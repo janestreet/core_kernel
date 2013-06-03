@@ -1,0 +1,7 @@
+# OASIS_START
+# OASIS_STOP
+<lib{,_test}/*.ml{,i}>     : syntax_camlp4o
+"lib/bigstring.ml"         : mlh, pkg_camlp4.macro
+"lib/bigstring_marshal.ml" : mlh, pkg_camlp4.macro
+"lib/binary_packing.ml"    : mlh, pkg_camlp4.macro
+"lib/core_int63.ml"        : mlh, pkg_camlp4.macro
