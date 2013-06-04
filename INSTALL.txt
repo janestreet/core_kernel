@@ -1,0 +1,45 @@
+(* OASIS_START *)
+(* DO NOT EDIT (digest: 7e7686e3223c56687d32af7410e7a41b) *)
+This is the INSTALL file for the core_kernel distribution.
+
+This package uses OASIS to generate its build system. See section OASIS for
+full information. 
+
+Dependencies
+============
+
+In order to compile this package, you will need:
+* ocaml (>= 4.00.1) for all, doc core_kernel
+* findlib (>= 1.3.2)
+* bin_prot (>= 109.15.00)
+* comparelib (>= 109.27.00)
+* fieldslib (>= 109.20.00)
+* herelib (>= 109.15.00)
+* pa_ounit (>= 109.27.00)
+* pa_pipebang (>= 109.15.00)
+* res
+* sexplib (>= 109.20.00)
+* variantslib (>= 109.15.00)
+
+Installing
+==========
+
+1. Uncompress the source archive and go to the root of the package
+2. Run 'ocaml setup.ml -configure'
+3. Run 'ocaml setup.ml -build'
+4. Run 'ocaml setup.ml -install'
+
+Uninstalling
+============
+
+1. Go to the root of the package 
+2. Run 'ocaml setup.ml -uninstall'
+
+OASIS
+=====
+
+OASIS is a program that generates a setup.ml file using a simple '_oasis'
+configuration file. The generated setup only depends on the standard OCaml
+installation: no additional library is required.
+
+(* OASIS_STOP *)
