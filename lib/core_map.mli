@@ -13,7 +13,8 @@
     v}
 
     Where [Key] is any module defining values that can be used as keys of a map, like
-    [Int], [String], ...
+    [Int], [String], etc.  To add this functionality to an arbitrary module, use the
+    [Comparable.Make] functor.
 
     One should use [Map] for functions that access existing maps, like [find], [mem],
     [add], [fold], [iter], and [to_alist].  For functions that create maps, like [empty],

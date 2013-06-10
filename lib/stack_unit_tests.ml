@@ -1,4 +1,3 @@
-
 open Std_internal
 
 let is_error = Result.is_error

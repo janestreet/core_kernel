@@ -45,9 +45,11 @@ let sub = String.sub
 let uncapitalize = String.uncapitalize
 let uppercase = String.uppercase
 external create : int -> string = "caml_create_string"
-external get : string -> int -> char = "%string_safe_get"
+external get        : string -> int -> char = "%string_safe_get"
+external unsafe_get : string -> int -> char = "%string_unsafe_get"
 external length : string -> int = "%string_length"
-external set : string -> int -> char -> unit = "%string_safe_set"
+external set        : string -> int -> char -> unit = "%string_safe_set"
+external unsafe_set : string -> int -> char -> unit = "%string_unsafe_set"
 
 let contains ?pos ?len t char =
   let (pos, len) =

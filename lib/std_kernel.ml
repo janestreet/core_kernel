@@ -23,6 +23,7 @@ module Equal                  = Equal
 module Error                  = Error
 module Exn                    = Exn
 module Flags                  = Flags
+module Flat_array             = Flat_array
 module Float                  = Float
 module Float_intf             = Float_intf
 module Floatable              = Floatable
@@ -58,6 +59,8 @@ module Or_error               = Or_error
 module Out_channel            = Out_channel
 module Pid                    = Pid
 module Polymorphic_compare    = Polymorphic_compare
+module Pool                   = Pool
+module Pooled_hashtbl         = Pooled_hashtbl
 module Pretty_printer         = Pretty_printer
 module Printexc               = Core_printexc
 module Printf                 = Core_printf
@@ -96,3 +99,5 @@ module type Validated = Validated.Validated
 include T
 
 type 'a _bound = 'a Comparable.bound = Incl of 'a | Excl of 'a | Unbounded
+
+let _make_sure_pool_pointer_is_an_int x = (x : _ Pool.Obj_array.Pointer.t :> int)

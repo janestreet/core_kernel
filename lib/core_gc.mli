@@ -92,11 +92,11 @@ module Control : sig
   type t = {
     mutable minor_heap_size : int;
     (** The size (in words) of the minor heap.  Changing
-       this parameter will trigger a minor collection.  Default: 32k. *)
+       this parameter will trigger a minor collection.  Default: 1M. *)
 
     mutable major_heap_increment : int;
     (** The minimum number of words to add to the
-       major heap when increasing it.  Default: 62k. *)
+       major heap when increasing it.  Default: 1M. *)
 
     mutable space_overhead : int;
     (** The major GC speed is computed from this parameter.
@@ -105,7 +105,7 @@ module Control : sig
        percentage of the memory used for live data.
        The GC will work more (use more CPU time and collect
        blocks more eagerly) if [space_overhead] is smaller.
-       Default: 80. *)
+       Default: 100. *)
 
     mutable verbose : int;
     (** This value controls the GC messages on standard error output.

@@ -2,7 +2,7 @@ OASISFormat:      0.3
 OCamlVersion:     >= 4.00.1
 FindlibVersion:   >= 1.3.2
 Name:             core_kernel
-Version:          109.27.00
+Version:          109.28.00
 Synopsis:         Jane Street Capital's standard library overlay
 Authors:          Jane Street Capital LLC <opensource@janestreet.com>
 Copyrights:       (C) 2008-2013 Jane Street Capital LLC <opensource@janestreet.com>
@@ -19,9 +19,14 @@ Description:
   OCaml's standard library that was developed by Jane Street, the
   largest industrial user of OCaml.
 
-PostConfCommand: config/discover.sh $ocamlc lib/config.mlh lib/config.h
+Flag caml_modify_test
+  Description:        Enable caml modify tests
+  Default$:           flag(ld_wrap_possible)
 
-PreDistCleanCommand: $rm lib/config.mlh lib/config.h
+PreConfCommand:       config/detect.sh
+PostConfCommand:      config/discover.sh $ocamlc lib/config.mlh lib/config.h
+
+PreDistCleanCommand:  $rm lib/config.mlh lib/config.h
 
 Library core_kernel
   Path:               lib
@@ -89,6 +94,9 @@ Library core_kernel
                       Exn,
                       Flags_intf,
                       Flags,
+                      Flat_array,
+                      Flat_array_debug,
+                      Flat_array_unit_tests,
                       Floatable,
                       Float_intf,
                       Float,
@@ -106,6 +114,7 @@ Library core_kernel
                       Heap,
                       Host_and_port,
                       Identifiable,
+                      Import,
                       In_channel,
                       Info,
                       Intable,
@@ -117,6 +126,7 @@ Library core_kernel
                       Int_replace_polymorphic_compare,
                       Int_set,
                       Invariant,
+                      Invariant_intf,
                       Linked_stack,
                       Make_substring,
                       Memo,
@@ -126,6 +136,7 @@ Library core_kernel
                       No_polymorphic_compare,
                       Nothing0,
                       Nothing,
+                      Obj_array,
                       Only_in_test,
                       Option,
                       Ordered_collection_common,
@@ -135,6 +146,11 @@ Library core_kernel
                       Pid,
                       Polymorphic_compare_intf,
                       Polymorphic_compare,
+                      Pool,
+                      Pool_intf,
+                      Pool_unit_tests,
+                      Pooled_hashtbl,
+                      Pooled_hashtbl_unit_test,
                       Pretty_printer,
                       Quickcheck,
                       Ref,
@@ -163,6 +179,8 @@ Library core_kernel
                       Thread_safe_queue,
                       T,
                       Tuple,
+                      Tuple_type,
+                      Tuple_type_intf,
                       Type_equal,
                       Union_find,
                       Unique_id_intf,
@@ -193,7 +211,7 @@ Library core_kernel
                       herelib.syntax,
                       pa_ounit (>= 109.27.00),
                       pa_ounit.syntax,
-                      pa_pipebang (>= 109.15.00),
+                      pa_pipebang (>= 109.28.00),
                       res,
                       sexplib (>= 109.20.00),
                       sexplib.syntax,
@@ -208,6 +226,33 @@ Library core_kernel
                       pa_ounit,
                       res,
                       unix
+
+Library check_caml_modify
+  Build$:             flag(caml_modify_test)
+  Install$:           flag(caml_modify_test)
+  Path:               check_caml_modify
+  FindlibName:        check_caml_modify
+  FindlibParent:      core_kernel
+  Pack:               true
+  Modules:            Caml_modify
+  CSources:           caml_modify_stub.c
+  BuildDepends:       pa_ounit,
+                      pa_ounit.syntax
+  XMETARequires:      pa_ounit
+
+Executable pool_caml_modify_check
+  Path:               lib_test
+  Build$:             flag(tests) && flag(caml_modify_test)
+  Install:            false
+  CompiledObject:     best
+  MainIs:             pool_caml_modify_check.ml
+  BuildDepends:       core_kernel,
+                      core_kernel.check_caml_modify
+
+Test test_pool_caml_modify_check
+  Command:            $pool_caml_modify_check
+  TestTools:          pool_caml_modify_check
+  Run$:               flag(tests) && flag(caml_modify_test)
 
 Document core_kernel
   Title:                Jane street's core library

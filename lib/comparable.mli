@@ -22,6 +22,20 @@ module Inherit
     val component : t -> C.t
   end) : S with type t = T.t
 
+(** Usage example:
+
+    {[
+      module Foo = struct
+        module T = struct
+          type t = ... with compare, sexp
+        end
+        include T
+        include Comparable.Make (T)
+      end
+    ]}
+
+    Then include [Comparable.S] in the signature (see comparable_intf.mli for an
+    example). *)
 module Make (T : sig
   type t with compare, sexp
 end) : S with type t := T.t

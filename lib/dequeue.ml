@@ -400,6 +400,16 @@ let sexp_of_t f t    = Array.sexp_of_t f (to_array t)
 let back_index  = apparent_back_index
 let front_index = apparent_front_index
 
+let back_index_exn t =
+  assert_not_empty t "Dequeue.back_index_exn";
+  apparent_back_index_when_not_empty t
+;;
+
+let front_index_exn t =
+  assert_not_empty t "Dequeue.front_index_exn";
+  apparent_front_index_when_not_empty t
+;;
+
 TEST_MODULE = struct
   module type Dequeue_intf = sig
     type 'a t

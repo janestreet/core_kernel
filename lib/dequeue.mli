@@ -21,7 +21,7 @@ include Container.S1 with type 'a t := 'a t
     then [never_shrink] is presumed to be [true], otherwise [never_shrink] defaults to
     [false]. *)
 val create
-  :  ?initial_length:int  (* defaults to 1 *)
+  :  ?initial_length:int  (* defaults to 7 *)
   -> ?never_shrink:bool   (* see comment above *)
   -> unit
   -> _ t
@@ -29,8 +29,16 @@ val create
 (** [front_index t] return the index of the front item in [t]. *)
 val front_index : _ t -> int option
 
+(** [front_index_exn t] throws an exception if [t] is empty, otherwise returns the index
+    of the front item in [t] *)
+val front_index_exn : _ t -> int
+
 (** [back_index t] return the index of the back item in [t]. *)
 val back_index : _ t -> int option
+
+(** [back_index_exn t] throws an exception if [t] is empty, otherwise returns the index
+    of the back item in [t] *)
+val back_index_exn : _ t -> int
 
 (** [get t i] return the element at index [i].  Return [None] if [i] is invalid. *)
 val get : 'a t -> int -> 'a option

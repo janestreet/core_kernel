@@ -318,3 +318,7 @@ module Escaping : sig
   val rsplit2     : string -> on:char -> escape_char:char -> (string * string) option
   val rsplit2_exn : string -> on:char -> escape_char:char -> (string * string)
 end
+
+
+external unsafe_get : string -> int -> char         = "%string_unsafe_get"
+external unsafe_set : string -> int -> char -> unit = "%string_unsafe_set"

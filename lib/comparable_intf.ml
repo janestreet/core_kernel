@@ -48,6 +48,16 @@ module type S_common = sig
   include Validate with type t := t
 end
 
+(** Usage example:
+
+    {[
+      module Foo : sig
+        type t = ...
+        include Comparable.S with type t := t
+      end
+    ]}
+
+    Then use [Comparable.Make] in the struct (see comparable.mli for an example). *)
 module type S = sig
   include S_common
 

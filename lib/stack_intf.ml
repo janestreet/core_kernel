@@ -1,4 +1,3 @@
-
 (** An interface for stacks that follows [Core]'s conventions, as opposed to OCaml's
     standard [Stack] module. *)
 
