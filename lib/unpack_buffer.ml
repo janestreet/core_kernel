@@ -157,14 +157,14 @@ let ensure_available t len =
   if not (is_available t len) then begin
     (* Grow the buffer, and shift the unconsumed bytes to the front. *)
     let new_buf = Bigstring.create (max (t.len + len) (2 * Bigstring.length t.buf)) in
-    Bigstring.blit ~src:t.buf ~src_pos:t.pos ~src_len:t.len ~dst:new_buf ();
+    Bigstring.blito ~src:t.buf ~src_pos:t.pos ~src_len:t.len ~dst:new_buf ();
     t.pos <- 0;
     t.buf <- new_buf;
     assert (is_available t len);
   end;
 ;;
 
-let feed_gen buf_length (blit_buf_to_bigstring : (_, _) Bigstring.blit)
+let feed_gen buf_length (blit_buf_to_bigstring : (_, _) Blit.blito)
     ?pos ?len t buf =
   if !debug then invariant t;
   match t.state with
@@ -182,11 +182,11 @@ let feed_gen buf_length (blit_buf_to_bigstring : (_, _) Bigstring.blit)
 ;;
 
 let feed ?pos ?len t buf =
-  feed_gen Bigstring.length Bigstring.blit                  ?pos ?len t buf
+  feed_gen Bigstring.length Bigstring.blito                  ?pos ?len t buf
 ;;
 
 let feed_string ?pos ?len t buf =
-  feed_gen    String.length Bigstring.blit_string_bigstring ?pos ?len t buf
+  feed_gen    String.length Bigstring.From_string.blito ?pos ?len t buf
 ;;
 
 let unpack t =
@@ -250,7 +250,7 @@ unpack returned a value but consumed 0 bytes without partially unpacked data")
                  once.  Once a byte has been shifted, it will remain where it is until it
                  is consumed. *)
               if t.len > 0 then
-                Bigstring.blit ~src:t.buf ~src_pos:t.pos ~src_len:t.len ~dst:t.buf ();
+                Bigstring.blito ~src:t.buf ~src_pos:t.pos ~src_len:t.len ~dst:t.buf ();
               t.pos <- 0;
               Ok result;
             end
@@ -317,7 +317,7 @@ TEST_MODULE "unpack-buffer" = struct
                 `Not_enough_data ((), 0)
               else
                 let string = String.create value_size in
-                Bigstring.blit_bigstring_string ~src:buf ~src_pos:pos ~src_len:value_size
+                Bigstring.To_string.blito ~src:buf ~src_pos:pos ~src_len:value_size
                   ~dst:string ();
                 `Ok (string, value_size))
         include String

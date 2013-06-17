@@ -6,8 +6,6 @@ module Hashable = Hashable
 let hash_param = Hashable.hash_param
 let hash       = Hashable.hash
 
-module Pool = Pool.Obj_array
-
 module Entry : sig
   module Pool : sig
     type ('k, 'd) t with sexp_of

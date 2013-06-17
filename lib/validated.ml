@@ -30,6 +30,7 @@ module Make (Raw : Raw) = struct
 end
 
 module Make_binable (Raw : Raw_binable) = struct
+
   type t = Raw.t with bin_io
   include (Make (Raw) : Validated with type raw := Raw.t with type t := t)
 end

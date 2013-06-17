@@ -82,96 +82,65 @@ external unsafe_blit :
   src : t -> src_pos : int -> dst : t -> dst_pos : int -> len : int -> unit
   = "bigstring_blit_stub"
 
-let blit_common
-    ~loc ~get_src_len ~get_dst_len ~blit ~src ?src_pos ?src_len ~dst ?(dst_pos = 0) () =
-  let (src_pos, len) =
-    Ordered_collection_common.get_pos_len_exn ?pos:src_pos ?len:src_len
-      ~length:(get_src_len src)
-  in
-  let check_pos var total_len pos =
-    if pos < 0 then invalid_argf "%s: %s < 0" loc var ()
-    else if pos + len > total_len then
-      invalid_argf "%s: pos (%d) + len (%d) > total_len (%d)"
-        loc pos len total_len ()
-  in
-  check_pos "src_pos" (get_src_len src) src_pos;
-  check_pos "dst_pos" (get_dst_len dst) dst_pos;
-  if len > 0 then blit ~src ~src_pos ~dst ~dst_pos ~len
-;;
-
-type ('src, 'dst) blit
-  =  src : 'src
-  -> ?src_pos : int
-  -> ?src_len : int
-  -> dst : 'dst
-  -> ?dst_pos : int
-  -> unit
-  -> unit
-
-let blit ~src ?src_pos ?src_len ~dst ?dst_pos () =
-  blit_common
-    ~loc:"blit"
-    ~get_src_len:length ~get_dst_len:length
-    ~blit:unsafe_blit
-    ~src ?src_pos ?src_len ~dst ?dst_pos
-    ()
-;;
-
-let sub ?(pos = 0) ?len bstr =
-  let len = get_opt_len bstr ~pos len in
-  let dst = create len in
-  blit ~src:bstr ~src_pos:pos ~src_len:len ~dst ();
-  dst
-;;
-
 let get bstr pos = Array1.get bstr pos
 
 let set bstr pos c = Array1.set bstr pos c
 
-external unsafe_blit_string_bigstring :
-  src : string -> src_pos : int -> dst : t -> dst_pos : int -> len : int -> unit
-  = "bigstring_blit_string_bigstring_stub" "noalloc"
+module Bigstring_sequence = struct
+  type nonrec t = t with sexp_of
+  let create ~len = create len
+  let get = get
+  let set = set
+  let length = length
+end
 
-let blit_string_bigstring ~src ?src_pos ?src_len ~dst ?dst_pos () =
-  blit_common
-    ~loc:"blit_string_bigstring"
-    ~get_src_len:String.length ~get_dst_len:length
-    ~blit:unsafe_blit_string_bigstring
-    ~src ?src_pos ?src_len ~dst ?dst_pos
-    ()
+module String_sequence = struct
+  type t = string with sexp_of
+  let create ~len = String.create len
+  let get = String.get
+  let set = String.set
+  let length = String.length
+end
+
+module Blit_elt = struct
+  include Char
+  let of_bool b = if b then 'a' else 'b'
+end
+
+include Blit.Make
+          (Blit_elt)
+          (struct
+            include Bigstring_sequence
+            let unsafe_blit = unsafe_blit
+          end)
+
+module From_string =
+  Blit.Make_distinct
+    (Blit_elt)
+    (String_sequence)
+    (struct
+      external unsafe_blit
+        : src : string -> src_pos : int -> dst : t -> dst_pos : int -> len : int -> unit
+        = "bigstring_blit_string_bigstring_stub" "noalloc"
+      include Bigstring_sequence
+    end)
 ;;
 
-external unsafe_blit_bigstring_string :
-  src : t -> src_pos : int -> dst : string -> dst_pos : int -> len : int -> unit
-  = "bigstring_blit_bigstring_string_stub" "noalloc"
-
-let blit_bigstring_string ~src ?src_pos ?src_len ~dst ?dst_pos () =
-  blit_common
-    ~loc:"blit_bigstring_string"
-    ~get_src_len:length ~get_dst_len:String.length
-    ~blit:unsafe_blit_bigstring_string
-    ~src ?src_pos ?src_len ~dst ?dst_pos
-    ()
+module To_string =
+  Blit.Make_distinct
+    (Blit_elt)
+    (Bigstring_sequence)
+    (struct
+      external unsafe_blit
+        : src : t -> src_pos : int -> dst : string -> dst_pos : int -> len : int -> unit
+        = "bigstring_blit_bigstring_string_stub" "noalloc"
+      include String_sequence
+    end)
 ;;
 
-let of_string ?(pos = 0) ?len src =
-  let len =
-    match len with
-    | Some len -> len
-    | None -> String.length src - pos
-  in
-  let dst = create len in
-  blit_string_bigstring ~src ~src_pos:pos ~src_len:len ~dst ();
-  dst;
-;;
+let of_string = From_string.subo
 
-let to_string ?(pos = 0) ?len src =
-  let len = get_opt_len src ~pos len in
-  check_args ~loc:"to_string" ~pos ~len src;
-  let dst = String.create len in
-  blit_bigstring_string ~src ~src_pos:pos ~src_len:len ~dst ();
-  dst
-;;
+let to_string = To_string.subo
 
 (* Memory mapping *)
 
@@ -465,7 +434,7 @@ let set_padded_fixed_string ~padding t ~pos ~len value =
   let slen = String.length value in
   if slen > len then
     failwithf "Bigstring.set_padded_fixed_string: %S is longer than %d" value len ();
-  blit_string_bigstring ~src:value ~dst:t ~src_pos:0 ~dst_pos:pos ~src_len:slen ();
+  From_string.blit ~src:value ~dst:t ~src_pos:0 ~dst_pos:pos ~len:slen;
   for i = pos + slen to pos + len - 1; do
     set t i padding
   done

@@ -5,34 +5,46 @@ val normalize :
   length_fun:('a -> int)
     -> 'a -> int -> int
 
-val slice :
-  length_fun:('a -> int) -> sub_fun:('a -> pos:int -> len:int -> 'a)
-    -> 'a -> int -> int -> 'a
+(* sweeks: We don't want to comment this function because Ron is OK with [slice] going
+   away, and there are comments above each of the three [val slice]'s in the mli's where
+   it appears. *)
+val slice
+  :  length_fun:('a -> int)
+  -> sub_fun:('a -> pos:int -> len:int -> 'a)
+  -> 'a
+  -> int
+  -> int
+  -> 'a
 
-(** [get_pos_len] and [get_pos_len_exn] are intended to be used by functions
- *  that take a sequence (array, string, bigstring, ...) and an optional [pos]
- *  and [len] specifying a subrange of the sequence.  Such functions should call
- *  [get_pos_len] with the length of the sequence and the optional [pos] and
- *  [len], and it will return the [pos] and [len] specifying the range, where
- *  the default [pos] is zero and the default [len] is to go to the end of the
- *  sequence.
- *
- *  It should be the case that:
- *
- *    0 <= pos <= length
- *    len >= 0
- *    pos + len <= length
- *
- *  Note that this allows [pos = length] and [len = 0], i.e. an empty subrange
- *  at the end of the sequence.
- *
- *  [get_pos_len] returns [(pos', len')] specifying a subrange where:
- *
- *    pos' = match pos with None -> 0 | Some i -> i
- *    len' = match len with None -> length - pos | Some i -> i
+(** [get_pos_len], [get_pos_len_exn], and [validate_pos_len_exn] are intended to be used
+    by functions that take a sequence (array, string, bigstring, ...) and an optional
+    [pos] and [len] specifying a subrange of the sequence.  Such functions should call
+    [get_pos_len] with the length of the sequence and the optional [pos] and [len], and it
+    will return the [pos] and [len] specifying the range, where the default [pos] is zero
+    and the default [len] is to go to the end of the sequence.
+
+    It should be the case that:
+
+    {[
+      pos >= 0 && len >= 0 && pos + len <= length
+    ]}
+
+    Note that this allows [pos = length] and [len = 0], i.e. an empty subrange
+    at the end of the sequence.
+
+    [get_pos_len] returns [(pos', len')] specifying a subrange where:
+
+    {v
+      pos' = match pos with None -> 0 | Some i -> i
+      len' = match len with None -> length - pos | Some i -> i
+    v}
  *)
+
+val get_pos_len     : ?pos:int -> ?len:int -> length:int -> (int * int, string) Result.t
 val get_pos_len_exn : ?pos:int -> ?len:int -> length:int -> int * int
 
-val get_pos_len :
-  ?pos:int -> ?len:int -> length:int -> (int * int, string) Result.t
+(** [check_pos_len_exn ~pos ~len ~length] raises unless
+    [pos >= 0 && len >= 0 && pos + len <= length]. *)
+val check_pos_len_exn : pos:int -> len:int -> length:int -> unit
+
 

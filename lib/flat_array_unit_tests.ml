@@ -31,6 +31,8 @@ let unsafe_get = unsafe_get
 let set        = set
 let unsafe_set = unsafe_set
 let get_tuple  = get_tuple
+let set_tuple  = set_tuple
+let slots      = slots
 
 TEST_UNIT =
   let check (type tuple) (type variant) (type a)
@@ -41,7 +43,9 @@ TEST_UNIT =
         (make_tuple : a -> tuple) : unit =
     for len = 0 to 3 do
       let tuple = make_tuple init in
+      let changed_tuple = make_tuple changed in
       let t = create slots ~len tuple in
+      assert (phys_equal slots (Flat_array.slots t));
       let t_copy = copy t in
       assert (length t_copy = len);
       for i = 0 to len - 1 do
@@ -64,6 +68,9 @@ TEST_UNIT =
         ~f:(fun (get, set) ->
           for i = 0 to len - 1 do
             assert (Poly.equal (get_tuple t i) tuple);
+            set_tuple t i changed_tuple;
+            assert (Poly.equal (get_tuple t i) changed_tuple);
+            set_tuple t i tuple;
             List.iter slot_list ~f:(fun changed_slot ->
               set t i changed_slot changed;
               List.iter slot_list ~f:(fun slot ->
@@ -99,3 +106,10 @@ TEST_UNIT =
   check Slots.t8 (slots8 ()) (fun i -> (i, i, i, i, i, i, i, i));
   check Slots.t9 (slots9 ()) (fun i -> (i, i, i, i, i, i, i, i, i));
 ;;
+
+(* These are unit tested via [Blit.Make_flat] in flat_tuple_array.ml *)
+let blit        = blit
+let blito       = blito
+let sub         = sub
+let subo        = subo
+let unsafe_blit = unsafe_blit

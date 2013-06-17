@@ -27,7 +27,8 @@ module Metadata = struct
   (* We rely on immutability of the metadata in the [copy] function, which shares the
      pointer to the metadata between the original and the copy. *)
   type 'slots t =
-    { (* [slots_per_tuple] is number of slots in a tuple as seen by the user; i.e. not
+    { slots : 'slots;
+      (* [slots_per_tuple] is number of slots in a tuple as seen by the user; i.e. not
          counting the next-free pointer. *)
       slots_per_tuple : int;
       length : int;
@@ -55,13 +56,17 @@ let metadata (type slots) (t : slots t) =
   (Obj.obj (Obj_array.unsafe_get t metadata_index) : slots Metadata.t)
 ;;
 
+let length t = (metadata t).length
+let slots  t = (metadata t).slots
+
 let sexp_of_t sexp_of_slots t = Metadata.sexp_of_t sexp_of_slots (metadata t)
 
-let invariant _invariant_a t : unit =
+let invariant slots_invariant t : unit =
   try
     let metadata = metadata t in
     let check f field = f (Field.get field metadata) in
     Metadata.Fields.iter
+      ~slots:(check slots_invariant)
       ~slots_per_tuple:(check (fun slots_per_tuple -> assert (slots_per_tuple > 0)))
       ~length:(check (fun length ->
         assert (length >= 0);
@@ -69,7 +74,7 @@ let invariant _invariant_a t : unit =
       ~dummy:(check (fun dummy ->
         assert (Obj_array.length dummy = metadata.slots_per_tuple)))
   with exn ->
-    failwiths "Flat_tuple_array.invariant failed" (exn, t) (<:sexp_of< exn * _ t >>)
+    failwiths "Flat_array.invariant failed" (exn, t) (<:sexp_of< exn * _ t >>)
 ;;
 
 let set_metadata (type slots) (t : slots t) metadata =
@@ -94,7 +99,7 @@ let unsafe_init_range t metadata ~lo ~hi =
 
 let create (type tuple) (slots : (tuple, _) Slots.t) ~len:length dummy =
   if length < 0 then
-    failwiths "Flat_tuple_array.create got invalid length" length <:sexp_of< int >>;
+    failwiths "Flat_array.create got invalid length" length <:sexp_of< int >>;
   let slots_per_tuple = Slots.slots_per_tuple slots in
   let dummy =
     if slots_per_tuple = 1 then
@@ -102,13 +107,16 @@ let create (type tuple) (slots : (tuple, _) Slots.t) ~len:length dummy =
     else
       (Obj.magic (dummy : tuple) : Obj_array.t)
   in
-  let metadata = { Metadata. slots_per_tuple; length; dummy } in
+  let metadata = { Metadata. slots; slots_per_tuple; length; dummy } in
   let t = create_array metadata in
   unsafe_init_range t metadata ~lo:0 ~hi:length;
   t
 ;;
 
-let length t = (metadata t).length
+let check_index t metadata i =
+  if i < 0 || i >= metadata.length then
+    failwiths "Flat_array got invalid index" (i, t) <:sexp_of< int * _ t >>;
+;;
 
 (* The backing obj_array is copied, including the pointer to the metadata.  We don't have
    to deep copy the metadata because it is immutable. *)
@@ -116,8 +124,7 @@ let copy t = Obj_array.copy t
 
 let get (type a) t i (slot : (_, a) Slot.t) =
   let metadata = metadata t in
-  if i < 0 || i >= metadata.length then
-    failwiths "Flat_tuple_array.get got invalid index" (i, t) <:sexp_of< int * _ t >>;
+  check_index t metadata i;
   (Obj.obj (Obj_array.unsafe_get t (Metadata.slot_index metadata i slot)) : a)
 ;;
 
@@ -128,8 +135,7 @@ let unsafe_get (type a) t i (slot : (_, a) Slot.t) =
 
 let set (type a) t i (slot : (_, a) Slot.t) a =
   let metadata = metadata t in
-  if i < 0 || i >= metadata.length then
-    failwiths "Flat_tuple_array.set got invalid index" (i, t) <:sexp_of< int * _ t >>;
+  check_index t metadata i;
   Obj_array.unsafe_set t (Metadata.slot_index metadata i slot) (Obj.repr (a : a))
 ;;
 
@@ -140,9 +146,7 @@ let unsafe_set (type a) t i (slot : (_, a) Slot.t) a =
 
 let get_tuple (type tuple) (t : (tuple, _) Slots.t t) i =
   let metadata = metadata t in
-  if i < 0 || i >= metadata.length then
-    failwiths "Flat_tuple_array.get_tuple got invalid index" (i, t)
-      <:sexp_of< int * _ t >>;
+  check_index t metadata i;
   let len = metadata.slots_per_tuple in
   if len = 1 then
     unsafe_get t i Slot.t0
@@ -151,4 +155,43 @@ let get_tuple (type tuple) (t : (tuple, _) Slots.t t) i =
       Obj_array.sub t ~pos:(Metadata.tuple_num_to_first_slot_index metadata i) ~len
     in
     (Obj.magic (obj : Obj_array.t) : tuple)
+;;
+
+let set_tuple (type tuple) (t : (tuple, _) Slots.t t) i tuple =
+  let metadata = metadata t in
+  check_index t metadata i;
+  let len = metadata.slots_per_tuple in
+  if len = 1 then
+    unsafe_set t i Slot.t0 tuple
+  else
+    Obj_array.blit
+      ~src:(Obj.magic (tuple : tuple) : Obj_array.t) ~src_pos:0
+      ~dst:t ~dst_pos:(Metadata.tuple_num_to_first_slot_index metadata i)
+      ~len
+;;
+
+let unsafe_blit ~src ~src_pos ~dst ~dst_pos ~len =
+  let m = metadata src in
+  Obj_array.blit
+    ~src ~src_pos:(Metadata.tuple_num_to_first_slot_index m src_pos)
+    ~dst ~dst_pos:(Metadata.tuple_num_to_first_slot_index (metadata dst) dst_pos)
+    ~len:(len * m.slots_per_tuple)
+;;
+
+include
+  Blit.Make1
+    (struct
+      module Slots = Slots
+      type nonrec 'a t = 'a t with sexp_of
+      type 'a z = 'a Slots.t1 t
+      let length      = length
+      let get         = get_tuple
+      let set         = set_tuple
+      let unsafe_blit = unsafe_blit
+      let create_like ~len t =
+        let metadata = metadata t in
+        create metadata.slots ~len metadata.dummy
+      ;;
+      let create_bool ~len = create Slots.t1 ~len false
+    end)
 ;;

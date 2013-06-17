@@ -59,20 +59,6 @@ val append : 'a t -> 'a t -> 'a t
 (** Same as [Array.append], but concatenates a list of arrays. *)
 val concat : 'a t list -> 'a t
 
-(** [Array.sub a start len] returns a fresh array of length [len], containing the elements
-    number [start] to [start + len - 1] of array [a].
-
-    Raise [Invalid_argument "Array.sub"] if [start] and [len] do not designate a valid
-    subarray of [a]; that is, if [start < 0], or [len < 0], or [start + len > Array.length
-    a].
-
-    [int_sub] and [float_sub] provide fast bound-checked blit copying for immediate data
-    types. *)
-type 'a sub = 'a t -> pos:int -> len:int -> 'a t
-val sub       : 'a    sub
-val int_sub   : int   sub
-val float_sub : float sub
-
 (** [Array.copy a] returns a copy of [a], that is, a fresh array
     containing the same elements as [a]. *)
 val copy : 'a t -> 'a t
@@ -94,21 +80,27 @@ val fill : 'a t -> pos:int -> len:int -> 'a -> unit
 
     [int_blit] and [float_blit] provide fast bound-checked blits for immediate
     data types.  The unsafe versions do not bound-check the arguments. *)
-val blit       : src:'a    t -> src_pos:int -> dst:'a    t -> dst_pos:int ->len:int ->unit
-val int_blit   : src:int   t -> src_pos:int -> dst:int   t -> dst_pos:int ->len:int ->unit
-val float_blit : src:float t -> src_pos:int -> dst:float t -> dst_pos:int ->len:int ->unit
+include Blit.S1 with type 'a t := 'a t
 
-external unsafe_int_blit
-  :  src:int   t -> src_pos:int
-  -> dst:int   t -> dst_pos:int
-  -> len:int     -> unit
-  = "core_array_unsafe_int_blit" "noalloc"
+module Int : sig
+  type nonrec t = int t with bin_io, compare, sexp
 
-external unsafe_float_blit
-  :  src:float t -> src_pos:int
-  -> dst:float t -> dst_pos:int
-  -> len:int -> unit
-  = "core_array_unsafe_float_blit" "noalloc"
+  include Blit.S with type t := t
+
+  external unsafe_blit
+    : src:t -> src_pos:int -> dst:t -> dst_pos:int -> len:int -> unit
+    = "core_array_unsafe_int_blit" "noalloc"
+end
+
+module Float : sig
+  type nonrec t = float t with bin_io, compare, sexp
+
+  include Blit.S with type t := t
+
+  external unsafe_blit
+    : src:t -> src_pos:int -> dst:t -> dst_pos:int -> len:int -> unit
+    = "core_array_unsafe_float_blit" "noalloc"
+end
 
 (** [Array.of_list l] returns a fresh array containing the elements of [l]. *)
 val of_list : 'a list -> 'a t

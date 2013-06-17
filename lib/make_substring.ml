@@ -5,14 +5,14 @@ open Std_internal
 type bigstring = Bigstring.t
 
 module Blit : sig
-  type ('src, 'dst) t = ('src, 'dst) Bigstring.blit
+  type ('src, 'dst) t = ('src, 'dst) Blit.blito
 
   val string_string       : (string   , string   ) t
   val bigstring_string    : (bigstring, string   ) t
   val string_bigstring    : (string   , bigstring) t
   val bigstring_bigstring : (bigstring, bigstring) t
 end = struct
-  type ('src, 'dst) t = ('src, 'dst) Bigstring.blit
+  type ('src, 'dst) t = ('src, 'dst) Blit.blito
 
   let string_string ~src ?src_pos ?src_len ~dst ?(dst_pos = 0) () =
     let (src_pos, len) =
@@ -22,11 +22,11 @@ end = struct
     Core_string.blit ~src ~src_pos ~len ~dst ~dst_pos;
   ;;
 
-  let string_bigstring = Bigstring.blit_string_bigstring
+  let string_bigstring = Bigstring.From_string.blito
 
-  let bigstring_bigstring = Bigstring.blit
+  let bigstring_bigstring = Bigstring.blito
 
-  let bigstring_string = Bigstring.blit_bigstring_string
+  let bigstring_string = Bigstring.To_string.blito
 
 end
 

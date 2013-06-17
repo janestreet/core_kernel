@@ -6,6 +6,8 @@ include Bigbuffer_internal
 
 let __internal (t : t) = t
 
+let length t = t.pos
+
 (*
 let invariant t =
   assert (t.len == Bigstring.length t.bstr);
@@ -24,30 +26,49 @@ let create n =
 
 let contents buf = Bigstring.to_string buf.bstr ~len:buf.pos
 
-let big_contents buf = sub ~len:buf.pos buf.bstr
+let big_contents buf = subo ~len:buf.pos buf.bstr
 
 let volatile_contents buf = buf.bstr
 
-let sub buf pos len =
-  if pos < 0 || len < 0 || pos > buf.pos - len
-  then invalid_arg "Bigbuffer.sub"
-  else Bigstring.to_string buf.bstr ~pos ~len
+let add_char buf c =
+  let pos = buf.pos in
+  if pos >= buf.len then resize buf 1;
+  buf.bstr.{pos} <- c;
+  buf.pos <- pos + 1;
 ;;
 
-let blit ~src ?src_pos ?src_len ~dst ?dst_pos () =
-  let (pos, len) =
-    Ordered_collection_common.get_pos_len_exn
-      ?pos:src_pos ?len:src_len
-      ~length:src.pos
-  in
-  Bigstring.blit_bigstring_string ~src:src.bstr ~src_pos:pos ~src_len:len ~dst ?dst_pos ()
+include
+  Blit.Make_distinct
+    (struct
+      type t = char
+      let equal = (=)
+      let of_bool b = if b then 'a' else 'b'
+    end)
+    (struct
+      type nonrec t = t with sexp_of
+      let create ~len =
+        let t = create len in
+        for _i = 1 to len do
+          add_char t 'a';
+        done;
+        t
+      ;;
+      let length = length
+      let set t i c = Bigstring.set t.bstr i c
+      let get t i   = Bigstring.get t.bstr i
+    end)
+    (struct
+      include Core_string
+      let create ~len = create len
+      let unsafe_blit ~src ~src_pos ~dst ~dst_pos ~len =
+        Bigstring.To_string.unsafe_blit ~src:src.bstr ~src_pos ~dst ~dst_pos ~len
+      ;;
+    end)
 ;;
 
 let nth buf pos =
   if pos < 0 || pos >= buf.pos then invalid_arg "Bigbuffer.nth"
   else buf.bstr.{pos}
-
-let length buf = buf.pos
 
 let clear buf = buf.pos <- 0
 
@@ -57,19 +78,12 @@ let reset buf =
   buf.len <- Bigstring.length buf.bstr;
 ;;
 
-let add_char buf c =
-  let pos = buf.pos in
-  if pos >= buf.len then resize buf 1;
-  buf.bstr.{pos} <- c;
-  buf.pos <- pos + 1;
-;;
-
 let add_substring buf src src_pos len =
   if src_pos < 0 || len < 0 || src_pos > String.length src - len
   then invalid_arg "Bigbuffer.add_substring";
   let new_pos = buf.pos + len in
   if new_pos > buf.len then resize buf len;
-  blit_string_bigstring ~src ~src_pos ~src_len:len ~dst:buf.bstr ~dst_pos:buf.pos ();
+  Bigstring.From_string.blit ~src ~src_pos ~len ~dst:buf.bstr ~dst_pos:buf.pos;
   buf.pos <- new_pos;
 ;;
 
@@ -77,7 +91,7 @@ let add_string buf src =
   let len = String.length src in
   let new_pos = buf.pos + len in
   if new_pos > buf.len then resize buf len;
-  blit_string_bigstring ~src ~src_len:len ~dst:buf.bstr ~dst_pos:buf.pos ();
+  Bigstring.From_string.blito ~src ~src_len:len ~dst:buf.bstr ~dst_pos:buf.pos ();
   buf.pos <- new_pos;
 ;;
 
@@ -86,7 +100,7 @@ let add_buffer buf_dst buf_src =
   let dst_pos = buf_dst.pos in
   let new_pos = dst_pos + len in
   if new_pos > buf_dst.len then resize buf_dst len;
-  Bigstring.blit ~src:buf_src.bstr ~src_len:len ~dst:buf_dst.bstr ~dst_pos ();
+  Bigstring.blito ~src:buf_src.bstr ~src_len:len ~dst:buf_dst.bstr ~dst_pos ();
   buf_dst.pos <- new_pos;
 ;;
 

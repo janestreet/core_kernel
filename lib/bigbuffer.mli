@@ -8,7 +8,7 @@
    buffer size, and improves I/O-performance when reading/writing from/to channels.
 *)
 
-type t
+type t with sexp_of
 (** The abstract type of buffers. *)
 
 val create : int -> t
@@ -36,13 +36,7 @@ val volatile_contents : t -> Bigstring.t
     No copying is involved.  To be safe, use and finish with the returned value
     before calling any other function in this module on the same [Bigbuffer.t]. *)
 
-val sub : t -> int -> int -> string
-(** [Bigbuffer.sub b off len] returns (a copy of) the substring of the
-current contents of the buffer [b] starting at offset [off] of length
-[len] bytes. May raise [Invalid_argument] if out of bounds request. The
-buffer itself is unaffected. *)
-
-val blit : (t, string) Bigstring.blit
+include Blit.S_distinct with type src := t with type dst := string
 
 (** [blit ~src ~src_pos ~dst ~dst_pos ~len] copies [len] characters from
    the current contents of the buffer [src], starting at offset [src_pos]

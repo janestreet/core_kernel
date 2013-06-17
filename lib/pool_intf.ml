@@ -1,11 +1,11 @@
-(** A manual memory manager for a set of tuples.
+(** A manual memory manager for a set of mutable tuples.
 
     A pool stores a bounded-size set of tuples, where client code is responsible for
     explicitly controlling when the pool allocates and frees tuples.  One [create]s a pool
     of a certain capacity, which returns an empty pool that can hold that many tuples.
     One then uses [new] to allocate a tuple, which returns a [Pointer.t] to the tuple.
     One then uses [get] and [set] along with the pointer to get and set slots of the
-    tuple.  Finally, one [free]'s a pointer to the pool's memory for tuple, making the
+    tuple.  Finally, one [free]'s a pointer to the pool's memory for a tuple, making the
     memory available for subsequent reuse.
 
     The point of [Pool] is to allocate a single long-lived block of memory (the pool) that
@@ -33,8 +33,8 @@ module type S = sig
   module Slot  : Tuple_type.Slot
 
   module Pointer : sig
-    (** The type of a pointer to a tuple in a pool.  ['slots] will look like [('a1, ...,
-        'an) Slots.tn], and the tuples have type ['a1 * ... * 'an]. *)
+    (** A pointer to a tuple in a pool.  ['slots] will look like [('a1, ..., 'an)
+        Slots.tn], and the tuples have type ['a1 * ... * 'an]. *)
     type 'slots t with sexp_of
 
     (** The [null] pointer is a distinct pointer that does not correspond to a tuple in
@@ -50,8 +50,8 @@ module type S = sig
     end
   end
 
-  (** The type of a pool.  ['slots] will look like [('a1, ..., 'an) Slots.tn], and the
-      pool holds tuples of type ['a1 * ... * 'an]. *)
+  (** A pool.  ['slots] will look like [('a1, ..., 'an) Slots.tn], and the pool holds
+      tuples of type ['a1 * ... * 'an]. *)
   type 'slots t with sexp_of
 
   include Invariant.S1 with type 'a t := 'a t
@@ -167,18 +167,22 @@ module type S = sig
   val get_tuple : (('tuple, _) Slots.t as 'slots) t -> 'slots Pointer.t -> 'tuple
 
   (** [get t pointer slot] gets [slot] of the tuple pointed to by [pointer] in
-      pool [t].  In the usual way with manual memory management, it is an error to refer
-      to a pointer that has been [free]d.  It is also an error to use a pointer with any
-      pool other than the one the pointer was [new]'d from or [grow]n to.
+      pool [t].
 
-      [unsafe_get] is like [get], but skips bounds checking, and can thus segfault.
+      [set t pointer slot a] sets to [a] the [slot] of the tuple pointed to by [pointer]
+      in pool [t].
+
+      In [get] and [set], it is an error to refer to a pointer that has been [free]d.  It
+      is also an error to use a pointer with any pool other than the one the pointer was
+      [new]'d from or [grow]n to.  These errors will lead to undefined behavior, but will
+      not segfault.
+
       [unsafe_get] is comparable in speed to [get] for immediate values, and 5%-10% faster
-      for pointers.  Since the difference is so small, one should as usual be very
-      convinced of the speed benefit before using these and introducing the possibility of
-      segfaults. *)
+      for pointers.
+
+      [unsafe_get] and [unsafe_set] skip bounds checking, and can thus segfault. *)
   val get
-    :  ((_, 'variant) Slots.t as 'slots) t
-    -> 'slots Pointer.t
+    :  ((_, 'variant) Slots.t as 'slots) t -> 'slots Pointer.t
     -> ('variant, 'slot) Slot.t
     -> 'slot
   val unsafe_get
@@ -186,13 +190,6 @@ module type S = sig
     -> 'slots Pointer.t
     -> ('variant, 'slot) Slot.t
     -> 'slot
-
-  (** [set t pointer slot a] sets to [a] the [slot] of the tuple pointed to by [pointer]
-      in pool [t].  In the usual way with manual memory management, it is an error to
-      refer to a pointer that has been [free]d.  It is also an error to use a pointer with
-      any pool other than the one the pointer was [new]'d from or [grow]n to.
-
-      [unsafe_set] is like [set], but skips bounds checking, and can thus segfault. *)
   val set
     :  ((_, 'variant) Slots.t as 'slots) t
     -> 'slots Pointer.t
@@ -211,16 +208,10 @@ module type Pool = sig
 
   module type S = S
 
-  (** [Obj_array] is an efficient implementation of pools that uses a single chunk of
-      memory, and is what an application should ultimately use.  We expose that
-      [Pointer.t] is an [int] so that OCaml can avoid the write barrier, due to knowing
-      that [Pointer.t] isn't an OCaml pointer. *)
-  module Obj_array : S with type 'a Pointer.t = private int
-
-  (** [None] is an inefficient implementation of pools that uses OCaml's memory allocator
-      to allocate each object.  It is useful for debugging [Obj_array], as well as
-      debugging client code that may be misusing pointers. *)
-  module None : S
+  (** This uses an [Obj_array.t] to implement the pool.  We expose that [Pointer.t] is an
+      [int] so that OCaml can avoid the write barrier, due to knowing that [Pointer.t]
+      isn't an OCaml pointer. *)
+  include S with type 'a Pointer.t = private int
 
   (** [Debug] builds a pool in which every function can run [invariant] on its pool
       argument(s) and/or print a debug message to stderr, as determined by
@@ -236,7 +227,7 @@ module type Pool = sig
   end
 
   (** [Error_check] builds a pool that has additional error checking for pointers, in
-      particular to catch using a freed pointer or multiply freeing a pointer.
+      particular to detect using a [free]d pointer or multiply [free]ing a pointer.
 
       [Error_check] has a significant performance cost, but less than that of [Debug].
 

@@ -32,6 +32,12 @@ module Make (M : Make_arg) = struct
     Error.raise e;
   ;;
 
+  let known =
+    if M.remove_zero_flags then
+      List.filter ~f:(fun (n, _) -> not (Int63.equal n Int63.zero)) M.known
+    else M.known
+  ;;
+
   let () =
     if not M.allow_intersecting then begin
       let rec check l ac =
@@ -42,17 +48,24 @@ module Make (M : Make_arg) = struct
           let ac = if List.is_empty bad then ac else (flag, name, bad) :: ac in
           check l ac
       in
-      let bad = check M.known [] in
+      let bad = check known [] in
       if not (List.is_empty bad) then
         error "Flags.Make got intersecting flags" bad
           (<:sexp_of< (t * string * (t * string) list) list >>);
     end;
   ;;
 
+  let () =
+    let bad = List.filter known ~f:(fun (flag, _) -> flag = zero) in
+    if not (List.is_empty bad) then
+      error "Flag.Make got flags with no bits set" bad
+        (<:sexp_of< (t * string) list >>)
+  ;;
+
   let sexp_of_t =
     (* We reverse [known] so that the fold below accumulates from right to left, giving a
        final list with elements in the same order as [known]. *)
-    let known = List.rev M.known in
+    let known = List.rev known in
     fun t ->
       let leftover, flag_names =
         List.fold known ~init:(t, []) ~f:(fun (t, flag_names) (flag, flag_name) ->
@@ -79,6 +92,7 @@ TEST =
               let known = [ Int63.of_int 0x1, "";
                             Int63.of_int 0x1, "";
                           ]
+              let remove_zero_flags = false
             end)
       in
       ()))
@@ -112,6 +126,7 @@ TEST_MODULE = struct
         c, "c";
       ]
     ;;
+    let remove_zero_flags = false
   end)
 
   (* [sexp_of_t] *)

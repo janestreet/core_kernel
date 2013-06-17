@@ -46,6 +46,16 @@ module type Make_arg = sig
       It is an error if different flags intersect, and [allow_intersecting = false]. *)
   val known : (Int63.t * string) list
 
+  (* If [remove_zero_flags], then all flags with value zero will be automatically removed
+     from [known].  If [not remove_zero_flags], then it is an error for [known] to contain
+     any flags with value zero.
+
+     About this existence of this option: it seems better to make it an option here rather
+     than do the filtering at the functor call site.  It also makes clear to callers that
+     they need to think about zero flags, and clear what they can do if they encounter
+     them. *)
+  val remove_zero_flags : bool
+
   (** [allow_intersecting] says whether to allow intersecting [known] flags.  It is
       common to do [allow_intersecting = false], however in some situations, e.g.
       Unix open flags, the flags intersect. *)

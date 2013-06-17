@@ -19,6 +19,7 @@ module Debug (Flat_array : Flat_array) : Flat_array = struct
   let create    = create
   let invariant = invariant
   let length    = length
+  let slots     = slots
 
   let debug x = debug (invariant ignore) "Flat_array." x
 
@@ -46,6 +47,62 @@ module Debug (Flat_array : Flat_array) : Flat_array = struct
   let get_tuple t i =
     debug "get_tuple" [t] i <:sexp_of< int >> <:sexp_of< _ >>
       (fun () -> get_tuple t i)
+  ;;
+
+  let set_tuple t i v =
+    debug "set_tuple" [t] i <:sexp_of< int >> <:sexp_of< _ >>
+      (fun () -> set_tuple t i v)
+  ;;
+
+  let blit ~src ~src_pos ~dst ~dst_pos ~len =
+    debug "blit" [ src; dst ]
+      (`src_pos src_pos, `len len, `dst_pos dst_pos)
+      <:sexp_of<
+        [ `src_pos of int ]
+        * [ `len of int ]
+        * [ `dst_pos of int ]
+        >>
+      <:sexp_of< unit >>
+    (fun () -> blit ~src ~src_pos ~dst ~dst_pos ~len)
+  ;;
+
+  let unsafe_blit ~src ~src_pos ~dst ~dst_pos ~len =
+    debug "unsafe_blit" [ src; dst ]
+      (`src_pos src_pos, `len len, `dst_pos dst_pos)
+      <:sexp_of<
+        [ `src_pos of int ]
+        * [ `len of int ]
+        * [ `dst_pos of int ]
+        >>
+      <:sexp_of< unit >>
+    (fun () -> unsafe_blit ~src ~src_pos ~dst ~dst_pos ~len)
+  ;;
+
+  let blito ~src ?src_pos ?src_len ~dst ?dst_pos () =
+    debug "blito" [ src; dst ]
+      (`src_pos src_pos, `src_len src_len, `dst_pos dst_pos)
+      <:sexp_of<
+        [ `src_pos of int option ]
+        * [ `src_len of int option ]
+        * [ `dst_pos of int option ]
+        >>
+      <:sexp_of< unit >>
+    (fun () -> blito ~src ?src_pos ?src_len ~dst ?dst_pos ())
+  ;;
+
+  let sub t ~pos ~len =
+    debug "sub" [ t ] (`pos pos, `len len)
+      <:sexp_of< [ `pos of int ] * [ `len of int ] >>
+      <:sexp_of< _ t >>
+    (fun () -> sub t ~pos ~len)
+  ;;
+
+  let subo ?pos ?len t =
+    debug "subo" [ t ]
+      (`pos pos, `len len)
+      <:sexp_of< [ `pos of int option ] * [ `len of int option ] >>
+      <:sexp_of< _ t >>
+    (fun () -> subo ?pos ?len t)
   ;;
 
 end

@@ -101,18 +101,10 @@ external is_mmapped : t -> bool = "bigstring_is_mmapped_stub" "noalloc"
 
     @raise Invalid_argument if the designated ranges are out of bounds.
 *)
-type ('src, 'dst) blit
-  =  src : 'src
-  -> ?src_pos : int
-  -> ?src_len : int
-  -> dst : 'dst
-  -> ?dst_pos : int
-  -> unit
-  -> unit
 
-val blit                  : (t     , t     ) blit
-val blit_string_bigstring : (string, t     ) blit
-val blit_bigstring_string : (t     , string) blit
+include Blit.S with type t := t
+module To_string   : Blit.S_distinct with type src := t      with type dst := string
+module From_string : Blit.S_distinct with type src := string with type dst := t
 
 (** {6 Memory mapping} *)
 
@@ -120,33 +112,6 @@ val map_file : shared : bool -> Unix.file_descr -> int -> t
 (** [map_file shared fd n] memory-maps [n] characters of the data
     associated with descriptor [fd] to a bigstring.  Iff [shared] is
     [true], all changes to the bigstring will be reflected in the file. *)
-
-
-(** {6 Unsafe functions} *)
-
-
-external unsafe_blit :
-  src : t -> src_pos : int -> dst : t -> dst_pos : int -> len : int -> unit
-  = "bigstring_blit_stub"
-(** [unsafe_blit ~src ~src_pos ~dst ~dst_pos ~len] similar to
-    {!Bigstring.blit}, but does not perform any bounds checks.  Will crash
-    on bounds errors!  Owing to special handling for very large copies,
-    [bigstring_blit_stub] may call Caml runtime functions, and hence
-    cannot be flagged as noalloc. *)
-
-external unsafe_blit_string_bigstring :
-  src : string -> src_pos : int -> dst : t -> dst_pos : int -> len : int -> unit
-  = "bigstring_blit_string_bigstring_stub" "noalloc"
-(** [unsafe_blit_string_bigstring ~src ~src_pos ~dst ~dst_pos ~len]
-    similar to {!Bigstring.blit_string_bigstring}, but does not perform
-    any bounds checks.  Will crash on bounds errors! *)
-
-external unsafe_blit_bigstring_string :
-  src : t -> src_pos : int -> dst : string -> dst_pos : int -> len : int -> unit
-  = "bigstring_blit_bigstring_string_stub" "noalloc"
-(** [unsafe_blit_bigstring_string ~src ~src_pos ~dst ~dst_pos ~len]
-    similar to {!Bigstring.blit_bigstring_string}, but does not perform
-    any bounds checks.  Will crash on bounds errors! *)
 
 (** {6 Search} *)
 

@@ -27,18 +27,13 @@ let () =
   assert (check ~expected:1 ~f:(fun () -> array_obj_set array_obj 0 v));
 ;;
 
-module Test (Pool : Pool.S) = struct
-  open Pool
-  let () =
-    let p = create Slots.t3 ~capacity:3 ~dummy:(Pointer.null (), 0, "") in
-    let e = new3 p (Pointer.null ()) 0 "" in
-    let v = Int.to_string (Random.int 42) in
-    let n = if Obj.is_int (Obj.repr e) then 0 else 1 in
-    assert (check ~expected:n ~f:(fun () -> set p e Slot.t0 e));
-    assert (check ~expected:0 ~f:(fun () -> set p e Slot.t1 0));
-    assert (check ~expected:1 ~f:(fun () -> set p e Slot.t2 v));
-  ;;
-end
+let () =
+  let open Pool in
+  let p = create Slots.t3 ~capacity:3 ~dummy:(Pointer.null (), 0, "") in
+  let e = new3 p (Pointer.null ()) 0 "" in
+  let v = Int.to_string (Random.int 42) in
+  let n = if Obj.is_int (Obj.repr e) then 0 else 1 in
+  assert (check ~expected:n ~f:(fun () -> set p e Slot.t0 e));
+  assert (check ~expected:0 ~f:(fun () -> set p e Slot.t1 0));
+  assert (check ~expected:1 ~f:(fun () -> set p e Slot.t2 v));
 
-include Test (Pool.None)
-include Test (Pool.Obj_array)

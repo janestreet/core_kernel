@@ -1,8 +1,6 @@
 open Std_internal
 open Import
 
-let debug = false
-
 type t = Obj.t array
 
 let length = Array.length
@@ -17,6 +15,8 @@ let sexp_of_t t =
 let zero_obj = Obj.repr (0 : int)
 
 let create ~len = Array.create ~len zero_obj
+
+let copy t = Array.copy t
 
 let singleton obj = Array.create ~len:1 obj
 
@@ -63,7 +63,6 @@ let unsafe_set t i obj =
     Array.unsafe_set t i obj
 ;;
 
-
 let unsafe_set_int_assuming_currently_int t i int =
   Array.unsafe_set (Obj.magic (t : t) : int array) i int
 ;;
@@ -78,21 +77,9 @@ let unsafe_set_assuming_currently_int t i obj =
     Array.unsafe_set t i obj
 ;;
 
-module Blit_arg = struct
-  type nonrec t =
-    { src : t;
-      src_pos : int;
-      dst : t;
-      dst_pos : int;
-      len : int
-    }
-  with sexp_of
-end
-
+(** [unsafe_blit] is like [Array.blit], except it uses our own for-loop to avoid
+    caml_modify when possible.  Its performance is still not comparable to a memcpy. *)
 let unsafe_blit ~src ~src_pos ~dst ~dst_pos ~len =
-  if debug then
-    log "unsafe_blit" { Blit_arg. src; src_pos; dst; dst_pos; len }
-      (<:sexp_of< Blit_arg.t >>);
   (* When [phys_equal src dst], we need to check whether [dst_pos < src_pos] and have the
      for loop go in the right direction so that we don't overwrite data that we still need
      to read.  When [not (phys_equal src dst)], doing this is harmless.  From a
@@ -110,25 +97,21 @@ let unsafe_blit ~src ~src_pos ~dst ~dst_pos ~len =
     done;
 ;;
 
-let copy t = Array.copy t
-
-let blit ~src ~src_pos ~dst ~dst_pos ~len =
-  if len < 0
-  || src_pos < 0
-  || len > length src - src_pos
-  || dst_pos < 0
-  || len > length dst - dst_pos
-  then
-    failwiths "Obj_array.blit got invalid arguments"
-      { Blit_arg. src; src_pos; dst; dst_pos; len }
-      (<:sexp_of< Blit_arg.t >>);
-  unsafe_blit ~src ~src_pos ~dst ~dst_pos ~len;
-;;
-
-let sub t ~pos ~len =
-  let t' = create ~len in
-  blit ~src:t ~src_pos:pos ~dst:t' ~dst_pos:0 ~len;
-  t'
+include
+  Blit.Make
+    (struct
+      type t = Obj.t
+      let equal = phys_equal
+      let of_bool b = Obj.repr (if b then 1 else 2 : int)
+    end)
+    (struct
+      type nonrec t = t with sexp_of
+      let create = create
+      let get = get
+      let set = set
+      let length = length
+      let unsafe_blit = unsafe_blit
+    end)
 ;;
 
 let truncate t ~len = Obj.truncate (Obj.repr (t : t)) len
@@ -151,21 +134,6 @@ TEST = phys_equal (get (singleton zero_obj) 0) zero_obj
 
 TEST = does_fail (fun () -> get (singleton zero_obj) 1)
 
-(* [sub] *)
-TEST = length (sub empty ~pos:0 ~len:0) = 0
-
-TEST = does_fail (fun () -> sub empty ~pos:0 ~len:1)
-
-TEST = does_fail (fun () -> sub empty ~pos:1 ~len:0)
-
-TEST_UNIT =
-  let t = sub (create ~len:4) ~pos:1 ~len:2 in
-  assert (length t = 2);
-  for i = 0 to 1 do
-    assert (phys_equal (get t i) zero_obj);
-  done;
-;;
-
 (* [get], [unsafe_get], [set], [unsafe_set], [unsafe_set_assuming_currently_int] *)
 TEST_UNIT =
   let t = create ~len:1 in
@@ -184,71 +152,6 @@ TEST_UNIT =
   unsafe_set_assuming_currently_int t 0 one_obj;
   check_get one_obj;
 ;;
-
-(* [blit] *)
-
-TEST_MODULE = struct
-  let test ~src ~dst tests =
-    List.iter tests
-      ~f:(fun (src_pos, dst_pos, len, expect_ok) ->
-        assert (
-          Bool.equal
-            expect_ok
-            (Result.is_ok (Result.try_with (fun () ->
-                             blit ~src ~src_pos ~dst ~dst_pos ~len)))))
-  ;;
-
-  TEST_UNIT =
-    test ~src:empty ~dst:empty
-      [ 0, 0, -1, false;
-        0, 0, 0, true;
-        0, 0, 1, false;
-        1, 0, 0, false;
-        0, 1, 0, false;
-        -1, 0, 0, false;
-        0, -1, 0, false;
-        0, 0, Int.min_value, false;
-        0, 0, Int.max_value, false;
-      ]
-  ;;
-
-  TEST_UNIT =
-    test ~src:(create ~len:1) ~dst:(create ~len:1)
-      [ 0, 0, -1, false;
-        0, 0, 0, true;
-        0, 0, 1, true;
-        0, 0, 2, false;
-        -1, 0, 0, false;
-        0, -1, 0, false;
-        1, 0, -1, false;
-        1, 0, 0, true;
-        1, 0, 1, false;
-        0, 1, -1, false;
-        0, 1, 0, true;
-        0, 1, 1, false;
-        0, 0, Int.min_value, false;
-        0, 0, Int.max_value, false;
-        1, 1, Int.min_value, false;
-        1, 1, Int.max_value, false;
-      ]
-  ;;
-
-  TEST_UNIT =
-    (* Test overlapping src/dst *)
-    let of_list l =
-      let arr = create ~len:(List.length l) in
-      List.iteri l ~f:(fun i x -> unsafe_set_int_assuming_currently_int arr i x);
-      arr
-    in
-    let src = of_list [0;1;2;3;4;5;6;7;8;9] in
-    blit ~src ~src_pos:3 ~dst:src ~dst_pos:0 ~len:7;
-    let expected = of_list [3;4;5;6;7;8;9;7;8;9] in
-    assert (Array.equal src expected ~equal:phys_equal);
-    let src = of_list [0;1;2;3;4;5;6;7;8;9] in
-    blit ~src ~src_pos:0 ~dst:src ~dst_pos:3 ~len:7;
-    let expected = of_list [0;1;2;0;1;2;3;4;5;6] in
-    assert (Array.equal src expected ~equal:phys_equal);
-end
 
 (* [truncate] *)
 TEST = does_fail (fun () -> truncate empty ~len:0)
@@ -270,4 +173,3 @@ TEST_UNIT =
   truncate t ~len:1;
   assert (length t = 1);
 ;;
-

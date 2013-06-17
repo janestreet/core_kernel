@@ -29,7 +29,6 @@ type elt = char
 let max_length = Caml.Sys.max_string_length
 
 (* Standard functions *)
-let blit = String.blit
 let capitalize = String.capitalize
 let concat ?(sep="") l = String.concat ~sep l
 let copy = String.copy
@@ -41,7 +40,6 @@ let lowercase = String.lowercase
 let make = String.make
 let rindex_exn = String.rindex
 let rindex_from_exn = String.rindex_from
-let sub = String.sub
 let uncapitalize = String.uncapitalize
 let uppercase = String.uppercase
 external create : int -> string = "caml_create_string"
@@ -50,6 +48,23 @@ external unsafe_get : string -> int -> char = "%string_unsafe_get"
 external length : string -> int = "%string_length"
 external set        : string -> int -> char -> unit = "%string_safe_set"
 external unsafe_set : string -> int -> char -> unit = "%string_unsafe_set"
+
+include
+  Blit.Make
+    (struct
+      type t = char
+      let equal = (=)
+      let of_bool b = if b then 'a' else 'b'
+    end)
+    (struct
+      type nonrec t = t with sexp_of
+      let create ~len = create len
+      let length = length
+      let get = get
+      let set = set
+      let unsafe_blit = String.unsafe_blit
+    end)
+;;
 
 let contains ?pos ?len t char =
   let (pos, len) =

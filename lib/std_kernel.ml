@@ -9,6 +9,7 @@ module Bin_prot               = Core_bin_prot
 module Binable                = Binable
 module Binary_packing         = Binary_packing
 module Blang                  = Blang
+module Blit                   = Blit
 module Bounded_int_table      = Bounded_int_table
 module Bucket                 = Bucket
 module Byte_units             = Byte_units
@@ -100,4 +101,4 @@ include T
 
 type 'a _bound = 'a Comparable.bound = Incl of 'a | Excl of 'a | Unbounded
 
-let _make_sure_pool_pointer_is_an_int x = (x : _ Pool.Obj_array.Pointer.t :> int)
+let _make_sure_pool_pointer_is_an_int x = (x : _ Pool.Pointer.t :> int)

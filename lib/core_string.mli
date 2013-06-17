@@ -3,8 +3,9 @@
 
 type t = string with bin_io, sexp
 
-include Identifiable.S  with type t := t
-include Container   .S0 with type t := t with type elt = char
+include Blit.S         with type t := t
+include Container.S0   with type t := t with type elt = char
+include Identifiable.S with type t := t
 
 (** Maximum length of a string. *)
 val max_length : int
@@ -20,11 +21,7 @@ val make : int -> char -> t
 val copy : t -> t
 val init : int -> f:(int -> char) -> t
 
-val sub : t -> pos:int -> len:int -> t
-
 val fill : t -> pos:int -> len:int -> char -> unit
-
-val blit : src:t -> src_pos:int -> dst:t -> dst_pos:int -> len:int -> unit
 
 (** concatanate all strings in the list using separator [sep] (default sep "") *)
 val concat : ?sep:t -> t list -> t

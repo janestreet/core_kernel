@@ -258,5 +258,4 @@ end) = struct
   ;;
 end
 
-TEST_MODULE = Test (Pool.Debug (Pool.None))
-TEST_MODULE = Test (Pool.Debug (Pool.Obj_array))
+TEST_MODULE = Test (Pool.Debug (Pool))

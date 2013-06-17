@@ -6,8 +6,7 @@ module List = Core_list
 
 let invalid_argf = Core_printf.invalid_argf
 
-type 'a t   = 'a array with sexp, bin_io
-type 'a sub = 'a t -> pos:int -> len:int -> 'a t
+type 'a t = 'a array with sexp, bin_io
 
 (* This module implements a new in-place, constant heap sorting algorithm to replace the
    one used by the standard libraries.  It's only purpose is to be faster (hopefully
@@ -319,7 +318,6 @@ let sort ?pos ?len arr ~cmp =
 
 (* Standard functions *)
 let append                = Array.append
-let blit                  = Array.blit
 let concat                = Array.concat
 let copy                  = Array.copy
 let fill                  = Array.fill
@@ -699,197 +697,85 @@ let cartesian_product t1 t2 =
     t
 ;;
 
-(* see OCaml perf notes for why these array blits are special cased -- in particular, the
-   section entitled "Fast, Slow and Incorrect Array blits" of
-   http://docs/programming/performance/ocaml-perf-notes.html
-*)
-external unsafe_int_blit
-  : src:int array -> src_pos:int -> dst:int array -> dst_pos:int -> len:int -> unit
-  = "core_array_unsafe_int_blit" "noalloc"
+module Sequence = struct
+  let length = length
+  let get = get
+  let set = set
+end
 
-external unsafe_float_blit
-  : src:float array -> src_pos:int -> dst:float array -> dst_pos:int -> len:int -> unit
-  = "core_array_unsafe_float_blit" "noalloc"
+include
+  Blit.Make1
+    (struct
+      type nonrec 'a t = 'a t with sexp_of
+      type 'a z = 'a
+      include Sequence
+      let create_like ~len t =
+        if len = 0
+        then [||]
+        else (assert (length t > 0); create ~len t.(0))
+      ;;
+      let unsafe_blit = Array.blit
+      let create_bool ~len = create ~len false
+    end)
+;;
 
-let array_bounds_check loc var arr ~pos ~len =
-  let total_len = Array.length arr in
-  if pos < 0 then
-    invalid_argf "%s: %s < 0" loc var ()
-  else if pos + len > total_len then
-    invalid_argf "%s: pos (%d) + len (%d) > total_len (%d)"
-      loc pos len total_len ()
+(* See OCaml perf notes for why these array blits are special cased -- in particular,
+   the section entitled "Fast, Slow and Incorrect Array blits" of
+   http://docs/programming/performance/ocaml-perf-notes.html *)
+module Int = struct
 
-let blit_bounds_checks loc ~src ~src_pos ~dst ~dst_pos ~len =
-  if len < 0 then invalid_argf "%s: len < 0" loc ();
-  array_bounds_check loc "src_pos" src ~pos:src_pos ~len;
-  array_bounds_check loc "dst_pos" dst ~pos:dst_pos ~len
+  type t = int array with bin_io, compare, sexp
 
-let int_blit ~src ~src_pos ~dst ~dst_pos ~len =
-  blit_bounds_checks "Array.int_blit" ~src ~src_pos ~dst ~dst_pos ~len;
-  unsafe_int_blit ~src ~dst ~src_pos ~dst_pos ~len
-
-let float_blit ~src ~src_pos ~dst ~dst_pos ~len =
-  blit_bounds_checks "Array.float_blit" ~src ~src_pos ~dst ~dst_pos ~len;
-  unsafe_float_blit ~src ~dst ~src_pos ~dst_pos ~len
-
-let sub_bounds_checks loc ~src ~pos ~len =
-  if len < 0 then invalid_argf "%s: len < 0" loc ();
-  array_bounds_check loc "pos" src ~pos ~len
-
-let float_sub src ~pos ~len =
-  sub_bounds_checks "Array.float_sub" ~src ~pos ~len;
-  if len = 0 then [||] else begin
-    let dst = create ~len 0.0 in
-    unsafe_float_blit ~src ~dst ~src_pos:pos ~dst_pos:0 ~len;
-    dst
+  module Unsafe_blit = struct
+    external unsafe_blit
+    : src:t -> src_pos:int -> dst:t -> dst_pos:int -> len:int -> unit
+      = "core_array_unsafe_int_blit" "noalloc"
   end
 
-let int_sub src ~pos ~len =
-  sub_bounds_checks "Array.int_sub" ~src ~pos ~len;
-  if len = 0 then [||] else begin
-    let dst = create ~len 0 in
-    unsafe_int_blit ~src ~dst ~src_pos:pos ~dst_pos:0 ~len;
-    dst
+  include
+    Blit.Make
+      (struct
+        type t = int
+        let equal = (=)
+        let of_bool b = if b then 1 else 0
+      end)
+      (struct
+        type nonrec t = t with sexp_of
+        include Sequence
+        let create ~len = create ~len 0
+        include Unsafe_blit
+      end)
+  ;;
+
+  include Unsafe_blit
+
+end
+
+module Float = struct
+
+  type t = float array with bin_io, compare, sexp
+
+  module Unsafe_blit = struct
+    external unsafe_blit
+      : src:t -> src_pos:int -> dst:t -> dst_pos:int -> len:int -> unit
+      = "core_array_unsafe_float_blit" "noalloc"
   end
 
-TEST_MODULE "type-specific blit/sub" = struct
+  include
+    Blit.Make
+      (struct
+        type t = float
+        let equal = (=)
+        let of_bool b = if b then 1. else 0.
+      end)
+      (struct
+        type nonrec t = t with sexp_of
+        include Sequence
+        let create ~len = create ~len 0.
+        include Unsafe_blit
+      end)
+  ;;
 
-  module Tests (X : sig
-    type elt
-    val a : elt
-    val b : elt
-    val c : elt
-    val d : elt
-    val z : elt
-    val blit : src:elt t -> src_pos:int -> dst:elt t -> dst_pos:int -> len:int -> unit
-    val sub : elt t -> pos:int -> len:int -> elt t
-  end) = struct
-
-    open X
-
-    TEST =
-      let src = [||] in
-      let dst = [||] in
-      blit ~src ~dst ~src_pos:0 ~dst_pos:0 ~len:0;
-      src = dst
-
-    TEST =
-      let src = [|a; b; c; d|] in
-      let dst = [|z; z; z; z|] in
-      blit ~src ~dst ~src_pos:0 ~dst_pos:0 ~len:4;
-      src = dst
-
-    TEST =
-      let src = [|a; b; c; d|] in
-      let res = [|a; b; a; b|] in
-      blit ~src ~dst:src ~src_pos:0 ~dst_pos:2 ~len:2;
-      src = res
-
-    TEST =
-      let src = [|a; b; c; d|] in
-      let res = [|a; a; b; c|] in
-      blit ~src ~dst:src ~src_pos:0 ~dst_pos:1 ~len:3;
-      src = res
-
-    TEST =
-      let src = [|a; b; c; d|] in
-      let res = [|b; c; d; d|] in
-      blit ~src ~dst:src ~src_pos:1 ~dst_pos:0 ~len:3;
-      src = res
-
-    TEST =
-      let src = [|a; b; c; d|] in
-      let res = [|a; b; c; d|] in
-      blit ~src ~dst:src ~src_pos:0 ~dst_pos:0 ~len:4;
-      src = res
-
-    TEST =
-      Result.is_error
-        (Result.try_with
-           (fun () ->
-             let src = [|a; b; c|] in
-             let dst = [|a; b; c; d|] in
-             blit ~src ~src_pos:(-1) ~dst ~dst_pos:1 ~len:2))
-
-    TEST =
-      Result.is_error
-        (Result.try_with
-           (fun () ->
-             let src = [|a; b; c|] in
-             let dst = [|a; b; c; d|] in
-             blit ~src ~src_pos:1 ~dst ~dst_pos:(-1) ~len:2))
-
-    TEST =
-      Result.is_error
-        (Result.try_with
-           (fun () ->
-             let src = [|a; b; c|] in
-             let dst = [|a; b; c; d|] in
-             blit ~src ~src_pos:1 ~dst ~dst_pos:1 ~len:(-1)))
-
-    TEST =
-      Result.is_error
-        (Result.try_with
-           (fun () ->
-             let src = [|a; b; c|] in
-             let dst = [|a; b; c; d|] in
-             blit ~src ~src_pos:1 ~dst ~dst_pos:1 ~len:3))
-
-    TEST =
-      Result.is_error
-        (Result.try_with
-           (fun () ->
-             let src = [|a; b; c; d|] in
-             let dst = [|a; b; c|] in
-             blit ~src ~src_pos:1 ~dst ~dst_pos:1 ~len:3))
-
-    TEST =
-      let src = [|a; b; c; d|] in
-      let copy = sub src ~pos:0 ~len:4 in
-      src = copy
-
-    TEST =
-      let src = [|a; b; c; d|] in
-      let copy = sub src ~pos:1 ~len:2 in
-      let res = [|b; c|] in
-      copy = res
-
-    TEST =
-      Result.is_error
-        (Result.try_with
-           (fun () ->
-             let src = [|a; b; c; d|] in
-             sub src ~pos:(-1) ~len:2))
-
-    TEST =
-      Result.is_error
-        (Result.try_with
-           (fun () ->
-             let src = [|a; b; c; d|] in
-             sub src ~pos:1 ~len:(-1)))
-
-    TEST =
-      Result.is_error
-        (Result.try_with
-           (fun () ->
-             let src = [|a; b; c; d|] in
-             sub src ~pos:1 ~len:4))
-  end
-
-  module Test_int = Tests (struct
-    type elt = int
-    let a = 1 let b = 2 let c = 3 let d = 4
-    let z = 0
-    let blit = int_blit
-    let sub = int_sub
-  end)
-
-  module Test_float = Tests (struct
-    type elt = float
-    let a = 1. let b = 2. let c = 3. let d = 4.
-    let z = 0.
-    let blit = float_blit
-    let sub = float_sub
-  end)
+  include Unsafe_blit
 
 end
