@@ -50,30 +50,38 @@ TEST_MODULE = struct
     done;
   ;;
 
+  (* [large_int] creates an integer constant that is not representable on 32bits
+     systems. *)
+  let large_int a b c d = (a lsl 48) lor (b lsl 32) lor (c lsl 16) lor d
+
   (* Test for past bugs with very small tables and collisions *)
   TEST_UNIT "tiny map, colliding keys" =
     let tbl = Hashtbl.create ~size:3 () in
-    Hashtbl.set tbl ~key:3146414644118347 ~data:0;
-    assert((Hashtbl.find_exn tbl 3146414644118347) = 0);
-    Hashtbl.set tbl ~key:5455654276678475 ~data:1;
-    assert((Hashtbl.find_exn tbl 5455654276678475) = 1);
-    Hashtbl.set tbl ~key:151277324321611 ~data:2;
-    assert((Hashtbl.find_exn tbl 151277324321611) = 2);
+    let s1 = large_int 0x000b 0x2da5 0xbf2d 0xc34b in
+    let s2 = large_int 0x0013 0x61e3 0x7f2d 0xc34b in
+    let s3 = large_int 0      0x8995 0xff2d 0xc34b in
+    Hashtbl.set tbl ~key:s1 ~data:0;
+    assert((Hashtbl.find_exn tbl s1) = 0);
+    Hashtbl.set tbl ~key:s2 ~data:1;
+    assert((Hashtbl.find_exn tbl s2) = 1);
+    Hashtbl.set tbl ~key:s3 ~data:2;
+    assert((Hashtbl.find_exn tbl s3) = 2);
   ;;
 
-  TEST_UNIT "collision test" =
+  TEST_UNIT "collision test" = if Int.num_bits >= 63 then begin
     (* Under identity hashing, this creates a collision and chain on bucket zero... *)
     let t = Hashtbl.create ~size:20 () in
-    let s1 = 128162763636736 in
-    let s2 = 2250965516288 in
+    let s1 = large_int 0 0x7490 0x3800 0x0000 in
+    let s2 = large_int 0 0x020c 0x1800 0x0000 in
     Hashtbl.add_exn t ~key:s1 ~data:0;
     assert ((Hashtbl.find_exn t s1) = 0);
     Hashtbl.add_exn t ~key:s2 ~data:1;
     assert ((Hashtbl.find_exn t s1) = 0);
     assert ((Hashtbl.find_exn t s2) = 1);
+  end
   ;;
 
-  TEST_UNIT "simple iter/fold" =
+  TEST_UNIT "simple iter/fold" = if Int.num_bits >= 63 then begin
     let tbl = Hashtbl.create ~size:64 () in
     let n = 100 in
     for i=1 to 100 do
@@ -90,6 +98,7 @@ TEST_MODULE = struct
     assert (fsum = !isum);
     let expected_sum = (n * (n+1)) / 2 in
     assert (fsum = expected_sum);
+  end
   ;;
 end
 
