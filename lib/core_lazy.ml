@@ -8,7 +8,7 @@ include (Lazy : module type of Lazy with type 'a t := 'a t)
 include Monad.Make (struct
   type nonrec 'a t = 'a t
 
-  let return x = lazy_from_val x
+  let return x = from_val x
 
   let bind t f = lazy (force (f (force t)))
 end)

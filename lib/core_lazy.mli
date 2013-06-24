@@ -42,15 +42,14 @@ external force : 'a t -> 'a = "%lazy_force"
 *)
 val force_val : 'a t -> 'a
 
-(** [lazy_from_fun f] is the same as [lazy (f ())] but slightly more
-    efficient. *)
-val lazy_from_fun : (unit -> 'a) -> 'a t
+(** [from_fun f] is the same as [lazy (f ())] but slightly more efficient. *)
+val from_fun : (unit -> 'a) -> 'a t
 
-(** [lazy_from_val v] returns an already-forced suspension of [v]
+(** [from_val v] returns an already-forced suspension of [v]
     This is for special purposes only and should not be confused with
     [lazy (v)]. *)
-val lazy_from_val : 'a -> 'a t
+val from_val : 'a -> 'a t
 
-(** [lazy_is_val x] returns [true] if [x] has already been forced and
+(** [is_val x] returns [true] if [x] has already been forced and
     did not raise an exception. *)
-val lazy_is_val : 'a t -> bool
+val is_val : 'a t -> bool

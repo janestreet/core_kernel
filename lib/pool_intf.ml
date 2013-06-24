@@ -163,7 +163,7 @@ module type S = sig
     -> 'slots Pointer.t
 
   (** [get_tuple t pointer] allocates an OCaml tuple isomorphic to the pool [t]'s tuple
-      pointed to by [pointer]. *)
+      pointed to by [pointer]. The tuple gets copied, but its slots do not. *)
   val get_tuple : (('tuple, _) Slots.t as 'slots) t -> 'slots Pointer.t -> 'tuple
 
   (** [get t pointer slot] gets [slot] of the tuple pointed to by [pointer] in

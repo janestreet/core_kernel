@@ -16,7 +16,7 @@ module Result = struct
 end
 
 let unit f =
-  let l = Lazy.lazy_from_fun f in
+  let l = Lazy.from_fun f in
   (fun () -> Lazy.force l)
 
 let unbounded (type a) ?hashable f =
