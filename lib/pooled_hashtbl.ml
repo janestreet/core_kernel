@@ -1,10 +1,29 @@
-open Std_internal
+open Sexplib
+open Sexplib.Conv
 open Core_hashtbl_intf
+open With_return
 
-module Hashable = Hashable
+module Binable = Binable0
+
+let failwiths = Error.failwiths
+
+module Hashable = Core_hashtbl_intf.Hashable
 
 let hash_param = Hashable.hash_param
 let hash       = Hashable.hash
+
+module Int = struct
+  type t = int
+
+  let max (x : t) y = if x > y then x else y
+
+  include Int_math
+end
+
+module List = Core_list
+module Array = Core_array
+
+let phys_equal = (==)
 
 module Entry : sig
   module Pool : sig
@@ -97,8 +116,8 @@ let load_factor = 0.85 ;;
 let calculate_table_size size =
   (* Ensure we can fit size elements in the table. *)
   let capacity = Int.ceil_pow2 size in
-  let n_entries = Float.iround_exn ~dir:`Up ((Float.of_int capacity) *. load_factor) in
-  (capacity, max size n_entries)
+  let n_entries = int_of_float (ceil (float capacity *. load_factor)) in
+  (capacity, Int.max size n_entries)
 ;;
 
 let create ?(growth_allowed = true) ?(size = 128) ~hashable () =

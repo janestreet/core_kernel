@@ -1,5 +1,3 @@
-open Import
-
 module type Slots = sig
   (** [Slots] has types [t1], ..., [t9] of arities 1 to 9 that are isomorphic to tuple
       types of the corresponding arities.  Type [('a0, ..., 'a<N-1>) t<N>] corresponds to

@@ -1,15 +1,23 @@
-open Std_internal
-open Import
+open Int_replace_polymorphic_compare
+
+module Sexp = Sexplib.Sexp
+module String = Caml.StringLabels
+module Array = Core_array
+
+let phys_equal = Caml.(==)
+
+let does_fail f = Result.is_error (Result.try_with f)
 
 type t = Obj.t array
 
 let length = Array.length
 
 let sexp_of_t t =
-  Sexp.Atom (concat [ "<Obj_array.t of length ";
-                      Int.to_string (length t);
-                      ">"
-                    ])
+  Sexp.Atom (String.concat ~sep:""
+               [ "<Obj_array.t of length ";
+                 string_of_int (length t);
+                 ">"
+               ])
 ;;
 
 let zero_obj = Obj.repr (0 : int)

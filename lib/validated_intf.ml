@@ -29,7 +29,23 @@ end
 
 module type Raw_binable = sig
   type t with bin_io
+
   include Raw with type t := t
+
+  (** [validate_binio_deserialization] controls whether when the binio representation of a
+      value is deserialized, the resulting value is validated.  Whether one needs to
+      validate values upon deserialization depends on how serialization is being used.  If
+      one only ever serializes/deserializes so that the validation function is the same on
+      both ends, then one need not validate upon deserialization, because only values that
+      already pass the validation function can be serialized.
+
+      If the validation functions in the serializer and deserializer may be different,
+      e.g. because of two different versions of the code compiled at different times, then
+      it is possible to serialize a value that may fail validation upon deserialization.
+      In that case, having [validate_binio_deserialization = true] is necessary to prevent
+      creating values that don't pass the validation function.
+  *)
+  val validate_binio_deserialization : bool
 end
 
 module type Validated = sig

@@ -140,6 +140,19 @@ let first_some x y =
 
 let some_if cond x = if cond then Some x else None
 
+let merge a b ~f =
+  match a, b with
+  | None, x | x, None -> x
+  | Some a, Some b -> Some (f a b)
+
+TEST_MODULE = struct
+  let f = (+)
+  TEST = merge None None ~f  = None
+  TEST = merge (Some 3) None ~f = Some 3
+  TEST = merge None (Some 3) ~f = Some 3
+  TEST = merge (Some 1) (Some 3) ~f = (Some 4)
+end
+
 let filter ~f = function
   | Some v as o when f v -> o
   | _ -> None

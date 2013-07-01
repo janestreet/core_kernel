@@ -25,6 +25,8 @@ let fails message a sexp_of_a =
 
 let fail message = [ { path = []; error = Error.of_string message } ]
 
+let failf format = Printf.ksprintf fail format
+
 let of_list = List.concat
 
 let name name t =

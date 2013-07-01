@@ -26,11 +26,7 @@ val is_none : 'a t -> bool
 (** [is_some t] returns true iff t = Some x. *)
 val is_some : 'a t -> bool
 
-(** [value_map t ~f ~default] is equivalent to [value (map t ~f) ~default], except that
-    it is slightly faster since it avoids creating the intermediate option.  I.e.
-
-      [value_map None     ~default ~f] = [default]
-      [value_map (Some x) ~default ~f] = [f x] *)
+(** [value_map ~default ~f] is the same as [function Some x -> f x | None -> default] *)
 val value_map : 'a t -> default:'b -> f:('a -> 'b) -> 'b
 
 (** [map2 o f] map 'a option and 'b option to a 'c option using ~f *)
@@ -66,6 +62,12 @@ val both : 'a t -> 'b t -> ('a * 'b) t
 val first_some : 'a t -> 'a t -> 'a t
 
 val some_if : bool -> 'a -> 'a t
+
+(** [merge a b ~f] merges together the values from [a] and [b] using [f].  If both [a] and
+    [b] are [None], returns [None].  If only one is [Some], returns that one, and if both
+    are [Some], returns [Some] of the result of applying [f] to the contents of [a] and
+    [b]. *)
+val merge : 'a t -> 'a t -> f:('a -> 'a -> 'a) -> 'a t
 
 val filter : f:('a -> bool) -> 'a t -> 'a t
 

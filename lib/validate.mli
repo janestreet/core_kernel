@@ -62,6 +62,9 @@ val pass      : t                       (** A result containing no errors *)
 val fail      : string -> t             (** A result containing a single error *)
 val fails     : string -> 'a -> ('a -> Sexplib.Sexp.t) -> t
 
+(** Like [sprintf] or [failwithf] but produces a [t] instead of a string or exception *)
+val failf     : ('a, unit, string, t) format4 -> 'a
+
 val of_list   : t list -> t             (** combine multiple results, merging errors *)
 val name      : string -> t -> t        (** extend location path by one name *)
 val name_list : string -> t list -> t

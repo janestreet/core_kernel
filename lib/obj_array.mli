@@ -1,20 +1,21 @@
 (** An array of [Obj.t]s.
 
     This is useful to have as its own type because we can implement faster [get] and [set]
-    functions that know that they aren't dealing with double arrays and save a test for
-    it.  We also have [set] avoid the write barrier (caml_modify) in certain situations.
+    functions that know that they aren't dealing with float arrays and save a test for it.
+    We also have [set] avoid the write barrier (caml_modify) in certain situations.
 
     Just like with a regular [Array], the elements are boxed so they don't get copied by
     [sub], [get], [set], [blit], etc.
-*)
 
-open Std_internal
-open Import
+    The dynamic check this array module implements is something we hope to have
+    implemented at a lower level (as part of the native compiler's code generation).
+    Given that, the interface is somewhat spartan and intended for use within internal
+    data structures.
+*)
 
 type t with sexp_of
 
 include Blit.S with type t := t
-
 
 (** [create ~len] returns an obj-array of length [len], all of whose indices have value
     [Obj.repr 0]. *)

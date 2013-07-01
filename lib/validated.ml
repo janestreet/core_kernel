@@ -30,30 +30,47 @@ module Make (Raw : Raw) = struct
 end
 
 module Make_binable (Raw : Raw_binable) = struct
+  type t = Raw.t
 
-  type t = Raw.t with bin_io
   include (Make (Raw) : Validated with type raw := Raw.t with type t := t)
+
+  include Bin_prot.Utils.Make_binable (struct
+    type t = Raw.t
+    module Binable = Raw
+    let of_binable raw =
+      if Raw.validate_binio_deserialization
+      then create_exn raw
+      else raw
+    ;;
+    let to_binable = Fn.id
+  end)
 end
 
 TEST_MODULE = struct
+
+  module Positive_int = struct
+    type t = int with bin_io, sexp
+    let validate t =
+      if t > 0
+      then Validate.pass
+      else Validate.fail "must be positive"
+    ;;
+  end
+
+  let does_fail f = Result.is_error (Result.try_with f)
+
   (* The [: Validated] is to remind us to add a unit test whenever the [Validated]
      interface changes. *)
   module M : Validated with type raw := int = struct
 
     module M = Make (struct
-      type t = int with sexp
       let here = _here_
-      let validate t =
-        if t > 0
-        then Validate.pass
-        else Validate.fail "must be positive"
+      include Positive_int
     end)
 
     open M
 
     type nonrec t = t
-
-    let does_fail f = Result.is_error (Result.try_with f)
 
     let t_of_sexp = t_of_sexp
     let sexp_of_t = sexp_of_t
@@ -91,5 +108,27 @@ TEST_MODULE = struct
     ;;
 
   end
+
+  module M1 = Make_binable (struct
+    let here = _here_
+    let validate_binio_deserialization = true
+    include Positive_int
+  end)
+
+  module M2 = Make_binable (struct
+    let here = _here_
+    let validate_binio_deserialization = false
+    include Positive_int
+  end)
+
+  let int = 0
+  let string = Binable.to_string (module Int) int
+  TEST = does_fail (fun () -> Binable.of_string (module M1) string)
+  TEST = (Binable.of_string (module M2) string) = int
+
+  let int = 1
+  let string = Binable.to_string (module Int) int
+  TEST = Binable.of_string (module M1) string = int
+  TEST = Binable.of_string (module M2) string = int
 
 end

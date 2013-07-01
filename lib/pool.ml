@@ -1,10 +1,46 @@
 INCLUDE "config.mlh"
 
-open Std_internal
-open Import  let _ = _squelch_unused_module_warning_
+open Int_replace_polymorphic_compare
+open Sexplib.Conv
+open Bin_prot.Std
 open Pool_intf
 
-module Int63 = Core_int63
+let failwiths = Error.failwiths
+let phys_equal = Caml.(==)
+
+module Sexp = Sexplib.Sexp
+module List = Core_list
+module Field = Core_field
+module Array = Core_array
+
+module Int = struct
+  let num_bits = Word_size.num_bits Word_size.word_size - 1
+  let max_value = Pervasives.max_int
+  let to_string = string_of_int
+end
+
+IFDEF ARCH_SIXTYFOUR THEN
+module Int63 = struct
+  type t = int with bin_io, sexp
+  let of_int i = i
+  let to_int_exn i = i
+end
+ELSE
+module Int63 = struct
+  type t = int64 with bin_io, sexp
+  let of_int = Int_conversions.int_to_int64
+  let to_int_exn = Int_conversions.int64_to_int_exn
+end
+ENDIF
+
+let eprintf = Core_printf.eprintf
+let sprintf = Core_printf.sprintf
+
+let log message a sexp_of_a =
+  eprintf "%s\n%!" (Sexp.to_string_hum (<:sexp_of< string * a >> (message, a)))
+;;
+
+let concat l = Caml.StringLabels.concat ~sep:"" l
 
 module type S = S
 

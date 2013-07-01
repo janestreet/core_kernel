@@ -1,5 +1,4 @@
-open Std_internal
-open Import  let _ = _squelch_unused_module_warning_
+open Sexplib.Conv
 
 include Tuple_type_intf
 
