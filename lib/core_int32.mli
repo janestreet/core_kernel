@@ -6,6 +6,8 @@
 
    Overflow issues are _not_ generally considered and explicitly handled.  This
    may be more of an issue for 32-bit ints than 64-bit ints.
+
+   [Int32.t] is boxed on both 32-bit and 64-bit machines.
 *)
 
 include Int_intf.S with type t = int32
