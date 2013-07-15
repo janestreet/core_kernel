@@ -181,8 +181,8 @@ val iter2_exn : 'a t -> 'b t -> f:('a -> 'b -> unit) -> unit
 
 val map2_exn : 'a t -> 'b t -> f:('a -> 'b -> 'c) -> 'c t
 
-val fold2_exn :
- 'a t
+val fold2_exn
+  :  'a t
   -> 'b t
   -> init:'c
   -> f:('c -> 'a -> 'b -> 'c)

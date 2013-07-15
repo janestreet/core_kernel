@@ -18,9 +18,8 @@ open Bigstring
     @param pos default = 0
     @param len default = [length buf - pos]
 *)
-val marshal_blit :
-  ?flags : Marshal.extern_flags list -> 'a ->
-  ?pos : int -> ?len : int -> t -> int
+val marshal_blit
+  : ?flags : Marshal.extern_flags list -> 'a -> ?pos : int -> ?len : int -> t -> int
 
 (** [marshal ?flags v] marshals value [v] to a bigstring using marshalling
     flags [flags].  This function may need two times more memory than

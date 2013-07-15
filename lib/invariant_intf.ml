@@ -51,16 +51,21 @@ module type Invariant = sig
   module type S2 = S2
   module type S3 = S3
 
-  (** [invariant name t sexp_of_t f] runs [f ()], and if [f] raises, wraps the exception
+  (** [invariant here t sexp_of_t f] runs [f ()], and if [f] raises, wraps the exception
       in an [Error.t] that states "invariant failed" and includes both the exception
       raised by [f], as well as [sexp_of_t t].  Idiomatic usage looks like:
 
       {[
-        invariant "Foo.invariant" t <:sexp_of< t >> (fun () ->
+        invariant _here_ t <:sexp_of< t >> (fun () ->
           ... check t's invariants ... )
       ]}
   *)
-  val invariant : string -> 'a -> ('a -> Sexp.t) -> (unit -> unit) -> unit
+  val invariant
+    :  Source_code_position0.t
+    -> 'a
+    -> ('a -> Sexp.t)
+    -> (unit -> unit)
+    -> unit
 
   (** [check_field] is used when checking invariants using [Fields.iter].  It wraps an
       exception raised when checking a field with the field's name.  Idiomatic usage looks

@@ -25,14 +25,16 @@ TEST_UNIT =
     assert (length (create Slots.t1 ~len ()) = len));
 ;;
 
-let copy       = copy
-let get        = get
-let unsafe_get = unsafe_get
-let set        = set
-let unsafe_set = unsafe_set
-let get_tuple  = get_tuple
-let set_tuple  = set_tuple
-let slots      = slots
+let copy          = copy
+let get           = get
+let get_all_slots = get_all_slots
+let is_init       = is_init
+let set           = set
+let set_all_slots = set_all_slots
+let set_to_init   = set_to_init
+let slots         = slots
+let unsafe_get    = unsafe_get
+let unsafe_set    = unsafe_set
 
 TEST_UNIT =
   let check (type tuple) (type variant) (type a)
@@ -45,20 +47,26 @@ TEST_UNIT =
       let tuple = make_tuple init in
       let changed_tuple = make_tuple changed in
       let t = create slots ~len tuple in
+      for i = 0 to len - 1 do
+        assert (is_init t i);
+      done;
       assert (phys_equal slots (Flat_array.slots t));
       let t_copy = copy t in
       assert (length t_copy = len);
       for i = 0 to len - 1 do
-        assert (Poly.equal (get_tuple t_copy i) tuple);
+        assert (Poly.equal (get_all_slots t_copy i) tuple);
         List.iter slot_list ~f:(fun slot -> set t_copy i slot changed);
+        assert (not (is_init t_copy i));
       done;
       (* Make sure changing [t_copy] didn't change [t]. *)
       for i = 0 to len - 1 do
-        assert (Poly.equal (get_tuple t i) tuple);
+        assert (Poly.equal (get_all_slots t i) tuple);
       done;
       (* Ensure invalid indices fail. *)
       List.iter [ -1; len ] ~f:(fun i ->
-        assert (does_fail (fun () -> get_tuple t i));
+        assert (does_fail (fun () -> is_init t i));
+        assert (does_fail (fun () -> set_to_init t i));
+        assert (does_fail (fun () -> get_all_slots t i));
         List.iter slot_list ~f:(fun slot ->
           assert (does_fail (fun () -> get t i slot))));
       List.iter
@@ -67,11 +75,14 @@ TEST_UNIT =
         ]
         ~f:(fun (get, set) ->
           for i = 0 to len - 1 do
-            assert (Poly.equal (get_tuple t i) tuple);
-            set_tuple t i changed_tuple;
-            assert (Poly.equal (get_tuple t i) changed_tuple);
-            set_tuple t i tuple;
+            assert (Poly.equal (get_all_slots t i) tuple);
+            set_all_slots t i changed_tuple;
+            assert (Poly.equal (get_all_slots t i) changed_tuple);
+            set_all_slots t i tuple;
             List.iter slot_list ~f:(fun changed_slot ->
+              set t i changed_slot changed;
+              Flat_array.set_to_init t i;
+              assert (Poly.equal (get t i changed_slot) init);
               set t i changed_slot changed;
               List.iter slot_list ~f:(fun slot ->
                 for j = 0 to len - 1 do

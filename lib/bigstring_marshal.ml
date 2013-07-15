@@ -3,8 +3,8 @@ open Std_internal
 
 (* Marshalling to/from bigstrings *)
 
-external unsafe_marshal_blit :
-  'a -> pos : int -> len : int -> t -> Marshal.extern_flags list -> int
+external unsafe_marshal_blit
+  : 'a -> pos : int -> len : int -> t -> Marshal.extern_flags list -> int
   = "bigstring_marshal_blit_stub"
 
 let marshal_blit ?(flags = []) v ?(pos = 0) ?len bstr =
@@ -18,16 +18,16 @@ external marshal : 'a -> Marshal.extern_flags list -> t
 
 let marshal ?(flags = []) x = marshal x flags
 
-external unsafe_marshal_data_size :
-  pos : int -> t -> int = "bigstring_marshal_data_size_stub"
+external unsafe_marshal_data_size
+  : pos : int -> t -> int = "bigstring_marshal_data_size_stub"
 
 let marshal_data_size ?(pos = 0) bstr =
   if pos < 0 || pos > length bstr - Marshal.header_size
   then invalid_arg "Bigstring.marshal_data_size"
   else unsafe_marshal_data_size ~pos bstr
 
-external unsafe_unmarshal :
-  pos : int -> len : int -> t -> 'a = "bigstring_unmarshal_stub"
+external unsafe_unmarshal
+  : pos : int -> len : int -> t -> 'a = "bigstring_unmarshal_stub"
 
 let unmarshal_next ?pos bstr =
   let pos =

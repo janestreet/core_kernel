@@ -68,8 +68,7 @@ module type Accessors = sig
   val clear : (_, _) t -> unit
   val copy : ('a, 'b) t -> ('a, 'b) t
   val invariant : (_, _) t -> unit
-  val fold :
-    ('a, 'b) t -> init:'c -> f:(key:'a key -> data:'b -> 'c -> 'c) -> 'c
+  val fold : ('a, 'b) t -> init:'c -> f:(key:'a key -> data:'b -> 'c -> 'c) -> 'c
   val iter : ('a, 'b) t -> f:(key:'a key -> data:'b -> unit) -> unit
   val existsi : ('a, 'b) t -> f:(key: 'a key -> data:'b -> bool) -> bool
   val exists : (_, 'b) t -> f:('b -> bool) -> bool

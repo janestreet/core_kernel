@@ -17,6 +17,9 @@ val ceil_pow2 : int -> int
     implementation may only be called for [x > 0]. *)
 val floor_pow2 : int -> int
 
+(** [is_pow2 x] returns true iff [x] is a power of 2.  [is_pow2] raises if [x <= 0]. *)
+val is_pow2 : int -> bool
+
 module Infix : sig
   (** mod and div operators that have the right behavior on negative numbers, that is, [x
       % y] always returns a value between 0 and [y-1].  Invariant:

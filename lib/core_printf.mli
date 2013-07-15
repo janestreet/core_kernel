@@ -8,12 +8,10 @@ val ifprintf : 'a ->                   ('r, 'a, unit) format -> 'r
 val sprintf  :                     ('r, unit, string) format -> 'r
 val bprintf  :       Buffer.t -> ('r, Buffer.t, unit) format -> 'r
 
-val kfprintf :
-  (out_channel -> 'a) -> out_channel -> ('r, out_channel, unit, 'a) format4 -> 'r
-val ksprintf :
-  (string -> 'a) -> ('r, unit, string, 'a) format4 -> 'r
-val kbprintf :
-  (Buffer.t -> 'a) -> Buffer.t -> ('r, Buffer.t, unit, 'a) format4 -> 'r
+val kfprintf
+  : (out_channel -> 'a) -> out_channel -> ('r, out_channel, unit, 'a) format4 -> 'r
+val ksprintf : (string -> 'a) -> ('r, unit, string, 'a) format4 -> 'r
+val kbprintf : (Buffer.t -> 'a) -> Buffer.t -> ('r, Buffer.t, unit, 'a) format4 -> 'r
 
 (** {6 Formatting error and exit functions} *)
 

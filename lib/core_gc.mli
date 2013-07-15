@@ -222,8 +222,8 @@ val delete_alarm : alarm -> unit
    to [a].  Calling [delete_alarm a] again has no effect. *)
 
 (** Adjust the specified GC parameters. *)
-val tune :
-  ?logger:(string -> unit)
+val tune
+  :  ?logger:(string -> unit)
   -> ?minor_heap_size:int
   -> ?major_heap_increment:int
   -> ?space_overhead:int

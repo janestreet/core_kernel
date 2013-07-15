@@ -1,9 +1,7 @@
 (** [normalize length_fun thing_with_length i] is just [i], unless
     [i] is negative, in which case it's [length_fun thing_with_length + i].
     This is used by various python-style slice functions. *)
-val normalize :
-  length_fun:('a -> int)
-    -> 'a -> int -> int
+val normalize : length_fun:('a -> int) -> 'a -> int -> int
 
 (* sweeks: We don't want to comment this function because Ron is OK with [slice] going
    away, and there are comments above each of the three [val slice]'s in the mli's where

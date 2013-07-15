@@ -63,8 +63,7 @@ type doc = string
 type usage_msg = string
 type anon_fun = (string -> unit)
 
-val parse :
-  (key * spec * doc) list -> anon_fun -> usage_msg -> unit
+val parse : (key * spec * doc) list -> anon_fun -> usage_msg -> unit
 (** [Arg.parse speclist anon_fun usage_msg] parses the command line.
     [speclist] is a list of triples [(key, spec, doc)].
     [key] is the option keyword, it must start with a ['-'] character.

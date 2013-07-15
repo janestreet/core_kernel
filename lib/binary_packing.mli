@@ -95,15 +95,15 @@ val pack_float   : byte_order:endian -> buf:string -> pos:int -> float -> unit
 (** Decode the fixed length padded string having length [len] from [buf] starting at
     [pos].  Return a string containing only the non-padding characters.  The default
     padding is '\x00'. *)
-val unpack_padded_fixed_string :
-  ?padding:char -> buf:string -> pos:int -> len:int -> unit -> string
+val unpack_padded_fixed_string
+  : ?padding:char -> buf:string -> pos:int -> len:int -> unit -> string
 
 (** Encode and pack the given string as a padded fixed length string having length [len].
     Place it in [buf] starting at position [pos].  If the length of the string is less
     then [len] pad it with the padding characters until its length is equal to [len].  If
     the string is longer than [len] raise [Invalid_argument].  The default padding is
     '\x00'. *)
-val pack_padded_fixed_string :
-  ?padding:char -> buf:string -> pos:int -> len:int -> string -> unit
+val pack_padded_fixed_string
+  : ?padding:char -> buf:string -> pos:int -> len:int -> string -> unit
 
 val test : unit -> unit

@@ -5,11 +5,12 @@ include Invariant_intf
 
 let failwiths = Error.failwiths
 
-let invariant name t sexp_of_t f : unit =
+let invariant here t sexp_of_t f : unit =
   try
     f ()
   with exn ->
-    failwiths "invariant failed" (name, exn, t) <:sexp_of< string * exn * t >>
+    failwiths "invariant failed" (here, exn, t)
+      <:sexp_of< Source_code_position0.t * exn * t >>
 ;;
 
 let check_field t f field =

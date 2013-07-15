@@ -378,6 +378,12 @@ include Comparable.With_zero (struct
   include V
 end)
 
+include Pretty_printer.Register(struct
+  include T
+  let module_name = "Core.Std.Float"
+  let to_string = to_string
+end)
+
 TEST_MODULE = struct
   let check v expect =
     match Validate.result v, expect with
@@ -401,5 +407,4 @@ TEST_MODULE = struct
   TEST_UNIT = check (validate_ubound ~max:(Incl 0.) 0.)           `Ok
   TEST_UNIT = check (validate_ubound ~max:(Incl 0.) 1.)           `Error
 end
-
 

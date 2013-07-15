@@ -31,8 +31,12 @@ let floor_pow2 x =
   let x = x lor (x lsr 32) in
   x - (x lsr 1)
 
+let is_pow2 x =
+  if x <= 0 then non_positive_argument ();
+  (x land (x-1)) = 0
+;;
+
 TEST_MODULE "int_math" = struct
-  let is_pow2 v = (v land (v-1)) = 0 ;;
 
   let test_cases () =
     let cases = [ 0xAA; 0xAA_AA; 0xAA_AA_AA;  0x80; 0x80_08; 0x80_00_08; ]

@@ -78,8 +78,8 @@ let sub_shared ?(pos = 0) ?len (bstr : t) =
 
 (* Blitting *)
 
-external unsafe_blit :
-  src : t -> src_pos : int -> dst : t -> dst_pos : int -> len : int -> unit
+external unsafe_blit
+  : src : t -> src_pos : int -> dst : t -> dst_pos : int -> len : int -> unit
   = "bigstring_blit_stub"
 
 let get bstr pos = Array1.get bstr pos

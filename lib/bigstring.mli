@@ -120,8 +120,8 @@ val map_file : shared : bool -> Unix.file_descr -> int -> t
 
     @param pos default = 0
     @param len default = [length bstr - pos] *)
-val find :
-  ?pos : int
+val find
+  :  ?pos : int
   -> ?len : int
   -> char
   -> t

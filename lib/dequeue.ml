@@ -420,8 +420,8 @@ TEST_MODULE = struct
     val to_array : 'a t -> 'a array
     val clear    : 'a t -> unit
     val length   : 'a t -> int
-    val fold' :
-      'a t -> [`front_to_back | `back_to_front] -> init:'b -> f:('b -> 'a -> 'b)-> 'b
+    val fold'
+      : 'a t -> [`front_to_back | `back_to_front] -> init:'b -> f:('b -> 'a -> 'b) -> 'b
   end
 
   module That_dequeue : Dequeue_intf = struct

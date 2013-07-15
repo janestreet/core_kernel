@@ -57,8 +57,8 @@ val rev_map2_exn: 'a t -> 'b t -> f:('a -> 'b -> 'c) -> 'c t
    [f (... (f (f a b1 c1) b2 c2) ...) bn cn].
    Raise [Invalid_argument] if the two lists have
    different lengths. *)
-val fold2_exn :
- 'a t
+val fold2_exn
+  :  'a t
   -> 'b t
   -> init:'c
   -> f:('c -> 'a -> 'b -> 'c)
@@ -249,8 +249,8 @@ exception Duplicate_found of (unit -> Sexplib.Sexp.t) * string
 (** [exn_if_dup ?compare ?context t ~to_sexp] will run [find_a_dup] on [t], and raise
     [Duplicate_found] if a duplicate is found.  The [context] is the second argument of
     the exception *)
-val exn_if_dup :
-  ?compare:('a -> 'a -> int)
+val exn_if_dup
+  :  ?compare:('a -> 'a -> int)
   -> ?context:string
   -> 'a t
   -> to_sexp:('a -> Sexplib.Sexp.t)

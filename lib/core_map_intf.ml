@@ -34,19 +34,19 @@ module type Accessors_generic = sig
   type 'a key
   type ('a, 'cmp, 'z) options
 
-  val invariants :
-    ('k, 'cmp,
-     ('k, 'v, 'cmp) t -> bool
-    ) options
+  val invariants
+    : ('k, 'cmp,
+       ('k, 'v, 'cmp) t -> bool
+      ) options
 
   val is_empty : (_, _, _) t -> bool
 
   val length : (_, _, _) t -> int
 
-  val add :
-    ('k, 'cmp,
-     ('k, 'v, 'cmp) t -> key:'k key -> data:'v -> ('k, 'v, 'cmp) t
-    ) options
+  val add
+    : ('k, 'cmp,
+       ('k, 'v, 'cmp) t -> key:'k key -> data:'v -> ('k, 'v, 'cmp) t
+      ) options
 
   val add_multi
     : ('k, 'cmp,
@@ -67,9 +67,9 @@ module type Accessors_generic = sig
   val find     : ('k, 'cmp, ('k, 'v, 'cmp) t -> 'k key -> 'v option) options
   val find_exn : ('k, 'cmp, ('k, 'v, 'cmp) t -> 'k key -> 'v       ) options
 
-  val remove :
-    ('k, 'cmp, ('k, 'v, 'cmp) t -> 'k key -> ('k, 'v, 'cmp) t
-    ) options
+  val remove
+    : ('k, 'cmp, ('k, 'v, 'cmp) t -> 'k key -> ('k, 'v, 'cmp) t
+      ) options
 
   val mem : ('k, 'cmp, ('k, _, 'cmp) t -> 'k key -> bool) options
 

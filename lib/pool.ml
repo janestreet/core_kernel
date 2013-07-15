@@ -33,12 +33,7 @@ module Int63 = struct
 end
 ENDIF
 
-let eprintf = Core_printf.eprintf
 let sprintf = Core_printf.sprintf
-
-let log message a sexp_of_a =
-  eprintf "%s\n%!" (Sexp.to_string_hum (<:sexp_of< string * a >> (message, a)))
-;;
 
 let concat l = Caml.StringLabels.concat ~sep:"" l
 
@@ -764,10 +759,10 @@ module Debug (Pool : S) = struct
   let debug name ts arg sexp_of_arg sexp_of_result f =
     let prefix = "Pool." in
     if !check_invariant then List.iter ts ~f:(invariant ignore);
-    if !show_messages then log (concat [ prefix; name ]) arg sexp_of_arg;
+    if !show_messages then Debug.eprints (concat [ prefix; name ]) arg sexp_of_arg;
     let result_or_exn = Result.try_with f in
     if !show_messages then
-      log (concat [ prefix; name; " result" ]) result_or_exn
+      Debug.eprints (concat [ prefix; name; " result" ]) result_or_exn
         (<:sexp_of< (result, exn) Result.t >>);
     Result.ok_exn result_or_exn;
   ;;

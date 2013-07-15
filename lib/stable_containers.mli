@@ -1,8 +1,8 @@
-(* The Stable versions of Hashtbl, Hash_set, Map, and Set are defined here rather than in
-   their respective modules because:
+(** The Stable versions of Hashtbl, Hash_set, Map, and Set are defined here rather than in
+    their respective modules because:
 
-   1. We guarantee their serializations independent of the implementation of those modules
-   2. Given 1. it is cleaner (and still okay) to separate the code into a separate file *)
+    1. We guarantee their serializations independent of the implementation of those modules
+    2. Given 1. it is cleaner (and still okay) to separate the code into a separate file *)
 
 open Std
 
