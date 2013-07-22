@@ -15,7 +15,7 @@ let create = create
 
 TEST_UNIT =
   List.iter [ Int.min_value; -1 ] ~f:(fun len ->
-    assert (does_fail (fun () -> create Slots.t1 ~len ())))
+    assert (does_raise (fun () -> create Slots.t1 ~len ())))
 ;;
 
 let length = length
@@ -64,11 +64,11 @@ TEST_UNIT =
       done;
       (* Ensure invalid indices fail. *)
       List.iter [ -1; len ] ~f:(fun i ->
-        assert (does_fail (fun () -> is_init t i));
-        assert (does_fail (fun () -> set_to_init t i));
-        assert (does_fail (fun () -> get_all_slots t i));
+        assert (does_raise (fun () -> is_init t i));
+        assert (does_raise (fun () -> set_to_init t i));
+        assert (does_raise (fun () -> get_all_slots t i));
         List.iter slot_list ~f:(fun slot ->
-          assert (does_fail (fun () -> get t i slot))));
+          assert (does_raise (fun () -> get t i slot))));
       List.iter
         [ get, set;
           unsafe_get, unsafe_set;

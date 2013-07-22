@@ -8,13 +8,6 @@ open Std_internal
 
 let _squelch_unused_module_warning_ = ()
 
-let concat = String.concat
-let is_error = Result.is_error
-let is_ok    = Result.is_ok
-
-let does_fail f = is_error (Result.try_with f)
-
 include Int.Replace_polymorphic_compare
 
 module Poly = Polymorphic_compare
-

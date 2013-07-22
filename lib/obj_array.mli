@@ -31,7 +31,8 @@ val empty : t
 val length : t -> int
 
 (** [get t i] and [unsafe_get t i] return the object at index [i].  [set t i o] and
-    [unsafe_set t i o] set index [i] to [o].  In no case is the object copied. *)
+    [unsafe_set t i o] set index [i] to [o].  In no case is the object copied.  The
+    [unsafe_*] variants omit the bounds check of [i]. *)
 val get        : t -> int -> Obj.t
 val unsafe_get : t -> int -> Obj.t
 val set        : t -> int -> Obj.t -> unit
@@ -45,6 +46,11 @@ val unsafe_set : t -> int -> Obj.t -> unit
     int. *)
 val unsafe_set_assuming_currently_int     : t -> int -> Obj.t -> unit
 val unsafe_set_int_assuming_currently_int : t -> int -> int   -> unit
+
+(** [unsafe_clear_if_pointer t i] prevents [t.(i)] from pointing to anything to prevent
+    space leaks.  It does this by setting [t.(i)] to [Obj.repr 0].  As a performance hack,
+    it only does this when [not (Obj.is_int t.(i))]. *)
+val unsafe_clear_if_pointer : t -> int -> unit
 
 (** [truncate t ~len] shortens [t]'s length to [len].  It is an error if [len <= 0] or
     [len > length t].*)

@@ -169,6 +169,17 @@ external counters : unit -> float * float * float = "caml_gc_counters"
 (** Return [(minor_words, promoted_words, major_words)].  This function
     is as fast at [quick_stat]. *)
 
+external minor_words : unit -> int = "core_kernel_gc_minor_words" "noalloc"
+(** Return [minor_words].  This function is designed to retrieve allocation stats fast
+    without causing any allocations of its own. Consequently, on 32bit machines the [int]
+    may overflow. *)
+
+external major_words : unit -> int = "core_kernel_gc_major_words" "noalloc"
+(** Return [major_words]. Also, see comment for [minor_words]. *)
+
+external promoted_words : unit -> int = "core_kernel_gc_promoted_words" "noalloc"
+(** Return [promoted_words].  Also, see comment for [minor_words]. *)
+
 external get : unit -> control = "caml_gc_get"
 (** Return the current values of the GC parameters in a [control] record. *)
 

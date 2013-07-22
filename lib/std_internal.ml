@@ -61,8 +61,11 @@ module Ref = Ref
 include Common
 
 include (Float : Interfaces.Robustly_comparable with type t := float)
+
 include String.Infix
+
 let round = Float.round
+
 include Interfaces
 
 module Sexp = Core_sexp

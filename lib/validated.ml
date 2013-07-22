@@ -75,7 +75,7 @@ TEST_MODULE = struct
     let t_of_sexp = t_of_sexp
     let sexp_of_t = sexp_of_t
 
-    TEST_UNIT = assert (does_fail (fun () -> t_of_sexp (<:sexp_of< int >> 0)))
+    TEST_UNIT = assert (does_raise (fun () -> t_of_sexp (<:sexp_of< int >> 0)))
 
     TEST_UNIT =
       let sexp = <:sexp_of< int >> 13 in
@@ -86,7 +86,7 @@ TEST_MODULE = struct
     let create_exn = create_exn
     let raw        = raw
 
-    TEST_UNIT = assert (does_fail (fun () -> create_exn 0))
+    TEST_UNIT = assert (does_raise (fun () -> create_exn 0))
 
     TEST_UNIT =
       match create 0 with

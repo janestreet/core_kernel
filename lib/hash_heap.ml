@@ -2,7 +2,9 @@
     constant time lookup, and log(n) time removal and replacement of
     elements in addition to the normal heap operations. *)
 
+
 module Hashtbl = Core_hashtbl
+module Heap = Heap.Removable
 
 module type Key = Hashtbl.Key
 
@@ -26,8 +28,8 @@ module type S = sig
   val pop_with_key_exn : 'a t -> (Key.t * 'a)
   val pop : 'a t -> 'a option
   val pop_exn : 'a t -> 'a
-  val cond_pop_with_key : 'a t -> (key:Key.t -> data:'a -> bool) -> (Key.t * 'a) option
-  val cond_pop : 'a t -> ('a -> bool) -> 'a option
+  val pop_if_with_key : 'a t -> (key:Key.t -> data:'a -> bool) -> (Key.t * 'a) option
+  val pop_if : 'a t -> ('a -> bool) -> 'a option
   val find : 'a t -> Key.t -> 'a option
   val find_pop : 'a t -> Key.t -> 'a option
   val find_exn : 'a t -> Key.t -> 'a
@@ -42,8 +44,9 @@ module Make (Key : Key) : S with module Key = Key = struct
   module Table = Hashtbl.Make (Key)
 
   type 'a t = {
-    heap: (Key.t * 'a) Heap.t;
-    tbl: (Key.t * 'a) Heap.heap_el Table.t;
+    heap : (Key.t * 'a) Heap.t;
+    cmp  : ('a -> 'a -> int);
+    tbl  : (Key.t * 'a) Heap.Elt.t Table.t;
   }
 
   let create ?min_size cmp =
@@ -52,17 +55,21 @@ module Make (Key : Key) : S with module Key = Key = struct
       | None -> 50
       | Some s -> s
     in
-    { heap = Heap.create ?min_size (fun (_, v1) (_, v2) -> cmp v1 v2);
+    { heap = Heap.create ?min_size ~cmp:(fun (_, v1) (_, v2) -> cmp v1 v2) ();
+      cmp;
       tbl = Table.create ~size:initial_tbl_size ();
     }
+
+  (* [push_new_key] adds an entry to the heap without checking for duplicates.  Thus it
+     should only be called when the key is known not to be present already. *)
+  let push_new_key t ~key ~data =
+    let el = Heap.add_removable t.heap (key, data) in
+    Hashtbl.replace t.tbl ~key ~data:el
 
   let push t ~key ~data =
     match Hashtbl.find t.tbl key with
     | Some _ -> `Key_already_present
-    | None ->
-        let el = Heap.push t.heap (key, data) in
-        Hashtbl.replace t.tbl ~key ~data:el;
-        `Ok
+    | None -> push_new_key t ~key ~data; `Ok
 
   exception Key_already_present of Key.t with sexp
 
@@ -74,14 +81,19 @@ module Make (Key : Key) : S with module Key = Key = struct
   let replace t ~key ~data =
     match Hashtbl.find t.tbl key with
     | None -> push_exn t ~key ~data
-    | Some el -> Heap.update el (key, data)
+    | Some el ->
+      Heap.remove t.heap el;
+      push_new_key t ~key ~data
+  ;;
 
   let remove t key =
     match Hashtbl.find t.tbl key with
     | None -> ()
     | Some el ->
         Hashtbl.remove t.tbl key;
-        Heap.remove el
+        Heap.remove t.heap el
+  ;;
+
   let mem t key = Hashtbl.mem t.tbl key
 
   let top_with_key t =
@@ -105,7 +117,7 @@ module Make (Key : Key) : S with module Key = Key = struct
 
   let pop_with_key t =
     try Some (pop_with_key_exn t)
-    with Heap.Empty -> None
+    with _ -> None
 
   let pop t =
     match pop_with_key t with
@@ -114,22 +126,23 @@ module Make (Key : Key) : S with module Key = Key = struct
 
   let pop_exn t = snd (pop_with_key_exn t)
 
-  let cond_pop_with_key t f =
-    match Heap.cond_pop t.heap (fun (k, v) -> f ~key:k ~data:v) with
+  let pop_if_with_key t f =
+    match Heap.pop_if t.heap (fun (k, v) -> f ~key:k ~data:v) with
     | None -> None
     | Some (k, v) ->
         Hashtbl.remove t.tbl k;
         Some (k, v)
 
-  let cond_pop t f =
-    match cond_pop_with_key t (fun ~key:_ ~data -> f data) with
+  let pop_if t f =
+    match pop_if_with_key t (fun ~key:_ ~data -> f data) with
     | None -> None
     | Some (_k, v) -> Some v
 
   let find t key =
     match Hashtbl.find t.tbl key with
-    | None -> None
-    | Some el -> Some (snd (Heap.heap_el_get_el el))
+    | None    -> None
+    | Some el -> Some (snd (Heap.Elt.value_exn el))
+  ;;
 
   exception Key_not_found of Key.t with sexp
 
@@ -142,9 +155,9 @@ module Make (Key : Key) : S with module Key = Key = struct
     match Hashtbl.find t.tbl key with
     | None -> None
     | Some el ->
-        let (_k, v) = Heap.heap_el_get_el el in
+        let (_k, v) = Heap.Elt.value_exn el in
         Hashtbl.remove t.tbl key;
-        Heap.remove el;
+        Heap.remove t.heap el;
         Some v
 
   let find_pop_exn t key =
@@ -155,19 +168,13 @@ module Make (Key : Key) : S with module Key = Key = struct
   let iter t ~f = Heap.iter t.heap ~f:(fun (k, v) -> f ~key:k ~data:v)
   let iter_vals t ~f = Heap.iter t.heap ~f:(fun (_k, v) -> f v)
 
-  let copy t =
-    (* Construct a new copy by constructing an empty hash heap pushing each
-       element onto the new hash heap. Copying the heap and tbl fields
-       individually would be incorrect because the heap elements in tbl would
-       belong to the wrong heap. *)
-    let result = {
-      heap = Heap.create (Heap.get_cmp t.heap);
-      tbl = Table.create ();
-    } in
-    iter t ~f:(fun ~key ~data -> push_exn result ~key ~data);
-    result
-
   let length t =
     assert (Hashtbl.length t.tbl = Heap.length t.heap);
     Hashtbl.length t.tbl
+
+  let copy t =
+    let t' = create t.cmp in
+    iter t ~f:(fun ~key ~data -> push_exn t' ~key ~data);
+    t'
+  ;;
 end

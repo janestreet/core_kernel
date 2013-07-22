@@ -1,3 +1,4 @@
+open Common
 open Int_replace_polymorphic_compare
 
 module Sexp = Sexplib.Sexp
@@ -5,8 +6,6 @@ module String = Caml.StringLabels
 module Array = Core_array
 
 let phys_equal = Caml.(==)
-
-let does_fail f = Result.is_error (Result.try_with f)
 
 type t = Obj.t array
 
@@ -85,6 +84,11 @@ let unsafe_set_assuming_currently_int t i obj =
     Array.unsafe_set t i obj
 ;;
 
+let unsafe_clear_if_pointer t i =
+  let old_obj = unsafe_get t i in
+  if not (Obj.is_int old_obj) then Array.unsafe_set t i (Obj.repr 0);
+;;
+
 (** [unsafe_blit] is like [Array.blit], except it uses our own for-loop to avoid
     caml_modify when possible.  Its performance is still not comparable to a memcpy. *)
 let unsafe_blit ~src ~src_pos ~dst ~dst_pos ~len =
@@ -133,14 +137,14 @@ TEST_UNIT =
 (* [empty] *)
 TEST = length empty = 0
 
-TEST = does_fail (fun () -> get empty 0)
+TEST = does_raise (fun () -> get empty 0)
 
 (* [singleton] *)
 TEST = length (singleton zero_obj) = 1
 
 TEST = phys_equal (get (singleton zero_obj) 0) zero_obj
 
-TEST = does_fail (fun () -> get (singleton zero_obj) 1)
+TEST = does_raise (fun () -> get (singleton zero_obj) 1)
 
 (* [get], [unsafe_get], [set], [unsafe_set], [unsafe_set_assuming_currently_int] *)
 TEST_UNIT =
@@ -162,11 +166,11 @@ TEST_UNIT =
 ;;
 
 (* [truncate] *)
-TEST = does_fail (fun () -> truncate empty ~len:0)
-TEST = does_fail (fun () -> truncate empty ~len:1)
-TEST = does_fail (fun () -> truncate empty ~len:-1)
-TEST = does_fail (fun () -> truncate (create ~len:1) ~len:0)
-TEST = does_fail (fun () -> truncate (create ~len:1) ~len:2)
+TEST = does_raise (fun () -> truncate empty ~len:0)
+TEST = does_raise (fun () -> truncate empty ~len:1)
+TEST = does_raise (fun () -> truncate empty ~len:-1)
+TEST = does_raise (fun () -> truncate (create ~len:1) ~len:0)
+TEST = does_raise (fun () -> truncate (create ~len:1) ~len:2)
 
 TEST_UNIT =
   let t = create ~len:1 in

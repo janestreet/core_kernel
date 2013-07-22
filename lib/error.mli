@@ -11,6 +11,12 @@ val raise : t -> _
     string.  So, if you mutate [value] in between the time you call [failwiths] and the
     time the error is displayed, those mutations will be reflected in the error message.
 
-    [failwiths s a f] = [Error.raise (Error.create s a f)] *)
-val failwiths : string -> 'a -> ('a -> Sexp.t) -> _
+    [failwiths s a f] = [Error.raise (Error.create s a f)]
+
+    [failwithp _here_ s a f] is just [failwiths] with the source code position tagged on.
+    We use [Lexing.position] rather than [Source_code_position.t] to avoid a circular
+    dependency.
+*)
+val failwiths :                    string -> 'a -> ('a -> Sexp.t) -> _
+val failwithp : Lexing.position -> string -> 'a -> ('a -> Sexp.t) -> _
 

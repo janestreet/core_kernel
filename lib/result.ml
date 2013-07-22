@@ -116,6 +116,9 @@ module Export = struct
     ('ok, 'err) t =
       | Ok of 'ok
       | Error of 'err
+
+  let is_error   = is_error
+  let is_ok      = is_ok
 end
 
 let combine t1 t2 ~ok ~err =

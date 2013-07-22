@@ -16,28 +16,6 @@ exception Finally of exn * exn
     the function that is unimplemented. *)
 val unimplemented : string -> _ Or_error.t
 
-(** The [decimal] type alias provides more readable serializations to s-expressions, at
-    the cost of lower precision.  For example:
-
-    {[
-    # sexp_of_decimal 3.000000000001;;
-    - : Sexp.t = 3
-    # sexp_of_float 3.000000000001;;
-    - : Sexp.t = 3.0000000000010000889
-    ]}
-
-    Also, the decimal sexp-converter will fail when provided with [nan] or [infinity].
-
-    {[
-    # float_of_sexp (Sexp.Atom "nan");;
-    - : float = nan
-    # decimal_of_sexp (Sexp.Atom "nan");;
-    Exception:
-    (Sexplib.Conv.Of_sexp_error (Failure common.ml.Decimal_nan_or_inf) nan).
-    ]}
-*)
-type decimal = float with bin_io, sexp, compare
-
 (** Types for use as markers in phantom types.  One should not expose functions for
     converting between read_only/immutable/read_write because the private types expose the
     subtyping. Users would say "(db :> read_only Db.t)" to cast.  The difference between
@@ -82,10 +60,15 @@ val ident : 'a -> 'a
 val const : 'a -> _ -> 'a
 val (==>) : bool -> bool -> bool
 
-val failwiths    :  string -> 'a -> ('a -> Sexp.t) -> _
+val failwiths    :                    string -> 'a -> ('a -> Sexp.t) -> _
+val failwithp    : Lexing.position -> string -> 'a -> ('a -> Sexp.t) -> _
 
 val failwithf    : ('r, unit, string, unit -> _) format4 -> 'r
 val invalid_argf : ('r, unit, string, unit -> _) format4 -> 'r
+
+(** [does_raise f] returns [true] iff [f ()] raises. It is intended to be used in unit
+    tests and should probably not be used in regular code. *)
+val does_raise : (unit -> _) -> bool
 
 (** [Or_error.ok_exn] *)
 val ok_exn : 'a Or_error.t -> 'a

@@ -1,372 +1,684 @@
+open Std_internal
+module Pointer = Pool.Pointer
 
-open Int_replace_polymorphic_compare
-open Sexplib.Conv
-module OldArray = Caml.Array
-module Array = Res.Array
+(* This pool holds nodes that would be represented more traditionally as:
 
-type 'a array = 'a Array.t
+    type 'a t =
+    | Empty
+    | Heap of 'a * 'a t list
 
-let sexp_of_array sexp_of_a array = <:sexp_of< a list >> (Array.to_list array)
+  We will represent them as a left-child, right-sibling tree in a triplet
+  (value * left_child * right_sibling).  The left child and all right siblings
+  of the left child form a linked list representing the subheaps of a given heap:
 
-let def_gfactor, def_sfactor, def_min_size = Res.DefStrat.default
+        A
+       /
+      B -> C -> D -> E -> F
+     /         /         /
+    G         H->I->J   K->L
+*)
 
-exception Empty with sexp
+module Node : sig
+  (* Exposing [private int] is a significant performance improvement, because it allows
+     the compiler to skip the write barrier. *)
+  type 'a t = private int
 
-type 'el t =
-  { ar : 'el heap_el array;
-    cmp : 'el -> 'el -> int;
-  }
-and 'el heap_el =
-  { mutable heap : 'el t sexp_opaque;
-    mutable pos : int;
-    mutable el : 'el;
-  }
-with sexp_of
+  module Pool : sig
+    type 'a node = 'a t
+    type 'a t
 
-let heap_el_is_valid h_el = h_el.pos >= 0
-
-let heap_el_get_el h_el = h_el.el
-
-let heap_el_get_heap_exn h_el =
-  if not (heap_el_is_valid h_el) then
-    failwith "Heap.heap_el_get_heap: heap element not in any heap";
-  h_el.heap
-;;
-
-let fold_el t ~init ~f =
-  let ar = t.ar in
-  let rec loop acc i =
-    if i < Array.length ar then begin
-      let el = ar.(i) in
-      if heap_el_is_valid el then
-        loop (f acc el) (i + 1)
-      else acc
-    end
-    else acc
-  in
-  loop init 0
-;;
-
-let fold t ~init ~f =
-  fold_el t ~init ~f:(fun acc x -> f acc x.el)
-
-let iter_el t ~f =
-  fold_el t ~init:() ~f:(fun () x -> f x)
-
-let iter t ~f =
-  fold_el t ~init:() ~f:(fun () x -> f x.el)
-
-module C = Container.Make (struct
-  type nonrec 'a t = 'a t
-  let fold = fold
-end)
-let exists   = C.exists
-let for_all  = C.for_all
-let count    = C.count
-let find     = C.find
-let find_map = C.find_map
-let to_list  = C.to_list
-let to_array = C.to_array
-
-let length h = Array.length h.ar
-let is_empty h = length h = 0
-let get_cmp h = h.cmp
-
-let calc_parent pos = (pos - 1) / 2
-let calc_left pos = pos + pos + 1
-let calc_right pos = pos + pos + 2
-
-let invalidate h_el = h_el.pos <- -1
-
-let set_pos ar pos = (Array.get ar pos).pos <- pos
-let get_el ar i = (Array.get ar i).el
-
-let exchange ar i1 i2 =
-  Array.swap ar i1 i2;
-  set_pos ar i1;
-  set_pos ar i2
-
-let rec heapify ar cmp len pos =
-  let left = calc_left pos in
-  let right = left + 1 in
-  let largest =
-    if left < len && cmp (get_el ar left) (get_el ar pos) < 0
-    then left
-    else pos
-  in
-  let largest =
-    if right < len && cmp (get_el ar right) (get_el ar largest) < 0
-    then right
-    else largest
-  in
-  if pos <> largest then begin
-    exchange ar pos largest;
-    heapify ar cmp len largest
+    val create  : min_size:int -> 'a t
+    val is_full : 'a t -> bool
+    val length  : 'a t -> int
+    val grow    : 'a t -> 'a t
+    val copy    : 'a t -> 'a node -> ('a -> 'b) -> ('b node * 'b t)
   end
 
-let create ?(min_size = def_min_size) cmp =
-  {
-    ar = Array.sempty (def_gfactor, def_sfactor, min_size);
-    cmp = cmp;
+  (** [allocate pool v] allocates a new node from the pool with no child or sibling *)
+  val allocate : 'a Pool.t -> 'a -> 'a t
+
+  (** [free pool t] frees [t] for reuse.  It is an error to access [t] after this. *)
+  val free : 'a Pool.t -> 'a t -> unit
+
+  (** a special [t] that represents the empty node *)
+  val empty    : unit -> 'a t
+  val is_empty : 'a t -> bool
+
+  (** [value_exn pool t] return the value of [t], raise if [is_empty t] *)
+  val value_exn : 'a Pool.t -> 'a t -> 'a
+
+  (** [add_child pool t ~child] Add a child to [t], preserving existing children as
+      siblings of [child]. [t] and [child] should not be empty and [child] should have no
+      sibling. *)
+  val add_child : 'a Pool.t -> 'a t -> child:'a t -> unit
+
+  val disconnect_sibling : 'a Pool.t -> 'a t -> 'a t
+
+  val disconnect_child : 'a Pool.t -> 'a t -> 'a t
+
+  val child : 'a Pool.t -> 'a t -> 'a t
+
+  val sibling : 'a Pool.t -> 'a t -> 'a t
+end = struct
+  type 'a node =
+    ( 'a
+    , 'a node Pointer.t
+    , 'a node Pointer.t
+    ) Pool.Slots.t3
+
+  type 'a t = 'a node Pointer.t
+
+  let empty    = Pointer.null
+  let is_empty = Pointer.is_null
+
+  let value_exn pool t =
+    assert (not (is_empty t));
+    Pool.get pool t Pool.Slot.t0
+  ;;
+
+  let allocate pool value = Pool.new3 pool value (empty ()) (empty ())
+
+  let free pool node =
+    Pool.free pool node
+  ;;
+
+  let sibling pool node = Pool.get pool node Pool.Slot.t2
+
+  let disconnect_sibling pool node =
+    let sibling = sibling pool node in
+    Pool.set pool node Pool.Slot.t2 (empty ());
+    sibling
+  ;;
+
+  let child pool node = Pool.get pool node Pool.Slot.t1
+
+  let disconnect_child pool node =
+    let child = child pool node in
+    Pool.set pool node Pool.Slot.t1 (empty ());
+    child
+  ;;
+
+  let add_child pool node ~child:new_child =
+    (* assertions we would make, but for speed:
+      assert (not (is_empty node));
+      assert (not (is_empty new_child));
+      assert (is_empty (sibling pool new_child));
+    *)
+    let current_child = disconnect_child pool node in
+    (* add [new_child] to the list of [node]'s children (which may be empty) *)
+    Pool.set pool new_child Pool.Slot.t2 current_child;
+    Pool.set pool node      Pool.Slot.t1 new_child;
+  ;;
+
+  module Pool = struct
+    type 'a t = 'a node Pool.t
+    type nonrec 'a node = 'a node Pointer.t
+
+    let create (type a) ~min_size:capacity : a t =
+      Pool.create Pool.Slots.t3 ~capacity
+        ~dummy:((Obj.magic () : a), Pointer.null (), Pointer.null ())
+    ;;
+
+    let is_full t = Pool.is_full t
+    let length  t = Pool.length t
+    let grow    t = Pool.grow t
+
+    let copy t start transform =
+      let t' = create ~min_size:(Pool.capacity t) in
+      let copy_node node to_visit =
+        if is_empty node
+        then (empty (), to_visit)
+        else begin
+          let new_node = allocate t' (transform (value_exn t node)) in
+          let to_visit =
+               (new_node, Pool.Slot.t1, child t node)
+            :: (new_node, Pool.Slot.t2, sibling t node)
+            :: to_visit
+          in
+          (new_node, to_visit)
+        end
+      in
+      let rec loop to_visit =
+        match to_visit with
+        | [] -> ()
+        | (node_to_update, slot, node_to_copy) :: rest ->
+          let new_node, to_visit = copy_node node_to_copy rest in
+          Pool.set t' node_to_update slot new_node;
+          loop to_visit
+      in
+      let new_start, to_visit = copy_node start [] in
+      loop to_visit;
+      (new_start, t')
+    ;;
+  end
+end
+
+module T = struct
+  (* Every node input to a function is assumed to have no sibling and any node output from
+     a function will have no sibling.  This is because a node is really the head of a node
+     list, but we always want to work with node options, corresponding to the type
+     t defined as
+
+     type 'a node = Node of 'a * 'a node list
+     type 'a t = 'a node option
+  *)
+
+  type 'a t = {
+    (* cmp is placed first to short-circuit polymorphic compare *)
+    cmp          : 'a -> 'a -> int;
+    mutable pool : 'a Node.Pool.t;
+    (* invariant:  [heap] never has a sibling *)
+    mutable heap : 'a Node.t;
   }
 
-let dummy_strat = 0.0, 0.0, 0
+  let create ?(min_size = 1) ~cmp () =
+    (* quietly fix up mistakes in setting the min size *)
+    let min_size = max min_size 1 in
+    { cmp;
+      pool = Node.Pool.create ~min_size;
+      heap = Node.empty ();
+    }
+  ;;
 
-let make_dummy_heap cmp =
-  {
-    ar = Array.sempty dummy_strat;
-    cmp = cmp;
-  }
+  let copy t =
+    let heap, pool = Node.Pool.copy t.pool t.heap ident in
+    {
+      cmp = t.cmp;
+      pool;
+      heap;
+    }
+  ;;
 
-let of_array ?min_size cmp ar =
-  let len = OldArray.length ar in
-  if len = 0 then create ?min_size cmp
-  else
-    let dummy = make_dummy_heap cmp in
-    (* Copied in from core_int, to avoid annoying loops *)
-    let int_max (x : int) y = if x > y then x else y in
-    let min_size =
-      match min_size with
-      | None -> int_max def_min_size (len / 2)
-      | Some min_size -> min_size in
-    let rar =
-      Array.sinit (def_gfactor, def_sfactor, min_size) len (fun pos ->
-        {
-          heap = dummy;
-          pos = pos;
-          el = OldArray.get ar pos;
-        }) in
-    let res = { ar = rar; cmp = cmp } in
-    for pos = 0 to len - 1 do
-      (Array.get rar pos).heap <- res
-    done;
-    if len = 1 then res
+  let allocate t v =
+    if Node.Pool.is_full t.pool then begin
+      t.pool <- Node.Pool.grow t.pool;
+    end;
+    Node.allocate t.pool v
+  ;;
+
+  (* translation:
+     match heap1, heap2 with
+     | None, h | h, None -> h
+     | Some (Node (v1, children1)), Some (Node (v2, children2)) ->
+       if v1 < v2
+       then Some (Node (v1, heap2 :: children1))
+       else Some (Node (v2, heap1 :: children2))
+  *)
+  let merge t heap1 heap2 =
+    if Node.is_empty heap1 then
+      heap2
+    else if Node.is_empty heap2 then
+      heap1
     else
-      let rec loop pos =
-        if pos >= 0 then (
-          heapify rar cmp len pos;
-          loop (pos - 1)) in
-      loop (calc_parent (len - 1));
-      res
-;;
+      let add_child t heap ~child =
+        Node.add_child t.pool heap ~child;
+        heap
+      in
+      let v1 = Node.value_exn t.pool heap1 in
+      let v2 = Node.value_exn t.pool heap2 in
+      if t.cmp v1 v2 < 0
+      then add_child t heap1 ~child:heap2
+      else add_child t heap2 ~child:heap1
+  ;;
 
-let copy { ar; cmp } =
-  let len = Array.length ar in
-  let (_, _, min_size) as strat = Array.get_strategy ar in
-  if len = 0 then create ~min_size cmp
-  else
-    let res_ar =
-      Array.sinit strat len (fun ix ->
-        let ar_ix = Array.get ar ix in
-        { ar_ix with heap = ar_ix.heap }) in
-    let res = { ar = res_ar; cmp = cmp } in
-    for pos = 0 to len - 1 do
-      (Array.get res_ar pos).heap <- res
-    done;
-    res
-;;
+  let top_exn t =
+    if Node.is_empty t.heap
+    then failwith "Heap.top_exn called on an empty heap"
+    else Node.value_exn t.pool t.heap
+  ;;
 
-let mem { ar; cmp } el =
-  let len = Array.length ar in
-  len > 0 &&
-    let rec loop pos =
-      let c = cmp (get_el ar pos) el in
-      c = 0
-      || c < 0
-      &&
-        let left = calc_left pos in
-        left < len
-        && (
-          loop left
-          ||
-            let right = left + 1 in
-            right < len
-            && loop right
-        )
+  let top t = try Some (top_exn t) with _ -> None
+
+  let add t v =
+    t.heap <- merge t t.heap (allocate t v)
+  ;;
+
+  (* [merge_pairs] takes a list of heaps and merges consecutive pairs, reducing the list
+     of length n to n/2.  Then it merges the merged pairs into a single heap.  One
+     intuition is that this is somewhat like building a single level of a binary tree.
+
+     The output heap does not contain the value that was at the root of the input heap.
+  *)
+  (* translation:
+     match t.heap with
+     | Node (_, children) ->
+       let rec loop acc = function
+         | [] -> acc
+         | [head] -> head :: acc
+         | head :: next1 :: next2 -> loop (merge head next1 :: acc) next2
+       in
+       match loop [] children with
+       | [] -> None
+       | [h] -> Some h
+       | x :: xs -> Some (List.fold xs ~init:x ~f:merge)
+  *)
+  let merge_pairs t =
+    let rec loop acc head =
+      if Node.is_empty head then
+        acc
+      else
+        let next1 = Node.disconnect_sibling t.pool head in
+        if Node.is_empty next1 then
+          head :: acc
+        else
+          let next2 = Node.disconnect_sibling t.pool next1 in
+          loop (merge t head next1 :: acc) next2
     in
-    loop 0
-;;
+    let head = Node.disconnect_child t.pool t.heap in
+    match loop [] head with
+    | []      -> Node.empty ()
+    | [h]     -> h
+    | x :: xs -> List.fold xs ~init:x ~f:(fun acc heap -> merge t acc heap)
+  ;;
 
-let find_heap_el_exn { ar; cmp } el =
-  let len = Array.length ar in
-  let rec loop pos =
-    if pos >= len then None
-    else begin
-      let h_el = Array.get ar pos in
-      let c = cmp h_el.el el in
-      if c = 0 then
-        Some h_el
-      else if c > 0 then
-        None
-      else begin
-        let left = calc_left pos in
-        match loop left with
-        | Some _ as x -> x
-        | None ->
-          let right = left + 1 in
-          loop right
-      end
+  let remove_top t =
+    if not (Node.is_empty t.heap) then begin
+      let current_heap = t.heap in
+      t.heap <- merge_pairs t;
+      Node.free t.pool current_heap
     end
-  in
-  match loop 0 with
-  | Some el -> el
-  | None -> raise Not_found
+  ;;
+
+  let pop_exn t =
+    let r = top_exn t in
+    remove_top t;
+    r
+  ;;
+
+  let pop t = try Some (pop_exn t) with _ -> None
+
+  let pop_if t f =
+    match top t with
+    | None -> None
+    | Some v when f v ->
+      remove_top t;
+      Some v
+    | Some _ -> None
+  ;;
+
+  (* pairing heaps are not balanced trees, and therefore we can't rely on a balance
+     property to stop ourselves from overflowing the stack. *)
+  let fold t ~init ~f =
+    let pool = t.pool in
+    let rec loop acc to_visit =
+      match to_visit with
+      | [] -> acc
+      | node :: rest ->
+        if Node.is_empty node then
+          loop acc rest
+        else
+          let to_visit = (Node.sibling pool node) :: (Node.child pool node) :: rest in
+          loop (f acc (Node.value_exn pool node)) to_visit
+    in
+    loop init [t.heap]
+  ;;
+
+  module C = Container.Make (struct
+    type nonrec 'a t = 'a t
+    let fold = fold
+  end)
+
+  (* we can do better than the O(n) of [C.length] *)
+  let length t = Node.Pool.length t.pool
+  let is_empty t = Node.is_empty t.heap
+
+  let iter     = C.iter
+  let mem      = C.mem
+  let exists   = C.exists
+  let for_all  = C.for_all
+  let count    = C.count
+  let find     = C.find
+  let find_map = C.find_map
+  let to_list  = C.to_list
+  let to_array = C.to_array
+
+  let of_array arr ~cmp =
+    let t = create ~min_size:(Array.length arr) ~cmp () in
+    Array.iter arr ~f:(fun v -> add t v);
+    t
+  ;;
+
+  let sexp_of_t f t = Array.sexp_of_t f (to_array t)
+end
+
+module Removable = struct
+  module Elt = struct
+    (* We could use an extra word to hold a pointer/representative id of the heap this
+       token belongs to to prevent using this token with the wrong heap in the
+       remove/update functions below.  It's (currently) deemed not worth the cost in
+       memory/speed. *)
+    type 'a t = 'a option ref with sexp_of
+
+    let create v    = ref (Some v)
+    let value_exn t = Option.value_exn !t
+  end
+
+  type 'a t = {
+    heap           : 'a Elt.t T.t;
+    mutable length : int;
+  } with sexp_of
+
+  let remove t token =
+    match !token with
+    | None   -> ()
+    | Some _ ->
+      token := None;
+      t.length <- t.length - 1
+  ;;
+
+  let augment_cmp cmp =
+    (fun v1 v2 ->
+      match !v1, !v2 with
+      | None, None       -> 0
+      | None, Some _     -> -1
+      | Some _, None     -> 1
+      | Some v1, Some v2 -> cmp v1 v2)
+  ;;
+
+  let create ?min_size ~cmp () =
+    let cmp = augment_cmp cmp in
+    { length = 0; heap = T.create ?min_size ~cmp () }
+  ;;
+
+  let copy t =
+    let current_heap = t.heap in
+    let replace_token v = ref !v in
+    let heap, pool = Node.Pool.copy current_heap.T.pool current_heap.T.heap replace_token in
+    {t with heap = {T.cmp = current_heap.T.cmp; pool; heap}}
+  ;;
+
+  let add_removable t v =
+    let token = Elt.create v in
+    T.add t.heap token;
+    t.length <- t.length + 1;
+    token
+  ;;
+
+  let update t token v =
+    remove t token;
+    add_removable t v
+  ;;
+
+  let add t v = ignore (add_removable t v : _ Elt.t)
+
+  let rec clear_deleted_tokens t =
+    if not (Node.is_empty t.heap.T.heap) then
+      match !(T.top_exn t.heap) with
+      | Some _ -> ()
+      | None   ->
+        T.remove_top t.heap;
+        clear_deleted_tokens t;
+  ;;
+
+  let fold t ~init ~f =
+    T.fold t.heap ~init ~f:(fun acc token ->
+      match !token with
+      | None   -> acc
+      | Some v -> f acc v)
+  ;;
+
+  let find_elt t ~f =
+    T.find t.heap ~f:(fun token ->
+      match !token with
+      | None   -> false
+      | Some v -> f v)
+  ;;
+
+  include Container.Make (struct
+    type nonrec 'a t = 'a t
+    let fold = fold
+  end)
+  let length t = t.length
+
+  let of_array arr ~cmp =
+    let t = create ~min_size:(Array.length arr) ~cmp () in
+    Array.iter arr ~f:(fun v -> add t v);
+    t
+  ;;
+
+  let top_exn t = clear_deleted_tokens t; Elt.value_exn (T.top_exn t.heap)
+  let top     t = try Some (top_exn t) with _ -> None
+
+  let pop_exn t =
+    clear_deleted_tokens t;
+    let token = T.pop_exn t.heap in
+    let v     = Elt.value_exn token in
+    remove t token;
+    v
+  ;;
+
+  let pop t = try Some (pop_exn t) with _ -> None
+
+  let remove_top t =
+    clear_deleted_tokens t;
+    begin match T.top t.heap with
+    | Some _ -> ignore (pop_exn t)
+    | None   -> ()
+    end;
+  ;;
+
+  let pop_if t f =
+    clear_deleted_tokens t;
+    match T.pop_if t.heap (fun v -> f (Elt.value_exn v)) with
+    | None       -> None
+    | Some token ->
+      let v = Elt.value_exn token in
+      remove t token;
+      Some v
+  ;;
+end
+
+include T
+
+TEST_MODULE = struct
+  module type Heap_intf = sig
+    type 'a t with sexp_of
+
+    val create     : cmp:('a -> 'a -> int) -> 'a t
+    val add        : 'a t -> 'a -> unit
+    val pop        : 'a t -> 'a option
+    val length     : 'a t -> int
+    val top        : 'a t -> 'a option
+    val remove_top : 'a t -> unit
+    val to_list    : 'a t -> 'a list
+  end
+
+  module That_heap : Heap_intf = struct
+    type 'a t = {
+      cmp          : 'a -> 'a -> int;
+      mutable heap : 'a list;
+    }
+
+    let sexp_of_t sexp_of_v t = List.sexp_of_t sexp_of_v t.heap
+
+    let create ~cmp = { cmp; heap = [] }
+    let add t v = t.heap <- List.sort ~cmp:t.cmp (v :: t.heap)
+
+    let pop t =
+      match t.heap with
+      | [] -> None
+      | x :: xs ->
+        t.heap <- xs;
+        Some x
+    ;;
+
+    let length t     = List.length t.heap
+    let top t        = List.hd t.heap
+    let remove_top t = match t.heap with [] -> () | _ :: xs -> t.heap <- xs
+    let to_list t    = t.heap
+  end
+
+  module This_heap : Heap_intf = struct
+    type nonrec 'a t = 'a t with sexp_of
+
+    let create ~cmp = create ~cmp ()
+    let add         = add
+    let pop         = pop
+    let length      = length
+    let top         = top
+    let remove_top  = remove_top
+    let to_list     = to_list
+  end
+
+  let this_to_string this = Sexp.to_string (This_heap.sexp_of_t Int.sexp_of_t this)
+  let that_to_string that = Sexp.to_string (That_heap.sexp_of_t Int.sexp_of_t that)
+
+  let length_check (t_a, t_b) =
+    let this_len = This_heap.length t_a in
+    let that_len = That_heap.length t_b in
+    if this_len <> that_len then
+      failwithf "error in length: %i (for %s) <> %i (for %s)"
+        this_len (this_to_string t_a)
+        that_len (that_to_string t_b) ()
+  ;;
+
+  let create () =
+    let cmp = Int.compare in
+    (This_heap.create ~cmp, That_heap.create ~cmp)
+  ;;
+
+  let add (this_t, that_t) v =
+    This_heap.add this_t v;
+    That_heap.add that_t v;
+    length_check (this_t, that_t)
+  ;;
+
+  let pop (this_t, that_t) =
+    let res1 = This_heap.pop this_t in
+    let res2 = That_heap.pop that_t in
+    if res1 <> res2 then
+      failwithf "pop results differ (%s, %s)"
+        (Option.value ~default:"None" (Option.map ~f:Int.to_string res1))
+        (Option.value ~default:"None" (Option.map ~f:Int.to_string res2)) ()
+  ;;
+
+  let top (this_t, that_t) =
+    let res1 = This_heap.top this_t in
+    let res2 = That_heap.top that_t in
+    if res1 <> res2 then
+      failwithf "top results differ (%s, %s)"
+        (Option.value ~default:"None" (Option.map ~f:Int.to_string res1))
+        (Option.value ~default:"None" (Option.map ~f:Int.to_string res2)) ()
+  ;;
+
+  let remove_top (this_t, that_t) =
+    This_heap.remove_top this_t;
+    That_heap.remove_top that_t;
+    length_check (this_t, that_t)
+  ;;
+
+  let internal_check (this_t, that_t) =
+    let this_list = List.sort ~cmp:Int.compare (This_heap.to_list this_t) in
+    let that_list = List.sort ~cmp:Int.compare (That_heap.to_list that_t) in
+    assert (this_list = that_list)
+  ;;
+
+  let test_dual_ops () =
+    let t = create () in
+
+    let rec loop ops =
+      if ops = 0 then ()
+      else begin
+        let r = Random.int 100 in
+        begin
+          if r < 40 then
+            add t (Random.int 100_000)
+          else if r < 70 then
+            pop t
+          else if r < 80 then
+            top t
+          else if r < 90 then
+            remove_top t
+          else
+            internal_check t
+        end;
+        loop (ops - 1)
+      end
+    in
+    loop 1_000
+  ;;
+
+  TEST_UNIT = test_dual_ops ()
+end
+
+let test_copy () =
+  let sum t = fold t ~init:0 ~f:(fun acc i -> acc + i) in
+  let t = create ~cmp:Int.compare () in
+  for i = 1 to 100 do
+    add t i;
+    if i % 10 = 0
+    (* We need to pop from time to time to trigger the amortized tree reorganizations.  If
+       we don't do this the resulting structure is just a linked list and the copy
+       function is not flexed as completely as it should be. *)
+    then begin
+      ignore (pop t);
+      add t i
+    end
+  done;
+  let t' = copy t in
+  assert (sum t = sum t');
+  assert (to_list t = to_list t');
+  add t (-100);
+  assert (sum t = sum t' - 100);
 ;;
+TEST_UNIT = test_copy ()
 
-let heap_el_mem heap h_el = heap_el_is_valid h_el && h_el.heap == heap
+let test_removable_copy () =
+  let sum t = Removable.fold t ~init:0 ~f:(fun acc i -> acc + i) in
+  let t = Removable.create ~cmp:Int.compare () in
+  for i = 1 to 99 do
+    Removable.add t i;
+    if i % 10 = 0
+    (* We need to pop from time to time to trigger the amortized tree reorganizations.  If
+       we don't do this the resulting structure is just a linked list and the copy
+       function is not flexed as completely as it should be. *)
+    then begin
+      ignore (Removable.pop t);
+      Removable.add t i
+    end
+  done;
+  let token = Removable.add_removable t 100 in
+  let t' = Removable.copy t in
+  assert (sum t = sum t');
+  Removable.remove t token;
+  assert (sum t = sum t' - 100);
+;;
+TEST_UNIT = test_removable_copy ()
 
-let top_heap_el_exn { ar; cmp=_ } =
-  if Array.length ar = 0 then raise Empty;
-  ar.(0)
-
-let top_heap_el { ar; cmp=_ } =
-  if Array.length ar = 0 then None
-  else Some ar.(0)
-
-let top_exn t = (top_heap_el_exn t).el
-
-let top { ar; cmp=_ } =
-  if Array.length ar = 0 then None
-  else Some (get_el ar 0)
-
-let pop_heap_el_exn ({ ar; cmp=_ } as h) =
-  let len = Array.length ar in
-  if len = 0 then raise Empty;
-  let min_h_el = Array.get ar 0 in
-  invalidate min_h_el;
-  if len = 1 then (Array.remove_one ar; min_h_el)
-  else (
-    Array.swap_in_last ar 0;
-    set_pos ar 0;
-    heapify ar h.cmp (len - 1) 0;
-    min_h_el)
-
-let pop_heap_el ({ ar; cmp=_ } as h) =
-  if Array.length ar = 0 then None
-  else Some (pop_heap_el_exn h)
-
-let pop_exn h = (pop_heap_el_exn h).el
-
-let pop ({ ar; cmp=_ } as h) =
-  if Array.length ar = 0 then None
-  else Some (pop_exn h)
-
-let cond_pop_heap_el ({ ar; cmp=_ } as h) cond =
-  if Array.length ar = 0 then None
-  else
-    let min_h_el = Array.get ar 0 in
-    if cond min_h_el.el then Some (pop_heap_el_exn h)
-    else None
-
-let cond_pop ({ ar; cmp=_ } as h) cond =
-  if Array.length ar = 0 then None
-  else
-    let min_el = get_el ar 0 in
-    if cond min_el then Some (pop_exn h)
-    else None
-
-let rec move_up ar cmp el pos =
-  if pos <= 0 then pos
-  else
-    let parent_pos = calc_parent pos in
-    let parent = Array.get ar parent_pos in
-    if cmp el parent.el >= 0 then pos
-    else (
-      Array.set ar pos parent;
-      parent.pos <- pos;
-      move_up ar cmp el parent_pos)
-
-let move_up_h_el h_el ar cmp el pos =
-  let pos = move_up ar cmp el pos in
-  Array.set ar pos h_el;
-  h_el.pos <- pos
-
-let push_heap_el { ar; cmp } h_el =
-  let len = Array.length ar in
-  Array.add_one ar h_el;
-  let pos = move_up ar cmp h_el.el len in
-  Array.set ar pos h_el;
-  h_el.pos <- pos
-
-let push_heap_el h h_el =
-  if heap_el_is_valid h_el then
-    failwith "Heap.push_heap_el: heap element already in a heap";
-  h_el.heap <- h;
-  push_heap_el h h_el
-
-let push h el =
-  let h_el = { heap = h; pos = -1; el = el } in
-  push_heap_el h h_el;
-  h_el
-
-let remove_move_down ar cmp len pos last =
-  Array.set ar pos last;
-  last.pos <- pos;
-  heapify ar cmp len pos
-
-let remove ({ heap = { ar; cmp }; pos; el=_ } as h_el) =
-  assert (heap_el_is_valid h_el);
-  invalidate h_el;
-  let lix = Array.lix ar in
-  if pos = lix then Array.remove_one ar
-  else
-    let { el = last_el; heap=_; pos=_ } as last = Array.get ar lix in
-    Array.remove_one ar;
-    if pos = 0 then remove_move_down ar cmp lix pos last
-    else
-      let parent_pos = calc_parent pos in
-      let parent = Array.get ar parent_pos in
-      if cmp last_el parent.el < 0 then move_up_h_el last ar cmp last_el pos
-      else remove_move_down ar cmp lix pos last
-
-let update ({ pos; heap=_; el=_ } as h_el) el =
-  assert (heap_el_is_valid h_el);
-  h_el.el <- el;
-  let { ar = ar; cmp = cmp } = h_el.heap in
-  let len = Array.length ar in
-  if pos = 0 then heapify ar cmp len pos
-  else
-    let parent_pos = calc_parent pos in
-    let parent = Array.get ar parent_pos in
-    if cmp el parent.el < 0 then move_up_h_el h_el ar cmp el pos
-    else heapify ar cmp len pos
-
-let check_heap_property { ar = ar; cmp = cmp } =
-  let len = Array.length ar in
-  try
-    for i = 0 to (len - 3) / 2 do
-      let el = ar.(i).el in
-      let left_child = calc_left i in
-      let right_child = calc_right i in
-      if cmp ar.(left_child).el el < 0
-        || cmp ar.(right_child).el el < 0
-      then raise Exit;
-    done;
-    true
-  with Exit -> false
-
-TEST_UNIT =
-  let int_compare = <:compare< int >> in
-  let heap = of_array int_compare [|5;99;1;7|] in
-  remove (find_heap_el_exn heap 99);
-  ignore (push heap 3 : int heap_el);
-  assert (check_heap_property heap);
-  let accum_positions_and_items ~fold_el =
-    fold_el heap ~init:([], []) ~f:(fun (positions, items) heap_el ->
-      assert (heap_el_is_valid heap_el);
-      assert (Pervasives.( == ) heap (heap_el_get_heap_exn heap_el));
-      heap_el.pos :: positions,
-      heap_el.el  :: items)
+let test_removal () =
+  let t = Removable.create ~cmp:Int.compare () in
+  let tokens = ref [] in
+  for i = 1 to 10_000 do
+    tokens := Removable.add_removable t i :: !tokens;
+  done;
+  List.iter !tokens ~f:(fun token ->
+    if Removable.Elt.value_exn token % 2 <> 0
+    then Removable.remove t token);
+  let rec loop count =
+    match Removable.pop t with
+    | None   -> assert (count = 10_000 / 2);
+    | Some v ->
+      assert ((1 + count) * 2 = v);
+      loop (count + 1)
   in
-  let poor_mans_fold ~iter_el t ~init ~f =
-    let acc = ref init in
-    iter_el t ~f:(fun x -> acc := f !acc x);
-    !acc
+  loop 0
+;;
+TEST_UNIT = test_removal ()
+
+let test_ordering () =
+  let t = create ~cmp:Int.compare () in
+  for _i = 1 to 10_000 do
+    add t (Random.int 100_000);
+  done;
+  let rec loop last =
+    match pop t with
+    | None -> ()
+    | Some v ->
+      assert (v >= last);
+      loop v
   in
-  let positions,  items  = accum_positions_and_items ~fold_el in
-  let positions', items' = accum_positions_and_items ~fold_el:(poor_mans_fold ~iter_el) in
-  assert (Pervasives.( = ) (positions, items) (positions', items'));
-  assert (Pervasives.( = ) [0;1;2;3] (List.sort int_compare positions));
-  assert (Pervasives.( = ) [1;3;5;7] (List.sort int_compare items))
+  loop (-1)
+;;
+TEST_UNIT = test_ordering ()
 
-
+TEST_UNIT = ignore (of_array [| |] ~cmp:Int.compare);

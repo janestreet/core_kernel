@@ -778,26 +778,26 @@ let partition_tf t ~f =
 
 module Assoc = struct
 
-  type ('a, 'b) t = ('a * 'b) list with sexp
+  type ('a, 'b) t = ('a * 'b) list with sexp, compare
 
-  let equal x y = compare x y = 0
+  let poly_equal = Polymorphic_compare.equal
 
-  let find t ?(equal=equal) key =
+  let find t ?(equal=poly_equal) key =
     match find t ~f:(fun (key', _) -> equal key key') with
     | None -> None
     | Some x -> Some (snd x)
 
-  let find_exn t ?(equal=equal) key =
+  let find_exn t ?(equal=poly_equal) key =
     match find t key ~equal with
     | None -> raise Not_found
     | Some value -> value
 
-  let mem t ?(equal=equal) key = (find t ~equal key) <> None
+  let mem t ?(equal=poly_equal) key = (find t ~equal key) <> None
 
-  let remove t ?(equal=equal) key =
+  let remove t ?(equal=poly_equal) key =
     filter t ~f:(fun (key', _) -> not (equal key key'))
 
-  let add t ?(equal=equal) key value =
+  let add t ?(equal=poly_equal) key value =
     (* the remove doesn't change the map semantics, but keeps the list small *)
     (key, value) :: remove t ~equal key
 

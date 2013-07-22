@@ -1,12 +1,7 @@
 open Std_internal
 open Import
 
-module Test (Pool : sig
-  include Pool.S
-  val show_messages : bool ref
-end) = struct
-
-  let () = Pool.show_messages := false
+module Test (Pool : Pool.S) = struct
 
   module Pointer = Pool.Pointer
 
@@ -249,7 +244,7 @@ end) = struct
       Array.iter ls ~f:(fun l -> free p l);
       let all_ls_fail () =
         Array.for_all ls ~f:(fun l ->
-          does_fail (fun () -> pointer_of_id_exn p (id_of_pointer p l)))
+          does_raise (fun () -> pointer_of_id_exn p (id_of_pointer p l)))
       in
       assert (all_ls_fail ());
       let _ls' = alloc_all () in
@@ -258,4 +253,10 @@ end) = struct
   ;;
 end
 
-TEST_MODULE = Test (Pool.Debug (Pool))
+TEST_MODULE = Test (Pool)
+
+TEST_MODULE =
+  Test (struct
+    include Pool.Unsafe
+    let create slots ~capacity ~dummy:_ = create slots ~capacity
+  end)

@@ -63,19 +63,19 @@ TEST_UNIT =
     let behaves_like_it_is_empty t =
       length t = 0
       && is_empty t
-      && does_fail (fun () -> drop_front t)
+      && does_raise (fun () -> drop_front t)
       && not (index_is_valid (-1))
       && not (index_is_valid 0)
       && (iter t ~f:(fun _ -> assert false); true)
       && fold t ~init:true ~f:(fun _ _ -> false)
     in
     List.iter [ Int.min_value; -1; 0 ] ~f:(fun capacity ->
-      assert (does_fail (fun () -> create ~capacity slots)));
+      assert (does_raise (fun () -> create ~capacity slots)));
     List.iter [ 1; 100 ] ~f:(fun capacity ->
       let t = create ~capacity slots in
       assert (Flat_queue.capacity t >= capacity);
       List.iter [ Int.min_value; -1; 0 ] ~f:(fun capacity ->
-        assert (does_fail (fun () -> set_capacity t capacity)));
+        assert (does_raise (fun () -> set_capacity t capacity)));
       List.iter [ 1; 2; 100 ] ~f:(fun capacity ->
         set_capacity t capacity;
         assert (Flat_queue.capacity t >= capacity));
@@ -83,7 +83,7 @@ TEST_UNIT =
         enqueue t changed;
       done;
       List.iter [ Int.min_value; -1; 0; length t - 1 ] ~f:(fun capacity ->
-        assert (does_fail (fun () -> set_capacity t capacity)));
+        assert (does_raise (fun () -> set_capacity t capacity)));
       set_capacity t (length t));
     assert (behaves_like_it_is_empty t);
     for i = 1 to num_enqueues do

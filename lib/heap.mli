@@ -1,146 +1,37 @@
-(** Min-heap implementation, adapted from CLR.  *)
 
-(** {6 Exceptions} *)
+(** Heap implementation based on a pairing-heap *)
 
-(** Raised when [top] or [pop] is called on an empty heap. *)
-exception Empty
+include Heap_intf.S
 
-(** {6 Types} *)
+(** Removable augments a heap with the ability to remove elements from the heap in lg(n)
+    (amortized) time at any point after they have been added.  Elements within a Removable
+    heap consume 4 words more memory and all heap operations will be somewhat slower. *)
+module Removable : sig
 
-(** Type of heaps *)
-type 'el t with sexp_of
+  include Heap_intf.S
 
-include Container.S1 with type 'el t := 'el t
+  module Elt : sig
+    type 'a t with sexp_of
 
-(** Type of heap elements (they can be efficiently removed) *)
-type 'el heap_el with sexp_of
+    (** [value_exn t] return the value in the heap controlled by this token if the value
+        is still in the heap.  @raise otherwise. *)
+    val value_exn : 'a t -> 'a
+  end
 
-(** {6 Functions on heap elements} *)
+  (** [add_removable t v] adds [v] to [t], returning a token that can be used to delete [v]
+      from [t] in lg(n) amortized time. *)
+  val add_removable : 'a t -> 'a -> 'a Elt.t
 
-(** [heap_el_is_valid heap_el] @return [true] iff heap element is member
-    of a heap. *)
-val heap_el_is_valid : 'el heap_el -> bool
+  (** If [t] and [token] are mismatched then behavior is undefined.  [remove] may safely
+      be called on a token more than once.  This doesn't free all the memory associated
+      with the Elt until some number of [pop] operations later -- see Heap_intf for
+      details. *)
+  val remove : 'a t -> 'a Elt.t -> unit
 
-(** [heap_el_get_el heap_el] @return the element associated with the heap
-    element. *)
-val heap_el_get_el : 'el heap_el -> 'el
+  (** [update t token v] is shorthand for [remove t token; add_removable t v] *)
+  val update : 'a t -> 'a Elt.t -> 'a -> 'a Elt.t
 
-(** [heap_el_get_heap_exn heap_el] @return the heap that contains the element
-    @raise Failure if the element is not contained by some heap *)
-val heap_el_get_heap_exn : 'el heap_el -> 'el t
-
-(** {6 Information on heap values} *)
-
-(** [get_cmp heap] @return the ordering function used by [heap]. *)
-val get_cmp : 'el t -> ('el -> 'el -> int)
-
-(** {6 Heap creation} *)
-
-(** [create ?min_size cmp] @return a fresh heap that can store [min_size]
-    elements without reallocations, using ordering function [cmp].
-
-    If [cmp x y < 0] (i.e. x < y), then [x] will be on "top" of [y] in the heap.
-    That is, Heap.pop will remove [x] before [y].
-*)
-val create : ?min_size : int -> ('el -> 'el -> int) -> 'el t
-
-(** [of_array ?min_size cmp ar] @return a fresh heap that can store
-    [min_size] elements without reallocations, using ordering function
-    [cmp], and initialize it with the elements of [ar]. *)
-val of_array : ?min_size : int -> ('el -> 'el -> int) -> 'el array -> 'el t
-
-(** [copy heap] @return a copy of [heap]. *)
-val copy : 'el t -> 'el t
-
-(** {6 Search functions} *)
-
-(** [mem heap el] @return [true] iff [el] is member of [heap].
-    Requires linear time in worst case. *)
-val mem : 'el t -> 'el -> bool
-
-(** [heap_el_mem heap heap_el] @return [true] iff [heap_el] is member of
-    [heap].  Requires constant time only. *)
-val heap_el_mem : 'el t -> 'el heap_el -> bool
-
-(** [find_heap_el_exn heap el] @return the heap element associated with
-    element [el] in [heap].
-
-    @raise Not_found if [el] could not be found. *)
-val find_heap_el_exn : 'el t -> 'el -> 'el heap_el
-
-(** {6 Non-destructive heap accessors} *)
-
-(** [top heap] @return [Some top_element] of [heap] without
-    changing it, or [None] if [heap] is empty. *)
-val top : 'el t -> 'el option
-
-(** [top_exn heap] @return the top element of [heap] without changing it.
-    @raise Empty if [heap] is empty. *)
-val top_exn : 'el t -> 'el
-
-(** [top_heap_el heap] @return [Some top_heap_el] of [heap] without
-    changing it, or [None] if [heap] is empty. *)
-val top_heap_el : 'el t -> 'el heap_el option
-
-(** [top_heap_el_exn heap] @return the top heap element of [heap]
-    without changing it.  @raise Empty if [heap] is empty. *)
-val top_heap_el_exn : 'el t -> 'el heap_el
-
-(** [fold_el heap ~f] fold over [heap] with function [f].  The elements
-    are passed in an unspecified order. *)
-val fold_el : 'a t -> init:'b -> f:('b -> 'a heap_el -> 'b) -> 'b
-
-(** [iter_el heap ~f] iterate over [heap] with function [f].  The elements
-    are passed in an unspecified order. *)
-val iter_el : 'a t -> f:('a heap_el -> unit) -> unit
-
-(** {6 Destructive heap accessors} *)
-
-(** [pop heap] @return [Some top_element] of [heap], removing it,
-    or [None] if [heap] is empty. *)
-val pop : 'el t -> 'el option
-
-(** [pop_exn heap] @return the top element of [heap], removing it.
-    @raise Empty if [heap] is empty. *)
-val pop_exn : 'el t -> 'el
-
-(** [pop_heap_el heap] @return [Some top_heap_element], removing
-    it, or [None] if [heap] is empty. *)
-val pop_heap_el : 'el t -> 'el heap_el option
-
-(** [pop_heap_el_exn heap] @return the top heap element of [heap],
-    removing it.  @raise Empty if [heap] is empty. *)
-val pop_heap_el_exn : 'el t -> 'el heap_el
-
-(** [cond_pop heap cond] @return [Some top_element] of [heap] if it
-    fills condition [cond], removing it, or [None] in any other case. *)
-val cond_pop : 'el t -> ('el -> bool) -> 'el option
-
-(** [cond_pop_heap_el heap cond] @return [Some top_heap_element] of
-    [heap] if the associated element fills condition [cond], removing it,
-    or [None] in any other case. *)
-val cond_pop_heap_el : 'el t -> ('el -> bool) -> 'el heap_el option
-
-(** [push heap el] pushes element [el] on [heap].  @return the heap
-    element associated with the newly inserted element. *)
-val push : 'el t -> 'el -> 'el heap_el
-
-(** [push_heap_el heap heap_el] pushes [heap_el] on [heap].
-    @raise Failure if [heap_el] is already member of some heap. *)
-val push_heap_el : 'el t -> 'el heap_el -> unit
-
-(** [remove heap_el] removes [heap_el] from its associated heap.
-    @raise Failure if [heap_el] is not member of any heap. *)
-val remove : 'el heap_el -> unit
-
-(** [update heap_el el] updates [heap_el] with element [el] in its
-    associated heap.
-    @raise Failure if [heap_el] is not member of any heap. *)
-val update : 'el heap_el -> 'el -> unit
-
-(** {6 For testing only.} *)
-
-(** [check_heap_property h] asserts that [h] has the heap property: that all
-    nodes are less than their children by [h]'s comparison function. *)
-val check_heap_property : 'el t -> bool
-
+  (** [find_elt t ~f].  If [f] is true for some element in [t], return a [Elt.t] for
+      that element.  This operation is O(n). *)
+  val find_elt : 'a t -> f:('a -> bool) -> 'a Elt.t option
+end

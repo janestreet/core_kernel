@@ -103,4 +103,6 @@ include T
 
 type 'a _bound = 'a Comparable.bound = Incl of 'a | Excl of 'a | Unbounded
 
+type decimal = Decimal.t with bin_io, sexp, compare
+
 let _make_sure_pool_pointer_is_an_int x = (x : _ Pool.Pointer.t :> int)

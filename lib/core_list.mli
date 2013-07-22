@@ -306,7 +306,7 @@ val filter_opt : 'a option t -> 'a t
 *)
 module Assoc : sig
 
-  type ('a, 'b) t = ('a * 'b) list with sexp
+  type ('a, 'b) t = ('a * 'b) list with sexp, compare
 
   val add      : ('a, 'b) t -> ?equal:('a -> 'a -> bool) -> 'a -> 'b -> ('a, 'b) t
   val find     : ('a, 'b) t -> ?equal:('a -> 'a -> bool) -> 'a -> 'b option

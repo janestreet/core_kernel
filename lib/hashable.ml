@@ -13,7 +13,6 @@ module type S = sig
   module Pooled_hashtbl : Pooled_hashtbl .S with type key   = t
   module Hash_set       : Hash_set       .S with type elt   = t
   module Hash_queue     : Hash_queue     .S with type Key.t = t
-  module Hash_heap      : Hash_heap      .S with type Key.t = t
 end
 
 module Make (T : Hashtbl.Key) : S with type t := T.t = struct
@@ -23,7 +22,6 @@ module Make (T : Hashtbl.Key) : S with type t := T.t = struct
   module Pooled_hashtbl = Pooled_hashtbl.Make (T)
   module Hash_set       = Hash_set      .Make (T)
   module Hash_queue     = Hash_queue    .Make (T)
-  module Hash_heap      = Hash_heap     .Make (T)
   let hashable = Table.hashable
 end
 
@@ -36,7 +34,6 @@ module type S_binable = sig
   module Pooled_hashtbl : Pooled_hashtbl.S_binable with type key = t
   module Hash_set       : Hash_set .     S_binable with type elt = t
   module Hash_queue : Hash_queue.S with type Key.t = t
-  module Hash_heap  : Hash_heap .S with type Key.t = t
 end
 
 module Make_binable (T : Hashtbl.Key_binable) : S_binable with type t := T.t = struct
@@ -45,7 +42,6 @@ module Make_binable (T : Hashtbl.Key_binable) : S_binable with type t := T.t = s
   module Pooled_hashtbl = Pooled_hashtbl.Make_binable (T)
   module Hash_set       = Hash_set      .Make_binable (T)
   module Hash_queue     = Hash_queue    .Make         (T)
-  module Hash_heap      = Hash_heap     .Make         (T)
 
   include T
   let hashable = Table.hashable

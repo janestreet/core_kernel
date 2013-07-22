@@ -103,11 +103,9 @@ TEST_MODULE = struct
   let b = Int63.of_int 0x2
   let c = Int63.of_int 0xC
 
-  let does_fail f = Result.is_error (Result.try_with f)
-
   TEST_UNIT =
     List.iter [ -1; 63 ] ~f:(fun bit ->
-      assert (does_fail (fun () -> create ~bit)))
+      assert (does_raise (fun () -> create ~bit)))
   ;;
 
   TEST_UNIT =

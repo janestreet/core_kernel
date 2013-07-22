@@ -79,12 +79,22 @@ let fst3 (x,_,_) = x
 let snd3 (_,y,_) = y
 let trd3 (_,_,z) = z
 
-open Sexplib
+let does_raise (type a) (f : unit -> a) =
+  try
+    ignore (f () : a);
+    false
+  with _ ->
+    true
+;;
+
+TEST = not (does_raise Fn.ignore)
+TEST = does_raise (fun () -> failwith "foo")
 
 let ok_exn = Or_error.ok_exn
 let error = Or_error.error
 
 let failwiths = Error.failwiths
+let failwithp = Error.failwithp
 
 include struct
   open Core_printf
@@ -101,42 +111,8 @@ let (!=) _ _ = `Consider_using_phys_equal
 
 let force = Lazy.force
 
-exception Decimal_nan_or_inf with sexp
-module Decimal = struct
-  module T = struct
-    module Binable = Float
-    type t = float with compare
-    let verify t =
-      match Pervasives.classify_float t with
-      | FP_normal
-      | FP_subnormal
-      | FP_zero      -> ()
-      | FP_infinite
-      | FP_nan       -> raise Decimal_nan_or_inf
-    let of_binable t = verify t; t
-    let to_binable t = verify t; t
-  end
-  include T
-  include Bin_prot.Utils.Make_binable (T)
-
-  let sexp_of_t t = Sexp.Atom (Core_printf.sprintf "%.12G" t)
-  let t_of_sexp = function
-  | Sexp.Atom s ->
-    let t = Float.of_string s in
-    begin
-      try
-        verify t
-      with e -> Conv.of_sexp_error (Exn.to_string e) (Sexp.Atom s)
-    end;
-    t
-  | s ->
-    Conv.of_sexp_error "decimal_of_sexp: Expected Atom, found List" s
-end
-
 let stage = Staged.stage
 let unstage = Staged.unstage
-
-type decimal = Decimal.t with sexp, bin_io, compare
 
 let unimplemented = Or_error.unimplemented
 

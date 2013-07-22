@@ -74,6 +74,9 @@ module Export : sig
     ('ok, 'err) t =
   | Ok of 'ok
   | Error of 'err
+
+  val is_ok    : (_, _) t -> bool
+  val is_error : (_, _) t -> bool
 end
 
 module Stable : sig

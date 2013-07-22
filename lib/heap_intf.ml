@@ -1,0 +1,48 @@
+module type S = sig
+  (** of_sexp and bin_io functions aren't supplied for heaps due to the difficulties in
+      reconstructing the correct comparison function when de-serializing. *)
+  type 'a t with sexp_of
+
+  include Container.S1 with type 'a t := 'a t
+
+  (** [create ?min_size ~cmp] returns a new min-heap that can store [min_size] elements
+      without reallocations, using ordering function [cmp].
+
+      The top of the heap is the smallest element as determined by the provided comparison
+      function.  In particular, if [cmp x y < 0] then [x] will be "on top of" [y] in the
+      heap.
+
+      Memory use is surprising in two ways:
+
+      1. The underlying pool never shrinks, so current memory use will at least be
+      proportional to the largest number of elements that the heap has ever held.
+
+      2. Not all the memory is freed upon [remove], but rather after some number of
+      subsequent [pop] operations. Alternating [add] and [remove] operations can therefore
+      use unbounded memory.
+  *)
+  val create : ?min_size : int -> cmp:('a -> 'a -> int) -> unit -> 'a t
+
+  (** [of_array arr ~cmp] [min_size] (see [create]) will be set to the size of [arr].  *)
+  val of_array : 'a array -> cmp:('a -> 'a -> int) -> 'a t
+
+  (** returns the top (i.e., smallest) element of the heap *)
+  val top     : 'a t -> 'a option
+  val top_exn : 'a t -> 'a
+
+  val add : 'a t -> 'a -> unit
+
+  (** [remove_top t] does nothing if [t] is empty *)
+  val remove_top : _ t -> unit
+
+  (** This removes and returns the top (i.e. least) element *)
+  val pop     : 'a t -> 'a option
+  val pop_exn : 'a t -> 'a
+
+  (** [pop_if t cond] returns [Some top_element] of [t] if it satisfies condition
+      [cond], removing it, or [None] in any other case. *)
+  val pop_if : 'a t -> ('a -> bool) -> 'a option
+
+  (** [copy t] returns a shallow copy *)
+  val copy : 'a t -> 'a t
+end

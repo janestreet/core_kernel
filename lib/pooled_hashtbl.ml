@@ -16,7 +16,7 @@ module Int = struct
   type t = int
 
   let max (x : t) y = if x > y then x else y
-
+  let min (x : t) y = if x < y then x else y
   include Int_math
 end
 
@@ -54,34 +54,36 @@ module Entry : sig
   val set_next  : ('k, 'd) Pool.t -> ('k, 'd) t -> ('k, 'd) t -> unit
   val set_data  : ('k, 'd) Pool.t -> ('k, 'd) t -> 'd -> unit
 end = struct
-  module Pointer = Pool.Pointer
+  (* It is OK to use [Pool.Unsafe] because entries are never exposed to user code.  Thus,
+     we can convince ourselves solely from looking at the implementation of
+     [Pooled_hashtbl] that an entry is never used after it is freed. *)
+  module Unsafe = Pool.Unsafe
 
-  type ('k, 'd) fields = (('k,'d) fields Pointer.t,'k,'d) Pool.Slots.t3 with sexp_of
+  module Pointer = Unsafe.Pointer
+
+  type ('k, 'd) fields = (('k,'d) fields Pointer.t,'k,'d) Unsafe.Slots.t3 with sexp_of
 
   type ('k, 'd) t = ('k, 'd) fields Pointer.t with sexp_of
 
+  let create pool ~next ~key ~data = Unsafe.new3 pool next key data
 
-  let create pool ~next ~key ~data = Pool.new3 pool next key data
+  let free = Unsafe.free
 
-  let free = Pool.free
+  let next     p t = Unsafe.get p t Unsafe.Slot.t0
+  let key      p t = Unsafe.get p t Unsafe.Slot.t1
+  let data     p t = Unsafe.get p t Unsafe.Slot.t2
 
-  let next     p t = Pool.get p t Pool.Slot.t0
-  let key      p t = Pool.get p t Pool.Slot.t1
-  let data     p t = Pool.get p t Pool.Slot.t2
-
-  let set_next p t = Pool.set p t Pool.Slot.t0
-  let set_data p t = Pool.set p t Pool.Slot.t2
+  let set_next p t = Unsafe.set p t Unsafe.Slot.t0
+  let set_data p t = Unsafe.set p t Unsafe.Slot.t2
 
   module Pool = struct
-    type ('k, 'd) t = ('k, 'd) fields Pool.t with sexp_of
+    type ('k, 'd) t = ('k, 'd) fields Unsafe.t with sexp_of
 
-    let invariant t = Pool.invariant ignore t
+    let invariant t = Unsafe.invariant ignore t
 
-    let create ~capacity =
-      Pool.create Pool.Slots.t3 ~capacity
-        ~dummy:(Pointer.null (), Obj.magic 0, Obj.magic 0)
-    ;;
-    let grow = Pool.grow
+    let create ~capacity = Unsafe.create Unsafe.Slots.t3 ~capacity
+
+    let grow = Unsafe.grow
   end
 
   let null = Pointer.null
@@ -113,6 +115,8 @@ let sexp_of_key t = t.hashable.Hashable.sexp_of_t ;;
    plumb it through functions like map which call create. *)
 let load_factor = 0.85 ;;
 
+let max_table_length = Int_math.floor_pow2 Sys.max_array_length ;;
+
 let calculate_table_size size =
   (* Ensure we can fit size elements in the table. *)
   let capacity = Int.ceil_pow2 size in
@@ -121,6 +125,7 @@ let calculate_table_size size =
 ;;
 
 let create ?(growth_allowed = true) ?(size = 128) ~hashable () =
+  let size = Int.min (Int.max 1 size) max_table_length in
   let capacity, n_entries = calculate_table_size size in
   let table = Array.create ~len:capacity (Entry.null ()) in
   let entries = Entry.Pool.create ~capacity:n_entries in

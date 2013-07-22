@@ -211,6 +211,24 @@ module type Pool = sig
       isn't an OCaml pointer. *)
   include S with type 'a Pointer.t = private int
 
+  (** An [Unsafe] pool is like an ordinary pool, except that the [create] function does
+      not require an initial element.  The pool stores [Obj.magic ()] as the dummy value
+      for each slot.  Such a pool is only safe if one never accesses a slot from a [free]d
+      tuple.
+
+      It makes sense to use [Unsafe] if one has a small constrained chunk of code where
+      one can prove that one never accesses a [free]d tuple, and one needs a pool where
+      it is difficult to construct a dummy value. *)
+  module Unsafe : sig
+    include S with type 'a Pointer.t = private int
+
+    (** [create slots ~capacity] creates an empty pool that can hold up to [capacity]
+        N-tuples.  The elements of a [free] tuple may contain stale and/or invalid values
+        for their types, and as such any access to a [free] tuple from this pool is
+        unsafe. *)
+    val create : ((_, _) Slots.t as 'slots) -> capacity:int -> 'slots t
+  end
+
   (** [Debug] builds a pool in which every function can run [invariant] on its pool
       argument(s) and/or print a debug message to stderr, as determined by
       [!check_invariant] and [!show_messages], which are initially both [true].
