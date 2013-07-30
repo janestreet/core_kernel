@@ -24,10 +24,8 @@ module Hashable = struct
       sexp_of_t : 'a -> Sexp.t;
     }
 
-  (* Copied from Inria hashtbl.ml *)
-  external hash_param : int -> int -> 'a -> int = "caml_hash_univ_param" "noalloc"
-
-  let hash x = hash_param 10 100 x
+  let hash_param = Caml.Hashtbl.hash_param
+  let hash       = Caml.Hashtbl.hash
 
   let poly = { hash;
                compare;

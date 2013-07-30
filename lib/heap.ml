@@ -172,8 +172,6 @@ module T = struct
   }
 
   let create ?(min_size = 1) ~cmp () =
-    (* quietly fix up mistakes in setting the min size *)
-    let min_size = max min_size 1 in
     { cmp;
       pool = Node.Pool.create ~min_size;
       heap = Node.empty ();

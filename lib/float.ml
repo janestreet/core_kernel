@@ -1,6 +1,7 @@
 open Sexplib.Std
 open Bin_prot.Std
 open Result.Export
+module List = ListLabels
 module Sexp = Sexplib.Sexp
 module String = Core_string
 open Core_printf
@@ -13,7 +14,15 @@ module T = struct
   type t = float with sexp, bin_io
   let compare (x : t) y = compare x y
   let equal (x : t) y = x = y
-  let hash (x : t) = Hashtbl.hash_param 1 1 x
+  external hash : float -> int = "caml_hash_double" "noalloc"
+
+  TEST_UNIT =
+    List.iter ~f:(fun float -> assert (hash float = Caml.Hashtbl.hash float))
+      [ 0.926038888360971146
+      ; 34.1638588598232076
+      ]
+  ;;
+
 end
 
 include T

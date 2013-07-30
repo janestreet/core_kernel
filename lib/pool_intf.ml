@@ -78,7 +78,8 @@ module type S = sig
   val pointer_of_id_exn_is_supported : bool
 
   (** [create slots ~capacity ~dummy] creates an empty pool that can hold up to [capacity]
-      N-tuples.  The slots of [dummy] are stored in free tuples. *)
+      N-tuples.  The slots of [dummy] are stored in free tuples.  [create] raises if
+      [capacity < 0]. *)
   val create
     :  (('tuple, _) Slots.t as 'slots)
     -> capacity:int

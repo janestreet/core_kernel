@@ -9,7 +9,7 @@ let invalid_argf = Core_printf.invalid_argf
 type 'a t = 'a array with sexp, bin_io
 
 (* This module implements a new in-place, constant heap sorting algorithm to replace the
-   one used by the standard libraries.  It's only purpose is to be faster (hopefully
+   one used by the standard libraries.  Its only purpose is to be faster (hopefully
    strictly faster) than the base sort and stable_sort.
 
    At a high level the algorithm is:

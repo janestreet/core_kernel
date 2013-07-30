@@ -1,5 +1,5 @@
 open Std_internal
-open Import
+open Import let _ = _squelch_unused_module_warning_
 
 module type Flat_queue = module type of Flat_queue
 

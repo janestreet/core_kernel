@@ -106,6 +106,10 @@ val split : t -> on:char -> t list
     produce multiple empty string splits in the result.  *)
 val split_on_chars : t -> on:char list -> t list
 
+(** [split_lines t] returns the list of lines that comprise [t].  The lines do
+    not include the trailing ["\n"] or ["\r\n"]. *)
+val split_lines : t -> t list
+
 (** [lfindi ?pos t ~f] returns the smallest [i >= pos] such that [f i t.[i]], if there is
     such an [i].  By default, [pos = 0]. *)
 val lfindi : ?pos : int -> t -> f:(int -> char -> bool) -> int option
@@ -188,7 +192,7 @@ val drop_prefix : t -> int -> t
 val concat_array : ?sep : t -> t array -> t
 
 (** slightly faster hash function on strings *)
-val hash : t -> int
+external hash : t -> int = "caml_hash_string" "noalloc"
 
 (** fast equality function on strings, doesn't use compare_val *)
 val equal : t -> t -> bool

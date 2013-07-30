@@ -1,5 +1,3 @@
-open Std_internal
-
 type 'a t = 'a with sexp_of
 
 external is_heap_block : Obj.t -> bool = "core_heap_block_is_heap_block" "noalloc"

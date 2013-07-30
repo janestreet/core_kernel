@@ -7,7 +7,14 @@ module Array = Core_array
 
 let phys_equal = Caml.(==)
 
+(* We maintain the property that all values of type [t] do not have the tag
+   [double_array_tag].  Some functions below assume this in order to avoid testing the
+   tag, and will segfault if this property doesn't hold. *)
 type t = Obj.t array
+
+let invariant t =
+  assert (Obj.tag (Obj.repr t) <> Obj.double_array_tag);
+;;
 
 let length = Array.length
 
@@ -23,14 +30,7 @@ let zero_obj = Obj.repr (0 : int)
 
 let create ~len = Array.create ~len zero_obj
 
-let copy t = Array.copy t
-
-let singleton obj = Array.create ~len:1 obj
-
 let empty = [||]
-
-(* In the following functions [t] must not have the tag [Double_array_tag].  There is no
-   other assumption about [t] needed for safety. *)
 
 let get t i =
   (* Make the compiler believe [a] is an integer array so it does not check if [a] is
@@ -68,6 +68,12 @@ let unsafe_set t i obj =
     Array.unsafe_set (Obj.magic (t : t) : int array) i (Obj.obj obj : int)
   else if not (phys_equal old_obj obj) then
     Array.unsafe_set t i obj
+;;
+
+let singleton obj =
+  let t = create ~len:1 in
+  unsafe_set t 0 obj;
+  t;
 ;;
 
 let unsafe_set_int_assuming_currently_int t i int =
@@ -126,6 +132,12 @@ include
     end)
 ;;
 
+let copy src =
+  let dst = create ~len:(length src) in
+  blito ~src ~dst ();
+  dst
+;;
+
 let truncate t ~len = Obj.truncate (Obj.repr (t : t)) len
 
 (* [create] *)
@@ -145,6 +157,13 @@ TEST = length (singleton zero_obj) = 1
 TEST = phys_equal (get (singleton zero_obj) 0) zero_obj
 
 TEST = does_raise (fun () -> get (singleton zero_obj) 1)
+
+TEST_UNIT =
+  let f = 13. in
+  let t = singleton (Obj.repr f) in
+  invariant t;
+  assert (Polymorphic_compare.equal (Obj.repr f) (get t 0));
+;;
 
 (* [get], [unsafe_get], [set], [unsafe_set], [unsafe_set_assuming_currently_int] *)
 TEST_UNIT =

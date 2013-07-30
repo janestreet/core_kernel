@@ -88,6 +88,8 @@ TEST = contains "abcd" 'd' ~pos:1 ~len:2 = false
 TEST = contains "abcd" 'd' ~pos:1 = true
 TEST = contains "abcd" 'a' ~pos:1 = false
 
+let is_empty t = length t = 0
+
 let index t char =
   try Some (index_exn t char)
   with Not_found -> None
@@ -215,6 +217,73 @@ let split str ~on = split_gen str ~on:(`char on) ;;
 
 let split_on_chars str ~on:chars =
   split_gen str ~on:(`char_list chars)
+;;
+
+let split_lines =
+  let back_up_at_newline ~t ~pos ~eol =
+    pos := !pos - (if !pos > 0 && t.[!pos - 1] = '\r' then 2 else 1);
+    eol := !pos + 1;
+  in
+  fun t ->
+    let n = length t in
+    if n = 0
+    then []
+    else
+      (* Invariant: [-1 <= pos < eol]. *)
+      let pos = ref (n - 1) in
+      let eol = ref n in
+      let ac = ref [] in
+      (* We treat the end of the string specially, because if the string ends with a
+         newline, we don't want an extra empty string at the end of the output. *)
+      if t.[!pos] = '\n' then back_up_at_newline ~t ~pos ~eol;
+      while !pos >= 0 do
+        if t.[!pos] <> '\n'
+        then decr pos
+        else
+          (* Becuase [pos < eol], we know that [start <= eol]. *)
+          let start = !pos + 1 in
+          ac := sub t ~pos:start ~len:(!eol - start) :: !ac;
+          back_up_at_newline ~t ~pos ~eol
+      done;
+      sub t ~pos:0 ~len:!eol :: !ac
+;;
+
+TEST_UNIT =
+  List.iter ~f:(fun (t, expect) ->
+    let actual = split_lines t in
+    if actual <> expect
+    then failwiths "split_lines bug" (t, `actual actual , `expect expect)
+           <:sexp_of< t * [ `actual of t list ] * [ `expect of t list ] >>)
+    [ ""             , [];
+      "\n"           , [""];
+      "a"            , ["a"];
+      "a\n"          , ["a"];
+      "a\nb"         , ["a"; "b"];
+      "a\nb\n"       , ["a"; "b"];
+      "a\n\n"        , ["a"; "" ];
+      "a\n\nb"       , ["a"; "" ; "b"];
+    ]
+;;
+
+TEST_UNIT =
+  let lines = [ ""; "a"; "bc" ] in
+  let newlines = [ "\n"; "\r\n" ] in
+  let rec loop n expect to_concat =
+    if n = 0 then begin
+      let input = concat to_concat in
+      let actual = Or_error.try_with (fun () -> split_lines input) in
+      if actual <> Ok expect
+      then failwiths "split_lines bug" (input, `actual actual , `expect expect)
+             <:sexp_of< t * [ `actual of t list Or_error.t ] * [ `expect of t list ] >>
+    end else begin
+      loop (n - 1) expect to_concat;
+      List.iter lines ~f:(fun t ->
+        let loop to_concat = loop (n - 1) (t :: expect) (t :: to_concat) in
+        if not (is_empty t) && List.is_empty to_concat then loop [];
+        List.iter newlines ~f:(fun newline -> loop (newline :: to_concat)));
+    end
+  in
+  loop 3 [] [];
 ;;
 
 (* [is_suffix s ~suff] returns [true] if the string [s] ends with the suffix [suff] *)
@@ -399,8 +468,6 @@ TEST = (foldi "hello" ~init:[] ~f:(fun i acc ch -> (i,ch)::acc)
 
 let count t ~f = Container.fold_count fold t ~f
 
-let is_empty t = String.length t = 0
-
 let mem ?(equal = Char.(=)) t c =
   let rec loop i = i < length t && (equal c t.[i] || loop (i + 1)) in
   loop 0
@@ -495,22 +562,25 @@ let chop_suffix_exn s ~suffix =
     raise (Invalid_argument
              (Printf.sprintf "Core_string.chop_suffix_exn %S %S" s suffix))
 
-(* The following function returns exactly the same results as the standard hash function
-   on strings (it performs exactly the same computation), but it is faster on short
-   strings (because we don't have to call the generic C function). For random strings of
-   length 4 to 6, it is 40% faster. For strings of length 30 or more, the standard hash
-   function is faster.
-*)
-let hash s =
-  let len = String.length s in
-  if len = 0 then 0
-  else if len > 30 then Hashtbl.hash_param 1 1 s
-  else
-    let res = ref (int_of_char (String.unsafe_get s 0)) in
-    for i = 1 to len - 1 do
-      res := !res * 19 + int_of_char (String.unsafe_get s i)
-    done;
-    !res land 0x3FFFFFFF
+(* There used to be a custom implementation that was faster for very short strings
+   (peaking at 40% faster for 4-6 char long strings).
+   This new function is around 20% faster than the default hash function, but slower
+   than the previous custom implementation. However, the new OCaml function is well
+   behaved, and this implementation is less likely to diverge from the default OCaml
+   implementation does, which is a desirable property. (The only way to avoid the
+   divergence is to expose the macro redefined in hash_stubs.c in the hash.h header of
+   the OCaml compiler.) *)
+module Hash = struct
+  external hash : string -> int = "caml_hash_string" "noalloc"
+
+  TEST_UNIT =
+    List.iter ~f:(fun string -> assert (hash string = Caml.Hashtbl.hash string))
+      [ "Oh Gloria inmarcesible! Oh jubilo inmortal!"
+      ; "Oh say can you see, by the dawn's early light"
+      ]
+  ;;
+
+end
 
 module Infix = struct
   let ( </> ) str (start,stop) = slice str start stop
@@ -518,8 +588,14 @@ end
 
 include (Hashable.Make_binable (struct
   include T
-  let hash = hash
+  include Hash
 end) : Hashable.S_binable with type t := t)
+
+(* [include Hash] to make the [external] version override the [hash] from
+   [Hashable.Make_binable], so that we get a little bit of a speedup by exposing it as
+   external in the mli. *)
+include Hash
+
 
 include Comparable.Map_and_set_binable (T)
 include Comparable.Validate (T)

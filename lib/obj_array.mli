@@ -15,7 +15,8 @@
 
 type t with sexp_of
 
-include Blit.S with type t := t
+include Blit.     S with type t := t
+include Invariant.S with type t := t
 
 (** [create ~len] returns an obj-array of length [len], all of whose indices have value
     [Obj.repr 0]. *)

@@ -188,7 +188,7 @@ val fold2_exn
   -> f:('c -> 'a -> 'b -> 'c)
   -> 'c
 
-(** [for_all2 t1 t2 ~f] fails if [length t1 <> length t2]. *)
+(** [for_all2_exn t1 t2 ~f] fails if [length t1 <> length t2]. *)
 val for_all2_exn : 'a t -> 'b t -> f:('a -> 'b -> bool) -> bool
 
 (** [filter ~f array] removes the elements for which [f] returns false.  *)

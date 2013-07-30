@@ -91,7 +91,7 @@ module Test (Pool : Pool.S) = struct
 
   (* [create] with invalid capacity *)
   TEST_UNIT =
-    List.iter [ -1; 0 ] ~f:(fun capacity ->
+    List.iter [ -1 ] ~f:(fun capacity ->
       assert (Result.is_error (Result.try_with (fun () ->
         ignore (Pool.create ~capacity ~dummy:())))))
   ;;
@@ -161,7 +161,7 @@ module Test (Pool : Pool.S) = struct
         loop i p (create p i list);
       end;
     in
-    loop total_length (Pool.create ~capacity:1 ~dummy:0) (nil ());
+    loop total_length (Pool.create ~capacity:0 ~dummy:0) (nil ());
   ;;
 
   (* [free] *)
@@ -251,6 +251,7 @@ module Test (Pool : Pool.S) = struct
       assert (all_ls_fail ());
     end;
   ;;
+
 end
 
 TEST_MODULE = Test (Pool)

@@ -40,14 +40,10 @@ let concat l = Caml.StringLabels.concat ~sep:"" l
 module type S = S
 
 module Pool = struct
-  let check_create_capacity ~capacity =
-    if capacity <= 0 then
-      failwiths "Pool.create got invalid capacity" capacity <:sexp_of< int >>;
-  ;;
 
   let grow_capacity ~capacity ~old_capacity =
     match capacity with
-    | None -> old_capacity * 2
+    | None -> if old_capacity = 0 then 1 else old_capacity * 2
     | Some capacity ->
       if capacity <= old_capacity then
         failwiths "Pool.grow got too small capacity"
@@ -460,7 +456,7 @@ end
       Metadata.Fields.iter
         ~slots_per_tuple:(check (fun slots_per_tuple -> assert (slots_per_tuple > 0)))
         ~capacity:(check (fun capacity ->
-          assert (capacity >= 0); (* can be zero in a pool that has [grow]n. *)
+          assert (capacity >= 0);
           assert (Obj_array.length t = Metadata.array_length metadata)))
         ~length:(check (fun length ->
           assert (length >= 0);
@@ -536,7 +532,8 @@ end
   ;;
 
   let create_with_dummy slots ~capacity ~dummy =
-    check_create_capacity ~capacity;
+    if capacity < 0 then
+      failwiths "Pool.create got invalid capacity" capacity <:sexp_of< int >>;
     let slots_per_tuple = Slots.slots_per_tuple slots in
     let max_capacity = max_capacity ~slots_per_tuple in
     if capacity > max_capacity then
@@ -585,7 +582,7 @@ end
     Obj_array.truncate t ~len:1;
   ;;
 
-  let grow ?(capacity) t =
+  let grow ?capacity t =
     let { Metadata.
           slots_per_tuple;
           capacity = old_capacity;

@@ -1,5 +1,4 @@
 open Bigstring
-open Std_internal
 
 (* Marshalling to/from bigstrings *)
 
