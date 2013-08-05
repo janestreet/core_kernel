@@ -19,7 +19,7 @@ module Removable : sig
     type 'a t with sexp_of
 
     (** [value_exn t] return the value in the heap controlled by this token if the value
-        is still in the heap.  @raise otherwise. *)
+        is still in the heap.  Raise otherwise. *)
     val value_exn : 'a t -> 'a
   end
 
