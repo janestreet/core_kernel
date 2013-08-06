@@ -11,8 +11,6 @@
     holding it.  Flat tuples are mutable via [Flat_queue.set].
 *)
 
-open Import
-
 module Slots : Tuple_type.Slots
 module Slot  : Tuple_type.Slot
 

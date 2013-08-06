@@ -780,24 +780,22 @@ module Assoc = struct
 
   type ('a, 'b) t = ('a * 'b) list with sexp, compare
 
-  let poly_equal = Polymorphic_compare.equal
-
-  let find t ?(equal=poly_equal) key =
+  let find t ?(equal=Poly.equal) key =
     match find t ~f:(fun (key', _) -> equal key key') with
     | None -> None
     | Some x -> Some (snd x)
 
-  let find_exn t ?(equal=poly_equal) key =
+  let find_exn t ?(equal=Poly.equal) key =
     match find t key ~equal with
     | None -> raise Not_found
     | Some value -> value
 
-  let mem t ?(equal=poly_equal) key = (find t ~equal key) <> None
+  let mem t ?(equal=Poly.equal) key = (find t ~equal key) <> None
 
-  let remove t ?(equal=poly_equal) key =
+  let remove t ?(equal=Poly.equal) key =
     filter t ~f:(fun (key', _) -> not (equal key key'))
 
-  let add t ?(equal=poly_equal) key value =
+  let add t ?(equal=Poly.equal) key value =
     (* the remove doesn't change the map semantics, but keeps the list small *)
     (key, value) :: remove t ~equal key
 

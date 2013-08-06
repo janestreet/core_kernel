@@ -33,6 +33,9 @@ let fold_count fold t ~f = fold t ~init:0 ~f:(fun n a -> if f a then n + 1 else 
 
     because the [include] makes it to easy to shadow specialized implementations of
     container functions ([length] being a common one).
+
+    [Container.Make] implements [iter] in terms of [fold], which is often slower than
+    implementing [iter] directly.
 *)
 module Make (T : T) = struct
   open T

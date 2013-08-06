@@ -7,8 +7,6 @@
     index in the array holding it.  Flat tuples are mutable via [Flat_array.set].
 *)
 
-open Import
-
 module Slots : Tuple_type.Slots
 module Slot  : Tuple_type.Slot
 

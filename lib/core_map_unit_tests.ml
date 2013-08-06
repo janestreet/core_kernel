@@ -711,8 +711,7 @@ module Unit_tests
       let ts = [ Map.empty ();  Map.of_alist_exn [ Key.sample, 13 ] ] in
       List.iter ts ~f:(fun t1 ->
         List.iter ts ~f:(fun t2 ->
-          assert (Result.is_error (Result.try_with (fun () ->
-            Polymorphic_compare.equal t1 t2)))));
+          assert (Result.is_error (Result.try_with (fun () -> Poly.equal t1 t2)))));
   ;;
 end
 

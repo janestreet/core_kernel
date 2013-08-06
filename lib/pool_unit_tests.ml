@@ -1,5 +1,5 @@
 open Std_internal
-open Import
+open Int.Replace_polymorphic_compare
 
 module Test (Pool : Pool.S) = struct
 

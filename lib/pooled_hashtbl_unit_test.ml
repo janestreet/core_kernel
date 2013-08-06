@@ -1,5 +1,5 @@
 open Std_internal
-open Import
+open Int.Replace_polymorphic_compare
 
 TEST_MODULE = struct
   module Hashtbl = Pooled_hashtbl.Make(struct

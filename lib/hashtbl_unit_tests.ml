@@ -68,8 +68,8 @@ module Make (Hashtbl : Core_hashtbl_intf.Hashtbl) = struct
     TEST "right keys" =
       let predicted = List.map test_data ~f:(fun (k,_) -> k) in
       let found = Hashtbl.keys (Hashtbl.Poly.of_alist_exn test_data) in
-      let sp = List.sort ~cmp:Polymorphic_compare.ascending predicted in
-      let sf = List.sort ~cmp:Polymorphic_compare.ascending found in
+      let sp = List.sort ~cmp:Poly.ascending predicted in
+      let sf = List.sort ~cmp:Poly.ascending found in
       sp = sf
     ;;
   end
@@ -77,31 +77,31 @@ module Make (Hashtbl : Core_hashtbl_intf.Hashtbl) = struct
   TEST "size and right keys" =
     let predicted = List.map test_data ~f:(fun (k,_) -> k) in
     let found = Hashtbl.keys test_hash in
-    let sp = List.sort ~cmp:Polymorphic_compare.ascending predicted in
-    let sf = List.sort ~cmp:Polymorphic_compare.ascending found in
+    let sp = List.sort ~cmp:Poly.ascending predicted in
+    let sf = List.sort ~cmp:Poly.ascending found in
     sp = sf
   ;;
 
   TEST "size and right data" =
     let predicted = List.map test_data ~f:(fun (_,v) -> v) in
     let found = Hashtbl.data test_hash in
-    let sp = List.sort ~cmp:Polymorphic_compare.ascending predicted in
-    let sf = List.sort ~cmp:Polymorphic_compare.ascending found in
+    let sp = List.sort ~cmp:Poly.ascending predicted in
+    let sf = List.sort ~cmp:Poly.ascending found in
     sp = sf
   ;;
 
   TEST "map" =
     let add1 x = x + 1 in
     let predicted_data =
-      List.sort ~cmp:Polymorphic_compare.ascending
+      List.sort ~cmp:Poly.ascending
         (List.map test_data ~f:(fun (k,v) -> (k,add1 v)))
     in
     let found_alist =
       Hashtbl.map test_hash ~f:add1
       |> Hashtbl.to_alist
-      |> List.sort ~cmp:Polymorphic_compare.ascending
+      |> List.sort ~cmp:Poly.ascending
     in
-    List.equal predicted_data found_alist ~equal:Polymorphic_compare.equal
+    List.equal predicted_data found_alist ~equal:Poly.equal
   ;;
 
   TEST_UNIT "filter_map" =
@@ -115,9 +115,9 @@ module Make (Hashtbl : Core_hashtbl_intf.Hashtbl) = struct
     in
     let found = Hashtbl.filter_map test_hash ~f:add1_to_even in
     let found_alist =
-      List.sort ~cmp:Polymorphic_compare.ascending (Hashtbl.to_alist found)
+      List.sort ~cmp:Poly.ascending (Hashtbl.to_alist found)
     in
-    assert (List.equal predicted_data found_alist ~equal:Polymorphic_compare.equal);
+    assert (List.equal predicted_data found_alist ~equal:Poly.equal);
   ;;
 
   TEST_UNIT "insert-find-remove" =

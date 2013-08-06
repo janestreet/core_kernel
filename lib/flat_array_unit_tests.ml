@@ -1,5 +1,5 @@
 open Std_internal
-open Import
+open Int.Replace_polymorphic_compare  let () = _squelch_unused_module_warning_
 
 (* module Flat_array = Flat_array_debug.Debug (Flat_array) *)
 open Flat_array
