@@ -101,7 +101,7 @@ val error : string -> 'a -> ('a -> Sexp.t) -> _ Or_error.t
    and then we get
 
    {[
-   type 'a return = { return : 'b . 'a -> b }
+   type 'a return = { return : 'b . 'a -> 'b }
    val with_return : ('a return -> 'a) -> 'a
    ]}
 
