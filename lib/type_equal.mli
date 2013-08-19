@@ -178,7 +178,26 @@ module Id : sig
 
   (** [same_witness t1 t2] and [same_witness_exn t1 t2] return a type equality proof iff
       the two identifiers are physically equal.  This is a useful way to achieve a sort of
-      dynamic typing. *)
+      dynamic typing.
+
+      The following two idioms are semantically equivalent; however, using [same] and
+      [same_witness_exn] instead of matching on [same_witness] has better performance
+      because [same_witness] would allocate an intermediate [Or_error.t].
+
+      {[
+        match same_witness ta tb with
+        | None -> ...
+        | Some e -> ...
+      ]}
+
+      {[
+        if not (same ta tb)
+        then ...
+        else
+          let e = same_witness_exn ta tb in
+          ...
+      ]}
+  *)
   val same : _ t -> _ t -> bool
   val same_witness     : 'a t -> 'b t -> ('a, 'b) equal Or_error.t
   val same_witness_exn : 'a t -> 'b t -> ('a, 'b) equal

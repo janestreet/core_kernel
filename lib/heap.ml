@@ -304,11 +304,30 @@ module T = struct
       | node :: rest ->
         if Node.is_empty node then
           loop acc rest
-        else
+        else begin
           let to_visit = (Node.sibling pool node) :: (Node.child pool node) :: rest in
           loop (f acc (Node.value_exn pool node)) to_visit
+        end
     in
     loop init [t.heap]
+  ;;
+
+  (* almost identical to fold, copied for speed purposes *)
+  let iter t ~f =
+    let pool = t.pool in
+    let rec loop to_visit =
+      match to_visit with
+      | [] -> ()
+      | node :: rest ->
+        if Node.is_empty node then
+          loop rest
+        else begin
+          f (Node.value_exn pool node);
+          let to_visit = (Node.sibling pool node) :: (Node.child pool node) :: rest in
+          loop to_visit
+        end
+    in
+    loop [t.heap]
   ;;
 
   module C = Container.Make (struct
@@ -320,7 +339,6 @@ module T = struct
   let length t = Node.Pool.length t.pool
   let is_empty t = Node.is_empty t.heap
 
-  let iter     = C.iter
   let mem      = C.mem
   let exists   = C.exists
   let for_all  = C.for_all
@@ -336,7 +354,26 @@ module T = struct
     t
   ;;
 
+  let of_list l ~cmp = of_array (Array.of_list l) ~cmp
+
   let sexp_of_t f t = Array.sexp_of_t f (to_array t)
+
+  TEST_MODULE = struct
+    let data = [ 0; 1; 2; 3; 4; 5; 6; 7 ]
+    let t = of_list data ~cmp:Int.compare
+    (* pop the zero at the top to force some heap structuring.  This does not touch the
+       sum. *)
+    let _ = pop t
+    let list_sum      = List.fold data ~init:0 ~f:(fun sum v -> sum + v)
+    let heap_fold_sum = fold t ~init:0 ~f:(fun sum v -> sum + v)
+    let heap_iter_sum =
+      let r = ref 0 in
+      iter t ~f:(fun v -> r := !r + v);
+      !r
+    TEST = Int.(=) list_sum heap_fold_sum
+    TEST = Int.(=) list_sum heap_iter_sum
+  end
+
 end
 
 module Removable = struct
@@ -433,6 +470,8 @@ module Removable = struct
     Array.iter arr ~f:(fun v -> add t v);
     t
   ;;
+
+  let of_list l ~cmp = of_array (Array.of_list l) ~cmp
 
   let top_exn t = clear_deleted_tokens t; Elt.value_exn (T.top_exn t.heap)
   let top     t = try Some (top_exn t) with _ -> None

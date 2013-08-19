@@ -133,7 +133,7 @@ val rstrip : ?drop:(char -> bool) -> t -> t
 
 (** [strip ?drop s] returns a string with consecutive chars satisfying [drop] (by default
     white space, e.g. tabs, spaces, newlines, and carriage returns) stripped from the
-    begining and end of [s]. *)
+    beginning and end of [s]. *)
 val strip : ?drop:(char -> bool) -> t -> t
 
 (** [map f s] applies [f] to each character in [s], and returns the

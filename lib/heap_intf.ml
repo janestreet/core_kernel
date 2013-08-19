@@ -23,8 +23,9 @@ module type S = sig
   *)
   val create : ?min_size : int -> cmp:('a -> 'a -> int) -> unit -> 'a t
 
-  (** [of_array arr ~cmp] [min_size] (see [create]) will be set to the size of [arr].  *)
+  (** [min_size] (see [create]) will be set to the size of the input array or list. *)
   val of_array : 'a array -> cmp:('a -> 'a -> int) -> 'a t
+  val of_list  : 'a list  -> cmp:('a -> 'a -> int) -> 'a t
 
   (** returns the top (i.e., smallest) element of the heap *)
   val top     : 'a t -> 'a option

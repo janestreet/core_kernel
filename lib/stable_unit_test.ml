@@ -1,7 +1,19 @@
 open Std_internal
 
-module Make (T : Stable_unit_test_intf.Arg) = struct
-  TEST_UNIT "sexp" =
+module Make_sexp_deserialization_test (T : Stable_unit_test_intf.Arg) = struct
+  TEST_UNIT "sexp deserialization" =
+    List.iter T.tests
+      ~f:(fun (t, sexp_as_string, _) ->
+        let sexp = Sexp.of_string sexp_as_string in
+        let t' = T.t_of_sexp sexp in
+        if not (T.equal t t') then
+          failwiths "sexp deserialization mismatch" (`Expected t, `But_got t')
+            (<:sexp_of< [ `Expected of T.t ] * [ `But_got of T.t ] >>)
+      )
+end
+
+module Make_sexp_serialization_test (T : Stable_unit_test_intf.Arg) = struct
+  TEST_UNIT "sexp serialization" =
     List.iter T.tests
       ~f:(fun (t, sexp_as_string, _) ->
         let sexp = Sexp.of_string sexp_as_string in
@@ -10,12 +22,10 @@ module Make (T : Stable_unit_test_intf.Arg) = struct
           failwiths "sexp serialization mismatch"
             (`Expected sexp, `But_got serialized_sexp)
             (<:sexp_of< [ `Expected of Sexp.t ] * [ `But_got of Sexp.t ] >>);
-        let t' = T.t_of_sexp serialized_sexp in
-        if not (T.equal t t') then
-          failwiths "sexp deserialization mismatch" (`Expected t, `But_got t')
-            (<:sexp_of< [ `Expected of T.t ] * [ `But_got of T.t ] >>)
       )
+end
 
+module Make_bin_io_test (T : Stable_unit_test_intf.Arg) = struct
   TEST_UNIT "bin_io" =
     List.iter T.tests
       ~f:(fun (t, _, expected_bin_io) ->
@@ -31,7 +41,12 @@ module Make (T : Stable_unit_test_intf.Arg) = struct
           failwiths "bin_io deserialization mismatch" (`Expected t, `But_got t')
             (<:sexp_of< [ `Expected of T.t ] * [ `But_got of T.t ] >>);
       )
+end
 
+module Make (T : Stable_unit_test_intf.Arg) = struct
+  include Make_sexp_deserialization_test (T)
+  include Make_sexp_serialization_test (T)
+  include Make_bin_io_test (T)
 end
 
 module Make_unordered_container (T : Stable_unit_test_intf.Unordered_container_arg) =
