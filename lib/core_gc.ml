@@ -137,3 +137,4 @@ TEST_UNIT =
     let mw2 = Float.iround_towards_zero_exn st.Stat.promoted_words in
     assert (mw1 = mw2);
   done
+
