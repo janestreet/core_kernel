@@ -78,6 +78,7 @@ module Unit_tests
     let of_alist_exn              = simplify_creator of_alist_exn
     let of_alist_multi            = simplify_creator of_alist_multi
     let of_alist_fold             = simplify_creator of_alist_fold
+    let of_alist_reduce           = simplify_creator of_alist_reduce
     let of_tree                   = simplify_creator of_tree
   end
 
@@ -337,7 +338,9 @@ module Unit_tests
 
   let of_alist_fold _ = assert false
 
-  TEST =
+  let of_alist_reduce _ = assert false
+
+  TEST_UNIT =
     let filtered =
       List.filter Key.samples ~f:(fun key -> not (Key.equal key Key.sample))
     in
@@ -346,8 +349,10 @@ module Unit_tests
     let alist' =
       (Key.sample, 1) :: (Key.sample, 2) :: alist @ [Key.sample, 3]
     in
-    let core_map = Map.of_alist_fold ~init:0 ~f:(+) alist' in
-    equal_maps ~caml_map core_map
+    let core_map_fold   = Map.of_alist_fold ~init:0 ~f:(+) alist' in
+    let core_map_reduce = Map.of_alist_reduce       ~f:(+) alist' in
+    assert(equal_maps ~caml_map core_map_fold);
+    assert(equal_maps ~caml_map core_map_reduce);
   ;;
 
   let of_alist_multi _ = assert false
@@ -468,7 +473,7 @@ module Unit_tests
     List.equal map_keys sorted_keys ~equal:Key.equal
   ;;
 
-  TEST =
+  TEST_UNIT =
     let base_alist = random_alist Key.samples in
     let map = Map.of_alist_exn base_alist in
     let map_keys = Map.keys map in
@@ -478,7 +483,6 @@ module Unit_tests
     assert (List.equal map_keys all_keys ~equal:Key.equal);
     assert (alist_equal map_alist base_alist);
     assert (alist_equal (List.zip_exn map_keys map_data) base_alist);
-    true
   ;;
 
   let symmetric_diff _ = assert false
@@ -592,7 +596,7 @@ module Unit_tests
   let max_elt     _ = assert false
   let max_elt_exn _ = assert false
 
-  TEST =
+  TEST_UNIT =
     let min_key, max_key = min_and_max_keys ~init:Key.sample Key.samples in
     let map = random_map (Key.sample :: Key.samples) in
     let min_key_element = Map.find_exn map min_key in
@@ -601,7 +605,6 @@ module Unit_tests
     assert (Map.max_elt     map = Some (max_key, max_key_element));
     assert (Map.min_elt_exn map =      (min_key, min_key_element));
     assert (Map.min_elt     map = Some (min_key, min_key_element));
-    true
   ;;
 
   TEST = Map.min_elt (Map.empty ()) = None
@@ -615,7 +618,7 @@ module Unit_tests
   TEST = Map.for_all (Map.empty ()) ~f:(fun _ -> assert false)
   TEST = not (Map.exists (Map.empty ()) ~f:(fun _ -> assert false))
 
-  TEST =
+  TEST_UNIT =
     let pos x = x >= 0 in
     let neg x = x <  0 in
     let base_map = random_map Key.samples in
@@ -624,7 +627,6 @@ module Unit_tests
     assert (not (Map.for_all with_negative ~f:pos));
     assert (not (Map.exists base_map ~f:neg));
     assert (Map.exists with_negative ~f:neg);
-    true
   ;;
 
   let fold_range_inclusive _ = assert false
@@ -633,7 +635,7 @@ module Unit_tests
   let next_key             _ = assert false
   let rank                 _ = assert false
 
-  TEST =
+  TEST_UNIT =
     let map = random_map (Key.sample :: Key.samples) in
     let min_key, max_key = min_and_max_keys ~init:Key.sample Key.samples in
     let after_min, before_max =
@@ -672,7 +674,6 @@ module Unit_tests
     assert (Map.rank map before_max = Some (length - 2));
     assert (Map.rank map max_key    = Some (length - 1));
     assert (Map.rank (Map.remove map Key.sample) Key.sample = None);
-    true
   ;;
 
   TEST = Map.prev_key (Map.empty ()) Key.sample = None
@@ -734,7 +735,7 @@ end
 
 module Create_options_without_comparator = struct
   type ('a, 'b, 'c) create_options = ('a, 'b, 'c) Without_comparator.t
-  let simplify_creator  = Fn.id
+  let simplify_creator = Fn.id
 end
 
 module Access_options_without_comparator = struct

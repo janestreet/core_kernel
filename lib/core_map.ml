@@ -536,6 +536,17 @@ module Tree0 = struct
         add accum ~key ~data ~compare_key)
   ;;
 
+  let of_alist_reduce alist ~f ~compare_key =
+    List.fold alist ~init:empty
+      ~f:(fun accum (key, data) ->
+        let new_data =
+          match find accum key ~compare_key with
+          | None -> data
+          | Some prev -> f prev data
+        in
+        add accum ~key ~data:new_data ~compare_key)
+  ;;
+
   let keys t = fold_right ~f:(fun ~key ~data:_ list -> key::list) t ~init:[]
   let data t = fold_right ~f:(fun ~key:_ ~data list -> data::list) t ~init:[]
 
@@ -783,6 +794,12 @@ let of_alist_fold ~comparator alist ~init ~f =
   }
 ;;
 
+let of_alist_reduce ~comparator alist ~f =
+  { comparator;
+    tree = Tree0.of_alist_reduce alist ~f ~compare_key:comparator.Comparator.compare;
+  }
+;;
+
 let t_of_sexp ~comparator k_of_sexp v_of_sexp sexp =
   { comparator; tree = Tree0.t_of_sexp k_of_sexp v_of_sexp sexp ~comparator }
 ;;
@@ -829,6 +846,8 @@ end = struct
 
   let of_alist_fold alist ~init ~f = of_alist_fold ~comparator alist ~init ~f
 
+  let of_alist_reduce alist ~f = of_alist_reduce ~comparator alist ~f
+
   let t_of_sexp k_of_sexp v_of_sexp sexp = t_of_sexp ~comparator k_of_sexp v_of_sexp sexp
 
 end
@@ -854,6 +873,9 @@ module Make_tree (Key : Comparator.S1) = struct
   ;;
   let of_alist_fold alist ~init ~f =
     Tree0.of_alist_fold alist ~init ~f ~compare_key:comparator.Comparator.compare
+  ;;
+  let of_alist_reduce alist ~f =
+    Tree0.of_alist_reduce alist ~f ~compare_key:comparator.Comparator.compare
   ;;
 
   let to_tree t = t
@@ -1060,6 +1082,9 @@ module Tree = struct
   ;;
   let of_alist_fold ~comparator alist ~init ~f =
     Tree0.of_alist_fold alist ~init ~f ~compare_key:comparator.Comparator.compare
+  ;;
+  let of_alist_reduce ~comparator alist ~f =
+    Tree0.of_alist_reduce alist ~f ~compare_key:comparator.Comparator.compare
   ;;
 
   let to_tree t = t

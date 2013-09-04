@@ -559,6 +559,13 @@ module type Creators_generic = sig
        -> ('k, 'v2, 'cmp) t
       ) options
 
+  val of_alist_reduce
+    : ('k, 'cmp,
+       ('k key * 'v) list
+       -> f:('v -> 'v -> 'v)
+       -> ('k, 'v, 'cmp) t
+      ) options
+
   val of_tree
     : ('k, 'cmp,
        ('k key, 'v, 'cmp) tree -> ('k, 'v, 'cmp) t
@@ -575,6 +582,7 @@ module type Creators1 = sig
   val of_alist_exn    : (key * 'a) list -> 'a t
   val of_alist_multi  : (key * 'a) list -> 'a list t
   val of_alist_fold   : (key * 'a) list -> init:'b -> f:('b -> 'a -> 'b) -> 'b t
+  val of_alist_reduce : (key * 'a) list -> f:('a -> 'a -> 'a) -> 'a t
   val of_sorted_array : (key * 'a) array -> 'a t Or_error.t
   val of_sorted_array_unchecked : (key * 'a) array -> 'a t
   val of_tree         : 'a tree -> 'a t
@@ -589,6 +597,7 @@ module type Creators2 = sig
   val of_alist_exn    : ('a * 'b) list -> ('a, 'b) t
   val of_alist_multi  : ('a * 'b) list -> ('a, 'b list) t
   val of_alist_fold   : ('a * 'b) list -> init:'c -> f:('c -> 'b -> 'c) -> ('a, 'c) t
+  val of_alist_reduce : ('a * 'b) list -> f:('b -> 'b -> 'b) -> ('a, 'b) t
   val of_sorted_array : ('a * 'b) array -> ('a, 'b) t Or_error.t
   val of_sorted_array_unchecked : ('a * 'b) array -> ('a, 'b) t
   val of_tree         : ('a, 'b) tree -> ('a, 'b) t
@@ -611,6 +620,9 @@ module type Creators3_with_comparator = sig
   val of_alist_fold
     :  comparator:('a, 'cmp) Comparator.t
     -> ('a * 'b) list -> init:'c -> f:('c -> 'b -> 'c) -> ('a, 'c, 'cmp) t
+  val of_alist_reduce
+    :  comparator:('a, 'cmp) Comparator.t
+    -> ('a * 'b) list -> f:('b -> 'b -> 'b) -> ('a, 'b, 'cmp) t
   val of_sorted_array
     :  comparator:('a, 'cmp) Comparator.t
     -> ('a * 'b) array -> ('a, 'b, 'cmp) t Or_error.t

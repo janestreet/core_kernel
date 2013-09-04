@@ -125,6 +125,12 @@ val of_alist_fold
   :  comparator:('a, 'cmp) Comparator.t
   -> ('a * 'b) list -> init:'c -> f:('c -> 'b -> 'c) -> ('a, 'c, 'cmp) t
 
+(** combines an association list into a map, reducing together bound values with common
+    keys *)
+val of_alist_reduce
+  :  comparator:('a, 'cmp) Comparator.t
+  -> ('a * 'b) list -> f:('b -> 'b -> 'b) -> ('a, 'b, 'cmp) t
+
 val to_tree : ('k, 'v, 'cmp) t -> ('k, 'v, 'cmp) Tree.t
 
 val of_tree
