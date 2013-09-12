@@ -1,5 +1,7 @@
 type 'a t = 'a array with bin_io, sexp
 
+(** Note: [Array.length] is not constant for a given array, as one can reduce it with
+    [Array.truncate] *)
 include Container.S1 with type 'a t := 'a t
 
 (** Maximum length of a normal array.  The maximum length of a float array is
@@ -138,6 +140,10 @@ val stable_sort : 'a t -> cmp:('a -> 'a -> int) -> unit
 
 val is_sorted : 'a t -> cmp:('a -> 'a -> int) -> bool
 
+(* [is_sorted_strictly xs ~cmp] iff [is_sorted xs ~cmp] and no two consecutive elements
+   in [xs] are equal according to [cmp] *)
+val is_sorted_strictly : 'a t -> cmp:('a -> 'a -> int) -> bool
+
 (* same as [List.concat_map] *)
 val concat_map : 'a t -> f:('a -> 'b array) -> 'b array
 
@@ -230,6 +236,11 @@ val findi : 'a t -> f:(int -> 'a -> bool) -> (int * 'a) option
     true.  It raises [Not_found] if there is no such element. *)
 val findi_exn : 'a t -> f:(int -> 'a -> bool) -> int * 'a
 
+(** [find_consecutive_duplicate t ~equal] returns the first pair of consecutive elements
+    [(a1, a2)] in [t] such that [equal a1 a2].  They are returned in the same order as
+    they appear in [t]. *)
+val find_consecutive_duplicate : 'a t -> equal:('a -> 'a -> bool) -> ('a * 'a) option
+
 (** [reduce f [a1; ...; an]] is [Some (f (... (f (f a1 a2) a3) ...) an)].
     Returns [None] on the empty array. *)
 val reduce     : 'a t -> f:('a -> 'a -> 'a) -> 'a option
@@ -257,6 +268,11 @@ val last : 'a t -> 'a
 val empty : unit -> 'a t
 
 val equal : 'a t -> 'a t -> equal:('a -> 'a -> bool) -> bool
+
+(** [truncate t ~len] drops [length t - len] elements from the end of [t], changing [t] so
+    that [length t = len] afterwards.  [truncate] raises if [len <= 0 || len > length
+    t]. *)
+val truncate : _ t -> len:int -> unit
 
 module Infix : sig
   val ( <|> ) : 'a t -> int * int -> 'a t

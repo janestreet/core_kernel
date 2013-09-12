@@ -80,18 +80,17 @@ let to_int64 f =
 (* max_int/min_int are architecture dependent, e.g. +/- 2^30, +/- 2^62 if 32-bit, 64-bit
    (respectively) while float is IEEE standard for double (52 significant bits).  We may
    lose precision (e.g. beyond the 52 bits) as we round from float to int but, by capping
-   with float_round_lb and float_round_ub, we shouldn't run afoul of flipping the sign bit
-   on our integers.  With strict inequalities used on float_round_lb and float_round_ub we
-   could actually define them without the +. or -. 257.; this is a bit of extra precaution
-   in case someone uses them with <= or >=.
-*)
-let float_round_lb = max (of_int min_int) (-1.0 *. 2.0 ** 62.0 +. 257.)
-let float_round_ub = min (of_int max_int) (        2.0 ** 62.0 -. 257.)
+   with [iround_lbound] and [iround_ubound], we shouldn't run afoul of flipping the sign
+   bit on our integers.  With strict inequalities used on iround_lbound and iround_ubound
+   we could actually define them without the +. or -. 257.; this is a bit of extra
+   precaution in case someone uses them with <= or >=. *)
+let iround_lbound = max (of_int min_int) (-1.0 *. 2.0 ** 62.0 +. 257.)
+let iround_ubound = min (of_int max_int) (        2.0 ** 62.0 -. 257.)
 
 let iround_exn ?(dir=`Nearest) t =
   if is_nan t
   then invalid_arg "Float.iround_exn: Unable to handle NaN"
-  else if t <= float_round_lb || t >= float_round_ub
+  else if t <= iround_lbound || t >= iround_ubound
   then invalid_argf "Float.iround_exn: argument out of bounds (%f)" t ()
   else match dir with
   | `Zero    -> truncate t

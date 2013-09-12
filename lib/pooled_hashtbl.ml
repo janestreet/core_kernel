@@ -674,6 +674,8 @@ let equal t t' equal =
     true)
 ;;
 
+let similar = equal
+
 let copy t =
   let table = Array.create ~len:t.capacity (Entry.null ()) in
   let entries = Entry.Pool.create ~capacity:t.n_entries in
@@ -735,6 +737,7 @@ module Accessors = struct
   let filter_inplace  = filter_inplace
   let filteri_inplace = filteri_inplace
   let equal           = equal
+  let similar         = similar
   let incr            = incr
   let sexp_of_key     = sexp_of_key
 end

@@ -8,7 +8,7 @@ module Make (Raw : Raw) = struct
 
   let validation_failed t error =
     Error.create "validation failed" (t, error, Raw.here)
-      <:sexp_of< Raw.t * Error.t * Source_code_position.t >>
+      <:sexp_of< Raw.t * Error.t * Source_code_position.t_hum >>
   ;;
 
   let create_exn t =

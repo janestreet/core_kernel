@@ -88,6 +88,11 @@ module type S = sig
   val iround_up_exn           : t -> int
   val iround_nearest_exn      : t -> int
 
+  (** If [f <= iround_lbound || f >= iround_ubound], then [iround*] functions will refuse
+      to round [f], returning [None] or raising as appropriate. *)
+  val iround_lbound : t
+  val iround_ubound : t
+
 
   val is_nan : t -> bool
 

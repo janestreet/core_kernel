@@ -624,6 +624,35 @@ let rec last list = match list with
   | _ :: tl -> last tl
   | [] -> None
 
+let find_consecutive_duplicate t ~equal =
+  match t with
+  | [] -> None
+  | a1 :: t ->
+    let rec loop a1 t =
+      match t with
+      | [] -> None
+      | a2 :: t -> if equal a1 a2 then Some (a1, a2) else loop a2 t
+    in
+    loop a1 t
+;;
+
+TEST_UNIT =
+  List.iter ~f:(fun (t, expect) ->
+    assert (Poly.equal expect (find_consecutive_duplicate t ~equal:Poly.equal)))
+    [ []            , None
+    ; [ 1 ]         , None
+    ; [ 1; 1 ]      , Some (1, 1)
+    ; [ 1; 2 ]      , None
+    ; [ 1; 2; 1 ]   , None
+    ; [ 1; 2; 2 ]   , Some (2, 2)
+    ; [ 1; 1; 2; 2 ], Some (1, 1)
+    ]
+;;
+
+TEST = find_consecutive_duplicate [(0,'a');(1,'b');(2,'b')]
+         ~equal:(fun (_, a) (_, b) -> Pervasives.(=) a b) = Some ((1, 'b'), (2, 'b'))
+;;
+
 (* returns list without adjacent duplicates *)
 let remove_consecutive_duplicates list ~equal =
   let rec loop list accum = match list with
@@ -920,6 +949,29 @@ TEST = is_sorted [1] ~compare
 TEST = is_sorted [1; 2; 3; 4] ~compare
 TEST = not (is_sorted [2; 1] ~compare)
 TEST = not (is_sorted [1; 3; 2] ~compare)
+
+let is_sorted_strictly l ~compare =
+  let rec loop l =
+    match l with
+    | [] | [_] -> true
+    | x1 :: ((x2 :: _) as rest) ->
+        compare x1 x2 < 0 && loop rest
+  in loop l
+;;
+
+TEST_UNIT =
+  List.iter
+    ~f:(fun (t, expect) -> assert (expect = is_sorted_strictly t ~compare))
+    [ []         , true;
+      [ 1 ]      , true;
+      [ 1; 2 ]   , true;
+      [ 1; 1 ]   , false;
+      [ 2; 1 ]   , false;
+      [ 1; 2; 3 ], true;
+      [ 1; 1; 3 ], false;
+      [ 1; 2; 2 ], false;
+    ]
+;;
 
 module Infix = struct
   let ( @ ) = append

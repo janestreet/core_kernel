@@ -10,7 +10,7 @@ let invariant here t sexp_of_t f : unit =
     f ()
   with exn ->
     failwiths "invariant failed" (here, exn, t)
-      <:sexp_of< Source_code_position0.t * exn * t >>
+      <:sexp_of< Source_code_position0.t_hum * exn * t >>
 ;;
 
 let check_field t f field =

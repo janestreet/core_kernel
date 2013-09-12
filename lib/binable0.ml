@@ -51,7 +51,7 @@ let to_bigstring ?(prefix_with_length = false) (type a) m t =
   let bigstring = create_bigstring bigstring_length in
   let pos =
     if prefix_with_length then
-      Bin_prot.Write.bin_write_int_64bit bigstring ~pos:0 t_length
+      Bin_prot.Write_ml.bin_write_int_64bit bigstring ~pos:0 t_length
     else
       0
   in

@@ -66,6 +66,7 @@ module Id : sig
   val same : _ t -> _ t -> bool
   val same_witness     : 'a t -> 'b t -> ('a, 'b) equal Or_error.t
   val same_witness_exn : 'a t -> 'b t -> ('a, 'b) equal
+
 end = struct
   module Uid = Unique_id.Int63 (struct end)
 

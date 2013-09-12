@@ -225,7 +225,7 @@ let remove t key =
       | None ->
         let sexp_of_key = sexp_of_key t in
         failwiths "Bounded_int_table.remove bug" (key, last, t)
-          <:sexp_of< key * int * (key, _) t >>
+          <:sexp_of< key * int * (key, _) t_detailed >>
       | Some entry_to_put_in_hole as entry_to_put_in_hole_opt ->
         t.defined_entries.(hole) <- entry_to_put_in_hole_opt;
         entry_to_put_in_hole.defined_entries_index <- hole;

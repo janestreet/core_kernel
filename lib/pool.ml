@@ -187,7 +187,8 @@ end
 
     include Invariant.S1 with type 'a t := 'a t
 
-    val phys_equal : 'a t -> 'a t -> bool
+    val phys_compare : 'a t -> 'a t -> int
+    val phys_equal   : 'a t -> 'a t -> bool
 
     (* The null pointer.  [null] is a function due to issues with the value restriction. *)
     val null : unit -> _ t
@@ -216,6 +217,8 @@ end
 
     let phys_equal (t1 : _ t) t2 = phys_equal t1 t2
 
+    let phys_compare = compare
+
     let null () = -max_slot - 1
 
     let is_null t = phys_equal t (null ())
@@ -239,11 +242,11 @@ end
       if not (is_null t) then assert (header_index t > 0);
     ;;
 
-    TEST_UNIT = invariant Fn.ignore (null ())
+    TEST_UNIT = invariant ignore (null ())
 
     TEST_UNIT =
       List.iter Tuple_id.examples ~f:(fun tuple_id ->
-        invariant Fn.ignore (create ~header_index:1 tuple_id));
+        invariant ignore (create ~header_index:1 tuple_id));
     ;;
 
     let slot_index t slot = header_index t + slot
@@ -814,6 +817,11 @@ module Debug (Pool : S) = struct
 
     type nonrec 'slots t = 'slots t with sexp_of
 
+    let phys_compare t1 t2 =
+      debug "Pointer.phys_compare" [] (t1, t2) <:sexp_of< _ t * _ t >> <:sexp_of< int >>
+        (fun () -> phys_compare t1 t2)
+    ;;
+
     let phys_equal t1 t2 =
       debug "Pointer.phys_equal" [] (t1, t2) <:sexp_of< _ t * _ t >> <:sexp_of< bool >>
         (fun () -> phys_equal t1 t2)
@@ -840,7 +848,7 @@ module Debug (Pool : S) = struct
   let length = length
 
   let id_of_pointer t pointer =
-    debug "Pool.id_of_pointer" [t] pointer
+    debug "id_of_pointer" [t] pointer
       <:sexp_of< _ Pointer.t >> <:sexp_of< Pointer.Id.t >>
       (fun () -> id_of_pointer t pointer)
   ;;
@@ -848,43 +856,43 @@ module Debug (Pool : S) = struct
   let pointer_of_id_exn_is_supported = pointer_of_id_exn_is_supported
 
   let pointer_of_id_exn t id =
-    debug "Pool.pointer_of_id_exn" [t] id
+    debug "pointer_of_id_exn" [t] id
       <:sexp_of< Pointer.Id.t >> <:sexp_of< _ Pointer.t >>
       (fun () -> pointer_of_id_exn t id)
   ;;
 
   let pointer_is_valid t pointer =
-    debug "Pool.pointer_is_valid" [t] pointer <:sexp_of< _ Pointer.t >> <:sexp_of< bool >>
+    debug "pointer_is_valid" [t] pointer <:sexp_of< _ Pointer.t >> <:sexp_of< bool >>
       (fun () -> pointer_is_valid t pointer)
   ;;
 
   let create slots ~capacity ~dummy =
-    debug "Pool.create" [] capacity <:sexp_of< int >> <:sexp_of< _ t >>
+    debug "create" [] capacity <:sexp_of< int >> <:sexp_of< _ t >>
       (fun () -> create slots ~capacity ~dummy)
   ;;
 
   let capacity t =
-    debug "Pool.capacity" [t] t <:sexp_of< _ t >> <:sexp_of< int >>
+    debug "capacity" [t] t <:sexp_of< _ t >> <:sexp_of< int >>
       (fun () -> capacity t)
   ;;
 
   let grow ?capacity t =
-    debug "Pool.grow" [t] (`capacity capacity) (<:sexp_of< [ `capacity of int option ] >>)
+    debug "grow" [t] (`capacity capacity) (<:sexp_of< [ `capacity of int option ] >>)
       (<:sexp_of< _ t >>) (fun () -> grow ?capacity t)
   ;;
 
   let is_full t =
-    debug "Pool.is_full" [t] t <:sexp_of< _ t >> <:sexp_of< bool >>
+    debug "is_full" [t] t <:sexp_of< _ t >> <:sexp_of< bool >>
       (fun () -> is_full t)
   ;;
 
   let free t p =
-    debug "Pool.free" [t] p <:sexp_of< _ Pointer.t >> <:sexp_of< unit >>
+    debug "free" [t] p <:sexp_of< _ Pointer.t >> <:sexp_of< unit >>
       (fun () -> free t p)
   ;;
 
   let debug_new t f =
-    debug "Pool.new" [t] () <:sexp_of< unit >> <:sexp_of< _ Pointer.t >> f
+    debug "new" [t] () <:sexp_of< unit >> <:sexp_of< _ Pointer.t >> f
   ;;
 
   let new1 t a0                         = debug_new t (fun () -> new1 t a0)
@@ -898,7 +906,7 @@ module Debug (Pool : S) = struct
   let new9 t a0 a1 a2 a3 a4 a5 a6 a7 a8 = debug_new t (fun () -> new9 t a0 a1 a2 a3 a4 a5 a6 a7 a8)
 
   let get_tuple t pointer =
-    debug "Pool.get_tuple" [t] pointer <:sexp_of< _ Pointer.t >> <:sexp_of< _ >>
+    debug "get_tuple" [t] pointer <:sexp_of< _ Pointer.t >> <:sexp_of< _ >>
       (fun () -> get_tuple t pointer)
   ;;
 
@@ -907,16 +915,16 @@ module Debug (Pool : S) = struct
       (fun () -> f t pointer)
   ;;
 
-  let get        t pointer slot = debug_get "Pool.get"        get        t pointer slot
-  let unsafe_get t pointer slot = debug_get "Pool.unsafe_get" unsafe_get t pointer slot
+  let get        t pointer slot = debug_get "get"        get        t pointer slot
+  let unsafe_get t pointer slot = debug_get "unsafe_get" unsafe_get t pointer slot
 
   let debug_set name f t pointer slot a =
     debug name [t] pointer <:sexp_of< _ Pointer.t >> <:sexp_of< unit >>
       (fun () -> f t pointer slot a)
   ;;
 
-  let set        t pointer slot a = debug_set "Pool.set"        set        t pointer slot a
-  let unsafe_set t pointer slot a = debug_set "Pool.unsafe_set" unsafe_set t pointer slot a
+  let set        t pointer slot a = debug_set "set"        set        t pointer slot a
+  let unsafe_set t pointer slot a = debug_set "unsafe_set" unsafe_set t pointer slot a
 
 end
 
@@ -939,7 +947,8 @@ module Error_check (Pool : S) = struct
 
     let null () = { is_valid = false; pointer = Pointer.null () }
 
-    let phys_equal (t1 : _ t) t2 = Pointer.phys_equal t1.pointer t2.pointer
+    let phys_compare t1 t2 = Pointer.phys_compare t1.pointer t2.pointer
+    let phys_equal   t1 t2 = Pointer.phys_equal   t1.pointer t2.pointer
 
     let is_null t = Pointer.is_null t.pointer
 

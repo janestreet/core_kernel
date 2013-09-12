@@ -6,6 +6,9 @@ module List = Core_list
 
 let invalid_argf = Core_printf.invalid_argf
 
+let failwiths = Error.failwiths
+let does_raise = Common.does_raise
+
 type 'a t = 'a array with sexp, bin_io
 
 (* This module implements a new in-place, constant heap sorting algorithm to replace the
@@ -366,6 +369,30 @@ TEST = is_sorted [|0|] ~cmp:compare
 TEST = is_sorted [|0;1;2;2;4|] ~cmp:compare
 TEST = not (is_sorted [|0;1;2;3;2|] ~cmp:compare)
 
+let is_sorted_strictly t ~cmp =
+  let rec loop i =
+    if i < 1 then
+      true
+    else
+      cmp t.(i - 1) t.(i) < 0 && loop (i - 1)
+  in
+  loop (length t - 1)
+;;
+
+TEST_UNIT =
+  List.iter
+    ~f:(fun (t, expect) -> assert (expect = is_sorted_strictly (of_list t) ~cmp:compare))
+    [ []         , true;
+      [ 1 ]      , true;
+      [ 1; 2 ]   , true;
+      [ 1; 1 ]   , false;
+      [ 2; 1 ]   , false;
+      [ 1; 2; 3 ], true;
+      [ 1; 1; 3 ], false;
+      [ 1; 2; 2 ], false;
+    ]
+;;
+
 let fold t ~init ~f = Array.fold_left t ~init ~f
 
 let count t ~f = Container.fold_count fold t ~f
@@ -620,6 +647,38 @@ let find_map t ~f =
   loop 0
 ;;
 
+let find_consecutive_duplicate t ~equal =
+  let n = length t in
+  if n <= 1
+  then None
+  else begin
+    let result = ref None in
+    let i = ref 1 in
+    let prev = ref t.(0) in
+    while !i < n do
+      let cur = t.(!i) in
+      if equal cur !prev
+      then (result := Some (!prev, cur); i := n)
+      else (prev := cur; incr i)
+    done;
+    !result
+  end
+;;
+
+TEST_UNIT =
+  List.iter
+    ~f:(fun (l, expect) ->
+      let t = of_list l in
+      assert (Poly.equal expect (find_consecutive_duplicate t ~equal:Poly.equal)))
+    [ []            , None
+    ; [ 1 ]         , None
+    ; [ 1; 1 ]      , Some (1, 1)
+    ; [ 1; 2 ]      , None
+    ; [ 1; 2; 1 ]   , None
+    ; [ 1; 2; 2 ]   , Some (2, 2)
+    ; [ 1; 1; 2; 2 ], Some (1, 1)
+    ]
+;;
 
 let reduce t ~f =
   if length t = 0 then None
@@ -695,6 +754,42 @@ let cartesian_product t1 t2 =
       done
     done;
     t
+;;
+
+(* [Array.truncate] is a safe wrapper for calling [Obj.truncate] on an array.
+   [Obj.truncate] reduces the size of a block on the ocaml heap.  For arrays, the block
+   size is the array length.  The precondition checked for [len] is exactly the one
+   required by [Obj.truncate]. *)
+let truncate t ~len =
+  if len <= 0 || len > length t then
+    failwiths "Array.truncate got invalid len" len <:sexp_of< int >>;
+  if len < length t then Obj.truncate (Obj.repr t) len;
+;;
+
+TEST_UNIT =
+  List.iter
+    ~f:(fun (t, len) ->
+      assert (does_raise (fun () -> truncate t ~len)))
+    [ [| |]  , -1
+    ; [| |]  , 0
+    ; [| |]  , 1
+    ; [| 1 |], -1
+    ; [| 1 |], 0
+    ; [| 1 |], 2
+    ]
+;;
+
+TEST_UNIT =
+  for orig_len = 1 to 5 do
+    for new_len = 1 to orig_len do
+      let t = init orig_len ~f:Fn.id in
+      truncate t ~len:new_len;
+      assert (length t = new_len);
+      for i = 0 to new_len - 1 do
+        assert (t.(i) = i);
+      done;
+    done;
+  done;
 ;;
 
 module Sequence = struct

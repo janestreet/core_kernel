@@ -1,6 +1,8 @@
 open Bin_prot.Std
 open Sexplib.Std
 
+module Sexp = Sexplib.Sexp
+
 type t = Lexing.position =
   { pos_fname : string;
     pos_lnum : int;
@@ -9,8 +11,16 @@ type t = Lexing.position =
   }
 with bin_io, compare, sexp
 
-let to_sexp_hum t =
-  <:sexp_of< [ `file of string ] * [ `line of int ] >>
-    (`file t.pos_fname, `line t.pos_lnum)
+type t_hum = t with bin_io, compare
+
+let to_string t =
+  String.concat ""
+    [ t.pos_fname
+    ; ":"; string_of_int t.pos_lnum
+    ; ":"; string_of_int (t.pos_cnum - t.pos_bol)
+    ]
 ;;
 
+let sexp_of_t_hum t = Sexp.Atom (to_string t)
+
+let to_sexp_hum = sexp_of_t_hum

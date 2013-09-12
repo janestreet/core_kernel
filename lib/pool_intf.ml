@@ -40,7 +40,8 @@ module type S = sig
     val null : unit -> _ t
     val is_null : _ t -> bool
 
-    val phys_equal : 'a t -> 'a t -> bool
+    val phys_compare : 'a t -> 'a t -> int
+    val phys_equal   : 'a t -> 'a t -> bool
 
     module Id : sig
       (** Pointer ids are serializable, but have no other operations. *)
@@ -238,6 +239,9 @@ module type Pool = sig
       input [Pool], even with all the controls set to [false]. *)
   module Debug (Pool : S) : sig
     include S
+      with type 'a Pointer.t = 'a Pool.Pointer.t
+      with type Pointer.Id.t = Pool.Pointer.Id.t
+      with type 'a t = 'a Pool.t
 
     val check_invariant : bool ref
     val show_messages : bool ref

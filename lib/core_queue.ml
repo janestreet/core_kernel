@@ -127,7 +127,7 @@ let singleton a =
 include Bin_prot.Utils.Make_iterable_binable1 (struct
 
   type 'a t = 'a Queue.t
-  type 'a el = 'a with bin_io
+  type 'a el = 'a
   type 'a acc = 'a t
 
   let module_name = Some "Core.Std.Queue"
@@ -144,6 +144,12 @@ include Bin_prot.Utils.Make_iterable_binable1 (struct
   let insert t x _i = enqueue t x; t
 
   let finish t = t
+
+  let bin_size_el sizer = sizer
+
+  let bin_write_el_ writer = writer
+
+  let bin_read_el_ reader = reader
 
 end)
 

@@ -58,7 +58,7 @@ TEST_MODULE = struct
     let check location =
       if not (Map.equal (=) !actual !expected) then
         failwiths "mismatch" (location, `actual actual, `expected expected)
-          (<:sexp_of< Source_code_position0.t * [ `actual of t ] * [ `expected of t ] >>)
+          <:sexp_of< Source_code_position0.t_hum * [ `actual of t ] * [ `expected of t ] >>
     ;;
   end
 

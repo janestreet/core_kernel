@@ -228,6 +228,11 @@ val groupi : 'a t -> break:(int -> 'a -> 'a -> bool) -> 'a t t
 val last : 'a t -> 'a option
 val last_exn : 'a t -> 'a
 
+(** [find_consecutive_duplicate t ~equal] returns the first pair of consecutive elements
+    [(a1, a2)] in [t] such that [equal a1 a2].  They are returned in the same order as
+    they appear in [t]. *)
+val find_consecutive_duplicate : 'a t -> equal:('a -> 'a -> bool) -> ('a * 'a) option
+
 (** [remove_consecutive_duplicates]. The same list with consecutive duplicates removed.
     The relative order of the other elements is unaffected. *)
 val remove_consecutive_duplicates : 'a t -> equal:('a -> 'a -> bool) -> 'a t
@@ -363,7 +368,12 @@ val to_string : f:('a -> string) -> 'a t -> string
     If [random_state] is not supplied, [permute] uses [Random.State.default]. *)
 val permute : ?random_state:Core_random.State.t -> 'a t -> 'a t
 
-val is_sorted : 'a t -> compare:('a -> 'a -> int) -> bool
+(** [is_sorted t ~compare] returns [true] iff forall adjacent [a1; a2] in [t], [compare a1
+    a2 <= 0].
+
+    [is_sorted_strictly] is similar, except uses [<] instead of [<=]. *)
+val is_sorted          : 'a t -> compare:('a -> 'a -> int) -> bool
+val is_sorted_strictly : 'a t -> compare:('a -> 'a -> int) -> bool
 
 (** lexicographic *)
 val compare : 'a t -> 'a t -> cmp:('a -> 'a -> int) -> int

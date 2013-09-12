@@ -556,6 +556,8 @@ let equal t t' equal =
     true)
 ;;
 
+let similar = equal
+
 module Accessors = struct
   let invariant       = invariant
   let clear           = clear
@@ -600,6 +602,7 @@ module Accessors = struct
   let filter_inplace  = filter_inplace
   let filteri_inplace = filteri_inplace
   let equal           = equal
+  let similar         = similar
   let incr            = incr
   let sexp_of_key     = sexp_of_key
 end
