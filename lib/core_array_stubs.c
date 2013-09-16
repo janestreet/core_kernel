@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <caml/mlvalues.h>
 #include <caml/memory.h>
+#include <caml/alloc.h>
+#include <caml/fail.h>
 
 CAMLprim value core_array_unsafe_int_blit(value src, value src_pos,
                                           value dst, value dst_pos, value len)
@@ -29,4 +31,15 @@ CAMLprim value core_array_unsafe_float_blit(value src, value src_pos,
           Long_val(len) * sizeof(double));
 
   return Val_unit;
+}
+
+CAMLprim value core_array_unsafe_alloc_floats(value v_len)
+{
+  mlsize_t wsize = Long_val(v_len) * Double_wosize;
+  if (wsize <= Max_young_wosize) {
+    if (wsize == 0) return Atom(Double_array_tag);
+    else return caml_alloc_small(wsize, Double_array_tag);
+  } else if (wsize > Max_wosize)
+    caml_invalid_argument("Core.Array.Float.alloc: len too large");
+  else return caml_alloc(wsize, Double_array_tag);
 }
