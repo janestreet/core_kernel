@@ -49,6 +49,8 @@ let min_value = neg_infinity
 let max_finite_value = Pervasives.max_float
 let min_positive_value = Pervasives.min_float
 let zero = 0.
+let one = 1.
+let neg_one = -1.
 
 let frexp = Pervasives.frexp
 let ldexp = Pervasives.ldexp
