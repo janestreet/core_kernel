@@ -31,6 +31,10 @@ let error message a sexp_of_a = Error (Error.create message a sexp_of_a)
 
 let error_string message = Error (Error.of_string message)
 
+let errorf format = Printf.ksprintf error_string format
+
+TEST = errorf "foo %d" 13 = error_string "foo 13"
+
 let tag t message = Result.map_error t ~f:(fun e -> Error.tag e message)
 let tag_arg t message a sexp_of_a =
   Result.map_error t ~f:(fun e -> Error.tag_arg e message a sexp_of_a)

@@ -11,7 +11,7 @@
     exception.
 
     A [Bounded_int_table] is implemented using two fixed size arrays of size [num_keys],
-    which is supplied at table-creation time.  The space used does not depend on the
+    which are supplied at table-creation time.  The space used does not depend on the
     [length] of the table but rather only on [num_keys].  Operations that deal with a
     single element (find, mem, add, remove, set) take constant time, and perform one or
     two array operations.  Operations that deal with all of the keys defined in the table

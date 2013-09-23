@@ -1,11 +1,12 @@
 module Array = Core_array
 module Int = Core_int
+module List = Core_list
 module String = Core_string
 module Hashtbl = Core_hashtbl
 
 let failwithf = Core_printf.failwithf
 
-let num_days = 7
+let num_days_in_week = 7
 
 module Stable = struct
   module V1 = struct
@@ -15,18 +16,18 @@ module Stable = struct
     type t = int
 
     let invariant t =
-      assert (0 <= t && t < num_days);
+      assert (0 <= t && t < num_days_in_week);
     ;;
 
     let of_int i =
-      if 0 <= i && i < num_days then
+      if 0 <= i && i < num_days_in_week then
         Some i
       else
         None
     ;;
 
     let of_int_exn i =
-      if 0 <= i && i < num_days then
+      if 0 <= i && i < num_days_in_week then
         i
       else
         failwithf "Day_of_week.of_int_exn %d" i ()
@@ -98,7 +99,22 @@ module Stable = struct
       | `Sat -> 6
     ;;
 
-    let shift t i = Int.Infix.( % ) (t + i) num_days
+    let shift t i = Int.Infix.( % ) (t + i) num_days_in_week
+
+    let num_days ~from ~to_ =
+      let d = to_ - from in
+      if d < 0 then d + num_days_in_week else d
+    ;;
+
+    TEST = num_days ~from:mon ~to_:tue = 1;;
+    TEST = num_days ~from:tue ~to_:mon = 6;;
+    TEST "num_days is inverse to shift" =
+      let all_days = [sun; mon; tue; wed; thu; fri; sat] in
+      List.for_all (List.cartesian_product all_days all_days)
+        ~f:(fun (from, to_) ->
+          let i = num_days ~from ~to_ in
+          0 <= i && i < num_days_in_week && shift from i = to_)
+    ;;
 
     let is_sun_or_sat t =
       t = sun || t = sat

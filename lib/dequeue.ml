@@ -193,7 +193,26 @@ module C = Container.Make (struct
   let fold = fold
 end)
 let count      = C.count
-let iter       = C.iter
+
+let iter t ~f =
+  if not (is_empty t) then begin
+    let actual_front = actual_front_index_when_not_empty t in
+    let actual_back  = actual_back_index_when_not_empty t in
+    let rec loop ~real_i ~stop_pos =
+      if real_i < stop_pos then begin
+        f t.arr.(real_i);
+        loop ~real_i:(real_i + 1) ~stop_pos
+      end
+    in
+    if actual_front <= actual_back then
+      loop ~real_i:actual_front ~stop_pos:(actual_back + 1)
+    else begin
+      loop ~real_i:actual_front ~stop_pos:t.arr_length;
+      loop ~real_i:0 ~stop_pos:(actual_back + 1)
+    end
+  end
+;;
+
 let exists     = C.exists
 let mem        = C.mem
 let for_all    = C.for_all
@@ -420,6 +439,7 @@ TEST_MODULE = struct
     val to_array : 'a t -> 'a array
     val clear    : 'a t -> unit
     val length   : 'a t -> int
+    val iter     : 'a t -> f:('a -> unit) -> unit
     val fold'
       : 'a t -> [`front_to_back | `back_to_front] -> init:'b -> f:('b -> 'a -> 'b) -> 'b
   end
@@ -449,6 +469,7 @@ TEST_MODULE = struct
 
     let to_array = Doubly_linked.to_array
     let clear    = Doubly_linked.clear
+    let iter     = Doubly_linked.iter
     let length   = Doubly_linked.length
   end
 
@@ -461,6 +482,7 @@ TEST_MODULE = struct
     let to_array  = to_array
     let clear     = clear
     let length    = length
+    let iter      = iter
     let fold'     = fold'
   end
 
@@ -533,6 +555,21 @@ TEST_MODULE = struct
         ()
   ;;
 
+  let iter_check (t_a, t_b) =
+    let make_rev_list iter t =
+      let r = ref [] in iter t ~f:(fun x -> r := x :: !r); !r
+    in
+    let this_l = make_rev_list This_dequeue.iter t_a in
+    let that_l = make_rev_list That_dequeue.iter t_b in
+    if this_l <> that_l then
+      failwithf "error in iter:  %s (from %s) <> %s (from %s)"
+        (Sexp.to_string (<:sexp_of<int list>> this_l))
+        (this_to_string t_a)
+        (Sexp.to_string (<:sexp_of<int list>> that_l))
+        (that_to_string t_b)
+        ()
+  ;;
+
   let length_check (t_a, t_b) =
     let this_len = This_dequeue.length t_a in
     let that_len = That_dequeue.length t_b in
@@ -557,7 +594,7 @@ TEST_MODULE = struct
             (Sexp.to_string (Array.sexp_of_t Int.sexp_of_t arr_b))
             ()
       end else begin
-        let r = Random.int 100 in
+        let r = Random.int 110 in
         begin
           if r < 20 then
             enqueue t `front (Random.int 10_000)
@@ -573,6 +610,8 @@ TEST_MODULE = struct
             fold_check t `front_to_back
           else if r < 90 then
             fold_check t `back_to_front
+          else if r < 100 then
+            iter_check t
           else
             length_check t
         end;

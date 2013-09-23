@@ -2,9 +2,6 @@
     organizational approach as [Core_map_intf].  See the documentation in core_map.mli for
     a description of the approach.
 
-    CRs and comments about [Set] functions do not belong in this file.  They belong next
-    to the appropriate function in core_set.mli.
-
     This module defines module types
     [{Creators,Accessors}{0,1,2,_generic,_with_comparator}].  It uses check functors to
     ensure that each module types is an instance of the corresponding [_generic] one.
@@ -12,6 +9,10 @@
     We must treat [Creators] and [Accessors] separately, because we sometimes need to
     choose different instantiations of their [options].  In particular, [Set] itself
     matches [Creators2_with_comparator] but [Accessors2] (without comparator).
+*)
+(*
+    CRs and comments about [Set] functions do not belong in this file.  They belong next
+    to the appropriate function in core_set.mli.
 *)
 
 open T

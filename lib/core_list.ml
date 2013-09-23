@@ -807,7 +807,7 @@ let partition_tf t ~f =
 
 module Assoc = struct
 
-  type ('a, 'b) t = ('a * 'b) list with sexp, compare
+  type ('a, 'b) t = ('a * 'b) list with bin_io, sexp, compare
 
   let find t ?(equal=Poly.equal) key =
     match find t ~f:(fun (key', _) -> equal key key') with

@@ -36,6 +36,11 @@ val error        : string -> 'a -> ('a -> Sexp.t) -> _ t
 (** [error_string message] is [Error (Error.of_string message)] *)
 val error_string : string -> _ t
 
+(** [errorf format arg1 arg2 ...] is [Error (sprintf format arg1 arg2 ...)].  Note that it
+    calculates the string eagerly, so when performance matters you may want to use [error]
+    instead. *)
+val errorf : ('a, unit, string, _ t) format4 -> 'a
+
 (** [tag t string] is [Result.map_error t ~f:(fun e -> Error.tag e string)].
     [tag_arg] is similar. *)
 val tag : 'a t -> string -> 'a t

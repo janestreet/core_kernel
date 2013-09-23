@@ -122,11 +122,11 @@ val eval : 'a t -> ('a -> bool) -> bool
 
     - [specialize t (fun x -> `Known (f x)) = constant (eval t f)]
 
-    - [List.forall (values (specialize t g)) ~f:(fun x -> g x = `Unknown)]
+    - [List.for_all (values (specialize t g)) ~f:(fun x -> g x = `Unknown)]
 
     - {[
         if
-          List.forall (values t) ~f:(fun x ->
+          List.for_all (values t) ~f:(fun x ->
             match g x with
             | `Known b -> b = f x
             | `Unknown -> true)

@@ -41,6 +41,11 @@ val to_int : t -> int
 (** [shift t i] goes forward (or backward) the specified number of weekdays *)
 val shift : t -> int -> t
 
+(** [num_days ~from ~to_] gives the number of days that must elapse from a [from] to get
+    to a [to_], i.e. the smallest non-negative number [i] such that [shift from i = to_].
+*)
+val num_days : from:t -> to_:t -> int
+
 (** [is_sun_or_sat] returns true if t is Sunday or Saturday *)
 val is_sun_or_sat : t -> bool
 

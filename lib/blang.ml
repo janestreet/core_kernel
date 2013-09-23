@@ -66,6 +66,7 @@ end = struct
   let not_ = function
     | True -> False
     | False -> True
+    | Not t -> t
     | t -> Not t
 
   let andalso t1 t2 =
@@ -86,10 +87,10 @@ end = struct
     | False -> c
     | _ ->
       match (b, c) with
-      | (True, _ ) -> orelse       a  c
-      | (_, False) -> andalso      a  b
-      | (_, True ) -> orelse  (Not a) b
-      | (False, _) -> andalso (Not a) c
+      | (True, _ ) -> orelse        a  c
+      | (_, False) -> andalso       a  b
+      | (_, True ) -> orelse  (not_ a) b
+      | (False, _) -> andalso (not_ a) c
       | _ -> If (a, b, c)
 
 end
@@ -264,6 +265,7 @@ TEST_MODULE "auto-simplification" = struct
 
   TEST = not_ true_ = false_
   TEST = not_ false_ = true_
+  TEST = not_ (not_ a) = a
 
   TEST = andalso true_ b = b
   TEST = andalso a true_ = a
