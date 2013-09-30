@@ -410,10 +410,42 @@ include (Monad.Make (struct
     | True -> true_
     | False -> false_
     | Not t1 -> not_ (bind t1 k)
-    | And (t1, t2) -> andalso (bind t1 k) (bind t2 k)
-    | Or (t1, t2) -> orelse (bind t1 k) (bind t2 k)
-    | If (t1, t2, t3) -> if_ (bind t1 k) (bind t2 k) (bind t3 k)
+    (* Unfortunately we need to duplicate some of the short-circuiting from [andalso] and
+       friends here. In principle we could do something involving [Lazy.t] but the
+       overhead probably wouldn't be worth it. *)
+    | And (t1, t2) ->
+      begin match bind t1 k with
+      | False -> false_
+      | other -> andalso other (bind t2 k)
+      end
+    | Or (t1, t2) ->
+      begin match bind t1 k with
+      | True -> true_
+      | other -> orelse other (bind t2 k)
+      end
+    | If (t1, t2, t3) ->
+      begin match bind t1 k with
+      | True -> bind t2 k
+      | False -> bind t3 k
+      | other -> if_ other (bind t2 k) (bind t3 k)
+      end
 end) : Monad.S with type 'a t := 'a t)
+
+TEST_MODULE "bind short-circuiting" = struct
+  let test expected_visits expr =
+    let visited = ref [] in
+    let f var =
+      visited := var :: !visited;
+      false_
+    in
+    match bind expr f with
+    | True -> List.equal ~equal:Int.equal expected_visits (List.rev !visited)
+    | _ -> false
+
+  TEST = test [0] (or_ [not_ (base 0); base 1])
+  TEST = test [0; 1] (not_ (and_ [not_ (base 0); base 1; base 2]))
+  TEST = test [0; 2] (if_ (base 0) (base 1) (not_ (base 2)))
+end
 
 (* semantics *)
 

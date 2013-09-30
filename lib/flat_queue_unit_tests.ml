@@ -3,7 +3,8 @@ open Int.Replace_polymorphic_compare  let () = _squelch_unused_module_warning_
 
 let eprints = Debug.eprints
 
-(* module Flat_queue = Flat_queue_debug.Debug (Flat_queue) *)
+module Flat_queue = Flat_queue_debug.Debug (Flat_queue)
+let () = Flat_queue.show_messages := false
 open Flat_queue
 
 module Slots = Slots

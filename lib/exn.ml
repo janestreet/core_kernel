@@ -22,16 +22,6 @@ let () =
       Conv.Exn_converter.add_auto ~finalise:false exc handler)
     [
       (
-        Bin_prot.Common.Read_exc (Not_found, 0),
-        (function
-        | Bin_prot.Common.Read_exc (exc, pos) ->
-            Sexp.List [
-              Sexp.Atom "Bin_prot.Common.Read_exc";
-              sexp_of_exn exc;
-              Conv.sexp_of_int pos;
-            ]
-        | _ -> assert false)
-      );(
         Bin_prot.Common.Read_error (Bin_prot.Common.ReadError.Neg_int8, 0),
         (function
         | Bin_prot.Common.Read_error (err, pos) ->
@@ -42,15 +32,7 @@ let () =
               Conv.sexp_of_int pos;
             ]
         | _ -> assert false)
-      );(
-        Bin_prot.Unsafe_read_c.Error Bin_prot.Common.ReadError.Neg_int8,
-        (function
-        | Bin_prot.Unsafe_read_c.Error err ->
-            let str_err = Bin_prot.Common.ReadError.to_string err in
-            Sexp.List [ Sexp.Atom "Bin_prot.Common.Read_error";
-                              Sexp.Atom str_err ]
-        | _ -> assert false)
-      )
+      );
     ]
 
 let to_string exc = Sexp.to_string_hum ~indent:2 (sexp_of_exn exc)

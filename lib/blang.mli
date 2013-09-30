@@ -103,7 +103,10 @@ include Container.S1 with type 'a t := 'a t
     {ul {- [return v] is [Base v] (think of [v] as a variable) }
         {- [bind t f] replaces every [Base v] in [t] with [f v]
            (think of [v] as a variable and [f] as specifying the term to
-           substitute for each variable) } } *)
+           substitute for each variable) } }
+
+    Note: [bind t f] does short-circuiting, so [f] may not be called on every variable in
+    [t]. *)
 include Monad with type 'a t := 'a t
 
 (** [values t] forms the list containing every [v]

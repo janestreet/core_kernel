@@ -49,7 +49,7 @@ module Unpack_one = struct
         if header_length > len then
           not_enough_data
         else begin
-          match read Bin_prot.Read_ml.bin_read_int_64bit buf ~pos ~len:header_length with
+          match read Bin_prot.Read.bin_read_int_64bit buf ~pos ~len:header_length with
           | `Invalid_data _ as x -> x
           | `Ok element_length ->
             if element_length < 0 then

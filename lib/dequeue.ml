@@ -378,9 +378,9 @@ let true_index_exn t i =
   else true_i
 ;;
 
-let get_exn t i = t.arr.(true_index_exn t i)
+let get t i = t.arr.(true_index_exn t i)
 
-let get t i = try Some (get_exn t i) with _ -> None
+let get_opt t i = try Some (get t i) with _ -> None
 
 let set_exn t i v = t.arr.(true_index_exn t i) <- v
 

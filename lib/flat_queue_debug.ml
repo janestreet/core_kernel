@@ -1,13 +1,9 @@
 open Std_internal
 open Int.Replace_polymorphic_compare  let _ = _squelch_unused_module_warning_
 
-module type Flat_queue = module type of Flat_queue
+module Debug (Flat_queue : module type of Flat_queue) = struct
 
-module Debug (Flat_queue : Flat_queue) : Flat_queue = struct
-
-  module Debug = Debug.Make (struct end)
-
-  include Debug
+  include Debug.Make (struct end)
 
   open Flat_queue
 

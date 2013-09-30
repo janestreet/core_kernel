@@ -1,9 +1,10 @@
-(** This module implements a very low level interface to a mutable AVL tree. It is not
-    intended to be used directly by casual users. It is used for implementing other data
-    structures. The interface is somewhat ugly, and it's that way for a reason. The goal
-    of this module is minimum memory overhead, and maximum performance.
+(** A low-level, mutable AVL tree.
 
-    ***************** Points of Ugliness *****************
+    It is not intended to be used directly by casual users. It is used for implementing
+    other data structures. The interface is somewhat ugly, and it's that way for a
+    reason. The goal of this module is minimum memory overhead, and maximum performance.
+
+ ***************** Points of Ugliness *****************
 
     * compare is passed in to every function where it is used. If you pass a different
     compare to functions on the same tree, then all bets are off as far as what it does,
