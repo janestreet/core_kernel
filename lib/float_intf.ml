@@ -111,6 +111,9 @@ module type S = sig
   val ( * ) : t -> t -> t
   val (/) : t -> t -> t
 
+  val (~+) : t -> t
+  val (~-) : t -> t
+
   (** Returns the fractional part and the whole (i.e. integer) part.  For example, [modf
       (-3.14)] returns [{ fractional = -0.14; integral = -3.; }]! *)
   module Parts : sig

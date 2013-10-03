@@ -335,6 +335,9 @@ let (-) t t' = t -. t'
 let ( * ) t t' = t *. t'
 let (/) t t' = t /. t'
 
+let (~+) = (~+.)
+let (~-) = (~-.)
+
 include Comparable.Map_and_set_binable (T)
 
 module Sign = struct
