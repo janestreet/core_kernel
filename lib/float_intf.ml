@@ -45,27 +45,39 @@ module type S = sig
   (* [round] rounds a float to an integer float.  [iround{,_exn}] rounds a float to an
      int.  Both round according to a direction [dir], with default [dir] being [`Nearest].
 
-     | `Down    | rounds toward Float.neg_infinity |
-     | `Up      | rounds toward Float.infinity     |
-     | `Nearest | rounds to the nearest int        |
-     | `Zero    | rounds toward zero               |
+     {v
+       | `Down    | rounds toward Float.neg_infinity                             |
+       | `Up      | rounds toward Float.infinity                                 |
+       | `Nearest | rounds to the nearest int ("round half-integers up")         |
+       | `Zero    | rounds toward zero                                           |
+     v}
 
-     iround[_exn] raises Invalid_argument when either trying to handle nan or trying to
-     handle a float outside the range (-. 2. ** 52., 2. ** 52.) (since floats have 52
-     significant bits) or outside the range (float min_int, float_max_int)
-
-     Caveat: If the absolute value of the input float is very large, then it could be that
-     |round ~dir:`Down x - round ~dir:`Up x| > 1.
+     [iround_exn] raises when trying to handle nan or trying to handle a float outside the
+     range [float min_int, float max_int).
 
      Here are some examples for [round] for each of the directions.
 
-     | `Down    | [-2.,-1.)   to -2. | [-1.,0.)   to -1. | [0.,1.) to 0., [1.,2.) to 1. |
-     | `Up      | (-2.,-1.]   to -1. | (-1.,0.]   to -0. | (0.,1.] to 1., (1.,2.] to 2. |
-     | `Zero    | (-2.,-1.]   to -1. | (-1.,1.)   to 0.  | [1.,2.) to 1.                |
-     | `Nearest | [-1.5,-0.5) to -1. | [-0.5,0.5) to 0.  | [0.5,1.5) to 1.              |
+     {v
+       | `Down    | [-2.,-1.)   to -2. | [-1.,0.)   to -1. | [0.,1.) to 0., [1.,2.) to 1. |
+       | `Up      | (-2.,-1.]   to -1. | (-1.,0.]   to -0. | (0.,1.] to 1., (1.,2.] to 2. |
+       | `Zero    | (-2.,-1.]   to -1. | (-1.,1.)   to 0.  | [1.,2.) to 1.                |
+       | `Nearest | [-1.5,-0.5) to -1. | [-0.5,0.5) to 0.  | [0.5,1.5) to 1.              |
+     v}
 
      For convenience, versions of these functions with the [dir] argument hard-coded are
-     provided. *)
+     provided.  If you are writing performance-critical code you should use the
+     versions with the hard-coded arguments (e.g. [iround_down_exn]).  The [_exn] ones
+     are the fastest.
+
+     The following properties hold:
+
+     - [of_int (iround_*_exn i) = i] for any float [i] that is an integer with
+       [min_int <= i <= max_int].
+
+     - [round_* i = i] for any float [i] that is an integer.
+
+     - [iround_*_exn (of_int i) = i] for any int [i] with [-2**52 <= i <= 2**52].
+  *)
   val round      : ?dir:[`Zero|`Nearest|`Up|`Down] -> t -> t
   val iround     : ?dir:[`Zero|`Nearest|`Up|`Down] -> t -> int option
   val iround_exn : ?dir:[`Zero|`Nearest|`Up|`Down] -> t -> int

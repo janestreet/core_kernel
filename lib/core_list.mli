@@ -29,8 +29,9 @@ val rev : 'a t -> 'a t
     to [(]{!List.rev}[ l1) @ l2], but [rev_append] is more efficient. *)
 val rev_append : 'a t -> 'a t -> 'a t
 
-(* Appends two lists, giving no guarantee about order.  Generally takes time proportional
-   to length of first list, but is O(1) if either list is empty. *)
+(** [List.unordered_append l1 l2] has the same elements as [l1 @ l2], but in some
+    unspecified order.  Generally takes time proportional to length of first list, but is
+    O(1) if either list is empty. *)
 val unordered_append : 'a t -> 'a t -> 'a t
 
 (** [List.rev_map f l] gives the same result as

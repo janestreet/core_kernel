@@ -78,48 +78,159 @@ let to_int64 f =
   | P.FP_infinite | P.FP_nan -> invalid_arg "Float.to_int64 on nan or inf"
 
 (* max_int/min_int are architecture dependent, e.g. +/- 2^30, +/- 2^62 if 32-bit, 64-bit
-   (respectively) while float is IEEE standard for double (52 significant bits).  We may
-   lose precision (e.g. beyond the 52 bits) as we round from float to int but, by capping
-   with [iround_lbound] and [iround_ubound], we shouldn't run afoul of flipping the sign
-   bit on our integers.  With strict inequalities used on iround_lbound and iround_ubound
-   we could actually define them without the +. or -. 257.; this is a bit of extra
-   precaution in case someone uses them with <= or >=. *)
-let iround_lbound = max (of_int min_int) (-1.0 *. 2.0 ** 62.0 +. 257.)
-let iround_ubound = min (of_int max_int) (        2.0 ** 62.0 -. 257.)
+   (respectively) while float is IEEE standard for double (52 significant bits).
+
+   In both cases, we want to guarantee that if [iround_lbound <= x <= iround_ubound],
+   then [int_of_float x] fits in an int.  2.0 ** 62.0 -. 512. is the greatest
+   representable double <= max_int on a 64-bit box, so we choose that for the upper
+   bound.  For the lower bound, [min_int] is already representable, so we use that.
+
+   Minor point: [iround_lbound] and [iround_ubound] are integers (in the mathematical
+   sense), so if [iround_lbound <= t <= iround_ubound], then
+   [iround_lbound <= floor t <= ceil t <= iround_ubound].
+*)
+let iround_lbound = of_int min_int
+let iround_ubound = min (of_int max_int) (2.0 ** 62.0 -. 512.)
+
+(* The performance of the "exn" rounding functions is important, so they are written
+   out separately, and tuned individually.  (We could have the option versions call
+   the "exn" versions, but that imposes arguably gratuitous overhead---especially
+   in the case where the capture of backtraces is enabled upon "with"---and that seems
+   not worth it when compared to the relatively small amount of code duplication.) *)
+
+let iround_up t =
+  if t > 0.0 then begin
+    if t <= iround_ubound then
+      Some (int_of_float (ceil t))
+    else
+      None
+  end
+  else begin
+    if t >= iround_lbound then
+      Some (int_of_float t)
+    else
+      None
+  end
+
+let iround_up_exn t =
+  if t > 0.0 then begin
+    if t <= iround_ubound then
+      int_of_float (ceil t)
+    else
+      invalid_argf "Float.iround_up_exn: argument (%f) is too large" t ()
+  end
+  else begin
+    if t >= iround_lbound then
+      int_of_float t
+    else
+      invalid_argf "Float.iround_up_exn: argument (%f) is too small or NaN" t ()
+  end
+
+let iround_down t =
+  if t >= 0.0 then begin
+    if t <= iround_ubound then
+      Some (int_of_float t)
+    else
+      None
+  end
+  else begin
+    if t >= iround_lbound then
+      Some (int_of_float (floor t))
+    else
+      None
+  end
+
+let iround_down_exn t =
+  if t >= 0.0 then begin
+    if t <= iround_ubound then
+      int_of_float t
+    else
+      invalid_argf "Float.iround_down_exn: argument (%f) is too large" t ()
+  end
+  else begin
+    if t >= iround_lbound then
+      int_of_float (floor t)
+    else
+      invalid_argf "Float.iround_down_exn: argument (%f) is too small or NaN" t ()
+  end
+
+let iround_towards_zero t =
+  if t >= iround_lbound && t <= iround_ubound then
+    Some (int_of_float t)
+  else
+    None
+
+let iround_towards_zero_exn t =
+  if t >= iround_lbound && t <= iround_ubound then
+    int_of_float t
+  else
+    invalid_argf
+      "Float.iround_towards_zero_exn: argument (%f) is out of range or NaN" t ()
+
+(* Outside of the range [round_nearest_lb..round_nearest_ub], all representable doubles
+   are integers in the mathematical sense, and [round_nearest] should be identity.
+
+   However, for odd numbers with the absolute value between 2**52 and 2**53, the formula
+   [round_nearest x = floor (x + 0.5)] does not hold:
+
+   # let naive_round_nearest x = floor (x +. 0.5);;
+   # let x = 2. ** 52. +. 1.;;
+   val x : float = 4503599627370497.
+   # naive_round_nearest x;;
+   - :     float = 4503599627370498.
+*)
+let round_nearest_lb = -.(2. ** 52.)
+let round_nearest_ub =    2. ** 52.
+
+let iround_nearest t =
+  if t >= 0. then
+    if t <= round_nearest_ub then
+      Some (int_of_float (t +. 0.5))
+    else
+      if t <= iround_ubound then
+        Some (int_of_float t)
+      else
+        None
+  else
+    if t >= round_nearest_lb then
+      Some (int_of_float (floor (t +. 0.5)))
+    else
+      if t >= iround_lbound then
+        Some (int_of_float t)
+      else
+        None
+
+let iround_nearest_exn t =
+  if t >= 0. then
+    if t <= round_nearest_ub then
+      int_of_float (t +. 0.5)
+    else
+      if t <= iround_ubound then
+        int_of_float t
+      else
+        invalid_argf "Float.iround_nearest_exn: argument (%f) is too large" t ()
+  else
+    if t >= round_nearest_lb then
+      int_of_float (floor (t +. 0.5))
+    else
+      if t >= iround_lbound then
+        int_of_float t
+      else
+        invalid_argf "Float.iround_nearest_exn: argument (%f) is too small or NaN" t ()
+
+(* The following [iround_exn] and [iround] functions are slower than the ones above.
+   Their equivalence to those functions is tested in the unit tests below. *)
 
 let iround_exn ?(dir=`Nearest) t =
-  if is_nan t
-  then invalid_arg "Float.iround_exn: Unable to handle NaN"
-  else if t <= iround_lbound || t >= iround_ubound
-  then invalid_argf "Float.iround_exn: argument out of bounds (%f)" t ()
-  else match dir with
-  | `Zero    -> truncate t
-  | `Nearest -> to_int (floor (t +. 0.5))
-  | `Up      -> to_int (ceil  t)
-  | `Down    -> to_int (floor t)
+  match dir with
+  | `Zero    -> iround_towards_zero_exn t
+  | `Nearest -> iround_nearest_exn t
+  | `Up      -> iround_up_exn t
+  | `Down    -> iround_down_exn t
 
 let iround ?(dir=`Nearest) t =
   try Some (iround_exn ~dir t)
   with _ -> None
-
-let iround_nearest          = iround     ~dir:`Nearest
-let iround_up               = iround     ~dir:`Up
-let iround_down             = iround     ~dir:`Down
-let iround_towards_zero     = iround     ~dir:`Zero
-let iround_nearest_exn      = iround_exn ~dir:`Nearest
-let iround_up_exn           = iround_exn ~dir:`Up
-let iround_down_exn         = iround_exn ~dir:`Down
-let iround_towards_zero_exn = iround_exn ~dir:`Zero
-
-TEST = iround_exn ~dir:`Nearest 3.4 = 3
-TEST = iround_exn ~dir:`Nearest 3.6 = 4
-TEST = iround_exn ~dir:`Nearest (-3.4) = (-3)
-TEST = iround_exn ~dir:`Nearest (-3.6) = (-4)
-
-TEST = iround ~dir:`Nearest 3.4 = Some 3
-TEST = iround ~dir:`Nearest 3.6 = Some 4
-TEST = iround ~dir:`Nearest (-3.4) = Some (-3)
-TEST = iround ~dir:`Nearest (-3.6) = Some (-4)
 
 let is_inf x = (Pervasives.classify_float x = Pervasives.FP_infinite);;
 
@@ -180,7 +291,13 @@ TEST =
   round_towards_zero      3.6  =  3.
   && round_towards_zero (-3.6) = -3.
 
-let round_nearest t = floor (t +. 0.5)
+(* see the comment above [round_nearest_lb] and [round_nearest_ub] for an explanation *)
+let round_nearest t =
+  if t >= round_nearest_lb && t <= round_nearest_ub then
+    floor (t +. 0.5)
+  else
+    t
+
 TEST =
   round_nearest      3.6  =  4.
   && round_nearest (-3.6) = -4.
@@ -414,5 +531,352 @@ TEST_MODULE = struct
   TEST_UNIT = check (validate_ubound ~max:(Incl 0.) (-1.))        `Ok
   TEST_UNIT = check (validate_ubound ~max:(Incl 0.) 0.)           `Ok
   TEST_UNIT = check (validate_ubound ~max:(Incl 0.) 1.)           `Error
-end
 
+  (* Some of the following tests used to live in lib_test/core_float_test.ml. *)
+
+  let () = Random.init 137
+
+  let (=) = Pervasives.(=)
+  let (>=) = Pervasives.(>=)
+  let (+) = Pervasives.(+)
+  let (-) = Pervasives.(-)
+  let ( * ) = Pervasives.( * )
+
+  (* round:
+     ...  <-)[-><-)[-><-)[-><-)[-><-)[-><-)[->   ...
+     ... -+-----+-----+-----+-----+-----+-----+- ...
+     ... -3    -2    -1     0     1     2     3  ...
+     so round x -. x should be in (-0.5,0.5]
+  *)
+  let round_test x =
+    let y = round x in
+    -0.5 < y -. x && y -. x <= 0.5
+
+  let iround_up_vs_down_test x =
+    let expected_difference =
+      if Parts.fractional (modf x) = 0. then
+        0
+      else
+        1
+    in
+      ((iround_up_exn x) - (iround_down_exn x)) = expected_difference
+
+  let test_all_four x ~specialized_iround ~specialized_iround_exn ~dir ~validate =
+    let result1 = iround x ~dir in
+    let result2 = try Some (iround_exn x ~dir) with _exn -> None in
+    let result3 = specialized_iround x in
+    let result4 = try Some (specialized_iround_exn x) with _exn -> None in
+    let (=) = Pervasives.(=) in
+    if result1 = result2 && result2 = result3 && result3 = result4 then
+      validate result1
+    else
+      false
+
+  (* iround ~dir:`Nearest built so this should always be true *)
+  let iround_nearest_test x =
+    test_all_four x
+      ~specialized_iround:iround_nearest
+      ~specialized_iround_exn:iround_nearest_exn
+      ~dir:`Nearest
+      ~validate:(function
+        | None -> true
+        | Some y ->
+          let y = of_int y in
+          -0.5 < y -. x && y -. x <= 0.5)
+
+  (* iround_down:
+     ... )[<---)[<---)[<---)[<---)[<---)[<---)[  ...
+     ... -+-----+-----+-----+-----+-----+-----+- ...
+     ... -3    -2    -1     0     1     2     3  ...
+     so x -. iround_down x should be in [0,1)
+  *)
+  let iround_down_test x =
+    test_all_four x
+      ~specialized_iround:iround_down
+      ~specialized_iround_exn:iround_down_exn
+      ~dir:`Down
+      ~validate:(function
+        | None -> true
+        | Some y ->
+          let y = of_int y in
+          0. <= x -. y && x -. y < 1.)
+
+  (* iround_up:
+     ...  ](--->](--->](--->](--->](--->](--->]( ...
+     ... -+-----+-----+-----+-----+-----+-----+- ...
+     ... -3    -2    -1     0     1     2     3  ...
+     so iround_up x -. x should be in [0,1)
+  *)
+  let iround_up_test x =
+    test_all_four x
+      ~specialized_iround:iround_up
+      ~specialized_iround_exn:iround_up_exn
+      ~dir:`Up
+      ~validate:(function
+        | None -> true
+        | Some y ->
+          let y = of_int y in
+          0. <= y -. x && y -. x < 1.)
+
+  (* iround_towards_zero:
+     ...  ](--->](--->](---><--->)[<---)[<---)[  ...
+     ... -+-----+-----+-----+-----+-----+-----+- ...
+     ... -3    -2    -1     0     1     2     3  ...
+     so abs x -. abs (iround_towards_zero x) should be in [0,1)
+  *)
+  let iround_towards_zero_test x =
+    test_all_four x
+      ~specialized_iround:iround_towards_zero
+      ~specialized_iround_exn:iround_towards_zero_exn
+      ~dir:`Zero
+      ~validate:(function
+        | None -> true
+        | Some y ->
+          let x = abs x in
+          let y = abs (of_int y) in
+          0. <= x -. y && x -. y < 1. && (sign x = sign y || y = 0.0))
+
+  (* Easy cases that used to live inline with the code above. *)
+  TEST = iround_up (-3.4) = Some (-3)
+  TEST = iround_up   0.0  = Some   0
+  TEST = iround_up   3.4  = Some   4
+
+  TEST = iround_up_exn (-3.4) = -3
+  TEST = iround_up_exn   0.0  =  0
+  TEST = iround_up_exn   3.4  =  4
+
+  TEST = iround_down (-3.4) = Some (-4)
+  TEST = iround_down   0.0  = Some   0
+  TEST = iround_down   3.4  = Some   3
+
+  TEST = iround_down_exn (-3.4) = -4
+  TEST = iround_down_exn   0.0  =  0
+  TEST = iround_down_exn   3.4  =  3
+
+  TEST = iround_towards_zero (-3.4) = Some (-3)
+  TEST = iround_towards_zero   0.0  = Some   0
+  TEST = iround_towards_zero   3.4  = Some   3
+
+  TEST = iround_towards_zero_exn (-3.4) = -3
+  TEST = iround_towards_zero_exn   0.0  =  0
+  TEST = iround_towards_zero_exn   3.4  =  3
+
+  TEST = iround_nearest (-3.6) = Some (-4)
+  TEST = iround_nearest (-3.5) = Some (-3)
+  TEST = iround_nearest (-3.4) = Some (-3)
+  TEST = iround_nearest   0.0  = Some   0
+  TEST = iround_nearest   3.4  = Some   3
+  TEST = iround_nearest   3.5  = Some   4
+  TEST = iround_nearest   3.6  = Some   4
+
+  TEST = iround_nearest_exn (-3.6) = -4
+  TEST = iround_nearest_exn (-3.5) = -3
+  TEST = iround_nearest_exn (-3.4) = -3
+  TEST = iround_nearest_exn   0.0  =  0
+  TEST = iround_nearest_exn   3.4  =  3
+  TEST = iround_nearest_exn   3.5  =  4
+  TEST = iround_nearest_exn   3.6  =  4
+
+  let special_values_test () =
+    round (-.1.50001) = -.2. &&
+    round (-.1.5) = -.1. &&
+    round (-.0.50001) = -.1. &&
+    round (-.0.5) = 0. &&
+    round 0.49999 = 0. &&
+    round 0.5 = 1. &&
+    round 1.49999 = 1. &&
+    round 1.5 = 2. &&
+    iround_exn ~dir:`Up (-.2.) = -2 &&
+    iround_exn ~dir:`Up (-.1.9999) = -1 &&
+    iround_exn ~dir:`Up (-.1.) = -1 &&
+    iround_exn ~dir:`Up (-.0.9999) = 0 &&
+    iround_exn ~dir:`Up 0. = 0 &&
+    iround_exn ~dir:`Up 0.00001 = 1 &&
+    iround_exn ~dir:`Up 1. = 1 &&
+    iround_exn ~dir:`Up 1.00001 = 2 &&
+    iround_up_exn (-.2.) = -2 &&
+    iround_up_exn (-.1.9999) = -1 &&
+    iround_up_exn (-.1.) = -1 &&
+    iround_up_exn (-.0.9999) = 0 &&
+    iround_up_exn 0. = 0 &&
+    iround_up_exn 0.00001 = 1 &&
+    iround_up_exn 1. = 1 &&
+    iround_up_exn 1.00001 = 2 &&
+    iround_exn ~dir:`Down (-.1.00001) = -2 &&
+    iround_exn ~dir:`Down (-.1.) = -1 &&
+    iround_exn ~dir:`Down (-.0.00001) = -1 &&
+    iround_exn ~dir:`Down 0. = 0 &&
+    iround_exn ~dir:`Down 0.99999 = 0 &&
+    iround_exn ~dir:`Down 1. = 1 &&
+    iround_exn ~dir:`Down 1.99999 = 1 &&
+    iround_exn ~dir:`Down 2. = 2 &&
+    iround_down_exn (-.1.00001) = -2 &&
+    iround_down_exn (-.1.) = -1 &&
+    iround_down_exn (-.0.00001) = -1 &&
+    iround_down_exn 0. = 0 &&
+    iround_down_exn 0.99999 = 0 &&
+    iround_down_exn 1. = 1 &&
+    iround_down_exn 1.99999 = 1 &&
+    iround_down_exn 2. = 2 &&
+    iround_exn ~dir:`Zero (-.2.) = -2 &&
+    iround_exn ~dir:`Zero (-.1.99999) = -1 &&
+    iround_exn ~dir:`Zero (-.1.) = -1 &&
+    iround_exn ~dir:`Zero (-.0.99999) = 0 &&
+    iround_exn ~dir:`Zero 0.99999 = 0 &&
+    iround_exn ~dir:`Zero 1. = 1 &&
+    iround_exn ~dir:`Zero 1.99999 = 1 &&
+    iround_exn ~dir:`Zero 2. = 2
+
+  let is_64_bit_platform = of_int max_int >= 2. ** 60.
+
+  (* Tests for values close to [iround_lbound] and [iround_ubound]. *)
+  let extremities_test ~round =
+    if is_64_bit_platform then
+      (* 64 bits *)
+      round (2.0 ** 62. -. 512.) = Some (max_int - 511)
+        && round (2.0 ** 62. -. 1024.) = Some (max_int - 1023)
+        && round (-. (2.0 ** 62.)) = Some min_int
+        && round (-. (2.0 ** 62. -. 512.)) = Some (min_int + 512)
+        && round (2.0 ** 62.) = None
+        && round (-. (2.0 ** 62. +. 1024.)) = None
+    else
+      (* 32 bits *)
+      round (2.0 ** 30. -. 1.) = Some max_int
+        && round (2.0 ** 30. -. 2.) = Some (max_int - 1)
+        && round (-. (2.0 ** 30.)) = Some min_int
+        && round (-. (2.0 ** 30. -. 1.)) = Some (min_int + 1)
+        && round (2.0 ** 30.) = None
+        && round (-. (2.0 ** 30. +. 1.)) = None
+
+  TEST = extremities_test ~round:iround_down
+  TEST = extremities_test ~round:iround_up
+  TEST = extremities_test ~round:iround_nearest
+  TEST = extremities_test ~round:iround_towards_zero
+
+  (* test values beyond the integers range *)
+  let large_value_test x =
+    true
+
+    && iround_down x = None
+    && iround ~dir:`Down x = None
+    && iround_up x = None
+    && iround ~dir:`Up x = None
+    && iround_towards_zero x = None
+    && iround ~dir:`Zero x = None
+    && iround_nearest x = None
+    && iround ~dir:`Nearest x = None
+
+    && (try ignore (iround_down_exn x); false with _ -> true)
+    && (try ignore (iround_exn ~dir:`Down x); false with _ -> true)
+    && (try ignore (iround_up_exn x); false with _ -> true)
+    && (try ignore (iround_exn ~dir:`Up x); false with _ -> true)
+    && (try ignore (iround_towards_zero_exn x); false with _ -> true)
+    && (try ignore (iround_exn ~dir:`Zero x); false with _ -> true)
+    && (try ignore (iround_nearest_exn x); false with _ -> true)
+    && (try ignore (iround_exn ~dir:`Nearest x); false with _ -> true)
+
+    && round_down x = x
+    && round ~dir:`Down x = x
+    && round_up x = x
+    && round ~dir:`Up x = x
+    && round_towards_zero x = x
+    && round ~dir:`Zero x = x
+    && round_nearest x = x
+    && round ~dir:`Nearest x = x
+
+  let large_numbers =
+    Core_list.concat (
+      Core_list.init (1024 - 64) ~f:(fun x ->
+        let x = float (x + 64) in
+        let y =
+          [2. ** x;
+           2. ** x -. 2. ** (x -. 53.); (* one ulp down *)
+           2. ** x +. 2. ** (x -. 52.)] (* one ulp up *)
+        in
+        y @ (List.map y ~f:neg)))
+      @
+      [infinity;
+       neg_infinity]
+
+  TEST = Core_list.for_all large_numbers ~f:large_value_test
+
+  (* Not for real use.  Slow and does not handle 0. *)
+  let one_ulp_less x =
+    let rec aux x exp =
+      let y = x -. (2. ** exp) in
+      if x = y then
+        aux x (exp +. 1.)
+      else
+        y
+    in
+    let start_exp = floor (log x /. log 2.) -. 55. in
+    assert (x -. (2. ** start_exp) = x);
+    aux x start_exp
+
+  let numbers_near_powers_of_two =
+    Core_list.concat (
+      Core_list.init (if is_64_bit_platform then 62 else 30) ~f:(fun i ->
+        let pow2 = 2. ** float i in
+        let x =
+          [ pow2;
+            one_ulp_less (pow2 +. 0.5);
+            pow2 +. 0.5;
+            one_ulp_less (pow2 +. 1.0);
+            pow2 +. 1.0;
+            one_ulp_less (pow2 +. 1.5);
+            pow2 +. 1.5;
+            one_ulp_less (pow2 +. 2.0);
+            pow2 +. 2.0;
+            one_ulp_less (pow2 *. 2.0 -. 1.0);
+          ]
+        in
+        x @ (List.map x ~f:neg)
+      ))
+
+  TEST = Core_list.for_all numbers_near_powers_of_two ~f:iround_up_vs_down_test
+  TEST = Core_list.for_all numbers_near_powers_of_two ~f:iround_nearest_test
+  TEST = Core_list.for_all numbers_near_powers_of_two ~f:iround_down_test
+  TEST = Core_list.for_all numbers_near_powers_of_two ~f:iround_up_test
+  TEST = Core_list.for_all numbers_near_powers_of_two ~f:iround_towards_zero_test
+  TEST = Core_list.for_all numbers_near_powers_of_two ~f:round_test
+
+  (* code for generating random floats on which to test functions *)
+  let rec absirand () =
+    let rec aux acc cnt =
+      if cnt = 0 then
+        acc
+      else
+        let bit = if Random.bool () then 1 else 0 in
+        aux (2 * acc + bit) (cnt - 1)
+    in
+    let result = aux 0 (if is_64_bit_platform then 62 else 30) in
+    if result >= max_int - 255 then
+      (* On a 64-bit box, [float x > max_int] when [x >= max_int - 255], so
+         [iround (float x)] would be out of bounds.  So we try again.  This branch of code
+         runs with probability 6e-17 :-)  As such, we have some fixed tests in
+         [extremities_test] above, to ensure that we do always check some examples in
+         that range. *)
+      absirand ()
+    else
+      result
+
+  (* -max_int <= frand () <= max_int *)
+  let frand () =
+    let x = (float (absirand ())) +. Random.float 1.0 in
+    if Random.bool () then
+      -1.0 *. x
+    else
+      x
+
+  let randoms = Core_list.init ~f:(fun _ -> frand ()) 10_000
+
+  TEST = Core_list.for_all randoms ~f:iround_up_vs_down_test
+  TEST = Core_list.for_all randoms ~f:iround_nearest_test
+  TEST = Core_list.for_all randoms ~f:iround_down_test
+  TEST = Core_list.for_all randoms ~f:iround_up_test
+  TEST = Core_list.for_all randoms ~f:iround_towards_zero_test
+  TEST = Core_list.for_all randoms ~f:round_test
+  TEST = special_values_test ()
+  TEST = iround_nearest_test (of_int max_int)
+  TEST = iround_nearest_test (of_int min_int)
+end

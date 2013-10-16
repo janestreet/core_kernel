@@ -756,6 +756,12 @@ let cartesian_product t1 t2 =
     t
 ;;
 
+include Binary_searchable.Make1 (struct
+  type nonrec 'a t = 'a t
+  let get = get
+  let length = length
+end)
+
 (* [Array.truncate] is a safe wrapper for calling [Obj.truncate] on an array.
    [Obj.truncate] reduces the size of a block on the ocaml heap.  For arrays, the block
    size is the array length.  The precondition checked for [len] is exactly the one
@@ -794,8 +800,8 @@ TEST_UNIT =
 
 module Sequence = struct
   let length = length
-  let get = get
-  let set = set
+  let get    = get
+  let set    = set
 end
 
 include

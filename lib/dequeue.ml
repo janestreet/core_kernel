@@ -177,7 +177,6 @@ let foldi' t dir ~init ~f =
   end
 ;;
 
-
 let fold'  t dir ~init ~f = foldi' t dir ~init    ~f:(fun _ acc v -> f acc v)
 let iteri' t dir       ~f = foldi' t dir ~init:() ~f:(fun i ()  v -> f i   v)
 let iter'  t dir       ~f = foldi' t dir ~init:() ~f:(fun _ ()  v -> f     v)
@@ -428,6 +427,44 @@ let front_index_exn t =
   assert_not_empty t "Dequeue.front_index_exn";
   apparent_front_index_when_not_empty t
 ;;
+
+module Binary_searchable = Binary_searchable.Make1 (struct
+  type nonrec 'a t = 'a t
+  let get t i = get t (front_index_exn t + i)
+  let length = length
+end)
+
+(* The "stable" indices used in this module make the application of the
+   [Binary_searchable] functor awkward.  We need to be sure to translate incoming
+   positions from stable space to the expected 0 -> length - 1 space and then we need to
+   translate them back on return. *)
+let binary_search ?pos ?len t ~compare v =
+  let pos =
+    match pos with
+    | None     -> None
+    | Some pos -> Some (pos - t.apparent_front_index)
+  in
+  match Binary_searchable.binary_search ?pos ?len t ~compare v with
+  | None                -> None
+  | Some untranslated_i -> Some (t.apparent_front_index + untranslated_i)
+;;
+
+TEST_UNIT = begin
+  let t = of_array [| 1; 2; 3; 4 |] in
+  assert (binary_search t ~compare:Int.compare 2 = Some 1);
+  assert (binary_search t ~compare:Int.compare 5 = None);
+  assert (binary_search t ~compare:Int.compare 0 = None);
+  assert (binary_search t ~pos:2 ~compare:Int.compare 2 = None);
+  assert (binary_search t ~pos:2 ~compare:Int.compare 3 = Some 2);
+  ignore (dequeue_front t);
+  ignore (dequeue_front t);
+  assert (binary_search t ~compare:Int.compare 2 = None);
+  assert (binary_search t ~compare:Int.compare 3 = Some 2);
+  assert (binary_search t ~compare:Int.compare 5 = None);
+  assert (binary_search t ~compare:Int.compare 0 = None);
+  assert (binary_search t ~pos:2 ~compare:Int.compare 2 = None);
+  assert (binary_search t ~pos:2 ~compare:Int.compare 3 = Some 2);
+end
 
 TEST_MODULE = struct
   module type Dequeue_intf = sig

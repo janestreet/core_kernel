@@ -12,7 +12,8 @@
 
 type 'a t with bin_io, sexp
 
-include Container.S1 with type 'a t := 'a t
+include Binary_searchable.S1 with type 'a t := 'a t
+include Container.        S1 with type 'a t := 'a t
 
 (** [create ?initial_length ?never_shrink ()] create a new [t].  [initial_length] is the
     initial length of the dequeue; it will be able to hold [initial_length] elements

@@ -1,5 +1,7 @@
 type 'a t = 'a array with bin_io, sexp
 
+include Binary_searchable.S1 with type 'a t := 'a t
+
 (** Note: [Array.length] is not constant for a given array, as one can reduce it with
     [Array.truncate] *)
 include Container.S1 with type 'a t := 'a t

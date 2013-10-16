@@ -8,6 +8,7 @@ module Bigsubstring           = Bigsubstring
 module Bin_prot               = Core_bin_prot
 module Binable                = Binable
 module Binary_packing         = Binary_packing
+module Binary_searchable      = Binary_searchable
 module Blang                  = Blang
 module Blit                   = Blit
 module Bounded_int_table      = Bounded_int_table

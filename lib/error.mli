@@ -5,6 +5,9 @@ include module type of Info with type t = private Info.t
 (* Note that the exception holds onto the [t]. *)
 val raise : t -> _
 
+val to_info : t -> Info.t
+val of_info : Info.t -> t
+
 (** [failwiths message value sexp_of_value] raises an exception with the supplied
     [message] and [value], by constructing an [Error.t] and using [Error.raise].  As
     usual, the [sexp_of_value] is only applied when the value is converted to a sexp or a
