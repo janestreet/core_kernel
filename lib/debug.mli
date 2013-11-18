@@ -2,12 +2,17 @@
 
 open Sexplib
 
-(** [log message a sexp_of_a] prints to stderr [message] and [a] as a sexp, followed by
-    a newline. *)
+(** [eprint message] prints to stderr [message], followed by a newline and flush.  This is
+    the same as [prerr_endline]. *)
+val eprint : string -> unit
+
+(** [eprints message a sexp_of_a] prints to stderr [message] and [a] as a sexp, followed
+    by a newline and flush. *)
 val eprints : string -> 'a -> ('a -> Sexp.t) -> unit
 
-(** synonym for [prerr_endline], meaning it prints to stderr, followed by a newline *)
-val eprint : string -> unit
+(** [eprintf message arg1 ... argn] prints to stderr [message], with sprintf-style format
+    characters instantiated, followed by a newline and flush. *)
+val eprintf : ('r, unit, string, unit) format4 -> 'r
 
 (** [Debug.Make] produces a [debug] function used to wrap a function to display arguments
     before calling and display results after returning.  Intended usage is:

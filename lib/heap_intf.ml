@@ -3,6 +3,9 @@ module type S = sig
       reconstructing the correct comparison function when de-serializing. *)
   type 'a t with sexp_of
 
+  (** Mutation of the heap during iteration is not supported, but there is no check to
+      prevent it.  The behavior of a heap that is mutated during iteration is
+      undefined. *)
   include Container.S1 with type 'a t := 'a t
 
   (** [create ?min_size ~cmp] returns a new min-heap that can store [min_size] elements

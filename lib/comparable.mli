@@ -20,7 +20,7 @@ module Inherit
   (T : sig
     type t with sexp
     val component : t -> C.t
-  end) : S with type t = T.t
+  end) : S with type t := T.t
 
 (** Usage example:
 
@@ -44,7 +44,7 @@ module Make_binable (T : sig
   type t with bin_io, compare, sexp
 end) : S_binable with type t := T.t
 
-module Map_and_set_binable (T : Comparator.Pre_binable)
+module Map_and_set_binable (T : sig type t with bin_io, compare, sexp end)
   : Map_and_set_binable with type t := T.t
 
 module Poly (T : sig type t with sexp end) : S with type t := T.t

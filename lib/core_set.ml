@@ -902,7 +902,7 @@ let compare _ _ t1 t2 = compare_direct t1 t2
 
 module Creators (Elt : Comparator.S1) : sig
 
-  type ('a, 'comparator) t_ = ('a Elt.t, Elt.comparator) set
+  type ('a, 'comparator) t_ = ('a Elt.t, Elt.comparator_witness) set
   type ('a, 'b) tree = 'a Tree0.t
   type 'a elt_ = 'a Elt.t
 
@@ -917,7 +917,7 @@ module Creators (Elt : Comparator.S1) : sig
 
 end = struct
 
-  type ('a, 'comparator) t_ = ('a Elt.t, Elt.comparator) set
+  type ('a, 'comparator) t_ = ('a Elt.t, Elt.comparator_witness) set
 
   type ('a, 'b) tree = 'a Tree0.t
 
@@ -1024,7 +1024,7 @@ module Poly = struct
 
   include Creators (Elt)
 
-  type 'a t = ('a, Elt.comparator) set
+  type 'a t = ('a, Elt.comparator_witness) set
 
   include Accessors
 
@@ -1033,7 +1033,7 @@ module Poly = struct
   let sexp_of_t = sexp_of_t
 
   include Bin_prot.Utils.Make_iterable_binable1 (struct
-    type 'a t = ('a, Elt.comparator) set
+    type 'a t = ('a, Elt.comparator_witness) set
     type 'a acc = 'a t
     type 'a el = 'a with bin_io
     let _ = bin_el
@@ -1054,7 +1054,7 @@ module Poly = struct
   module Tree = struct
     include Make_tree (Comparator.Poly)
 
-    type 'elt t = ('elt, Comparator.Poly.comparator) tree
+    type 'elt t = ('elt, Comparator.Poly.comparator_witness) tree
 
     let sexp_of_t sexp_of_elt t = Tree0.sexp_of_t sexp_of_elt t
 
@@ -1080,7 +1080,10 @@ module type S_binable = S0_binable
   with type ('a, 'b) set  := ('a, 'b) t
   with type ('a, 'b) tree := ('a, 'b) tree
 
-module Make_using_comparator (Elt : Comparator.S) = struct
+module Make_using_comparator (Elt : sig
+  type t with sexp
+  include Comparator.S with type t := t
+end) = struct
 
   module Elt = Elt
   module Elt_S1 = Comparator.S_to_S1 (Elt)
@@ -1088,7 +1091,7 @@ module Make_using_comparator (Elt : Comparator.S) = struct
   include Creators (Elt_S1)
 
   type ('a, 'b) set = ('a, 'b) t
-  type t = (Elt.t, Elt.comparator) set
+  type t = (Elt.t, Elt.comparator_witness) set
 
   include Accessors
 
@@ -1101,7 +1104,7 @@ module Make_using_comparator (Elt : Comparator.S) = struct
   module Tree = struct
     include Make_tree (Elt_S1)
 
-    type t = (Elt.t, Elt.comparator) tree
+    type t = (Elt.t, Elt.comparator_witness) tree
 
     let compare t1 t2 = compare_direct t1 t2
 
@@ -1113,9 +1116,16 @@ module Make_using_comparator (Elt : Comparator.S) = struct
   end
 end
 
-module Make (Elt : Comparator.Pre) = Make_using_comparator (Comparator.Make (Elt))
+module Make (Elt : Elt) =
+  Make_using_comparator (struct
+    include Elt
+    include Comparator.Make (Elt)
+  end)
 
-module Make_binable_using_comparator (Elt' : Comparator.S_binable) = struct
+module Make_binable_using_comparator (Elt' : sig
+  type t with bin_io, sexp
+  include Comparator.S with type t := t
+end) = struct
 
   include (Make_using_comparator (Elt'))
 
@@ -1140,8 +1150,11 @@ module Make_binable_using_comparator (Elt' : Comparator.S_binable) = struct
 
 end
 
-module Make_binable (Elt : Comparator.Pre_binable) =
-  Make_binable_using_comparator (Comparator.Make_binable (Elt))
+module Make_binable (Elt : Elt_binable) =
+  Make_binable_using_comparator (struct
+    include Elt
+    include Comparator.Make (Elt)
+  end)
 
 module Tree = struct
   type ('a, 'comparator) t = ('a, 'comparator) tree

@@ -76,6 +76,11 @@ val unpack_signed_64_int : byte_order:endian -> buf:string -> pos:int -> int
 val   pack_signed_64     : byte_order:endian -> buf:string -> pos:int -> Int64.t -> unit
 val   pack_signed_64_int : byte_order:endian -> buf:string -> pos:int -> int -> unit
 
+val unpack_signed_64_int_little_endian : buf:string -> pos:int -> int
+val   pack_signed_64_int_little_endian : buf:string -> pos:int -> int -> unit
+val unpack_signed_64_int_big_endian : buf:string -> pos:int -> int
+val   pack_signed_64_int_big_endian : buf:string -> pos:int -> int -> unit
+
 val unpack_signed_64_big_endian    : buf:string -> pos:int -> int64
 val unpack_signed_64_little_endian : buf:string -> pos:int -> int64
 val   pack_signed_64_big_endian    : buf:string -> pos:int -> int64 -> unit

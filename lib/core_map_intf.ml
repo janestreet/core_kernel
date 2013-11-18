@@ -17,8 +17,14 @@ open T
 
 module Binable = Binable0
 module List = Core_list
-module type Key = Comparator.Pre
-module type Key_binable = Comparator.Pre_binable
+
+module type Key = sig
+  type t with compare, sexp
+end
+
+module type Key_binable = sig
+  type t with bin_io, compare, sexp
+end
 
 module Without_comparator = struct
   type ('key, 'cmp, 'z) t = 'z
@@ -704,7 +710,7 @@ module type S = sig
   module Key : Comparator.S
 
   module Tree : sig
-    type 'a t = (Key.t, 'a, Key.comparator) tree with sexp
+    type 'a t = (Key.t, 'a, Key.comparator_witness) tree with sexp
 
     include Creators_and_accessors1
       with type 'a t    := 'a t
@@ -712,7 +718,7 @@ module type S = sig
       with type key     := Key.t
   end
 
-  type +'a t = (Key.t, 'a, Key.comparator) map with compare, sexp
+  type +'a t = (Key.t, 'a, Key.comparator_witness) map with compare, sexp
 
   include Creators_and_accessors1
     with type 'a t    := 'a t

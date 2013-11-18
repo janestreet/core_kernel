@@ -595,6 +595,7 @@ include struct
   module Monad = Monad.Make (struct
     type 'a t = 'a list
     let bind x f = concat_map x ~f
+    let map = map
     let return x = [x]
   end)
   open Monad

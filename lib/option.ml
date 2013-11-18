@@ -164,14 +164,19 @@ let try_with f =
   try Some (f ())
   with _ -> None
 
-include (Monad.Make (struct
+include Monad.Make (struct
   type 'a t = 'a option
   let return x = Some x
+  let map t ~f =
+    match t with
+    | None -> None
+    | Some a -> Some (f a)
+  ;;
   let bind o f =
     match o with
     | None -> None
     | Some x -> f x
-end) : Monad.S with type 'a t := 'a option)
+end)
 
 let validate ~none ~some t =
   let module V = Validate in

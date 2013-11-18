@@ -51,7 +51,7 @@ val is_sun_or_sat : t -> bool
 
 module Stable : sig
   module V1 : sig
-    type t with bin_io, sexp, compare
-  end with type t = t
+    type nonrec t = t with bin_io, sexp, compare
+  end
 end
 

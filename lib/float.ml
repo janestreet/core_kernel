@@ -445,10 +445,11 @@ end
 
 include Replace_polymorphic_compare
 
-let (+) t t' = t +. t'
-let (-) t t' = t -. t'
-let ( * ) t t' = t *. t'
-let (/) t t' = t /. t'
+let ( + ) = ( +. )
+let ( - ) = ( -. )
+let ( * ) = ( *. )
+let ( / ) = ( /. )
+let ( ~- ) = ( ~-. )
 
 include Comparable.Map_and_set_binable (T)
 
@@ -508,6 +509,18 @@ include Pretty_printer.Register(struct
   let module_name = "Core.Std.Float"
   let to_string = to_string
 end)
+
+module O = struct
+  let ( +  ) = ( +  )
+  let ( -  ) = ( -  )
+  let ( *  ) = ( *  )
+  let ( /  ) = ( /  )
+  let ( ~- ) = ( ~- )
+  include (Replace_polymorphic_compare : Polymorphic_compare_intf.Infix with type t := t)
+  let neg    = neg
+  let zero   = zero
+  let of_int = of_int
+end
 
 TEST_MODULE = struct
   let check v expect =

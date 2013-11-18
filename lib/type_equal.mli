@@ -31,6 +31,7 @@
     principle, not pass around values of type [Type_equal.t] at run time.
 *)
 
+open Sexplib
 open T
 
 type (_, _) t = T : ('a, 'a) t
@@ -169,12 +170,19 @@ module Id : sig
   val uid : _ t -> Uid.t
 
   (** [create ~name] defines a new type identity.  Two calls to [create] will result in
-      two distinct identifiers, even for the same arguments with the same type. *)
-  val create : name:string -> _ t
+      two distinct identifiers, even for the same arguments with the same type.  If the
+      type ['a] doesn't support sexp conversion, then a good practice is to have the
+      converter be [<:sexp_of< _ >>], (or [sexp_of_opaque], if not using pa_sexp). *)
+
+  val create
+    :  name:string
+    -> ('a -> Sexp.t)
+    -> 'a t
 
   (** accessors *)
-  val hash : _ t -> int
-  val name : _ t -> string
+  val hash    : _ t -> int
+  val name    : _ t -> string
+  val to_sexp : 'a t -> 'a -> Sexp.t
 
   (** [same_witness t1 t2] and [same_witness_exn t1 t2] return a type equality proof iff
       the two identifiers are physically equal.  This is a useful way to achieve a sort of

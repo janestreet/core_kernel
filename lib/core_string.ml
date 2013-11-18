@@ -442,14 +442,28 @@ let tr_inplace ~target ~replacement s = (* destructive version of tr *)
   done
 
 let exists s ~f =
-  let rec loop i = i > 0 && (let i = i - 1 in f s.[i] || loop i) in
-  loop (length s)
+  let length = length s in
+  let rec loop i = i < length && (f s.[i] || loop (i + 1)) in
+  loop 0
 ;;
 
+TEST = false = exists ""    ~f:(fun _ -> assert false)
+TEST = false = exists "abc" ~f:(Fn.const false)
+TEST = true  = exists "abc" ~f:(Fn.const true)
+TEST = true  = exists "abc" ~f:(function
+    'a' -> false | 'b' -> true | _ -> assert false)
+
 let for_all s ~f =
-  let rec loop i = i = 0 || (let i = i - 1 in f s.[i] && loop i) in
-  loop (length s)
+  let length = length s in
+  let rec loop i = i = length || (f s.[i] && loop (i + 1)) in
+  loop 0
 ;;
+
+TEST = true  = for_all ""    ~f:(fun _ -> assert false)
+TEST = true  = for_all "abc" ~f:(Fn.const true)
+TEST = false = for_all "abc" ~f:(Fn.const false)
+TEST = false = for_all "abc" ~f:(function
+    'a' -> true | 'b' -> false | _ -> assert false)
 
 let fold t ~init ~f =
   let n = length t in

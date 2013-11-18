@@ -1,4 +1,6 @@
-(** The size of Int63 is always at least 63 bits.  On a 64-bit platform it is just an int
+(** 63 or 64 bit integers.
+
+    The size of Int63 is always at least 63 bits.  On a 64-bit platform it is just an int
     (63-bits), and on a 32-bit platform it is an int64.
 
     Because Int63 has different sizes on 32-bit and 64-bit platforms, there are several

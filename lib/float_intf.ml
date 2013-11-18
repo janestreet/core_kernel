@@ -147,6 +147,21 @@ module type S = sig
   val scale : t -> t -> t
   val abs : t -> t
 
+  (** A sub-module designed to be opened to make working with floats more convenient.  *)
+  module O : sig
+    val ( +  ) : t -> t -> t
+    val ( -  ) : t -> t -> t
+    val ( *  ) : t -> t -> t
+    val ( /  ) : t -> t -> t
+    val ( ~- ) : t -> t
+    include Polymorphic_compare_intf.Infix with type t := t
+
+    val neg    : t -> t
+    val zero   : t
+    val of_int : int -> t
+  end
+
+
   (** Pretty print float, for example [to_string_hum ~decimals:3 1234.1999 = "1_234.200"]
       [to_string_hum ~decimals:3 ~strip_zero:true 1234.1999 = "1_234.2" ]. No delimiters
       are inserted to the right of the decimal. *)

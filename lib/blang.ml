@@ -401,9 +401,12 @@ let mem      = C.mem
 let to_array = C.to_array
 let to_list  = C.to_list
 
-include (Monad.Make (struct
+include Monad.Make (struct
+
   type 'a t = 'a T.t
+
   let return = base
+
   let rec bind t k =
     match t with
     | Base v -> k v
@@ -429,7 +432,11 @@ include (Monad.Make (struct
       | False -> bind t3 k
       | other -> if_ other (bind t2 k) (bind t3 k)
       end
-end) : Monad.S with type 'a t := 'a t)
+  ;;
+
+  let map t ~f = Monad.map_via_bind t ~f ~return ~bind
+
+end)
 
 TEST_MODULE "bind short-circuiting" = struct
   let test expected_visits expr =

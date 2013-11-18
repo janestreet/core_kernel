@@ -1,19 +1,15 @@
 module T = struct
+
   type 'a t = 'a ref = { mutable contents : 'a }
 
-  let sexp_of_t sexp_of_a t = sexp_of_a !t
-
-  let t_of_sexp a_of_sexp sexp = ref (a_of_sexp sexp)
-
-  include Bin_prot.Utils.Make_binable1 (struct
-    module Binable = struct
-      type 'a t = 'a with bin_io
-    end
-
-    type 'a t = 'a ref
-    let to_binable t = !t
-    let of_binable a = ref a
-  end)
+  include (struct
+    (* open Typerep_kernel.Std *)
+    open Sexplib.Conv
+    open Bin_prot.Std
+    type 'a t = 'a ref with bin_io, compare, sexp (* , typerep *)
+  end : sig
+    type 'a t = 'a ref with bin_io, compare, sexp (* , typerep *)
+  end with type 'a t := 'a t)
 
   let create x = ref x
 

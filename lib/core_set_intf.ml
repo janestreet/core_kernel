@@ -18,8 +18,14 @@
 open T
 
 module Binable = Binable0
-module type Elt         = Comparator.Pre
-module type Elt_binable = Comparator.Pre_binable
+
+module type Elt = sig
+  type t with compare, sexp
+end
+
+module type Elt_binable = sig
+  type t with bin_io, compare, sexp
+end
 
 module Without_comparator = Core_map_intf.Without_comparator
 module With_comparator    = Core_map_intf.With_comparator
@@ -543,10 +549,13 @@ module type S0 = sig
   type ('a, 'cmp) set
   type ('a, 'cmp) tree
 
-  module Elt : Comparator.S
+  module Elt : sig
+    type t with sexp
+    include Comparator.S with type t := t
+  end
 
   module Tree : sig
-    type t = (Elt.t, Elt.comparator) tree with compare, sexp
+    type t = (Elt.t, Elt.comparator_witness) tree with compare, sexp
 
     include Creators_and_accessors0
       with type ('a, 'b) set := ('a, 'b) tree
@@ -555,7 +564,7 @@ module type S0 = sig
       with type elt          := Elt.t
   end
 
-  type t = (Elt.t, Elt.comparator) set with compare, sexp
+  type t = (Elt.t, Elt.comparator_witness) set with compare, sexp
 
   include Creators_and_accessors0
     with type ('a, 'b) set := ('a, 'b) set

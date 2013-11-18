@@ -70,8 +70,11 @@ module Hash_set = struct
 end
 
 module Map = struct
-  module V1 (Key : Comparator.S_binable) : sig
-    type 'a t = (Key.t, 'a, Key.comparator) Map.t with sexp, bin_io
+  module V1 (Key : sig
+    type t with bin_io, sexp
+    include Comparator.S with type t := t
+  end) : sig
+    type 'a t = (Key.t, 'a, Key.comparator_witness) Map.t with sexp, bin_io
   end = Map.Make_binable_using_comparator (Key)
 
   TEST_MODULE "Map.V1" = Stable_unit_test.Make (struct
@@ -90,8 +93,11 @@ module Map = struct
 end
 
 module Set = struct
-  module V1 (Elt : Comparator.S_binable) : sig
-    type t = (Elt.t, Elt.comparator) Set.t with sexp, bin_io
+  module V1 (Elt : sig
+    type t with bin_io, sexp
+    include Comparator.S with type t := t
+  end) : sig
+    type t = (Elt.t, Elt.comparator_witness) Set.t with sexp, bin_io
   end = Set.Make_binable_using_comparator (Elt)
 
   TEST_MODULE "Set.V1" = Stable_unit_test.Make (struct

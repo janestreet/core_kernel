@@ -6,6 +6,6 @@ include Identifiable with type t = private string
 
 module Stable : sig
   module V1 : sig
-    type t with sexp, bin_io, compare
-  end with type t = t
+    type nonrec t = t with sexp, bin_io, compare
+  end
 end

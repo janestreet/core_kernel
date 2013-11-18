@@ -10,11 +10,11 @@ module Uid = Unique_id.Int63 (struct end) (* uniqueness of ids is required *)
 
 module Key = struct
 
-  type 'a t = Uid.t * 'a Univ.Constr.t with sexp_of
+  type 'a t = Uid.t * 'a Type_equal.Id.t with sexp_of
 
-  let create name sexp_of_a = (Uid.create (), Univ.Constr.create name sexp_of_a)
+  let create name sexp_of_a = (Uid.create (), Type_equal.Id.create ~name sexp_of_a)
 
-  let name (_, con) = Univ.Constr.name con
+  let name (_, con) = Type_equal.Id.name con
 
 end
 
@@ -64,7 +64,7 @@ let change t key update =
 
 let sexp_of_t t =
   Uid.Map.data t
-  |! List.map ~f:(fun u -> (Univ.constr_name u, u))
+  |! List.map ~f:(fun u -> (Univ.type_id_name u, u))
   |! List.sort ~cmp:(fun (a, _) (b, _) -> String.compare a b)
   |! <:sexp_of< (string * Univ.t) list >>
 

@@ -1,57 +1,35 @@
 open Sexplib
 
-type ('a, 'unique_id) t =
-  { compare : 'a -> 'a -> int;
-    sexp_of_t : 'a -> Sexp.t;
+type ('a, 'witness) t =
+  { compare   : 'a -> 'a -> int
+  ; sexp_of_t : 'a -> Sexp.t
   }
 
-type ('a, 'unique_id) t_ = ('a, 'unique_id) t
-
-module type Pre = sig
-  type t with sexp
-  val compare : t -> t -> int
-end
-
-module type Pre_binable = sig
-  type t with bin_io, sexp
-  val compare : t -> t -> int
-end
+type ('a, 'b) comparator = ('a, 'b) t
 
 module type S = sig
-  include Pre
-  type comparator
-  val comparator : (t, comparator) t_
-end
-
-module type S_binable = sig
-  include Pre_binable
-  type comparator
-  val comparator : (t, comparator) t_
-end
-
-module Make (M : Pre) = struct
-  include M
-  type comparator
-  let comparator = let open M in { compare; sexp_of_t }
-end
-
-module Make_binable (M : Pre_binable) = struct
-  include M
-  type comparator
-  let comparator = let open M in { compare; sexp_of_t }
+  type t
+  type comparator_witness
+  val comparator : (t, comparator_witness) comparator
 end
 
 module type S1 = sig
   type 'a t
-  type comparator
-  val comparator : ('a t, comparator) t_
+  type comparator_witness
+  val comparator : ('a t, comparator_witness) comparator
 end
 
 module S_to_S1 (S : S) = struct
   type 'a t = S.t
-  type comparator = S.comparator
+  type comparator_witness = S.comparator_witness
   open S
   let comparator = comparator
+end
+
+module Make (M : sig type t with compare, sexp_of end) = struct
+  include M
+  type comparator_witness
+  let comparator = M.({ compare; sexp_of_t })
 end
 
 module Make1 (M : sig
@@ -59,8 +37,8 @@ module Make1 (M : sig
   val compare : 'a t -> 'a t -> int
   val sexp_of_t : 'a t -> Sexp.t
 end) = struct
-  type comparator
-  let comparator = let open M in { compare; sexp_of_t }
+  type comparator_witness
+  let comparator = M.({ compare; sexp_of_t })
 end
 
 module Poly = struct
@@ -68,6 +46,6 @@ module Poly = struct
   include Make1 (struct
     type 'a t = 'a
     let compare = Pervasives.compare
-    let sexp_of_t _ = Sexp.Atom ""
+    let sexp_of_t = <:sexp_of< _ >>
   end)
 end

@@ -19,7 +19,6 @@ module Comparable             = Comparable
 module Comparator             = Comparator
 module Container              = Container
 module Day_of_week            = Day_of_week
-module Debug                  = Debug
 module Decimal                = Decimal
 module Dequeue                = Dequeue
 module Doubly_linked          = Doubly_linked

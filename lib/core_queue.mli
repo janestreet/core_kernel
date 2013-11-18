@@ -8,6 +8,9 @@
       [dequeue_exn] is available if you want to raise [Empty].
       [iter] takes a labeled argument.
       [transfer]'s arguments are labeled.
+
+    All functions that take a function as input have unspecified behavior if the input
+    function mutates the queue.
 *)
 
 type 'a t with bin_io, sexp
@@ -62,7 +65,5 @@ val filter_map : 'a t -> f:('a -> 'b option) -> 'b t
 
 val of_array : 'a array -> 'a t
 val to_array : 'a t -> 'a array
-
-val fold : 'a t -> init:'b -> f:('b -> 'a -> 'b) -> 'b
 
 val singleton : 'a -> 'a t

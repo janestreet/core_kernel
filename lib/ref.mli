@@ -1,7 +1,7 @@
 open Common
 
 type 'a t = 'a ref = { mutable contents : 'a }
-with bin_io, sexp
+with bin_io, compare, sexp
 
 include Container.S1 with type 'a t := 'a t
 

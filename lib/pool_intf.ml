@@ -21,8 +21,8 @@
     - one can mistakenly free a pointer multiple times
     - one can forget to free a pointer
 
-    There are debugging functors, [Pool.Debug] and [Pool.Error_check], that are useful for
-    building pools to help debug incorrect pointer usage.
+    There is a debugging functor, [Pool.Error_check], that is useful for building pools
+    to help debug incorrect pointer usage.
 *)
 
 (** [S] is the module type for a pool. *)

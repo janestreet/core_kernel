@@ -28,7 +28,10 @@ module Of_sexpable
   end)
   : S with type t := M.t =
 struct
-  let t_of_sexp s = M.of_sexpable (S.t_of_sexp s)
+  let t_of_sexp sexp =
+    let s = S.t_of_sexp sexp in
+    (try M.of_sexpable s with exn -> Conv.of_sexp_error_exn exn sexp)
+
   let sexp_of_t t = S.sexp_of_t (M.to_sexpable t)
 end
 
@@ -36,7 +39,8 @@ module Of_stringable (M : Stringable.S) : S with type t := M.t =
 struct
   let t_of_sexp sexp =
     match sexp with
-    | Sexp.Atom s -> M.of_string s
+    | Sexp.Atom s ->
+      (try M.of_string s with exn -> Conv.of_sexp_error_exn exn sexp)
     | Sexp.List _ ->
       Conv.of_sexp_error
         "Sexpable.Of_stringable.t_of_sexp expected an atom, but got a list" sexp

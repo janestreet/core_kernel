@@ -13,7 +13,6 @@ ENDIF
 
 type endian = [ `Big_endian | `Little_endian ]
 
-
 (* Computes the offset based on the total number of bytes, the byte order, and the
    byte number. The byte number is ordered by decreasing significance starting at zero
    (big endian). So the most significant byte is 0, and the least significant byte is (len
@@ -597,6 +596,38 @@ let pack_signed_64_int ~byte_order ~buf ~pos n =
   buf.[pos + offset ~len:8 ~byte_order 7] <- Char.unsafe_chr (0xFF land n)
 ;;
 
+(* It's important to use [asr] not [lsr] in [pack_signed_64_int_big_endian] and
+   [pack_signed_64_int_little_endian] so that the most significant byte is encoded
+   correctly.  (It might be helpful to think about this as widening, i.e. sign
+   extending, the number to 64 bits and then doing the right shift by 56.)
+*)
+
+let pack_signed_64_int_big_endian ~buf ~pos v =
+  (* Safely set the first and last bytes, so that we verify the string bounds. *)
+  buf.[pos] <- Char.unsafe_chr (0xFF land (v asr 56));
+  buf.[pos + 7] <- Char.unsafe_chr (0xFF land v);
+  (* Now we can use [unsafe_set] for the intermediate bytes. *)
+  Caml.String.unsafe_set buf (pos + 1) (Char.unsafe_chr (0xFF land (v asr 48)));
+  Caml.String.unsafe_set buf (pos + 2) (Char.unsafe_chr (0xFF land (v asr 40)));
+  Caml.String.unsafe_set buf (pos + 3) (Char.unsafe_chr (0xFF land (v asr 32)));
+  Caml.String.unsafe_set buf (pos + 4) (Char.unsafe_chr (0xFF land (v asr 24)));
+  Caml.String.unsafe_set buf (pos + 5) (Char.unsafe_chr (0xFF land (v asr 16)));
+  Caml.String.unsafe_set buf (pos + 6) (Char.unsafe_chr (0xFF land (v asr 8)))
+;;
+
+let pack_signed_64_int_little_endian ~buf ~pos v =
+  (* Safely set the first and last bytes, so that we verify the string bounds. *)
+  buf.[pos] <- Char.unsafe_chr (0xFF land v);
+  buf.[pos + 7] <- Char.unsafe_chr (0xFF land (v asr 56));
+  (* Now we can use [unsafe_set] for the intermediate bytes. *)
+  Caml.String.unsafe_set buf (pos + 1) (Char.unsafe_chr (0xFF land (v asr 8)));
+  Caml.String.unsafe_set buf (pos + 2) (Char.unsafe_chr (0xFF land (v asr 16)));
+  Caml.String.unsafe_set buf (pos + 3) (Char.unsafe_chr (0xFF land (v asr 24)));
+  Caml.String.unsafe_set buf (pos + 4) (Char.unsafe_chr (0xFF land (v asr 32)));
+  Caml.String.unsafe_set buf (pos + 5) (Char.unsafe_chr (0xFF land (v asr 40)));
+  Caml.String.unsafe_set buf (pos + 6) (Char.unsafe_chr (0xFF land (v asr 48)))
+;;
+
 let unpack_signed_64_int ~byte_order ~buf ~pos =
   assert (Sys.word_size = 64);
   (Char.code buf.[pos + offset ~len:8 ~byte_order 0] lsl 56)
@@ -607,6 +638,75 @@ let unpack_signed_64_int ~byte_order ~buf ~pos =
   lor (Char.code buf.[pos + offset ~len:8 ~byte_order 5] lsl 16)
   lor (Char.code buf.[pos + offset ~len:8 ~byte_order 6] lsl 8)
   lor (Char.code buf.[pos + offset ~len:8 ~byte_order 7])
+;;
+
+exception Unpack_signed_64_int_most_significant_byte_too_large of int with sexp
+let check_highest_order_byte_range byte =
+  if byte < 64 || byte >= 192 then ()
+  else raise (Unpack_signed_64_int_most_significant_byte_too_large byte)
+;;
+
+let unpack_signed_64_int_big_endian ~buf ~pos =
+  assert (Sys.word_size = 64);
+  (* Do bounds checking only on the first and last bytes *)
+  let b1 = Char.code buf.[pos]
+  and b8 = Char.code buf.[pos + 7] in
+
+  let b2 = Char.code (Caml.String.unsafe_get buf (pos + 1))
+  and b3 = Char.code (Caml.String.unsafe_get buf (pos + 2))
+  and b4 = Char.code (Caml.String.unsafe_get buf (pos + 3))
+  and b5 = Char.code (Caml.String.unsafe_get buf (pos + 4))
+  and b6 = Char.code (Caml.String.unsafe_get buf (pos + 5))
+  and b7 = Char.code (Caml.String.unsafe_get buf (pos + 6)) in
+
+  check_highest_order_byte_range b1;
+
+  (b1 lsl 56) lor
+  (b2 lsl 48) lor (b3 lsl 40) lor
+  (b4 lsl 32) lor (b5 lsl 24) lor
+  (b6 lsl 16) lor (b7 lsl  8) lor b8
+;;
+
+let unpack_signed_64_int_little_endian ~buf ~pos =
+  assert (Sys.word_size = 64);
+  (* Do bounds checking only on the first and last bytes *)
+  let b1 = Char.code buf.[pos]
+  and b8 = Char.code buf.[pos + 7] in
+
+  let b2 = Char.code (Caml.String.unsafe_get buf (pos + 1))
+  and b3 = Char.code (Caml.String.unsafe_get buf (pos + 2))
+  and b4 = Char.code (Caml.String.unsafe_get buf (pos + 3))
+  and b5 = Char.code (Caml.String.unsafe_get buf (pos + 4))
+  and b6 = Char.code (Caml.String.unsafe_get buf (pos + 5))
+  and b7 = Char.code (Caml.String.unsafe_get buf (pos + 6)) in
+
+  check_highest_order_byte_range b8;
+
+  b1          lor (b2 lsl 8) lor
+  (b3 lsl 16) lor (b4 lsl 24) lor
+  (b5 lsl 32) lor (b6 lsl 40) lor
+  (b7 lsl 48) lor (b8 lsl 56)
+;;
+
+TEST_UNIT "63 bits overflow" =
+  let buf = String.create 8 in
+  let pos = 0 in
+  List.iter
+    [pack_signed_64_little_endian, unpack_signed_64_int_little_endian;
+     pack_signed_64_big_endian, unpack_signed_64_int_big_endian]
+    ~f:(fun (pack, unpack) ->
+      List.iter [
+        Int64.max_int, Some 127;
+        Int64.min_int, Some 128;
+        Int64.(add (of_int Int.max_value) 1L), Some 64;
+        Int64.(add (of_int Int.min_value) (-1L)), Some 191;
+        Int64.(of_int Int.max_value), None;
+        Int64.(of_int Int.min_value), None;
+      ] ~f:(fun (n, opt) ->
+          pack ~buf ~pos n;
+          try ignore (unpack ~buf ~pos : int); assert (opt = None)
+          with Unpack_signed_64_int_most_significant_byte_too_large n when Some n = opt -> ()
+       ))
 ;;
 
 TEST_MODULE "inline_signed_64" = Make_inline_tests (struct
@@ -627,6 +727,28 @@ TEST_MODULE "inline_signed_64" = Make_inline_tests (struct
   let unpack_big_endian = unpack_signed_64_big_endian
   let pack_little_endian = pack_signed_64_little_endian
   let unpack_little_endian = unpack_signed_64_little_endian
+end)
+
+TEST_MODULE "inline_signed_64_int" = Make_inline_tests (struct
+  (* These numbers are written with one endianness and read with the opposite endianness,
+     so the smallest byte becomes the biggest byte. Because of this, the range restriction
+     that applies to the biggest byte also applies to the smallest byte. *)
+  let ns = [0x3f20_3040_5060_0708;
+            0x7f20_3040_5060_0708;
+           -0x7f20_3040_5060_0708;
+            0x7fff_ffff_ffff_0000;
+            0]
+  let num_bytes = 8
+  let signed = true
+  type t = int
+  let of_int64 = Int64.to_int
+  let to_int64 = Int64.of_int
+  let pack = pack_signed_64_int
+  let unpack = unpack_signed_64_int
+  let pack_big_endian = pack_signed_64_int_big_endian
+  let unpack_big_endian = unpack_signed_64_int_big_endian
+  let pack_little_endian = pack_signed_64_int_little_endian
+  let unpack_little_endian = unpack_signed_64_int_little_endian
 end)
 
 let pack_float ~byte_order ~buf ~pos f =

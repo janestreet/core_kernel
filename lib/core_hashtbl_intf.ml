@@ -3,9 +3,7 @@ open Sexplib
 module Binable = Binable0
 
 module type Key = sig
-  type t with sexp
-
-  val compare : t -> t -> int
+  type t with compare, sexp
 
   (** Values returned by [hash] must be non-negative.  An exception will be raised in the
       case that [hash] returns a negative value. *)

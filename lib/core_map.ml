@@ -806,7 +806,7 @@ let t_of_sexp ~comparator k_of_sexp v_of_sexp sexp =
 
 module Creators (Key : Comparator.S1) : sig
 
-  type ('a, 'b, 'c) t_ = ('a Key.t, 'b, Key.comparator) t
+  type ('a, 'b, 'c) t_ = ('a Key.t, 'b, Key.comparator_witness) t
   type ('a, 'b, 'c) tree = ('a, 'b) Tree0.t
   type ('a, 'b, 'c) options = ('a, 'b, 'c) Without_comparator.t
 
@@ -824,7 +824,7 @@ end = struct
 
   let comparator = Key.comparator
 
-  type ('a, 'b, 'c) t_ = ('a Key.t, 'b, Key.comparator) t
+  type ('a, 'b, 'c) t_ = ('a Key.t, 'b, Key.comparator_witness) t
 
   type ('a, 'b, 'c) tree = ('a, 'b) Tree0.t
 
@@ -957,7 +957,7 @@ module Poly = struct
   include Creators (Comparator.Poly)
 
   type ('a, 'b, 'c) map = ('a, 'b, 'c) t
-  type ('k, 'v) t = ('k, 'v, Comparator.Poly.comparator) map
+  type ('k, 'v) t = ('k, 'v, Comparator.Poly.comparator_witness) map
 
   include Accessors
 
@@ -984,7 +984,7 @@ module Poly = struct
 
   module Tree = struct
     include Make_tree (Comparator.Poly)
-    type ('k, +'v) t = ('k, 'v, Comparator.Poly.comparator) tree
+    type ('k, +'v) t = ('k, 'v, Comparator.Poly.comparator_witness) tree
 
     let sexp_of_t sexp_of_k sexp_of_v t = Tree0.sexp_of_t sexp_of_k sexp_of_v t
     let t_of_sexp k_of_sexp v_of_sexp sexp =
@@ -1003,7 +1003,10 @@ module type S_binable = S_binable
   with type ('a, 'b, 'c) map  := ('a, 'b, 'c) t
   with type ('a, 'b, 'c) tree := ('a, 'b, 'c) tree
 
-module Make_using_comparator (Key : Comparator.S) = struct
+module Make_using_comparator (Key : sig
+  type t with sexp
+  include Comparator.S with type t := t
+end) = struct
 
   module Key = Key
 
@@ -1012,7 +1015,7 @@ module Make_using_comparator (Key : Comparator.S) = struct
 
   type key = Key.t
   type ('a, 'b, 'c) map = ('a, 'b, 'c) t
-  type 'v t = (key, 'v, Key.comparator) map
+  type 'v t = (key, 'v, Key.comparator_witness) map
 
   include Accessors
 
@@ -1024,7 +1027,7 @@ module Make_using_comparator (Key : Comparator.S) = struct
 
   module Tree = struct
     include Make_tree (Key_S1)
-    type +'v t = (Key.t, 'v, Key.comparator) tree
+    type +'v t = (Key.t, 'v, Key.comparator_witness) tree
 
     let sexp_of_t sexp_of_v t = Tree0.sexp_of_t Key.sexp_of_t sexp_of_v t
     let t_of_sexp v_of_sexp sexp =
@@ -1033,9 +1036,16 @@ module Make_using_comparator (Key : Comparator.S) = struct
 
 end
 
-module Make (Key : Comparator.Pre) = Make_using_comparator (Comparator.Make (Key))
+module Make (Key : Key) =
+  Make_using_comparator (struct
+    include Key
+    include Comparator.Make (Key)
+  end)
 
-module Make_binable_using_comparator (Key' : Comparator.S_binable) = struct
+module Make_binable_using_comparator (Key' : sig
+  type t with bin_io, sexp
+  include Comparator.S with type t := t
+end) = struct
 
   include Make_using_comparator (Key')
 
@@ -1058,8 +1068,11 @@ module Make_binable_using_comparator (Key' : Comparator.S_binable) = struct
 
 end
 
-module Make_binable (Key : Comparator.Pre_binable) =
-  Make_binable_using_comparator (Comparator.Make_binable (Key))
+module Make_binable (Key : Key_binable) =
+  Make_binable_using_comparator (struct
+    include Key
+    include Comparator.Make (Key)
+  end)
 
 module Tree = struct
   type ('k, 'v, 'comparator) t = ('k, 'v, 'comparator) tree

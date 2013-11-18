@@ -168,7 +168,7 @@ module Poly : sig
   type ('a, 'b) set
 
   module Tree : sig
-    type 'elt t = ('elt, Comparator.Poly.comparator) Tree.t with sexp
+    type 'elt t = ('elt, Comparator.Poly.comparator_witness) Tree.t with sexp
 
     include Creators_and_accessors1
       with type ('a, 'b) set := ('a, 'b) Tree.t
@@ -176,7 +176,7 @@ module Poly : sig
       with type 'elt tree    := 'elt t
   end
 
-  type 'elt t = ('elt, Comparator.Poly.comparator) set with bin_io, compare, sexp
+  type 'elt t = ('elt, Comparator.Poly.comparator_witness) set with bin_io, compare, sexp
 
   include Creators_and_accessors1
     with type ('a, 'b) set := ('a, 'b) set
@@ -199,14 +199,20 @@ module type S_binable = S0_binable
 
 module Make (Elt : Elt) : S with type Elt.t = Elt.t
 
-module Make_using_comparator (Elt : Comparator.S)
+module Make_using_comparator (Elt : sig
+  type t with sexp
+  include Comparator.S with type t := t
+end)
   : S
     with type Elt.t = Elt.t
-    with type Elt.comparator = Elt.comparator
+    with type Elt.comparator_witness = Elt.comparator_witness
 
 module Make_binable (Elt : Elt_binable) : S_binable with type Elt.t = Elt.t
 
-module Make_binable_using_comparator (Elt : Comparator.S_binable)
+module Make_binable_using_comparator (Elt : sig
+  type t with bin_io, sexp
+  include Comparator.S with type t := t
+end)
   : S_binable
     with type Elt.t = Elt.t
-    with type Elt.comparator = Elt.comparator
+    with type Elt.comparator_witness = Elt.comparator_witness
