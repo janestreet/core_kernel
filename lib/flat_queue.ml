@@ -135,10 +135,7 @@ let resize t ~capacity =
 let maybe_grow t = if is_full t then resize t ~capacity:(capacity t * 2)
 
 let set_capacity t new_capacity =
-  if new_capacity < length t then
-    failwiths "Flat_queue.set_capacity got capacity smaller than length"
-      (new_capacity, length t) <:sexp_of< int * int >>;
-  let new_capacity = Int.ceil_pow2 new_capacity in
+  let new_capacity = Int.ceil_pow2 (max new_capacity (length t)) in
   if new_capacity <> capacity t then resize t ~capacity:new_capacity;
 ;;
 

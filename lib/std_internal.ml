@@ -2,10 +2,6 @@
    I can't just include Sexplib.Std because
    I can only define Hashtbl once in this module
 *)
-module Big_int = Sexplib.Std.Big_int
-module Nat     = Sexplib.Std.Nat
-module Ratio   = Sexplib.Std.Ratio
-module Num     = Sexplib.Std.Num
 module Set = Core_set
 module Map = Core_map
 module Array = Core_array

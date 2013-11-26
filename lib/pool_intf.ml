@@ -115,6 +115,10 @@ module type S = sig
   (** [free t pointer] frees the tuple pointed to by [pointer] from [t]. *)
   val free : 'slots t -> 'slots Pointer.t -> unit
 
+  (** [unsafe_free t pointer] frees the tuple pointed to by [pointer] without checking
+      [pointer_is_valid] *)
+  val unsafe_free : 'slots t -> 'slots Pointer.t -> unit
+
   (** [new<N> t a0 ... a<N-1>] returns a new tuple from the pool, with the tuple's
       slots initialized to [a0] ... [a<N-1>].  [new] raises if [is_full t]. *)
   val new1

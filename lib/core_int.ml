@@ -87,10 +87,10 @@ include Conv.Make (T)
 
 let abs x = abs x
 
-let (+) x y = (+) x y
-let (-) x y = (-) x y
+let ( + ) x y = ( + ) x y
+let ( - ) x y = ( - ) x y
 let ( * ) x y = ( * ) x y
-let (/) x y = (/) x y
+let ( / ) x y = ( / ) x y
 
 module Infix = struct
   let ( % ) x y =
@@ -115,6 +115,7 @@ module Infix = struct
 end
 
 let neg x = -x
+let ( ~- ) = neg
 
 TEST = (neg 5 + 5 = 0)
 
@@ -138,3 +139,16 @@ include Pretty_printer.Register (struct
   let to_string = to_string
   let module_name = "Core.Std.Int"
 end)
+
+module O = struct
+  let ( + ) = ( + )
+  let ( - ) = ( - )
+  let ( * ) = ( * )
+  let ( / ) = ( / )
+  let ( ~- ) = ( ~- )
+  include (Replace_polymorphic_compare : Polymorphic_compare_intf.Infix with type t := t)
+  let abs = abs
+  let neg = neg
+  let zero = zero
+  let of_int_exn = of_int_exn
+end

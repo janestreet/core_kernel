@@ -35,7 +35,11 @@ module type S = sig
   val epsilon_float : t
 
   val max_finite_value : t
-  val min_positive_value : t
+
+  (** [min_positive_subnormal_value = 2 ** -1074]
+      [min_positive_normal_value    = 2 ** -1022] *)
+  val min_positive_subnormal_value : t
+  val min_positive_normal_value    : t
 
   val of_int : int -> t
   val to_int : t -> int
@@ -155,12 +159,22 @@ module type S = sig
     val ( /  ) : t -> t -> t
     val ( ~- ) : t -> t
     include Polymorphic_compare_intf.Infix with type t := t
+    include Robustly_comparable.S          with type t := t
 
-    val neg    : t -> t
-    val zero   : t
-    val of_int : int -> t
+    val abs      : t -> t
+    val neg      : t -> t
+    val zero     : t
+    val of_int   : int -> t
+    val of_float : float -> t
   end
 
+  (** Like [to_string], but guaranteed to be round-trippable.
+
+      It usually yields as few significant digits as possible.  That is, it won't print
+      [3.14] as [3.1400000000000001243].  The only exception is that occasionally it will
+      output 17 significant digits when the number can be represented with just 16 (but
+      not 15 or less) of them. *)
+  val to_string_round_trippable : float -> string
 
   (** Pretty print float, for example [to_string_hum ~decimals:3 1234.1999 = "1_234.200"]
       [to_string_hum ~decimals:3 ~strip_zero:true 1234.1999 = "1_234.2" ]. No delimiters

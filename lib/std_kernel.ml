@@ -61,6 +61,7 @@ module Only_in_test           = Only_in_test
 module Option                 = Option
 module Or_error               = Or_error
 module Out_channel            = Out_channel
+module Percent                = Percent
 module Pid                    = Pid
 module Poly                   = Poly
 module Polymorphic_compare    = Polymorphic_compare

@@ -3,7 +3,7 @@ open Std_internal
 let is_error = Result.is_error
 let is_ok    = Result.is_ok
 
-module Debug (Stack : Stack_intf.S) : Stack_intf.S = struct
+module Debug (Stack : Stack_intf.S) : Stack_intf.S with type 'a t = 'a Stack.t = struct
 
   open Stack
 
@@ -49,7 +49,10 @@ module Debug (Stack : Stack_intf.S) : Stack_intf.S = struct
 
 end
 
-module Test (Stack : Stack_intf.S) : sig end = (struct
+module Test (Stack : Stack_intf.S)
+  (* This signature is here to remind us to add a unit test whenever we add something to
+     the stack interface. *)
+  : Stack_intf.S with type 'a t = 'a Stack.t = struct
 
   open Stack
 
@@ -174,19 +177,33 @@ module Test (Stack : Stack_intf.S) : sig end = (struct
   ;;
 
 end
-  (* This signature is here to remind us to add a unit test whenever we add something to
-     the stack interface. *)
-  : Stack_intf.S)
 
-include Test (Debug (Core_stack))
-include Test (Debug (Linked_stack))
+include (Test (Debug (Linked_stack)) : sig end)
 
-(* Check [Core_stack] with [auto_shrink] [true]. *)
-include Test (Debug (struct
-  include Core_stack
-  let create () =
+TEST_MODULE = (struct
+
+  open Core_stack
+
+  include Test (Debug (Core_stack))
+
+  let capacity     = capacity
+  let set_capacity = set_capacity
+
+  TEST_UNIT =
     let t = create () in
-    set_auto_shrink t true;
-    t
+    assert (capacity t = 0);
+    set_capacity t (-1);
+    assert (capacity t = 0);
+    set_capacity t 10;
+    assert (capacity t = 10);
+    set_capacity t 0;
+    assert (capacity t = 0);
+    push t ();
+    set_capacity t 0;
+    assert (length t = 1);
+    assert (capacity t >= 1);
   ;;
-end))
+end
+(* This signature constraint is here to remind us to add a unit test whenever the
+   interface to [Core_stack] changes. *)
+: module type of Core_stack)

@@ -1,12 +1,14 @@
 (** A stack implemented with an array.  See {!Stack_intf} for documentation.
 
-    The implementation will grow the array as necessary.  By default, it will not
-    automatically shrink the array.  One can use [set_auto_shrink] to change
-    auto-shrinking behavior.
+    The implementation will grow the array as necessary, and will never automatically
+    shrink the array.  One can use [set_capacity] to explicitly resize the array.
 *)
 
 include Stack_intf.S
 
-(** [set_auto_shrink t] controls whether [t]'s array will automatically shrink when the
-    number of elements on the stack falls below 1/4 of the array size. *)
-val set_auto_shrink : _ t -> bool -> unit
+(** [capacity t] returns the length of the array backing [t]. *)
+val capacity : _ t -> int
+
+(** [set_capacity t capacity] sets the length of the array backing [t] to [max capacity
+    (length t)].  To shrink as much as possible, do [set_capacity t 0]. *)
+val set_capacity : _ t -> int -> unit

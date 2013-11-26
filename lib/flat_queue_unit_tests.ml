@@ -84,7 +84,7 @@ TEST_UNIT =
         enqueue t changed;
       done;
       List.iter [ Int.min_value; -1; 0; length t - 1 ] ~f:(fun capacity ->
-        assert (does_raise (fun () -> set_capacity t capacity)));
+        set_capacity t capacity);
       set_capacity t (length t));
     assert (behaves_like_it_is_empty t);
     for i = 1 to num_enqueues do

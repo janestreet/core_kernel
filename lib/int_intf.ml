@@ -21,13 +21,29 @@ module type S = sig
   val one : t
   val minus_one : t
 
-  val (+)   : t -> t -> t
-  val (-)   : t -> t -> t
+  val ( + ) : t -> t -> t
+  val ( - ) : t -> t -> t
   val ( * ) : t -> t -> t
-  val (/)   : t -> t -> t
+  val ( / ) : t -> t -> t
 
   (** Negation *)
   val neg : t -> t
+  val ( ~- ) : t -> t
+
+  (** A sub-module designed to be opened to make working with ints more convenient.  *)
+  module O : sig
+    val ( + ) : t -> t -> t
+    val ( - ) : t -> t -> t
+    val ( * ) : t -> t -> t
+    val ( / ) : t -> t -> t
+    val ( ~- ) : t -> t
+    include Polymorphic_compare_intf.Infix with type t := t
+
+    val abs    : t -> t
+    val neg    : t -> t
+    val zero   : t
+    val of_int_exn : int -> t
+  end
 
   (** {9 Successor and predecessor functions } *)
 
@@ -83,5 +99,9 @@ module type S = sig
   val of_nativeint_exn : nativeint -> t
   val to_nativeint_exn : t -> nativeint
 
+end
 
+TEST_MODULE = struct
+  (* this functor's type-correctness ensures that every value in [S.O] is also in [S]. *)
+  module Check_O_contained_in_S (M : S) : sig end = (M : module type of M.O)
 end

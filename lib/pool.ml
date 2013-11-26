@@ -644,14 +644,7 @@ end
     Pointer.create ~header_index tuple_id;
   ;;
 
-  let free (type slots) (t : slots t) (pointer : slots Pointer.t) =
-    (* Check [pointer_is_valid] to:
-       - avoid freeing a null pointer
-       - avoid freeing a free pointer (this would lead to a pool inconsistency)
-       - be able to use unsafe functions after. *)
-    if not (pointer_is_valid t pointer) then
-      failwiths "Pool.free of invalid pointer" (pointer, t)
-        (<:sexp_of< _ Pointer.t * _ t >>);
+  let unsafe_free (type slots) (t : slots t) (pointer : slots Pointer.t) =
     let metadata = metadata t in
     metadata.length <- metadata.length - 1;
     unsafe_add_to_free_list t metadata ~header_index:(Pointer.header_index pointer);
@@ -666,6 +659,17 @@ end
         ~src:dummy ~src_pos:0 ~len:metadata.slots_per_tuple
         ~dst:t     ~dst_pos:(Pointer.first_slot_index pointer)
     end;
+  ;;
+
+  let free (type slots) (t : slots t) (pointer : slots Pointer.t) =
+    (* Check [pointer_is_valid] to:
+       - avoid freeing a null pointer
+       - avoid freeing a free pointer (this would lead to a pool inconsistency)
+       - be able to use unsafe functions after. *)
+    if not (pointer_is_valid t pointer) then
+      failwiths "Pool.free of invalid pointer" (pointer, t)
+        (<:sexp_of< _ Pointer.t * _ t >>);
+    unsafe_free t pointer
   ;;
 
   let new1 t a0 =
@@ -940,6 +944,11 @@ module Debug (Pool : S) = struct
       (fun () -> is_full t)
   ;;
 
+  let unsafe_free t p =
+    debug "unsafe_free" [t] p <:sexp_of< _ Pointer.t >> <:sexp_of< unit >>
+      (fun () -> unsafe_free t p)
+  ;;
+
   let free t p =
     debug "free" [t] p <:sexp_of< _ Pointer.t >> <:sexp_of< unit >>
       (fun () -> free t p)
@@ -1060,6 +1069,11 @@ module Error_check (Pool : S) = struct
 
   let set        t p slot v = set        t (Pointer.follow p) slot v
   let unsafe_set t p slot v = unsafe_set t (Pointer.follow p) slot v
+
+  let unsafe_free t p =
+    unsafe_free t (Pointer.follow p);
+    Pointer.invalidate p;
+  ;;
 
   let free t p =
     free t (Pointer.follow p);

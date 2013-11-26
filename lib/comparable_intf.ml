@@ -85,4 +85,3 @@ module type S_binable = sig
     with type t := t
     with type comparator_witness := comparator_witness
 end
-

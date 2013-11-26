@@ -36,7 +36,129 @@ let of_string s =
   | _ -> invalid_argf "Float.of_string %s" s ()
 ;;
 
-let to_string = Pervasives.string_of_float
+external format_float : string -> float -> string = "caml_format_float"
+
+(* Stolen from [pervasives.ml].  Adds a "." at the end if needed.  It is in
+   [pervasives.mli], but it also says not to use it directly, so we copy and paste the
+   code. It makes the assumption on the string passed in argument that it was returned by
+   [format_float] *)
+let valid_float_lexem s =
+  let l = String.length s in
+  let rec loop i =
+    if i >= l then s ^ "." else
+    match s.[i] with
+    | '0' .. '9' | '-' -> loop (i + 1)
+    | _ -> s
+  in
+  loop 0
+;;
+
+(* Standard 12 significant digits, exponential notation used as necessary, guaranteed to
+   be a valid OCaml float lexem, not to look like an int.  *)
+let to_string x = valid_float_lexem (format_float "%.12g" x);;
+
+(* Let [y] be a power of 2.  Then the next representable float is:
+     [z = y * (1 + 2 ** -52)]
+   and the previous one is
+     [x = y * (1 - 2 ** -53)]
+
+   In general, every two adjacent floats are within a factor of between [1 + 2**-53]
+   and [1 + 2**-52] from each other, that is within [1 + 1.1e-16] and [1 + 2.3e-16].
+
+   So if the decimal representation of a float starts with "1", then its adjacent floats
+   will usually differ from it by 1, and sometimes by 2, at the 17th significant digit
+   (counting from 1).
+
+   On the other hand, if the decimal representation starts with "9", then the adjacent
+   floats will be off by no more than 23 at the 16th and 17th significant digits.
+
+   E.g.:
+
+   # sprintf "%.17g" (1024. *. (1. -. 2.** (-53.)));;
+                           11111111
+                 1234 5678901234567
+   - : string = "1023.9999999999999"
+
+   Printing a couple of extra digits reveals that the difference indeed is roughly 11 at
+   digits 17th and 18th (that is, 13th and 14th after "."):
+
+   # sprintf "%.19g" (1024. *. (1. -. 2.** (-53.)));;
+                           1111111111
+                 1234 567890123456789
+   - : string = "1023.999999999999886"
+
+   The ulp (the difference between adjacent floats) is twice as big on the other side of
+   1024.:
+
+   # sprintf "%.19g" (1024. *. (1. +. 2.** (-52.)));;
+                           1111111111
+                 1234 567890123456789
+   - : string = "1024.000000000000227"
+
+   Now take a power of 2 which starts with 99:
+
+   # 2.**93. ;;
+                        1111111111
+               1 23456789012345678
+   - : float = 9.9035203142830422e+27
+
+   # 2.**93. *. (1. +. 2.** (-52.));;
+   - : float = 9.9035203142830444e+27
+
+   # 2.**93. *. (1. -. 2.** (-53.));;
+   - : float = 9.9035203142830411e+27
+
+   The difference between 2**93 and its two neighbors is slightly more than, respectively,
+   1 and 2 at significant digit 16.
+
+   Those examples show that:
+    - 17 significant digits is always sufficient to represent a float without ambiguity
+    - 15th significant digit can always be represented accurately
+    - converting a decimal number with 16 significant digits to its nearest float and back
+      can change the last decimal digit by no more than 1
+
+   To make sure that floats obtained by conversion from decimal fractions (e.g. "3.14")
+   are printed without trailing non-zero digits, one should choose the first among the
+   '%.15g', '%.16g', and '%.17g' representations which does round-trip:
+
+   # sprintf "%.15g" 3.14;;
+   - : string = "3.14"                     (* pick this one *)
+   # sprintf "%.16g" 3.14;;
+   - : string = "3.14"
+   # sprintf "%.17g" 3.14;;
+   - : string = "3.1400000000000001"       (* do not pick this one *)
+
+   # sprintf "%.15g" 8.000000000000002;;
+   - : string = "8"                        (* do not pick this one--does not round-trip *)
+   # sprintf "%.16g" 8.000000000000002;;
+   - : string = "8.000000000000002"        (* prefer this one *)
+   # sprintf "%.17g" 8.000000000000002;;
+   - : string = "8.0000000000000018"       (* this one has one digit of junk at the end *)
+
+   Skipping the '%.16g' in the above procedure saves us some time, but it means that, as
+   seen in the second example above, occasionally numbers with exactly 16 significant
+   digits will have an error introduced at the 17th digit.  That is probably OK for
+   typical use, because a number with 16 significant digits is "ugly" already.  Adding one
+   more doesn't make it much worse for a human reader.
+
+   On the other hand, we cannot skip '%.15g' and only look at '%.16g' and '%.17g', since
+   the inaccuracy at the 16th digit might introduce the noise we want to avoid:
+
+   # sprintf "%.15g" 9.992;;
+   - : string = "9.992"                    (* pick this one *)
+   # sprintf "%.16g" 9.992;;
+   - : string = "9.992000000000001"        (* do not pick this one--junk at the end *)
+   # sprintf "%.17g" 9.992;;
+   - : string = "9.9920000000000009"
+*)
+let to_string_round_trippable x =
+  valid_float_lexem (
+    let y = format_float "%.15g" x in
+    if float_of_string y = x then
+      y
+    else
+      format_float "%.17g" x)
+;;
 
 let nan = Pervasives.nan
 
@@ -47,15 +169,73 @@ let max_value = infinity
 let min_value = neg_infinity
 
 let max_finite_value = Pervasives.max_float
-let min_positive_value = Pervasives.min_float
+
+let min_positive_subnormal_value = 2. ** -1074.
+let min_positive_normal_value = 2. ** -1022.
+
+TEST_MODULE = struct
+  (* Some tests to make sure that the compiler is generating code for handling subnormal
+     numbers at runtime accurately. *)
+  let x () = min_positive_subnormal_value
+  let y () = min_positive_normal_value
+
+  TEST = x () > 0.
+  TEST = x () /. 2. = 0.
+
+  let half_way_between a b = a +. (b -. a) /. 2.
+  let are_one_ulp_apart a b = half_way_between a b = a || half_way_between a b = b
+
+  TEST = are_one_ulp_apart (x ()) (2. *. x ())
+  TEST = are_one_ulp_apart (2. *. x ()) (3. *. x ())
+
+  let one_ulp_below_y () = y () -. x ()
+  TEST = one_ulp_below_y () < y ()
+  TEST = y () -. one_ulp_below_y () = x ()
+  TEST = are_one_ulp_apart (one_ulp_below_y ()) (y ())
+
+  let one_ulp_above_y () = y () +. x ()
+  TEST = y () < one_ulp_above_y ()
+  TEST = one_ulp_above_y () -. y () = x ()
+  TEST = are_one_ulp_apart (y ()) (one_ulp_above_y ())
+
+  TEST = not (are_one_ulp_apart (one_ulp_below_y ()) (one_ulp_above_y ()))
+
+  (* [2 * min_positive_normal_value] is where the ulp increases for the first time. *)
+  let z () = 2. *. y ()
+  let one_ulp_below_z () = z () -. x ()
+  TEST = one_ulp_below_z () < z ()
+  TEST = z () -. one_ulp_below_z () = x ()
+  TEST = are_one_ulp_apart (one_ulp_below_z ()) (z ())
+
+  let one_ulp_above_z () = z () +. 2. *. x ()
+  TEST = z () < one_ulp_above_z ()
+  TEST = one_ulp_above_z () -. z () = 2. *. x ()
+  TEST = are_one_ulp_apart (z ()) (one_ulp_above_z ())
+
+end
+
 let zero = 0.
+
+TEST = to_string_round_trippable 3.14                             = "3.14"
+TEST = to_string_round_trippable 3.1400000000000001               = "3.14"
+TEST = to_string_round_trippable 3.1400000000000004               = "3.1400000000000006"
+TEST = to_string_round_trippable 8.000000000000002                = "8.0000000000000018"
+TEST = to_string_round_trippable 9.992                            = "9.992"
+TEST = to_string_round_trippable (2.**63. *. (1. +. 2.** (-52.))) = "9.2233720368547779e+18"
+TEST = to_string_round_trippable (-3.)                            = "-3."
+TEST = to_string_round_trippable nan                              = "nan"
+TEST = to_string_round_trippable infinity                         = "inf"
+TEST = to_string_round_trippable neg_infinity                     = "-inf"
+TEST = to_string_round_trippable 3e100                            = "3e+100"
+TEST = to_string_round_trippable max_finite_value                 = "1.7976931348623157e+308"
+TEST = to_string_round_trippable min_positive_subnormal_value     = "4.94065645841247e-324"
 
 let frexp = Pervasives.frexp
 let ldexp = Pervasives.ldexp
 
 let is_nan x = (x : t) <> x
-include
-  (Float_robust_compare.Make(struct let epsilon = 1E-7 end) : Float_robust_compare.S)
+module Robustly_comparable = Float_robust_compare.Make (struct let epsilon = 1E-7 end)
+include Robustly_comparable
 
 let epsilon_float = Pervasives.epsilon_float
 
@@ -517,9 +697,12 @@ module O = struct
   let ( /  ) = ( /  )
   let ( ~- ) = ( ~- )
   include (Replace_polymorphic_compare : Polymorphic_compare_intf.Infix with type t := t)
-  let neg    = neg
-  let zero   = zero
-  let of_int = of_int
+  include Robustly_comparable
+  let abs        = abs
+  let neg        = neg
+  let zero       = zero
+  let of_int     = of_int
+  let of_float x = x
 end
 
 TEST_MODULE = struct
