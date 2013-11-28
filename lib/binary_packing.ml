@@ -733,11 +733,13 @@ TEST_MODULE "inline_signed_64_int" = Make_inline_tests (struct
   (* These numbers are written with one endianness and read with the opposite endianness,
      so the smallest byte becomes the biggest byte. Because of this, the range restriction
      that applies to the biggest byte also applies to the smallest byte. *)
-  let ns = [0x3f20_3040_5060_0708;
-            0x7f20_3040_5060_0708;
-           -0x7f20_3040_5060_0708;
-            0x7fff_ffff_ffff_0000;
-            0]
+  let ns =
+    let big_number a b = (a lsl 32) lor b in
+    [  big_number 0x3f20_3040 0x5060_0708
+    ;  big_number 0x7f20_3040 0x5060_0708
+    ;-(big_number 0x7f20_3040 0x5060_0708)
+    ;  big_number 0x7fff_ffff 0xffff_0000
+    ;  0]
   let num_bytes = 8
   let signed = true
   type t = int
