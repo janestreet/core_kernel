@@ -187,3 +187,17 @@ TEST_MODULE "gc" = struct
     done;
     check ()
 end
+
+(* Simple inline benchmarks for GC functions *)
+BENCH "minor_words" = minor_words ()
+BENCH "major_words" = major_words ()
+BENCH "promoted_words" = promoted_words ()
+BENCH "minor_collections" = minor_collections ()
+BENCH "major_collections" = major_collections ()
+BENCH "heap_words" = heap_words ()
+BENCH "heap_chunks" = heap_chunks ()
+BENCH "compactions" = compactions ()
+BENCH "top_heap_words" = top_heap_words ()
+BENCH "stat" = stat ()
+BENCH "quick_stat" = quick_stat ()
+BENCH "counters" = counters ()

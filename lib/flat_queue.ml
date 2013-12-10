@@ -20,6 +20,7 @@ type 'slots t =
     (* [front] is the index of the first element in the queue. *)
     mutable front : int;
     mutable length : int;
+    mutable num_mutations : int;
   }
 with fields, sexp_of
 
@@ -44,7 +45,9 @@ let invariant slots_invariant t =
         assert (front < capacity t)))
       ~length:(check (fun length ->
         assert (length >= 0);
-        assert (length <= capacity t))))
+        assert (length <= capacity t)))
+      ~num_mutations:(check (fun num_mutations ->
+        assert (num_mutations >= 0))))
 ;;
 
 let create
@@ -77,6 +80,7 @@ let create
     elements = create_elements ~len:capacity;
     front    = 0;
     length   = 0;
+    num_mutations = 0;
   }
 ;;
 
@@ -84,9 +88,12 @@ let is_empty t = length t = 0
 
 let is_full t = length t = capacity t
 
+let inc_num_mutations t = t.num_mutations <- t.num_mutations + 1
+
 let drop_front ?(n = 1) t =
   if n < 0 || n > length t then
     failwiths "Flat_queue.drop_front got invalid n" (n, t) <:sexp_of< int * _ t >>;
+  inc_num_mutations t;
   for _i = 1 to n do
     A.set_to_init t.elements t.front;
     t.front <- offset t 1;
@@ -95,6 +102,7 @@ let drop_front ?(n = 1) t =
 ;;
 
 let clear t =
+  inc_num_mutations t;
   for i = 0 to length t - 1 do
     A.set_to_init t.elements (offset t i);
   done;
@@ -103,7 +111,10 @@ let clear t =
 ;;
 
 let unsafe_get t i slot   = A.unsafe_get t.elements (offset t i) slot
-let unsafe_set t i slot a = A.unsafe_set t.elements (offset t i) slot a
+let unsafe_set t i slot a =
+  inc_num_mutations t;
+  A.unsafe_set t.elements (offset t i) slot a;
+;;
 
 let check_index t i =
   if i < 0 || i >= t.length then
@@ -114,7 +125,11 @@ let get t i slot   = check_index t i; unsafe_get t i slot
 let set t i slot a = check_index t i; unsafe_set t i slot a
 
 let get_all_slots t i       = check_index t i; A.get_all_slots t.elements (offset t i)
-let set_all_slots t i tuple = check_index t i; A.set_all_slots t.elements (offset t i) tuple
+let set_all_slots t i tuple =
+  inc_num_mutations t;
+  check_index t i;
+  A.set_all_slots t.elements (offset t i) tuple;
+;;
 
 let resize t ~capacity =
   let old_elements = t.elements in
@@ -132,13 +147,23 @@ let resize t ~capacity =
   t.front <- 0;
 ;;
 
-let maybe_grow t = if is_full t then resize t ~capacity:(capacity t * 2)
+(* [maybe_grow] and [set_capacity] both increment [t.num_mutations] directly rather than
+   relying on [resize] to increment it so that it is incremented even if the underlying
+   array doesn't need to change.  [resize] does not need to increment it because these are
+   the only call sites. *)
+let maybe_grow t =
+  inc_num_mutations t;
+  if is_full t then resize t ~capacity:(capacity t * 2)
+;;
 
 let set_capacity t new_capacity =
+  inc_num_mutations t;
   let new_capacity = Int.ceil_pow2 (max new_capacity (length t)) in
   if new_capacity <> capacity t then resize t ~capacity:new_capacity;
 ;;
 
+(* In the [enqueueN] functions, [maybe_grow] increments [t.num_mutations], so it doesn't
+   need to be incremented again. *)
 let enqueue1 t a0 =
   maybe_grow t;
   let elements = t.elements in
@@ -247,16 +272,25 @@ let enqueue9 t a0 a1 a2 a3 a4 a5 a6 a7 a8 =
   t.length <- t.length + 1;
 ;;
 
+let ensure_no_mutation t num_mutations =
+  if t.num_mutations <> num_mutations
+  then failwiths "mutation of queue during iteration" t <:sexp_of< _ t >>;
+;;
+
 let fold t ~init ~f =
+  let num_mutations = t.num_mutations in
   let r = ref init in
   for i = 0 to length t - 1 do
     r := f !r (get_all_slots t i);
+    ensure_no_mutation t num_mutations;
   done;
   !r
 ;;
 
 let iter t ~f =
+  let num_mutations = t.num_mutations in
   for i = 0 to length t - 1 do
     f (get_all_slots t i);
+    ensure_no_mutation t num_mutations;
   done;
 ;;

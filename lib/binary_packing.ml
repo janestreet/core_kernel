@@ -729,6 +729,8 @@ TEST_MODULE "inline_signed_64" = Make_inline_tests (struct
   let unpack_little_endian = unpack_signed_64_little_endian
 end)
 
+IFDEF ARCH_SIXTYFOUR THEN
+
 TEST_MODULE "inline_signed_64_int" = Make_inline_tests (struct
   (* These numbers are written with one endianness and read with the opposite endianness,
      so the smallest byte becomes the biggest byte. Because of this, the range restriction
@@ -752,6 +754,8 @@ TEST_MODULE "inline_signed_64_int" = Make_inline_tests (struct
   let pack_little_endian = pack_signed_64_int_little_endian
   let unpack_little_endian = unpack_signed_64_int_little_endian
 end)
+
+ENDIF
 
 let pack_float ~byte_order ~buf ~pos f =
   pack_signed_64 ~byte_order ~buf ~pos (Int64.bits_of_float f)

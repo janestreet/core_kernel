@@ -1,5 +1,6 @@
 module List = StdLabels.List
 module String = StdLabels.String
+open Typerep_kernel.Std
 open Sexplib.Std
 open Bin_prot.Std
 
@@ -8,7 +9,7 @@ module Random = Core_random
 let invalid_argf = Core_printf.invalid_argf
 
 module T = struct
-  type 'a t = 'a list with sexp, bin_io
+  type 'a t = 'a list with sexp, bin_io, typerep
 end
 
 include T

@@ -1,7 +1,8 @@
+open Typerep_kernel.Std
 open Sexplib.Std
 open Bin_prot.Std
 
-type 'a t = 'a option with bin_io, sexp, compare
+type 'a t = 'a option with bin_io, sexp, compare, typerep
 
 let is_none = function None -> true | _ -> false
 

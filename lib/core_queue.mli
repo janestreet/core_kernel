@@ -2,9 +2,9 @@
     follows Core idioms and adds some functions.
 
     Differences from the standard module:
-      [enqueue] replaces [push], [add], and takes the queue first.
-      [dequeue] replaces [pop], [take], takes the queue first, and returns an
-        option rather than raising [Empty].
+      [enqueue] replaces [push] and [add], and takes the queue first.
+      [dequeue] replaces [pop] and [take], and returns an option rather than raising
+        [Empty].
       [dequeue_exn] is available if you want to raise [Empty].
       [iter] takes a labeled argument.
       [transfer]'s arguments are labeled.

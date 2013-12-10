@@ -1,7 +1,8 @@
+open Typerep_kernel.Std
 open Sexplib.Std
 open Bin_prot.Std
 
-type 'a t = 'a lazy_t with bin_io, sexp
+type 'a t = 'a lazy_t with bin_io, sexp, typerep
 
 include (Lazy : module type of Lazy with type 'a t := 'a t)
 

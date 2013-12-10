@@ -2,6 +2,7 @@ module Array = Caml.ArrayLabels
 module Char = Core_char
 module String = Caml.StringLabels
 module List = Core_list
+open Typerep_kernel.Std
 open Sexplib.Std
 open Bin_prot.Std
 open Result.Export
@@ -14,7 +15,7 @@ let invalid_argf = Core_printf.invalid_argf
 let failwiths = Error.failwiths
 
 module T = struct
-  type t = string with sexp, bin_io
+  type t = string with sexp, bin_io, typerep
   let compare = String.compare
 
   (* = on two strings avoids calling compare_val, which is what happens

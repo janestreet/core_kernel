@@ -1,4 +1,5 @@
 module Array = StdLabels.Array
+open Typerep_kernel.Std
 open Sexplib.Std
 open Bin_prot.Std
 
@@ -9,7 +10,7 @@ let invalid_argf = Core_printf.invalid_argf
 let failwiths = Error.failwiths
 let does_raise = Common.does_raise
 
-type 'a t = 'a array with sexp, bin_io
+type 'a t = 'a array with sexp, bin_io, typerep
 
 (* This module implements a new in-place, constant heap sorting algorithm to replace the
    one used by the standard libraries.  Its only purpose is to be faster (hopefully
@@ -879,4 +880,64 @@ module Float = struct
 
   include Unsafe_blit
 
+end
+
+
+BENCH_FUN "Array.get (int)" =
+  let len = 300 in
+  let arr = create ~len 0 in
+  (fun () -> ignore(arr.(len-1)))
+
+BENCH_FUN "Array.set (int)" =
+  let len = 300 in
+  let arr = create ~len 0 in
+  (fun () -> arr.(len-1) <- 100)
+
+BENCH_FUN "Array.get (float)" =
+  let len = 300 in
+  let arr = create ~len 0.0 in
+  (fun () -> ignore(arr.(len-1)))
+
+BENCH_FUN "Array.set (float)" =
+  let len = 300 in
+  let arr = create ~len 0.0 in
+  (fun () -> arr.(len-1) <- 1.0)
+
+BENCH_FUN "Array.get (tuple)" =
+  let len = 300 in
+  let arr = create ~len (1,2) in
+  (fun () -> ignore(arr.(len-1)))
+
+BENCH_FUN "Array.set (tuple)" =
+  let len = 300 in
+  let arr = create ~len (1,2) in
+  (fun () -> arr.(len-1) <- (3,4))
+
+(* Some benchmarks of the blit operations *)
+BENCH_MODULE "Blit tests" = struct
+  let lengths = [0; 10; 100; 1000; 10_000]
+
+  BENCH_MODULE "Int" = struct
+    BENCH_INDEXED "blit" len lengths =
+      let src = create ~len 0 in
+      let dst = create ~len 0 in
+      (fun () -> Int.blit ~src ~src_pos:0 ~dst ~dst_pos:0 ~len)
+
+    BENCH_INDEXED "blito" len lengths =
+      let src = create ~len 0 in
+      let dst = create ~len 0 in
+      (fun () -> Int.blito ~src ~src_pos:0 ~dst ~dst_pos:0 ~src_len:len ())
+  end
+
+  BENCH_MODULE "Float" = struct
+    BENCH_INDEXED "blit" len lengths =
+      let src = create ~len 0.0 in
+      let dst = create ~len 0.0 in
+      (fun () -> Float.blit ~src ~src_pos:0 ~dst ~dst_pos:0 ~len)
+
+    BENCH_INDEXED "blito" len lengths =
+      let src = create ~len 0.0 in
+      let dst = create ~len 0.0 in
+      (fun () -> Float.blito ~src ~src_pos:0 ~dst ~dst_pos:0 ~src_len:len ())
+  end
 end

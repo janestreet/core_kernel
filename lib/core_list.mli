@@ -1,6 +1,6 @@
 (** Tail recursive version of standard List functions, plus additional operations. *)
 
-type 'a t = 'a list with bin_io, sexp
+type 'a t = 'a list with bin_io, sexp, typerep
 
 include Container.S1 with type 'a t := 'a t
 include Monad.S with type 'a t := 'a t
@@ -167,7 +167,7 @@ val map3_exn : 'a t -> 'b t -> 'c t -> f:('a -> 'b -> 'c -> 'd) -> 'd t
     element, and appends the result to the front of [l2]. *)
 val rev_map_append : 'a t -> 'b t -> f:('a -> 'b) -> 'b t
 
-(** [List.fold_right f [a1; ...; an] b] is
+(** [List.fold_right [a1; ...; an] ~f ~init:b] is
     [f a1 (f a2 (... (f an b) ...))]. *)
 val fold_right : 'a t -> f:('a -> 'b -> 'b) -> init:'b -> 'b
 

@@ -1,9 +1,10 @@
+open Typerep_kernel.Std
 open Sexplib.Std
 open Bin_prot.Std
 open Int64
 
 module T = struct
-  type t = int64 with sexp, bin_io
+  type t = int64 with sexp, bin_io, typerep
 
   let compare (x : t) y = compare x y
   let equal (x : t) y = x = y

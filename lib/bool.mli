@@ -1,4 +1,4 @@
-type t = bool with bin_io, sexp
+type t = bool with bin_io, sexp, typerep
 
 open Interfaces
 include Comparable with type t := t

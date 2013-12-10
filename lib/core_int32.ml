@@ -1,9 +1,10 @@
+open Typerep_kernel.Std
 open Sexplib.Std
 open Bin_prot.Std
 open Int32
 
 module T = struct
-  type t = int32 with sexp, bin_io
+  type t = int32 with sexp, bin_io, typerep
   let compare (x : t) y = compare x y
   let hash (x : t) = Hashtbl.hash x
 

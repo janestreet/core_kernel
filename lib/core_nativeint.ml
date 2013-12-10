@@ -1,10 +1,11 @@
+open Typerep_kernel.Std
 open Sexplib.Std
 open Bin_prot.Std
 
 open Nativeint
 
 module T = struct
-  type t = nativeint with sexp, bin_io
+  type t = nativeint with sexp, bin_io, typerep
   let compare (x : t) y = compare x y
   let equal (x : t) y = x = y
   let hash (x : t) = Hashtbl.hash x

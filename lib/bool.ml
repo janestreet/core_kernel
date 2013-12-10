@@ -1,10 +1,11 @@
+open Typerep_kernel.Std
 open Sexplib.Std
 open Bin_prot.Std
 
 let invalid_argf = Core_printf.invalid_argf
 
 module T = struct
-  type t = bool with bin_io, sexp
+  type t = bool with bin_io, sexp, typerep
   let compare (t : t) t' = compare t t'
 
   (* we use physical equality here because for bools it is the same *)

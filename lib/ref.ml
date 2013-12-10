@@ -1,14 +1,17 @@
 module T = struct
-
+  (* In the definition of [t], we do not have [with bin_io, compare, sexp] because in
+     general, syntax extensions tend to use the implementation when available rather than
+     usign the alias.  Here that would lead to use the record representation [ { mutable
+     contents : 'a } ] which would result in different (and unwanted) behavior.  *)
   type 'a t = 'a ref = { mutable contents : 'a }
 
   include (struct
-    (* open Typerep_kernel.Std *)
+    open Typerep_kernel.Std
     open Sexplib.Conv
     open Bin_prot.Std
-    type 'a t = 'a ref with bin_io, compare, sexp (* , typerep *)
+    type 'a t = 'a ref with bin_io, compare, sexp, typerep
   end : sig
-    type 'a t = 'a ref with bin_io, compare, sexp (* , typerep *)
+    type 'a t = 'a ref with bin_io, compare, sexp, typerep
   end with type 'a t := 'a t)
 
   let create x = ref x

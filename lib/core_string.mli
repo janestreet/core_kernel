@@ -1,7 +1,7 @@
 (** An extension of the standard StringLabels. If you open Core.Std, you'll get
     these in the String module. *)
 
-type t = string with bin_io, sexp
+type t = string with bin_io, sexp, typerep
 
 include Blit.S         with type t := t
 include Container.S0   with type t := t with type elt = char

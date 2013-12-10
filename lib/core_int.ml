@@ -1,9 +1,10 @@
+open Typerep_kernel.Std
 open Sexplib.Std
 open Bin_prot.Std
 open Common
 
 module T = struct
-  type t = int with bin_io, sexp
+  type t = int with bin_io, sexp, typerep
 
   (* According to estokes,
      if i = j then 0 else if i < j then -1 else 1

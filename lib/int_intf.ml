@@ -1,7 +1,7 @@
 open Interfaces
 
 module type S = sig
-  type t with bin_io, sexp
+  type t with bin_io, sexp, typerep
 
   include Floatable            with type t := t
   include Intable              with type t := t

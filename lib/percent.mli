@@ -24,6 +24,7 @@ val is_zero : t -> bool
 val is_nan : t -> bool
 val is_inf : t -> bool
 
+
 (* [apply t x] multiplies the percent [t] by [x], returning a float *)
 val apply : t -> float -> float
 
@@ -55,3 +56,5 @@ module Stable : sig
     type nonrec t = t with sexp, bin_io, compare
   end
 end
+
+

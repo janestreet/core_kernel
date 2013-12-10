@@ -3,9 +3,9 @@
 module Binable = Binable0
 
 module type S = sig
-  type t
+  type t with typerep
   type outer = t
-  with bin_io, sexp
+  with bin_io, sexp, typerep
 
 
   include Floatable.S with type t := t

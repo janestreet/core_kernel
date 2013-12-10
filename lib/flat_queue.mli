@@ -109,6 +109,7 @@ val enqueue9
 val get_all_slots : (('tuple, _) Slots.t) t -> int -> 'tuple
 val set_all_slots : (('tuple, _) Slots.t) t -> int -> 'tuple -> unit
 
-(** In [iter t ~f] and [fold t ~init ~f], behavior is unspecified if [f] mutates [t]. *)
-val fold : (('tuple, _) Slots.t) t -> init:'a -> f:('a -> 'tuple -> 'a) -> 'a
-val iter : (('tuple, _) Slots.t) t -> f:('tuple -> unit) -> unit
+(** In [iter t ~f] and [fold t ~init ~f], if [f] mutates [t], then the iteration will
+    raise. *)
+val fold : (('tuple, _) Slots.t) t -> init:'a -> f:('a -> 'tuple -> 'a  ) -> 'a
+val iter : (('tuple, _) Slots.t) t            -> f:(      'tuple -> unit) -> unit

@@ -1,8 +1,9 @@
+open Typerep_kernel.Std
 open Sexplib.Std
 open Bin_prot.Std
 
 module T = struct
-  type t = unit with sexp, bin_io
+  type t = unit with sexp, bin_io, typerep
 
   let compare _ _ = 0
   let hash _ = 0

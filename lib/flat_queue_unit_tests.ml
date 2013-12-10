@@ -203,6 +203,18 @@ TEST_UNIT =
     (fun t a -> enqueue9 t a a a a a a a a a);
 ;;
 
+TEST_UNIT = (* mutation during [fold] *)
+  let t = create Slots.t1 in
+  enqueue1 t ();
+  assert (does_raise (fun () -> fold t ~init:() ~f:(fun () () -> enqueue1 t ())));
+;;
+
+TEST_UNIT = (* mutation during [iter] *)
+  let t = create Slots.t1 in
+  enqueue1 t ();
+  assert (does_raise (fun () -> iter t ~f:(fun () -> enqueue1 t ())));
+;;
+
 (* Compare [Flat_queue] with [Core_queue]. *)
 TEST_MODULE = struct
   module type Queue = sig

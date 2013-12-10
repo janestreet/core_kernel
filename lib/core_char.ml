@@ -1,3 +1,4 @@
+open Typerep_kernel.Std
 open Sexplib.Std
 open Bin_prot.Std
 module Char = Caml.Char
@@ -5,7 +6,7 @@ module Char = Caml.Char
 let failwithf = Core_printf.failwithf
 
 module T = struct
-  type t = char with bin_io, sexp
+  type t = char with bin_io, sexp, typerep
 
   let compare = Char.compare
   let hash = Hashtbl.hash

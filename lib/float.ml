@@ -1,3 +1,4 @@
+open Typerep_kernel.Std
 open Sexplib.Std
 open Bin_prot.Std
 open Result.Export
@@ -11,7 +12,7 @@ type 'a bound = 'a Comparable.bound = Incl of 'a | Excl of 'a | Unbounded
 let failwiths = Error.failwiths
 
 module T = struct
-  type t = float with sexp, bin_io
+  type t = float with sexp, bin_io, typerep
   let compare (x : t) y = compare x y
   let equal (x : t) y = x = y
   external hash : float -> int = "caml_hash_double" "noalloc"
@@ -26,7 +27,7 @@ module T = struct
 end
 
 include T
-type outer = t with sexp, bin_io (* alias for use by sub-modules *)
+type outer = t with sexp, bin_io, typerep (* alias for use by sub-modules *)
 
 let to_float x = x
 let of_float x = x
