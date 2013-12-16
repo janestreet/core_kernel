@@ -1,6 +1,6 @@
 # OASIS_START
-# DO NOT EDIT (digest: 7b05cd412c9be6ca9440794e3b2543fd)
-version = "109.55.01"
+# DO NOT EDIT (digest: 9138e9aaeaa254d648334f596831f329)
+version = "109.55.02"
 description = "Jane Street Capital's standard library overlay"
 requires =
 "bin_prot variantslib sexplib fieldslib bigarray pa_bench pa_ounit res typerep_kernel unix"
@@ -10,7 +10,7 @@ archive(native) = "core_kernel.cmxa"
 archive(native, plugin) = "core_kernel.cmxs"
 exists_if = "core_kernel.cma"
 package "check_caml_modify" (
- version = "109.55.01"
+ version = "109.55.02"
  description = "Jane Street Capital's standard library overlay"
  requires = "pa_ounit"
  archive(byte) = "check_caml_modify.cma"
