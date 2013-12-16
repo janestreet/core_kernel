@@ -1,5 +1,5 @@
 (* OASIS_START *)
-(* DO NOT EDIT (digest: 1cfb024c994bf635f97b22b3733e8f3d) *)
+(* DO NOT EDIT (digest: 64be7f648992c9009a1e07a25c8a3c4e) *)
 This is the INSTALL file for the core_kernel distribution.
 
 This package uses OASIS to generate its build system. See section OASIS for
@@ -35,7 +35,7 @@ Installing
 Uninstalling
 ============
 
-1. Go to the root of the package 
+1. Go to the root of the package
 2. Run 'ocaml setup.ml -uninstall'
 
 OASIS
