@@ -1,10 +1,10 @@
+<**/*.ml{,i}>              : syntax_camlp4o
+"lib/bigstring.ml"         : mlh, package(camlp4.macro)
+"lib/bigstring_marshal.ml" : mlh, package(camlp4.macro)
+"lib/binary_packing.ml"    : mlh, package(camlp4.macro)
+"lib/core_int63.ml"        : mlh, package(camlp4.macro)
+"lib/core_int63.mli"       : mlh, package(camlp4.macro)
+"lib/pool.ml"              : mlh, package(camlp4.macro)
+<check_caml_modify/*>      : caml_modify_wrapper
 # OASIS_START
 # OASIS_STOP
-<**/*.ml{,i}>              : syntax_camlp4o
-"lib/bigstring.ml"         : mlh, pkg_camlp4.macro
-"lib/bigstring_marshal.ml" : mlh, pkg_camlp4.macro
-"lib/binary_packing.ml"    : mlh, pkg_camlp4.macro
-"lib/core_int63.ml"        : mlh, pkg_camlp4.macro
-"lib/core_int63.mli"       : mlh, pkg_camlp4.macro
-"lib/pool.ml"              : mlh, pkg_camlp4.macro
-<check_caml_modify/*>      : caml_modify_wrapper
