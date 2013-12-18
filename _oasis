@@ -228,7 +228,6 @@ Library core_kernel
                       pa_ounit,
                       pa_ounit.syntax,
                       pa_pipebang,
-                      res,
                       sexplib,
                       sexplib.syntax,
                       typerep_kernel,
@@ -243,7 +242,6 @@ Library core_kernel
                       bigarray,
                       pa_bench,
                       pa_ounit,
-                      res,
                       typerep_kernel,
                       unix
 
