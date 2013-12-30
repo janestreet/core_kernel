@@ -2,11 +2,19 @@ open Std_internal
 
 module Id = Type_equal.Id
 
-type t = T : 'a Id.t * 'a -> t
+module View = struct
+  type t = T : 'a Id.t * 'a -> t
+end
+
+include View
+
+let view = Fn.id
 
 let create id value = T (id, value)
 
 let type_id_name (T (id, _)) = Id.name id
+
+let type_id_uid (T (id, _)) = Id.uid id
 
 let sexp_of_t (T (id, value)) = Id.to_sexp id value
 

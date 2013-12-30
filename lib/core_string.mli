@@ -60,6 +60,9 @@ val slice : t -> int -> int -> t
 (** Returns the reversed list of characters contained in a list. *)
 val to_list_rev : t -> char list
 
+(** [rev t] returns [t] in reverse order. *)
+val rev : t -> t
+
 (** [nget s i] Gets the char at normalized position [i] in [s]. *)
 val nget : t -> int -> char
 

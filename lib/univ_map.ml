@@ -1,42 +1,36 @@
 open Std_internal
 
-(* INVARIANT:
-    for each [(uid, con) : Univ_map.Key.t] and [t : Univ_map.t],
-      if [Uid.Map.find t uid = Some univ]
-      then [univ] was built using [con].
-*)
+module Key = Type_equal.Id
 
-module Uid = Unique_id.Int63 (struct end) (* uniqueness of ids is required *)
-
-module Key = struct
-
-  type 'a t = Uid.t * 'a Type_equal.Id.t with sexp_of
-
-  let create name sexp_of_a = (Uid.create (), Type_equal.Id.create ~name sexp_of_a)
-
-  let name (_, con) = Type_equal.Id.name con
-
-end
+module Uid = Type_equal.Id.Uid
 
 type t = Univ.t Uid.Map.t
 
-let set t (uid, con) data = Map.add t ~key:uid ~data:(Univ.create con data)
+let sexp_of_t t =
+  Map.data t
+  |> List.map ~f:(fun u -> (Univ.type_id_name u, u))
+  |> List.sort ~cmp:(fun (a, _) (b, _) -> String.compare a b)
+  |> <:sexp_of< (string * Univ.t) list >>
 
-let mem t (uid, _) = Map.mem t uid
+let invariant (t : t) =
+  Invariant.invariant _here_ t <:sexp_of< t >> (fun () ->
+    Map.iter t ~f:(fun ~key ~data ->
+      assert (Uid.equal key (Univ.type_id_uid data))))
 
-let remove t (uid, _) = Map.remove t uid
+let set t key data = Map.add t ~key:(Key.uid key) ~data:(Univ.create key data)
+
+let mem t key = Map.mem t (Key.uid key)
+
+let remove t key = Map.remove t (Key.uid key)
 
 let empty = Uid.Map.empty
 
-let is_empty = Uid.Map.is_empty
+let is_empty = Map.is_empty
 
-let find t (uid, con) =
-  match Map.find t uid with
+let find t key =
+  match Map.find t (Key.uid key) with
   | None -> None
-  | Some univ ->
-    match Univ.match_ univ con with
-    | None -> assert false (* see INVARIANT above *)
-    | Some _ as result -> result
+  | Some univ -> Some (Univ.match_exn univ key) (* cannot raise -- see [invariant] *)
 
 let find_exn t key =
   match find t key with
@@ -62,18 +56,12 @@ let change t key update =
   | Some data -> set t key data
   | None -> if Option.is_none orig then t else remove t key
 
-let sexp_of_t t =
-  Uid.Map.data t
-  |! List.map ~f:(fun u -> (Univ.type_id_name u, u))
-  |! List.sort ~cmp:(fun (a, _) (b, _) -> String.compare a b)
-  |! <:sexp_of< (string * Univ.t) list >>
-
 TEST_MODULE = struct
 
-  let size = Key.create "size" Int.sexp_of_t
-  let name = Key.create "name" String.sexp_of_t
-  let foo  = Key.create "foo"  Float.sexp_of_t
-  let kids = Key.create "kids" (List.sexp_of_t sexp_of_t)
+  let size = Key.create ~name:"size" Int.sexp_of_t
+  let name = Key.create ~name:"name" String.sexp_of_t
+  let foo  = Key.create ~name:"foo"  Float.sexp_of_t
+  let kids = Key.create ~name:"kids" (List.sexp_of_t sexp_of_t)
 
   TEST = is_empty empty
 
@@ -139,7 +127,7 @@ module With_default = struct
 
   module Key = struct
     type 'a t = { key : 'a Key.t; default : 'a; }
-    let create ~default name sexp_of = { default; key = Key.create name sexp_of }
+    let create ~default ~name sexp_of = { default; key = Key.create ~name sexp_of }
   end
 
   let find t {Key.key; default} = Option.value ~default (find t key)
@@ -149,7 +137,7 @@ module With_default = struct
   let change t k update = set t k (update (find t k))
 
   TEST_UNIT =
-    let key = Key.create ~default:0 "default 0" Int.sexp_of_t in
+    let key = Key.create ~default:0 ~name:"default 0" Int.sexp_of_t in
     assert (find empty key = 0);
     let t = set empty key 1 in
     assert (find t key = 1);
@@ -159,7 +147,7 @@ module With_default = struct
     assert (find t key = -2);
 
   TEST =
-    let key = Key.create ~default:1 "default 1" Int.sexp_of_t in
+    let key = Key.create ~default:1 ~name:"default 1" Int.sexp_of_t in
     find (change empty key (~-)) key = -1
 end
 
@@ -167,8 +155,8 @@ module With_fold = struct
 
   module Key = struct
     type ('a, 'b) t = { key : 'b With_default.Key.t; f : 'b -> 'a -> 'b; }
-    let create ~init ~f name sexp_of =
-      {f; key = With_default.Key.create ~default:init name sexp_of}
+    let create ~init ~f ~name sexp_of =
+      {f; key = With_default.Key.create ~default:init ~name sexp_of}
   end
 
   let find t {Key.key; f=_ } = With_default.find t key
@@ -180,7 +168,7 @@ module With_fold = struct
   let add t {Key.key; f} v = With_default.change t key (fun acc -> f acc v)
 
   TEST_UNIT =
-    let key = Key.create ~init:5 ~f:(+) "init 5" Int.sexp_of_t in
+    let key = Key.create ~init:5 ~f:(+) ~name:"init 5" Int.sexp_of_t in
     assert (find empty key = 5);
     let t = add empty key 3 in
     assert (find t key = 8);
@@ -189,7 +177,7 @@ module With_fold = struct
 
   TEST_UNIT =
     let key =
-      Key.create ~init:0 ~f:(fun _ -> assert false) "don't fold this" Int.sexp_of_t
+      Key.create ~init:0 ~f:(fun _ -> assert false) ~name:"don't fold this" Int.sexp_of_t
     in
     assert (find empty key = 0);
     let t = set empty key 1 in
@@ -202,8 +190,8 @@ module Multi = struct
   open With_fold
   module Key = struct
     type 'a t = ('a, 'a list) Key.t
-    let create name sexp_of =
-      Key.create ~init:[] ~f:(fun xs x -> x :: xs) name (List.sexp_of_t sexp_of)
+    let create ~name sexp_of =
+      Key.create ~init:[] ~f:(fun xs x -> x :: xs) ~name (List.sexp_of_t sexp_of)
   end
   let set = set
   let find = find
@@ -211,7 +199,7 @@ module Multi = struct
   let change = change
 
   TEST_UNIT =
-    let key = Key.create "int list" Int.sexp_of_t in
+    let key = Key.create ~name:"int list" Int.sexp_of_t in
     assert (find empty key = []);
     let t = add empty key 1 in
     assert (find t key = [1]);

@@ -105,6 +105,18 @@ external heap_chunks : unit -> int = "core_kernel_gc_heap_chunks" "noalloc"
 external compactions : unit -> int = "core_kernel_gc_compactions" "noalloc"
 external top_heap_words : unit -> int = "core_kernel_gc_top_heap_words" "noalloc"
 
+module Expert = struct
+  let add_finalizer x f = Caml.Gc.finalise f x
+
+  (* [add_finalizer_exn] is the same as [add_finalizer].  However, their types in
+     core_gc.mli are different, and the type of [add_finalizer] guarantees that it always
+     receives a heap block, which ensures that it will not raise, while
+     [add_finalizer_exn] accepts any type, and so may raise. *)
+  let add_finalizer_exn = add_finalizer
+
+  let finalize_release = Caml.Gc.finalise_release
+end
+
 TEST_MODULE "gc" = struct
 
   (* The idea underlying this test is that minor_words does not allocate any memory. Hence

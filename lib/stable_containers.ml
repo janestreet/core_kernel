@@ -74,7 +74,7 @@ module Map = struct
     type t with bin_io, sexp
     include Comparator.S with type t := t
   end) : sig
-    type 'a t = (Key.t, 'a, Key.comparator_witness) Map.t with sexp, bin_io
+    type 'a t = (Key.t, 'a, Key.comparator_witness) Map.t with sexp, bin_io, compare
   end = Map.Make_binable_using_comparator (Key)
 
   TEST_MODULE "Map.V1" = Stable_unit_test.Make (struct
@@ -97,7 +97,7 @@ module Set = struct
     type t with bin_io, sexp
     include Comparator.S with type t := t
   end) : sig
-    type t = (Elt.t, Elt.comparator_witness) Set.t with sexp, bin_io
+    type t = (Elt.t, Elt.comparator_witness) Set.t with sexp, bin_io, compare
   end = Set.Make_binable_using_comparator (Elt)
 
   TEST_MODULE "Set.V1" = Stable_unit_test.Make (struct

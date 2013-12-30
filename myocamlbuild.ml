@@ -19,7 +19,13 @@ let dispatch = function
           A "-cclib";
           A "-Xlinker";
           A "-cclib";
-          A "caml_modify"])
+          A "caml_modify"]);
+
+    List.iter
+      (fun tag ->
+         pflag ["ocaml"; tag] "pa_ounit_lib"
+           (fun s -> S[A"-ppopt"; A"-pa-ounit-lib"; A"-ppopt"; A s]))
+      ["ocamldep"; "compile"; "doc"];
   | _ ->
     ()
 

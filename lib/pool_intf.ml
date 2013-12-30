@@ -240,7 +240,12 @@ module type Pool = sig
 
       It makes sense to use [Unsafe] if one has a small constrained chunk of code where
       one can prove that one never accesses a [free]d tuple, and one needs a pool where
-      it is difficult to construct a dummy value. *)
+      it is difficult to construct a dummy value.
+
+      Some [Unsafe] functions are faster than the corresponding safe version because they
+      do not have to maintain values with the correct represention in the [Obj_array]
+      backing the pool: [free], [create], [grow].
+  *)
   module Unsafe : sig
     include S with type 'a Pointer.t = private int
 

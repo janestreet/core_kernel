@@ -1077,3 +1077,38 @@ TEST_MODULE = struct
   TEST = iround_nearest_test (of_int max_int)
   TEST = iround_nearest_test (of_int min_int)
 end
+
+
+BENCH_MODULE "Simple" = struct
+  (* The [of_string] is so that won't get inlined. The values of [x] and [y] have no
+     special significance. *)
+  let x = of_string "1.0000000001000000111"
+  let y = of_string "2.0000000001000000111"
+
+  BENCH "add" = x +. y
+  BENCH "mul" = x *. y
+  BENCH "div" = x /. y
+  BENCH "exp" = x ** y
+  BENCH "log" = log x
+  BENCH "sqrt"  = sqrt x
+end
+
+BENCH_MODULE "Rounding" = struct
+  let x = of_string "1.0000000001000000111"
+
+  BENCH "iround_down_exn"         = iround_down_exn         x
+  BENCH "round_nearest_exn"       = iround_nearest_exn      x
+  BENCH "iround_up_exn"           = iround_up_exn           x
+  BENCH "iround_towards_zero_exn" = iround_towards_zero_exn x
+  BENCH "Pervasives.int_of_float" = Pervasives.int_of_float x
+end
+
+(* These tests show the degenerate cases for the OCaml [**] operator.  The slowness of
+   this primitive can be traced back to the implementation of [pow] in [glibc].  Also see
+   our Perf notes for more about this issue. *)
+BENCH_MODULE "pow (**)" = struct
+  BENCH "very slow" = 1.0000000000000020 ** 0.5000000000000000
+  BENCH "slow"      = 1.0000000000000020 ** 0.5000000000100000
+  BENCH "slow"      = 1.0000000000000020 ** 0.4999999999000000
+  BENCH "fast"      = 1.0000000000000020 ** 0.4999900000000000
+end

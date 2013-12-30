@@ -18,6 +18,7 @@ module Commutative_group      = Commutative_group
 module Comparable             = Comparable
 module Comparator             = Comparator
 module Container              = Container
+module Gc                     = Core_gc
 module Day_of_week            = Day_of_week
 module Decimal                = Decimal
 module Dequeue                = Dequeue

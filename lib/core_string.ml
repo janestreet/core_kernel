@@ -169,6 +169,20 @@ let to_list_rev s =
   in
   loop [] 0
 
+let rev t =
+  let len = String.length t in
+  let res = String.create len in
+  for i = 0 to len - 1 do
+    unsafe_set res i (unsafe_get t (len - 1 - i))
+  done;
+  res
+;;
+
+TEST = rev "" = "";;
+TEST = rev "a" = "a";;
+TEST = rev "ab" = "ba";;
+TEST = rev "abc" = "cba";;
+
 (** Efficient string splitting *)
 
 let lsplit2_exn line ~on:delim =

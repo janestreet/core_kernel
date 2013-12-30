@@ -125,7 +125,7 @@ module type Blit = sig
             end)
     : S with type t := Sequence.t
 
-  (** [Make_distinct] is for blitting between values of disinct monomorphic types. *)
+  (** [Make_distinct] is for blitting between values of distinct monomorphic types. *)
   module Make_distinct
            (Elt : Elt)
            (Src : Sequence with type elt := Elt.t)
