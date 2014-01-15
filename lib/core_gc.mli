@@ -219,6 +219,11 @@ val allocated_bytes : unit -> float
    started.  It is returned as a [float] to avoid overflow problems
    with [int] on 32-bit machines. *)
 
+(* [keep_alive a] ensures that [a] is live at the point where [keep_alive a] is called.
+   It is like [ignore a], except that the compiler won't be able to simplify it and
+   potentially collect [a] too soon. *)
+val keep_alive : _ -> unit
+
 type alarm
 (** An alarm is a piece of data that calls a user function at the end of
    each major GC cycle.  The following functions are provided to create

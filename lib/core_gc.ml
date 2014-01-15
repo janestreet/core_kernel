@@ -105,6 +105,20 @@ external heap_chunks : unit -> int = "core_kernel_gc_heap_chunks" "noalloc"
 external compactions : unit -> int = "core_kernel_gc_compactions" "noalloc"
 external top_heap_words : unit -> int = "core_kernel_gc_top_heap_words" "noalloc"
 
+let zero = int_of_string "0" (* The compiler won't optimize int_of_string away so it won't
+                                perform constant folding below. *)
+let rec keep_alive o =
+  if zero <> 0 then keep_alive o
+
+TEST_UNIT =
+  let r = ref () in
+  let weak = Weak.create 1 in
+  Weak.set weak 0 (Some r);
+  Gc.compact ();
+  assert (Option.is_some (Weak.get weak 0));
+  keep_alive r;
+;;
+
 module Expert = struct
   let add_finalizer x f = Caml.Gc.finalise f x
 
