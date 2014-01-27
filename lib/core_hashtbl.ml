@@ -449,12 +449,18 @@ let of_alist_report_all_dups ?growth_allowed ?size ~hashable lst =
   create_mapped ?growth_allowed ?size ~hashable ~get_key:fst ~get_data:snd lst
 ;;
 
-let of_alist_exn ?growth_allowed ?size ~hashable lst =
+let of_alist_or_error ?growth_allowed ?size ~hashable lst =
   match of_alist ?growth_allowed ?size ~hashable lst with
-  | `Ok v -> v
+  | `Ok v -> Result.Ok v
   | `Duplicate_key key ->
     let sexp_of_key = hashable.Hashable.sexp_of_t in
-    failwiths "Hashtbl.of_alist_exn: duplicate key" key <:sexp_of< key >>
+    Or_error.error "Hashtbl.of_alist_exn: duplicate key" key <:sexp_of< key >>
+;;
+
+let of_alist_exn ?growth_allowed ?size ~hashable lst =
+  match of_alist_or_error ?growth_allowed ?size ~hashable lst with
+  | Result.Ok v -> v
+  | Result.Error e -> Error.raise e
 ;;
 
 let of_alist_multi ?growth_allowed ?size ~hashable lst =
@@ -639,6 +645,10 @@ end = struct
 
   let of_alist_report_all_dups ?growth_allowed ?size l =
     of_alist_report_all_dups ?growth_allowed ~hashable ?size l
+  ;;
+
+  let of_alist_or_error ?growth_allowed ?size l =
+    of_alist_or_error ?growth_allowed ~hashable ?size l
   ;;
 
   let of_alist_exn ?growth_allowed ?size l =

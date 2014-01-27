@@ -1,7 +1,7 @@
 module T = struct
   (* In the definition of [t], we do not have [with bin_io, compare, sexp] because in
      general, syntax extensions tend to use the implementation when available rather than
-     usign the alias.  Here that would lead to use the record representation [ { mutable
+     using the alias.  Here that would lead to use the record representation [ { mutable
      contents : 'a } ] which would result in different (and unwanted) behavior.  *)
   type 'a t = 'a ref = { mutable contents : 'a }
 

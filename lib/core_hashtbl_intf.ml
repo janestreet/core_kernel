@@ -239,6 +239,8 @@ module type Creators = sig
           | `Duplicate_keys of 'a key list
           ]) create_options
 
+  val of_alist_or_error : ('a key, ('a key * 'b) list -> ('a, 'b) t Or_error.t) create_options
+
   val of_alist_exn : ('a key, ('a key * 'b) list -> ('a, 'b) t) create_options
 
   val of_alist_multi : ('a key, ('a key * 'b) list -> ('a, 'b list) t) create_options

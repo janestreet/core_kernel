@@ -247,7 +247,12 @@ TEST_MODULE = struct
     ;;
   end
 
-  module That_queue : Queue = Core_queue
+  module That_queue : Queue = struct
+    include Core_queue
+
+    (* [Core_queue.create] takes an optional argument, so this is necessary *)
+    let create () = create ()
+  end
 
   module Queue : sig
     include Queue

@@ -3,8 +3,6 @@ open Sexplib.Conv
 open Core_map_intf
 open With_return
 
-let failwiths = Error.failwiths
-
 module List = Core_list
 
 open Int_replace_polymorphic_compare
@@ -569,12 +567,18 @@ module Tree0 = struct
       iter t ~f:(fun ~key:_ ~data -> if f data then r.return true);
       false)
 
-  let of_alist_exn alist ~comparator =
+  let of_alist_or_error alist ~comparator =
     match of_alist alist ~compare_key:comparator.Comparator.compare with
-    | `Ok x -> x
+    | `Ok x -> Result.Ok x
     | `Duplicate_key key ->
       let sexp_of_key = comparator.Comparator.sexp_of_t in
-      failwiths "Map.of_alist_exn: duplicate key" key <:sexp_of< key >>
+      Or_error.error "Map.of_alist_exn: duplicate key" key <:sexp_of< key >>
+  ;;
+
+  let of_alist_exn alist ~comparator =
+    match of_alist_or_error alist ~comparator with
+    | Result.Ok x -> x
+    | Result.Error e -> Error.raise e
   ;;
 
   let of_alist_multi alist ~compare_key =
@@ -761,6 +765,12 @@ let of_alist ~comparator alist =
   | `Duplicate_key _ as z -> z
 ;;
 
+let of_alist_or_error ~comparator alist =
+  match Tree0.of_alist_or_error alist ~comparator with
+  | Result.Ok tree -> Result.Ok { comparator; tree }
+  | Result.Error e -> Result.Error e
+;;
+
 let of_alist_exn ~comparator alist =
   { comparator; tree = Tree0.of_alist_exn alist ~comparator }
 ;;
@@ -823,6 +833,8 @@ end = struct
 
   let of_alist alist = of_alist ~comparator alist
 
+  let of_alist_or_error alist = of_alist_or_error ~comparator alist
+
   let of_alist_exn alist = of_alist_exn ~comparator alist
 
   let of_alist_multi alist = of_alist_multi ~comparator alist
@@ -850,6 +862,7 @@ module Make_tree (Key : Comparator.S1) = struct
   let of_alist alist =
     Tree0.of_alist alist ~compare_key:comparator.Comparator.compare
   ;;
+  let of_alist_or_error alist = Tree0.of_alist_or_error alist ~comparator
   let of_alist_exn alist = Tree0.of_alist_exn alist ~comparator
   let of_alist_multi alist =
     Tree0.of_alist_multi alist ~compare_key:comparator.Comparator.compare
@@ -1072,6 +1085,7 @@ module Tree = struct
   let of_alist ~comparator alist =
     Tree0.of_alist alist ~compare_key:comparator.Comparator.compare
   ;;
+  let of_alist_or_error ~comparator alist = Tree0.of_alist_or_error alist ~comparator
   let of_alist_exn ~comparator alist = Tree0.of_alist_exn alist ~comparator
   let of_alist_multi ~comparator alist =
     Tree0.of_alist_multi alist ~compare_key:comparator.Comparator.compare

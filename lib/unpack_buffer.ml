@@ -284,7 +284,7 @@ TEST_MODULE "unpack-buffer" = struct
             assert (feed t input ~pos ~len = Ok ());
             assert (not (is_empty_exn t));
             let unpack_result = ok_exn (unpack t) in
-            Queue.transfer ~src:unpack_result ~dst:output;
+            Queue.blit_transfer ~src:unpack_result ~dst:output ();
             loop (pos + len);
           end
         in

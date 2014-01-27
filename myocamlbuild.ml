@@ -21,6 +21,8 @@ let dispatch = function
           A "-cclib";
           A "caml_modify"]);
 
+    flag ["ocaml"; "native"; "compile"; "inline0"] (S[A"-inline"; A"0"]);
+
     List.iter
       (fun tag ->
          pflag ["ocaml"; tag] "pa_ounit_lib"

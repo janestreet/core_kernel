@@ -12,6 +12,9 @@ exception Finally of t * t
 
 exception Reraised of string * t
 
+(** Same as [raise], except that the backtrace is not recorded. *)
+val raise_without_backtrace : t -> _
+
 val reraise : t -> string -> _
 
 (* Types with [format4] are hard to read, so here's an example.

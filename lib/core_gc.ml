@@ -86,15 +86,6 @@ let tune ?logger ?minor_heap_size ?major_heap_increment ?space_overhead
   }
 ;;
 
-(* Reasonable defaults for the YEAR 2000! *)
-let () =
-  tune
-    ~minor_heap_size:1_000_000 (* 32K words -> 1M words *)
-    ~major_heap_increment:1_000_000 (* 32K words -> 1M words *)
-    ~space_overhead:100 (* 80 -> 100 (because we have sooo much memory) *)
-    ()
-;;
-
 external minor_words : unit -> int = "core_kernel_gc_minor_words" "noalloc"
 external major_words : unit -> int = "core_kernel_gc_major_words" "noalloc"
 external promoted_words : unit -> int = "core_kernel_gc_promoted_words" "noalloc"

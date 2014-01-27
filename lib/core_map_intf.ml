@@ -553,6 +553,9 @@ module type Creators_generic = sig
        ('k key * 'v) list -> [ `Ok of ('k, 'v, 'cmp) t | `Duplicate_key of 'k key ]
       ) options
 
+  val of_alist_or_error
+    : ('k, 'cmp, ('k key * 'v) list -> ('k, 'v, 'cmp) t Or_error.t) options
+
   val of_alist_exn : ('k, 'cmp, ('k key * 'v) list -> ('k, 'v, 'cmp) t) options
 
   val of_alist_multi : ('k, 'cmp, ('k key * 'v) list -> ('k, 'v list, 'cmp) t) options
@@ -585,6 +588,7 @@ module type Creators1 = sig
   val empty           : _ t
   val singleton       : key -> 'a -> 'a t
   val of_alist        : (key * 'a) list -> [ `Ok of 'a t | `Duplicate_key of key ]
+  val of_alist_or_error : (key * 'a) list -> 'a t Or_error.t
   val of_alist_exn    : (key * 'a) list -> 'a t
   val of_alist_multi  : (key * 'a) list -> 'a list t
   val of_alist_fold   : (key * 'a) list -> init:'b -> f:('b -> 'a -> 'b) -> 'b t
@@ -600,6 +604,7 @@ module type Creators2 = sig
   val empty           : (_, _) t
   val singleton       : 'a -> 'b -> ('a, 'b) t
   val of_alist        : ('a * 'b) list -> [ `Ok of ('a, 'b) t | `Duplicate_key of 'a ]
+  val of_alist_or_error : ('a * 'b) list -> ('a, 'b) t Or_error.t
   val of_alist_exn    : ('a * 'b) list -> ('a, 'b) t
   val of_alist_multi  : ('a * 'b) list -> ('a, 'b list) t
   val of_alist_fold   : ('a * 'b) list -> init:'c -> f:('c -> 'b -> 'c) -> ('a, 'c) t
@@ -617,6 +622,9 @@ module type Creators3_with_comparator = sig
   val of_alist
     :  comparator:('a, 'cmp) Comparator.t
     -> ('a * 'b) list -> [ `Ok of ('a, 'b, 'cmp) t | `Duplicate_key of 'a ]
+  val of_alist_or_error
+    :  comparator:('a, 'cmp) Comparator.t
+    -> ('a * 'b) list -> ('a, 'b, 'cmp) t Or_error.t
   val of_alist_exn
     :  comparator:('a, 'cmp) Comparator.t
     -> ('a * 'b) list -> ('a, 'b, 'cmp) t

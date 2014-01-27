@@ -68,7 +68,7 @@ let clear t =
   begin
     if t.never_shrink then
       (* clear the array to allow elements to be garbage collected *)
-      t.arr <- Array.create ~len:t.arr_length t.dummy
+      Array.replace_all ~f:(fun _ -> t.dummy) t.arr
     else
       t.arr <- Array.create ~len:8 t.dummy
   end;

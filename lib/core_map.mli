@@ -108,6 +108,12 @@ val of_alist
   -> ('a * 'b) list
   -> [ `Ok of ('a, 'b, 'cmp) t | `Duplicate_key of 'a ]
 
+(** creates map from association list with unique keys.  Returns an error if duplicate 'a
+    keys are found. *)
+val of_alist_or_error
+  :  comparator:('a, 'cmp) Comparator.t
+  -> ('a * 'b) list -> ('a, 'b, 'cmp) t Or_error.t
+
 (** creates map from association list with unique keys.  Raises an exception if duplicate
     'a keys are found. *)
 val of_alist_exn

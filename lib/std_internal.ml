@@ -35,6 +35,7 @@ end
 include List.Infix
 
 module Queue = Core_queue
+module Linked_queue = Linked_queue
 module Random = Core_random
 module Char = Core_char
 

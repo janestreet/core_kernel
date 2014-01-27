@@ -2,16 +2,27 @@
 
 type 'a return = { return : 'b. 'a -> 'b }
 
-let with_return (type r) f =
+let with_return (type a) f =
   let module M = struct
     (* Raised to indicate ~return was called.  Local so that the exception is tied to a
        particular call of [with_return]. *)
-    exception Return of r
-  end
+    exception Return of a
+  end in
+  let is_alive = ref true in
+  let return a =
+    if not !is_alive
+    then failwith "use of [return] from a [with_return] that already returned";
+    Exn.raise_without_backtrace (M.Return a);
   in
-  let return = { return = (fun x -> raise (M.Return x)); } in
-  (* allows other exceptions through *)
-  try f return with M.Return x -> x
+  try
+    let a = f { return } in
+    is_alive := false;
+    a
+  with exn ->
+    is_alive := false;
+    match exn with
+    | M.Return a -> a
+    | _ -> raise exn
 ;;
 
 TEST_MODULE "with_return" = struct
