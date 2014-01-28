@@ -283,11 +283,3 @@ Test test_pool_caml_modify_check
   Command:            $pool_caml_modify_check
   TestTools:          pool_caml_modify_check
   Run$:               flag(tests) && flag(caml_modify_test)
-
-Document core_kernel
-  Title:                Jane street's core library
-  Type:                 ocamlbuild (0.3)
-  BuildTools+:          ocamldoc
-  XOCamlbuildPath:      lib
-  XOCamlbuildLibraries: core_kernel
-
