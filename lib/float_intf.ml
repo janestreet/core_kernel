@@ -29,7 +29,7 @@ module type S = sig
   val min_value : t                   (* Float.neg_infinity *)
   val zero : t
   val one : t
-  val neg_one : t
+  val minus_one : t
   val epsilon : t   (* WARNING: This is not [Float.epsilon_float].  See Robust_compare. *)
 
   (* The difference between 1.0 and the smallest exactly representable floating-point
