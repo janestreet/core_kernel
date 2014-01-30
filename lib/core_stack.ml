@@ -9,7 +9,6 @@ type 'a t =
   { (* [dummy] is a value that we create via [Obj.magic] and use for empty slots in
        [elts].  It is intended that [dummy] is never returned to user code. *)
     dummy : 'a;
-    mutable auto_shrink : bool;
     mutable length : int;
     mutable elts : 'a array;
   }
@@ -19,15 +18,13 @@ let sexp_of_t_internal = sexp_of_t
 let sexp_of_t = `Rebound_later
 let _ = sexp_of_t
 
-let should_shrink t = t.auto_shrink && t.length * 4 < Array.length t.elts
+let capacity t = Array.length t.elts
 
 let invariant invariant_a t : unit =
   try
-    assert (not (should_shrink t));
     let check f field = f (Field.get field t) in
     Fields.iter
       ~dummy:ignore
-      ~auto_shrink:ignore
       ~length:(check (fun length ->
         assert (0 <= length && length <= Array.length t.elts)))
       ~elts:(check (fun elts ->
@@ -44,12 +41,9 @@ let invariant invariant_a t : unit =
     failwiths "Stack.invariant failed" (exn, t) <:sexp_of< exn * _ t_internal >>
 ;;
 
-let default_auto_shrink = false
-
 let create (type a) () : a t =
   let dummy = (Obj.magic () : a) in
   { dummy;
-    auto_shrink = default_auto_shrink;
     length = 0;
     elts = [||];
   }
@@ -103,7 +97,7 @@ let of_list (type a) (l : a list) =
       | [] -> assert false
       | a :: l -> elts.(i) <- a; r := l
     done;
-    { dummy; auto_shrink = default_auto_shrink; length; elts }
+    { dummy; length; elts }
   end
 ;;
 
@@ -117,9 +111,10 @@ let resize t size =
       if i < t.length then t.elts.(i) else t.dummy);
 ;;
 
-let maybe_shrink t = if should_shrink t then resize t (2 * t.length)
-
-let set_auto_shrink t b = t.auto_shrink <- b; maybe_shrink t
+let set_capacity t new_capacity =
+  let new_capacity = max new_capacity (length t) in
+  if new_capacity <> capacity t then resize t new_capacity;
+;;
 
 let push t a =
   if t.length = Array.length t.elts then resize t (2 * (t.length + 1));
@@ -132,7 +127,6 @@ let pop_nonempty t =
   let result = t.elts.(i) in
   t.elts.(i) <- t.dummy;
   t.length <- i;
-  maybe_shrink t;
   result
 ;;
 
@@ -166,9 +160,8 @@ let top_exn t =
   else top_nonempty t;
 ;;
 
-let copy { dummy; auto_shrink; length; elts } =
+let copy { dummy; length; elts } =
   { dummy;
-    auto_shrink;
     length;
     elts = Array.copy elts;
   }

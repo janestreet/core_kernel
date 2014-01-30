@@ -1,9 +1,11 @@
+open Typerep_kernel.Std
+
 module type T = sig type t end
 
 module Make (T1 : T) (T2 : T) = struct type t = T1.t * T2.t end
 
 module T2 = struct
-  type ('a, 'b) t = 'a * 'b with sexp
+  type ('a, 'b) t = 'a * 'b with sexp, typerep
 
   let create a b = (a, b)
 
@@ -31,7 +33,7 @@ module T2 = struct
 end
 
 module T3 = struct
-  type ('a, 'b, 'c) t = 'a * 'b * 'c with sexp
+  type ('a, 'b, 'c) t = 'a * 'b * 'c with sexp, typerep
 
   let create a b c = (a, b, c)
 

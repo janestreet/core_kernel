@@ -1,6 +1,6 @@
 (** Tail recursive version of standard List functions, plus additional operations. *)
 
-type 'a t = 'a list with bin_io, sexp
+type 'a t = 'a list with bin_io, sexp, typerep
 
 include Container.S1 with type 'a t := 'a t
 include Monad.S with type 'a t := 'a t
@@ -29,8 +29,9 @@ val rev : 'a t -> 'a t
     to [(]{!List.rev}[ l1) @ l2], but [rev_append] is more efficient. *)
 val rev_append : 'a t -> 'a t -> 'a t
 
-(* Appends two lists, giving no guarantee about order.  Generally takes time proportional
-   to length of first list, but is O(1) if either list is empty. *)
+(** [List.unordered_append l1 l2] has the same elements as [l1 @ l2], but in some
+    unspecified order.  Generally takes time proportional to length of first list, but is
+    O(1) if either list is empty. *)
 val unordered_append : 'a t -> 'a t -> 'a t
 
 (** [List.rev_map f l] gives the same result as
@@ -166,7 +167,7 @@ val map3_exn : 'a t -> 'b t -> 'c t -> f:('a -> 'b -> 'c -> 'd) -> 'd t
     element, and appends the result to the front of [l2]. *)
 val rev_map_append : 'a t -> 'b t -> f:('a -> 'b) -> 'b t
 
-(** [List.fold_right f [a1; ...; an] b] is
+(** [List.fold_right [a1; ...; an] ~f ~init:b] is
     [f a1 (f a2 (... (f an b) ...))]. *)
 val fold_right : 'a t -> f:('a -> 'b -> 'b) -> init:'b -> 'b
 
@@ -311,7 +312,7 @@ val filter_opt : 'a option t -> 'a t
 *)
 module Assoc : sig
 
-  type ('a, 'b) t = ('a * 'b) list with sexp, compare
+  type ('a, 'b) t = ('a * 'b) list with bin_io, sexp, compare
 
   val add      : ('a, 'b) t -> ?equal:('a -> 'a -> bool) -> 'a -> 'b -> ('a, 'b) t
   val find     : ('a, 'b) t -> ?equal:('a -> 'a -> bool) -> 'a -> 'b option

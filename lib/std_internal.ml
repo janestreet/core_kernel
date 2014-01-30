@@ -2,10 +2,6 @@
    I can't just include Sexplib.Std because
    I can only define Hashtbl once in this module
 *)
-module Big_int = Sexplib.Std.Big_int
-module Nat     = Sexplib.Std.Nat
-module Ratio   = Sexplib.Std.Ratio
-module Num     = Sexplib.Std.Num
 module Set = Core_set
 module Map = Core_map
 module Array = Core_array
@@ -39,6 +35,7 @@ end
 include List.Infix
 
 module Queue = Core_queue
+module Linked_queue = Linked_queue
 module Random = Core_random
 module Char = Core_char
 
@@ -107,36 +104,38 @@ include Result.Export
 
 
 
+include Typerep_kernel.Std_internal
+
 include (struct
-  type 'a array  = 'a Array.    t with bin_io,          sexp
-  type bool      = Bool.        t with bin_io, compare, sexp
-  type char      = Char.        t with bin_io, compare, sexp
-  type float     = Float.       t with bin_io, compare, sexp
-  type int       = Int.         t with bin_io, compare, sexp
-  type int32     = Int32.       t with bin_io, compare, sexp
-  type int64     = Int64.       t with bin_io, compare, sexp
-  type 'a lazy_t = 'a Core_lazy.t with bin_io, compare, sexp
-  type 'a list   = 'a List.     t with bin_io,          sexp
-  type nativeint = Nativeint.   t with bin_io, compare, sexp
-  type 'a option = 'a Option.   t with bin_io,          sexp
-  type string    = String.      t with bin_io, compare, sexp
-  type 'a ref    = 'a Ref.      t with bin_io,          sexp
-  type unit      = Unit.        t with bin_io, compare, sexp
+  type 'a array  = 'a Array.    t with bin_io,          sexp, typerep
+  type bool      = Bool.        t with bin_io, compare, sexp, typerep
+  type char      = Char.        t with bin_io, compare, sexp, typerep
+  type float     = Float.       t with bin_io, compare, sexp, typerep
+  type int       = Int.         t with bin_io, compare, sexp, typerep
+  type int32     = Int32.       t with bin_io, compare, sexp, typerep
+  type int64     = Int64.       t with bin_io, compare, sexp, typerep
+  type 'a lazy_t = 'a Core_lazy.t with bin_io, compare, sexp, typerep
+  type 'a list   = 'a List.     t with bin_io,          sexp, typerep
+  type nativeint = Nativeint.   t with bin_io, compare, sexp, typerep
+  type 'a option = 'a Option.   t with bin_io,          sexp, typerep
+  type string    = String.      t with bin_io, compare, sexp, typerep
+  type 'a ref    = 'a Ref.      t with bin_io,          sexp, typerep
+  type unit      = Unit.        t with bin_io, compare, sexp, typerep
 end : sig
-  type 'a array  with bin_io,          sexp
-  type bool      with bin_io, compare, sexp
-  type char      with bin_io, compare, sexp
-  type float     with bin_io, compare, sexp
-  type int       with bin_io, compare, sexp
-  type int32     with bin_io, compare, sexp
-  type int64     with bin_io, compare, sexp
-  type 'a lazy_t with bin_io,          sexp
-  type 'a list   with bin_io,          sexp
-  type nativeint with bin_io, compare, sexp
-  type 'a option with bin_io,          sexp
-  type string    with bin_io, compare, sexp
-  type 'a ref    with bin_io,          sexp
-  type unit      with bin_io, compare, sexp
+  type 'a array  with bin_io,          sexp, typerep
+  type bool      with bin_io, compare, sexp, typerep
+  type char      with bin_io, compare, sexp, typerep
+  type float     with bin_io, compare, sexp, typerep
+  type int       with bin_io, compare, sexp, typerep
+  type int32     with bin_io, compare, sexp, typerep
+  type int64     with bin_io, compare, sexp, typerep
+  type 'a lazy_t with bin_io,          sexp, typerep
+  type 'a list   with bin_io,          sexp, typerep
+  type nativeint with bin_io, compare, sexp, typerep
+  type 'a option with bin_io,          sexp, typerep
+  type string    with bin_io, compare, sexp, typerep
+  type 'a ref    with bin_io,          sexp, typerep
+  type unit      with bin_io, compare, sexp, typerep
 end
   with type 'a array  := 'a array
   with type bool      := bool
@@ -177,11 +176,11 @@ let sexp_of_exn = Exn.sexp_of_t
 
    For more documentation, see sexplib/README.md.
 *)
-type 'a sexp_array  = 'a array  with bin_io, compare
-type sexp_bool      = bool      with bin_io, compare
-type 'a sexp_list   = 'a list   with bin_io, compare
-type 'a sexp_option = 'a option with bin_io, compare
-type 'a sexp_opaque = 'a        with bin_io, compare
+type 'a sexp_array  = 'a array  with bin_io, compare, typerep
+type sexp_bool      = bool      with bin_io, compare, typerep
+type 'a sexp_list   = 'a list   with bin_io, compare, typerep
+type 'a sexp_option = 'a option with bin_io, compare, typerep
+type 'a sexp_opaque = 'a        with bin_io, compare, typerep
 
 include Ordering.Export
 

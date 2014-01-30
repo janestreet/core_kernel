@@ -3,8 +3,6 @@ open Sexplib.Conv
 open Core_map_intf
 open With_return
 
-let failwiths = Error.failwiths
-
 module List = Core_list
 
 open Int_replace_polymorphic_compare
@@ -274,9 +272,9 @@ module Tree0 = struct
          ~compare_key)
   ;;
 
-  let merge t1 t2 =
+  let concat t1 t2 =
     match (t1, t2) with
-      (Empty, t) -> t
+    | (Empty, t) -> t
     | (t, Empty) -> t
     | (_, _) ->
       let (x, d) = min_elt_exn t2 in
@@ -290,7 +288,7 @@ module Tree0 = struct
     | Node(l, v, d, r, _) ->
       let c = compare_key x v in
       if c = 0 then
-        merge l r
+        concat l r
       else if c < 0 then
         bal (remove l x ~compare_key) v d r
       else
@@ -322,7 +320,7 @@ module Tree0 = struct
         let c = compare_key key v in
         if c = 0 then
           begin match (f (Some d)) with
-            | None -> merge l r
+            | None -> concat l r
             | Some data -> Node(l, key, data, r, h)
           end
         else
@@ -569,12 +567,18 @@ module Tree0 = struct
       iter t ~f:(fun ~key:_ ~data -> if f data then r.return true);
       false)
 
-  let of_alist_exn alist ~comparator =
+  let of_alist_or_error alist ~comparator =
     match of_alist alist ~compare_key:comparator.Comparator.compare with
-    | `Ok x -> x
+    | `Ok x -> Result.Ok x
     | `Duplicate_key key ->
       let sexp_of_key = comparator.Comparator.sexp_of_t in
-      failwiths "Map.of_alist_exn: duplicate key" key <:sexp_of< key >>
+      Or_error.error "Map.of_alist_exn: duplicate key" key <:sexp_of< key >>
+  ;;
+
+  let of_alist_exn alist ~comparator =
+    match of_alist_or_error alist ~comparator with
+    | Result.Ok x -> x
+    | Result.Error e -> Error.raise e
   ;;
 
   let of_alist_multi alist ~compare_key =
@@ -586,37 +590,20 @@ module Tree0 = struct
     fold_right t ~init:[] ~f:(fun ~key ~data x -> (key,data)::x)
   ;;
 
-  let merge =
-    let merge_rest kvs ~init ~f ~compare_key ~wrap =
-      Core_list.fold kvs ~init ~f:(fun t (key, data) ->
-        match f ~key (wrap data) with
-        | None -> t
-        | Some data -> add t ~key ~data ~compare_key)
-    in
-    fun t1 t2 ~f ~compare_key ->
-    let rec loop xs ys t =
-      match xs, ys with
-      | [], [] -> t
-      | xs, [] -> merge_rest xs ~wrap:(fun x -> `Left  x) ~init:t ~f ~compare_key
-      | [], ys -> merge_rest ys ~wrap:(fun y -> `Right y) ~init:t ~f ~compare_key
-      | (x_key, x_data) :: xs', (y_key, y_data) :: ys' ->
-        let c = compare_key x_key y_key in
-        let next_xs, next_ys, key, f_input =
-          if c = 0 then
-            xs', ys', x_key, (`Both (x_data, y_data))
-          else if c < 0 then
-            xs', ys, x_key, (`Left x_data)
-          else
-            xs, ys', y_key, (`Right y_data)
-        in
-        let next_t =
-          match f ~key f_input with
-          | None -> t
-          | Some data -> add t ~key ~data ~compare_key
-        in
-        loop next_xs next_ys next_t
-    in
-    loop (to_alist t1) (to_alist t2) empty
+  let merge t1 t2 ~f ~compare_key =
+    let elts = Core_array.create ~len:(length t1 + length t2) (Obj.magic None) in
+    let i = ref 0 in
+    iter2 t1 t2 ~compare_key ~f:(fun ~key ~data:values ->
+      match f ~key values with
+      | Some value -> elts.(!i) <- (key, value); incr i
+      | None -> ());
+    (* [Core_array.truncate] raises if [len = 0] *)
+    if !i = 0 then
+      empty
+    else begin
+      Core_array.truncate elts ~len:!i;
+      of_sorted_array_unchecked ~compare_key elts
+    end
   ;;
 
   let rec next_key t k ~compare_key =
@@ -778,6 +765,12 @@ let of_alist ~comparator alist =
   | `Duplicate_key _ as z -> z
 ;;
 
+let of_alist_or_error ~comparator alist =
+  match Tree0.of_alist_or_error alist ~comparator with
+  | Result.Ok tree -> Result.Ok { comparator; tree }
+  | Result.Error e -> Result.Error e
+;;
+
 let of_alist_exn ~comparator alist =
   { comparator; tree = Tree0.of_alist_exn alist ~comparator }
 ;;
@@ -806,7 +799,7 @@ let t_of_sexp ~comparator k_of_sexp v_of_sexp sexp =
 
 module Creators (Key : Comparator.S1) : sig
 
-  type ('a, 'b, 'c) t_ = ('a Key.t, 'b, Key.comparator) t
+  type ('a, 'b, 'c) t_ = ('a Key.t, 'b, Key.comparator_witness) t
   type ('a, 'b, 'c) tree = ('a, 'b) Tree0.t
   type ('a, 'b, 'c) options = ('a, 'b, 'c) Without_comparator.t
 
@@ -824,7 +817,7 @@ end = struct
 
   let comparator = Key.comparator
 
-  type ('a, 'b, 'c) t_ = ('a Key.t, 'b, Key.comparator) t
+  type ('a, 'b, 'c) t_ = ('a Key.t, 'b, Key.comparator_witness) t
 
   type ('a, 'b, 'c) tree = ('a, 'b) Tree0.t
 
@@ -839,6 +832,8 @@ end = struct
   let of_sorted_array array = of_sorted_array ~comparator array
 
   let of_alist alist = of_alist ~comparator alist
+
+  let of_alist_or_error alist = of_alist_or_error ~comparator alist
 
   let of_alist_exn alist = of_alist_exn ~comparator alist
 
@@ -867,6 +862,7 @@ module Make_tree (Key : Comparator.S1) = struct
   let of_alist alist =
     Tree0.of_alist alist ~compare_key:comparator.Comparator.compare
   ;;
+  let of_alist_or_error alist = Tree0.of_alist_or_error alist ~comparator
   let of_alist_exn alist = Tree0.of_alist_exn alist ~comparator
   let of_alist_multi alist =
     Tree0.of_alist_multi alist ~compare_key:comparator.Comparator.compare
@@ -957,7 +953,7 @@ module Poly = struct
   include Creators (Comparator.Poly)
 
   type ('a, 'b, 'c) map = ('a, 'b, 'c) t
-  type ('k, 'v) t = ('k, 'v, Comparator.Poly.comparator) map
+  type ('k, 'v) t = ('k, 'v, Comparator.Poly.comparator_witness) map
 
   include Accessors
 
@@ -984,7 +980,7 @@ module Poly = struct
 
   module Tree = struct
     include Make_tree (Comparator.Poly)
-    type ('k, +'v) t = ('k, 'v, Comparator.Poly.comparator) tree
+    type ('k, +'v) t = ('k, 'v, Comparator.Poly.comparator_witness) tree
 
     let sexp_of_t sexp_of_k sexp_of_v t = Tree0.sexp_of_t sexp_of_k sexp_of_v t
     let t_of_sexp k_of_sexp v_of_sexp sexp =
@@ -1003,7 +999,10 @@ module type S_binable = S_binable
   with type ('a, 'b, 'c) map  := ('a, 'b, 'c) t
   with type ('a, 'b, 'c) tree := ('a, 'b, 'c) tree
 
-module Make_using_comparator (Key : Comparator.S) = struct
+module Make_using_comparator (Key : sig
+  type t with sexp
+  include Comparator.S with type t := t
+end) = struct
 
   module Key = Key
 
@@ -1012,7 +1011,7 @@ module Make_using_comparator (Key : Comparator.S) = struct
 
   type key = Key.t
   type ('a, 'b, 'c) map = ('a, 'b, 'c) t
-  type 'v t = (key, 'v, Key.comparator) map
+  type 'v t = (key, 'v, Key.comparator_witness) map
 
   include Accessors
 
@@ -1024,7 +1023,7 @@ module Make_using_comparator (Key : Comparator.S) = struct
 
   module Tree = struct
     include Make_tree (Key_S1)
-    type +'v t = (Key.t, 'v, Key.comparator) tree
+    type +'v t = (Key.t, 'v, Key.comparator_witness) tree
 
     let sexp_of_t sexp_of_v t = Tree0.sexp_of_t Key.sexp_of_t sexp_of_v t
     let t_of_sexp v_of_sexp sexp =
@@ -1033,9 +1032,16 @@ module Make_using_comparator (Key : Comparator.S) = struct
 
 end
 
-module Make (Key : Comparator.Pre) = Make_using_comparator (Comparator.Make (Key))
+module Make (Key : Key) =
+  Make_using_comparator (struct
+    include Key
+    include Comparator.Make (Key)
+  end)
 
-module Make_binable_using_comparator (Key' : Comparator.S_binable) = struct
+module Make_binable_using_comparator (Key' : sig
+  type t with bin_io, sexp
+  include Comparator.S with type t := t
+end) = struct
 
   include Make_using_comparator (Key')
 
@@ -1058,8 +1064,11 @@ module Make_binable_using_comparator (Key' : Comparator.S_binable) = struct
 
 end
 
-module Make_binable (Key : Comparator.Pre_binable) =
-  Make_binable_using_comparator (Comparator.Make_binable (Key))
+module Make_binable (Key : Key_binable) =
+  Make_binable_using_comparator (struct
+    include Key
+    include Comparator.Make (Key)
+  end)
 
 module Tree = struct
   type ('k, 'v, 'comparator) t = ('k, 'v, 'comparator) tree
@@ -1076,6 +1085,7 @@ module Tree = struct
   let of_alist ~comparator alist =
     Tree0.of_alist alist ~compare_key:comparator.Comparator.compare
   ;;
+  let of_alist_or_error ~comparator alist = Tree0.of_alist_or_error alist ~comparator
   let of_alist_exn ~comparator alist = Tree0.of_alist_exn alist ~comparator
   let of_alist_multi ~comparator alist =
     Tree0.of_alist_multi alist ~compare_key:comparator.Comparator.compare

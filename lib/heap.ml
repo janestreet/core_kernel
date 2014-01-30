@@ -79,7 +79,7 @@ end = struct
   let allocate pool value = Pool.new3 pool value (empty ()) (empty ())
 
   let free pool node =
-    Pool.free pool node
+    Pool.unsafe_free pool node
   ;;
 
   let sibling pool node = Pool.get pool node Pool.Slot.t2
@@ -452,6 +452,13 @@ module Removable = struct
       | Some v -> f acc v)
   ;;
 
+  let iter t ~f =
+    T.iter t.heap ~f:(fun token ->
+      match !token with
+      | None   -> ()
+      | Some v -> f v)
+  ;;
+
   let find_elt t ~f =
     T.find t.heap ~f:(fun token ->
       match !token with
@@ -459,11 +466,22 @@ module Removable = struct
       | Some v -> f v)
   ;;
 
-  include Container.Make (struct
+  module C = Container.Make (struct
     type nonrec 'a t = 'a t
     let fold = fold
   end)
+
   let length t = t.length
+  let is_empty t = t.length = 0
+
+  let to_array = C.to_array
+  let to_list  = C.to_list
+  let find_map = C.find_map
+  let find     = C.find
+  let count    = C.count
+  let for_all  = C.for_all
+  let exists   = C.exists
+  let mem      = C.mem
 
   let of_array arr ~cmp =
     let t = create ~min_size:(Array.length arr) ~cmp () in

@@ -5,6 +5,7 @@
 
 
 
+
 module Caml_map = Map
 open Std
 
@@ -29,7 +30,7 @@ module Unit_tests
       with type 'a key               := 'a Key.t
       with type ('a, 'b, 'c) options := ('a, 'b, 'c) create_options
 
-    val simplify_creator : (int, Int.comparator, 'c) create_options -> 'c
+    val simplify_creator : (int, Int.comparator_witness, 'c) create_options -> 'c
 
     type ('a, 'b, 'c) access_options
 
@@ -39,7 +40,7 @@ module Unit_tests
       with type 'a key               := 'a Key.t
       with type ('a, 'b, 'c) options := ('a, 'b, 'c) access_options
 
-    val simplify_accessor : (int, Int.comparator, 'c) access_options -> 'c
+    val simplify_accessor : (int, Int.comparator_witness, 'c) access_options -> 'c
 
     val kind : [ `Map | `Tree ]
   end)
@@ -75,6 +76,7 @@ module Unit_tests
     let of_sorted_array_unchecked = simplify_creator of_sorted_array_unchecked
     let of_sorted_array           = simplify_creator of_sorted_array
     let of_alist                  = simplify_creator of_alist
+    let of_alist_or_error         = simplify_creator of_alist_or_error
     let of_alist_exn              = simplify_creator of_alist_exn
     let of_alist_multi            = simplify_creator of_alist_multi
     let of_alist_fold             = simplify_creator of_alist_fold
@@ -328,6 +330,17 @@ module Unit_tests
     | `Ok _ -> false
     | `Duplicate_key _ -> true
   ;;
+
+  let of_alist_or_error _ = assert false
+
+  TEST =
+    Result.is_error
+      (Map.of_alist_or_error [Key.sample, 0; Key.sample, 1])
+
+  TEST =
+    Result.is_ok
+      (Map.of_alist_or_error
+         (List.map Key.samples ~f:(fun key -> (key,Key.to_int key))))
 
   let of_alist_exn _ = assert false
 

@@ -1,10 +1,11 @@
+open Typerep_kernel.Std
 open Sexplib.Std
 open Bin_prot.Std
 
 open Nativeint
 
 module T = struct
-  type t = nativeint with sexp, bin_io
+  type t = nativeint with sexp, bin_io, typerep
   let compare (x : t) y = compare x y
   let equal (x : t) y = x = y
   let hash (x : t) = Hashtbl.hash x
@@ -68,6 +69,7 @@ let ( / ) = div
 let ( * ) = mul
 let ( - ) = sub
 let ( + ) = add
+let ( ~- ) = neg
 
 let incr r = r := !r + one
 let decr r = r := !r - one
@@ -97,3 +99,16 @@ include Pretty_printer.Register (struct
   let to_string = to_string
   let module_name = "Core.Std.Nativeint"
 end)
+
+module O = struct
+  let ( + ) = ( + )
+  let ( - ) = ( - )
+  let ( * ) = ( * )
+  let ( / ) = ( / )
+  let ( ~- ) = ( ~- )
+  include (Replace_polymorphic_compare : Polymorphic_compare_intf.Infix with type t := t)
+  let abs = abs
+  let neg = neg
+  let zero = zero
+  let of_int_exn = of_int_exn
+end

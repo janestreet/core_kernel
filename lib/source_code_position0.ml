@@ -22,5 +22,3 @@ let to_string t =
 ;;
 
 let sexp_of_t_hum t = Sexp.Atom (to_string t)
-
-let to_sexp_hum = sexp_of_t_hum

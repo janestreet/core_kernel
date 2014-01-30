@@ -9,6 +9,8 @@ let eprints message a sexp_of_a =
   eprint (Sexp.to_string_hum (<:sexp_of< string * a >> (message, a)));
 ;;
 
+let eprintf format = Printf.ksprintf eprint format
+
 let failwiths = Error.failwiths
 
 module Make (M : sig end) = struct

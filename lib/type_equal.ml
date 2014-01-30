@@ -3,7 +3,7 @@ open Sexplib.Std
 
 let failwiths = Error.failwiths
 
-type (_, _) t = T : ('a, 'a) t
+type ('a, 'b) t = ('a, 'b) Typerep_kernel.Std.Type_equal.t = T : ('a, 'a) t
 type ('a, 'b) equal = ('a, 'b) t
 
 let refl = T
@@ -57,11 +57,12 @@ module Id : sig
 
   module Uid : Unique_id_intf.Id
 
-  val create : name:string -> _ t
+  val create : name:string -> ('a -> Sexp.t) -> 'a t
 
-  val uid  : _ t -> Uid.t
-  val hash : _ t -> int
-  val name : _ t -> string
+  val uid     : _  t -> Uid.t
+  val hash    : _  t -> int
+  val name    : _  t -> string
+  val to_sexp : 'a t -> 'a -> Sexp.t
 
   val same : _ t -> _ t -> bool
   val same_witness     : 'a t -> 'b t -> ('a, 'b) equal Or_error.t
@@ -71,12 +72,13 @@ end = struct
   module Uid = Unique_id.Int63 (struct end)
 
   type 'a t =
-    { uid : Uid.t;
-      name : string;
+    { uid : Uid.t
+    ; name : string
+    ; to_sexp : 'a -> Sexp.t
     }
   with fields, sexp_of
 
-  let create ~name = { uid = Uid.create (); name }
+  let create ~name to_sexp = { uid = Uid.create () ; name ; to_sexp }
 
   let hash t = Uid.to_int_exn t.uid
 
@@ -111,8 +113,8 @@ end = struct
   ;;
 
   TEST_MODULE = struct
-    let t1 = create ~name:"t1"
-    let t2 = create ~name:"t2"
+    let t1 = create ~name:"t1" <:sexp_of< _ >>
+    let t2 = create ~name:"t2" <:sexp_of< _ >>
 
     TEST = same t1 t1
     TEST = not (same t1 t2)
@@ -127,7 +129,7 @@ end
 
 (* This test shows that we need [conv] even though [Type_equal.T] is exposed. *)
 TEST_MODULE = struct
-  let id = Id.create ~name:"int"
+  let id = Id.create ~name:"int" <:sexp_of< int >>
 
   module A : sig
     type t

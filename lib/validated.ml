@@ -1,6 +1,15 @@
 open Std_internal
 
-include Validated_intf
+open Validated_intf
+
+module type Raw = Raw
+
+type 'a t = 'a
+
+module type Validated         = Validated         with type 'a validated := 'a t
+module type Validated_binable = Validated_binable with type 'a validated := 'a t
+
+let raw t = t
 
 module Make (Raw : Raw) = struct
 
@@ -30,9 +39,8 @@ module Make (Raw : Raw) = struct
 end
 
 module Make_binable (Raw : Raw_binable) = struct
-  type t = Raw.t
 
-  include (Make (Raw) : Validated with type raw := Raw.t with type t := t)
+  include Make (Raw)
 
   include Bin_prot.Utils.Make_binable (struct
     type t = Raw.t

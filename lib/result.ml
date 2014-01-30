@@ -25,16 +25,19 @@ include Stable.V1
 
 type ('a, 'b) _t = ('a, 'b) t
 
-include (Monad.Make2
-(struct
-   type ('a, 'b) t = ('a,'b) _t
+include Monad.Make2 (struct
+  type ('a, 'b) t = ('a,'b) _t
 
-   let bind x f = match x with
-     | Error _ as x -> x
-     | Ok x -> f x
+  let bind x f = match x with
+    | Error _ as x -> x
+    | Ok x -> f x
 
-   let return x = Ok x
- end): Monad.S2 with type ('a,'b) t := ('a,'b) t)
+  let map x ~f = match x with
+    | Error _ as x -> x
+    | Ok x -> Ok (f x)
+
+  let return x = Ok x
+end)
 
 let fail x = Error x;;
 let failf format = Printf.ksprintf fail format

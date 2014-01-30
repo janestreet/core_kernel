@@ -1,5 +1,6 @@
 module List = StdLabels.List
 module String = StdLabels.String
+open Typerep_kernel.Std
 open Sexplib.Std
 open Bin_prot.Std
 
@@ -8,7 +9,7 @@ module Random = Core_random
 let invalid_argf = Core_printf.invalid_argf
 
 module T = struct
-  type 'a t = 'a list with sexp, bin_io
+  type 'a t = 'a list with sexp, bin_io, typerep
 end
 
 include T
@@ -595,6 +596,7 @@ include struct
   module Monad = Monad.Make (struct
     type 'a t = 'a list
     let bind x f = concat_map x ~f
+    let map = map
     let return x = [x]
   end)
   open Monad
@@ -807,7 +809,7 @@ let partition_tf t ~f =
 
 module Assoc = struct
 
-  type ('a, 'b) t = ('a * 'b) list with sexp, compare
+  type ('a, 'b) t = ('a * 'b) list with bin_io, sexp, compare
 
   let find t ?(equal=Poly.equal) key =
     match find t ~f:(fun (key', _) -> equal key key') with

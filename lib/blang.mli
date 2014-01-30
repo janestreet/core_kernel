@@ -103,7 +103,10 @@ include Container.S1 with type 'a t := 'a t
     {ul {- [return v] is [Base v] (think of [v] as a variable) }
         {- [bind t f] replaces every [Base v] in [t] with [f v]
            (think of [v] as a variable and [f] as specifying the term to
-           substitute for each variable) } } *)
+           substitute for each variable) } }
+
+    Note: [bind t f] does short-circuiting, so [f] may not be called on every variable in
+    [t]. *)
 include Monad with type 'a t := 'a t
 
 (** [values t] forms the list containing every [v]
@@ -122,11 +125,11 @@ val eval : 'a t -> ('a -> bool) -> bool
 
     - [specialize t (fun x -> `Known (f x)) = constant (eval t f)]
 
-    - [List.forall (values (specialize t g)) ~f:(fun x -> g x = `Unknown)]
+    - [List.for_all (values (specialize t g)) ~f:(fun x -> g x = `Unknown)]
 
     - {[
         if
-          List.forall (values t) ~f:(fun x ->
+          List.for_all (values t) ~f:(fun x ->
             match g x with
             | `Known b -> b = f x
             | `Unknown -> true)

@@ -86,55 +86,135 @@ let tune ?logger ?minor_heap_size ?major_heap_increment ?space_overhead
   }
 ;;
 
-(* Reasonable defaults for the YEAR 2000! *)
-let () =
-  tune
-    ~minor_heap_size:1_000_000 (* 32K words -> 1M words *)
-    ~major_heap_increment:1_000_000 (* 32K words -> 1M words *)
-    ~space_overhead:100 (* 80 -> 100 (because we have sooo much memory) *)
-    ()
+external minor_words : unit -> int = "core_kernel_gc_minor_words" "noalloc"
+external major_words : unit -> int = "core_kernel_gc_major_words" "noalloc"
+external promoted_words : unit -> int = "core_kernel_gc_promoted_words" "noalloc"
+external minor_collections : unit -> int = "core_kernel_gc_minor_collections" "noalloc"
+external major_collections : unit -> int = "core_kernel_gc_major_collections" "noalloc"
+external heap_words : unit -> int = "core_kernel_gc_heap_words" "noalloc"
+external heap_chunks : unit -> int = "core_kernel_gc_heap_chunks" "noalloc"
+external compactions : unit -> int = "core_kernel_gc_compactions" "noalloc"
+external top_heap_words : unit -> int = "core_kernel_gc_top_heap_words" "noalloc"
+
+let zero = int_of_string "0" (* The compiler won't optimize int_of_string away so it won't
+                                perform constant folding below. *)
+let rec keep_alive o =
+  if zero <> 0 then keep_alive o
+
+TEST_UNIT =
+  let r = ref () in
+  let weak = Weak.create 1 in
+  Weak.set weak 0 (Some r);
+  Gc.compact ();
+  assert (Option.is_some (Weak.get weak 0));
+  keep_alive r;
 ;;
 
-external minor_words : unit -> int = "core_kernel_gc_minor_words" "noalloc"
+module Expert = struct
+  let add_finalizer x f = Caml.Gc.finalise f x
 
-external major_words : unit -> int = "core_kernel_gc_major_words" "noalloc"
+  (* [add_finalizer_exn] is the same as [add_finalizer].  However, their types in
+     core_gc.mli are different, and the type of [add_finalizer] guarantees that it always
+     receives a heap block, which ensures that it will not raise, while
+     [add_finalizer_exn] accepts any type, and so may raise. *)
+  let add_finalizer_exn = add_finalizer
 
-external promoted_words : unit -> int = "core_kernel_gc_promoted_words" "noalloc"
+  let finalize_release = Caml.Gc.finalise_release
+end
 
-(* The idea underlying this test is that minor_words does not allocate any memory. Hence
-   the subsequent call to quick_stat should report exactly the same number. Also:
+TEST_MODULE "gc" = struct
 
-   1) This test may fail if the float is so large that it cannot fit in a 64bit int.
+  (* The idea underlying this test is that minor_words does not allocate any memory. Hence
+     the subsequent call to quick_stat should report exactly the same number. Also:
 
-   2) We run this in a loop because the each call to [quick_stat] allocates minor_data and
-   this number should be picked up by [minor_words]
-*)
-TEST_UNIT =
-  for _i = 1 to 1000 do
-    let mw1 = minor_words () in
-    let st = quick_stat () in
-    let mw2 = Float.iround_towards_zero_exn st.Stat.minor_words in
-    assert (mw1 = mw2);
-  done
+     1) This test may fail if the float is so large that it cannot fit in a 64bit int.
 
-(* The point of doing a [minor] in the tests below is that [st] is still live and will be
-   promoted during the minor GC, thereby changing both the promoted words and the major
-   words in each iteration of the loop *)
-TEST_UNIT =
-  for _i = 1 to 1000 do
-    let mw1 = major_words () in
-    let st = quick_stat () in
-    minor ();
-    let mw2 = Float.iround_towards_zero_exn st.Stat.major_words in
-    assert (mw1 = mw2);
-  done
+     2) We run this in a loop because the each call to [quick_stat] allocates minor_data
+     and this number should be picked up by [minor_words] *)
+  TEST_UNIT =
+    for _i = 1 to 1000 do
+      let mw1 = minor_words () in
+      let st = quick_stat () in
+      let mw2 = Float.iround_towards_zero_exn st.Stat.minor_words in
+      assert (mw1 = mw2);
+    done
 
-TEST_UNIT =
-  for _i = 1 to 1000 do
-    let mw1 = promoted_words () in
-    let st = quick_stat () in
-    minor ();
-    let mw2 = Float.iround_towards_zero_exn st.Stat.promoted_words in
-    assert (mw1 = mw2);
-  done
+  (* The point of doing a [minor] in the tests below is that [st] is still live and will
+     be promoted during the minor GC, thereby changing both the promoted words and the
+     major words in each iteration of the loop *)
+  TEST_UNIT =
+    for _i = 1 to 1000 do
+      let mw1 = major_words () in
+      let st = quick_stat () in
+      minor ();
+      let mw2 = Float.iround_towards_zero_exn st.Stat.major_words in
+      assert (mw1 = mw2);
+    done
 
+  TEST_UNIT =
+    for _i = 1 to 1000 do
+      let mw1 = promoted_words () in
+      let st = quick_stat () in
+      minor ();
+      let mw2 = Float.iround_towards_zero_exn st.Stat.promoted_words in
+      assert (mw1 = mw2);
+    done
+
+  let stat_eq func projection =
+    (* In the stub the record is allocated after getting the stats, so we must ensure
+       [func] is called first. *)
+    let x = func () in
+    let y = projection (quick_stat ()) in
+    x = y
+  ;;
+
+  TEST_UNIT =
+    for _i = 1 to 1000 do
+      assert (stat_eq minor_collections Stat.minor_collections);
+      minor ();
+      assert (stat_eq minor_collections Stat.minor_collections);
+    done
+
+  TEST_UNIT =
+    for _i = 1 to 1000 do
+      assert (stat_eq major_collections Stat.major_collections);
+      major ();
+      assert (stat_eq major_collections Stat.major_collections);
+    done
+
+  TEST_UNIT =
+    for _i = 1 to 1000 do
+      assert (stat_eq compactions Stat.compactions);
+      compact ();
+      assert (stat_eq compactions Stat.compactions);
+    done
+
+  TEST_UNIT =
+    let check () =
+      assert (stat_eq heap_chunks Stat.heap_chunks);
+      assert (stat_eq heap_words Stat.heap_words);
+      assert (stat_eq top_heap_words Stat.top_heap_words);
+    in
+    check ();
+    let r = ref [] in
+    let n = heap_chunks () in
+    while not (heap_chunks () > n) do
+      check ();
+      r := String.create 128 :: !r
+    done;
+    check ()
+end
+
+(* Simple inline benchmarks for GC functions *)
+BENCH "minor_words" = minor_words ()
+BENCH "major_words" = major_words ()
+BENCH "promoted_words" = promoted_words ()
+BENCH "minor_collections" = minor_collections ()
+BENCH "major_collections" = major_collections ()
+BENCH "heap_words" = heap_words ()
+BENCH "heap_chunks" = heap_chunks ()
+BENCH "compactions" = compactions ()
+BENCH "top_heap_words" = top_heap_words ()
+BENCH "stat" = stat ()
+BENCH "quick_stat" = quick_stat ()
+BENCH "counters" = counters ()

@@ -127,6 +127,12 @@ val phys_equal : 'a -> 'a -> bool
 val (==) : [ `Consider_using_phys_equal ] -> [ `Consider_using_phys_equal ] -> [ `Consider_using_phys_equal ]
 val (!=) : [ `Consider_using_phys_equal ] -> [ `Consider_using_phys_equal ] -> [ `Consider_using_phys_equal ]
 
+(** [phys_same] is like [phys_equal], but with a more general type.  [phys_same] is useful
+    when dealing with existential types, when one has a packed value and an unpacked value
+    that one wants to check are physically equal.  One can't use [phys_equal] in such a
+    situation because the types are different. *)
+val phys_same : _ -> _ -> bool
+
 val force : 'a Lazy.t -> 'a
 
 (** See {! module : Staged } for documentation *)

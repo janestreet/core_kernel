@@ -43,14 +43,14 @@ module type Raw_binable = sig
       e.g. because of two different versions of the code compiled at different times, then
       it is possible to serialize a value that may fail validation upon deserialization.
       In that case, having [validate_binio_deserialization = true] is necessary to prevent
-      creating values that don't pass the validation function.
-  *)
+      creating values that don't pass the validation function. *)
   val validate_binio_deserialization : bool
 end
 
 module type Validated = sig
+  type 'a validated
   type raw
-  type t (* = private raw *) with sexp
+  type t = raw validated with sexp
 
   val create     : raw -> t Or_error.t
   val create_exn : raw -> t
@@ -59,13 +59,19 @@ module type Validated = sig
 end
 
 module type Validated_binable = sig
-  type t with bin_io
-  include Validated with type t := t
+  include Validated
+  include sig type t = raw validated with bin_io end with type t := t
 end
 
 module type S = sig
-  module type Raw       = Raw
-  module type Validated = Validated
+  type 'a t = private 'a
+
+  val raw : 'a t -> 'a
+
+  module type Raw = Raw
+
+  module type Validated         = Validated         with type 'a validated := 'a t
+  module type Validated_binable = Validated_binable with type 'a validated := 'a t
 
   module Make         (Raw : Raw)         : Validated         with type raw := Raw.t
   module Make_binable (Raw : Raw_binable) : Validated_binable with type raw := Raw.t

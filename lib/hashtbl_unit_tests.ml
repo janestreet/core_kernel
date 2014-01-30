@@ -74,6 +74,16 @@ module Make (Hashtbl : Core_hashtbl_intf.Hashtbl) = struct
     ;;
   end
 
+  TEST_MODULE "of_alist_or_error" = struct
+
+    TEST "unique" =
+      Result.is_ok (Hashtbl.Poly.of_alist_or_error test_data)
+
+    TEST "duplicate" =
+      Result.is_error (Hashtbl.Poly.of_alist_or_error (test_data @ test_data))
+
+  end
+
   TEST "size and right keys" =
     let predicted = List.map test_data ~f:(fun (k,_) -> k) in
     let found = Hashtbl.keys test_hash in

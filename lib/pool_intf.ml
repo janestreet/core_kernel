@@ -21,8 +21,8 @@
     - one can mistakenly free a pointer multiple times
     - one can forget to free a pointer
 
-    There are debugging functors, [Pool.Debug] and [Pool.Error_check], that are useful for
-    building pools to help debug incorrect pointer usage.
+    There is a debugging functor, [Pool.Error_check], that is useful for building pools
+    to help debug incorrect pointer usage.
 *)
 
 (** [S] is the module type for a pool. *)
@@ -115,6 +115,10 @@ module type S = sig
   (** [free t pointer] frees the tuple pointed to by [pointer] from [t]. *)
   val free : 'slots t -> 'slots Pointer.t -> unit
 
+  (** [unsafe_free t pointer] frees the tuple pointed to by [pointer] without checking
+      [pointer_is_valid] *)
+  val unsafe_free : 'slots t -> 'slots Pointer.t -> unit
+
   (** [new<N> t a0 ... a<N-1>] returns a new tuple from the pool, with the tuple's
       slots initialized to [a0] ... [a<N-1>].  [new] raises if [is_full t]. *)
   val new1
@@ -160,6 +164,22 @@ module type S = sig
   val new9
     :  (('a0, 'a1, 'a2, 'a3, 'a4, 'a5, 'a6, 'a7, 'a8) Slots.t9 as 'slots) t
     -> 'a0 -> 'a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'a6 -> 'a7 -> 'a8
+    -> 'slots Pointer.t
+
+  val new10
+    :  (('a0, 'a1, 'a2, 'a3, 'a4, 'a5, 'a6, 'a7, 'a8, 'a9) Slots.t10 as 'slots) t
+    -> 'a0 -> 'a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'a6 -> 'a7 -> 'a8 -> 'a9
+    -> 'slots Pointer.t
+
+  val new11
+    :  (('a0, 'a1, 'a2, 'a3, 'a4, 'a5, 'a6, 'a7, 'a8, 'a9, 'a10) Slots.t11 as 'slots) t
+    -> 'a0 -> 'a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'a6 -> 'a7 -> 'a8 -> 'a9 -> 'a10
+    -> 'slots Pointer.t
+
+  val new12
+    :  (('a0, 'a1, 'a2, 'a3, 'a4, 'a5, 'a6, 'a7, 'a8, 'a9, 'a10, 'a11) Slots.t12
+        as 'slots) t
+    -> 'a0 -> 'a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'a6 -> 'a7 -> 'a8 -> 'a9 -> 'a10 -> 'a11
     -> 'slots Pointer.t
 
   (** [get_tuple t pointer] allocates an OCaml tuple isomorphic to the pool [t]'s tuple
@@ -220,7 +240,12 @@ module type Pool = sig
 
       It makes sense to use [Unsafe] if one has a small constrained chunk of code where
       one can prove that one never accesses a [free]d tuple, and one needs a pool where
-      it is difficult to construct a dummy value. *)
+      it is difficult to construct a dummy value.
+
+      Some [Unsafe] functions are faster than the corresponding safe version because they
+      do not have to maintain values with the correct represention in the [Obj_array]
+      backing the pool: [free], [create], [grow].
+  *)
   module Unsafe : sig
     include S with type 'a Pointer.t = private int
 

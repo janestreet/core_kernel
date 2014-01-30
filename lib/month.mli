@@ -39,6 +39,8 @@ end
 
 module Stable : sig
   module V1 : sig
-    type t with sexp, bin_io, compare
-  end with type t = t
+    type nonrec t = t =
+      | Jan | Feb | Mar | Apr | May | Jun | Jul | Aug | Sep | Oct | Nov | Dec
+    with sexp, bin_io, compare
+  end
 end

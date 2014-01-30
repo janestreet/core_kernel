@@ -22,16 +22,6 @@ let () =
       Conv.Exn_converter.add_auto ~finalise:false exc handler)
     [
       (
-        Bin_prot.Common.Read_exc (Not_found, 0),
-        (function
-        | Bin_prot.Common.Read_exc (exc, pos) ->
-            Sexp.List [
-              Sexp.Atom "Bin_prot.Common.Read_exc";
-              sexp_of_exn exc;
-              Conv.sexp_of_int pos;
-            ]
-        | _ -> assert false)
-      );(
         Bin_prot.Common.Read_error (Bin_prot.Common.ReadError.Neg_int8, 0),
         (function
         | Bin_prot.Common.Read_error (err, pos) ->
@@ -42,15 +32,7 @@ let () =
               Conv.sexp_of_int pos;
             ]
         | _ -> assert false)
-      );(
-        Bin_prot.Unsafe_read_c.Error Bin_prot.Common.ReadError.Neg_int8,
-        (function
-        | Bin_prot.Unsafe_read_c.Error err ->
-            let str_err = Bin_prot.Common.ReadError.to_string err in
-            Sexp.List [ Sexp.Atom "Bin_prot.Common.Read_error";
-                              Sexp.Atom str_err ]
-        | _ -> assert false)
-      )
+      );
     ]
 
 let to_string exc = Sexp.to_string_hum ~indent:2 (sexp_of_exn exc)
@@ -106,3 +88,62 @@ let () =
     | None -> None
     | Some sexp ->
       Some (Sexp.to_string_hum ~indent:2 sexp))
+
+external clear_backtrace : unit -> unit = "clear_caml_backtrace_pos" "noalloc"
+let raise_without_backtrace e =
+  clear_backtrace ();
+  Raise_without_backtrace.Rwb_std.raise_without_backtrace e
+;;
+
+TEST_MODULE = struct
+  exception Test_exception
+
+  TEST_UNIT "clear_backtrace" =
+    begin try raise Test_exception with _ -> () end;
+    assert (backtrace () <> "");
+    clear_backtrace ();
+    assert (backtrace () = "");
+  ;;
+
+  let check_if_empty_backtrace raise_f =
+    clear_backtrace ();
+    (* The call to [raise] installs a new saved backtrace.  Then, the call to [raise_f],
+       if it's [raise], should save a new, different backtrace, while if it's
+       [raise_without_backtrace], should clear the backtrace and then not install a new
+       one when raising. *)
+    let old_backtrace = try raise   Not_found      with Not_found      -> backtrace () in
+    assert (old_backtrace <> "");
+    let new_backtrace = try raise_f Test_exception with Test_exception -> backtrace () in
+    assert (new_backtrace <> old_backtrace);
+    new_backtrace = ""
+  ;;
+
+  TEST = not (check_if_empty_backtrace raise)
+  TEST = check_if_empty_backtrace raise_without_backtrace
+end
+
+BENCH_MODULE "raise" = struct
+
+  exception Test_exception
+
+  let nested_raise raise_f depth =
+    let rec loop d =
+      if d = 0
+      then raise_f Test_exception
+      else loop (d - 1) + 1
+    in
+    (fun () ->
+       try
+         ignore (loop depth : int)
+       with
+       | Test_exception -> ())
+  ;;
+
+  let depths = [ 0; 10; 100; 1000; 10_000 ]
+
+  BENCH_INDEXED "raise" depth depths = nested_raise raise depth
+
+  BENCH_INDEXED "raise_without_backtrace" depth depths =
+    nested_raise raise_without_backtrace  depth
+  ;;
+end

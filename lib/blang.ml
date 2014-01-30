@@ -66,6 +66,7 @@ end = struct
   let not_ = function
     | True -> False
     | False -> True
+    | Not t -> t
     | t -> Not t
 
   let andalso t1 t2 =
@@ -86,10 +87,10 @@ end = struct
     | False -> c
     | _ ->
       match (b, c) with
-      | (True, _ ) -> orelse       a  c
-      | (_, False) -> andalso      a  b
-      | (_, True ) -> orelse  (Not a) b
-      | (False, _) -> andalso (Not a) c
+      | (True, _ ) -> orelse        a  c
+      | (_, False) -> andalso       a  b
+      | (_, True ) -> orelse  (not_ a) b
+      | (False, _) -> andalso (not_ a) c
       | _ -> If (a, b, c)
 
 end
@@ -264,6 +265,7 @@ TEST_MODULE "auto-simplification" = struct
 
   TEST = not_ true_ = false_
   TEST = not_ false_ = true_
+  TEST = not_ (not_ a) = a
 
   TEST = andalso true_ b = b
   TEST = andalso a true_ = a
@@ -399,19 +401,58 @@ let mem      = C.mem
 let to_array = C.to_array
 let to_list  = C.to_list
 
-include (Monad.Make (struct
+include Monad.Make (struct
+
   type 'a t = 'a T.t
+
   let return = base
+
   let rec bind t k =
     match t with
     | Base v -> k v
     | True -> true_
     | False -> false_
     | Not t1 -> not_ (bind t1 k)
-    | And (t1, t2) -> andalso (bind t1 k) (bind t2 k)
-    | Or (t1, t2) -> orelse (bind t1 k) (bind t2 k)
-    | If (t1, t2, t3) -> if_ (bind t1 k) (bind t2 k) (bind t3 k)
-end) : Monad.S with type 'a t := 'a t)
+    (* Unfortunately we need to duplicate some of the short-circuiting from [andalso] and
+       friends here. In principle we could do something involving [Lazy.t] but the
+       overhead probably wouldn't be worth it. *)
+    | And (t1, t2) ->
+      begin match bind t1 k with
+      | False -> false_
+      | other -> andalso other (bind t2 k)
+      end
+    | Or (t1, t2) ->
+      begin match bind t1 k with
+      | True -> true_
+      | other -> orelse other (bind t2 k)
+      end
+    | If (t1, t2, t3) ->
+      begin match bind t1 k with
+      | True -> bind t2 k
+      | False -> bind t3 k
+      | other -> if_ other (bind t2 k) (bind t3 k)
+      end
+  ;;
+
+  let map t ~f = Monad.map_via_bind t ~f ~return ~bind
+
+end)
+
+TEST_MODULE "bind short-circuiting" = struct
+  let test expected_visits expr =
+    let visited = ref [] in
+    let f var =
+      visited := var :: !visited;
+      false_
+    in
+    match bind expr f with
+    | True -> List.equal ~equal:Int.equal expected_visits (List.rev !visited)
+    | _ -> false
+
+  TEST = test [0] (or_ [not_ (base 0); base 1])
+  TEST = test [0; 1] (not_ (and_ [not_ (base 0); base 1; base 2]))
+  TEST = test [0; 2] (if_ (base 0) (base 1) (not_ (base 2)))
+end
 
 (* semantics *)
 

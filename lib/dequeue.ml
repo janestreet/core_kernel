@@ -68,7 +68,7 @@ let clear t =
   begin
     if t.never_shrink then
       (* clear the array to allow elements to be garbage collected *)
-      t.arr <- Array.create ~len:t.arr_length t.dummy
+      Array.replace_all ~f:(fun _ -> t.dummy) t.arr
     else
       t.arr <- Array.create ~len:8 t.dummy
   end;
@@ -177,7 +177,6 @@ let foldi' t dir ~init ~f =
   end
 ;;
 
-
 let fold'  t dir ~init ~f = foldi' t dir ~init    ~f:(fun _ acc v -> f acc v)
 let iteri' t dir       ~f = foldi' t dir ~init:() ~f:(fun i ()  v -> f i   v)
 let iter'  t dir       ~f = foldi' t dir ~init:() ~f:(fun _ ()  v -> f     v)
@@ -193,7 +192,26 @@ module C = Container.Make (struct
   let fold = fold
 end)
 let count      = C.count
-let iter       = C.iter
+
+let iter t ~f =
+  if not (is_empty t) then begin
+    let actual_front = actual_front_index_when_not_empty t in
+    let actual_back  = actual_back_index_when_not_empty t in
+    let rec loop ~real_i ~stop_pos =
+      if real_i < stop_pos then begin
+        f t.arr.(real_i);
+        loop ~real_i:(real_i + 1) ~stop_pos
+      end
+    in
+    if actual_front <= actual_back then
+      loop ~real_i:actual_front ~stop_pos:(actual_back + 1)
+    else begin
+      loop ~real_i:actual_front ~stop_pos:t.arr_length;
+      loop ~real_i:0 ~stop_pos:(actual_back + 1)
+    end
+  end
+;;
+
 let exists     = C.exists
 let mem        = C.mem
 let for_all    = C.for_all
@@ -359,9 +377,9 @@ let true_index_exn t i =
   else true_i
 ;;
 
-let get_exn t i = t.arr.(true_index_exn t i)
+let get t i = t.arr.(true_index_exn t i)
 
-let get t i = try Some (get_exn t i) with _ -> None
+let get_opt t i = try Some (get t i) with _ -> None
 
 let set_exn t i v = t.arr.(true_index_exn t i) <- v
 
@@ -410,6 +428,44 @@ let front_index_exn t =
   apparent_front_index_when_not_empty t
 ;;
 
+module Binary_searchable = Binary_searchable.Make1 (struct
+  type nonrec 'a t = 'a t
+  let get t i = get t (front_index_exn t + i)
+  let length = length
+end)
+
+(* The "stable" indices used in this module make the application of the
+   [Binary_searchable] functor awkward.  We need to be sure to translate incoming
+   positions from stable space to the expected 0 -> length - 1 space and then we need to
+   translate them back on return. *)
+let binary_search ?pos ?len t ~compare v =
+  let pos =
+    match pos with
+    | None     -> None
+    | Some pos -> Some (pos - t.apparent_front_index)
+  in
+  match Binary_searchable.binary_search ?pos ?len t ~compare v with
+  | None                -> None
+  | Some untranslated_i -> Some (t.apparent_front_index + untranslated_i)
+;;
+
+TEST_UNIT = begin
+  let t = of_array [| 1; 2; 3; 4 |] in
+  assert (binary_search t ~compare:Int.compare 2 = Some 1);
+  assert (binary_search t ~compare:Int.compare 5 = None);
+  assert (binary_search t ~compare:Int.compare 0 = None);
+  assert (binary_search t ~pos:2 ~compare:Int.compare 2 = None);
+  assert (binary_search t ~pos:2 ~compare:Int.compare 3 = Some 2);
+  ignore (dequeue_front t);
+  ignore (dequeue_front t);
+  assert (binary_search t ~compare:Int.compare 2 = None);
+  assert (binary_search t ~compare:Int.compare 3 = Some 2);
+  assert (binary_search t ~compare:Int.compare 5 = None);
+  assert (binary_search t ~compare:Int.compare 0 = None);
+  assert (binary_search t ~pos:2 ~compare:Int.compare 2 = None);
+  assert (binary_search t ~pos:2 ~compare:Int.compare 3 = Some 2);
+end
+
 TEST_MODULE = struct
   module type Dequeue_intf = sig
     type 'a t
@@ -420,6 +476,7 @@ TEST_MODULE = struct
     val to_array : 'a t -> 'a array
     val clear    : 'a t -> unit
     val length   : 'a t -> int
+    val iter     : 'a t -> f:('a -> unit) -> unit
     val fold'
       : 'a t -> [`front_to_back | `back_to_front] -> init:'b -> f:('b -> 'a -> 'b) -> 'b
   end
@@ -449,6 +506,7 @@ TEST_MODULE = struct
 
     let to_array = Doubly_linked.to_array
     let clear    = Doubly_linked.clear
+    let iter     = Doubly_linked.iter
     let length   = Doubly_linked.length
   end
 
@@ -461,6 +519,7 @@ TEST_MODULE = struct
     let to_array  = to_array
     let clear     = clear
     let length    = length
+    let iter      = iter
     let fold'     = fold'
   end
 
@@ -533,6 +592,21 @@ TEST_MODULE = struct
         ()
   ;;
 
+  let iter_check (t_a, t_b) =
+    let make_rev_list iter t =
+      let r = ref [] in iter t ~f:(fun x -> r := x :: !r); !r
+    in
+    let this_l = make_rev_list This_dequeue.iter t_a in
+    let that_l = make_rev_list That_dequeue.iter t_b in
+    if this_l <> that_l then
+      failwithf "error in iter:  %s (from %s) <> %s (from %s)"
+        (Sexp.to_string (<:sexp_of<int list>> this_l))
+        (this_to_string t_a)
+        (Sexp.to_string (<:sexp_of<int list>> that_l))
+        (that_to_string t_b)
+        ()
+  ;;
+
   let length_check (t_a, t_b) =
     let this_len = This_dequeue.length t_a in
     let that_len = That_dequeue.length t_b in
@@ -557,7 +631,7 @@ TEST_MODULE = struct
             (Sexp.to_string (Array.sexp_of_t Int.sexp_of_t arr_b))
             ()
       end else begin
-        let r = Random.int 100 in
+        let r = Random.int 110 in
         begin
           if r < 20 then
             enqueue t `front (Random.int 10_000)
@@ -573,6 +647,8 @@ TEST_MODULE = struct
             fold_check t `front_to_back
           else if r < 90 then
             fold_check t `back_to_front
+          else if r < 100 then
+            iter_check t
           else
             length_check t
         end;

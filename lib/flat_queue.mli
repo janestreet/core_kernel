@@ -34,9 +34,8 @@ val create
 val capacity : _ t -> int
 
 (** [set_capacity t capacity] sets the length of the array backing [t] to as small as
-    value as possible that is not less than [capacity].  [set_capacity] raises if
-    [capacity < length t].  To shrink as much as possible, do [set_capacity t (length
-    t)]. *)
+    value as possible that is not less than [max capacity (length t)].  To shrink as much
+    as possible, do [set_capacity t 0]. *)
 val set_capacity : _ t -> int -> unit
 
 val length : _ t -> int
@@ -110,5 +109,7 @@ val enqueue9
 val get_all_slots : (('tuple, _) Slots.t) t -> int -> 'tuple
 val set_all_slots : (('tuple, _) Slots.t) t -> int -> 'tuple -> unit
 
-val fold : (('tuple, _) Slots.t) t -> init:'a -> f:('a -> 'tuple -> 'a) -> 'a
-val iter : (('tuple, _) Slots.t) t -> f:('tuple -> unit) -> unit
+(** In [iter t ~f] and [fold t ~init ~f], if [f] mutates [t], then the iteration will
+    raise. *)
+val fold : (('tuple, _) Slots.t) t -> init:'a -> f:('a -> 'tuple -> 'a  ) -> 'a
+val iter : (('tuple, _) Slots.t) t            -> f:(      'tuple -> unit) -> unit

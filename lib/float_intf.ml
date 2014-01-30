@@ -3,9 +3,9 @@
 module Binable = Binable0
 
 module type S = sig
-  type t
+  type t with typerep
   type outer = t
-  with bin_io, sexp
+  with bin_io, sexp, typerep
 
 
   include Floatable.S with type t := t
@@ -37,7 +37,11 @@ module type S = sig
   val epsilon_float : t
 
   val max_finite_value : t
-  val min_positive_value : t
+
+  (** [min_positive_subnormal_value = 2 ** -1074]
+      [min_positive_normal_value    = 2 ** -1022] *)
+  val min_positive_subnormal_value : t
+  val min_positive_normal_value    : t
 
   val of_int : int -> t
   val to_int : t -> int
@@ -47,27 +51,39 @@ module type S = sig
   (* [round] rounds a float to an integer float.  [iround{,_exn}] rounds a float to an
      int.  Both round according to a direction [dir], with default [dir] being [`Nearest].
 
-     | `Down    | rounds toward Float.neg_infinity |
-     | `Up      | rounds toward Float.infinity     |
-     | `Nearest | rounds to the nearest int        |
-     | `Zero    | rounds toward zero               |
+     {v
+       | `Down    | rounds toward Float.neg_infinity                             |
+       | `Up      | rounds toward Float.infinity                                 |
+       | `Nearest | rounds to the nearest int ("round half-integers up")         |
+       | `Zero    | rounds toward zero                                           |
+     v}
 
-     iround[_exn] raises Invalid_argument when either trying to handle nan or trying to
-     handle a float outside the range (-. 2. ** 52., 2. ** 52.) (since floats have 52
-     significant bits) or outside the range (float min_int, float_max_int)
-
-     Caveat: If the absolute value of the input float is very large, then it could be that
-     |round ~dir:`Down x - round ~dir:`Up x| > 1.
+     [iround_exn] raises when trying to handle nan or trying to handle a float outside the
+     range [float min_int, float max_int).
 
      Here are some examples for [round] for each of the directions.
 
-     | `Down    | [-2.,-1.)   to -2. | [-1.,0.)   to -1. | [0.,1.) to 0., [1.,2.) to 1. |
-     | `Up      | (-2.,-1.]   to -1. | (-1.,0.]   to -0. | (0.,1.] to 1., (1.,2.] to 2. |
-     | `Zero    | (-2.,-1.]   to -1. | (-1.,1.)   to 0.  | [1.,2.) to 1.                |
-     | `Nearest | [-1.5,-0.5) to -1. | [-0.5,0.5) to 0.  | [0.5,1.5) to 1.              |
+     {v
+       | `Down    | [-2.,-1.)   to -2. | [-1.,0.)   to -1. | [0.,1.) to 0., [1.,2.) to 1. |
+       | `Up      | (-2.,-1.]   to -1. | (-1.,0.]   to -0. | (0.,1.] to 1., (1.,2.] to 2. |
+       | `Zero    | (-2.,-1.]   to -1. | (-1.,1.)   to 0.  | [1.,2.) to 1.                |
+       | `Nearest | [-1.5,-0.5) to -1. | [-0.5,0.5) to 0.  | [0.5,1.5) to 1.              |
+     v}
 
      For convenience, versions of these functions with the [dir] argument hard-coded are
-     provided. *)
+     provided.  If you are writing performance-critical code you should use the
+     versions with the hard-coded arguments (e.g. [iround_down_exn]).  The [_exn] ones
+     are the fastest.
+
+     The following properties hold:
+
+     - [of_int (iround_*_exn i) = i] for any float [i] that is an integer with
+       [min_int <= i <= max_int].
+
+     - [round_* i = i] for any float [i] that is an integer.
+
+     - [iround_*_exn (of_int i) = i] for any int [i] with [-2**52 <= i <= 2**52].
+  *)
   val round      : ?dir:[`Zero|`Nearest|`Up|`Down] -> t -> t
   val iround     : ?dir:[`Zero|`Nearest|`Up|`Down] -> t -> int option
   val iround_exn : ?dir:[`Zero|`Nearest|`Up|`Down] -> t -> int
@@ -139,6 +155,31 @@ module type S = sig
   val neg : t -> t
   val scale : t -> t -> t
   val abs : t -> t
+
+  (** A sub-module designed to be opened to make working with floats more convenient.  *)
+  module O : sig
+    val ( +  ) : t -> t -> t
+    val ( -  ) : t -> t -> t
+    val ( *  ) : t -> t -> t
+    val ( /  ) : t -> t -> t
+    val ( ~- ) : t -> t
+    include Polymorphic_compare_intf.Infix with type t := t
+    include Robustly_comparable.S          with type t := t
+
+    val abs      : t -> t
+    val neg      : t -> t
+    val zero     : t
+    val of_int   : int -> t
+    val of_float : float -> t
+  end
+
+  (** Like [to_string], but guaranteed to be round-trippable.
+
+      It usually yields as few significant digits as possible.  That is, it won't print
+      [3.14] as [3.1400000000000001243].  The only exception is that occasionally it will
+      output 17 significant digits when the number can be represented with just 16 (but
+      not 15 or less) of them. *)
+  val to_string_round_trippable : float -> string
 
   (** Pretty print float, for example [to_string_hum ~decimals:3 1234.1999 = "1_234.200"]
       [to_string_hum ~decimals:3 ~strip_zero:true 1234.1999 = "1_234.2" ]. No delimiters

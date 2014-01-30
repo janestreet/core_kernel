@@ -8,15 +8,18 @@ module Slot = struct
 
   let equal (t1 : (_, _) t) t2 = t1 = t2
 
-  let t0 = 0
-  let t1 = 1
-  let t2 = 2
-  let t3 = 3
-  let t4 = 4
-  let t5 = 5
-  let t6 = 6
-  let t7 = 7
-  let t8 = 8
+  let t0  = 0
+  let t1  = 1
+  let t2  = 2
+  let t3  = 3
+  let t4  = 4
+  let t5  = 5
+  let t6  = 6
+  let t7  = 7
+  let t8  = 8
+  let t9  = 9
+  let t10 = 10
+  let t11 = 11
 end
 
 let metadata_index = 0

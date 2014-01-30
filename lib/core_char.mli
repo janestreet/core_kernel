@@ -1,7 +1,7 @@
 (** Character operations. *)
 
 (** An alias for the type of characters. *)
-type t = char with bin_io, sexp
+type t = char with bin_io, sexp, typerep
 include Identifiable.S with type t := t
 
 (** Return the ASCII code of the argument. *)

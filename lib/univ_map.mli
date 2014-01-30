@@ -12,16 +12,13 @@ open Std_internal
 
 type t with sexp_of
 
+include Invariant.S with type t := t
+
 val empty : t
 val is_empty : t -> bool
 
-module Key : sig
-  type 'a t with sexp_of
-  (** [create name to_sexp] generates a fresh key.
-      Note: If type ['a] doesn't support sexp conversion, then a good
-            practice is to use [sexp_of_opaque] as the converter. *)
-  val create : string -> ('a -> Sexp.t) -> 'a t
-end
+(** A key in a [Univ_map] is just a [Type_equal.Id]. *)
+module Key : module type of struct include Type_equal.Id end
 
 val set : t -> 'a Key.t -> 'a -> t
 val mem : t -> 'a Key.t -> bool
@@ -39,7 +36,7 @@ val change_exn : t -> 'a Key.t -> ('a        -> 'a       ) -> t
 module With_default : sig
   module Key : sig
     type 'a t
-    val create : default:'a -> string -> ('a -> Sexp.t) -> 'a t
+    val create : default:'a -> name:string -> ('a -> Sexp.t) -> 'a t
   end
   val set    : t -> 'a Key.t -> 'a -> t
   val find   : t -> 'a Key.t -> 'a
@@ -50,7 +47,12 @@ end
 module With_fold : sig
   module Key : sig
     type ('a, 'b) t
-    val create : init:'b -> f:('b -> 'a -> 'b) -> string -> ('b -> Sexp.t) -> ('a, 'b) t
+    val create
+      :  init:'b
+      -> f:('b -> 'a -> 'b)
+      -> name:string
+      -> ('b -> Sexp.t)
+      -> ('a, 'b) t
   end
   val set    : t -> ('a, 'b) Key.t -> 'b -> t (* reset the accumulator *)
   val find   : t -> ('a, 'b) Key.t -> 'b      (* the current accumulator *)
@@ -62,7 +64,7 @@ end
 module Multi : sig
   module Key : sig
     type 'a t
-    val create : string -> ('a -> Sexp.t) -> 'a t
+    val create : name:string -> ('a -> Sexp.t) -> 'a t
   end
   val set    : t -> 'a Key.t -> 'a list -> t
   val find   : t -> 'a Key.t -> 'a list

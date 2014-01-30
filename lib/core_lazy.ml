@@ -1,7 +1,8 @@
+open Typerep_kernel.Std
 open Sexplib.Std
 open Bin_prot.Std
 
-type 'a t = 'a lazy_t with bin_io, sexp
+type 'a t = 'a lazy_t with bin_io, sexp, typerep
 
 include (Lazy : module type of Lazy with type 'a t := 'a t)
 
@@ -11,6 +12,8 @@ include Monad.Make (struct
   let return x = from_val x
 
   let bind t f = lazy (force (f (force t)))
+
+  let map t ~f = lazy (f (force t))
 end)
 
 TEST_MODULE = struct

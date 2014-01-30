@@ -2,6 +2,7 @@ module Array = Caml.ArrayLabels
 module Char = Core_char
 module String = Caml.StringLabels
 module List = Core_list
+open Typerep_kernel.Std
 open Sexplib.Std
 open Bin_prot.Std
 open Result.Export
@@ -14,7 +15,7 @@ let invalid_argf = Core_printf.invalid_argf
 let failwiths = Error.failwiths
 
 module T = struct
-  type t = string with sexp, bin_io
+  type t = string with sexp, bin_io, typerep
   let compare = String.compare
 
   (* = on two strings avoids calling compare_val, which is what happens
@@ -167,6 +168,20 @@ let to_list_rev s =
       loop (s.[i] :: acc) (i+1)
   in
   loop [] 0
+
+let rev t =
+  let len = String.length t in
+  let res = String.create len in
+  for i = 0 to len - 1 do
+    unsafe_set res i (unsafe_get t (len - 1 - i))
+  done;
+  res
+;;
+
+TEST = rev "" = "";;
+TEST = rev "a" = "a";;
+TEST = rev "ab" = "ba";;
+TEST = rev "abc" = "cba";;
 
 (** Efficient string splitting *)
 
@@ -442,14 +457,28 @@ let tr_inplace ~target ~replacement s = (* destructive version of tr *)
   done
 
 let exists s ~f =
-  let rec loop i = i > 0 && (let i = i - 1 in f s.[i] || loop i) in
-  loop (length s)
+  let length = length s in
+  let rec loop i = i < length && (f s.[i] || loop (i + 1)) in
+  loop 0
 ;;
 
+TEST = false = exists ""    ~f:(fun _ -> assert false)
+TEST = false = exists "abc" ~f:(Fn.const false)
+TEST = true  = exists "abc" ~f:(Fn.const true)
+TEST = true  = exists "abc" ~f:(function
+    'a' -> false | 'b' -> true | _ -> assert false)
+
 let for_all s ~f =
-  let rec loop i = i = 0 || (let i = i - 1 in f s.[i] && loop i) in
-  loop (length s)
+  let length = length s in
+  let rec loop i = i = length || (f s.[i] && loop (i + 1)) in
+  loop 0
 ;;
+
+TEST = true  = for_all ""    ~f:(fun _ -> assert false)
+TEST = true  = for_all "abc" ~f:(Fn.const true)
+TEST = false = for_all "abc" ~f:(Fn.const false)
+TEST = false = for_all "abc" ~f:(function
+    'a' -> true | 'b' -> false | _ -> assert false)
 
 let fold t ~init ~f =
   let n = length t in

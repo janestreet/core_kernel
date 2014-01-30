@@ -49,7 +49,7 @@ module Unpack_one = struct
         if header_length > len then
           not_enough_data
         else begin
-          match read Bin_prot.Read_ml.bin_read_int_64bit buf ~pos ~len:header_length with
+          match read Bin_prot.Read.bin_read_int_64bit buf ~pos ~len:header_length with
           | `Invalid_data _ as x -> x
           | `Ok element_length ->
             if element_length < 0 then
@@ -284,7 +284,7 @@ TEST_MODULE "unpack-buffer" = struct
             assert (feed t input ~pos ~len = Ok ());
             assert (not (is_empty_exn t));
             let unpack_result = ok_exn (unpack t) in
-            Queue.transfer ~src:unpack_result ~dst:output;
+            Queue.blit_transfer ~src:unpack_result ~dst:output ();
             loop (pos + len);
           end
         in

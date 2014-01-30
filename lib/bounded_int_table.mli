@@ -11,7 +11,7 @@
     exception.
 
     A [Bounded_int_table] is implemented using two fixed size arrays of size [num_keys],
-    which is supplied at table-creation time.  The space used does not depend on the
+    which are supplied at table-creation time.  The space used does not depend on the
     [length] of the table but rather only on [num_keys].  Operations that deal with a
     single element (find, mem, add, remove, set) take constant time, and perform one or
     two array operations.  Operations that deal with all of the keys defined in the table
@@ -22,11 +22,11 @@ open Std_internal
 type ('key, 'data) t with sexp_of
 type ('a, 'b) table = ('a, 'b) t
 
+include Invariant.S2 with type ('a, 'b) t := ('a, 'b) t
+
 (* Equality only requires the keys and values to be the same, not the bin or sexp
    formatting or the integers the keys correspond to (see [key_to_int]).*)
 include Equal.S2 with type ('a, 'b) t := ('a, 'b) t
-
-val invariant : (_, _) t -> unit
 
 (** [create ~num_keys ~key_to_int] returns a table where the keys can map to 0
     .. num_keys-1, according to [key_to_int].  It is an error if [num_keys < 0].

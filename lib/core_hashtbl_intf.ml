@@ -3,9 +3,7 @@ open Sexplib
 module Binable = Binable0
 
 module type Key = sig
-  type t with sexp
-
-  val compare : t -> t -> int
+  type t with compare, sexp
 
   (** Values returned by [hash] must be non-negative.  An exception will be raised in the
       case that [hash] returns a negative value. *)
@@ -240,6 +238,8 @@ module type Creators = sig
        -> [ `Ok of ('a, 'b) t
           | `Duplicate_keys of 'a key list
           ]) create_options
+
+  val of_alist_or_error : ('a key, ('a key * 'b) list -> ('a, 'b) t Or_error.t) create_options
 
   val of_alist_exn : ('a key, ('a key * 'b) list -> ('a, 'b) t) create_options
 

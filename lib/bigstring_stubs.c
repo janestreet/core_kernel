@@ -5,6 +5,11 @@
 /* For pread/pwrite */
 #define _XOPEN_SOURCE 500
 
+/* For OpenBSD `swap` functions */
+#ifdef __OpenBSD__
+#define _BSD_SOURCE
+#endif
+
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
@@ -19,6 +24,11 @@
 #elif __GLIBC__
 #include <byteswap.h>
 #include <malloc.h>
+#elif __OpenBSD__
+#include <sys/types.h>
+#define bswap_16 swap16
+#define bswap_32 swap32
+#define bswap_64 swap64
 #else
 #include <sys/types.h>
 #include <sys/endian.h>

@@ -2,46 +2,36 @@ open Std_internal
 
 module Id = Type_equal.Id
 
-module Constr = struct
-
-  type 'a t =
-    { id : 'a Id.t;
-      to_sexp : 'a -> Sexp.t;
-    }
-  with fields, sexp_of
-
-  let create name to_sexp = { id = Id.create ~name; to_sexp }
-
-  let hash t = Id.hash t.id
-  let name t = Id.name t.id
+module View = struct
+  type t = T : 'a Id.t * 'a -> t
 end
 
-type t = T : 'a Constr.t * 'a -> t
+include View
 
-let create constr value = T (constr, value)
+let view = Fn.id
 
-let constr_name (T (constr, _)) = Constr.name constr
+let create id value = T (id, value)
 
-let sexp_of_t (T (constr, value)) = Constr.to_sexp constr value
+let type_id_name (T (id, _)) = Id.name id
 
-let does_match (T (constr1, _)) constr2 = Id.same (Constr.id constr1) (Constr.id constr2)
+let type_id_uid (T (id, _)) = Id.uid id
 
-let match_ (type a) (T (constr1, value)) (constr2 : a Constr.t) =
-  let id1 = Constr.id constr1 in
-  let id2 = Constr.id constr2 in
-  if not (Id.same id1 id2) then
-    None
+let sexp_of_t (T (id, value)) = Id.to_sexp id value
+
+let does_match (T (id1, _)) id2 = Id.same id1 id2
+
+let match_ (type a) (T (id1, value)) (id2 : a Id.t) =
+  if not (Id.same id1 id2)
+  then None
   else
     let Type_equal.T = Id.same_witness_exn id1 id2 in
     Some (value : a)
 ;;
 
-let match_exn (type a) (T (constr1, value) as t) (constr2 : a Constr.t) =
-  let id1 = Constr.id constr1 in
-  let id2 = Constr.id constr2 in
-  if not (Id.same id1 id2) then
-    failwiths "Univ.match_exn called with mismatched value and constructor" (t, constr2)
-      (<:sexp_of< t * _ Constr.t >>)
+let match_exn (type a) (T (id1, value) as t) (id2 : a Id.t) =
+  if not (Id.same id1 id2)
+  then failwiths "Univ.match_exn called with mismatched value and type id" (t, id2)
+         (<:sexp_of< t * _ Id.t >>)
   else
     let Type_equal.T = Id.same_witness_exn id1 id2 in
     (value : a)
@@ -49,15 +39,15 @@ let match_exn (type a) (T (constr1, value) as t) (constr2 : a Constr.t) =
 
 TEST_MODULE = struct
 
-  let c1 = Constr.create "c1" Int.sexp_of_t
-  let c2 = Constr.create "c2" Int.sexp_of_t
+  let c1 = Id.create ~name:"c1" Int.sexp_of_t
+  let c2 = Id.create ~name:"c2" Int.sexp_of_t
   let t1 = create c1 13
   let t2 = create c2 13
 
-  TEST_UNIT = ignore (<:sexp_of< _ Constr.t >> c1 : Sexp.t)
+  TEST_UNIT = ignore (<:sexp_of< _ Id.t >> c1 : Sexp.t)
   TEST_UNIT = ignore (<:sexp_of< t >> t1 : Sexp.t)
 
-  TEST = constr_name t1 = Constr.name c1
+  TEST = type_id_name t1 = Id.name c1
 
   TEST = does_match t1 c1
   TEST = not (does_match t1 c2)

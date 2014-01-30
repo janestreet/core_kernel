@@ -2,9 +2,6 @@
     organizational approach as [Core_map_intf].  See the documentation in core_map.mli for
     a description of the approach.
 
-    CRs and comments about [Set] functions do not belong in this file.  They belong next
-    to the appropriate function in core_set.mli.
-
     This module defines module types
     [{Creators,Accessors}{0,1,2,_generic,_with_comparator}].  It uses check functors to
     ensure that each module types is an instance of the corresponding [_generic] one.
@@ -13,12 +10,22 @@
     choose different instantiations of their [options].  In particular, [Set] itself
     matches [Creators2_with_comparator] but [Accessors2] (without comparator).
 *)
+(*
+    CRs and comments about [Set] functions do not belong in this file.  They belong next
+    to the appropriate function in core_set.mli.
+*)
 
 open T
 
 module Binable = Binable0
-module type Elt         = Comparator.Pre
-module type Elt_binable = Comparator.Pre_binable
+
+module type Elt = sig
+  type t with compare, sexp
+end
+
+module type Elt_binable = sig
+  type t with bin_io, compare, sexp
+end
 
 module Without_comparator = Core_map_intf.Without_comparator
 module With_comparator    = Core_map_intf.With_comparator
@@ -542,10 +549,13 @@ module type S0 = sig
   type ('a, 'cmp) set
   type ('a, 'cmp) tree
 
-  module Elt : Comparator.S
+  module Elt : sig
+    type t with sexp
+    include Comparator.S with type t := t
+  end
 
   module Tree : sig
-    type t = (Elt.t, Elt.comparator) tree with compare, sexp
+    type t = (Elt.t, Elt.comparator_witness) tree with compare, sexp
 
     include Creators_and_accessors0
       with type ('a, 'b) set := ('a, 'b) tree
@@ -554,7 +564,7 @@ module type S0 = sig
       with type elt          := Elt.t
   end
 
-  type t = (Elt.t, Elt.comparator) set with compare, sexp
+  type t = (Elt.t, Elt.comparator_witness) set with compare, sexp
 
   include Creators_and_accessors0
     with type ('a, 'b) set := ('a, 'b) set

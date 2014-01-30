@@ -1,178 +1,336 @@
-open Bin_prot.Std
-open Sexplib.Conv
-
 open Common
+open Sexplib.Conv
+open Int_replace_polymorphic_compare
 
+module Sexp  = Core_sexp
+module List  = Core_list
 module Array = Core_array
-module Binable = Binable0
-module List = Core_list
-module Queue = Caml.Queue
-
-type 'a t = 'a Queue.t
-
-let create = Queue.create
-
-let enqueue t x = Queue.push x t
+module Int   = Core_int
 
 
-let is_empty = Queue.is_empty
+(* [t] stores the [t.length] queue elements at consecutive increasing indices of [t.elts],
+   mod the capacity of [t], which is [Array.length t.elts].  The capacity is required to
+   be a power of two (user-requested capacities are rounded up to the nearest power), so
+   that mod can quickly be computed using [land t.mask], where [t.mask = capacity t - 1].
+   So, queue element [i] is at [t.elts.( (t.front + i) land t.mask )].
 
-let dequeue t = if is_empty t then None else Some (Queue.pop t)
+   [num_mutations] is used to detect modification during iteration. *)
+type 'a t =
+  { mutable num_mutations : int
+  ; mutable front         : int
+  ; mutable mask          : int
+  ; mutable length        : int
+  ; mutable elts          : 'a array
+  }
+with fields, sexp_of
 
-let dequeue_exn = Queue.pop
+let inc_num_mutations t = t.num_mutations <- t.num_mutations + 1
 
-let peek t = if is_empty t then None else Some (Queue.peek t)
+let capacity t = t.mask + 1
 
-let peek_exn = Queue.peek
+let dummy (type a) (_ : a t) = (Obj.magic 0 : a)
 
-let clear = Queue.clear
+let elts_index t i = (t.front + i) land t.mask
 
-let copy = Queue.copy
+let unsafe_get t i   = Array.unsafe_get t.elts (elts_index t i)
+let unsafe_set t i a = Array.unsafe_set t.elts (elts_index t i) a
 
-let length = Queue.length
+let check_index_exn t i =
+  if i < 0 || i >= t.length
+  then failwiths "Queue index out of bounds" (i, `length t.length)
+         <:sexp_of< int * [ `length of int ] >>
+;;
 
-let iter t ~f = Queue.iter f t
+let get t i   = check_index_exn t i; unsafe_get t i
+let set t i a =
+  check_index_exn t i;
+  inc_num_mutations t;
+  unsafe_set t i a;
+;;
 
-let fold t ~init ~f = Queue.fold f init t
+let is_empty t = t.length = 0
 
-let to_list t = List.rev (fold t ~init:[] ~f:(fun acc elem -> elem::acc))
+let ensure_no_mutation t num_mutations =
+  if t.num_mutations <> num_mutations then
+    failwiths "mutation of queue during iteration" t <:sexp_of< _ t >>;
+;;
 
-let count t ~f = Container.fold_count fold t ~f
+let invariant invariant_a t =
+  Invariant.invariant _here_ t <:sexp_of< _ t >> (fun () ->
+    let check f = Invariant.check_field t f in
+    Fields.iter
+      ~num_mutations:ignore
+      ~front:(check (fun front ->
+        assert (front >= 0);
+        assert (front < capacity t)))
+      ~mask:(check (fun _ ->
+          let capacity = capacity t in
+          assert (capacity = Array.length t.elts);
+          assert (capacity >= 1);
+          assert (Int.is_pow2 capacity)))
+      ~length:(check (fun length ->
+        assert (length >= 0);
+        assert (length <= capacity t)))
+      ~elts:(check (fun _ ->
+        let num_mutations = t.num_mutations in
+        for i = 0 to capacity t - 1 do
+          let elt = unsafe_get t i in
+          if i < t.length
+          then (invariant_a elt; ensure_no_mutation t num_mutations)
+          else assert (phys_equal elt (dummy t))
+        done)))
+;;
 
-let transfer ~src ~dst = Queue.transfer src dst
+let create (type a) ?capacity () : a t =
+  let capacity =
+    match capacity with
+    | None -> 1
+    | Some capacity ->
+      if capacity < 0
+      then failwiths "cannot have queue with negative capacity" capacity
+             <:sexp_of< int >>
+      else if capacity = 0
+      then 1
+      else Int.ceil_pow2 capacity
+  in
+  { num_mutations = 0
+  ; front         = 0
+  ; mask          = capacity - 1
+  ; length        = 0
+  ; elts          = Array.create ~len:capacity (Obj.magic 0 : a)
+  }
+;;
 
-let concat_map t ~f =
-  let res = create () in
-  iter t ~f:(fun a ->
-    List.iter (f a) ~f:(fun b -> enqueue res b));
+let blit_to_array ~src dst =
+  assert (src.length <= Array.length dst);
+  let front_len = Int.min src.length (capacity src - src.front) in
+  let rest_len  = src.length - front_len in
+  Array.blit ~len:front_len ~src:src.elts ~src_pos:src.front ~dst ~dst_pos:0;
+  Array.blit ~len:rest_len  ~src:src.elts ~src_pos:0         ~dst ~dst_pos:front_len;
+;;
+
+let set_capacity t desired_capacity =
+  (* We allow arguments less than 1 to [set_capacity], but translate them to 1 to simplify
+     the code that relies on the array length being a power of 2. *)
+  inc_num_mutations t;
+  let new_capacity = Int.ceil_pow2 (max 1 (max desired_capacity t.length)) in
+  if new_capacity <> capacity t then begin
+    let dst = Array.create ~len:new_capacity (dummy t) in
+    blit_to_array ~src:t dst;
+    t.front <- 0;
+    t.mask  <- new_capacity - 1;
+    t.elts  <- dst;
+  end;
+;;
+
+let enqueue t a =
+  inc_num_mutations t;
+  if t.length = capacity t then set_capacity t (2 * t.length);
+  unsafe_set t t.length a;
+  t.length <- t.length + 1;
+;;
+
+let dequeue_nonempty t =
+  inc_num_mutations t;
+  let elts  = t.elts in
+  let front = t.front in
+  let res   = elts.(front) in
+  elts.(front) <- dummy t;
+  t.front      <- elts_index t 1;
+  t.length     <- t.length - 1;
   res
 ;;
 
-let filter_map t ~f =
-  let res = create () in
-  iter t ~f:(fun a ->
-    match f a with
-    | None -> ()
-    | Some b -> enqueue res b);
-  res;
+let dequeue_exn t =
+  if is_empty t
+  then raise Caml.Queue.Empty
+  else dequeue_nonempty t
 ;;
 
-let map t ~f =
-  let res = create () in
-  iter t ~f:(fun a -> enqueue res (f a));
-  res;
+let dequeue t =
+  if is_empty t
+  then None
+  else Some (dequeue_nonempty t)
 ;;
 
-let filter_inplace q ~f =
-  let q' = create () in
-  transfer ~src:q ~dst:q';
-  iter q' ~f:(fun x -> if f x then enqueue q x)
+let peek_nonempty t = Array.unsafe_get t.elts t.front
 
-let of_list list =
-  let t = create () in
-  List.iter list ~f:(fun x -> enqueue t x);
-  t
-
-let of_array array =
-  let t = create () in
-  Array.iter array ~f:(fun x -> enqueue t x);
-  t
+let peek t =
+  if is_empty t
+  then None
+  else Some (peek_nonempty t)
 ;;
 
-let to_array t =
-  match length t with
-  | 0 -> [||]
-  | len ->
-    let arr = Array.create ~len (peek_exn t) in
-    let i = ref 0 in
-    iter t ~f:(fun v ->
-      arr.(!i) <- v;
-      incr i);
-    arr
-
-let find t ~f =
-  with_return (fun r ->
-    iter t ~f:(fun x -> if f x then r.return (Some x));
-    None)
+let peek_exn t =
+  if is_empty t
+  then raise Caml.Queue.Empty
+  else peek_nonempty t
 ;;
 
-let find_map t ~f =
-  with_return (fun r ->
-    iter t ~f:(fun x -> match f x with None -> () | Some _ as res -> r.return res);
-    None)
+let clear t =
+  inc_num_mutations t;
+  if length t > 0 then begin
+    for i = 0 to t.length - 1 do
+      unsafe_set t i (dummy t);
+    done;
+    t.length <- 0;
+    t.front  <- 0;
+  end;
 ;;
 
-let exists t ~f = Option.is_some (find t ~f)
-let for_all t ~f = not (exists t ~f:(fun x -> not (f x)))
-
-let mem ?(equal = (=)) t a = exists t ~f:(equal a)
-
-let partial_iter t ~f =
-  with_return (fun r ->
-    iter t ~f:(fun x ->
-      match f x with
-      | `Continue -> ()
-      | `Stop -> r.return ()))
+let blit_transfer ~src ~dst ?len () =
+  inc_num_mutations src;
+  inc_num_mutations dst;
+  let len =
+    match len with
+    | None -> length src
+    | Some len ->
+      if len < 0 then
+        failwiths "Queue.blit_transfer: negative length" len <:sexp_of< int >>;
+      min len (length src)
+  in
+  if len > 0 then begin
+    set_capacity dst (max (capacity dst) (dst.length + len));
+    let dst_start = dst.front + dst.length in
+    for i = 0 to len - 1 do
+      (* This is significantly faster than simply [enqueue dst (dequeue_nonempty src)] *)
+      let src_i = (src.front + i) land src.mask in
+      let dst_i = (dst_start + i) land dst.mask in
+      Array.unsafe_set dst.elts dst_i (Array.unsafe_get src.elts src_i);
+      Array.unsafe_set src.elts src_i (dummy src);
+    done;
+    dst.length <- dst.length + len;
+    src.front  <- (src.front + len) land src.mask;
+    src.length <- src.length - len;
+  end;
 ;;
 
-let t_of_sexp a_of_sexp sexp = of_list (list_of_sexp a_of_sexp sexp)
-let sexp_of_t sexp_of_a t = sexp_of_list sexp_of_a (to_list t)
-
-let singleton a =
-  let t = create () in
-  enqueue t a;
-  t
+let fold t ~init ~f =
+  if t.length = 0
+  then init
+  else begin
+    let num_mutations = t.num_mutations in
+    let r = ref init in
+    for i = 0 to t.length - 1 do
+      r := f !r (unsafe_get t i);
+      ensure_no_mutation t num_mutations;
+    done;
+    !r
+  end;
 ;;
 
-include Bin_prot.Utils.Make_iterable_binable1 (struct
-
-  type 'a t = 'a Queue.t
-  type 'a el = 'a
-  type 'a acc = 'a t
-
-  let module_name = Some "Core.Std.Queue"
-
-  let length = length
-
-  let iter = iter
-
-  let init _ = create ()
-
-  (* Bin_prot reads the elements in the same order they were written out, as determined by
-     [iter].  So, we can ignore the index and just enqueue each element as it is read
-     in. *)
-  let insert t x _i = enqueue t x; t
-
-  let finish t = t
-
-  let bin_size_el sizer = sizer
-
-  let bin_write_el_ writer = writer
-
-  let bin_read_el_ reader = reader
-
+module C = Container.Make (struct
+  type nonrec 'a t = 'a t
+  let fold = fold
 end)
 
-TEST_MODULE = struct
-  let m =
-    let module M  = struct
-      type 'a u = 'a t with bin_io
-      type t = int u with bin_io
-    end
-    in
-    (module M : Binable.S with type t = M.t)
-  ;;
+let to_list  = C.to_list
+let count    = C.count
+let find     = C.find
+let find_map = C.find_map
+let exists   = C.exists
+let for_all  = C.for_all
+let mem      = C.mem
 
-  let test list =
-    let t = of_list list in
-    let bigstring = Binable.to_bigstring m t in
-    let list' = to_list (Binable.of_bigstring m bigstring) in
-    list = list'
-  ;;
+(* [iter] is implemented directly because implementing it in terms of fold is slower *)
+let iter t ~f =
+  let num_mutations = t.num_mutations in
+  for i = 0 to t.length - 1 do
+    f (unsafe_get t i);
+    ensure_no_mutation t num_mutations;
+  done;
+;;
 
-  TEST = test []
-  TEST = test [ 1 ]
-  TEST = test [ 1; 2; 3 ]
-  TEST = test (List.init 10_000 ~f:Fn.id)
+(* For [concat_map], [filter_map], and [filter], we don't create [t_result] with [t]'s
+   capacity because we have no idea how many elements [t_result] will ultimately hold. *)
+let concat_map t ~f =
+  let t_result = create () in
+  iter t ~f:(fun a -> List.iter (f a) ~f:(fun b -> enqueue t_result b));
+  t_result
+;;
 
-end
+let filter_map t ~f =
+  let t_result = create () in
+  iter t ~f:(fun a ->
+    match f a with
+    | None   -> ()
+    | Some b -> enqueue t_result b);
+  t_result
+;;
+
+let filter t ~f =
+  let t_result = create () in
+  iter t ~f:(fun a -> if f a then enqueue t_result a);
+  t_result
+;;
+
+let filter_inplace t ~f =
+  let t2 = filter t ~f in
+  clear t;
+  blit_transfer ~src:t2 ~dst:t ();
+;;
+
+let copy src =
+  let dst = create ~capacity:src.length () in
+  blit_to_array ~src dst.elts;
+  dst.length <- src.length;
+  dst
+;;
+
+let of_list l =
+  (* Traversing the list up front to compute its length is probably (but not definitely)
+     better than doubling the underlying array size several times for large queues. *)
+  let t = create ~capacity:(List.length l) () in
+  List.iter l ~f:(fun x -> enqueue t x);
+  t
+;;
+
+(* The queue [t] returned by [create] will have [t.length = 0], [t.front = 0], and
+   [capacity t = Int.ceil_pow2 len].  So, we only have to set [t.length] to [len] after
+   the blit to maintain all the invariants: [t.length] is equal to the number of elements
+   in the queue, [t.front] is the array index of the first element in the queue, and
+   [capacity t = Array.length t.elts]. *)
+let of_array a =
+  let len = Array.length a in
+  let t = create ~capacity:len () in
+  Array.blit ~len ~src:a ~src_pos:0 ~dst:t.elts ~dst_pos:0;
+  t.length <- len;
+  t
+;;
+
+let to_array t = Array.init t.length ~f:(fun i -> unsafe_get t i)
+
+let map ta ~f =
+  let num_mutations = ta.num_mutations in
+  let tb = create ~capacity:ta.length () in
+  tb.length <- ta.length;
+  for i = 0 to ta.length - 1 do
+    let b = f (unsafe_get ta i) in
+    ensure_no_mutation ta num_mutations;
+    Array.unsafe_set tb.elts i b;
+  done;
+  tb
+;;
+
+let singleton x =
+  let t = create () in
+  enqueue t x;
+  t
+;;
+
+let sexp_of_t sexp_of_a t = to_list t |> <:sexp_of< a list >>
+
+let t_of_sexp a_of_sexp sexp = sexp |> <:of_sexp< a list >> |> of_list
+
+include Bin_prot.Utils.Make_iterable_binable1 (struct
+  type nonrec 'a t = 'a t
+  type 'a el       = 'a with bin_io
+  type 'a acc      = 'a t
+
+  let module_name = Some "Core.Queue"
+  let length      = length
+  let iter        = iter
+  let init n       = create ~capacity:n ()
+  let insert t x _ = enqueue t x; t
+  let finish       = Fn.id
+end)

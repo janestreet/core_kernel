@@ -81,8 +81,11 @@ end
 
 module Stable : sig
   module V1 : sig
-    type ('a, 'b) t with sexp, bin_io, compare
-  end with type ('a, 'b) t = ('a, 'b) t
+    type nonrec ('ok, 'err) t = ('ok, 'err) t =
+      | Ok of 'ok
+      | Error of 'err
+    with sexp, bin_io, compare
+  end
 
   (* We export the unit test arg rather than instantiate the functor inside result.ml in
      order to avoid circular dependencies.  The functor is instantiated in stable.ml. *)

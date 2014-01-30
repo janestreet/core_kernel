@@ -90,85 +90,195 @@ module type S0 = sig
   type t
   type elt
 
+  (** Checks whether the provided element is there using the default equality test, using
+      the provided [equal] function if it is not *)
   val mem : ?equal:(elt -> elt -> bool) -> t -> elt -> bool
+
   val length   : t -> int
+
   val is_empty : t -> bool
+
   val iter     : t -> f:(elt -> unit) -> unit
+
+  (** [fold t ~init ~f] returns [f (... f (f (f init e1) e2) e3 ...) en], where [e1..en]
+      are the elements of [t]  *)
   val fold     : t -> init:'accum -> f:('accum -> elt -> 'accum) -> 'accum
+
+  (** Returns [true] if and only if there exists an element for which the provided
+      function evaluates to [true].  This is a short-circuiting operation. *)
   val exists   : t -> f:(elt -> bool) -> bool
+
+  (** Returns [true] if and only if the provided function evaluates to [true] for all
+      elements.  This is a short-circuiting operation. *)
   val for_all  : t -> f:(elt -> bool) -> bool
+
+  (** Returns the number of elements for which the provided function evaluates to true. *)
   val count    : t -> f:(elt -> bool) -> int
+
+  (** Returns as an [option] the first element for which [f] evaluates to true. *)
   val find     : t -> f:(elt -> bool) -> elt option
+
+  (** Returns the first evaluation of [f] that returns [Some], and returns [None] if there
+      is no such element.  *)
   val find_map : t -> f:(elt -> 'a option) -> 'a option
+
   val to_list  : t -> elt list
   val to_array : t -> elt array
-(* val compare : t -> t -> cmp:(elt -> elt -> int) -> int *)
 end
 
 module type S0_phantom = sig
   type elt
   type 'a t
+
+  (** Checks whether the provided element is there using the default equality test, using
+      the provided [equal] function if it is not *)
   val mem : ?equal:(elt -> elt -> bool) -> _ t -> elt -> bool
+
   val length   : _ t -> int
+
   val is_empty : _ t -> bool
+
   val iter     : _ t -> f:(elt -> unit) -> unit
+
+  (** [fold t ~init ~f] returns [f (... f (f (f init e1) e2) e3 ...) en], where [e1..en]
+      are the elements of [t]  *)
   val fold     : _ t -> init:'accum -> f:('accum -> elt -> 'accum) -> 'accum
+
+  (** Returns [true] if and only if there exists an element for which the provided
+      function evaluates to [true].  This is a short-circuiting operation. *)
   val exists   : _ t -> f:(elt -> bool) -> bool
+
+  (** Returns [true] if and only if the provided function evaluates to [true] for all
+      elements.  This is a short-circuiting operation. *)
   val for_all  : _ t -> f:(elt -> bool) -> bool
+
+  (** Returns the number of elements for which the provided function evaluates to true. *)
   val count    : _ t -> f:(elt -> bool) -> int
+
+  (** Returns as an [option] the first element for which [f] evaluates to true. *)
   val find     : _ t -> f:(elt -> bool) -> elt option
+
+  (** Returns the first evaluation of [f] that returns [Some], and returns [None] if there
+      is no such element.  *)
   val find_map : _ t -> f:(elt -> 'a option) -> 'a option
+
   val to_list  : _ t -> elt list
   val to_array : _ t -> elt array
-  (* val compare : _ t -> _ t -> cmp:(elt -> elt -> int) -> int *)
 end
 
 (* Signature for polymorphic container, e.g., 'a list or 'a array *)
 module type S1 = sig
   type 'a t
+
+  (** Checks whether the provided element is there, using polymorphic compare if [equal]
+      is not provided  *)
   val mem : ?equal:('a -> 'a -> bool) -> 'a t -> 'a -> bool
+
   val length   : 'a t -> int
+
   val is_empty : 'a t -> bool
+
   val iter     : 'a t -> f:('a -> unit) -> unit
+
+  (** [fold t ~init ~f] returns [f (... f (f (f init e1) e2) e3 ...) en], where [e1..en]
+      are the elements of [t]  *)
   val fold     : 'a t -> init:'accum -> f:('accum -> 'a -> 'accum) -> 'accum
+
+  (** Returns [true] if and only if there exists an element for which the provided
+      function evaluates to [true].  This is a short-circuiting operation. *)
   val exists   : 'a t -> f:('a -> bool) -> bool
+
+  (** Returns [true] if and only if the provided function evaluates to [true] for all
+      elements.  This is a short-circuiting operation. *)
   val for_all  : 'a t -> f:('a -> bool) -> bool
+
+  (** Returns the number of elements for which the provided function evaluates to true. *)
   val count    : 'a t -> f:('a -> bool) -> int
+
+  (** Returns as an [option] the first element for which [f] evaluates to true. *)
   val find     : 'a t -> f:('a -> bool) -> 'a option
+
+  (** Returns the first evaluation of [f] that returns [Some], and returns [None] if there
+      is no such element.  *)
   val find_map : 'a t -> f:('a -> 'b option) -> 'b option
+
   val to_list  : 'a t -> 'a list
   val to_array : 'a t -> 'a array
-  (* val compare : 'a t -> 'a t -> cmp:('a -> 'a -> int) -> int *)
 end
 
 module type S1_phantom = sig
   type ('a, +'phantom) t
+
+  (** Checks whether the provided element is there, using polymorphic compare if [equal]
+      is not provided  *)
   val mem : ?equal:('a -> 'a -> bool) -> ('a, _) t -> 'a -> bool
+
   val length   : ('a, _) t -> int
+
   val is_empty : ('a, _) t -> bool
+
   val iter     : ('a, _) t -> f:('a -> unit) -> unit
+
+  (** [fold t ~init ~f] returns [f (... f (f (f init e1) e2) e3 ...) en], where [e1..en]
+      are the elements of [t]  *)
   val fold     : ('a, _) t -> init:'accum -> f:('accum -> 'a -> 'accum) -> 'accum
+
+  (** Returns [true] if and only if there exists an element for which the provided
+      function evaluates to [true].  This is a short-circuiting operation. *)
   val exists   : ('a, _) t -> f:('a -> bool) -> bool
+
+  (** Returns [true] if and only if the provided function evaluates to [true] for all
+      elements.  This is a short-circuiting operation. *)
   val for_all  : ('a, _) t -> f:('a -> bool) -> bool
+
+  (** Returns the number of elements for which the provided function evaluates to true. *)
   val count    : ('a, _) t -> f:('a -> bool) -> int
+
+  (** Returns as an [option] the first element for which [f] evaluates to true. *)
   val find     : ('a, _) t -> f:('a -> bool) -> 'a option
+
+  (** Returns the first evaluation of [f] that returns [Some], and returns [None] if there
+      is no such element.  *)
   val find_map : ('a, _) t -> f:('a -> 'b option) -> 'b option
+
   val to_list  : ('a, _) t -> 'a list
+
   val to_array : ('a, _) t -> 'a array
 end
 
 module type S1_phantom_invariant = sig
   type ('a, 'phantom) t
+
+  (** Checks whether the provided element is there, using polymorphic compare if [equal]
+      is not provided  *)
   val mem : ?equal:('a -> 'a -> bool) -> ('a, _) t -> 'a -> bool
+
   val length   : ('a, _) t -> int
   val is_empty : ('a, _) t -> bool
   val iter     : ('a, _) t -> f:('a -> unit) -> unit
+
+  (** [fold t ~init ~f] returns [f (... f (f (f init e1) e2) e3 ...) en], where [e1..en]
+      are the elements of [t]  *)
   val fold     : ('a, _) t -> init:'accum -> f:('accum -> 'a -> 'accum) -> 'accum
+
+  (** Returns [true] if and only if there exists an element for which the provided
+      function evaluates to [true].  This is a short-circuiting operation. *)
   val exists   : ('a, _) t -> f:('a -> bool) -> bool
+
+  (** Returns [true] if and only if the provided function evaluates to [true] for all
+      elements.  This is a short-circuiting operation. *)
   val for_all  : ('a, _) t -> f:('a -> bool) -> bool
+
+  (** Returns the number of elements for which the provided function evaluates to true. *)
   val count    : ('a, _) t -> f:('a -> bool) -> int
+
+  (** Returns as an [option] the first element for which [f] evaluates to true. *)
   val find     : ('a, _) t -> f:('a -> bool) -> 'a option
+
+  (** Returns the first evaluation of [f] that returns [Some], and returns [None] if there
+      is no such element.  *)
   val find_map : ('a, _) t -> f:('a -> 'b option) -> 'b option
+
   val to_list  : ('a, _) t -> 'a list
   val to_array : ('a, _) t -> 'a array
 end
@@ -188,7 +298,6 @@ module type Generic = sig
   val find_map : 'a t -> f:('a elt -> 'b option) -> 'b option
   val to_list  : 'a t -> 'a elt list
   val to_array : 'a t -> 'a elt array
-  (* val compare : 'a t -> 'a t -> cmp:('a elt -> 'a elt -> int) -> int *)
 end
 
 module type Generic_phantom = sig
@@ -206,7 +315,6 @@ module type Generic_phantom = sig
   val find_map : ('a, _) t -> f:('a elt -> 'b option) -> 'b option
   val to_list  : ('a, _) t -> 'a elt list
   val to_array : ('a, _) t -> 'a elt array
-  (* val compare : 'a t -> 'a t -> cmp:('a elt -> 'a elt -> int) -> int *)
 end
 
 (* The following functors exist as a consistency check among all the various [S?]
@@ -231,4 +339,3 @@ module Check_S1_phantom (M : S1_phantom) =
 
 module Check_S1_phantom_invariant (M : S1_phantom_invariant) =
   Check (struct type 'a t = ('a, phantom) M.t end) (struct type 'a t = 'a end) (M)
-

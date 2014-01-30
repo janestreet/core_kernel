@@ -12,7 +12,8 @@
 
 type 'a t with bin_io, sexp
 
-include Container.S1 with type 'a t := 'a t
+include Binary_searchable.S1 with type 'a t := 'a t
+include Container.        S1 with type 'a t := 'a t
 
 (** [create ?initial_length ?never_shrink ()] create a new [t].  [initial_length] is the
     initial length of the dequeue; it will be able to hold [initial_length] elements
@@ -40,12 +41,12 @@ val back_index : _ t -> int option
     of the back item in [t] *)
 val back_index_exn : _ t -> int
 
-(** [get t i] return the element at index [i].  Return [None] if [i] is invalid. *)
-val get : 'a t -> int -> 'a option
+(** [get_opt t i] return the element at index [i].  Return [None] if [i] is invalid. *)
+val get_opt : 'a t -> int -> 'a option
 
-(** [get_exn t i] return the element at index [i].  Raise an exception if [i] is
+(** [get t i] return the element at index [i].  Raise an exception if [i] is
     invalid. *)
-val get_exn : 'a t -> int -> 'a
+val get : 'a t -> int -> 'a
 
 (** [peek t back_or_front] return the value at the back or front of the dequeue without
     removing it. *)

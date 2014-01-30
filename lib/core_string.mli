@@ -1,7 +1,7 @@
 (** An extension of the standard StringLabels. If you open Core.Std, you'll get
     these in the String module. *)
 
-type t = string with bin_io, sexp
+type t = string with bin_io, sexp, typerep
 
 include Blit.S         with type t := t
 include Container.S0   with type t := t with type elt = char
@@ -59,6 +59,9 @@ val slice : t -> int -> int -> t
 
 (** Returns the reversed list of characters contained in a list. *)
 val to_list_rev : t -> char list
+
+(** [rev t] returns [t] in reverse order. *)
+val rev : t -> t
 
 (** [nget s i] Gets the char at normalized position [i] in [s]. *)
 val nget : t -> int -> char

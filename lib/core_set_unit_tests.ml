@@ -23,7 +23,7 @@ module Unit_tests
       with type 'a elt               := 'a Elt.t
       with type ('a, 'b, 'c) options := ('a, 'b, 'c) create_options
 
-    val simplify_creator : (int, Int.comparator, 'c) create_options -> 'c
+    val simplify_creator : (int, Int.comparator_witness, 'c) create_options -> 'c
 
     type ('a, 'b, 'c) access_options
 
@@ -33,7 +33,7 @@ module Unit_tests
       with type 'a elt               := 'a Elt.t
       with type ('a, 'b, 'c) options := ('a, 'b, 'c) access_options
 
-    val simplify_accessor : (int, Int.comparator, 'c) access_options -> 'c
+    val simplify_accessor : (int, Int.comparator_witness, 'c) access_options -> 'c
 
     val kind : [ `Set | `Tree ]
   end)

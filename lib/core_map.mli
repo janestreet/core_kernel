@@ -108,6 +108,12 @@ val of_alist
   -> ('a * 'b) list
   -> [ `Ok of ('a, 'b, 'cmp) t | `Duplicate_key of 'a ]
 
+(** creates map from association list with unique keys.  Returns an error if duplicate 'a
+    keys are found. *)
+val of_alist_or_error
+  :  comparator:('a, 'cmp) Comparator.t
+  -> ('a * 'b) list -> ('a, 'b, 'cmp) t Or_error.t
+
 (** creates map from association list with unique keys.  Raises an exception if duplicate
     'a keys are found. *)
 val of_alist_exn
@@ -327,14 +333,14 @@ module Poly : sig
   type ('a, +'b, 'c) map
 
   module Tree : sig
-    type ('k, +'v) t = ('k, 'v, Comparator.Poly.comparator) Tree.t with sexp
+    type ('k, +'v) t = ('k, 'v, Comparator.Poly.comparator_witness) Tree.t with sexp
 
     include Creators_and_accessors2
       with type ('a, 'b) t    := ('a, 'b) t
       with type ('a, 'b) tree := ('a, 'b) t
   end
 
-  type ('a, +'b) t = ('a, 'b, Comparator.Poly.comparator) map with bin_io, sexp, compare
+  type ('a, +'b) t = ('a, 'b, Comparator.Poly.comparator_witness) map with bin_io, sexp, compare
 
   include Creators_and_accessors2
     with type ('a, 'b) t    := ('a, 'b) t
@@ -355,14 +361,20 @@ module type S_binable = S_binable
 
 module Make (Key : Key) : S with type Key.t = Key.t
 
-module Make_using_comparator (Key : Comparator.S)
+module Make_using_comparator (Key : sig
+  type t with sexp
+  include Comparator.S with type t := t
+end)
   : S
-    with type Key.t          = Key.t
-    with type Key.comparator = Key.comparator
+    with type Key.t                  = Key.t
+    with type Key.comparator_witness = Key.comparator_witness
 
 module Make_binable (Key : Key_binable) : S_binable with type Key.t = Key.t
 
-module Make_binable_using_comparator (Key : Comparator.S_binable)
+module Make_binable_using_comparator (Key : sig
+  type t with bin_io, sexp
+  include Comparator.S with type t := t
+end)
   : S_binable
-    with type Key.t          = Key.t
-    with type Key.comparator = Key.comparator
+    with type Key.t                  = Key.t
+    with type Key.comparator_witness = Key.comparator_witness

@@ -43,7 +43,7 @@ let sexp_of_key t =
   | None -> fun key -> Int.sexp_of_t (t.key_to_int key)
 ;;
 
-let invariant t =
+let invariant invariant_key invariant_data t =
   try
     let num_keys = t.num_keys in
     assert (num_keys = Array.length t.entries_by_key);
@@ -52,6 +52,8 @@ let invariant t =
     Array.iteri t.entries_by_key ~f:(fun i -> function
       | None -> ()
       | Some entry ->
+        invariant_key entry.key;
+        invariant_data entry.data;
         assert (i = t.key_to_int entry.key);
         match t.defined_entries.(entry.defined_entries_index) with
         | None -> assert false
@@ -78,7 +80,7 @@ let invariant t =
 
 let debug = ref false
 
-let check_invariant t = if !debug then invariant t
+let check_invariant t = if !debug then invariant ignore ignore t
 
 let is_empty t = length t = 0
 

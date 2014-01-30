@@ -1,4 +1,15 @@
+(** OCaml's native integer type.
+
+    The number of bits in an integer is platform dependent, being 31-bits on a 32-bit
+    platform, and 63-bits on a 64-bit platform.  [int] is a signed integer type.  [int]s
+    are also subject to overflow, meaning that [Int.max_value + 1 = Int.min_value].
+
+    [int]s always fit in a machine word.
+*)
+
 include Int_intf.S with type t = int
+
+(** {9 Conversion functions} *)
 
 val of_int : int -> t
 val to_int : t -> int

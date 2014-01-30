@@ -4,12 +4,16 @@ type t = exn with sexp_of
 
 include Pretty_printer.S with type t := t
 
+
 (** Raised when finalization after an exception failed, too.
     The first exception argument is the one raised by the initial
     function, the second exception the one raised by the finalizer. *)
 exception Finally of t * t
 
 exception Reraised of string * t
+
+(** Same as [raise], except that the backtrace is not recorded. *)
+val raise_without_backtrace : t -> _
 
 val reraise : t -> string -> _
 

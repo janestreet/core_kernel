@@ -3,7 +3,8 @@ open Int.Replace_polymorphic_compare  let () = _squelch_unused_module_warning_
 
 let eprints = Debug.eprints
 
-(* module Flat_queue = Flat_queue_debug.Debug (Flat_queue) *)
+module Flat_queue = Flat_queue_debug.Debug (Flat_queue)
+let () = Flat_queue.show_messages := false
 open Flat_queue
 
 module Slots = Slots
@@ -83,7 +84,7 @@ TEST_UNIT =
         enqueue t changed;
       done;
       List.iter [ Int.min_value; -1; 0; length t - 1 ] ~f:(fun capacity ->
-        assert (does_raise (fun () -> set_capacity t capacity)));
+        set_capacity t capacity);
       set_capacity t (length t));
     assert (behaves_like_it_is_empty t);
     for i = 1 to num_enqueues do
@@ -202,6 +203,18 @@ TEST_UNIT =
     (fun t a -> enqueue9 t a a a a a a a a a);
 ;;
 
+TEST_UNIT = (* mutation during [fold] *)
+  let t = create Slots.t1 in
+  enqueue1 t ();
+  assert (does_raise (fun () -> fold t ~init:() ~f:(fun () () -> enqueue1 t ())));
+;;
+
+TEST_UNIT = (* mutation during [iter] *)
+  let t = create Slots.t1 in
+  enqueue1 t ();
+  assert (does_raise (fun () -> iter t ~f:(fun () -> enqueue1 t ())));
+;;
+
 (* Compare [Flat_queue] with [Core_queue]. *)
 TEST_MODULE = struct
   module type Queue = sig
@@ -234,7 +247,12 @@ TEST_MODULE = struct
     ;;
   end
 
-  module That_queue : Queue = Core_queue
+  module That_queue : Queue = struct
+    include Core_queue
+
+    (* [Core_queue.create] takes an optional argument, so this is necessary *)
+    let create () = create ()
+  end
 
   module Queue : sig
     include Queue

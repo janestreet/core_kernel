@@ -16,18 +16,22 @@ module type S = sig
   (* Fails if init_level is not within bounds [zero;size]. *)
   val create : size:contents -> init_level:contents -> t
 
+  (* the size used upon creation *)
+  val size : t -> contents
+
   (* the current bucket level *)
   val level : t -> contents
 
   (* Take some exact amount out of the bucket and return `Taken. If there is not enough
-   * left in the bucket, return `Unable. *)
+   * left in the bucket, return `Unable and do not take anything *)
   val take : t -> contents -> [ `Taken | `Unable ]
 
   (* Take some amount out of the bucket, possibly emptying it. The return value is the
    * amount that was actually taken out. *)
   val take_at_most : t -> contents -> contents
 
-  (* Put some amount into the bucket, possibly overflowing. *)
+  (* Add some amount into the bucket. Cap at maximum capacity if the increment provided
+     is too big *)
   val fill : t -> contents -> unit
 end
 
@@ -42,7 +46,6 @@ struct
   }
   with sexp, bin_io
 
-
   let create ~size ~init_level =
     let error msg =
       failwithf "Bucket.create ~size:%s ~init_level:%s: %s"
@@ -55,6 +58,7 @@ struct
     { level = init_level; size = size }
   ;;
 
+  let size t = t.size
   let level t = t.level
 
   let assert_positive name x =

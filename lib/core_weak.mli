@@ -10,3 +10,6 @@ val length : _ t -> int
 val set : 'a t -> int -> 'a Heap_block.t option -> unit
 
 val get : 'a t -> int -> 'a Heap_block.t option
+
+val is_some : _ t -> int -> bool
+val is_none : _ t -> int -> bool

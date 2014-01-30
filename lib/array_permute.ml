@@ -1,4 +1,5 @@
-(* factored out due to a circular dependency between core_array and core_list *)
+(** An internal-only module factored out due to a circular dependency between core_array
+    and core_list.  Contains code for permuting an array. *)
 
 module Random = Core_random
 

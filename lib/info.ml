@@ -18,8 +18,6 @@ module Sexp = struct
   end : Binable.S with type t := t)
 end
 
-let concat ?(sep="") l = String.concat sep l
-
 type sexp = Sexp.t = Atom of string | List of sexp list (* constructor import *)
 
 module Message = struct
@@ -33,39 +31,6 @@ module Message = struct
   | Of_list of int option * t list
   | With_backtrace of t * string (* backtrace *)
   with bin_io, sexp_of
-
-  let rec to_strings_hum t ac =
-    (* We use [Sexp.to_string_mach], despite the fact that we are implementing
-       [to_strings_hum], because we want the info to fit on a single line, and once
-       we've had to resort to sexps, the message is going to start not looking so
-       pretty anyway. *)
-    match t with
-    | Could_not_construct sexp ->
-      "could not construct info: " :: Sexp.to_string_mach sexp :: ac
-    | String string -> string :: ac
-    | Sexp sexp -> Sexp.to_string_mach sexp :: ac
-    | Tag_sexp (tag, sexp, _) -> tag :: ": " :: Sexp.to_string_mach sexp :: ac
-    | Tag_t (tag, t) -> tag :: ": " :: to_strings_hum t ac
-    | Tag_arg (tag, sexp, t) ->
-      tag :: ": " :: Sexp.to_string_mach sexp :: ": " :: to_strings_hum t ac
-    | With_backtrace (t, backtrace) ->
-      to_strings_hum t ("\nBacktrace:\n" :: backtrace :: ac)
-    | Of_list (trunc_after, ts) ->
-      let ts =
-        match trunc_after with
-        | None -> ts
-        | Some max ->
-          let n = List.length ts in
-          if n <= max then
-            ts
-          else
-            List.take ts max @ [ String (Printf.sprintf "and %d more info" (n - max)) ]
-      in
-      List.fold (List.rev ts) ~init:ac ~f:(fun ac t ->
-        to_strings_hum t (if List.is_empty ac then ac else ("; " :: ac)))
-  ;;
-
-  let to_string_hum t = concat ~sep:"" (to_strings_hum t [])
 
   let rec to_sexps_hum t ac =
     match t with
@@ -110,7 +75,7 @@ let sexp_of_t t = Message.to_sexp_hum (to_message t)
 
 let t_of_sexp sexp = lazy (Message.Sexp sexp)
 
-let to_string_hum t = Message.to_string_hum (to_message t)
+let to_string_hum t = Sexp.to_string_hum (sexp_of_t t)
 
 include Bin_prot.Utils.Make_binable (struct
   module Binable = Message
@@ -165,9 +130,27 @@ let of_exn ?backtrace exn =
 ;;
 
 TEST_MODULE "Info" = struct
-  TEST = to_string_hum (of_exn (Failure "foo")) = "(Failure foo)"
-  TEST = to_string_hum (tag (of_string "b") "a") = "a: b"
-  TEST = to_string_hum (of_list (List.map ~f:of_string [ "a"; "b"; "c" ])) = "a; b; c"
+
+  let failwithf = Core_printf.failwithf
+
+  let test_result got ~expect =
+    if got <> expect then failwithf "(got %S) (expected %S)" got expect ();
+  ;;
+
+  TEST_UNIT =
+    test_result (to_string_hum (of_exn (Failure "foo")))
+      ~expect:"(Failure foo)"
+  ;;
+
+  TEST_UNIT =
+    test_result (to_string_hum (tag (of_string "b") "a"))
+      ~expect:"(a b)"
+  ;;
+
+  TEST_UNIT =
+    test_result (to_string_hum (of_list (List.map ~f:of_string [ "a"; "b"; "c" ])))
+      ~expect:"(a b c)"
+  ;;
 
   let round t =
     let sexp = sexp_of_t t in

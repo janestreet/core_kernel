@@ -2,7 +2,7 @@
 
 (** Signature for a 2-tuple module *)
 module T2 : sig
-  type ('a, 'b) t = 'a * 'b with sexp
+  type ('a, 'b) t = 'a * 'b with sexp, typerep
 
   val create : 'a -> 'b -> ('a, 'b) t
   val curry :  (('a, 'b) t -> 'c) -> 'a -> 'b -> 'c
@@ -28,7 +28,7 @@ end
 
 (** Signature for a 3-tuple module *)
 module T3 : sig
-  type ('a, 'b, 'c) t = 'a * 'b * 'c with sexp
+  type ('a, 'b, 'c) t = 'a * 'b * 'c with sexp, typerep
 
   val create : 'a -> 'b -> 'c -> ('a, 'b, 'c) t
   val curry :  (('a, 'b, 'c) t -> 'd) -> 'a -> 'b -> 'c -> 'd

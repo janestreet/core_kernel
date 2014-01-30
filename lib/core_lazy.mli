@@ -22,7 +22,7 @@
    Without the [-rectypes] option, such ill-founded recursive definitions
    are rejected by the type-checker.
 *)
-type 'a t = 'a lazy_t with bin_io, compare, sexp
+type 'a t = 'a lazy_t with bin_io, compare, sexp, typerep
 
 include Monad.S with type 'a t := 'a t
 

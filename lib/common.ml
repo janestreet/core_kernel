@@ -109,6 +109,35 @@ let phys_equal = Caml.(==)
 let (==) _ _ = `Consider_using_phys_equal
 let (!=) _ _ = `Consider_using_phys_equal
 
+let phys_same (type a) (type b) (a : a) (b : b) = phys_equal a (Obj.magic b : a)
+
+TEST_MODULE "phys_same" = struct
+
+  TEST = phys_same 0 None
+  TEST = phys_same 1 true
+
+  TEST =
+    let f () = "statically-allocated" in
+    phys_same (f ()) (f ())
+  ;;
+
+  TEST =
+    let a = (1, 2) in
+    let b = (1, 2) in
+    phys_same a a && not (phys_same a b)
+  ;;
+
+  type thing = Obscure : _ -> thing
+
+  let same_thing (Obscure a) (Obscure b) = phys_same a b
+
+  TEST =
+    let a = (1, 2) in
+    let b = (1, 2) in
+    same_thing (Obscure a) (Obscure a) && not (same_thing (Obscure a) (Obscure b))
+  ;;
+end
+
 let force = Lazy.force
 
 let stage = Staged.stage

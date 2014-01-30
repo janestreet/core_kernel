@@ -10,14 +10,14 @@ module Int63 = Core_int63
     flags, and the various functions operate on sets of flags.  There is a finite universe
     of flags (in particular 63 flags, one for each bit).
 
-    [sexp_of_t] uses the flag names supplied to [Flags.Make] *)
+    [sexp_of_t] and [t_of_sexp] use the flag names supplied to [Flags.Make]. *)
 module type S = sig
-  type t with sexp_of
+  type t with sexp
+
+  include Comparable.S with type t := t (** consistent with subset *)
 
   val of_int : int -> t
   val to_int_exn : t -> int
-
-  val equal : t -> t -> bool
 
   val empty : t
 
