@@ -27,8 +27,14 @@ open Sexplib
 
 type t with bin_io, sexp
 
-(** might be an expensive operation *)
+(** [to_string_hum] forces the lazy message, which might be an expensive operation.
+
+    [to_string_hum] usually produces a sexp; however, it is guaranteed that [to_string_hum
+    (of_string s) = s]. *)
 val to_string_hum : t -> string
+
+(** old version (pre 109.61) of [to_string_hum] that some applications rely on *)
+val to_string_hum_deprecated : t -> string
 
 val of_string : string -> t
 

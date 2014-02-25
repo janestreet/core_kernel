@@ -30,8 +30,8 @@ module type S = sig
   val zero : t
   val epsilon : t   (* WARNING: This is not [Float.epsilon_float].  See Robust_compare. *)
 
-  (* The difference between 1.0 and the smallest exactly representable floating-point
-     number greater than 1.0. *)
+  (** The difference between 1.0 and the smallest exactly representable floating-point
+      number greater than 1.0. *)
   val epsilon_float : t
 
   val max_finite_value : t
@@ -46,59 +46,56 @@ module type S = sig
   val of_int64 : int64 -> t
   val to_int64 : t -> int64
 
-  (* [round] rounds a float to an integer float.  [iround{,_exn}] rounds a float to an
-     int.  Both round according to a direction [dir], with default [dir] being [`Nearest].
+  (** [round] rounds a float to an integer float.  [iround{,_exn}] rounds a float to an
+      int.  Both round according to a direction [dir], with default [dir] being [`Nearest].
 
-     {v
-       | `Down    | rounds toward Float.neg_infinity                             |
-       | `Up      | rounds toward Float.infinity                                 |
-       | `Nearest | rounds to the nearest int ("round half-integers up")         |
-       | `Zero    | rounds toward zero                                           |
-     v}
+      {v
+        | `Down    | rounds toward Float.neg_infinity                             |
+        | `Up      | rounds toward Float.infinity                                 |
+        | `Nearest | rounds to the nearest int ("round half-integers up")         |
+        | `Zero    | rounds toward zero                                           |
+      v}
 
-     [iround_exn] raises when trying to handle nan or trying to handle a float outside the
-     range [float min_int, float max_int).
+      [iround_exn] raises when trying to handle nan or trying to handle a float outside the
+      range [float min_int, float max_int).
 
-     Here are some examples for [round] for each of the directions.
+      Here are some examples for [round] for each of the directions.
 
-     {v
-       | `Down    | [-2.,-1.)   to -2. | [-1.,0.)   to -1. | [0.,1.) to 0., [1.,2.) to 1. |
-       | `Up      | (-2.,-1.]   to -1. | (-1.,0.]   to -0. | (0.,1.] to 1., (1.,2.] to 2. |
-       | `Zero    | (-2.,-1.]   to -1. | (-1.,1.)   to 0.  | [1.,2.) to 1.                |
-       | `Nearest | [-1.5,-0.5) to -1. | [-0.5,0.5) to 0.  | [0.5,1.5) to 1.              |
-     v}
+      {v
+        | `Down    | [-2.,-1.)   to -2. | [-1.,0.)   to -1. | [0.,1.) to 0., [1.,2.) to 1. |
+        | `Up      | (-2.,-1.]   to -1. | (-1.,0.]   to -0. | (0.,1.] to 1., (1.,2.] to 2. |
+        | `Zero    | (-2.,-1.]   to -1. | (-1.,1.)   to 0.  | [1.,2.) to 1.                |
+        | `Nearest | [-1.5,-0.5) to -1. | [-0.5,0.5) to 0.  | [0.5,1.5) to 1.              |
+      v}
 
-     For convenience, versions of these functions with the [dir] argument hard-coded are
-     provided.  If you are writing performance-critical code you should use the
-     versions with the hard-coded arguments (e.g. [iround_down_exn]).  The [_exn] ones
-     are the fastest.
+      For convenience, versions of these functions with the [dir] argument hard-coded are
+      provided.  If you are writing performance-critical code you should use the
+      versions with the hard-coded arguments (e.g. [iround_down_exn]).  The [_exn] ones
+      are the fastest.
 
-     The following properties hold:
+      The following properties hold:
 
-     - [of_int (iround_*_exn i) = i] for any float [i] that is an integer with
-       [min_int <= i <= max_int].
+      - [of_int (iround_*_exn i) = i] for any float [i] that is an integer with
+        [min_int <= i <= max_int].
 
-     - [round_* i = i] for any float [i] that is an integer.
+      - [round_* i = i] for any float [i] that is an integer.
 
-     - [iround_*_exn (of_int i) = i] for any int [i] with [-2**52 <= i <= 2**52].
+      - [iround_*_exn (of_int i) = i] for any int [i] with [-2**52 <= i <= 2**52].
   *)
   val round      : ?dir:[`Zero|`Nearest|`Up|`Down] -> t -> t
   val iround     : ?dir:[`Zero|`Nearest|`Up|`Down] -> t -> int option
   val iround_exn : ?dir:[`Zero|`Nearest|`Up|`Down] -> t -> int
 
-  (* See [round] for a description of these functions. *)
   val round_towards_zero : t -> t
   val round_down         : t -> t
   val round_up           : t -> t
   val round_nearest      : t -> t
 
-  (* See [round] for a description of these functions. *)
   val iround_towards_zero : t -> int option
   val iround_down         : t -> int option
   val iround_up           : t -> int option
   val iround_nearest      : t -> int option
 
-  (* See [round] for a description of these functions. *)
   val iround_towards_zero_exn : t -> int
   val iround_down_exn         : t -> int
   val iround_up_exn           : t -> int
@@ -186,12 +183,12 @@ module type S = sig
     -> float
     -> string
 
-  (* [ldexp x n] returns x *. 2 ** n *)
+  (** [ldexp x n] returns [x *. 2 ** n] *)
   val ldexp : t -> int -> t
 
-  (* [frexp f] returns the pair of the significant and the exponent of f. When f is zero,
-     the significant x and the exponent n of f are equal to zero. When f is non-zero, they
-     are defined by f = x *. 2 ** n and 0.5 <= x < 1.0. *)
+  (** [frexp f] returns the pair of the significant and the exponent of f. When f is zero,
+      the significant x and the exponent n of f are equal to zero. When f is non-zero,
+      they are defined by [f = x *. 2 ** n] and [0.5 <= x < 1.0]. *)
   val frexp : t -> t * int
 
   module Class : sig
@@ -218,7 +215,7 @@ module type S = sig
   *)
   val classify : t -> Class.t
 
-  (* [is_finite t] returns [true] iff [classify t] is in [Normal; Subnormal; Zero;]. *)
+  (** [is_finite t] returns [true] iff [classify t] is in [Normal; Subnormal; Zero;]. *)
   val is_finite : t -> bool
 
   module Sign : sig
@@ -227,7 +224,7 @@ module type S = sig
 
   val sign : t -> Sign.t
 
-  (* S-expressions contain at most 8 significant digits. *)
+  (** S-expressions contain at most 8 significant digits. *)
   module Terse : sig
     type t = outer with bin_io, sexp
     include Stringable.S with type t := t

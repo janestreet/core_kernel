@@ -62,17 +62,6 @@ val get_opt_len : t -> pos : int -> int option -> int
 val length : t -> int
 (** [length bstr] @return the length of bigstring [bstr]. *)
 
-val sub : ?pos : int -> ?len : int -> t -> t
-(** [sub ?pos ?len bstr] @return the sub-bigstring in [bstr] that starts at
-    position [pos] and has length [len].  The sub-bigstring is a unique copy
-    of the memory region, i.e. modifying it will not modify the original
-    bigstring.  Note that this is different than the behavior of the
-    standard OCaml Array1.sub, which shares the memory.
-
-    @param pos default = 0
-    @param len default = [Bigstring.length bstr - pos]
-*)
-
 val sub_shared : ?pos : int -> ?len : int -> t -> t
 (** [sub_shared ?pos ?len bstr] @return the sub-bigstring in [bstr]
     that starts at position [pos] and has length [len].  The sub-bigstring

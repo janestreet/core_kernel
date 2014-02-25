@@ -1,5 +1,10 @@
 module List = Core_list
 
+(* INVARIANT: This exception is raised if a list is mutated during a pending iteration.
+
+   This invariant is guaranteed by the Header and Elt modules in conjunction.  All
+   downstream code in this module need not be concerned with this invariant.
+*)
 exception Attempt_to_mutate_list_during_iteration
 
 let phys_equal = (==)
@@ -10,6 +15,7 @@ module Header : sig
   val length : t -> int
   val equal : t -> t -> bool
   val incr_length : by:int -> t -> unit
+  val check_no_pending_iterations : t -> unit
   val with_iteration : t -> (unit -> 'a) -> 'a
   val merge : t -> t -> [ `Same_already | `Merged ]
 end = struct
@@ -27,9 +33,17 @@ end = struct
 
   let length t = (Union_find.get t).length
 
-  let incr_length ~by:n t =
+  let union_find_get__check_no_pending_iterations t =
     let s = Union_find.get t in
-    if s.pending_iterations > 0 then raise Attempt_to_mutate_list_during_iteration;
+    if s.pending_iterations > 0
+    then raise Attempt_to_mutate_list_during_iteration
+    else s
+
+  let check_no_pending_iterations t =
+    ignore (union_find_get__check_no_pending_iterations t : s)
+
+  let incr_length ~by:n t =
+    let s = union_find_get__check_no_pending_iterations t in
     s.length <- s.length + n
 
   let with_iteration t f =
@@ -43,8 +57,8 @@ end = struct
 
   let merge (t1 : t) t2 =
     if Union_find.same_class t1 t2 then `Same_already else begin
-      let n1 = length t1 in
-      let n2 = length t2 in
+      let n1 = (union_find_get__check_no_pending_iterations t1).length in
+      let n2 = (union_find_get__check_no_pending_iterations t2).length in
       with_iteration t1 (fun () ->
         with_iteration t2 (fun () ->
           Union_find.union t1 t2;
@@ -65,6 +79,7 @@ module Elt : sig
   val value : 'a t -> 'a
   val unlink : 'a t -> unit
   val split_or_splice_before : 'a t -> 'a t -> unit
+  val split_or_splice_after  : 'a t -> 'a t -> unit
   val insert_after : 'a t -> 'a -> 'a t
   val insert_before : 'a t -> 'a -> 'a t
   val unlink_before : 'a t -> 'a t
@@ -120,41 +135,55 @@ end = struct
           -----+        +-----         -----+               +-----
   *)
 
-  let split_or_splice ~prev1:a ~next1:b ~prev2:c ~next2:d =
+  let unsafe_split_or_splice ~prev1:a ~next1:b ~prev2:c ~next2:d =
     a.next <- d; d.prev <- a;
     c.next <- b; b.prev <- c
 
-  let split_or_splice_after t1 t2 =
-    split_or_splice
+  let unsafe_split_or_splice_after t1 t2 =
+    unsafe_split_or_splice
      ~next1:t1.next
      ~prev1:t1.next.prev
      ~next2:t2.next
      ~prev2:t2.next.prev
 
-  let split_or_splice_before t1 t2 =
-    split_or_splice
+  let unsafe_split_or_splice_before t1 t2 =
+    unsafe_split_or_splice
      ~prev1:t1.prev
      ~next1:t1.prev.next
      ~prev2:t2.prev
      ~next2:t2.prev.next
 
+  let check_two_nodes_no_pending_iterations t1 t2 =
+    Header.check_no_pending_iterations t1.header;
+    if not (Header.equal t1.header t2.header) then
+      Header.check_no_pending_iterations t2.header
+
+  (* We redefine safe versions for export *)
+  let split_or_splice_after t1 t2 =
+    check_two_nodes_no_pending_iterations t1 t2;
+    unsafe_split_or_splice_after t1 t2
+
+  let split_or_splice_before t1 t2 =
+    check_two_nodes_no_pending_iterations t1 t2;
+    unsafe_split_or_splice_before t1 t2
+
   let insert_before t v =
     Header.incr_length t.header ~by:1;
     let node = create_aux v t.header in
-    split_or_splice_before t node;
+    unsafe_split_or_splice_before t node;
     node
 
   let insert_after t v =
     Header.incr_length t.header ~by:1;
     let node = create_aux v t.header in
-    split_or_splice_after t node;
+    unsafe_split_or_splice_after t node;
     node
 
   let unlink_before t =
     let node = t.prev in
     if is_singleton node then node else begin
       Header.incr_length t.header ~by:(-1);
-      split_or_splice_before t node;
+      unsafe_split_or_splice_before t node;
       node.header <- Header.create ();
       node
     end
@@ -163,7 +192,7 @@ end = struct
     let node = t.next in
     if is_singleton node then node else begin
       Header.incr_length t.header ~by:(-1);
-      split_or_splice_after t node;
+      unsafe_split_or_splice_after t node;
       node.header <- Header.create ();
       node
     end
@@ -173,6 +202,22 @@ end = struct
 end
 
 type 'a t = 'a Elt.t option ref
+
+let invariant t =
+  match !t with
+  | None -> ()
+  | Some head ->
+    let header = Elt.header head in
+    let rec loop n elt =
+      let next_elt = Elt.next elt in
+      let prev_elt = Elt.prev elt in
+      assert (Elt.equal elt (Elt.prev next_elt));
+      assert (Elt.equal elt (Elt.next prev_elt));
+      assert (Header.equal (Elt.header elt) header);
+      if Elt.equal next_elt head then n else loop (n + 1) next_elt
+    in
+    let len = loop 1 head in
+    assert (len = Header.length header)
 
 let create (type a) () : a t = ref None
 
@@ -303,11 +348,16 @@ let transfer ~src ~dst =
   | None -> ()
   | Some src_head ->
     match !dst with
-    | None -> dst := Some src_head; clear src
+    | None ->
+      dst := Some src_head;
+      clear src
     | Some dst_head ->
       match Header.merge (Elt.header src_head) (Elt.header dst_head) with
-      | `Same_already -> raise Transfer_src_and_dst_are_same_list
-      | `Merged -> Elt.split_or_splice_before dst_head src_head; clear src
+      | `Same_already ->
+        raise Transfer_src_and_dst_are_same_list
+      | `Merged ->
+        Elt.split_or_splice_before dst_head src_head;
+        clear src
 
 let filter_inplace t ~f =
   let to_remove =
@@ -395,9 +445,9 @@ let insert_before t elt v =
       t := Some new_elt;
       new_elt
     end else if Header.equal (Elt.header first) (Elt.header elt) then
-        Elt.insert_before elt v
-      else
-        raise Elt_does_not_belong_to_list
+      Elt.insert_before elt v
+    else
+      raise Elt_does_not_belong_to_list
 
 let insert_empty t v =
   let new_elt = Elt.create v in
@@ -445,6 +495,114 @@ let remove t elt =
     else
       raise Elt_does_not_belong_to_list
 
+exception Invalid_move__elt_equals_anchor
+
+let move_before t elt ~anchor =
+  if Elt.equal anchor elt then
+    raise Invalid_move__elt_equals_anchor;
+  if Header.equal (Elt.header anchor) (Elt.header elt) then
+    match !t with
+    | None -> raise Elt_does_not_belong_to_list
+    | Some first ->
+      if Header.equal (Elt.header first) (Elt.header elt) then begin
+        (* unlink [elt] *)
+        let after_elt = Elt.next elt in
+        Elt.split_or_splice_before elt after_elt;
+        let first =
+          if Elt.equal first elt then begin
+            t := Some after_elt;
+            after_elt
+          end else
+            first
+        in
+        (* splice [elt] in before [anchor] *)
+        Elt.split_or_splice_before anchor elt;
+        if Elt.equal first anchor then t := Some elt;
+      end else
+        raise Elt_does_not_belong_to_list
+  else
+    raise Elt_does_not_belong_to_list
+
+let move_to_front t elt =
+  match !t with
+  | None -> raise Elt_does_not_belong_to_list
+  | Some first ->
+    if not (Elt.equal elt first) then move_before t elt ~anchor:first
+
+let move_after t elt ~anchor =
+  if Elt.equal anchor elt then
+    raise Invalid_move__elt_equals_anchor;
+  if Header.equal (Elt.header anchor) (Elt.header elt) then
+    match !t with
+    | None -> raise Elt_does_not_belong_to_list
+    | Some first ->
+      if Header.equal (Elt.header first) (Elt.header elt) then begin
+        (* unlink [elt] *)
+        let after_elt = Elt.next elt in
+        Elt.split_or_splice_before elt after_elt;
+        if Elt.equal first elt then t := Some after_elt;
+        (* splice [elt] in after [anchor] *)
+        Elt.split_or_splice_after anchor elt
+      end else
+        raise Elt_does_not_belong_to_list
+  else
+    raise Elt_does_not_belong_to_list
+
+let move_to_back t elt =
+  match !t with
+  | None -> raise Elt_does_not_belong_to_list
+  | Some first ->
+    let last = Elt.prev first in
+    if not (Elt.equal elt last) then move_after t elt ~anchor:last
+
+TEST_MODULE "move functions" = struct
+
+  let n = 5
+
+  let test k expected =
+    let t = create () in
+    let a = Array.init n (fun i -> insert_last t i) in
+    k t a;
+    invariant t;
+    assert (length t = n);
+    let observed = to_list t in
+    if observed <> expected then begin
+      let open Sexplib.Conv in
+      Error.failwiths "mismatch"
+        (`Expected expected, `Observed observed)
+        <:sexp_of< [`Expected of int list] *
+                   [`Observed of int list] >>
+    end
+
+  TEST_UNIT = test (fun _ _ -> ()) [0; 1; 2; 3; 4]
+
+  TEST_UNIT = test (fun t a -> move_to_front t a.(4)) [4; 0; 1; 2; 3]
+  TEST_UNIT = test (fun t a -> move_to_front t a.(3)) [3; 0; 1; 2; 4]
+  TEST_UNIT = test (fun t a -> move_to_front t a.(2)) [2; 0; 1; 3; 4]
+  TEST_UNIT = test (fun t a -> move_to_front t a.(1)) [1; 0; 2; 3; 4]
+  TEST_UNIT = test (fun t a -> move_to_front t a.(0)) [0; 1; 2; 3; 4]
+
+  TEST_UNIT = test (fun t a -> move_to_back  t a.(0)) [1; 2; 3; 4; 0]
+  TEST_UNIT = test (fun t a -> move_to_back  t a.(1)) [0; 2; 3; 4; 1]
+  TEST_UNIT = test (fun t a -> move_to_back  t a.(2)) [0; 1; 3; 4; 2]
+  TEST_UNIT = test (fun t a -> move_to_back  t a.(3)) [0; 1; 2; 4; 3]
+  TEST_UNIT = test (fun t a -> move_to_back  t a.(4)) [0; 1; 2; 3; 4]
+
+  TEST_UNIT = test (fun t a -> move_before t a.(2) ~anchor:a.(1)) [0; 2; 1; 3; 4]
+  TEST_UNIT = test (fun t a -> move_before t a.(2) ~anchor:a.(0)) [2; 0; 1; 3; 4]
+  TEST_UNIT = test (fun t a -> move_before t a.(1) ~anchor:a.(0)) [1; 0; 2; 3; 4]
+  TEST_UNIT = test (fun t a -> move_before t a.(0) ~anchor:a.(2)) [1; 0; 2; 3; 4]
+  TEST_UNIT = test (fun t a -> move_before t a.(0) ~anchor:a.(1)) [0; 1; 2; 3; 4]
+  TEST_UNIT = test (fun t a -> move_before t a.(3) ~anchor:a.(2)) [0; 1; 3; 2; 4]
+  TEST_UNIT = test (fun t a -> move_before t a.(2) ~anchor:a.(3)) [0; 1; 2; 3; 4]
+
+  TEST_UNIT = test (fun t a -> move_after  t a.(1) ~anchor:a.(3)) [0; 2; 3; 1; 4]
+  TEST_UNIT = test (fun t a -> move_after  t a.(0) ~anchor:a.(2)) [1; 2; 0; 3; 4]
+  TEST_UNIT = test (fun t a -> move_after  t a.(1) ~anchor:a.(4)) [0; 2; 3; 4; 1]
+  TEST_UNIT = test (fun t a -> move_after  t a.(3) ~anchor:a.(2)) [0; 1; 2; 3; 4]
+  TEST_UNIT = test (fun t a -> move_after  t a.(2) ~anchor:a.(3)) [0; 1; 3; 2; 4]
+end
+
 TEST =
   let t1 = create () in
   let t2 = create () in
@@ -455,14 +613,14 @@ TEST =
     Elt_does_not_belong_to_list -> true
 
 TEST =
-      let t1 = create () in
-      let t2 = create () in
-      let elt = insert_first t1 14 in
-      let _   = insert_first t2 13 in
-      try
-        remove t2 elt; false
-      with
-        Elt_does_not_belong_to_list -> true
+  let t1 = create () in
+  let t2 = create () in
+  let elt = insert_first t1 14 in
+  let _   = insert_first t2 13 in
+  try
+    remove t2 elt; false
+  with
+    Elt_does_not_belong_to_list -> true
 
 TEST_MODULE "unchecked_iter" = struct
   let b = of_list [0; 1; 2; 3; 4]
@@ -489,19 +647,3 @@ TEST_MODULE "unchecked_iter" = struct
   TEST = to_list (fun b x -> if x = 2 then insert_after b 2 5) = [0; 1; 2; 5; 3; 4]
   TEST = to_list (fun b x -> if x = 2 then insert_after b 3 5) = [0; 1; 2; 3; 5; 4]
 end
-
-let invariant t =
-  match !t with
-  | None -> ()
-  | Some head ->
-    let header = Elt.header head in
-    let rec loop n elt =
-      let next_elt = Elt.next elt in
-      let prev_elt = Elt.prev elt in
-      assert (Elt.equal elt (Elt.prev next_elt));
-      assert (Elt.equal elt (Elt.next prev_elt));
-      assert (Header.equal (Elt.header elt) header);
-      if Elt.equal next_elt head then n else loop (n + 1) next_elt
-    in
-    let len = loop 1 head in
-    assert (len = Header.length header)

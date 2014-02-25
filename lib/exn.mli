@@ -1,5 +1,8 @@
 open Never_returns
 
+(* [sexp_of_t] uses a global table of sexp converters.  To register a converter for a new
+   exception, add "with sexp" to its definition. If no suitable converter is found, the
+   standard converter in [Printexc] will be used to generate an atomic S-expression. *)
 type t = exn with sexp_of
 
 include Pretty_printer.S with type t := t
@@ -29,11 +32,6 @@ val reraisef : t -> ('a, unit, string, unit -> _) format4 -> 'a
 
 val to_string      : t -> string (* human-readable, multi-lines *)
 val to_string_mach : t -> string (* machine format, single-line *)
-
-(* Uses a global table of sexp converters.  To register a converter for a new exception,
-   add "with sexp" to its definition. If no suitable converter is found, the standard
-   converter in [Printexc] will be used to generate an atomic S-expression. *)
-val sexp_of_t : t -> Sexplib.Sexp.t
 
 (** Executes [f] and afterwards executes [finally], whether [f] throws an exception or
     not.
