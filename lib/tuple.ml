@@ -1,4 +1,4 @@
-open Typerep_kernel.Std
+open Typerep_lib.Std
 
 module type T = sig type t end
 

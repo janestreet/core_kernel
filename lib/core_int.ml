@@ -1,4 +1,4 @@
-open Typerep_kernel.Std
+open Typerep_lib.Std
 open Sexplib.Std
 open Bin_prot.Std
 open Common
@@ -93,28 +93,6 @@ let ( - ) x y = ( - ) x y
 let ( * ) x y = ( * ) x y
 let ( / ) x y = ( / ) x y
 
-module Infix = struct
-  let ( % ) x y =
-    if y <= 0 then
-      invalid_argf
-        "%d %% %d in core_int.ml: modulus should be positive" x y ();
-    let rval = x mod y in
-    if rval < 0
-    then rval + y
-    else rval
-
-  let ( /% ) x y =
-    if y <= 0 then
-      invalid_argf
-        "%d /%% %d in core_int.ml: divisor should be positive" x y ();
-    if x < 0
-    then (x + 1) / y - 1
-    else x / y
-
-  (** float division of integers *)
-  let (//) x y = float x /. float y
-end
-
 let neg x = -x
 let ( ~- ) = neg
 
@@ -133,7 +111,7 @@ let bit_or a b = a lor b
 let bit_and a b = a land b
 let bit_xor a b = a lxor b
 
-include Int_math
+include Int_pow2
 
 include Pretty_printer.Register (struct
   type nonrec t = t
@@ -141,7 +119,7 @@ include Pretty_printer.Register (struct
   let module_name = "Core.Std.Int"
 end)
 
-module O = struct
+module Pre_O = struct
   let ( + ) = ( + )
   let ( - ) = ( - )
   let ( * ) = ( * )
@@ -153,3 +131,148 @@ module O = struct
   let zero = zero
   let of_int_exn = of_int_exn
 end
+
+module O = struct
+  include Pre_O
+  module F = Int_math.Make (struct
+    type nonrec t = t
+    include Pre_O
+    let rem = rem
+    let to_float = to_float
+    let of_float = of_float
+    let of_string = T.of_string
+    let to_string = T.to_string
+  end)
+  include F
+
+  (* These inlined versions of (%), (/%), and (//) perform better than their functorized
+     counterparts in [F] (see benchmarks below).
+
+     The reason these functions are inlined in [Int] but not in any of the other integer
+     modules is that they existed in [Int] and [Int] alone prior to the introduction of
+     the [Int_math.Make] functor, and we didn't want to degrade their performance.
+
+     We won't pre-emptively do the same for new functions, unless someone cares, on a case
+     by case fashion.  *)
+
+  let ( % ) x y =
+    if y <= zero then
+      invalid_argf
+        "%s %% %s in core_int.ml: modulus should be positive"
+        (to_string x) (to_string y) ();
+    let rval = rem x y in
+    if rval < zero
+    then rval + y
+    else rval
+  ;;
+
+  let ( /% ) x y =
+    if y <= zero then
+      invalid_argf
+        "%s /%% %s in core_int.ml: divisor should be positive"
+        (to_string x) (to_string y) ();
+    if x < zero
+    then (x + one) / y - one
+    else x / y
+  ;;
+
+  let (//) x y = to_float x /. to_float y
+  ;;
+end
+
+BENCH_MODULE "Core_int_inline_ops" = struct
+  (* The [of_string] and [Random.bool] are so that the values won't get inlined. *)
+  let small = of_string "37"
+  let big   = of_string "123456789"
+
+  let max = if Random.bool () then max_value else max_value
+  let min = if Random.bool () then min_value else min_value
+
+  BENCH "inlined  % 01" = O.(%)    big small
+  BENCH "functor  % 01" = O.F.(%)  big small
+  BENCH "inlined /% 01" = O.(/%)   big small
+  BENCH "functor /% 01" = O.F.(/%) big small
+  BENCH "inlined // 01" = O.(//)   big small
+  BENCH "functor // 01" = O.F.(//) big small
+
+  BENCH "inlined  % 11" = O.(%)    small big
+  BENCH "functor  % 11" = O.F.(%)  small big
+  BENCH "inlined /% 11" = O.(/%)   small big
+  BENCH "functor /% 11" = O.F.(/%) small big
+  BENCH "inlined // 11" = O.(//)   small big
+  BENCH "functor // 11" = O.F.(//) small big
+
+  BENCH "inlined  % 21" = O.(%)    max small
+  BENCH "functor  % 21" = O.F.(%)  max small
+  BENCH "inlined /% 21" = O.(/%)   max small
+  BENCH "functor /% 21" = O.F.(/%) max small
+  BENCH "inlined // 21" = O.(//)   max small
+  BENCH "functor // 21" = O.F.(//) max small
+
+  BENCH "inlined  % 31" = O.(%)    min small
+  BENCH "functor  % 31" = O.F.(%)  min small
+  BENCH "inlined /% 31" = O.(/%)   min small
+  BENCH "functor /% 31" = O.F.(/%) min small
+  BENCH "inlined // 31" = O.(//)   min small
+  BENCH "functor // 31" = O.F.(//) min small
+
+  BENCH "inlined  % 41" = O.(%)    max big
+  BENCH "functor  % 41" = O.F.(%)  max big
+  BENCH "inlined /% 41" = O.(/%)   max big
+  BENCH "functor /% 41" = O.F.(/%) max big
+  BENCH "inlined // 41" = O.(//)   max big
+  BENCH "functor // 41" = O.F.(//) max big
+
+  BENCH "inlined  % 51" = O.(%)    min big
+  BENCH "functor  % 51" = O.F.(%)  min big
+  BENCH "inlined /% 51" = O.(/%)   min big
+  BENCH "functor /% 51" = O.F.(/%) min big
+  BENCH "inlined // 51" = O.(//)   min big
+  BENCH "functor // 51" = O.F.(//) min big
+end
+
+(*
+Estimated testing time 6m (36 benchmarks x 10s). Change using -quota SECS.
+┌─────────────────────────────────────────────────┬──────────┬─────────┬────────────┐
+│ Name                                            │ Time/Run │ mWd/Run │ Percentage │
+├─────────────────────────────────────────────────┼──────────┼─────────┼────────────┤
+│ [core_int.ml:Core_int_inline_ops] inlined  % 01 │  19.89ns │         │     63.76% │
+│ [core_int.ml:Core_int_inline_ops] functor  % 01 │  25.45ns │         │     81.58% │
+│ [core_int.ml:Core_int_inline_ops] inlined /% 01 │  18.26ns │         │     58.54% │
+│ [core_int.ml:Core_int_inline_ops] functor /% 01 │  23.72ns │         │     76.03% │
+│ [core_int.ml:Core_int_inline_ops] inlined // 01 │   8.16ns │   2.00w │     26.16% │
+│ [core_int.ml:Core_int_inline_ops] functor // 01 │  12.27ns │   6.00w │     39.34% │
+│ [core_int.ml:Core_int_inline_ops] inlined  % 11 │  17.24ns │         │     55.26% │
+│ [core_int.ml:Core_int_inline_ops] functor  % 11 │  23.86ns │         │     76.48% │
+│ [core_int.ml:Core_int_inline_ops] inlined /% 11 │  17.10ns │         │     54.81% │
+│ [core_int.ml:Core_int_inline_ops] functor /% 11 │  22.08ns │         │     70.77% │
+│ [core_int.ml:Core_int_inline_ops] inlined // 11 │   8.13ns │   2.00w │     26.06% │
+│ [core_int.ml:Core_int_inline_ops] functor // 11 │  12.20ns │   6.00w │     39.11% │
+│ [core_int.ml:Core_int_inline_ops] inlined  % 21 │  21.37ns │         │     68.50% │
+│ [core_int.ml:Core_int_inline_ops] functor  % 21 │  27.67ns │         │     88.69% │
+│ [core_int.ml:Core_int_inline_ops] inlined /% 21 │  19.60ns │         │     62.82% │
+│ [core_int.ml:Core_int_inline_ops] functor /% 21 │  25.78ns │         │     82.64% │
+│ [core_int.ml:Core_int_inline_ops] inlined // 21 │   8.13ns │   2.00w │     26.06% │
+│ [core_int.ml:Core_int_inline_ops] functor // 21 │  12.18ns │   6.00w │     39.05% │
+│ [core_int.ml:Core_int_inline_ops] inlined  % 31 │  22.94ns │         │     73.53% │
+│ [core_int.ml:Core_int_inline_ops] functor  % 31 │  31.20ns │         │    100.00% │
+│ [core_int.ml:Core_int_inline_ops] inlined /% 31 │  20.74ns │         │     66.48% │
+│ [core_int.ml:Core_int_inline_ops] functor /% 31 │  30.94ns │         │     99.18% │
+│ [core_int.ml:Core_int_inline_ops] inlined // 31 │   8.14ns │   2.00w │     26.08% │
+│ [core_int.ml:Core_int_inline_ops] functor // 31 │  12.25ns │   6.00w │     39.25% │
+│ [core_int.ml:Core_int_inline_ops] inlined  % 41 │  20.75ns │         │     66.50% │
+│ [core_int.ml:Core_int_inline_ops] functor  % 41 │  26.49ns │         │     84.91% │
+│ [core_int.ml:Core_int_inline_ops] inlined /% 41 │  18.89ns │         │     60.55% │
+│ [core_int.ml:Core_int_inline_ops] functor /% 41 │  24.83ns │         │     79.59% │
+│ [core_int.ml:Core_int_inline_ops] inlined // 41 │   8.14ns │   2.00w │     26.10% │
+│ [core_int.ml:Core_int_inline_ops] functor // 41 │  12.12ns │   6.00w │     38.85% │
+│ [core_int.ml:Core_int_inline_ops] inlined  % 51 │  21.57ns │         │     69.15% │
+│ [core_int.ml:Core_int_inline_ops] functor  % 51 │  29.50ns │         │     94.56% │
+│ [core_int.ml:Core_int_inline_ops] inlined /% 51 │  20.03ns │         │     64.21% │
+│ [core_int.ml:Core_int_inline_ops] functor /% 51 │  29.15ns │         │     93.45% │
+│ [core_int.ml:Core_int_inline_ops] inlined // 51 │   8.14ns │   2.00w │     26.08% │
+│ [core_int.ml:Core_int_inline_ops] functor // 51 │  12.12ns │   6.00w │     38.85% │
+└─────────────────────────────────────────────────┴──────────┴─────────┴────────────┘
+*)
+
+include O (* [Int] and [Int.O] agree value-wise *)

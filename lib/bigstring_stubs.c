@@ -118,9 +118,7 @@ CAMLprim value bigstring_blit_stub(
   char *src = (char *) ba_src->data + Long_val(v_src_pos);
   char *dst = (char *) ba_dst->data + Long_val(v_dst_pos);
   size_t len = Long_val(v_len);
-  if ((len > THREAD_IO_CUTOFF)
-      || (ba_src->flags & CAML_BA_MAPPED_FILE)
-      || (ba_dst->flags & CAML_BA_MAPPED_FILE))
+  if (len > THREAD_IO_CUTOFF)
   {
     Begin_roots2(v_src, v_dst);
     caml_enter_blocking_section();

@@ -17,7 +17,7 @@ module Int = struct
 
   let max (x : t) y = if x > y then x else y
   let min (x : t) y = if x < y then x else y
-  include Int_math
+  include Int_pow2
 end
 
 module List = Core_list
@@ -115,7 +115,7 @@ let sexp_of_key t = t.hashable.Hashable.sexp_of_t ;;
    plumb it through functions like map which call create. *)
 let load_factor = 0.85 ;;
 
-let max_table_length = Int_math.floor_pow2 Sys.max_array_length ;;
+let max_table_length = Int_pow2.floor_pow2 Sys.max_array_length ;;
 
 let calculate_table_size size =
   (* Ensure we can fit size elements in the table. *)

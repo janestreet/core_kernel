@@ -75,6 +75,7 @@ val filter : f:('a -> bool) -> 'a t -> 'a t
     exception.  See [Result.try_with] if you'd like to know which exception. *)
 val try_with : (unit -> 'a) -> 'a t
 
+(** Compares [None] as smaller than any [Some x] *)
 val compare : cmp:('a -> 'a -> int) -> 'a t -> 'a t -> int
 
 val validate : none:unit Validate.check -> some:'a Validate.check -> 'a t Validate.check

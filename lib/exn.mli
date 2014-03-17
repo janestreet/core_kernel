@@ -46,9 +46,9 @@ val protect : f:(unit -> 'a) -> finally:(unit -> unit) -> 'a
 *)
 val handle_uncaught : exit:bool -> (unit -> unit) -> unit
 
-(** behaves as [handle_uncaught ~exit:true] and also has a more precise
-    type in this case *)
-val handle_uncaught_and_exit : (unit -> never_returns) -> never_returns
+(** [handle_uncaught_and_exit f] returns [f ()], unless that raises, in which case it
+    prints the exception and exits nonzero. *)
+val handle_uncaught_and_exit : (unit -> 'a) -> 'a
 
 (* Traces exceptions passing through.  Useful because in practice backtraces still don't
    seem to work.

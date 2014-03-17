@@ -6,7 +6,7 @@ module T = struct
   type 'a t = 'a ref = { mutable contents : 'a }
 
   include (struct
-    open Typerep_kernel.Std
+    open Typerep_lib.Std
     open Sexplib.Conv
     open Bin_prot.Std
     type 'a t = 'a ref with bin_io, compare, sexp, typerep

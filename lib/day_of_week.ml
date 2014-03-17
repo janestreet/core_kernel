@@ -99,7 +99,7 @@ module Stable = struct
       | `Sat -> 6
     ;;
 
-    let shift t i = Int.Infix.( % ) (t + i) num_days_in_week
+    let shift t i = Int.( % ) (t + i) num_days_in_week
 
     let num_days ~from ~to_ =
       let d = to_ - from in

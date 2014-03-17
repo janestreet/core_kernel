@@ -59,7 +59,8 @@ module type S = sig
       [iround_exn] raises when trying to handle nan or trying to handle a float outside the
       range [float min_int, float max_int).
 
-      Here are some examples for [round] for each of the directions.
+
+      Here are some examples for [round] for each direction:
 
       {v
         | `Down    | [-2.,-1.)   to -2. | [-1.,0.)   to -1. | [0.,1.) to 0., [1.,2.) to 1. |

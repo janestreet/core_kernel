@@ -49,11 +49,11 @@ let compare_key t = t.hashable.Hashable.compare
 
 (** Internally use a maximum size that is a power of 2. Reverses the above to find the
     floor power of 2 below the system max array length *)
-let max_table_length = Int_math.floor_pow2 Sys.max_array_length ;;
+let max_table_length = Int_pow2.floor_pow2 Sys.max_array_length ;;
 
 let create ?(growth_allowed = true) ?(size = 128) ~hashable () =
   let size = Int.min (Int.max 1 size) max_table_length in
-  let size = Int_math.ceil_pow2 size in
+  let size = Int_pow2.ceil_pow2 size in
   { table = Array.create ~len:size Avltree.empty;
     length = 0;
     growth_allowed = growth_allowed;

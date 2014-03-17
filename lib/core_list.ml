@@ -1,6 +1,6 @@
 module List = StdLabels.List
 module String = StdLabels.String
-open Typerep_kernel.Std
+open Typerep_lib.Std
 open Sexplib.Std
 open Bin_prot.Std
 

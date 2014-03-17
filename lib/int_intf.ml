@@ -1,5 +1,40 @@
 open Interfaces
 
+module type Round = sig
+  type t
+
+  (* [round] rounds an int to a multiple of a given [to_multiple_of] argument, according
+     to a direction [dir], with default [dir] being [`Nearest].  [round] will raise if
+     [to_multiple_of <= 0].
+
+     {v
+       | `Down    | rounds toward Int.neg_infinity                          |
+       | `Up      | rounds toward Int.infinity                              |
+       | `Nearest | rounds to the nearest multiple, or `Up in case of a tie |
+       | `Zero    | rounds toward zero                                      |
+     v}
+
+     Here are some examples for [round ~to_multiple_of:10] for each direction:
+
+     {v
+       | `Down    | {10 .. 19} --> 10 | { 0 ... 9} --> 0 | {-10 ... -1} --> -10 |
+       | `Up      | { 1 .. 10} --> 10 | {-9 ... 0} --> 0 | {-19 .. -10} --> -10 |
+       | `Zero    | {10 .. 19} --> 10 | {-9 ... 9} --> 0 | {-19 .. -10} --> -10 |
+       | `Nearest | { 5 .. 14} --> 10 | {-5 ... 4} --> 0 | {-15 ... -6} --> -10 |
+     v}
+
+     For convenience and performance, there are variants of [round] with [dir] hard-coded.
+     If you are writing performance-critical code you should use these.
+  *)
+
+  val round : ?dir:[ `Zero | `Nearest | `Up | `Down ] -> t -> to_multiple_of:t -> t
+
+  val round_towards_zero : t -> to_multiple_of:t -> t
+  val round_down         : t -> to_multiple_of:t -> t
+  val round_up           : t -> to_multiple_of:t -> t
+  val round_nearest      : t -> to_multiple_of:t -> t
+end
+
 module type S = sig
   type t with bin_io, sexp, typerep
 
@@ -12,7 +47,7 @@ module type S = sig
   val to_string_hum : ?delimiter:char -> t -> string
 
   (** The number of bits available in this integer type.  Note that the integer
-    representations are signed *)
+      representations are signed *)
   val num_bits : int
 
   (** {9 Infix operators and constants } *)
@@ -24,14 +59,41 @@ module type S = sig
   val ( + ) : t -> t -> t
   val ( - ) : t -> t -> t
   val ( * ) : t -> t -> t
-  val ( / ) : t -> t -> t
 
   (** Negation *)
   val neg : t -> t
   val ( ~- ) : t -> t
 
+  (** There are two pairs of integer division and remainder functions, [/%] and [%], and
+      [/] and [rem].  They both satisfy the same equation relating the quotient and the
+      remainder:
+
+      {[
+        x = (x /% y) * y + (x % y);
+        x = (x /  y) * y + (rem x y);
+      ]}
+
+      The functions return the same values if [x] and [y] are positive.  They all raise
+      if [y = 0].
+
+      The functions differ if [x < 0] or [y < 0].
+
+      If [y < 0], then [%] and [/%] raise, whereas [/] and [rem] do not.
+
+      [x % y] always returns a value between 0 and [y - 1], even when [x < 0].  On the
+      other hand, [rem x y] returns a negative value if and only if [x < 0]; that value
+      satisfies [abs (rem x y) <= abs y - 1]. *)
+  val ( /% ) : t -> t -> t
+  val ( %  ) : t -> t -> t
+  val ( / )  : t -> t -> t
+  val rem    : t -> t -> t
+
+  (** float division of integers *)
+  val ( // ) : t -> t -> float
+
   (** A sub-module designed to be opened to make working with ints more convenient.  *)
   module O : sig
+
     val ( + ) : t -> t -> t
     val ( - ) : t -> t -> t
     val ( * ) : t -> t -> t
@@ -43,6 +105,10 @@ module type S = sig
     val neg    : t -> t
     val zero   : t
     val of_int_exn : int -> t
+
+    val ( % )  : t -> t -> t
+    val ( /% ) : t -> t -> t
+    val ( // ) : t -> t -> float
   end
 
   (** {9 Successor and predecessor functions } *)
@@ -54,12 +120,7 @@ module type S = sig
       [min_value] *)
   val abs : t -> t
 
-  (** Integer remainder, with the semantics of [mod] in [Pervasives] or [rem] in
-      [Int32/64], i.e.  if [y] is not zero, the result of [rem x y] satisfies the
-      following properties: [x = (x / y) * y + rem x y] and [abs (rem x y) <= abs y - 1].
-      If [y = 0], [rem x y] raises [Division_by_zero].  Notice that [rem x y] is
-      nonpositive if and only if [x < 0]. *)
-  val rem : t -> t -> t
+  include Round with type t := t
 
   (** The largest representable integer *)
   val max_value : t

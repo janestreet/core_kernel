@@ -1,5 +1,5 @@
 module Array = StdLabels.Array
-open Typerep_kernel.Std
+open Typerep_lib.Std
 open Sexplib.Std
 open Bin_prot.Std
 
@@ -913,10 +913,65 @@ BENCH_FUN "Array.set (tuple)" =
   let arr = create ~len (1,2) in
   (fun () -> arr.(len-1) <- (3,4))
 
-(* Some benchmarks of the blit operations *)
-BENCH_MODULE "Blit tests" = struct
-  let lengths = [0; 10; 100; 1000; 10_000]
+(* Allocation of arrays.  Arrays longer than 255 elements are directly allocated to the
+   major heap and are more expensive. *)
+BENCH_MODULE "Alloc" = struct
+  let lengths = [0; 100; 255; 256; 1000]
 
+  BENCH_INDEXED "create" len lengths =
+    (fun () -> ignore (create ~len 0))
+end
+
+(* Some benchmarks of the blit operations *)
+BENCH_MODULE "Blit" = struct
+  let lengths = [0; 3; 5; 10; 100; 1000; 10_000]
+
+  (* These measure the cost of using polymorphic blit. *)
+  BENCH_MODULE "Poly" = struct
+
+    BENCH_INDEXED "blit (tuple)" len lengths =
+      let src = create ~len (10, 20) in
+      let dst = create ~len (20, 30) in
+      (fun () -> blit ~src ~src_pos:0 ~dst ~dst_pos:0 ~len)
+
+    BENCH_INDEXED "blito (tuple)" len lengths =
+      let src = create ~len (10, 20) in
+      let dst = create ~len (20, 30) in
+      (fun () -> blito ~src ~src_pos:0 ~dst ~dst_pos:0 ~src_len:len ())
+
+    (* Even though [int]s are immediate and don't require [caml_modify] calls, the runtime
+       does not special case their behavior. *)
+    BENCH_INDEXED "blit (int)" len lengths =
+      let src = create ~len 0 in
+      let dst = create ~len 0 in
+      (fun () -> blit ~src ~src_pos:0 ~dst ~dst_pos:0 ~len)
+
+    BENCH_INDEXED "blito without args (int)" len lengths =
+      let src = create ~len 0 in
+      let dst = create ~len 0 in
+      (fun () -> blito ~src ~dst ())
+
+    BENCH_INDEXED "blito with args (int)" len lengths =
+      let src = create ~len 0 in
+      let dst = create ~len 0 in
+      (fun () -> blito ~src ~src_pos:0 ~dst ~dst_pos:0 ~src_len:len ())
+
+    (* In the OCaml runtime, the handling of double tagged arrays (i.e. float arrays) is
+       special cased. *)
+
+    BENCH_INDEXED "blit (float)" len lengths =
+      let src = create ~len 0.0 in
+      let dst = create ~len 0.0 in
+      (fun () -> blit ~src ~src_pos:0 ~dst ~dst_pos:0 ~len)
+
+    BENCH_INDEXED "blito (float)" len lengths =
+      let src = create ~len 0.0 in
+      let dst = create ~len 0.0 in
+      (fun () -> blito ~src ~src_pos:0 ~dst ~dst_pos:0 ~src_len:len ())
+  end
+
+  (* This measures the cost of doing a blit that takes advantage of the fact that [int]
+     has an immediate representation. *)
   BENCH_MODULE "Int" = struct
     BENCH_INDEXED "blit" len lengths =
       let src = create ~len 0 in
@@ -929,6 +984,8 @@ BENCH_MODULE "Blit tests" = struct
       (fun () -> Int.blito ~src ~src_pos:0 ~dst ~dst_pos:0 ~src_len:len ())
   end
 
+  (* This measures the cost of doing a blit that takes advantage of the fact that [float]
+     has an immediate representation in arrays. *)
   BENCH_MODULE "Float" = struct
     BENCH_INDEXED "blit" len lengths =
       let src = create ~len 0.0 in
@@ -941,3 +998,16 @@ BENCH_MODULE "Blit tests" = struct
       (fun () -> Float.blito ~src ~src_pos:0 ~dst ~dst_pos:0 ~src_len:len ())
   end
 end
+
+(* All of these benchmarks check to see if an array is empty. *)
+BENCH_MODULE "Is empty" = struct
+  let arr1 : int t = empty ()
+  let arr2 = create ~len:5 0
+
+  BENCH "Polymorphic '='" = ([||] = [||])
+  BENCH "Array.equal" = equal ~equal:(=) [||] [||]
+  BENCH "phys_equal" = [||] == [||]
+  BENCH "Array.is_empty (empty)" = is_empty arr1
+  BENCH "Array.is_empty (non-empty)" = is_empty arr2
+end
+

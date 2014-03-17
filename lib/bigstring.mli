@@ -98,9 +98,15 @@ module From_string : Blit.S_distinct with type src := string with type dst := t
 (** {6 Memory mapping} *)
 
 val map_file : shared : bool -> Unix.file_descr -> int -> t
-(** [map_file shared fd n] memory-maps [n] characters of the data
-    associated with descriptor [fd] to a bigstring.  Iff [shared] is
-    [true], all changes to the bigstring will be reflected in the file. *)
+(** [map_file shared fd n] memory-maps [n] characters of the data associated with
+    descriptor [fd] to a bigstring.  Iff [shared] is [true], all changes to the bigstring
+    will be reflected in the file.
+
+    Users must keep in mind that operations on the resulting bigstring may result in disk
+    operations which block the runtime.  This is true for pure OCaml operations (such as
+    t.{1} <- 1), and for calls to [blit].  While some I/O operations may release the OCaml
+    lock, users should not expect this to be done for all operations on a bigstring
+    returned from [map_file].  *)
 
 (** {6 Search} *)
 
