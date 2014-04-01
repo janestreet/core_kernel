@@ -26,6 +26,34 @@ module T = struct
 
 end
 
+module For_unit_tests = struct
+  (* Not for real use.  Slow and does not handle 0. *)
+  let one_ulp dir x =
+    assert (x > 0.);
+    let op = match dir with
+      | `less -> (-.)
+      | `more -> (+.)
+    in
+    let rec aux x exp =
+      let y = op x (2. ** exp) in
+      if x = y then
+        aux x (exp +. 1.)
+      else
+        y
+    in
+    let start_exp = floor (log x /. log 2.) -. 55. in
+    assert (op x (2. ** start_exp) = x);
+    let result =
+      aux x start_exp
+    in
+    assert (result <> x);
+    assert (
+      let halfway_between = (min x result) +. abs_float (x -. result) /. 2. in
+      result = halfway_between || x = halfway_between);
+    result
+  ;;
+end
+
 include T
 type outer = t with sexp, bin_io, typerep (* alias for use by sub-modules *)
 
@@ -607,6 +635,204 @@ TEST_MODULE = struct
 end
 ;;
 
+let to_padded_compact_string t =
+
+  (* Round a ratio toward the nearest integer, resolving ties toward the nearest even
+     number.  For sane inputs (in particular, when [denominator] is an integer and
+     [abs numerator < 2e52]) this should be accurate.  Otherwise, the result might be a
+     little bit off, but we don't really use that case. *)
+  let iround_ratio_exn ~numerator ~denominator =
+    let k = floor (numerator /. denominator) in
+    (* if [abs k < 2e53], then both [k] and [k +. 1.] are accurately represented, and in
+       particular [k +. 1. > k].  If [denominator] is also an integer, and
+       [abs (denominator *. (k +. 1)) < 2e53] (and in some other cases, too), then [lower]
+       and [higher] are actually both accurate.  Since (roughly)
+       [numerator = denominator *. k] then for [abs numerator < 2e52] we should be
+       fine. *)
+    let lower  = denominator *. k  in
+    let higher = denominator *. (k +. 1.) in
+    (* Subtracting numbers within a factor of two from each other is accurate.
+       So either the two subtractions below are accurate, or k = 0, or k = -1.
+       In case of a tie, round to even. *)
+    let diff_right = higher -. numerator in
+    let diff_left = numerator -. lower in
+    let k = iround_nearest_exn k in
+    if diff_right < diff_left then
+      k + 1
+    else if diff_right > diff_left then
+      k
+    else
+      (* a tie *)
+    if k mod 2 = 0 then k else k + 1
+  in
+
+  match classify t with
+  | Class.Infinite -> if t < 0.0 then "-inf  " else "inf  "
+  | Class.Nan -> "nan  "
+  | Class.Subnormal | Class.Normal | Class.Zero ->
+    let go t =
+      let conv_one t =
+        assert (0. <= t && t < 999.95);
+        let x = format_float "%.1f" t in
+        (* Fix the ".0" suffix *)
+        if String.is_suffix x ~suffix:".0" then begin
+          let n = String.length x in
+          x.[n - 1] <- ' ';
+          x.[n - 2] <- ' ';
+        end;
+        x
+      in
+      let conv mag t denominator =
+        assert (denominator  = 100.     && t >= 999.95
+             || denominator >= 100_000. && t >= round_nearest (denominator *. 9.999_5));
+        assert (t < round_nearest (denominator *. 9_999.5));
+        let i, d =
+          let k = iround_ratio_exn ~numerator:t ~denominator in
+          (* [mod] is okay here because we know i >= 0. *)
+          k / 10, k mod 10
+        in
+        assert (0 <= i && i < 1000);
+        assert (0 <= d && d < 10);
+        if d = 0 then
+          sprintf "%d%c " i mag
+        else
+          sprintf "%d%c%d" i mag d
+      in
+      (* While the standard metric prefixes (e.g. capital "M" rather than "m", [1]) are
+         nominally more correct, this hinders readability in our case.  E.g., 10G6 and
+         1066 look too similar.  That's an extreme example, but in general k,m,g,t,p
+         probably stand out better than K,M,G,T,P when interspersed with digits.
+
+         [1] http://en.wikipedia.org/wiki/Metric_prefix *)
+      (* The trick here is that:
+          - the first boundary (999.95) as a float is slightly over-represented (so it is
+            better approximated as "1k" than as "999.9"),
+          - the other boundaries are accurately represented, because they are integers.
+         That's why the strict equalities below do exactly what we want. *)
+      if t < 999.95E0       then conv_one t
+      else if t < 999.95E3  then conv 'k' t 100.
+      else if t < 999.95E6  then conv 'm' t 100_000.
+      else if t < 999.95E9  then conv 'g' t 100_000_000.
+      else if t < 999.95E12 then conv 't' t 100_000_000_000.
+      else if t < 999.95E15 then conv 'p' t 100_000_000_000_000.
+      else sprintf "%.1e" t
+    in
+    if t >= 0.
+    then go t
+    else "-" ^ (go ~-.t)
+
+TEST_MODULE = struct
+  let test f expect =
+    let actual = to_padded_compact_string f  in
+    if actual <> expect
+    then failwithf "%f: expected '%s', got '%s'" f expect actual ()
+
+  let both f expect =
+    assert (f > 0.);
+    test f expect;
+    test (~-.f) ("-"^expect);
+  ;;
+
+  let decr = For_unit_tests.one_ulp `less
+  let incr = For_unit_tests.one_ulp `more
+
+  let boundary f ~closer_to_zero ~at =
+    assert (f > 0.);
+    (* If [f] looks like an odd multiple of 0.05, it might be slightly under-represented
+       as a float, e.g.
+
+       1. -. 0.95 = 0.0500000000000000444
+
+       In such case, sadly, the right way for [to_padded_compact_string], just as for
+       [sprintf "%.1f"], is to round it down.  However, the next representable number
+       should be rounded up:
+
+       # let x = 0.95 in sprintf "%.0f / %.1f / %.2f / %.3f / %.20f" x x x x x;;
+       - : string = "1 / 0.9 / 0.95 / 0.950 / 0.94999999999999995559"
+
+       # let x = incr 0.95 in sprintf "%.0f / %.1f / %.2f / %.3f / %.20f" x x x x x ;;
+       - : string = "1 / 1.0 / 0.95 / 0.950 / 0.95000000000000006661"
+
+    *)
+    let f =
+      if f >= 1000. then
+        f
+      else
+        let x = sprintf "%.20f" f in
+        let spot = String.index_exn x '.' in
+        (* the following condition is only meant to work for small multiples of 0.05 *)
+        if x.[spot + 2] = '4' && x.[spot + 3] = '9' && x.[spot + 4] = '9' then
+          (* something like 0.94999999999999995559 *)
+          incr f
+        else
+          f
+    in
+    both (decr f) closer_to_zero;
+    both f at;
+  ;;
+
+  TEST_UNIT = test nan                            "nan  ";
+  TEST_UNIT = test 0.0                              "0  ";
+  TEST_UNIT = both min_positive_subnormal_value     "0  ";
+  TEST_UNIT = both infinity                       "inf  ";
+
+  TEST_UNIT = boundary                       0.05 ~closer_to_zero:  "0  " ~at:    "0.1";
+  TEST_UNIT = boundary                       0.15 ~closer_to_zero:  "0.1" ~at:    "0.2";
+  (* glibc printf resolves ties to even, cf.
+     http://www.exploringbinary.com/inconsistent-rounding-of-printed-floating-point-numbers/ *)
+  TEST_UNIT = boundary (* tie *)             0.25 ~closer_to_zero:  "0.2" ~at:    "0.2";
+  TEST_UNIT = boundary                 (incr 0.25)~closer_to_zero:  "0.2" ~at:    "0.3";
+  TEST_UNIT = boundary                       0.35 ~closer_to_zero:  "0.3" ~at:    "0.4";
+  TEST_UNIT = boundary                       0.45 ~closer_to_zero:  "0.4" ~at:    "0.5";
+  TEST_UNIT = both                           0.50                                 "0.5";
+  TEST_UNIT = boundary                       0.55 ~closer_to_zero:  "0.5" ~at:    "0.6";
+  TEST_UNIT = boundary                       0.65 ~closer_to_zero:  "0.6" ~at:    "0.7";
+  (* this time tie-to-even means round away from 0 *)
+  TEST_UNIT = boundary (* tie *)             0.75 ~closer_to_zero:  "0.7" ~at:    "0.8";
+  TEST_UNIT = boundary                       0.85 ~closer_to_zero:  "0.8" ~at:    "0.9";
+  TEST_UNIT = boundary                       0.95 ~closer_to_zero:  "0.9" ~at:    "1  ";
+  TEST_UNIT = boundary                       1.05 ~closer_to_zero:  "1  " ~at:    "1.1";
+  TEST_UNIT = boundary                       3.25 ~closer_to_zero:  "3.2" ~at:    "3.2";
+  TEST_UNIT = boundary                 (incr 3.25)~closer_to_zero:  "3.2" ~at:    "3.3";
+  TEST_UNIT = boundary                       3.75 ~closer_to_zero:  "3.7" ~at:    "3.8";
+  TEST_UNIT = boundary                       9.95 ~closer_to_zero:  "9.9" ~at:   "10  ";
+  TEST_UNIT = boundary                      10.05 ~closer_to_zero: "10  " ~at:   "10.1";
+  TEST_UNIT = boundary                     100.05 ~closer_to_zero:"100  " ~at:  "100.1";
+  TEST_UNIT = boundary (* tie *)           999.25 ~closer_to_zero:"999.2" ~at:  "999.2";
+  TEST_UNIT = boundary               (incr 999.25)~closer_to_zero:"999.2" ~at:  "999.3";
+  TEST_UNIT = boundary                     999.75 ~closer_to_zero:"999.7" ~at:  "999.8";
+  TEST_UNIT = boundary                     999.95 ~closer_to_zero:"999.9" ~at:    "1k ";
+  TEST_UNIT = both                        1000.                                   "1k ";
+
+  (* some ties which we resolve manually in [iround_ratio_exn] *)
+  TEST_UNIT = boundary                    1050.   ~closer_to_zero:  "1k " ~at:    "1k "
+  TEST_UNIT = boundary              (incr 1050.)  ~closer_to_zero:  "1k " ~at:    "1k1"
+  TEST_UNIT = boundary                    1950.   ~closer_to_zero:  "1k9" ~at:    "2k ";
+  TEST_UNIT = boundary                    3250.   ~closer_to_zero:  "3k2" ~at:    "3k2";
+  TEST_UNIT = boundary              (incr 3250.)  ~closer_to_zero:  "3k2" ~at:    "3k3";
+  TEST_UNIT = boundary                    9950.   ~closer_to_zero:  "9k9" ~at:   "10k ";
+  TEST_UNIT = boundary                  33_250.   ~closer_to_zero: "33k2" ~at:   "33k2";
+  TEST_UNIT = boundary            (incr 33_250.)  ~closer_to_zero: "33k2" ~at:   "33k3";
+  TEST_UNIT = boundary                  33_350.   ~closer_to_zero: "33k3" ~at:   "33k4";
+  TEST_UNIT = boundary                  33_750.   ~closer_to_zero: "33k7" ~at:   "33k8";
+  TEST_UNIT = boundary                 333_250.   ~closer_to_zero:"333k2" ~at:  "333k2";
+  TEST_UNIT = boundary           (incr 333_250.)  ~closer_to_zero:"333k2" ~at:  "333k3";
+  TEST_UNIT = boundary                 333_750.   ~closer_to_zero:"333k7" ~at:  "333k8";
+  TEST_UNIT = boundary                 999_850.   ~closer_to_zero:"999k8" ~at:  "999k8";
+  TEST_UNIT = boundary           (incr 999_850.)  ~closer_to_zero:"999k8" ~at:  "999k9";
+  TEST_UNIT = boundary                 999_950.   ~closer_to_zero:"999k9" ~at:    "1m ";
+  TEST_UNIT = boundary               1_050_000.   ~closer_to_zero:  "1m " ~at:    "1m ";
+  TEST_UNIT = boundary         (incr 1_050_000.)  ~closer_to_zero:  "1m " ~at:    "1m1";
+
+  TEST_UNIT = boundary             999_950_000.   ~closer_to_zero:"999m9" ~at:    "1g ";
+  TEST_UNIT = boundary         999_950_000_000.   ~closer_to_zero:"999g9" ~at:    "1t ";
+  TEST_UNIT = boundary     999_950_000_000_000.   ~closer_to_zero:"999t9" ~at:    "1p ";
+  TEST_UNIT = boundary 999_950_000_000_000_000.   ~closer_to_zero:"999p9" ~at:"1.0e+18";
+
+  (* Test the boundary between the subnormals and the normals. *)
+  TEST_UNIT = boundary min_positive_normal_value ~closer_to_zero:"0  " ~at:"0  ";
+end
+
 module Replace_polymorphic_compare = struct
   let equal = equal
   let compare (x : t) y = compare x y
@@ -997,34 +1223,21 @@ TEST_MODULE = struct
 
   TEST = Core_list.for_all large_numbers ~f:large_value_test
 
-  (* Not for real use.  Slow and does not handle 0. *)
-  let one_ulp_less x =
-    let rec aux x exp =
-      let y = x -. (2. ** exp) in
-      if x = y then
-        aux x (exp +. 1.)
-      else
-        y
-    in
-    let start_exp = floor (log x /. log 2.) -. 55. in
-    assert (x -. (2. ** start_exp) = x);
-    aux x start_exp
-
   let numbers_near_powers_of_two =
     Core_list.concat (
       Core_list.init (if is_64_bit_platform then 62 else 30) ~f:(fun i ->
         let pow2 = 2. ** float i in
         let x =
           [ pow2;
-            one_ulp_less (pow2 +. 0.5);
+            For_unit_tests.one_ulp `less (pow2 +. 0.5);
             pow2 +. 0.5;
-            one_ulp_less (pow2 +. 1.0);
+            For_unit_tests.one_ulp `less (pow2 +. 1.0);
             pow2 +. 1.0;
-            one_ulp_less (pow2 +. 1.5);
+            For_unit_tests.one_ulp `less (pow2 +. 1.5);
             pow2 +. 1.5;
-            one_ulp_less (pow2 +. 2.0);
+            For_unit_tests.one_ulp `less (pow2 +. 2.0);
             pow2 +. 2.0;
-            one_ulp_less (pow2 *. 2.0 -. 1.0);
+            For_unit_tests.one_ulp `less (pow2 *. 2.0 -. 1.0);
           ]
         in
         x @ (List.map x ~f:neg)

@@ -175,7 +175,7 @@ module type S = sig
   val to_string_round_trippable : float -> string
 
   (** Pretty print float, for example [to_string_hum ~decimals:3 1234.1999 = "1_234.200"]
-      [to_string_hum ~decimals:3 ~strip_zero:true 1234.1999 = "1_234.2" ]. No delimiters
+      [to_string_hum ~decimals:3 ~strip_zero:true 1234.1999 = "1_234.2" ].  No delimiters
       are inserted to the right of the decimal. *)
   val to_string_hum
     :  ?delimiter:char  (* defaults to '_' *)
@@ -183,6 +183,57 @@ module type S = sig
     -> ?strip_zero:bool (* defaults to false *)
     -> float
     -> string
+
+  (** Produce a lossy compact string representation of the float.  The float is scaled by
+      an appropriate power of 1000 and rendered with one digit after the decimal point,
+      except that the decimal point is written as '.', 'k', 'm', 'g', 't', or 'p' to
+      indicate the scale factor.  (However, if the digit after the "decimal" point is 0,
+      it is suppressed.)  The smallest scale factor that allows the number to be rendered
+      with at most 3 digits to the left of the decimal is used.  If the number is too
+      large for this format (i.e., the absolute value is at least 999.95e15), scientific
+      notation is used instead. E.g.:
+
+      {[
+        to_padded_compact_string     (-0.01) =  "-0  "
+        to_padded_compact_string       1.89  =   "1.9"
+        to_padded_compact_string 999_949.99  = "999k9"
+        to_padded_compact_string 999_950.    =   "1m "
+      ]}
+
+      In the case where the digit after the "decimal", or the "decimal" itself are
+      omitted, the numbers are padded on the right with spaces to ensure the last two
+      columns of the string always correspond to the decimal and the digit afterward
+      (except in the case of scientific notation, where the exponent is the right-most
+      element in the string and could take up to four characters).
+
+      {[
+        to_padded_compact_string    1. =    "1  ";
+        to_padded_compact_string  1.e6 =    "1m ";
+        to_padded_compact_string 1.e16 = "1.e+16";
+        to_padded_compact_string max_finite_value = "1.8e+308";
+      ]}
+
+      Numbers in the range -.05 < x < .05 are rendered as "0  " or "-0  ".
+
+      Other cases:
+
+      {[
+        to_padded_compact_string nan          =  "nan  "
+        to_padded_compact_string infinity     =  "inf  "
+        to_padded_compact_string neg_infinity = "-inf  "
+      ]}
+
+      Exact ties are resolved to even in the decimal:
+
+      {|
+        to_padded_compact_string      3.25 =  "3.2"
+        to_padded_compact_string      3.75 =  "3.8"
+        to_padded_compact_string 33_250.   = "33k2"
+        to_padded_compact_string 33_350.   = "33k4"
+      |}
+
+  *)
+  val to_padded_compact_string : float -> string
 
   (** [ldexp x n] returns [x *. 2 ** n] *)
   val ldexp : t -> int -> t

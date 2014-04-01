@@ -209,6 +209,25 @@ module Make (Hashtbl : Core_hashtbl_intf.Hashtbl) = struct
     Hashtbl.invariant t;
   ;;
 
+  TEST_UNIT "exists" =
+    let t = Hashtbl.Poly.create () in
+    assert (not (Hashtbl.exists t ~f:(fun _ -> failwith "can't be called")));
+    Hashtbl.set t ~key:7 ~data:3;
+    assert (not (Hashtbl.exists t ~f:(Int.equal 4)));
+    Hashtbl.set t ~key:8 ~data:4;
+    assert (Hashtbl.exists t ~f:(Int.equal 4));
+    Hashtbl.set t ~key:9 ~data:5;
+    assert (Hashtbl.existsi t ~f:(fun ~key ~data -> key + data = 14))
+
+  TEST_UNIT "for_all" =
+    let t = Hashtbl.Poly.create () in
+    assert (Hashtbl.for_all t ~f:(fun _ -> failwith "can't be called"));
+    Hashtbl.set t ~key:7 ~data:3;
+    assert (Hashtbl.for_all t ~f:(fun x -> Int.equal x 3));
+    Hashtbl.set t ~key:8 ~data:4;
+    assert (not (Hashtbl.for_all t ~f:(fun x -> Int.equal x 3)));
+    Hashtbl.set t ~key:9 ~data:5;
+    assert (Hashtbl.for_alli t ~f:(fun ~key ~data -> key - 4 = data));
 end
 
 TEST_MODULE = Make(Hashtbl)

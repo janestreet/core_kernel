@@ -28,3 +28,5 @@ module Make (T : sig val initial_table_size : int end) : sig
   include Identifiable
   val of_bigstring : ?pos:int -> ?len:int -> Bigstring.t -> t
 end
+
+

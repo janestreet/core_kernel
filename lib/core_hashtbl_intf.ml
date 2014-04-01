@@ -66,8 +66,10 @@ module type Accessors = sig
   val invariant : (_, _) t -> unit
   val fold : ('a, 'b) t -> init:'c -> f:(key:'a key -> data:'b -> 'c -> 'c) -> 'c
   val iter : ('a, 'b) t -> f:(key:'a key -> data:'b -> unit) -> unit
-  val existsi : ('a, 'b) t -> f:(key: 'a key -> data:'b -> bool) -> bool
-  val exists : (_, 'b) t -> f:('b -> bool) -> bool
+  val existsi  : ('a, 'b) t -> f:(key:'a key -> data:'b -> bool) -> bool
+  val exists   : (_ , 'b) t -> f:(                   'b -> bool) -> bool
+  val for_alli : ('a, 'b) t -> f:(key:'a key -> data:'b -> bool) -> bool
+  val for_all  : (_ , 'b) t -> f:(                   'b -> bool) -> bool
   val length : (_, _) t -> int
   val is_empty : (_, _) t -> bool
   val mem : ('a, _) t -> 'a key -> bool

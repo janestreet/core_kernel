@@ -143,14 +143,14 @@ val invariant : 'a t -> unit
 
 module Stable : sig
   module V1 : sig
-    type 'a t_ = 'a t = private
-    | True
-    | False
-    | And of 'a t_ * 'a t_
-    | Or of 'a t_ * 'a t_
-    | Not of 'a t_
-    | If of 'a t_ * 'a t_ * 'a t_
-    | Base of 'a
-    type 'a t = 'a t_ with sexp, bin_io, compare
+    type nonrec 'a t = 'a t = private
+      | True
+      | False
+      | And of 'a t * 'a t
+      | Or of 'a t * 'a t
+      | Not of 'a t
+      | If of 'a t * 'a t * 'a t
+      | Base of 'a
+    with sexp, bin_io, compare
   end
 end

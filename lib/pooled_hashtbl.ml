@@ -474,6 +474,9 @@ let existsi t ~f =
 
 let exists t ~f = existsi t ~f:(fun ~key:_ ~data -> f data) ;;
 
+let for_alli t ~f = not (existsi t ~f:(fun ~key   ~data -> not (f ~key ~data)))
+let for_all  t ~f = not (existsi t ~f:(fun ~key:_ ~data -> not (f       data)))
+
 let mapi t ~f =
   let new_t =
     create ~growth_allowed:t.growth_allowed
@@ -716,6 +719,8 @@ module Accessors = struct
   let iter            = iter
   let exists          = exists
   let existsi         = existsi
+  let for_all         = for_all
+  let for_alli        = for_alli
   let fold            = fold
   let length          = length
   let is_empty        = is_empty
