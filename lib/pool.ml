@@ -105,19 +105,17 @@ module Pool = struct
     TEST = t11 = max_slot
   end
 
-IFDEF ARCH_SIXTYFOUR THEN
+  (* This code has been changed to accommodate js_of_ocaml.  It previously used 
+     'IFDEF ARCH_SIXTYFOUR' to choose these settings and would assert if Int.num_bits
+     was not of an expected size.
 
-  let () = assert (Int.num_bits = 63)
-  let array_index_num_bits = 30
-  let masked_tuple_id_num_bits = 33
-
-ELSE
-
-  let () = assert (Int.num_bits = 31)
-  let array_index_num_bits = 27
-  let masked_tuple_id_num_bits = 4
-
-ENDIF
+     NOTE: other ARCH_SIXTYFOUR defines in this file will also need to be changeed 
+     to ensure correct operation of the module, but this is enough to get 
+     core_kernel to run in js_of_ocaml.
+  *)
+  let array_index_num_bits, masked_tuple_id_num_bits = 
+    if Int.num_bits = 63 then 30, 33
+    else 27, 4
 
   TEST = array_index_num_bits > 0
   TEST = masked_tuple_id_num_bits > 0
