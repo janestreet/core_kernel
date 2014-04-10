@@ -787,7 +787,7 @@ module Inline_signed_32_int_test_(T : sig end) = struct end
 
 module Inline_signed_int_test_ = 
   (val (if arch64 then (module Inline_signed_64_int_test_ : Apply_functor_for_sideeffect)
-        else (module Inline_signed_64_int_test_ : Apply_functor_for_sideeffect)))
+        else (module Inline_signed_32_int_test_ : Apply_functor_for_sideeffect)))
 
 (* execute the tests, if required *)
 module Inline_signed_int_test = Inline_signed_int_test_(struct end)
