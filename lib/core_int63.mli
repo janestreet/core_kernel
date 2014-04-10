@@ -15,21 +15,15 @@
       large of an int from a 32-bit to a 64-bit platform.  This is couterintuitive because
       the 32-bit platform has the larger int size. *)
 
-INCLUDE "config.mlh"
-
-IFDEF ARCH_SIXTYFOUR THEN
-
-(** We expose [private int] so that the compiler can omit caml_modify when dealing with
+(** WARNING: XXX The following is no longer valid and I don't know how to make it so 
+                 when the implementation is dynamically selected at run time rather than
+                 build time XXX
+   
+    We expose [private int] so that the compiler can omit caml_modify when dealing with
     record fields holding [Int63.t].  Code should not explicitly make use of the
     [private], e.g. via [(i :> int)], since such code will not compile on 32-bit
     platforms. *)
-include Int_intf.S with type t = private int
-
-ELSE
-
-include Int_intf.S
-
-ENDIF
+include Int_intf.S (* with type t = private int *)
 
 val of_int : int -> t
 val to_int : t -> int option

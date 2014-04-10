@@ -6,10 +6,21 @@ module Int64 = Caml.Int64
 
 INCLUDE "config.mlh"
 
-IFDEF ARCH_SIXTYFOUR THEN
+(* These constants are used on 64 bit platforms.  They evaluate to '-1'
+   on 32 bit platforms (at least in 4.01.0)  *)
 let   signed_max = Int32.to_int Int32.max_int
 let unsigned_max = Int64.to_int 0xffff_ffffL
-ENDIF
+
+(* this is used to replace ARCH_SIXTYFOUR. 
+   NOTE: a comment about some of the code changes.  First class modules are
+         used to select between implementations at runtime.  In some cases
+         they also wrap up TEST_MODULE code which we do not want to run
+         on inappropriate platforms.  In those cases we wrap the modules
+         as a functor and only instantiate the correct one.
+
+         Possibly not my most elegant code ever...
+   *)
+let arch64 = Word_size.(word_size = W64)
 
 type endian = [ `Big_endian | `Little_endian ]
 
@@ -280,14 +291,15 @@ TEST_MODULE "inline_signed_16" = Make_inline_tests (struct
 end)
 
 exception Pack_unsigned_32_argument_out_of_range of int with sexp
-let check_unsigned_32_in_range n =
-  IFDEF ARCH_SIXTYFOUR THEN
-    if n > unsigned_max || n < 0 then
-      raise (Pack_unsigned_32_argument_out_of_range n)
-  ELSE
-    if n < 0 then
-      raise (Pack_unsigned_32_argument_out_of_range n)
-  ENDIF
+let check_unsigned_32_in_range =
+  if arch64 then 
+    (fun n ->
+      if n > unsigned_max || n < 0 then
+        raise (Pack_unsigned_32_argument_out_of_range n))
+  else
+    (fun n ->
+      if n < 0 then
+        raise (Pack_unsigned_32_argument_out_of_range n))
 
 let pack_unsigned_32_int ~byte_order ~buf ~pos n =
   assert (Sys.word_size = 64);
@@ -315,14 +327,15 @@ let pack_unsigned_32_int_little_endian ~buf ~pos n =
 ;;
 
 exception Pack_signed_32_argument_out_of_range of int with sexp
-let check_signed_32_in_range n =
-  IFDEF ARCH_SIXTYFOUR THEN
-    if n > signed_max || n < -(signed_max + 1) then
-      raise (Pack_signed_32_argument_out_of_range n)
-  ELSE
-    if false then
-      raise (Pack_signed_32_argument_out_of_range n)
-  ENDIF
+let check_signed_32_in_range =
+  if arch64 then
+    (fun n -> 
+      if n > signed_max || n < -(signed_max + 1) then
+        raise (Pack_signed_32_argument_out_of_range n))
+  else
+    (fun n ->
+      if false then
+        raise (Pack_signed_32_argument_out_of_range n))
 
 exception Pack_signed_32_argument_out_of_range of int with sexp
 let pack_signed_32_int ~byte_order ~buf ~pos n =
@@ -395,63 +408,78 @@ let unpack_unsigned_32_int_little_endian ~buf ~pos =
   b1 lor b2 lor b3 lor b4
 ;;
 
-IFDEF ARCH_SIXTYFOUR THEN
+(* wrap the module for arch64 in a functor and only apply it on the 
+   correct platform.  This is to avoid the TEST_MODULE's running
+   inappropriately *)
+module Unpack_signed_arch64(T : sig end) = struct
 
-let unpack_signed_32_int ~byte_order ~buf ~pos =
-  let n = unpack_unsigned_32_int ~byte_order ~buf ~pos in
-  if n > signed_max then -(((signed_max + 1) lsl 1) - n)
-  else n
-;;
+  let unpack_signed_32_int ~byte_order ~buf ~pos =
+    let n = unpack_unsigned_32_int ~byte_order ~buf ~pos in
+    if n > signed_max then -(((signed_max + 1) lsl 1) - n)
+    else n
+  ;;
 
-let unpack_signed_32_int_big_endian ~buf ~pos =
-  let n = unpack_unsigned_32_int_big_endian ~buf ~pos in
-  if n > signed_max then n - (unsigned_max + 1) else n
-;;
+  let unpack_signed_32_int_big_endian ~buf ~pos =
+    let n = unpack_unsigned_32_int_big_endian ~buf ~pos in
+    if n > signed_max then n - (unsigned_max + 1) else n
+  ;;
 
-let unpack_signed_32_int_little_endian ~buf ~pos =
-  let n = unpack_unsigned_32_int_little_endian ~buf ~pos in
-  if n > signed_max then n - (unsigned_max + 1) else n
-;;
+  let unpack_signed_32_int_little_endian ~buf ~pos =
+    let n = unpack_unsigned_32_int_little_endian ~buf ~pos in
+    if n > signed_max then n - (unsigned_max + 1) else n
+  ;;
 
-TEST_MODULE "inline_unsigned_32_int" = Make_inline_tests (struct
-  let ns = [0x3f20_3040; 0x7f20_3040;
-            signed_max; signed_max + 1; unsigned_max; 0]
-  let num_bytes = 4
-  let signed = false
-  type t = int
-  let of_int64 = Int64.to_int
-  let to_int64 = Int64.of_int
-  let pack = pack_unsigned_32_int
-  let unpack = unpack_unsigned_32_int
-  let pack_big_endian = pack_unsigned_32_int_big_endian
-  let unpack_big_endian = unpack_unsigned_32_int_big_endian
-  let pack_little_endian = pack_unsigned_32_int_little_endian
-  let unpack_little_endian = unpack_unsigned_32_int_little_endian
-end)
+  TEST_MODULE "inline_unsigned_32_int" = Make_inline_tests (struct
+    let ns = [0x3f20_3040; 0x7f20_3040;
+              signed_max; signed_max + 1; unsigned_max; 0]
+    let num_bytes = 4
+    let signed = false
+    type t = int
+    let of_int64 = Int64.to_int
+    let to_int64 = Int64.of_int
+    let pack = pack_unsigned_32_int
+    let unpack = unpack_unsigned_32_int
+    let pack_big_endian = pack_unsigned_32_int_big_endian
+    let unpack_big_endian = unpack_unsigned_32_int_big_endian
+    let pack_little_endian = pack_unsigned_32_int_little_endian
+    let unpack_little_endian = unpack_unsigned_32_int_little_endian
+  end)
 
-TEST_MODULE "inline_signed_32_int" = Make_inline_tests (struct
-  let ns = [0x3f20_3040; 0x7f20_3040; -0x7f20_3040;
-            signed_max; -(signed_max + 1); 0]
-  let num_bytes = 4
-  let signed = true
-  type t = int
-  let of_int64 = Int64.to_int
-  let to_int64 = Int64.of_int
-  let pack = pack_signed_32_int
-  let unpack = unpack_signed_32_int
-  let pack_big_endian = pack_signed_32_int_big_endian
-  let unpack_big_endian = unpack_signed_32_int_big_endian
-  let pack_little_endian = pack_signed_32_int_little_endian
-  let unpack_little_endian = unpack_signed_32_int_little_endian
-end)
+  TEST_MODULE "inline_signed_32_int" = Make_inline_tests (struct
+    let ns = [0x3f20_3040; 0x7f20_3040; -0x7f20_3040;
+              signed_max; -(signed_max + 1); 0]
+    let num_bytes = 4
+    let signed = true
+    type t = int
+    let of_int64 = Int64.to_int
+    let to_int64 = Int64.of_int
+    let pack = pack_signed_32_int
+    let unpack = unpack_signed_32_int
+    let pack_big_endian = pack_signed_32_int_big_endian
+    let unpack_big_endian = unpack_signed_32_int_big_endian
+    let pack_little_endian = pack_signed_32_int_little_endian
+    let unpack_little_endian = unpack_signed_32_int_little_endian
+  end)
 
-ELSE
+end
 
-let unpack_signed_32_int               = unpack_unsigned_32_int
-let unpack_signed_32_int_big_endian    = unpack_unsigned_32_int_big_endian
-let unpack_signed_32_int_little_endian = unpack_unsigned_32_int_little_endian
+module Unpack_signed_arch32(T : sig end) = struct
+  let unpack_signed_32_int               = unpack_unsigned_32_int
+  let unpack_signed_32_int_big_endian    = unpack_unsigned_32_int_big_endian
+  let unpack_signed_32_int_little_endian = unpack_unsigned_32_int_little_endian
+end
 
-ENDIF (* ARCH_SIXTYFOUR *)
+module type Unpack_signed = functor (T : sig end) -> sig
+  val unpack_signed_32_int_big_endian    : buf:string -> pos:int -> int
+  val unpack_signed_32_int : byte_order:endian -> buf:string -> pos:int -> int
+  val unpack_signed_32_int_little_endian : buf:string -> pos:int -> int
+end
+
+module Unpack_signed = 
+  (val (if arch64 then (module Unpack_signed_arch64 : Unpack_signed)
+        else (module Unpack_signed_arch32 : Unpack_signed)))
+
+include Unpack_signed(struct end)
 
 let pack_signed_64 ~byte_order ~buf ~pos v =
   let top3 = Int64.to_int (Int64.shift_right v 40) in
@@ -536,22 +564,21 @@ let unpack_signed_64_big_endian ~buf ~pos =
   and b6 = Char.code (Caml.String.unsafe_get buf (pos + 5))
   and b7 = Char.code (Caml.String.unsafe_get buf (pos + 6)) in
 
-  IFDEF ARCH_SIXTYFOUR THEN
+  if arch64 then (* move up and return functions (and repeat above code)? *)
 
-  let i1 = Int64.of_int (                                b1)
-  and i2 = Int64.of_int ((b2 lsl 48) lor (b3 lsl 40) lor
-                         (b4 lsl 32) lor (b5 lsl 24) lor
-                         (b6 lsl 16) lor (b7 lsl  8) lor b8) in
-  Int64.(logor i2 (shift_left i1 56))
+    let i1 = Int64.of_int (                                b1)
+    and i2 = Int64.of_int ((b2 lsl 48) lor (b3 lsl 40) lor
+                           (b4 lsl 32) lor (b5 lsl 24) lor
+                           (b6 lsl 16) lor (b7 lsl  8) lor b8) in
+    Int64.(logor i2 (shift_left i1 56))
 
-  ELSE
+  else
 
-  let i1 = Int64.of_int (                (b1 lsl 8) lor b2)
-  and i2 = Int64.of_int ((b3 lsl 16) lor (b4 lsl 8) lor b5)
-  and i3 = Int64.of_int ((b6 lsl 16) lor (b7 lsl 8) lor b8) in
-  Int64.(logor i3 (logor (shift_left i2 24) (shift_left i1 48)))
+    let i1 = Int64.of_int (                (b1 lsl 8) lor b2)
+    and i2 = Int64.of_int ((b3 lsl 16) lor (b4 lsl 8) lor b5)
+    and i3 = Int64.of_int ((b6 lsl 16) lor (b7 lsl 8) lor b8) in
+    Int64.(logor i3 (logor (shift_left i2 24) (shift_left i1 48)))
 
-  ENDIF
 ;;
 
 let unpack_signed_64_little_endian ~buf ~pos =
@@ -566,22 +593,21 @@ let unpack_signed_64_little_endian ~buf ~pos =
   and b6 = Char.code (Caml.String.unsafe_get buf (pos + 5))
   and b7 = Char.code (Caml.String.unsafe_get buf (pos + 6)) in
 
-  IFDEF ARCH_SIXTYFOUR THEN
+  if arch64 then (* move up and return functions (and repeat above code)? *)
+  
+    let i1 = Int64.of_int ( b1         lor (b2 lsl  8) lor
+                          (b3 lsl 16) lor (b4 lsl 24) lor
+                          (b5 lsl 32) lor (b6 lsl 40) lor (b7 lsl 48))
+    and i2 = Int64.of_int   b8         in
+    Int64.(logor i1 (shift_left i2 56))
 
-  let i1 = Int64.of_int ( b1         lor (b2 lsl  8) lor
-                         (b3 lsl 16) lor (b4 lsl 24) lor
-                         (b5 lsl 32) lor (b6 lsl 40) lor (b7 lsl 48))
-  and i2 = Int64.of_int   b8         in
-  Int64.(logor i1 (shift_left i2 56))
+  else
 
-  ELSE
+    let i1 = Int64.of_int (b1 lor (b2 lsl 8) lor (b3 lsl 16))
+    and i2 = Int64.of_int (b4 lor (b5 lsl 8) lor (b6 lsl 16))
+    and i3 = Int64.of_int (b7 lor (b8 lsl 8)) in
+    Int64.(logor i1 (logor (shift_left i2 24) (shift_left i3 48)))
 
-  let i1 = Int64.of_int (b1 lor (b2 lsl 8) lor (b3 lsl 16))
-  and i2 = Int64.of_int (b4 lor (b5 lsl 8) lor (b6 lsl 16))
-  and i3 = Int64.of_int (b7 lor (b8 lsl 8)) in
-  Int64.(logor i1 (logor (shift_left i2 24) (shift_left i3 48)))
-
-  ENDIF
 ;;
 
 let pack_signed_64_int ~byte_order ~buf ~pos n =
@@ -729,33 +755,42 @@ TEST_MODULE "inline_signed_64" = Make_inline_tests (struct
   let unpack_little_endian = unpack_signed_64_little_endian
 end)
 
-IFDEF ARCH_SIXTYFOUR THEN
+module type Apply_functor_for_sideeffect = functor (T : sig end) -> sig end
 
-TEST_MODULE "inline_signed_64_int" = Make_inline_tests (struct
-  (* These numbers are written with one endianness and read with the opposite endianness,
-     so the smallest byte becomes the biggest byte. Because of this, the range restriction
-     that applies to the biggest byte also applies to the smallest byte. *)
-  let ns =
-    List.map ~f:Int64.to_int
-      [0x3f20_3040_5060_0708L
-      ;0x7f20_3040_5060_0708L
-      ;0x7f20_3040_5060_0708L
-      ;0x7fff_ffff_ffff_0000L
-      ;0L]
-  let num_bytes = 8
-  let signed = true
-  type t = int
-  let of_int64 = Int64.to_int
-  let to_int64 = Int64.of_int
-  let pack = pack_signed_64_int
-  let unpack = unpack_signed_64_int
-  let pack_big_endian = pack_signed_64_int_big_endian
-  let unpack_big_endian = unpack_signed_64_int_big_endian
-  let pack_little_endian = pack_signed_64_int_little_endian
-  let unpack_little_endian = unpack_signed_64_int_little_endian
-end)
+(* wrap up the test module in a functor so it won't run unless required by the platform *)
+module Inline_signed_64_int_test_(T : sig end) = struct
+  TEST_MODULE "inline_signed_64_int" = Make_inline_tests (struct
+    (* These numbers are written with one endianness and read with the opposite endianness,
+      so the smallest byte becomes the biggest byte. Because of this, the range restriction
+      that applies to the biggest byte also applies to the smallest byte. *)
+    let ns =
+      List.map ~f:Int64.to_int
+        [0x3f20_3040_5060_0708L
+        ;0x7f20_3040_5060_0708L
+        ;0x7f20_3040_5060_0708L
+        ;0x7fff_ffff_ffff_0000L
+        ;0L]
+    let num_bytes = 8
+    let signed = true
+    type t = int
+    let of_int64 = Int64.to_int
+    let to_int64 = Int64.of_int
+    let pack = pack_signed_64_int
+    let unpack = unpack_signed_64_int
+    let pack_big_endian = pack_signed_64_int_big_endian
+    let unpack_big_endian = unpack_signed_64_int_big_endian
+    let pack_little_endian = pack_signed_64_int_little_endian
+    let unpack_little_endian = unpack_signed_64_int_little_endian
+  end)
+end
+module Inline_signed_32_int_test_(T : sig end) = struct end
 
-ENDIF
+module Inline_signed_int_test_ = 
+  (val (if arch64 then (module Inline_signed_64_int_test_ : Apply_functor_for_sideeffect)
+        else (module Inline_signed_64_int_test_ : Apply_functor_for_sideeffect)))
+
+(* execute the tests, if required *)
+module Inline_signed_int_test = Inline_signed_int_test_(struct end)
 
 let pack_float ~byte_order ~buf ~pos f =
   pack_signed_64 ~byte_order ~buf ~pos (Int64.bits_of_float f)
