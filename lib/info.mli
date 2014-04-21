@@ -30,10 +30,18 @@ type t with bin_io, sexp
 (** [to_string_hum] forces the lazy message, which might be an expensive operation.
 
     [to_string_hum] usually produces a sexp; however, it is guaranteed that [to_string_hum
-    (of_string s) = s]. *)
+    (of_string s) = s].
+
+    If this string is going to go into a log file, you may find it useful to ensure that
+    the string is only one line long. To do this, use [Sexp.to_string_mach (sexp_of_t t)].
+*)
 val to_string_hum : t -> string
 
-(** old version (pre 109.61) of [to_string_hum] that some applications rely on *)
+(** old version (pre 109.61) of [to_string_hum] that some applications rely on.
+
+    Calls should be replaced with [Sexp.to_string_mach (sexp_of_t t)], which outputs more
+    parenthesis and backslashes.
+*)
 val to_string_hum_deprecated : t -> string
 
 val of_string : string -> t

@@ -107,6 +107,262 @@ let rindex_from t pos char =
   try Some (rindex_from_exn t pos char)
   with Not_found -> None
 
+module Search_pattern = struct
+
+  type t = string * int array with sexp_of
+
+  (* Find max number of matched characters at [next_text_char], given the current
+     [matched_chars]. Try to extend the current match, if chars don't match, try to match
+     fewer chars. If chars match then extend the match. *)
+  let kmp_internal_loop ~matched_chars ~next_text_char ~pattern ~kmp_arr =
+    let matched_chars = ref matched_chars in
+    while !matched_chars > 0 && next_text_char <> unsafe_get pattern !matched_chars do
+      matched_chars := Core_array.unsafe_get kmp_arr (!matched_chars - 1)
+    done;
+    if next_text_char = unsafe_get pattern !matched_chars then
+      matched_chars := !matched_chars + 1;
+    !matched_chars
+  ;;
+
+  (* Classic KMP pre-processing of the pattern: build the int array, which, for each i,
+     contains the length of the longest non-trivial prefix of s which is equal to a suffix
+     ending at s.[i] *)
+  let create pattern =
+    let n = length pattern in
+    let kmp_arr = Core_array.create ~len:n (-1) in
+    if n > 0 then begin
+      Core_array.unsafe_set kmp_arr 0 0;
+      let matched_chars = ref 0 in
+      for i = 1 to n - 1 do
+        matched_chars :=
+          kmp_internal_loop
+            ~matched_chars:!matched_chars
+            ~next_text_char:(unsafe_get pattern i)
+            ~pattern
+            ~kmp_arr;
+        Core_array.unsafe_set kmp_arr i !matched_chars
+      done
+    end;
+    (pattern, kmp_arr)
+  ;;
+
+  TEST_MODULE "Search_pattern.create" = struct
+    let prefix s n = sub s ~pos:0 ~len:n
+    let suffix s n = sub s ~pos:(length s - n) ~len:n
+
+    let slow_create pattern =
+      (* Compute the longest prefix-suffix array from definition, O(n^3) *)
+      let n = length pattern in
+      let kmp_arr = Core_array.create ~len:n (-1) in
+      for i = 0 to n - 1 do
+        let x = prefix pattern (i + 1) in
+        for j = 0 to i do
+          if prefix x j = suffix x j then
+            kmp_arr.(i) <- j
+        done
+      done;
+      (pattern, kmp_arr)
+    ;;
+
+    let test_both (s, a) = create s = (s, a) && slow_create s = (s, a)
+    let cmp_both s = create s = slow_create s
+
+    TEST = test_both ("", [| |])
+    TEST = test_both ("ababab", [|0; 0; 1; 2; 3; 4|])
+    TEST = test_both ("abaCabaD", [|0; 0; 1; 0; 1; 2; 3; 0|])
+    TEST = test_both ("abaCabaDabaCabaCabaDabaCabaEabab",
+                           [|0; 0; 1; 0; 1; 2; 3; 0; 1; 2; 3; 4; 5; 6; 7; 4; 5; 6; 7; 8;
+                             9; 10; 11; 12; 13; 14; 15; 0; 1; 2; 3; 2|])
+
+    let rec x k =
+      if k < 0 then "" else
+        let b = x (k - 1) in
+        b ^ (make 1 (Caml.Char.unsafe_chr (65 + k))) ^ b
+    ;;
+
+    TEST = cmp_both (x 10)
+    TEST = cmp_both ((x 5) ^ "E" ^ (x 4) ^ "D" ^ (x 3) ^ "B" ^ (x 2) ^ "C" ^ (x 3))
+  end
+
+  (* Classic KMP: use the pre-processed pattern to optimize look-behinds on non-matches.
+     We return int to avoid allocation in [index_exn]. -1 means no match. *)
+  let index_internal ?(pos=0) (pattern, kmp_arr) ~in_:text =
+    if pos < 0 || pos > length text - length pattern then
+      -1
+    else begin
+      let j = ref pos in
+      let matched_chars = ref 0 in
+      let k = length pattern in
+      let n = length text in
+      while !j < n && !matched_chars < k do
+        let next_text_char = unsafe_get text !j in
+        matched_chars :=
+          kmp_internal_loop
+            ~matched_chars:!matched_chars
+            ~next_text_char
+            ~pattern
+            ~kmp_arr;
+        j := !j + 1
+      done;
+      if !matched_chars = k then
+        !j - k
+      else
+        -1
+    end
+  ;;
+
+  let index ?pos t ~in_ =
+    let p = index_internal ?pos t ~in_ in
+    if p < 0 then
+      None
+    else
+      Some p
+  ;;
+
+  TEST = index (create "") ~in_:"abababac" = Some 0
+  TEST = index ~pos:(-1) (create "") ~in_:"abababac" = None
+  TEST = index ~pos:1 (create "") ~in_:"abababac" = Some 1
+  TEST = index ~pos:7 (create "") ~in_:"abababac" = Some 7
+  TEST = index ~pos:8 (create "") ~in_:"abababac" = Some 8
+  TEST = index ~pos:9 (create "") ~in_:"abababac" = None
+  TEST = index (create "abababaca") ~in_:"abababac" = None
+  TEST = index (create "abababac") ~in_:"abababac" = Some 0
+  TEST = index ~pos:0 (create "abababac") ~in_:"abababac" = Some 0
+  TEST = index (create "abac") ~in_:"abababac" = Some 4
+  TEST = index ~pos:4 (create "abac") ~in_:"abababac" = Some 4
+  TEST = index ~pos:5 (create "abac") ~in_:"abababac" = None
+  TEST = index ~pos:5 (create "abac") ~in_:"abababaca" = None
+  TEST = index ~pos:5 (create "baca") ~in_:"abababaca" = Some 5
+  TEST = index ~pos:(-1) (create "a") ~in_:"abc" = None
+  TEST = index ~pos:2 (create "a") ~in_:"abc" = None
+  TEST = index ~pos:2 (create "c") ~in_:"abc" = Some 2
+  TEST = index ~pos:3 (create "c") ~in_:"abc" = None
+
+  let index_exn ?pos t ~in_ =
+    let p = index_internal ?pos t ~in_ in
+    if p >= 0 then
+      p
+    else
+      failwiths "Substring not found" (fst t) sexp_of_string
+  ;;
+
+  let index_all (pattern, kmp_arr) ~may_overlap ~in_:text =
+    if length pattern = 0 then
+      List.init (1 + length text) ~f:Fn.id
+    else begin
+      let matched_chars = ref 0 in
+      let k = length pattern in
+      let n = length text in
+      let found = ref [] in
+      for j = 0 to n do
+        if !matched_chars = k then begin
+          found := (j - k)::!found;
+          (* we just found a match in the previous iteration *)
+          match may_overlap with
+          | true -> matched_chars := Core_array.unsafe_get kmp_arr (k - 1)
+          | false -> matched_chars := 0
+        end;
+        if j < n then begin
+          let next_text_char = unsafe_get text j in
+          matched_chars :=
+            kmp_internal_loop
+              ~matched_chars:!matched_chars
+              ~next_text_char
+              ~pattern
+              ~kmp_arr
+        end
+      done;
+      Core_list.rev !found
+    end
+  ;;
+
+  TEST = index_all (create "") ~may_overlap:false ~in_:"abcd" = [0; 1; 2; 3; 4]
+  TEST = index_all (create "") ~may_overlap:true ~in_:"abcd" = [0; 1; 2; 3; 4]
+  TEST = index_all (create "abab") ~may_overlap:false ~in_:"abababab" = [0; 4]
+  TEST = index_all (create "abab") ~may_overlap:true  ~in_:"abababab" = [0; 2; 4]
+  TEST = index_all (create "abab") ~may_overlap:false ~in_:"ababababab" = [0; 4]
+  TEST = index_all (create "abab") ~may_overlap:true  ~in_:"ababababab" = [0; 2; 4; 6]
+  TEST = index_all (create "aaa") ~may_overlap:false ~in_:"aaaaBaaaaaa" = [0; 5; 8]
+  TEST = index_all (create "aaa") ~may_overlap:true  ~in_:"aaaaBaaaaaa" = [0; 1; 5; 6; 7; 8]
+
+  let replace_first ?pos t ~in_:s ~with_ =
+    match index ?pos t ~in_:s with
+    | None -> s
+    | Some i ->
+      let len_s = length s in
+      let len_t = length (fst t) in
+      let len_with = length with_ in
+      let dst = make (len_s + len_with - len_t) ' ' in
+      blit ~src:s ~src_pos:0 ~dst ~dst_pos:0 ~len:i;
+      blit ~src:with_ ~src_pos:0 ~dst ~dst_pos:i ~len:len_with;
+      blit ~src:s ~src_pos:(i + len_t) ~dst ~dst_pos:(i + len_with) ~len:(len_s - i - len_t);
+      dst
+  ;;
+
+  TEST = replace_first (create "abab") ~in_:"abababab" ~with_:"" = "abab"
+  TEST = replace_first (create "abab") ~in_:"abacabab" ~with_:"" = "abac"
+  TEST = replace_first (create "abab") ~in_:"ababacab" ~with_:"A" = "Aacab"
+  TEST = replace_first (create "abab") ~in_:"acabababab" ~with_:"A" = "acAabab"
+  TEST = replace_first (create "ababab") ~in_:"acabababab" ~with_:"A" = "acAab"
+  TEST = replace_first (create "abab") ~in_:"abababab" ~with_:"abababab" = "abababababab"
+
+
+  let replace_all t ~in_:s ~with_ =
+    let matches = index_all t ~may_overlap:false ~in_:s in
+    match matches with
+    | [] -> s
+    | _::_ ->
+      let len_s = length s in
+      let len_t = length (fst t) in
+      let len_with = length with_ in
+      let num_matches = Core_list.length matches in
+      let dst = make (len_s + (len_with - len_t) * num_matches) ' ' in
+      let next_dst_pos = ref 0 in
+      let next_src_pos = ref 0 in
+      List.iter matches ~f:(fun i ->
+        let len = i - !next_src_pos in
+        blit ~src:s ~src_pos:!next_src_pos ~dst ~dst_pos:!next_dst_pos ~len;
+        blit ~src:with_ ~src_pos:0 ~dst ~dst_pos:(!next_dst_pos + len) ~len:len_with;
+        next_dst_pos := !next_dst_pos + len + len_with;
+        next_src_pos := !next_src_pos + len + len_t;
+      );
+      blit ~src:s ~src_pos:!next_src_pos ~dst ~dst_pos:!next_dst_pos
+        ~len:(len_s - !next_src_pos);
+      dst
+  ;;
+
+  TEST = replace_all (create "abab") ~in_:"abababab" ~with_:"" = ""
+  TEST = replace_all (create "abab") ~in_:"abacabab" ~with_:"" = "abac"
+  TEST = replace_all (create "abab") ~in_:"acabababab" ~with_:"A" = "acAA"
+  TEST = replace_all (create "ababab") ~in_:"acabababab" ~with_:"A" = "acAab"
+  TEST = replace_all (create "abaC") ~in_:"abaCabaDCababaCabaCaba" ~with_:"x" = "xabaDCabxxaba"
+  TEST = replace_all (create "a") ~in_:"aa" ~with_:"aaa" = "aaaaaa"
+  TEST = replace_all (create "") ~in_:"abcdeefff" ~with_:"X1" = "X1aX1bX1cX1dX1eX1eX1fX1fX1fX1"
+
+  (* a doc comment in core_string.mli gives this as an example *)
+  TEST = replace_all (create "bc") ~in_:"aabbcc" ~with_:"cb" = "aabcbc"
+end
+
+let substr_index ?pos t ~pattern =
+  Search_pattern.index ?pos (Search_pattern.create pattern) ~in_:t
+;;
+
+let substr_index_exn ?pos t ~pattern =
+  Search_pattern.index_exn ?pos (Search_pattern.create pattern) ~in_:t
+;;
+
+let substr_index_all t ~may_overlap ~pattern =
+  Search_pattern.index_all (Search_pattern.create pattern) ~may_overlap ~in_:t
+;;
+
+let substr_replace_first ?pos t ~pattern =
+  Search_pattern.replace_first ?pos (Search_pattern.create pattern) ~in_:t
+;;
+
+let substr_replace_all t ~pattern =
+  Search_pattern.replace_all (Search_pattern.create pattern) ~in_:t
+;;
+
 let id x = x
 let of_string = id
 let to_string = id

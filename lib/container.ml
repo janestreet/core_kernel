@@ -10,6 +10,14 @@ open With_return
 module type T = sig
   type 'a t
   val fold : 'a t -> init:'b -> f:('b -> 'a -> 'b) -> 'b
+  (* The [iter] argument to [Container.Make] is optional.  If non-[None], it overrides the
+     default implementation of [iter] in terms of [fold], which is often slower than a
+     more direct implementation.
+
+     Several other functions returned by [Container.Make] are defined in terms of [iter],
+     so passing in a more efficient [iter] will improve their efficiency as well.
+  *)
+  val iter : ('a t -> f:('a -> unit) -> unit) option
 end
 
 let fold_count fold t ~f = fold t ~init:0 ~f:(fun n a -> if f a then n + 1 else n)
@@ -33,9 +41,6 @@ let fold_count fold t ~f = fold t ~init:0 ~f:(fun n a -> if f a then n + 1 else 
 
     because the [include] makes it to easy to shadow specialized implementations of
     container functions ([length] being a common one).
-
-    [Container.Make] implements [iter] in terms of [fold], which is often slower than
-    implementing [iter] directly.
 *)
 module Make (T : T) = struct
   open T
@@ -44,7 +49,12 @@ module Make (T : T) = struct
 
   let count t ~f = fold_count fold t ~f
 
-  let iter t ~f = fold t ~init:() ~f:(fun () a -> f a)
+  let iter_via_fold t ~f = fold t ~init:() ~f:(fun () a -> f a)
+
+  let iter =
+    match T.iter with
+    | Some iter -> iter
+    | None -> iter_via_fold
 
   let length c = fold c ~init:0 ~f:(fun acc _ -> acc + 1)
 

@@ -219,9 +219,19 @@ let fold t ~init ~f =
   end;
 ;;
 
+(* [iter] is implemented directly because implementing it in terms of fold is slower *)
+let iter t ~f =
+  let num_mutations = t.num_mutations in
+  for i = 0 to t.length - 1 do
+    f (unsafe_get t i);
+    ensure_no_mutation t num_mutations;
+  done;
+;;
+
 module C = Container.Make (struct
   type nonrec 'a t = 'a t
   let fold = fold
+  let iter = Some iter
 end)
 
 let to_list  = C.to_list
@@ -231,15 +241,6 @@ let find_map = C.find_map
 let exists   = C.exists
 let for_all  = C.for_all
 let mem      = C.mem
-
-(* [iter] is implemented directly because implementing it in terms of fold is slower *)
-let iter t ~f =
-  let num_mutations = t.num_mutations in
-  for i = 0 to t.length - 1 do
-    f (unsafe_get t i);
-    ensure_no_mutation t num_mutations;
-  done;
-;;
 
 (* For [concat_map], [filter_map], and [filter], we don't create [t_result] with [t]'s
    capacity because we have no idea how many elements [t_result] will ultimately hold. *)

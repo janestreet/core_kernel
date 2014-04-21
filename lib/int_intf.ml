@@ -122,6 +122,10 @@ module type S = sig
 
   include Round with type t := t
 
+  (** [pow base exponent] returns [base] raised to the power of [exponent].  It is OK if
+      [base <= 0].  [pow] raises if [exponent < 0], or an integer overflow would occur. *)
+  val pow : t -> t -> t
+
   (** The largest representable integer *)
   val max_value : t
   (** The smallest representable integer *)

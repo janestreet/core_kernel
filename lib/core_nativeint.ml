@@ -92,6 +92,8 @@ let of_int64 = Conv.int64_to_nativeint
 let of_int64_exn = Conv.int64_to_nativeint_exn
 let to_int64 = Conv.nativeint_to_int64
 
+let pow b e = of_int_exn (Int_math.int_pow (to_int_exn b) (to_int_exn e))
+
 include Conv.Make (T)
 
 include Pretty_printer.Register (struct

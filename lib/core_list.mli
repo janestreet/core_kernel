@@ -357,8 +357,8 @@ val concat_no_order : 'a t t -> 'a t
 
 val cons : 'a -> 'a t -> 'a t
 
-(* Returns a list with all possible pairs -- if input lists have length len1 and len2,
-   resulting list will have length len1*len2. *)
+(* Returns a list with all possible pairs -- if the input lists have length len1 and len2,
+   the resulting list will have length len1*len2. *)
 val cartesian_product : 'a t -> 'b t -> ('a * 'b) t
 
 val to_string : f:('a -> string) -> 'a t -> string
@@ -372,7 +372,7 @@ val permute : ?random_state:Core_random.State.t -> 'a t -> 'a t
 (** [is_sorted t ~compare] returns [true] iff forall adjacent [a1; a2] in [t], [compare a1
     a2 <= 0].
 
-    [is_sorted_strictly] is similar, except uses [<] instead of [<=]. *)
+    [is_sorted_strictly] is similar, except it uses [<] instead of [<=]. *)
 val is_sorted          : 'a t -> compare:('a -> 'a -> int) -> bool
 val is_sorted_strictly : 'a t -> compare:('a -> 'a -> int) -> bool
 

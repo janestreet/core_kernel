@@ -383,6 +383,8 @@ module C = Container.Make (struct
       | t :: ts -> loop acc t ts
     in
     loop init t []
+
+  let iter = None
 end)
 
 let count    = C.count

@@ -1,6 +1,49 @@
 open Interfaces
 open Common
 
+let negative_exponent () =
+  Core_printf.invalid_argf "exponent can not be negative" ()
+
+let overflow () =
+  Core_printf.invalid_argf "integer overflow in pow" ()
+
+(* To implement [int64_pow], we use C code rather than OCaml to eliminate allocation. *)
+external int_math_int_pow   : int   -> int   -> int   = "int_math_int_pow_stub" "noalloc"
+external int_math_int64_pow : int64 -> int64 -> int64 = "int_math_int64_pow_stub"
+
+let int_pow base exponent =
+  if exponent < 0 then negative_exponent ();
+
+  if abs(base) > 1 &&
+     (exponent > 63 ||
+      abs(base) > Pow_overflow_bounds.int_positive_overflow_bounds.(exponent))
+  then overflow ();
+
+  int_math_int_pow base exponent
+;;
+
+(* we don't do [abs] in int64 case to avoid allocation *)
+let int64_pow base exponent =
+  if exponent < 0L then negative_exponent ();
+
+  if (base > 1L || base < (-1L)) &&
+     (exponent > 63L ||
+      (base >= 0L &&
+       base > Pow_overflow_bounds.int64_positive_overflow_bounds.(Int64.to_int exponent))
+      ||
+      (base < 0L &&
+       base < Pow_overflow_bounds.int64_negative_overflow_bounds.(Int64.to_int exponent)))
+  then overflow ();
+
+  int_math_int64_pow base exponent
+;;
+
+BENCH_MODULE "int_math_pow" = struct
+  BENCH "2 ^ 30"   = int_pow 2 30
+  BENCH "2L ^ 30L" = int64_pow 2L 30L
+  BENCH "2L ^ 60L" = int64_pow 2L 60L
+end
+
 module type T = sig
   type t
   include Floatable with type t := t
@@ -17,7 +60,6 @@ module type T = sig
   val neg    : t -> t
   val zero   : t
   val of_int_exn : int -> t
-
   val rem : t -> t -> t
 end
 
@@ -123,7 +165,6 @@ module Make (X : T) = struct
   end
 
   TEST_MODULE "remainder-and-modulus-random" = struct
-
     let check x y =
       let check_raises f =
         try begin
@@ -169,5 +210,88 @@ module Make (X : T) = struct
         check (-x) (-y);
       done
   end
+end
 
+TEST_MODULE "pow" = struct
+  TEST = int_pow 0  0 = 1
+  TEST = int_pow 0  1 = 0
+  TEST = int_pow 10 1 = 10
+  TEST = int_pow 10 2 = 100
+  TEST = int_pow 10 3 = 1_000
+  TEST = int_pow 10 4 = 10_000
+  TEST = int_pow 10 5 = 100_000
+  TEST = int_pow 2 10 = 1024
+
+  TEST = int_pow 0 1_000_000 = 0
+  TEST = int_pow 1 1_000_000 = 1
+  TEST = int_pow (-1) 1_000_000 = 1
+  TEST = int_pow (-1) 1_000_001 = -1
+
+  TEST = int64_pow 0L 0L = 1L
+  TEST = int64_pow 0L 1_000_000L = 0L
+  TEST = int64_pow 1L 1_000_000L = 1L
+  TEST = int64_pow (-1L) 1_000_000L = 1L
+  TEST = int64_pow (-1L) 1_000_001L = -1L
+
+  TEST = int64_pow 10L 1L  = 10L
+  TEST = int64_pow 10L 2L  = 100L
+  TEST = int64_pow 10L 3L  = 1_000L
+  TEST = int64_pow 10L 4L  = 10_000L
+  TEST = int64_pow 10L 5L  = 100_000L
+  TEST = int64_pow 2L  10L = 1_024L
+  TEST = int64_pow 5L  27L = 7450580596923828125L
+
+  let exception_thrown pow b e = try let _ = pow b e in false with _ -> true;;
+
+  TEST = exception_thrown int_pow 10 60
+  TEST = exception_thrown int64_pow 10L 60L
+  TEST = exception_thrown int_pow 10 (-1)
+  TEST = exception_thrown int64_pow 10L (-1L)
+
+  TEST = exception_thrown int64_pow 2L 63L
+  TEST = not (exception_thrown int64_pow 2L 62L)
+
+  TEST = exception_thrown int64_pow (-2L) 63L
+  TEST = not (exception_thrown int64_pow (-2L) 62L)
+end
+
+TEST_MODULE "overflow_bounds" = struct
+  TEST = Pow_overflow_bounds.overflow_bound_max_int_value = Pervasives.max_int
+  TEST = Pow_overflow_bounds.overflow_bound_max_int64_value = Int64.max_int
+
+  (* These tests are disabled because they create a dependency to bignum.
+
+  module Big_int = struct
+    include Big_int
+    let (>)  = gt_big_int
+    let (=)  = eq_big_int
+    let (^)  = power_big_int_positive_int
+    let (+)  = add_big_int
+    let one  = unit_big_int
+    let to_string = string_of_big_int
+  end
+
+  let test_overflow_table tbl conv max_val =
+    assert (Array.length tbl = 64);
+    let max_val = conv max_val in
+    StdLabels.Array.iteri tbl ~f:(fun i max_base ->
+      let max_base = conv max_base in
+      let overflows b = Big_int.((b ^ i) > max_val) in
+      let is_ok =
+        if i = 0 then Big_int.(max_base = max_val)
+        else
+          not (overflows max_base) && overflows Big_int.(max_base + one)
+      in
+      if not is_ok then
+        Core_printf.failwithf
+          "overflow table check failed for %s (index %d)"
+          (Big_int.to_string max_base) i ())
+  ;;
+
+  TEST_UNIT = test_overflow_table Pow_overflow_bounds.int_positive_overflow_bounds
+                Big_int.big_int_of_int Pervasives.max_int
+
+  TEST_UNIT = test_overflow_table Pow_overflow_bounds.int64_positive_overflow_bounds
+                Big_int.big_int_of_int64 Int64.max_int
+  *)
 end

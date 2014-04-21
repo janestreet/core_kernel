@@ -73,6 +73,7 @@ module C =
   Container.Make (struct
     type nonrec 'a t = 'a t
     let fold = fold
+    let iter = Some iter
   end)
 
 let mem      = C.mem

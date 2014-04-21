@@ -265,10 +265,24 @@ let find_elt t ~f =
       if f (Elt.value elt) then r.return (Some elt));
     None)
 
+(* this function is lambda lifted for performance, to make direct recursive calls instead
+   of calls through its closure. It also avoids the initial closure allocation. *)
+let rec iter_loop first f elt =
+  f (Elt.value elt);
+  let next = Elt.next elt in
+  if not (phys_equal next first) then iter_loop first f next
+
+let iter t ~f =
+  match !t with
+  | None -> ()
+  | Some first ->
+    Header.with_iteration (Elt.header first) (fun () -> iter_loop first f first)
+
 module C = Container.Make (struct
   type 'a t_ = 'a t
   type 'a t = 'a t_
   let fold t ~init ~f = fold_elt t ~init ~f:(fun acc elt -> f acc (Elt.value elt))
+  let iter = Some iter
 end)
 
 let count    = C.count
@@ -279,22 +293,6 @@ let fold     = C.fold
 let for_all  = C.for_all
 let mem      = C.mem
 let to_array = C.to_array
-
-(* this function is lambda lifted for performance, to make direct recursive calls instead
-   of calls through its closure. It also avoids the initial closure allocation. *)
-let rec iter_loop first f elt =
-  f (Elt.value elt);
-  let next = Elt.next elt in
-  if not (phys_equal next first) then iter_loop first f next
-
-(* more efficient than the one from container *)
-let iter t ~f =
-  match !t with
-  | None -> ()
-  | Some first ->
-    Header.with_iteration (Elt.header first) (fun () ->
-      iter_loop first f first
-    )
 
 let unchecked_iter t ~f =
   match !t with

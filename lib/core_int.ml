@@ -100,6 +100,7 @@ TEST = (neg 5 + 5 = 0)
 
 (* note that rem is not same as % *)
 let rem a b = a mod b
+
 let incr = Pervasives.incr
 let decr = Pervasives.decr
 
@@ -110,6 +111,10 @@ let bit_not a = lnot a
 let bit_or a b = a lor b
 let bit_and a b = a land b
 let bit_xor a b = a lxor b
+
+let pow = Int_math.int_pow
+TEST = pow min_value 1 = min_value
+TEST = pow max_value 1 = max_value
 
 include Int_pow2
 

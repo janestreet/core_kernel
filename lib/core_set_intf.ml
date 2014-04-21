@@ -30,6 +30,8 @@ end
 module Without_comparator = Core_map_intf.Without_comparator
 module With_comparator    = Core_map_intf.With_comparator
 
+module Map = Core_map
+
 module type Accessors_generic = sig
 
   include Container.Generic_phantom
@@ -39,6 +41,8 @@ module type Accessors_generic = sig
   (* The [options] type is used to make [Accessors_generic] flexible as to whether a
      comparator is required to be passed to certain functions. *)
   type ('a, 'cmp, 'z) options
+
+  type 'cmp cmp
 
   val invariants
     : ('a, 'cmp,
@@ -138,11 +142,17 @@ module type Accessors_generic = sig
     ) options
 
   val to_tree : ('a, 'cmp) t -> ('a elt, 'cmp) tree
+
+  val to_map
+    : ('a, 'cmp,
+       ('a, 'cmp) t -> f:('a elt -> 'b) -> ('a elt, 'b, 'cmp cmp) Map.t
+    ) options
 end
 
 module type Accessors0 = sig
   include Container.S0
   type tree
+  type comparator_witness
   val invariants     : t -> bool
   val mem            : t -> elt -> bool
   val add            : t -> elt -> t
@@ -173,11 +183,13 @@ module type Accessors0 = sig
   val find_index     : t -> int -> elt option
   val remove_index   : t -> int -> t
   val to_tree        : t -> tree
+  val to_map         : t -> f:(elt -> 'data) -> (elt, 'data, comparator_witness) Map.t
 end
 
 module type Accessors1 = sig
   include Container.S1
   type 'a tree
+  type comparator_witness
   val invariants     : _ t -> bool
   val mem            : 'a t -> 'a -> bool
   val add            : 'a t -> 'a -> 'a t
@@ -208,6 +220,7 @@ module type Accessors1 = sig
   val find_index     : 'a t -> int -> 'a option
   val remove_index   : 'a t -> int -> 'a t
   val to_tree        : 'a t -> 'a tree
+  val to_map         : 'a t -> f:('a -> 'b) -> ('a, 'b, comparator_witness) Map.t
 end
 
 module type Accessors2 = sig
@@ -245,6 +258,7 @@ module type Accessors2 = sig
   val find_index     : ('a, _) t -> int -> 'a option
   val remove_index   : ('a, 'cmp) t -> int -> ('a, 'cmp) t
   val to_tree        : ('a, 'cmp) t -> ('a, 'cmp) tree
+  val to_map         : ('a, 'cmp) t -> f:('a -> 'b) -> ('a, 'b, 'cmp) Map.t
 end
 
 module type Accessors2_with_comparator = sig
@@ -303,15 +317,21 @@ module type Accessors2_with_comparator = sig
   val remove_index
     : comparator:('a, 'cmp) Comparator.t -> ('a, 'cmp) t -> int -> ('a, 'cmp) t
   val to_tree        : ('a, 'cmp) t -> ('a, 'cmp) tree
+  val to_map
+    :  comparator:('a, 'cmp) Comparator.t
+    -> ('a, 'cmp) t
+    -> f:('a -> 'b)
+    -> ('a, 'b, 'cmp) Map.t
 end
 
 (* Consistency checks (same as in [Container]). *)
-module Check_accessors (T : T2) (Tree : T2) (Elt : T1) (Options : T3)
+module Check_accessors (T : T2) (Tree : T2) (Elt : T1) (Cmp : T1) (Options : T3)
   (M : Accessors_generic
      with type ('a, 'b, 'c) options := ('a, 'b, 'c) Options.t
      with type ('a, 'b) t           := ('a, 'b) T.t
      with type ('a, 'b) tree        := ('a, 'b) Tree.t
-     with type 'a elt               := 'a Elt.t)
+     with type 'a elt               := 'a Elt.t
+     with type 'cmp cmp             := 'cmp Cmp.t)
   = struct end
 
 module Check_accessors0 (M : Accessors0) =
@@ -319,6 +339,7 @@ module Check_accessors0 (M : Accessors0) =
     (struct type ('a, 'b) t = M.t end)
     (struct type ('a, 'b) t = M.tree end)
     (struct type 'a t = M.elt end)
+    (struct type 'a t = M.comparator_witness end)
     (Without_comparator)
     (M)
 
@@ -327,6 +348,7 @@ module Check_accessors1 (M : Accessors1) =
     (struct type ('a, 'b) t = 'a M.t end)
     (struct type ('a, 'b) t = 'a M.tree end)
     (struct type 'a t = 'a end)
+    (struct type 'a t = M.comparator_witness end)
     (Without_comparator)
     (M)
 
@@ -335,6 +357,7 @@ module Check_accessors2 (M : Accessors2) =
     (struct type ('a, 'b) t = ('a, 'b) M.t end)
     (struct type ('a, 'b) t = ('a, 'b) M.tree end)
     (struct type 'a t = 'a end)
+    (struct type 'a t = 'a end)
     (Without_comparator)
     (M)
 
@@ -342,6 +365,7 @@ module Check_accessors2_with_comparator (M : Accessors2_with_comparator) =
   Check_accessors
     (struct type ('a, 'b) t = ('a, 'b) M.t end)
     (struct type ('a, 'b) t = ('a, 'b) M.tree end)
+    (struct type 'a t = 'a end)
     (struct type 'a t = 'a end)
     (With_comparator)
     (M)
@@ -352,6 +376,7 @@ module type Creators_generic = sig
   type ('a, 'cmp) tree
   type 'a elt
   type ('a, 'cmp, 'z) options
+  type 'cmp cmp
 
   val empty : ('a, 'cmp, ('a, 'cmp) t) options
   val singleton : ('a, 'cmp, 'a elt -> ('a, 'cmp) t) options
@@ -388,6 +413,9 @@ module type Creators_generic = sig
     : ('a, 'cmp,
        ('a elt, 'cmp) tree -> ('a, 'cmp) t
     ) options
+
+  (* never requires a comparator because it can get one from the input [Map.t] *)
+  val of_map_keys : ('a elt, _, 'cmp cmp) Map.t -> ('a, 'cmp) t
 end
 
 module type Creators0 = sig
@@ -395,6 +423,7 @@ module type Creators0 = sig
   type t
   type tree
   type elt
+  type comparator_witness
   val empty                     : t
   val singleton                 : elt -> t
   val union_list                : t list -> t
@@ -406,12 +435,14 @@ module type Creators0 = sig
   val map                       : ('a, _) set -> f:('a -> elt       ) -> t
   val filter_map                : ('a, _) set -> f:('a -> elt option) -> t
   val of_tree                   : tree -> t
+  val of_map_keys               : (elt, _, comparator_witness) Map.t -> t
 end
 
 module type Creators1 = sig
   type ('a, 'cmp) set
   type 'a t
   type 'a tree
+  type comparator_witness
   val empty                     : 'a t
   val singleton                 : 'a -> 'a t
   val union_list                : 'a t list -> 'a t
@@ -423,6 +454,7 @@ module type Creators1 = sig
   val map                       : ('a, _) set -> f:('a -> 'b       ) -> 'b t
   val filter_map                : ('a, _) set -> f:('a -> 'b option) -> 'b t
   val of_tree                   : 'a tree -> 'a t
+  val of_map_keys               : ('a, _, comparator_witness) Map.t -> 'a t
 end
 
 module type Creators2 = sig
@@ -440,6 +472,7 @@ module type Creators2 = sig
   val map                       : ('a, _) set -> f:('a -> 'b       ) -> ('b, 'cmp) t
   val filter_map                : ('a, _) set -> f:('a -> 'b option) -> ('b, 'cmp) t
   val of_tree                   : ('a, 'cmp) tree -> ('a, 'cmp) t
+  val of_map_keys               : ('a, _, 'cmp) Map.t -> ('a, 'cmp) t
 end
 
 module type Creators2_with_comparator = sig
@@ -465,14 +498,17 @@ module type Creators2_with_comparator = sig
     -> f:('a -> 'b option) -> ('b, 'cmp) t
   val of_tree                   : comparator:('a, 'cmp) Comparator.t
     -> ('a, 'cmp) tree -> ('a, 'cmp) t
+
+  val of_map_keys : ('a, _, 'cmp) Map.t -> ('a, 'cmp) t
 end
 
-module Check_creators (T : T2) (Tree : T2) (Elt : T1) (Options : T3)
+module Check_creators (T : T2) (Tree : T2) (Elt : T1) (Cmp : T1) (Options : T3)
   (M : Creators_generic
      with type ('a, 'b, 'c) options := ('a, 'b, 'c) Options.t
      with type ('a, 'b) t           := ('a, 'b) T.t
      with type ('a, 'b) tree        := ('a, 'b) Tree.t
-     with type 'a elt               := 'a Elt.t)
+     with type 'a elt               := 'a Elt.t
+     with type 'cmp cmp             := 'cmp Cmp.t)
   = struct end
 
 module Check_creators0 (M : Creators0) =
@@ -480,6 +516,7 @@ module Check_creators0 (M : Creators0) =
     (struct type ('a, 'b) t = M.t end)
     (struct type ('a, 'b) t = M.tree end)
     (struct type 'a t = M.elt end)
+    (struct type 'cmp t = M.comparator_witness end)
     (Without_comparator)
     (M)
 
@@ -488,6 +525,7 @@ module Check_creators1 (M : Creators1) =
     (struct type ('a, 'b) t = 'a M.t end)
     (struct type ('a, 'b) t = 'a M.tree end)
     (struct type 'a t = 'a end)
+    (struct type 'cmp t = M.comparator_witness end)
     (Without_comparator)
     (M)
 
@@ -496,6 +534,7 @@ module Check_creators2 (M : Creators2) =
     (struct type ('a, 'b) t = ('a, 'b) M.t end)
     (struct type ('a, 'b) t = ('a, 'b) M.tree end)
     (struct type 'a t = 'a end)
+    (struct type 'cmp t = 'cmp end)
     (Without_comparator)
     (M)
 
@@ -504,6 +543,7 @@ module Check_creators2_with_comparator (M : Creators2_with_comparator) =
     (struct type ('a, 'b) t = ('a, 'b) M.t end)
     (struct type ('a, 'b) t = ('a, 'b) M.tree end)
     (struct type 'a t = 'a end)
+    (struct type 'cmp t = 'cmp end)
     (With_comparator)
     (M)
 
@@ -514,6 +554,7 @@ module type Creators_and_accessors_generic = sig
     with type ('a, 'b) t           := ('a, 'b) t
     with type ('a, 'b) tree        := ('a, 'b) tree
     with type 'a elt               := 'a elt
+    with type 'cmp cmp             := 'cmp cmp
 end
 
 module type Creators_and_accessors0 = sig
@@ -522,6 +563,7 @@ module type Creators_and_accessors0 = sig
     with type t    := t
     with type tree := tree
     with type elt  := elt
+    with type comparator_witness := comparator_witness
 end
 
 module type Creators_and_accessors1 = sig
@@ -529,6 +571,7 @@ module type Creators_and_accessors1 = sig
   include Creators1
     with type 'a t    := 'a t
     with type 'a tree := 'a tree
+    with type comparator_witness := comparator_witness
 end
 
 module type Creators_and_accessors2 = sig
@@ -562,6 +605,7 @@ module type S0 = sig
       with type t            := t
       with type tree         := t
       with type elt          := Elt.t
+      with type comparator_witness := Elt.comparator_witness
   end
 
   type t = (Elt.t, Elt.comparator_witness) set with compare, sexp
@@ -571,6 +615,7 @@ module type S0 = sig
     with type t            := t
     with type tree         := Tree.t
     with type elt          := Elt.t
+    with type comparator_witness := Elt.comparator_witness
 end
 
 module type S0_binable = sig

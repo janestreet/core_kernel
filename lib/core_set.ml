@@ -21,6 +21,7 @@ open With_return
 
 module Array = Core_array
 module List = Core_list
+module Map = Core_map
 
 open Int_replace_polymorphic_compare
 
@@ -756,6 +757,17 @@ module Tree0 = struct
     loop xs [] empty
   ;;
 
+  let to_map ~comparator t ~f =
+    Map.of_sorted_array_unchecked ~comparator
+      (Array.map (to_array t) ~f:(fun key -> (key, f key)))
+  ;;
+
+  let of_map_keys m =
+    of_sorted_array_unchecked
+      ~compare_elt:(Map.comparator m).Comparator.compare
+      (List.to_array (Map.keys m))
+  ;;
+
   open Sexplib
 
   let t_of_sexp a_of_sexp sexp ~compare_elt =
@@ -849,6 +861,8 @@ module Accessors = struct
   let find_index t i = Tree0.find_index t.tree i
   let remove_index t i = like t (Tree0.remove_index t.tree i ~compare_elt:(compare_elt t))
   let sexp_of_t sexp_of_a t = Tree0.sexp_of_t sexp_of_a t.tree
+
+  let to_map t ~f = Tree0.to_map t.tree ~f ~comparator:t.comparator
 end
 
 let to_tree t = t.tree
@@ -896,6 +910,8 @@ let filter_map ~comparator t ~f =
   }
 ;;
 
+let of_map_keys m = { comparator = Map.comparator m; tree = Tree0.of_map_keys m }
+
 include Accessors
 
 let compare _ _ t1 t2 = compare_direct t1 t2
@@ -905,6 +921,7 @@ module Creators (Elt : Comparator.S1) : sig
   type ('a, 'comparator) t_ = ('a Elt.t, Elt.comparator_witness) set
   type ('a, 'b) tree = 'a Tree0.t
   type 'a elt_ = 'a Elt.t
+  type 'a cmp_ = Elt.comparator_witness
 
   val t_of_sexp : (Sexp.t -> 'a Elt.t) -> Sexp.t -> ('a, 'comparator) t_
 
@@ -914,6 +931,7 @@ module Creators (Elt : Comparator.S1) : sig
     with type ('a, 'b) tree        := ('a, 'b) tree
     with type 'a elt               := 'a elt_
     with type ('a, 'b, 'c) options := ('a, 'b, 'c) Without_comparator.t
+    with type 'a cmp               := 'a cmp_
 
 end = struct
 
@@ -922,6 +940,8 @@ end = struct
   type ('a, 'b) tree = 'a Tree0.t
 
   type 'a elt_ = 'a Elt.t
+
+  type 'cmp cmp_ = Elt.comparator_witness
 
   let comparator = Elt.comparator
 
@@ -950,6 +970,8 @@ end = struct
   let filter_map t ~f = filter_map ~comparator t ~f
 
   let t_of_sexp a_of_sexp sexp = of_tree (Tree0.t_of_sexp a_of_sexp sexp ~compare_elt)
+
+  let of_map_keys = of_map_keys
 
 end
 
@@ -1017,6 +1039,9 @@ module Make_tree (Elt : Comparator.S1) = struct
 
   let to_tree t = t
   let of_tree t = t
+
+  let of_map_keys = Tree0.of_map_keys
+  let to_map t ~f = Tree0.to_map t ~f ~comparator
 end
 
 module Poly = struct
@@ -1226,4 +1251,7 @@ module Tree = struct
 
   let to_tree t = t
   let of_tree ~comparator:_ t = t
+
+  let of_map_keys = Tree0.of_map_keys
+  let to_map = Tree0.to_map
 end

@@ -184,15 +184,6 @@ let fold   t     ~init ~f = fold'  t `front_to_back ~init ~f
 let foldi  t     ~init ~f = foldi' t `front_to_back ~init ~f
 let iteri  t           ~f = iteri' t `front_to_back ~f
 
-(* We have to be careful here, importing all of Container.Make would change the runtime of
-   some functions ([length] minimally) silently without changing the semantics.  We get
-   around that by importing things explicitly.  *)
-module C = Container.Make (struct
-  type nonrec 'a t = 'a t
-  let fold = fold
-end)
-let count      = C.count
-
 let iter t ~f =
   if not (is_empty t) then begin
     let actual_front = actual_front_index_when_not_empty t in
@@ -212,6 +203,16 @@ let iter t ~f =
   end
 ;;
 
+(* We have to be careful here, importing all of Container.Make would change the runtime of
+   some functions ([length] minimally) silently without changing the semantics.  We get
+   around that by importing things explicitly.  *)
+module C = Container.Make (struct
+  type nonrec 'a t = 'a t
+  let fold = fold
+  let iter = Some iter
+end)
+
+let count      = C.count
 let exists     = C.exists
 let mem        = C.mem
 let for_all    = C.for_all

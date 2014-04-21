@@ -31,3 +31,6 @@ module Make (X : T) : sig
   val ( // ) : X.t -> X.t -> float
   include Int_intf.Round with type t := X.t
 end
+
+val int_pow   : int   -> int   -> int
+val int64_pow : int64 -> int64 -> int64

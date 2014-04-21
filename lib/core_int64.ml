@@ -32,6 +32,7 @@ let max_value = max_int
 let abs = abs
 let pred = pred
 let succ = succ
+let pow = Int_math.int64_pow
 let rem = rem
 let neg = neg
 let minus_one = minus_one
