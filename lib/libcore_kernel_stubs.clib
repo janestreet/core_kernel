@@ -1,0 +1,12 @@
+# OASIS_START
+# DO NOT EDIT (digest: 3bd1c5c9791c562248fe3c6f4b2b0bfb)
+bigstring_marshal_stubs.o
+bigstring_stubs.o
+channel_stubs.o
+core_array_stubs.o
+core_gc_stubs.o
+hash_stubs.o
+heap_block_stubs.o
+exn_stubs.o
+int_math_stubs.o
+# OASIS_STOP
