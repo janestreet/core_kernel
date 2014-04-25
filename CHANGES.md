@@ -154,29 +154,32 @@
 - Added `Error.to_string_hum_deprecated` that is the same as
   `Error.to_string_hum` pre 109.61.
 - Changed `Error.to_string_hum` so that
-	`Error.to_string_hum (Error.of_string s) = s`.
+  `Error.to_string_hum (Error.of_string s) = s`.
 
-		This fixed undesirable sexp escaping introduced in 109.61 and
-		restores the pre-109.61 behavior for the special case of
-		`Error.of_string`.  A consequence of the removal of the custom
-		`to_string_hum` converter in 109.61 was that:
+  This fixed undesirable sexp escaping introduced in 109.61 and
+  restores the pre-109.61 behavior for the special case of
+  `Error.of_string`.  A consequence of the removal of the custom
+  `to_string_hum` converter in 109.61 was that:
 
-		    Error.to_string_hum (Error.of_string s) = Sexp.to_string_hum (Sexp.Atom s)
+  ```ocaml
+  Error.to_string_hum (Error.of_string s) =
+      Sexp.to_string_hum (Sexp.Atom s)
+  ```
 
-		That introduced sexp escaping of `s`.
-
+  That introduced sexp escaping of `s`.
 - Added to `Doubly_linked` functions for moving an element
   within a list.
 
-        val move_to_front : 'a t -> 'a Elt.t -> unit
-        val move_to_back  : 'a t -> 'a Elt.t -> unit
-        val move_after    : 'a t -> 'a Elt.t -> anchor:'a Elt.t -> unit
-        val move_before   : 'a t -> 'a Elt.t -> anchor:'a Elt.t -> unit
-
+  ```ocaml
+  val move_to_front : 'a t -> 'a Elt.t -> unit
+  val move_to_back  : 'a t -> 'a Elt.t -> unit
+  val move_after    : 'a t -> 'a Elt.t -> anchor:'a Elt.t -> unit
+  val move_before   : 'a t -> 'a Elt.t -> anchor:'a Elt.t -> unit
+  ```
 - Improved `Core_map_unit_tests.Unit_tests` to allow arbitrary data
   in the map, not just `ints`.
 
-		This was done by eta expansion.
+  This was done by eta expansion.
 
 ## 110.01.00
 
@@ -270,25 +273,17 @@
 
   New sexp:
 
-  ```ocaml
-  ┌────────────────────────┬──────────┬─────────┬────────────┐
-  │ Name                   │ Time/Run │ mWd/Run │ Percentage │
-  ├────────────────────────┼──────────┼─────────┼────────────┤
-  │ new Float.sexp_of 3.14 │ 463.28ns │   6.00w │     48.88% │
-  │ new Float.sexp_of e    │ 947.71ns │  12.00w │    100.00% │
-  └────────────────────────┴──────────┴─────────┴────────────┘
-  ```
+  | Name                   | Time/Run | mWd/Run | Percentage |
+  |------------------------|----------|---------|------------|
+  | new Float.sexp_of 3.14 | 463.28ns |   6.00w |     48.88% |
+  | new Float.sexp_of e    | 947.71ns |  12.00w |    100.00% |
 
   Old sexp:
 
-  ```ocaml
-  ┌────────────────────────┬──────────┬─────────┬────────────┐
-  │ Name                   │ Time/Run │ mWd/Run │ Percentage │
-  ├────────────────────────┼──────────┼─────────┼────────────┤
-  │ old Float.sexp_of 3.14 │ 841.99ns │ 178.00w │     98.03% │
-  │ old Float.sexp_of e    │ 858.94ns │ 178.00w │    100.00% │
-  └────────────────────────┴──────────┴─────────┴────────────┘
-  ```
+  | Name                   | Time/Run | mWd/Run | Percentage |
+  |------------------------|----------|---------|------------|
+  | old Float.sexp_of 3.14 | 841.99ns | 178.00w |     98.03% |
+  | old Float.sexp_of e    | 858.94ns | 178.00w |    100.00% |
 
   Much of the speedup in the 3.14 case comes from the fact that
   `format_float "%.15g"` is much faster than `sprintf "%.15g"`.  And
@@ -298,36 +293,32 @@
   Here are some detailed benchmarks of the various bits and pieces of
   what's going on here:
 
-  ```ocaml
-  ┌─────────────────────────────────────┬────────────┬─────────┬────────────┐
-  │ Name                                │   Time/Run │ mWd/Run │ Percentage │
-  ├─────────────────────────────────────┼────────────┼─────────┼────────────┤
-  │ format_float '%.15g' 3.14           │   335.96ns │   2.00w │     32.71% │
-  │ format_float '%.17g' 3.14           │   394.18ns │   4.00w │     38.38% │
-  │ format_float '%.20g' 3.14           │   459.79ns │   4.00w │     44.77% │
-  │ format_float '%.40g' 3.14           │   638.06ns │   7.00w │     62.13% │
-  │ sprintf '%.15g' 3.14                │   723.71ns │ 165.00w │     70.47% │
-  │ sprintf '%.17g' 3.14                │   803.44ns │ 173.00w │     78.23% │
-  │ sprintf '%.20g' 3.14                │   920.78ns │ 176.00w │     89.66% │
-  │ sprintf '%.40g' 3.14                │   990.09ns │ 187.00w │     96.41% │
-  │ format_float '%.15g' e              │   357.59ns │   4.00w │     34.82% │
-  │ format_float '%.17g' e              │   372.16ns │   4.00w │     36.24% │
-  │ format_float '%.20g' e              │   434.59ns │   4.00w │     42.32% │
-  │ format_float '%.40g' e              │   592.78ns │   7.00w │     57.72% │
-  │ sprintf '%.15g' e                   │   742.12ns │ 173.00w │     72.26% │
-  │ sprintf '%.17g' e                   │   747.92ns │ 173.00w │     72.83% │
-  │ sprintf '%.20g' e                   │   836.30ns │ 176.00w │     81.43% │
-  │ sprintf '%.40g' e                   │ 1_026.96ns │ 187.00w │    100.00% │
-  │ valid_float_lexem 12345678901234567 │    76.29ns │   9.00w │      7.43% │
-  │ valid_float_lexem 3.14              │     9.28ns │   5.00w │      0.90% │
-  │ float_of_string 3.14                │   130.19ns │   2.00w │     12.68% │
-  │ float_of_string 1234567890123456.7  │   184.33ns │   2.00w │     17.95% │
-  │ to_string 3.14                      │   316.47ns │   7.00w │     30.82% │
-  │ to_string_round_trippable 3.14      │   466.02ns │   9.00w │     45.38% │
-  │ to_string e                         │   315.41ns │   7.00w │     30.71% │
-  │ to_string_round_trippable e         │   949.12ns │  15.00w │     92.42% │
-  └─────────────────────────────────────┴────────────┴─────────┴────────────┘
-  ```
+  | Name                                |   Time/Run | mWd/Run | Percentage |
+  |-------------------------------------|------------|---------|------------|
+  | format_float '%.15g' 3.14           |   335.96ns |   2.00w |     32.71% |
+  | format_float '%.17g' 3.14           |   394.18ns |   4.00w |     38.38% |
+  | format_float '%.20g' 3.14           |   459.79ns |   4.00w |     44.77% |
+  | format_float '%.40g' 3.14           |   638.06ns |   7.00w |     62.13% |
+  | sprintf '%.15g' 3.14                |   723.71ns | 165.00w |     70.47% |
+  | sprintf '%.17g' 3.14                |   803.44ns | 173.00w |     78.23% |
+  | sprintf '%.20g' 3.14                |   920.78ns | 176.00w |     89.66% |
+  | sprintf '%.40g' 3.14                |   990.09ns | 187.00w |     96.41% |
+  | format_float '%.15g' e              |   357.59ns |   4.00w |     34.82% |
+  | format_float '%.17g' e              |   372.16ns |   4.00w |     36.24% |
+  | format_float '%.20g' e              |   434.59ns |   4.00w |     42.32% |
+  | format_float '%.40g' e              |   592.78ns |   7.00w |     57.72% |
+  | sprintf '%.15g' e                   |   742.12ns | 173.00w |     72.26% |
+  | sprintf '%.17g' e                   |   747.92ns | 173.00w |     72.83% |
+  | sprintf '%.20g' e                   |   836.30ns | 176.00w |     81.43% |
+  | sprintf '%.40g' e                   | 1_026.96ns | 187.00w |    100.00% |
+  | valid_float_lexem 12345678901234567 |    76.29ns |   9.00w |      7.43% |
+  | valid_float_lexem 3.14              |     9.28ns |   5.00w |      0.90% |
+  | float_of_string 3.14                |   130.19ns |   2.00w |     12.68% |
+  | float_of_string 1234567890123456.7  |   184.33ns |   2.00w |     17.95% |
+  | to_string 3.14                      |   316.47ns |   7.00w |     30.82% |
+  | to_string_round_trippable 3.14      |   466.02ns |   9.00w |     45.38% |
+  | to_string e                         |   315.41ns |   7.00w |     30.71% |
+  | to_string_round_trippable e         |   949.12ns |  15.00w |     92.42% |
 
 - Replaced `Float.min_positive_value` with `min_positive_normal_value`
   and `min_positive_subnormal_value`.
@@ -438,16 +429,12 @@
   CPU time of the old version on non-negative floats.  For negative
   floats it uses around 60% of the CPU time.
 
-  ```
-  ┌─────────────────────────┬───────────┬──────────┐
-  │ Name                    │ Time (ns) │ % of max │
-  ├─────────────────────────┼───────────┼──────────┤
-  │ old iround_down_exn pos │     15.02 │    95.23 │
-  │ new iround_down_exn pos │      3.75 │    23.75 │
-  │ old iround_down_exn neg │     15.78 │   100.00 │
-  │ new iround_down_exn neg │      9.80 │    62.10 │
-  └─────────────────────────┴───────────┴──────────┘
-  ```
+  | Name                    | Time (ns) | % of max |
+  |-------------------------|-----------|----------|
+  | old iround_down_exn pos |     15.02 |    95.23 |
+  | new iround_down_exn pos |      3.75 |    23.75 |
+  | old iround_down_exn neg |     15.78 |   100.00 |
+  | new iround_down_exn neg |      9.80 |    62.10 |
 - Added `Binary_searchable.Make` functor to core, and used it in `Array` and `Dequeue`.
 - Fixed `Bounded_int_table` to match `Invariant.S2`.
 - Added to `Pool` support for `10-`, `11-`, and `12-` tuples.
@@ -640,17 +627,16 @@
   ```
   $ ./test_bench.exe -q 2 -clear name time +alloc +time-err
   Estimated testing time 12s (change using -quota SECS).
-  ┌─────────────────┬───────────┬─────────────┬──────────┬───────┐
-  │ Name            │ Time (ns) │      95% ci │ Time R^2 │ Minor │
-  ├─────────────────┼───────────┼─────────────┼──────────┼───────┤
-  │ quick_stat      │     92.16 │ +0.72 -0.64 │     1.00 │ 23.00 │
-  │ counters        │     33.63 │ +0.26 -0.23 │     1.00 │ 10.00 │
-  │ allocated_bytes │     37.89 │ +0.34 -0.32 │     1.00 │ 12.00 │
-  │ minor_words     │      4.63 │ +0.03 -0.02 │     1.00 │       │
-  │ major_words     │      4.36 │ +0.02 -0.02 │     1.00 │       │
-  │ promoted_words  │      4.10 │ +0.03 -0.02 │     1.00 │       │
-  └─────────────────┴───────────┴─────────────┴──────────┴───────┘
   ```
+
+  | Name            | Time (ns) |      95% ci | Time R^2 | Minor |
+  |-----------------|-----------|-------------|----------|-------|
+  | quick_stat      |     92.16 | +0.72 -0.64 |     1.00 | 23.00 |
+  | counters        |     33.63 | +0.26 -0.23 |     1.00 | 10.00 |
+  | allocated_bytes |     37.89 | +0.34 -0.32 |     1.00 | 12.00 |
+  | minor_words     |      4.63 | +0.03 -0.02 |     1.00 |       |
+  | major_words     |      4.36 | +0.02 -0.02 |     1.00 |       |
+  | promoted_words  |      4.10 | +0.03 -0.02 |     1.00 |       |
 
 ## 109.34.00
 
