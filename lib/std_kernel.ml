@@ -74,6 +74,7 @@ module Printf                 = Core_printf
 module Quickcheck             = Quickcheck
 module Result                 = Result
 module Robustly_comparable    = Robustly_comparable
+module Sequence               = Sequence
 module Set_once               = Set_once
 module Sexp_maybe             = Core_sexp.Sexp_maybe
 module Sexpable               = Sexpable

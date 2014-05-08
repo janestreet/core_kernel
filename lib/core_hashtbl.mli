@@ -48,7 +48,7 @@
     Hashtbl.find table "C" ]}
     Here 4 need only be a guess at the hashtable's future size.
     There are other similar pre-made hashtables, eg
-      Int63.Table or Symbol.Reuters.Table. *)
+      Int63.Table or Host_and_port.Table. *)
 
 
   (** To create a hashtable with a custom key type use Hashable.

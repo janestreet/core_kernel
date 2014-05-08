@@ -259,19 +259,24 @@ TEST_MODULE = struct
     type 'a t = 'a lazy_t with typerep
 
     TEST =
+      (* type t = unit lazy_t *)
       let conv = get_conv (typerep_of_t typerep_of_unit) in
       test_inconvertible_values conv [lazy ((fun () -> ()) ())]
-      && test_convertibles conv [lazy (),0]
+      && test_convertibles conv [Lazy.from_val (), 0]
       && test_inconvertible_ints conv no_int_but_zero_converts
     ;;
 
     TEST =
+      (* type t = int lazy_t *)
       let conv = get_conv (typerep_of_t typerep_of_int) in
       test_convertibles conv
         [lazy 0,0; lazy (-1),-1;
          Lazy.from_val Int.max_value,Int.max_value]
       && test_inconvertible_values conv [lazy (1+2); lazy (List.length [])]
     ;;
+
+    (* depending on when the Gc runs, some lazy after being forced might be
+       replaced by their immediate value.  *)
 
     TEST =
       (* type t = int list lazy_t *)
@@ -281,10 +286,6 @@ TEST_MODULE = struct
       let l2 = lazy (List.filter []        ~f:(fun _ -> true))  in
       let l3 = lazy (List.filter [1]       ~f:(fun _ -> true))  in
       let empty = Lazy.from_val [] in
-      (* Force them *)
-      let _ = Lazy.force l1 in
-      let _ = Lazy.force l2 in
-      let _ = Lazy.force l3 in
       test_convertibles conv [empty, 0]
       && test_inconvertible_values conv [Lazy.from_val [1]; l1; l2; l3]
       && test_inconvertible_ints   conv no_int_but_zero_converts
@@ -293,11 +294,8 @@ TEST_MODULE = struct
     TEST =
       let conv = get_conv (typerep_of_t (typerep_of_t typerep_of_int)) in
       let l1 = lazy (lazy (1+2)) in
-      let l2 = lazy (lazy (1+2)) in
-      let _ = Lazy.force l1 in
-      let _ = Lazy.force (Lazy.force l2) in
       test_convertibles conv [Lazy.from_val (Lazy.from_val 3), 3]
-      && test_inconvertible_values conv [l1;l2]
+      && test_inconvertible_values conv [l1]
     ;;
   end
 

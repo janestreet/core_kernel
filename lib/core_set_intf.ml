@@ -143,6 +143,17 @@ module type Accessors_generic = sig
 
   val to_tree : ('a, 'cmp) t -> ('a elt, 'cmp) tree
 
+  val to_sequence
+    : ('a, 'cmp,
+       ?in_:[ `Increasing_order
+            | `Decreasing_order
+            | `Increasing_order_greater_than_or_equal_to of 'a elt
+            | `Decreasing_order_less_than_or_equal_to    of 'a elt
+            ]
+       -> ('a, 'cmp) t
+       -> 'a elt Sequence.t
+      ) options
+
   val to_map
     : ('a, 'cmp,
        ('a, 'cmp) t -> f:('a elt -> 'b) -> ('a elt, 'b, 'cmp cmp) Map.t
@@ -183,6 +194,14 @@ module type Accessors0 = sig
   val find_index     : t -> int -> elt option
   val remove_index   : t -> int -> t
   val to_tree        : t -> tree
+  val to_sequence
+    :  ?in_:[ `Increasing_order
+            | `Decreasing_order
+            | `Increasing_order_greater_than_or_equal_to of elt
+            | `Decreasing_order_less_than_or_equal_to    of elt
+            ]
+    -> t
+    -> elt Sequence.t
   val to_map         : t -> f:(elt -> 'data) -> (elt, 'data, comparator_witness) Map.t
 end
 
@@ -220,6 +239,14 @@ module type Accessors1 = sig
   val find_index     : 'a t -> int -> 'a option
   val remove_index   : 'a t -> int -> 'a t
   val to_tree        : 'a t -> 'a tree
+  val to_sequence
+    :  ?in_:[ `Increasing_order
+            | `Decreasing_order
+            | `Increasing_order_greater_than_or_equal_to of 'a
+            | `Decreasing_order_less_than_or_equal_to    of 'a
+            ]
+    -> 'a t
+    -> 'a Sequence.t
   val to_map         : 'a t -> f:('a -> 'b) -> ('a, 'b, comparator_witness) Map.t
 end
 
@@ -258,6 +285,14 @@ module type Accessors2 = sig
   val find_index     : ('a, _) t -> int -> 'a option
   val remove_index   : ('a, 'cmp) t -> int -> ('a, 'cmp) t
   val to_tree        : ('a, 'cmp) t -> ('a, 'cmp) tree
+  val to_sequence
+    :  ?in_:[ `Increasing_order
+            | `Decreasing_order
+            | `Increasing_order_greater_than_or_equal_to of 'a
+            | `Decreasing_order_less_than_or_equal_to    of 'a
+            ]
+    -> ('a, 'cmp) t
+    -> 'a Sequence.t
   val to_map         : ('a, 'cmp) t -> f:('a -> 'b) -> ('a, 'b, 'cmp) Map.t
 end
 
@@ -317,6 +352,15 @@ module type Accessors2_with_comparator = sig
   val remove_index
     : comparator:('a, 'cmp) Comparator.t -> ('a, 'cmp) t -> int -> ('a, 'cmp) t
   val to_tree        : ('a, 'cmp) t -> ('a, 'cmp) tree
+  val to_sequence
+    :  comparator:('a, 'cmp) Comparator.t
+    -> ?in_:[ `Increasing_order
+            | `Decreasing_order
+            | `Increasing_order_greater_than_or_equal_to of 'a
+            | `Decreasing_order_less_than_or_equal_to    of 'a
+            ]
+    -> ('a, 'cmp) t
+    -> 'a Sequence.t
   val to_map
     :  comparator:('a, 'cmp) Comparator.t
     -> ('a, 'cmp) t

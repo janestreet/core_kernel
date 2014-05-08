@@ -180,4 +180,18 @@ module Debug (Core_queue : module type of Core_queue) = struct
     debug "set_capacity" [ t ] (t, capacity) <:sexp_of< _ t * int >> <:sexp_of< unit >>
       (fun () -> set_capacity t capacity)
   ;;
+
+  let binary_search ?pos ?len t ~compare which v =
+    debug "binary_search" [ t ] (t, pos, len)
+      <:sexp_of< _ t * int option * int option >>
+      <:sexp_of< int option >>
+      (fun () -> binary_search ?pos ?len t ~compare which v)
+  ;;
+
+  let binary_search_segmented ?pos ?len t ~segment_of which =
+    debug "binary_search_segmented" [ t ] (t, pos, len)
+      <:sexp_of< _ t * int option * int option >>
+      <:sexp_of< int option >>
+      (fun () -> binary_search_segmented ?pos ?len t ~segment_of which)
+  ;;
 end

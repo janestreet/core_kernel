@@ -732,6 +732,26 @@ let partition_tf t ~f =
 
 let last t = t.(length t - 1)
 
+(* Convert to a sequence but does not attempt to protect against modification
+   in the array. *)
+let to_sequence_mutable t =
+  Sequence.unfold_step ~init:0 ~f:(fun i ->
+    if i >= Array.length t
+    then Sequence.Step.Done
+    else Sequence.Step.Yield (t.(i), i+1))
+
+let to_sequence t = to_sequence_mutable (copy t)
+
+TEST_UNIT =
+  List.iter
+    [ [||]
+    ; [| 1 |]
+    ; [| 1; 2; 3; 4; 5 |]
+    ]
+    ~f:(fun t ->
+      assert (Sequence.to_array (to_sequence t) = t))
+;;
+
 module Infix = struct
   let ( <|> ) t (start, stop) = slice t start stop
 end
@@ -761,6 +781,9 @@ include Binary_searchable.Make1 (struct
   type nonrec 'a t = 'a t
   let get = get
   let length = length
+  module For_test = struct
+    let of_array a = a
+  end
 end)
 
 (* [Array.truncate] is a safe wrapper for calling [Obj.truncate] on an array.

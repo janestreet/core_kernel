@@ -253,6 +253,17 @@ val split : ('a, 'cmp) t -> 'a -> ('a, 'cmp) t * bool * ('a, 'cmp) t
     [group_by] runs in O(n^2) time. *)
 val group_by :  ('a, 'cmp) t -> equiv:('a -> 'a -> bool) -> ('a, 'cmp) t list
 
+(** [to_sequence ?in_ t] converts the set [t] to a sequence of the elements in the order
+    indicated by [in_]. *)
+val to_sequence
+  :  ?in_:[ `Increasing_order (** default *)
+          | `Decreasing_order
+          | `Increasing_order_greater_than_or_equal_to of 'a
+          | `Decreasing_order_less_than_or_equal_to    of 'a
+          ]
+  -> ('a, 'cmp) t
+  -> 'a Sequence.t
+
 (** Convert a set to or from a map.  [to_map] takes a function to produce data for each
     key.  Both functions run in O(n) time (assuming the function passed to [to_map] runs
     in constant time). *)

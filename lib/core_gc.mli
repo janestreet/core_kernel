@@ -76,6 +76,8 @@ module Stat : sig
     (** Current size of the stack, in words. *)
   }
   with bin_io, sexp, fields
+
+  include Comparable.S with type t := t
 end
 
 type stat = Stat.t
@@ -145,6 +147,8 @@ module Control : sig
         Default: 0. *)
   }
   with bin_io, sexp, fields
+
+  include Comparable.S with type t := t
 end
 
 type control = Control.t

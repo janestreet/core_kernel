@@ -433,38 +433,53 @@ module Binary_searchable = Binary_searchable.Make1 (struct
   type nonrec 'a t = 'a t
   let get t i = get t (front_index_exn t + i)
   let length = length
+  module For_test = struct
+    let of_array = of_array
+  end
 end)
 
 (* The "stable" indices used in this module make the application of the
    [Binary_searchable] functor awkward.  We need to be sure to translate incoming
    positions from stable space to the expected 0 -> length - 1 space and then we need to
    translate them back on return. *)
-let binary_search ?pos ?len t ~compare v =
+let binary_search ?pos ?len t ~compare how v =
   let pos =
     match pos with
     | None     -> None
     | Some pos -> Some (pos - t.apparent_front_index)
   in
-  match Binary_searchable.binary_search ?pos ?len t ~compare v with
+  match Binary_searchable.binary_search ?pos ?len t ~compare how v with
   | None                -> None
   | Some untranslated_i -> Some (t.apparent_front_index + untranslated_i)
 ;;
 
-TEST_UNIT = begin
-  let t = of_array [| 1; 2; 3; 4 |] in
-  assert (binary_search t ~compare:Int.compare 2 = Some 1);
-  assert (binary_search t ~compare:Int.compare 5 = None);
-  assert (binary_search t ~compare:Int.compare 0 = None);
-  assert (binary_search t ~pos:2 ~compare:Int.compare 2 = None);
-  assert (binary_search t ~pos:2 ~compare:Int.compare 3 = Some 2);
-  ignore (dequeue_front t);
-  ignore (dequeue_front t);
-  assert (binary_search t ~compare:Int.compare 2 = None);
-  assert (binary_search t ~compare:Int.compare 3 = Some 2);
-  assert (binary_search t ~compare:Int.compare 5 = None);
-  assert (binary_search t ~compare:Int.compare 0 = None);
-  assert (binary_search t ~pos:2 ~compare:Int.compare 2 = None);
-  assert (binary_search t ~pos:2 ~compare:Int.compare 3 = Some 2);
+let binary_search_segmented ?pos ?len t ~segment_of how =
+  let pos =
+    match pos with
+    | None     -> None
+    | Some pos -> Some (pos - t.apparent_front_index)
+  in
+  match Binary_searchable.binary_search_segmented ?pos ?len t ~segment_of how with
+  | None                -> None
+  | Some untranslated_i -> Some (t.apparent_front_index + untranslated_i)
+;;
+
+TEST_MODULE = struct
+  let binary_search = binary_search ~compare:Int.compare
+  let t = of_array [| 1; 2; 3; 4 |]
+  TEST = binary_search t        `First_equal_to 2 = Some 1
+  TEST = binary_search t        `First_equal_to 5 = None
+  TEST = binary_search t        `First_equal_to 0 = None
+  TEST = binary_search t ~pos:2 `First_equal_to 2 = None
+  TEST = binary_search t ~pos:2 `First_equal_to 3 = Some 2
+  let _ = dequeue_front t
+  let _ = dequeue_front t
+  TEST = binary_search t        `First_equal_to 2 = None
+  TEST = binary_search t        `First_equal_to 3 = Some 2
+  TEST = binary_search t        `First_equal_to 5 = None
+  TEST = binary_search t        `First_equal_to 0 = None
+  TEST = binary_search t ~pos:2 `First_equal_to 2 = None
+  TEST = binary_search t ~pos:2 `First_equal_to 3 = Some 2
 end
 
 TEST_MODULE = struct

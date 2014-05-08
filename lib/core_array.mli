@@ -279,3 +279,12 @@ val truncate : _ t -> len:int -> unit
 module Infix : sig
   val ( <|> ) : 'a t -> int * int -> 'a t
 end
+
+
+(** [to_sequence t] converts [t] to a sequence. [t] is copied internally so that future
+    modifications of [t] do not change the sequence. *)
+val to_sequence : 'a t -> 'a Sequence.t
+
+(** [to_sequence_mutable t] converts [t] to a sequence. [t] is shared with the sequence
+    and modifications of [t] will result in modification of the sequence. *)
+val to_sequence_mutable : 'a t -> 'a Sequence.t

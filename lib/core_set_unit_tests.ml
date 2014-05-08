@@ -56,6 +56,8 @@ module Unit_tests
     let to_map         = simplify_accessor to_map
     let to_list    = to_list
     let to_array   = to_array
+    let to_sequence ?in_ x =
+      simplify_accessor to_sequence ?in_ x
 
     let empty ()       = simplify_creator empty
     let singleton      = simplify_creator singleton
@@ -148,6 +150,42 @@ module Unit_tests
     let a = Set.to_array set_nonempty in
     List.equal (Array.to_list a) (Set.to_list set_nonempty) ~equal:Elt.equal
   ;;
+
+  let to_sequence ?in_:_ _ = assert false
+
+  TEST =
+    let m = set_nonempty in
+    Sequence.to_list (Set.to_sequence ~in_:`Increasing_order m) = Set.to_list m
+
+  TEST =
+    let m = set_nonempty in
+    Sequence.to_list (Set.to_sequence ~in_:`Decreasing_order m) = List.rev (Set.to_list m)
+
+  TEST =
+    let m = set_nonempty in
+    Sequence.to_list (Set.to_sequence ~in_:(`Increasing_order_greater_than_or_equal_to (Elt.of_int 4)) m)
+    = List.filter ~f:(fun x -> x >= Elt.of_int 4) (Set.to_list m)
+
+  TEST =
+    let m = set_nonempty in
+    Sequence.to_list (Set.to_sequence ~in_:(`Decreasing_order_less_than_or_equal_to (Elt.of_int 4)) m)
+    = List.filter ~f:(fun x -> x <= Elt.of_int 4) (List.rev (Set.to_list m))
+
+  TEST =
+    let m = Set.empty () in
+    Sequence.to_list (Set.to_sequence ~in_:`Increasing_order m) = []
+
+  TEST =
+    let m = Set.empty () in
+    Sequence.to_list (Set.to_sequence ~in_:`Decreasing_order m) = []
+
+  TEST =
+    let m = set_nonempty in
+    Sequence.to_list (Set.to_sequence ~in_:(`Increasing_order_greater_than_or_equal_to (Elt.of_int 11)) m) = []
+
+  TEST =
+    let m = set_nonempty in
+    Sequence.to_list (Set.to_sequence ~in_:(`Decreasing_order_less_than_or_equal_to (Elt.of_int (-1))) m) = []
 
   let of_sorted_array _ = assert false
   let of_sorted_array_unchecked _ = assert false
@@ -298,7 +336,7 @@ end
 
 module Create_options_without_comparator = struct
   type ('a, 'b, 'c) create_options = ('a, 'b, 'c) Without_comparator.t
-  let simplify_creator  = Fn.id
+  let simplify_creator = Fn.id
 end
 
 module Access_options_without_comparator = struct

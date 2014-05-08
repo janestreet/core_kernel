@@ -329,6 +329,17 @@ val next_key : ('k, 'v, 'cmp) t -> 'k -> ('k * 'v) option
     otherwise None *)
 val rank : ('k, 'v, 'cmp) t -> 'k -> int option
 
+(** [to_sequence ~keys_in t] converts the map [t] to a sequence of key-value pairs
+    in order and with keys according to [keys_in]. *)
+val to_sequence
+  :  ?keys_in:[ `Increasing_order (** default *)
+              | `Increasing_order_greater_than_or_equal_to of 'k
+              | `Decreasing_order
+              | `Decreasing_order_less_than_or_equal_to of 'k
+              ]
+  -> ('k, 'v, 'cmp) t
+  -> ('k * 'v) Sequence.t
+
 module Poly : sig
   type ('a, +'b, 'c) map
 

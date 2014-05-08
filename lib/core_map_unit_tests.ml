@@ -69,6 +69,8 @@ module Unit_tests
     let prev_key             x = simplify_accessor prev_key x
     let next_key             x = simplify_accessor next_key x
     let rank                 x = simplify_accessor rank x
+    let to_sequence ?keys_in x =
+      simplify_accessor to_sequence ?keys_in x
 
     let empty ()                    = simplify_creator empty
     let singleton                 x = simplify_creator singleton x
@@ -640,6 +642,42 @@ module Unit_tests
     assert (not (Map.exists base_map ~f:neg));
     assert (Map.exists with_negative ~f:neg);
   ;;
+
+  let to_sequence ?keys_in:_  _ = assert false
+
+  TEST =
+    let m = random_map Key.samples in
+    Sequence.to_list (Map.to_sequence ~keys_in:`Increasing_order  m) = Map.to_alist m
+
+  TEST =
+    let m = random_map Key.samples in
+    Sequence.to_list (Map.to_sequence ~keys_in:`Decreasing_order m) = List.rev (Map.to_alist m)
+
+  TEST =
+    let m = random_map Key.samples in
+    Sequence.to_list (Map.to_sequence ~keys_in:(`Increasing_order_greater_than_or_equal_to (Key.of_int 4)) m)
+    = List.filter ~f:(fun (x, _) -> x >= Key.of_int 4) (Map.to_alist m)
+
+  TEST =
+    let m = random_map Key.samples in
+    Sequence.to_list (Map.to_sequence ~keys_in:(`Decreasing_order_less_than_or_equal_to (Key.of_int 4)) m)
+    = List.filter ~f:(fun (x, _) -> x <= Key.of_int 4) (List.rev (Map.to_alist m))
+
+  TEST =
+    let m = Map.empty () in
+    Sequence.to_list (Map.to_sequence ~keys_in:`Increasing_order m) = []
+
+  TEST =
+    let m = Map.empty () in
+    Sequence.to_list (Map.to_sequence ~keys_in:`Decreasing_order m) = []
+
+  TEST =
+    let m = random_map Key.samples in
+    Sequence.to_list (Map.to_sequence ~keys_in:(`Increasing_order_greater_than_or_equal_to (Key.of_int 11)) m) = []
+
+  TEST =
+    let m = random_map Key.samples in
+    Sequence.to_list (Map.to_sequence ~keys_in:(`Decreasing_order_less_than_or_equal_to (Key.of_int (-1))) m) = []
 
   let fold_range_inclusive _ = assert false
   let range_to_alist       _ = assert false
