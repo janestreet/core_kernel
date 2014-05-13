@@ -1,3 +1,66 @@
+## 111.13.00
+
+- Added a `Sequence` module that implements polymorphic, on-demand
+  sequences.
+
+    Also implemented conversion to `Sequence.t` from various containers.
+
+- Improved the explicitness and expressiveness of
+  `Binary_searchable.binary_search`.
+
+    `binary_search` now takes an additional (polymorphic variant)
+    argument describing the relationship of the returned position to the
+    element being searched for.
+
+        val binary_search
+          :  ?pos:int
+          -> ?len:int
+          -> t
+          -> compare:(elt -> elt -> int)
+          -> [ `Last_strictly_less_than         (** {v | < elt X |                       v} *)
+             | `Last_less_than_or_equal_to      (** {v |      <= elt       X |           v} *)
+             | `Last_equal_to                   (** {v           |   = elt X |           v} *)
+             | `First_equal_to                  (** {v           | X = elt   |           v} *)
+             | `First_greater_than_or_equal_to  (** {v           | X       >= elt      | v} *)
+             | `First_strictly_greater_than     (** {v                       | X > elt | v} *)
+             ]
+          -> elt
+          -> int option
+
+- Added a new function, `Binary_searchable.binary_search_segmented`,
+that can search an array consisting of two segments, rather than ordered
+by `compare`.
+
+        (** [binary_search_segmented ?pos ?len t ~segment_of which] takes an [segment_of]
+            function that divides [t] into two (possibly empty) segments:
+
+            {v
+              | segment_of elt = `Left | segment_of elt = `Right |
+            v}
+
+            [binary_search_segmented] returns the index of the element on the boundary of the
+            segments as specified by [which]: [`Last_on_left] yields the index of the last
+            element of the left segment, while [`First_on_right] yields the index of the first
+            element of the right segment.  It returns [None] if the segment is empty.
+
+            By default, [binary_search] searches the entire [t].  One can supply [?pos] or
+            [?len] to search a slice of [t].
+
+            [binary_search_segmented] does not check that [segment_of] segments [t] as in the
+            diagram, and behavior is unspecified if [segment_of] doesn't segment [t].  Behavior
+            is also unspecified if [segment_of] mutates [t]. *)
+        val binary_search_segmented
+          :  ?pos:int
+          -> ?len:int
+          -> t
+          -> segment_of:(elt -> [ `Left | `Right ])
+          -> [ `Last_on_left | `First_on_right ]
+          -> int option
+
+- Made `Queue` match `Binary_searchable.S1`.
+- Made `Gc.Stat` and `Gc.Control` match `Comparable`.
+- Fixed some unit tests in `Type_immediacy` that were fragile due to GC.
+
 ## 111.11.00
 
 - Added to `String` functions for substring search and replace, based
@@ -92,7 +155,7 @@
 
 - Added inline benchmarks for `Array`
 
-  Hera are some of the results from the new benchmarks, with some
+  Here are some of the results from the new benchmarks, with some
   indexed tests dropped.
 
   | Name                                                |    Time/Run | mWd/Run |  mjWd/Run |
