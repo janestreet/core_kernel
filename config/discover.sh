@@ -18,6 +18,17 @@ trap "rm -f $OUT" EXIT
 
 $OCAMLC -ccopt -E $OCAML_CFLAGS -c $SRC | grep '^"OUT:[^"]*"$' | sed 's/"OUT:\([^"]*\)"/\1/' | tee > $OUT
 
+OCAML_VERSION="`ocamlc -version`"
+case "$OCAML_VERSION" in
+    4.0[1-9]*|4.[1-9]*)
+        echo "DEFINE OCAML_4"    >> $OUT
+        echo "DEFINE OCAML_4_01" >> $OUT
+        ;;
+    4*)
+        echo "DEFINE OCAML_4" >> $OUT
+        ;;
+esac
+
 mv "$OUT" "$ML_OUTFILE"
 
 

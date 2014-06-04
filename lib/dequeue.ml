@@ -101,11 +101,6 @@ let checked t f =
   else Some (f t)
 ;;
 
-let assert_not_empty t name =
-  if is_empty t then
-    failwithf "%s: Dequeue.t is empty" name ()
-;;
-
 let apparent_front_index t = checked t apparent_front_index_when_not_empty
 let apparent_back_index  t = checked t apparent_back_index_when_not_empty
 
@@ -287,19 +282,37 @@ let enqueue t back_or_front v =
   | `front -> enqueue_front t v
 ;;
 
-let peek_front_exn t =
-  assert_not_empty t "Dequeue.peek_front_exn";
+let peek_front_nonempty t =
   t.arr.(actual_front_index_when_not_empty t)
 ;;
 
-let peek_front t = try Some (peek_front_exn t) with _ -> None
+let peek_front_exn t =
+  if is_empty t
+  then failwith "Dequeue.peek_front_exn passed an empty queue"
+  else peek_front_nonempty t
+;;
 
-let peek_back_exn t =
-  assert_not_empty t "Dequeue.peek_back_exn";
+let peek_front t =
+  if is_empty t
+  then None
+  else Some (peek_front_nonempty t)
+;;
+
+let peek_back_nonempty t =
   t.arr.(actual_back_index_when_not_empty t)
 ;;
 
-let peek_back t = try Some (peek_back_exn t) with _ -> None
+let peek_back_exn t =
+  if is_empty t
+  then failwith "Dequeue.peek_back_exn passed an empty queue"
+  else peek_back_nonempty t
+;;
+
+let peek_back t =
+  if is_empty t
+  then None
+  else Some (peek_back_nonempty t)
+;;
 
 let peek t back_or_front =
   match back_or_front with
@@ -307,8 +320,7 @@ let peek t back_or_front =
   | `front -> peek_front t
 ;;
 
-let dequeue_front_exn t =
-  assert_not_empty t "Dequeue.dequeue_front_exn";
+let dequeue_front_nonempty t =
   let i = actual_front_index_when_not_empty t in
   let res = t.arr.(i) in
   t.arr.(i)              <- t.dummy;
@@ -319,10 +331,19 @@ let dequeue_front_exn t =
   res
 ;;
 
-let dequeue_front t = try Some (dequeue_front_exn t) with _ -> None
+let dequeue_front_exn t =
+  if is_empty t
+  then failwith "Dequeue.dequeue_front_exn passed an empty queue"
+  else dequeue_front_nonempty t
+;;
 
-let dequeue_back_exn t =
-  assert_not_empty t "Dequeue.dequeue_back_exn";
+let dequeue_front t =
+  if is_empty t
+  then None
+  else Some (dequeue_front_nonempty t)
+;;
+
+let dequeue_back_nonempty t =
   let i = actual_back_index_when_not_empty t in
   let res = t.arr.(i) in
   t.arr.(i)    <- t.dummy;
@@ -332,7 +353,17 @@ let dequeue_back_exn t =
   res
 ;;
 
-let dequeue_back t = try Some (dequeue_back_exn t) with _ -> None
+let dequeue_back_exn t =
+  if is_empty t
+  then failwith "Dequeue.dequeue_back_exn passed an empty queue"
+  else dequeue_back_nonempty t
+;;
+
+let dequeue_back t =
+  if is_empty t
+  then None
+  else Some (dequeue_back_nonempty t)
+;;
 
 let dequeue_exn t back_or_front =
   match back_or_front with
@@ -340,7 +371,10 @@ let dequeue_exn t back_or_front =
   | `back  -> dequeue_back_exn t
 ;;
 
-let dequeue t back_or_front = try Some (dequeue_exn t back_or_front) with _ -> None
+let dequeue t back_or_front =
+  match back_or_front with
+  | `front -> dequeue_front t
+  | `back  -> dequeue_back t
 
 let drop_gen ?(n=1) ~dequeue t =
   if n < 0 then
@@ -361,6 +395,11 @@ let drop ?n t back_or_front =
   match back_or_front with
   | `back  -> drop_back  ?n t
   | `front -> drop_front ?n t
+;;
+
+let assert_not_empty t name =
+  if is_empty t then
+    failwithf "%s: Dequeue.t is empty" name ()
 ;;
 
 let true_index_exn t i =
@@ -675,4 +714,22 @@ TEST_MODULE = struct
   ;;
 
   TEST_UNIT = test ()
+end
+
+BENCH_MODULE "Dequeue" = struct
+
+  (* this is the old way we used to implement the option versions of peek and
+     dequeue, which did a failwithf. *)
+  BENCH_FUN "assert_not_empty" =
+    let t = create () in
+    fun () -> try assert_not_empty t "Queue.dequeue_front" with _ -> ()
+
+  BENCH_FUN "dequeue_front empty" =
+    let t = create () in
+    fun () -> ignore (dequeue_front t : _ option)
+
+  BENCH_FUN "peek_back non-empty" =
+    let t = create () in
+    let () = enqueue_back t 2 in
+    fun () -> ignore (peek_back t : _ option)
 end

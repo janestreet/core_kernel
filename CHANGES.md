@@ -1,3 +1,53 @@
+## 111.17.00
+
+- In `Bigstring`, made many operations use compiler primitives new in
+  OCaml 4.01.
+
+  Exposed `Bigstring.get` and `set` as compiler primitives in the
+  interface.
+
+  Added `Bigstring.unsafe_get_int64_{le,be}_trunc`.
+- Made `Error` round trip `exn`, i.e. `Error.to_exn (Error.of_exn exn)
+  = exn`.
+- Added to `failwiths` an optional `?here:Lexing.position` argument.
+- Added `with typerep` to `Flags.S`.
+- Optimized `List.dedup []` to return immediately.
+- Added `data` argument to polymorphic type `Hashtbl_intf.Creators.create_options`.
+
+  This allows implementations of `Hashtbl_intf.Creators` to have
+  constructor arguments that depend on the type of both key and data
+  values.  For example:
+
+  ```ocaml
+  module type Hashtbl_creators_with_typerep =
+    Hashtbl_intf.Creators
+    with type ('key, 'data, 'z) create_options
+      =  typerep_of_key:'key Typerep.t
+      -> typerep_of_data:'data Typerep.t
+      -> 'z
+  ```
+- Improved the interface for getting `Monad.Make` to define `map` in
+  terms of `bind`.
+
+  Instead of passing a `map` function and requiring everyone who wants
+  to define `map` using `bind` to call a special function, we use a
+  variant type to allow the user to say what they want:
+
+  ```ocaml
+  val map : [ `Define_using_bind
+            | `Custom of ('a t -> f:('a -> 'b) -> 'b t)
+            ]
+  ```
+- Improved the performance of many `Dequeue` functions.
+
+  Previously, many `Dequeue.dequeue`-type functions worked by raising
+  and then catching an exception when the dequeue is empty.  This is
+  much slower than just testing for emptiness, which is what the code
+  now does.
+
+  This improves the performance of `Async.Writer`, which uses
+  `Dequeue.dequeue_front`.
+
 ## 111.13.00
 
 - Added a `Sequence` module that implements polymorphic, on-demand

@@ -10,7 +10,7 @@ let create ~bit:n =
 ;;
 
 module Make (M : Make_arg) = struct
-  type t = Int63.t
+  type t = Int63.t with typerep
 
   let of_int     = Int63.of_int
   let to_int_exn = Int63.to_int_exn

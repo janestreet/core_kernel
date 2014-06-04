@@ -173,6 +173,7 @@ include Monad.Make (struct
     | None -> None
     | Some a -> Some (f a)
   ;;
+  let map = `Custom map
   let bind o f =
     match o with
     | None -> None

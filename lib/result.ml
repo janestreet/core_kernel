@@ -36,6 +36,8 @@ include Monad.Make2 (struct
     | Error _ as x -> x
     | Ok x -> Ok (f x)
 
+  let map = `Custom map
+
   let return x = Ok x
 end)
 

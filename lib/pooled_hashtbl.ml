@@ -769,7 +769,7 @@ end) : sig
   include Creators
     with type ('a, 'b) t := ('a, 'b) t_
     with type 'a key := 'a Key.t
-    with type ('key, 'a) create_options := ('key, 'a) create_options_without_hashable
+    with type ('key, 'data, 'a) create_options := ('key, 'data, 'a) create_options_without_hashable
 
 end = struct
 

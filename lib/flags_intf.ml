@@ -12,7 +12,7 @@ module Int63 = Core_int63
 
     [sexp_of_t] and [t_of_sexp] use the flag names supplied to [Flags.Make]. *)
 module type S = sig
-  type t with sexp
+  type t with sexp, typerep
 
   include Comparable.S with type t := t (** consistent with subset *)
 

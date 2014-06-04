@@ -20,10 +20,28 @@ end
 
 type sexp = Sexp.t = Atom of string | List of sexp list (* constructor import *)
 
+module Binable_exn = struct
+  module T = struct
+    type t = exn with sexp_of
+  end
+  include T
+  include Bin_prot.Utils.Make_binable (struct
+    module Binable = struct
+      type t = Sexp.t with bin_io
+    end
+    include T
+    exception Exn of Sexp.t with sexp
+    let to_binable t = t |> <:sexp_of< t >>
+    let of_binable sexp = Exn sexp
+  end)
+end
+
 module Message = struct
+
   type t =
   | Could_not_construct of Sexp.t
   | String of string
+  | Exn of Binable_exn.t
   | Sexp of Sexp.t
   | Tag_sexp of string * Sexp.t * Source_code_position0.t_hum option
   | Tag_t of string * t
@@ -41,6 +59,7 @@ module Message = struct
     | Could_not_construct sexp ->
       "could not construct info: " :: Sexp.to_string_mach sexp :: ac
     | String string -> string :: ac
+    | Exn exn -> Sexp.to_string_mach (Exn.sexp_of_t exn) :: ac
     | Sexp sexp -> Sexp.to_string_mach sexp :: ac
     | Tag_sexp (tag, sexp, _) -> tag :: ": " :: Sexp.to_string_mach sexp :: ac
     | Tag_t (tag, t) -> tag :: ": " :: to_strings_hum t ac
@@ -69,6 +88,7 @@ module Message = struct
     match t with
     | Could_not_construct _ as t -> sexp_of_t t :: ac
     | String string -> Atom string :: ac
+    | Exn exn -> Exn.sexp_of_t exn :: ac
     | Sexp sexp -> sexp :: ac
     | Tag_sexp (tag, sexp, here) ->
       List ( Atom tag
@@ -141,7 +161,9 @@ let tag_arg t tag x sexp_of_x =
   lazy (protect (fun () -> Tag_arg (tag, sexp_of_x x, to_message t)))
 ;;
 
-let of_list ?trunc_after ts = lazy (Of_list (?trunc_after, List.map ts ~f:to_message))
+let of_list ?trunc_after ts =
+  lazy (Of_list (?trunc_after, List.map ts ~f:to_message))
+;;
 
 exception Exn of t
 
@@ -154,7 +176,14 @@ let () =
     | _ -> assert false)
 ;;
 
-let to_exn t = Exn t
+let to_exn t =
+  if not (Lazy.is_val t)
+  then Exn t
+  else
+    match Lazy.force t with
+    | Message.Exn exn -> exn
+    | _ -> Exn t
+;;
 
 let of_exn ?backtrace exn =
   let backtrace =
@@ -166,7 +195,7 @@ let of_exn ?backtrace exn =
   match exn, backtrace with
   | Exn t, None           -> t
   | Exn t, Some backtrace -> lazy (With_backtrace (to_message t, backtrace))
-  | _    , None           -> lazy (Sexp (Exn.sexp_of_t exn))
+  | _    , None           -> Lazy.from_val (Message.Exn exn)
   | _    , Some backtrace -> lazy (With_backtrace (Sexp (Exn.sexp_of_t exn), backtrace))
 ;;
 
@@ -191,6 +220,12 @@ TEST_MODULE "Info" = struct
   TEST_UNIT =
     test_result (to_string_hum (of_list (List.map ~f:of_string [ "a"; "b"; "c" ])))
       ~expect:"(a b c)"
+  ;;
+
+  TEST_UNIT =
+    match to_exn (of_exn (Failure "foo")) with
+    | Failure "foo" -> ()
+    | exn -> failwithf "(got %S) (expected (Failure foo))" (Exn.to_string exn) ()
   ;;
 
   let round t =

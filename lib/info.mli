@@ -65,7 +65,6 @@ val tag_arg : t -> string -> 'a -> ('a -> Sexp.t) -> t
 (* Combine multiple infos into one *)
 val of_list : ?trunc_after:int -> t list -> t
 
-
 (* [of_exn] and [to_exn] are primarily used with [Error], but their definitions have to be
    here because they refer to the underlying representation. *)
 val of_exn : ?backtrace:[ `Get | `This of string ] -> exn -> t

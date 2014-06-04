@@ -365,7 +365,7 @@ TEST = to_list (return 1) = [1]
 
 include Monad.Make(struct
   type nonrec 'a t = 'a t
-  let map = map
+  let map = `Custom map
   let bind = bind
   let return = return
 end)
@@ -892,6 +892,7 @@ module Generator = struct
     let return x = (); fun k -> k x
     let bind m f = (); fun k -> m (fun a -> let m' = f a in m' k)
     let map m ~f = (); fun k -> m (fun a -> k (f a))
+    let map = `Custom map
   end
   include T
   include Monad.Make2 (T)

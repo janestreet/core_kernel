@@ -596,7 +596,7 @@ include struct
   module Monad = Monad.Make (struct
     type 'a t = 'a list
     let bind x f = concat_map x ~f
-    let map = map
+    let map = `Custom map
     let return x = [x]
   end)
   open Monad
@@ -682,9 +682,12 @@ TEST = length (remove_consecutive_duplicates [(0,1);(2,2);(0,2);(4,1)]
 
 (** returns sorted version of list with duplicates removed *)
 let dedup ?(compare=Pervasives.compare) list =
-  let equal x x' = compare x x' = 0 in
-  let sorted = List.sort ~cmp:compare list in
-  remove_consecutive_duplicates ~equal sorted
+  match list with
+  | [] -> []                            (* performance hack *)
+  | _ ->
+    let equal x x' = compare x x' = 0 in
+    let sorted = List.sort ~cmp:compare list in
+    remove_consecutive_duplicates ~equal sorted
 
 TEST = dedup [] = []
 TEST = dedup [5;5;5;5;5] = [5]

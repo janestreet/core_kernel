@@ -1,17 +1,4 @@
-(** [Option] wraps the output [x] of successful functions in [Some x].  Failed
-    functions return [None]. *)
 
-(** Options are preferred over exceptions.  For example, use
-    {[
-    let data = [(2, "two"); (5, "five"); (8, "eight")];;
-    let f x = match List.Assoc.find_opt x data with
-    | Some y -> y
-    | None -> "zero" (* where "zero" is some default value *);; ]}
-    rather than
-    {[
-    let f x = try List.Assoc.find x data with Not_found -> "zero";; ]}
-    In this case using an exception is shorter, but in nontrivial code options
-    are easier to understand. *)
 type 'a t = 'a option with bin_io, sexp, typerep
 
 include Container.S1 with type 'a t := 'a t

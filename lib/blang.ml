@@ -433,7 +433,7 @@ include Monad.Make (struct
       end
   ;;
 
-  let map t ~f = Monad.map_via_bind t ~f ~return ~bind
+  let map = `Define_using_bind
 
 end)
 
