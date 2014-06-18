@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <caml/alloc.h>
 #include <caml/mlvalues.h>
 #include <caml/memory.h>
