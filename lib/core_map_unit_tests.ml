@@ -503,16 +503,15 @@ module Unit_tests
 
   TEST =
     let m1 = random_map Key.samples in
-    Map.symmetric_diff m1 m1 ~data_equal:(=) = []
+    Sequence.to_list (Map.symmetric_diff m1 m1 ~data_equal:(=)) = []
   ;;
 
   TEST =
     let key = Key.of_int 7 in
     let m1 = Map.empty () in
     let m1 = Map.add m1 ~key:(Key.of_int 1) ~data:1 in
-    (* data must be out of the range of random_map to be a good test *)
     let m2 = Map.add m1 ~key:key ~data:2_000 in
-    Map.symmetric_diff m1 m2 ~data_equal:(=) = [(key, `Right 2_000)]
+    Sequence.to_list (Map.symmetric_diff m1 m2 ~data_equal:(=)) = [(key, `Right 2_000)]
   ;;
 
   TEST =
@@ -521,23 +520,22 @@ module Unit_tests
       List.fold (Map.to_alist m1) ~init:(Map.empty ()) ~f:(fun m (k,d) ->
         Map.add m ~key:k ~data:d)
     in
-    Map.symmetric_diff m1 m2 ~data_equal:(=) = []
+    Sequence.to_list (Map.symmetric_diff m1 m2 ~data_equal:(=)) = []
   ;;
-
 
   TEST =
     let key = Key.of_int 20 in
     let m1 = random_map Key.samples in
-    (* data must be out of the range of random_map to be a good test *)
     let m2 = Map.add m1 ~key:key ~data:2_000 in
-    Map.symmetric_diff m1 m2 ~data_equal:(=) = [(key, `Right 2_000)]
+    Sequence.to_list (Map.symmetric_diff m1 m2 ~data_equal:(=)) = [(key, `Right 2_000)]
   ;;
 
   TEST =
     let key = Key.of_int 5 in
     let m1 = random_map Key.samples in
     let m2 = Map.remove m1 key in
-    Map.symmetric_diff m1 m2 ~data_equal:(=) = [(key, `Left (Map.find_exn m1 key))]
+    Sequence.to_list (Map.symmetric_diff m1 m2 ~data_equal:(=)) =
+      [(key, `Left (Map.find_exn m1 key))]
   ;;
 
   TEST =
@@ -550,8 +548,76 @@ module Unit_tests
           assert (v <> 2_000);
           Some 2_000)
     in
-    Map.symmetric_diff m1 m2 ~data_equal:(=) =
-        [(key, `Unequal (Map.find_exn m1 key, 2000))]
+    Sequence.to_list (Map.symmetric_diff m1 m2 ~data_equal:(=)) =
+      [(key, `Unequal (Map.find_exn m1 key, 2000))]
+  ;;
+
+  TEST =
+    let map1 = Int.Map.empty in
+    let map2 =
+      Int.Map.of_alist_exn
+        [ (1, 1)
+        ; (2, 2)
+        ; (3, 3)
+        ; (4, 4)
+        ; (5, 5)
+        ]
+    in
+    let diff = Int.Map.symmetric_diff map1 map2 ~data_equal:Int.equal in
+    Sequence.length diff = 5
+  ;;
+
+  TEST =
+    let map1 =
+      Int.Map.of_alist_exn
+        [ (1, 1)
+        ; (2, 2)
+        ; (3, 3)
+        ; (4, 4)
+        ; (5, 5)
+        ]
+    in
+    let map2 = Int.Map.empty in
+    let diff = Int.Map.symmetric_diff map1 map2 ~data_equal:Int.equal in
+    Sequence.length diff = 5
+  ;;
+
+  TEST =
+    let map1 =
+      Int.Map.of_alist_exn
+        [ (1, 1)
+        ; (2, 2)
+        ]
+    in
+    let map2 =
+      List.fold
+        [ (3, 3)
+        ; (4, 4)
+        ; (5, 5) ]
+        ~init:map1
+        ~f:(fun acc (key, data) -> Int.Map.add acc ~key ~data)
+    in
+    let diff = Int.Map.symmetric_diff map1 map2 ~data_equal:Int.equal in
+    Sequence.length diff = 3
+  ;;
+
+  TEST =
+    let map2 =
+      Int.Map.of_alist_exn
+        [ (1, 1)
+        ; (2, 2)
+        ]
+    in
+    let map1 =
+      List.fold
+        [ (3, 3)
+        ; (4, 4)
+        ; (5, 5) ]
+        ~init:map2
+        ~f:(fun acc (key, data) -> Int.Map.add acc ~key ~data)
+    in
+    let diff = Int.Map.symmetric_diff map1 map2 ~data_equal:Int.equal in
+    Sequence.length diff = 3
   ;;
 
   let merge _ = assert false

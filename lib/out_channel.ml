@@ -26,9 +26,7 @@ let set_binary_mode = Pervasives.set_binary_mode_out
 
 let flush = Pervasives.flush
 
-external close_out_channel : t -> unit = "fixed_close_channel";;
-
-let close t = flush t; close_out_channel t
+let close = Pervasives.close_out
 
 let output t ~buf ~pos ~len = Pervasives.output t buf pos len
 let output_string = Pervasives.output_string

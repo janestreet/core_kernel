@@ -41,6 +41,19 @@ module type S = sig
   val min_positive_subnormal_value : t
   val min_positive_normal_value    : t
 
+  (** An order-preserving bijection between all floats except for nans, and all int64s
+      with absolute value smaller than or equal to [2**63 - 2**52].
+      Note both 0. and -0. map to 0L. *)
+  val to_int64_preserve_order : t -> int64 option
+  val to_int64_preserve_order_exn : t -> int64
+  (** returns [nan] if the absolute value of the argument is too large *)
+  val of_int64_preserve_order : int64 -> t
+
+  (** The next or previous representable float.  ULP stands for "unit of least precision",
+      and is the spacing between floating point numbers.  Both [one_ulp `Up infinity] and
+      [one_ulp `Down neg_infinity] return a nan. *)
+  val one_ulp : [`Up | `Down] -> t -> t
+
   val of_int : int -> t
   val to_int : t -> int
   val of_int64 : int64 -> t

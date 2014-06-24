@@ -156,6 +156,9 @@ val range
 (** [init n ~f] is [[(f 0); (f 1); ...; (f (n-1))]].  It is an error if [n < 0]. *)
 val init : int -> f:(int -> 'a) -> 'a t
 
+(** [filter_map t ~f] produce mapped elements of [t] which are not [None]. *)
+val filter_map : 'a t -> f:('a -> 'b option) -> 'b t
+
 (** [filter_mapi] is just like [filter_map], but it also passes in the index of each
     element to [f]. *)
 val filter_mapi : 'a t -> f:(int -> 'a -> 'b option) -> 'b t
@@ -238,7 +241,7 @@ val repeat : 'a -> ' a t
 (** [singleton a] produces [a] exactly once. *)
 val singleton : 'a -> 'a t
 
-(** [delayed_fold] allows to do an on-demand fold, while maintaning a state.  This
+(** [delayed_fold] allows to do an on-demand fold, while maintaining a state.  This
     function is sufficient to implement [fold_m] in any monad.
 
     {[

@@ -14,7 +14,7 @@ let create ?(binary = true) file =
   open_in_gen flags 0o000 file
 ;;
 
-external close : t -> unit = "fixed_close_channel";;
+let close = Pervasives.close_in
 
 let with_file ?binary file ~f = Exn.protectx (create ?binary file) ~f ~finally:close
 

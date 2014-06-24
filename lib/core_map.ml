@@ -398,6 +398,7 @@ module Tree0 = struct
   module Enum = struct
     type increasing
     type decreasing
+
     type ('k, 'v, 'direction) t =
     | End
     | More of 'k * 'v * ('k, 'v) tree * ('k, 'v, 'direction) t
@@ -501,38 +502,33 @@ module Tree0 = struct
       loop t1 t2
     ;;
 
-    let fold tree ~init ~f =
-      let rec loop acc = function
-        | End -> acc
-        | More (key, data, tree, enum) ->
-          let acc = f ~key ~data acc in
-          loop acc (cons tree enum)
-      in
-      loop init tree
-    ;;
-
     let symmetric_diff t1 t2 ~compare_key ~data_equal =
-      let rec loop t1 t2 acc =
-        match t1, t2 with
-        | End, End -> acc
-        | End, _   -> fold t2 ~init:acc ~f:(fun ~key ~data acc -> (key, `Right data)::acc)
-        | _  , End -> fold t1 ~init:acc ~f:(fun ~key ~data acc -> (key, `Left data)::acc)
-        | More (k1, v1, tree1, enum1), More (k2, v2, tree2, enum2) ->
+      let step state =
+        match state with
+        | End, End ->
+          Sequence.Step.Done
+        | End, More (key, data, tree, enum) ->
+          Sequence.Step.Yield ((key, `Right data), (End, cons tree enum))
+        | More (key, data, tree, enum), End ->
+          Sequence.Step.Yield ((key, `Left data), (cons tree enum, End))
+        | (More (k1, v1, tree1, enum1) as left), (More (k2, v2, tree2, enum2) as right) ->
           let compare_result = compare_key k1 k2 in
           if compare_result = 0 then begin
-            let acc = if data_equal v1 v2 then acc else (k1, `Unequal (v1, v2)) :: acc in
-            if Pervasives.(==) tree1 tree2
-            then loop enum1 enum2 acc
-            else loop (cons tree1 enum1) (cons tree2 enum2) acc
+            let next_state =
+              if Pervasives.(==) tree1 tree2
+              then (enum1, enum2)
+              else (cons tree1 enum1, cons tree2 enum2)
+            in
+            if data_equal v1 v2
+            then Sequence.Step.Skip next_state
+            else Sequence.Step.Yield ((k1, `Unequal (v1, v2)), next_state)
           end else if compare_result < 0 then begin
-            let acc = (k1, `Left v1) :: acc in
-            loop (cons tree1 enum1) t2 acc
+            Sequence.Step.Yield ((k1, `Left v1), (cons tree1 enum1, right))
           end else begin
-            let acc = (k2, `Right v2) :: acc in
-            loop t1 (cons tree2 enum2) acc
+            Sequence.Step.Yield ((k2, `Right v2), (left, (cons tree2 enum2)))
           end
       in
-      loop (of_tree t1) (of_tree t2) []
+      Sequence.unfold_step ~init:(of_tree t1, of_tree t2) ~f:step
     ;;
   end
 

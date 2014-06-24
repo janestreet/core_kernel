@@ -4,11 +4,17 @@ module Make_sexp_deserialization_test (T : Stable_unit_test_intf.Arg) = struct
   TEST_UNIT "sexp deserialization" =
     List.iter T.tests
       ~f:(fun (t, sexp_as_string, _) ->
-        let sexp = Sexp.of_string sexp_as_string in
-        let t' = T.t_of_sexp sexp in
-        if not (T.equal t t') then
-          failwiths "sexp deserialization mismatch" (`Expected t, `But_got t')
-            (<:sexp_of< [ `Expected of T.t ] * [ `But_got of T.t ] >>)
+        match
+          Or_error.try_with (fun () ->
+            sexp_as_string |> Sexp.of_string |> <:of_sexp< T.t >>)
+        with
+        | Error _ ->
+          failwiths "could not deserialize sexp" (sexp_as_string, `Expected t)
+            <:sexp_of< string * [ `Expected of T.t ] >>
+        | Ok t' ->
+          if not (T.equal t t') then
+            failwiths "sexp deserialization mismatch" (`Expected t, `But_got t')
+              (<:sexp_of< [ `Expected of T.t ] * [ `But_got of T.t ] >>)
       )
 end
 

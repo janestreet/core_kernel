@@ -164,7 +164,7 @@ module type Accessors_generic = sig
         ('k, 'v, 'cmp) t
         -> ('k, 'v, 'cmp) t
         -> data_equal:('v -> 'v -> bool)
-        -> ('k key * [ `Left of 'v | `Right of 'v |  `Unequal of 'v * 'v ]) list
+        -> ('k key * [ `Left of 'v | `Right of 'v |  `Unequal of 'v * 'v ]) Sequence.t
        ) options
 
   val min_elt     : ('k, 'v, _) t -> ('k key * 'v) option
@@ -262,7 +262,7 @@ module type Accessors1 = sig
     :  'a t
     -> 'a t
     -> data_equal:('a -> 'a -> bool)
-    -> (key * [ `Left of 'a | `Right of 'a |  `Unequal of 'a * 'a ]) list
+    -> (key * [ `Left of 'a | `Right of 'a |  `Unequal of 'a * 'a ]) Sequence.t
   val min_elt        : 'a t -> (key * 'a) option
   val min_elt_exn    : 'a t -> key * 'a
   val max_elt        : 'a t -> (key * 'a) option
@@ -333,7 +333,7 @@ module type Accessors2 = sig
     :  ('a, 'b) t
     -> ('a, 'b) t
     -> data_equal:('b -> 'b -> bool)
-    -> ('a * [ `Left of 'b | `Right of 'b |  `Unequal of 'b * 'b ]) list
+    -> ('a * [ `Left of 'b | `Right of 'b |  `Unequal of 'b * 'b ]) Sequence.t
   val min_elt        : ('a, 'b) t -> ('a * 'b) option
   val min_elt_exn    : ('a, 'b) t -> 'a * 'b
   val max_elt        : ('a, 'b) t -> ('a * 'b) option
@@ -399,7 +399,7 @@ module type Accessors3 = sig
     :  ('a, 'b, 'cmp) t
     -> ('a, 'b, 'cmp) t
     -> data_equal:('b -> 'b -> bool)
-    -> ('a * [ `Left of 'b | `Right of 'b |  `Unequal of 'b * 'b ]) list
+    -> ('a * [ `Left of 'b | `Right of 'b |  `Unequal of 'b * 'b ]) Sequence.t
   val min_elt        : ('a, 'b, 'cmp) t -> ('a * 'b) option
   val min_elt_exn    : ('a, 'b, 'cmp) t -> 'a * 'b
   val max_elt        : ('a, 'b, 'cmp) t -> ('a * 'b) option
@@ -499,7 +499,7 @@ module type Accessors3_with_comparator = sig
     -> ('a, 'b, 'cmp) t
     -> ('a, 'b, 'cmp) t
     -> data_equal:('b -> 'b -> bool)
-    -> ('a * [ `Left of 'b | `Right of 'b |  `Unequal of 'b * 'b ]) list
+    -> ('a * [ `Left of 'b | `Right of 'b |  `Unequal of 'b * 'b ]) Sequence.t
   val min_elt        : ('a, 'b, 'cmp) t -> ('a * 'b) option
   val min_elt_exn    : ('a, 'b, 'cmp) t -> 'a * 'b
   val max_elt        : ('a, 'b, 'cmp) t -> ('a * 'b) option

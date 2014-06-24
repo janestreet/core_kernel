@@ -287,7 +287,7 @@ val symmetric_diff
   :  ('k, 'v, 'cmp) t
   -> ('k, 'v, 'cmp) t
   -> data_equal:('v -> 'v -> bool)
-  -> ('k * [ `Left of 'v | `Right of 'v |  `Unequal of 'v * 'v ]) list
+  -> ('k * [ `Left of 'v | `Right of 'v |  `Unequal of 'v * 'v ]) Sequence.t
 
 (** [min_elt map] @return Some [(key, data)] pair corresponding to the minimum key in
     [map], None if empty. *)

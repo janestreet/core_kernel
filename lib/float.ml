@@ -26,34 +26,6 @@ module T = struct
 
 end
 
-module For_unit_tests = struct
-  (* Not for real use.  Slow and does not handle 0. *)
-  let one_ulp dir x =
-    assert (x > 0.);
-    let op = match dir with
-      | `less -> (-.)
-      | `more -> (+.)
-    in
-    let rec aux x exp =
-      let y = op x (2. ** exp) in
-      if x = y then
-        aux x (exp +. 1.)
-      else
-        y
-    in
-    let start_exp = floor (log x /. log 2.) -. 55. in
-    assert (op x (2. ** start_exp) = x);
-    let result =
-      aux x start_exp
-    in
-    assert (result <> x);
-    assert (
-      let halfway_between = (min x result) +. abs_float (x -. result) /. 2. in
-      result = halfway_between || x = halfway_between);
-    result
-  ;;
-end
-
 include T
 type outer = t with sexp, bin_io, typerep (* alias for use by sub-modules *)
 
@@ -202,17 +174,83 @@ let max_finite_value = Pervasives.max_float
 let min_positive_subnormal_value = 2. ** -1074.
 let min_positive_normal_value = 2. ** -1022.
 
+let is_nan x = (x : t) <> x
+
+(* An order-preserving bijection between all floats except for NaNs, and 99.95% of
+   int64s.
+
+   Note we don't distinguish 0. and -0. as separate values here, they both map to 0L, which
+   maps back to 0.
+
+   This should work both on little-endian and high-endian CPUs.  Wikipedia says: "on
+   modern standard computers (i.e., implementing IEEE 754), one may in practice safely
+   assume that the endianness is the same for floating point numbers as for integers"
+   (http://en.wikipedia.org/wiki/Endianness#Floating-point_and_endianness).
+*)
+let to_int64_preserve_order t =
+  if is_nan t then
+    None
+  else
+  if t = 0. then (* also includes -0. *)
+    Some 0L
+  else
+  if t > 0. then
+    Some (Int64.bits_of_float t)
+  else
+    Some (Int64.neg (Int64.bits_of_float (~-. t)))
+;;
+
+let to_int64_preserve_order_exn x =
+  Option.value_exn (to_int64_preserve_order x)
+;;
+
+let of_int64_preserve_order x =
+    if x >= 0L then
+      Int64.float_of_bits x
+    else
+      ~-. (Int64.float_of_bits (Int64.neg x))
+;;
+
+let one_ulp dir t =
+  match to_int64_preserve_order t with
+  | None -> nan
+  | Some x ->
+    of_int64_preserve_order (Int64.add x (match dir with `Up -> 1L | `Down -> -1L))
+;;
+
 TEST_MODULE = struct
+
+  let test_both_ways a b =
+    to_int64_preserve_order_exn a = b && of_int64_preserve_order b = a
+  ;;
+
+  TEST = test_both_ways          0.  0L
+  TEST = test_both_ways        (-0.) 0L
+  TEST = test_both_ways          1.  (Int64.of_int (   1023 lsl 52))
+  TEST = test_both_ways        (-2.) (Int64.of_int (- (1024 lsl 52)))
+  TEST = test_both_ways     infinity (Int64.shift_left 2047L 52)
+  TEST = test_both_ways neg_infinity (Int64.neg (Int64.shift_left 2047L 52))
+
+  TEST = one_ulp `Down infinity = max_finite_value
+  TEST = is_nan (one_ulp `Up infinity)
+  TEST = is_nan (one_ulp `Down neg_infinity)
+  TEST = one_ulp `Up neg_infinity = ~-. max_finite_value
+
   (* Some tests to make sure that the compiler is generating code for handling subnormal
      numbers at runtime accurately. *)
   let x () = min_positive_subnormal_value
   let y () = min_positive_normal_value
 
+  TEST = test_both_ways  (x ())  1L
+  TEST = test_both_ways  (y ())  (Int64.of_int  (1 lsl 52))
+
   TEST = x () > 0.
   TEST = x () /. 2. = 0.
 
-  let half_way_between a b = a +. (b -. a) /. 2.
-  let are_one_ulp_apart a b = half_way_between a b = a || half_way_between a b = b
+  TEST = one_ulp `Up 0. = x ()
+  TEST = one_ulp `Down 0. = ~-. (x ())
+
+  let are_one_ulp_apart a b = one_ulp `Up a = b
 
   TEST = are_one_ulp_apart (x ()) (2. *. x ())
   TEST = are_one_ulp_apart (2. *. x ()) (3. *. x ())
@@ -262,7 +300,6 @@ TEST = to_string_round_trippable min_positive_subnormal_value     = "4.940656458
 let frexp = Pervasives.frexp
 let ldexp = Pervasives.ldexp
 
-let is_nan x = (x : t) <> x
 module Robustly_comparable = Float_robust_compare.Make (struct let epsilon = 1E-7 end)
 include Robustly_comparable
 
@@ -733,8 +770,8 @@ TEST_MODULE = struct
     test (~-.f) ("-"^expect);
   ;;
 
-  let decr = For_unit_tests.one_ulp `less
-  let incr = For_unit_tests.one_ulp `more
+  let decr = one_ulp `Down
+  let incr = one_ulp `Up
 
   let boundary f ~closer_to_zero ~at =
     assert (f > 0.);
@@ -1229,15 +1266,15 @@ TEST_MODULE = struct
         let pow2 = 2. ** float i in
         let x =
           [ pow2;
-            For_unit_tests.one_ulp `less (pow2 +. 0.5);
+            one_ulp `Down (pow2 +. 0.5);
             pow2 +. 0.5;
-            For_unit_tests.one_ulp `less (pow2 +. 1.0);
+            one_ulp `Down (pow2 +. 1.0);
             pow2 +. 1.0;
-            For_unit_tests.one_ulp `less (pow2 +. 1.5);
+            one_ulp `Down (pow2 +. 1.5);
             pow2 +. 1.5;
-            For_unit_tests.one_ulp `less (pow2 +. 2.0);
+            one_ulp `Down (pow2 +. 2.0);
             pow2 +. 2.0;
-            For_unit_tests.one_ulp `less (pow2 *. 2.0 -. 1.0);
+            one_ulp `Down (pow2 *. 2.0 -. 1.0);
           ]
         in
         x @ (List.map x ~f:neg)
