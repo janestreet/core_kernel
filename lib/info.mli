@@ -27,8 +27,22 @@ open Sexplib
 
 type t with bin_io, sexp
 
-(** might be an expensive operation *)
+(** [to_string_hum] forces the lazy message, which might be an expensive operation.
+
+    [to_string_hum] usually produces a sexp; however, it is guaranteed that [to_string_hum
+    (of_string s) = s].
+
+    If this string is going to go into a log file, you may find it useful to ensure that
+    the string is only one line long. To do this, use [Sexp.to_string_mach (sexp_of_t t)].
+*)
 val to_string_hum : t -> string
+
+(** old version (pre 109.61) of [to_string_hum] that some applications rely on.
+
+    Calls should be replaced with [Sexp.to_string_mach (sexp_of_t t)], which outputs more
+    parenthesis and backslashes.
+*)
+val to_string_hum_deprecated : t -> string
 
 val of_string : string -> t
 
@@ -50,7 +64,6 @@ val tag_arg : t -> string -> 'a -> ('a -> Sexp.t) -> t
 
 (* Combine multiple infos into one *)
 val of_list : ?trunc_after:int -> t list -> t
-
 
 (* [of_exn] and [to_exn] are primarily used with [Error], but their definitions have to be
    here because they refer to the underlying representation. *)

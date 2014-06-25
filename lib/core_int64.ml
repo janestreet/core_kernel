@@ -1,4 +1,4 @@
-open Typerep_kernel.Std
+open Typerep_lib.Std
 open Sexplib.Std
 open Bin_prot.Std
 open Int64
@@ -32,6 +32,7 @@ let max_value = max_int
 let abs = abs
 let pred = pred
 let succ = succ
+let pow = Int_math.int64_pow
 let rem = rem
 let neg = neg
 let minus_one = minus_one
@@ -103,7 +104,7 @@ include Pretty_printer.Register (struct
   let module_name = "Core.Std.Int64"
 end)
 
-module O = struct
+module Pre_O = struct
   let ( + ) = ( + )
   let ( - ) = ( - )
   let ( * ) = ( * )
@@ -115,3 +116,18 @@ module O = struct
   let zero = zero
   let of_int_exn = of_int_exn
 end
+
+module O = struct
+  include Pre_O
+  include Int_math.Make (struct
+    type nonrec t = t
+    include Pre_O
+    let rem = rem
+    let to_float = to_float
+    let of_float = of_float
+    let of_string = T.of_string
+    let to_string = T.to_string
+  end)
+end
+
+include O (* [Int64] and [Int64.O] agree value-wise *)

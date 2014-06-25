@@ -20,10 +20,10 @@ module type Accessors = sig
 end
 
 type ('key, 'z) create_options_without_hashable =
-  ('key, 'z) Core_hashtbl_intf.create_options_without_hashable
+  ('key, unit, 'z) Core_hashtbl_intf.create_options_without_hashable
 
 type ('key, 'z) create_options_with_hashable_required =
-  ('key, 'z) Core_hashtbl_intf.create_options_with_hashable
+  ('key, unit, 'z) Core_hashtbl_intf.create_options_with_hashable
 
 module type Creators = sig
   type 'a t

@@ -20,8 +20,9 @@
 
 type 'a t with bin_io, sexp
 
-include Container.S1 with type 'a t := 'a t
-include Invariant.S1 with type 'a t := 'a t
+include Container.        S1 with type 'a t := 'a t
+include Invariant.        S1 with type 'a t := 'a t
+include Binary_searchable.S1 with type 'a t := 'a t
 
 (** Create an empty queue. *)
 val create

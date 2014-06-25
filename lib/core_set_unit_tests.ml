@@ -32,6 +32,7 @@ module Unit_tests
       with type ('a, 'b) tree        := ('a, 'b) tree
       with type 'a elt               := 'a Elt.t
       with type ('a, 'b, 'c) options := ('a, 'b, 'c) access_options
+      with type 'cmp cmp             := 'cmp cmp
 
     val simplify_accessor : (int, Int.comparator_witness, 'c) access_options -> 'c
 
@@ -52,8 +53,11 @@ module Unit_tests
     let subset         = simplify_accessor subset
     let iter2          = simplify_accessor iter2
     let invariants     = simplify_accessor invariants
+    let to_map         = simplify_accessor to_map
     let to_list    = to_list
     let to_array   = to_array
+    let to_sequence ?in_ x =
+      simplify_accessor to_sequence ?in_ x
 
     let empty ()       = simplify_creator empty
     let singleton      = simplify_creator singleton
@@ -68,6 +72,7 @@ module Unit_tests
   type ('a, 'b) set = ('a, 'b) t
   type 'a elt
   type ('a, 'b, 'c) options = ('a, 'b, 'c) Without_comparator.t
+  type 'a cmp
 
   module Elt = struct
     open Elt
@@ -146,6 +151,42 @@ module Unit_tests
     List.equal (Array.to_list a) (Set.to_list set_nonempty) ~equal:Elt.equal
   ;;
 
+  let to_sequence ?in_:_ _ = assert false
+
+  TEST =
+    let m = set_nonempty in
+    Sequence.to_list (Set.to_sequence ~in_:`Increasing_order m) = Set.to_list m
+
+  TEST =
+    let m = set_nonempty in
+    Sequence.to_list (Set.to_sequence ~in_:`Decreasing_order m) = List.rev (Set.to_list m)
+
+  TEST =
+    let m = set_nonempty in
+    Sequence.to_list (Set.to_sequence ~in_:(`Increasing_order_greater_than_or_equal_to (Elt.of_int 4)) m)
+    = List.filter ~f:(fun x -> x >= Elt.of_int 4) (Set.to_list m)
+
+  TEST =
+    let m = set_nonempty in
+    Sequence.to_list (Set.to_sequence ~in_:(`Decreasing_order_less_than_or_equal_to (Elt.of_int 4)) m)
+    = List.filter ~f:(fun x -> x <= Elt.of_int 4) (List.rev (Set.to_list m))
+
+  TEST =
+    let m = Set.empty () in
+    Sequence.to_list (Set.to_sequence ~in_:`Increasing_order m) = []
+
+  TEST =
+    let m = Set.empty () in
+    Sequence.to_list (Set.to_sequence ~in_:`Decreasing_order m) = []
+
+  TEST =
+    let m = set_nonempty in
+    Sequence.to_list (Set.to_sequence ~in_:(`Increasing_order_greater_than_or_equal_to (Elt.of_int 11)) m) = []
+
+  TEST =
+    let m = set_nonempty in
+    Sequence.to_list (Set.to_sequence ~in_:(`Decreasing_order_less_than_or_equal_to (Elt.of_int (-1))) m) = []
+
   let of_sorted_array _ = assert false
   let of_sorted_array_unchecked _ = assert false
 
@@ -214,6 +255,26 @@ module Unit_tests
           assert (Result.is_error (Result.try_with (fun () -> Poly.equal t1 t2)))));
   ;;
 
+  let to_map _ = assert false
+
+  TEST_UNIT = assert (Map.is_empty (Set.to_map set_empty ~f:Elt.to_int))
+
+  TEST_UNIT =
+    let s = set_nonempty in
+    let m = Set.to_map s ~f:Elt.to_int in
+    assert (Set.length s = Map.length m);
+    Map.iter m ~f:(fun ~key ~data -> assert (Elt.to_int key = data));
+    assert (Set.to_list s = Map.keys m);
+  ;;
+
+  let of_map_keys _ = assert false
+
+  TEST_UNIT =
+    assert (Set.is_empty (Set.of_map_keys (Set.to_map set_empty ~f:Elt.to_int)))
+  TEST_UNIT =
+    assert
+      (Set.equal (Set.of_map_keys (Set.to_map set_nonempty ~f:Elt.to_int)) set_nonempty)
+
 
   let to_tree _           = assert false
   let remove_index _      = assert false
@@ -275,7 +336,7 @@ end
 
 module Create_options_without_comparator = struct
   type ('a, 'b, 'c) create_options = ('a, 'b, 'c) Without_comparator.t
-  let simplify_creator  = Fn.id
+  let simplify_creator = Fn.id
 end
 
 module Access_options_without_comparator = struct
@@ -293,6 +354,7 @@ TEST_MODULE "Set" = Unit_tests (Elt_poly) (struct
   type ('a, 'b) t_   = ('a, 'b) t
   type ('a, 'b) set  = ('a, 'b) t
   type ('a, 'b) tree = ('a, 'b) Tree.t
+  type 'a cmp        = 'a
   include Create_options_with_comparator
   include Access_options_without_comparator
   let kind = `Set
@@ -303,6 +365,7 @@ TEST_MODULE "Set.Poly" = Unit_tests (Elt_poly) (struct
   type ('a, 'b) set  = ('a, 'b) Set.t
   type ('a, 'b) t_   = 'a t
   type ('a, 'b) tree = 'a Tree.t
+  type 'a cmp        = Comparator.Poly.comparator_witness
   include Create_options_without_comparator
   include Access_options_without_comparator
   let kind = `Set
@@ -313,6 +376,7 @@ TEST_MODULE "Int.Set" = Unit_tests (Elt_int) (struct
   type ('a, 'b) set  = ('a, 'b) Set.t
   type ('a, 'b) t_   = t
   type ('a, 'b) tree = Tree.t
+  type 'a cmp        = Int.comparator_witness
   include Create_options_without_comparator
   include Access_options_without_comparator
   let kind = `Set
@@ -323,6 +387,7 @@ TEST_MODULE "Set.Tree" = Unit_tests (Elt_poly) (struct
   type ('a, 'b) set  = ('a, 'b) Set.Tree.t
   type ('a, 'b) t_   = ('a, 'b) t
   type ('a, 'b) tree = ('a, 'b) t
+  type 'a cmp        = 'a
   include Create_options_with_comparator
   include Access_options_with_comparator
   let kind = `Tree
@@ -333,6 +398,7 @@ TEST_MODULE "Set.Poly.Tree" = Unit_tests (Elt_poly) (struct
   type ('a, 'b) set  = 'a Set.Poly.Tree.t
   type ('a, 'b) t_   = 'a t
   type ('a, 'b) tree = 'a t
+  type 'a cmp        = Comparator.Poly.comparator_witness
   include Create_options_without_comparator
   include Access_options_without_comparator
   let kind = `Tree
@@ -343,6 +409,7 @@ TEST_MODULE "Int.Set.Tree" = Unit_tests (Elt_int) (struct
   type ('a, 'b) set  = ('a, 'b) Set.Tree.t
   type ('a, 'b) t_   = t
   type ('a, 'b) tree = t
+  type 'a cmp        = Int.comparator_witness
   include Create_options_without_comparator
   include Access_options_without_comparator
   let kind = `Tree

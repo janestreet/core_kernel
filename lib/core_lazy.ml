@@ -1,4 +1,4 @@
-open Typerep_kernel.Std
+open Typerep_lib.Std
 open Sexplib.Std
 open Bin_prot.Std
 
@@ -14,6 +14,8 @@ include Monad.Make (struct
   let bind t f = lazy (force (f (force t)))
 
   let map t ~f = lazy (f (force t))
+
+  let map = `Custom map
 end)
 
 TEST_MODULE = struct

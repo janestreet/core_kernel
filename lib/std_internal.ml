@@ -43,7 +43,9 @@ module Ordering = Ordering
 
 module Bool = Bool
 module Int = Core_int
-include Int.Infix
+let ( %  ) = Int.( %  )
+let ( /% ) = Int.( /% )
+let ( // ) = Int.( // )
 module Int32 = Core_int32
 module Int64 = Core_int64
 module Nativeint = Core_nativeint
@@ -104,7 +106,7 @@ include Result.Export
 
 
 
-include Typerep_kernel.Std_internal
+include Typerep_lib.Std_internal
 
 include (struct
   type 'a array  = 'a Array.    t with bin_io,          sexp, typerep

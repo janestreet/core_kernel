@@ -159,7 +159,7 @@ TEST = Pervasives.(=) (sexp_of_t Jan) (Sexp.Atom "Jan")
 TEST = Jan = t_of_sexp (Sexp.Atom "Jan")
 TEST = Option.is_none (Option.try_with (fun () -> t_of_sexp (Sexp.Atom "0")))
 
-let shift t i = of_int_exn (1 + (Int.Infix.( % ) (to_int t - 1 + i) num_months))
+let shift t i = of_int_exn (1 + (Int.( % ) (to_int t - 1 + i) num_months))
 TEST = shift Jan 12 = Jan
 TEST = shift Jan (-12) = Jan
 TEST = shift Jan 16 = May

@@ -34,7 +34,7 @@
 open Sexplib
 open T
 
-type ('a, 'b) t = ('a, 'b) Typerep_kernel.Std.Type_equal.t = T : ('a, 'a) t
+type ('a, 'b) t = ('a, 'b) Typerep_lib.Std.Type_equal.t = T : ('a, 'a) t
 type ('a, 'b) equal = ('a, 'b) t (** just an alias, needed when [t] gets shadowed below *)
 
 (** [refl], [sym], and [trans] construct proofs that type equality is reflexive,

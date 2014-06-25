@@ -100,16 +100,15 @@ module Stable = struct
   module V1 : sig
     (* THIS TYPE AND ITS SERIALIZATIONS SHOULD NEVER BE CHANGED - PLEASE SPEAK WITH
        ANOTHER DEVELOPER IF YOU NEED MORE DETAIL *)
-    type 'a t_ = 'a T.t = private
+    type 'a t = 'a T.t = private
     | True
     | False
-    | And of 'a t_ * 'a t_
-    | Or of 'a t_ * 'a t_
-    | Not of 'a t_
-    | If of 'a t_ * 'a t_ * 'a t_
+    | And of 'a t * 'a t
+    | Or of 'a t * 'a t
+    | Not of 'a t
+    | If of 'a t * 'a t * 'a t
     | Base of 'a
-
-    type 'a t = 'a t_ with bin_io, compare, sexp
+    with bin_io, compare, sexp
 
     (* the remainder of this signature consists of functions used in the definitions
        of sexp conversions that are also useful more generally *)
@@ -122,16 +121,14 @@ module Stable = struct
 
   end = struct
 
-    type 'a t_ = 'a T.t = private
+    type 'a t = 'a T.t = private
     | True
     | False
-    | And of 'a t_ * 'a t_
-    | Or of 'a t_ * 'a t_
-    | Not of 'a t_
-    | If of 'a t_ * 'a t_ * 'a t_
+    | And of 'a t * 'a t
+    | Or of 'a t * 'a t
+    | Not of 'a t
+    | If of 'a t * 'a t * 'a t
     | Base of 'a
-
-    type 'a t = 'a t_
 
     include (T : sig type 'a t with bin_io, compare end with type 'a t := 'a t)
 
@@ -386,6 +383,8 @@ module C = Container.Make (struct
       | t :: ts -> loop acc t ts
     in
     loop init t []
+
+  let iter = None
 end)
 
 let count    = C.count
@@ -434,7 +433,7 @@ include Monad.Make (struct
       end
   ;;
 
-  let map t ~f = Monad.map_via_bind t ~f ~return ~bind
+  let map = `Define_using_bind
 
 end)
 

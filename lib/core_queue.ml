@@ -219,9 +219,19 @@ let fold t ~init ~f =
   end;
 ;;
 
+(* [iter] is implemented directly because implementing it in terms of fold is slower *)
+let iter t ~f =
+  let num_mutations = t.num_mutations in
+  for i = 0 to t.length - 1 do
+    f (unsafe_get t i);
+    ensure_no_mutation t num_mutations;
+  done;
+;;
+
 module C = Container.Make (struct
   type nonrec 'a t = 'a t
   let fold = fold
+  let iter = Some iter
 end)
 
 let to_list  = C.to_list
@@ -231,15 +241,6 @@ let find_map = C.find_map
 let exists   = C.exists
 let for_all  = C.for_all
 let mem      = C.mem
-
-(* [iter] is implemented directly because implementing it in terms of fold is slower *)
-let iter t ~f =
-  let num_mutations = t.num_mutations in
-  for i = 0 to t.length - 1 do
-    f (unsafe_get t i);
-    ensure_no_mutation t num_mutations;
-  done;
-;;
 
 (* For [concat_map], [filter_map], and [filter], we don't create [t_result] with [t]'s
    capacity because we have no idea how many elements [t_result] will ultimately hold. *)
@@ -333,4 +334,25 @@ include Bin_prot.Utils.Make_iterable_binable1 (struct
   let init n       = create ~capacity:n ()
   let insert t x _ = enqueue t x; t
   let finish       = Fn.id
+end)
+
+include Binary_searchable.Make1 (struct
+  type nonrec 'a t = 'a t
+  let get = get
+  let length = length
+  module For_test = struct
+    let of_array a =
+      let r = create () in
+      (* We enqueue everything twice, and dequeue it once to ensure:
+         - that the queue has the same content as the array.
+         - that it has, in most cases, an interesting internal structure*)
+      for i = 0 to Core_array.length a - 1 do
+        enqueue r a.(i)
+      done;
+      for i = 0 to Core_array.length a - 1 do
+        ignore (dequeue_exn r : bool);
+        enqueue r a.(i)
+      done;
+      r
+  end
 end)

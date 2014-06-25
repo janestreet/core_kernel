@@ -13,12 +13,6 @@ with bin_io, compare, sexp
 
 type t_hum = t with bin_io, compare
 
-let to_string t =
-  String.concat ""
-    [ t.pos_fname
-    ; ":"; string_of_int t.pos_lnum
-    ; ":"; string_of_int (t.pos_cnum - t.pos_bol)
-    ]
-;;
+let to_string = Pa_test_lib.Runtime.string_of_loc
 
-let sexp_of_t_hum t = Sexp.Atom (to_string t)
+let sexp_of_t_hum = Pa_test_lib.Runtime.sexp_of_loc

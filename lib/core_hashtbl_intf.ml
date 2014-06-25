@@ -66,8 +66,10 @@ module type Accessors = sig
   val invariant : (_, _) t -> unit
   val fold : ('a, 'b) t -> init:'c -> f:(key:'a key -> data:'b -> 'c -> 'c) -> 'c
   val iter : ('a, 'b) t -> f:(key:'a key -> data:'b -> unit) -> unit
-  val existsi : ('a, 'b) t -> f:(key: 'a key -> data:'b -> bool) -> bool
-  val exists : (_, 'b) t -> f:('b -> bool) -> bool
+  val existsi  : ('a, 'b) t -> f:(key:'a key -> data:'b -> bool) -> bool
+  val exists   : (_ , 'b) t -> f:(                   'b -> bool) -> bool
+  val for_alli : ('a, 'b) t -> f:(key:'a key -> data:'b -> bool) -> bool
+  val for_all  : (_ , 'b) t -> f:(                   'b -> bool) -> bool
   val length : (_, _) t -> int
   val is_empty : (_, _) t -> bool
   val mem : ('a, _) t -> 'a key -> bool
@@ -207,12 +209,12 @@ module type Accessors = sig
   val incr : ?by:int -> ('a, int) t -> 'a key -> unit
 end
 
-type ('key, 'z) create_options_without_hashable =
+type ('key, 'data, 'z) create_options_without_hashable =
   ?growth_allowed:bool (* defaults to true *)
   -> ?size:int (* initial size -- default 128 *)
   -> 'z
 
-type ('key, 'z) create_options_with_hashable =
+type ('key, 'data, 'z) create_options_with_hashable =
   ?growth_allowed:bool (* defaults to true *)
   -> ?size:int (* initial size -- default 128 *)
   -> hashable:'key Hashable.t
@@ -221,12 +223,13 @@ type ('key, 'z) create_options_with_hashable =
 module type Creators = sig
   type ('a, 'b) t
   type 'a key
-  type ('key, 'z) create_options
+  type ('key, 'data, 'z) create_options
 
-  val create : ('a key, unit -> ('a, 'b) t) create_options
+  val create : ('a key, 'b, unit -> ('a, 'b) t) create_options
 
   val of_alist
     :  ('a key,
+        'b,
         ('a key * 'b) list
         -> [ `Ok of ('a, 'b) t
            | `Duplicate_key of 'a key
@@ -234,22 +237,24 @@ module type Creators = sig
 
   val of_alist_report_all_dups
     : ('a key,
+       'b,
        ('a key * 'b) list
        -> [ `Ok of ('a, 'b) t
           | `Duplicate_keys of 'a key list
           ]) create_options
 
-  val of_alist_or_error : ('a key, ('a key * 'b) list -> ('a, 'b) t Or_error.t) create_options
+  val of_alist_or_error : ('a key, 'b, ('a key * 'b) list -> ('a, 'b) t Or_error.t) create_options
 
-  val of_alist_exn : ('a key, ('a key * 'b) list -> ('a, 'b) t) create_options
+  val of_alist_exn : ('a key, 'b, ('a key * 'b) list -> ('a, 'b) t) create_options
 
-  val of_alist_multi : ('a key, ('a key * 'b) list -> ('a, 'b list) t) create_options
+  val of_alist_multi : ('a key, 'b, ('a key * 'b) list -> ('a, 'b list) t) create_options
 
 
   (* create_mapped get_key get_data [x1,...,xn] =
      of_alist [get_key x1, get_data x1; ...; get_key xn, get_data xn] *)
   val create_mapped
     : ('a key,
+       'b,
        get_key:('r -> 'a key)
        -> get_data:('r -> 'b)
        -> 'r list
@@ -260,6 +265,7 @@ module type Creators = sig
      of_alist [get_key x1, x1; ...; get_key xn, xn] *)
   val create_with_key
     : ('a key,
+       'b,
        get_key:('r -> 'a key)
        -> 'r list
        -> [ `Ok of ('a, 'r) t
@@ -267,12 +273,14 @@ module type Creators = sig
 
   val create_with_key_exn
     : ('a key,
+       'b,
        get_key:('r -> 'a key)
        -> 'r list
        -> ('a, 'r) t) create_options
 
   val group
     : ('a key,
+       'b,
        get_key:('r -> 'a key)
        -> get_data:('r -> 'b)
        -> combine:('b -> 'b -> 'b)
@@ -292,7 +300,7 @@ module type S = sig
   include Creators
     with type ('a, 'b) t := ('a, 'b) t_
     with type 'a key := 'a key_
-    with type ('key, 'z) create_options := ('key, 'z) create_options_without_hashable
+    with type ('key, 'data, 'z) create_options := ('key, 'data, 'z) create_options_without_hashable
 
   include Accessors with type ('a, 'b) t := ('a, 'b) t_ with type 'a key := 'a key_
 
@@ -319,7 +327,7 @@ module type Hashtbl = sig
   include Creators
     with type ('a, 'b) t  := ('a, 'b) t
     with type 'a key = 'a
-    with type ('a, 'z) create_options := ('a, 'z) create_options_with_hashable
+    with type ('a, 'b, 'z) create_options := ('a, 'b, 'z) create_options_with_hashable
 
   include Accessors with type ('a, 'b) t := ('a, 'b) t with type 'a key := 'a key
 
@@ -333,7 +341,7 @@ module type Hashtbl = sig
     include Creators
       with type ('a, 'b) t  := ('a, 'b) t
       with type 'a key = 'a
-      with type ('key, 'z) create_options := ('key, 'z) create_options_without_hashable
+      with type ('key, 'data, 'z) create_options := ('key, 'data, 'z) create_options_without_hashable
 
     include Accessors with type ('a, 'b) t := ('a, 'b) t with type 'a key := 'a key
 

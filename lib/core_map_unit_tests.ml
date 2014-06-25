@@ -5,7 +5,6 @@
 
 
 
-
 module Caml_map = Map
 open Std
 
@@ -49,39 +48,41 @@ module Unit_tests
   : Creators_and_accessors_generic = struct
   module Map = struct
     include Map
-    let add                  = simplify_accessor add
-    let add_multi            = simplify_accessor add_multi
-    let change               = simplify_accessor change
-    let find                 = simplify_accessor find
-    let find_exn             = simplify_accessor find_exn
-    let invariants           = simplify_accessor invariants
-    let remove               = simplify_accessor remove
-    let mem                  = simplify_accessor mem
-    let filter               = simplify_accessor filter
-    let filter_map           = simplify_accessor filter_map
-    let filter_mapi          = simplify_accessor filter_mapi
-    let compare_direct       = simplify_accessor compare_direct
-    let equal                = simplify_accessor equal
-    let iter2                = simplify_accessor iter2
-    let symmetric_diff       = simplify_accessor symmetric_diff
-    let merge                = simplify_accessor merge
-    let fold_range_inclusive = simplify_accessor fold_range_inclusive
-    let range_to_alist       = simplify_accessor range_to_alist
-    let prev_key             = simplify_accessor prev_key
-    let next_key             = simplify_accessor next_key
-    let rank                 = simplify_accessor rank
+    let add                  x = simplify_accessor add x
+    let add_multi            x = simplify_accessor add_multi x
+    let change               x = simplify_accessor change x
+    let find                 x = simplify_accessor find x
+    let find_exn             x = simplify_accessor find_exn x
+    let invariants           x = simplify_accessor invariants x
+    let remove               x = simplify_accessor remove x
+    let mem                  x = simplify_accessor mem x
+    let filter               x = simplify_accessor filter x
+    let filter_map           x = simplify_accessor filter_map x
+    let filter_mapi          x = simplify_accessor filter_mapi x
+    let compare_direct       x = simplify_accessor compare_direct x
+    let equal                x = simplify_accessor equal x
+    let iter2                x = simplify_accessor iter2 x
+    let symmetric_diff       x = simplify_accessor symmetric_diff x
+    let merge                x = simplify_accessor merge x
+    let fold_range_inclusive x = simplify_accessor fold_range_inclusive x
+    let range_to_alist       x = simplify_accessor range_to_alist x
+    let prev_key             x = simplify_accessor prev_key x
+    let next_key             x = simplify_accessor next_key x
+    let rank                 x = simplify_accessor rank x
+    let to_sequence ?keys_in x =
+      simplify_accessor to_sequence ?keys_in x
 
-    let empty ()                  = simplify_creator empty
-    let singleton                 = simplify_creator singleton
-    let of_sorted_array_unchecked = simplify_creator of_sorted_array_unchecked
-    let of_sorted_array           = simplify_creator of_sorted_array
-    let of_alist                  = simplify_creator of_alist
-    let of_alist_or_error         = simplify_creator of_alist_or_error
-    let of_alist_exn              = simplify_creator of_alist_exn
-    let of_alist_multi            = simplify_creator of_alist_multi
-    let of_alist_fold             = simplify_creator of_alist_fold
-    let of_alist_reduce           = simplify_creator of_alist_reduce
-    let of_tree                   = simplify_creator of_tree
+    let empty ()                    = simplify_creator empty
+    let singleton                 x = simplify_creator singleton x
+    let of_sorted_array_unchecked x = simplify_creator of_sorted_array_unchecked x
+    let of_sorted_array           x = simplify_creator of_sorted_array x
+    let of_alist                  x = simplify_creator of_alist x
+    let of_alist_or_error         x = simplify_creator of_alist_or_error x
+    let of_alist_exn              x = simplify_creator of_alist_exn x
+    let of_alist_multi            x = simplify_creator of_alist_multi x
+    let of_alist_fold             x = simplify_creator of_alist_fold x
+    let of_alist_reduce           x = simplify_creator of_alist_reduce x
+    let of_tree                   x = simplify_creator of_tree x
   end
 
   type ('a, 'b, 'c) t = Unit_test_follows
@@ -641,6 +642,42 @@ module Unit_tests
     assert (not (Map.exists base_map ~f:neg));
     assert (Map.exists with_negative ~f:neg);
   ;;
+
+  let to_sequence ?keys_in:_  _ = assert false
+
+  TEST =
+    let m = random_map Key.samples in
+    Sequence.to_list (Map.to_sequence ~keys_in:`Increasing_order  m) = Map.to_alist m
+
+  TEST =
+    let m = random_map Key.samples in
+    Sequence.to_list (Map.to_sequence ~keys_in:`Decreasing_order m) = List.rev (Map.to_alist m)
+
+  TEST =
+    let m = random_map Key.samples in
+    Sequence.to_list (Map.to_sequence ~keys_in:(`Increasing_order_greater_than_or_equal_to (Key.of_int 4)) m)
+    = List.filter ~f:(fun (x, _) -> x >= Key.of_int 4) (Map.to_alist m)
+
+  TEST =
+    let m = random_map Key.samples in
+    Sequence.to_list (Map.to_sequence ~keys_in:(`Decreasing_order_less_than_or_equal_to (Key.of_int 4)) m)
+    = List.filter ~f:(fun (x, _) -> x <= Key.of_int 4) (List.rev (Map.to_alist m))
+
+  TEST =
+    let m = Map.empty () in
+    Sequence.to_list (Map.to_sequence ~keys_in:`Increasing_order m) = []
+
+  TEST =
+    let m = Map.empty () in
+    Sequence.to_list (Map.to_sequence ~keys_in:`Decreasing_order m) = []
+
+  TEST =
+    let m = random_map Key.samples in
+    Sequence.to_list (Map.to_sequence ~keys_in:(`Increasing_order_greater_than_or_equal_to (Key.of_int 11)) m) = []
+
+  TEST =
+    let m = random_map Key.samples in
+    Sequence.to_list (Map.to_sequence ~keys_in:(`Decreasing_order_less_than_or_equal_to (Key.of_int (-1))) m) = []
 
   let fold_range_inclusive _ = assert false
   let range_to_alist       _ = assert false

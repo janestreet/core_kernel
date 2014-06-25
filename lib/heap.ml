@@ -333,6 +333,7 @@ module T = struct
   module C = Container.Make (struct
     type nonrec 'a t = 'a t
     let fold = fold
+    let iter = Some iter
   end)
 
   (* we can do better than the O(n) of [C.length] *)
@@ -469,6 +470,7 @@ module Removable = struct
   module C = Container.Make (struct
     type nonrec 'a t = 'a t
     let fold = fold
+    let iter = Some iter
   end)
 
   let length t = t.length

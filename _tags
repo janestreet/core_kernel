@@ -8,6 +8,7 @@
 "lib/core_int63.ml"          : mlh, package(camlp4.macro)
 "lib/core_int63.mli"         : mlh, package(camlp4.macro)
 "lib/pool.ml"                : mlh, package(camlp4.macro)
+"lib/pow_overflow_bounds.ml" : mlh, package(camlp4.macro)
 <check_caml_modify/*>        : caml_modify_wrapper
 # OASIS_START
 # OASIS_STOP

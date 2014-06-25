@@ -396,18 +396,52 @@ module Tree0 = struct
   ;;
 
   module Enum = struct
-    type ('k, 'v) t =
+    type increasing
+    type decreasing
+    type ('k, 'v, 'direction) t =
     | End
-    | More of 'k * 'v * ('k, 'v) tree * ('k, 'v) t
+    | More of 'k * 'v * ('k, 'v) tree * ('k, 'v, 'direction) t
 
-    let rec cons t e =
+    let rec cons t (e : (_, _, increasing) t) : (_, _, increasing) t =
       match t with
-        Empty -> e
-      | Leaf (v, d) -> More(v, d, Empty, e)
+      | Empty -> e
+      | Leaf(v, d) -> More(v, d, Empty, e)
       | Node(l, v, d, r, _) -> cons l (More(v, d, r, e))
     ;;
 
-    let of_tree tree = cons tree End
+    let rec cons_right t (e : (_, _, decreasing) t) : (_, _, decreasing) t  =
+      match t with
+      | Empty -> e
+      | Leaf(v, d) -> More(v, d, Empty, e)
+      | Node(l, v, d, r, _) -> cons_right r (More(v, d, l, e))
+    ;;
+
+    let of_tree tree : (_, _, increasing) t  = cons tree End
+    ;;
+
+    let of_tree_right tree : (_, _, decreasing) t = cons_right tree End
+    ;;
+
+    let starting_at_increasing t key compare : (_, _, increasing) t =
+      let rec loop t e =
+        match t with
+        | Empty -> e
+        | Leaf(v, d) -> loop (Node(Empty, v, d, Empty, 1)) e
+        | Node(_, v, _, r, _) when compare v key < 0 -> loop r e
+        | Node(l, v, d, r, _) -> loop l (More(v, d, r, e))
+      in
+      loop t End
+    ;;
+
+    let starting_at_decreasing t key compare : (_, _, decreasing) t =
+      let rec loop t e =
+        match t with
+        | Empty -> e
+        | Leaf(v, d) -> loop (Node(Empty, v, d, Empty, 1)) e
+        | Node(l, v, _, _, _) when compare v key > 0 -> loop l e
+        | Node(l, v, d, r, _) -> loop r (More(v, d, l, e))
+      in
+      loop t End
     ;;
 
     let compare compare_key compare_data t1 t2 =
@@ -501,6 +535,44 @@ module Tree0 = struct
       loop (of_tree t1) (of_tree t2) []
     ;;
   end
+
+  let to_sequence_increasing comparator ?from_key t =
+    let next enum =
+      match enum with
+      | Enum.End -> Sequence.Step.Done
+      | Enum.More(k,v,t,e) -> Sequence.Step.Yield((k,v), Enum.cons t e)
+    in
+    let init =
+      match from_key with
+      | None -> Enum.of_tree t
+      | Some key -> Enum.starting_at_increasing t key comparator.Comparator.compare
+    in
+    Sequence.unfold_step ~init ~f:next
+  ;;
+
+  let to_sequence_decreasing comparator ?from_key t =
+    let next enum =
+      match enum with
+      | Enum.End -> Sequence.Step.Done
+      | Enum.More(k,v,t,e) -> Sequence.Step.Yield((k,v), Enum.cons_right t e)
+    in
+    let init =
+      match from_key with
+      | None -> Enum.of_tree_right t
+      | Some key -> Enum.starting_at_decreasing t key comparator.Comparator.compare
+    in
+    Sequence.unfold_step ~init ~f:next
+  ;;
+
+  let to_sequence comparator ?(keys_in=`Increasing_order) t =
+    match keys_in with
+    | `Increasing_order -> to_sequence_increasing comparator t
+    | `Increasing_order_greater_than_or_equal_to from_key ->
+      to_sequence_increasing comparator ~from_key t
+    | `Decreasing_order -> to_sequence_decreasing comparator t
+    | `Decreasing_order_less_than_or_equal_to from_key ->
+      to_sequence_decreasing comparator ~from_key t
+  ;;
 
   let compare compare_key compare_data t1 t2 =
     Enum.compare compare_key compare_data (Enum.of_tree t1) (Enum.of_tree t2)
@@ -740,6 +812,8 @@ module Accessors = struct
   let next_key t key = Tree0.next_key t.tree key ~compare_key:(compare_key t)
   let rank t key = Tree0.rank t.tree key ~compare_key:(compare_key t)
   let sexp_of_t sexp_of_k sexp_of_v t = Tree0.sexp_of_t sexp_of_k sexp_of_v t.tree
+  let to_sequence ?keys_in t =
+    Tree0.to_sequence t.comparator ?keys_in t.tree
 end
 
 let of_tree ~comparator tree = { tree; comparator }
@@ -947,6 +1021,9 @@ module Make_tree (Key : Comparator.S1) = struct
     Tree0.next_key t key ~compare_key:comparator.Comparator.compare
   ;;
   let rank t key = Tree0.rank t key ~compare_key:comparator.Comparator.compare
+
+  let to_sequence ?keys_in t =
+    Tree0.to_sequence comparator ?keys_in t
 end
 
 module Poly = struct
@@ -1173,4 +1250,7 @@ module Tree = struct
   ;;
   let rank ~comparator t key = Tree0.rank t key ~compare_key:comparator.Comparator.compare
   let sexp_of_t sexp_of_k sexp_of_v _ t = Tree0.sexp_of_t sexp_of_k sexp_of_v t
+
+  let to_sequence ~comparator ?keys_in t =
+    Tree0.to_sequence comparator ?keys_in t
 end

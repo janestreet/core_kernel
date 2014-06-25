@@ -3,17 +3,16 @@ module type Basic = sig
   val bind : 'a t -> ('a -> 'b t) -> 'b t
   val return : 'a -> 'a t
 
-  (** Although [map] can be defined in terms of [bind] and [return], it is almost always
-      better to define it directly.  We require it in [Basic], which is the argument to
-      the [Make] functor, to encourage direct definition.
+  (* The [map] argument to [Monad.Make] says how to implement the monad's [map] function.
+     [`Define_using_bind] means to define [map t ~f = bind t (fun a -> return (f a))].
+     [`Custom] overrides the default implementation, presumably with something more
+     efficient.
 
-      For situations where defining [map] in terms of [bind] is fine, you can do:
-
-      {[
-        let map t ~f = Monad.map_via_bind t ~f ~return ~bind
-      ]}
-  *)
-  val map : 'a t -> f:('a -> 'b) -> 'b t
+     Some other functions returned by [Monad.Make] are defined in terms of [map], so
+     passing in a more efficient [map] will improve their efficiency as well. *)
+  val map : [ `Define_using_bind
+            | `Custom of ('a t -> f:('a -> 'b) -> 'b t)
+            ]
 end
 
 module type Infix = sig
@@ -28,13 +27,6 @@ module type Infix = sig
   val (>>|) : 'a t -> ('a -> 'b) -> 'b t
 
 end
-
-let map_via_bind
-  : type a b ma mb.
-    ma -> f:(a -> b) -> return:(b -> mb) -> bind:(ma -> (a -> mb) -> mb) -> mb
-  =
-  fun ma ~f ~return ~bind -> bind ma (fun a -> return (f a))
-;;
 
 module type S = sig
   (** A monad is an abstraction of the concept of sequencing of computations.  A value of
@@ -65,8 +57,14 @@ end
 module Make (M : Basic) : S with type 'a t := 'a M.t = struct
 
   let bind   = M.bind
-  let map    = M.map
   let return = M.return
+
+  let map_via_bind ma ~f = M.bind ma (fun a -> M.return (f a))
+
+  let map =
+    match M.map with
+    | `Define_using_bind -> map_via_bind
+    | `Custom x -> x
 
   module Monad_infix = struct
 
@@ -104,7 +102,9 @@ end
 module type Basic2 = sig
   type ('a, 'd) t
   val bind : ('a, 'd) t -> ('a -> ('b, 'd) t) -> ('b, 'd) t
-  val map : ('a, 'd) t -> f:('a -> 'b) -> ('b, 'd) t
+  val map : [ `Define_using_bind
+            | `Custom of (('a, 'd) t -> f:('a -> 'b) -> ('b, 'd) t)
+            ]
   val return : 'a -> ('a, _) t
 end
 
@@ -163,8 +163,14 @@ end
 module Make2 (M : Basic2) : S2 with type ('a, 'd) t := ('a, 'd) M.t = struct
 
   let bind   = M.bind
-  let map    = M.map
   let return = M.return
+
+  let map_via_bind ma ~f = M.bind ma (fun a -> M.return (f a))
+
+  let map =
+    match M.map with
+    | `Define_using_bind -> map_via_bind
+    | `Custom x -> x
 
   module Monad_infix = struct
 

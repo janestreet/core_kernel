@@ -47,8 +47,12 @@ TEST "create with different max_mem_waiting_gc" =
   involved *)
   (2 * large_max_mem) < small_max_mem
 
-
+(* 4.01 brings new primitives to bigstring, including an optimized length for [Array1] *)
+IFDEF OCAML_4_01 THEN
+let length = Array1.dim
+ELSE
 external length : t -> int = "bigstring_length" "noalloc"
+ENDIF
 
 external is_mmapped : t -> bool = "bigstring_is_mmapped_stub" "noalloc"
 
@@ -82,9 +86,10 @@ external unsafe_blit
   : src : t -> src_pos : int -> dst : t -> dst_pos : int -> len : int -> unit
   = "bigstring_blit_stub"
 
-let get bstr pos = Array1.get bstr pos
+(* Exposing the external version of get/set supports better inlining *)
+external get : t -> int -> char = "%caml_ba_ref_1"
 
-let set bstr pos c = Array1.set bstr pos c
+external set : t -> int -> char -> unit = "%caml_ba_set_1"
 
 module Bigstring_sequence = struct
   type nonrec t = t with sexp_of
@@ -163,6 +168,51 @@ external unsafe_destroy : t -> unit = "bigstring_destroy_stub"
 
 (* Binary-packing like accessors *)
 
+external int32_of_int : int -> int32 = "%int32_of_int"
+external int32_to_int : int32 -> int = "%int32_to_int"
+external int64_of_int : int -> int64 = "%int64_of_int"
+external int64_to_int : int64 -> int = "%int64_to_int"
+
+IFDEF OCAML_4_01 THEN
+external swap16 : int -> int = "%bswap16"
+external swap32 : int32 -> int32 = "%bswap_int32"
+external swap64 : int64 -> int64 = "%bswap_int64"
+external unsafe_get_16 : t -> int -> int = "%caml_bigstring_get16u"
+external unsafe_get_32 : t -> int -> int32 = "%caml_bigstring_get32u"
+external unsafe_get_64 : t -> int -> int64 = "%caml_bigstring_get64u"
+external unsafe_set_16 : t -> int -> int -> unit = "%caml_bigstring_set16u"
+external unsafe_set_32 : t -> int -> int32 -> unit = "%caml_bigstring_set32u"
+external unsafe_set_64 : t -> int -> int64 -> unit = "%caml_bigstring_set64u"
+
+let sign_extend_16 u = (u lsl (Sys.word_size - 17)) asr (Sys.word_size - 17)
+let unsafe_read_int16 t ~pos          = sign_extend_16 (unsafe_get_16 t pos)
+let unsafe_read_int16_swap t ~pos     = sign_extend_16 (swap16 (unsafe_get_16 t pos))
+let unsafe_write_int16 t ~pos x       = unsafe_set_16 t pos x
+let unsafe_write_int16_swap t ~pos x  = unsafe_set_16 t pos (swap16 x)
+
+let unsafe_read_uint16 t ~pos          = unsafe_get_16 t pos
+let unsafe_read_uint16_swap t ~pos     = swap16 (unsafe_get_16 t pos)
+let unsafe_write_uint16 t ~pos x       = unsafe_set_16 t pos x
+let unsafe_write_uint16_swap t ~pos x  = unsafe_set_16 t pos (swap16 x)
+
+let unsafe_read_int32_int t ~pos       = int32_to_int (unsafe_get_32 t pos)
+let unsafe_read_int32_int_swap t ~pos  = int32_to_int (swap32 (unsafe_get_32 t pos))
+let unsafe_read_int32 t ~pos           = unsafe_get_32 t pos
+let unsafe_read_int32_swap t ~pos      = swap32 (unsafe_get_32 t pos)
+let unsafe_write_int32 t ~pos x        = unsafe_set_32 t pos x
+let unsafe_write_int32_swap t ~pos x   = unsafe_set_32 t pos (swap32 x)
+let unsafe_write_int32_int t ~pos x    = unsafe_set_32 t pos (int32_of_int x)
+let unsafe_write_int32_int_swap t ~pos x = unsafe_set_32 t pos (swap32 (int32_of_int x))
+
+let unsafe_read_int64_int t ~pos      = int64_to_int (unsafe_get_64 t pos)
+let unsafe_read_int64_int_swap t ~pos = int64_to_int (swap64 (unsafe_get_64 t pos))
+let unsafe_read_int64 t ~pos          = unsafe_get_64 t pos
+let unsafe_read_int64_swap t ~pos     = swap64 (unsafe_get_64 t pos)
+let unsafe_write_int64 t ~pos x       = unsafe_set_64 t pos x
+let unsafe_write_int64_swap t ~pos x  = unsafe_set_64 t pos (swap64 x)
+let unsafe_write_int64_int t ~pos x       = unsafe_set_64 t pos (int64_of_int x)
+let unsafe_write_int64_int_swap t ~pos x  = unsafe_set_64 t pos (swap64 (int64_of_int x))
+ELSE
 external unsafe_read_int16            : t -> pos:int -> int
   = "unsafe_read_int16_t"       "noalloc"
 external unsafe_read_int16_swap       : t -> pos:int -> int
@@ -221,6 +271,7 @@ external unsafe_write_int64           : t -> pos:int -> Int64.t -> unit
   = "unsafe_write_int64"
 external unsafe_write_int64_swap      : t -> pos:int -> Int64.t -> unit
   = "unsafe_write_int64_swap"
+ENDIF
 
 
 IFDEF ARCH_BIG_ENDIAN THEN
@@ -244,15 +295,26 @@ let unsafe_get_int32_le  = unsafe_read_int32_int_swap
 let unsafe_set_int32_be  = unsafe_write_int32_int
 let unsafe_set_int32_le  = unsafe_write_int32_int_swap
 
-let unsafe_get_int64_be_exn = unsafe_read_int64_int
-let unsafe_get_int64_le_exn = unsafe_read_int64_int_swap
-let unsafe_set_int64_be  = unsafe_write_int64_int
-let unsafe_set_int64_le  = unsafe_write_int64_int_swap
+let unsafe_get_int64_be_trunc = unsafe_read_int64_int
+let unsafe_get_int64_le_trunc = unsafe_read_int64_int_swap
+let unsafe_set_int64_be       = unsafe_write_int64_int
+let unsafe_set_int64_le       = unsafe_write_int64_int_swap
 
 let unsafe_get_int64_t_be  = unsafe_read_int64
 let unsafe_get_int64_t_le  = unsafe_read_int64_swap
 let unsafe_set_int64_t_be  = unsafe_write_int64
 let unsafe_set_int64_t_le  = unsafe_write_int64_swap
+
+(* These allocate intermediate boxes in the common (non-exception) case:
+
+   {[
+     let unsafe_get_int64_be_exn t ~pos = unsafe_get_int64_t_be t ~pos |> Int64.to_int_exn
+     let unsafe_get_int64_le_exn t ~pos = unsafe_get_int64_t_le t ~pos |> Int64.to_int_exn
+   ]}
+
+   So, continue to use the stub for the non-truncating accessors. *)
+external unsafe_get_int64_be_exn : t -> pos:int -> int = "unsafe_read_int64_t"
+external unsafe_get_int64_le_exn : t -> pos:int -> int = "unsafe_read_int64_t_swap"
 ELSE
 let unsafe_get_int16_be  = unsafe_read_int16_swap
 let unsafe_get_int16_le  = unsafe_read_int16
@@ -274,22 +336,31 @@ let unsafe_get_int32_t_le  = unsafe_read_int32
 let unsafe_set_int32_t_be  = unsafe_write_int32_swap
 let unsafe_set_int32_t_le  = unsafe_write_int32
 
-let unsafe_get_int64_be_exn  = unsafe_read_int64_int_swap
-let unsafe_get_int64_le_exn  = unsafe_read_int64_int
-let unsafe_set_int64_be  = unsafe_write_int64_int_swap
-let unsafe_set_int64_le  = unsafe_write_int64_int
+let unsafe_get_int64_be_trunc = unsafe_read_int64_int_swap
+let unsafe_get_int64_le_trunc = unsafe_read_int64_int
+let unsafe_set_int64_be       = unsafe_write_int64_int_swap
+let unsafe_set_int64_le       = unsafe_write_int64_int
 
 let unsafe_get_int64_t_be  = unsafe_read_int64_swap
 let unsafe_get_int64_t_le  = unsafe_read_int64
 let unsafe_set_int64_t_be  = unsafe_write_int64_swap
 let unsafe_set_int64_t_le  = unsafe_write_int64
+
+external unsafe_get_int64_be_exn : t -> pos:int -> int = "unsafe_read_int64_t_swap"
+external unsafe_get_int64_le_exn : t -> pos:int -> int = "unsafe_read_int64_t"
 ENDIF
+BENCH_MODULE "unsafe_get_int64_* don't allocate intermediate boxes" = struct
+  let t = init 8 ~f:Char.of_int_exn
+  BENCH "be" = unsafe_get_int64_be_exn t ~pos:0
+  BENCH "le" = unsafe_get_int64_le_exn t ~pos:0
+end
 
 let unsafe_set_uint8 t ~pos n =
   Array1.unsafe_set t pos (Char.unsafe_of_int n)
 let unsafe_set_int8 t ~pos n =
   (* in all the set functions where there are these tests, it looks like the test could be
-     removed, since they are only changing the values of the bytes that are not written. *)
+     removed, since they are only changing the values of the bytes that are not
+     written. *)
   let n = if n < 0 then n + 256 else n in
   Array1.unsafe_set t pos (Char.unsafe_of_int n)
 let unsafe_get_uint8 t ~pos =
@@ -315,26 +386,30 @@ TEST_MODULE "binary accessors" = struct
 
   let buf = create 256
 
-  let test_accessor ~buf ~fget ~fset vals =
-    Core_list.for_all vals ~f:(fun x -> fset buf ~pos:0 x; x = fget buf ~pos:0)
+  let test_accessor ~buf to_str ~fget ~fset vals =
+    Core_list.foldi ~init:true vals ~f:(fun i passing x ->
+      fset buf ~pos:0 x;
+      let y = fget buf ~pos:0 in
+      if x <> y then eprintf "Value %d: expected %s, got %s\n" i (to_str x) (to_str y);
+      x = y && passing)
   ;;
 
-  TEST = test_accessor ~buf
+  TEST = test_accessor ~buf Int.to_string
     ~fget:unsafe_get_int16_le
     ~fset:unsafe_set_int16_le
     [-32768; -1; 0; 1; 32767]
 
-  TEST = test_accessor ~buf
+  TEST = test_accessor ~buf Int.to_string
     ~fget:unsafe_get_uint16_le
     ~fset:unsafe_set_uint16_le
     [0; 1; 65535]
 
-  TEST = test_accessor ~buf
+  TEST = test_accessor ~buf Int.to_string
     ~fget:unsafe_get_int16_be
     ~fset:unsafe_set_int16_be
     [-32768; -1; 0; 1; 32767]
 
-  TEST = test_accessor ~buf
+  TEST = test_accessor ~buf Int.to_string
     ~fget:unsafe_get_uint16_be
     ~fset:unsafe_set_uint16_be
     [0; 1; 65535]
@@ -342,22 +417,22 @@ TEST_MODULE "binary accessors" = struct
 
 IFDEF ARCH_SIXTYFOUR THEN
 
-  TEST = test_accessor ~buf
+  TEST = test_accessor ~buf Int.to_string
     ~fget:unsafe_get_int32_le
     ~fset:unsafe_set_int32_le
     [Int64.to_int_exn (-2147483648L); -1; 0; 1; Int64.to_int_exn 2147483647L]
 
-  TEST = test_accessor ~buf
+  TEST = test_accessor ~buf Int.to_string
     ~fget:unsafe_get_int32_be
     ~fset:unsafe_set_int32_be
     [Int64.to_int_exn (-2147483648L); -1; 0; 1; Int64.to_int_exn 2147483647L]
 
-  TEST = test_accessor ~buf
+  TEST = test_accessor ~buf Int.to_string
     ~fget:unsafe_get_int64_le_exn
     ~fset:unsafe_set_int64_le
     [Int64.to_int_exn (-2147483648L); -1; 0; 1; Int64.to_int_exn 2147483647L]
 
-  TEST = test_accessor ~buf
+  TEST = test_accessor ~buf Int.to_string
     ~fget:unsafe_get_int64_be_exn
     ~fset:unsafe_set_int64_be
     [Int64.to_int_exn (-0x4000_0000_0000_0000L);
@@ -366,7 +441,7 @@ IFDEF ARCH_SIXTYFOUR THEN
 
 ENDIF (* ARCH_SIXTYFOUR *)
 
-  TEST = test_accessor ~buf
+  TEST = test_accessor ~buf Int64.to_string
     ~fget:unsafe_get_int64_t_le
     ~fset:unsafe_set_int64_t_le
     [-0x8000_0000_0000_0000L;
@@ -378,7 +453,7 @@ ENDIF (* ARCH_SIXTYFOUR *)
      0x789A_BCDE_F012_3456L;
      0x7FFF_FFFF_FFFF_FFFFL]
 
-  TEST = test_accessor ~buf
+  TEST = test_accessor ~buf Int64.to_string
     ~fget:unsafe_get_int64_t_be
     ~fset:unsafe_set_int64_t_be
     [-0x8000_0000_0000_0000L;
@@ -390,7 +465,7 @@ ENDIF (* ARCH_SIXTYFOUR *)
      0x789A_BCDE_F012_3456L;
      0x7FFF_FFFF_FFFF_FFFFL]
 
-  TEST = test_accessor ~buf
+  TEST = test_accessor ~buf Int64.to_string
     ~fget:unsafe_get_int64_t_be
     ~fset:unsafe_set_int64_t_be
     [-0x8000_0000_0000_0000L;
@@ -404,19 +479,54 @@ ENDIF (* ARCH_SIXTYFOUR *)
 
   (* Test 63/64-bit precision boundary.
 
-     Seen on a data stream the constant 0x4000_0000_0000_0000 is supposed to
-     represent a 64-bit positive integer (2^62).
+     Seen on a data stream the constant 0x4000_0000_0000_0000 is supposed to represent a
+     64-bit positive integer (2^62).
 
-     Whilst this bit pattern does fit inside an OCaml value of type [int] on a
-     64-bit machine, it is the representation of a negative number (the most negative
-     number representable in type [int]), and in particular is not the representation
-     of 2^62.  It is thus suitable for this test.
-  *)
-  TEST = let too_big = 0x4000_0000_0000_0000L in
-    unsafe_set_int64_t_le buf ~pos:0 too_big;
-    try
-      let _too_small = unsafe_get_int64_le_exn buf ~pos:0 in false
-    with _ -> true
+     Whilst this bit pattern does fit in an OCaml [int] on a 64-bit machine, it is the
+     representation of a negative number ([Int.min_value]), and in particular is not the
+     representation of 2^62.  It is thus suitable for this test. *)
+  let test_int64 get_exn get_trunc set_t double_check_set =
+    List.iter
+      [ 0x4000_0000_0000_0000L
+      ; Int64.succ (Int64.of_int Int.max_value)
+      ; Int64.pred (Int64.of_int Int.min_value)
+      ; Int64.min_value
+      ; Int64.max_value
+      ; Int64.succ Int64.min_value
+      ; Int64.pred Int64.max_value
+      ]
+      ~f:(fun too_big ->
+        let trunc = int64_to_int too_big in
+        try
+          set_t buf ~pos:0 too_big;
+          <:test_result< int64 >> ~expect:too_big (double_check_set buf ~pos:0);
+          let test_get name got =
+            <:test_pred< string Or_error.t >> is_error ~message:name
+              (Or_error.map ~f:(fun i -> sprintf "%d = 0x%x" i i) got)
+          in
+          let got_exn = Or_error.try_with (fun () -> get_exn buf ~pos:0) in
+          test_get "get_exn" got_exn;
+          <:test_result< int >> ~message:"get_trunc" ~expect:trunc
+            (get_trunc buf ~pos:0)
+        with e ->
+          failwiths "test_int64"
+            ( sprintf "too_big = %LdL = 0x%LxL" too_big too_big
+            , sprintf "trunc = %d = 0x%x" trunc trunc
+            , e
+            )
+            <:sexp_of< string * string * exn >>)
+TEST_UNIT "unsafe_get_int64_le" =
+    test_int64
+      unsafe_get_int64_le_exn
+      unsafe_get_int64_le_trunc
+      unsafe_set_int64_t_le
+      unsafe_get_int64_t_le
+  TEST_UNIT "unsafe_get_int64_be" =
+    test_int64
+      unsafe_get_int64_be_exn
+      unsafe_get_int64_be_trunc
+      unsafe_set_int64_t_be
+      unsafe_get_int64_t_be
 end
 
 let rec last_nonmatch_plus_one ~buf ~min_pos ~pos ~char =

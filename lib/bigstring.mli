@@ -62,17 +62,6 @@ val get_opt_len : t -> pos : int -> int option -> int
 val length : t -> int
 (** [length bstr] @return the length of bigstring [bstr]. *)
 
-val sub : ?pos : int -> ?len : int -> t -> t
-(** [sub ?pos ?len bstr] @return the sub-bigstring in [bstr] that starts at
-    position [pos] and has length [len].  The sub-bigstring is a unique copy
-    of the memory region, i.e. modifying it will not modify the original
-    bigstring.  Note that this is different than the behavior of the
-    standard OCaml Array1.sub, which shares the memory.
-
-    @param pos default = 0
-    @param len default = [Bigstring.length bstr - pos]
-*)
-
 val sub_shared : ?pos : int -> ?len : int -> t -> t
 (** [sub_shared ?pos ?len bstr] @return the sub-bigstring in [bstr]
     that starts at position [pos] and has length [len].  The sub-bigstring
@@ -85,10 +74,10 @@ val sub_shared : ?pos : int -> ?len : int -> t -> t
 *)
 
 (** [get t pos] returns the character at [pos] *)
-val get : t -> int -> char
+external get : t -> int -> char = "%caml_ba_ref_1"
 
 (** [set t pos] sets the character at [pos] *)
-val set : t -> int -> char -> unit
+external set : t -> int -> char -> unit = "%caml_ba_set_1"
 
 external is_mmapped : t -> bool = "bigstring_is_mmapped_stub" "noalloc"
 (** [is_mmapped bstr] @return whether the bigstring [bstr] is
@@ -109,9 +98,15 @@ module From_string : Blit.S_distinct with type src := string with type dst := t
 (** {6 Memory mapping} *)
 
 val map_file : shared : bool -> Unix.file_descr -> int -> t
-(** [map_file shared fd n] memory-maps [n] characters of the data
-    associated with descriptor [fd] to a bigstring.  Iff [shared] is
-    [true], all changes to the bigstring will be reflected in the file. *)
+(** [map_file shared fd n] memory-maps [n] characters of the data associated with
+    descriptor [fd] to a bigstring.  Iff [shared] is [true], all changes to the bigstring
+    will be reflected in the file.
+
+    Users must keep in mind that operations on the resulting bigstring may result in disk
+    operations which block the runtime.  This is true for pure OCaml operations (such as
+    t.{1} <- 1), and for calls to [blit].  While some I/O operations may release the OCaml
+    lock, users should not expect this to be done for all operations on a bigstring
+    returned from [map_file].  *)
 
 (** {6 Search} *)
 
@@ -126,6 +121,7 @@ val find
   -> char
   -> t
   -> int option
+
 
 (** {6 Destruction} *)
 
@@ -170,7 +166,7 @@ external unsafe_destroy : t -> unit = "bigstring_destroy_stub"
    Bigstring.length is a C call, and not even a noalloc one.  In practice, message parsers
    can check the size of an outer message once, and use the unsafe accessors for
    individual fields, so many bounds checks can end up being redundant as well. The
-   situation could be improved by having bigarray cache the length/dimensions.  *)
+   situation could be improved by having bigarray cache the length/dimensions. *)
 
 
 
@@ -206,10 +202,12 @@ val unsafe_set_uint32_be    : t -> pos:int -> int -> unit
    the user is confident that the range of values used in practice will not require 64 bit
    precision (i.e. Less than Max_Long), then we can avoid allocation and use an
    immediate.  If the user is wrong, an exception will be thrown (for get). *)
-val unsafe_get_int64_le_exn : t -> pos:int -> int
-val unsafe_get_int64_be_exn : t -> pos:int -> int
-val unsafe_set_int64_le     : t -> pos:int -> int -> unit
-val unsafe_set_int64_be     : t -> pos:int -> int -> unit
+val unsafe_get_int64_le_exn   : t -> pos:int -> int
+val unsafe_get_int64_be_exn   : t -> pos:int -> int
+val unsafe_set_int64_le       : t -> pos:int -> int -> unit
+val unsafe_set_int64_be       : t -> pos:int -> int -> unit
+val unsafe_get_int64_le_trunc : t -> pos:int -> int
+val unsafe_get_int64_be_trunc : t -> pos:int -> int
 
 (* 32 bit methods w/ full precision *)
 val unsafe_get_int32_t_le : t -> pos:int -> Int32.t

@@ -1,4 +1,4 @@
-open Typerep_kernel.Std
+open Typerep_lib.Std
 open Sexplib.Std
 open Bin_prot.Std
 
@@ -173,6 +173,7 @@ include Monad.Make (struct
     | None -> None
     | Some a -> Some (f a)
   ;;
+  let map = `Custom map
   let bind o f =
     match o with
     | None -> None

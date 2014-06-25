@@ -21,6 +21,7 @@ open With_return
 
 module Array = Core_array
 module List = Core_list
+module Map = Core_map
 
 open Int_replace_polymorphic_compare
 
@@ -457,13 +458,48 @@ module Tree0 = struct
   ;;
 
   module Enum = struct
-    type 'a t = End | More of 'a * 'a tree * 'a t
+    type increasing
+    type decreasing
+    type ('a, 'direction) t = End | More of 'a * 'a tree * ('a, 'direction) t
 
-    let rec cons s e =
+    let rec cons s (e : (_, increasing) t) : (_, increasing) t =
       match s with
       | Empty -> e
       | Leaf v -> (More (v, Empty, e))
       | Node (l, v, r, _, _) -> cons l (More (v, r, e))
+    ;;
+
+    let rec cons_right s (e : (_, decreasing) t) : (_, decreasing) t =
+      match s with
+      | Empty -> e
+      | Leaf v -> More (v, Empty, e)
+      | Node (l, v, r, _, _) -> cons_right r (More (v, l, e))
+    ;;
+
+    let of_set s : (_, increasing) t = cons s End
+
+    let of_set_right s : (_, decreasing) t = cons_right s End
+
+    let starting_at_increasing t key compare : (_, increasing) t =
+      let rec loop t e =
+        match t with
+        | Empty -> e
+        | Leaf v -> loop (Node (Empty, v, Empty, 1, 1)) e
+        | Node(_, v, r, _, _) when compare v key < 0 -> loop r e
+        | Node(l, v, r, _, _) -> loop l (More(v, r, e))
+      in
+      loop t End
+    ;;
+
+    let starting_at_decreasing t key compare : (_, decreasing) t =
+      let rec loop t e =
+        match t with
+        | Empty -> e
+        | Leaf v -> loop (Node (Empty, v, Empty, 1, 1)) e
+        | Node(l, v, _, _, _) when compare v key > 0 -> loop l e
+        | Node(l, v, r, _, _) -> loop r (More(v, l, e))
+      in
+      loop t End
     ;;
 
     let compare compare_elt e1 e2 =
@@ -480,8 +516,6 @@ module Tree0 = struct
       in
       loop e1 e2
     ;;
-
-    let of_set s = cons s End
 
     let rec iter ~f = function
       | End -> ()
@@ -511,6 +545,44 @@ module Tree0 = struct
       in
       loop t1 t2
   end
+
+  let to_sequence_increasing comparator ?from_elt t =
+    let next enum =
+      match enum with
+      | Enum.End -> Sequence.Step.Done
+      | Enum.More (k, t, e) -> Sequence.Step.Yield (k, Enum.cons t e)
+    in
+    let init =
+      match from_elt with
+      | None -> Enum.of_set t
+      | Some key -> Enum.starting_at_increasing t key comparator.Comparator.compare
+    in
+    Sequence.unfold_step ~init ~f:next
+  ;;
+
+  let to_sequence_decreasing comparator ?from_elt t =
+    let next enum =
+      match enum with
+      | Enum.End -> Sequence.Step.Done
+      | Enum.More (k, t, e) -> Sequence.Step.Yield (k, Enum.cons_right t e)
+    in
+    let init =
+      match from_elt with
+      | None -> Enum.of_set_right t
+      | Some key -> Enum.starting_at_decreasing t key comparator.Comparator.compare
+    in
+    Sequence.unfold_step ~init ~f:next
+  ;;
+
+  let to_sequence comparator ?(in_ = `Increasing_order) t =
+    match in_ with
+    | `Increasing_order -> to_sequence_increasing comparator t
+    | `Increasing_order_greater_than_or_equal_to from_elt ->
+      to_sequence_increasing comparator ~from_elt t
+    | `Decreasing_order -> to_sequence_decreasing comparator t
+    | `Decreasing_order_less_than_or_equal_to from_elt ->
+      to_sequence_decreasing comparator ~from_elt t
+  ;;
 
   let compare compare_elt s1 s2 =
     Enum.compare compare_elt (Enum.of_set s1) (Enum.of_set s2)
@@ -756,6 +828,17 @@ module Tree0 = struct
     loop xs [] empty
   ;;
 
+  let to_map ~comparator t ~f =
+    Map.of_sorted_array_unchecked ~comparator
+      (Array.map (to_array t) ~f:(fun key -> (key, f key)))
+  ;;
+
+  let of_map_keys m =
+    of_sorted_array_unchecked
+      ~compare_elt:(Map.comparator m).Comparator.compare
+      (List.to_array (Map.keys m))
+  ;;
+
   open Sexplib
 
   let t_of_sexp a_of_sexp sexp ~compare_elt =
@@ -849,6 +932,10 @@ module Accessors = struct
   let find_index t i = Tree0.find_index t.tree i
   let remove_index t i = like t (Tree0.remove_index t.tree i ~compare_elt:(compare_elt t))
   let sexp_of_t sexp_of_a t = Tree0.sexp_of_t sexp_of_a t.tree
+  let to_sequence ?in_ t =
+    Tree0.to_sequence ?in_ t.comparator t.tree
+
+  let to_map t ~f = Tree0.to_map t.tree ~f ~comparator:t.comparator
 end
 
 let to_tree t = t.tree
@@ -896,6 +983,8 @@ let filter_map ~comparator t ~f =
   }
 ;;
 
+let of_map_keys m = { comparator = Map.comparator m; tree = Tree0.of_map_keys m }
+
 include Accessors
 
 let compare _ _ t1 t2 = compare_direct t1 t2
@@ -905,6 +994,7 @@ module Creators (Elt : Comparator.S1) : sig
   type ('a, 'comparator) t_ = ('a Elt.t, Elt.comparator_witness) set
   type ('a, 'b) tree = 'a Tree0.t
   type 'a elt_ = 'a Elt.t
+  type 'a cmp_ = Elt.comparator_witness
 
   val t_of_sexp : (Sexp.t -> 'a Elt.t) -> Sexp.t -> ('a, 'comparator) t_
 
@@ -914,6 +1004,7 @@ module Creators (Elt : Comparator.S1) : sig
     with type ('a, 'b) tree        := ('a, 'b) tree
     with type 'a elt               := 'a elt_
     with type ('a, 'b, 'c) options := ('a, 'b, 'c) Without_comparator.t
+    with type 'a cmp               := 'a cmp_
 
 end = struct
 
@@ -922,6 +1013,8 @@ end = struct
   type ('a, 'b) tree = 'a Tree0.t
 
   type 'a elt_ = 'a Elt.t
+
+  type 'cmp cmp_ = Elt.comparator_witness
 
   let comparator = Elt.comparator
 
@@ -950,6 +1043,8 @@ end = struct
   let filter_map t ~f = filter_map ~comparator t ~f
 
   let t_of_sexp a_of_sexp sexp = of_tree (Tree0.t_of_sexp a_of_sexp sexp ~compare_elt)
+
+  let of_map_keys = of_map_keys
 
 end
 
@@ -1017,6 +1112,12 @@ module Make_tree (Elt : Comparator.S1) = struct
 
   let to_tree t = t
   let of_tree t = t
+
+  let to_sequence ?in_ t =
+    Tree0.to_sequence ?in_ comparator t
+
+  let of_map_keys = Tree0.of_map_keys
+  let to_map t ~f = Tree0.to_map t ~f ~comparator
 end
 
 module Poly = struct
@@ -1226,4 +1327,10 @@ module Tree = struct
 
   let to_tree t = t
   let of_tree ~comparator:_ t = t
+
+  let to_sequence ~comparator ?in_ t =
+    Tree0.to_sequence ?in_ comparator t
+
+  let of_map_keys = Tree0.of_map_keys
+  let to_map = Tree0.to_map
 end

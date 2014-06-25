@@ -49,11 +49,11 @@ let compare_key t = t.hashable.Hashable.compare
 
 (** Internally use a maximum size that is a power of 2. Reverses the above to find the
     floor power of 2 below the system max array length *)
-let max_table_length = Int_math.floor_pow2 Sys.max_array_length ;;
+let max_table_length = Int_pow2.floor_pow2 Sys.max_array_length ;;
 
 let create ?(growth_allowed = true) ?(size = 128) ~hashable () =
   let size = Int.min (Int.max 1 size) max_table_length in
-  let size = Int_math.ceil_pow2 size in
+  let size = Int_pow2.ceil_pow2 size in
   { table = Array.create ~len:size Avltree.empty;
     length = 0;
     growth_allowed = growth_allowed;
@@ -271,6 +271,11 @@ let existsi t ~f =
 ;;
 
 let exists t ~f = existsi t ~f:(fun ~key:_ ~data -> f data)
+;;
+
+let for_alli t ~f = not (existsi t ~f:(fun ~key   ~data -> not (f ~key ~data)))
+let for_all  t ~f = not (existsi t ~f:(fun ~key:_ ~data -> not (f       data)))
+
 
 let mapi t ~f =
   let new_t =
@@ -581,6 +586,8 @@ module Accessors = struct
   let iter            = iter
   let exists          = exists
   let existsi         = existsi
+  let for_all         = for_all
+  let for_alli        = for_alli
   let fold            = fold
   let length          = length
   let is_empty        = is_empty
@@ -629,7 +636,7 @@ end) : sig
   include Creators
     with type ('a, 'b) t := ('a, 'b) t_
     with type 'a key := 'a Key.t
-    with type ('key, 'a) create_options := ('key, 'a) create_options_without_hashable
+    with type ('key, 'data, 'a) create_options := ('key, 'data, 'a) create_options_without_hashable
 
 end = struct
 

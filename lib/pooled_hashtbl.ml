@@ -17,7 +17,7 @@ module Int = struct
 
   let max (x : t) y = if x > y then x else y
   let min (x : t) y = if x < y then x else y
-  include Int_math
+  include Int_pow2
 end
 
 module List = Core_list
@@ -115,7 +115,7 @@ let sexp_of_key t = t.hashable.Hashable.sexp_of_t ;;
    plumb it through functions like map which call create. *)
 let load_factor = 0.85 ;;
 
-let max_table_length = Int_math.floor_pow2 Sys.max_array_length ;;
+let max_table_length = Int_pow2.floor_pow2 Sys.max_array_length ;;
 
 let calculate_table_size size =
   (* Ensure we can fit size elements in the table. *)
@@ -474,6 +474,9 @@ let existsi t ~f =
 
 let exists t ~f = existsi t ~f:(fun ~key:_ ~data -> f data) ;;
 
+let for_alli t ~f = not (existsi t ~f:(fun ~key   ~data -> not (f ~key ~data)))
+let for_all  t ~f = not (existsi t ~f:(fun ~key:_ ~data -> not (f       data)))
+
 let mapi t ~f =
   let new_t =
     create ~growth_allowed:t.growth_allowed
@@ -716,6 +719,8 @@ module Accessors = struct
   let iter            = iter
   let exists          = exists
   let existsi         = existsi
+  let for_all         = for_all
+  let for_alli        = for_alli
   let fold            = fold
   let length          = length
   let is_empty        = is_empty
@@ -764,7 +769,7 @@ end) : sig
   include Creators
     with type ('a, 'b) t := ('a, 'b) t_
     with type 'a key := 'a Key.t
-    with type ('key, 'a) create_options := ('key, 'a) create_options_without_hashable
+    with type ('key, 'data, 'a) create_options := ('key, 'data, 'a) create_options_without_hashable
 
 end = struct
 

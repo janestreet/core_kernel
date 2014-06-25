@@ -207,6 +207,17 @@ module type Accessors_generic = sig
       ) options
 
   val to_tree : ('k, 'v, 'cmp) t -> ('k key, 'v, 'cmp) tree
+
+  val to_sequence
+    : ('k, 'cmp,
+       ?keys_in:[ `Increasing_order
+                | `Increasing_order_greater_than_or_equal_to of 'k key
+                | `Decreasing_order
+                | `Decreasing_order_less_than_or_equal_to of 'k key
+                ]
+       -> ('k, 'v, 'cmp) t
+       -> ('k key * 'v) Sequence.t
+      ) options
 end
 
 module type Accessors1 = sig
@@ -225,7 +236,7 @@ module type Accessors1 = sig
   val mem            : _ t -> key -> bool
   val iter           : 'a t -> f:(key:key -> data:'a -> unit) -> unit
   val iter2
-    : 'a t
+    :  'a t
     -> 'b t
     -> f:(key:key -> data:[ `Left of 'a | `Right of 'b | `Both of 'a * 'b ] -> unit)
     -> unit
@@ -270,6 +281,14 @@ module type Accessors1 = sig
   val next_key       : 'a t -> key -> (key * 'a) option
   val rank           : _  t -> key -> int option
   val to_tree        : 'a t -> 'a tree
+  val to_sequence
+    :  ?keys_in:[ `Increasing_order
+                | `Increasing_order_greater_than_or_equal_to of key
+                | `Decreasing_order
+                | `Decreasing_order_less_than_or_equal_to of key
+                ]
+    -> 'a t
+    -> (key * 'a) Sequence.t
 end
 
 module type Accessors2 = sig
@@ -328,6 +347,14 @@ module type Accessors2 = sig
   val next_key       : ('a, 'b) t -> 'a -> ('a * 'b) option
   val rank           : ('a, _)  t -> 'a -> int option
   val to_tree        : ('a, 'b) t -> ('a, 'b) tree
+  val to_sequence
+    :  ?keys_in:[ `Increasing_order
+                | `Increasing_order_greater_than_or_equal_to of 'a
+                | `Decreasing_order
+                | `Decreasing_order_less_than_or_equal_to of 'a
+                ]
+    -> ('a, 'b) t
+    -> ('a * 'b) Sequence.t
 end
 
 module type Accessors3 = sig
@@ -391,6 +418,14 @@ module type Accessors3 = sig
   val next_key       : ('a, 'b, _)    t -> 'a -> ('a * 'b) option
   val rank           : ('a, _,  _)    t -> 'a -> int option
   val to_tree        : ('a, 'b, 'cmp) t -> ('a, 'b, 'cmp) tree
+  val to_sequence
+    :  ?keys_in:[ `Increasing_order
+                | `Increasing_order_greater_than_or_equal_to of 'a
+                | `Decreasing_order
+                | `Decreasing_order_less_than_or_equal_to of 'a
+                ]
+    -> ('a, 'b, _) t
+    -> ('a * 'b) Sequence.t
 end
 
 module type Accessors3_with_comparator = sig
@@ -488,6 +523,15 @@ module type Accessors3_with_comparator = sig
     :  comparator:('a, 'cmp) Comparator.t
     -> ('a, 'b, 'cmp) t -> 'a -> int option
   val to_tree : ('a, 'b, 'cmp) t -> ('a, 'b, 'cmp) tree
+  val to_sequence
+    :  comparator:('a, 'cmp) Comparator.t
+    -> ?keys_in:[ `Increasing_order
+                | `Increasing_order_greater_than_or_equal_to of 'a
+                | `Decreasing_order
+                | `Decreasing_order_less_than_or_equal_to of 'a
+                ]
+    -> ('a, 'b, 'cmp) t
+    -> ('a * 'b) Sequence.t
 end
 
 (* Consistency checks (same as in [Container]). *)

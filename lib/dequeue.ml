@@ -101,11 +101,6 @@ let checked t f =
   else Some (f t)
 ;;
 
-let assert_not_empty t name =
-  if is_empty t then
-    failwithf "%s: Dequeue.t is empty" name ()
-;;
-
 let apparent_front_index t = checked t apparent_front_index_when_not_empty
 let apparent_back_index  t = checked t apparent_back_index_when_not_empty
 
@@ -184,15 +179,6 @@ let fold   t     ~init ~f = fold'  t `front_to_back ~init ~f
 let foldi  t     ~init ~f = foldi' t `front_to_back ~init ~f
 let iteri  t           ~f = iteri' t `front_to_back ~f
 
-(* We have to be careful here, importing all of Container.Make would change the runtime of
-   some functions ([length] minimally) silently without changing the semantics.  We get
-   around that by importing things explicitly.  *)
-module C = Container.Make (struct
-  type nonrec 'a t = 'a t
-  let fold = fold
-end)
-let count      = C.count
-
 let iter t ~f =
   if not (is_empty t) then begin
     let actual_front = actual_front_index_when_not_empty t in
@@ -212,6 +198,16 @@ let iter t ~f =
   end
 ;;
 
+(* We have to be careful here, importing all of Container.Make would change the runtime of
+   some functions ([length] minimally) silently without changing the semantics.  We get
+   around that by importing things explicitly.  *)
+module C = Container.Make (struct
+  type nonrec 'a t = 'a t
+  let fold = fold
+  let iter = Some iter
+end)
+
+let count      = C.count
 let exists     = C.exists
 let mem        = C.mem
 let for_all    = C.for_all
@@ -286,19 +282,37 @@ let enqueue t back_or_front v =
   | `front -> enqueue_front t v
 ;;
 
-let peek_front_exn t =
-  assert_not_empty t "Dequeue.peek_front_exn";
+let peek_front_nonempty t =
   t.arr.(actual_front_index_when_not_empty t)
 ;;
 
-let peek_front t = try Some (peek_front_exn t) with _ -> None
+let peek_front_exn t =
+  if is_empty t
+  then failwith "Dequeue.peek_front_exn passed an empty queue"
+  else peek_front_nonempty t
+;;
 
-let peek_back_exn t =
-  assert_not_empty t "Dequeue.peek_back_exn";
+let peek_front t =
+  if is_empty t
+  then None
+  else Some (peek_front_nonempty t)
+;;
+
+let peek_back_nonempty t =
   t.arr.(actual_back_index_when_not_empty t)
 ;;
 
-let peek_back t = try Some (peek_back_exn t) with _ -> None
+let peek_back_exn t =
+  if is_empty t
+  then failwith "Dequeue.peek_back_exn passed an empty queue"
+  else peek_back_nonempty t
+;;
+
+let peek_back t =
+  if is_empty t
+  then None
+  else Some (peek_back_nonempty t)
+;;
 
 let peek t back_or_front =
   match back_or_front with
@@ -306,8 +320,7 @@ let peek t back_or_front =
   | `front -> peek_front t
 ;;
 
-let dequeue_front_exn t =
-  assert_not_empty t "Dequeue.dequeue_front_exn";
+let dequeue_front_nonempty t =
   let i = actual_front_index_when_not_empty t in
   let res = t.arr.(i) in
   t.arr.(i)              <- t.dummy;
@@ -318,10 +331,19 @@ let dequeue_front_exn t =
   res
 ;;
 
-let dequeue_front t = try Some (dequeue_front_exn t) with _ -> None
+let dequeue_front_exn t =
+  if is_empty t
+  then failwith "Dequeue.dequeue_front_exn passed an empty queue"
+  else dequeue_front_nonempty t
+;;
 
-let dequeue_back_exn t =
-  assert_not_empty t "Dequeue.dequeue_back_exn";
+let dequeue_front t =
+  if is_empty t
+  then None
+  else Some (dequeue_front_nonempty t)
+;;
+
+let dequeue_back_nonempty t =
   let i = actual_back_index_when_not_empty t in
   let res = t.arr.(i) in
   t.arr.(i)    <- t.dummy;
@@ -331,7 +353,17 @@ let dequeue_back_exn t =
   res
 ;;
 
-let dequeue_back t = try Some (dequeue_back_exn t) with _ -> None
+let dequeue_back_exn t =
+  if is_empty t
+  then failwith "Dequeue.dequeue_back_exn passed an empty queue"
+  else dequeue_back_nonempty t
+;;
+
+let dequeue_back t =
+  if is_empty t
+  then None
+  else Some (dequeue_back_nonempty t)
+;;
 
 let dequeue_exn t back_or_front =
   match back_or_front with
@@ -339,7 +371,10 @@ let dequeue_exn t back_or_front =
   | `back  -> dequeue_back_exn t
 ;;
 
-let dequeue t back_or_front = try Some (dequeue_exn t back_or_front) with _ -> None
+let dequeue t back_or_front =
+  match back_or_front with
+  | `front -> dequeue_front t
+  | `back  -> dequeue_back t
 
 let drop_gen ?(n=1) ~dequeue t =
   if n < 0 then
@@ -360,6 +395,11 @@ let drop ?n t back_or_front =
   match back_or_front with
   | `back  -> drop_back  ?n t
   | `front -> drop_front ?n t
+;;
+
+let assert_not_empty t name =
+  if is_empty t then
+    failwithf "%s: Dequeue.t is empty" name ()
 ;;
 
 let true_index_exn t i =
@@ -432,38 +472,53 @@ module Binary_searchable = Binary_searchable.Make1 (struct
   type nonrec 'a t = 'a t
   let get t i = get t (front_index_exn t + i)
   let length = length
+  module For_test = struct
+    let of_array = of_array
+  end
 end)
 
 (* The "stable" indices used in this module make the application of the
    [Binary_searchable] functor awkward.  We need to be sure to translate incoming
    positions from stable space to the expected 0 -> length - 1 space and then we need to
    translate them back on return. *)
-let binary_search ?pos ?len t ~compare v =
+let binary_search ?pos ?len t ~compare how v =
   let pos =
     match pos with
     | None     -> None
     | Some pos -> Some (pos - t.apparent_front_index)
   in
-  match Binary_searchable.binary_search ?pos ?len t ~compare v with
+  match Binary_searchable.binary_search ?pos ?len t ~compare how v with
   | None                -> None
   | Some untranslated_i -> Some (t.apparent_front_index + untranslated_i)
 ;;
 
-TEST_UNIT = begin
-  let t = of_array [| 1; 2; 3; 4 |] in
-  assert (binary_search t ~compare:Int.compare 2 = Some 1);
-  assert (binary_search t ~compare:Int.compare 5 = None);
-  assert (binary_search t ~compare:Int.compare 0 = None);
-  assert (binary_search t ~pos:2 ~compare:Int.compare 2 = None);
-  assert (binary_search t ~pos:2 ~compare:Int.compare 3 = Some 2);
-  ignore (dequeue_front t);
-  ignore (dequeue_front t);
-  assert (binary_search t ~compare:Int.compare 2 = None);
-  assert (binary_search t ~compare:Int.compare 3 = Some 2);
-  assert (binary_search t ~compare:Int.compare 5 = None);
-  assert (binary_search t ~compare:Int.compare 0 = None);
-  assert (binary_search t ~pos:2 ~compare:Int.compare 2 = None);
-  assert (binary_search t ~pos:2 ~compare:Int.compare 3 = Some 2);
+let binary_search_segmented ?pos ?len t ~segment_of how =
+  let pos =
+    match pos with
+    | None     -> None
+    | Some pos -> Some (pos - t.apparent_front_index)
+  in
+  match Binary_searchable.binary_search_segmented ?pos ?len t ~segment_of how with
+  | None                -> None
+  | Some untranslated_i -> Some (t.apparent_front_index + untranslated_i)
+;;
+
+TEST_MODULE = struct
+  let binary_search = binary_search ~compare:Int.compare
+  let t = of_array [| 1; 2; 3; 4 |]
+  TEST = binary_search t        `First_equal_to 2 = Some 1
+  TEST = binary_search t        `First_equal_to 5 = None
+  TEST = binary_search t        `First_equal_to 0 = None
+  TEST = binary_search t ~pos:2 `First_equal_to 2 = None
+  TEST = binary_search t ~pos:2 `First_equal_to 3 = Some 2
+  let _ = dequeue_front t
+  let _ = dequeue_front t
+  TEST = binary_search t        `First_equal_to 2 = None
+  TEST = binary_search t        `First_equal_to 3 = Some 2
+  TEST = binary_search t        `First_equal_to 5 = None
+  TEST = binary_search t        `First_equal_to 0 = None
+  TEST = binary_search t ~pos:2 `First_equal_to 2 = None
+  TEST = binary_search t ~pos:2 `First_equal_to 3 = Some 2
 end
 
 TEST_MODULE = struct
@@ -659,4 +714,22 @@ TEST_MODULE = struct
   ;;
 
   TEST_UNIT = test ()
+end
+
+BENCH_MODULE "Dequeue" = struct
+
+  (* this is the old way we used to implement the option versions of peek and
+     dequeue, which did a failwithf. *)
+  BENCH_FUN "assert_not_empty" =
+    let t = create () in
+    fun () -> try assert_not_empty t "Queue.dequeue_front" with _ -> ()
+
+  BENCH_FUN "dequeue_front empty" =
+    let t = create () in
+    fun () -> ignore (dequeue_front t : _ option)
+
+  BENCH_FUN "peek_back non-empty" =
+    let t = create () in
+    let () = enqueue_back t 2 in
+    fun () -> ignore (peek_back t : _ option)
 end

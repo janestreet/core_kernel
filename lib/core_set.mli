@@ -253,6 +253,23 @@ val split : ('a, 'cmp) t -> 'a -> ('a, 'cmp) t * bool * ('a, 'cmp) t
     [group_by] runs in O(n^2) time. *)
 val group_by :  ('a, 'cmp) t -> equiv:('a -> 'a -> bool) -> ('a, 'cmp) t list
 
+(** [to_sequence ?in_ t] converts the set [t] to a sequence of the elements in the order
+    indicated by [in_]. *)
+val to_sequence
+  :  ?in_:[ `Increasing_order (** default *)
+          | `Decreasing_order
+          | `Increasing_order_greater_than_or_equal_to of 'a
+          | `Decreasing_order_less_than_or_equal_to    of 'a
+          ]
+  -> ('a, 'cmp) t
+  -> 'a Sequence.t
+
+(** Convert a set to or from a map.  [to_map] takes a function to produce data for each
+    key.  Both functions run in O(n) time (assuming the function passed to [to_map] runs
+    in constant time). *)
+val to_map : ('key, 'cmp) t -> f:('key -> 'data) -> ('key, 'data, 'cmp) Map.t
+val of_map_keys : ('key, _, 'cmp) Map.t -> ('key, 'cmp) t
+
 (** {1 Polymorphic sets}
 
     Module {!Poly} deals with sets that use OCaml's polymorphic comparison to compare
@@ -269,6 +286,7 @@ module Poly : sig
       with type ('a, 'b) set := ('a, 'b) Tree.t
       with type 'elt t       := 'elt t
       with type 'elt tree    := 'elt t
+      with type comparator_witness := Comparator.Poly.comparator_witness
   end
 
   type 'elt t = ('elt, Comparator.Poly.comparator_witness) set with bin_io, compare, sexp
@@ -277,6 +295,7 @@ module Poly : sig
     with type ('a, 'b) set := ('a, 'b) set
     with type 'elt t       := 'elt t
     with type 'elt tree    := 'elt Tree.t
+    with type comparator_witness := Comparator.Poly.comparator_witness
 end
   with type ('a, 'b) set := ('a, 'b) t
 

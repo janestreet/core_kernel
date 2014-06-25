@@ -466,6 +466,9 @@ TEST_MODULE = (struct
     ;;
   end
 
+  let binary_search = binary_search
+  let binary_search_segmented = binary_search_segmented
+
   TEST_UNIT "modification-during-iteration" =
     let x = `A 0 in
     let t = of_list [x; x] in

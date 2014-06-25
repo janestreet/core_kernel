@@ -32,8 +32,8 @@ module type S = sig
   val minus_one : t
   val epsilon : t   (* WARNING: This is not [Float.epsilon_float].  See Robust_compare. *)
 
-  (* The difference between 1.0 and the smallest exactly representable floating-point
-     number greater than 1.0. *)
+  (** The difference between 1.0 and the smallest exactly representable floating-point
+      number greater than 1.0. *)
   val epsilon_float : t
 
   val max_finite_value : t
@@ -48,59 +48,57 @@ module type S = sig
   val of_int64 : int64 -> t
   val to_int64 : t -> int64
 
-  (* [round] rounds a float to an integer float.  [iround{,_exn}] rounds a float to an
-     int.  Both round according to a direction [dir], with default [dir] being [`Nearest].
+  (** [round] rounds a float to an integer float.  [iround{,_exn}] rounds a float to an
+      int.  Both round according to a direction [dir], with default [dir] being [`Nearest].
 
-     {v
-       | `Down    | rounds toward Float.neg_infinity                             |
-       | `Up      | rounds toward Float.infinity                                 |
-       | `Nearest | rounds to the nearest int ("round half-integers up")         |
-       | `Zero    | rounds toward zero                                           |
-     v}
+      {v
+        | `Down    | rounds toward Float.neg_infinity                             |
+        | `Up      | rounds toward Float.infinity                                 |
+        | `Nearest | rounds to the nearest int ("round half-integers up")         |
+        | `Zero    | rounds toward zero                                           |
+      v}
 
-     [iround_exn] raises when trying to handle nan or trying to handle a float outside the
-     range [float min_int, float max_int).
+      [iround_exn] raises when trying to handle nan or trying to handle a float outside the
+      range [float min_int, float max_int).
 
-     Here are some examples for [round] for each of the directions.
 
-     {v
-       | `Down    | [-2.,-1.)   to -2. | [-1.,0.)   to -1. | [0.,1.) to 0., [1.,2.) to 1. |
-       | `Up      | (-2.,-1.]   to -1. | (-1.,0.]   to -0. | (0.,1.] to 1., (1.,2.] to 2. |
-       | `Zero    | (-2.,-1.]   to -1. | (-1.,1.)   to 0.  | [1.,2.) to 1.                |
-       | `Nearest | [-1.5,-0.5) to -1. | [-0.5,0.5) to 0.  | [0.5,1.5) to 1.              |
-     v}
+      Here are some examples for [round] for each direction:
 
-     For convenience, versions of these functions with the [dir] argument hard-coded are
-     provided.  If you are writing performance-critical code you should use the
-     versions with the hard-coded arguments (e.g. [iround_down_exn]).  The [_exn] ones
-     are the fastest.
+      {v
+        | `Down    | [-2.,-1.)   to -2. | [-1.,0.)   to -1. | [0.,1.) to 0., [1.,2.) to 1. |
+        | `Up      | (-2.,-1.]   to -1. | (-1.,0.]   to -0. | (0.,1.] to 1., (1.,2.] to 2. |
+        | `Zero    | (-2.,-1.]   to -1. | (-1.,1.)   to 0.  | [1.,2.) to 1.                |
+        | `Nearest | [-1.5,-0.5) to -1. | [-0.5,0.5) to 0.  | [0.5,1.5) to 1.              |
+      v}
 
-     The following properties hold:
+      For convenience, versions of these functions with the [dir] argument hard-coded are
+      provided.  If you are writing performance-critical code you should use the
+      versions with the hard-coded arguments (e.g. [iround_down_exn]).  The [_exn] ones
+      are the fastest.
 
-     - [of_int (iround_*_exn i) = i] for any float [i] that is an integer with
-       [min_int <= i <= max_int].
+      The following properties hold:
 
-     - [round_* i = i] for any float [i] that is an integer.
+      - [of_int (iround_*_exn i) = i] for any float [i] that is an integer with
+        [min_int <= i <= max_int].
 
-     - [iround_*_exn (of_int i) = i] for any int [i] with [-2**52 <= i <= 2**52].
+      - [round_* i = i] for any float [i] that is an integer.
+
+      - [iround_*_exn (of_int i) = i] for any int [i] with [-2**52 <= i <= 2**52].
   *)
   val round      : ?dir:[`Zero|`Nearest|`Up|`Down] -> t -> t
   val iround     : ?dir:[`Zero|`Nearest|`Up|`Down] -> t -> int option
   val iround_exn : ?dir:[`Zero|`Nearest|`Up|`Down] -> t -> int
 
-  (* See [round] for a description of these functions. *)
   val round_towards_zero : t -> t
   val round_down         : t -> t
   val round_up           : t -> t
   val round_nearest      : t -> t
 
-  (* See [round] for a description of these functions. *)
   val iround_towards_zero : t -> int option
   val iround_down         : t -> int option
   val iround_up           : t -> int option
   val iround_nearest      : t -> int option
 
-  (* See [round] for a description of these functions. *)
   val iround_towards_zero_exn : t -> int
   val iround_down_exn         : t -> int
   val iround_up_exn           : t -> int
@@ -182,7 +180,7 @@ module type S = sig
   val to_string_round_trippable : float -> string
 
   (** Pretty print float, for example [to_string_hum ~decimals:3 1234.1999 = "1_234.200"]
-      [to_string_hum ~decimals:3 ~strip_zero:true 1234.1999 = "1_234.2" ]. No delimiters
+      [to_string_hum ~decimals:3 ~strip_zero:true 1234.1999 = "1_234.2" ].  No delimiters
       are inserted to the right of the decimal. *)
   val to_string_hum
     :  ?delimiter:char  (* defaults to '_' *)
@@ -191,12 +189,63 @@ module type S = sig
     -> float
     -> string
 
-  (* [ldexp x n] returns x *. 2 ** n *)
+  (** Produce a lossy compact string representation of the float.  The float is scaled by
+      an appropriate power of 1000 and rendered with one digit after the decimal point,
+      except that the decimal point is written as '.', 'k', 'm', 'g', 't', or 'p' to
+      indicate the scale factor.  (However, if the digit after the "decimal" point is 0,
+      it is suppressed.)  The smallest scale factor that allows the number to be rendered
+      with at most 3 digits to the left of the decimal is used.  If the number is too
+      large for this format (i.e., the absolute value is at least 999.95e15), scientific
+      notation is used instead. E.g.:
+
+      {[
+        to_padded_compact_string     (-0.01) =  "-0  "
+        to_padded_compact_string       1.89  =   "1.9"
+        to_padded_compact_string 999_949.99  = "999k9"
+        to_padded_compact_string 999_950.    =   "1m "
+      ]}
+
+      In the case where the digit after the "decimal", or the "decimal" itself are
+      omitted, the numbers are padded on the right with spaces to ensure the last two
+      columns of the string always correspond to the decimal and the digit afterward
+      (except in the case of scientific notation, where the exponent is the right-most
+      element in the string and could take up to four characters).
+
+      {[
+        to_padded_compact_string    1. =    "1  ";
+        to_padded_compact_string  1.e6 =    "1m ";
+        to_padded_compact_string 1.e16 = "1.e+16";
+        to_padded_compact_string max_finite_value = "1.8e+308";
+      ]}
+
+      Numbers in the range -.05 < x < .05 are rendered as "0  " or "-0  ".
+
+      Other cases:
+
+      {[
+        to_padded_compact_string nan          =  "nan  "
+        to_padded_compact_string infinity     =  "inf  "
+        to_padded_compact_string neg_infinity = "-inf  "
+      ]}
+
+      Exact ties are resolved to even in the decimal:
+
+      {|
+        to_padded_compact_string      3.25 =  "3.2"
+        to_padded_compact_string      3.75 =  "3.8"
+        to_padded_compact_string 33_250.   = "33k2"
+        to_padded_compact_string 33_350.   = "33k4"
+      |}
+
+  *)
+  val to_padded_compact_string : float -> string
+
+  (** [ldexp x n] returns [x *. 2 ** n] *)
   val ldexp : t -> int -> t
 
-  (* [frexp f] returns the pair of the significant and the exponent of f. When f is zero,
-     the significant x and the exponent n of f are equal to zero. When f is non-zero, they
-     are defined by f = x *. 2 ** n and 0.5 <= x < 1.0. *)
+  (** [frexp f] returns the pair of the significant and the exponent of f. When f is zero,
+      the significant x and the exponent n of f are equal to zero. When f is non-zero,
+      they are defined by [f = x *. 2 ** n] and [0.5 <= x < 1.0]. *)
   val frexp : t -> t * int
 
   module Class : sig
@@ -223,7 +272,7 @@ module type S = sig
   *)
   val classify : t -> Class.t
 
-  (* [is_finite t] returns [true] iff [classify t] is in [Normal; Subnormal; Zero;]. *)
+  (** [is_finite t] returns [true] iff [classify t] is in [Normal; Subnormal; Zero;]. *)
   val is_finite : t -> bool
 
   module Sign : sig
@@ -232,7 +281,7 @@ module type S = sig
 
   val sign : t -> Sign.t
 
-  (* S-expressions contain at most 8 significant digits. *)
+  (** S-expressions contain at most 8 significant digits. *)
   module Terse : sig
     type t = outer with bin_io, sexp
     include Stringable.S with type t := t

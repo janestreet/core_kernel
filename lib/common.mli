@@ -60,8 +60,8 @@ val ident : 'a -> 'a
 val const : 'a -> _ -> 'a
 val (==>) : bool -> bool -> bool
 
-val failwiths    :                    string -> 'a -> ('a -> Sexp.t) -> _
-val failwithp    : Lexing.position -> string -> 'a -> ('a -> Sexp.t) -> _
+val failwiths    : ?here:Lexing.position -> string -> 'a -> ('a -> Sexp.t) -> _
+val failwithp    :       Lexing.position -> string -> 'a -> ('a -> Sexp.t) -> _
 
 val failwithf    : ('r, unit, string, unit -> _) format4 -> 'r
 val invalid_argf : ('r, unit, string, unit -> _) format4 -> 'r
