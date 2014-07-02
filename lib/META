@@ -1,0 +1,33 @@
+# OASIS_START
+# DO NOT EDIT (digest: 44ba1a78d5f536faaf065369ae1008b6)
+version = "111.21.00"
+description = "Jane Street Capital's standard library overlay"
+requires =
+"bin_prot variantslib sexplib enumerate fieldslib bigarray pa_bench pa_ounit pa_test typerep_lib unix core_kernel.raise_without_backtrace"
+archive(byte) = "core_kernel.cma"
+archive(byte, plugin) = "core_kernel.cma"
+archive(native) = "core_kernel.cmxa"
+archive(native, plugin) = "core_kernel.cmxs"
+exists_if = "core_kernel.cma"
+package "raise_without_backtrace" (
+ version = "111.21.00"
+ description = "Jane Street Capital's standard library overlay"
+ archive(byte) = "raise_without_backtrace.cma"
+ archive(byte, plugin) = "raise_without_backtrace.cma"
+ archive(native) = "raise_without_backtrace.cmxa"
+ archive(native, plugin) = "raise_without_backtrace.cmxs"
+ exists_if = "raise_without_backtrace.cma"
+)
+
+package "check_caml_modify" (
+ version = "111.21.00"
+ description = "Jane Street Capital's standard library overlay"
+ requires = "pa_ounit"
+ archive(byte) = "check_caml_modify.cma"
+ archive(byte, plugin) = "check_caml_modify.cma"
+ archive(native) = "check_caml_modify.cmxa"
+ archive(native, plugin) = "check_caml_modify.cmxs"
+ exists_if = "check_caml_modify.cma"
+)
+# OASIS_STOP
+
