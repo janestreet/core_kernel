@@ -104,6 +104,15 @@ module Float : sig
   external unsafe_blit
     : src:t -> src_pos:int -> dst:t -> dst_pos:int -> len:int -> unit
     = "core_array_unsafe_float_blit" "noalloc"
+
+  (** [alloc len] @return a freshly allocated but uninitialized float array
+      of length [len].
+
+      @raise Failure if [len < 0]
+  *)
+  val alloc : int -> float array
+
+  external unsafe_alloc : int -> float array = "core_array_unsafe_alloc_floats"
 end
 
 (** [Array.of_list l] returns a fresh array containing the elements of [l]. *)

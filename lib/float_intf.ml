@@ -28,6 +28,8 @@ module type S = sig
   val max_value : t                   (* Float.infinity *)
   val min_value : t                   (* Float.neg_infinity *)
   val zero : t
+  val one : t
+  val minus_one : t
   val epsilon : t   (* WARNING: This is not [Float.epsilon_float].  See Robust_compare. *)
 
   (** The difference between 1.0 and the smallest exactly representable floating-point
@@ -135,6 +137,9 @@ module type S = sig
   val (-) : t -> t -> t
   val ( * ) : t -> t -> t
   val (/) : t -> t -> t
+
+  val (~+) : t -> t
+  val (~-) : t -> t
 
   (** Returns the fractional part and the whole (i.e. integer) part.  For example, [modf
       (-3.14)] returns [{ fractional = -0.14; integral = -3.; }]! *)

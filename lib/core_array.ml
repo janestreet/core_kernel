@@ -903,6 +903,11 @@ module Float = struct
 
   include Unsafe_blit
 
+  external unsafe_alloc : int -> float array = "core_array_unsafe_alloc_floats"
+
+  let alloc len =
+    if len < 0 then failwith "Core.Array.Float.alloc: len < 0"
+    else unsafe_alloc len
 end
 
 
