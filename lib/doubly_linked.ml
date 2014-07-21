@@ -282,10 +282,11 @@ module C = Container.Make (struct
   type 'a t_ = 'a t
   type 'a t = 'a t_
   let fold t ~init ~f = fold_elt t ~init ~f:(fun acc elt -> f acc (Elt.value elt))
-  let iter = Some iter
+  let iter = `Custom iter
 end)
 
 let count    = C.count
+let sum      = C.sum
 let exists   = C.exists
 let find     = C.find
 let find_map = C.find_map
@@ -293,6 +294,8 @@ let fold     = C.fold
 let for_all  = C.for_all
 let mem      = C.mem
 let to_array = C.to_array
+let min_elt  = C.min_elt
+let max_elt  = C.max_elt
 
 let unchecked_iter t ~f =
   match !t with

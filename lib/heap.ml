@@ -333,7 +333,7 @@ module T = struct
   module C = Container.Make (struct
     type nonrec 'a t = 'a t
     let fold = fold
-    let iter = Some iter
+    let iter = `Custom iter
   end)
 
   (* we can do better than the O(n) of [C.length] *)
@@ -344,10 +344,13 @@ module T = struct
   let exists   = C.exists
   let for_all  = C.for_all
   let count    = C.count
+  let sum      = C.sum
   let find     = C.find
   let find_map = C.find_map
   let to_list  = C.to_list
   let to_array = C.to_array
+  let min_elt  = C.min_elt
+  let max_elt  = C.max_elt
 
   let of_array arr ~cmp =
     let t = create ~min_size:(Array.length arr) ~cmp () in
@@ -470,7 +473,7 @@ module Removable = struct
   module C = Container.Make (struct
     type nonrec 'a t = 'a t
     let fold = fold
-    let iter = Some iter
+    let iter = `Custom iter
   end)
 
   let length t = t.length
@@ -481,9 +484,12 @@ module Removable = struct
   let find_map = C.find_map
   let find     = C.find
   let count    = C.count
+  let sum      = C.sum
   let for_all  = C.for_all
   let exists   = C.exists
   let mem      = C.mem
+  let min_elt  = C.min_elt
+  let max_elt  = C.max_elt
 
   let of_array arr ~cmp =
     let t = create ~min_size:(Array.length arr) ~cmp () in

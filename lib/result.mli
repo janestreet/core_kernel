@@ -44,10 +44,6 @@ val combine
   -> err:('err -> 'err -> 'err)
   -> ('ok3, 'err) t
 
-(* these two are rarely used *)
-val call : f:(('a -> unit), _) t -> 'a -> unit
-val apply : f:(('a -> 'b), 'err) t -> 'a -> ('b, 'err) t
-
 (** [ok_fst] is useful with [List.partition_map].  Continuing the above example:
 {[
     let rics, errors = List.partition_map ~f:Result.ok_fst

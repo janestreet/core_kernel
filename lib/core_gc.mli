@@ -256,6 +256,15 @@ val tune
   -> unit
   -> unit
 
+(** Disable GC compaction *)
+val disable_compaction
+  :  ?logger:(string -> unit)
+  (** The docs strongly suggest that the allocation policy be changed from
+      Next Fit to First Fit if disabling compaction permanently. *)
+  -> ?don't_change_allocation_policy:unit
+  -> unit
+  -> unit
+
 (** The [Expert] module contains functions that novice users should not use, due to their
     complexity.
 

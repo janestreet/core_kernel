@@ -397,6 +397,9 @@ TEST_UNIT =
 let fold t ~init ~f = Array.fold_left t ~init ~f
 
 let count t ~f = Container.fold_count fold t ~f
+let sum m t ~f = Container.fold_sum m fold t ~f
+let min_elt t ~cmp = Container.fold_min fold t ~cmp
+let max_elt t ~cmp = Container.fold_max fold t ~cmp
 
 let foldi t ~init ~f =
   let rec loop i ac =

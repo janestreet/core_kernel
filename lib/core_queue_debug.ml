@@ -55,6 +55,11 @@ module Debug (Core_queue : module type of Core_queue) = struct
       (fun () -> count t ~f)
   ;;
 
+  let sum (type a) (module M : Commutative_group.S with type t = a) t ~f =
+    debug "sum" [ t ] t <:sexp_of< _ t >> <:sexp_of< M.t >>
+      (fun () -> sum (module M) t ~f)
+  ;;
+
   let find t ~f =
     debug "find" [ t ] t <:sexp_of< _ t >> <:sexp_of< _ option >>
       (fun () -> find t ~f)
@@ -63,6 +68,16 @@ module Debug (Core_queue : module type of Core_queue) = struct
   let find_map t ~f =
     debug "find_map" [ t ] t <:sexp_of< _ t >> <:sexp_of< _ option >>
       (fun () -> find_map t ~f)
+  ;;
+
+  let min_elt t ~cmp =
+    debug "min_elt" [ t ] t <:sexp_of< _ t >> <:sexp_of< _ option >>
+      (fun () -> min_elt t ~cmp)
+  ;;
+
+  let max_elt t ~cmp =
+    debug "max_elt" [ t ] t <:sexp_of< _ t >> <:sexp_of< _ option >>
+      (fun () -> max_elt t ~cmp)
   ;;
 
   let to_list t =

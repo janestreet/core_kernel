@@ -71,7 +71,6 @@ module Pooled_hashtbl         = Pooled_hashtbl
 module Pretty_printer         = Pretty_printer
 module Printexc               = Core_printexc
 module Printf                 = Core_printf
-module Quickcheck             = Quickcheck
 module Result                 = Result
 module Robustly_comparable    = Robustly_comparable
 module Sequence               = Sequence
@@ -110,4 +109,3 @@ type 'a _bound = 'a Comparable.bound = Incl of 'a | Excl of 'a | Unbounded
 
 type decimal = Decimal.t with bin_io, sexp, compare
 
-let _make_sure_pool_pointer_is_an_int x = (x : _ Pool.Pointer.t :> int)

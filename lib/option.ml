@@ -28,11 +28,6 @@ let call x ~f =
   | None -> ()
   | Some f -> f x
 
-let apply x ~f =
-  match f with
-  | None -> None
-  | Some f -> Some (f x)
-
 let value t ~default =
   match t with
   | None -> default
@@ -70,6 +65,14 @@ let to_list t =
   match t with
   | None -> []
   | Some x -> [x]
+;;
+
+let min_elt t ~cmp:_ = t
+let max_elt t ~cmp:_ = t
+let sum (type a) (module M : Commutative_group.S with type t = a) t ~f =
+  match t with
+  | None -> M.zero
+  | Some x -> f x
 ;;
 
 let for_all t ~f =
@@ -155,7 +158,8 @@ TEST_MODULE = struct
   TEST = merge (Some 1) (Some 3) ~f = (Some 4)
 end
 
-let filter ~f = function
+let filter t ~f =
+  match t with
   | Some v as o when f v -> o
   | _ -> None
 

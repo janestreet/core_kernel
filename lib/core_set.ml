@@ -30,9 +30,6 @@ module type Elt = Elt
 module type Elt_binable = Elt_binable
 
 module Tree0 = struct
-  (* IF THIS REPRESENTATION EVER CHANGES, ENSURE THAT EITHER
-      (1) all values serialize the same way in both representations, or
-      (2) you add a new Set version to stable.ml *)
   type 'a t =
   | Empty
   (* (Leaf x) is the same as (Node (Empty, x, Empty, 1, 1)) but uses less space. *)
@@ -637,6 +634,7 @@ module Tree0 = struct
   ;;
 
   let count t ~f = Container.fold_count fold t ~f
+  let sum m t ~f = Container.fold_sum m fold t ~f
 
   let rec fold_right s ~init:accu ~f =
     match s with
@@ -863,9 +861,6 @@ module Tree0 = struct
   ;;
 end
 
-(* IF THIS REPRESENTATION EVER CHANGES, ENSURE THAT EITHER
-    (1) all values serialize the same way in both representations, or
-    (2) you add a new Set version to stable.ml *)
 type ('a, 'comparator) t =
   { (* [comparator] is the first field so that polymorphic comparisons fail on a map due
        to the functional value in the comparator. *)
@@ -905,6 +900,7 @@ module Accessors = struct
   let exists   t ~f = Tree0.exists   t.tree ~f
   let for_all  t ~f = Tree0.for_all  t.tree ~f
   let count    t ~f = Tree0.count    t.tree ~f
+  let sum    m t ~f = Tree0.sum    m t.tree ~f
   let find     t ~f = Tree0.find     t.tree ~f
   let find_exn t ~f = Tree0.find_exn t.tree ~f
   let find_map t ~f = Tree0.find_map t.tree ~f
@@ -1074,6 +1070,7 @@ module Make_tree (Elt : Comparator.S1) = struct
   let exists   t ~f = Tree0.exists   t ~f
   let for_all  t ~f = Tree0.for_all  t ~f
   let count    t ~f = Tree0.count    t ~f
+  let sum    m t ~f = Tree0.sum    m t ~f
   let find     t ~f = Tree0.find     t ~f
   let find_exn t ~f = Tree0.find_exn t ~f
   let find_map t ~f = Tree0.find_map t ~f
@@ -1282,6 +1279,7 @@ module Tree = struct
   let exists   t ~f = Tree0.exists   t ~f
   let for_all  t ~f = Tree0.for_all  t ~f
   let count    t ~f = Tree0.count    t ~f
+  let sum    m t ~f = Tree0.sum    m t ~f
   let find     t ~f = Tree0.find     t ~f
   let find_exn t ~f = Tree0.find_exn t ~f
   let find_map t ~f = Tree0.find_map t ~f

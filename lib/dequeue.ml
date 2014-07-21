@@ -29,14 +29,14 @@ let create ?initial_length ?never_shrink () =
     | Some b -> b
   in
   let initial_length = Option.value ~default:7 initial_length in
-  if initial_length < 1 then
-    invalid_argf "passed non-positive initial_length to Dequeue.create: %d"
+  if initial_length < 0 then
+    invalid_argf "passed negative initial_length to Dequeue.create: %i"
       initial_length ();
+  (* Make the initial array length be [initial_length + 1] so we can fit [initial_length]
+     elements without growing.  We never quite use the whole array. *)
   let arr_length = initial_length + 1 in
   let dummy = (Obj.magic () : 'a) in
   {
-    (* make the initial array length be [initial_length + 1] so we can fit
-       [initial_length] elements without growing *)
     arr                  = Array.create ~len:arr_length dummy;
     front_index          = 0;
     back_index           = 1;
@@ -47,6 +47,7 @@ let create ?initial_length ?never_shrink () =
     dummy;
   }
 ;;
+TEST_UNIT = ignore (create ~initial_length:0 () : _ t)
 
 let length t = t.length
 TEST = length (create ()) = 0
@@ -204,16 +205,19 @@ let iter t ~f =
 module C = Container.Make (struct
   type nonrec 'a t = 'a t
   let fold = fold
-  let iter = Some iter
+  let iter = `Custom iter
 end)
 
 let count      = C.count
+let sum        = C.sum
 let exists     = C.exists
 let mem        = C.mem
 let for_all    = C.for_all
 let find_map   = C.find_map
 let find       = C.find
 let to_list    = C.to_list
+let min_elt    = C.min_elt
+let max_elt    = C.max_elt
 
 let blit new_arr t =
   assert (not (is_empty t));
@@ -522,6 +526,16 @@ TEST_MODULE = struct
 end
 
 TEST_MODULE = struct
+  TEST_UNIT =
+    let q = create () in
+    let bin_alpha _ = assert false in
+    let pos_ref = ref 0 in
+    assert (Int.(=) (length q) 0);
+    let bigstring = Bigstring.create (bin_size_t bin_alpha q) in
+    ignore (bin_write_t bin_alpha bigstring ~pos:0 q);
+    let q' = bin_read_t bin_alpha bigstring ~pos_ref in
+    assert (Int.(=) (length q') 0)
+
   module type Dequeue_intf = sig
     type 'a t
 

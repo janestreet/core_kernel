@@ -8,10 +8,7 @@ module List = Core_list
 open Int_replace_polymorphic_compare
 
 module Tree0 = struct
-  (* IF THIS REPRESENTATION EVER CHANGES, ENSURE THAT EITHER
-      (1) all values serialize the same way in both representations, or
-      (2) you add a new Map version to stable.ml
-  *)
+
   type ('k, 'v) t =
   | Empty
   | Leaf of 'k * 'v
@@ -734,10 +731,6 @@ module Tree0 = struct
   ;;
 end
 
-(* IF THIS REPRESENTATION EVER CHANGES, ENSURE THAT EITHER
-    (1) all values serialize the same way in both representations, or
-    (2) you add a new Map version to stable.ml
-*)
 type ('k, 'v, 'comparator) t =
   { (* [comparator] is the first field so that polymorphic comparisons fail on a map due
        to the functional value in the comparator. *)

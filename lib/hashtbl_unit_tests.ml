@@ -230,4 +230,6 @@ module Make (Hashtbl : Core_hashtbl_intf.Hashtbl) = struct
     assert (Hashtbl.for_alli t ~f:(fun ~key ~data -> key - 4 = data));
 end
 
-TEST_MODULE = Make(Hashtbl)
+module M(S : sig end) = Make(Hashtbl)
+
+TEST_MODULE = M(struct end)

@@ -31,7 +31,15 @@ module type S = sig
   val epsilon : t   (* WARNING: This is not [Float.epsilon_float].  See Robust_compare. *)
 
   (** The difference between 1.0 and the smallest exactly representable floating-point
-      number greater than 1.0. *)
+      number greater than 1.0.  That is:
+
+      [epsilon_float = (one_ulp `Up 1.0) -. 1.0]
+
+      This gives the relative accuracy of type [t], in the sense that for numbers on the
+      order of [x], the roundoff error is on the order of [x *. float_epsilon].
+
+      See also: http://en.wikipedia.org/wiki/Machine_epsilon
+  *)
   val epsilon_float : t
 
   val max_finite_value : t

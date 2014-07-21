@@ -83,16 +83,6 @@ let iter_error v ~f = match v with
   | Ok _ -> ()
   | Error x -> f x
 
-let call ~f x =
-  match f with
-  | Ok g -> g x
-  | Error _ -> ()
-
-let apply ~f x =
-  match f with
-  | Ok g -> Ok (g x)
-  | Error _ as z -> z
-
 let ok_fst = function
   | Ok x -> `Fst x
   | Error x -> `Snd x

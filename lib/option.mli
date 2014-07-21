@@ -22,9 +22,6 @@ val map2 : 'a t -> 'b t -> f:('a -> 'b -> 'c) -> 'c t
 (** [call x f] run optional function on argument *)
 val call : 'a -> f:('a -> unit) t -> unit
 
-(** [apply x f] run optional function on argument and return an option *)
-val apply : 'a -> f:('a -> 'b) t -> 'b t
-
 (** [value None ~default] = [default]
     [value (Some x) ~default] = [x]
 *)
@@ -40,8 +37,6 @@ val value_exn
   -> 'a t
   -> 'a
 
-val equal : ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
-
 val some : 'a -> 'a t
 
 val both : 'a t -> 'b t -> ('a * 'b) t
@@ -56,13 +51,15 @@ val some_if : bool -> 'a -> 'a t
     [b]. *)
 val merge : 'a t -> 'a t -> f:('a -> 'a -> 'a) -> 'a t
 
-val filter : f:('a -> bool) -> 'a t -> 'a t
+val filter : 'a t -> f:('a -> bool) -> 'a t
 
 (** [try_with f] returns [Some x] if [f] returns [x] and [None] if [f] raises an
     exception.  See [Result.try_with] if you'd like to know which exception. *)
 val try_with : (unit -> 'a) -> 'a t
 
 (** Compares [None] as smaller than any [Some x] *)
-val compare : cmp:('a -> 'a -> int) -> 'a t -> 'a t -> int
+val compare : cmp:('a -> 'a -> int)  -> 'a t -> 'a t -> int
+val equal   :     ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
 
 val validate : none:unit Validate.check -> some:'a Validate.check -> 'a t Validate.check
+

@@ -65,12 +65,27 @@ module Test_generic
         let r = ref 0 in
         Container.iter c ~f:(fun e -> r := !r + Elt.to_int e);
         assert (!r = List.fold list ~init:0 ~f:(fun n e -> n + Elt.to_int e));
+        assert (!r = sum (module Int) c ~f:Elt.to_int);
         let c2 = <:of_sexp< int Container.t >> (<:sexp_of< int Container.t >> c) in
-        assert (sorts_are_equal list (Container.to_list c2))
+        assert (sorts_are_equal list (Container.to_list c2));
+        let compare_elt a b = Int.compare (Elt.to_int a) (Elt.to_int b) in
+        if n = 0 then begin
+          assert (!r = 0);
+          assert (min_elt ~cmp:compare_elt c = None);
+          assert (max_elt ~cmp:compare_elt c = None);
+        end else begin
+          assert (!r = (n * (n-1) / 2));
+          assert (Option.map ~f:Elt.to_int (min_elt ~cmp:compare_elt c) = Some 0);
+          assert (Option.map ~f:Elt.to_int (max_elt ~cmp:compare_elt c) = Some (pred n));
+        end
       );
     ;;
 
+    let min_elt = min_elt
+    let max_elt = max_elt
+
     let count   = count
+    let sum     = sum
     let exists  = exists
     let for_all = for_all
 

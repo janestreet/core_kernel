@@ -39,7 +39,8 @@ let unbounded (type a) ?hashable f =
 
 (* the same but with a bound on cache size *)
 let lru (type a) ?hashable ~max_cache_size f =
-  let max_cache_size = Int.max 1 max_cache_size in
+  if max_cache_size <= 0
+  then failwithf "Memo.lru: max_cache_size of %i <= 0" max_cache_size ();
   let module Cache =
     Hash_queue.Make (struct
       type t = a

@@ -304,6 +304,7 @@ module Robustly_comparable = Float_robust_compare.Make (struct let epsilon = 1E-
 include Robustly_comparable
 
 let epsilon_float = Pervasives.epsilon_float
+TEST = epsilon_float = (one_ulp `Up 1.) -. 1.
 
 include Hashable.Make_binable (T)
 

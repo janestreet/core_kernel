@@ -95,6 +95,12 @@ val for_all : ('a, _) t -> f:('a -> bool) -> bool
     [O(n)]. *)
 val count : ('a, _) t -> f:('a -> bool) -> int
 
+(** [sum t] returns the sum of [f t] for each [t] in the set.
+    [O(n)]. *)
+val sum
+  : (module Commutative_group.S with type t = 'sum)
+  -> ('a, _) t -> f:('a -> 'sum) -> 'sum
+
 (** [find t f] returns an element of [t] for which [f] returns true, with no guarantee as
     to which element is returned.  [O(n)], but returns as soon as a suitable element is
     found. *)
@@ -250,7 +256,8 @@ val split : ('a, 'cmp) t -> 'a -> ('a, 'cmp) t * bool * ('a, 'cmp) t
       Set.of_list['A';'a']; Set.singleton 'b'; Set.singleton 'c']
     ]}
 
-    [group_by] runs in O(n^2) time. *)
+    [group_by] runs in O(n^2) time, so if you have a comparison function, it's usually
+    much faster to use [Set.of_list]. *)
 val group_by :  ('a, 'cmp) t -> equiv:('a -> 'a -> bool) -> ('a, 'cmp) t list
 
 (** [to_sequence ?in_ t] converts the set [t] to a sequence of the elements in the order

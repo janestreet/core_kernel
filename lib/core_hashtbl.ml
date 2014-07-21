@@ -26,10 +26,6 @@ module Array = Core_array
 
 let phys_equal = (==)
 
-(* IF THIS REPRESENTATION EVER CHANGES, ENSURE THAT EITHER
-    (1) all values serialize the same way in both representations, or
-    (2) you add a new Hashtbl version to stable.ml
-*)
 type ('k, 'v) t =
   { mutable table : ('k, 'v) Avltree.t array;
     mutable length : int;

@@ -182,6 +182,7 @@ type 'a sexp_array  = 'a array  with bin_io, compare, typerep
 type sexp_bool      = bool      with bin_io, compare, typerep
 type 'a sexp_list   = 'a list   with bin_io, compare, typerep
 type 'a sexp_option = 'a option with bin_io, compare, typerep
+
 type 'a sexp_opaque = 'a        with bin_io, compare, typerep
 
 include Ordering.Export

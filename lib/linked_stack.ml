@@ -70,6 +70,9 @@ let iter t ~f = List.iter t.elts ~f
 let fold t ~init ~f = List.fold t.elts ~init ~f
 
 let count t ~f = List.count t.elts ~f
+let sum m t ~f = List.sum m t.elts ~f
+let min_elt t ~cmp = List.min_elt t.elts ~cmp
+let max_elt t ~cmp = List.max_elt t.elts ~cmp
 
 let exists t ~f = List.exists t.elts ~f
 

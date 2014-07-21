@@ -10,17 +10,39 @@ open With_return
 module type T = sig
   type 'a t
   val fold : 'a t -> init:'b -> f:('b -> 'a -> 'b) -> 'b
-  (* The [iter] argument to [Container.Make] is optional.  If non-[None], it overrides the
-     default implementation of [iter] in terms of [fold], which is often slower than a
-     more direct implementation.
+  (* The [iter] argument to [Container.Make] says how to implement the container's [iter]
+     function.  [`Define_using_fold] means to define [iter t ~f = fold t ~init:() ~f:(fun
+     () a -> f a)].
 
-     Several other functions returned by [Container.Make] are defined in terms of [iter],
-     so passing in a more efficient [iter] will improve their efficiency as well.
+     [`Custom] overrides the default implementation, presumably with something more
+     efficient.  Several other functions returned by [Container.Make] are defined in terms
+     of [iter], so passing in a more efficient [iter] will improve their efficiency as
+     well.
   *)
-  val iter : ('a t -> f:('a -> unit) -> unit) option
+  val iter : [ `Define_using_fold
+             | `Custom of ('a t -> f:('a -> unit) -> unit)
+             ]
 end
 
+
 let fold_count fold t ~f = fold t ~init:0 ~f:(fun n a -> if f a then n + 1 else n)
+let fold_sum (type a) (module M : Commutative_group.S with type t = a) fold t ~f =
+  fold t ~init:M.zero ~f:(fun n a -> M.(+) n (f a))
+;;
+
+let fold_min fold t ~cmp =
+  fold t ~init:None ~f:(fun acc elt ->
+    match acc with
+    | None -> Some elt
+    | Some min -> if cmp min elt > 0 then Some elt else acc)
+;;
+
+let fold_max fold t ~cmp =
+  fold t ~init:None ~f:(fun acc elt ->
+    match acc with
+    | None -> Some elt
+    | Some max -> if cmp max elt < 0 then Some elt else acc)
+;;
 
 (** The idiom for using [Container.Make] is to bind the resulting module and to explicitly
     import each of the functions that one wants:
@@ -48,13 +70,14 @@ module Make (T : T) = struct
   let fold = fold
 
   let count t ~f = fold_count fold t ~f
+  let sum m t ~f = fold_sum m fold t ~f
 
   let iter_via_fold t ~f = fold t ~init:() ~f:(fun () a -> f a)
 
   let iter =
     match T.iter with
-    | Some iter -> iter
-    | None -> iter_via_fold
+    | `Custom iter -> iter
+    | `Define_using_fold -> iter_via_fold
 
   let length c = fold c ~init:0 ~f:(fun acc _ -> acc + 1)
 
@@ -93,6 +116,10 @@ module Make (T : T) = struct
   let to_list c = List.rev (fold c ~init:[] ~f:(fun acc x -> x :: acc))
 
   let to_array c = Array.of_list (to_list c)
+
+  let min_elt t ~cmp = fold_min fold t ~cmp
+
+  let max_elt t ~cmp = fold_max fold t ~cmp
 end
 
 (* Signature for monomorphic container, e.g., string *)
@@ -125,6 +152,11 @@ module type S0 = sig
   (** Returns the number of elements for which the provided function evaluates to true. *)
   val count    : t -> f:(elt -> bool) -> int
 
+  (** Returns the sum of [f i] for i in the container *)
+  val sum
+    : (module Commutative_group.S with type t = 'sum)
+    -> t -> f:(elt -> 'sum) -> 'sum
+
   (** Returns as an [option] the first element for which [f] evaluates to true. *)
   val find     : t -> f:(elt -> bool) -> elt option
 
@@ -134,6 +166,13 @@ module type S0 = sig
 
   val to_list  : t -> elt list
   val to_array : t -> elt array
+
+  (** Returns a min (resp max) element from the collection using the provided [cmp]
+      function. In case of a tie, the first element encountered while traversing the
+      collection is returned. The implementation uses [fold] so it has the same
+      complexity as [fold]. Returns [None] iff the collection is empty. *)
+  val min_elt : t -> cmp:(elt -> elt -> int) -> elt option
+  val max_elt : t -> cmp:(elt -> elt -> int) -> elt option
 end
 
 module type S0_phantom = sig
@@ -165,6 +204,11 @@ module type S0_phantom = sig
   (** Returns the number of elements for which the provided function evaluates to true. *)
   val count    : _ t -> f:(elt -> bool) -> int
 
+  (** Returns the sum of [f i] for i in the container *)
+  val sum
+    : (module Commutative_group.S with type t = 'sum)
+    -> _ t -> f:(elt -> 'sum) -> 'sum
+
   (** Returns as an [option] the first element for which [f] evaluates to true. *)
   val find     : _ t -> f:(elt -> bool) -> elt option
 
@@ -174,6 +218,12 @@ module type S0_phantom = sig
 
   val to_list  : _ t -> elt list
   val to_array : _ t -> elt array
+
+  (** Returns a min (resp max) element from the collection using the provided [cmp]
+      function, or [None] if the collection is empty.  In case of a tie, the first element
+      encountered while traversing the collection is returned. *)
+  val min_elt : _ t -> cmp:(elt -> elt -> int) -> elt option
+  val max_elt : _ t -> cmp:(elt -> elt -> int) -> elt option
 end
 
 (* Signature for polymorphic container, e.g., 'a list or 'a array *)
@@ -205,6 +255,11 @@ module type S1 = sig
   (** Returns the number of elements for which the provided function evaluates to true. *)
   val count    : 'a t -> f:('a -> bool) -> int
 
+  (** Returns the sum of [f i] for i in the container *)
+  val sum
+    : (module Commutative_group.S with type t = 'sum)
+    -> 'a t -> f:('a -> 'sum) -> 'sum
+
   (** Returns as an [option] the first element for which [f] evaluates to true. *)
   val find     : 'a t -> f:('a -> bool) -> 'a option
 
@@ -214,6 +269,13 @@ module type S1 = sig
 
   val to_list  : 'a t -> 'a list
   val to_array : 'a t -> 'a array
+
+  (** Returns a minimum (resp maximum) element from the collection using the provided
+      [cmp] function, or [None] if the collection is empty. In case of a tie, the first
+      element encountered while traversing the collection is returned. The implementation
+      uses [fold] so it has the same complexity as [fold]. *)
+  val min_elt : 'a t -> cmp:('a -> 'a -> int) -> 'a option
+  val max_elt : 'a t -> cmp:('a -> 'a -> int) -> 'a option
 end
 
 module type S1_phantom = sig
@@ -244,6 +306,11 @@ module type S1_phantom = sig
   (** Returns the number of elements for which the provided function evaluates to true. *)
   val count    : ('a, _) t -> f:('a -> bool) -> int
 
+  (** Returns the sum of [f i] for i in the container *)
+  val sum
+    : (module Commutative_group.S with type t = 'sum)
+    -> ('a, _) t -> f:('a -> 'sum) -> 'sum
+
   (** Returns as an [option] the first element for which [f] evaluates to true. *)
   val find     : ('a, _) t -> f:('a -> bool) -> 'a option
 
@@ -252,8 +319,14 @@ module type S1_phantom = sig
   val find_map : ('a, _) t -> f:('a -> 'b option) -> 'b option
 
   val to_list  : ('a, _) t -> 'a list
-
   val to_array : ('a, _) t -> 'a array
+
+  (** Returns a minimum (resp maximum) element from the collection using the provided
+      [cmp] function. In case of a tie, the first element encountered while traversing the
+      collection is returned. The implementation uses [fold] so it has the same complexity
+      as [fold]. Returns [None] iff the collection is empty. *)
+  val min_elt : ('a, _) t -> cmp:('a -> 'a -> int) -> 'a option
+  val max_elt : ('a, _) t -> cmp:('a -> 'a -> int) -> 'a option
 end
 
 module type S1_phantom_invariant = sig
@@ -282,6 +355,11 @@ module type S1_phantom_invariant = sig
   (** Returns the number of elements for which the provided function evaluates to true. *)
   val count    : ('a, _) t -> f:('a -> bool) -> int
 
+  (** Returns the sum of [f i] for i in the container *)
+  val sum
+    : (module Commutative_group.S with type t = 'sum)
+    -> ('a, _) t -> f:('a -> 'sum) -> 'sum
+
   (** Returns as an [option] the first element for which [f] evaluates to true. *)
   val find     : ('a, _) t -> f:('a -> bool) -> 'a option
 
@@ -291,6 +369,13 @@ module type S1_phantom_invariant = sig
 
   val to_list  : ('a, _) t -> 'a list
   val to_array : ('a, _) t -> 'a array
+
+  (** Returns a min (resp max) element from the collection using the provided [cmp]
+      function. In case of a tie, the first element encountered while traversing the
+      collection is returned. The implementation uses [fold] so it has the same complexity
+      as [fold]. Returns [None] iff the collection is empty. *)
+  val min_elt : ('a, _) t -> cmp:('a -> 'a -> int) -> 'a option
+  val max_elt : ('a, _) t -> cmp:('a -> 'a -> int) -> 'a option
 end
 
 module type Generic = sig
@@ -304,10 +389,15 @@ module type Generic = sig
   val exists   : 'a t -> f:('a elt -> bool) -> bool
   val for_all  : 'a t -> f:('a elt -> bool) -> bool
   val count    : 'a t -> f:('a elt -> bool) -> int
+  val sum
+    : (module Commutative_group.S with type t = 'sum)
+    -> 'a t -> f:('a elt -> 'sum) -> 'sum
   val find     : 'a t -> f:('a elt -> bool) -> 'a elt option
   val find_map : 'a t -> f:('a elt -> 'b option) -> 'b option
   val to_list  : 'a t -> 'a elt list
   val to_array : 'a t -> 'a elt array
+  val min_elt  : 'a t -> cmp:('a elt -> 'a elt -> int) -> 'a elt option
+  val max_elt  : 'a t -> cmp:('a elt -> 'a elt -> int) -> 'a elt option
 end
 
 module type Generic_phantom = sig
@@ -321,10 +411,15 @@ module type Generic_phantom = sig
   val exists   : ('a, _) t -> f:('a elt -> bool) -> bool
   val for_all  : ('a, _) t -> f:('a elt -> bool) -> bool
   val count    : ('a, _) t -> f:('a elt -> bool) -> int
+  val sum
+    : (module Commutative_group.S with type t = 'sum)
+    -> ('a, _) t -> f:('a elt -> 'sum) -> 'sum
   val find     : ('a, _) t -> f:('a elt -> bool) -> 'a elt option
   val find_map : ('a, _) t -> f:('a elt -> 'b option) -> 'b option
   val to_list  : ('a, _) t -> 'a elt list
   val to_array : ('a, _) t -> 'a elt array
+  val min_elt  : ('a, _) t -> cmp:('a elt -> 'a elt -> int) -> 'a elt option
+  val max_elt  : ('a, _) t -> cmp:('a elt -> 'a elt -> int) -> 'a elt option
 end
 
 (* The following functors exist as a consistency check among all the various [S?]

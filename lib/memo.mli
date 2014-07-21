@@ -1,5 +1,6 @@
 open Std_internal
 
+
 (** Memoization code -- not re-entrant! *)
 
 
@@ -8,7 +9,9 @@ open Std_internal
     default caching policy is to remember everything for the lifetime
     of the returned closure, but one may specify an upper bound on
     cache size.  Whenever a cache entry must be forgotten in order to
-    obey this bound, we pick the least-recently-used one. *)
+    obey this bound, we pick the least-recently-used one.
+
+    Raises an exception if [cache_size_bound] is nonpositive. *)
 val general
   :  ?hashable:'a Hashtbl.Hashable.t
   -> ?cache_size_bound:int

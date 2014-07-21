@@ -301,6 +301,7 @@ module Unit_tests
   let find_map _          = assert false
   let find _              = assert false
   let count _             = assert false
+  let sum _               = assert false
   let for_all _           = assert false
   let exists _            = assert false
   let fold _              = assert false

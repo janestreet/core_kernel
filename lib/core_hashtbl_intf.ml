@@ -56,9 +56,12 @@ module type Hashable = sig
   val hash : 'a -> int
 end
 
+type ('a,'z) no_map_options = 'z
+
 module type Accessors = sig
   type ('a, 'b) t
   type 'a key
+  type ('a,'z) map_options
 
   val sexp_of_key : ('a, _) t -> 'a key -> Sexp.t
   val clear : (_, _) t -> unit
@@ -99,32 +102,41 @@ module type Accessors = sig
 
   (** [map t f] returns new table with bound values replaced by
       [f] applied to the bound values *)
-  val map : ('a, 'b) t -> f:('b -> 'c) -> ('a, 'c) t
+  val map : ('c, ('a, 'b) t -> f:('b -> 'c) -> ('a, 'c) t) map_options
 
   (** like [map], but function takes both key and data as arguments *)
-  val mapi : ('a, 'b) t -> f:(key:'a key -> data:'b -> 'c) -> ('a, 'c) t
+  val mapi : ('c, ('a, 'b) t -> f:(key:'a key -> data:'b -> 'c) -> ('a, 'c) t) map_options
 
   (** returns new map with bound values filtered by f applied to the bound
       values *)
-  val filter_map : ('a, 'b) t -> f:('b -> 'c option) -> ('a, 'c) t
+  val filter_map : ('c, ('a, 'b) t -> f:('b -> 'c option) -> ('a, 'c) t) map_options
 
   (** like [filter_map], but function takes both key and data as arguments*)
-  val filter_mapi : ('a, 'b) t -> f:(key:'a key -> data:'b -> 'c option) -> ('a, 'c) t
+  val filter_mapi
+    : ('c, ('a, 'b) t -> f:(key:'a key -> data:'b -> 'c option) -> ('a, 'c) t) map_options
 
   val filter : ('a, 'b) t -> f:('b -> bool) -> ('a, 'b) t
   val filteri : ('a, 'b) t -> f:(key:'a key -> data:'b -> bool) -> ('a, 'b) t
 
   (** returns new maps with bound values partitioned by f applied to the bound values *)
   val partition_map
-    :  ('a, 'b) t
-    -> f:('b -> [`Fst of 'c | `Snd of 'd])
-    -> ('a, 'c) t * ('a, 'd) t
+    :  ('c,
+        ('d,
+         ('a, 'b) t
+         -> f:('b -> [`Fst of 'c | `Snd of 'd])
+         -> ('a, 'c) t * ('a, 'd) t)
+          map_options)
+         map_options
 
   (** like [partition_map], but function takes both key and data as arguments*)
   val partition_mapi
-    :  ('a, 'b) t
-    -> f:(key:'a key -> data:'b -> [`Fst of 'c | `Snd of 'd])
-    -> ('a, 'c) t * ('a, 'd) t
+    :  ('c,
+        ('d,
+         ('a, 'b) t
+         -> f:(key:'a key -> data:'b -> [`Fst of 'c | `Snd of 'd])
+         -> ('a, 'c) t * ('a, 'd) t)
+        map_options)
+       map_options
 
   val partition_tf : ('a, 'b) t -> f:('b -> bool) -> ('a, 'b) t * ('a, 'b) t
   val partitioni_tf : ('a, 'b) t -> f:(key:'a key -> data:'b -> bool) -> ('a, 'b) t * ('a, 'b) t
@@ -168,10 +180,12 @@ module type Accessors = sig
 
       Each key [k] is mapped to a single piece of data x, where [d(k)] = Some x. *)
   val merge
-    :  ('k, 'a) t
-    -> ('k, 'b) t
-    -> f:(key:'k key -> [ `Left of 'a | `Right of 'b | `Both of 'a * 'b ] -> 'c option)
-    -> ('k, 'c) t
+    :  ('c,
+        ('k, 'a) t
+        -> ('k, 'b) t
+        -> f:(key:'k key -> [ `Left of 'a | `Right of 'b | `Both of 'a * 'b ] -> 'c option)
+        -> ('k, 'c) t)
+       map_options
 
   (** Merge one hashtable into another.
 
@@ -247,7 +261,7 @@ module type Creators = sig
 
   val of_alist_exn : ('a key, 'b, ('a key * 'b) list -> ('a, 'b) t) create_options
 
-  val of_alist_multi : ('a key, 'b, ('a key * 'b) list -> ('a, 'b list) t) create_options
+  val of_alist_multi : ('a key, 'b list, ('a key * 'b) list -> ('a, 'b list) t) create_options
 
 
   (* create_mapped get_key get_data [x1,...,xn] =
@@ -265,7 +279,7 @@ module type Creators = sig
      of_alist [get_key x1, x1; ...; get_key xn, xn] *)
   val create_with_key
     : ('a key,
-       'b,
+       'r,
        get_key:('r -> 'a key)
        -> 'r list
        -> [ `Ok of ('a, 'r) t
@@ -273,7 +287,7 @@ module type Creators = sig
 
   val create_with_key_exn
     : ('a key,
-       'b,
+       'r,
        get_key:('r -> 'a key)
        -> 'r list
        -> ('a, 'r) t) create_options
@@ -302,7 +316,10 @@ module type S = sig
     with type 'a key := 'a key_
     with type ('key, 'data, 'z) create_options := ('key, 'data, 'z) create_options_without_hashable
 
-  include Accessors with type ('a, 'b) t := ('a, 'b) t_ with type 'a key := 'a key_
+  include Accessors
+    with type ('a, 'b) t := ('a, 'b) t_
+    with type 'a key := 'a key_
+    with type ('a,'z) map_options := ('a,'z) no_map_options
 
 end
 
@@ -329,7 +346,10 @@ module type Hashtbl = sig
     with type 'a key = 'a
     with type ('a, 'b, 'z) create_options := ('a, 'b, 'z) create_options_with_hashable
 
-  include Accessors with type ('a, 'b) t := ('a, 'b) t with type 'a key := 'a key
+  include Accessors
+    with type ('a, 'b) t := ('a, 'b) t
+    with type 'a key := 'a key
+    with type ('a,'z) map_options := ('a,'z) no_map_options
 
 
   module Poly : sig
@@ -343,7 +363,10 @@ module type Hashtbl = sig
       with type 'a key = 'a
       with type ('key, 'data, 'z) create_options := ('key, 'data, 'z) create_options_without_hashable
 
-    include Accessors with type ('a, 'b) t := ('a, 'b) t with type 'a key := 'a key
+    include Accessors
+      with type ('a, 'b) t := ('a, 'b) t
+      with type 'a key := 'a key
+      with type ('a,'z) map_options := ('a,'z) no_map_options
 
   end with type ('a, 'b) t = ('a, 'b) t
 

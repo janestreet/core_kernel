@@ -10,10 +10,6 @@ module Binable = Binable0
 
 module Hashable = Hashtbl.Hashable
 
-(* IF THIS REPRESENTATION EVER CHANGES, ENSURE THAT EITHER
-    (1) all values serialize the same way in both representations, or
-    (2) you add a new Hash_set version to stable.ml
-*)
 type 'a t = ('a, unit) Hashtbl.t
 type 'a hash_set = 'a t
 type 'a elt = 'a
@@ -65,10 +61,12 @@ module Accessors = struct
   let strict_remove_exn t k = Or_error.ok_exn (strict_remove t k)
 
   let fold t ~init ~f = Hashtbl.fold t ~init ~f:(fun ~key ~data:() acc -> f acc key)
+  let iter t ~f = Hashtbl.iter t ~f:(fun ~key ~data:() -> f key)
 
   let count t ~f = Container.fold_count fold t ~f
-
-  let iter t ~f = Hashtbl.iter t ~f:(fun ~key ~data:() -> f key)
+  let sum m t ~f = Container.fold_sum m fold t ~f
+  let min_elt t ~cmp = Container.fold_min fold t ~cmp
+  let max_elt t ~cmp = Container.fold_max fold t ~cmp
 
   let to_list = Hashtbl.keys
 

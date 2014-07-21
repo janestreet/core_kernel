@@ -81,13 +81,12 @@ val remove : 'a t -> 'a Elt.t -> unit
 val remove_first : 'a t -> 'a option
 val remove_last : 'a t -> 'a option
 
-
 (** [fold_elt t ~init ~f] is the same as fold, except [f] is called with the ['a Elt.t]'s
     from the list instead of the contained ['a] values.
 
     Note that like other iteration functions, it is an error to mutate [t] inside the
-    fold. If you'd like to call [remove] on any of the ['a Elt.t]'s, accumulate them here
-    and do so after [fold_elt] returns. *)
+    fold. If you'd like to call [remove] on any of the ['a Elt.t]'s, use
+    [filter_inplace]. *)
 val fold_elt : 'a t -> init:'b -> f:('b -> 'a Elt.t -> 'b) -> 'b
 
 val iter_elt : 'a t -> f:('a Elt.t -> unit) -> unit

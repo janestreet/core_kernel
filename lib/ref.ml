@@ -36,6 +36,7 @@ module T = struct
   let fold t ~init ~f = f init !t
 
   let count t ~f = if f !t then 1 else 0
+  let sum _ t ~f = f !t
 
   let exists t ~f = f !t
 
@@ -50,6 +51,9 @@ module T = struct
   let to_list t = [ !t ]
 
   let to_array t = [| !t |]
+
+  let min_elt t ~cmp:_ = Some !t
+  let max_elt t ~cmp:_ = Some !t
 end
 
 include T

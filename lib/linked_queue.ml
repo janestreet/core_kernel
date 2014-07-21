@@ -38,6 +38,9 @@ let fold t ~init ~f = Queue.fold f init t
 let to_list t = List.rev (fold t ~init:[] ~f:(fun acc elem -> elem::acc))
 
 let count t ~f = Container.fold_count fold t ~f
+let sum m t ~f = Container.fold_sum m fold t ~f
+let min_elt t ~cmp = Container.fold_min fold t ~cmp
+let max_elt t ~cmp = Container.fold_max fold t ~cmp
 
 let transfer ~src ~dst = Queue.transfer src dst
 

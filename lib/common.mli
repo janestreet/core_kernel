@@ -121,7 +121,9 @@ val with_return : ('a return -> 'a) -> 'a
 (** We disable [==] and [!=] and replace them with the longer and more mnemonic
     [phys_equal] because they too easily lead to mistakes (for example they don't even
     work right on Int64 or Float).  One can usually use the [equal] function for a
-    specific type, or use (=) or (<>) for built in types like char, int, float,
+    specific type, or use (=) or (<>) for built in types like char, int, float.
+
+    Note that 4.02 increased cases where objects are physically equal.
 *)
 val phys_equal : 'a -> 'a -> bool
 val (==) : [ `Consider_using_phys_equal ] -> [ `Consider_using_phys_equal ] -> [ `Consider_using_phys_equal ]
@@ -164,7 +166,7 @@ val close_in : [ `Deprecated_use_in_channel ] -> [ `Deprecated_use_in_channel ]
 val close_out : [ `Deprecated_use_out_channel ] -> [ `Deprecated_use_out_channel ]
 
 val ( & )  : [ `Deprecated_use_two_ampersands ] -> [ `Deprecated_use_two_ampersands ] -> [ `Deprecated_use_two_ampersands ]
-(* val ( or ) : [ `Deprecated_use_pipe_pipe ] *)
+val ( or ) : [ `Deprecated_use_pipe_pipe ]
 val max_int : [ `Deprecated_use_int_module ]
 val min_int : [ `Deprecated_use_int_module ]
 

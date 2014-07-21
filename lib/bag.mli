@@ -48,13 +48,8 @@ val remove_one : 'a t -> 'a option
 (** [clear t] removes all elements from the bag.  [clear] runs in O(1) time. *)
 val clear : 'a t -> unit
 
-(** [fold_elt t ~init ~f] is the same as fold, except [f] is called with the
-    ['a Elt.t]'s from the bag instead of the contained ['a] values.
-
-    Note that like other iteration functions, it is an error to mutate [t] inside the
-    fold. If you'd like to call [remove] on any of the ['a Elt.t]'s, accumulate them here
-    and do so after [fold_elt] returns. *)
-val fold_elt : 'a t -> init:'b -> f:('b -> 'a Elt.t -> 'b) -> 'b
+(** [filter_inplace t ~f] removes all the elements from [t] that don't satisfy [f]. *)
+val filter_inplace : 'a t -> f:('a -> bool) -> unit
 
 val iter_elt : 'a t -> f:('a Elt.t -> unit) -> unit
 
@@ -74,6 +69,7 @@ val until_empty : 'a t -> ('a -> unit) -> unit
 val transfer : src:'a t -> dst:'a t -> unit
 
 val of_list : 'a list -> 'a t
+val elts : 'a t -> 'a Elt.t list
 
 (** [unchecked_iter t ~f] behaves like [iter t ~f] except that [f] is allowed to modify
     [t].  Elements added by [f] may or may not be visited, elements removed by [f] that

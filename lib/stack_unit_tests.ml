@@ -25,6 +25,7 @@ module Debug (Stack : Stack_intf.S) : Stack_intf.S with type 'a t = 'a Stack.t =
   let clear t : unit                 = debug t (fun () -> clear t)
   let copy t : _ t                   = check_and_return (debug t (fun () -> copy t))
   let count t ~f : int               = debug t (fun () -> count t ~f)
+  let sum m t ~f                     = debug t (fun () -> sum m t ~f)
   let create () : _ t                = check_and_return (create ())
   let exists t ~f : bool             = debug t (fun () -> exists t ~f)
   let find t ~f : _ option           = debug t (fun () -> find t ~f)
@@ -46,7 +47,8 @@ module Debug (Stack : Stack_intf.S) : Stack_intf.S with type 'a t = 'a Stack.t =
   let top t : _ option               = debug t (fun () -> top t)
   let top_exn (type a) t : a         = debug t (fun () -> top_exn t)
   let until_empty t f : unit         = debug t (fun () -> until_empty t f)
-
+  let min_elt t ~cmp : _ option      = debug t (fun () -> min_elt t ~cmp)
+  let max_elt t ~cmp : _ option      = debug t (fun () -> max_elt t ~cmp)
 end
 
 module Test (Stack : Stack_intf.S)
@@ -91,6 +93,16 @@ module Test (Stack : Stack_intf.S)
     assert (is_some (top (of_list [0])));
   ;;
 
+  let min_elt = min_elt
+  let max_elt = max_elt
+
+  TEST_UNIT =
+    let empty = create () in
+    assert (min_elt ~cmp:Int.compare empty = None);
+    assert (max_elt ~cmp:Int.compare empty = None);
+    assert (sum (module Int) ~f:Fn.id empty = 0);
+  ;;
+
   let push = push
   let copy = copy
   let until_empty = until_empty
@@ -107,6 +119,9 @@ module Test (Stack : Stack_intf.S)
     assert (length t = 3);
     assert (top t = Some 2);
     assert (top_exn t = 2);
+    assert (min_elt ~cmp:Int.compare t = Some 0);
+    assert (max_elt ~cmp:Int.compare t = Some 2);
+    assert (sum (module Int) ~f:Fn.id t = 3);
     let t' = copy t in
     assert (pop_exn t' = 2);
     assert (pop_exn t' = 1);
@@ -143,6 +158,9 @@ module Test (Stack : Stack_intf.S)
     push t 13;
     assert (not (is_empty t));
     assert (length t = 1);
+    assert (min_elt ~cmp:Int.compare t = Some 13);
+    assert (max_elt ~cmp:Int.compare t = Some 13);
+    assert (sum (module Int) ~f:Fn.id t = 13);
     assert (pop_exn t = 13);
     assert (is_empty t);
     assert (length t = 0);
@@ -151,6 +169,9 @@ module Test (Stack : Stack_intf.S)
     assert (not (is_empty t));
     assert (length t = 2);
     assert (to_list t = [ 14; 13 ]);
+    assert (min_elt ~cmp:Int.compare t = Some 13);
+    assert (max_elt ~cmp:Int.compare t = Some 14);
+    assert (sum (module Int) ~f:Fn.id t = 27);
     assert (is_some (pop t));
     assert (is_some (pop t));
   ;;

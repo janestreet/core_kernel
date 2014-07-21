@@ -738,6 +738,9 @@ let exn_if_dup ?compare ?(context="exn_if_dup") t ~to_sexp =
     raise (Duplicate_found ((fun () -> to_sexp dup),context))
 
 let count t ~f = Container.fold_count fold t ~f
+let sum m t ~f = Container.fold_sum m fold t ~f
+let min_elt t ~cmp = Container.fold_min fold t ~cmp
+let max_elt t ~cmp = Container.fold_max fold t ~cmp
 
 let init n ~f =
   if n < 0 then invalid_argf "List.init %d" n ();

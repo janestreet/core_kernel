@@ -270,6 +270,9 @@ module Make (Key : Key) : S with module Key = Key = struct
   let fold t ~init ~f = foldi t ~init ~f:(fun ac ~key:_ ~data -> f ac data)
 
   let count t ~f = Container.fold_count fold t ~f
+  let sum m t ~f = Container.fold_sum m fold t ~f
+  let min_elt t ~cmp = Container.fold_min fold t ~cmp
+  let max_elt t ~cmp = Container.fold_max fold t ~cmp
 
   let dequeue_all t ~f =
     let rec loop () =

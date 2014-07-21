@@ -121,7 +121,7 @@ val booltest : ('a -> bool) -> if_false:string -> 'a check
 val pair : fst:'a check -> snd:'b check -> ('a * 'b) check
 
 (** Validates a list, naming each element by its position in the list (where the first
-    position is 1, not 0 *)
+    position is 1, not 0) *)
 val list_indexed : 'a check -> 'a list check
 
 (** Validates a list, naming each element using a user-defined function for computing the

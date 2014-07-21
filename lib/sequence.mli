@@ -42,11 +42,15 @@ val empty : _ t
     finished. It is the most primitive way to walk over a sequence. *)
 val next : 'a t -> ('a * 'a t) option
 
-
 (** A [Step] describes the next step of the sequence construction.  [Done] indicates the
     sequence is finished.  [Skip] indicates the sequence continues with another state
     without producing the next element yet.  [Yield] outputs an element and introduces a
-    new state. *)
+    new state.
+
+    Modifying ['s] doesn't violate any *internal* invariants, but it may violate some
+    undocumented expectations.  For example, one might expect that producing an element
+    from the same point in the sequence would always give the same value, but if the state
+    can mutate, that is not so. *)
 module Step : sig
   type ('a, 's) t =
     | Done

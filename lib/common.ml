@@ -10,8 +10,7 @@ let modf _ = `Deprecated_use_float_modf
 let truncate _ = `Deprecated_use_float_iround_towards_zero
 
 let ( & ) _ _ = `Deprecated_use_two_ampersands
-
-(* let ( or ) =  `Deprecated_use_pipe_pipe *)
+let ( or ) =  `Deprecated_use_pipe_pipe
 
 let max_int =  `Deprecated_use_int_module
 let min_int =  `Deprecated_use_int_module
@@ -123,8 +122,7 @@ TEST_MODULE "phys_same" = struct
 
   TEST =
     let a = (1, 2) in
-    let b = (1, 2) in
-    phys_same a a && not (phys_same a b)
+    phys_same a a
   ;;
 
   type thing = Obscure : _ -> thing
@@ -133,8 +131,7 @@ TEST_MODULE "phys_same" = struct
 
   TEST =
     let a = (1, 2) in
-    let b = (1, 2) in
-    same_thing (Obscure a) (Obscure a) && not (same_thing (Obscure a) (Obscure b))
+    same_thing (Obscure a) (Obscure a)
   ;;
 end
 

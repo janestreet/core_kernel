@@ -73,17 +73,20 @@ module C =
   Container.Make (struct
     type nonrec 'a t = 'a t
     let fold = fold
-    let iter = Some iter
+    let iter = `Custom iter
   end)
 
 let mem      = C.mem
 let exists   = C.exists
 let for_all  = C.for_all
 let count    = C.count
+let sum      = C.sum
 let find     = C.find
 let find_map = C.find_map
 let to_list  = C.to_list
 let to_array = C.to_array
+let min_elt  = C.min_elt
+let max_elt  = C.max_elt
 
 let of_list (type a) (l : a list) =
   if List.is_empty l then

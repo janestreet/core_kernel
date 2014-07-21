@@ -1,7 +1,6 @@
 (* This is factored out of float.ml in order to break a module dependency cycle.  *)
 
 
-
 module type S = sig
   (* note: this is not the same as Float.epsilon_float, rather it is intended to
      be a tolerance on human-entered floats *)

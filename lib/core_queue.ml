@@ -231,16 +231,19 @@ let iter t ~f =
 module C = Container.Make (struct
   type nonrec 'a t = 'a t
   let fold = fold
-  let iter = Some iter
+  let iter = `Custom iter
 end)
 
 let to_list  = C.to_list
 let count    = C.count
+let sum      = C.sum
 let find     = C.find
 let find_map = C.find_map
 let exists   = C.exists
 let for_all  = C.for_all
 let mem      = C.mem
+let min_elt  = C.min_elt
+let max_elt  = C.max_elt
 
 (* For [concat_map], [filter_map], and [filter], we don't create [t_result] with [t]'s
    capacity because we have no idea how many elements [t_result] will ultimately hold. *)

@@ -752,6 +752,10 @@ TEST = (foldi "hello" ~init:[] ~f:(fun i acc ch -> (i,ch)::acc)
         = List.rev [0,'h';1,'e';2,'l';3,'l';4,'o'])
 
 let count t ~f = Container.fold_count fold t ~f
+let sum m t ~f = Container.fold_sum m fold t ~f
+
+let min_elt = Container.fold_min fold
+let max_elt = Container.fold_max fold
 
 let mem ?(equal = Char.(=)) t c =
   let rec loop i = i < length t && (equal c t.[i] || loop (i + 1)) in

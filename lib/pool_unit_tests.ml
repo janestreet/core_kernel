@@ -1,6 +1,8 @@
 open Std_internal
 open Int.Replace_polymorphic_compare
 
+let _make_sure_pool_pointer_is_an_int x = (x : _ Pool.Pointer.t :> int)
+
 module Test (Pool : Pool.S) = struct
 
   module Pointer = Pool.Pointer

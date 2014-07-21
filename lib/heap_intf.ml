@@ -8,6 +8,16 @@ module type S = sig
       undefined. *)
   include Container.S1 with type 'a t := 'a t
 
+  (** Even though these two functions are part of Container.S1, they are documented
+      separately to make sure there is no confusion.  They are independent of the
+      comparison function used to order the heap.  Instead, a traversal of the entire
+      structure is done using the provided [cmp] function to find a min or max.
+
+      If you want to access the smallest element of the heap according to the heap's
+      comparison function in constant time, you should use [top]. *)
+  val min_elt : 'a t -> cmp:('a -> 'a -> int) -> 'a option
+  val max_elt : 'a t -> cmp:('a -> 'a -> int) -> 'a option
+
   (** [create ?min_size ~cmp] returns a new min-heap that can store [min_size] elements
       without reallocations, using ordering function [cmp].
 

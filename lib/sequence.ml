@@ -145,7 +145,6 @@ let filter t ~f =
                | Yield(a,s) when f a -> Yield(a,s)
                | Yield (_,s) -> Skip s)
 
-
 (* For testing, we create a sequence which is equal to 1;2;3;4;5, but
    with a more interesting structure inside*)
 
@@ -655,6 +654,10 @@ TEST = to_list (remove_consecutive_duplicates ~equal:(fun _ _ -> true) s12345) =
 
 let count s ~f =
   length (filter s ~f)
+
+let sum m t ~f = Container.fold_sum m fold t ~f
+let min_elt t ~cmp = Container.fold_min fold t ~cmp
+let max_elt t ~cmp = Container.fold_max fold t ~cmp
 
 let init n ~f =
   unfold_step ~init:0

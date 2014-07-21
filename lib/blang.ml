@@ -384,10 +384,11 @@ module C = Container.Make (struct
     in
     loop init t []
 
-  let iter = None
+  let iter = `Define_using_fold
 end)
 
 let count    = C.count
+let sum      = C.sum
 let exists   = C.exists
 let find     = C.find
 let find_map = C.find_map
@@ -399,6 +400,8 @@ let length   = C.length
 let mem      = C.mem
 let to_array = C.to_array
 let to_list  = C.to_list
+let min_elt  = C.min_elt
+let max_elt  = C.max_elt
 
 include Monad.Make (struct
 
@@ -540,14 +543,16 @@ TEST_MODULE "laws" = struct
     let f = gen_base_fun [| true; false |]
     let g = gen_base_fun [| `Unknown; `Known true; `Known false |]
 
-    let tf = Quickcheck.pg t f
-    let tg = Quickcheck.pg t g
+    let tf () = (t (), f ())
+    let tg () = (t (), g ())
   end
 
   let law gen sexp_of run =
-    match Quickcheck.laws 100 gen run with
-    | None -> ()
-    | Some v -> failwith (Sexp.to_string_hum (sexp_of v))
+    for _i = 0 to 100 do
+      let arg = gen () in
+      if not (run arg)
+      then failwith (Sexp.to_string (sexp_of arg))
+    done
 
   let forall_t  = law Gen.t  <:sexp_of<base t>>
   let forall_tf = law Gen.tf <:sexp_of<base t * bool base_fun>>
