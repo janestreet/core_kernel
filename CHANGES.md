@@ -1,3 +1,80 @@
+## 111.25.00
+
+- Fix build on FreeBSD
+
+  Closes #10
+- Added functions to `Container` interface: `sum`, `min_elt`,
+  `max_elt`.
+
+  ```ocaml
+  (** Returns the sum of [f i] for i in the container *)
+  val sum
+    : (module Commutative_group.S with type t = 'sum)
+    -> t -> f:(elt -> 'sum) -> 'sum
+
+  (** Returns a min (resp max) element from the collection using the provided [cmp]
+      function. In case of a tie, the first element encountered while traversing the
+      collection is returned. The implementation uses [fold] so it has the same
+      complexity as [fold]. Returns [None] iff the collection is empty. *)
+  val min_elt : t -> cmp:(elt -> elt -> int) -> elt option
+  val max_elt : t -> cmp:(elt -> elt -> int) -> elt option
+  ```
+- Made `Core_hashtbl_intf` more flexible. For instance supports
+  modules that require typereps to be passed when creating a table.
+
+  Address the following issues:
+
+  The type `('a, 'b, 'z) create_options` needs to be consistently used
+  so that `b` corresponds with the type of data values in the returned
+  hash table.  The type argument was wrong in several cases.
+
+  Added the type `('a, 'z) map_options` to `Accessors` so that
+  map-like functions -- those that output hash tables of a different
+  type than they input -- can allow additional arguments.
+- Fixed a bug in `Dequeue`'s `bin_prot` implementation that caused it
+  to raise when deserializing an empty dequeue.
+- Made `Container.Make`'s interface match `Monad.Make`.
+- Deprecated infix `or` in favor of `||`.
+- Simplified the interface of `Arg` (which was already deprecated in
+  favor of `Command`).
+- Replaced `Bag.fold_elt` with `Bag.filter`.
+- `Memo.general` now raises on non-positive `cache_size_bound`.
+- Removed `Option.apply`.
+- Removed `Result.call`, `Result.apply`.
+- Moved `Quichcheck` to `core_extended`.
+
+  It should not be used in new code.
+
+## 111.21.00
+
+- Removed our custom C stub for closing channels, reverting to the one
+  in the OCaml runtime.
+
+    A long time ago we found that the OCaml runtime did not release the
+    lock before calling `close` on the fd underlying a channel.  On some
+    filesystems (e.g. smb, nfs) this could cause a runtime hang.  We
+    filed a bug with INRIA and wrote our own `close` function which
+    `In_channel` calls to this day.  The bug has long been fixed, and
+    our function is probably buggy, so this reverts us to the runtime's
+    `close`.
+
+- Added `Float.{of,to}_int64_preserve_order`, which implement the
+  order-preserving zero-preserving bijection between non-NaN floats and
+  99.95% of `Int64`'s.
+
+    Used the new function to improve `one_ulp`, which is now exposed:
+
+        (** The next or previous representable float.  ULP stands for "unit of least precision",
+            and is the spacing between floating point numbers.  Both [one_ulp `Up infinity] and
+            [one_ulp `Down neg_infinity] return a nan. *)
+        val one_ulp : [`Up | `Down] -> t -> t
+
+- Changed `Map.symmetric_diff` to return a `Sequence.t`
+  instead of a `list`.
+- Added `Sequence.filter_map`.
+- Improved `Stable_unit_test.Make_sexp_deserialization_test`'s error
+  message so that it includes the expected sexp.
+
 ## 111.17.00
 
 - In `Bigstring`, made many operations use compiler primitives new in
