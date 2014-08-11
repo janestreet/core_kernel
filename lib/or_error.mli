@@ -46,7 +46,10 @@ val errorf : ('a, unit, string, _ t) format4 -> 'a
 val tag : 'a t -> string -> 'a t
 val tag_arg : 'a t -> string -> 'b -> ('b -> Sexp.t) -> 'a t
 
-(** [unimplemented name] returns a standard error value for an unimplemented value. *)
+(** For marking a given value as unimplemented.  Typically combined with conditional
+    compilation, where on some platforms the function is defined normally, and on some
+    platforms it is defined as unimplemented.  The supplied string should be the name of
+    the function that is unimplemented. *)
 val unimplemented : string -> _ t
 
 (** [combine_errors ts] returns [Ok] if every element in [ts] is [Ok], else it returns

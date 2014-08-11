@@ -1,4 +1,3 @@
-open Common
 open Int_replace_polymorphic_compare
 
 module Sexp = Sexplib.Sexp
@@ -6,6 +5,8 @@ module String = Caml.StringLabels
 module Array = Core_array
 
 let phys_equal = Caml.(==)
+
+let does_raise = Exn.does_raise
 
 (* We maintain the property that all values of type [t] do not have the tag
    [double_array_tag].  Some functions below assume this in order to avoid testing the

@@ -65,7 +65,7 @@ TEST_MODULE = struct
     ;;
   end
 
-  let does_fail f = Result.is_error (Result.try_with f)
+  let does_raise = Exn.does_raise
 
   (* The [: Validated] is to remind us to add a unit test whenever the [Validated]
      interface changes. *)
@@ -131,7 +131,7 @@ TEST_MODULE = struct
 
   let int = 0
   let string = Binable.to_string (module Int) int
-  TEST = does_fail (fun () -> Binable.of_string (module M1) string)
+  TEST = does_raise (fun () -> Binable.of_string (module M1) string)
   TEST = (Binable.of_string (module M2) string) = int
 
   let int = 1

@@ -184,9 +184,9 @@ let of_string =
     let table = T.create ~size:num_months () in
     Array.iteri (Lazy.force all_strings) ~f:(fun i s ->
       let t = of_int_exn (i + 1) in
-      Hashtbl.replace table ~key:s ~data:t;
-      Hashtbl.replace table ~key:(String.lowercase s) ~data:t;
-      Hashtbl.replace table ~key:(String.uppercase s) ~data:t);
+      Hashtbl.set table ~key:s ~data:t;
+      Hashtbl.set table ~key:(String.lowercase s) ~data:t;
+      Hashtbl.set table ~key:(String.uppercase s) ~data:t);
     table)
   in
   fun str ->

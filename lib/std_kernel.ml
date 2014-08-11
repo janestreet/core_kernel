@@ -109,3 +109,5 @@ type 'a _bound = 'a Comparable.bound = Incl of 'a | Excl of 'a | Unbounded
 
 type decimal = Decimal.t with bin_io, sexp, compare
 
+(* Some people have proposed removing [does_raise], but there isn't consensus. *)
+let does_raise = Exn.does_raise

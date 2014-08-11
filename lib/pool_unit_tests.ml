@@ -246,7 +246,7 @@ module Test (Pool : Pool.S) = struct
       Array.iter ls ~f:(fun l -> free p l);
       let all_ls_fail () =
         Array.for_all ls ~f:(fun l ->
-          does_raise (fun () -> pointer_of_id_exn p (id_of_pointer p l)))
+          Exn.does_raise (fun () -> pointer_of_id_exn p (id_of_pointer p l)))
       in
       assert (all_ls_fail ());
       let _ls' = alloc_all () in

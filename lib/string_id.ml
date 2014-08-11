@@ -6,6 +6,9 @@ module type S = sig
   module Stable : sig
     module V1 : sig
       type nonrec t = t with sexp, bin_io, compare
+
+      type nonrec comparator_witness = comparator_witness
+      val comparator : (t, comparator_witness) Comparator.comparator
     end
   end
 end

@@ -30,7 +30,7 @@ let unsafe_of_int = Char.unsafe_chr
 
 (* We use our own range test when converting integers to chars rather than
    calling [Caml.Char.chr] because it's simple and it saves us a function call
-   and the try-with (exceptions cost, especially in the world with backtraces. *)
+   and the try-with (exceptions cost, especially in the world with backtraces). *)
 let int_is_ok i =
   let (<=) = Pervasives.(<=) in
   0 <= i && i <= 255

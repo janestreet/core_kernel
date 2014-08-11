@@ -1,3 +1,22 @@
+## 111.28.00
+
+- Added `Pooled_hashtbl.resize` function, to allow preallocating a table
+  of the desired size, to avoid growth at an undesirable time.
+- Added `Pooled_hashtbl.on_grow` callback, to get information about
+  hashtbl growth.
+- Changed `Hashable.Make` to not export a `Hashable` module.
+
+    The `Hashable` module previously exported was useless, and shadowed
+    `Core.Std.Hashable`.
+
+- Moved `Common.does_raise` to `Exn.does_raise`, to make it easier to
+  find.
+- Added `Float.one`, `minus_one`, and `~-`.  (fixes #12).
+- Removed `Core.Std.unimplemented` and renamed it as
+  `Or_error.unimplemented`.
+
+    It is not used enough to live in the global namespace.
+
 ## 111.25.00
 
 - Fix build on FreeBSD

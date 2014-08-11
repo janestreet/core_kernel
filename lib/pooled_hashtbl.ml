@@ -166,34 +166,49 @@ let clear t =
   t.length <- 0
 ;;
 
-let resize t =
-  if t.growth_allowed then begin
-    let new_capacity, new_n_entries = calculate_table_size (t.capacity + 1) in
-    let old_table, old_capacity = t.table, t.capacity in
-    t.entries <- Entry.Pool.grow t.entries ~capacity:new_n_entries;
-    t.table <- Array.create ~len:new_capacity (Entry.null ());
-    t.capacity <- new_capacity;
-    t.n_entries <- new_n_entries;
+let on_grow = ref (fun ~unix_time_before:_ ~old_capacity:_ _ -> ())
 
-    for i = 0 to old_capacity - 1 do
-      let rec copy_entries e =
-        if not (Entry.is_null e) then begin
-          let key    = Entry.key t.entries e in
-          let next_e = Entry.next t.entries e in
-          let index = slot t key in
-          let next  = table_get t.table index in
-          Entry.set_next t.entries e next;
-          table_set t.table index e;
-          copy_entries next_e
-        end
-      in
-      copy_entries (table_get old_table i)
-    done
+let resize t size =
+  if t.growth_allowed then begin
+    if size > t.capacity then begin
+      let new_capacity, new_n_entries = calculate_table_size size in
+      let old_table, old_capacity = t.table, t.capacity in
+      let unix_time_before = Unix.time () in
+      t.entries <- Entry.Pool.grow t.entries ~capacity:new_n_entries;
+      t.table <- Array.create ~len:new_capacity (Entry.null ());
+      t.capacity <- new_capacity;
+      t.n_entries <- new_n_entries;
+
+      for i = 0 to old_capacity - 1 do
+        let rec copy_entries e =
+          if not (Entry.is_null e) then begin
+            let key    = Entry.key t.entries e in
+            let next_e = Entry.next t.entries e in
+            let index = slot t key in
+            let next  = table_get t.table index in
+            Entry.set_next t.entries e next;
+            table_set t.table index e;
+            copy_entries next_e
+          end
+        in
+        copy_entries (table_get old_table i)
+      done;
+      !on_grow ~unix_time_before ~old_capacity new_capacity
+    end
   end
   else begin
     t.entries <- Entry.Pool.grow t.entries ~capacity:(2 * t.n_entries);
     t.n_entries <- (2 * t.n_entries);
   end
+;;
+
+let on_grow f =
+  let g = !on_grow in
+  on_grow :=
+    (fun ~unix_time_before ~old_capacity size ->
+       g ~unix_time_before ~old_capacity size;
+       f ~unix_time_before ~old_capacity size
+    )
 ;;
 
 let rec find_entry t ~key ~it =
@@ -223,7 +238,7 @@ let insert_link t ~index ~key ~data ~it =
   if t.length < t.n_entries then
     insert_link_pool_not_full t ~index ~key ~data ~it
   else begin
-    resize t;
+    resize t (t.capacity + 1);
     let index = slot t key in
     let it = table_get t.table index in
     insert_link_pool_not_full t ~index ~key ~data ~it

@@ -10,12 +10,6 @@ exception Bug of string
     function, the second exception the one raised by the finalizer. *)
 exception Finally of exn * exn
 
-(** For marking a given value as unimplemented.  Typically combined with conditional
-    compilation, where on some platforms the function is defined normally, and on some
-    platforms it is defined as unimplemented.  The supplied string should be the name of
-    the function that is unimplemented. *)
-val unimplemented : string -> _ Or_error.t
-
 (** Types for use as markers in phantom types.  One should not expose functions for
     converting between read_only/immutable/read_write because the private types expose the
     subtyping. Users would say "(db :> read_only Db.t)" to cast.  The difference between
@@ -65,10 +59,6 @@ val failwithp    :       Lexing.position -> string -> 'a -> ('a -> Sexp.t) -> _
 
 val failwithf    : ('r, unit, string, unit -> _) format4 -> 'r
 val invalid_argf : ('r, unit, string, unit -> _) format4 -> 'r
-
-(** [does_raise f] returns [true] iff [f ()] raises. It is intended to be used in unit
-    tests and should probably not be used in regular code. *)
-val does_raise : (unit -> _) -> bool
 
 (** [Or_error.ok_exn] *)
 val ok_exn : 'a Or_error.t -> 'a

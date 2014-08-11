@@ -78,17 +78,6 @@ let fst3 (x,_,_) = x
 let snd3 (_,y,_) = y
 let trd3 (_,_,z) = z
 
-let does_raise (type a) (f : unit -> a) =
-  try
-    ignore (f () : a);
-    false
-  with _ ->
-    true
-;;
-
-TEST = not (does_raise Fn.ignore)
-TEST = does_raise (fun () -> failwith "foo")
-
 let ok_exn = Or_error.ok_exn
 let error = Or_error.error
 
@@ -139,8 +128,6 @@ let force = Lazy.force
 
 let stage = Staged.stage
 let unstage = Staged.unstage
-
-let unimplemented = Or_error.unimplemented
 
 exception Bug of string with sexp
 

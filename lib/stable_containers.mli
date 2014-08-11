@@ -6,32 +6,44 @@
 
 open Std
 
-module Set : sig
-  module V1 (Elt : sig
-    type t with bin_io, sexp
-    include Comparator.S with type t := t
-  end) : sig
-    type t = (Elt.t, Elt.comparator_witness) Set.t with sexp, bin_io, compare
+module Comparable : sig
+  module V1 : sig
+    module type S = sig
+      type key
+      type comparator_witness
+
+      module Map : sig
+        type 'a t = (key, 'a, comparator_witness) Map.t with sexp, bin_io, compare
+      end
+
+      module Set : sig
+        type t = (key, comparator_witness) Set.t with sexp, bin_io, compare
+      end
+    end
+
+    module Make (
+      Key : sig
+        type t with bin_io, sexp
+        include Comparator.S with type t := t
+      end
+    ) : S with type key := Key.t and type comparator_witness := Key.comparator_witness
   end
 end
 
-module Hashtbl : sig
-  module V1 (Key : Hashtbl.Key_binable) : sig
-    type 'a t = (Key.t, 'a) Hashtbl.t with sexp, bin_io
-  end
-end
+module Hashable : sig
+  module V1 : sig
+    module type S = sig
+      type key
 
-module Hash_set : sig
-  module V1 (Elt : Hash_set.Elt_binable) : sig
-    type t = Elt.t Hash_set.t with sexp, bin_io
-  end
-end
+      module Table : sig
+        type 'a t = (key, 'a) Hashtbl.t with sexp, bin_io
+      end
 
-module Map : sig
-  module V1 (Key : sig
-    type t with bin_io, sexp
-    include Comparator.S with type t := t
-  end) : sig
-    type 'a t = (Key.t, 'a, Key.comparator_witness) Map.t with sexp, bin_io, compare
+      module Hash_set : sig
+        type t = key Hash_set.t with sexp, bin_io
+      end
+    end
+
+    module Make (Key : Hashtbl.Key_binable) : S with type key := Key.t
   end
 end

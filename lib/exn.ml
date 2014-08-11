@@ -53,6 +53,17 @@ let protectx ~f x ~(finally : _ -> unit) =
 
 let protect ~f ~finally = protectx ~f () ~finally
 
+let does_raise (type a) (f : unit -> a) =
+  try
+    ignore (f () : a);
+    false
+  with _ ->
+    true
+;;
+
+TEST = not (does_raise Fn.ignore)
+TEST = does_raise (fun () -> failwith "foo")
+
 include Pretty_printer.Register_pp (struct
   type t = exn
   let pp ppf t =

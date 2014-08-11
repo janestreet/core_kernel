@@ -131,7 +131,7 @@ module Make (Key : Key) : S with module Key = Key = struct
       | None -> assert false
       | Some _ ->
         assert (not (Hashtbl.mem keys key));
-        Hashtbl.replace keys ~key ~data:());
+        Hashtbl.set keys ~key ~data:());
   ;;
 
   let create () = {
@@ -201,7 +201,7 @@ module Make (Key : Key) : S with module Key = Key = struct
         Doubly_linked.insert_last t.queue
           { Key_value.key = key; value = value; }
       in
-      Hashtbl.replace t.table ~key ~data:elt;
+      Hashtbl.set t.table ~key ~data:elt;
       `Ok
     end
   ;;

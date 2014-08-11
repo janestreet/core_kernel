@@ -7,6 +7,8 @@ open Flat_array
 module Slots = Slots
 module Slot = Slot
 
+let does_raise = Exn.does_raise
+
 type nonrec 'slots t = 'slots t with sexp_of
 
 let invariant = invariant

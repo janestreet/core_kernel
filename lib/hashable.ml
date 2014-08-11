@@ -5,7 +5,6 @@ module Hashtbl = Core_hashtbl
 
 module type S = sig
   type t
-  module Hashable : T with type t = t
   val hash : t -> int
   val compare : t -> t -> int
   val hashable : t Hashtbl.Hashable.t

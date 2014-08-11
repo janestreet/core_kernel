@@ -1,6 +1,12 @@
 open Std
 open Stable_internal
 
+(* avoid getting shadowed by the similarly named modules in this file *)
+module Core_map = Map
+module Core_set = Set
+module Core_hashtbl = Hashtbl
+module Core_hash_set = Hash_set
+
 module Hashtbl = struct
   module V1 (Elt : Hashtbl.Key_binable) : sig
     type 'a t = (Elt.t, 'a) Hashtbl.t with sexp, bin_io
@@ -93,10 +99,12 @@ module Map = struct
 end
 
 module Set = struct
-  module V1 (Elt : sig
-    type t with bin_io, sexp
-    include Comparator.S with type t := t
-  end) : sig
+  module V1 (
+    Elt : sig
+      type t with bin_io, sexp
+      include Comparator.S with type t := t
+    end
+  ) : sig
     type t = (Elt.t, Elt.comparator_witness) Set.t with sexp, bin_io, compare
   end = Set.Make_binable_using_comparator (Elt)
 
@@ -113,4 +121,53 @@ module Set = struct
         Int.Set.singleton 0, "(0)", "\001\000";
       ]
   end)
+end
+
+module Comparable = struct
+  module V1 = struct
+    module type S = sig
+      type key
+      type comparator_witness
+
+      module Map : sig
+        type 'a t = (key, 'a, comparator_witness) Core_map.t with sexp, bin_io, compare
+      end
+
+      module Set : sig
+        type t = (key, comparator_witness) Core_set.t with sexp, bin_io, compare
+      end
+    end
+
+    module Make (
+      Key : sig
+        type t with bin_io, sexp
+        include Comparator.S with type t := t
+      end
+    ) : S with type key := Key.t and type comparator_witness := Key.comparator_witness
+    = struct
+      module Map = Map.V1 (Key)
+      module Set = Set.V1 (Key)
+    end
+  end
+end
+
+module Hashable = struct
+  module V1 = struct
+    module type S = sig
+      type key
+
+      module Table : sig
+        type 'a t = (key, 'a) Core_hashtbl.t with sexp, bin_io
+      end
+
+      module Hash_set : sig
+        type t = key Core_hash_set.t with sexp, bin_io
+      end
+    end
+
+    module Make (Key : Core_hashtbl.Key_binable) : S with type key := Key.t = struct
+      module Table = Hashtbl.V1 (Key)
+      module Hash_set = Hash_set.V1 (Key)
+    end
+  end
 end

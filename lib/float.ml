@@ -282,6 +282,8 @@ TEST_MODULE = struct
 end
 
 let zero = 0.
+let one = 1.
+let minus_one = -1.
 
 TEST = to_string_round_trippable 3.14                             = "3.14"
 TEST = to_string_round_trippable 3.1400000000000001               = "3.14"
@@ -300,7 +302,8 @@ TEST = to_string_round_trippable min_positive_subnormal_value     = "4.940656458
 let frexp = Pervasives.frexp
 let ldexp = Pervasives.ldexp
 
-module Robustly_comparable = Float_robust_compare.Make (struct let epsilon = 1E-7 end)
+module Robustly_comparable =
+  Float_robust_compare.Make (struct let robust_comparison_tolerance = 1E-7 end)
 include Robustly_comparable
 
 let epsilon_float = Pervasives.epsilon_float

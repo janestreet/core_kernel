@@ -64,7 +64,7 @@ module Make (Key : Key) : S with module Key = Key = struct
      should only be called when the key is known not to be present already. *)
   let push_new_key t ~key ~data =
     let el = Heap.add_removable t.heap (key, data) in
-    Hashtbl.replace t.tbl ~key ~data:el
+    Hashtbl.set t.tbl ~key ~data:el
 
   let push t ~key ~data =
     match Hashtbl.find t.tbl key with

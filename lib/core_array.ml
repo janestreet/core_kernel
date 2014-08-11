@@ -8,7 +8,6 @@ module List = Core_list
 let invalid_argf = Core_printf.invalid_argf
 
 let failwiths = Error.failwiths
-let does_raise = Common.does_raise
 
 type 'a t = 'a array with sexp, bin_io, typerep
 
@@ -802,7 +801,7 @@ let truncate t ~len =
 TEST_UNIT =
   List.iter
     ~f:(fun (t, len) ->
-      assert (does_raise (fun () -> truncate t ~len)))
+      assert (Exn.does_raise (fun () -> truncate t ~len)))
     [ [| |]  , -1
     ; [| |]  , 0
     ; [| |]  , 1

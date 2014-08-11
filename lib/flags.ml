@@ -129,7 +129,7 @@ TEST_MODULE = struct
 
   TEST_UNIT =
     List.iter [ -1; 63 ] ~f:(fun bit ->
-      assert (does_raise (fun () -> create ~bit)))
+      assert (Exn.does_raise (fun () -> create ~bit)))
   ;;
 
   TEST_UNIT =

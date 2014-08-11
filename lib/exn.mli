@@ -62,5 +62,9 @@ val handle_uncaught_and_exit : (unit -> 'a) -> 'a
 *)
 val reraise_uncaught : string -> (unit -> 'a) -> 'a
 
+(** [does_raise f] returns [true] iff [f ()] raises, which is often useful in unit
+    tests. *)
+val does_raise : (unit -> _) -> bool
+
 (** [Printexc.get_backtrace] *)
 val backtrace : unit -> string

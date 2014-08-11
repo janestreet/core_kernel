@@ -9,6 +9,8 @@ TEST_MODULE = (struct
   module Core_queue = Core_queue_debug.Debug (Core_queue)
   open Core_queue
 
+  let does_raise = Exn.does_raise
+
   let () = show_messages := false
 
   type nonrec 'a t = 'a t with bin_io, sexp

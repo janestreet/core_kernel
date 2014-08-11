@@ -7,7 +7,7 @@ module Make (Hashtbl : Core_hashtbl_intf.Hashtbl) = struct
   let test_hash = begin
     let h = Hashtbl.Poly.create () ~size:10 in
     List.iter test_data ~f:(fun (k,v) ->
-      Hashtbl.replace h ~key:k ~data:v
+      Hashtbl.set h ~key:k ~data:v
     );
     h
   end
@@ -154,7 +154,7 @@ module Make (Hashtbl : Core_hashtbl_intf.Hashtbl) = struct
       if i < 2000 then begin
         let k = Random.int 10_000 in
         inserted := List.Assoc.add (List.Assoc.remove !inserted k) k i;
-        Hashtbl.replace t ~key:k ~data:i;
+        Hashtbl.set t ~key:k ~data:i;
         Hashtbl.invariant t;
         verify_inserted t;
         loop (i + 1) t
@@ -179,8 +179,8 @@ module Make (Hashtbl : Core_hashtbl_intf.Hashtbl) = struct
     let verify_not_present l =
       List.for_all l ~f:(fun i -> not (Hashtbl.mem t i))
     in
-    List.iter l ~f:(fun i -> Hashtbl.replace t ~key:i ~data:(i * i));
-    List.iter l ~f:(fun i -> Hashtbl.replace t ~key:i ~data:(i * i));
+    List.iter l ~f:(fun i -> Hashtbl.set t ~key:i ~data:(i * i));
+    List.iter l ~f:(fun i -> Hashtbl.set t ~key:i ~data:(i * i));
     assert (Hashtbl.length t = 100);
     assert (verify_present l);
     Hashtbl.clear t;
@@ -188,7 +188,7 @@ module Make (Hashtbl : Core_hashtbl_intf.Hashtbl) = struct
     assert (Hashtbl.length t = 0);
     assert (verify_not_present l);
     let l = List.take l 42 in
-    List.iter l ~f:(fun i -> Hashtbl.replace t ~key:i ~data:(i * i));
+    List.iter l ~f:(fun i -> Hashtbl.set t ~key:i ~data:(i * i));
     assert (Hashtbl.length t = 42);
     assert (verify_present l);
     Hashtbl.invariant t;
@@ -199,7 +199,7 @@ module Make (Hashtbl : Core_hashtbl_intf.Hashtbl) = struct
     Hashtbl.invariant t;
     assert (not (Hashtbl.mem t "Fred"));
     Hashtbl.invariant t;
-    Hashtbl.replace t ~key:"Fred" ~data:"Wilma";
+    Hashtbl.set t ~key:"Fred" ~data:"Wilma";
     Hashtbl.invariant t;
     assert (Hashtbl.mem t "Fred");
     Hashtbl.invariant t;

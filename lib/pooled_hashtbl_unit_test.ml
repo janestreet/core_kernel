@@ -11,14 +11,14 @@ TEST_MODULE = struct
     let n = 1_000_000 in
     let tbl = Hashtbl.create ~size:16 () in
     for i = 0 to n - 1 do
-      Hashtbl.replace tbl ~key:i ~data:i;
+      Hashtbl.set tbl ~key:i ~data:i;
     done;
     let first_n = ref 0 in
     for _z = 1 to 2 do
       let loop_end = !first_n + n - 1 in
       for i = !first_n to loop_end do
         let x = n + i in
-        Hashtbl.replace tbl ~key:x ~data:x;
+        Hashtbl.set tbl ~key:x ~data:x;
         Hashtbl.remove tbl i;
       done;
       first_n := !first_n + n

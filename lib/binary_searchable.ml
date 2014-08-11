@@ -306,10 +306,8 @@ module Make_gen (T : sig
           for pos = -1 to length do
             for len = -1 to length + 1 do
               (*try*)
-              let does_raise f =
-                try f (); false with _ -> true in
               let should_raise =
-                does_raise (fun () ->
+                Exn.does_raise (fun () ->
                   Ordered_collection_common.check_pos_len_exn ~pos ~len ~length)
               in
               let result =
