@@ -282,6 +282,8 @@ TEST_MODULE = struct
 end
 
 let zero = 0.
+let one = 1.
+let minus_one = -1.
 
 TEST = to_string_round_trippable 3.14                             = "3.14"
 TEST = to_string_round_trippable 3.1400000000000001               = "3.14"
@@ -895,6 +897,9 @@ let ( - ) = ( -. )
 let ( * ) = ( *. )
 let ( / ) = ( /. )
 let ( ~- ) = ( ~-. )
+
+let (~+) = (~+.)
+let (~-) = (~-.)
 
 include Comparable.Map_and_set_binable (T)
 
