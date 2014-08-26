@@ -1,7 +1,7 @@
 (* OASIS_START *)
 (* OASIS_STOP *)
 
-let dispatch = function
+let dispatch env = function
   | After_rules ->
     pflag ["compile"; "ocaml"] "I" (fun x -> S [A "-I"; A x]);
 
@@ -26,9 +26,18 @@ let dispatch = function
     List.iter
       (fun tag ->
          pflag ["ocaml"; tag] "pa_ounit_lib"
-           (fun s -> S[A"-ppopt"; A"-pa-ounit-lib"; A"-ppopt"; A s]))
+           (fun s ->
+              let args =
+                if BaseEnvLight.var_get "tests" env = "true"
+                then []
+                else [A"-ppopt"; A"-pa-ounit-drop"]
+              in
+              let args = A"-ppopt" :: A"-pa-ounit-lib" :: A"-ppopt" :: A s :: args in
+              S args))
       ["ocamldep"; "compile"; "doc"];
   | _ ->
     ()
 
-let () = Ocamlbuild_plugin.dispatch (fun hook -> dispatch hook; dispatch_default hook)
+let () =
+  let env = BaseEnvLight.load ~allow_empty:true ~filename:MyOCamlbuildBase.env_filename () in
+  Ocamlbuild_plugin.dispatch (fun hook -> dispatch env hook; dispatch_default hook)
