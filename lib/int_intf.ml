@@ -35,6 +35,17 @@ module type Round = sig
   val round_nearest      : t -> to_multiple_of:t -> t
 end
 
+module type Hexable = sig
+  type t
+  module Hex : sig
+    type nonrec t = t with bin_io, sexp, compare, typerep
+
+    include Stringable with type t := t
+
+    val to_string_hum : ?delimiter:char -> t -> string
+  end
+end
+
 module type S = sig
   type t with bin_io, sexp, typerep
 
@@ -42,6 +53,7 @@ module type S = sig
   include Intable              with type t := t
   include Identifiable         with type t := t
   include Comparable.With_zero with type t := t
+  include Hexable              with type t := t
 
   (** [delimiter] is underscore by default *)
   val to_string_hum : ?delimiter:char -> t -> string

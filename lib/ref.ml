@@ -61,7 +61,7 @@ include T
 module Permissioned = struct
   include (T : (module type of T) with type 'a t := 'a ref)
 
-  type ('a, 'perm) t = 'a T.t with bin_io, sexp
+  type ('a, -'perms) t = 'a T.t with bin_io, sexp
 
   let read_only = Fn.id
   let of_ref    = Fn.id

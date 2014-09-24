@@ -18,8 +18,7 @@ val nth : 'a t -> int -> 'a option
 
 (** Return the [n]-th element of the given list.
     The first element (head of the list) is at position 0.
-    Raise [Failure "nth"] if the list is too short.
-    Raise [Invalid_argument "List.nth"] if [n] is negative. *)
+    Raise if the list is too short or [n] is negative. *)
 val nth_exn : 'a t -> int -> 'a
 
 (** List reversal. *)
@@ -34,7 +33,7 @@ val rev_append : 'a t -> 'a t -> 'a t
     O(1) if either list is empty. *)
 val unordered_append : 'a t -> 'a t -> 'a t
 
-(** [List.rev_map f l] gives the same result as
+(** [List.rev_map l ~f] gives the same result as
    {!List.rev}[ (]{!ListLabels.map}[ f l)], but is more efficient. *)
 val rev_map : 'a t -> f:('a -> 'b) -> 'b t
 
@@ -44,20 +43,18 @@ val rev_map : 'a t -> f:('a -> 'b) -> 'b t
 *)
 val fold_left : 'a t -> init:'b -> f:('b -> 'a -> 'b) -> 'b
 
-(** [List.iter2_exn f [a1; ...; an] [b1; ...; bn]] calls in turn
+(** [List.iter2_exn [a1; ...; an] [b1; ...; bn] ~f] calls in turn
     [f a1 b1; ...; f an bn].
-    Raise [Invalid_argument] if the two lists have
-    different lengths. *)
+    Raise if the two lists have different lengths. *)
 val iter2_exn : 'a t -> 'b t -> f:('a -> 'b -> unit) -> unit
 
-(** [List.rev_map2_exn f l1 l2] gives the same result as
+(** [List.rev_map2_exn l1 l2 ~f] gives the same result as
    {!List.rev}[ (]{!List.map2_exn}[ f l1 l2)], but is more efficient. *)
 val rev_map2_exn: 'a t -> 'b t -> f:('a -> 'b -> 'c) -> 'c t
 
-(** [List.fold2_exn f a [b1; ...; bn] [c1; ...; cn]] is
+(** [List.fold2_exn ~f a [b1; ...; bn] [c1; ...; cn]] is
    [f (... (f (f a b1 c1) b2 c2) ...) bn cn].
-   Raise [Invalid_argument] if the two lists have
-   different lengths. *)
+   Raise if the two lists have different lengths. *)
 val fold2_exn
   :  'a t
   -> 'b t
@@ -66,16 +63,14 @@ val fold2_exn
   -> 'c
 
 (** Same as {!List.for_all}, but for a two-argument predicate.
-   Raise [Invalid_argument] if the two lists have
-   different lengths. *)
+   Raise if the two lists have different lengths. *)
 val for_all2_exn : 'a t -> 'b t -> f:('a -> 'b -> bool) -> bool
 
 (** Same as {!List.exists}, but for a two-argument predicate.  Raise
-    [Invalid_argument] if the end of one list is reached before the end of the
-    other. *)
+    if the end of one list is reached before the end of the other. *)
 val exists2_exn : 'a t -> 'b t -> f:('a -> 'b -> bool) -> bool
 
-(** [filter p l] returns all the elements of the list [l] that satisfy the predicate [p].
+(** [filter l ~f] returns all the elements of the list [l] that satisfy the predicate [p].
     The order of the elements in the input list is preserved. *)
 val filter : 'a t -> f:('a -> bool) -> 'a t
 
@@ -87,7 +82,7 @@ val filteri : 'a t -> f: (int -> 'a -> bool) -> 'a t
 (** [partition_map t ~f] partitions [t] according to [f]. *)
 val partition_map : 'a t -> f:('a -> [ `Fst of 'b | `Snd of 'c ]) -> 'b t * 'c t
 
-(** [partition_tf p l] returns a pair of lists [(l1, l2)], where [l1] is the list of all the
+(** [partition_tf l ~f] returns a pair of lists [(l1, l2)], where [l1] is the list of all the
     elements of [l] that satisfy the predicate [p], and [l2] is the list of all the
     elements of [l] that do not satisfy [p].  The order of the elements in the input list
     is preserved.  The "tf" suffix is mnemonic to remind readers at a call that the result
@@ -125,12 +120,10 @@ val hd : 'a t -> 'a option
 
 val tl : 'a t -> 'a t option
 
-(** Return the first element of the given list. Raise
-    [Failure "hd"] if the list is empty. *)
+(** Return the first element of the given list. Raise if the list is empty. *)
 val hd_exn : 'a t -> 'a
 
-(** Return the given list without its first element. Raise [Failure "tl"] if the list is
-    empty. *)
+(** Return the given list without its first element. Raise if the list is empty. *)
 val tl_exn : 'a t -> 'a t
 
 val findi : 'a t -> f:(int -> 'a -> bool) -> (int * 'a) option
@@ -156,14 +149,14 @@ val concat_map : 'a t -> f:('a -> 'b t) -> 'b t
 *)
 val concat_mapi : 'a t -> f:(int -> 'a -> 'b t) -> 'b t
 
-(** [List.map2_exn f [a1; ...; an] [b1; ...; bn]] is [[f a1 b1; ...; f an bn]].  Raise
-    [Invalid_argument] if the two lists have different lengths. *)
+(** [List.map2_exn [a1; ...; an] [b1; ...; bn] ~f] is [[f a1 b1; ...; f an bn]].  Raise
+    if the two lists have different lengths. *)
 val map2_exn :'a t -> 'b t ->  f:('a -> 'b -> 'c) -> 'c t
 
 val rev_map3_exn : 'a t -> 'b t -> 'c t -> f:('a -> 'b -> 'c -> 'd) -> 'd t
 val map3_exn : 'a t -> 'b t -> 'c t -> f:('a -> 'b -> 'c -> 'd) -> 'd t
 
-(** [rev_map_append ~f l1 l2] reverses [l1] mapping [f] over each
+(** [rev_map_append l1 l2 ~f] reverses [l1] mapping [f] over each
     element, and appends the result to the front of [l2]. *)
 val rev_map_append : 'a t -> 'b t -> f:('a -> 'b) -> 'b t
 
@@ -195,7 +188,7 @@ val iteri : 'a t ->  f:(int -> 'a -> unit) -> unit
     element as the first argument to the folded function.  Tail-recursive. *)
 val foldi : 'a t -> f:(int -> 'b -> 'a -> 'b) -> init:'b -> 'b
 
-(** [reduce_exn f [a1; ...; an]] is [f (... (f (f a1 a2) a3) ...) an].
+(** [reduce_exn [a1; ...; an] ~f] is [f (... (f (f a1 a2) a3) ...) an].
     It fails on the empty list.  Tail recursive. *)
 val reduce_exn : 'a t -> f:('a -> 'a -> 'a) -> 'a
 val reduce : 'a t -> f:('a -> 'a -> 'a) -> 'a option
@@ -224,8 +217,7 @@ val group : 'a t -> break:('a -> 'a -> bool) -> 'a t t
 *)
 val groupi : 'a t -> break:(int -> 'a -> 'a -> bool) -> 'a t t
 
-(** The final element of a list.  The _exn version raises Invalid_argument on the empty
-    list. *)
+(** The final element of a list.  The _exn version raises on the empty list. *)
 val last : 'a t -> 'a option
 val last_exn : 'a t -> 'a
 
@@ -262,7 +254,7 @@ val exn_if_dup
   -> to_sexp:('a -> Sexplib.Sexp.t)
   -> unit
 
-(** [count f l] is the number of elements in [l] that satisfy the
+(** [count l ~f] is the number of elements in [l] that satisfy the
     predicate [f].  *)
 val count : 'a t -> f:('a -> bool) -> int
 
@@ -278,10 +270,10 @@ val range
   -> int
   -> int t
 
-(** [init f n] is [[(f 0); (f 1); ...; (f (n-1))]]. It is an error if [n < 0]. *)
+(** [init n ~f] is [[(f 0); (f 1); ...; (f (n-1))]]. It is an error if [n < 0]. *)
 val init : int -> f:(int -> 'a) -> 'a t
 
-(** [rev_filter_map f l] is the reversed sublist of [l] containing
+(** [rev_filter_map l ~f] is the reversed sublist of [l] containing
     only elements for which [f] returns [Some e]. *)
 val rev_filter_map : 'a t -> f:('a -> 'b option) -> 'b t
 
@@ -289,7 +281,7 @@ val rev_filter_map : 'a t -> f:('a -> 'b option) -> 'b t
     element as the first argument to the mapped function. Tail-recursive. *)
 val rev_filter_mapi : 'a t -> f:(int -> 'a -> 'b option) -> 'b t
 
-(** [filter_map f l] is the sublist of [l] containing only elements
+(** [filter_map l ~f] is the sublist of [l] containing only elements
     for which [f] returns [Some e].  *)
 val filter_map : 'a t -> f:('a -> 'b option) -> 'b t
 

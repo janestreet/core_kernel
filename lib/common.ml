@@ -56,6 +56,8 @@ let read_only_of_sexp = sexp_of_read_only
 let sexp_of_read_write _ = failwith "attempt to convert abstract type read_write"
 let read_write_of_sexp = sexp_of_read_write
 
+include Perms.Export
+
 include Never_returns
 
 exception Finally = Exn.Finally

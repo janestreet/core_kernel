@@ -28,6 +28,9 @@ module Unpack_one = struct
       unpack_one ?partial_unpack buf ~pos ~len
   ;;
 
+  (* [create_bin_prot] doesn't use [Bigstring.read_bin_prot] for performance reasons.  It
+     was written prior to [Bigstring.read_bin_prot], and it's not clear whether switching
+     to use it would cause too much of a performance hit. *)
   let create_bin_prot bin_prot_reader =
     let header_length = 8 in
     let not_enough_data = `Not_enough_data ((), 0) in
@@ -405,4 +408,43 @@ TEST_MODULE "unpack-buffer" = struct
     end
   ;;
 
+  (* [Unpack_one.create_bin_prot] *)
+  TEST_UNIT =
+    debug := true;
+    let module Value = struct
+      type t = {
+        foo : bool;
+        bar : int;
+        baz : string list
+      } with bin_io, compare, sexp
+
+      let equal t t' = compare t t' = 0
+
+      let pack ts =
+        let size =
+          List.fold ts ~init:0 ~f:(fun acc t ->
+            acc + bin_size_t t + Bigstring.bin_prot_size_header_length)
+        in
+        let buffer = Bigstring.create size in
+        let final_pos =
+          List.fold ts ~init:0 ~f:(fun pos t ->
+            Bigstring.write_bin_prot buffer bin_writer_t t ~pos)
+        in
+        assert (final_pos = size);
+        Bigstring.to_string buffer
+      ;;
+
+      type partial_unpack = unit with sexp_of
+
+      let unpack_one = Unpack_one.create_bin_prot bin_reader_t
+    end
+    in
+    let a = { Value. foo = true; bar = 4; baz = [ "qux"; "quux" ] } in
+    let b = { Value. foo = false; bar = -3289; baz = [] } in
+    let c = { Value. foo = false; bar = 0; baz = List.init 1000 ~f:(fun _i -> "spam") } in
+    test (module Value) [];
+    test (module Value) [ a ];
+    test (module Value) [ a; b; a; a; a; b; b; c; c; b; a; a; b ];
+    test (module Value) (List.init 1000 ~f:(fun i -> if i % 2 = 0 then a else b))
+  ;;
 end

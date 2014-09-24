@@ -20,12 +20,12 @@ val of_int64_exn : int64 -> t
 val of_nativeint : nativeint -> t option
 val to_nativeint : t -> nativeint
 
-(** [ceil_pow2 x] returns the smallest power of 2 that is greater than or equal to
-    [x].  The implementation may only be called for [x > 0]. *)
+(** [ceil_pow2 x] returns the smallest power of 2 that is greater than or equal to [x].
+    The implementation may only be called for [x > 0].  Example: [ceil_pow2 17 = 32] *)
 val ceil_pow2 : int -> int
 
 (** [floor_pow2 x] returns the largest power of 2 that is less than or equal to [x]. The
-    implementation may only be called for [x > 0]. *)
+    implementation may only be called for [x > 0].  Example: [floor_pow2 17 = 16] *)
 val floor_pow2 : int -> int
 
 (** [is_pow2 x] returns true iff [x] is a power of 2.  [is_pow2] raises if [x <= 0]. *)

@@ -14,8 +14,9 @@ let set_exn t v =
   | Some _ -> raise Already_set
 
 let set t v =
-  try Ok (set_exn t v)
-  with Already_set -> Error "already set"
+  match !t with
+  | None -> t := Some v; Ok ()
+  | Some _ -> Error "already set"
 
 let get t = !t
 

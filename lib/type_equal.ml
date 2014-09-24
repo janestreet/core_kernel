@@ -24,6 +24,13 @@ module Lift2 (X : sig type ('a1, 'a2) t end) = struct
   ;;
 end
 
+module Lift3 (X : sig type ('a1, 'a2, 'a3) t end) = struct
+  let lift (type a1) (type b1) (type a2) (type b2) (type a3) (type b3)
+        (T : (a1, b1) t) (T : (a2, b2) t) (T : (a3, b3) t) =
+    (T : ((a1, a2, a3) X.t, (b1, b2, b3) X.t) t)
+  ;;
+end
+
 let detuple2 (type a1) (type a2) (type b1) (type b2)
     (T : (a1 * a2, b1 * b2) t) : (a1, b1) t * (a2, b2) t =
   T, T

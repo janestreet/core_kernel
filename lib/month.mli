@@ -13,8 +13,8 @@ type t =
 | Dec
 with bin_io, sexp
 
-include Comparable.S with type t := t
-include Hashable.S with type t := t
+include Comparable.S_binable with type t := t
+include Hashable.  S_binable with type t := t
 
 (** [of_string s] accepts three-character abbreviations with 3 capitalizations (e.g. Jan,
     JAN, and jan) *)

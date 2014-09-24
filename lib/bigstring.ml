@@ -47,12 +47,7 @@ TEST "create with different max_mem_waiting_gc" =
   involved *)
   (2 * large_max_mem) < small_max_mem
 
-(* 4.01 brings new primitives to bigstring, including an optimized length for [Array1] *)
-IFDEF OCAML_4_01 THEN
 let length = Array1.dim
-ELSE
-external length : t -> int = "bigstring_length" "noalloc"
-ENDIF
 
 external is_mmapped : t -> bool = "bigstring_is_mmapped_stub" "noalloc"
 
@@ -147,6 +142,135 @@ let of_string = From_string.subo
 
 let to_string = To_string.subo
 
+(* Reading / writing bin-prot *)
+
+let bin_prot_size_header_length = 8
+
+let read_bin_prot_verbose_errors t ?(pos=0) ?len reader =
+  let len = get_opt_len t len ~pos in
+  let limit = pos + len in
+  check_args ~loc:"read_bin_prot_verbose_errors" t ~pos ~len;
+  let invalid_data message a sexp_of_a =
+    `Invalid_data (Error.create message a sexp_of_a)
+  in
+  let read bin_reader ~pos ~len =
+    if len > limit - pos
+    then `Not_enough_data
+    else
+      let pos_ref = ref pos in
+      match
+        (try `Ok (bin_reader t ~pos_ref)
+         with exn -> `Invalid_data (Error.of_exn exn))
+      with
+      | `Invalid_data _ as x -> x
+      | `Ok result ->
+        let expected_pos = pos + len in
+        if !pos_ref = expected_pos
+        then `Ok (result, expected_pos)
+        else invalid_data "pos_ref <> expected_pos" (!pos_ref, expected_pos)
+               <:sexp_of< int * int >>
+  in
+  match read Bin_prot.Read.bin_read_int_64bit ~pos ~len:bin_prot_size_header_length with
+  | `Not_enough_data | `Invalid_data _ as x -> x
+  | `Ok (element_length, pos) ->
+    if element_length < 0
+    then invalid_data "negative element length %d" element_length <:sexp_of< int >>
+    else read reader.Bin_prot.Type_class.read ~pos ~len:element_length
+;;
+
+TEST_MODULE = struct
+  let make_t ~size input =
+    let t = create (String.length input + 8) in
+    ignore (Bin_prot.Write.bin_write_int_64bit t ~pos:0 size : int);
+    List.iteri (String.to_list input) ~f:(fun i c -> set t (i+8) c);
+    t
+
+  let test (type a) ~size input ?pos ?len reader sexp_of_a compare_a ~expect =
+    let result =
+      match read_bin_prot_verbose_errors (make_t ~size input) ?pos ?len reader with
+      | `Ok (x, _bytes_read) -> `Ok x
+      | `Not_enough_data -> `Not_enough_data
+      | `Invalid_data _ -> `Invalid_data
+    in
+    <:test_result< [ `Ok of a | `Not_enough_data | `Invalid_data ] >> result ~expect
+
+  let test_int ?pos ?len ~size input ~expect =
+    test ~size input ?pos ?len Int.bin_reader_t Int.sexp_of_t Int.compare ~expect
+  let test_string ?pos ?len ~size input ~expect =
+    test ~size input ?pos ?len String.bin_reader_t String.sexp_of_t String.compare ~expect
+
+  (* Keep in mind that the string bin-prot representation is itself prefixed with a
+     length, so strings under the length-prefixed bin-prot protocol end up with two
+     lengths at the front. *)
+  TEST_UNIT = test_int    ~size:1 "\042"            ~expect:(`Ok 42)
+  TEST_UNIT = test_int    ~size:1 "\042suffix"      ~expect:(`Ok 42)
+  TEST_UNIT = test_string ~size:4 "\003foo"         ~expect:(`Ok "foo")
+  TEST_UNIT = test_string ~size:4 "\003foo" ~len:12 ~expect:(`Ok "foo")
+
+  TEST "pos <> 0" =
+    let t =
+       ("prefix" ^ to_string (make_t ~size:4 "\003foo") ^ "suffix")
+       |> of_string
+    in
+    read_bin_prot_verbose_errors t ~pos:6 String.bin_reader_t = `Ok ("foo", 18)
+
+  TEST_UNIT "negative size" = test_string ~size:(-1) "\003foo" ~expect:`Invalid_data
+  TEST_UNIT "wrong size"    = test_string ~size:3    "\003foo" ~expect:`Invalid_data
+  TEST_UNIT "bad bin-prot"  = test_string ~size:4    "\007foo" ~expect:`Invalid_data
+
+  TEST_UNIT "len too short" = test_string ~size:4 "\003foo" ~len:3 ~expect:`Not_enough_data
+
+  TEST "no header" =
+    let t = of_string "\003foo" in
+    read_bin_prot_verbose_errors t String.bin_reader_t = `Not_enough_data
+end
+
+let read_bin_prot t ?pos ?len reader =
+  match read_bin_prot_verbose_errors t ?pos ?len reader with
+  | `Ok x -> Ok x
+  | `Invalid_data e -> Error (Error.tag e "Invalid data")
+  | `Not_enough_data -> Or_error.error_string "not enough data"
+
+let write_bin_prot t ?(pos = 0) writer v =
+  let data_len = writer.Bin_prot.Type_class.size v in
+  let total_len = data_len + bin_prot_size_header_length in
+  if pos < 0 then
+    failwiths "Bigstring.write_bin_prot: negative pos" pos <:sexp_of< int >>;
+  if pos + total_len > length t then
+    failwiths "Bigstring.write_bin_prot: not enough room"
+      (`pos pos, `pos_after_writing (pos + total_len), `bigstring_length (length t))
+      <:sexp_of<[`pos of int] * [`pos_after_writing of int] * [`bigstring_length of int]>>;
+  let pos_after_size_header = Bin_prot.Write.bin_write_int_64bit t ~pos data_len in
+  let pos_after_data =
+    writer.Bin_prot.Type_class.write t ~pos:pos_after_size_header v
+  in
+  if pos_after_data - pos <> total_len then begin
+    failwiths "Bigstring.write_bin_prot bug!"
+      (`pos_after_data pos_after_data,
+       `start_pos pos,
+       `bin_prot_size_header_length bin_prot_size_header_length,
+       `data_len data_len,
+       `total_len total_len)
+      <:sexp_of<
+        [`pos_after_data of int] * [`start_pos of int]
+        * [`bin_prot_size_header_length of int] * [`data_len of int] * [`total_len of int]
+      >>
+  end;
+  pos_after_data
+
+TEST_MODULE = struct
+  let test ?pos writer v ~expect =
+    let size = writer.Bin_prot.Type_class.size v + 8 in
+    let t = create size in
+    ignore (write_bin_prot t ?pos writer v : int);
+    <:test_result< string >> (to_string t) ~expect
+
+  TEST_UNIT =
+    test String.bin_writer_t "foo" ~expect:"\004\000\000\000\000\000\000\000\003foo"
+  TEST_UNIT =
+    test Int.bin_writer_t    123   ~expect:"\001\000\000\000\000\000\000\000\123"
+end
+
 (* Memory mapping *)
 
 let map_file ~shared fd n = Array1.map_file fd Bigarray.char c_layout shared n
@@ -173,7 +297,6 @@ external int32_to_int : int32 -> int = "%int32_to_int"
 external int64_of_int : int -> int64 = "%int64_of_int"
 external int64_to_int : int64 -> int = "%int64_to_int"
 
-IFDEF OCAML_4_01 THEN
 external swap16 : int -> int = "%bswap16"
 external swap32 : int32 -> int32 = "%bswap_int32"
 external swap64 : int64 -> int64 = "%bswap_int64"
@@ -212,69 +335,9 @@ let unsafe_write_int64 t ~pos x       = unsafe_set_64 t pos x
 let unsafe_write_int64_swap t ~pos x  = unsafe_set_64 t pos (swap64 x)
 let unsafe_write_int64_int t ~pos x       = unsafe_set_64 t pos (int64_of_int x)
 let unsafe_write_int64_int_swap t ~pos x  = unsafe_set_64 t pos (swap64 (int64_of_int x))
-ELSE
-external unsafe_read_int16            : t -> pos:int -> int
-  = "unsafe_read_int16_t"       "noalloc"
-external unsafe_read_int16_swap       : t -> pos:int -> int
-  = "unsafe_read_int16_t_swap"  "noalloc"
-external unsafe_read_uint16           : t -> pos:int -> int
-  = "unsafe_read_uint16_t"      "noalloc"
-external unsafe_read_uint16_swap      : t -> pos:int -> int
-  = "unsafe_read_uint16_t_swap" "noalloc"
-
-external unsafe_write_int16           : t -> pos:int -> int -> unit
-  = "unsafe_write_int16_t"       "noalloc"
-external unsafe_write_int16_swap      : t -> pos:int -> int -> unit
-  = "unsafe_write_int16_t_swap"  "noalloc"
-external unsafe_write_uint16          : t -> pos:int -> int -> unit
-  = "unsafe_write_uint16_t"      "noalloc"
-external unsafe_write_uint16_swap     : t -> pos:int -> int -> unit
-  = "unsafe_write_uint16_t_swap" "noalloc"
-
-external unsafe_read_int32_int        : t -> pos:int -> int
-  = "unsafe_read_int32_t"         "noalloc"
-external unsafe_read_int32_int_swap   : t -> pos:int -> int
-  = "unsafe_read_int32_t_swap"    "noalloc"
-
-external unsafe_write_int32_int       : t -> pos:int -> int -> unit
-  = "unsafe_write_int32_t"        "noalloc"
-external unsafe_write_int32_int_swap  : t -> pos:int -> int -> unit
-  = "unsafe_write_int32_t_swap"   "noalloc"
-
-external unsafe_read_int32            : t -> pos:int -> Int32.t
-  = "unsafe_read_int32"
-external unsafe_read_int32_swap       : t -> pos:int -> Int32.t
-  = "unsafe_read_int32_swap"
-external unsafe_write_int32           : t -> pos:int -> Int32.t -> unit
-  = "unsafe_write_int32"       "noalloc"
-external unsafe_write_int32_swap      : t -> pos:int -> Int32.t -> unit
-  = "unsafe_write_int32_swap"  "noalloc"
-
-(* [unsafe_read_int64_int] and [unsafe_read_int64_int_swap] may raise exceptions on
-   both 32-bit and 64-bit platforms.  As such, they cannot be marked [noalloc].
-*)
-external unsafe_read_int64_int        : t -> pos:int -> int
-  = "unsafe_read_int64_t"
-external unsafe_read_int64_int_swap   : t -> pos:int -> int
-  = "unsafe_read_int64_t_swap"
-
-external unsafe_write_int64_int       : t -> pos:int -> int -> unit
-  = "unsafe_write_int64_t"      "noalloc"
-external unsafe_write_int64_int_swap  : t -> pos:int -> int -> unit
-  = "unsafe_write_int64_t_swap" "noalloc"
-
-external unsafe_read_int64            : t -> pos:int -> Int64.t
-  = "unsafe_read_int64"
-external unsafe_read_int64_swap       : t -> pos:int -> Int64.t
-  = "unsafe_read_int64_swap"
-external unsafe_write_int64           : t -> pos:int -> Int64.t -> unit
-  = "unsafe_write_int64"
-external unsafe_write_int64_swap      : t -> pos:int -> Int64.t -> unit
-  = "unsafe_write_int64_swap"
-ENDIF
-
 
 IFDEF ARCH_BIG_ENDIAN THEN
+
 let unsafe_get_int16_be  = unsafe_read_int16
 let unsafe_get_int16_le  = unsafe_read_int16_swap
 let unsafe_get_uint16_be = unsafe_read_uint16
@@ -305,17 +368,8 @@ let unsafe_get_int64_t_le  = unsafe_read_int64_swap
 let unsafe_set_int64_t_be  = unsafe_write_int64
 let unsafe_set_int64_t_le  = unsafe_write_int64_swap
 
-(* These allocate intermediate boxes in the common (non-exception) case:
-
-   {[
-     let unsafe_get_int64_be_exn t ~pos = unsafe_get_int64_t_be t ~pos |> Int64.to_int_exn
-     let unsafe_get_int64_le_exn t ~pos = unsafe_get_int64_t_le t ~pos |> Int64.to_int_exn
-   ]}
-
-   So, continue to use the stub for the non-truncating accessors. *)
-external unsafe_get_int64_be_exn : t -> pos:int -> int = "unsafe_read_int64_t"
-external unsafe_get_int64_le_exn : t -> pos:int -> int = "unsafe_read_int64_t_swap"
 ELSE
+
 let unsafe_get_int16_be  = unsafe_read_int16_swap
 let unsafe_get_int16_le  = unsafe_read_int16
 let unsafe_get_uint16_be = unsafe_read_uint16_swap
@@ -346,9 +400,35 @@ let unsafe_get_int64_t_le  = unsafe_read_int64
 let unsafe_set_int64_t_be  = unsafe_write_int64_swap
 let unsafe_set_int64_t_le  = unsafe_write_int64
 
-external unsafe_get_int64_be_exn : t -> pos:int -> int = "unsafe_read_int64_t_swap"
-external unsafe_get_int64_le_exn : t -> pos:int -> int = "unsafe_read_int64_t"
 ENDIF
+
+let int64_conv_error () =
+  failwith "unsafe_read_int64: value cannot be represented unboxed!"
+;;
+
+IFDEF ARCH_SIXTYFOUR THEN
+
+let int64_to_int_exn n =
+  if n >= -0x4000_0000_0000_0000L && n < 0x4000_0000_0000_0000L then
+    int64_to_int n
+  else
+    int64_conv_error ()
+;;
+
+ELSE
+
+let int64_to_int_exn n =
+  if n >= -0x0000_0000_4000_0000L && n < 0x0000_0000_4000_0000L then
+    int64_to_int n
+  else
+    int64_conv_error ()
+;;
+
+ENDIF
+
+let unsafe_get_int64_be_exn t ~pos = int64_to_int_exn (unsafe_get_int64_t_be t ~pos)
+let unsafe_get_int64_le_exn t ~pos = int64_to_int_exn (unsafe_get_int64_t_le t ~pos)
+
 BENCH_MODULE "unsafe_get_int64_* don't allocate intermediate boxes" = struct
   let t = init 8 ~f:Char.of_int_exn
   BENCH "be" = unsafe_get_int64_be_exn t ~pos:0

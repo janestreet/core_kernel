@@ -2,8 +2,8 @@
 
 type t with bin_io, sexp
 
-include Hashable.S with type t := t
-include Comparable.S with type t := t
+include Hashable.  S_binable with type t := t
+include Comparable.S_binable with type t := t
 
 (** [of_string s] accepts three-character abbreviations with any capitalization
 *)

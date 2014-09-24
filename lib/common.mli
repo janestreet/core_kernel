@@ -14,10 +14,17 @@ exception Finally of exn * exn
     converting between read_only/immutable/read_write because the private types expose the
     subtyping. Users would say "(db :> read_only Db.t)" to cast.  The difference between
     read-only and immutable is that someone else can change a read-only object, while
-    immutable never changes. *)
+    immutable never changes.
+
+    These types are deprecated in favor of the types included from [Perms.Export] module
+    below.
+*)
 type read_only                      with sexp, bin_io, compare
 type immutable  = private read_only with sexp, bin_io, compare
 type read_write = private read_only with sexp, bin_io, compare
+
+(** Types for use as markers in phantom types.  See the [Perms] module for more details. *)
+include module type of Perms.Export
 
 (** [never_returns] should be used as the return type of functions that don't return and
     might block forever, rather than ['a] or [_].  This forces callers of such functions

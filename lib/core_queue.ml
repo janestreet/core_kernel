@@ -28,7 +28,7 @@ let inc_num_mutations t = t.num_mutations <- t.num_mutations + 1
 
 let capacity t = t.mask + 1
 
-let dummy (type a) (_ : a t) = (Obj.magic 0 : a)
+let dummy (type a) (_ : a t) = (Obj.magic None : a)
 
 let elts_index t i = (t.front + i) land t.mask
 
@@ -97,7 +97,7 @@ let create (type a) ?capacity () : a t =
   ; front         = 0
   ; mask          = capacity - 1
   ; length        = 0
-  ; elts          = Array.create ~len:capacity (Obj.magic 0 : a)
+  ; elts          = Array.create ~len:capacity (Obj.magic None : a)
   }
 ;;
 

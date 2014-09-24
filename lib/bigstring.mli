@@ -95,6 +95,41 @@ include Blit.S with type t := t
 module To_string   : Blit.S_distinct with type src := t      with type dst := string
 module From_string : Blit.S_distinct with type src := string with type dst := t
 
+(** {6 Reading/writing bin-prot *)
+
+(** These functions write the "size-prefixed" bin-prot format that is used by, e.g.,
+    async's [Writer.write_bin_prot], [Reader.read_bin_prot] and
+    [Unpack_buffer.Unpack_one.create_bin_prot]. *)
+
+(** The length of the size prefix is always 8 bytes at present.  This is exposed so your
+    program does not have to know this fact too. *)
+val bin_prot_size_header_length : int
+
+(** [write_bin_prot t writer a] writes [a] to [t] starting at [pos], and returns the index
+    in [t] immediately after the last byte written.  It raises if [pos < 0] or if [a]
+    doesn't fit in [t]. *)
+val write_bin_prot
+  :  t
+  -> ?pos:int  (** default is 0 *)
+  -> 'a Bin_prot.Type_class.writer
+  -> 'a
+  -> int
+
+(** The [read_bin_prot*] functions read from the region of [t] starting at [pos] of length
+    [len].  They return the index in [t] immediately after the last byte read.  They raise
+    if [pos] and [len] don't describe a region of [t]. *)
+val read_bin_prot
+  : t -> ?pos:int -> ?len:int -> 'a Bin_prot.Type_class.reader -> ('a * int) Or_error.t
+val read_bin_prot_verbose_errors
+  : t
+  -> ?pos:int
+  -> ?len:int
+  -> 'a Bin_prot.Type_class.reader
+  -> [ `Invalid_data of Error.t
+     | `Not_enough_data
+     | `Ok of ('a * int)
+     ]
+
 (** {6 Memory mapping} *)
 
 val map_file : shared : bool -> Unix.file_descr -> int -> t

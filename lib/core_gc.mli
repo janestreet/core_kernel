@@ -93,51 +93,54 @@ type stat = Stat.t
 module Control : sig
   type t = {
     mutable minor_heap_size : int;
-    (** The size (in words) of the minor heap.  Changing
-       this parameter will trigger a minor collection.  Default: 1M. *)
+    (** The size (in words) of the minor heap.  Changing this parameter will
+        trigger a minor collection.
+        Default: 262144 words / 1MB (32bit) / 2MB (64bit). *)
 
     mutable major_heap_increment : int;
-    (** The minimum number of words to add to the
-       major heap when increasing it.  Default: 1M. *)
+    (** The minimum number of words to add to the major heap when increasing it.
+        Default: 126976 words / 0.5MB (32bit) / 1MB (64bit). *)
 
     mutable space_overhead : int;
     (** The major GC speed is computed from this parameter.
         This is the memory that will be "wasted" because the GC does not
-       immediatly collect unreachable blocks.  It is expressed as a
-       percentage of the memory used for live data.
-       The GC will work more (use more CPU time and collect
-       blocks more eagerly) if [space_overhead] is smaller.
-       Default: 100. *)
+        immediatly collect unreachable blocks.  It is expressed as a
+        percentage of the memory used for live data.
+        The GC will work more (use more CPU time and collect
+        blocks more eagerly) if [space_overhead] is smaller.
+        Default: 80. *)
 
     mutable verbose : int;
     (** This value controls the GC messages on standard error output.
-       It is a sum of some of the following flags, to print messages
-       on the corresponding events:
-       - [0x001] Start of major GC cycle.
-       - [0x002] Minor collection and major GC slice.
-       - [0x004] Growing and shrinking of the heap.
-       - [0x008] Resizing of stacks and memory manager tables.
-       - [0x010] Heap compaction.
-       - [0x020] Change of GC parameters.
-       - [0x040] Computation of major GC slice size.
-       - [0x080] Calling of finalisation functions.
-       - [0x100] Bytecode executable search at start-up.
-       - [0x200] Computation of compaction triggering condition.
-       Default: 0. *)
+        It is a sum of some of the following flags, to print messages
+        on the corresponding events:
+        - [0x001] Start of major GC cycle.
+        - [0x002] Minor collection and major GC slice.
+        - [0x004] Growing and shrinking of the heap.
+        - [0x008] Resizing of stacks and memory manager tables.
+        - [0x010] Heap compaction.
+        - [0x020] Change of GC parameters.
+        - [0x040] Computation of major GC slice size.
+        - [0x080] Calling of finalisation functions.
+        - [0x100] Bytecode executable search at start-up.
+        - [0x200] Computation of compaction triggering condition.
+        Default: 0. *)
 
     mutable max_overhead : int;
     (** Heap compaction is triggered when the estimated amount
-       of "wasted" memory is more than [max_overhead] percent of the
-       amount of live data.  If [max_overhead] is set to 0, heap
-       compaction is triggered at the end of each major GC cycle
-       (this setting is intended for testing purposes only).
-       If [max_overhead >= 1000000], compaction is never triggered.
-       Default: 500. *)
+        of "wasted" memory is more than [max_overhead] percent of the
+        amount of live data.  If [max_overhead] is set to 0, heap
+        compaction is triggered at the end of each major GC cycle
+        (this setting is intended for testing purposes only).
+        If [max_overhead >= 1000000], compaction is never triggered.
+        Default: 500. *)
 
     mutable stack_limit : int;
     (** The maximum size of the stack (in words).  This is only
-       relevant to the byte-code runtime, as the native code runtime
-       uses the operating system's stack.  Default: 256k. *)
+        relevant to the byte-code runtime, as the native code runtime
+        uses the operating system's stack.
+        Default: 1048576 words / 4MB (32bit) / 8MB (64bit). *)
+
     mutable allocation_policy : int;
     (** The policy used for allocating in the heap.  Possible
         values are 0 and 1.  0 is the next-fit policy, which is
@@ -175,8 +178,13 @@ external counters : unit -> float * float * float = "caml_gc_counters"
 
 (** The following functions return the same as [(Gc.quick_stat ()).Stat.f], avoiding any
     allocation (of the [stat] record or a float).  On 32-bit machines the [int] may
-    overflow. *)
-external minor_words       : unit -> int = "core_kernel_gc_minor_words"       "noalloc"
+    overflow.
+
+    Note that [minor_words] does not allocate, but we do not annotate it as [noalloc]
+    because we want the compiler to save the value of the allocation pointer register
+    (%r15 on x86-64) to the global variable [caml_young_ptr] before the C stub tries to
+    read its value. *)
+external minor_words       : unit -> int = "core_kernel_gc_minor_words"
 external major_words       : unit -> int = "core_kernel_gc_major_words"       "noalloc"
 external promoted_words    : unit -> int = "core_kernel_gc_promoted_words"    "noalloc"
 external minor_collections : unit -> int = "core_kernel_gc_minor_collections" "noalloc"
@@ -185,6 +193,16 @@ external heap_words        : unit -> int = "core_kernel_gc_heap_words"        "n
 external heap_chunks       : unit -> int = "core_kernel_gc_heap_chunks"       "noalloc"
 external compactions       : unit -> int = "core_kernel_gc_compactions"       "noalloc"
 external top_heap_words    : unit -> int = "core_kernel_gc_top_heap_words"    "noalloc"
+
+(** This function returns [major_words () + minor_words ()].  It exists purely for speed
+    (one call into C rather than two).  Like [major_words] and [minor_words],
+    [major_plus_minor_words] avoids allocating a [stat] record or a float, and may
+    overflow on 32-bit machines.
+
+    This function is not marked ["noalloc"] to ensure that the allocation pointer is
+    up-to-date when the minor-heap measurement is made.
+*)
+external major_plus_minor_words : unit -> int = "core_kernel_gc_major_plus_minor_words"
 
 external get : unit -> control = "caml_gc_get"
 (** Return the current values of the GC parameters in a [control] record. *)

@@ -98,6 +98,20 @@ let to_nativeint_exn = Conv.int64_to_nativeint_exn
 
 include Conv.Make (T)
 
+include Conv.Make_hex(struct
+
+  type t = int64 with bin_io, compare, typerep
+
+  let zero = zero
+  let neg = (~-)
+  let (<) = (<)
+  let to_string i = Printf.sprintf "%Lx" i
+  let of_string s = Scanf.sscanf s "%Lx" Fn.id
+
+  let module_name = "Core.Std.Int64.Hex"
+
+end)
+
 include Pretty_printer.Register (struct
   type nonrec t = t
   let to_string = to_string

@@ -62,7 +62,7 @@ let is_uppercase t = 'A' <= t && t <= 'Z'
 
 let is_print t = ' ' <= t && t <= '~'
 
-let is_whitespace t = t = ' ' || t = '\n' || t = '\t' || t = '\r'
+let is_whitespace = function ' ' | '\n' |  '\t' | '\r' -> true | _ -> false
 
 let is_digit t = '0' <= t && t <= '9'
 

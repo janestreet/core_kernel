@@ -95,8 +95,7 @@ let (int64_to_nativeint, int64_to_nativeint_exn) =
 ;;
 let nativeint_to_int64 = Int64.of_nativeint
 
-let insert_delimiter input ~delimiter =
-  let chars_per_delimiter = 3 in
+let insert_delimiter_every input ~delimiter ~chars_per_delimiter =
   let input_length = String.length input in
   if input_length <= chars_per_delimiter then
     input
@@ -126,7 +125,11 @@ let insert_delimiter input ~delimiter =
   end
 ;;
 
-let insert_underscores input = insert_delimiter input ~delimiter:'_'
+let insert_delimiter input ~delimiter =
+  insert_delimiter_every input ~delimiter ~chars_per_delimiter:3
+
+let insert_underscores input =
+  insert_delimiter input ~delimiter:'_'
 
 TEST_MODULE "pretty" = struct
 
@@ -156,13 +159,72 @@ module Make (I : sig
   val to_string : t -> string
 end) = struct
 
-  let to_string_hum ?(delimiter='_') t = insert_delimiter (I.to_string t) ~delimiter
+  open I
+
+  let chars_per_delimiter = 3
+
+  let to_string_hum ?(delimiter='_') t =
+    insert_delimiter_every (to_string t) ~delimiter ~chars_per_delimiter
 
   let sexp_of_t t =
-    let s = I.to_string t in
+    let s = to_string t in
     Sexplib.Sexp.Atom
       (match !sexp_of_int_style with
-      | `Underscores -> insert_underscores s
+      | `Underscores -> insert_delimiter_every s ~chars_per_delimiter ~delimiter:'_'
       | `No_underscores -> s)
   ;;
+end
+
+module Make_hex (I : sig
+                   type t with bin_io, compare, typerep
+                   val to_string : t -> string
+                   val of_string : string -> t
+                   val zero : t
+                   val (<) : t -> t -> bool
+                   val neg : t -> t
+                   val module_name : string
+                 end) =
+struct
+
+  module T_hex = struct
+
+    type t = I.t with bin_io, compare, typerep
+
+    let chars_per_delimiter = 4
+
+    let to_string' ?delimiter t =
+      let make_suffix =
+        match delimiter with
+        | None -> I.to_string
+        | Some delimiter ->
+          (fun t ->
+             insert_delimiter_every (I.to_string t) ~delimiter ~chars_per_delimiter)
+      in
+      if I.(<) t I.zero
+      then "-0x" ^ make_suffix (I.neg t)
+      else "0x" ^ make_suffix t
+
+    let to_string t = to_string' t ?delimiter:None
+
+    let to_string_hum ?(delimiter='_') t = to_string' t ~delimiter
+
+    let invalid str =
+      failwith (Printf.sprintf "%s.of_string: invalid input %S" I.module_name str)
+
+    let of_string_with_delimiter str =
+      I.of_string (Core_string.filter str ~f:(fun c -> c <> '_'))
+
+    let of_string str =
+      let module L = Hex_lexer in
+      match Option.try_with (fun () -> L.parse_hex (Lexing.from_string str)) with
+      | None -> invalid str
+      | Some (Neg body) -> I.neg (of_string_with_delimiter body)
+      | Some (Pos body) -> of_string_with_delimiter body
+  end
+
+  module Hex = struct
+    include T_hex
+    include Sexpable.Of_stringable(T_hex)
+  end
+
 end

@@ -121,8 +121,8 @@ module Stable = struct
 
     include (Int : sig
       include Binable.S with type t := t
-      include Hashable.S with type t := t
-      include Comparable.S with type t := t
+      include Hashable.S_binable with type t := t
+      include Comparable.S_binable with type t := t
     end)
   end
 

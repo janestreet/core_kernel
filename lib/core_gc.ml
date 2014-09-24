@@ -110,8 +110,7 @@ let disable_compaction ?logger ?don't_change_allocation_policy () =
   tune ?logger ?allocation_policy ~max_overhead:1_000_000 ();
 ;;
 
-
-external minor_words : unit -> int = "core_kernel_gc_minor_words" "noalloc"
+external minor_words : unit -> int = "core_kernel_gc_minor_words"
 external major_words : unit -> int = "core_kernel_gc_major_words" "noalloc"
 external promoted_words : unit -> int = "core_kernel_gc_promoted_words" "noalloc"
 external minor_collections : unit -> int = "core_kernel_gc_minor_collections" "noalloc"
@@ -120,6 +119,8 @@ external heap_words : unit -> int = "core_kernel_gc_heap_words" "noalloc"
 external heap_chunks : unit -> int = "core_kernel_gc_heap_chunks" "noalloc"
 external compactions : unit -> int = "core_kernel_gc_compactions" "noalloc"
 external top_heap_words : unit -> int = "core_kernel_gc_top_heap_words" "noalloc"
+
+external major_plus_minor_words : unit -> int = "core_kernel_gc_major_plus_minor_words"
 
 let zero = int_of_string "0" (* The compiler won't optimize int_of_string away so it won't
                                 perform constant folding below. *)
@@ -185,6 +186,9 @@ TEST_MODULE "gc" = struct
       assert (mw1 = mw2);
     done
 
+  TEST_UNIT =
+    assert (major_words () + minor_words () = major_plus_minor_words ())
+
   let stat_eq func projection =
     (* In the stub the record is allocated after getting the stats, so we must ensure
        [func] is called first. *)
@@ -233,6 +237,7 @@ end
 (* Simple inline benchmarks for GC functions *)
 BENCH "minor_words" = minor_words ()
 BENCH "major_words" = major_words ()
+BENCH "major_plus_minor_words" = major_plus_minor_words ()
 BENCH "promoted_words" = promoted_words ()
 BENCH "minor_collections" = minor_collections ()
 BENCH "major_collections" = major_collections ()

@@ -1,3 +1,80 @@
+## 112.01.00
+
+- Removed vestigial code supporting OCaml 4.00.
+- Used `{Hashable,Comparable}.S_binable` in `Day_of_week` and `Month`.
+- Improved the performance of `Set_once.set`.
+- Added `Type_equal.Lift3` functor.
+- Replaced occurrences of `Obj.magic 0` with `Obj.magic None`.
+
+  With the former the compiler might think the destination type is
+  always an integer and instruct the GC to ignore references to such
+  values.  The latter doesn't have this problem as options are not
+  always integers.
+- Made `String_id.of_string` faster.
+- Added `Bigstring` functions for reading and writing the
+  size-prefixed bin-io format.
+
+  - `bin_prot_size_header_length`
+  - `write_bin_prot`
+  - `read_bin_prot`
+  - `read_bin_prot_verbose_errors`
+- Added `{Info,Error}.to_string_mach` which produces a single-line
+  sexp from an `Error.t`.
+- Added `{Info,Error}.createf`, for creation from a format string.
+- Added new `Perms` module with phantom types for managing access
+  control.
+
+  This module supersedes the `read_only`, `read_write`, and
+  `immutable` phantom types, which are now deprecated, and will be
+  removed in the future.  This module uses a different approach using
+  sets of polymorphic variants as capabilities, and contravariant
+  subtyping to express dropping capabilities.
+
+  This approach fixes a bug with the current phantom types used for
+  `Ref.Permissioned` in which `immutable` types aren't guaranteed to
+  be immutable:
+
+  ```ocaml
+  let r = Ref.Permissioned.create 0
+  let r_immutable = (r :  (int, immutable) Ref.Permissioned.t)
+  let () = assert (Ref.Permissioned.get r_immutable = 0)
+  let () = Ref.Permissioned.set r 1
+  let () = assert (Ref.Permissioned.get r_immutable = 1)
+  ```
+
+  The bug stems from the fact that the phantom-type parameter is
+  covariant, which allows OCaml's relaxed value restriction to kick
+  in, which allows one to create a polymorphic value, which can then
+  be viewed as both immutable and read write.  Here's a small
+  standalone example to demonstrate:
+
+  ```ocaml
+  module F (M : sig
+              type +'z t
+              val create : int -> _ t
+              val get : _ t -> int
+              val set : read_write t -> int -> unit
+            end) : sig
+    val t : _ M.t
+  end = struct
+    let t = M.create 0
+    let t_immutable = (t :  immutable M.t)
+    let () =
+      assert (M.get t_immutable = 0);
+      M.set t 1;
+      assert (M.get t_immutable = 1);
+    ;;
+  end
+  ```
+
+  The new approach fixes the problem by making the phantom-type
+  parameter contravariant, and using polymorphic variants as
+  capabilities to represent what operations are allowed.
+  Contravariance allows one to drop capabilities, but not add them.
+- Added `Int.Hex` module, which has hexadecimal sexp/string
+  conversions.
+- Added `Gc.major_plus_minor_words`, for performance reasons.
+
 ## 111.28.00
 
 - Added `Pooled_hashtbl.resize` function, to allow preallocating a table

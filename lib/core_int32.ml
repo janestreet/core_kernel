@@ -97,6 +97,20 @@ let pow b e = of_int_exn (Int_math.int_pow (to_int_exn b) (to_int_exn e))
 
 include Conv.Make (T)
 
+include Conv.Make_hex(struct
+
+  type t = int32 with bin_io, compare, typerep
+
+  let zero = zero
+  let neg = (~-)
+  let (<) = (<)
+  let to_string i = Printf.sprintf "%lx" i
+  let of_string s = Scanf.sscanf s "%lx" Fn.id
+
+  let module_name = "Core.Std.Int32.Hex"
+
+end)
+
 include Pretty_printer.Register (struct
   type nonrec t = t
   let to_string = to_string

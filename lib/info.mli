@@ -9,6 +9,11 @@
 
     {[Info.of_string "Unable to find file"]}
 
+    Or for a more descriptive [Info] without attaching any content (but evaluating the
+    result eagerly):
+
+    {[Info.createf "Process %s exited with code %d" process exit_code]}
+
     For info where you want to attach some content, you would write:
 
     {[Info.create "Unable to find file" filename <:sexp_of< string >>]}
@@ -33,14 +38,17 @@ type t with bin_io, sexp
     (of_string s) = s].
 
     If this string is going to go into a log file, you may find it useful to ensure that
-    the string is only one line long. To do this, use [Sexp.to_string_mach (sexp_of_t t)].
+    the string is only one line long.  To do this, use [to_string_mach t].
 *)
 val to_string_hum : t -> string
 
+(** [to_string_mach t] outputs [t] as a sexp on a single-line. *)
+val to_string_mach : t -> string
+
 (** old version (pre 109.61) of [to_string_hum] that some applications rely on.
 
-    Calls should be replaced with [Sexp.to_string_mach (sexp_of_t t)], which outputs more
-    parenthesis and backslashes.
+    Calls should be replaced with [to_string_mach t], which outputs more parenthesis and
+    backslashes.
 *)
 val to_string_hum_deprecated : t -> string
 
@@ -55,6 +63,10 @@ val of_thunk : (unit -> string) -> t
     aware that [z] will be lazily converted to a sexp at a later point in time, which will
     pick up the then-current state of [z]. *)
 val create : ?here:Source_code_position0.t -> string -> 'a -> ('a -> Sexp.t) -> t
+
+(** Construct an error containing only a string from a format.  This eagerly constructs
+    the string. *)
+val createf : ('a, unit, string, t) format4 -> 'a
 
 (* Add a string to the front. *)
 val tag : t -> string -> t

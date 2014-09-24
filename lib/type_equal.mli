@@ -82,6 +82,14 @@ module Lift2 (X : T2) : sig
   val lift : ('a1, 'b1) t -> ('a2, 'b2) t -> (('a1, 'a2) X.t, ('b1, 'b2) X.t) t
 end
 
+module Lift3 (X : T3) : sig
+  val lift
+    :  ('a1, 'b1) t
+    -> ('a2, 'b2) t
+    -> ('a3, 'b3) t
+    -> (('a1, 'a2, 'a3) X.t, ('b1, 'b2, 'b3) X.t) t
+end
+
 (** [tuple2] and [detuple2] convert between equality on a 2-tuple and its components. *)
 val detuple2 : ('a1 * 'a2, 'b1 * 'b2) t -> ('a1, 'b1) t * ('a2, 'b2) t
 val tuple2   : ('a1, 'b1) t -> ('a2, 'b2) t -> ('a1 * 'a2, 'b1 * 'b2) t

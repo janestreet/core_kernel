@@ -136,6 +136,8 @@ let to_string_hum t =
 
 let to_string_hum_deprecated t = Message.to_string_hum_deprecated (to_message t)
 
+let to_string_mach t = Sexp.to_string_mach (sexp_of_t t)
+
 include Bin_prot.Utils.Make_binable (struct
   module Binable = Message
   type t = t_
@@ -146,6 +148,8 @@ end)
 let of_lazy l = lazy (protect (fun () -> String (Lazy.force l)))
 
 let of_string message = Lazy.lazy_from_val (String message)
+
+let createf format = Printf.ksprintf of_string format
 
 TEST = to_string_hum (of_string "a\nb") = "a\nb"
 

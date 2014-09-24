@@ -66,16 +66,36 @@ end) : sig
     -> string
 
   val sexp_of_t : I.t -> Sexplib.Sexp.t
+
 end
 
-(* global ref affecting whether the [sexp_of_t] returned by [Make]
-   is consistent with the [to_string] input or the [to_string_hum] output *)
+module Make_hex (I : sig
+                   type t with bin_io, compare, typerep
+                   (** [to_string] and [of_string] convert between [t] and unsigned,
+                       unprefixed hexadecimal *)
+                   val to_string : t -> string
+                   val of_string : string -> t
+                   val zero : t
+                   val (<) : t -> t -> bool
+                   val neg : t -> t
+                   val module_name : string
+                 end)
+  (** in the output, [to_string], [of_string], [sexp_of_t], and [t_of_sexp] convert
+      between [t] and signed hexadecimal with an optional "0x" or "0X" prefix. *)
+  : Int_intf.Hexable with type t := I.t
+
+(** global ref affecting whether the [sexp_of_t] returned by [Make]
+    is consistent with the [to_string] input or the [to_string_hum] output *)
 val sexp_of_int_style : [ `No_underscores | `Underscores ] ref
 
-(* utility for defining to_string_hum on numeric types -- takes a string matching
-   (-|+)?[0-9]+ and puts [delimiter] every 3 digits starting from the right. *)
+(** utility for defining to_string_hum on numeric types -- takes a string matching
+    (-|+)?[0-9a-fA-F]+ and puts [delimiter] every [chars_per_delimiter] characters
+    starting from the right. *)
+val insert_delimiter_every : string -> delimiter:char -> chars_per_delimiter:int -> string
+
+(** [insert_delimiter_every ~chars_per_delimiter:3] *)
 val insert_delimiter : string -> delimiter:char -> string
 
-(* [insert_delimiter ~delimiter:'_'] *)
+(** [insert_delimiter ~delimiter:'_'] *)
 val insert_underscores : string -> string
 

@@ -18,18 +18,19 @@ module Make (M : sig val module_name : string end) = struct
     module V1 = struct
       include String
 
-      let check s =
-        let invalid reason =
+      let check =
+        let invalid s reason =
           Error (sprintf "'%s' is not a valid %s because %s" s M.module_name reason)
         in
-        let stripped = String.strip s in
-        if not (String.(=) stripped s)
-        then invalid "it has whitespace on the edge"
-        else if String.(=) s ""
-        then invalid "it is empty"
-        else if String.contains s '|'
-        then invalid "it contains a pipe '|'"
-        else Ok ()
+        fun s ->
+          let len = String.length s in
+          if Int.(=) len 0
+          then invalid s "it is empty"
+          else if Char.is_whitespace s.[0] || Char.is_whitespace s.[len-1]
+          then invalid s "it has whitespace on the edge"
+          else if String.contains s '|'
+          then invalid s "it contains a pipe '|'"
+          else Ok ()
       ;;
 
       let of_string s =
@@ -50,3 +51,9 @@ module Make (M : sig val module_name : string end) = struct
 end
 
 include Make (struct let module_name = "String_id" end)
+
+BENCH_MODULE "String_id" = struct
+  BENCH "of_string(AAA)"       = of_string "AAA"
+  BENCH "of_string(AAABBB)"    = of_string "AAABBB"
+  BENCH "of_string(AAABBBCCC)" = of_string "AAABBBCCC"
+end

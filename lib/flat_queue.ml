@@ -62,7 +62,7 @@ let create
        the segfault variety) in [Flat_queue] if this dummy value is ever exposed to user
        code. *)
     if slots_per_tuple = 1
-    then (Obj.magic 0 : tuple)
+    then (Obj.magic None : tuple)
     else (Obj.magic (Obj_array.create ~len:slots_per_tuple) : tuple)
   in
   let capacity =

@@ -86,6 +86,69 @@ let to_nativeint_exn = to_nativeint
 
 include Conv.Make (T)
 
+include Conv.Make_hex(struct
+
+  type t = int with bin_io, compare, typerep
+
+  let zero = zero
+  let neg = (~-)
+  let (<) = (<)
+  let to_string i = Printf.sprintf "%x" i
+  let of_string s = Scanf.sscanf s "%x" Fn.id
+
+  let module_name = "Core.Std.Int.Hex"
+
+end)
+
+TEST_MODULE "Hex" = struct
+
+  let f (i,s_hum) =
+    let s = Core_string.filter s_hum ~f:(fun c -> not (Core_char.equal c '_')) in
+    let sexp_hum = Core_sexp.Atom s_hum in
+    let sexp = Core_sexp.Atom s in
+    <:test_result< Core_sexp.t >> ~message:"sexp_of_t" ~expect:sexp (Hex.sexp_of_t i);
+    <:test_result< int >> ~message:"t_of_sexp" ~expect:i (Hex.t_of_sexp sexp);
+    <:test_result< int >> ~message:"t_of_sexp[human]" ~expect:i (Hex.t_of_sexp sexp_hum);
+    <:test_result< string >> ~message:"to_string" ~expect:s (Hex.to_string i);
+    <:test_result< string >> ~message:"to_string_hum" ~expect:s_hum (Hex.to_string_hum i);
+    <:test_result< int >> ~message:"of_string" ~expect:i (Hex.of_string s);
+    <:test_result< int >> ~message:"of_string[human]" ~expect:i (Hex.of_string s_hum);
+  ;;
+
+  TEST_UNIT =
+    Core_list.iter ~f
+      [ 0, "0x0"
+      ; 1, "0x1"
+      ; 2, "0x2"
+      ; 5, "0x5"
+      ; 10, "0xa"
+      ; 16, "0x10"
+      ; 254, "0xfe"
+      ; 65_535, "0xffff"
+      ; 65_536, "0x1_0000"
+      ; 1_000_000, "0xf_4240"
+      ; -1, "-0x1"
+      ; -2, "-0x2"
+      ; -1_000_000, "-0xf_4240"
+      ; max_value, "0x3fff_ffff_ffff_ffff"
+      ; min_value, "-0x4000_0000_0000_0000"
+      ]
+
+  TEST_UNIT =
+    <:test_result< int >> (Hex.of_string "0XA") ~expect:10
+
+  TEST_UNIT =
+    match Option.try_with (fun () -> Hex.of_string "0") with
+    | None -> ()
+    | Some _ -> failwith "Hex must always have a 0x prefix."
+
+  TEST_UNIT =
+    match Option.try_with (fun () -> Hex.of_string "0x_0") with
+    | None -> ()
+    | Some _ -> failwith "Hex may not have '_' before the first digit."
+
+end
+
 let abs x = abs x
 
 let ( + ) x y = ( + ) x y
