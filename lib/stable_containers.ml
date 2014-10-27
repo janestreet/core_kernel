@@ -1,4 +1,4 @@
-open Std
+open Std_internal
 open Stable_internal
 
 (* avoid getting shadowed by the similarly named modules in this file *)

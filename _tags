@@ -1,7 +1,6 @@
 <lib/*.ml{,i}>               : pa_ounit_lib(core_kernel)
 <check_caml_modify/*.ml{,i}> : pa_ounit_lib(core_kernel.check_caml_modify)
 <**/*.ml{,i}>                : syntax_camlp4o
-<raise_without_backtrace/*>  : -syntax_camlp4o, -debug, inline0
 "lib/bigstring.ml"           : mlh, package(camlp4.macro)
 "lib/bigstring_marshal.ml"   : mlh, package(camlp4.macro)
 "lib/binary_packing.ml"      : mlh, package(camlp4.macro)

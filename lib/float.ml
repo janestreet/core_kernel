@@ -910,6 +910,82 @@ let sign t =
   else if t <. 0. then Sign.Neg
   else Sign.Zero
 
+let ieee_negative t =
+  let bits = Int64.bits_of_float t in
+  Pervasives.(bits < Int64.zero)
+
+let exponent_bits = 11
+let mantissa_bits = 52
+
+let exponent_mask = Pervasives.((1 lsl exponent_bits) - 1)
+let mantissa_mask = Pervasives.((1 lsl mantissa_bits) - 1)
+
+let ieee_exponent t =
+  let bits = Int64.bits_of_float t in
+  ((Int64.to_int bits) lsr mantissa_bits) land exponent_mask
+
+let ieee_mantissa t =
+  let bits = Int64.bits_of_float t in
+  (Int64.to_int bits) land mantissa_mask
+
+let create_ieee_exn ~negative ~exponent ~mantissa =
+  if Pervasives.(exponent land exponent_mask <> exponent)
+  then failwithf "exponent %d out of range [%d, %d]" exponent 0 exponent_mask ()
+  else if Pervasives.(mantissa land mantissa_mask <> mantissa)
+  then failwithf "mantissa %d out of range [%d, %d]" mantissa 0 mantissa_mask ()
+  else
+    let sign_bits = if negative then Int64.min_int else Int64.zero in
+    let expt_bits = Int64.shift_left (Int64.of_int exponent) mantissa_bits in
+    let mant_bits = Int64.of_int mantissa in
+    let bits = Int64.(logor sign_bits (logor expt_bits mant_bits)) in
+    Int64.float_of_bits bits
+
+let create_ieee ~negative ~exponent ~mantissa =
+  Or_error.try_with (fun () -> create_ieee_exn ~negative ~exponent ~mantissa)
+
+TEST_MODULE "IEEE" = struct
+
+  let f (t : t) (negative : bool) (exponent : int) (mantissa : int) : unit =
+    let str = to_string_round_trippable t in
+    <:test_result<bool>> ~message:("ieee_negative " ^ str)
+      (ieee_negative t) ~expect:negative;
+    <:test_result<int>> ~message:("ieee_exponent " ^ str)
+      (ieee_exponent t) ~expect:exponent;
+    <:test_result<int>> ~message:("ieee_mantissa " ^ str)
+      (ieee_mantissa t) ~expect:mantissa;
+    <:test_result<t>>
+      ~message:(sprintf "create_ieee ~negative:%B ~exponent:%d ~mantissa:%d"
+                  negative exponent mantissa)
+      (create_ieee_exn ~negative ~exponent ~mantissa)
+      ~expect:t
+
+  TEST_UNIT =
+    f zero                         false 0                                 0;
+    f min_positive_subnormal_value false 0                                 1;
+    f min_positive_normal_value    false 1                                 0;
+    f epsilon_float                false Pervasives.(1023 - mantissa_bits) 0;
+    f one                          false 1023                              0;
+    f minus_one                    true  1023                              0;
+    f max_finite_value             false Pervasives.(exponent_mask - 1)    mantissa_mask;
+    f infinity                     false exponent_mask                     0;
+    f neg_infinity                 true  exponent_mask                     0;
+    f nan                          false exponent_mask                     1
+
+  (* test the normalized case, that is, 1 <= exponent <= 2046 *)
+  TEST_UNIT =
+    let g ~negative ~exponent ~mantissa =
+      assert (create_ieee_exn ~negative ~exponent ~mantissa =
+              (if negative then -1. else 1.)
+              * 2. ** (float exponent - 1023.)
+              * (1. + (2. ** -52.) * float mantissa))
+    in
+    g ~negative:false ~exponent:1 ~mantissa:147;
+    g ~negative:true ~exponent:137 ~mantissa:13;
+    g ~negative:false ~exponent:1015 ~mantissa:1370001;
+    g ~negative:true ~exponent:2046 ~mantissa:137000100945;
+
+end
+
 module Terse = struct
   type t = outer with bin_io
   let t_of_sexp = t_of_sexp

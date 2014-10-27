@@ -76,13 +76,27 @@ end)
 
 let backtrace = Printexc.get_backtrace
 
+let print_with_backtrace exc raw_backtrace =
+  Format.eprintf "@[<2>Uncaught exception:@\n@\n@[%a@]@]@\n@." pp exc;
+  if Printexc.backtrace_status () then Printexc.print_raw_backtrace stderr raw_backtrace;
+  flush stderr;
+;;
+
+let () = Printexc.set_uncaught_exception_handler print_with_backtrace
+
 let handle_uncaught_aux ~exit f =
   try f ()
   with exc ->
-    let bt = backtrace () in
-    Format.eprintf "@[<2>Uncaught exception:@\n@\n@[%a@]@]@\n@.%!" pp exc;
-    if Printexc.backtrace_status () then prerr_string bt;
+    begin
+      try
+        print_with_backtrace exc (Printexc.get_raw_backtrace ())
+      with _ ->
+        try
+          Printf.eprintf "Exn.handle_uncaught could not print; exiting anyway\n%!";
+        with _ -> ()
+    end;
     exit 1
+;;
 
 let handle_uncaught_and_exit f = handle_uncaught_aux f ~exit
 
@@ -102,8 +116,10 @@ let () =
 
 external clear_backtrace : unit -> unit = "clear_caml_backtrace_pos" "noalloc"
 let raise_without_backtrace e =
+  (* We clear the backtrace to reduce confusion, so that people don't think whatever
+     is stored corresponds to this raise. *)
   clear_backtrace ();
-  Raise_without_backtrace.Rwb_std.raise_without_backtrace e
+  raise_notrace e
 ;;
 
 TEST_MODULE = struct

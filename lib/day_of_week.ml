@@ -1,129 +1,134 @@
-module Array = Core_array
-module Int = Core_int
-module List = Core_list
-module String = Core_string
+module Array   = Core_array
+module Int     = Core_int
+module List    = Core_list
+module String  = Core_string
 module Hashtbl = Core_hashtbl
+module Sexp    = Core_sexp
 
 let failwithf = Core_printf.failwithf
 
+module T = struct
+  type t =
+    | Sun
+    | Mon
+    | Tue
+    | Wed
+    | Thu
+    | Fri
+    | Sat
+  with bin_io, compare
+
+  let hash = Hashtbl.hash
+
+  let to_string t =
+    match t with
+    | Sun -> "SUN"
+    | Mon -> "MON"
+    | Tue -> "TUE"
+    | Wed -> "WED"
+    | Thu -> "THU"
+    | Fri -> "FRI"
+    | Sat -> "SAT"
+  ;;
+
+  let of_string_internal s =
+    match String.uppercase s with
+    | "SUN" -> Sun
+    | "MON" -> Mon
+    | "TUE" -> Tue
+    | "WED" -> Wed
+    | "THU" -> Thu
+    | "FRI" -> Fri
+    | "SAT" -> Sat
+    | _     -> failwithf "Day_of_week.of_string: %S" s ()
+  ;;
+
+  let of_int_exn i =
+    match i with
+    | 0 -> Sun
+    | 1 -> Mon
+    | 2 -> Tue
+    | 3 -> Wed
+    | 4 -> Thu
+    | 5 -> Fri
+    | 6 -> Sat
+    | _ -> failwithf "Day_of_week.of_int_exn: %d" i ()
+  ;;
+
+  (* Be very generous with of_string.  We accept all possible capitalizations and the
+     integer representations as well. *)
+  let of_string s =
+    try
+      of_string_internal s
+    with
+    | _ ->
+      try
+        of_int_exn (Int.of_string s)
+      with
+      | _ -> failwithf "Day_of_week.of_string: %S" s ()
+  ;;
+
+  (* this is in T rather than outside so that the later functor application to build maps
+     uses this sexp representation *)
+  include Sexpable.Of_stringable (struct
+    type nonrec t = t
+    let of_string = of_string
+    let to_string = to_string
+  end)
+end
+include T
+
+let weekdays = [ Mon; Tue; Wed; Thu; Fri ]
+
+let weekends = [ Sat; Sun ]
+
+(* written out to save overhead when loading modules.  The members of the set and the
+   ordering should never change, so speed wins over something more complex that proves
+   the order = the order in t at runtime *)
+let all = [ Sun; Mon; Tue; Wed; Thu; Fri; Sat ]
+
+TEST = List.is_sorted all ~compare
+
+let of_int i = try Some (of_int_exn i) with _ -> None
+
+let to_int t =
+  match t with
+  | Sun -> 0
+  | Mon -> 1
+  | Tue -> 2
+  | Wed -> 3
+  | Thu -> 4
+  | Fri -> 5
+  | Sat -> 6
+;;
+
 let num_days_in_week = 7
+
+let shift t i = of_int_exn (Int.( % ) (to_int t + i) num_days_in_week)
+
+let num_days ~from ~to_ =
+  let d = to_int to_ - to_int from in
+  if Int.(d < 0) then d + num_days_in_week else d
+;;
+
+TEST = num_days ~from:Mon ~to_:Tue = 1;;
+TEST = num_days ~from:Tue ~to_:Mon = 6;;
+TEST "num_days is inverse to shift" =
+  let all_days = [Sun; Mon; Tue; Wed; Thu; Fri; Sat] in
+  List.for_all (List.cartesian_product all_days all_days)
+    ~f:(fun (from, to_) ->
+      let i = num_days ~from ~to_ in
+      0 <= i && i < num_days_in_week && shift from i = to_)
+;;
+
+let is_sun_or_sat t = t = Sun || t = Sat
+
+include Comparable.Make_binable (T)
+include Hashable.Make_binable (T)
 
 module Stable = struct
   module V1 = struct
-    (* IF THIS REPRESENTATION EVER CHANGES, ENSURE THAT EITHER
-       (1) all values serialize the same way in both representations, or
-       (2) you add a new Day_of_week version to stable.ml *)
-    type t = int
-
-    let invariant t =
-      assert (0 <= t && t < num_days_in_week);
-    ;;
-
-    let of_int i =
-      if 0 <= i && i < num_days_in_week then
-        Some i
-      else
-        None
-    ;;
-
-    let of_int_exn i =
-      if 0 <= i && i < num_days_in_week then
-        i
-      else
-        failwithf "Day_of_week.of_int_exn %d" i ()
-    ;;
-
-    let to_int t = t
-
-    let sun = 0
-    let mon = 1
-    let tue = 2
-    let wed = 3
-    let thu = 4
-    let fri = 5
-    let sat = 6
-
-    type variant = [ `Sun | `Mon | `Tue | `Wed | `Thu | `Fri | `Sat ]
-
-    type rep = {
-      string : string;
-      t : t;
-      variant : variant;
-    }
-
-    let reps =
-      Array.map
-        [|("SUN", sun, `Sun);
-          ("MON", mon, `Mon);
-          ("TUE", tue, `Tue);
-          ("WED", wed, `Wed);
-          ("THU", thu, `Thu);
-          ("FRI", fri, `Fri);
-          ("SAT", sat, `Sat)|]
-        ~f:(fun (string, t, variant) ->
-          { string = string; t = t; variant = variant; })
-    ;;
-
-    (* WARNING: if you are going to change this function in a material way, be sure you
-       make the appropriate changes to the Stable module below *)
-    let to_string t = reps.(t).string
-
-    (* WARNING: if you are going to change this function in a material way, be sure you
-       make the appropriate changes to the Stable module below *)
-    let of_string =
-      let table =
-        String.Table.of_alist_exn
-          (Array.to_list (Array.map reps ~f:(fun r -> (r.string, r.t))))
-      in
-      fun str ->
-        match Hashtbl.find table (String.uppercase str) with
-        | None -> failwithf "Invalid weekday: %s" str ()
-        | Some x -> x
-    ;;
-
-    include (Sexpable.Of_stringable (struct
-      type t = int
-      let of_string = of_string
-      let to_string = to_string
-    end) : Sexpable.S with type t := t)
-
-    let get t = reps.(t).variant
-
-    let create = function
-      | `Sun -> 0
-      | `Mon -> 1
-      | `Tue -> 2
-      | `Wed -> 3
-      | `Thu -> 4
-      | `Fri -> 5
-      | `Sat -> 6
-    ;;
-
-    let shift t i = Int.( % ) (t + i) num_days_in_week
-
-    let num_days ~from ~to_ =
-      let d = to_ - from in
-      if d < 0 then d + num_days_in_week else d
-    ;;
-
-    TEST = num_days ~from:mon ~to_:tue = 1;;
-    TEST = num_days ~from:tue ~to_:mon = 6;;
-    TEST "num_days is inverse to shift" =
-      let all_days = [sun; mon; tue; wed; thu; fri; sat] in
-      List.for_all (List.cartesian_product all_days all_days)
-        ~f:(fun (from, to_) ->
-          let i = num_days ~from ~to_ in
-          0 <= i && i < num_days_in_week && shift from i = to_)
-    ;;
-
-    let is_sun_or_sat t =
-      t = sun || t = sat
-
-    include (Int : sig
-      include Binable.S with type t := t
-      include Hashable.S_binable with type t := t
-      include Comparable.S_binable with type t := t
-    end)
+    include T
   end
 
   TEST_MODULE "Day_of_week.V1" = Stable_unit_test.Make (struct
@@ -132,15 +137,13 @@ module Stable = struct
     let equal = equal
 
     let tests =
-      [ sun, "SUN", "\000"
-      ; mon, "MON", "\001"
-      ; tue, "TUE", "\002"
-      ; wed, "WED", "\003"
-      ; thu, "THU", "\004"
-      ; fri, "FRI", "\005"
-      ; sat, "SAT", "\006"
+      [ Sun, "SUN", "\000"
+      ; Mon, "MON", "\001"
+      ; Tue, "TUE", "\002"
+      ; Wed, "WED", "\003"
+      ; Thu, "THU", "\004"
+      ; Fri, "FRI", "\005"
+      ; Sat, "SAT", "\006"
       ]
   end)
 end
-
-include Stable.V1

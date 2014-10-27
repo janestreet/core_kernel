@@ -224,6 +224,8 @@ val fold : ('k, 'v, _) t -> init:'a -> f:(key:'k -> data:'v -> 'a -> 'a) -> 'a
 (** folds over keys and data in map in decreasing order of key. *)
 val fold_right : ('k, 'v, _) t -> init:'a -> f:(key:'k -> data:'v -> 'a -> 'a) -> 'a
 
+(** [filter], [filter_map], and [filter_mapi] run in O(n * lg n) time; they simply
+    accumulate each key & data retained by [f] into a new map using [add]. *)
 val filter
   :  ('k, 'v, 'cmp) t
   -> f:(key:'k -> data:'v -> bool)

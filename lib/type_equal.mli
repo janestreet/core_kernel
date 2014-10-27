@@ -173,7 +173,11 @@ module Id : sig
 
   (** Every [Id.t] contains a unique id that is distinct from the [Uid.t] in any other
       [Id.t]. *)
-  module Uid : Unique_id_intf.Id
+  module Uid : sig
+    type t
+    include Comparable.S with type t := t
+    include Hashable.S   with type t := t
+  end
 
   val uid : _ t -> Uid.t
 
@@ -181,7 +185,6 @@ module Id : sig
       two distinct identifiers, even for the same arguments with the same type.  If the
       type ['a] doesn't support sexp conversion, then a good practice is to have the
       converter be [<:sexp_of< _ >>], (or [sexp_of_opaque], if not using pa_sexp). *)
-
   val create
     :  name:string
     -> ('a -> Sexp.t)
@@ -193,28 +196,13 @@ module Id : sig
   val to_sexp : 'a t -> 'a -> Sexp.t
 
   (** [same_witness t1 t2] and [same_witness_exn t1 t2] return a type equality proof iff
-      the two identifiers are physically equal.  This is a useful way to achieve a sort of
-      dynamic typing.
+      the two identifiers are the same (i.e. physically equal, resulting from the same
+      call to [create]).  This is a useful way to achieve a sort of dynamic typing.
+      [same_witness] does not allocate a [Some] every time it is called.
 
-      The following two idioms are semantically equivalent; however, using [same] and
-      [same_witness_exn] instead of matching on [same_witness] has better performance
-      because [same_witness] would allocate an intermediate [Or_error.t].
-
-      {[
-        match same_witness ta tb with
-        | None -> ...
-        | Some e -> ...
-      ]}
-
-      {[
-        if not (same ta tb)
-        then ...
-        else
-          let e = same_witness_exn ta tb in
-          ...
-      ]}
+      [same t1 t2 = is_some (same_witness t1 t2)].
   *)
-  val same : _ t -> _ t -> bool
-  val same_witness     : 'a t -> 'b t -> ('a, 'b) equal Or_error.t
+  val same             :  _ t -> _ t  -> bool
+  val same_witness     : 'a t -> 'b t -> ('a, 'b) equal option
   val same_witness_exn : 'a t -> 'b t -> ('a, 'b) equal
 end

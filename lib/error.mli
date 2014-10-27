@@ -1,6 +1,6 @@
 open Sexplib
 
-include module type of Info with type t = private Info.t
+include module type of Info
 
 (* Note that the exception holds onto the [t]. *)
 val raise : t -> _

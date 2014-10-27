@@ -25,6 +25,11 @@ let with_return (type a) f =
     | _ -> raise exn
 ;;
 
+let with_return_option f =
+  with_return (fun return ->
+    f { return = fun a -> return.return (Some a) }; None)
+;;
+
 TEST_MODULE "with_return" = struct
   let test_loop loop_limit jump_out =
     with_return (fun { return } ->
@@ -64,3 +69,15 @@ TEST_MODULE "with_return" = struct
   TEST = test_nested `Foo `Foo = `Outer_normal `Inner_normal
 end
 
+TEST_MODULE "with_return_option" = struct
+  let test_loop loop_limit jump_out =
+    with_return_option (fun { return } ->
+      for i = 0 to loop_limit do begin
+        if i = jump_out then return (`Jumped_out i);
+      end done)
+  ;;
+
+  TEST = test_loop 5 10 = None
+  TEST = test_loop 10 5 = Some (`Jumped_out 5)
+  TEST = test_loop 5 5  = Some (`Jumped_out 5)
+end

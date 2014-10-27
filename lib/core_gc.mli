@@ -274,12 +274,27 @@ val tune
   -> unit
   -> unit
 
-(** Disable GC compaction *)
+
+(** The policy used for allocating in the heap.
+
+    The Next_fit policy is quite fast but can result in fragmentation.
+
+    The First_fit policy can be slower in some cases but can be better for programs with
+    fragmentation problems.
+
+    The default is Next_fit.
+*)
+module Allocation_policy : sig
+  type t =
+    | Next_fit
+    | First_fit
+end
+
 val disable_compaction
   :  ?logger:(string -> unit)
-  (** The docs strongly suggest that the allocation policy be changed from
-      Next Fit to First Fit if disabling compaction permanently. *)
-  -> ?don't_change_allocation_policy:unit
+    (** The OCaml docs strongly suggest that the allocation policy be changed from
+        Next Fit to First Fit if disabling compaction permanently. *)
+  -> allocation_policy:[ `Don't_change | `Set_to of Allocation_policy.t ]
   -> unit
   -> unit
 

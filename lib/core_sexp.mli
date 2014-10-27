@@ -108,3 +108,9 @@ module With_text : sig
 
   val text  : 'a t -> string
 end
+
+(** [of_sexp_allow_extra_fields of_sexp sexp] uses [of_sexp] to convert [sexp] to a
+    value, but will not fail if there are any extra fields in a record (even deeply
+    nested records).
+    The implementation uses global state, so it is not thread safe. *)
+val of_sexp_allow_extra_fields : (Sexp.t -> 'a) -> Sexp.t -> 'a

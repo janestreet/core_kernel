@@ -62,7 +62,26 @@ let is_uppercase t = 'A' <= t && t <= 'Z'
 
 let is_print t = ' ' <= t && t <= '~'
 
-let is_whitespace = function ' ' | '\n' |  '\t' | '\r' -> true | _ -> false
+let is_whitespace = function
+  | '\t'
+  | '\n'
+  | '\011' (* vertical tab *)
+  | '\012' (* form feed *)
+  | '\r'
+  | ' '
+    -> true
+  | _
+    -> false
+;;
+
+TEST = not (is_whitespace '\008') (* backspace *)
+TEST =      is_whitespace '\009'  (* '\t': horizontal tab *)
+TEST =      is_whitespace '\010'  (* '\n': line feed *)
+TEST =      is_whitespace '\011'  (* '\v': vertical tab *)
+TEST =      is_whitespace '\012'  (* '\f': form feed *)
+TEST =      is_whitespace '\013'  (* '\r': carriage return *)
+TEST = not (is_whitespace '\014') (* shift out *)
+TEST =      is_whitespace '\032'  (* space *)
 
 let is_digit t = '0' <= t && t <= '9'
 

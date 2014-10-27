@@ -97,14 +97,24 @@ let tune ?logger ?minor_heap_size ?major_heap_increment ?space_overhead
   }
 ;;
 
-let disable_compaction ?logger ?don't_change_allocation_policy () =
+module Allocation_policy = struct
+  type t =
+    | Next_fit
+    | First_fit
+
+  let to_int = function
+    | Next_fit  -> 0
+    | First_fit -> 1
+end
+
+let disable_compaction ?logger ~allocation_policy () =
   let allocation_policy =
-    match don't_change_allocation_policy with
-    | Some () -> None
-    | None    -> Some 1
+    match allocation_policy with
+    | `Don't_change  -> None
+    | `Set_to policy -> Some (Allocation_policy.to_int policy)
   in
   (* The value 1_000_000, according to
-     http://caml.inria.fr/pub/docs/manual-ocaml-4.01/libref/Gc.html
+     http://caml.inria.fr/pub/docs/manual-ocaml-4.02/libref/Gc.html
      will disable compactions.
   *)
   tune ?logger ?allocation_policy ~max_overhead:1_000_000 ();

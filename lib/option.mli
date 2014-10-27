@@ -2,6 +2,7 @@
 type 'a t = 'a option with bin_io, sexp, typerep
 
 include Container.S1 with type 'a t := 'a t
+include Invariant.S1 with type 'a t := 'a t
 
 (** Options form a monad, where [return x =  Some x],
     [(None >>= f) = None], and [(Some x >>= f) = f x]. *)

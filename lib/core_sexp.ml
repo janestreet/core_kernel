@@ -167,3 +167,9 @@ include Comparable.Make (struct
   type t = Sexp.t
   include T
 end)
+
+let of_sexp_allow_extra_fields of_sexp sexp =
+  let r = Sexplib.Conv.record_check_extra_fields in
+  let prev = !r in
+  Exn.protect ~finally:(fun () -> r := prev)
+    ~f:(fun () -> r := false; of_sexp sexp)

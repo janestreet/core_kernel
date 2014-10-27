@@ -16,6 +16,13 @@ include Core_hashtbl_intf.Hashtbl
     online.  See {!Jane_parachute.Immediate.String.resize}, for example. *)
 val resize : (_, _) t -> int -> unit
 
-(** Allow to connect higher level loggers to the point where these hashtbls grow. *)
+(** [on_grow ~before ~after] allows you to connect higher level loggers to the point where
+    these hashtbls grow.  [before] is called before the table grows, and [after] after it.
+    This permits you to e.g. measure the time elapsed between the two.
+
+    This is only meant for debugging and profiling, e.g. note that once a callback is
+    installed, there is no way to remove it. *)
 val on_grow
-  : (unix_time_before : float -> old_capacity : int -> int -> unit) -> unit
+  :  before:(unit -> 'a)
+  -> after:('a -> old_capacity:int -> new_capacity:int -> unit)
+  -> unit

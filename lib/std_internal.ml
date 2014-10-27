@@ -123,36 +123,46 @@ include (struct
   type string    = String.      t with bin_io, compare, sexp, typerep
   type 'a ref    = 'a Ref.      t with bin_io,          sexp, typerep
   type unit      = Unit.        t with bin_io, compare, sexp, typerep
+
+  (* Bin_prot has optimized functions for float arrays *)
+  type float_array = Bin_prot.Std.float_array with bin_io
+  include (struct
+    type float_array = Float.t array with compare, sexp, typerep
+  end : sig
+    type float_array with compare, sexp, typerep
+  end with type float_array := float_array)
 end : sig
-  type 'a array  with bin_io,          sexp, typerep
+  type 'a array  with bin_io, sexp, typerep
   type bool      with bin_io, compare, sexp, typerep
   type char      with bin_io, compare, sexp, typerep
   type float     with bin_io, compare, sexp, typerep
   type int       with bin_io, compare, sexp, typerep
   type int32     with bin_io, compare, sexp, typerep
   type int64     with bin_io, compare, sexp, typerep
-  type 'a lazy_t with bin_io,          sexp, typerep
-  type 'a list   with bin_io,          sexp, typerep
+  type 'a lazy_t with bin_io, sexp, typerep
+  type 'a list   with bin_io, sexp, typerep
   type nativeint with bin_io, compare, sexp, typerep
-  type 'a option with bin_io,          sexp, typerep
+  type 'a option with bin_io, sexp, typerep
   type string    with bin_io, compare, sexp, typerep
-  type 'a ref    with bin_io,          sexp, typerep
+  type 'a ref    with bin_io, sexp, typerep
   type unit      with bin_io, compare, sexp, typerep
+
+  type float_array = float array with bin_io, compare, sexp, typerep
 end
-  with type 'a array  := 'a array
-  with type bool      := bool
-  with type char      := char
-  with type float     := float
-  with type int       := int
-  with type int32     := int32
-  with type int64     := int64
-  with type 'a list   := 'a list
-  with type nativeint := nativeint
-  with type 'a option := 'a option
-  with type string    := string
-  with type 'a lazy_t := 'a lazy_t
-  with type 'a ref    := 'a ref
-  with type unit      := unit
+  with type 'a array    := 'a array
+  with type bool        := bool
+  with type char        := char
+  with type float       := float
+  with type int         := int
+  with type int32       := int32
+  with type int64       := int64
+  with type 'a list     := 'a list
+  with type nativeint   := nativeint
+  with type 'a option   := 'a option
+  with type string      := string
+  with type 'a lazy_t   := 'a lazy_t
+  with type 'a ref      := 'a ref
+  with type unit        := unit
 )
 
 let sexp_of_exn = Exn.sexp_of_t

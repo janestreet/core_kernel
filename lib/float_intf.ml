@@ -303,6 +303,21 @@ module type S = sig
 
   val sign : t -> Sign.t
 
+  (** These functions construct and destruct 64-bit floating point numbers based on their
+      IEEE representation with sign bit, 11-bit non-negative (biased) exponent, and 52-bit
+      non-negative mantissa (or significand).  See wikipedia for details of the encoding:
+      http://en.wikipedia.org/wiki/Double-precision_floating-point_format.
+
+      In particular, if 1 <= exponent <= 2046, then:
+        create_ieee_exn ~negative:false ~exponent ~mantissa =
+           2 ** (exponent - 1023) * (1 + (2 ** -52) * mantissa)
+  *)
+  val create_ieee     : negative:bool -> exponent:int -> mantissa:int -> t Or_error.t
+  val create_ieee_exn : negative:bool -> exponent:int -> mantissa:int -> t
+  val ieee_negative : t -> bool
+  val ieee_exponent : t -> int
+  val ieee_mantissa : t -> int
+
   (** S-expressions contain at most 8 significant digits. *)
   module Terse : sig
     type t = outer with bin_io, sexp
