@@ -4,7 +4,7 @@
     1. We guarantee their serializations independent of the implementation of those modules
     2. Given 1. it is cleaner (and still okay) to separate the code into a separate file *)
 
-open Std
+open Std_internal
 
 module Comparable : sig
   module V1 : sig

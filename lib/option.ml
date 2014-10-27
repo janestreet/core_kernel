@@ -17,6 +17,9 @@ let iter o ~f =
   match o with
   | None -> ()
   | Some a -> f a
+;;
+
+let invariant f t = iter t ~f
 
 let map2 o1 o2 ~f =
   match o1, o2 with

@@ -3,6 +3,15 @@
 
 type t = string with bin_io, sexp, typerep
 
+(** [Caseless] compares and hashes strings ignoring case, so that for example
+    [Caseless.equal "OCaml" "ocaml"] and [Caseless.("apple" < "Banana")] are [true], and
+    [Caseless.Map], [Caseless.Table] lookup and [Caseless.Set] membership is
+    case-insensitive. *)
+module Caseless : sig
+  include Comparable.S_binable with type t := t
+  include Hashable.  S_binable with type t := t
+end
+
 include Blit.S         with type t := t
 include Container.S0   with type t := t with type elt = char
 include Identifiable.S with type t := t

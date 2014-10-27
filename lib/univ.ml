@@ -21,20 +21,17 @@ let sexp_of_t (T (id, value)) = Id.to_sexp id value
 let does_match (T (id1, _)) id2 = Id.same id1 id2
 
 let match_ (type a) (T (id1, value)) (id2 : a Id.t) =
-  if not (Id.same id1 id2)
-  then None
-  else
-    let Type_equal.T = Id.same_witness_exn id1 id2 in
-    Some (value : a)
+  match Id.same_witness id1 id2 with
+  | Some Type_equal.T -> Some (value : a)
+  | None -> None
 ;;
 
 let match_exn (type a) (T (id1, value) as t) (id2 : a Id.t) =
-  if not (Id.same id1 id2)
-  then failwiths "Univ.match_exn called with mismatched value and type id" (t, id2)
-         (<:sexp_of< t * _ Id.t >>)
-  else
-    let Type_equal.T = Id.same_witness_exn id1 id2 in
-    (value : a)
+  match Id.same_witness id1 id2 with
+  | Some Type_equal.T -> (value : a)
+  | None ->
+    failwiths "Univ.match_exn called with mismatched value and type id" (t, id2)
+      <:sexp_of< t * _ Id.t >>
 ;;
 
 TEST_MODULE = struct

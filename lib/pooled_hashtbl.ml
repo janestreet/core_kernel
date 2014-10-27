@@ -166,14 +166,14 @@ let clear t =
   t.length <- 0
 ;;
 
-let on_grow = ref (fun ~unix_time_before:_ ~old_capacity:_ _ -> ())
+let on_grow = ref (fun () -> Staged.stage (fun ~old_capacity:_ ~new_capacity:_ -> ()))
 
 let resize t size =
   if t.growth_allowed then begin
     if size > t.capacity then begin
       let new_capacity, new_n_entries = calculate_table_size size in
       let old_table, old_capacity = t.table, t.capacity in
-      let unix_time_before = Unix.time () in
+      let after_grow = Staged.unstage (!on_grow ()) in
       t.entries <- Entry.Pool.grow t.entries ~capacity:new_n_entries;
       t.table <- Array.create ~len:new_capacity (Entry.null ());
       t.capacity <- new_capacity;
@@ -193,7 +193,7 @@ let resize t size =
         in
         copy_entries (table_get old_table i)
       done;
-      !on_grow ~unix_time_before ~old_capacity new_capacity
+      after_grow ~old_capacity ~new_capacity
     end
   end
   else begin
@@ -202,13 +202,14 @@ let resize t size =
   end
 ;;
 
-let on_grow f =
-  let g = !on_grow in
-  on_grow :=
-    (fun ~unix_time_before ~old_capacity size ->
-       g ~unix_time_before ~old_capacity size;
-       f ~unix_time_before ~old_capacity size
-    )
+let on_grow ~before ~after =
+  let old_before = !on_grow in
+  on_grow := fun () ->
+    let old_after = Staged.unstage (old_before ()) in
+    let v = before () in
+    Staged.stage (fun ~old_capacity ~new_capacity ->
+      old_after ~old_capacity ~new_capacity;
+      after v ~old_capacity ~new_capacity)
 ;;
 
 let rec find_entry t ~key ~it =

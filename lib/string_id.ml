@@ -7,8 +7,9 @@ module type S = sig
     module V1 : sig
       type nonrec t = t with sexp, bin_io, compare
 
-      type nonrec comparator_witness = comparator_witness
-      val comparator : (t, comparator_witness) Comparator.comparator
+      include Stable_containers.Comparable.V1.S
+        with type key := t
+        with type comparator_witness := comparator_witness
     end
   end
 end

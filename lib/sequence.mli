@@ -29,7 +29,7 @@
     sequence (the [f] passed to [unfold]) raises, in which case the exception will
     cascade. *)
 
-type +'a t
+type +'a t with compare, sexp_of
 type 'a sequence = 'a t
 
 include Container.S1 with type 'a t := 'a t
@@ -77,6 +77,8 @@ val nth_exn : 'a t -> int -> 'a
 val mapi : 'a t -> f:(int -> 'a -> 'b) -> 'b t
 
 val filteri : 'a t -> f: (int -> 'a -> bool) -> 'a t
+
+val filter : 'a t -> f: ('a -> bool) -> 'a t
 
 (** [merge t1 t2 ~cmp] produces the interleaved elements of [t1] and [t2], always picking
     the smallest of the two available elements from [t1] and [t2], according to [cmp].

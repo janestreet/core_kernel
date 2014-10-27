@@ -56,78 +56,93 @@ module Composition_preserves_injectivity (M1 : Injective) (M2 : Injective) = str
   let strip e = M1.strip (M2.strip e)
 end
 
-module Id : sig
-  (* The type parameter must be invariant! See the comment over [same_witness] for why.
-     This signature is included in the .ml because it is critical to the correctness of
-     the module. *)
-  type 'a t with sexp_of
+module Id = struct
+  module Uid = Core_int
 
-  module Uid : Unique_id_intf.Id
+  module Witness = struct
+    module Key = struct
+      type _ t = ..
 
-  val create : name:string -> ('a -> Sexp.t) -> 'a t
+      let sexp_of_t _sexp_of_a t =
+        (`type_witness (Obj.extension_id t)) |> <:sexp_of< [ `type_witness of int ] >>
+      ;;
+    end
 
-  val uid     : _  t -> Uid.t
-  val hash    : _  t -> int
-  val name    : _  t -> string
-  val to_sexp : 'a t -> 'a -> Sexp.t
+    module type S = sig
+      type t
+      type _ Key.t += Key : t Key.t
+    end
 
-  val same : _ t -> _ t -> bool
-  val same_witness     : 'a t -> 'b t -> ('a, 'b) equal Or_error.t
-  val same_witness_exn : 'a t -> 'b t -> ('a, 'b) equal
+    type 'a t = (module S with type t = 'a)
 
-end = struct
-  module Uid = Unique_id.Int63 (struct end)
+    let sexp_of_t (type a) sexp_of_a (module M : S with type t = a) =
+      M.Key |> <:sexp_of< a Key.t >>
+    ;;
+
+    let create (type t) () =
+      let module M = struct
+        type nonrec t = t
+        type _ Key.t += Key : t Key.t
+      end in
+      (module M : S with type t = t)
+    ;;
+
+    let uid (type a) (module M : S with type t = a) = Obj.extension_id M.Key
+
+    (* We want a constant allocated once that [same] can return whenever it gets the same
+       witnesses.  If we write the constant inside the body of [same], the native-code
+       compiler will do the right thing and lift it out.  But for clarity and robustness,
+       we do it ourselves. *)
+    let some_t = Some T
+
+    let same (type a) (type b) (a : a t) (b : b t) : (a, b) equal option =
+      let module A = (val a : S with type t = a) in
+      let module B = (val b : S with type t = b) in
+      match A.Key with
+      | B.Key -> some_t
+      | _     -> None
+    ;;
+  end
+
 
   type 'a t =
-    { uid : Uid.t
-    ; name : string
+    { witness : 'a Witness.t
+    ; name    : string
     ; to_sexp : 'a -> Sexp.t
     }
   with fields, sexp_of
 
-  let create ~name to_sexp = { uid = Uid.create () ; name ; to_sexp }
-
-  let hash t = Uid.to_int_exn t.uid
-
-  let same t1 t2 = Uid.equal t1.uid t2.uid
-
-  (* The use of [Obj.magic] does not directly create any issues with using the type
-     equality proof at runtime since all occurrences of [T] at runtime are the same
-     anyway.  That just leaves the question of type safety.  The claim is that if two type
-     identities are the [same] then their type parameters are the same.
-
-     [create] is the only way to create a new type identity and always creates a new
-     [uid].  This ensures that two type identities will be the [same] iff they were
-     created by the same call to [create].  The type parameter for a type identity is
-     invariant, so type identities are subject to the value restriction.  Therefore, the
-     result of [create] can't be unified with more than one type parameter.
-
-     Thus, if [same (ta : a t) (tb : b t)], then [a = b].  Therefore, it is safe to create
-     a proof of type equality between [a] and [b] using [Obj.magic]. *)
-  let same_witness (type a) (type b) (a : a t) (b : b t) =
-    if same a b
-    then Result.Ok (Obj.magic (refl : (a, a) equal) : (a, b) equal)
-    else Or_error.error "Type_equal.Id.same got different ids" (a, b)
-           <:sexp_of< _ t * _ t >>
+  let create ~name to_sexp =
+    { witness = Witness.create ()
+    ; name
+    ; to_sexp
+    }
   ;;
 
-  (* The proof for [same_witness] also applied to [same_witness_exn]. *)
-  let same_witness_exn (type a) (type b) (a : a t) (b : b t) =
-    if same a b
-    then (Obj.magic (refl : (a, a) equal) : (a, b) equal)
-    else failwiths "Type_equal.Id.same_exn got different ids" (a, b)
-           <:sexp_of< _ t * _ t >>
+  let uid t = Witness.uid t.witness
+
+  let hash t = uid t
+
+  let same_witness t1 t2 = Witness.same t1.witness t2.witness
+
+  let same t1 t2 = Option.is_some (same_witness t1 t2)
+
+  let same_witness_exn t1 t2 =
+    match same_witness t1 t2 with
+    | Some w -> w
+    | None -> failwiths "Type_equal.Id.same_witness_exn got different ids" (t1, t2)
+                <:sexp_of< _ t * _ t >>
   ;;
 
   TEST_MODULE = struct
     let t1 = create ~name:"t1" <:sexp_of< _ >>
     let t2 = create ~name:"t2" <:sexp_of< _ >>
 
-    TEST = same t1 t1
+    TEST =      same t1 t1
     TEST = not (same t1 t2)
 
-    TEST = Result.is_ok (same_witness t1 t1)
-    TEST = Result.is_error (same_witness t1 t2)
+    TEST = Option.is_some (same_witness t1 t1)
+    TEST = Option.is_none (same_witness t1 t2)
 
     TEST_UNIT = ignore (same_witness_exn t1 t1 : (_, _) equal)
     TEST = Result.is_error (Result.try_with (fun () -> same_witness_exn t1 t2))

@@ -1,3 +1,5 @@
+open Sexplib.Conv
+
 module Step = struct
   (* 'a is an item in the sequence, 's is the state that will produce the remainder of
      the sequence *)
@@ -81,6 +83,8 @@ TEST =
   let test_equal l = to_list (of_list l) = l in
   test_equal [] && test_equal [1; 2; 3; 4; 5]
 (* The test for longer list is after range *)
+
+let sexp_of_t sexp_of_a t = to_list t |> <:sexp_of< a list >>
 
 let range ?(stride=1) ?(start=`inclusive) ?(stop=`exclusive) start_v stop_v =
   let step =
@@ -407,7 +411,7 @@ let merge (Sequence (s1, next1)) (Sequence (s2, next2)) ~cmp =
   Sequence((Skip s1, Skip s2), next)
 
 TEST = to_list (merge (of_list [1;3;4;6])
-                      (of_list [2;5;7]) ~cmp:compare) = [1;2;3;4;5;6;7]
+                      (of_list [2;5;7]) ~cmp:Pervasives.compare) = [1;2;3;4;5;6;7]
 
 let hd s =
  let rec loop s next =
@@ -883,6 +887,36 @@ TEST = to_list (drop_eagerly s12345 0) = [1;2;3;4;5]
 TEST = to_list (drop_eagerly s12345 2) = [3;4;5]
 TEST = to_list (drop_eagerly s12345 5) = []
 TEST = to_list (drop_eagerly s12345 8) = []
+
+let compare compare_a t1 t2 =
+  With_return.with_return (fun r ->
+    iter (zip_full t1 t2) ~f:(function
+      | `Left _        -> r.return 1
+      | `Right _       -> r.return (-1)
+      | `Both (v1, v2) ->
+        let c = compare_a v1 v2 in
+        if c <> 0
+        then r.return c);
+    0);
+;;
+
+let compare_tests =
+  [ [1; 2; 3] , [1; 2; 3] , 0
+  ; [1; 2; 3] , []        , 1
+  ; []        , [1; 2; 3] , -1
+  ; [1; 2]    , [1; 2; 3] , -1
+  ; [1; 2; 3] , [1; 2]    , 1
+  ; [1; 3; 2] , [1; 2; 3] , 1
+  ; [1; 2; 3] , [1; 3; 2] , -1 ]
+
+(* this test has to use base OCaml library functions to avoid circular dependencies *)
+TEST =
+  List.for_all
+    (fun b -> b)
+    (List.map
+       (fun (l1, l2, expected_res) ->
+          compare Pervasives.compare (of_list l1) (of_list l2) = expected_res)
+       compare_tests)
 
 module Generator = struct
 

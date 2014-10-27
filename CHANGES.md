@@ -1,3 +1,37 @@
+## 112.06.00
+
+- Made `String_id` have `Stable_containers.Comparable`.
+- Changed `Gc.disable_compaction` to require an `allocation_policy`.
+- Made `Option` match `Invariant.S1`.
+- Added `Sequence.filter`, `compare`, and `sexp_of_t`.
+- Added `With_return.with_return_option`, abstracting a common pattern
+  of `with_return`.
+
+        val with_return        : ('a return -> 'a  ) -> 'a
+        val with_return_option : ('a return -> unit) -> 'a option
+
+- Install a handler for uncaught exceptions, using
+  `Printexc.set_uncaught_exception_handler`, new in OCaml 4.02.
+- Changed `Day_of_week` representation to a normal variant.
+- Changed `Exn.handle_uncaught` so that if it is unable to print, it
+  still does `exit 1`.
+- Added `Sexp.of_sexp_allow_extra_fields`, previously in
+  `Core_extended.Sexp`.
+- Changed the implementation of `Exn.raise_without_backtrace` to use
+  `raise_notrace`, new in OCaml 4.02.
+- Added `Float` functions for converting to and from IEEE
+  sign/exponent/mantissa.
+- Added `String.Caseless` module, which compares and hashes strings
+  ignoring case.
+- Reimplemented `Type_equal.Id` using extensible types (new in OCaml
+  4.02), removing a use of `Obj.magic`.
+
+    Changed `Type_equal.Id.same_witness` to return `option` rather than
+    `Or_error`, which allows it to be implemented without allocation.
+
+- Made `Char.is_whitespace` accept `\f` and `\v` as whitespace,
+  matching C.
+
 ## 112.01.00
 
 - Removed vestigial code supporting OCaml 4.00.

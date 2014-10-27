@@ -50,6 +50,87 @@ external length : string -> int = "%string_length"
 external set        : string -> int -> char -> unit = "%string_safe_set"
 external unsafe_set : string -> int -> char -> unit = "%string_unsafe_set"
 
+module Caseless = struct
+  module T = struct
+    type t = string with bin_io, sexp
+
+    (* This function gives the same result as [compare (lowercase s1) (lowercase s2)]. It
+       is optimised so that it is as fast as that implementation, but uses constant memory
+       instead of O(n). It is still an order of magnitude slower than the inbuilt string
+       comparison, sadly. *)
+    let compare s1 s2 =
+      if phys_equal s1 s2
+      then 0
+      else With_return.with_return (fun r ->
+        for i = 0 to min (length s1) (length s2) - 1 do
+          match
+            Char.compare
+              (Char.lowercase (unsafe_get s1 i))
+              (Char.lowercase (unsafe_get s2 i))
+          with
+          | 0 -> ()
+          | other -> r.return other
+        done;
+        (* the Int module is not available here, and [compare] is string comparison *)
+        Polymorphic_compare.compare (length s1) (length s2))
+
+    BENCH_FUN "compare" =
+      let s1 =
+        String.init 1000 ~f:(fun i -> "aBcDeFgHiJkLmNoPqRsTuVwXyZ !?.".[i mod 30])
+      in
+      let s2 = copy s1 in
+      fun () -> ignore (compare s1 s2)
+
+    let hash s =
+      let len_s = length s in
+      let rec loop acc i =
+        if i = len_s
+        then acc
+        else loop (Hashtbl.seeded_hash acc (Char.lowercase s.[i])) (i + 1)
+      in
+      loop 0 0
+    ;;
+
+    BENCH_FUN "hash" =
+      let s = String.init 1000 ~f:(fun i -> Char.of_int_exn (i mod 256)) in
+      fun () -> ignore (hash s)
+  end
+
+  include T
+  include Comparable.Make_binable(T)
+  include Hashable.Make_binable(T)
+end
+
+TEST_MODULE "Caseless" = struct
+  (* examples from docs *)
+  TEST = Caseless.equal "OCaml" "ocaml"
+  TEST = Caseless.("apple" < "Banana")
+
+  TEST = Caseless.("aa" < "aaa")
+  TEST = Caseless.compare "apple" "Banana" <> T.compare "apple" "Banana"
+  TEST = Caseless.equal "XxX" "xXx"
+  TEST = Caseless.("XxX" < "xXxX")
+  TEST = Caseless.("XxXx" > "xXx")
+
+  TEST = List.is_sorted ~compare:Caseless.compare ["Apples"; "bananas"; "Carrots"]
+
+  TEST = Core_map.find_exn (Caseless.Map.of_alist_exn [("a", 4); ("b", 5)]) "A" = 4
+
+  TEST = Core_set.mem (Caseless.Set.of_list ["hello"; "world"]) "heLLO"
+  TEST = Core_set.length (Caseless.Set.of_list ["a"; "A"]) = 1
+
+  TEST =
+    Core_hashtbl.hash "x" <> Core_hashtbl.hash "X"
+      && Caseless.hash "x" = Caseless.hash "X"
+  TEST = Caseless.hash "OCaml" = Caseless.hash "ocaml"
+  TEST = Caseless.hash "aaa" <> Caseless.hash "aaaa"
+  TEST = Caseless.hash "aaa" <> Caseless.hash "aab"
+  TEST =
+    let tbl = Caseless.Table.create () in
+    Core_hashtbl.add_exn tbl ~key:"x" ~data:7;
+    Core_hashtbl.find tbl "X" = Some 7
+end
+
 include
   Blit.Make
     (struct

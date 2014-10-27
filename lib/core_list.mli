@@ -49,10 +49,10 @@ val fold_left : 'a t -> init:'b -> f:('b -> 'a -> 'b) -> 'b
 val iter2_exn : 'a t -> 'b t -> f:('a -> 'b -> unit) -> unit
 
 (** [List.rev_map2_exn l1 l2 ~f] gives the same result as
-   {!List.rev}[ (]{!List.map2_exn}[ f l1 l2)], but is more efficient. *)
+    [List.rev (List.map2_exn l1 l2 ~f)], but is more efficient. *)
 val rev_map2_exn: 'a t -> 'b t -> f:('a -> 'b -> 'c) -> 'c t
 
-(** [List.fold2_exn ~f a [b1; ...; bn] [c1; ...; cn]] is
+(** [List.fold2_exn ~f ~init:a [b1; ...; bn] [c1; ...; cn]] is
    [f (... (f (f a b1 c1) b2 c2) ...) bn cn].
    Raise if the two lists have different lengths. *)
 val fold2_exn
@@ -100,7 +100,7 @@ val split_n : 'a t -> int -> 'a t * 'a t
     complete specification).  For example, {!Pervasives.compare} is a suitable comparison
     function.
 
-    The current implementation uses Merge Sort. It runs in constant heap space and
+    The current implementation uses Merge Sort. It runs in linear heap space and
     logarithmic stack space.
 
     Presently, the sort is stable, meaning that two equal elements in the input will be in

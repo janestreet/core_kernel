@@ -2,7 +2,7 @@ OASISFormat:      0.3
 OCamlVersion:     >= 4.00.1
 FindlibVersion:   >= 1.3.2
 Name:             core_kernel
-Version:          112.01.00
+Version:          112.06.00
 Synopsis:         Jane Street Capital's standard library overlay
 Authors:          Jane Street Capital LLC <opensource@janestreet.com>
 Copyrights:       (C) 2008-2013 Jane Street Capital LLC <opensource@janestreet.com>
@@ -195,6 +195,7 @@ Library core_kernel
                       Substring_intf,
                       Substring,
                       T,
+                      Thread_safe_queue,
                       Tuple,
                       Tuple_type,
                       Tuple_type_intf,
@@ -247,8 +248,7 @@ Library core_kernel
                       typerep_lib.syntax,
                       unix,
                       variantslib,
-                      variantslib.syntax,
-                      core_kernel.raise_without_backtrace
+                      variantslib.syntax
   XMETARequires:      bin_prot,
                       variantslib,
                       sexplib,
@@ -259,8 +259,7 @@ Library core_kernel
                       pa_ounit,
                       pa_test,
                       typerep_lib,
-                      unix,
-                      core_kernel.raise_without_backtrace
+                      unix
 
 Library check_caml_modify
   Build$:             flag(caml_modify_test)
@@ -274,12 +273,6 @@ Library check_caml_modify
   BuildDepends:       pa_ounit,
                       pa_ounit.syntax
   XMETARequires:      pa_ounit
-
-Library raise_without_backtrace
-  Path:               raise_without_backtrace
-  FindlibParent:      core_kernel
-  Pack:               true
-  Modules:            Rwb_std
 
 Executable pool_caml_modify_check
   Path:               lib_test
