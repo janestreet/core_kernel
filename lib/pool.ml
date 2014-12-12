@@ -19,19 +19,24 @@ module Int = struct
   let to_string = string_of_int
 end
 
-IFDEF ARCH_SIXTYFOUR THEN
-module Int63 = struct
+(* dynamically choose Int63 implementation based on int size *)
+module type Int63 = sig
+  type t with bin_io, sexp
+  val of_int : int -> t
+  val to_int_exn : t -> int
+end
+module Int63_64 = struct
   type t = int with bin_io, sexp
   let of_int i = i
   let to_int_exn i = i
 end
-ELSE
-module Int63 = struct
+module Int63_32 = struct
   type t = int64 with bin_io, sexp
   let of_int = Int_conversions.int_to_int64
   let to_int_exn = Int_conversions.int64_to_int_exn
 end
-ENDIF
+module Int63 = 
+  (val (if Int.num_bits = 63 then (module Int63_64 : Int63) else (module Int63_32 : Int63)))
 
 let sprintf = Core_printf.sprintf
 
@@ -105,19 +110,17 @@ module Pool = struct
     TEST = t11 = max_slot
   end
 
-IFDEF ARCH_SIXTYFOUR THEN
+  (* This code has been changed to accommodate js_of_ocaml.  It previously used 
+     'IFDEF ARCH_SIXTYFOUR' to choose these settings and would assert if Int.num_bits
+     was not of an expected size.
 
-  let () = assert (Int.num_bits = 63)
-  let array_index_num_bits = 30
-  let masked_tuple_id_num_bits = 33
-
-ELSE
-
-  let () = assert (Int.num_bits = 31)
-  let array_index_num_bits = 27
-  let masked_tuple_id_num_bits = 4
-
-ENDIF
+     NOTE: other ARCH_SIXTYFOUR defines in this file will also need to be changeed 
+     to ensure correct operation of the module, but this is enough to get 
+     core_kernel to run in js_of_ocaml.
+  *)
+  let array_index_num_bits, masked_tuple_id_num_bits = 
+    if Int.num_bits = 63 then 30, 33
+    else 27, 4
 
   TEST = array_index_num_bits > 0
   TEST = masked_tuple_id_num_bits > 0
@@ -154,13 +157,12 @@ ENDIF
 
     let init = 0
 
-    let next t =
-IFDEF ARCHSIXTYFOUR THEN
-      t + 1
-ELSE
-      if t = Int.max_value then 0 else t + 1
-ENDIF
-;;
+    (* NOTE: this code used 'ARCHSIXTYFOUR' rather than 'ARCH_SIXTYFOUR'
+       which means it probably wasn't actually selecting between platforms
+       the way that was intended *)
+    let next = 
+      if Int.num_bits = 63 then (fun t -> t + 1)
+      else (fun t -> if t = Int.max_value then 0 else t + 1)
 
     let to_int t = t
 
