@@ -56,6 +56,7 @@ module Step : sig
     | Done
     | Skip of 's
     | Yield of 'a * 's
+  with sexp_of
 end
 
 (** [unfold_step ~init ~f] constructs a sequence by giving an initial state [init] and a

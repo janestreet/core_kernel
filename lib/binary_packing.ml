@@ -324,7 +324,6 @@ let check_signed_32_in_range n =
       raise (Pack_signed_32_argument_out_of_range n)
   ENDIF
 
-exception Pack_signed_32_argument_out_of_range of int with sexp
 let pack_signed_32_int ~byte_order ~buf ~pos n =
   assert (Sys.word_size = 64);
   check_signed_32_in_range n;

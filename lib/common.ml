@@ -38,24 +38,6 @@ type fpclass =        [`Deprecated_use_float_module ]
 let close_in _ = `Deprecated_use_in_channel
 let close_out _ = `Deprecated_use_out_channel
 
-type read_only with bin_io, compare
-include (struct
-  type immutable  = read_only with bin_io, compare
-  type read_write = read_only with bin_io, compare
-end : sig
-  type immutable  = private read_only with bin_io, compare
-  type read_write = private read_only with bin_io, compare
-end)
-
-(* These are to work around a bug in pa_sexp where sexp_of_immutable would assert false
-   rather than give a clear error message. *)
-let sexp_of_immutable _ = failwith "attempt to convert abstract type immutable"
-let immutable_of_sexp = sexp_of_immutable
-let sexp_of_read_only _ = failwith "attempt to convert abstract type read_only"
-let read_only_of_sexp = sexp_of_read_only
-let sexp_of_read_write _ = failwith "attempt to convert abstract type read_write"
-let read_write_of_sexp = sexp_of_read_write
-
 include Perms.Export
 
 include Never_returns

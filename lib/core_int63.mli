@@ -9,7 +9,7 @@
     - Int63 will behave differently in the case of overflow.
 
     - marshalling Int63 will not work between 32-bit and 64-bit platforms.
-    unmarshal will segfault.
+      unmarshal will segfault.
 
     - bin_io will work, except that it will raise an overflow exception when you send too
       large of an int from a 32-bit to a 64-bit platform.  This is couterintuitive because

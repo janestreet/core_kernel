@@ -14,11 +14,14 @@ module List = Core_list
 module Sexp = struct
   include Sexplib.Sexp
   include (struct
-    type t = Sexplib.Sexp.t = Atom of string | List of t list with bin_io
-  end : Binable.S with type t := t)
+    type t = Sexplib.Sexp.t = Atom of string | List of t list with bin_io, compare
+  end : sig
+    type t with bin_io, compare
+  end with type t := t)
 end
 
 type sexp = Sexp.t = Atom of string | List of sexp list (* constructor import *)
+with compare
 
 module Binable_exn = struct
   module T = struct
@@ -116,6 +119,8 @@ type t = Message.t Lazy.t
 
 type t_ = t
 
+let invariant _ = ()
+
 (* We use [protect] to guard against exceptions raised by user-supplied functons, so
    that failure to produce one part of an info doesn't interfere with other parts. *)
 let protect f = try f () with exn -> Message.Could_not_construct (Exn.sexp_of_t exn)
@@ -127,6 +132,10 @@ let of_message message = Lazy.lazy_from_val message
 let sexp_of_t t = Message.to_sexp_hum (to_message t)
 
 let t_of_sexp sexp = lazy (Message.Sexp sexp)
+
+let compare t1 t2 =
+  <:compare< Sexp.t >> (t1 |> <:sexp_of< t >>) (t2 |> <:sexp_of< t >>)
+;;
 
 let to_string_hum t =
   match to_message t with
@@ -202,6 +211,27 @@ let of_exn ?backtrace exn =
   | _    , None           -> Lazy.from_val (Message.Exn exn)
   | _    , Some backtrace -> lazy (With_backtrace (Sexp (Exn.sexp_of_t exn), backtrace))
 ;;
+
+module Stable = struct
+  module V1 = struct
+    type nonrec t = t
+
+    include Sexpable.Of_sexpable (Sexp) (struct
+      type nonrec t = t
+      let to_sexpable = sexp_of_t
+      let of_sexpable = t_of_sexp
+    end)
+
+    let compare = compare
+
+    include Bin_prot.Utils.Make_binable (struct
+      module Binable = Sexp
+      type nonrec t = t
+      let to_binable = sexp_of_t
+      let of_binable = t_of_sexp
+    end)
+  end
+end
 
 TEST_MODULE "Info" = struct
 

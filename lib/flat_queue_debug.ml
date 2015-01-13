@@ -3,7 +3,7 @@ open Int.Replace_polymorphic_compare  let _ = _squelch_unused_module_warning_
 
 module Debug (Flat_queue : module type of Flat_queue) = struct
 
-  include Debug.Make (struct end)
+  include Debug.Make ()
 
   open Flat_queue
 

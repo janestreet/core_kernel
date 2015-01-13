@@ -38,7 +38,22 @@ let int64_pow base exponent =
   int_math_int64_pow base exponent
 ;;
 
+TEST_UNIT =
+  for i = 0 to 10 do
+    for j = 0 to 10 do
+      assert (int_pow i j = Float.to_int ((Float.of_int i) ** (Float.of_int j)))
+    done
+  done
+
 BENCH_MODULE "int_math_pow" = struct
+  let a = Array.init 10000 (fun _ -> Random.int 5)
+  BENCH "random[ 5] x 10000" = Array.iter (fun x -> let _ = int_pow 2 x in ()) a
+  let a = Array.init 10000 (fun _ -> Random.int 10)
+  BENCH "random[10] x 10000" = Array.iter (fun x -> let _ = int_pow 2 x in ()) a
+  let a = Array.init 10000 (fun _ -> Random.int 30)
+  BENCH "random[30] x 10000" = Array.iter (fun x -> let _ = int_pow 2 x in ()) a
+  let a = Array.init 10000 (fun _ -> Random.int 60)
+  BENCH "random[60] x 10000" = Array.iter (fun x -> let _ = int_pow 2 x in ()) a
   BENCH "2 ^ 30"   = int_pow 2 30
   BENCH "2L ^ 30L" = int64_pow 2L 30L
   BENCH "2L ^ 60L" = int64_pow 2L 60L
@@ -164,50 +179,75 @@ module Make (X : T) = struct
     TEST_UNIT = check ~modulus:5 `Nearest ~range:(-12, -8) (-10)
   end
 
-  TEST_MODULE "remainder-and-modulus-random" = struct
-    let check x y =
-      let check_raises f =
-        try begin
-          ignore (f ());
-          failwithf "failed for x = %s, y = %s" (to_string x) (to_string y) ()
-        end with _ -> ()
-      in
-      let check cond =
-        if not cond
-        then failwithf "failed for x = %s, y = %s" (to_string x) (to_string y) ()
-      in
-      if x < zero
-      then check (rem x y < zero)
-      else check (rem x y >= zero);
-      check (abs (rem x y) <= abs y - one);
-      if y < zero then begin
-        check_raises (fun () -> x % y);
-        check_raises (fun () -> x /% y)
-      end
-      else begin
-        check (x = (x /% y) * y + (x % y));
-        check (x = (x /  y) * y + (rem x y));
-        check (x % y >= zero);
-        check (x % y <= y - one);
-        if x > zero && y > zero
-        then begin
-          check (x /% y = x / y);
-          check (x % y = rem x y)
-        end;
-      end
+  TEST_MODULE "remainder-and-modulus" = struct
 
+    let check_integers x y =
+      let check_raises f desc =
+        match f () with
+        | exception _ -> ()
+        | z -> failwithf "%s: failed for x = %s, y = %s; produced %s rather than raising"
+                 desc (to_string x) (to_string y) (to_string z) ()
+      in
+      let check_true cond desc =
+        if not cond
+        then failwithf "%s: failed for x = %s, y = %s" desc (to_string x) (to_string y) ()
+      in
+      if y = zero
+      then
+        begin
+          check_raises (fun () -> x / y) "division by zero";
+          check_raises (fun () -> rem x y) "rem _ zero";
+          check_raises (fun () -> x % y) "_ % zero";
+          check_raises (fun () -> x /% y) "_ /% zero";
+        end
+      else
+        begin
+          if x < zero
+          then check_true (rem x y <= zero) "non-positive remainder"
+          else check_true (rem x y >= zero) "non-negative remainder";
+          check_true (abs (rem x y) <= abs y - one) "range of remainder";
+          if y < zero then begin
+            check_raises (fun () -> x % y) "_ % negative";
+            check_raises (fun () -> x /% y) "_ /% negative"
+          end
+          else begin
+            check_true (x = (x /% y) * y + (x % y)) "(/%) and (%) identity";
+            check_true (x = (x /  y) * y + (rem x y)) "(/) and rem identity";
+            check_true (x % y >= zero) "non-negative (%)";
+            check_true (x % y <= y - one) "range of (%)";
+            if x > zero && y > zero
+            then begin
+              check_true (x /% y = x / y) "(/%) and (/) identity";
+              check_true (x % y = rem x y) "(%) and rem identity"
+            end;
+          end
+        end
     ;;
 
-    TEST_UNIT =
-      Random.self_init ();
-      for _i = 0 to 1000 do
-        let max_value = 1000000000 in
-        let x = of_int_exn (Random.int max_value) in
-        let y = of_int_exn (Random.int max_value) in
-        check x    y;
-        check (-x) y;
-        check x    (-y);
-        check (-x) (-y);
+    let check_natural_numbers x y =
+      Core_list.iter [ x ; -x ; x+one ; -(x + one) ] ~f:(fun x ->
+        Core_list.iter [ y ; -y ; y+one ; -(y + one) ] ~f:(fun y ->
+          check_integers x y))
+
+    TEST_UNIT "deterministic" =
+      let big1 = of_int_exn 118_310_344 in
+      let big2 = of_int_exn 828_172_408 in
+      (* Important to test the case where one value is a multiple of the other.  Note that
+         the [x + one] and [y + one] cases in [check_natural_numbers] ensure that we also
+         test non-multiple cases. *)
+      assert (big2 = big1 * of_int_exn 7);
+      let values = [ zero ; one ; big1 ; big2 ] in
+      Core_list.iter values ~f:(fun x ->
+        Core_list.iter values ~f:(fun y ->
+          check_natural_numbers x y))
+
+    TEST_UNIT "random" =
+      let rand = Core_random.State.make [| 8; 67; -5_309 |] in
+      for _i = 0 to 1_000 do
+        let max_value = 1_000_000_000 in
+        let x = of_int_exn (Core_random.State.int rand max_value) in
+        let y = of_int_exn (Core_random.State.int rand max_value) in
+        check_natural_numbers x y
       done
   end
 end

@@ -24,24 +24,24 @@ module Permissioned : sig
     with type ('a, 'perms) t := ('a, 'perms) t
 
   val create    : 'a -> ('a, [< _ perms]) t
-  val read_only : ('a, [> read_perm]) t -> ('a, read_only_perms) t
+  val read_only : ('a, [> read ]) t -> ('a, read) t
 
   (** [get] and [(!)] are two names for the same function. *)
-  val (!)       : ('a, [> read_perm]) t -> 'a
-  val get       : ('a, [> read_perm]) t -> 'a
+  val (!)       : ('a, [> read ]) t -> 'a
+  val get       : ('a, [> read ]) t -> 'a
 
   (** [set] and [(:=)] are two names for the same function. *)
-  val set       : ('a, [> write_perm]) t -> 'a -> unit
-  val (:=)      : ('a, [> write_perm]) t -> 'a -> unit
+  val set       : ('a, [> write ]) t -> 'a -> unit
+  val (:=)      : ('a, [> write ]) t -> 'a -> unit
 
-  val of_ref    : 'a ref -> ('a, [< read_write_perms]) t
-  val to_ref    : ('a, [> read_write_perms]) t -> 'a ref
+  val of_ref    : 'a ref -> ('a, [< read_write ]) t
+  val to_ref    : ('a, [> read_write ]) t -> 'a ref
 
   (* [swap] and [replace] - permissioned versions of above functions. *)
   val swap
-    :  ('a, [> read_write_perms]) t
-    -> ('a, [> read_write_perms]) t
+    :  ('a, [> read_write ]) t
+    -> ('a, [> read_write ]) t
     -> unit
 
-  val replace : ('a, [> read_write_perms]) t -> ('a -> 'a) -> unit
+  val replace : ('a, [> read_write ]) t -> ('a -> 'a) -> unit
 end

@@ -1,4 +1,4 @@
-type 'a t = 'a array with bin_io, sexp, typerep
+type 'a t = 'a array with bin_io, compare, sexp, typerep
 
 include Binary_searchable.S1 with type 'a t := 'a t
 
@@ -27,12 +27,12 @@ external get : 'a t -> int -> 'a = "%array_safe_get"
    if [n] is outside the range 0 to [Array.length a - 1]. *)
 external set : 'a t -> int -> 'a -> unit = "%array_safe_set"
 
-(** Unsafe version of [get].  Can cause arbitrary behavior when used to for an
-    out-of-bounds array access *)
+(** Unsafe version of [get].  Can cause arbitrary behavior when used for an out-of-bounds
+    array access *)
 external unsafe_get : 'a t -> int -> 'a = "%array_unsafe_get"
 
-(** Unsafe version of [set].  Can cause arbitrary behavior when used to for an
-    out-of-bounds array access *)
+(** Unsafe version of [set].  Can cause arbitrary behavior when used for an out-of-bounds
+    array access *)
 external unsafe_set : 'a t -> int -> 'a -> unit = "%array_unsafe_set"
 
 (** [create ~len x] creates an array of length [len] with the value [x] populated in each

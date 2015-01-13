@@ -30,6 +30,8 @@ let with_return_option f =
     f { return = fun a -> return.return (Some a) }; None)
 ;;
 
+let prepend { return } ~f = { return = fun x -> return (f x) }
+
 TEST_MODULE "with_return" = struct
   let test_loop loop_limit jump_out =
     with_return (fun { return } ->

@@ -13,7 +13,7 @@ let eprintf format = Printf.ksprintf eprint format
 
 let failwiths = Error.failwiths
 
-module Make (M : sig end) = struct
+module Make () = struct
   let check_invariant = ref true
   let show_messages   = ref true
   let debug invariant ~module_name =

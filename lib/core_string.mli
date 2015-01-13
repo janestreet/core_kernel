@@ -116,6 +116,9 @@ val substr_replace_first : ?pos:int -> t -> pattern:t -> with_:t -> t
 (** As with [Search_pattern.replace_all], the result may still contain [pattern]. *)
 val substr_replace_all   :             t -> pattern:t -> with_:t -> t
 
+(** [is_substring ~substring:"bar" "foo bar baz"] is true *)
+val is_substring : t -> substring:t -> bool
+
 (** [slice s start stop] gets a slice of [s] between [start] and [stop].
     [start] and [stop] will be normalized before the access.
     (viz. Core_array.normalize). *)

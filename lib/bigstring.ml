@@ -29,16 +29,17 @@ let create ?max_mem_waiting_gc size =
 
 TEST "create with different max_mem_waiting_gc" =
   Core_gc.full_major ();
+  let module Alarm = Core_gc.Expert.Alarm in
   let count_gc_cycles mem_units =
     let cycles = ref 0 in
-    let alarm = Core_gc.create_alarm (fun () -> incr cycles) in
+    let alarm = Alarm.create (fun () -> incr cycles) in
     let large_int = 10_000 in
     let max_mem_waiting_gc = Byte_units.create mem_units 256. in
     for _i = 0 to large_int do
       let (_ : t) = create ~max_mem_waiting_gc large_int in
       ()
     done;
-    Core_gc.delete_alarm alarm;
+    Alarm.delete alarm;
     !cycles
   in
   let large_max_mem = count_gc_cycles `Megabytes in
@@ -144,8 +145,6 @@ let to_string = To_string.subo
 
 (* Reading / writing bin-prot *)
 
-let bin_prot_size_header_length = 8
-
 let read_bin_prot_verbose_errors t ?(pos=0) ?len reader =
   let len = get_opt_len t len ~pos in
   let limit = pos + len in
@@ -170,7 +169,12 @@ let read_bin_prot_verbose_errors t ?(pos=0) ?len reader =
         else invalid_data "pos_ref <> expected_pos" (!pos_ref, expected_pos)
                <:sexp_of< int * int >>
   in
-  match read Bin_prot.Read.bin_read_int_64bit ~pos ~len:bin_prot_size_header_length with
+  match
+    read
+      Bin_prot.Utils.bin_read_size_header
+      ~pos
+      ~len:Bin_prot.Utils.size_header_length
+  with
   | `Not_enough_data | `Invalid_data _ as x -> x
   | `Ok (element_length, pos) ->
     if element_length < 0
@@ -180,6 +184,8 @@ let read_bin_prot_verbose_errors t ?(pos=0) ?len reader =
 
 TEST_MODULE = struct
   let make_t ~size input =
+    (* We hardcode the size here to catch problems if [Bin_prot.Utils.size_header_length]
+       ever changes. *)
     let t = create (String.length input + 8) in
     ignore (Bin_prot.Write.bin_write_int_64bit t ~pos:0 size : int);
     List.iteri (String.to_list input) ~f:(fun i c -> set t (i+8) c);
@@ -233,14 +239,14 @@ let read_bin_prot t ?pos ?len reader =
 
 let write_bin_prot t ?(pos = 0) writer v =
   let data_len = writer.Bin_prot.Type_class.size v in
-  let total_len = data_len + bin_prot_size_header_length in
+  let total_len = data_len + Bin_prot.Utils.size_header_length in
   if pos < 0 then
     failwiths "Bigstring.write_bin_prot: negative pos" pos <:sexp_of< int >>;
   if pos + total_len > length t then
     failwiths "Bigstring.write_bin_prot: not enough room"
       (`pos pos, `pos_after_writing (pos + total_len), `bigstring_length (length t))
       <:sexp_of<[`pos of int] * [`pos_after_writing of int] * [`bigstring_length of int]>>;
-  let pos_after_size_header = Bin_prot.Write.bin_write_int_64bit t ~pos data_len in
+  let pos_after_size_header = Bin_prot.Utils.bin_write_size_header t ~pos data_len in
   let pos_after_data =
     writer.Bin_prot.Type_class.write t ~pos:pos_after_size_header v
   in
@@ -248,7 +254,7 @@ let write_bin_prot t ?(pos = 0) writer v =
     failwiths "Bigstring.write_bin_prot bug!"
       (`pos_after_data pos_after_data,
        `start_pos pos,
-       `bin_prot_size_header_length bin_prot_size_header_length,
+       `bin_prot_size_header_length Bin_prot.Utils.size_header_length,
        `data_len data_len,
        `total_len total_len)
       <:sexp_of<

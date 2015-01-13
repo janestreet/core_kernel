@@ -1,9 +1,23 @@
 open Sexplib.Conv
 open Result.Export
 
-module List = Core_list
+module Stable = struct
+  module V1 = struct
+    type 'a t = ('a, Error.Stable.V1.t) Result.Stable.V1.t with bin_io, compare, sexp
 
-type 'a t = ('a, Error.t) Result.t with sexp, bin_io
+    let map x ~f = Result.Stable.V1.map x ~f1:f ~f2:Fn.id
+  end
+end
+
+include Stable.V1
+
+let invariant invariant_a t =
+  match t with
+  | Ok a -> invariant_a a
+  | Error error -> Error.invariant error
+;;
+
+module List = Core_list
 
 include (Result : Monad.S2 with type ('a, 'b) t := ('a, 'b) Result.t)
 
@@ -65,5 +79,3 @@ TEST =
   match combine_errors_unit [Ok (); Error a; Ok (); Error b] with
   | Ok _ -> false
   | Error e -> Error.to_string_hum e = Error.to_string_hum (Error.of_list [a;b])
-
-

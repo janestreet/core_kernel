@@ -1,3 +1,184 @@
+## 112.17.00
+
+- Added `List.is_prefix`.
+
+  ```ocaml
+  val List.is_prefix : 'a t -> prefix:'a t -> equal:('a -> 'a -> bool) -> bool
+  ```
+- Made `String_id.Make` functor generative, which exposes that the
+  result has `type t = private string`.
+
+  Previously the result of `String_id.Make` didn't expose `type t =
+  private string` due to a type-checker bug:
+
+  * http://caml.inria.fr/mantis/view.php?id=6485
+  * http://caml.inria.fr/mantis/view.php?id=6011
+
+- Used generative functors, e.g. for `Unique_id`.
+
+  Used generative functors (new feature in 4.02) where previously we
+  used dummy `M : sig end` arguments in the signature and `(struct
+  end)` when applying the functor.
+
+  Just to note the difference between applicative and generative
+  functors.  Suppose we have:
+
+  ```ocaml
+  module F (M : sig end) : sig type t end
+  ```
+
+  and we apply it several times
+
+  ```ocaml
+  module A = F (struct end)
+  module B = F (struct end)
+  module C = F (String)
+  module D = F (String)
+  ```
+
+  Then we have that `A.t <> B.t` but `C.t = D.t`.  This can lead to
+  subtle bugs, e.g. `Unique_id.Int (Unit)`.  Note that it is perfectly
+  valid to apply any module to `F`, even though that is certainly not
+  what we want.
+
+  In 4.02, we can explicitly say that functor generates new types,
+  i.e. it is generative. For this we use argument `()`.  So `F`
+  becomes
+
+  ```ocaml
+  module F () : sig type t end
+  ```
+
+  You can only apply `F` to `()` or `(struct end)` but each
+  application yields a new type `t`.
+
+  ```ocaml
+  module A = F ()
+  module B = F ()
+  module C = F (struct end)
+  module D = F (String) (* illegal *)
+  ```
+
+  and now `A.t`, `B.t` and `C.t` are all different.
+
+  Note that `F (struct end)` is still allowed but was converted to to
+  `F ()` for consistency with signatures.
+
+  Propagated generativity where necessary.  If inside a functor we use
+  generative functor that creates new types, then we also need to make
+  the enclosing functor generative.
+
+  For functors that don't create types (like `Async.Log.Make_global`),
+  generative or applicative functors are the same, but the syntax of
+  generative functors is lighter.
+- Exported `Core_kernel.Std.With_return`.
+- Exposed the record type of `Source_code_position.t`.
+- In `Weak_hashtbl.create`, exposed the `?growth_allowed` and `?size`
+  arguments of the underlying `Hashtbl.create`.
+- Added `with compare` to `Array`.
+- Sped up `Int.pow`.
+
+  Benchmarks before:
+
+  | Name                                          |     Time/Run | mWd/Run | Percentage |
+  |-----------------------------------------------|--------------|---------|------------|
+  | [int_math.ml:int_math_pow] random[ 5] x 10000 | 140_546.89ns |         |     53.98% |
+  | [int_math.ml:int_math_pow] random[10] x 10000 | 173_853.08ns |         |     66.77% |
+  | [int_math.ml:int_math_pow] random[30] x 10000 | 219_948.85ns |         |     84.47% |
+  | [int_math.ml:int_math_pow] random[60] x 10000 | 260_387.26ns |         |    100.00% |
+  | [int_math.ml:int_math_pow] 2 ^ 30             |      11.34ns |         |            |
+  | [int_math.ml:int_math_pow] 2L ^ 30L           |      21.69ns |   3.00w |            |
+  | [int_math.ml:int_math_pow] 2L ^ 60L           |      22.95ns |   3.00w |            |
+
+  and after:
+
+  | Name                                          |     Time/Run | mWd/Run | Percentage |
+  |-----------------------------------------------|--------------|---------|------------|
+  | [int_math.ml:int_math_pow] random[ 5] x 10000 | 105_200.94ns |         |     80.78% |
+  | [int_math.ml:int_math_pow] random[10] x 10000 | 117_365.82ns |         |     90.12% |
+  | [int_math.ml:int_math_pow] random[30] x 10000 | 130_234.51ns |         |    100.00% |
+  | [int_math.ml:int_math_pow] random[60] x 10000 | 123_621.45ns |         |     94.92% |
+  | [int_math.ml:int_math_pow] 2 ^ 30             |       8.55ns |         |            |
+  | [int_math.ml:int_math_pow] 2L ^ 30L           |      22.17ns |   3.00w |      0.02% |
+  | [int_math.ml:int_math_pow] 2L ^ 60L           |      22.49ns |   3.00w |      0.02% |
+- Removed the old, deprecated permission phantom types (`read_only`,
+  etc.) and replaced them with the new =Perms= types.
+
+  The old types had subtyping based on covariance and `private` types.
+  The new types have subtyping based on contravariance and dropping
+  capabilities.
+
+  Renamed `read_only` as `read`, since `Perms` doesn't distinguish
+  between them.
+
+  The idiom for the type of a function that only needs read access
+  changed from:
+
+  ```ocaml
+  val f : _ t -> ...
+  ```
+
+  to
+
+  ```ocaml
+  val f : [> read ] t -> ...
+  ```
+
+  This mostly hit `Iobuf` and its users.
+- Added `String.is_substring`.
+- Added `With_return.prepend`, and exposed `With_return.t` as
+  contravariant.
+
+  ```ocaml
+  (** [prepend a ~f] returns a value [x] such that each call to [x.return] first applies [f]
+      before applying [a.return].  The call to [f] is "prepended" to the call to the
+      original [a.return].  A possible use case is to hand [x] over to an other function
+      which returns ['b] a subtype of ['a], or to capture a common transformation [f]
+      applied to returned values at several call sites. *)
+  val prepend : 'a return -> f:('b -> 'a) -> 'b return
+  ```
+- Moved the `Gc` module's alarm functionality into a new
+  `Gc.Expert.Alarm` module.
+
+  The was done because the Gc alarms introduce threading semantics.
+- Exposed modules in `Core_kernel.Std`: `Int_conversions`,
+  `Ordered_collection_common`
+- Removed `Pooled_hashtbl` from `Hashable.S`, to eliminate a
+  dependency cycle between `Int63` and `Pool`.
+
+  This was needed to use `Int63` in `Pool`.  Previously, `Int63 <- Int
+  <- Hashable <- Pool`, which made it impossible to use `Int63` in
+  `Pool`.
+
+  So, we are removing the dependency `Hashable <- Pool`, simplifying
+  `Hashable` to not include `Pooled_hashtbl`, and letting users call
+  the `Pooled_hashtbl` functor directly when necessary.
+- Added to `Pool.Pointer.Id` conversions to and from `Int63`.
+- Made `Pooled_hashtbl.resize` allocate less.
+- Removed `Pool.pointer_of_id_exn_is_supported`, which was always
+  `true`.
+- Added `with compare` to `Info`, `Error`, `Or_error`.
+- Moved `Backtrace` from `Core`
+- In C stubs, replaced `intxx` types by `intxx_t`.
+
+  Following this: http://caml.inria.fr/mantis/view.php?id=6517
+
+  Fixes #23
+- Removed `Backtrace.get_opt`, which is no longer necessary now that
+  `Backtrace.get` is available on all platforms.
+- Added module types: `Stable`, `Stable1`, `Stable2`.
+- Exposed `Core_kernel.Std.Avltree`.
+- Removed from `Binary_packing` a duplicated exception,
+  `Pack_signed_32_argument_out_of_range`.
+
+  Closes #26
+- Made `Info`, `Error`, and `Or_error` stable.
+
+  The new stable serialization format is distinct from the existing
+  unstable serialization format in the respective modules, which wasn't
+  changed.
+- Add `Sequence.Step.sexp_of_t`.
+
 ## 112.06.00
 
 - Made `String_id` have `Stable_containers.Comparable`.

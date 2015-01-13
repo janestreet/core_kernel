@@ -24,12 +24,6 @@ module Types = struct
     let name = "Write"
   end
 
-  module Read_only = struct
-    type t = [ Read.t ]
-    with bin_io, compare, sexp
-    let name = "Read_only"
-  end
-
   module Immutable = struct
     type t = [ Read.t | `Who_can_write of Nobody.t ]
     with bin_io, compare, sexp
@@ -97,7 +91,6 @@ module Stable = struct
     module Read       = Only_used_as_phantom_type0 (Types.Read)
     module Write      = Only_used_as_phantom_type0 (Types.Write)
     module Read_write = Only_used_as_phantom_type0 (Types.Read_write)
-    module Read_only  = Only_used_as_phantom_type0 (Types.Read_only)
     module Immutable  = Only_used_as_phantom_type0 (Types.Immutable)
 
     type nobody = Nobody.t with bin_io, compare, sexp
@@ -110,12 +103,11 @@ module Stable = struct
   end
 
   module Export = struct
-    type read_perm        = V1.Read.          t with bin_io, compare, sexp
-    type write_perm       = V1.Write.         t with bin_io, compare, sexp
-    type read_only_perms  = V1.Read_only.     t with bin_io, compare, sexp
-    type immutable_perms  = V1.Immutable.     t with bin_io, compare, sexp
-    type read_write_perms = V1.Read_write.    t with bin_io, compare, sexp
-    type 'a perms         = 'a V1.Upper_bound.t with bin_io, compare, sexp
+    type read       = V1.Read.          t with bin_io, compare, sexp
+    type write      = V1.Write.         t with         compare, sexp
+    type immutable  = V1.Immutable.     t with bin_io, compare, sexp
+    type read_write = V1.Read_write.    t with bin_io, compare, sexp
+    type 'a perms   = 'a V1.Upper_bound.t with bin_io, compare, sexp
   end
 end
 

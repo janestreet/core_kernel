@@ -1,4 +1,3 @@
-
 (** A simple boolean domain-specific language *)
 
 (** Blang provides infrastructure for writing simple boolean DSLs.

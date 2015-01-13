@@ -7,6 +7,7 @@ module Step = struct
     | Done
     | Skip of 's
     | Yield of 'a * 's
+  with sexp_of
 end
 
 open Step

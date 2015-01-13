@@ -73,8 +73,8 @@ end = struct
   let key      p t = Unsafe.get p t Unsafe.Slot.t1
   let data     p t = Unsafe.get p t Unsafe.Slot.t2
 
-  let set_next p t = Unsafe.set p t Unsafe.Slot.t0
-  let set_data p t = Unsafe.set p t Unsafe.Slot.t2
+  let set_next p t x = Unsafe.set p t Unsafe.Slot.t0 x
+  let set_data p t x = Unsafe.set p t Unsafe.Slot.t2 x
 
   module Pool = struct
     type ('k, 'd) t = ('k, 'd) fields Unsafe.t with sexp_of
@@ -150,56 +150,58 @@ let length t = t.length
 
 let is_empty t = t.length = 0
 
-let clear t =
-  for i=0 to t.capacity - 1 do
-    let rec free_loop e =
-      let next = Entry.next t.entries e in
-      Entry.free t.entries e;
-      if not (Entry.is_null next) then free_loop next;
-    in
-    let e = table_get t.table i in
-    if not (Entry.is_null e) then begin
-      free_loop e;
-      table_set t.table i (Entry.null ());
-    end;
-  done;
-  t.length <- 0
+let clear =
+  let rec free_loop t e =
+    let next = Entry.next t.entries e in
+    Entry.free t.entries e;
+    if not (Entry.is_null next) then free_loop t next;
+  in
+  fun t ->
+    for i=0 to t.capacity - 1 do
+      let e = table_get t.table i in
+      if not (Entry.is_null e) then begin
+        free_loop t e;
+        table_set t.table i (Entry.null ());
+      end;
+    done;
+    t.length <- 0
 ;;
 
 let on_grow = ref (fun () -> Staged.stage (fun ~old_capacity:_ ~new_capacity:_ -> ()))
 
-let resize t size =
-  if t.growth_allowed then begin
-    if size > t.capacity then begin
-      let new_capacity, new_n_entries = calculate_table_size size in
-      let old_table, old_capacity = t.table, t.capacity in
-      let after_grow = Staged.unstage (!on_grow ()) in
-      t.entries <- Entry.Pool.grow t.entries ~capacity:new_n_entries;
-      t.table <- Array.create ~len:new_capacity (Entry.null ());
-      t.capacity <- new_capacity;
-      t.n_entries <- new_n_entries;
-
-      for i = 0 to old_capacity - 1 do
-        let rec copy_entries e =
-          if not (Entry.is_null e) then begin
-            let key    = Entry.key t.entries e in
-            let next_e = Entry.next t.entries e in
-            let index = slot t key in
-            let next  = table_get t.table index in
-            Entry.set_next t.entries e next;
-            table_set t.table index e;
-            copy_entries next_e
-          end
-        in
-        copy_entries (table_get old_table i)
-      done;
-      after_grow ~old_capacity ~new_capacity
+let resize =
+  let rec copy_entries t e =
+    if not (Entry.is_null e) then begin
+      let key    = Entry.key t.entries e in
+      let next_e = Entry.next t.entries e in
+      let index = slot t key in
+      let next  = table_get t.table index in
+      Entry.set_next t.entries e next;
+      table_set t.table index e;
+      copy_entries t next_e
     end
-  end
-  else begin
-    t.entries <- Entry.Pool.grow t.entries ~capacity:(2 * t.n_entries);
-    t.n_entries <- (2 * t.n_entries);
-  end
+  in
+  fun t size ->
+    if t.growth_allowed then begin
+      if size > t.capacity then begin
+        let new_capacity, new_n_entries = calculate_table_size size in
+        let old_table, old_capacity = t.table, t.capacity in
+        let after_grow = Staged.unstage (!on_grow ()) in
+        t.entries <- Entry.Pool.grow t.entries ~capacity:new_n_entries;
+        t.table <- Array.create ~len:new_capacity (Entry.null ());
+        t.capacity <- new_capacity;
+        t.n_entries <- new_n_entries;
+
+        for i = 0 to old_capacity - 1 do
+          copy_entries t (table_get old_table i)
+        done;
+        after_grow ~old_capacity ~new_capacity
+      end
+    end
+    else begin
+      t.entries <- Entry.Pool.grow t.entries ~capacity:(2 * t.n_entries);
+      t.n_entries <- (2 * t.n_entries);
+    end
 ;;
 
 let on_grow ~before ~after =
@@ -354,24 +356,30 @@ let incr ?(by=1) t key =
     Entry.set_data t.entries e (data + by)
 ;;
 
-let change t key f =
-  let index = slot t key in
-  let it = table_get t.table index in
-  let rec change_key e prev =
-    if not (Entry.is_null e) then
-      let curr_key = Entry.key t.entries e in
-      if compare_key t curr_key key = 0 then
-        match f (Some (Entry.data t.entries e)) with
-        | Some data -> Entry.set_data t.entries e data
-        | None -> delete_link t ~index ~prev ~e
-      else change_key (Entry.next t.entries e) e
+let change =
+  let rec change_key t key f index e prev =
+    if Entry.is_null e then
+      `Not_found
     else
+      let curr_key = Entry.key t.entries e in
+      if compare_key t curr_key key = 0 then begin
+        (match f (Some (Entry.data t.entries e)) with
+         | Some data -> Entry.set_data t.entries e data
+         | None      -> delete_link t ~index ~prev ~e);
+        `Changed
+      end else
+        change_key t key f index (Entry.next t.entries e) e
+  in
+  fun t key f ->
+    let index = slot t key in
+    let it = table_get t.table index in
+    match change_key t key f index it (Entry.null ()) with
+    | `Changed   -> ()
+    | `Not_found ->
       (* New entry is inserted in the begining of the list (it) *)
-      match (f None) with
+      match f None with
       | None -> ()
       | Some data -> insert_link t ~index ~key ~data ~it
-  in
-  change_key it (Entry.null ())
 ;;
 
 
@@ -424,20 +432,21 @@ let remove_multi t key =
   | Some (_ :: tl) -> replace t ~key ~data:tl
 ;;
 
-let iter t ~f =
-  if t.length = 0 then ()
-  else begin
-    for i = 0 to t.capacity - 1 do
-      let rec loop e =
-        if not (Entry.is_null e) then begin
-          f ~key:(Entry.key t.entries e)
-            ~data:(Entry.data t.entries e);
-          loop (Entry.next t.entries e)
-        end
-      in
-      loop (table_get t.table i)
-    done
-  end
+let iter =
+  let rec loop t f e =
+    if not (Entry.is_null e) then begin
+      f ~key:(Entry.key t.entries e)
+        ~data:(Entry.data t.entries e);
+      loop t f (Entry.next t.entries e)
+    end
+  in
+  fun t ~f ->
+    if t.length = 0 then ()
+    else begin
+      for i = 0 to t.capacity - 1 do
+        loop t f (table_get t.table i)
+      done
+    end
 ;;
 
 let fold =
@@ -465,11 +474,8 @@ let fold =
 let invariant t =
   let n = Array.length t.table in
   for i = 0 to n - 1 do
-    let loop e =
-      if Entry.is_null e then ()
-      else assert (i = (slot t (Entry.key t.entries e)))
-    in
-    loop (table_get t.table i)
+    let e = table_get t.table i in
+    assert (Entry.is_null e || i = slot t (Entry.key t.entries e))
   done;
   Entry.Pool.invariant t.entries;
   let real_len = fold t ~init:0 ~f:(fun ~key:_ ~data:_ i -> i + 1) in
@@ -931,3 +937,18 @@ end) = struct
 
 end
 
+BENCH_MODULE "Pooled_hashtbl" = struct
+  (* Big enough so that the arrays are not allocated on the minor. Minor allocations
+     should be small and independant of the size. *)
+  let size = 512
+  let create () =
+    let t = Poly.create ~size () in
+    for i = 1 to size do
+      add_exn t ~key:i ~data:42
+    done;
+    t
+  ;;
+
+  BENCH "create" = create ()
+  BENCH "create+resize" = resize (create ()) (size * 2)
+end

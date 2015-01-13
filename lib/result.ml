@@ -4,6 +4,12 @@ module Stable = struct
     | Ok of 'a
     | Error of 'b
     with sexp, bin_io, compare
+
+    let map x ~f1 ~f2 =
+      match x with
+      | Error err -> Error (f2 err)
+      | Ok x      -> Ok    (f1 x)
+    ;;
   end
 
   module V1_stable_unit_test = struct

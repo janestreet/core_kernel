@@ -10,7 +10,8 @@ let () =
     fun (cs, bs, lib) ->
       match lib.OASISTypes.lib_findlib_name with
         | Some "core_kernel" ->
-            (cs, bs, lib, ["lib/core_params.h"])
+            (cs, bs, lib, [ "lib/core_params.h"
+                          ; "lib/core_bigstring.h" ])
         | _ ->
             (cs, bs, lib, [])
 ;;

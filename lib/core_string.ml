@@ -444,6 +444,10 @@ let substr_replace_all t ~pattern =
   Search_pattern.replace_all (Search_pattern.create pattern) ~in_:t
 ;;
 
+let is_substring t ~substring =
+  Option.is_some (substr_index t ~pattern:substring)
+;;
+
 let id x = x
 let of_string = id
 let to_string = id

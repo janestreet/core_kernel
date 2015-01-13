@@ -9,7 +9,7 @@ let invalid_argf = Core_printf.invalid_argf
 
 let failwiths = Error.failwiths
 
-type 'a t = 'a array with sexp, bin_io, typerep
+type 'a t = 'a array with bin_io, compare, sexp, typerep
 
 (* This module implements a new in-place, constant heap sorting algorithm to replace the
    one used by the standard libraries.  Its only purpose is to be faster (hopefully
@@ -173,17 +173,14 @@ module Sort = struct
         | x :: xs ->
           List.concat_map (permutations xs) ~f:(fun perms -> sprinkle x perms)
 
-      let int_cmp (i1 : int) (i2 : int) = compare i1 i2
-      let list_cmp l1 l2 = List.compare l1 l2 ~cmp:int_cmp
-
       let all_perms = permutations [1;2;3;4;5]
       TEST = List.length all_perms = 120
-      TEST = not (List.contains_dup ~compare:list_cmp all_perms)
+      TEST = not (List.contains_dup ~compare:<:compare< int list >> all_perms)
 
       TEST =
         List.for_all all_perms ~f:(fun l ->
           let arr = Array.of_list l in
-          five_element_sort arr ~cmp:int_cmp 0 1 2 3 4;
+          five_element_sort arr ~cmp:<:compare< int >> 0 1 2 3 4;
           arr = [|1;2;3;4;5|])
     end
 
@@ -289,7 +286,7 @@ module Sort = struct
       ;;
 
       let assert_sorted arr =
-        M.sort arr ~left:0 ~right:(Array.length arr - 1) ~cmp:compare;
+        M.sort arr ~left:0 ~right:(Array.length arr - 1) ~cmp:<:compare< int >>;
         let len = Array.length arr in
         let rec loop i prev =
           if i = len then true
@@ -364,10 +361,10 @@ let is_sorted t ~cmp =
   in
   loop (length t - 1)
 
-TEST = is_sorted [||] ~cmp:compare
-TEST = is_sorted [|0|] ~cmp:compare
-TEST = is_sorted [|0;1;2;2;4|] ~cmp:compare
-TEST = not (is_sorted [|0;1;2;3;2|] ~cmp:compare)
+TEST = is_sorted [||] ~cmp:<:compare< int >>
+TEST = is_sorted [|0|] ~cmp:<:compare< int >>
+TEST = is_sorted [|0;1;2;2;4|] ~cmp:<:compare< int >>
+TEST = not (is_sorted [|0;1;2;3;2|] ~cmp:<:compare< int >>)
 
 let is_sorted_strictly t ~cmp =
   let rec loop i =
@@ -381,7 +378,8 @@ let is_sorted_strictly t ~cmp =
 
 TEST_UNIT =
   List.iter
-    ~f:(fun (t, expect) -> assert (expect = is_sorted_strictly (of_list t) ~cmp:compare))
+    ~f:(fun (t, expect) ->
+      assert (expect = is_sorted_strictly (of_list t) ~cmp:<:compare< int >>))
     [ []         , true;
       [ 1 ]      , true;
       [ 1; 2 ]   , true;

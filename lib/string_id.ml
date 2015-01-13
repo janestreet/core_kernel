@@ -14,7 +14,7 @@ module type S = sig
   end
 end
 
-module Make (M : sig val module_name : string end) = struct
+module Make (M : sig val module_name : string end) () = struct
   module Stable = struct
     module V1 = struct
       include String
@@ -51,7 +51,7 @@ module Make (M : sig val module_name : string end) = struct
 
 end
 
-include Make (struct let module_name = "String_id" end)
+include Make (struct let module_name = "String_id" end) ()
 
 BENCH_MODULE "String_id" = struct
   BENCH "of_string(AAA)"       = of_string "AAA"

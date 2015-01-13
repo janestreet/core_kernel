@@ -2,7 +2,6 @@ INCLUDE "config.mlh"
 
 open Int_replace_polymorphic_compare
 open Sexplib.Conv
-open Bin_prot.Std
 open Pool_intf
 
 let failwiths = Error.failwiths
@@ -18,20 +17,6 @@ module Int = struct
   let max_value = Pervasives.max_int
   let to_string = string_of_int
 end
-
-IFDEF ARCH_SIXTYFOUR THEN
-module Int63 = struct
-  type t = int with bin_io, sexp
-  let of_int i = i
-  let to_int_exn i = i
-end
-ELSE
-module Int63 = struct
-  type t = int64 with bin_io, sexp
-  let of_int = Int_conversions.int_to_int64
-  let to_int_exn = Int_conversions.int64_to_int_exn
-end
-ENDIF
 
 let sprintf = Core_printf.sprintf
 
@@ -206,9 +191,12 @@ end
 
     module Id : sig
       type t with bin_io, sexp
+
+      val to_int63 : t -> Int63.t
+      val of_int63 : Int63.t -> t
     end
 
-    val to_id : _ t -> Id.t
+    val to_id     : _ t -> Id.t
     val of_id_exn : Id.t -> _ t
 
   end = struct
@@ -257,14 +245,17 @@ end
     let first_slot_index t = slot_index t Slot.t0
 
     module Id = struct
-      type t = Int63.t with bin_io, sexp
+      include Int63
+
+      let to_int63 t = t
+      let of_int63 i = i
     end
 
-    let to_id t = Int63.of_int t
+    let to_id t = Id.of_int t
 
     let of_id_exn id =
       try
-        let t = Int63.to_int_exn id in
+        let t = Id.to_int_exn id in
         if is_null t then
           t
         else
@@ -437,8 +428,6 @@ end
     && 0 = (header_index - start_of_tuples_index)
            mod (Metadata.array_indices_per_tuple metadata)
   ;;
-
-  let pointer_of_id_exn_is_supported = true
 
   let pointer_of_id_exn t id =
     try
@@ -896,6 +885,20 @@ module Debug (Pool : S) = struct
       open Id
 
       type nonrec t = t with bin_io, sexp
+
+      let of_int63 i =
+        debug "Pointer.Id.of_int63" [] i
+          <:sexp_of< Core_int63.t >>
+          <:sexp_of< t >>
+          (fun () -> of_int63 i)
+      ;;
+
+      let to_int63 t =
+        debug "Pointer.Id.to_int63" [] t
+          <:sexp_of< t >>
+          <:sexp_of< Core_int63.t >>
+          (fun () -> to_int63 t)
+      ;;
     end
   end
 
@@ -910,8 +913,6 @@ module Debug (Pool : S) = struct
       <:sexp_of< _ Pointer.t >> <:sexp_of< Pointer.Id.t >>
       (fun () -> id_of_pointer t pointer)
   ;;
-
-  let pointer_of_id_exn_is_supported = pointer_of_id_exn_is_supported
 
   let pointer_of_id_exn t id =
     debug "pointer_of_id_exn" [t] id
@@ -1046,9 +1047,9 @@ module Error_check (Pool : S) = struct
     is_valid && pointer_is_valid t pointer
   ;;
 
-  let id_of_pointer t pointer = id_of_pointer t (Pointer.follow pointer)
-
-  let pointer_of_id_exn_is_supported = pointer_of_id_exn_is_supported
+  (* We don't do [Pointer.follow pointer], because that would disallow
+     [id_of_pointer t (Pointer.null ())]. *)
+  let id_of_pointer t pointer = id_of_pointer t pointer.Pointer.pointer
 
   let pointer_of_id_exn t id =
     let pointer = pointer_of_id_exn t id in

@@ -101,10 +101,6 @@ module From_string : Blit.S_distinct with type src := string with type dst := t
     async's [Writer.write_bin_prot], [Reader.read_bin_prot] and
     [Unpack_buffer.Unpack_one.create_bin_prot]. *)
 
-(** The length of the size prefix is always 8 bytes at present.  This is exposed so your
-    program does not have to know this fact too. *)
-val bin_prot_size_header_length : int
-
 (** [write_bin_prot t writer a] writes [a] to [t] starting at [pos], and returns the index
     in [t] immediately after the last byte written.  It raises if [pos < 0] or if [a]
     doesn't fit in [t]. *)

@@ -8,9 +8,11 @@
 
 open Sexplib
 
-type 'a t = ('a, Error.t) Result.t with bin_io, sexp
+(** Serialization and comparison of an [Error] force the error's lazy message. **)
+type 'a t = ('a, Error.t) Result.t with bin_io, compare, sexp
 
-include Monad.S  with type 'a t := 'a t
+include Invariant.S1 with type 'a t := 'a t
+include Monad.S      with type 'a t := 'a t
 
 (** [try_with f] catches exceptions thrown by [f] and returns them in the Result.t as an
     Error.t.  [try_with_join] is like [try_with], except that [f] can throw exceptions or
@@ -63,3 +65,7 @@ val combine_errors : 'a t list -> 'a list t
 (** [combine_errors_unit] returns [Ok] if every element in [ts] is [Ok ()], else it
     returns [Error] with all the errors in [ts], like [combine_errors]. *)
 val combine_errors_unit : unit t list -> unit t
+
+module Stable : sig
+  module V1 : Stable_module_types.S1 with type 'a t = 'a t
+end

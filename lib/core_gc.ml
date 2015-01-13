@@ -147,7 +147,12 @@ TEST_UNIT =
 ;;
 
 module Expert = struct
-  let add_finalizer x f = Caml.Gc.finalise f x
+
+  let add_finalizer x f =
+    Caml.Gc.finalise
+      (fun x -> Exn.handle_uncaught_and_exit (fun () -> f x))
+      x
+  ;;
 
   (* [add_finalizer_exn] is the same as [add_finalizer].  However, their types in
      core_gc.mli are different, and the type of [add_finalizer] guarantees that it always
@@ -156,6 +161,16 @@ module Expert = struct
   let add_finalizer_exn = add_finalizer
 
   let finalize_release = Caml.Gc.finalise_release
+
+  module Alarm = struct
+    type t = alarm
+
+    let sexp_of_t _ = "<gc alarm>" |> <:sexp_of< string >>
+
+    let create f = create_alarm (fun () -> Exn.handle_uncaught_and_exit f)
+
+    let delete = delete_alarm
+  end
 end
 
 TEST_MODULE "gc" = struct

@@ -33,7 +33,7 @@ val eprintf : ('r, unit, string, unit) format4 -> 'r
       end
     ]}
 *)
-module Make (M : sig end) : sig
+module Make () : sig
   (* Whether the invariants are called on each invocation *)
   val check_invariant : bool ref
 

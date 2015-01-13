@@ -3,7 +3,7 @@ open Sexplib.Conv
 
 module Debug (Core_queue : module type of Core_queue) = struct
 
-  module Debug = Debug.Make (struct end)
+  module Debug = Debug.Make ()
 
   include Debug
 

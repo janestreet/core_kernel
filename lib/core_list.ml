@@ -625,6 +625,23 @@ let rec last list = match list with
   | [x] -> Some x
   | _ :: tl -> last tl
   | [] -> None
+;;
+
+let rec is_prefix list ~prefix ~equal =
+  match prefix with
+  | [] -> true
+  | hd::tl ->
+    match list with
+    | [] -> false
+    | hd'::tl' -> equal hd hd' && is_prefix tl' ~prefix:tl ~equal
+;;
+
+TEST = is_prefix []  ~prefix:[]  ~equal:(=)
+TEST = is_prefix [1] ~prefix:[]  ~equal:(=)
+TEST = is_prefix [1] ~prefix:[1] ~equal:(=)
+TEST = not (is_prefix [1] ~prefix:[1;2] ~equal:(=))
+TEST = not (is_prefix [1;3] ~prefix:[1;2] ~equal:(=))
+TEST = is_prefix [1;2;3] ~prefix:[1;2] ~equal:(=)
 
 let find_consecutive_duplicate t ~equal =
   match t with

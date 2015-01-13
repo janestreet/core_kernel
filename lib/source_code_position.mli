@@ -3,7 +3,15 @@
 
 open Sexplib
 
-type t = Lexing.position with bin_io, sexp
+type t
+  = Lexing.position
+  (** See INRIA's OCaml documentation for a description of these fields. *)
+  = { pos_fname : string
+    ; pos_lnum  : int
+    ; pos_bol   : int
+    ; pos_cnum  : int
+    }
+  with bin_io, sexp
 
 type t_hum = t with bin_io, compare, sexp_of
 

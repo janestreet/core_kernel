@@ -246,21 +246,6 @@ val allocated_bytes : unit -> float
    potentially collect [a] too soon. *)
 val keep_alive : _ -> unit
 
-type alarm
-(** An alarm is a piece of data that calls a user function at the end of
-   each major GC cycle.  The following functions are provided to create
-   and delete alarms. *)
-
-val create_alarm : (unit -> unit) -> alarm
-(** [create_alarm f] will arrange for [f] to be called at the end of each
-   major GC cycle, starting with the current cycle or the next one.
-   A value of type [alarm] is returned that you can
-   use to call [delete_alarm]. *)
-
-val delete_alarm : alarm -> unit
-(** [delete_alarm a] will stop the calls to the function associated
-   to [a].  Calling [delete_alarm a] again has no effect. *)
-
 (** Adjust the specified GC parameters. *)
 val tune
   :  ?logger:(string -> unit)
@@ -348,12 +333,14 @@ module Expert : sig
       value reachable again.  It can also loop forever (in this case, the other
       finalisation functions will be called during the execution of f).  It can call
       [add_finalizer] on [v] or other values to register other functions or even itself.
-      It can raise an exception; in this case the exception will interrupt whatever the
-      program was doing when the function was called.  This is very hard to think about,
-      so one should take care to make [f] not raise.
+
+      All finalizers are called with [Exn.handle_uncaught_and_exit], to prevent the
+      finalizer from raising, because raising from a finalizer could raise to any
+      allocation or GC point in any thread, which would be impossible to reason about.
 
       [add_finalizer_exn b f] is like [add_finalizer], but will raise if [b] is not a heap
-      block. *)
+      block.
+  *)
   val add_finalizer     : 'a Heap_block.t -> ('a Heap_block.t -> unit) -> unit
   val add_finalizer_exn : 'a -> ('a -> unit) -> unit
 
@@ -370,4 +357,22 @@ module Expert : sig
       [finalizer_is_running := false], which allows another finalizer to start whether
       or not the current finalizer finishes. *)
   val finalize_release : unit -> unit
+
+  (** A GC alarm calls a user function at the end of each major GC cycle. *)
+  module Alarm : sig
+
+    type t with sexp_of
+
+    (** [create f] arranges for [f] to be called at the end of each major GC cycle,
+        starting with the current cycle or the next one.  [f] can be called in any thread,
+        and so introduces all the complexity of threading.  [f] is called with
+        [Exn.handle_uncaught_and_exit], to prevent it from raising, because raising could
+        raise to any allocation or GC point in any thread, which would be impossible to
+        reason about. *)
+    val create : (unit -> unit) -> t
+
+    (** [delete t] will stop the calls to the function associated to [t].  Calling [delete
+        t] again has no effect. *)
+    val delete : t -> unit
+  end
 end

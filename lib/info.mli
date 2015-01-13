@@ -30,7 +30,10 @@
 
 open Sexplib
 
-type t with bin_io, sexp
+(** Serialization and comparison force the lazy message. *)
+type t with bin_io, compare, sexp
+
+include Invariant_intf.S with type t := t
 
 (** [to_string_hum] forces the lazy message, which might be an expensive operation.
 
@@ -83,3 +86,7 @@ val of_exn : ?backtrace:[ `Get | `This of string ] -> exn -> t
 val to_exn : t -> exn
 
 val pp : Format.formatter -> t -> unit
+
+module Stable : sig
+  module V1 : Stable_module_types.S0 with type t = t
+end

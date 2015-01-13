@@ -25,6 +25,8 @@
     to help debug incorrect pointer usage.
 *)
 
+module Int63 = Core_int63
+
 (** [S] is the module type for a pool. *)
 module type S = sig
   module Slots : Tuple_type.Slots
@@ -44,8 +46,10 @@ module type S = sig
     val phys_equal   : 'a t -> 'a t -> bool
 
     module Id : sig
-      (** Pointer ids are serializable, but have no other operations. *)
       type t with bin_io, sexp
+
+      val to_int63 : t -> Int63.t
+      val of_int63 : Int63.t -> t
     end
   end
 
@@ -69,14 +73,8 @@ module type S = sig
   val id_of_pointer : 'slots t -> 'slots Pointer.t -> Pointer.Id.t
 
   (** [pointer_of_id_exn t id] returns the pointer corresponding to [id].  It fails if the
-      tuple corresponding to [id] was already [free]d.
-
-      [pointer_of_id_exn_is_supported] says whether the implementation supports
-      [pointer_of_id_exn]; if not, it will always raise.  We can not use the usual idiom
-      of making [pointer_of_id_exn] be an [Or_error.t] due to problems with the value
-      restriction. *)
+      tuple corresponding to [id] was already [free]d. *)
   val pointer_of_id_exn : 'slots t -> Pointer.Id.t -> 'slots Pointer.t
-  val pointer_of_id_exn_is_supported : bool
 
   (** [create slots ~capacity ~dummy] creates an empty pool that can hold up to [capacity]
       N-tuples.  The slots of [dummy] are stored in free tuples.  [create] raises if
@@ -280,7 +278,7 @@ module type Pool = sig
       One can compose [Debug] and [Error_check], e.g:
 
       {[
-        module M = Debug (Error_check (Obj_array))
+        module M = Debug (Error_check (Pool))
       ]}
   *)
   module Error_check (Pool : S) : S

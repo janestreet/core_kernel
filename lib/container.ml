@@ -337,49 +337,49 @@ module type S1_phantom_permissions = sig
 
   (** Checks whether the provided element is there, using polymorphic compare if [equal]
       is not provided  *)
-  val mem : ?equal:('a -> 'a -> bool) -> ('a, [> read_perm]) t -> 'a -> bool
+  val mem : ?equal:('a -> 'a -> bool) -> ('a, [> read ]) t -> 'a -> bool
 
-  val length   : (_, [> read_perm]) t -> int
-  val is_empty : (_, [> read_perm]) t -> bool
-  val iter     : ('a, [> read_perm]) t -> f:('a -> unit) -> unit
+  val length   : (_, [> read ]) t -> int
+  val is_empty : (_, [> read ]) t -> bool
+  val iter     : ('a, [> read ]) t -> f:('a -> unit) -> unit
 
   (** [fold t ~init ~f] returns [f (... f (f (f init e1) e2) e3 ...) en], where [e1..en]
       are the elements of [t]  *)
-  val fold     : ('a, [> read_perm]) t -> init:'accum
+  val fold     : ('a, [> read ]) t -> init:'accum
     -> f:('accum -> 'a -> 'accum) -> 'accum
 
   (** Returns [true] if and only if there exists an element for which the provided
       function evaluates to [true].  This is a short-circuiting operation. *)
-  val exists   : ('a, [> read_perm]) t -> f:('a -> bool) -> bool
+  val exists   : ('a, [> read ]) t -> f:('a -> bool) -> bool
 
   (** Returns [true] if and only if the provided function evaluates to [true] for all
       elements.  This is a short-circuiting operation. *)
-  val for_all  : ('a, [> read_perm]) t -> f:('a -> bool) -> bool
+  val for_all  : ('a, [> read ]) t -> f:('a -> bool) -> bool
 
   (** Returns the number of elements for which the provided function evaluates to true. *)
-  val count    : ('a, [> read_perm]) t -> f:('a -> bool) -> int
+  val count    : ('a, [> read ]) t -> f:('a -> bool) -> int
 
   (** Returns the sum of [f i] for i in the container *)
   val sum
     : (module Commutative_group.S with type t = 'sum)
-    -> ('a, [> read_perm]) t -> f:('a -> 'sum) -> 'sum
+    -> ('a, [> read ]) t -> f:('a -> 'sum) -> 'sum
 
   (** Returns as an [option] the first element for which [f] evaluates to true. *)
-  val find     : ('a, [> read_perm]) t -> f:('a -> bool) -> 'a option
+  val find     : ('a, [> read ]) t -> f:('a -> bool) -> 'a option
 
   (** Returns the first evaluation of [f] that returns [Some], and returns [None] if there
       is no such element.  *)
-  val find_map : ('a, [> read_perm]) t -> f:('a -> 'b option) -> 'b option
+  val find_map : ('a, [> read ]) t -> f:('a -> 'b option) -> 'b option
 
-  val to_list  : ('a, [> read_perm]) t -> 'a list
-  val to_array : ('a, [> read_perm]) t -> 'a array
+  val to_list  : ('a, [> read ]) t -> 'a list
+  val to_array : ('a, [> read ]) t -> 'a array
 
   (** Returns a min (resp max) element from the collection using the provided [cmp]
       function. In case of a tie, the first element encountered while traversing the
       collection is returned. The implementation uses [fold] so it has the same complexity
       as [fold]. Returns [None] iff the collection is empty. *)
-  val min_elt : ('a, [> read_perm]) t -> cmp:('a -> 'a -> int) -> 'a option
-  val max_elt : ('a, [> read_perm]) t -> cmp:('a -> 'a -> int) -> 'a option
+  val min_elt : ('a, [> read ]) t -> cmp:('a -> 'a -> int) -> 'a option
+  val max_elt : ('a, [> read ]) t -> cmp:('a -> 'a -> int) -> 'a option
 end
 
 module type Generic = sig

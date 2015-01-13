@@ -7,12 +7,17 @@
 
 static int64_t int_pow(int64_t base, int64_t exponent) {
   int64_t ret = 1;
+  int64_t mul[4];
+  mul[0] = 1;
+  mul[1] = base;
+  mul[3] = 1;
 
   while(exponent != 0) {
-    if((exponent & 1) != 0)
-      ret *= base;
-    base *= base;
-    exponent >>= 1;
+    mul[1] *= mul[3];
+    mul[2] = mul[1] * mul[1];
+    mul[3] = mul[2] * mul[1];
+    ret *= mul[exponent & 3];
+    exponent >>= 2;
   }
 
   return ret;

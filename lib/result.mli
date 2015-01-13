@@ -65,10 +65,10 @@ val ok_or_failwith : ('ok, string) t -> 'ok
 val ok_unit : (unit, _) t
 
 module Export : sig
-  type ('ok, 'err) _result =
-    ('ok, 'err) t =
-  | Ok of 'ok
-  | Error of 'err
+  type ('ok, 'err) _result
+    = ('ok, 'err) t
+    = Ok of 'ok
+    | Error of 'err
 
   val is_ok    : (_, _) t -> bool
   val is_error : (_, _) t -> bool
@@ -76,10 +76,12 @@ end
 
 module Stable : sig
   module V1 : sig
-    type nonrec ('ok, 'err) t = ('ok, 'err) t =
-      | Ok of 'ok
+    type nonrec ('ok, 'err) t
+      = ('ok, 'err) t
+      = Ok of 'ok
       | Error of 'err
-    with sexp, bin_io, compare
+
+    include Stable_module_types.S2 with type ('ok, 'err) t := ('ok, 'err) t
   end
 
   (* We export the unit test arg rather than instantiate the functor inside result.ml in

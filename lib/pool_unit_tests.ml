@@ -3,7 +3,7 @@ open Int.Replace_polymorphic_compare
 
 let _make_sure_pool_pointer_is_an_int x = (x : _ Pool.Pointer.t :> int)
 
-module Test (Pool : Pool.S) = struct
+module Make (Pool : Pool_intf.S) = struct
 
   module Pointer = Pool.Pointer
 
@@ -43,12 +43,9 @@ module Test (Pool : Pool.S) = struct
 
     val equal : 'a t -> 'a t -> bool
 
-    module Id : sig
-      type t
-    end
+    module Id : module type of Pointer.Id
 
     val id_of_pointer : 'a Pool.t -> 'a t -> Id.t
-    val pointer_of_id_exn_is_supported : bool
     val pointer_of_id_exn : 'a Pool.t -> Id.t -> 'a t
   end = struct
 
@@ -69,12 +66,9 @@ module Test (Pool : Pool.S) = struct
 
     let get t p = if is_nil p then None else Some (Pool.get_tuple t p)
 
-    module Id = struct
-      type t = Pointer.Id.t
-    end
+    module Id = Pointer.Id
 
     let id_of_pointer = Pool.id_of_pointer
-    let pointer_of_id_exn_is_supported = Pool.pointer_of_id_exn_is_supported
     let pointer_of_id_exn = Pool.pointer_of_id_exn
 
     module Pool = struct
@@ -233,33 +227,47 @@ module Test (Pool : Pool.S) = struct
     with exn -> failwiths "failure" (exn, p) <:sexp_of< exn * _ Pool.t >>
   ;;
 
-  (* [id_of_pointer], [pointer_of_id_exn] *)
+  (* [id_of_pointer], [pointer_of_id_exn], [Id.to_int63], [Id.of_int63] *)
   TEST_UNIT =
-    if pointer_of_id_exn_is_supported then begin
-      let capacity = 10 in
-      let p = Pool.create ~capacity ~dummy:0 in
-      let does_round_trip l = equal l (pointer_of_id_exn p (id_of_pointer p l)) in
-      assert (does_round_trip (nil ()));
-      let alloc_all () = Array.init capacity ~f:(fun _ -> create p 13 (nil ())) in
-      let ls = alloc_all () in
-      assert (Array.for_all ls ~f:does_round_trip);
-      Array.iter ls ~f:(fun l -> free p l);
-      let all_ls_fail () =
-        Array.for_all ls ~f:(fun l ->
-          Exn.does_raise (fun () -> pointer_of_id_exn p (id_of_pointer p l)))
-      in
-      assert (all_ls_fail ());
-      let _ls' = alloc_all () in
-      assert (all_ls_fail ());
-    end;
+    let capacity = 10 in
+    let p = Pool.create ~capacity ~dummy:0 in
+    let id_of_pointer_via_int63 l =
+      Id.of_int63 (Id.to_int63 (id_of_pointer p l))
+    in
+    let does_round_trip l =
+      let id = id_of_pointer_via_int63 l in
+      equal l (pointer_of_id_exn p id)
+    in
+    assert (does_round_trip (nil ()));
+    let alloc_all () = Array.init capacity ~f:(fun _ -> create p 13 (nil ())) in
+    let ls = alloc_all () in
+    assert (Array.for_all ls ~f:does_round_trip);
+    Array.iter ls ~f:(fun l -> free p l);
+    let all_ls_fail () =
+      Array.for_all ls ~f:(fun l ->
+        Exn.does_raise (fun () ->
+          pointer_of_id_exn p (id_of_pointer_via_int63 l)))
+    in
+    assert (all_ls_fail ());
+    let _ls' = alloc_all () in
+    assert (all_ls_fail ())
   ;;
 
 end
 
-TEST_MODULE = Test (Pool)
+TEST_MODULE = Make (Pool)
 
 TEST_MODULE =
-  Test (struct
+  Make (struct
     include Pool.Unsafe
-    let create slots ~capacity ~dummy:_ = create slots ~capacity
+
+    let create (type tuple) (slots : (tuple, _) Slots.t) ~capacity ~dummy:(_ : tuple) =
+      create slots ~capacity
   end)
+
+TEST_MODULE "Debug without messages" = Make (struct
+  include Pool.Debug (Pool)
+  let () = show_messages := false       (* or it prints too much *)
+end)
+
+TEST_MODULE = Make (Pool.Error_check (Pool))

@@ -5,7 +5,7 @@ module type Flat_array = module type of Flat_array
 
 module Debug (Flat_array : Flat_array) : Flat_array = struct
 
-  include Debug.Make (struct end)
+  include Debug.Make ()
 
   open Flat_array
 

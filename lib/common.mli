@@ -10,20 +10,8 @@ exception Bug of string
     function, the second exception the one raised by the finalizer. *)
 exception Finally of exn * exn
 
-(** Types for use as markers in phantom types.  One should not expose functions for
-    converting between read_only/immutable/read_write because the private types expose the
-    subtyping. Users would say "(db :> read_only Db.t)" to cast.  The difference between
-    read-only and immutable is that someone else can change a read-only object, while
-    immutable never changes.
-
-    These types are deprecated in favor of the types included from [Perms.Export] module
-    below.
-*)
-type read_only                      with sexp, bin_io, compare
-type immutable  = private read_only with sexp, bin_io, compare
-type read_write = private read_only with sexp, bin_io, compare
-
-(** Types for use as markers in phantom types.  See the [Perms] module for more details. *)
+(** Types for expressing read-write permissions in phantom types.  See the [Perms] module
+    for details. *)
 include module type of Perms.Export
 
 (** [never_returns] should be used as the return type of functions that don't return and
@@ -109,11 +97,12 @@ val error : string -> 'a -> ('a -> Sexp.t) -> _ Or_error.t
    [return] as a record field. We are clobbering the namespace of record fields but that
    is much more acceptable.
 *)
-type 'a return = private {
+type -'a return = 'a With_return.return = private {
   return : 'b. 'a -> 'b;
 }
 
-val with_return : ('a return -> 'a) -> 'a
+val with_return        : ('a return -> 'a)   -> 'a
+val with_return_option : ('a return -> unit) -> 'a option
 
 (** We disable [==] and [!=] and replace them with the longer and more mnemonic
     [phys_equal] because they too easily lead to mistakes (for example they don't even

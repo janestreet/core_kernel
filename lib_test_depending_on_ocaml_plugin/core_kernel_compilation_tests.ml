@@ -52,7 +52,7 @@ let r' = (r : (int, foo) Ref.Permissioned.t)"
   { note = "Can't set a ref if some version has been made immutable"
   ; setup = "
 let r = Ref.Permissioned.create 0
-let r_immutable = (r : (int, immutable_perms) Ref.Permissioned.t)
+let r_immutable = (r : (int, immutable) Ref.Permissioned.t)
 "
   ; shouldn't_compile = "
 let () = Ref.Permissioned.set r 1
@@ -64,9 +64,59 @@ let r = Ref.Permissioned.create 0
 let () = Ref.Permissioned.set r 1
 "
   ; shouldn't_compile = "
-let r_immutable = (r : (int, immutable_perms) Ref.Permissioned.t)
+let r_immutable = (r : (int, immutable) Ref.Permissioned.t)
 "
-  }
+  };
+
+  (* The following tests are not tests of things that we don't want to compile.  They
+     document reasons why we didn't use constraints in the usage of the new permission
+     types, and if they ever start compiling, we might want to revisit them.
+  *)
+  { note = "Constraints don't work with included signatures, part 1"
+  ; setup = "
+module type Container = sig
+  type ('a, -'perm) t
+  val iter : ('a, [> read]) t -> f:('a -> unit) -> unit
+end
+
+type ('a, -'perm) t constraint 'perm = [< _ perms]
+"
+  ; shouldn't_compile = "
+include Container with type ('a, 'perm) t := ('a, 'perm) t
+"
+  };
+
+  { note = "Constraints don't work with included signatures, part 2"
+  ; setup = "
+module type Container = sig
+  type ('a, -'perm) t constraint 'perm = [< _ perms]
+  val iter : ('a, [> read]) t -> f:('a -> unit) -> unit
+end
+
+type ('a, -'perm) t constraint 'perm = [< _ perms]
+"
+  ; shouldn't_compile = "
+include Container with type ('a, 'perm) t := ('a, 'perm) t
+"
+  };
+
+  { note = "Constraints don't work with type aliases, part 1"
+  ; setup = "
+type -'perm t constraint 'perm = [< _ perms]
+"
+  ; shouldn't_compile = "
+type 'perm alias = 'perm t
+"
+  };
+
+  { note = "Constraints don't work with type aliases, part 2"
+  ; setup = "
+type -'perm t constraint 'perm = [< _ perms]
+"
+  ; shouldn't_compile = "
+type 'perm alias = 'perm t constraint 'perm = [< _ perms]
+"
+  };
 ]
 
 

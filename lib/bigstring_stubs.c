@@ -46,6 +46,7 @@
 #include <caml/signals.h>
 #include <caml/bigarray.h>
 #include "core_params.h"
+#include "core_bigstring.h"
 
 static inline char * get_bstr(value v_bstr, value v_pos)
 {
@@ -57,7 +58,7 @@ bigstring_alloc (value v_gc_max_unused, value v_size)
 {
   intnat size = Long_val (v_size);
   void * data = NULL;
-  int flags = CAML_BA_CHAR | CAML_BA_C_LAYOUT | CAML_BA_MANAGED;
+  int flags = CORE_BIGSTRING_FLAGS | CAML_BA_MANAGED;
   intnat gc_max_unused = Long_val(v_gc_max_unused);
   intnat dims[1];
   dims[0] = size;
@@ -148,14 +149,14 @@ static void check_bigstring_proxy(struct caml_ba_array *b)
 
 extern void caml_ba_unmap_file(void *addr, uintnat len);
 
-CAMLprim value bigstring_destroy_stub(value v_bstr)
+void core_bigstring_destroy(struct caml_ba_array *b, int flags)
 {
-  struct caml_ba_array *b = Caml_ba_array_val(v_bstr);
   int i;
   switch (b->flags & CAML_BA_MANAGED_MASK) {
     case CAML_BA_EXTERNAL :
-      caml_failwith(
-        "bigstring_destroy: bigstring is external or already deallocated");
+      if ((flags & CORE_BIGSTRING_DESTROY_ALLOW_EXTERNAL)
+           != CORE_BIGSTRING_DESTROY_ALLOW_EXTERNAL)
+        caml_failwith("bigstring_destroy: bigstring is external or already deallocated");
       break;
     case CAML_BA_MANAGED :
       check_bigstring_proxy(b);
@@ -163,11 +164,18 @@ CAMLprim value bigstring_destroy_stub(value v_bstr)
       break;
     case CAML_BA_MAPPED_FILE :
       check_bigstring_proxy(b);
-      caml_ba_unmap_file(b->data, caml_ba_byte_size(b));
+      if ((flags & CORE_BIGSTRING_DESTROY_DO_NOT_UNMAP)
+           != CORE_BIGSTRING_DESTROY_DO_NOT_UNMAP)
+        caml_ba_unmap_file(b->data, caml_ba_byte_size(b));
       break;
   }
   b->data = NULL;
   b->flags = CAML_BA_EXTERNAL;
   for (i = 0; i < b->num_dims; ++i) b->dim[i] = 0;
+}
+
+CAMLprim value bigstring_destroy_stub(value v_bstr)
+{
+  core_bigstring_destroy(Caml_ba_array_val(v_bstr), 0);
   return Val_unit;
 }

@@ -52,7 +52,7 @@ module Unpack_one = struct
         if header_length > len then
           not_enough_data
         else begin
-          match read Bin_prot.Read.bin_read_int_64bit buf ~pos ~len:header_length with
+          match read Bin_prot.Utils.bin_read_size_header buf ~pos ~len:header_length with
           | `Invalid_data _ as x -> x
           | `Ok element_length ->
             if element_length < 0 then
@@ -423,7 +423,7 @@ TEST_MODULE "unpack-buffer" = struct
       let pack ts =
         let size =
           List.fold ts ~init:0 ~f:(fun acc t ->
-            acc + bin_size_t t + Bigstring.bin_prot_size_header_length)
+            acc + bin_size_t t + Bin_prot.Utils.size_header_length)
         in
         let buffer = Bigstring.create size in
         let final_pos =

@@ -17,14 +17,14 @@ let rec race_free_create_loop cell make =
   if phys_equal !cell x then begin cell := new_x; x end
   else race_free_create_loop cell make
 
-module Int (Z : Unit) = struct
+module Int () = struct
   include Core_int
 
   let current = ref zero
   let create () = race_free_create_loop current succ
 end
 
-module Int63 (Z : Unit) = struct
+module Int63 () = struct
   include Core_int63
 
   let current = ref zero
