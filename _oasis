@@ -229,6 +229,8 @@ Library core_kernel
                       bin_prot,
                       bin_prot.syntax,
                       comparelib.syntax,
+                      custom_printf,
+                      custom_printf.syntax,
                       enumerate,
                       enumerate.syntax,
                       fieldslib,
@@ -250,6 +252,7 @@ Library core_kernel
                       variantslib,
                       variantslib.syntax
   XMETARequires:      bin_prot,
+                      custom_printf,
                       variantslib,
                       sexplib,
                       enumerate,

@@ -312,11 +312,11 @@ module type S = sig
         create_ieee_exn ~negative:false ~exponent ~mantissa =
            2 ** (exponent - 1023) * (1 + (2 ** -52) * mantissa)
   *)
-  val create_ieee     : negative:bool -> exponent:int -> mantissa:int -> t Or_error.t
-  val create_ieee_exn : negative:bool -> exponent:int -> mantissa:int -> t
+  val create_ieee     : negative:bool -> exponent:int -> mantissa:Core_int63.t -> t Or_error.t
+  val create_ieee_exn : negative:bool -> exponent:int -> mantissa:Core_int63.t -> t
   val ieee_negative : t -> bool
   val ieee_exponent : t -> int
-  val ieee_mantissa : t -> int
+  val ieee_mantissa : t -> Core_int63.t
 
   (** S-expressions contain at most 8 significant digits. *)
   module Terse : sig

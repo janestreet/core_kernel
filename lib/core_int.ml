@@ -26,8 +26,12 @@ include T
 
 let num_bits = Word_size.num_bits Word_size.word_size - 1
 
-let of_float = Float.to_int
-let to_float = Float.of_int
+let to_float = Pervasives.float_of_int
+
+let of_float f =
+  match Pervasives.classify_float f with
+  | FP_normal | FP_subnormal | FP_zero -> Pervasives.int_of_float f
+  | FP_infinite | FP_nan -> invalid_arg "Int.of_float on nan or inf"
 
 module Replace_polymorphic_compare = struct
   let min (x : t) y = if x < y then x else y
