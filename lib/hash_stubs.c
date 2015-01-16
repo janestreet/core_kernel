@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <caml/mlvalues.h>
 #include <caml/hash.h>
+#include <stdint.h>
 
 /* Final mix and return from the hash.c implementation from INRIA */
 #define FINAL_MIX_AND_RETURN(h) \

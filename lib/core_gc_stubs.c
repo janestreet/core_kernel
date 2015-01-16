@@ -1,4 +1,6 @@
 #include <caml/memory.h>
+#define CAML_NAME_SPACE
+#include <caml/compatibility.h>
 
 extern double caml_stat_minor_words;
 extern double caml_stat_promoted_words;
