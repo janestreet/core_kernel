@@ -28,8 +28,16 @@ end
 ELSE
 module Int63 = struct
   type t = int64 with bin_io, sexp
-  let of_int = Int_conversions.int_to_int64
-  let to_int_exn = Int_conversions.int64_to_int_exn
+  let of_int = Int64.of_int
+  let to_int_exn =
+    let max_int_as_int64 = Int64.of_int Pervasives.max_int in
+    let min_int_as_int64 = Int64.of_int Pervasives.min_int in
+    fun t ->
+    if Int64.compare t max_int_as_int64 > 0 || Int64.compare t min_int_as_int64 < 0
+    then
+      failwith ("conversion from int64 to int failed: " ^ Int64.to_string t ^ " is out of range")
+    else
+      Int64.to_int t
 end
 ENDIF
 
