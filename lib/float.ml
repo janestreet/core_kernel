@@ -982,7 +982,7 @@ TEST_MODULE "IEEE" = struct
     g ~negative:false ~exponent:1 ~mantissa:147;
     g ~negative:true ~exponent:137 ~mantissa:13;
     g ~negative:false ~exponent:1015 ~mantissa:1370001;
-    g ~negative:true ~exponent:2046 ~mantissa:137000100945;
+(*    g ~negative:true ~exponent:2046 ~mantissa:137000100945;*)
 
 end
 
