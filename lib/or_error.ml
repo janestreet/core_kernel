@@ -9,7 +9,7 @@ module Stable = struct
   end
 end
 
-include Stable.V1
+type 'a t = ('a, Error.t) Result.t with bin_io, compare, sexp
 
 let invariant invariant_a t =
   match t with
