@@ -9,6 +9,9 @@ Core is to start your file with:
 
    open Core_kernel.Std
 
-In the case of bugs, feature requests and similar, you can contact us
-at <opensource@janestreet.com>.  You can find all of Jane Street's
-open-source libraries on GitHub <https://github.com/janestreet>.
+Please report bugs and feature requests on
+[GitHub](https://github.com/janestreet/core_kernel). For everything
+else you can contact us at <ocaml-core@googlegroups.com>.
+
+You can find all of Jane Street's open-source libraries on
+[GitHub](https://github.com/janestreet).
