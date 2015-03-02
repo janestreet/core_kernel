@@ -1,3 +1,17 @@
+## 112.24.00
+
+- Added `Time_ns` module.
+
+  A fragment of `Core.Std.Time_ns` is now in `Core_kernel.Std.Time_ns` such that
+  `Async_kernel` can use `Time_ns` and only depend on `Core_kernel`.
+
+- Renamed `Dequeue` as `Deque`.
+  `Dequeue` remains for backward compatibility, but should not be used anymore.
+  Use `Deque` instead.
+
+- Added `Fdeque` module, a functional version `Deque`.
+  Deprecate deque-like functions in `Fqueue`.
+
 ## 112.17.00
 
 - Added `List.is_prefix`.

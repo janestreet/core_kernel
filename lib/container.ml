@@ -332,7 +332,7 @@ module type S1_phantom = sig
   include S1_phantom_invariant with type ('a, 'phantom) t := ('a, 'phantom) t
 end
 
-module type S1_phantom_permissions = sig
+module type S1_permissions = sig
   type ('a, -'permissions) t
 
   (** Checks whether the provided element is there, using polymorphic compare if [equal]

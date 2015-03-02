@@ -108,14 +108,14 @@ include Conv.Make_hex(struct
   let to_string i = Printf.sprintf "%Lx" i
   let of_string s = Scanf.sscanf s "%Lx" Fn.id
 
-  let module_name = "Core.Std.Int64.Hex"
+  let module_name = "Core_kernel.Std.Int64.Hex"
 
 end)
 
 include Pretty_printer.Register (struct
   type nonrec t = t
   let to_string = to_string
-  let module_name = "Core.Std.Int64"
+  let module_name = "Core_kernel.Std.Int64"
 end)
 
 module Pre_O = struct

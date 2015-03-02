@@ -221,11 +221,11 @@ module Make (Key : Key) : S with module Key = Key = struct
     | Some kv -> Hashtbl.remove t.table kv.key; Some (kv.key, kv.value)
   ;;
 
-  exception Dequeue_with_key_empty with sexp
+  exception Deque_with_key_empty with sexp
 
   let dequeue_with_key_exn t =
     match dequeue_with_key t with
-    | None -> raise Dequeue_with_key_empty
+    | None -> raise Deque_with_key_empty
     | Some (k, v) -> (k, v)
   ;;
 
@@ -241,11 +241,11 @@ module Make (Key : Key) : S with module Key = Key = struct
     | Some kv -> Some kv.value
   ;;
 
-  exception Dequeue_empty with sexp
+  exception Deque_empty with sexp
 
   let dequeue_exn t =
     match dequeue t with
-    | None -> raise Dequeue_empty
+    | None -> raise Deque_empty
     | Some v -> v
   ;;
 

@@ -67,6 +67,7 @@ val set     : ('a, 'b) t -> key:'a -> data:'b -> unit
 val add     : ('a, 'b) t -> key:'a -> data:'b -> [ `Ok | `Duplicate of 'b ]
 val add_exn : ('a, 'b) t -> key:'a -> data:'b -> unit
 val to_alist : ('key, 'data) t -> ('key * 'data) list
+val clear : (_, _) t -> unit
 
 module With_key (Key : sig
   type t with bin_io, sexp

@@ -919,6 +919,57 @@ TEST =
           compare Pervasives.compare (of_list l1) (of_list l2) = expected_res)
        compare_tests)
 
+let interleave (Sequence (s1, f1)) =
+  let next (todo_stack, done_stack, s1) =
+    match todo_stack with
+    | Sequence (s2, f2) :: todo_stack ->
+      begin
+        match f2 s2 with
+        | Yield (x, s2) -> Yield (x, (todo_stack, Sequence (s2, f2) :: done_stack, s1))
+        | Skip s2       -> Skip      (todo_stack, Sequence (s2, f2) :: done_stack, s1)
+        | Done          -> Skip      (todo_stack,                      done_stack, s1)
+      end
+    | [] ->
+      begin
+        match f1 s1, done_stack with
+        | Yield (t, s1), _    -> Skip (List.rev (t :: done_stack), [], s1)
+        | Skip      s1 , _    -> Skip (List.rev       done_stack , [], s1)
+        | Done         , _::_ -> Skip (List.rev       done_stack , [], s1)
+        | Done         , []   -> Done
+      end
+  in
+  let state = [], [], s1 in
+  Sequence (state, next)
+
+TEST_UNIT =
+  let seq_of_seqs =
+    Sequence (0, fun i -> Yield (Sequence (i, fun j -> Yield ((i,j), j + 1)), i + 1))
+  in
+  <:test_result< (int * int) list >>
+    (to_list (take (interleave seq_of_seqs) 10))
+    ~expect:[ 0,0
+            ; 0,1 ; 1,1
+            ; 0,2 ; 1,2 ; 2,2
+            ; 0,3 ; 1,3 ; 2,3 ; 3,3
+            ]
+
+let interleaved_cartesian_product s1 s2 =
+  map s1 ~f:(fun x1 ->
+    map s2 ~f:(fun x2 ->
+      (x1, x2)))
+  |> interleave
+
+TEST_UNIT =
+  let evens = Sequence (0, fun i -> Yield (i, i + 2)) in
+  let vowels = cycle (of_list ['a';'e';'i';'o';'u']) in
+  <:test_result< (int * char) list >>
+    (to_list (take (interleaved_cartesian_product evens vowels) 10))
+    ~expect:[ 0,'a'
+            ; 0,'e' ; 2,'a'
+            ; 0,'i' ; 2,'e' ; 4,'a'
+            ; 0,'o' ; 2,'i' ; 4,'e' ; 6,'a'
+            ]
+
 module Generator = struct
 
   type 'elt steps = Wrap of ('elt, unit -> 'elt steps) Step.t

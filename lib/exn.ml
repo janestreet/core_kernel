@@ -71,7 +71,7 @@ include Pretty_printer.Register_pp (struct
     | Some sexp -> Sexp.pp_hum ppf sexp
     | None -> Format.pp_print_string ppf (Printexc.to_string t)
   ;;
-  let module_name = "Core.Std.Exn"
+  let module_name = "Core_kernel.Std.Exn"
 end)
 
 let backtrace = Printexc.get_backtrace

@@ -46,6 +46,16 @@ module type S = sig
   val subo        : (t, t) subo
 end
 
+module type S_permissions = sig
+  open Perms.Export
+  type -'perms t
+  val blit        : ([> read] t, [>   write] t) blit
+  val blito       : ([> read] t, [>   write] t) blito
+  val unsafe_blit : ([> read] t, [>   write] t) blit
+  val sub         : ([> read] t, [< _ perms] t) sub
+  val subo        : ([> read] t, [< _ perms] t) subo
+end
+
 module type S1 = sig
   type 'a t
   val blit        : ('a t, 'a t) blit
@@ -53,6 +63,16 @@ module type S1 = sig
   val unsafe_blit : ('a t, 'a t) blit
   val sub         : ('a t, 'a t) sub
   val subo        : ('a t, 'a t) subo
+end
+
+module type S1_permissions = sig
+  open Perms.Export
+  type ('a, -'perms) t
+  val blit        : (('a, [> read]) t, ('a, [>   write]) t) blit
+  val blito       : (('a, [> read]) t, ('a, [>   write]) t) blito
+  val unsafe_blit : (('a, [> read]) t, ('a, [>   write]) t) blit
+  val sub         : (('a, [> read]) t, ('a, [< _ perms]) t) sub
+  val subo        : (('a, [> read]) t, ('a, [< _ perms]) t) subo
 end
 
 module type S_distinct = sig
@@ -94,9 +114,11 @@ module type Blit = sig
   type nonrec ('src, 'dst) sub   = ('src, 'dst) sub
   type nonrec ('src, 'dst) subo  = ('src, 'dst) subo
 
-  module type S          = S
-  module type S1         = S1
-  module type S_distinct = S_distinct
+  module type S              = S
+  module type S_permissions  = S_permissions
+  module type S1             = S1
+  module type S1_permissions = S1_permissions
+  module type S_distinct     = S_distinct
 
   (** There are various [Make*] functors that turn an [unsafe_blit] function into a [blit]
       function.  The functors differ in whether the sequence type is monomorphic or

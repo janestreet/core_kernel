@@ -16,11 +16,13 @@ val of_info : Info.t -> t
 
     [failwiths ?here s a f] = [Error.raise (Error.create ?here s a f)]
 
-    When compiling with pa_fail (the default at jane street) the [?here] argument is
-    automatically filled in with the value [_here_], and so cannot be passed manually.
+    When compiling with the [pa_fail] preprocessor, [failwiths string a sexp_of_a] is
+    replaced with [failwiths ?here:_here_ string a sexp_of_a] so that one does not need to
+    (and cannot) supply [_here_].  [pa_fail] does not insert [?here:_here_] into
+    [Error.failwiths string a sexp_of_a].
 
-    We say [?here:Lexing.position] rather than [?here:Source_code_position.t] to avoid a
-    circular dependency.
+    In this signature we write [?here:Lexing.position] rather than
+    [?here:Source_code_position.t] to avoid a circular dependency.
 
     [failwithp here] is like [failwiths ~here], except that you can provide a source
     position yourself (which is only interesting if you don't provide [_here_]).

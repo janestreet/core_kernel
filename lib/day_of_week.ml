@@ -102,6 +102,17 @@ let to_int t =
   | Sat -> 6
 ;;
 
+let iso_8601_weekday_number t =
+  match t with
+  | Mon -> 1
+  | Tue -> 2
+  | Wed -> 3
+  | Thu -> 4
+  | Fri -> 5
+  | Sat -> 6
+  | Sun -> 7
+;;
+
 let num_days_in_week = 7
 
 let shift t i = of_int_exn (Int.( % ) (to_int t + i) num_days_in_week)

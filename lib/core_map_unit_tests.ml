@@ -127,14 +127,14 @@ module Unit_tests
 
   (* relies on correctness of Map.to_alist *)
   let equal_maps ~caml_map map =
-    alist_equal (Map.to_alist map) (caml_map_to_alist caml_map)
+    Map.length map = Caml_map.cardinal caml_map
+    && alist_equal (Map.to_alist map) (caml_map_to_alist caml_map)
 
   let add     _ = assert false
   let remove  _ = assert false
   let find    _ = assert false
   let mem     _ = assert false
   let iter    _ = assert false
-  let length  _ = assert false
   let map     _ = assert false
   let mapi    _ = assert false
   let fold    _ = assert false
@@ -744,6 +744,77 @@ module Unit_tests
   TEST =
     let m = random_map Key.samples in
     Sequence.to_list (Map.to_sequence ~keys_in:(`Decreasing_order_less_than_or_equal_to (Key.of_int (-1))) m) = []
+
+  let length _ = assert false
+
+  (* Length has to be updated correctly by many operations, which should be tested here.
+     Some basic operations are already tested above. *)
+  TEST_MODULE "length" = struct
+    let sample_map = random_map Key.samples
+    let k1 = List.nth_exn (Map.keys sample_map) 0
+    let k2 = List.nth_exn (Map.keys sample_map) 1
+    let k3 = List.nth_exn (Map.keys sample_map) 2
+    let k4 = List.nth_exn (Map.keys sample_map) 3
+
+    TEST "change" =
+      let m = Map.add ~key:Key.sample ~data:1 (Map.empty ()) in
+      assert (Map.length m = 1);
+      let m = Map.change m Key.sample Fn.id in
+      let caml_map = Caml_map.add Key.sample 1 Caml_map.empty in
+      assert (equal_maps m ~caml_map);
+      let m = Map.change (Map.empty ()) Key.sample (Fn.const (Some 1)) in
+      assert (Map.length m = 1);
+      let m = Map.change m Key.sample (Fn.const (Some 1)) in
+      assert (Map.length m = 1);
+      let m = Map.change m Key.sample (Fn.const None) in
+      Map.length m = 0
+
+    TEST "filter" =
+      let m' = Map.filter sample_map ~f:(fun ~key:x ~data:_ -> x <> k1 && x <> k2) in
+      let m'' = Map.remove (Map.remove sample_map k1) k2 in
+      assert (Map.length m' = Map.length m'');
+      Map.length m' = Map.length sample_map - 2
+
+    TEST "of_alist_exn and of_alist_fold" =
+      let expected_length = List.length Key.samples in
+      let dup x = (x,x) in
+      let m = Map.of_alist_exn (List.map Key.samples ~f:dup) in
+      assert (Map.length m = List.length Key.samples);
+      let alist = List.map (Key.samples @ Key.samples) ~f:dup in
+      let m = Map.of_alist_fold alist ~init:Key.sample ~f:(fun x _ -> x) in
+      Map.length m = expected_length
+
+    TEST "merge" =
+      let m1 = Map.of_alist_exn [k1, 1] in
+      let m2 = Map.of_alist_exn [k2, 2] in
+      let m' =
+        Map.merge m1 m2 ~f:(fun ~key:_ -> function
+          | `Both _ -> assert false
+          | `Left x | `Right x -> Some x)
+      in
+      assert (Map.length m' = 2);
+      let m3 = Map.of_alist_exn [k1, 2] in
+      let m' =
+        Map.merge m1 m3 ~f:(fun ~key:_ -> function
+          | `Both (x,_) -> Some x
+          | `Left _ | `Right _ -> assert false)
+      in
+      assert (Map.length m' = 1);
+      let m' =
+        Map.merge m1 m3 ~f:(fun ~key:_ -> function
+          | `Both (_,_) -> None
+          | `Left _ | `Right _ -> assert false)
+      in
+      assert (Map.length m' = 0);
+      let m4 = Map.of_alist_exn [k1, 1; k2, 2; k3, 3] in
+      let m5 = Map.of_alist_exn [k3, 99; k4, 4] in
+      let m' =
+        Map.merge m4 m5 ~f:(fun ~key:_ -> function
+          | `Both (x,_) -> Some x
+          | `Left x | `Right x -> Some x)
+      in
+      Map.length m' = 4
+  end
 
   let fold_range_inclusive _ = assert false
   let range_to_alist       _ = assert false

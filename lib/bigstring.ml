@@ -275,6 +275,12 @@ TEST_MODULE = struct
     test String.bin_writer_t "foo" ~expect:"\004\000\000\000\000\000\000\000\003foo"
   TEST_UNIT =
     test Int.bin_writer_t    123   ~expect:"\001\000\000\000\000\000\000\000\123"
+  TEST_UNIT =
+    test
+      (Or_error.bin_writer_t Unit.bin_writer_t)
+      (Or_error.error_string "test")
+      ~expect:"\007\000\000\000\000\000\000\000\001\001\004test"
+  ;;
 end
 
 (* Memory mapping *)

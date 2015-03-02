@@ -24,7 +24,7 @@ type ('key, 'data) t_detailed =
     (* The number of entries in the table, not the length of the arrays below. *)
     mutable length : int;
     (* (key, data) is in the table
-       iff [entries_by_key.(key_to_index key) = { key; data }] *)
+       iff [entries_by_key.(key_to_int key) = { key; data }] *)
     entries_by_key : ('key, 'data) Entry.t option array;
     (* The first [length] elements of [defined_entries] hold the data in the table.
        This is an optimization for fold, to keep us from wasting iterations when
@@ -126,6 +126,17 @@ let iter_vals t ~f = iter t ~f:(fun ~key:_ ~data -> f data)
 let map_entries t ~f = fold t ~init:[] ~f:(fun ~key ~data ac -> f ~key ~data :: ac)
 
 let to_alist t = map_entries t ~f:(fun ~key ~data -> (key, data))
+
+let clear t =
+  for i = 0 to t.length - 1 do
+    match t.defined_entries.(i) with
+    | None -> assert false
+    | Some entry ->
+      t.defined_entries.(i) <- None;
+      t.entries_by_key.(t.key_to_int entry.key) <- None;
+  done;
+  t.length <- 0;
+;;
 
 module Serialized = struct
   type ('key, 'data) t =
@@ -463,6 +474,10 @@ TEST_MODULE = struct
     assert (to_alist t = []);
     assert (keys t = []);
     assert (data t = []);
+    for i = 0 to t.num_keys - 1 do
+      assert (Option.is_none t.entries_by_key.(i));
+      assert (Option.is_none t.defined_entries.(i));
+    done
   ;;
 
   TEST_UNIT =
@@ -600,5 +615,23 @@ TEST_MODULE = struct
       let binable_m = (module T : Binable.S with type t = T.t) in
       ensure_equal "binio" t (Binable.of_string binable_m (Binable.to_string binable_m t))
     done;
+  ;;
+
+  (* Test [clear] *)
+  TEST_UNIT =
+    let num_keys = 10 in
+    let t = create ~num_keys in
+    clear t;
+    add_exn t ~key:5 ~data:"five";
+    assert (length t = 1);
+    assert (find t 5 = Some "five");
+    clear t;
+    assert_empty t;
+    for key = 0 to num_keys - 1 do
+      add_exn t ~key ~data:(Int.to_string key)
+    done;
+    assert (length t = num_keys);
+    clear t;
+    assert_empty t;
   ;;
 end

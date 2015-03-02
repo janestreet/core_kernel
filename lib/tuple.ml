@@ -80,6 +80,10 @@ module Sexpable (S1 : Sexpable.S) (S2 : Sexpable.S) = struct
   type t = S1.t * S2.t with sexp
 end
 
+module Binable (B1 : Binable.S) (B2 : Binable.S) = struct
+  type t = B1.t * B2.t with bin_io
+end
+
 module Comparable (S1 : Comparable_sexpable) (S2 : Comparable_sexpable) = struct
   module T = struct
     include Sexpable (S1) (S2)

@@ -59,6 +59,17 @@ module type Invariant = sig
         invariant _here_ t <:sexp_of< t >> (fun () ->
           ... check t's invariants ... )
       ]}
+
+      For polymorphic types:
+
+      {[
+        let invariant check_a t =
+          Invariant.invariant _here_ t <:sexp_of< _ t >> (fun () -> ... )
+      ]}
+
+      It's okay to use [ <:sexp_of< _ t >> ] because the exceptions raised by [check_a]
+      will show the parts that are sexp_opaque at top-level.
+
   *)
   val invariant
     :  Source_code_position0.t

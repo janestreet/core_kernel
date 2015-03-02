@@ -104,7 +104,8 @@ val find_exn : 'a t -> f:('a -> bool) -> 'a
     [t2]. *)
 val append : 'a t -> 'a t -> 'a t
 
-(** [concat tt] produces the elements of each inner sequence sequentially. *)
+(** [concat tt] produces the elements of each inner sequence sequentially.  If any inner
+    sequences are infinite, elements of subsequent inner sequences will not be reached. *)
 val concat : 'a t t -> 'a t
 
 (** [concat_map t ~f] is [concat (map t ~f)].*)
@@ -112,6 +113,12 @@ val concat_map : 'a t -> f:('a -> 'b t) -> 'b t
 
 (** [concat_mapi t ~f] is like concat_map, but passes the index as an argument. *)
 val concat_mapi : 'a t -> f:(int -> 'a -> 'b t) -> 'b t
+
+(** [interleave tt] produces each element of the inner sequences of [tt] eventually, even
+    if any or all of the inner sequences are infinite.  The elements of each inner
+    sequence are produced in order with respect to that inner sequence.  The manner of
+    interleaving among the separate inner sequences is deterministic but unspecified. *)
+val interleave : 'a t t -> 'a t
 
 (** Transforms a pair of sequences into a sequence of pairs. The length of the returned
     sequence is the length of the shorter input. The remaining elements of the longer
@@ -231,8 +238,15 @@ end
 
 (** Returns a sequence with all possible pairs.  The stepper function of the second
     sequence passed as argument may be applied to the same state multiple times, so be
-    careful using [cartesian_product] with expensive or side-effecting functions. *)
+    careful using [cartesian_product] with expensive or side-effecting functions.  If the
+    second sequence is infinite, some values in the first sequence may not be reached. *)
 val cartesian_product : 'a t -> 'b t -> ('a * 'b) t
+
+(** Returns a sequence that eventually reaches every possible pair of elements of the
+    inputs, even if either or both are infinite.  The step function of both inputs may be
+    applied to the same state repeatedly, so be careful using
+    [interleaved_cartesian_product] with expensive or side-effecting functions. *)
+val interleaved_cartesian_product : 'a t -> 'b t -> ('a * 'b) t
 
 (** [intersperse xs ~sep] produces [sep] between adjacent elements of [xs].
     e.g. [intersperse [1;2;3] ~sep:0 = [1;0;2;0;3]] *)
@@ -266,7 +280,7 @@ val singleton : 'a -> 'a t
 val delayed_fold
   :  'a t
   -> init:'s
-  -> f:('s -> 'a -> k:('s -> 'r) -> 'r) (* [k] stand for "continuation" *)
+  -> f:('s -> 'a -> k:('s -> 'r) -> 'r) (* [k] stands for "continuation" *)
   -> finish:('s -> 'r)
   -> 'r
 

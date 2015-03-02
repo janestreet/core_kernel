@@ -9,7 +9,11 @@ module Stable = struct
   end
 end
 
-include Stable.V1
+(* 2015-01-14: We don't [include Stable.V1], because that has a different [with bin_io]
+   format, and we don't want to change this "unstable" format, which is in use.  We just
+   introduced the stable format, so people haven't yet had the time to adjust code to use
+   it. *)
+type 'a t = ('a, Error.t) Result.t with bin_io, compare, sexp
 
 let invariant invariant_a t =
   match t with

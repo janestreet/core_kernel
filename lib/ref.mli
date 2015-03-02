@@ -20,7 +20,7 @@ val replace : 'a t -> ('a -> 'a) -> unit
 module Permissioned : sig
   type ('a, -'perms) t with sexp, bin_io
 
-  include Container.S1_phantom_permissions
+  include Container.S1_permissions
     with type ('a, 'perms) t := ('a, 'perms) t
 
   val create    : 'a -> ('a, [< _ perms]) t

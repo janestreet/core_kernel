@@ -57,6 +57,7 @@ end
      include Tuple.Make       (String) (Int)
      include Tuple.Comparable (String) (Int)
      include Tuple.Hashable   (String) (Int)
+     include Tuple.Binable    (String) (Int)
    end
   ]}
 *)
@@ -109,3 +110,6 @@ module Hashable_t (S1 : Hashable_sexpable) (S2 : Hashable_sexpable)
 
 module Sexpable (S1 : Sexpable.S) (S2 : Sexpable.S)
   : Sexpable.S with type t := Make (S1) (S2).t
+
+module Binable (B1 : Binable.S) (B2 : Binable.S)
+  : Binable.S with type t := Make (B1) (B2).t

@@ -311,13 +311,8 @@ TEST = epsilon_float = (one_ulp `Up 1.) -. 1.
 
 include Hashable.Make_binable (T)
 
-let of_int = Pervasives.float_of_int
-
-let to_int f =
-  let module P = Pervasives in
-  match P.classify_float f with
-  | P.FP_normal | P.FP_subnormal | P.FP_zero -> int_of_float f
-  | P.FP_infinite | P.FP_nan -> invalid_arg "Float.to_int on nan or inf"
+let of_int = Core_int.to_float
+let to_int = Core_int.of_float
 
 let of_int64 i = Int64.to_float i
 
@@ -917,8 +912,9 @@ let ieee_negative t =
 let exponent_bits = 11
 let mantissa_bits = 52
 
-let exponent_mask = Pervasives.((1 lsl exponent_bits) - 1)
-let mantissa_mask = Pervasives.((1 lsl mantissa_bits) - 1)
+let exponent_mask = Core_int.  ((shift_left one exponent_bits) - one)
+let mantissa_mask = Core_int63.((shift_left one mantissa_bits) - one)
+let mantissa_mask64 = Core_int63.to_int64 mantissa_mask
 
 let ieee_exponent t =
   let bits = Int64.bits_of_float t in
@@ -926,17 +922,19 @@ let ieee_exponent t =
 
 let ieee_mantissa t =
   let bits = Int64.bits_of_float t in
-  (Int64.to_int bits) land mantissa_mask
+  Core_int63.of_int64_exn Int64.(logand bits mantissa_mask64)
 
 let create_ieee_exn ~negative ~exponent ~mantissa =
-  if Pervasives.(exponent land exponent_mask <> exponent)
-  then failwithf "exponent %d out of range [%d, %d]" exponent 0 exponent_mask ()
-  else if Pervasives.(mantissa land mantissa_mask <> mantissa)
-  then failwithf "mantissa %d out of range [%d, %d]" mantissa 0 mantissa_mask ()
+  if Core_int.(bit_and exponent exponent_mask <> exponent)
+  then failwithf !"exponent %{Core_int} out of range [0, %{Core_int}]"
+         exponent exponent_mask ()
+  else if Core_int63.(bit_and mantissa mantissa_mask <> mantissa)
+  then failwithf !"mantissa %{Core_int63} out of range [0, %{Core_int63}]"
+         mantissa mantissa_mask ()
   else
     let sign_bits = if negative then Int64.min_int else Int64.zero in
     let expt_bits = Int64.shift_left (Int64.of_int exponent) mantissa_bits in
-    let mant_bits = Int64.of_int mantissa in
+    let mant_bits = Core_int63.to_int64 mantissa in
     let bits = Int64.(logor sign_bits (logor expt_bits mant_bits)) in
     Int64.float_of_bits bits
 
@@ -945,44 +943,47 @@ let create_ieee ~negative ~exponent ~mantissa =
 
 TEST_MODULE "IEEE" = struct
 
-  let f (t : t) (negative : bool) (exponent : int) (mantissa : int) : unit =
+  let f (t : t) (negative : bool) (exponent : int) (mantissa : Core_int63.t) : unit =
     let str = to_string_round_trippable t in
     <:test_result<bool>> ~message:("ieee_negative " ^ str)
       (ieee_negative t) ~expect:negative;
     <:test_result<int>> ~message:("ieee_exponent " ^ str)
       (ieee_exponent t) ~expect:exponent;
-    <:test_result<int>> ~message:("ieee_mantissa " ^ str)
+    <:test_result<Core_int63.t>> ~message:("ieee_mantissa " ^ str)
       (ieee_mantissa t) ~expect:mantissa;
     <:test_result<t>>
-      ~message:(sprintf "create_ieee ~negative:%B ~exponent:%d ~mantissa:%d"
+      ~message:(sprintf !"create_ieee ~negative:%B ~exponent:%d ~mantissa:%{Core_int63}"
                   negative exponent mantissa)
       (create_ieee_exn ~negative ~exponent ~mantissa)
       ~expect:t
 
   TEST_UNIT =
-    f zero                         false 0                                 0;
-    f min_positive_subnormal_value false 0                                 1;
-    f min_positive_normal_value    false 1                                 0;
-    f epsilon_float                false Pervasives.(1023 - mantissa_bits) 0;
-    f one                          false 1023                              0;
-    f minus_one                    true  1023                              0;
+    let (!!) x = Core_int63.of_int x in
+    f zero                         false 0                                 (!! 0);
+    f min_positive_subnormal_value false 0                                 (!! 1);
+    f min_positive_normal_value    false 1                                 (!! 0);
+    f epsilon_float                false Pervasives.(1023 - mantissa_bits) (!! 0);
+    f one                          false 1023                              (!! 0);
+    f minus_one                    true  1023                              (!! 0);
     f max_finite_value             false Pervasives.(exponent_mask - 1)    mantissa_mask;
-    f infinity                     false exponent_mask                     0;
-    f neg_infinity                 true  exponent_mask                     0;
-    f nan                          false exponent_mask                     1
+    f infinity                     false exponent_mask                     (!! 0);
+    f neg_infinity                 true  exponent_mask                     (!! 0);
+    f nan                          false exponent_mask                     (!! 1)
 
   (* test the normalized case, that is, 1 <= exponent <= 2046 *)
   TEST_UNIT =
     let g ~negative ~exponent ~mantissa =
-      assert (create_ieee_exn ~negative ~exponent ~mantissa =
+      assert (create_ieee_exn ~negative ~exponent
+                ~mantissa:(Core_int63.of_int64_exn mantissa)
+              =
               (if negative then -1. else 1.)
               * 2. ** (float exponent - 1023.)
-              * (1. + (2. ** -52.) * float mantissa))
+              * (1. + (2. ** -52.) * Int64.to_float mantissa))
     in
-    g ~negative:false ~exponent:1 ~mantissa:147;
-    g ~negative:true ~exponent:137 ~mantissa:13;
-    g ~negative:false ~exponent:1015 ~mantissa:1370001;
-    g ~negative:true ~exponent:2046 ~mantissa:137000100945;
+    g ~negative:false ~exponent:1 ~mantissa:147L;
+    g ~negative:true ~exponent:137 ~mantissa:13L;
+    g ~negative:false ~exponent:1015 ~mantissa:1370001L;
+    g ~negative:true ~exponent:2046 ~mantissa:137000100945L;
 
 end
 
@@ -1030,7 +1031,7 @@ end)
 
 include Pretty_printer.Register(struct
   include T
-  let module_name = "Core.Std.Float"
+  let module_name = "Core_kernel.Std.Float"
   let to_string = to_string
 end)
 

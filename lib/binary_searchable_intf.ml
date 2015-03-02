@@ -32,6 +32,29 @@ module type Indexable1 = sig
   end
 end
 
+type ('t, 'elt) binary_search =
+     ?pos:int
+  -> ?len:int
+  -> 't
+  -> compare:('elt -> 'elt -> int)
+  -> [ `Last_strictly_less_than         (** {v | < elt X |                       v} *)
+     | `Last_less_than_or_equal_to      (** {v |      <= elt       X |           v} *)
+     | `Last_equal_to                   (** {v           |   = elt X |           v} *)
+     | `First_equal_to                  (** {v           | X = elt   |           v} *)
+     | `First_greater_than_or_equal_to  (** {v           | X       >= elt      | v} *)
+     | `First_strictly_greater_than     (** {v                       | X > elt | v} *)
+     ]
+  -> 'elt
+  -> int option
+
+type ('t, 'elt) binary_search_segmented =
+     ?pos:int
+  -> ?len:int
+  -> 't
+  -> segment_of:('elt -> [ `Left | `Right ])
+  -> [ `Last_on_left | `First_on_right ]
+  -> int option
+
 module type S = sig
   type elt
   type t
@@ -73,20 +96,7 @@ module type S = sig
       [binary_search] does not check that [compare] orders [t], and behavior is
       unspecified if [compare] doesn't order [t].  Behavior is also unspecified if
       [compare] mutates [t]. *)
-  val binary_search
-    :  ?pos:int
-    -> ?len:int
-    -> t
-    -> compare:(elt -> elt -> int)
-    -> [ `Last_strictly_less_than         (** {v | < elt X |                       v} *)
-       | `Last_less_than_or_equal_to      (** {v |      <= elt       X |           v} *)
-       | `Last_equal_to                   (** {v           |   = elt X |           v} *)
-       | `First_equal_to                  (** {v           | X = elt   |           v} *)
-       | `First_greater_than_or_equal_to  (** {v           | X       >= elt      | v} *)
-       | `First_strictly_greater_than     (** {v                       | X > elt | v} *)
-       ]
-    -> elt
-    -> int option
+  val binary_search : (t, elt) binary_search
 
   (** [binary_search_segmented ?pos ?len t ~segment_of which] takes an [segment_of]
       function that divides [t] into two (possibly empty) segments:
@@ -106,45 +116,29 @@ module type S = sig
       [binary_search_segmented] does not check that [segment_of] segments [t] as in the
       diagram, and behavior is unspecified if [segment_of] doesn't segment [t].  Behavior
       is also unspecified if [segment_of] mutates [t]. *)
-  val binary_search_segmented
-    :  ?pos:int
-    -> ?len:int
-    -> t
-    -> segment_of:(elt -> [ `Left | `Right ])
-    -> [ `Last_on_left | `First_on_right ]
-    -> int option
+  val binary_search_segmented : (t, elt) binary_search_segmented
 end
 
 module type S1 = sig
   type 'a t
 
-  val binary_search
-    :  ?pos:int
-    -> ?len:int
-    -> 'a t
-    -> compare:('a -> 'a -> int)
-    -> [ `Last_strictly_less_than
-       | `Last_less_than_or_equal_to
-       | `Last_equal_to
-       | `First_equal_to
-       | `First_greater_than_or_equal_to
-       | `First_strictly_greater_than
-       ]
-    -> 'a
-    -> int option
+  val binary_search           : ('a t, 'a) binary_search
+  val binary_search_segmented : ('a t, 'a) binary_search_segmented
+end
 
- val binary_search_segmented
-    :  ?pos:int
-    -> ?len:int
-    -> 'a t
-    -> segment_of:('a -> [ `Left | `Right ])
-    -> [ `Last_on_left | `First_on_right ]
-    -> int option
+module type S1_permissions = sig
+  open Perms.Export
+
+  type ('a, -'perms) t
+
+  val binary_search           : (('a, [> read]) t, 'a) binary_search
+  val binary_search_segmented : (('a, [> read]) t, 'a) binary_search_segmented
 end
 
 module type Binary_searchable = sig
-  module type S          = S
-  module type S1         = S1
+  module type S              = S
+  module type S1             = S1
+  module type S1_permissions = S1_permissions
   module type Indexable  = Indexable
   module type Indexable1 = Indexable1
   module Make  (T : Indexable)  : S  with type    t :=    T.t with type elt := T.elt

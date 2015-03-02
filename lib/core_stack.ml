@@ -1,9 +1,9 @@
 open Std_internal
 open Fieldslib
 
-(* This implementation is similar to [Dequeue] in that it uses an array of ['a] and
+(* This implementation is similar to [Deque] in that it uses an array of ['a] and
    a mutable [int] to indicate what in the array is used.  We choose to implement [Stack]
-   directly rather than on top of [Dequeue] for performance reasons.  E.g. a simple
+   directly rather than on top of [Deque] for performance reasons.  E.g. a simple
    microbenchmark shows that push/pop is about 20% faster. *)
 type 'a t =
   { (* [dummy] is a value that we create via [Obj.magic] and use for empty slots in

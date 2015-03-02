@@ -90,15 +90,15 @@ let tests =
             stage (fun () ->
               Linked_queue.enqueue t ();
               Linked_queue.dequeue_exn t))
-     ; Bench.Test.create_indexed ~name:"Dequeue.enqueue + dequeue" ~args
+     ; Bench.Test.create_indexed ~name:"Deque.enqueue + dequeue" ~args
          (fun num_elts ->
-            let t = Dequeue.create () in
+            let t = Deque.create () in
             for _i = 1 to num_elts do
-              Dequeue.enqueue_front t ();
+              Deque.enqueue_front t ();
             done;
             stage (fun () ->
-              Dequeue.enqueue_front t ();
-              Dequeue.dequeue_front_exn t))
+              Deque.enqueue_front t ();
+              Deque.dequeue_front_exn t))
      ])
 ;;
 

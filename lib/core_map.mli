@@ -139,6 +139,8 @@ val of_alist_reduce
 
 val to_tree : ('k, 'v, 'cmp) t -> ('k, 'v, 'cmp) Tree.t
 
+(** Creates a [t] from a [Tree.t] and a [Comparator.t].  This is an O(n) operation as it
+    must discover the length of the [Tree.t]. *)
 val of_tree
   :  comparator:('k, 'cmp) Comparator.t -> ('k, 'v, 'cmp) Tree.t -> ('k, 'v, 'cmp) t
 
@@ -159,7 +161,7 @@ val of_sorted_array_unchecked
 (** Test whether a map is empty or not. *)
 val is_empty : (_, _, _) t -> bool
 
-(** [length map] @return number of elements in [map]. *)
+(** [length map] @return number of elements in [map].  O(1), but [Tree.length] is O(n). *)
 val length : (_, _, _) t -> int
 
 (** returns a new map with the specified new binding;

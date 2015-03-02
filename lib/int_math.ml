@@ -41,7 +41,8 @@ let int64_pow base exponent =
 TEST_UNIT =
   for i = 0 to 10 do
     for j = 0 to 10 do
-      assert (int_pow i j = Float.to_int ((Float.of_int i) ** (Float.of_int j)))
+      assert (int_pow i j
+              = Pervasives.(int_of_float ((float_of_int i) ** (float_of_int j))))
     done
   done
 

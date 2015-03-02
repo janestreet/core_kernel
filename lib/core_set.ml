@@ -1136,7 +1136,7 @@ module Poly = struct
     type 'a el = 'a with bin_io
     let _ = bin_el
 
-    let module_name = Some "Core.Std.Set"
+    let module_name = Some "Core_kernel.Std.Set"
     let length = length
     let iter t ~f = iter ~f:(fun key -> f key) t
     let init _n = empty
@@ -1233,7 +1233,7 @@ end) = struct
     type el = Elt'.t with bin_io
     let _ = bin_el
 
-    let module_name = Some "Core.Std.Set"
+    let module_name = Some "Core_kernel.Std.Set"
     let length = length
     let iter t ~f = iter ~f:(fun key -> f key) t
     let init _n = empty

@@ -39,6 +39,8 @@ module type S = sig
       undefined. *)
   val iter : 'a t -> f:(key:Key.t -> data:'a -> unit) -> unit
   val iter_vals : 'a t -> f:('a -> unit) -> unit
+  (** Returns the list of all (key, value) pairs for given [Hash_heap]. *)
+  val to_alist : 'a t -> (Key.t * 'a) list
   val length : 'a t -> int
 end
 
@@ -170,6 +172,8 @@ module Make (Key : Key) : S with module Key = Key = struct
 
   let iter t ~f = Heap.iter t.heap ~f:(fun (k, v) -> f ~key:k ~data:v)
   let iter_vals t ~f = Heap.iter t.heap ~f:(fun (_k, v) -> f v)
+
+  let to_alist t = Heap.to_list t.heap
 
   let length t =
     assert (Hashtbl.length t.tbl = Heap.length t.heap);
