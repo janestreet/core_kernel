@@ -41,7 +41,7 @@ CAMLprim value core_kernel_time_ns_gettime_or_zero()
   if (clock_gettime(CLOCK_REALTIME, &ts) != 0)
     return caml_alloc_int63(0);
   else
-    return caml_alloc_int63(NANOS_PER_SECOND * ts.tv_sec + ts.tv_nsec);
+    return caml_alloc_int63(NANOS_PER_SECOND * (uint64_t)ts.tv_sec + (uint64_t)ts.tv_nsec);
 }
 
 #else
@@ -55,7 +55,7 @@ CAMLprim value core_kernel_time_ns_gettime_or_zero()
   if (gettimeofday(&tp, NULL) == -1)
     return caml_alloc_int63(0);
   else
-    return caml_alloc_int63(NANOS_PER_SECOND * tp.tv_sec + tp.tv_usec * 1000);
+    return caml_alloc_int63(NANOS_PER_SECOND * (uint64_t)tp.tv_sec + (uint64_t)tp.tv_usec * 1000);
 }
 
 #endif

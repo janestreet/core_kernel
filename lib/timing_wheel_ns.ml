@@ -1120,9 +1120,13 @@ let create ~config ~start =
   let alarm_precision = Config.alarm_precision config in
   let interval_num time = interval_num_internal ~time ~start ~alarm_precision in
   let min_time =
-    if Time_ns.( <= ) start Time_ns.epoch
-    then Time_ns.min_value
-    else Time_ns.add start Time_ns.Span.min_value
+    match Word_size.word_size with
+    | W32 ->
+      Time_ns.add start (Time_ns.Span.scale_int alarm_precision Int.min_value)
+    | W64 ->
+      if Time_ns.( <= ) start Time_ns.epoch
+      then Time_ns.min_value
+      else Time_ns.add start Time_ns.Span.min_value
   in
   (* We add one to define [min_interval_num] because [min_time] may not be at the start of
      an interval, and we want to be sure that [interval_num_start t min_interval_num]
@@ -1130,9 +1134,13 @@ let create ~config ~start =
   let min_interval_num = interval_num min_time + 1 in
   let min_time = interval_num_start_internal min_interval_num ~start ~alarm_precision in
   let max_time =
-    if Time_ns.( >= ) start Time_ns.epoch
-    then Time_ns.max_value
-    else Time_ns.add start Time_ns.Span.max_value
+    match Word_size.word_size with
+    | W32 ->
+      Time_ns.add start (Time_ns.Span.scale_int alarm_precision Int.max_value)
+    | W64 ->
+      if Time_ns.( >= ) start Time_ns.epoch
+      then Time_ns.max_value
+      else Time_ns.add start Time_ns.Span.max_value
   in
   { config;
     start;
