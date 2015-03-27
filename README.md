@@ -7,8 +7,9 @@ cases when the full Core is not available, such as in Javascript.  It
 provides an overlay on the usual namespace, so the best way to use
 Core is to start your file with:
 
-   open Core_kernel.Std
-
+```ocaml
+open Core_kernel.Std
+```
 Please report bugs and feature requests on
 [GitHub](https://github.com/janestreet/core_kernel). For everything
 else you can contact us at <ocaml-core@googlegroups.com>.
