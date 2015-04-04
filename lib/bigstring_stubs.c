@@ -21,6 +21,13 @@
 #define bswap_16 OSSwapInt16
 #define bswap_32 OSSwapInt32
 #define bswap_64 OSSwapInt64
+#elif __MINGW32__
+static inline uint16_t bswap_16 (uint16_t x)
+{
+    return (x << 8) | (x >> 8);
+}
+#define bswap_32 __builtin_bswap32
+#define bswap_64 __builtin_bswap64
 #elif __GLIBC__
 #include <byteswap.h>
 #include <malloc.h>
