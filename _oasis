@@ -24,12 +24,12 @@ Flag caml_modify_test
   Default$:           flag(ld_wrap_possible)
 
 PreConfCommand:       config/detect.sh
-PostConfCommand:      config/discover.sh $ocamlc lib/config.mlh lib/config.h
+PostConfCommand:      config/discover.sh $ocamlc src/config.mlh src/config.h
 
-PreDistCleanCommand:  $rm lib/config.mlh lib/config.h
+PreDistCleanCommand:  $rm src/config.mlh src/config.h
 
 Library core_kernel
-  Path:               lib
+  Path:               src
   FindlibName:        core_kernel
   Pack:               true
   Modules:            Array_permute,
@@ -295,7 +295,7 @@ Library check_caml_modify
   XMETARequires:      pa_ounit
 
 Executable pool_caml_modify_check
-  Path:               lib_test
+  Path:               test
   Build$:             flag(tests) && flag(caml_modify_test)
   Install:            false
   CompiledObject:     best
