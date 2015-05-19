@@ -20,6 +20,7 @@ module T2 : sig
 
   external get1 : ('a, _) t -> 'a = "%field0"
   external get2 : (_, 'a) t -> 'a = "%field1"
+
   val map1 : f:('a -> 'c) -> ('a, 'b) t -> ('c, 'b) t
   val map2 : f:('b -> 'c) -> ('a, 'b) t -> ('a, 'c) t
 

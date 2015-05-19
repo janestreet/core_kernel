@@ -2,23 +2,21 @@ open Sexplib
 
 exception Decimal_nan_or_inf with sexp
 
-module T = struct
-  module Binable = Float
-  type t = float with compare
-  let verify t =
-    match Pervasives.classify_float t with
-    | FP_normal
-    | FP_subnormal
-    | FP_zero      -> ()
-    | FP_infinite
-    | FP_nan       -> raise Decimal_nan_or_inf
-  let of_binable t = verify t; t
-  let to_binable t = verify t; t
-end
+type t = float with compare
 
-include T
+let verify t =
+  match Pervasives.classify_float t with
+  | FP_normal
+  | FP_subnormal
+  | FP_zero      -> ()
+  | FP_infinite
+  | FP_nan       -> raise Decimal_nan_or_inf
 
-include Bin_prot.Utils.Make_binable (T)
+include Binable.Of_binable (Float) (struct
+    type nonrec t = t
+    let of_binable t = verify t; t
+    let to_binable t = verify t; t
+  end)
 
 let sexp_of_t t = Sexp.Atom (Core_printf.sprintf "%.12G" t)
 

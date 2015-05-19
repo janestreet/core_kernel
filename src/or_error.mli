@@ -11,8 +11,15 @@ open Sexplib
 (** Serialization and comparison of an [Error] force the error's lazy message. **)
 type 'a t = ('a, Error.t) Result.t with bin_io, compare, sexp
 
-include Invariant.S1 with type 'a t := 'a t
-include Monad.S      with type 'a t := 'a t
+(* [Applicative] functions don't have quite the same semantics as
+   [Applicative.of_Monad(Or_error)] would give -- [apply (Error e1) (Error e2)] returns
+   the combination of [e1] and [e2], whereas it would only return [e1] if it were defined
+   using [bind]. *)
+include Applicative.S      with type 'a t := 'a t
+include Invariant.S1       with type 'a t := 'a t
+include Monad.S            with type 'a t := 'a t
+
+val ignore : _ t -> unit t
 
 (** [try_with f] catches exceptions thrown by [f] and returns them in the Result.t as an
     Error.t.  [try_with_join] is like [try_with], except that [f] can throw exceptions or

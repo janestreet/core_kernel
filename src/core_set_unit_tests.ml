@@ -44,7 +44,7 @@ module Unit_tests
   module Set = struct
     include Set
     let add            = simplify_accessor add
-    (* let remove         = simplify_accessor remove *)
+    let remove         = simplify_accessor remove
     let mem            = simplify_accessor mem
     (* let filter         = simplify_accessor filter *)
     (* let compare_direct = simplify_accessor compare_direct *)
@@ -65,6 +65,7 @@ module Unit_tests
     let of_sorted_array = simplify_creator of_sorted_array
     let of_sorted_array_unchecked = simplify_creator of_sorted_array_unchecked
     (* let of_tree        = simplify_creator of_tree *)
+    let symmetric_diff = simplify_accessor symmetric_diff
   end
 
   type ('a, 'b) t = Unit_test_follows
@@ -274,6 +275,110 @@ module Unit_tests
   TEST_UNIT =
     assert
       (Set.equal (Set.of_map_keys (Set.to_map set_nonempty ~f:Elt.to_int)) set_nonempty)
+
+  let symmetric_diff _ = assert false
+
+  TEST =
+    let m1 = set_nonempty in
+    Sequence.to_list (Set.symmetric_diff m1 m1) = []
+  ;;
+
+  TEST =
+    let elt = Elt.of_int 7 in
+    let m1 = Set.empty () in
+    let m1 = Set.add m1 (Elt.of_int 1) in
+    let m2 = Set.add m1 elt in
+    Sequence.to_list (Set.symmetric_diff m1 m2) = [Second elt]
+  ;;
+
+  TEST =
+    let m1 = set_nonempty in
+    let m2 =
+      List.fold (Set.to_list m1) ~init:(Set.empty ()) ~f:(fun m k ->
+        Set.add m k)
+    in
+    Sequence.to_list (Set.symmetric_diff m1 m2) = []
+  ;;
+
+  TEST =
+    let elt = Elt.of_int 20 in
+    let m1 = set_nonempty in
+    let m2 = Set.add m1 elt in
+    Sequence.to_list (Set.symmetric_diff m1 m2) = [Second elt]
+  ;;
+
+  TEST =
+    let elt = Elt.of_int 5 in
+    let m1 = set_nonempty in
+    let m2 = Set.remove m1 elt in
+    Sequence.to_list (Set.symmetric_diff m1 m2) = [First elt]
+  ;;
+
+  let set_of_int_list l =
+    Set.of_list (List.map ~f:Elt.of_int l)
+
+  TEST =
+    let map1 = Set.empty () in
+    let map2 =
+      set_of_int_list
+        [ 1
+        ; 2
+        ; 3
+        ; 4
+        ; 5
+        ]
+    in
+    let diff = Set.symmetric_diff map1 map2 in
+    Sequence.length diff = 5
+  ;;
+
+  TEST =
+    let map1 =
+      set_of_int_list
+        [ 1
+        ; 2
+        ; 3
+        ; 4
+        ; 5
+        ]
+    in
+    let map2 = Set.empty () in
+    let diff = Set.symmetric_diff map1 map2 in
+    Sequence.length diff = 5
+  ;;
+
+  TEST =
+    let map1 =
+      set_of_int_list
+        [ 1
+        ; 2
+        ]
+    in
+    let map2 =
+      List.fold
+        [ 3
+        ; 4
+        ; 5 ]
+        ~init:map1
+        ~f:(fun acc elt -> Set.add acc (Elt.of_int elt))
+    in
+    let diff = Set.symmetric_diff map1 map2 in
+    Sequence.length diff = 3
+  ;;
+
+  TEST =
+    let map2 =
+      set_of_int_list
+        [ 1; 2 ]
+    in
+    let map1 =
+      List.fold [ 3; 4; 5 ]
+        ~init:map2
+        ~f:(fun acc elt -> Set.add acc (Elt.of_int elt))
+    in
+    let diff = Set.symmetric_diff map1 map2 in
+    Sequence.length diff = 3
+  ;;
 
 
   let to_tree _           = assert false

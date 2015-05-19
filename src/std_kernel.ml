@@ -2,6 +2,7 @@
 
 include Std_internal
 
+module Applicative               = Applicative
 module Arg                       = Core_arg
 module Avltree                   = Avltree
 module Backtrace                 = Backtrace
@@ -15,6 +16,7 @@ module Blang                     = Blang
 module Blit                      = Blit
 module Bounded_int_table         = Bounded_int_table
 module Bucket                    = Bucket
+module Bytes                     = Core_bytes
 module Byte_units                = Byte_units
 module Commutative_group         = Commutative_group
 module Comparable                = Comparable
@@ -25,6 +27,7 @@ module Decimal                   = Decimal
 module Deque                     = Deque
 module Dequeue                   = Dequeue
 module Doubly_linked             = Doubly_linked
+module Either                    = Either
 module Equal                     = Equal
 module Error                     = Error
 module Exn                       = Exn
@@ -121,3 +124,7 @@ type decimal = Decimal.t with bin_io, sexp, compare
 
 (* Some people have proposed removing [does_raise], but there isn't consensus. *)
 let does_raise = Exn.does_raise
+
+type bytes =
+  [ `This_type_does_not_equal_string_because_we_want_type_errors_to_say_string ]
+;;

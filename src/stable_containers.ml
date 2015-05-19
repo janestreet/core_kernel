@@ -80,8 +80,12 @@ module Map = struct
     type t with bin_io, sexp
     include Comparator.S with type t := t
   end) : sig
-    type 'a t = (Key.t, 'a, Key.comparator_witness) Map.t with sexp, bin_io, compare
-  end = Map.Make_binable_using_comparator (Key)
+    type 'a t = (Key.t, 'a, Key.comparator_witness) Map.t
+    include Stable_module_types.S1 with type 'a t := 'a t
+  end = struct
+    include Map.Make_binable_using_comparator (Key)
+    let map = Map.map
+  end
 
   TEST_MODULE "Map.V1" = Stable_unit_test.Make (struct
     module Map = V1 (Int)
@@ -130,11 +134,13 @@ module Comparable = struct
       type comparator_witness
 
       module Map : sig
-        type 'a t = (key, 'a, comparator_witness) Core_map.t with sexp, bin_io, compare
+        type 'a t = (key, 'a, comparator_witness) Core_map.t
+        include Stable_module_types.S1 with type 'a t := 'a t
       end
 
       module Set : sig
-        type t = (key, comparator_witness) Core_set.t with sexp, bin_io, compare
+        type t = (key, comparator_witness) Core_set.t
+        include Stable_module_types.S0 with type t := t
       end
     end
 

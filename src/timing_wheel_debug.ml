@@ -2,8 +2,8 @@ open Std_internal
 open Timing_wheel_intf
 
 module Make
-         (Time         : Timing_wheel_time)
-         (Timing_wheel : Timing_wheel with module Time := Time) = struct
+    (Time         : Timing_wheel_time)
+    (Timing_wheel : Timing_wheel with module Time := Time) = struct
 
   module Debug = Debug.Make ()
 
@@ -13,7 +13,11 @@ module Make
 
   type nonrec 'a t = 'a t with sexp_of
 
+  type nonrec 'a t_now = 'a t_now with sexp_of
+
   type 'a timing_wheel = 'a t
+
+  module Interval_num = Interval_num
 
   module Level_bits = struct
     open Level_bits
@@ -56,9 +60,9 @@ module Make
 
     let null = null
 
-    let at = at
-    let key = key
-    let value = value
+    let at           = at
+    let interval_num = interval_num
+    let value        = value
   end
 
   let invariant = invariant
@@ -87,12 +91,12 @@ module Make
   ;;
 
   let interval_num t time =
-    debug "interval_num" [t] time <:sexp_of< Time.t >> <:sexp_of< int >>
+    debug "interval_num" [t] time <:sexp_of< Time.t >> <:sexp_of< Interval_num.t >>
       (fun () -> interval_num t time)
   ;;
 
   let now_interval_num t =
-    debug "now_interval_num" [t] () <:sexp_of< unit >> <:sexp_of< int >>
+    debug "now_interval_num" [t] () <:sexp_of< unit >> <:sexp_of< Interval_num.t >>
       (fun () -> now_interval_num t)
   ;;
 
@@ -102,7 +106,7 @@ module Make
   ;;
 
   let interval_num_start t interval_num =
-    debug "interval_num_start" [t] interval_num <:sexp_of< int >> <:sexp_of< Time.t >>
+    debug "interval_num_start" [t] interval_num <:sexp_of< Interval_num.t >> <:sexp_of< Time.t >>
       (fun () -> interval_num_start t interval_num)
   ;;
 
@@ -119,13 +123,25 @@ module Make
   ;;
 
   let add_at_interval_num t ~at a =
-    debug "add_at_interval_num" [t] at <:sexp_of< int >> <:sexp_of< _ Alarm.t >>
+    debug "add_at_interval_num" [t] at <:sexp_of< Interval_num.t >> <:sexp_of< _ Alarm.t >>
       (fun () -> add_at_interval_num t ~at a)
   ;;
 
   let remove t alarm =
     debug "remove" [t] alarm <:sexp_of< _ Alarm.t >> <:sexp_of< unit >>
       (fun () -> remove t alarm)
+  ;;
+
+  let reschedule t alarm ~at =
+    debug "reschedule" [t] (alarm, at) <:sexp_of< _ Alarm.t * Time.t >> <:sexp_of< unit >>
+      (fun () -> reschedule t alarm ~at)
+  ;;
+
+  let reschedule_at_interval_num t alarm ~at =
+    debug "reschedule_at_interval_num" [t] (alarm, at)
+      <:sexp_of< _ Alarm.t * Interval_num.t >>
+      <:sexp_of< unit >>
+      (fun () -> reschedule_at_interval_num t alarm ~at)
   ;;
 
   let clear t =
@@ -146,6 +162,8 @@ module Make
     type nonrec 'a t = 'a t with sexp_of
 
     type 'a priority_queue = 'a t
+
+    module Key = Key
 
     module Elt = struct
       open Elt
@@ -170,8 +188,6 @@ module Make
 
     let is_empty = is_empty
 
-    let max_representable_key = max_representable_key
-
     let min_allowed_key = min_allowed_key
 
     let max_allowed_key = max_allowed_key
@@ -182,18 +198,23 @@ module Make
     ;;
 
     let min_key t =
-      debug "min_key" [t] () <:sexp_of< unit >> <:sexp_of< int option >>
+      debug "min_key" [t] () <:sexp_of< unit >> <:sexp_of< Key.t option >>
         (fun () -> min_key t)
     ;;
 
     let add t ~key a =
-      debug "add" [t] key <:sexp_of< int >> <:sexp_of< _ Elt.t >>
+      debug "add" [t] key <:sexp_of< Key.t >> <:sexp_of< _ Elt.t >>
         (fun () -> add t ~key a)
     ;;
 
     let remove t elt =
       debug "remove" [t] elt <:sexp_of< _ Elt.t >> <:sexp_of< unit >>
         (fun () -> remove t elt)
+    ;;
+
+    let change_key t elt ~key =
+      debug "change_key" [t] (elt, key) <:sexp_of< _ Elt.t * Key.t >> <:sexp_of< unit >>
+        (fun () -> change_key t elt ~key)
     ;;
 
     let clear t =
@@ -207,7 +228,7 @@ module Make
     ;;
 
     let increase_min_allowed_key t ~key ~handle_removed =
-      debug "increase_min_allowed_key" [t] key <:sexp_of< int >> <:sexp_of< unit >>
+      debug "increase_min_allowed_key" [t] key <:sexp_of< Key.t >> <:sexp_of< unit >>
         (fun () -> increase_min_allowed_key t ~key ~handle_removed)
     ;;
 

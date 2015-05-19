@@ -278,17 +278,16 @@ let add t ~key ~data =
   if Entry.is_null e then `Ok else `Duplicate
 ;;
 
-let add_exn (type k) t ~key ~data =
+let add_or_error t ~key ~data =
   match add t ~key ~data with
-  | `Ok -> ()
+  | `Ok -> Result.Ok ()
   | `Duplicate ->
-    let module T = struct
-      type key = k
-      let sexp_of_key = sexp_of_key t
-      exception Add_key_already_present of key with sexp
-    end
-    in
-    raise (T.Add_key_already_present key)
+    let sexp_of_key = sexp_of_key t in
+    Or_error.error "Pooled_hashtbl.add_exn got key already present" key <:sexp_of< key >>
+;;
+
+let add_exn t ~key ~data =
+  Or_error.ok_exn (add_or_error t ~key ~data)
 ;;
 
 let find_or_add t key ~default =
@@ -317,6 +316,15 @@ let find_exn t key =
   let e = find_entry t ~key ~it in
   if not (Entry.is_null e) then Entry.data t.entries e
   else raise Not_found
+;;
+
+let find_and_call t key ~if_found ~if_not_found =
+  let index = slot t key in
+  let it = table_get t.table index in
+  let e = find_entry t ~key ~it in
+  if not (Entry.is_null e)
+  then if_found (Entry.data t.entries e)
+  else if_not_found key
 ;;
 
 (* This is split in a rather odd way so as to make find_and_remove for a single entry
@@ -640,12 +648,17 @@ let create_with_key ?growth_allowed ?size ~hashable ~get_key rows =
   create_mapped ?growth_allowed ?size ~hashable ~get_key ~get_data:(fun x -> x) rows
 ;;
 
-let create_with_key_exn ?growth_allowed ?size ~hashable ~get_key rows =
+let create_with_key_or_error ?growth_allowed ?size ~hashable ~get_key rows =
   match create_with_key ?growth_allowed ?size ~hashable ~get_key rows with
-  | `Ok t -> t
+  | `Ok t -> Result.Ok t
   | `Duplicate_keys keys ->
     let sexp_of_key = hashable.Hashable.sexp_of_t in
-    failwiths "Pooled_hashtbl.create_with_key: duplicate keys" keys <:sexp_of< key list >>
+    Or_error.error "Pooled_hashtbl.create_with_key: duplicate keys"
+      keys <:sexp_of< key list >>
+;;
+
+let create_with_key_exn ?growth_allowed ?size ~hashable ~get_key rows =
+  Or_error.ok_exn (create_with_key_or_error ?growth_allowed ?size ~hashable ~get_key rows)
 ;;
 
 let merge t1 t2 ~f =
@@ -733,6 +746,7 @@ module Accessors = struct
   let replace         = replace
   let set             = set
   let add             = add
+  let add_or_error    = add_or_error
   let add_exn         = add_exn
   let change          = change
   let add_multi       = add_multi
@@ -759,6 +773,7 @@ module Accessors = struct
   let find_or_add     = find_or_add
   let find            = find
   let find_exn        = find_exn
+  let find_and_call   = find_and_call
   let find_and_remove = find_and_remove
   let iter_vals       = iter_vals
   let to_alist        = to_alist
@@ -832,6 +847,10 @@ end = struct
 
   let create_with_key ?growth_allowed ?size ~get_key l =
     create_with_key ?growth_allowed ~hashable ?size ~get_key l
+  ;;
+
+  let create_with_key_or_error ?growth_allowed ?size ~get_key l =
+    create_with_key_or_error ?growth_allowed ~hashable ?size ~get_key l
   ;;
 
   let create_with_key_exn ?growth_allowed ?size ~get_key l =

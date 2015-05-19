@@ -44,47 +44,91 @@
 
 open Std_internal
 
+module Int63 = Core_int63
+
 module Time_ns = Time_ns_alternate_sexp
 
 module Time = Time_ns (* for the .mli *)
 
 let sexp_of_t_style : [ `Pretty | `Internal ] ref = ref `Pretty
 
-module Level_bits = struct
-  type raw = int list with sexp
-  type t = raw with sexp_of
+module Num_key_bits : sig
+  type t = private int with compare, sexp
 
-  let max_num_bits = Word_size.(num_bits word_size) - 3
+  include Comparable  with type t := t
+  include Invariant.S with type t := t
+
+  val zero : t
+  (* val min_value : t *)
+  val max_value : t
+
+  val of_int : int -> t
+
+  val ( + ) : t -> t -> t
+
+  val pow2 : t -> Int63.t
+end = struct
+
+  include Int
+
+  let min_value = 0
+  let max_value = Int64.num_bits - 3 (* for the three bits we don't use *)
+
+  let invariant t =
+    assert (t >= min_value);
+    assert (t <= max_value);
+  ;;
+
+  TEST_UNIT = invariant zero
+
+  let of_int i = invariant i; i
+
+  let ( + ) t1 t2 =
+    let t = t1 + t2 in
+    invariant t;
+    t
+  ;;
+
+  let pow2 t = Int63.shift_left Int63.one t
+end
+
+module Level_bits = struct
+  type t = Num_key_bits.t list with sexp
+
+  let max_num_bits = (Num_key_bits.max_value :> int)
+
+  let num_bits_internal t = List.fold t ~init:Num_key_bits.zero ~f:Num_key_bits.( + )
+
+  let num_bits t = (num_bits_internal t :> int)
 
   let invariant t =
     assert (not (List.is_empty t));
-    assert (List.for_all t ~f:(fun i -> i > 0));
-    assert (List.fold t ~init:0 ~f:(+) <= max_num_bits);
+    List.iter t ~f:(fun num_key_bits ->
+      Num_key_bits.invariant num_key_bits;
+      assert (Num_key_bits.( > ) num_key_bits Num_key_bits.zero));
+    Num_key_bits.invariant (num_bits_internal t);
+  ;;
+
+  let t_of_sexp sexp =
+    let t = sexp |> <:of_sexp< t >> in
+    invariant t;
+    t
   ;;
 
   let create_exn ints =
-    if List.is_empty ints then
-      failwith "Level_bits.create_exn requires a nonempty list";
-    if List.exists ints ~f:(fun bits -> bits <= 0) then
-      failwiths "Level_bits.create_exn got nonpositive num bits" ints
-        <:sexp_of< int list >>;
+    if List.is_empty ints then failwith "Level_bits.create_exn requires a nonempty list";
+    if List.exists ints ~f:(fun bits -> bits <= 0)
+    then failwiths "Level_bits.create_exn got nonpositive num bits" ints
+           <:sexp_of< int list >>;
     let num_bits = List.fold ints ~init:0 ~f:(+) in
-    if num_bits > max_num_bits then
-      failwiths "Level_bits.create_exn got too many bits"
-        (ints, `got num_bits, `max max_num_bits)
-        <:sexp_of< int list * [ `got of int ] * [ `max of int ] >>;
-    ints
+    if num_bits > max_num_bits
+    then failwiths "Level_bits.create_exn got too many bits"
+           (ints, `got num_bits, `max max_num_bits)
+           <:sexp_of< int list * [ `got of int ] * [ `max of int ] >>;
+    List.map ints ~f:Num_key_bits.of_int
   ;;
 
-  let t_of_sexp sexp = create_exn (<:of_sexp< raw >> sexp)
-
-  let num_bits t = List.fold t ~init:0 ~f:(+)
-
-  let default word_size =
-    match word_size with
-    | Word_size.W64 -> [ 11; 10; 10; 10; 10; 10 ]
-    | Word_size.W32 -> [ 10; 10; 9 ]
-  ;;
+  let default = create_exn [ 11; 10; 10; 10; 10; 10 ]
 end
 
 module Config = struct
@@ -96,7 +140,7 @@ module Config = struct
     end)
 
   let alarm_precision_default = Alarm_precision.create_exn (Time_ns.Span.of_int_sec 1)
-  let level_bits_default = Level_bits.default Word_size.word_size
+  let level_bits_default = Level_bits.default
 
   type t =
     { alarm_precision : Alarm_precision.t with default ( alarm_precision_default )
@@ -133,7 +177,7 @@ module Config = struct
       List.fold t.level_bits ~init:(alarm_precision t, [])
         ~f:(fun (interval_duration, durations) num_bits ->
           let duration =
-            Time_ns.Span.scale_int interval_duration (Int.pow 2 num_bits)
+            Time_ns.Span.scale_int63 interval_duration (Num_key_bits.pow2 num_bits)
           in
           duration, duration :: durations)
     in
@@ -161,14 +205,101 @@ module Priority_queue = struct
   module Pool    = Pool.Unsafe
   module Pointer = Pool.Pointer
 
-  let max_representable_key = 1 lsl Level_bits.max_num_bits - 1
+  module Key : sig
+    (* [Interval_num] is the public API.  Everything following in the signature is
+       for internal use. *)
+    include Timing_wheel_intf.Interval_num
+
+    (* [Slots_mask] is used to quickly determine a key's slot in a given level. *)
+    module Slots_mask : sig
+      type t = private int with compare, sexp_of
+
+      val create : level_bits:Num_key_bits.t -> t
+
+      val next_slot : t -> int -> int
+    end
+
+    (* [Min_key_in_same_slot_mask] is used to quickly determine the minimum key in the
+       same slot as a given key. *)
+    module Min_key_in_same_slot_mask : sig
+      type t = private Int63.t with compare, sexp_of
+
+      val create : bits_per_slot:Num_key_bits.t -> t
+    end
+
+    val num_keys : Num_key_bits.t -> Span.t
+
+    val min_key_in_same_slot : t -> Min_key_in_same_slot_mask.t -> t
+
+    val largest_multiple : of_ : Span.t -> less_than_or_equal_to : t -> t
+
+    val slot
+      :  t
+      -> bits_per_slot : Num_key_bits.t
+      -> slots_mask    : Slots_mask.t
+      -> int
+  end = struct
+
+    module Slots_mask = struct
+      type t = int with compare, sexp_of
+
+      let create ~level_bits = Int63.to_int_exn (Num_key_bits.pow2 level_bits) - 1
+
+      let next_slot t slot = (slot + 1) land t
+    end
+
+    let num_keys num_bits = Num_key_bits.pow2 num_bits
+
+    module Min_key_in_same_slot_mask = struct
+      include Int63
+
+      let create ~bits_per_slot = bit_not (Num_key_bits.pow2 bits_per_slot - one)
+    end
+
+    module Span = struct
+      include Int63
+
+      let to_int63 t = t
+      let of_int63 i = i
+
+      let scale_int t i = t * of_int i
+    end
+
+    include Int63
+
+    let of_int63 i = i
+    let to_int63 t = t
+
+    let add t i = t + i
+    let sub t i = t - i
+    let diff t1 t2 = t1 - t2
+
+    let max_representable = num_keys Num_key_bits.max_value - one
+
+    let slot t ~(bits_per_slot : Num_key_bits.t) ~slots_mask =
+      (to_int_exn (shift_right t (bits_per_slot :> int)))
+      land slots_mask
+    ;;
+
+    let min_key_in_same_slot t min_key_in_same_slot_mask =
+      bit_and t min_key_in_same_slot_mask
+    ;;
+
+    let largest_multiple ~of_ ~less_than_or_equal_to = of_ * (less_than_or_equal_to / of_)
+  end
+
+  module Min_key_in_same_slot_mask = Key.Min_key_in_same_slot_mask
+  module Slots_mask                = Key.Slots_mask
 
   module External_elt = struct
 
     (* The [pool_slots] here has nothing to do with the slots in a level array.  This is
        for the slots in the pool tuple representing a level element. *)
     type 'a pool_slots =
-      (int, Time_ns.t, 'a, int,
+      (Key.t,
+       Time_ns.t,
+       'a,
+       int,
        'a pool_slots Pointer.t,
        'a pool_slots Pointer.t
       ) Pool.Slots.t6
@@ -207,26 +338,28 @@ module Priority_queue = struct
 
     (* [create] returns an element whose [next] and [prev] are [null]. *)
     val create
-        :  'a Pool.t
-        -> key:int
-        (* [at] is used when the priority queue is used to implement a timing wheel.  If
-           unused, it will be [Time_ns.epoch]. *)
-        -> at:Time_ns.t
-        -> value:'a
-        -> level_index:int
-        -> 'a t
+      :  'a Pool.t
+      -> key         : Key.t
+      (* [at] is used when the priority queue is used to implement a timing wheel.  If
+         unused, it will be [Time_ns.epoch]. *)
+      -> at          : Time_ns.t
+      -> value       : 'a
+      -> level_index : int
+      -> 'a t
 
     val free : 'a Pool.t -> 'a t -> unit
 
     (* accessors *)
-    val key         : 'a Pool.t -> 'a t -> int
+    val key         : 'a Pool.t -> 'a t -> Key.t
     val at          : 'a Pool.t -> 'a t -> Time_ns.t
     val level_index : 'a Pool.t -> 'a t -> int
     val next        : 'a Pool.t -> 'a t -> 'a t
     val value       : 'a Pool.t -> 'a t -> 'a
 
     (* mutators *)
-    val set_level_index : 'a Pool.t -> 'a t -> int -> unit
+    val set_key         : 'a Pool.t -> 'a t -> Key.t     -> unit
+    val set_at          : 'a Pool.t -> 'a t -> Time_ns.t -> unit
+    val set_level_index : 'a Pool.t -> 'a t -> int       -> unit
 
     (* [link pool t ~after] links [t] into the circular doubly-linked list containing
        [after], placing [t] after [after]. *)
@@ -264,7 +397,9 @@ module Priority_queue = struct
     let free = Pool.free
 
     let key p t               = Pool.get p t Pool.Slot.t0
+    let set_key p t k         = Pool.set p t Pool.Slot.t0 k
     let at p t                = Pool.get p t Pool.Slot.t1
+    let set_at p t x          = Pool.set p t Pool.Slot.t1 x
     let value p t             = Pool.get p t Pool.Slot.t2
     let level_index p t       = Pool.get p t Pool.Slot.t3
     let set_level_index p t i = Pool.set p t Pool.Slot.t3 i
@@ -358,49 +493,49 @@ module Priority_queue = struct
        "Lower levels" is [bits_per_slot] bits wide.  "This level" is [bits] wide. *)
     type 'a t =
       { (* The [index] in the timing wheel's array of levels where this level is. *)
-        index : int;
-        (* How many [bits] this level is responsible for. *)
-        bits : int;
-        (* [slots_mask = Array.length slots - 1].  This used to quickly mod a key by
-           [Array.length slots] to determine what slot it goes in. *)
-        slots_mask : int;
-        (* [bits_per_slot] is how many bits each slot distinguishes, and is the sum of
-           of the [bits] of all the lower levels. *)
-        bits_per_slot : int;
-        (* [keys_per_slot = 1 lsl bits_per_slot] *)
-        keys_per_slot : int;
-        (* [min_key_in_same_slot_mask = lnot (keys_per_slot - 1)]. *)
-        min_key_in_same_slot_mask : int;
-        (* [num_allowed_keys = keys_per_slot * 1 lsl bits] *)
-        num_allowed_keys : int;
-        (* [length] is the number of elts currently in this level. *)
-        mutable length : int;
-        (* All elements at this level have their [key] satisfy [min_allowed_key <= key <=
-           max_allowed_key].  Also, [min_allowed_key] is a multiple of [keys_per_slot]. *)
-        mutable min_allowed_key : int;
-        mutable max_allowed_key : int;
+        index                     : int
+      (* How many [bits] this level is responsible for. *)
+      ; bits                      : Num_key_bits.t
+      (* [slots_mask = Slots_mask.create ~level_bits:t.bits]. *)
+      ; slots_mask                : Slots_mask.t
+      (* [bits_per_slot] is how many bits each slot distinguishes, and is the sum of of
+         the [bits] of all the lower levels. *)
+      ; bits_per_slot             : Num_key_bits.t
+      ; keys_per_slot             : Key.Span.t
+      ; min_key_in_same_slot_mask : Min_key_in_same_slot_mask.t
+      (* [num_allowed_keys = keys_per_slot * Array.length slots] *)
+      ; num_allowed_keys          : Key.Span.t
+      (* [length] is the number of elts currently in this level. *)
+      ; mutable length            : int
+      (* All elements at this level have their [key] satisfy [min_allowed_key <= key <=
+         max_allowed_key].  Also, [min_allowed_key] is a multiple of [keys_per_slot]. *)
+      ; mutable min_allowed_key   : Key.t
+      ; mutable max_allowed_key   : Key.t
         (* [slots] holds the (possibly null) pointers to the circular doubly-linked lists
            of elts.  [Array.length slots = 1 lsl bits]. *)
-        slots : 'a Internal_elt.t array sexp_opaque;
+      ; slots                     : 'a Internal_elt.t array sexp_opaque
       }
     with fields, sexp_of
 
     let num_slots t = Array.length t.slots
 
-    let slot t ~key = (key lsr t.bits_per_slot) land t.slots_mask
+    let slot t ~key = Key.slot key ~bits_per_slot:t.bits_per_slot ~slots_mask:t.slots_mask
 
-    let next_slot t slot = (slot + 1) land t.slots_mask
+    let next_slot t slot = Slots_mask.next_slot t.slots_mask slot
 
-    let min_key_in_same_slot t ~key = key land t.min_key_in_same_slot_mask
+    let min_key_in_same_slot t ~key =
+      Key.min_key_in_same_slot key t.min_key_in_same_slot_mask
+    ;;
   end
 
   type 'a t =
-    { mutable length : int;
-      mutable pool : 'a Internal_elt.Pool.t;
-      mutable min_elt : 'a Internal_elt.t;
-      (* All elements in the priority queue have their key [>= elt_key_lower_bound]. *)
-      mutable elt_key_lower_bound : int;
-      levels : 'a Level.t array;
+    { mutable length              : int
+    ; mutable pool                : 'a Internal_elt.Pool.t
+    (* [min_elt] is either null or an element whose key is [elt_key_lower_bound]. *)
+    ; mutable min_elt             : 'a Internal_elt.t
+    (* All elements in the priority queue have their key [>= elt_key_lower_bound]. *)
+    ; mutable elt_key_lower_bound : Key.t
+    ; levels                      : 'a Level.t array
     }
   with fields, sexp_of
 
@@ -426,29 +561,31 @@ module Priority_queue = struct
 
   let num_levels t = Array.length t.levels
 
-  let min_allowed_key t = Level.min_allowed_key t.levels.(0)
+  let min_allowed_key t = Level.min_allowed_key t.levels.( 0 )
 
   let max_allowed_key t =
-    (* We do [min max_representable_key] because a level's [max_allowed_key] can be [>
-       max_representable_key].  E.g. consider a timing wheel after one does
-       [increase_min_allowed_key t ~key:max_representable_key].  Then level 0 will have
-       [min_allowed_key = max_representable_key] and [max_allowed_key =
-       max_representable_key + num_allowed_keys - 1].  And by the inter-level invariant,
+    (* We do [min Key.max_representable] because a level's [max_allowed_key] can be [>
+       Key.max_representable].  E.g. consider a timing wheel after one does
+       [increase_min_allowed_key t ~key:Key.max_representable].  Then level 0 will have
+       [min_allowed_key = Key.max_representable] and [max_allowed_key =
+       Key.max_representable + num_allowed_keys - 1].  And by the inter-level invariant,
        the higher levels will even have their [min_allowed_key] and [max_allowed_key]
-       greater than [max_representable_key]. *)
-    min max_representable_key (Level.max_allowed_key t.levels.(num_levels t - 1))
+       greater than [Key.max_representable]. *)
+    Key.min Key.max_representable (Level.max_allowed_key t.levels.( num_levels t - 1 ))
   ;;
 
   let internal_iter t ~f =
-    if t.length > 0 then begin
+    if t.length > 0
+    then begin
       let pool = t.pool in
       let levels = t.levels in
       for level_index = 0 to Array.length levels - 1 do
-        let level = levels.(level_index) in
-        if level.Level.length > 0 then begin
-          let slots = level.Level.slots in
+        let level = levels.( level_index ) in
+        if level.length > 0
+        then begin
+          let slots = level.slots in
           for slot_index = 0 to Array.length slots - 1 do
-            let elt = slots.(slot_index) in
+            let elt = slots.( slot_index ) in
             if not (Internal_elt.is_null elt) then Internal_elt.iter pool elt ~f;
           done;
         end;
@@ -463,16 +600,16 @@ module Priority_queue = struct
   module Pretty = struct
     module Elt = struct
       type 'a t =
-        { key : int;
-          value : 'a;
+        { key   : Key.t
+        ; value : 'a
         }
       with sexp_of
     end
 
     type 'a t =
-      { min_allowed_key : int;
-        max_allowed_key : int;
-        elts : 'a Elt.t list;
+      { min_allowed_key : Key.t
+      ; max_allowed_key : Key.t
+      ; elts            : 'a Elt.t list
       }
     with sexp_of
   end
@@ -480,16 +617,16 @@ module Priority_queue = struct
   let pretty t =
     let pool = t.pool in
     { Pretty.
-      min_allowed_key = min_allowed_key t;
-      max_allowed_key = max_allowed_key t;
-      elts =
+      min_allowed_key = min_allowed_key t
+    ; max_allowed_key = max_allowed_key t
+    ; elts =
         let r = ref [] in
         internal_iter t ~f:(fun elt ->
           r := { Pretty.Elt.
                  key   = Internal_elt.key   pool elt;
                  value = Internal_elt.value pool elt;
                } :: !r);
-        List.rev !r;
+        List.rev !r
     }
   ;;
 
@@ -500,81 +637,93 @@ module Priority_queue = struct
   ;;
 
   let invariant invariant_a t : unit =
-    let module L = Level in
     let pool = t.pool in
     let level_invariant level =
       Invariant.invariant _here_ level <:sexp_of< _ Level.t >> (fun () ->
         let check f = Invariant.check_field level f in
         Level.Fields.iter
           ~index:(check (fun index -> assert (index >= 0)))
-          ~bits:(check (fun bits -> assert (bits > 0)))
-          ~slots_mask:(check (fun mask -> assert (mask = Level.num_slots level - 1)))
-          ~bits_per_slot:(check (fun bits_per_slot -> assert (bits_per_slot >= 0)))
+          ~bits:(check (fun bits -> assert (Num_key_bits.( > ) bits Num_key_bits.zero)))
+          ~slots_mask:(check (<:test_result< Slots_mask.t >>
+                                ~expect:(Slots_mask.create ~level_bits:level.bits)))
+          ~bits_per_slot:(check (fun bits_per_slot ->
+            assert (Num_key_bits.( >= ) bits_per_slot Num_key_bits.zero)))
           ~keys_per_slot:(check (fun keys_per_slot ->
-            assert (keys_per_slot = 1 lsl level.L.bits_per_slot)))
+            <:test_result< Key.Span.t >> keys_per_slot
+              ~expect:(Key.num_keys level.bits_per_slot)))
           ~min_key_in_same_slot_mask:(check (fun min_key_in_same_slot_mask ->
-            assert (min_key_in_same_slot_mask = lnot (level.L.keys_per_slot - 1))))
+            assert (min_key_in_same_slot_mask
+                    = Min_key_in_same_slot_mask.create
+                        ~bits_per_slot:level.bits_per_slot)))
           ~num_allowed_keys:(check (fun num_allowed_keys ->
-            assert (num_allowed_keys
-                    = level.L.keys_per_slot * Level.num_slots level)))
+            <:test_result< Key.Span.t >> num_allowed_keys
+              ~expect:(Key.Span.scale_int level.keys_per_slot (Level.num_slots level))))
           ~length:(check (fun length ->
             assert (length
-                    = Array.fold level.L.slots ~init:0 ~f:(fun n elt ->
-                      if Internal_elt.is_null elt then
-                        n
-                      else
-                        n + Internal_elt.length pool elt))))
+                    = Array.fold level.slots ~init:0 ~f:(fun n elt ->
+                      if Internal_elt.is_null elt
+                      then n
+                      else n + Internal_elt.length pool elt))))
           ~min_allowed_key:(check (fun min_allowed_key ->
-            assert (min_allowed_key >= 0);
-            assert (Int.rem min_allowed_key level.L.keys_per_slot = 0)))
+            assert (Key.( >= ) min_allowed_key Key.zero);
+            <:test_result< Key.Span.t >>
+              (Key.rem min_allowed_key level.keys_per_slot)
+              ~expect:Key.Span.zero))
           ~max_allowed_key:
-          (check (fun max_allowed_key ->
-            assert (max_allowed_key
-                    = level.L.min_allowed_key + level.L.num_allowed_keys - 1)))
+            (check (fun max_allowed_key ->
+               <:test_result< Key.t >> max_allowed_key
+                 ~expect:(Key.add level.min_allowed_key
+                            (Key.Span.pred level.num_allowed_keys))))
           ~slots:(check (fun slots ->
             Array.iter slots ~f:(fun elt ->
-              if not (Internal_elt.is_null elt) then begin
+              if not (Internal_elt.is_null elt)
+              then begin
                 Internal_elt.invariant pool invariant_a elt;
                 Internal_elt.iter pool elt ~f:(fun elt ->
-                  assert (Internal_elt.key pool elt >= level.L.min_allowed_key);
-                  assert (Internal_elt.key pool elt <= level.L.max_allowed_key);
+                  assert (Internal_elt.key pool elt >= level.min_allowed_key);
+                  assert (Internal_elt.key pool elt <= level.max_allowed_key);
                   assert (Internal_elt.key pool elt >= t.elt_key_lower_bound);
-                  assert (Internal_elt.level_index pool elt = level.L.index);
+                  assert (Internal_elt.level_index pool elt = level.index);
                   invariant_a (Internal_elt.value pool elt));
               end))))
     in
     Invariant.invariant _here_ t <:sexp_of< _ t_internal >> (fun () ->
       let check f = Invariant.check_field t f in
-      assert (min_allowed_key t >= 0);
-      assert (min_allowed_key t <= max_representable_key);
+      assert (min_allowed_key t >= Key.zero);
+      assert (min_allowed_key t <= Key.max_representable);
       assert (max_allowed_key t >= min_allowed_key t);
-      assert (max_allowed_key t <= max_representable_key);
+      assert (max_allowed_key t <= Key.max_representable);
       Fields.iter
         ~length:(check (fun length -> assert (length >= 0)))
         ~pool:(check (Internal_elt.Pool.invariant ignore))
         ~min_elt:(check (fun elt_ ->
-          if not (Internal_elt.is_null elt_) then begin
+          if not (Internal_elt.is_null elt_)
+          then begin
             assert (Internal_elt.is_valid t.pool elt_);
             assert (t.elt_key_lower_bound = Internal_elt.key t.pool elt_);
           end))
         ~elt_key_lower_bound:(check (fun elt_key_lower_bound ->
           assert (elt_key_lower_bound >= min_allowed_key t);
           assert (elt_key_lower_bound <= max_allowed_key t);
-          if not (Internal_elt.is_null t.min_elt) then
-            assert (elt_key_lower_bound = Internal_elt.key t.pool t.min_elt);
+          if not (Internal_elt.is_null t.min_elt)
+          then assert (elt_key_lower_bound = Internal_elt.key t.pool t.min_elt);
         ))
         ~levels:(check (fun levels ->
           assert (num_levels t > 0);
           Array.iteri levels ~f:(fun level_index level ->
             assert (level_index = Level.index level);
             level_invariant level;
-            if level_index > 0 then begin
-              let prev_level = levels.(level_index - 1) in
+            if level_index > 0
+            then begin
+              let prev_level = levels.( level_index - 1 ) in
               let module L = Level in
-              assert (L.keys_per_slot level = L.num_allowed_keys prev_level);
-              let bound = L.max_allowed_key prev_level + 1 in
+              <:test_result< Key.Span.t >>
+                (L.keys_per_slot level) ~expect:(L.num_allowed_keys prev_level);
+              let bound = Key.succ (L.max_allowed_key prev_level) in
               assert (L.min_allowed_key level <= bound);
-              assert (L.min_allowed_key level + L.keys_per_slot level > bound);
+              assert (Key.( > )
+                        (Key.add (L.min_allowed_key level) (L.keys_per_slot level))
+                        bound);
             end))))
   ;;
 
@@ -586,44 +735,45 @@ module Priority_queue = struct
     else if not (Internal_elt.is_null t.min_elt)
     then t.min_elt
     else begin
-      let module L = Level in
       let pool = t.pool in
       let min_elt_already_found = ref (Internal_elt.null ()) in
-      let min_key_already_found = ref (max_representable_key + 1) in
+      let min_key_already_found = ref (Key.succ Key.max_representable) in
       let level_index = ref 0 in
       let num_levels = num_levels t in
       while !level_index < num_levels do
-        let level = t.levels.(!level_index) in
+        let level = t.levels.( !level_index ) in
         if Level.min_allowed_key level >= !min_key_already_found
         then
           (* We don't need to consider any more levels.  Quit the loop. *)
           level_index := num_levels
-        else if level.L.length = 0
+        else if level.length = 0
         then incr level_index
         else begin
           (* Look in [level]. *)
-          let slots = level.L.slots in
+          let slots = level.slots in
           let slot_min_key =
             ref (Level.min_key_in_same_slot level
-                   ~key:(max level.L.min_allowed_key t.elt_key_lower_bound))
+                   ~key:(Key.max level.min_allowed_key t.elt_key_lower_bound))
           in
           let slot = ref (Level.slot level ~key:!slot_min_key) in
           (* Find the first nonempty slot with a small enough [slot_min_key]. *)
           while
-            Internal_elt.is_null slots.(!slot)
+            Internal_elt.is_null slots.( !slot )
             && !slot_min_key < !min_key_already_found
           do
-            slot := L.next_slot level !slot;
-            slot_min_key := !slot_min_key + level.L.keys_per_slot;
+            slot := Level.next_slot level !slot;
+            slot_min_key := Key.add !slot_min_key level.keys_per_slot;
           done;
-          let first = slots.(!slot) in
-          if not (Internal_elt.is_null first) then begin
+          let first = slots.( !slot ) in
+          if not (Internal_elt.is_null first)
+          then begin
             (* Visit all of the elts in this slot and find one with minimum key. *)
             let continue = ref true in
             let current = ref first in
             while !continue do
               let current_key = Internal_elt.key pool !current in
-              if current_key < !min_key_already_found then begin
+              if current_key < !min_key_already_found
+              then begin
                 min_elt_already_found := !current;
                 min_key_already_found := current_key;
               end;
@@ -649,59 +799,67 @@ module Priority_queue = struct
 
   let min_elt t =
     let elt = min_elt_ t in
-    if Internal_elt.is_null elt then
-      None
-    else
-      Some (Internal_elt.to_external elt)
+    if Internal_elt.is_null elt
+    then None
+    else Some (Internal_elt.to_external elt)
   ;;
 
   let min_key t =
     let elt = min_elt_ t in
-    if Internal_elt.is_null elt then
-      None
-    else
-      Some (Internal_elt.key t.pool elt)
+    if Internal_elt.is_null elt
+    then None
+    else Some (Internal_elt.key t.pool elt)
   ;;
 
   let add_elt t elt =
     let pool = t.pool in
-    let module L = Level in
     let key = Internal_elt.key pool elt in
     assert (key >= min_allowed_key t && key <= max_allowed_key t);
     (* Find the lowest level that will hold [elt]. *)
     let level_index =
       let level_index = ref 0 in
-      while key > Level.max_allowed_key t.levels.(!level_index) do
+      while key > Level.max_allowed_key t.levels.( !level_index ) do
         incr level_index;
       done;
       !level_index
     in
-    let level = t.levels.(level_index) in
-    assert (key >= level.L.min_allowed_key && key <= level.L.max_allowed_key);
-    level.L.length <- level.L.length + 1;
+    let level = t.levels.( level_index ) in
+    assert (key >= level.min_allowed_key && key <= level.max_allowed_key);
+    level.length <- level.length + 1;
     Internal_elt.set_level_index pool elt level_index;
     let slot = Level.slot level ~key in
-    let slots = level.L.slots in
-    let first = slots.(slot) in
-    if not (Internal_elt.is_null first) then
-      Internal_elt.link pool elt ~after:first
+    let slots = level.slots in
+    let first = slots.( slot ) in
+    if not (Internal_elt.is_null first)
+    then Internal_elt.link pool elt ~after:first
     else begin
-      slots.(slot) <- elt;
+      slots.( slot ) <- elt;
       Internal_elt.link_to_self pool elt;
     end
   ;;
 
-  let internal_add t ~key ~at value =
-    if key < min_allowed_key t || key > max_allowed_key t then
-      failwiths "Timing_wheel.add got invalid key" (key, t) <:sexp_of< int * _ t >>;
-    if Internal_elt.Pool.is_full t.pool then t.pool <- Internal_elt.Pool.grow t.pool;
-    let elt = Internal_elt.create t.pool ~key ~at ~value ~level_index:(-1) in
-    if key < t.elt_key_lower_bound then begin
+  let internal_add_elt t elt =
+    let key = Internal_elt.key t.pool elt in
+    if key < t.elt_key_lower_bound
+    then begin
       t.min_elt <- elt;
       t.elt_key_lower_bound <- key;
     end;
     add_elt t elt;
     t.length <- t.length + 1;
+  ;;
+
+  let ensure_valid_key t ~key =
+    if key < min_allowed_key t || key > max_allowed_key t
+    then failwiths "Timing_wheel.Priority_queue got invalid key" (key, t)
+           <:sexp_of< Key.t * _ t >>;
+  ;;
+
+  let internal_add t ~key ~at value =
+    ensure_valid_key t ~key;
+    if Internal_elt.Pool.is_full t.pool then t.pool <- Internal_elt.Pool.grow t.pool;
+    let elt = Internal_elt.create t.pool ~key ~at ~value ~level_index:(-1) in
+    internal_add_elt t elt;
     elt
   ;;
 
@@ -713,7 +871,12 @@ module Priority_queue = struct
      [first].  If the element's key is [>= t_min_allowed_key], then it adds the element
      back at a lower level.  If not, then it calls [handle_removed] and [free]s the
      element. *)
-  let remove_or_re_add_elts t level first ~t_min_allowed_key ~handle_removed =
+  let remove_or_re_add_elts
+        t
+        (level : _ Level.t)
+        first
+        ~t_min_allowed_key
+        ~handle_removed =
     let pool = t.pool in
     let current = ref first in
     let continue = ref true in
@@ -721,15 +884,17 @@ module Priority_queue = struct
       (* We extract [next] from [current] first, because we will modify or [free]
          [current] before continuing the loop. *)
       let next = Internal_elt.next pool !current in
-      level.Level.length <- level.Level.length - 1;
-      if Internal_elt.key pool !current >= t_min_allowed_key then
-        add_elt t !current
+      level.length <- level.length - 1;
+      if Internal_elt.key pool !current >= t_min_allowed_key
+      then add_elt t !current
       else begin
         t.length <- t.length - 1;
         handle_removed (Internal_elt.to_external !current);
         Internal_elt.free pool !current;
       end;
-      if phys_equal next first then continue := false else current := next;
+      if phys_equal next first
+      then continue := false
+      else current := next;
     done;
   ;;
 
@@ -739,48 +904,61 @@ module Priority_queue = struct
      elements are encountered, they are removed from the timing wheel if their key is
      smaller than [t_min_allowed_key], or added at a lower level if not. *)
   let increase_level_min_allowed_key
-        t level ~max_level_min_allowed_key ~t_min_allowed_key ~handle_removed =
-    let module L = Level in
-    (* We require that [mod level.L.min_allowed_key level.L.keys_per_slot = 0].  So,
+        t
+        (level : _ Level.t)
+        ~max_level_min_allowed_key
+        ~t_min_allowed_key
+        ~handle_removed =
+    (* We require that [mod level.min_allowed_key level.keys_per_slot = 0].  So,
        we start [level_min_allowed_key] where that is true, and then increase it by
        [keys_per_slot] each iteration of the loop. *)
     let level_min_allowed_key =
       Level.min_key_in_same_slot level
         ~key:(min max_level_min_allowed_key
-                (max level.L.min_allowed_key t.elt_key_lower_bound))
+                (max level.min_allowed_key t.elt_key_lower_bound))
     in
     let level_min_allowed_key = ref level_min_allowed_key in
     assert (!level_min_allowed_key <= max_level_min_allowed_key);
     let slot = ref (Level.slot level ~key:!level_min_allowed_key) in
-    let keys_per_slot = level.L.keys_per_slot in
-    let slots = level.L.slots in
-    while !level_min_allowed_key + keys_per_slot <= max_level_min_allowed_key do
-      if level.L.length = 0 then
+    let keys_per_slot = level.keys_per_slot in
+    let slots = level.slots in
+    while Key.( <= )
+            (Key.add !level_min_allowed_key keys_per_slot)
+            max_level_min_allowed_key
+    do
+      if level.length = 0
+      then
         (* If no elements remain at this level, we can just set [min_allowed_key] to the
            desired value. *)
         level_min_allowed_key :=
-          keys_per_slot * (max_level_min_allowed_key / keys_per_slot)
+          Key.largest_multiple ~of_:keys_per_slot
+            ~less_than_or_equal_to:max_level_min_allowed_key
       else begin
-        let first = slots.(!slot) in
-        if not (Internal_elt.is_null first) then begin
-          slots.(!slot) <- Internal_elt.null ();
+        let first = slots.( !slot ) in
+        if not (Internal_elt.is_null first)
+        then begin
+          slots.( !slot ) <- Internal_elt.null ();
           remove_or_re_add_elts t level first ~t_min_allowed_key ~handle_removed;
         end;
         slot := Level.next_slot level !slot;
-        level_min_allowed_key := !level_min_allowed_key + keys_per_slot;
+        level_min_allowed_key := Key.add !level_min_allowed_key keys_per_slot;
       end
     done;
     assert (!level_min_allowed_key <= max_level_min_allowed_key);
-    assert (!level_min_allowed_key + keys_per_slot > max_level_min_allowed_key);
-    level.L.min_allowed_key <- !level_min_allowed_key;
-    level.L.max_allowed_key <- !level_min_allowed_key + level.L.num_allowed_keys - 1;
+    assert (Key.( > )
+              (Key.add !level_min_allowed_key keys_per_slot)
+              max_level_min_allowed_key);
+    level.min_allowed_key <- !level_min_allowed_key;
+    level.max_allowed_key <- Key.add !level_min_allowed_key
+                                 (Key.Span.pred level.num_allowed_keys);
   ;;
 
   let increase_min_allowed_key t ~key ~handle_removed =
-    if key > max_representable_key then
-      failwiths "Timing_wheel.increase_min_allowed_key got invalid key" (key, t)
-        <:sexp_of< int * _ t >>;
-    if key > min_allowed_key t then begin
+    if Key.( > ) key Key.max_representable
+    then failwiths "Timing_wheel.increase_min_allowed_key got invalid key" (key, t)
+           <:sexp_of< Key.t * _ t >>;
+    if key > min_allowed_key t
+    then begin
       (* We increase the [min_allowed_key] of levels in order to restore the invariant
          that they have as large as possible a [min_allowed_key], while leaving no gaps in
          keys. *)
@@ -789,21 +967,23 @@ module Priority_queue = struct
       let levels = t.levels in
       let num_levels = num_levels t in
       while !level_index < num_levels do
-        let level = levels.(!level_index) in
-        let min_allowed_key_before = level.Level.min_allowed_key in
+        let level = levels.( !level_index ) in
+        let min_allowed_key_before = level.min_allowed_key in
         increase_level_min_allowed_key t level
           ~max_level_min_allowed_key:!max_level_min_allowed_key
           ~t_min_allowed_key:key ~handle_removed;
-        if Level.min_allowed_key level = min_allowed_key_before then
+        if Level.min_allowed_key level = min_allowed_key_before
+        then
           (* This level did not shift.  Don't shift any higher levels. *)
           level_index := num_levels
         else begin
           (* Level [level_index] shifted.  Consider shifting higher levels. *)
           level_index := !level_index + 1;
-          max_level_min_allowed_key := 1 + Level.max_allowed_key level;
+          max_level_min_allowed_key := Key.succ (Level.max_allowed_key level);
         end;
       done;
-      if key > t.elt_key_lower_bound then begin
+      if key > t.elt_key_lower_bound
+      then begin
         (* We have removed [t.min_elt] or it was already null, so just set it to null. *)
         t.min_elt <- Internal_elt.null ();
         t.elt_key_lower_bound <- min_allowed_key t;
@@ -815,89 +995,119 @@ module Priority_queue = struct
     let level_bits =
       match level_bits with
       | Some l -> l
-      | None -> Level_bits.default Word_size.word_size
+      | None -> Level_bits.default
     in
     let _, _, levels =
-      List.foldi level_bits ~init:(0, 0, [])
-        ~f:(fun index (bits_per_slot, max_level_min_allowed_key, levels) bits ->
-          let num_slots = 1 lsl bits in
-          let keys_per_slot = 1 lsl bits_per_slot in
-          let num_allowed_keys = 1 lsl (bits + bits_per_slot) in
-          let min_allowed_key =
-            keys_per_slot * (max_level_min_allowed_key / keys_per_slot)
-          in
-          let max_allowed_key = min_allowed_key + num_allowed_keys - 1 in
-          let level =
-            { Level.
-              index;
-              bits;
-              slots_mask = num_slots - 1;
-              bits_per_slot;
-              keys_per_slot;
-              min_key_in_same_slot_mask = lnot (keys_per_slot - 1);
-              num_allowed_keys;
-              length = 0;
-              min_allowed_key;
-              max_allowed_key;
-              slots = Array.create ~len:num_slots (Internal_elt.null ());
-            }
-          in
-          (bits + bits_per_slot,
-           max_allowed_key + 1,
-           level :: levels))
+      List.foldi level_bits ~init:(Num_key_bits.zero, Key.zero, [])
+        ~f:(fun index
+             (bits_per_slot, max_level_min_allowed_key, levels)
+             (level_bits : Num_key_bits.t) ->
+             let keys_per_slot = Key.num_keys bits_per_slot in
+             let num_allowed_keys =
+               Key.num_keys (Num_key_bits.( + ) level_bits bits_per_slot)
+             in
+             let min_allowed_key =
+               Key.largest_multiple ~of_:keys_per_slot
+                 ~less_than_or_equal_to:max_level_min_allowed_key
+             in
+             let max_allowed_key =
+               Key.add min_allowed_key (Key.Span.pred num_allowed_keys)
+             in
+             let level =
+               { Level.
+                 index
+               ; bits                      = level_bits
+               ; slots_mask                = Slots_mask.create ~level_bits
+               ; bits_per_slot
+               ; keys_per_slot
+               ; min_key_in_same_slot_mask =
+                   Min_key_in_same_slot_mask.create ~bits_per_slot
+               ; num_allowed_keys
+               ; length                    = 0
+               ; min_allowed_key
+               ; max_allowed_key
+               ; slots                     =
+                   Array.create
+                   ~len:(Int63.to_int_exn (Num_key_bits.pow2 level_bits))
+                   (Internal_elt.null ())
+               }
+             in
+             (Num_key_bits.( + ) level_bits bits_per_slot,
+              Key.succ max_allowed_key,
+              level :: levels))
     in
-    { length = 0;
-      pool = Internal_elt.Pool.create ();
-      min_elt = Internal_elt.null ();
-      elt_key_lower_bound = 0;
-      levels = Array.of_list_rev levels;
+    { length              = 0
+    ; pool                = Internal_elt.Pool.create ()
+    ; min_elt             = Internal_elt.null ()
+    ; elt_key_lower_bound = Key.zero
+    ; levels              = Array.of_list_rev levels
     }
   ;;
 
   let mem t elt = Internal_elt.external_is_valid t.pool elt
 
-  let remove t elt =
+  let internal_remove t elt =
     let pool = t.pool in
-    let elt = Internal_elt.of_external_exn pool elt in
-    if Internal_elt.equal elt t.min_elt then begin
+    if Internal_elt.equal elt t.min_elt
+    then begin
       t.min_elt <- Internal_elt.null ();
       (* We keep [t.elt_lower_bound] since it is valid even though [t.min_elt] is being
          removed. *)
     end;
-    let module L = Level in
     t.length <- t.length - 1;
-    let level = t.levels.(Internal_elt.level_index pool elt) in
-    level.L.length <- level.L.length - 1;
-    let slots = level.L.slots in
+    let level = t.levels.( Internal_elt.level_index pool elt ) in
+    level.length <- level.length - 1;
+    let slots = level.slots in
     let slot = Level.slot level ~key:(Internal_elt.key pool elt) in
-    let first = slots.(slot) in
-    if phys_equal elt (Internal_elt.next pool elt) then
+    let first = slots.( slot ) in
+    if phys_equal elt (Internal_elt.next pool elt)
+    then
       (* [elt] is the only element in the slot *)
-      slots.(slot) <- Internal_elt.null ()
+      slots.( slot ) <- Internal_elt.null ()
     else begin
-      if phys_equal elt first then slots.(slot) <- Internal_elt.next pool elt;
+      if phys_equal elt first then slots.( slot ) <- Internal_elt.next pool elt;
       Internal_elt.unlink pool elt;
     end;
+  ;;
+
+  let remove t elt =
+    let pool = t.pool in
+    let elt = Internal_elt.of_external_exn pool elt in
+    internal_remove t elt;
     Internal_elt.free pool elt;
   ;;
 
+  let change t elt ~key ~at =
+    ensure_valid_key t ~key;
+    let pool = t.pool in
+    let elt = Internal_elt.of_external_exn pool elt in
+    internal_remove t elt;
+    Internal_elt.set_key pool elt key;
+    Internal_elt.set_at  pool elt at;
+    internal_add_elt t elt;
+  ;;
+
+  let change_key t elt ~key = change t elt ~key ~at:(Elt.at t elt)
+
   let clear t =
-    if not (is_empty t) then begin
+    if not (is_empty t)
+    then begin
       t.length <- 0;
       let pool = t.pool in
       let free_elt elt = Internal_elt.free pool elt in
       let levels = t.levels in
       for level_index = 0 to Array.length levels - 1 do
-        let level = levels.(level_index) in
-        let module L = Level in
-        if level.L.length > 0 then begin
-          level.L.length <- 0;
-          let slots = level.L.slots in
+        let level = levels.( level_index ) in
+        if level.length > 0
+        then begin
+          level.length <- 0;
+          let slots = level.slots in
           for slot_index = 0 to Array.length slots - 1 do
-            let elt = slots.(slot_index) in
-            if not (Internal_elt.is_null elt) then begin
+            let elt = slots.( slot_index ) in
+            if not (Internal_elt.is_null elt)
+            then begin
               Internal_elt.iter pool elt ~f:free_elt;
-              slots.(slot_index) <- Internal_elt.null ();
+              slots.( slot_index ) <- Internal_elt.null ();
             end;
           done;
         end;
@@ -907,30 +1117,35 @@ module Priority_queue = struct
 end
 
 module Internal_elt = Priority_queue.Internal_elt
+module Key          = Priority_queue.Key
+module Interval_num = Key
 
 (* All time from [start] onwards is broken into half-open intervals of size
    [Config.alarm_precision config].  The intervals are numbered starting at zero, and a
    time's interval number serves as its key in [priority_queue]. *)
 type 'a t =
-  { config : Config.t;
-    start : Time_ns.t;
-    (* [{min,max}_{time,interval_num} are bounds on the times and interval numbers
-       supported by this timing wheel.
+  { config           : Config.t
+  ; start            : Time_ns.t
+  (* [{min,max}_{time,interval_num} are bounds on the times and interval numbers supported
+     by this timing wheel.
 
-       [min_time] and [max_time] are chosen so that if [min_time <= time <= max_time],
-       [Time.diff time start] doesn't overflow.  [min_interval_num] and [max_interval_num]
-       are the corresponding interval numbers.
-    *)
-    min_time : Time_ns.t;
-    max_time : Time_ns.t;
-    min_interval_num : int;
-    max_interval_num : int;
-    mutable now : Time_ns.t;
-    priority_queue : 'a Priority_queue.t;
+     [min_time] and [max_time] are chosen so that if [min_time <= time <= max_time],
+     [Time.diff time start] doesn't overflow.  [min_interval_num] and [max_interval_num]
+     are the corresponding interval numbers. *)
+  ; min_time         : Time_ns.t
+  ; max_time         : Time_ns.t
+  ; min_interval_num : Interval_num.t
+  ; max_interval_num : Interval_num.t
+  ; mutable now      : Time_ns.t
+  ; priority_queue   : 'a Priority_queue.t
   }
 with fields, sexp_of
 
 type 'a timing_wheel = 'a t
+
+type 'a t_now = 'a t
+
+let sexp_of_t_now _ t = t.now |> <:sexp_of< Time_ns.t >>
 
 let alarm_precision t = Config.alarm_precision t.config
 
@@ -939,9 +1154,9 @@ module Alarm = struct
 
   let null = Priority_queue.Elt.null
 
-  let at    tw t = Priority_queue.Elt.at    tw.priority_queue t
-  let value tw t = Priority_queue.Elt.value tw.priority_queue t
-  let key   tw t = Priority_queue.Elt.key   tw.priority_queue t
+  let at           tw t = Priority_queue.Elt.at    tw.priority_queue t
+  let value        tw t = Priority_queue.Elt.value tw.priority_queue t
+  let interval_num tw t = Priority_queue.Elt.key   tw.priority_queue t
 end
 
 let sexp_of_t_internal = sexp_of_t
@@ -951,8 +1166,8 @@ let iter t ~f = Priority_queue.iter t.priority_queue ~f
 module Pretty = struct
   module Alarm = struct
     type 'a t =
-      { at : Time_ns.t;
-        value : 'a;
+      { at    : Time_ns.t
+      ; value : 'a
       }
     with fields, sexp_of
 
@@ -962,25 +1177,33 @@ module Pretty = struct
   end
 
   type 'a t =
-    { config : Config.t;
-      start : Time_ns.t;
-      min_time : Time_ns.t;
-      max_time : Time_ns.t;
-      min_interval_num : int;
-      max_interval_num : int;
-      now : Time_ns.t;
-      alarms : 'a Alarm.t list;
+    { config           : Config.t
+    ; start            : Time_ns.t
+    ; min_time         : Time_ns.t
+    ; max_time         : Time_ns.t
+    ; min_interval_num : Interval_num.t
+    ; max_interval_num : Interval_num.t
+    ; now              : Time_ns.t
+    ; alarms           : 'a Alarm.t list
     }
   with sexp_of
 end
 
-let pretty ({ config; start; min_time; max_time; min_interval_num; max_interval_num; now;
-              priority_queue = _ } as t) =
+let pretty ({ config; start; min_time; max_time; min_interval_num; max_interval_num; now
+            ; priority_queue = _ } as t) =
   let r = ref [] in
   iter t ~f:(fun a -> r := Pretty.Alarm.create t a :: !r);
   let alarms = List.sort !r ~cmp:Pretty.Alarm.compare in
-  { Pretty. config; start; min_time; max_time; min_interval_num; max_interval_num;
-    now; alarms }
+  { Pretty.
+    config
+  ; start
+  ; min_time
+  ; max_time
+  ; min_interval_num
+  ; max_interval_num
+  ; now
+  ; alarms
+  }
 ;;
 
 let sexp_of_t sexp_of_a t =
@@ -994,7 +1217,7 @@ let length t = Priority_queue.length t.priority_queue
 let is_empty t = length t = 0
 
 let interval_num_internal ~time ~start ~alarm_precision =
-  Time_ns.Span.div (Time_ns.diff time start) alarm_precision
+  Interval_num.of_int63 (Time_ns.Span.div (Time_ns.diff time start) alarm_precision)
 ;;
 
 TEST_UNIT =
@@ -1009,11 +1232,12 @@ TEST_UNIT =
     ;  3,  1
     ]
     ~f:(fun (time, expect) ->
-    <:test_result< int >> ~expect
-      (interval_num_internal
-         ~start:Time_ns.epoch
-         ~alarm_precision:(Time_ns.Span.of_int_ns 3)
-         ~time:(Time_ns.of_int_ns_since_epoch time)))
+      <:test_result< int >> ~expect
+        (Interval_num.to_int_exn
+           (interval_num_internal
+              ~start:Time_ns.epoch
+              ~alarm_precision:(Time_ns.Span.of_int_ns 3)
+              ~time:(Time_ns.of_int_ns_since_epoch time))))
 ;;
 
 let interval_num_unchecked t time =
@@ -1021,17 +1245,18 @@ let interval_num_unchecked t time =
 ;;
 
 let interval_num t time =
-  if Time_ns.(<) time t.min_time
+  if Time_ns.( < ) time t.min_time
   then failwiths "Timing_wheel.interval_num got time too far in the past" time
          <:sexp_of< Time_ns.t >>;
-  if Time_ns.(>) time t.max_time
+  if Time_ns.( > ) time t.max_time
   then failwiths "Timing_wheel.interval_num got time too far in the future" time
          <:sexp_of< Time_ns.t >>;
   interval_num_unchecked t time;
 ;;
 
 let interval_num_start_internal interval_num ~start ~alarm_precision =
-  Time_ns.add start (Time_ns.Span.scale_int alarm_precision interval_num)
+  Time_ns.add start
+    (Time_ns.Span.scale_int63 alarm_precision (Interval_num.to_int63 interval_num))
 ;;
 
 let interval_num_start_unchecked t interval_num =
@@ -1041,11 +1266,11 @@ let interval_num_start_unchecked t interval_num =
 
 let interval_num_start t interval_num =
   if interval_num < t.min_interval_num
-  then failwiths "Timing_wheel.interval_num_start got too small interval_num"
-         interval_num <:sexp_of< int >>;
+  then failwiths "Timing_wheel.interval_num_start got too small interval_num" interval_num
+         <:sexp_of< Interval_num.t >>;
   if interval_num > t.max_interval_num
-  then failwiths "Timing_wheel.interval_num_start got too large interval_num"
-         interval_num <:sexp_of< int >>;
+  then failwiths "Timing_wheel.interval_num_start got too large interval_num" interval_num
+         <:sexp_of< Interval_num.t >>;
   interval_num_start_unchecked t interval_num
 ;;
 
@@ -1072,9 +1297,8 @@ let interval_num_start t interval_num =
 
 let alarm_upper_bound t =
   interval_num_start_unchecked t
-    (Int.min
-       t.max_interval_num
-       (Priority_queue.max_allowed_key t.priority_queue + 1))
+    (Interval_num.min t.max_interval_num
+       (Interval_num.succ (Priority_queue.max_allowed_key t.priority_queue)))
 ;;
 
 let now_interval_num t = Priority_queue.min_allowed_key t.priority_queue
@@ -1088,16 +1312,16 @@ let invariant invariant_a t =
       ~config:(check Config.invariant)
       ~start:ignore
       ~min_time:(check (fun min_time ->
-          assert (Time_ns.( <= ) min_time t.start)))
+        assert (Time_ns.( <= ) min_time t.start)))
       ~max_time:(check (fun max_time ->
-          assert (Time_ns.( >= ) max_time t.start)))
+        assert (Time_ns.( >= ) max_time t.start)))
       ~min_interval_num:(check (fun min_interval_num ->
-        <:test_result< int >> ~expect:min_interval_num (interval_num t t.min_time);
-        <:test_result< int >> ~expect:min_interval_num
+        <:test_result< Interval_num.t >> ~expect:min_interval_num (interval_num t t.min_time);
+        <:test_result< Interval_num.t >> ~expect:min_interval_num
           (interval_num t (interval_num_start t min_interval_num))))
       ~max_interval_num:(check (fun max_interval_num ->
-        <:test_result< int >> ~expect:max_interval_num (interval_num t t.max_time);
-        <:test_result< int >> ~expect:max_interval_num
+        <:test_result< Interval_num.t >> ~expect:max_interval_num (interval_num t t.max_time);
+        <:test_result< Interval_num.t >> ~expect:max_interval_num
           (interval_num t (interval_num_start t max_interval_num))))
       ~now:(check (fun now ->
         assert (Time_ns.( >= ) now t.start);
@@ -1106,11 +1330,11 @@ let invariant invariant_a t =
       ~priority_queue:(check (Priority_queue.invariant invariant_a))
     ;
     iter t ~f:(fun alarm ->
-      assert (Alarm.key t alarm = interval_num t (Alarm.at t alarm));
-      assert (Time_ns.(>=)
+      assert (Alarm.interval_num t alarm = interval_num t (Alarm.at t alarm));
+      assert (Time_ns.( >= )
                 (interval_start t (Alarm.at t alarm))
                 (interval_start t (now t)));
-      assert (Time_ns.(>)
+      assert (Time_ns.( > )
                 (Alarm.at t alarm)
                 (Time_ns.sub (now t) (alarm_precision t)));
     ))
@@ -1131,7 +1355,7 @@ let create ~config ~start =
   (* We add one to define [min_interval_num] because [min_time] may not be at the start of
      an interval, and we want to be sure that [interval_num_start t min_interval_num]
      doesn't underflow. *)
-  let min_interval_num = interval_num min_time + 1 in
+  let min_interval_num = Interval_num.succ (interval_num min_time) in
   let min_time = interval_num_start_internal min_interval_num ~start ~alarm_precision in
   let max_time =
     match Word_size.word_size with
@@ -1142,22 +1366,23 @@ let create ~config ~start =
       then Time_ns.max_value
       else Time_ns.add start Time_ns.Span.max_value
   in
-  { config;
-    start;
-    min_time;
-    max_time;
-    min_interval_num;
-    max_interval_num = interval_num max_time;
-    now = start;
-    priority_queue = Priority_queue.create ~level_bits:config.Config.level_bits ();
+  { config
+  ; start
+  ; min_time
+  ; max_time
+  ; min_interval_num
+  ; max_interval_num = interval_num max_time
+  ; now              = start
+  ; priority_queue   = Priority_queue.create ~level_bits:config.level_bits ()
   }
 ;;
 
 let advance_clock t ~to_ ~handle_fired =
-  if Time_ns.(>) to_ t.max_time
+  if Time_ns.( > ) to_ t.max_time
   then failwiths "Timing_wheel.advance_clock got time too far in the future" to_
          <:sexp_of< Time_ns.t >>;
-  if Time_ns.(>) to_ (now t) then begin
+  if Time_ns.( > ) to_ (now t)
+  then begin
     t.now <- to_;
     Priority_queue.increase_min_allowed_key t.priority_queue
       ~key:(interval_num_unchecked t to_)
@@ -1171,13 +1396,17 @@ let add_at_interval_num t ~at value =
        ~key:at ~at:(interval_num_start t at) value);
 ;;
 
+let ensure_can_schedule_alarm t ~at =
+  if Time_ns.( > ) at t.max_time
+  then failwiths "Timing_wheel cannot schedule alarm that far in the future" at
+         <:sexp_of< Time_ns.t >>;
+  if Time_ns.( < ) at t.start
+  then failwiths "Timing_wheel cannot schedule alarm before its clock start" at
+         <:sexp_of< Time_ns.t >>;
+;;
+
 let add t ~at value =
-  if Time_ns.(>) at t.max_time
-  then failwiths "Timing_wheel.add got [~at] too far in the future" at
-         <:sexp_of< Time_ns.t >>;
-  if Time_ns.(<) at t.start
-  then failwiths "Timing_wheel.add got [~at] before clock start" at
-         <:sexp_of< Time_ns.t >>;
+  ensure_can_schedule_alarm t ~at;
   Internal_elt.to_external
     (Priority_queue.internal_add t.priority_queue
        ~key:(interval_num_unchecked t at) ~at value);
@@ -1189,10 +1418,25 @@ let clear t = Priority_queue.clear t.priority_queue
 
 let mem t alarm = Priority_queue.mem t.priority_queue alarm
 
+let reschedule_gen t alarm ~key ~at =
+  if not (mem t alarm)
+  then failwith "Timing_wheel_ns cannot reschedule alarm not in timing wheel";
+  ensure_can_schedule_alarm t ~at;
+  Priority_queue.change t.priority_queue alarm ~key ~at;
+;;
+
+let reschedule t alarm ~at =
+  reschedule_gen t alarm ~key:(interval_num_unchecked t at) ~at;
+;;
+
+let reschedule_at_interval_num t alarm ~at =
+  reschedule_gen t alarm ~key:at ~at:(interval_num_start t at);
+;;
+
 let next_alarm_fires_at t =
   let elt = Priority_queue.min_elt_ t.priority_queue in
-  if Internal_elt.is_null elt then
-    None
+  if Internal_elt.is_null elt
+  then None
   else
     let key = Internal_elt.key t.priority_queue.Priority_queue.pool elt in
     (* [interval_num_start t key] is the key corresponding to the start of the time
@@ -1200,5 +1444,5 @@ let next_alarm_fires_at t =
        since the alarms in that interval don't fire until the clock is advanced to the
        start of the next interval.  So, we use [key + 1] to advance to the start of the
        next interval. *)
-    Some (interval_num_start t (key + 1))
+    Some (interval_num_start t (Interval_num.succ key))
 ;;

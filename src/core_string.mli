@@ -103,9 +103,9 @@ module Search_pattern : sig
   val replace_all   :             t -> in_:string -> with_:string -> string
 end
 
-(** Substring search and replace convenience functions.  They call [Search_pattern.create] and
-    then forget the preprocessed pattern when the search is complete.  [pos < 0] or [pos
-    >= length t] result in no match (hence [substr_index] returns [None] and
+(** Substring search and replace convenience functions.  They call [Search_pattern.create]
+    and then forget the preprocessed pattern when the search is complete.  [pos < 0] or
+    [pos >= length t] result in no match (hence [substr_index] returns [None] and
     [substr_index_exn] raises).  [may_overlap] indicates whether to report overlapping
     matches, see [Search_pattern.index_all]. *)
 val substr_index     : ?pos:int -> t -> pattern:t -> int option
@@ -393,3 +393,5 @@ end
 
 external unsafe_get : string -> int -> char         = "%string_unsafe_get"
 external unsafe_set : string -> int -> char -> unit = "%string_unsafe_set"
+
+

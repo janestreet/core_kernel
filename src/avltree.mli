@@ -73,6 +73,21 @@ val last  : ('k, 'v) t -> ('k * 'v) option
     O(log(N)) time and O(1) space. *)
 val find : ('k, 'v) t -> compare:('k -> 'k -> int) -> 'k -> 'v option
 
+(** [find_and_call t ~compare k ~if_found ~if_not_found]
+
+    is equivalent to:
+
+    [match find t ~compare k with Some v -> if_found v | None -> if_not_found k]
+
+    except that it doesn't allocate the option. *)
+val find_and_call
+  :  ('k, 'v) t
+  -> compare:('k -> 'k -> int)
+  -> 'k
+  -> if_found:('v -> 'a)
+  -> if_not_found:('k -> 'a)
+  -> 'a
+
 (** return true if key is present in the tree, otherwise return false. *)
 val mem : ('k, 'v) t -> compare:('k -> 'k -> int) -> 'k -> bool
 

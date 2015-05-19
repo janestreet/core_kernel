@@ -32,7 +32,7 @@ module Unpack_one = struct
      was written prior to [Bigstring.read_bin_prot], and it's not clear whether switching
      to use it would cause too much of a performance hit. *)
   let create_bin_prot bin_prot_reader =
-    let header_length = 8 in
+    let header_length = Bin_prot.Utils.size_header_length in
     let not_enough_data = `Not_enough_data ((), 0) in
     let pos_ref = ref 0 in
     let invalid_data message a sexp_of_a =
@@ -192,17 +192,14 @@ let feed_string ?pos ?len t buf =
   feed_gen    String.length Bigstring.From_string.blito ?pos ?len t buf
 ;;
 
-let unpack t =
+let unpack_iter t ~f =
   if !debug then invariant t;
   match t.state with
   | Dead e -> Error e
   | Alive alive ->
-    let result = Queue.create () in
     let error e =
       t.state <- Dead e;
-      (* If we *have* unpacked values, we first want to return them,
-         and then on the next call we will return the error (because [t.state = Dead]) *)
-      if Queue.is_empty result then Error e else Ok result
+      Error e
     in
     let t = alive in
     let consume ~num_bytes =
@@ -212,14 +209,13 @@ let unpack t =
     let rec loop () =
       if t.len = 0 then begin
         t.pos <- 0;
-        Ok result;
+        Ok ();
       end else begin
         match
-          Result.try_with (fun () ->
-            t.unpack_one t.buf ~pos:t.pos ~len:t.len ?partial_unpack:t.partial_unpack)
+          t.unpack_one t.buf ~pos:t.pos ~len:t.len ?partial_unpack:t.partial_unpack
         with
-        | Error exn -> error (Error.create "unpack error" exn <:sexp_of< Exn.t >>)
-        | Ok unpack_result ->
+        | exception exn -> error (Error.create "unpack error" exn <:sexp_of< Exn.t >>)
+        | unpack_result ->
           match unpack_result with
           | `Invalid_data e -> error (Error.tag e "invalid data")
           | `Ok (one, num_bytes) ->
@@ -236,8 +232,11 @@ unpack returned a value but consumed 0 bytes without partially unpacked data")
             else begin
               consume ~num_bytes;
               t.partial_unpack <- None;
-              Queue.enqueue result one;
-              loop ();
+              match f one with
+              | exception exn ->
+                error (Error.create "~f supplied to Unpack_buffer.unpack_iter raised" exn
+                         <:sexp_of< exn >>)
+              | _ -> loop ();
             end;
           | `Not_enough_data (partial_unpack, num_bytes) ->
             (* Partial unpacking need not have consumed any bytes, and cannot have
@@ -255,14 +254,33 @@ unpack returned a value but consumed 0 bytes without partially unpacked data")
               if t.len > 0 then
                 Bigstring.blito ~src:t.buf ~src_pos:t.pos ~src_len:t.len ~dst:t.buf ();
               t.pos <- 0;
-              Ok result;
+              Ok ();
             end
       end
     in
     loop ()
 ;;
 
+let unpack_into t q = unpack_iter t ~f:(Queue.enqueue q)
+
 TEST_MODULE "unpack-buffer" = struct
+
+  let is_dead t =
+    match t.state with
+    | Dead _ -> true
+    | Alive _ -> false
+  ;;
+
+  let unpack t =
+    let q = Queue.create () in
+    match unpack_into t q with
+    | Ok () -> Ok q
+    | Error _ as err ->
+      (* If we *have* unpacked values, we first want to return them,
+         and then on the next call we will return the error (because [t.state = Dead]) *)
+      assert (is_dead t);
+      if Queue.is_empty q then err else Ok q
+  ;;
 
   module type Value = sig
     type t with sexp_of
@@ -446,5 +464,16 @@ TEST_MODULE "unpack-buffer" = struct
     test (module Value) [ a ];
     test (module Value) [ a; b; a; a; a; b; b; c; c; b; a; a; b ];
     test (module Value) (List.init 1000 ~f:(fun i -> if i % 2 = 0 then a else b))
+  ;;
+
+  TEST_UNIT = (* [unpack_iter] when [f] raises *)
+    let t =
+      create (Unpack_one.create (fun ?partial_unpack:_ _ ~pos:_ ~len ->
+        if len = 0
+        then assert false
+        else `Ok ((), 1)))
+    in
+    ok_exn (feed_string t "hello");
+    assert (is_error (unpack_iter t ~f:(fun _ -> failwith "f raised")));
   ;;
 end

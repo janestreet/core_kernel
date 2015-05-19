@@ -24,6 +24,8 @@ module Make (Timing_wheel : Timing_wheel)
   module Debug_in_this_dir = Debug
   open Timing_wheel
   module Debug = Debug_in_this_dir
+
+  module Interval_num = Interval_num
   module Time = Time
 
   let does_raise = Exn.does_raise
@@ -39,19 +41,19 @@ module Make (Timing_wheel : Timing_wheel)
 
     let max_num_bits = max_num_bits
 
-    TEST = max_num_bits = Word_size.(num_bits word_size) - 3
+    TEST = max_num_bits = Word_size.( num_bits word_size ) - 3
 
     let create_exn = create_exn
     let t_of_sexp = t_of_sexp
 
     TEST_UNIT =
       List.iter
-        [ [];
-          [ 0 ];
-          [ -1 ];
-          [ 2; 0; 1 ];
-          [ max_num_bits + 1 ];
-          List.init (max_num_bits + 1) ~f:Fn.id;
+        [ []
+        ; [ 0 ]
+        ; [ -1 ]
+        ; [ 2; 0; 1 ]
+        ; [ max_num_bits + 1 ]
+        ; List.init (max_num_bits + 1) ~f:Fn.id
         ]
         ~f:(fun level_bits ->
           assert (does_raise (fun () -> Level_bits.create_exn level_bits));
@@ -60,17 +62,16 @@ module Make (Timing_wheel : Timing_wheel)
 
     let default = default
 
-    TEST_UNIT = invariant (default Word_size.W32)
-    TEST_UNIT = invariant (default Word_size.W64)
+    TEST_UNIT = invariant default
 
     let num_bits = num_bits
     let sexp_of_t = sexp_of_t
 
     TEST_UNIT =
       List.iter
-        [ [ 1 ]      , 1;
-          [ 1; 1 ]   , 2;
-          [ 1; 2; 3 ], 6;
+        [ [ 1 ]      , 1
+        ; [ 1; 1 ]   , 2
+        ; [ 1; 2; 3 ], 6
         ]
         ~f:(fun (bits, expect) ->
           let t = create_exn bits in
@@ -107,8 +108,8 @@ module Make (Timing_wheel : Timing_wheel)
 
     TEST_UNIT =
       List.iter
-        [ [ 1 ], [ sec 2. ];
-          [ 2; 1 ], [ sec 4.; sec 8. ];
+        [ [ 1 ]   , [ sec 2. ]
+        ; [ 2; 1 ], [ sec 4.; sec 8. ]
         ]
         ~f:(fun (level_bits, expect) ->
           assert (Poly.equal expect
@@ -129,6 +130,8 @@ module Make (Timing_wheel : Timing_wheel)
     type 'a priority_queue = 'a t
 
     let invariant = invariant
+
+    module Key = Key
 
     module Elt = struct
       open Elt
@@ -151,38 +154,46 @@ module Make (Timing_wheel : Timing_wheel)
 
     TEST_UNIT =
       List.iter
-        [ [ 1 ], 1;
-          [ 1; 1 ], 5;
-          [ 1; 1; 1 ], 11;
-          [ 2 ], 3;
-          [ 3 ], 7;
-          [ 3; 1 ], 23;
+        [ [ 1 ]      , 1
+        ; [ 1; 1 ]   , 5
+        ; [ 1; 1; 1 ], 11
+        ; [ 2 ]      , 3
+        ; [ 3 ]      , 7
+        ; [ 3; 1 ]   , 23
         ]
         ~f:(fun (level_bits, expected_max_allowed_key) ->
           let t = create_unit ~level_bits in
-          assert (min_allowed_key t = 0);
-          assert (max_allowed_key t = expected_max_allowed_key))
+          <:test_result< Key.t >> (min_allowed_key t) ~expect:Key.zero;
+          <:test_result< Key.t >> (max_allowed_key t)
+            ~expect:(Key.of_int expected_max_allowed_key))
     ;;
 
-    let add      = add
-    let remove   = remove
-    let mem      = mem
-    let is_empty = is_empty
-    let length   = length
+    let add        = add
+    let change_key = change_key
+    let is_empty   = is_empty
+    let length     = length
+    let mem        = mem
+    let remove     = remove
 
     TEST_UNIT =
-      let t = create_unit ~level_bits:[1] in
+      let t = create_unit ~level_bits:[ 1 ] in
       assert (is_empty t);
       assert (length t = 0);
-      let e1 = add t ~key:0 () in
-      let e2 = add t ~key:0 () in
+      let e1 = add t ~key:Key.zero () in
+      let e2 = add t ~key:Key.zero () in
       assert (mem t e1);
       assert (mem t e2);
       assert (not (is_empty t));
       assert (length t = 2);
-      assert (not (is_empty t));
       remove t e1;
       assert (not (mem t e1));
+      assert (mem t e2);
+      assert (length t = 1);
+      assert (not (is_empty t));
+      change_key t e2 ~key:(Key.of_int 1);
+      assert (Key.equal (Elt.key t e2) (Key.of_int 1));
+      assert (not (mem t e1));
+      assert (does_raise (fun () -> change_key t e1 ~key:(Key.of_int 1)));
       assert (mem t e2);
       assert (length t = 1);
       assert (not (is_empty t));
@@ -194,27 +205,29 @@ module Make (Timing_wheel : Timing_wheel)
     ;;
 
     TEST_UNIT =
-      let t = create_unit ~level_bits:[1] in
+      let t = create_unit ~level_bits:[ 1 ] in
       let add ~key = ignore (add t ~key () : _ Elt.t) in
-      for key = min_allowed_key t to max_allowed_key t do
-        add ~key;
+      for key = Key.to_int_exn (min_allowed_key t)
+        to      Key.to_int_exn (max_allowed_key t)
+      do
+        add ~key:(Key.of_int key);
       done;
       let check_adds_fail () =
         List.iter
-          [ Int.min_value;
-            min_allowed_key t - 1;
-            max_allowed_key t + 1;
-            max_representable_key + 1;
-            Int.max_value;
+          [ Key.min_value
+          ; Key.pred (min_allowed_key t)
+          ; Key.succ (max_allowed_key t)
+          ; Key.succ Key.max_representable
+          ; Key.max_value
           ]
           ~f:(fun key -> assert (does_raise (fun () -> add ~key)))
       in
       check_adds_fail ();
-      increase_min_allowed_key t ~key:1 ~handle_removed:ignore;
+      increase_min_allowed_key t ~key:Key.one ~handle_removed:ignore;
       check_adds_fail ();
       increase_min_allowed_key t ~key:(max_allowed_key t) ~handle_removed:ignore;
       check_adds_fail ();
-      increase_min_allowed_key t ~key:max_representable_key ~handle_removed:ignore;
+      increase_min_allowed_key t ~key:Key.max_representable ~handle_removed:ignore;
       check_adds_fail ();
     ;;
 
@@ -222,15 +235,13 @@ module Make (Timing_wheel : Timing_wheel)
     TEST_UNIT =
       let t = create_unit ~level_bits:[ 1; 1 ] in
       clear t;
-      let e1 = add t ~key:0 () in
-      let e2 = add t ~key:2 () in
+      let e1 = add t ~key:Key.zero       () in
+      let e2 = add t ~key:(Key.of_int 2) () in
       clear t;
       assert (is_empty t);
       assert (not (mem t e1));
       assert (not (mem t e2));
     ;;
-
-    let max_representable_key = max_representable_key
 
     let increase_min_allowed_key_return_removed_keys t ~key =
       let r = ref [] in
@@ -240,18 +251,18 @@ module Make (Timing_wheel : Timing_wheel)
     ;;
 
     TEST_UNIT =
-      let t = create_unit ~level_bits:[1] in
+      let t = create_unit ~level_bits:[ 1 ] in
       let add ~key = ignore (add t ~key () : _ Elt.t) in
-      add ~key:0;
-      add ~key:1;
+      add ~key:Key.zero;
+      add ~key:Key.one;
       assert (does_raise (fun () ->
-        increase_min_allowed_key t ~key:(max_representable_key + 1)
+        increase_min_allowed_key t ~key:Key.( succ max_representable )
           ~handle_removed:ignore));
-      increase_min_allowed_key t ~key:max_representable_key ~handle_removed:ignore;
+      increase_min_allowed_key t ~key:Key.max_representable ~handle_removed:ignore;
       assert (is_empty t);
-      assert (min_allowed_key t = max_representable_key);
-      assert (max_allowed_key t = max_representable_key);
-      add ~key:max_representable_key;
+      <:test_result< Key.t >> (min_allowed_key t) ~expect:Key.max_representable;
+      <:test_result< Key.t >> (max_allowed_key t) ~expect:Key.max_representable;
+      add ~key:Key.max_representable;
       assert (length t = 1);
     ;;
 
@@ -261,33 +272,35 @@ module Make (Timing_wheel : Timing_wheel)
       (* [all_sums n] returns all combinations of nonnegative ints that sum to [n]. *)
       let all_sums n =
         let results = Array.create ~len:(n + 1) [] in
-        results.(0) <- [[]];
+        results.( 0 ) <- [[]];
         for i = 1 to n do
-          results.(i) <-
+          results.( i ) <-
             List.concat
               (List.init i ~f:(fun j ->
                  let first = j + 1 in
-                 List.map results.(i - first) ~f:(fun rest -> first :: rest)));
+                 List.map results.( i - first ) ~f:(fun rest -> first :: rest)));
         done;
-        results.(n)
+        results.( n )
       in
       let test ~num_bits ~level_bits ~initial_min_allowed_key ~step =
-        if false then
-          Debug.eprints "test" (`num_bits num_bits, `level_bits level_bits,
-                                `initial_min_allowed_key initial_min_allowed_key,
-                                `step step)
-            (<:sexp_of< ([`num_bits of int] * [`level_bits of int list]
-                         * [`initial_min_allowed_key of int]
-                         * [`step of int]) >>);
+        if false
+        then Debug.eprints "test" (`num_bits num_bits, `level_bits level_bits,
+                                   `initial_min_allowed_key initial_min_allowed_key,
+                                   `step step)
+               <:sexp_of< [`num_bits of int] * [`level_bits of int list]
+                            * [`initial_min_allowed_key of Key.t]
+                            * [`step of Key.Span.t] >>;
         let t = create_unit ~level_bits in
         try
           increase_min_allowed_key t ~key:initial_min_allowed_key ~handle_removed:ignore;
-          assert (min_allowed_key t = initial_min_allowed_key);
-          assert (max_allowed_key t >= min_allowed_key t + 1 lsl num_bits - 1);
+          <:test_result< Key.t >> (min_allowed_key t) ~expect:initial_min_allowed_key;
+          assert (Key.( >= ) (max_allowed_key t)
+                    (Key.add (min_allowed_key t)
+                       (Key.Span.of_int63 Int63.( shift_left one num_bits - one ))));
           let keys =
-            List.range
-              ~start:`inclusive (min_allowed_key t)
-              ~stop: `inclusive (max_allowed_key t - 1)
+            List.init (Key.Span.to_int_exn
+                         (Key.diff (max_allowed_key t) (min_allowed_key t)))
+              ~f:(fun i -> Key.add (min_allowed_key t) (Key.Span.of_int i))
           in
           let n = ref 0 in
           List.iter keys ~f:(fun key ->
@@ -298,12 +311,13 @@ module Make (Timing_wheel : Timing_wheel)
           while length t > 0 do
             let keys_removed =
               increase_min_allowed_key_return_removed_keys t
-                ~key:(min max_representable_key (min_allowed_key t + step))
+                ~key:(Key.min Key.max_representable
+                        (Key.add (min_allowed_key t) step))
             in
             removed := keys_removed @ !removed;
-            List.iter keys_removed ~f:(fun key -> assert (key < min_allowed_key t))
+            List.iter keys_removed ~f:(fun key -> assert (Key.( < ) key (min_allowed_key t)))
           done;
-          let keys_removed = List.sort !removed ~cmp:Int.compare in
+          let keys_removed = List.sort !removed ~cmp:Key.compare in
           assert (Poly.equal keys_removed keys);
         with exn ->
           failwiths "failure" (exn, t) <:sexp_of< exn * _ t >>
@@ -311,13 +325,15 @@ module Make (Timing_wheel : Timing_wheel)
       let num_bits = 6 in
       let all_sums = all_sums num_bits in
       List.iter
-        [ 0;
-          max_representable_key - (1 lsl num_bits);
+        [ Key.zero
+        ; Key.sub Key.max_representable
+            (Key.Span.of_int63 (Int63.shift_left Int63.one num_bits))
         ]
         ~f:(fun initial_min_allowed_key ->
           for step = 1 to 1 lsl num_bits do
             List.iter all_sums ~f:(fun level_bits ->
-              test ~num_bits ~level_bits ~initial_min_allowed_key ~step)
+              test ~num_bits ~level_bits ~initial_min_allowed_key
+                ~step:(Key.Span.of_int step))
           done);
     ;;
 
@@ -327,36 +343,44 @@ module Make (Timing_wheel : Timing_wheel)
     TEST_UNIT =
       let t = create_unit ~level_bits:[ 1; 1; 1; 1 ] in
       assert (is_none (min_key t));
-      let _elt = add t ~key:0 () in
-      assert (Poly.equal (min_key t) (Some 0));
+      let _elt = add t ~key:Key.zero () in
+      <:test_result< Key.t option >> (min_key t) ~expect:(Some Key.zero);
       let max_key = 10 in
       for key = 1 to max_key; do
+        let key = Key.of_int key in
         assert (is_ok (Result.try_with (fun () -> add t ~key ())));
-        assert (Poly.equal (min_key t) (Some 0));
+        <:test_result< Key.t option >> (min_key t) ~expect:(Some Key.zero);
       done;
       for key = 1 to max_key + 1; do
+        let key = Key.of_int key in
         begin match increase_min_allowed_key_return_removed_keys t ~key with
-        | [key'] -> assert (key' = key - 1);
+        | [ key' ] -> <:test_result< Key.t >> key' ~expect:(Key.pred key);
         | _ -> assert false
         end;
-        assert (Poly.equal (min_key t) (if key <= max_key then Some key else None));
+        <:test_result< Key.t option >> (min_key t)
+          ~expect:(if Key.( <= ) key (Key.of_int max_key) then Some key else None);
       done;
     ;;
 
     TEST_UNIT =
-      let t = create_unit ~level_bits:[1; 1; 1; 1] in
-      let max_key = 10 in
-      let elts = List.init (max_key + 1) ~f:(fun key -> add t ~key ()) in
+      let t = create_unit ~level_bits:[ 1; 1; 1; 1 ] in
+      let max_key = Key.of_int 10 in
+      let elts =
+        List.init (Key.to_int_exn max_key + 1)
+          ~f:(fun key -> add t ~key:(Key.of_int key) ())
+      in
       List.iter elts ~f:(fun elt ->
         let key = Elt.key t elt in
         remove t elt;
-        assert (Poly.equal (min_key t) (if key < max_key then Some (key + 1) else None)));
+        <:test_result< Key.t option >>
+          (min_key t)
+          ~expect:(if Key.( < ) key max_key then Some (Key.succ key) else None))
     ;;
 
     let iter = iter
 
     TEST_UNIT =
-      let t = create_unit ~level_bits:[1; 1; 1; 1] in
+      let t = create_unit ~level_bits:[ 1; 1; 1; 1 ] in
       let count () =
         let r = ref 0 in
         iter t ~f:(fun _ -> incr r);
@@ -365,32 +389,34 @@ module Make (Timing_wheel : Timing_wheel)
       assert (count () = 0);
       let num_elts = 10 in
       for key = 0 to num_elts - 1; do
-        ignore (add t ~key () : _ Elt.t);
+        ignore (add t ~key:(Key.of_int key) () : _ Elt.t);
       done;
       assert (count () = num_elts);
-      increase_min_allowed_key t ~key:1 ~handle_removed:ignore;
+      increase_min_allowed_key t ~key:Key.one ~handle_removed:ignore;
       assert (count () = num_elts - 1);
-      increase_min_allowed_key t ~key:num_elts ~handle_removed:ignore;
+      increase_min_allowed_key t ~key:(Key.of_int num_elts) ~handle_removed:ignore;
       assert (count () = 0);
     ;;
 
     TEST_UNIT =
       let t = create_unit ~level_bits:[ 1; 1; 1; 1 ] in
       let elts = ref [] in
-      for key = 0 to max_allowed_key t do
-        elts := add t ~key () :: !elts
+      for key = 0 to Key.to_int_exn (max_allowed_key t) do
+        elts := add t ~key:(Key.of_int key) () :: !elts
       done;
       let elts' = ref [] in
       iter t ~f:(fun elt -> elts' := elt :: !elts');
       let sort elts =
-        List.sort elts ~cmp:(fun elt1 elt2 -> Int.compare (Elt.key t elt1) (Elt.key t elt2))
+        List.sort elts ~cmp:(fun elt1 elt2 ->
+          Key.compare (Elt.key t elt1) (Elt.key t elt2))
       in
       assert (List.equal ~equal:phys_equal (sort !elts) (sort !elts'));
     ;;
-
   end
 
   type nonrec 'a t = 'a t with sexp_of
+
+  type nonrec 'a t_now = 'a t_now with sexp_of
 
   type 'a timing_wheel = 'a t
 
@@ -401,9 +427,9 @@ module Make (Timing_wheel : Timing_wheel)
 
     let null = null
 
-    let at = at
-    let key = key
-    let value = value
+    let at           = at
+    let interval_num = interval_num
+    let value        = value
   end
 
   let invariant = invariant
@@ -416,8 +442,8 @@ module Make (Timing_wheel : Timing_wheel)
 
   TEST_UNIT =
     List.iter
-      [ sec (-1.);
-        sec 0.;
+      [ sec (-1.)
+      ; sec 0.
       ]
       ~f:(fun alarm_precision ->
         assert (does_raise (fun () -> create_unit ~alarm_precision ())))
@@ -433,19 +459,21 @@ module Make (Timing_wheel : Timing_wheel)
     let t = create_unit () in
     assert (not (mem t (Alarm.null ())));
     let start = start t in
-    assert (Time.(<) (interval_num_start t (-1)) start);
+    assert (Time.( < ) (interval_num_start t (Interval_num.of_int ~-1)) start);
     List.iter
-      [ 0.,   0;
-        0.1,  0;
-        0.99, 0;
-        1.,   1;
-        1.5,  1;
-        1.99, 1;
-        2.,   2;
+      [ 0.,   0
+      ; 0.1,  0
+      ; 0.99, 0
+      ; 1.,   1
+      ; 1.5,  1
+      ; 1.99, 1
+      ; 2.,   2
       ]
       ~f:(fun (after, expected_interval) ->
         let time = Time.add start (sec after) in
-        assert (interval_num t time = expected_interval);
+        <:test_result< Interval_num.t >>
+          (interval_num t time)
+          ~expect:(Interval_num.of_int expected_interval);
         assert (Time.equal
                   (interval_num_start t (interval_num t time))
                   (interval_start t time));
@@ -519,9 +547,100 @@ module Make (Timing_wheel : Timing_wheel)
     assert (mem t alarm);
     remove t alarm;
     assert (not (mem t alarm));
-    assert (does_raise (fun _ -> Alarm.key t alarm));
+    assert (does_raise (fun _ -> Alarm.interval_num t alarm));
     assert (does_raise (fun _ -> Alarm.at t alarm));
     assert (does_raise (fun _ -> Alarm.value t alarm));
+  ;;
+
+  let reschedule                 = reschedule
+  let reschedule_at_interval_num = reschedule_at_interval_num
+
+  (* Check that [reschedule] and [reschedule_at_interval_num] leave an alarm in the timing
+     wheel but reschedule its scheduled time. *)
+  TEST_UNIT =
+    List.iter
+      [ (fun t alarm ~at -> reschedule                 t alarm ~at)
+      ; (fun t alarm ~at -> reschedule_at_interval_num t alarm ~at:(interval_num t at))
+      ]
+      ~f:(fun reschedule ->
+        let epoch_plus n_seconds = Time.add Time.epoch (sec n_seconds) in
+        let t =
+          create
+            ~config:(Config.create ~alarm_precision:(sec 1.) ())
+            ~start:(epoch_plus 0.)
+        in
+        (* add alarm1 before alarm2, test initial conditions *)
+        let alarm1 = add t ~at:(epoch_plus 5.)  () in
+        let alarm2 = add t ~at:(epoch_plus 10.) () in
+        assert (mem t alarm1);
+        assert (mem t alarm2);
+        <:test_eq< Time.t >> (Alarm.at t alarm1) (epoch_plus 5.);
+        <:test_eq< Time.t >> (Alarm.at t alarm2) (epoch_plus 10.);
+        <:test_eq< Time.t >> (now t) (epoch_plus 0.);
+        <:test_eq< Time.t option >> (next_alarm_fires_at t) (Some (epoch_plus 6.));
+        (* reschedule alarm1 after alarm2, make sure alarm2 becomes next *)
+        reschedule t alarm1 ~at:(epoch_plus 15.);
+        assert (mem t alarm1);
+        assert (mem t alarm2);
+        <:test_eq< Time.t >> (Alarm.at t alarm1) (epoch_plus 15.);
+        <:test_eq< Time.t >> (Alarm.at t alarm2) (epoch_plus 10.);
+        <:test_eq< Time.t >> (now t) (epoch_plus 0.);
+        <:test_eq< Time.t option >> (next_alarm_fires_at t) (Some (epoch_plus 11.));
+        (* advance time past alarm1's original time, make sure nothing fires *)
+        advance_clock t ~to_:(epoch_plus 7.) ~handle_fired:(fun _ -> assert false);
+        assert (mem t alarm1);
+        assert (mem t alarm2);
+        <:test_eq< Time.t >> (Alarm.at t alarm1) (epoch_plus 15.);
+        <:test_eq< Time.t >> (Alarm.at t alarm2) (epoch_plus 10.);
+        <:test_eq< Time.t >> (now t) (epoch_plus 7.);
+        <:test_eq< Time.t option >> (next_alarm_fires_at t) (Some (epoch_plus 11.));
+        (* reschedule alarm1 before alarm2 again, make sure alarm1 becomes next *)
+        reschedule t alarm1 ~at:(epoch_plus 8.);
+        assert (mem t alarm1);
+        assert (mem t alarm2);
+        <:test_eq< Time.t >> (Alarm.at t alarm1) (epoch_plus 8.);
+        <:test_eq< Time.t >> (Alarm.at t alarm2) (epoch_plus 10.);
+        <:test_eq< Time.t >> (now t) (epoch_plus 7.);
+        <:test_eq< Time.t option >> (next_alarm_fires_at t) (Some (epoch_plus 9.));
+        (* advance time past alarm1, make sure alarm1 fires but alarm2 does not *)
+        let fired1 = ref false in
+        advance_clock t ~to_:(epoch_plus 9.) ~handle_fired:(fun _ -> fired1 := true);
+        assert !fired1;
+        assert (not (mem t alarm1));
+        assert (mem t alarm2);
+        <:test_eq< Time.t >> (Alarm.at t alarm2) (epoch_plus 10.);
+        <:test_eq< Time.t >> (now t) (epoch_plus 9.);
+        <:test_eq< Time.t option >> (next_alarm_fires_at t) (Some (epoch_plus 11.));
+        (* cannot reschedule already-fired alarm *)
+        assert (does_raise (fun _ -> reschedule t alarm1 ~at:(epoch_plus 20.)));
+        assert (not (mem t alarm1));
+        assert (mem t alarm2);
+        <:test_eq< Time.t >> (Alarm.at t alarm2) (epoch_plus 10.);
+        <:test_eq< Time.t >> (now t) (epoch_plus 9.);
+        <:test_eq< Time.t option >> (next_alarm_fires_at t) (Some (epoch_plus 11.));
+        (* cannot reschedule to before current time *)
+        assert (does_raise (fun _ -> reschedule t alarm2 ~at:(epoch_plus 8.)));
+        assert (not (mem t alarm1));
+        assert (mem t alarm2);
+        <:test_eq< Time.t >> (Alarm.at t alarm2) (epoch_plus 10.);
+        <:test_eq< Time.t >> (now t) (epoch_plus 9.);
+        <:test_eq< Time.t option >> (next_alarm_fires_at t) (Some (epoch_plus 11.));
+        (* cannot reschedule arbitrarily far in the future *)
+        assert (does_raise (fun _ ->
+          reschedule t alarm2 ~at:(Time.add (alarm_upper_bound t) (sec 1.))));
+        assert (not (mem t alarm1));
+        assert (mem t alarm2);
+        <:test_eq< Time.t >> (Alarm.at t alarm2) (epoch_plus 10.);
+        <:test_eq< Time.t >> (now t) (epoch_plus 9.);
+        <:test_eq< Time.t option >> (next_alarm_fires_at t) (Some (epoch_plus 11.));
+        (* fire alarm2 *)
+        let fired2 = ref false in
+        advance_clock t ~to_:(epoch_plus 11.) ~handle_fired:(fun _ -> fired2 := true);
+        assert !fired2;
+        assert (not (mem t alarm1));
+        assert (not (mem t alarm2));
+        <:test_eq< Time.t >> (now t) (epoch_plus 11.);
+        <:test_eq< Time.t option >> (next_alarm_fires_at t) None)
   ;;
 
   let add                 = add
@@ -532,20 +651,20 @@ module Make (Timing_wheel : Timing_wheel)
   (* No early alarms *)
   TEST_UNIT =
     let test ~add ~num_alarms ~alarm_precision ~alarm_separation ~advance_by =
-      if false then
-        Debug.eprints "test" (num_alarms, alarm_precision, alarm_separation, advance_by)
-          (<:sexp_of< int * Time.Span.t * Time.Span.t * Time.Span.t >>);
+      if false
+      then Debug.eprints "test" (num_alarms, alarm_precision, alarm_separation, advance_by)
+             <:sexp_of< int * Time.Span.t * Time.Span.t * Time.Span.t >>;
       let t =
         create ~config:(Config.create ~alarm_precision ()) ~start:Time.epoch
       in
       for i = 1 to num_alarms do
         let at = Time.add (now t) (Time.Span.scale alarm_separation (Float.of_int i)) in
-        ignore (add t ~at (fun () -> assert (Time.(<=) at (now t))) : _ Alarm.t);
+        ignore (add t ~at (fun () -> assert (Time.( <= ) at (now t))) : _ Alarm.t);
       done;
       while not (is_empty t) do
         let to_ = Time.add (now t) advance_by in
         advance_clock t ~to_ ~handle_fired:(fun alarm -> Alarm.value t alarm ());
-        assert (now_interval_num t = interval_num t to_);
+        <:test_result< Interval_num.t >> (now_interval_num t) ~expect:(interval_num t to_);
       done;
     in
     List.iter
@@ -568,7 +687,7 @@ module Make (Timing_wheel : Timing_wheel)
       create
         ~config:(Config.create
                    ~alarm_precision:(sec 1.)
-                   ~level_bits:(Level_bits.create_exn [10])
+                   ~level_bits:(Level_bits.create_exn [ 10 ])
                    ())
         ~start:Time.epoch
     in
@@ -599,13 +718,13 @@ module Make (Timing_wheel : Timing_wheel)
   let next_alarm_fires_at = next_alarm_fires_at
 
   TEST_UNIT =
-    let t = create_unit ~level_bits:(Level_bits.create_exn [10]) () in
+    let t = create_unit ~level_bits:(Level_bits.create_exn [ 10 ]) () in
     let add_at at = ignore (add t ~at:(Time.add Time.epoch at) () : _ Alarm.t) in
     let no_next_alarm () = is_none (next_alarm_fires_at t) in
     let next_alarm_fires_at span =
       match next_alarm_fires_at t with
       | None -> false
-      | Some at -> Time.(=) at (Time.add Time.epoch span)
+      | Some at -> Time.( = ) at (Time.add Time.epoch span)
     in
     let advance_clock span =
       advance_clock t ~to_:(Time.add Time.epoch span) ~handle_fired:ignore

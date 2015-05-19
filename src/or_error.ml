@@ -25,6 +25,18 @@ module List = Core_list
 
 include (Result : Monad.S2 with type ('a, 'b) t := ('a, 'b) Result.t)
 
+include Applicative.Make (struct
+    type nonrec 'a t = 'a t
+    let return = return
+    let apply f x =
+      Result.combine f x
+        ~ok:(fun f x -> f x)
+        ~err:(fun e1 e2 -> Error.of_list [e1; e2])
+    let map = `Custom map
+  end)
+
+let ignore = ignore_m
+
 let try_with ?(backtrace = false) f =
   let backtrace = (backtrace :> bool) in
   try Ok (f ())

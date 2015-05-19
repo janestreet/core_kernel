@@ -125,24 +125,32 @@ let raise_without_backtrace e =
 TEST_MODULE = struct
   exception Test_exception
 
+  let with_backtraces_enabled f =
+    let saved = Printexc.backtrace_status () in
+    Printexc.record_backtrace true;
+    protect ~f ~finally:(fun () -> Printexc.record_backtrace saved)
+  ;;
+
   TEST_UNIT "clear_backtrace" =
-    begin try raise Test_exception with _ -> () end;
-    assert (backtrace () <> "");
-    clear_backtrace ();
-    assert (backtrace () = "");
+    with_backtraces_enabled (fun () ->
+      begin try raise Test_exception with _ -> () end;
+      assert (backtrace () <> "");
+      clear_backtrace ();
+      assert (backtrace () = ""));
   ;;
 
   let check_if_empty_backtrace raise_f =
-    clear_backtrace ();
-    (* The call to [raise] installs a new saved backtrace.  Then, the call to [raise_f],
-       if it's [raise], should save a new, different backtrace, while if it's
-       [raise_without_backtrace], should clear the backtrace and then not install a new
-       one when raising. *)
-    let old_backtrace = try raise   Not_found      with Not_found      -> backtrace () in
-    assert (old_backtrace <> "");
-    let new_backtrace = try raise_f Test_exception with Test_exception -> backtrace () in
-    assert (new_backtrace <> old_backtrace);
-    new_backtrace = ""
+    with_backtraces_enabled (fun () ->
+      clear_backtrace ();
+      (* The call to [raise] installs a new saved backtrace.  Then, the call to [raise_f],
+         if it's [raise], should save a new, different backtrace, while if it's
+         [raise_without_backtrace], should clear the backtrace and then not install a new
+         one when raising. *)
+      let old_backtrace = try raise   Not_found      with Not_found      -> backtrace () in
+      assert (old_backtrace <> "");
+      let new_backtrace = try raise_f Test_exception with Test_exception -> backtrace () in
+      assert (new_backtrace <> old_backtrace);
+      new_backtrace = "");
   ;;
 
   TEST = not (check_if_empty_backtrace raise)

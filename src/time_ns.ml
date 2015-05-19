@@ -27,39 +27,6 @@ ENDIF
 
 let float x = Core_int63.to_float x
 
-(* We have pulled this up here so that we have a way for formatting times in their sexp
-   representation. *)
-module Platform_specific = struct
-  type tm =
-    Unix.tm = {
-    (* DON'T CHANGE THIS RECORD WITHOUT UPDATING time_ns_stubs.c!!!
-
-       The compiler will notice if the runtime's Unix.tm changes, and we must then update
-       time_ns_stubs.c, not just this copy of the definition. *)
-    tm_sec   : int;
-    tm_min   : int;
-    tm_hour  : int;
-    tm_mday  : int;
-    tm_mon   : int;
-    tm_year  : int;
-    tm_wday  : int;
-    tm_yday  : int;
-    tm_isdst : bool;
-  } with sexp
-
-  external strftime : tm -> string -> string = "core_kernel_time_ns_strftime"
-
-  TEST_UNIT "record format hasn't changed" =
-    (* Exclude the time zone (%Z) because it depends on the location. *)
-    <:test_result< string >> ~expect:"1907-07-05 04:03:08; wday=2; yday=010"
-      (strftime
-         { tm_sec = 8; tm_min = 3; tm_hour = 4; tm_mday = 5; tm_mon = 6; tm_year = 7;
-           tm_wday = 2; tm_yday = 9; tm_isdst = true }
-         "%F %T; wday=%u; yday=%j")
-
-  let internal_round_nearest = round_nearest
-end
-
 (* This signature constraint is semi-temporary and serves to make the implementation more
    type-safe (so the compiler can help us more).  It would go away if we broke the
    implementation into multiple files. *)
@@ -98,6 +65,8 @@ module Span : sig
   val to_hr  : t     -> float
   val to_day : t     -> float
 
+  val of_sec_with_microsecond_precision : float -> t
+
   val of_int_sec : int -> t
   val to_int_sec : t -> int
 
@@ -113,11 +82,14 @@ module Span : sig
   val ( - ) : t -> t -> t
   val abs : t -> t
   val neg : t -> t
-  val scale     : t -> float -> t
-  val scale_int : t -> int   -> t
-  val div : t -> t -> int
-  val ( / ) : t -> float -> t
-  val ( // ) : t -> t -> float
+
+  val scale       : t -> float        -> t
+  val scale_int   : t -> int          -> t
+  val scale_int63 : t -> Core_int63.t -> t
+
+  val div    : t -> t     -> Core_int63.t
+  val ( / )  : t -> float -> t
+  val ( // ) : t -> t     -> float
 
   val create
     :  ?sign : Float.Sign.t
@@ -250,6 +222,12 @@ end = struct
   let of_hr       f = round_nearest (f *. float hour)
   let of_day      f = round_nearest (f *. float day)
 
+  let of_sec_with_microsecond_precision f =
+    (* round [f] as if it was millisecond and scale it back *)
+    Core_int63.( * )
+      (round_nearest (f *. float millisecond))
+      (Core_int63.of_int 1000)
+
   let to_ns       t = float t
   let to_int63_ns t =       t
   let to_us       t = float t /. float microsecond
@@ -274,8 +252,9 @@ ENDIF
   let abs       = Core_int63.(abs)
   let neg       = Core_int63.(neg)
   let scale t f = round_nearest (float t *. f)
-  let scale_int t i = Core_int63.(t * of_int i)
-  let div t1 t2 = Core_int63.(to_int_exn (t1 /% t2))
+  let scale_int63 t i = Core_int63.( * ) t i
+  let scale_int   t i = scale_int63 t (Core_int63.of_int i)
+  let div       = Core_int63.( /% )
   let (/)   t f = round_nearest (float t /. f)
   let (//)      = Core_int63.(//)
 
@@ -372,6 +351,8 @@ ENDIF
     TEST_UNIT = eq (create ~day:7                      ()) (of_int 7    * day)
     TEST_UNIT = eq (create ~us:8 ~sign:Float.Sign.Neg  ()) (of_int (-8) * microsecond)
     TEST_UNIT = eq (create ~ms:9 ~sign:Float.Sign.Zero ()) (of_int 9    * millisecond)
+    TEST_UNIT = eq (create ~us:3 ~ns:242 () |> to_sec |> of_sec_with_microsecond_precision)
+                  (of_int 3 * microsecond)
     TEST_UNIT =
       let open Core_int63 in
       for _i = 1 to 1_000_000 do
@@ -527,9 +508,12 @@ module Alternate_sexp = struct
 
     let time_format = "%Y-%m-%dT%H:%M:%S%z"
 
+    (* We have pulled this up here so that we have a way for formatting times in their sexp
+       representation. *)
+    external format : float -> string -> string = "core_kernel_time_ns_format"
+
     let of_time time =
-      { human_readable =
-          Platform_specific.strftime (Unix.localtime (Span.to_sec time)) time_format
+      { human_readable = format (Span.to_sec time) time_format
       ; int63_ns_since_epoch = to_int63_ns_since_epoch time
       }
 

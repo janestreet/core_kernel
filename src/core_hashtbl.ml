@@ -150,17 +150,16 @@ let add t ~key ~data =
     `Duplicate
 ;;
 
-let add_exn (type k) t ~key ~data =
+let add_or_error t ~key ~data =
   match add t ~key ~data with
-  | `Ok -> ()
+  | `Ok -> Result.Ok ()
   | `Duplicate ->
-    let module T = struct
-      type key = k
-      let sexp_of_key = sexp_of_key t
-      exception Add_key_already_present of key with sexp
-    end
-    in
-    raise (T.Add_key_already_present key)
+    let sexp_of_key = sexp_of_key t in
+    Or_error.error "Hashtbl.add_exn got key already present" key <:sexp_of< key >>
+;;
+
+let add_exn t ~key ~data =
+  Or_error.ok_exn (add_or_error t ~key ~data)
 ;;
 
 let clear t =
@@ -170,16 +169,24 @@ let clear t =
   t.length <- 0
 ;;
 
-let find t key =
+let find_and_call t key ~if_found ~if_not_found =
   (* with a good hash function these first two cases will be the overwhelming majority,
      and Avltree.find is recursive, so it can't be inlined, so doing this avoids a
      function call in most cases. *)
   match t.table.(slot t key) with
-  | Avltree.Empty -> None
+  | Avltree.Empty -> if_not_found key
   | Avltree.Leaf (k, v) ->
-    if compare_key t k key = 0 then Some v
-    else None
-  | tree -> Avltree.find tree ~compare:(compare_key t) key
+    if compare_key t k key = 0 then if_found v
+    else if_not_found key
+  | tree ->
+    Avltree.find_and_call tree ~compare:(compare_key t) key ~if_found ~if_not_found
+;;
+
+let find =
+  let if_found v = Some v in
+  let if_not_found _ = None in
+  fun t key ->
+    find_and_call t key ~if_found ~if_not_found
 ;;
 
 let mem t key =
@@ -248,11 +255,11 @@ let invariant t =
   assert (real_len = t.length)
 ;;
 
-let find_exn t id =
-  match find t id with
-  | Some x -> x
-  | None ->
-    raise Not_found
+let find_exn =
+  let if_found v = v in
+  let if_not_found _ = raise Not_found in
+  fun t key ->
+    find_and_call t key ~if_found ~if_not_found
 ;;
 
 (*let find_default t key ~default =
@@ -455,7 +462,7 @@ let of_alist_or_error ?growth_allowed ?size ~hashable lst =
   | `Ok v -> Result.Ok v
   | `Duplicate_key key ->
     let sexp_of_key = hashable.Hashable.sexp_of_t in
-    Or_error.error "Hashtbl.of_alist_exn: duplicate key" key <:sexp_of< key >>
+    Or_error.error "Hashtbl.of_alist_exn: duplicate key" key sexp_of_key
 ;;
 
 let of_alist_exn ?growth_allowed ?size ~hashable lst =
@@ -498,12 +505,16 @@ let create_with_key ?growth_allowed ?size ~hashable ~get_key rows =
   create_mapped ?growth_allowed ?size ~hashable ~get_key ~get_data:(fun x -> x) rows
 ;;
 
-let create_with_key_exn ?growth_allowed ?size ~hashable ~get_key rows =
+let create_with_key_or_error ?growth_allowed ?size ~hashable ~get_key rows =
   match create_with_key ?growth_allowed ?size ~hashable ~get_key rows with
-  | `Ok t -> t
+  | `Ok t -> Result.Ok t
   | `Duplicate_keys keys ->
     let sexp_of_key = hashable.Hashable.sexp_of_t in
-    failwiths "Hashtbl.create_with_key: duplicate keys" keys <:sexp_of< key list >>
+    Or_error.error "Hashtbl.create_with_key: duplicate keys" keys <:sexp_of< key list >>
+;;
+
+let create_with_key_exn ?growth_allowed ?size ~hashable ~get_key rows =
+  Or_error.ok_exn (create_with_key_or_error ?growth_allowed ?size ~hashable ~get_key rows)
 ;;
 
 let merge t1 t2 ~f =
@@ -574,6 +585,7 @@ module Accessors = struct
   let replace         = replace
   let set             = set
   let add             = add
+  let add_or_error    = add_or_error
   let add_exn         = add_exn
   let change          = change
   let add_multi       = add_multi
@@ -600,6 +612,7 @@ module Accessors = struct
   let find_or_add     = find_or_add
   let find            = find
   let find_exn        = find_exn
+  let find_and_call   = find_and_call
   let find_and_remove = find_and_remove
   let iter_vals       = iter_vals
   let to_alist        = to_alist
@@ -673,6 +686,10 @@ end = struct
 
   let create_with_key ?growth_allowed ?size ~get_key l =
     create_with_key ?growth_allowed ~hashable ?size ~get_key l
+  ;;
+
+  let create_with_key_or_error ?growth_allowed ?size ~get_key l =
+    create_with_key_or_error ?growth_allowed ~hashable ?size ~get_key l
   ;;
 
   let create_with_key_exn ?growth_allowed ?size ~get_key l =

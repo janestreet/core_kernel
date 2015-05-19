@@ -42,23 +42,47 @@ module Control = struct
      See the documentation of ocamlrun. *)
   module T = struct
     type t = Caml.Gc.control = {
-      mutable minor_heap_size : int; (* The size (in words) of the minor heap. Changing this parameter will trigger a minor collection. Default: 32k. *)
-      mutable major_heap_increment : int; (* The minimum number of words to add to the major heap when increasing it. Default: 62k. *)
-      mutable space_overhead : int; (* The major GC speed is computed from this parameter. This is the memory that will be "wasted" because the GC does not immediatly collect unreachable blocks. It is expressed as a percentage of the memory used for live data. The GC will work more (use more CPU time and collect blocks more eagerly) if space_overhead is smaller. Default: 80. *)
-      mutable verbose : int; (* This value controls the GC messages on standard error output. It is a sum of some of the following flags, to print messages on the corresponding events:
-      * 0x001 Start of major GC cycle.
-      * 0x002 Minor collection and major GC slice.
-      * 0x004 Growing and shrinking of the heap.
-      * 0x008 Resizing of stacks and memory manager tables.
-      * 0x010 Heap compaction.
-      * 0x020 Change of GC parameters.
-      * 0x040 Computation of major GC slice size.
-      * 0x080 Calling of finalisation functions.
-      * 0x100 Bytecode executable search at start-up.
-      * 0x200 Computation of compaction triggering condition. Default: 0. *)
-      mutable max_overhead : int; (* Heap compaction is triggered when the estimated amount of "wasted" memory is more than max_overhead percent of the amount of live data. If max_overhead is set to 0, heap compaction is triggered at the end of each major GC cycle (this setting is intended for testing purposes only). If max_overhead >= 1000000, compaction is never triggered. Default: 500. *)
-      mutable stack_limit : int; (* The maximum size of the stack (in words). This is only relevant to the byte-code runtime, as the native code runtime uses the operating system's stack. Default: 256k. *)
-      mutable allocation_policy : int; (** The policy used for allocating in the heap.  Possible values are 0 and 1.  0 is the next-fit policy, which is quite fast but can result in fragmentation.  1 is the first-fit policy, which can be slower in some cases but can be better for programs with fragmentation problems.  Default: 0. *)
+      (* The size (in words) of the minor heap. Changing this parameter will trigger a
+         minor collection. Default: 32k. *)
+      mutable minor_heap_size : int;
+      (* The minimum number of words to add to the major heap when increasing it. Default:
+         62k. *)
+      mutable major_heap_increment : int;
+      (* The major GC speed is computed from this parameter. This is the memory that will
+         be "wasted" because the GC does not immediatly collect unreachable blocks. It is
+         expressed as a percentage of the memory used for live data. The GC will work more
+         (use more CPU time and collect blocks more eagerly) if space_overhead is
+         smaller. Default: 80. *)
+      mutable space_overhead : int;
+      (* This value controls the GC messages on standard error output. It is a sum of some
+         of the following flags, to print messages on the corresponding events:
+
+       * 0x001 Start of major GC cycle.
+       * 0x002 Minor collection and major GC slice.
+       * 0x004 Growing and shrinking of the heap.
+       * 0x008 Resizing of stacks and memory manager tables.
+       * 0x010 Heap compaction.
+       * 0x020 Change of GC parameters.
+       * 0x040 Computation of major GC slice size.
+       * 0x080 Calling of finalisation functions.
+       * 0x100 Bytecode executable search at start-up.
+       * 0x200 Computation of compaction triggering condition. Default: 0. *)
+      mutable verbose : int;
+      (* Heap compaction is triggered when the estimated amount of "wasted" memory is more
+         than max_overhead percent of the amount of live data. If max_overhead is set to
+         0, heap compaction is triggered at the end of each major GC cycle (this setting
+         is intended for testing purposes only). If max_overhead >= 1000000, compaction is
+         never triggered. Default: 500. *)
+      mutable max_overhead : int;
+      (* The maximum size of the stack (in words). This is only relevant to the byte-code
+         runtime, as the native code runtime uses the operating system's stack. Default:
+         256k. *)
+      mutable stack_limit : int;
+      (** The policy used for allocating in the heap.  Possible values are 0 and 1.  0 is
+          the next-fit policy, which is quite fast but can result in fragmentation.  1 is
+          the first-fit policy, which can be slower in some cases but can be better for
+          programs with fragmentation problems.  Default: 0. *)
+      mutable allocation_policy : int;
     } with compare, bin_io, sexp, fields
   end
 
@@ -66,35 +90,31 @@ module Control = struct
   include Comparable.Make(T)
 end
 
-
-let tune__field logger ?(fmt = ("%d" : (_, _, _) format)) name arg current =
-  match arg with
-  | None -> current
-  | Some v ->
-      Option.iter logger
-        ~f:(fun f -> Printf.ksprintf f "Gc.Control.%s: %(%d%) -> %(%d%)"
-              name fmt current fmt v);
-      v
-;;
-
-(*
-  *\(.*\) -> \1 = f "\1" \1 c.\1;
-*)
 let tune ?logger ?minor_heap_size ?major_heap_increment ?space_overhead
-    ?verbose ?max_overhead ?stack_limit ?allocation_policy () =
-  let c = get () in
-  let f = tune__field logger in
-  set {
-    minor_heap_size = f "minor_heap_size" minor_heap_size c.minor_heap_size;
-    major_heap_increment = f "major_heap_increment" major_heap_increment
-      c.major_heap_increment;
-    space_overhead = f "space_overhead" space_overhead c.space_overhead;
-    verbose = f "verbose" ~fmt:"0x%x" verbose c.verbose;
-    max_overhead = f "max_overhead" max_overhead c.max_overhead;
-    stack_limit = f "stack_limit" stack_limit c.stack_limit;
-    allocation_policy = f "allocation_policy" allocation_policy
-      c.allocation_policy
-  }
+      ?verbose ?max_overhead ?stack_limit ?allocation_policy () =
+  let module Field = Fieldslib.Field in
+  let old_control_params = get () in
+  let f opt to_string field =
+    let old_value = Field.get field old_control_params in
+    match opt with
+    | None -> old_value
+    | Some new_value ->
+      Option.iter logger ~f:(fun f ->
+        Printf.ksprintf f "Gc.Control.%s: %s -> %s"
+          (Field.name field) (to_string old_value) (to_string new_value));
+      new_value
+  in
+  let new_control_params =
+    Control.Fields.map
+      ~minor_heap_size:     (f minor_heap_size      string_of_int)
+      ~major_heap_increment:(f major_heap_increment string_of_int)
+      ~space_overhead:      (f space_overhead       string_of_int)
+      ~verbose:             (f verbose              string_of_int)
+      ~max_overhead:        (f max_overhead         string_of_int)
+      ~stack_limit:         (f stack_limit          string_of_int)
+      ~allocation_policy:   (f allocation_policy    string_of_int)
+  in
+  set new_control_params
 ;;
 
 module Allocation_policy = struct

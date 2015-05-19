@@ -601,7 +601,7 @@ include struct
   end)
   open Monad
   module Monad_infix = Monad_infix
-  let ignore = ignore
+  let ignore_m = ignore_m
   let join = join
   let bind = bind
   let (>>=) = bind
@@ -1018,7 +1018,7 @@ let to_string ~f t =
     (sexp_of_t (fun x -> Sexplib.Sexp.Atom x) (List.map t ~f))
 ;;
 
-let compare a b ~cmp =
+let compare cmp a b =
   let rec loop a b =
     match a, b with
     | [], [] -> 0

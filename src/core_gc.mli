@@ -248,14 +248,14 @@ val keep_alive : _ -> unit
 
 (** Adjust the specified GC parameters. *)
 val tune
-  :  ?logger:(string -> unit)
-  -> ?minor_heap_size:int
-  -> ?major_heap_increment:int
-  -> ?space_overhead:int
-  -> ?verbose:int
-  -> ?max_overhead:int
-  -> ?stack_limit:int
-  -> ?allocation_policy:int
+  :  ?logger               : (string -> unit)
+  -> ?minor_heap_size      : int
+  -> ?major_heap_increment : int
+  -> ?space_overhead       : int
+  -> ?verbose              : int
+  -> ?max_overhead         : int
+  -> ?stack_limit          : int
+  -> ?allocation_policy    : int
   -> unit
   -> unit
 

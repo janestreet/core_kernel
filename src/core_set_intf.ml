@@ -71,6 +71,11 @@ module type Accessors_generic = sig
     : ('a, 'cmp,
        ('a, 'cmp) t -> ('a, 'cmp) t -> ('a, 'cmp) t
     ) options
+  val symmetric_diff
+    : ('a, 'cmp,
+       ('a, 'cmp) t -> ('a, 'cmp) t
+       -> ('a elt, 'a elt) Either.t Sequence.t
+      ) options
   val compare_direct
     : ('a, 'cmp,
        ('a, 'cmp) t -> ('a, 'cmp) t -> int
@@ -171,6 +176,7 @@ module type Accessors0 = sig
   val union          : t -> t -> t
   val inter          : t -> t -> t
   val diff           : t -> t -> t
+  val symmetric_diff : t -> t -> (elt, elt) Either.t Sequence.t
   val compare_direct : t -> t -> int
   val equal          : t -> t -> bool
   val subset         : t -> t -> bool
@@ -216,6 +222,7 @@ module type Accessors1 = sig
   val union          : 'a t -> 'a t -> 'a t
   val inter          : 'a t -> 'a t -> 'a t
   val diff           : 'a t -> 'a t -> 'a t
+  val symmetric_diff : 'a t -> 'a t -> ('a, 'a) Either.t Sequence.t
   val compare_direct : 'a t -> 'a t -> int
   val equal          : 'a t -> 'a t -> bool
   val subset         : 'a t -> 'a t -> bool
@@ -260,6 +267,7 @@ module type Accessors2 = sig
   val union          : ('a, 'cmp) t -> ('a, 'cmp) t -> ('a, 'cmp) t
   val inter          : ('a, 'cmp) t -> ('a, 'cmp) t -> ('a, 'cmp) t
   val diff           : ('a, 'cmp) t -> ('a, 'cmp) t -> ('a, 'cmp) t
+  val symmetric_diff : ('a, 'cmp) t -> ('a, 'cmp) t -> ('a, 'a) Either.t Sequence.t
   val compare_direct : ('a, 'cmp) t -> ('a, 'cmp) t -> int
   val equal          : ('a, 'cmp) t -> ('a, 'cmp) t -> bool
   val subset         : ('a, 'cmp) t -> ('a, 'cmp) t -> bool
@@ -311,6 +319,9 @@ module type Accessors2_with_comparator = sig
     : comparator:('a, 'cmp) Comparator.t -> ('a, 'cmp) t -> ('a, 'cmp) t -> ('a, 'cmp) t
   val diff
     : comparator:('a, 'cmp) Comparator.t -> ('a, 'cmp) t -> ('a, 'cmp) t -> ('a, 'cmp) t
+  val symmetric_diff
+    : comparator:('a, 'cmp) Comparator.t -> ('a, 'cmp) t -> ('a, 'comp) t
+    -> ('a, 'a) Either.t Sequence.t
   val compare_direct
     : comparator:('a, 'cmp) Comparator.t -> ('a, 'cmp) t -> ('a, 'cmp) t -> int
   val equal

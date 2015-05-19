@@ -42,9 +42,8 @@ module Make_binable (Raw : Raw_binable) = struct
 
   include Make (Raw)
 
-  include Bin_prot.Utils.Make_binable (struct
+  include Binable.Of_binable (Raw) (struct
     type t = Raw.t
-    module Binable = Raw
     let of_binable raw =
       if Raw.validate_binio_deserialization
       then create_exn raw

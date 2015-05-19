@@ -1,60 +1,111 @@
 open Std_internal
 
-module Key = Type_equal.Id
+include Univ_map_intf
 
 module Uid = Type_equal.Id.Uid
 
-type t = Univ.t Uid.Map.t
+module Make1 (Data : sig type ('s, 'a) t with sexp_of end) = struct
+  type ('s, 'a) data = ('s, 'a) Data.t
 
-let sexp_of_t t =
-  Map.data t
-  |> List.map ~f:(fun u -> (Univ.type_id_name u, u))
-  |> List.sort ~cmp:(fun (a, _) (b, _) -> String.compare a b)
-  |> <:sexp_of< (string * Univ.t) list >>
+  module Packed = struct
+    type 's t = T : 'a Key.t * ('s, 'a) Data.t -> 's t
 
-let invariant (t : t) =
-  Invariant.invariant _here_ t <:sexp_of< t >> (fun () ->
-    Map.iter t ~f:(fun ~key ~data ->
-      assert (Uid.equal key (Univ.type_id_uid data))))
+    let sexp_of_t sexp_of_a (T (key,data)) =
+      Data.sexp_of_t sexp_of_a (Key.to_sexp key) data
 
-let set t key data = Map.add t ~key:(Key.uid key) ~data:(Univ.create key data)
+    let type_id_name (T (key, _)) = Key.name key
 
-let mem t key = Map.mem t (Key.uid key)
+    let type_id_uid  (T (key, _)) = Key.uid  key
+  end
 
-let remove t key = Map.remove t (Key.uid key)
+  type 's t = 's Packed.t Uid.Map.t
 
-let empty = Uid.Map.empty
+  let sexp_of_t sexp_of_a t =
+    Map.data t
+    |> List.map ~f:(fun u -> (Packed.type_id_name u, u))
+    |> List.sort ~cmp:(fun (a, _) (b, _) -> String.compare a b)
+    |> <:sexp_of< (string * a Packed.t) list >>
 
-let is_empty = Map.is_empty
+  let invariant (t : _ t) =
+    Invariant.invariant _here_ t <:sexp_of< _ t >> (fun () ->
+      Map.iter t ~f:(fun ~key ~data ->
+        assert (Uid.equal key (Packed.type_id_uid data))))
 
-let find t key =
-  match Map.find t (Key.uid key) with
-  | None -> None
-  | Some univ -> Some (Univ.match_exn univ key) (* cannot raise -- see [invariant] *)
+  let set t key data = Map.add t ~key:(Key.uid key) ~data:(Packed.T (key, data))
 
-let find_exn t key =
-  match find t key with
-  | Some data -> data
-  | None -> failwithf "Univ_map.find_exn on unknown key %s" (Key.name key) ()
+  let mem t key = Map.mem t (Key.uid key)
 
-let add t key data = if mem t key then `Duplicate else `Ok (set t key data)
+  let remove t key = Map.remove t (Key.uid key)
 
-let add_exn t key data =
-  match add t key data with
-  | `Ok t -> t
-  | `Duplicate -> failwithf "Univ_map.add_exn on existing key %s" (Key.name key) ()
+  let empty = Uid.Map.empty
 
-let change_exn t key update =
-  match find t key with
-  | Some data -> set t key (update data)
-  | None -> failwithf "Univ_map.change_exn on unknown key %s" (Key.name key) ()
+  let is_empty = Map.is_empty
 
-let change t key update =
-  let orig = find t key in
-  let next = update orig in
-  match next with
-  | Some data -> set t key data
-  | None -> if Option.is_none orig then t else remove t key
+  let find (type b) t (key : b Key.t) =
+    match Map.find t (Key.uid key) with
+    | None -> None
+    | Some (Packed.T (key', value)) ->
+      (* cannot raise -- see [invariant] *)
+      let Type_equal.T = Key.same_witness_exn key key' in
+      Some (value : (_, b) Data.t)
+
+  let find_exn t key =
+    match find t key with
+    | Some data -> data
+    | None -> failwithf "Univ_map.find_exn on unknown key %s" (Key.name key) ()
+
+  let add t key data = if mem t key then `Duplicate else `Ok (set t key data)
+
+  let add_exn t key data =
+    match add t key data with
+    | `Ok t -> t
+    | `Duplicate -> failwithf "Univ_map.add_exn on existing key %s" (Key.name key) ()
+
+  let change_exn t key update =
+    match find t key with
+    | Some data -> set t key (update data)
+    | None -> failwithf "Univ_map.change_exn on unknown key %s" (Key.name key) ()
+
+  let change t key update =
+    let orig = find t key in
+    let next = update orig in
+    match next with
+    | Some data -> set t key data
+    | None -> if Option.is_none orig then t else remove t key
+
+  let to_alist t = Map.data t
+end
+
+module Make (Data : sig type 'a t with sexp_of end) = struct
+  module M = Make1 (struct
+    type (_, 'a) t = 'a Data.t with sexp_of
+  end)
+
+  type t = unit M.t with sexp_of
+
+  type 'a data = 'a Data.t
+
+  let invariant  = M.invariant
+  let empty      = M.empty
+  let is_empty   = M.is_empty
+  let set        = M.set
+  let mem        = M.mem
+  let find       = M.find
+  let find_exn   = M.find_exn
+  let add        = M.add
+  let add_exn    = M.add_exn
+  let change     = M.change
+  let change_exn = M.change_exn
+
+  module Packed = struct
+    type t = T : 'a Key.t * 'a Data.t -> t
+  end
+
+  let to_alist t =
+    List.map (M.to_alist t) ~f:(function M.Packed.T (key, data) -> Packed.T (key, data))
+end
+
+include Make (struct type 'a t = 'a with sexp_of end)
 
 TEST_MODULE = struct
 
@@ -208,4 +259,3 @@ module Multi = struct
     let t = change t key (List.map ~f:(~-)) in
     assert (find t key = [-2;-3]);
 end
-

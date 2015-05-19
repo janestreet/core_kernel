@@ -29,8 +29,6 @@ module Make (M : sig val module_name : string end) () = struct
           then invalid s "it is empty"
           else if Char.is_whitespace s.[0] || Char.is_whitespace s.[len-1]
           then invalid s "it has whitespace on the edge"
-          else if String.contains s '|'
-          then invalid s "it contains a pipe '|'"
           else Ok ()
       ;;
 
@@ -48,6 +46,12 @@ module Make (M : sig val module_name : string end) () = struct
   end
 
   include Stable.V1
+
+  include Pretty_printer.Register (struct
+      type nonrec t = t
+      let module_name = M.module_name
+      let to_string = to_string
+    end)
 
 end
 

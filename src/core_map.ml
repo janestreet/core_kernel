@@ -733,6 +733,31 @@ module Tree0 = struct
       else Option.map (rank r k ~compare_key) ~f:(fun rank -> rank + 1 + (length l))
   ;;
 
+  (* this could be implemented using [Sequence] interface but the following implementation
+     allocates only 2 words and doesn't require write-barrier *)
+  let rec nth' num_to_search = function
+    | Empty       -> None
+    | Leaf (k, v) ->
+      if !num_to_search = 0
+      then Some (k, v)
+      else begin
+        decr num_to_search;
+        None
+      end
+    | Node (l, k, v, r, _) ->
+      match nth' num_to_search l with
+      | (Some _) as some -> some
+      | None             ->
+        if !num_to_search = 0
+        then Some (k, v)
+        else begin
+          decr num_to_search;
+          nth' num_to_search r
+        end
+
+  let nth t n = nth' (ref n) t
+  ;;
+
   let t_of_sexp key_of_sexp value_of_sexp sexp ~comparator =
     let alist = <:of_sexp< (key * value) list >> sexp in
     of_alist_exn alist ~comparator
@@ -822,6 +847,7 @@ module Accessors = struct
   ;;
   let prev_key t key = Tree0.prev_key t.tree key ~compare_key:(compare_key t)
   let next_key t key = Tree0.next_key t.tree key ~compare_key:(compare_key t)
+  let nth t n = Tree0.nth t.tree n
   let rank t key = Tree0.rank t.tree key ~compare_key:(compare_key t)
   let sexp_of_t sexp_of_k sexp_of_v t = Tree0.sexp_of_t sexp_of_k sexp_of_v t.tree
   let to_sequence ?keys_in t =
@@ -1036,6 +1062,9 @@ module Make_tree (Key : Comparator.S1) = struct
   ;;
   let next_key t key =
     Tree0.next_key t key ~compare_key:comparator.Comparator.compare
+  ;;
+  let nth t n =
+    Tree0.nth t n
   ;;
   let rank t key = Tree0.rank t key ~compare_key:comparator.Comparator.compare
 
@@ -1276,6 +1305,7 @@ module Tree = struct
   let next_key ~comparator t key =
     Tree0.next_key t key ~compare_key:comparator.Comparator.compare
   ;;
+  let nth ~comparator:_ t n = Tree0.nth t n
   let rank ~comparator t key = Tree0.rank t key ~compare_key:comparator.Comparator.compare
   let sexp_of_t sexp_of_k sexp_of_v _ t = Tree0.sexp_of_t sexp_of_k sexp_of_v t
 

@@ -541,6 +541,33 @@ module Tree0 = struct
           end
       in
       loop t1 t2
+
+    let symmetric_diff t1 t2 ~compare_elt =
+      let step state : ((_,_) Either.t, _) Sequence.Step.t =
+        match state with
+        | End, End ->
+          Done
+        | End, More (elt, tree, enum) ->
+          Yield (Second elt, (End, cons tree enum))
+        | More (elt, tree, enum), End ->
+          Yield (First elt, (cons tree enum, End))
+        | (More (a1, tree1, enum1) as left), (More (a2, tree2, enum2) as right) ->
+          let compare_result = compare_elt a1 a2 in
+          if compare_result = 0 then begin
+            let next_state =
+              if Pervasives.(==) tree1 tree2
+              then (enum1, enum2)
+              else (cons tree1 enum1, cons tree2 enum2)
+            in
+            Skip next_state
+          end else if compare_result < 0 then begin
+            Yield (First a1, (cons tree1 enum1, right))
+          end else begin
+            Yield (Second a2, (left, cons tree2 enum2))
+          end
+      in
+      Sequence.unfold_step ~init:(of_set t1, of_set t2) ~f:step
+    ;;
   end
 
   let to_sequence_increasing comparator ?from_elt t =
@@ -625,6 +652,8 @@ module Tree0 = struct
     in
     iter t
   ;;
+
+  let symmetric_diff = Enum.symmetric_diff
 
   let rec fold s ~init:accu ~f =
     match s with
@@ -911,6 +940,8 @@ module Accessors = struct
   let union t1 t2 = like t1 (Tree0.union t1.tree t2.tree ~compare_elt:(compare_elt t1))
   let inter t1 t2 = like t1 (Tree0.inter t1.tree t2.tree ~compare_elt:(compare_elt t1))
   let diff  t1 t2 = like t1 (Tree0.diff  t1.tree t2.tree ~compare_elt:(compare_elt t1))
+  let symmetric_diff t1 t2 =
+    Tree0.symmetric_diff t1.tree t2.tree ~compare_elt:(compare_elt t1)
   let compare_direct t1 t2 = Tree0.compare (compare_elt t1) t1.tree t2.tree
   let equal t1 t2 = Tree0.equal t1.tree t2.tree ~compare_elt:(compare_elt t1)
   let subset t1 t2 = Tree0.subset  t1.tree t2.tree ~compare_elt:(compare_elt t1)
@@ -1091,6 +1122,8 @@ module Make_tree (Elt : Comparator.S1) = struct
   let union   t1 t2 = Tree0.union   t1 t2 ~compare_elt
   let inter   t1 t2 = Tree0.inter   t1 t2 ~compare_elt
   let diff    t1 t2 = Tree0.diff    t1 t2 ~compare_elt
+  let symmetric_diff t1 t2 =
+    Tree0.symmetric_diff t1 t2 ~compare_elt
   let compare_direct t1 t2 = Tree0.compare compare_elt t1 t2
   let equal   t1 t2 = Tree0.equal   t1 t2 ~compare_elt
   let subset  t1 t2 = Tree0.subset  t1 t2 ~compare_elt
@@ -1302,6 +1335,8 @@ module Tree = struct
   let union   ~comparator t1 t2 = Tree0.union   t1 t2 ~compare_elt:(ce comparator)
   let inter   ~comparator t1 t2 = Tree0.inter   t1 t2 ~compare_elt:(ce comparator)
   let diff    ~comparator t1 t2 = Tree0.diff    t1 t2 ~compare_elt:(ce comparator)
+  let symmetric_diff ~comparator t1 t2 =
+    Tree0.symmetric_diff t1 t2 ~compare_elt:(ce comparator)
   let compare_direct ~comparator t1 t2 = Tree0.compare (ce comparator) t1 t2
   let equal   ~comparator t1 t2 = Tree0.equal   t1 t2 ~compare_elt:(ce comparator)
   let subset  ~comparator t1 t2 = Tree0.subset  t1 t2 ~compare_elt:(ce comparator)

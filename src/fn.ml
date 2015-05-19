@@ -1,8 +1,8 @@
-let const c = (); fun _ -> c
+let const c _ = c
 
 external ignore : _ -> unit = "%ignore" (* this has the same behavior as [Pervasives.ignore] *)
 
-let non f = (); fun x -> not (f x)
+let non f x = not (f x)
 
 let forever f =
   let rec forever () =
@@ -21,11 +21,10 @@ TEST = 1 |> fun x -> x = 1
 TEST = 1 |> fun x -> x + 1 |> fun y -> y = 2
 
 (* The typical use case for these functions is to pass in functional arguments and get
-   functions as a result. For this reason, we tell the compiler where to insert
-   breakpoints in the argument-passing scheme. *)
-let compose f g = (); fun x -> f (g x)
+   functions as a result. *)
+let compose f g x = f (g x)
 
-let flip f = (); fun x y -> f y x
+let flip f x y = f y x
 
 let rec apply_n_times ~n f x =
   if n <= 0

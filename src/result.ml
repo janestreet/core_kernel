@@ -47,6 +47,8 @@ include Monad.Make2 (struct
   let return x = Ok x
 end)
 
+let ignore = ignore_m
+
 let fail x = Error x;;
 let failf format = Printf.ksprintf fail format
 

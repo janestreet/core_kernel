@@ -2,6 +2,14 @@ module type Basic = sig
   type 'a t
   val bind : 'a t -> ('a -> 'b t) -> 'b t
   val return : 'a -> 'a t
+  (* The following identities ought to hold (for some value of =):
+
+      - return x >>= f = f x
+      - t >>= fun x -> return x = t
+      - (t >>= f) >>= g = t >>= fun x -> (f x >>= g)
+
+     Note: >>= is the infix notation for bind)
+  *)
 
   (* The [map] argument to [Monad.Make] says how to implement the monad's [map] function.
      [`Define_using_bind] means to define [map t ~f = bind t (fun a -> return (f a))].
@@ -47,8 +55,11 @@ module type S = sig
   (** [join t] is [t >>= (fun t' -> t')]. *)
   val join : 'a t t -> 'a t
 
-  (** [ignore t] = map t ~f:(fun _ -> ()). *)
-  val ignore : 'a t -> unit t
+  (** [ignore_m t] is [map t ~f:(fun _ -> ())].  [ignore_m] used to be called [ignore],
+      but we decided that was a bad name, because it shadowed the widely used
+      [Pervasives.ignore].  Some monads still do [let ignore = ignore_m] for historical
+      reasons. *)
+  val ignore_m : 'a t -> unit t
 
   val all : 'a t list -> 'a list t
   val all_ignore : unit t list -> unit t
@@ -78,7 +89,7 @@ module Make (M : Basic) : S with type 'a t := 'a M.t = struct
 
   let join t = t >>= fun t' -> t'
 
-  let ignore t = map t ~f:(fun _ -> ())
+  let ignore_m t = map t ~f:(fun _ -> ())
 
   let all =
     let rec loop vs = function
@@ -131,7 +142,7 @@ module type S2 = sig
 
   val join : (('a, 'd) t, 'd) t -> ('a, 'd) t
 
-  val ignore : (_, 'd) t -> (unit, 'd) t
+  val ignore_m : (_, 'd) t -> (unit, 'd) t
 
   val all : ('a, 'd) t list -> ('a list, 'd) t
 
@@ -149,7 +160,7 @@ struct
     let return     = return
     let map        = map
     let join       = join
-    let ignore     = ignore
+    let ignore_m   = ignore_m
     let all        = all
     let all_ignore = all_ignore
   end
@@ -183,7 +194,7 @@ module Make2 (M : Basic2) : S2 with type ('a, 'd) t := ('a, 'd) M.t = struct
 
   let join t = t >>= fun t' -> t'
 
-  let ignore t = map t ~f:(fun _ -> ())
+  let ignore_m t = map t ~f:(fun _ -> ())
 
   let all =
     let rec loop vs = function
@@ -196,4 +207,14 @@ module Make2 (M : Basic2) : S2 with type ('a, 'd) t := ('a, 'd) M.t = struct
     | [] -> return ()
     | t :: ts -> t >>= fun () -> all_ignore ts
 
+end
+
+module Ident = struct
+  type 'a t = 'a
+  include Make (struct
+      type nonrec 'a t = 'a t
+      let bind a f = f a
+      let return a = a
+      let map = `Custom (fun a ~f -> f a)
+    end)
 end

@@ -74,6 +74,14 @@ val inter : ('a, 'cmp) t -> ('a, 'cmp) t -> ('a, 'cmp) t
     elements in [t1] that are not in [t2].  [O(log(length t1) + log(length t2))]. *)
 val diff : ('a, 'cmp) t -> ('a, 'cmp) t -> ('a, 'cmp) t
 
+(** [symmetric_diff t1 t2] returns a sequence of changes between [t1] and [t2]. It is
+    intended to be efficient in the case where [t1] and [t2] share a large amount of
+    structure. *)
+val symmetric_diff
+  :  ('a, 'cmp) t
+  -> ('a, 'cmp) t
+  -> ('a, 'a) Either.t Sequence.t
+
 (** [compare_direct t1 t2] compares the sets [t1] and [t2].  It returns the same result
     as [compare], but unlike compare, doesn't require arguments to be passed in for the
     type parameters of the set.  [O(length t1 + length t2)]. *)

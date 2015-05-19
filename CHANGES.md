@@ -1,3 +1,122 @@
+## 112.35.00
+
+- Added an Applicative interface to Core
+  (a.k.a. idioms or applicative functors)
+- Generalized the signature of `Hashtbl.merge_into` to allow the types
+  of `src` and `dst` to be different.
+- Made `Day_of_week.of_string` accept additional formats (integers 0-6,
+  full day names).
+- Added `Day_of_week.to_string_long`, which produces the full day name.
+- Changed `Hashtbl.add_exn` to not create a new exception constructor
+  when it raises due to a duplicate key.
+- Added `Map.nth`, which returns the nth element of a map, ordered by
+  key rank.
+- Added `Binable.Of_binable` functors, similar to `Sexpable.Of_sexpable`
+
+    One should use `Binable.Of_binable` rather than the functionally
+    equivalent `Bin_prot.Utils.Make_binable`.
+
+- Added `Either` module, with
+  `type ('a, 'b) t = First  of 'a | Second of 'b`.
+- Added to `Univ_map` a functor that creates a new `Univ_map` type in
+  which the type of data is a function of the key's type, with the type
+  function specified by the functor's argument.
+
+    Normally, a `Univ_map.t` stores `('a Key.t * 'a)` pairs.  This feature
+    lets it store `('a Key.t * 'a Data.t)` pairs for a given
+    `('a Data.t)`.
+
+- Made `Day_of_week.Stable` be `Comparable` and `Hashable`.
+- Fixed a couple `Exn` unit tests that mistakenly relied on the global
+  setting of `Printexc.get_backtrace`.
+
+    Now the tests locally set it to what they need.
+
+    This avoids unit-test failures when running with no
+    `OCAMLRUNPARAM` set:
+
+        File "exn.ml", line 130, characters 2-258: clear_backtrace threw "Assert_failure exn.ml:133:4".
+            in TEST_MODULE at file "exn.ml", line 127, characters 0-1057
+
+- Renamed `Monad.ignore` as `Monad.ignore_m`, while preserving
+  `ignore = ignore_m` in existing modules (e.g. `Deferred`)
+  that used it.
+
+    We can later consider those modules on a case-by-case basis to see
+    whether we want to remove `ignore`.
+
+- Added `Set.symmetric_diff`.
+- Added `Timing_wheel.reschedule`, which reschedules an existing alarm.
+- Added `Applicative.S2`, analogous to `Monad.S2`.
+- Added combinators to `Either`.
+- Added `Hashtbl.add_or_error` and `create_with_key_or_error`, which use
+  `Or_error` and are more idiomatic ways of signalling duplicates.
+- Added `Sexpable.Of_sexpable1` functor, for one-parameter type
+  constructors.
+- Made `Timing_wheel_ns` keys be `Int63.t` rather than `int`, so that
+  behavior is consistent on 32-bit and 64-bit machines.
+
+  Also, made `Timing_wheel.Interval_num` an abstract type.
+- Hid the `bytes` type in `Core.Std`, so that type errors refer to
+  `string` rather than `bytes`.
+
+    Added `Bytes` module so that people can say `Bytes.t` if they
+    need to.
+
+    Now we get reasonable error messages:
+
+        String.length 13
+        -->
+        Error: This expression has type int but an expression was expected of type
+                string
+
+        "" + 13
+        -->
+        Error: This expression has type string but an expression was expected of type
+                int
+
+- Modernized the coding style in `Timing_wheel`.
+- Replaced `Unpack_buffer.unpack` with `unpack_into` and `unpack_iter`,
+  to avoid allocation.
+
+    `Unpack_buffer.unpack` created a (vector-backed) `Core.Std.Queue`
+    for each call.  When unpacking a buffer containing many values,
+    resizing of the buffer can be costly and in some cases leads to
+    promotions of short-lived data to the major heap.
+
+    The new functions avoid allocating the queue:
+
+        val unpack_into : ('value, _) t -> 'value Queue.t     -> unit Or_error.t
+        val unpack_iter : ('value, _) t -> f:('value -> unit) -> unit Or_error.t
+
+- Cleaned up the implementation of `Gc.tune`.
+- Change `Unit` implementation to use `Identifiable.Make` instead of
+  applying functors separately.
+- Added `val random: unit -> int` to `Int63`.
+- Reworked `Float.iround_*_exn` functions to not allocate in the common case.
+- Added `Fqueue.singleton` and `Fdeque.singleton`.
+- Moved `Unix.tm` and `Unix.strftime` from `Core_kernel` to `Core`.
+
+    Added external time formatting:
+
+        float (* seconds *)-> string (* format *) -> string = "..."
+
+- Made `String_id.Make` call `Pretty_printer.Register`.
+- Changed `String_id` to allow the pipe character in identifiers.
+- Made `List.compare` have the usual type from `with compare`,
+  `val compare : ('a -> 'a -> int) -> 'a t -> 'a t -> int`.
+
+    Previously, `List.compare`'s type was:
+
+        val compare : 'a t -> 'a t -> cmp:('a -> 'a -> int) -> int
+
+- Made stable `Map`'s and `Set`'s conform to the `Stable1` interface.
+- Reworked `Hashtbl.find_exn` to not allocate.
+
+    Previously, `Hashtbl.find_exn` allocated because it called
+    `Hashtbl.find`, which allocates an option (partially because
+    `Avltree` allocates options in its `find` function).
+
 ## 112.24.00
 
 - Added `Time_ns` module.

@@ -2,23 +2,21 @@ open Typerep_lib.Std
 open Sexplib.Std
 open Bin_prot.Std
 
-module T = struct
+module T0 = struct
   type t = unit with sexp, bin_io, typerep
 
   let compare _ _ = 0
   let hash _ = 0
 end
 
-include T
-include Sexpable.To_stringable (T)
-include Comparable.Make_binable (T)
-include Hashable.Make_binable (T)
-
-include Pretty_printer.Register (struct
-  type nonrec t = t
-  let to_string = to_string
+module T1 = struct
+  include T0
+  include Sexpable.To_stringable (T0)
   let module_name = "Core.Std.Unit"
-end)
+end
+
+include T1
+include Identifiable.Make (T1)
 
 module type S = sig end
 

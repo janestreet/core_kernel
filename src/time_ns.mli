@@ -1,3 +1,5 @@
+(** Time represented as an [Int63.t] number of nanoseconds since the epoch. *)
+
 open Std_internal
 
 module Span : sig
@@ -35,6 +37,8 @@ module Span : sig
   val to_hr  : t     -> float
   val to_day : t     -> float
 
+  val of_sec_with_microsecond_precision : float -> t
+
   val of_int_sec : int -> t
   val to_int_sec : t -> int
 
@@ -45,11 +49,14 @@ module Span : sig
   val ( - ) : t -> t -> t
   val abs : t -> t
   val neg : t -> t
-  val scale     : t -> float -> t
-  val scale_int : t -> int   -> t
-  val div : t -> t -> int
-  val ( / ) : t -> float -> t
-  val ( // ) : t -> t -> float
+
+  val scale       : t -> float        -> t
+  val scale_int   : t -> int          -> t
+  val scale_int63 : t -> Core_int63.t -> t
+
+  val div    : t -> t     -> Core_int63.t
+  val ( / )  : t -> float -> t
+  val ( // ) : t -> t     -> float
 
   val create
     :  ?sign : Float.Sign.t
@@ -157,28 +164,3 @@ val interruptible_pause : Span.t -> [ `Ok | `Remaining of Span.t ]
 
 (** [pause_forever] sleeps indefinitely. *)
 val pause_forever : unit -> never_returns
-
-module Platform_specific : sig
-  type tm =
-    Unix.tm = {
-    tm_sec   : int;
-    tm_min   : int;
-    tm_hour  : int;
-    tm_mday  : int;
-    tm_mon   : int;
-    tm_year  : int;
-    tm_wday  : int;
-    tm_yday  : int;
-    tm_isdst : bool;
-  } with sexp
-
-  (** Convert a date and time, specified by the [tm] argument, into a formatted string.
-      See 'man strftime' for format options. *)
-  val strftime : tm -> string -> string
-
-  (* [internal_round_nearest] is an internal coercion from floats to [Core_int63.t] that
-     is reused by [Core.Time_ns]. It is exposed here so that [Core_kernel] and [Core]
-     make consistent choices with respect to this rounding. It is not meant for end users
-     of this module. *)
-  val internal_round_nearest : float -> Core_int63.t
-end

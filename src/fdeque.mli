@@ -37,6 +37,9 @@ end
 (** The empty deque. *)
 val empty : _ t
 
+(** A one-element deque. *)
+val singleton : 'a -> 'a t
+
 (** [of_list] returns a deque with elements in the same front-to-back order as the
     list. *)
 val of_list : 'a list -> 'a t

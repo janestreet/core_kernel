@@ -18,6 +18,7 @@
 #include "config.h"
 
 #include "timespec.h"
+#include "time_ns_stubs.h"
 
 #define NANOS_PER_SECOND 1000000000
 
@@ -60,34 +61,16 @@ CAMLprim value core_kernel_time_ns_gettime_or_zero()
 
 #endif
 
-
-CAMLprim value core_kernel_time_ns_strftime(value v_tm, value v_fmt)
+CAMLprim value core_kernel_time_ns_format_tm(struct tm * tm, value v_fmt)
 {
-  struct tm tm;
   size_t len;
   char* buf;
   int buf_len;
   value v_str;
-
   buf_len = 128*1024 + caml_string_length(v_fmt);
   buf = malloc(buf_len);
   if (!buf) caml_failwith("unix_strftime: malloc failed");
-
-  tm.tm_sec  = Int_val(Field(v_tm, 0));
-  tm.tm_min  = Int_val(Field(v_tm, 1));
-  tm.tm_hour = Int_val(Field(v_tm, 2));
-  tm.tm_mday = Int_val(Field(v_tm, 3));
-  tm.tm_mon  = Int_val(Field(v_tm, 4));
-  tm.tm_year = Int_val(Field(v_tm, 5));
-  tm.tm_wday = Int_val(Field(v_tm, 6));
-  tm.tm_yday = Int_val(Field(v_tm, 7));
-  tm.tm_isdst = Bool_val(Field(v_tm, 8));
-#ifdef __USE_BSD
-  tm.tm_gmtoff = 0;  /* GNU extension, may not be visible everywhere */
-  tm.tm_zone = NULL; /* GNU extension, may not be visible everywhere */
-#endif
-
-  len = strftime(buf, buf_len, String_val(v_fmt), &tm);
+  len = strftime(buf, buf_len, String_val(v_fmt), tm);
 
   if (len == 0) {
     /* From the man page:
@@ -103,6 +86,20 @@ CAMLprim value core_kernel_time_ns_strftime(value v_tm, value v_fmt)
   v_str = caml_copy_string(buf);  /* [strftime] always null terminates the string */
   free(buf);
   return v_str;
+}
+
+
+CAMLprim value core_kernel_time_ns_format(value t, value v_fmt)
+{
+  time_t clock;
+  struct tm * tm;
+  clock = (time_t) Double_val(t);
+  /* This [tm] must not be freed. It refers to statically allocated
+     memory and its contents change every time [localtime] is
+     called. */
+  tm = localtime(&clock);
+  if (tm == NULL) unix_error(EINVAL, "localtime", Nothing);
+  return core_kernel_time_ns_format_tm(tm, v_fmt);
 }
 
 CAMLprim value core_kernel_time_ns_nanosleep(value v_seconds)

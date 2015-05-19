@@ -19,8 +19,8 @@ module Make (T : sig
   val module_name : string
 end) = struct
   include T
-  include (Comparable.Make_binable (T) : Comparable.S_binable with type t := t)
-  include (Hashable  .Make_binable (T) : Hashable  .S_binable with type t := t)
+  include Comparable.Make_binable (T)
+  include Hashable  .Make_binable (T)
   include Pretty_printer.Register (T)
 end
 

@@ -59,3 +59,42 @@ let to_bigstring ?(prefix_with_length = false) (type a) m t =
   assert (pos = bigstring_length);
   bigstring
 ;;
+
+module Of_binable
+    (Binable : S)
+    (M : sig
+       type t
+       val to_binable : t -> Binable.t
+       val of_binable : Binable.t -> t
+     end)
+  : S with type t := M.t
+  = Bin_prot.Utils.Make_binable (struct
+    module Binable = Binable
+    include M
+  end)
+
+module Of_binable1
+    (Binable : S1)
+    (M : sig
+       type 'a t
+       val to_binable : 'a t -> 'a Binable.t
+       val of_binable : 'a Binable.t -> 'a t
+     end)
+  : S1 with type 'a t := 'a M.t
+  = Bin_prot.Utils.Make_binable1 (struct
+    module Binable = Binable
+    include M
+  end)
+
+module Of_binable2
+    (Binable : S2)
+    (M : sig
+       type ('a, 'b) t
+       val to_binable : ('a, 'b) t -> ('a, 'b) Binable.t
+       val of_binable : ('a, 'b) Binable.t -> ('a, 'b) t
+     end)
+  : S2 with type ('a, 'b) t := ('a, 'b) M.t
+  = Bin_prot.Utils.Make_binable2 (struct
+    module Binable = Binable
+    include M
+  end)

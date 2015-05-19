@@ -57,6 +57,10 @@ module type S = sig
   (** [first t] returns the front element of the queue, without removing it. *)
   val first : 'a t -> 'a option
 
+  (** [first_with_key t] returns the front element of the queue and its key, without
+      removing it. *)
+  val first_with_key : 'a t -> (Key.t * 'a) option
+
   (** [keys t] returns the keys in the order of the queue. *)
   val keys : 'a t -> Key.t list
 
@@ -233,6 +237,12 @@ module Make (Key : Key) : S with module Key = Key = struct
     match dequeue_with_key t with
     | None -> None
     | Some (_, v) -> Some v
+  ;;
+
+  let first_with_key t =
+    match Doubly_linked.first t.queue with
+    | None -> None
+    | Some { key; value; } -> Some (key, value)
   ;;
 
   let first t =

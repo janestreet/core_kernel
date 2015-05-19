@@ -329,6 +329,10 @@ val prev_key : ('k, 'v, 'cmp) t -> 'k -> ('k * 'v) option
 (** [next_key t k] returns the smallest (key, value) pair in t with key greater than k *)
 val next_key : ('k, 'v, 'cmp) t -> 'k -> ('k * 'v) option
 
+(** [nth t n] finds the (key, value) pair of rank n (i.e. such that there are exactly n
+    keys strictly less than the found key), if one exists.  O(log(length t) + n) time. *)
+val nth : ('k, 'v, _) t -> int -> ('k * 'v) option
+
 (** [rank t k] if k is in t, returns the number of keys strictly less than k in t,
     otherwise None *)
 val rank : ('k, 'v, 'cmp) t -> 'k -> int option

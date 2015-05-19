@@ -54,14 +54,10 @@ module Stable = struct
       | Nov -> 11
       | Dec -> 12
 
-    include Bin_prot.Utils.Make_binable (struct
-      module Binable = Core_int
-
+    include Binable.Of_binable (Core_int) (struct
+      type nonrec t = t
       let to_binable t = to_int t - 1
       let of_binable i = of_int_exn (i + 1)
-
-      type z = t
-      type t = z
     end)
   end
 

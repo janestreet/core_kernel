@@ -5,32 +5,20 @@
     In other words, given different [Key.t]'s from the same [string], one will not be able
     to recover the key stored in the other one.
 
-    This is similar to [Univ] in spirit, and is indeed built on top of [Univ].
+    This is similar to [Univ] in spirit.
 *)
 
 open Std_internal
 
-type t with sexp_of
+include module type of Univ_map_intf
 
-include Invariant.S with type t := t
+include S with type 'a data = 'a
 
-val empty : t
-val is_empty : t -> bool
+module Make (Data : sig type 'a t with sexp_of end) : S
+  with type 'a data = 'a Data.t
 
-(** A key in a [Univ_map] is just a [Type_equal.Id]. *)
-module Key : module type of struct include Type_equal.Id end
-
-val set : t -> 'a Key.t -> 'a -> t
-val mem : t -> 'a Key.t -> bool
-
-val find     : t -> 'a Key.t -> 'a option
-val find_exn : t -> 'a Key.t -> 'a
-
-val add     : t -> 'a Key.t -> 'a -> [ `Ok of t | `Duplicate ]
-val add_exn : t -> 'a Key.t -> 'a -> t
-
-val change     : t -> 'a Key.t -> ('a option -> 'a option) -> t
-val change_exn : t -> 'a Key.t -> ('a        -> 'a       ) -> t
+module Make1 (Data : sig type ('s, 'a) t with sexp_of end) : S1
+  with type ('s, 'a) data = ('s, 'a) Data.t
 
 (** keys with associated default values, so that [find] is no longer partial *)
 module With_default : sig

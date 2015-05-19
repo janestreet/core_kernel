@@ -1,3 +1,4 @@
+module type Applicative         = Applicative.S
 module type Binable             = Binable0.S
 module type Comparable          = Comparable.S
 module type Comparable_binable  = Comparable.S_binable

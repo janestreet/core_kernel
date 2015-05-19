@@ -293,41 +293,51 @@ let rec last t =
 ;;
 
 
-let rec find t ~compare k =
+let rec find_and_call t ~compare k ~if_found ~if_not_found =
   (* A little manual unrolling of the recursion.
      This is really worth 5% on average *)
   match t with
-  | Empty -> None
+  | Empty -> if_not_found k
   | Leaf (k', v) ->
-    if compare k k' = 0 then Some v
-    else None
+    if compare k k' = 0 then if_found v
+    else if_not_found k
   | Node (left, k', v, _, right) ->
     let c = compare k k' in
-    if c = 0 then Some v
+    if c = 0 then if_found v
     else if c < 0 then begin
       match left with
-      | Empty -> None
+      | Empty -> if_not_found k
       | Leaf (k', v) ->
-        if compare k k' = 0 then Some v
-        else None
+        if compare k k' = 0 then if_found v
+        else if_not_found k
       | Node (left, k', v, _, right) ->
         let c = compare k k' in
-        if c = 0 then Some v
-        else find (if c < 0 then left else right) ~compare k
+        if c = 0 then if_found v
+        else find_and_call (if c < 0 then left else right) ~compare k ~if_found ~if_not_found
     end else begin
       match right with
-      | Empty -> None
+      | Empty -> if_not_found k
       | Leaf (k', v) ->
-        if compare k k' = 0 then Some v
-        else None
+        if compare k k' = 0 then if_found v
+        else if_not_found k
       | Node (left, k', v, _, right) ->
         let c = compare k k' in
-        if c = 0 then Some v
-        else find (if c < 0 then left else right) ~compare k
+        if c = 0 then if_found v
+        else find_and_call (if c < 0 then left else right) ~compare k ~if_found ~if_not_found
     end
 ;;
 
-let mem t ~compare k = Option.is_some (find t ~compare k)
+let find =
+  let if_found v = Some v in
+  let if_not_found _ = None in
+  fun t ~compare k ->
+    find_and_call t ~compare k ~if_found ~if_not_found
+
+let mem =
+  let if_found _ = true in
+  let if_not_found _ = false in
+  fun t ~compare k ->
+    find_and_call t ~compare k ~if_found ~if_not_found
 
 let remove =
   let rec min_elt tree =

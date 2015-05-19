@@ -295,8 +295,10 @@ end
 
 include Front_to_back
 
+let singleton x = of_list [x]
+
 let compare cmp t1 t2 =
-  List.compare ~cmp
+  List.compare cmp
     (to_list t1)
     (to_list t2)
 

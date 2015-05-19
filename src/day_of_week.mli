@@ -13,8 +13,12 @@ with bin_io, compare, sexp
 include Comparable.S_binable with type t := t
 include Hashable.  S_binable with type t := t
 
-(** [of_string s] accepts three-character abbreviations with any capitalization *)
+(** [of_string s] accepts three-character abbreviations and full day names
+    with any capitalization, and strings of the integers 0-6. *)
 include Stringable.S with type t := t
+
+(* Capitalized full day names rather than all-caps 3-letter abbreviations *)
+val to_string_long : t -> string
 
 (** These use the same mapping as [Unix.tm_wday]: 0 <-> Sun, ... 6 <-> Sat *)
 val of_int_exn : int -> t
@@ -41,5 +45,12 @@ val weekends : t list (** [ Sat; Sun ] *)
 module Stable : sig
   module V1 : sig
     type nonrec t = t with bin_io, sexp, compare
+
+    include Stable_containers.Comparable.V1.S
+      with type key := t
+      with type comparator_witness := comparator_witness
+
+    include Stable_containers.Hashable.V1.S
+      with type key := t
   end
 end

@@ -13,11 +13,13 @@ module Comparable : sig
       type comparator_witness
 
       module Map : sig
-        type 'a t = (key, 'a, comparator_witness) Map.t with sexp, bin_io, compare
+        type 'a t = (key, 'a, comparator_witness) Map.t
+        include Stable1 with type 'a t := 'a t
       end
 
       module Set : sig
-        type t = (key, comparator_witness) Set.t with sexp, bin_io, compare
+        type t = (key, comparator_witness) Set.t
+        include Stable with type t := t
       end
     end
 

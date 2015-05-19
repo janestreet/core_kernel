@@ -367,16 +367,14 @@ end) = struct
     of_serialized (Serialized.t_of_sexp Key.t_of_sexp data_of_sexp sexp)
   ;;
 
-  include Bin_prot.Utils.Make_binable1 (struct
-    module Binable = struct
-      type 'data t = (Key.t, 'data) Serialized.t with bin_io
-    end
+  include Binable.Of_binable1
+      (struct type 'data t = (Key.t, 'data) Serialized.t with bin_io end)
+      (struct
+        type 'data t = 'data table
 
-    type 'data t = 'data table
-
-    let to_binable = to_serialized
-    let of_binable = of_serialized
-  end)
+        let to_binable = to_serialized
+        let of_binable = of_serialized
+      end)
 
 end
 

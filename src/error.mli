@@ -16,10 +16,9 @@ val of_info : Info.t -> t
 
     [failwiths ?here s a f] = [Error.raise (Error.create ?here s a f)]
 
-    When compiling with the [pa_fail] preprocessor, [failwiths string a sexp_of_a] is
-    replaced with [failwiths ?here:_here_ string a sexp_of_a] so that one does not need to
-    (and cannot) supply [_here_].  [pa_fail] does not insert [?here:_here_] into
-    [Error.failwiths string a sexp_of_a].
+    The [pa_fail] preprocessor replaces [failwiths] with [failwiths ?here:_here_] so that
+    one does not need to (and cannot) supply [_here_].  [pa_fail] does not add
+    [?here:_here_] to [Error.failwiths].
 
     In this signature we write [?here:Lexing.position] rather than
     [?here:Source_code_position.t] to avoid a circular dependency.
@@ -29,3 +28,6 @@ val of_info : Info.t -> t
 *)
 val failwiths : ?here:Lexing.position -> string -> 'a -> ('a -> Sexp.t) -> _
 val failwithp :       Lexing.position -> string -> 'a -> ('a -> Sexp.t) -> _
+
+(** [Error.t] is NOT wire-compatible with [Error.Stable.V1.t].  See info.mli for
+    details. *)

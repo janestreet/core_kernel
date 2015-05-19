@@ -1,5 +1,6 @@
 open Sexplib
 
+
 module Binable = Binable0
 
 module type Key = sig
@@ -82,10 +83,11 @@ module type Accessors = sig
      elements then replace [key] with [List.tl data], otherwise remove [key] *)
   val remove_one : ('a, _ list) t -> 'a key -> unit
 
-  val replace : ('a, 'b) t -> key:'a key -> data:'b -> unit
-  val set     : ('a, 'b) t -> key:'a key -> data:'b -> unit
-  val add     : ('a, 'b) t -> key:'a key -> data:'b -> [ `Ok | `Duplicate ]
-  val add_exn : ('a, 'b) t -> key:'a key -> data:'b -> unit
+  val replace      : ('a, 'b) t -> key:'a key -> data:'b -> unit
+  val set          : ('a, 'b) t -> key:'a key -> data:'b -> unit
+  val add          : ('a, 'b) t -> key:'a key -> data:'b -> [ `Ok | `Duplicate ]
+  val add_or_error : ('a, 'b) t -> key:'a key -> data:'b -> unit Or_error.t
+  val add_exn      : ('a, 'b) t -> key:'a key -> data:'b -> unit
 
   (** [change t key f] updates the given table by changing the value stored under [key]
       according to [f], just like [Map.change] (see that for example). *)
@@ -154,6 +156,20 @@ module type Accessors = sig
       if no such binding exists.*)
   val find_exn : ('a, 'b) t -> 'a key -> 'b
 
+  (** [find_and_call t k ~if_found ~if_not_found]
+
+      is equivalent to:
+
+      [match find t k with Some v -> if_found v | None -> if_not_found k]
+
+      except that it doesn't allocate the option. *)
+  val find_and_call
+    :  ('a, 'b) t
+    -> 'a key
+    -> if_found:('b -> 'c)
+    -> if_not_found:('a key -> 'c)
+    -> 'c
+
   (** [find_and_remove t k] returns Some (the current binding) of k in t and removes
       it, or None is no such binding exists *)
   val find_and_remove : ('a, 'b) t -> 'a key -> 'b option
@@ -193,9 +209,9 @@ module type Accessors = sig
       re-mapped in [dst] to [v] if [f ~key d1 (find dst key) = Some v].
   *)
   val merge_into
-    :  f:(key:'a key -> 'b -> 'b option -> 'b option)
+    :  f:(key:'a key -> 'b -> 'c option -> 'c option)
     -> src:('a, 'b) t
-    -> dst:('a, 'b) t
+    -> dst:('a, 'c) t
     -> unit
 
   (** Returns the list of all keys for given hashtable. *)
@@ -284,6 +300,13 @@ module type Creators = sig
        -> 'r list
        -> [ `Ok of ('a, 'r) t
           | `Duplicate_keys of 'a key list ]) create_options
+
+  val create_with_key_or_error
+    : ('a key,
+       'r,
+       get_key:('r -> 'a key)
+       -> 'r list
+       -> ('a, 'r) t Or_error.t) create_options
 
   val create_with_key_exn
     : ('a key,

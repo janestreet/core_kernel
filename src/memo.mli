@@ -4,7 +4,6 @@ open Std_internal
 (** Memoization code -- not re-entrant! *)
 
 
-
 (** Returns memoized version of any function with a single argument. The
     default caching policy is to remember everything for the lifetime
     of the returned closure, but one may specify an upper bound on

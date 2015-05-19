@@ -56,6 +56,8 @@ val length : 'a t -> int
 (** complexity: O(1) *)
 val is_empty : 'a t -> bool
 
+val singleton : 'a -> 'a t
+
 module Stable : sig
   module V1 : sig
     type nonrec 'a t = 'a t with bin_io, compare, sexp

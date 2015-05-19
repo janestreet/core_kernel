@@ -201,6 +201,11 @@ module type Accessors_generic = sig
        ('k, 'v, 'cmp) t -> 'k key -> ('k key * 'v) option
       ) options
 
+  val nth
+    : ('k, 'cmp,
+       ('k, 'v, 'cmp) t -> int -> ('k key * 'v) option
+      ) options
+
   val rank
     : ('k, 'cmp,
        ('k, _, 'cmp) t -> 'k key -> int option
@@ -279,6 +284,7 @@ module type Accessors1 = sig
   val range_to_alist : 'a t -> min:key -> max:key -> (key * 'a) list
   val prev_key       : 'a t -> key -> (key * 'a) option
   val next_key       : 'a t -> key -> (key * 'a) option
+  val nth            : 'a t -> int -> (key * 'a) option
   val rank           : _  t -> key -> int option
   val to_tree        : 'a t -> 'a tree
   val to_sequence
@@ -345,6 +351,7 @@ module type Accessors2 = sig
   val range_to_alist : ('a, 'b) t -> min:'a -> max:'a -> ('a * 'b) list
   val prev_key       : ('a, 'b) t -> 'a -> ('a * 'b) option
   val next_key       : ('a, 'b) t -> 'a -> ('a * 'b) option
+  val nth            : ('a, 'b) t -> int -> ('a * 'b) option
   val rank           : ('a, _)  t -> 'a -> int option
   val to_tree        : ('a, 'b) t -> ('a, 'b) tree
   val to_sequence
@@ -416,6 +423,7 @@ module type Accessors3 = sig
   val range_to_alist : ('a, 'b, _)    t -> min:'a -> max:'a -> ('a * 'b) list
   val prev_key       : ('a, 'b, _)    t -> 'a -> ('a * 'b) option
   val next_key       : ('a, 'b, _)    t -> 'a -> ('a * 'b) option
+  val nth            : ('a, 'b, _)    t -> int -> ('a * 'b) option
   val rank           : ('a, _,  _)    t -> 'a -> int option
   val to_tree        : ('a, 'b, 'cmp) t -> ('a, 'b, 'cmp) tree
   val to_sequence
@@ -519,6 +527,9 @@ module type Accessors3_with_comparator = sig
   val next_key
     :  comparator:('a, 'cmp) Comparator.t
     -> ('a, 'b, 'cmp) t -> 'a -> ('a * 'b) option
+  val nth
+    :  comparator:('a, 'cmp) Comparator.t
+    -> ('a, 'b, 'cmp) t -> int -> ('a * 'b) option
   val rank
     :  comparator:('a, 'cmp) Comparator.t
     -> ('a, 'b, 'cmp) t -> 'a -> int option

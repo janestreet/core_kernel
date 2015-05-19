@@ -8,8 +8,8 @@ let () =
         | Some "core_kernel" ->
             (cs, bs, lib, [ "src/core_params.h"
                           ; "src/core_bigstring.h"
-                          ; "src/ocaml_utils.h"
                           ; "src/jane_common.h"
+                          ; "src/time_ns_stubs.h"
                           ; "src/timespec.h" ])
         | _ ->
             (cs, bs, lib, [])

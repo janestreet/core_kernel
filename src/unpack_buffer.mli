@@ -80,11 +80,19 @@ val is_empty : (_, _) t -> bool Or_error.t
 val feed        : ?pos:int -> ?len:int -> (_, _) t -> Bigstring.t -> unit Or_error.t
 val feed_string : ?pos:int -> ?len:int -> (_, _) t -> string      -> unit Or_error.t
 
-(** [unpack t] unpacks all the values that it can from [t].  The resulting queue will be
-    empty if nothing could be unpacked.  If there is an unpacking error, [unpack] returns
-    an error, and subsequent [feed] and [unpack] operations on [t] will return that same
-    error.  I.e. no more data can be fed to or unpacked from [t]. *)
-val unpack : ('value, _) t -> 'value Queue.t Or_error.t
+(** [unpack_into t q] unpacks all the values that it can from [t] and enqueues them in
+    [q].  If there is an unpacking error, [unpack_into] returns an error, and subsequent
+    [feed] and unpack operations on [t] will return that same error -- i.e. no more data
+    can be fed to or unpacked from [t]. *)
+val unpack_into : ('value, _) t -> 'value Queue.t -> unit Or_error.t
+
+(** [unpack_iter t ~f] unpacks all the values that it can from [t], calling [f] on each
+    value as it's unpacked.  If there is an unpacking error (including if [f] raises),
+    [unpack_iter] returns an error, and subsequent [feed] and unpack operations on [t]
+    will return that same error -- i.e. no more data can be fed to or unpacked from [t].
+
+    Behavior is unspecified if [f] operates on [t]. *)
+val unpack_iter : ('value, _) t -> f:('value -> unit) -> unit Or_error.t
 
 (** [debug] controls whether invariants are checked at each call.  Setting this to [true]
     can make things very slow. *)

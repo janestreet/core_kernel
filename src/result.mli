@@ -16,6 +16,8 @@ with bin_io, sexp, compare
 
 include Monad.S2 with type ('a,'err) t := ('a,'err) t
 
+val ignore : (_, 'err) t -> (unit, 'err) t
+
 
 val fail : 'err -> (_, 'err) t
 

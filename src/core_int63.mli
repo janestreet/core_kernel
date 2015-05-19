@@ -12,8 +12,8 @@
       unmarshal will segfault.
 
     - bin_io will work, except that it will raise an overflow exception when you send too
-      large of an int from a 32-bit to a 64-bit platform.  This is couterintuitive because
-      the 32-bit platform has the larger int size. *)
+      large of an int from a 32-bit to a 64-bit platform.  This is counterintuitive
+      because the 32-bit platform has the larger int size. *)
 
 INCLUDE "config.mlh"
 
@@ -34,3 +34,8 @@ ENDIF
 val of_int : int -> t
 val to_int : t -> int option
 
+(** [random ~state bound] returns a random integer between 0 (inclusive) and [bound]
+    (exclusive).  [bound] must be greater than 0.
+
+    The default [~state] is [Random.State.default]. *)
+val random : ?state : Core_random.State.t -> t -> t

@@ -1,3 +1,5 @@
+module Binable = Binable0
+
 (* All the types as exposed in the mli are defined in this [Types] module.  The rest of
    this file is simply overriding all the bin_io, compare, and sexp functions to raise
    exceptions. *)
@@ -61,16 +63,15 @@ module Only_used_as_phantom_type1 (Name : sig val name : string end)
     failwithf "Unexpectedly called [%s.t_of_sexp]" Name.name ()
   let compare _ _ _ =
     failwithf "Unexpectedly called [%s.compare]" Name.name ()
-  include Bin_prot.Utils.Make_binable1 (struct
-    type nonrec 'a t = 'a t
-    module Binable = struct
-      type 'a t with bin_io
-    end
-    let to_binable _ =
-      failwithf "Unexpectedly used %s bin_io serialization" Name.name ()
-    let of_binable _ =
-      failwithf "Unexpectedly used %s bin_io deserialization" Name.name ()
-  end)
+  include Binable.Of_binable1
+    (struct type 'a t = 'a with bin_io end)
+    (struct
+      type nonrec 'a t = 'a t
+      let to_binable _ =
+        failwithf "Unexpectedly used %s bin_io serialization" Name.name ()
+      let of_binable _ =
+        failwithf "Unexpectedly used %s bin_io deserialization" Name.name ()
+    end)
 end
 
 module Only_used_as_phantom_type0 (T : sig

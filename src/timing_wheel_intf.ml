@@ -67,17 +67,17 @@
     determined by the current time, [now t], and the [level_bits] and [alarm_precision]
     arguments supplied to [create].  Various functions raise if they are supplied a time
     smaller than [now t] or [>= alarm_upper_bound t].  This situation likely indicates a
-    misconfiguration of the [level_bits] and/or [alarm_precision].  Here are some examples
-    of the duration [alarm_upper_bound t - now t] for 32-bit and 64-bit machines using the
-    default [level_bits].
+    misconfiguration of the [level_bits] and/or [alarm_precision].  Here is the duration
+    [alarm_upper_bound t - now t] using the default [level_bits].
 
     {v
-      | word size | # intervals | alarm_precision | duration |
-      |-----------+-------------+-----------------+----------|
-      |        32 |        2^29 | millisecond     | 7 days   |
-      |        64 |        2^61 | nanosecond      | 73 years |
+      | # intervals | alarm_precision | duration |
+      +-------------+-----------------+----------|
+      |        2^61 | nanosecond      | 73 years |
     v}
 *)
+
+module Int63 = Core_int63
 
 (** [Timing_wheel_time] is used to parameterize the timing-wheel interface over both
     [Time] and [Time_ns]. *)
@@ -100,8 +100,74 @@ module type Timing_wheel_time = sig
   include Equal.S          with type t := t
 
   val epoch : t
+
   val add : t -> Span.t -> t
   val sub : t -> Span.t -> t
+end
+
+(** An [Interval_num.t] is an index of one of the intervals into which a timing-wheel
+    partitions time. *)
+module type Interval_num = sig
+
+  module Span : sig
+    type t = private Int63.t with bin_io, compare, sexp
+
+    include Comparable.S with type t := t
+
+    val max : t -> t -> t
+
+    val zero : t
+    val one  : t
+
+    val of_int63 : Int63.t -> t
+    val to_int63 : t -> Int63.t
+
+    val of_int     : int -> t
+    val to_int_exn : t -> int
+
+    val scale_int : t -> int -> t
+
+    val pred : t -> t
+    val succ : t -> t
+  end
+
+  type t = private Int63.t with bin_io, compare, sexp
+
+  include Comparable.S with type t := t
+  include Hashable.S   with type t := t
+
+  val max : t -> t -> t
+  val min : t -> t -> t
+
+  val zero      : t
+  val one       : t
+  val min_value : t
+  val max_value : t
+
+  (** To avoid issues with arithmetic overflow, the implementation restricts interval
+      numbers to be [<= max_representable], where:
+
+      {[
+        max_representable = 1 lsl Level_bits.max_num_bits - 1
+      ]}
+  *)
+  val max_representable : t
+
+  val of_int63 : Int63.t -> t
+  val to_int63 : t -> Int63.t
+
+  val of_int : int -> t
+  val to_int_exn : t -> int
+
+  val add : t -> Span.t -> t
+  val sub : t -> Span.t -> t
+
+  val diff : t -> t -> Span.t
+
+  val succ : t -> t
+  val pred : t -> t
+
+  val rem : t -> Span.t -> Span.t
 end
 
 module type Timing_wheel = sig
@@ -111,6 +177,11 @@ module type Timing_wheel = sig
 
   type 'a timing_wheel = 'a t
 
+  (** [<:sexp_of< _ t_now >>] displays only [now t], not all the alarms. *)
+  type 'a t_now = 'a t with sexp_of
+
+  module Interval_num : Interval_num
+
   module Alarm : sig
     type 'a t with sexp_of
 
@@ -119,9 +190,9 @@ module type Timing_wheel = sig
     val null : unit -> _ t
 
     (** All [Alarm] functions will raise if [not (Timing_wheel.mem timing_wheel t)]. *)
-    val at    : 'a timing_wheel -> 'a t -> Time.t
-    val key   : 'a timing_wheel -> 'a t -> int
-    val value : 'a timing_wheel -> 'a t -> 'a
+    val at           : 'a timing_wheel -> 'a t -> Time.t
+    val interval_num : 'a timing_wheel -> 'a t -> Interval_num.t
+    val value        : 'a timing_wheel -> 'a t -> 'a
   end
 
   include Invariant.S1 with type 'a t := 'a t
@@ -142,9 +213,8 @@ module type Timing_wheel = sig
 
     include Invariant.S with type t := t
 
-    (* [max_num_bits] is how many bits in an integer key the timing wheel can use, i.e.
-       [Word_size.num_bits word_size - 3].  We subtract the 3 bits in the word that we
-       won't use:
+    (* [max_num_bits] is how many bits in a key the timing wheel can use, i.e. 61.  We
+       subtract 3 for the bits in the word that we won't use:
 
        - for the tag bit
        - for negative numbers
@@ -156,15 +226,15 @@ module type Timing_wheel = sig
     val create_exn : int list -> t
 
     (** [default] returns the default value of [level_bits] used by [Timing_wheel.create]
-        and [Timing_wheel.Priority_queue.create].  It varies based on the machine's word
-        size.  Here are the the values and the amount of space used for the level arrays.
+        and [Timing_wheel.Priority_queue.create].
 
-        | word | bits used | level_bits               | space used  |
-        |------+-----------+--------------------------+-------------|
-        |   32 |        29 | [10; 10; 9]              | < 4k words  |
-        |   64 |        61 | [11; 10; 10; 10; 10; 10] | < 10k words |
+        {[
+          default = [11; 10; 10; 10; 10; 10]
+        ]}
+
+        This default uses 61 bits, i.e. [max_num_bits], and less than 10k words of memory.
     *)
-    val default : Word_size.t -> t
+    val default : t
 
     (** [num_bits t] is the sum of the [b_i] in [t]. *)
     val num_bits : t -> int
@@ -178,14 +248,14 @@ module type Timing_wheel = sig
 
     (** [create] raises if [alarm_precision <= 0]. *)
     val create
-      :  ?alarm_precision:Time.Span.t
-      -> ?level_bits:Level_bits.t
+      :  ?alarm_precision : Time.Span.t
+      -> ?level_bits      : Level_bits.t
       -> unit
       -> t
 
     (** accessors *)
     val alarm_precision : t -> Time.Span.t
-    val level_bits : t -> Level_bits.t
+    val level_bits      : t -> Level_bits.t
 
     (** [default] is [create ()]. *)
     val default : t
@@ -217,8 +287,8 @@ module type Timing_wheel = sig
       far in the past or future to represent.
 
       [now_interval_num t] equals [interval_num t (now t)]. *)
-  val interval_num : _ t -> Time.t -> int
-  val now_interval_num : _ t -> int
+  val interval_num     : _ t -> Time.t -> Interval_num.t
+  val now_interval_num : _ t           -> Interval_num.t
 
   (** [interval_num_start t n] is the start of the [n]'th interval in [t], i.e.:
 
@@ -234,8 +304,8 @@ module type Timing_wheel = sig
       ]}
 
       [interval_start] raises in the same cases that [interval_num] does. *)
-  val interval_num_start : _ t -> int    -> Time.t
-  val interval_start     : _ t -> Time.t -> Time.t
+  val interval_num_start : _ t -> Interval_num.t -> Time.t
+  val interval_start     : _ t -> Time.t  -> Time.t
 
   (** [advance_clock t ~to_ ~handle_fired] advances [t]'s clock to [to_].  It fires and
       removes all alarms [a] in [t] with [Time.(<) (Alarm.at a) (interval_start t to_)]
@@ -260,14 +330,27 @@ module type Timing_wheel = sig
 
       [add_at_interval_num t ~at a] is equivalent to [add t ~at:(interval_num_start t at)
       a]. *)
-  val add                 : 'a t -> at:Time.t -> 'a -> 'a Alarm.t
-  val add_at_interval_num : 'a t -> at:int    -> 'a -> 'a Alarm.t
+  val add                 : 'a t -> at:Time.t  -> 'a -> 'a Alarm.t
+  val add_at_interval_num : 'a t -> at:Interval_num.t -> 'a -> 'a Alarm.t
 
   val mem : 'a t -> 'a Alarm.t -> bool
 
   (** [remove t alarm] removes [alarm] from [t].  [remove] raises if [not (mem t
       alarm)]. *)
   val remove : 'a t -> 'a Alarm.t -> unit
+
+  (** [reschedule t alarm ~at] mutates [alarm] so that it will fire at [at], i.e. so that
+      [Alarm.at t alarm = at].  [reschedule] raises if [not (mem t alarm)] or if [at] is
+      an invalid time for [t], in the same situations that [add] raises.
+
+      [reschedule_at_interval_num t alarm ~at] is equivalent to:
+
+      {[
+        reschedule t alarm ~at:(interval_num_start t at)
+      ]}
+  *)
+  val reschedule                 : 'a t -> 'a Alarm.t -> at:Time.t         -> unit
+  val reschedule_at_interval_num : 'a t -> 'a Alarm.t -> at:Interval_num.t -> unit
 
   (** [clear t] removes all alarms from [t]. *)
   val clear : _ t -> unit
@@ -315,13 +398,15 @@ module type Timing_wheel = sig
 
     type 'a priority_queue = 'a t
 
+    module Key : Interval_num
+
     module Elt : sig
       (** An [Elt.t] represents an element that was added to a timing wheel. *)
       type 'a t with sexp_of
 
       val invariant : 'a priority_queue -> 'a Invariant.t -> 'a t Invariant.t
 
-      val key   : 'a priority_queue -> 'a t -> int
+      val key   : 'a priority_queue -> 'a t -> Key.t
       val value : 'a priority_queue -> 'a t -> 'a
     end
 
@@ -337,18 +422,6 @@ module type Timing_wheel = sig
     (** [is_empty t] is [length t = 0] *)
     val is_empty : _ t -> bool
 
-    (** To avoid issues with arithmetic overflow, the implementation restricts keys to
-        being between [0] and [max_representable_key], where:
-
-        {[
-          max_representable_key = 1 lsl Level_bits.max_num_bits - 1
-        ]}
-
-        This is different from [max_allowed_key t], which gives the maximum key that can
-        currently be stored in [t].  The maximum allowed key is never larger than the
-        maximum representable key, but may be smaller. *)
-    val max_representable_key : int
-
     (** [min_allowed_key t] is the minimum key that can be stored in [t].  This only
         indicates the possibility; there need not be an element [elt] in [t] with [Elt.key
         elt = min_allowed_key t].  This is not the same as the "min_key" operation in a
@@ -356,16 +429,16 @@ module type Timing_wheel = sig
 
         [min_allowed_key t] can increase over time, via calls to
         [increase_min_allowed_key].  It is guaranteed that [min_allowed_key t <=
-        max_representable_key]. *)
-    val min_allowed_key : _ t -> int
+        Key.max_representable]. *)
+    val min_allowed_key : _ t -> Key.t
 
     (** [max_allowed_key t] is the maximum allowed key that can be stored in [t].  As
         [min_allowed_key] increases, so does [max_allowed_key]; however it is not the case
         that [max_allowed_key t - min_allowed_key t] is a constant.  It is guaranteed that
-        [max_allowed_key t >= min (max_representable_key, min_allowed_key t + 2^B - 1],
+        [max_allowed_key t >= min (Key.max_representable, min_allowed_key t + 2^B - 1],
         where [B] is the sum of the b_i in [level_bits].  It is also guaranteed that
-        [max_allowed_key t <= max_representable_key]. *)
-    val max_allowed_key : _ t -> int
+        [max_allowed_key t <= Key.max_representable]. *)
+    val max_allowed_key : _ t -> Key.t
 
     (** [min_elt t] returns an element in [t] that has the minimum key, if [t] is
         nonempty.  [min_elt] takes time proportional to the size of the timing-wheel data
@@ -373,16 +446,20 @@ module type Timing_wheel = sig
 
         [min_key t] returns the key of [min_elt t], if any. *)
     val min_elt : 'a t -> 'a Elt.t option
-    val min_key :  _ t ->      int option
+    val min_key :  _ t ->  Key.t option
 
     (** [add t ~key value] adds a new value to [t] and returns an element that can later
         be supplied to [remove] the element from [t].  [add] raises if [key <
         min_allowed_key t || key > max_allowed_key t]. *)
-    val add : 'a t -> key:int -> 'a -> 'a Elt.t
+    val add : 'a t -> key:Key.t -> 'a -> 'a Elt.t
 
     (** [remove t elt] removes [elt] from [t].  It is an error if [elt] is not currently
         in [t], and this error may or may not be detected. *)
     val remove : 'a t -> 'a Elt.t -> unit
+
+    (** [change_key t elt ~key] changes the key of [elt] to [key].  [change_key] raises if
+        [not (mem t elt) || key < min_allowed_key t || key > max_allowed_key t]. *)
+    val change_key : 'a t -> 'a Elt.t -> key:Key.t -> unit
 
     (** [clear t] removes all elts from [t]. *)
     val clear : _ t -> unit
@@ -395,7 +472,7 @@ module type Timing_wheel = sig
         then [increase_min_allowed_key] does nothing.  Otherwise, if
         [increase_min_allowed_key] returns successfully, [min_allowed_key t = key].
 
-        [increase_min_allowed_key] raises if [key > max_representable_key].
+        [increase_min_allowed_key] raises if [key > Key.max_representable].
 
         [increase_min_allowed_key] takes time proportional to [key - min_allowed_key t],
         although possibly less time.
@@ -403,7 +480,10 @@ module type Timing_wheel = sig
         Behavior is unspecified if [handle_removed] accesses [t] in any way other than
         [Elt] functions. *)
     val increase_min_allowed_key
-      : 'a t -> key:int -> handle_removed:('a Elt.t -> unit) -> unit
+      :  'a t
+      -> key            : Key.t
+      -> handle_removed : ('a Elt.t -> unit)
+      -> unit
 
     val iter : 'a t -> f:('a Elt.t -> unit) -> unit
   end

@@ -20,19 +20,35 @@ end
 (* for when you want the sexp representation of one type to be the same as that for some
    other isomorphic type *)
 module Of_sexpable
-  (S : S)
+  (Sexpable : S)
   (M : sig
     type t
-    val to_sexpable : t -> S.t
-    val of_sexpable : S.t -> t
+    val to_sexpable : t -> Sexpable.t
+    val of_sexpable : Sexpable.t -> t
   end)
   : S with type t := M.t =
 struct
   let t_of_sexp sexp =
-    let s = S.t_of_sexp sexp in
+    let s = Sexpable.t_of_sexp sexp in
     (try M.of_sexpable s with exn -> Conv.of_sexp_error_exn exn sexp)
 
-  let sexp_of_t t = S.sexp_of_t (M.to_sexpable t)
+  let sexp_of_t t = Sexpable.sexp_of_t (M.to_sexpable t)
+end
+
+module Of_sexpable1
+  (Sexpable : S1)
+  (M : sig
+    type 'a t
+    val to_sexpable : 'a t -> 'a Sexpable.t
+    val of_sexpable : 'a Sexpable.t -> 'a t
+  end)
+  : S1 with type 'a t := 'a M.t =
+struct
+  let t_of_sexp a_of_sexp sexp =
+    let s = Sexpable.t_of_sexp a_of_sexp sexp in
+    (try M.of_sexpable s with exn -> Conv.of_sexp_error_exn exn sexp)
+
+  let sexp_of_t sexp_of_a t = Sexpable.sexp_of_t sexp_of_a (M.to_sexpable t)
 end
 
 module Of_stringable (M : Stringable.S) : S with type t := M.t =

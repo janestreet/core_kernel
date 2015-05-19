@@ -1,9 +1,10 @@
 (** Tail recursive version of standard List functions, plus additional operations. *)
 
-type 'a t = 'a list with bin_io, sexp, typerep
+(* [compare] is lexicographic. *)
+type 'a t = 'a list with bin_io, compare, sexp, typerep
 
 include Container.S1 with type 'a t := 'a t
-include Monad.S with type 'a t := 'a t
+include Monad.S      with type 'a t := 'a t
 
 (** [of_list] is the identity function.  It is useful so that the [List] module matches
     the same signature that other container modules do, namely:
@@ -111,7 +112,7 @@ val sort : cmp:('a -> 'a -> int) -> 'a t -> 'a t
 val stable_sort : cmp:('a -> 'a -> int) -> 'a t -> 'a t
 
 (** Merge two lists: assuming that [l1] and [l2] are sorted according to the comparison
-    function [cmp], [merge cmp l1 l2] will return a sorted list containting all the
+    function [cmp], [merge cmp l1 l2] will return a sorted list containing all the
     elements of [l1] and [l2].  If several elements compare equal, the elements of [l1]
     will be before the elements of [l2]. *)
 val merge : 'a t -> 'a t -> cmp:('a -> 'a -> int) -> 'a t
@@ -371,9 +372,6 @@ val permute : ?random_state:Core_random.State.t -> 'a t -> 'a t
 val is_sorted          : 'a t -> compare:('a -> 'a -> int) -> bool
 val is_sorted_strictly : 'a t -> compare:('a -> 'a -> int) -> bool
 
-(** lexicographic *)
-val compare : 'a t -> 'a t -> cmp:('a -> 'a -> int) -> int
-
 val equal : 'a t -> 'a t -> equal:('a -> 'a -> bool) -> bool
 
 module Infix : sig
@@ -393,11 +391,11 @@ end
 **)
 val transpose : 'a t t -> 'a t t option
 
-(** [transpose_exn] transposes the rows and columns of its argument, throwing exception if
-    the list is not rectangular.
-**)
+(** [transpose_exn] transposes the rows and columns of its argument, throwing an exception
+    if the list is not rectangular.
+ **)
 val transpose_exn : 'a t t -> 'a t t
 
 (** [intersperse xs ~sep] places [sep] between adjacent elements of [xs].
     e.g. [intersperse [1;2;3] ~sep:0 = [1;0;2;0;3]] *)
-val intersperse : 'a list -> sep:'a -> 'a list
+val intersperse : 'a t -> sep:'a -> 'a t

@@ -343,6 +343,15 @@ let iround_ubound = min (of_int max_int) (2.0 ** 62.0 -. 512.)
    in the case where the capture of backtraces is enabled upon "with"---and that seems
    not worth it when compared to the relatively small amount of code duplication.) *)
 
+(* Error reporting below is very carefully arranged so that, e.g., [iround_nearest_exn]
+   itself can be inlined into callers such that they don't need to allocate a box for the
+   [float] argument.  This is done with a [box] function carefully chosen to allow the
+   compiler to create a separate box for the float only in error cases. *)
+let box =
+  (* Prevent potential constant folding of [+. 0.] in the near ocamlopt future. *)
+  let x = if Random.bool () then 0. else 0. in
+  (fun f -> f +. x)
+
 let iround_up t =
   if t > 0.0 then begin
     if t <= iround_ubound then
@@ -362,13 +371,13 @@ let iround_up_exn t =
     if t <= iround_ubound then
       int_of_float (ceil t)
     else
-      invalid_argf "Float.iround_up_exn: argument (%f) is too large" t ()
+      invalid_argf "Float.iround_up_exn: argument (%f) is too large" (box t) ()
   end
   else begin
     if t >= iround_lbound then
       int_of_float t
     else
-      invalid_argf "Float.iround_up_exn: argument (%f) is too small or NaN" t ()
+      invalid_argf "Float.iround_up_exn: argument (%f) is too small or NaN" (box t) ()
   end
 
 let iround_down t =
@@ -390,13 +399,13 @@ let iround_down_exn t =
     if t <= iround_ubound then
       int_of_float t
     else
-      invalid_argf "Float.iround_down_exn: argument (%f) is too large" t ()
+      invalid_argf "Float.iround_down_exn: argument (%f) is too large" (box t) ()
   end
   else begin
     if t >= iround_lbound then
       int_of_float (floor t)
     else
-      invalid_argf "Float.iround_down_exn: argument (%f) is too small or NaN" t ()
+      invalid_argf "Float.iround_down_exn: argument (%f) is too small or NaN" (box t) ()
   end
 
 let iround_towards_zero t =
@@ -409,8 +418,9 @@ let iround_towards_zero_exn t =
   if t >= iround_lbound && t <= iround_ubound then
     int_of_float t
   else
-    invalid_argf
-      "Float.iround_towards_zero_exn: argument (%f) is out of range or NaN" t ()
+    invalid_argf "Float.iround_towards_zero_exn: argument (%f) is out of range or NaN"
+      (box t)
+      ()
 
 (* Outside of the range [round_nearest_lb..round_nearest_ub], all representable doubles
    are integers in the mathematical sense, and [round_nearest] should be identity.
@@ -453,7 +463,7 @@ let iround_nearest_exn t =
       if t <= iround_ubound then
         int_of_float t
       else
-        invalid_argf "Float.iround_nearest_exn: argument (%f) is too large" t ()
+        invalid_argf "Float.iround_nearest_exn: argument (%f) is too large" (box t) ()
   else
     if t >= round_nearest_lb then
       int_of_float (floor (t +. 0.5))
@@ -461,7 +471,8 @@ let iround_nearest_exn t =
       if t >= iround_lbound then
         int_of_float t
       else
-        invalid_argf "Float.iround_nearest_exn: argument (%f) is too small or NaN" t ()
+        invalid_argf "Float.iround_nearest_exn: argument (%f) is too small or NaN" (box t)
+          ()
 
 (* The following [iround_exn] and [iround] functions are slower than the ones above.
    Their equivalence to those functions is tested in the unit tests below. *)
@@ -1426,12 +1437,35 @@ end
 
 BENCH_MODULE "Rounding" = struct
   let x = of_string "1.0000000001000000111"
-
   BENCH "iround_down_exn"         = iround_down_exn         x
-  BENCH "round_nearest_exn"       = iround_nearest_exn      x
+  BENCH "iround_nearest_exn"      = iround_nearest_exn      x
   BENCH "iround_up_exn"           = iround_up_exn           x
   BENCH "iround_towards_zero_exn" = iround_towards_zero_exn x
   BENCH "Pervasives.int_of_float" = Pervasives.int_of_float x
+
+  BENCH_MODULE "imm" = struct
+    (* Here we check that rounding functions don't force boxing.  We observe this by
+       noting the lack of allocation when calling with a float that compiler can avoid
+       boxing.  Without the tuning above that allows, e.g., [iround_nearest_exn] to avoid
+       forcing callers to box floats, these allocate:
+
+       Estimated testing time 5s (5 benchmarks x 1s). Change using -quota SECS.
+       ┌─────────────────────────────────────────────────┬──────────┬────────────┐
+       │ Name                                            │ Time/Run │ Percentage │
+       ├─────────────────────────────────────────────────┼──────────┼────────────┤
+       │ [float.ml:Rounding.imm] iround_down_exn         │   3.69ns │     45.10% │
+       │ [float.ml:Rounding.imm] iround_nearest_exn      │   3.96ns │     48.42% │
+       │ [float.ml:Rounding.imm] iround_up_exn           │   8.19ns │    100.00% │
+       │ [float.ml:Rounding.imm] iround_towards_zero_exn │   3.73ns │     45.52% │
+       │ [float.ml:Rounding.imm] Pervasives.int_of_float │   3.36ns │     41.10% │
+       └─────────────────────────────────────────────────┴──────────┴────────────┘ *)
+    let x = [| x |]
+    BENCH "iround_down_exn"         = iround_down_exn         x.(0)
+    BENCH "iround_nearest_exn"      = iround_nearest_exn      x.(0)
+    BENCH "iround_up_exn"           = iround_up_exn           x.(0)
+    BENCH "iround_towards_zero_exn" = iround_towards_zero_exn x.(0)
+    BENCH "Pervasives.int_of_float" = Pervasives.int_of_float x.(0)
+  end
 end
 
 (* These tests show the degenerate cases for the OCaml [**] operator.  The slowness of

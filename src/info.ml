@@ -28,12 +28,22 @@ module Binable_exn = struct
     type t = exn with sexp_of
   end
   include T
-  include Bin_prot.Utils.Make_binable (struct
-    module Binable = struct
-      type t = Sexp.t with bin_io
-    end
+  include Binable.Of_binable (Sexp) (struct
     include T
-    exception Exn of Sexp.t with sexp
+
+    exception Exn of Sexp.t
+
+    (* We install a custom exn-converter rather than use [exception Exn of t with sexp] to
+       eliminate the extra wrapping of "(Exn ...)". *)
+    let () =
+      Sexplib.Conv.Exn_converter.add_auto (Exn (Atom "<template>"))
+        (function
+          | Exn t -> t
+          | _ ->
+            (* Reaching this branch indicates a bug in sexplib. *)
+            assert false)
+    ;;
+
     let to_binable t = t |> <:sexp_of< t >>
     let of_binable sexp = Exn sexp
   end)
@@ -117,8 +127,6 @@ open Message
 
 type t = Message.t Lazy.t
 
-type t_ = t
-
 let invariant _ = ()
 
 (* We use [protect] to guard against exceptions raised by user-supplied functons, so
@@ -147,9 +155,8 @@ let to_string_hum_deprecated t = Message.to_string_hum_deprecated (to_message t)
 
 let to_string_mach t = Sexp.to_string_mach (sexp_of_t t)
 
-include Bin_prot.Utils.Make_binable (struct
-  module Binable = Message
-  type t = t_
+include Binable.Of_binable (Message) (struct
+  type nonrec t = t
   let to_binable = to_message
   let of_binable = of_message
 end)
@@ -175,7 +182,7 @@ let tag_arg t tag x sexp_of_x =
 ;;
 
 let of_list ?trunc_after ts =
-  lazy (Of_list (?trunc_after, List.map ts ~f:to_message))
+  lazy (Of_list (trunc_after, List.map ts ~f:to_message))
 ;;
 
 exception Exn of t
@@ -186,7 +193,9 @@ let () =
   Sexplib.Conv.Exn_converter.add_auto (Exn (of_string "<template>"))
     (function
     | Exn t -> sexp_of_t t
-    | _ -> assert false)
+    | _ ->
+      (* Reaching this branch indicates a bug in sexplib. *)
+      assert false)
 ;;
 
 let to_exn t =
@@ -224,8 +233,7 @@ module Stable = struct
 
     let compare = compare
 
-    include Bin_prot.Utils.Make_binable (struct
-      module Binable = Sexp
+    include Binable.Of_binable (Sexp) (struct
       type nonrec t = t
       let to_binable = sexp_of_t
       let of_binable = t_of_sexp
@@ -237,23 +245,42 @@ TEST_MODULE "Info" = struct
 
   let failwithf = Core_printf.failwithf
 
-  let test_result got ~expect =
-    if got <> expect then failwithf "(got %S) (expected %S)" got expect ();
-  ;;
-
   TEST_UNIT =
-    test_result (to_string_hum (of_exn (Failure "foo")))
+    <:test_result< string >> (to_string_hum (of_exn (Failure "foo")))
       ~expect:"(Failure foo)"
   ;;
 
   TEST_UNIT =
-    test_result (to_string_hum (tag (of_string "b") "a"))
+    <:test_result< string >> (to_string_hum (tag (of_string "b") "a"))
       ~expect:"(a b)"
   ;;
 
   TEST_UNIT =
-    test_result (to_string_hum (of_list (List.map ~f:of_string [ "a"; "b"; "c" ])))
+    <:test_result< string >>
+      (to_string_hum (of_list (List.map ~f:of_string [ "a"; "b"; "c" ])))
       ~expect:"(a b c)"
+  ;;
+
+  let of_strings strings = of_list (List.map ~f:of_string strings)
+
+  let nested =
+    of_list
+      (List.map ~f:of_strings
+         [ [ "a"; "b"; "c" ]
+         ; [ "d"; "e"; "f" ]
+         ; [ "g"; "h"; "i" ]
+         ])
+  ;;
+
+  TEST_UNIT =
+    <:test_result< string >> (to_string_hum nested) ~expect:"(a b c d e f g h i)"
+  ;;
+
+  TEST_UNIT =
+    <:test_result< Sexp.t >> (sexp_of_t nested)
+      ~expect:(sexp_of_t (of_strings [ "a"; "b"; "c"
+                                     ; "d"; "e"; "f"
+                                     ; "g"; "h"; "i" ]))
   ;;
 
   TEST_UNIT =

@@ -68,6 +68,7 @@ module Unit_tests
     let range_to_alist       x = simplify_accessor range_to_alist x
     let prev_key             x = simplify_accessor prev_key x
     let next_key             x = simplify_accessor next_key x
+    let nth                  x = simplify_accessor nth x
     let rank                 x = simplify_accessor rank x
     let to_sequence ?keys_in x =
       simplify_accessor to_sequence ?keys_in x
@@ -820,6 +821,7 @@ module Unit_tests
   let range_to_alist       _ = assert false
   let prev_key             _ = assert false
   let next_key             _ = assert false
+  let nth                  _ = assert false
   let rank                 _ = assert false
 
   TEST_UNIT =
@@ -861,6 +863,13 @@ module Unit_tests
     assert (Map.rank map before_max = Some (length - 2));
     assert (Map.rank map max_key    = Some (length - 1));
     assert (Map.rank (Map.remove map Key.sample) Key.sample = None);
+    (* nth *)
+    assert
+      (alist_equal
+         (Map.to_alist map)
+         (List.init (Map.length map) ~f:(Map.nth map) |> List.filter_opt));
+    assert (Option.is_none (Map.nth map (-1)));
+    assert (Option.is_none (Map.nth map (Map.length map)));
   ;;
 
   TEST = Map.prev_key (Map.empty ()) Key.sample = None

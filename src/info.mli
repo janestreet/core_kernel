@@ -67,7 +67,7 @@ val of_thunk : (unit -> string) -> t
     pick up the then-current state of [z]. *)
 val create : ?here:Source_code_position0.t -> string -> 'a -> ('a -> Sexp.t) -> t
 
-(** Construct an error containing only a string from a format.  This eagerly constructs
+(** Construct a [t] containing only a string from a format.  This eagerly constructs
     the string. *)
 val createf : ('a, unit, string, t) format4 -> 'a
 
@@ -88,5 +88,11 @@ val to_exn : t -> exn
 val pp : Format.formatter -> t -> unit
 
 module Stable : sig
+  (** [Info.t] is NOT wire-compatible with [Info.Stable.V1.t] (and the same for [Error]).
+
+      [Info.Stable.V1.t] bin-prots as sexps for compatibility with its predecessor
+      [Iron_common.Stable_error].  [Info.t] continues to bin-prot as the underlying
+      [Message.t] value for compatibility with existing protocols that used unstable
+      errors. *)
   module V1 : Stable_module_types.S0 with type t = t
 end
