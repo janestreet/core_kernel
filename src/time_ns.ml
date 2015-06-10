@@ -101,6 +101,8 @@ module Span : sig
   val of_int_sec : int -> t
   val to_int_sec : t -> int
 
+  val to_string : t -> string
+
   val of_int63_ns : Core_int63.t -> t
   val to_int63_ns : t -> Core_int63.t
   val of_int_ns : int -> t
@@ -268,6 +270,17 @@ ELSE
   let of_int_ns _i = failwith "unsupported on 32bit machines"
   let to_int_ns _i = failwith "unsupported on 32bit machines"
 ENDIF
+
+  let to_string t =
+    let parts = to_parts t in
+    let sign = match parts.sign with
+    | Neg  -> "-"
+    | _    -> "" in
+    let days = parts.hr / 24 in
+    let hours = parts.hr mod 24 in
+    Printf.sprintf
+      "%s%d days, %d hours, %d minutes, %d seconds, %d ms, %d us"
+      sign days hours parts.min parts.sec parts.ms parts.us
 
   let (+)       = Core_int63.(+)
   let (-)       = Core_int63.(-)
@@ -525,11 +538,8 @@ module Alternate_sexp = struct
       }
     with sexp
 
-    let time_format = "%Y-%m-%dT%H:%M:%S%z"
-
     let of_time time =
-      { human_readable =
-          Platform_specific.strftime (Unix.localtime (Span.to_sec time)) time_format
+      { human_readable = Span.to_string time
       ; int63_ns_since_epoch = to_int63_ns_since_epoch time
       }
 
