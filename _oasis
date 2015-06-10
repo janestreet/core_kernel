@@ -278,8 +278,7 @@ Library core_kernel
                       pa_bench,
                       pa_ounit,
                       pa_test,
-                      typerep_lib,
-                      unix
+                      typerep_lib
 
 Library check_caml_modify
   Build$:             flag(caml_modify_test)
