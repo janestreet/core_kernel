@@ -4,7 +4,7 @@
    This can be very easily broken, and as such we're adding these tests to detect when
    this may have happened. *)
 
-open Core.Std
+open Core_kernel.Std
 open Check_caml_modify
 
 (* Big enough length so an array goes directly into the major heap. *)
