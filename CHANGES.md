@@ -1,3 +1,176 @@
+## 113.00.00
+
+- Added `Float.int63_round_nearest_exn`.
+
+    val int63_round_nearest_exn : t -> Core_int63.
+
+- Changed `Hashtbl.sexp_of_t` so that keys are sorted in increasing order.
+
+    This also applies to the `sexp_of_t` produced by `Hashtbl.Make` and
+    `Make_binable`. Sorting by key is nice when looking at output, as well as
+    in tests, so that the output is deterministic and so that diffs are
+    minimized when output changes.
+
+- Added to `Info`, `Error`, and `Or_error` a `Stable.V2` module, whose `bin_io`
+  is the same as the unstable `bin_io`.
+
+- Replaced `Map.prev_key` and `next_key` with `closest_key`.
+
+    val closest_key
+      :  ('k, 'v, 'cmp) t
+      -> [ `Greater_or_equal_to
+         | `Greater_than
+         | `Less_or_equal_to
+         | `Less_than
+         ]
+      -> 'k
+      -> ('k * 'v) option
+
+- Shared code between `Monad.Make{,2}` and `Applicative.Make{,2}`.
+
+- Added tests to make sure `round_nearest` and `int63_round_nearest_exn`
+  don't allocate.
+
+- Added `Lazy.T_unforcing` module, with a custom `sexp_of_t` that doesn't
+  force.
+
+    This serializer does not support round tripping, i.e. `t_of_sexp`.  It
+    is intended to be used in debug code or `<:sexp_of< >>` statements.  E.g:
+
+      type t =
+        { x : int Lazy.T_unforcing.t
+        ; y : string
+        }
+      with sexp_of
+
+- Extended `Map.to_sequence` and `Set.to_sequence` to take any combination of
+  upper bound, lower bound, and direction.
+
+- Added `Map.split`.
+
+- Added `Timing_wheel.fire_past_alarms`, which fires alarms in the current time
+  interval's bucket whose time is in the past.
+
+- Added a `Total_map` module, for maps where every value of the key type is
+  present in the map.
+
+- Added `Bigstring.compare` and `Bigstring.equal`.
+
+- Split `monad.ml` into three files: `monad.ml`, `monad.mli`, and `monad_intf.ml`.
+
+- Removed the last remaining dependence of `Core_kernel` on Unix, moving
+  `Time_ns.pause` functions to `Core`.
+
+- Added optional arguments to `Hash_queue.create`, `?growth_allowed` and
+  `size`, which then get passed to `Hashtbl.create`.
+
+- Added a `?strict:unit` argument to functions that ordinarily create lazy
+  sexps, like `failwiths`.
+
+      Info.create
+      Error.create
+      Error.failwiths
+      Error.failwithp
+      Or_error.error
+
+    This makes it easy to force a use to be strict, which is sometimes
+    useful to accurately capture the state of a mutable data structure at
+    the time the error happens, lest it change by the time the error is
+    rendered.
+
+- Removed `Interned_string` module.
+
+- In `Pooled_hashtbl`, avoid trying to create arrays bigger than
+  `Sys.max_array_length`.
+
+    The problem affected 32-bit platforms.
+
+- Added `Quickcheck` module.
+
+    Supports automated testing with randomly-generated inputs in the style of
+    Haskell's Quickcheck library.  Our adaptation supports flexible probability
+    distributions for values of a given type and uniqueness guarantees for
+    generated values.
+
+- Made `Set.to_sequence` and `Set.split` have the same interface as
+  `Map.to_sequence` and `Map.split`, respectively.
+
+- Fixed `Float` and `Timing_wheel` to compile on 32-bit platforms.
+
+- Added `Lazy.Stable.V1`.
+
+- Added `List.reduce_balanced`, which is like `reduce`, but relies on
+  associativity of `f` to make nesting of calls to `f` logarithmic rather than
+  linear in the input list length.
+
+- Added `String_id.Make_without_pretty_printer`.
+
+- Restricted `Time_ns.Span` values to be less than 135 years, which ensures the
+  corresponding `float` `Time.Span` values have microsecond precision.
+
+    Fixed a `Time_ns` test that recently started failing due to crossing
+    the 135-year boundary.
+
+    Reducing the range of `Time_ns.Span` required adjusting the implementation
+    of `Core.Time_ns.Option.Stable.V1`, which (accidentally, incorrectly)
+    incorporated the (unstabilized) `Core_kernel.Time_ns.Span.min_value` as the
+    representation of `bid_none` and `.max_value` as `ask_none`.  The prior
+    representation is preserved, but some previously allowed values are no
+    longer allowed and now raise exceptions!
+
+- Added `Rope` module, the standard data structure for efficient string
+  manipulation.
+
+- Added `Sequence.unfold_with_and_finish`, a variant of `unfold_with` that can
+  continue the sequence after the inner sequence finishes.
+
+- Replaced `Sequence.cycle` with `Sequence.cycle_list_exn`, to work around a
+  bug in `Sequence.cycle` raising on the empty sequence.
+
+    Sequence.cycle can cause an infinite loop if its input is empty. It is
+    problematic to check whether the input sequence is empty.
+
+      * If we check it eagerly, we have to turn `cycle` into
+        `cycle_eagerly_exn`, and it will evaluate the first element twice.
+
+      * If we check it lazily, we might raise an exception in a seemingly
+        unrelated part of the code, and the usually-good habit of wrapping a
+        function like `cycle_exn` in `try .. with ..`  would not catch it.
+
+    To get around these issues, [cycle] is changed to accept only lists as
+    inputs, not sequences. It is now called [cycle_list_exn].
+
+- Fixed assumptions about the size of integers, to support compiling to
+  Javascript, where integers are 32-bit.
+
+- Fixed build on Mac OSX.
+
+    Fix build when LINUX_EXT or TIMERFD are undefined.
+
+- Added `Caml.Bytes`.
+
+    Add an alias for Bytes in Caml. Fixes janestreet/core_kernel#46.
+
+- In `Container`, exposed polymorphic functions individually building container functions using `fold` or `iter`.
+
+    Exposed polymorphic functions in `Core_kernel.Container` for
+    individually building each of the `Container` functions using `fold`
+    or `iter`.  E.g.:
+
+      type ('t, 'elt, 'accum) fold =
+        't -> init:'accum -> f:('accum -> 'elt -> 'accum) -> 'accum
+
+      type ('t, 'elt) iter = 't -> f:('elt -> unit) -> unit
+
+      val length : fold:('t,  _, int ) fold -> 't -> int
+      val exists : iter:('t, 'a) iter -> 't -> f:('a -> bool) -> bool
+
+- Added container.mli, which was sorely missing.
+
+- Added `Doubly_linked.to_sequence`.
+
+- Added `Hash_queue.sexp_of_t`.
+
 ## 112.35.00
 
 - Added an Applicative interface to Core

@@ -17,6 +17,7 @@ module Fdeque        = Fdeque        .Stable
 module Fqueue        = Fqueue        .Stable
 module Host_and_port = Host_and_port .Stable
 module Info          = Info          .Stable
+module Lazy          = Core_lazy     .Stable
 module Month         = Month         .Stable
 module Nothing       = Nothing       .Stable
 module Or_error      = Or_error      .Stable

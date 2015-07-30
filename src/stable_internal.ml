@@ -33,6 +33,7 @@ include (Sexplib.Std : sig
 end)
 
 type 'a sexp_option = 'a Std_internal.sexp_option with bin_io, compare
+type 'a sexp_list   = 'a Std_internal.sexp_list   with bin_io, compare
 
 (* Hack, because Sexp isn't Binable *)
 module Sexp = struct

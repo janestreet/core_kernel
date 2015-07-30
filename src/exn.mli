@@ -1,8 +1,8 @@
 open Never_returns
 
-(* [sexp_of_t] uses a global table of sexp converters.  To register a converter for a new
-   exception, add "with sexp" to its definition. If no suitable converter is found, the
-   standard converter in [Printexc] will be used to generate an atomic S-expression. *)
+(** [sexp_of_t] uses a global table of sexp converters.  To register a converter for a new
+    exception, add "with sexp" to its definition. If no suitable converter is found, the
+    standard converter in [Printexc] will be used to generate an atomic S-expression. *)
 type t = exn with sexp_of
 
 include Pretty_printer.S with type t := t
@@ -20,13 +20,15 @@ val raise_without_backtrace : t -> _
 
 val reraise : t -> string -> _
 
-(* Types with [format4] are hard to read, so here's an example.
+(** Types with [format4] are hard to read, so here's an example.
 
-   let foobar str =
-     try
-       ...
-     with exn ->
-       Exn.reraisef exn "Foobar is buggy on: %s" str ()
+    {[
+      let foobar str =
+        try
+          ...
+        with exn ->
+          Exn.reraisef exn "Foobar is buggy on: %s" str ()
+    ]}
 *)
 val reraisef : t -> ('a, unit, string, unit -> _) format4 -> 'a
 
@@ -50,15 +52,16 @@ val handle_uncaught : exit:bool -> (unit -> unit) -> unit
     prints the exception and exits nonzero. *)
 val handle_uncaught_and_exit : (unit -> 'a) -> 'a
 
-(* Traces exceptions passing through.  Useful because in practice backtraces still don't
-   seem to work.
+(** Traces exceptions passing through.  Useful because in practice backtraces still don't
+    seem to work.
 
-   Ex:
-   let rogue_function () = if Random.bool () then failwith "foo" else 3
-   let traced_function () = Exn.reraise_uncaught "rogue_function" rogue_function
-   traced_function ();;
-
-   : Program died with Reraised("rogue_function", Failure "foo")
+    Example:
+    {[
+    let rogue_function () = if Random.bool () then failwith "foo" else 3
+    let traced_function () = Exn.reraise_uncaught "rogue_function" rogue_function
+    traced_function ();;
+    ]}
+    {v : Program died with Reraised("rogue_function", Failure "foo") v}
 *)
 val reraise_uncaught : string -> (unit -> 'a) -> 'a
 
@@ -66,5 +69,5 @@ val reraise_uncaught : string -> (unit -> 'a) -> 'a
     tests. *)
 val does_raise : (unit -> _) -> bool
 
-(** [Printexc.get_backtrace] *)
+(** The same as {!Printexc.get_backtrace} *)
 val backtrace : unit -> string

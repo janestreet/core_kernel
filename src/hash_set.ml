@@ -63,10 +63,10 @@ module Accessors = struct
   let fold t ~init ~f = Hashtbl.fold t ~init ~f:(fun ~key ~data:() acc -> f acc key)
   let iter t ~f = Hashtbl.iter t ~f:(fun ~key ~data:() -> f key)
 
-  let count t ~f = Container.fold_count fold t ~f
-  let sum m t ~f = Container.fold_sum m fold t ~f
-  let min_elt t ~cmp = Container.fold_min fold t ~cmp
-  let max_elt t ~cmp = Container.fold_max fold t ~cmp
+  let count t ~f = Container.count ~fold t ~f
+  let sum m t ~f = Container.sum ~fold m t ~f
+  let min_elt t ~cmp = Container.min_elt ~fold t ~cmp
+  let max_elt t ~cmp = Container.max_elt ~fold t ~cmp
 
   let to_list = Hashtbl.keys
 

@@ -42,10 +42,10 @@ module With_fold : sig
       -> ('b -> Sexp.t)
       -> ('a, 'b) t
   end
-  val set    : t -> ('a, 'b) Key.t -> 'b -> t (* reset the accumulator *)
-  val find   : t -> ('a, 'b) Key.t -> 'b      (* the current accumulator *)
-  val add    : t -> ('a, 'b) Key.t -> 'a -> t (* fold value into accumulator *)
-  val change : t -> ('a, 'b) Key.t -> ('b -> 'b) -> t (* accumulator update *)
+  val set    : t -> ('a, 'b) Key.t -> 'b -> t (** reset the accumulator *)
+  val find   : t -> ('a, 'b) Key.t -> 'b      (** the current accumulator *)
+  val add    : t -> ('a, 'b) Key.t -> 'a -> t (** fold value into accumulator *)
+  val change : t -> ('a, 'b) Key.t -> ('b -> 'b) -> t (** accumulator update *)
 end
 
 (** list-accumulating keys with a default value of the empty list *)

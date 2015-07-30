@@ -63,7 +63,7 @@ let snd3 (_,y,_) = y
 let trd3 (_,_,z) = z
 
 let ok_exn = Or_error.ok_exn
-let error = Or_error.error
+let error  = Or_error.error
 
 let failwiths = Error.failwiths
 let failwithp = Error.failwithp

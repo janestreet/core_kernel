@@ -1,5 +1,5 @@
-open Std_internal
-open Int.Replace_polymorphic_compare  let () = _squelch_unused_module_warning_
+open! Std_internal
+open! Int.Replace_polymorphic_compare
 
 let eprints = Debug.eprints
 
@@ -321,8 +321,8 @@ TEST_MODULE = struct
   end = struct
 
     type 'a t =
-      { elt : (module Elt with type t = 'a);
-        queues : 'a Queue.t list;
+      { elt    : (module Elt with type t = 'a)
+      ; queues : 'a Queue.t list;
       }
 
     let equal_a   (type a) (t : a t) = let module Elt = (val t.elt) in Elt.equal
@@ -341,8 +341,8 @@ TEST_MODULE = struct
     let create elt queues =
       if List.is_empty queues then failwiths "empty queues" _here_ <:sexp_of< Here.t >>;
       let t =
-        { elt;
-          queues = List.map queues ~f:Queue.create;
+        { elt
+        ; queues = List.map queues ~f:Queue.create
         }
       in
       ensure_consistent _here_ t;
@@ -356,7 +356,8 @@ TEST_MODULE = struct
 
     let dequeue t =
       let as_ = List.map t.queues ~f:(fun q -> Queue.dequeue q) in
-      if not (all_are_equal as_ ~equal:(Option.equal (equal_a t))) then begin
+      if not (all_are_equal as_ ~equal:(Option.equal (equal_a t)))
+      then begin
         let sexp_of_a = sexp_of_a t in
         failwiths "dequeue inconsistency" (_here_, t, as_)
           <:sexp_of< Here.t * a t * a option list >>;

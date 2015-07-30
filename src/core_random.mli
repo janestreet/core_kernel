@@ -1,15 +1,15 @@
-(* This is a slightly modified version of the OCaml standard library's random.mli.  We
-   want Core's [Random] module to be different from OCaml's standard one:
+(** This is a slightly modified version of the OCaml standard library's random.mli.  We
+    want Core's [Random] module to be different from OCaml's standard one:
 
-   - We expose [Random.State.default], so that user code can easily share the default
-   random state if it wants.
+    - We expose [Random.State.default], so that user code can easily share the default
+      random state if it wants.
 
-   - We disallow [Random.get_state], because it misleadingly makes a copy of random state.
-   And it is what people naturally, albeit incorrectly, grab for when they want to use
-   shared random state.
+    - We disallow [Random.get_state], because it misleadingly makes a copy of random
+      state.  And it is what people naturally, albeit incorrectly, grab for when they want
+      to use shared random state.
 
-   The fact that we construct our own default random state means that code using
-   Core.Std.Random and code using OCaml's Random will not share the default state. *)
+    The fact that we construct our own default random state means that code using
+    Core.Std.Random and code using OCaml's Random will not share the default state. *)
 
 (***********************************************************************)
 (*                                                                     *)

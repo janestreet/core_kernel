@@ -71,6 +71,17 @@ val unfold : init:'s -> f:('s -> ('a * 's) option) -> 'a t
     sequence *)
 val unfold_with : 'a t -> init:'s -> f:('s -> 'a -> ('b, 's) Step.t) -> 'b t
 
+(** [unfold_with_and_finish t ~init ~running_step ~inner_finished ~finishing_step] folds a
+    state through the sequence [t] to create a new sequence.  The new sequence can
+    continue once [t] has finished. *)
+val unfold_with_and_finish
+  :  'a t
+  -> init           : 's_a
+  -> running_step   : ('s_a -> 'a -> ('b, 's_a) Step.t)
+  -> inner_finished : ('s_a -> 's_b)
+  -> finishing_step : ('s_b -> ('b, 's_b) Step.t)
+  -> 'b t
+
 (** return the nth element *)
 val nth     : 'a t -> int -> 'a option
 val nth_exn : 'a t -> int -> 'a
@@ -252,9 +263,9 @@ val interleaved_cartesian_product : 'a t -> 'b t -> ('a * 'b) t
     e.g. [intersperse [1;2;3] ~sep:0 = [1;0;2;0;3]] *)
 val intersperse : 'a t -> sep:'a -> 'a t
 
-(** [cycle t] repeats the sequence [t] forever.  The elements of [t] will be recomputed
-    for each repetition in the cycle. *)
-val cycle : 'a t -> 'a t
+(** [cycle_list_exn xs] repeats the elements of [xs] forever.  If [xs] is empty, it
+    raises. *)
+val cycle_list_exn : 'a list -> 'a t
 
 (** [repeat a] repeats [a] forever. *)
 val repeat : 'a -> ' a t
@@ -280,7 +291,7 @@ val singleton : 'a -> 'a t
 val delayed_fold
   :  'a t
   -> init:'s
-  -> f:('s -> 'a -> k:('s -> 'r) -> 'r) (* [k] stands for "continuation" *)
+  -> f:('s -> 'a -> k:('s -> 'r) -> 'r) (** [k] stands for "continuation" *)
   -> finish:('s -> 'r)
   -> 'r
 

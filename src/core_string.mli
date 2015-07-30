@@ -19,9 +19,7 @@ include Identifiable.S with type t := t
 (** Maximum length of a string. *)
 val max_length : int
 
-(* From the standard StringLabels *)
 external length : t -> int = "%string_length"
-
 external get : t -> int -> char = "%string_safe_get"
 external set : t -> int -> char -> unit = "%string_safe_set"
 
@@ -31,6 +29,16 @@ val copy : t -> t
 val init : int -> f:(int -> char) -> t
 
 val fill : t -> pos:int -> len:int -> char -> unit
+
+(** String append. Also available unqualified, but re-exported here for documentation
+    purposes.
+
+    Note that [a ^ b] must copy both [a] and [b] into a newly-allocated result string, so
+    [a ^ b ^ c ^ ... ^ z] is quadratic in the number of strings.  [String.concat] does not
+    have this problem -- it allocates the result buffer only once.  The [Rope] module
+    provides a data structure which uses a similar trick to achieve fast concatenation at
+    either end of a string. *)
+val ( ^ ) : t -> t -> t
 
 (** concatanate all strings in the list using separator [sep] (default sep "") *)
 val concat : ?sep:t -> t list -> t
@@ -188,8 +196,8 @@ val lfindi : ?pos : int -> t -> f:(int -> char -> bool) -> int option
     such an [i].  By default [pos = length t - 1]. *)
 val rfindi : ?pos : int -> t -> f:(int -> char -> bool) -> int option
 
-(* Warning: the following strip functions have copy-on-write semantics (i.e. they may
-   return the same string passed in) *)
+(** Warning: the following strip functions have copy-on-write semantics (i.e. they may
+    return the same string passed in) *)
 
 (** [lstrip ?drop s] returns a string with consecutive chars satisfying [drop] (by default
     white space, e.g. tabs, spaces, newlines, and carriage returns) stripped from the
@@ -379,13 +387,13 @@ module Escaping : sig
       ["foo_|bar"; "baz"; "0"] *)
   val split_on_chars : string -> on:char list -> escape_char:char -> string list
 
-  (* [lsplit2 s on escape_char] splits s into a pair on the first literal instance
-     of [on] (meaning the first unescaped instance) starting from the left. *)
+  (** [lsplit2 s on escape_char] splits s into a pair on the first literal instance of
+      [on] (meaning the first unescaped instance) starting from the left. *)
   val lsplit2     : string -> on:char -> escape_char:char -> (string * string) option
   val lsplit2_exn : string -> on:char -> escape_char:char -> (string * string)
 
-  (* [rsplit2 s on escape_char] splits [s] into a pair on the first literal instance
-     of [on] (meaning the first unescaped instance) starting from the right. *)
+  (** [rsplit2 s on escape_char] splits [s] into a pair on the first literal instance of
+      [on] (meaning the first unescaped instance) starting from the right. *)
   val rsplit2     : string -> on:char -> escape_char:char -> (string * string) option
   val rsplit2_exn : string -> on:char -> escape_char:char -> (string * string)
 end
@@ -393,5 +401,4 @@ end
 
 external unsafe_get : string -> int -> char         = "%string_unsafe_get"
 external unsafe_set : string -> int -> char -> unit = "%string_unsafe_set"
-
 

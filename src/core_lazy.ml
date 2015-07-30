@@ -2,7 +2,16 @@ open Typerep_lib.Std
 open Sexplib.Std
 open Bin_prot.Std
 
-type 'a t = 'a lazy_t with bin_io, sexp, typerep
+module Stable = struct
+  module V1 = struct
+    type 'a t = 'a lazy_t with bin_io, sexp, typerep
+
+    let map t ~f = lazy (f (Lazy.force t))
+    let compare compare_a t1 t2 = compare_a (Lazy.force t1) (Lazy.force t2)
+  end
+end
+
+include Stable.V1
 
 include (Lazy : module type of Lazy with type 'a t := 'a t)
 
@@ -13,7 +22,7 @@ include Monad.Make (struct
 
   let bind t f = lazy (force (f (force t)))
 
-  let map t ~f = lazy (f (force t))
+  let map = map
 
   let map = `Custom map
 end)
@@ -42,4 +51,44 @@ TEST_MODULE = struct
 
 end
 
-let compare compare_a t1 t2 = compare_a (force t1) (force t2)
+module T_unforcing = struct
+  type nonrec 'a t = 'a t
+
+  let sexp_of_t sexp_of_a t =
+    if is_val t
+    then sexp_of_a (force t)
+    else sexp_of_string "<unforced lazy>"
+  ;;
+end
+
+TEST_MODULE = struct
+
+  module M1 = struct
+    type nonrec t = { x : int t } with sexp_of
+  end
+
+  module M2 = struct
+    type t = { x : int T_unforcing.t } with sexp_of
+  end
+
+  TEST_UNIT =
+    let v = lazy 42 in
+    let (_ : int) =
+      (* no needed, but the purpose of this test is not to test this compiler
+         optimization *)
+      force v
+    in
+    assert (is_val v);
+    let t1 = { M1. x = v } in
+    let t2 = { M2. x = v } in
+    assert (M1.sexp_of_t t1 = M2.sexp_of_t t2);
+  ;;
+
+  TEST_UNIT =
+    let t1 = { M1. x = lazy (40 + 2) } in
+    let t2 = { M2. x = lazy (40 + 2) } in
+    assert (M1.sexp_of_t t1 <> M2.sexp_of_t t2);
+    assert (is_val t1.x);
+    assert (not (is_val t2.x));
+  ;;
+end

@@ -1,4 +1,4 @@
-(* Conversions between units of measure based on bytes. *)
+(** Conversions between units of measure based on bytes. *)
 
 module Measure : sig
   type t = [ `Bytes | `Kilobytes | `Megabytes | `Gigabytes | `Words ]

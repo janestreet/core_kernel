@@ -22,6 +22,7 @@ module Array = StdLabels.Array
 
 type generated_type =
   | Int31
+  | Int32
   | Int63
   | Int64
 
@@ -30,6 +31,12 @@ type type_info =
     max_val : Big_int.t;
     ocaml_type : string;
     generate_negative_bounds : bool;
+    (* [maybe_32bit=true] means that we should check at
+       runtime the size of integers (num_bits) - it might
+       be 32bit (i.e., JavaScript) instead of 63bit or 31bit.
+       This only applies to Int31 and Int63.
+    *)
+    maybe_32bit : bool
   }
 
 let max_big_int_for_bits bits =
@@ -52,6 +59,7 @@ let type_info_of_type =
       max_val;
       ocaml_type = "int";
       generate_negative_bounds = false;
+      maybe_32bit = true
     }
   in
   function
@@ -59,11 +67,19 @@ let type_info_of_type =
     type_info_for_ocaml_int (max_big_int_for_bits 31)
   | Int63 ->
     type_info_for_ocaml_int (max_big_int_for_bits 63)
+  | Int32 ->
+    { format_entry = (fun b -> Big_int.to_string b ^ "l");
+      max_val = max_big_int_for_bits 32;
+      ocaml_type = "int32";
+      generate_negative_bounds = false;
+      maybe_32bit = false;
+    }
   | Int64 ->
     { format_entry = (fun b -> Big_int.to_string b  ^ "L");
       max_val = max_big_int_for_bits 64;
       ocaml_type = "int64";
       generate_negative_bounds = true;
+      maybe_32bit = false;
     }
 ;;
 
@@ -86,21 +102,31 @@ let highest_base exponent max_val =
     search one
 ;;
 
+let info32 = type_info_of_type Int32
+
+let maybe_32bit info convert make_name =
+  if info.maybe_32bit
+  then Printf.sprintf "\n  if Int_conversions.num_bits_int = 32 then\n    %s %s\n  else\n    " convert (make_name info32)
+  else "\n  "
+
 let print_array ~info ~descr arr =
+  let name info = Printf.sprintf "%s_%s_overflow_bounds" info.ocaml_type descr in
   Printf.printf
-    "let %s_%s_overflow_bounds : %s array =\n  [|\n"
-    info.ocaml_type descr info.ocaml_type;
-  Array.iter arr ~f:(fun b -> Printf.printf "    %s;\n" (info.format_entry b));
+    "let %s : %s array =%s[|\n"
+    (name info) info.ocaml_type (maybe_32bit info "Array.map Int32.to_int" name);
+  let spaces = if info.maybe_32bit then String.make 6 ' ' else String.make 4 ' ' in
+  Array.iter arr ~f:(fun b -> Printf.printf "%s%s;\n" spaces (info.format_entry b));
   Printf.printf "  |]\n\n";
 ;;
 
 let gen_bounds ocaml_type =
   let info = type_info_of_type ocaml_type in
-
+  let name info = Printf.sprintf "overflow_bound_max_%s_value" info.ocaml_type in
   Printf.printf
-    "let overflow_bound_max_%s_value : %s = %s\n\n"
+    "let %s : %s =%s%s\n\n"
+    (name info)
     info.ocaml_type
-    info.ocaml_type
+    (maybe_32bit info "Int32.to_int" name)
     (info.format_entry info.max_val);
 
   let pos_bounds = Array.init 64 ~f:(fun i -> highest_base i info.max_val) in
@@ -117,6 +143,7 @@ let () =
   Printf.printf "(* We have to use Int64.to_int_exn instead of int constants to make\n";
   Printf.printf "   sure that file can be preprocessed on 32-bit machines. *)\n\n";
   Printf.printf "INCLUDE \"config.mlh\"\n\n";
+  gen_bounds Int32;
   Printf.printf "IFDEF ARCH_SIXTYFOUR THEN\n\n";
   gen_bounds Int63;
   Printf.printf "ELSE\n\n";

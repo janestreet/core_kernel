@@ -43,6 +43,34 @@ let unfold_with s ~init ~f =
                  | Skip seed -> Skip (seed, s)
                  | Yield(a,seed) -> Yield(a,(seed,s))))
 
+let unfold_with_and_finish s ~init ~running_step ~inner_finished ~finishing_step =
+  match s with
+  | Sequence (s, next) ->
+    Sequence (`Inner_running (init, s), (fun state ->
+      match state with
+      | `Inner_running (state, inner_state) -> begin
+          match next inner_state with
+          | Done ->
+            Skip (`Inner_finished (inner_finished state))
+          | Skip inner_state ->
+            Skip (`Inner_running (state, inner_state))
+          | Yield (x, inner_state) ->
+            match running_step state x with
+            | Done -> Done
+            | Skip state ->
+              Skip (`Inner_running (state, inner_state))
+            | Yield (y, state) ->
+              Yield (y, `Inner_running (state, inner_state))
+        end
+      | `Inner_finished state -> begin
+          match finishing_step state with
+          | Done -> Done
+          | Skip state ->
+            Skip (`Inner_finished state)
+          | Yield (y, state) ->
+            Yield (y, `Inner_finished state)
+        end))
+
 let of_list l =
   unfold_step ~init:l
     ~f:(function
@@ -175,6 +203,23 @@ TEST =
                  Yield(s, s+1)))
   = [1;3]
 
+let test_delay init =
+  unfold_with_and_finish ~init
+    ~running_step:(fun prev next ->
+      Yield (prev, next))
+    ~inner_finished:Option.some
+    ~finishing_step:(fun prev ->
+      match prev with
+      | None -> Done
+      | Some prev -> Yield (prev, None))
+
+TEST =
+  to_list (test_delay 0 s12345)
+  = [0; 1; 2; 3; 4; 5]
+
+TEST =
+  to_list (test_delay 0 sempty)
+  = [0]
 
 TEST = to_list s12345 = [1; 2; 3; 4; 5]
 
@@ -660,9 +705,9 @@ TEST = to_list (remove_consecutive_duplicates ~equal:(fun _ _ -> true) s12345) =
 let count s ~f =
   length (filter s ~f)
 
-let sum m t ~f = Container.fold_sum m fold t ~f
-let min_elt t ~cmp = Container.fold_min fold t ~cmp
-let max_elt t ~cmp = Container.fold_max fold t ~cmp
+let sum m t ~f = Container.sum ~fold m t ~f
+let min_elt t ~cmp = Container.min_elt ~fold t ~cmp
+let max_elt t ~cmp = Container.max_elt ~fold t ~cmp
 
 let init n ~f =
   unfold_step ~init:0
@@ -806,10 +851,17 @@ let repeat x =
 
 TEST = to_list (take (repeat 1) 3) = [1;1;1]
 
-let cycle s =
+let cycle_list_exn xs =
+  if Core_list.is_empty xs then raise (Invalid_argument "Core.Sequence.cycle_list_exn");
+  let s = of_list xs in
   concat_map ~f:(fun () -> s) (repeat ())
 
-TEST = to_list (take (cycle s12345) 7) = [1;2;3;4;5;1;2]
+TEST = to_list (take (cycle_list_exn [1;2;3;4;5]) 7) = [1;2;3;4;5;1;2]
+
+TEST =
+  match cycle_list_exn [] with
+  | exception Invalid_argument "Core.Sequence.cycle_list_exn" -> true
+  | _ -> false
 
 let cartesian_product sa sb =
   concat_map sa
@@ -961,7 +1013,7 @@ let interleaved_cartesian_product s1 s2 =
 
 TEST_UNIT =
   let evens = Sequence (0, fun i -> Yield (i, i + 2)) in
-  let vowels = cycle (of_list ['a';'e';'i';'o';'u']) in
+  let vowels = cycle_list_exn ['a';'e';'i';'o';'u'] in
   <:test_result< (int * char) list >>
     (to_list (take (interleaved_cartesian_product evens vowels) 10))
     ~expect:[ 0,'a'

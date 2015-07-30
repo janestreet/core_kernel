@@ -1,5 +1,5 @@
-open Std_internal
-open Int.Replace_polymorphic_compare  let _ = _squelch_unused_module_warning_
+open! Std_internal
+open! Int.Replace_polymorphic_compare
 
 module type Flat_array = module type of Flat_array
 
@@ -71,7 +71,7 @@ module Debug (Flat_array : Flat_array) : Flat_array = struct
         * [ `dst_pos of int ]
         >>
       <:sexp_of< unit >>
-    (fun () -> blit ~src ~src_pos ~dst ~dst_pos ~len)
+      (fun () -> blit ~src ~src_pos ~dst ~dst_pos ~len)
   ;;
 
   let unsafe_blit ~src ~src_pos ~dst ~dst_pos ~len =
@@ -83,7 +83,7 @@ module Debug (Flat_array : Flat_array) : Flat_array = struct
         * [ `dst_pos of int ]
         >>
       <:sexp_of< unit >>
-    (fun () -> unsafe_blit ~src ~src_pos ~dst ~dst_pos ~len)
+      (fun () -> unsafe_blit ~src ~src_pos ~dst ~dst_pos ~len)
   ;;
 
   let blito ~src ?src_pos ?src_len ~dst ?dst_pos () =
@@ -95,14 +95,14 @@ module Debug (Flat_array : Flat_array) : Flat_array = struct
         * [ `dst_pos of int option ]
         >>
       <:sexp_of< unit >>
-    (fun () -> blito ~src ?src_pos ?src_len ~dst ?dst_pos ())
+      (fun () -> blito ~src ?src_pos ?src_len ~dst ?dst_pos ())
   ;;
 
   let sub t ~pos ~len =
     debug "sub" [ t ] (`pos pos, `len len)
       <:sexp_of< [ `pos of int ] * [ `len of int ] >>
       <:sexp_of< _ t >>
-    (fun () -> sub t ~pos ~len)
+      (fun () -> sub t ~pos ~len)
   ;;
 
   let subo ?pos ?len t =
@@ -110,7 +110,6 @@ module Debug (Flat_array : Flat_array) : Flat_array = struct
       (`pos pos, `len len)
       <:sexp_of< [ `pos of int option ] * [ `len of int option ] >>
       <:sexp_of< _ t >>
-    (fun () -> subo ?pos ?len t)
+      (fun () -> subo ?pos ?len t)
   ;;
-
 end

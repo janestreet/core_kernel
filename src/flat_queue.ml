@@ -1,5 +1,5 @@
-open Std_internal
-open Int.Replace_polymorphic_compare  let () = _squelch_unused_module_warning_
+open! Std_internal
+open! Int.Replace_polymorphic_compare
 
 module A = Flat_array
 
@@ -7,20 +7,20 @@ module Slots = A.Slots
 module Slot  = A.Slot
 
 type 'slots t =
-  { mutable elements : 'slots Flat_array.t;
-    (* [create_elements] is used when we need to create a new [elements] array when we
-       shrink or grow the queue.  We store it as a function that is closed over the [init]
-       value, because we cannot store the [init] value for the array in [t], because we
-       cannot write down its type in terms of ['slots]. *)
-    create_elements : len:int -> 'slots Flat_array.t;
-    (* [mask = A.length elements - 1].  Having it makes it quick to go from a queue index
-       to an array index -- since the array's length is a power of 2, [index land mask]
-       equals [index mod A.length elements]. *)
-    mutable mask : int;
-    (* [front] is the index of the first element in the queue. *)
-    mutable front : int;
-    mutable length : int;
-    mutable num_mutations : int;
+  { mutable elements      : 'slots Flat_array.t
+  (* [create_elements] is used when we need to create a new [elements] array when we
+     shrink or grow the queue.  We store it as a function that is closed over the[init]
+     value, because we cannot store the [init] value for the array in [t], because we
+     cannot write down its type in terms of ['slots]. *)
+  ; create_elements       : len:int -> 'slots Flat_array.t
+  (* [mask = A.length elements - 1].  Having it makes it quick to go from a queue index
+     to an array index -- since the array's length is a power of 2, [index land mask]
+     equals [index mod A.length elements]. *)
+  ; mutable mask          : int
+  (* [front] is the index of the first element in the queue. *)
+  ; mutable front         : int
+  ; mutable length        : int
+  ; mutable num_mutations : int
   }
 with fields, sexp_of
 
@@ -69,18 +69,18 @@ let create
     match capacity with
     | None -> 1
     | Some capacity ->
-      if capacity <= 0 then
-        failwiths "Flat_queue.create got nonpositive capacity" capacity <:sexp_of< int >>
-      else
-        Int.ceil_pow2 capacity
+      if capacity <= 0
+      then failwiths "Flat_queue.create got nonpositive capacity" capacity
+             <:sexp_of< int >>
+      else Int.ceil_pow2 capacity
   in
   let create_elements ~len : (tuple, variant) Slots.t A.t = A.create slots ~len init in
-  { create_elements;
-    mask     = capacity - 1;
-    elements = create_elements ~len:capacity;
-    front    = 0;
-    length   = 0;
-    num_mutations = 0;
+  { create_elements
+  ; mask            = capacity - 1
+  ; elements        = create_elements ~len:capacity
+  ; front           = 0
+  ; length          = 0
+  ; num_mutations   = 0
   }
 ;;
 
@@ -91,8 +91,8 @@ let is_full t = length t = capacity t
 let inc_num_mutations t = t.num_mutations <- t.num_mutations + 1
 
 let drop_front ?(n = 1) t =
-  if n < 0 || n > length t then
-    failwiths "Flat_queue.drop_front got invalid n" (n, t) <:sexp_of< int * _ t >>;
+  if n < 0 || n > length t
+  then failwiths "Flat_queue.drop_front got invalid n" (n, t) <:sexp_of< int * _ t >>;
   inc_num_mutations t;
   for _i = 1 to n do
     A.set_to_init t.elements t.front;
@@ -117,8 +117,8 @@ let unsafe_set t i slot a =
 ;;
 
 let check_index t i =
-  if i < 0 || i >= t.length then
-    failwiths "invalid index in Flat_queue" (i, t) <:sexp_of< int * _ t >>;
+  if i < 0 || i >= t.length
+  then failwiths "invalid index in Flat_queue" (i, t) <:sexp_of< int * _ t >>;
 ;;
 
 let get t i slot   = check_index t i; unsafe_get t i slot

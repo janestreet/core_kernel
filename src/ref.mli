@@ -37,7 +37,6 @@ module Permissioned : sig
   val of_ref    : 'a ref -> ('a, [< read_write ]) t
   val to_ref    : ('a, [> read_write ]) t -> 'a ref
 
-  (* [swap] and [replace] - permissioned versions of above functions. *)
   val swap
     :  ('a, [> read_write ]) t
     -> ('a, [> read_write ]) t

@@ -244,10 +244,10 @@ val choose : ('a, _) t -> 'a option
 (** Like {!choose}, but throws an exception on an empty set. *)
 val choose_exn : ('a, _) t -> 'a
 
-(** [split t x] produces a triple [(t1, b, t2)] where [t1] is the set of elements strictly
-    less than [x], [b = mem set x], and [t2] is the set of elements strictly larger than
-    [x]. *)
-val split : ('a, 'cmp) t -> 'a -> ('a, 'cmp) t * bool * ('a, 'cmp) t
+(** [split t x] produces a triple [(t1, maybe_x, t2)] where [t1] is the set of elements
+    strictly less than [x], [maybe_x] is the member (if any) of [t] which compares equal
+    to [x], and [t2] is the set of elements strictly larger than [x]. *)
+val split : ('a, 'cmp) t -> 'a -> ('a, 'cmp) t * 'a option * ('a, 'cmp) t
 
 (** if [equiv] is an equivalence predicate, then [group_by set ~equiv] produces a list
     of equivalence classes (i.e., a set-theoretic quotient).  E.g.,
@@ -268,14 +268,14 @@ val split : ('a, 'cmp) t -> 'a -> ('a, 'cmp) t * bool * ('a, 'cmp) t
     much faster to use [Set.of_list]. *)
 val group_by :  ('a, 'cmp) t -> equiv:('a -> 'a -> bool) -> ('a, 'cmp) t list
 
-(** [to_sequence ?in_ t] converts the set [t] to a sequence of the elements in the order
-    indicated by [in_]. *)
+(** [to_sequence t] converts the set [t] to a sequence of the elements between
+    [greater_or_equal_to] and [less_or_equal_to] inclusive in the order indicated by
+    [order].  If [greater_or_equal_to > less_or_equal_to] the sequence is empty.  Cost is
+    O(log n) up front and amortized O(1) for each element produced. *)
 val to_sequence
-  :  ?in_:[ `Increasing_order (** default *)
-          | `Decreasing_order
-          | `Increasing_order_greater_than_or_equal_to of 'a
-          | `Decreasing_order_less_than_or_equal_to    of 'a
-          ]
+  :  ?order               : [ `Increasing (** default *) | `Decreasing ]
+  -> ?greater_or_equal_to : 'a
+  -> ?less_or_equal_to    : 'a
   -> ('a, 'cmp) t
   -> 'a Sequence.t
 

@@ -1,6 +1,6 @@
 
-(** Linked_queue is a wrapper around OCaml's standard Queue module that
-    follows Core idioms and adds some functions.
+(** Linked_queue is a wrapper around OCaml's standard Queue module that follows Core
+    idioms and adds some functions.
 
     Differences from the standard module:
       [enqueue] replaces [push], [add], and takes the queue first.
@@ -21,13 +21,13 @@ val create : unit -> 'a t
 (** [enqueue t x] adds [x] to the end of [t].*)
 val enqueue : 'a t -> 'a -> unit
 
-(** [dequeue t] returns [None] if [t] is empty, otherwise it removes and returns
-    the front of [t] *)
+(** [dequeue t] returns [None] if [t] is empty, otherwise it removes and returns the front
+    of [t] *)
 val dequeue     : 'a t -> 'a option
 val dequeue_exn : 'a t -> 'a
 
-(** [peek t] returns [None] if [t] is empty, otherwise it returns [Some x] where
-    [x] is the front of [t]. *)
+(** [peek t] returns [None] if [t] is empty, otherwise it returns [Some x] where [x] is
+    the front of [t]. *)
 val peek     : 'a t -> 'a option
 val peek_exn : 'a t -> 'a
 
@@ -40,15 +40,20 @@ val copy : 'a t -> 'a t
 (** [filter_inplace t ~f] removes all elements of [t] that don't satisfy [f]. *)
 val filter_inplace : 'a t -> f:('a -> bool) -> unit
 
-(** [transfer ~src ~dst] adds all of the elements of [src] to the end of [dst],
-    then clears [src]. It is equivalent to the sequence
-      [iter ~src ~f:(enqueue dst); clear src]
+(** [transfer ~src ~dst] adds all of the elements of [src] to the end of [dst], then
+    clears [src].  It is equivalent to the sequence:
+
+    {[
+      iter ~src ~f:(enqueue dst);
+      clear src
+    ]}
+
     but runs in constant time. *)
 val transfer : src:'a t -> dst:'a t -> unit
 
-(** [of_list list] returns a queue [t] with the elements of [list] in the same
-    order as the elements of [list] (i.e. the first element of [t] is the first
-    element of the list). *)
+(** [of_list list] returns a queue [t] with the elements of [list] in the same order as
+    the elements of [list] (i.e. the first element of [t] is the first element of the
+    list). *)
 val of_list : 'a list -> 'a t
 val to_list : 'a t -> 'a list
 

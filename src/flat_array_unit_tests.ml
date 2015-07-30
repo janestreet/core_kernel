@@ -1,5 +1,5 @@
-open Std_internal
-open Int.Replace_polymorphic_compare  let () = _squelch_unused_module_warning_
+open! Std_internal
+open! Int.Replace_polymorphic_compare
 
 (* module Flat_array = Flat_array_debug.Debug (Flat_array) *)
 open Flat_array

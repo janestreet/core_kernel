@@ -240,13 +240,13 @@ module type Accessors = sig
 end
 
 type ('key, 'data, 'z) create_options_without_hashable =
-  ?growth_allowed:bool (* defaults to true *)
-  -> ?size:int (* initial size -- default 128 *)
+  ?growth_allowed:bool (** defaults to [true] *)
+  -> ?size:int (** initial size -- default 128 *)
   -> 'z
 
 type ('key, 'data, 'z) create_options_with_hashable =
-  ?growth_allowed:bool (* defaults to true *)
-  -> ?size:int (* initial size -- default 128 *)
+  ?growth_allowed:bool (** defaults to [true] *)
+  -> ?size:int (** initial size -- default 128 *)
   -> hashable:'key Hashable.t
   -> 'z
 
@@ -280,8 +280,9 @@ module type Creators = sig
   val of_alist_multi : ('a key, 'b list, ('a key * 'b) list -> ('a, 'b list) t) create_options
 
 
-  (* create_mapped get_key get_data [x1,...,xn] =
-     of_alist [get_key x1, get_data x1; ...; get_key xn, get_data xn] *)
+  (** {[ create_mapped get_key get_data [x1,...,xn]
+         = of_alist [get_key x1, get_data x1; ...; get_key xn, get_data xn]
+     ]} *)
   val create_mapped
     : ('a key,
        'b,
@@ -291,8 +292,8 @@ module type Creators = sig
        -> [ `Ok of ('a, 'b) t
           | `Duplicate_keys of 'a key list ]) create_options
 
-  (* create_with_key ~get_key [x1,...,xn] =
-     of_alist [get_key x1, x1; ...; get_key xn, xn] *)
+  (** {[ create_with_key ~get_key [x1,...,xn]
+         = of_alist [get_key x1, x1; ...; get_key xn, xn] ]} *)
   val create_with_key
     : ('a key,
        'r,
@@ -384,7 +385,8 @@ module type Hashtbl = sig
     include Creators
       with type ('a, 'b) t  := ('a, 'b) t
       with type 'a key = 'a
-      with type ('key, 'data, 'z) create_options := ('key, 'data, 'z) create_options_without_hashable
+      with type ('key, 'data, 'z) create_options
+      := ('key, 'data, 'z) create_options_without_hashable
 
     include Accessors
       with type ('a, 'b) t := ('a, 'b) t

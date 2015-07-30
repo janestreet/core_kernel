@@ -7,6 +7,11 @@ module Stable = struct
 
     let map x ~f = Result.Stable.V1.map x ~f1:f ~f2:Fn.id
   end
+  module V2 = struct
+    type 'a t = ('a, Error.Stable.V2.t) Result.Stable.V1.t with bin_io, compare, sexp
+
+    let map x ~f = Result.Stable.V1.map x ~f1:f ~f2:Fn.id
+  end
 end
 
 (* 2015-01-14: We don't [include Stable.V1], because that has a different [with bin_io]
@@ -57,7 +62,9 @@ let of_exn_result = function
   | Error exn -> of_exn exn
 ;;
 
-let error message a sexp_of_a = Error (Error.create message a sexp_of_a)
+let error ?strict message a sexp_of_a =
+  Error (Error.create ?strict message a sexp_of_a)
+;;
 
 let error_string message = Error (Error.of_string message)
 

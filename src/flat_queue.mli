@@ -23,7 +23,7 @@ include Invariant.S1 with type 'a t := 'a t
 (** [create ?capacity slots] creates an empty queue with capacity at least the supplied
     [capacity].  It is an error if [capacity <= 0]. *)
 val create
-  :  ?capacity:int
+  :  ?capacity : int
   -> ((_, _) Slots.t as 'slots)
   -> 'slots t
 
@@ -57,7 +57,7 @@ val unsafe_set : ((_, 'v) Slots.t) t -> int -> ('v, 'a) Slot.t -> 'a -> unit
     use [get t 0 Slot.tj] to access the front of the queue, and then to use [drop_front]
     to remove it.  This usage avoids ever allocating an ordinary OCaml tuple. *)
 val drop_front
-  :  ?n:int  (** default is 1. *)
+  :  ?n : int  (** default is 1. *)
   -> _ t
   -> unit
 
@@ -69,28 +69,28 @@ val enqueue1
   :  'a0 Slots.t1 t
   -> 'a0 -> unit
 val enqueue2
-  : ('a0, 'a1) Slots.t2 t
+  :  ('a0, 'a1) Slots.t2 t
   -> 'a0 -> 'a1 -> unit
 val enqueue3
-  : ('a0, 'a1, 'a2) Slots.t3 t
+  :  ('a0, 'a1, 'a2) Slots.t3 t
   -> 'a0 -> 'a1 -> 'a2 -> unit
 val enqueue4
-  : ('a0, 'a1, 'a2, 'a3) Slots.t4 t
+  :  ('a0, 'a1, 'a2, 'a3) Slots.t4 t
   -> 'a0 -> 'a1 -> 'a2 -> 'a3 -> unit
 val enqueue5
-  : ('a0, 'a1, 'a2, 'a3, 'a4) Slots.t5 t
+  :  ('a0, 'a1, 'a2, 'a3, 'a4) Slots.t5 t
   -> 'a0 -> 'a1 -> 'a2 -> 'a3 -> 'a4 -> unit
 val enqueue6
-  : ('a0, 'a1, 'a2, 'a3, 'a4, 'a5) Slots.t6 t
+  :  ('a0, 'a1, 'a2, 'a3, 'a4, 'a5) Slots.t6 t
   -> 'a0 -> 'a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> unit
 val enqueue7
-  : ('a0, 'a1, 'a2, 'a3, 'a4, 'a5, 'a6) Slots.t7 t
+  :  ('a0, 'a1, 'a2, 'a3, 'a4, 'a5, 'a6) Slots.t7 t
   -> 'a0 -> 'a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'a6 -> unit
 val enqueue8
-  : ('a0, 'a1, 'a2, 'a3, 'a4, 'a5, 'a6, 'a7) Slots.t8 t
+  :  ('a0, 'a1, 'a2, 'a3, 'a4, 'a5, 'a6, 'a7) Slots.t8 t
   -> 'a0 -> 'a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'a6 -> 'a7 -> unit
 val enqueue9
-  : ('a0, 'a1, 'a2, 'a3, 'a4, 'a5, 'a6, 'a7, 'a8) Slots.t9 t
+  :  ('a0, 'a1, 'a2, 'a3, 'a4, 'a5, 'a6, 'a7, 'a8) Slots.t9 t
   -> 'a0 -> 'a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'a6 -> 'a7 -> 'a8 -> unit
 
 (** The functions below deal with Flat-array tuples as ordinary OCaml tuples.  These

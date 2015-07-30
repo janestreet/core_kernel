@@ -1,14 +1,16 @@
-<src/*.ml{,i}>               : pa_ounit_lib(core_kernel)
-<check_caml_modify/*.ml{,i}> : pa_ounit_lib(core_kernel.check_caml_modify)
-<**/*.ml{,i}>                : syntax_camlp4o
-"src/time_ns.ml"             : mlh, package(camlp4.macro)
-"src/bigstring.ml"           : mlh, package(camlp4.macro)
-"src/bigstring_marshal.ml"   : mlh, package(camlp4.macro)
-"src/binary_packing.ml"      : mlh, package(camlp4.macro)
-"src/core_int63.ml"          : mlh, package(camlp4.macro)
-"src/core_int63.mli"         : mlh, package(camlp4.macro)
-"src/pool.ml"                : mlh, package(camlp4.macro)
-"src/pow_overflow_bounds.ml" : mlh, package(camlp4.macro)
-<check_caml_modify/*>        : caml_modify_wrapper
+<src/*.ml{,i}>                 : pa_ounit_lib(core_kernel)
+<check_caml_modify/*.ml{,i}>   : pa_ounit_lib(core_kernel.check_caml_modify)
+<**/*.ml{,i}>                  : syntax_camlp4o
+"src/time_ns.ml"               : mlh, package(camlp4.macro)
+"src/bigstring.ml"             : mlh, package(camlp4.macro)
+"src/bigstring_marshal.ml"     : mlh, package(camlp4.macro)
+"src/binary_packing.ml"        : mlh, package(camlp4.macro)
+"src/core_int63.ml"            : mlh, package(camlp4.macro)
+"src/core_int63.mli"           : mlh, package(camlp4.macro)
+"src/pool.ml"                  : mlh, package(camlp4.macro)
+"src/pow_overflow_bounds.ml"   : mlh, package(camlp4.macro)
+"src/quickcheck_unit_tests.ml" : mlh, package(camlp4.macro)
+"src/float.ml"                 : mlh, package(camlp4.macro)
+<check_caml_modify/*>          : caml_modify_wrapper
 # OASIS_START
 # OASIS_STOP

@@ -307,6 +307,13 @@ val max_elt_exn : ('k, 'v, _) t ->  'k * 'v
 val for_all : ('k, 'v, _) t -> f:('v -> bool) -> bool
 val exists  : ('k, 'v, _) t -> f:('v -> bool) -> bool
 
+(** [split t key] returns a map of keys strictly less than [key], the mapping of [key] if
+    any, and a map of keys strictly greater than [key]. **)
+val split
+  :  ('k, 'v, 'cmp) t
+  -> 'k
+  -> ('k, 'v, 'cmp) t * ('k * 'v) option * ('k, 'v, 'cmp) t
+
 (** [fold_range_inclusive t ~min ~max ~init ~f]
     folds f (with initial value ~init) over all keys (and their associated values)
     that are in the range [min, max] (inclusive).  *)
@@ -323,11 +330,24 @@ val fold_range_inclusive
     list. *)
 val range_to_alist : ('k, 'v, 'cmp) t -> min:'k -> max:'k -> ('k * 'v) list
 
-(** [prev_key t k] returns the largest (key, value) pair in t with key less than k *)
-val prev_key : ('k, 'v, 'cmp) t -> 'k -> ('k * 'v) option
+(** [closest_key t dir k] returns the [(key, value)] pair in [t] with [key] closest to
+    [k], which satisfies the given inequality bound.
 
-(** [next_key t k] returns the smallest (key, value) pair in t with key greater than k *)
-val next_key : ('k, 'v, 'cmp) t -> 'k -> ('k * 'v) option
+    For example, [closest_key t `Less_than k] would be the pair with the closest key to
+    [k] where [key < k].
+
+    [to_sequence] can be used to get the same results as [closest_key].  It is less
+    efficient for individual lookups but more efficient for finding many elements starting
+    at some value. *)
+val closest_key
+  :  ('k, 'v, 'cmp) t
+  -> [ `Greater_or_equal_to
+     | `Greater_than
+     | `Less_or_equal_to
+     | `Less_than
+     ]
+  -> 'k
+  -> ('k * 'v) option
 
 (** [nth t n] finds the (key, value) pair of rank n (i.e. such that there are exactly n
     keys strictly less than the found key), if one exists.  O(log(length t) + n) time. *)
@@ -337,14 +357,15 @@ val nth : ('k, 'v, _) t -> int -> ('k * 'v) option
     otherwise None *)
 val rank : ('k, 'v, 'cmp) t -> 'k -> int option
 
-(** [to_sequence ~keys_in t] converts the map [t] to a sequence of key-value pairs
-    in order and with keys according to [keys_in]. *)
+(** [to_sequence ?order ?keys_greater_or_equal_to ?keys_less_or_equal_to t] gives a
+    sequence of key-value pairs between [keys_less_or_equal_to] and
+    [keys_greater_or_equal_to] inclusive, presented in [order].  If
+    [keys_greater_or_equal_to > keys_less_or_equal_to], the sequence is empty.  Cost is
+    O(log n) up front and amortized O(1) to produce each element. *)
 val to_sequence
-  :  ?keys_in:[ `Increasing_order (** default *)
-              | `Increasing_order_greater_than_or_equal_to of 'k
-              | `Decreasing_order
-              | `Decreasing_order_less_than_or_equal_to of 'k
-              ]
+  :  ?order                    : [ `Increasing_key (** default *) | `Decreasing_key ]
+  -> ?keys_greater_or_equal_to : 'k
+  -> ?keys_less_or_equal_to    : 'k
   -> ('k, 'v, 'cmp) t
   -> ('k * 'v) Sequence.t
 

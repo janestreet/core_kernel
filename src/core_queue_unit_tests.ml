@@ -154,6 +154,50 @@ TEST_MODULE = (struct
     done;
   ;;
 
+  let compare = compare
+  let equal   = equal
+
+  TEST_MODULE "comparisons" = struct
+
+    let sign x = if x < 0 then ~-1 else if x > 0 then 1 else 0
+
+    let test t1 t2 =
+      <:test_result< bool >>
+        (equal Int.equal t1 t2)
+        ~expect:(List.equal ~equal:Int.equal (to_list t1) (to_list t2));
+      <:test_result< int >>
+        (sign (compare Int.compare t1 t2))
+        ~expect:(sign (List.compare Int.compare (to_list t1) (to_list t2)))
+    ;;
+
+    let lists =
+      [ []
+      ; [ 1 ]
+      ; [ 2 ]
+      ; [ 1; 1 ]
+      ; [ 1; 2 ]
+      ; [ 2; 1 ]
+      ; [ 1; 1; 1 ]
+      ; [ 1; 2; 3 ]
+      ; [ 1; 2; 4 ]
+      ; [ 1; 2; 4; 8 ]
+      ; [ 1; 2; 3; 4; 5 ]
+      ]
+    ;;
+
+    TEST_UNIT = (* [phys_equal] inputs *)
+      List.iter lists ~f:(fun list ->
+        let t = of_list list in
+        test t t)
+    ;;
+
+    TEST_UNIT =
+      List.iter lists ~f:(fun list1 ->
+        List.iter lists ~f:(fun list2 ->
+          test (of_list list1) (of_list list2)))
+    ;;
+  end
+
   let clear          = clear
   let concat_map     = concat_map
 
@@ -249,26 +293,26 @@ TEST_MODULE = (struct
       That_queue.enqueue t_b v;
       let end_a = This_queue.to_array t_a in
       let end_b = That_queue.to_array t_b in
-      if end_a <> end_b then
-        failwithf "enqueue transition failure of: %s -> %s vs. %s -> %s"
-          (array_string start_a)
-          (array_string end_a)
-          (array_string start_b)
-          (array_string end_b)
-          ()
+      if end_a <> end_b
+      then failwithf "enqueue transition failure of: %s -> %s vs. %s -> %s"
+             (array_string start_a)
+             (array_string end_a)
+             (array_string start_b)
+             (array_string end_b)
+             ()
     ;;
 
     let iter (t_a, t_b) =
       let r_a, r_b = ref 0, ref 0 in
       This_queue.iter t_a ~f:(fun x -> r_a := !r_a + x);
       That_queue.iter t_b ~f:(fun x -> r_b := !r_b + x);
-      if !r_a <> !r_b then
-        failwithf "error in iter: %s (from %s) <> %s (from %s)"
-          (Int.to_string !r_a)
-          (this_to_string t_a)
-          (Int.to_string !r_b)
-          (that_to_string t_b)
-          ()
+      if !r_a <> !r_b
+      then failwithf "error in iter: %s (from %s) <> %s (from %s)"
+             (Int.to_string !r_a)
+             (this_to_string t_a)
+             (Int.to_string !r_b)
+             (that_to_string t_b)
+             ()
     ;;
 
     let dequeue (t_a, t_b) =
@@ -277,15 +321,15 @@ TEST_MODULE = (struct
       let a, b = This_queue.dequeue t_a, That_queue.dequeue t_b in
       let end_a = This_queue.to_array t_a in
       let end_b = That_queue.to_array t_b in
-      if a <> b || end_a <> end_b then
-        failwithf "error in dequeue: %s (%s -> %s) <> %s (%s -> %s)"
-          (Option.value ~default:"None" (Option.map a ~f:Int.to_string))
-          (array_string start_a)
-          (array_string end_a)
-          (Option.value ~default:"None" (Option.map b ~f:Int.to_string))
-          (array_string start_b)
-          (array_string end_b)
-          ()
+      if a <> b || end_a <> end_b
+      then failwithf "error in dequeue: %s (%s -> %s) <> %s (%s -> %s)"
+             (Option.value ~default:"None" (Option.map a ~f:Int.to_string))
+             (array_string start_a)
+             (array_string end_a)
+             (Option.value ~default:"None" (Option.map b ~f:Int.to_string))
+             (array_string start_b)
+             (array_string end_b)
+             ()
     ;;
 
     let clear (t_a, t_b) =
@@ -298,13 +342,13 @@ TEST_MODULE = (struct
     let filter (t_a, t_b) =
       let t_a' = This_queue.filter t_a ~f:is_even in
       let t_b' = That_queue.filter t_b ~f:is_even in
-      if This_queue.to_array t_a' <> That_queue.to_array t_b' then
-        failwithf "error in filter: %s -> %s vs. %s -> %s"
-          (this_to_string t_a)
-          (this_to_string t_a')
-          (that_to_string t_b)
-          (that_to_string t_b')
-          ()
+      if This_queue.to_array t_a' <> That_queue.to_array t_b'
+      then failwithf "error in filter: %s -> %s vs. %s -> %s"
+             (this_to_string t_a)
+             (this_to_string t_a')
+             (that_to_string t_b)
+             (that_to_string t_b')
+             ()
     ;;
 
     let filter_inplace (t_a, t_b) =
@@ -314,39 +358,39 @@ TEST_MODULE = (struct
       That_queue.filter_inplace t_b ~f:is_even;
       let end_a = This_queue.to_array t_a in
       let end_b = That_queue.to_array t_b in
-      if end_a <> end_b then
-        failwithf "error in filter_inplace: %s -> %s vs. %s -> %s"
-          (array_string start_a)
-          (array_string end_a)
-          (array_string start_b)
-          (array_string end_b)
-          ()
+      if end_a <> end_b
+      then failwithf "error in filter_inplace: %s -> %s vs. %s -> %s"
+             (array_string start_a)
+             (array_string end_a)
+             (array_string start_b)
+             (array_string end_b)
+             ()
     ;;
 
     let concat_map (t_a, t_b) =
       let f x = [x; x + 1; x + 2] in
       let t_a' = This_queue.concat_map t_a ~f in
       let t_b' = That_queue.concat_map t_b ~f in
-      if (This_queue.to_array t_a') <> (That_queue.to_array t_b') then
-        failwithf "error in concat_map: %s (for %s) <> %s (for %s)"
-          (this_to_string t_a')
-          (this_to_string t_a)
-          (that_to_string t_b')
-          (that_to_string t_b)
-          ()
+      if (This_queue.to_array t_a') <> (That_queue.to_array t_b')
+      then failwithf "error in concat_map: %s (for %s) <> %s (for %s)"
+             (this_to_string t_a')
+             (this_to_string t_a)
+             (that_to_string t_b')
+             (that_to_string t_b)
+             ()
     ;;
 
     let filter_map (t_a, t_b) =
       let f x = if is_even x then None else Some (x + 1) in
       let t_a' = This_queue.filter_map t_a ~f in
       let t_b' = That_queue.filter_map t_b ~f in
-      if (This_queue.to_array t_a') <> (That_queue.to_array t_b') then
-        failwithf "error in filter_map: %s (for %s) <> %s (for %s)"
-          (this_to_string t_a')
-          (this_to_string t_a)
-          (that_to_string t_b')
-          (that_to_string t_b)
-          ()
+      if (This_queue.to_array t_a') <> (That_queue.to_array t_b')
+      then failwithf "error in filter_map: %s (for %s) <> %s (for %s)"
+             (this_to_string t_a')
+             (this_to_string t_a)
+             (that_to_string t_b')
+             (that_to_string t_b)
+             ()
     ;;
 
     let copy (t_a, t_b) =
@@ -356,20 +400,21 @@ TEST_MODULE = (struct
       let start_b = That_queue.to_array t_b in
       let end_a = This_queue.to_array copy_a in
       let end_b = That_queue.to_array copy_b in
-      if end_a <> end_b then
-        failwithf "error in copy: %s -> %s vs. %s -> %s"
-          (array_string start_a)
-          (array_string end_a)
-          (array_string start_b)
-          (array_string end_b)
-          ()
+      if end_a <> end_b
+      then failwithf "error in copy: %s -> %s vs. %s -> %s"
+             (array_string start_a)
+             (array_string end_a)
+             (array_string start_b)
+             (array_string end_b)
+             ()
     ;;
 
     let transfer (t_a, t_b) =
       let dst_a = This_queue.create () in
       let dst_b = That_queue.create () in
       (* sometimes puts some elements in the destination queues *)
-      if Random.bool () then begin
+      if Random.bool ()
+      then begin
         List.iter [ 1; 2; 3; 4; 5 ] ~f:(fun elem ->
           This_queue.enqueue dst_a elem;
           That_queue.enqueue dst_b elem);
@@ -382,15 +427,15 @@ TEST_MODULE = (struct
       let end_b  = That_queue.to_array t_b in
       let end_a' = This_queue.to_array dst_a in
       let end_b' = That_queue.to_array dst_b in
-      if end_a' <> end_b' || end_a <> end_b then
-        failwithf "error in transfer: %s -> (%s, %s) vs. %s -> (%s, %s)"
-          (array_string start_a)
-          (array_string end_a)
-          (array_string end_a')
-          (array_string start_b)
-          (array_string end_b)
-          (array_string end_b)
-          ()
+      if end_a' <> end_b' || end_a <> end_b
+      then failwithf "error in transfer: %s -> (%s, %s) vs. %s -> (%s, %s)"
+             (array_string start_a)
+             (array_string end_a)
+             (array_string end_a')
+             (array_string start_b)
+             (array_string end_b)
+             (array_string end_b)
+             ()
     ;;
 
     let fold_check (t_a, t_b) =
@@ -399,65 +444,65 @@ TEST_MODULE = (struct
       in
       let this_l = make_list This_queue.fold t_a in
       let that_l = make_list That_queue.fold t_b in
-      if this_l <> that_l then
-        failwithf "error in fold:  %s (from %s) <> %s (from %s)"
-          (Sexp.to_string (this_l |> <:sexp_of< int list >>))
-          (this_to_string t_a)
-          (Sexp.to_string (that_l |> <:sexp_of< int list >>))
-          (that_to_string t_b)
-          ()
+      if this_l <> that_l
+      then failwithf "error in fold:  %s (from %s) <> %s (from %s)"
+             (Sexp.to_string (this_l |> <:sexp_of< int list >>))
+             (this_to_string t_a)
+             (Sexp.to_string (that_l |> <:sexp_of< int list >>))
+             (that_to_string t_b)
+             ()
     ;;
 
     let length_check (t_a, t_b) =
       let this_len = This_queue.length t_a in
       let that_len = That_queue.length t_b in
-      if this_len <> that_len then
-        failwithf "error in length: %i (for %s) <> %i (for %s)"
-          this_len (this_to_string t_a)
-          that_len (that_to_string t_b)
-          ()
+      if this_len <> that_len
+      then failwithf "error in length: %i (for %s) <> %i (for %s)"
+             this_len (this_to_string t_a)
+             that_len (that_to_string t_b)
+             ()
     ;;
 
     TEST_UNIT =
       let t = create () in
       let rec loop ~all_ops ~non_empty_ops =
-        if all_ops <= 0 && non_empty_ops <= 0 then begin
+        if all_ops <= 0 && non_empty_ops <= 0
+        then begin
           let (t_a, t_b) = t in
           let arr_a = This_queue.to_array t_a in
           let arr_b = That_queue.to_array t_b in
-          if arr_a <> arr_b then
-            failwithf "queue final states not equal: %s vs. %s"
-              (array_string arr_a)
-              (array_string arr_b)
-              ()
+          if arr_a <> arr_b
+          then failwithf "queue final states not equal: %s vs. %s"
+                 (array_string arr_a)
+                 (array_string arr_b)
+                 ()
         end else begin
           let queue_was_empty = This_queue.length (fst t) = 0 in
           let r = Random.int 160 in
           begin
-            if r < 60 then
-              enqueue t (Random.int 10_000)
-            else if r < 65 then
-              dequeue t
-            else if r < 70 then
-              clear t
-            else if r < 80 then
-              iter t
-            else if r < 90 then
-              fold_check t
-            else if r < 100 then
-              filter t
-            else if r < 110 then
-              concat_map t
-            else if r < 120 then
-              transfer t
-            else if r < 130 then
-              filter_map t
-            else if r < 140 then
-              copy t
-            else if r < 150 then
-              filter_inplace t
-            else
-              length_check t
+            if r < 60
+            then enqueue t (Random.int 10_000)
+            else if r < 65
+            then dequeue t
+            else if r < 70
+            then clear t
+            else if r < 80
+            then iter t
+            else if r < 90
+            then fold_check t
+            else if r < 100
+            then filter t
+            else if r < 110
+            then concat_map t
+            else if r < 120
+            then transfer t
+            else if r < 130
+            then filter_map t
+            else if r < 140
+            then copy t
+            else if r < 150
+            then filter_inplace t
+            else length_check t
           end;
           loop
             ~all_ops:(all_ops - 1)

@@ -50,14 +50,15 @@ module Unit_tests
     (* let compare_direct = simplify_accessor compare_direct *)
     let equal          = simplify_accessor equal
     let inter          = simplify_accessor inter
+    let union          = simplify_accessor union
     let subset         = simplify_accessor subset
     let iter2          = simplify_accessor iter2
     let invariants     = simplify_accessor invariants
     let to_map         = simplify_accessor to_map
     let to_list    = to_list
     let to_array   = to_array
-    let to_sequence ?in_ x =
-      simplify_accessor to_sequence ?in_ x
+    let to_sequence ?order ?greater_or_equal_to ?less_or_equal_to x =
+      simplify_accessor to_sequence ?order ?greater_or_equal_to ?less_or_equal_to x
 
     let empty ()       = simplify_creator empty
     let singleton      = simplify_creator singleton
@@ -66,6 +67,10 @@ module Unit_tests
     let of_sorted_array_unchecked = simplify_creator of_sorted_array_unchecked
     (* let of_tree        = simplify_creator of_tree *)
     let symmetric_diff = simplify_accessor symmetric_diff
+    let split          = simplify_accessor split
+    let diff           = simplify_accessor diff
+
+    let sexp_of_t_ t = <:sexp_of< int Elt.t list >> (to_list t)
   end
 
   type ('a, 'b) t = Unit_test_follows
@@ -79,6 +84,10 @@ module Unit_tests
     open Elt
     let of_int = of_int
     let to_int = to_int
+
+    let gen =
+      let open Quickcheck_generator in
+      int >>| of_int
 
     module T = struct
       type t = int Elt.t with sexp
@@ -97,13 +106,17 @@ module Unit_tests
   let set_empty = Set.empty ()
   let set_nonempty = Set.of_list Elt.samples
 
-  let add _               = assert false
-  let of_list _           = assert false
-  let mem _               = assert false
+  let gen_set =
+    let open Quickcheck_generator in
+    list Elt.gen >>| Set.of_list
+
+  let add _     = assert false
+  let of_list _ = assert false
+  let mem _     = assert false
 
   TEST = List.for_all Elt.samples ~f:(fun e -> Set.mem set_nonempty e)
 
-  let is_empty _          = assert false
+  let is_empty _ = assert false
   TEST = Set.is_empty set_empty
   TEST = not (Set.is_empty set_nonempty)
 
@@ -112,7 +125,7 @@ module Unit_tests
     Set.equal set_nonempty set'
   ;;
 
-  let inter _             = assert false
+  let inter _ = assert false
   TEST = Set.is_empty (Set.inter set_empty set_nonempty)
   TEST = Set.is_empty (Set.inter set_nonempty set_empty)
   TEST =
@@ -121,14 +134,14 @@ module Unit_tests
   ;;
   TEST = Set.equal set_nonempty (Set.inter set_nonempty set_nonempty)
 
-  let subset _            = assert false
+  let subset _ = assert false
   TEST = Set.subset set_empty set_nonempty
   TEST = not (Set.subset set_nonempty set_empty)
   TEST = Set.subset set_nonempty set_nonempty
   TEST = Set.subset set_empty set_empty
   TEST = not (Set.subset set_nonempty (Set.singleton Elt.present))
 
-  let to_list _           = assert false
+  let to_list _ = assert false
   TEST =
     let elts = Set.to_list set_nonempty in
     List.for_all elts ~f:(fun elt ->
@@ -146,47 +159,75 @@ module Unit_tests
     is_list_ordered_ascending (Set.to_list set_nonempty)
   ;;
 
-  let to_array _          = assert false
+  let to_array _ = assert false
   TEST =
     let a = Set.to_array set_nonempty in
     List.equal (Array.to_list a) (Set.to_list set_nonempty) ~equal:Elt.equal
   ;;
 
-  let to_sequence ?in_:_ _ = assert false
+  let to_sequence ?order:_ ?greater_or_equal_to:_ ?less_or_equal_to:_ _ : _ Sequence.t = assert false
 
-  TEST =
-    let m = set_nonempty in
-    Sequence.to_list (Set.to_sequence ~in_:`Increasing_order m) = Set.to_list m
+  TEST_MODULE "to_sequence" = struct
 
-  TEST =
-    let m = set_nonempty in
-    Sequence.to_list (Set.to_sequence ~in_:`Decreasing_order m) = List.rev (Set.to_list m)
+    let (<=>) observed expected =
+      <:test_eq< Elt.t list >> (Sequence.to_list observed) expected
+    ;;
 
-  TEST =
-    let m = set_nonempty in
-    Sequence.to_list (Set.to_sequence ~in_:(`Increasing_order_greater_than_or_equal_to (Elt.of_int 4)) m)
-    = List.filter ~f:(fun x -> x >= Elt.of_int 4) (Set.to_list m)
+    let m = set_nonempty
 
-  TEST =
-    let m = set_nonempty in
-    Sequence.to_list (Set.to_sequence ~in_:(`Decreasing_order_less_than_or_equal_to (Elt.of_int 4)) m)
-    = List.filter ~f:(fun x -> x <= Elt.of_int 4) (List.rev (Set.to_list m))
+    (* Calibration: make sure [m] contains elements less than 4, greater than 8, and
+       between these two. Otherwise the tests aren't testing what we want. *)
+    TEST =
+      let l = Set.to_list m in
+      List.exists l ~f:(fun x -> x < Elt.of_int 4)
+      &&
+      List.exists l ~f:(fun x -> x >= Elt.of_int 4 && x <= Elt.of_int 8)
+      &&
+      List.exists l ~f:(fun x -> x > Elt.of_int 8)
+    ;;
 
-  TEST =
-    let m = Set.empty () in
-    Sequence.to_list (Set.to_sequence ~in_:`Increasing_order m) = []
+    TEST_UNIT = Set.to_sequence ~order:`Increasing m <=> Set.to_list m
 
-  TEST =
-    let m = Set.empty () in
-    Sequence.to_list (Set.to_sequence ~in_:`Decreasing_order m) = []
+    TEST_UNIT = Set.to_sequence ~order:`Decreasing m <=> List.rev (Set.to_list m)
 
-  TEST =
-    let m = set_nonempty in
-    Sequence.to_list (Set.to_sequence ~in_:(`Increasing_order_greater_than_or_equal_to (Elt.of_int 11)) m) = []
+    TEST_UNIT =
+      Set.to_sequence ~order:`Increasing ~greater_or_equal_to:(Elt.of_int 4) m
+      <=>
+      List.filter ~f:(fun x -> x >= Elt.of_int 4) (Set.to_list m)
 
-  TEST =
-    let m = set_nonempty in
-    Sequence.to_list (Set.to_sequence ~in_:(`Decreasing_order_less_than_or_equal_to (Elt.of_int (-1))) m) = []
+    TEST_UNIT =
+      Set.to_sequence m
+        ~order:`Increasing
+        ~greater_or_equal_to:(Elt.of_int 4)
+        ~less_or_equal_to:(Elt.of_int 8)
+      <=>
+      List.filter ~f:(fun x -> x >= Elt.of_int 4 && x <= Elt.of_int 8) (Set.to_list m)
+
+    TEST_UNIT =
+      Set.to_sequence ~order:`Decreasing ~less_or_equal_to:(Elt.of_int 4) m
+      <=>
+      List.filter ~f:(fun x -> x <= Elt.of_int 4) (List.rev (Set.to_list m))
+
+    TEST_UNIT =
+      Set.to_sequence m
+        ~order:`Decreasing
+        ~less_or_equal_to:(Elt.of_int 8)
+        ~greater_or_equal_to:(Elt.of_int 4)
+      <=>
+      List.filter ~f:(fun x -> x <= Elt.of_int 8 && x >= Elt.of_int 4)
+        (List.rev (Set.to_list m))
+
+    TEST_UNIT = Set.to_sequence ~order:`Increasing (Set.empty ()) <=> []
+
+    TEST_UNIT = Set.to_sequence ~order:`Decreasing (Set.empty ()) <=> []
+
+    TEST_UNIT =
+      Set.to_sequence ~order:`Increasing ~greater_or_equal_to:(Elt.of_int 11) m <=> []
+
+    TEST_UNIT =
+      Set.to_sequence ~order:`Decreasing ~less_or_equal_to:(Elt.of_int ~-1) m <=> []
+
+  end
 
   let of_sorted_array _ = assert false
   let of_sorted_array_unchecked _ = assert false
@@ -206,7 +247,7 @@ module Unit_tests
     && Set.equal (Set.of_list list) (Set.of_sorted_array_unchecked rev_array)
   ;;
 
-  let invariants _        = assert false
+  let invariants _ = assert false
 
   TEST_UNIT =
     for n = 0 to 100 do
@@ -277,6 +318,24 @@ module Unit_tests
       (Set.equal (Set.of_map_keys (Set.to_map set_nonempty ~f:Elt.to_int)) set_nonempty)
 
   let symmetric_diff _ = assert false
+
+  TEST_UNIT "symmetric diff quick" =
+    let symmetric_diff_set s1 s2 =
+      Set.symmetric_diff s1 s2
+      |> Sequence.to_list
+      |> List.map ~f:(function | First elt | Second elt -> elt)
+      |> Set.of_list
+    in
+    (* Textbook definition of symmetric difference: *)
+    let symmetric_diff_spec s1 s2 = Set.diff (Set.union s1 s2) (Set.inter s1 s2) in
+    Quickcheck.test
+      ~seed:(`Deterministic "core set symmetric diff")
+      (Quickcheck_generator.tuple2 gen_set gen_set)
+      ~sexp_of:<:sexp_of< Set.t_ * Set.t_ >>
+      ~f:(fun (s1, s2) ->
+        let expect = symmetric_diff_spec s1 s2 in
+        let actual = symmetric_diff_set s1 s2 in
+        assert (Set.equal actual expect))
 
   TEST =
     let m1 = set_nonempty in
@@ -380,13 +439,47 @@ module Unit_tests
     Sequence.length diff = 3
   ;;
 
+  let split _ = assert false
+
+  module Simple_int_set = struct
+    type t = int list with compare, sexp
+
+    let init i = List.init i ~f:Fn.id
+
+    let split t i =
+      let l = List.filter t ~f:(Int.(>) i) in
+      let r = List.filter t ~f:(Int.(<) i) in
+      let x =
+        if List.mem t i ~equal:(Int.(=))
+        then Some (Elt.of_int i)
+        else None
+      in
+      (l, x, r)
+    ;;
+
+    let to_set = set_of_int_list
+  end
+
+  TEST_UNIT =
+    let n = 16 in
+    let t = set_of_int_list (List.init n ~f:Fn.id) in
+    let t' = Simple_int_set.init n in
+    let check i =
+      let l, x, r = Set.split t (Elt.of_int i) in
+      let l', x', r' = Simple_int_set.split t' i in
+      assert (Set.equal l (Simple_int_set.to_set l'));
+      <:test_eq< Elt.t option >> x x';
+      assert (Set.equal r (Simple_int_set.to_set r'));
+    in
+    for i = 0 to n - 1 do check i done;
+  ;;
+
 
   let to_tree _           = assert false
   let remove_index _      = assert false
   let find_index _        = assert false
   let find_exn _          = assert false
   let group_by _          = assert false
-  let split _             = assert false
   let choose_exn _        = assert false
   let choose _            = assert false
   let max_elt_exn _       = assert false

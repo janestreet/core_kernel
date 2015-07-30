@@ -16,7 +16,9 @@
     single element (find, mem, add, remove, set) take constant time, and perform one or
     two array operations.  Operations that deal with all of the keys defined in the table
     (data, fold, iter, iter_vals, keys, to_alist) take time proportional to the [length]
-    of the table, not [num_keys]. *)
+    of the table, not [num_keys].
+*)
+
 open Std_internal
 
 type ('key, 'data) t with sexp_of
@@ -24,8 +26,8 @@ type ('a, 'b) table = ('a, 'b) t
 
 include Invariant.S2 with type ('a, 'b) t := ('a, 'b) t
 
-(* Equality only requires the keys and values to be the same, not the bin or sexp
-   formatting or the integers the keys correspond to (see [key_to_int]).*)
+(** Equality only requires the keys and values to be the same, not the bin or sexp
+    formatting or the integers the keys correspond to (see [key_to_int]).*)
 include Equal.S2 with type ('a, 'b) t := ('a, 'b) t
 
 (** [create ~num_keys ~key_to_int] returns a table where the keys can map to 0
@@ -33,9 +35,9 @@ include Equal.S2 with type ('a, 'b) t := ('a, 'b) t
 
     [sexp_of_key], if supplied, will be used to display keys in error messages. *)
 val create
-  :  ?sexp_of_key:('key -> Sexp.t)
-  -> num_keys:int
-  -> key_to_int:('key -> int)
+  :  ?sexp_of_key : ('key -> Sexp.t)
+  -> num_keys     : int
+  -> key_to_int   : ('key -> int)
   -> unit
   -> ('key, 'data) t
 
@@ -47,13 +49,21 @@ val find_exn : ('key, 'data) t -> 'key -> 'data
 val find_or_add : ('key, 'data) t -> 'key -> default:(unit -> 'data) -> 'data
 val fold
   :  ('key, 'data) t
-  -> init:'accum
-  -> f:(key:'key -> data:'data -> 'accum -> 'accum)
+  -> init : 'accum
+  -> f    : (key:'key -> data:'data -> 'accum -> 'accum)
   -> 'accum
 val iter      : ('key, 'data) t -> f:(key:'key -> data:'data -> unit) -> unit
 val iter_vals : (_   , 'data) t -> f:(                 'data -> unit) -> unit
-val filter_mapi : ('key, 'data1) t -> f:(key:'key -> data:'data1 -> 'data2 option) -> ('key, 'data2) t
-val filter_map  : ('key, 'data1) t -> f:(                 'data1 -> 'data2 option) -> ('key, 'data2) t
+
+val filter_mapi
+  :  ('key, 'data1) t
+  -> f : (key:'key -> data:'data1 -> 'data2 option)
+  -> ('key, 'data2) t
+val filter_map
+  :  ('key, 'data1) t
+  -> f : ('data1 -> 'data2 option)
+  -> ('key, 'data2) t
+
 val mapi : ('key, 'data1) t -> f:(key:'key -> data:'data1 -> 'data2) -> ('key, 'data2) t
 val map  : ('key, 'data1) t -> f:(                 'data1 -> 'data2) -> ('key, 'data2) t
 val for_alli : ('key, 'data) t -> f:(key:'key -> data:'data -> bool) -> bool
@@ -79,8 +89,8 @@ end) : sig
 
   val create : num_keys:int -> 'data t
 
-  (* [of_alist] returns a table whose maximum allowed key is the maximum key in the input
-     list. *)
+  (** [of_alist] returns a table whose maximum allowed key is the maximum key in the input
+      list. *)
   val of_alist     : (Key.t * 'data) list -> 'data t Or_error.t
   val of_alist_exn : (Key.t * 'data) list -> 'data t
 end

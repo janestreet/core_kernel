@@ -38,8 +38,8 @@ module type Accessors_generic = sig
 
   type ('a, 'cmp) tree
 
-  (* The [options] type is used to make [Accessors_generic] flexible as to whether a
-     comparator is required to be passed to certain functions. *)
+  (** The [options] type is used to make [Accessors_generic] flexible as to whether a
+      comparator is required to be passed to certain functions. *)
   type ('a, 'cmp, 'z) options
 
   type 'cmp cmp
@@ -49,7 +49,7 @@ module type Accessors_generic = sig
        ('a, 'cmp) t -> bool
     ) options
 
-  (* override [Container]'s [mem] *)
+  (** override [Container]'s [mem] *)
   val mem : ('a, 'cmp, ('a, 'cmp) t -> 'a elt -> bool) options
   val add
     : ('a, 'cmp,
@@ -129,7 +129,7 @@ module type Accessors_generic = sig
     : ('a, 'cmp,
        ('a, 'cmp) t
        -> 'a elt
-       -> ('a, 'cmp) t * bool * ('a, 'cmp) t
+       -> ('a, 'cmp) t * 'a elt option * ('a, 'cmp) t
     ) options
 
   val group_by
@@ -150,11 +150,9 @@ module type Accessors_generic = sig
 
   val to_sequence
     : ('a, 'cmp,
-       ?in_:[ `Increasing_order
-            | `Decreasing_order
-            | `Increasing_order_greater_than_or_equal_to of 'a elt
-            | `Decreasing_order_less_than_or_equal_to    of 'a elt
-            ]
+       ?order:[ `Increasing | `Decreasing ]
+       -> ?greater_or_equal_to:'a elt
+       -> ?less_or_equal_to:'a elt
        -> ('a, 'cmp) t
        -> 'a elt Sequence.t
       ) options
@@ -194,18 +192,16 @@ module type Accessors0 = sig
   val max_elt_exn    : t -> elt
   val choose         : t -> elt option
   val choose_exn     : t -> elt
-  val split          : t -> elt -> t * bool * t
+  val split          : t -> elt -> t * elt option * t
   val group_by       : t -> equiv:(elt -> elt -> bool) -> t list
   val find_exn       : t -> f:(elt -> bool) -> elt
   val find_index     : t -> int -> elt option
   val remove_index   : t -> int -> t
   val to_tree        : t -> tree
   val to_sequence
-    :  ?in_:[ `Increasing_order
-            | `Decreasing_order
-            | `Increasing_order_greater_than_or_equal_to of elt
-            | `Decreasing_order_less_than_or_equal_to    of elt
-            ]
+    :  ?order:[ `Increasing | `Decreasing ]
+    -> ?greater_or_equal_to:elt
+    -> ?less_or_equal_to:elt
     -> t
     -> elt Sequence.t
   val to_map         : t -> f:(elt -> 'data) -> (elt, 'data, comparator_witness) Map.t
@@ -240,18 +236,16 @@ module type Accessors1 = sig
   val max_elt_exn    : 'a t -> 'a
   val choose         : 'a t -> 'a option
   val choose_exn     : 'a t -> 'a
-  val split          : 'a t -> 'a -> 'a t * bool * 'a t
+  val split          : 'a t -> 'a -> 'a t * 'a option * 'a t
   val group_by       : 'a t -> equiv:('a -> 'a -> bool) -> 'a t list
   val find_exn       : 'a t -> f:('a -> bool) -> 'a
   val find_index     : 'a t -> int -> 'a option
   val remove_index   : 'a t -> int -> 'a t
   val to_tree        : 'a t -> 'a tree
   val to_sequence
-    :  ?in_:[ `Increasing_order
-            | `Decreasing_order
-            | `Increasing_order_greater_than_or_equal_to of 'a
-            | `Decreasing_order_less_than_or_equal_to    of 'a
-            ]
+    :  ?order:[ `Increasing | `Decreasing ]
+    -> ?greater_or_equal_to:'a
+    -> ?less_or_equal_to:'a
     -> 'a t
     -> 'a Sequence.t
   val to_map         : 'a t -> f:('a -> 'b) -> ('a, 'b, comparator_witness) Map.t
@@ -287,18 +281,16 @@ module type Accessors2 = sig
   val max_elt_exn    : ('a, _) t -> 'a
   val choose         : ('a, _) t -> 'a option
   val choose_exn     : ('a, _) t -> 'a
-  val split          : ('a, 'cmp) t -> 'a -> ('a, 'cmp) t * bool * ('a, 'cmp) t
+  val split          : ('a, 'cmp) t -> 'a -> ('a, 'cmp) t * 'a option * ('a, 'cmp) t
   val group_by       : ('a, 'cmp) t -> equiv:('a -> 'a -> bool) -> ('a, 'cmp) t list
   val find_exn       : ('a, _) t -> f:('a -> bool) -> 'a
   val find_index     : ('a, _) t -> int -> 'a option
   val remove_index   : ('a, 'cmp) t -> int -> ('a, 'cmp) t
   val to_tree        : ('a, 'cmp) t -> ('a, 'cmp) tree
   val to_sequence
-    :  ?in_:[ `Increasing_order
-            | `Decreasing_order
-            | `Increasing_order_greater_than_or_equal_to of 'a
-            | `Decreasing_order_less_than_or_equal_to    of 'a
-            ]
+    :  ?order:[ `Increasing | `Decreasing ]
+    -> ?greater_or_equal_to:'a
+    -> ?less_or_equal_to:'a
     -> ('a, 'cmp) t
     -> 'a Sequence.t
   val to_map         : ('a, 'cmp) t -> f:('a -> 'b) -> ('a, 'b, 'cmp) Map.t
@@ -354,7 +346,7 @@ module type Accessors2_with_comparator = sig
   val choose_exn     : ('a, _) t -> 'a
   val split
     : comparator:('a, 'cmp) Comparator.t
-    -> ('a, 'cmp) t -> 'a -> ('a, 'cmp) t * bool * ('a, 'cmp) t
+    -> ('a, 'cmp) t -> 'a -> ('a, 'cmp) t * 'a option * ('a, 'cmp) t
   val group_by
     : comparator:('a, 'cmp) Comparator.t
     -> ('a, 'cmp) t -> equiv:('a -> 'a -> bool) -> ('a, 'cmp) t list
@@ -365,11 +357,9 @@ module type Accessors2_with_comparator = sig
   val to_tree        : ('a, 'cmp) t -> ('a, 'cmp) tree
   val to_sequence
     :  comparator:('a, 'cmp) Comparator.t
-    -> ?in_:[ `Increasing_order
-            | `Decreasing_order
-            | `Increasing_order_greater_than_or_equal_to of 'a
-            | `Decreasing_order_less_than_or_equal_to    of 'a
-            ]
+    -> ?order:[ `Increasing | `Decreasing ]
+    -> ?greater_or_equal_to:'a
+    -> ?less_or_equal_to:'a
     -> ('a, 'cmp) t
     -> 'a Sequence.t
   val to_map
@@ -379,7 +369,7 @@ module type Accessors2_with_comparator = sig
     -> ('a, 'b, 'cmp) Map.t
 end
 
-(* Consistency checks (same as in [Container]). *)
+(** Consistency checks (same as in [Container]). *)
 module Check_accessors (T : T2) (Tree : T2) (Elt : T1) (Cmp : T1) (Options : T3)
   (M : Accessors_generic
      with type ('a, 'b, 'c) options := ('a, 'b, 'c) Options.t
@@ -469,7 +459,7 @@ module type Creators_generic = sig
        ('a elt, 'cmp) tree -> ('a, 'cmp) t
     ) options
 
-  (* never requires a comparator because it can get one from the input [Map.t] *)
+  (** never requires a comparator because it can get one from the input [Map.t] *)
   val of_map_keys : ('a elt, _, 'cmp cmp) Map.t -> ('a, 'cmp) t
 end
 

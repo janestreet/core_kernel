@@ -648,3 +648,5 @@ TEST_MODULE "unchecked_iter" = struct
   TEST = to_list (fun b x -> if x = 2 then insert_after b 2 5) = [0; 1; 2; 5; 3; 4]
   TEST = to_list (fun b x -> if x = 2 then insert_after b 3 5) = [0; 1; 2; 3; 5; 4]
 end
+
+let to_sequence t = to_list t |> Sequence.of_list

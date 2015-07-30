@@ -123,7 +123,8 @@ module Make (Pool : Pool_intf.S) = struct
   (* [grow] a non-empty pool, while adding each time *)
   TEST_UNIT =
     let rec loop p num_left =
-      if num_left > 0 then begin
+      if num_left > 0
+      then begin
         ignore (create p 13 (nil ()));
         loop (Pool.grow p) (num_left - 1);
       end;
@@ -132,10 +133,9 @@ module Make (Pool : Pool_intf.S) = struct
   ;;
 
   let rec fold p list ~init ~f =
-    if is_nil list then
-      init
-    else
-      fold p (tail p list) ~init:(f init (head p list)) ~f
+    if is_nil list
+    then init
+    else fold p (tail p list) ~init:(f init (head p list)) ~f
   ;;
 
   let to_list p list = List.rev (fold p list ~init:[] ~f:(fun l a -> a :: l))
@@ -145,14 +145,13 @@ module Make (Pool : Pool_intf.S) = struct
     let total_length = 10_000 in
     let rec loop i p list =
       let i = i - 1 in
-      if i < 0 then
-        assert (Poly.equal (to_list p list) (List.init total_length ~f:Fn.id))
+      if i < 0
+      then assert (Poly.equal (to_list p list) (List.init total_length ~f:Fn.id))
       else begin
         let p =
-          if not (Pool.is_full p) then
-            p
-          else
-            Pool.grow p
+          if not (Pool.is_full p)
+          then p
+          else Pool.grow p
         in
         loop i p (create p i list);
       end;
@@ -174,8 +173,8 @@ module Make (Pool : Pool_intf.S) = struct
   (* [free] *)
   TEST_UNIT =
     let rec loop p num_iters_left num_to_alloc_this_iter live =
-      if num_iters_left = 0 then
-        List.iter live ~f:(fun l -> free p l)
+      if num_iters_left = 0
+      then List.iter live ~f:(fun l -> free p l)
       else
         let p, live =
           List.fold (List.init num_to_alloc_this_iter ~f:Fn.id) ~init:(p, live)

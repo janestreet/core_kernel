@@ -17,7 +17,6 @@
 #include "ocaml_utils.h"
 #include "config.h"
 
-#include "timespec.h"
 #include "time_ns_stubs.h"
 
 #define NANOS_PER_SECOND 1000000000
@@ -69,7 +68,7 @@ CAMLprim value core_kernel_time_ns_format_tm(struct tm * tm, value v_fmt)
   value v_str;
   buf_len = 128*1024 + caml_string_length(v_fmt);
   buf = malloc(buf_len);
-  if (!buf) caml_failwith("unix_strftime: malloc failed");
+  if (!buf) caml_failwith("core_kernel_time_ns_format_tm: malloc failed");
   len = strftime(buf, buf_len, String_val(v_fmt), tm);
 
   if (len == 0) {
@@ -98,28 +97,6 @@ CAMLprim value core_kernel_time_ns_format(value t, value v_fmt)
      memory and its contents change every time [localtime] is
      called. */
   tm = localtime(&clock);
-  if (tm == NULL) unix_error(EINVAL, "localtime", Nothing);
+  if (tm == NULL) caml_failwith("core_kernel_time_ns_format: localtime failed");
   return core_kernel_time_ns_format_tm(tm, v_fmt);
-}
-
-CAMLprim value core_kernel_time_ns_nanosleep(value v_seconds)
-{
-  struct timespec req = timespec_of_double(Double_val(v_seconds));
-  struct timespec rem;
-  int retval;
-
-  caml_enter_blocking_section();
-  retval = nanosleep(&req, &rem);
-  caml_leave_blocking_section();
-
-  if (retval == 0)
-    return caml_copy_double(0.0);
-  else if (retval == -1) {
-    if (errno == EINTR)
-      return caml_copy_double(timespec_to_double(rem));
-    else
-      uerror("nanosleep", Nothing);
-  }
-  else
-    caml_failwith("core_kernel_time_ns_nanosleep: impossible return value from nanosleep(2)");
 }

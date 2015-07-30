@@ -1,31 +1,37 @@
-(* conversions between various integer types *)
+(** Conversions between various integer types *)
 
-(* Ocaml has the following integer types, with the following bit widths
-   on 32-bit and 64-bit architectures.
+(** Ocaml has the following integer types, with the following bit widths
+    on 32-bit and 64-bit architectures.
 
+    {v
                             arch  arch
                 type        32b   64b
                 ----------------------
-                int          31    63
+                int          31    63  (32 when compiled to JavaScript)
                 nativeint    32    64
                 int32        32    32
                 int64        64    64
+       v}
 
   In both cases, the following inequalities hold:
 
+    {[
       width(int) < width(nativeint)
-      width(int32) <= width(nativeint) <= width(int64)
+      && width(int32) <= width(nativeint) <= width(int64)
+    ]}
 
   The conversion functions come in one of two flavors.
 
   If width(foo) <= width(bar) on both 32-bit and 64-bit architectures, then we have
 
-    val foo_to_bar : foo -> bar
+    {[ val foo_to_bar : foo -> bar ]}
 
   otherwise we have
 
-    val foo_to_bar     : foo -> bar option
-    val foo_to_bar_exn : foo -> bar
+    {[
+      val foo_to_bar     : foo -> bar option
+      val foo_to_bar_exn : foo -> bar
+    ]}
 
 *)
 val int_to_int32           : int       -> int32 option
@@ -51,7 +57,12 @@ val nativeint_to_int32     : nativeint -> int32 option
 val nativeint_to_int32_exn : nativeint -> int32
 val nativeint_to_int64     : nativeint -> int64
 
-(* human-friendly string (and possibly sexp) conversions *)
+val num_bits_int           : int
+val num_bits_int32         : int
+val num_bits_int64         : int
+val num_bits_nativeint     : int
+
+(** human-friendly string (and possibly sexp) conversions *)
 module Make (I : sig
 
   type t
@@ -61,7 +72,7 @@ module Make (I : sig
 end) : sig
 
   val to_string_hum
-    :  ?delimiter:char  (* defaults to '_' *)
+    :  ?delimiter:char  (** defaults to ['_'] *)
     -> I.t
     -> string
 

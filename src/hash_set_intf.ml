@@ -3,8 +3,8 @@ module Binable = Binable0
 module type Accessors = sig
   include Container.Generic
 
-  val mem : 'a t -> 'a -> bool (* override [Container.Generic.mem] *)
-  val copy : 'a t -> 'a t                 (* preserves the equality function *)
+  val mem : 'a t -> 'a -> bool (** override [Container.Generic.mem] *)
+  val copy : 'a t -> 'a t      (** preserves the equality function *)
   val add               : 'a t -> 'a -> unit
   val strict_add        : 'a t -> 'a -> unit Or_error.t
   val strict_add_exn    : 'a t -> 'a -> unit

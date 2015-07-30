@@ -687,6 +687,7 @@ let unpack_signed_64_int_little_endian ~buf ~pos =
   (b7 lsl 48) lor (b8 lsl 56)
 ;;
 
+IFDEF ARCH_SIXTYFOUR THEN
 TEST_UNIT "63 bits overflow" =
   let buf = String.create 8 in
   let pos = 0 in
@@ -707,6 +708,7 @@ TEST_UNIT "63 bits overflow" =
           with Unpack_signed_64_int_most_significant_byte_too_large n when Some n = opt -> ()
        ))
 ;;
+ENDIF
 
 TEST_MODULE "inline_signed_64" = Make_inline_tests (struct
   let ns = [0x3f20_3040_5060_7080L;
@@ -730,17 +732,16 @@ end)
 
 IFDEF ARCH_SIXTYFOUR THEN
 
-TEST_MODULE "inline_signed_64_int" = Make_inline_tests (struct
+TEST_MODULE "inline_signed_64_int" =
+  Make_inline_tests (struct
   (* These numbers are written with one endianness and read with the opposite endianness,
      so the smallest byte becomes the biggest byte. Because of this, the range restriction
      that applies to the biggest byte also applies to the smallest byte. *)
-  let ns =
-    List.map ~f:Int64.to_int
-      [0x3f20_3040_5060_0708L
-      ;0x7f20_3040_5060_0708L
-      ;0x7f20_3040_5060_0708L
-      ;0x7fff_ffff_ffff_0000L
-      ;0L]
+  let ns = [0x3f20_3040_5060_0708L;
+            0x7f20_3040_5060_0708L;
+            -0x7f20_3040_5060_0708L;
+            0x7fff_ffff_ffff_0000L;
+            0L] |> List.map ~f:Int64.to_int
   let num_bytes = 8
   let signed = true
   type t = int
@@ -772,21 +773,21 @@ let rec last_nonmatch_plus_one ~buf ~min_pos ~pos ~char =
     pos
 ;;
 
-let unpack_padded_fixed_string ?(padding='\x00') ~buf ~pos ~len () =
+let unpack_tail_padded_fixed_string ?(padding='\x00') ~buf ~pos ~len () =
   let data_end =
     last_nonmatch_plus_one ~buf ~min_pos:pos ~pos:(pos + len) ~char:padding
   in
   String.sub buf ~pos ~len:(data_end - pos)
 ;;
 
-exception Pack_padded_fixed_string_argument_too_long of
+exception Pack_tail_padded_fixed_string_argument_too_long of
     [`s of string] * [`longer_than] * [`len of int] with sexp
 ;;
 
-let pack_padded_fixed_string ?(padding='\x00') ~buf ~pos ~len s =
+let pack_tail_padded_fixed_string ?(padding='\x00') ~buf ~pos ~len s =
   let slen = String.length s in
   if slen > len then
-    raise (Pack_padded_fixed_string_argument_too_long (`s s, `longer_than, `len len))
+    raise (Pack_tail_padded_fixed_string_argument_too_long (`s s, `longer_than, `len len))
   else begin
     String.blit ~src:s ~dst:buf ~src_pos:0 ~dst_pos:pos ~len:slen;
     if slen < len then begin
@@ -796,7 +797,7 @@ let pack_padded_fixed_string ?(padding='\x00') ~buf ~pos ~len s =
   end
 ;;
 
-TEST_MODULE "inline_padded_fixed_string" = struct
+TEST_MODULE "inline_tail_padded_fixed_string" = struct
   TEST = last_nonmatch_plus_one ~buf:"222121212" ~min_pos:3 ~pos:9 ~char:'2' = 8
   TEST = last_nonmatch_plus_one ~buf:"111121212" ~min_pos:3 ~pos:9 ~char:'1' = 9
   TEST = last_nonmatch_plus_one ~buf:"222121222" ~min_pos:3 ~pos:9 ~char:'2' = 6
@@ -807,37 +808,37 @@ TEST_MODULE "inline_padded_fixed_string" = struct
   TEST = last_nonmatch_plus_one ~buf:"222122222" ~min_pos:3 ~pos:8 ~char:'1' = 8
   TEST = last_nonmatch_plus_one ~buf:"222122221" ~min_pos:3 ~pos:8 ~char:'1' = 8
   TEST = last_nonmatch_plus_one ~buf:"222122221" ~min_pos:3 ~pos:8 ~char:'2' = 4
-  TEST = unpack_padded_fixed_string ~padding:'.' ~buf:"ab..c." ~pos:1 ~len:5 () = "b..c"
-  TEST = unpack_padded_fixed_string ~padding:'.' ~buf:"ab..c." ~pos:1 ~len:4 () = "b..c"
-  TEST = unpack_padded_fixed_string ~padding:'.' ~buf:"ab..c." ~pos:1 ~len:3 () = "b"
-  TEST = unpack_padded_fixed_string ~padding:'.' ~buf:"ab..c." ~pos:1 ~len:2 () = "b"
-  TEST = unpack_padded_fixed_string ~padding:'.' ~buf:"ab..c." ~pos:1 ~len:1 () = "b"
-  TEST = unpack_padded_fixed_string ~padding:'.' ~buf:"ab..c" ~pos:2 ~len:3 () = "..c"
-  TEST = unpack_padded_fixed_string ~padding:'.' ~buf:"ab..c" ~pos:2 ~len:2 () = ""
-  TEST = unpack_padded_fixed_string ~padding:'.' ~buf:"ab..cd" ~pos:2 ~len:3 () = "..c"
-  TEST = unpack_padded_fixed_string ~padding:'.' ~buf:"ab..cd" ~pos:2 ~len:2 () = ""
-  TEST = unpack_padded_fixed_string ~padding:'.' ~buf:"ab..c." ~pos:2 ~len:1 () = ""
-  TEST = unpack_padded_fixed_string ~padding:'.' ~buf:".....x" ~pos:0 ~len:6 () = ".....x"
-  TEST = unpack_padded_fixed_string ~padding:'.' ~buf:".....x" ~pos:0 ~len:5 () = ""
+  TEST = unpack_tail_padded_fixed_string ~padding:'.' ~buf:"ab..c." ~pos:1 ~len:5 () = "b..c"
+  TEST = unpack_tail_padded_fixed_string ~padding:'.' ~buf:"ab..c." ~pos:1 ~len:4 () = "b..c"
+  TEST = unpack_tail_padded_fixed_string ~padding:'.' ~buf:"ab..c." ~pos:1 ~len:3 () = "b"
+  TEST = unpack_tail_padded_fixed_string ~padding:'.' ~buf:"ab..c." ~pos:1 ~len:2 () = "b"
+  TEST = unpack_tail_padded_fixed_string ~padding:'.' ~buf:"ab..c." ~pos:1 ~len:1 () = "b"
+  TEST = unpack_tail_padded_fixed_string ~padding:'.' ~buf:"ab..c" ~pos:2 ~len:3 () = "..c"
+  TEST = unpack_tail_padded_fixed_string ~padding:'.' ~buf:"ab..c" ~pos:2 ~len:2 () = ""
+  TEST = unpack_tail_padded_fixed_string ~padding:'.' ~buf:"ab..cd" ~pos:2 ~len:3 () = "..c"
+  TEST = unpack_tail_padded_fixed_string ~padding:'.' ~buf:"ab..cd" ~pos:2 ~len:2 () = ""
+  TEST = unpack_tail_padded_fixed_string ~padding:'.' ~buf:"ab..c." ~pos:2 ~len:1 () = ""
+  TEST = unpack_tail_padded_fixed_string ~padding:'.' ~buf:".....x" ~pos:0 ~len:6 () = ".....x"
+  TEST = unpack_tail_padded_fixed_string ~padding:'.' ~buf:".....x" ~pos:0 ~len:5 () = ""
   TEST =
     "1abcd.78" = (
       let buf = "12345678" in
-      pack_padded_fixed_string ~padding:'.' ~buf ~pos:1 ~len:5 "abcd";
+      pack_tail_padded_fixed_string ~padding:'.' ~buf ~pos:1 ~len:5 "abcd";
       buf)
   TEST =
     "1abcde78" = (
       let buf = "12345678" in
-      pack_padded_fixed_string ~padding:'.' ~buf ~pos:1 ~len:5 "abcde";
+      pack_tail_padded_fixed_string ~padding:'.' ~buf ~pos:1 ~len:5 "abcde";
       buf)
   TEST =
     "1.....78" = (
       let buf = "12345678" in
-      pack_padded_fixed_string ~padding:'.' ~buf ~pos:1 ~len:5 "";
+      pack_tail_padded_fixed_string ~padding:'.' ~buf ~pos:1 ~len:5 "";
       buf)
   TEST =
     "1.....78" = (
       let buf = "12345678" in
-      pack_padded_fixed_string ~padding:'.' ~buf ~pos:1 ~len:5 "...";
+      pack_tail_padded_fixed_string ~padding:'.' ~buf ~pos:1 ~len:5 "...";
       buf)
 end
 ;;

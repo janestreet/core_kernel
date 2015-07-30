@@ -1,14 +1,14 @@
-(* A thread-safe non-blocking queue of unbounded size.
+(** A thread-safe non-blocking queue of unbounded size.
 
-   The implementation does not use mutexes, and so is safe to use in situations when
-   one doesn't want to block, e.g. a finalizer or an async job.
+    The implementation does not use mutexes, and so is safe to use in situations when one
+    doesn't want to block, e.g. a finalizer or an async job.
 *)
 
 type 'a t with sexp_of
 
 include Invariant.S1 with type 'a t := 'a t
 
-(* [create ()] returns an empty queue. *)
+(** [create ()] returns an empty queue. *)
 val create : unit -> 'a t
 
 val length : _ t -> int

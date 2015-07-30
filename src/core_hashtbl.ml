@@ -229,11 +229,6 @@ let fold t ~init ~f =
   end
 ;;
 
-let sexp_of_t sexp_of_k sexp_of_d t =
-  let coll ~key:k ~data:v acc = Sexp.List [sexp_of_k k; sexp_of_d v] :: acc in
-  Sexp.List (fold ~f:coll t ~init:[])
-;;
-
 let iter t ~f =
   if t.length = 0 then ()
   else begin
@@ -475,7 +470,14 @@ let of_alist_multi ?growth_allowed ?size ~hashable lst =
   create_mapped_multi ?growth_allowed ?size ~hashable ~get_key:fst ~get_data:snd lst
 ;;
 
-let to_alist t = fold ~f:(fun ~key ~data list -> (key, data)::list) ~init:[] t
+let to_alist t = fold ~f:(fun ~key ~data list -> (key, data) :: list) ~init:[] t
+
+let sexp_of_t sexp_of_key sexp_of_data t =
+  t
+  |> to_alist
+  |> List.sort ~cmp:(fun (k1, _) (k2, _) -> t.hashable.compare k1 k2)
+  |> <:sexp_of< (key * data) list >>
+;;
 
 let validate ~name f t = Validate.alist ~name f (to_alist t)
 
@@ -792,3 +794,28 @@ module Make_binable (Key : Key_binable) = struct
   end)
 
 end
+
+TEST_UNIT = (* [sexp_of_t] output is sorted by key *)
+  let module Table =
+    Make (struct
+      open Bin_prot.Std
+      type t = int with bin_io, compare, sexp
+      let hash (x : t) = if x >= 0 then x else ~-x
+    end)
+  in
+  let t = Table.create () in
+  for key = -10 to 10; do
+    Table.add_exn t ~key ~data:();
+  done;
+  List.iter
+    [ <:sexp_of< unit Table.t >>
+    ; <:sexp_of< (int, unit) t >>
+    ]
+    ~f:(fun sexp_of_t ->
+      let list =
+        t
+        |> <:sexp_of< t >>
+        |> <:of_sexp< (int * unit) list >>
+      in
+      assert (Core_list.is_sorted list ~compare:(fun (i1, _) (i2, _) -> i1 - i2)))
+;;

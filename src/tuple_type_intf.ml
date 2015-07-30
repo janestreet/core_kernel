@@ -209,7 +209,8 @@ module type Slot = sig
 
   val equal : ('v, 'a) t -> ('v, 'a) t -> bool
 
-  (* [ti] is the [i]'th slot. *)
+  (** [ti] is the [i]'th slot. *)
+
   val t0  : ([> `S0  of 'a ], 'a) t
   val t1  : ([> `S1  of 'a ], 'a) t
   val t2  : ([> `S2  of 'a ], 'a) t

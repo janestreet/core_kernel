@@ -22,8 +22,6 @@ let create ?max_mem_waiting_gc size =
     | None -> ~-1
     | Some v -> Float.to_int (Byte_units.bytes v)
   in
-  (* vgatien-baron: aux_create ~size:(-1) throws Out of memory, which could be quite
-     confusing during debugging. *)
   if size < 0 then invalid_argf "create: size = %d < 0" size ();
   aux_create ~max_mem_waiting_gc ~size
 
@@ -142,6 +140,59 @@ module To_string =
 let of_string = From_string.subo
 
 let to_string = To_string.subo
+
+(* Comparison *)
+
+external unsafe_memcmp
+  : t1 : t -> t1_pos : int -> t2 : t -> t2_pos : int -> len : int -> int
+  = "bigstring_memcmp_stub" "noalloc"
+
+let compare t1 t2 =
+  if phys_equal t1 t2 then 0 else
+    let len1 = length t1 in
+    let len2 = length t2 in
+    let len = Int.min len1 len2 in
+    match unsafe_memcmp ~t1 ~t1_pos:0 ~t2 ~t2_pos:0 ~len with
+    | 0 ->
+      if len1 < len2 then -1 else
+      if len1 > len2 then  1 else
+        0
+    | n -> n
+
+let equal t1 t2 =
+  if phys_equal t1 t2 then true else
+    let len1 = length t1 in
+    let len2 = length t2 in
+    Int.equal len1 len2
+    && Int.equal (unsafe_memcmp ~t1 ~t1_pos:0 ~t2 ~t2_pos:0 ~len:len1) 0
+
+TEST_MODULE "comparison" = struct
+  let sign n =
+    if n < 0 then ~-1 else
+    if n > 0 then   1 else
+      0
+
+  let check t1 t2 int =
+    let bool = match int with 0 -> true | _ -> false in
+    <:test_result< int >>  (sign (compare t1 t2)) ~expect:int;
+    <:test_result< bool >> (equal t1 t2)          ~expect:bool
+
+  TEST_UNIT = let t = of_string "cat" in check t t 0
+  TEST_UNIT = check (of_string "cat") (of_string "cat")   0
+  TEST_UNIT = check (of_string "cat") (of_string "cab")   1
+  TEST_UNIT = check (of_string "cat") (of_string "caz") ~-1
+  TEST_UNIT = check (of_string "cat") (of_string "c")     1
+  TEST_UNIT = check (of_string "c")   (of_string "cat") ~-1
+  TEST_UNIT = check (of_string "cat") (of_string "dog") ~-1
+  TEST_UNIT = check (of_string "dog") (of_string "cat")   1
+end
+
+BENCH_MODULE "comparison" = struct
+  let t1 = of_string "microsoft"
+  let t2 = of_string "microsoff"
+
+  BENCH "equal" = equal t1 t2
+end
 
 (* Reading / writing bin-prot *)
 
@@ -319,7 +370,19 @@ external unsafe_set_16 : t -> int -> int -> unit = "%caml_bigstring_set16u"
 external unsafe_set_32 : t -> int -> int32 -> unit = "%caml_bigstring_set32u"
 external unsafe_set_64 : t -> int -> int64 -> unit = "%caml_bigstring_set64u"
 
-let sign_extend_16 u = (u lsl (Sys.word_size - 17)) asr (Sys.word_size - 17)
+let sign_extend_16 u = (u lsl (Core_int.num_bits - 16)) asr (Core_int.num_bits - 16)
+
+TEST_UNIT =
+  List.iter [ 0,0
+            ; 1,1
+            ; 0x7fff,  32767
+            ; 0xffff, -1
+            ; 0x8000, -32768]
+    ~f:(fun (i,expect) ->
+      assert (i >= 0);
+      <:test_result<int>> ~expect (sign_extend_16 i)
+    )
+
 let unsafe_read_int16 t ~pos          = sign_extend_16 (unsafe_get_16 t pos)
 let unsafe_read_int16_swap t ~pos     = sign_extend_16 (swap16 (unsafe_get_16 t pos))
 let unsafe_write_int16 t ~pos x       = unsafe_set_16 t pos x
@@ -628,14 +691,14 @@ let rec last_nonmatch_plus_one ~buf ~min_pos ~pos ~char =
   else
     pos
 
-let get_padded_fixed_string ~padding t ~pos ~len () =
+let get_tail_padded_fixed_string ~padding t ~pos ~len () =
   let data_end = last_nonmatch_plus_one ~buf:t ~min_pos:pos ~pos:(pos + len) ~char:padding in
   to_string t ~pos ~len:(data_end - pos)
 
-let set_padded_fixed_string ~padding t ~pos ~len value =
+let set_tail_padded_fixed_string ~padding t ~pos ~len value =
   let slen = String.length value in
   if slen > len then
-    failwithf "Bigstring.set_padded_fixed_string: %S is longer than %d" value len ();
+    failwithf "Bigstring.set_tail_padded_fixed_string: %S is longer than %d" value len ();
   From_string.blit ~src:value ~dst:t ~src_pos:0 ~dst_pos:pos ~len:slen;
   for i = pos + slen to pos + len - 1; do
     set t i padding

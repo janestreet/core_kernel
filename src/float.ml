@@ -7,6 +7,8 @@ module Sexp = Sexplib.Sexp
 module String = Core_string
 open Core_printf
 
+INCLUDE "config.mlh"
+
 type 'a bound = 'a Comparable.bound = Incl of 'a | Excl of 'a | Unbounded
 
 let failwiths = Error.failwiths
@@ -226,10 +228,10 @@ TEST_MODULE = struct
 
   TEST = test_both_ways          0.  0L
   TEST = test_both_ways        (-0.) 0L
-  TEST = test_both_ways          1.  (Int64.of_int (   1023 lsl 52))
-  TEST = test_both_ways        (-2.) (Int64.of_int (- (1024 lsl 52)))
-  TEST = test_both_ways     infinity (Int64.shift_left 2047L 52)
-  TEST = test_both_ways neg_infinity (Int64.neg (Int64.shift_left 2047L 52))
+  TEST = test_both_ways          1.  Int64.(shift_left 1023L 52)
+  TEST = test_both_ways        (-2.) Int64.(neg (shift_left 1024L 52))
+  TEST = test_both_ways     infinity Int64.(shift_left 2047L 52)
+  TEST = test_both_ways neg_infinity Int64.(neg (shift_left 2047L 52))
 
   TEST = one_ulp `Down infinity = max_finite_value
   TEST = is_nan (one_ulp `Up infinity)
@@ -242,10 +244,10 @@ TEST_MODULE = struct
   let y () = min_positive_normal_value
 
   TEST = test_both_ways  (x ())  1L
-  TEST = test_both_ways  (y ())  (Int64.of_int  (1 lsl 52))
+  TEST = test_both_ways  (y ())  Int64.(shift_left 1L 52)
 
   TEST = x () > 0.
-  TEST = x () /. 2. = 0.
+  TEST_UNIT = <:test_result<float>> (x () /. 2.) ~expect:0.
 
   TEST = one_ulp `Up 0. = x ()
   TEST = one_ulp `Down 0. = ~-. (x ())
@@ -434,8 +436,14 @@ let iround_towards_zero_exn t =
    # naive_round_nearest x;;
    - :     float = 4503599627370498.
 *)
+IFDEF ARCH_SIXTYFOUR THEN
 let round_nearest_lb = -.(2. ** 52.)
 let round_nearest_ub =    2. ** 52.
+ELSE
+let int_size_minus_one = float_of_int (Core_int.num_bits - 1)
+let round_nearest_lb = -.(2. ** int_size_minus_one)
+let round_nearest_ub =   (2. ** int_size_minus_one) -. 1.
+ENDIF
 
 let iround_nearest t =
   if t >= 0. then
@@ -554,9 +562,86 @@ let round_nearest t =
   else
     t
 
+(* See [iround_lbound] and [iround_ubound] for more explanation. *)
+let int63_round_lbound = ~-. (2. ** 62.)
+let int63_round_ubound = 2.0 ** 62.0 -. 512.
+
+let int63_round_nearest_portable_alloc_exn t =
+  if t > 0.
+  then begin
+    if t <= int63_round_ubound
+    then Core_int63.of_float (round_nearest t)
+    else invalid_argf
+           "Float.int63_round_nearest_portable_alloc_exn: argument (%f) is too large" t ()
+  end
+  else begin
+    if t >= int63_round_lbound
+    then Core_int63.of_float (round_nearest t)
+    else invalid_argf
+           "Float.int63_round_nearest_portable_alloc_exn: argument (%f) is too small or NaN" t ()
+  end
+
+TEST_MODULE = struct
+  (* check we raise on invalid input *)
+  let must_fail f x = try ignore (f x); false with _ -> true
+  let must_succeed f x = try ignore (f x); true with err ->
+    print_endline (Exn.to_string err);
+    false
+  TEST = must_fail int63_round_nearest_portable_alloc_exn nan
+  TEST = must_fail int63_round_nearest_portable_alloc_exn max_value
+  TEST = must_fail int63_round_nearest_portable_alloc_exn min_value
+  TEST = must_fail int63_round_nearest_portable_alloc_exn (2. ** 63.)
+  TEST = must_fail int63_round_nearest_portable_alloc_exn (~-. (2. ** 63.))
+  TEST = must_succeed int63_round_nearest_portable_alloc_exn (2. ** 62. -. 512.)
+  TEST = must_fail int63_round_nearest_portable_alloc_exn (2. ** 62.)
+  TEST = must_fail int63_round_nearest_portable_alloc_exn (~-. (2. ** 62.) -. 1024.)
+  TEST = must_succeed int63_round_nearest_portable_alloc_exn (~-. (2. ** 62.))
+end
+
+let int63_round_nearest_arch64_noalloc_exn f = Core_int63.of_int (iround_nearest_exn f)
+
+IFDEF ARCH_SIXTYFOUR THEN
+let int63_round_nearest_exn = int63_round_nearest_arch64_noalloc_exn
+TEST =
+  let before = Core_gc.minor_words () in
+  assert (int63_round_nearest_exn 0.8 = Core_int63.of_int_exn 1);
+  let after = Core_gc.minor_words () in
+  before = after
+ELSE
+let int63_round_nearest_exn = int63_round_nearest_portable_alloc_exn
+ENDIF
+
+
+BENCH_MODULE "round_nearest portability/performance" = struct
+  let f = if Random.bool () then 1.0 else 2.0
+  BENCH "int63_round_nearest_portable_alloc_exn" = int63_round_nearest_portable_alloc_exn f
+  BENCH "int63_round_nearest_arch64_noalloc_exn" = int63_round_nearest_arch64_noalloc_exn f
+  BENCH "int63_round_nearest_exn"                = int63_round_nearest_exn f
+
+  (* Here is a comparison of both of these rounding operators on a 64-bit machine. Hence
+     we have special-cased this so that we get the faster operation on 64-bit machines.
+     We also benchmark the selected operator to make sure we actually select the right one
+
+     ┌────────────────────────────────────────┬──────────┬─────────┬────────────┐
+     │ Name                                   │ Time/Run │ mWd/Run │ Percentage │
+     ├────────────────────────────────────────┼──────────┼─────────┼────────────┤
+     │ int63_round_nearest_portable_alloc_exn │  18.41ns │   2.00w │    100.00% │
+     │ int63_round_nearest_arch64_noalloc_exn │   4.27ns │         │     23.17% │
+     │ int63_round_nearest_exn                │   4.27ns │         │     23.18% │
+     └────────────────────────────────────────┴──────────┴─────────┴────────────┘
+  *)
+
+end
+
 TEST =
   round_nearest      3.6  =  4.
   && round_nearest (-3.6) = -4.
+
+TEST =
+  let before = Core_gc.minor_words () in
+  assert(round_nearest 3.6 = 4.);
+  let after = Core_gc.minor_words () in
+  before = after
 
 let round ?(dir=`Nearest) t =
   match dir with
@@ -923,13 +1008,15 @@ let ieee_negative t =
 let exponent_bits = 11
 let mantissa_bits = 52
 
-let exponent_mask = Core_int.  ((shift_left one exponent_bits) - one)
+let exponent_mask64 = Core_int64.((shift_left one exponent_bits) - one)
+let exponent_mask = Core_int64.to_int_exn exponent_mask64
 let mantissa_mask = Core_int63.((shift_left one mantissa_bits) - one)
 let mantissa_mask64 = Core_int63.to_int64 mantissa_mask
 
 let ieee_exponent t =
   let bits = Int64.bits_of_float t in
-  ((Int64.to_int bits) lsr mantissa_bits) land exponent_mask
+  Core_int64.((bit_and (shift_right_logical bits mantissa_bits) exponent_mask64))
+  |> Int64.to_int
 
 let ieee_mantissa t =
   let bits = Int64.bits_of_float t in
@@ -953,15 +1040,25 @@ let create_ieee ~negative ~exponent ~mantissa =
   Or_error.try_with (fun () -> create_ieee_exn ~negative ~exponent ~mantissa)
 
 TEST_MODULE "IEEE" = struct
-
+  (* Note: IEEE 754 defines NaN values to be those where the exponent is all 1s and the
+     mantissa is nonzero.  test_result<t> sees nan values as equal because it
+     is based on [compare] rather than [=].  (If [x] and [x'] are nan, [compare x x']
+     returns 0, whereas [x = x'] returns [false].  This is the case regardless of
+     whether or not [x] and [x'] are bit-identical values of nan.)
+  *)
   let f (t : t) (negative : bool) (exponent : int) (mantissa : Core_int63.t) : unit =
     let str = to_string_round_trippable t in
-    <:test_result<bool>> ~message:("ieee_negative " ^ str)
-      (ieee_negative t) ~expect:negative;
+    let is_nan = is_nan t in
+    (* the sign doesn't matter when nan *)
+    if not is_nan then
+      <:test_result<bool>> ~message:("ieee_negative " ^ str)
+        (ieee_negative t) ~expect:negative;
     <:test_result<int>> ~message:("ieee_exponent " ^ str)
       (ieee_exponent t) ~expect:exponent;
-    <:test_result<Core_int63.t>> ~message:("ieee_mantissa " ^ str)
-      (ieee_mantissa t) ~expect:mantissa;
+    if is_nan
+    then assert (Core_int63.(zero <> ieee_mantissa t))
+    else <:test_result<Core_int63.t>> ~message:("ieee_mantissa " ^ str)
+           (ieee_mantissa t) ~expect:mantissa;
     <:test_result<t>>
       ~message:(sprintf !"create_ieee ~negative:%B ~exponent:%d ~mantissa:%{Core_int63}"
                   negative exponent mantissa)
@@ -1292,13 +1389,14 @@ TEST_MODULE = struct
         && round (2.0 ** 62.) = None
         && round (-. (2.0 ** 62. +. 1024.)) = None
     else
+      let int_size_minus_one = float_of_int (Core_int.num_bits - 1) in
       (* 32 bits *)
-      round (2.0 ** 30. -. 1.) = Some max_int
-        && round (2.0 ** 30. -. 2.) = Some (max_int - 1)
-        && round (-. (2.0 ** 30.)) = Some min_int
-        && round (-. (2.0 ** 30. -. 1.)) = Some (min_int + 1)
-        && round (2.0 ** 30.) = None
-        && round (-. (2.0 ** 30. +. 1.)) = None
+      round (2.0 ** int_size_minus_one -. 1.) = Some max_int
+        && round (2.0 ** int_size_minus_one -. 2.) = Some (max_int - 1)
+        && round (-. (2.0 ** int_size_minus_one)) = Some min_int
+        && round (-. (2.0 ** int_size_minus_one -. 1.)) = Some (min_int + 1)
+        && round (2.0 ** int_size_minus_one) = None
+        && round (-. (2.0 ** int_size_minus_one +. 1.)) = None
 
   TEST = extremities_test ~round:iround_down
   TEST = extremities_test ~round:iround_up

@@ -13,7 +13,7 @@ type t
     }
   with bin_io, sexp
 
-type t_hum = t with bin_io, compare, sexp_of
+type t_hum = t with sexp_of
 
 include Comparable.S with type t := t
 include Hashable.S   with type t := t
@@ -21,3 +21,7 @@ include Hashable.S   with type t := t
 (** [to_string t] converts [t] to the form ["FILE:LINE:COL"]. *)
 val to_string : t -> string
 
+
+module Stable : sig
+  module V1 : Stable_module_types.S0 with type t = t
+end

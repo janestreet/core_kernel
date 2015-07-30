@@ -25,13 +25,13 @@ module type S = sig
   val infinity : t
   val neg_infinity : t
 
-  val max_value : t                   (* Float.infinity *)
-  val min_value : t                   (* Float.neg_infinity *)
+  val max_value : t                   (** equal to [infinity] *)
+  val min_value : t                   (** equal to [neg_infinity] *)
   val zero : t
   val one : t
   val minus_one : t
 
-  (* See [Robust_compare] *)
+  (** See {!module:Robust_compare} *)
   val robust_comparison_tolerance : t
 
   (** The difference between 1.0 and the smallest exactly representable floating-point
@@ -127,6 +127,8 @@ module type S = sig
   val iround_up_exn           : t -> int
   val iround_nearest_exn      : t -> int
 
+  val int63_round_nearest_exn : t -> Core_int63.t
+
   (** If [f <= iround_lbound || f >= iround_ubound], then [iround*] functions will refuse
       to round [f], returning [None] or raising as appropriate. *)
   val iround_lbound : t
@@ -161,15 +163,22 @@ module type S = sig
 
   (** [mod_float x y] returns a result with the same sign as [x].  It returns [nan] if [y]
       is [0].  It is basically
-      [let mod_float x y = x -. float(truncate(x/.y)) *. y]
+
+      {[ let mod_float x y = x -. float(truncate(x/.y)) *. y]}
+
       not
-      [let mod_float x y = x -. floor(x/.y) *. y]
+
+      {[ let mod_float x y = x -. floor(x/.y) *. y ]}
+
       and therefore resembles [mod] on integers more than [%].
   *)
   val mod_float : t -> t -> t
 
-  (* mostly for modules that inherit from t, since the infix operators are more
-     convenient *)
+  (** {6 Ordinary functions for arithmetic operations}
+
+      These are for modules that inherit from t, since the infix operators are more
+      convenient
+  *)
   val add : t -> t -> t
   val sub : t -> t -> t
   val neg : t -> t
@@ -205,9 +214,9 @@ module type S = sig
       [to_string_hum ~decimals:3 ~strip_zero:true 1234.1999 = "1_234.2" ].  No delimiters
       are inserted to the right of the decimal. *)
   val to_string_hum
-    :  ?delimiter:char  (* defaults to '_' *)
-    -> ?decimals:int    (* defaults to 3 *)
-    -> ?strip_zero:bool (* defaults to false *)
+    :  ?delimiter:char  (** defaults to ['_'] *)
+    -> ?decimals:int    (** defaults to [3] *)
+    -> ?strip_zero:bool (** defaults to [false] *)
     -> float
     -> string
 
@@ -282,15 +291,17 @@ module type S = sig
     include Stringable.S with type t := t
   end
 
-  (* return the Class.t.  Excluding nan the floating-point "number line" looks like:
-       t                Class.t    example
-     ^ neg_infinity     Infinite   neg_infinity
-     | neg normals      Normal     -3.14
-     | neg subnormals   Subnormal  -.2. ** -1023.
-     | (-/+) zero       Zero       0.
-     | pos subnormals   Subnormal  2. ** -1023.
-     | pos normals      Normal     3.14
-     v infinity         Infinite   infinity
+  (** return the Class.t.  Excluding nan the floating-point "number line" looks like:
+      {v
+               t                Class.t    example
+             ^ neg_infinity     Infinite   neg_infinity
+             | neg normals      Normal     -3.14
+             | neg subnormals   Subnormal  -.2. ** -1023.
+             | (-/+) zero       Zero       0.
+             | pos subnormals   Subnormal  2. ** -1023.
+             | pos normals      Normal     3.14
+             v infinity         Infinite   infinity
+      v}
   *)
   val classify : t -> Class.t
 

@@ -78,12 +78,15 @@ module type S = sig
 
   (** [create slots ~capacity ~dummy] creates an empty pool that can hold up to [capacity]
       N-tuples.  The slots of [dummy] are stored in free tuples.  [create] raises if
-      [capacity < 0]. *)
+      [capacity < 0 || capacity > max_capacity ~slots_per_tuple]. *)
   val create
     :  (('tuple, _) Slots.t as 'slots)
-    -> capacity:int
-    -> dummy:'tuple
+    -> capacity : int
+    -> dummy    : 'tuple
     -> 'slots t
+
+  (** [max_capacity] returns the maximum capacity allowed when creating a pool. *)
+  val max_capacity : slots_per_tuple:int -> int
 
   (** [capacity] returns the maximum number of tuples that the pool can hold. *)
   val capacity : _ t -> int

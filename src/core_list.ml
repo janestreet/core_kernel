@@ -526,6 +526,96 @@ let reduce_exn l ~f =
   | None -> raise (Invalid_argument "List.reduce_exn")
   | Some v -> v
 
+let reduce_balanced l ~f =
+  (* Call the "size" of a value the number of list elements that have been combined into
+     it via calls to [f].  We proceed by using [f] to combine elements in the accumulator
+     of the same size until we can't combine any more, then getting a new element from the
+     input list and repeating.
+
+     With this strategy, in the accumulator:
+     - we only ever have elements of sizes a power of two
+     - we never have more than one element of each size
+     - the sum of all the element sizes is equal to the number of elements consumed
+
+     These conditions enforce that list of elements of each size is precisely the binary
+     expansion of the number of elements consumed: if you've consumed 13 = 0b1101
+     elements, you have one element of size 8, one of size 4, and one of size 1.  Hence
+     when a new element comes along, the number of combinings you need to do is the number
+     of trailing 1s in the binary expansion of [num], the number of elements that have
+     already gone into the accumulator.  The accumulator is in ascending order of size, so
+     the next element to combine with is always the head of the list. *)
+  let rec step_accum num acc x =
+    if num land 1 = 0
+    then x :: acc
+    else
+      match acc with
+      | [] -> assert false
+      (* New elements from later in the input list go on the front of the accumulator, so
+         the accumulator is in reverse order wrt the original list order, hence [f y x]
+         instead of [f x y]. *)
+      | y :: ys -> step_accum (num asr 1) ys (f y x)
+  in
+  (* Experimentally, inlining [foldi] and unrolling this loop a few times can reduce
+     runtime down to a third and allocation to 1/16th or so in the microbenchmarks below.
+     However, in most use cases [f] is likely to be expensive (otherwise why do you care
+     about the order of reduction?) so the overhead of this function itself doesn't really
+     matter. If you come up with a use-case where it does, then that's something you might
+     want to try: see hg log -pr 49ef065f429d. *)
+  match foldi l ~init:[] ~f:step_accum with
+  | [] -> None
+  | x :: xs -> Some (fold xs ~init:x ~f:(fun x y -> f y x))
+
+let reduce_balanced_exn l ~f =
+  match reduce_balanced l ~f with
+  | None -> raise (Invalid_argument "List.reduce_balanced_exn")
+  | Some v -> v
+
+TEST_MODULE "reduce_balanced" = struct
+  let test expect list =
+    <:test_result<string option>> ~expect
+      (reduce_balanced ~f:(fun a b -> "(" ^ a  ^ "+" ^ b ^ ")") list)
+
+  TEST_UNIT "length 0" =
+    test None []
+
+  TEST_UNIT "length 1" =
+    test (Some "a") ["a"]
+
+  TEST_UNIT "length 2" =
+    test (Some "(a+b)") ["a"; "b"]
+
+  TEST_UNIT "length 6" =
+    test (Some "(((a+b)+(c+d))+(e+f))") ["a";"b";"c";"d";"e";"f"]
+
+  TEST_UNIT "longer" =
+    (* pairs (index, number of times f called on me) to check:
+       1. f called on results in index order
+       2. total number of calls on any element is low
+       called on 2^n + 1 to demonstrate lack of balance (most elements are distance 7 from
+       the tree root, but one is distance 1) *)
+    let data = map (range 0 65) ~f:(fun i -> [(i, 0)]) in
+    let f x y = map (x @ y) ~f:(fun (ix, cx) -> (ix, cx + 1)) in
+    match reduce_balanced data ~f with
+    | None -> failwith "None"
+    | Some l ->
+      <:test_result<int>> ~expect:65 (List.length l);
+      iteri l ~f:(fun actual_index (computed_index, num_f) ->
+        let expected_num_f = if actual_index = 64 then 1 else 7 in
+        <:test_result< int * int >>
+          ~expect:(actual_index, expected_num_f) (computed_index, num_f))
+end
+
+BENCH_INDEXED "reduce_balanced" i [5; 7; 9; 11; 13; 20] =
+  let l = range 0 (1 lsl i) in
+  fun () ->
+    reduce_balanced l ~f:(+)
+
+BENCH_INDEXED "reduce_imbalanced" i [5; 7; 9; 11; 13; 20] =
+  let l = range 0 (1 lsl i) in
+  fun () ->
+    reduce l ~f:(+)
+
+
 let groupi l ~break =
   let groups =
     foldi l ~init:[] ~f:(fun i acc x ->
@@ -754,10 +844,10 @@ let exn_if_dup ?compare ?(context="exn_if_dup") t ~to_sexp =
   | Some dup ->
     raise (Duplicate_found ((fun () -> to_sexp dup),context))
 
-let count t ~f = Container.fold_count fold t ~f
-let sum m t ~f = Container.fold_sum m fold t ~f
-let min_elt t ~cmp = Container.fold_min fold t ~cmp
-let max_elt t ~cmp = Container.fold_max fold t ~cmp
+let count t ~f = Container.count ~fold t ~f
+let sum m t ~f = Container.sum ~fold m t ~f
+let min_elt t ~cmp = Container.min_elt ~fold t ~cmp
+let max_elt t ~cmp = Container.max_elt ~fold t ~cmp
 
 let init n ~f =
   if n < 0 then invalid_argf "List.init %d" n ();

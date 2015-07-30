@@ -69,7 +69,7 @@ end
 (** argument lists and associated N-ary map and apply functions *)
 module type Args = sig
 
-  type 'a arg (* the underlying applicative *)
+  type 'a arg (** the underlying applicative *)
 
   (** ['f] is the type of a function that consumes the list of arguments and returns an
       ['r]. *)
@@ -176,25 +176,16 @@ module type S2 = sig
   include module type of Applicative_infix
 end
 
-module Check_S2_refines_S (X : S) : (S2 with type ('a, 'e) t = 'a X.t) = struct
+(** This module serves mostly as a partial check that [S2] and [S] are in sync, but
+    actually calling it is occasionally useful. *)
+module S_to_S2 (X : S) : (S2 with type ('a, 'e) t = 'a X.t) = struct
   type ('a, 'e) t = 'a X.t
-  include struct
-    open X
-    let return = return
-    let apply  = apply
-    let map    = map
-    let map2   = map2
-    let map3   = map3
-    let all    = all
-    let both   = both
-  end
-  module Applicative_infix = struct
-    open X.Applicative_infix
-    let ( <*> ) = ( <*> )
-    let ( <*  ) = ( <*  )
-    let (  *> ) = (  *> )
-  end
-  include Applicative_infix
+  include (X : S with type 'a t := 'a X.t)
+end
+
+module S2_to_S (X : S2) : (S with type 'a t = ('a, unit) X.t) = struct
+  type 'a t = ('a, unit) X.t
+  include (X : S2 with type ('a, 'e) t := ('a, 'e) X.t)
 end
 
 module type Args2 = sig
@@ -213,18 +204,11 @@ module type Args2 = sig
   val applyN : ('f, 'e) arg -> ('f, 'r, 'e) t -> ('r, 'e) arg
 end
 
-module Check_Args2_refines_Args (X : Args) : (
+module Args_to_Args2 (X : Args) : (
   Args2 with type ('a, 'e) arg = 'a X.arg
         with type ('f, 'r, 'e) t = ('f, 'r) X.t
 ) = struct
   type ('a, 'e) arg = 'a X.arg
   type ('f, 'r, 'e) t = ('f, 'r) X.t
-
-  open X
-  let nil    = nil
-  let cons   = cons
-  let (@>)   = (@>)
-  let step   = step
-  let mapN   = mapN
-  let applyN = applyN
+  include (X : Args with type 'a arg := 'a X.arg and type ('f, 'r) t := ('f, 'r) X.t)
 end

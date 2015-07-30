@@ -1,13 +1,13 @@
-(* An int of exactly 32 bits, regardless of the machine.
+(** An int of exactly 32 bits, regardless of the machine.
 
-   Side note: There's not much reason to want an int of at least 32 bits (i.e.
-   32 on 32-bit machines and 63 on 64-bit machines) because Int63 is basically
-   just as efficient.
+    Side note: There's not much reason to want an int of at least 32 bits (i.e.
+    32 on 32-bit machines and 63 on 64-bit machines) because Int63 is basically
+    just as efficient.
 
-   Overflow issues are _not_ generally considered and explicitly handled.  This
-   may be more of an issue for 32-bit ints than 64-bit ints.
+    Overflow issues are _not_ generally considered and explicitly handled.  This
+    may be more of an issue for 32-bit ints than 64-bit ints.
 
-   [Int32.t] is boxed on both 32-bit and 64-bit machines.
+    [Int32.t] is boxed on both 32-bit and 64-bit machines.
 *)
 
 include Int_intf.S with type t = int32

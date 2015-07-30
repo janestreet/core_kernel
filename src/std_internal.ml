@@ -1,7 +1,3 @@
-(* bgrundmann:
-   I can't just include Sexplib.Std because
-   I can only define Hashtbl once in this module
-*)
 module Set = Core_set
 module Map = Core_map
 module Array = Core_array
@@ -201,48 +197,50 @@ include Ordering.Export
    consistent with the generic map and set signatures defined in core_map_intf.ml
    and core_set_intf.ml. *)
 
-let module M : sig
-  open Core_set_intf
+let () =
+  let module M : sig
+    open Core_set_intf
 
-  module Tree : sig
+    module Tree : sig
+      type ('a, 'b) t
+
+      include Creators_and_accessors2_with_comparator
+        with type ('a, 'b) set  := ('a, 'b) t
+        with type ('a, 'b) t    := ('a, 'b) t
+        with type ('a, 'b) tree := ('a, 'b) t
+    end
+
     type ('a, 'b) t
 
-    include Creators_and_accessors2_with_comparator
+    include Accessors2
+      with type ('a, 'b) t    := ('a, 'b) t
+      with type ('a, 'b) tree := ('a, 'b) Tree.t
+
+    include Creators2_with_comparator
       with type ('a, 'b) set  := ('a, 'b) t
       with type ('a, 'b) t    := ('a, 'b) t
-      with type ('a, 'b) tree := ('a, 'b) t
-  end
+      with type ('a, 'b) tree := ('a, 'b) Tree.t
+  end = Set in ()
 
-  type ('a, 'b) t
+let () =
+  let module M : sig
+    open Core_map_intf
 
-  include Accessors2
-    with type ('a, 'b) t    := ('a, 'b) t
-    with type ('a, 'b) tree := ('a, 'b) Tree.t
+    module Tree : sig
+      type ('a, 'b, 'c) t
 
-  include Creators2_with_comparator
-    with type ('a, 'b) set  := ('a, 'b) t
-    with type ('a, 'b) t    := ('a, 'b) t
-    with type ('a, 'b) tree := ('a, 'b) Tree.t
-end = Set in ()
+      include Creators_and_accessors3_with_comparator
+        with type ('a, 'b, 'c) t    := ('a, 'b, 'c) t
+        with type ('a, 'b, 'c) tree := ('a, 'b, 'c) t
+    end
 
-let module M : sig
-  open Core_map_intf
-
-  module Tree : sig
     type ('a, 'b, 'c) t
 
-    include Creators_and_accessors3_with_comparator
+    include Accessors3
       with type ('a, 'b, 'c) t    := ('a, 'b, 'c) t
-      with type ('a, 'b, 'c) tree := ('a, 'b, 'c) t
-  end
+      with type ('a, 'b, 'c) tree := ('a, 'b, 'c) Tree.t
 
-  type ('a, 'b, 'c) t
-
-  include Accessors3
-    with type ('a, 'b, 'c) t    := ('a, 'b, 'c) t
-    with type ('a, 'b, 'c) tree := ('a, 'b, 'c) Tree.t
-
-  include Creators3_with_comparator
-    with type ('a, 'b, 'c) t    := ('a, 'b, 'c) t
-    with type ('a, 'b, 'c) tree := ('a, 'b, 'c) Tree.t
-end = Map in ()
+    include Creators3_with_comparator
+      with type ('a, 'b, 'c) t    := ('a, 'b, 'c) t
+      with type ('a, 'b, 'c) tree := ('a, 'b, 'c) Tree.t
+  end = Map in ()

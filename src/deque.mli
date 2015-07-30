@@ -22,7 +22,7 @@ include Container.        S1 with type 'a t := 'a t
     then [never_shrink] is presumed to be [true], otherwise [never_shrink] defaults to
     [false]. *)
 val create
-  :  ?initial_length:int  (* defaults to 7 *)
+  :  ?initial_length:int  (** defaults to 7 *)
   -> ?never_shrink:bool   (* see comment above *)
   -> unit
   -> _ t

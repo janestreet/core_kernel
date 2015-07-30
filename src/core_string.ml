@@ -31,6 +31,7 @@ let max_length = Caml.Sys.max_string_length
 
 (* Standard functions *)
 let capitalize = String.capitalize
+let (^) = (^)
 let concat ?(sep="") l = String.concat ~sep l
 let copy = String.copy
 let escaped = String.escaped
@@ -836,11 +837,11 @@ let foldi t ~init ~f =
 TEST = (foldi "hello" ~init:[] ~f:(fun i acc ch -> (i,ch)::acc)
         = List.rev [0,'h';1,'e';2,'l';3,'l';4,'o'])
 
-let count t ~f = Container.fold_count fold t ~f
-let sum m t ~f = Container.fold_sum m fold t ~f
+let count t ~f = Container.count ~fold t ~f
+let sum m t ~f = Container.sum ~fold m t ~f
 
-let min_elt = Container.fold_min fold
-let max_elt = Container.fold_max fold
+let min_elt t = Container.min_elt ~fold t
+let max_elt t = Container.max_elt ~fold t
 
 let mem ?(equal = Char.(=)) t c =
   let rec loop i = i < length t && (equal c t.[i] || loop (i + 1)) in

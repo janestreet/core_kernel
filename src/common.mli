@@ -1,8 +1,6 @@
 (** Basic types and definitions required throughout the system. *)
 open Sexplib
 
-(* pzimmer: use Bug when the condition is checkable but requires you to look further
-   away *)
 exception Bug of string
 
 (** Raised when finalization after an exception failed, too.
@@ -49,8 +47,23 @@ val ident : 'a -> 'a
 val const : 'a -> _ -> 'a
 val (==>) : bool -> bool -> bool
 
-val failwiths    : ?here:Lexing.position -> string -> 'a -> ('a -> Sexp.t) -> _
-val failwithp    :       Lexing.position -> string -> 'a -> ('a -> Sexp.t) -> _
+(** [Error.failwiths] *)
+val failwiths
+  :  ?strict : unit
+  -> ?here:Lexing.position
+  -> string
+  -> 'a
+  -> ('a -> Sexp.t)
+  -> _
+
+(** [Error.failwithp] *)
+val failwithp
+  :  ?strict : unit
+  -> Lexing.position
+  -> string
+  -> 'a
+  -> ('a -> Sexp.t)
+  -> _
 
 val failwithf    : ('r, unit, string, unit -> _) format4 -> 'r
 val invalid_argf : ('r, unit, string, unit -> _) format4 -> 'r
@@ -59,7 +72,12 @@ val invalid_argf : ('r, unit, string, unit -> _) format4 -> 'r
 val ok_exn : 'a Or_error.t -> 'a
 
 (** [Or_error.error] *)
-val error : string -> 'a -> ('a -> Sexp.t) -> _ Or_error.t
+val error
+  :  ?strict : unit
+  -> string
+  -> 'a
+  -> ('a -> Sexp.t)
+  -> _ Or_error.t
 
 (** [with_return f] allows for something like the return statement in C within [f].  There
    are three ways [f] can terminate:
@@ -136,7 +154,8 @@ exception C_malloc_exn of int * int
   library that are considered problematic or confusing, or simply redundant.
 *)
 
-(* override Pervasives methods that need LargeFile support *)
+(** {7 Overrides for Pervasives methods that need LargeFile support} *)
+
 val seek_out : [ `Deprecated_use_out_channel ] -> [ `Deprecated_use_out_channel ] -> [ `Deprecated_use_out_channel ]
 val pos_out : [ `Deprecated_use_out_channel ] -> [ `Deprecated_use_out_channel ]
 val out_channel_length : [ `Deprecated_use_out_channel ] -> [ `Deprecated_use_out_channel ]

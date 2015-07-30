@@ -1,39 +1,40 @@
-(* Core_hashtbl is a reimplementation of the standard MoreLabels.Hashtbl.  Its worst case
-   time complexity is O(log(N)) for lookups and additions, unlike the standard
-   MoreLabels.Hashtbl, which is O(N)
+(** Core_hashtbl is a reimplementation of the standard MoreLabels.Hashtbl.  Its worst case
+    time complexity is O(log(N)) for lookups and additions, unlike the standard
+    MoreLabels.Hashtbl, which is O(N)
 
-   A hash table is implemented as an array of AVL trees (see [Avltree]). If
-   [growth_allowed] (default true) is false then [size] is the final size of the array,
-   the table can always hold more elements than [size], however they will all go into tree
-   nodes. If it is true (default) then the array will double in size when the number of
-   elements in the table reaches twice the size of the array. When this happens all
-   existing elements will be reinserted, which can take a long time. If you care about
-   latency set [size] and [growth_allowed=false] if possible.
+    A hash table is implemented as an array of AVL trees (see [Avltree]). If
+    [growth_allowed] (default true) is false then [size] is the final size of the array,
+    the table can always hold more elements than [size], however they will all go into
+    tree nodes. If it is true (default) then the array will double in size when the number
+    of elements in the table reaches twice the size of the array. When this happens all
+    existing elements will be reinserted, which can take a long time. If you care about
+    latency set [size] and [growth_allowed=false] if possible.
 
-   We have three kinds of hash table modules:
+    We have three kinds of hash table modules:
 
-   Hashtbl
-   Hashtbl.Poly
-   Key.Table       (a class of similar modules)
+    Hashtbl
+    Hashtbl.Poly
+    Key.Table       (a class of similar modules)
 
-   There are three kinds of hash-table functions:
+    There are three kinds of hash-table functions:
 
-   creation from nothing (create, of_alist)
-   sexp converters (t_of_sexp, sexp_of_t, and bin_io too)
-   accessors and mappers (fold, mem, find, map, filter_map, ...)
+    creation from nothing (create, of_alist)
+    sexp converters (t_of_sexp, sexp_of_t, and bin_io too)
+    accessors and mappers (fold, mem, find, map, filter_map, ...)
 
-   Here is a table showing what classes of functions are available in each kind
-   of hash-table module:
+    Here is a table showing what classes of functions are available in each kind
+    of hash-table module:
 
-                 creation   sexp-conv   accessors
-   Hashtbl                                   X
-   Hashtbl.Poly      X           X
-   Key.Table         X           X           X'
+    creation   sexp-conv   accessors
+    Hashtbl                                   X
+    Hashtbl.Poly      X           X
+    Key.Table         X           X           X'
 
-   The entry marked with X' is there for historical reasons, and may be eliminated at some
-   point.  The upshot is that one should use [Hashtbl] for accessors, [Hashtbl.Poly] for
-   hash-table creation and sexp conversion using polymorphic compare/hash, and [Key.Table]
-   for hash-table creation and sexp conversion using [Key.compare] and [Key.hash]. *)
+    The entry marked with X' is there for historical reasons, and may be eliminated at
+    some point.  The upshot is that one should use [Hashtbl] for accessors, [Hashtbl.Poly]
+    for hash-table creation and sexp conversion using polymorphic compare/hash, and
+    [Key.Table] for hash-table creation and sexp conversion using [Key.compare] and
+    [Key.hash]. *)
 
 (** For many students of ocaml, using hashtables is complicated by the
     functors.  Here are a few tips: *)

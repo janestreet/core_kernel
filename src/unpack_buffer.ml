@@ -3,10 +3,10 @@ open Std_internal
 let debug = ref false
 
 module Unpack_one = struct
-  type ('value, 'partial_unpack) t =
-    ?partial_unpack:'partial_unpack
-    -> ?pos:int
-    -> ?len:int
+  type ('value, 'partial_unpack) t
+    =  ?partial_unpack : 'partial_unpack
+    -> ?pos            : int
+    -> ?len            : int
     -> Bigstring.t
     -> [ `Ok of 'value * int
        | `Not_enough_data of 'partial_unpack * int
@@ -49,27 +49,27 @@ module Unpack_one = struct
     in
     create
       (fun ?partial_unpack:_ buf ~pos ~len ->
-        if header_length > len then
-          not_enough_data
-        else begin
-          match read Bin_prot.Utils.bin_read_size_header buf ~pos ~len:header_length with
-          | `Invalid_data _ as x -> x
-          | `Ok element_length ->
-            if element_length < 0 then
-              invalid_data "negative element length %d" element_length <:sexp_of< int >>
-            else begin
-              if element_length > len - header_length then
-                not_enough_data
-              else begin
-                match
-                  read bin_prot_reader.Bin_prot.Type_class.read
-                    buf ~pos:(pos + header_length) ~len:element_length
-                with
-                | `Invalid_data _ as x -> x
-                | `Ok result -> `Ok (result, header_length + element_length)
-              end
-            end
-        end)
+         if header_length > len then
+           not_enough_data
+         else begin
+           match read Bin_prot.Utils.bin_read_size_header buf ~pos ~len:header_length with
+           | `Invalid_data _ as x -> x
+           | `Ok element_length ->
+             if element_length < 0 then
+               invalid_data "negative element length %d" element_length <:sexp_of< int >>
+             else begin
+               if element_length > len - header_length then
+                 not_enough_data
+               else begin
+                 match
+                   read bin_prot_reader.Bin_prot.Type_class.read
+                     buf ~pos:(pos + header_length) ~len:element_length
+                 with
+                 | `Invalid_data _ as x -> x
+                 | `Ok result -> `Ok (result, header_length + element_length)
+               end
+             end
+         end)
   ;;
 
   type partial_sexp = (Bigstring.t, Sexp.t) Sexp.parse_fun sexp_opaque with sexp_of
@@ -81,30 +81,30 @@ module Unpack_one = struct
     in
     create
       (fun ?(partial_unpack = partial_unpack_init) buf ~pos ~len ->
-        try
-          begin match partial_unpack ~pos ~len buf with
-          | Sexp.Cont (_state, k) -> `Not_enough_data (k, len)
-          | Sexp.Done (sexp, parse_pos) -> `Ok (sexp, parse_pos.Parse_pos.buf_pos - pos)
-          end
-        with exn -> `Invalid_data (Error.of_exn exn))
+         try
+           begin match partial_unpack ~pos ~len buf with
+           | Sexp.Cont (_state, k) -> `Not_enough_data (k, len)
+           | Sexp.Done (sexp, parse_pos) -> `Ok (sexp, parse_pos.Parse_pos.buf_pos - pos)
+           end
+         with exn -> `Invalid_data (Error.of_exn exn))
   ;;
 end
 
 type ('a, 'b) alive =
-  { mutable partial_unpack : 'b option;
-    unpack_one : ('a, 'b) Unpack_one.t sexp_opaque;
-    (* [buf] holds unconsumed chars *)
-    mutable buf : Bigstring.t;
-    (* [pos] is the start of unconsumed data in [buf] *)
-    mutable pos : int;
-    (* [len] is the length of unconsumed data in [buf] *)
-    mutable len : int;
+  { mutable partial_unpack : 'b option
+  ; unpack_one : ('a, 'b) Unpack_one.t sexp_opaque
+  (* [buf] holds unconsumed chars *)
+  ; mutable buf : Bigstring.t
+  (* [pos] is the start of unconsumed data in [buf] *)
+  ; mutable pos : int
+  (* [len] is the length of unconsumed data in [buf] *)
+  ; mutable len : int
   }
-  with sexp_of
+with sexp_of
 
 type ('a, 'b) state =
-| Alive of ('a, 'b) alive
-| Dead of Error.t
+  | Alive of ('a, 'b) alive
+  | Dead  of Error.t
 with sexp_of
 
 type ('a, 'b) t =
@@ -131,12 +131,12 @@ let invariant t =
 
 let create ?partial_unpack unpack_one =
   { state =
-      Alive { partial_unpack;
-               unpack_one;
-               buf = Bigstring.create 1;
-               pos = 0;
-               len = 0;
-             };
+      Alive { partial_unpack
+            ; unpack_one
+            ; buf            = Bigstring.create 1
+            ; pos            = 0
+            ; len            = 0
+            };
   }
 ;;
 
@@ -168,7 +168,7 @@ let ensure_available t len =
 ;;
 
 let feed_gen buf_length (blit_buf_to_bigstring : (_, _) Blit.blito)
-    ?pos ?len t buf =
+      ?pos ?len t buf =
   if !debug then invariant t;
   match t.state with
   | Dead e -> Error e
@@ -185,7 +185,7 @@ let feed_gen buf_length (blit_buf_to_bigstring : (_, _) Blit.blito)
 ;;
 
 let feed ?pos ?len t buf =
-  feed_gen Bigstring.length Bigstring.blito                  ?pos ?len t buf
+  feed_gen Bigstring.length Bigstring.blito             ?pos ?len t buf
 ;;
 
 let feed_string ?pos ?len t buf =
@@ -225,7 +225,7 @@ let unpack_iter t ~f =
                where atom ends until we hit parenthesis, e.g. "abc(". *)
             if num_bytes < 0 || num_bytes > t.len then
               error (Error.create "unpack consumed invalid amount" num_bytes
-                       (<:sexp_of< int >>))
+                       <:sexp_of< int >>)
             else if num_bytes = 0 && Option.is_none t.partial_unpack then
               error (Error.of_string "\
 unpack returned a value but consumed 0 bytes without partially unpacked data")
@@ -243,7 +243,7 @@ unpack returned a value but consumed 0 bytes without partially unpacked data")
                consumed more bytes than were available. *)
             if num_bytes < 0 || num_bytes > t.len then
               error (Error.create "partial unpack consumed invalid amount" num_bytes
-                       (<:sexp_of< int >>))
+                       <:sexp_of< int >>)
             else begin
               consume ~num_bytes;
               t.partial_unpack <- Some partial_unpack;
@@ -317,11 +317,11 @@ TEST_MODULE "unpack-buffer" = struct
       with exn ->
         failwiths "failure"
           (exn, `chunk_size chunk_size, `input input, values, t)
-          (<:sexp_of< (exn
+          <:sexp_of< (exn
                        * [ `chunk_size of int ]
                        * [ `input of Bigstring.t ]
                        * V.t list
-                       * (V.t, V.partial_unpack) t )>>);
+                       * (V.t, V.partial_unpack) t )>>;
     done;
   ;;
 
@@ -334,13 +334,13 @@ TEST_MODULE "unpack-buffer" = struct
         let unpack_one =
           Unpack_one.create
             (fun ?partial_unpack:_ buf ~pos ~len ->
-              if len < value_size then
-                `Not_enough_data ((), 0)
-              else
-                let string = String.create value_size in
-                Bigstring.To_string.blito ~src:buf ~src_pos:pos ~src_len:value_size
-                  ~dst:string ();
-                `Ok (string, value_size))
+               if len < value_size then
+                 `Not_enough_data ((), 0)
+               else
+                 let string = String.create value_size in
+                 Bigstring.To_string.blito ~src:buf ~src_pos:pos ~src_len:value_size
+                   ~dst:string ();
+                 `Ok (string, value_size))
         include String
       end in
       let values =
@@ -430,11 +430,12 @@ TEST_MODULE "unpack-buffer" = struct
   TEST_UNIT =
     debug := true;
     let module Value = struct
-      type t = {
-        foo : bool;
-        bar : int;
-        baz : string list
-      } with bin_io, compare, sexp
+      type t =
+        { foo : bool
+        ; bar : int
+        ; baz : string list
+        }
+      with bin_io, compare, sexp
 
       let equal t t' = compare t t' = 0
 

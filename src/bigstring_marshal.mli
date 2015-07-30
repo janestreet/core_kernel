@@ -6,17 +6,17 @@
 
 (** marshals value [_] to the bigstring at most [len] bytes. *)
 val marshal_blit
-  : ?flags : Marshal.extern_flags list  (* default = [] *)
+  : ?flags : Marshal.extern_flags list  (** default = [] *)
   -> _
   -> ?pos : int
-  -> ?len : int                         (* default = length buf - pos *)
+  -> ?len : int                         (** default = length buf - pos *)
   -> Bigstring.t
   -> int
 
 (** marshals value [_] to a new bigstring.  This function may need two times more memory
     than [marshal_blit]. *)
 val marshal
-  : ?flags : Marshal.extern_flags list  (* default = [] *)
+  : ?flags : Marshal.extern_flags list  (** default = [] *)
   -> _
   -> Bigstring.t
 

@@ -1,5 +1,5 @@
-open Std_internal
-open Int.Replace_polymorphic_compare  let () = _squelch_unused_module_warning_
+open! Std_internal
+open! Int.Replace_polymorphic_compare
 
 module Slots = Tuple_type.Slots
 
@@ -30,13 +30,13 @@ module Metadata = struct
   (* We rely on immutability of the metadata in the [copy] function, which shares the
      pointer to the metadata between the original and the copy. *)
   type 'slots t =
-    { slots : 'slots;
+    { slots : 'slots
       (* [slots_per_tuple] is number of slots in a tuple as seen by the user; i.e. not
          counting the next-free pointer. *)
-      slots_per_tuple : int;
-      length : int;
+    ; slots_per_tuple : int
+    ; length : int
       (* [Obj_array.length dummy = slots_per_tuple]. *)
-      dummy : Obj_array.t sexp_opaque;
+    ; dummy : Obj_array.t sexp_opaque
     }
   with fields, sexp_of
 
@@ -77,7 +77,7 @@ let invariant slots_invariant t : unit =
       ~dummy:(check (fun dummy ->
         assert (Obj_array.length dummy = metadata.slots_per_tuple)))
   with exn ->
-    failwiths "Flat_array.invariant failed" (exn, t) (<:sexp_of< exn * _ t >>)
+    failwiths "Flat_array.invariant failed" (exn, t) <:sexp_of< exn * _ t >>
 ;;
 
 let set_metadata (type slots) (t : slots t) metadata =
@@ -91,8 +91,8 @@ let create_array (type slots) (metadata : slots Metadata.t) : slots t =
 ;;
 
 let check_index t metadata i =
-  if i < 0 || i >= metadata.length then
-    failwiths "Flat_array got invalid index" (i, t) <:sexp_of< int * _ t >>;
+  if i < 0 || i >= metadata.length
+  then failwiths "Flat_array got invalid index" (i, t) <:sexp_of< int * _ t >>;
 ;;
 
 let set_to_init t tuple_num =
@@ -118,14 +118,13 @@ let is_init t tuple_num =
 ;;
 
 let create (type tuple) (slots : (tuple, _) Slots.t) ~len:length dummy =
-  if length < 0 then
-    failwiths "Flat_array.create got invalid length" length <:sexp_of< int >>;
+  if length < 0
+  then failwiths "Flat_array.create got invalid length" length <:sexp_of< int >>;
   let slots_per_tuple = Slots.slots_per_tuple slots in
   let dummy =
-    if slots_per_tuple = 1 then
-      Obj_array.singleton (Obj.repr (dummy : tuple))
-    else
-      (Obj.magic (dummy : tuple) : Obj_array.t)
+    if slots_per_tuple = 1
+    then Obj_array.singleton (Obj.repr (dummy : tuple))
+    else (Obj.magic (dummy : tuple) : Obj_array.t)
   in
   let metadata = { Metadata. slots; slots_per_tuple; length; dummy } in
   let t = create_array metadata in
@@ -165,8 +164,8 @@ let get_all_slots (type tuple) (t : (tuple, _) Slots.t t) i =
   let metadata = metadata t in
   check_index t metadata i;
   let len = metadata.slots_per_tuple in
-  if len = 1 then
-    unsafe_get t i Slot.t0
+  if len = 1
+  then unsafe_get t i Slot.t0
   else
     let obj =
       Obj_array.sub t ~pos:(Metadata.tuple_num_to_first_slot_index metadata i) ~len
@@ -178,13 +177,12 @@ let set_all_slots (type tuple) (t : (tuple, _) Slots.t t) i tuple =
   let metadata = metadata t in
   check_index t metadata i;
   let len = metadata.slots_per_tuple in
-  if len = 1 then
-    unsafe_set t i Slot.t0 tuple
-  else
-    Obj_array.blit
-      ~src:(Obj.magic (tuple : tuple) : Obj_array.t) ~src_pos:0
-      ~dst:t ~dst_pos:(Metadata.tuple_num_to_first_slot_index metadata i)
-      ~len
+  if len = 1
+  then unsafe_set t i Slot.t0 tuple
+  else Obj_array.blit
+         ~src:(Obj.magic (tuple : tuple) : Obj_array.t) ~src_pos:0
+         ~dst:t ~dst_pos:(Metadata.tuple_num_to_first_slot_index metadata i)
+         ~len
 ;;
 
 let unsafe_blit ~src ~src_pos ~dst ~dst_pos ~len =

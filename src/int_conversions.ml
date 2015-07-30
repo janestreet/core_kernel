@@ -32,9 +32,19 @@ let convert a b a_to_b b_to_a =
 
 let compare_int (x : int) y = compare x y
 
+let int_num_bits =
+  let size = ref 0 in
+  let i = ref (-1) in
+  while !i <> 0 do i:= !i lsl 1; incr size done;
+  !size
+
+let () = assert(   int_num_bits = 63
+                || int_num_bits = 31
+                || int_num_bits = 32 )
+
 let int = {
   name = "int";
-  num_bits = Word_size.num_bits Word_size.word_size - 1;
+  num_bits = int_num_bits;
   max = max_int;
   min = min_int;
   to_string = string_of_int;
@@ -94,6 +104,11 @@ let (int64_to_nativeint, int64_to_nativeint_exn) =
   convert int64 nativeint Int64.to_nativeint Int64.of_nativeint
 ;;
 let nativeint_to_int64 = Int64.of_nativeint
+
+let num_bits_int       = int.num_bits
+let num_bits_int32     = int32.num_bits
+let num_bits_int64     = int64.num_bits
+let num_bits_nativeint = nativeint.num_bits
 
 let insert_delimiter_every input ~delimiter ~chars_per_delimiter =
   let input_length = String.length input in

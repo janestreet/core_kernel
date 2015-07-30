@@ -1,36 +1,5 @@
 include Applicative_intf
 
-module Make (X : Basic) : S with type 'a t := 'a X.t = struct
-
-  include X
-
-  let (<*>) = apply
-
-  let derived_map t ~f = return f <*> t
-
-  let map =
-    match X.map with
-    | `Define_using_apply -> derived_map
-    | `Custom x -> x
-
-  let map2 ta tb ~f = map ~f ta <*> tb
-
-  let map3 ta tb tc ~f = map ~f ta <*> tb <*> tc
-
-  let all ts = Core_list.fold_right ts ~init:(return []) ~f:(map2 ~f:(fun x xs -> x :: xs))
-
-  let both ta tb = map2 ta tb ~f:(fun a b -> (a, b))
-
-  let ( *> ) u v = return (fun () y -> y) <*> u <*> v
-  let ( <* ) u v = return (fun x () -> x) <*> u <*> v
-
-  module Applicative_infix = struct
-    let ( <*> ) = ( <*> )
-    let (  *> ) = (  *> )
-    let ( <*  ) = ( <*  )
-  end
-end
-
 module Make2 (X : Basic2) : S2 with type ('a, 'e) t := ('a, 'e) X.t = struct
 
   include X
@@ -62,10 +31,15 @@ module Make2 (X : Basic2) : S2 with type ('a, 'e) t := ('a, 'e) X.t = struct
   end
 end
 
-module Make_args (X : S) : Args with type 'a arg := 'a X.t = struct
+module Make (X : Basic) : S with type 'a t := 'a X.t = Make2 (struct
+    type ('a, 'e) t = 'a X.t
+    include (X : Basic with type 'a t := 'a X.t)
+  end)
+
+module Make_args' (X : S2) = struct
   open X
 
-  type ('f, 'r) t = { applyN : 'f X.t -> 'r X.t }
+  type ('f, 'r, 'e) t_ = { applyN : ('f, 'e) X.t -> ('r, 'e) X.t }
 
   let nil = { applyN = fun x -> x }
 
@@ -80,22 +54,19 @@ module Make_args (X : S) : Args with type 'a arg := 'a X.t = struct
   let mapN ~f t = applyN (return f) t
 end
 
+module Make_args (X : S) : Args with type 'a arg := 'a X.t = struct
+  include Make_args' (struct
+      type ('a, 'e) t = 'a X.t
+      include (X : S with type 'a t := 'a X.t)
+    end)
+
+  type ('f, 'r) t = ('f, 'r, unit) t_
+end
+
 module Make_args2 (X : S2) : Args2 with type ('a, 'e) arg := ('a, 'e) X.t = struct
-  open X
+  include Make_args' (X)
 
-  type ('f, 'r, 'e) t = { applyN : ('f, 'e) X.t -> ('r, 'e) X.t }
-
-  let nil = { applyN = fun x -> x }
-
-  let cons arg t = { applyN = fun d -> t.applyN (apply d arg) }
-
-  let step t ~f = { applyN = fun d -> t.applyN (map ~f d) }
-
-  let (@>) = cons
-
-  let applyN arg t = t.applyN arg
-
-  let mapN ~f t = applyN (return f) t
+  type ('f, 'r, 'e) t = ('f, 'r, 'e) t_
 end
 
 module Of_monad (M : Monad.S) : S with type 'a t := 'a M.t =

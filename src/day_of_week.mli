@@ -17,7 +17,7 @@ include Hashable.  S_binable with type t := t
     with any capitalization, and strings of the integers 0-6. *)
 include Stringable.S with type t := t
 
-(* Capitalized full day names rather than all-caps 3-letter abbreviations *)
+(** Capitalized full day names rather than all-caps 3-letter abbreviations *)
 val to_string_long : t -> string
 
 (** These use the same mapping as [Unix.tm_wday]: 0 <-> Sun, ... 6 <-> Sat *)

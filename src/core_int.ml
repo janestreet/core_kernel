@@ -24,7 +24,7 @@ end
 
 include T
 
-let num_bits = Word_size.num_bits Word_size.word_size - 1
+let num_bits = Int_conversions.num_bits_int
 
 let to_float = Pervasives.float_of_int
 
@@ -134,8 +134,18 @@ TEST_MODULE "Hex" = struct
       ; -1, "-0x1"
       ; -2, "-0x2"
       ; -1_000_000, "-0xf_4240"
-      ; max_value, "0x3fff_ffff_ffff_ffff"
-      ; min_value, "-0x4000_0000_0000_0000"
+      ; max_value,
+        (match num_bits with
+         | 31 -> "0x3fff_ffff"
+         | 32 -> "0x7fff_ffff"
+         | 63 -> "0x3fff_ffff_ffff_ffff"
+         | _  -> assert false)
+      ; min_value,
+        (match num_bits with
+         | 31 -> "-0x4000_0000"
+         | 32 -> "-0x8000_0000"
+         | 63 -> "-0x4000_0000_0000_0000"
+         | _  -> assert false)
       ]
 
   TEST_UNIT =

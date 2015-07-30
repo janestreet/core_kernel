@@ -51,8 +51,55 @@ let set t i a =
 let is_empty t = t.length = 0
 
 let ensure_no_mutation t num_mutations =
-  if t.num_mutations <> num_mutations then
-    failwiths "mutation of queue during iteration" t <:sexp_of< _ t >>;
+  if t.num_mutations <> num_mutations
+  then failwiths "mutation of queue during iteration" t <:sexp_of< _ t >>;
+;;
+
+let compare =
+  let rec unsafe_compare_from compare_elt pos ~t1 ~t2 ~len1 ~len2 ~mut1 ~mut2 =
+    match pos = len1, pos = len2 with
+    | true , true  ->  0
+    | true , false -> -1
+    | false, true  ->  1
+    | false, false ->
+      let x = compare_elt (unsafe_get t1 pos) (unsafe_get t2 pos) in
+      ensure_no_mutation t1 mut1;
+      ensure_no_mutation t2 mut2;
+      match x with
+      | 0 -> unsafe_compare_from compare_elt (pos + 1) ~t1 ~t2 ~len1 ~len2 ~mut1 ~mut2
+      | n -> n
+  in
+  fun compare_elt t1 t2 ->
+    if phys_equal t1 t2 then
+      0
+    else
+      unsafe_compare_from compare_elt 0 ~t1 ~t2
+        ~len1:(length t1)
+        ~len2:(length t2)
+        ~mut1:t1.num_mutations
+        ~mut2:t2.num_mutations
+;;
+
+let equal =
+  let rec unsafe_equal_from equal_elt pos ~t1 ~t2 ~mut1 ~mut2 ~len =
+    pos = len
+    ||
+    (let b = equal_elt (unsafe_get t1 pos) (unsafe_get t2 pos) in
+     ensure_no_mutation t1 mut1;
+     ensure_no_mutation t2 mut2;
+     b && unsafe_equal_from equal_elt (pos + 1) ~t1 ~t2 ~mut1 ~mut2 ~len)
+  in
+  fun equal_elt t1 t2 ->
+    phys_equal t1 t2
+    ||
+    (let len1 = length t1 in
+     let len2 = length t2 in
+     len1 = len2
+     &&
+     unsafe_equal_from equal_elt 0 ~t1 ~t2
+       ~len:len1
+       ~mut1:t1.num_mutations
+       ~mut2:t2.num_mutations)
 ;;
 
 let invariant invariant_a t =
@@ -64,10 +111,10 @@ let invariant invariant_a t =
         assert (front >= 0);
         assert (front < capacity t)))
       ~mask:(check (fun _ ->
-          let capacity = capacity t in
-          assert (capacity = Array.length t.elts);
-          assert (capacity >= 1);
-          assert (Int.is_pow2 capacity)))
+        let capacity = capacity t in
+        assert (capacity = Array.length t.elts);
+        assert (capacity >= 1);
+        assert (Int.is_pow2 capacity)))
       ~length:(check (fun length ->
         assert (length >= 0);
         assert (length <= capacity t)))
@@ -134,8 +181,8 @@ let dequeue_nonempty t =
   inc_num_mutations t;
   let elts  = t.elts in
   let front = t.front in
-  let res   = elts.(front) in
-  elts.(front) <- dummy t;
+  let res   = elts.( front ) in
+  elts.( front ) <- dummy t;
   t.front      <- elts_index t 1;
   t.length     <- t.length - 1;
   res
@@ -185,8 +232,8 @@ let blit_transfer ~src ~dst ?len () =
     match len with
     | None -> length src
     | Some len ->
-      if len < 0 then
-        failwiths "Queue.blit_transfer: negative length" len <:sexp_of< int >>;
+      if len < 0
+      then failwiths "Queue.blit_transfer: negative length" len <:sexp_of< int >>;
       min len (length src)
   in
   if len > 0 then begin
@@ -228,11 +275,12 @@ let iter t ~f =
   done;
 ;;
 
-module C = Container.Make (struct
-  type nonrec 'a t = 'a t
-  let fold = fold
-  let iter = `Custom iter
-end)
+module C =
+  Container.Make (struct
+    type nonrec 'a t = 'a t
+    let fold = fold
+    let iter = `Custom iter
+  end)
 
 let to_list  = C.to_list
 let count    = C.count
@@ -326,36 +374,38 @@ let sexp_of_t sexp_of_a t = to_list t |> <:sexp_of< a list >>
 
 let t_of_sexp a_of_sexp sexp = sexp |> <:of_sexp< a list >> |> of_list
 
-include Bin_prot.Utils.Make_iterable_binable1 (struct
-  type nonrec 'a t = 'a t
-  type 'a el       = 'a with bin_io
-  type 'a acc      = 'a t
+include
+  Bin_prot.Utils.Make_iterable_binable1 (struct
+    type nonrec 'a t = 'a t
+    type 'a el       = 'a with bin_io
+    type 'a acc      = 'a t
 
-  let module_name = Some "Core.Queue"
-  let length      = length
-  let iter        = iter
-  let init n       = create ~capacity:n ()
-  let insert t x _ = enqueue t x; t
-  let finish       = Fn.id
-end)
+    let module_name = Some "Core.Queue"
+    let length      = length
+    let iter        = iter
+    let init n       = create ~capacity:n ()
+    let insert t x _ = enqueue t x; t
+    let finish       = Fn.id
+  end)
 
-include Binary_searchable.Make1 (struct
-  type nonrec 'a t = 'a t
-  let get = get
-  let length = length
-  module For_test = struct
-    let of_array a =
-      let r = create () in
-      (* We enqueue everything twice, and dequeue it once to ensure:
-         - that the queue has the same content as the array.
-         - that it has, in most cases, an interesting internal structure*)
-      for i = 0 to Core_array.length a - 1 do
-        enqueue r a.(i)
-      done;
-      for i = 0 to Core_array.length a - 1 do
-        ignore (dequeue_exn r : bool);
-        enqueue r a.(i)
-      done;
-      r
-  end
-end)
+include
+  Binary_searchable.Make1 (struct
+    type nonrec 'a t = 'a t
+    let get = get
+    let length = length
+    module For_test = struct
+      let of_array a =
+        let r = create () in
+        (* We enqueue everything twice, and dequeue it once to ensure:
+           - that the queue has the same content as the array.
+           - that it has, in most cases, an interesting internal structure*)
+        for i = 0 to Core_array.length a - 1 do
+          enqueue r a.( i )
+        done;
+        for i = 0 to Core_array.length a - 1 do
+          ignore (dequeue_exn r : bool);
+          enqueue r a.( i )
+        done;
+        r
+    end
+  end)

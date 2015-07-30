@@ -5,20 +5,20 @@
     values from [src] starting at position [src_pos] to [dst] at position [dst_pos].
     Furthermore, [blit] raises if [src_pos], [len], and [dst_pos] don't specify valid
     slices of [src] and [dst]. *)
-type ('src, 'dst) blit =
-     src      : 'src
+type ('src, 'dst) blit
+  =  src      : 'src
   -> src_pos  : int
   -> dst      : 'dst
   -> dst_pos  : int
   -> len      : int
   -> unit
 
-(* [blito] is like [blit], except that the [src_pos], [src_len], and [dst_pos] are
-   optional (hence the "o" in "blito").  Also, we use [src_len] rather than [len] as a
-   reminder that if [src_len] isn't supplied, then the default is to take the slice
-   running from [src_pos] to the end of [src]. *)
-type ('src, 'dst) blito =
-     src      : 'src
+(** [blito] is like [blit], except that the [src_pos], [src_len], and [dst_pos] are
+    optional (hence the "o" in "blito").  Also, we use [src_len] rather than [len] as a
+    reminder that if [src_len] isn't supplied, then the default is to take the slice
+    running from [src_pos] to the end of [src]. *)
+type ('src, 'dst) blito
+  =  src      : 'src
   -> ?src_pos : int  (** default is [0] *)
   -> ?src_len : int  (** default is [length src - src_pos] *)
   -> dst      : 'dst
@@ -32,8 +32,8 @@ type ('src, 'dst) blito =
     [subo] is like [sub], except [pos] and [len] are optional. *)
 type ('src, 'dst) sub = 'src -> pos:int -> len:int -> 'dst
 type ('src, 'dst) subo
-  =  ?pos:int  (** default is [0] *)
-  -> ?len:int  (** default is [length src - pos] *)
+  =  ?pos : int  (** default is [0] *)
+  -> ?len : int  (** default is [length src - pos] *)
   -> 'src
   -> 'dst
 
@@ -140,41 +140,40 @@ module type Blit = sig
 
   (** [Make] is for blitting between two values of the same monomorphic type. *)
   module Make
-           (Elt : Elt)
-           (Sequence : sig
-              include Sequence with type elt := Elt.t
-              val unsafe_blit : (t, t) blit
-            end)
+      (Elt : Elt)
+      (Sequence : sig
+         include Sequence with type elt := Elt.t
+         val unsafe_blit : (t, t) blit
+       end)
     : S with type t := Sequence.t
 
   (** [Make_distinct] is for blitting between values of distinct monomorphic types. *)
   module Make_distinct
-           (Elt : Elt)
-           (Src : Sequence with type elt := Elt.t)
-           (Dst : sig
-              include Sequence with type elt := Elt.t
-              val unsafe_blit : (Src.t, t) blit
-            end)
+      (Elt : Elt)
+      (Src : Sequence with type elt := Elt.t)
+      (Dst : sig
+         include Sequence with type elt := Elt.t
+         val unsafe_blit : (Src.t, t) blit
+       end)
     : S_distinct
       with type src := Src.t
       with type dst := Dst.t
 
   (** [Make1] is for blitting between two values of the same polymorphic type. *)
   module Make1
-           (Sequence : sig
-              type 'a t with sexp_of
-              (** [Make1] guarantees to only call [create_like ~len t] with [len > 0] if
-                  [length t > 0]. *)
-              val create_like : len:int -> 'a t -> 'a t
-              val length : _ t -> int
-              val unsafe_blit : ('a t, 'a t) blit
-              (* [create], [get], and [set] are just used for unit tests.  [z] is
-                 needed for [Flat_tuple_array]. *)
-              type 'a z
-              val create_bool : len:int -> bool z t
-              val get : 'a z t -> int -> 'a
-              val set : 'a z t -> int -> 'a -> unit
-            end)
+      (Sequence : sig
+         type 'a t with sexp_of
+         (** [Make1] guarantees to only call [create_like ~len t] with [len > 0] if
+             [length t > 0]. *)
+         val create_like : len:int -> 'a t -> 'a t
+         val length : _ t -> int
+         val unsafe_blit : ('a t, 'a t) blit
+         (** [create], [get], and [set] are just used for unit tests.  [z] is needed for
+             [Flat_tuple_array]. *)
+         type 'a z
+         val create_bool : len:int -> bool z t
+         val get : 'a z t -> int -> 'a
+         val set : 'a z t -> int -> 'a -> unit
+       end)
     : S1 with type 'a t := 'a Sequence.t
-
 end

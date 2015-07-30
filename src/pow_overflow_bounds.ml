@@ -5,153 +5,239 @@
 
 INCLUDE "config.mlh"
 
+let overflow_bound_max_int32_value : int32 =
+  2147483647l
+
+let int32_positive_overflow_bounds : int32 array =
+  [|
+    2147483647l;
+    2147483647l;
+    46340l;
+    1290l;
+    215l;
+    73l;
+    35l;
+    21l;
+    14l;
+    10l;
+    8l;
+    7l;
+    5l;
+    5l;
+    4l;
+    4l;
+    3l;
+    3l;
+    3l;
+    3l;
+    2l;
+    2l;
+    2l;
+    2l;
+    2l;
+    2l;
+    2l;
+    2l;
+    2l;
+    2l;
+    2l;
+    1l;
+    1l;
+    1l;
+    1l;
+    1l;
+    1l;
+    1l;
+    1l;
+    1l;
+    1l;
+    1l;
+    1l;
+    1l;
+    1l;
+    1l;
+    1l;
+    1l;
+    1l;
+    1l;
+    1l;
+    1l;
+    1l;
+    1l;
+    1l;
+    1l;
+    1l;
+    1l;
+    1l;
+    1l;
+    1l;
+    1l;
+    1l;
+    1l;
+  |]
+
 IFDEF ARCH_SIXTYFOUR THEN
 
-let overflow_bound_max_int_value : int = Int64.to_int 4611686018427387903L
+let overflow_bound_max_int_value : int =
+  if Int_conversions.num_bits_int = 32 then
+    Int32.to_int overflow_bound_max_int32_value
+  else
+    Int64.to_int 4611686018427387903L
 
 let int_positive_overflow_bounds : int array =
-  [|
-    Int64.to_int 4611686018427387903L;
-    Int64.to_int 4611686018427387903L;
-    Int64.to_int 2147483647L;
-    1664510;
-    46340;
-    5404;
-    1290;
-    463;
-    215;
-    118;
-    73;
-    49;
-    35;
-    27;
-    21;
-    17;
-    14;
-    12;
-    10;
-    9;
-    8;
-    7;
-    7;
-    6;
-    5;
-    5;
-    5;
-    4;
-    4;
-    4;
-    4;
-    3;
-    3;
-    3;
-    3;
-    3;
-    3;
-    3;
-    3;
-    3;
-    2;
-    2;
-    2;
-    2;
-    2;
-    2;
-    2;
-    2;
-    2;
-    2;
-    2;
-    2;
-    2;
-    2;
-    2;
-    2;
-    2;
-    2;
-    2;
-    2;
-    2;
-    2;
-    1;
-    1;
+  if Int_conversions.num_bits_int = 32 then
+    Array.map Int32.to_int int32_positive_overflow_bounds
+  else
+    [|
+      Int64.to_int 4611686018427387903L;
+      Int64.to_int 4611686018427387903L;
+      Int64.to_int 2147483647L;
+      1664510;
+      46340;
+      5404;
+      1290;
+      463;
+      215;
+      118;
+      73;
+      49;
+      35;
+      27;
+      21;
+      17;
+      14;
+      12;
+      10;
+      9;
+      8;
+      7;
+      7;
+      6;
+      5;
+      5;
+      5;
+      4;
+      4;
+      4;
+      4;
+      3;
+      3;
+      3;
+      3;
+      3;
+      3;
+      3;
+      3;
+      3;
+      2;
+      2;
+      2;
+      2;
+      2;
+      2;
+      2;
+      2;
+      2;
+      2;
+      2;
+      2;
+      2;
+      2;
+      2;
+      2;
+      2;
+      2;
+      2;
+      2;
+      2;
+      2;
+      1;
+      1;
   |]
 
 ELSE
 
-let overflow_bound_max_int_value : int = 1073741823
+let overflow_bound_max_int_value : int =
+  if Int_conversions.num_bits_int = 32 then
+    Int32.to_int overflow_bound_max_int32_value
+  else
+    1073741823
 
 let int_positive_overflow_bounds : int array =
-  [|
-    1073741823;
-    1073741823;
-    32767;
-    1023;
-    181;
-    63;
-    31;
-    19;
-    13;
-    10;
-    7;
-    6;
-    5;
-    4;
-    4;
-    3;
-    3;
-    3;
-    3;
-    2;
-    2;
-    2;
-    2;
-    2;
-    2;
-    2;
-    2;
-    2;
-    2;
-    2;
-    1;
-    1;
-    1;
-    1;
-    1;
-    1;
-    1;
-    1;
-    1;
-    1;
-    1;
-    1;
-    1;
-    1;
-    1;
-    1;
-    1;
-    1;
-    1;
-    1;
-    1;
-    1;
-    1;
-    1;
-    1;
-    1;
-    1;
-    1;
-    1;
-    1;
-    1;
-    1;
-    1;
-    1;
+  if Int_conversions.num_bits_int = 32 then
+    Array.map Int32.to_int int32_positive_overflow_bounds
+  else
+    [|
+      1073741823;
+      1073741823;
+      32767;
+      1023;
+      181;
+      63;
+      31;
+      19;
+      13;
+      10;
+      7;
+      6;
+      5;
+      4;
+      4;
+      3;
+      3;
+      3;
+      3;
+      2;
+      2;
+      2;
+      2;
+      2;
+      2;
+      2;
+      2;
+      2;
+      2;
+      2;
+      1;
+      1;
+      1;
+      1;
+      1;
+      1;
+      1;
+      1;
+      1;
+      1;
+      1;
+      1;
+      1;
+      1;
+      1;
+      1;
+      1;
+      1;
+      1;
+      1;
+      1;
+      1;
+      1;
+      1;
+      1;
+      1;
+      1;
+      1;
+      1;
+      1;
+      1;
+      1;
+      1;
+      1;
   |]
 
 END
 
-let overflow_bound_max_int64_value : int64 = 9223372036854775807L
+let overflow_bound_max_int64_value : int64 =
+  9223372036854775807L
 
 let int64_positive_overflow_bounds : int64 array =
   [|

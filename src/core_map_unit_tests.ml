@@ -48,30 +48,32 @@ module Unit_tests
   : Creators_and_accessors_generic = struct
   module Map = struct
     include Map
-    let add                  x = simplify_accessor add x
-    let add_multi            x = simplify_accessor add_multi x
-    let change               x = simplify_accessor change x
-    let find                 x = simplify_accessor find x
-    let find_exn             x = simplify_accessor find_exn x
-    let invariants           x = simplify_accessor invariants x
-    let remove               x = simplify_accessor remove x
-    let mem                  x = simplify_accessor mem x
-    let filter               x = simplify_accessor filter x
-    let filter_map           x = simplify_accessor filter_map x
-    let filter_mapi          x = simplify_accessor filter_mapi x
-    let compare_direct       x = simplify_accessor compare_direct x
-    let equal                x = simplify_accessor equal x
-    let iter2                x = simplify_accessor iter2 x
-    let symmetric_diff       x = simplify_accessor symmetric_diff x
-    let merge                x = simplify_accessor merge x
-    let fold_range_inclusive x = simplify_accessor fold_range_inclusive x
-    let range_to_alist       x = simplify_accessor range_to_alist x
-    let prev_key             x = simplify_accessor prev_key x
-    let next_key             x = simplify_accessor next_key x
-    let nth                  x = simplify_accessor nth x
-    let rank                 x = simplify_accessor rank x
-    let to_sequence ?keys_in x =
-      simplify_accessor to_sequence ?keys_in x
+    let add                        x = simplify_accessor add x
+    let add_multi                  x = simplify_accessor add_multi x
+    let change                     x = simplify_accessor change x
+    let find                       x = simplify_accessor find x
+    let find_exn                   x = simplify_accessor find_exn x
+    let invariants                 x = simplify_accessor invariants x
+    let remove                     x = simplify_accessor remove x
+    let mem                        x = simplify_accessor mem x
+    let filter                     x = simplify_accessor filter x
+    let filter_map                 x = simplify_accessor filter_map x
+    let filter_mapi                x = simplify_accessor filter_mapi x
+    let compare_direct             x = simplify_accessor compare_direct x
+    let equal                      x = simplify_accessor equal x
+    let iter2                      x = simplify_accessor iter2 x
+    let symmetric_diff             x = simplify_accessor symmetric_diff x
+    let merge                      x = simplify_accessor merge x
+    let split                      x = simplify_accessor split x
+    let fold_range_inclusive       x = simplify_accessor fold_range_inclusive x
+    let range_to_alist             x = simplify_accessor range_to_alist x
+    let closest_key                x = simplify_accessor closest_key x
+    let nth                        x = simplify_accessor nth x
+    let rank                       x = simplify_accessor rank x
+    let to_sequence ?order ?keys_greater_or_equal_to ?keys_less_or_equal_to x =
+      simplify_accessor to_sequence ?order ?keys_greater_or_equal_to
+        ?keys_less_or_equal_to x
+    ;;
 
     let empty ()                    = simplify_creator empty
     let singleton                 x = simplify_creator singleton x
@@ -100,11 +102,25 @@ module Unit_tests
       type t = int Key.t with sexp
       let compare t t' = Pervasives.compare (to_int t) (to_int t')
       let equal t t' = compare t t' = 0
+      let (<) t t' = compare t t' < 0
+      let (>) t t' = compare t t' > 0
     end
     include T
 
     let sample = of_int 0
-    let samples = List.dedup ~compare (List.init 10 ~f:(fun i -> of_int (i + 1)))
+    let samples =
+      List.init 10 ~f:(fun i -> of_int (i + 1))
+      |> List.dedup ~compare
+      |> List.sort ~cmp:compare
+    ;;
+
+    let min = List.hd_exn samples
+    let max = List.hd_exn (List.rev samples)
+    let mid = List.nth_exn samples (List.length samples / 2)
+
+    let pred t = of_int (to_int t - 1)
+    let succ t = of_int (to_int t + 1)
+
   end
 
   module Caml_map = Caml_map.Make (Key)
@@ -710,41 +726,74 @@ module Unit_tests
     assert (Map.exists with_negative ~f:neg);
   ;;
 
-  let to_sequence ?keys_in:_  _ = assert false
+  let to_sequence ?order:_ ?keys_greater_or_equal_to:_ ?keys_less_or_equal_to:_ _ =
+    assert false
 
-  TEST =
-    let m = random_map Key.samples in
-    Sequence.to_list (Map.to_sequence ~keys_in:`Increasing_order  m) = Map.to_alist m
+  TEST_MODULE "to_sequence" = struct
 
-  TEST =
-    let m = random_map Key.samples in
-    Sequence.to_list (Map.to_sequence ~keys_in:`Decreasing_order m) = List.rev (Map.to_alist m)
+    let m = random_map Key.samples
+    let (<=>) observed expected =
+      <:test_eq< (Key.t * int) list >> (Sequence.to_list observed) expected
+    let limit_keys min max = List.filter ~f:(fun (key, _) -> key >= min && key <= max)
 
-  TEST =
-    let m = random_map Key.samples in
-    Sequence.to_list (Map.to_sequence ~keys_in:(`Increasing_order_greater_than_or_equal_to (Key.of_int 4)) m)
-    = List.filter ~f:(fun (x, _) -> x >= Key.of_int 4) (Map.to_alist m)
+    TEST_UNIT = Map.to_sequence ~order:`Increasing_key m <=> Map.to_alist m
 
-  TEST =
-    let m = random_map Key.samples in
-    Sequence.to_list (Map.to_sequence ~keys_in:(`Decreasing_order_less_than_or_equal_to (Key.of_int 4)) m)
-    = List.filter ~f:(fun (x, _) -> x <= Key.of_int 4) (List.rev (Map.to_alist m))
+    TEST_UNIT = Map.to_sequence ~order:`Decreasing_key m <=> List.rev (Map.to_alist m)
 
-  TEST =
-    let m = Map.empty () in
-    Sequence.to_list (Map.to_sequence ~keys_in:`Increasing_order m) = []
+    TEST_UNIT =
+      Map.to_sequence ~order:`Increasing_key ~keys_greater_or_equal_to:Key.mid m
+      <=> limit_keys Key.mid Key.max (Map.to_alist m)
+    ;;
 
-  TEST =
-    let m = Map.empty () in
-    Sequence.to_list (Map.to_sequence ~keys_in:`Decreasing_order m) = []
+    TEST_UNIT =
+      let keys_greater_or_equal_to, keys_less_or_equal_to = Key.mid, Key.pred Key.max in
+      Map.to_sequence m ~order:`Increasing_key ~keys_greater_or_equal_to
+        ~keys_less_or_equal_to
+      <=> limit_keys keys_greater_or_equal_to keys_less_or_equal_to (Map.to_alist m)
+    ;;
 
-  TEST =
-    let m = random_map Key.samples in
-    Sequence.to_list (Map.to_sequence ~keys_in:(`Increasing_order_greater_than_or_equal_to (Key.of_int 11)) m) = []
+    TEST_UNIT =
+      Map.to_sequence m ~order:`Increasing_key ~keys_less_or_equal_to:Key.mid
+      <=> limit_keys Key.min Key.mid (Map.to_alist m)
+    ;;
 
-  TEST =
-    let m = random_map Key.samples in
-    Sequence.to_list (Map.to_sequence ~keys_in:(`Decreasing_order_less_than_or_equal_to (Key.of_int (-1))) m) = []
+    TEST_UNIT =
+      Map.to_sequence ~order:`Decreasing_key ~keys_less_or_equal_to:Key.mid m
+      <=> limit_keys Key.min Key.mid (List.rev (Map.to_alist m))
+    ;;
+
+    TEST_UNIT =
+      let keys_greater_or_equal_to, keys_less_or_equal_to = Key.succ Key.min, Key.mid in
+      Map.to_sequence m ~order:`Decreasing_key ~keys_greater_or_equal_to
+        ~keys_less_or_equal_to
+      <=> limit_keys keys_greater_or_equal_to keys_less_or_equal_to (List.rev (Map.to_alist m))
+    ;;
+
+    TEST_UNIT =
+      Map.to_sequence m ~order:`Decreasing_key ~keys_greater_or_equal_to:Key.mid
+      <=> limit_keys Key.mid Key.max (List.rev (Map.to_alist m))
+    ;;
+
+    TEST_UNIT = Map.to_sequence ~order:`Increasing_key (Map.empty ()) <=> []
+
+    TEST_UNIT = Map.to_sequence ~order:`Decreasing_key (Map.empty ()) <=> []
+
+    TEST_UNIT =
+      Map.to_sequence ~order:`Increasing_key
+        ~keys_greater_or_equal_to:(Key.succ Key.max) m
+      <=> []
+
+    TEST_UNIT =
+      Map.to_sequence ~order:`Decreasing_key ~keys_less_or_equal_to:(Key.pred Key.min)
+        m
+      <=> []
+
+    TEST_UNIT =
+      Map.to_sequence ~order:`Increasing_key ~keys_less_or_equal_to:Key.min
+        ~keys_greater_or_equal_to:Key.max m
+      <=> []
+
+  end
 
   let length _ = assert false
 
@@ -819,8 +868,7 @@ module Unit_tests
 
   let fold_range_inclusive _ = assert false
   let range_to_alist       _ = assert false
-  let prev_key             _ = assert false
-  let next_key             _ = assert false
+  let closest_key          _ = assert false
   let nth                  _ = assert false
   let rank                 _ = assert false
 
@@ -842,15 +890,37 @@ module Unit_tests
     (* fold_range_inclusive *)
     assert (keys_between ~min:min_key ~max:max_key = length);
     assert (keys_between ~min:after_min ~max:before_max = length - 2);
-    (* prev_key / next_key *)
-    assert (Map.prev_key map min_key = None);
-    assert (Map.next_key map max_key = None);
+    (* closest_key *)
+    let prev_key t k = Map.closest_key t `Less_than k in
+    let next_key t k = Map.closest_key t `Greater_than k in
+    assert (prev_key map min_key = None);
+    assert (next_key map max_key = None);
     let optional_key_equal key = function
       | None -> false
       | Some (key', _) -> Key.equal key key'
     in
-    assert (optional_key_equal min_key (Map.prev_key map after_min));
-    assert (optional_key_equal max_key (Map.next_key map before_max));
+    assert (optional_key_equal min_key (prev_key map after_min));
+    assert (optional_key_equal max_key (next_key map before_max));
+    assert (optional_key_equal min_key (Map.closest_key map `Less_or_equal_to min_key));
+    assert (optional_key_equal min_key (Map.closest_key map `Greater_or_equal_to min_key));
+    assert (optional_key_equal max_key (Map.closest_key map `Less_or_equal_to max_key));
+    assert (optional_key_equal max_key (Map.closest_key map `Greater_or_equal_to max_key));
+    assert (optional_key_equal after_min (Map.closest_key map `Less_or_equal_to after_min));
+    assert (optional_key_equal after_min (Map.closest_key map `Greater_or_equal_to after_min));
+    assert (optional_key_equal before_max (Map.closest_key map `Less_or_equal_to before_max));
+    assert (optional_key_equal before_max (Map.closest_key map `Greater_or_equal_to before_max));
+    begin
+      let map_with_hole_after_min = Map.remove map after_min in
+      assert (optional_key_equal min_key (
+        prev_key map_with_hole_after_min after_min));
+      assert (optional_key_equal min_key (
+        Map.closest_key map_with_hole_after_min `Less_or_equal_to after_min));
+      let map_with_hole_before_max = Map.remove map before_max in
+      assert (optional_key_equal max_key (
+        next_key map_with_hole_before_max before_max));
+      assert (optional_key_equal max_key (
+        Map.closest_key map_with_hole_before_max `Greater_or_equal_to before_max));
+    end;
     (* range_to_alist *)
     assert (alist_equal (Map.range_to_alist ~min:min_key ~max:max_key map)
               (Map.to_alist map));
@@ -872,8 +942,33 @@ module Unit_tests
     assert (Option.is_none (Map.nth map (Map.length map)));
   ;;
 
-  TEST = Map.prev_key (Map.empty ()) Key.sample = None
-  TEST = Map.next_key (Map.empty ()) Key.sample = None
+  let split _ = assert false
+
+  TEST_UNIT =
+    let check here map pivot =
+      let l, maybe, r = Map.split map pivot in
+      assert(Map.invariants l);
+      assert(Map.invariants r);
+      Map.iter l ~f:(fun ~key ~data:_ -> assert (Key.(<) key pivot));
+      Map.iter r ~f:(fun ~key ~data:_ -> assert (Key.(>) key pivot));
+      <:test_eq< (Key.t * int) option >> ~here:[ here ]
+        (Option.map ~f:(fun d -> pivot, d) (Map.find map pivot))
+        maybe;
+      <:test_eq< int >> ~here:[ here ] (Map.length map)
+        (Map.length l + Map.length r + Option.length maybe);
+    in
+    let map = random_map Key.samples in
+    check _here_ map Key.min;
+    check _here_ map Key.max;
+    check _here_ map Key.mid;
+    let map = Map.remove map Key.mid in
+    check _here_ map Key.mid
+  ;;
+
+  TEST = Map.closest_key (Map.empty ()) `Greater_or_equal_to Key.sample = None
+  TEST = Map.closest_key (Map.empty ()) `Greater_than Key.sample = None
+  TEST = Map.closest_key (Map.empty ()) `Less_or_equal_to Key.sample = None
+  TEST = Map.closest_key (Map.empty ()) `Less_than Key.sample = None
 
   let validate ~name:_ _ = assert false
 

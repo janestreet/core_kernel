@@ -7,6 +7,7 @@ module Arg = Arg
 module Array = Array
 module ArrayLabels = ArrayLabels
 module Buffer = Buffer
+module Bytes = Bytes
 module Callback = Callback
 module Char = Char
 module Complex = Complex

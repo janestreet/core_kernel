@@ -213,12 +213,12 @@ module type Timing_wheel = sig
 
     include Invariant.S with type t := t
 
-    (* [max_num_bits] is how many bits in a key the timing wheel can use, i.e. 61.  We
-       subtract 3 for the bits in the word that we won't use:
+    (** [max_num_bits] is how many bits in a key the timing wheel can use, i.e. 61.  We
+        subtract 3 for the bits in the word that we won't use:
 
-       - for the tag bit
-       - for negative numbers
-       - so we can do arithmetic around the bound without worrying about overflow *)
+        - for the tag bit
+        - for negative numbers
+        - so we can do arithmetic around the bound without worrying about overflow *)
     val max_num_bits : int
 
     (** In [create_exn bits], it is an error if any of the [b_i] in [bits] has [b_i <= 0],
@@ -308,7 +308,7 @@ module type Timing_wheel = sig
   val interval_start     : _ t -> Time.t  -> Time.t
 
   (** [advance_clock t ~to_ ~handle_fired] advances [t]'s clock to [to_].  It fires and
-      removes all alarms [a] in [t] with [Time.(<) (Alarm.at a) (interval_start t to_)]
+      removes all alarms [a] in [t] with [Time.(<) (Alarm.at t a) (interval_start t to_)],
       applying [handle_fired] to each such [a].
 
       If [to_ <= now t], then [advance_clock] does nothing.
@@ -318,6 +318,16 @@ module type Timing_wheel = sig
       Behavior is unspecified if [handle_fired] accesses [t] in any way other than
       [Alarm] functions. *)
   val advance_clock : 'a t -> to_:Time.t -> handle_fired:('a Alarm.t -> unit) -> unit
+
+  (** [fire_past_alarms t ~handle_fired] fires and removes all alarms [a] in [t] with
+      [Time.( <= ) (Alarm.at t a) (now t)], applying [handle_fired] to each such [a].
+
+      [fire_past_alarms] visits all alarms in interval [now_interval_num], to check their
+      [Alarm.at].
+
+      Behavior is unspecified if [handle_fired] accesses [t] in any way other than
+      [Alarm] functions. *)
+  val fire_past_alarms : 'a t -> handle_fired:('a Alarm.t -> unit) -> unit
 
   (** [alarm_upper_bound t] returns the upper bound on an [at] that can be supplied to
       [add].  [alarm_upper_bound t] is not constant; its value increases as [now t]
@@ -362,9 +372,11 @@ module type Timing_wheel = sig
   val next_alarm_fires_at : _ t -> Time.t option
 
   (***********************************************************************************)
-  (* The rest of this interface is not intended to be used with Timing_wheel, but is a
-     separate data structure used to implement Timing_wheel, and may find use
-     elsewhere. *)
+  (** {6 Implementation details}
+
+      The rest of this interface is not intended to be used with Timing_wheel, but is a
+      separate data structure used to implement Timing_wheel, and may find use
+      elsewhere. *)
 
   (** Timing wheel is implemented as a priority queue in which the keys are
       non-negative integers corresponding to the intervals of time.  The priority queue is

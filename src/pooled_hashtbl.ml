@@ -32,6 +32,7 @@ module Entry : sig
     val invariant : ('k, 'd) t -> unit
     val create : capacity:int -> (_, _) t
     val grow : ?capacity:int -> ('k, 'd) t -> ('k, 'd) t
+    val max_capacity : int
   end
 
   type ('k, 'd) t = private int with sexp_of
@@ -83,6 +84,10 @@ end = struct
 
     let create ~capacity = Unsafe.create Unsafe.Slots.t3 ~capacity
 
+    let max_capacity =
+      Unsafe.max_capacity
+        ~slots_per_tuple:(Unsafe.Slots.slots_per_tuple Unsafe.Slots.t3)
+
     let grow = Unsafe.grow
   end
 
@@ -119,9 +124,12 @@ let max_table_length = Int_pow2.floor_pow2 Sys.max_array_length ;;
 
 let calculate_table_size size =
   (* Ensure we can fit size elements in the table. *)
+  let size = Int.min size Sys.max_array_length in
   let capacity = Int.ceil_pow2 size in
   let n_entries = int_of_float (ceil (float capacity *. load_factor)) in
-  (capacity, Int.max size n_entries)
+  let n_entries = Int.max size n_entries in
+  let n_entries = Int.min n_entries Entry.Pool.max_capacity in
+  (capacity, n_entries)
 ;;
 
 let create ?(growth_allowed = true) ?(size = 128) ~hashable () =

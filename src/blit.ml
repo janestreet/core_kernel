@@ -24,23 +24,23 @@ module type Sequence_gen = sig
 end
 
 module Make_gen
-         (Elt : sig
-            type 'a t
-            val equal : bool t -> bool t -> bool
-            val of_bool : bool -> bool t
-          end)
-         (Src : Sequence_gen with type 'a elt := 'a Elt.t)
-         (Dst : sig
-            include Sequence_gen
-              with type 'a elt := 'a Elt.t
-              with type 'a z := 'a Src.z
-            val create_like : len:int -> 'a Src.t -> 'a t
-            val unsafe_blit : ('a Src.t, 'a t) blit
-            val overlapping_src_dst
-              :  [ `Do_not_check
-                 | `Check of ('a Src.t -> 'a t)
-                 ]
-          end) = struct
+    (Elt : sig
+       type 'a t
+       val equal : bool t -> bool t -> bool
+       val of_bool : bool -> bool t
+     end)
+    (Src : Sequence_gen with type 'a elt := 'a Elt.t)
+    (Dst : sig
+       include Sequence_gen
+         with type 'a elt := 'a Elt.t
+         with type 'a z := 'a Src.z
+       val create_like : len:int -> 'a Src.t -> 'a t
+       val unsafe_blit : ('a Src.t, 'a t) blit
+       val overlapping_src_dst
+         :  [ `Do_not_check
+            | `Check of ('a Src.t -> 'a t)
+            ]
+     end) = struct
 
   let unsafe_blit = Dst.unsafe_blit
 
@@ -164,11 +164,11 @@ end
 type 'a poly = 'a
 
 module Make1
-         (Sequence : sig
-            include Sequence_gen with type 'a elt := 'a poly
-            val create_like : len:int -> 'a t -> 'a t
-            val unsafe_blit : ('a t, 'a t) blit
-          end) =
+    (Sequence : sig
+       include Sequence_gen with type 'a elt := 'a poly
+       val create_like : len:int -> 'a t -> 'a t
+       val unsafe_blit : ('a t, 'a t) blit
+     end) =
   Make_gen
     (struct
       type 'a t = 'a
@@ -188,11 +188,11 @@ module Elt_to_elt1 (Elt : Elt) = struct
 end
 
 module Make
-         (Elt : Elt)
-         (Sequence : sig
-            include Sequence with type elt := Elt.t
-            val unsafe_blit : (t, t) blit
-          end) = struct
+    (Elt : Elt)
+    (Sequence : sig
+       include Sequence with type elt := Elt.t
+       val unsafe_blit : (t, t) blit
+     end) = struct
   module Sequence = struct
     type 'a t = Sequence.t with sexp_of
     type 'a z = unit
@@ -209,12 +209,12 @@ module Make
 end
 
 module Make_distinct
-         (Elt : Elt)
-         (Src : Sequence with type elt := Elt.t)
-         (Dst : sig
-            include Sequence with type elt := Elt.t
-            val unsafe_blit : (Src.t, t) blit
-          end) =
+    (Elt : Elt)
+    (Src : Sequence with type elt := Elt.t)
+    (Dst : sig
+       include Sequence with type elt := Elt.t
+       val unsafe_blit : (Src.t, t) blit
+     end) =
   Make_gen
     (Elt_to_elt1 (Elt))
     (struct
@@ -295,7 +295,7 @@ TEST_MODULE = struct
                     ());
                 check (fun () ->
                   ignore (B.subo (Array.create src false) ?pos:src_pos ?len:src_len
-                            : bool array));
+                          : bool array));
               end
               with exn ->
                 failwiths "failure"
@@ -309,5 +309,4 @@ TEST_MODULE = struct
                     * [ `dst of int ] * [ `dst_pos of int option ]
                   >>)))))
   ;;
-
 end

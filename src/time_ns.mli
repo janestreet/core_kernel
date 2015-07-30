@@ -3,7 +3,6 @@
 open Std_internal
 
 module Span : sig
-
   (** [Core_int63.t] is immediate on 64bit boxes and so plays nicely with the GC write
       barrier.  Unfortunately, [private Core_int63.t] is necessary for the compiler to
       optimize uses. *)
@@ -43,8 +42,13 @@ module Span : sig
   val to_int_sec : t -> int
 
   val zero : t
+
+  (** The limits of [t] are chosen to allow conversion to and from [float] spans with
+      microsecond precision.  This property supports {!Core.Std.Timing_wheel_float} in
+      particular.  See also {!Core.Std.Time}. *)
   val min_value : t
   val max_value : t
+
   val ( + ) : t -> t -> t
   val ( - ) : t -> t -> t
   val abs : t -> t
@@ -154,13 +158,3 @@ val next_multiple
   -> interval:Span.t
   -> unit
   -> t
-
-(** [pause span] sleeps for [span] time. *)
-val pause : Span.t -> unit
-
-(** [interruptible_pause span] sleeps for [span] time unless interrupted (e.g. by delivery
-    of a signal), in which case the remaining unslept portion of time is returned. *)
-val interruptible_pause : Span.t -> [ `Ok | `Remaining of Span.t ]
-
-(** [pause_forever] sleeps indefinitely. *)
-val pause_forever : unit -> never_returns

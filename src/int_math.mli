@@ -1,8 +1,8 @@
-(* This module is not exposed in Core.Std.  Instead, these functions are accessed and
+(** This module is not exposed in Core.Std.  Instead, these functions are accessed and
    commented in the various Core modules implementing [Int_intf.S]. *)
 open Interfaces
 
-(* this interface is not defined in int_intf.ml because we don't want users of Core to
+(* This interface is not defined in int_intf.ml because we don't want users of Core to
    think about it. *)
 module type T = sig
   type t
@@ -24,7 +24,7 @@ module type T = sig
   val rem : t -> t -> t
 end
 
-(* derived operations common to various integer modules *)
+(** derived operations common to various integer modules *)
 module Make (X : T) : sig
   val ( %  ) : X.t -> X.t -> X.t
   val ( /% ) : X.t -> X.t -> X.t

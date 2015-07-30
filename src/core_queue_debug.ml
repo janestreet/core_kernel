@@ -15,6 +15,16 @@ module Debug (Core_queue : module type of Core_queue) = struct
 
   let debug x = debug (invariant ignore) ~module_name:"Core_queue" x
 
+  let equal equal_elt t1 t2 =
+    debug "equal" [ t1; t2 ] (t1, t2) <:sexp_of< _ t * _ t >> <:sexp_of< bool >>
+      (fun () -> equal equal_elt t1 t2)
+  ;;
+
+  let compare compare_elt t1 t2 =
+    debug "compare" [ t1; t2 ] (t1, t2) <:sexp_of< _ t * _ t >> <:sexp_of< int >>
+      (fun () -> compare compare_elt t1 t2)
+  ;;
+
   let mem ?equal t elt =
     debug "mem" [ t ] t <:sexp_of< _ t >> <:sexp_of< bool >>
       (fun () -> mem ?equal t elt)

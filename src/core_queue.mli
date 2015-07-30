@@ -9,24 +9,25 @@
     modified during iteration.
 
     Differences from the standard module:
-      [enqueue] replaces [push] and [add], and takes the queue first.
-      [dequeue] replaces [pop] and [take], and returns an option rather than raising
-        [Empty].
-      [dequeue_exn] is available if you want to raise [Empty].
-      [iter] and [fold] take labeled arguments.
-      [blit_transfer] replaces [transfer] but is markedly different; see below.
+    [enqueue] replaces [push] and [add], and takes the queue first.
+    [dequeue] replaces [pop] and [take], and returns an option rather than raising
+    [Empty].
+    [dequeue_exn] is available if you want to raise [Empty].
+    [iter] and [fold] take labeled arguments.
+    [blit_transfer] replaces [transfer] but is markedly different; see below.
 *)
 
 
-type 'a t with bin_io, sexp
+type 'a t with bin_io, compare, sexp
 
-include Container.        S1 with type 'a t := 'a t
-include Invariant.        S1 with type 'a t := 'a t
 include Binary_searchable.S1 with type 'a t := 'a t
+include Container.        S1 with type 'a t := 'a t
+include Equal.            S1 with type 'a t := 'a t
+include Invariant.        S1 with type 'a t := 'a t
 
 (** Create an empty queue. *)
 val create
-  :  ?capacity:int  (** default is [1]. *)
+  :  ?capacity : int  (** default is [1]. *)
   -> unit
   -> _ t
 
@@ -49,9 +50,9 @@ val copy : 'a t -> 'a t
 
     Aside from a call to [set_capacity dst] if needed, runs in O([len]) time *)
 val blit_transfer
-  :  src:'a t
-  -> dst:'a t
-  -> ?len:int (** default is [len = length src] *)
+  :  src  : 'a t
+  -> dst  : 'a t
+  -> ?len : int  (** default is [length src] *)
   -> unit
   -> unit
 

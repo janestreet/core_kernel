@@ -22,15 +22,20 @@ module type S = sig
   module Key : Key
 
   (** a hash-queue, where the values are of type 'a *)
-  type 'a t
+  type 'a t with sexp_of
 
   include Container.S1 with type 'a t := 'a t
 
   (** [invariant t] checks the invariants of the queue. *)
   val invariant : 'a t -> unit
 
-  (** [create ()] returns an empty queue. *)
-  val create : unit -> 'a t
+  (** [create ()] returns an empty queue.  The arguments [growth_allowed] and [size] are
+      referring to the underlying hashtable. *)
+  val create
+    :  ?growth_allowed:bool (** defaults to true *)
+    -> ?size:int (** initial size -- default 16 *)
+    -> unit
+    -> 'a t
 
   (**  clear the queue *)
   val clear : 'a t -> unit
@@ -92,7 +97,6 @@ module type S = sig
   (** [iter t ~f] applies f to each key and element of the queue. *)
   val iteri : 'a t -> f:(key:Key.t -> data:'a -> unit) -> unit
   val foldi : 'a t -> init:'b -> f:('b -> key:Key.t -> data:'a -> 'b) -> 'b
-
 end
 
 module Make (Key : Key) : S with module Key = Key = struct
@@ -110,6 +114,8 @@ module Make (Key : Key) : S with module Key = Key = struct
 
     let key t = t.key
     let value t = t.value
+
+    let sexp_of_t sexp_of_a {key; value} = <:sexp_of< Key.t * a >> (key, value)
   end
 
   open Key_value.T
@@ -121,6 +127,8 @@ module Make (Key : Key) : S with module Key = Key = struct
     queue : 'a Key_value.t Doubly_linked.t;
     table : 'a Key_value.t Elt.t Table.t;
   }
+
+  let sexp_of_t sexp_of_a t = <:sexp_of< a Key_value.t Doubly_linked.t >> t.queue
 
   let invariant t =
     assert (Doubly_linked.length t.queue = Hashtbl.length t.table);
@@ -138,11 +146,12 @@ module Make (Key : Key) : S with module Key = Key = struct
         Hashtbl.set keys ~key ~data:());
   ;;
 
-  let create () = {
+  let create ?(growth_allowed=true) ?(size=16) () = {
     num_readers = 0;
     queue = Doubly_linked.create ();
-    table = Table.create ~size:16 ();
+    table = Table.create ~growth_allowed ~size ();
   }
+  ;;
 
   let read t f =
     t.num_readers <- t.num_readers + 1;
@@ -279,10 +288,10 @@ module Make (Key : Key) : S with module Key = Key = struct
 
   let fold t ~init ~f = foldi t ~init ~f:(fun ac ~key:_ ~data -> f ac data)
 
-  let count t ~f = Container.fold_count fold t ~f
-  let sum m t ~f = Container.fold_sum m fold t ~f
-  let min_elt t ~cmp = Container.fold_min fold t ~cmp
-  let max_elt t ~cmp = Container.fold_max fold t ~cmp
+  let count t ~f = Container.count ~fold t ~f
+  let sum m t ~f = Container.sum m ~fold t ~f
+  let min_elt t ~cmp = Container.min_elt ~fold t ~cmp
+  let max_elt t ~cmp = Container.max_elt ~fold t ~cmp
 
   let dequeue_all t ~f =
     let rec loop () =

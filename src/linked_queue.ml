@@ -37,10 +37,10 @@ let fold t ~init ~f = Queue.fold f init t
 
 let to_list t = List.rev (fold t ~init:[] ~f:(fun acc elem -> elem::acc))
 
-let count t ~f = Container.fold_count fold t ~f
-let sum m t ~f = Container.fold_sum m fold t ~f
-let min_elt t ~cmp = Container.fold_min fold t ~cmp
-let max_elt t ~cmp = Container.fold_max fold t ~cmp
+let count t ~f = Container.count ~fold t ~f
+let sum m t ~f = Container.sum m ~fold t ~f
+let min_elt t ~cmp = Container.min_elt ~fold t ~cmp
+let max_elt t ~cmp = Container.max_elt ~fold t ~cmp
 
 let transfer ~src ~dst = Queue.transfer src dst
 
@@ -133,28 +133,29 @@ let singleton a =
   t
 ;;
 
-include Bin_prot.Utils.Make_iterable_binable1 (struct
+include
+  Bin_prot.Utils.Make_iterable_binable1 (struct
 
-  type 'a t = 'a Queue.t
-  type 'a el = 'a with bin_io
-  type 'a acc = 'a t
+    type 'a t = 'a Queue.t
+    type 'a el = 'a with bin_io
+    type 'a acc = 'a t
 
-  let module_name = Some "Core_kernel.Std.Queue"
+    let module_name = Some "Core_kernel.Std.Queue"
 
-  let length = length
+    let length = length
 
-  let iter = iter
+    let iter = iter
 
-  let init _ = create ()
+    let init _ = create ()
 
-  (* Bin_prot reads the elements in the same order they were written out, as determined by
-     [iter].  So, we can ignore the index and just enqueue each element as it is read
-     in. *)
-  let insert t x _i = enqueue t x; t
+    (* Bin_prot reads the elements in the same order they were written out, as determined by
+       [iter].  So, we can ignore the index and just enqueue each element as it is read
+       in. *)
+    let insert t x _i = enqueue t x; t
 
-  let finish t = t
+    let finish t = t
 
-end)
+  end)
 
 TEST_MODULE = struct
   let m =

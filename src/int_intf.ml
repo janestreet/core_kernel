@@ -3,7 +3,7 @@ open Interfaces
 module type Round = sig
   type t
 
-  (* [round] rounds an int to a multiple of a given [to_multiple_of] argument, according
+  (** [round] rounds an int to a multiple of a given [to_multiple_of] argument, according
      to a direction [dir], with default [dir] being [`Nearest].  [round] will raise if
      [to_multiple_of <= 0].
 
@@ -179,6 +179,6 @@ module type S = sig
 end
 
 TEST_MODULE = struct
-  (* this functor's type-correctness ensures that every value in [S.O] is also in [S]. *)
+  (** this functor's type-correctness ensures that every value in [S.O] is also in [S]. *)
   module Check_O_contained_in_S (M : S) : sig end = (M : module type of M.O)
 end

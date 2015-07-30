@@ -312,30 +312,24 @@ module Tree0 = struct
     | (_, _) -> join t1 (min_elt_exn t2) (remove_min_elt t2) ~compare_elt
   ;;
 
-  (* Splitting.  split x s returns a triple (l, present, r) where
-     - l is the set of elements of s that are < x
-     - r is the set of elements of s that are > x
-     - present is false if s contains no element equal to x,
-     or true if s contains an element equal to x. *)
-
   let split t x ~compare_elt =
     let rec split t =
       match t with
-      | Empty -> (Empty, false, Empty)
+      | Empty -> (Empty, None, Empty)
       | Leaf v ->
         let c = compare_elt x v in
-        if c = 0 then (Empty, true, Empty)
-        else if c < 0 then (Empty, false, Leaf v)
-        else (Leaf v, false, Empty)
+        if c = 0 then (Empty, Some v, Empty)
+        else if c < 0 then (Empty, None, Leaf v)
+        else (Leaf v, None, Empty)
       | Node (l, v, r, _, _) ->
         let c = compare_elt x v in
-        if c = 0 then (l, true, r)
+        if c = 0 then (l, Some v, r)
         else if c < 0 then
-          let (ll, pres, rl) = split l in
-          (ll, pres, join rl v r ~compare_elt)
+          let (ll, maybe_elt, rl) = split l in
+          (ll, maybe_elt, join rl v r ~compare_elt)
         else
-          let (lr, pres, rr) = split r in
-          (join l v lr ~compare_elt, pres, rr)
+          let (lr, maybe_elt, rr) = split r in
+          (join l v lr ~compare_elt, maybe_elt, rr)
     in
     split t
   ;;
@@ -432,8 +426,8 @@ module Tree0 = struct
         if mem other_set elt ~compare_elt then singleton else Empty
       | (Node (l1, v1, r1, _, _), t2) ->
         match split t2 v1 ~compare_elt with
-        | (l2, false, r2) -> concat (inter l1 l2) (inter r1 r2) ~compare_elt
-        | (l2, true, r2) -> join (inter l1 l2) v1 (inter r1 r2) ~compare_elt
+        | (l2, None, r2) -> concat (inter l1 l2) (inter r1 r2) ~compare_elt
+        | (l2, Some v1, r2) -> join (inter l1 l2) v1 (inter r1 r2) ~compare_elt
     in
     inter s1 s2
   ;;
@@ -446,9 +440,9 @@ module Tree0 = struct
       | (Leaf v1, t2) -> diff (Node(Empty, v1, Empty, 1, 1)) t2
       | (Node(l1, v1, r1, _, _), t2) ->
         match split t2 v1 ~compare_elt with
-        | (l2, false, r2) ->
+        | (l2, None, r2) ->
           join (diff l1 l2) v1 (diff r1 r2) ~compare_elt
-        | (l2, true, r2) ->
+        | (l2, Some _, r2) ->
           concat (diff l1 l2) (diff r1 r2) ~compare_elt
     in
     diff s1 s2
@@ -570,7 +564,7 @@ module Tree0 = struct
     ;;
   end
 
-  let to_sequence_increasing comparator ?from_elt t =
+  let to_sequence_increasing comparator ~from_elt t =
     let next enum =
       match enum with
       | Enum.End -> Sequence.Step.Done
@@ -584,7 +578,7 @@ module Tree0 = struct
     Sequence.unfold_step ~init ~f:next
   ;;
 
-  let to_sequence_decreasing comparator ?from_elt t =
+  let to_sequence_decreasing comparator ~from_elt t =
     let next enum =
       match enum with
       | Enum.End -> Sequence.Step.Done
@@ -598,14 +592,23 @@ module Tree0 = struct
     Sequence.unfold_step ~init ~f:next
   ;;
 
-  let to_sequence comparator ?(in_ = `Increasing_order) t =
-    match in_ with
-    | `Increasing_order -> to_sequence_increasing comparator t
-    | `Increasing_order_greater_than_or_equal_to from_elt ->
-      to_sequence_increasing comparator ~from_elt t
-    | `Decreasing_order -> to_sequence_decreasing comparator t
-    | `Decreasing_order_less_than_or_equal_to from_elt ->
-      to_sequence_decreasing comparator ~from_elt t
+  let to_sequence comparator ?(order = `Increasing)
+        ?greater_or_equal_to ?less_or_equal_to t =
+    let inclusive_bound side t bound =
+      let compare_elt = comparator.Comparator.compare in
+      let l, maybe, r = split t bound ~compare_elt in
+      let t = side (l, r) in
+      match maybe with
+      | None -> t
+      | Some elt -> add t elt ~compare_elt
+    in
+    match order with
+    | `Increasing ->
+      let t = Option.fold less_or_equal_to ~init:t ~f:(inclusive_bound fst) in
+      to_sequence_increasing comparator ~from_elt:greater_or_equal_to t
+    | `Decreasing ->
+      let t = Option.fold greater_or_equal_to ~init:t ~f:(inclusive_bound snd) in
+      to_sequence_decreasing comparator ~from_elt:less_or_equal_to t
   ;;
 
   let compare compare_elt s1 s2 =
@@ -662,8 +665,8 @@ module Tree0 = struct
     | Node(l, v, r, _, _) -> fold ~f r ~init:(f (fold ~f l ~init:accu) v)
   ;;
 
-  let count t ~f = Container.fold_count fold t ~f
-  let sum m t ~f = Container.fold_sum m fold t ~f
+  let count t ~f = Container.count ~fold t ~f
+  let sum m t ~f = Container.sum ~fold m t ~f
 
   let rec fold_right s ~init:accu ~f =
     match s with
@@ -959,8 +962,8 @@ module Accessors = struct
   let find_index t i = Tree0.find_index t.tree i
   let remove_index t i = like t (Tree0.remove_index t.tree i ~compare_elt:(compare_elt t))
   let sexp_of_t sexp_of_a t = Tree0.sexp_of_t sexp_of_a t.tree
-  let to_sequence ?in_ t =
-    Tree0.to_sequence ?in_ t.comparator t.tree
+  let to_sequence ?order ?greater_or_equal_to ?less_or_equal_to t =
+    Tree0.to_sequence t.comparator ?order ?greater_or_equal_to ?less_or_equal_to t.tree
 
   let to_map t ~f = Tree0.to_map t.tree ~f ~comparator:t.comparator
 end
@@ -1143,8 +1146,8 @@ module Make_tree (Elt : Comparator.S1) = struct
   let to_tree t = t
   let of_tree t = t
 
-  let to_sequence ?in_ t =
-    Tree0.to_sequence ?in_ comparator t
+  let to_sequence ?order ?greater_or_equal_to ?less_or_equal_to t =
+    Tree0.to_sequence comparator ?order ?greater_or_equal_to ?less_or_equal_to t
 
   let of_map_keys = Tree0.of_map_keys
   let to_map t ~f = Tree0.to_map t ~f ~comparator
@@ -1361,8 +1364,8 @@ module Tree = struct
   let to_tree t = t
   let of_tree ~comparator:_ t = t
 
-  let to_sequence ~comparator ?in_ t =
-    Tree0.to_sequence ?in_ comparator t
+  let to_sequence ~comparator ?order ?greater_or_equal_to ?less_or_equal_to t =
+    Tree0.to_sequence comparator ?order ?greater_or_equal_to ?less_or_equal_to t
 
   let of_map_keys = Tree0.of_map_keys
   let to_map = Tree0.to_map

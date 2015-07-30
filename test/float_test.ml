@@ -24,8 +24,8 @@ let nobox name f =
           | exception _ -> ()
           | `minor minor, `major major, `result result ->
             let message = message ^ " -> " ^ Int.to_string result in
-            <:test_result< int >> ~message minor ~expect:0;
-            <:test_result< int >> ~message major ~expect:0;
+            [%test_result:int] ~message minor ~expect:0;
+            [%test_result:int] ~message major ~expect:0;
       done)
 ;;
 

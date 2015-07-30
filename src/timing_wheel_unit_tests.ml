@@ -41,7 +41,7 @@ module Make (Timing_wheel : Timing_wheel)
 
     let max_num_bits = max_num_bits
 
-    TEST = max_num_bits = Word_size.( num_bits word_size ) - 3
+    TEST = max_num_bits = Int64.num_bits - 3
 
     let create_exn = create_exn
     let t_of_sexp = t_of_sexp
@@ -750,5 +750,92 @@ module Make (Timing_wheel : Timing_wheel)
     assert (next_alarm_fires_at (sec 3.));
     advance_clock (sec 3.);
     assert (no_next_alarm ());
+  ;;
+
+  let fire_past_alarms = fire_past_alarms
+
+  TEST_UNIT = (* all possible subsets of alarms in the first bucket that fire *)
+    let start = Time.epoch in
+    let at sec = Time.add start (Time.Span.of_sec sec) in
+    let at1 = at 1. in
+    let at2 = at 2. in
+    for num_elts = 0 to 5 do
+      let rec loop i ats =
+        if i > 0
+        then begin
+          loop (i - 1) (at1 :: ats);
+          loop (i - 1) (at2 :: ats);
+        end else begin
+          let t =
+            create ~start
+              ~config:(Config.create ~alarm_precision:(Time.Span.of_sec 60.) ())
+          in
+          let num_fired = ref 0 in
+          List.iter ats ~f:(fun at ->
+            let alarm = add t ~at () in
+            <:test_result< Interval_num.t >> (Alarm.interval_num t alarm)
+              ~expect:Interval_num.zero);
+          advance_clock t ~to_:at1 ~handle_fired:(fun _ -> assert false);
+          fire_past_alarms t ~handle_fired:(fun alarm ->
+            if Time.equal (Alarm.at t alarm) at1
+            then incr num_fired
+            else assert false);
+          <:test_result< int >> !num_fired ~expect:(List.count ats ~f:(Time.equal at1));
+        end
+      in
+      loop num_elts []
+    done
+  ;;
+
+  TEST_UNIT =
+    let start = Time.epoch in
+    let t : bool ref t = create ~config:Config.default ~start in
+    let handle_fired (a : bool ref Alarm.t) : unit =
+      let r = Alarm.value t a in
+      assert (not !r);
+      r := true
+    in
+    let precision = alarm_precision t in
+    let precision_0_2 = Time.Span.scale precision 0.2 in
+    let _ = add t ~at:(Time.add start precision) (ref false) in
+    let base = next_alarm_fires_at t |> Option.value_exn in
+    let step0 = Time.add base  precision_0_2 in
+    let step1 = Time.add step0 precision_0_2 in
+    let step2 = Time.add step1 precision_0_2 in
+    let step3 = Time.add step2 precision in
+    (* Check all alarm will be in the same bucket but step3 *)
+    let interval_num0  = interval_num t step0 in
+    let interval_num1  = interval_num t step1 in
+    let interval_num2  = interval_num t step2 in
+    let interval_num3  = interval_num t step3 in
+    <:test_result< Interval_num.t >> interval_num2 ~expect:interval_num0;
+    <:test_result< Interval_num.t >> interval_num1 ~expect:interval_num0;
+    assert (Interval_num.( <> ) interval_num0 interval_num3);
+    let step1_fired = ref false in
+    let step2_fired = ref false in
+    let step3_fired = ref false in
+    let _ = add t ~at:step1 step1_fired in
+    let _ = add t ~at:step2 step2_fired in
+    let _ = add t ~at:step3 step3_fired in
+    (* Nothing should be triggered before *)
+    advance_clock t ~to_:step0 ~handle_fired;
+    fire_past_alarms t ~handle_fired;
+    assert (not !step1_fired);
+    assert (not !step2_fired);
+    assert (not !step3_fired);
+    (* Check only step1_fired get trigger at step1 *)
+    advance_clock t ~to_:step1 ~handle_fired;
+    assert (not !step1_fired);
+    fire_past_alarms t ~handle_fired;
+    assert (!step1_fired);
+    assert (not !step2_fired);
+    assert (not !step3_fired);
+    (* Check only step2_fired get trigger at step2 *)
+    advance_clock t ~to_:step2 ~handle_fired;
+    assert (not !step2_fired);
+    fire_past_alarms t ~handle_fired;
+    assert (!step1_fired);
+    assert (!step2_fired);
+    assert (not !step3_fired);
   ;;
 end

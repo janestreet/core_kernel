@@ -212,7 +212,7 @@ module Priority_queue = struct
 
     (* [Slots_mask] is used to quickly determine a key's slot in a given level. *)
     module Slots_mask : sig
-      type t = private int with compare, sexp_of
+      type t = private Int63.t with compare, sexp_of
 
       val create : level_bits:Num_key_bits.t -> t
 
@@ -241,11 +241,11 @@ module Priority_queue = struct
   end = struct
 
     module Slots_mask = struct
-      type t = int with compare, sexp_of
+      type t = Int63.t with compare, sexp_of
 
-      let create ~level_bits = Int63.to_int_exn (Num_key_bits.pow2 level_bits) - 1
+      let create ~level_bits = Int63.( - ) (Num_key_bits.pow2 level_bits) Int63.one
 
-      let next_slot t slot = (slot + 1) land t
+      let next_slot t slot = (slot + 1) land Int63.to_int_exn t
     end
 
     let num_keys num_bits = Num_key_bits.pow2 num_bits
@@ -277,8 +277,10 @@ module Priority_queue = struct
     let max_representable = num_keys Num_key_bits.max_value - one
 
     let slot t ~(bits_per_slot : Num_key_bits.t) ~slots_mask =
-      (to_int_exn (shift_right t (bits_per_slot :> int)))
-      land slots_mask
+      to_int_exn
+        (bit_and
+           (shift_right t (bits_per_slot :> int))
+           slots_mask)
     ;;
 
     let min_key_in_same_slot t min_key_in_same_slot_mask =
@@ -1077,6 +1079,36 @@ module Priority_queue = struct
     Internal_elt.free pool elt;
   ;;
 
+  let fire_past_alarms t ~handle_fired ~key ~now =
+    let level = t.levels.( 0 ) in
+    if level.length > 0
+    then
+      let slot = Level.slot level ~key in
+      let slots = level.slots in
+      let pool = t.pool in
+      let first = ref slots.( slot ) in
+      if not (Internal_elt.is_null !first)
+      then begin
+        let current = ref !first in
+        let continue = ref true in
+        while !continue do
+          let elt = !current in
+          let next = Internal_elt.next pool elt in
+          if phys_equal next !first
+          then continue := false
+          else current := next;
+          if Time_ns.( <= ) (Internal_elt.at pool elt) now
+          then begin
+            handle_fired (Internal_elt.to_external elt);
+            internal_remove t elt;
+            Internal_elt.free pool elt;
+            (* We recompute [first] because [internal_remove] may have changed it. *)
+            first := slots.( slot );
+          end;
+        done;
+      end
+  ;;
+
   let change t elt ~key ~at =
     ensure_valid_key t ~key;
     let pool = t.pool in
@@ -1236,8 +1268,8 @@ TEST_UNIT =
         (Interval_num.to_int_exn
            (interval_num_internal
               ~start:Time_ns.epoch
-              ~alarm_precision:(Time_ns.Span.of_int_ns 3)
-              ~time:(Time_ns.of_int_ns_since_epoch time))))
+              ~alarm_precision:(Time_ns.Span.of_int63_ns (Int63.of_int 3))
+              ~time:(Time_ns.of_int63_ns_since_epoch (Int63.of_int time)))))
 ;;
 
 let interval_num_unchecked t time =
@@ -1438,11 +1470,17 @@ let next_alarm_fires_at t =
   if Internal_elt.is_null elt
   then None
   else
-    let key = Internal_elt.key t.priority_queue.Priority_queue.pool elt in
+    let key = Internal_elt.key t.priority_queue.pool elt in
     (* [interval_num_start t key] is the key corresponding to the start of the time
        interval holding the first alarm in [t].  Advancing to that would not be enough,
        since the alarms in that interval don't fire until the clock is advanced to the
        start of the next interval.  So, we use [key + 1] to advance to the start of the
        next interval. *)
     Some (interval_num_start t (Interval_num.succ key))
+;;
+
+let fire_past_alarms t ~handle_fired =
+  Priority_queue.fire_past_alarms t.priority_queue ~handle_fired
+    ~key:(now_interval_num t)
+    ~now:t.now;
 ;;

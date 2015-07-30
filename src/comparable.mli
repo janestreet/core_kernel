@@ -96,8 +96,8 @@ module Validate_with_zero
     include With_zero with type t := T.t
   end
 
-(* [Check_sexp_conversion] checks that conversion of a map or set to a sexp uses the same
-   sexp conversion as the underlying element. *)
+(** [Check_sexp_conversion] checks that conversion of a map or set to a sexp uses the same
+    sexp conversion as the underlying element. *)
 module Check_sexp_conversion (M : sig
   type t with sexp_of
   include S with type t := t

@@ -11,10 +11,10 @@ open Sexplib
 (** Serialization and comparison of an [Error] force the error's lazy message. **)
 type 'a t = ('a, Error.t) Result.t with bin_io, compare, sexp
 
-(* [Applicative] functions don't have quite the same semantics as
-   [Applicative.of_Monad(Or_error)] would give -- [apply (Error e1) (Error e2)] returns
-   the combination of [e1] and [e2], whereas it would only return [e1] if it were defined
-   using [bind]. *)
+(** [Applicative] functions don't have quite the same semantics as
+    [Applicative.of_Monad(Or_error)] would give -- [apply (Error e1) (Error e2)] returns
+    the combination of [e1] and [e2], whereas it would only return [e1] if it were defined
+    using [bind]. *)
 include Applicative.S      with type 'a t := 'a t
 include Invariant.S1       with type 'a t := 'a t
 include Monad.S            with type 'a t := 'a t
@@ -25,8 +25,8 @@ val ignore : _ t -> unit t
     Error.t.  [try_with_join] is like [try_with], except that [f] can throw exceptions or
     return an Error directly, without ending up with a nested error; it is equivalent to
     [Result.join (try_with f)]. *)
-val try_with      : ?backtrace:bool (* defaults to false *) -> (unit -> 'a  ) -> 'a t
-val try_with_join : ?backtrace:bool (* defaults to false *) -> (unit -> 'a t) -> 'a t
+val try_with      : ?backtrace:bool (** defaults to [false] *) -> (unit -> 'a  ) -> 'a t
+val try_with_join : ?backtrace:bool (** defaults to [false] *) -> (unit -> 'a t) -> 'a t
 
 (** [ok_exn t] throws an exception if [t] is an [Error], and otherwise returns the
     contents of the [Ok] constructor. *)
@@ -38,9 +38,23 @@ val of_exn : ?backtrace:[ `Get | `This of string ] -> exn -> _ t
 (** [of_exn_result (Ok a) = Ok a], [of_exn_result (Error exn) = of_exn exn] *)
 val of_exn_result : ('a, exn) Result.t -> 'a t
 
-(** [error message value sexp_of_value] constructs an [Error.t] and returns it as a
-    [Result.Error]. *)
-val error        : string -> 'a -> ('a -> Sexp.t) -> _ t
+(** [error] is a wrapper around [Error.create]:
+
+    {[
+      error ?strict message a sexp_of_a
+      = Error (Error.create ?strict message a sexp_of_a)
+    ]}
+
+    As with [Error.create], [sexp_of_a a] is lazily computed, when the info is converted
+    to a sexp.  So, if [a] is mutated in the time between the call to [create] and the
+    sexp conversion, those mutations will be reflected in the sexp.  Use [~strict:()] to
+    force [sexp_of_a a] to be computed immediately. *)
+val error
+  :  ?strict : unit
+  -> string
+  -> 'a
+  -> ('a -> Sexp.t)
+  -> _ t
 
 (** [error_string message] is [Error (Error.of_string message)] *)
 val error_string : string -> _ t
@@ -74,5 +88,8 @@ val combine_errors : 'a t list -> 'a list t
 val combine_errors_unit : unit t list -> unit t
 
 module Stable : sig
+  (** [Or_error.t] is wire compatible with [V2.t], but not [V1.t], like [Info.Stable]
+      and [Error.Stable]. *)
   module V1 : Stable_module_types.S1 with type 'a t = 'a t
+  module V2 : Stable_module_types.S1 with type 'a t = 'a t
 end

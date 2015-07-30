@@ -14,7 +14,7 @@ module type S = sig
   end
 end
 
-module Make (M : sig val module_name : string end) () = struct
+module Make_without_pretty_printer (M : sig val module_name : string end) () = struct
   module Stable = struct
     module V1 = struct
       include String
@@ -47,15 +47,19 @@ module Make (M : sig val module_name : string end) () = struct
 
   include Stable.V1
 
+end
+
+module Make (M : sig val module_name : string end) () = struct
+  include Make_without_pretty_printer(M) ()
+
   include Pretty_printer.Register (struct
       type nonrec t = t
       let module_name = M.module_name
       let to_string = to_string
     end)
-
 end
 
-include Make (struct let module_name = "String_id" end) ()
+include Make (struct let module_name = "Core_kernel.String_id" end) ()
 
 BENCH_MODULE "String_id" = struct
   BENCH "of_string(AAA)"       = of_string "AAA"

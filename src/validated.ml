@@ -113,7 +113,6 @@ TEST_MODULE = struct
       | Error _ -> assert false
       | Ok t -> assert ((t :> int) = n);
     ;;
-
   end
 
   module M1 = Make_binable (struct

@@ -133,22 +133,23 @@ val foldi : 'a t -> init:'b -> f:(int -> 'b -> 'a -> 'b) -> 'b
     where [n] is the length of the array [a]. *)
 val fold_right : 'a t -> f:('a -> 'b -> 'b) -> init:'b -> 'b
 
-(* All sorting is in increasing order by default. *)
+(** All sort functions in this module sort in increasing order by default.  *)
 
-(* [sort] uses constant heap space. [stable_sort] uses linear heap space.
+(** [sort] uses constant heap space. [stable_sort] uses linear heap space.
 
-   To sort only part of the array, specify [pos] to be the index to start sorting from
-   and [len] indicating how many elements to sort. *)
+    To sort only part of the array, specify [pos] to be the index to start sorting from
+    and [len] indicating how many elements to sort.
+*)
 val sort : ?pos:int -> ?len:int -> 'a t -> cmp:('a -> 'a -> int) -> unit
 val stable_sort : 'a t -> cmp:('a -> 'a -> int) -> unit
 
 val is_sorted : 'a t -> cmp:('a -> 'a -> int) -> bool
 
-(* [is_sorted_strictly xs ~cmp] iff [is_sorted xs ~cmp] and no two consecutive elements
+(** [is_sorted_strictly xs ~cmp] iff [is_sorted xs ~cmp] and no two consecutive elements
    in [xs] are equal according to [cmp] *)
 val is_sorted_strictly : 'a t -> cmp:('a -> 'a -> int) -> bool
 
-(* same as [List.concat_map] *)
+(** same as [List.concat_map] *)
 val concat_map : 'a t -> f:('a -> 'b array) -> 'b array
 
 val partition_tf : 'a t -> f:('a -> bool) -> 'a t * 'a t
@@ -188,7 +189,7 @@ val filter_map : 'a t -> f:('a -> 'b option) -> 'b t
 (** Same as [filter_map] but uses {!Array.mapi}. *)
 val filter_mapi : 'a t -> f:(int -> 'a -> 'b option) -> 'b t
 
-(* Functions with 2 suffix raise an exception if the lengths aren't the same. *)
+(** Functions with 2 suffix raise an exception if the lengths aren't the same. *)
 val iter2_exn : 'a t -> 'b t -> f:('a -> 'b -> unit) -> unit
 
 val map2_exn : 'a t -> 'b t -> f:('a -> 'b -> 'c) -> 'c t
@@ -353,12 +354,14 @@ module Permissioned : sig
   include Blit.             S1_permissions with type ('a, 'perms) t := ('a, 'perms) t
   include Binary_searchable.S1_permissions with type ('a, 'perms) t := ('a, 'perms) t
 
-  (* These functions are in [Container.S1_permissions], but they are re-exposed here so
-     that their types can be changed to make them more permissive (see comment above). *)
+  (** These functions are in [Container.S1_permissions], but they are re-exposed here so
+      that their types can be changed to make them more permissive (see comment above). *)
+
   val length   : (_, _) t -> int
   val is_empty : (_, _) t -> bool
 
-  (* counterparts of regular array functions above *)
+  (** counterparts of regular array functions above *)
+
   external get        : ('a, [> read] ) t -> int -> 'a         = "%array_safe_get"
   external set        : ('a, [> write]) t -> int -> 'a -> unit = "%array_safe_set"
   external unsafe_get : ('a, [> read] ) t -> int -> 'a         = "%array_unsafe_get"

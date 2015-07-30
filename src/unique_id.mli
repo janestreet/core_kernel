@@ -18,5 +18,5 @@ module type Id = Id
    even amongst different runs and different machines. *)
 module Int () : Id with type t = private int
 
-(* An abstract unique identifier based on 63 bit integers. *)
+(** An abstract unique identifier based on 63 bit integers. *)
 module Int63 () : Id with type t = private Core_int63.t

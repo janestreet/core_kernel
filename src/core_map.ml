@@ -174,6 +174,43 @@ module Tree0 = struct
         (bal l v d r, length)
   ;;
 
+  let add' t key data ~compare_key = fst (add t ~length:0 ~key ~data ~compare_key)
+
+  (* Like [bal] but allows any difference in height between [l] and [r]. *)
+  let rec join l k d r ~compare_key =
+    match l, r with
+    | Empty, _ -> add' r k d ~compare_key
+    | _, Empty -> add' l k d ~compare_key
+    | Leaf(lk, ld), _ -> add' (add' r k d ~compare_key) lk ld ~compare_key
+    | _, Leaf(rk, rd) -> add' (add' l k d ~compare_key) rk rd ~compare_key
+    | Node(ll, lk, ld, lr, lh), Node(rl, rk, rd, rr, rh) ->
+      if lh > rh + 2
+      (* height lr <= height (join lr k d r) <= height lr + 1 *)
+      then bal ll lk ld (join lr k d r ~compare_key)
+      else if rh > lh + 2
+      then bal (join l k d rl ~compare_key) rk rd rr
+      else create l k d r
+  ;;
+
+  let rec split t x ~compare_key =
+    match t with
+    | Empty -> (Empty, None, Empty)
+    | Leaf(k, d) ->
+      let cmp = compare_key x k in
+      if cmp = 0 then (Empty, Some (k, d), Empty)
+      else if cmp < 0 then (Empty, None, t)
+      else (t, None, Empty)
+    | Node(l, k, d, r, _) ->
+      let cmp = compare_key x k in
+      if cmp = 0 then (l, Some (k, d), r)
+      else if cmp < 0 then
+        let ll, maybe, lr = split l x ~compare_key in
+        (ll, maybe, join lr k d r ~compare_key)
+      else
+        let rl, maybe, rr = split r x ~compare_key in
+        (join l k d rl ~compare_key, maybe, rr)
+  ;;
+
   let rec find t x ~compare_key =
     match t with
     | Empty -> None
@@ -542,7 +579,7 @@ module Tree0 = struct
     ;;
   end
 
-  let to_sequence_increasing comparator ?from_key t =
+  let to_sequence_increasing comparator ~from_key t =
     let next enum =
       match enum with
       | Enum.End -> Sequence.Step.Done
@@ -556,7 +593,7 @@ module Tree0 = struct
     Sequence.unfold_step ~init ~f:next
   ;;
 
-  let to_sequence_decreasing comparator ?from_key t =
+  let to_sequence_decreasing comparator ~from_key t =
     let next enum =
       match enum with
       | Enum.End -> Sequence.Step.Done
@@ -570,14 +607,23 @@ module Tree0 = struct
     Sequence.unfold_step ~init ~f:next
   ;;
 
-  let to_sequence comparator ?(keys_in=`Increasing_order) t =
-    match keys_in with
-    | `Increasing_order -> to_sequence_increasing comparator t
-    | `Increasing_order_greater_than_or_equal_to from_key ->
-      to_sequence_increasing comparator ~from_key t
-    | `Decreasing_order -> to_sequence_decreasing comparator t
-    | `Decreasing_order_less_than_or_equal_to from_key ->
-      to_sequence_decreasing comparator ~from_key t
+  let to_sequence comparator ?(order=`Increasing_key) ?keys_greater_or_equal_to
+        ?keys_less_or_equal_to t =
+    let inclusive_bound side t bound =
+      let compare_key = comparator.Comparator.compare in
+      let l, maybe, r = split t bound ~compare_key in
+      let t = side (l, r) in
+      match maybe with
+      | None -> t
+      | Some (key, data) -> add' t key data ~compare_key
+    in
+    match order with
+    | `Increasing_key ->
+      let t = Option.fold keys_less_or_equal_to ~init:t ~f:(inclusive_bound fst) in
+      to_sequence_increasing comparator ~from_key:keys_greater_or_equal_to t
+    | `Decreasing_key ->
+      let t = Option.fold keys_greater_or_equal_to ~init:t ~f:(inclusive_bound snd) in
+      to_sequence_decreasing comparator ~from_key:keys_less_or_equal_to t
   ;;
 
   let compare compare_key compare_data t1 t2 =
@@ -684,41 +730,88 @@ module Tree0 = struct
     end
   ;;
 
-  let rec next_key t k ~compare_key =
-    match t with
-    | Empty -> None
-    | Leaf (k', v') ->
-      if compare_key k' k > 0 then
-        Some (k', v')
-      else
-        None
-    | Node (l, k', v', r, _) ->
-      let c = compare_key k' k in
-      if c = 0 then min_elt r
-      else if c < 0 then next_key r k ~compare_key
-      else begin match next_key l k ~compare_key with
-      | None -> Some (k', v')
-      | Some answer -> Some answer
-      end
-  ;;
+  module Closest_key_impl = struct
+    (* [marker] and [repackage] allow us to create "logical" options without actually
+       allocating any options. Passing [Found key value] to a function is equivalent to
+       passing [Some (key, value)]; passing [Missing () ()] is equivalent to passing
+       [None]. *)
+    type ('k, 'v, 'k_opt, 'v_opt) marker =
+      | Missing : ('k, 'v, unit, unit) marker
+      | Found : ('k, 'v, 'k, 'v) marker
 
-  let rec prev_key t k ~compare_key =
-    match t with
-    | Empty -> None
-    | Leaf (k', v') ->
-      if compare_key k' k < 0 then
-        Some (k', v')
-      else
-        None
-    | Node (l, k', v', r, _) ->
-      let c = compare_key k' k in
-      if c = 0 then max_elt l
-      else if c > 0 then prev_key l k ~compare_key
-      else begin match prev_key r k ~compare_key with
-      | None -> Some (k', v')
-      | Some answer -> Some answer
-      end
-  ;;
+    let repackage (type k) (type v) (type k_opt) (type v_opt)
+          (marker : (k, v, k_opt, v_opt) marker) (k : k_opt) (v : v_opt)
+      : (k * v) option =
+      match marker with
+      | Missing -> None
+      | Found -> Some (k, v)
+    ;;
+
+    (* The type signature is explicit here to allow polymorphic recursion. *)
+    let rec loop
+      :  'k 'v 'k_opt 'v_opt.
+         ('k, 'v) tree
+      -> [ `Greater_or_equal_to
+         | `Greater_than
+         | `Less_or_equal_to
+         | `Less_than
+         ]
+      -> 'k -> compare_key:('k -> 'k -> int)
+      -> ('k, 'v, 'k_opt, 'v_opt) marker -> 'k_opt -> 'v_opt
+      -> ('k * 'v) option
+      = fun t dir k ~compare_key found_marker found_key found_value ->
+        match t with
+        | Empty ->
+          repackage found_marker found_key found_value
+        | Leaf (k', v') ->
+          let c = compare_key k' k in
+          if
+            match dir with
+            | `Greater_or_equal_to -> c >= 0
+            | `Greater_than -> c > 0
+            | `Less_or_equal_to -> c <= 0
+            | `Less_than -> c < 0
+          then
+            Some (k', v')
+          else
+            repackage found_marker found_key found_value
+        | Node (l, k', v', r, _) ->
+          let c = compare_key k' k in
+          if c = 0 then begin
+            (* This is a base case (no recursive call). *)
+            match dir with
+            | `Greater_or_equal_to | `Less_or_equal_to ->
+              Some (k', v')
+            | `Greater_than ->
+              if is_empty r then
+                repackage found_marker found_key found_value
+              else
+                min_elt r
+            | `Less_than ->
+              if is_empty l then
+                repackage found_marker found_key found_value
+              else
+                max_elt l
+          end else begin
+            (* We are guaranteed here that k' <> k. *)
+            (* This is the only recursive case. *)
+            match dir with
+            | `Greater_or_equal_to | `Greater_than ->
+              if c > 0
+              then loop l dir k ~compare_key Found k' v'
+              else loop r dir k ~compare_key found_marker found_key found_value
+            | `Less_or_equal_to | `Less_than ->
+              if c < 0
+              then loop r dir k ~compare_key Found k' v'
+              else loop l dir k ~compare_key found_marker found_key found_value
+          end
+    ;;
+
+    let closest_key t dir k ~compare_key =
+      loop t dir k ~compare_key Missing () ()
+    ;;
+  end
+  let closest_key = Closest_key_impl.closest_key
 
   let rec rank t k ~compare_key =
     match t with
@@ -787,6 +880,8 @@ let like {tree = _; length = _; comparator} (tree, length) = {tree; length; comp
 let with_same_length { tree = _; comparator; length } tree =
   { tree; comparator; length }
 
+let of_tree ~comparator tree = { tree; comparator; length = Tree0.length tree}
+
 module Accessors = struct
   let to_tree t = t.tree
   let invariants t = Tree0.invariants t.tree ~compare_key:(compare_key t)
@@ -839,22 +934,24 @@ module Accessors = struct
   let max_elt_exn t = Tree0.max_elt_exn t.tree
   let for_all t ~f = Tree0.for_all t.tree ~f
   let exists t ~f = Tree0.exists t.tree ~f
+  let split t k =
+    let l, maybe, r = Tree0.split t.tree k ~compare_key:(compare_key t) in
+    (of_tree l ~comparator:(comparator t), maybe, of_tree r ~comparator:(comparator t))
+  ;;
   let fold_range_inclusive t ~min ~max ~init ~f =
     Tree0.fold_range_inclusive t.tree ~min ~max ~init ~f ~compare_key:(compare_key t)
   ;;
   let range_to_alist t ~min ~max =
     Tree0.range_to_alist t.tree ~min ~max ~compare_key:(compare_key t)
   ;;
-  let prev_key t key = Tree0.prev_key t.tree key ~compare_key:(compare_key t)
-  let next_key t key = Tree0.next_key t.tree key ~compare_key:(compare_key t)
+  let closest_key t dir key = Tree0.closest_key t.tree dir key ~compare_key:(compare_key t)
   let nth t n = Tree0.nth t.tree n
   let rank t key = Tree0.rank t.tree key ~compare_key:(compare_key t)
   let sexp_of_t sexp_of_k sexp_of_v t = Tree0.sexp_of_t sexp_of_k sexp_of_v t.tree
-  let to_sequence ?keys_in t =
-    Tree0.to_sequence t.comparator ?keys_in t.tree
+  let to_sequence ?order ?keys_greater_or_equal_to ?keys_less_or_equal_to t =
+    Tree0.to_sequence t.comparator ?order ?keys_greater_or_equal_to
+      ?keys_less_or_equal_to t.tree
 end
-
-let of_tree ~comparator tree = { tree; comparator; length = Tree0.length tree}
 
 let empty ~comparator = { tree = Tree0.empty; comparator; length = 0 }
 
@@ -1050,6 +1147,7 @@ module Make_tree (Key : Comparator.S1) = struct
   let max_elt_exn t = Tree0.max_elt_exn t
   let for_all t ~f = Tree0.for_all t ~f
   let exists  t ~f = Tree0.exists  t ~f
+  let split t k = Tree0.split t k ~compare_key:comparator.Comparator.compare
   let fold_range_inclusive t ~min ~max ~init ~f =
     Tree0.fold_range_inclusive t ~min ~max ~init ~f
       ~compare_key:comparator.Comparator.compare
@@ -1057,19 +1155,17 @@ module Make_tree (Key : Comparator.S1) = struct
   let range_to_alist t ~min ~max =
     Tree0.range_to_alist t ~min ~max ~compare_key:comparator.Comparator.compare
   ;;
-  let prev_key t key =
-    Tree0.prev_key t key ~compare_key:comparator.Comparator.compare
-  ;;
-  let next_key t key =
-    Tree0.next_key t key ~compare_key:comparator.Comparator.compare
+  let closest_key t dir key =
+    Tree0.closest_key t dir key ~compare_key:comparator.Comparator.compare
   ;;
   let nth t n =
     Tree0.nth t n
   ;;
   let rank t key = Tree0.rank t key ~compare_key:comparator.Comparator.compare
 
-  let to_sequence ?keys_in t =
-    Tree0.to_sequence comparator ?keys_in t
+  let to_sequence ?order ?keys_greater_or_equal_to ?keys_less_or_equal_to t =
+    Tree0.to_sequence comparator ?order ?keys_greater_or_equal_to
+      ?keys_less_or_equal_to t
 end
 
 module Poly = struct
@@ -1292,6 +1388,7 @@ module Tree = struct
   let max_elt_exn t = Tree0.max_elt_exn t
   let for_all t ~f = Tree0.for_all t ~f
   let exists  t ~f = Tree0.exists  t ~f
+  let split ~comparator t k = Tree0.split t k ~compare_key:comparator.Comparator.compare
   let fold_range_inclusive ~comparator t ~min ~max ~init ~f =
     Tree0.fold_range_inclusive t ~min ~max ~init ~f
       ~compare_key:comparator.Comparator.compare
@@ -1299,16 +1396,15 @@ module Tree = struct
   let range_to_alist ~comparator t ~min ~max =
     Tree0.range_to_alist t ~min ~max ~compare_key:comparator.Comparator.compare
   ;;
-  let prev_key ~comparator t key =
-    Tree0.prev_key t key ~compare_key:comparator.Comparator.compare
-  ;;
-  let next_key ~comparator t key =
-    Tree0.next_key t key ~compare_key:comparator.Comparator.compare
+  let closest_key ~comparator t dir key =
+    Tree0.closest_key t dir key ~compare_key:comparator.Comparator.compare
   ;;
   let nth ~comparator:_ t n = Tree0.nth t n
   let rank ~comparator t key = Tree0.rank t key ~compare_key:comparator.Comparator.compare
   let sexp_of_t sexp_of_k sexp_of_v _ t = Tree0.sexp_of_t sexp_of_k sexp_of_v t
 
-  let to_sequence ~comparator ?keys_in t =
-    Tree0.to_sequence comparator ?keys_in t
+  let to_sequence ~comparator ?order ?keys_greater_or_equal_to ?keys_less_or_equal_to t
+    =
+    Tree0.to_sequence comparator ?order ?keys_greater_or_equal_to ?keys_less_or_equal_to
+      t
 end

@@ -176,6 +176,13 @@ module type Accessors_generic = sig
   val for_all : ('k, 'v, _) t -> f:('v -> bool) -> bool
   val exists  : ('k, 'v, _) t -> f:('v -> bool) -> bool
 
+  val split
+    : ('k, 'cmp,
+       ('k, 'v, 'cmp) t
+       -> 'k key
+       -> ('k, 'v, 'cmp) t * ('k key * 'v) option * ('k, 'v, 'cmp) t
+      ) options
+
   val fold_range_inclusive
     : ('k, 'cmp,
        ('k, 'v, 'cmp) t
@@ -191,14 +198,15 @@ module type Accessors_generic = sig
        ('k, 'v, 'cmp) t -> min:'k key -> max:'k key -> ('k key * 'v) list
       ) options
 
-  val prev_key
+  val closest_key
     : ('k, 'cmp,
-       ('k, 'v, 'cmp) t -> 'k key -> ('k key * 'v) option
-      ) options
-
-  val next_key
-    : ('k, 'cmp,
-       ('k, 'v, 'cmp) t -> 'k key -> ('k key * 'v) option
+       ('k, 'v, 'cmp) t
+       -> [ `Greater_or_equal_to
+          | `Greater_than
+          | `Less_or_equal_to
+          | `Less_than
+          ]
+       -> 'k key -> ('k key * 'v) option
       ) options
 
   val nth
@@ -215,11 +223,9 @@ module type Accessors_generic = sig
 
   val to_sequence
     : ('k, 'cmp,
-       ?keys_in:[ `Increasing_order
-                | `Increasing_order_greater_than_or_equal_to of 'k key
-                | `Decreasing_order
-                | `Decreasing_order_less_than_or_equal_to of 'k key
-                ]
+       ?order:[ `Increasing_key | `Decreasing_key ]
+       -> ?keys_greater_or_equal_to:'k key
+       -> ?keys_less_or_equal_to:'k key
        -> ('k, 'v, 'cmp) t
        -> ('k key * 'v) Sequence.t
       ) options
@@ -274,6 +280,7 @@ module type Accessors1 = sig
   val max_elt_exn    : 'a t -> key * 'a
   val for_all        : 'a t -> f:('a -> bool) -> bool
   val exists         : 'a t -> f:('a -> bool) -> bool
+  val split          : 'a t -> key -> 'a t * (key * 'a) option * 'a t
   val fold_range_inclusive
     :  'a t
     -> min:key
@@ -282,17 +289,20 @@ module type Accessors1 = sig
     -> f:(key:key -> data:'a -> 'b -> 'b)
     -> 'b
   val range_to_alist : 'a t -> min:key -> max:key -> (key * 'a) list
-  val prev_key       : 'a t -> key -> (key * 'a) option
-  val next_key       : 'a t -> key -> (key * 'a) option
+  val closest_key    : 'a t
+    -> [ `Greater_or_equal_to
+       | `Greater_than
+       | `Less_or_equal_to
+       | `Less_than
+       ]
+    -> key -> (key * 'a) option
   val nth            : 'a t -> int -> (key * 'a) option
   val rank           : _  t -> key -> int option
   val to_tree        : 'a t -> 'a tree
   val to_sequence
-    :  ?keys_in:[ `Increasing_order
-                | `Increasing_order_greater_than_or_equal_to of key
-                | `Decreasing_order
-                | `Decreasing_order_less_than_or_equal_to of key
-                ]
+    :  ?order:[ `Increasing_key | `Decreasing_key ]
+    -> ?keys_greater_or_equal_to:key
+    -> ?keys_less_or_equal_to:key
     -> 'a t
     -> (key * 'a) Sequence.t
 end
@@ -346,20 +356,24 @@ module type Accessors2 = sig
   val max_elt_exn    : ('a, 'b) t -> 'a * 'b
   val for_all        : (_,  'b) t -> f:('b -> bool) -> bool
   val exists         : (_,  'b) t -> f:('b -> bool) -> bool
+  val split          : ('a, 'b) t -> 'a -> ('a, 'b) t * ('a * 'b) option * ('a, 'b) t
   val fold_range_inclusive
     : ('a, 'b) t -> min:'a -> max:'a -> init:'c -> f:(key:'a -> data:'b -> 'c -> 'c) -> 'c
   val range_to_alist : ('a, 'b) t -> min:'a -> max:'a -> ('a * 'b) list
-  val prev_key       : ('a, 'b) t -> 'a -> ('a * 'b) option
-  val next_key       : ('a, 'b) t -> 'a -> ('a * 'b) option
+  val closest_key    : ('a, 'b) t
+    -> [ `Greater_or_equal_to
+       | `Greater_than
+       | `Less_or_equal_to
+       | `Less_than
+       ]
+    -> 'a -> ('a * 'b) option
   val nth            : ('a, 'b) t -> int -> ('a * 'b) option
   val rank           : ('a, _)  t -> 'a -> int option
   val to_tree        : ('a, 'b) t -> ('a, 'b) tree
   val to_sequence
-    :  ?keys_in:[ `Increasing_order
-                | `Increasing_order_greater_than_or_equal_to of 'a
-                | `Decreasing_order
-                | `Decreasing_order_less_than_or_equal_to of 'a
-                ]
+    :  ?order:[ `Increasing_key | `Decreasing_key ]
+    -> ?keys_greater_or_equal_to:'a
+    -> ?keys_less_or_equal_to:'a
     -> ('a, 'b) t
     -> ('a * 'b) Sequence.t
 end
@@ -413,6 +427,10 @@ module type Accessors3 = sig
   val max_elt_exn    : ('a, 'b, 'cmp) t -> 'a * 'b
   val for_all        : (_,  'b, _)    t -> f:('b -> bool) -> bool
   val exists         : (_,  'b, _)    t -> f:('b -> bool) -> bool
+  val split
+    :  ('k, 'v, 'cmp) t
+    -> 'k
+    -> ('k, 'v, 'cmp) t * ('k * 'v) option * ('k, 'v, 'cmp) t
   val fold_range_inclusive
     :  ('a, 'b, _) t
     -> min:'a
@@ -421,17 +439,20 @@ module type Accessors3 = sig
     -> f:(key:'a -> data:'b -> 'c -> 'c)
     -> 'c
   val range_to_alist : ('a, 'b, _)    t -> min:'a -> max:'a -> ('a * 'b) list
-  val prev_key       : ('a, 'b, _)    t -> 'a -> ('a * 'b) option
-  val next_key       : ('a, 'b, _)    t -> 'a -> ('a * 'b) option
+  val closest_key    : ('a, 'b, _)    t
+    -> [ `Greater_or_equal_to
+       | `Greater_than
+       | `Less_or_equal_to
+       | `Less_than
+       ]
+    -> 'a -> ('a * 'b) option
   val nth            : ('a, 'b, _)    t -> int -> ('a * 'b) option
   val rank           : ('a, _,  _)    t -> 'a -> int option
   val to_tree        : ('a, 'b, 'cmp) t -> ('a, 'b, 'cmp) tree
   val to_sequence
-    :  ?keys_in:[ `Increasing_order
-                | `Increasing_order_greater_than_or_equal_to of 'a
-                | `Decreasing_order
-                | `Decreasing_order_less_than_or_equal_to of 'a
-                ]
+    :  ?order:[ `Increasing_key | `Decreasing_key ]
+    -> ?keys_greater_or_equal_to:'a
+    -> ?keys_less_or_equal_to:'a
     -> ('a, 'b, _) t
     -> ('a * 'b) Sequence.t
 end
@@ -514,6 +535,11 @@ module type Accessors3_with_comparator = sig
   val max_elt_exn    : ('a, 'b, 'cmp) t -> 'a * 'b
   val for_all        : ('a, 'b, 'cmp) t -> f:('b -> bool) -> bool
   val exists         : ('a, 'b, 'cmp) t -> f:('b -> bool) -> bool
+  val split
+    :  comparator:('a, 'cmp) Comparator.t
+    -> ('a, 'b, 'cmp) t
+    -> 'a
+    -> ('a, 'b, 'cmp) t * ('a * 'b) option * ('a, 'b, 'cmp) t
   val fold_range_inclusive
     :  comparator:('a, 'cmp) Comparator.t
     -> ('a, 'b, 'cmp) t
@@ -521,12 +547,15 @@ module type Accessors3_with_comparator = sig
   val range_to_alist
     :  comparator:('a, 'cmp) Comparator.t
     -> ('a, 'b, 'cmp) t -> min:'a -> max:'a -> ('a * 'b) list
-  val prev_key
+  val closest_key
     :  comparator:('a, 'cmp) Comparator.t
-    -> ('a, 'b, 'cmp) t -> 'a -> ('a * 'b) option
-  val next_key
-    :  comparator:('a, 'cmp) Comparator.t
-    -> ('a, 'b, 'cmp) t -> 'a -> ('a * 'b) option
+    -> ('a, 'b, 'cmp) t
+    -> [ `Greater_or_equal_to
+       | `Greater_than
+       | `Less_or_equal_to
+       | `Less_than
+       ]
+    -> 'a -> ('a * 'b) option
   val nth
     :  comparator:('a, 'cmp) Comparator.t
     -> ('a, 'b, 'cmp) t -> int -> ('a * 'b) option
@@ -536,16 +565,14 @@ module type Accessors3_with_comparator = sig
   val to_tree : ('a, 'b, 'cmp) t -> ('a, 'b, 'cmp) tree
   val to_sequence
     :  comparator:('a, 'cmp) Comparator.t
-    -> ?keys_in:[ `Increasing_order
-                | `Increasing_order_greater_than_or_equal_to of 'a
-                | `Decreasing_order
-                | `Decreasing_order_less_than_or_equal_to of 'a
-                ]
+    -> ?order:[ `Increasing_key | `Decreasing_key ]
+    -> ?keys_greater_or_equal_to:'a
+    -> ?keys_less_or_equal_to:'a
     -> ('a, 'b, 'cmp) t
     -> ('a * 'b) Sequence.t
 end
 
-(* Consistency checks (same as in [Container]). *)
+(** Consistency checks (same as in [Container]). *)
 module Check_accessors (T : T3) (Tree : T3) (Key : T1) (Options : T3)
   (M : Accessors_generic
      with type ('a, 'b, 'c) options := ('a, 'b, 'c) Options.t

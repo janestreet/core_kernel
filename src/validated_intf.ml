@@ -4,10 +4,10 @@
 
     {[
       module Positive_int = Validated.Make (struct
-        type t = int
-        let here = _here_
-        let validate = Int.validate_positive
-      end)
+          type t = int
+          let here = _here_
+          let validate = Int.validate_positive
+        end)
     ]}
 
     With this, one is certain that any value of type [Positive_int.t] has passed

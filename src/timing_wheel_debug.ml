@@ -115,6 +115,11 @@ module Make
       (fun () -> advance_clock t ~to_ ~handle_fired)
   ;;
 
+  let fire_past_alarms t ~handle_fired =
+    debug "fire_past_alarms" [t] () <:sexp_of< unit >> <:sexp_of< unit >>
+      (fun () -> fire_past_alarms t ~handle_fired)
+  ;;
+
   let alarm_upper_bound = alarm_upper_bound
 
   let add t ~at a =

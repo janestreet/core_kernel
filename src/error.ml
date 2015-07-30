@@ -9,7 +9,12 @@ let raise t = raise (to_exn t)
 let to_info t = t
 let of_info t = t
 
-let failwiths ?here message a sexp_of_a = raise (create ?here message a sexp_of_a)
-let failwithp  here message a sexp_of_a = raise (create ~here message a sexp_of_a)
+let failwiths ?strict ?here message a sexp_of_a =
+  raise (create ?strict ?here message a sexp_of_a)
+;;
 
-let () = Pretty_printer.register "Core.Error.pp"
+let failwithp ?strict here message a sexp_of_a =
+  raise (create ?strict ~here message a sexp_of_a)
+;;
+
+let () = Pretty_printer.register "Core_kernel.Error.pp"

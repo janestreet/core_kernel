@@ -49,7 +49,7 @@ type 'a m = (module S with type t = 'a)
 val of_bigstring : 'a m -> bigstring -> 'a
 
 val to_bigstring
-  :  ?prefix_with_length:bool (* defaults to false *)
+  :  ?prefix_with_length:bool (** defaults to false *)
   -> 'a m
   -> 'a
   -> bigstring

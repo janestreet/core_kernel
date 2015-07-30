@@ -55,20 +55,22 @@ let set t i obj =
   (* We use [get] first but then we use [Array.unsafe_set] since we know that [i] is
      valid. *)
   let old_obj = get t i in
-  if Obj.is_int old_obj && Obj.is_int obj then
+  if Obj.is_int old_obj && Obj.is_int obj
+  then
     (* It is OK to skip [caml_modify] if both the old and new values are integers. *)
     Array.unsafe_set (Obj.magic (t : t) : int array) i (Obj.obj obj : int)
-  else if not (phys_equal old_obj obj) then
-    Array.unsafe_set t i obj
+  else if not (phys_equal old_obj obj)
+  then Array.unsafe_set t i obj
 ;;
 
 let unsafe_set t i obj =
   let old_obj = unsafe_get t i in
-  if Obj.is_int old_obj && Obj.is_int obj then
+  if Obj.is_int old_obj && Obj.is_int obj
+  then
     (* It is OK to skip [caml_modify] if both the old and new values are integers. *)
     Array.unsafe_set (Obj.magic (t : t) : int array) i (Obj.obj obj : int)
-  else if not (phys_equal old_obj obj) then
-    Array.unsafe_set t i obj
+  else if not (phys_equal old_obj obj)
+  then Array.unsafe_set t i obj
 ;;
 
 let singleton obj =
@@ -83,8 +85,8 @@ let unsafe_set_int_assuming_currently_int t i int =
 
 (* Pre-condition: t.(i) is an integer. *)
 let unsafe_set_assuming_currently_int t i obj =
-  if Obj.is_int obj then
-    unsafe_set_int_assuming_currently_int t i (Obj.obj obj : int)
+  if Obj.is_int obj
+  then unsafe_set_int_assuming_currently_int t i (Obj.obj obj : int)
   else
     (* [t.(i)] is an integer and [obj] is not, so we do not need to check if they are
        equal. *)
@@ -106,7 +108,8 @@ let unsafe_blit ~src ~src_pos ~dst ~dst_pos ~len =
      Constant-stride access, forward or backward, should be indistinguishable (at least on
      an intel i7).  So, we don't do a check for [phys_equal src dst] and always loop up in
      that case. *)
-  if dst_pos < src_pos then
+  if dst_pos < src_pos
+  then
     for i = 0 to len - 1 do
       unsafe_set dst (dst_pos + i) (unsafe_get src (src_pos + i))
     done
@@ -188,7 +191,7 @@ TEST_UNIT =
 (* [truncate] *)
 TEST = does_raise (fun () -> truncate empty ~len:0)
 TEST = does_raise (fun () -> truncate empty ~len:1)
-TEST = does_raise (fun () -> truncate empty ~len:-1)
+TEST = does_raise (fun () -> truncate empty ~len:(-1))
 TEST = does_raise (fun () -> truncate (create ~len:1) ~len:0)
 TEST = does_raise (fun () -> truncate (create ~len:1) ~len:2)
 

@@ -1,4 +1,7 @@
-(** [Weak] is like the OCaml standard library module of the same name, except that it
+(** Module for dealing with weak pointers, i.e., pointers that don't prevent garbage
+    collection of what they point to.
+
+    This module is like the OCaml standard library module of the same name, except that it
     requires that the values in the weak set are heap blocks. *)
 
 type 'a t with sexp_of

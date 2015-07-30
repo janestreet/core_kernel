@@ -60,7 +60,11 @@ type 'a check = 'a -> t                 (** to make function signatures easier t
 
 val pass      : t                       (** A result containing no errors *)
 val fail      : string -> t             (** A result containing a single error *)
-val fails     : string -> 'a -> ('a -> Sexplib.Sexp.t) -> t
+val fails
+  :  string
+  -> 'a
+  -> ('a -> Sexplib.Sexp.t)
+  -> t
 
 (** Like [sprintf] or [failwithf] but produces a [t] instead of a string or exception *)
 val failf     : ('a, unit, string, t) format4 -> 'a
@@ -94,7 +98,7 @@ val errors : t -> string list
     message containing a message for every error. *)
 val maybe_raise : t -> unit
 
-(* Returns an error if validation fails. *)
+(** Returns an error if validation fails. *)
 val valid_or_error : 'a -> 'a check -> 'a Or_error.t
 
 (** Used for validating an individual field. *)

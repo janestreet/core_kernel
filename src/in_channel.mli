@@ -1,13 +1,13 @@
-(** In_channel collects all of the pervasive functions that work on in_channels.
+(** [In_channel] collects all of the pervasive functions that work on in_channels.
     * It adds some new functions (like [input_all] and [input_lines]).
     * It names things using the fact that there is no worry about toplevel name
       conflicts (since we are in a module).
     * It uses labelled arguments.
-    * It returns an option rather than raising End_of_file. *)
+    * It returns an option rather than raising End_of_file.
 
-(* Note: an in_channel is a custom block with a finalizer, and so is allocated directly
-   to the major heap. Creating a lot of in_channels can result in many major collections
-   and poor performance. *)
+    Note that an [in_channel] is a custom block with a finalizer, and so is allocated
+    directly to the major heap. Creating a lot of in_channels can result in many major
+    collections and poor performance. *)
 
 type t = in_channel
 
@@ -17,13 +17,13 @@ val stdin : t
     Windows.
 *)
 
-val create : ?binary:bool (* defaults to true *) -> string -> t
+val create : ?binary:bool (** defaults to [true] *) -> string -> t
 
 (** [with_file ~f fname] executes [~f] on the open channel from
     [fname], and closes it afterwards. *)
-val with_file : ?binary:bool (* defaults to true *) -> string -> f:(t -> 'a) -> 'a
+val with_file : ?binary:bool (** defaults to [true] *) -> string -> f:(t -> 'a) -> 'a
 
-(* [close t] closes t, and may raise an exception. *)
+(** [close t] closes t, and may raise an exception. *)
 val close : t -> unit
 
 val input : t -> buf:string -> pos:int -> len:int -> int
@@ -39,21 +39,29 @@ val input_all : t -> string
     the newline ("\n") character at the end, and, if [fix_win_eol] the trailing
     "\r\n" is dropped.
 *)
-val input_line : ?fix_win_eol:bool (* defaults to true *) -> t -> string option
+val input_line : ?fix_win_eol:bool (** defaults to [true] *) -> t -> string option
 
 (** [fold_lines ?fix_win_eol t ~init ~f] folds over the lines read from [t]
     using [input_line].  Lines are provided to [f] in the order they are
     found in the file. *)
 val fold_lines
-  : ?fix_win_eol:bool (* defaults to true *) -> t -> init:'a -> f:('a -> string -> 'a) -> 'a
+  :  ?fix_win_eol:bool (** defaults to [true] *)
+  -> t
+  -> init:'a
+  -> f:('a -> string -> 'a)
+  -> 'a
 
 (** Completely reads an input channel and returns the results as a list of
     strings. Each line in one string. *)
-val input_lines : ?fix_win_eol:bool (* defaults to true *) -> t -> string list
+val input_lines : ?fix_win_eol:bool (** defaults to [true] *) -> t -> string list
 
 (** [iter_lines ?fix_win_eol t ~f] applies [f] to each line read from [t] using
     [input_line]. *)
-val iter_lines : ?fix_win_eol:bool (* defaults to true *) -> t -> f:(string -> unit) -> unit
+val iter_lines
+  :  ?fix_win_eol:bool (** defaults to [true] *)
+  -> t
+  -> f:(string -> unit)
+  -> unit
 
 val seek : t -> int64 -> unit
 val pos : t -> int64

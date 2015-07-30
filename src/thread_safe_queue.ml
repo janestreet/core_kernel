@@ -59,7 +59,6 @@ end = struct
 end
 
 module Elt = struct
-
   type 'a t =
     { mutable value : 'a Uopt.t
     ; mutable next  : 'a t Uopt.t sexp_opaque
@@ -95,7 +94,7 @@ let invariant _invariant_a t =
           decr i;
           let elt = !r in
           r := Uopt.value_exn elt.Elt.next;
-          assert (Uopt.is_some elt.Elt.value);
+          assert (Uopt.is_some elt.value);
         done;
         assert (phys_equal !r t.back)))
       ~back:(check (fun back ->
@@ -105,7 +104,7 @@ let invariant _invariant_a t =
         while Uopt.is_some !r do
           let elt = Uopt.value_exn !r in
           r := elt.Elt.next;
-          assert (Uopt.is_none elt.Elt.value);
+          assert (Uopt.is_none elt.value);
         done)))
 ;;
 
@@ -123,7 +122,7 @@ let get_unused_elt t =
   if Uopt.is_some t.unused_elts
   then begin
     let elt = Uopt.unsafe_value t.unused_elts in
-    t.unused_elts <- elt.Elt.next;
+    t.unused_elts <- elt.next;
     elt;
   end
   (* END ATOMIC SECTION *)
@@ -134,16 +133,16 @@ let enqueue (type a) (t : a t) (a : a) =
   let new_back = get_unused_elt t in
   (* BEGIN ATOMIC SECTION *)
   t.length <- t.length + 1;
-  t.back.Elt.value <- Uopt.some a;
-  t.back.Elt.next  <- Uopt.some new_back;
+  t.back.value <- Uopt.some a;
+  t.back.next  <- Uopt.some new_back;
   t.back <- new_back;
   (* END ATOMIC SECTION *)
 ;;
 
-let return_unused_elt t elt =
+let return_unused_elt t (elt : _ Elt.t) =
   (* BEGIN ATOMIC SECTION *)
-  elt.Elt.value <- Uopt.none;
-  elt.Elt.next <- t.unused_elts;
+  elt.value <- Uopt.none;
+  elt.next <- t.unused_elts;
   t.unused_elts <- Uopt.some elt;
   (* END ATOMIC SECTION *)
 ;;
@@ -153,8 +152,8 @@ let dequeue_exn t =
   if t.length = 0
   then failwiths "Thread_safe_queue.dequeue_exn of empty queue" t <:sexp_of< _ t >>;
   let elt = t.front in
-  let a = elt.Elt.value in
-  t.front <- Uopt.unsafe_value elt.Elt.next;
+  let a = elt.value in
+  t.front <- Uopt.unsafe_value elt.next;
   t.length <- t.length - 1;
   (* END ATOMIC SECTION *)
   return_unused_elt t elt;

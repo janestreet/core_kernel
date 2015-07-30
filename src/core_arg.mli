@@ -1,6 +1,7 @@
-(* This module is deprecated.  Please use [Command]. *)
+(** INRIA's original command-line parsing library.
 
-(* INRIA's original command-line parsing library. *)
+    The [Command] module is generally recommended over direct use of this library.. *)
+
 include module type of Caml.Arg
 
 type t = key * spec * doc

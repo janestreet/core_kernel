@@ -21,11 +21,11 @@ module type S = sig
 
   val empty : t
 
-  val (+) : t -> t -> t       (* set union, bitwise or *)
-  val (-) : t -> t -> t       (* set difference *)
+  val (+) : t -> t -> t       (** set union, bitwise or *)
+  val (-) : t -> t -> t       (** set difference *)
 
-  val intersect : t -> t -> t   (* bitwise and *)
-  val complement : t -> t       (* bitwise not *)
+  val intersect : t -> t -> t   (** bitwise and *)
+  val complement : t -> t       (** bitwise not *)
 
   val is_empty     : t -> bool
   val do_intersect : t -> t -> bool
@@ -46,14 +46,14 @@ module type Make_arg = sig
       It is an error if different flags intersect, and [allow_intersecting = false]. *)
   val known : (Int63.t * string) list
 
-  (* If [remove_zero_flags], then all flags with value zero will be automatically removed
-     from [known].  If [not remove_zero_flags], then it is an error for [known] to contain
-     any flags with value zero.
+  (** If [remove_zero_flags], then all flags with value zero will be automatically removed
+      from [known].  If [not remove_zero_flags], then it is an error for [known] to contain
+      any flags with value zero.
 
-     About this existence of this option: it seems better to make it an option here rather
-     than do the filtering at the functor call site.  It also makes clear to callers that
-     they need to think about zero flags, and clear what they can do if they encounter
-     them. *)
+      About this existence of this option: it seems better to make it an option here
+      rather than do the filtering at the functor call site.  It also makes clear to
+      callers that they need to think about zero flags, and clear what they can do if they
+      encounter them. *)
   val remove_zero_flags : bool
 
   (** [allow_intersecting] says whether to allow intersecting [known] flags.  It is

@@ -24,50 +24,72 @@ type sexp = Sexp.t = Atom of string | List of sexp list (* constructor import *)
 with compare
 
 module Binable_exn = struct
-  module T = struct
-    type t = exn with sexp_of
+  module Stable = struct
+    module V1 = struct
+      module T = struct
+        type t = exn with sexp_of
+      end
+      include T
+      include Binable.Of_binable (Sexp) (struct
+          include T
+
+          exception Exn of Sexp.t
+
+          (* We install a custom exn-converter rather than use [exception Exn of t with
+             sexp] to eliminate the extra wrapping of "(Exn ...)". *)
+          let () =
+            Sexplib.Conv.Exn_converter.add_auto (Exn (Atom "<template>"))
+              (function
+                | Exn t -> t
+                | _ ->
+                  (* Reaching this branch indicates a bug in sexplib. *)
+                  assert false)
+          ;;
+
+          let to_binable t = t |> <:sexp_of< t >>
+          let of_binable sexp = Exn sexp
+        end)
+    end
   end
-  include T
-  include Binable.Of_binable (Sexp) (struct
-    include T
-
-    exception Exn of Sexp.t
-
-    (* We install a custom exn-converter rather than use [exception Exn of t with sexp] to
-       eliminate the extra wrapping of "(Exn ...)". *)
-    let () =
-      Sexplib.Conv.Exn_converter.add_auto (Exn (Atom "<template>"))
-        (function
-          | Exn t -> t
-          | _ ->
-            (* Reaching this branch indicates a bug in sexplib. *)
-            assert false)
-    ;;
-
-    let to_binable t = t |> <:sexp_of< t >>
-    let of_binable sexp = Exn sexp
-  end)
 end
 
 module Message = struct
+  module Stable = struct
+    module Binable_exn = Binable_exn.Stable
 
-  type t =
-  | Could_not_construct of Sexp.t
-  | String of string
-  | Exn of Binable_exn.t
-  | Sexp of Sexp.t
-  | Tag_sexp of string * Sexp.t * Source_code_position0.t_hum option
-  | Tag_t of string * t
-  | Tag_arg of string * Sexp.t * t
-  | Of_list of int option * t list
-  | With_backtrace of t * string (* backtrace *)
-  with bin_io, sexp_of
+    module Source_code_position = struct
+      module V1 = struct
+        type t = Source_code_position0.Stable.V1.t with bin_io
+
+        (* [sexp_of_t] as defined here is unstable; this is OK because there is no
+           [t_of_sexp].  [sexp_of_t] is only used to produce a sexp that is never
+           deserialized as a [Source_code_position]. *)
+        let sexp_of_t = Source_code_position0.sexp_of_t_hum
+      end
+    end
+
+    module V2 = struct
+      type t =
+        | Could_not_construct of Sexp.t
+        | String              of string
+        | Exn                 of Binable_exn.V1.t
+        | Sexp                of Sexp.t
+        | Tag_sexp            of string * Sexp.t * Source_code_position.V1.t option
+        | Tag_t               of string * t
+        | Tag_arg             of string * Sexp.t * t
+        | Of_list             of int option * t list
+        | With_backtrace      of t * string (* backtrace *)
+      with bin_io, sexp_of
+    end
+  end
+
+  include Stable.V2
 
   let rec to_strings_hum t ac =
     (* We use [Sexp.to_string_mach], despite the fact that we are implementing
-       [to_strings_hum], because we want the info to fit on a single line, and once
-       we've had to resort to sexps, the message is going to start not looking so
-       pretty anyway. *)
+       [to_strings_hum], because we want the info to fit on a single line, and once we've
+       had to resort to sexps, the message is going to start not looking so pretty
+       anyway. *)
     match t with
     | Could_not_construct sexp ->
       "could not construct info: " :: Sexp.to_string_mach sexp :: ac
@@ -107,8 +129,8 @@ module Message = struct
       List ( Atom tag
              :: sexp
              :: (match here with
-             | None -> []
-             | Some here -> [ Source_code_position0.sexp_of_t_hum here ]))
+               | None -> []
+               | Some here -> [ Source_code_position0.sexp_of_t_hum here ]))
       :: ac
     | Tag_t (tag, t) -> List (Atom tag :: to_sexps_hum t []) :: ac
     | Tag_arg (tag, sexp, t) -> List (Atom tag :: sexp :: to_sexps_hum t []) :: ac
@@ -131,19 +153,37 @@ let invariant _ = ()
 
 (* We use [protect] to guard against exceptions raised by user-supplied functons, so
    that failure to produce one part of an info doesn't interfere with other parts. *)
-let protect f = try f () with exn -> Message.Could_not_construct (Exn.sexp_of_t exn)
+let protect f =
+  try f () with exn -> Could_not_construct (Exn.sexp_of_t exn)
+;;
 
 let to_message t = protect (fun () -> Lazy.force t)
 
 let of_message message = Lazy.lazy_from_val message
 
-let sexp_of_t t = Message.to_sexp_hum (to_message t)
+module Stable_v2 = struct
+  type nonrec t = t
 
-let t_of_sexp sexp = lazy (Message.Sexp sexp)
+  (* It is OK to use [Message.to_sexp_hum], which is not stable, because [t_of_sexp]
+     below can handle any sexp. *)
+  let sexp_of_t t = Message.to_sexp_hum (to_message t)
 
-let compare t1 t2 =
-  <:compare< Sexp.t >> (t1 |> <:sexp_of< t >>) (t2 |> <:sexp_of< t >>)
-;;
+  let t_of_sexp sexp = lazy (Message.Sexp sexp)
+
+  let compare t1 t2 =
+    <:compare< Sexp.t >> (t1 |> <:sexp_of< t >>) (t2 |> <:sexp_of< t >>)
+  ;;
+
+  include Binable.Of_binable (Message.Stable.V2) (struct
+      type nonrec t = t
+      let to_binable = to_message
+      let of_binable = of_message
+    end)
+end
+
+include (Stable_v2 : sig
+           type t with bin_io, compare, sexp
+         end with type t := t)
 
 let to_string_hum t =
   match to_message t with
@@ -155,12 +195,6 @@ let to_string_hum_deprecated t = Message.to_string_hum_deprecated (to_message t)
 
 let to_string_mach t = Sexp.to_string_mach (sexp_of_t t)
 
-include Binable.Of_binable (Message) (struct
-  type nonrec t = t
-  let to_binable = to_message
-  let of_binable = of_message
-end)
-
 let of_lazy l = lazy (protect (fun () -> String (Lazy.force l)))
 
 let of_string message = Lazy.lazy_from_val (String message)
@@ -171,8 +205,10 @@ TEST = to_string_hum (of_string "a\nb") = "a\nb"
 
 let of_thunk f = lazy (protect (fun () -> String (f ())))
 
-let create ?here tag x sexp_of_x =
-  lazy (protect (fun () -> Tag_sexp (tag, sexp_of_x x, here)))
+let create ?here ?strict tag x sexp_of_x =
+  match strict with
+  | None    -> lazy (protect (fun () -> Tag_sexp (tag, sexp_of_x x, here)))
+  | Some () -> of_message (             Tag_sexp (tag, sexp_of_x x, here))
 ;;
 
 let tag t tag = lazy (Tag_t (tag, to_message t))
@@ -222,22 +258,24 @@ let of_exn ?backtrace exn =
 ;;
 
 module Stable = struct
+  module V2 = Stable_v2
+
   module V1 = struct
     type nonrec t = t
 
     include Sexpable.Of_sexpable (Sexp) (struct
-      type nonrec t = t
-      let to_sexpable = sexp_of_t
-      let of_sexpable = t_of_sexp
-    end)
+        type nonrec t = t
+        let to_sexpable = sexp_of_t
+        let of_sexpable = t_of_sexp
+      end)
 
     let compare = compare
 
     include Binable.Of_binable (Sexp) (struct
-      type nonrec t = t
-      let to_binable = sexp_of_t
-      let of_binable = t_of_sexp
-    end)
+        type nonrec t = t
+        let to_binable = sexp_of_t
+        let of_binable = t_of_sexp
+      end)
   end
 end
 
@@ -304,9 +342,9 @@ TEST_MODULE "Info" = struct
 end
 
 let pp ppf t = Format.pp_print_string ppf (to_string_hum t)
-let () = Pretty_printer.register "Core.Info.pp"
+let () = Pretty_printer.register "Core_kernel.Info.pp"
 
-(* yminsky: benchmarks
+(* benchmarks
 
    open Core.Std
    module Bench = Core_extended.Bench

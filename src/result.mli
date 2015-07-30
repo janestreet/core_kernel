@@ -38,7 +38,7 @@ val iter_error : (_  , 'err) t -> f:('err -> unit) -> unit
 val map       : ('ok, 'err) t -> f:('ok  -> 'c) -> ('c , 'err) t
 val map_error : ('ok, 'err) t -> f:('err -> 'c) -> ('ok, 'c  ) t
 
-(* Returns Ok if both are Ok and Error otherwise. *)
+(** Returns [Ok] if both are [Ok] and [Error] otherwise. *)
 val combine
   :  ('ok1, 'err) t
   -> ('ok2, 'err) t
@@ -52,7 +52,7 @@ val combine
       (List.map ~f:ric_of_ticker ["AA"; "F"; "CSCO"; "AAPL"]) ]} *)
 val ok_fst : ('ok, 'err) t -> [ `Fst of 'ok | `Snd of 'err ]
 
-(* [ok_if_true] returns [Ok ()] if [bool] is true, and [Error error] if it is false *)
+(** [ok_if_true] returns [Ok ()] if [bool] is true, and [Error error] if it is false *)
 val ok_if_true : bool -> error : 'err -> (unit, 'err) t
 
 val try_with : (unit -> 'a) -> ('a, exn) t
@@ -60,7 +60,7 @@ val try_with : (unit -> 'a) -> ('a, exn) t
 (** [ok_exn t] returns [x] if [t = Ok x], and raises [exn] if [t = Error exn] *)
 val ok_exn : ('ok, exn) t -> 'ok
 
-(* raises Failure in the Error case *)
+(** raises [Failure] in the [Error] case *)
 val ok_or_failwith : ('ok, string) t -> 'ok
 
 (** [ok_unit = Ok ()], used to avoid allocation as a performance hack *)
@@ -86,7 +86,7 @@ module Stable : sig
     include Stable_module_types.S2 with type ('ok, 'err) t := ('ok, 'err) t
   end
 
-  (* We export the unit test arg rather than instantiate the functor inside result.ml in
-     order to avoid circular dependencies.  The functor is instantiated in stable.ml. *)
+  (** We export the unit test arg rather than instantiate the functor inside result.ml in
+      order to avoid circular dependencies.  The functor is instantiated in stable.ml. *)
   module V1_stable_unit_test : Stable_unit_test_intf.Arg
 end

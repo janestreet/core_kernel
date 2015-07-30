@@ -1,8 +1,8 @@
 (** This module can be used to safely expose functions and values in signatures
-    that can only be used in unit tests.
+    that should only be used in unit tests.
 
-    Under the hood, ['a t = (unit -> 'a)] and the only thing that ever forces them
-    is the [run_tests_and_exit] function below which actually runs the unit tests.
+    Under the hood, ['a t = 'a Lazy.t] and the only thing that ever forces them
+    is the [force] function below which should only be called in unit tests.
 
     For example, suppose in some module, [type t] is actually an [int].  You
     want to keep the type definition opaque, but use the underlying
@@ -24,7 +24,7 @@
     writing, e.g.:
 
     [let (test_special_value : t Only_in_test.t) =
-       Only_in_test.of_thunk (fun () ->  (factorial 100))]
+       Only_in_test.of_thunk (fun () ->  factorial 100)]
 
     instead of
 

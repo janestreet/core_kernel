@@ -1,6 +1,6 @@
 (** Tail recursive version of standard List functions, plus additional operations. *)
 
-(* [compare] is lexicographic. *)
+(** [compare] on lists is lexicographic. *)
 type 'a t = 'a list with bin_io, compare, sexp, typerep
 
 include Container.S1 with type 'a t := 'a t
@@ -38,9 +38,9 @@ val unordered_append : 'a t -> 'a t -> 'a t
    {!List.rev}[ (]{!ListLabels.map}[ f l)], but is more efficient. *)
 val rev_map : 'a t -> f:('a -> 'b) -> 'b t
 
-(* [fold_left] is the same as [fold], and one should always use [fold] rather
-   than [fold_left], except in functors that are parameterized over a more
-   general signature where this equivalence does not hold.
+(** [fold_left] is the same as [fold], and one should always use [fold] rather than
+    [fold_left], except in functors that are parameterized over a more general signature
+    where this equivalence does not hold.
 *)
 val fold_left : 'a t -> init:'b -> f:('b -> 'a -> 'b) -> 'b
 
@@ -189,10 +189,19 @@ val iteri : 'a t ->  f:(int -> 'a -> unit) -> unit
     element as the first argument to the folded function.  Tail-recursive. *)
 val foldi : 'a t -> f:(int -> 'b -> 'a -> 'b) -> init:'b -> 'b
 
-(** [reduce_exn [a1; ...; an] ~f] is [f (... (f (f a1 a2) a3) ...) an].
-    It fails on the empty list.  Tail recursive. *)
+(** [reduce_exn [a1; ...; an] ~f] is [f (... (f (f a1 a2) a3) ...) an].  It fails on the
+    empty list.  Tail recursive. *)
 val reduce_exn : 'a t -> f:('a -> 'a -> 'a) -> 'a
-val reduce : 'a t -> f:('a -> 'a -> 'a) -> 'a option
+val reduce     : 'a t -> f:('a -> 'a -> 'a) -> 'a option
+
+(** [reduce_balanced] returns the same value as [reduce] when [f] is associative, but
+    differs in that the tree of nested applications of [f] has logarithmic depth.
+
+    This is useful when your ['a] grows in size as you reduce it and [f] becomes more
+    expensive with bigger inputs.  For example, [reduce_balanced ~f:(^)] takes [n*log(n)]
+    time, while [reduce ~f:(^)] takes quadratic time. *)
+val reduce_balanced     : 'a t -> f:('a -> 'a -> 'a) -> 'a option
+val reduce_balanced_exn : 'a t -> f:('a -> 'a -> 'a) -> 'a
 
 (** [group l ~break] returns a list of lists (i.e., groups) whose concatenation is
     equal to the original list.  Each group is broken where break returns true on
@@ -245,7 +254,7 @@ val contains_dup : ?compare:('a -> 'a -> int) -> 'a t -> bool
     duplicate you get), or None if there are no dups. *)
 val find_a_dup : ?compare:('a -> 'a -> int) -> 'a t -> 'a option
 
-(* only raised in [exn_if_dup] below *)
+(** only raised in [exn_if_dup] below *)
 exception Duplicate_found of (unit -> Sexplib.Sexp.t) * string
 
 (** [exn_if_dup ?compare ?context t ~to_sexp] will run [find_a_dup] on [t], and raise
@@ -267,9 +276,9 @@ val count : 'a t -> f:('a -> bool) -> int
     the result to be nonempty (or [start_i] = [stop_i] in the case where both bounds are
     inclusive). *)
 val range
-  :  ?stride:int                            (* default = 1 *)
-  -> ?start:[`inclusive|`exclusive]         (* default = `inclusive *)
-  -> ?stop:[`inclusive|`exclusive]          (* default = `exclusive *)
+  :  ?stride:int                            (** default = 1 *)
+  -> ?start:[`inclusive|`exclusive]         (** default = `inclusive *)
+  -> ?stop:[`inclusive|`exclusive]          (** default = `exclusive *)
   -> int
   -> int
   -> int t
@@ -297,14 +306,14 @@ val filter_mapi : 'a t -> f:(int -> 'a -> 'b option) -> 'b t
     which are [Some e].  In other words, [filter_opt l] = [filter_map ~f:ident l]. *)
 val filter_opt : 'a option t -> 'a t
 
-(* Interpret a list of (key, value) pairs as a map in which only the first
-   occurrence of a key affects the semantics, i.e.:
+(** Interpret a list of (key, value) pairs as a map in which only the first
+    occurrence of a key affects the semantics, i.e.:
 
-   List.Assoc.xxx alist ...args...
+    {[List.Assoc.xxx alist ...args... ]}
 
-   is always the same as (or at least sort of isomorphic to):
+    is always the same as (or at least sort of isomorphic to):
 
-   Map.xxx (alist |! Map.of_alist_multi |! Map.map ~f:List.hd) ...args...
+    {[ Map.xxx (alist |! Map.of_alist_multi |! Map.map ~f:List.hd) ...args... }]
 *)
 module Assoc : sig
 
@@ -316,7 +325,7 @@ module Assoc : sig
   val mem      : ('a, 'b) t -> ?equal:('a -> 'a -> bool) -> 'a -> bool
   val remove   : ('a, 'b) t -> ?equal:('a -> 'a -> bool) -> 'a -> ('a, 'b) t
   val map      : ('a, 'b) t -> f:('b -> 'c) -> ('a, 'c) t
-  (* Bijectivity is not guaranteed because we allow a key to appear more than once. *)
+  (** Bijectivity is not guaranteed because we allow a key to appear more than once. *)
   val inverse  : ('a, 'b) t -> ('b, 'a) t
 end
 
@@ -353,8 +362,8 @@ val concat_no_order : 'a t t -> 'a t
 
 val cons : 'a -> 'a t -> 'a t
 
-(* Returns a list with all possible pairs -- if the input lists have length len1 and len2,
-   the resulting list will have length len1*len2. *)
+(** Returns a list with all possible pairs -- if the input lists have length len1 and
+    len2, the resulting list will have length len1*len2. *)
 val cartesian_product : 'a t -> 'b t -> ('a * 'b) t
 
 val to_string : f:('a -> string) -> 'a t -> string

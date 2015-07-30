@@ -123,6 +123,23 @@ CAMLprim value bigstring_blit_stub(
   return Val_unit;
 }
 
+/* Comparison */
+
+CAMLprim value bigstring_memcmp_stub(value v_s1, value v_s1_pos,
+                                     value v_s2, value v_s2_pos,
+                                     value v_len) /* noalloc */
+{
+  struct caml_ba_array *ba_s1 = Caml_ba_array_val(v_s1);
+  struct caml_ba_array *ba_s2 = Caml_ba_array_val(v_s2);
+  char *s1 = (char *) ba_s1->data + Long_val(v_s1_pos);
+  char *s2 = (char *) ba_s2->data + Long_val(v_s2_pos);
+  int res;
+  res = memcmp(s1, s2, Long_val(v_len));
+  if (res < 0) return Val_int(-1);
+  if (res > 0) return Val_int(1);
+  return Val_int(0);
+}
+
 /* Search */
 
 CAMLprim value bigstring_find(value v_str, value v_needle,

@@ -1,7 +1,9 @@
 (** A buffer for incremental decoding of an input stream.
 
     An [Unpack_buffer.t] is a buffer to which one can [feed] strings, and then [unpack]
-    from the buffer to produce a queue of values. *)
+    from the buffer to produce a queue of values.
+*)
+
 open Std_internal
 
 module Unpack_one : sig
@@ -26,13 +28,13 @@ module Unpack_one : sig
       calls to [feed]. *)
 
   type ('value, 'partial_unpack) t =
-    ?partial_unpack:'partial_unpack
-    -> ?pos:int  (* default is [0] *)
-    -> ?len:int  (* default is [Bigstring.len bigstring - pos] *)
+    ?partial_unpack : 'partial_unpack
+    -> ?pos         : int  (** default is [0] *)
+    -> ?len         : int  (** default is [Bigstring.len bigstring - pos] *)
     -> Bigstring.t
-    -> [ `Ok of 'value * int
+    -> [ `Ok              of 'value * int
        | `Not_enough_data of 'partial_unpack * int
-       | `Invalid_data of Error.t
+       | `Invalid_data    of Error.t
        ]
 
   val map : ('a, 'partial_unpack) t -> f:('a -> 'b) -> ('b, 'partial_unpack) t
@@ -52,14 +54,16 @@ module Unpack_one : sig
   val sexp : (Sexp.t, partial_sexp) t
 end
 
-(* Note that [t] doesn't expose its type ['partial_unpack].  It is only here to allow the
-   chosen implementation strategy in the .ml. *)
+(** The type of an unpack buffer.
+
+    Note that [t] doesn't expose its type ['partial_unpack].  It is only here to allow the
+    chosen implementation strategy in the .ml. *)
 type ('value, 'partial_unpack) t with sexp_of
 
 val invariant : (_, _) t -> unit
 
 val create
-  :  ?partial_unpack:'partial_unpack
+  :  ?partial_unpack : 'partial_unpack
   -> ('value, 'partial_unpack) Unpack_one.t
   -> ('value, 'partial_unpack) t
 

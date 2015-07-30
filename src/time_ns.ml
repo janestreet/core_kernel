@@ -2,28 +2,7 @@ INCLUDE "config.mlh"
 open Std_internal
 
 
-let round_nearest_portable_alloc f = Core_int63.of_float (Float.round_nearest f)
-let round_nearest_arch64_noalloc f = Core_int63.of_int (Float.iround_nearest_exn f)
-BENCH_MODULE "round_nearest portability/performance" = struct
-  let f = if Random.bool () then 1.0 else 2.0
-  BENCH "round_nearest_portable_alloc" = round_nearest_portable_alloc f
-  BENCH "round_nearest_arch64_noalloc" = round_nearest_arch64_noalloc f
-  (* Here is a comparison of both of these rounding operators on a 64-bit machine.  Hence
-     we have special-cased this so that we get the faster operation on 64-bit machines.
-
-     ┌───────────────────────────────────────────┬──────────┬─────────┬────────────┐
-     │ Name                                      │ Time/Run │ mWd/Run │ Percentage │
-     ├───────────────────────────────────────────┼──────────┼─────────┼────────────┤
-     │ [time_ns.ml] round_nearest_portable_alloc │  17.31ns │   2.00w │    100.00% │
-     │ [time_ns.ml] round_nearest_arch64_noalloc │   4.53ns │         │     26.16% │
-     └───────────────────────────────────────────┴──────────┴─────────┴────────────┘
-  *)
-end
-IFDEF ARCH_SIXTYFOUR THEN
-let round_nearest = round_nearest_arch64_noalloc
-ELSE
-let round_nearest = round_nearest_portable_alloc
-ENDIF
+let round_nearest = Float.int63_round_nearest_exn
 
 let float x = Core_int63.to_float x
 
@@ -39,8 +18,6 @@ module Span : sig
   include Comparable.Validate  with type t := t
   include Comparable.With_zero with type t := t
   include Equal.S              with type t := t
-
-  val min : t -> t -> t
 
   val nanosecond  : t
   val microsecond : t
@@ -127,13 +104,6 @@ module Span : sig
     type nonrec t = t with sexp
   end
 end = struct
-  let half_microsecond = Core_int63.of_int 500
-
-  let min_value = Core_int63.min_value
-
-  (* [- half_microsecond] to avoid overflow in [Core.Std.Time_ns.to_span max_value] *)
-  let max_value = Core_int63.(max_value - half_microsecond)
-
   (* [Span] is basically a [Core_int63] *)
   module T = struct
     type t = Core_int63.t (** nanoseconds *)
@@ -145,7 +115,6 @@ end = struct
 
     include (Core_int63 : Comparable.Infix with type t := t)
 
-    let min = Core_int63.min
   end
 
   include T
@@ -173,6 +142,18 @@ end = struct
   let hour        = Core_int63.(of_int 60 * minute)
   let day         = Core_int63.(of_int 24 * hour)
 
+  (* Beyond this, not every microsecond can be represented as a [float] number of seconds.
+     (In fact, it is around 135y, but we leave a small margin.) *)
+  let max_value = Core_int63.(of_int 135 * of_int 365 * day)
+  let min_value = Core_int63.neg max_value
+
+  let check_range t =
+    if t < min_value || t > max_value then
+      failwiths "Span.t exceeds limits" (t, min_value, max_value)
+        <:sexp_of< Core_int63.t * Core_int63.t * Core_int63.t >>
+    else t
+  ;;
+
   let create
         ?(sign = Float.Sign.Pos)
         ?day:(d = 0)
@@ -194,7 +175,8 @@ end = struct
       + of_int us * microsecond
       + of_int ns * nanosecond
     in
-    Float.Sign.(match sign with Neg -> -t | Pos | Zero -> t)
+    check_range Float.Sign.(match sign with Neg -> -t | Pos | Zero -> t)
+  ;;
 
   let to_parts t =
     let open Core_int63 in
@@ -208,25 +190,26 @@ end = struct
     ; us = to_int_exn ((rem mag millisecond) / microsecond)
     ; ns = to_int_exn ((rem mag microsecond) / nanosecond)
     }
+  ;;
 
   let of_parts { Parts. sign; hr; min; sec; ms; us; ns } =
-    create ~sign ~hr ~min ~sec ~ms ~us ~ns ()
+    check_range (create ~sign ~hr ~min ~sec ~ms ~us ~ns ())
+  ;;
 
-  let of_ns       f = round_nearest f
-  let of_int63_ns i = i
-  let of_int_sec  i = Core_int63.(of_int i * second)
-  let of_us       f = round_nearest (f *. float microsecond)
-  let of_ms       f = round_nearest (f *. float millisecond)
-  let of_sec      f = round_nearest (f *. float second)
-  let of_min      f = round_nearest (f *. float minute)
-  let of_hr       f = round_nearest (f *. float hour)
-  let of_day      f = round_nearest (f *. float day)
+  let of_ns       f = check_range (round_nearest f)
+  let of_int63_ns i = check_range i
+  let of_int_sec  i = check_range Core_int63.(of_int i * second)
+  let of_us       f = check_range (round_nearest (f *. float microsecond))
+  let of_ms       f = check_range (round_nearest (f *. float millisecond))
+  let of_sec      f = check_range (round_nearest (f *. float second))
+  let of_min      f = check_range (round_nearest (f *. float minute))
+  let of_hr       f = check_range (round_nearest (f *. float hour))
+  let of_day      f = check_range (round_nearest (f *. float day))
 
-  let of_sec_with_microsecond_precision f =
-    (* round [f] as if it was millisecond and scale it back *)
-    Core_int63.( * )
-      (round_nearest (f *. float millisecond))
-      (Core_int63.of_int 1000)
+  let of_sec_with_microsecond_precision sec =
+    let us = round_nearest (sec *. 1e6) in
+    of_int63_ns Core_int63.(us * of_int 1000)
+  ;;
 
   let to_ns       t = float t
   let to_int63_ns t =       t
@@ -237,26 +220,27 @@ end = struct
   let to_hr       t = float t /. float hour
   let to_day      t = float t /. float day
   let to_int_sec  t = Core_int63.(to_int_exn (t / second))
-  TEST = Int.(>) (to_int_sec Core_int63.max_value) 0 (* and doesn't raise *)
 
 IFDEF ARCH_SIXTYFOUR THEN
-  let of_int_ns i = of_int63_ns (Core_int63.of_int i)
+  TEST = Int.(>) (to_int_sec Core_int63.max_value) 0 (* and doesn't raise *)
+
+  let of_int_ns i = check_range (of_int63_ns (Core_int63.of_int i))
   let to_int_ns t = Core_int63.to_int_exn (to_int63_ns t)
 ELSE
   let of_int_ns _i = failwith "unsupported on 32bit machines"
   let to_int_ns _i = failwith "unsupported on 32bit machines"
 ENDIF
 
-  let (+)       = Core_int63.(+)
-  let (-)       = Core_int63.(-)
-  let abs       = Core_int63.(abs)
-  let neg       = Core_int63.(neg)
-  let scale t f = round_nearest (float t *. f)
-  let scale_int63 t i = Core_int63.( * ) t i
-  let scale_int   t i = scale_int63 t (Core_int63.of_int i)
-  let div       = Core_int63.( /% )
-  let (/)   t f = round_nearest (float t /. f)
-  let (//)      = Core_int63.(//)
+  let (+) t u         = check_range (Core_int63.(+) t u)
+  let (-) t u         = check_range (Core_int63.(-) t u)
+  let abs             = Core_int63.(abs)
+  let neg             = Core_int63.(neg)
+  let scale t f       = check_range (round_nearest (float t *. f))
+  let scale_int63 t i = check_range (Core_int63.( * ) t i)
+  let scale_int t i   = check_range (scale_int63 t (Core_int63.of_int i))
+  let div             = Core_int63.( /% )
+  let (/) t f         = check_range (round_nearest (float t /. f))
+  let (//)            = Core_int63.(//)
 
   (** The conversion code here is largely copied from [Core.Span] and edited to remove
       some of the stable versioning details. This makes it a little easier to think about
@@ -301,7 +285,7 @@ ENDIF
       match sexp with
       | Sexp.Atom x ->
         (try of_string x
-        with exn -> of_sexp_error (Exn.to_string exn) sexp)
+         with exn -> of_sexp_error (Exn.to_string exn) sexp)
       | Sexp.List _ ->
         of_sexp_error "Time_ns.Span.t_of_sexp sexp must be an Atom" sexp
 
@@ -327,11 +311,11 @@ ENDIF
   let sexp_of_t = Alternate_sexp.sexp_of_t
   let t_of_sexp = Alternate_sexp.t_of_sexp
 
-  include Comparable.Validate_with_zero (struct
-      include T
-      let sexp_of_t = Alternate_sexp.sexp_of_t
-      let t_of_sexp = Alternate_sexp.t_of_sexp
-    end)
+  include Comparable.Validate_with_zero(struct
+    include T
+    let sexp_of_t = Alternate_sexp.sexp_of_t
+    let t_of_sexp = Alternate_sexp.t_of_sexp
+  end)
 
   TEST_MODULE = struct
     let ( * ) = Core_int63.( * )
@@ -351,13 +335,13 @@ ENDIF
     TEST_UNIT = eq (create ~day:7                      ()) (of_int 7    * day)
     TEST_UNIT = eq (create ~us:8 ~sign:Float.Sign.Neg  ()) (of_int (-8) * microsecond)
     TEST_UNIT = eq (create ~ms:9 ~sign:Float.Sign.Zero ()) (of_int 9    * millisecond)
-    TEST_UNIT = eq (create ~us:3 ~ns:242 () |> to_sec |> of_sec_with_microsecond_precision)
-                  (of_int 3 * microsecond)
     TEST_UNIT =
-      let open Core_int63 in
+      eq (create ~us:3 ~ns:242 () |> to_sec |> of_sec_with_microsecond_precision)
+        (of_int 3 * microsecond)
+    TEST_UNIT =
       for _i = 1 to 1_000_000 do
         let t =
-          (of_int64_exn (Random.int64 (to_int64 max_value)))
+          (Core_int63.of_int64_exn (Random.int64 (Core_int63.to_int64 max_value)))
           + if Random.bool () then zero else min_value
         in
         round_trip t
@@ -444,8 +428,8 @@ IFDEF ARCH_SIXTYFOUR THEN
 let to_int_ns_since_epoch t = Core_int63.to_int_exn (to_int63_ns_since_epoch t)
 let of_int_ns_since_epoch i = of_int63_ns_since_epoch (Core_int63.of_int i)
 ELSE
-let to_int_ns_since_epoch t = failwith "unsupported on 32bit machines"
-let of_int_ns_since_epoch i = failwith "unsupported on 32bit machines"
+let to_int_ns_since_epoch _t = failwith "unsupported on 32bit machines"
+let of_int_ns_since_epoch _i = failwith "unsupported on 32bit machines"
 ENDIF
 
 let next_multiple ?(can_equal_after = false) ~base ~after ~interval () =
@@ -465,37 +449,6 @@ let next_multiple ?(can_equal_after = false) ~base ~after ~interval () =
     then next
     else add next interval
   end
-;;
-
-external nanosleep : float -> float = "core_kernel_time_ns_nanosleep" ;;
-
-let nanosleep t = Span.of_sec (nanosleep (Span.to_sec t))
-
-let pause_for t =
-  let time_remaining =
-    (* If too large a float is passed in (Span.max_value for instance) then nanosleep
-       will return immediately, leading to an infinite and expensive select loop.  This
-       is handled by pausing for no longer than 100 days. *)
-    nanosleep (Span.min t (Span.scale Span.day 100.))
-  in
-  if Span.( > ) time_remaining Span.zero
-  then `Remaining time_remaining
-  else `Ok
-;;
-
-(** Pause and don't allow events to interrupt. *)
-let rec pause span =
-  match pause_for span with
-  | `Remaining span -> pause span
-  | `Ok -> ()
-;;
-
-(** Pause but allow events to interrupt. *)
-let interruptible_pause = pause_for
-
-let rec pause_forever () =
-  pause Span.day;
-  pause_forever ()
 ;;
 
 module Alternate_sexp = struct

@@ -44,17 +44,18 @@ with bin_io, compare, sexp
     fancy shortcuts.  Also, the sexps for ['a] must not look anything like blang sexps.
     Otherwise [t_of_sexp] will fail. *)
 
-(* smart constructors that simplify away constants whenever possible *)
+(** {6 smart constructors that simplify away constants whenever possible} *)
+
 val base     : 'a -> 'a t
 val true_    : _ t
 val false_   : _ t
-val constant : bool -> _ t (* [function true -> true_ | false -> false_] *)
+val constant : bool -> _ t (** [function true -> true_ | false -> false_] *)
 val not_     : 'a t -> 'a t
-val and_     : 'a t list -> 'a t (* n-ary [And] *)
-val or_      : 'a t list -> 'a t (* n-ary [Or] *)
-val if_      : 'a t -> 'a t -> 'a t -> 'a t (* [if_ if then else] *)
+val and_     : 'a t list -> 'a t (** n-ary [And] *)
+val or_      : 'a t list -> 'a t (** n-ary [Or] *)
+val if_      : 'a t -> 'a t -> 'a t -> 'a t (** [if_ if then else] *)
 
-(* [constant_value t = Some b] iff [t = constant b] *)
+(** [constant_value t = Some b] iff [t = constant b] *)
 val constant_value : 'a t -> bool option
 
 (** The following two functions are useful when one wants to pretend

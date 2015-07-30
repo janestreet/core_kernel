@@ -53,3 +53,16 @@ val from_val : 'a -> 'a t
 (** [is_val x] returns [true] if [x] has already been forced and
     did not raise an exception. *)
 val is_val : 'a t -> bool
+
+(** This type offers a serialization function [sexp_of_t] that won't force its argument.
+    Instead, it will serialize the ['a] if it is available, or just use a custom string
+    indicating is not forced.  Note that this is not a round-trippable type, thus the type
+    does not expose [of_sexp].  To be used in debug code for example, or while tracking an
+    Heisenbug, etc. *)
+module T_unforcing : sig
+  type nonrec 'a t = 'a t with sexp_of
+end
+
+module Stable : sig
+  module V1 : Stable_module_types.S1 with type 'a t = 'a t
+end
