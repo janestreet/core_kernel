@@ -7,7 +7,7 @@ module Sexp = Sexplib.Sexp
 let sprintf = Printf.sprintf
 
 module Stat = struct
-  type pretty_float = float with compare, bin_io, sexp
+  type pretty_float = float [@@deriving compare, bin_io, sexp]
   let sexp_of_pretty_float f = Sexp.Atom (sprintf "%.2e" f)
 
   module T = struct
@@ -28,7 +28,7 @@ module Stat = struct
       compactions : int;
       top_heap_words : int;
       stack_size : int
-    } with compare, bin_io, sexp, fields
+    } [@@deriving compare, bin_io, sexp, fields]
   end
 
   include T
@@ -83,7 +83,7 @@ module Control = struct
           the first-fit policy, which can be slower in some cases but can be better for
           programs with fragmentation problems.  Default: 0. *)
       mutable allocation_policy : int;
-    } with compare, bin_io, sexp, fields
+    } [@@deriving compare, bin_io, sexp, fields]
   end
 
   include T
@@ -157,13 +157,13 @@ let zero = int_of_string "0" (* The compiler won't optimize int_of_string away s
 let rec keep_alive o =
   if zero <> 0 then keep_alive o
 
-TEST_UNIT =
+let%test_unit _ =
   let r = ref () in
   let weak = Weak.create 1 in
   Weak.set weak 0 (Some r);
   Gc.compact ();
   assert (Option.is_some (Weak.get weak 0));
-  keep_alive r;
+  keep_alive r
 ;;
 
 module Expert = struct
@@ -185,7 +185,7 @@ module Expert = struct
   module Alarm = struct
     type t = alarm
 
-    let sexp_of_t _ = "<gc alarm>" |> <:sexp_of< string >>
+    let sexp_of_t _ = "<gc alarm>" |> [%sexp_of: string]
 
     let create f = create_alarm (fun () -> Exn.handle_uncaught_and_exit f)
 
@@ -194,16 +194,16 @@ module Expert = struct
 end
 
 (* Simple inline benchmarks for GC functions *)
-BENCH "minor_words" = minor_words ()
-BENCH "major_words" = major_words ()
-BENCH "major_plus_minor_words" = major_plus_minor_words ()
-BENCH "promoted_words" = promoted_words ()
-BENCH "minor_collections" = minor_collections ()
-BENCH "major_collections" = major_collections ()
-BENCH "heap_words" = heap_words ()
-BENCH "heap_chunks" = heap_chunks ()
-BENCH "compactions" = compactions ()
-BENCH "top_heap_words" = top_heap_words ()
-BENCH "stat" = stat ()
-BENCH "quick_stat" = quick_stat ()
-BENCH "counters" = counters ()
+let%bench "minor_words" = minor_words ()
+let%bench "major_words" = major_words ()
+let%bench "major_plus_minor_words" = major_plus_minor_words ()
+let%bench "promoted_words" = promoted_words ()
+let%bench "minor_collections" = minor_collections ()
+let%bench "major_collections" = major_collections ()
+let%bench "heap_words" = heap_words ()
+let%bench "heap_chunks" = heap_chunks ()
+let%bench "compactions" = compactions ()
+let%bench "top_heap_words" = top_heap_words ()
+let%bench "stat" = stat ()
+let%bench "quick_stat" = quick_stat ()
+let%bench "counters" = counters ()

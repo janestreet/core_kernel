@@ -12,7 +12,7 @@ module Slot  : Tuple_type.Slot
 
 (** The type of a flat-tuple array.  ['slots] will look like [('a1, ..., 'an) Slots.tn],
     and the array holds flat tuples of type ['a1 * ... * 'an]. *)
-type 'slots t with sexp_of
+type 'slots t [@@deriving sexp_of]
 
 include Blit.     S1 with type 'a t := 'a t
 include Invariant.S1 with type 'a t := 'a t

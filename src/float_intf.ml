@@ -3,9 +3,9 @@
 module Binable = Binable0
 
 module type S = sig
-  type t with typerep
+  type t [@@deriving typerep]
   type outer = t
-  with bin_io, sexp, typerep
+  [@@deriving bin_io, sexp, typerep]
 
 
   include Floatable.S with type t := t
@@ -16,6 +16,7 @@ module type S = sig
   include Comparable.With_zero with type t := t
   (** The results of robust comparisons on [nan] should be considered undefined. *)
   include Robustly_comparable.S with type t := t
+  include Quickcheckable.S with type t := t
 
   (** [validate_ordinary] fails if class is [Nan] or [Infinite]. *)
   val validate_ordinary : t Validate.check
@@ -271,6 +272,29 @@ module type S = sig
   *)
   val to_padded_compact_string : float -> string
 
+  (** [int_pow x n] computes [x ** float n] via repeated squaring.  It is generally much
+      faster than [**].
+
+      Note that [int_pow x 0] always returns [1.], even if [x = nan].  This
+      coincides with [x ** 0.] and is intentional.
+
+      For [n >= 0] the result is identical to an n-fold product of [x] with itself under
+      [*.], with a certain placement of parentheses.  For [n < 0] the result is identical
+      to [int_pow (1. /. x) (-n)].
+
+      The error will be on the order of [|n|] ulps, essentially the same as if you
+      perturbed [x] by up to a ulp and then exponentiated exactly.
+
+      Benchmarks show a factor of 5-10 speedup (relative to [**]) for exponents up to
+      about 1000 (approximately 10ns vs. 70ns).  For larger exponents the advantage is
+      smaller but persists into the trillions.  For a recent or more detailed comparison
+      run the benchmarks.
+
+      Depending on context, calling this function might or might not allocate 2 minor
+      words.  Even if called in a way that causes allocation, it still appears faster than
+      [**]. *)
+  val int_pow : t -> int -> t
+
   (** [ldexp x n] returns [x *. 2 ** n] *)
   val ldexp : t -> int -> t
 
@@ -286,7 +310,7 @@ module type S = sig
     | Normal
     | Subnormal
     | Zero
-    with bin_io, sexp
+    [@@deriving bin_io, sexp]
 
     include Stringable.S with type t := t
   end
@@ -309,7 +333,7 @@ module type S = sig
   val is_finite : t -> bool
 
   module Sign : sig
-    type t = Neg | Zero | Pos with sexp
+    type t = Neg | Zero | Pos [@@deriving sexp]
   end
 
   val sign : t -> Sign.t
@@ -320,18 +344,44 @@ module type S = sig
       http://en.wikipedia.org/wiki/Double-precision_floating-point_format.
 
       In particular, if 1 <= exponent <= 2046, then:
-        create_ieee_exn ~negative:false ~exponent ~mantissa =
-           2 ** (exponent - 1023) * (1 + (2 ** -52) * mantissa)
-  *)
+
+      {[
+        create_ieee_exn ~negative:false ~exponent ~mantissa
+        = 2 ** (exponent - 1023) * (1 + (2 ** -52) * mantissa)
+      ]} *)
   val create_ieee     : negative:bool -> exponent:int -> mantissa:Core_int63.t -> t Or_error.t
   val create_ieee_exn : negative:bool -> exponent:int -> mantissa:Core_int63.t -> t
   val ieee_negative : t -> bool
   val ieee_exponent : t -> int
   val ieee_mantissa : t -> Core_int63.t
 
+  module Nan_dist : sig
+    type t = Without | With_single | With_all [@@deriving sexp]
+  end
+
+  (** [gen_between ~nan ~lower_bound ~upper_bound] creates a Quickcheck generator
+      producing [t] values that are either finite numbers satisfying [lower_bound] and
+      [upper_bound], or NaN values satisfying the [nan] distribution.  Raises an exception
+      if no values satisfy [lower_bound] and [upper_bound].  [~nan:Without] produces no
+      NaN values, [~nan:With_single] produces only the single NaN value [Float.nan], and
+      [~nan:With_all] produces all valid IEEE NaN values. *)
+  val gen_between
+    :  nan : Nan_dist.t
+    -> lower_bound : t Maybe_bound.t
+    -> upper_bound : t Maybe_bound.t
+    -> t Quickcheck.Generator.t
+
+  (** [gen_finite] produces all finite [t] values, excluding infinities and all NaN
+      values. *)
+  val gen_finite      : t Quickcheck.Generator.t
+
+  (** [gen_without_nan] produces all finite and infinite [t] values, excluding all NaN
+      values. *)
+  val gen_without_nan : t Quickcheck.Generator.t
+
   (** S-expressions contain at most 8 significant digits. *)
   module Terse : sig
-    type t = outer with bin_io, sexp
+    type t = outer [@@deriving bin_io, sexp]
     include Stringable.S with type t := t
   end
 

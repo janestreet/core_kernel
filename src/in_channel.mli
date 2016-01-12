@@ -67,6 +67,8 @@ val seek : t -> int64 -> unit
 val pos : t -> int64
 val length : t -> int64
 
+(** same as [Pervasives.set_binary_mode_in], only applicable for Windows or Cygwin, no-op
+    otherwise *)
 val set_binary_mode : t -> bool -> unit
 
 (** [read_lines filename] Opens filename, reads all lines, and closes the file. *)

@@ -1,3 +1,5 @@
 (* To break the circular dependency *)
 
-type t with sexp, bin_io, compare
+type t [@@deriving sexp, bin_io, compare]
+
+let all = []

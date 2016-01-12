@@ -68,7 +68,7 @@
     arguments supplied to [create].  Various functions raise if they are supplied a time
     smaller than [now t] or [>= alarm_upper_bound t].  This situation likely indicates a
     misconfiguration of the [level_bits] and/or [alarm_precision].  Here is the duration
-    [alarm_upper_bound t - now t] using the default [level_bits].
+    of [alarm_upper_bound t - now t] using the default [level_bits].
 
     {v
       | # intervals | alarm_precision | duration |
@@ -82,10 +82,10 @@ module Int63 = Core_int63
 (** [Timing_wheel_time] is used to parameterize the timing-wheel interface over both
     [Time] and [Time_ns]. *)
 module type Timing_wheel_time = sig
-  type t with compare, sexp_of
+  type t [@@deriving compare, sexp_of]
 
   module Span : sig
-    type t with compare, sexp_of
+    type t [@@deriving compare, sexp_of]
 
     include Comparable.Infix     with type t := t
     include Comparable.Validate  with type t := t
@@ -110,7 +110,7 @@ end
 module type Interval_num = sig
 
   module Span : sig
-    type t = private Int63.t with bin_io, compare, sexp
+    type t = private Int63.t [@@deriving bin_io, compare, sexp]
 
     include Comparable.S with type t := t
 
@@ -131,7 +131,7 @@ module type Interval_num = sig
     val succ : t -> t
   end
 
-  type t = private Int63.t with bin_io, compare, sexp
+  type t = private Int63.t [@@deriving bin_io, compare, sexp]
 
   include Comparable.S with type t := t
   include Hashable.S   with type t := t
@@ -173,17 +173,17 @@ end
 module type Timing_wheel = sig
   module Time : Timing_wheel_time
 
-  type 'a t with sexp_of
+  type 'a t [@@deriving sexp_of]
 
   type 'a timing_wheel = 'a t
 
   (** [<:sexp_of< _ t_now >>] displays only [now t], not all the alarms. *)
-  type 'a t_now = 'a t with sexp_of
+  type 'a t_now = 'a t [@@deriving sexp_of]
 
   module Interval_num : Interval_num
 
   module Alarm : sig
-    type 'a t with sexp_of
+    type 'a t [@@deriving sexp_of]
 
     (** [null ()] returns an alarm [t] such that [not (mem timing_wheel t)] for all
         [timing_wheel]s. *)
@@ -209,7 +209,7 @@ module type Timing_wheel = sig
         wheel.  For a fixed [num_bits], as the number of levels increases, the length of
         the levels decreases and the timing wheel uses less space, but the constant factor
         for the running time of [add] and [increase_min_allowed_key] increases. *)
-    type t with sexp
+    type t [@@deriving sexp]
 
     include Invariant.S with type t := t
 
@@ -242,23 +242,20 @@ module type Timing_wheel = sig
   end
 
   module Config : sig
-    type t with sexp
+    type t [@@deriving sexp]
 
     include Invariant.S with type t := t
 
     (** [create] raises if [alarm_precision <= 0]. *)
     val create
-      :  ?alarm_precision : Time.Span.t
-      -> ?level_bits      : Level_bits.t
+      :  ?level_bits     : Level_bits.t
+      -> alarm_precision : Time.Span.t
       -> unit
       -> t
 
     (** accessors *)
     val alarm_precision : t -> Time.Span.t
     val level_bits      : t -> Level_bits.t
-
-    (** [default] is [create ()]. *)
-    val default : t
 
     (** [durations t] returns the durations of the levels in [t] *)
     val durations : t -> Time.Span.t list
@@ -340,7 +337,7 @@ module type Timing_wheel = sig
 
       [add_at_interval_num t ~at a] is equivalent to [add t ~at:(interval_num_start t at)
       a]. *)
-  val add                 : 'a t -> at:Time.t  -> 'a -> 'a Alarm.t
+  val add                 : 'a t -> at:Time.t         -> 'a -> 'a Alarm.t
   val add_at_interval_num : 'a t -> at:Interval_num.t -> 'a -> 'a Alarm.t
 
   val mem : 'a t -> 'a Alarm.t -> bool
@@ -368,8 +365,12 @@ module type Timing_wheel = sig
   (** [next_alarm_fires_at t] returns the minimum time to which the clock can be advanced
       such that an alarm will fire, or [None] if [t] has no alarms.  If
       [next_alarm_fires_at t = Some next], then for the minimum alarm time [min] that
-      occurs in [t], it is guaranteed that: [next - alarm_precision t <= min < next]. *)
-  val next_alarm_fires_at : _ t -> Time.t option
+      occurs in [t], it is guaranteed that: [next - alarm_precision t <= min < next].
+
+      [next_alarm_fires_at_exn] is the same as [next_alarm_fires_at], except that it
+      raises if [is_empty t]. *)
+  val next_alarm_fires_at     : _ t -> Time.t option
+  val next_alarm_fires_at_exn : _ t -> Time.t
 
   (***********************************************************************************)
   (** {6 Implementation details}
@@ -406,7 +407,7 @@ module type Timing_wheel = sig
       reach level 0, and then are eventually removed.  *)
   module Priority_queue : sig
 
-    type 'a t with sexp_of
+    type 'a t [@@deriving sexp_of]
 
     type 'a priority_queue = 'a t
 
@@ -414,7 +415,7 @@ module type Timing_wheel = sig
 
     module Elt : sig
       (** An [Elt.t] represents an element that was added to a timing wheel. *)
-      type 'a t with sexp_of
+      type 'a t [@@deriving sexp_of]
 
       val invariant : 'a priority_queue -> 'a Invariant.t -> 'a t Invariant.t
 

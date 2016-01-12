@@ -1,6 +1,6 @@
 module Stable = struct
   module V1 = struct
-    type t = Nothing0.t with sexp, bin_io, compare
+    type t = Nothing0.t [@@deriving sexp, bin_io, compare, enumerate]
   end
 end
 

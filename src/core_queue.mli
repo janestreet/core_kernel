@@ -18,7 +18,7 @@
 *)
 
 
-type 'a t with bin_io, compare, sexp
+type 'a t [@@deriving bin_io, compare, sexp]
 
 include Binary_searchable.S1 with type 'a t := 'a t
 include Container.        S1 with type 'a t := 'a t
@@ -31,15 +31,26 @@ val create
   -> unit
   -> _ t
 
+(** Create a queue with one element. *)
 val singleton : 'a -> 'a t
 
+(** [enqueue t a] adds [a] to the end of [t]. *)
 val enqueue : 'a t -> 'a -> unit
 
+(** [enqueue_all t list] adds all elements in [list] to [t] in order of [list]. *)
+val enqueue_all : 'a t -> 'a list -> unit
+
+(** [dequeue t] removes and returns the front element of [t], if any. *)
 val dequeue     : 'a t -> 'a option
 val dequeue_exn : 'a t -> 'a
 
+(** [peek t] returns but does not remove the front element of [t], if any. *)
 val peek     : 'a t -> 'a option
 val peek_exn : 'a t -> 'a
+
+(** [last t] returns the most recently enqueued element in [t], if any. *)
+val last     : 'a t -> 'a option
+val last_exn : 'a t -> 'a
 
 val clear : _ t -> unit
 
@@ -88,8 +99,9 @@ val set : 'a t -> int -> 'a -> unit
 (** Returns the current length of the backing array. *)
 val capacity : _ t -> int
 
-(** [set_capacity t capacity] sets the capacity of [t]'s backing array to at least
-    [max capacity (length t)].  If the capacity changes, then this involves allocating
-    a new backing array and copying the queue elements over. *)
+(** [set_capacity t c] sets the capacity of [t]'s backing array to at least [max c (length
+    t)].  If [t]'s capacity changes, then this involves allocating a new backing array and
+    copying the queue elements over.  [set_capacity] may decrease the capacity of [t], if
+    [c < capacity t]. *)
 val set_capacity : _ t -> int -> unit
 

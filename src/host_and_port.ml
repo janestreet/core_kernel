@@ -2,7 +2,7 @@ open Std_internal
 
 module Stable = struct
   module V1 = struct
-    type t = string * int with sexp, bin_io, compare
+    type t = string * int [@@deriving sexp, bin_io, compare]
   end
 end
 
@@ -45,3 +45,6 @@ let t_of_sexp = function
     (try of_string s with Failure err -> of_sexp_error err sexp)
   | sexp -> t_of_sexp sexp
 
+let type_id =
+  Type_equal.Id.create ~name:"Host_and_port" sexp_of_t
+;;

@@ -38,7 +38,7 @@ end
 module type Hexable = sig
   type t
   module Hex : sig
-    type nonrec t = t with bin_io, sexp, compare, typerep
+    type nonrec t = t [@@deriving bin_io, sexp, compare, typerep]
 
     include Stringable with type t := t
 
@@ -47,13 +47,14 @@ module type Hexable = sig
 end
 
 module type S = sig
-  type t with bin_io, sexp, typerep
+  type t [@@deriving bin_io, sexp, typerep]
 
-  include Floatable            with type t := t
-  include Intable              with type t := t
-  include Identifiable         with type t := t
-  include Comparable.With_zero with type t := t
-  include Hexable              with type t := t
+  include Floatable                with type t := t
+  include Intable                  with type t := t
+  include Identifiable             with type t := t
+  include Comparable.With_zero     with type t := t
+  include Hexable                  with type t := t
+  include Quickcheckable.S_bounded with type t := t
 
   (** [delimiter] is underscore by default *)
   val to_string_hum : ?delimiter:char -> t -> string
@@ -178,7 +179,7 @@ module type S = sig
 
 end
 
-TEST_MODULE = struct
+let%test_module _ = (module struct
   (** this functor's type-correctness ensures that every value in [S.O] is also in [S]. *)
   module Check_O_contained_in_S (M : S) : sig end = (M : module type of M.O)
-end
+end)

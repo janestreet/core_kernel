@@ -4,28 +4,36 @@
 (** An [Indexable] type is a finite sequence of elements indexed by consecutive integers
     [0] ... [length t - 1].  [get] and [length] must be O(1) for the resulting
     [binary_search] to be lg(n). *)
-module type Indexable = sig
+module type Indexable_without_tests = sig
   type elt
   type t
 
   val get : t -> int -> elt
   val length : t -> int
+end
+
+module type Indexable = sig
+  include Indexable_without_tests
 
   (** To implement the test provided by [Binary_searchable], we need to be able to
       construct [t] with two different values [small < big].  We also need to be able to
       build a [t] from an [elt array]. *)
   module For_test : sig
-    val small : elt
-    val big   : elt
+    val small    : elt
+    val big      : elt
     val of_array : elt array -> t
   end
 end
 
-module type Indexable1 = sig
+module type Indexable1_without_tests = sig
   type 'a t
 
   val get    : 'a t -> int -> 'a
   val length : _ t -> int
+end
+
+module type Indexable1 = sig
+  include Indexable1_without_tests
 
   module For_test : sig
     val of_array : bool array -> bool t
@@ -141,6 +149,12 @@ module type Binary_searchable = sig
   module type S1_permissions = S1_permissions
   module type Indexable  = Indexable
   module type Indexable1 = Indexable1
+
   module Make  (T : Indexable)  : S  with type    t :=    T.t with type elt := T.elt
   module Make1 (T : Indexable1) : S1 with type 'a t := 'a T.t
+  module Make_without_tests (T : Indexable_without_tests) : S
+    with type t   := T.t
+    with type elt := T.elt
+  module Make1_without_tests (T : Indexable1_without_tests) : S1
+    with type 'a t := 'a T.t
 end

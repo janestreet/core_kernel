@@ -1,9 +1,10 @@
 open Never_returns
 
 (** [sexp_of_t] uses a global table of sexp converters.  To register a converter for a new
-    exception, add "with sexp" to its definition. If no suitable converter is found, the
-    standard converter in [Printexc] will be used to generate an atomic S-expression. *)
-type t = exn with sexp_of
+    exception, add [[@@deriving sexp]] to its definition. If no suitable converter is
+    found, the standard converter in [Printexc] will be used to generate an atomic
+    S-expression. *)
+type t = exn [@@deriving sexp_of]
 
 include Pretty_printer.S with type t := t
 
@@ -45,6 +46,9 @@ val protect : f:(unit -> 'a) -> finally:(unit -> unit) -> 'a
 (** [handle_uncaught ~exit f] catches an exception escaping [f] and prints an error
     message to stderr.  Exits with return code 1 if [exit] is [true].  Otherwise returns
     unit.
+
+    Note that since OCaml 4.02.0, it is not needed to use this at the entry point of your
+    program as the OCaml runtime will do better than this function.
 *)
 val handle_uncaught : exit:bool -> (unit -> unit) -> unit
 
@@ -71,3 +75,7 @@ val does_raise : (unit -> _) -> bool
 
 (** The same as {!Printexc.get_backtrace} *)
 val backtrace : unit -> string
+
+(** Runs global side effects, which change the display of exceptions and install
+    an uncaught-exception printer. *)
+val initialize_module : unit -> unit

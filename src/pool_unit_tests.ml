@@ -7,14 +7,14 @@ module Make (Pool : Pool_intf.S) = struct
 
   module Pointer = Pool.Pointer
 
-  TEST_UNIT "get_tuple with length = 1" =
+  let%test_unit "get_tuple with length = 1" =
     let pool = Pool.create Pool.Slots.t1 ~capacity:10 ~dummy:0 in
     let ptr = Pool.new1 pool 42 in
     let tuple = Pool.get_tuple pool ptr in
     assert (tuple = 42)
   ;;
 
-  TEST_UNIT "get_tuple with length > 1" =
+  let%test_unit "get_tuple with length > 1" =
     let pool = Pool.create Pool.Slots.t3 ~capacity:10 ~dummy:(0, 0, 0) in
     let ptr = Pool.new3 pool 42 42 42 in
     let tuple = Pool.get_tuple pool ptr in
@@ -23,7 +23,7 @@ module Make (Pool : Pool_intf.S) = struct
 
   module rec List_ : sig
     module Pool : sig
-      type 'a t with sexp_of
+      type 'a t [@@deriving sexp_of]
 
       val create : capacity:int -> dummy:'a -> 'a t
       val length : _ t -> int
@@ -31,7 +31,7 @@ module Make (Pool : Pool_intf.S) = struct
       val grow : ?capacity:int -> 'a t -> 'a t
     end
 
-    type 'a t with sexp_of
+    type 'a t [@@deriving sexp_of]
 
     val nil : unit -> _ t
     val is_nil : _ t -> bool
@@ -49,9 +49,9 @@ module Make (Pool : Pool_intf.S) = struct
     val pointer_of_id_exn : 'a Pool.t -> Id.t -> 'a t
   end = struct
 
-    type 'a ty = ('a, 'a ty Pointer.t) Pool.Slots.t2 with sexp_of
+    type 'a ty = ('a, 'a ty Pointer.t) Pool.Slots.t2 [@@deriving sexp_of]
 
-    type 'a t = 'a ty Pointer.t with sexp_of
+    type 'a t = 'a ty Pointer.t [@@deriving sexp_of]
 
     let create = Pool.new2
     let free = Pool.free
@@ -72,7 +72,7 @@ module Make (Pool : Pool_intf.S) = struct
     let pointer_of_id_exn = Pool.pointer_of_id_exn
 
     module Pool = struct
-      type 'a t = 'a ty Pool.t with sexp_of
+      type 'a t = 'a ty Pool.t [@@deriving sexp_of]
 
       let create ~capacity ~dummy =
         Pool.create Pool.Slots.t2 ~capacity ~dummy:(dummy, nil ())
@@ -86,14 +86,14 @@ module Make (Pool : Pool_intf.S) = struct
   open List_
 
   (* [create] with invalid capacity *)
-  TEST_UNIT =
+  let%test_unit _ =
     List.iter [ -1 ] ~f:(fun capacity ->
       assert (Result.is_error (Result.try_with (fun () ->
         ignore (Pool.create ~capacity ~dummy:())))))
   ;;
 
   (* [length] *)
-  TEST_UNIT =
+  let%test_unit _ =
     let t = Pool.create ~capacity:3 ~dummy:13 in
     assert (Pool.length t = 0);
     let l1 = create t 13 (nil ()) in
@@ -103,7 +103,7 @@ module Make (Pool : Pool_intf.S) = struct
     free t l1;
     assert (Pool.length t = 1);
     free t l2;
-    assert (Pool.length t = 0);
+    assert (Pool.length t = 0)
   ;;
 
   let rec grow_loop p num_left =
@@ -111,17 +111,17 @@ module Make (Pool : Pool_intf.S) = struct
   ;;
 
   (* [grow] an empty pool *)
-  TEST_UNIT = grow_loop (Pool.create ~capacity:1 ~dummy:()) 10
+  let%test_unit _ = grow_loop (Pool.create ~capacity:1 ~dummy:()) 10
 
   (* [grow] a non-empty pool *)
-  TEST_UNIT =
+  let%test_unit _ =
     let p = Pool.create ~capacity:1 ~dummy:0 in
     ignore (create p 13 (nil ()));
-    grow_loop p 10;
+    grow_loop p 10
   ;;
 
   (* [grow] a non-empty pool, while adding each time *)
-  TEST_UNIT =
+  let%test_unit _ =
     let rec loop p num_left =
       if num_left > 0
       then begin
@@ -129,7 +129,7 @@ module Make (Pool : Pool_intf.S) = struct
         loop (Pool.grow p) (num_left - 1);
       end;
     in
-    loop (Pool.create ~capacity:1 ~dummy:0) 10;
+    loop (Pool.create ~capacity:1 ~dummy:0) 10
   ;;
 
   let rec fold p list ~init ~f =
@@ -141,7 +141,7 @@ module Make (Pool : Pool_intf.S) = struct
   let to_list p list = List.rev (fold p list ~init:[] ~f:(fun l a -> a :: l))
 
   (* [grow] on demand *)
-  TEST_UNIT =
+  let%test_unit _ =
     let total_length = 10_000 in
     let rec loop i p list =
       let i = i - 1 in
@@ -156,22 +156,22 @@ module Make (Pool : Pool_intf.S) = struct
         loop i p (create p i list);
       end;
     in
-    loop total_length (Pool.create ~capacity:0 ~dummy:0) (nil ());
+    loop total_length (Pool.create ~capacity:0 ~dummy:0) (nil ())
   ;;
 
   (* [free] *)
-  TEST_UNIT =
+  let%test_unit _ =
     let n = 10 in
     let p = Pool.create ~capacity:n ~dummy:0 in
-    for _i = 1 to 4 do
+    for _ = 1 to 4 do
       let ls = List.init n ~f:(fun i -> create p i (nil ())) in
       assert (Pool.is_full p);
       List.iter ls ~f:(fun l -> free p l);
-    done;
+    done
   ;;
 
   (* [free] *)
-  TEST_UNIT =
+  let%test_unit _ =
     let rec loop p num_iters_left num_to_alloc_this_iter live =
       if num_iters_left = 0
       then List.iter live ~f:(fun l -> free p l)
@@ -191,20 +191,20 @@ module Make (Pool : Pool_intf.S) = struct
         List.iter to_free ~f:(fun l -> free p l);
         loop p (num_iters_left - 1) (num_to_alloc_this_iter * 2) live;
     in
-    loop (Pool.create ~capacity:1 ~dummy:0) 10 1 [];
+    loop (Pool.create ~capacity:1 ~dummy:0) 10 1 []
   ;;
 
   (* [get_tuple] *)
-  TEST_UNIT =
+  let%test_unit _ =
     let p = Pool.create ~capacity:10 ~dummy:0 in
     let l = create p 13 (nil ()) in
     let z1 = Option.value_exn (get p l) in
     let z2 = (13, nil ()) in
-    assert (Poly.equal z1 z2);
+    assert (Poly.equal z1 z2)
   ;;
 
   (* [get] *)
-  TEST_UNIT =
+  let%test_unit _ =
     let p = Pool.create ~capacity:10 ~dummy:0 in
     try
       let l = create p 13 (nil ()) in
@@ -212,22 +212,22 @@ module Make (Pool : Pool_intf.S) = struct
       assert (head p l = 13);
       assert (is_nil (tail p l));
       free p l;
-    with exn -> failwiths "failure" (exn, p) <:sexp_of< exn * _ Pool.t >>
+    with exn -> failwiths "failure" (exn, p) [%sexp_of: exn * _ Pool.t]
   ;;
 
   (* [sexp_of] *)
-  TEST_UNIT =
-    let sexp_of = <:sexp_of< int t >> in
+  let%test_unit _ =
+    let sexp_of = [%sexp_of: int t] in
     ignore (sexp_of (nil ()));
     let p = Pool.create ~capacity:10 ~dummy:0 in
     try
       let l = create p 13 (nil ()) in
       ignore (sexp_of l);
-    with exn -> failwiths "failure" (exn, p) <:sexp_of< exn * _ Pool.t >>
+    with exn -> failwiths "failure" (exn, p) [%sexp_of: exn * _ Pool.t]
   ;;
 
   (* [id_of_pointer], [pointer_of_id_exn], [Id.to_int63], [Id.of_int63] *)
-  TEST_UNIT =
+  let%test_unit _ =
     let capacity = 10 in
     let p = Pool.create ~capacity ~dummy:0 in
     let id_of_pointer_via_int63 l =
@@ -254,19 +254,19 @@ module Make (Pool : Pool_intf.S) = struct
 
 end
 
-TEST_MODULE = Make (Pool)
+let%test_module _ = (module Make (Pool))
 
-TEST_MODULE =
-  Make (struct
+let%test_module _ =
+  (module Make (struct
     include Pool.Unsafe
 
     let create (type tuple) (slots : (tuple, _) Slots.t) ~capacity ~dummy:(_ : tuple) =
       create slots ~capacity
-  end)
+  end))
 
-TEST_MODULE "Debug without messages" = Make (struct
+let%test_module "Debug without messages" = (module Make (struct
   include Pool.Debug (Pool)
   let () = show_messages := false       (* or it prints too much *)
-end)
+end))
 
-TEST_MODULE = Make (Pool.Error_check (Pool))
+let%test_module _ = (module Make (Pool.Error_check (Pool)))

@@ -9,12 +9,12 @@ module Core_hash_set = Hash_set
 
 module Hashtbl = struct
   module V1 (Elt : Hashtbl.Key_binable) : sig
-    type 'a t = (Elt.t, 'a) Hashtbl.t with sexp, bin_io
+    type 'a t = (Elt.t, 'a) Hashtbl.t [@@deriving sexp, bin_io]
   end = Hashtbl.Make_binable (Elt)
 
-  TEST_MODULE "Hashtbl.V1" = Stable_unit_test.Make_unordered_container (struct
+  let%test_module "Hashtbl.V1" = (module Stable_unit_test.Make_unordered_container (struct
     module Table = V1 (Int)
-    type t = string Table.t with sexp, bin_io
+    type t = string Table.t [@@deriving sexp, bin_io]
 
     let equal t1 t2 = Int.Table.equal t1 t2 String.equal
 
@@ -38,15 +38,15 @@ module Hashtbl = struct
           sexps = ["(0 foo)"]; bin_io_header = "\001"; bin_io_elements = ["\000\003foo"];
         };
       ]
-  end)
+  end))
 end
 
 module Hash_set = struct
   module V1 (Elt : Hash_set.Elt_binable) : sig
-    type t = Elt.t Hash_set.t with sexp, bin_io
+    type t = Elt.t Hash_set.t [@@deriving sexp, bin_io]
   end = Hash_set.Make_binable (Elt)
 
-  TEST_MODULE "Hash_set.V1" = Stable_unit_test.Make_unordered_container (struct
+  let%test_module "Hash_set.V1" = (module Stable_unit_test.Make_unordered_container (struct
     include V1 (Int)
 
     let equal = Hash_set.equal
@@ -72,12 +72,12 @@ module Hash_set = struct
           sexps = ["0"]; bin_io_header = "\001"; bin_io_elements = ["\000"];
         };
       ]
-  end)
+  end))
 end
 
 module Map = struct
   module V1 (Key : sig
-    type t with bin_io, sexp
+    type t [@@deriving bin_io, sexp]
     include Comparator.S with type t := t
   end) : sig
     type 'a t = (Key.t, 'a, Key.comparator_witness) Map.t
@@ -87,9 +87,9 @@ module Map = struct
     let map = Map.map
   end
 
-  TEST_MODULE "Map.V1" = Stable_unit_test.Make (struct
+  let%test_module "Map.V1" = (module Stable_unit_test.Make (struct
     module Map = V1 (Int)
-    type t = string Map.t with sexp, bin_io
+    type t = string Map.t [@@deriving sexp, bin_io]
 
     let equal = Int.Map.equal String.equal
 
@@ -99,20 +99,20 @@ module Map = struct
         Int.Map.empty, "()", "\000";
         Int.Map.singleton 0 "foo", "((0 foo))", "\001\000\003foo";
       ]
-  end)
+  end))
 end
 
 module Set = struct
   module V1 (
     Elt : sig
-      type t with bin_io, sexp
+      type t [@@deriving bin_io, sexp]
       include Comparator.S with type t := t
     end
   ) : sig
-    type t = (Elt.t, Elt.comparator_witness) Set.t with sexp, bin_io, compare
+    type t = (Elt.t, Elt.comparator_witness) Set.t [@@deriving sexp, bin_io, compare]
   end = Set.Make_binable_using_comparator (Elt)
 
-  TEST_MODULE "Set.V1" = Stable_unit_test.Make (struct
+  let%test_module "Set.V1" = (module Stable_unit_test.Make (struct
     include V1 (Int)
 
     let equal = Set.equal
@@ -124,7 +124,7 @@ module Set = struct
         Int.Set.empty, "()", "\000";
         Int.Set.singleton 0, "(0)", "\001\000";
       ]
-  end)
+  end))
 end
 
 module Comparable = struct
@@ -146,7 +146,7 @@ module Comparable = struct
 
     module Make (
       Key : sig
-        type t with bin_io, sexp
+        type t [@@deriving bin_io, sexp]
         include Comparator.S with type t := t
       end
     ) : S with type key := Key.t and type comparator_witness := Key.comparator_witness
@@ -163,11 +163,11 @@ module Hashable = struct
       type key
 
       module Table : sig
-        type 'a t = (key, 'a) Core_hashtbl.t with sexp, bin_io
+        type 'a t = (key, 'a) Core_hashtbl.t [@@deriving sexp, bin_io]
       end
 
       module Hash_set : sig
-        type t = key Core_hash_set.t with sexp, bin_io
+        type t = key Core_hash_set.t [@@deriving sexp, bin_io]
       end
     end
 

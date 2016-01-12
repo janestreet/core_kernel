@@ -1,5 +1,5 @@
-open Interfaces
 open Common
+open Interfaces
 
 let negative_exponent () =
   Core_printf.invalid_argf "exponent can not be negative" ()
@@ -38,7 +38,7 @@ let int64_pow base exponent =
   int_math_int64_pow base exponent
 ;;
 
-TEST_UNIT =
+let%test_unit _ =
   let x = match Word_size.word_size with W32 -> 9 | W64 -> 10 in
   for i = 0 to x do
     for j = 0 to x do
@@ -47,19 +47,19 @@ TEST_UNIT =
     done
   done
 
-BENCH_MODULE "int_math_pow" = struct
+let%bench_module "int_math_pow" = (module struct
   let a = Array.init 10000 (fun _ -> Random.int 5)
-  BENCH "random[ 5] x 10000" = Array.iter (fun x -> let _ = int_pow 2 x in ()) a
+  let%bench "random[ 5] x 10000" = Array.iter (fun x -> let _ = int_pow 2 x in ()) a
   let a = Array.init 10000 (fun _ -> Random.int 10)
-  BENCH "random[10] x 10000" = Array.iter (fun x -> let _ = int_pow 2 x in ()) a
+  let%bench "random[10] x 10000" = Array.iter (fun x -> let _ = int_pow 2 x in ()) a
   let a = Array.init 10000 (fun _ -> Random.int 30)
-  BENCH "random[30] x 10000" = Array.iter (fun x -> let _ = int_pow 2 x in ()) a
+  let%bench "random[30] x 10000" = Array.iter (fun x -> let _ = int_pow 2 x in ()) a
   let a = Array.init 10000 (fun _ -> Random.int 60)
-  BENCH "random[60] x 10000" = Array.iter (fun x -> let _ = int_pow 2 x in ()) a
-  BENCH "2 ^ 30"   = int_pow 2 30
-  BENCH "2L ^ 30L" = int64_pow 2L 30L
-  BENCH "2L ^ 60L" = int64_pow 2L 60L
-end
+  let%bench "random[60] x 10000" = Array.iter (fun x -> let _ = int_pow 2 x in ()) a
+  let%bench "2 ^ 30"   = int_pow 2 30
+  let%bench "2L ^ 30L" = int64_pow 2L 30L
+  let%bench "2L ^ 60L" = int64_pow 2L 60L
+end)
 
 module type T = sig
   type t
@@ -143,7 +143,7 @@ module Make (X : T) = struct
     | `Zero    -> round_towards_zero i ~to_multiple_of
   ;;
 
-  TEST_MODULE "integer-rounding" = struct
+  let%test_module "integer-rounding" = (module struct
 
     let check dir ~range:(lower, upper) ~modulus expected =
       let modulus = of_int_exn modulus in
@@ -154,34 +154,34 @@ module Make (X : T) = struct
       done
     ;;
 
-    TEST_UNIT = check ~modulus:10 `Down    ~range:( 10,  19)   10
-    TEST_UNIT = check ~modulus:10 `Down    ~range:(  0,   9)    0
-    TEST_UNIT = check ~modulus:10 `Down    ~range:(-10,  -1) (-10)
-    TEST_UNIT = check ~modulus:10 `Down    ~range:(-20, -11) (-20)
+    let%test_unit _ = check ~modulus:10 `Down    ~range:( 10,  19)   10
+    let%test_unit _ = check ~modulus:10 `Down    ~range:(  0,   9)    0
+    let%test_unit _ = check ~modulus:10 `Down    ~range:(-10,  -1) (-10)
+    let%test_unit _ = check ~modulus:10 `Down    ~range:(-20, -11) (-20)
 
-    TEST_UNIT = check ~modulus:10 `Up      ~range:( 11,  20)   20
-    TEST_UNIT = check ~modulus:10 `Up      ~range:(  1,  10)   10
-    TEST_UNIT = check ~modulus:10 `Up      ~range:( -9,   0)    0
-    TEST_UNIT = check ~modulus:10 `Up      ~range:(-19, -10) (-10)
+    let%test_unit _ = check ~modulus:10 `Up      ~range:( 11,  20)   20
+    let%test_unit _ = check ~modulus:10 `Up      ~range:(  1,  10)   10
+    let%test_unit _ = check ~modulus:10 `Up      ~range:( -9,   0)    0
+    let%test_unit _ = check ~modulus:10 `Up      ~range:(-19, -10) (-10)
 
-    TEST_UNIT = check ~modulus:10 `Zero    ~range:( 10,  19)   10
-    TEST_UNIT = check ~modulus:10 `Zero    ~range:( -9,   9)    0
-    TEST_UNIT = check ~modulus:10 `Zero    ~range:(-19, -10) (-10)
+    let%test_unit _ = check ~modulus:10 `Zero    ~range:( 10,  19)   10
+    let%test_unit _ = check ~modulus:10 `Zero    ~range:( -9,   9)    0
+    let%test_unit _ = check ~modulus:10 `Zero    ~range:(-19, -10) (-10)
 
-    TEST_UNIT = check ~modulus:10 `Nearest ~range:( 15,  24)   20
-    TEST_UNIT = check ~modulus:10 `Nearest ~range:(  5,  14)   10
-    TEST_UNIT = check ~modulus:10 `Nearest ~range:( -5,   4)    0
-    TEST_UNIT = check ~modulus:10 `Nearest ~range:(-15,  -6) (-10)
-    TEST_UNIT = check ~modulus:10 `Nearest ~range:(-25, -16) (-20)
+    let%test_unit _ = check ~modulus:10 `Nearest ~range:( 15,  24)   20
+    let%test_unit _ = check ~modulus:10 `Nearest ~range:(  5,  14)   10
+    let%test_unit _ = check ~modulus:10 `Nearest ~range:( -5,   4)    0
+    let%test_unit _ = check ~modulus:10 `Nearest ~range:(-15,  -6) (-10)
+    let%test_unit _ = check ~modulus:10 `Nearest ~range:(-25, -16) (-20)
 
-    TEST_UNIT = check ~modulus:5 `Nearest ~range:(  8, 12)   10
-    TEST_UNIT = check ~modulus:5 `Nearest ~range:(  3,  7)    5
-    TEST_UNIT = check ~modulus:5 `Nearest ~range:( -2,  2)    0
-    TEST_UNIT = check ~modulus:5 `Nearest ~range:( -7, -3)  (-5)
-    TEST_UNIT = check ~modulus:5 `Nearest ~range:(-12, -8) (-10)
-  end
+    let%test_unit _ = check ~modulus:5 `Nearest ~range:(  8, 12)   10
+    let%test_unit _ = check ~modulus:5 `Nearest ~range:(  3,  7)    5
+    let%test_unit _ = check ~modulus:5 `Nearest ~range:( -2,  2)    0
+    let%test_unit _ = check ~modulus:5 `Nearest ~range:( -7, -3)  (-5)
+    let%test_unit _ = check ~modulus:5 `Nearest ~range:(-12, -8) (-10)
+  end)
 
-  TEST_MODULE "remainder-and-modulus" = struct
+  let%test_module "remainder-and-modulus" = (module struct
 
     let check_integers x y =
       let check_raises f desc =
@@ -231,7 +231,7 @@ module Make (X : T) = struct
         Core_list.iter [ y ; -y ; y+one ; -(y + one) ] ~f:(fun y ->
           check_integers x y))
 
-    TEST_UNIT "deterministic" =
+    let%test_unit "deterministic" =
       let big1 = of_int_exn 118_310_344 in
       let big2 = of_int_exn 828_172_408 in
       (* Important to test the case where one value is a multiple of the other.  Note that
@@ -243,65 +243,63 @@ module Make (X : T) = struct
         Core_list.iter values ~f:(fun y ->
           check_natural_numbers x y))
 
-    TEST_UNIT "random" =
+    let%test_unit "random" =
       let rand = Core_random.State.make [| 8; 67; -5_309 |] in
-      for _i = 0 to 1_000 do
+      for _ = 0 to 1_000 do
         let max_value = 1_000_000_000 in
         let x = of_int_exn (Core_random.State.int rand max_value) in
         let y = of_int_exn (Core_random.State.int rand max_value) in
         check_natural_numbers x y
       done
-  end
+  end)
 end
 
-TEST_MODULE "pow" = struct
-  TEST = int_pow 0  0 = 1
-  TEST = int_pow 0  1 = 0
-  TEST = int_pow 10 1 = 10
-  TEST = int_pow 10 2 = 100
-  TEST = int_pow 10 3 = 1_000
-  TEST = int_pow 10 4 = 10_000
-  TEST = int_pow 10 5 = 100_000
-  TEST = int_pow 2 10 = 1024
+let%test_module "pow" = (module struct
+  let%test _ = int_pow 0  0 = 1
+  let%test _ = int_pow 0  1 = 0
+  let%test _ = int_pow 10 1 = 10
+  let%test _ = int_pow 10 2 = 100
+  let%test _ = int_pow 10 3 = 1_000
+  let%test _ = int_pow 10 4 = 10_000
+  let%test _ = int_pow 10 5 = 100_000
+  let%test _ = int_pow 2 10 = 1024
 
-  TEST = int_pow 0 1_000_000 = 0
-  TEST = int_pow 1 1_000_000 = 1
-  TEST = int_pow (-1) 1_000_000 = 1
-  TEST = int_pow (-1) 1_000_001 = -1
+  let%test _ = int_pow 0 1_000_000 = 0
+  let%test _ = int_pow 1 1_000_000 = 1
+  let%test _ = int_pow (-1) 1_000_000 = 1
+  let%test _ = int_pow (-1) 1_000_001 = -1
 
-  TEST = int64_pow 0L 0L = 1L
-  TEST = int64_pow 0L 1_000_000L = 0L
-  TEST = int64_pow 1L 1_000_000L = 1L
-  TEST = int64_pow (-1L) 1_000_000L = 1L
-  TEST = int64_pow (-1L) 1_000_001L = -1L
+  let%test _ = int64_pow 0L 0L = 1L
+  let%test _ = int64_pow 0L 1_000_000L = 0L
+  let%test _ = int64_pow 1L 1_000_000L = 1L
+  let%test _ = int64_pow (-1L) 1_000_000L = 1L
+  let%test _ = int64_pow (-1L) 1_000_001L = -1L
 
-  TEST = int64_pow 10L 1L  = 10L
-  TEST = int64_pow 10L 2L  = 100L
-  TEST = int64_pow 10L 3L  = 1_000L
-  TEST = int64_pow 10L 4L  = 10_000L
-  TEST = int64_pow 10L 5L  = 100_000L
-  TEST = int64_pow 2L  10L = 1_024L
-  TEST = int64_pow 5L  27L = 7450580596923828125L
+  let%test _ = int64_pow 10L 1L  = 10L
+  let%test _ = int64_pow 10L 2L  = 100L
+  let%test _ = int64_pow 10L 3L  = 1_000L
+  let%test _ = int64_pow 10L 4L  = 10_000L
+  let%test _ = int64_pow 10L 5L  = 100_000L
+  let%test _ = int64_pow 2L  10L = 1_024L
+  let%test _ = int64_pow 5L  27L = 7450580596923828125L
 
   let exception_thrown pow b e = try let _ = pow b e in false with _ -> true;;
 
-  TEST = exception_thrown int_pow 10 60
-  TEST = exception_thrown int64_pow 10L 60L
-  TEST = exception_thrown int_pow 10 (-1)
-  TEST = exception_thrown int64_pow 10L (-1L)
+  let%test _ = exception_thrown int_pow 10 60
+  let%test _ = exception_thrown int64_pow 10L 60L
+  let%test _ = exception_thrown int_pow 10 (-1)
+  let%test _ = exception_thrown int64_pow 10L (-1L)
 
-  TEST = exception_thrown int64_pow 2L 63L
-  TEST = not (exception_thrown int64_pow 2L 62L)
+  let%test _ = exception_thrown int64_pow 2L 63L
+  let%test _ = not (exception_thrown int64_pow 2L 62L)
 
-  TEST = exception_thrown int64_pow (-2L) 63L
-  TEST = not (exception_thrown int64_pow (-2L) 62L)
-end
+  let%test _ = exception_thrown int64_pow (-2L) 63L
+  let%test _ = not (exception_thrown int64_pow (-2L) 62L)
+end)
 
-TEST_MODULE "overflow_bounds" = struct
-  TEST = Pow_overflow_bounds.overflow_bound_max_int_value = Pervasives.max_int
-  TEST = Pow_overflow_bounds.overflow_bound_max_int64_value = Int64.max_int
-
-  (* These tests are disabled because they create a dependency to bignum.
+let%test_module "overflow_bounds" = (module struct
+  let%test _ = Pow_overflow_bounds.overflow_bound_max_int_value = Pervasives.max_int
+  let%test _ = Pow_overflow_bounds.overflow_bound_max_int64_value = Int64.max_int
 
   module Big_int = struct
     include Big_int
@@ -330,10 +328,9 @@ TEST_MODULE "overflow_bounds" = struct
           (Big_int.to_string max_base) i ())
   ;;
 
-  TEST_UNIT = test_overflow_table Pow_overflow_bounds.int_positive_overflow_bounds
+  let%test_unit _ = test_overflow_table Pow_overflow_bounds.int_positive_overflow_bounds
                 Big_int.big_int_of_int Pervasives.max_int
 
-  TEST_UNIT = test_overflow_table Pow_overflow_bounds.int64_positive_overflow_bounds
+  let%test_unit _ = test_overflow_table Pow_overflow_bounds.int64_positive_overflow_bounds
                 Big_int.big_int_of_int64 Int64.max_int
-  *)
-end
+end)

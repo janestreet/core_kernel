@@ -33,16 +33,16 @@ module S_to_S1 (S : S) : S1
   with type 'a t = S.t
   with type comparator_witness = S.comparator_witness
 
-(** The [Make] functors mint fresh types that are used as the phantom
-    [comparator_witness]es. *)
+(** [Make] creates a [comparator] value and its phantom [comparator_witness] type for a
+    nullary type. *)
+module Make (M : sig type t [@@deriving compare, sexp_of] end) : S with type t := M.t
 
-module Make (M : sig type t with compare, sexp_of end) : S with type t := M.t
-
+(** [Make1] creates a [comparator] value and its phantom [comparator_witness] type for a
+    unary type.  It takes a [compare] and [sexp_of_t] that have
+    non-standard types because the [Comparator.t] type doesn't allow passing in
+    additional values for the type argument. *)
 module Make1 (M : sig
   type 'a t
-  val compare : 'a t -> 'a t -> int (* not the usual type for [compare] *)
-  val sexp_of_t : _ t -> Sexp.t (* not the usual type for [sexp_of_t] *)
+  val compare : 'a t -> 'a t -> int
+  val sexp_of_t : _ t -> Sexp.t
 end) : S1 with type 'a t := 'a M.t
-
-
-

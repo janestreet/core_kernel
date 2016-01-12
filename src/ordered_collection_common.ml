@@ -23,14 +23,14 @@ let check_pos_len_exn ~pos ~len ~length =
   then invalid_argf "pos + len past end: %d + %d > %d" pos len length ()
 ;;
 
-TEST_UNIT =
+let%test_unit _ =
   let vals = [ -1; 0; 1; 2; 3 ] in
   List.iter [ 0; 1; 2 ] ~f:(fun length ->
     List.iter vals ~f:(fun pos ->
       List.iter vals ~f:(fun len ->
         let result = Result.try_with (fun () -> check_pos_len_exn ~pos ~len ~length) in
         let valid = pos >= 0 && len >= 0 && len <= length - pos in
-        assert (valid = Result.is_ok result))));
+        assert (valid = Result.is_ok result))))
 ;;
 
 let get_pos_len_exn ?(pos = 0) ?len ~length =
@@ -39,7 +39,7 @@ let get_pos_len_exn ?(pos = 0) ?len ~length =
   pos, len
 ;;
 
-TEST_UNIT =
+let%test_unit _ =
   let opts = [ None; Some (-1); Some 0; Some 1; Some 2 ] in
   List.iter [ 0; 1; 2 ] ~f:(fun length ->
     List.iter opts ~f:(fun pos ->

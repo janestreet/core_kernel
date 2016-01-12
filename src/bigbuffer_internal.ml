@@ -7,7 +7,7 @@ type t =
     mutable len : int;
     init : Bigstring.t;
   }
-with sexp_of
+[@@deriving sexp_of]
 
 let resize buf more =
   let min_len = buf.len + more in

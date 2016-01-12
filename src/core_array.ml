@@ -11,7 +11,7 @@ let invalid_argf = Core_printf.invalid_argf
 
 let failwiths = Error.failwiths
 
-type 'a t = 'a array with bin_io, compare, sexp, typerep
+type 'a t = 'a array [@@deriving bin_io, compare, sexp, typerep]
 
 module T = struct
   (* This module implements a new in-place, constant heap sorting algorithm to replace the
@@ -160,7 +160,7 @@ module T = struct
         compare_and_swap m4 m5;  (* 5-----o--------------o-----o--5 *)
       ;;
 
-      TEST_MODULE = struct
+      let%test_module _ = (module struct
         (* run [five_element_sort] on all permutations of an array of five elements *)
 
         let rec sprinkle x xs =
@@ -177,15 +177,15 @@ module T = struct
             List.concat_map (permutations xs) ~f:(fun perms -> sprinkle x perms)
 
         let all_perms = permutations [1;2;3;4;5]
-        TEST = List.length all_perms = 120
-        TEST = not (List.contains_dup ~compare:<:compare< int list >> all_perms)
+        let%test _ = List.length all_perms = 120
+        let%test _ = not (List.contains_dup ~compare:[%compare: int list] all_perms)
 
-        TEST =
+        let%test _ =
           List.for_all all_perms ~f:(fun l ->
             let arr = Array.of_list l in
-            five_element_sort arr ~cmp:<:compare< int >> 0 1 2 3 4;
+            five_element_sort arr ~cmp:[%compare: int] 0 1 2 3 4;
             arr = [|1;2;3;4;5|])
-      end
+      end)
 
       (* choose pivots for the array by sorting 5 elements and examining the center three
          elements.  The goal is to choose two pivots that will either:
@@ -279,9 +279,9 @@ module T = struct
 
     module Test (M : Sort) = struct
 
-      TEST_MODULE = struct
+      let%test_module _ = (module struct
         let random_data ~length ~range =
-          let arr = Array.create length 0 in
+          let arr = Array.make length 0 in
           for i = 0 to length - 1 do
             arr.(i) <- Random.int range;
           done;
@@ -289,7 +289,7 @@ module T = struct
         ;;
 
         let assert_sorted arr =
-          M.sort arr ~left:0 ~right:(Array.length arr - 1) ~cmp:<:compare< int >>;
+          M.sort arr ~left:0 ~right:(Array.length arr - 1) ~cmp:[%compare: int];
           let len = Array.length arr in
           let rec loop i prev =
             if i = len then true
@@ -299,13 +299,13 @@ module T = struct
           loop 0 (-1)
         ;;
 
-        TEST = assert_sorted (random_data ~length:0 ~range:100)
-        TEST = assert_sorted (random_data ~length:1 ~range:100)
-        TEST = assert_sorted (random_data ~length:100 ~range:1_000)
-        TEST = assert_sorted (random_data ~length:1_000 ~range:1)
-        TEST = assert_sorted (random_data ~length:1_000 ~range:10)
-        TEST = assert_sorted (random_data ~length:1_000 ~range:1_000_000)
-      end
+        let%test _ = assert_sorted (random_data ~length:0 ~range:100)
+        let%test _ = assert_sorted (random_data ~length:1 ~range:100)
+        let%test _ = assert_sorted (random_data ~length:100 ~range:1_000)
+        let%test _ = assert_sorted (random_data ~length:1_000 ~range:1)
+        let%test _ = assert_sorted (random_data ~length:1_000 ~range:10)
+        let%test _ = assert_sorted (random_data ~length:1_000 ~range:1_000_000)
+      end)
     end
 
     module Insertion_test = Test (Insertion_sort)
@@ -362,10 +362,10 @@ module T = struct
     in
     loop (length t - 1)
 
-  TEST = is_sorted [||] ~cmp:<:compare< int >>
-  TEST = is_sorted [|0|] ~cmp:<:compare< int >>
-  TEST = is_sorted [|0;1;2;2;4|] ~cmp:<:compare< int >>
-  TEST = not (is_sorted [|0;1;2;3;2|] ~cmp:<:compare< int >>)
+  let%test _ = is_sorted [||] ~cmp:[%compare: int]
+  let%test _ = is_sorted [|0|] ~cmp:[%compare: int]
+  let%test _ = is_sorted [|0;1;2;2;4|] ~cmp:[%compare: int]
+  let%test _ = not (is_sorted [|0;1;2;3;2|] ~cmp:[%compare: int])
 
   let is_sorted_strictly t ~cmp =
     let rec loop i =
@@ -377,10 +377,10 @@ module T = struct
     loop (length t - 1)
   ;;
 
-  TEST_UNIT =
+  let%test_unit _ =
     List.iter
       ~f:(fun (t, expect) ->
-        assert (expect = is_sorted_strictly (of_list t) ~cmp:<:compare< int >>))
+        assert (expect = is_sorted_strictly (of_list t) ~cmp:[%compare: int]))
       [ []         , true;
         [ 1 ]      , true;
         [ 1; 2 ]   , true;
@@ -408,13 +408,19 @@ module T = struct
     loop 0 init
   ;;
 
-  TEST = foldi [||] ~init:13 ~f:(fun _ _ _ -> failwith "bad") = 13
-  TEST = foldi [| 13 |] ~init:17 ~f:(fun i ac x -> ac + i + x) = 30
-  TEST = foldi [| 13; 17 |] ~init:19 ~f:(fun i ac x -> ac + i + x) = 50
+  let%test _ = foldi [||] ~init:13 ~f:(fun _ _ _ -> failwith "bad") = 13
+  let%test _ = foldi [| 13 |] ~init:17 ~f:(fun i ac x -> ac + i + x) = 30
+  let%test _ = foldi [| 13; 17 |] ~init:19 ~f:(fun i ac x -> ac + i + x) = 50
+
+  let counti t ~f = foldi t ~init:0 ~f:(fun idx count a -> if f idx a then count + 1 else count)
+
+  let%test _ = counti [|0;1;2;3;4|] ~f:(fun idx x -> idx = x) = 5
+  let%test _ = counti [|0;1;2;3;4|] ~f:(fun idx x -> idx = 4-x) = 1
 
   let iter t ~f = Array.iter t ~f
 
-  let concat_map t ~f = concat (to_list (map ~f t))
+  let concat_map  t ~f = concat (to_list (map  ~f t))
+  let concat_mapi t ~f = concat (to_list (mapi ~f t))
 
   (** [normalize array index] returns a new index into the array such that if index is less
       than zero, the returned index will "wrap around" -- i.e. array.(normalize array (-1))
@@ -467,12 +473,12 @@ module T = struct
       t
   ;;
 
-  TEST_UNIT =
+  let%test_unit _ =
     for i = 0 to 5 do
       let l1 = List.init i ~f:Fn.id in
       let l2 = List.rev (to_list (of_list_rev l1)) in
       assert (l1 = l2);
-    done;
+    done
   ;;
 
   (* [list_length] and [of_list_rev_map] are based on functions from the
@@ -498,46 +504,72 @@ module T = struct
     rev_inplace t;
     t
 
-  (** [filter_opt array] returns a new array where [None] entries are omitted and [Some x]
-      entries are replaced with [x]. Note that this changes the index at which elements
-      will appear. *)
-  let filter_opt t =
-    let n = length t in
-    let res_size = ref 0 in
-    let first_some = ref None in
-    for i = 0 to n - 1 do
-      begin match t.(i) with
-      | None -> ()
-      | Some _ as s ->
-        if !res_size = 0 then first_some := s;
-        incr res_size;
-      end;
-    done;
-    match !first_some with
-    | None -> [||]
-    | Some el ->
-      let result = create ~len:!res_size el in
-      let pos = ref 0 in
-      for i = 0 to n - 1 do
-        begin match t.(i) with
-        | None -> ()
-        | Some x ->
-          result.(!pos) <- x;
-          incr pos;
-        end;
+  (* [Array.truncate] is a safe wrapper for calling [Obj.truncate] on an array.
+     [Obj.truncate] reduces the size of a block on the ocaml heap.  For arrays, the block
+     size is the array length.  The precondition checked for [len] is exactly the one
+     required by [Obj.truncate]. *)
+  let truncate t ~len =
+    if len <= 0 || len > length t then
+      failwiths "Array.truncate got invalid len" len [%sexp_of: int];
+    if len < length t then Obj.truncate (Obj.repr t) len;
+  ;;
+
+  let%test_unit _ =
+    List.iter
+      ~f:(fun (t, len) ->
+        assert (Exn.does_raise (fun () -> truncate t ~len)))
+      [ [| |]  , -1
+      ; [| |]  , 0
+      ; [| |]  , 1
+      ; [| 1 |], -1
+      ; [| 1 |], 0
+      ; [| 1 |], 2
+      ]
+  ;;
+
+  let%test_unit _ =
+    for orig_len = 1 to 5 do
+      for new_len = 1 to orig_len do
+        let t = init orig_len ~f:Fn.id in
+        truncate t ~len:new_len;
+        assert (length t = new_len);
+        for i = 0 to new_len - 1 do
+          assert (t.(i) = i);
+        done;
       done;
-      result
+    done
+  ;;
 
-  TEST = filter_opt [|Some 1; None; Some 2; None; Some 3|] = [|1; 2; 3|]
-  TEST = filter_opt [|Some 1; None; Some 2|] = [|1; 2|]
-  TEST = filter_opt [|Some 1|] = [|1|]
-  TEST = filter_opt [|None|] = [||]
-  TEST = filter_opt [||] = [||]
+  let filter_mapi t ~f =
+    let r = ref [||] in
+    let k = ref 0 in
+    for i = 0 to length t - 1 do
+      match f i (unsafe_get t i) with
+      | None -> ()
+      | Some a ->
+        if !k = 0 then begin
+          r := create ~len:(length t) a
+        end;
+        unsafe_set !r !k a;
+        incr k;
+    done;
+    if !k > 0 then begin
+      truncate !r ~len:!k;
+      !r
+    end else
+      [||]
 
-  (** [filter_map ~f array] maps [f] over [array] and filters [None] out of the results. *)
-  let filter_map t ~f = filter_opt (map t ~f)
-  (** Same as {!filter_map} but uses {!Array.mapi}. *)
-  let filter_mapi t ~f = filter_opt (mapi t ~f)
+  let filter_map t ~f =
+    filter_mapi t ~f:(fun _i a -> f a)
+
+  let filter_opt t =
+    filter_map t ~f:Fn.id
+
+  let%test _ = filter_opt [|Some 1; None; Some 2; None; Some 3|] = [|1; 2; 3|]
+  let%test _ = filter_opt [|Some 1; None; Some 2|] = [|1; 2|]
+  let%test _ = filter_opt [|Some 1|] = [|1|]
+  let%test _ = filter_opt [|None|] = [||]
+  let%test _ = filter_opt [||] = [||]
 
   let iter2_exn t1 t2 ~f =
     if length t1 <> length t2 then invalid_arg "Array.iter2_exn";
@@ -553,23 +585,36 @@ module T = struct
     foldi t1 ~init ~f:(fun i ac x -> f ac x t2.(i))
   ;;
 
-  TEST = fold2_exn [||] [||] ~init:13 ~f:(fun _ -> failwith "fail") = 13
-  TEST = fold2_exn [| 1 |] [| "1" |] ~init:[] ~f:(fun ac a b -> (a, b) :: ac) = [ 1, "1" ]
+  let%test _ = fold2_exn [||] [||] ~init:13 ~f:(fun _ -> failwith "fail") = 13
+  let%test _ = fold2_exn [| 1 |] [| "1" |] ~init:[] ~f:(fun ac a b -> (a, b) :: ac) = [ 1, "1" ]
 
-  (** [filter ~f array] removes the elements for which [f] returns false.  *)
-  let filter ~f =  filter_map ~f:(fun x -> if f x then Some x else None)
-  (** Like {!filter} except [f] also receives the index. *)
+  let filter ~f = filter_map ~f:(fun x -> if f x then Some x else None)
+
   let filteri ~f = filter_mapi ~f:(fun i x -> if f i x then Some x else None)
+
+  let%test _ = filter [| 0; 1 |] ~f:(fun n -> n < 2) = [| 0; 1 |]
+  let%test _ = filter [| 0; 1 |] ~f:(fun n -> n < 1) = [| 0 |]
+  let%test _ = filter [| 0; 1 |] ~f:(fun n -> n < 0) = [||]
 
   let exists t ~f =
     let rec loop i =
       if i < 0
       then false
-      else if f t.(i)
-      then true
-      else loop (i - 1)
+      else f t.(i) || loop (i - 1)
     in
     loop (length t - 1)
+
+  let existsi t ~f =
+    let rec loop i =
+      if i < 0
+      then false
+      else f i t.(i) || loop (i - 1)
+    in
+    loop (length t - 1)
+
+  let%test _ = existsi [||] ~f:(fun _ _ -> true) = false
+  let%test _ = existsi [|0;1;2;3|] ~f:(fun i x -> i <> x) = false
+  let%test _ = existsi [|0;1;3;3|] ~f:(fun i x -> i <> x) = true
 
   let mem ?(equal = (=)) t a = exists t ~f:(equal a)
 
@@ -577,11 +622,31 @@ module T = struct
     let rec loop i =
       if i < 0
       then true
-      else if f t.(i)
-      then loop (i - 1)
-      else false
+      else f t.(i) && loop (i - 1)
     in
     loop (length t - 1)
+
+  let for_alli t ~f =
+    let rec loop i =
+      if i < 0
+      then true
+      else f i t.(i) && loop (i - 1)
+    in
+    loop (length t - 1)
+
+  let%test _ = for_alli [||] ~f:(fun _ _ -> false) = true
+  let%test _ = for_alli [|0;1;2;3|] ~f:(fun i x -> i = x) = true
+  let%test _ = for_alli [|0;1;3;3|] ~f:(fun i x -> i = x) = false
+
+  let exists2_exn t1 t2 ~f =
+    let len = length t1 in
+    if length t2 <> len then invalid_arg "Array.exists2_exn";
+    let rec loop i =
+      if i < 0
+      then false
+      else f t1.(i) t2.(i) || loop (i - 1)
+    in
+    loop (len - 1)
 
   let for_all2_exn t1 t2 ~f =
     let len = length t1 in
@@ -589,21 +654,28 @@ module T = struct
     let rec loop i =
       if i < 0
       then true
-      else if f t1.(i) t2.(i)
-      then loop (i - 1)
-      else false
+      else f t1.(i) t2.(i) && loop (i - 1)
     in
     loop (len - 1)
 
+  let%test _ = exists2_exn [||] [||] ~f:(fun _ _ -> true) = false
+  let%test _ = exists2_exn [|0;2;4;6|] [|0;2;4;6|] ~f:(fun x y -> x <> y) = false
+  let%test _ = exists2_exn [|0;2;4;8|] [|0;2;4;6|] ~f:(fun x y -> x <> y) = true
+  let%test _ = exists2_exn [|2;2;4;6|] [|0;2;4;6|] ~f:(fun x y -> x <> y) = true
+  let%test _ = for_all2_exn [||] [||] ~f:(fun _ _ -> false) = true
+  let%test _ = for_all2_exn [|0;2;4;6|] [|0;2;4;6|] ~f:(fun x y -> x = y) = true
+  let%test _ = for_all2_exn [|0;2;4;8|] [|0;2;4;6|] ~f:(fun x y -> x = y) = false
+  let%test _ = for_all2_exn [|2;2;4;6|] [|0;2;4;6|] ~f:(fun x y -> x = y) = false
+
   let equal t1 t2 ~equal = length t1 = length t2 && for_all2_exn t1 t2 ~f:equal
 
-  TEST = equal [||] [||] ~equal:(=)
-  TEST = equal [| 1 |] [| 1 |] ~equal:(=)
-  TEST = equal [| 1; 2 |] [| 1; 2 |] ~equal:(=)
-  TEST = not (equal [||] [| 1 |] ~equal:(=))
-  TEST = not (equal [| 1 |] [||] ~equal:(=))
-  TEST = not (equal [| 1 |] [| 1; 2 |] ~equal:(=))
-  TEST = not (equal [| 1; 2 |] [| 1; 3 |] ~equal:(=))
+  let%test _ = equal [||] [||] ~equal:(=)
+  let%test _ = equal [| 1 |] [| 1 |] ~equal:(=)
+  let%test _ = equal [| 1; 2 |] [| 1; 2 |] ~equal:(=)
+  let%test _ = not (equal [||] [| 1 |] ~equal:(=))
+  let%test _ = not (equal [| 1 |] [||] ~equal:(=))
+  let%test _ = not (equal [| 1 |] [| 1; 2 |] ~equal:(=))
+  let%test _ = not (equal [| 1; 2 |] [| 1; 3 |] ~equal:(=))
 
   let replace t i ~f = t.(i) <- f t.(i)
 
@@ -649,6 +721,33 @@ module T = struct
     loop 0
   ;;
 
+  let find_map_exn t ~f =
+    match find_map t ~f with
+    | None -> raise Not_found
+    | Some x -> x
+
+  let find_mapi t ~f =
+    let length = length t in
+    let rec loop i =
+      if i >= length then None
+      else
+        match f i t.(i) with
+        | None -> loop (i + 1)
+        | Some _ as res -> res
+    in
+    loop 0
+  ;;
+
+  let%test _ = find_mapi [|0;5;2;1;4|] ~f:(fun i x -> if i = x then Some (i+x) else None) = Some 0
+  let%test _ = find_mapi [|3;5;2;1;4|] ~f:(fun i x -> if i = x then Some (i+x) else None) = Some 4
+  let%test _ = find_mapi [|3;5;1;1;4|] ~f:(fun i x -> if i = x then Some (i+x) else None) = Some 8
+  let%test _ = find_mapi [|3;5;1;1;2|] ~f:(fun i x -> if i = x then Some (i+x) else None) = None
+
+  let find_mapi_exn t ~f =
+    match find_mapi t ~f with
+    | None -> raise Not_found
+    | Some x -> x
+
   let find_consecutive_duplicate t ~equal =
     let n = length t in
     if n <= 1
@@ -667,7 +766,7 @@ module T = struct
     end
   ;;
 
-  TEST_UNIT =
+  let%test_unit _ =
     List.iter
       ~f:(fun (l, expect) ->
         let t = of_list l in
@@ -699,11 +798,15 @@ module T = struct
 
   let permute = Array_permute.permute
 
-  let combine t1 t2 =
-    if length t1 <> length t2 then failwith "Array.combine"
+  let zip t1 t2 =
+    if length t1 <> length t2 then None
+    else Some (map2_exn t1 t2 ~f:(fun x1 x2 -> x1, x2))
+
+  let zip_exn t1 t2 =
+    if length t1 <> length t2 then failwith "Array.zip_exn"
     else map2_exn t1 t2 ~f:(fun x1 x2 -> x1, x2)
 
-  let split t =
+  let unzip t =
     let n = length t in
     if n = 0 then [||], [||]
     else
@@ -723,10 +826,10 @@ module T = struct
     t1
 
   let partitioni_tf t ~f =
-    let (trues, falses) =
-      mapi t ~f:(fun i x -> if f i x then (Some x, None) else (None, Some x)) |! split
-    in
-    (filter_opt trues, filter_opt falses)
+    let both = mapi t ~f:(fun i x -> if f i x then Either.First x else Either.Second x) in
+    let trues = filter_map both ~f:(function First x -> Some x | Second _ -> None) in
+    let falses = filter_map both ~f:(function First _ -> None | Second x -> Some x) in
+    (trues, falses)
 
   let partition_tf t ~f =
     partitioni_tf t ~f:(fun _i x -> f x)
@@ -743,7 +846,7 @@ module T = struct
 
   let to_sequence t = to_sequence_mutable (copy t)
 
-  TEST_UNIT =
+  let%test_unit _ =
     List.iter
       [ [||]
       ; [| 1 |]
@@ -752,10 +855,6 @@ module T = struct
       ~f:(fun t ->
         assert (Sequence.to_array (to_sequence t) = t))
   ;;
-
-  module Infix = struct
-    let ( <|> ) t (start, stop) = slice t start stop
-  end
 
   (* We use [init 0] rather than [||] because all [||] are physically equal, and
      we want [empty] to create a new array. *)
@@ -780,48 +879,14 @@ module T = struct
 
   include Binary_searchable.Make1 (struct
     type nonrec 'a t = 'a t
+
     let get = get
     let length = length
+
     module For_test = struct
       let of_array a = a
     end
   end)
-
-  (* [Array.truncate] is a safe wrapper for calling [Obj.truncate] on an array.
-     [Obj.truncate] reduces the size of a block on the ocaml heap.  For arrays, the block
-     size is the array length.  The precondition checked for [len] is exactly the one
-     required by [Obj.truncate]. *)
-  let truncate t ~len =
-    if len <= 0 || len > length t then
-      failwiths "Array.truncate got invalid len" len <:sexp_of< int >>;
-    if len < length t then Obj.truncate (Obj.repr t) len;
-  ;;
-
-  TEST_UNIT =
-    List.iter
-      ~f:(fun (t, len) ->
-        assert (Exn.does_raise (fun () -> truncate t ~len)))
-      [ [| |]  , -1
-      ; [| |]  , 0
-      ; [| |]  , 1
-      ; [| 1 |], -1
-      ; [| 1 |], 0
-      ; [| 1 |], 2
-      ]
-  ;;
-
-  TEST_UNIT =
-    for orig_len = 1 to 5 do
-      for new_len = 1 to orig_len do
-        let t = init orig_len ~f:Fn.id in
-        truncate t ~len:new_len;
-        assert (length t = new_len);
-        for i = 0 to new_len - 1 do
-          assert (t.(i) = i);
-        done;
-      done;
-    done;
-  ;;
 
   module Sequence = struct
     let length = length
@@ -832,7 +897,7 @@ module T = struct
   include
     Blit.Make1
       (struct
-        type nonrec 'a t = 'a t with sexp_of
+        type nonrec 'a t = 'a t [@@deriving sexp_of]
         type 'a z = 'a
         include Sequence
         let create_like ~len t =
@@ -850,7 +915,7 @@ module T = struct
      https://janestreet.github.io/ocaml-perf-notes.html *)
   module Int = struct
 
-    type t_ = int array with bin_io, compare, sexp
+    type t_ = int array [@@deriving bin_io, compare, sexp]
 
     module Unsafe_blit = struct
       external unsafe_blit
@@ -866,7 +931,7 @@ module T = struct
           let of_bool b = if b then 1 else 0
         end)
         (struct
-          type t = t_ with sexp_of
+          type t = t_ [@@deriving sexp_of]
           include Sequence
           let create ~len = create ~len 0
           include Unsafe_blit
@@ -879,7 +944,7 @@ module T = struct
 
   module Float = struct
 
-    type t_ = float array with bin_io, compare, sexp
+    type t_ = float array [@@deriving bin_io, compare, sexp]
 
     module Unsafe_blit = struct
       external unsafe_blit
@@ -895,7 +960,7 @@ module T = struct
           let of_bool b = if b then 1. else 0.
         end)
         (struct
-          type t = t_ with sexp_of
+          type t = t_ [@@deriving sexp_of]
           include Sequence
           let create ~len = create ~len 0.
           include Unsafe_blit
@@ -952,6 +1017,10 @@ module type Permissioned = sig
     :  ('a, [> read]) t
     -> f:('a -> ('b, [> read]) t)
     -> ('b, [< _ perms]) t
+  val concat_mapi
+    :  ('a, [> read]) t
+    -> f:(int -> 'a -> ('b, [> read]) t)
+    -> ('b, [< _ perms]) t
   val partition_tf
     :  ('a, [> read]) t
     -> f:('a -> bool)
@@ -973,6 +1042,9 @@ module type Permissioned = sig
     :  ('a, [> read]) t
     -> f:(int -> 'a -> 'b option)
     -> ('b, [< _ perms]) t
+  val for_alli :  ('a, [> read]) t -> f:(int -> 'a -> bool) -> bool
+  val existsi  :  ('a, [> read]) t -> f:(int -> 'a -> bool) -> bool
+  val counti   :  ('a, [> read]) t -> f:(int -> 'a -> bool) -> int
   val iter2_exn : ('a, [> read]) t -> ('b, [> read]) t -> f:('a -> 'b -> unit) -> unit
   val map2_exn
     :  ('a, [> read]) t
@@ -990,6 +1062,11 @@ module type Permissioned = sig
     -> ('b, [> read]) t
     -> f:('a -> 'b -> bool)
     -> bool
+  val exists2_exn
+    :  ('a, [> read]) t
+    -> ('b, [> read]) t
+    -> f:('a -> 'b -> bool)
+    -> bool
   val filter : f:('a -> bool) -> ('a, [> read]) t -> ('a, [< _ perms]) t
   val filteri : f:(int -> 'a -> bool) -> ('a, [> read]) t -> ('a, [< _ perms]) t
   val swap : ('a, [> read_write]) t -> int -> int -> unit
@@ -1000,8 +1077,11 @@ module type Permissioned = sig
   val replace : ('a, [> read_write]) t -> int -> f:('a -> 'a) -> unit
   val replace_all : ('a, [> read_write]) t -> f:('a -> 'a) -> unit
   val find_exn : ('a, [> read]) t -> f:('a -> bool) -> 'a
+  val find_map_exn : ('a, [> read]) t -> f:('a -> 'b option) -> 'b
   val findi : ('a, [> read]) t -> f:(int -> 'a -> bool) -> (int * 'a) option
   val findi_exn : ('a, [> read]) t -> f:(int -> 'a -> bool) -> int * 'a
+  val find_mapi     : ('a, [> read]) t -> f:(int -> 'a -> 'b option) -> 'b option
+  val find_mapi_exn : ('a, [> read]) t -> f:(int -> 'a -> 'b option) -> 'b
   val find_consecutive_duplicate
     :  ('a, [> read]) t
     -> equal:('a -> 'a -> bool)
@@ -1009,27 +1089,24 @@ module type Permissioned = sig
   val reduce     : ('a, [> read]) t -> f:('a -> 'a -> 'a) -> 'a option
   val reduce_exn : ('a, [> read]) t -> f:('a -> 'a -> 'a) -> 'a
   val permute : ?random_state:Core_random.State.t -> ('a, [> read_write]) t -> unit
-  val combine : ('a, [> read]) t -> ('b, [> read]) t -> ('a * 'b, [< _ perms]) t
-  val split : ('a * 'b, [> read]) t -> ('a, [< _ perms]) t * ('b, [< _ perms]) t
+  val zip     : ('a, [> read]) t -> ('b, [> read]) t -> ('a * 'b, [< _ perms]) t option
+  val zip_exn : ('a, [> read]) t -> ('b, [> read]) t -> ('a * 'b, [< _ perms]) t
+  val unzip : ('a * 'b, [> read]) t -> ('a, [< _ perms]) t * ('b, [< _ perms]) t
   val sorted_copy : ('a, [> read]) t -> cmp:('a -> 'a -> int) -> ('a, [< _ perms]) t
   val last : ('a, [> read]) t -> 'a
   val empty : unit -> ('a, [< _ perms]) t
   val equal : ('a, [> read]) t -> ('a, [> read]) t -> equal:('a -> 'a -> bool) -> bool
   val truncate : (_, [> write]) t -> len:int -> unit
 
-  module Infix : sig
-    val ( <|> ) : ('a, [> read]) t -> int * int -> ('a, [< _ perms]) t
-  end
-
   val to_sequence : ('a, [> read]) t -> 'a Sequence.t
   val to_sequence_mutable : ('a, [> read]) t -> 'a Sequence.t
 end
 
 module Permissioned : sig
-  type ('a, -'perms) t with bin_io, compare, sexp
+  type ('a, -'perms) t [@@deriving bin_io, compare, sexp]
 
   module Int : sig
-    type nonrec -'perms t = (int, 'perms) t with bin_io, compare, sexp
+    type nonrec -'perms t = (int, 'perms) t [@@deriving bin_io, compare, sexp]
 
     include Blit.S_permissions with type 'perms t := 'perms t
 
@@ -1039,7 +1116,7 @@ module Permissioned : sig
   end
 
   module Float : sig
-    type nonrec -'perms t = (float, 'perms) t with bin_io, compare, sexp
+    type nonrec -'perms t = (float, 'perms) t [@@deriving bin_io, compare, sexp]
 
     include Blit.S_permissions with type 'perms t := 'perms t
 
@@ -1055,18 +1132,18 @@ module Permissioned : sig
 
   include Permissioned with type ('a, 'perms) t := ('a, 'perms) t
 end = struct
-  type ('a, -'perms) t = 'a array with bin_io, compare, sexp, typerep
+  type ('a, -'perms) t = 'a array [@@deriving bin_io, compare, sexp, typerep]
 
   module Int = struct
     include T.Int
 
-    type -'perms t = t_ with bin_io, compare, sexp
+    type -'perms t = t_ [@@deriving bin_io, compare, sexp]
   end
 
   module Float = struct
     include T.Float
 
-    type -'perms t = t_ with bin_io, compare, sexp
+    type -'perms t = t_ [@@deriving bin_io, compare, sexp]
   end
 
   let to_array_id = Fn.id
@@ -1109,6 +1186,7 @@ module type S = sig
   val is_sorted : 'a t -> cmp:('a -> 'a -> int) -> bool
   val is_sorted_strictly : 'a t -> cmp:('a -> 'a -> int) -> bool
   val concat_map : 'a t -> f:('a -> 'b t) -> 'b t
+  val concat_mapi : 'a t -> f:(int -> 'a -> 'b t) -> 'b t
   val partition_tf : 'a t -> f:('a -> bool) -> 'a t * 'a t
   val partitioni_tf : 'a t -> f:(int -> 'a -> bool) -> 'a t * 'a t
   val cartesian_product : 'a t -> 'b t -> ('a * 'b) t
@@ -1119,10 +1197,14 @@ module type S = sig
   val filter_opt : 'a option t -> 'a t
   val filter_map : 'a t -> f:('a -> 'b option) -> 'b t
   val filter_mapi : 'a t -> f:(int -> 'a -> 'b option) -> 'b t
+  val for_alli : 'a t -> f:(int -> 'a -> bool) -> bool
+  val existsi  : 'a t -> f:(int -> 'a -> bool) -> bool
+  val counti   : 'a t -> f:(int -> 'a -> bool) -> int
   val iter2_exn : 'a t -> 'b t -> f:('a -> 'b -> unit) -> unit
   val map2_exn : 'a t -> 'b t -> f:('a -> 'b -> 'c) -> 'c t
   val fold2_exn : 'a t -> 'b t -> init:'c -> f:('c -> 'a -> 'b -> 'c) -> 'c
   val for_all2_exn : 'a t -> 'b t -> f:('a -> 'b -> bool) -> bool
+  val exists2_exn : 'a t -> 'b t -> f:('a -> 'b -> bool) -> bool
   val filter : f:('a -> bool) -> 'a t -> 'a t
   val filteri : f:(int -> 'a -> bool) -> 'a t -> 'a t
   val swap : 'a t -> int -> int -> unit
@@ -1133,23 +1215,23 @@ module type S = sig
   val replace : 'a t -> int -> f:('a -> 'a) -> unit
   val replace_all : 'a t -> f:('a -> 'a) -> unit
   val find_exn : 'a t -> f:('a -> bool) -> 'a
+  val find_map_exn : 'a t -> f:('a -> 'b option) -> 'b
   val findi : 'a t -> f:(int -> 'a -> bool) -> (int * 'a) option
   val findi_exn : 'a t -> f:(int -> 'a -> bool) -> int * 'a
+  val find_mapi : 'a t -> f:(int -> 'a -> 'b option) -> 'b option
+  val find_mapi_exn : 'a t -> f:(int -> 'a -> 'b option) -> 'b
   val find_consecutive_duplicate : 'a t -> equal:('a -> 'a -> bool) -> ('a * 'a) option
   val reduce     : 'a t -> f:('a -> 'a -> 'a) -> 'a option
   val reduce_exn : 'a t -> f:('a -> 'a -> 'a) -> 'a
   val permute : ?random_state:Core_random.State.t -> 'a t -> unit
-  val combine : 'a t -> 'b t -> ('a * 'b) t
-  val split : ('a * 'b) t -> 'a t * 'b t
+  val zip     : 'a t -> 'b t -> ('a * 'b) t option
+  val zip_exn : 'a t -> 'b t -> ('a * 'b) t
+  val unzip : ('a * 'b) t -> 'a t * 'b t
   val sorted_copy : 'a t -> cmp:('a -> 'a -> int) -> 'a t
   val last : 'a t -> 'a
   val empty : unit -> 'a t
   val equal : 'a t -> 'a t -> equal:('a -> 'a -> bool) -> bool
   val truncate : _ t -> len:int -> unit
-
-  module Infix : sig
-    val ( <|> ) : 'a t -> int * int -> 'a t
-  end
 
   val to_sequence : 'a t -> 'a Core_sequence.t
   val to_sequence_mutable : 'a t -> 'a Core_sequence.t
@@ -1157,16 +1239,18 @@ end
 
 include (T : S with type 'a t := 'a array)
 
+let invariant invariant_a t = iter t ~f:invariant_a
+
 let max_length = Sys.max_array_length
 
 module Int = struct
   include T.Int
-  type t = t_ with bin_io, compare, sexp
+  type t = t_ [@@deriving bin_io, compare, sexp]
 end
 
 module Float = struct
   include T.Float
-  type t = t_ with bin_io, compare, sexp
+  type t = t_ [@@deriving bin_io, compare, sexp]
 end
 
 module Check1 (M : S) : sig
@@ -1185,75 +1269,75 @@ end = struct
   type 'a t_ = ('a, read_write) t
 end
 
-BENCH_FUN "Array.get (int)" =
+let%bench_fun "Array.get (int)" =
   let len = 300 in
   let arr = create ~len 0 in
   (fun () -> ignore(arr.(len-1)))
 
-BENCH_FUN "Array.set (int)" =
+let%bench_fun "Array.set (int)" =
   let len = 300 in
   let arr = create ~len 0 in
   (fun () -> arr.(len-1) <- 100)
 
-BENCH_FUN "Array.get (float)" =
+let%bench_fun "Array.get (float)" =
   let len = 300 in
   let arr = create ~len 0.0 in
   (fun () -> ignore(arr.(len-1)))
 
-BENCH_FUN "Array.set (float)" =
+let%bench_fun "Array.set (float)" =
   let len = 300 in
   let arr = create ~len 0.0 in
   (fun () -> arr.(len-1) <- 1.0)
 
-BENCH_FUN "Array.get (tuple)" =
+let%bench_fun "Array.get (tuple)" =
   let len = 300 in
   let arr = create ~len (1,2) in
   (fun () -> ignore(arr.(len-1)))
 
-BENCH_FUN "Array.set (tuple)" =
+let%bench_fun "Array.set (tuple)" =
   let len = 300 in
   let arr = create ~len (1,2) in
   (fun () -> arr.(len-1) <- (3,4))
 
 (* Allocation of arrays.  Arrays longer than 255 elements are directly allocated to the
    major heap and are more expensive. *)
-BENCH_MODULE "Alloc" = struct
+let%bench_module "Alloc" = (module struct
   let lengths = [0; 100; 255; 256; 1000]
 
-  BENCH_INDEXED "create" len lengths =
+  let%bench_fun "create" [@indexed len = lengths] =
     (fun () -> ignore (create ~len 0))
-end
+end)
 
 (* Some benchmarks of the blit operations *)
-BENCH_MODULE "Blit" = struct
+let%bench_module "Blit" = (module struct
   let lengths = [0; 3; 5; 10; 100; 1000; 10_000]
 
   (* These measure the cost of using polymorphic blit. *)
-  BENCH_MODULE "Poly" = struct
+  let%bench_module "Poly" = (module struct
 
-    BENCH_INDEXED "blit (tuple)" len lengths =
+    let%bench_fun "blit (tuple)" [@indexed len = lengths] =
       let src = create ~len (10, 20) in
       let dst = create ~len (20, 30) in
       (fun () -> blit ~src ~src_pos:0 ~dst ~dst_pos:0 ~len)
 
-    BENCH_INDEXED "blito (tuple)" len lengths =
+    let%bench_fun "blito (tuple)" [@indexed len = lengths] =
       let src = create ~len (10, 20) in
       let dst = create ~len (20, 30) in
       (fun () -> blito ~src ~src_pos:0 ~dst ~dst_pos:0 ~src_len:len ())
 
     (* Even though [int]s are immediate and don't require [caml_modify] calls, the runtime
        does not special case their behavior. *)
-    BENCH_INDEXED "blit (int)" len lengths =
+    let%bench_fun "blit (int)" [@indexed len = lengths] =
       let src = create ~len 0 in
       let dst = create ~len 0 in
       (fun () -> blit ~src ~src_pos:0 ~dst ~dst_pos:0 ~len)
 
-    BENCH_INDEXED "blito without args (int)" len lengths =
+    let%bench_fun "blito without args (int)" [@indexed len = lengths] =
       let src = create ~len 0 in
       let dst = create ~len 0 in
       (fun () -> blito ~src ~dst ())
 
-    BENCH_INDEXED "blito with args (int)" len lengths =
+    let%bench_fun "blito with args (int)" [@indexed len = lengths] =
       let src = create ~len 0 in
       let dst = create ~len 0 in
       (fun () -> blito ~src ~src_pos:0 ~dst ~dst_pos:0 ~src_len:len ())
@@ -1261,55 +1345,54 @@ BENCH_MODULE "Blit" = struct
     (* In the OCaml runtime, the handling of double tagged arrays (i.e. float arrays) is
        special cased. *)
 
-    BENCH_INDEXED "blit (float)" len lengths =
+    let%bench_fun "blit (float)" [@indexed len = lengths] =
       let src = create ~len 0.0 in
       let dst = create ~len 0.0 in
       (fun () -> blit ~src ~src_pos:0 ~dst ~dst_pos:0 ~len)
 
-    BENCH_INDEXED "blito (float)" len lengths =
+    let%bench_fun "blito (float)" [@indexed len = lengths] =
       let src = create ~len 0.0 in
       let dst = create ~len 0.0 in
       (fun () -> blito ~src ~src_pos:0 ~dst ~dst_pos:0 ~src_len:len ())
-  end
+  end)
 
   (* This measures the cost of doing a blit that takes advantage of the fact that [int]
      has an immediate representation. *)
-  BENCH_MODULE "Int" = struct
-    BENCH_INDEXED "blit" len lengths =
+  let%bench_module "Int" = (module struct
+    let%bench_fun "blit" [@indexed len = lengths] =
       let src = create ~len 0 in
       let dst = create ~len 0 in
       (fun () -> Int.blit ~src ~src_pos:0 ~dst ~dst_pos:0 ~len)
 
-    BENCH_INDEXED "blito" len lengths =
+    let%bench_fun "blito" [@indexed len = lengths] =
       let src = create ~len 0 in
       let dst = create ~len 0 in
       (fun () -> Int.blito ~src ~src_pos:0 ~dst ~dst_pos:0 ~src_len:len ())
-  end
+  end)
 
   (* This measures the cost of doing a blit that takes advantage of the fact that [float]
      has an immediate representation in arrays. *)
-  BENCH_MODULE "Float" = struct
-    BENCH_INDEXED "blit" len lengths =
+  let%bench_module "Float" = (module struct
+    let%bench_fun "blit" [@indexed len = lengths] =
       let src = create ~len 0.0 in
       let dst = create ~len 0.0 in
       (fun () -> Float.blit ~src ~src_pos:0 ~dst ~dst_pos:0 ~len)
 
-    BENCH_INDEXED "blito" len lengths =
+    let%bench_fun "blito" [@indexed len = lengths] =
       let src = create ~len 0.0 in
       let dst = create ~len 0.0 in
       (fun () -> Float.blito ~src ~src_pos:0 ~dst ~dst_pos:0 ~src_len:len ())
-  end
-end
+  end)
+end)
 
 (* All of these benchmarks check to see if an array is empty. *)
-BENCH_MODULE "Is empty" = struct
+let%bench_module "Is empty" = (module struct
   let arr1 : int t = empty ()
   let arr2 = create ~len:5 0
 
-  BENCH "Polymorphic '='" = ([||] = [||])
-  BENCH "Array.equal" = equal ~equal:(=) [||] [||]
-  BENCH "phys_equal" = [||] == [||]
-  BENCH "Array.is_empty (empty)" = is_empty arr1
-  BENCH "Array.is_empty (non-empty)" = is_empty arr2
-end
-
+  let%bench "Polymorphic '='" = ([||] = [||])
+  let%bench "Array.equal" = equal ~equal:(=) [||] [||]
+  let%bench "phys_equal" = [||] == [||]
+  let%bench "Array.is_empty (empty)" = is_empty arr1
+  let%bench "Array.is_empty (non-empty)" = is_empty arr2
+end)

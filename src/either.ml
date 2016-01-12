@@ -3,7 +3,7 @@ module Stable = struct
     type ('f, 's) t =
       | First  of 'f
       | Second of 's
-    with bin_io, compare, sexp, typerep
+    [@@deriving bin_io, compare, sexp, typerep]
 
     let map x ~f1 ~f2 =
       match x with
@@ -63,6 +63,45 @@ let invariant f s = function
   | First  x -> f x
   | Second y -> s y
 ;;
+
+module For_quickcheck = struct
+
+  module Generator = Quickcheck.Generator
+  module Observer  = Quickcheck.Observer
+  module Shrinker  = Quickcheck.Shrinker
+
+  open Generator.Monad_infix
+
+  let to_poly = function
+    | First  a -> `A a
+    | Second b -> `B b
+
+  let of_poly = function
+    | `A a -> First a
+    | `B b -> Second b
+
+  let gen a b =
+    Generator.union
+      [ a >>| first
+      ; b >>| second
+      ]
+
+  let obs a b =
+    Observer.unmap (Observer.variant2 a b)
+      ~f:to_poly
+      ~f_sexp:(fun () -> Atom "variant_of_either")
+
+  let shrinker a b =
+    Shrinker.map
+      (Shrinker.variant2 a b)
+      ~f:of_poly
+      ~f_inverse:to_poly
+
+end
+
+let gen      = For_quickcheck.gen
+let obs      = For_quickcheck.obs
+let shrinker = For_quickcheck.shrinker
 
 module Make_focused (M : sig
     type (+'a, +'b) t

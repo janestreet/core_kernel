@@ -1,20 +1,20 @@
 open Std_internal
 open Int.Replace_polymorphic_compare
 
-TEST_MODULE = struct
+let%test_module _ = (module struct
   module Hashtbl = Pooled_hashtbl.Make(struct
     include Int
     let hash x = x
   end)
 
-  TEST_UNIT "growing test/copy test" =
+  let%test_unit "growing test/copy test" =
     let n = 1_000_000 in
     let tbl = Hashtbl.create ~size:16 () in
     for i = 0 to n - 1 do
       Hashtbl.set tbl ~key:i ~data:i;
     done;
     let first_n = ref 0 in
-    for _z = 1 to 2 do
+    for _ = 1 to 2 do
       let loop_end = !first_n + n - 1 in
       for i = !first_n to loop_end do
         let x = n + i in
@@ -39,15 +39,15 @@ TEST_MODULE = struct
     for i = !first_n to !first_n + n - 1 do
       assert ( not (Hashtbl.mem tbl i) );
       assert ( (Hashtbl.find_exn tbl_copy i) = i )
-    done;
+    done
   ;;
 
-  TEST_UNIT "adding elements when growth_allowed=false" =
+  let%test_unit "adding elements when growth_allowed=false" =
     let n = 1_000 in
     let tbl = Hashtbl.create ~size:16 ~growth_allowed:false () in
     for i = 0 to n - 1 do
       Hashtbl.set tbl ~key:i ~data:i;
-    done;
+    done
   ;;
 
   (* [large_int] creates an integer constant that is not representable on 32bits
@@ -55,7 +55,7 @@ TEST_MODULE = struct
   let large_int a b c d = (a lsl 48) lor (b lsl 32) lor (c lsl 16) lor d
 
   (* Test for past bugs with very small tables and collisions *)
-  TEST_UNIT "tiny map, colliding keys" =
+  let%test_unit "tiny map, colliding keys" =
     let tbl = Hashtbl.create ~size:3 () in
     let s1 = large_int 0x000b 0x2da5 0xbf2d 0xc34b in
     let s2 = large_int 0x0013 0x61e3 0x7f2d 0xc34b in
@@ -65,10 +65,10 @@ TEST_MODULE = struct
     Hashtbl.set tbl ~key:s2 ~data:1;
     assert((Hashtbl.find_exn tbl s2) = 1);
     Hashtbl.set tbl ~key:s3 ~data:2;
-    assert((Hashtbl.find_exn tbl s3) = 2);
+    assert((Hashtbl.find_exn tbl s3) = 2)
   ;;
 
-  TEST_UNIT "collision test" = if Int.num_bits >= 63 then begin
+  let%test_unit "collision test" = if Int.num_bits >= 63 then begin
     (* Under identity hashing, this creates a collision and chain on bucket zero... *)
     let t = Hashtbl.create ~size:20 () in
     let s1 = large_int 0 0x7490 0x3800 0x0000 in
@@ -81,14 +81,14 @@ TEST_MODULE = struct
   end
   ;;
 
-  TEST_UNIT "simple iter/fold" = if Int.num_bits >= 63 then begin
+  let%test_unit "simple iter/fold" = if Int.num_bits >= 63 then begin
     let tbl = Hashtbl.create ~size:64 () in
     let n = 100 in
     for i=1 to 100 do
       Hashtbl.set tbl ~key:i ~data:i
     done;
     let isum = ref 0 in
-    Hashtbl.iter tbl ~f:(fun ~key ~data -> assert (key = data); isum := !isum + key);
+    Hashtbl.iteri tbl ~f:(fun ~key ~data -> assert (key = data); isum := !isum + key);
     let fsum =
       Hashtbl.fold tbl ~init:0 ~f:(fun ~key ~data acc ->
         assert (key = data);
@@ -100,6 +100,6 @@ TEST_MODULE = struct
     assert (fsum = expected_sum);
   end
   ;;
-end
+end)
 
-TEST_MODULE "unit tests from core" = Hashtbl_unit_tests.Make (Pooled_hashtbl)
+let%test_module "unit tests from core" = (module Hashtbl_unit_tests.Make (Pooled_hashtbl))

@@ -1,4 +1,4 @@
-type 'a t = 'a with sexp_of
+type 'a t = 'a [@@deriving sexp_of]
 
 external is_heap_block : Obj.t -> bool = "core_heap_block_is_heap_block" "noalloc"
 

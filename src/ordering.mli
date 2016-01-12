@@ -25,7 +25,7 @@ type t =
 | Less
 | Equal
 | Greater
-with bin_io, compare, sexp
+[@@deriving bin_io, compare, sexp]
 
 (** [of_int n] is:
 
@@ -37,6 +37,18 @@ with bin_io, compare, sexp
 *)
 val of_int : int -> t
 
+(** [to_int t] is:
+
+    {v
+      Less     -> -1
+      Equal    -> 0
+      Greater  -> 1
+    v}
+
+    It can be useful when writing a comparison function to allow one to return
+    [Ordering.t] values and transform them to [int]s later.
+*)
+val to_int : t -> int
 
 module Export : sig
   type _ordering = t =

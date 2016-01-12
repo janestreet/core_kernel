@@ -1,8 +1,8 @@
 open Sexplib
 
-exception Decimal_nan_or_inf with sexp
+exception Decimal_nan_or_inf [@@deriving sexp]
 
-type t = float with compare
+type t = float [@@deriving compare]
 
 let verify t =
   match Pervasives.classify_float t with

@@ -8,7 +8,7 @@ type t =
   | Thu
   | Fri
   | Sat
-with bin_io, compare, sexp
+[@@deriving bin_io, compare, sexp]
 
 include Comparable.S_binable with type t := t
 include Hashable.  S_binable with type t := t
@@ -44,7 +44,7 @@ val weekends : t list (** [ Sat; Sun ] *)
 
 module Stable : sig
   module V1 : sig
-    type nonrec t = t with bin_io, sexp, compare
+    type nonrec t = t [@@deriving bin_io, sexp, compare]
 
     include Stable_containers.Comparable.V1.S
       with type key := t

@@ -25,7 +25,7 @@ module Comparable : sig
 
     module Make (
       Key : sig
-        type t with bin_io, sexp
+        type t [@@deriving bin_io, sexp]
         include Comparator.S with type t := t
       end
     ) : S with type key := Key.t and type comparator_witness := Key.comparator_witness
@@ -38,11 +38,11 @@ module Hashable : sig
       type key
 
       module Table : sig
-        type 'a t = (key, 'a) Hashtbl.t with sexp, bin_io
+        type 'a t = (key, 'a) Hashtbl.t [@@deriving sexp, bin_io]
       end
 
       module Hash_set : sig
-        type t = key Hash_set.t with sexp, bin_io
+        type t = key Hash_set.t [@@deriving sexp, bin_io]
       end
     end
 

@@ -2,16 +2,15 @@
 module type Infix               = Polymorphic_compare_intf.Infix
 module type Polymorphic_compare = Polymorphic_compare_intf.S
 
-(** Used for specifying a bound (either upper or lower) as inclusive, exclusive, or
-    unbounded. *)
-type 'a bound = Incl of 'a | Excl of 'a | Unbounded
-
 module type Validate = sig
   type t
 
-  val validate_lbound : min : t bound                  -> t Validate.check
-  val validate_ubound :                  max : t bound -> t Validate.check
-  val validate_bound  : min : t bound -> max : t bound -> t Validate.check
+  val validate_lbound : min : t Maybe_bound.t -> t Validate.check
+  val validate_ubound : max : t Maybe_bound.t -> t Validate.check
+  val validate_bound
+    :  min : t Maybe_bound.t
+    -> max : t Maybe_bound.t
+    -> t Validate.check
 end
 
 module type With_zero = sig
@@ -38,10 +37,14 @@ module type S_common = sig
 
   val between : t -> low:t -> high:t -> bool
 
-  module Replace_polymorphic_compare : sig
-    include Polymorphic_compare with type t := t
-    val _squelch_unused_module_warning_ : unit
-  end
+  (** [clamp_exn t ~min ~max] returns [t'], the closest value to [t] such that
+      [between t' ~low:min ~high:max] is true.
+
+      Raises if [not (min <= max)]. *)
+  val clamp_exn : t -> min:t -> max:t -> t
+  val clamp     : t -> min:t -> max:t -> t Or_error.t
+
+  module Replace_polymorphic_compare : Polymorphic_compare with type t := t
 
   include Comparator.S with type t := t
 

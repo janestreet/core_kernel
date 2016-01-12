@@ -9,10 +9,11 @@ let key_not_in_enumeration t key =
     "Key was not provided in the enumeration given to [Total_map.Make]"
     key (Map.comparator t).sexp_of_t
 
-let change t k f =
-  Map.change t k (function
-    | Some x -> Some (f x)
+let change t k ~f =
+  Map.update t k ~f:(function
+    | Some x -> f x
     | None -> key_not_in_enumeration t k)
+;;
 
 let find t k =
   match Map.find t k with
@@ -36,16 +37,26 @@ let map2 t1 t2 ~f =
 
 let set t key data = Map.add t ~key ~data
 
+module Sequence (A : Applicative) = struct
+  let sequence t =
+    List.fold (Map.to_alist t)
+      ~init:(A.return (Map.empty ~comparator:(Map.comparator t)))
+      ~f:(fun acc (key, data) ->
+        A.map2 acc data ~f:(fun acc data ->
+          Map.add acc ~key ~data))
+end
+
 include struct
   open Map
   let map      = map
   let mapi     = mapi
   let to_alist = to_alist
-  let iter     = iter
+  let iter     = iteri
+  let iteri    = iteri
 end
 
 module type Key = sig
-  type t with sexp, bin_io, compare, enumerate
+  type t [@@deriving sexp, bin_io, compare, enumerate]
 end
 
 module type S = sig
@@ -53,7 +64,7 @@ module type S = sig
 
   type comparator_witness
 
-  type nonrec 'a t = (Key.t, 'a, comparator_witness) t with sexp, bin_io, compare
+  type nonrec 'a t = (Key.t, 'a, comparator_witness) t [@@deriving sexp, bin_io, compare]
 
   include Applicative with type 'a t := 'a t
 
@@ -69,7 +80,7 @@ module Make (Key : Key) = struct
 
   type comparator_witness = Key.comparator_witness
 
-  type 'a t = 'a Key.Map.t with sexp, compare
+  type 'a t = 'a Key.Map.t [@@deriving sexp, compare]
 
   let all_set = Key.Set.of_list Key.all
 
@@ -83,12 +94,12 @@ module Make (Key : Key) = struct
           Validate.pass
         else
           Validate.fails "map from serialization has keys not provided in the enumeration"
-            keys_minus_all <:sexp_of<Key.Set.t>>;
+            keys_minus_all [%sexp_of: Key.Set.t];
         if Set.is_empty all_minus_keys then
           Validate.pass
         else
           Validate.fails "map from serialization doesn't have keys it should have"
-            all_minus_keys <:sexp_of<Key.Set.t>>;
+            all_minus_keys [%sexp_of: Key.Set.t];
       ]
     )
 

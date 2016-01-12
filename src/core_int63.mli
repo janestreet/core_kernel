@@ -15,9 +15,9 @@
       large of an int from a 32-bit to a 64-bit platform.  This is counterintuitive
       because the 32-bit platform has the larger int size. *)
 
-INCLUDE "config.mlh"
+#import "config.mlh"
 
-IFDEF ARCH_SIXTYFOUR THEN
+#if JSC_ARCH_SIXTYFOUR
 
 (** We expose [private int] so that the compiler can omit caml_modify when dealing with
     record fields holding [Int63.t].  Code should not explicitly make use of the
@@ -25,11 +25,11 @@ IFDEF ARCH_SIXTYFOUR THEN
     platforms. *)
 include Int_intf.S with type t = private int
 
-ELSE
+#else
 
 include Int_intf.S
 
-ENDIF
+#endif
 
 val of_int : int -> t
 val to_int : t -> int option

@@ -5,7 +5,7 @@ module List = Core_list
 module Array = StdLabels.Array
 
 let _log s a sexp_of_a =
-  Printf.eprintf "%s\n%!" (Sexp.to_string_hum (<:sexp_of< string * a >> (s, a)));
+  Printf.eprintf "%s\n%!" (Sexp.to_string_hum ([%sexp_of: string * a] (s, a)));
 ;;
 
 let ok_exn    = Or_error.ok_exn
@@ -15,7 +15,7 @@ include Blit_intf
 
 module type Sequence_gen = sig
   type 'a elt
-  type 'a t with sexp_of
+  type 'a t [@@deriving sexp_of]
   val length : _ t -> int
   type 'a z
   val create_bool : len:int -> bool z t
@@ -81,7 +81,7 @@ module Make_gen
   ;;
 
   (* Test [blit]. *)
-  TEST_UNIT =
+  let%test_unit _ =
     let elt1 = Elt.of_bool true in
     let elt2 = Elt.of_bool false in
     assert (not (Elt.equal elt1 elt2));
@@ -100,7 +100,7 @@ module Make_gen
                     for i = 0 to length sequence - 1 do
                       if not (Elt.equal (get sequence i) (expect i)) then
                         failwiths "bug" (name, `i i)
-                          <:sexp_of< string * [ `i of int ] >>
+                          [%sexp_of: string * [ `i of int ]]
                     done;
                 in
                 let check_src = check Src.length Src.get in
@@ -147,16 +147,16 @@ module Make_gen
                   (exn,
                    `src_length src_length, `src_pos src_pos,
                    `dst_length dst_length, `dst_pos dst_pos)
-                  <:sexp_of<
+                  [%sexp_of:
                     exn
                     * [ `src_length of int ] * [ `src_pos of int ]
                     * [ `dst_length of int ] * [ `dst_pos of int ]
-                  >>
+                  ]
             done;
           done;
         done;
       done;
-    done;
+    done
   ;;
 
 end
@@ -194,7 +194,7 @@ module Make
        val unsafe_blit : (t, t) blit
      end) = struct
   module Sequence = struct
-    type 'a t = Sequence.t with sexp_of
+    type 'a t = Sequence.t [@@deriving sexp_of]
     type 'a z = unit
     open Sequence
     let create_like ~len _ = create ~len
@@ -218,7 +218,7 @@ module Make_distinct
   Make_gen
     (Elt_to_elt1 (Elt))
     (struct
-      type 'a t = Src.t with sexp_of
+      type 'a t = Src.t [@@deriving sexp_of]
       type 'a z = unit
       open Src
       let length = length
@@ -227,7 +227,7 @@ module Make_distinct
       let create_bool = create
     end)
     (struct
-      type 'a t = Dst.t with sexp_of
+      type 'a t = Dst.t [@@deriving sexp_of]
       open Dst
       let length = length
       let get = get
@@ -240,7 +240,7 @@ module Make_distinct
 
 (* This unit test checks that when [blit] calls [unsafe_blit], the slices are valid.
    It also checks that [blit] doesn't call [unsafe_blit] when there is a range error. *)
-TEST_MODULE = struct
+let%test_module _ = (module struct
 
   let blit_was_called = ref false
 
@@ -254,8 +254,8 @@ TEST_MODULE = struct
         let of_bool = Fn.id
       end)
       (struct
-        type t = bool array with sexp_of
-        let create ~len = Array.create len false
+        type t = bool array [@@deriving sexp_of]
+        let create ~len = Array.make len false
         let length = Array.length
         let get = Array.get
         let set = Array.set
@@ -273,7 +273,7 @@ TEST_MODULE = struct
       end)
   ;;
 
-  TEST_UNIT =
+  let%test_unit _ =
     let opts = [ None; Some (-1); Some 0; Some 1; Some 2 ] in
     List.iter [ 0; 1; 2 ] ~f:(fun src ->
       List.iter [ 0; 1; 2 ] ~f:(fun dst ->
@@ -290,11 +290,11 @@ TEST_MODULE = struct
                 in
                 check (fun () ->
                   B.blito
-                    ~src:(Array.create src false) ?src_pos ?src_len
-                    ~dst:(Array.create dst false) ?dst_pos
+                    ~src:(Array.make src false) ?src_pos ?src_len
+                    ~dst:(Array.make dst false) ?dst_pos
                     ());
                 check (fun () ->
-                  ignore (B.subo (Array.create src false) ?pos:src_pos ?len:src_len
+                  ignore (B.subo (Array.make src false) ?pos:src_pos ?len:src_len
                           : bool array));
               end
               with exn ->
@@ -302,11 +302,11 @@ TEST_MODULE = struct
                   (exn,
                    `src src, `src_pos src_pos, `src_len src_len,
                    `dst dst, `dst_pos dst_pos)
-                  <:sexp_of<
+                  [%sexp_of:
                     exn
                     * [ `src of int ] * [ `src_pos of int option ]
                     * [ `src_len of int option ]
                     * [ `dst of int ] * [ `dst_pos of int option ]
-                  >>)))))
+                  ])))))
   ;;
-end
+end)

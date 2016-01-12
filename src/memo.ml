@@ -74,28 +74,28 @@ let general ?hashable ?cache_size_bound f =
   | None -> unbounded ?hashable f
   | Some n -> lru ?hashable ~max_cache_size:n f
 
-TEST_MODULE "lru" = struct
+let%test_module "lru" = (module struct
   let count = ref 0  (* number of times f underlying function is run *)
   let f = lru ~max_cache_size:3 (fun i -> incr count; i)
 
-  TEST = f 0 = 0
-  TEST = !count = 1
+  let%test _ = f 0 = 0
+  let%test _ = !count = 1
 
-  TEST = f 1 = 1
-  TEST = !count = 2
+  let%test _ = f 1 = 1
+  let%test _ = !count = 2
 
-  TEST = f 0 = 0
-  TEST = !count = 2
+  let%test _ = f 0 = 0
+  let%test _ = !count = 2
 
-  TEST = f 3 = 3                       (* cache full *)
-  TEST = !count = 3
+  let%test _ = f 3 = 3                       (* cache full *)
+  let%test _ = !count = 3
 
-  TEST = f 4 = 4                       (* evict 1 *)
-  TEST = !count = 4
+  let%test _ = f 4 = 4                       (* evict 1 *)
+  let%test _ = !count = 4
 
-  TEST = f 0 = 0
-  TEST = !count = 4
+  let%test _ = f 0 = 0
+  let%test _ = !count = 4
 
-  TEST = f 1 = 1                       (* recompute 1 *)
-  TEST = !count = 5
-end
+  let%test _ = f 1 = 1                       (* recompute 1 *)
+  let%test _ = !count = 5
+end)

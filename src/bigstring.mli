@@ -7,7 +7,7 @@ open Bigarray
 
 (** Type of bigstrings *)
 type t = (char, int8_unsigned_elt, c_layout) Array1.t
-with bin_io, sexp, compare
+[@@deriving bin_io, sexp, compare]
 
 include Equal.S with type t := t
 
@@ -43,6 +43,8 @@ val to_string : ?pos : int -> ?len : int -> t -> string
     @raise Invalid_argument if the string would exceed runtime limits.
 *)
 
+val concat : ?sep:t -> t list -> t
+(** [concat ?sep list] returns the concatenation of [list] with [sep] in between each. *)
 
 (** {6 Checking} *)
 
@@ -155,6 +157,10 @@ val find
   -> t
   -> int option
 
+(** Same as [find], but does no bounds checking, and returns a negative value instead of
+    [None] if [char] is not found. *)
+external unsafe_find : t -> char -> pos:int -> len:int -> int = "bigstring_find" "noalloc"
+
 
 (** {6 Destruction} *)
 
@@ -236,20 +242,27 @@ val unsafe_set_uint32_be    : t -> pos:int -> int -> unit
     bit precision (i.e. Less than Max_Long), then we can avoid allocation and use an
     immediate.  If the user is wrong, an exception will be thrown (for get). *)
 
+(** {6 64-bit signed values} *)
 val unsafe_get_int64_le_exn   : t -> pos:int -> int
 val unsafe_get_int64_be_exn   : t -> pos:int -> int
-val unsafe_set_int64_le       : t -> pos:int -> int -> unit
-val unsafe_set_int64_be       : t -> pos:int -> int -> unit
 val unsafe_get_int64_le_trunc : t -> pos:int -> int
 val unsafe_get_int64_be_trunc : t -> pos:int -> int
+val unsafe_set_int64_le  : t -> pos:int -> int -> unit
+val unsafe_set_int64_be  : t -> pos:int -> int -> unit
 
-(** {6 32 bit methods w/ full precision} *)
+(** {6 64-bit unsigned values} *)
+val unsafe_get_uint64_be_exn : t -> pos:int -> int
+val unsafe_get_uint64_le_exn : t -> pos:int -> int
+val unsafe_set_uint64_le     : t -> pos:int -> int -> unit
+val unsafe_set_uint64_be     : t -> pos:int -> int -> unit
+
+(** {6 32-bit methods w/ full precision} *)
 val unsafe_get_int32_t_le : t -> pos:int -> Int32.t
 val unsafe_get_int32_t_be : t -> pos:int -> Int32.t
 val unsafe_set_int32_t_le : t -> pos:int -> Int32.t -> unit
 val unsafe_set_int32_t_be : t -> pos:int -> Int32.t -> unit
 
-(** {6 64 bit methods w/ full precision} *)
+(** {6 64-bit methods w/ full precision} *)
 val unsafe_get_int64_t_le : t -> pos:int -> Int64.t
 val unsafe_get_int64_t_be : t -> pos:int -> Int64.t
 val unsafe_set_int64_t_le : t -> pos:int -> Int64.t -> unit
@@ -259,5 +272,8 @@ val unsafe_set_int64_t_be : t -> pos:int -> Int64.t -> unit
     [.pack_tail_padded_fixed_string]. *)
 val get_tail_padded_fixed_string : padding:char -> t -> pos:int -> len:int -> unit -> string
 val set_tail_padded_fixed_string : padding:char -> t -> pos:int -> len:int -> string -> unit
+
+val get_head_padded_fixed_string : padding:char -> t -> pos:int -> len:int -> unit -> string
+val set_head_padded_fixed_string : padding:char -> t -> pos:int -> len:int -> string -> unit
 
 

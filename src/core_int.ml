@@ -1,10 +1,10 @@
+open Common
 open Typerep_lib.Std
 open Sexplib.Std
 open Bin_prot.Std
-open Common
 
 module T = struct
-  type t = int with bin_io, sexp, typerep
+  type t = int [@@deriving bin_io, sexp, typerep]
 
   (* According to estokes,
      if i = j then 0 else if i < j then -1 else 1
@@ -47,7 +47,19 @@ module Replace_polymorphic_compare = struct
   let ( <  ) (x : t) y = x <  y
   let ( <> ) (x : t) y = x <> y
   let between t ~low ~high = low <= t && t <= high
-  let _squelch_unused_module_warning_ = ()
+  let clamp_unchecked t ~min ~max =
+    if t < min then min else if t <= max then t else max
+
+  let clamp_exn t ~min ~max =
+    assert (min <= max);
+    clamp_unchecked t ~min ~max
+
+  let clamp t ~min ~max =
+    if min > max then
+      Or_error.error "clamp requires [min <= max]"
+        (`Min min, `Max max) [%sexp_of: [`Min of T.t] * [`Max of T.t]]
+    else
+      Ok (clamp_unchecked t ~min ~max)
 end
 
 include Replace_polymorphic_compare
@@ -92,7 +104,7 @@ include Conv.Make (T)
 
 include Conv.Make_hex(struct
 
-  type t = int with bin_io, compare, typerep
+  type t = int [@@deriving bin_io, compare, typerep]
 
   let zero = zero
   let neg = (~-)
@@ -104,22 +116,22 @@ include Conv.Make_hex(struct
 
 end)
 
-TEST_MODULE "Hex" = struct
+let%test_module "Hex" = (module struct
 
   let f (i,s_hum) =
     let s = Core_string.filter s_hum ~f:(fun c -> not (Core_char.equal c '_')) in
     let sexp_hum = Core_sexp.Atom s_hum in
     let sexp = Core_sexp.Atom s in
-    <:test_result< Core_sexp.t >> ~message:"sexp_of_t" ~expect:sexp (Hex.sexp_of_t i);
-    <:test_result< int >> ~message:"t_of_sexp" ~expect:i (Hex.t_of_sexp sexp);
-    <:test_result< int >> ~message:"t_of_sexp[human]" ~expect:i (Hex.t_of_sexp sexp_hum);
-    <:test_result< string >> ~message:"to_string" ~expect:s (Hex.to_string i);
-    <:test_result< string >> ~message:"to_string_hum" ~expect:s_hum (Hex.to_string_hum i);
-    <:test_result< int >> ~message:"of_string" ~expect:i (Hex.of_string s);
-    <:test_result< int >> ~message:"of_string[human]" ~expect:i (Hex.of_string s_hum);
+    [%test_result: Core_sexp.t] ~message:"sexp_of_t" ~expect:sexp (Hex.sexp_of_t i);
+    [%test_result: int] ~message:"t_of_sexp" ~expect:i (Hex.t_of_sexp sexp);
+    [%test_result: int] ~message:"t_of_sexp[human]" ~expect:i (Hex.t_of_sexp sexp_hum);
+    [%test_result: string] ~message:"to_string" ~expect:s (Hex.to_string i);
+    [%test_result: string] ~message:"to_string_hum" ~expect:s_hum (Hex.to_string_hum i);
+    [%test_result: int] ~message:"of_string" ~expect:i (Hex.of_string s);
+    [%test_result: int] ~message:"of_string[human]" ~expect:i (Hex.of_string s_hum);
   ;;
 
-  TEST_UNIT =
+  let%test_unit _ =
     Core_list.iter ~f
       [ 0, "0x0"
       ; 1, "0x1"
@@ -148,20 +160,20 @@ TEST_MODULE "Hex" = struct
          | _  -> assert false)
       ]
 
-  TEST_UNIT =
-    <:test_result< int >> (Hex.of_string "0XA") ~expect:10
+  let%test_unit _ =
+    [%test_result: int] (Hex.of_string "0XA") ~expect:10
 
-  TEST_UNIT =
+  let%test_unit _ =
     match Option.try_with (fun () -> Hex.of_string "0") with
     | None -> ()
     | Some _ -> failwith "Hex must always have a 0x prefix."
 
-  TEST_UNIT =
+  let%test_unit _ =
     match Option.try_with (fun () -> Hex.of_string "0x_0") with
     | None -> ()
     | Some _ -> failwith "Hex may not have '_' before the first digit."
 
-end
+end)
 
 let abs x = abs x
 
@@ -173,7 +185,7 @@ let ( / ) x y = ( / ) x y
 let neg x = -x
 let ( ~- ) = neg
 
-TEST = (neg 5 + 5 = 0)
+let%test _ = (neg 5 + 5 = 0)
 
 (* note that rem is not same as % *)
 let rem a b = a mod b
@@ -190,8 +202,8 @@ let bit_and a b = a land b
 let bit_xor a b = a lxor b
 
 let pow = Int_math.int_pow
-TEST = pow min_value 1 = min_value
-TEST = pow max_value 1 = max_value
+let%test _ = pow min_value 1 = min_value
+let%test _ = pow max_value 1 = max_value
 
 include Int_pow2
 
@@ -200,6 +212,29 @@ include Pretty_printer.Register (struct
   let to_string = to_string
   let module_name = "Core_kernel.Std.Int"
 end)
+
+include Quickcheck.Make_int (struct
+    type nonrec t = t [@@deriving sexp, compare]
+    include (Replace_polymorphic_compare
+             : Polymorphic_compare_intf.Infix with type t := t)
+    let num_bits    = num_bits
+    let (+)         = (+)
+    let (-)         = (-)
+    let (~-)        = (~-)
+    let zero        = zero
+    let one         = one
+    let min_value   = min_value
+    let max_value   = max_value
+    let abs         = abs
+    let succ        = succ
+    let bit_not     = bit_not
+    let bit_and     = bit_and
+    let shift_left  = shift_left
+    let shift_right = shift_right
+    let of_int_exn  = of_int_exn
+    let to_int_exn  = to_int_exn
+    let to_float    = to_float
+  end)
 
 module Pre_O = struct
   let ( + ) = ( + )
@@ -262,7 +297,7 @@ module O = struct
   ;;
 end
 
-BENCH_MODULE "Core_int_inline_ops" = struct
+let%bench_module "Core_int_inline_ops" = (module struct
   (* The [of_string] and [Random.bool] are so that the values won't get inlined. *)
   let small = of_string "37"
   let big   = of_string "123456789"
@@ -270,48 +305,48 @@ BENCH_MODULE "Core_int_inline_ops" = struct
   let max = if Random.bool () then max_value else max_value
   let min = if Random.bool () then min_value else min_value
 
-  BENCH "inlined  % 01" = O.(%)    big small
-  BENCH "functor  % 01" = O.F.(%)  big small
-  BENCH "inlined /% 01" = O.(/%)   big small
-  BENCH "functor /% 01" = O.F.(/%) big small
-  BENCH "inlined // 01" = O.(//)   big small
-  BENCH "functor // 01" = O.F.(//) big small
+  let%bench "inlined  % 01" = O.(%)    big small
+  let%bench "functor  % 01" = O.F.(%)  big small
+  let%bench "inlined /% 01" = O.(/%)   big small
+  let%bench "functor /% 01" = O.F.(/%) big small
+  let%bench "inlined // 01" = O.(//)   big small
+  let%bench "functor // 01" = O.F.(//) big small
 
-  BENCH "inlined  % 11" = O.(%)    small big
-  BENCH "functor  % 11" = O.F.(%)  small big
-  BENCH "inlined /% 11" = O.(/%)   small big
-  BENCH "functor /% 11" = O.F.(/%) small big
-  BENCH "inlined // 11" = O.(//)   small big
-  BENCH "functor // 11" = O.F.(//) small big
+  let%bench "inlined  % 11" = O.(%)    small big
+  let%bench "functor  % 11" = O.F.(%)  small big
+  let%bench "inlined /% 11" = O.(/%)   small big
+  let%bench "functor /% 11" = O.F.(/%) small big
+  let%bench "inlined // 11" = O.(//)   small big
+  let%bench "functor // 11" = O.F.(//) small big
 
-  BENCH "inlined  % 21" = O.(%)    max small
-  BENCH "functor  % 21" = O.F.(%)  max small
-  BENCH "inlined /% 21" = O.(/%)   max small
-  BENCH "functor /% 21" = O.F.(/%) max small
-  BENCH "inlined // 21" = O.(//)   max small
-  BENCH "functor // 21" = O.F.(//) max small
+  let%bench "inlined  % 21" = O.(%)    max small
+  let%bench "functor  % 21" = O.F.(%)  max small
+  let%bench "inlined /% 21" = O.(/%)   max small
+  let%bench "functor /% 21" = O.F.(/%) max small
+  let%bench "inlined // 21" = O.(//)   max small
+  let%bench "functor // 21" = O.F.(//) max small
 
-  BENCH "inlined  % 31" = O.(%)    min small
-  BENCH "functor  % 31" = O.F.(%)  min small
-  BENCH "inlined /% 31" = O.(/%)   min small
-  BENCH "functor /% 31" = O.F.(/%) min small
-  BENCH "inlined // 31" = O.(//)   min small
-  BENCH "functor // 31" = O.F.(//) min small
+  let%bench "inlined  % 31" = O.(%)    min small
+  let%bench "functor  % 31" = O.F.(%)  min small
+  let%bench "inlined /% 31" = O.(/%)   min small
+  let%bench "functor /% 31" = O.F.(/%) min small
+  let%bench "inlined // 31" = O.(//)   min small
+  let%bench "functor // 31" = O.F.(//) min small
 
-  BENCH "inlined  % 41" = O.(%)    max big
-  BENCH "functor  % 41" = O.F.(%)  max big
-  BENCH "inlined /% 41" = O.(/%)   max big
-  BENCH "functor /% 41" = O.F.(/%) max big
-  BENCH "inlined // 41" = O.(//)   max big
-  BENCH "functor // 41" = O.F.(//) max big
+  let%bench "inlined  % 41" = O.(%)    max big
+  let%bench "functor  % 41" = O.F.(%)  max big
+  let%bench "inlined /% 41" = O.(/%)   max big
+  let%bench "functor /% 41" = O.F.(/%) max big
+  let%bench "inlined // 41" = O.(//)   max big
+  let%bench "functor // 41" = O.F.(//) max big
 
-  BENCH "inlined  % 51" = O.(%)    min big
-  BENCH "functor  % 51" = O.F.(%)  min big
-  BENCH "inlined /% 51" = O.(/%)   min big
-  BENCH "functor /% 51" = O.F.(/%) min big
-  BENCH "inlined // 51" = O.(//)   min big
-  BENCH "functor // 51" = O.F.(//) min big
-end
+  let%bench "inlined  % 51" = O.(%)    min big
+  let%bench "functor  % 51" = O.F.(%)  min big
+  let%bench "inlined /% 51" = O.(/%)   min big
+  let%bench "functor /% 51" = O.F.(/%) min big
+  let%bench "inlined // 51" = O.(//)   min big
+  let%bench "functor // 51" = O.F.(//) min big
+end)
 
 (*
 Estimated testing time 6m (36 benchmarks x 10s). Change using -quota SECS.

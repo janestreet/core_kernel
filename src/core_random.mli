@@ -40,8 +40,11 @@ val init : int -> unit
 val full_init : int array -> unit
 
 (** Initialize the generator with a more-or-less random seed chosen in a system-dependent
-    way. *)
-val self_init : unit -> unit
+    way.  By default, [self_init] is disallowed in inline tests, as it's often used for no
+    good reason and it just creates non deterministic failures for everyone.  Passing
+    [~allow_in_tests:true] removes this restriction in case you legitimately want
+    non-deterministic values, like in [Filename.temp_dir]. *)
+val self_init : ?allow_in_tests:bool -> unit -> unit
 
 (** Return 30 random bits in a nonnegative integer.  @before 3.12.0 used a different
     algorithm (affects all the following functions)
@@ -49,7 +52,7 @@ val self_init : unit -> unit
 val bits : unit -> int
 
 (** [Random.int bound] returns a random integer between 0 (inclusive) and [bound]
-    (exclusive).  [bound] must be greater than 0 and less than 2{^30}. *)
+    (exclusive).  [bound] must be greater than 0. *)
 val int : int -> int
 
 (** [Random.int32 bound] returns a random integer between 0 (inclusive) and [bound]
@@ -89,7 +92,7 @@ module State : sig
   val make : int array -> t
 
   (** Create a new state and initialize it with a system-dependent low-entropy seed. *)
-  val make_self_init : unit -> t
+  val make_self_init : ?allow_in_tests:bool -> unit -> t
 
   val copy : t -> t
 

@@ -23,12 +23,12 @@ module External = struct
     | `Gigabytes of float
     | `Words of float
     ]
-  with sexp
+  [@@deriving sexp]
 end
 
 module Measure = struct
   type t = [ `Bytes | `Kilobytes | `Megabytes | `Gigabytes | `Words ]
-  with sexp, bin_io
+  [@@deriving sexp, bin_io]
 
   let bytes = function
     | `Bytes -> 1.
@@ -40,7 +40,7 @@ module Measure = struct
 end
 
 module T = struct
-  type t = float with bin_io, compare
+  type t = float [@@deriving bin_io, compare]
 
   let hash = Float.hash
 
@@ -158,7 +158,7 @@ include T
 include Comparable.Make (T)
 include Hashable.Make (T)
 
-TEST_MODULE "{of,to}_string" = struct
+let%test_module "{of,to}_string" = (module struct
 
   let f measure input expected_output =
     let observed_output =
@@ -172,23 +172,23 @@ TEST_MODULE "{of,to}_string" = struct
     let result = String.equal expected_output observed_output in
     if not result then begin
       let measure =
-        <:sexp_of<[ `Specific of Measure.t | `Largest ]>> measure
+        [%sexp_of: [ `Specific of Measure.t | `Largest ]] measure
         |! Sexp.to_string
       in
       eprintf "\n(%s) %s -> %s != %s\n%!" measure input expected_output observed_output
     end;
     result
 
-  TEST = f `Largest "3b" "3b"
-  TEST = f `Largest "3w" (sprintf "%gb" (3.0 *. bytes_per_word))
-  TEST = f `Largest "3k" "3k"
-  TEST = f `Largest "3m" "3m"
-  TEST = f `Largest "3g" "3g"
+  let%test _ = f `Largest "3b" "3b"
+  let%test _ = f `Largest "3w" (sprintf "%gb" (3.0 *. bytes_per_word))
+  let%test _ = f `Largest "3k" "3k"
+  let%test _ = f `Largest "3m" "3m"
+  let%test _ = f `Largest "3g" "3g"
 
-  TEST = f (`Specific `Bytes)     "3k" "3072b"
-  TEST = f (`Specific `Kilobytes) "3k" "3k"
-  TEST = f (`Specific `Megabytes) "3k" "0.00292969m"
-  TEST = f (`Specific `Gigabytes) "3k" "2.86102e-06g"
-  TEST = f (`Specific `Words)     "3k" (sprintf "%gw" ((3.0 *. kbyte) /. bytes_per_word))
+  let%test _ = f (`Specific `Bytes)     "3k" "3072b"
+  let%test _ = f (`Specific `Kilobytes) "3k" "3k"
+  let%test _ = f (`Specific `Megabytes) "3k" "0.00292969m"
+  let%test _ = f (`Specific `Gigabytes) "3k" "2.86102e-06g"
+  let%test _ = f (`Specific `Words)     "3k" (sprintf "%gw" ((3.0 *. kbyte) /. bytes_per_word))
 
-end
+end)

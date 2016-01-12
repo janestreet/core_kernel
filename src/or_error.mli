@@ -9,7 +9,7 @@
 open Sexplib
 
 (** Serialization and comparison of an [Error] force the error's lazy message. **)
-type 'a t = ('a, Error.t) Result.t with bin_io, compare, sexp
+type 'a t = ('a, Error.t) Result.t [@@deriving bin_io, compare, sexp]
 
 (** [Applicative] functions don't have quite the same semantics as
     [Applicative.of_Monad(Or_error)] would give -- [apply (Error e1) (Error e2)] returns
@@ -55,6 +55,8 @@ val error
   -> 'a
   -> ('a -> Sexp.t)
   -> _ t
+
+val error_s : Sexp.t -> _ t
 
 (** [error_string message] is [Error (Error.of_string message)] *)
 val error_string : string -> _ t

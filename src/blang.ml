@@ -20,7 +20,7 @@ module T : sig
     | Not of 'a t
     | If of 'a t * 'a t * 'a t
     | Base of 'a
-  with bin_io, compare
+  [@@deriving bin_io, compare]
 
   val invariant : 'a t -> unit
 
@@ -42,7 +42,7 @@ end = struct
     | Not of 'a t
     | If of 'a t * 'a t * 'a t
     | Base of 'a
-  with bin_io, compare
+  [@@deriving bin_io, compare]
 
   let invariant =
     let subterms = function
@@ -107,7 +107,7 @@ module Stable = struct
     | Not of 'a t
     | If of 'a t * 'a t * 'a t
     | Base of 'a
-    with bin_io, compare, sexp
+    [@@deriving bin_io, compare, sexp]
 
     (* the remainder of this signature consists of functions used in the definitions
        of sexp conversions that are also useful more generally *)
@@ -129,7 +129,7 @@ module Stable = struct
     | If of 'a t * 'a t * 'a t
     | Base of 'a
 
-    include (T : sig type 'a t with bin_io, compare end with type 'a t := 'a t)
+    include (T : sig type 'a t [@@deriving bin_io, compare] end with type 'a t := 'a t)
 
     type sexp = Sexp.t = Atom of string | List of sexp list (* cheap import *)
 
@@ -225,8 +225,8 @@ module Stable = struct
       aux sexp
   end
 
-  TEST_MODULE "Blang.V1" = Stable_unit_test.Make (struct
-    type t = string V1.t with sexp, bin_io
+  let%test_module "Blang.V1" = (module Stable_unit_test.Make (struct
+    type t = string V1.t [@@deriving sexp, bin_io]
 
     open V1
 
@@ -248,65 +248,65 @@ module Stable = struct
       ; true_, "true", "\000"
       ; false_, "false", "\001"
       ]
-  end)
+  end))
 end
 
 include (Stable.V1 : module type of Stable.V1 with type 'a t := 'a t)
 
-TEST_MODULE "auto-simplification" = struct
+let%test_module "auto-simplification" = (module struct
 
   let (a, b, c) = (base 1, base 2, base 3)
 
   let (=) a b = invariant a; invariant b; Pervasives.(=) a b
 
-  TEST = not_ true_ = false_
-  TEST = not_ false_ = true_
-  TEST = not_ (not_ a) = a
+  let%test _ = not_ true_ = false_
+  let%test _ = not_ false_ = true_
+  let%test _ = not_ (not_ a) = a
 
-  TEST = andalso true_ b = b
-  TEST = andalso a true_ = a
-  TEST = andalso false_ b = false_
-  TEST = andalso a false_ = false_
+  let%test _ = andalso true_ b = b
+  let%test _ = andalso a true_ = a
+  let%test _ = andalso false_ b = false_
+  let%test _ = andalso a false_ = false_
 
-  TEST = orelse false_ b = b
-  TEST = orelse a false_ = a
-  TEST = orelse true_ b  = true_
-  TEST = orelse a true_  = true_
+  let%test _ = orelse false_ b = b
+  let%test _ = orelse a false_ = a
+  let%test _ = orelse true_ b  = true_
+  let%test _ = orelse a true_  = true_
 
-  TEST = if_ true_ b c = b
-  TEST = if_ false_ b c = c
-  TEST = if_ a true_ c = orelse a c
-  TEST = if_ a b false_ = andalso a b
-  TEST = if_ a b true_ = if_ (not_ a) true_ b  (* b/c (if a b c) = (if (not a) c b) *)
-  TEST = if_ a b true_ = orelse (not_ a) b
-  TEST = if_ a false_ c = if_ (not_ a) c false_  (* b/c (if a b c) = (if (not a) c b) *)
-  TEST = if_ a false_ c = andalso (not_ a) c
+  let%test _ = if_ true_ b c = b
+  let%test _ = if_ false_ b c = c
+  let%test _ = if_ a true_ c = orelse a c
+  let%test _ = if_ a b false_ = andalso a b
+  let%test _ = if_ a b true_ = if_ (not_ a) true_ b  (* b/c (if a b c) = (if (not a) c b) *)
+  let%test _ = if_ a b true_ = orelse (not_ a) b
+  let%test _ = if_ a false_ c = if_ (not_ a) c false_  (* b/c (if a b c) = (if (not a) c b) *)
+  let%test _ = if_ a false_ c = andalso (not_ a) c
 
-  TEST_MODULE "n-ary-and-or" = struct
+  let%test_module "n-ary-and-or" = (module struct
 
-    TEST = and_ [a; b; c] = andalso (andalso a b) c
-    TEST = or_ [a; b; c]  = orelse (orelse a b) c
+    let%test _ = and_ [a; b; c] = andalso (andalso a b) c
+    let%test _ = or_ [a; b; c]  = orelse (orelse a b) c
 
     let test_and ts = (and_ ts = List.fold ts ~init:true_ ~f:andalso)
     let test_or  ts = (or_  ts = List.fold ts ~init:false_ ~f:orelse)
 
-    TEST = test_or []
-    TEST = test_or [a]
-    TEST = test_or [true_]
-    TEST = test_or [false_]
-    TEST = test_or [a; true_; b]
-    TEST = test_or [a; false_; b]
+    let%test _ = test_or []
+    let%test _ = test_or [a]
+    let%test _ = test_or [true_]
+    let%test _ = test_or [false_]
+    let%test _ = test_or [a; true_; b]
+    let%test _ = test_or [a; false_; b]
 
-    TEST = test_and []
-    TEST = test_and [a]
-    TEST = test_and [true_]
-    TEST = test_and [false_]
-    TEST = test_and [a; true_; b]
-    TEST = test_and [a; false_; b]
+    let%test _ = test_and []
+    let%test _ = test_and [a]
+    let%test _ = test_and [true_]
+    let%test _ = test_and [false_]
+    let%test _ = test_and [a; true_; b]
+    let%test _ = test_and [a; false_; b]
 
-  end
+  end)
 
-end
+end)
 
 let constant b = if b then true_ else false_
 
@@ -329,7 +329,7 @@ let values t =
   in
   loop [] [t]
 
-TEST = [1; 2; 3; 4; 5; 6; 7] =
+let%test _ = [1; 2; 3; 4; 5; 6; 7] =
   values
     (and_ [
       or_ [base 1; base 2];
@@ -339,12 +339,12 @@ TEST = [1; 2; 3; 4; 5; 6; 7] =
       not_ (base 7);
     ])
 
-TEST = gather_conjuncts (base 1) = [base 1]
-TEST = gather_conjuncts (and_ []) = []
-TEST = gather_conjuncts (and_ [base 1]) = [base 1]
-TEST = gather_conjuncts (and_ [base 1; base 2]) = [base 1; base 2]
-TEST = gather_conjuncts (and_ [base 1; base 2; base 3]) = [base 1; base 2; base 3]
-TEST =
+let%test _ = gather_conjuncts (base 1) = [base 1]
+let%test _ = gather_conjuncts (and_ []) = []
+let%test _ = gather_conjuncts (and_ [base 1]) = [base 1]
+let%test _ = gather_conjuncts (and_ [base 1; base 2]) = [base 1; base 2]
+let%test _ = gather_conjuncts (and_ [base 1; base 2; base 3]) = [base 1; base 2; base 3]
+let%test _ =
   gather_conjuncts
     (and_ [
       and_ [and_ [base 1; base 2]; base 3];
@@ -353,12 +353,12 @@ TEST =
   =
     [base 1; base 2; base 3; or_ [base 4; base 5]; base 6; base 7]
 
-TEST = gather_disjuncts (base 1) = [base 1]
-TEST = gather_disjuncts (or_ []) = []
-TEST = gather_disjuncts (or_ [base 1]) = [base 1]
-TEST = gather_disjuncts (or_ [base 1; base 2]) = [base 1; base 2]
-TEST = gather_disjuncts (or_ [base 1; base 2; base 3]) = [base 1; base 2; base 3]
-TEST =
+let%test _ = gather_disjuncts (base 1) = [base 1]
+let%test _ = gather_disjuncts (or_ []) = []
+let%test _ = gather_disjuncts (or_ [base 1]) = [base 1]
+let%test _ = gather_disjuncts (or_ [base 1; base 2]) = [base 1; base 2]
+let%test _ = gather_disjuncts (or_ [base 1; base 2; base 3]) = [base 1; base 2; base 3]
+let%test _ =
   gather_disjuncts
     (or_ [
       or_ [or_ [base 1; base 2]; base 3];
@@ -439,7 +439,7 @@ include Monad.Make (struct
 
 end)
 
-TEST_MODULE "bind short-circuiting" = struct
+let%test_module "bind short-circuiting" = (module struct
   let test expected_visits expr =
     let visited = ref [] in
     let f var =
@@ -450,10 +450,10 @@ TEST_MODULE "bind short-circuiting" = struct
     | True -> List.equal ~equal:Int.equal expected_visits (List.rev !visited)
     | _ -> false
 
-  TEST = test [0] (or_ [not_ (base 0); base 1])
-  TEST = test [0; 1] (not_ (and_ [not_ (base 0); base 1; base 2]))
-  TEST = test [0; 2] (if_ (base 0) (base 1) (not_ (base 2)))
-end
+  let%test _ = test [0] (or_ [not_ (base 0); base 1])
+  let%test _ = test [0; 1] (not_ (and_ [not_ (base 0); base 1; base 2]))
+  let%test _ = test [0; 2] (if_ (base 0) (base 1) (not_ (base 2)))
+end)
 
 (* semantics *)
 
@@ -475,9 +475,27 @@ let specialize t f =
     | `Known c -> constant c
     | `Unknown -> base v)
 
-TEST_MODULE "laws" = struct
+let eval_set ~universe:all set_of_base =
+  let rec aux (b : _ t) =
+    match b with
+    | True       -> force all
+    | False      -> Set.empty ~comparator:(Set.comparator (force all))
+    | And (a, b) -> Set.inter (aux a)     (aux b)
+    | Or (a, b)  -> Set.union (aux a)     (aux b)
+    | Not a      -> Set.diff  (force all) (aux a)
+    | Base a     -> set_of_base a
+    | If (cond, a, b) ->
+      let cond = aux cond in
+      Set.union
+        (Set.inter cond (aux a))
+        (Set.inter (Set.diff (force all) cond) (aux b))
+  in
+  aux
+;;
 
-  type base = A | B | C with sexp_of
+let%test_module "laws" = (module struct
+
+  type base = A | B | C [@@deriving sexp_of]
 
   type 'a base_fun = base -> 'a
 
@@ -547,29 +565,29 @@ TEST_MODULE "laws" = struct
   end
 
   let law gen sexp_of run =
-    for _i = 0 to 100 do
+    for _ = 0 to 100 do
       let arg = gen () in
       if not (run arg)
       then failwith (Sexp.to_string (sexp_of arg))
     done
 
-  let forall_t  = law Gen.t  <:sexp_of<base t>>
-  let forall_tf = law Gen.tf <:sexp_of<base t * bool base_fun>>
-  let forall_tg = law Gen.tg <:sexp_of<base t * [`Known of bool | `Unknown] base_fun>>
+  let forall_t  = law Gen.t  [%sexp_of: base t]
+  let forall_tf = law Gen.tf [%sexp_of: base t * bool base_fun]
+  let forall_tg = law Gen.tg [%sexp_of: base t * [`Known of bool | `Unknown] base_fun]
 
-  TEST_UNIT =
+  let%test_unit _ =
     forall_t (fun t ->
       specialize t (fun _ -> `Unknown) = t)
 
-  TEST_UNIT =
+  let%test_unit _ =
     forall_tf (fun (t, f) ->
       specialize t (fun x -> `Known (f x)) = constant (eval t f))
 
-  TEST_UNIT =
+  let%test_unit _ =
     forall_tg (fun (t, g) ->
       List.for_all (values (specialize t g)) ~f:(fun x -> g x = `Unknown))
 
-  TEST_UNIT =
+  let%test_unit _ =
     forall_tg (fun (t, g) ->
       (* an arbitrary [f] such that [f x = b] whenever [g x = `Known b] *)
       let f =
@@ -584,5 +602,55 @@ TEST_MODULE "laws" = struct
       in
       eval t f = eval (specialize t g) f)
 
-end
+  let%test_module "eval_set" = (module struct
+
+    type base_set =
+      | Odd
+      | Even
+      | Greater_than of int
+      | Smaller_than of int
+    [@@deriving sexp_of]
+
+    let size = 10
+    let universe = lazy (List.init size ~f:Fn.id |> Int.Set.of_list)
+
+    let gen_base =
+      let bases =
+        [| Odd; Even; Greater_than (size / 2); Smaller_than (size / 2) |]
+      in
+      fun () -> Gen.element bases
+    ;;
+
+    let t () = Gen.gen_blang gen_base ~depth:5
+
+    let set_of_base = Memo.general (fun t ->
+      Int.Set.filter (force universe) ~f:(fun e ->
+        match t with
+        | Odd            -> e mod 2 = 1
+        | Even           -> e mod 2 = 0
+        | Greater_than x -> e > x
+        | Smaller_than x -> e < x))
+    ;;
+
+    let run expression =
+      let expect =
+        Set.filter (force universe) ~f:(fun e ->
+          eval expression (fun base -> Int.Set.mem (set_of_base base) e))
+      in
+      try
+        [%test_result: Int.Set.t] ~expect
+          (eval_set ~universe set_of_base expression)
+      with
+      | exn -> failwiths "fail on expression" (expression, exn)
+                 [%sexp_of: base_set t * Exn.t]
+    ;;
+
+    let%test_unit _ =
+      for _ = 0 to 100 do
+        run (t ())
+      done;
+    ;;
+  end)
+
+end)
 

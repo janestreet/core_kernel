@@ -11,13 +11,11 @@ module Stable = struct
         pos_bol : int;
         pos_cnum : int;
       }
-    with bin_io, compare, sexp
+    [@@deriving bin_io, compare, sexp]
   end
 end
 
 include Stable.V1
 
-type t_hum = t
-
-let sexp_of_t_hum = Pa_test_lib.Runtime.sexp_of_loc
-let to_string     = Pa_test_lib.Runtime.string_of_loc
+let sexp_of_t = Ppx_assert_lib.Runtime.sexp_of_loc
+let to_string = Ppx_assert_lib.Runtime.string_of_loc

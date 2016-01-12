@@ -12,7 +12,7 @@ type 'a t =
     mutable length : int;
     mutable elts : 'a array;
   }
-with bin_io, fields, sexp_of
+[@@deriving bin_io, fields, sexp_of]
 
 let sexp_of_t_internal = sexp_of_t
 let sexp_of_t = `Rebound_later
@@ -38,7 +38,7 @@ let invariant invariant_a t : unit =
         done;
       ));
   with exn ->
-    failwiths "Stack.invariant failed" (exn, t) <:sexp_of< exn * _ t_internal >>
+    failwiths "Stack.invariant failed" (exn, t) [%sexp_of: exn * _ t_internal]
 ;;
 
 let create (type a) () : a t =
@@ -105,9 +105,9 @@ let of_list (type a) (l : a list) =
   end
 ;;
 
-let sexp_of_t sexp_of_a t = <:sexp_of< a list >> (to_list t)
+let sexp_of_t sexp_of_a t = [%sexp_of: a list] (to_list t)
 
-let t_of_sexp a_of_sexp sexp = of_list (<:of_sexp< a list >> sexp)
+let t_of_sexp a_of_sexp sexp = of_list ([%of_sexp: a list] sexp)
 
 let resize t size =
   t.elts <-
@@ -183,4 +183,10 @@ let clear t =
 let until_empty t f =
   let rec loop () = if t.length > 0 then (f (pop_nonempty t); loop ()) in
   loop ()
+;;
+
+let singleton x =
+  let t = create () in
+  push t x;
+  t
 ;;

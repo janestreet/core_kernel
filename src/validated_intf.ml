@@ -5,7 +5,7 @@
     {[
       module Positive_int = Validated.Make (struct
           type t = int
-          let here = _here_
+          let here = [%here]
           let validate = Int.validate_positive
         end)
     ]}
@@ -19,7 +19,7 @@
 *)
 
 module type Raw = sig
-  type t with sexp
+  type t [@@deriving sexp]
 
   (** [here] will appear in validation-failure error messages. *)
   val here : Source_code_position.t
@@ -28,7 +28,7 @@ module type Raw = sig
 end
 
 module type Raw_binable = sig
-  type t with bin_io
+  type t [@@deriving bin_io]
 
   include Raw with type t := t
 
@@ -50,7 +50,7 @@ end
 module type Validated = sig
   type 'a validated
   type raw
-  type t = raw validated with sexp
+  type t = raw validated [@@deriving sexp]
 
   val create     : raw -> t Or_error.t
   val create_exn : raw -> t
@@ -60,7 +60,7 @@ end
 
 module type Validated_binable = sig
   include Validated
-  include sig type t = raw validated with bin_io end with type t := t
+  include sig type t = raw validated [@@deriving bin_io] end with type t := t
 end
 
 module type S = sig

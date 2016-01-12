@@ -4,7 +4,7 @@ open Bin_prot.Std
 
 module Stable = struct
   module V1 = struct
-    type 'a t = 'a lazy_t with bin_io, sexp, typerep
+    type 'a t = 'a lazy_t [@@deriving bin_io, sexp, typerep]
 
     let map t ~f = lazy (f (Lazy.force t))
     let compare compare_a t1 t2 = compare_a (Lazy.force t1) (Lazy.force t2)
@@ -27,29 +27,29 @@ include Monad.Make (struct
   let map = `Custom map
 end)
 
-TEST_MODULE = struct
+let%test_module _ = (module struct
 
-  TEST_UNIT =
+  let%test_unit _ =
     let r = ref 0 in
     let t = return () >>= fun () -> incr r; return () in
     assert (!r = 0);
     force t;
     assert (!r = 1);
     force t;
-    assert (!r = 1);
+    assert (!r = 1)
   ;;
 
-  TEST_UNIT =
+  let%test_unit _ =
     let r = ref 0 in
     let t = return () >>= fun () -> lazy (incr r) in
     assert (!r = 0);
     force t;
     assert (!r = 1);
     force t;
-    assert (!r = 1);
+    assert (!r = 1)
   ;;
 
-end
+end)
 
 module T_unforcing = struct
   type nonrec 'a t = 'a t
@@ -61,17 +61,17 @@ module T_unforcing = struct
   ;;
 end
 
-TEST_MODULE = struct
+let%test_module _ = (module struct
 
   module M1 = struct
-    type nonrec t = { x : int t } with sexp_of
+    type nonrec t = { x : int t } [@@deriving sexp_of]
   end
 
   module M2 = struct
-    type t = { x : int T_unforcing.t } with sexp_of
+    type t = { x : int T_unforcing.t } [@@deriving sexp_of]
   end
 
-  TEST_UNIT =
+  let%test_unit _ =
     let v = lazy 42 in
     let (_ : int) =
       (* no needed, but the purpose of this test is not to test this compiler
@@ -81,14 +81,14 @@ TEST_MODULE = struct
     assert (is_val v);
     let t1 = { M1. x = v } in
     let t2 = { M2. x = v } in
-    assert (M1.sexp_of_t t1 = M2.sexp_of_t t2);
+    assert (M1.sexp_of_t t1 = M2.sexp_of_t t2)
   ;;
 
-  TEST_UNIT =
+  let%test_unit _ =
     let t1 = { M1. x = lazy (40 + 2) } in
     let t2 = { M2. x = lazy (40 + 2) } in
     assert (M1.sexp_of_t t1 <> M2.sexp_of_t t2);
     assert (is_val t1.x);
-    assert (not (is_val t2.x));
+    assert (not (is_val t2.x))
   ;;
-end
+end)

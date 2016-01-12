@@ -35,9 +35,10 @@ module type S = sig
   type ('f, 's) t =
     | First  of 'f
     | Second of 's
-  with bin_io, compare, sexp, typerep
+  [@@deriving bin_io, compare, sexp, typerep]
 
-  include Invariant.S2 with type ('a, 'b) t := ('a, 'b) t
+  include Invariant.S2      with type ('a, 'b) t := ('a, 'b) t
+  include Quickcheckable.S2 with type ('a, 'b) t := ('a, 'b) t
 
   val swap      : ('f, 's) t -> ('s, 'f) t
 

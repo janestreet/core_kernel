@@ -29,7 +29,7 @@
     sequence (the [f] passed to [unfold]) raises, in which case the exception will
     cascade. *)
 
-type +'a t with compare, sexp_of
+type +'a t [@@deriving compare, sexp_of]
 type 'a sequence = 'a t
 
 include Container.S1 with type 'a t := 'a t
@@ -56,7 +56,7 @@ module Step : sig
     | Done
     | Skip of 's
     | Yield of 'a * 's
-  with sexp_of
+  [@@deriving sexp_of]
 end
 
 (** [unfold_step ~init ~f] constructs a sequence by giving an initial state [init] and a
@@ -227,9 +227,19 @@ val drop_while : 'a t -> f : ('a -> bool) -> 'a t
     (if the element is added to the final state of the sequence using [shift_right]). *)
 val drop_while_option : 'a t -> f : ('a -> bool) -> ('a * 'a t) option
 
-(** [split_n_eagerly t n] immediately consumes the first [n] elements of [t] and returns
-    the consumed prefix, as a new stream, along with the unevaluated tail of [t]. *)
+(** [split_n t n] immediately consumes the first [n] elements of [t] and returns the
+    consumed prefix, as a list, along with the unevaluated tail of [t]. *)
+val split_n : 'a t -> int -> 'a list * 'a t
+
+(** [split_n_eagerly t n] behaves as [split_n t n], but converts the prefix into a
+    sequence. *)
 val split_n_eagerly : 'a t -> int -> 'a t * 'a t
+  [@@deprecated "[since 2015-11] Use {!Sequence.split_n} instead."]
+
+(** [chunks_exn t n] produces lists of elements of [t], up to [n] elements at a time. The
+    last list may contain fewer than [n] elements. No list contains zero elements. If [n]
+    is not positive, it raises. *)
+val chunks_exn : 'a t -> int -> 'a list t
 
 (** [shift_right t a] produces [a] and then produces each element of [t]. *)
 val shift_right : 'a t -> 'a -> 'a t
@@ -237,7 +247,7 @@ val shift_right : 'a t -> 'a -> 'a t
 (** [shift_right_with_list t l] produces the elements of [l], then produces the elements
     of [t].  It is better to call [shift_right_with_list] with a list of size n than
     [shift_right] n times; the former will require O(1) work per element produced and the
-    later O(n) work per element produced. *)
+    latter O(n) work per element produced. *)
 val shift_right_with_list : 'a t -> 'a list -> 'a t
 
 (** [shift_left t n] is a synonym for [drop t n].*)

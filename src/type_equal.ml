@@ -64,7 +64,7 @@ module Id = struct
       type _ t = ..
 
       let sexp_of_t _sexp_of_a t =
-        (`type_witness (Obj.extension_id t)) |> <:sexp_of< [ `type_witness of int ] >>
+        (`type_witness (Obj.extension_id t)) |> [%sexp_of: [ `type_witness of int ]]
       ;;
     end
 
@@ -76,7 +76,7 @@ module Id = struct
     type 'a t = (module S with type t = 'a)
 
     let sexp_of_t (type a) sexp_of_a (module M : S with type t = a) =
-      M.Key |> <:sexp_of< a Key.t >>
+      M.Key |> [%sexp_of: a Key.t]
     ;;
 
     let create (type t) () =
@@ -110,7 +110,7 @@ module Id = struct
     ; name    : string
     ; to_sexp : 'a -> Sexp.t
     }
-  with fields, sexp_of
+  [@@deriving fields, sexp_of]
 
   let create ~name to_sexp =
     { witness = Witness.create ()
@@ -131,27 +131,27 @@ module Id = struct
     match same_witness t1 t2 with
     | Some w -> w
     | None -> failwiths "Type_equal.Id.same_witness_exn got different ids" (t1, t2)
-                <:sexp_of< _ t * _ t >>
+                [%sexp_of: _ t * _ t]
   ;;
 
-  TEST_MODULE = struct
-    let t1 = create ~name:"t1" <:sexp_of< _ >>
-    let t2 = create ~name:"t2" <:sexp_of< _ >>
+  let%test_module _ = (module struct
+    let t1 = create ~name:"t1" [%sexp_of: _]
+    let t2 = create ~name:"t2" [%sexp_of: _]
 
-    TEST =      same t1 t1
-    TEST = not (same t1 t2)
+    let%test _ =      same t1 t1
+    let%test _ = not (same t1 t2)
 
-    TEST = Option.is_some (same_witness t1 t1)
-    TEST = Option.is_none (same_witness t1 t2)
+    let%test _ = Option.is_some (same_witness t1 t1)
+    let%test _ = Option.is_none (same_witness t1 t2)
 
-    TEST_UNIT = ignore (same_witness_exn t1 t1 : (_, _) equal)
-    TEST = Result.is_error (Result.try_with (fun () -> same_witness_exn t1 t2))
-  end
+    let%test_unit _ = ignore (same_witness_exn t1 t1 : (_, _) equal)
+    let%test _ = Result.is_error (Result.try_with (fun () -> same_witness_exn t1 t2))
+  end)
 end
 
 (* This test shows that we need [conv] even though [Type_equal.T] is exposed. *)
-TEST_MODULE = struct
-  let id = Id.create ~name:"int" <:sexp_of< int >>
+let%test_module _ = (module struct
+  let id = Id.create ~name:"int" [%sexp_of: int]
 
   module A : sig
     type t
@@ -190,4 +190,4 @@ TEST_MODULE = struct
     let eq = Liftc.lift (Id.same_witness_exn A.id B.id) in
     (conv eq ac : B.t C.t)
   ;;
-end
+end)

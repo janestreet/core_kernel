@@ -1,5 +1,5 @@
 open Core_gc
-TEST_MODULE "gc" = struct
+let%test_module "gc" = (module struct
 
   (* The idea underlying this test is that minor_words does not allocate any memory. Hence
      the subsequent call to quick_stat should report exactly the same number. Also:
@@ -8,8 +8,8 @@ TEST_MODULE "gc" = struct
 
      2) We run this in a loop because the each call to [quick_stat] allocates minor_data
      and this number should be picked up by [minor_words] *)
-  TEST_UNIT =
-    for _i = 1 to 1000 do
+  let%test_unit _ =
+    for _ = 1 to 1000 do
       let mw1 = minor_words () in
       let st = quick_stat () in
       let mw2 = Float.iround_towards_zero_exn st.Stat.minor_words in
@@ -19,8 +19,8 @@ TEST_MODULE "gc" = struct
   (* The point of doing a [minor] in the tests below is that [st] is still live and will
      be promoted during the minor GC, thereby changing both the promoted words and the
      major words in each iteration of the loop *)
-  TEST_UNIT =
-    for _i = 1 to 1000 do
+  let%test_unit _ =
+    for _ = 1 to 1000 do
       let mw1 = major_words () in
       let st = quick_stat () in
       minor ();
@@ -28,8 +28,8 @@ TEST_MODULE "gc" = struct
       assert (mw1 = mw2);
     done
 
-  TEST_UNIT =
-    for _i = 1 to 1000 do
+  let%test_unit _ =
+    for _ = 1 to 1000 do
       let mw1 = promoted_words () in
       let st = quick_stat () in
       minor ();
@@ -37,7 +37,7 @@ TEST_MODULE "gc" = struct
       assert (mw1 = mw2);
     done
 
-  TEST_UNIT =
+  let%test_unit _ =
     assert (major_words () + minor_words () = major_plus_minor_words ())
 
   let stat_eq func projection =
@@ -48,28 +48,28 @@ TEST_MODULE "gc" = struct
     x = y
   ;;
 
-  TEST_UNIT =
-    for _i = 1 to 1000 do
+  let%test_unit _ =
+    for _ = 1 to 1000 do
       assert (stat_eq minor_collections Stat.minor_collections);
       minor ();
       assert (stat_eq minor_collections Stat.minor_collections);
     done
 
-  TEST_UNIT =
-    for _i = 1 to 1000 do
+  let%test_unit _ =
+    for _ = 1 to 1000 do
       assert (stat_eq major_collections Stat.major_collections);
       major ();
       assert (stat_eq major_collections Stat.major_collections);
     done
 
-  TEST_UNIT =
-    for _i = 1 to 1000 do
+  let%test_unit _ =
+    for _ = 1 to 1000 do
       assert (stat_eq compactions Stat.compactions);
       compact ();
       assert (stat_eq compactions Stat.compactions);
     done
 
-  TEST_UNIT =
+  let%test_unit _ =
     let check () =
       assert (stat_eq heap_chunks Stat.heap_chunks);
       assert (stat_eq heap_words Stat.heap_words);
@@ -80,7 +80,7 @@ TEST_MODULE "gc" = struct
     let n = heap_chunks () in
     while not (heap_chunks () > n) do
       check ();
-      r := String.create 128 :: !r
+      r := Bytes.create 128 :: !r
     done;
     check ()
-end
+end)

@@ -33,15 +33,35 @@ module type Infix = sig
 
   (** [t >>| f] is [t >>= (fun a -> return (f a))]. *)
   val (>>|) : 'a t -> ('a -> 'b) -> 'b t
-
 end
 
-module type S = sig
+(** opening a module of this type allows one to use the [%bind] and [%map] syntax
+    extensions defined by ppx_let, as well as brings [return] into scope *)
+module type Syntax = sig
+  type 'a t
+  module Let_syntax : sig
+    val return : 'a -> 'a t
+    val bind : 'a t -> ('a -> 'b t) -> 'b t
+    val map  : 'a t -> f:('a -> 'b) -> 'b t
+    val both : 'a t -> 'b t -> ('a * 'b) t
+    module Open_on_rhs : sig
+      (** convenient to have in scope when programming with a monad *)
+      val return : 'a -> 'a t
+    end
+    module Open_in_body : sig
+      (** convenient to have in scope when programming with a monad *)
+      val return : 'a -> 'a t
+    end
+  end
+end
+
+module type S_without_syntax = sig
   (** A monad is an abstraction of the concept of sequencing of computations.  A value of
       type 'a monad represents a computation that returns a value of type 'a. *)
-  include Infix
+  type 'a t
+  include Infix  with type 'a t := 'a t
 
-  module Monad_infix : Infix with type 'a t := 'a t
+  module Monad_infix : Infix  with type 'a t := 'a t
 
   (** [bind t f] = [t >>= f] *)
   val bind : 'a t -> ('a -> 'b t) -> 'b t
@@ -63,6 +83,12 @@ module type S = sig
 
   val all : 'a t list -> 'a list t
   val all_ignore : unit t list -> unit t
+end
+
+module type S = sig
+  type 'a t
+  include S_without_syntax with type 'a t := 'a t
+  include Syntax           with type 'a t := 'a t
 end
 
 (**
@@ -88,10 +114,24 @@ module type Infix2 = sig
   val (>>|) : ('a, 'e) t -> ('a -> 'b) -> ('b, 'e) t
 end
 
+module type Syntax2 = sig
+  type ('a, 'e) t
+  module Let_syntax : sig
+    val return : 'a -> ('a, 'e) t
+    val bind : ('a, 'e) t -> ('a -> ('b, 'e) t) -> ('b, 'e) t
+    val map  : ('a, 'e) t -> f:('a -> 'b) -> ('b, 'e) t
+    val both : ('a, 'e) t -> ('b, 'e) t -> ('a * 'b, 'e) t
+    module Open_on_rhs  : sig val return : 'a -> ('a, 'e) t end
+    module Open_in_body : sig val return : 'a -> ('a, 'e) t end
+  end
+end
+
 (** The same as S except the monad type has two arguments. The second is always just
     passed through. *)
 module type S2 = sig
-  include Infix2
+  type ('a, 'e) t
+  include Infix2  with type ('a, 'e) t := ('a, 'e) t
+  include Syntax2 with type ('a, 'e) t := ('a, 'e) t
 
   module Monad_infix : Infix2 with type ('a, 'e) t := ('a, 'e) t
 
@@ -117,12 +157,15 @@ end
 
 module type Monad = sig
 
-  module type Basic  = Basic
-  module type Basic2 = Basic2
-  module type Infix  = Infix
-  module type Infix2 = Infix2
-  module type S      = S
-  module type S2     = S2
+  module type Basic   = Basic
+  module type Basic2  = Basic2
+  module type Infix   = Infix
+  module type Infix2  = Infix2
+  module type Syntax  = Syntax
+  module type Syntax2 = Syntax2
+  module type S_without_syntax = S_without_syntax
+  module type S       = S
+  module type S2      = S2
 
   module Make  (X : Basic ) : S  with type  'a      t :=  'a      X.t
   module Make2 (X : Basic2) : S2 with type ('a, 'e) t := ('a, 'e) X.t

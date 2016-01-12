@@ -1,8 +1,9 @@
 (** Character operations. *)
 
 (** An alias for the type of characters. *)
-type t = char with bin_io, sexp, typerep
-include Identifiable.S with type t := t
+type t = char [@@deriving bin_io, sexp, typerep]
+include Identifiable.S   with type t := t
+include Quickcheckable.S with type t := t
 
 (** Return the ASCII code of the argument. *)
 val to_int : t -> int
@@ -56,3 +57,11 @@ val get_digit_exn : t -> int
 
 val min_value : t
 val max_value : t
+
+val gen_digit      : t Quickcheck.Generator.t
+val gen_lowercase  : t Quickcheck.Generator.t
+val gen_uppercase  : t Quickcheck.Generator.t
+val gen_alpha      : t Quickcheck.Generator.t
+val gen_alphanum   : t Quickcheck.Generator.t
+val gen_print      : t Quickcheck.Generator.t
+val gen_whitespace : t Quickcheck.Generator.t

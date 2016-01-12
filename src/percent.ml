@@ -63,12 +63,12 @@ module Stable = struct
       val to_string : t -> string
     end with type t := t)
 
-    include (Sexpable.Of_stringable (Stringable) : Sexpable.S with type t := t)
+    include (Sexpable.Stable.Of_stringable.V1 (Stringable) : Sexpable.S with type t := t)
     include (Float : Binable with type t := t)
     include (Float : Comparable with type t := t)
   end
 
-  TEST_MODULE "Percent.V1" = Stable_unit_test.Make (struct
+  let%test_module "Percent.V1" = (module Stable_unit_test.Make (struct
     include V1
 
     let _coerce t =
@@ -81,7 +81,7 @@ module Stable = struct
       ; 0.0002, "2bp", "-C\028\235\2266*?"
       ; 0.000075, "0.75bp", "a2U0*\169\019?"
       ]
-  end)
+  end))
 end
 
 include Stable.V1
@@ -111,7 +111,7 @@ let of_string_allow_nan_and_inf s =
 let t_of_sexp_allow_nan_and_inf sexp =
   of_string_allow_nan_and_inf (Sexp.to_string sexp)
 
-TEST_UNIT = (* [t_of_sexp] *)
+let%test_unit _ = (* [t_of_sexp] *)
   List.iter ~f:(fun (string, expected) ->
     assert (equal (t_of_sexp (Sexp.Atom string)) expected);
   )
@@ -143,7 +143,7 @@ TEST_UNIT = (* [t_of_sexp] *)
     ]
 ;;
 
-TEST_UNIT = (* [sexp_of_t] and [t_of_sexp] *)
+let%test_unit _ = (* [sexp_of_t] and [t_of_sexp] *)
   List.iter ~f:(fun (t1, expected) ->
     let s = Sexp.to_string (sexp_of_t t1) in
     assert (String.equal s expected);

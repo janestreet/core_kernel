@@ -4,7 +4,7 @@ open Sexplib
 module Binable = Binable0
 
 module type Key = sig
-  type t with compare, sexp
+  type t [@@deriving compare, sexp]
 
   (** Values returned by [hash] must be non-negative.  An exception will be raised in the
       case that [hash] returns a negative value. *)
@@ -12,7 +12,7 @@ module type Key = sig
 end
 
 module type Key_binable = sig
-  type t with bin_io
+  type t [@@deriving bin_io]
   include Key with type t := t
 end
 
@@ -67,31 +67,38 @@ module type Accessors = sig
   val sexp_of_key : ('a, _) t -> 'a key -> Sexp.t
   val clear : (_, _) t -> unit
   val copy : ('a, 'b) t -> ('a, 'b) t
-  val invariant : (_, _) t -> unit
   val fold : ('a, 'b) t -> init:'c -> f:(key:'a key -> data:'b -> 'c -> 'c) -> 'c
-  val iter : ('a, 'b) t -> f:(key:'a key -> data:'b -> unit) -> unit
+  val iter_vals : ( _, 'b) t -> f:(                   'b -> unit) -> unit
+  val iteri     : ('a, 'b) t -> f:(key:'a key -> data:'b -> unit) -> unit
+  val iter_keys : ('a,  _) t -> f:(    'a key            -> unit) -> unit
+
+  val iter     : ('a, 'b) t -> f:(key:'a key -> data:'b -> unit) -> unit
+    [@@ocaml.deprecated "[since 2015-10] Use iteri instead"]
+
   val existsi  : ('a, 'b) t -> f:(key:'a key -> data:'b -> bool) -> bool
   val exists   : (_ , 'b) t -> f:(                   'b -> bool) -> bool
   val for_alli : ('a, 'b) t -> f:(key:'a key -> data:'b -> bool) -> bool
   val for_all  : (_ , 'b) t -> f:(                   'b -> bool) -> bool
+  val counti   : ('a, 'b) t -> f:(key:'a key -> data:'b -> bool) -> int
+  val count    : (_ , 'b) t -> f:(                   'b -> bool) -> int
+
   val length : (_, _) t -> int
   val is_empty : (_, _) t -> bool
   val mem : ('a, _) t -> 'a key -> bool
   val remove : ('a, _) t -> 'a key -> unit
 
-  (* [remove_one t key] if [key] is present in the table, and [data] is has at least two
-     elements then replace [key] with [List.tl data], otherwise remove [key] *)
-  val remove_one : ('a, _ list) t -> 'a key -> unit
-
   val replace      : ('a, 'b) t -> key:'a key -> data:'b -> unit
+    [@@ocaml.deprecated "[since 2015-10] Use set instead"]
   val set          : ('a, 'b) t -> key:'a key -> data:'b -> unit
   val add          : ('a, 'b) t -> key:'a key -> data:'b -> [ `Ok | `Duplicate ]
   val add_or_error : ('a, 'b) t -> key:'a key -> data:'b -> unit Or_error.t
   val add_exn      : ('a, 'b) t -> key:'a key -> data:'b -> unit
 
-  (** [change t key f] updates the given table by changing the value stored under [key]
-      according to [f], just like [Map.change] (see that for example). *)
-  val change : ('a, 'b) t -> 'a key -> ('b option -> 'b option) -> unit
+  (** [change t key ~f] changes [t]'s value for [key] to be [f (find t key)]. *)
+  val change : ('a, 'b) t -> 'a key -> f:('b option -> 'b option) -> unit
+
+  (** [update t key ~f] is [change t key ~f:(fun o -> Some (f o))]. *)
+  val update : ('a, 'b) t -> 'a key -> f:('b option -> 'b) -> unit
 
   (** [add_multi t ~key ~data] if [key] is present in the table then cons
      [data] on the list, otherwise add [key] with a single element list. *)
@@ -174,10 +181,6 @@ module type Accessors = sig
       it, or None is no such binding exists *)
   val find_and_remove : ('a, 'b) t -> 'a key -> 'b option
 
-  (** [iter_vals t ~f] is like iter, except it only supplies the value to f,
-      not the key. *)
-  val iter_vals : (_, 'b) t -> f:('b -> unit) -> unit
-
   (** Merge two hashtables.
 
       The result of [merge f h1 h2] has as keys the set of all [k] in the
@@ -218,9 +221,17 @@ module type Accessors = sig
   val keys : ('a, _) t -> 'a key list
   (** Returns the list of all data for given hashtable. *)
   val data : (_, 'b) t -> 'b list
+
   (** [filter_inplace t ~f] removes all the elements from [t] that don't satisfy [f]. *)
   val filter_inplace : (_, 'b) t -> f:('b -> bool) -> unit
-  val filteri_inplace : ('a, 'b) t -> f:('a key -> 'b -> bool) -> unit
+  val filteri_inplace : ('a, 'b) t -> f:(key:'a key -> data:'b -> bool) -> unit
+  val filter_keys_inplace : ('a, _) t -> f:('a key -> bool) -> unit
+  (** [replace_all t ~f] applies f to all elements in [t], transforming them in place *)
+  val replace_all : (_, 'b) t -> f:('b -> 'b) -> unit
+  val replace_alli : ('a, 'b) t -> f:(key:'a key -> data:'b -> 'b) -> unit
+  (** [filter_replace_all] combines the effects of [replace_all] and [filter_inplace] *)
+  val filter_replace_all : (_, 'b) t -> f:('b -> 'b option) -> unit
+  val filter_replace_alli : ('a, 'b) t -> f:(key:'a key -> data:'b -> 'b option) -> unit
 
   (** [equal t1 t2 f] and [similar t1 t2 f] both return true iff [t1] and [t2] have the
       same keys and for all keys [k], [f (find_exn t1 k) (find_exn t2 k)].  [equal] and
@@ -329,11 +340,13 @@ end
 module type S = sig
   type key
   type ('a, 'b) hashtbl
-  type 'b t = (key, 'b) hashtbl with sexp
+  type 'b t = (key, 'b) hashtbl [@@deriving sexp]
   type ('a, 'b) t_ = 'b t
   type 'a key_ = key
 
   val hashable : key Hashable.t
+
+  include Invariant.S1 with type 'b t := 'b t
 
   include Creators
     with type ('a, 'b) t := ('a, 'b) t_
@@ -359,11 +372,13 @@ module type Hashtbl = sig
   val hash : 'a -> int
   val hash_param : int -> int -> 'a -> int
 
-  type ('a, 'b) t with sexp_of
-  (* We use [with sexp_of] but not [with sexp] because we want people to be explicit
-     about the hash and comparison functions used when creating hashtables.  One can
-     use [Hashtbl.Poly.t], which does have [with sexp], to use polymorphic comparison and
-     hashing. *)
+  type ('a, 'b) t [@@deriving sexp_of]
+  (** We use [[@@deriving sexp_of]] but not [[@@deriving sexp]] because we want people to
+      be explicit about the hash and comparison functions used when creating hashtables.
+      One can use [Hashtbl.Poly.t], which does have [[@@deriving sexp]], to use
+      polymorphic comparison and hashing. *)
+
+  include Invariant.S2 with type ('a, 'b) t := ('a, 'b) t
 
   include Creators
     with type ('a, 'b) t  := ('a, 'b) t
@@ -375,12 +390,16 @@ module type Hashtbl = sig
     with type 'a key := 'a key
     with type ('a,'z) map_options := ('a,'z) no_map_options
 
+  val hashable : ('key, _) t -> 'key Hashable.t
+
 
   module Poly : sig
 
-    type ('a, 'b) t with bin_io, sexp
+    type ('a, 'b) t [@@deriving bin_io, sexp]
 
     val hashable : 'a Hashable.t
+
+    include Invariant.S2 with type ('a, 'b) t := ('a, 'b) t
 
     include Creators
       with type ('a, 'b) t  := ('a, 'b) t

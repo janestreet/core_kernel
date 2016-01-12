@@ -8,7 +8,7 @@ module type S = sig
 
   module Stable : sig
     module V1 : sig
-      type nonrec t = t with sexp, bin_io, compare
+      type nonrec t = t [@@deriving sexp, bin_io, compare]
 
       include Stable_containers.Comparable.V1.S
         with type key := t

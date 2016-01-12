@@ -8,7 +8,9 @@ open Bigarray
    bigstring.ml *)
 type bigstring = (char, int8_unsigned_elt, c_layout) Array1.t
 
-module type S = S
+(** New code should use [@@deriving bin_io].  These module types (S, S1, and S2) are
+    exported only for backwards compatibility.**)
+module type S  = S
 module type S1 = S1
 module type S2 = S2
 
@@ -42,6 +44,12 @@ module Of_binable2
      end)
   : S2 with type ('a, 'b) t := ('a, 'b) M.t
 
+(** [Of_sexpable] serializes a value using the bin-io of the sexp serialization of the
+    value.  This is not as efficient as using [@@deriving bin_io].  However, it is useful
+    when performance isn't important and there are obstacles to using [@@deriving
+    bin_io]. *)
+module Of_sexpable (M : Sexpable.S) : S with type t := M.t
+
 module Of_stringable (M : Stringable.S) : S with type t := M.t
 
 type 'a m = (module S with type t = 'a)
@@ -56,3 +64,19 @@ val to_bigstring
 
 val of_string : 'a m -> string -> 'a
 val to_string : 'a m -> 'a -> string
+
+
+(** The following functors preserve stability: if applied to stable types with stable
+    (de)serializations, they will produce stable types with stable (de)serializations.
+
+    Note: In all cases, stability of the input (and therefore the output) depends on the
+    semantics of all conversion functions (e.g. to_string, to_sexpable) not changing in
+    the future.
+*)
+module Stable : sig
+  module Of_binable    : sig module V1 : module type of Of_binable    end
+  module Of_binable1   : sig module V1 : module type of Of_binable1   end
+  module Of_binable2   : sig module V1 : module type of Of_binable2   end
+  module Of_sexpable   : sig module V1 : module type of Of_sexpable   end
+  module Of_stringable : sig module V1 : module type of Of_stringable end
+end

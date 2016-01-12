@@ -19,11 +19,11 @@ module Binable = Binable0
 module List = Core_list
 
 module type Key = sig
-  type t with compare, sexp
+  type t [@@deriving compare, sexp]
 end
 
 module type Key_binable = sig
-  type t with bin_io, compare, sexp
+  type t [@@deriving bin_io, compare, sexp]
 end
 
 module Without_comparator = struct
@@ -32,6 +32,11 @@ end
 
 module With_comparator = struct
   type ('key, 'cmp, 'z) t = comparator:('key, 'cmp) Comparator.t -> 'z
+end
+
+module Symmetric_diff_element = struct
+  type ('k, 'v) t = 'k * [ `Left of 'v | `Right of 'v | `Unequal of 'v * 'v ]
+  [@@deriving bin_io, compare, sexp]
 end
 
 module type Accessors_generic = sig
@@ -62,11 +67,26 @@ module type Accessors_generic = sig
        -> ('k, 'v list, 'cmp) t
       ) options
 
+  val remove_multi
+    : ('k, 'cmp,
+       ('k, 'v list, 'cmp) t
+       -> 'k key
+       -> ('k, 'v list, 'cmp) t
+      ) options
+
   val change
     : ('k, 'cmp,
        ('k, 'v, 'cmp) t
        -> 'k key
-       -> ('v option -> 'v option)
+       -> f:('v option -> 'v option)
+       -> ('k, 'v, 'cmp) t
+      ) options
+
+  val update
+    : ('k, 'cmp,
+       ('k, 'v, 'cmp) t
+       -> 'k key
+       -> f:('v option -> 'v)
        -> ('k, 'v, 'cmp) t
       ) options
 
@@ -79,7 +99,12 @@ module type Accessors_generic = sig
 
   val mem : ('k, 'cmp, ('k, _, 'cmp) t -> 'k key -> bool) options
 
-  val iter : ('k, 'v, _) t -> f:(key:'k key -> data:'v -> unit) -> unit
+  val iter  : ('k, 'v, _) t -> f:(key:'k key -> data:'v -> unit) -> unit
+    [@@ocaml.deprecated "[since 2015-10] Use iteri instead"]
+
+  val iteri : ('k, 'v, _) t -> f:(key:'k key -> data:'v -> unit) -> unit
+
+  val iter_keys : ('k, _, _) t -> f:('k key -> unit) -> unit
 
   val iter2
     : ('k, 'cmp,
@@ -101,10 +126,37 @@ module type Accessors_generic = sig
   val fold       : ('k, 'v, _) t -> init:'a -> f:(key:'k key -> data:'v -> 'a -> 'a) -> 'a
   val fold_right : ('k, 'v, _) t -> init:'a -> f:(key:'k key -> data:'v -> 'a -> 'a) -> 'a
 
+  val fold2
+    : ('k, 'cmp,
+       ('k, 'v1, 'cmp) t
+       -> ('k, 'v2, 'cmp) t
+       -> init:'a
+       -> f:(key:'k key
+             -> data:[ `Left of 'v1 | `Right of 'v2 | `Both of 'v1 * 'v2 ]
+             -> 'a
+             -> 'a)
+       -> 'a
+      ) options
+
   val filter
     : ('k, 'cmp,
        ('k, 'v, 'cmp) t
        -> f:(key:'k key -> data:'v -> bool)
+       -> ('k, 'v, 'cmp) t
+      ) options
+    [@@ocaml.deprecated "[since 2015-10] Use filteri instead"]
+
+  val filteri
+    : ('k, 'cmp,
+       ('k, 'v, 'cmp) t
+       -> f:(key:'k key -> data:'v -> bool)
+       -> ('k, 'v, 'cmp) t
+      ) options
+
+  val filter_keys
+    : ('k, 'cmp,
+       ('k, 'v, 'cmp) t
+       -> f:('k key -> bool)
        -> ('k, 'v, 'cmp) t
       ) options
 
@@ -120,6 +172,34 @@ module type Accessors_generic = sig
        ('k, 'v1, 'cmp) t
        -> f:(key:'k key -> data:'v1 -> 'v2 option)
        -> ('k, 'v2, 'cmp) t
+      ) options
+
+  val partition_mapi
+    : ('k, 'cmp,
+       ('k, 'v1, 'cmp) t
+       -> f:(key:'k key -> data:'v1 -> [`Fst of 'v2 | `Snd of 'v3])
+       -> ('k, 'v2, 'cmp) t * ('k, 'v3, 'cmp) t
+      ) options
+
+  val partition_map
+    : ('k, 'cmp,
+       ('k, 'v1, 'cmp) t
+       -> f:('v1 -> [`Fst of 'v2 | `Snd of 'v3])
+       -> ('k, 'v2, 'cmp) t * ('k, 'v3, 'cmp) t
+      ) options
+
+  val partitioni_tf
+    : ('k, 'cmp,
+       ('k, 'v, 'cmp) t
+       -> f:(key:'k key -> data:'v -> bool)
+       -> ('k, 'v, 'cmp) t * ('k, 'v, 'cmp) t
+      ) options
+
+  val partition_tf
+    : ('k, 'cmp,
+       ('k, 'v, 'cmp) t
+       -> f:('v -> bool)
+       -> ('k, 'v, 'cmp) t * ('k, 'v, 'cmp) t
       ) options
 
   val compare_direct
@@ -142,7 +222,10 @@ module type Accessors_generic = sig
 
   val data : (_, 'v, _) t -> 'v list
 
-  val to_alist : ('k, 'v, _) t -> ('k key * 'v) list
+  val to_alist
+    :  ?key_order:[`Increasing|`Decreasing]
+    -> ('k, 'v, _) t
+    -> ('k key * 'v) list
 
   val validate
     :  name:('k key -> string)
@@ -164,7 +247,7 @@ module type Accessors_generic = sig
         ('k, 'v, 'cmp) t
         -> ('k, 'v, 'cmp) t
         -> data_equal:('v -> 'v -> bool)
-        -> ('k key * [ `Left of 'v | `Right of 'v |  `Unequal of 'v * 'v ]) Sequence.t
+        -> ('k key, 'v) Symmetric_diff_element.t Sequence.t
        ) options
 
   val min_elt     : ('k, 'v, _) t -> ('k key * 'v) option
@@ -173,8 +256,12 @@ module type Accessors_generic = sig
   val max_elt     : ('k, 'v, _) t -> ('k key * 'v) option
   val max_elt_exn : ('k, 'v, _) t ->  'k key * 'v
 
-  val for_all : ('k, 'v, _) t -> f:('v -> bool) -> bool
-  val exists  : ('k, 'v, _) t -> f:('v -> bool) -> bool
+  val for_all  : ('k, 'v, _) t -> f:(                   'v -> bool) -> bool
+  val for_alli : ('k, 'v, _) t -> f:(key:'k key -> data:'v -> bool) -> bool
+  val exists   : ('k, 'v, _) t -> f:(                   'v -> bool) -> bool
+  val existsi  : ('k, 'v, _) t -> f:(key:'k key -> data:'v -> bool) -> bool
+  val count    : ('k, 'v, _) t -> f:(                   'v -> bool) -> int
+  val counti   : ('k, 'v, _) t -> f:(key:'k key -> data:'v -> bool) -> int
 
   val split
     : ('k, 'cmp,
@@ -229,6 +316,19 @@ module type Accessors_generic = sig
        -> ('k, 'v, 'cmp) t
        -> ('k key * 'v) Sequence.t
       ) options
+
+  val obs
+    :  'k key Quickcheck.Observer.t
+    -> 'v Quickcheck.Observer.t
+    -> ('k, 'v, 'cmp) t Quickcheck.Observer.t
+
+  val shrinker
+    :  ('k, 'cmp,
+        'k key Quickcheck.Shrinker.t
+        -> 'v Quickcheck.Shrinker.t
+        -> ('k, 'v, 'cmp) t Quickcheck.Shrinker.t
+       ) options
+
 end
 
 module type Accessors1 = sig
@@ -240,12 +340,19 @@ module type Accessors1 = sig
   val length         : _ t -> int
   val add            : 'a t -> key:key -> data:'a -> 'a t
   val add_multi      : 'a list t -> key:key -> data:'a -> 'a list t
-  val change         : 'a t -> key -> ('a option -> 'a option) -> 'a t
+  val remove_multi   : 'a list t -> key -> 'a list t
+  val change         : 'a t -> key -> f:('a option -> 'a option) -> 'a t
+  val update         : 'a t -> key -> f:('a option -> 'a) -> 'a t
   val find           : 'a t -> key -> 'a option
   val find_exn       : 'a t -> key -> 'a
   val remove         : 'a t -> key -> 'a t
   val mem            : _ t -> key -> bool
+
   val iter           : 'a t -> f:(key:key -> data:'a -> unit) -> unit
+    [@@ocaml.deprecated "[since 2015-10] Use iteri instead"]
+
+  val iteri          : 'a t -> f:(key:key -> data:'a -> unit) -> unit
+  val iter_keys      : _ t -> f:(key -> unit) -> unit
   val iter2
     :  'a t
     -> 'b t
@@ -255,14 +362,41 @@ module type Accessors1 = sig
   val mapi           : 'a t -> f:(key:key -> data:'a -> 'b) -> 'b t
   val fold           : 'a t -> init:'b -> f:(key:key -> data:'a -> 'b -> 'b) -> 'b
   val fold_right     : 'a t -> init:'b -> f:(key:key -> data:'a -> 'b -> 'b) -> 'b
-  val filter         : 'a t -> f:(key:key -> data:'a -> bool) -> 'a t
+  val fold2
+    :  'a t
+    -> 'b t
+    -> init:'c
+    -> f:(key:key -> data:[ `Left of 'a | `Right of 'b | `Both of 'a * 'b ] -> 'c -> 'c)
+    -> 'c
+
+  val filter        : 'a t -> f:(key:key -> data:'a -> bool) -> 'a t
+    [@@ocaml.deprecated "[since 2015-10] Use filteri instead"]
+
+  val filteri        : 'a t -> f:(key:key -> data:'a -> bool) -> 'a t
+  val filter_keys    : 'a t -> f:(key -> bool) -> 'a t
   val filter_map     : 'a t -> f:('a -> 'b option) -> 'b t
   val filter_mapi    : 'a t -> f:(key:key -> data:'a -> 'b option) -> 'b t
+  val partition_mapi
+    :  'a t
+    -> f:(key:key -> data:'a -> [`Fst of 'b | `Snd of 'c])
+    -> 'b t * 'c t
+  val partition_map
+    :  'a t
+    -> f:('a -> [`Fst of 'b | `Snd of 'c])
+    -> 'b t * 'c t
+  val partitioni_tf
+    :  'a t
+    -> f:(key:key -> data:'a -> bool)
+    -> 'a t * 'a t
+  val partition_tf
+    :  'a t
+    -> f:('a -> bool)
+    -> 'a t * 'a t
   val compare_direct : ('a -> 'a -> int) -> 'a t -> 'a t -> int
   val equal          : ('a -> 'a -> bool)-> 'a t -> 'a t -> bool
   val keys           : _ t -> key list
   val data           : 'a t -> 'a list
-  val to_alist       : 'a t -> (key * 'a) list
+  val to_alist       : ?key_order:[`Increasing|`Decreasing] -> 'a t -> (key * 'a) list
   val validate       : name:(key -> string) -> 'a Validate.check -> 'a t Validate.check
   val merge
     :  'a t
@@ -273,13 +407,17 @@ module type Accessors1 = sig
     :  'a t
     -> 'a t
     -> data_equal:('a -> 'a -> bool)
-    -> (key * [ `Left of 'a | `Right of 'a |  `Unequal of 'a * 'a ]) Sequence.t
+    -> (key, 'a) Symmetric_diff_element.t Sequence.t
   val min_elt        : 'a t -> (key * 'a) option
   val min_elt_exn    : 'a t -> key * 'a
   val max_elt        : 'a t -> (key * 'a) option
   val max_elt_exn    : 'a t -> key * 'a
-  val for_all        : 'a t -> f:('a -> bool) -> bool
-  val exists         : 'a t -> f:('a -> bool) -> bool
+  val for_all        : 'a t -> f:(                'a -> bool) -> bool
+  val for_alli       : 'a t -> f:(key:key -> data:'a -> bool) -> bool
+  val exists         : 'a t -> f:(                'a -> bool) -> bool
+  val existsi        : 'a t -> f:(key:key -> data:'a -> bool) -> bool
+  val count          : 'a t -> f:(                'a -> bool) -> int
+  val counti         : 'a t -> f:(key:key -> data:'a -> bool) -> int
   val split          : 'a t -> key -> 'a t * (key * 'a) option * 'a t
   val fold_range_inclusive
     :  'a t
@@ -305,6 +443,14 @@ module type Accessors1 = sig
     -> ?keys_less_or_equal_to:key
     -> 'a t
     -> (key * 'a) Sequence.t
+  val obs
+    :  key Quickcheck.Observer.t
+    -> 'v Quickcheck.Observer.t
+    -> 'v t Quickcheck.Observer.t
+  val shrinker
+    :  key Quickcheck.Shrinker.t
+    -> 'v Quickcheck.Shrinker.t
+    -> 'v t Quickcheck.Shrinker.t
 end
 
 module type Accessors2 = sig
@@ -315,12 +461,19 @@ module type Accessors2 = sig
   val length         : (_, _) t -> int
   val add            : ('a, 'b) t -> key:'a -> data:'b -> ('a, 'b) t
   val add_multi      : ('a, 'b list) t -> key:'a -> data:'b -> ('a, 'b list) t
-  val change         : ('a, 'b) t -> 'a -> ('b option -> 'b option) -> ('a, 'b) t
+  val remove_multi   : ('a, 'b list) t -> 'a -> ('a, 'b list) t
+  val change         : ('a, 'b) t -> 'a -> f:('b option -> 'b option) -> ('a, 'b) t
+  val update         : ('a, 'b) t -> 'a -> f:('b option -> 'b) -> ('a, 'b) t
   val find           : ('a, 'b) t -> 'a -> 'b option
   val find_exn       : ('a, 'b) t -> 'a -> 'b
   val remove         : ('a, 'b) t -> 'a -> ('a, 'b) t
   val mem            : ('a, 'b) t -> 'a -> bool
+
   val iter           : ('a, 'b) t -> f:(key:'a -> data:'b -> unit) -> unit
+    [@@ocaml.deprecated "[since 2015-10] Use iteri instead"]
+
+  val iteri          : ('a, 'b) t -> f:(key:'a -> data:'b -> unit) -> unit
+  val iter_keys      : ('a,  _) t -> f:('a -> unit) -> unit
   val iter2
     :  ('a, 'b) t
     -> ('a, 'c) t
@@ -330,14 +483,41 @@ module type Accessors2 = sig
   val mapi           : ('a, 'b) t -> f:(key:'a -> data:'b -> 'c) -> ('a, 'c) t
   val fold           : ('a, 'b) t -> init:'c -> f:(key:'a -> data:'b -> 'c -> 'c) -> 'c
   val fold_right     : ('a, 'b) t -> init:'c -> f:(key:'a -> data:'b -> 'c -> 'c) -> 'c
-  val filter         : ('a, 'b) t -> f:(key:'a -> data:'b -> bool) -> ('a, 'b) t
+  val fold2
+    :  ('a, 'b) t
+    -> ('a, 'c) t
+    -> init:'d
+    -> f:(key:'a -> data:[ `Left of 'b | `Right of 'c | `Both of 'b * 'c ] -> 'd -> 'd)
+    -> 'd
+
+  val filter        : ('a, 'b) t -> f:(key:'a -> data:'b -> bool) -> ('a, 'b) t
+    [@@ocaml.deprecated "[since 2015-10] Use filteri instead"]
+
+  val filteri        : ('a, 'b) t -> f:(key:'a -> data:'b -> bool) -> ('a, 'b) t
+  val filter_keys    : ('a, 'b) t -> f:('a -> bool) -> ('a, 'b) t
   val filter_map     : ('a, 'b) t -> f:('b -> 'c option) -> ('a, 'c) t
   val filter_mapi    : ('a, 'b) t -> f:(key:'a -> data:'b -> 'c option) -> ('a, 'c) t
+  val partition_mapi
+    :  ('a, 'b) t
+    -> f:(key:'a -> data:'b -> [`Fst of 'c | `Snd of 'd])
+    -> ('a, 'c) t * ('a, 'd) t
+  val partition_map
+    :  ('a, 'b) t
+    -> f:('b -> [`Fst of 'c | `Snd of 'd])
+    -> ('a, 'c) t * ('a, 'd) t
+  val partitioni_tf
+    :  ('a, 'b) t
+    -> f:(key:'a -> data:'b -> bool)
+    -> ('a, 'b) t * ('a, 'b) t
+  val partition_tf
+    :  ('a, 'b) t
+    -> f:('b -> bool)
+    -> ('a, 'b) t * ('a, 'b) t
   val compare_direct : ('b -> 'b -> int) -> ('a, 'b) t -> ('a, 'b) t -> int
   val equal          : ('b -> 'b -> bool)-> ('a, 'b) t -> ('a, 'b) t -> bool
   val keys           : ('a, _) t -> 'a list
   val data           : (_, 'b) t -> 'b list
-  val to_alist       : ('a, 'b) t -> ('a * 'b) list
+  val to_alist       : ?key_order:[`Increasing|`Decreasing] -> ('a, 'b) t -> ('a * 'b) list
   val validate
     : name:('a -> string) -> 'b Validate.check -> ('a, 'b) t Validate.check
   val merge
@@ -349,13 +529,17 @@ module type Accessors2 = sig
     :  ('a, 'b) t
     -> ('a, 'b) t
     -> data_equal:('b -> 'b -> bool)
-    -> ('a * [ `Left of 'b | `Right of 'b |  `Unequal of 'b * 'b ]) Sequence.t
+    -> ('a, 'b) Symmetric_diff_element.t Sequence.t
   val min_elt        : ('a, 'b) t -> ('a * 'b) option
   val min_elt_exn    : ('a, 'b) t -> 'a * 'b
   val max_elt        : ('a, 'b) t -> ('a * 'b) option
   val max_elt_exn    : ('a, 'b) t -> 'a * 'b
-  val for_all        : (_,  'b) t -> f:('b -> bool) -> bool
-  val exists         : (_,  'b) t -> f:('b -> bool) -> bool
+  val for_all        : ( _, 'b) t -> f:(               'b -> bool) -> bool
+  val for_alli       : ('a, 'b) t -> f:(key:'a -> data:'b -> bool) -> bool
+  val exists         : ( _, 'b) t -> f:(               'b -> bool) -> bool
+  val existsi        : ('a, 'b) t -> f:(key:'a -> data:'b -> bool) -> bool
+  val count          : ( _, 'b) t -> f:(               'b -> bool) -> int
+  val counti         : ('a, 'b) t -> f:(key:'a -> data:'b -> bool) -> int
   val split          : ('a, 'b) t -> 'a -> ('a, 'b) t * ('a * 'b) option * ('a, 'b) t
   val fold_range_inclusive
     : ('a, 'b) t -> min:'a -> max:'a -> init:'c -> f:(key:'a -> data:'b -> 'c -> 'c) -> 'c
@@ -376,6 +560,14 @@ module type Accessors2 = sig
     -> ?keys_less_or_equal_to:'a
     -> ('a, 'b) t
     -> ('a * 'b) Sequence.t
+  val obs
+    :  'k Quickcheck.Observer.t
+    -> 'v Quickcheck.Observer.t
+    -> ('k, 'v) t Quickcheck.Observer.t
+  val shrinker
+    :  'k Quickcheck.Shrinker.t
+    -> 'v Quickcheck.Shrinker.t
+    -> ('k, 'v) t Quickcheck.Shrinker.t
 end
 
 module type Accessors3 = sig
@@ -384,14 +576,21 @@ module type Accessors3 = sig
   val invariants     : (_, _, _) t -> bool
   val is_empty       : (_, _, _) t -> bool
   val length         : (_, _, _) t -> int
-  val add            : ('a, 'b, 'cmp) t -> key:'a -> data:'b -> ('a, 'b, 'cmp) t
+  val add            : ('a, 'b,      'cmp) t -> key:'a -> data:'b -> ('a, 'b     , 'cmp) t
   val add_multi      : ('a, 'b list, 'cmp) t -> key:'a -> data:'b -> ('a, 'b list, 'cmp) t
-  val change         : ('a, 'b, 'cmp) t -> 'a -> ('b option -> 'b option) -> ('a, 'b, 'cmp) t
+  val remove_multi   : ('a, 'b list, 'cmp) t -> 'a -> ('a, 'b list, 'cmp) t
+  val change         : ('a, 'b, 'cmp) t -> 'a -> f:('b option -> 'b option) -> ('a, 'b, 'cmp) t
+  val update         : ('a, 'b, 'cmp) t -> 'a -> f:('b option -> 'b) -> ('a, 'b, 'cmp) t
   val find           : ('a, 'b, 'cmp) t -> 'a -> 'b option
   val find_exn       : ('a, 'b, 'cmp) t -> 'a -> 'b
   val remove         : ('a, 'b, 'cmp) t -> 'a -> ('a, 'b, 'cmp) t
   val mem            : ('a, 'b, 'cmp) t -> 'a -> bool
+
   val iter           : ('a, 'b, 'cmp) t -> f:(key:'a -> data:'b -> unit) -> unit
+    [@@ocaml.deprecated "[since 2015-10] Use iteri instead"]
+
+  val iteri          : ('a, 'b, 'cmp) t -> f:(key:'a -> data:'b -> unit) -> unit
+  val iter_keys      : ('a,  _, 'cmp) t -> f:('a -> unit) -> unit
   val iter2
     :  ('a, 'b, 'cmp) t
     -> ('a, 'c, 'cmp) t
@@ -401,15 +600,42 @@ module type Accessors3 = sig
   val mapi           : ('a, 'b, 'cmp) t -> f:(key:'a -> data:'b -> 'c) -> ('a, 'c, 'cmp) t
   val fold           : ('a, 'b, _) t -> init:'c -> f:(key:'a -> data:'b -> 'c -> 'c) -> 'c
   val fold_right     : ('a, 'b, _) t -> init:'c -> f:(key:'a -> data:'b -> 'c -> 'c) -> 'c
+  val fold2
+    :  ('a, 'b, 'cmp) t
+    -> ('a, 'c, 'cmp) t
+    -> init:'d
+    -> f:(key:'a -> data:[ `Left of 'b | `Right of 'c | `Both of 'b * 'c ] -> 'd -> 'd)
+    -> 'd
+
   val filter         : ('a, 'b, 'cmp) t -> f:(key:'a -> data:'b -> bool) -> ('a, 'b, 'cmp) t
+    [@@ocaml.deprecated "[since 2015-10] Use filteri instead"]
+
+  val filteri        : ('a, 'b, 'cmp) t -> f:(key:'a -> data:'b -> bool) -> ('a, 'b, 'cmp) t
+  val filter_keys    : ('a, 'b, 'cmp) t -> f:('a -> bool) -> ('a, 'b, 'cmp) t
   val filter_map     : ('a, 'b, 'cmp) t -> f:('b -> 'c option) -> ('a, 'c, 'cmp) t
   val filter_mapi
     : ('a, 'b, 'cmp) t -> f:(key:'a -> data:'b -> 'c option) -> ('a, 'c, 'cmp) t
+  val partition_mapi
+    :  ('a, 'b, 'cmp) t
+    -> f:(key:'a -> data:'b -> [`Fst of 'c | `Snd of 'd])
+    -> ('a, 'c, 'cmp) t * ('a, 'd, 'cmp) t
+  val partition_map
+    :  ('a, 'b, 'cmp) t
+    -> f:('b -> [`Fst of 'c | `Snd of 'd])
+    -> ('a, 'c, 'cmp) t * ('a, 'd, 'cmp) t
+  val partitioni_tf
+    :  ('a, 'b, 'cmp) t
+    -> f:(key:'a -> data:'b -> bool)
+    -> ('a, 'b, 'cmp) t * ('a, 'b, 'cmp) t
+  val partition_tf
+    :  ('a, 'b, 'cmp) t
+    -> f:('b -> bool)
+    -> ('a, 'b, 'cmp) t * ('a, 'b, 'cmp) t
   val compare_direct : ('b -> 'b -> int) -> ('a, 'b, 'cmp) t -> ('a, 'b, 'cmp) t -> int
   val equal          : ('b -> 'b -> bool)-> ('a, 'b, 'cmp) t -> ('a, 'b, 'cmp) t -> bool
   val keys           : ('a, _, _) t -> 'a list
   val data           : (_, 'b, _) t -> 'b list
-  val to_alist       : ('a, 'b, _) t -> ('a * 'b) list
+  val to_alist       : ?key_order:[`Increasing|`Decreasing] -> ('a, 'b, _) t -> ('a * 'b) list
   val validate
     : name:('a -> string) -> 'b Validate.check -> ('a, 'b, _) t Validate.check
   val merge
@@ -420,13 +646,17 @@ module type Accessors3 = sig
     :  ('a, 'b, 'cmp) t
     -> ('a, 'b, 'cmp) t
     -> data_equal:('b -> 'b -> bool)
-    -> ('a * [ `Left of 'b | `Right of 'b |  `Unequal of 'b * 'b ]) Sequence.t
+    -> ('a, 'b) Symmetric_diff_element.t Sequence.t
   val min_elt        : ('a, 'b, 'cmp) t -> ('a * 'b) option
   val min_elt_exn    : ('a, 'b, 'cmp) t -> 'a * 'b
   val max_elt        : ('a, 'b, 'cmp) t -> ('a * 'b) option
   val max_elt_exn    : ('a, 'b, 'cmp) t -> 'a * 'b
-  val for_all        : (_,  'b, _)    t -> f:('b -> bool) -> bool
-  val exists         : (_,  'b, _)    t -> f:('b -> bool) -> bool
+  val for_all        : ( _, 'b, _)    t -> f:(               'b -> bool) -> bool
+  val for_alli       : ('a, 'b, _)    t -> f:(key:'a -> data:'b -> bool) -> bool
+  val exists         : ( _, 'b, _)    t -> f:(               'b -> bool) -> bool
+  val existsi        : ('a, 'b, _)    t -> f:(key:'a -> data:'b -> bool) -> bool
+  val count          : ( _, 'b, _)    t -> f:(               'b -> bool) -> int
+  val counti         : ('a, 'b, _)    t -> f:(key:'a -> data:'b -> bool) -> int
   val split
     :  ('k, 'v, 'cmp) t
     -> 'k
@@ -455,6 +685,14 @@ module type Accessors3 = sig
     -> ?keys_less_or_equal_to:'a
     -> ('a, 'b, _) t
     -> ('a * 'b) Sequence.t
+  val obs
+    :  'k Quickcheck.Observer.t
+    -> 'v Quickcheck.Observer.t
+    -> ('k, 'v, _) t Quickcheck.Observer.t
+  val shrinker
+    :  'k Quickcheck.Shrinker.t
+    -> 'v Quickcheck.Shrinker.t
+    -> ('k, 'v, _) t Quickcheck.Shrinker.t
 end
 
 module type Accessors3_with_comparator = sig
@@ -469,9 +707,15 @@ module type Accessors3_with_comparator = sig
   val add_multi
     :  comparator:('a, 'cmp) Comparator.t
     -> ('a, 'b list, 'cmp) t -> key:'a -> data:'b -> ('a, 'b list, 'cmp) t
+  val remove_multi
+    :  comparator:('a, 'cmp) Comparator.t
+    -> ('a, 'b list, 'cmp) t -> 'a -> ('a, 'b list, 'cmp) t
   val change
     :  comparator:('a, 'cmp) Comparator.t
-    -> ('a, 'b, 'cmp) t -> 'a -> ('b option -> 'b option) -> ('a, 'b, 'cmp) t
+    -> ('a, 'b, 'cmp) t -> 'a -> f:('b option -> 'b option) -> ('a, 'b, 'cmp) t
+  val update
+    :  comparator:('a, 'cmp) Comparator.t
+    -> ('a, 'b, 'cmp) t -> 'a -> f:('b option -> 'b) -> ('a, 'b, 'cmp) t
   val find
     :  comparator:('a, 'cmp) Comparator.t
     -> ('a, 'b, 'cmp) t -> 'a -> 'b option
@@ -484,7 +728,12 @@ module type Accessors3_with_comparator = sig
   val mem
     :  comparator:('a, 'cmp) Comparator.t
     -> ('a, 'b, 'cmp) t -> 'a -> bool
-  val iter : ('a, 'b, 'cmp) t -> f:(key:'a -> data:'b -> unit) -> unit
+
+  val iter      : ('a, 'b, 'cmp) t -> f:(key:'a -> data:'b -> unit) -> unit
+    [@@ocaml.deprecated "[since 2015-10] Use iteri instead"]
+
+  val iteri     : ('a, 'b, 'cmp) t -> f:(key:'a -> data:'b -> unit) -> unit
+  val iter_keys : ('a, 'b, 'cmp) t -> f:('a -> unit) -> unit
   val iter2
     :  comparator:('a, 'cmp) Comparator.t
     -> ('a, 'b, 'cmp) t -> ('a, 'c, 'cmp) t
@@ -494,15 +743,50 @@ module type Accessors3_with_comparator = sig
   val mapi           : ('a, 'b, 'cmp) t -> f:(key:'a -> data:'b -> 'c) -> ('a, 'c, 'cmp) t
   val fold           : ('a, 'b, _) t -> init:'c -> f:(key:'a -> data:'b -> 'c -> 'c) -> 'c
   val fold_right     : ('a, 'b, _) t -> init:'c -> f:(key:'a -> data:'b -> 'c -> 'c) -> 'c
+  val fold2
+    :  comparator:('a, 'cmp) Comparator.t
+    -> ('a, 'b, 'cmp) t -> ('a, 'c, 'cmp) t
+    -> init:'d
+    -> f:(key:'a -> data:[ `Left of 'b | `Right of 'c | `Both of 'b * 'c] -> 'd -> 'd)
+    -> 'd
+
   val filter
     :  comparator:('a, 'cmp) Comparator.t
     -> ('a, 'b, 'cmp) t -> f:(key:'a -> data:'b -> bool) -> ('a, 'b, 'cmp) t
+    [@@ocaml.deprecated "[since 2015-10] Use filteri instead"]
+
+  val filteri
+    :  comparator:('a, 'cmp) Comparator.t
+    -> ('a, 'b, 'cmp) t -> f:(key:'a -> data:'b -> bool) -> ('a, 'b, 'cmp) t
+  val filter_keys
+    :  comparator:('a, 'cmp) Comparator.t
+    -> ('a, 'b, 'cmp) t -> f:('a -> bool) -> ('a, 'b, 'cmp) t
   val filter_map
     :  comparator:('a, 'cmp) Comparator.t
     -> ('a, 'b, 'cmp) t -> f:('b -> 'c option) -> ('a, 'c, 'cmp) t
   val filter_mapi
     :  comparator:('a, 'cmp) Comparator.t
     -> ('a, 'b, 'cmp) t -> f:(key:'a -> data:'b -> 'c option) -> ('a, 'c, 'cmp) t
+  val partition_mapi
+    :  comparator:('a, 'cmp) Comparator.t
+    -> ('a, 'b, 'cmp) t
+    -> f:(key:'a -> data:'b -> [`Fst of 'c | `Snd of 'd])
+    -> ('a, 'c, 'cmp) t * ('a, 'd, 'cmp) t
+  val partition_map
+    :  comparator:('a, 'cmp) Comparator.t
+    -> ('a, 'b, 'cmp) t
+    -> f:('b -> [`Fst of 'c | `Snd of 'd])
+    -> ('a, 'c, 'cmp) t * ('a, 'd, 'cmp) t
+  val partitioni_tf
+    :  comparator:('a, 'cmp) Comparator.t
+    -> ('a, 'b, 'cmp) t
+    -> f:(key:'a -> data:'b -> bool)
+    -> ('a, 'b, 'cmp) t * ('a, 'b, 'cmp) t
+  val partition_tf
+    :  comparator:('a, 'cmp) Comparator.t
+    -> ('a, 'b, 'cmp) t
+    -> f:('b -> bool)
+    -> ('a, 'b, 'cmp) t * ('a, 'b, 'cmp) t
   val compare_direct
     :  comparator:('a, 'cmp) Comparator.t
     -> ('b -> 'b -> int)
@@ -514,7 +798,8 @@ module type Accessors3_with_comparator = sig
     -> ('b -> 'b -> bool) -> ('a, 'b, 'cmp) t -> ('a, 'b, 'cmp) t -> bool
   val keys           : ('a,  _, _) t -> 'a list
   val data           : (_ , 'b, _) t -> 'b list
-  val to_alist       : ('a, 'b, _) t -> ('a * 'b) list
+  val to_alist
+    : ?key_order:[`Increasing|`Decreasing] -> ('a, 'b, _) t -> ('a * 'b) list
   val validate
     : name:('a -> string) -> 'b Validate.check -> ('a, 'b, _) t Validate.check
   val merge
@@ -528,13 +813,17 @@ module type Accessors3_with_comparator = sig
     -> ('a, 'b, 'cmp) t
     -> ('a, 'b, 'cmp) t
     -> data_equal:('b -> 'b -> bool)
-    -> ('a * [ `Left of 'b | `Right of 'b |  `Unequal of 'b * 'b ]) Sequence.t
+    -> ('a, 'b) Symmetric_diff_element.t Sequence.t
   val min_elt        : ('a, 'b, 'cmp) t -> ('a * 'b) option
   val min_elt_exn    : ('a, 'b, 'cmp) t -> 'a * 'b
   val max_elt        : ('a, 'b, 'cmp) t -> ('a * 'b) option
   val max_elt_exn    : ('a, 'b, 'cmp) t -> 'a * 'b
-  val for_all        : ('a, 'b, 'cmp) t -> f:('b -> bool) -> bool
-  val exists         : ('a, 'b, 'cmp) t -> f:('b -> bool) -> bool
+  val for_all        : ('a, 'b, 'cmp) t -> f:(               'b -> bool) -> bool
+  val for_alli       : ('a, 'b, 'cmp) t -> f:(key:'a -> data:'b -> bool) -> bool
+  val exists         : ('a, 'b, 'cmp) t -> f:(               'b -> bool) -> bool
+  val existsi        : ('a, 'b, 'cmp) t -> f:(key:'a -> data:'b -> bool) -> bool
+  val count          : ('a, 'b, 'cmp) t -> f:(               'b -> bool) -> int
+  val counti         : ('a, 'b, 'cmp) t -> f:(key:'a -> data:'b -> bool) -> int
   val split
     :  comparator:('a, 'cmp) Comparator.t
     -> ('a, 'b, 'cmp) t
@@ -570,6 +859,15 @@ module type Accessors3_with_comparator = sig
     -> ?keys_less_or_equal_to:'a
     -> ('a, 'b, 'cmp) t
     -> ('a * 'b) Sequence.t
+  val obs
+    :  'k Quickcheck.Observer.t
+    -> 'v Quickcheck.Observer.t
+    -> ('k, 'v, 'cmp) t Quickcheck.Observer.t
+  val shrinker
+    :  comparator:('k, 'cmp) Comparator.t
+    -> 'k Quickcheck.Shrinker.t
+    -> 'v Quickcheck.Shrinker.t
+    -> ('k, 'v, 'cmp) t Quickcheck.Shrinker.t
 end
 
 (** Consistency checks (same as in [Container]). *)
@@ -661,6 +959,13 @@ module type Creators_generic = sig
     : ('k, 'cmp,
        ('k key, 'v, 'cmp) tree -> ('k, 'v, 'cmp) t
       ) options
+
+  val gen
+    :  ('k, 'cmp,
+        'k key Quickcheck.Generator.t
+        -> 'v Quickcheck.Generator.t
+        -> ('k, 'v, 'cmp) t Quickcheck.Generator.t
+       ) options
 end
 
 module type Creators1 = sig
@@ -678,6 +983,10 @@ module type Creators1 = sig
   val of_sorted_array : (key * 'a) array -> 'a t Or_error.t
   val of_sorted_array_unchecked : (key * 'a) array -> 'a t
   val of_tree         : 'a tree -> 'a t
+  val gen
+    :  key Quickcheck.Generator.t
+    -> 'a Quickcheck.Generator.t
+    -> 'a t Quickcheck.Generator.t
 end
 
 module type Creators2 = sig
@@ -694,6 +1003,10 @@ module type Creators2 = sig
   val of_sorted_array : ('a * 'b) array -> ('a, 'b) t Or_error.t
   val of_sorted_array_unchecked : ('a * 'b) array -> ('a, 'b) t
   val of_tree         : ('a, 'b) tree -> ('a, 'b) t
+  val gen
+    :  'a Quickcheck.Generator.t
+    -> 'b Quickcheck.Generator.t
+    -> ('a, 'b) t Quickcheck.Generator.t
 end
 
 module type Creators3_with_comparator = sig
@@ -728,6 +1041,11 @@ module type Creators3_with_comparator = sig
   val of_tree
     :  comparator:('a, 'cmp) Comparator.t
     -> ('a, 'b, 'cmp) tree -> ('a, 'b, 'cmp) t
+  val gen
+    :  comparator:('a, 'cmp) Comparator.t
+    -> 'a Quickcheck.Generator.t
+    -> 'b Quickcheck.Generator.t
+    -> ('a, 'b, 'cmp) t Quickcheck.Generator.t
 end
 
 module Check_creators (T : T3) (Tree : T3) (Key : T1) (Options : T3)
@@ -800,7 +1118,7 @@ module type S = sig
   module Key : Comparator.S
 
   module Tree : sig
-    type 'a t = (Key.t, 'a, Key.comparator_witness) tree with sexp
+    type 'a t = (Key.t, 'a, Key.comparator_witness) tree [@@deriving sexp]
 
     include Creators_and_accessors1
       with type 'a t    := 'a t
@@ -808,7 +1126,7 @@ module type S = sig
       with type key     := Key.t
   end
 
-  type +'a t = (Key.t, 'a, Key.comparator_witness) map with compare, sexp
+  type +'a t = (Key.t, 'a, Key.comparator_witness) map [@@deriving compare, sexp]
 
   include Creators_and_accessors1
     with type 'a t    := 'a t

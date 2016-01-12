@@ -13,7 +13,7 @@ module Stable = struct
     | Oct
     | Nov
     | Dec
-    with sexp, compare, variants
+    [@@deriving sexp, compare, variants]
 
     let failwithf = Core_printf.failwithf
 
@@ -54,14 +54,14 @@ module Stable = struct
       | Nov -> 11
       | Dec -> 12
 
-    include Binable.Of_binable (Core_int) (struct
+    include Binable.Stable.Of_binable.V1 (Core_int) (struct
       type nonrec t = t
       let to_binable t = to_int t - 1
       let of_binable i = of_int_exn (i + 1)
     end)
   end
 
-  TEST_MODULE "Month.V1" = Stable_unit_test.Make(struct
+  let%test_module "Month.V1" = (module Stable_unit_test.Make(struct
     include V1
     let equal t1 t2 = Core_int.(=) 0 (compare t1 t2)
     let tests =
@@ -83,7 +83,7 @@ module Stable = struct
         ~oct:(c 9 "Oct" "\009")
         ~nov:(c 10 "Nov" "\010")
         ~dec:(c 11 "Dec" "\011")
-  end)
+  end))
 end
 
 module Hashtbl = Core_hashtbl
@@ -112,9 +112,9 @@ module T = struct
     ; Nov
     ; Dec ]
 
-  TEST = List.length all = num_months
+  let%test _ = List.length all = num_months
 
-  TEST =
+  let%test _ =
     List.fold (List.tl_exn all) ~init:Jan ~f:(fun last cur ->
       assert (compare last cur = (-1));
       cur)
@@ -150,18 +150,18 @@ end)
 let sexp_of_t = T.sexp_of_t
 let t_of_sexp = T.t_of_sexp
 
-TEST = Set.equal (Set.of_list [Jan]) (Set.t_of_sexp Sexp.(List [Atom "0"]))
-TEST = Pervasives.(=) (sexp_of_t Jan) (Sexp.Atom "Jan")
-TEST = Jan = t_of_sexp (Sexp.Atom "Jan")
-TEST = Option.is_none (Option.try_with (fun () -> t_of_sexp (Sexp.Atom "0")))
+let%test _ = Set.equal (Set.of_list [Jan]) (Set.t_of_sexp Sexp.(List [Atom "0"]))
+let%test _ = Pervasives.(=) (sexp_of_t Jan) (Sexp.Atom "Jan")
+let%test _ = Jan = t_of_sexp (Sexp.Atom "Jan")
+let%test _ = Option.is_none (Option.try_with (fun () -> t_of_sexp (Sexp.Atom "0")))
 
 let shift t i = of_int_exn (1 + (Int.( % ) (to_int t - 1 + i) num_months))
-TEST = shift Jan 12 = Jan
-TEST = shift Jan (-12) = Jan
-TEST = shift Jan 16 = May
-TEST = shift Jan (-16) = Sep
-TEST = shift Sep 1 = Oct
-TEST = shift Sep (-1) = Aug
+let%test _ = shift Jan 12 = Jan
+let%test _ = shift Jan (-12) = Jan
+let%test _ = shift Jan 16 = May
+let%test _ = shift Jan (-16) = Sep
+let%test _ = shift Sep 1 = Oct
+let%test _ = shift Sep (-1) = Aug
 
 let all_strings = lazy
   (Array.of_list

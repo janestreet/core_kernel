@@ -18,31 +18,32 @@ module Elt : sig
   val value : 'a t -> 'a
 end
 
-type 'a t with sexp
+type 'a t [@@deriving sexp]
 
 include Container.S1 with type 'a t := 'a t
-
-val invariant : 'a t -> unit
+include Invariant.S1 with type 'a t := 'a t
 
 (** [create ()] returns an empty bag. *)
 val create : unit -> 'a t
 
 (** [add t v] adds [v] to the bag [t], returning an element that can
-    later be removed from the bag.  [add] runs in constant time.
-*)
+    later be removed from the bag.  [add] runs in constant time. *)
 val add : 'a t -> 'a -> 'a Elt.t
 
+(** [mem_elt t elt] returns whether or not [elt] is in [t].  It is like [mem] (included
+    from [Container]), but it takes an ['a Elt.t] instead of an ['a] and runs in constant
+    time instead of linear time. *)
+val mem_elt : 'a t -> 'a Elt.t -> bool
+
 (** [remove t elt] removes [elt] from the bag [t], raising an exception if [elt]
-    is not in the bag.  [remove] runs in constant time.
-*)
+    is not in the bag.  [remove] runs in constant time. *)
 val remove : 'a t -> 'a Elt.t -> unit
 
 (** [choose t] returns some element in the bag. *)
 val choose : 'a t -> 'a Elt.t option
 
 (** [remove_one t] removes some element from the bag, and returns its value.
-    [remove_one] runs in constant time.
-*)
+    [remove_one] runs in constant time. *)
 val remove_one : 'a t -> 'a option
 
 (** [clear t] removes all elements from the bag.  [clear] runs in O(1) time. *)
@@ -60,8 +61,7 @@ val find_elt : 'a t -> f:('a -> bool) -> 'a Elt.t option
 
 (** [until_empty t f] repeatedly removes a value [v] from [t] and runs [f v],
     continuing until [t] is empty.  Running [f] may add elements to [t] if it
-    wants.
-*)
+    wants. *)
 val until_empty : 'a t -> ('a -> unit) -> unit
 
 (** [transfer ~src ~dst] moves all of the elements from [src] to [dst] in constant

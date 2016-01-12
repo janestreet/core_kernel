@@ -1,6 +1,6 @@
 (** various combinators for functions *)
 
-(** A 'pipe' operator. Deprecated. *)
+(** A 'pipe' operator. *)
 external ( |! ) : 'a -> ( 'a -> 'b) -> 'b = "%revapply"
 
 (** A pipe operator, equivalent to |!, but this notation is more broadly accepted *)

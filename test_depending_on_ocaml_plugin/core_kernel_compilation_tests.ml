@@ -26,19 +26,19 @@ module Test = struct
     note : string;
     setup : string;
     shouldn't_compile : string;
-  } with sexp
+  } [@@deriving sexp]
 
   let test : t -> Error.t option Deferred.t = fun t ->
     check_compilation t.setup
     >>= function
     | Error e -> Deferred.return (
-      Some (Error.tag_arg e "setup didn't compile" t <:sexp_of<t>>)
+      Some (Error.tag_arg e "setup didn't compile" t [%sexp_of: t])
     )
     | Ok () ->
       check_compilation (t.setup ^ t.shouldn't_compile)
       >>| function
       | Error _ -> None
-      | Ok () -> Some (Error.create "unexpectedly compiled" t <:sexp_of<t>>)
+      | Ok () -> Some (Error.create "unexpectedly compiled" t [%sexp_of: t])
 end
 
 let tests : Test.t list = [

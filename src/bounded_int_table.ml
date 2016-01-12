@@ -10,7 +10,7 @@ module Entry = struct
     (* The index in [defined_entries] where this [Entry.t] is placed. *)
     ; mutable defined_entries_index : int;
     }
-  with fields, sexp_of
+  [@@deriving fields, sexp_of]
 end
 
 type ('key, 'data) t_detailed =
@@ -21,7 +21,7 @@ type ('key, 'data) t_detailed =
   ; mutable length  : int
   (* [(key, data)] is in the table iff
      {[
-       entries_by_key.( key_to_int key ) = { key; data }
+       entries_by_key.( key_to_int key ) = Some { key; data; _ }
      ]}
   *)
   ; entries_by_key  : ('key, 'data) Entry.t option array
@@ -30,7 +30,7 @@ type ('key, 'data) t_detailed =
      sparse. *)
   ; defined_entries : ('key, 'data) Entry.t option array
   }
-with fields, sexp_of
+[@@deriving fields, sexp_of]
 
 type ('a, 'b) t = ('a, 'b) t_detailed
 
@@ -74,7 +74,7 @@ let invariant invariant_key invariant_data t =
     assert (Array.equal entries entries' ~equal:phys_equal)
   with exn ->
     let sexp_of_key = sexp_of_key t in
-    failwiths "invariant failed" (exn, t) <:sexp_of< exn * (key, _) t_detailed >>
+    failwiths "invariant failed" (exn, t) [%sexp_of: exn * (key, _) t_detailed]
 ;;
 
 let debug = ref false
@@ -85,7 +85,7 @@ let is_empty t = length t = 0
 
 let create ?sexp_of_key ~num_keys ~key_to_int () =
   if num_keys < 0
-  then failwiths "num_keys must be nonnegative" num_keys <:sexp_of< int >>;
+  then failwiths "num_keys must be nonnegative" num_keys [%sexp_of: int];
   let t =
     { num_keys
     ; sexp_of_key
@@ -122,9 +122,13 @@ let fold t ~init ~f =
   loop 0 init
 ;;
 
-let iter t ~f = fold t ~init:() ~f:(fun ~key ~data () -> f ~key ~data)
+let iteri t ~f = fold t ~init:() ~f:(fun ~key ~data () -> f ~key ~data)
 
-let iter_vals t ~f = iter t ~f:(fun ~key:_ ~data -> f data)
+(* DEPRECATED - leaving here for a little while so as to ease the transition for
+   external core users. (But marking as deprecated in the mli *)
+let iter = iteri
+
+let iter_vals t ~f = iteri t ~f:(fun ~key:_ ~data -> f data)
 
 let map_entries t ~f = fold t ~init:[] ~f:(fun ~key ~data ac -> f ~key ~data :: ac)
 
@@ -146,7 +150,7 @@ module Serialized = struct
     { num_keys : int
     ; alist    : ('key * 'data) list
     }
-  with bin_io, sexp
+  [@@deriving bin_io, sexp]
 end
 
 let to_serialized t =
@@ -171,10 +175,14 @@ let entry_opt t key =
     let sexp_of_key = sexp_of_key t in
     failwiths "key's index out of range"
       (key, index, `Should_be_between_0_and (t.num_keys - 1))
-      <:sexp_of< key * int * [ `Should_be_between_0_and of int ] >>
+      [%sexp_of: key * int * [ `Should_be_between_0_and of int ]]
 ;;
 
-let find t key = Option.map (entry_opt t key) ~f:Entry.data
+let find t key =
+  match entry_opt t key with
+  | None   -> None
+  | Some e -> Some (Entry.data e)
+;;
 
 let find_exn t key =
   match entry_opt t key with
@@ -182,7 +190,7 @@ let find_exn t key =
   | None ->
     let sexp_of_key = sexp_of_key t in
     failwiths "Bounded_int_table.find_exn got unknown key" (key, t)
-      <:sexp_of< key * (key, _) t >>
+      [%sexp_of: key * (key, _) t]
 ;;
 
 let mem t key = is_some (entry_opt t key)
@@ -225,7 +233,7 @@ let add_exn t ~key ~data =
   | `Duplicate _ ->
     let sexp_of_key = sexp_of_key t in
     failwiths "Bounded_int_table.add_exn of key whose index is already present"
-      (key, t.key_to_int key) <:sexp_of< key * int >>
+      (key, t.key_to_int key) [%sexp_of: key * int]
 ;;
 
 let remove t key =
@@ -242,7 +250,7 @@ let remove t key =
       | None ->
         let sexp_of_key = sexp_of_key t in
         failwiths "Bounded_int_table.remove bug" (key, last, t)
-          <:sexp_of< key * int * (key, _) t_detailed >>
+          [%sexp_of: key * int * (key, _) t_detailed]
       | Some entry_to_put_in_hole as entry_to_put_in_hole_opt ->
         t.defined_entries.( hole ) <- entry_to_put_in_hole_opt;
         entry_to_put_in_hole.defined_entries_index <- hole;
@@ -254,7 +262,7 @@ let remove t key =
 
 let existsi t ~f =
   with_return (fun r ->
-    iter t ~f:(fun ~key ~data -> if f ~key ~data then r.return true);
+    iteri t ~f:(fun ~key ~data -> if f ~key ~data then r.return true);
     false)
 ;;
 
@@ -275,7 +283,7 @@ let equal key_equal data_equal t1 t2 =
 ;;
 
 (* test [exists{,i}], [for_all{,i}] *)
-TEST_MODULE = struct
+let%test_module _ = (module struct
   let of_list keys =
     let t = create ~num_keys:10 ~key_to_int:Fn.id ~sexp_of_key:Int.sexp_of_t () in
     List.iter keys ~f:(fun key -> add_exn t ~key ~data:key);
@@ -292,31 +300,31 @@ TEST_MODULE = struct
     && exists (of_list [1; 2; 3]) ~f:(fun data -> data = 3) = true
   ;;
 
-  TEST = test_exists_like_function (fun t ~f -> existsi t ~f:(fun ~key:_ ~data -> f data))
+  let%test _ = test_exists_like_function (fun t ~f -> existsi t ~f:(fun ~key:_ ~data -> f data))
 
-  TEST = test_exists_like_function exists
+  let%test _ = test_exists_like_function exists
 
-  TEST =
+  let%test _ =
     test_exists_like_function (fun t ~f ->
       not (for_alli t ~f:(fun ~key:_ ~data -> not (f data))))
   ;;
 
-  TEST =
-    test_exists_like_function (fun t ~f -> not (for_all t ~f:(fun data -> not (f data))));
+  let%test _ =
+    test_exists_like_function (fun t ~f -> not (for_all t ~f:(fun data -> not (f data))))
   ;;
 
   let equal_of_list l1 l2 = equal Int.equal Int.equal (of_list l1) (of_list l2)
 
-  TEST = equal_of_list [] [] = true
-  TEST = equal_of_list [] [1] = false
-  TEST = equal_of_list [1] [] = false
-  TEST = equal_of_list [1] [1] = true
-  TEST = equal_of_list [1] [1; 2] = false
-  TEST = equal_of_list [1; 2] [1; 2] = true
-  TEST = equal_of_list [1; 2] [2; 1] = true
+  let%test _ = equal_of_list [] [] = true
+  let%test _ = equal_of_list [] [1] = false
+  let%test _ = equal_of_list [1] [] = false
+  let%test _ = equal_of_list [1] [1] = true
+  let%test _ = equal_of_list [1] [1; 2] = false
+  let%test _ = equal_of_list [1; 2] [1; 2] = true
+  let%test _ = equal_of_list [1; 2] [2; 1] = true
 
   (* test [equal] between tables that have different [to_int] functions. *)
-  TEST_UNIT =
+  let%test_unit _ =
     let of_list ~offset keys =
       let t = create ~num_keys:10 ~key_to_int:(fun i -> i + offset) () in
       List.iter keys ~f:(fun key -> add_exn t ~key ~data:key);
@@ -332,12 +340,12 @@ TEST_MODULE = struct
     assert (equal t1 t2);
     assert (not (equal t0 t3));
     assert (not (equal t1 t3));
-    assert (not (equal t2 t3));
+    assert (not (equal t2 t3))
   ;;
-end
+end)
 
 module With_key (Key : sig
-    type t with bin_io, sexp
+    type t [@@deriving bin_io, sexp]
     val to_int : t -> int
   end) = struct
 
@@ -372,7 +380,7 @@ module With_key (Key : sig
   ;;
 
   include Binable.Of_binable1
-      (struct type 'data t = (Key.t, 'data) Serialized.t with bin_io end)
+      (struct type 'data t = (Key.t, 'data) Serialized.t [@@deriving bin_io] end)
       (struct
         type 'data t = 'data table
 
@@ -383,35 +391,35 @@ module With_key (Key : sig
 end
 
 (* test [With_key] *)
-TEST_MODULE = struct
+let%test_module _ = (module struct
   include (With_key (Int))
 
-  TEST = is_empty (create ~num_keys:1)
+  let%test _ = is_empty (create ~num_keys:1)
 
-  TEST = Result.is_ok (of_alist [ ])
-  TEST = Result.is_ok (of_alist [ (1, 1) ])
-  TEST = Result.is_error (of_alist [ (1, 1); (1, 2) ])
+  let%test _ = Result.is_ok (of_alist [ ])
+  let%test _ = Result.is_ok (of_alist [ (1, 1) ])
+  let%test _ = Result.is_error (of_alist [ (1, 1); (1, 2) ])
 
-  TEST = is_empty (of_alist_exn [])
+  let%test _ = is_empty (of_alist_exn [])
 
-  TEST_UNIT =
+  let%test_unit _ =
     let t = of_alist_exn [ (1, 2) ] in
     assert (length t = 1);
     assert (keys t = [1]);
-    assert (data t = [2]);
+    assert (data t = [2])
   ;;
 
-  TEST_UNIT =
+  let%test_unit _ =
     let t = of_alist_exn [ (1, 2); (3, 4) ] in
     assert (length t = 2);
     assert (keys t = [1; 3] || keys t = [3; 1]);
-    assert (data t = [2; 4] || data t = [4; 2]);
+    assert (data t = [2; 4] || data t = [4; 2])
   ;;
-end
+end)
 
 let filter_mapi t ~f =
   let result = create_like t in
-  iter t ~f:(fun ~key ~data ->
+  iteri t ~f:(fun ~key ~data ->
     match f ~key ~data with
     | None -> ()
     | Some data -> add_exn result ~key ~data);
@@ -427,7 +435,7 @@ let mapi t ~f = filter_mapi t ~f:(fun ~key ~data -> Some (f ~key ~data))
 let map t ~f = mapi t ~f:(ignore_key f)
 
 
-TEST_MODULE = struct
+let%test_module _ = (module struct
   include (With_key (Int))
 
   let equal = equal Int.equal Int.equal
@@ -436,11 +444,11 @@ TEST_MODULE = struct
     equal (filter_map (of_alist_exn input) ~f) (of_alist_exn expect)
   ;;
 
-  TEST = test_filter_map [] ~f:(fun _ -> assert false) []
-  TEST = test_filter_map [1, 2] ~f:(fun _ -> None) []
-  TEST = test_filter_map [1, 2] ~f:(fun x -> Some x) [1, 2]
-  TEST = test_filter_map [1, 2] ~f:(fun x -> Some (x + 1)) [1, 3]
-  TEST =
+  let%test _ = test_filter_map [] ~f:(fun _ -> assert false) []
+  let%test _ = test_filter_map [1, 2] ~f:(fun _ -> None) []
+  let%test _ = test_filter_map [1, 2] ~f:(fun x -> Some x) [1, 2]
+  let%test _ = test_filter_map [1, 2] ~f:(fun x -> Some (x + 1)) [1, 3]
+  let%test _ =
     test_filter_map [(1, 2); (3, 4)] ~f:(fun x -> if x = 2 then Some x else None) [1, 2]
   ;;
 
@@ -453,187 +461,189 @@ TEST_MODULE = struct
     && test [(1, 2); (3, 4)] ~f:((+) 5)   [(1, 7); (3, 9)]
   ;;
 
-  TEST = test_map_like (fun t ~f -> mapi t ~f:(fun ~key:_ ~data -> f data))
-  TEST = test_map_like map
-end
+  let%test _ = test_map_like (fun t ~f -> mapi t ~f:(fun ~key:_ ~data -> f data))
+  let%test _ = test_map_like map
+end)
 
+let%test_module _ =
+  (module struct
+    let () = debug := true
 
-TEST_MODULE = struct
-  let () = debug := true
+    let%test_unit _ =
+      (* Check that [set] replaces the key. *)
+      let t = create ~num_keys:1 ~key_to_int:(fun _ -> 0) () in
+      set t ~key:13 ~data:();
+      set t ~key:14 ~data:();
+      assert (keys t = [14])
+    ;;
 
-  TEST_UNIT =
-    (* Check that [set] replaces the key. *)
-    let t = create ~num_keys:1 ~key_to_int:(fun _ -> 0) () in
-    set t ~key:13 ~data:();
-    set t ~key:14 ~data:();
-    assert (keys t = [14]);
-  ;;
+    let create ~num_keys : (int, _) t = create ~num_keys ~key_to_int:Fn.id ()
 
-  let create ~num_keys : (int, _) t = create ~num_keys ~key_to_int:Fn.id ()
+    let assert_empty t =
+      assert (length t = 0);
+      assert (to_alist t = []);
+      assert (keys t = []);
+      assert (data t = []);
+      for i = 0 to t.num_keys - 1 do
+        assert (Option.is_none t.entries_by_key.( i ));
+        assert (Option.is_none t.defined_entries.( i ));
+      done
+    ;;
 
-  let assert_empty t =
-    assert (length t = 0);
-    assert (to_alist t = []);
-    assert (keys t = []);
-    assert (data t = []);
-    for i = 0 to t.num_keys - 1 do
-      assert (Option.is_none t.entries_by_key.( i ));
-      assert (Option.is_none t.defined_entries.( i ));
-    done
-  ;;
+    let%test_unit _ =
+      begin
+        try ignore (create ~num_keys:(-1)); assert false with _ -> ()
+      end
 
-  TEST_UNIT =
-    begin
-      try ignore (create ~num_keys:(-1)); assert false with _ -> ()
-    end;
+    let%test_unit _ = ignore (create ~num_keys:0)
+    let%test_unit _ = ignore (create ~num_keys:1)
+    let%test_unit _ = ignore (create ~num_keys:10_000)
 
-  TEST_UNIT = ignore (create ~num_keys:0)
-  TEST_UNIT = ignore (create ~num_keys:1)
-  TEST_UNIT = ignore (create ~num_keys:10_000)
+    let%test_unit _ =
+      let num_keys = 10 in
+      let t = create ~num_keys in
+      let key_is_valid key = try ignore (find t key); true with _ -> false in
+      assert (not (key_is_valid (-1)));
+      for key = 0 to num_keys - 1 do
+        assert (key_is_valid key);
+        assert (is_none (find t key));
+      done;
+      assert (not (key_is_valid num_keys));
+      assert_empty t
+    ;;
 
-  TEST_UNIT =
-    let num_keys = 10 in
-    let t = create ~num_keys in
-    let key_is_valid key = try ignore (find t key); true with _ -> false in
-    assert (not (key_is_valid (-1)));
-    for key = 0 to num_keys - 1 do
-      assert (key_is_valid key);
-      assert (is_none (find t key));
-    done;
-    assert (not (key_is_valid num_keys));
-    assert_empty t;
-  ;;
+    let table_data = data
 
-  let table_data = data
-
-  TEST_UNIT =
-    let num_keys = 10 in
-    let t = create ~num_keys in
-    let key = 0 in
-    let data = "zero" in
-    add_exn t ~key ~data;
-    assert (length t = 1);
-    assert (find t key = Some data);
-    for key = 1 to num_keys - 1 do
-      assert (find t key = None)
-    done;
-    assert (to_alist t = [(key, data)]);
-    assert (keys t = [key]);
-    assert (table_data t = [data]);
-    remove t key;
-    assert_empty t;
-  ;;
-
-  TEST_UNIT =
-    let num_keys = 10 in
-    let t = create ~num_keys in
-    let key = 0 in
-    let data = "zero" in
-    add_exn t ~key ~data:"bad";
-    set t ~key ~data;
-    assert (find t key = Some data);
-    for key = 1 to num_keys - 1 do
-      assert (find t key = None)
-    done;
-    assert (to_alist t = [(key, data)]);
-    assert (keys t = [key]);
-    assert (table_data t = [data]);
-  ;;
-
-  TEST_UNIT =
-    let num_keys = 10 in
-    let t = create ~num_keys in
-    for key = 1 to 5 do
-      add_exn t ~key ~data:(Int.to_string key)
-    done;
-    assert (length t = 5);
-    for key = 1 to 5 do
+    let%test_unit _ =
+      let num_keys = 10 in
+      let t = create ~num_keys in
+      let key = 0 in
+      let data = "zero" in
+      add_exn t ~key ~data;
+      assert (length t = 1);
+      assert (find t key = Some data);
+      for key = 1 to num_keys - 1 do
+        assert (find t key = None)
+      done;
+      assert (to_alist t = [(key, data)]);
+      assert (keys t = [key]);
+      assert (table_data t = [data]);
       remove t key;
-    done;
-    assert_empty t;
-  ;;
+      assert_empty t
+    ;;
 
-  TEST_UNIT =
-    let num_keys = 10 in
-    let t = create ~num_keys in
-    for key = 0 to num_keys - 1 do
-      add_exn t ~key ~data:(Int.to_string key)
-    done;
-    assert (length t = num_keys);
-    for key = 0 to num_keys - 1 do
-      remove t key;
-    done;
-    assert_empty t;
-  ;;
+    let%test_unit _ =
+      let num_keys = 10 in
+      let t = create ~num_keys in
+      let key = 0 in
+      let data = "zero" in
+      add_exn t ~key ~data:"bad";
+      set t ~key ~data;
+      assert (find t key = Some data);
+      for key = 1 to num_keys - 1 do
+        assert (find t key = None)
+      done;
+      assert (to_alist t = [(key, data)]);
+      assert (keys t = [key]);
+      assert (table_data t = [data])
+    ;;
 
-  (* Additional tests for [with binio], [with sexp], [t_of_sexp], [filter_map{,i}],
-     [map{,i}]. *)
-  TEST_UNIT =
-    let outer_sexp_of_t = sexp_of_t in
-    let module M = struct
-      module Table = With_key (Int)
-      type alist = (int * int) list with sexp_of
-      type t = int Table.t with sexp_of
-    end in
-    let open M in
-    let empty = Table.of_alist_exn [] in
-    let equal = equal Int.equal Int.equal in
-    for n = 0 to 5 do
-      let alist = List.init n ~f:(fun i -> (i, i)) in
-      let t = Table.of_alist_exn alist in
-      assert (equal t t);
-      List.iter alist ~f:(fun (key', data') ->
-        assert (existsi t ~f:(fun ~key ~data -> key = key' && data = data'));
-        assert (exists t ~f:(fun data -> data = data')));
-      assert (for_alli t ~f:(fun ~key ~data -> key = data));
-      assert (for_all t ~f:(fun data -> 0 <= data && data < n));
-      let sort alist = List.sort alist ~cmp:(fun (i, _) (i', _) -> compare i i')  in
-      let alist' = sort (to_alist t) in
-      if alist <> alist'
-      then failwiths "Bounded_int_table alist bug" (t, alist, alist')
-             <:sexp_of< t * alist * alist >>;
-      let sexp = sexp_of_t t in
-      let sexp' = outer_sexp_of_t Int.sexp_of_t Int.sexp_of_t t in
-      if sexp <> sexp'
-      then failwiths "Bounded_int_table sexp bug" (t, sexp, sexp')
-             <:sexp_of< t * Sexp.t * Sexp.t >>;
-      let ensure_equal message t t' =
-        if not (equal t t')
-        then failwiths "Bounded_int_table bug" (message, t, t')
-               <:sexp_of< string * t * t >>;
-      in
-      ensure_equal "t_of_sexp" t (Table.t_of_sexp Int.t_of_sexp sexp);
-      ensure_equal "filter_mapi" t (filter_mapi t ~f:(fun ~key ~data:_ -> Some key));
-      ensure_equal "filter_map" t (filter_map t ~f:(fun data -> Some data));
-      ensure_equal "filter_map None" empty (filter_map t ~f:(fun _ -> None));
-      ensure_equal "map" t (map t ~f:Fn.id);
-      ensure_equal "mapi" t (mapi t ~f:(fun ~key:_ ~data -> data));
-      ensure_equal "map and mapi"
-        (map t ~f:(fun x -> x + 1))
-        (mapi t ~f:(fun ~key:_ ~data -> data + 1));
-      let module T = struct
-        type t = int Table.t with bin_io, sexp
+    let%test_unit _ =
+      let num_keys = 10 in
+      let t = create ~num_keys in
+      for key = 1 to 5 do
+        add_exn t ~key ~data:(Int.to_string key)
+      done;
+      assert (length t = 5);
+      for key = 1 to 5 do
+        remove t key;
+      done;
+      assert_empty t
+    ;;
+
+    let%test_unit _ =
+      let num_keys = 10 in
+      let t = create ~num_keys in
+      for key = 0 to num_keys - 1 do
+        add_exn t ~key ~data:(Int.to_string key)
+      done;
+      assert (length t = num_keys);
+      for key = 0 to num_keys - 1 do
+        remove t key;
+      done;
+      assert_empty t
+    ;;
+
+    (* Additional tests for [[@@deriving binio]], [[@@deriving sexp]], [t_of_sexp],
+       [filter_map{,i}], [map{,i}]. *)
+    let%test_unit _ =
+      let outer_sexp_of_t = sexp_of_t in
+      let module M = struct
+        module Table = With_key (Int)
+        type alist = (int * int) list [@@deriving sexp_of]
+        type t = int Table.t [@@deriving sexp_of]
       end in
-      let binable_m = (module T : Binable.S with type t = T.t) in
-      ensure_equal "binio" t (Binable.of_string binable_m (Binable.to_string binable_m t))
-    done;
-  ;;
+      let open M in
+      let empty = Table.of_alist_exn [] in
+      let equal = equal Int.equal Int.equal in
+      for n = 0 to 5 do
+        let alist = List.init n ~f:(fun i -> (i, i)) in
+        let t = Table.of_alist_exn alist in
+        assert (equal t t);
+        List.iter alist ~f:(fun (key', data') ->
+          assert (existsi t ~f:(fun ~key ~data -> key = key' && data = data'));
+          assert (exists t ~f:(fun data -> data = data')));
+        assert (for_alli t ~f:(fun ~key ~data -> key = data));
+        assert (for_all t ~f:(fun data -> 0 <= data && data < n));
+        let sort alist = List.sort alist ~cmp:(fun (i, _) (i', _) -> compare i i')  in
+        let alist' = sort (to_alist t) in
+        if alist <> alist'
+        then failwiths "Bounded_int_table alist bug" (t, alist, alist')
+               [%sexp_of: t * alist * alist];
+        let sexp = sexp_of_t t in
+        let sexp' = outer_sexp_of_t Int.sexp_of_t Int.sexp_of_t t in
+        if sexp <> sexp'
+        then failwiths "Bounded_int_table sexp bug" (t, sexp, sexp')
+               [%sexp_of: t * Sexp.t * Sexp.t];
+        let ensure_equal message t t' =
+          if not (equal t t')
+          then failwiths "Bounded_int_table bug" (message, t, t')
+                 [%sexp_of: string * t * t];
+        in
+        ensure_equal "t_of_sexp" t (Table.t_of_sexp Int.t_of_sexp sexp);
+        ensure_equal "filter_mapi" t (filter_mapi t ~f:(fun ~key ~data:_ -> Some key));
+        ensure_equal "filter_map" t (filter_map t ~f:(fun data -> Some data));
+        ensure_equal "filter_map None" empty (filter_map t ~f:(fun _ -> None));
+        ensure_equal "map" t (map t ~f:Fn.id);
+        ensure_equal "mapi" t (mapi t ~f:(fun ~key:_ ~data -> data));
+        ensure_equal "map and mapi"
+          (map t ~f:(fun x -> x + 1))
+          (mapi t ~f:(fun ~key:_ ~data -> data + 1));
+        let module T = struct
+          type t = int Table.t [@@deriving bin_io, sexp]
+        end in
+        let binable_m = (module T : Binable.S with type t = T.t) in
+        ensure_equal "binio" t (Binable.of_string binable_m (Binable.to_string binable_m t))
+      done
+    ;;
 
-  (* Test [clear] *)
-  TEST_UNIT =
-    let num_keys = 10 in
-    let t = create ~num_keys in
-    clear t;
-    add_exn t ~key:5 ~data:"five";
-    assert (length t = 1);
-    assert (find t 5 = Some "five");
-    clear t;
-    assert_empty t;
-    for key = 0 to num_keys - 1 do
-      add_exn t ~key ~data:(Int.to_string key)
-    done;
-    assert (length t = num_keys);
-    clear t;
-    assert_empty t;
-  ;;
-end
+    (* Test [clear] *)
+    let%test_unit _ =
+      let num_keys = 10 in
+      let t = create ~num_keys in
+      clear t;
+      add_exn t ~key:5 ~data:"five";
+      assert (length t = 1);
+      assert (find t 5 = Some "five");
+      clear t;
+      assert_empty t;
+      for key = 0 to num_keys - 1 do
+        add_exn t ~key ~data:(Int.to_string key)
+      done;
+      assert (length t = num_keys);
+      clear t;
+      assert_empty t
+    ;;
+
+  end)
+;;

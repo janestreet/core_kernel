@@ -11,7 +11,7 @@ type t =
 | Oct
 | Nov
 | Dec
-with bin_io, sexp
+[@@deriving bin_io, sexp]
 
 include Comparable.S_binable with type t := t
 include Hashable.  S_binable with type t := t
@@ -41,6 +41,6 @@ module Stable : sig
   module V1 : sig
     type nonrec t = t =
       | Jan | Feb | Mar | Apr | May | Jun | Jul | Aug | Sep | Oct | Nov | Dec
-    with sexp, bin_io, compare
+    [@@deriving sexp, bin_io, compare]
   end
 end

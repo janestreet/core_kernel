@@ -1,6 +1,8 @@
 (** Basic types and definitions required throughout the system. *)
 open Sexplib
 
+include module type of Core_pervasives
+
 exception Bug of string
 
 (** Raised when finalization after an exception failed, too.
@@ -17,7 +19,7 @@ include module type of Perms.Export
     to have a call to [never_returns] at the call site, which makes it clear to readers
     what's going on. We do not intend to use this type for functions such as [failwithf]
     that always raise an exception. *)
-type never_returns = Never_returns.never_returns with sexp_of
+type never_returns = Never_returns.never_returns [@@deriving sexp_of]
 val never_returns : never_returns -> _
 
 (** {6 Error handling} *)
@@ -42,7 +44,7 @@ val is_some : 'a option -> bool
 
 (** {6 Functions from fn.ml} *)
 val (|!) : 'a -> ('a -> 'b) -> 'b
-val (|>) : 'a -> ('a -> 'b) -> 'b
+
 val ident : 'a -> 'a
 val const : 'a -> _ -> 'a
 val (==>) : bool -> bool -> bool
@@ -68,6 +70,9 @@ val failwithp
 val failwithf    : ('r, unit, string, unit -> _) format4 -> 'r
 val invalid_argf : ('r, unit, string, unit -> _) format4 -> 'r
 
+(** [Error.raise_s] *)
+val raise_s : Sexp.t -> _
+
 (** [Or_error.ok_exn] *)
 val ok_exn : 'a Or_error.t -> 'a
 
@@ -78,6 +83,9 @@ val error
   -> 'a
   -> ('a -> Sexp.t)
   -> _ Or_error.t
+
+(** [Or_error.error_s] *)
+val error_s : Sexp.t -> _ Or_error.t
 
 (** [with_return f] allows for something like the return statement in C within [f].  There
    are three ways [f] can terminate:
@@ -130,8 +138,6 @@ val with_return_option : ('a return -> unit) -> 'a option
     Note that 4.02 increased cases where objects are physically equal.
 *)
 val phys_equal : 'a -> 'a -> bool
-val (==) : [ `Consider_using_phys_equal ] -> [ `Consider_using_phys_equal ] -> [ `Consider_using_phys_equal ]
-val (!=) : [ `Consider_using_phys_equal ] -> [ `Consider_using_phys_equal ] -> [ `Consider_using_phys_equal ]
 
 (** [phys_same] is like [phys_equal], but with a more general type.  [phys_same] is useful
     when dealing with existential types, when one has a packed value and an unpacked value
@@ -147,50 +153,4 @@ val unstage : 'a Staged.t -> 'a
 
 (** Raised if malloc in C bindings fail (errno * size). *)
 exception C_malloc_exn of int * int
-
-(** {6 Deprecated operations}
-
-  The following section contains definitions that hide operations from the standard
-  library that are considered problematic or confusing, or simply redundant.
-*)
-
-(** {7 Overrides for Pervasives methods that need LargeFile support} *)
-
-val seek_out : [ `Deprecated_use_out_channel ] -> [ `Deprecated_use_out_channel ] -> [ `Deprecated_use_out_channel ]
-val pos_out : [ `Deprecated_use_out_channel ] -> [ `Deprecated_use_out_channel ]
-val out_channel_length : [ `Deprecated_use_out_channel ] -> [ `Deprecated_use_out_channel ]
-val seek_in : [ `Deprecated_use_in_channel ] -> [ `Deprecated_use_in_channel ] -> [ `Deprecated_use_in_channel ]
-val pos_in : [ `Deprecated_use_in_channel ] -> [ `Deprecated_use_in_channel ]
-val in_channel_length : [ `Deprecated_use_in_channel ] -> [ `Deprecated_use_in_channel ]
-val modf : [ `Deprecated_use_float_modf ] -> [ `Deprecated_use_float_modf ]
-val truncate : [ `Deprecated_use_float_iround_towards_zero ] -> [ `Deprecated_use_float_iround_towards_zero ]
-
-(** we have our own version of these two, the INRIA version doesn't release the runtime
-    lock.  *)
-val close_in : [ `Deprecated_use_in_channel ] -> [ `Deprecated_use_in_channel ]
-val close_out : [ `Deprecated_use_out_channel ] -> [ `Deprecated_use_out_channel ]
-
-val ( & )  : [ `Deprecated_use_two_ampersands ] -> [ `Deprecated_use_two_ampersands ] -> [ `Deprecated_use_two_ampersands ]
-val ( or ) : [ `Deprecated_use_pipe_pipe ]
-val max_int : [ `Deprecated_use_int_module ]
-val min_int : [ `Deprecated_use_int_module ]
-
-val ceil            : [ `Deprecated_use__Float__round_up ] -> [ `Deprecated_use__Float__round_up ]
-val floor           : [ `Deprecated_use__Float__round_down ] -> [ `Deprecated_use__Float__round_down ]
-val abs_float       : [ `Deprecated_use_float_module ] -> [ `Deprecated_use_float_module ]
-val mod_float       : [ `Deprecated_use_float_module ] -> [ `Deprecated_use_float_module ]
-val frexp           : [ `Deprecated_use_float_module ] -> [ `Deprecated_use_float_module ] -> [ `Deprecated_use_float_module ]
-val ldexp           : [ `Deprecated_use_float_module ] -> [ `Deprecated_use_float_module ] -> [ `Deprecated_use_float_module ]
-val float_of_int    : [ `Deprecated_use_float_module ] -> [ `Deprecated_use_float_module ]
-val max_float       : [ `Deprecated_use_float_module ]
-val min_float       : [ `Deprecated_use_float_module ]
-val epsilon_float   : [ `Deprecated_use_float_module ]
-val classify_float  : [ `Deprecated_use_float_module ] -> [ `Deprecated_use_float_module ]
-val string_of_float : [ `Deprecated_use_float_module ] -> [ `Deprecated_use_float_module ]
-val float_of_string : [ `Deprecated_use_float_module ] -> [ `Deprecated_use_float_module ]
-val infinity        : [ `Deprecated_use_float_module ]
-val neg_infinity    : [ `Deprecated_use_float_module ]
-val nan             : [ `Deprecated_use_float_module ]
-val int_of_float    : [ `Deprecated_use_float_module ] -> [ `Deprecated_use_float_module ]
-type fpclass = [ `Deprecated_use_float_module ]
 

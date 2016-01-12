@@ -17,8 +17,8 @@ external id : 'a -> 'a = "%identity"
 external ( |! ) : 'a -> ( 'a -> 'b) -> 'b = "%revapply"
 external ( |> ) : 'a -> ( 'a -> 'b) -> 'b = "%revapply"
 
-TEST = 1 |> fun x -> x = 1
-TEST = 1 |> fun x -> x + 1 |> fun y -> y = 2
+let%test _ = 1 |> fun x -> x = 1
+let%test _ = 1 |> fun x -> x + 1 |> fun y -> y = 2
 
 (* The typical use case for these functions is to pass in functional arguments and get
    functions as a result. *)
@@ -31,6 +31,6 @@ let rec apply_n_times ~n f x =
   then x
   else apply_n_times ~n:(n - 1) f (f x)
 
-TEST = 0  = apply_n_times ~n:0 (fun _ -> assert false) 0
-TEST = 0  = apply_n_times ~n:(-3) (fun _ -> assert false) 0
-TEST = 10 = apply_n_times ~n:10 ((+) 1) 0
+let%test _ = 0  = apply_n_times ~n:0 (fun _ -> assert false) 0
+let%test _ = 0  = apply_n_times ~n:(-3) (fun _ -> assert false) 0
+let%test _ = 10 = apply_n_times ~n:10 ((+) 1) 0

@@ -3,7 +3,7 @@
 
 (** [t_of_sexp] is not supported, because of the difficulty involved in recreating the
     comparison function. *)
-type 'a t with sexp_of
+type 'a t [@@deriving sexp_of]
 
 (** Even though [min_elt], [max_elt], and [to_list] are in [Container.S1], they are
     documented separately to make sure there is no confusion. *)

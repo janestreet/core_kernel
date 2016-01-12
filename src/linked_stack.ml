@@ -5,7 +5,7 @@ type 'a t =
   { mutable elts : 'a list;
     mutable length : int;
   }
-with bin_io, fields, sexp_of
+[@@deriving bin_io, fields, sexp_of]
 
 let sexp_of_t_internal = sexp_of_t
 let sexp_of_t = `Rebound_later
@@ -18,10 +18,12 @@ let invariant a_invariant t : unit =
       ~elts:(check (fun elts -> List.iter elts ~f:a_invariant))
       ~length:(check (fun length -> assert (length = List.length t.elts)))
   with exn ->
-    failwiths "Linked_stack.invariant failed" (exn, t) <:sexp_of< exn * _ t_internal >>
+    failwiths "Linked_stack.invariant failed" (exn, t) [%sexp_of: exn * _ t_internal]
 ;;
 
 let create () = { elts = []; length = 0; }
+
+let singleton a = { elts = [ a ]; length = 1 }
 
 (* We always want to set elts and length at the same time.  Having a function to do so
    helps us to remember. *)

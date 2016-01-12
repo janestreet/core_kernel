@@ -1,4 +1,4 @@
-TEST_MODULE = (struct
+let%test_module _ = (module (struct
   open Common
   open Sexplib.Conv
   module Sexp = Sexplib.Sexp
@@ -13,12 +13,12 @@ TEST_MODULE = (struct
 
   let () = show_messages := false
 
-  type nonrec 'a t = 'a t with bin_io, sexp
+  type nonrec 'a t = 'a t [@@deriving bin_io, sexp]
 
   let capacity = capacity
   let set_capacity = set_capacity
 
-  TEST_UNIT =
+  let%test_unit _ =
     let t = create () in
     assert (capacity t = 1);
     enqueue t 1;
@@ -36,7 +36,7 @@ TEST_MODULE = (struct
     enqueue t 4;
     enqueue t 5;
     set_capacity t 0;
-    assert (capacity t = 8);
+    assert (capacity t = 8)
   ;;
 
 
@@ -45,26 +45,26 @@ TEST_MODULE = (struct
     let t'   = t_of_sexp Int.t_of_sexp sexp in
     assert (to_list t = to_list t')
   ;;
-  TEST_UNIT = round_trip_sexp (of_list [1; 2; 3; 4])
-  TEST_UNIT = round_trip_sexp (create ())
-  TEST_UNIT = round_trip_sexp (of_list [])
+  let%test_unit _ = round_trip_sexp (of_list [1; 2; 3; 4])
+  let%test_unit _ = round_trip_sexp (create ())
+  let%test_unit _ = round_trip_sexp (of_list [])
 
   let invariant = invariant
 
   let create = create
 
   let singleton = singleton
-  TEST_UNIT =
+  let%test_unit _ =
     let t = singleton 7 in
     assert (length t = 1);
     assert (capacity t = 1);
     assert (dequeue t = Some 7);
-    assert (dequeue t = None);
+    assert (dequeue t = None)
   ;;
 
   let get = get
   let set = set
-  TEST_UNIT =
+  let%test_unit _ =
     let t = create () in
     let get_opt t i = try Some (get t i) with _ -> None in
     assert (get_opt t 0 = None);
@@ -85,11 +85,11 @@ TEST_MODULE = (struct
     set t 0 3;
     assert (get_opt t 0 = Some 3);
     assert (get_opt t 1 = Some 2);
-    List.iter [ -1; 2 ] ~f:(fun i -> assert (does_raise (fun () -> set t i 0)));
+    List.iter [ -1; 2 ] ~f:(fun i -> assert (does_raise (fun () -> set t i 0)))
   ;;
 
   let map = map
-  TEST_UNIT =
+  let%test_unit _ =
     for i = 0 to 5 do
       let l = List.init i ~f:Fn.id in
       let t = of_list l in
@@ -99,12 +99,12 @@ TEST_MODULE = (struct
     done
   ;;
 
-  TEST_UNIT =
+  let%test_unit _ =
     let t = create () in
     let t' = map t ~f:(fun x -> x * 2) in
     assert (length t' = length t);
     assert (length t' = 0);
-    assert (to_list t' = []);
+    assert (to_list t' = [])
   ;;
 
   include Container_unit_tests.Test_S1 (Core_queue)
@@ -113,30 +113,53 @@ TEST_MODULE = (struct
   let enqueue     = enqueue
   let peek        = peek
   let peek_exn    = peek_exn
-  TEST_UNIT =
+  let last        = last
+  let last_exn    = last_exn
+  let%test_unit _ =
     let t = create () in
     assert (is_none (peek t));
+    assert (is_none (last t));
     enqueue t 1;
     enqueue t 2;
     assert (peek t = Some 1);
     assert (peek_exn t = 1);
+    assert (last t = Some 2);
+    assert (last_exn t = 2);
     assert (dequeue_exn t = 1);
     assert (dequeue_exn t = 2);
     assert (does_raise (fun () -> dequeue_exn t));
     assert (does_raise (fun () -> peek_exn t));
+    assert (does_raise (fun () -> last_exn t))
+  ;;
+
+  let enqueue_all = enqueue_all
+  let%test_unit _ =
+    let t = create () in
+    enqueue_all t [1; 2; 3];
+    assert (dequeue_exn t = 1);
+    assert (dequeue_exn t = 2);
+    assert (last t = Some 3);
+    enqueue_all t [4; 5];
+    assert (last t = Some 5);
+    assert (dequeue_exn t = 3);
+    assert (dequeue_exn t = 4);
+    assert (dequeue_exn t = 5);
+    assert (does_raise (fun () -> dequeue_exn t));
+    enqueue_all t [];
+    assert (does_raise (fun () -> dequeue_exn t));
   ;;
 
   let of_list = of_list
   let to_list = to_list
 
-  TEST_UNIT =
+  let%test_unit _ =
     for i = 0 to 4 do
       let list = List.init i ~f:Fn.id in
       assert (Poly.equal (to_list (of_list list)) list);
-    done;
+    done
   ;;
 
-  TEST =
+  let%test _ =
     let t = create () in
     begin
       for i = 1 to 5 do enqueue t i done;
@@ -147,25 +170,25 @@ TEST_MODULE = (struct
   let of_array = of_array
   let to_array = to_array
 
-  TEST_UNIT =
+  let%test_unit _ =
     for len = 0 to 4 do
       let array = Array.init len ~f:Fn.id in
       assert (Poly.equal (to_array (of_array array)) array);
-    done;
+    done
   ;;
 
   let compare = compare
   let equal   = equal
 
-  TEST_MODULE "comparisons" = struct
+  let%test_module "comparisons" = (module struct
 
     let sign x = if x < 0 then ~-1 else if x > 0 then 1 else 0
 
     let test t1 t2 =
-      <:test_result< bool >>
+      [%test_result: bool]
         (equal Int.equal t1 t2)
         ~expect:(List.equal ~equal:Int.equal (to_list t1) (to_list t2));
-      <:test_result< int >>
+      [%test_result: int]
         (sign (compare Int.compare t1 t2))
         ~expect:(sign (List.compare Int.compare (to_list t1) (to_list t2)))
     ;;
@@ -185,42 +208,42 @@ TEST_MODULE = (struct
       ]
     ;;
 
-    TEST_UNIT = (* [phys_equal] inputs *)
+    let%test_unit _ = (* [phys_equal] inputs *)
       List.iter lists ~f:(fun list ->
         let t = of_list list in
         test t t)
     ;;
 
-    TEST_UNIT =
+    let%test_unit _ =
       List.iter lists ~f:(fun list1 ->
         List.iter lists ~f:(fun list2 ->
           test (of_list list1) (of_list list2)))
     ;;
-  end
+  end)
 
   let clear          = clear
   let concat_map     = concat_map
 
   let blit_transfer  = blit_transfer
 
-  TEST_UNIT =
+  let%test_unit _ =
     let q_list = [1; 2; 3; 4] in
     let q = of_list q_list in
     let q' = create () in
     blit_transfer ~src:q ~dst:q' ();
     assert (to_list q' = q_list);
-    assert (to_list q = []);
+    assert (to_list q = [])
   ;;
 
-  TEST_UNIT =
+  let%test_unit _ =
     let q = of_list [1; 2; 3; 4] in
     let q' = create () in
     blit_transfer ~src:q ~dst:q' ~len:2 ();
     assert (to_list q' = [1; 2]);
-    assert (to_list q  = [3; 4]);
+    assert (to_list q  = [3; 4])
   ;;
 
-  TEST_UNIT "blit_transfer on wrapped queues" =
+  let%test_unit "blit_transfer on wrapped queues" =
     let list = [1; 2; 3; 4] in
     let q = of_list list in
     let q' = copy q in
@@ -233,7 +256,7 @@ TEST_MODULE = (struct
     enqueue q 6;
     blit_transfer ~src:q ~dst:q' ~len:3 ();
     assert (to_list q' = [4; 3; 4; 5]);
-    assert (to_list q = [6]);
+    assert (to_list q = [6])
   ;;
 
   let copy           = copy
@@ -243,9 +266,9 @@ TEST_MODULE = (struct
   let filter_map     = filter_map
   let iter           = iter
 
-  TEST_MODULE "Linked_queue bisimulation" = struct
+  let%test_module "Linked_queue bisimulation" = (module struct
     module type Queue_intf = sig
-      type 'a t with sexp_of
+      type 'a t [@@deriving sexp_of]
 
       val create : unit -> 'a t
       val enqueue : 'a t -> 'a -> unit
@@ -272,15 +295,15 @@ TEST_MODULE = (struct
     end
 
     let this_to_string this_t =
-      Sexp.to_string (this_t |> <:sexp_of< int This_queue.t >>)
+      Sexp.to_string (this_t |> [%sexp_of: int This_queue.t])
     ;;
 
     let that_to_string that_t =
-      Sexp.to_string (that_t |> <:sexp_of< int That_queue.t >>)
+      Sexp.to_string (that_t |> [%sexp_of: int That_queue.t])
     ;;
 
     let array_string arr =
-      Sexp.to_string (arr |> <:sexp_of< int array >>)
+      Sexp.to_string (arr |> [%sexp_of: int array])
     ;;
 
     let create () = (This_queue.create (), That_queue.create ())
@@ -446,9 +469,9 @@ TEST_MODULE = (struct
       let that_l = make_list That_queue.fold t_b in
       if this_l <> that_l
       then failwithf "error in fold:  %s (from %s) <> %s (from %s)"
-             (Sexp.to_string (this_l |> <:sexp_of< int list >>))
+             (Sexp.to_string (this_l |> [%sexp_of: int list]))
              (this_to_string t_a)
-             (Sexp.to_string (that_l |> <:sexp_of< int list >>))
+             (Sexp.to_string (that_l |> [%sexp_of: int list]))
              (that_to_string t_b)
              ()
     ;;
@@ -463,7 +486,7 @@ TEST_MODULE = (struct
              ()
     ;;
 
-    TEST_UNIT =
+    let%test_unit _ =
       let t = create () in
       let rec loop ~all_ops ~non_empty_ops =
         if all_ops <= 0 && non_empty_ops <= 0
@@ -511,29 +534,29 @@ TEST_MODULE = (struct
       in
       loop ~all_ops:7_500 ~non_empty_ops:5_000
     ;;
-  end
+  end)
 
   let binary_search = binary_search
   let binary_search_segmented = binary_search_segmented
 
-  TEST_UNIT "modification-during-iteration" =
+  let%test_unit "modification-during-iteration" =
     let x = `A 0 in
     let t = of_list [x; x] in
     let f (`A n) = ignore n; clear t in
-    assert (does_raise (fun () -> iter t ~f));
+    assert (does_raise (fun () -> iter t ~f))
   ;;
 
-  TEST_UNIT "more-modification-during-iteration" =
+  let%test_unit "more-modification-during-iteration" =
     let nested_iter_okay = ref false in
     let t = of_list [ `iter; `clear ] in
     assert (does_raise (fun () ->
       iter t ~f:(function
         | `iter -> iter t ~f:ignore; nested_iter_okay := true
         | `clear -> clear t)));
-    assert !nested_iter_okay;
+    assert !nested_iter_okay
   ;;
 
-  TEST_UNIT "modification-during-filter" =
+  let%test_unit "modification-during-filter" =
     let reached_unreachable = ref false in
     let t = of_list [`clear; `unreachable] in
     let f x =
@@ -542,10 +565,10 @@ TEST_MODULE = (struct
       | `unreachable -> reached_unreachable := true; false
     in
     assert (does_raise (fun () -> filter t ~f));
-    assert (not !reached_unreachable);
+    assert (not !reached_unreachable)
   ;;
 
-  TEST_UNIT "modification-during-filter-inplace" =
+  let%test_unit "modification-during-filter-inplace" =
     let reached_unreachable = ref false in
     let t = of_list [`drop_this; `enqueue_new_element; `unreachable] in
     let f x =
@@ -560,10 +583,10 @@ TEST_MODULE = (struct
     (* even though we said to drop the first element, the aborted call to [filter_inplace]
        shouldn't have made that change *)
     assert (peek_exn t = `drop_this);
-    assert (not !reached_unreachable);
+    assert (not !reached_unreachable)
   ;;
 
-  TEST_UNIT "filter-inplace-during-iteration" =
+  let%test_unit "filter-inplace-during-iteration" =
     let reached_unreachable = ref false in
     let t = of_list [`filter_inplace; `unreachable] in
     let f x =
@@ -572,9 +595,9 @@ TEST_MODULE = (struct
       | `unreachable -> reached_unreachable := true
     in
     assert (does_raise (fun () -> iter t ~f));
-    assert (not !reached_unreachable);
+    assert (not !reached_unreachable)
   ;;
 end
 (** This signature is here to remind us to update the unit tests whenever we change
     [Core_queue]. *)
-: module type of Core_queue)
+: module type of Core_queue))

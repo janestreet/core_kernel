@@ -3,7 +3,7 @@ module Stable = struct
     type ('a, 'b) t =
     | Ok of 'a
     | Error of 'b
-    with sexp, bin_io, compare
+    [@@deriving sexp, bin_io, compare]
 
     let map x ~f1 ~f2 =
       match x with
@@ -16,7 +16,7 @@ module Stable = struct
     open Sexplib.Std
     open Bin_prot.Std
 
-    type t = (string, int) V1.t with sexp, bin_io, compare
+    type t = (string, int) V1.t [@@deriving sexp, bin_io, compare]
 
     let equal = (=)
 

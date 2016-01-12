@@ -18,7 +18,7 @@ module Stable = struct
         | Thu
         | Fri
         | Sat
-      with bin_io, compare
+      [@@deriving bin_io, compare]
 
       let hash = Hashtbl.hash
 
@@ -83,7 +83,7 @@ module Stable = struct
 
       (* this is in T rather than outside so that the later functor application to build maps
          uses this sexp representation *)
-      include Sexpable.Of_stringable (struct
+      include Sexpable.Stable.Of_stringable.V1 (struct
           type nonrec t = t
           let of_string = of_string
           let to_string = to_string
@@ -100,8 +100,8 @@ module Stable = struct
     include Stable_containers.Hashable.V1.Make   (Unstable)
   end
 
-  TEST_MODULE "Day_of_week.V1" =
-    Stable_unit_test.Make (struct
+  let%test_module "Day_of_week.V1" =
+    (module Stable_unit_test.Make (struct
       include V1
 
       let equal a b = (compare a b) = 0
@@ -115,7 +115,7 @@ module Stable = struct
         ; Fri, "FRI", "\005"
         ; Sat, "SAT", "\006"
         ]
-    end)
+    end))
 end
 
 include Stable.V1.Unstable
@@ -129,9 +129,9 @@ let weekends = [ Sat; Sun ]
    the order = the order in t at runtime *)
 let all = [ Sun; Mon; Tue; Wed; Thu; Fri; Sat ]
 
-TEST = List.is_sorted all ~compare
+let%test _ = List.is_sorted all ~compare
 
-TEST "to_string_long output parses with of_string" =
+let%test "to_string_long output parses with of_string" =
   List.for_all all ~f:(fun d -> d = (to_string_long d |> of_string))
 
 let of_int i = try Some (of_int_exn i) with _ -> None
@@ -167,9 +167,9 @@ let num_days ~from ~to_ =
   if Int.(d < 0) then d + num_days_in_week else d
 ;;
 
-TEST = Int.(num_days ~from:Mon ~to_:Tue = 1);;
-TEST = Int.(num_days ~from:Tue ~to_:Mon = 6);;
-TEST "num_days is inverse to shift" =
+let%test _ = Int.(num_days ~from:Mon ~to_:Tue = 1);;
+let%test _ = Int.(num_days ~from:Tue ~to_:Mon = 6);;
+let%test "num_days is inverse to shift" =
   let all_days = [Sun; Mon; Tue; Wed; Thu; Fri; Sat] in
   List.for_all (List.cartesian_product all_days all_days)
     ~f:(fun (from, to_) ->

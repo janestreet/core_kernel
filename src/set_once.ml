@@ -2,9 +2,15 @@ open Bin_prot.Std
 open Sexplib.Std
 open Result
 
-exception Already_set with sexp
+exception Already_set [@@deriving sexp]
 
-type 'a t = 'a option ref with bin_io, sexp
+type 'a t = 'a option ref [@@deriving bin_io, sexp]
+
+let invariant invariant_a t =
+  match !t with
+  | None -> ()
+  | Some a -> invariant_a a
+;;
 
 let create () = ref None
 

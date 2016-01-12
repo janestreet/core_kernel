@@ -35,7 +35,7 @@ module type Slots = sig
 
   type ('tuple, 'variant) u
 
-  type ('tuple, 'variant) t = [ `Slots of ('tuple, 'variant) u ] with sexp_of
+  type ('tuple, 'variant) t = [ `Slots of ('tuple, 'variant) u ] [@@deriving sexp_of]
 
   val slots_per_tuple : (_, _) t -> int
 
@@ -44,7 +44,7 @@ module type Slots = sig
      [ `S0 of 'a0
      ]
     ) t
-  with sexp_of
+  [@@deriving sexp_of]
 
   type ('a0, 'a1) t2 =
     ('a0 * 'a1,
@@ -52,7 +52,7 @@ module type Slots = sig
      | `S1 of 'a1
      ]
     ) t
-  with sexp_of
+  [@@deriving sexp_of]
 
   type ('a0, 'a1, 'a2) t3 =
     ('a0 * 'a1 * 'a2,
@@ -61,7 +61,7 @@ module type Slots = sig
      | `S2 of 'a2
      ]
     ) t
-  with sexp_of
+  [@@deriving sexp_of]
 
   type ('a0, 'a1, 'a2, 'a3) t4 =
     ('a0 * 'a1 * 'a2 * 'a3,
@@ -71,7 +71,7 @@ module type Slots = sig
      | `S3 of 'a3
      ]
     ) t
-  with sexp_of
+  [@@deriving sexp_of]
 
   type ('a0, 'a1, 'a2, 'a3, 'a4) t5 =
     ('a0 * 'a1 * 'a2 * 'a3 * 'a4,
@@ -82,7 +82,7 @@ module type Slots = sig
      | `S4 of 'a4
      ]
     ) t
-  with sexp_of
+  [@@deriving sexp_of]
 
   type ('a0, 'a1, 'a2, 'a3, 'a4, 'a5) t6 =
     ('a0 * 'a1 * 'a2 * 'a3 * 'a4 * 'a5,
@@ -94,7 +94,7 @@ module type Slots = sig
      | `S5 of 'a5
      ]
     ) t
-  with sexp_of
+  [@@deriving sexp_of]
 
   type ('a0, 'a1, 'a2, 'a3, 'a4, 'a5, 'a6) t7 =
     ('a0 * 'a1 * 'a2 * 'a3 * 'a4 * 'a5 * 'a6,
@@ -107,7 +107,7 @@ module type Slots = sig
      | `S6 of 'a6
      ]
     ) t
-  with sexp_of
+  [@@deriving sexp_of]
 
   type ('a0, 'a1, 'a2, 'a3, 'a4, 'a5, 'a6, 'a7) t8 =
     ('a0 * 'a1 * 'a2 * 'a3 * 'a4 * 'a5 * 'a6 * 'a7,
@@ -121,7 +121,7 @@ module type Slots = sig
      | `S7 of 'a7
      ]
     ) t
-  with sexp_of
+  [@@deriving sexp_of]
 
   type ('a0, 'a1, 'a2, 'a3, 'a4, 'a5, 'a6, 'a7, 'a8) t9 =
     ('a0 * 'a1 * 'a2 * 'a3 * 'a4 * 'a5 * 'a6 * 'a7 * 'a8,
@@ -136,7 +136,7 @@ module type Slots = sig
      | `S8 of 'a8
      ]
     ) t
-  with sexp_of
+  [@@deriving sexp_of]
 
   type ('a0, 'a1, 'a2, 'a3, 'a4, 'a5, 'a6, 'a7, 'a8, 'a9) t10 =
     ('a0 * 'a1 * 'a2 * 'a3 * 'a4 * 'a5 * 'a6 * 'a7 * 'a8 * 'a9,
@@ -152,7 +152,7 @@ module type Slots = sig
      | `S9 of 'a9
      ]
     ) t
-  with sexp_of
+  [@@deriving sexp_of]
 
   type ('a0, 'a1, 'a2, 'a3, 'a4, 'a5, 'a6, 'a7, 'a8, 'a9, 'a10) t11 =
     ('a0 * 'a1 * 'a2 * 'a3 * 'a4 * 'a5 * 'a6 * 'a7 * 'a8 * 'a9 * 'a10,
@@ -169,7 +169,7 @@ module type Slots = sig
      | `S10 of 'a10
      ]
     ) t
-  with sexp_of
+  [@@deriving sexp_of]
 
   type ('a0, 'a1, 'a2, 'a3, 'a4, 'a5, 'a6, 'a7, 'a8, 'a9, 'a10, 'a11) t12 =
     ('a0 * 'a1 * 'a2 * 'a3 * 'a4 * 'a5 * 'a6 * 'a7 * 'a8 * 'a9 * 'a10 * 'a11,
@@ -187,7 +187,7 @@ module type Slots = sig
      | `S11 of 'a11
      ]
     ) t
-  with sexp_of
+  [@@deriving sexp_of]
 
   val t1 : _ t1
   val t2 : (_, _) t2
@@ -205,7 +205,7 @@ end
 
 module type Slot = sig
   (** A [Slot.t] represents a slot in a tuple type. *)
-  type ('variant, 'a) t with sexp_of
+  type ('variant, 'a) t [@@deriving sexp_of]
 
   val equal : ('v, 'a) t -> ('v, 'a) t -> bool
 

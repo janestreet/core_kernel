@@ -1,5 +1,5 @@
-(** One typically obtains a [Source_code_position.t] using a [_here_] expression, which is
-    implemented by the [pa_here] preprocessor. *)
+(** One typically obtains a [Source_code_position.t] using a [[%here]] expression, which
+    is implemented by the [ppx_here] preprocessor. *)
 
 open Sexplib
 
@@ -11,9 +11,9 @@ type t
     ; pos_bol   : int
     ; pos_cnum  : int
     }
-  with bin_io, sexp
-
-type t_hum = t with sexp_of
+    (** [sexp_of_t] uses the form ["FILE:LINE:COL"], and does not have a corresponding
+        [of_sexp]. *)
+  [@@deriving sexp_of]
 
 include Comparable.S with type t := t
 include Hashable.S   with type t := t

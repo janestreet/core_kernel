@@ -99,7 +99,7 @@ end
 
 module type Sequence = sig
   type elt
-  type t with sexp_of
+  type t [@@deriving sexp_of]
 
   val create : len:int -> t
   val length : t -> int
@@ -162,7 +162,7 @@ module type Blit = sig
   (** [Make1] is for blitting between two values of the same polymorphic type. *)
   module Make1
       (Sequence : sig
-         type 'a t with sexp_of
+         type 'a t [@@deriving sexp_of]
          (** [Make1] guarantees to only call [create_like ~len t] with [len > 0] if
              [length t > 0]. *)
          val create_like : len:int -> 'a t -> 'a t

@@ -1,4 +1,6 @@
 
+module String = Bytes
+
 type 'a int_spec = {
   name : string;
   num_bits : int;
@@ -146,7 +148,7 @@ let insert_delimiter input ~delimiter =
 let insert_underscores input =
   insert_delimiter input ~delimiter:'_'
 
-TEST_MODULE "pretty" = struct
+let%test_module "pretty" = (module struct
 
   let check input output =
     Core_list.for_all [""; "+"; "-"] ~f:(fun prefix ->
@@ -154,18 +156,18 @@ TEST_MODULE "pretty" = struct
       let output = prefix ^ output in
       output = insert_underscores input)
 
-  TEST = check          "1"             "1"
-  TEST = check         "12"            "12"
-  TEST = check        "123"           "123"
-  TEST = check       "1234"         "1_234"
-  TEST = check      "12345"        "12_345"
-  TEST = check     "123456"       "123_456"
-  TEST = check    "1234567"     "1_234_567"
-  TEST = check   "12345678"    "12_345_678"
-  TEST = check  "123456789"   "123_456_789"
-  TEST = check "1234567890" "1_234_567_890"
+  let%test _ = check          "1"             "1"
+  let%test _ = check         "12"            "12"
+  let%test _ = check        "123"           "123"
+  let%test _ = check       "1234"         "1_234"
+  let%test _ = check      "12345"        "12_345"
+  let%test _ = check     "123456"       "123_456"
+  let%test _ = check    "1234567"     "1_234_567"
+  let%test _ = check   "12345678"    "12_345_678"
+  let%test _ = check  "123456789"   "123_456_789"
+  let%test _ = check "1234567890" "1_234_567_890"
 
-end
+end)
 
 let sexp_of_int_style : [ `Underscores | `No_underscores ] ref = ref `No_underscores
 
@@ -191,7 +193,7 @@ end) = struct
 end
 
 module Make_hex (I : sig
-                   type t with bin_io, compare, typerep
+                   type t [@@deriving bin_io, compare, typerep]
                    val to_string : t -> string
                    val of_string : string -> t
                    val zero : t
@@ -203,7 +205,7 @@ struct
 
   module T_hex = struct
 
-    type t = I.t with bin_io, compare, typerep
+    type t = I.t [@@deriving bin_io, compare, typerep]
 
     let chars_per_delimiter = 4
 

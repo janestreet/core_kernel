@@ -4,7 +4,7 @@
     This module is like the OCaml standard library module of the same name, except that it
     requires that the values in the weak set are heap blocks. *)
 
-type 'a t with sexp_of
+type 'a t [@@deriving sexp_of]
 
 val create : len:int -> _ t
 

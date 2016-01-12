@@ -12,25 +12,17 @@ ML_OUTFILE="$2"
 C_OUTFILE="$3"
 shift 3
 
+OCAML_CFLAGS=
+. ./setup.data
+[ "$posix_timers" = true ] && OCAML_CFLAGS="$OCAML_CFLAGS -ccopt -DPOSIX_TIMERS"
+
 SRC=config/test.c
 OUT=config/test.out
 trap "rm -f $OUT" EXIT
 
 $OCAMLC -ccopt -E $OCAML_CFLAGS -c $SRC | grep '^"OUT:[^"]*"$' | sed 's/"OUT:\([^"]*\)"/\1/' | tee > $OUT
 
-OCAML_VERSION="`ocamlc -version`"
-case "$OCAML_VERSION" in
-    4.0[1-9]*|4.[1-9]*)
-        echo "DEFINE OCAML_4"    >> $OUT
-        echo "DEFINE OCAML_4_01" >> $OUT
-        ;;
-    4*)
-        echo "DEFINE OCAML_4" >> $OUT
-        ;;
-esac
-
 mv "$OUT" "$ML_OUTFILE"
-
 
 {
     sentinel="CORE_`basename "$C_OUTFILE" | tr a-z. A-Z_`"
@@ -38,7 +30,8 @@ mv "$OUT" "$ML_OUTFILE"
 #ifndef $sentinel
 #define $sentinel
 EOF
-    sed 's/^DEFINE */#define JSC_/' "$ML_OUTFILE"
+    sed -r 's|^#let *([A-Za-z_0-9]+) *= *true *$|#define \1|;
+            s|^#let *([A-Za-z_0-9]+) *= *false *$|#undef \1|' "$ML_OUTFILE"
     cat  <<EOF
 #endif /* $sentinel */
 EOF

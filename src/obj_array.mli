@@ -13,7 +13,7 @@
     data structures.
 *)
 
-type t with sexp_of
+type t [@@deriving sexp_of]
 
 include Blit.     S with type t := t
 include Invariant.S with type t := t

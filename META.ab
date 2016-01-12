@@ -1,0 +1,7 @@
+version = "$(pkg_version)"
+description = "Industrial strength alternative to OCaml's standard library"
+requires = "bin_prot fieldslib num ppx_assert.runtime-lib ppx_bench.runtime-lib ppx_expect.collector ppx_inline_test.runtime-lib sexplib typerep variantslib"
+archive(byte          ) = "core_kernel.cma"
+archive(native        ) = "core_kernel.cmxa"
+archive(native, plugin) = "core_kernel.cmxs"
+exists_if = "core_kernel.cma"

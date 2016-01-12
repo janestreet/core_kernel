@@ -1,38 +1,47 @@
 open Std_internal
 
 module Make_sexp_deserialization_test (T : Stable_unit_test_intf.Arg) = struct
-  TEST_UNIT "sexp deserialization" =
-    List.iter T.tests
-      ~f:(fun (t, sexp_as_string, _) ->
-        match
-          Or_error.try_with (fun () ->
-            sexp_as_string |> Sexp.of_string |> <:of_sexp< T.t >>)
-        with
-        | Error _ ->
-          failwiths "could not deserialize sexp" (sexp_as_string, `Expected t)
-            <:sexp_of< string * [ `Expected of T.t ] >>
-        | Ok t' ->
-          if not (T.equal t t') then
-            failwiths "sexp deserialization mismatch" (`Expected t, `But_got t')
-              (<:sexp_of< [ `Expected of T.t ] * [ `But_got of T.t ] >>)
-      )
+  let%test_unit "sexp deserialization" =
+    Or_error.combine_errors_unit
+      (List.map T.tests
+         ~f:(fun (t, sexp_as_string, _) ->
+           match
+             Or_error.try_with (fun () ->
+               sexp_as_string |> Sexp.of_string |> [%of_sexp: T.t])
+           with
+           | Error _ as error ->
+             Or_error.tag_arg error "could not deserialize sexp"
+               (sexp_as_string, `Expected t)
+               [%sexp_of: string * [ `Expected of T.t ]]
+           | Ok t' ->
+             if T.equal t t' then
+               Ok ()
+             else
+               Or_error.error "sexp deserialization mismatch"
+                 (`Expected t, `But_got t')
+                 ([%sexp_of: [ `Expected of T.t ] * [ `But_got of T.t ]])
+         ))
+    |> ok_exn
 end
 
 module Make_sexp_serialization_test (T : Stable_unit_test_intf.Arg) = struct
-  TEST_UNIT "sexp serialization" =
-    List.iter T.tests
-      ~f:(fun (t, sexp_as_string, _) ->
-        let sexp = Sexp.of_string sexp_as_string in
-        let serialized_sexp = T.sexp_of_t t in
-        if serialized_sexp <> sexp then
-          failwiths "sexp serialization mismatch"
-            (`Expected sexp, `But_got serialized_sexp)
-            (<:sexp_of< [ `Expected of Sexp.t ] * [ `But_got of Sexp.t ] >>);
-      )
+  let%test_unit "sexp serialization" =
+    Or_error.combine_errors_unit
+      (List.map T.tests
+         ~f:(fun (t, sexp_as_string, _) ->
+           Or_error.try_with (fun () ->
+             let sexp = Sexp.of_string sexp_as_string in
+             let serialized_sexp = T.sexp_of_t t in
+             if serialized_sexp <> sexp then
+               failwiths "sexp serialization mismatch"
+                 (`Expected sexp, `But_got serialized_sexp)
+                 ([%sexp_of: [ `Expected of Sexp.t ] * [ `But_got of Sexp.t ]]);
+           )))
+    |> ok_exn
 end
 
 module Make_bin_io_test (T : Stable_unit_test_intf.Arg) = struct
-  TEST_UNIT "bin_io" =
+  let%test_unit "bin_io" =
     List.iter T.tests
       ~f:(fun (t, _, expected_bin_io) ->
         let binable_m = (module T : Binable.S with type t = T.t) in
@@ -41,25 +50,25 @@ module Make_bin_io_test (T : Stable_unit_test_intf.Arg) = struct
         if serialized_bin_io <> expected_bin_io then
           failwiths "bin_io serialization mismatch"
             (t, `Expected expected_bin_io, `But_got serialized_bin_io)
-            (<:sexp_of< T.t * [ `Expected of string ] * [ `But_got of string ] >>);
+            ([%sexp_of: T.t * [ `Expected of string ] * [ `But_got of string ]]);
         let t' = Binable.of_string binable_m serialized_bin_io in
         if not (T.equal t t') then
           failwiths "bin_io deserialization mismatch" (`Expected t, `But_got t')
-            (<:sexp_of< [ `Expected of T.t ] * [ `But_got of T.t ] >>);
+            ([%sexp_of: [ `Expected of T.t ] * [ `But_got of T.t ]]);
       )
 end
 
 module Make (T : Stable_unit_test_intf.Arg) = struct
   include Make_sexp_deserialization_test (T)
-  include Make_sexp_serialization_test (T)
-  include Make_bin_io_test (T)
+  include Make_sexp_serialization_test   (T)
+  include Make_bin_io_test               (T)
 end
 
 module Make_unordered_container (T : Stable_unit_test_intf.Unordered_container_arg) =
 struct
   module Test = Stable_unit_test_intf.Unordered_container_test
 
-  TEST_UNIT "sexp" =
+  let%test_unit "sexp" =
     List.iter T.tests
       ~f:(fun (t, {Test. sexps; _ }) ->
         let sexps = List.map sexps ~f:Sexp.of_string in
@@ -75,14 +84,14 @@ struct
         if not (List.equal ~equal:(=) sorted_sexps sorted_serialized) then
           failwiths "sexp serialization mismatch"
             (`Expected sexps, `But_got serialized_elements)
-            <:sexp_of< [ `Expected of Sexp.t list ] * [ `But_got of Sexp.t list ] >>;
+            [%sexp_of: [ `Expected of Sexp.t list ] * [ `But_got of Sexp.t list ]];
         let sexp_permutations = List.init 10 ~f:(fun _ -> List.permute sexps) in
         List.iter sexp_permutations ~f:(fun sexps ->
           let t' = T.t_of_sexp (Sexp.List sexps) in
           if not (T.equal t t') then
             failwiths "sexp deserialization msimatch"
               (`Expected t, `But_got t')
-              <:sexp_of< [ `Expected of T.t ] * [ `But_got of T.t ] >>);
+              [%sexp_of: [ `Expected of T.t ] * [ `But_got of T.t ]]);
       )
   ;;
 
@@ -104,7 +113,7 @@ struct
       loop [] strings
   ;;
 
-  TEST_UNIT "bin_io" =
+  let%test_unit "bin_io" =
     List.iter T.tests
       ~f:(fun (t, {Test. bin_io_header; bin_io_elements; _ }) ->
         let binable_m = (module T : Binable.S with type t = T.t) in
@@ -119,14 +128,14 @@ struct
         if not serialization_matches then
           failwiths "serialization mismatch"
             (`Expected (bin_io_header, elements), `But_got serialized)
-            <:sexp_of< [`Expected of (string * string list)] * [`But_got of string] >>;
+            [%sexp_of: [`Expected of (string * string list)] * [`But_got of string]];
         let permutatations = List.init 10 ~f:(fun _ -> List.permute elements) in
         List.iter permutatations ~f:(fun elements ->
           let t' = Binable.of_string binable_m (bin_io_of_elements elements) in
           if not (T.equal t t') then
             failwiths "bin-io deserialization mismatch"
               (`Expected t, `But_got t')
-              <:sexp_of< [ `Expected of T.t ] * [ `But_got of T.t ] >>);
+              [%sexp_of: [ `Expected of T.t ] * [ `But_got of T.t ]]);
       )
   ;;
 end

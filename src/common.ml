@@ -1,42 +1,17 @@
 open Sexplib.Conv
 
-let seek_out _ _ = `Deprecated_use_out_channel
-let pos_out _ = `Deprecated_use_out_channel
-let out_channel_length _ = `Deprecated_use_out_channel
-let seek_in _ _ = `Deprecated_use_in_channel
-let pos_in _ = `Deprecated_use_in_channel
-let in_channel_length _ = `Deprecated_use_in_channel
-let modf _ = `Deprecated_use_float_modf
-let truncate _ = `Deprecated_use_float_iround_towards_zero
+include Core_pervasives
 
-let ( & ) _ _ = `Deprecated_use_two_ampersands
-let ( or ) =  `Deprecated_use_pipe_pipe
+(* We hack our compiler to define raise as reraise *)
+module Jane_pervasives = struct
+  include Pervasives
+  external raise : exn -> 'a = "%reraise"
+end
 
-let max_int =  `Deprecated_use_int_module
-let min_int =  `Deprecated_use_int_module
-
-let ceil _            = `Deprecated_use__Float__round_up
-let floor _           = `Deprecated_use__Float__round_down
-let abs_float _       = `Deprecated_use_float_module
-let mod_float _       = `Deprecated_use_float_module
-let frexp _ _         = `Deprecated_use_float_module
-let ldexp _ _         = `Deprecated_use_float_module
-let float_of_int _    = `Deprecated_use_float_module
-let max_float         = `Deprecated_use_float_module
-let min_float         = `Deprecated_use_float_module
-let epsilon_float     = `Deprecated_use_float_module
-let classify_float _  = `Deprecated_use_float_module
-let string_of_float _ = `Deprecated_use_float_module
-let float_of_string _ = `Deprecated_use_float_module
-let infinity          = `Deprecated_use_float_module
-let neg_infinity      = `Deprecated_use_float_module
-let nan               = `Deprecated_use_float_module
-let int_of_float _    = `Deprecated_use_float_module
-
-type fpclass =        [`Deprecated_use_float_module ]
-
-let close_in _ = `Deprecated_use_in_channel
-let close_out _ = `Deprecated_use_out_channel
+(* This is here just to assert that the interfaces match, so we'll notice when INRIA
+   changes Pervasives. *)
+include ((Core_pervasives : module type of Jane_pervasives) : sig end)
+include ((Jane_pervasives : module type of Core_pervasives) : sig end)
 
 include Perms.Export
 
@@ -48,7 +23,6 @@ let protectx = Exn.protectx
 let protect = Exn.protect
 
 let (|!) = Fn.(|!)
-let (|>) = Fn.(|>)
 let ident = Fn.id
 let const = Fn.const
 let (==>) a b = (not a) || b
@@ -62,11 +36,13 @@ let fst3 (x,_,_) = x
 let snd3 (_,y,_) = y
 let trd3 (_,_,z) = z
 
-let ok_exn = Or_error.ok_exn
-let error  = Or_error.error
+let ok_exn  = Or_error.ok_exn
+let error   = Or_error.error
+let error_s = Or_error.error_s
 
 let failwiths = Error.failwiths
 let failwithp = Error.failwithp
+let raise_s   = Error.raise_s
 
 include struct
   open Core_printf
@@ -78,22 +54,20 @@ end
 include With_return
 
 let phys_equal = Caml.(==)
-let (==) _ _ = `Consider_using_phys_equal
-let (!=) _ _ = `Consider_using_phys_equal
 
 let phys_same (type a) (type b) (a : a) (b : b) = phys_equal a (Obj.magic b : a)
 
-TEST_MODULE "phys_same" = struct
+let%test_module "phys_same" = (module struct
 
-  TEST = phys_same 0 None
-  TEST = phys_same 1 true
+  let%test _ = phys_same 0 None
+  let%test _ = phys_same 1 true
 
-  TEST =
+  let%test _ =
     let f () = "statically-allocated" in
     phys_same (f ()) (f ())
   ;;
 
-  TEST =
+  let%test _ =
     let a = (1, 2) in
     phys_same a a
   ;;
@@ -102,18 +76,18 @@ TEST_MODULE "phys_same" = struct
 
   let same_thing (Obscure a) (Obscure b) = phys_same a b
 
-  TEST =
+  let%test _ =
     let a = (1, 2) in
     same_thing (Obscure a) (Obscure a)
   ;;
-end
+end)
 
 let force = Lazy.force
 
 let stage = Staged.stage
 let unstage = Staged.unstage
 
-exception Bug of string with sexp
+exception Bug of string [@@deriving sexp]
 
 exception C_malloc_exn of int * int (* errno, size *)
 let () =

@@ -311,10 +311,11 @@ module type Generic_phantom = sig
   val max_elt  : ('a, _) t -> cmp:('a elt -> 'a elt -> int) -> 'a elt option
 end
 
-module type Make_arg = sig
+module type Make_gen_arg = sig
   type 'a t
+  type 'a elt
 
-  val fold : 'a t -> init:'accum -> f:('accum -> 'a -> 'accum) -> 'accum
+  val fold : 'a t -> init:'accum -> f:('accum -> 'a elt -> 'accum) -> 'accum
 
   (** The [iter] argument to [Container.Make] says how to implement the container's [iter]
       function.  [`Define_using_fold] means to define [iter] via:
@@ -328,7 +329,19 @@ module type Make_arg = sig
       terms of [iter], so passing in a more efficient [iter] will improve their efficiency
       as well. *)
   val iter : [ `Define_using_fold
-             | `Custom of 'a t -> f:('a -> unit) -> unit
+             | `Custom of 'a t -> f:('a elt -> unit) -> unit
+             ]
+end
+
+module type Make_arg = Make_gen_arg with type 'a elt := 'a Monad.Ident.t
+
+module type Make0_arg = sig
+  type t
+  type elt
+
+  val fold : t -> init:'accum -> f:('accum -> elt -> 'accum) -> 'accum
+  val iter : [ `Define_using_fold
+             | `Custom of t -> f:(elt -> unit) -> unit
              ]
 end
 
@@ -376,7 +389,7 @@ module type Container = sig
         let count    = C.count
         let exists   = C.exists
         let find     = C.find
-                         ...
+        ...
       ]}
 
       This is preferable to:
@@ -387,6 +400,10 @@ module type Container = sig
 
       because the [include] makes it too easy to shadow specialized implementations of
       container functions ([length] being a common one).
+
+      [Container.Make0] is like [Container.Make], but for monomorphic containers like
+      [string].
   *)
-  module Make (T : Make_arg) : S1 with type 'a t := 'a T.t
+  module Make  (T : Make_arg)  : S1 with type 'a t := 'a T.t
+  module Make0 (T : Make0_arg) : S0 with type    t :=    T.t and type elt := T.elt
 end

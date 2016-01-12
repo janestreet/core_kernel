@@ -35,7 +35,7 @@ let is_pow2 x =
   (x land (x-1)) = 0
 ;;
 
-TEST_MODULE "int_math" = struct
+let%test_module "int_math" = (module struct
 
   let test_cases () =
     let cases = [ 0xAA; 0xAA_AA; 0xAA_AA_AA;  0x80; 0x80_08; 0x80_00_08; ]
@@ -49,17 +49,17 @@ TEST_MODULE "int_math" = struct
     else cases
   ;;
 
-  TEST_UNIT "ceil_pow2" =
+  let%test_unit "ceil_pow2" =
     Core_list.iter (test_cases ())
       ~f:(fun x -> let p2 = ceil_pow2 x in
         assert( (is_pow2 p2) && (p2 >= x && x >= (p2 / 2)) )
-      );
+      )
     ;;
 
-  TEST_UNIT "floor_pow2" =
+  let%test_unit "floor_pow2" =
     Core_list.iter (test_cases ())
       ~f:(fun x -> let p2 = floor_pow2 x in
         assert( (is_pow2 p2) && ((2 * p2) >= x && x >= p2) )
-      );
+      )
     ;;
-end
+end)

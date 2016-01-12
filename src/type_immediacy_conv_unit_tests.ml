@@ -1,6 +1,6 @@
 (* Tests checking the correctness of conversions between values and ints. *)
 
-TEST_MODULE = struct
+let%test_module _ = (module struct
 
   open Std_internal
 
@@ -120,7 +120,7 @@ TEST_MODULE = struct
   let no_int_but_zero_converts = [1; 2; 3; -1; Int.max_value; Int.min_value]
   let no_int_converts = 0::no_int_but_zero_converts
 
-  module type S = sig type t with typerep end
+  module type S = sig type t [@@deriving typerep] end
 
   let is_never (type a) (module M : S with type t = a) examples =
     let conv = get_conv M.typerep_of_t in
@@ -128,8 +128,8 @@ TEST_MODULE = struct
     && test_inconvertible_ints conv no_int_converts
   ;;
 
-  TEST =
-    is_never (module struct type t = int32 with typerep end)
+  let%test _ =
+    is_never (module struct type t = int32 [@@deriving typerep] end)
       [ Int32.zero
       ; Int32.one
       ; Int32.minus_one
@@ -139,20 +139,20 @@ TEST_MODULE = struct
       ]
   ;;
 
-  TEST =
-    is_never (module struct type t = int64 with typerep end)
+  let%test _ =
+    is_never (module struct type t = int64 [@@deriving typerep] end)
       [Int64.zero; Int64.one; Int64.minus_one; Int64.max_value; Int64.min_value]
   ;;
 
-  TEST =
-    is_never (module struct type t = nativeint with typerep end)
+  let%test _ =
+    is_never (module struct type t = nativeint [@@deriving typerep] end)
       [Nativeint.zero; Nativeint.one; Nativeint.minus_one;
        Nativeint.max_value; Nativeint.min_value]
   ;;
 
-  TEST =
+  let%test _ =
     let module M = struct
-      type t = char with typerep
+      type t = char [@@deriving typerep]
     end in
     let conv = get_conv M.typerep_of_t in
     test_convertibles conv
@@ -162,37 +162,37 @@ TEST_MODULE = struct
     && test_inconvertible_ints conv [256; -1; 500; Int.max_value; Int.min_value]
   ;;
 
-  TEST =
-    is_never (module struct type t = float with typerep end)
+  let%test _ =
+    is_never (module struct type t = float [@@deriving typerep] end)
       [1.1; 0.0; -3.3; Float.nan; Float.infinity; Float.neg_infinity]
   ;;
 
-  TEST =
-    is_never (module struct type t = string with typerep end)
+  let%test _ =
+    is_never (module struct type t = string [@@deriving typerep] end)
       [""; "Hello world!"]
   ;;
 
-  TEST =
+  let%test _ =
     let module M = struct
-      type t = bool with typerep
+      type t = bool [@@deriving typerep]
     end in
     let conv = get_conv M.typerep_of_t in
     test_convertibles conv [true,1; false,0]
     && test_inconvertible_ints conv [2; 3; -1; -2; 50; Int.max_value; Int.min_value]
   ;;
 
-  TEST =
+  let%test _ =
     let module M = struct
-      type t = unit with typerep
+      type t = unit [@@deriving typerep]
     end in
     let conv = get_conv M.typerep_of_t in
     test_convertibles conv [(),0]
     && test_inconvertible_ints conv no_int_but_zero_converts
   ;;
 
-  TEST =
+  let%test _ =
     let module M = struct
-      type t = unit option with typerep
+      type t = unit option [@@deriving typerep]
     end in
     let conv = get_conv M.typerep_of_t in
     test_convertibles conv [None,0]
@@ -200,9 +200,9 @@ TEST_MODULE = struct
     && test_inconvertible_values conv [Some ()]
   ;;
 
-  TEST =
+  let%test _ =
     let module M = struct
-      type t = int ref option with typerep
+      type t = int ref option [@@deriving typerep]
     end in
     let conv = get_conv M.typerep_of_t in
     test_convertibles conv [None,0]
@@ -210,9 +210,9 @@ TEST_MODULE = struct
     && test_inconvertible_values conv [Some (ref 0); Some (ref 1)]
   ;;
 
-  TEST =
+  let%test _ =
     let module M = struct
-      type t = int ref list with typerep
+      type t = int ref list [@@deriving typerep]
     end in
     let conv = get_conv M.typerep_of_t in
     test_convertibles conv [[],0]
@@ -220,9 +220,9 @@ TEST_MODULE = struct
     && test_inconvertible_values conv [[ref 0]; [ref 1]]
   ;;
 
-  TEST =
+  let%test _ =
     let module M = struct
-      type t = unit list with typerep
+      type t = unit list [@@deriving typerep]
     end in
     let conv = get_conv M.typerep_of_t in
     test_convertibles conv [[],0]
@@ -230,35 +230,35 @@ TEST_MODULE = struct
     && test_inconvertible_values conv [[()]]
   ;;
 
-  TEST =
-    is_never (module struct type t = int ref array with typerep end)
+  let%test _ =
+    is_never (module struct type t = int ref array [@@deriving typerep] end)
       [ [| |]
       ; [| ref 1 |]
       ]
   ;;
 
-  TEST =
-    is_never (module struct type t = unit array with typerep end)
+  let%test _ =
+    is_never (module struct type t = unit array [@@deriving typerep] end)
       [ [| |]
       ; [| () |]
       ; [| (); ()|]
       ]
   ;;
 
-  TEST =
-    is_never (module struct type t = unit ref with typerep end)
+  let%test _ =
+    is_never (module struct type t = unit ref [@@deriving typerep] end)
       [ref ()]
   ;;
 
-  TEST =
-    is_never (module struct type t = int ref with typerep end)
+  let%test _ =
+    is_never (module struct type t = int ref [@@deriving typerep] end)
       [ref 1; ref 2; ref (-1)]
   ;;
 
-  TEST_MODULE = struct
-    type 'a t = 'a lazy_t with typerep
+  let%test_module _ = (module struct
+    type 'a t = 'a lazy_t [@@deriving typerep]
 
-    TEST =
+    let%test _ =
       (* type t = unit lazy_t *)
       let conv = get_conv (typerep_of_t typerep_of_unit) in
       test_inconvertible_values conv [lazy ((fun () -> ()) ())]
@@ -266,7 +266,7 @@ TEST_MODULE = struct
       && test_inconvertible_ints conv no_int_but_zero_converts
     ;;
 
-    TEST =
+    let%test _ =
       (* type t = int lazy_t *)
       let conv = get_conv (typerep_of_t typerep_of_int) in
       test_convertibles conv
@@ -278,7 +278,7 @@ TEST_MODULE = struct
     (* depending on when the Gc runs, some lazy after being forced might be
        replaced by their immediate value.  *)
 
-    TEST =
+    let%test _ =
       (* type t = int list lazy_t *)
       let conv = get_conv (typerep_of_t (typerep_of_list typerep_of_int)) in
       (* Define some lazy lists. *)
@@ -291,46 +291,46 @@ TEST_MODULE = struct
       && test_inconvertible_ints   conv no_int_but_zero_converts
     ;;
 
-    TEST =
+    let%test _ =
       let conv = get_conv (typerep_of_t (typerep_of_t typerep_of_int)) in
       let l1 = lazy (lazy (1+2)) in
       test_convertibles conv [Lazy.from_val (Lazy.from_val 3), 3]
       && test_inconvertible_values conv [l1]
     ;;
-  end
+  end)
 
-  TEST =
+  let%test _ =
     let module M = struct
-      type t = {foo:unit} with typerep
+      type t = {foo:unit} [@@deriving typerep]
     end in
     is_never (module M) [{M.foo = ()}]
   ;;
 
-  TEST =
-    is_never (module struct type t = unit * unit with typerep end)
+  let%test _ =
+    is_never (module struct type t = unit * unit [@@deriving typerep] end)
       [(),()]
   ;;
 
-  TEST =
-    is_never (module struct type t = unit * unit * unit with typerep end)
+  let%test _ =
+    is_never (module struct type t = unit * unit * unit [@@deriving typerep] end)
       [(),(),()]
   ;;
 
-  TEST =
-    is_never (module struct type t = unit * unit * unit * unit with typerep end)
+  let%test _ =
+    is_never (module struct type t = unit * unit * unit * unit [@@deriving typerep] end)
       [(),(),(),()]
   ;;
 
-  TEST =
-    is_never (module struct type t = unit * unit * unit * unit * unit with typerep end)
+  let%test _ =
+    is_never (module struct type t = unit * unit * unit * unit * unit [@@deriving typerep] end)
       [(),(),(),(),()]
   ;;
 
-  TEST =
+  let%test _ =
     let module M = struct
       type t =
       | Foo
-      | Bar of unit with typerep
+      | Bar of unit [@@deriving typerep]
     end in
     let conv = get_conv M.typerep_of_t in
     test_convertibles conv [M.Foo,0]
@@ -338,12 +338,12 @@ TEST_MODULE = struct
     && test_inconvertible_ints conv no_int_but_zero_converts
   ;;
 
-  TEST =
+  let%test _ =
     let module M = struct
       type t =
       | Foo
       | Bar
-      | Baz with typerep
+      | Baz [@@deriving typerep]
     end in
     let conv = get_conv M.typerep_of_t in
     test_convertibles conv [M.Foo,0; M.Bar,1; M.Baz,2]
@@ -352,12 +352,12 @@ TEST_MODULE = struct
        Int.max_value; Int.min_value]
   ;;
 
-  TEST =
+  let%test _ =
     let module M = struct
       type t =
       | Foo of unit
       | Bar of unit
-      | Baz of unit with typerep
+      | Baz of unit [@@deriving typerep]
     end in
     is_never (module M) [M.Foo (); M.Bar (); M.Baz ()]
   ;;
@@ -373,12 +373,12 @@ TEST_MODULE = struct
     )
   ;;
 
-  TEST =
+  let%test _ =
     let module M = struct
       type t = [
       | `Foo
       | `Bar of unit
-      ] with typerep, enumerate
+      ] [@@deriving typerep, enumerate]
     end in
     let conv = get_conv M.typerep_of_t in
     test_convertibles conv [`Foo, Typerep_obj.repr_of_poly_variant `Foo]
@@ -390,13 +390,13 @@ TEST_MODULE = struct
          ])
   ;;
 
-  TEST =
+  let%test _ =
     let module M = struct
       type t = [
       | `Foo
       | `Bar
       | `Baz
-      ] with typerep, enumerate
+      ] [@@deriving typerep, enumerate]
     end in
     let conv = get_conv M.typerep_of_t in
     test_convertibles conv
@@ -410,12 +410,12 @@ TEST_MODULE = struct
       )
   ;;
 
-  TEST =
+  let%test _ =
     let module M = struct
       type t =
       [ `Foo of unit
       | `Bar of unit
-      | `Baz of unit ] with typerep
+      | `Baz of unit ] [@@deriving typerep]
     end in
     let conv = get_conv M.typerep_of_t in
     test_inconvertible_values conv [`Foo (); `Bar (); `Baz ()]
@@ -428,9 +428,9 @@ TEST_MODULE = struct
       )
   ;;
 
-  TEST =
+  let%test _ =
     let module M = struct
-      type 'a t = Nil | Cons of 'a * 'a t with typerep
+      type 'a t = Nil | Cons of 'a * 'a t [@@deriving typerep]
     end in
     let conv = get_conv (M.typerep_of_t typerep_of_unit) in
     test_convertibles conv [M.Nil,0]
@@ -438,9 +438,9 @@ TEST_MODULE = struct
     && test_inconvertible_ints   conv no_int_but_zero_converts
   ;;
 
-  TEST =
+  let%test _ =
     let module M = struct
-      type 'a t = A | B of 'a t lazy_t | C of 'a * 'a t with typerep
+      type 'a t = A | B of 'a t lazy_t | C of 'a * 'a t [@@deriving typerep]
     end in
     let conv = get_conv (M.typerep_of_t typerep_of_int) in
     test_convertibles conv [M.A,0]
@@ -448,13 +448,13 @@ TEST_MODULE = struct
     && test_inconvertible_ints   conv no_int_but_zero_converts
   ;;
 
-  TEST =
+  let%test _ =
     let module M = struct
-      type 'a t = A | B of ('a t * 'a t) | C of 'a with typerep
+      type 'a t = A | B of ('a t * 'a t) | C of 'a [@@deriving typerep]
     end in
     let conv = get_conv (M.typerep_of_t typerep_of_unit) in
     test_convertibles conv [M.A,0]
     && test_inconvertible_values conv [M.B (M.A,M.A); M.C ()]
     && test_inconvertible_ints   conv no_int_but_zero_converts
   ;;
-end
+end)

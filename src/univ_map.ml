@@ -4,7 +4,7 @@ include Univ_map_intf
 
 module Uid = Type_equal.Id.Uid
 
-module Make1 (Data : sig type ('s, 'a) t with sexp_of end) = struct
+module Make1 (Data : sig type ('s, 'a) t [@@deriving sexp_of] end) = struct
   type ('s, 'a) data = ('s, 'a) Data.t
 
   module Packed = struct
@@ -24,18 +24,22 @@ module Make1 (Data : sig type ('s, 'a) t with sexp_of end) = struct
     Map.data t
     |> List.map ~f:(fun u -> (Packed.type_id_name u, u))
     |> List.sort ~cmp:(fun (a, _) (b, _) -> String.compare a b)
-    |> <:sexp_of< (string * a Packed.t) list >>
+    |> [%sexp_of: (string * a Packed.t) list]
 
   let invariant (t : _ t) =
-    Invariant.invariant _here_ t <:sexp_of< _ t >> (fun () ->
-      Map.iter t ~f:(fun ~key ~data ->
+    Invariant.invariant [%here] t [%sexp_of: _ t] (fun () ->
+      Map.iteri t ~f:(fun ~key ~data ->
         assert (Uid.equal key (Packed.type_id_uid data))))
 
   let set t key data = Map.add t ~key:(Key.uid key) ~data:(Packed.T (key, data))
 
-  let mem t key = Map.mem t (Key.uid key)
+  let mem_by_id t id = Map.mem t id
 
-  let remove t key = Map.remove t (Key.uid key)
+  let mem t key = mem_by_id t (Key.uid key)
+
+  let remove_by_id t id = Map.remove t id
+
+  let remove t key = remove_by_id t (Key.uid key)
 
   let empty = Uid.Map.empty
 
@@ -61,27 +65,29 @@ module Make1 (Data : sig type ('s, 'a) t with sexp_of end) = struct
     | `Ok t -> t
     | `Duplicate -> failwithf "Univ_map.add_exn on existing key %s" (Key.name key) ()
 
-  let change_exn t key update =
+  let change_exn t key ~f:update =
     match find t key with
     | Some data -> set t key (update data)
     | None -> failwithf "Univ_map.change_exn on unknown key %s" (Key.name key) ()
 
-  let change t key update =
+  let change t key ~f:update =
     let orig = find t key in
     let next = update orig in
     match next with
     | Some data -> set t key data
     | None -> if Option.is_none orig then t else remove t key
 
+  let update t key ~f = change t key ~f:(fun data -> Some (f data))
+
   let to_alist t = Map.data t
 end
 
-module Make (Data : sig type 'a t with sexp_of end) = struct
+module Make (Data : sig type 'a t [@@deriving sexp_of] end) = struct
   module M = Make1 (struct
-    type (_, 'a) t = 'a Data.t with sexp_of
+    type (_, 'a) t = 'a Data.t [@@deriving sexp_of]
   end)
 
-  type t = unit M.t with sexp_of
+  type t = unit M.t [@@deriving sexp_of]
 
   type 'a data = 'a Data.t
 
@@ -90,12 +96,16 @@ module Make (Data : sig type 'a t with sexp_of end) = struct
   let is_empty   = M.is_empty
   let set        = M.set
   let mem        = M.mem
+  let mem_by_id  = M.mem_by_id
   let find       = M.find
   let find_exn   = M.find_exn
   let add        = M.add
   let add_exn    = M.add_exn
   let change     = M.change
   let change_exn = M.change_exn
+  let update     = M.update
+  let remove     = M.remove
+  let remove_by_id = M.remove_by_id
 
   module Packed = struct
     type t = T : 'a Key.t * 'a Data.t -> t
@@ -105,23 +115,23 @@ module Make (Data : sig type 'a t with sexp_of end) = struct
     List.map (M.to_alist t) ~f:(function M.Packed.T (key, data) -> Packed.T (key, data))
 end
 
-include Make (struct type 'a t = 'a with sexp_of end)
+include Make (struct type 'a t = 'a [@@deriving sexp_of] end)
 
-TEST_MODULE = struct
+let%test_module _ = (module struct
 
   let size = Key.create ~name:"size" Int.sexp_of_t
   let name = Key.create ~name:"name" String.sexp_of_t
   let foo  = Key.create ~name:"foo"  Float.sexp_of_t
   let kids = Key.create ~name:"kids" (List.sexp_of_t sexp_of_t)
 
-  TEST = is_empty empty
+  let%test _ = is_empty empty
 
   let test_contains t k v =
     assert (not (is_empty t));
     assert (mem t k);
     begin (* these do not raise *)
-      ignore (change_exn t k Fn.id);
-      ignore (change t k (function None -> assert false | o -> o));
+      ignore (change_exn t k ~f:Fn.id);
+      ignore (change t k ~f:(function None -> assert false | o -> o));
     end;
     match find t k with
     | None -> assert false
@@ -139,11 +149,27 @@ TEST_MODULE = struct
     | (None,    Some _)  -> assert false
 
   let test_change t k v =
-    let t_minus = change t k (fun _ -> None) in
+    let t_minus = change t k ~f:(fun _ -> None) in
     assert (not (mem t_minus k));
-    let t_plus = change t k (fun _ -> Some v) in
+    let t_plus = change t k ~f:(fun _ -> Some v) in
     test_contains t_plus k v;
     ()
+
+  let test_remove t k v =
+    let t_minus = remove t k in
+    assert (not (mem t_minus k));
+    let t_plus = set t k v in
+    test_contains t_plus k v;
+    let t_minus = remove t_plus k in
+    assert (not (mem t_minus k))
+
+  let test_remove_by_id t k v =
+    let t_minus = remove_by_id t (Key.uid k) in
+    assert (not (mem t_minus k));
+    let t_plus = set t k v in
+    test_contains t_plus k v;
+    let t_minus = remove_by_id t_plus (Key.uid k) in
+    assert (not (mem t_minus k))
 
   let test t =
     (* add *)
@@ -158,6 +184,14 @@ TEST_MODULE = struct
     test_change t size 33;
     test_change t name "frank";
     test_change t kids [];
+    (* remove *)
+    test_remove t size 33;
+    test_remove t name "frank";
+    test_remove t kids [];
+    (* remove_by_id *)
+    test_remove_by_id t size 33;
+    test_remove_by_id t name "frank";
+    test_remove_by_id t kids [];
     ()
 
   let t0 = empty
@@ -165,14 +199,14 @@ TEST_MODULE = struct
   let t2 = set t1 foo 13.25
   let t3 = set t2 size 15
 
-  TEST_UNIT = test t0
-  TEST_UNIT = test t1
-  TEST_UNIT = test t2
-  TEST_UNIT = test t3
+  let%test_unit _ = test t0
+  let%test_unit _ = test t1
+  let%test_unit _ = test t2
+  let%test_unit _ = test t3
 
-  TEST = sexp_of_t t3 = Sexp.of_string "((foo 13.25)(size 15))"
+  let%test _ = sexp_of_t t3 = Sexp.of_string "((foo 13.25)(size 15))"
 
-end
+end)
 
 module With_default = struct
 
@@ -185,21 +219,21 @@ module With_default = struct
 
   let set t {Key.key; default=_ } v = set t key v
 
-  let change t k update = set t k (update (find t k))
+  let change t k ~f:update = set t k (update (find t k))
 
-  TEST_UNIT =
+  let%test_unit _ =
     let key = Key.create ~default:0 ~name:"default 0" Int.sexp_of_t in
     assert (find empty key = 0);
     let t = set empty key 1 in
     assert (find t key = 1);
     let t = set empty key 2 in
     assert (find t key = 2);
-    let t = change t key (~-) in
-    assert (find t key = -2);
+    let t = change t key ~f:(~-) in
+    assert (find t key = -2)
 
-  TEST =
+  let%test _ =
     let key = Key.create ~default:1 ~name:"default 1" Int.sexp_of_t in
-    find (change empty key (~-)) key = -1
+    find (change empty key ~f:(~-)) key = -1
 end
 
 module With_fold = struct
@@ -214,27 +248,27 @@ module With_fold = struct
 
   let set t {Key.key; f=_ } v = With_default.set t key v
 
-  let change t {Key.key; f=_ } update = With_default.change t key update
+  let change t {Key.key; f=_ } ~f:update = With_default.change t key ~f:update
 
-  let add t {Key.key; f} v = With_default.change t key (fun acc -> f acc v)
+  let add t {Key.key; f} v = With_default.change t key ~f:(fun acc -> f acc v)
 
-  TEST_UNIT =
+  let%test_unit _ =
     let key = Key.create ~init:5 ~f:(+) ~name:"init 5" Int.sexp_of_t in
     assert (find empty key = 5);
     let t = add empty key 3 in
     assert (find t key = 8);
-    let t = change t key (~-) in
-    assert (find t key = -8);
+    let t = change t key ~f:(~-) in
+    assert (find t key = -8)
 
-  TEST_UNIT =
+  let%test_unit _ =
     let key =
       Key.create ~init:0 ~f:(fun _ -> assert false) ~name:"don't fold this" Int.sexp_of_t
     in
     assert (find empty key = 0);
     let t = set empty key 1 in
     assert (find t key = 1);
-    let t = change t key (~-) in
-    assert (find t key = -1);
+    let t = change t key ~f:(~-) in
+    assert (find t key = -1)
 end
 
 module Multi = struct
@@ -249,13 +283,13 @@ module Multi = struct
   let add = add
   let change = change
 
-  TEST_UNIT =
+  let%test_unit _ =
     let key = Key.create ~name:"int list" Int.sexp_of_t in
     assert (find empty key = []);
     let t = add empty key 1 in
     assert (find t key = [1]);
     let t = set t key [2;3] in
     assert (find t key = [2;3]);
-    let t = change t key (List.map ~f:(~-)) in
-    assert (find t key = [-2;-3]);
+    let t = change t key ~f:(List.map ~f:(~-)) in
+    assert (find t key = [-2;-3])
 end

@@ -9,7 +9,7 @@
 *)
 
 module type S = sig
-  type t with sexp  (* an element of the group *)
+  type t [@@deriving sexp]  (* an element of the group *)
 
   val zero : t
   val (+)  : t -> t -> t

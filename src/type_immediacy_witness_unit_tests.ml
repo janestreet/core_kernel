@@ -6,7 +6,7 @@ open Typerep_lib.Std
 (* Tests are bound to the value returned by Immediate.of_typerep, as the test cases are
    designed along the value returned and so that they must be revised if changes are
    made. *)
-TEST_MODULE = struct
+let%test_module _ = (module struct
   type t = Always | Sometimes | Never
 
   (* Where appropriate, unit is used as a representative of something that will always be
@@ -56,235 +56,235 @@ TEST_MODULE = struct
   end
   include T
 
-  TEST =
+  let%test _ =
     let module M = struct
-      type t = int with typerep
+      type t = int [@@deriving typerep]
     end in
     check_a M.typerep_of_t [0; 1]
 
-  TEST =
+  let%test _ =
     let module M = struct
-      type t = int32 with typerep
+      type t = int32 [@@deriving typerep]
     end in
     check_n M.typerep_of_t [Int32.zero; Int32.one; Int32.minus_one; Int32.of_int 32580]
 
-  TEST =
+  let%test _ =
     let module M = struct
-      type t = int64 with typerep
+      type t = int64 [@@deriving typerep]
     end in
     check_n M.typerep_of_t [Int64.zero]
 
-  TEST =
+  let%test _ =
     let module M = struct
-      type t = nativeint with typerep
+      type t = nativeint [@@deriving typerep]
     end in
     check_n M.typerep_of_t [Nativeint.zero]
 
-  TEST =
+  let%test _ =
     let module M = struct
-      type t = char with typerep
+      type t = char [@@deriving typerep]
     end in
     check_a M.typerep_of_t ['a']
 
-  TEST =
+  let%test _ =
     let module M = struct
-      type t = float with typerep
+      type t = float [@@deriving typerep]
     end in
     check_n M.typerep_of_t
       [1.1; 0.0; -3.3; nan; infinity; neg_infinity; max_float; min_float]
 
-  TEST =
+  let%test _ =
     let module M = struct
-      type t = string with typerep
+      type t = string [@@deriving typerep]
     end in
     check_n M.typerep_of_t [""; "Hello world!"]
 
-  TEST =
+  let%test _ =
     let module M = struct
-      type t = bool with typerep
+      type t = bool [@@deriving typerep]
     end in
     check_a M.typerep_of_t [true; false]
 
-  TEST =
+  let%test _ =
     let module M = struct
-      type t = unit with typerep
+      type t = unit [@@deriving typerep]
     end in
     check_a M.typerep_of_t [()]
 
-  TEST =
+  let%test _ =
     let module M = struct
       (* The generated typrep in the case of parametric types have this signature:
          val M.typerep_of_t : 'a Typerep.t -> 'a t Typerep.t *)
-      type 'a t = 'a option with typerep
+      type 'a t = 'a option [@@deriving typerep]
     end in
     check_s (M.typerep_of_t imm_t) [None; Some ()]
     && check_s (M.typerep_of_t box_t) [None; Some (ref 1)]
 
-  TEST =
+  let%test _ =
     let module M = struct
-      type 'a t = 'a list with typerep
+      type 'a t = 'a list [@@deriving typerep]
     end in
     check_s (M.typerep_of_t imm_t) [ []; [()] ]
     && check_s (M.typerep_of_t box_t) [ []; [ref 1]]
 
   let static_empty_array = [||]
 
-  TEST =
+  let%test _ =
     let module M = struct
-      type 'a t = 'a array with typerep
+      type 'a t = 'a array [@@deriving typerep]
     end in
     check_n (M.typerep_of_t imm_t) [ static_empty_array ; [| |]; [| (); () |]]
 
-  TEST =
+  let%test _ =
     let module M = struct
-      type 'a t = 'a ref with typerep
+      type 'a t = 'a ref [@@deriving typerep]
     end in
     check_n (M.typerep_of_t imm_t) [ref ()]
 
-  TEST =
+  let%test _ =
     let module M = struct
-      type 'a t = 'a lazy_t with typerep
+      type 'a t = 'a lazy_t [@@deriving typerep]
     end in
     check_s (M.typerep_of_t typerep_of_int) [lazy 1; lazy (1+2)]
     && check_n (M.typerep_of_t typerep_of_float) [lazy 0.0; lazy (1.0 +. -3.3)]
 
-  TEST =
+  let%test _ =
     let module M = struct
-      type t = {foo:unit} with typerep
+      type t = {foo:unit} [@@deriving typerep]
     end in
     check_n (M.typerep_of_t) [{M.foo = ()}]
 
-  TEST =
+  let%test _ =
     let module M = struct
-      type ('a, 'b) t = ('a * 'b) with typerep
+      type ('a, 'b) t = ('a * 'b) [@@deriving typerep]
     end in
     check_n (M.typerep_of_t imm_t imm_t) [ (), () ]
 
-  TEST =
+  let%test _ =
     let module M = struct
-      type ('a, 'b, 'c) t = ('a * 'b * 'c) with typerep
+      type ('a, 'b, 'c) t = ('a * 'b * 'c) [@@deriving typerep]
     end in
     check_n (M.typerep_of_t imm_t imm_t imm_t) [ (), (), () ]
 
-  TEST =
+  let%test _ =
     let module M = struct
-      type ('a, 'b, 'c, 'd) t = ('a * 'b * 'c * 'd) with typerep
+      type ('a, 'b, 'c, 'd) t = ('a * 'b * 'c * 'd) [@@deriving typerep]
     end in
     check_n (M.typerep_of_t imm_t imm_t imm_t imm_t) [ (), (), (), () ]
 
-  TEST =
+  let%test _ =
     let module M = struct
-      type ('a, 'b, 'c, 'd, 'e) t = ('a * 'b * 'c * 'd * 'e) with typerep
+      type ('a, 'b, 'c, 'd, 'e) t = ('a * 'b * 'c * 'd * 'e) [@@deriving typerep]
     end in
     check_n (M.typerep_of_t imm_t imm_t imm_t imm_t imm_t) [ (), (), (), (), () ]
 
-  TEST =
+  let%test _ =
     let module M = struct
       type t =
       | Foo
-      | Bar of unit with typerep
+      | Bar of unit [@@deriving typerep]
     end in
     check_s M.typerep_of_t [M.Foo; M.Bar ()]
 
-  TEST =
+  let%test _ =
     let module M = struct
       type t =
       | Foo
       | Bar
-      | Baz with typerep
+      | Baz [@@deriving typerep]
     end in
     check_a M.typerep_of_t [M.Foo; M.Bar; M.Baz]
 
-  TEST =
+  let%test _ =
     let module M = struct
       type t =
       | Foo of unit
       | Bar of unit
-      | Baz of unit with typerep
+      | Baz of unit [@@deriving typerep]
     end in
     check_n M.typerep_of_t [M.Foo (); M.Bar (); M.Baz ()]
 
-  TEST =
+  let%test _ =
     let module M = struct
-      type t = Foo of unit with typerep
+      type t = Foo of unit [@@deriving typerep]
     end in
     check_n M.typerep_of_t [M.Foo ()]
 
-  TEST =
+  let%test _ =
     let module M = struct
       type t =
       [ `Foo
-      | `Bar of unit ] with typerep
+      | `Bar of unit ] [@@deriving typerep]
     end in
     check_s M.typerep_of_t [`Foo; `Bar ()]
 
-  TEST =
+  let%test _ =
     let module M = struct
       type t =
       [ `Foo
       | `Bar
-      | `Baz ] with typerep
+      | `Baz ] [@@deriving typerep]
     end in
     check_a M.typerep_of_t [`Foo; `Bar; `Baz]
 
-  TEST =
+  let%test _ =
     let module M = struct
       type t =
       [ `Foo of unit
       | `Bar of unit
-      | `Baz of unit ] with typerep
+      | `Baz of unit ] [@@deriving typerep]
     end in
     check_n M.typerep_of_t [`Foo (); `Bar (); `Baz ()]
 
-  TEST =
+  let%test _ =
     let module M = struct
-      type t = [ `Foo of unit ] with typerep
+      type t = [ `Foo of unit ] [@@deriving typerep]
     end in
     check_n M.typerep_of_t [`Foo ()]
 
-  TEST =
+  let%test _ =
     let module M = struct
-      type 'a t = Nil | Cons of 'a * 'a t with typerep
+      type 'a t = Nil | Cons of 'a * 'a t [@@deriving typerep]
     end in
     check_s (M.typerep_of_t typerep_of_int) [M.Nil; M.Cons (1, M.Cons (2, M.Nil))]
 
-  TEST =
+  let%test _ =
     let module M = struct
-      type 'a t = A | B of 'a t lazy_t | C of 'a * 'a t with typerep
+      type 'a t = A | B of 'a t lazy_t | C of 'a * 'a t [@@deriving typerep]
     end in
     check_s (M.typerep_of_t typerep_of_int) [M.A; M.B (lazy M.A); M.C (1,M.A)]
 
-  TEST =
+  let%test _ =
     let module M = struct
-      type 'a t = A | B of ('a t * 'a t) | C of 'a with typerep
+      type 'a t = A | B of ('a t * 'a t) | C of 'a [@@deriving typerep]
     end in
     check_s (M.typerep_of_t typerep_of_int) [M.A; M.B (M.A,M.C 1)]
 
   (* Test the [For_all_parameters] generic witness functors. *)
-  TEST =
+  let%test _ =
     let module M = struct
-      type 'a t = A | B | C with typerep
+      type 'a t = A | B | C [@@deriving typerep]
     end in
     let module X = Type_immediacy.Always.For_all_parameters_S1(M) in
     true
 
-  TEST =
+  let%test _ =
     let module M = struct
-      type 'a t = 'a option lazy_t with typerep
+      type 'a t = 'a option lazy_t [@@deriving typerep]
     end in
     let module X = Type_immediacy.Sometimes.For_all_parameters_S1(M) in
     true
 
-  TEST =
+  let%test _ =
     let module M = struct
-      type 'a t = 'a array lazy_t with typerep
+      type 'a t = 'a array lazy_t [@@deriving typerep]
     end in
     let module X = Type_immediacy.Never.For_all_parameters_S1(M) in
     true
 
-  TEST =
+  let%test _ =
     let module M = struct
-      type 'a t = 'a lazy_t with typerep
+      type 'a t = 'a lazy_t [@@deriving typerep]
     end in
     try
       let module X = Type_immediacy.Sometimes.For_all_parameters_S1(M) in
@@ -298,4 +298,4 @@ TEST_MODULE = struct
           let module X = Type_immediacy.Always.For_all_parameters_S1(M) in
           false
         with _ -> true
-end
+end)

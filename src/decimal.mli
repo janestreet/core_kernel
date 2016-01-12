@@ -19,4 +19,4 @@
     ]}
 *)
 
-type t = float with bin_io, sexp, compare
+type t = float [@@deriving bin_io, sexp, compare]

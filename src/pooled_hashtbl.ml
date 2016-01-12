@@ -27,7 +27,7 @@ let phys_equal = (==)
 
 module Entry : sig
   module Pool : sig
-    type ('k, 'd) t with sexp_of
+    type ('k, 'd) t [@@deriving sexp_of]
 
     val invariant : ('k, 'd) t -> unit
     val create : capacity:int -> (_, _) t
@@ -35,7 +35,7 @@ module Entry : sig
     val max_capacity : int
   end
 
-  type ('k, 'd) t = private int with sexp_of
+  type ('k, 'd) t = private int [@@deriving sexp_of]
 
   val null : unit -> (_, _) t
   val is_null : (_, _) t -> bool
@@ -62,9 +62,9 @@ end = struct
 
   module Pointer = Unsafe.Pointer
 
-  type ('k, 'd) fields = (('k,'d) fields Pointer.t,'k,'d) Unsafe.Slots.t3 with sexp_of
+  type ('k, 'd) fields = (('k,'d) fields Pointer.t,'k,'d) Unsafe.Slots.t3 [@@deriving sexp_of]
 
-  type ('k, 'd) t = ('k, 'd) fields Pointer.t with sexp_of
+  type ('k, 'd) t = ('k, 'd) fields Pointer.t [@@deriving sexp_of]
 
   let create pool ~next ~key ~data = Unsafe.new3 pool next key data
 
@@ -78,7 +78,7 @@ end = struct
   let set_data p t x = Unsafe.set p t Unsafe.Slot.t2 x
 
   module Pool = struct
-    type ('k, 'd) t = ('k, 'd) fields Unsafe.t with sexp_of
+    type ('k, 'd) t = ('k, 'd) fields Unsafe.t [@@deriving sexp_of]
 
     let invariant t = Unsafe.invariant ignore t
 
@@ -96,15 +96,16 @@ end = struct
 end
 
 
-type ('k, 'd) hashtbl = {
-  hashable : 'k Hashable.t;
-  growth_allowed : bool;
-  mutable length : int;
-  mutable capacity : int;
-  mutable entries : ('k, 'd) Entry.Pool.t;
-  mutable table : (('k, 'd) Entry.t) array;
-  mutable n_entries : int;
-}
+type ('k, 'd) hashtbl =
+  { hashable                 : 'k Hashable.t
+  ; growth_allowed           : bool
+  ; mutable length           : int
+  ; mutable capacity         : int
+  ; mutable entries          : ('k, 'd) Entry.Pool.t
+  ; mutable table            : (('k, 'd) Entry.t) array
+  ; mutable n_entries        : int
+  ; mutable mutation_allowed : bool
+  }
 
 type ('k, 'd) t = ('k, 'd) hashtbl
 
@@ -114,6 +115,24 @@ module type S         = S         with type ('a, 'b) hashtbl = ('a, 'b) t
 module type S_binable = S_binable with type ('a, 'b) hashtbl = ('a, 'b) t
 
 let sexp_of_key t = t.hashable.Hashable.sexp_of_t ;;
+
+let ensure_mutation_allowed t =
+  if not t.mutation_allowed then
+    failwith "Hashtbl: mutation not allowed during iteration"
+;;
+
+let without_mutating t f =
+  if t.mutation_allowed
+  then
+    begin
+      t.mutation_allowed <- false;
+      match f () with
+      | x             -> t.mutation_allowed <- true; x
+      | exception exn -> t.mutation_allowed <- true; raise exn
+    end
+  else
+    f ()
+;;
 
 (* We match want to match Core's interface completely, so you can't change the load
    factor. If we care, we can add a new create function, put it back in the record, and
@@ -137,7 +156,15 @@ let create ?(growth_allowed = true) ?(size = 128) ~hashable () =
   let capacity, n_entries = calculate_table_size size in
   let table = Array.create ~len:capacity (Entry.null ()) in
   let entries = Entry.Pool.create ~capacity:n_entries in
-  { hashable; growth_allowed; length = 0; capacity; table; entries; n_entries }
+  { hashable
+  ; growth_allowed
+  ; length = 0
+  ; capacity
+  ; table
+  ; entries
+  ; n_entries
+  ; mutation_allowed = true
+  }
 ;;
 
 let table_get (t : (('k, 'd) Entry.t) array) h =
@@ -152,6 +179,8 @@ let hash_key t key = t.hashable.Hashable.hash key
 
 let compare_key t k1 k2 = t.hashable.Hashable.compare k1 k2
 
+let hashable t = t.hashable
+
 let slot t key = (hash_key t key) land (t.capacity - 1)
 
 let length t = t.length
@@ -165,6 +194,7 @@ let clear =
     if not (Entry.is_null next) then free_loop t next;
   in
   fun t ->
+    ensure_mutation_allowed t;
     for i=0 to t.capacity - 1 do
       let e = table_get t.table i in
       if not (Entry.is_null e) then begin
@@ -275,6 +305,7 @@ let set_or_entry t ~key ~data =
 ;;
 
 let set t ~key ~data =
+  ensure_mutation_allowed t;
   let e = set_or_entry t ~key ~data in
   if not (Entry.is_null e) then Entry.set_data t.entries e data
 ;;
@@ -282,6 +313,7 @@ let set t ~key ~data =
 let replace = set ;;
 
 let add t ~key ~data =
+  ensure_mutation_allowed t;
   let e = set_or_entry t ~key ~data in
   if Entry.is_null e then `Ok else `Duplicate
 ;;
@@ -291,7 +323,7 @@ let add_or_error t ~key ~data =
   | `Ok -> Result.Ok ()
   | `Duplicate ->
     let sexp_of_key = sexp_of_key t in
-    Or_error.error "Pooled_hashtbl.add_exn got key already present" key <:sexp_of< key >>
+    Or_error.error "Pooled_hashtbl.add_exn got key already present" key [%sexp_of: key]
 ;;
 
 let add_exn t ~key ~data =
@@ -299,14 +331,17 @@ let add_exn t ~key ~data =
 ;;
 
 let find_or_add t key ~default =
+  ensure_mutation_allowed t;
   let index = slot t key in
   let it = table_get t.table index in
   let e = find_entry t ~key ~it in
   if not (Entry.is_null e) then Entry.data t.entries e
   else
-    let data = default () in
-    insert_link t ~index ~key ~data ~it;
-    data
+    begin
+      let data = without_mutating t default in
+      insert_link t ~index ~key ~data ~it;
+      data
+    end
 ;;
 
 let find t key =
@@ -348,6 +383,7 @@ let rec remove_key_r t index key e prev =
 ;;
 
 let find_and_remove t key =
+  ensure_mutation_allowed t;
   let index = slot t key in
   let e = table_get t.table index in
   (* can't reuse find_entry given that we require the prev pointer *)
@@ -364,6 +400,7 @@ let find_and_remove t key =
 ;;
 
 let incr ?(by=1) t key =
+  ensure_mutation_allowed t;
   (* Core's implementation actually has a bug here and, if the key is missing, it sets
      it to 1, not by. I believe "by" is correct. *)
   let e = set_or_entry t ~key ~data:by in
@@ -373,31 +410,36 @@ let incr ?(by=1) t key =
 ;;
 
 let change =
+  let call t f x =
+    without_mutating t (fun () -> f x)
+  in
   let rec change_key t key f index e prev =
     if Entry.is_null e then
       `Not_found
     else
       let curr_key = Entry.key t.entries e in
       if compare_key t curr_key key = 0 then begin
-        (match f (Some (Entry.data t.entries e)) with
+        (match call t f (Some (Entry.data t.entries e)) with
          | Some data -> Entry.set_data t.entries e data
          | None      -> delete_link t ~index ~prev ~e);
         `Changed
       end else
         change_key t key f index (Entry.next t.entries e) e
   in
-  fun t key f ->
+  fun t key ~f ->
+    ensure_mutation_allowed t;
     let index = slot t key in
     let it = table_get t.table index in
     match change_key t key f index it (Entry.null ()) with
     | `Changed   -> ()
     | `Not_found ->
       (* New entry is inserted in the begining of the list (it) *)
-      match f None with
+      match call t f None with
       | None -> ()
       | Some data -> insert_link t ~index ~key ~data ~it
 ;;
 
+let update t key ~f = change t key ~f:(fun data -> Some (f data))
 
 (* Split similar to find and removed. Code duplicated to avoid allocation and
    unroll/inline the single entry case *)
@@ -410,6 +452,7 @@ let rec remove_key_r t index key e prev =
 ;;
 
 let remove t key =
+  ensure_mutation_allowed t;
   let index = slot t key in
   let e = table_get t.table index in
   (* can't reuse find_entry given that we require the prev pointer *)
@@ -428,27 +471,20 @@ let remove t key =
    here, we should, at the least, allow you to determine, given an entry, whether it has
    a key. Then we could just iterate over the Entry_pool and get better cache behavior. *)
 
-let remove_one t key =
-  match find t key with
-  | None -> ()
-  | Some ([] | [_]) -> remove t key
-  | Some (_ :: tl) -> replace t ~key ~data:tl
-;;
-
 let add_multi t ~key ~data =
   match find t key with
-  | None -> replace t ~key ~data:[data]
+  | None   -> replace t ~key ~data:[data]
   | Some l -> replace t ~key ~data:(data :: l)
 ;;
 
 let remove_multi t key =
   match find t key with
-  | None -> ()
-  | Some [] | Some [_] -> remove t key
-  | Some (_ :: tl) -> replace t ~key ~data:tl
+  | None               -> ()
+  | Some [] | Some [_] -> remove  t  key
+  | Some (_ :: tl)     -> replace t ~key ~data:tl
 ;;
 
-let iter =
+let iteri =
   let rec loop t f e =
     if not (Entry.is_null e) then begin
       f ~key:(Entry.key t.entries e)
@@ -459,11 +495,26 @@ let iter =
   fun t ~f ->
     if t.length = 0 then ()
     else begin
-      for i = 0 to t.capacity - 1 do
-        loop t f (table_get t.table i)
-      done
+      let m = t.mutation_allowed in
+      match
+        t.mutation_allowed <- false;
+        for i = 0 to t.capacity - 1 do
+          loop t f (table_get t.table i)
+        done
+      with
+      | () ->
+        t.mutation_allowed <- m
+      | exception exn ->
+        t.mutation_allowed <- m;
+        raise exn
     end
 ;;
+let iter_vals t ~f = iteri t ~f:(fun ~key:_ ~data -> f data) ;;
+let iter_keys t ~f = iteri t ~f:(fun ~key ~data:_ -> f key) ;;
+
+(* DEPRECATED - leaving here for a little while so as to ease the transition for
+   external core users. (But marking as deprecated in the mli *)
+let iter = iteri
 
 let fold =
   let rec fold_entries t e acc f =
@@ -478,23 +529,37 @@ let fold =
     if length t = 0 then init
     else begin
       let acc = ref init in
-      for i = 0 to t.capacity - 1 do
-        let e = table_get t.table i in
-        if not (Entry.is_null e) then
-          acc := fold_entries t e !acc f;
-      done;
-      !acc
+      let m = t.mutation_allowed in
+      match
+        t.mutation_allowed <- false;
+        for i = 0 to t.capacity - 1 do
+          let e = table_get t.table i in
+          if not (Entry.is_null e) then
+            acc := fold_entries t e !acc f;
+        done
+      with
+      | () ->
+        t.mutation_allowed <- m;
+        !acc
+      | exception exn ->
+        t.mutation_allowed <- m;
+        raise exn
     end
 ;;
 
-let invariant t =
+let invariant invariant_key invariant_data t =
   let n = Array.length t.table in
   for i = 0 to n - 1 do
     let e = table_get t.table i in
     assert (Entry.is_null e || i = slot t (Entry.key t.entries e))
   done;
   Entry.Pool.invariant t.entries;
-  let real_len = fold t ~init:0 ~f:(fun ~key:_ ~data:_ i -> i + 1) in
+  let real_len =
+    fold t ~init:0 ~f:(fun ~key ~data i ->
+      invariant_key key;
+      invariant_data data;
+      i + 1)
+  in
   assert (real_len = t.length);
   assert (t.length <= t.n_entries);
 ;;
@@ -506,7 +571,9 @@ let sexp_of_t sexp_of_k sexp_of_d t =
 
 let existsi t ~f =
   with_return (fun r ->
-    iter t ~f:(fun ~key ~data -> if f ~key ~data then r.return true);
+    iteri t ~f:(fun ~key ~data ->
+      if f ~key ~data then
+        r.return true);
     false)
 ;;
 
@@ -515,12 +582,17 @@ let exists t ~f = existsi t ~f:(fun ~key:_ ~data -> f data) ;;
 let for_alli t ~f = not (existsi t ~f:(fun ~key   ~data -> not (f ~key ~data)))
 let for_all  t ~f = not (existsi t ~f:(fun ~key:_ ~data -> not (f       data)))
 
+let counti t ~f =
+  fold t ~init:0 ~f:(fun ~key ~data acc -> if f ~key ~data then acc+1 else acc)
+let count t ~f =
+  fold t ~init:0 ~f:(fun ~key:_ ~data acc -> if f data then acc+1 else acc)
+
 let mapi t ~f =
   let new_t =
     create ~growth_allowed:t.growth_allowed
       ~hashable:t.hashable ~size:t.length ()
   in
-  iter t ~f:(fun ~key ~data -> replace new_t ~key ~data:(f ~key ~data));
+  iteri t ~f:(fun ~key ~data -> replace new_t ~key ~data:(f ~key ~data));
   new_t
 ;;
 
@@ -531,7 +603,7 @@ let filter_mapi t ~f =
     create ~growth_allowed:t.growth_allowed
       ~hashable:t.hashable ~size:t.length ()
   in
-  iter t ~f:(fun ~key ~data ->
+  iteri t ~f:(fun ~key ~data ->
     match f ~key ~data with
     | Some new_data -> replace new_t ~key ~data:new_data
     | None -> ());
@@ -555,7 +627,7 @@ let partition_mapi t ~f =
     create ~growth_allowed:t.growth_allowed
       ~hashable:t.hashable ~size:t.length ()
   in
-  iter t ~f:(fun ~key ~data ->
+  iteri t ~f:(fun ~key ~data ->
     match f ~key ~data with
     | `Fst new_data -> replace t0 ~key ~data:new_data
     | `Snd new_data -> replace t1 ~key ~data:new_data);
@@ -569,8 +641,6 @@ let partitioni_tf t ~f =
 ;;
 
 let partition_tf t ~f = partitioni_tf t ~f:(fun ~key:_ ~data -> f data) ;;
-
-let iter_vals t ~f = iter t ~f:(fun ~key:_ ~data -> f data) ;;
 
 let create_mapped ?growth_allowed ?size ~hashable ~get_key ~get_data rows =
   let size = match size with Some s -> s | None -> List.length rows in
@@ -613,7 +683,7 @@ let of_alist_or_error ?growth_allowed ?size ~hashable lst =
   | `Ok v -> Result.Ok v
   | `Duplicate_key key ->
     let sexp_of_key = hashable.Hashable.sexp_of_t in
-    Or_error.error "Pooled_hashtbl.of_alist_exn: duplicate key" key <:sexp_of< key >>
+    Or_error.error "Pooled_hashtbl.of_alist_exn: duplicate key" key [%sexp_of: key]
 ;;
 
 let of_alist_exn ?growth_allowed ?size ~hashable lst =
@@ -662,67 +732,100 @@ let create_with_key_or_error ?growth_allowed ?size ~hashable ~get_key rows =
   | `Duplicate_keys keys ->
     let sexp_of_key = hashable.Hashable.sexp_of_t in
     Or_error.error "Pooled_hashtbl.create_with_key: duplicate keys"
-      keys <:sexp_of< key list >>
+      keys [%sexp_of: key list]
 ;;
 
 let create_with_key_exn ?growth_allowed ?size ~hashable ~get_key rows =
   Or_error.ok_exn (create_with_key_or_error ?growth_allowed ?size ~hashable ~get_key rows)
 ;;
 
-let merge t1 t2 ~f =
-  if not (phys_equal t1.hashable t2.hashable)
-  then invalid_arg "Pooled_hashtbl.merge: different 'hashable' values";
-  let create () =
-    create
-      ~growth_allowed:t1.growth_allowed
-      ~hashable:t1.hashable
-      ~size:t1.length
-      ()
+let merge =
+  let maybe_set t ~key ~f d =
+    match f ~key d with
+    | None -> ()
+    | Some v ->
+      set t ~key ~data:v
   in
-  let t = create () in
-  let unique_keys = create () in
-  let record_key ~key ~data:_ = replace unique_keys ~key ~data:() in
-  iter t1 ~f:record_key;
-  iter t2 ~f:record_key;
-  iter unique_keys ~f:(fun ~key ~data:_ ->
-    let arg =
-      match find t1 key, find t2 key with
-      | None, None -> assert false
-      | None, Some r -> `Right r
-      | Some l, None -> `Left l
-      | Some l, Some r -> `Both (l, r)
+  fun t_left t_right ~f ->
+    if not (phys_equal t_left.hashable t_right.hashable)
+    then invalid_arg "Pooled_hashtbl.merge: different 'hashable' values";
+    let new_t =
+      create ~growth_allowed:t_left.growth_allowed
+        ~hashable:t_left.hashable ~size:t_left.length ()
     in
-    match f ~key arg with
-    | Some data -> replace t ~key ~data
-    | None -> ());
-  t
+    without_mutating t_left (fun () ->
+      without_mutating t_right (fun () ->
+        iteri t_left ~f:(fun ~key ~data:left ->
+          match find t_right key with
+          | None ->
+            maybe_set new_t ~key ~f (`Left left)
+          | Some right ->
+            maybe_set new_t ~key ~f (`Both (left, right))
+        );
+        iteri t_right ~f:(fun ~key ~data:right ->
+          match find t_left key with
+          | None ->
+            maybe_set new_t ~key ~f (`Right right)
+          | Some _ -> () (* already done above *)
+        )));
+    new_t
 ;;
 
 let merge_into ~f ~src ~dst =
-  iter src ~f:(fun ~key ~data ->
-    match f ~key data (find dst key) with
+  iteri src ~f:(fun ~key ~data ->
+    match without_mutating dst (fun () -> f ~key data (find dst key)) with
     | Some data -> replace dst ~key ~data
-    | None -> ())
+    | None      -> ())
 
 let filteri_inplace t ~f =
   let to_remove =
     fold t ~init:[] ~f:(fun ~key ~data ac ->
-      if f key data then ac else key :: ac)
+      if f ~key ~data then ac else key :: ac)
   in
   List.iter to_remove ~f:(fun key -> remove t key);
 ;;
 
 let filter_inplace t ~f =
-  filteri_inplace t ~f:(fun _ data -> f data)
+  filteri_inplace t ~f:(fun ~key:_ ~data -> f data)
 ;;
+
+let filter_keys_inplace t ~f =
+  filteri_inplace t ~f:(fun ~key ~data:_ -> f key)
+;;
+
+let filter_replace_alli t ~f =
+  let map_results =
+    fold t ~init:[] ~f:(fun ~key ~data ac -> (key, f ~key ~data) :: ac)
+  in
+  List.iter map_results ~f:(fun (key,result) ->
+    match result with
+    | None -> remove t key
+    | Some data -> set t ~key ~data
+  );
+;;
+
+let filter_replace_all t ~f =
+  filter_replace_alli t ~f:(fun ~key:_ ~data -> f data)
+
+let replace_alli t ~f =
+  let map_results =
+    fold t ~init:[] ~f:(fun ~key ~data ac -> (key, f ~key ~data) :: ac)
+  in
+  List.iter map_results ~f:(fun (key,data) -> set t ~key ~data);
+;;
+
+let replace_all t ~f =
+  replace_alli t ~f:(fun ~key:_ ~data -> f data)
 
 let equal t t' equal =
   length t = length t' &&
   with_return (fun r ->
-    iter t ~f:(fun ~key ~data ->
+    iteri t ~f:(fun ~key ~data ->
       match find t' key with
-      | None -> r.return false
-      | Some data' -> if not (equal data data') then r.return false);
+      | None       -> r.return false
+      | Some data' ->
+        if not (without_mutating t' (fun () -> equal data data'))
+        then r.return false);
     true)
 ;;
 
@@ -731,40 +834,45 @@ let similar = equal
 let copy t =
   let table = Array.create ~len:t.capacity (Entry.null ()) in
   let entries = Entry.Pool.create ~capacity:t.n_entries in
-  let copy = {
-    hashable = t.hashable;
-    growth_allowed = t.growth_allowed;
-    length = 0;
-    capacity = t.capacity;
-    table;
-    entries;
-    n_entries = t.n_entries;
-  }
+  let copy =
+    { hashable         = t.hashable
+    ; growth_allowed   = t.growth_allowed
+    ; length           = 0
+    ; capacity         = t.capacity
+    ; table
+    ; entries
+    ; n_entries        = t.n_entries
+    ; mutation_allowed = true
+    }
   in
-  iter t ~f:(fun ~key ~data -> add_exn copy ~key ~data);
+  iteri t ~f:(fun ~key ~data -> add_exn copy ~key ~data);
   copy
 ;;
 
 module Accessors = struct
-  let invariant       = invariant
   let clear           = clear
   let copy            = copy
   let remove          = remove
-  let remove_one      = remove_one
   let replace         = replace
   let set             = set
   let add             = add
   let add_or_error    = add_or_error
   let add_exn         = add_exn
   let change          = change
+  let update          = update
   let add_multi       = add_multi
   let remove_multi    = remove_multi
   let mem             = mem
+  let iter_vals       = iter_vals
+  let iteri           = iteri
+  let iter_keys       = iter_keys
   let iter            = iter
   let exists          = exists
   let existsi         = existsi
   let for_all         = for_all
   let for_alli        = for_alli
+  let count           = count
+  let counti          = counti
   let fold            = fold
   let length          = length
   let is_empty        = is_empty
@@ -783,7 +891,6 @@ module Accessors = struct
   let find_exn        = find_exn
   let find_and_call   = find_and_call
   let find_and_remove = find_and_remove
-  let iter_vals       = iter_vals
   let to_alist        = to_alist
   let validate        = validate
   let merge           = merge
@@ -792,6 +899,11 @@ module Accessors = struct
   let data            = data
   let filter_inplace  = filter_inplace
   let filteri_inplace = filteri_inplace
+  let filter_keys_inplace = filter_keys_inplace
+  let replace_all     = replace_all
+  let replace_alli    = replace_alli
+  let filter_replace_all  = filter_replace_all
+  let filter_replace_alli = filter_replace_alli
   let equal           = equal
   let similar         = similar
   let incr            = incr
@@ -841,7 +953,7 @@ end = struct
   ;;
 
   let t_of_sexp k_of_sexp d_of_sexp sexp =
-    let alist = <:of_sexp< (k * d) list >> sexp in
+    let alist = [%of_sexp: (k * d) list] sexp in
     of_alist_exn alist ~size:(List.length alist)
   ;;
 
@@ -878,6 +990,8 @@ module Poly = struct
 
   let hashable = Hashable.poly
 
+  let invariant = invariant
+
   include Creators (struct
     type 'a t = 'a
     let hashable = hashable
@@ -890,21 +1004,21 @@ module Poly = struct
   include Bin_prot.Utils.Make_iterable_binable2 (struct
     type ('a, 'b) z = ('a, 'b) t
     type ('a, 'b) t = ('a, 'b) z
-    type ('a, 'b) el = 'a * 'b with bin_io
-    type ('a, 'b) acc = ('a, 'b) t
+    type ('a, 'b) el = 'a * 'b [@@deriving bin_io]
 
     let module_name = Some "Pooled_hashtbl"
     let length = length
-    let iter t ~f = iter t ~f:(fun ~key ~data -> f (key, data))
-    let init size = create ~size ()
-
-    let insert t (key, data) _i =
-      match find t key with
-      | None -> replace t ~key ~data; t
-      | Some _ -> failwith "Pooled_hashtbl.bin_read_t_: duplicate key"
+    let iter t ~f = iteri t ~f:(fun ~key ~data -> f (key, data))
+    let init ~len ~next =
+      let t = create ~size:len () in
+      for _i = 0 to len - 1 do
+        let key,data = next () in
+        match find t key with
+        | None -> replace t ~key ~data
+        | Some _ -> failwith "Pooled_hashtbl.bin_read_t_: duplicate key"
+      done;
+      t
     ;;
-
-    let finish = Fn.id
   end)
 
 end
@@ -919,10 +1033,12 @@ module Make (Key : Key) = struct
     }
   ;;
 
-  type key = Key.t with sexp_of
+  type key = Key.t [@@deriving sexp_of]
   type ('a, 'b) hashtbl = ('a, 'b) t
   type 'a t = (key, 'a) hashtbl
   type 'a key_ = key
+
+  let invariant invariant_data t = invariant ignore invariant_data t
 
   include Creators (struct
     type 'a t = Key.t
@@ -943,28 +1059,28 @@ end) = struct
   include Make (Key)
 
   include Bin_prot.Utils.Make_iterable_binable1 (struct
-    type 'a acc = 'a t
-    type 'a t = 'a acc
-    type 'a el = Key.t * 'a with bin_io
+    type nonrec 'a t = 'a t
+    type 'a el = Key.t * 'a [@@deriving bin_io]
 
     let module_name = Some "Pooled_hashtbl"
     let length = length
-    let iter t ~f = iter t ~f:(fun ~key ~data -> f (key, data))
-    let init size = create ~size ()
-
-    let insert t (key, data) _i =
-      match find t key with
-      | None -> replace t ~key ~data; t
-      | Some _ -> failwiths "Pooled_hashtbl.bin_read_t: duplicate key"
-        key <:sexp_of< Key.t >>
+    let iter t ~f = iteri t ~f:(fun ~key ~data -> f (key, data))
+    let init ~len ~next =
+      let t = create ~size:len () in
+      for _i = 0 to len - 1 do
+        let (key, data) = next () in
+        match find t key with
+        | None -> replace t ~key ~data
+        | Some _ -> failwiths "Pooled_hashtbl.bin_read_t: duplicate key"
+                      key [%sexp_of: Key.t]
+      done;
+      t
     ;;
-
-    let finish = Fn.id
   end)
 
 end
 
-BENCH_MODULE "Pooled_hashtbl" = struct
+let%bench_module "Pooled_hashtbl" = (module struct
   (* Big enough so that the arrays are not allocated on the minor. Minor allocations
      should be small and independant of the size. *)
   let size = 512
@@ -976,6 +1092,6 @@ BENCH_MODULE "Pooled_hashtbl" = struct
     t
   ;;
 
-  BENCH "create" = create ()
-  BENCH "create+resize" = resize (create ()) (size * 2)
-end
+  let%bench "create" = create ()
+  let%bench "create+resize" = resize (create ()) (size * 2)
+end)

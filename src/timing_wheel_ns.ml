@@ -53,7 +53,7 @@ module Time = Time_ns (* for the .mli *)
 let sexp_of_t_style : [ `Pretty | `Internal ] ref = ref `Pretty
 
 module Num_key_bits : sig
-  type t = private int with compare, sexp
+  type t = private int [@@deriving compare, sexp]
 
   include Comparable  with type t := t
   include Invariant.S with type t := t
@@ -79,7 +79,7 @@ end = struct
     assert (t <= max_value);
   ;;
 
-  TEST_UNIT = invariant zero
+  let%test_unit _ = invariant zero
 
   let of_int i = invariant i; i
 
@@ -93,7 +93,7 @@ end = struct
 end
 
 module Level_bits = struct
-  type t = Num_key_bits.t list with sexp
+  type t = Num_key_bits.t list [@@deriving sexp]
 
   let max_num_bits = (Num_key_bits.max_value :> int)
 
@@ -110,7 +110,7 @@ module Level_bits = struct
   ;;
 
   let t_of_sexp sexp =
-    let t = sexp |> <:of_sexp< t >> in
+    let t = sexp |> [%of_sexp: t] in
     invariant t;
     t
   ;;
@@ -119,12 +119,12 @@ module Level_bits = struct
     if List.is_empty ints then failwith "Level_bits.create_exn requires a nonempty list";
     if List.exists ints ~f:(fun bits -> bits <= 0)
     then failwiths "Level_bits.create_exn got nonpositive num bits" ints
-           <:sexp_of< int list >>;
+           [%sexp_of: int list];
     let num_bits = List.fold ints ~init:0 ~f:(+) in
     if num_bits > max_num_bits
     then failwiths "Level_bits.create_exn got too many bits"
            (ints, `got num_bits, `max max_num_bits)
-           <:sexp_of< int list * [ `got of int ] * [ `max of int ] >>;
+           [%sexp_of: int list * [ `got of int ] * [ `max of int ]];
     List.map ints ~f:Num_key_bits.of_int
   ;;
 
@@ -135,23 +135,22 @@ module Config = struct
   module Alarm_precision =
     Validated.Make (struct
       include Time_ns.Span
-      let here = _here_
+      let here = [%here]
       let validate = Time_ns.Span.validate_positive
     end)
 
-  let alarm_precision_default = Alarm_precision.create_exn (Time_ns.Span.of_int_sec 1)
   let level_bits_default = Level_bits.default
 
   type t =
-    { alarm_precision : Alarm_precision.t with default ( alarm_precision_default )
-    ; level_bits      : Level_bits.t      with default ( level_bits_default )
+    { alarm_precision : Alarm_precision.t
+    ; level_bits      : Level_bits.t [@default level_bits_default] [@sexp_drop_default]
     }
-  with fields, sexp
+  [@@deriving fields, sexp]
 
   let alarm_precision t = Alarm_precision.raw t.alarm_precision
 
   let invariant t =
-    Invariant.invariant _here_ t <:sexp_of< t >> (fun () ->
+    Invariant.invariant [%here] t [%sexp_of: t] (fun () ->
       let check f = Invariant.check_field t f in
       Fields.iter
         ~alarm_precision:ignore
@@ -159,18 +158,14 @@ module Config = struct
   ;;
 
   let create
-        ?alarm_precision
         ?(level_bits = level_bits_default)
+        ~alarm_precision
         ()
     =
-    let alarm_precision =
-      Option.value_map alarm_precision ~f:Alarm_precision.create_exn
-        ~default:alarm_precision_default
-    in
-    { alarm_precision; level_bits }
+    { alarm_precision = Alarm_precision.create_exn alarm_precision
+    ; level_bits
+    }
   ;;
-
-  let default = create ()
 
   let durations t =
     let _, durations =
@@ -212,7 +207,7 @@ module Priority_queue = struct
 
     (* [Slots_mask] is used to quickly determine a key's slot in a given level. *)
     module Slots_mask : sig
-      type t = private Int63.t with compare, sexp_of
+      type t = private Int63.t [@@deriving compare, sexp_of]
 
       val create : level_bits:Num_key_bits.t -> t
 
@@ -222,7 +217,7 @@ module Priority_queue = struct
     (* [Min_key_in_same_slot_mask] is used to quickly determine the minimum key in the
        same slot as a given key. *)
     module Min_key_in_same_slot_mask : sig
-      type t = private Int63.t with compare, sexp_of
+      type t = private Int63.t [@@deriving compare, sexp_of]
 
       val create : bits_per_slot:Num_key_bits.t -> t
     end
@@ -241,7 +236,7 @@ module Priority_queue = struct
   end = struct
 
     module Slots_mask = struct
-      type t = Int63.t with compare, sexp_of
+      type t = Int63.t [@@deriving compare, sexp_of]
 
       let create ~level_bits = Int63.( - ) (Num_key_bits.pow2 level_bits) Int63.one
 
@@ -305,16 +300,16 @@ module Priority_queue = struct
        'a pool_slots Pointer.t,
        'a pool_slots Pointer.t
       ) Pool.Slots.t6
-    with sexp_of
+    [@@deriving sexp_of]
 
-    type 'a t = 'a pool_slots Pointer.t with sexp_of
+    type 'a t = 'a pool_slots Pointer.t [@@deriving sexp_of]
 
     let null = Pointer.null
   end
 
   module Internal_elt : sig
     module Pool : sig
-      type 'a t with sexp_of
+      type 'a t [@@deriving sexp_of]
 
       include Invariant.S1 with type 'a t := 'a t
 
@@ -323,7 +318,7 @@ module Priority_queue = struct
       val grow : ?capacity:int -> 'a t -> 'a t
     end
 
-    type 'a t = private 'a External_elt.t with sexp_of
+    type 'a t = private 'a External_elt.t [@@deriving sexp_of]
 
     val null : unit -> _ t
     val is_null : _ t -> bool
@@ -383,9 +378,9 @@ module Priority_queue = struct
 
   end = struct
 
-    type 'a pool_slots = 'a External_elt.pool_slots with sexp_of
+    type 'a pool_slots = 'a External_elt.pool_slots [@@deriving sexp_of]
 
-    type 'a t = 'a External_elt.t with sexp_of
+    type 'a t = 'a External_elt.t [@@deriving sexp_of]
 
     let null    = Pointer.null
     let is_null = Pointer.is_null
@@ -414,7 +409,7 @@ module Priority_queue = struct
     let external_is_valid = is_valid
 
     let invariant pool invariant_a t =
-      Invariant.invariant _here_ t <:sexp_of< _ t >> (fun () ->
+      Invariant.invariant [%here] t [%sexp_of: _ t] (fun () ->
         assert (is_valid pool t);
         invariant_a (value pool t);
         let n = next pool t in
@@ -425,7 +420,7 @@ module Priority_queue = struct
 
     module Pool = struct
 
-      type 'a t = 'a pool_slots Pool.t with sexp_of
+      type 'a t = 'a pool_slots Pool.t [@@deriving sexp_of]
 
       let invariant _invariant_a t = Pool.invariant ignore t
 
@@ -440,7 +435,7 @@ module Priority_queue = struct
     let of_external_exn pool t =
       if is_valid pool t
       then t
-      else failwiths "Timing_wheel.Priority_queue got invalid elt" t <:sexp_of< _ t >>
+      else failwiths "Timing_wheel.Priority_queue got invalid elt" t [%sexp_of: _ t]
     ;;
 
     let unlink pool t =
@@ -517,7 +512,7 @@ module Priority_queue = struct
            of elts.  [Array.length slots = 1 lsl bits]. *)
       ; slots                     : 'a Internal_elt.t array sexp_opaque
       }
-    with fields, sexp_of
+    [@@deriving fields, sexp_of]
 
     let num_slots t = Array.length t.slots
 
@@ -539,12 +534,12 @@ module Priority_queue = struct
     ; mutable elt_key_lower_bound : Key.t
     ; levels                      : 'a Level.t array
     }
-  with fields, sexp_of
+  [@@deriving fields, sexp_of]
 
   type 'a priority_queue = 'a t
 
   module Elt = struct
-    type 'a t = 'a External_elt.t with sexp_of
+    type 'a t = 'a External_elt.t [@@deriving sexp_of]
 
     let invariant p invariant_a t =
       Internal_elt.invariant p.pool invariant_a (Internal_elt.of_external_exn p.pool t)
@@ -605,7 +600,7 @@ module Priority_queue = struct
         { key   : Key.t
         ; value : 'a
         }
-      with sexp_of
+      [@@deriving sexp_of]
     end
 
     type 'a t =
@@ -613,7 +608,7 @@ module Priority_queue = struct
       ; max_allowed_key : Key.t
       ; elts            : 'a Elt.t list
       }
-    with sexp_of
+    [@@deriving sexp_of]
   end
 
   let pretty t =
@@ -634,31 +629,31 @@ module Priority_queue = struct
 
   let sexp_of_t sexp_of_a t =
     match !sexp_of_t_style with
-    | `Internal -> <:sexp_of< a t_internal >> t
-    | `Pretty -> <:sexp_of< a Pretty.t >> (pretty t)
+    | `Internal -> [%sexp_of: a t_internal] t
+    | `Pretty -> [%sexp_of: a Pretty.t] (pretty t)
   ;;
 
   let invariant invariant_a t : unit =
     let pool = t.pool in
     let level_invariant level =
-      Invariant.invariant _here_ level <:sexp_of< _ Level.t >> (fun () ->
+      Invariant.invariant [%here] level [%sexp_of: _ Level.t] (fun () ->
         let check f = Invariant.check_field level f in
         Level.Fields.iter
           ~index:(check (fun index -> assert (index >= 0)))
           ~bits:(check (fun bits -> assert (Num_key_bits.( > ) bits Num_key_bits.zero)))
-          ~slots_mask:(check (<:test_result< Slots_mask.t >>
+          ~slots_mask:(check ([%test_result: Slots_mask.t]
                                 ~expect:(Slots_mask.create ~level_bits:level.bits)))
           ~bits_per_slot:(check (fun bits_per_slot ->
             assert (Num_key_bits.( >= ) bits_per_slot Num_key_bits.zero)))
           ~keys_per_slot:(check (fun keys_per_slot ->
-            <:test_result< Key.Span.t >> keys_per_slot
+            [%test_result: Key.Span.t] keys_per_slot
               ~expect:(Key.num_keys level.bits_per_slot)))
           ~min_key_in_same_slot_mask:(check (fun min_key_in_same_slot_mask ->
             assert (min_key_in_same_slot_mask
                     = Min_key_in_same_slot_mask.create
                         ~bits_per_slot:level.bits_per_slot)))
           ~num_allowed_keys:(check (fun num_allowed_keys ->
-            <:test_result< Key.Span.t >> num_allowed_keys
+            [%test_result: Key.Span.t] num_allowed_keys
               ~expect:(Key.Span.scale_int level.keys_per_slot (Level.num_slots level))))
           ~length:(check (fun length ->
             assert (length
@@ -668,12 +663,12 @@ module Priority_queue = struct
                       else n + Internal_elt.length pool elt))))
           ~min_allowed_key:(check (fun min_allowed_key ->
             assert (Key.( >= ) min_allowed_key Key.zero);
-            <:test_result< Key.Span.t >>
+            [%test_result: Key.Span.t]
               (Key.rem min_allowed_key level.keys_per_slot)
               ~expect:Key.Span.zero))
           ~max_allowed_key:
             (check (fun max_allowed_key ->
-               <:test_result< Key.t >> max_allowed_key
+               [%test_result: Key.t] max_allowed_key
                  ~expect:(Key.add level.min_allowed_key
                             (Key.Span.pred level.num_allowed_keys))))
           ~slots:(check (fun slots ->
@@ -689,7 +684,7 @@ module Priority_queue = struct
                   invariant_a (Internal_elt.value pool elt));
               end))))
     in
-    Invariant.invariant _here_ t <:sexp_of< _ t_internal >> (fun () ->
+    Invariant.invariant [%here] t [%sexp_of: _ t_internal] (fun () ->
       let check f = Invariant.check_field t f in
       assert (min_allowed_key t >= Key.zero);
       assert (min_allowed_key t <= Key.max_representable);
@@ -719,7 +714,7 @@ module Priority_queue = struct
             then begin
               let prev_level = levels.( level_index - 1 ) in
               let module L = Level in
-              <:test_result< Key.Span.t >>
+              [%test_result: Key.Span.t]
                 (L.keys_per_slot level) ~expect:(L.num_allowed_keys prev_level);
               let bound = Key.succ (L.max_allowed_key prev_level) in
               assert (L.min_allowed_key level <= bound);
@@ -854,7 +849,7 @@ module Priority_queue = struct
   let ensure_valid_key t ~key =
     if key < min_allowed_key t || key > max_allowed_key t
     then failwiths "Timing_wheel.Priority_queue got invalid key" (key, t)
-           <:sexp_of< Key.t * _ t >>;
+           [%sexp_of: Key.t * _ t];
   ;;
 
   let internal_add t ~key ~at value =
@@ -958,7 +953,7 @@ module Priority_queue = struct
   let increase_min_allowed_key t ~key ~handle_removed =
     if Key.( > ) key Key.max_representable
     then failwiths "Timing_wheel.increase_min_allowed_key got invalid key" (key, t)
-           <:sexp_of< Key.t * _ t >>;
+           [%sexp_of: Key.t * _ t];
     if key > min_allowed_key t
     then begin
       (* We increase the [min_allowed_key] of levels in order to restore the invariant
@@ -1171,18 +1166,18 @@ type 'a t =
   ; mutable now      : Time_ns.t
   ; priority_queue   : 'a Priority_queue.t
   }
-with fields, sexp_of
+[@@deriving fields, sexp_of]
 
 type 'a timing_wheel = 'a t
 
 type 'a t_now = 'a t
 
-let sexp_of_t_now _ t = t.now |> <:sexp_of< Time_ns.t >>
+let sexp_of_t_now _ t = t.now |> [%sexp_of: Time_ns.t]
 
 let alarm_precision t = Config.alarm_precision t.config
 
 module Alarm = struct
-  type 'a t = 'a Priority_queue.Elt.t with sexp_of
+  type 'a t = 'a Priority_queue.Elt.t [@@deriving sexp_of]
 
   let null = Priority_queue.Elt.null
 
@@ -1201,7 +1196,7 @@ module Pretty = struct
       { at    : Time_ns.t
       ; value : 'a
       }
-    with fields, sexp_of
+    [@@deriving fields, sexp_of]
 
     let create t alarm = { at = Alarm.at t alarm; value = Alarm.value t alarm }
 
@@ -1218,7 +1213,7 @@ module Pretty = struct
     ; now              : Time_ns.t
     ; alarms           : 'a Alarm.t list
     }
-  with sexp_of
+  [@@deriving sexp_of]
 end
 
 let pretty ({ config; start; min_time; max_time; min_interval_num; max_interval_num; now
@@ -1241,7 +1236,7 @@ let pretty ({ config; start; min_time; max_time; min_interval_num; max_interval_
 let sexp_of_t sexp_of_a t =
   match !sexp_of_t_style with
   | `Internal -> sexp_of_t_internal sexp_of_a t
-  | `Pretty -> <:sexp_of< a Pretty.t >> (pretty t)
+  | `Pretty -> [%sexp_of: a Pretty.t] (pretty t)
 ;;
 
 let length t = Priority_queue.length t.priority_queue
@@ -1252,7 +1247,7 @@ let interval_num_internal ~time ~start ~alarm_precision =
   Interval_num.of_int63 (Time_ns.Span.div (Time_ns.diff time start) alarm_precision)
 ;;
 
-TEST_UNIT =
+let%test_unit _ =
   List.iter
     [ -4, -2
     ; -3, -1
@@ -1264,7 +1259,7 @@ TEST_UNIT =
     ;  3,  1
     ]
     ~f:(fun (time, expect) ->
-      <:test_result< int >> ~expect
+      [%test_result: int] ~expect
         (Interval_num.to_int_exn
            (interval_num_internal
               ~start:Time_ns.epoch
@@ -1279,10 +1274,10 @@ let interval_num_unchecked t time =
 let interval_num t time =
   if Time_ns.( < ) time t.min_time
   then failwiths "Timing_wheel.interval_num got time too far in the past" time
-         <:sexp_of< Time_ns.t >>;
+         [%sexp_of: Time_ns.t];
   if Time_ns.( > ) time t.max_time
   then failwiths "Timing_wheel.interval_num got time too far in the future" time
-         <:sexp_of< Time_ns.t >>;
+         [%sexp_of: Time_ns.t];
   interval_num_unchecked t time;
 ;;
 
@@ -1299,10 +1294,10 @@ let interval_num_start_unchecked t interval_num =
 let interval_num_start t interval_num =
   if interval_num < t.min_interval_num
   then failwiths "Timing_wheel.interval_num_start got too small interval_num" interval_num
-         <:sexp_of< Interval_num.t >>;
+         [%sexp_of: Interval_num.t];
   if interval_num > t.max_interval_num
   then failwiths "Timing_wheel.interval_num_start got too large interval_num" interval_num
-         <:sexp_of< Interval_num.t >>;
+         [%sexp_of: Interval_num.t];
   interval_num_start_unchecked t interval_num
 ;;
 
@@ -1338,7 +1333,7 @@ let now_interval_num t = Priority_queue.min_allowed_key t.priority_queue
 let interval_start t time = interval_num_start_unchecked t (interval_num t time)
 
 let invariant invariant_a t =
-  Invariant.invariant _here_ t <:sexp_of< _ t >> (fun () ->
+  Invariant.invariant [%here] t [%sexp_of: _ t] (fun () ->
     let check f = Invariant.check_field t f in
     Fields.iter
       ~config:(check Config.invariant)
@@ -1348,12 +1343,12 @@ let invariant invariant_a t =
       ~max_time:(check (fun max_time ->
         assert (Time_ns.( >= ) max_time t.start)))
       ~min_interval_num:(check (fun min_interval_num ->
-        <:test_result< Interval_num.t >> ~expect:min_interval_num (interval_num t t.min_time);
-        <:test_result< Interval_num.t >> ~expect:min_interval_num
+        [%test_result: Interval_num.t] ~expect:min_interval_num (interval_num t t.min_time);
+        [%test_result: Interval_num.t] ~expect:min_interval_num
           (interval_num t (interval_num_start t min_interval_num))))
       ~max_interval_num:(check (fun max_interval_num ->
-        <:test_result< Interval_num.t >> ~expect:max_interval_num (interval_num t t.max_time);
-        <:test_result< Interval_num.t >> ~expect:max_interval_num
+        [%test_result: Interval_num.t] ~expect:max_interval_num (interval_num t t.max_time);
+        [%test_result: Interval_num.t] ~expect:max_interval_num
           (interval_num t (interval_num_start t max_interval_num))))
       ~now:(check (fun now ->
         assert (Time_ns.( >= ) now t.start);
@@ -1376,13 +1371,9 @@ let create ~config ~start =
   let alarm_precision = Config.alarm_precision config in
   let interval_num time = interval_num_internal ~time ~start ~alarm_precision in
   let min_time =
-    match Word_size.word_size with
-    | W32 ->
-      Time_ns.add start (Time_ns.Span.scale_int alarm_precision Int.min_value)
-    | W64 ->
-      if Time_ns.( <= ) start Time_ns.epoch
-      then Time_ns.min_value
-      else Time_ns.add start Time_ns.Span.min_value
+    if Time_ns.( <= ) start Time_ns.epoch
+    then Time_ns.min_value
+    else Time_ns.add start Time_ns.Span.min_value
   in
   (* We add one to define [min_interval_num] because [min_time] may not be at the start of
      an interval, and we want to be sure that [interval_num_start t min_interval_num]
@@ -1390,13 +1381,9 @@ let create ~config ~start =
   let min_interval_num = Interval_num.succ (interval_num min_time) in
   let min_time = interval_num_start_internal min_interval_num ~start ~alarm_precision in
   let max_time =
-    match Word_size.word_size with
-    | W32 ->
-      Time_ns.add start (Time_ns.Span.scale_int alarm_precision Int.max_value)
-    | W64 ->
-      if Time_ns.( >= ) start Time_ns.epoch
-      then Time_ns.max_value
-      else Time_ns.add start Time_ns.Span.max_value
+    if Time_ns.( >= ) start Time_ns.epoch
+    then Time_ns.max_value
+    else Time_ns.add start Time_ns.Span.max_value
   in
   { config
   ; start
@@ -1412,7 +1399,7 @@ let create ~config ~start =
 let advance_clock t ~to_ ~handle_fired =
   if Time_ns.( > ) to_ t.max_time
   then failwiths "Timing_wheel.advance_clock got time too far in the future" to_
-         <:sexp_of< Time_ns.t >>;
+         [%sexp_of: Time_ns.t];
   if Time_ns.( > ) to_ (now t)
   then begin
     t.now <- to_;
@@ -1431,10 +1418,10 @@ let add_at_interval_num t ~at value =
 let ensure_can_schedule_alarm t ~at =
   if Time_ns.( > ) at t.max_time
   then failwiths "Timing_wheel cannot schedule alarm that far in the future" at
-         <:sexp_of< Time_ns.t >>;
+         [%sexp_of: Time_ns.t];
   if Time_ns.( < ) at t.start
   then failwiths "Timing_wheel cannot schedule alarm before its clock start" at
-         <:sexp_of< Time_ns.t >>;
+         [%sexp_of: Time_ns.t];
 ;;
 
 let add t ~at value =
@@ -1465,18 +1452,29 @@ let reschedule_at_interval_num t alarm ~at =
   reschedule_gen t alarm ~key:at ~at:(interval_num_start t at);
 ;;
 
+let next_alarm_fires_at_internal t elt =
+  let key = Internal_elt.key t.priority_queue.pool elt in
+  (* [interval_num_start t key] is the key corresponding to the start of the time interval
+     holding the first alarm in [t].  Advancing to that would not be enough, since the
+     alarms in that interval don't fire until the clock is advanced to the start of the
+     next interval.  So, we use [succ key] to advance to the start of the next
+     interval. *)
+  interval_num_start t (Interval_num.succ key)
+;;
+
 let next_alarm_fires_at t =
   let elt = Priority_queue.min_elt_ t.priority_queue in
   if Internal_elt.is_null elt
   then None
-  else
-    let key = Internal_elt.key t.priority_queue.pool elt in
-    (* [interval_num_start t key] is the key corresponding to the start of the time
-       interval holding the first alarm in [t].  Advancing to that would not be enough,
-       since the alarms in that interval don't fire until the clock is advanced to the
-       start of the next interval.  So, we use [key + 1] to advance to the start of the
-       next interval. *)
-    Some (interval_num_start t (Interval_num.succ key))
+  else Some (next_alarm_fires_at_internal t elt)
+;;
+
+let next_alarm_fires_at_exn t =
+  let elt = Priority_queue.min_elt_ t.priority_queue in
+  if Internal_elt.is_null elt
+  then failwiths "Timing_wheel_exn.next_alarm_fires_at_exn of empty timing wheel" t
+         [%sexp_of: _ t]
+  else next_alarm_fires_at_internal t elt
 ;;
 
 let fire_past_alarms t ~handle_fired =

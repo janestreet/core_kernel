@@ -76,7 +76,7 @@ module Make (Key : Key) : S with module Key = Key = struct
     | Some _ -> `Key_already_present
     | None -> push_new_key t ~key ~data; `Ok
 
-  exception Key_already_present of Key.t with sexp
+  exception Key_already_present of Key.t [@@deriving sexp]
 
   let push_exn t ~key ~data =
     match push t ~key ~data with
@@ -149,7 +149,7 @@ module Make (Key : Key) : S with module Key = Key = struct
     | Some el -> Some (snd (Heap.Elt.value_exn el))
   ;;
 
-  exception Key_not_found of Key.t with sexp
+  exception Key_not_found of Key.t [@@deriving sexp]
 
   let find_exn t key =
     match find t key with

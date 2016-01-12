@@ -5,7 +5,7 @@
     Amortized running times assumes that enqueue/dequeue are used sequentially, threading
     the changing Fqueue through the calls. *)
 
-type 'a t with bin_io, compare, sexp
+type 'a t [@@deriving bin_io, compare, sexp]
 
 include Container.S1 with type 'a t := 'a t
 include Invariant.S1 with type 'a t := 'a t
@@ -60,6 +60,6 @@ val singleton : 'a -> 'a t
 
 module Stable : sig
   module V1 : sig
-    type nonrec 'a t = 'a t with bin_io, compare, sexp
+    type nonrec 'a t = 'a t [@@deriving bin_io, compare, sexp]
   end
 end

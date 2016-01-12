@@ -12,7 +12,7 @@
 type ('ok, 'err) t =
   | Ok of 'ok
   | Error of 'err
-with bin_io, sexp, compare
+[@@deriving bin_io, sexp, compare]
 
 include Monad.S2 with type ('a,'err) t := ('a,'err) t
 

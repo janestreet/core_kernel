@@ -31,3 +31,6 @@ val to_string : t -> string
 
 (** takes O(1) time *)
 val ( ^ ) : t -> t -> t
+
+(** Appends the contents of the Rope at the end of a destination buffer *)
+val add_to_buffer : t -> Buffer.t -> unit

@@ -35,7 +35,7 @@ module type S = sig
   module Pointer : sig
     (** A pointer to a tuple in a pool.  ['slots] will look like [('a1, ..., 'an)
         Slots.tn], and the tuples have type ['a1 * ... * 'an]. *)
-    type 'slots t with sexp_of
+    type 'slots t [@@deriving sexp_of]
 
     (** The [null] pointer is a distinct pointer that does not correspond to a tuple in
         the pool.  It is a function to prevent problems due to the value restriction. *)
@@ -46,7 +46,7 @@ module type S = sig
     val phys_equal   : 'a t -> 'a t -> bool
 
     module Id : sig
-      type t with bin_io, sexp
+      type t [@@deriving bin_io, sexp]
 
       val to_int63 : t -> Int63.t
       val of_int63 : Int63.t -> t
@@ -55,7 +55,7 @@ module type S = sig
 
   (** A pool.  ['slots] will look like [('a1, ..., 'an) Slots.tn], and the pool holds
       tuples of type ['a1 * ... * 'an]. *)
-  type 'slots t with sexp_of
+  type 'slots t [@@deriving sexp_of]
 
   include Invariant.S1 with type 'a t := 'a t
 

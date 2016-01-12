@@ -1,4 +1,4 @@
-INCLUDE "config.mlh"
+#import "config.mlh"
 
 open Std_internal
 open Bigarray
@@ -6,11 +6,11 @@ open Bigarray
 module Binable = Binable0
 
 module Z : sig
-  type t = (char, int8_unsigned_elt, c_layout) Array1.t with bin_io, sexp
+  type t = (char, int8_unsigned_elt, c_layout) Array1.t [@@deriving bin_io, sexp]
 end = struct
   include Bin_prot.Std
   include Sexplib.Conv
-  type t = bigstring with bin_io, sexp
+  type t = bigstring [@@deriving bin_io, sexp]
 end
 include Z
 
@@ -25,7 +25,7 @@ let create ?max_mem_waiting_gc size =
   if size < 0 then invalid_argf "create: size = %d < 0" size ();
   aux_create ~max_mem_waiting_gc ~size
 
-TEST "create with different max_mem_waiting_gc" =
+let%test "create with different max_mem_waiting_gc" =
   Core_gc.full_major ();
   let module Alarm = Core_gc.Expert.Alarm in
   let count_gc_cycles mem_units =
@@ -33,7 +33,7 @@ TEST "create with different max_mem_waiting_gc" =
     let alarm = Alarm.create (fun () -> incr cycles) in
     let large_int = 10_000 in
     let max_mem_waiting_gc = Byte_units.create mem_units 256. in
-    for _i = 0 to large_int do
+    for _ = 0 to large_int do
       let (_ : t) = create ~max_mem_waiting_gc large_int in
       ()
     done;
@@ -73,7 +73,6 @@ let sub_shared ?(pos = 0) ?len (bstr : t) =
   let len = get_opt_len bstr ~pos len in
   Array1.sub bstr pos len
 
-
 (* Blitting *)
 
 external unsafe_blit
@@ -86,7 +85,7 @@ external get : t -> int -> char = "%caml_ba_ref_1"
 external set : t -> int -> char -> unit = "%caml_ba_set_1"
 
 module Bigstring_sequence = struct
-  type nonrec t = t with sexp_of
+  type nonrec t = t [@@deriving sexp_of]
   let create ~len = create len
   let get = get
   let set = set
@@ -94,7 +93,7 @@ module Bigstring_sequence = struct
 end
 
 module String_sequence = struct
-  type t = string with sexp_of
+  type t = string [@@deriving sexp_of]
   let create ~len = String.create len
   let get = String.get
   let set = String.set
@@ -141,6 +140,62 @@ let of_string = From_string.subo
 
 let to_string = To_string.subo
 
+let concat =
+  let append ~src ~dst ~dst_pos_ref =
+    let len = length src in
+    let src_pos = 0 in
+    let dst_pos = !dst_pos_ref in
+    blit ~dst ~dst_pos ~src ~src_pos ~len;
+    dst_pos_ref := dst_pos + len
+  in
+  fun ?sep list ->
+    match list with
+    | []           -> create 0
+    | head :: tail ->
+      let head_len = length head in
+      let sep_len = Option.value_map sep ~f:length ~default:0 in
+      let tail_count = List.length tail in
+      let len =
+        head_len
+        + (sep_len * tail_count)
+        + List.sum (module Int) tail ~f:length
+      in
+      let dst = create len in
+      let dst_pos_ref = ref 0 in
+      append ~src:head ~dst ~dst_pos_ref;
+      List.iter tail ~f:(fun src ->
+        begin
+          match sep with
+          | None     -> ()
+          | Some sep -> append ~src:sep ~dst ~dst_pos_ref
+        end;
+        append ~src ~dst ~dst_pos_ref);
+      assert (!dst_pos_ref = len);
+      dst
+
+let%test_module "concat" =
+  (module struct
+
+    let test ?sep list =
+      [%test_result: t]
+        (concat ?sep:(Option.map sep ~f:of_string)
+           (List.map list ~f:of_string))
+        ~expect:(of_string (String.concat ?sep list))
+
+    let%test_unit _ = test []
+    let%test_unit _ = test [""]
+    let%test_unit _ = test ["foo"]
+    let%test_unit _ = test ["foo"; "bar"]
+    let%test_unit _ = test ["foo"; "bar"; "baz"]
+    let%test_unit _ = test ~sep:"," []
+    let%test_unit _ = test ~sep:"," [""]
+    let%test_unit _ = test ~sep:"," ["foo"]
+    let%test_unit _ = test ~sep:"," ["foo"; "bar"]
+    let%test_unit _ = test ~sep:"," ["foo"; "bar"; "baz"]
+    let%test_unit _ = test ~sep:",.?" ["Strings"; "of"; "different"; "lengths."]
+
+  end)
+
 (* Comparison *)
 
 external unsafe_memcmp
@@ -166,7 +221,7 @@ let equal t1 t2 =
     Int.equal len1 len2
     && Int.equal (unsafe_memcmp ~t1 ~t1_pos:0 ~t2 ~t2_pos:0 ~len:len1) 0
 
-TEST_MODULE "comparison" = struct
+let%test_module "comparison" = (module struct
   let sign n =
     if n < 0 then ~-1 else
     if n > 0 then   1 else
@@ -174,25 +229,25 @@ TEST_MODULE "comparison" = struct
 
   let check t1 t2 int =
     let bool = match int with 0 -> true | _ -> false in
-    <:test_result< int >>  (sign (compare t1 t2)) ~expect:int;
-    <:test_result< bool >> (equal t1 t2)          ~expect:bool
+    [%test_result: int]  (sign (compare t1 t2)) ~expect:int;
+    [%test_result: bool] (equal t1 t2)          ~expect:bool
 
-  TEST_UNIT = let t = of_string "cat" in check t t 0
-  TEST_UNIT = check (of_string "cat") (of_string "cat")   0
-  TEST_UNIT = check (of_string "cat") (of_string "cab")   1
-  TEST_UNIT = check (of_string "cat") (of_string "caz") ~-1
-  TEST_UNIT = check (of_string "cat") (of_string "c")     1
-  TEST_UNIT = check (of_string "c")   (of_string "cat") ~-1
-  TEST_UNIT = check (of_string "cat") (of_string "dog") ~-1
-  TEST_UNIT = check (of_string "dog") (of_string "cat")   1
-end
+  let%test_unit _ = let t = of_string "cat" in check t t 0
+  let%test_unit _ = check (of_string "cat") (of_string "cat")   0
+  let%test_unit _ = check (of_string "cat") (of_string "cab")   1
+  let%test_unit _ = check (of_string "cat") (of_string "caz") ~-1
+  let%test_unit _ = check (of_string "cat") (of_string "c")     1
+  let%test_unit _ = check (of_string "c")   (of_string "cat") ~-1
+  let%test_unit _ = check (of_string "cat") (of_string "dog") ~-1
+  let%test_unit _ = check (of_string "dog") (of_string "cat")   1
+end)
 
-BENCH_MODULE "comparison" = struct
+let%bench_module "comparison" = (module struct
   let t1 = of_string "microsoft"
   let t2 = of_string "microsoff"
 
-  BENCH "equal" = equal t1 t2
-end
+  let%bench "equal" = equal t1 t2
+end)
 
 (* Reading / writing bin-prot *)
 
@@ -218,7 +273,7 @@ let read_bin_prot_verbose_errors t ?(pos=0) ?len reader =
         if !pos_ref = expected_pos
         then `Ok (result, expected_pos)
         else invalid_data "pos_ref <> expected_pos" (!pos_ref, expected_pos)
-               <:sexp_of< int * int >>
+               [%sexp_of: int * int]
   in
   match
     read
@@ -229,11 +284,11 @@ let read_bin_prot_verbose_errors t ?(pos=0) ?len reader =
   | `Not_enough_data | `Invalid_data _ as x -> x
   | `Ok (element_length, pos) ->
     if element_length < 0
-    then invalid_data "negative element length %d" element_length <:sexp_of< int >>
+    then invalid_data "negative element length %d" element_length [%sexp_of: int]
     else read reader.Bin_prot.Type_class.read ~pos ~len:element_length
 ;;
 
-TEST_MODULE = struct
+let%test_module _ = (module struct
   let make_t ~size input =
     (* We hardcode the size here to catch problems if [Bin_prot.Utils.size_header_length]
        ever changes. *)
@@ -249,7 +304,7 @@ TEST_MODULE = struct
       | `Not_enough_data -> `Not_enough_data
       | `Invalid_data _ -> `Invalid_data
     in
-    <:test_result< [ `Ok of a | `Not_enough_data | `Invalid_data ] >> result ~expect
+    [%test_result: [ `Ok of a | `Not_enough_data | `Invalid_data ]] result ~expect
 
   let test_int ?pos ?len ~size input ~expect =
     test ~size input ?pos ?len Int.bin_reader_t Int.sexp_of_t Int.compare ~expect
@@ -259,28 +314,28 @@ TEST_MODULE = struct
   (* Keep in mind that the string bin-prot representation is itself prefixed with a
      length, so strings under the length-prefixed bin-prot protocol end up with two
      lengths at the front. *)
-  TEST_UNIT = test_int    ~size:1 "\042"            ~expect:(`Ok 42)
-  TEST_UNIT = test_int    ~size:1 "\042suffix"      ~expect:(`Ok 42)
-  TEST_UNIT = test_string ~size:4 "\003foo"         ~expect:(`Ok "foo")
-  TEST_UNIT = test_string ~size:4 "\003foo" ~len:12 ~expect:(`Ok "foo")
+  let%test_unit _ = test_int    ~size:1 "\042"            ~expect:(`Ok 42)
+  let%test_unit _ = test_int    ~size:1 "\042suffix"      ~expect:(`Ok 42)
+  let%test_unit _ = test_string ~size:4 "\003foo"         ~expect:(`Ok "foo")
+  let%test_unit _ = test_string ~size:4 "\003foo" ~len:12 ~expect:(`Ok "foo")
 
-  TEST "pos <> 0" =
+  let%test "pos <> 0" =
     let t =
        ("prefix" ^ to_string (make_t ~size:4 "\003foo") ^ "suffix")
        |> of_string
     in
     read_bin_prot_verbose_errors t ~pos:6 String.bin_reader_t = `Ok ("foo", 18)
 
-  TEST_UNIT "negative size" = test_string ~size:(-1) "\003foo" ~expect:`Invalid_data
-  TEST_UNIT "wrong size"    = test_string ~size:3    "\003foo" ~expect:`Invalid_data
-  TEST_UNIT "bad bin-prot"  = test_string ~size:4    "\007foo" ~expect:`Invalid_data
+  let%test_unit "negative size" = test_string ~size:(-1) "\003foo" ~expect:`Invalid_data
+  let%test_unit "wrong size"    = test_string ~size:3    "\003foo" ~expect:`Invalid_data
+  let%test_unit "bad bin-prot"  = test_string ~size:4    "\007foo" ~expect:`Invalid_data
 
-  TEST_UNIT "len too short" = test_string ~size:4 "\003foo" ~len:3 ~expect:`Not_enough_data
+  let%test_unit "len too short" = test_string ~size:4 "\003foo" ~len:3 ~expect:`Not_enough_data
 
-  TEST "no header" =
+  let%test "no header" =
     let t = of_string "\003foo" in
     read_bin_prot_verbose_errors t String.bin_reader_t = `Not_enough_data
-end
+end)
 
 let read_bin_prot t ?pos ?len reader =
   match read_bin_prot_verbose_errors t ?pos ?len reader with
@@ -292,11 +347,11 @@ let write_bin_prot t ?(pos = 0) writer v =
   let data_len = writer.Bin_prot.Type_class.size v in
   let total_len = data_len + Bin_prot.Utils.size_header_length in
   if pos < 0 then
-    failwiths "Bigstring.write_bin_prot: negative pos" pos <:sexp_of< int >>;
+    failwiths "Bigstring.write_bin_prot: negative pos" pos [%sexp_of: int];
   if pos + total_len > length t then
     failwiths "Bigstring.write_bin_prot: not enough room"
       (`pos pos, `pos_after_writing (pos + total_len), `bigstring_length (length t))
-      <:sexp_of<[`pos of int] * [`pos_after_writing of int] * [`bigstring_length of int]>>;
+      [%sexp_of: [`pos of int] * [`pos_after_writing of int] * [`bigstring_length of int]];
   let pos_after_size_header = Bin_prot.Utils.bin_write_size_header t ~pos data_len in
   let pos_after_data =
     writer.Bin_prot.Type_class.write t ~pos:pos_after_size_header v
@@ -308,31 +363,31 @@ let write_bin_prot t ?(pos = 0) writer v =
        `bin_prot_size_header_length Bin_prot.Utils.size_header_length,
        `data_len data_len,
        `total_len total_len)
-      <:sexp_of<
+      [%sexp_of:
         [`pos_after_data of int] * [`start_pos of int]
         * [`bin_prot_size_header_length of int] * [`data_len of int] * [`total_len of int]
-      >>
+      ]
   end;
   pos_after_data
 
-TEST_MODULE = struct
+let%test_module _ = (module struct
   let test ?pos writer v ~expect =
     let size = writer.Bin_prot.Type_class.size v + 8 in
     let t = create size in
     ignore (write_bin_prot t ?pos writer v : int);
-    <:test_result< string >> (to_string t) ~expect
+    [%test_result: string] (to_string t) ~expect
 
-  TEST_UNIT =
+  let%test_unit _ =
     test String.bin_writer_t "foo" ~expect:"\004\000\000\000\000\000\000\000\003foo"
-  TEST_UNIT =
+  let%test_unit _ =
     test Int.bin_writer_t    123   ~expect:"\001\000\000\000\000\000\000\000\123"
-  TEST_UNIT =
+  let%test_unit _ =
     test
       (Or_error.bin_writer_t Unit.bin_writer_t)
       (Or_error.error_string "test")
       ~expect:"\007\000\000\000\000\000\000\000\001\001\004test"
   ;;
-end
+end)
 
 (* Memory mapping *)
 
@@ -340,7 +395,8 @@ let map_file ~shared fd n = Array1.map_file fd Bigarray.char c_layout shared n
 
 (* Search *)
 
-external unsafe_find : t -> char -> pos:int -> len:int -> int = "bigstring_find"
+external unsafe_find : t -> char -> pos:int -> len:int -> int = "bigstring_find" "noalloc"
+
 let find ?(pos = 0) ?len chr bstr =
   let len = get_opt_len bstr ~pos len in
   check_args ~loc:"find" ~pos ~len bstr;
@@ -372,7 +428,7 @@ external unsafe_set_64 : t -> int -> int64 -> unit = "%caml_bigstring_set64u"
 
 let sign_extend_16 u = (u lsl (Core_int.num_bits - 16)) asr (Core_int.num_bits - 16)
 
-TEST_UNIT =
+let%test_unit _ =
   List.iter [ 0,0
             ; 1,1
             ; 0x7fff,  32767
@@ -380,7 +436,7 @@ TEST_UNIT =
             ; 0x8000, -32768]
     ~f:(fun (i,expect) ->
       assert (i >= 0);
-      <:test_result<int>> ~expect (sign_extend_16 i)
+      [%test_result: int] ~expect (sign_extend_16 i)
     )
 
 let unsafe_read_int16 t ~pos          = sign_extend_16 (unsafe_get_16 t pos)
@@ -411,7 +467,7 @@ let unsafe_write_int64_swap t ~pos x  = unsafe_set_64 t pos (swap64 x)
 let unsafe_write_int64_int t ~pos x       = unsafe_set_64 t pos (int64_of_int x)
 let unsafe_write_int64_int_swap t ~pos x  = unsafe_set_64 t pos (swap64 (int64_of_int x))
 
-IFDEF ARCH_BIG_ENDIAN THEN
+#if JSC_ARCH_BIG_ENDIAN
 
 let unsafe_get_int16_be  = unsafe_read_int16
 let unsafe_get_int16_le  = unsafe_read_int16_swap
@@ -443,7 +499,7 @@ let unsafe_get_int64_t_le  = unsafe_read_int64_swap
 let unsafe_set_int64_t_be  = unsafe_write_int64
 let unsafe_set_int64_t_le  = unsafe_write_int64_swap
 
-ELSE
+#else
 
 let unsafe_get_int16_be  = unsafe_read_int16_swap
 let unsafe_get_int16_le  = unsafe_read_int16
@@ -475,13 +531,17 @@ let unsafe_get_int64_t_le  = unsafe_read_int64
 let unsafe_set_int64_t_be  = unsafe_write_int64_swap
 let unsafe_set_int64_t_le  = unsafe_write_int64
 
-ENDIF
+#endif
 
 let int64_conv_error () =
   failwith "unsafe_read_int64: value cannot be represented unboxed!"
 ;;
 
-IFDEF ARCH_SIXTYFOUR THEN
+let uint64_conv_error () =
+  failwith "unsafe_read_uint64: value cannot be represented unboxed!"
+;;
+
+#if JSC_ARCH_SIXTYFOUR
 
 let int64_to_int_exn n =
   if n >= -0x4000_0000_0000_0000L && n < 0x4000_0000_0000_0000L then
@@ -490,7 +550,14 @@ let int64_to_int_exn n =
     int64_conv_error ()
 ;;
 
-ELSE
+let uint64_to_int_exn n =
+  if n >= 0L && n < 0x4000_0000_0000_0000L then
+    int64_to_int n
+  else
+    uint64_conv_error ()
+;;
+
+#else
 
 let int64_to_int_exn n =
   if n >= -0x0000_0000_4000_0000L && n < 0x0000_0000_4000_0000L then
@@ -499,28 +566,51 @@ let int64_to_int_exn n =
     int64_conv_error ()
 ;;
 
-ENDIF
+let uint64_to_int_exn n =
+  if n >= 0L && n < 0x0000_0000_4000_0000L then
+    int64_to_int n
+  else
+    uint64_conv_error ()
+;;
+
+#endif
 
 let unsafe_get_int64_be_exn t ~pos = int64_to_int_exn (unsafe_get_int64_t_be t ~pos)
 let unsafe_get_int64_le_exn t ~pos = int64_to_int_exn (unsafe_get_int64_t_le t ~pos)
 
-BENCH_MODULE "unsafe_get_int64_* don't allocate intermediate boxes" = struct
-  let t = init 8 ~f:Char.of_int_exn
-  BENCH "be" = unsafe_get_int64_be_exn t ~pos:0
-  BENCH "le" = unsafe_get_int64_le_exn t ~pos:0
-end
+let unsafe_get_uint64_be_exn t ~pos = uint64_to_int_exn (unsafe_get_int64_t_be t ~pos)
+let unsafe_get_uint64_le_exn t ~pos = uint64_to_int_exn (unsafe_get_int64_t_le t ~pos)
 
-let unsafe_set_uint8 t ~pos n =
+let unsafe_set_uint64_be = unsafe_set_int64_be
+let unsafe_set_uint64_le = unsafe_set_int64_le
+
+let%bench_module "unsafe_get_*int64_* don't allocate intermediate boxes" =
+  (module struct
+    let t = init 8 ~f:Char.of_int_exn
+    let%bench "int64_be_exn"    = unsafe_get_int64_be_exn  t ~pos:0
+    let%bench "int64_le_exn"    = unsafe_get_int64_le_exn  t ~pos:0
+    let%bench "uint64_be_exn"   = unsafe_get_uint64_be_exn t ~pos:0
+    let%bench "uint64_le_exn"   = unsafe_get_uint64_le_exn t ~pos:0
+  end)
+;;
+
+(* Type annotations on the [t]s are important here: in order for the compiler to generate
+   optimized code, it needs to know the fully instantiated type of the bigarray. This is
+   because the type of the bigarray encodes the element kind and the layout of the
+   bigarray. Without the annotation the compiler generates a C call to the generic access
+   functions.
+*)
+let unsafe_set_uint8 (t : t) ~pos n =
   Array1.unsafe_set t pos (Char.unsafe_of_int n)
-let unsafe_set_int8 t ~pos n =
+let unsafe_set_int8 (t : t) ~pos n =
   (* in all the set functions where there are these tests, it looks like the test could be
      removed, since they are only changing the values of the bytes that are not
      written. *)
   let n = if n < 0 then n + 256 else n in
   Array1.unsafe_set t pos (Char.unsafe_of_int n)
-let unsafe_get_uint8 t ~pos =
+let unsafe_get_uint8 (t : t) ~pos =
   Char.to_int (Array1.unsafe_get t pos)
-let unsafe_get_int8 t ~pos =
+let unsafe_get_int8 (t : t) ~pos =
   let n = Char.to_int (Array1.unsafe_get t pos) in
   if n >= 128 then n - 256 else n
 
@@ -537,7 +627,7 @@ let unsafe_get_uint32_be t ~pos =
   let n = unsafe_get_int32_be t ~pos in
   if n < 0 then n + 1 lsl 32 else n
 
-TEST_MODULE "binary accessors" = struct
+let%test_module "binary accessors" = (module struct
 
   let buf = create 256
 
@@ -549,54 +639,81 @@ TEST_MODULE "binary accessors" = struct
       x = y && passing)
   ;;
 
-  TEST = test_accessor ~buf Int.to_string
+  let%test _ = test_accessor ~buf Int.to_string
     ~fget:unsafe_get_int16_le
     ~fset:unsafe_set_int16_le
     [-32768; -1; 0; 1; 32767]
 
-  TEST = test_accessor ~buf Int.to_string
+  let%test _ = test_accessor ~buf Int.to_string
     ~fget:unsafe_get_uint16_le
     ~fset:unsafe_set_uint16_le
     [0; 1; 65535]
 
-  TEST = test_accessor ~buf Int.to_string
+  let%test _ = test_accessor ~buf Int.to_string
     ~fget:unsafe_get_int16_be
     ~fset:unsafe_set_int16_be
     [-32768; -1; 0; 1; 32767]
 
-  TEST = test_accessor ~buf Int.to_string
+  let%test _ = test_accessor ~buf Int.to_string
     ~fget:unsafe_get_uint16_be
     ~fset:unsafe_set_uint16_be
     [0; 1; 65535]
 
 
-IFDEF ARCH_SIXTYFOUR THEN
+#if JSC_ARCH_SIXTYFOUR
 
-  TEST = test_accessor ~buf Int.to_string
+  let%test _ = test_accessor ~buf Int.to_string
     ~fget:unsafe_get_int32_le
     ~fset:unsafe_set_int32_le
     [Int64.to_int_exn (-2147483648L); -1; 0; 1; Int64.to_int_exn 2147483647L]
 
-  TEST = test_accessor ~buf Int.to_string
+  let%test _ = test_accessor ~buf Int.to_string
     ~fget:unsafe_get_int32_be
     ~fset:unsafe_set_int32_be
     [Int64.to_int_exn (-2147483648L); -1; 0; 1; Int64.to_int_exn 2147483647L]
 
-  TEST = test_accessor ~buf Int.to_string
+  let%test _ = test_accessor ~buf Int.to_string
     ~fget:unsafe_get_int64_le_exn
     ~fset:unsafe_set_int64_le
     [Int64.to_int_exn (-2147483648L); -1; 0; 1; Int64.to_int_exn 2147483647L]
 
-  TEST = test_accessor ~buf Int.to_string
+  let%test _ = test_accessor ~buf Int.to_string
     ~fget:unsafe_get_int64_be_exn
     ~fset:unsafe_set_int64_be
     [Int64.to_int_exn (-0x4000_0000_0000_0000L);
      Int64.to_int_exn (-2147483648L); -1; 0; 1; Int64.to_int_exn 2147483647L;
      Int64.to_int_exn 0x3fff_ffff_ffff_ffffL]
 
-ENDIF (* ARCH_SIXTYFOUR *)
+  let%test _ =
+    List.for_all
+      [ unsafe_get_uint64_be_exn, unsafe_set_uint64_be
+      ; unsafe_get_uint64_le_exn, unsafe_set_uint64_le
+      ]
+      ~f:(fun (fget, fset) ->
+        test_accessor ~buf Int.to_string
+          ~fget ~fset
+          ([ 0L
+           ; 1L
+           ; 0xffff_ffffL
+           ; 0x3fff_ffff_ffff_ffffL ]
+          |> List.map ~f:Int64.to_int_exn))
 
-  TEST = test_accessor ~buf Int64.to_string
+  let%test_unit _ =
+    List.iter
+      [ "\x40\x00\x00\x00\x00\x00\x00\x00"
+      ; "\x80\x00\x00\x00\x00\x00\x00\x00"
+      ; "\xA0\x00\x00\x00\x00\x00\x00\x00"
+      ; "\xF0\x00\x00\x00\x00\x00\x00\x00"
+      ; "\x4F\xFF\xFF\xFF\xFF\xFF\xFF\xFF"
+      ; "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF"
+      ] ~f:(fun string ->
+    assert (Exn.does_raise (fun () -> unsafe_get_uint64_be_exn ~pos:0 (of_string string)));
+    assert (Exn.does_raise (fun () -> unsafe_get_uint64_le_exn ~pos:0
+                                        (of_string (String.rev string)))))
+
+#endif (* ARCH_SIXTYFOUR *)
+
+  let%test _ = test_accessor ~buf Int64.to_string
     ~fget:unsafe_get_int64_t_le
     ~fset:unsafe_set_int64_t_le
     [-0x8000_0000_0000_0000L;
@@ -608,7 +725,7 @@ ENDIF (* ARCH_SIXTYFOUR *)
      0x789A_BCDE_F012_3456L;
      0x7FFF_FFFF_FFFF_FFFFL]
 
-  TEST = test_accessor ~buf Int64.to_string
+  let%test _ = test_accessor ~buf Int64.to_string
     ~fget:unsafe_get_int64_t_be
     ~fset:unsafe_set_int64_t_be
     [-0x8000_0000_0000_0000L;
@@ -620,7 +737,7 @@ ENDIF (* ARCH_SIXTYFOUR *)
      0x789A_BCDE_F012_3456L;
      0x7FFF_FFFF_FFFF_FFFFL]
 
-  TEST = test_accessor ~buf Int64.to_string
+  let%test _ = test_accessor ~buf Int64.to_string
     ~fget:unsafe_get_int64_t_be
     ~fset:unsafe_set_int64_t_be
     [-0x8000_0000_0000_0000L;
@@ -654,14 +771,14 @@ ENDIF (* ARCH_SIXTYFOUR *)
         let trunc = int64_to_int too_big in
         try
           set_t buf ~pos:0 too_big;
-          <:test_result< int64 >> ~expect:too_big (double_check_set buf ~pos:0);
+          [%test_result: int64] ~expect:too_big (double_check_set buf ~pos:0);
           let test_get name got =
-            <:test_pred< string Or_error.t >> is_error ~message:name
+            [%test_pred: string Or_error.t] is_error ~message:name
               (Or_error.map ~f:(fun i -> sprintf "%d = 0x%x" i i) got)
           in
           let got_exn = Or_error.try_with (fun () -> get_exn buf ~pos:0) in
           test_get "get_exn" got_exn;
-          <:test_result< int >> ~message:"get_trunc" ~expect:trunc
+          [%test_result: int] ~message:"get_trunc" ~expect:trunc
             (get_trunc buf ~pos:0)
         with e ->
           failwiths "test_int64"
@@ -669,20 +786,20 @@ ENDIF (* ARCH_SIXTYFOUR *)
             , sprintf "trunc = %d = 0x%x" trunc trunc
             , e
             )
-            <:sexp_of< string * string * exn >>)
-TEST_UNIT "unsafe_get_int64_le" =
+            [%sexp_of: string * string * exn])
+let%test_unit "unsafe_get_int64_le" =
     test_int64
       unsafe_get_int64_le_exn
       unsafe_get_int64_le_trunc
       unsafe_set_int64_t_le
       unsafe_get_int64_t_le
-  TEST_UNIT "unsafe_get_int64_be" =
+  let%test_unit "unsafe_get_int64_be" =
     test_int64
       unsafe_get_int64_be_exn
       unsafe_get_int64_be_trunc
       unsafe_set_int64_t_be
       unsafe_get_int64_t_be
-end
+end)
 
 let rec last_nonmatch_plus_one ~buf ~min_pos ~pos ~char =
   let pos' = pos - 1 in
@@ -703,3 +820,23 @@ let set_tail_padded_fixed_string ~padding t ~pos ~len value =
   for i = pos + slen to pos + len - 1; do
     set t i padding
   done
+
+let rec first_nonmatch ~buf ~pos ~max_pos ~char =
+  if pos <= max_pos && Char.(=) (get buf pos) char then
+    first_nonmatch ~buf ~pos:(succ pos) ~max_pos ~char
+  else
+    pos
+
+let set_head_padded_fixed_string ~padding t ~pos ~len value =
+  let slen = String.length value in
+  if slen > len then
+    failwithf "Bigstring.set_head_padded_fixed_string: %S is longer than %d" value len ();
+  From_string.blit ~src:value ~dst:t ~src_pos:0 ~dst_pos:(pos + len - slen) ~len:slen;
+  for i = pos to pos + len - slen - 1; do
+    set t i padding
+  done
+
+let get_head_padded_fixed_string ~padding t ~pos ~len () =
+  let data_begin = first_nonmatch ~buf:t ~pos ~max_pos:(pos + len - 1) ~char: padding in
+  to_string t ~pos:data_begin ~len:(len - (data_begin - pos))
+

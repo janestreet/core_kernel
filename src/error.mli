@@ -1,10 +1,12 @@
 open Sexplib
 
-include module type of Info
+include Info_intf.S
 
 (** Note that the exception raised by this function maintains a reference to the [t]
     passed in. *)
 val raise : t -> _
+
+val raise_s : Sexp.t -> _
 
 val to_info : t -> Info.t
 val of_info : Info.t -> t
@@ -19,15 +21,15 @@ val of_info : Info.t -> t
    sexp conversion, those mutations will be reflected in the error message.  Use
    [~strict:()] to force [sexp_of_a a] to be computed immediately.
 
-   The [pa_fail] preprocessor replaces [failwiths] with [failwiths ?here:_here_] so that
-   one does not need to (and cannot) supply [_here_].  [pa_fail] does not add
-   [?here:_here_] to [Error.failwiths].
+   The [pa_fail] preprocessor replaces [failwiths] with [failwiths ?here:[%here]] so that
+   one does not need to (and cannot) supply [[%here]].  [pa_fail] does not add
+   [?here:[%here]] to [Error.failwiths].
 
    In this signature we write [?here:Lexing.position] rather than
    [?here:Source_code_position.t] to avoid a circular dependency.
 
    [failwithp here] is like [failwiths ~here], except that you can provide a source
-   position yourself (which is only interesting if you don't provide [_here_]). *)
+   position yourself (which is only interesting if you don't provide [[%here]]). *)
 val failwiths
   :  ?strict : unit
   -> ?here   : Lexing.position

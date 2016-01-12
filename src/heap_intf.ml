@@ -1,7 +1,7 @@
 module type S = sig
   (** of_sexp and bin_io functions aren't supplied for heaps due to the difficulties in
       reconstructing the correct comparison function when de-serializing. *)
-  type 'a t with sexp_of
+  type 'a t [@@deriving sexp_of]
 
   (** Mutation of the heap during iteration is not supported, but there is no check to
       prevent it.  The behavior of a heap that is mutated during iteration is

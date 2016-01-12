@@ -46,13 +46,13 @@ let blit_transfer_tests =
     let half_len = len / 2 in
     let src = Queue.create () in
     let dst = Queue.create () in
-    for _i = 1 to len do
+    for _ = 1 to len do
       Queue.enqueue src 0;
     done;
-    for _i = 1 to half_len do
+    for _ = 1 to half_len do
       ignore (Queue.dequeue_exn src);
     done;
-    for _i = 1 to half_len do
+    for _ = 1 to half_len do
       Queue.enqueue src 0;
     done;
     [
@@ -75,7 +75,7 @@ let tests =
      [ Bench.Test.create_indexed ~name:"Queue.enqueue + dequeue" ~args
          (fun num_elts ->
             let t = Queue.create () in
-            for _i = 1 to num_elts do
+            for _ = 1 to num_elts do
               Queue.enqueue t ();
             done;
             stage (fun () ->
@@ -84,7 +84,7 @@ let tests =
      ; Bench.Test.create_indexed ~name:"Linked_queue.enqueue + dequeue" ~args
          (fun num_elts ->
             let t = Linked_queue.create () in
-            for _i = 1 to num_elts do
+            for _ = 1 to num_elts do
               Linked_queue.enqueue t ();
             done;
             stage (fun () ->
@@ -93,7 +93,7 @@ let tests =
      ; Bench.Test.create_indexed ~name:"Deque.enqueue + dequeue" ~args
          (fun num_elts ->
             let t = Deque.create () in
-            for _i = 1 to num_elts do
+            for _ = 1 to num_elts do
               Deque.enqueue_front t ();
             done;
             stage (fun () ->

@@ -3,7 +3,7 @@
 (* We have to use Int64.to_int_exn instead of int constants to make
    sure that file can be preprocessed on 32-bit machines. *)
 
-INCLUDE "config.mlh"
+#import "config.mlh"
 
 let overflow_bound_max_int32_value : int32 =
   2147483647l
@@ -76,7 +76,7 @@ let int32_positive_overflow_bounds : int32 array =
     1l;
   |]
 
-IFDEF ARCH_SIXTYFOUR THEN
+#if JSC_ARCH_SIXTYFOUR
 
 let overflow_bound_max_int_value : int =
   if Int_conversions.num_bits_int = 32 then
@@ -155,7 +155,7 @@ let int_positive_overflow_bounds : int array =
       1;
   |]
 
-ELSE
+#else
 
 let overflow_bound_max_int_value : int =
   if Int_conversions.num_bits_int = 32 then
@@ -234,7 +234,7 @@ let int_positive_overflow_bounds : int array =
       1;
   |]
 
-END
+#endif
 
 let overflow_bound_max_int64_value : int64 =
   9223372036854775807L

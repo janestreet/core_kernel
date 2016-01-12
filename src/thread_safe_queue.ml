@@ -16,7 +16,7 @@ open Std_internal
 (* This [Uopt] type is not exposed to users, and is only used as an [Elt.value] field. *)
 module Uopt : sig
 
-  type 'a t with sexp_of
+  type 'a t [@@deriving sexp_of]
 
   val none : _ t
   val some : 'a -> 'a t
@@ -40,9 +40,9 @@ end = struct
 
   let some (type a) a = Obj.repr (a : a)
 
-  TEST = is_none none
+  let%test _ = is_none none
 
-  TEST = is_some (some ())
+  let%test _ = is_some (some ())
 
   let unsafe_value (type a) t = (Obj.obj t : a)
 
@@ -53,8 +53,8 @@ end = struct
 
   let sexp_of_t sexp_of_a t =
     if is_none t
-    then "None" |> <:sexp_of< string >>
-    else ("Some", unsafe_value t) |> <:sexp_of< string * a >>
+    then "None" |> [%sexp_of: string]
+    else ("Some", unsafe_value t) |> [%sexp_of: string * a]
   ;;
 end
 
@@ -63,7 +63,7 @@ module Elt = struct
     { mutable value : 'a Uopt.t
     ; mutable next  : 'a t Uopt.t sexp_opaque
     }
-  with sexp_of
+  [@@deriving sexp_of]
 
   let create () = { value = Uopt.none; next = Uopt.none }
 
@@ -79,10 +79,10 @@ type 'a t =
      [unused_elts] have [Uopt.is_none elt.value]. *)
   ; mutable unused_elts     : 'a Elt.t Uopt.t
   }
-with fields, sexp_of
+[@@deriving fields, sexp_of]
 
 let invariant _invariant_a t =
-  Invariant.invariant _here_ t <:sexp_of< _ t >> (fun () ->
+  Invariant.invariant [%here] t [%sexp_of: _ t] (fun () ->
     let check f = Invariant.check_field t f in
     Fields.iter
       ~length:(check (fun length ->
@@ -150,7 +150,7 @@ let return_unused_elt t (elt : _ Elt.t) =
 let dequeue_exn t =
   (* BEGIN ATOMIC SECTION *)
   if t.length = 0
-  then failwiths "Thread_safe_queue.dequeue_exn of empty queue" t <:sexp_of< _ t >>;
+  then failwiths "Thread_safe_queue.dequeue_exn of empty queue" t [%sexp_of: _ t];
   let elt = t.front in
   let a = elt.value in
   t.front <- Uopt.unsafe_value elt.next;
@@ -166,7 +166,7 @@ let clear_internal_pool t = t.unused_elts <- Uopt.none
    [Gc.full_major] so that the queue and elt are in the major heap, which should more
    accurately reflect common usage than if they were in the minor heap. *)
 
-BENCH_FUN "enqueue + dequeue_exn of immediate" =
+let%bench_fun "enqueue + dequeue_exn of immediate" =
   let t = create () in
   enqueue t ();
   ignore (dequeue_exn t : unit);
@@ -176,7 +176,7 @@ BENCH_FUN "enqueue + dequeue_exn of immediate" =
      ignore (dequeue_exn t : unit))
 ;;
 
-BENCH_FUN "enqueue + dequeue_exn of young object" =
+let%bench_fun "enqueue + dequeue_exn of young object" =
   let t = create () in
   enqueue t (ref ());
   ignore (dequeue_exn t : unit ref);
@@ -186,7 +186,7 @@ BENCH_FUN "enqueue + dequeue_exn of young object" =
      ignore (dequeue_exn t : unit ref))
 ;;
 
-BENCH_FUN "enqueue + dequeue_exn of old object" =
+let%bench_fun "enqueue + dequeue_exn of old object" =
   let r = ref () in
   let t = create () in
   enqueue t r;

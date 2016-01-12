@@ -1,7 +1,14 @@
 (* in separate file to avoid circular dependency *)
 
-TEST_MODULE "Info.Stable.V2" =
-  Stable_unit_test.Make (struct
+open Std_kernel
+
+let%test_unit "[create_s sexp] produces an info whose [sexp_of_t] is [sexp]" =
+  let sexp = [%sexp "foo"] in
+  assert (phys_equal [%sexp (Info.create_s sexp : Info.t)] sexp);
+;;
+
+let%test_module "Info.Stable.V2" =
+  (module Stable_unit_test.Make (struct
     include Info.Stable.V2
 
     let equal t t' = compare t t' = 0
@@ -35,4 +42,4 @@ TEST_MODULE "Info.Stable.V2" =
         "((Failure Error)backtrace)",
         "\b\003\001\002\000\007Failure\000\005Error\tbacktrace"
       ]
-  end)
+  end))

@@ -7,7 +7,7 @@ module Debug (Stack : Stack_intf.S) : Stack_intf.S with type 'a t = 'a Stack.t =
 
   open Stack
 
-  type nonrec 'a t = 'a t with bin_io
+  type nonrec 'a t = 'a t [@@deriving bin_io]
 
   let invariant = invariant
 
@@ -40,8 +40,9 @@ module Debug (Stack : Stack_intf.S) : Stack_intf.S with type 'a t = 'a Stack.t =
   let pop t : _ option               = debug t (fun () -> pop t)
   let pop_exn (type a) t : a         = debug t (fun () -> pop_exn t)
   let push t a : unit                = debug t (fun () -> push t a)
-  let sexp_of_t sexp_of_a t : Sexp.t = debug t (fun () -> <:sexp_of< a t >> t)
-  let t_of_sexp a_of_sexp sexp : _ t = check_and_return (<:of_sexp< a t >> sexp)
+  let sexp_of_t sexp_of_a t : Sexp.t = debug t (fun () -> [%sexp_of: a t] t)
+  let singleton x : _ t              = check_and_return (singleton x)
+  let t_of_sexp a_of_sexp sexp : _ t = check_and_return ([%of_sexp: a t] sexp)
   let to_array t : _ array           = debug t (fun () -> to_array t)
   let to_list t : _ list             = debug t (fun () -> to_list t)
   let top t : _ option               = debug t (fun () -> top t)
@@ -58,7 +59,7 @@ module Test (Stack : Stack_intf.S)
 
   open Stack
 
-  type nonrec 'a t = 'a t with bin_io
+  type nonrec 'a t = 'a t [@@deriving bin_io]
 
   include Container_unit_tests.Test_S1 (Stack)
 
@@ -70,8 +71,9 @@ module Test (Stack : Stack_intf.S)
   let pop_exn = pop_exn
   let pop = pop
   let top = top
+  let singleton = singleton
 
-  TEST_UNIT =
+  let%test_unit _ =
     let empty = create () in
     invariant ignore empty;
     invariant (fun b -> assert b) (of_list [true]);
@@ -91,23 +93,28 @@ module Test (Stack : Stack_intf.S)
     assert (is_some (pop (of_list [0])));
     assert (is_none (top empty));
     assert (is_some (top (of_list [0])));
+    assert (is_some (top (singleton 0)));
+    assert (is_some (pop (singleton 0)));
+    assert (let t = singleton 0 in
+            ignore (pop_exn t : int);
+            is_none (top t));
   ;;
 
   let min_elt = min_elt
   let max_elt = max_elt
 
-  TEST_UNIT =
+  let%test_unit _ =
     let empty = create () in
     assert (min_elt ~cmp:Int.compare empty = None);
     assert (max_elt ~cmp:Int.compare empty = None);
-    assert (sum (module Int) ~f:Fn.id empty = 0);
+    assert (sum (module Int) ~f:Fn.id empty = 0)
   ;;
 
   let push = push
   let copy = copy
   let until_empty = until_empty
 
-  TEST_UNIT =
+  let%test_unit _ =
     let t =
       let t = create () in
       push t 0;
@@ -146,10 +153,10 @@ module Test (Stack : Stack_intf.S)
     until_empty t' (fun x -> n := !n + x);
     assert (!n = 3);
     assert (is_empty t');
-    assert (length t' = 0);
+    assert (length t' = 0)
   ;;
 
-  TEST_UNIT =
+  let%test_unit _ =
     let t = create () in
     assert (is_empty t);
     assert (length t = 0);
@@ -173,35 +180,35 @@ module Test (Stack : Stack_intf.S)
     assert (max_elt ~cmp:Int.compare t = Some 14);
     assert (sum (module Int) ~f:Fn.id t = 27);
     assert (is_some (pop t));
-    assert (is_some (pop t));
+    assert (is_some (pop t))
   ;;
 
   let of_list = of_list
 
-  TEST_UNIT =
+  let%test_unit _ =
     for n = 0 to 5 do
       let l = List.init n ~f:Fn.id in
       assert (l = to_list (of_list l));
-    done;
+    done
   ;;
 
   let clear = clear
 
-  TEST_UNIT =
+  let%test_unit _ =
     for n = 0 to 5 do
       let t = of_list (List.init n ~f:Fn.id) in
       clear t;
       assert (is_empty t);
       push t 13;
       assert (length t = 1);
-    done;
+    done
   ;;
 
 end
 
 include (Test (Debug (Linked_stack)) : sig end)
 
-TEST_MODULE = (struct
+let%test_module _ = (module (struct
 
   open Core_stack
 
@@ -210,7 +217,7 @@ TEST_MODULE = (struct
   let capacity     = capacity
   let set_capacity = set_capacity
 
-  TEST_UNIT =
+  let%test_unit _ =
     let t = create () in
     assert (capacity t = 0);
     set_capacity t (-1);
@@ -222,9 +229,9 @@ TEST_MODULE = (struct
     push t ();
     set_capacity t 0;
     assert (length t = 1);
-    assert (capacity t >= 1);
+    assert (capacity t >= 1)
   ;;
 end
 (* This signature constraint is here to remind us to add a unit test whenever the
    interface to [Core_stack] changes. *)
-: module type of Core_stack)
+: module type of Core_stack))

@@ -105,7 +105,7 @@ let union t1 t2 =
       if n1 = n2 then r1.rank <- r1.rank + 1;
     end
 
-TEST_MODULE = struct
+let%test_module _ = (module struct
 
   let is_compressed t =
     invariant t;
@@ -149,7 +149,7 @@ TEST_MODULE = struct
     b
   ;;
 
-  TEST_UNIT "union" =
+  let%test_unit "union" =
     let a = create 1 in
     let b = create 2 in
     assert (not (same_class a b));
@@ -168,10 +168,10 @@ TEST_MODULE = struct
     union d f;
     assert (same_class d e);
     assert (same_class d f);
-    assert (same_class e f);
+    assert (same_class e f)
   ;;
 
-  TEST_UNIT "union" =
+  let%test_unit "union" =
     let a = create 1 in
     let b = create 2 in
     union a b;
@@ -179,10 +179,10 @@ TEST_MODULE = struct
     let d = create 2 in
     union c d;
     union b d;
-    assert (same_class a c);
+    assert (same_class a c)
   ;;
 
-  TEST_UNIT "set/get" =
+  let%test_unit "set/get" =
     let a = create 1 in
     let b = create 2 in
     assert (get a = 1);
@@ -190,20 +190,20 @@ TEST_MODULE = struct
     union a b;
     set a 3;
     assert (get a = 3);
-    assert (get b = 3);
+    assert (get b = 3)
   ;;
 
-  TEST_UNIT "compressed" =
+  let%test_unit "compressed" =
     let n = 1000 in
     let ts = List.init n ~f:create in
     let t = List.reduce_exn ts ~f:(fun a b -> union a b; b) in
     let max_rank = List.fold ts ~init:0 ~f:(fun acc t -> max acc (root t).rank) in
     assert (max_rank = 1);
     set t 42;
-    assert (List.for_all ts ~f:(fun t' -> same_class t t' && get t' = 42));
+    assert (List.for_all ts ~f:(fun t' -> same_class t t' && get t' = 42))
   ;;
 
-  TEST_UNIT "balanced" =
+  let%test_unit "balanced" =
     let module Array = Core_array in
     let log2 n = int_of_float (ceil (log (float_of_int n) /. log 2.)) in
     let n = 1000 in
@@ -226,6 +226,6 @@ TEST_MODULE = struct
     assert (max_rank <= log2 n);
     set t 42;
     assert (Array.for_all ts ~f:(fun t' -> same_class t t' && get t' = 42));
-    assert (Array.for_all ts ~f:is_compressed);
+    assert (Array.for_all ts ~f:is_compressed)
   ;;
-end
+end)

@@ -9,22 +9,22 @@ module Slot = Slot
 
 let does_raise = Exn.does_raise
 
-type nonrec 'slots t = 'slots t with sexp_of
+type nonrec 'slots t = 'slots t [@@deriving sexp_of]
 
 let invariant = invariant
 
 let create = create
 
-TEST_UNIT =
+let%test_unit _ =
   List.iter [ Int.min_value; -1 ] ~f:(fun len ->
     assert (does_raise (fun () -> create Slots.t1 ~len ())))
 ;;
 
 let length = length
 
-TEST_UNIT =
+let%test_unit _ =
   List.iter [ 0; 1; 2; 100; 1_000 ] ~f:(fun len ->
-    assert (length (create Slots.t1 ~len ()) = len));
+    assert (length (create Slots.t1 ~len ()) = len))
 ;;
 
 let copy          = copy
@@ -38,7 +38,7 @@ let slots         = slots
 let unsafe_get    = unsafe_get
 let unsafe_set    = unsafe_set
 
-TEST_UNIT =
+let%test_unit _ =
   let check (type tuple) (type variant) (type a)
         (init : a)
         (changed : a)
@@ -117,7 +117,7 @@ TEST_UNIT =
   check Slots.t6 (slots6 ()) (fun i -> (i, i, i, i, i, i));
   check Slots.t7 (slots7 ()) (fun i -> (i, i, i, i, i, i, i));
   check Slots.t8 (slots8 ()) (fun i -> (i, i, i, i, i, i, i, i));
-  check Slots.t9 (slots9 ()) (fun i -> (i, i, i, i, i, i, i, i, i));
+  check Slots.t9 (slots9 ()) (fun i -> (i, i, i, i, i, i, i, i, i))
 ;;
 
 (* These are unit tested via [Blit.Make_flat] in flat_tuple_array.ml *)

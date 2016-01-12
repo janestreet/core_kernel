@@ -1,7 +1,7 @@
 (** An extension of the standard StringLabels. If you open Core.Std, you'll get
     these in the String module. *)
 
-type t = string with bin_io, sexp, typerep
+type t = string [@@deriving bin_io, sexp, typerep]
 
 (** [Caseless] compares and hashes strings ignoring case, so that for example
     [Caseless.equal "OCaml" "ocaml"] and [Caseless.("apple" < "Banana")] are [true], and
@@ -12,9 +12,10 @@ module Caseless : sig
   include Hashable.  S_binable with type t := t
 end
 
-include Blit.S         with type t := t
-include Container.S0   with type t := t with type elt = char
-include Identifiable.S with type t := t
+include Blit.S           with type t := t
+include Container.S0     with type t := t with type elt = char
+include Identifiable.S   with type t := t
+include Quickcheckable.S with type t := t
 
 (** Maximum length of a string. *)
 val max_length : int
@@ -76,7 +77,7 @@ val rindex_from_exn : t -> int -> char -> int
     searched pattern once and then use it many times without further allocations. *)
 module Search_pattern : sig
 
-  type t with sexp_of
+  type t [@@deriving sexp_of]
 
   (** [create pattern] preprocesses [pattern] as per KMP, building an [int array] of
       length [length pattern].  All inputs are valid. *)
@@ -278,13 +279,16 @@ val equal : t -> t -> bool
 (** [is_empty s] returns [true] iff [s] is empty (i.e. its length is 0). *)
 val is_empty : t -> bool
 
-module Infix : sig
-  val ( </> ) : t -> int * int -> t
-end
-
 val of_char : char -> t
 
 val of_char_list : char list -> t
+
+(** [gen' ?length char_gen] generates strings using the given distributions for string
+    length and each character. *)
+val gen'
+  :  ?length : int Quickcheck.Generator.t  (** defaults to [Quickcheck.Generator.size] *)
+  -> char Quickcheck.Generator.t
+  -> t    Quickcheck.Generator.t
 
 (** Operations for escaping and unescaping strings, with paramaterized escape and
     escapeworthy characters.  Escaping/unescaping using this module is more efficient than

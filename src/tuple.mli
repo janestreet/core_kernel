@@ -2,7 +2,7 @@
 
 (** Signature for a 2-tuple module *)
 module T2 : sig
-  type ('a, 'b) t = 'a * 'b with sexp, typerep
+  type ('a, 'b) t = 'a * 'b [@@deriving sexp, typerep]
 
   val create : 'a -> 'b -> ('a, 'b) t
   val curry :  (('a, 'b) t -> 'c) -> 'a -> 'b -> 'c
@@ -29,7 +29,7 @@ end
 
 (** Signature for a 3-tuple module *)
 module T3 : sig
-  type ('a, 'b, 'c) t = 'a * 'b * 'c with sexp, typerep
+  type ('a, 'b, 'c) t = 'a * 'b * 'c [@@deriving sexp, typerep]
 
   val create : 'a -> 'b -> 'c -> ('a, 'b, 'c) t
   val curry :  (('a, 'b, 'c) t -> 'd) -> 'a -> 'b -> 'c -> 'd
@@ -66,7 +66,7 @@ end
 module Make (T1 : sig type t end) (T2 : sig type t end) : sig type t = T1.t * T2.t end
 
 module type Comparable_sexpable = sig
-  type t with sexp
+  type t [@@deriving sexp]
   include Comparable.S with type t := t
 end
 
@@ -74,7 +74,7 @@ module Comparable (S1 : Comparable_sexpable) (S2 : Comparable_sexpable)
   : Comparable_sexpable with type t := Make (S1) (S2).t
 
 module type Hashable_sexpable = sig
-  type t with sexp
+  type t [@@deriving sexp]
   include Hashable.S with type t := t
 end
 

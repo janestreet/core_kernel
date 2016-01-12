@@ -1,12 +1,13 @@
 module Array = Caml.ArrayLabels
 module Char = Core_char
-module String = Caml.StringLabels
+module String = Caml.BytesLabels
 module List = Core_list
 open Typerep_lib.Std
 open Sexplib.Std
 open Bin_prot.Std
 open Result.Export
 open Staged
+
 
 let phys_equal = (==)
 
@@ -15,7 +16,7 @@ let invalid_argf = Core_printf.invalid_argf
 let failwiths = Error.failwiths
 
 module T = struct
-  type t = string with sexp, bin_io, typerep
+  type t = string [@@deriving sexp, bin_io, typerep]
   let compare = String.compare
 
   (* = on two strings avoids calling compare_val, which is what happens
@@ -53,7 +54,7 @@ external unsafe_set : string -> int -> char -> unit = "%string_unsafe_set"
 
 module Caseless = struct
   module T = struct
-    type t = string with bin_io, sexp
+    type t = string [@@deriving bin_io, sexp]
 
     (* This function gives the same result as [compare (lowercase s1) (lowercase s2)]. It
        is optimised so that it is as fast as that implementation, but uses constant memory
@@ -75,7 +76,7 @@ module Caseless = struct
         (* the Int module is not available here, and [compare] is string comparison *)
         Polymorphic_compare.compare (length s1) (length s2))
 
-    BENCH_FUN "compare" =
+    let%bench_fun "compare" =
       let s1 =
         String.init 1000 ~f:(fun i -> "aBcDeFgHiJkLmNoPqRsTuVwXyZ !?.".[i mod 30])
       in
@@ -92,7 +93,7 @@ module Caseless = struct
       loop 0 0
     ;;
 
-    BENCH_FUN "hash" =
+    let%bench_fun "hash" =
       let s = String.init 1000 ~f:(fun i -> Char.of_int_exn (i mod 256)) in
       fun () -> ignore (hash s)
   end
@@ -102,35 +103,35 @@ module Caseless = struct
   include Hashable.Make_binable(T)
 end
 
-TEST_MODULE "Caseless" = struct
+let%test_module "Caseless" = (module struct
   (* examples from docs *)
-  TEST = Caseless.equal "OCaml" "ocaml"
-  TEST = Caseless.("apple" < "Banana")
+  let%test _ = Caseless.equal "OCaml" "ocaml"
+  let%test _ = Caseless.("apple" < "Banana")
 
-  TEST = Caseless.("aa" < "aaa")
-  TEST = Caseless.compare "apple" "Banana" <> T.compare "apple" "Banana"
-  TEST = Caseless.equal "XxX" "xXx"
-  TEST = Caseless.("XxX" < "xXxX")
-  TEST = Caseless.("XxXx" > "xXx")
+  let%test _ = Caseless.("aa" < "aaa")
+  let%test _ = Caseless.compare "apple" "Banana" <> T.compare "apple" "Banana"
+  let%test _ = Caseless.equal "XxX" "xXx"
+  let%test _ = Caseless.("XxX" < "xXxX")
+  let%test _ = Caseless.("XxXx" > "xXx")
 
-  TEST = List.is_sorted ~compare:Caseless.compare ["Apples"; "bananas"; "Carrots"]
+  let%test _ = List.is_sorted ~compare:Caseless.compare ["Apples"; "bananas"; "Carrots"]
 
-  TEST = Core_map.find_exn (Caseless.Map.of_alist_exn [("a", 4); ("b", 5)]) "A" = 4
+  let%test _ = Core_map.find_exn (Caseless.Map.of_alist_exn [("a", 4); ("b", 5)]) "A" = 4
 
-  TEST = Core_set.mem (Caseless.Set.of_list ["hello"; "world"]) "heLLO"
-  TEST = Core_set.length (Caseless.Set.of_list ["a"; "A"]) = 1
+  let%test _ = Core_set.mem (Caseless.Set.of_list ["hello"; "world"]) "heLLO"
+  let%test _ = Core_set.length (Caseless.Set.of_list ["a"; "A"]) = 1
 
-  TEST =
+  let%test _ =
     Core_hashtbl.hash "x" <> Core_hashtbl.hash "X"
       && Caseless.hash "x" = Caseless.hash "X"
-  TEST = Caseless.hash "OCaml" = Caseless.hash "ocaml"
-  TEST = Caseless.hash "aaa" <> Caseless.hash "aaaa"
-  TEST = Caseless.hash "aaa" <> Caseless.hash "aab"
-  TEST =
+  let%test _ = Caseless.hash "OCaml" = Caseless.hash "ocaml"
+  let%test _ = Caseless.hash "aaa" <> Caseless.hash "aaaa"
+  let%test _ = Caseless.hash "aaa" <> Caseless.hash "aab"
+  let%test _ =
     let tbl = Caseless.Table.create () in
     Core_hashtbl.add_exn tbl ~key:"x" ~data:7;
     Core_hashtbl.find tbl "X" = Some 7
-end
+end)
 
 include
   Blit.Make
@@ -140,7 +141,7 @@ include
       let of_bool b = if b then 'a' else 'b'
     end)
     (struct
-      type nonrec t = t with sexp_of
+      type nonrec t = t [@@deriving sexp_of]
       let create ~len = create len
       let length = length
       let get = get
@@ -158,18 +159,18 @@ let contains ?pos ?len t char =
   loop pos
 ;;
 
-TEST = contains "" 'a' = false
-TEST = contains "a" 'a' = true
-TEST = contains "a" 'b' = false
-TEST = contains "ab" 'a' = true
-TEST = contains "ab" 'b' = true
-TEST = contains "ab" 'c' = false
-TEST = contains "abcd" 'b' ~pos:1 ~len:0 = false
-TEST = contains "abcd" 'b' ~pos:1 ~len:1 = true
-TEST = contains "abcd" 'c' ~pos:1 ~len:2 = true
-TEST = contains "abcd" 'd' ~pos:1 ~len:2 = false
-TEST = contains "abcd" 'd' ~pos:1 = true
-TEST = contains "abcd" 'a' ~pos:1 = false
+let%test _ = contains "" 'a' = false
+let%test _ = contains "a" 'a' = true
+let%test _ = contains "a" 'b' = false
+let%test _ = contains "ab" 'a' = true
+let%test _ = contains "ab" 'b' = true
+let%test _ = contains "ab" 'c' = false
+let%test _ = contains "abcd" 'b' ~pos:1 ~len:0 = false
+let%test _ = contains "abcd" 'b' ~pos:1 ~len:1 = true
+let%test _ = contains "abcd" 'c' ~pos:1 ~len:2 = true
+let%test _ = contains "abcd" 'd' ~pos:1 ~len:2 = false
+let%test _ = contains "abcd" 'd' ~pos:1 = true
+let%test _ = contains "abcd" 'a' ~pos:1 = false
 
 let is_empty t = length t = 0
 
@@ -191,7 +192,7 @@ let rindex_from t pos char =
 
 module Search_pattern = struct
 
-  type t = string * int array with sexp_of
+  type t = string * int array [@@deriving sexp_of]
 
   (* Find max number of matched characters at [next_text_char], given the current
      [matched_chars]. Try to extend the current match, if chars don't match, try to match
@@ -228,7 +229,7 @@ module Search_pattern = struct
     (pattern, kmp_arr)
   ;;
 
-  TEST_MODULE "Search_pattern.create" = struct
+  let%test_module "Search_pattern.create" = (module struct
     let prefix s n = sub s ~pos:0 ~len:n
     let suffix s n = sub s ~pos:(length s - n) ~len:n
 
@@ -249,10 +250,10 @@ module Search_pattern = struct
     let test_both (s, a) = create s = (s, a) && slow_create s = (s, a)
     let cmp_both s = create s = slow_create s
 
-    TEST = test_both ("", [| |])
-    TEST = test_both ("ababab", [|0; 0; 1; 2; 3; 4|])
-    TEST = test_both ("abaCabaD", [|0; 0; 1; 0; 1; 2; 3; 0|])
-    TEST = test_both ("abaCabaDabaCabaCabaDabaCabaEabab",
+    let%test _ = test_both ("", [| |])
+    let%test _ = test_both ("ababab", [|0; 0; 1; 2; 3; 4|])
+    let%test _ = test_both ("abaCabaD", [|0; 0; 1; 0; 1; 2; 3; 0|])
+    let%test _ = test_both ("abaCabaDabaCabaCabaDabaCabaEabab",
                            [|0; 0; 1; 0; 1; 2; 3; 0; 1; 2; 3; 4; 5; 6; 7; 4; 5; 6; 7; 8;
                              9; 10; 11; 12; 13; 14; 15; 0; 1; 2; 3; 2|])
 
@@ -262,9 +263,9 @@ module Search_pattern = struct
         b ^ (make 1 (Caml.Char.unsafe_chr (65 + k))) ^ b
     ;;
 
-    TEST = cmp_both (x 10)
-    TEST = cmp_both ((x 5) ^ "E" ^ (x 4) ^ "D" ^ (x 3) ^ "B" ^ (x 2) ^ "C" ^ (x 3))
-  end
+    let%test _ = cmp_both (x 10)
+    let%test _ = cmp_both ((x 5) ^ "E" ^ (x 4) ^ "D" ^ (x 3) ^ "B" ^ (x 2) ^ "C" ^ (x 3))
+  end)
 
   (* Classic KMP: use the pre-processed pattern to optimize look-behinds on non-matches.
      We return int to avoid allocation in [index_exn]. -1 means no match. *)
@@ -301,24 +302,24 @@ module Search_pattern = struct
       Some p
   ;;
 
-  TEST = index (create "") ~in_:"abababac" = Some 0
-  TEST = index ~pos:(-1) (create "") ~in_:"abababac" = None
-  TEST = index ~pos:1 (create "") ~in_:"abababac" = Some 1
-  TEST = index ~pos:7 (create "") ~in_:"abababac" = Some 7
-  TEST = index ~pos:8 (create "") ~in_:"abababac" = Some 8
-  TEST = index ~pos:9 (create "") ~in_:"abababac" = None
-  TEST = index (create "abababaca") ~in_:"abababac" = None
-  TEST = index (create "abababac") ~in_:"abababac" = Some 0
-  TEST = index ~pos:0 (create "abababac") ~in_:"abababac" = Some 0
-  TEST = index (create "abac") ~in_:"abababac" = Some 4
-  TEST = index ~pos:4 (create "abac") ~in_:"abababac" = Some 4
-  TEST = index ~pos:5 (create "abac") ~in_:"abababac" = None
-  TEST = index ~pos:5 (create "abac") ~in_:"abababaca" = None
-  TEST = index ~pos:5 (create "baca") ~in_:"abababaca" = Some 5
-  TEST = index ~pos:(-1) (create "a") ~in_:"abc" = None
-  TEST = index ~pos:2 (create "a") ~in_:"abc" = None
-  TEST = index ~pos:2 (create "c") ~in_:"abc" = Some 2
-  TEST = index ~pos:3 (create "c") ~in_:"abc" = None
+  let%test _ = index (create "") ~in_:"abababac" = Some 0
+  let%test _ = index ~pos:(-1) (create "") ~in_:"abababac" = None
+  let%test _ = index ~pos:1 (create "") ~in_:"abababac" = Some 1
+  let%test _ = index ~pos:7 (create "") ~in_:"abababac" = Some 7
+  let%test _ = index ~pos:8 (create "") ~in_:"abababac" = Some 8
+  let%test _ = index ~pos:9 (create "") ~in_:"abababac" = None
+  let%test _ = index (create "abababaca") ~in_:"abababac" = None
+  let%test _ = index (create "abababac") ~in_:"abababac" = Some 0
+  let%test _ = index ~pos:0 (create "abababac") ~in_:"abababac" = Some 0
+  let%test _ = index (create "abac") ~in_:"abababac" = Some 4
+  let%test _ = index ~pos:4 (create "abac") ~in_:"abababac" = Some 4
+  let%test _ = index ~pos:5 (create "abac") ~in_:"abababac" = None
+  let%test _ = index ~pos:5 (create "abac") ~in_:"abababaca" = None
+  let%test _ = index ~pos:5 (create "baca") ~in_:"abababaca" = Some 5
+  let%test _ = index ~pos:(-1) (create "a") ~in_:"abc" = None
+  let%test _ = index ~pos:2 (create "a") ~in_:"abc" = None
+  let%test _ = index ~pos:2 (create "c") ~in_:"abc" = Some 2
+  let%test _ = index ~pos:3 (create "c") ~in_:"abc" = None
 
   let index_exn ?pos t ~in_ =
     let p = index_internal ?pos t ~in_ in
@@ -358,14 +359,14 @@ module Search_pattern = struct
     end
   ;;
 
-  TEST = index_all (create "") ~may_overlap:false ~in_:"abcd" = [0; 1; 2; 3; 4]
-  TEST = index_all (create "") ~may_overlap:true ~in_:"abcd" = [0; 1; 2; 3; 4]
-  TEST = index_all (create "abab") ~may_overlap:false ~in_:"abababab" = [0; 4]
-  TEST = index_all (create "abab") ~may_overlap:true  ~in_:"abababab" = [0; 2; 4]
-  TEST = index_all (create "abab") ~may_overlap:false ~in_:"ababababab" = [0; 4]
-  TEST = index_all (create "abab") ~may_overlap:true  ~in_:"ababababab" = [0; 2; 4; 6]
-  TEST = index_all (create "aaa") ~may_overlap:false ~in_:"aaaaBaaaaaa" = [0; 5; 8]
-  TEST = index_all (create "aaa") ~may_overlap:true  ~in_:"aaaaBaaaaaa" = [0; 1; 5; 6; 7; 8]
+  let%test _ = index_all (create "") ~may_overlap:false ~in_:"abcd" = [0; 1; 2; 3; 4]
+  let%test _ = index_all (create "") ~may_overlap:true ~in_:"abcd" = [0; 1; 2; 3; 4]
+  let%test _ = index_all (create "abab") ~may_overlap:false ~in_:"abababab" = [0; 4]
+  let%test _ = index_all (create "abab") ~may_overlap:true  ~in_:"abababab" = [0; 2; 4]
+  let%test _ = index_all (create "abab") ~may_overlap:false ~in_:"ababababab" = [0; 4]
+  let%test _ = index_all (create "abab") ~may_overlap:true  ~in_:"ababababab" = [0; 2; 4; 6]
+  let%test _ = index_all (create "aaa") ~may_overlap:false ~in_:"aaaaBaaaaaa" = [0; 5; 8]
+  let%test _ = index_all (create "aaa") ~may_overlap:true  ~in_:"aaaaBaaaaaa" = [0; 1; 5; 6; 7; 8]
 
   let replace_first ?pos t ~in_:s ~with_ =
     match index ?pos t ~in_:s with
@@ -381,12 +382,12 @@ module Search_pattern = struct
       dst
   ;;
 
-  TEST = replace_first (create "abab") ~in_:"abababab" ~with_:"" = "abab"
-  TEST = replace_first (create "abab") ~in_:"abacabab" ~with_:"" = "abac"
-  TEST = replace_first (create "abab") ~in_:"ababacab" ~with_:"A" = "Aacab"
-  TEST = replace_first (create "abab") ~in_:"acabababab" ~with_:"A" = "acAabab"
-  TEST = replace_first (create "ababab") ~in_:"acabababab" ~with_:"A" = "acAab"
-  TEST = replace_first (create "abab") ~in_:"abababab" ~with_:"abababab" = "abababababab"
+  let%test _ = replace_first (create "abab") ~in_:"abababab" ~with_:"" = "abab"
+  let%test _ = replace_first (create "abab") ~in_:"abacabab" ~with_:"" = "abac"
+  let%test _ = replace_first (create "abab") ~in_:"ababacab" ~with_:"A" = "Aacab"
+  let%test _ = replace_first (create "abab") ~in_:"acabababab" ~with_:"A" = "acAabab"
+  let%test _ = replace_first (create "ababab") ~in_:"acabababab" ~with_:"A" = "acAab"
+  let%test _ = replace_first (create "abab") ~in_:"abababab" ~with_:"abababab" = "abababababab"
 
 
   let replace_all t ~in_:s ~with_ =
@@ -413,16 +414,16 @@ module Search_pattern = struct
       dst
   ;;
 
-  TEST = replace_all (create "abab") ~in_:"abababab" ~with_:"" = ""
-  TEST = replace_all (create "abab") ~in_:"abacabab" ~with_:"" = "abac"
-  TEST = replace_all (create "abab") ~in_:"acabababab" ~with_:"A" = "acAA"
-  TEST = replace_all (create "ababab") ~in_:"acabababab" ~with_:"A" = "acAab"
-  TEST = replace_all (create "abaC") ~in_:"abaCabaDCababaCabaCaba" ~with_:"x" = "xabaDCabxxaba"
-  TEST = replace_all (create "a") ~in_:"aa" ~with_:"aaa" = "aaaaaa"
-  TEST = replace_all (create "") ~in_:"abcdeefff" ~with_:"X1" = "X1aX1bX1cX1dX1eX1eX1fX1fX1fX1"
+  let%test _ = replace_all (create "abab") ~in_:"abababab" ~with_:"" = ""
+  let%test _ = replace_all (create "abab") ~in_:"abacabab" ~with_:"" = "abac"
+  let%test _ = replace_all (create "abab") ~in_:"acabababab" ~with_:"A" = "acAA"
+  let%test _ = replace_all (create "ababab") ~in_:"acabababab" ~with_:"A" = "acAab"
+  let%test _ = replace_all (create "abaC") ~in_:"abaCabaDCababaCabaCaba" ~with_:"x" = "xabaDCabxxaba"
+  let%test _ = replace_all (create "a") ~in_:"aa" ~with_:"aaa" = "aaaaaa"
+  let%test _ = replace_all (create "") ~in_:"abcdeefff" ~with_:"X1" = "X1aX1bX1cX1dX1eX1eX1fX1fX1fX1"
 
   (* a doc comment in core_string.mli gives this as an example *)
-  TEST = replace_all (create "bc") ~in_:"aabbcc" ~with_:"cb" = "aabcbc"
+  let%test _ = replace_all (create "bc") ~in_:"aabbcc" ~with_:"cb" = "aabcbc"
 end
 
 let substr_index ?pos t ~pattern =
@@ -473,17 +474,17 @@ let slice t start stop =
 
 
 (*TEST = slice "hey" 0 0 = ""*) (* This is what I would expect *)
-TEST = slice "hey" 0 0 = "hey" (* But this is what we get! *)
+let%test _ = slice "hey" 0 0 = "hey" (* But this is what we get! *)
 
-TEST = slice "hey" 0 1 = "h"
-TEST = slice "hey" 0 2 = "he"
-TEST = slice "hey" 0 3 = "hey"
-TEST = slice "hey" 1 1 = ""
-TEST = slice "hey" 1 2 = "e"
-TEST = slice "hey" 1 3 = "ey"
-TEST = slice "hey" 2 2 = ""
-TEST = slice "hey" 2 3 = "y"
-TEST = slice "hey" 3 3 = ""
+let%test _ = slice "hey" 0 1 = "h"
+let%test _ = slice "hey" 0 2 = "he"
+let%test _ = slice "hey" 0 3 = "hey"
+let%test _ = slice "hey" 1 1 = ""
+let%test _ = slice "hey" 1 2 = "e"
+let%test _ = slice "hey" 1 3 = "ey"
+let%test _ = slice "hey" 2 2 = ""
+let%test _ = slice "hey" 2 3 = "y"
+let%test _ = slice "hey" 3 3 = ""
 
 let nget x i =
   x.[normalize x i]
@@ -520,10 +521,10 @@ let rev t =
   res
 ;;
 
-TEST = rev "" = "";;
-TEST = rev "a" = "a";;
-TEST = rev "ab" = "ba";;
-TEST = rev "abc" = "cba";;
+let%test _ = rev "" = "";;
+let%test _ = rev "a" = "a";;
+let%test _ = rev "ab" = "ba";;
+let%test _ = rev "abc" = "cba";;
 
 (** Efficient string splitting *)
 
@@ -605,12 +606,12 @@ let split_lines =
       sub t ~pos:0 ~len:!eol :: !ac
 ;;
 
-TEST_UNIT =
+let%test_unit _ =
   List.iter ~f:(fun (t, expect) ->
     let actual = split_lines t in
     if actual <> expect
     then failwiths "split_lines bug" (t, `actual actual , `expect expect)
-           <:sexp_of< t * [ `actual of t list ] * [ `expect of t list ] >>)
+           [%sexp_of: t * [ `actual of t list ] * [ `expect of t list ]])
     [ ""             , [];
       "\n"           , [""];
       "a"            , ["a"];
@@ -622,7 +623,7 @@ TEST_UNIT =
     ]
 ;;
 
-TEST_UNIT =
+let%test_unit _ =
   let lines = [ ""; "a"; "bc" ] in
   let newlines = [ "\n"; "\r\n" ] in
   let rec loop n expect to_concat =
@@ -631,7 +632,7 @@ TEST_UNIT =
       let actual = Or_error.try_with (fun () -> split_lines input) in
       if actual <> Ok expect
       then failwiths "split_lines bug" (input, `actual actual , `expect expect)
-             <:sexp_of< t * [ `actual of t list Or_error.t ] * [ `expect of t list ] >>
+             [%sexp_of: t * [ `actual of t list Or_error.t ] * [ `expect of t list ]]
     end else begin
       loop (n - 1) expect to_concat;
       List.iter lines ~f:(fun t ->
@@ -640,7 +641,7 @@ TEST_UNIT =
         List.iter newlines ~f:(fun newline -> loop (newline :: to_concat)));
     end
   in
-  loop 3 [] [];
+  loop 3 [] []
 ;;
 
 (* [is_suffix s ~suff] returns [true] if the string [s] ends with the suffix [suff] *)
@@ -686,10 +687,10 @@ let lfindi ?(pos=0) t ~f =
   loop pos
 ;;
 
-TEST = lfindi "bob" ~f:(fun _ c -> 'b' = c) = Some 0
-TEST = lfindi ~pos:0 "bob" ~f:(fun _ c -> 'b' = c) = Some 0
-TEST = lfindi ~pos:1 "bob" ~f:(fun _ c -> 'b' = c) = Some 2
-TEST = lfindi "bob" ~f:(fun _ c -> 'x' = c) = None
+let%test _ = lfindi "bob" ~f:(fun _ c -> 'b' = c) = Some 0
+let%test _ = lfindi ~pos:0 "bob" ~f:(fun _ c -> 'b' = c) = Some 0
+let%test _ = lfindi ~pos:1 "bob" ~f:(fun _ c -> 'b' = c) = Some 2
+let%test _ = lfindi "bob" ~f:(fun _ c -> 'x' = c) = None
 
 let find t ~f =
   match lfindi t ~f:(fun _ c -> f c) with
@@ -707,9 +708,9 @@ let find_map t ~f =
   loop 0
 ;;
 
-TEST = find_map "fop" ~f:(fun c -> if c >= 'o' then Some c else None) = Some 'o'
-TEST = find_map "bar" ~f:(fun _ -> None) = None
-TEST = find_map "" ~f:(fun _ -> assert false) = None
+let%test _ = find_map "fop" ~f:(fun c -> if c >= 'o' then Some c else None) = Some 'o'
+let%test _ = find_map "bar" ~f:(fun _ -> None) = None
+let%test _ = find_map "" ~f:(fun _ -> assert false) = None
 
 let rfindi ?pos t ~f =
   let rec loop i =
@@ -727,10 +728,10 @@ let rfindi ?pos t ~f =
   loop pos
 ;;
 
-TEST = rfindi "bob" ~f:(fun _ c -> 'b' = c) = Some 2
-TEST = rfindi ~pos:2 "bob" ~f:(fun _ c -> 'b' = c) = Some 2
-TEST = rfindi ~pos:1 "bob" ~f:(fun _ c -> 'b' = c) = Some 0
-TEST = rfindi "bob" ~f:(fun _ c -> 'x' = c) = None
+let%test _ = rfindi "bob" ~f:(fun _ c -> 'b' = c) = Some 2
+let%test _ = rfindi ~pos:2 "bob" ~f:(fun _ c -> 'b' = c) = Some 2
+let%test _ = rfindi ~pos:1 "bob" ~f:(fun _ c -> 'b' = c) = Some 0
+let%test _ = rfindi "bob" ~f:(fun _ c -> 'x' = c) = None
 
 let last_non_drop ~drop t = rfindi t ~f:(fun _ c -> not (drop c))
 
@@ -768,9 +769,9 @@ let strip ?(drop=Char.is_whitespace) t =
         | Some last -> sub t ~pos:first ~len:(last - first + 1)
 ;;
 
-TEST = strip " foo bar \n" = "foo bar"
-TEST = strip ~drop:(fun c -> c = '"') "\" foo bar " = " foo bar "
-TEST = strip ~drop:(fun c -> c = '"') " \" foo bar " = " \" foo bar "
+let%test _ = strip " foo bar \n" = "foo bar"
+let%test _ = strip ~drop:(fun c -> c = '"') "\" foo bar " = " foo bar "
+let%test _ = strip ~drop:(fun c -> c = '"') " \" foo bar " = " \" foo bar "
 
 let mapi t ~f =
   let l = String.length t in
@@ -804,10 +805,10 @@ let exists s ~f =
   loop 0
 ;;
 
-TEST = false = exists ""    ~f:(fun _ -> assert false)
-TEST = false = exists "abc" ~f:(Fn.const false)
-TEST = true  = exists "abc" ~f:(Fn.const true)
-TEST = true  = exists "abc" ~f:(function
+let%test _ = false = exists ""    ~f:(fun _ -> assert false)
+let%test _ = false = exists "abc" ~f:(Fn.const false)
+let%test _ = true  = exists "abc" ~f:(Fn.const true)
+let%test _ = true  = exists "abc" ~f:(function
     'a' -> false | 'b' -> true | _ -> assert false)
 
 let for_all s ~f =
@@ -816,10 +817,10 @@ let for_all s ~f =
   loop 0
 ;;
 
-TEST = true  = for_all ""    ~f:(fun _ -> assert false)
-TEST = true  = for_all "abc" ~f:(Fn.const true)
-TEST = false = for_all "abc" ~f:(Fn.const false)
-TEST = false = for_all "abc" ~f:(function
+let%test _ = true  = for_all ""    ~f:(fun _ -> assert false)
+let%test _ = true  = for_all "abc" ~f:(Fn.const true)
+let%test _ = false = for_all "abc" ~f:(Fn.const false)
+let%test _ = false = for_all "abc" ~f:(function
     'a' -> true | 'b' -> false | _ -> assert false)
 
 let fold t ~init ~f =
@@ -834,7 +835,7 @@ let foldi t ~init ~f =
   loop 0 init
 ;;
 
-TEST = (foldi "hello" ~init:[] ~f:(fun i acc ch -> (i,ch)::acc)
+let%test _ = (foldi "hello" ~init:[] ~f:(fun i acc ch -> (i,ch)::acc)
         = List.rev [0,'h';1,'e';2,'l';3,'l';4,'o'])
 
 let count t ~f = Container.count ~fold t ~f
@@ -899,16 +900,16 @@ let filter t ~f =
   end
 ;;
 
-TEST = filter "hello" ~f:(fun c -> c <> 'h') = "ello"
-TEST = filter "hello" ~f:(fun c -> c <> 'l') = "heo"
-TEST = filter "hello" ~f:(fun _ -> false) = ""
-TEST = filter "hello" ~f:(fun _ -> true) = "hello"
-TEST = let s = "hello" in (filter s ~f:(fun _ -> true)) == s
-TEST_UNIT =
+let%test _ = filter "hello" ~f:(fun c -> c <> 'h') = "ello"
+let%test _ = filter "hello" ~f:(fun c -> c <> 'l') = "heo"
+let%test _ = filter "hello" ~f:(fun _ -> false) = ""
+let%test _ = filter "hello" ~f:(fun _ -> true) = "hello"
+let%test _ = let s = "hello" in (filter s ~f:(fun _ -> true)) == s
+let%test_unit _ =
   let s = "abc" in
   let r = ref 0 in
   assert (phys_equal s (filter s ~f:(fun _ -> incr r; true)));
-  assert (!r = String.length s);
+  assert (!r = String.length s)
 ;;
 
 let chop_prefix s ~prefix =
@@ -948,17 +949,13 @@ let chop_suffix_exn s ~suffix =
 module Hash = struct
   external hash : string -> int = "caml_hash_string" "noalloc"
 
-  TEST_UNIT =
+  let%test_unit _ =
     List.iter ~f:(fun string -> assert (hash string = Caml.Hashtbl.hash string))
       [ "Oh Gloria inmarcesible! Oh jubilo inmortal!"
       ; "Oh say can you see, by the dawn's early light"
       ]
   ;;
 
-end
-
-module Infix = struct
-  let ( </> ) str (start,stop) = slice str start stop
 end
 
 include (Hashable.Make_binable (struct
@@ -1013,8 +1010,39 @@ let of_char_list l =
   List.iteri l ~f:(fun i c -> t.[i] <- c);
   t
 
-TEST = of_char_list ['a';'b';'c'] = "abc"
-TEST = of_char_list [] = ""
+let%test _ = of_char_list ['a';'b';'c'] = "abc"
+let%test _ = of_char_list [] = ""
+
+module For_quickcheck = struct
+
+  module Generator = Quickcheck.Generator
+  module Observer  = Quickcheck.Observer
+  module Shrinker  = Quickcheck.Shrinker
+
+  open Generator.Monad_infix
+
+  let gen' ?(length = Generator.size) char_gen =
+    length
+    >>= fun len ->
+    List.gen' char_gen ~length:(`Exactly len)
+    >>| of_char_list
+
+  let gen = gen' Char.gen
+
+  let obs =
+    Observer.unmap (List.obs Char.obs)
+      ~f:to_list
+      ~f_sexp:(fun () -> Atom "String.to_list")
+
+  let shrinker =
+    Shrinker.map (List.shrinker Char.shrinker) ~f:of_char_list ~f_inverse:to_list
+
+end
+
+let gen'     = For_quickcheck.gen'
+let gen      = For_quickcheck.gen
+let obs      = For_quickcheck.obs
+let shrinker = For_quickcheck.shrinker
 
 module Escaping = struct
 
@@ -1026,7 +1054,7 @@ module Escaping = struct
       then escapeworthy_map
       else (escape_char, escape_char) :: escapeworthy_map
     in
-    let arr = Array.create 256 (-1) in
+    let arr = Array.make 256 (-1) in
     let rec loop vals = function
       | [] -> Ok arr
       | (c_from, c_to) :: l ->
@@ -1037,7 +1065,7 @@ module Escaping = struct
         if arr.(k) <> -1 || Char.Set.mem vals v then
           Or_error.error "escapeworthy_map not one-to-one"
             (c_from, c_to, escapeworthy_map)
-            (<:sexp_of< char * char * (char * char) list >>)
+            ([%sexp_of: char * char * (char * char) list])
         else (arr.(k) <- Char.to_int v; loop (Char.Set.add vals v) l)
     in
     loop Char.Set.empty escapeworthy_map
@@ -1119,25 +1147,25 @@ module Escaping = struct
     Or_error.ok_exn (escape_gen ~escapeworthy_map ~escape_char) |! stage
   ;;
 
-  TEST_MODULE "escape_gen" = struct
+  let%test_module "escape_gen" = (module struct
     let escape = unstage
       (escape_gen_exn
          ~escapeworthy_map:[('%','p');('^','c')] ~escape_char:'_')
 
-    TEST = escape "" = ""
-    TEST = escape "foo" = "foo"
-    TEST = escape "_" = "__"
-    TEST = escape "foo%bar" = "foo_pbar"
-    TEST = escape "^foo%" = "_cfoo_p"
+    let%test _ = escape "" = ""
+    let%test _ = escape "foo" = "foo"
+    let%test _ = escape "_" = "__"
+    let%test _ = escape "foo%bar" = "foo_pbar"
+    let%test _ = escape "^foo%" = "_cfoo_p"
 
     let escape2 = unstage
       (escape_gen_exn
          ~escapeworthy_map:[('_','.');('%','p');('^','c')] ~escape_char:'_')
 
-    TEST = escape2 "_." = "_.."
-    TEST = escape2 "_" = "_."
-    TEST = escape2 "foo%_bar" = "foo_p_.bar"
-    TEST = escape2 "_foo%" = "_.foo_p"
+    let%test _ = escape2 "_." = "_.."
+    let%test _ = escape2 "_" = "_."
+    let%test _ = escape2 "foo%_bar" = "foo_p_.bar"
+    let%test _ = escape2 "_foo%" = "_.foo_p"
 
     let checks_for_one_to_one escapeworthy_map =
       try
@@ -1145,9 +1173,9 @@ module Escaping = struct
         false
       with _ -> true
 
-    TEST = checks_for_one_to_one [('%','p');('^','c');('$','c')]
-    TEST = checks_for_one_to_one [('%','p');('^','c');('%','d')]
-  end
+    let%test _ = checks_for_one_to_one [('%','p');('^','c');('$','c')]
+    let%test _ = checks_for_one_to_one [('%','p');('^','c');('%','d')]
+  end)
 
   let escape ~escapeworthy ~escape_char =
     (* For [escape_gen_exn], we don't know how to fix invalid escapeworthy_map so we have
@@ -1250,30 +1278,30 @@ module Escaping = struct
     Or_error.ok_exn (unescape_gen ~escapeworthy_map ~escape_char) |! stage
   ;;
 
-  TEST_MODULE "unescape_gen" = struct
+  let%test_module "unescape_gen" = (module struct
     let unescape =
       unstage
         (unescape_gen_exn ~escapeworthy_map:['%','p';'^','c'] ~escape_char:'_')
 
-    TEST = unescape "__" = "_"
-    TEST = unescape "foo" = "foo"
-    TEST = unescape "__" = "_"
-    TEST = unescape "foo_pbar" = "foo%bar"
-    TEST = unescape "_cfoo_p" = "^foo%"
+    let%test _ = unescape "__" = "_"
+    let%test _ = unescape "foo" = "foo"
+    let%test _ = unescape "__" = "_"
+    let%test _ = unescape "foo_pbar" = "foo%bar"
+    let%test _ = unescape "_cfoo_p" = "^foo%"
 
     let unescape2 =
       unstage
         (unescape_gen_exn ~escapeworthy_map:['_','.';'%','p';'^','c'] ~escape_char:'_')
 
     (* this one is ill-formed, just ignore the escape_char without escaped char *)
-    TEST = unescape2 "_" = ""
-    TEST = unescape2 "a_" = "a"
+    let%test _ = unescape2 "_" = ""
+    let%test _ = unescape2 "a_" = "a"
 
-    TEST = unescape2 "__" = "_"
-    TEST = unescape2 "_.." = "_."
-    TEST = unescape2 "_." = "_"
-    TEST = unescape2 "foo_p_.bar" = "foo%_bar"
-    TEST = unescape2 "_.foo_p" = "_foo%"
+    let%test _ = unescape2 "__" = "_"
+    let%test _ = unescape2 "_.." = "_."
+    let%test _ = unescape2 "_." = "_"
+    let%test _ = unescape2 "foo_p_.bar" = "foo%_bar"
+    let%test _ = unescape2 "_.foo_p" = "_foo%"
 
     (* generate [n] random string and check if escaping and unescaping are consistent *)
     let random_test ~escapeworthy_map ~escape_char n =
@@ -1308,7 +1336,7 @@ module Escaping = struct
         List.map escapeworthy_map ~f:fst |! Array.of_list
       in
       try
-        for _i = 0 to n - 1 do
+        for _ = 0 to n - 1 do
           let str =
             List.init (Random.int 50) ~f:(fun _ ->
               let p = Random.int 100 in
@@ -1327,20 +1355,20 @@ module Escaping = struct
       with e ->
         raise e
 
-    TEST = random_test 1000 ~escapeworthy_map:['%','p';'^','c'] ~escape_char:'_'
-    TEST = random_test 1000 ~escapeworthy_map:['_','.';'%','p';'^','c'] ~escape_char:'_'
-  end
+    let%test _ = random_test 1000 ~escapeworthy_map:['%','p';'^','c'] ~escape_char:'_'
+    let%test _ = random_test 1000 ~escapeworthy_map:['_','.';'%','p';'^','c'] ~escape_char:'_'
+  end)
 
   let unescape ~escape_char =
     unescape_gen_exn ~escapeworthy_map:[] ~escape_char
 
-  TEST_MODULE "unescape" = struct
+  let%test_module "unescape" = (module struct
     let unescape = unstage (unescape ~escape_char:'_')
-    TEST = unescape "foo" = "foo"
-    TEST = unescape "__" = "_"
-    TEST = unescape "foo_%bar" = "foo%bar"
-    TEST = unescape "_^foo_%" = "^foo%"
-  end
+    let%test _ = unescape "foo" = "foo"
+    let%test _ = unescape "__" = "_"
+    let%test _ = unescape "foo_%bar" = "foo%bar"
+    let%test _ = unescape "_^foo_%" = "^foo%"
+  end)
 
   let preceding_escape_chars str ~escape_char pos =
     let rec loop p cnt =
@@ -1388,50 +1416,50 @@ module Escaping = struct
     escape_status str ~escape_char pos = `Escaping
   ;;
 
-  TEST_MODULE "is_char_escaping" = struct
+  let%test_module "is_char_escaping" = (module struct
     let is = is_char_escaping ~escape_char:'_'
-    TEST = is "___" 0 = true
-    TEST = is "___" 1 = false
-    TEST = is "___" 2 = true (* considered escaping, though there's nothing to escape *)
+    let%test _ = is "___" 0 = true
+    let%test _ = is "___" 1 = false
+    let%test _ = is "___" 2 = true (* considered escaping, though there's nothing to escape *)
 
-    TEST = is "a_b__c" 0 = false
-    TEST = is "a_b__c" 1 = true
-    TEST = is "a_b__c" 2 = false
-    TEST = is "a_b__c" 3 = true
-    TEST = is "a_b__c" 4 = false
-    TEST = is "a_b__c" 5 = false
-  end
+    let%test _ = is "a_b__c" 0 = false
+    let%test _ = is "a_b__c" 1 = true
+    let%test _ = is "a_b__c" 2 = false
+    let%test _ = is "a_b__c" 3 = true
+    let%test _ = is "a_b__c" 4 = false
+    let%test _ = is "a_b__c" 5 = false
+  end)
 
   let is_char_escaped str ~escape_char pos =
     check_bound str pos "is_char_escaped";
     escape_status str ~escape_char pos = `Escaped
   ;;
 
-  TEST_MODULE "is_char_escaped" = struct
+  let%test_module "is_char_escaped" = (module struct
     let is = is_char_escaped ~escape_char:'_'
-    TEST = is "___" 2 = false
-    TEST = is "x" 0 = false
-    TEST = is "_x" 1 = true
-    TEST = is "sadflkas____sfff" 12 = false
-    TEST = is "s_____s" 6 = true
-  end
+    let%test _ = is "___" 2 = false
+    let%test _ = is "x" 0 = false
+    let%test _ = is "_x" 1 = true
+    let%test _ = is "sadflkas____sfff" 12 = false
+    let%test _ = is "s_____s" 6 = true
+  end)
 
   let is_char_literal str ~escape_char pos =
     check_bound str pos "is_char_literal";
     escape_status str ~escape_char pos = `Literal
   ;;
 
-  TEST_MODULE "is_char_literal" = struct
+  let%test_module "is_char_literal" = (module struct
     let is_char_literal = is_char_literal ~escape_char:'_'
-    TEST = is_char_literal "123456" 4 = true
-    TEST = is_char_literal "12345_6" 6 = false
-    TEST = is_char_literal "12345_6" 5 = false
-    TEST = is_char_literal "123__456" 4 = false
-    TEST = is_char_literal "123456__" 7 = false
-    TEST = is_char_literal "__123456" 1 = false
-    TEST = is_char_literal "__123456" 0 = false
-    TEST = is_char_literal "__123456" 2 = true
-  end
+    let%test _ = is_char_literal "123456" 4 = true
+    let%test _ = is_char_literal "12345_6" 6 = false
+    let%test _ = is_char_literal "12345_6" 5 = false
+    let%test _ = is_char_literal "123__456" 4 = false
+    let%test _ = is_char_literal "123456__" 7 = false
+    let%test _ = is_char_literal "__123456" 1 = false
+    let%test _ = is_char_literal "__123456" 0 = false
+    let%test _ = is_char_literal "__123456" 2 = true
+  end)
 
   let index_from str ~escape_char pos char =
     check_bound str pos "index_from";
@@ -1450,21 +1478,21 @@ module Escaping = struct
     | None ->
       failwiths "index_from_exn: not found"
         (str, `escape_char escape_char, `pos pos, char)
-        <:sexp_of<t * [`escape_char of char] * [`pos of int] * char>>
+        [%sexp_of: t * [`escape_char of char] * [`pos of int] * char]
     | Some pos -> pos
   ;;
 
   let index str ~escape_char char = index_from str ~escape_char 0 char
   let index_exn str ~escape_char char = index_from_exn str ~escape_char 0 char
 
-  TEST_MODULE "index_from" = struct
+  let%test_module "index_from" = (module struct
     let f = index_from ~escape_char:'_'
-    TEST = f "__" 0 '_' = None
-    TEST = f "_.." 0 '.' = Some 2
-    TEST = f "1273456_7789" 3 '7' = Some 9
-    TEST = f "1273_7456_7789" 3 '7' = Some 11
-    TEST = f "1273_7456_7789" 3 'z' = None
-  end
+    let%test _ = f "__" 0 '_' = None
+    let%test _ = f "_.." 0 '.' = Some 2
+    let%test _ = f "1273456_7789" 3 '7' = Some 9
+    let%test _ = f "1273_7456_7789" 3 '7' = Some 11
+    let%test _ = f "1273_7456_7789" 3 'z' = None
+  end)
 
   let rindex_from str ~escape_char pos char =
     check_bound str pos "rindex_from";
@@ -1487,7 +1515,7 @@ module Escaping = struct
     | None ->
       failwiths "rindex_from_exn: not found"
         (str, `escape_char escape_char, `pos pos, char)
-        <:sexp_of<t * [`escape_char of char] * [`pos of int] * char>>
+        [%sexp_of: t * [`escape_char of char] * [`pos of int] * char]
     | Some pos -> pos
   ;;
 
@@ -1499,13 +1527,13 @@ module Escaping = struct
     rindex_from_exn str ~escape_char (String.length str - 1) char
   ;;
 
-  TEST_MODULE "rindex_from" = struct
+  let%test_module "rindex_from" = (module struct
     let f = rindex_from ~escape_char:'_'
-    TEST = f "__" 0 '_' = None
-    TEST = f "123456_37839" 9 '3' = Some 2
-    TEST = f "123_2321" 6 '2' = Some 6
-    TEST = f "123_2321" 5 '2' = Some 1
-  end
+    let%test _ = f "__" 0 '_' = None
+    let%test _ = f "123456_37839" 9 '3' = Some 2
+    let%test _ = f "123_2321" 6 '2' = Some 6
+    let%test _ = f "123_2321" 5 '2' = Some 1
+  end)
 
   (* [split_gen str ~escape_char ~on] works similarly to [String.split_gen], with an
      additional requirement: only split on literal chars, not escaping or escaped *)
@@ -1534,22 +1562,22 @@ module Escaping = struct
     split_gen str ~on:(`char_list chars)
   ;;
 
-  TEST_MODULE "split_on_gen" = struct
+  let%test_module "split_on_gen" = (module struct
     let split = split_gen ~escape_char:'_' ~on:(`char ',')
-    TEST = split "foo,bar,baz" = ["foo"; "bar"; "baz"]
-    TEST = split "foo_,bar,baz" = ["foo_,bar"; "baz"]
-    TEST = split "foo_,bar_,baz" = ["foo_,bar_,baz"]
-    TEST = split "foo__,bar,baz" = ["foo__"; "bar"; "baz"]
-    TEST = split "foo,bar,baz_," = ["foo"; "bar"; "baz_,"]
-    TEST = split "foo,bar_,baz_,," = ["foo"; "bar_,baz_,"; ""]
+    let%test _ = split "foo,bar,baz" = ["foo"; "bar"; "baz"]
+    let%test _ = split "foo_,bar,baz" = ["foo_,bar"; "baz"]
+    let%test _ = split "foo_,bar_,baz" = ["foo_,bar_,baz"]
+    let%test _ = split "foo__,bar,baz" = ["foo__"; "bar"; "baz"]
+    let%test _ = split "foo,bar,baz_," = ["foo"; "bar"; "baz_,"]
+    let%test _ = split "foo,bar_,baz_,," = ["foo"; "bar_,baz_,"; ""]
 
     let split = split_gen ~escape_char:'_' ~on:(`char_list [',';':'])
-    TEST = split "foo,bar:baz" = ["foo"; "bar"; "baz"]
-    TEST = split "foo_,bar,baz" = ["foo_,bar"; "baz"]
-    TEST = split "foo_:bar_,baz" = ["foo_:bar_,baz"]
-    TEST = split "foo,bar,baz_," = ["foo"; "bar"; "baz_,"]
-    TEST = split "foo:bar_,baz_,," = ["foo"; "bar_,baz_,"; ""]
-  end
+    let%test _ = split "foo,bar:baz" = ["foo"; "bar"; "baz"]
+    let%test _ = split "foo_,bar,baz" = ["foo_,bar"; "baz"]
+    let%test _ = split "foo_:bar_,baz" = ["foo_:bar_,baz"]
+    let%test _ = split "foo,bar,baz_," = ["foo"; "bar"; "baz_,"]
+    let%test _ = split "foo:bar_,baz_,," = ["foo"; "bar_,baz_,"; ""]
+  end)
 
   let split_at str pos =
       String.sub str ~pos:0 ~len:pos,
@@ -1571,18 +1599,18 @@ module Escaping = struct
     split_at str (rindex_exn str ~escape_char on)
   ;;
 
-  TEST_MODULE "split2" = struct
+  let%test_module "split2" = (module struct
     let escape_char = '_'
     let on = ','
-    TEST = lsplit2 ~escape_char ~on "foo_,bar,baz_,0" = Some ("foo_,bar", "baz_,0")
-    TEST = rsplit2 ~escape_char ~on "foo_,bar,baz_,0" = Some ("foo_,bar", "baz_,0")
-    TEST = lsplit2_exn ~escape_char ~on "foo_,bar,baz_,0" = ("foo_,bar", "baz_,0")
-    TEST = rsplit2_exn ~escape_char ~on "foo_,bar,baz_,0" = ("foo_,bar", "baz_,0")
-    TEST = lsplit2 ~escape_char ~on "foo_,bar" = None
-    TEST = rsplit2 ~escape_char ~on "foo_,bar" = None
-    TEST = try lsplit2_exn ~escape_char ~on "foo_,bar" |! Fn.const false with _ -> true
-    TEST = try rsplit2_exn ~escape_char ~on "foo_,bar" |! Fn.const false with _ -> true
-  end
+    let%test _ = lsplit2 ~escape_char ~on "foo_,bar,baz_,0" = Some ("foo_,bar", "baz_,0")
+    let%test _ = rsplit2 ~escape_char ~on "foo_,bar,baz_,0" = Some ("foo_,bar", "baz_,0")
+    let%test _ = lsplit2_exn ~escape_char ~on "foo_,bar,baz_,0" = ("foo_,bar", "baz_,0")
+    let%test _ = rsplit2_exn ~escape_char ~on "foo_,bar,baz_,0" = ("foo_,bar", "baz_,0")
+    let%test _ = lsplit2 ~escape_char ~on "foo_,bar" = None
+    let%test _ = rsplit2 ~escape_char ~on "foo_,bar" = None
+    let%test _ = try lsplit2_exn ~escape_char ~on "foo_,bar" |! Fn.const false with _ -> true
+    let%test _ = try rsplit2_exn ~escape_char ~on "foo_,bar" |! Fn.const false with _ -> true
+  end)
 end
 ;;
 
@@ -1600,7 +1628,19 @@ module Replace_polymorphic_compare = struct
   let ( < ) x y = (x : t) < y
   let ( <> ) x y = (x : t) <> y
   let between t ~low ~high = low <= t && t <= high
-  let _squelch_unused_module_warning_ = ()
+  let clamp_unchecked t ~min ~max =
+    if t < min then min else if t <= max then t else max
+
+  let clamp_exn t ~min ~max =
+    assert (min <= max);
+    clamp_unchecked t ~min ~max
+
+  let clamp t ~min ~max =
+    if min > max then
+      Or_error.error "clamp requires [min <= max]"
+        (`Min min, `Max max) [%sexp_of: [`Min of T.t] * [`Max of T.t]]
+    else
+      Ok (clamp_unchecked t ~min ~max)
 end
 
 include Replace_polymorphic_compare

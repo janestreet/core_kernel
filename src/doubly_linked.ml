@@ -16,7 +16,34 @@ module Header : sig
   val equal : t -> t -> bool
   val incr_length : by:int -> t -> unit
   val check_no_pending_iterations : t -> unit
-  val with_iteration : t -> (unit -> 'a) -> 'a
+  (* Unfortunate, but by specializing [with_iteration] for different arities, a large
+     amount of allocation during folds and iterations is avoided.
+
+     The original type of [with_iteration] was
+     [val with_iteration : t -> (unit -> 'a) -> 'a]
+
+     The difference between
+     {[
+       let x = e in
+       let f () = g x in
+       f ()
+     ]}
+     and
+     {[
+       let x = e in
+       let f x = g x in
+       f x
+     ]}
+     is that in the first case the closure for [f] contains a pointer to [x],
+     and in the second case it doesn't. A closure without pointers to enclosing
+     environment is implemented as a naked function pointer, so we don't
+     allocate at all.
+
+     For the same reason we make sure not to call [Result.try_with (fun () -> ...)]
+     inside [with_iteration] and do an explicit match statement instead.  *)
+  val with_iteration_2 : t -> 'a -> 'b -> ('a -> 'b -> 'c) -> 'c
+  val with_iteration_3 : t -> 'a -> 'b -> 'c -> ('a -> 'b -> 'c -> 'd) -> 'd
+  val with_iteration_4 : t -> 'a -> 'b -> 'c -> 'd -> ('a -> 'b -> 'c -> 'd -> 'e) -> 'e
   val merge : t -> t -> [ `Same_already | `Merged ]
 end = struct
 
@@ -46,21 +73,54 @@ end = struct
     let s = union_find_get__check_no_pending_iterations t in
     s.length <- s.length + n
 
-  let with_iteration t f =
+  (* Care is taken not to allocate in [with_iteration_*], since it is called every second
+     by [every_second] in [writer0.ml] *)
+
+  let incr_pending_iters s = s.pending_iterations <- s.pending_iterations + 1
+  let decr_pending_iters s = s.pending_iterations <- s.pending_iterations - 1
+
+  let with_iteration_2 t a b f =
     let s = Union_find.get t in
-    s.pending_iterations <- s.pending_iterations + 1;
-    let res = Result.try_with f in
-    s.pending_iterations <- s.pending_iterations - 1;
-    match res with
-    | Result.Ok v -> v
-    | Result.Error e -> raise e
+    incr_pending_iters s;
+    match f a b with
+    | exception exn ->
+      decr_pending_iters s;
+      raise exn
+    | r ->
+      decr_pending_iters s;
+      r
+  ;;
+
+  let with_iteration_3 t a b c f =
+    let s = Union_find.get t in
+    incr_pending_iters s;
+    match f a b c with
+    | exception exn ->
+      decr_pending_iters s;
+      raise exn
+    | r ->
+      decr_pending_iters s;
+      r
+  ;;
+
+  let with_iteration_4 t a b c d f =
+    let s = Union_find.get t in
+    incr_pending_iters s;
+    match f a b c d with
+    | exception exn ->
+      decr_pending_iters s;
+      raise exn
+    | r ->
+      decr_pending_iters s;
+      r
+  ;;
 
   let merge (t1 : t) t2 =
     if Union_find.same_class t1 t2 then `Same_already else begin
       let n1 = (union_find_get__check_no_pending_iterations t1).length in
       let n2 = (union_find_get__check_no_pending_iterations t2).length in
-      with_iteration t1 (fun () ->
-        with_iteration t2 (fun () ->
+      with_iteration_4 t1 t1 t2 n1 n2 (fun t1 t2 n1 n2 ->
+        with_iteration_4 t2 t1 t2 n1 n2 (fun t1 t2 n1 n2 ->
           Union_find.union t1 t2;
           Union_find.set t1 {
             length = n1 + n2;
@@ -72,7 +132,7 @@ end = struct
 end
 
 module Elt : sig
-  type 'a t with sexp_of
+  type 'a t [@@deriving sexp_of]
   val header : 'a t -> Header.t
   val equal : 'a t -> 'a t -> bool
   val create : 'a -> 'a t
@@ -203,7 +263,7 @@ end
 
 type 'a t = 'a Elt.t option ref
 
-let invariant t =
+let invariant invariant_a t =
   match !t with
   | None -> ()
   | Some head ->
@@ -214,6 +274,7 @@ let invariant t =
       assert (Elt.equal elt (Elt.prev next_elt));
       assert (Elt.equal elt (Elt.next prev_elt));
       assert (Header.equal (Elt.header elt) header);
+      invariant_a (Elt.value elt);
       if Elt.equal next_elt head then n else loop (n + 1) next_elt
     in
     let len = loop 1 head in
@@ -234,18 +295,37 @@ let fold_elt t ~init ~f =
   match !t with
   | None -> init
   | Some first ->
-    Header.with_iteration (Elt.header first) (fun () ->
-      let rec loop acc elt =
+    Header.with_iteration_3
+      (Elt.header first)
+      f init first
+      (fun f init first ->
+      let rec loop f acc first elt =
         let acc = f acc elt in
         let next = Elt.next elt in
-        if phys_equal next first then acc else loop acc next
+        if phys_equal next first then acc else loop f acc first next
       in
-      loop init first)
+      loop f init first first)
 ;;
 
-let iter_elt t ~f = fold_elt t ~init:() ~f:(fun () elt -> f elt)
+let fold_elt_1 t ~init ~f a =
+  match !t with
+  | None -> init
+  | Some first ->
+    Header.with_iteration_4
+      (Elt.header first)
+      f a init first
+      (fun f a init first ->
+        let rec loop f a acc first elt =
+          let acc = f a acc elt in
+          let next = Elt.next elt in
+          if phys_equal next first then acc else loop f a acc first next
+        in
+        loop f a init first first)
+;;
 
-TEST_UNIT =
+let iter_elt t ~f = fold_elt_1 t ~init:() ~f:(fun f () elt -> f elt) f
+
+let%test_unit _ =
   List.iter
     [ [];
       [ 1 ];
@@ -261,7 +341,7 @@ open With_return
 
 let find_elt t ~f =
   with_return (fun r ->
-    fold_elt t ~init:() ~f:(fun () elt ->
+    fold_elt_1 t f ~init:() ~f:(fun f () elt ->
       if f (Elt.value elt) then r.return (Some elt));
     None)
 
@@ -276,12 +356,15 @@ let iter t ~f =
   match !t with
   | None -> ()
   | Some first ->
-    Header.with_iteration (Elt.header first) (fun () -> iter_loop first f first)
+    Header.with_iteration_2
+      (Elt.header first)
+      first f
+      (fun first f -> iter_loop first f first)
 
 module C = Container.Make (struct
   type 'a t_ = 'a t
   type 'a t = 'a t_
-  let fold t ~init ~f = fold_elt t ~init ~f:(fun acc elt -> f acc (Elt.value elt))
+  let fold t ~init ~f = fold_elt_1 t ~init f ~f:(fun f acc elt -> f acc (Elt.value elt))
   let iter = `Custom iter
 end)
 
@@ -316,7 +399,10 @@ let fold_right t ~init ~f =
   match !t with
   | None -> init
   | Some first ->
-    Header.with_iteration (Elt.header first) (fun () ->
+    Header.with_iteration_3
+      (Elt.header first)
+      f init first
+      (fun f init first ->
       let rec loop acc elt =
         let prev = Elt.prev elt in
         let acc = f (Elt.value prev) acc in
@@ -404,6 +490,11 @@ let is_last t elt =
       Elt.equal elt last
     end else
       raise Elt_does_not_belong_to_list
+
+let mem_elt t elt =
+  match !t with
+  | None -> false
+  | Some first -> Header.equal (Elt.header first) (Elt.header elt)
 
 let prev t elt =
   match !t with
@@ -556,7 +647,7 @@ let move_to_back t elt =
     let last = Elt.prev first in
     if not (Elt.equal elt last) then move_after t elt ~anchor:last
 
-TEST_MODULE "move functions" = struct
+let%test_module "move functions" = (module struct
 
   let n = 5
 
@@ -564,47 +655,47 @@ TEST_MODULE "move functions" = struct
     let t = create () in
     let a = Array.init n (fun i -> insert_last t i) in
     k t a;
-    invariant t;
+    invariant ignore t;
     assert (length t = n);
     let observed = to_list t in
     if observed <> expected then begin
       let open Sexplib.Conv in
       Error.failwiths "mismatch"
         (`Expected expected, `Observed observed)
-        <:sexp_of< [`Expected of int list] *
-                   [`Observed of int list] >>
+        [%sexp_of: [`Expected of int list] *
+                   [`Observed of int list]]
     end
 
-  TEST_UNIT = test (fun _ _ -> ()) [0; 1; 2; 3; 4]
+  let%test_unit _ = test (fun _ _ -> ()) [0; 1; 2; 3; 4]
 
-  TEST_UNIT = test (fun t a -> move_to_front t a.(4)) [4; 0; 1; 2; 3]
-  TEST_UNIT = test (fun t a -> move_to_front t a.(3)) [3; 0; 1; 2; 4]
-  TEST_UNIT = test (fun t a -> move_to_front t a.(2)) [2; 0; 1; 3; 4]
-  TEST_UNIT = test (fun t a -> move_to_front t a.(1)) [1; 0; 2; 3; 4]
-  TEST_UNIT = test (fun t a -> move_to_front t a.(0)) [0; 1; 2; 3; 4]
+  let%test_unit _ = test (fun t a -> move_to_front t a.(4)) [4; 0; 1; 2; 3]
+  let%test_unit _ = test (fun t a -> move_to_front t a.(3)) [3; 0; 1; 2; 4]
+  let%test_unit _ = test (fun t a -> move_to_front t a.(2)) [2; 0; 1; 3; 4]
+  let%test_unit _ = test (fun t a -> move_to_front t a.(1)) [1; 0; 2; 3; 4]
+  let%test_unit _ = test (fun t a -> move_to_front t a.(0)) [0; 1; 2; 3; 4]
 
-  TEST_UNIT = test (fun t a -> move_to_back  t a.(0)) [1; 2; 3; 4; 0]
-  TEST_UNIT = test (fun t a -> move_to_back  t a.(1)) [0; 2; 3; 4; 1]
-  TEST_UNIT = test (fun t a -> move_to_back  t a.(2)) [0; 1; 3; 4; 2]
-  TEST_UNIT = test (fun t a -> move_to_back  t a.(3)) [0; 1; 2; 4; 3]
-  TEST_UNIT = test (fun t a -> move_to_back  t a.(4)) [0; 1; 2; 3; 4]
+  let%test_unit _ = test (fun t a -> move_to_back  t a.(0)) [1; 2; 3; 4; 0]
+  let%test_unit _ = test (fun t a -> move_to_back  t a.(1)) [0; 2; 3; 4; 1]
+  let%test_unit _ = test (fun t a -> move_to_back  t a.(2)) [0; 1; 3; 4; 2]
+  let%test_unit _ = test (fun t a -> move_to_back  t a.(3)) [0; 1; 2; 4; 3]
+  let%test_unit _ = test (fun t a -> move_to_back  t a.(4)) [0; 1; 2; 3; 4]
 
-  TEST_UNIT = test (fun t a -> move_before t a.(2) ~anchor:a.(1)) [0; 2; 1; 3; 4]
-  TEST_UNIT = test (fun t a -> move_before t a.(2) ~anchor:a.(0)) [2; 0; 1; 3; 4]
-  TEST_UNIT = test (fun t a -> move_before t a.(1) ~anchor:a.(0)) [1; 0; 2; 3; 4]
-  TEST_UNIT = test (fun t a -> move_before t a.(0) ~anchor:a.(2)) [1; 0; 2; 3; 4]
-  TEST_UNIT = test (fun t a -> move_before t a.(0) ~anchor:a.(1)) [0; 1; 2; 3; 4]
-  TEST_UNIT = test (fun t a -> move_before t a.(3) ~anchor:a.(2)) [0; 1; 3; 2; 4]
-  TEST_UNIT = test (fun t a -> move_before t a.(2) ~anchor:a.(3)) [0; 1; 2; 3; 4]
+  let%test_unit _ = test (fun t a -> move_before t a.(2) ~anchor:a.(1)) [0; 2; 1; 3; 4]
+  let%test_unit _ = test (fun t a -> move_before t a.(2) ~anchor:a.(0)) [2; 0; 1; 3; 4]
+  let%test_unit _ = test (fun t a -> move_before t a.(1) ~anchor:a.(0)) [1; 0; 2; 3; 4]
+  let%test_unit _ = test (fun t a -> move_before t a.(0) ~anchor:a.(2)) [1; 0; 2; 3; 4]
+  let%test_unit _ = test (fun t a -> move_before t a.(0) ~anchor:a.(1)) [0; 1; 2; 3; 4]
+  let%test_unit _ = test (fun t a -> move_before t a.(3) ~anchor:a.(2)) [0; 1; 3; 2; 4]
+  let%test_unit _ = test (fun t a -> move_before t a.(2) ~anchor:a.(3)) [0; 1; 2; 3; 4]
 
-  TEST_UNIT = test (fun t a -> move_after  t a.(1) ~anchor:a.(3)) [0; 2; 3; 1; 4]
-  TEST_UNIT = test (fun t a -> move_after  t a.(0) ~anchor:a.(2)) [1; 2; 0; 3; 4]
-  TEST_UNIT = test (fun t a -> move_after  t a.(1) ~anchor:a.(4)) [0; 2; 3; 4; 1]
-  TEST_UNIT = test (fun t a -> move_after  t a.(3) ~anchor:a.(2)) [0; 1; 2; 3; 4]
-  TEST_UNIT = test (fun t a -> move_after  t a.(2) ~anchor:a.(3)) [0; 1; 3; 2; 4]
-end
+  let%test_unit _ = test (fun t a -> move_after  t a.(1) ~anchor:a.(3)) [0; 2; 3; 1; 4]
+  let%test_unit _ = test (fun t a -> move_after  t a.(0) ~anchor:a.(2)) [1; 2; 0; 3; 4]
+  let%test_unit _ = test (fun t a -> move_after  t a.(1) ~anchor:a.(4)) [0; 2; 3; 4; 1]
+  let%test_unit _ = test (fun t a -> move_after  t a.(3) ~anchor:a.(2)) [0; 1; 2; 3; 4]
+  let%test_unit _ = test (fun t a -> move_after  t a.(2) ~anchor:a.(3)) [0; 1; 3; 2; 4]
+end)
 
-TEST =
+let%test _ =
   let t1 = create () in
   let t2 = create () in
   let elt = insert_first t1 15 in
@@ -613,7 +704,7 @@ TEST =
   with
     Elt_does_not_belong_to_list -> true
 
-TEST =
+let%test _ =
   let t1 = create () in
   let t2 = create () in
   let elt = insert_first t1 14 in
@@ -623,7 +714,26 @@ TEST =
   with
     Elt_does_not_belong_to_list -> true
 
-TEST_MODULE "unchecked_iter" = struct
+let%test_unit "mem_elt" =
+  let t1 = create () in
+  let a = insert_first t1 'a' in
+  let b = insert_first t1 'b' in
+  let sexp_of_bool = Sexplib.Conv.sexp_of_bool in
+  [%test_result: bool] (mem_elt t1 a) ~expect:true;
+  [%test_result: bool] (mem_elt t1 b) ~expect:true;
+  let t2 = create () in
+  let b2 = insert_first t2 'b' in
+  [%test_result: bool] (mem_elt t2 b2) ~expect:true;
+  [%test_result: bool] (mem_elt t1 b2) ~expect:false;
+  remove t1 a;
+  [%test_result: bool] (mem_elt t1 a) ~expect:false;
+  [%test_result: bool] (mem_elt t1 b) ~expect:true;
+  remove t1 b;
+  [%test_result: bool] (mem_elt t1 a) ~expect:false;
+  [%test_result: bool] (mem_elt t1 b) ~expect:false;
+;;
+
+let%test_module "unchecked_iter" = (module struct
   let b = of_list [0; 1; 2; 3; 4]
   let element b n =
     Option.value_exn (find_elt b ~f:(fun value -> value = n))
@@ -639,14 +749,14 @@ TEST_MODULE "unchecked_iter" = struct
       f b n;
     );
     List.rev !r
-  TEST = to_list (fun _ _ -> ()) = [0; 1; 2; 3; 4]
-  TEST = to_list (fun b x -> if x = 0 then remove b 1) = [0; 2; 3; 4]
-  TEST = to_list (fun b x -> if x = 1 then remove b 0) = [0; 1; 2; 3; 4]
-  TEST = to_list (fun b x -> if x = 2 then remove b 1) = [0; 1; 2; 3; 4]
-  TEST = to_list (fun b x -> if x = 2 then begin remove b 4; remove b 3; end) = [0; 1; 2]
-  TEST = to_list (fun b x -> if x = 2 then insert_after b 1 5) = [0; 1; 2; 3; 4]
-  TEST = to_list (fun b x -> if x = 2 then insert_after b 2 5) = [0; 1; 2; 5; 3; 4]
-  TEST = to_list (fun b x -> if x = 2 then insert_after b 3 5) = [0; 1; 2; 3; 5; 4]
-end
+  let%test _ = to_list (fun _ _ -> ()) = [0; 1; 2; 3; 4]
+  let%test _ = to_list (fun b x -> if x = 0 then remove b 1) = [0; 2; 3; 4]
+  let%test _ = to_list (fun b x -> if x = 1 then remove b 0) = [0; 1; 2; 3; 4]
+  let%test _ = to_list (fun b x -> if x = 2 then remove b 1) = [0; 1; 2; 3; 4]
+  let%test _ = to_list (fun b x -> if x = 2 then begin remove b 4; remove b 3; end) = [0; 1; 2]
+  let%test _ = to_list (fun b x -> if x = 2 then insert_after b 1 5) = [0; 1; 2; 3; 4]
+  let%test _ = to_list (fun b x -> if x = 2 then insert_after b 2 5) = [0; 1; 2; 5; 3; 4]
+  let%test _ = to_list (fun b x -> if x = 2 then insert_after b 3 5) = [0; 1; 2; 3; 5; 4]
+end)
 
 let to_sequence t = to_list t |> Sequence.of_list

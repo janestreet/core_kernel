@@ -65,7 +65,9 @@ let to_list ~fold c = List.rev (fold c ~init:[] ~f:(fun acc x -> x :: acc))
 
 let to_array ~fold c = Array.of_list (to_list ~fold c)
 
-module Make (T : Make_arg) : S1 with type 'a t := 'a T.t = struct
+module Make_gen (T : Make_gen_arg) : sig
+  include Generic with type 'a t := 'a T.t with type 'a elt := 'a T.elt
+end = struct
   let fold = T.fold
 
   let iter =
@@ -88,6 +90,17 @@ module Make (T : Make_arg) : S1 with type 'a t := 'a T.t = struct
   let min_elt t ~cmp = min_elt  ~fold t ~cmp
   let max_elt t ~cmp = max_elt  ~fold t ~cmp
 end
+
+module Make (T : Make_arg) = Make_gen (struct
+  include T
+  type 'a elt = 'a
+end)
+
+module Make0 (T : Make0_arg) = Make_gen (struct
+  include (T : Make0_arg with type t := T.t and type elt := T.elt)
+  type 'a t   = T.t
+  type 'a elt = T.elt
+end)
 
 open T
 

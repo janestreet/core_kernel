@@ -1,8 +1,9 @@
 open Typerep_lib.Std
 open Sexplib.Std
 open Bin_prot.Std
+module List = ListLabels
 
-type 'a t = 'a option with bin_io, sexp, compare, typerep
+type 'a t = 'a option [@@deriving bin_io, sexp, compare, typerep]
 
 let is_none = function None -> true | _ -> false
 
@@ -48,12 +49,12 @@ let value_exn ?here ?error ?message t =
       | None  , Some e, None   -> e
       | None  , Some e, Some m -> Error.tag e m
       | Some p, None  , None   ->
-        Error.create "Option.value_exn" p <:sexp_of< Source_code_position0.t_hum >>
+        Error.create "Option.value_exn" p [%sexp_of: Source_code_position0.t]
       | Some p, None  , Some m ->
-        Error.create m p <:sexp_of< Source_code_position0.t_hum >>
+        Error.create m p [%sexp_of: Source_code_position0.t]
       | Some p, Some e, _      ->
         Error.create (value message ~default:"") (e, p)
-          <:sexp_of< Error.t * Source_code_position0.t_hum >>
+          [%sexp_of: Error.t * Source_code_position0.t]
     in
     Error.raise error
 ;;
@@ -153,20 +154,18 @@ let merge a b ~f =
   | None, x | x, None -> x
   | Some a, Some b -> Some (f a b)
 
-TEST_MODULE = struct
+let%test_module _ = (module struct
   let f = (+)
-  TEST = merge None None ~f  = None
-  TEST = merge (Some 3) None ~f = Some 3
-  TEST = merge None (Some 3) ~f = Some 3
-  TEST = merge (Some 1) (Some 3) ~f = (Some 4)
-end
+  let%test _ = merge None None ~f  = None
+  let%test _ = merge (Some 3) None ~f = Some 3
+  let%test _ = merge None (Some 3) ~f = Some 3
+  let%test _ = merge (Some 1) (Some 3) ~f = (Some 4)
+end)
 
 let filter t ~f =
   match t with
   | Some v as o when f v -> o
   | _ -> None
-
-let compare ~cmp v1 v2 = compare cmp v1 v2
 
 let try_with f =
   try Some (f ())
@@ -193,3 +192,66 @@ let validate ~none ~some t =
   | None   -> V.name "none" (V.protect none ())
   | Some x -> V.name "some" (V.protect some x )
 ;;
+
+module For_quickcheck = struct
+
+  module Generator = Quickcheck.Generator
+  module Observer  = Quickcheck.Observer
+  module Shrinker  = Quickcheck.Shrinker
+
+  open Generator.Monad_infix
+
+  let gen elt_gen =
+    Generator.union
+      [ Generator.singleton None
+      ; elt_gen >>| return
+      ]
+
+  let obs elt_obs =
+    Observer.unmap (Observer.variant2 (Observer.singleton ()) elt_obs)
+      ~f:(function
+        | None   -> `A ()
+        | Some x -> `B x)
+      ~f_sexp:(fun () -> Atom "variant_of_option")
+
+  let shrinker elt_shr =
+    let shrinker = function
+      | Some elt ->
+        Sequence.append
+          (Sequence.singleton None)
+          (Sequence.map (Shrinker.shrink elt_shr elt) ~f:(fun v -> Some v))
+      | None ->
+        Sequence.empty
+    in
+    Shrinker.create shrinker
+
+  let%test_module "shrinker" =
+    (module struct
+
+      let t1 = Shrinker.create (Fn.const (Sequence.singleton 1))
+
+      let%test_unit _ =
+        [%test_result: int option list]
+          (Sequence.to_list (Shrinker.shrink (shrinker t1) None))
+          ~expect:[]
+
+      let%test_unit _ =
+        let sort = List.sort ~cmp:[%compare: int option ] in
+        let expect =
+          [ None; Some 1]
+          |> sort
+        in
+        let results =
+          Shrinker.shrink (shrinker t1) (Some 5)
+          |> Sequence.to_list
+          |> sort
+        in
+        [%test_result: int option list ] ~expect results
+
+    end)
+
+end
+
+let gen      = For_quickcheck.gen
+let obs      = For_quickcheck.obs
+let shrinker = For_quickcheck.shrinker

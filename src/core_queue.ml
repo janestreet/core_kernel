@@ -22,7 +22,7 @@ type 'a t =
   ; mutable length        : int
   ; mutable elts          : 'a array
   }
-with fields, sexp_of
+[@@deriving fields, sexp_of]
 
 let inc_num_mutations t = t.num_mutations <- t.num_mutations + 1
 
@@ -38,7 +38,7 @@ let unsafe_set t i a = Array.unsafe_set t.elts (elts_index t i) a
 let check_index_exn t i =
   if i < 0 || i >= t.length
   then failwiths "Queue index out of bounds" (i, `length t.length)
-         <:sexp_of< int * [ `length of int ] >>
+         [%sexp_of: int * [ `length of int ]]
 ;;
 
 let get t i   = check_index_exn t i; unsafe_get t i
@@ -52,7 +52,7 @@ let is_empty t = t.length = 0
 
 let ensure_no_mutation t num_mutations =
   if t.num_mutations <> num_mutations
-  then failwiths "mutation of queue during iteration" t <:sexp_of< _ t >>;
+  then failwiths "mutation of queue during iteration" t [%sexp_of: _ t];
 ;;
 
 let compare =
@@ -103,7 +103,7 @@ let equal =
 ;;
 
 let invariant invariant_a t =
-  Invariant.invariant _here_ t <:sexp_of< _ t >> (fun () ->
+  Invariant.invariant [%here] t [%sexp_of: _ t] (fun () ->
     let check f = Invariant.check_field t f in
     Fields.iter
       ~num_mutations:ignore
@@ -135,7 +135,7 @@ let create (type a) ?capacity () : a t =
     | Some capacity ->
       if capacity < 0
       then failwiths "cannot have queue with negative capacity" capacity
-             <:sexp_of< int >>
+             [%sexp_of: int]
       else if capacity = 0
       then 1
       else Int.ceil_pow2 capacity
@@ -201,6 +201,7 @@ let dequeue t =
 ;;
 
 let peek_nonempty t = Array.unsafe_get t.elts t.front
+let last_nonempty t = unsafe_get t (t.length - 1)
 
 let peek t =
   if is_empty t
@@ -212,6 +213,18 @@ let peek_exn t =
   if is_empty t
   then raise Caml.Queue.Empty
   else peek_nonempty t
+;;
+
+let last t =
+  if is_empty t
+  then None
+  else Some (last_nonempty t)
+;;
+
+let last_exn t =
+  if is_empty t
+  then raise Caml.Queue.Empty
+  else last_nonempty t
 ;;
 
 let clear t =
@@ -233,7 +246,7 @@ let blit_transfer ~src ~dst ?len () =
     | None -> length src
     | Some len ->
       if len < 0
-      then failwiths "Queue.blit_transfer: negative length" len <:sexp_of< int >>;
+      then failwiths "Queue.blit_transfer: negative length" len [%sexp_of: int];
       min len (length src)
   in
   if len > 0 then begin
@@ -250,6 +263,13 @@ let blit_transfer ~src ~dst ?len () =
     src.front  <- (src.front + len) land src.mask;
     src.length <- src.length - len;
   end;
+;;
+
+let enqueue_all t l =
+  (* Traversing the list up front to compute its length is probably (but not definitely)
+     better than doubling the underlying array size several times for large queues. *)
+  set_capacity t (Int.max (capacity t) (length t + List.length l));
+  List.iter l ~f:(fun x -> enqueue t x)
 ;;
 
 let fold t ~init ~f =
@@ -370,29 +390,35 @@ let singleton x =
   t
 ;;
 
-let sexp_of_t sexp_of_a t = to_list t |> <:sexp_of< a list >>
+let sexp_of_t sexp_of_a t = to_list t |> [%sexp_of: a list]
 
-let t_of_sexp a_of_sexp sexp = sexp |> <:of_sexp< a list >> |> of_list
+let t_of_sexp a_of_sexp sexp = sexp |> [%of_sexp: a list] |> of_list
 
 include
   Bin_prot.Utils.Make_iterable_binable1 (struct
     type nonrec 'a t = 'a t
-    type 'a el       = 'a with bin_io
-    type 'a acc      = 'a t
+    type 'a el       = 'a [@@deriving bin_io]
 
     let module_name = Some "Core.Queue"
     let length      = length
     let iter        = iter
-    let init n       = create ~capacity:n ()
-    let insert t x _ = enqueue t x; t
-    let finish       = Fn.id
+
+    let init ~len ~next =
+      let t = create ~capacity:len () in
+      for i = 0 to len - 1 do
+        Array.unsafe_set t.elts i (next ());
+      done;
+      t.length <- len;
+      t
   end)
 
 include
   Binary_searchable.Make1 (struct
     type nonrec 'a t = 'a t
+
     let get = get
     let length = length
+
     module For_test = struct
       let of_array a =
         let r = create () in

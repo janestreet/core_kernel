@@ -10,6 +10,9 @@ val eprint : string -> unit
     by a newline and flush. *)
 val eprints : string -> 'a -> ('a -> Sexp.t) -> unit
 
+(** [eprint_s sexp] prints [sexp] to stderr, followed by a newline and a flush. *)
+val eprint_s : Sexp.t -> unit
+
 (** [eprintf message arg1 ... argn] prints to stderr [message], with sprintf-style format
     characters instantiated, followed by a newline and flush. *)
 val eprintf : ('r, unit, string, unit) format4 -> 'r

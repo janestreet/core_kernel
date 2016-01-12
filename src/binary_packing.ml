@@ -4,21 +4,21 @@ module Char = Caml.Char
 module Int32 = Caml.Int32
 module Int64 = Caml.Int64
 
-INCLUDE "config.mlh"
+#import "config.mlh"
 
-IFDEF ARCH_SIXTYFOUR THEN
+#if JSC_ARCH_SIXTYFOUR
 let   signed_max = Int32.to_int Int32.max_int
 let unsigned_max = Int64.to_int 0xffff_ffffL
-ENDIF
+#endif
 
-type endian = [ `Big_endian | `Little_endian ]
+type endian = [ `Big_endian | `Little_endian ] [@@deriving sexp]
 
 (* Computes the offset based on the total number of bytes, the byte order, and the
    byte number. The byte number is ordered by decreasing significance starting at zero
    (big endian). So the most significant byte is 0, and the least significant byte is (len
    - 1). *)
 
-exception Binary_packing_invalid_byte_number of int * int with sexp
+exception Binary_packing_invalid_byte_number of int * int [@@deriving sexp]
 let offset ~len ~byte_order byte_nr =
   if byte_nr >= len || byte_nr < 0 then
     raise (Binary_packing_invalid_byte_number (byte_nr, len));
@@ -28,7 +28,7 @@ let offset ~len ~byte_order byte_nr =
 ;;
 
 (* byte order added to the _8 functions to make testing easier (uniformity) *)
-exception Pack_unsigned_8_argument_out_of_range of int with sexp
+exception Pack_unsigned_8_argument_out_of_range of int [@@deriving sexp]
 let pack_unsigned_8 ~buf ~pos n =
   if n > 0xFF || n < 0 then
     raise (Pack_unsigned_8_argument_out_of_range n)
@@ -37,7 +37,7 @@ let pack_unsigned_8 ~buf ~pos n =
 
 let unpack_unsigned_8 ~buf ~pos = Char.code buf.[pos]
 
-exception Pack_signed_8_argument_out_of_range of int with sexp
+exception Pack_signed_8_argument_out_of_range of int [@@deriving sexp]
 let pack_signed_8 ~buf ~pos n =
   if n > 0x7F || n < -0x80 then
     raise (Pack_signed_8_argument_out_of_range n)
@@ -52,7 +52,7 @@ let unpack_signed_8 ~buf ~pos =
     n
 ;;
 
-exception Pack_unsigned_16_argument_out_of_range of int with sexp
+exception Pack_unsigned_16_argument_out_of_range of int [@@deriving sexp]
 let pack_unsigned_16 ~byte_order ~buf ~pos n =
   if n >= 0x10000 || n < 0 then
     raise (Pack_unsigned_16_argument_out_of_range n)
@@ -80,7 +80,7 @@ let pack_unsigned_16_little_endian ~buf ~pos n =
   end
 ;;
 
-exception Pack_signed_16_argument_out_of_range of int with sexp
+exception Pack_signed_16_argument_out_of_range of int [@@deriving sexp]
 let pack_signed_16 ~byte_order ~buf ~pos n =
   if n > 0x7FFF || n < -0x8000 then
     raise (Pack_signed_16_argument_out_of_range n)
@@ -187,61 +187,61 @@ end) = struct
         assert (String.get buf k = padding)
     done
   ;;
-  TEST =
+  let%test _ =
     ns = List.map ns ~f:(fun n ->
       let buf = String.make buf_size padding in
       pack ~byte_order:`Little_endian ~buf ~pos n;
       test_rest_of_buf buf;
       unpack ~byte_order:`Little_endian ~buf ~pos)
-  TEST =
+  let%test _ =
     ns = List.map ns ~f:(fun n ->
       let buf = String.make buf_size padding in
       pack ~byte_order:`Big_endian ~buf ~pos n;
       test_rest_of_buf buf;
       unpack ~byte_order:`Big_endian ~buf ~pos)
-  TEST =
+  let%test _ =
     ns = List.map ns ~f:(fun n ->
       let buf = String.make buf_size padding in
       pack_little_endian ~buf ~pos n;
       test_rest_of_buf buf;
       unpack_little_endian ~buf ~pos)
-  TEST =
+  let%test _ =
     ns = List.map ns ~f:(fun n ->
       let buf = String.make buf_size padding in
       pack_big_endian ~buf ~pos n;
       test_rest_of_buf buf;
       unpack_big_endian ~buf ~pos)
-  TEST =
+  let%test _ =
     ns_rev = List.map ns ~f:(fun n ->
       let buf = String.make buf_size padding in
       pack_big_endian ~buf ~pos n;
       test_rest_of_buf buf;
       unpack_little_endian ~buf ~pos)
-  TEST =
+  let%test _ =
     ns_rev = List.map ns ~f:(fun n ->
       let buf = String.make buf_size padding in
       pack_little_endian ~buf ~pos n;
       test_rest_of_buf buf;
       unpack_big_endian ~buf ~pos)
-  TEST =
+  let%test _ =
     ns = List.map ns ~f:(fun n ->
       let buf = String.make buf_size padding in
       pack ~byte_order:`Big_endian ~buf ~pos n;
       test_rest_of_buf buf;
       unpack_big_endian ~buf ~pos)
-  TEST =
+  let%test _ =
     ns = List.map ns ~f:(fun n ->
       let buf = String.make buf_size padding in
       pack ~byte_order:`Little_endian ~buf ~pos n;
       test_rest_of_buf buf;
       unpack_little_endian ~buf ~pos)
-  TEST =
+  let%test _ =
     ns = List.map ns ~f:(fun n ->
       let buf = String.make buf_size padding in
       pack_big_endian ~buf ~pos n;
       test_rest_of_buf buf;
       unpack ~byte_order:`Big_endian ~buf ~pos)
-  TEST =
+  let%test _ =
     ns = List.map ns ~f:(fun n ->
       let buf = String.make buf_size padding in
       pack_little_endian ~buf ~pos n;
@@ -249,7 +249,7 @@ end) = struct
       unpack ~byte_order:`Little_endian ~buf ~pos)
 end
 
-TEST_MODULE "inline_unsigned_16" = Make_inline_tests (struct
+let%test_module "inline_unsigned_16" = (module Make_inline_tests (struct
   let ns = [0x3f20; 0x7f20; 0xef20; 0; 0x7fff; 0x8000; 0xffff]
   let num_bytes = 2
   let signed = false
@@ -262,9 +262,9 @@ TEST_MODULE "inline_unsigned_16" = Make_inline_tests (struct
   let unpack_big_endian = unpack_unsigned_16_big_endian
   let pack_little_endian = pack_unsigned_16_little_endian
   let unpack_little_endian = unpack_unsigned_16_little_endian
-end)
+end))
 
-TEST_MODULE "inline_signed_16" = Make_inline_tests (struct
+let%test_module "inline_signed_16" = (module Make_inline_tests (struct
   let ns = [0x3f20; 0x7f20; -0x7f20; -0x8000; 0; 1; 0x7fff]
   let num_bytes = 2
   let signed = true
@@ -277,17 +277,17 @@ TEST_MODULE "inline_signed_16" = Make_inline_tests (struct
   let unpack_big_endian = unpack_signed_16_big_endian
   let pack_little_endian = pack_signed_16_little_endian
   let unpack_little_endian = unpack_signed_16_little_endian
-end)
+end))
 
-exception Pack_unsigned_32_argument_out_of_range of int with sexp
+exception Pack_unsigned_32_argument_out_of_range of int [@@deriving sexp]
 let check_unsigned_32_in_range n =
-  IFDEF ARCH_SIXTYFOUR THEN
+#if JSC_ARCH_SIXTYFOUR
     if n > unsigned_max || n < 0 then
       raise (Pack_unsigned_32_argument_out_of_range n)
-  ELSE
+#else
     if n < 0 then
       raise (Pack_unsigned_32_argument_out_of_range n)
-  ENDIF
+#endif
 
 let pack_unsigned_32_int ~byte_order ~buf ~pos n =
   assert (Sys.word_size = 64);
@@ -302,27 +302,27 @@ let pack_unsigned_32_int_big_endian ~buf ~pos n =
   check_unsigned_32_in_range n;
   buf.[pos] <- Char.unsafe_chr (0xFF land (n lsr 24)); (* MSB *)
   buf.[pos + 3] <- Char.unsafe_chr (0xFF land n); (* LSB *)
-  Caml.String.unsafe_set buf (pos + 1) (Char.unsafe_chr (0xFF land (n lsr 16)));
-  Caml.String.unsafe_set buf (pos + 2) (Char.unsafe_chr (0xFF land (n lsr 8)));
+  Caml.Bytes.unsafe_set buf (pos + 1) (Char.unsafe_chr (0xFF land (n lsr 16)));
+  Caml.Bytes.unsafe_set buf (pos + 2) (Char.unsafe_chr (0xFF land (n lsr 8)));
 ;;
 
 let pack_unsigned_32_int_little_endian ~buf ~pos n =
   check_unsigned_32_in_range n;
   buf.[pos + 3] <- Char.unsafe_chr (0xFF land (n lsr 24)); (* MSB *)
   buf.[pos] <- Char.unsafe_chr (0xFF land n); (* LSB *)
-  Caml.String.unsafe_set buf (pos + 2) (Char.unsafe_chr (0xFF land (n lsr 16)));
-  Caml.String.unsafe_set buf (pos + 1) (Char.unsafe_chr (0xFF land (n lsr 8)));
+  Caml.Bytes.unsafe_set buf (pos + 2) (Char.unsafe_chr (0xFF land (n lsr 16)));
+  Caml.Bytes.unsafe_set buf (pos + 1) (Char.unsafe_chr (0xFF land (n lsr 8)));
 ;;
 
-exception Pack_signed_32_argument_out_of_range of int with sexp
+exception Pack_signed_32_argument_out_of_range of int [@@deriving sexp]
 let check_signed_32_in_range n =
-  IFDEF ARCH_SIXTYFOUR THEN
+#if JSC_ARCH_SIXTYFOUR
     if n > signed_max || n < -(signed_max + 1) then
       raise (Pack_signed_32_argument_out_of_range n)
-  ELSE
+#else
     if false then
       raise (Pack_signed_32_argument_out_of_range n)
-  ENDIF
+#endif
 
 let pack_signed_32_int ~byte_order ~buf ~pos n =
   assert (Sys.word_size = 64);
@@ -337,16 +337,16 @@ let pack_signed_32_int_big_endian ~buf ~pos n =
   check_signed_32_in_range n;
   buf.[pos] <- Char.unsafe_chr (0xFF land (n asr 24)); (* MSB *)
   buf.[pos + 3] <- Char.unsafe_chr (0xFF land n); (* LSB *)
-  Caml.String.unsafe_set buf (pos + 1) (Char.unsafe_chr (0xFF land (n asr 16)));
-  Caml.String.unsafe_set buf (pos + 2) (Char.unsafe_chr (0xFF land (n asr 8)));
+  Caml.Bytes.unsafe_set buf (pos + 1) (Char.unsafe_chr (0xFF land (n asr 16)));
+  Caml.Bytes.unsafe_set buf (pos + 2) (Char.unsafe_chr (0xFF land (n asr 8)));
 ;;
 
 let pack_signed_32_int_little_endian ~buf ~pos n =
   check_signed_32_in_range n;
   buf.[pos + 3] <- Char.unsafe_chr (0xFF land (n asr 24)); (* MSB *)
   buf.[pos] <- Char.unsafe_chr (0xFF land n); (* LSB *)
-  Caml.String.unsafe_set buf (pos + 2) (Char.unsafe_chr (0xFF land (n asr 16)));
-  Caml.String.unsafe_set buf (pos + 1) (Char.unsafe_chr (0xFF land (n asr 8)));
+  Caml.Bytes.unsafe_set buf (pos + 2) (Char.unsafe_chr (0xFF land (n asr 16)));
+  Caml.Bytes.unsafe_set buf (pos + 1) (Char.unsafe_chr (0xFF land (n asr 8)));
 ;;
 
 let pack_signed_32 ~byte_order ~buf ~pos n =
@@ -381,20 +381,20 @@ let unpack_unsigned_32_int ~byte_order ~buf ~pos =
 let unpack_unsigned_32_int_big_endian ~buf ~pos =
   let b1 = Char.code buf.[pos] lsl 24 in (* msb *)
   let b4 = Char.code buf.[pos + 3] in (* lsb *)
-  let b2 = Char.code (Caml.String.unsafe_get buf (pos + 1)) lsl 16 in
-  let b3 = Char.code (Caml.String.unsafe_get buf (pos + 2)) lsl 8 in
+  let b2 = Char.code (Caml.Bytes.unsafe_get buf (pos + 1)) lsl 16 in
+  let b3 = Char.code (Caml.Bytes.unsafe_get buf (pos + 2)) lsl 8 in
   b1 lor b2 lor b3 lor b4
 ;;
 
 let unpack_unsigned_32_int_little_endian ~buf ~pos =
   let b1 = Char.code buf.[pos + 3] lsl 24 in (* msb *)
   let b4 = Char.code buf.[pos] in (* lsb *)
-  let b2 = Char.code (Caml.String.unsafe_get buf (pos + 2)) lsl 16 in
-  let b3 = Char.code (Caml.String.unsafe_get buf (pos + 1)) lsl 8 in
+  let b2 = Char.code (Caml.Bytes.unsafe_get buf (pos + 2)) lsl 16 in
+  let b3 = Char.code (Caml.Bytes.unsafe_get buf (pos + 1)) lsl 8 in
   b1 lor b2 lor b3 lor b4
 ;;
 
-IFDEF ARCH_SIXTYFOUR THEN
+#if JSC_ARCH_SIXTYFOUR
 
 let unpack_signed_32_int ~byte_order ~buf ~pos =
   let n = unpack_unsigned_32_int ~byte_order ~buf ~pos in
@@ -412,7 +412,7 @@ let unpack_signed_32_int_little_endian ~buf ~pos =
   if n > signed_max then n - (unsigned_max + 1) else n
 ;;
 
-TEST_MODULE "inline_unsigned_32_int" = Make_inline_tests (struct
+let%test_module "inline_unsigned_32_int" = (module Make_inline_tests (struct
   let ns = [0x3f20_3040; 0x7f20_3040;
             signed_max; signed_max + 1; unsigned_max; 0]
   let num_bytes = 4
@@ -426,9 +426,9 @@ TEST_MODULE "inline_unsigned_32_int" = Make_inline_tests (struct
   let unpack_big_endian = unpack_unsigned_32_int_big_endian
   let pack_little_endian = pack_unsigned_32_int_little_endian
   let unpack_little_endian = unpack_unsigned_32_int_little_endian
-end)
+end))
 
-TEST_MODULE "inline_signed_32_int" = Make_inline_tests (struct
+let%test_module "inline_signed_32_int" = (module Make_inline_tests (struct
   let ns = [0x3f20_3040; 0x7f20_3040; -0x7f20_3040;
             signed_max; -(signed_max + 1); 0]
   let num_bytes = 4
@@ -442,15 +442,16 @@ TEST_MODULE "inline_signed_32_int" = Make_inline_tests (struct
   let unpack_big_endian = unpack_signed_32_int_big_endian
   let pack_little_endian = pack_signed_32_int_little_endian
   let unpack_little_endian = unpack_signed_32_int_little_endian
-end)
+end))
 
-ELSE
+#else
 
 let unpack_signed_32_int               = unpack_unsigned_32_int
 let unpack_signed_32_int_big_endian    = unpack_unsigned_32_int_big_endian
 let unpack_signed_32_int_little_endian = unpack_unsigned_32_int_little_endian
 
-ENDIF (* ARCH_SIXTYFOUR *)
+#endif
+ (* ARCH_SIXTYFOUR *)
 
 let pack_signed_64 ~byte_order ~buf ~pos v =
   let top3 = Int64.to_int (Int64.shift_right v 40) in
@@ -472,17 +473,17 @@ let pack_signed_64_big_endian ~buf ~pos v =
     Char.unsafe_chr (Int64.to_int (Int64.logand 0xFFL (Int64.shift_right_logical v 56)));
   buf.[pos + 7] <- Char.unsafe_chr (Int64.to_int (Int64.logand 0xFFL v));
   (* Now we can use [unsafe_set] for the intermediate bytes. *)
-  Caml.String.unsafe_set buf (pos + 1)
+  Caml.Bytes.unsafe_set buf (pos + 1)
     (Char.unsafe_chr (Int64.to_int (Int64.logand 0xFFL (Int64.shift_right_logical v 48))));
-  Caml.String.unsafe_set buf (pos + 2)
+  Caml.Bytes.unsafe_set buf (pos + 2)
     (Char.unsafe_chr (Int64.to_int (Int64.logand 0xFFL (Int64.shift_right_logical v 40))));
-  Caml.String.unsafe_set buf (pos + 3)
+  Caml.Bytes.unsafe_set buf (pos + 3)
     (Char.unsafe_chr (Int64.to_int (Int64.logand 0xFFL (Int64.shift_right_logical v 32))));
-  Caml.String.unsafe_set buf (pos + 4)
+  Caml.Bytes.unsafe_set buf (pos + 4)
     (Char.unsafe_chr (Int64.to_int (Int64.logand 0xFFL (Int64.shift_right_logical v 24))));
-  Caml.String.unsafe_set buf (pos + 5)
+  Caml.Bytes.unsafe_set buf (pos + 5)
     (Char.unsafe_chr (Int64.to_int (Int64.logand 0xFFL (Int64.shift_right_logical v 16))));
-  Caml.String.unsafe_set buf (pos + 6)
+  Caml.Bytes.unsafe_set buf (pos + 6)
     (Char.unsafe_chr (Int64.to_int (Int64.logand 0xFFL (Int64.shift_right_logical v 8))))
 ;;
 
@@ -492,17 +493,17 @@ let pack_signed_64_little_endian ~buf ~pos v =
   buf.[pos + 7] <-
     Char.unsafe_chr (Int64.to_int (Int64.logand 0xFFL (Int64.shift_right_logical v 56)));
   (* Now we can use [unsafe_set] for the intermediate bytes. *)
-  Caml.String.unsafe_set buf (pos + 1)
+  Caml.Bytes.unsafe_set buf (pos + 1)
     (Char.unsafe_chr (Int64.to_int (Int64.logand 0xFFL (Int64.shift_right_logical v 8))));
-  Caml.String.unsafe_set buf (pos + 2)
+  Caml.Bytes.unsafe_set buf (pos + 2)
     (Char.unsafe_chr (Int64.to_int (Int64.logand 0xFFL (Int64.shift_right_logical v 16))));
-  Caml.String.unsafe_set buf (pos + 3)
+  Caml.Bytes.unsafe_set buf (pos + 3)
     (Char.unsafe_chr (Int64.to_int (Int64.logand 0xFFL (Int64.shift_right_logical v 24))));
-  Caml.String.unsafe_set buf (pos + 4)
+  Caml.Bytes.unsafe_set buf (pos + 4)
     (Char.unsafe_chr (Int64.to_int (Int64.logand 0xFFL (Int64.shift_right_logical v 32))));
-  Caml.String.unsafe_set buf (pos + 5)
+  Caml.Bytes.unsafe_set buf (pos + 5)
     (Char.unsafe_chr (Int64.to_int (Int64.logand 0xFFL (Int64.shift_right_logical v 40))));
-  Caml.String.unsafe_set buf (pos + 6)
+  Caml.Bytes.unsafe_set buf (pos + 6)
     (Char.unsafe_chr (Int64.to_int (Int64.logand 0xFFL (Int64.shift_right_logical v 48))))
 ;;
 
@@ -528,14 +529,14 @@ let unpack_signed_64_big_endian ~buf ~pos =
   let b1 = Char.code buf.[pos]
   and b8 = Char.code buf.[pos + 7] in
 
-  let b2 = Char.code (Caml.String.unsafe_get buf (pos + 1))
-  and b3 = Char.code (Caml.String.unsafe_get buf (pos + 2))
-  and b4 = Char.code (Caml.String.unsafe_get buf (pos + 3))
-  and b5 = Char.code (Caml.String.unsafe_get buf (pos + 4))
-  and b6 = Char.code (Caml.String.unsafe_get buf (pos + 5))
-  and b7 = Char.code (Caml.String.unsafe_get buf (pos + 6)) in
+  let b2 = Char.code (Caml.Bytes.unsafe_get buf (pos + 1))
+  and b3 = Char.code (Caml.Bytes.unsafe_get buf (pos + 2))
+  and b4 = Char.code (Caml.Bytes.unsafe_get buf (pos + 3))
+  and b5 = Char.code (Caml.Bytes.unsafe_get buf (pos + 4))
+  and b6 = Char.code (Caml.Bytes.unsafe_get buf (pos + 5))
+  and b7 = Char.code (Caml.Bytes.unsafe_get buf (pos + 6)) in
 
-  IFDEF ARCH_SIXTYFOUR THEN
+#if JSC_ARCH_SIXTYFOUR
 
   let i1 = Int64.of_int (                                b1)
   and i2 = Int64.of_int ((b2 lsl 48) lor (b3 lsl 40) lor
@@ -543,14 +544,14 @@ let unpack_signed_64_big_endian ~buf ~pos =
                          (b6 lsl 16) lor (b7 lsl  8) lor b8) in
   Int64.(logor i2 (shift_left i1 56))
 
-  ELSE
+#else
 
   let i1 = Int64.of_int (                (b1 lsl 8) lor b2)
   and i2 = Int64.of_int ((b3 lsl 16) lor (b4 lsl 8) lor b5)
   and i3 = Int64.of_int ((b6 lsl 16) lor (b7 lsl 8) lor b8) in
   Int64.(logor i3 (logor (shift_left i2 24) (shift_left i1 48)))
 
-  ENDIF
+#endif
 ;;
 
 let unpack_signed_64_little_endian ~buf ~pos =
@@ -558,14 +559,14 @@ let unpack_signed_64_little_endian ~buf ~pos =
   let b1 = Char.code buf.[pos]
   and b8 = Char.code buf.[pos + 7] in
 
-  let b2 = Char.code (Caml.String.unsafe_get buf (pos + 1))
-  and b3 = Char.code (Caml.String.unsafe_get buf (pos + 2))
-  and b4 = Char.code (Caml.String.unsafe_get buf (pos + 3))
-  and b5 = Char.code (Caml.String.unsafe_get buf (pos + 4))
-  and b6 = Char.code (Caml.String.unsafe_get buf (pos + 5))
-  and b7 = Char.code (Caml.String.unsafe_get buf (pos + 6)) in
+  let b2 = Char.code (Caml.Bytes.unsafe_get buf (pos + 1))
+  and b3 = Char.code (Caml.Bytes.unsafe_get buf (pos + 2))
+  and b4 = Char.code (Caml.Bytes.unsafe_get buf (pos + 3))
+  and b5 = Char.code (Caml.Bytes.unsafe_get buf (pos + 4))
+  and b6 = Char.code (Caml.Bytes.unsafe_get buf (pos + 5))
+  and b7 = Char.code (Caml.Bytes.unsafe_get buf (pos + 6)) in
 
-  IFDEF ARCH_SIXTYFOUR THEN
+#if JSC_ARCH_SIXTYFOUR
 
   let i1 = Int64.of_int ( b1         lor (b2 lsl  8) lor
                          (b3 lsl 16) lor (b4 lsl 24) lor
@@ -573,14 +574,14 @@ let unpack_signed_64_little_endian ~buf ~pos =
   and i2 = Int64.of_int   b8         in
   Int64.(logor i1 (shift_left i2 56))
 
-  ELSE
+#else
 
   let i1 = Int64.of_int (b1 lor (b2 lsl 8) lor (b3 lsl 16))
   and i2 = Int64.of_int (b4 lor (b5 lsl 8) lor (b6 lsl 16))
   and i3 = Int64.of_int (b7 lor (b8 lsl 8)) in
   Int64.(logor i1 (logor (shift_left i2 24) (shift_left i3 48)))
 
-  ENDIF
+#endif
 ;;
 
 let pack_signed_64_int ~byte_order ~buf ~pos n =
@@ -606,12 +607,12 @@ let pack_signed_64_int_big_endian ~buf ~pos v =
   buf.[pos] <- Char.unsafe_chr (0xFF land (v asr 56));
   buf.[pos + 7] <- Char.unsafe_chr (0xFF land v);
   (* Now we can use [unsafe_set] for the intermediate bytes. *)
-  Caml.String.unsafe_set buf (pos + 1) (Char.unsafe_chr (0xFF land (v asr 48)));
-  Caml.String.unsafe_set buf (pos + 2) (Char.unsafe_chr (0xFF land (v asr 40)));
-  Caml.String.unsafe_set buf (pos + 3) (Char.unsafe_chr (0xFF land (v asr 32)));
-  Caml.String.unsafe_set buf (pos + 4) (Char.unsafe_chr (0xFF land (v asr 24)));
-  Caml.String.unsafe_set buf (pos + 5) (Char.unsafe_chr (0xFF land (v asr 16)));
-  Caml.String.unsafe_set buf (pos + 6) (Char.unsafe_chr (0xFF land (v asr 8)))
+  Caml.Bytes.unsafe_set buf (pos + 1) (Char.unsafe_chr (0xFF land (v asr 48)));
+  Caml.Bytes.unsafe_set buf (pos + 2) (Char.unsafe_chr (0xFF land (v asr 40)));
+  Caml.Bytes.unsafe_set buf (pos + 3) (Char.unsafe_chr (0xFF land (v asr 32)));
+  Caml.Bytes.unsafe_set buf (pos + 4) (Char.unsafe_chr (0xFF land (v asr 24)));
+  Caml.Bytes.unsafe_set buf (pos + 5) (Char.unsafe_chr (0xFF land (v asr 16)));
+  Caml.Bytes.unsafe_set buf (pos + 6) (Char.unsafe_chr (0xFF land (v asr 8)))
 ;;
 
 let pack_signed_64_int_little_endian ~buf ~pos v =
@@ -619,12 +620,12 @@ let pack_signed_64_int_little_endian ~buf ~pos v =
   buf.[pos] <- Char.unsafe_chr (0xFF land v);
   buf.[pos + 7] <- Char.unsafe_chr (0xFF land (v asr 56));
   (* Now we can use [unsafe_set] for the intermediate bytes. *)
-  Caml.String.unsafe_set buf (pos + 1) (Char.unsafe_chr (0xFF land (v asr 8)));
-  Caml.String.unsafe_set buf (pos + 2) (Char.unsafe_chr (0xFF land (v asr 16)));
-  Caml.String.unsafe_set buf (pos + 3) (Char.unsafe_chr (0xFF land (v asr 24)));
-  Caml.String.unsafe_set buf (pos + 4) (Char.unsafe_chr (0xFF land (v asr 32)));
-  Caml.String.unsafe_set buf (pos + 5) (Char.unsafe_chr (0xFF land (v asr 40)));
-  Caml.String.unsafe_set buf (pos + 6) (Char.unsafe_chr (0xFF land (v asr 48)))
+  Caml.Bytes.unsafe_set buf (pos + 1) (Char.unsafe_chr (0xFF land (v asr 8)));
+  Caml.Bytes.unsafe_set buf (pos + 2) (Char.unsafe_chr (0xFF land (v asr 16)));
+  Caml.Bytes.unsafe_set buf (pos + 3) (Char.unsafe_chr (0xFF land (v asr 24)));
+  Caml.Bytes.unsafe_set buf (pos + 4) (Char.unsafe_chr (0xFF land (v asr 32)));
+  Caml.Bytes.unsafe_set buf (pos + 5) (Char.unsafe_chr (0xFF land (v asr 40)));
+  Caml.Bytes.unsafe_set buf (pos + 6) (Char.unsafe_chr (0xFF land (v asr 48)))
 ;;
 
 let unpack_signed_64_int ~byte_order ~buf ~pos =
@@ -639,7 +640,7 @@ let unpack_signed_64_int ~byte_order ~buf ~pos =
   lor (Char.code buf.[pos + offset ~len:8 ~byte_order 7])
 ;;
 
-exception Unpack_signed_64_int_most_significant_byte_too_large of int with sexp
+exception Unpack_signed_64_int_most_significant_byte_too_large of int [@@deriving sexp]
 let check_highest_order_byte_range byte =
   if byte < 64 || byte >= 192 then ()
   else raise (Unpack_signed_64_int_most_significant_byte_too_large byte)
@@ -651,12 +652,12 @@ let unpack_signed_64_int_big_endian ~buf ~pos =
   let b1 = Char.code buf.[pos]
   and b8 = Char.code buf.[pos + 7] in
 
-  let b2 = Char.code (Caml.String.unsafe_get buf (pos + 1))
-  and b3 = Char.code (Caml.String.unsafe_get buf (pos + 2))
-  and b4 = Char.code (Caml.String.unsafe_get buf (pos + 3))
-  and b5 = Char.code (Caml.String.unsafe_get buf (pos + 4))
-  and b6 = Char.code (Caml.String.unsafe_get buf (pos + 5))
-  and b7 = Char.code (Caml.String.unsafe_get buf (pos + 6)) in
+  let b2 = Char.code (Caml.Bytes.unsafe_get buf (pos + 1))
+  and b3 = Char.code (Caml.Bytes.unsafe_get buf (pos + 2))
+  and b4 = Char.code (Caml.Bytes.unsafe_get buf (pos + 3))
+  and b5 = Char.code (Caml.Bytes.unsafe_get buf (pos + 4))
+  and b6 = Char.code (Caml.Bytes.unsafe_get buf (pos + 5))
+  and b7 = Char.code (Caml.Bytes.unsafe_get buf (pos + 6)) in
 
   check_highest_order_byte_range b1;
 
@@ -672,12 +673,12 @@ let unpack_signed_64_int_little_endian ~buf ~pos =
   let b1 = Char.code buf.[pos]
   and b8 = Char.code buf.[pos + 7] in
 
-  let b2 = Char.code (Caml.String.unsafe_get buf (pos + 1))
-  and b3 = Char.code (Caml.String.unsafe_get buf (pos + 2))
-  and b4 = Char.code (Caml.String.unsafe_get buf (pos + 3))
-  and b5 = Char.code (Caml.String.unsafe_get buf (pos + 4))
-  and b6 = Char.code (Caml.String.unsafe_get buf (pos + 5))
-  and b7 = Char.code (Caml.String.unsafe_get buf (pos + 6)) in
+  let b2 = Char.code (Caml.Bytes.unsafe_get buf (pos + 1))
+  and b3 = Char.code (Caml.Bytes.unsafe_get buf (pos + 2))
+  and b4 = Char.code (Caml.Bytes.unsafe_get buf (pos + 3))
+  and b5 = Char.code (Caml.Bytes.unsafe_get buf (pos + 4))
+  and b6 = Char.code (Caml.Bytes.unsafe_get buf (pos + 5))
+  and b7 = Char.code (Caml.Bytes.unsafe_get buf (pos + 6)) in
 
   check_highest_order_byte_range b8;
 
@@ -687,8 +688,8 @@ let unpack_signed_64_int_little_endian ~buf ~pos =
   (b7 lsl 48) lor (b8 lsl 56)
 ;;
 
-IFDEF ARCH_SIXTYFOUR THEN
-TEST_UNIT "63 bits overflow" =
+#if JSC_ARCH_SIXTYFOUR
+let%test_unit "63 bits overflow" =
   let buf = String.create 8 in
   let pos = 0 in
   List.iter
@@ -708,9 +709,9 @@ TEST_UNIT "63 bits overflow" =
           with Unpack_signed_64_int_most_significant_byte_too_large n when Some n = opt -> ()
        ))
 ;;
-ENDIF
+#endif
 
-TEST_MODULE "inline_signed_64" = Make_inline_tests (struct
+let%test_module "inline_signed_64" = (module Make_inline_tests (struct
   let ns = [0x3f20_3040_5060_7080L;
             0x7f20_3040_5060_7080L;
            -0x7f20_3040_5060_7080L;
@@ -728,18 +729,18 @@ TEST_MODULE "inline_signed_64" = Make_inline_tests (struct
   let unpack_big_endian = unpack_signed_64_big_endian
   let pack_little_endian = pack_signed_64_little_endian
   let unpack_little_endian = unpack_signed_64_little_endian
-end)
+end))
 
-IFDEF ARCH_SIXTYFOUR THEN
+#if JSC_ARCH_SIXTYFOUR
 
-TEST_MODULE "inline_signed_64_int" =
-  Make_inline_tests (struct
+let%test_module "inline_signed_64_int" =
+  (module Make_inline_tests (struct
   (* These numbers are written with one endianness and read with the opposite endianness,
      so the smallest byte becomes the biggest byte. Because of this, the range restriction
      that applies to the biggest byte also applies to the smallest byte. *)
   let ns = [0x3f20_3040_5060_0708L;
             0x7f20_3040_5060_0708L;
-            -0x7f20_3040_5060_0708L;
+           -0x7f20_3040_5060_0708L;
             0x7fff_ffff_ffff_0000L;
             0L] |> List.map ~f:Int64.to_int
   let num_bytes = 8
@@ -753,9 +754,9 @@ TEST_MODULE "inline_signed_64_int" =
   let unpack_big_endian = unpack_signed_64_int_big_endian
   let pack_little_endian = pack_signed_64_int_little_endian
   let unpack_little_endian = unpack_signed_64_int_little_endian
-end)
+end))
 
-ENDIF
+#endif
 
 let pack_float ~byte_order ~buf ~pos f =
   pack_signed_64 ~byte_order ~buf ~pos (Int64.bits_of_float f)
@@ -781,7 +782,7 @@ let unpack_tail_padded_fixed_string ?(padding='\x00') ~buf ~pos ~len () =
 ;;
 
 exception Pack_tail_padded_fixed_string_argument_too_long of
-    [`s of string] * [`longer_than] * [`len of int] with sexp
+    [`s of string] * [`longer_than] * [`len of int] [@@deriving sexp]
 ;;
 
 let pack_tail_padded_fixed_string ?(padding='\x00') ~buf ~pos ~len s =
@@ -797,50 +798,50 @@ let pack_tail_padded_fixed_string ?(padding='\x00') ~buf ~pos ~len s =
   end
 ;;
 
-TEST_MODULE "inline_tail_padded_fixed_string" = struct
-  TEST = last_nonmatch_plus_one ~buf:"222121212" ~min_pos:3 ~pos:9 ~char:'2' = 8
-  TEST = last_nonmatch_plus_one ~buf:"111121212" ~min_pos:3 ~pos:9 ~char:'1' = 9
-  TEST = last_nonmatch_plus_one ~buf:"222121222" ~min_pos:3 ~pos:9 ~char:'2' = 6
-  TEST = last_nonmatch_plus_one ~buf:"222222222" ~min_pos:3 ~pos:9 ~char:'2' = 3
-  TEST = last_nonmatch_plus_one ~buf:"221222222" ~min_pos:3 ~pos:9 ~char:'2' = 3
-  TEST = last_nonmatch_plus_one ~buf:"222122222" ~min_pos:3 ~pos:9 ~char:'2' = 4
-  TEST = last_nonmatch_plus_one ~buf:"222122222" ~min_pos:3 ~pos:9 ~char:'1' = 9
-  TEST = last_nonmatch_plus_one ~buf:"222122222" ~min_pos:3 ~pos:8 ~char:'1' = 8
-  TEST = last_nonmatch_plus_one ~buf:"222122221" ~min_pos:3 ~pos:8 ~char:'1' = 8
-  TEST = last_nonmatch_plus_one ~buf:"222122221" ~min_pos:3 ~pos:8 ~char:'2' = 4
-  TEST = unpack_tail_padded_fixed_string ~padding:'.' ~buf:"ab..c." ~pos:1 ~len:5 () = "b..c"
-  TEST = unpack_tail_padded_fixed_string ~padding:'.' ~buf:"ab..c." ~pos:1 ~len:4 () = "b..c"
-  TEST = unpack_tail_padded_fixed_string ~padding:'.' ~buf:"ab..c." ~pos:1 ~len:3 () = "b"
-  TEST = unpack_tail_padded_fixed_string ~padding:'.' ~buf:"ab..c." ~pos:1 ~len:2 () = "b"
-  TEST = unpack_tail_padded_fixed_string ~padding:'.' ~buf:"ab..c." ~pos:1 ~len:1 () = "b"
-  TEST = unpack_tail_padded_fixed_string ~padding:'.' ~buf:"ab..c" ~pos:2 ~len:3 () = "..c"
-  TEST = unpack_tail_padded_fixed_string ~padding:'.' ~buf:"ab..c" ~pos:2 ~len:2 () = ""
-  TEST = unpack_tail_padded_fixed_string ~padding:'.' ~buf:"ab..cd" ~pos:2 ~len:3 () = "..c"
-  TEST = unpack_tail_padded_fixed_string ~padding:'.' ~buf:"ab..cd" ~pos:2 ~len:2 () = ""
-  TEST = unpack_tail_padded_fixed_string ~padding:'.' ~buf:"ab..c." ~pos:2 ~len:1 () = ""
-  TEST = unpack_tail_padded_fixed_string ~padding:'.' ~buf:".....x" ~pos:0 ~len:6 () = ".....x"
-  TEST = unpack_tail_padded_fixed_string ~padding:'.' ~buf:".....x" ~pos:0 ~len:5 () = ""
-  TEST =
+let%test_module "inline_tail_padded_fixed_string" = (module struct
+  let%test _ = last_nonmatch_plus_one ~buf:"222121212" ~min_pos:3 ~pos:9 ~char:'2' = 8
+  let%test _ = last_nonmatch_plus_one ~buf:"111121212" ~min_pos:3 ~pos:9 ~char:'1' = 9
+  let%test _ = last_nonmatch_plus_one ~buf:"222121222" ~min_pos:3 ~pos:9 ~char:'2' = 6
+  let%test _ = last_nonmatch_plus_one ~buf:"222222222" ~min_pos:3 ~pos:9 ~char:'2' = 3
+  let%test _ = last_nonmatch_plus_one ~buf:"221222222" ~min_pos:3 ~pos:9 ~char:'2' = 3
+  let%test _ = last_nonmatch_plus_one ~buf:"222122222" ~min_pos:3 ~pos:9 ~char:'2' = 4
+  let%test _ = last_nonmatch_plus_one ~buf:"222122222" ~min_pos:3 ~pos:9 ~char:'1' = 9
+  let%test _ = last_nonmatch_plus_one ~buf:"222122222" ~min_pos:3 ~pos:8 ~char:'1' = 8
+  let%test _ = last_nonmatch_plus_one ~buf:"222122221" ~min_pos:3 ~pos:8 ~char:'1' = 8
+  let%test _ = last_nonmatch_plus_one ~buf:"222122221" ~min_pos:3 ~pos:8 ~char:'2' = 4
+  let%test _ = unpack_tail_padded_fixed_string ~padding:'.' ~buf:"ab..c." ~pos:1 ~len:5 () = "b..c"
+  let%test _ = unpack_tail_padded_fixed_string ~padding:'.' ~buf:"ab..c." ~pos:1 ~len:4 () = "b..c"
+  let%test _ = unpack_tail_padded_fixed_string ~padding:'.' ~buf:"ab..c." ~pos:1 ~len:3 () = "b"
+  let%test _ = unpack_tail_padded_fixed_string ~padding:'.' ~buf:"ab..c." ~pos:1 ~len:2 () = "b"
+  let%test _ = unpack_tail_padded_fixed_string ~padding:'.' ~buf:"ab..c." ~pos:1 ~len:1 () = "b"
+  let%test _ = unpack_tail_padded_fixed_string ~padding:'.' ~buf:"ab..c" ~pos:2 ~len:3 () = "..c"
+  let%test _ = unpack_tail_padded_fixed_string ~padding:'.' ~buf:"ab..c" ~pos:2 ~len:2 () = ""
+  let%test _ = unpack_tail_padded_fixed_string ~padding:'.' ~buf:"ab..cd" ~pos:2 ~len:3 () = "..c"
+  let%test _ = unpack_tail_padded_fixed_string ~padding:'.' ~buf:"ab..cd" ~pos:2 ~len:2 () = ""
+  let%test _ = unpack_tail_padded_fixed_string ~padding:'.' ~buf:"ab..c." ~pos:2 ~len:1 () = ""
+  let%test _ = unpack_tail_padded_fixed_string ~padding:'.' ~buf:".....x" ~pos:0 ~len:6 () = ".....x"
+  let%test _ = unpack_tail_padded_fixed_string ~padding:'.' ~buf:".....x" ~pos:0 ~len:5 () = ""
+  let%test _ =
     "1abcd.78" = (
       let buf = "12345678" in
       pack_tail_padded_fixed_string ~padding:'.' ~buf ~pos:1 ~len:5 "abcd";
       buf)
-  TEST =
+  let%test _ =
     "1abcde78" = (
       let buf = "12345678" in
       pack_tail_padded_fixed_string ~padding:'.' ~buf ~pos:1 ~len:5 "abcde";
       buf)
-  TEST =
+  let%test _ =
     "1.....78" = (
       let buf = "12345678" in
       pack_tail_padded_fixed_string ~padding:'.' ~buf ~pos:1 ~len:5 "";
       buf)
-  TEST =
+  let%test _ =
     "1.....78" = (
       let buf = "12345678" in
       pack_tail_padded_fixed_string ~padding:'.' ~buf ~pos:1 ~len:5 "...";
       buf)
-end
+end)
 ;;
 
 let test byte_order =

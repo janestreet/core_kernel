@@ -11,7 +11,7 @@
       [transfer]'s arguments are labeled.
 *)
 
-type 'a t with bin_io, sexp
+type 'a t [@@deriving bin_io, sexp]
 
 include Container.S1 with type 'a t := 'a t
 

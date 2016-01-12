@@ -1,8 +1,10 @@
 
-type 'a t = 'a option with bin_io, sexp, typerep
+type 'a t = 'a option [@@deriving bin_io, compare, sexp, typerep]
 
-include Container.S1 with type 'a t := 'a t
-include Invariant.S1 with type 'a t := 'a t
+include Container.S1      with type 'a t := 'a t
+include Equal.S1          with type 'a t := 'a t
+include Invariant.S1      with type 'a t := 'a t
+include Quickcheckable.S1 with type 'a t := 'a t
 
 (** Options form a monad, where [return x =  Some x],
     [(None >>= f) = None], and [(Some x >>= f) = f x]. *)
@@ -58,9 +60,4 @@ val filter : 'a t -> f:('a -> bool) -> 'a t
     exception.  See [Result.try_with] if you'd like to know which exception. *)
 val try_with : (unit -> 'a) -> 'a t
 
-(** Compares [None] as smaller than any [Some x] *)
-val compare : cmp:('a -> 'a -> int)  -> 'a t -> 'a t -> int
-val equal   :     ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
-
 val validate : none:unit Validate.check -> some:'a Validate.check -> 'a t Validate.check
-

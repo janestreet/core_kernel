@@ -75,9 +75,9 @@
     }
 
     Unfortunately, that doesn't work for us due to some quirks in the way constraints of
-    this form are handled:  In particular, they don't work well with [with sexp] and they
-    don't work well with included signatures.  But you could try this usage pattern if you
-    don't do either of those things.
+    this form are handled:  In particular, they don't work well with [[@@deriving sexp]]
+    and they don't work well with included signatures.  But you could try this usage
+    pattern if you don't do either of those things.
 
     For some types you may expect to always have read permissions, and it may therefore by
     annoying to keep rewriting [[> read]].  In that case you may want to try this usage
@@ -97,73 +97,73 @@
 
 (** Every type in this module besides the following two represent permission sets; these
     two represent who is allowed to write in the [Write.t] and [Immutable.t] types. *)
-type nobody with bin_io, compare, sexp
-type me     with bin_io, compare, sexp
+type nobody [@@deriving bin_io, compare, sexp]
+type me     [@@deriving bin_io, compare, sexp]
 
 module Read : sig
   type t = [ `Read ]
-  with bin_io, compare, sexp
+  [@@deriving bin_io, compare, sexp]
 end
 
 module Write : sig
   type t = [ `Who_can_write of me ]
-  with bin_io, compare, sexp
+  [@@deriving bin_io, compare, sexp]
 end
 
 module Immutable : sig
   type t = [ Read.t | `Who_can_write of nobody ]
-  with bin_io, compare, sexp
+  [@@deriving bin_io, compare, sexp]
 end
 
 module Read_write : sig
   type t = [ Read.t | Write.t ]
-  with bin_io, compare, sexp
+  [@@deriving bin_io, compare, sexp]
 end
 
 module Upper_bound : sig
   type 'a t = [ Read.t | `Who_can_write of 'a ]
-  with bin_io, compare, sexp
+  [@@deriving bin_io, compare, sexp]
 end
 
 module Export : sig
   (** We don't expose [bin_io] for [write] due to a naming conflict with the functions
       exported by [bin_io] for [read_write].  If you want [bin_io] for [write], use
       [Write.t]. *)
-  type read       = Read.          t with bin_io, compare, sexp
-  type write      = Write.         t with         compare, sexp
-  type immutable  = Immutable.     t with bin_io, compare, sexp
-  type read_write = Read_write.    t with bin_io, compare, sexp
-  type 'a perms   = 'a Upper_bound.t with bin_io, compare, sexp
+  type read       = Read.          t [@@deriving bin_io, compare, sexp]
+  type write      = Write.         t [@@deriving compare, sexp]
+  type immutable  = Immutable.     t [@@deriving bin_io, compare, sexp]
+  type read_write = Read_write.    t [@@deriving bin_io, compare, sexp]
+  type 'a perms   = 'a Upper_bound.t [@@deriving bin_io, compare, sexp]
 end
 
 module Stable : sig
   module V1 : sig
-    type nonrec nobody = nobody with bin_io, compare, sexp
-    type nonrec me     = me     with bin_io, compare, sexp
+    type nonrec nobody = nobody [@@deriving bin_io, compare, sexp]
+    type nonrec me     = me     [@@deriving bin_io, compare, sexp]
 
     module Read : sig
       type t = Read.t
-      with bin_io, compare, sexp
+      [@@deriving bin_io, compare, sexp]
     end
 
     module Write : sig
       type t = Write.t
-      with bin_io, compare, sexp
+      [@@deriving bin_io, compare, sexp]
     end
 
     module Immutable : sig
       type t = Immutable.t
-      with bin_io, compare, sexp
+      [@@deriving bin_io, compare, sexp]
     end
 
     module Read_write : sig
       type t = Read_write.t
-      with bin_io, compare, sexp
+      [@@deriving bin_io, compare, sexp]
     end
 
     module Upper_bound : sig
       type 'a t = 'a Upper_bound.t
-      with bin_io, compare, sexp
+      [@@deriving bin_io, compare, sexp]
     end
   end
 

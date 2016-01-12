@@ -1,17 +1,18 @@
 module T = struct
-  (* In the definition of [t], we do not have [with bin_io, compare, sexp] because in
-     general, syntax extensions tend to use the implementation when available rather than
-     using the alias.  Here that would lead to use the record representation [ { mutable
-     contents : 'a } ] which would result in different (and unwanted) behavior.  *)
+  (* In the definition of [t], we do not have [[@@deriving bin_io, compare, sexp]] because
+     in general, syntax extensions tend to use the implementation when available rather
+     than using the alias.  Here that would lead to use the record representation [ {
+     mutable contents : 'a } ] which would result in different (and unwanted)
+     behavior.  *)
   type 'a t = 'a ref = { mutable contents : 'a }
 
   include (struct
     open Typerep_lib.Std
     open Sexplib.Conv
     open Bin_prot.Std
-    type 'a t = 'a ref with bin_io, compare, sexp, typerep
+    type 'a t = 'a ref [@@deriving bin_io, compare, sexp, typerep]
   end : sig
-    type 'a t = 'a ref with bin_io, compare, sexp, typerep
+    type 'a t = 'a ref [@@deriving bin_io, compare, sexp, typerep]
   end with type 'a t := 'a t)
 
   let create x = ref x
@@ -54,6 +55,12 @@ module T = struct
 
   let min_elt t ~cmp:_ = Some !t
   let max_elt t ~cmp:_ = Some !t
+
+  let set_temporarily t a ~f =
+    let restore_to = !t in
+    t := a;
+    Exn.protect ~f ~finally:(fun () -> t := restore_to);
+  ;;
 end
 
 include T
@@ -61,7 +68,7 @@ include T
 module Permissioned = struct
   include (T : (module type of T) with type 'a t := 'a ref)
 
-  type ('a, -'perms) t = 'a T.t with bin_io, sexp
+  type ('a, -'perms) t = 'a T.t [@@deriving bin_io, sexp]
 
   let read_only = Fn.id
   let of_ref    = Fn.id

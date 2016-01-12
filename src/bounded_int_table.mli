@@ -21,7 +21,7 @@
 
 open Std_internal
 
-type ('key, 'data) t with sexp_of
+type ('key, 'data) t [@@deriving sexp_of]
 type ('a, 'b) table = ('a, 'b) t
 
 include Invariant.S2 with type ('a, 'b) t := ('a, 'b) t
@@ -52,7 +52,11 @@ val fold
   -> init : 'accum
   -> f    : (key:'key -> data:'data -> 'accum -> 'accum)
   -> 'accum
+
 val iter      : ('key, 'data) t -> f:(key:'key -> data:'data -> unit) -> unit
+  [@@ocaml.deprecated "[since 2015-10] Use iteri instead"]
+
+val iteri     : ('key, 'data) t -> f:(key:'key -> data:'data -> unit) -> unit
 val iter_vals : (_   , 'data) t -> f:(                 'data -> unit) -> unit
 
 val filter_mapi
@@ -80,12 +84,12 @@ val to_alist : ('key, 'data) t -> ('key * 'data) list
 val clear : (_, _) t -> unit
 
 module With_key (Key : sig
-  type t with bin_io, sexp
+  type t [@@deriving bin_io, sexp]
   val to_int : t -> int
 end) : sig
   (** Serialization of a bounded int table using [bin_io] or [sexp] preserves [num_keys],
       but only takes space proportional to the [length] of the table. *)
-  type 'data t = (Key.t, 'data) table with bin_io, sexp
+  type 'data t = (Key.t, 'data) table [@@deriving bin_io, sexp]
 
   val create : num_keys:int -> 'data t
 

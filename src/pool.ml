@@ -1,4 +1,4 @@
-INCLUDE "config.mlh"
+#import "config.mlh"
 
 open Int_replace_polymorphic_compare
 open Sexplib.Conv
@@ -33,7 +33,7 @@ module Pool = struct
       if capacity <= old_capacity
       then failwiths "Pool.grow got too small capacity"
              (`capacity capacity, `old_capacity old_capacity)
-             <:sexp_of< [ `capacity of int ] * [ `old_capacity of int ] >>;
+             [%sexp_of: [ `capacity of int ] * [ `old_capacity of int ]];
       capacity
   ;;
 
@@ -70,7 +70,7 @@ module Pool = struct
   *)
 
   module Slot = struct
-    type ('slots, 'a) t = int with sexp_of
+    type ('slots, 'a) t = int [@@deriving sexp_of]
 
     let equal (t1 : (_, _) t) t2 = t1 = t2
 
@@ -87,7 +87,7 @@ module Pool = struct
     let t10 = 11
     let t11 = 12
 
-    TEST = t11 = max_slot
+    let%test _ = t11 = max_slot
   end
 
 (* We only have [Int.num_bits] bits available for pool pointers.  The bits of a pool
@@ -102,28 +102,28 @@ module Pool = struct
    address-space sizes, so we choose [array_index_num_bits] differently.  We write
    both numbers as constants for performance reasons -- the compiler generates better
    code when they are constants rather than expressions. *)
-IFDEF ARCH_SIXTYFOUR THEN
+#if JSC_ARCH_SIXTYFOUR
 
 let () = assert (Int.num_bits = 63)
 let array_index_num_bits = 30
 let masked_tuple_id_num_bits = 33
 
-ELSE
+#else
 
 let () = assert (Int.num_bits = 31 || Int.num_bits = 32)
 let array_index_num_bits = 22
 let masked_tuple_id_num_bits = Int.num_bits - array_index_num_bits
 
-ENDIF
+#endif
 
-TEST = array_index_num_bits > 0
-TEST = masked_tuple_id_num_bits > 0
-TEST = array_index_num_bits + masked_tuple_id_num_bits <= Int.num_bits
+let%test _ = array_index_num_bits > 0
+let%test _ = masked_tuple_id_num_bits > 0
+let%test _ = array_index_num_bits + masked_tuple_id_num_bits <= Int.num_bits
 
 let max_array_length = 1 lsl array_index_num_bits
 
 module Tuple_id : sig
-  type t = private int with sexp_of
+  type t = private int [@@deriving sexp_of]
 
   include Invariant.S with type t := t
 
@@ -139,7 +139,7 @@ module Tuple_id : sig
 
   val examples : t list
 end = struct
-  type t = int with sexp_of
+  type t = int [@@deriving sexp_of]
 
   (* We guarantee that tuple ids are nonnegative so that they can be encoded in
      headers. *)
@@ -152,17 +152,17 @@ end = struct
   let init = 0
 
   let next t =
-IFDEF ARCH_SIXTYFOUR THEN
+#if JSC_ARCH_SIXTYFOUR
     t + 1
-ELSE
+#else
     if t = Int.max_value then 0 else t + 1
-ENDIF
+#endif
 ;;
 
 let to_int t = t
 
 let of_int i =
-  if i < 0 then failwiths "Tuple_id.of_int got negative int" i <:sexp_of< int >>;
+  if i < 0 then failwiths "Tuple_id.of_int got negative int" i [%sexp_of: int];
   i
 ;;
 
@@ -183,7 +183,7 @@ module Pointer : sig
      access, the [slot_index] function.  The encoding is designed so that [slot_index]
      produces a negative number for [Null], which will cause the subsequent array bounds
      check to fail. *)
-  type 'slots t = private int with sexp_of
+  type 'slots t = private int [@@deriving sexp_of]
 
   include Invariant.S1 with type 'a t := 'a t
 
@@ -202,7 +202,7 @@ module Pointer : sig
   val first_slot_index : _ t -> int
 
   module Id : sig
-    type t with bin_io, sexp
+    type t [@@deriving bin_io, sexp]
 
     val to_int63 : t -> Int63.t
     val of_int63 : Int63.t -> t
@@ -228,7 +228,7 @@ end = struct
 
   (* [null] must be such that [null + slot] is an invalid array index for all slots.
      Otherwise get/set on the null pointer may lead to a segfault. *)
-  TEST = null () + max_slot < 0
+  let%test _ = null () + max_slot < 0
 
   let create ~header_index (tuple_id : Tuple_id.t) =
     header_index
@@ -245,11 +245,11 @@ end = struct
     if not (is_null t) then assert (header_index t > 0);
   ;;
 
-  TEST_UNIT = invariant ignore (null ())
+  let%test_unit _ = invariant ignore (null ())
 
-  TEST_UNIT =
+  let%test_unit _ =
     List.iter Tuple_id.examples ~f:(fun tuple_id ->
-      invariant ignore (create ~header_index:1 tuple_id));
+      invariant ignore (create ~header_index:1 tuple_id))
   ;;
 
   let slot_index t slot = header_index t + slot
@@ -276,9 +276,9 @@ end = struct
         in
         if phys_equal t should_equal
         then t
-        else failwiths "should equal" should_equal <:sexp_of< _ t >>
+        else failwiths "should equal" should_equal [%sexp_of: _ t]
     with exn ->
-      failwiths "Pointer.of_id_exn got strange id" (id, exn) <:sexp_of< Id.t * exn >>
+      failwiths "Pointer.of_id_exn got strange id" (id, exn) [%sexp_of: Id.t * exn]
   ;;
 end
 
@@ -294,7 +294,7 @@ module Header : sig
      If a tuple is free, its header is set to either [Null] or [Free] with
      [next_free_header_index] indicating the header of the next tuple on the free list.
      If a tuple is in use, it header is set to [Used]. *)
-  type t = private int with sexp_of
+  type t = private int [@@deriving sexp_of]
 
   val null : t
   val is_null : t -> bool
@@ -322,11 +322,11 @@ end = struct
   let is_used t = t < 0
   let tuple_id t = Tuple_id.of_int (- (t + 1))
 
-  TEST_UNIT =
+  let%test_unit _ =
     List.iter Tuple_id.examples ~f:(fun id ->
       let t = used id in
       assert (is_used t);
-      assert (Tuple_id.equal (tuple_id t) id));
+      assert (Tuple_id.equal (tuple_id t) id))
   ;;
 
   let sexp_of_t t =
@@ -347,12 +347,12 @@ let max_capacity ~slots_per_tuple =
   (max_array_length - start_of_tuples_index) / (1 + slots_per_tuple)
 ;;
 
-TEST_UNIT =
+let%test_unit _ =
   for slots_per_tuple = 1 to max_slot do
     assert ((start_of_tuples_index
              + (1 + slots_per_tuple) * max_capacity ~slots_per_tuple)
             <= max_array_length);
-  done;
+  done
 ;;
 
 module Metadata = struct
@@ -368,7 +368,7 @@ module Metadata = struct
        [Obj_array.length a = slots_per_tuple]. *)
     ; dummy              : Obj_array.t sexp_opaque option
     }
-  with fields, sexp_of
+  [@@deriving fields, sexp_of]
 
   let array_indices_per_tuple t = 1 + t.slots_per_tuple
 
@@ -448,13 +448,13 @@ let pointer_of_id_exn t id =
     then begin
       let header_index = Pointer.header_index pointer in
       if not (is_valid_header_index t ~header_index)
-      then failwiths "invalid header index" header_index <:sexp_of< int >>;
+      then failwiths "invalid header index" header_index [%sexp_of: int];
       if not (unsafe_pointer_is_live t pointer) then failwith "pointer not live";
     end;
     pointer
   with exn ->
     failwiths "Pool.pointer_of_id_exn got invalid id" (id, t, exn)
-      <:sexp_of< Pointer.Id.t * _ t * exn >>
+      [%sexp_of: Pointer.Id.t * _ t * exn]
 ;;
 
 let invariant _invariant_a t : unit =
@@ -480,7 +480,7 @@ let invariant _invariant_a t : unit =
           assert (is_valid_header_index t ~header_index);
           let tuple_num = header_index_to_tuple_num metadata ~header_index in
           if free.( tuple_num )
-          then failwiths "cycle in free list" tuple_num <:sexp_of< int >>;
+          then failwiths "cycle in free list" tuple_num [%sexp_of: int];
           free.( tuple_num ) <- true;
           r := unsafe_header t ~header_index;
         done))
@@ -498,7 +498,7 @@ let invariant _invariant_a t : unit =
               done;
           done))
   with exn ->
-    failwiths "Pool.invariant failed" (exn, t) (<:sexp_of< exn * _ t >>)
+    failwiths "Pool.invariant failed" (exn, t) ([%sexp_of: exn * _ t])
 ;;
 
 let capacity t = (metadata t).capacity
@@ -542,12 +542,12 @@ let unsafe_init_range t metadata ~lo ~hi =
 
 let create_with_dummy slots ~capacity ~dummy =
   if capacity < 0
-  then failwiths "Pool.create got invalid capacity" capacity <:sexp_of< int >>;
+  then failwiths "Pool.create got invalid capacity" capacity [%sexp_of: int];
   let slots_per_tuple = Slots.slots_per_tuple slots in
   let max_capacity = max_capacity ~slots_per_tuple in
   if capacity > max_capacity
   then failwiths "Pool.create got too large capacity" (capacity, `max max_capacity)
-         <:sexp_of< int * [ `max of int ] >>;
+         [%sexp_of: int * [ `max of int ]];
   let metadata =
     { Metadata.
       slots_per_tuple
@@ -607,7 +607,7 @@ let grow ?capacity t =
   in
   if capacity = old_capacity
   then failwiths "Pool.grow cannot grow pool; capacity already at maximum" capacity
-         <:sexp_of< int >>;
+         [%sexp_of: int];
   let metadata =
     { Metadata.
       slots_per_tuple
@@ -638,7 +638,7 @@ let malloc (type slots) (t : slots t) : slots Pointer.t =
   let metadata = metadata t in
   let first_free = metadata.first_free in
   if Header.is_null first_free
-  then failwiths "Pool.malloc of full pool" t <:sexp_of< _ t >>;
+  then failwiths "Pool.malloc of full pool" t [%sexp_of: _ t];
   let header_index = Header.next_free_header_index first_free in
   metadata.first_free <- unsafe_header t ~header_index;
   metadata.length <- metadata.length + 1;
@@ -672,7 +672,7 @@ let free (type slots) (t : slots t) (pointer : slots Pointer.t) =
      - be able to use unsafe functions after. *)
   if not (pointer_is_valid t pointer)
   then failwiths "Pool.free of invalid pointer" (pointer, t)
-         <:sexp_of< _ Pointer.t * _ t >>;
+         [%sexp_of: _ Pointer.t * _ t];
   unsafe_free t pointer
 ;;
 
@@ -865,7 +865,7 @@ module Debug (Pool : S) = struct
     let result_or_exn = Result.try_with f in
     if !show_messages
     then Debug.eprints (concat [ prefix; name; " result" ]) result_or_exn
-           <:sexp_of< (result, exn) Result.t >>;
+           [%sexp_of: (result, exn) Result.t];
     Result.ok_exn result_or_exn;
   ;;
 
@@ -876,20 +876,20 @@ module Debug (Pool : S) = struct
   module Pointer = struct
     open Pointer
 
-    type nonrec 'slots t = 'slots t with sexp_of
+    type nonrec 'slots t = 'slots t [@@deriving sexp_of]
 
     let phys_compare t1 t2 =
-      debug "Pointer.phys_compare" [] (t1, t2) <:sexp_of< _ t * _ t >> <:sexp_of< int >>
+      debug "Pointer.phys_compare" [] (t1, t2) [%sexp_of: _ t * _ t] [%sexp_of: int]
         (fun () -> phys_compare t1 t2)
     ;;
 
     let phys_equal t1 t2 =
-      debug "Pointer.phys_equal" [] (t1, t2) <:sexp_of< _ t * _ t >> <:sexp_of< bool >>
+      debug "Pointer.phys_equal" [] (t1, t2) [%sexp_of: _ t * _ t] [%sexp_of: bool]
         (fun () -> phys_equal t1 t2)
     ;;
 
     let is_null t =
-      debug "Pointer.is_null" [] t <:sexp_of< _ t >> <:sexp_of< bool >>
+      debug "Pointer.is_null" [] t [%sexp_of: _ t] [%sexp_of: bool]
         (fun () -> is_null t)
     ;;
 
@@ -898,25 +898,25 @@ module Debug (Pool : S) = struct
     module Id = struct
       open Id
 
-      type nonrec t = t with bin_io, sexp
+      type nonrec t = t [@@deriving bin_io, sexp]
 
       let of_int63 i =
         debug "Pointer.Id.of_int63" [] i
-          <:sexp_of< Core_int63.t >>
-          <:sexp_of< t >>
+          [%sexp_of: Core_int63.t]
+          [%sexp_of: t]
           (fun () -> of_int63 i)
       ;;
 
       let to_int63 t =
         debug "Pointer.Id.to_int63" [] t
-          <:sexp_of< t >>
-          <:sexp_of< Core_int63.t >>
+          [%sexp_of: t]
+          [%sexp_of: Core_int63.t]
           (fun () -> to_int63 t)
       ;;
     end
   end
 
-  type nonrec 'slots t = 'slots t with sexp_of
+  type nonrec 'slots t = 'slots t [@@deriving sexp_of]
 
   let invariant = invariant
 
@@ -924,58 +924,58 @@ module Debug (Pool : S) = struct
 
   let id_of_pointer t pointer =
     debug "id_of_pointer" [t] pointer
-      <:sexp_of< _ Pointer.t >> <:sexp_of< Pointer.Id.t >>
+      [%sexp_of: _ Pointer.t] [%sexp_of: Pointer.Id.t]
       (fun () -> id_of_pointer t pointer)
   ;;
 
   let pointer_of_id_exn t id =
     debug "pointer_of_id_exn" [t] id
-      <:sexp_of< Pointer.Id.t >> <:sexp_of< _ Pointer.t >>
+      [%sexp_of: Pointer.Id.t] [%sexp_of: _ Pointer.t]
       (fun () -> pointer_of_id_exn t id)
   ;;
 
   let pointer_is_valid t pointer =
-    debug "pointer_is_valid" [t] pointer <:sexp_of< _ Pointer.t >> <:sexp_of< bool >>
+    debug "pointer_is_valid" [t] pointer [%sexp_of: _ Pointer.t] [%sexp_of: bool]
       (fun () -> pointer_is_valid t pointer)
   ;;
 
   let create slots ~capacity ~dummy =
-    debug "create" [] capacity <:sexp_of< int >> <:sexp_of< _ t >>
+    debug "create" [] capacity [%sexp_of: int] [%sexp_of: _ t]
       (fun () -> create slots ~capacity ~dummy)
   ;;
 
   let max_capacity ~slots_per_tuple =
-    debug "max_capacity" [] slots_per_tuple <:sexp_of< int >> <:sexp_of< int >>
+    debug "max_capacity" [] slots_per_tuple [%sexp_of: int] [%sexp_of: int]
       (fun () -> max_capacity ~slots_per_tuple)
   ;;
 
   let capacity t =
-    debug "capacity" [t] t <:sexp_of< _ t >> <:sexp_of< int >>
+    debug "capacity" [t] t [%sexp_of: _ t] [%sexp_of: int]
       (fun () -> capacity t)
   ;;
 
   let grow ?capacity t =
-    debug "grow" [t] (`capacity capacity) (<:sexp_of< [ `capacity of int option ] >>)
-      (<:sexp_of< _ t >>) (fun () -> grow ?capacity t)
+    debug "grow" [t] (`capacity capacity) ([%sexp_of: [ `capacity of int option ]])
+      ([%sexp_of: _ t]) (fun () -> grow ?capacity t)
   ;;
 
   let is_full t =
-    debug "is_full" [t] t <:sexp_of< _ t >> <:sexp_of< bool >>
+    debug "is_full" [t] t [%sexp_of: _ t] [%sexp_of: bool]
       (fun () -> is_full t)
   ;;
 
   let unsafe_free t p =
-    debug "unsafe_free" [t] p <:sexp_of< _ Pointer.t >> <:sexp_of< unit >>
+    debug "unsafe_free" [t] p [%sexp_of: _ Pointer.t] [%sexp_of: unit]
       (fun () -> unsafe_free t p)
   ;;
 
   let free t p =
-    debug "free" [t] p <:sexp_of< _ Pointer.t >> <:sexp_of< unit >>
+    debug "free" [t] p [%sexp_of: _ Pointer.t] [%sexp_of: unit]
       (fun () -> free t p)
   ;;
 
   let debug_new t f =
-    debug "new" [t] () <:sexp_of< unit >> <:sexp_of< _ Pointer.t >> f
+    debug "new" [t] () [%sexp_of: unit] [%sexp_of: _ Pointer.t] f
   ;;
 
   let new1 t a0                         = debug_new t (fun () -> new1 t a0)
@@ -998,12 +998,12 @@ module Debug (Pool : S) = struct
     = debug_new t (fun () -> new12 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11)
 
   let get_tuple t pointer =
-    debug "get_tuple" [t] pointer <:sexp_of< _ Pointer.t >> <:sexp_of< _ >>
+    debug "get_tuple" [t] pointer [%sexp_of: _ Pointer.t] [%sexp_of: _]
       (fun () -> get_tuple t pointer)
   ;;
 
   let debug_get name f t pointer =
-    debug name [t] pointer <:sexp_of< _ Pointer.t >> <:sexp_of< _ >>
+    debug name [t] pointer [%sexp_of: _ Pointer.t] [%sexp_of: _]
       (fun () -> f t pointer)
   ;;
 
@@ -1011,7 +1011,7 @@ module Debug (Pool : S) = struct
   let unsafe_get t pointer slot = debug_get "unsafe_get" unsafe_get t pointer slot
 
   let debug_set name f t pointer slot a =
-    debug name [t] pointer <:sexp_of< _ Pointer.t >> <:sexp_of< unit >>
+    debug name [t] pointer [%sexp_of: _ Pointer.t] [%sexp_of: unit]
       (fun () -> f t pointer slot a)
   ;;
 
@@ -1033,7 +1033,7 @@ module Error_check (Pool : S) = struct
       { mutable is_valid : bool
       ; pointer          : 'slots Pointer.t
       }
-    with sexp_of
+    [@@deriving sexp_of]
 
     let create pointer = { is_valid = true; pointer }
 
@@ -1046,7 +1046,7 @@ module Error_check (Pool : S) = struct
 
     let follow t =
       if not t.is_valid
-      then failwiths "attempt to use invalid pointer" t <:sexp_of< _ t >>;
+      then failwiths "attempt to use invalid pointer" t [%sexp_of: _ t];
       t.pointer;
     ;;
 
@@ -1056,7 +1056,7 @@ module Error_check (Pool : S) = struct
 
   end
 
-  type 'slots t = 'slots Pool.t with sexp_of
+  type 'slots t = 'slots Pool.t [@@deriving sexp_of]
 
   let invariant = invariant
 

@@ -22,7 +22,7 @@ module type S = sig
   module Key : Key
 
   (** a hash-queue, where the values are of type 'a *)
-  type 'a t with sexp_of
+  type 'a t [@@deriving sexp_of]
 
   include Container.S1 with type 'a t := 'a t
 
@@ -115,7 +115,7 @@ module Make (Key : Key) : S with module Key = Key = struct
     let key t = t.key
     let value t = t.value
 
-    let sexp_of_t sexp_of_a {key; value} = <:sexp_of< Key.t * a >> (key, value)
+    let sexp_of_t sexp_of_a {key; value} = [%sexp_of: Key.t * a] (key, value)
   end
 
   open Key_value.T
@@ -128,7 +128,7 @@ module Make (Key : Key) : S with module Key = Key = struct
     table : 'a Key_value.t Elt.t Table.t;
   }
 
-  let sexp_of_t sexp_of_a t = <:sexp_of< a Key_value.t Doubly_linked.t >> t.queue
+  let sexp_of_t sexp_of_a t = [%sexp_of: a Key_value.t Doubly_linked.t] t.queue
 
   let invariant t =
     assert (Doubly_linked.length t.queue = Hashtbl.length t.table);
@@ -219,7 +219,7 @@ module Make (Key : Key) : S with module Key = Key = struct
     end
   ;;
 
-  exception Enqueue_duplicate_key of Key.t with sexp
+  exception Enqueue_duplicate_key of Key.t [@@deriving sexp]
 
   let enqueue_exn t key value =
     match enqueue t key value with
@@ -234,7 +234,7 @@ module Make (Key : Key) : S with module Key = Key = struct
     | Some kv -> Hashtbl.remove t.table kv.key; Some (kv.key, kv.value)
   ;;
 
-  exception Deque_with_key_empty with sexp
+  exception Deque_with_key_empty [@@deriving sexp]
 
   let dequeue_with_key_exn t =
     match dequeue_with_key t with
@@ -260,7 +260,7 @@ module Make (Key : Key) : S with module Key = Key = struct
     | Some kv -> Some kv.value
   ;;
 
-  exception Deque_empty with sexp
+  exception Deque_empty [@@deriving sexp]
 
   let dequeue_exn t =
     match dequeue t with
@@ -311,7 +311,7 @@ module Make (Key : Key) : S with module Key = Key = struct
         `Ok
   ;;
 
-  exception Remove_unknown_key of Key.t with sexp
+  exception Remove_unknown_key of Key.t [@@deriving sexp]
 
   let remove_exn t k =
     ensure_can_modify t;
@@ -329,7 +329,7 @@ module Make (Key : Key) : S with module Key = Key = struct
         `Ok
   ;;
 
-  exception Replace_unknown_key of Key.t with sexp
+  exception Replace_unknown_key of Key.t [@@deriving sexp]
 
   let replace_exn t k v =
     ensure_can_modify t;

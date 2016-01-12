@@ -2,10 +2,10 @@
 
 module Measure : sig
   type t = [ `Bytes | `Kilobytes | `Megabytes | `Gigabytes | `Words ]
-  with sexp, bin_io
+  [@@deriving sexp, bin_io]
 end
 
-type t with bin_io, sexp
+type t [@@deriving bin_io, sexp]
 
 (** [create measure value] creates a [t] from [value] units of the given measure. *)
 val create : Measure.t -> float -> t

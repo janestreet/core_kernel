@@ -26,7 +26,7 @@ module S_to_S1 (S : S) = struct
   let comparator = comparator
 end
 
-module Make (M : sig type t with compare, sexp_of end) = struct
+module Make (M : sig type t [@@deriving compare, sexp_of] end) = struct
   include M
   type comparator_witness
   let comparator = M.({ compare; sexp_of_t })
@@ -46,6 +46,6 @@ module Poly = struct
   include Make1 (struct
     type 'a t = 'a
     let compare = Pervasives.compare
-    let sexp_of_t = <:sexp_of< _ >>
+    let sexp_of_t = [%sexp_of: _]
   end)
 end

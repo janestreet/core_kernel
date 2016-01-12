@@ -2,17 +2,23 @@ let polymorphic_compare = (=)
 open Int_replace_polymorphic_compare
 include Binary_searchable_intf
 
-module Make_gen (T : sig
-                   type 'a elt
-                   type 'a t
-                   val get : 'a t -> int -> 'a elt
-                   val length : _ t -> int
-                   module For_test : sig
-                     val small : bool elt
-                     val big   : bool elt
-                     val of_array : bool elt array -> bool t
-                   end
-                 end) = struct
+module type Arg_without_tests = sig
+  type 'a elt
+  type 'a t
+  val get : 'a t -> int -> 'a elt
+  val length : _ t -> int
+end
+
+module type Arg = sig
+  include Arg_without_tests
+  module For_test : sig
+    val small    : bool elt
+    val big      : bool elt
+    val of_array : bool elt array -> bool t
+  end
+end
+
+module Make_gen_without_tests (T : Arg_without_tests) = struct
 
   (* These functions implement a search for the first (resp. last) element
      satisfying a predicate, assuming that the predicate is increasing on
@@ -121,7 +127,13 @@ module Make_gen (T : sig
     | `First_on_right -> find_first_satisfying ?pos ?len t ~pred:is_right
   ;;
 
-  TEST_MODULE "test_binary_searchable" = struct
+end
+
+module Make_gen (T : Arg) = struct
+
+  include Make_gen_without_tests (T)
+
+  let%test_module "test_binary_searchable" = (module struct
     let compare x y =
       if x == y then 0 else
       if x == T.For_test.small then -1 else 1
@@ -136,40 +148,40 @@ module Make_gen (T : sig
 
     let (=) = polymorphic_compare
 
-    TEST = binary_search ~compare [|          |]  `First_equal_to s = None
-    TEST = binary_search ~compare [| s        |]  `First_equal_to s = Some 0
-    TEST = binary_search ~compare [| s        |]  `First_equal_to b = None
-    TEST = binary_search ~compare [| s ; b    |]  `First_equal_to s = Some 0
-    TEST = binary_search ~compare [| s ; b    |]  `First_equal_to b = Some 1
-    TEST = binary_search ~compare [| b ; b    |]  `First_equal_to s = None
-    TEST = binary_search ~compare [| s ; s    |]  `First_equal_to b = None
-    TEST = binary_search ~compare [| s ; b ; b |] `First_equal_to b = Some 1
-    TEST = binary_search ~compare [| s ; s ; b |] `First_equal_to s = Some 0
-    TEST = binary_search ~compare [| b ; b ; b |] `First_equal_to s = None
+    let%test _ = binary_search ~compare [|          |]  `First_equal_to s = None
+    let%test _ = binary_search ~compare [| s        |]  `First_equal_to s = Some 0
+    let%test _ = binary_search ~compare [| s        |]  `First_equal_to b = None
+    let%test _ = binary_search ~compare [| s ; b    |]  `First_equal_to s = Some 0
+    let%test _ = binary_search ~compare [| s ; b    |]  `First_equal_to b = Some 1
+    let%test _ = binary_search ~compare [| b ; b    |]  `First_equal_to s = None
+    let%test _ = binary_search ~compare [| s ; s    |]  `First_equal_to b = None
+    let%test _ = binary_search ~compare [| s ; b ; b |] `First_equal_to b = Some 1
+    let%test _ = binary_search ~compare [| s ; s ; b |] `First_equal_to s = Some 0
+    let%test _ = binary_search ~compare [| b ; b ; b |] `First_equal_to s = None
 
-    TEST = binary_search ~compare [|          |]  `Last_equal_to s = None
-    TEST = binary_search ~compare [| s        |]  `Last_equal_to s = Some 0
-    TEST = binary_search ~compare [| s        |]  `Last_equal_to b = None
-    TEST = binary_search ~compare [| s ; b    |]  `Last_equal_to b = Some 1
-    TEST = binary_search ~compare [| s ; b    |]  `Last_equal_to s = Some 0
-    TEST = binary_search ~compare [| b ; b    |]  `Last_equal_to s = None
-    TEST = binary_search ~compare [| s ; s    |]  `Last_equal_to b = None
-    TEST = binary_search ~compare [| s ; b ; b |] `Last_equal_to b = Some 2
-    TEST = binary_search ~compare [| s ; s ; b |] `Last_equal_to s = Some 1
-    TEST = binary_search ~compare [| b ; b; b |]  `Last_equal_to s = None
+    let%test _ = binary_search ~compare [|          |]  `Last_equal_to s = None
+    let%test _ = binary_search ~compare [| s        |]  `Last_equal_to s = Some 0
+    let%test _ = binary_search ~compare [| s        |]  `Last_equal_to b = None
+    let%test _ = binary_search ~compare [| s ; b    |]  `Last_equal_to b = Some 1
+    let%test _ = binary_search ~compare [| s ; b    |]  `Last_equal_to s = Some 0
+    let%test _ = binary_search ~compare [| b ; b    |]  `Last_equal_to s = None
+    let%test _ = binary_search ~compare [| s ; s    |]  `Last_equal_to b = None
+    let%test _ = binary_search ~compare [| s ; b ; b |] `Last_equal_to b = Some 2
+    let%test _ = binary_search ~compare [| s ; s ; b |] `Last_equal_to s = Some 1
+    let%test _ = binary_search ~compare [| b ; b; b |]  `Last_equal_to s = None
 
-    TEST = binary_search ~compare [||] `First_greater_than_or_equal_to s    = None
-    TEST = binary_search ~compare [| b |] `First_greater_than_or_equal_to s = Some 0
-    TEST = binary_search ~compare [| s |] `First_greater_than_or_equal_to s = Some 0
-    TEST = binary_search ~compare [| s |] `First_strictly_greater_than s    = None
+    let%test _ = binary_search ~compare [||] `First_greater_than_or_equal_to s    = None
+    let%test _ = binary_search ~compare [| b |] `First_greater_than_or_equal_to s = Some 0
+    let%test _ = binary_search ~compare [| s |] `First_greater_than_or_equal_to s = Some 0
+    let%test _ = binary_search ~compare [| s |] `First_strictly_greater_than s    = None
 
-    TEST = binary_search ~compare [||] `Last_less_than_or_equal_to  s   = None
-    TEST = binary_search ~compare [| b |] `Last_less_than_or_equal_to s = None
-    TEST = binary_search ~compare [| s |] `Last_less_than_or_equal_to s = Some 0
-    TEST = binary_search ~compare [| s |] `Last_strictly_less_than s = None
+    let%test _ = binary_search ~compare [||] `Last_less_than_or_equal_to  s   = None
+    let%test _ = binary_search ~compare [| b |] `Last_less_than_or_equal_to s = None
+    let%test _ = binary_search ~compare [| s |] `Last_less_than_or_equal_to s = Some 0
+    let%test _ = binary_search ~compare [| s |] `Last_strictly_less_than s = None
 
     let create_test_case (num_s, num_b) =
-      let arr = Array.create (num_s + num_b) b in
+      let arr = Array.make (num_s + num_b) b in
       for i = 0 to num_s -1 do
         arr.(i) <- s
       done;
@@ -181,124 +193,124 @@ module Make_gen (T : sig
 
     let both = (2531, 4717)
 
-    TEST = Option.is_some (binary_search (create_test_case only_small) ~compare `First_equal_to s)
+    let%test _ = Option.is_some (binary_search (create_test_case only_small) ~compare `First_equal_to s)
 
-    TEST =
+    let%test _ =
       let arr = create_test_case both in
       match binary_search arr ~compare `First_equal_to b with
       | None -> false
       | Some v -> v = 2531
 
-    TEST =
+    let%test _ =
       let arr = create_test_case only_small in
       binary_search arr ~compare `First_equal_to b = None
 
     let create_deterministic_test () =
       Array.init 100_000 (fun i -> if i > 50_000 then b else s)
 
-    TEST =
+    let%test _ =
       let arr = create_deterministic_test () in
       binary_search arr ~compare `First_equal_to s = Some 0
 
-    TEST =
+    let%test _ =
       let arr = create_deterministic_test () in
       binary_search arr ~compare `Last_equal_to s = Some 50_000
 
-    TEST =
+    let%test _ =
       let arr = create_deterministic_test () in
       binary_search arr ~compare `First_greater_than_or_equal_to s = Some 0
 
-    TEST =
+    let%test _ =
       let arr = create_deterministic_test () in
       binary_search arr ~compare `Last_less_than_or_equal_to s = Some 50_000
 
-    TEST =
+    let%test _ =
       let arr = create_deterministic_test () in
       binary_search arr ~compare `First_strictly_greater_than s = Some 50_001
 
-    TEST =
+    let%test _ =
       let arr = create_deterministic_test () in
       binary_search arr ~compare `Last_strictly_less_than b = Some 50_000
 
     (* tests around a gap*)
-    TEST =
+    let%test _ =
       let arr = create_deterministic_test () in
       binary_search arr ~compare `First_equal_to b  = Some 50_001
 
-    TEST =
+    let%test _ =
       let arr = create_deterministic_test () in
       binary_search arr ~compare `Last_equal_to b = Some 99_999
 
-    TEST =
+    let%test _ =
       let arr = create_deterministic_test () in
       binary_search arr ~compare `First_greater_than_or_equal_to b = Some 50_001
 
-    TEST =
+    let%test _ =
       let arr = create_deterministic_test () in
       binary_search arr ~compare `Last_less_than_or_equal_to b = Some 99_999
 
-    TEST =
+    let%test _ =
       let arr = create_deterministic_test () in
       binary_search arr ~compare `First_strictly_greater_than b = None
 
-    TEST =
+    let%test _ =
       let arr = create_deterministic_test () in
       binary_search arr ~compare `Last_strictly_less_than b = Some 50_000
 
     (* test beginning of array *)
 
-    TEST =
+    let%test _ =
       let arr = create_test_case only_big in
       binary_search arr ~compare `First_equal_to s  = None
 
-    TEST =
+    let%test _ =
       let arr = create_test_case only_big  in
       binary_search arr ~compare `Last_equal_to s = None
 
-    TEST =
+    let%test _ =
       let arr = create_test_case only_big  in
       binary_search arr ~compare `First_greater_than_or_equal_to s = Some 0
 
-    TEST =
+    let%test _ =
       let arr = create_test_case only_big  in
       binary_search arr ~compare `Last_less_than_or_equal_to s = None
 
-    TEST =
+    let%test _ =
       let arr = create_test_case only_big  in
       binary_search arr ~compare `First_strictly_greater_than s = Some 0
 
-    TEST =
+    let%test _ =
       let arr = create_test_case only_big  in
       binary_search arr ~compare `Last_strictly_less_than b = None
 
 
     (* test end of array *)
 
-    TEST =
+    let%test _ =
       let arr = create_test_case only_small  in
       binary_search arr ~compare `First_equal_to b  = None
 
-    TEST =
+    let%test _ =
       let arr = create_test_case only_small  in
       binary_search arr ~compare `Last_equal_to b = None
 
-    TEST =
+    let%test _ =
       let arr = create_test_case only_small  in
       binary_search arr ~compare `First_greater_than_or_equal_to b = None
 
-    TEST =
+    let%test _ =
       let arr = create_test_case only_small  in
       binary_search arr ~compare `Last_less_than_or_equal_to b = Some 9_999
 
-    TEST =
+    let%test _ =
       let arr = create_test_case only_small  in
       binary_search arr ~compare `First_strictly_greater_than s = None
 
-    TEST =
+    let%test _ =
       let arr = create_test_case only_small  in
       binary_search arr ~compare `Last_strictly_less_than b = Some 9_999
 
-    TEST_UNIT =
+    let%test_unit _ =
       let open Result in
       for length = 0 to 5 do
         for num_s = 0 to length do
@@ -335,33 +347,40 @@ module Make_gen (T : sig
             done;
           done;
         done;
-      done;
+      done
     ;;
 
     let binary_search_segmented a = binary_search_segmented (T.For_test.of_array a)
 
     (*test for binary_search_segmented*)
-    TEST =
+    let%test _ =
       let arr = create_deterministic_test () in
       let segment_of x = if x = b then `Right else `Left in
       binary_search_segmented arr ~segment_of `Last_on_left    = Some 50_000 &&
       binary_search_segmented arr ~segment_of `First_on_right  = Some 50_001
 
-    TEST =
+    let%test _ =
       let arr = create_deterministic_test () in
       let segment_of _ = `Right in
       binary_search_segmented arr ~segment_of `Last_on_left    = None &&
       binary_search_segmented arr ~segment_of `First_on_right  = Some 0
 
-    TEST =
+    let%test _ =
       let arr = create_deterministic_test () in
       let segment_of _ = `Left in
       binary_search_segmented arr ~segment_of `Last_on_left    = Some 99_999 &&
       binary_search_segmented arr ~segment_of `First_on_right  = None
 
-  end
+  end)
 
 end
+
+module Make_without_tests (T : Indexable_without_tests) =
+  Make_gen_without_tests (struct
+    type 'a elt = T.elt
+    type 'a t   = T.t
+    include (T : Indexable_without_tests with type elt := T.elt with type t := T.t)
+  end)
 
 module Make (T : Indexable) =
   Make_gen (struct
@@ -370,15 +389,25 @@ module Make (T : Indexable) =
     include (T : Indexable with type elt := T.elt with type t := T.t)
   end)
 
-module Make1 (T : Indexable1) =
-  Make_gen (struct
+module Make1_without_tests (T : Indexable1_without_tests) =
+  Make_gen_without_tests (struct
     type 'a elt = 'a
     type 'a t = 'a T.t
     let get = T.get
     let length = T.length
-    module For_test =
-    struct
+  end)
+
+module Make1 (T : Indexable1) =
+  Make_gen (struct
+    type 'a elt = 'a
+    type 'a t   = 'a T.t
+
+    let get    = T.get
+    let length = T.length
+
+    module For_test = struct
       include T.For_test
+
       let small = false
       let big   = true
     end

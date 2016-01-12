@@ -3,7 +3,7 @@ open Sexplib.Std
 open Bin_prot.Std
 
 module T0 = struct
-  type t = unit with sexp, bin_io, typerep
+  type t = unit [@@deriving sexp, bin_io, typerep]
 
   let compare _ _ = 0
   let hash _ = 0
@@ -17,6 +17,12 @@ end
 
 include T1
 include Identifiable.Make (T1)
+
+let invariant () = ()
+
+let gen      = Quickcheck.Generator.singleton ()
+let obs      = Quickcheck.Observer.singleton  ()
+let shrinker = Quickcheck.Shrinker.empty      ()
 
 module type S = sig end
 

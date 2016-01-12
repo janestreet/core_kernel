@@ -6,7 +6,22 @@
     For instance, [Async.Std.Rpc.Pipe_rpc.t] is parameterized by an error type, but a user
     may want to define a Pipe RPC that can't fail. *)
 
-type t = Nothing0.t
+(** Having [[@@deriving enumerate]] may seem strange due to the fact that generated
+    [val all : t list] is the empty list, so it seems like it could be of no use.
+
+    This may be true if you always expect your type to be [Nothing.t], but [[@@deriving
+    enumerate]] can be useful if you have a type which you expect to change over time.
+    For example, you may have a program which has to interact with multiple servers which
+    are possibly at different versions.  It may be useful in this program to have a
+    variant type which enumerates the ways in which the servers may differ.  When all the
+    servers are at the same version, you can change this type to [Nothing.t] and code
+    which uses an enumeration of the type will continue to work correctly.
+
+    This is a similar issue to the identifiability of [Nothing.t].  As discussed below,
+    another case where [[@deriving enumerate]] could be useful is when this type is part
+    of some larger type.
+*)
+type t = Nothing0.t [@@deriving enumerate]
 
 (** Because there are no values of type [Nothing.t], a piece of code that has a value of
     type [Nothing.t] must be unreachable.  In such an unreachable piece of code, one can
@@ -31,6 +46,6 @@ include Identifiable.S with type t := t
 
 module Stable : sig
   module V1 : sig
-    type nonrec t = t with sexp, bin_io, compare
+    type nonrec t = t [@@deriving sexp, bin_io, compare]
   end
 end

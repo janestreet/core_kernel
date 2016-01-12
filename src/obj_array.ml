@@ -127,7 +127,7 @@ include
       let of_bool b = Obj.repr (if b then 1 else 2 : int)
     end)
     (struct
-      type nonrec t = t with sexp_of
+      type nonrec t = t [@@deriving sexp_of]
       let create = create
       let get = get
       let set = set
@@ -145,32 +145,32 @@ let copy src =
 let truncate t ~len = Obj.truncate (Obj.repr (t : t)) len
 
 (* [create] *)
-TEST_UNIT =
+let%test_unit _ =
   let t = create ~len:0 in
-  assert (length t = 0);
+  assert (length t = 0)
 ;;
 
 (* [empty] *)
-TEST = length empty = 0
+let%test _ = length empty = 0
 
-TEST = does_raise (fun () -> get empty 0)
+let%test _ = does_raise (fun () -> get empty 0)
 
 (* [singleton] *)
-TEST = length (singleton zero_obj) = 1
+let%test _ = length (singleton zero_obj) = 1
 
-TEST = phys_equal (get (singleton zero_obj) 0) zero_obj
+let%test _ = phys_equal (get (singleton zero_obj) 0) zero_obj
 
-TEST = does_raise (fun () -> get (singleton zero_obj) 1)
+let%test _ = does_raise (fun () -> get (singleton zero_obj) 1)
 
-TEST_UNIT =
+let%test_unit _ =
   let f = 13. in
   let t = singleton (Obj.repr f) in
   invariant t;
-  assert (Polymorphic_compare.equal (Obj.repr f) (get t 0));
+  assert (Polymorphic_compare.equal (Obj.repr f) (get t 0))
 ;;
 
 (* [get], [unsafe_get], [set], [unsafe_set], [unsafe_set_assuming_currently_int] *)
-TEST_UNIT =
+let%test_unit _ =
   let t = create ~len:1 in
   assert (length t = 1);
   assert (phys_equal (get t 0) zero_obj);
@@ -185,26 +185,26 @@ TEST_UNIT =
   unsafe_set t 0 zero_obj;
   check_get zero_obj;
   unsafe_set_assuming_currently_int t 0 one_obj;
-  check_get one_obj;
+  check_get one_obj
 ;;
 
 (* [truncate] *)
-TEST = does_raise (fun () -> truncate empty ~len:0)
-TEST = does_raise (fun () -> truncate empty ~len:1)
-TEST = does_raise (fun () -> truncate empty ~len:(-1))
-TEST = does_raise (fun () -> truncate (create ~len:1) ~len:0)
-TEST = does_raise (fun () -> truncate (create ~len:1) ~len:2)
+let%test _ = does_raise (fun () -> truncate empty ~len:0)
+let%test _ = does_raise (fun () -> truncate empty ~len:1)
+let%test _ = does_raise (fun () -> truncate empty ~len:(-1))
+let%test _ = does_raise (fun () -> truncate (create ~len:1) ~len:0)
+let%test _ = does_raise (fun () -> truncate (create ~len:1) ~len:2)
 
-TEST_UNIT =
+let%test_unit _ =
   let t = create ~len:1 in
   truncate t ~len:1;
-  assert (length t = 1);
+  assert (length t = 1)
 ;;
 
-TEST_UNIT =
+let%test_unit _ =
   let t = create ~len:3 in
   truncate t ~len:2;
   assert (length t = 2);
   truncate t ~len:1;
-  assert (length t = 1);
+  assert (length t = 1)
 ;;

@@ -5,7 +5,7 @@
 
 open Sexplib
 
-type t with sexp_of
+type t [@@deriving sexp_of]
 
 val type_id_name : t -> string
 val type_id_uid  : t -> Type_equal.Id.Uid.t

@@ -4,7 +4,7 @@ open! Int.Replace_polymorphic_compare
 module Slots = Tuple_type.Slots
 
 module Slot = struct
-  type ('slots, 'a) t = int with sexp_of
+  type ('slots, 'a) t = int [@@deriving sexp_of]
 
   let equal (t1 : (_, _) t) t2 = t1 = t2
 
@@ -38,7 +38,7 @@ module Metadata = struct
       (* [Obj_array.length dummy = slots_per_tuple]. *)
     ; dummy : Obj_array.t sexp_opaque
     }
-  with fields, sexp_of
+  [@@deriving fields, sexp_of]
 
   let array_indices_per_tuple t = t.slots_per_tuple
 
@@ -77,7 +77,7 @@ let invariant slots_invariant t : unit =
       ~dummy:(check (fun dummy ->
         assert (Obj_array.length dummy = metadata.slots_per_tuple)))
   with exn ->
-    failwiths "Flat_array.invariant failed" (exn, t) <:sexp_of< exn * _ t >>
+    failwiths "Flat_array.invariant failed" (exn, t) [%sexp_of: exn * _ t]
 ;;
 
 let set_metadata (type slots) (t : slots t) metadata =
@@ -92,7 +92,7 @@ let create_array (type slots) (metadata : slots Metadata.t) : slots t =
 
 let check_index t metadata i =
   if i < 0 || i >= metadata.length
-  then failwiths "Flat_array got invalid index" (i, t) <:sexp_of< int * _ t >>;
+  then failwiths "Flat_array got invalid index" (i, t) [%sexp_of: int * _ t];
 ;;
 
 let set_to_init t tuple_num =
@@ -119,7 +119,7 @@ let is_init t tuple_num =
 
 let create (type tuple) (slots : (tuple, _) Slots.t) ~len:length dummy =
   if length < 0
-  then failwiths "Flat_array.create got invalid length" length <:sexp_of< int >>;
+  then failwiths "Flat_array.create got invalid length" length [%sexp_of: int];
   let slots_per_tuple = Slots.slots_per_tuple slots in
   let dummy =
     if slots_per_tuple = 1
@@ -197,7 +197,7 @@ include
   Blit.Make1
     (struct
       module Slots = Slots
-      type nonrec 'a t = 'a t with sexp_of
+      type nonrec 'a t = 'a t [@@deriving sexp_of]
       type 'a z = 'a Slots.t1 t
       let length      = length
       let get         = get_all_slots

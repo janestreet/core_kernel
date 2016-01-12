@@ -5,7 +5,7 @@ module type T = sig type t end
 module Make (T1 : T) (T2 : T) = struct type t = T1.t * T2.t end
 
 module T2 = struct
-  type ('a, 'b) t = 'a * 'b with sexp, typerep
+  type ('a, 'b) t = 'a * 'b [@@deriving sexp, typerep]
 
   let create a b = (a, b)
 
@@ -33,7 +33,7 @@ module T2 = struct
 end
 
 module T3 = struct
-  type ('a, 'b, 'c) t = 'a * 'b * 'c with sexp, typerep
+  type ('a, 'b, 'c) t = 'a * 'b * 'c [@@deriving sexp, typerep]
 
   let create a b c = (a, b, c)
 
@@ -67,21 +67,21 @@ module T3 = struct
 end
 
 module type Comparable_sexpable = sig
-  type t with sexp
+  type t [@@deriving sexp]
   include Comparable.S with type t := t
 end
 
 module type Hashable_sexpable = sig
-  type t with sexp
+  type t [@@deriving sexp]
   include Hashable.S with type t := t
 end
 
 module Sexpable (S1 : Sexpable.S) (S2 : Sexpable.S) = struct
-  type t = S1.t * S2.t with sexp
+  type t = S1.t * S2.t [@@deriving sexp]
 end
 
 module Binable (B1 : Binable.S) (B2 : Binable.S) = struct
-  type t = B1.t * B2.t with bin_io
+  type t = B1.t * B2.t [@@deriving bin_io]
 end
 
 module Comparable (S1 : Comparable_sexpable) (S2 : Comparable_sexpable) = struct

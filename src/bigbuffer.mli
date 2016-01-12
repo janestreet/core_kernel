@@ -8,7 +8,7 @@
    buffer size, and improves I/O-performance when reading/writing from/to channels.
 *)
 
-type t with sexp_of
+type t [@@deriving sexp_of]
 (** The abstract type of buffers. *)
 
 val create : int -> t

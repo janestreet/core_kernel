@@ -12,7 +12,7 @@ module Slot  = Slot
 
 let does_raise = Exn.does_raise
 
-type nonrec 'slots t = 'slots t with sexp_of
+type nonrec 'slots t = 'slots t [@@deriving sexp_of]
 
 let invariant = invariant
 
@@ -41,7 +41,7 @@ let set_capacity  = set_capacity
 let unsafe_get    = unsafe_get
 let unsafe_set    = unsafe_set
 
-TEST_UNIT =
+let%test_unit _ =
   let num_enqueues = 5 in
   let check (type a) (type tuple) (type variant)
         (init : a)
@@ -51,7 +51,7 @@ TEST_UNIT =
         (make_tuple : a -> tuple)
         (_sexp_of_tuple : tuple -> Sexp.t)
         (enqueue : (tuple, variant) Slots.t t -> a -> unit) : unit =
-    if false then eprints "testing" slots <:sexp_of< (_, _) Slots.t >>;
+    if false then eprints "testing" slots [%sexp_of: (_, _) Slots.t];
     let changed_tuple = make_tuple changed in
     let init_tuple = make_tuple init in
     let t = create slots in
@@ -82,7 +82,7 @@ TEST_UNIT =
       List.iter [ 1; 2; 100 ] ~f:(fun capacity ->
         set_capacity t capacity;
         assert (Flat_queue.capacity t >= capacity));
-      for _i = 1 to 10 do
+      for _ = 1 to 10 do
         enqueue t changed;
       done;
       List.iter [ Int.min_value; -1; 0; length t - 1 ] ~f:(fun capacity ->
@@ -126,21 +126,21 @@ TEST_UNIT =
     done;
     assert (behaves_like_it_is_empty t);
     (* Check the circular buffer. *)
-    for _i = 1 to 2 do
+    for _ = 1 to 2 do
       enqueue t changed;
     done;
-    for _i = 1 to 100 do
+    for _ = 1 to 100 do
       enqueue t changed;
       drop_front t;
       assert (length t = 2);
     done;
-    for _i = 1 to 2 do
+    for _ = 1 to 2 do
       drop_front t;
     done;
     assert (behaves_like_it_is_empty t);
     (* Check [clear]. *)
     for i = 0 to 5 do
-      for _j = 1 to i do
+      for _ = 1 to i do
         enqueue t changed;
       done;
       clear t;
@@ -149,14 +149,14 @@ TEST_UNIT =
     (* Check growing with the front at various places. *)
     for shift = 0 to 3 do
       let t = create slots in
-      for _i = 1 to 3 do
+      for _ = 1 to 3 do
         enqueue t changed;
       done;
-      for _i = 1 to shift do
+      for _ = 1 to shift do
         enqueue t changed;
         drop_front t;
       done;
-      for _i = 1 to 4 do
+      for _ = 1 to 4 do
         enqueue t changed;
       done;
       for i = 0 to 6 do
@@ -177,50 +177,50 @@ TEST_UNIT =
   let slots8 () = slots7 () @ [ Slot.t7 ] in
   let slots9 () = slots8 () @ [ Slot.t8 ] in
   check Slots.t1 (slots1 ()) (fun i -> i)
-    <:sexp_of< int >>
+    [%sexp_of: int]
     (fun t a -> enqueue1 t a);
   check Slots.t2 (slots2 ()) (fun i -> (i, i))
-    <:sexp_of< int * int >>
+    [%sexp_of: int * int]
     (fun t a -> enqueue2 t a a);
   check Slots.t3 (slots3 ()) (fun i -> (i, i, i))
-    <:sexp_of< int * int * int >>
+    [%sexp_of: int * int * int]
     (fun t a -> enqueue3 t a a a);
   check Slots.t4 (slots4 ()) (fun i -> (i, i, i, i))
-    <:sexp_of< int * int * int * int >>
+    [%sexp_of: int * int * int * int]
     (fun t a -> enqueue4 t a a a a);
   check Slots.t5 (slots5 ()) (fun i -> (i, i, i, i, i))
-    <:sexp_of< int * int * int * int * int >>
+    [%sexp_of: int * int * int * int * int]
     (fun t a -> enqueue5 t a a a a a);
   check Slots.t6 (slots6 ()) (fun i -> (i, i, i, i, i, i))
-    <:sexp_of< int * int * int * int * int * int >>
+    [%sexp_of: int * int * int * int * int * int]
     (fun t a -> enqueue6 t a a a a a a);
   check Slots.t7 (slots7 ()) (fun i -> (i, i, i, i, i, i, i))
-    <:sexp_of< int * int * int * int * int * int * int >>
+    [%sexp_of: int * int * int * int * int * int * int]
     (fun t a -> enqueue7 t a a a a a a a);
   check Slots.t8 (slots8 ()) (fun i -> (i, i, i, i, i, i, i, i))
-    <:sexp_of< int * int * int * int * int * int * int * int >>
+    [%sexp_of: int * int * int * int * int * int * int * int]
     (fun t a -> enqueue8 t a a a a a a a a);
   check Slots.t9 (slots9 ()) (fun i -> (i, i, i, i, i, i, i, i, i))
-    <:sexp_of< int * int * int * int * int * int * int * int * int >>
-    (fun t a -> enqueue9 t a a a a a a a a a);
+    [%sexp_of: int * int * int * int * int * int * int * int * int]
+    (fun t a -> enqueue9 t a a a a a a a a a)
 ;;
 
-TEST_UNIT = (* mutation during [fold] *)
+let%test_unit _ = (* mutation during [fold] *)
   let t = create Slots.t1 in
   enqueue1 t ();
-  assert (does_raise (fun () -> fold t ~init:() ~f:(fun () () -> enqueue1 t ())));
+  assert (does_raise (fun () -> fold t ~init:() ~f:(fun () () -> enqueue1 t ())))
 ;;
 
-TEST_UNIT = (* mutation during [iter] *)
+let%test_unit _ = (* mutation during [iter] *)
   let t = create Slots.t1 in
   enqueue1 t ();
-  assert (does_raise (fun () -> iter t ~f:(fun () -> enqueue1 t ())));
+  assert (does_raise (fun () -> iter t ~f:(fun () -> enqueue1 t ())))
 ;;
 
 (* Compare [Flat_queue] with [Core_queue]. *)
-TEST_MODULE = struct
+let%test_module _ = (module struct
   module type Queue = sig
-    type 'a t with sexp_of
+    type 'a t [@@deriving sexp_of]
 
     val create : unit -> _ t
     val enqueue : 'a t -> 'a -> unit
@@ -229,7 +229,7 @@ TEST_MODULE = struct
   end
 
   module This_queue : Queue = struct
-    type 'a t = 'a Slots.t1 Flat_queue.t with sexp_of
+    type 'a t = 'a Slots.t1 Flat_queue.t [@@deriving sexp_of]
 
     let create () = Flat_queue.create Slots.t1
 
@@ -270,7 +270,7 @@ TEST_MODULE = struct
 
     let sexp_of_t (type a) sexp_of_a (t : a t) =
       let module Q = (val t) in
-      <:sexp_of< a Q.t >> Q.t
+      [%sexp_of: a Q.t] Q.t
     ;;
 
     let create (type a) (q : (module Queue)) : a t =
@@ -306,12 +306,12 @@ TEST_MODULE = struct
   module Here = Source_code_position
 
   module type Elt = sig
-    type t with sexp_of
+    type t [@@deriving sexp_of]
     val equal : t -> t -> bool
   end
 
   module Queues : sig
-    type 'a t with sexp_of
+    type 'a t [@@deriving sexp_of]
     val create
       :  (module Elt with type t = 'a)
       -> (module Queue) list
@@ -328,30 +328,30 @@ TEST_MODULE = struct
     let equal_a   (type a) (t : a t) = let module Elt = (val t.elt) in Elt.equal
     let sexp_of_a (type a) (t : a t) = let module Elt = (val t.elt) in Elt.sexp_of_t
 
-    let sexp_of_t sexp_of_a t = <:sexp_of< a Queue.t list >> t.queues
+    let sexp_of_t sexp_of_a t = [%sexp_of: a Queue.t list] t.queues
 
     let ensure_consistent here t =
       if not (all_are_equal (List.map t.queues ~f:Queue.to_list)
                 ~equal:(fun l1 l2 -> List.equal l1 l2 ~equal:(equal_a t)))
       then
         let sexp_of_a = sexp_of_a t in
-        failwiths "inconsistent queues" (here, t) <:sexp_of< Here.t * a t >>
+        failwiths "inconsistent queues" (here, t) [%sexp_of: Here.t * a t]
     ;;
 
     let create elt queues =
-      if List.is_empty queues then failwiths "empty queues" _here_ <:sexp_of< Here.t >>;
+      if List.is_empty queues then failwiths "empty queues" [%here] [%sexp_of: Here.t];
       let t =
         { elt
         ; queues = List.map queues ~f:Queue.create
         }
       in
-      ensure_consistent _here_ t;
+      ensure_consistent [%here] t;
       t
     ;;
 
     let enqueue t a =
       List.iter t.queues ~f:(fun q -> Queue.enqueue q a);
-      ensure_consistent _here_ t;
+      ensure_consistent [%here] t;
     ;;
 
     let dequeue t =
@@ -359,25 +359,25 @@ TEST_MODULE = struct
       if not (all_are_equal as_ ~equal:(Option.equal (equal_a t)))
       then begin
         let sexp_of_a = sexp_of_a t in
-        failwiths "dequeue inconsistency" (_here_, t, as_)
-          <:sexp_of< Here.t * a t * a option list >>;
+        failwiths "dequeue inconsistency" ([%here], t, as_)
+          [%sexp_of: Here.t * a t * a option list];
       end;
-      ensure_consistent _here_ t;
+      ensure_consistent [%here] t;
       List.hd_exn as_;
     ;;
   end
 
-  TEST_UNIT =
+  let%test_unit _ =
     let random_state = Random.State.make [||] in
     let qs =
       Queues.create (module Int) [ (module This_queue); (module That_queue)]
     in
     let r = ref 0 in
-    for _i = 1 to 1_000 do
+    for _ = 1 to 1_000 do
       let op = Random.State.int random_state 10 in
       if op < 7
       then (incr r; Queues.enqueue qs !r)
       else ignore (Queues.dequeue qs : int option);
-    done;
+    done
   ;;
-end
+end)

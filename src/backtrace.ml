@@ -16,9 +16,9 @@ let sexp_of_t t =
        ~f:(fun x -> Sexp.Atom x))
 ;;
 
-TEST_UNIT =
+let%test_unit _ =
   let t = get () in
-  assert (String.length (to_string t) > 0);
+  assert (String.length (to_string t) > 0)
 ;;
 
 module Exn = struct
@@ -27,7 +27,7 @@ module Exn = struct
   let most_recent   = Printexc.get_backtrace
 
   (* We turn on backtraces by default if OCAMLRUNPARAM isn't set. *)
-  let () =
+  let maybe_set_recording () =
     match Sys.getenv "OCAMLRUNPARAM" with
     | exception _ -> set_recording true
     | _ -> ()  (* the caller set something, they are responsible *)
@@ -39,5 +39,9 @@ module Exn = struct
     protect ~f ~finally:(fun () -> set_recording saved)
   ;;
 
-  TEST = "" = with_recording false ~f:most_recent
+  let%test _ = "" = with_recording false ~f:most_recent
 end
+
+let initialize_module () =
+  Exn.maybe_set_recording ();
+;;

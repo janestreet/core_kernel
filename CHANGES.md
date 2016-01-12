@@ -1,3 +1,578 @@
+## 113.24.00
+
+- Add `Container.Make0` for monomorphic container types.
+
+- Improved the performance of the implementation of `Bounded_int_table.find`.
+
+- Switched to ppx
+
+- Remove references to `Core_list` from `Sequence`.
+
+- Added functions to `Bigstring` and `Iobuf` for reading unsigned 64-bit
+  integers.
+
+- Move `Comparable.bound` to `Maybe_bound.t`.  The purpose is to break up
+  dependencies between the two.
+
+- `Doubly_linked` allocated during iteration. This became a large source of
+  allocation for simple benchmarks like TCP pingpong (`async/bench/pingpong`).
+  Some unnecessary allocations have been removed.
+
+- Added `Timing_wheel.next_alarm_fires_at_exn`, which is useful to avoid
+  allocation when you know the timing wheel isn't empty.
+
+- Make versions of `Binary_searchable.Make*` that don't require a `For_test` argument.
+  This allows `Binary_searchable.Make` to be used for types that don't easily convert from arrays.
+
+- Add `Quickcheckable` interface to Core and move generators/observers into type modules.
+
+  Renames core\_list.ml to core\_list0.ml, then adds a new core\_list.ml with quickcheck
+  generators and observers.  This allows quickcheck.ml to use core\_list0.ml without a
+  dependency cycle.
+
+  The feature also moves the contents of quickcheck.mli into quickcheck\_intf.ml.
+
+- Made `Core.Unpack_buffer.Unpack_one.t` be a unary type rather than a
+  binary one, by hiding its `partial_unpack` type under an existential.
+
+  This makes it possible to make `Unpack_one` into a monad because we
+  can combine two `Unpack_one.t`'s with different `partial_unpack` types
+  into a new `Unpack_one.t` with a different `partial_unpack` type.
+
+- https://github.com/janestreet/core\_kernel/pull/20
+  Core.Std module is not found when compiling lib\_test/pool\_caml\_modify\_check.ml.
+
+- Added an optional argument `?key_order` for specifying the order of
+  Map.to\_alist output: either `Increasing or `Decreasing.
+
+  The default key order is no longer left unspecified: we're now
+  committed to the \`Increasing, which was the old behavior.
+
+- Add Sexpable.Of\_sexpable2 functor, for symmetry with Binable.Of\_binable2.
+  Add sexpable.mli
+
+- Added a function for sequencing computations stored in a total map:
+  `Total_map.sequence`.
+
+- Added `Core.Bus`, a publisher/subscriber system within the memory
+  space of the program.  This is a synchronous version of `Async.Bus`.
+
+- Added `Core_map.fold2` (fold based on the contents of two maps side-by-side).
+
+- `Core.Interfaces` defines the `Unit` module type to be `sig end`.
+  Increase uniformity with its other definitions by defining it to be
+  `Unit.S` instead.
+
+- Adapt `Core_random.int` to accept larger values than `1 lsl 30`.
+
+- Mark the `Sexpable.Of_*` and `Binable.Of_*` functors as stable.
+
+- In `Core_char.int_is_ok`, used by `of_int` and `of_int_exn`, use int compare
+  instead of polymorphic compare.
+
+- Fix a few files where toplevel side effects might not be running
+  when we don't pack libraries anymore and use -no-alias-deps.
+
+- In `Char.For_quickcheck`, memoize construction of the filtered chars generators, since if
+  they are used once, they are likely to be used many times, and the construction is costly
+  compared to generating a single char.
+
+- Extend `Core_map` to implement quickcheckable
+  Extend `Core_set` to implement quickcheckable
+
+- In `Avltree.add`, replace `?(replace = true)` with `~replace`.  This both makes the
+  behavior more explicit, and saves some allocation occasionally.
+
+- Reimplement `Avltree.iter` directly, rather than using `fold`, which requires allocating
+  a closure.  This winds up being expensive during `Hashtbl.iter`.
+
+- Add a function in Blang to deal with boolean expressions E representing the
+  membership of elements in a set, given a universe U and a function projecting
+  each atoms of E to a subset of U.
+
+  Example:
+  --------
+
+  {`
+  Blang.eval_set ~universe:js_tech resolve_named_set
+    ("(or (and has-blue-eyes has-brown-hair) (and has-brown-eyes has-blue-hair))"
+    |> Sexp.of_string
+    |> t_of_sexp)
+  `}
+
+
+- Expose more functions in univ_map interface
+
+- Made `Random.self_init` by default raise if used in inline tests.
+  One can opt out by passing `~allow_in_tests:true`.
+
+- In core\_hashtbl.ml, `maybe_resize_table` allocates the same closure in each iteration of a
+  for loop.  Allocate it just once.
+
+- `Hashtbl.remove_one` and `Hashtbl.remove_multi` are the same function, written twice.
+  Remove `remove_one` and replace uses with `remove_multi`.
+
+- `Bigstring.unsafe_{get,set}-{,u}int8` used the generic bigarray
+  access function without a type annotation. As a result the compiler
+  generated a call to the generic C function.
+
+  Fixed this by adding type annotations.
+
+- Add new functions to map that add common missing functionality and/or that makes the interface more uniform and consistent with other container modules.
+
+- Made `Unpack_buffer.Unpack_one` monadic so that users can easily
+  compose file parsers
+
+  Added a couple simple parsers as examples and for testing.
+
+- Avoid use of polymorphic compare in Quickcheck.
+  Make `Quickcheck.Generator.bind_choice` lazy: do not eagerly descend into all branches.
+
+  Reduces memory overhead by setting a threshold on the probability of choices that are
+  remembered and discarded by `Quickcheck.iter` and friends.
+
+  Motivation: Currently, `Quickcheck.iter` and related functions guarantee never to repeat
+  a choice from a generator.  This winds up recording every choice ever made, which for a
+  lot of generators is a prohibitive cost in space, and most of the recorded values are very
+  unlikely to be repeated anyway.
+
+  Implementation: This feature sets a probability threshold below which choices will not be
+  remembered.  Choosing a fairly low, but still non-zero, threshold means values are still
+  very unlikely to be repeated, but memory usage stays low.
+
+  As of this version, the benefits of "forgetting" unlikely-to-repeat values:
+
+  ┌──────────────────────────────────────────┬──────────┬─────────┬──────────┬──────────┬────────────┐
+  │ Name                                     │ Time/Run │ mWd/Run │ mjWd/Run │ Prom/Run │ Percentage │
+  ├──────────────────────────────────────────┼──────────┼─────────┼──────────┼──────────┼────────────┤
+  │ `quickcheck.ml:Quickcheck.iter` remember │  20.26ms │ 16.33Mw │ 100.85kw │ 100.85kw │    100.00% │
+  │ `quickcheck.ml:Quickcheck.iter` forget   │  17.65ms │ 16.21Mw │  34.83kw │  34.83kw │     87.10% │
+  └──────────────────────────────────────────┴──────────┴─────────┴──────────┴──────────┴────────────┘
+
+- Optimizations to:
+   + various `Float.t` validation functions
+   + various functions in `Validate`
+   + `List.fold_right`
+
+
+- Made the type of `Option.compare` compatible with `@@deriving compare`.
+
+- Fixed an example code fragment in a comment in applicative_intf.ml
+
+- In `Core_hashtbl`, the `add_worker` function used a `bool ref` both internally and to pass
+  to `Avltree` to track whether a new key is added.  This was allocated on every
+  call to `add` or `set`, and `set` didn't even use its contents.
+
+  This version pre-allocates the `bool ref` inside each `Core_hashtbl.t` and reuses it. It
+  still can't be a `mutable` field because it does need to be passed to `Avltree`.
+
+  After change:
+
+    ┌───────────────────────────────────────────────────┬──────────────┬────────────┬────────────┬────────────┬────────────┐
+    │ Name                                              │     Time/Run │    mWd/Run │   mjWd/Run │   Prom/Run │ Percentage │
+    ├───────────────────────────────────────────────────┼──────────────┼────────────┼────────────┼────────────┼────────────┤
+    │        Hashtbl.set `no collisions`                │      84.73ns │      3.00w │      0.83w │      0.83w │      0.01% │
+    │        Hashtbl.set `w/ collisions`                │     112.46ns │            │            │            │      0.02% │
+    │        Hashtbl.change `no collisions`             │      82.74ns │      3.50w │      0.53w │      0.53w │      0.01% │
+    │        Hashtbl.change `w/ collisions`             │     191.50ns │      4.56w │      1.15w │      1.15w │      0.03% │
+    │        Hashtbl.merge `no collisions`              │ 292_976.43ns │ 26_669.00w │ 15_381.62w │ 12_305.62w │     48.52% │
+    │        Hashtbl.merge `w/ collisions`              │ 603_822.86ns │ 33_001.00w │ 20_037.22w │ 16_961.22w │    100.00% │
+    │        Hashtbl.add_exn `no resize, no collisions` │  80_992.57ns │  3_088.00w │  4_102.63w │  3_077.63w │     13.41% │
+    │        Hashtbl.add_exn `no resize, w/ collisions` │ 178_080.05ns │  4_621.00w │  5_668.61w │  4_643.61w │     29.49% │
+    │        Hashtbl.add_exn `w/ resize, no collisions` │ 176_442.98ns │ 16_403.00w │  9_222.64w │  6_148.64w │     29.22% │
+    │        Hashtbl.add_exn `w/ resize, w/ collisions` │ 297_577.29ns │ 19_472.00w │ 12_292.13w │  9_218.13w │     49.28% │
+    └───────────────────────────────────────────────────┴──────────────┴────────────┴────────────┴────────────┴────────────┘
+
+  Before change:
+
+    ┌───────────────────────────────────────────────────┬──────────────┬────────────┬────────────┬────────────┬────────────┐
+    │ Name                                              │     Time/Run │    mWd/Run │   mjWd/Run │   Prom/Run │ Percentage │
+    ├───────────────────────────────────────────────────┼──────────────┼────────────┼────────────┼────────────┼────────────┤
+    │        Hashtbl.set `no collisions`                │     104.88ns │      5.00w │      1.26w │      1.26w │      0.02% │
+    │        Hashtbl.set `w/ collisions`                │     114.33ns │      2.00w │            │            │      0.02% │
+    │        Hashtbl.change `no collisions`             │      85.79ns │      4.50w │      0.58w │      0.58w │      0.02% │
+    │        Hashtbl.change `w/ collisions`             │     198.75ns │      5.56w │      1.28w │      1.28w │      0.04% │
+    │        Hashtbl.merge `no collisions`              │ 307_857.59ns │ 31_787.00w │ 15_380.91w │ 12_304.91w │     58.19% │
+    │        Hashtbl.merge `w/ collisions`              │ 529_054.02ns │ 38_119.00w │ 20_015.32w │ 16_939.32w │    100.00% │
+    │        Hashtbl.add_exn `no resize, no collisions` │  77_708.20ns │  5_135.00w │  4_101.83w │  3_076.83w │     14.69% │
+    │        Hashtbl.add_exn `no resize, w/ collisions` │ 180_950.23ns │  6_668.00w │  5_638.77w │  4_613.77w │     34.20% │
+    │        Hashtbl.add_exn `w/ resize, no collisions` │ 177_492.82ns │ 19_476.00w │  9_237.07w │  6_163.07w │     33.55% │
+    │        Hashtbl.add_exn `w/ resize, w/ collisions` │ 285_298.72ns │ 22_545.00w │ 12_330.90w │  9_256.90w │     53.93% │
+    └───────────────────────────────────────────────────┴──────────────┴────────────┴────────────┴────────────┴────────────┘
+
+
+- In `Core_hashtbl.add_worker`, removed a `match` that avoided calling `Avltree.add`, but
+  actually did hurt performance overall.
+
+  Perhaps at some point before cross-module inlining, this was a helpful optimization.
+  Right now it bypasses the mutation inside `Avltree`, so replacing a value in a
+  non-colliding bucket (a `Leaf`) causes unnecessary re-allocation of the leaf.
+
+  After changes:
+
+    ┌───────────────────────────────────────────────────┬──────────────┬────────────┬────────────┬────────────┬────────────┐
+    │ Name                                              │     Time/Run │    mWd/Run │   mjWd/Run │   Prom/Run │ Percentage │
+    ├───────────────────────────────────────────────────┼──────────────┼────────────┼────────────┼────────────┼────────────┤
+    │        Hashtbl.set `no collisions`                │      52.19ns │      2.00w │            │            │            │
+    │        Hashtbl.set `w/ collisions`                │     112.04ns │      2.00w │            │            │      0.02% │
+    │        Hashtbl.change `no collisions`             │      87.25ns │      4.50w │      0.58w │      0.58w │      0.02% │
+    │        Hashtbl.change `w/ collisions`             │     195.85ns │      5.56w │      1.29w │      1.29w │      0.04% │
+    │        Hashtbl.merge `no collisions`              │ 308_164.10ns │ 31_787.00w │ 15_380.91w │ 12_304.91w │     58.48% │
+    │        Hashtbl.merge `w/ collisions`              │ 526_914.80ns │ 38_119.00w │ 20_013.81w │ 16_937.81w │    100.00% │
+    │        Hashtbl.add_exn `no resize, no collisions` │  76_983.60ns │  5_135.00w │  4_100.44w │  3_075.44w │     14.61% │
+    │        Hashtbl.add_exn `no resize, w/ collisions` │ 174_712.92ns │  6_668.00w │  5_667.47w │  4_642.47w │     33.16% │
+    │        Hashtbl.add_exn `w/ resize, no collisions` │ 176_681.57ns │ 19_476.00w │  9_231.75w │  6_157.75w │     33.53% │
+    │        Hashtbl.add_exn `w/ resize, w/ collisions` │ 280_448.62ns │ 22_545.00w │ 12_293.32w │  9_219.32w │     53.22% │
+    └───────────────────────────────────────────────────┴──────────────┴────────────┴────────────┴────────────┴────────────┘
+
+  Before changes:
+
+    ┌───────────────────────────────────────────────────┬──────────────┬────────────┬────────────┬────────────┬────────────┐
+    │ Name                                              │     Time/Run │    mWd/Run │   mjWd/Run │   Prom/Run │ Percentage │
+    ├───────────────────────────────────────────────────┼──────────────┼────────────┼────────────┼────────────┼────────────┤
+    │        Hashtbl.set `no collisions`                │     104.88ns │      5.00w │      1.26w │      1.26w │      0.02% │
+    │        Hashtbl.set `w/ collisions`                │     114.33ns │      2.00w │            │            │      0.02% │
+    │        Hashtbl.change `no collisions`             │      85.79ns │      4.50w │      0.58w │      0.58w │      0.02% │
+    │        Hashtbl.change `w/ collisions`             │     198.75ns │      5.56w │      1.28w │      1.28w │      0.04% │
+    │        Hashtbl.merge `no collisions`              │ 307_857.59ns │ 31_787.00w │ 15_380.91w │ 12_304.91w │     58.19% │
+    │        Hashtbl.merge `w/ collisions`              │ 529_054.02ns │ 38_119.00w │ 20_015.32w │ 16_939.32w │    100.00% │
+    │        Hashtbl.add_exn `no resize, no collisions` │  77_708.20ns │  5_135.00w │  4_101.83w │  3_076.83w │     14.69% │
+    │        Hashtbl.add_exn `no resize, w/ collisions` │ 180_950.23ns │  6_668.00w │  5_638.77w │  4_613.77w │     34.20% │
+    │        Hashtbl.add_exn `w/ resize, no collisions` │ 177_492.82ns │ 19_476.00w │  9_237.07w │  6_163.07w │     33.55% │
+    │        Hashtbl.add_exn `w/ resize, w/ collisions` │ 285_298.72ns │ 22_545.00w │ 12_330.90w │  9_256.90w │     53.93% │
+    └───────────────────────────────────────────────────┴──────────────┴────────────┴────────────┴────────────┴────────────┘
+
+- Add new functions to hashtbl that add common missing functionality and/or that makes the interface more uniform and consistent with other container modules.
+
+- Add a bunch of functions to list and array that add common missing functionality and/or that make their interfaces more uniform and consistent with other container modules.
+
+- Rewrite `Hashtbl.merge` to be simpler and faster.
+
+  After changes:
+
+    ┌──────────────────────────────────────┬──────────┬─────────┬──────────┬──────────┬────────────┐
+    │ Name                                 │ Time/Run │ mWd/Run │ mjWd/Run │ Prom/Run │ Percentage │
+    ├──────────────────────────────────────┼──────────┼─────────┼──────────┼──────────┼────────────┤
+    │        Hashtbl.merge `no collisions` │ 172.57us │ 17.44kw │   9.22kw │   7.69kw │     48.76% │
+    │        Hashtbl.merge `w/ collisions` │ 284.55us │ 20.61kw │  11.53kw │   9.99kw │     80.41% │
+    │ Pooled_hashtbl.merge `no collisions` │ 260.57us │  5.20kw │  19.18kw │   3.09kw │     73.63% │
+    │ Pooled_hashtbl.merge `w/ collisions` │ 353.88us │  5.20kw │  19.18kw │   3.09kw │    100.00% │
+    └──────────────────────────────────────┴──────────┴─────────┴──────────┴──────────┴────────────┘
+
+  Before changes:
+
+    ┌──────────────────────────────────────┬──────────┬─────────┬──────────┬──────────┬────────────┐
+    │ Name                                 │ Time/Run │ mWd/Run │ mjWd/Run │ Prom/Run │ Percentage │
+    ├──────────────────────────────────────┼──────────┼─────────┼──────────┼──────────┼────────────┤
+    │        Hashtbl.merge `no collisions` │ 309.59us │ 31.79kw │  15.38kw │  12.30kw │     48.91% │
+    │        Hashtbl.merge `w/ collisions` │ 526.67us │ 38.12kw │  19.97kw │  16.90kw │     83.21% │
+    │ Pooled_hashtbl.merge `no collisions` │ 469.41us │  7.32kw │  35.29kw │   3.12kw │     74.16% │
+    │ Pooled_hashtbl.merge `w/ collisions` │ 632.96us │  7.32kw │  35.29kw │   3.12kw │    100.00% │
+    └──────────────────────────────────────┴──────────┴─────────┴──────────┴──────────┴────────────┘
+
+- Make `Hashtbl` functions raise an exception if a callback passed in as an argument mutates
+  one of the hash tables being worked on.
+
+  Usually, though not always, this comes up for iteration functions.  Once a hash table has
+  been mutated, it is unsafe to continue operating on it, as its structure may have changed.
+  Buckets and their contents may have been moved or resized; continuing may result in
+  skipping key/value pairs, repeating key/value pairs, or executing unsafe operations.
+
+  This feature adds a `mutation_allowed` flag to hash tables.  Each mutating operation first
+  checks the flag, and raises if it is not set.  Each operation with callbacks that must not
+  mutate unsets the flag before calling the callbacks, and restores the flag's original
+  value when it finishes.
+
+  We compared the timing of this implementation to an alternate implementation using a
+  mutation counter, and the time and space used for this implementation was much better for
+  iteration and within epsilon of the other for single-key operations like `set`.
+
+
+- Array function names related to zipping are all over the place. Make
+  them match List, which has a nice uniform naming scheme.
+
+  * Rename `combine` -> `zip_exn`
+  * Rename `split` -> `unzip`
+  * (`zip` remains named as `zip`)
+
+- Add `~key` and `~data` labels to `Hashtbl.filteri_inplace`
+
+- Added `Hash_set.to_hashtbl`, by analogy to `Set.to_map`.
+
+- Since we are mutating avltrees in place, make sure the compiler sees
+  the type parameters as invariant.
+
+  Tested that a segfaulting example doesn't compile anymore.
+
+
+- Add label `f` to Hashtbl.change, Map.change, & family.
+
+  Introduce the new function `update` in those modules, which enforces
+  statically the presence of a resulting value
+
+  Example:
+
+  -|val Hashtbl.change : 'a t -> key -> ('a option -> 'a option) -> unit
+
+  +|val Hashtbl.change : 'a t -> key -> f:('a option -> 'a option) -> unit
+  +|val Hashtbl.update : 'a t -> key -> f:('a option -> 'a) -> unit
+
+  The motivation for the introduction of `update` is that in an overwhelming
+  majority of the places where `Hashtbl.change` is used in our codebase, it is
+  statically known that a new value shall be computed and stored.  The use of the
+  dynamism offered by `change`, which can return an option, is error prone.
+
+  The addition of the label is considered acceptable in consideration to external
+  libraries depending on core, because a missing label is just a warning, and we
+  do not guarantee stability in the presence of -warn-error = true.
+
+- Changed `Source_code_position.t` from:
+
+    `@@deriving bin_io, sexp`
+
+  to:
+
+    `@@deriving sexp_of`
+
+  and made `sexp_of` use the human-readable format, `"FILE:LINE:COL"`,
+  rather than the unreadable format.  Removed
+  `Source_code_position.t_hum`, which is now obsolete.
+
+  If one wants a serialized source-code position, one can use
+  `Source_code_position.Stable`.
+
+- Added `Ref.set_temporarily`, for temporarily setting a ref to a value for
+  the duration of a thunk.
+
+    val set_temporarily : 'a t -> 'a -> f:(unit -> 'b) -> 'b
+
+- Add the function `singleton : 'a -> 'a t` in the stack containers.  It cannot be
+  added to `Container.S` directly because some container never have exactly 1
+  element.
+
+- Made `Core.Array` match `Invariant.S1`.
+
+- Change the interface of `Make_iterable_binable*` to give the control
+  back to the user when deserializing Bin\_protted data.
+
+  Improve the bin\_prot deserialization of `Map`s and `Set`s.
+  We construct a balanced tree directly instead of relying on `Map.add` / `Set.add`.
+  This is possibile because the size of the map is known and elements are sorted.
+
+  The complexity goes down from n.log(n) to n.
+
+  In case the comparison function changes (and the invariant is not respected),
+  there is a fallback to reconstruct the whole map from scratch.
+
+- Add a function to blit a `Rope.t` into a `Buffer.t`.
+
+- Hashtbl differs from some other core containers with idiosyncratic naming of iteration functions. Change to be consistent and to more closely match the conventions for List and Array.
+
+  Hashtbl:
+  * Copy `iter` -> `iteri`.
+  * Add a deprecation tag to `iter`.
+
+
+- Made `Bag.invariant` and `Doubly_linked.invariant` match `Invariant.S1`.
+
+- Map differs from some other core containers with idiosyncratic naming of iteration functions. The current Map name conventions are also internally inconsistent as well (ex: current `Map.iter` vs `Map.map` vs `Map.mapi`). Change to be consistent and to more closely match the conventions for List and Array.
+
+  Map:
+  * Copy `filter` -> `filteri`.
+  * Add a deprecation tag to `filter`.
+
+- Map differs from some other core containers with idiosyncratic naming
+  of iteration functions. The current Map name conventions are also
+  internally inconsistent as well (ex: current `Map.iter` vs `Map.map`
+  vs `Map.mapi`). Change to be consistent and to more closely match the
+  conventions for List and Array.
+
+  Map:
+  * Copy `iter` -> `iteri`.
+  * Add a deprecation tag to `iter`.
+
+- Made `Core.Set_once` match `Invariant.S1`.
+
+- Add `Bigstring.concat`.
+
+- For `Core.Unique_id`, exposed `@@deriving typerep`.
+
+- Expose Hashtbl.hashable, analogous to Map.comparator.
+
+- Adds a constant-time `val mem_elt : 'a t -> 'a Elt.t -> bool` to Doubly_linked and Bag
+
+- Add `Ordering.to_int` which can be useful when one is writing a comparison
+  function.  Instead of dealing with the int directly, one can return Ordering.t
+  values and transform them later into ints.
+
+- `Float.int_pow`: Fast computation of `x ** n` when n is an integer.
+
+- Make `Core_kernel.Std.Nothing.t` enumerable.  There's no particular reason
+  not to.
+
+- Minor improvements to queue interface
+
+- Call `Caml.Pervasives.do_at_exit` before printing an exception and exiting
+
+  The default ocaml uncaught exception handler does this. It is
+  especially useful for curses applications as the `at_exit` handler has
+  a chance to put back the terminal in a good state before printing the
+  exception and backtrace.
+
+  Do the same in Core and Async.
+
+- Removed big literals so that the compiler does not complain in 32bit
+
+- Add `List.range'`, a generalization of `List.range`.
+
+- Add some functions to `Map` that are present in `Hashtbl`:
+  - `remove_multi`
+  - `partition_tf`
+  - `partitioni_tf`
+  - `partition_map`
+  - `partition_mapi`
+
+- Add a `Map.nth_exn` as a missing complementary function to nth
+
+- Renamed `Validate.fail_sexp` as `fail_s`, to follow our new `*_s`
+  convention for `Sexp.t`-taking functions.
+
+- `Sequence.split_n_eagerly` returns a pair of sequences, but every element of the
+  first sequence has already been evaluated by the time it returns. This feature
+  just makes the first component of the tuple a list instead of a sequence, and
+  renames `split_n_eagerly` to `split_n`.
+
+  Additionally, this feature adds a new `chunks_exn` function, which just applies
+  `split_n` until the input sequence is empty.
+
+- Removed `Timing_wheel`'s default `alarm_precision`, to force people to
+  think about the precision they want when they create a timing wheel.
+
+- In `Timing_wheel.Config.sexp_of_t`, used `@sexp_drop_default` with
+  `level_bits`.
+
+- Write a better-performing `Array.filter_mapi` function, and implement
+  `Array.filter_map`, `Array.filter_opt`, `Array.partitioni_tf`, and
+  `Array.partition_tf` in terms of it.
+
+  Slightly worse for zero-length input arrays, about unch'd if we're filtering out
+  almost everything (`eq_zero`), better on most everything else.
+
+  ┌────────────────────────────────────────────────────┬─────────────────┬─────────────┬─────────────┬─────────────┬────────────┐
+  │ Name                                               │        Time/Run │     mWd/Run │    mjWd/Run │    Prom/Run │ Percentage │
+  ├────────────────────────────────────────────────────┼─────────────────┼─────────────┼─────────────┼─────────────┼────────────┤
+  │ `core\_array.ml:filter` old-filter-even:0           │         12.37ns │       9.00w │             │             │            │
+  │ `core\_array.ml:filter` old-filter-even:1           │         77.44ns │      15.00w │             │             │            │
+  │ `core\_array.ml:filter` old-filter-even:10          │        207.10ns │      36.00w │             │             │            │
+  │ `core\_array.ml:filter` old-filter-even:100         │      1\_699.41ns │     261.00w │             │             │            │
+  │ `core\_array.ml:filter` old-filter-even:1000        │     56\_320.50ns │   1\_009.00w │   2\_506.01w │   1\_004.01w │      0.30% │
+  │ `core\_array.ml:filter` old-filter-even:10000       │    469\_134.89ns │  10\_009.00w │  25\_007.38w │  10\_005.38w │      2.46% │
+  │ `core\_array.ml:filter` old-filter-even:100000      │  4\_421\_742.22ns │ 100\_009.00w │ 250\_130.09w │ 100\_128.09w │     23.17% │
+  │ `core\_array.ml:filter` new-filter-even:0           │         13.87ns │      14.00w │             │             │            │
+  │ `core\_array.ml:filter` new-filter-even:1           │         57.64ns │      18.00w │             │             │            │
+  │ `core\_array.ml:filter` new-filter-even:10          │        196.28ns │      35.00w │             │             │            │
+  │ `core\_array.ml:filter` new-filter-even:100         │      1\_361.04ns │     215.00w │             │             │            │
+  │ `core\_array.ml:filter` new-filter-even:1000        │     21\_473.76ns │   1\_014.00w │   1\_001.02w │             │      0.11% │
+  │ `core\_array.ml:filter` new-filter-even:10000       │    204\_033.12ns │  10\_014.00w │  10\_001.14w │       0.14w │      1.07% │
+  │ `core\_array.ml:filter` new-filter-even:100000      │  2\_058\_144.47ns │ 100\_014.00w │ 100\_002.00w │       1.00w │     10.78% │
+  │ `core\_array.ml:filter` old-filter-eq\_zero:0        │         12.21ns │       9.00w │             │             │            │
+  │ `core\_array.ml:filter` old-filter-eq\_zero:1        │         71.23ns │      15.00w │             │             │            │
+  │ `core\_array.ml:filter` old-filter-eq\_zero:10       │        174.80ns │      24.00w │             │             │            │
+  │ `core\_array.ml:filter` old-filter-eq\_zero:100      │      1\_212.70ns │     114.00w │             │             │            │
+  │ `core\_array.ml:filter` old-filter-eq\_zero:1000     │     23\_347.51ns │      13.00w │   1\_007.00w │       6.00w │      0.12% │
+  │ `core\_array.ml:filter` old-filter-eq\_zero:10000    │    210\_509.83ns │      13.00w │  10\_007.00w │       6.00w │      1.10% │
+  │ `core\_array.ml:filter` old-filter-eq\_zero:100000   │  1\_912\_253.91ns │      13.00w │ 100\_007.01w │       6.01w │     10.02% │
+  │ `core\_array.ml:filter` new-filter-eq\_zero:0        │         13.70ns │      14.00w │             │             │            │
+  │ `core\_array.ml:filter` new-filter-eq\_zero:1        │         56.56ns │      18.00w │             │             │            │
+  │ `core\_array.ml:filter` new-filter-eq\_zero:10       │        179.42ns │      27.00w │             │             │            │
+  │ `core\_array.ml:filter` new-filter-eq\_zero:100      │      1\_254.49ns │     117.00w │             │             │            │
+  │ `core\_array.ml:filter` new-filter-eq\_zero:1000     │     20\_968.06ns │      16.00w │   1\_001.02w │             │      0.11% │
+  │ `core\_array.ml:filter` new-filter-eq\_zero:10000    │    204\_299.82ns │      16.00w │  10\_001.13w │       0.13w │      1.07% │
+  │ `core\_array.ml:filter` new-filter-eq\_zero:100000   │  2\_019\_283.81ns │      16.00w │ 100\_001.91w │       0.91w │     10.58% │
+  │ `core\_array.ml:filter` old-filter-neq\_zero:0       │         12.14ns │       9.00w │             │             │            │
+  │ `core\_array.ml:filter` old-filter-neq\_zero:1       │         32.72ns │      11.00w │             │             │            │
+  │ `core\_array.ml:filter` old-filter-neq\_zero:10      │        219.18ns │      48.00w │             │             │            │
+  │ `core\_array.ml:filter` old-filter-neq\_zero:100     │      1\_902.76ns │     408.00w │       0.12w │       0.12w │            │
+  │ `core\_array.ml:filter` old-filter-neq\_zero:1000    │     82\_032.44ns │   2\_007.00w │   3\_998.20w │   1\_997.20w │      0.43% │
+  │ `core\_array.ml:filter` old-filter-neq\_zero:10000   │    850\_234.44ns │  20\_007.00w │  40\_014.86w │  20\_013.86w │      4.46% │
+  │ `core\_array.ml:filter` old-filter-neq\_zero:100000  │  7\_345\_941.05ns │ 200\_007.00w │ 400\_407.82w │ 200\_406.82w │     38.49% │
+  │ `core\_array.ml:filter` new-filter-neq\_zero:0       │         13.66ns │      14.00w │             │             │            │
+  │ `core\_array.ml:filter` new-filter-neq\_zero:1       │         18.26ns │      14.00w │             │             │            │
+  │ `core\_array.ml:filter` new-filter-neq\_zero:10      │        201.04ns │      43.00w │             │             │            │
+  │ `core\_array.ml:filter` new-filter-neq\_zero:100     │      1\_404.33ns │     313.00w │             │             │            │
+  │ `core\_array.ml:filter` new-filter-neq\_zero:1000    │     22\_829.70ns │   2\_012.00w │   1\_001.02w │             │      0.12% │
+  │ `core\_array.ml:filter` new-filter-neq\_zero:10000   │    218\_872.52ns │  20\_012.00w │  10\_001.21w │       0.21w │      1.15% │
+  │ `core\_array.ml:filter` new-filter-neq\_zero:100000  │  2\_121\_340.68ns │ 200\_012.00w │ 100\_002.77w │       1.77w │     11.12% │
+  │ `core\_array.ml:filter` old-filter\_map-int:0        │          9.58ns │       5.00w │             │             │            │
+  │ `core\_array.ml:filter` old-filter\_map-int:1        │         68.46ns │      11.00w │             │             │            │
+  │ `core\_array.ml:filter` old-filter\_map-int:10       │        191.66ns │      32.00w │             │             │            │
+  │ `core\_array.ml:filter` old-filter\_map-int:100      │      1\_492.60ns │     257.00w │             │             │            │
+  │ `core\_array.ml:filter` old-filter\_map-int:1000     │     57\_155.42ns │   1\_005.00w │   2\_507.01w │   1\_005.01w │      0.30% │
+  │ `core\_array.ml:filter` old-filter\_map-int:10000    │    522\_177.50ns │  10\_005.00w │  25\_008.54w │  10\_006.54w │      2.74% │
+  │ `core\_array.ml:filter` old-filter\_map-int:100000   │  5\_945\_405.67ns │ 100\_005.00w │ 250\_170.69w │ 100\_168.69w │     31.15% │
+  │ `core\_array.ml:filter` new-filter\_map-int:0        │         12.03ns │      10.00w │             │             │            │
+  │ `core\_array.ml:filter` new-filter\_map-int:1        │         53.63ns │      14.00w │             │             │            │
+  │ `core\_array.ml:filter` new-filter\_map-int:10       │        164.16ns │      31.00w │             │             │            │
+  │ `core\_array.ml:filter` new-filter\_map-int:100      │      1\_263.42ns │     211.00w │             │             │            │
+  │ `core\_array.ml:filter` new-filter\_map-int:1000     │     23\_113.12ns │   1\_010.00w │   1\_001.02w │             │      0.12% │
+  │ `core\_array.ml:filter` new-filter\_map-int:10000    │    218\_152.23ns │  10\_010.00w │  10\_001.15w │       0.15w │      1.14% │
+  │ `core\_array.ml:filter` new-filter\_map-int:100000   │  2\_217\_307.86ns │ 100\_010.00w │ 100\_002.11w │       1.11w │     11.62% │
+  │ `core\_array.ml:filter` old-filter\_map-float:0      │          9.32ns │       5.00w │             │             │            │
+  │ `core\_array.ml:filter` old-filter\_map-float:1      │         66.68ns │      13.00w │             │             │            │
+  │ `core\_array.ml:filter` old-filter\_map-float:10     │        182.86ns │      42.00w │             │             │            │
+  │ `core\_array.ml:filter` old-filter\_map-float:100    │      1\_496.56ns │     357.00w │             │             │            │
+  │ `core\_array.ml:filter` old-filter\_map-float:1000   │     76\_479.74ns │   2\_005.00w │   3\_507.02w │   2\_005.02w │      0.40% │
+  │ `core\_array.ml:filter` old-filter\_map-float:10000  │    694\_999.59ns │  20\_005.00w │  35\_011.08w │  20\_009.08w │      3.64% │
+  │ `core\_array.ml:filter` old-filter\_map-float:100000 │  8\_694\_669.26ns │ 200\_005.00w │ 350\_476.44w │ 200\_474.44w │     45.56% │
+  │ `core\_array.ml:filter` new-filter\_map-float:0      │         12.29ns │      10.00w │             │             │            │
+  │ `core\_array.ml:filter` new-filter\_map-float:1      │         58.24ns │      16.00w │             │             │            │
+  │ `core\_array.ml:filter` new-filter\_map-float:10     │        142.67ns │      41.00w │             │             │            │
+  │ `core\_array.ml:filter` new-filter\_map-float:100    │      1\_119.41ns │     311.00w │             │             │            │
+  │ `core\_array.ml:filter` new-filter\_map-float:1000   │     14\_262.66ns │   2\_010.00w │   1\_001.02w │             │      0.07% │
+  │ `core\_array.ml:filter` new-filter\_map-float:10000  │    136\_448.05ns │  20\_010.00w │  10\_001.23w │       0.23w │      0.71% │
+  │ `core\_array.ml:filter` new-filter\_map-float:100000 │  1\_282\_005.01ns │ 200\_010.00w │ 100\_003.14w │       2.14w │      6.72% │
+  │ `core\_array.ml:filter` old-filter\_map-boxed:0      │          9.48ns │       5.00w │             │             │            │
+  │ `core\_array.ml:filter` old-filter\_map-boxed:1      │         71.16ns │      13.00w │             │             │            │
+  │ `core\_array.ml:filter` old-filter\_map-boxed:10     │        197.40ns │      42.00w │             │             │            │
+  │ `core\_array.ml:filter` old-filter\_map-boxed:100    │      1\_762.40ns │     357.00w │             │             │            │
+  │ `core\_array.ml:filter` old-filter\_map-boxed:1000   │     86\_220.67ns │   2\_005.00w │   3\_507.02w │   2\_005.02w │      0.45% │
+  │ `core\_array.ml:filter` old-filter\_map-boxed:10000  │    828\_291.42ns │  20\_005.00w │  35\_011.84w │  20\_009.84w │      4.34% │
+  │ `core\_array.ml:filter` old-filter\_map-boxed:100000 │  7\_955\_395.61ns │ 200\_005.00w │ 350\_441.44w │ 200\_439.44w │     41.68% │
+  │ `core\_array.ml:filter` new-filter\_map-boxed:0      │         14.43ns │      10.00w │             │             │            │
+  │ `core\_array.ml:filter` new-filter\_map-boxed:1      │         59.24ns │      16.00w │             │             │            │
+  │ `core\_array.ml:filter` new-filter\_map-boxed:10     │        198.19ns │      41.00w │             │             │            │
+  │ `core\_array.ml:filter` new-filter\_map-boxed:100    │      1\_580.21ns │     311.00w │             │             │            │
+  │ `core\_array.ml:filter` new-filter\_map-boxed:1000   │     52\_045.31ns │   2\_010.00w │   2\_011.01w │   1\_010.01w │      0.27% │
+  │ `core\_array.ml:filter` new-filter\_map-boxed:10000  │    479\_239.44ns │  20\_010.00w │  20\_012.42w │  10\_011.42w │      2.51% │
+  │ `core\_array.ml:filter` new-filter\_map-boxed:100000 │  4\_389\_392.06ns │ 200\_010.00w │ 200\_135.09w │ 100\_134.09w │     23.00% │
+  │ `core\_array.ml:filter` old-partition\_tf:0          │         16.55ns │      16.00w │             │             │            │
+  │ `core\_array.ml:filter` old-partition\_tf:1          │        128.08ns │      29.00w │             │             │            │
+  │ `core\_array.ml:filter` old-partition\_tf:10         │        554.15ns │     111.00w │             │             │            │
+  │ `core\_array.ml:filter` old-partition\_tf:100        │      4\_853.58ns │     921.00w │       0.46w │       0.46w │      0.03% │
+  │ `core\_array.ml:filter` old-partition\_tf:1000       │    201\_289.06ns │   5\_016.00w │   9\_015.21w │   5\_010.21w │      1.05% │
+  │ `core\_array.ml:filter` old-partition\_tf:10000      │  1\_796\_749.87ns │  50\_016.00w │  90\_040.96w │  50\_035.96w │      9.41% │
+  │ `core\_array.ml:filter` old-partition\_tf:100000     │ 19\_084\_871.85ns │ 500\_016.00w │ 902\_187.67w │ 502\_182.67w │    100.00% │
+  │ `core\_array.ml:filter` new-partition\_tf:0          │         28.29ns │      23.00w │             │             │            │
+  │ `core\_array.ml:filter` new-partition\_tf:1          │        103.78ns │      31.00w │             │             │            │
+  │ `core\_array.ml:filter` new-partition\_tf:10         │        504.10ns │      96.00w │             │             │            │
+  │ `core\_array.ml:filter` new-partition\_tf:100        │      3\_869.52ns │     726.00w │       0.23w │       0.23w │      0.02% │
+  │ `core\_array.ml:filter` new-partition\_tf:1000       │    122\_807.29ns │   4\_023.00w │   5\_013.04w │   2\_010.04w │      0.64% │
+  │ `core\_array.ml:filter` new-partition\_tf:10000      │  1\_197\_596.39ns │  40\_023.00w │  50\_020.05w │  20\_017.05w │      6.28% │
+  │ `core\_array.ml:filter` new-partition\_tf:100000     │ 10\_458\_344.09ns │ 400\_023.00w │ 500\_590.94w │ 200\_587.94w │     54.80% │
+  └────────────────────────────────────────────────────┴─────────────────┴─────────────┴─────────────┴─────────────┴────────────┘
+
+
+- Added `Binable.Of_sexpable` functor.
+
+- Install the sexp exception printer sooner so that we can get proper
+  `%test_result ...` errors in things that come before `core_kernel`.
+
+- In `Stable_unit_test.Make` functors, include all test failures rather
+  than just the first.  This is useful for updating batches of expected
+  `bin_io` results when stabilizing a module.
+
+- Remove an unnecessary cast in or_error.ml
+
 ## 113.00.00
 
 - Added `Float.int63_round_nearest_exn`.

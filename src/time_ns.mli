@@ -6,7 +6,7 @@ module Span : sig
   (** [Core_int63.t] is immediate on 64bit boxes and so plays nicely with the GC write
       barrier.  Unfortunately, [private Core_int63.t] is necessary for the compiler to
       optimize uses. *)
-  type t = private Core_int63.t with compare, typerep, bin_io
+  type t = private Core_int63.t [@@deriving compare, typerep, bin_io]
 
   include Comparable.Infix     with type t := t
   include Comparable.Validate  with type t := t
@@ -38,7 +38,11 @@ module Span : sig
 
   val of_sec_with_microsecond_precision : float -> t
 
+  val of_int_us  : int -> t
+  val of_int_ms  : int -> t
   val of_int_sec : int -> t
+  val to_int_us  : t -> int
+  val to_int_ms  : t -> int
   val to_int_sec : t -> int
 
   val zero : t
@@ -85,7 +89,7 @@ module Span : sig
       ; us   : int
       ; ns   : int
       }
-    with sexp
+    [@@deriving sexp]
   end
 
   val to_parts : t -> Parts.t
@@ -106,18 +110,18 @@ module Span : sig
 
   (** Note that we expose a sexp format that is not the one exposed in [Core]. *)
   module Alternate_sexp : sig
-    type nonrec t = t with sexp
+    type nonrec t = t [@@deriving sexp]
   end
 end
 
-type t = private Core_int63.t with compare, typerep, bin_io
+type t = private Core_int63.t [@@deriving compare, typerep, bin_io]
 
 include Comparable.Infix with type t := t
 include Equal.S          with type t := t
 
 (** Note that we expose a sexp format that is not the one exposed in [Core]. *)
 module Alternate_sexp : sig
-  type nonrec t = t with sexp
+  type nonrec t = t [@@deriving sexp]
 end
 
 val epoch : t (** Unix epoch (1970-01-01 00:00:00 UTC) *)

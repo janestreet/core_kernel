@@ -20,11 +20,11 @@ open T
 module Binable = Binable0
 
 module type Elt = sig
-  type t with compare, sexp
+  type t [@@deriving compare, sexp]
 end
 
 module type Elt_binable = sig
-  type t with bin_io, compare, sexp
+  type t [@@deriving bin_io, compare, sexp]
 end
 
 module Without_comparator = Core_map_intf.Without_comparator
@@ -161,6 +161,13 @@ module type Accessors_generic = sig
     : ('a, 'cmp,
        ('a, 'cmp) t -> f:('a elt -> 'b) -> ('a elt, 'b, 'cmp cmp) Map.t
     ) options
+
+  val obs : 'a elt Quickcheck.obs -> ('a, 'cmp) t Quickcheck.obs
+
+  val shrinker
+    : ('a, 'cmp,
+       'a elt Quickcheck.shr -> ('a, 'cmp) t Quickcheck.shr
+      ) options
 end
 
 module type Accessors0 = sig
@@ -205,6 +212,8 @@ module type Accessors0 = sig
     -> t
     -> elt Sequence.t
   val to_map         : t -> f:(elt -> 'data) -> (elt, 'data, comparator_witness) Map.t
+  val obs : elt Quickcheck.obs -> t Quickcheck.obs
+  val shrinker : elt Quickcheck.shr -> t Quickcheck.shr
 end
 
 module type Accessors1 = sig
@@ -249,6 +258,8 @@ module type Accessors1 = sig
     -> 'a t
     -> 'a Sequence.t
   val to_map         : 'a t -> f:('a -> 'b) -> ('a, 'b, comparator_witness) Map.t
+  val obs : 'a Quickcheck.obs -> 'a t Quickcheck.obs
+  val shrinker : 'a Quickcheck.shr -> 'a t Quickcheck.shr
 end
 
 module type Accessors2 = sig
@@ -294,6 +305,8 @@ module type Accessors2 = sig
     -> ('a, 'cmp) t
     -> 'a Sequence.t
   val to_map         : ('a, 'cmp) t -> f:('a -> 'b) -> ('a, 'b, 'cmp) Map.t
+  val obs : 'a Quickcheck.obs -> ('a, 'cmp) t Quickcheck.obs
+  val shrinker : 'a Quickcheck.shr -> ('a, 'cmp) t Quickcheck.shr
 end
 
 module type Accessors2_with_comparator = sig
@@ -367,6 +380,11 @@ module type Accessors2_with_comparator = sig
     -> ('a, 'cmp) t
     -> f:('a -> 'b)
     -> ('a, 'b, 'cmp) Map.t
+  val obs : 'a Quickcheck.obs -> ('a, 'cmp) t Quickcheck.obs
+  val shrinker
+    :  comparator:('a, 'cmp) Comparator.t
+    -> 'a Quickcheck.shr
+    -> ('a, 'cmp) t Quickcheck.shr
 end
 
 (** Consistency checks (same as in [Container]). *)
@@ -461,6 +479,12 @@ module type Creators_generic = sig
 
   (** never requires a comparator because it can get one from the input [Map.t] *)
   val of_map_keys : ('a elt, _, 'cmp cmp) Map.t -> ('a, 'cmp) t
+
+  val gen
+    : ('a, 'cmp,
+       'a elt Quickcheck.Generator.t
+       -> ('a, 'cmp) t Quickcheck.Generator.t
+      ) options
 end
 
 module type Creators0 = sig
@@ -481,6 +505,7 @@ module type Creators0 = sig
   val filter_map                : ('a, _) set -> f:('a -> elt option) -> t
   val of_tree                   : tree -> t
   val of_map_keys               : (elt, _, comparator_witness) Map.t -> t
+  val gen                       : elt Quickcheck.Generator.t -> t Quickcheck.Generator.t
 end
 
 module type Creators1 = sig
@@ -500,6 +525,7 @@ module type Creators1 = sig
   val filter_map                : ('a, _) set -> f:('a -> 'b option) -> 'b t
   val of_tree                   : 'a tree -> 'a t
   val of_map_keys               : ('a, _, comparator_witness) Map.t -> 'a t
+  val gen                       : 'a Quickcheck.Generator.t -> 'a t Quickcheck.Generator.t
 end
 
 module type Creators2 = sig
@@ -518,6 +544,9 @@ module type Creators2 = sig
   val filter_map                : ('a, _) set -> f:('a -> 'b option) -> ('b, 'cmp) t
   val of_tree                   : ('a, 'cmp) tree -> ('a, 'cmp) t
   val of_map_keys               : ('a, _, 'cmp) Map.t -> ('a, 'cmp) t
+  val gen
+    :  'a Quickcheck.Generator.t
+    -> ('a, 'cmp) t Quickcheck.Generator.t
 end
 
 module type Creators2_with_comparator = sig
@@ -545,6 +574,11 @@ module type Creators2_with_comparator = sig
     -> ('a, 'cmp) tree -> ('a, 'cmp) t
 
   val of_map_keys : ('a, _, 'cmp) Map.t -> ('a, 'cmp) t
+
+  val gen
+    :  comparator:('a, 'cmp) Comparator.t
+    -> 'a Quickcheck.Generator.t
+    -> ('a, 'cmp) t Quickcheck.Generator.t
 end
 
 module Check_creators (T : T2) (Tree : T2) (Elt : T1) (Cmp : T1) (Options : T3)
@@ -638,12 +672,12 @@ module type S0 = sig
   type ('a, 'cmp) tree
 
   module Elt : sig
-    type t with sexp
+    type t [@@deriving sexp]
     include Comparator.S with type t := t
   end
 
   module Tree : sig
-    type t = (Elt.t, Elt.comparator_witness) tree with compare, sexp
+    type t = (Elt.t, Elt.comparator_witness) tree [@@deriving compare, sexp]
 
     include Creators_and_accessors0
       with type ('a, 'b) set := ('a, 'b) tree
@@ -653,7 +687,7 @@ module type S0 = sig
       with type comparator_witness := Elt.comparator_witness
   end
 
-  type t = (Elt.t, Elt.comparator_witness) set with compare, sexp
+  type t = (Elt.t, Elt.comparator_witness) set [@@deriving compare, sexp]
 
   include Creators_and_accessors0
     with type ('a, 'b) set := ('a, 'b) set

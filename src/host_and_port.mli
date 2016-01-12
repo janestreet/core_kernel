@@ -12,6 +12,8 @@ include Identifiable with type t := t
 
 module Stable : sig
   module V1 : sig
-    type nonrec t = t with sexp, bin_io, compare
+    type nonrec t = t [@@deriving sexp, bin_io, compare]
   end
 end
+
+val type_id : t Type_equal.Id.t

@@ -19,6 +19,7 @@ module type S_binable = S_binable with type 'a hash_set = 'a t
 
 module Accessors = struct
 
+  let hashable = Hashtbl.hashable
   let clear = Hashtbl.clear
   let length = Hashtbl.length
   let mem = Hashtbl.mem
@@ -27,7 +28,7 @@ module Accessors = struct
 
   let find_map t ~f =
     with_return (fun r ->
-      Hashtbl.iter t ~f:(fun ~key:elt ~data:_ ->
+      Hashtbl.iter_keys t ~f:(fun elt ->
         match f elt with
         | None -> ()
         | Some _ as o -> r.return o);
@@ -61,7 +62,7 @@ module Accessors = struct
   let strict_remove_exn t k = Or_error.ok_exn (strict_remove t k)
 
   let fold t ~init ~f = Hashtbl.fold t ~init ~f:(fun ~key ~data:() acc -> f acc key)
-  let iter t ~f = Hashtbl.iter t ~f:(fun ~key ~data:() -> f key)
+  let iter t ~f = Hashtbl.iter_keys t ~f
 
   let count t ~f = Container.count ~fold t ~f
   let sum m t ~f = Container.sum ~fold m t ~f
@@ -94,6 +95,8 @@ module Accessors = struct
   ;;
 
   let of_hashtbl_keys hashtbl = Hashtbl.map hashtbl ~f:ignore
+
+  let to_hashtbl t ~f = Hashtbl.mapi t ~f:(fun ~key ~data:() -> f key)
 end
 
 include Accessors
@@ -200,15 +203,18 @@ module Make_binable (Elt : Elt_binable) = struct
 
   include Bin_prot.Utils.Make_iterable_binable (struct
     type t = elt hash_set
-    type el = Elt.t with bin_io
+    type el = Elt.t [@@deriving bin_io]
     let _ = bin_el
-    type acc = t
     let module_name = Some "Core.Std.Hash_set"
     let length = length
     let iter = iter
-    let init size = create ~size ()
-    let insert acc v _i = add acc v; acc
-    let finish t = t
+    let init ~len ~next =
+      let t = create ~size:len () in
+      for _i = 0 to len - 1 do
+        let v = next () in
+        add t v;
+      done;
+      t
   end)
 
 end

@@ -5,7 +5,7 @@ open Bin_prot.Std
 open Nativeint
 
 module T = struct
-  type t = nativeint with sexp, bin_io, typerep
+  type t = nativeint [@@deriving sexp, bin_io, typerep]
   let compare (x : t) y = compare x y
   let equal (x : t) y = x = y
   let hash (x : t) = Hashtbl.hash x
@@ -57,7 +57,19 @@ module Replace_polymorphic_compare = struct
   let ( < ) (x : t) y = x < y
   let ( <> ) (x : t) y = x <> y
   let between t ~low ~high = low <= t && t <= high
-  let _squelch_unused_module_warning_ = ()
+  let clamp_unchecked t ~min ~max =
+    if t < min then min else if t <= max then t else max
+
+  let clamp_exn t ~min ~max =
+    assert (min <= max);
+    clamp_unchecked t ~min ~max
+
+  let clamp t ~min ~max =
+    if min > max then
+      Or_error.error "clamp requires [min <= max]"
+        (`Min min, `Max max) [%sexp_of: [`Min of T.t] * [`Max of T.t]]
+    else
+      Ok (clamp_unchecked t ~min ~max)
 end
 
 include Replace_polymorphic_compare
@@ -98,7 +110,7 @@ include Conv.Make (T)
 
 include Conv.Make_hex(struct
 
-  type t = nativeint with bin_io, compare, typerep
+  type t = nativeint [@@deriving bin_io, compare, typerep]
 
   let zero = zero
   let neg = (~-)
@@ -115,6 +127,29 @@ include Pretty_printer.Register (struct
   let to_string = to_string
   let module_name = "Core_kernel.Std.Nativeint"
 end)
+
+include Quickcheck.Make_int (struct
+    type nonrec t = t [@@deriving sexp, compare]
+    include (Replace_polymorphic_compare
+             : Polymorphic_compare_intf.Infix with type t := t)
+    let num_bits    = num_bits
+    let (+)         = (+)
+    let (-)         = (-)
+    let (~-)        = (~-)
+    let zero        = zero
+    let one         = one
+    let min_value   = min_value
+    let max_value   = max_value
+    let abs         = abs
+    let succ        = succ
+    let bit_not     = bit_not
+    let bit_and     = bit_and
+    let shift_left  = shift_left
+    let shift_right = shift_right
+    let of_int_exn  = of_int_exn
+    let to_int_exn  = to_int_exn
+    let to_float    = to_float
+  end)
 
 module Pre_O = struct
   let ( + ) = ( + )

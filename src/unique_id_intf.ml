@@ -4,7 +4,7 @@ open Std_internal
 
 module type Id = sig
   (** The sexps and strings look like integers. *)
-  type t with bin_io, sexp
+  type t [@@deriving bin_io, sexp, typerep]
 
   (** CAVEAT: Values created with of_float, of_sexp, or of_string may be equal to
      previously created values. *)

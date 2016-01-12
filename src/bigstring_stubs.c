@@ -45,7 +45,7 @@
 #include <caml/fail.h>
 #include <caml/signals.h>
 #include <caml/bigarray.h>
-#include "core_params.h"
+#include <core_params.h>
 #include "core_bigstring.h"
 
 static inline char * get_bstr(value v_bstr, value v_pos)

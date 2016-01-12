@@ -34,11 +34,10 @@ module Elt : sig
   val sexp_of_t : ('a -> Sexp.t) -> 'a t -> Sexp.t
 end
 
-type 'a t with sexp
+type 'a t [@@deriving sexp]
 
 include Container.S1 with type 'a t := 'a t
-
-val invariant : 'a t -> unit
+include Invariant.S1 with type 'a t := 'a t
 
 (** creating doubly-linked lists *)
 val create : unit -> 'a t
@@ -51,7 +50,8 @@ val of_list : 'a list -> 'a t
 (** predicates *)
 val equal : 'a t -> 'a t -> bool (** pointer equality *)
 val is_first : 'a t -> 'a Elt.t -> bool
-val is_last : 'a t -> 'a Elt.t -> bool
+val is_last  : 'a t -> 'a Elt.t -> bool
+val mem_elt  : 'a t -> 'a Elt.t -> bool
 
 (** constant-time extraction of first and last elements. *)
 val first_elt : 'a t -> 'a Elt.t option

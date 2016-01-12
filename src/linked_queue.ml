@@ -1,7 +1,7 @@
+open Common
+
 open Bin_prot.Std
 open Sexplib.Conv
-
-open Common
 
 module Array = Core_array
 module Binable = Binable0
@@ -137,31 +137,30 @@ include
   Bin_prot.Utils.Make_iterable_binable1 (struct
 
     type 'a t = 'a Queue.t
-    type 'a el = 'a with bin_io
-    type 'a acc = 'a t
+    type 'a el = 'a [@@deriving bin_io]
 
-    let module_name = Some "Core_kernel.Std.Queue"
+    let module_name = Some "Core_kernel.Std.Linked_queue"
 
     let length = length
 
     let iter = iter
 
-    let init _ = create ()
-
-    (* Bin_prot reads the elements in the same order they were written out, as determined by
-       [iter].  So, we can ignore the index and just enqueue each element as it is read
+    (* Bin_prot reads the elements in the same order they were written out, as determined
+       by [iter].  So, we can ignore the index and just enqueue each element as it is read
        in. *)
-    let insert t x _i = enqueue t x; t
-
-    let finish t = t
-
+    let init ~len ~next =
+      let t = create () in
+      for _ = 1 to len do
+        enqueue t (next ())
+      done;
+      t
   end)
 
-TEST_MODULE = struct
+let%test_module _ = (module struct
   let m =
     let module M  = struct
-      type 'a u = 'a t with bin_io
-      type t = int u with bin_io
+      type 'a u = 'a t [@@deriving bin_io]
+      type t = int u [@@deriving bin_io]
     end
     in
     (module M : Binable.S with type t = M.t)
@@ -174,9 +173,9 @@ TEST_MODULE = struct
     list = list'
   ;;
 
-  TEST = test []
-  TEST = test [ 1 ]
-  TEST = test [ 1; 2; 3 ]
-  TEST = test (List.init 10_000 ~f:Fn.id)
+  let%test _ = test []
+  let%test _ = test [ 1 ]
+  let%test _ = test [ 1; 2; 3 ]
+  let%test _ = test (List.init 10_000 ~f:Fn.id)
 
-end
+end)

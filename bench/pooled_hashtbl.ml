@@ -16,11 +16,11 @@ let test_core () =
   done;
   let start = Time.now () in
   let first_n = ref 0 in
-  for _z = 0 to times - 1 do
+  for _ = 0 to times - 1 do
     let loop_end = !first_n + n - 1 in
     for i = !first_n to loop_end do
       let x = n + i in
-      Identity_table.replace tbl ~key:x ~data:x;
+      Identity_table.set tbl ~key:x ~data:x;
       Identity_table.remove tbl i;
     done;
     first_n := !first_n + n
@@ -42,15 +42,15 @@ let test_zero () =
   in
   let tbl = Identity_table.create ~size:(2*n) () in
   for i = 0 to n - 1 do
-    Identity_table.replace tbl ~key:i ~data:i;
+    Identity_table.set tbl ~key:i ~data:i;
   done;
   let start = Time.now () in
   let first_n = ref 0 in
-  for _z = 0 to times - 1 do
+  for _ = 0 to times - 1 do
     let loop_end = !first_n + n - 1 in
     for i = !first_n to loop_end do
       let x = n + i in
-      Identity_table.replace tbl ~key:x ~data:x;
+      Identity_table.set tbl ~key:x ~data:x;
       Identity_table.remove tbl i;
     done;
     first_n := !first_n + n

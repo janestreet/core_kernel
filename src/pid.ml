@@ -2,7 +2,7 @@ open Sexplib.Conv
 
 include Core_int
 
-exception Pid_must_be_positive of int with sexp
+exception Pid_must_be_positive of int [@@deriving sexp]
 
 let ensure i = if i <= 0 then raise (Pid_must_be_positive i) else i
 

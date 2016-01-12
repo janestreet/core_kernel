@@ -143,9 +143,9 @@ let sexp_of_t sexp_of_a t = List.sexp_of_t sexp_of_a (to_list t)
 
 let to_sequence t = Sequence.unfold ~init:t ~f:pop
 
-TEST_MODULE = struct
+let%test_module _ = (module struct
   module type Heap_intf = sig
-    type 'a t with sexp_of
+    type 'a t [@@deriving sexp_of]
     val create     : cmp:('a -> 'a -> int) -> 'a t
     val add        : 'a t -> 'a -> 'a t
     val pop        : 'a t -> ('a * 'a t) option
@@ -186,7 +186,7 @@ TEST_MODULE = struct
   end
 
   module This_heap : Heap_intf = struct
-    type nonrec 'a t = 'a t with sexp_of
+    type nonrec 'a t = 'a t [@@deriving sexp_of]
     let create ~cmp = create ~cmp
     let add = add
     let pop = pop
@@ -273,17 +273,17 @@ TEST_MODULE = struct
   let check (this_t, that_t) =
     let this_list = List.sort ~cmp:Int.compare (This_heap.to_list this_t) in
     let that_list = List.sort ~cmp:Int.compare (That_heap.to_list that_t) in
-    <:test_eq< int list >> this_list that_list
+    [%test_eq: int list] this_list that_list
   ;;
 
   let check_sum (this_t, that_t) =
     let this_sum = This_heap.sum (module Int) ~f:ident this_t in
     let that_sum = That_heap.sum (module Int) ~f:ident that_t in
-    <:test_eq< int >> this_sum that_sum;
+    [%test_eq: int] this_sum that_sum;
     this_sum
   ;;
 
-  TEST_UNIT =
+  let%test_unit _ =
     let t = create () in
     let random = Random.State.make [| 4 |] in
 
@@ -310,21 +310,21 @@ TEST_MODULE = struct
     loop 10_000 t
   ;;
 
-  TEST_UNIT =
+  let%test_unit _ =
     let l = List.init 10_000 ~f:(fun _ -> Random.int 100_000) in
     let dual = of_list ~cmp:Int.compare l in
     check dual;
     let sum0 = check_sum dual in
     let dual = add dual (-100) in
     let sum1 = check_sum dual in
-    <:test_eq< int >> (sum0 - 100) sum1
-end
+    [%test_eq: int] (sum0 - 100) sum1
+end)
 
-TEST_UNIT =
+let%test_unit _ =
   let data = [ 0; 1; 2; 3; 4; 5; 6; 7 ] in
   let h = of_list data ~cmp:Int.compare in
   let (top_value, t) = pop_exn h in
-  <:test_result< int >> ~expect:0 top_value;
+  [%test_result: int] ~expect:0 top_value;
   let list_sum = List.sum (module Int) data ~f:ident in
   let heap_fold_sum = fold t ~init:0 ~f:(fun sum v -> sum + v) in
   let heap_iter_sum =
@@ -332,26 +332,26 @@ TEST_UNIT =
     iter t ~f:(fun v -> r := !r + v);
     !r
   in
-  <:test_eq< int >> list_sum heap_fold_sum;
-  <:test_eq< int >> list_sum heap_iter_sum;
+  [%test_eq: int] list_sum heap_fold_sum;
+  [%test_eq: int] list_sum heap_iter_sum
 ;;
 
-TEST_UNIT =
+let%test_unit _ =
   let data = [ 0; 1; 2; 3; 4; 5; 6; 7 ] in
   let t = of_list data ~cmp:Int.compare in
   let s = sum (module Int) t ~f:ident in
-  <:test_result< int >> ~expect:28 s;
+  [%test_result: int] ~expect:28 s;
   let t = add t 8 in
   let top_value = top_exn t in
-  <:test_result< int >> ~expect:0 top_value;
+  [%test_result: int] ~expect:0 top_value;
   let top_value, t = pop_exn t in
-  <:test_result< int >> ~expect:0 top_value;
-  <:test_result< int >> ~expect:1 (top_exn t);
+  [%test_result: int] ~expect:0 top_value;
+  [%test_result: int] ~expect:1 (top_exn t);
   let len = length t in
-  <:test_result< int >> ~expect:8 len;
+  [%test_result: int] ~expect:8 len
 ;;
 
-BENCH_INDEXED "pop_add_with_existing_heap" initial_size [1; 10; 100; 1000; 10_000] =
+let%bench_fun "pop_add_with_existing_heap" [@indexed initial_size = [1; 10; 100; 1000; 10_000]] =
   let a = Array.init initial_size ~f:(fun _ -> Random.int 100_000) in
   let h1 = of_array ~cmp:Int.compare a in
   (fun () ->

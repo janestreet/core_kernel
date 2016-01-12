@@ -8,7 +8,7 @@ module Test_generic
             val to_int : int t -> int
           end)
          (Container : sig
-            type 'a t with sexp
+            type 'a t [@@deriving sexp]
             include Generic
               with type 'a t := 'a t
               with type 'a elt := 'a Elt.t
@@ -17,7 +17,7 @@ module Test_generic
   (* This signature constraint reminds us to add unit tests when functions are added to
      [Generic]. *)
   : sig
-    type 'a t with sexp
+    type 'a t [@@deriving sexp]
     include Generic with type 'a t := 'a t
   end
   with type 'a t := 'a Container.t
@@ -38,7 +38,7 @@ module Test_generic
     let to_array  = to_array
     let to_list   = to_list
 
-    TEST_UNIT =
+    let%test_unit _ =
       List.iter [ 0; 1; 2; 3; 4; 8; 1024 ] ~f:(fun n ->
         let list = List.init n ~f:Elt.of_int in
         let c = Container.of_list list in
@@ -66,7 +66,7 @@ module Test_generic
         Container.iter c ~f:(fun e -> r := !r + Elt.to_int e);
         assert (!r = List.fold list ~init:0 ~f:(fun n e -> n + Elt.to_int e));
         assert (!r = sum (module Int) c ~f:Elt.to_int);
-        let c2 = <:of_sexp< int Container.t >> (<:sexp_of< int Container.t >> c) in
+        let c2 = [%of_sexp: int Container.t] ([%sexp_of: int Container.t] c) in
         assert (sorts_are_equal list (Container.to_list c2));
         let compare_elt a b = Int.compare (Elt.to_int a) (Elt.to_int b) in
         if n = 0 then begin
@@ -78,7 +78,7 @@ module Test_generic
           assert (Option.map ~f:Elt.to_int (min_elt ~cmp:compare_elt c) = Some 0);
           assert (Option.map ~f:Elt.to_int (max_elt ~cmp:compare_elt c) = Some (pred n));
         end
-      );
+      )
     ;;
 
     let min_elt = min_elt
@@ -89,7 +89,7 @@ module Test_generic
     let exists  = exists
     let for_all = for_all
 
-    TEST_UNIT =
+    let%test_unit _ =
       List.iter [ [];
                   [true];
                   [false];

@@ -65,9 +65,12 @@ val fails
   -> 'a
   -> ('a -> Sexplib.Sexp.t)
   -> t
+val fail_s : Sexplib.Sexp.t -> t     (** this can be used with the [%sexp] extension *)
 
 (** Like [sprintf] or [failwithf] but produces a [t] instead of a string or exception *)
 val failf     : ('a, unit, string, t) format4 -> 'a
+
+val combine : t -> t -> t
 
 val of_list   : t list -> t             (** combine multiple results, merging errors *)
 val name      : string -> t -> t        (** extend location path by one name *)
@@ -110,6 +113,11 @@ val field_folder
   -> 'a check
   -> (t list -> ('record, 'a) Fieldslib.Field.t -> t list)
 
+(** Creates a function for use in a [Fields.Direct.fold]. *)
+val field_direct_folder
+  :  'a check
+  -> (t list -> ('record, 'a) Fieldslib.Field.t -> 'record -> 'a -> t list) Staged.t
+
 (** Combine a list of validation functions into one that does all validations. *)
 val all : 'a check list -> 'a check
 
@@ -139,4 +147,15 @@ val of_error_opt : string option -> t
 (** Validates an association list, naming each element using a user-defined function for
     computing the name. *)
 val alist : name:('a -> string) -> 'b check -> ('a * 'b) list check
+
+val bounded
+  :  name    : ('a -> string)
+  -> lower   : 'a Maybe_bound.t
+  -> upper   : 'a Maybe_bound.t
+  -> compare : ('a -> 'a -> int)
+  -> 'a check
+
+module Infix : sig
+  val (++) : t -> t -> t (* infix operator for [combine] above *)
+end
 

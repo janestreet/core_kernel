@@ -362,7 +362,7 @@ module T = struct
 
   let sexp_of_t f t = Array.sexp_of_t f (to_array t)
 
-  TEST_MODULE = struct
+  let%test_module _ = (module struct
     let data = [ 0; 1; 2; 3; 4; 5; 6; 7 ]
     let t = of_list data ~cmp:Int.compare
     (* pop the zero at the top to force some heap structuring.  This does not touch the
@@ -374,9 +374,9 @@ module T = struct
       let r = ref 0 in
       iter t ~f:(fun v -> r := !r + v);
       !r
-    TEST = Int.(=) list_sum heap_fold_sum
-    TEST = Int.(=) list_sum heap_iter_sum
-  end
+    let%test _ = Int.(=) list_sum heap_fold_sum
+    let%test _ = Int.(=) list_sum heap_iter_sum
+  end)
 
 end
 
@@ -386,7 +386,7 @@ module Removable = struct
        token belongs to to prevent using this token with the wrong heap in the
        remove/update functions below.  It's (currently) deemed not worth the cost in
        memory/speed. *)
-    type 'a t = 'a option ref with sexp_of
+    type 'a t = 'a option ref [@@deriving sexp_of]
 
     let create v    = ref (Some v)
     let value_exn t = Option.value_exn !t
@@ -395,7 +395,7 @@ module Removable = struct
   type 'a t = {
     heap           : 'a Elt.t T.t;
     mutable length : int;
-  } with sexp_of
+  } [@@deriving sexp_of]
 
   let remove t token =
     match !token with
@@ -533,9 +533,9 @@ end
 
 include T
 
-TEST_MODULE = struct
+let%test_module _ = (module struct
   module type Heap_intf = sig
-    type 'a t with sexp_of
+    type 'a t [@@deriving sexp_of]
 
     val create     : cmp:('a -> 'a -> int) -> 'a t
     val add        : 'a t -> 'a -> unit
@@ -572,7 +572,7 @@ TEST_MODULE = struct
   end
 
   module This_heap : Heap_intf = struct
-    type nonrec 'a t = 'a t with sexp_of
+    type nonrec 'a t = 'a t [@@deriving sexp_of]
 
     let create ~cmp = create ~cmp ()
     let add         = add
@@ -661,8 +661,8 @@ TEST_MODULE = struct
     loop 1_000
   ;;
 
-  TEST_UNIT = test_dual_ops ()
-end
+  let%test_unit _ = test_dual_ops ()
+end)
 
 let test_copy () =
   let sum t = fold t ~init:0 ~f:(fun acc i -> acc + i) in
@@ -684,7 +684,7 @@ let test_copy () =
   add t (-100);
   assert (sum t = sum t' - 100);
 ;;
-TEST_UNIT = test_copy ()
+let%test_unit _ = test_copy ()
 
 let test_removable_copy () =
   let sum t = Removable.fold t ~init:0 ~f:(fun acc i -> acc + i) in
@@ -706,7 +706,7 @@ let test_removable_copy () =
   Removable.remove t token;
   assert (sum t = sum t' - 100);
 ;;
-TEST_UNIT = test_removable_copy ()
+let%test_unit _ = test_removable_copy ()
 
 let test_removal () =
   let t = Removable.create ~cmp:Int.compare () in
@@ -726,11 +726,11 @@ let test_removal () =
   in
   loop 0
 ;;
-TEST_UNIT = test_removal ()
+let%test_unit _ = test_removal ()
 
 let test_ordering () =
   let t = create ~cmp:Int.compare () in
-  for _i = 1 to 10_000 do
+  for _ = 1 to 10_000 do
     add t (Random.int 100_000);
   done;
   let rec loop last =
@@ -742,11 +742,11 @@ let test_ordering () =
   in
   loop (-1)
 ;;
-TEST_UNIT = test_ordering ()
+let%test_unit _ = test_ordering ()
 
-TEST_UNIT = ignore (of_array [| |] ~cmp:Int.compare);
+let%test_unit _ = ignore (of_array [| |] ~cmp:Int.compare)
 
-BENCH_INDEXED "pop_insert_with_existing_heap" initial_size [1; 100; 10_000; 1_000_000] =
+let%bench_fun "pop_insert_with_existing_heap" [@indexed initial_size = [1; 100; 10_000; 1_000_000]] =
   let a = Array.init initial_size ~f:(fun _ -> Random.int 100_000) in
   let h1 = of_array ~cmp:Int.compare a in
   (fun () ->

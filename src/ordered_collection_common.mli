@@ -3,7 +3,6 @@
     This is used by various python-style slice functions. *)
 val normalize : length_fun:('a -> int) -> 'a -> int -> int
 
-
 val slice
   :  length_fun:('a -> int)
   -> sub_fun:('a -> pos:int -> len:int -> 'a)

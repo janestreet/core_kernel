@@ -36,12 +36,34 @@
     better interface, implement a hash table with it, and show that your table has better
     performance than Core_hashtbl.
 *)
-(* estokes: We expose [t] to allow an optimization in Hashtbl that makes iter and fold
-   more than twice as fast. *)
+
+(** We expose [t] to allow an optimization in Hashtbl that makes iter and fold more than
+    twice as fast.
+
+    It is however private so that ['k] and ['v] are invariant.  This avoids the following
+    segfault.  The segfault works by creating a tree containing [[`A of string]] keys,
+    mutating it to contain [[`A of string | `B of int]] keys, and then pattern matching
+    against keys at the first type.
+
+    {[
+      let added = ref false in
+      let tree =
+        Avltree.add Avltree.empty ~key:0 ~data:(`A "Hello, world!") ~compare
+          ~added ~replace:true
+      in
+      let x : (int, [ `A of string ]) Avltree.t = tree in
+      ignore (Avltree.add tree ~key:0 ~data:(`B 0) ~compare
+                ~added ~replace:true : (_, _) Avltree.t);
+      match Avltree.find x 0 ~compare:compare with
+      | None -> assert false
+      | Some (`A str) -> print_string str (* BOOM! *)
+    ]}
+*)
 type ('k, 'v) t =
-| Empty
-| Node of ('k, 'v) t * 'k * 'v * int * ('k, 'v) t
-| Leaf of 'k * 'v
+  private
+  | Empty
+  | Node of ('k, 'v) t * 'k * 'v * int * ('k, 'v) t
+  | Leaf of 'k * 'v
 
 val empty : ('k, 'v) t
 
@@ -57,15 +79,15 @@ val invariant : ('k, 'v) t -> compare:('k -> 'k -> int) -> unit
     overwrite any existing mapping for [key]. If [replace] is false, and there is an
     existing mapping for key then add has no effect. *)
 val add
-  :  ?replace:bool (* defaults to true *)
-  -> ('k, 'v) t
+  :  ('k, 'v) t
+  -> replace:bool
   -> compare:('k -> 'k -> int)
   -> added:bool ref
   -> key:'k
   -> data:'v
   -> ('k, 'v) t
 
-(* Returns the first (leftmost) or last (rightmost) element in the tree *)
+(** Returns the first (leftmost) or last (rightmost) element in the tree *)
 val first : ('k, 'v) t -> ('k * 'v) option
 val last  : ('k, 'v) t -> ('k * 'v) option
 

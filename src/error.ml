@@ -6,6 +6,8 @@ include Info
 
 let raise t = raise (to_exn t)
 
+let raise_s sexp = raise (create_s sexp)
+
 let to_info t = t
 let of_info t = t
 

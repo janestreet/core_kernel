@@ -5,7 +5,7 @@ open Bin_prot.Std
 let invalid_argf = Core_printf.invalid_argf
 
 module T = struct
-  type t = bool with bin_io, sexp, typerep
+  type t = bool [@@deriving bin_io, sexp, typerep]
   let compare (t : t) t' = compare t t'
 
   (* we use physical equality here because for bools it is the same *)
@@ -38,7 +38,19 @@ module Replace_polymorphic_compare = struct
   let ( < ) (x : t) y = x < y
   let ( <> ) (x : t) y = x != y
   let between t ~low ~high = low <= t && t <= high
-  let _squelch_unused_module_warning_ = ()
+  let clamp_unchecked t ~min ~max =
+    if t < min then min else if t <= max then t else max
+
+  let clamp_exn t ~min ~max =
+    assert (min <= max);
+    clamp_unchecked t ~min ~max
+
+  let clamp t ~min ~max =
+    if min > max then
+      Or_error.error "clamp requires [min <= max]"
+        (`Min min, `Max max) [%sexp_of: [`Min of T.t] * [`Max of T.t]]
+    else
+      Ok (clamp_unchecked t ~min ~max)
 end
 
 include Replace_polymorphic_compare
@@ -49,3 +61,13 @@ include Hashable.Make (T)
 
 include Comparable.Map_and_set_binable (T)
 include Comparable.Validate (T)
+
+let gen =
+  Quickcheck.Generator.doubleton true false
+
+let obs =
+  Quickcheck.Observer.doubleton Fn.id
+    ~f_sexp:(fun () -> Atom "Fn.id")
+
+let shrinker =
+  Quickcheck.Shrinker.empty ()

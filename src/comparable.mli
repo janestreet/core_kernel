@@ -8,17 +8,15 @@ module type S_common            = S_common
 module type Validate            = Validate
 module type With_zero           = With_zero
 
-type 'a bound = 'a Comparable_intf.bound = Incl of 'a | Excl of 'a | Unbounded
-
 (** [lexicographic cmps x y] compares [x] and [y] lexicographically using functions in the
     list [cmps]. *)
 val lexicographic : ('a -> 'a -> int) list -> 'a -> 'a -> int
 
 (** Inherit comparability from a component. *)
 module Inherit
-  (C : sig type t with compare end)
+  (C : sig type t [@@deriving compare] end)
   (T : sig
-    type t with sexp
+    type t [@@deriving sexp]
     val component : t -> C.t
   end) : S with type t := T.t
 
@@ -27,7 +25,7 @@ module Inherit
     {[
       module Foo = struct
         module T = struct
-          type t = ... with compare, sexp
+          type t = ... [@@deriving compare, sexp]
         end
         include T
         include Comparable.Make (T)
@@ -65,30 +63,30 @@ module Inherit
     ]}
 *)
 module Make (T : sig
-  type t with compare, sexp
+  type t [@@deriving compare, sexp]
 end) : S with type t := T.t
 
 module Make_binable (T : sig
-  type t with bin_io, compare, sexp
+  type t [@@deriving bin_io, compare, sexp]
 end) : S_binable with type t := T.t
 
-module Map_and_set_binable (T : sig type t with bin_io, compare, sexp end)
+module Map_and_set_binable (T : sig type t [@@deriving bin_io, compare, sexp] end)
   : Map_and_set_binable with type t := T.t
 
-module Poly (T : sig type t with sexp end) : S with type t := T.t
+module Poly (T : sig type t [@@deriving sexp] end) : S with type t := T.t
 
-module Validate (T : sig type t with compare, sexp end) : Validate with type t := T.t
+module Validate (T : sig type t [@@deriving compare, sexp] end) : Validate with type t := T.t
 
 module With_zero
          (T : sig
-            type t with compare, sexp
+            type t [@@deriving compare, sexp]
             val zero : t
             include Validate with type t := t
           end) : With_zero with type t := T.t
 
 module Validate_with_zero
          (T : sig
-            type t with compare, sexp
+            type t [@@deriving compare, sexp]
             val zero : t
           end)
   : sig
@@ -99,7 +97,7 @@ module Validate_with_zero
 (** [Check_sexp_conversion] checks that conversion of a map or set to a sexp uses the same
     sexp conversion as the underlying element. *)
 module Check_sexp_conversion (M : sig
-  type t with sexp_of
+  type t [@@deriving sexp_of]
   include S with type t := t
   val examples : t list
 end) : sig end

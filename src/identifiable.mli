@@ -1,7 +1,7 @@
 (** a signature for opaque identifier types. *)
 
 module type S = sig
-  type t with bin_io, sexp
+  type t [@@deriving bin_io, sexp]
   include Stringable.S         with type t := t
   include Comparable.S_binable with type t := t
   include Hashable.S_binable   with type t := t
@@ -13,9 +13,9 @@ end
     {[
       module Id = struct
         module T = struct
-          type t = A | B with bin_io, compare, sexp
+          type t = A | B [@@deriving bin_io, compare, sexp]
           let hash (t : t) = Hashtbl.hash t
-          include Sexpable.To_stringable (struct type nonrec t = t with sexp end)
+          include Sexpable.To_stringable (struct type nonrec t = t [@@deriving sexp] end)
         end
         include T
         include Identifiable.Make (T)
@@ -23,7 +23,7 @@ end
     ]}
 *)
 module Make (M : sig
-  type t with bin_io, compare, sexp
+  type t [@@deriving bin_io, compare, sexp]
   include Stringable.S with type t := t
   val hash : t -> int
   val module_name : string  (** for registering the pretty printer *)

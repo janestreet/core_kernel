@@ -29,34 +29,58 @@ let to_string { len; tree } =
     in
     go [s2] 0 s1;
     buf
+;;
 
 let (^) a b = { len = a.len + b.len; tree = Append (a.tree, b.tree) }
 
-TEST "no stack overflow" = to_string (
+let rec add_to_buffer_internal buffer todo = function
+  | Append (s1, s2) -> add_to_buffer_internal buffer (s2::todo) s1
+  | Base s ->
+    Buffer.add_string buffer s;
+    begin match todo with
+    | [] -> ()
+    | x :: xs -> add_to_buffer_internal buffer xs x
+    end
+;;
+
+let add_to_buffer { len = _; tree } buffer = add_to_buffer_internal buffer [] tree
+
+let%test_unit _ =
+  let r = (of_string "abc" ^ of_string "def") ^ (of_string "ghi" ^ of_string "jkl") in
+  let buffer = Buffer.create 12 in
+  add_to_buffer r buffer;
+  [%test_result: String.t] ~expect:"abcdefghijkl" (Buffer.to_bytes buffer)
+;;
+
+let%test "no stack overflow" = to_string (
   List.fold_left ~init:(of_string "") ~f:(^) (
     List.init 1000000 ~f:(fun _x -> of_string "x")))
         = String.make 1000000 'x'
+;;
 
-TEST = to_string (of_string "") = ""
-TEST = to_string (of_string "x") = "x"
-TEST = to_string (of_string "ab" ^ of_string "cd" ^ of_string "efg") = "abcdefg"
-TEST =
+let%test _ = to_string (of_string "") = ""
+let%test _ = to_string (of_string "x") = "x"
+let%test _ = to_string (of_string "ab" ^ of_string "cd" ^ of_string "efg") = "abcdefg"
+let%test _ =
   let rec go = function
     | 0 -> of_string "0"
     | n -> go (n - 1) ^ of_string (string_of_int n) ^ go (n - 1)
   in
   to_string (go 4) = "0102010301020104010201030102010"
+;;
 
-BENCH "small on the right" =
+let%bench "small on the right" =
   let rec go acc = function
     | 0 -> acc
     | n -> go (acc ^ of_string "bla") (n - 1)
   in
   to_string (go (of_string "") 2048)
+;;
 
-BENCH "balanced" =
+let%bench "balanced" =
   let rec go = function
     | 0 -> of_string "bla"
     | n -> go (n - 1) ^ go (n - 1)
   in
   to_string (go 11)
+;;

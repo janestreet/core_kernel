@@ -3,7 +3,7 @@
 
 module type S = sig
 
-  type 'a t with bin_io, sexp
+  type 'a t [@@deriving bin_io, sexp]
 
   include Invariant.S1 with type 'a t := 'a t
 
@@ -18,6 +18,9 @@ module type S = sig
 
   (** [create ()] returns an empty stack. *)
   val create : unit -> _ t
+
+  (** [singleton a] creates a new stack containing only [a]. *)
+  val singleton : 'a -> 'a t
 
   (** [push t a] adds [a] to the top of stack [t]. *)
   val push : 'a t -> 'a -> unit

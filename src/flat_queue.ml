@@ -22,14 +22,14 @@ type 'slots t =
   ; mutable length        : int
   ; mutable num_mutations : int
   }
-with fields, sexp_of
+[@@deriving fields, sexp_of]
 
 let capacity t = A.length t.elements
 
 let offset t i = (t.front + i) land t.mask
 
 let invariant slots_invariant t =
-  Invariant.invariant _here_ t <:sexp_of< _ t >> (fun () ->
+  Invariant.invariant [%here] t [%sexp_of: _ t] (fun () ->
     let check f = Invariant.check_field t f in
     Fields.iter
       ~elements:(check (fun elements ->
@@ -71,7 +71,7 @@ let create
     | Some capacity ->
       if capacity <= 0
       then failwiths "Flat_queue.create got nonpositive capacity" capacity
-             <:sexp_of< int >>
+             [%sexp_of: int]
       else Int.ceil_pow2 capacity
   in
   let create_elements ~len : (tuple, variant) Slots.t A.t = A.create slots ~len init in
@@ -92,9 +92,9 @@ let inc_num_mutations t = t.num_mutations <- t.num_mutations + 1
 
 let drop_front ?(n = 1) t =
   if n < 0 || n > length t
-  then failwiths "Flat_queue.drop_front got invalid n" (n, t) <:sexp_of< int * _ t >>;
+  then failwiths "Flat_queue.drop_front got invalid n" (n, t) [%sexp_of: int * _ t];
   inc_num_mutations t;
-  for _i = 1 to n do
+  for _ = 1 to n do
     A.set_to_init t.elements t.front;
     t.front <- offset t 1;
     t.length <- t.length - 1;
@@ -118,7 +118,7 @@ let unsafe_set t i slot a =
 
 let check_index t i =
   if i < 0 || i >= t.length
-  then failwiths "invalid index in Flat_queue" (i, t) <:sexp_of< int * _ t >>;
+  then failwiths "invalid index in Flat_queue" (i, t) [%sexp_of: int * _ t];
 ;;
 
 let get t i slot   = check_index t i; unsafe_get t i slot
@@ -274,7 +274,7 @@ let enqueue9 t a0 a1 a2 a3 a4 a5 a6 a7 a8 =
 
 let ensure_no_mutation t num_mutations =
   if t.num_mutations <> num_mutations
-  then failwiths "mutation of queue during iteration" t <:sexp_of< _ t >>;
+  then failwiths "mutation of queue during iteration" t [%sexp_of: _ t];
 ;;
 
 let fold t ~init ~f =

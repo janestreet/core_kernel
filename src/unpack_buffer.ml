@@ -3,7 +3,7 @@ open Std_internal
 let debug = ref false
 
 module Unpack_one = struct
-  type ('value, 'partial_unpack) t
+  type ('value, 'partial_unpack) unpacked
     =  ?partial_unpack : 'partial_unpack
     -> ?pos            : int
     -> ?len            : int
@@ -13,14 +13,9 @@ module Unpack_one = struct
        | `Invalid_data of Error.t
        ]
 
-  let map t ~f =
-    fun ?partial_unpack ?pos ?len buf ->
-      match t ?partial_unpack ?pos ?len buf with
-      | `Invalid_data _ | `Not_enough_data _ as x -> x
-      | `Ok (a, pos) -> `Ok (f a, pos)
-  ;;
+  type 'a t = T : ('a, _) unpacked -> 'a t
 
-  let create unpack_one =
+  let create_unpacked unpack_one =
     fun ?partial_unpack ?pos ?len buf ->
       let (pos, len) =
         Ordered_collection_common.get_pos_len_exn ?pos ?len ~length:(Bigstring.length buf)
@@ -28,10 +23,58 @@ module Unpack_one = struct
       unpack_one ?partial_unpack buf ~pos ~len
   ;;
 
+  let create unpack_one = T (create_unpacked unpack_one)
+
+  include Monad.Make (struct
+
+      type nonrec 'a t = 'a t
+
+      let return v = T (fun ?partial_unpack:_ ?pos:_ ?len:_ _ -> `Ok (v, 0))
+
+      let map' (t : 'a t) ~f =
+        let T t = t in
+        T (fun ?partial_unpack ?pos ?len buf ->
+          match t ?partial_unpack ?pos ?len buf with
+          | `Invalid_data _ | `Not_enough_data _ as x -> x
+          | `Ok (a, pos) -> `Ok (f a, pos))
+      ;;
+
+      let map = `Custom map'
+
+      let bind =
+        let module Partial_unpack = struct
+          type ('pa, 'b) t =
+            | A : 'pa -> ('pa, _) t
+            | B : 'pb * ('b, 'pb) unpacked -> (_, 'b) t
+        end in
+        let open Partial_unpack in
+        let do_b ~na partial_unpack (ub : (_, _) unpacked) buf ~pos ~len =
+          match ub ?partial_unpack ~pos ~len buf with
+          | `Invalid_data _ as x -> x
+          | `Not_enough_data (pb, nb) -> `Not_enough_data (B (pb, ub), nb + na)
+          | `Ok (b, nb) -> `Ok (b, na + nb)
+        in
+        fun (T ua) f ->
+          let do_a partial_unpack buf ~pos ~len =
+            match ua ?partial_unpack ~pos ~len buf with
+            | `Invalid_data _ as x -> x
+            | `Not_enough_data (pa, n) -> `Not_enough_data (A pa, n)
+            | `Ok (a, na) ->
+              let T ub = f a in
+              do_b ~na None ub buf ~pos:(pos + na) ~len:(len - na)
+          in
+          create (fun ?partial_unpack buf ~pos ~len ->
+            match partial_unpack with
+            | None              -> do_a       None         buf ~pos ~len
+            | Some (A pa)       -> do_a       (Some pa)    buf ~pos ~len
+            | Some (B (pb, ub)) -> do_b ~na:0 (Some pb) ub buf ~pos ~len)
+      ;;
+    end)
+
   (* [create_bin_prot] doesn't use [Bigstring.read_bin_prot] for performance reasons.  It
      was written prior to [Bigstring.read_bin_prot], and it's not clear whether switching
      to use it would cause too much of a performance hit. *)
-  let create_bin_prot bin_prot_reader =
+  let create_bin_prot_unpacked bin_prot_reader =
     let header_length = Bin_prot.Utils.size_header_length in
     let not_enough_data = `Not_enough_data ((), 0) in
     let pos_ref = ref 0 in
@@ -43,11 +86,11 @@ module Unpack_one = struct
       let result = bin_reader buf ~pos_ref in
       if !pos_ref <> pos + len then
         invalid_data "pos_ref <> pos + len" (!pos_ref, pos, len)
-          (<:sexp_of< int * int * int >>)
+          ([%sexp_of: int * int * int])
       else
         `Ok result
     in
-    create
+    create_unpacked
       (fun ?partial_unpack:_ buf ~pos ~len ->
          if header_length > len then
            not_enough_data
@@ -56,7 +99,7 @@ module Unpack_one = struct
            | `Invalid_data _ as x -> x
            | `Ok element_length ->
              if element_length < 0 then
-               invalid_data "negative element length %d" element_length <:sexp_of< int >>
+               invalid_data "negative element length %d" element_length [%sexp_of: int]
              else begin
                if element_length > len - header_length then
                  not_enough_data
@@ -72,7 +115,7 @@ module Unpack_one = struct
          end)
   ;;
 
-  type partial_sexp = (Bigstring.t, Sexp.t) Sexp.parse_fun sexp_opaque with sexp_of
+  let create_bin_prot bin_prot_reader = T (create_bin_prot_unpacked bin_prot_reader)
 
   let sexp =
     let module Parse_pos = Sexp.Parse_pos in
@@ -83,40 +126,69 @@ module Unpack_one = struct
       (fun ?(partial_unpack = partial_unpack_init) buf ~pos ~len ->
          try
            begin match partial_unpack ~pos ~len buf with
-           | Sexp.Cont (_state, k) -> `Not_enough_data (k, len)
-           | Sexp.Done (sexp, parse_pos) -> `Ok (sexp, parse_pos.Parse_pos.buf_pos - pos)
+           | Cont (_state, k)       -> `Not_enough_data (k, len)
+           | Done (sexp, parse_pos) -> `Ok (sexp, parse_pos.Parse_pos.buf_pos - pos)
            end
          with exn -> `Invalid_data (Error.of_exn exn))
   ;;
+
+  let char =
+    create (fun ?partial_unpack:_ buf ~pos ~len ->
+      if len < 1 then
+        `Not_enough_data ((), 0)
+      else
+        `Ok (Bigstring.get buf pos, 1))
+  ;;
+
+  module type Equal = sig
+    type t [@@deriving sexp_of]
+    val equal : t -> t -> bool
+  end
+
+  let expect (type a) (T u) (module E : Equal with type t = a) expected =
+    T (fun ?partial_unpack ?pos ?len buf ->
+      match u ?partial_unpack ?pos ?len buf with
+      | `Invalid_data _ | `Not_enough_data _ as x -> x
+      | `Ok (parsed, n) ->
+        if E.equal expected parsed then
+          `Ok ((), n)
+        else
+          `Invalid_data
+            (Error.create "parsed does not match expected" () (fun () ->
+               [%sexp
+                 { parsed =   (parsed   : E.t)
+                 ; expected = (expected : E.t)
+                 }])))
+  ;;
+
+  let expect_char = expect char (module Char)
+
+  let newline = expect_char '\n'
 end
 
 type ('a, 'b) alive =
   { mutable partial_unpack : 'b option
-  ; unpack_one : ('a, 'b) Unpack_one.t sexp_opaque
-  (* [buf] holds unconsumed chars *)
-  ; mutable buf : Bigstring.t
-  (* [pos] is the start of unconsumed data in [buf] *)
-  ; mutable pos : int
-  (* [len] is the length of unconsumed data in [buf] *)
-  ; mutable len : int
+  ; unpack_one             : ('a, 'b) Unpack_one.unpacked sexp_opaque
+  (* [buf] holds unconsumed chars*)
+  ; mutable buf            : Bigstring.t
+  (* [pos] is the start of unconsumed data in[buf] *)
+  ; mutable pos            : int
+  (* [len] is the length of unconsumed data in[buf] *)
+  ; mutable len            : int
   }
-with sexp_of
+[@@deriving sexp_of]
 
-type ('a, 'b) state =
-  | Alive of ('a, 'b) alive
+type 'a state =
+  | Alive  : ('a, _) alive -> 'a state
   | Dead  of Error.t
-with sexp_of
+[@@deriving sexp_of]
 
-type ('a, 'b) t =
-  { mutable state : ('a, 'b) state;
+type 'a t =
+  { mutable state : 'a state
   }
-with sexp_of
+[@@deriving sexp_of]
 
-let sexp_of_any _ = Sexp.Atom "<VALUE>"
-
-let to_sexp_ignore t = sexp_of_t sexp_of_any sexp_of_any t
-
-let invariant t =
+let invariant _ t =
   try
     match t.state with
     | Dead _ -> ()
@@ -126,21 +198,25 @@ let invariant t =
       if t.len = 0 then assert (t.pos = 0);
       assert (t.pos + t.len <= Bigstring.length t.buf);
   with exn ->
-    failwiths "invariant failed" (exn, to_sexp_ignore t) <:sexp_of< exn * Sexp.t >>
+    failwiths "invariant failed" (exn, t) [%sexp_of: exn * _ t]
 ;;
 
-let create ?partial_unpack unpack_one =
+let create_unpacked ?partial_unpack unpack_one =
   { state =
       Alive { partial_unpack
             ; unpack_one
-            ; buf            = Bigstring.create 1
-            ; pos            = 0
-            ; len            = 0
+            ; buf = Bigstring.create 1
+            ; pos = 0
+            ; len = 0
             };
   }
 ;;
 
-let create_bin_prot bin_prot_reader = create (Unpack_one.create_bin_prot bin_prot_reader)
+let create (Unpack_one.T unpack_one) = create_unpacked unpack_one
+
+let create_bin_prot bin_prot_reader =
+  create (Unpack_one.create_bin_prot bin_prot_reader)
+;;
 
 let is_empty t =
   match t.state with
@@ -169,7 +245,7 @@ let ensure_available t len =
 
 let feed_gen buf_length (blit_buf_to_bigstring : (_, _) Blit.blito)
       ?pos ?len t buf =
-  if !debug then invariant t;
+  if !debug then invariant ignore t;
   match t.state with
   | Dead e -> Error e
   | Alive t ->
@@ -193,7 +269,7 @@ let feed_string ?pos ?len t buf =
 ;;
 
 let unpack_iter t ~f =
-  if !debug then invariant t;
+  if !debug then invariant ignore t;
   match t.state with
   | Dead e -> Error e
   | Alive alive ->
@@ -214,7 +290,7 @@ let unpack_iter t ~f =
         match
           t.unpack_one t.buf ~pos:t.pos ~len:t.len ?partial_unpack:t.partial_unpack
         with
-        | exception exn -> error (Error.create "unpack error" exn <:sexp_of< Exn.t >>)
+        | exception exn -> error (Error.create "unpack error" exn [%sexp_of: Exn.t])
         | unpack_result ->
           match unpack_result with
           | `Invalid_data e -> error (Error.tag e "invalid data")
@@ -225,7 +301,7 @@ let unpack_iter t ~f =
                where atom ends until we hit parenthesis, e.g. "abc(". *)
             if num_bytes < 0 || num_bytes > t.len then
               error (Error.create "unpack consumed invalid amount" num_bytes
-                       <:sexp_of< int >>)
+                       [%sexp_of: int])
             else if num_bytes = 0 && Option.is_none t.partial_unpack then
               error (Error.of_string "\
 unpack returned a value but consumed 0 bytes without partially unpacked data")
@@ -235,7 +311,7 @@ unpack returned a value but consumed 0 bytes without partially unpacked data")
               match f one with
               | exception exn ->
                 error (Error.create "~f supplied to Unpack_buffer.unpack_iter raised" exn
-                         <:sexp_of< exn >>)
+                         [%sexp_of: exn])
               | _ -> loop ();
             end;
           | `Not_enough_data (partial_unpack, num_bytes) ->
@@ -243,7 +319,7 @@ unpack returned a value but consumed 0 bytes without partially unpacked data")
                consumed more bytes than were available. *)
             if num_bytes < 0 || num_bytes > t.len then
               error (Error.create "partial unpack consumed invalid amount" num_bytes
-                       <:sexp_of< int >>)
+                       [%sexp_of: int])
             else begin
               consume ~num_bytes;
               t.partial_unpack <- Some partial_unpack;
@@ -263,7 +339,7 @@ unpack returned a value but consumed 0 bytes without partially unpacked data")
 
 let unpack_into t q = unpack_iter t ~f:(Queue.enqueue q)
 
-TEST_MODULE "unpack-buffer" = struct
+let%test_module "unpack-buffer" = (module struct
 
   let is_dead t =
     match t.state with
@@ -283,15 +359,14 @@ TEST_MODULE "unpack-buffer" = struct
   ;;
 
   module type Value = sig
-    type t with sexp_of
+    type t [@@deriving sexp_of]
     include Equal.S with type t := t
+
     val pack : t list -> string
-    type partial_unpack with sexp_of
-    val unpack_one : (t, partial_unpack) Unpack_one.t
+    val unpack_one : t Unpack_one.t
   end
 
-  let test (type value) (v : (module Value with type t = value)) values =
-    let module V = (val v) in
+  let test (type value) (module V : Value with type t = value) values =
     let input = Bigstring.of_string (V.pack values) in
     let input_size = Bigstring.length input in
     for chunk_size = 1 to input_size do
@@ -313,24 +388,23 @@ TEST_MODULE "unpack-buffer" = struct
         assert (is_empty_exn t);
         let output = Queue.to_list output in
         if not (List.equal ~equal:V.equal values output) then
-          failwiths "mismatch" (values, output) <:sexp_of< V.t list * V.t list >>;
+          failwiths "mismatch" (values, output) [%sexp_of: V.t list * V.t list];
       with exn ->
         failwiths "failure"
           (exn, `chunk_size chunk_size, `input input, values, t)
-          <:sexp_of< (exn
+          [%sexp_of: (exn
                        * [ `chunk_size of int ]
                        * [ `input of Bigstring.t ]
                        * V.t list
-                       * (V.t, V.partial_unpack) t )>>;
+                       * V.t t)];
     done;
   ;;
 
-  TEST_UNIT =
+  let%test_unit _ =
     debug := true;
     for value_size = 1 to 5 do
       let module Value = struct
         let pack ts = String.concat ts
-        type partial_unpack = unit with sexp_of
         let unpack_one =
           Unpack_one.create
             (fun ?partial_unpack:_ buf ~pos ~len ->
@@ -349,14 +423,13 @@ TEST_MODULE "unpack-buffer" = struct
             Char.of_int_exn ((i * value_size + j) land 0xFF)))
       in
       test (module Value) values
-    done;
+    done
   ;;
 
   (* [Unpack_one.sexp] *)
-  TEST_UNIT =
+  let%test_unit _ =
     let module Value = struct
       let pack ts = String.concat ~sep:" " (List.map ts ~f:Sexp.to_string)
-      type partial_unpack = Unpack_one.partial_sexp with sexp_of
       let unpack_one = Unpack_one.sexp
       include Sexp
     end in
@@ -380,15 +453,16 @@ TEST_MODULE "unpack-buffer" = struct
     List.iter sexps ~f:(fun sexp ->
       test [ sexp; terminator ];
       test [ sexp; sexp; terminator ]);
-    test sexps;
+    test sexps
   ;;
 
   (* [Unpack_one.sexp] *)
-  TEST_UNIT =
+  let%test_unit _ =
     debug := true;
     (* Error case. *)
     begin
-      match Unpack_one.sexp ~pos:0 ~len:1 (Bigstring.of_string ")") with
+      let Unpack_one.T unpack_sexp = Unpack_one.sexp in
+      match unpack_sexp ~pos:0 ~len:1 (Bigstring.of_string ")") with
       | `Invalid_data _ -> ()
       | `Ok _
       | `Not_enough_data _ -> assert false
@@ -397,21 +471,23 @@ TEST_MODULE "unpack-buffer" = struct
        - starts in the middle of the buffer
        - doesn't consume the whole buffer *)
     begin
-      match Unpack_one.sexp ~pos:1 ~len:9 (Bigstring.of_string ")(foo)(x y") with
+      let Unpack_one.T unpack_sexp = Unpack_one.sexp in
+      match unpack_sexp ~pos:1 ~len:9 (Bigstring.of_string ")(foo)(x y") with
       | `Ok (Sexp.List [Sexp.Atom "foo"], 5) -> ()
       | `Ok result ->
         Error.raise
-          (Error.create "Unexpected result" result <:sexp_of<Sexp.t * int>>)
+          (Error.create "Unexpected result" result [%sexp_of: Sexp.t * int])
       | `Not_enough_data _
       | `Invalid_data _ -> assert false
     end;
     (* Partial sexp case, requries two passes to parse the sexp. *)
     begin
-      match Unpack_one.sexp ~pos:6 ~len:4 (Bigstring.of_string ")(foo)(x y") with
+      let Unpack_one.T unpack_sexp = Unpack_one.sexp in
+      match unpack_sexp ~pos:6 ~len:4 (Bigstring.of_string ")(foo)(x y") with
       | `Not_enough_data (k, 4) ->
         begin
           match
-            Unpack_one.sexp ~partial_unpack:k ~pos:0 ~len:3 (Bigstring.of_string " z)")
+            unpack_sexp ~partial_unpack:k ~pos:0 ~len:3 (Bigstring.of_string " z)")
           with
           | `Ok (Sexp.List [Sexp.Atom "x"; Sexp.Atom "y"; Sexp.Atom "z"], 3) -> ()
           | `Ok _
@@ -421,13 +497,63 @@ TEST_MODULE "unpack-buffer" = struct
       | `Not_enough_data (_, n) -> failwithf "Consumed %d bytes" n ()
       | `Ok result ->
         Error.raise
-          (Error.create "Unexpected result" result <:sexp_of<Sexp.t * int>>)
+          (Error.create "Unexpected result" result [%sexp_of: Sexp.t * int])
       | `Invalid_data error -> Error.raise error
     end
   ;;
 
+  (* [Unpack_one.ch] *)
+  let%test_unit _ =
+    debug := true;
+    let succeeded_correctly = function
+      | `Ok ((), 1) -> true
+      | `Ok _ | `Not_enough_data _ | `Invalid_data _ -> false
+    in
+    let failed_correctly = function
+      | `Invalid_data _ -> true
+      | `Ok _ | `Not_enough_data _ -> false
+    in
+    let open Unpack_one in
+    let T expect_a = expect_char 'a' in
+    (* basic *)
+    assert (succeeded_correctly (expect_a ~pos:0 ~len:1 (Bigstring.of_string "a")));
+    assert (failed_correctly    (expect_a ~pos:0 ~len:1 (Bigstring.of_string "b")));
+    (* middle of buffer *)
+    assert (succeeded_correctly (expect_a ~pos:3 ~len:1 (Bigstring.of_string "bcda")));
+    assert (failed_correctly    (expect_a ~pos:3 ~len:1 (Bigstring.of_string "abcd")));
+    (* Need more data *)
+    match expect_a ~pos:0 ~len:0 (Bigstring.of_string "") with
+    | `Not_enough_data (_, 0) -> ()
+    | `Not_enough_data _ | `Ok _ | `Invalid_data _ -> assert false
+  ;;
+
+  (* [Unpack_one.bind] *)
+  let%test_unit _ =
+    debug := true;
+    let module Value = struct
+      include Sexp
+      let pack ts =
+        List.map ts ~f:(fun sexp -> Sexp.to_string sexp ^ "\n")
+        |> String.concat
+      let unpack_one =
+        let open Unpack_one.Monad_infix in
+        Unpack_one.sexp
+        >>= fun sexp ->
+        Unpack_one.newline
+        >>| fun () ->
+        sexp
+    end
+    in
+    test (module Value) [];
+    test (module Value) [ List [] ];
+    test (module Value) [ Atom "one" ];
+    test (module Value) [ Atom "one"; Atom "two" ];
+    test (module Value) [ Atom "one"; List [Atom "two"] ];
+    test (module Value) [ List [Atom "one"] ; Atom "two" ]
+  ;;
+
   (* [Unpack_one.create_bin_prot] *)
-  TEST_UNIT =
+  let%test_unit _ =
     debug := true;
     let module Value = struct
       type t =
@@ -435,7 +561,7 @@ TEST_MODULE "unpack-buffer" = struct
         ; bar : int
         ; baz : string list
         }
-      with bin_io, compare, sexp
+      [@@deriving bin_io, compare, sexp]
 
       let equal t t' = compare t t' = 0
 
@@ -453,8 +579,6 @@ TEST_MODULE "unpack-buffer" = struct
         Bigstring.to_string buffer
       ;;
 
-      type partial_unpack = unit with sexp_of
-
       let unpack_one = Unpack_one.create_bin_prot bin_reader_t
     end
     in
@@ -467,7 +591,7 @@ TEST_MODULE "unpack-buffer" = struct
     test (module Value) (List.init 1000 ~f:(fun i -> if i % 2 = 0 then a else b))
   ;;
 
-  TEST_UNIT = (* [unpack_iter] when [f] raises *)
+  let%test_unit _ = (* [unpack_iter] when [f] raises *)
     let t =
       create (Unpack_one.create (fun ?partial_unpack:_ _ ~pos:_ ~len ->
         if len = 0
@@ -475,6 +599,6 @@ TEST_MODULE "unpack-buffer" = struct
         else `Ok ((), 1)))
     in
     ok_exn (feed_string t "hello");
-    assert (is_error (unpack_iter t ~f:(fun _ -> failwith "f raised")));
+    assert (is_error (unpack_iter t ~f:(fun _ -> failwith "f raised")))
   ;;
-end
+end)

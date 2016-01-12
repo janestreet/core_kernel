@@ -4,7 +4,7 @@
     doesn't want to block, e.g. a finalizer or an async job.
 *)
 
-type 'a t with sexp_of
+type 'a t [@@deriving sexp_of]
 
 include Invariant.S1 with type 'a t := 'a t
 

@@ -32,7 +32,7 @@ let with_return_option f =
 
 let prepend { return } ~f = { return = fun x -> return (f x) }
 
-TEST_MODULE "with_return" = struct
+let%test_module "with_return" = (module struct
   let test_loop loop_limit jump_out =
     with_return (fun { return } ->
       for i = 0 to loop_limit do begin
@@ -41,9 +41,9 @@ TEST_MODULE "with_return" = struct
       `Normal)
   ;;
 
-  TEST = test_loop 5 10 = `Normal
-  TEST = test_loop 10 5 = `Jumped_out 5
-  TEST = test_loop 5 5  = `Jumped_out 5
+  let%test _ = test_loop 5 10 = `Normal
+  let%test _ = test_loop 10 5 = `Jumped_out 5
+  let%test _ = test_loop 5 5  = `Jumped_out 5
 
   let test_nested outer inner =
     with_return (fun { return = return_outer } ->
@@ -58,20 +58,20 @@ TEST_MODULE "with_return" = struct
       `Outer_normal inner_res)
   ;;
 
-  TEST = test_nested `Outer_jump `Inner_jump                = `Outer_jump
-  TEST = test_nested `Outer_jump `Inner_jump_out_completely = `Outer_jump
-  TEST = test_nested `Outer_jump `Foo                       = `Outer_jump
+  let%test _ = test_nested `Outer_jump `Inner_jump                = `Outer_jump
+  let%test _ = test_nested `Outer_jump `Inner_jump_out_completely = `Outer_jump
+  let%test _ = test_nested `Outer_jump `Foo                       = `Outer_jump
 
-  TEST = test_nested `Jump_with_inner `Inner_jump_out_completely = `Inner_jump
-  TEST = test_nested `Jump_with_inner `Inner_jump = `Outer_later_jump `Inner_jump
-  TEST = test_nested `Jump_with_inner `Foo        = `Outer_later_jump `Inner_normal
+  let%test _ = test_nested `Jump_with_inner `Inner_jump_out_completely = `Inner_jump
+  let%test _ = test_nested `Jump_with_inner `Inner_jump = `Outer_later_jump `Inner_jump
+  let%test _ = test_nested `Jump_with_inner `Foo        = `Outer_later_jump `Inner_normal
 
-  TEST = test_nested `Foo `Inner_jump_out_completely = `Inner_jump
-  TEST = test_nested `Foo `Inner_jump = `Outer_normal `Inner_jump
-  TEST = test_nested `Foo `Foo = `Outer_normal `Inner_normal
-end
+  let%test _ = test_nested `Foo `Inner_jump_out_completely = `Inner_jump
+  let%test _ = test_nested `Foo `Inner_jump = `Outer_normal `Inner_jump
+  let%test _ = test_nested `Foo `Foo = `Outer_normal `Inner_normal
+end)
 
-TEST_MODULE "with_return_option" = struct
+let%test_module "with_return_option" = (module struct
   let test_loop loop_limit jump_out =
     with_return_option (fun { return } ->
       for i = 0 to loop_limit do begin
@@ -79,7 +79,7 @@ TEST_MODULE "with_return_option" = struct
       end done)
   ;;
 
-  TEST = test_loop 5 10 = None
-  TEST = test_loop 10 5 = Some (`Jumped_out 5)
-  TEST = test_loop 5 5  = Some (`Jumped_out 5)
-end
+  let%test _ = test_loop 5 10 = None
+  let%test _ = test_loop 10 5 = Some (`Jumped_out 5)
+  let%test _ = test_loop 5 5  = Some (`Jumped_out 5)
+end)

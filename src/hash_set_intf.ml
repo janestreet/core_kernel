@@ -16,6 +16,7 @@ module type Accessors = sig
   val filter : 'a t -> f:('a -> bool) -> 'a t
   val diff : 'a t -> 'a t -> 'a t
   val of_hashtbl_keys : ('a, _) Core_hashtbl.t -> 'a t
+  val to_hashtbl : 'key t -> f:('key -> 'data) -> ('key, 'data) Core_hashtbl.t
   val filter_inplace : 'a t -> f:('a -> bool) -> unit
 end
 
@@ -37,7 +38,7 @@ end
 module type S = sig
   type elt
   type 'a hash_set
-  type t = elt hash_set with sexp
+  type t = elt hash_set [@@deriving sexp]
   type 'a t_ = t
   type 'a elt_ = elt
 

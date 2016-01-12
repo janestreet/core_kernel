@@ -63,7 +63,6 @@ module type S = sig
   end
 
   include module type of Applicative_infix
-
 end
 
 (** argument lists and associated N-ary map and apply functions *)
@@ -88,7 +87,7 @@ module type Args = sig
       argument like so:
 
       {[
-        step ~f:(fun f ~foo:x -> f x) : ('a -> 'r1, 'r2) t -> (foo:'a -> 'r1, 'r2) t
+        step ~f:(fun f x -> f ~foo:x) : ('a -> 'r1, 'r2) t -> (foo:'a -> 'r1, 'r2) t
       ]}
   *)
   val step : ('f1, 'r) t -> f:('f2 -> 'f1) -> ('f2, 'r) t

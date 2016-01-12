@@ -4,7 +4,9 @@
 
 exception Already_set
 
-type 'a t with bin_io, sexp
+type 'a t [@@deriving bin_io, sexp]
+
+include Invariant.S1 with type 'a t := 'a t (** Passes when unset. *)
 
 val create : unit -> 'a t
 

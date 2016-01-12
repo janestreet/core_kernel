@@ -1,7 +1,7 @@
 open Common
 
 type 'a t = 'a ref = { mutable contents : 'a }
-with bin_io, compare, sexp, typerep
+[@@deriving bin_io, compare, sexp, typerep]
 
 include Container.S1 with type 'a t := 'a t
 
@@ -17,8 +17,12 @@ val swap : 'a t -> 'a t -> unit
 (** [replace t f] is [t := f !t] *)
 val replace : 'a t -> ('a -> 'a) -> unit
 
+(** [set_temporarily t a ~f] sets [t] to [a], calls [f ()], and then restores [t] to its
+    value prior to [set_temporarily] being called, whether [f] returns or raises. *)
+val set_temporarily : 'a t -> 'a -> f:(unit -> 'b) -> 'b
+
 module Permissioned : sig
-  type ('a, -'perms) t with sexp, bin_io
+  type ('a, -'perms) t [@@deriving sexp, bin_io]
 
   include Container.S1_permissions
     with type ('a, 'perms) t := ('a, 'perms) t
@@ -43,4 +47,10 @@ module Permissioned : sig
     -> unit
 
   val replace : ('a, [> read_write ]) t -> ('a -> 'a) -> unit
+
+  val set_temporarily
+    :  ('a, [> read_write ]) t
+    -> 'a
+    -> f:(unit -> 'b)
+    -> 'b
 end

@@ -16,7 +16,7 @@ module Removable : sig
   include Heap_intf.S
 
   module Elt : sig
-    type 'a t with sexp_of
+    type 'a t [@@deriving sexp_of]
 
     (** [value_exn t] return the value in the heap controlled by this token if the value
         is still in the heap.  Raise otherwise. *)

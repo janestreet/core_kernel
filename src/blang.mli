@@ -39,7 +39,7 @@ type 'a t = private
   | Not of 'a t
   | If of 'a t * 'a t * 'a t
   | Base of 'a
-with bin_io, compare, sexp
+[@@deriving bin_io, compare, sexp]
 (** Note that the sexps are not directly inferred from the type above -- there are lots of
     fancy shortcuts.  Also, the sexps for ['a] must not look anything like blang sexps.
     Otherwise [t_of_sexp] will fail. *)
@@ -117,6 +117,22 @@ val values : 'a t -> 'a list
     [f] that assigns truth values to base propositions. *)
 val eval : 'a t -> ('a -> bool) -> bool
 
+(** [eval_set ~universe set_of_base expression] returns the subset of elements [e] in
+    [universe] that satisfy [eval expression (fun base -> Set.mem (set_of_base base) e)].
+
+    [eval_set] assumes, but does not verify, that [set_of_base] always returns a subset of
+    [universe].  If this doesn't hold, then [eval_set]'s result may contain elements not
+    in [universe].
+
+    [And set1 set2] represent the elements that are both in set1 and set2, thus in the
+    intersection of set1 and set2.  Symmetrically, [Or set1 set2] represent the union of
+    set1 and set2. *)
+val eval_set
+  :  universe : ('elt, 'comparator) Set.t Lazy.t
+  -> ('a -> ('elt, 'comparator) Set.t)
+  -> 'a t
+  -> ('elt, 'comparator) Set.t
+
 (** [specialize t f] partially evaluates [t] according to a
     perhaps-incomplete assignment [f] of the values of base propositions.
     The following laws (at least partially) characterize its behavior.
@@ -151,6 +167,6 @@ module Stable : sig
       | Not of 'a t
       | If of 'a t * 'a t * 'a t
       | Base of 'a
-    with sexp, bin_io, compare
+    [@@deriving sexp, bin_io, compare]
   end
 end

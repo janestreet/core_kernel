@@ -169,7 +169,7 @@ module Composition_preserves_injectivity (M1 : Injective) (M2 : Injective)
     types.  Unlike values of type [Type_equal.t], values of type [Id.t] do have semantic
     content and must have a nontrivial runtime representation. *)
 module Id : sig
-  type 'a t with sexp_of
+  type 'a t [@@deriving sexp_of]
 
   (** Every [Id.t] contains a unique id that is distinct from the [Uid.t] in any other
       [Id.t]. *)

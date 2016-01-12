@@ -8,6 +8,7 @@ module Array = Array
 module ArrayLabels = ArrayLabels
 module Buffer = Buffer
 module Bytes = Bytes
+module BytesLabels = BytesLabels
 module Callback = Callback
 module Char = Char
 module Complex = Complex
@@ -46,3 +47,4 @@ module Sys = Sys
 module Weak = Weak
 
 include Pervasives
+

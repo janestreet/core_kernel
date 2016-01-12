@@ -12,7 +12,7 @@ open Std_internal
     represented as a string with newlines separating the frames.  [sexp_of_t] splits the
     string at newlines and removes some of the cruft, leaving a human-friendly list of
     frames, but [to_string] does not. *)
-type t with sexp_of
+type t [@@deriving sexp_of]
 
 val get : ?at_most_num_frames:int -> unit -> t
 
@@ -57,3 +57,6 @@ module Exn : sig
       most recently raised exception. *)
   val most_recent : unit -> string
 end
+
+(** Runs global side effects, which initializes [am_recording ()] as specified above. *)
+val initialize_module : unit -> unit

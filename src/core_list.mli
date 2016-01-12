@@ -1,10 +1,15 @@
-(** Tail recursive version of standard List functions, plus additional operations. *)
+(** List operations.
 
-(** [compare] on lists is lexicographic. *)
-type 'a t = 'a list with bin_io, compare, sexp, typerep
+    OCaml's lists are immutable, singly-linked lists, which therefore give fast access to
+    the front of the list, and slow (i.e., O(n)) access to the back of the list.  The
+    comparison functions on lists are lexicographic.
+*)
 
-include Container.S1 with type 'a t := 'a t
-include Monad.S      with type 'a t := 'a t
+type 'a t = 'a list [@@deriving bin_io, compare, sexp, typerep]
+
+include Container.S1      with type 'a t := 'a t
+include Monad.S           with type 'a t := 'a t
+include Quickcheckable.S1 with type 'a t := 'a t
 
 (** [of_list] is the identity function.  It is useful so that the [List] module matches
     the same signature that other container modules do, namely:
@@ -63,11 +68,17 @@ val fold2_exn
   -> f:('c -> 'a -> 'b -> 'c)
   -> 'c
 
-(** Same as {!List.for_all}, but for a two-argument predicate.
+(** Like {!List.for_all}, but passes the index as an argument. *)
+val for_alli : 'a t -> f:(int -> 'a -> bool) -> bool
+
+(** Like {!List.for_all}, but for a two-argument predicate.
    Raise if the two lists have different lengths. *)
 val for_all2_exn : 'a t -> 'b t -> f:('a -> 'b -> bool) -> bool
 
-(** Same as {!List.exists}, but for a two-argument predicate.  Raise
+(** Like {!List.exists}, but passes the index as an argument. *)
+val existsi : 'a t -> f:(int -> 'a -> bool) -> bool
+
+(** Like {!List.exists}, but for a two-argument predicate.  Raise
     if the end of one list is reached before the end of the other. *)
 val exists2_exn : 'a t -> 'b t -> f:('a -> 'b -> bool) -> bool
 
@@ -108,7 +119,7 @@ val split_n : 'a t -> int -> 'a t * 'a t
     the same order in the output. *)
 val sort : cmp:('a -> 'a -> int) -> 'a t -> 'a t
 
-(** Same as sort, but guaranteed to be stable *)
+(** Like [sort], but guaranteed to be stable *)
 val stable_sort : cmp:('a -> 'a -> int) -> 'a t -> 'a t
 
 (** Merge two lists: assuming that [l1] and [l2] are sorted according to the comparison
@@ -133,7 +144,13 @@ val findi : 'a t -> f:(int -> 'a -> bool) -> (int * 'a) option
     [Not_found] if there is no such element. *)
 val find_exn : 'a t -> f:('a -> bool) -> 'a
 
-(** {6 Tail-recursive implementations of standard List operations} *)
+(** Returns the first evaluation of [f] that returns [Some].  Raises [Not_found] if [f]
+    always returns [None].  *)
+val find_map_exn : 'a t -> f:('a -> 'b option) -> 'b
+
+(** Like [find_map] and [find_map_exn], but pass the index as an argument. *)
+val find_mapi     : 'a t -> f:(int -> 'a -> 'b option) -> 'b option
+val find_mapi_exn : 'a t -> f:(int -> 'a -> 'b option) -> 'b
 
 (** E.g. [append [1; 2] [3; 4; 5]] is [[1; 2; 3; 4; 5]] *)
 val append : 'a t -> 'a t -> 'a t
@@ -234,13 +251,16 @@ val last_exn : 'a t -> 'a
 (** [is_prefix xs ~prefix] returns [true] if [xs] starts with [prefix]. *)
 val is_prefix : 'a t -> prefix:'a t -> equal:('a -> 'a -> bool) -> bool
 
+
 (** [find_consecutive_duplicate t ~equal] returns the first pair of consecutive elements
     [(a1, a2)] in [t] such that [equal a1 a2].  They are returned in the same order as
-    they appear in [t]. *)
+    they appear in [t].  [equal] need not be an equivalence relation; it is simply used as
+    a predicate on consecutive elements. *)
 val find_consecutive_duplicate : 'a t -> equal:('a -> 'a -> bool) -> ('a * 'a) option
 
 (** [remove_consecutive_duplicates]. The same list with consecutive duplicates removed.
-    The relative order of the other elements is unaffected. *)
+    The relative order of the other elements is unaffected.
+    The element kept from a run of duplicates is the last one. *)
 val remove_consecutive_duplicates : 'a t -> equal:('a -> 'a -> bool) -> 'a t
 
 (** [dedup] (de-duplicate).  The same list with duplicates removed, but the
@@ -253,6 +273,10 @@ val contains_dup : ?compare:('a -> 'a -> int) -> 'a t -> bool
 (** [find_a_dup] returns a duplicate from the list (no guarantees about which
     duplicate you get), or None if there are no dups. *)
 val find_a_dup : ?compare:('a -> 'a -> int) -> 'a t -> 'a option
+
+(** [find_all_dups] returns a list of all elements that occur more than once, with
+    no guarantees about order. *)
+val find_all_dups : ?compare:('a -> 'a -> int) -> 'a t -> 'a list
 
 (** only raised in [exn_if_dup] below *)
 exception Duplicate_found of (unit -> Sexplib.Sexp.t) * string
@@ -267,9 +291,9 @@ val exn_if_dup
   -> to_sexp:('a -> Sexplib.Sexp.t)
   -> unit
 
-(** [count l ~f] is the number of elements in [l] that satisfy the
-    predicate [f].  *)
-val count : 'a t -> f:('a -> bool) -> int
+(** [count l ~f] is the number of elements in [l] that satisfy the predicate [f]. *)
+val count  : 'a t -> f:(       'a -> bool) -> int
+val counti : 'a t -> f:(int -> 'a -> bool) -> int
 
 (** [range ?stride ?start ?stop start_i stop_i] is the list of integers from [start_i] to
     [stop_i], stepping by [stride].  If [stride] < 0 then we need [start_i] > [stop_i] for
@@ -282,6 +306,18 @@ val range
   -> int
   -> int
   -> int t
+
+(** [range'] is analogous to [range] for general start/stop/stride types.  [range'] raises
+    if [stride x] returns [x] or if the direction that [stride x] moves [x] changes from
+    one call to the next. *)
+val range'
+  :  compare:('a -> 'a -> int)
+  -> stride:('a -> 'a)
+  -> ?start:[`inclusive|`exclusive]         (** default = `inclusive *)
+  -> ?stop:[`inclusive|`exclusive]          (** default = `exclusive *)
+  -> 'a
+  -> 'a
+  -> 'a t
 
 (** [init n ~f] is [[(f 0); (f 1); ...; (f (n-1))]]. It is an error if [n < 0]. *)
 val init : int -> f:(int -> 'a) -> 'a t
@@ -317,7 +353,7 @@ val filter_opt : 'a option t -> 'a t
 *)
 module Assoc : sig
 
-  type ('a, 'b) t = ('a * 'b) list with bin_io, sexp, compare
+  type ('a, 'b) t = ('a * 'b) list [@@deriving bin_io, sexp, compare]
 
   val add      : ('a, 'b) t -> ?equal:('a -> 'a -> bool) -> 'a -> 'b -> ('a, 'b) t
   val find     : ('a, 'b) t -> ?equal:('a -> 'a -> bool) -> 'a -> 'b option
@@ -356,7 +392,7 @@ val split_while : 'a t -> f : ('a -> bool) -> 'a t * 'a t
     lists. *)
 val concat : 'a t t -> 'a t
 
-(** Same as [concat] but faster and without preserving any ordering (ie for lists that are
+(** Like [concat], but faster and without preserving any ordering (i.e. for lists that are
     essentially viewed as multi-sets. *)
 val concat_no_order : 'a t t -> 'a t
 
@@ -408,3 +444,50 @@ val transpose_exn : 'a t t -> 'a t t
 (** [intersperse xs ~sep] places [sep] between adjacent elements of [xs].
     e.g. [intersperse [1;2;3] ~sep:0 = [1;0;2;0;3]] *)
 val intersperse : 'a t -> sep:'a -> 'a t
+
+(** Quickcheck generator for lists with additional customization.
+
+    [List.gen' t] produces a generator for arbitrary lists of values from [t].
+
+    Adding [~unique:true] guarantees that every value from [t] is included in each list
+    at most once.
+
+    - Adding [~length:(`Exactly n)] produces only lists of length [n].
+    - Adding [~length:(`At_least n)] produces only lists of length [n] or greater.
+    - Adding [~length:(`At_most n)] produces only lists of length [n] or less.
+    - Adding [~length:(`Between_inclusive (m,n))] produces only lists of length [k] such
+      that [m <= k] and [k <= n].
+
+    Adding [~sorted:`Arbitrarily] produces lists that are sorted in a deterministic
+    order based on the construction of [t], but not guaranteed to correspond to any
+    specific comparison function.
+
+    Adding [~sorted:(`By cmp)] produces lists that are sorted in ascending order by
+    [cmp].
+
+    The optional arguments can be combined; for example, the following expression
+    creates lists of 10 to 20 integers each that are strictly sorted (no duplicates):
+
+    {[
+      gen' Int.gen
+        ~unique:true
+        ~sorted:(`By Int.compare)
+        ~length:(`Between_inclusive (10,20))
+    ]}
+
+    Regardless of the options provided, the lists in the output of [list t] are
+    generated uniquely, so long as the values in [t] are generated uniquely. *)
+val gen'
+  :  ?length : [ `Exactly           of int
+               | `At_least          of int
+               | `At_most           of int
+               | `Between_inclusive of int * int ]
+  -> ?unique : bool
+  -> ?sorted : [ `Arbitrarily | `By of ('a -> 'a -> int) ]
+  -> 'a Quickcheck.Generator.t
+  -> 'a t Quickcheck.Generator.t
+
+(** [gen_permutations t] generates all permutations of [list].  If [t]
+    contains duplicate values, then [gen_permutations t] will produce
+    duplicate lists. *)
+val gen_permutations : 'a t -> 'a t Quickcheck.Generator.t

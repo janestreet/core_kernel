@@ -45,10 +45,10 @@ include
       let of_bool b = if b then 'a' else 'b'
     end)
     (struct
-      type nonrec t = t with sexp_of
+      type nonrec t = t [@@deriving sexp_of]
       let create ~len =
         let t = create len in
-        for _i = 1 to len do
+        for _ = 1 to len do
           add_char t 'a';
         done;
         t

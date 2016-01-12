@@ -22,7 +22,7 @@
    Without the [-rectypes] option, such ill-founded recursive definitions
    are rejected by the type-checker.
 *)
-type 'a t = 'a lazy_t with bin_io, compare, sexp, typerep
+type 'a t = 'a lazy_t [@@deriving bin_io, compare, sexp, typerep]
 
 include Monad.S with type 'a t := 'a t
 
@@ -37,17 +37,21 @@ exception Undefined
 *)
 external force : 'a t -> 'a = "%lazy_force"
 
-(** Like [force] except that if the computation of [x] raises an exception, it is
+(** Like [force] except that [force_val x] does not use an exception handler, so it may be
+    more efficient.  However, if the computation of [x] raises an exception, it is
     unspecified whether [force_val x] raises the same exception or [Undefined].
 *)
 val force_val : 'a t -> 'a
 
-(** [from_fun f] is the same as [lazy (f ())] but slightly more efficient. *)
+(** [from_fun f] is the same as [lazy (f ())] but slightly more efficient if [f] is a
+    variable.  [from_fun] should only be used if the function [f] is already defined.  In
+    particular it is always less efficient to write [from_fun (fun () -> expr)] than [lazy
+    expr]. *)
 val from_fun : (unit -> 'a) -> 'a t
 
-(** [from_val v] returns an already-forced suspension of [v]
-    This is for special purposes only and should not be confused with
-    [lazy (v)]. *)
+(** [from_val v] returns an already-forced suspension of [v] (where [v] can be any
+    expression).  Essentially, [from_val expr] is the same as [let var = expr in lazy
+    var]. *)
 val from_val : 'a -> 'a t
 
 (** [is_val x] returns [true] if [x] has already been forced and
@@ -60,7 +64,7 @@ val is_val : 'a t -> bool
     does not expose [of_sexp].  To be used in debug code for example, or while tracking an
     Heisenbug, etc. *)
 module T_unforcing : sig
-  type nonrec 'a t = 'a t with sexp_of
+  type nonrec 'a t = 'a t [@@deriving sexp_of]
 end
 
 module Stable : sig

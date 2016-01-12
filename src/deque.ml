@@ -47,10 +47,10 @@ let create ?initial_length ?never_shrink () =
     dummy;
   }
 ;;
-TEST_UNIT = ignore (create ~initial_length:0 () : _ t)
+let%test_unit _ = ignore (create ~initial_length:0 () : _ t)
 
 let length t = t.length
-TEST = length (create ()) = 0
+let%test _ = length (create ()) = 0
 
 let is_empty t = length t = 0
 
@@ -444,15 +444,18 @@ let of_array arr =
 
 include Bin_prot.Utils.Make_iterable_binable1 (struct
   type nonrec 'a t = 'a t
-  type 'a el = 'a with bin_io
-  type 'a acc = 'a t
+  type 'a el = 'a [@@deriving bin_io]
 
   let module_name  = Some "Core_kernel.Std.Deque"
   let length       = length
   let iter t ~f    = iter t ~f
-  let init n       = create ~initial_length:n ()
-  let insert t x _ = enqueue_back t x; t
-  let finish       = Fn.id
+  let init ~len ~next =
+    let t = create ~initial_length:len () in
+    for _i = 0 to len - 1 do
+      let x = next () in
+      enqueue_back t x
+    done;
+    t
 end)
 
 let t_of_sexp f sexp = of_array (Array.t_of_sexp f sexp)
@@ -474,8 +477,10 @@ let front_index_exn t =
 
 module Binary_searchable = Binary_searchable.Make1 (struct
   type nonrec 'a t = 'a t
+
   let get t i = get t (front_index_exn t + i)
   let length = length
+
   module For_test = struct
     let of_array = of_array
   end
@@ -507,26 +512,26 @@ let binary_search_segmented ?pos ?len t ~segment_of how =
   | Some untranslated_i -> Some (t.apparent_front_index + untranslated_i)
 ;;
 
-TEST_MODULE = struct
+let%test_module _ = (module struct
   let binary_search = binary_search ~compare:Int.compare
   let t = of_array [| 1; 2; 3; 4 |]
-  TEST = binary_search t        `First_equal_to 2 = Some 1
-  TEST = binary_search t        `First_equal_to 5 = None
-  TEST = binary_search t        `First_equal_to 0 = None
-  TEST = binary_search t ~pos:2 `First_equal_to 2 = None
-  TEST = binary_search t ~pos:2 `First_equal_to 3 = Some 2
+  let%test _ = binary_search t        `First_equal_to 2 = Some 1
+  let%test _ = binary_search t        `First_equal_to 5 = None
+  let%test _ = binary_search t        `First_equal_to 0 = None
+  let%test _ = binary_search t ~pos:2 `First_equal_to 2 = None
+  let%test _ = binary_search t ~pos:2 `First_equal_to 3 = Some 2
   let _ = dequeue_front t
   let _ = dequeue_front t
-  TEST = binary_search t        `First_equal_to 2 = None
-  TEST = binary_search t        `First_equal_to 3 = Some 2
-  TEST = binary_search t        `First_equal_to 5 = None
-  TEST = binary_search t        `First_equal_to 0 = None
-  TEST = binary_search t ~pos:2 `First_equal_to 2 = None
-  TEST = binary_search t ~pos:2 `First_equal_to 3 = Some 2
-end
+  let%test _ = binary_search t        `First_equal_to 2 = None
+  let%test _ = binary_search t        `First_equal_to 3 = Some 2
+  let%test _ = binary_search t        `First_equal_to 5 = None
+  let%test _ = binary_search t        `First_equal_to 0 = None
+  let%test _ = binary_search t ~pos:2 `First_equal_to 2 = None
+  let%test _ = binary_search t ~pos:2 `First_equal_to 3 = Some 2
+end)
 
-TEST_MODULE = struct
-  TEST_UNIT =
+let%test_module _ = (module struct
+  let%test_unit _ =
     let q = create () in
     let bin_alpha _ = assert false in
     let pos_ref = ref 0 in
@@ -639,11 +644,11 @@ TEST_MODULE = struct
   ;;
 
   let this_to_string this_t =
-    Sexp.to_string (<:sexp_of<int array>> (This_dequeue.to_array this_t))
+    Sexp.to_string ([%sexp_of: int array] (This_dequeue.to_array this_t))
   ;;
 
   let that_to_string that_t =
-    Sexp.to_string (<:sexp_of<int array>> (That_dequeue.to_array that_t))
+    Sexp.to_string ([%sexp_of: int array] (That_dequeue.to_array that_t))
   ;;
 
   let fold_check (t_a, t_b) dir =
@@ -654,9 +659,9 @@ TEST_MODULE = struct
     let that_l = make_list That_dequeue.fold' t_b in
     if this_l <> that_l then
       failwithf "error in fold:  %s (from %s) <> %s (from %s)"
-        (Sexp.to_string (<:sexp_of<int list>> this_l))
+        (Sexp.to_string ([%sexp_of: int list] this_l))
         (this_to_string t_a)
-        (Sexp.to_string (<:sexp_of<int list>> that_l))
+        (Sexp.to_string ([%sexp_of: int list] that_l))
         (that_to_string t_b)
         ()
   ;;
@@ -669,9 +674,9 @@ TEST_MODULE = struct
     let that_l = make_rev_list That_dequeue.iter t_b in
     if this_l <> that_l then
       failwithf "error in iter:  %s (from %s) <> %s (from %s)"
-        (Sexp.to_string (<:sexp_of<int list>> this_l))
+        (Sexp.to_string ([%sexp_of: int list] this_l))
         (this_to_string t_a)
-        (Sexp.to_string (<:sexp_of<int list>> that_l))
+        (Sexp.to_string ([%sexp_of: int list] that_l))
         (that_to_string t_b)
         ()
   ;;
@@ -727,23 +732,23 @@ TEST_MODULE = struct
     loop 1_000
   ;;
 
-  TEST_UNIT = test ()
-end
+  let%test_unit _ = test ()
+end)
 
-BENCH_MODULE "Deque" = struct
+let%bench_module "Deque" = (module struct
 
   (* this is the old way we used to implement the option versions of peek and
      dequeue, which did a failwithf. *)
-  BENCH_FUN "assert_not_empty" =
+  let%bench_fun "assert_not_empty" =
     let t = create () in
     fun () -> try assert_not_empty t "Queue.dequeue_front" with _ -> ()
 
-  BENCH_FUN "dequeue_front empty" =
+  let%bench_fun "dequeue_front empty" =
     let t = create () in
     fun () -> ignore (dequeue_front t : _ option)
 
-  BENCH_FUN "peek_back non-empty" =
+  let%bench_fun "peek_back non-empty" =
     let t = create () in
     let () = enqueue_back t 2 in
     fun () -> ignore (peek_back t : _ option)
-end
+end)

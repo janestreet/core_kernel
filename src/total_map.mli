@@ -1,8 +1,8 @@
 (** A [('key, 'value, cmp) Map.t] where every value of type ['key] is present.
 
     This is intended to be used on ['key] types where there is a full enumeration of the
-    type.  In the common use case, ['key] will be a simple variant type with [with
-    compare, enumerate].  For example:
+    type.  In the common use case, ['key] will be a simple variant type with [[@@deriving
+    compare, enumerate]].  For example:
 
     {[
       module Arrow_key = struct
@@ -12,7 +12,7 @@
             | Down
             | Left
             | Right
-          with sexp, bin_io, compare, enumerate
+          [@@deriving sexp, bin_io, compare, enumerate]
         end
         include T
         module Total_map = Total_map.Make (T)
@@ -46,7 +46,11 @@ val map2
   -> f:('a -> 'b -> 'c)
   -> ('key, 'c, 'cmp) t
 
-val iter : ('key, 'a, _) t -> f:(key:'key -> data:'a -> unit) -> unit
+
+val iter  : ('key, 'a, _) t -> f:(key:'key -> data:'a -> unit) -> unit
+  [@@ocaml.deprecated "[since 2015-10] Use iteri instead"]
+
+val iteri : ('key, 'a, _) t -> f:(key:'key -> data:'a -> unit) -> unit
 val iter2
   :  ('key, 'a, 'cmp) t
   -> ('key, 'b, 'cmp) t
@@ -55,17 +59,26 @@ val iter2
 
 val set : ('key, 'a, 'cmp) t -> 'key -> 'a -> ('key, 'a, 'cmp) t
 
-val to_alist : ('key, 'a, _) t -> ('key * 'a) list
+val to_alist
+  :  ?key_order:[ `Increasing | `Decreasing ]  (** default is [`Increasing] *)
+  -> ('key, 'a, _) t
+  -> ('key * 'a) list
 
 val find : ('key, 'a, _) t -> 'key -> 'a
 
-val change : ('key, 'a, 'cmp) t -> 'key -> ('a -> 'a) -> ('key, 'a, 'cmp) t
+val change : ('key, 'a, 'cmp) t -> 'key -> f:('a -> 'a) -> ('key, 'a, 'cmp) t
+
+(** Sequence a total map of computations in order of their keys resulting in computation
+    of the total map of results. *)
+module Sequence (A : Applicative) : sig
+  val sequence : ('key, 'a A.t, 'cmp) t -> ('key, 'a, 'cmp) t A.t
+end
 
 (** The only reason that the Applicative interface isn't included here is that we don't
     have an [Applicative.S3]. *)
 
 module type Key = sig
-  type t with sexp, bin_io, compare, enumerate
+  type t [@@deriving sexp, bin_io, compare, enumerate]
 end
 
 module type S = sig
@@ -73,7 +86,7 @@ module type S = sig
 
   type comparator_witness
 
-  type nonrec 'a t = (Key.t, 'a, comparator_witness) t with sexp, bin_io, compare
+  type nonrec 'a t = (Key.t, 'a, comparator_witness) t [@@deriving sexp, bin_io, compare]
 
   include Applicative with type 'a t := 'a t
 

@@ -5,7 +5,7 @@
     Amortized running times assume that enqueue/dequeue are used sequentially, threading
     the changing deque through the calls. *)
 
-type 'a t with bin_io, compare, sexp
+type 'a t [@@deriving bin_io, compare, sexp]
 
 (** [Container] operations traverse deque elements front-to-back, like [Front_to_back]
     below.  If you need faster traversal and don't care about the order, use
@@ -90,6 +90,6 @@ val dequeue_back_exn  : 'a t ->                       ('a * 'a t)
 
 module Stable : sig
   module V1 : sig
-    type nonrec 'a t = 'a t with bin_io, compare, sexp
+    type nonrec 'a t = 'a t [@@deriving bin_io, compare, sexp]
   end
 end

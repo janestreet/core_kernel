@@ -10,6 +10,12 @@
     existing elements will be reinserted, which can take a long time. If you care about
     latency set [size] and [growth_allowed=false] if possible.
 
+    In most cases, functions passed as arguments to hash table accessors must not mutate
+    the hash table while it is being accessed, as it will result an an exception.  For
+    example, [iter] and [change] take a function [f] which must not modify [t].  In a few
+    cases, mutation is allowed, such as in [Hashtbl.find_and_call], where all access to
+    [t] is finished before the [~if_found] and [~if_not_found] arguments are invoked.
+
     We have three kinds of hash table modules:
 
     Hashtbl
@@ -25,7 +31,7 @@
     Here is a table showing what classes of functions are available in each kind
     of hash-table module:
 
-    creation   sexp-conv   accessors
+                   creation   sexp-conv   accessors
     Hashtbl                                   X
     Hashtbl.Poly      X           X
     Key.Table         X           X           X'
@@ -34,7 +40,8 @@
     some point.  The upshot is that one should use [Hashtbl] for accessors, [Hashtbl.Poly]
     for hash-table creation and sexp conversion using polymorphic compare/hash, and
     [Key.Table] for hash-table creation and sexp conversion using [Key.compare] and
-    [Key.hash]. *)
+    [Key.hash].
+ *)
 
 (** For many students of ocaml, using hashtables is complicated by the
     functors.  Here are a few tips: *)
@@ -56,7 +63,7 @@
       {[
         module Key = struct
           module T = struct
-            type t = String.t * Int63.t with sexp
+            type t = String.t * Int63.t [@@deriving sexp]
             let compare = compare
             let hash = Hashtbl.hash
           end

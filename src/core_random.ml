@@ -1,3 +1,5 @@
+#import "config.mlh"
+
 (* Unfortunately, because the standard library does not expose [Random.State.default],
    we have to construct our own.  We then build the [Random.int], [Random.bool] functions
    and friends using that default state in exactly the same way as the standard library.
@@ -8,20 +10,38 @@
    and use [Obj.magic] to get access to the underlying implementation. *)
 open Random
 
-external random_seed: unit -> int array = "caml_sys_random_seed";;
+let forbid_nondeterminism_in_tests ~allow_in_tests =
+  if Ppx_inline_test_lib.Runtime.testing then
+    match allow_in_tests with
+    | Some true -> ()
+    | None | Some false ->
+      failwith "\
+initializing Random with a nondeterministic seed is forbidden in inline tests"
+;;
 
-TEST_UNIT =
+external random_seed: unit -> int array = "caml_sys_random_seed";;
+let random_seed ?allow_in_tests () =
+  forbid_nondeterminism_in_tests ~allow_in_tests;
+  random_seed ()
+;;
+
+let%test_unit _ =
   (* test that the return type of "caml_sys_random_seed" is what we expect *)
-  let obj = Obj.repr (random_seed ()) in
+  let obj = Obj.repr (random_seed ~allow_in_tests:true ()) in
   assert (Obj.is_block obj);
   assert (Obj.tag obj = Obj.tag (Obj.repr [| 13 |]));
   for i = 0 to Obj.size obj - 1 do
     assert (Obj.is_int (Obj.field obj i));
-  done;
+  done
 ;;
 
 module State = struct
   include State
+
+  let make_self_init ?allow_in_tests () =
+    forbid_nondeterminism_in_tests ~allow_in_tests;
+    make_self_init ()
+  ;;
 
   type repr = { st : int array; mutable idx : int }
 
@@ -47,6 +67,26 @@ module State = struct
     t
   ;;
 
+#if JSC_ARCH_SIXTYFOUR
+  let int t bound =
+    if bound < (1 lsl 30)
+    then int t bound
+    else Int64.to_int (int64 t (Int64.of_int bound))
+
+  let%test_unit "random int above 2^30" =
+    let state = make [| 1 ; 2 ; 3 ; 4 ; 5 |] in
+    for _ = 1 to 100 do
+      let bound = 1 lsl 40 in
+      let n = int state bound in
+      if n < 0 || n >= bound then
+        failwith (Printf.sprintf "random result %d out of bounds (0,%d)" n (bound-1))
+    done
+
+  let%bench "random int above 2^30" = int default (1 lsl 40)
+#endif
+
+  let%bench "random int below 2^30" = int default (1 lsl 20)
+
 end
 
 let default = State.default
@@ -61,7 +101,7 @@ let bool () = State.bool default
 
 let full_init seed = State.full_init default seed
 let init seed = full_init [| seed |]
-let self_init () = full_init (random_seed ())
+let self_init ?allow_in_tests () = full_init (random_seed ?allow_in_tests ())
 
 let get_state () = `Consider_using_Random_State_default
 let set_state s = State.assign default s

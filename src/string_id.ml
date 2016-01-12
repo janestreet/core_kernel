@@ -5,7 +5,7 @@ module type S = sig
 
   module Stable : sig
     module V1 : sig
-      type nonrec t = t with sexp, bin_io, compare
+      type nonrec t = t [@@deriving sexp, bin_io, compare]
 
       include Stable_containers.Comparable.V1.S
         with type key := t
@@ -61,8 +61,8 @@ end
 
 include Make (struct let module_name = "Core_kernel.String_id" end) ()
 
-BENCH_MODULE "String_id" = struct
-  BENCH "of_string(AAA)"       = of_string "AAA"
-  BENCH "of_string(AAABBB)"    = of_string "AAABBB"
-  BENCH "of_string(AAABBBCCC)" = of_string "AAABBBCCC"
-end
+let%bench_module "String_id" = (module struct
+  let%bench "of_string(AAA)"       = of_string "AAA"
+  let%bench "of_string(AAABBB)"    = of_string "AAABBB"
+  let%bench "of_string(AAABBBCCC)" = of_string "AAABBBCCC"
+end)

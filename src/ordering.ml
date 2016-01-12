@@ -1,4 +1,4 @@
-type t = Less | Equal | Greater with bin_io, compare, sexp
+type t = Less | Equal | Greater [@@deriving bin_io, compare, enumerate, sexp]
 
 module Export = struct
   type _ordering = t =
@@ -15,12 +15,21 @@ let of_int n =
   else Greater
 ;;
 
-TEST = of_int (-10) = Less
-TEST = of_int (-1)  = Less
-TEST = of_int 0     = Equal
-TEST = of_int 1     = Greater
-TEST = of_int 10    = Greater
+let to_int = function
+  | Less    -> -1
+  | Equal   -> 0
+  | Greater -> 1
+;;
 
-TEST = of_int (Pervasives.compare 0 1) = Less
-TEST = of_int (Pervasives.compare 1 1) = Equal
-TEST = of_int (Pervasives.compare 1 0) = Greater
+let%test _ = of_int (-10) = Less
+let%test _ = of_int (-1)  = Less
+let%test _ = of_int 0     = Equal
+let%test _ = of_int 1     = Greater
+let%test _ = of_int 10    = Greater
+
+let%test _ = of_int (Pervasives.compare 0 1) = Less
+let%test _ = of_int (Pervasives.compare 1 1) = Equal
+let%test _ = of_int (Pervasives.compare 1 0) = Greater
+
+let%test _ = List.for_all (fun t -> t = (t |> to_int |> of_int)) all
+let%test _ = List.for_all (fun i -> i = (i |> of_int |> to_int)) [ -1; 0; 1 ]

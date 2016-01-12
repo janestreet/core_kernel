@@ -75,7 +75,7 @@ module Stat : sig
     stack_size : int
     (** Current size of the stack, in words. *)
   }
-  with bin_io, sexp, fields
+  [@@deriving bin_io, sexp, fields]
 
   include Comparable.S with type t := t
 end
@@ -149,7 +149,7 @@ module Control : sig
         can be better for programs with fragmentation problems.
         Default: 0. *)
   }
-  with bin_io, sexp, fields
+  [@@deriving bin_io, sexp, fields]
 
   include Comparable.S with type t := t
 end
@@ -290,7 +290,7 @@ val disable_compaction
     time, even in the middle of other code, and because unhandled exceptions in a
     finalizer can be raised at any point in other code.  This introduces all the semantic
     complexities of multithreading, which is usually a bad idea.  It is much easier to use
-    async finalizers, see {!Async_core.Async_gc.add_finalizer}, which do not involve
+    async finalizers, see {!Async_kernel.Async_gc.add_finalizer}, which do not involve
     multithreading, and runs user code as ordinary async jobs.
 
     If you do use [Core] finalizers, you should strive to make the finalization function
@@ -361,7 +361,7 @@ module Expert : sig
   (** A GC alarm calls a user function at the end of each major GC cycle. *)
   module Alarm : sig
 
-    type t with sexp_of
+    type t [@@deriving sexp_of]
 
     (** [create f] arranges for [f] to be called at the end of each major GC cycle,
         starting with the current cycle or the next one.  [f] can be called in any thread,

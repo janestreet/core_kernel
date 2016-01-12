@@ -14,13 +14,13 @@ open Core_set_intf
     the second identifies the comparator, which determines the comparison function that is
     used for ordering elements in this set.  Many operations (e.g., {!union}), require
     that they be passed sets with the same element type and the same comparator type. *)
-type ('elt, 'cmp) t with compare
+type ('elt, 'cmp) t [@@deriving compare]
 
 module Tree : sig
   (** A [Tree.t] contains just the tree data structure that a set is based on, without
       including the comparator.  Accordingly, any operation on a [Tree.t] must also take
       as an argument the corresponding comparator. *)
-  type ('a, 'cmp) t with sexp_of
+  type ('a, 'cmp) t [@@deriving sexp_of]
 
   include Creators_and_accessors2_with_comparator
     with type ('a, 'b) set  := ('a, 'b) t
@@ -66,12 +66,12 @@ val union : ('a, 'cmp) t -> ('a, 'cmp) t -> ('a, 'cmp) t
 *)
 val union_list : comparator:('a, 'cmp) Comparator.t -> ('a, 'cmp) t list -> ('a, 'cmp) t
 
-(** [inter t1 t2] computes the intersection of sets [t1] and [t2].  [O(log(length t1) +
-    log(length t2))]. *)
+(** [inter t1 t2] computes the intersection of sets [t1] and [t2].  [O(length t1 +
+    length t2)]. *)
 val inter : ('a, 'cmp) t -> ('a, 'cmp) t -> ('a, 'cmp) t
 
 (** [diff t1 t2] computes the set difference [t1 - t2], i.e., the set containing all
-    elements in [t1] that are not in [t2].  [O(log(length t1) + log(length t2))]. *)
+    elements in [t1] that are not in [t2].  [O(length t1 + length t2)]. *)
 val diff : ('a, 'cmp) t -> ('a, 'cmp) t -> ('a, 'cmp) t
 
 (** [symmetric_diff t1 t2] returns a sequence of changes between [t1] and [t2]. It is
@@ -261,7 +261,7 @@ val split : ('a, 'cmp) t -> 'a -> ('a, 'cmp) t * 'a option * ('a, 'cmp) t
     produces:
 
     {[
-      Set.of_list['A';'a']; Set.singleton 'b'; Set.singleton 'c']
+      [Set.of_list ['A';'a']; Set.singleton 'b'; Set.singleton 'c']
     ]}
 
     [group_by] runs in O(n^2) time, so if you have a comparison function, it's usually
@@ -285,6 +285,13 @@ val to_sequence
 val to_map : ('key, 'cmp) t -> f:('key -> 'data) -> ('key, 'data, 'cmp) Map.t
 val of_map_keys : ('key, _, 'cmp) Map.t -> ('key, 'cmp) t
 
+val gen
+  :  comparator:('key, 'cmp) Comparator.t
+  -> 'key Quickcheck.gen
+  -> ('key, 'cmp) t Quickcheck.gen
+val obs : 'key Quickcheck.obs -> ('key, 'cmp) t Quickcheck.obs
+val shrinker : 'key Quickcheck.shr -> ('key, 'cmp) t Quickcheck.shr
+
 (** {1 Polymorphic sets}
 
     Module {!Poly} deals with sets that use OCaml's polymorphic comparison to compare
@@ -295,7 +302,7 @@ module Poly : sig
   type ('a, 'b) set
 
   module Tree : sig
-    type 'elt t = ('elt, Comparator.Poly.comparator_witness) Tree.t with sexp
+    type 'elt t = ('elt, Comparator.Poly.comparator_witness) Tree.t [@@deriving sexp]
 
     include Creators_and_accessors1
       with type ('a, 'b) set := ('a, 'b) Tree.t
@@ -304,7 +311,7 @@ module Poly : sig
       with type comparator_witness := Comparator.Poly.comparator_witness
   end
 
-  type 'elt t = ('elt, Comparator.Poly.comparator_witness) set with bin_io, compare, sexp
+  type 'elt t = ('elt, Comparator.Poly.comparator_witness) set [@@deriving bin_io, compare, sexp]
 
   include Creators_and_accessors1
     with type ('a, 'b) set := ('a, 'b) set
@@ -345,7 +352,7 @@ module Make_binable (Elt : Elt_binable) : S_binable with type Elt.t = Elt.t
     [Make_binable_using_comparator] is similar, except the element and set types support
     [bin_io]. *)
 module Make_using_comparator (Elt : sig
-  type t with sexp
+  type t [@@deriving sexp]
   include Comparator.S with type t := t
 end)
   : S
@@ -353,7 +360,7 @@ end)
     with type Elt.comparator_witness = Elt.comparator_witness
 
 module Make_binable_using_comparator (Elt : sig
-  type t with bin_io, sexp
+  type t [@@deriving bin_io, sexp]
   include Comparator.S with type t := t
 end)
   : S_binable

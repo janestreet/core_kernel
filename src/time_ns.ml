@@ -1,4 +1,4 @@
-INCLUDE "config.mlh"
+#import "config.mlh"
 open Std_internal
 
 
@@ -12,7 +12,7 @@ let float x = Core_int63.to_float x
 module Span : sig
   (* Note that the [sexp] below is implemented only for some debug text later in this
      module. It is not exposed in the mli. *)
-  type t = Core_int63.t with typerep, compare, bin_io, sexp
+  type t = Core_int63.t [@@deriving typerep, compare, bin_io, sexp]
 
   include Comparable.Infix     with type t := t
   include Comparable.Validate  with type t := t
@@ -44,7 +44,11 @@ module Span : sig
 
   val of_sec_with_microsecond_precision : float -> t
 
+  val of_int_us  : int -> t
+  val of_int_ms  : int -> t
   val of_int_sec : int -> t
+  val to_int_us  : t -> int
+  val to_int_ms  : t -> int
   val to_int_sec : t -> int
 
   val of_int63_ns : Core_int63.t -> t
@@ -90,7 +94,7 @@ module Span : sig
       ; us   : int
       ; ns   : int
       }
-    with sexp
+    [@@deriving sexp]
   end
 
   val to_parts : t -> Parts.t
@@ -101,13 +105,13 @@ module Span : sig
   val since_unix_epoch : unit -> t
 
   module Alternate_sexp : sig
-    type nonrec t = t with sexp
+    type nonrec t = t [@@deriving sexp]
   end
 end = struct
   (* [Span] is basically a [Core_int63] *)
   module T = struct
     type t = Core_int63.t (** nanoseconds *)
-    with bin_io, typerep
+    [@@deriving bin_io, typerep]
 
     let compare = Core_int63.compare
     let equal = Core_int63.equal
@@ -129,7 +133,7 @@ end = struct
       ; us   : int
       ; ns   : int
       }
-    with sexp
+    [@@deriving sexp]
 
     let compare = Poly.compare
   end
@@ -150,7 +154,7 @@ end = struct
   let check_range t =
     if t < min_value || t > max_value then
       failwiths "Span.t exceeds limits" (t, min_value, max_value)
-        <:sexp_of< Core_int63.t * Core_int63.t * Core_int63.t >>
+        [%sexp_of: Core_int63.t * Core_int63.t * Core_int63.t]
     else t
   ;;
 
@@ -198,6 +202,8 @@ end = struct
 
   let of_ns       f = check_range (round_nearest f)
   let of_int63_ns i = check_range i
+  let of_int_us   i = check_range Core_int63.(of_int i * microsecond)
+  let of_int_ms   i = check_range Core_int63.(of_int i * millisecond)
   let of_int_sec  i = check_range Core_int63.(of_int i * second)
   let of_us       f = check_range (round_nearest (f *. float microsecond))
   let of_ms       f = check_range (round_nearest (f *. float millisecond))
@@ -219,17 +225,19 @@ end = struct
   let to_min      t = float t /. float minute
   let to_hr       t = float t /. float hour
   let to_day      t = float t /. float day
+  let to_int_us   t = Core_int63.(to_int_exn (t / microsecond))
+  let to_int_ms   t = Core_int63.(to_int_exn (t / millisecond))
   let to_int_sec  t = Core_int63.(to_int_exn (t / second))
 
-IFDEF ARCH_SIXTYFOUR THEN
-  TEST = Int.(>) (to_int_sec Core_int63.max_value) 0 (* and doesn't raise *)
+#if JSC_ARCH_SIXTYFOUR
+  let%test _ = Int.(>) (to_int_sec Core_int63.max_value) 0 (* and doesn't raise *)
 
   let of_int_ns i = check_range (of_int63_ns (Core_int63.of_int i))
   let to_int_ns t = Core_int63.to_int_exn (to_int63_ns t)
-ELSE
+#else
   let of_int_ns _i = failwith "unsupported on 32bit machines"
   let to_int_ns _i = failwith "unsupported on 32bit machines"
-ENDIF
+#endif
 
   let (+) t u         = check_range (Core_int63.(+) t u)
   let (-) t u         = check_range (Core_int63.(-) t u)
@@ -317,29 +325,29 @@ ENDIF
     let t_of_sexp = Alternate_sexp.t_of_sexp
   end)
 
-  TEST_MODULE = struct
+  let%test_module _ = (module struct
     let ( * ) = Core_int63.( * )
     let of_int = Core_int63.of_int
 
-    let round_trip t = <:test_result< t >> (of_parts (to_parts t)) ~expect:t
+    let round_trip t = [%test_result: t] (of_parts (to_parts t)) ~expect:t
     let eq t expect =
-      <:test_result< t >> t ~expect;
-      <:test_result< Parts.t >> (to_parts t) ~expect:(to_parts expect);
+      [%test_result: t] t ~expect;
+      [%test_result: Parts.t] (to_parts t) ~expect:(to_parts expect);
       round_trip t
 
-    TEST_UNIT = eq (create ~us:2                       ()) (of_int 2    * microsecond)
-    TEST_UNIT = eq (create ~min:3                      ()) (of_int 3    * minute)
-    TEST_UNIT = eq (create ~ms:4                       ()) (of_int 4    * millisecond)
-    TEST_UNIT = eq (create ~sec:5                      ()) (of_int 5    * second)
-    TEST_UNIT = eq (create ~hr:6                       ()) (of_int 6    * hour)
-    TEST_UNIT = eq (create ~day:7                      ()) (of_int 7    * day)
-    TEST_UNIT = eq (create ~us:8 ~sign:Float.Sign.Neg  ()) (of_int (-8) * microsecond)
-    TEST_UNIT = eq (create ~ms:9 ~sign:Float.Sign.Zero ()) (of_int 9    * millisecond)
-    TEST_UNIT =
+    let%test_unit _ = eq (create ~us:2                       ()) (of_int 2    * microsecond)
+    let%test_unit _ = eq (create ~min:3                      ()) (of_int 3    * minute)
+    let%test_unit _ = eq (create ~ms:4                       ()) (of_int 4    * millisecond)
+    let%test_unit _ = eq (create ~sec:5                      ()) (of_int 5    * second)
+    let%test_unit _ = eq (create ~hr:6                       ()) (of_int 6    * hour)
+    let%test_unit _ = eq (create ~day:7                      ()) (of_int 7    * day)
+    let%test_unit _ = eq (create ~us:8 ~sign:Float.Sign.Neg  ()) (of_int (-8) * microsecond)
+    let%test_unit _ = eq (create ~ms:9 ~sign:Float.Sign.Zero ()) (of_int 9    * millisecond)
+    let%test_unit _ =
       eq (create ~us:3 ~ns:242 () |> to_sec |> of_sec_with_microsecond_precision)
         (of_int 3 * microsecond)
-    TEST_UNIT =
-      for _i = 1 to 1_000_000 do
+    let%test_unit _ =
+      for _ = 1 to 1_000_000 do
         let t =
           (Core_int63.of_int64_exn (Random.int64 (Core_int63.to_int64 max_value)))
           + if Random.bool () then zero else min_value
@@ -348,24 +356,24 @@ ENDIF
       done
 
     let round_trip parts =
-      <:test_result< Parts.t >> (to_parts (of_parts parts)) ~expect:parts
+      [%test_result: Parts.t] (to_parts (of_parts parts)) ~expect:parts
     let eq parts expect =
-      <:test_result< Parts.t >> parts ~expect;
-      <:test_result< t >> (of_parts parts) ~expect:(of_parts expect);
+      [%test_result: Parts.t] parts ~expect;
+      [%test_result: t] (of_parts parts) ~expect:(of_parts expect);
       round_trip parts
 
-    TEST_UNIT =
+    let%test_unit _ =
       eq (to_parts (create ~sign:Float.Sign.Neg ~hr:2 ~min:3 ~sec:4 ~ms:5 ~us:6 ~ns:7 ()))
         { Parts. sign = Float.Sign.Neg; hr = 2; min = 3; sec = 4; ms = 5; us = 6; ns = 7 }
-    TEST_UNIT = round_trip (to_parts (create ~hr:25 ()))
-    TEST_UNIT =
+    let%test_unit _ = round_trip (to_parts (create ~hr:25 ()))
+    let%test_unit _ =
       let hr =
         match Word_size.word_size with
         | W32 -> Core_int.max_value
         | W64 -> Core_int64.to_int_exn 2217989799822798757L
       in
       round_trip (to_parts (create ~hr ()))
-  end
+  end)
 
   (* Functions required by [Robustly_comparable]: allows for [epsilon] granularity.
 
@@ -380,19 +388,19 @@ ENDIF
   let (<>.) t u = Core_int63.(abs (t - u)) > epsilon
   let robustly_compare t u = if t <. u then -1 else if t >. u then 1 else 0
 
-IFDEF ARCH_SIXTYFOUR THEN
+#if JSC_ARCH_SIXTYFOUR
   external since_unix_epoch_or_zero : unit -> t
     = "core_kernel_time_ns_gettime_or_zero" "noalloc"
-ELSE
+#else
   external since_unix_epoch_or_zero : unit -> t
     = "core_kernel_time_ns_gettime_or_zero"
-ENDIF
+#endif
 
-IFDEF POSIX_TIMERS THEN
+#if JSC_POSIX_TIMERS
   let gettime_failed () = failwith "clock_gettime(CLOCK_REALTIME) failed"
-ELSE
+#else
   let gettime_failed () = failwith "gettimeofday failed"
-ENDIF
+#endif
 
   let since_unix_epoch () =
     let t = since_unix_epoch_or_zero () in
@@ -401,7 +409,7 @@ ENDIF
 end
 
 type t = Span.t (** since the Unix epoch (1970-01-01 00:00:00 UTC) *)
-with bin_io, compare, typerep
+[@@deriving bin_io, compare, typerep]
 
 include (Span : Comparable.Infix with type t := t)
 
@@ -424,18 +432,18 @@ let of_span_since_epoch s = s
 let to_int63_ns_since_epoch t = Span.to_int63_ns (to_span_since_epoch t)
 let of_int63_ns_since_epoch i = of_span_since_epoch (Span.of_int63_ns i)
 
-IFDEF ARCH_SIXTYFOUR THEN
+#if JSC_ARCH_SIXTYFOUR
 let to_int_ns_since_epoch t = Core_int63.to_int_exn (to_int63_ns_since_epoch t)
 let of_int_ns_since_epoch i = of_int63_ns_since_epoch (Core_int63.of_int i)
-ELSE
+#else
 let to_int_ns_since_epoch _t = failwith "unsupported on 32bit machines"
 let of_int_ns_since_epoch _i = failwith "unsupported on 32bit machines"
-ENDIF
+#endif
 
 let next_multiple ?(can_equal_after = false) ~base ~after ~interval () =
   if Span.(<=) interval Span.zero
   then failwiths "Time.next_multiple got nonpositive interval" interval
-         <:sexp_of< Span.t >>;
+         [%sexp_of: Span.t];
   let base_to_after = diff after base in
   if Span.(<) base_to_after Span.zero
   then base (* [after < base], choose [k = 0]. *)
@@ -457,7 +465,7 @@ module Alternate_sexp = struct
       { human_readable       : string
       ; int63_ns_since_epoch : Core_int63.t
       }
-    with sexp
+    [@@deriving sexp]
 
     let time_format = "%Y-%m-%dT%H:%M:%S%z"
 

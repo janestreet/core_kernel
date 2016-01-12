@@ -81,7 +81,7 @@ end) : sig
 end
 
 module Make_hex (I : sig
-                   type t with bin_io, compare, typerep
+                   type t [@@deriving bin_io, compare, typerep]
                    (** [to_string] and [of_string] convert between [t] and unsigned,
                        unprefixed hexadecimal *)
                    val to_string : t -> string

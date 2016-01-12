@@ -16,6 +16,7 @@ module Blang                     = Blang
 module Blit                      = Blit
 module Bounded_int_table         = Bounded_int_table
 module Bucket                    = Bucket
+module Bus                       = Bus
 module Bytes                     = Core_bytes
 module Byte_units                = Byte_units
 module Commutative_group         = Commutative_group
@@ -60,9 +61,8 @@ module Int_intf                  = Int_intf
 module Int_set                   = Int_set
 module Interfaces                = Interfaces
 module Invariant                 = Invariant
-module Quickcheck_intf           = Quickcheck_intf
-module Quickcheck                = Quickcheck
 module Linked_stack              = Linked_stack
+module Maybe_bound               = Maybe_bound
 module Memo                      = Memo
 module Monad                     = Monad
 module Month                     = Month
@@ -82,6 +82,9 @@ module Pooled_hashtbl            = Pooled_hashtbl
 module Pretty_printer            = Pretty_printer
 module Printexc                  = Core_printexc
 module Printf                    = Core_printf
+module Quickcheck_intf           = Quickcheck_intf
+module Quickcheck                = Quickcheck
+module Quickcheckable            = Quickcheckable
 module Result                    = Result
 module Robustly_comparable       = Robustly_comparable
 module Rope                      = Rope
@@ -121,13 +124,19 @@ module type Validated = Validated.Validated
 
 include T
 
-type 'a _bound = 'a Comparable.bound = Incl of 'a | Excl of 'a | Unbounded
+type 'a _maybe_bound = 'a Maybe_bound.t =
+    Incl of 'a | Excl of 'a | Unbounded
 
-type decimal = Decimal.t with bin_io, sexp, compare
+type decimal = Decimal.t [@@deriving bin_io, sexp, compare]
 
 (* Some people have proposed removing [does_raise], but there isn't consensus. *)
 let does_raise = Exn.does_raise
 
 type bytes =
   [ `This_type_does_not_equal_string_because_we_want_type_errors_to_say_string ]
+;;
+
+let () =
+  Backtrace.initialize_module ();
+  Exn.initialize_module ();
 ;;

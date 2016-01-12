@@ -5,9 +5,9 @@ module String = StringLabels
 
 let eprint message = Printf.eprintf "%s\n%!" message
 
-let eprints message a sexp_of_a =
-  eprint (Sexp.to_string_hum (<:sexp_of< string * a >> (message, a)));
-;;
+let eprint_s sexp = eprint (Sexp.to_string_hum sexp)
+
+let eprints message a sexp_of_a = eprint_s ([%sexp_of: string * a] (message, a))
 
 let eprintf format = Printf.ksprintf eprint format
 
@@ -25,18 +25,18 @@ module Make () = struct
       then begin
         try List.iter ts ~f:invariant with exn ->
           failwiths "invariant pre-condition failed" (name, exn)
-            <:sexp_of< string * exn >>
+            [%sexp_of: string * exn]
       end;
       let result_or_exn = Result.try_with f in
       if !check_invariant
       then begin
         try List.iter ts ~f:invariant with exn ->
           failwiths "invariant post-condition failed" (name, exn)
-            <:sexp_of< string * exn >>
+            [%sexp_of: string * exn]
       end;
       if !show_messages
       then eprints (String.concat ~sep:"" [ module_name; "."; name; "-result" ])
-             result_or_exn <:sexp_of< (result, exn) Result.t >>;
+             result_or_exn [%sexp_of: (result, exn) Result.t];
       Result.ok_exn result_or_exn;
   ;;
 end

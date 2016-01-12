@@ -5,42 +5,42 @@ module Binable = Binable0
    exceptions. *)
 module Types = struct
   module Nobody = struct
-    type t with bin_io, compare, sexp
+    type t [@@deriving bin_io, compare, sexp]
     let name = "Nobody"
   end
 
   module Me = struct
-    type t with bin_io, compare, sexp
+    type t [@@deriving bin_io, compare, sexp]
     let name = "Me"
   end
 
   module Read = struct
     type t = [ `Read ]
-    with bin_io, compare, sexp
+    [@@deriving bin_io, compare, sexp]
     let name = "Read"
   end
 
   module Write = struct
     type t = [ `Who_can_write of Me.t ]
-    with bin_io, compare, sexp
+    [@@deriving bin_io, compare, sexp]
     let name = "Write"
   end
 
   module Immutable = struct
     type t = [ Read.t | `Who_can_write of Nobody.t ]
-    with bin_io, compare, sexp
+    [@@deriving bin_io, compare, sexp]
     let name = "Immutable"
   end
 
   module Read_write = struct
     type t = [ Read.t | Write.t ]
-    with bin_io, compare, sexp
+    [@@deriving bin_io, compare, sexp]
     let name = "Read_write"
   end
 
   module Upper_bound = struct
     type 'a t = [ Read.t | `Who_can_write of 'a ]
-    with bin_io, compare, sexp
+    [@@deriving bin_io, compare, sexp]
     let name = "Upper_bound"
   end
 end
@@ -50,7 +50,7 @@ let failwithf = Core_printf.failwithf
 (* This is an explicit module type instead of just given inline as the return signature of
    [Only_used_as_phantom_type1] to avoid an unused value warning with bin_io values. *)
 module type Sexpable_binable_comparable = sig
-  type 'a t = 'a with bin_io, compare, sexp
+  type 'a t = 'a [@@deriving bin_io, compare, sexp]
 end
 
 (* Override all bin_io, sexp, compare functions to raise exceptions *)
@@ -64,7 +64,7 @@ module Only_used_as_phantom_type1 (Name : sig val name : string end)
   let compare _ _ _ =
     failwithf "Unexpectedly called [%s.compare]" Name.name ()
   include Binable.Of_binable1
-    (struct type 'a t = 'a with bin_io end)
+    (struct type 'a t = 'a [@@deriving bin_io] end)
     (struct
       type nonrec 'a t = 'a t
       let to_binable _ =
@@ -75,14 +75,14 @@ module Only_used_as_phantom_type1 (Name : sig val name : string end)
 end
 
 module Only_used_as_phantom_type0 (T : sig
-  type t with bin_io, compare, sexp
+  type t [@@deriving bin_io, compare, sexp]
   val name : string
 end) : sig
-  type t = T.t with bin_io, compare, sexp
-  val __t_of_sexp__ : Sexplib.Sexp.t -> t
+  type t = T.t [@@deriving bin_io, compare, sexp_poly]
 end = struct
   module M = Only_used_as_phantom_type1 (T)
-  type t = T.t M.t with bin_io, compare, sexp
+  type t = T.t M.t [@@deriving bin_io, compare, sexp]
+  let __t_of_sexp__ = t_of_sexp
 end
 
 module Stable = struct
@@ -94,21 +94,22 @@ module Stable = struct
     module Read_write = Only_used_as_phantom_type0 (Types.Read_write)
     module Immutable  = Only_used_as_phantom_type0 (Types.Immutable)
 
-    type nobody = Nobody.t with bin_io, compare, sexp
-    type me     = Me.t     with bin_io, compare, sexp
+    type nobody = Nobody.t [@@deriving bin_io, compare, sexp]
+    type me     = Me.t     [@@deriving bin_io, compare, sexp]
 
     module Upper_bound = struct
       module M = Only_used_as_phantom_type1 (Types.Upper_bound)
-      type 'a t = 'a Types.Upper_bound.t M.t with bin_io, compare, sexp
+      type 'a t = 'a Types.Upper_bound.t M.t [@@deriving bin_io, compare, sexp]
+      let __t_of_sexp__ = t_of_sexp
     end
   end
 
   module Export = struct
-    type read       = V1.Read.          t with bin_io, compare, sexp
-    type write      = V1.Write.         t with         compare, sexp
-    type immutable  = V1.Immutable.     t with bin_io, compare, sexp
-    type read_write = V1.Read_write.    t with bin_io, compare, sexp
-    type 'a perms   = 'a V1.Upper_bound.t with bin_io, compare, sexp
+    type read       = V1.Read.          t [@@deriving bin_io, compare, sexp]
+    type write      = V1.Write.         t [@@deriving compare, sexp]
+    type immutable  = V1.Immutable.     t [@@deriving bin_io, compare, sexp]
+    type read_write = V1.Read_write.    t [@@deriving bin_io, compare, sexp]
+    type 'a perms   = 'a V1.Upper_bound.t [@@deriving bin_io, compare, sexp]
   end
 end
 

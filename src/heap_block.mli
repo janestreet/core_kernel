@@ -17,7 +17,7 @@
     length argument is [0].
 *)
 
-type +'a t = private 'a with sexp_of
+type +'a t = private 'a [@@deriving sexp_of]
 
 (** [create v] returns [Some t] if [v] is a heap block, where [t] is physically equal
     to [v] *)

@@ -7,19 +7,17 @@ module Sexp = Sexplib.Sexp
 module String = Core_string
 open Core_printf
 
-INCLUDE "config.mlh"
-
-type 'a bound = 'a Comparable.bound = Incl of 'a | Excl of 'a | Unbounded
+#import "config.mlh"
 
 let failwiths = Error.failwiths
 
 module T = struct
-  type t = float with sexp, bin_io, typerep
+  type t = float [@@deriving sexp, bin_io, typerep]
   let compare (x : t) y = compare x y
   let equal (x : t) y = x = y
   external hash : float -> int = "caml_hash_double" "noalloc"
 
-  TEST_UNIT =
+  let%test_unit _ =
     List.iter ~f:(fun float -> assert (hash float = Caml.Hashtbl.hash float))
       [ 0.926038888360971146
       ; 34.1638588598232076
@@ -29,7 +27,7 @@ module T = struct
 end
 
 include T
-type outer = t with sexp, bin_io, typerep (* alias for use by sub-modules *)
+type outer = t [@@deriving sexp, bin_io, typerep] (* alias for use by sub-modules *)
 
 let to_float x = x
 let of_float x = x
@@ -220,86 +218,86 @@ let one_ulp dir t =
     of_int64_preserve_order (Int64.add x (match dir with `Up -> 1L | `Down -> -1L))
 ;;
 
-TEST_MODULE = struct
+let%test_module _ = (module struct
 
   let test_both_ways a b =
     to_int64_preserve_order_exn a = b && of_int64_preserve_order b = a
   ;;
 
-  TEST = test_both_ways          0.  0L
-  TEST = test_both_ways        (-0.) 0L
-  TEST = test_both_ways          1.  Int64.(shift_left 1023L 52)
-  TEST = test_both_ways        (-2.) Int64.(neg (shift_left 1024L 52))
-  TEST = test_both_ways     infinity Int64.(shift_left 2047L 52)
-  TEST = test_both_ways neg_infinity Int64.(neg (shift_left 2047L 52))
+  let%test _ = test_both_ways          0.  0L
+  let%test _ = test_both_ways        (-0.) 0L
+  let%test _ = test_both_ways          1.  Int64.(shift_left 1023L 52)
+  let%test _ = test_both_ways        (-2.) Int64.(neg (shift_left 1024L 52))
+  let%test _ = test_both_ways     infinity Int64.(shift_left 2047L 52)
+  let%test _ = test_both_ways neg_infinity Int64.(neg (shift_left 2047L 52))
 
-  TEST = one_ulp `Down infinity = max_finite_value
-  TEST = is_nan (one_ulp `Up infinity)
-  TEST = is_nan (one_ulp `Down neg_infinity)
-  TEST = one_ulp `Up neg_infinity = ~-. max_finite_value
+  let%test _ = one_ulp `Down infinity = max_finite_value
+  let%test _ = is_nan (one_ulp `Up infinity)
+  let%test _ = is_nan (one_ulp `Down neg_infinity)
+  let%test _ = one_ulp `Up neg_infinity = ~-. max_finite_value
 
   (* Some tests to make sure that the compiler is generating code for handling subnormal
      numbers at runtime accurately. *)
   let x () = min_positive_subnormal_value
   let y () = min_positive_normal_value
 
-  TEST = test_both_ways  (x ())  1L
-  TEST = test_both_ways  (y ())  Int64.(shift_left 1L 52)
+  let%test _ = test_both_ways  (x ())  1L
+  let%test _ = test_both_ways  (y ())  Int64.(shift_left 1L 52)
 
-  TEST = x () > 0.
-  TEST_UNIT = <:test_result<float>> (x () /. 2.) ~expect:0.
+  let%test _ = x () > 0.
+  let%test_unit _ = [%test_result: float] (x () /. 2.) ~expect:0.
 
-  TEST = one_ulp `Up 0. = x ()
-  TEST = one_ulp `Down 0. = ~-. (x ())
+  let%test _ = one_ulp `Up 0. = x ()
+  let%test _ = one_ulp `Down 0. = ~-. (x ())
 
   let are_one_ulp_apart a b = one_ulp `Up a = b
 
-  TEST = are_one_ulp_apart (x ()) (2. *. x ())
-  TEST = are_one_ulp_apart (2. *. x ()) (3. *. x ())
+  let%test _ = are_one_ulp_apart (x ()) (2. *. x ())
+  let%test _ = are_one_ulp_apart (2. *. x ()) (3. *. x ())
 
   let one_ulp_below_y () = y () -. x ()
-  TEST = one_ulp_below_y () < y ()
-  TEST = y () -. one_ulp_below_y () = x ()
-  TEST = are_one_ulp_apart (one_ulp_below_y ()) (y ())
+  let%test _ = one_ulp_below_y () < y ()
+  let%test _ = y () -. one_ulp_below_y () = x ()
+  let%test _ = are_one_ulp_apart (one_ulp_below_y ()) (y ())
 
   let one_ulp_above_y () = y () +. x ()
-  TEST = y () < one_ulp_above_y ()
-  TEST = one_ulp_above_y () -. y () = x ()
-  TEST = are_one_ulp_apart (y ()) (one_ulp_above_y ())
+  let%test _ = y () < one_ulp_above_y ()
+  let%test _ = one_ulp_above_y () -. y () = x ()
+  let%test _ = are_one_ulp_apart (y ()) (one_ulp_above_y ())
 
-  TEST = not (are_one_ulp_apart (one_ulp_below_y ()) (one_ulp_above_y ()))
+  let%test _ = not (are_one_ulp_apart (one_ulp_below_y ()) (one_ulp_above_y ()))
 
   (* [2 * min_positive_normal_value] is where the ulp increases for the first time. *)
   let z () = 2. *. y ()
   let one_ulp_below_z () = z () -. x ()
-  TEST = one_ulp_below_z () < z ()
-  TEST = z () -. one_ulp_below_z () = x ()
-  TEST = are_one_ulp_apart (one_ulp_below_z ()) (z ())
+  let%test _ = one_ulp_below_z () < z ()
+  let%test _ = z () -. one_ulp_below_z () = x ()
+  let%test _ = are_one_ulp_apart (one_ulp_below_z ()) (z ())
 
   let one_ulp_above_z () = z () +. 2. *. x ()
-  TEST = z () < one_ulp_above_z ()
-  TEST = one_ulp_above_z () -. z () = 2. *. x ()
-  TEST = are_one_ulp_apart (z ()) (one_ulp_above_z ())
+  let%test _ = z () < one_ulp_above_z ()
+  let%test _ = one_ulp_above_z () -. z () = 2. *. x ()
+  let%test _ = are_one_ulp_apart (z ()) (one_ulp_above_z ())
 
-end
+end)
 
 let zero = 0.
 let one = 1.
 let minus_one = -1.
 
-TEST = to_string_round_trippable 3.14                             = "3.14"
-TEST = to_string_round_trippable 3.1400000000000001               = "3.14"
-TEST = to_string_round_trippable 3.1400000000000004               = "3.1400000000000006"
-TEST = to_string_round_trippable 8.000000000000002                = "8.0000000000000018"
-TEST = to_string_round_trippable 9.992                            = "9.992"
-TEST = to_string_round_trippable (2.**63. *. (1. +. 2.** (-52.))) = "9.2233720368547779e+18"
-TEST = to_string_round_trippable (-3.)                            = "-3."
-TEST = to_string_round_trippable nan                              = "nan"
-TEST = to_string_round_trippable infinity                         = "inf"
-TEST = to_string_round_trippable neg_infinity                     = "-inf"
-TEST = to_string_round_trippable 3e100                            = "3e+100"
-TEST = to_string_round_trippable max_finite_value                 = "1.7976931348623157e+308"
-TEST = to_string_round_trippable min_positive_subnormal_value     = "4.94065645841247e-324"
+let%test _ = to_string_round_trippable 3.14                             = "3.14"
+let%test _ = to_string_round_trippable 3.1400000000000001               = "3.14"
+let%test _ = to_string_round_trippable 3.1400000000000004               = "3.1400000000000006"
+let%test _ = to_string_round_trippable 8.000000000000002                = "8.0000000000000018"
+let%test _ = to_string_round_trippable 9.992                            = "9.992"
+let%test _ = to_string_round_trippable (2.**63. *. (1. +. 2.** (-52.))) = "9.2233720368547779e+18"
+let%test _ = to_string_round_trippable (-3.)                            = "-3."
+let%test _ = to_string_round_trippable nan                              = "nan"
+let%test _ = to_string_round_trippable infinity                         = "inf"
+let%test _ = to_string_round_trippable neg_infinity                     = "-inf"
+let%test _ = to_string_round_trippable 3e100                            = "3e+100"
+let%test _ = to_string_round_trippable max_finite_value                 = "1.7976931348623157e+308"
+let%test _ = to_string_round_trippable min_positive_subnormal_value     = "4.94065645841247e-324"
 
 let frexp = Pervasives.frexp
 let ldexp = Pervasives.ldexp
@@ -309,7 +307,7 @@ module Robustly_comparable =
 include Robustly_comparable
 
 let epsilon_float = Pervasives.epsilon_float
-TEST = epsilon_float = (one_ulp `Up 1.) -. 1.
+let%test _ = epsilon_float = (one_ulp `Up 1.) -. 1.
 
 include Hashable.Make_binable (T)
 
@@ -348,7 +346,9 @@ let iround_ubound = min (of_int max_int) (2.0 ** 62.0 -. 512.)
 (* Error reporting below is very carefully arranged so that, e.g., [iround_nearest_exn]
    itself can be inlined into callers such that they don't need to allocate a box for the
    [float] argument.  This is done with a [box] function carefully chosen to allow the
-   compiler to create a separate box for the float only in error cases. *)
+   compiler to create a separate box for the float only in error cases.  See, e.g.,
+   [../../zero/test/price_test.ml] for a mechanical test of this property when building
+   with [X_LIBRARY_INLINING=true]. *)
 let box =
   (* Prevent potential constant folding of [+. 0.] in the near ocamlopt future. *)
   let x = if Random.bool () then 0. else 0. in
@@ -436,14 +436,14 @@ let iround_towards_zero_exn t =
    # naive_round_nearest x;;
    - :     float = 4503599627370498.
 *)
-IFDEF ARCH_SIXTYFOUR THEN
+#if JSC_ARCH_SIXTYFOUR
 let round_nearest_lb = -.(2. ** 52.)
 let round_nearest_ub =    2. ** 52.
-ELSE
+#else
 let int_size_minus_one = float_of_int (Core_int.num_bits - 1)
 let round_nearest_lb = -.(2. ** int_size_minus_one)
 let round_nearest_ub =   (2. ** int_size_minus_one) -. 1.
-ENDIF
+#endif
 
 let iround_nearest t =
   if t >= 0. then
@@ -538,12 +538,12 @@ end
 let modf = Parts.modf
 
 let round_down = floor
-TEST =
+let%test _ =
   round_down      3.6  =  3.
   && round_down (-3.6) = -4.
 
 let round_up = ceil
-TEST =
+let%test _ =
   round_up      3.6  =  4.
   && round_up (-3.6) = -3.
 
@@ -551,7 +551,7 @@ let round_towards_zero t =
   if t >= 0.
   then round_down t
   else round_up   t
-TEST =
+let%test _ =
   round_towards_zero      3.6  =  3.
   && round_towards_zero (-3.6) = -3.
 
@@ -581,42 +581,42 @@ let int63_round_nearest_portable_alloc_exn t =
            "Float.int63_round_nearest_portable_alloc_exn: argument (%f) is too small or NaN" t ()
   end
 
-TEST_MODULE = struct
+let%test_module _ = (module struct
   (* check we raise on invalid input *)
   let must_fail f x = try ignore (f x); false with _ -> true
   let must_succeed f x = try ignore (f x); true with err ->
     print_endline (Exn.to_string err);
     false
-  TEST = must_fail int63_round_nearest_portable_alloc_exn nan
-  TEST = must_fail int63_round_nearest_portable_alloc_exn max_value
-  TEST = must_fail int63_round_nearest_portable_alloc_exn min_value
-  TEST = must_fail int63_round_nearest_portable_alloc_exn (2. ** 63.)
-  TEST = must_fail int63_round_nearest_portable_alloc_exn (~-. (2. ** 63.))
-  TEST = must_succeed int63_round_nearest_portable_alloc_exn (2. ** 62. -. 512.)
-  TEST = must_fail int63_round_nearest_portable_alloc_exn (2. ** 62.)
-  TEST = must_fail int63_round_nearest_portable_alloc_exn (~-. (2. ** 62.) -. 1024.)
-  TEST = must_succeed int63_round_nearest_portable_alloc_exn (~-. (2. ** 62.))
-end
+  let%test _ = must_fail int63_round_nearest_portable_alloc_exn nan
+  let%test _ = must_fail int63_round_nearest_portable_alloc_exn max_value
+  let%test _ = must_fail int63_round_nearest_portable_alloc_exn min_value
+  let%test _ = must_fail int63_round_nearest_portable_alloc_exn (2. ** 63.)
+  let%test _ = must_fail int63_round_nearest_portable_alloc_exn (~-. (2. ** 63.))
+  let%test _ = must_succeed int63_round_nearest_portable_alloc_exn (2. ** 62. -. 512.)
+  let%test _ = must_fail int63_round_nearest_portable_alloc_exn (2. ** 62.)
+  let%test _ = must_fail int63_round_nearest_portable_alloc_exn (~-. (2. ** 62.) -. 1024.)
+  let%test _ = must_succeed int63_round_nearest_portable_alloc_exn (~-. (2. ** 62.))
+end)
 
 let int63_round_nearest_arch64_noalloc_exn f = Core_int63.of_int (iround_nearest_exn f)
 
-IFDEF ARCH_SIXTYFOUR THEN
+#if JSC_ARCH_SIXTYFOUR
 let int63_round_nearest_exn = int63_round_nearest_arch64_noalloc_exn
-TEST =
+let%test _ =
   let before = Core_gc.minor_words () in
   assert (int63_round_nearest_exn 0.8 = Core_int63.of_int_exn 1);
   let after = Core_gc.minor_words () in
   before = after
-ELSE
+#else
 let int63_round_nearest_exn = int63_round_nearest_portable_alloc_exn
-ENDIF
+#endif
 
 
-BENCH_MODULE "round_nearest portability/performance" = struct
+let%bench_module "round_nearest portability/performance" = (module struct
   let f = if Random.bool () then 1.0 else 2.0
-  BENCH "int63_round_nearest_portable_alloc_exn" = int63_round_nearest_portable_alloc_exn f
-  BENCH "int63_round_nearest_arch64_noalloc_exn" = int63_round_nearest_arch64_noalloc_exn f
-  BENCH "int63_round_nearest_exn"                = int63_round_nearest_exn f
+  let%bench "int63_round_nearest_portable_alloc_exn" = int63_round_nearest_portable_alloc_exn f
+  let%bench "int63_round_nearest_arch64_noalloc_exn" = int63_round_nearest_arch64_noalloc_exn f
+  let%bench "int63_round_nearest_exn"                = int63_round_nearest_exn f
 
   (* Here is a comparison of both of these rounding operators on a 64-bit machine. Hence
      we have special-cased this so that we get the faster operation on 64-bit machines.
@@ -631,13 +631,13 @@ BENCH_MODULE "round_nearest portability/performance" = struct
      └────────────────────────────────────────┴──────────┴─────────┴────────────┘
   *)
 
-end
+end)
 
-TEST =
+let%test _ =
   round_nearest      3.6  =  4.
   && round_nearest (-3.6) = -4.
 
-TEST =
+let%test _ =
   let before = Core_gc.minor_words () in
   assert(round_nearest 3.6 = 4.);
   let after = Core_gc.minor_words () in
@@ -659,7 +659,7 @@ module Class = struct
   | Normal
   | Subnormal
   | Zero
-  with sexp, bin_io
+  [@@deriving sexp, bin_io]
 
   let to_string t = Sexp.to_string (sexp_of_t t)
   let of_string s = t_of_sexp (Sexp.Atom s)
@@ -708,41 +708,41 @@ let to_string_hum ?(delimiter='_') ?(decimals=3) ?(strip_zero=false) f =
       | _ -> left ^ "." ^ right
 ;;
 
-TEST_MODULE = struct
+let%test_module _ = (module struct
   let test ?delimiter ~decimals f s s_strip_zero =
     let s' = to_string_hum ?delimiter ~decimals ~strip_zero:false f in
     if s' <> s then
       failwiths "to_string_hum ~strip_zero:false"
         (`input f, `decimals decimals, `got s', `expected s)
-        (<:sexp_of< ([ `input of float ]
+        ([%sexp_of: ([ `input of float ]
                      * [ `decimals of int ]
                      * [ `got of string ]
-                     * [ `expected of string ]) >>);
+                     * [ `expected of string ])]);
     let s_strip_zero' = to_string_hum ?delimiter ~decimals ~strip_zero:true f in
     if s_strip_zero' <> s_strip_zero then
       failwiths "to_string_hum ~strip_zero:true"
         (`input f, `decimals decimals, `got s_strip_zero, `expected s_strip_zero')
-        (<:sexp_of< ([ `input of float ]
+        ([%sexp_of: ([ `input of float ]
                      * [ `decimals of int ]
                      * [ `got of string ]
-                     * [ `expected of string ]) >>);
+                     * [ `expected of string ])]);
   ;;
 
-  TEST_UNIT = test ~decimals:3 0.99999 "1.000" "1"
-  TEST_UNIT = test ~decimals:3 0.00001 "0.000" "0"
-  TEST_UNIT = test ~decimals:3 ~-.12345.1 "-12_345.100" "-12_345.1"
-  TEST_UNIT = test ~delimiter:',' ~decimals:3 ~-.12345.1 "-12,345.100" "-12,345.1"
-  TEST_UNIT = test ~decimals:0 0.99999 "1" "1"
-  TEST_UNIT = test ~decimals:0 0.00001 "0" "0"
-  TEST_UNIT = test ~decimals:0 ~-.12345.1 "-12_345" "-12_345"
-  TEST_UNIT = test ~decimals:0 (5.0 /. 0.0) "inf" "inf"
-  TEST_UNIT = test ~decimals:0 (-5.0 /. 0.0) "-inf" "-inf"
-  TEST_UNIT = test ~decimals:0 (0.0 /. 0.0) "nan" "nan"
-  TEST_UNIT = test ~decimals:2 (5.0 /. 0.0) "inf" "inf"
-  TEST_UNIT = test ~decimals:2 (-5.0 /. 0.0) "-inf" "-inf"
-  TEST_UNIT = test ~decimals:2 (0.0 /. 0.0) "nan" "nan"
-  TEST_UNIT = test ~decimals:5 (10_000.0 /. 3.0) "3_333.33333" "3_333.33333"
-  TEST_UNIT = test ~decimals:2 ~-.0.00001 "-0.00" "-0"
+  let%test_unit _ = test ~decimals:3 0.99999 "1.000" "1"
+  let%test_unit _ = test ~decimals:3 0.00001 "0.000" "0"
+  let%test_unit _ = test ~decimals:3 ~-.12345.1 "-12_345.100" "-12_345.1"
+  let%test_unit _ = test ~delimiter:',' ~decimals:3 ~-.12345.1 "-12,345.100" "-12,345.1"
+  let%test_unit _ = test ~decimals:0 0.99999 "1" "1"
+  let%test_unit _ = test ~decimals:0 0.00001 "0" "0"
+  let%test_unit _ = test ~decimals:0 ~-.12345.1 "-12_345" "-12_345"
+  let%test_unit _ = test ~decimals:0 (5.0 /. 0.0) "inf" "inf"
+  let%test_unit _ = test ~decimals:0 (-5.0 /. 0.0) "-inf" "-inf"
+  let%test_unit _ = test ~decimals:0 (0.0 /. 0.0) "nan" "nan"
+  let%test_unit _ = test ~decimals:2 (5.0 /. 0.0) "inf" "inf"
+  let%test_unit _ = test ~decimals:2 (-5.0 /. 0.0) "-inf" "-inf"
+  let%test_unit _ = test ~decimals:2 (0.0 /. 0.0) "nan" "nan"
+  let%test_unit _ = test ~decimals:5 (10_000.0 /. 3.0) "3_333.33333" "3_333.33333"
+  let%test_unit _ = test ~decimals:2 ~-.0.00001 "-0.00" "-0"
 
   let rand_test n =
     let go () =
@@ -755,16 +755,16 @@ TEST_MODULE = struct
       repeatable (to_string_hum ~decimals:3 ~strip_zero:false);
     in
     try
-      for _i = 0 to n - 1 do go () done;
+      for _ = 0 to n - 1 do go () done;
       true
     with e ->
       Printf.eprintf "%s\n%!" (Exn.to_string e);
       false
   ;;
 
-  TEST = rand_test 10_000
+  let%test _ = rand_test 10_000
   ;;
-end
+end)
 ;;
 
 let to_padded_compact_string t =
@@ -853,7 +853,7 @@ let to_padded_compact_string t =
     then go t
     else "-" ^ (go ~-.t)
 
-TEST_MODULE = struct
+let%test_module _ = (module struct
   let test f expect =
     let actual = to_padded_compact_string f  in
     if actual <> expect
@@ -903,67 +903,147 @@ TEST_MODULE = struct
     both f at;
   ;;
 
-  TEST_UNIT = test nan                            "nan  ";
-  TEST_UNIT = test 0.0                              "0  ";
-  TEST_UNIT = both min_positive_subnormal_value     "0  ";
-  TEST_UNIT = both infinity                       "inf  ";
+  let%test_unit _ = test nan                            "nan  "
+  let%test_unit _ = test 0.0                              "0  "
+  let%test_unit _ = both min_positive_subnormal_value     "0  "
+  let%test_unit _ = both infinity                       "inf  "
 
-  TEST_UNIT = boundary                       0.05 ~closer_to_zero:  "0  " ~at:    "0.1";
-  TEST_UNIT = boundary                       0.15 ~closer_to_zero:  "0.1" ~at:    "0.2";
+  let%test_unit _ = boundary                       0.05 ~closer_to_zero:  "0  " ~at:    "0.1"
+  let%test_unit _ = boundary                       0.15 ~closer_to_zero:  "0.1" ~at:    "0.2"
   (* glibc printf resolves ties to even, cf.
      http://www.exploringbinary.com/inconsistent-rounding-of-printed-floating-point-numbers/ *)
-  TEST_UNIT = boundary (* tie *)             0.25 ~closer_to_zero:  "0.2" ~at:    "0.2";
-  TEST_UNIT = boundary                 (incr 0.25)~closer_to_zero:  "0.2" ~at:    "0.3";
-  TEST_UNIT = boundary                       0.35 ~closer_to_zero:  "0.3" ~at:    "0.4";
-  TEST_UNIT = boundary                       0.45 ~closer_to_zero:  "0.4" ~at:    "0.5";
-  TEST_UNIT = both                           0.50                                 "0.5";
-  TEST_UNIT = boundary                       0.55 ~closer_to_zero:  "0.5" ~at:    "0.6";
-  TEST_UNIT = boundary                       0.65 ~closer_to_zero:  "0.6" ~at:    "0.7";
+  let%test_unit _ = boundary (* tie *)             0.25 ~closer_to_zero:  "0.2" ~at:    "0.2"
+  let%test_unit _ = boundary                 (incr 0.25)~closer_to_zero:  "0.2" ~at:    "0.3"
+  let%test_unit _ = boundary                       0.35 ~closer_to_zero:  "0.3" ~at:    "0.4"
+  let%test_unit _ = boundary                       0.45 ~closer_to_zero:  "0.4" ~at:    "0.5"
+  let%test_unit _ = both                           0.50                                 "0.5"
+  let%test_unit _ = boundary                       0.55 ~closer_to_zero:  "0.5" ~at:    "0.6"
+  let%test_unit _ = boundary                       0.65 ~closer_to_zero:  "0.6" ~at:    "0.7"
   (* this time tie-to-even means round away from 0 *)
-  TEST_UNIT = boundary (* tie *)             0.75 ~closer_to_zero:  "0.7" ~at:    "0.8";
-  TEST_UNIT = boundary                       0.85 ~closer_to_zero:  "0.8" ~at:    "0.9";
-  TEST_UNIT = boundary                       0.95 ~closer_to_zero:  "0.9" ~at:    "1  ";
-  TEST_UNIT = boundary                       1.05 ~closer_to_zero:  "1  " ~at:    "1.1";
-  TEST_UNIT = boundary                       3.25 ~closer_to_zero:  "3.2" ~at:    "3.2";
-  TEST_UNIT = boundary                 (incr 3.25)~closer_to_zero:  "3.2" ~at:    "3.3";
-  TEST_UNIT = boundary                       3.75 ~closer_to_zero:  "3.7" ~at:    "3.8";
-  TEST_UNIT = boundary                       9.95 ~closer_to_zero:  "9.9" ~at:   "10  ";
-  TEST_UNIT = boundary                      10.05 ~closer_to_zero: "10  " ~at:   "10.1";
-  TEST_UNIT = boundary                     100.05 ~closer_to_zero:"100  " ~at:  "100.1";
-  TEST_UNIT = boundary (* tie *)           999.25 ~closer_to_zero:"999.2" ~at:  "999.2";
-  TEST_UNIT = boundary               (incr 999.25)~closer_to_zero:"999.2" ~at:  "999.3";
-  TEST_UNIT = boundary                     999.75 ~closer_to_zero:"999.7" ~at:  "999.8";
-  TEST_UNIT = boundary                     999.95 ~closer_to_zero:"999.9" ~at:    "1k ";
-  TEST_UNIT = both                        1000.                                   "1k ";
+  let%test_unit _ = boundary (* tie *)             0.75 ~closer_to_zero:  "0.7" ~at:    "0.8"
+  let%test_unit _ = boundary                       0.85 ~closer_to_zero:  "0.8" ~at:    "0.9"
+  let%test_unit _ = boundary                       0.95 ~closer_to_zero:  "0.9" ~at:    "1  "
+  let%test_unit _ = boundary                       1.05 ~closer_to_zero:  "1  " ~at:    "1.1"
+  let%test_unit _ = boundary                       3.25 ~closer_to_zero:  "3.2" ~at:    "3.2"
+  let%test_unit _ = boundary                 (incr 3.25)~closer_to_zero:  "3.2" ~at:    "3.3"
+  let%test_unit _ = boundary                       3.75 ~closer_to_zero:  "3.7" ~at:    "3.8"
+  let%test_unit _ = boundary                       9.95 ~closer_to_zero:  "9.9" ~at:   "10  "
+  let%test_unit _ = boundary                      10.05 ~closer_to_zero: "10  " ~at:   "10.1"
+  let%test_unit _ = boundary                     100.05 ~closer_to_zero:"100  " ~at:  "100.1"
+  let%test_unit _ = boundary (* tie *)           999.25 ~closer_to_zero:"999.2" ~at:  "999.2"
+  let%test_unit _ = boundary               (incr 999.25)~closer_to_zero:"999.2" ~at:  "999.3"
+  let%test_unit _ = boundary                     999.75 ~closer_to_zero:"999.7" ~at:  "999.8"
+  let%test_unit _ = boundary                     999.95 ~closer_to_zero:"999.9" ~at:    "1k "
+  let%test_unit _ = both                        1000.                                   "1k "
 
   (* some ties which we resolve manually in [iround_ratio_exn] *)
-  TEST_UNIT = boundary                    1050.   ~closer_to_zero:  "1k " ~at:    "1k "
-  TEST_UNIT = boundary              (incr 1050.)  ~closer_to_zero:  "1k " ~at:    "1k1"
-  TEST_UNIT = boundary                    1950.   ~closer_to_zero:  "1k9" ~at:    "2k ";
-  TEST_UNIT = boundary                    3250.   ~closer_to_zero:  "3k2" ~at:    "3k2";
-  TEST_UNIT = boundary              (incr 3250.)  ~closer_to_zero:  "3k2" ~at:    "3k3";
-  TEST_UNIT = boundary                    9950.   ~closer_to_zero:  "9k9" ~at:   "10k ";
-  TEST_UNIT = boundary                  33_250.   ~closer_to_zero: "33k2" ~at:   "33k2";
-  TEST_UNIT = boundary            (incr 33_250.)  ~closer_to_zero: "33k2" ~at:   "33k3";
-  TEST_UNIT = boundary                  33_350.   ~closer_to_zero: "33k3" ~at:   "33k4";
-  TEST_UNIT = boundary                  33_750.   ~closer_to_zero: "33k7" ~at:   "33k8";
-  TEST_UNIT = boundary                 333_250.   ~closer_to_zero:"333k2" ~at:  "333k2";
-  TEST_UNIT = boundary           (incr 333_250.)  ~closer_to_zero:"333k2" ~at:  "333k3";
-  TEST_UNIT = boundary                 333_750.   ~closer_to_zero:"333k7" ~at:  "333k8";
-  TEST_UNIT = boundary                 999_850.   ~closer_to_zero:"999k8" ~at:  "999k8";
-  TEST_UNIT = boundary           (incr 999_850.)  ~closer_to_zero:"999k8" ~at:  "999k9";
-  TEST_UNIT = boundary                 999_950.   ~closer_to_zero:"999k9" ~at:    "1m ";
-  TEST_UNIT = boundary               1_050_000.   ~closer_to_zero:  "1m " ~at:    "1m ";
-  TEST_UNIT = boundary         (incr 1_050_000.)  ~closer_to_zero:  "1m " ~at:    "1m1";
+  let%test_unit _ = boundary                    1050.   ~closer_to_zero:  "1k " ~at:    "1k "
+  let%test_unit _ = boundary              (incr 1050.)  ~closer_to_zero:  "1k " ~at:    "1k1"
+  let%test_unit _ = boundary                    1950.   ~closer_to_zero:  "1k9" ~at:    "2k "
+  let%test_unit _ = boundary                    3250.   ~closer_to_zero:  "3k2" ~at:    "3k2"
+  let%test_unit _ = boundary              (incr 3250.)  ~closer_to_zero:  "3k2" ~at:    "3k3"
+  let%test_unit _ = boundary                    9950.   ~closer_to_zero:  "9k9" ~at:   "10k "
+  let%test_unit _ = boundary                  33_250.   ~closer_to_zero: "33k2" ~at:   "33k2"
+  let%test_unit _ = boundary            (incr 33_250.)  ~closer_to_zero: "33k2" ~at:   "33k3"
+  let%test_unit _ = boundary                  33_350.   ~closer_to_zero: "33k3" ~at:   "33k4"
+  let%test_unit _ = boundary                  33_750.   ~closer_to_zero: "33k7" ~at:   "33k8"
+  let%test_unit _ = boundary                 333_250.   ~closer_to_zero:"333k2" ~at:  "333k2"
+  let%test_unit _ = boundary           (incr 333_250.)  ~closer_to_zero:"333k2" ~at:  "333k3"
+  let%test_unit _ = boundary                 333_750.   ~closer_to_zero:"333k7" ~at:  "333k8"
+  let%test_unit _ = boundary                 999_850.   ~closer_to_zero:"999k8" ~at:  "999k8"
+  let%test_unit _ = boundary           (incr 999_850.)  ~closer_to_zero:"999k8" ~at:  "999k9"
+  let%test_unit _ = boundary                 999_950.   ~closer_to_zero:"999k9" ~at:    "1m "
+  let%test_unit _ = boundary               1_050_000.   ~closer_to_zero:  "1m " ~at:    "1m "
+  let%test_unit _ = boundary         (incr 1_050_000.)  ~closer_to_zero:  "1m " ~at:    "1m1"
 
-  TEST_UNIT = boundary             999_950_000.   ~closer_to_zero:"999m9" ~at:    "1g ";
-  TEST_UNIT = boundary         999_950_000_000.   ~closer_to_zero:"999g9" ~at:    "1t ";
-  TEST_UNIT = boundary     999_950_000_000_000.   ~closer_to_zero:"999t9" ~at:    "1p ";
-  TEST_UNIT = boundary 999_950_000_000_000_000.   ~closer_to_zero:"999p9" ~at:"1.0e+18";
+  let%test_unit _ = boundary             999_950_000.   ~closer_to_zero:"999m9" ~at:    "1g "
+  let%test_unit _ = boundary         999_950_000_000.   ~closer_to_zero:"999g9" ~at:    "1t "
+  let%test_unit _ = boundary     999_950_000_000_000.   ~closer_to_zero:"999t9" ~at:    "1p "
+  let%test_unit _ = boundary 999_950_000_000_000_000.   ~closer_to_zero:"999p9" ~at:"1.0e+18"
 
   (* Test the boundary between the subnormals and the normals. *)
-  TEST_UNIT = boundary min_positive_normal_value ~closer_to_zero:"0  " ~at:"0  ";
-end
+  let%test_unit _ = boundary min_positive_normal_value ~closer_to_zero:"0  " ~at:"0  "
+end)
+
+(* Performance note: Initializing the accumulator to 1 results in one extra
+   multiply; e.g., to compute x ** 4, we in principle only need 2 multiplies,
+   but this function will have 3 multiplies.  However, attempts to avoid this
+   (like decrementing n and initializing accum to be x, or handling small
+   exponents as a special case) have not yielded anything that is a net
+   improvement.
+*)
+let int_pow x n =
+  if n = 0 then
+    1.
+  else begin
+    (* Using [x +. (-0.)] on the following line convinces the compiler to avoid a certain
+       boxing (that would result in allocation in each iteration).  Soon, the compiler
+       shouldn't need this "hint" to avoid the boxing.  The reason we add -0 rather than 0
+       is that [x +. (-0.)] is apparently always the same as [x], whereas [x +. 0.] is
+       not, in that it sends [-0.] to [0.].  This makes a difference because we want
+       [int_pow (-0.) (-1)] to return neg_infinity just like [-0. ** -1.] would.  *)
+    let x = ref (x +. (-0.)) in
+    let n = ref n in
+    let accum = ref 1. in
+    if !n < 0 then begin
+      (* x ** n = (1/x) ** -n *)
+      x := 1. /. !x;
+      n := ~- !n;
+      if !n < 0 then begin
+        (* n must have been min_int, so it is now so big that it has wrapped around.
+           We decrement it so that it looks positive again, but accordingly have
+           to put an extra factor of x in the accumulator.
+        *)
+        accum := !x;
+        decr n
+      end
+    end;
+    (* Letting [a] denote (the original value of) [x ** n], we maintain
+       the invariant that [(x ** n) *. accum = a]. *)
+    while !n > 1 do
+      if !n land 1 <> 0 then accum := !x *. !accum;
+      x := !x *. !x;
+      n := !n lsr 1
+    done;
+    (* n is necessarily 1 at this point, so there is one additional
+       multiplication by x. *)
+    !x *. !accum
+  end
+
+let%test "int_pow" =
+  let tol = 1e-15 in
+  let test (x, n) =
+    let reference_value = x ** float n in
+    let relative_error = (int_pow x n -. reference_value) /. reference_value in
+    abs relative_error < tol
+  in
+  List.for_all ~f:test
+    [(1.5, 17); (1.5, 42); (0.99, 64); (2., -5); (2., -1)
+    ; (-1.3, 2); (-1.3, -1); (-1.3, -2); (5., 0)
+    ; (nan, 0); (0., 0); (infinity, 0)
+    ]
+
+let%test "int_pow misc" =
+  int_pow 0. (-1) = infinity
+  && int_pow (-0.) (-1) = neg_infinity
+  && int_pow (-0.) (-2) = infinity
+  && int_pow 1.5 5000 = infinity
+  && int_pow 1.5 (-5000) = 0.
+  && int_pow (-1.) Pervasives.max_int = -1.
+  && int_pow (-1.) Pervasives.min_int = 1.
+
+(* some ugly corner cases with extremely large exponents and some serious precision loss *)
+let%test "int_pow bad cases" =
+  let a = one_ulp `Down 1. in
+  let b = one_ulp `Up 1. in
+  let large = 1 lsl 61 in
+  let small = ~- large in
+  (* this huge discrepancy comes from the fact that [1 / a = b] but this is a very poor
+     approximation, and in particular [1 / b = one_ulp `Down a = a * a]. *)
+  a **    float small = 1.5114276650041252e+111
+  &&  int_pow a small = 2.2844048619719663e+222
+  &&  int_pow b large = 2.2844048619719663e+222
+  && b ** float large = 2.2844135865396268e+222
 
 module Replace_polymorphic_compare = struct
   let equal = equal
@@ -979,7 +1059,41 @@ module Replace_polymorphic_compare = struct
   let ( < ) (x : t) y = x < y
   let ( <> ) (x : t) y = x <> y
   let between t ~low ~high = low <= t && t <= high
-  let _squelch_unused_module_warning_ = ()
+
+  (* This is structured slightly differently than in other modules in this library so that
+     we get the behavior of [clamp_unchecked nan ~min ~max = nan] (for any [min] and
+     [max]) for free
+  *)
+  let clamp_unchecked t ~min ~max =
+    if t < min then min
+    else if max < t then max
+    else t
+
+  let clamp_exn t ~min ~max =
+    (* Also fails if [min] or [max] is nan *)
+    assert (min <= max);
+    clamp_unchecked t ~min ~max
+
+  let clamp t ~min ~max =
+    (* Also fails if [min] or [max] is nan *)
+    if min <= max then
+      Ok (clamp_unchecked t ~min ~max)
+    else
+      Or_error.error "clamp requires [min <= max]"
+        (`Min min, `Max max) [%sexp_of: [`Min of T.t] * [`Max of T.t]]
+
+  let%bench_module "clamping" = (module struct
+    (* The [of_string] is to prevent inlining. *)
+    let a = of_string "1.1"
+    let b = of_string "2.1"
+    let c = of_string "2.2"
+
+    let%bench "clamp_unchecked" = clamp_unchecked ~min:a ~max:b c
+
+    let%bench "clamp" = clamp ~min:a ~max:b c
+
+  end)
+
 end
 
 include Replace_polymorphic_compare
@@ -993,7 +1107,7 @@ let ( ~- ) = ( ~-. )
 include Comparable.Map_and_set_binable (T)
 
 module Sign = struct
-  type t = Neg | Zero | Pos with sexp
+  type t = Neg | Zero | Pos [@@deriving sexp]
 end
 
 let sign t =
@@ -1039,7 +1153,7 @@ let create_ieee_exn ~negative ~exponent ~mantissa =
 let create_ieee ~negative ~exponent ~mantissa =
   Or_error.try_with (fun () -> create_ieee_exn ~negative ~exponent ~mantissa)
 
-TEST_MODULE "IEEE" = struct
+let%test_module "IEEE" = (module struct
   (* Note: IEEE 754 defines NaN values to be those where the exponent is all 1s and the
      mantissa is nonzero.  test_result<t> sees nan values as equal because it
      is based on [compare] rather than [=].  (If [x] and [x'] are nan, [compare x x']
@@ -1051,21 +1165,21 @@ TEST_MODULE "IEEE" = struct
     let is_nan = is_nan t in
     (* the sign doesn't matter when nan *)
     if not is_nan then
-      <:test_result<bool>> ~message:("ieee_negative " ^ str)
+      [%test_result: bool] ~message:("ieee_negative " ^ str)
         (ieee_negative t) ~expect:negative;
-    <:test_result<int>> ~message:("ieee_exponent " ^ str)
+    [%test_result: int] ~message:("ieee_exponent " ^ str)
       (ieee_exponent t) ~expect:exponent;
     if is_nan
     then assert (Core_int63.(zero <> ieee_mantissa t))
-    else <:test_result<Core_int63.t>> ~message:("ieee_mantissa " ^ str)
+    else [%test_result: Core_int63.t] ~message:("ieee_mantissa " ^ str)
            (ieee_mantissa t) ~expect:mantissa;
-    <:test_result<t>>
+    [%test_result: t]
       ~message:(sprintf !"create_ieee ~negative:%B ~exponent:%d ~mantissa:%{Core_int63}"
                   negative exponent mantissa)
       (create_ieee_exn ~negative ~exponent ~mantissa)
       ~expect:t
 
-  TEST_UNIT =
+  let%test_unit _ =
     let (!!) x = Core_int63.of_int x in
     f zero                         false 0                                 (!! 0);
     f min_positive_subnormal_value false 0                                 (!! 1);
@@ -1079,7 +1193,7 @@ TEST_MODULE "IEEE" = struct
     f nan                          false exponent_mask                     (!! 1)
 
   (* test the normalized case, that is, 1 <= exponent <= 2046 *)
-  TEST_UNIT =
+  let%test_unit _ =
     let g ~negative ~exponent ~mantissa =
       assert (create_ieee_exn ~negative ~exponent
                 ~mantissa:(Core_int63.of_int64_exn mantissa)
@@ -1091,12 +1205,321 @@ TEST_MODULE "IEEE" = struct
     g ~negative:false ~exponent:1 ~mantissa:147L;
     g ~negative:true ~exponent:137 ~mantissa:13L;
     g ~negative:false ~exponent:1015 ~mantissa:1370001L;
-    g ~negative:true ~exponent:2046 ~mantissa:137000100945L;
+    g ~negative:true ~exponent:2046 ~mantissa:137000100945L
+
+end)
+
+module Nan_dist = struct
+  type t = Without | With_single | With_all [@@deriving sexp]
+end
+
+module For_quickcheck = struct
+
+  module Generator = Quickcheck.Generator
+  module Observer  = Quickcheck.Observer
+  module Shrinker  = Quickcheck.Shrinker
+
+  open Generator.Monad_infix
+
+  let min_positive_subnormal_value = min_positive_subnormal_value
+  let max_positive_subnormal_value = one_ulp `Down min_positive_normal_value
+
+  let min_normal_mantissa = ieee_mantissa min_positive_normal_value
+  let max_normal_mantissa = ieee_mantissa max_finite_value
+
+  let%test_unit _ =
+    [%test_result: Core_int63.t]
+      min_normal_mantissa
+      ~expect:Core_int63.zero
+
+  let min_normal_exponent = ieee_exponent min_positive_normal_value
+  let max_normal_exponent = ieee_exponent max_finite_value
+
+  let min_subnormal_mantissa = ieee_mantissa min_positive_subnormal_value
+  let max_subnormal_mantissa = ieee_mantissa max_positive_subnormal_value
+
+  let%test_unit _ =
+    [%test_result: Core_int63.t]
+      min_subnormal_mantissa
+      ~expect:Core_int63.one
+
+  let nan_exponent = ieee_exponent nan
+  let min_nan_mantissa = min_normal_mantissa |> Core_int63.succ
+  let max_nan_mantissa = max_normal_mantissa
+
+  let%test_unit _ =
+    [%test_result: Core_int63.t]
+      min_nan_mantissa
+      ~expect:Core_int63.one
+
+  let maybe_union option_gens =
+    match Core_list.filter_opt option_gens with
+    | []   -> None
+    | gens -> Some (Generator.union gens)
+
+  let maybe_weighted_union weighted_option_gens =
+    Core_list.filter_map weighted_option_gens ~f:(fun (wt, option_gen) ->
+      Option.map option_gen ~f:(fun gen ->
+        (wt, gen)))
+    |> function
+    | []   -> None
+    | gens -> Some (Generator.weighted_union gens)
+
+  let int63_pair_lexicographic
+        ~fst_lower_bound ~fst_upper_bound
+        ~snd_lower_bound ~snd_upper_bound
+        ~snd_start ~snd_final
+    =
+    let open Core_int63 in
+    gen_between
+      ~lower_bound:(Incl fst_lower_bound)
+      ~upper_bound:(Incl fst_upper_bound)
+    >>= fun fst ->
+    let lower_bound = if fst = fst_lower_bound then snd_start else snd_lower_bound in
+    let upper_bound = if fst = fst_upper_bound then snd_final else snd_upper_bound in
+    gen_between
+      ~lower_bound:(Incl lower_bound)
+      ~upper_bound:(Incl upper_bound)
+    >>| fun snd ->
+    (fst, snd)
+
+  let gen_nan = function
+    | Nan_dist.Without     -> None
+    | Nan_dist.With_single -> Some (Generator.singleton nan)
+    | Nan_dist.With_all    ->
+      begin
+        Core_int63.gen_between
+          ~lower_bound:(Incl min_nan_mantissa)
+          ~upper_bound:(Incl max_nan_mantissa)
+        >>= fun mantissa ->
+        Bool.gen
+        >>| fun negative ->
+        let exponent = nan_exponent in
+        create_ieee_exn ~negative ~exponent ~mantissa
+      end
+      |> Option.return
+
+  let gen_pos_range
+        ~lower_bound
+        ~upper_bound
+        ~min_pos_candidate
+        ~max_pos_candidate
+    =
+    if lower_bound > max_pos_candidate ||
+       upper_bound < min_pos_candidate
+    then None
+    else
+      let lower = max lower_bound min_pos_candidate in
+      let upper = min upper_bound max_pos_candidate in
+      begin
+        int63_pair_lexicographic
+          ~fst_lower_bound:(ieee_exponent lower |> Core_int63.of_int)
+          ~fst_upper_bound:(ieee_exponent upper |> Core_int63.of_int)
+          ~snd_lower_bound:(ieee_mantissa min_pos_candidate)
+          ~snd_upper_bound:(ieee_mantissa max_pos_candidate)
+          ~snd_start:(ieee_mantissa lower)
+          ~snd_final:(ieee_mantissa upper)
+        >>| fun (exponent, mantissa) ->
+        let negative = false in
+        let exponent = Core_int63.to_int_exn exponent in
+        create_ieee_exn ~negative ~exponent ~mantissa
+      end
+      |> Option.return
+
+  let gen_neg_range
+        ~lower_bound
+        ~upper_bound
+        ~min_pos_candidate
+        ~max_pos_candidate
+    =
+    gen_pos_range
+      ~lower_bound:(neg upper_bound)
+      ~upper_bound:(neg lower_bound)
+      ~min_pos_candidate
+      ~max_pos_candidate
+    |> Option.map ~f:(Generator.map ~f:neg)
+
+  let gen_range
+        ~lower_bound
+        ~upper_bound
+        ~min_pos_candidate
+        ~max_pos_candidate
+    =
+    maybe_union
+      [ gen_pos_range
+          ~lower_bound
+          ~upper_bound
+          ~min_pos_candidate
+          ~max_pos_candidate
+      ; gen_neg_range
+          ~lower_bound
+          ~upper_bound
+          ~min_pos_candidate
+          ~max_pos_candidate
+      ]
+
+  let gen_zero ~lower_bound ~upper_bound =
+    gen_range ~lower_bound ~upper_bound
+      ~min_pos_candidate:zero
+      ~max_pos_candidate:zero
+
+  let gen_subnormal ~lower_bound ~upper_bound =
+    gen_range ~lower_bound ~upper_bound
+      ~min_pos_candidate:min_positive_subnormal_value
+      ~max_pos_candidate:max_positive_subnormal_value
+
+  let gen_normal ~lower_bound ~upper_bound =
+    gen_range ~lower_bound ~upper_bound
+      ~min_pos_candidate:min_positive_normal_value
+      ~max_pos_candidate:max_finite_value
+
+  let gen_infinity ~lower_bound ~upper_bound =
+    gen_range ~lower_bound ~upper_bound
+      ~min_pos_candidate:infinity
+      ~max_pos_candidate:infinity
+
+  let gen_between_inclusive ~nan ~lower_bound ~upper_bound =
+    assert (lower_bound <= upper_bound);
+    maybe_weighted_union
+      [ 5., gen_normal    ~lower_bound ~upper_bound
+      ; 4., gen_subnormal ~lower_bound ~upper_bound
+      ; 3., gen_zero      ~lower_bound ~upper_bound
+      ; 2., gen_infinity  ~lower_bound ~upper_bound
+      ; 1., gen_nan       nan
+      ]
+    |> Option.value_exn ~message:"Float.gen_between: no values satisfy given constraints"
+
+  let gen =
+    gen_between_inclusive
+      ~nan:With_single
+      ~lower_bound:neg_infinity
+      ~upper_bound:infinity
+
+  let gen_between ~nan ~lower_bound ~upper_bound =
+    match
+      (lower_bound : float Maybe_bound.t),
+      (upper_bound : float Maybe_bound.t)
+    with
+    | (Excl lower, _) | (Incl lower, _) when is_nan lower ->
+      failwith "Float.gen_between: lower bound = NaN"
+    | (_, Excl upper) | (_, Incl upper) when is_nan upper ->
+      failwith "Float.gen_between: upper bound = NaN"
+    | Excl lower, _ when equal lower infinity ->
+      failwith "Float.gen_between: lower bound > infinity"
+    | _, Excl upper when equal upper neg_infinity ->
+      failwith "Float.gen_between: upper bound < -infinity"
+    | _ ->
+      let lower_inclusive =
+        match lower_bound with
+        | Unbounded        -> neg_infinity
+        | Incl lower_bound -> lower_bound
+        | Excl lower_bound -> one_ulp `Up lower_bound
+      in
+      let upper_inclusive =
+        match upper_bound with
+        | Unbounded        -> infinity
+        | Incl upper_bound -> upper_bound
+        | Excl upper_bound -> one_ulp `Down upper_bound
+      in
+      if lower_inclusive > upper_inclusive then
+        failwiths "Float.gen_between: crossed bounds"
+          (`lower_bound lower_bound, `upper_bound upper_bound)
+          [%sexp_of: [`lower_bound of t Maybe_bound.t] *
+                     [`upper_bound of t Maybe_bound.t]];
+      gen_between_inclusive ~nan
+        ~lower_bound:lower_inclusive
+        ~upper_bound:upper_inclusive
+
+  let gen_without_nan =
+    gen_between
+      ~nan:Without
+      ~lower_bound:Unbounded
+      ~upper_bound:Unbounded
+
+  let gen_finite =
+    gen_between
+      ~nan:Without
+      ~lower_bound:(Excl neg_infinity)
+      ~upper_bound:(Excl infinity)
+
+  (* obs_{zero,subnormal,normal,infinite,nan} are observers that
+     distinguish floats already known to classify as their names suggest. E.g.,
+     [obs_zero] only distinguishes between positive and negative zero.  *)
+
+  let obs_zero =
+    Observer.unmap Bool.obs
+      ~f:ieee_negative
+      ~f_sexp:(fun () -> Atom "ieee_negative")
+
+  let obs_subnormal =
+    let mantissa =
+      Core_int63.obs_between
+        ~lower_bound:(Incl min_subnormal_mantissa)
+        ~upper_bound:(Incl max_subnormal_mantissa)
+    in
+    Observer.unmap (Observer.tuple2 Bool.obs mantissa)
+      ~f:(fun float ->
+        ieee_negative float,
+        ieee_mantissa float)
+      ~f_sexp:(fun () -> Atom "ieee_negative_and_mantissa")
+
+  let obs_normal =
+    let exponent =
+      Core_int.obs_between
+        ~lower_bound:(Incl min_normal_exponent)
+        ~upper_bound:(Incl max_normal_exponent)
+    in
+    let mantissa =
+      Core_int63.obs_between
+        ~lower_bound:(Incl min_normal_mantissa)
+        ~upper_bound:(Incl max_normal_mantissa)
+    in
+    Observer.unmap (Observer.tuple3 Bool.obs exponent mantissa)
+      ~f:(fun float ->
+        ieee_negative float,
+        ieee_exponent float,
+        ieee_mantissa float)
+      ~f_sexp:(fun () -> Atom "ieee_negative_and_exponent_and_mantissa")
+
+  let obs_infinite =
+    Observer.unmap Bool.obs
+      ~f:ieee_negative
+      ~f_sexp:(fun () -> Atom "ieee_negative")
+
+  let obs_nan =
+    Observer.singleton ()
+
+  let obs =
+    Observer.unmap
+      (Observer.variant5
+         obs_zero
+         obs_subnormal
+         obs_normal
+         obs_infinite
+         obs_nan)
+      ~f:(fun float ->
+        match classify float with
+        | Zero      -> `A float
+        | Subnormal -> `B float
+        | Normal    -> `C float
+        | Infinite  -> `D float
+        | Nan       -> `E float)
+      ~f_sexp:(fun () -> Atom "variant5_of_float_by_classification")
+
+  let shrinker =
+    Shrinker.empty ()
 
 end
 
+let gen             = For_quickcheck.gen
+let gen_between     = For_quickcheck.gen_between
+let gen_without_nan = For_quickcheck.gen_without_nan
+let gen_finite      = For_quickcheck.gen_finite
+let obs             = For_quickcheck.obs
+let shrinker        = For_quickcheck.shrinker
+
 module Terse = struct
-  type t = outer with bin_io
+  type t = outer [@@deriving bin_io]
   let t_of_sexp = t_of_sexp
 
   let to_string x = Core_printf.sprintf "%.8G" x
@@ -1137,6 +1560,13 @@ include Comparable.With_zero (struct
   include V
 end)
 
+let%test_unit "Float.validate_positive doesn't allocate on success" =
+  let initial_words = Core_gc.minor_words () in
+  let _ : Validate.t = validate_positive 1. in
+  let allocated = Core_int.(-) (Core_gc.minor_words ()) initial_words in
+  [%test_result: int] allocated ~expect:0
+;;
+
 include Pretty_printer.Register(struct
   include T
   let module_name = "Core_kernel.Std.Float"
@@ -1158,28 +1588,28 @@ module O = struct
   let of_float x = x
 end
 
-TEST_MODULE = struct
+let%test_module _ = (module struct
   let check v expect =
     match Validate.result v, expect with
     | Ok (), `Ok | Error _, `Error -> ()
     | r, expect ->
       failwiths "mismatch" (r, expect)
-        <:sexp_of< unit Or_error.t * [ `Ok | `Error ] >>
+        [%sexp_of: unit Or_error.t * [ `Ok | `Error ]]
   ;;
 
-  TEST_UNIT = check (validate_lbound ~min:(Incl 0.) nan)          `Error
-  TEST_UNIT = check (validate_lbound ~min:(Incl 0.) infinity)     `Error
-  TEST_UNIT = check (validate_lbound ~min:(Incl 0.) neg_infinity) `Error
-  TEST_UNIT = check (validate_lbound ~min:(Incl 0.) (-1.))        `Error
-  TEST_UNIT = check (validate_lbound ~min:(Incl 0.) 0.)           `Ok
-  TEST_UNIT = check (validate_lbound ~min:(Incl 0.) 1.)           `Ok
+  let%test_unit _ = check (validate_lbound ~min:(Incl 0.) nan)          `Error
+  let%test_unit _ = check (validate_lbound ~min:(Incl 0.) infinity)     `Error
+  let%test_unit _ = check (validate_lbound ~min:(Incl 0.) neg_infinity) `Error
+  let%test_unit _ = check (validate_lbound ~min:(Incl 0.) (-1.))        `Error
+  let%test_unit _ = check (validate_lbound ~min:(Incl 0.) 0.)           `Ok
+  let%test_unit _ = check (validate_lbound ~min:(Incl 0.) 1.)           `Ok
 
-  TEST_UNIT = check (validate_ubound ~max:(Incl 0.) nan)          `Error
-  TEST_UNIT = check (validate_ubound ~max:(Incl 0.) infinity)     `Error
-  TEST_UNIT = check (validate_ubound ~max:(Incl 0.) neg_infinity) `Error
-  TEST_UNIT = check (validate_ubound ~max:(Incl 0.) (-1.))        `Ok
-  TEST_UNIT = check (validate_ubound ~max:(Incl 0.) 0.)           `Ok
-  TEST_UNIT = check (validate_ubound ~max:(Incl 0.) 1.)           `Error
+  let%test_unit _ = check (validate_ubound ~max:(Incl 0.) nan)          `Error
+  let%test_unit _ = check (validate_ubound ~max:(Incl 0.) infinity)     `Error
+  let%test_unit _ = check (validate_ubound ~max:(Incl 0.) neg_infinity) `Error
+  let%test_unit _ = check (validate_ubound ~max:(Incl 0.) (-1.))        `Ok
+  let%test_unit _ = check (validate_ubound ~max:(Incl 0.) 0.)           `Ok
+  let%test_unit _ = check (validate_ubound ~max:(Incl 0.) 1.)           `Error
 
   (* Some of the following tests used to live in lib_test/core_float_test.ml. *)
 
@@ -1286,45 +1716,45 @@ TEST_MODULE = struct
           0. <= x -. y && x -. y < 1. && (sign x = sign y || y = 0.0))
 
   (* Easy cases that used to live inline with the code above. *)
-  TEST = iround_up (-3.4) = Some (-3)
-  TEST = iround_up   0.0  = Some   0
-  TEST = iround_up   3.4  = Some   4
+  let%test _ = iround_up (-3.4) = Some (-3)
+  let%test _ = iround_up   0.0  = Some   0
+  let%test _ = iround_up   3.4  = Some   4
 
-  TEST = iround_up_exn (-3.4) = -3
-  TEST = iround_up_exn   0.0  =  0
-  TEST = iround_up_exn   3.4  =  4
+  let%test _ = iround_up_exn (-3.4) = -3
+  let%test _ = iround_up_exn   0.0  =  0
+  let%test _ = iround_up_exn   3.4  =  4
 
-  TEST = iround_down (-3.4) = Some (-4)
-  TEST = iround_down   0.0  = Some   0
-  TEST = iround_down   3.4  = Some   3
+  let%test _ = iround_down (-3.4) = Some (-4)
+  let%test _ = iround_down   0.0  = Some   0
+  let%test _ = iround_down   3.4  = Some   3
 
-  TEST = iround_down_exn (-3.4) = -4
-  TEST = iround_down_exn   0.0  =  0
-  TEST = iround_down_exn   3.4  =  3
+  let%test _ = iround_down_exn (-3.4) = -4
+  let%test _ = iround_down_exn   0.0  =  0
+  let%test _ = iround_down_exn   3.4  =  3
 
-  TEST = iround_towards_zero (-3.4) = Some (-3)
-  TEST = iround_towards_zero   0.0  = Some   0
-  TEST = iround_towards_zero   3.4  = Some   3
+  let%test _ = iround_towards_zero (-3.4) = Some (-3)
+  let%test _ = iround_towards_zero   0.0  = Some   0
+  let%test _ = iround_towards_zero   3.4  = Some   3
 
-  TEST = iround_towards_zero_exn (-3.4) = -3
-  TEST = iround_towards_zero_exn   0.0  =  0
-  TEST = iround_towards_zero_exn   3.4  =  3
+  let%test _ = iround_towards_zero_exn (-3.4) = -3
+  let%test _ = iround_towards_zero_exn   0.0  =  0
+  let%test _ = iround_towards_zero_exn   3.4  =  3
 
-  TEST = iround_nearest (-3.6) = Some (-4)
-  TEST = iround_nearest (-3.5) = Some (-3)
-  TEST = iround_nearest (-3.4) = Some (-3)
-  TEST = iround_nearest   0.0  = Some   0
-  TEST = iround_nearest   3.4  = Some   3
-  TEST = iround_nearest   3.5  = Some   4
-  TEST = iround_nearest   3.6  = Some   4
+  let%test _ = iround_nearest (-3.6) = Some (-4)
+  let%test _ = iround_nearest (-3.5) = Some (-3)
+  let%test _ = iround_nearest (-3.4) = Some (-3)
+  let%test _ = iround_nearest   0.0  = Some   0
+  let%test _ = iround_nearest   3.4  = Some   3
+  let%test _ = iround_nearest   3.5  = Some   4
+  let%test _ = iround_nearest   3.6  = Some   4
 
-  TEST = iround_nearest_exn (-3.6) = -4
-  TEST = iround_nearest_exn (-3.5) = -3
-  TEST = iround_nearest_exn (-3.4) = -3
-  TEST = iround_nearest_exn   0.0  =  0
-  TEST = iround_nearest_exn   3.4  =  3
-  TEST = iround_nearest_exn   3.5  =  4
-  TEST = iround_nearest_exn   3.6  =  4
+  let%test _ = iround_nearest_exn (-3.6) = -4
+  let%test _ = iround_nearest_exn (-3.5) = -3
+  let%test _ = iround_nearest_exn (-3.4) = -3
+  let%test _ = iround_nearest_exn   0.0  =  0
+  let%test _ = iround_nearest_exn   3.4  =  3
+  let%test _ = iround_nearest_exn   3.5  =  4
+  let%test _ = iround_nearest_exn   3.6  =  4
 
   let special_values_test () =
     round (-.1.50001) = -.2. &&
@@ -1398,10 +1828,10 @@ TEST_MODULE = struct
         && round (2.0 ** int_size_minus_one) = None
         && round (-. (2.0 ** int_size_minus_one +. 1.)) = None
 
-  TEST = extremities_test ~round:iround_down
-  TEST = extremities_test ~round:iround_up
-  TEST = extremities_test ~round:iround_nearest
-  TEST = extremities_test ~round:iround_towards_zero
+  let%test _ = extremities_test ~round:iround_down
+  let%test _ = extremities_test ~round:iround_up
+  let%test _ = extremities_test ~round:iround_nearest
+  let%test _ = extremities_test ~round:iround_towards_zero
 
   (* test values beyond the integers range *)
   let large_value_test x =
@@ -1448,7 +1878,7 @@ TEST_MODULE = struct
       [infinity;
        neg_infinity]
 
-  TEST = Core_list.for_all large_numbers ~f:large_value_test
+  let%test _ = Core_list.for_all large_numbers ~f:large_value_test
 
   let numbers_near_powers_of_two =
     Core_list.concat (
@@ -1470,12 +1900,12 @@ TEST_MODULE = struct
         x @ (List.map x ~f:neg)
       ))
 
-  TEST = Core_list.for_all numbers_near_powers_of_two ~f:iround_up_vs_down_test
-  TEST = Core_list.for_all numbers_near_powers_of_two ~f:iround_nearest_test
-  TEST = Core_list.for_all numbers_near_powers_of_two ~f:iround_down_test
-  TEST = Core_list.for_all numbers_near_powers_of_two ~f:iround_up_test
-  TEST = Core_list.for_all numbers_near_powers_of_two ~f:iround_towards_zero_test
-  TEST = Core_list.for_all numbers_near_powers_of_two ~f:round_test
+  let%test _ = Core_list.for_all numbers_near_powers_of_two ~f:iround_up_vs_down_test
+  let%test _ = Core_list.for_all numbers_near_powers_of_two ~f:iround_nearest_test
+  let%test _ = Core_list.for_all numbers_near_powers_of_two ~f:iround_down_test
+  let%test _ = Core_list.for_all numbers_near_powers_of_two ~f:iround_up_test
+  let%test _ = Core_list.for_all numbers_near_powers_of_two ~f:iround_towards_zero_test
+  let%test _ = Core_list.for_all numbers_near_powers_of_two ~f:round_test
 
   (* code for generating random floats on which to test functions *)
   let rec absirand () =
@@ -1507,41 +1937,41 @@ TEST_MODULE = struct
 
   let randoms = Core_list.init ~f:(fun _ -> frand ()) 10_000
 
-  TEST = Core_list.for_all randoms ~f:iround_up_vs_down_test
-  TEST = Core_list.for_all randoms ~f:iround_nearest_test
-  TEST = Core_list.for_all randoms ~f:iround_down_test
-  TEST = Core_list.for_all randoms ~f:iround_up_test
-  TEST = Core_list.for_all randoms ~f:iround_towards_zero_test
-  TEST = Core_list.for_all randoms ~f:round_test
-  TEST = special_values_test ()
-  TEST = iround_nearest_test (of_int max_int)
-  TEST = iround_nearest_test (of_int min_int)
-end
+  let%test _ = Core_list.for_all randoms ~f:iround_up_vs_down_test
+  let%test _ = Core_list.for_all randoms ~f:iround_nearest_test
+  let%test _ = Core_list.for_all randoms ~f:iround_down_test
+  let%test _ = Core_list.for_all randoms ~f:iround_up_test
+  let%test _ = Core_list.for_all randoms ~f:iround_towards_zero_test
+  let%test _ = Core_list.for_all randoms ~f:round_test
+  let%test _ = special_values_test ()
+  let%test _ = iround_nearest_test (of_int max_int)
+  let%test _ = iround_nearest_test (of_int min_int)
+end)
 
 
-BENCH_MODULE "Simple" = struct
+let%bench_module "Simple" = (module struct
   (* The [of_string] is so that won't get inlined. The values of [x] and [y] have no
      special significance. *)
   let x = of_string "1.0000000001000000111"
   let y = of_string "2.0000000001000000111"
 
-  BENCH "add" = x +. y
-  BENCH "mul" = x *. y
-  BENCH "div" = x /. y
-  BENCH "exp" = x ** y
-  BENCH "log" = log x
-  BENCH "sqrt"  = sqrt x
-end
+  let%bench "add" = x +. y
+  let%bench "mul" = x *. y
+  let%bench "div" = x /. y
+  let%bench "exp" = x ** y
+  let%bench "log" = log x
+  let%bench "sqrt"  = sqrt x
+end)
 
-BENCH_MODULE "Rounding" = struct
+let%bench_module "Rounding" = (module struct
   let x = of_string "1.0000000001000000111"
-  BENCH "iround_down_exn"         = iround_down_exn         x
-  BENCH "iround_nearest_exn"      = iround_nearest_exn      x
-  BENCH "iround_up_exn"           = iround_up_exn           x
-  BENCH "iround_towards_zero_exn" = iround_towards_zero_exn x
-  BENCH "Pervasives.int_of_float" = Pervasives.int_of_float x
+  let%bench "iround_down_exn"         = iround_down_exn         x
+  let%bench "iround_nearest_exn"      = iround_nearest_exn      x
+  let%bench "iround_up_exn"           = iround_up_exn           x
+  let%bench "iround_towards_zero_exn" = iround_towards_zero_exn x
+  let%bench "Pervasives.int_of_float" = Pervasives.int_of_float x
 
-  BENCH_MODULE "imm" = struct
+  let%bench_module "imm" = (module struct
     (* Here we check that rounding functions don't force boxing.  We observe this by
        noting the lack of allocation when calling with a float that compiler can avoid
        boxing.  Without the tuning above that allows, e.g., [iround_nearest_exn] to avoid
@@ -1558,20 +1988,74 @@ BENCH_MODULE "Rounding" = struct
        │ [float.ml:Rounding.imm] Pervasives.int_of_float │   3.36ns │     41.10% │
        └─────────────────────────────────────────────────┴──────────┴────────────┘ *)
     let x = [| x |]
-    BENCH "iround_down_exn"         = iround_down_exn         x.(0)
-    BENCH "iround_nearest_exn"      = iround_nearest_exn      x.(0)
-    BENCH "iround_up_exn"           = iround_up_exn           x.(0)
-    BENCH "iround_towards_zero_exn" = iround_towards_zero_exn x.(0)
-    BENCH "Pervasives.int_of_float" = Pervasives.int_of_float x.(0)
-  end
-end
+    let%bench "iround_down_exn"         = iround_down_exn         x.(0)
+    let%bench "iround_nearest_exn"      = iround_nearest_exn      x.(0)
+    let%bench "iround_up_exn"           = iround_up_exn           x.(0)
+    let%bench "iround_towards_zero_exn" = iround_towards_zero_exn x.(0)
+    let%bench "Pervasives.int_of_float" = Pervasives.int_of_float x.(0)
+  end)
+end)
 
 (* These tests show the degenerate cases for the OCaml [**] operator.  The slowness of
    this primitive can be traced back to the implementation of [pow] in [glibc].  Also see
    our Perf notes for more about this issue. *)
-BENCH_MODULE "pow (**)" = struct
-  BENCH "very slow" = 1.0000000000000020 ** 0.5000000000000000
-  BENCH "slow"      = 1.0000000000000020 ** 0.5000000000100000
-  BENCH "slow"      = 1.0000000000000020 ** 0.4999999999000000
-  BENCH "fast"      = 1.0000000000000020 ** 0.4999900000000000
-end
+let%bench_module "pow (**)" = (module struct
+  let%bench "very slow" = 1.0000000000000020 ** 0.5000000000000000
+  let%bench "slow"      = 1.0000000000000020 ** 0.5000000000100000
+  let%bench "slow"      = 1.0000000000000020 ** 0.4999999999000000
+  let%bench "fast"      = 1.0000000000000020 ** 0.4999900000000000
+end)
+
+let%bench_module "int_pow" = (module struct
+  (* Forcing the compiler to box the base is important in these benchmarks: Without the
+     boxing, the compiler was doing something clever to avoid allocation, and this hid the
+     fact that calling int_pow with a boxed argument wasn't merely causing a couple words
+     to be allocated, but was causing int_pow to allocate *on every iteration* inside
+     int_pow.  (That problem with int_pow has been fixed, but we still force the boxing
+     here.) *)
+  let%bench_fun "int_pow x10" [@indexed n = [1;2;3;5;20;61;-61;1010]] =
+    (fun () ->
+       let base = box 1.07 in
+       for _ = 1 to 10 do
+         (* The [0. +.] prevents a certain allocation from occurring (with OCaml 4.02.3,
+            at least).  This allegedly won't matter in future versions of the compiler. *)
+         let _ =  0. +. int_pow base n in ()
+       done
+    )
+
+#if JSC_ARCH_SIXTYFOUR
+  let int_1_111_111_111     = Int64.to_int 1_111_111_111L
+  let int_1_111_111_111_111 = Int64.to_int 1_111_111_111_111L
+
+  (* Now, some outrageously large exponents one probably never needs.  But if one does
+     need them, the base is probably close to 1. *)
+  let%bench_fun "int_pow huge exponent x10"
+                   [@indexed n = [int_1_111_111_111; int_1_111_111_111_111; Pervasives.max_int]] =
+    (fun () ->
+       let base = box 1.000000000001 in
+       for _ = 1 to 10 do
+         let _ =  0. +. int_pow base n in ()
+       done
+    )
+
+  (* For comparison: *)
+  let%bench_fun "** x10" [@indexed n = [1;2;3;5;20;61;-61;1010]] =
+    (fun () ->
+       let base = box 1.07 in
+       let n = float n in
+       for _ = 1 to 10 do
+         let _ =  0. +. base ** n in ()
+       done
+    )
+
+  let%bench_fun "** huge exponent x10"
+                  [@indexed n = [int_1_111_111_111; int_1_111_111_111_111; Pervasives.max_int]] =
+    (fun () ->
+       let base = box 1.000000000001 in
+       let n = float n in
+       for _ = 1 to 10 do
+         let _ =  0. +. base ** n in ()
+       done
+    )
+#endif
+end)

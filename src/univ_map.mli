@@ -14,10 +14,10 @@ include module type of Univ_map_intf
 
 include S with type 'a data = 'a
 
-module Make (Data : sig type 'a t with sexp_of end) : S
+module Make (Data : sig type 'a t [@@deriving sexp_of] end) : S
   with type 'a data = 'a Data.t
 
-module Make1 (Data : sig type ('s, 'a) t with sexp_of end) : S1
+module Make1 (Data : sig type ('s, 'a) t [@@deriving sexp_of] end) : S1
   with type ('s, 'a) data = ('s, 'a) Data.t
 
 (** keys with associated default values, so that [find] is no longer partial *)
@@ -28,7 +28,7 @@ module With_default : sig
   end
   val set    : t -> 'a Key.t -> 'a -> t
   val find   : t -> 'a Key.t -> 'a
-  val change : t -> 'a Key.t -> ('a -> 'a) -> t
+  val change : t -> 'a Key.t -> f:('a -> 'a) -> t
 end
 
 (** keys that map to an accumulator value with an associated fold operation *)
@@ -45,7 +45,7 @@ module With_fold : sig
   val set    : t -> ('a, 'b) Key.t -> 'b -> t (** reset the accumulator *)
   val find   : t -> ('a, 'b) Key.t -> 'b      (** the current accumulator *)
   val add    : t -> ('a, 'b) Key.t -> 'a -> t (** fold value into accumulator *)
-  val change : t -> ('a, 'b) Key.t -> ('b -> 'b) -> t (** accumulator update *)
+  val change : t -> ('a, 'b) Key.t -> f:('b -> 'b) -> t (** accumulator update *)
 end
 
 (** list-accumulating keys with a default value of the empty list *)
@@ -57,5 +57,5 @@ module Multi : sig
   val set    : t -> 'a Key.t -> 'a list -> t
   val find   : t -> 'a Key.t -> 'a list
   val add    : t -> 'a Key.t -> 'a -> t
-  val change : t -> 'a Key.t -> ('a list -> 'a list) -> t
+  val change : t -> 'a Key.t -> f:('a list -> 'a list) -> t
 end

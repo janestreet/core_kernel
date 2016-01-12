@@ -5,10 +5,10 @@ open Sexplib.Std
 let sexp_of_exn = Conv.sexp_of_exn
 let sexp_of_exn_opt = Conv.sexp_of_exn_opt
 
-type t = exn with sexp_of
+type t = exn [@@deriving sexp_of]
 
-exception Finally of t * t with sexp
-exception Reraised of string * t with sexp
+exception Finally of t * t [@@deriving sexp]
+exception Reraised of string * t [@@deriving sexp]
 
 let reraise exc str =
   raise (Reraised (str, exc))
@@ -16,7 +16,7 @@ let reraise exc str =
 let reraisef exc format =
   Printf.ksprintf (fun str () -> reraise exc str) format
 
-let () =
+let install_sexp_converters () =
   StdLabels.List.iter
     ~f:(fun (exc, handler) ->
       Conv.Exn_converter.add_auto ~finalise:false exc handler)
@@ -61,8 +61,8 @@ let does_raise (type a) (f : unit -> a) =
     true
 ;;
 
-TEST = not (does_raise Fn.ignore)
-TEST = does_raise (fun () -> failwith "foo")
+let%test _ = not (does_raise Fn.ignore)
+let%test _ = does_raise (fun () -> failwith "foo")
 
 include Pretty_printer.Register_pp (struct
   type t = exn
@@ -82,14 +82,18 @@ let print_with_backtrace exc raw_backtrace =
   flush stderr;
 ;;
 
-let () = Printexc.set_uncaught_exception_handler print_with_backtrace
+let set_uncaught_exception_handler () =
+  Printexc.set_uncaught_exception_handler print_with_backtrace
+;;
 
-let handle_uncaught_aux ~exit f =
+let handle_uncaught_aux ~do_at_exit ~exit f =
   try f ()
   with exc ->
+    let raw_backtrace = Printexc.get_raw_backtrace () in
+    if do_at_exit then (try Pervasives.do_at_exit () with _ -> ());
     begin
       try
-        print_with_backtrace exc (Printexc.get_raw_backtrace ())
+        print_with_backtrace exc raw_backtrace
       with _ ->
         try
           Printf.eprintf "Exn.handle_uncaught could not print; exiting anyway\n%!";
@@ -98,21 +102,15 @@ let handle_uncaught_aux ~exit f =
     exit 1
 ;;
 
-let handle_uncaught_and_exit f = handle_uncaught_aux f ~exit
+let handle_uncaught_and_exit f = handle_uncaught_aux f ~exit ~do_at_exit:true
 
 let handle_uncaught ~exit:must_exit f =
   handle_uncaught_aux f ~exit:(if must_exit then exit else ignore)
+    ~do_at_exit:must_exit
 
 let reraise_uncaught str func =
   try func () with
   | exn -> raise (Reraised (str, exn))
-
-let () =
-  Printexc.register_printer (fun exc ->
-    match sexp_of_exn_opt exc with
-    | None -> None
-    | Some sexp ->
-      Some (Sexp.to_string_hum ~indent:2 sexp))
 
 external clear_backtrace : unit -> unit = "clear_caml_backtrace_pos" "noalloc"
 let raise_without_backtrace e =
@@ -122,7 +120,7 @@ let raise_without_backtrace e =
   raise_notrace e
 ;;
 
-TEST_MODULE = struct
+let%test_module _ = (module struct
   exception Test_exception
 
   let with_backtraces_enabled f =
@@ -131,12 +129,12 @@ TEST_MODULE = struct
     protect ~f ~finally:(fun () -> Printexc.record_backtrace saved)
   ;;
 
-  TEST_UNIT "clear_backtrace" =
+  let%test_unit "clear_backtrace" =
     with_backtraces_enabled (fun () ->
       begin try raise Test_exception with _ -> () end;
       assert (backtrace () <> "");
       clear_backtrace ();
-      assert (backtrace () = ""));
+      assert (backtrace () = ""))
   ;;
 
   let check_if_empty_backtrace raise_f =
@@ -153,11 +151,11 @@ TEST_MODULE = struct
       new_backtrace = "");
   ;;
 
-  TEST = not (check_if_empty_backtrace raise)
-  TEST = check_if_empty_backtrace raise_without_backtrace
-end
+  let%test _ = not (check_if_empty_backtrace raise)
+  let%test _ = check_if_empty_backtrace raise_without_backtrace
+end)
 
-BENCH_MODULE "raise" = struct
+let%bench_module "raise" = (module struct
 
   exception Test_exception
 
@@ -176,9 +174,14 @@ BENCH_MODULE "raise" = struct
 
   let depths = [ 0; 10; 100; 1000; 10_000 ]
 
-  BENCH_INDEXED "raise" depth depths = nested_raise raise depth
+  let%bench_fun "raise" [@indexed depth = depths] = nested_raise raise depth
 
-  BENCH_INDEXED "raise_without_backtrace" depth depths =
+  let%bench_fun "raise_without_backtrace" [@indexed depth = depths] =
     nested_raise raise_without_backtrace  depth
   ;;
-end
+end)
+
+let initialize_module () =
+  install_sexp_converters ();
+  set_uncaught_exception_handler ();
+;;

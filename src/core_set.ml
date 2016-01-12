@@ -53,31 +53,31 @@ module Tree0 = struct
     | Node(_, _, _, _, s) -> s
   ;;
 
-  let invariants t ~compare_elt =
-    let rec loop lower upper t =
-      let in_range v =
-        (match lower with
-        | None -> true
-        | Some lower -> compare_elt lower v < 0
-        )
-        && (match upper with
+  let invariants =
+    let in_range lower upper compare_elt v =
+      (match lower with
+       | None -> true
+       | Some lower -> compare_elt lower v < 0
+      )
+      && (match upper with
         | None -> true
         | Some upper -> compare_elt v upper < 0
-        )
-      in
+      )
+    in
+    let rec loop lower upper compare_elt t =
       match t with
       | Empty -> true
-      | Leaf v -> in_range v
+      | Leaf v -> in_range lower upper compare_elt v
       | Node (l, v, r, h, n) ->
         let hl = height l and hr = height r in
         abs (hl - hr) <= 2
         && h = (max hl hr) + 1
         && n = length l + length r + 1
-        && in_range v
-        && loop lower (Some v) l
-        && loop (Some v) upper r
+        && in_range lower upper compare_elt v
+        && loop lower (Some v) compare_elt l
+        && loop (Some v) upper compare_elt r
     in
-    loop None None t
+    fun t ~compare_elt -> loop None None compare_elt t
   ;;
 
   let is_empty = function Empty -> true | Leaf _ | Node _ -> false
@@ -99,31 +99,54 @@ module Tree0 = struct
       Node (l, v, r, h, sl + sr + 1)
     end
 
+  (* [init_for_bin_prot] makes the assumption that [f] is called with increasing indexes
+     from [0] to [len - 1]. *)
+  let init_unsafe ~len ~f =
+    let rec loop n ~f i =
+      match n with
+      | 0 -> Empty
+      | 1 ->
+        let k = f i in
+        Leaf k
+      | 2 ->
+        let kl = f  i      in
+        let k  = f (i + 1) in
+        create (Leaf kl) k (Empty)
+      | 3 ->
+        let kl = f  i      in
+        let k  = f (i + 1) in
+        let kr = f (i + 2) in
+        create (Leaf kl) k (Leaf kr)
+      | n ->
+        let left_length = n lsr 1 in
+        let right_length = n - left_length - 1 in
+        let left = loop left_length ~f i in
+        let k = f (i + left_length) in
+        let right = loop right_length ~f (i + left_length + 1) in
+        create left k right
+    in
+    loop len ~f 0
+
+  let%test _ =
+    let set = init_unsafe ~len:20 ~f:Fn.id in
+    let compare_elt x y =
+      if x = y      then 0
+      else if x < y then -1
+      else               1
+    in
+    invariants set ~compare_elt
+
+
   let of_sorted_array_unchecked array ~compare_elt =
     let array_length = Array.length array in
-    let arr =
+    let next =
       (* We don't check if the array is sorted or keys are duplicated, because that
          checking is slower than the whole [of_sorted_array] function *)
       if array_length < 2 || compare_elt array.(0) array.(1) < 0
       then (fun i -> array.(i))
       else (fun i -> array.(array_length - 1 - i))
     in
-    let rec loop i j =
-      match j - i with
-      | x when x < 0 -> assert false
-      | 0 -> Empty
-      | 1 -> Leaf (arr i)
-      | 2 ->
-        Node (Leaf (arr i), arr (i + 1), Empty, 2, 2)
-      | 3 ->
-        Node (Leaf (arr i), arr (i + 1), Leaf (arr (i + 2)), 2, 3)
-      | n ->
-        let left_length = n / 2 in
-        let left_i, left_j = i, i + left_length in
-        let right_i, right_j = i + left_length + 1, j in
-        create (loop left_i left_j) (arr (i + left_length)) (loop right_i right_j)
-    in
-    loop 0 (Array.length array)
+    init_unsafe ~len:array_length ~f:next
   ;;
 
   let of_sorted_array array ~compare_elt =
@@ -244,8 +267,8 @@ module Tree0 = struct
     | Node(l, _, _, _, _) -> min_elt l
   ;;
 
-  exception Set_min_elt_exn_of_empty_set with sexp
-  exception Set_max_elt_exn_of_empty_set with sexp
+  exception Set_min_elt_exn_of_empty_set [@@deriving sexp]
+  exception Set_max_elt_exn_of_empty_set [@@deriving sexp]
 
   let min_elt_exn t =
     match min_elt t with
@@ -910,7 +933,7 @@ let like { tree = _; comparator } tree = { tree; comparator }
 
 let compare_elt t = t.comparator.Comparator.compare
 
-module Accessors = struct
+module Accessors_without_quickcheck = struct
   let to_tree t = t.tree
   let invariants  t = Tree0.invariants  t.tree ~compare_elt:(compare_elt t)
   let length      t = Tree0.length      t.tree
@@ -1015,6 +1038,75 @@ let filter_map ~comparator t ~f =
 
 let of_map_keys m = { comparator = Map.comparator m; tree = Tree0.of_map_keys m }
 
+module For_quickcheck = struct
+
+  open Accessors_without_quickcheck
+
+  module Generator = Quickcheck.Generator
+  module Observer  = Quickcheck.Observer
+  module Shrinker = Quickcheck.Shrinker
+
+  open Generator.Monad_infix
+
+  let gen_list elt_gen =
+    List.gen' ~unique:true ~sorted:`Arbitrarily elt_gen
+
+  let gen ~comparator elt_gen =
+    gen_list elt_gen
+    >>| of_list ~comparator
+
+  let gen_tree ~comparator elt_gen =
+    gen_list elt_gen
+    >>| Tree0.of_list ~compare_elt:comparator.Comparator.compare
+
+  let obs elt_obs =
+    Observer.unmap (List.obs elt_obs)
+      ~f:to_list
+      ~f_sexp:(fun () -> Atom "Set.to_list")
+
+  let obs_tree elt_obs =
+    Observer.unmap (List.obs elt_obs)
+      ~f:Tree0.to_list
+      ~f_sexp:(fun () -> Atom "Set.Tree.to_list")
+
+  let shrink elt_shr t =
+    let seq = to_sequence t in
+    let drop_elts =
+      Sequence.map seq ~f:(fun elt ->
+        remove t elt)
+    in
+    let shrink_elts =
+      Sequence.interleave (Sequence.map seq ~f:(fun elt ->
+        Sequence.map (Shrinker.shrink elt_shr elt) ~f:(fun elt' ->
+          add (remove t elt) elt')))
+    in
+    [ drop_elts ; shrink_elts ]
+    |> Sequence.of_list
+    |> Sequence.interleave
+
+  let shrinker elt_shr =
+    Shrinker.create (fun t ->
+      shrink elt_shr t)
+
+  let shr_tree ~comparator elt_shr =
+    Shrinker.create (fun tree ->
+      of_tree ~comparator tree
+      |> shrink elt_shr
+      |> Sequence.map ~f:to_tree)
+
+end
+
+let gen = For_quickcheck.gen
+let obs = For_quickcheck.obs
+let shrinker = For_quickcheck.shrinker
+
+module Accessors = struct
+  include Accessors_without_quickcheck
+
+  let obs elt = obs elt
+  let shrinker elt = shrinker elt
+end
+
 include Accessors
 
 let compare _ _ t1 t2 = compare_direct t1 t2
@@ -1075,6 +1167,8 @@ end = struct
   let t_of_sexp a_of_sexp sexp = of_tree (Tree0.t_of_sexp a_of_sexp sexp ~compare_elt)
 
   let of_map_keys = of_map_keys
+
+  let gen elt = gen ~comparator elt
 
 end
 
@@ -1151,7 +1245,28 @@ module Make_tree (Elt : Comparator.S1) = struct
 
   let of_map_keys = Tree0.of_map_keys
   let to_map t ~f = Tree0.to_map t ~f ~comparator
+
+  let gen elt = For_quickcheck.gen_tree elt ~comparator
+  let obs elt = For_quickcheck.obs_tree elt
+  let shrinker elt = For_quickcheck.shr_tree elt ~comparator
 end
+
+(* Don't use [of_sorted_array] to avoid the allocation of an intermediate array *)
+let init_for_bin_prot ~len ~f ~comparator =
+  let tree = Tree0.init_unsafe ~len ~f in
+  let compare_elt = comparator.Comparator.compare in
+  let tree =
+    if Tree0.invariants ~compare_elt tree
+    then tree
+    else (Tree0.fold tree ~init:Tree0.Empty ~f:(fun acc elt->
+      if Tree0.mem acc elt ~compare_elt
+      then failwith "Set.bin_read_t: duplicate element in map"
+      else Tree0.add acc elt ~compare_elt)
+    )
+  in
+  of_tree ~comparator tree
+;;
+
 
 module Poly = struct
   module Elt = Comparator.Poly
@@ -1168,21 +1283,15 @@ module Poly = struct
 
   include Bin_prot.Utils.Make_iterable_binable1 (struct
     type 'a t = ('a, Elt.comparator_witness) set
-    type 'a acc = 'a t
-    type 'a el = 'a with bin_io
+    type 'a el = 'a [@@deriving bin_io]
     let _ = bin_el
 
     let module_name = Some "Core_kernel.Std.Set"
     let length = length
     let iter t ~f = iter ~f:(fun key -> f key) t
-    let init _n = empty
+    let init ~len ~next =
+      init_for_bin_prot ~len ~f:(fun _ -> next ()) ~comparator:Comparator.Poly.comparator
 
-    let insert acc el _i =
-      if mem acc el then failwith "Set.bin_read_t_: duplicate element in set"
-      else add acc el
-    ;;
-
-    let finish t = t
   end)
 
   module Tree = struct
@@ -1198,12 +1307,12 @@ module Poly = struct
     ;;
   end
 
-  TEST_MODULE = struct
+  let%test_module _ = (module struct
     let (=) = Pervasives.(=)
-    TEST = stable_dedup_list [] = []
-    TEST = stable_dedup_list [5;5;5;5;5] = [5]
-    TEST = stable_dedup_list [5;9;3;5;2;2] = [5;9;3;2]
-  end
+    let%test _ = stable_dedup_list [] = []
+    let%test _ = stable_dedup_list [5;5;5;5;5] = [5]
+    let%test _ = stable_dedup_list [5;9;3;5;2;2] = [5;9;3;2]
+  end)
 end
 
 module type S = S0
@@ -1215,7 +1324,7 @@ module type S_binable = S0_binable
   with type ('a, 'b) tree := ('a, 'b) tree
 
 module Make_using_comparator (Elt : sig
-  type t with sexp
+  type t [@@deriving sexp]
   include Comparator.S with type t := t
 end) = struct
 
@@ -1257,29 +1366,23 @@ module Make (Elt : Elt) =
   end)
 
 module Make_binable_using_comparator (Elt' : sig
-  type t with bin_io, sexp
+  type t [@@deriving bin_io, sexp]
   include Comparator.S with type t := t
 end) = struct
 
   include (Make_using_comparator (Elt'))
 
   include Bin_prot.Utils.Make_iterable_binable (struct
-    type acc = t
-    type t = acc
-    type el = Elt'.t with bin_io
+    type nonrec t = t
+    type el = Elt'.t [@@deriving bin_io]
     let _ = bin_el
 
     let module_name = Some "Core_kernel.Std.Set"
     let length = length
     let iter t ~f = iter ~f:(fun key -> f key) t
-    let init _n = empty
+    let init ~len ~next =
+      init_for_bin_prot ~len ~f:(fun _ -> next ()) ~comparator:Elt'.comparator
 
-    let insert acc el _i =
-      if mem acc el then failwith "Set.bin_read_t_: duplicate element in set"
-      else add acc el
-    ;;
-
-    let finish t = t
   end)
 
 end
@@ -1369,4 +1472,8 @@ module Tree = struct
 
   let of_map_keys = Tree0.of_map_keys
   let to_map = Tree0.to_map
+
+  let gen = For_quickcheck.gen_tree
+  let obs = For_quickcheck.obs_tree
+  let shrinker = For_quickcheck.shr_tree
 end

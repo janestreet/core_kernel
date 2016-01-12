@@ -1,3 +1,5 @@
+module String = Bytes
+
 include Make_substring.F (struct
   type t = string
 

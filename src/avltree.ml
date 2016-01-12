@@ -270,8 +270,7 @@ let add =
           set_right t (add right replace added compare k v);
       t
   in
-  fun ?(replace = true) t ~compare ~added ~key ~data ->
-    let replace = (replace :> bool) in
+  fun t ~replace ~compare ~added ~key ~data ->
     let t = add t replace added compare key data in
     if !added then balance t else t
 ;;
@@ -419,4 +418,8 @@ let rec fold t ~init ~f =
   | Node (left, key, data, _, right) ->
     fold right ~init:(f ~key ~data (fold left ~init ~f)) ~f
 
-let iter t ~f = fold t ~init:() ~f:(fun ~key ~data () -> f ~key ~data)
+let rec iter t ~f =
+  match t with
+  | Empty                            -> ()
+  | Leaf (key, data)                 -> f ~key ~data
+  | Node (left, key, data, _, right) -> iter left ~f; f ~key ~data; iter right ~f

@@ -9,28 +9,28 @@ module Binable = Binable0
 
 module Conv = Sexplib.Conv
 
-module List = Core_list
+module List = Core_list0
 
 module Sexp = struct
   include Sexplib.Sexp
   include (struct
-    type t = Sexplib.Sexp.t = Atom of string | List of t list with bin_io, compare
+    type t = Sexplib.Sexp.t = Atom of string | List of t list [@@deriving bin_io, compare]
   end : sig
-    type t with bin_io, compare
+    type t [@@deriving bin_io, compare]
   end with type t := t)
 end
 
 type sexp = Sexp.t = Atom of string | List of sexp list (* constructor import *)
-with compare
+[@@deriving compare]
 
 module Binable_exn = struct
   module Stable = struct
     module V1 = struct
       module T = struct
-        type t = exn with sexp_of
+        type t = exn [@@deriving sexp_of]
       end
       include T
-      include Binable.Of_binable (Sexp) (struct
+      include Binable.Stable.Of_binable.V1 (Sexp) (struct
           include T
 
           exception Exn of Sexp.t
@@ -46,7 +46,7 @@ module Binable_exn = struct
                   assert false)
           ;;
 
-          let to_binable t = t |> <:sexp_of< t >>
+          let to_binable t = t |> [%sexp_of: t]
           let of_binable sexp = Exn sexp
         end)
     end
@@ -59,12 +59,12 @@ module Message = struct
 
     module Source_code_position = struct
       module V1 = struct
-        type t = Source_code_position0.Stable.V1.t with bin_io
+        type t = Source_code_position0.Stable.V1.t [@@deriving bin_io]
 
         (* [sexp_of_t] as defined here is unstable; this is OK because there is no
            [t_of_sexp].  [sexp_of_t] is only used to produce a sexp that is never
            deserialized as a [Source_code_position]. *)
-        let sexp_of_t = Source_code_position0.sexp_of_t_hum
+        let sexp_of_t = Source_code_position0.sexp_of_t
       end
     end
 
@@ -79,7 +79,7 @@ module Message = struct
         | Tag_arg             of string * Sexp.t * t
         | Of_list             of int option * t list
         | With_backtrace      of t * string (* backtrace *)
-      with bin_io, sexp_of
+      [@@deriving bin_io, sexp_of]
     end
   end
 
@@ -130,7 +130,7 @@ module Message = struct
              :: sexp
              :: (match here with
                | None -> []
-               | Some here -> [ Source_code_position0.sexp_of_t_hum here ]))
+               | Some here -> [ Source_code_position0.sexp_of_t here ]))
       :: ac
     | Tag_t (tag, t) -> List (Atom tag :: to_sexps_hum t []) :: ac
     | Tag_arg (tag, sexp, t) -> List (Atom tag :: sexp :: to_sexps_hum t []) :: ac
@@ -159,7 +159,7 @@ let protect f =
 
 let to_message t = protect (fun () -> Lazy.force t)
 
-let of_message message = Lazy.lazy_from_val message
+let of_message message = Lazy.from_val message
 
 module Stable_v2 = struct
   type nonrec t = t
@@ -171,10 +171,10 @@ module Stable_v2 = struct
   let t_of_sexp sexp = lazy (Message.Sexp sexp)
 
   let compare t1 t2 =
-    <:compare< Sexp.t >> (t1 |> <:sexp_of< t >>) (t2 |> <:sexp_of< t >>)
+    [%compare: Sexp.t] (t1 |> [%sexp_of: t]) (t2 |> [%sexp_of: t])
   ;;
 
-  include Binable.Of_binable (Message.Stable.V2) (struct
+  include Binable.Stable.Of_binable.V1 (Message.Stable.V2) (struct
       type nonrec t = t
       let to_binable = to_message
       let of_binable = of_message
@@ -182,7 +182,7 @@ module Stable_v2 = struct
 end
 
 include (Stable_v2 : sig
-           type t with bin_io, compare, sexp
+           type t [@@deriving bin_io, compare, sexp]
          end with type t := t)
 
 let to_string_hum t =
@@ -197,11 +197,11 @@ let to_string_mach t = Sexp.to_string_mach (sexp_of_t t)
 
 let of_lazy l = lazy (protect (fun () -> String (Lazy.force l)))
 
-let of_string message = Lazy.lazy_from_val (String message)
+let of_string message = Lazy.from_val (String message)
 
 let createf format = Printf.ksprintf of_string format
 
-TEST = to_string_hum (of_string "a\nb") = "a\nb"
+let%test _ = to_string_hum (of_string "a\nb") = "a\nb"
 
 let of_thunk f = lazy (protect (fun () -> String (f ())))
 
@@ -210,6 +210,8 @@ let create ?here ?strict tag x sexp_of_x =
   | None    -> lazy (protect (fun () -> Tag_sexp (tag, sexp_of_x x, here)))
   | Some () -> of_message (             Tag_sexp (tag, sexp_of_x x, here))
 ;;
+
+let create_s sexp = Lazy.from_val (Sexp sexp)
 
 let tag t tag = lazy (Tag_t (tag, to_message t))
 
@@ -224,8 +226,9 @@ let of_list ?trunc_after ts =
 exception Exn of t
 
 let () =
-  (* We install a custom exn-converter rather than use [exception Exn of t with sexp]
-     to eliminate the extra wrapping of "(Exn ...)". *)
+  (* We install a custom exn-converter rather than use
+     [exception Exn of t [@@deriving sexp]] to eliminate the extra wrapping of
+     "(Exn ...)". *)
   Sexplib.Conv.Exn_converter.add_auto (Exn (of_string "<template>"))
     (function
     | Exn t -> sexp_of_t t
@@ -263,7 +266,7 @@ module Stable = struct
   module V1 = struct
     type nonrec t = t
 
-    include Sexpable.Of_sexpable (Sexp) (struct
+    include Sexpable.Stable.Of_sexpable.V1 (Sexp) (struct
         type nonrec t = t
         let to_sexpable = sexp_of_t
         let of_sexpable = t_of_sexp
@@ -271,7 +274,7 @@ module Stable = struct
 
     let compare = compare
 
-    include Binable.Of_binable (Sexp) (struct
+    include Binable.Stable.Of_binable.V1 (Sexp) (struct
         type nonrec t = t
         let to_binable = sexp_of_t
         let of_binable = t_of_sexp
@@ -279,22 +282,22 @@ module Stable = struct
   end
 end
 
-TEST_MODULE "Info" = struct
+let%test_module "Info" = (module struct
 
   let failwithf = Core_printf.failwithf
 
-  TEST_UNIT =
-    <:test_result< string >> (to_string_hum (of_exn (Failure "foo")))
+  let%test_unit _ =
+    [%test_result: string] (to_string_hum (of_exn (Failure "foo")))
       ~expect:"(Failure foo)"
   ;;
 
-  TEST_UNIT =
-    <:test_result< string >> (to_string_hum (tag (of_string "b") "a"))
+  let%test_unit _ =
+    [%test_result: string] (to_string_hum (tag (of_string "b") "a"))
       ~expect:"(a b)"
   ;;
 
-  TEST_UNIT =
-    <:test_result< string >>
+  let%test_unit _ =
+    [%test_result: string]
       (to_string_hum (of_list (List.map ~f:of_string [ "a"; "b"; "c" ])))
       ~expect:"(a b c)"
   ;;
@@ -310,18 +313,18 @@ TEST_MODULE "Info" = struct
          ])
   ;;
 
-  TEST_UNIT =
-    <:test_result< string >> (to_string_hum nested) ~expect:"(a b c d e f g h i)"
+  let%test_unit _ =
+    [%test_result: string] (to_string_hum nested) ~expect:"(a b c d e f g h i)"
   ;;
 
-  TEST_UNIT =
-    <:test_result< Sexp.t >> (sexp_of_t nested)
+  let%test_unit _ =
+    [%test_result: Sexp.t] (sexp_of_t nested)
       ~expect:(sexp_of_t (of_strings [ "a"; "b"; "c"
                                      ; "d"; "e"; "f"
                                      ; "g"; "h"; "i" ]))
   ;;
 
-  TEST_UNIT =
+  let%test_unit _ =
     match to_exn (of_exn (Failure "foo")) with
     | Failure "foo" -> ()
     | exn -> failwithf "(got %S) (expected (Failure foo))" (Exn.to_string exn) ()
@@ -332,55 +335,15 @@ TEST_MODULE "Info" = struct
     sexp = sexp_of_t (t_of_sexp sexp)
   ;;
 
-  TEST = round (of_string "hello")
-  TEST = round (of_thunk (fun () -> "hello"))
-  TEST = round (create "tag" 13 <:sexp_of< int >>)
-  TEST = round (tag (of_string "hello") "tag")
-  TEST = round (tag_arg (of_string "hello") "tag" 13 <:sexp_of< int >>)
-  TEST = round (of_list [ of_string "hello"; of_string "goodbye" ])
-  TEST = round (t_of_sexp (Sexp.of_string "((random sexp 1)(b 2)((c (1 2 3))))"))
-end
+  let%test _ = round (of_string "hello")
+  let%test _ = round (of_thunk (fun () -> "hello"))
+  let%test _ = round (create "tag" 13 [%sexp_of: int])
+  let%test _ = round (tag (of_string "hello") "tag")
+  let%test _ = round (tag_arg (of_string "hello") "tag" 13 [%sexp_of: int])
+  let%test _ = round (of_list [ of_string "hello"; of_string "goodbye" ])
+  let%test _ = round (t_of_sexp (Sexp.of_string "((random sexp 1)(b 2)((c (1 2 3))))"))
+end)
 
 let pp ppf t = Format.pp_print_string ppf (to_string_hum t)
 let () = Pretty_printer.register "Core_kernel.Info.pp"
 
-(* benchmarks
-
-   open Core.Std
-   module Bench = Core_extended.Bench
-
-   let () =
-   Bench.bench ~print:true (fun () ->
-   let x = 33 in
-   ignore (sprintf "%d" x)) ()
-   |! Bench.print_costs
-
-   let () =
-   Bench.bench ~print:true (fun () ->
-   let x = 33 in
-   let closure = (fun () -> sprintf "%d" x) in
-   ignore (if 3 = 4 then closure () else "")) ()
-   |! Bench.print_costs
-
-   Here are the bench results themselves:
-
-   calculating cost of timing measurement: 260 ns
-   calculating minimal measurable interval: 1000 ns
-   determining number of runs per sample: 1048576
-   stabilizing GC: done
-   calculating the cost of a full major sweep: 1431398 ns
-   running samples (estimated time 59 sec)
-   ....................................................................................................
-   mean run time + mean gc time: 568 ns
-   warning: max run time is more than 5% away from mean
-   calculating cost of timing measurement: 258 ns
-   calculating minimal measurable interval: 1000 ns
-   determining number of runs per sample: 134217728
-   stabilizing GC: done
-   calculating the cost of a full major sweep: 1484784 ns
-   running samples (estimated time 75 sec)
-   ....................................................................................................
-   mean run time + mean gc time: 5 ns
-   warning: max run time is more than 5% away from mean
-
-*)

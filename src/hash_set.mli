@@ -2,12 +2,12 @@
 
 open Hash_set_intf
 
-type 'a t with sexp_of
+type 'a t [@@deriving sexp_of]
 
-(** We use [with sexp_of] but not [with sexp] because we want people to be explicit about
-    the hash and comparison functions used when creating hashtables.  One can use
-    [Hash_set.Poly.t], which does have [with sexp], to use polymorphic comparison and
-    hashing. *)
+(** We use [[@@deriving sexp_of]] but not [[@@deriving sexp]] because we want people to be
+    explicit about the hash and comparison functions used when creating hashtables.  One
+    can use [Hash_set.Poly.t], which does have [[@@deriving sexp]], to use polymorphic
+    comparison and hashing. *)
 
 include Creators
   with type 'a t := 'a t
@@ -15,6 +15,8 @@ include Creators
   with type ('key, 'z) create_options := ('key, 'z) create_options_with_hashable_required
 
 include Accessors with type 'a t := 'a t with type 'a elt := 'a elt
+
+val hashable : 'key t -> 'key Core_hashtbl_intf.Hashable.t
 
 module type Elt         = Core_hashtbl.Key
 module type Elt_binable = Core_hashtbl.Key_binable
@@ -24,7 +26,7 @@ module type S_binable = S_binable with type 'a hash_set = 'a t
 (** A hash set that uses polymorphic comparison *)
 module Poly : sig
 
-  type 'a t with sexp
+  type 'a t [@@deriving sexp]
 
   include Creators
     with type 'a t := 'a t

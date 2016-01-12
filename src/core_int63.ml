@@ -1,10 +1,10 @@
-INCLUDE "config.mlh"
-IFDEF ARCH_SIXTYFOUR THEN
+#import "config.mlh"
+#if JSC_ARCH_SIXTYFOUR
 include Core_int
 let to_int x = Some x
-ELSE
+#else
 include Core_int64
-ENDIF
+#endif
 
 let () = assert (Core_int.(>=) num_bits 63)
 

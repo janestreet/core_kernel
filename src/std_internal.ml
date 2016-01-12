@@ -1,7 +1,10 @@
+
+(* handy shortcuts *)
+include Common
+
 module Set = Core_set
 module Map = Core_map
 module Array = Core_array
-include Array.Infix
 module Hashtbl = Core_hashtbl
 module String = Core_string
 module List = struct
@@ -52,12 +55,7 @@ module Field = Core_field
 
 module Ref = Ref
 
-(* handy shortcuts *)
-include Common
-
 include (Float : Interfaces.Robustly_comparable with type t := float)
-
-include String.Infix
 
 let round = Float.round
 
@@ -67,13 +65,13 @@ module Sexp = Core_sexp
 
 include (Sexplib.Conv : sig
 
-  type bigstring = Sexplib.Conv.bigstring with sexp
-  type mat = Sexplib.Conv.mat with sexp
-  type vec = Sexplib.Conv.vec with sexp
+  type bigstring = Sexplib.Conv.bigstring [@@deriving sexp]
+  type mat = Sexplib.Conv.mat [@@deriving sexp]
+  type vec = Sexplib.Conv.vec [@@deriving sexp]
 
   (* [sexp_of_opaque] and [opaque_of_sexp] are used by the code generated from
-     [with sexp], [<:sexp_of< >>], and [<:of_sexp< >>].  The type [_ sexp_opaque] expands
-     to uses of [sexp_of_opaque] and [opaque_of_sexp]. *)
+     [[@@deriving sexp]], [[%sexp_of: ]], and [[%of_sexp: ]].  The type [_ sexp_opaque]
+     expands to uses of [sexp_of_opaque] and [opaque_of_sexp]. *)
   val sexp_of_opaque : _ -> Sexp.t
   val opaque_of_sexp : Sexp.t -> _
 
@@ -105,45 +103,45 @@ include Either.Export
 include Typerep_lib.Std_internal
 
 include (struct
-  type 'a array  = 'a Array.    t with bin_io,          sexp, typerep
-  type bool      = Bool.        t with bin_io, compare, sexp, typerep
-  type char      = Char.        t with bin_io, compare, sexp, typerep
-  type float     = Float.       t with bin_io, compare, sexp, typerep
-  type int       = Int.         t with bin_io, compare, sexp, typerep
-  type int32     = Int32.       t with bin_io, compare, sexp, typerep
-  type int64     = Int64.       t with bin_io, compare, sexp, typerep
-  type 'a lazy_t = 'a Core_lazy.t with bin_io, compare, sexp, typerep
-  type 'a list   = 'a List.     t with bin_io,          sexp, typerep
-  type nativeint = Nativeint.   t with bin_io, compare, sexp, typerep
-  type 'a option = 'a Option.   t with bin_io,          sexp, typerep
-  type string    = String.      t with bin_io, compare, sexp, typerep
-  type 'a ref    = 'a Ref.      t with bin_io,          sexp, typerep
-  type unit      = Unit.        t with bin_io, compare, sexp, typerep
+  type 'a array  = 'a Array.    t [@@deriving bin_io, sexp, typerep]
+  type bool      = Bool.        t [@@deriving bin_io, compare, sexp, typerep]
+  type char      = Char.        t [@@deriving bin_io, compare, sexp, typerep]
+  type float     = Float.       t [@@deriving bin_io, compare, sexp, typerep]
+  type int       = Int.         t [@@deriving bin_io, compare, sexp, typerep]
+  type int32     = Int32.       t [@@deriving bin_io, compare, sexp, typerep]
+  type int64     = Int64.       t [@@deriving bin_io, compare, sexp, typerep]
+  type 'a lazy_t = 'a Core_lazy.t [@@deriving bin_io, compare, sexp, typerep]
+  type 'a list   = 'a List.     t [@@deriving bin_io, sexp, typerep]
+  type nativeint = Nativeint.   t [@@deriving bin_io, compare, sexp, typerep]
+  type 'a option = 'a Option.   t [@@deriving bin_io, sexp, typerep]
+  type string    = String.      t [@@deriving bin_io, compare, sexp, typerep]
+  type 'a ref    = 'a Ref.      t [@@deriving bin_io, sexp, typerep]
+  type unit      = Unit.        t [@@deriving bin_io, compare, sexp, typerep]
 
   (* Bin_prot has optimized functions for float arrays *)
-  type float_array = Bin_prot.Std.float_array with bin_io
+  type float_array = Bin_prot.Std.float_array [@@deriving bin_io]
   include (struct
-    type float_array = Float.t array with compare, sexp, typerep
+    type float_array = Float.t array [@@deriving compare, sexp, typerep]
   end : sig
-    type float_array with compare, sexp, typerep
+    type float_array [@@deriving compare, sexp, typerep]
   end with type float_array := float_array)
 end : sig
-  type 'a array  with bin_io, sexp, typerep
-  type bool      with bin_io, compare, sexp, typerep
-  type char      with bin_io, compare, sexp, typerep
-  type float     with bin_io, compare, sexp, typerep
-  type int       with bin_io, compare, sexp, typerep
-  type int32     with bin_io, compare, sexp, typerep
-  type int64     with bin_io, compare, sexp, typerep
-  type 'a lazy_t with bin_io, sexp, typerep
-  type 'a list   with bin_io, sexp, typerep
-  type nativeint with bin_io, compare, sexp, typerep
-  type 'a option with bin_io, sexp, typerep
-  type string    with bin_io, compare, sexp, typerep
-  type 'a ref    with bin_io, sexp, typerep
-  type unit      with bin_io, compare, sexp, typerep
+  type 'a array  [@@deriving bin_io, sexp, typerep]
+  type bool      [@@deriving bin_io, compare, sexp, typerep]
+  type char      [@@deriving bin_io, compare, sexp, typerep]
+  type float     [@@deriving bin_io, compare, sexp, typerep]
+  type int       [@@deriving bin_io, compare, sexp, typerep]
+  type int32     [@@deriving bin_io, compare, sexp, typerep]
+  type int64     [@@deriving bin_io, compare, sexp, typerep]
+  type 'a lazy_t [@@deriving bin_io, sexp, typerep]
+  type 'a list   [@@deriving bin_io, sexp, typerep]
+  type nativeint [@@deriving bin_io, compare, sexp, typerep]
+  type 'a option [@@deriving bin_io, sexp, typerep]
+  type string    [@@deriving bin_io, compare, sexp, typerep]
+  type 'a ref    [@@deriving bin_io, sexp, typerep]
+  type unit      [@@deriving bin_io, compare, sexp, typerep]
 
-  type float_array = float array with bin_io, compare, sexp, typerep
+  type float_array = float array [@@deriving bin_io, compare, sexp, typerep]
 end
   with type 'a array    := 'a array
   with type bool        := bool
@@ -167,7 +165,7 @@ let sexp_of_exn = Exn.sexp_of_t
 (* The below declarations define converters for the special types recognized by pa-sexp.
    E.g. this allows the following to work:
 
-   type t = { foo : int sexp_option } with bin_io, sexp, compare
+   type t = { foo : int sexp_option } [@@deriving bin_io, sexp, compare]
 
    [sexp_array], [sexp_bool], [sexp_list], and [sexp_option] allow a record field to be
    absent when converting from a sexp, and if absent, the field will take a default value
@@ -184,12 +182,12 @@ let sexp_of_exn = Exn.sexp_of_t
 
    For more documentation, see sexplib/README.md.
 *)
-type 'a sexp_array  = 'a array  with bin_io, compare, typerep
-type sexp_bool      = bool      with bin_io, compare, typerep
-type 'a sexp_list   = 'a list   with bin_io, compare, typerep
-type 'a sexp_option = 'a option with bin_io, compare, typerep
+type 'a sexp_array  = 'a array  [@@deriving bin_io, compare, typerep]
+type sexp_bool      = bool      [@@deriving bin_io, compare, typerep]
+type 'a sexp_list   = 'a list   [@@deriving bin_io, compare, typerep]
+type 'a sexp_option = 'a option [@@deriving bin_io, compare, typerep]
 
-type 'a sexp_opaque = 'a        with bin_io, compare, typerep
+type 'a sexp_opaque = 'a        [@@deriving bin_io, compare, typerep]
 
 include Ordering.Export
 

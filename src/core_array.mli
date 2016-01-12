@@ -1,12 +1,14 @@
 open Perms.Export
 
-type 'a t = 'a array with bin_io, compare, sexp, typerep
+type 'a t = 'a array [@@deriving bin_io, compare, sexp, typerep]
 
 include Binary_searchable.S1 with type 'a t := 'a t
 
 (** Note: [Array.length] is not constant for a given array, as one can reduce it with
     [Array.truncate] *)
 include Container.S1 with type 'a t := 'a t
+
+include Invariant.S1 with type 'a t := 'a t
 
 (** Maximum length of a normal array.  The maximum length of a float array is
     [max_length/2] on 32-bit machines and [max_length] on 64-bit machines. *)
@@ -62,7 +64,7 @@ val make_matrix : dimx:int -> dimy:int -> 'a -> 'a t t
     concatenation of the arrays [v1] and [v2]. *)
 val append : 'a t -> 'a t -> 'a t
 
-(** Same as [Array.append], but concatenates a list of arrays. *)
+(** Like [Array.append], but concatenates a list of arrays. *)
 val concat : 'a t list -> 'a t
 
 (** [Array.copy a] returns a copy of [a], that is, a fresh array
@@ -89,7 +91,7 @@ val fill : 'a t -> pos:int -> len:int -> 'a -> unit
 include Blit.S1 with type 'a t := 'a t
 
 module Int : sig
-  type nonrec t = int t with bin_io, compare, sexp
+  type nonrec t = int t [@@deriving bin_io, compare, sexp]
 
   include Blit.S with type t := t
 
@@ -99,7 +101,7 @@ module Int : sig
 end
 
 module Float : sig
-  type nonrec t = float t with bin_io, compare, sexp
+  type nonrec t = float t [@@deriving bin_io, compare, sexp]
 
   include Blit.S with type t := t
 
@@ -116,14 +118,12 @@ val of_list : 'a list -> 'a t
     [[| f a.(0); f a.(1); ...; f a.(Array.length a - 1) |]]. *)
 val map : f:('a -> 'b) -> 'a t -> 'b t
 
-(** Same as {!Array.iter}, but the
-    function is applied to the index of the element as first argument,
-    and the element itself as second argument. *)
+(** Like {!Array.iter}, but the function is applied to the index of the element as first
+    argument, and the element itself as second argument. *)
 val iteri : f:(int -> 'a -> unit) -> 'a t -> unit
 
-(** Same as {!Array.map}, but the
-    function is applied to the index of the element as first argument,
-    and the element itself as second argument. *)
+(** Like {!Array.map}, but the function is applied to the index of the element as first
+    argument, and the element itself as second argument. *)
 val mapi : f:(int -> 'a -> 'b) -> 'a t -> 'b t
 
 val foldi : 'a t -> init:'b -> f:(int -> 'b -> 'a -> 'b) -> 'b
@@ -149,8 +149,9 @@ val is_sorted : 'a t -> cmp:('a -> 'a -> int) -> bool
    in [xs] are equal according to [cmp] *)
 val is_sorted_strictly : 'a t -> cmp:('a -> 'a -> int) -> bool
 
-(** same as [List.concat_map] *)
-val concat_map : 'a t -> f:('a -> 'b array) -> 'b array
+(** Like [List.concat_map], [List.concat_mapi]. *)
+val concat_map  : 'a t -> f:(       'a -> 'b array) -> 'b array
+val concat_mapi : 'a t -> f:(int -> 'a -> 'b array) -> 'b array
 
 val partition_tf : 'a t -> f:('a -> bool) -> 'a t * 'a t
 
@@ -186,8 +187,17 @@ val filter_opt : 'a option t -> 'a t
     results. *)
 val filter_map : 'a t -> f:('a -> 'b option) -> 'b t
 
-(** Same as [filter_map] but uses {!Array.mapi}. *)
+(** Like [filter_map] but uses {!Array.mapi}. *)
 val filter_mapi : 'a t -> f:(int -> 'a -> 'b option) -> 'b t
+
+(** Like [for_all], but passes the index as an argument. *)
+val for_alli : 'a t -> f:(int -> 'a -> bool) -> bool
+
+(** Like [exists], but passes the index as an argument. *)
+val existsi : 'a t -> f:(int -> 'a -> bool) -> bool
+
+(** Like [count], but passes the index as an argument. *)
+val counti : 'a t -> f:(int -> 'a -> bool) -> int
 
 (** Functions with 2 suffix raise an exception if the lengths aren't the same. *)
 val iter2_exn : 'a t -> 'b t -> f:('a -> 'b -> unit) -> unit
@@ -198,6 +208,9 @@ val fold2_exn : 'a t -> 'b t -> init:'c -> f:('c -> 'a -> 'b -> 'c) -> 'c
 
 (** [for_all2_exn t1 t2 ~f] fails if [length t1 <> length t2]. *)
 val for_all2_exn : 'a t -> 'b t -> f:('a -> 'b -> bool) -> bool
+
+(** [exists2_exn t1 t2 ~f] fails if [length t1 <> length t2]. *)
+val exists2_exn : 'a t -> 'b t -> f:('a -> 'b -> bool) -> bool
 
 (** [filter ~f array] removes the elements for which [f] returns false.  *)
 val filter : f:('a -> bool) -> 'a t -> 'a t
@@ -227,9 +240,12 @@ val replace : 'a t -> int -> f:('a -> 'a) -> unit
 val replace_all : 'a t -> f:('a -> 'a) -> unit
 
 (** [find_exn f t] returns the first [a] in [t] for which [f t.(i)] is true.
-    It raises [Not_found] if there is no such [a].
-*)
+    It raises [Not_found] if there is no such [a]. *)
 val find_exn : 'a t -> f:('a -> bool) -> 'a
+
+(** Returns the first evaluation of [f] that returns [Some].
+    Raises [Not_found] if [f] always returns [None].  *)
+val find_map_exn : 'a t -> f:('a -> 'b option) -> 'b
 
 (** [findi t f] returns the first index [i] of [t] for which [f i t.(i)] is true *)
 val findi : 'a t -> f:(int -> 'a -> bool) -> (int * 'a) option
@@ -237,6 +253,12 @@ val findi : 'a t -> f:(int -> 'a -> bool) -> (int * 'a) option
 (** [findi_exn t f] returns the first index [i] of [t] for which [f i t.(i)] is
     true.  It raises [Not_found] if there is no such element. *)
 val findi_exn : 'a t -> f:(int -> 'a -> bool) -> int * 'a
+
+(** [find_mapi t f] is the like [find_map] but passes the index as an argument. *)
+val find_mapi : 'a t -> f:(int -> 'a -> 'b option) -> 'b option
+
+(** [find_mapi_exn] is the like [find_map_exn] but passes the index as an argument. *)
+val find_mapi_exn : 'a t -> f:(int -> 'a -> 'b option) -> 'b
 
 (** [find_consecutive_duplicate t ~equal] returns the first pair of consecutive elements
     [(a1, a2)] in [t] such that [equal a1 a2].  They are returned in the same order as
@@ -254,11 +276,12 @@ val reduce_exn : 'a t -> f:('a -> 'a -> 'a) -> 'a
     If [random_state] is not supplied, [permute] uses [Random.State.default]. *)
 val permute : ?random_state:Core_random.State.t -> 'a t -> unit
 
-(** [combine ar] combines two arrays to an array of pairs. *)
-val combine : 'a t -> 'b t -> ('a * 'b) t
+(** [zip] is like [List.zip], but for arrays. *)
+val zip     : 'a t -> 'b t -> ('a * 'b) t option
+val zip_exn : 'a t -> 'b t -> ('a * 'b) t
 
-(** [split ar] splits an array of pairs into two arrays of single elements. *)
-val split : ('a * 'b) t -> 'a t * 'b t
+(** [unzip] is like [List.unzip], but for arrays. *)
+val unzip : ('a * 'b) t -> 'a t * 'b t
 
 (** [sorted_copy ar cmp] returns a shallow copy of [ar] that is sorted. Similar to
     List.sort *)
@@ -275,10 +298,6 @@ val equal : 'a t -> 'a t -> equal:('a -> 'a -> bool) -> bool
     so that [length t = len] afterwards.  [truncate] raises if [len <= 0 || len > length
     t]. *)
 val truncate : _ t -> len:int -> unit
-
-module Infix : sig
-  val ( <|> ) : 'a t -> int * int -> 'a t
-end
 
 
 (** [to_sequence t] converts [t] to a sequence. [t] is copied internally so that future
@@ -299,10 +318,10 @@ module Permissioned : sig
       information about the length of an array can leak out even if you only have write
       permissions since you can catch out-of-bounds errors.
   *)
-  type ('a, -'perms) t with bin_io, compare, sexp
+  type ('a, -'perms) t [@@deriving bin_io, compare, sexp]
 
   module Int : sig
-    type nonrec -'perms t = (int, 'perms) t with bin_io, compare, sexp
+    type nonrec -'perms t = (int, 'perms) t [@@deriving bin_io, compare, sexp]
 
     include Blit.S_permissions with type 'perms t := 'perms t
 
@@ -312,7 +331,7 @@ module Permissioned : sig
   end
 
   module Float : sig
-    type nonrec -'perms t = (float, 'perms) t with bin_io, compare, sexp
+    type nonrec -'perms t = (float, 'perms) t [@@deriving bin_io, compare, sexp]
 
     include Blit.S_permissions with type 'perms t := 'perms t
 
@@ -397,6 +416,10 @@ module Permissioned : sig
     :  ('a, [> read]) t
     -> f:('a -> ('b, [> read]) t)
     -> ('b, [< _ perms]) t
+  val concat_mapi
+    :  ('a, [> read]) t
+    -> f:(int -> 'a -> ('b, [> read]) t)
+    -> ('b, [< _ perms]) t
   val partition_tf
     :  ('a, [> read]) t
     -> f:('a -> bool)
@@ -413,6 +436,11 @@ module Permissioned : sig
   val filter_opt  : ('a option, [> read]) t -> ('a, [< _ perms]) t
   val filter_map  : ('a, [> read]) t -> f:(       'a -> 'b option) -> ('b, [< _ perms]) t
   val filter_mapi : ('a, [> read]) t -> f:(int -> 'a -> 'b option) -> ('b, [< _ perms]) t
+
+  val for_alli : ('a, [> read]) t -> f:(int -> 'a -> bool) -> bool
+  val existsi  : ('a, [> read]) t -> f:(int -> 'a -> bool) -> bool
+  val counti   : ('a, [> read]) t -> f:(int -> 'a -> bool) -> int
+
   val iter2_exn : ('a, [> read]) t -> ('b, [> read]) t -> f:('a -> 'b -> unit) -> unit
   val map2_exn
     :  ('a, [> read]) t
@@ -430,6 +458,11 @@ module Permissioned : sig
     -> ('b, [> read]) t
     -> f:('a -> 'b -> bool)
     -> bool
+  val exists2_exn
+    :  ('a, [> read]) t
+    -> ('b, [> read]) t
+    -> f:('a -> 'b -> bool)
+    -> bool
   val filter  : f:('a -> bool)        -> ('a, [> read]) t -> ('a, [< _ perms]) t
   val filteri : f:(int -> 'a -> bool) -> ('a, [> read]) t -> ('a, [< _ perms]) t
   val swap : ('a, [> read_write]) t -> int -> int -> unit
@@ -439,9 +472,12 @@ module Permissioned : sig
   val of_list_rev_map : 'a list -> f:('a -> 'b) -> ('b, [< _ perms]) t
   val replace     : ('a, [> read_write]) t -> int -> f:('a -> 'a) -> unit
   val replace_all : ('a, [> read_write]) t        -> f:('a -> 'a) -> unit
-  val find_exn  : ('a, [> read]) t -> f:('a -> bool) -> 'a
+  val find_exn     : ('a, [> read]) t -> f:('a -> bool) -> 'a
+  val find_map_exn : ('a, [> read]) t -> f:('a -> 'b option) -> 'b
   val findi     : ('a, [> read]) t -> f:(int -> 'a -> bool) -> (int * 'a) option
   val findi_exn : ('a, [> read]) t -> f:(int -> 'a -> bool) -> int * 'a
+  val find_mapi     : ('a, [> read]) t -> f:(int -> 'a -> 'b option) -> 'b option
+  val find_mapi_exn : ('a, [> read]) t -> f:(int -> 'a -> 'b option) -> 'b
   val find_consecutive_duplicate
     :  ('a, [> read]) t
     -> equal:('a -> 'a -> bool)
@@ -449,17 +485,14 @@ module Permissioned : sig
   val reduce     : ('a, [> read]) t -> f:('a -> 'a -> 'a) -> 'a option
   val reduce_exn : ('a, [> read]) t -> f:('a -> 'a -> 'a) -> 'a
   val permute : ?random_state:Core_random.State.t -> ('a, [> read_write]) t -> unit
-  val combine : ('a, [> read]) t -> ('b, [> read]) t -> ('a * 'b, [< _ perms]) t
-  val split : ('a * 'b, [> read]) t -> ('a, [< _ perms]) t * ('b, [< _ perms]) t
+  val zip     : ('a, [> read]) t -> ('b, [> read]) t -> ('a * 'b, [< _ perms]) t option
+  val zip_exn : ('a, [> read]) t -> ('b, [> read]) t -> ('a * 'b, [< _ perms]) t
+  val unzip : ('a * 'b, [> read]) t -> ('a, [< _ perms]) t * ('b, [< _ perms]) t
   val sorted_copy : ('a, [> read]) t -> cmp:('a -> 'a -> int) -> ('a, [< _ perms]) t
   val last : ('a, [> read]) t -> 'a
   val empty : unit -> ('a, [< _ perms]) t
   val equal : ('a, [> read]) t -> ('a, [> read]) t -> equal:('a -> 'a -> bool) -> bool
   val truncate : (_, [> write]) t -> len:int -> unit
-
-  module Infix : sig
-    val ( <|> ) : ('a, [> read]) t -> int * int -> ('a, [< _ perms]) t
-  end
 
   val to_sequence         : ('a, [> read]) t -> 'a Sequence.t
   val to_sequence_mutable : ('a, [> read]) t -> 'a Sequence.t
