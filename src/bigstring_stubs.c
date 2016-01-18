@@ -29,6 +29,8 @@
 #define bswap_16 swap16
 #define bswap_32 swap32
 #define bswap_64 swap64
+#elif __CYGWIN__
+#include <endian.h>
 #else
 #include <sys/types.h>
 #include <sys/endian.h>
