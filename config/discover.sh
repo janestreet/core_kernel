@@ -30,8 +30,8 @@ mv "$OUT" "$ML_OUTFILE"
 #ifndef $sentinel
 #define $sentinel
 EOF
-    sed -r 's|^#let *([A-Za-z_0-9]+) *= *true *$|#define \1|;
-            s|^#let *([A-Za-z_0-9]+) *= *false *$|#undef \1|' "$ML_OUTFILE"
+    sed 's|^#let *\([A-Za-z_0-9]*\) *= *true *$|#define \1|;
+         s|^#let *\([A-Za-z_0-9]*\) *= *false *$|#undef \1|' "$ML_OUTFILE"
     cat  <<EOF
 #endif /* $sentinel */
 EOF
