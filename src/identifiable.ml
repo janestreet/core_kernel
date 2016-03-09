@@ -24,6 +24,19 @@ end) = struct
   include Pretty_printer.Register (T)
 end
 
+module Make_using_comparator (T : sig
+  type t [@@deriving bin_io, compare, sexp]
+  include Comparator.S with type t := t
+  include Stringable.S with type t := t
+  val hash : t -> int
+  val module_name : string
+end) = struct
+  include T
+  include Comparable.Make_binable_using_comparator (T)
+  include Hashable  .Make_binable (T)
+  include Pretty_printer.Register (T)
+end
+
 (* The unit test below checks that for a call to [Identifiable.Make], the functions in the
    resulting module call the functions in the argument module the correct number of
    times. *)

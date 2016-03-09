@@ -1106,14 +1106,57 @@ let ( ~- ) = ( ~-. )
 
 include Comparable.Map_and_set_binable (T)
 
-module Sign = struct
-  type t = Neg | Zero | Pos [@@deriving sexp]
-end
+let robust_sign t : Sign.t =
+  if t >. 0.
+  then Pos
+  else if t <. 0.
+  then Neg
+  else Zero
 
-let sign t =
-  if t >. 0. then Sign.Pos
-  else if t <. 0. then Sign.Neg
-  else Sign.Zero
+let sign_exn t : Sign.t =
+  if t > 0.
+  then Pos
+  else if t < 0.
+  then Neg
+  else if t = 0.
+  then Zero
+  else Error.raise_s [%message "Float.sign_exn of NAN" ~_:(t : t)]
+
+module Sign_or_nan = struct type t = Neg | Zero | Pos | Nan end
+
+let sign_or_nan t : Sign_or_nan.t =
+  if t > 0.
+  then Pos
+  else if t < 0.
+  then Neg
+  else if t = 0.
+  then Zero
+  else Nan
+
+let%test_unit "robust_sign" =
+  List.iter ~f:(fun (input,expect) -> assert (Sign.equal (robust_sign input) expect))
+    [ (1e-6,         Pos)
+    ; (1e-8,         Zero)
+    ; (-1e-6,        Neg)
+    ; (-1e-8,        Zero)
+    ; (-0.,          Zero)
+    ; (0.,           Zero)
+    ; (neg_infinity, Neg)
+    ; (nan,          Zero)  (* preserve this old behavior of [sign] *)
+    ]
+
+let%test_unit "sign_exn" =
+  List.iter ~f:(fun (input,expect) -> assert (Sign.equal (sign_exn input) expect))
+    [ (1e-30,        Pos)
+    ; (-0.,          Zero)
+    ; (0.,           Zero)
+    ; (neg_infinity, Neg)
+    ]
+
+let%test _ =
+  match sign_exn nan with
+  | Neg | Zero | Pos -> false
+  | exception _ -> true
 
 let ieee_negative t =
   let bits = Int64.bits_of_float t in
@@ -1559,6 +1602,13 @@ include Comparable.With_zero (struct
   let zero = zero
   include V
 end)
+(* Override the version of [sign] that Comparable.With_zero gives us.  There are two
+   issues:
+   - Float.sign used to use robust comparison, and users of [Core] might have come to
+     depend on this.
+   - Robustness aside, what we get from Comparable.With_zero would map nan to Neg.
+*)
+let sign = robust_sign
 
 let%test_unit "Float.validate_positive doesn't allocate on success" =
   let initial_words = Core_gc.minor_words () in
@@ -1713,7 +1763,7 @@ let%test_module _ = (module struct
         | Some y ->
           let x = abs x in
           let y = abs (of_int y) in
-          0. <= x -. y && x -. y < 1. && (sign x = sign y || y = 0.0))
+          0. <= x -. y && x -. y < 1. && (sign_exn x = sign_exn y || y = 0.0))
 
   (* Easy cases that used to live inline with the code above. *)
   let%test _ = iround_up (-3.4) = Some (-3)

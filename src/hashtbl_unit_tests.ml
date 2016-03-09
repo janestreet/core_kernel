@@ -173,14 +173,14 @@ module Make (Hashtbl : Core_hashtbl_intf.Hashtbl) = struct
     List.equal predicted_data found_alist ~equal:Poly.equal
   ;;
 
-  let%test "filter_replace_all" =
+  let%test "filter_map_inplace" =
     let f x = if x = 1 then None else Some (x * 2) in
     let predicted_data =
       List.sort ~cmp:Poly.ascending
         (List.filter_map test_data ~f:(fun (k,v) -> Option.map (f v) ~f:(fun x -> (k,x))))
     in
     let test_hash = Hashtbl.copy test_hash in
-    Hashtbl.filter_replace_all test_hash ~f;
+    Hashtbl.filter_map_inplace test_hash ~f;
     let found_alist =
       Hashtbl.to_alist test_hash
       |> List.sort ~cmp:Poly.ascending
@@ -188,14 +188,14 @@ module Make (Hashtbl : Core_hashtbl_intf.Hashtbl) = struct
     List.equal predicted_data found_alist ~equal:Poly.equal
   ;;
 
-  let%test "replace_all" =
+  let%test "map_inplace" =
     let f x = x + 3 in
     let predicted_data =
       List.sort ~cmp:Poly.ascending
         (List.map test_data ~f:(fun (k,v) -> (k,f v)))
     in
     let test_hash = Hashtbl.copy test_hash in
-    Hashtbl.replace_all test_hash ~f;
+    Hashtbl.map_inplace test_hash ~f;
     let found_alist =
       Hashtbl.to_alist test_hash
       |> List.sort ~cmp:Poly.ascending
@@ -327,6 +327,973 @@ module Make (Hashtbl : Core_hashtbl_intf.Hashtbl) = struct
        |> Hashtbl.to_alist
        |> List.sort ~cmp:(fun (x,_) (y,_) -> Int.compare x y))
       ~expect:[ 1, `Both (111,123) ; 3, `Left 333 ; 4, `Right 444 ]
+
+  let%test_module "quickcheck comparison to Map" =
+    (module (struct
+
+      module Qc  = Quickcheck
+      module Gen = Qc.Generator
+
+      open Gen.Monad_infix
+
+      module type Creators_with_quickcheck_generators = sig
+        include Core_hashtbl_intf.Creators
+          with type ('a, 'b) t := ('a, 'b) Hashtbl.t
+          with type 'a key := 'a Hashtbl.key
+          with type ('a, 'b, 'c) create_options :=
+            ('a, 'b, 'c) Core_hashtbl_intf.create_options_with_hashable
+
+        module For_tests : sig
+
+          type ('key, 'data) constructor       [@@deriving sexp_of]
+          type ('key, 'data) multi_constructor [@@deriving sexp_of]
+
+          val empty_constructor : (_, _) constructor
+
+          val constructor_gen
+            :  'key  Gen.t
+            -> 'data Gen.t
+            -> ('key, 'data) constructor Gen.t
+
+          val multi_constructor_gen
+            :  'key  Gen.t
+            -> 'data Gen.t
+            -> ('key, 'data) multi_constructor Gen.t
+
+          val map_and_table
+            :  hashable   : 'key Hashtbl.Hashable.t
+            -> comparator : ('key, 'cmp) Comparator.t
+            -> ('key, 'data) constructor
+            -> ('key, 'data, 'cmp) Map.t * ('key, 'data) Hashtbl.t
+
+          val map_and_table_multi
+            :  hashable   : 'key Hashtbl.Hashable.t
+            -> comparator : ('key, 'cmp) Comparator.t
+            -> ('key, 'data) multi_constructor
+            -> ('key, 'data list, 'cmp) Map.t * ('key, 'data list) Hashtbl.t
+
+        end
+      end
+
+      module type Accessors_with_unit_tests = sig
+        include Core_hashtbl_intf.Accessors
+          with type ('a, 'b) t := ('a, 'b) Hashtbl.t
+          with type 'a key := 'a Hashtbl.key
+          with type ('a, 'b) map_options := ('a, 'b) Core_hashtbl_intf.no_map_options
+        val invariant
+          :  'a Invariant_intf.inv
+          -> 'b Invariant_intf.inv
+          -> ('a, 'b) Hashtbl.t Invariant_intf.inv
+      end
+
+      include (struct
+
+        let alist_gen key_gen data_gen ~unique_keys =
+          List.gen' key_gen ~unique:unique_keys
+          >>= fun keys ->
+          List.gen' data_gen ~length:(`Exactly (List.length keys))
+          >>| fun data ->
+          List.zip_exn keys data
+
+        let create = Hashtbl.create
+
+        let create_gen () = Gen.singleton `Create
+
+        let of_alist                 = Hashtbl.of_alist
+        let of_alist_exn             = Hashtbl.of_alist_exn
+        let of_alist_or_error        = Hashtbl.of_alist_or_error
+        let of_alist_report_all_dups = Hashtbl.of_alist_report_all_dups
+
+        let of_alist_gen key_gen data_gen =
+          alist_gen key_gen data_gen ~unique_keys:true
+          >>| fun alist ->
+          `Of_alist alist
+
+        let of_alist_multi = Hashtbl.of_alist_multi
+
+        let of_alist_multi_gen key_gen data_gen =
+          alist_gen key_gen data_gen ~unique_keys:false
+          >>| fun alist ->
+          `Of_alist_multi alist
+
+        let create_with_key          = Hashtbl.create_with_key
+        let create_with_key_exn      = Hashtbl.create_with_key_exn
+        let create_with_key_or_error = Hashtbl.create_with_key_or_error
+
+        let create_with_key_gen key_gen data_gen =
+          alist_gen key_gen data_gen ~unique_keys:true
+          >>| fun alist ->
+          `Create_with_key alist
+
+        let create_mapped = Hashtbl.create_mapped
+
+        let create_mapped_gen key_gen data_gen =
+          alist_gen key_gen data_gen ~unique_keys:true
+          >>| fun alist ->
+          `Create_mapped alist
+
+        let group = Hashtbl.group
+
+        let group_gen key_gen data_gen =
+          alist_gen key_gen data_gen ~unique_keys:false
+          >>| fun alist ->
+          `Group alist
+
+        module For_tests = struct
+
+          type ('key, 'data) constructor =
+            [ `Create
+            | `Of_alist        of ('key * 'data) list
+            | `Create_mapped   of ('key * 'data) list
+            | `Create_with_key of ('key * 'data) list
+            ]
+          [@@deriving sexp_of]
+
+          type ('key, 'data) multi_constructor =
+            [ ('key, 'data list) constructor
+            | `Of_alist_multi of ('key * 'data) list
+            | `Group          of ('key * 'data) list
+            ]
+          [@@deriving sexp_of]
+
+          let empty_constructor = `Create
+
+          let constructor_gen key_gen data_gen =
+            Gen.union
+              [ create_gen          ()
+              ; of_alist_gen        key_gen data_gen
+              ; create_mapped_gen   key_gen data_gen
+              ; create_with_key_gen key_gen data_gen
+              ]
+
+          let multi_constructor_gen key_gen data_gen =
+            Gen.union
+              [ constructor_gen    key_gen (List.gen data_gen)
+              ; of_alist_multi_gen key_gen data_gen
+              ; group_gen          key_gen data_gen
+              ]
+
+          let map_and_table ~hashable ~comparator = function
+            | `Create ->
+              Map.empty         ~comparator,
+              Hashtbl.create () ~hashable
+            | `Of_alist alist ->
+              Map.of_alist_exn     alist ~comparator,
+              Hashtbl.of_alist_exn alist ~hashable
+            | `Create_with_key alist ->
+              Map.of_alist_exn            alist ~comparator,
+              Hashtbl.create_with_key_exn alist ~hashable ~get_key:fst
+              |> Hashtbl.map ~f:snd
+            | `Create_mapped alist ->
+              Map.of_alist_exn       alist ~comparator,
+              (Hashtbl.create_mapped alist ~hashable ~get_key:fst ~get_data:snd
+               |> function
+               | `Ok table         -> table
+               | `Duplicate_keys _ -> assert false)
+
+          let map_and_table_multi ~hashable ~comparator = function
+            | `Of_alist_multi alist ->
+              Map.of_alist_multi     (List.rev alist) ~comparator,
+              Hashtbl.of_alist_multi           alist  ~hashable
+            | `Group alist ->
+              Map.of_alist_reduce ~comparator ~f:(@) (List.map alist ~f:(fun (key,data) ->
+                (key, [data]))),
+              Hashtbl.group alist ~hashable
+                ~combine:(@)
+                ~get_key:fst
+                ~get_data:(Fn.compose List.return snd)
+            | ((`Create | `Of_alist _ | `Create_with_key _ | `Create_mapped _) as c) ->
+              map_and_table ~hashable ~comparator c
+
+        end
+
+      end : Creators_with_quickcheck_generators)
+
+      include (struct
+
+        module For_tests = struct
+          open For_tests
+
+          let is_even n = n land 1 = 0
+
+          module Key = struct
+            include String
+            let gen = Gen.size >>| sprintf "s%d"
+            let to_bool t =
+              is_empty t
+              || is_even (Char.to_int (get t (length t - 1)))
+          end
+
+          module Data = struct
+            include Int
+            let gen = Gen.size
+            let to_bool = is_even
+            (* Here, [succ] is useful for testing [filter_map] *)
+            let to_option t = if is_even t then Some (succ t) else None
+            let to_partition t =
+              if is_even t
+              then `Fst (succ t)
+              else `Snd (pred t)
+          end
+
+          module Key_and_data = struct
+            let to_bool ~key ~data =
+              Bool.equal (Key.to_bool key) (Data.to_bool data)
+            let to_data ~key ~data =
+              if Key.to_bool key
+              then succ data
+              else pred data
+            let to_data_option ~key ~data =
+              if Key.to_bool key
+              then Some data
+              else Data.to_option data
+            let to_data_partition ~key ~data =
+              if Key.to_bool key
+              then `Fst (succ data)
+              else `Snd (pred data)
+            let merge ~key x =
+              if Key.to_bool key
+              then None
+              else
+                match x with
+                | `Left  data   -> Some (Data.succ data)
+                | `Right data   -> Some (Data.pred data)
+                | `Both  (x, y) -> Some (x - y)
+          end
+
+          let hashable   = Key.hashable
+          let comparator = Key.comparator
+
+          type nonrec constructor =
+            (Key.t, Data.t) constructor
+          [@@deriving sexp_of]
+
+          type nonrec multi_constructor =
+            (Key.t, Data.t) multi_constructor
+          [@@deriving sexp_of]
+
+          let empty_constructor = For_tests.empty_constructor
+
+          let constructor_gen       = constructor_gen       Key.gen Data.gen
+          let multi_constructor_gen = multi_constructor_gen Key.gen Data.gen
+
+          let map_and_table       = map_and_table       ~hashable ~comparator
+          let map_and_table_multi = map_and_table_multi ~hashable ~comparator
+
+          let to_map t =
+            Hashtbl.to_alist t
+            |> Map.of_alist_exn ~comparator
+        end
+
+        open For_tests
+
+        let invariant = Hashtbl.invariant
+
+        type 'a merge_into_action = 'a Hashtbl.merge_into_action = Remove | Set_to of 'a
+
+        (* This test is mostly validating constructors, making sure all of them satisfy
+           [invariant] and that we have correctly constructed corresponding hash tables
+           and maps. *)
+        let%test_unit _ =
+          Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            Hashtbl.invariant ignore ignore t;
+            [%test_result: Data.t Key.Map.t]
+              (to_map t)
+              ~expect:map)
+
+        let%test_unit _ =
+          Qc.test multi_constructor_gen
+            ~sexp_of:[%sexp_of: multi_constructor]
+            ~f:(fun multi_constructor ->
+              let map, t = map_and_table_multi multi_constructor in
+              Hashtbl.invariant ignore ignore t;
+              [%test_result: Data.t list Key.Map.t]
+                (to_map t)
+                ~expect:map)
+
+        let sexp_of_key = Hashtbl.sexp_of_key
+
+        let%test_unit _ =
+          Qc.test (Gen.tuple2 constructor_gen Key.gen)
+            ~sexp_of:[%sexp_of: constructor * Key.t]
+            ~f:(fun (constructor, key) ->
+              let _, t = map_and_table constructor in
+              [%test_result: Sexp.t]
+                (Hashtbl.sexp_of_key t key)
+                ~expect:([%sexp_of: Key.t] key))
+
+        let clear = Hashtbl.clear
+
+        let%test_unit _ =
+          Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
+            let _, t = map_and_table constructor in
+            Hashtbl.clear t;
+            Hashtbl.invariant ignore ignore t;
+            [%test_result: Data.t Key.Map.t]
+              (to_map t)
+              ~expect:Key.Map.empty)
+
+        let copy = Hashtbl.copy
+
+        let%test_unit _ =
+          Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            let t_copy = Hashtbl.copy t in
+            Hashtbl.clear t;
+            Hashtbl.invariant ignore ignore t_copy;
+            [%test_result: Data.t Key.Map.t]
+              (to_map t_copy)
+              ~expect:map)
+
+        let fold = Hashtbl.fold
+
+        let%test_unit _ =
+          Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
+              let map, t = map_and_table constructor in
+              [%test_result: Data.t Key.Map.t]
+                (Hashtbl.fold t ~init:Key.Map.empty ~f:(fun ~key ~data map ->
+                   Map.add map ~key ~data))
+                ~expect:map)
+
+        let iter  = Hashtbl.iteri
+        let iteri = Hashtbl.iteri
+
+        let%test_unit _ =
+          Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            let t_copy = Hashtbl.create ~hashable () in
+            Hashtbl.iteri t ~f:(fun ~key ~data ->
+              Hashtbl.add_exn t_copy ~key ~data);
+            [%test_result: Data.t Key.Map.t]
+              (to_map t_copy)
+              ~expect:map)
+
+        let iter_keys = Hashtbl.iter_keys
+
+        let%test_unit _ =
+          Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            let keys = ref [] in
+            Hashtbl.iter_keys t ~f:(fun key ->
+              keys := key :: !keys);
+            [%test_result: Key.t list]
+              (List.sort !keys ~cmp:Key.compare)
+              ~expect:(List.sort (Map.keys map) ~cmp:Key.compare))
+
+        let iter_vals = Hashtbl.iter_vals
+
+        let%test_unit _ =
+          Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            let datas = ref [] in
+            Hashtbl.iter_vals t ~f:(fun data ->
+              datas := data :: !datas);
+            [%test_result: Data.t list]
+              (List.sort !datas ~cmp:Data.compare)
+              ~expect:(List.sort (Map.data map) ~cmp:Data.compare))
+
+        let exists = Hashtbl.exists
+
+        let%test_unit _ =
+          Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            [%test_result: bool]
+              (Hashtbl.exists t ~f:Data.to_bool)
+              ~expect:(Map.exists map ~f:Data.to_bool))
+
+        let existsi = Hashtbl.existsi
+
+        let%test_unit _ =
+          Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            [%test_result: bool]
+              (Hashtbl.existsi t ~f:Key_and_data.to_bool)
+              ~expect:(Map.existsi map ~f:Key_and_data.to_bool))
+
+        let for_all = Hashtbl.for_all
+
+        let%test_unit _ =
+          Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            [%test_result: bool]
+              (Hashtbl.for_all t ~f:Data.to_bool)
+              ~expect:(Map.for_all map ~f:Data.to_bool))
+
+        let for_alli = Hashtbl.for_alli
+
+        let%test_unit _ =
+          Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            [%test_result: bool]
+              (Hashtbl.for_alli t ~f:Key_and_data.to_bool)
+              ~expect:(Map.for_alli map ~f:Key_and_data.to_bool))
+
+        let count = Hashtbl.count
+
+        let%test_unit _ =
+          Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            [%test_result: int]
+              (Hashtbl.count t ~f:Data.to_bool)
+              ~expect:(Map.count map ~f:Data.to_bool))
+
+        let counti = Hashtbl.counti
+
+        let%test_unit _ =
+          Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            [%test_result: int]
+              (Hashtbl.counti t ~f:Key_and_data.to_bool)
+              ~expect:(Map.counti map ~f:Key_and_data.to_bool))
+
+        let length = Hashtbl.length
+
+        let%test_unit _ =
+          Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            [%test_result: int]
+              (Hashtbl.length t)
+              ~expect:(Map.length map))
+
+        let is_empty = Hashtbl.is_empty
+
+        let%test_unit _ =
+          Qc.test constructor_gen
+            ~examples:[empty_constructor]
+            ~sexp_of:[%sexp_of: constructor]
+            ~f:(fun constructor ->
+              let map, t = map_and_table constructor in
+              [%test_result: bool]
+                (Hashtbl.is_empty t)
+                ~expect:(Map.is_empty map))
+
+        let mem = Hashtbl.mem
+
+        let%test_unit _ =
+          Qc.test (Gen.tuple2 constructor_gen Key.gen)
+            ~sexp_of:[%sexp_of: constructor * Key.t]
+            ~f:(fun (constructor, key) ->
+              let map, t = map_and_table constructor in
+              [%test_result: bool]
+                (Hashtbl.mem t key)
+                ~expect:(Map.mem map key))
+
+        let remove = Hashtbl.remove
+
+        let%test_unit _ =
+          Qc.test (Gen.tuple2 constructor_gen Key.gen)
+            ~sexp_of:[%sexp_of: constructor * Key.t]
+            ~f:(fun (constructor, key) ->
+              let map, t = map_and_table constructor in
+              Hashtbl.remove t key;
+              [%test_result: Data.t Key.Map.t]
+                (to_map t)
+                ~expect:(Map.remove map key))
+
+        let set     = Hashtbl.set
+        (* We don't test [replace] because it's deprecated in favor of [set] *)
+        let replace = Hashtbl.set
+
+        let%test_unit _ =
+          Qc.test (Gen.tuple3 constructor_gen Key.gen Data.gen)
+            ~sexp_of:[%sexp_of: constructor * Key.t * Data.t]
+            ~f:(fun (constructor, key, data) ->
+              let map, t = map_and_table constructor in
+              Hashtbl.set t ~key ~data;
+              [%test_result: Data.t Key.Map.t]
+                (to_map t)
+                ~expect:(Map.add map ~key ~data))
+
+        let add          = Hashtbl.add
+        let add_exn      = Hashtbl.add_exn
+        let add_or_error = Hashtbl.add_or_error
+
+        let%test_unit _ =
+          let f (name, add) =
+            Qc.test (Gen.tuple3 constructor_gen Key.gen Data.gen)
+              ~sexp_of:[%sexp_of: constructor * Key.t * Data.t]
+              ~f:(fun (constructor, key, data) ->
+                let map, t = map_and_table constructor in
+                let expect =
+                  match add t ~key ~data with
+                  | `Ok        -> Map.add map ~key ~data
+                  | `Duplicate -> map
+                in
+                [%test_result: Data.t Key.Map.t]
+                  (to_map t)
+                  ~expect
+                  ~message:name)
+          in
+          let add_exn t ~key ~data =
+            match add_exn t ~key ~data with
+            | ()          -> `Ok
+            | exception _ -> `Duplicate
+          in
+          let add_or_error t ~key ~data =
+            match add_or_error t ~key ~data with
+            | Ok ()   -> `Ok
+            | Error _ -> `Duplicate
+          in
+          List.iter ~f
+            [ "add"         , add
+            ; "add_exn"     , add_exn
+            ; "add_or_error", add_or_error
+            ]
+
+        let change = Hashtbl.change
+
+        let%test_unit _ =
+          Qc.test (Gen.tuple3 constructor_gen Key.gen (Option.gen Data.gen))
+            ~sexp_of:[%sexp_of: constructor * Key.t * Data.t option]
+            ~f:(fun (constructor, key, data_opt) ->
+              let map, t = map_and_table constructor in
+              Hashtbl.change t key ~f:(fun original ->
+                [%test_result: Data.t option]
+                  original
+                  ~expect:(Map.find map key);
+                data_opt);
+              [%test_result: Data.t Key.Map.t]
+                (to_map t)
+                ~expect:(Map.change map key ~f:(fun _ -> data_opt)))
+
+        let update = Hashtbl.update
+
+        let%test_unit _ =
+          Qc.test (Gen.tuple3 constructor_gen Key.gen Data.gen)
+            ~sexp_of:[%sexp_of: constructor * Key.t * Data.t]
+            ~f:(fun (constructor, key, data) ->
+              let map, t = map_and_table constructor in
+              Hashtbl.update t key ~f:(fun original ->
+                [%test_result: Data.t option]
+                  original
+                  ~expect:(Map.find map key);
+                data);
+              [%test_result: Data.t Key.Map.t]
+                (to_map t)
+                ~expect:(Map.update map key ~f:(fun _ -> data)))
+
+        let add_multi = Hashtbl.add_multi
+
+        let%test_unit _ =
+          Qc.test (Gen.tuple3 multi_constructor_gen Key.gen Data.gen)
+            ~sexp_of:[%sexp_of: multi_constructor * Key.t * Data.t]
+            ~f:(fun (multi_constructor, key, data) ->
+              let map, t = map_and_table_multi multi_constructor in
+              Hashtbl.add_multi t ~key ~data;
+              [%test_result: Data.t list Key.Map.t]
+                (to_map t)
+                ~expect:(Map.add_multi map ~key ~data))
+
+        let remove_multi = Hashtbl.remove_multi
+
+        let%test_unit _ =
+          Qc.test (Gen.tuple2 multi_constructor_gen Key.gen)
+            ~sexp_of:[%sexp_of: multi_constructor * Key.t]
+            ~f:(fun (multi_constructor, key) ->
+              let map, t = map_and_table_multi multi_constructor in
+              Hashtbl.remove_multi t key;
+              [%test_result: Data.t list Key.Map.t]
+                (to_map t)
+                ~expect:(Map.remove_multi map key))
+
+        let map = Hashtbl.map
+
+        let%test_unit _ =
+          Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            [%test_result: Data.t Key.Map.t]
+              (to_map (Hashtbl.map t ~f:Data.succ))
+              ~expect:(Map.map map ~f:Data.succ))
+
+        let mapi = Hashtbl.mapi
+
+        let%test_unit _ =
+          Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            [%test_result: Data.t Key.Map.t]
+              (to_map (Hashtbl.mapi t ~f:Key_and_data.to_data))
+              ~expect:(Map.mapi map ~f:Key_and_data.to_data))
+
+        let map_inplace = Hashtbl.map_inplace
+        (* [replace_all] is deprecated *)
+        let replace_all = Hashtbl.map_inplace
+
+        let%test_unit _ =
+          Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            Hashtbl.map_inplace t ~f:Data.succ;
+            [%test_result: Data.t Key.Map.t]
+              (to_map t)
+              ~expect:(Map.map map ~f:Data.succ))
+
+        let mapi_inplace = Hashtbl.mapi_inplace
+        (* [replace_alli] is deprecated *)
+        let replace_alli = Hashtbl.mapi_inplace
+
+        let%test_unit _ =
+          Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            Hashtbl.mapi_inplace t ~f:Key_and_data.to_data;
+            [%test_result: Data.t Key.Map.t]
+              (to_map t)
+              ~expect:(Map.mapi map ~f:Key_and_data.to_data))
+
+        let filter = Hashtbl.filter
+
+        let%test_unit _ =
+          Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            [%test_result: Data.t Key.Map.t]
+              (to_map (Hashtbl.filter t ~f:Data.to_bool))
+              ~expect:(Map.filteri map ~f:(fun ~key:_ ~data -> Data.to_bool data)))
+
+        let filteri = Hashtbl.filteri
+
+        let%test_unit _ =
+          Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            [%test_result: Data.t Key.Map.t]
+              (to_map (Hashtbl.filteri t ~f:Key_and_data.to_bool))
+              ~expect:(Map.filteri map ~f:Key_and_data.to_bool))
+
+        let filter_map = Hashtbl.filter_map
+
+        let%test_unit _ =
+          Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
+              let map, t = map_and_table constructor in
+              [%test_result: Data.t Key.Map.t]
+                (to_map (Hashtbl.filter_map t ~f:Data.to_option))
+                ~expect:(Map.filter_map map ~f:Data.to_option))
+
+        let filter_mapi = Hashtbl.filter_mapi
+
+        let%test_unit _ =
+          Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            [%test_result: Data.t Key.Map.t]
+              (to_map (Hashtbl.filter_mapi t ~f:Key_and_data.to_data_option))
+              ~expect:(Map.filter_mapi map ~f:Key_and_data.to_data_option))
+
+        let filter_inplace = Hashtbl.filter_inplace
+
+        let%test_unit _ =
+          Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            Hashtbl.filter_inplace t ~f:Data.to_bool;
+            [%test_result: Data.t Key.Map.t]
+              (to_map t)
+              ~expect:(Map.filteri map ~f:(fun ~key:_ ~data -> Data.to_bool data)))
+
+        let filteri_inplace = Hashtbl.filteri_inplace
+
+        let%test_unit _ =
+          Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            Hashtbl.filteri_inplace t ~f:Key_and_data.to_bool;
+            [%test_result: Data.t Key.Map.t]
+              (to_map t)
+              ~expect:(Map.filteri map ~f:Key_and_data.to_bool))
+
+        let filter_map_inplace = Hashtbl.filter_map_inplace
+        (* [filter_replace_all] is deprecated *)
+        let filter_replace_all = Hashtbl.filter_map_inplace
+
+        let%test_unit _ =
+          Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            Hashtbl.filter_map_inplace t ~f:Data.to_option;
+            [%test_result: Data.t Key.Map.t]
+              (to_map t)
+              ~expect:(Map.filter_map map ~f:Data.to_option))
+
+        let filter_mapi_inplace = Hashtbl.filter_mapi_inplace
+        (* [filter_replace_alli] is deprecated *)
+        let filter_replace_alli = Hashtbl.filter_mapi_inplace
+
+        let%test_unit _ =
+          Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            Hashtbl.filter_mapi_inplace t ~f:Key_and_data.to_data_option;
+            [%test_result: Data.t Key.Map.t]
+              (to_map t)
+              ~expect:(Map.filter_mapi map ~f:Key_and_data.to_data_option))
+
+        let filter_keys_inplace = Hashtbl.filter_keys_inplace
+
+        let%test_unit _ =
+          Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            Hashtbl.filter_keys_inplace t ~f:Key.to_bool;
+            [%test_result: Data.t Key.Map.t]
+              (to_map t)
+              ~expect:(Map.filteri map ~f:(fun ~key ~data:_ -> Key.to_bool key)))
+
+        let partition_map = Hashtbl.partition_map
+
+        let%test_unit _ =
+          Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            [%test_result: Data.t Key.Map.t * Data.t Key.Map.t]
+              (let a, b = Hashtbl.partition_map t ~f:Data.to_partition in
+               to_map a, to_map b)
+              ~expect:(Map.partition_map map ~f:Data.to_partition))
+
+        let partition_mapi = Hashtbl.partition_mapi
+
+        let%test_unit _ =
+          Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            [%test_result: Data.t Key.Map.t * Data.t Key.Map.t]
+              (let a, b = Hashtbl.partition_mapi t ~f:Key_and_data.to_data_partition in
+               to_map a, to_map b)
+              ~expect:(Map.partition_mapi map ~f:Key_and_data.to_data_partition))
+
+        let partition_tf = Hashtbl.partition_tf
+
+        let%test_unit _ =
+          Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            [%test_result: Data.t Key.Map.t * Data.t Key.Map.t]
+              (let a, b = Hashtbl.partition_tf t ~f:Data.to_bool in
+               to_map a, to_map b)
+              ~expect:(Map.partition_tf map ~f:Data.to_bool))
+
+        let partitioni_tf = Hashtbl.partitioni_tf
+
+        let%test_unit _ =
+          Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            [%test_result: Data.t Key.Map.t * Data.t Key.Map.t]
+              (let a, b = Hashtbl.partitioni_tf t ~f:Key_and_data.to_bool in
+               to_map a, to_map b)
+              ~expect:(Map.partitioni_tf map ~f:Key_and_data.to_bool))
+
+        let find_or_add = Hashtbl.find_or_add
+
+        let%test_unit _ =
+          Qc.test (Gen.tuple3 constructor_gen Key.gen Data.gen)
+            ~sexp_of:[%sexp_of: constructor * Key.t * Data.t]
+            ~f:(fun (constructor, key, data) ->
+              let map, t = map_and_table constructor in
+              [%test_result: Data.t]
+                (find_or_add t key ~default:(fun () -> data))
+                ~expect:(Map.find map key |> Option.value ~default:data);
+              [%test_result: Data.t Key.Map.t]
+                (to_map t)
+                ~expect:(if Map.mem map key
+                         then map
+                         else Map.add map ~key ~data))
+
+        let find     = Hashtbl.find
+        let find_exn = Hashtbl.find_exn
+
+        let%test_unit _ =
+          let f (name, find) =
+            Qc.test (Gen.tuple2 constructor_gen Key.gen)
+              ~sexp_of:[%sexp_of: constructor * Key.t]
+              ~f:(fun (constructor, key) ->
+                let map, t = map_and_table constructor in
+                [%test_result: Data.t option]
+                  (find t key)
+                  ~expect:(Map.find map key)
+                  ~message:name)
+          in
+          let find_exn t key =
+            match find_exn t key with
+            | data        -> Some data
+            | exception _ -> None
+          in
+          List.iter ~f
+            [ "find"    , find
+            ; "find_exn", find_exn
+            ]
+
+        let find_and_call = Hashtbl.find_and_call
+
+        let%test_unit _ =
+          Qc.test (Gen.tuple2 constructor_gen Key.gen)
+            ~sexp_of:[%sexp_of: constructor * Key.t]
+            ~f:(fun (constructor, key) ->
+              let map, t = map_and_table constructor in
+              [%test_result: (Data.t, Key.t) Either.t]
+                (Hashtbl.find_and_call t key
+                   ~if_found:Either.first
+                   ~if_not_found:Either.second)
+                ~expect:(match Map.find map key with
+                  | Some data -> First data
+                  | None      -> Second key))
+
+        let find_and_remove = Hashtbl.find_and_remove
+
+        let%test_unit _ =
+          Qc.test (Gen.tuple2 constructor_gen Key.gen)
+            ~sexp_of:[%sexp_of: constructor * Key.t]
+            ~f:(fun (constructor, key) ->
+              let map, t = map_and_table constructor in
+              [%test_result: Data.t option]
+                (Hashtbl.find_and_remove t key)
+                ~expect:(Map.find map key);
+              [%test_result: Data.t Key.Map.t]
+                (to_map t)
+                ~expect:(Map.remove map key))
+
+        let merge = Hashtbl.merge
+
+        let%test_unit _ =
+          Qc.test (Gen.tuple2 constructor_gen constructor_gen)
+            ~sexp_of:[%sexp_of: constructor * constructor]
+            ~f:(fun (constructor1, constructor2) ->
+              let map1, t1 = map_and_table constructor1 in
+              let map2, t2 = map_and_table constructor2 in
+              [%test_result: Data.t Key.Map.t]
+                (to_map (Hashtbl.merge t1 t2 ~f:Key_and_data.merge))
+                ~expect:(Map.merge map1 map2 ~f:Key_and_data.merge))
+
+        let merge_into = Hashtbl.merge_into
+
+        let%test_unit _ =
+          Qc.test (Gen.tuple2 constructor_gen constructor_gen)
+            ~sexp_of:[%sexp_of: constructor * constructor]
+            ~f:(fun (constructor1, constructor2) ->
+              let map1, t1 = map_and_table constructor1 in
+              let map2, t2 = map_and_table constructor2 in
+              let f ~key data2 data1_opt =
+                Key_and_data.merge ~key
+                  (match data1_opt with
+                   | Some data1 -> `Both (data1, data2)
+                   | None       -> `Right data2)
+                |> function
+                | None   -> Remove
+                | Some x -> Set_to x
+              in
+              Hashtbl.merge_into ~dst:t1 ~src:t2 ~f;
+              [%test_result: Data.t Key.Map.t]
+                (to_map t1)
+                ~expect:(Map.fold map2 ~init:map1 ~f:(fun ~key ~data:data2 map1 ->
+                  Map.change map1 key ~f:(fun data1_opt ->
+                    match f ~key data2 data1_opt with
+                    | Set_to x -> Some x
+                    | Remove   -> None))))
+
+        let equal = Hashtbl.equal
+
+        let%test_unit _ =
+          Qc.test (Gen.tuple2 constructor_gen constructor_gen)
+            ~sexp_of:[%sexp_of: constructor * constructor]
+            ~f:(fun (constructor1, constructor2) ->
+              let map1, t1 = map_and_table constructor1 in
+              let map2, t2 = map_and_table constructor2 in
+              [%test_result: bool]
+                (Hashtbl.equal t1 t2 Data.equal)
+                ~expect:(Map.equal Data.equal map1 map2))
+
+        let similar = Hashtbl.similar
+
+        let%test_unit _ =
+          Qc.test (Gen.tuple2 constructor_gen constructor_gen)
+            ~sexp_of:[%sexp_of: constructor * constructor]
+            ~f:(fun (constructor1, constructor2) ->
+              let map1, t1 = map_and_table constructor1 in
+              let map2, t2 = map_and_table constructor2 in
+              [%test_result: bool]
+                (Hashtbl.similar t1 t2 Data.equal)
+                ~expect:(Map.equal Data.equal map1 map2))
+
+        let keys = Hashtbl.keys
+
+        let%test_unit _ =
+          Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            [%test_result: Key.t list]
+              (keys t |> List.sort ~cmp:Key.compare)
+              ~expect:(Map.keys map |> List.sort ~cmp:Key.compare))
+
+        let data = Hashtbl.data
+
+        let%test_unit _ =
+          Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            [%test_result: Data.t list]
+              (data t |> List.sort ~cmp:Data.compare)
+              ~expect:(Map.data map |> List.sort ~cmp:Data.compare))
+
+        let to_alist = Hashtbl.to_alist
+
+        let%test_unit _ =
+          Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            [%test_result: (Key.t * Data.t) list]
+              (to_alist t |> List.sort ~cmp:[%compare: Key.t * Data.t])
+              ~expect:(Map.to_alist map |> List.sort ~cmp:[%compare: Key.t * Data.t]))
+
+        let validate = Hashtbl.validate
+
+        let%test_unit _ =
+          Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
+            let map, t = map_and_table constructor in
+            let name = Key.to_string in
+            let check_data data =
+              if Data.to_bool data
+              then Validate.pass
+              else Validate.fail "data"
+             in
+            [%test_result: bool]
+              (Result.is_ok (Validate.result (Hashtbl.validate ~name check_data t)))
+              ~expect:(Map.for_all map ~f:Data.to_bool))
+
+        let incr = Hashtbl.incr
+
+        let%test_unit _ =
+          Qc.test (Gen.tuple3 constructor_gen Key.gen Data.gen)
+            ~sexp_of:[%sexp_of: constructor * Key.t * Data.t]
+            ~f:(fun (constructor, key, by) ->
+              let map, t = map_and_table constructor in
+              Hashtbl.incr t key ~by;
+              [%test_result: Data.t Key.Map.t]
+                (to_map t)
+                ~expect:(Map.update map key ~f:(fun opt ->
+                  Option.value opt ~default:0 + by)))
+
+        let decr = Hashtbl.decr
+
+        let%test_unit _ =
+          Qc.test (Gen.tuple3 constructor_gen Key.gen Data.gen)
+            ~sexp_of:[%sexp_of: constructor * Key.t * Data.t]
+            ~f:(fun (constructor, key, by) ->
+              let map, t = map_and_table constructor in
+              Hashtbl.decr t key ~by;
+              [%test_result: Data.t Key.Map.t]
+                (to_map t)
+                ~expect:(Map.update map key ~f:(fun opt ->
+                  Option.value opt ~default:0 - by)))
+
+      end : Accessors_with_unit_tests)
+
+      (* miscellaneous functions that aren't in Accessors and aren't particularly
+         interesting to test *)
+
+      let hashable   = Hashtbl.hashable
+      let sexp_of_t  = Hashtbl.sexp_of_t
+      let hash_param = Hashtbl.hash_param
+      let hash       = Hashtbl.hash
+
+      (* types, module types, and modules *)
+
+      type ('a, 'b) t   = ('a, 'b) Hashtbl.t
+      type  'a      key =  'a      Hashtbl.key
+
+      module type S_binable   = Hashtbl.S_binable
+      module type S           = Hashtbl.S
+      module type Key_binable = Hashtbl.Key_binable
+      module type Key         = Hashtbl.Key
+
+      module Hashable     = Hashtbl.Hashable
+      module Poly         = Hashtbl.Poly
+      module Make         = Hashtbl.Make
+      module Make_binable = Hashtbl.Make_binable
+
+    end : Core_hashtbl_intf.Hashtbl))
 
   let%test_module "mutation in callbacks" =
     (module (struct
@@ -616,6 +1583,8 @@ module Make (Hashtbl : Core_hashtbl_intf.Hashtbl) = struct
 
       open Test
 
+      type 'a merge_into_action = 'a Hashtbl.merge_into_action = Remove | Set_to of 'a
+
       (* functions that both mutate and accept callbacks *)
 
       let find_or_add = Hashtbl.find_or_add
@@ -662,9 +1631,14 @@ module Make (Hashtbl : Core_hashtbl_intf.Hashtbl) = struct
 
       let%test_unit "merge_into" =
         for_each "f result" [%sexp_of: data option] (option sample_data) (fun opt ->
+          let action =
+            match opt with
+            | None   -> Hashtbl.Remove
+            | Some x -> Set_to x
+          in
           test_mutate_2ts (fun dst src ->
-            Hashtbl.merge_into ~dst ~src ~f:(fun ~key:_ _ _ -> opt));
-          let callback _ = opt in
+            Hashtbl.merge_into ~dst ~src ~f:(fun ~key:_ _ _ -> action));
+          let callback _ = action in
           let test_result = [%test_result: (int * int) list] in
           test_caller_2ts ~callback ~test_result (fun src dst f ->
             Hashtbl.merge_into ~dst ~src ~f:(fun ~key a b -> f (key, a, b));
@@ -706,52 +1680,60 @@ module Make (Hashtbl : Core_hashtbl_intf.Hashtbl) = struct
             Hashtbl.filter_keys_inplace t ~f;
             Hashtbl.to_alist t))
 
-      let replace_all = Hashtbl.replace_all
+      let map_inplace = Hashtbl.map_inplace
+      (* [replace_all] is deprecated *)
+      let replace_all = Hashtbl.map_inplace
 
-      let%test_unit "replace_all" =
+      let%test_unit "map_inplace" =
         for_each "f result" [%sexp_of: int] sample_data (fun data ->
           test_mutate (fun t ->
-            Hashtbl.replace_all t ~f:(fun _ -> data));
+            Hashtbl.map_inplace t ~f:(fun _ -> data));
           let callback _ = data in
           let test_result = [%test_result: (int * int) list] in
           test_caller ~callback ~test_result (fun t f ->
-            Hashtbl.replace_all t ~f;
+            Hashtbl.map_inplace t ~f;
             Hashtbl.to_alist t))
 
-      let replace_alli = Hashtbl.replace_alli
+      let mapi_inplace = Hashtbl.mapi_inplace
+      (* [replace_alli] is deprecated *)
+      let replace_alli = Hashtbl.mapi_inplace
 
-      let%test_unit "replace_alli" =
+      let%test_unit "mapi_inplace" =
         for_each "f result" [%sexp_of: int] sample_data (fun data ->
           test_mutate (fun t ->
-            Hashtbl.replace_alli t ~f:(fun ~key:_ ~data:_ -> data));
+            Hashtbl.mapi_inplace t ~f:(fun ~key:_ ~data:_ -> data));
           let callback _ = data in
           let test_result = [%test_result: (int * int) list] in
           test_caller ~callback ~test_result (fun t f ->
-            Hashtbl.replace_alli t ~f:(fun ~key ~data -> f (key, data));
+            Hashtbl.mapi_inplace t ~f:(fun ~key ~data -> f (key, data));
             Hashtbl.to_alist t))
 
-      let filter_replace_all = Hashtbl.filter_replace_all
+      let filter_map_inplace = Hashtbl.filter_map_inplace
+      (* [filter_replace_all] is deprecated *)
+      let filter_replace_all = Hashtbl.filter_map_inplace
 
-      let%test_unit "filter_replace_all" =
+      let%test_unit "filter_map_inplace" =
         for_each "f result" [%sexp_of: int option] (option sample_data) (fun opt ->
           test_mutate (fun t ->
-            Hashtbl.filter_replace_all t ~f:(fun _ -> opt));
+            Hashtbl.filter_map_inplace t ~f:(fun _ -> opt));
           let callback _ = opt in
           let test_result = [%test_result: (int * int) list] in
           test_caller ~callback ~test_result (fun t f ->
-            Hashtbl.filter_replace_all t ~f;
+            Hashtbl.filter_map_inplace t ~f;
             Hashtbl.to_alist t))
 
-      let filter_replace_alli = Hashtbl.filter_replace_alli
+      let filter_mapi_inplace = Hashtbl.filter_mapi_inplace
+      (* [filter_replace_alli] is deprecated *)
+      let filter_replace_alli = Hashtbl.filter_mapi_inplace
 
-      let%test_unit "filter_replace_alli" =
+      let%test_unit "filter_mapi_inplace" =
         for_each "f result" [%sexp_of: int option] (option sample_data) (fun opt ->
           test_mutate (fun t ->
-            Hashtbl.filter_replace_alli t ~f:(fun ~key:_ ~data:_ -> opt));
+            Hashtbl.filter_mapi_inplace t ~f:(fun ~key:_ ~data:_ -> opt));
           let callback _ = opt in
           let test_result = [%test_result: (int * int) list] in
           test_caller ~callback ~test_result (fun t f ->
-            Hashtbl.filter_replace_alli t ~f:(fun ~key ~data -> f (key, data));
+            Hashtbl.filter_mapi_inplace t ~f:(fun ~key ~data -> f (key, data));
             Hashtbl.to_alist t))
 
       (* functions that mutate *)
@@ -797,6 +1779,13 @@ module Make (Hashtbl : Core_hashtbl_intf.Hashtbl) = struct
         for_each "key" sexp_of_key sample_keys (fun key ->
           test_mutate (fun t ->
             Hashtbl.incr t key))
+
+      let decr = Hashtbl.decr
+
+      let%test_unit "decr" =
+        for_each "key" sexp_of_key sample_keys (fun key ->
+          test_mutate (fun t ->
+            Hashtbl.decr t key))
 
       let add_multi = Hashtbl.add_multi
 

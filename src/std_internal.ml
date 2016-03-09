@@ -1,3 +1,5 @@
+(* We don't just include Sexplib.Std because one can only define Hashtbl once in this
+   module. *)
 
 (* handy shortcuts *)
 include Common

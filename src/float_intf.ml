@@ -209,7 +209,7 @@ module type S = sig
       [3.14] as [3.1400000000000001243].  The only exception is that occasionally it will
       output 17 significant digits when the number can be represented with just 16 (but
       not 15 or less) of them. *)
-  val to_string_round_trippable : float -> string
+  val to_string_round_trippable : t -> string
 
   (** Pretty print float, for example [to_string_hum ~decimals:3 1234.1999 = "1_234.200"]
       [to_string_hum ~decimals:3 ~strip_zero:true 1234.1999 = "1_234.2" ].  No delimiters
@@ -218,7 +218,7 @@ module type S = sig
     :  ?delimiter:char  (** defaults to ['_'] *)
     -> ?decimals:int    (** defaults to [3] *)
     -> ?strip_zero:bool (** defaults to [false] *)
-    -> float
+    -> t
     -> string
 
   (** Produce a lossy compact string representation of the float.  The float is scaled by
@@ -270,7 +270,7 @@ module type S = sig
       |}
 
   *)
-  val to_padded_compact_string : float -> string
+  val to_padded_compact_string : t -> string
 
   (** [int_pow x n] computes [x ** float n] via repeated squaring.  It is generally much
       faster than [**].
@@ -332,11 +332,21 @@ module type S = sig
   (** [is_finite t] returns [true] iff [classify t] is in [Normal; Subnormal; Zero;]. *)
   val is_finite : t -> bool
 
-  module Sign : sig
-    type t = Neg | Zero | Pos [@@deriving sexp]
-  end
-
+  (* Caution: If we remove this sig item, [sign] will still be present from
+     [Comparable.With_zero]. *)
   val sign : t -> Sign.t
+     [@@deprecated "[since 2016-01] Replace [sign] with [robust_sign] or [sign_exn]"]
+
+  (** (Formerly [sign]) Uses robust comparison (so sufficiently small numbers are mapped
+      to [Zero]).  Also maps nan to [Zero].  Using this function is weakly discouraged. *)
+  val robust_sign : t -> Sign.t
+
+  (** The sign of a float.  Both [-0.] and [0.] map to [Zero].  Raises on nan.  All other
+      values map to [Neg] or [Pos]. *)
+  val sign_exn : t -> Sign.t
+
+  module Sign_or_nan : sig type t = Neg | Zero | Pos | Nan end
+  val sign_or_nan : t -> Sign_or_nan.t
 
   (** These functions construct and destruct 64-bit floating point numbers based on their
       IEEE representation with sign bit, 11-bit non-negative (biased) exponent, and 52-bit

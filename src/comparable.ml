@@ -42,6 +42,7 @@ module With_zero
   let is_non_negative t = compare t zero >= 0
   let is_negative     t = compare t zero <  0
   let is_non_positive t = compare t zero <= 0
+  let sign t = Sign0.of_int (compare t zero)
 end
 
 module Validate_with_zero
@@ -138,6 +139,19 @@ end) = struct
   include Validate (T)
 end
 
+module Make_using_comparator (T : sig
+    type t [@@deriving sexp]
+    include Comparator.S with type t := t
+  end) : S with type t := T.t and type comparator_witness = T.comparator_witness = struct
+  include T
+  include Make_common (struct
+      include T
+      let compare = comparator.compare
+    end)
+  module Map = Core_map.Make_using_comparator (T)
+  module Set = Core_set.Make_using_comparator (T)
+end
+
 module Make (T : sig
   type t [@@deriving compare, sexp]
 end) : S with type t := T.t = struct
@@ -145,10 +159,20 @@ end) : S with type t := T.t = struct
     include T
     include Comparator.Make (T)
   end
-  include C
-  include Make_common (C)
-  module Map = Core_map.Make_using_comparator (C)
-  module Set = Core_set.Make_using_comparator (C)
+  include Make_using_comparator (C)
+end
+
+module Make_binable_using_comparator (T : sig
+  type t [@@deriving bin_io, sexp]
+  include Comparator.S with type t := t
+end) = struct
+  include T
+  include Make_common (struct
+      include T
+      let compare = comparator.compare
+    end)
+  module Map = Core_map.Make_binable_using_comparator (T)
+  module Set = Core_set.Make_binable_using_comparator (T)
 end
 
 module Make_binable (T : sig
@@ -158,10 +182,7 @@ end) = struct
     include T
     include Comparator.Make (T)
   end
-  include C
-  include Make_common (C)
-  module Map = Core_map.Make_binable_using_comparator (C)
-  module Set = Core_set.Make_binable_using_comparator (C)
+  include Make_binable_using_comparator (C)
 end
 
 module Inherit

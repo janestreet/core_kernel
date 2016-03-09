@@ -279,6 +279,26 @@ val to_sequence
   -> ('a, 'cmp) t
   -> 'a Sequence.t
 
+(** Produces the elements of the two sets between [greater_or_equal_to] and
+    [less_or_equal_to] in [order], noting whether each element appears in the left set,
+    the right set, or both.  In the both case, both elements are returned, in case the
+    caller can distinguish between elements that are equal to the sets' comparator.  Runs
+    in O(length t + length t'). *)
+module Merge_to_sequence_element : sig
+  type 'a t = 'a Sequence.Merge_with_duplicates_element.t =
+    | Left of 'a
+    | Right of 'a
+    | Both of 'a * 'a
+  [@@deriving bin_io, compare, sexp]
+end
+val merge_to_sequence
+  :  ?order               : [ `Increasing (** default *) | `Decreasing ]
+  -> ?greater_or_equal_to : 'a
+  -> ?less_or_equal_to    : 'a
+  -> ('a, 'cmp) t
+  -> ('a, 'cmp) t
+  -> 'a Merge_to_sequence_element.t Sequence.t
+
 (** Convert a set to or from a map.  [to_map] takes a function to produce data for each
     key.  Both functions run in O(n) time (assuming the function passed to [to_map] runs
     in constant time). *)

@@ -159,6 +159,11 @@ val partitioni_tf : 'a t -> f:(int -> 'a -> bool) -> 'a t * 'a t
 
 val cartesian_product : 'a t -> 'b t -> ('a * 'b) t
 
+(** [transpose] in the sense of a matrix transpose.  It returns [None] if the arrays are
+    not all the same length. *)
+val transpose     : 'a t t -> 'a t t option
+val transpose_exn : 'a t t -> 'a t t
+
 (** [normalize array index] returns a new index into the array such that if index is
     less than zero, the returned index will "wrap around" -- i.e. array.(normalize array
     (-1)) returns the last element of the array. *)
@@ -429,6 +434,8 @@ module Permissioned : sig
     -> f:(int -> 'a -> bool)
     -> ('a, [< _ perms]) t * ('a, [< _ perms]) t
   val cartesian_product : ('a, [> read]) t -> ('b, [> read]) t -> ('a * 'b, [< _ perms]) t
+  val transpose     : (('a, [> read]) t, [> read]) t -> (('a, [< _ perms]) t, [< _ perms]) t option
+  val transpose_exn : (('a, [> read]) t, [> read]) t -> (('a, [< _ perms]) t, [< _ perms]) t
   val normalize : (_, _) t -> int -> int
   val slice : ('a, [> read]) t -> int -> int -> ('a, [< _ perms]) t
   val nget : ('a, [> read] ) t -> int -> 'a

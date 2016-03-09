@@ -1,3 +1,204 @@
+## 113.33.00
+
+- Rename Tuple.T2.map1 and Tuple.T2.map2 to `map_fst` and `map_snd`,
+  following the convention of the accessors.  Usually, numeric suffixes
+  mean higher arities, not different fields.
+
+- After discussion, rather than checking for overflow in `Time_ns`
+  arithmetic, clarify that it's silently ignored.  (Subsequent
+  conversions may or may not notice.)
+
+  We did identify the set of functions to document:
+
+      Time_ns.Span.((+), (-), scale_int, scale_int63, create, of_parts)
+      Time_ns.(add, sub, diff, abs_diff, next_multiple)
+
+  Added `Core_int63.(add_with_overflow_exn, abs_with_overflow_exn, neg_with_overflow_exn)`
+  in the course of abandoned work on overflow detection in `Time_ns`.  These may
+  be useful.  `mul_with_overflow_exn` was abandoned because
+    1. it's a lot of work to review
+    2. there's a better approach: Go to the C level and check the high word of
+       the product from the IMUL instruction, which is both simpler and faster.
+
+- Changes related to Float.sign
+
+  Float.sign currently maps -1e-8 and nan to Zero.  Some users don't
+  expect this.  This feature addresses that via the following changes:
+
+  - `Float.sign` renamed to `Float.robust_sign`.  (`Float.sign` is
+    still present, but deprecated.)
+
+  - `Float.sign_exn` introduced which does not use robust comparison,
+    and which raises on `nan`.
+
+  - `Sign` pulled out of `Float` and made its own module, and
+    `sign : t -> Sign.t` added to `Comparable.With_zero`.  In particular,
+    `Int.sign : int -> Sign.t` now exists.  (In looking at existing uses
+    of `Float.sign`, there was at least one case where the user was
+    converting an int to a float to get its sign.  That ended up being
+    deleted, but it still seems desirable to have `Int.sign`.
+    There were also record types with a field `sign : Float.Sign.t` where
+    logically the type has no real connection to `Float`.)
+
+  - Uses of `Float.robust_sign` revisited to make sure that's the behavior
+    we want.
+
+- Added Quickcheck tests for `Hashtbl` functions, using `Map` as a point of comparison.
+  A lot of `Hashtbl` functions did not have tests, so I used an interface trick to
+  require every function to show up in the test module.  The easiest way to write a readable
+  test for every function was to compare it to a similar datatype, so I went with `Map`.
+
+- Allow clients of `Hashtbl.incr` and `Hashtbl.decr` to specify entries should be removed if the value is 0
+
+- The type of `symmetric_diff` has a typo in it.
+
+- Switched `Timing_wheel_ns` to use `%message` and `%sexp`.
+
+- Improved the error message raised by `Timing_wheel.add` and
+  `reschedule` if the supplied time is before the start of the current
+  interval.
+
+  Previously, the error message was something like:
+
+    ("Timing_wheel.Priority_queue got invalid key"
+     (key ...) (timing_wheel ...))
+
+  Now, it will be like:
+
+    ("Timing_wheel cannot schedule alarm before start of current interval"
+     (at ...) (now_interval_num_start ...))
+
+  The old message was confusing because `key` is less understandable
+  than `at`, and because it didn't make clear that this is a usage
+  error, as opposed to a Timing_wheel bug.
+
+  Implementing this efficiently required adding a field to timing wheel:
+
+    mutable now_interval_num_start : Time_ns.t
+
+  so that the check done by `add` is fast.
+
+- Add `Comparable.Make_using_comparator`.
+
+  Since `Map` and `Set` already have `Make_using_comparator` functors,
+  there's no particular reason for `Comparable` not to have one.
+
+  More concretely, this will be useful when (if) we add stable
+  containers to core: we can add a stable version of `Comparable.Make`,
+  then pass the resulting comparator into the unstable functor to get
+  equal types.
+
+- Add a `Total_map.Make_using_comparator` functor to allow the creation
+  of total maps which are type equivalent to regular maps.
+
+- Change default major heap increments to be % of the heap size instead of a constant increment
+
+  Also changed type of overhead parameters to Percent.t
+
+- Remove modules `Core.Std.Sexp.Sexp_{option,list,array,opaque}`, which
+  used to allow binability for types `sexp_option`, `sexp_list`, etc.,
+  but now serve no purpose.
+
+- Change the signature of the output of
+  `Comparable.Make{,_binable}_using_comparator` to not include `comparator_witness`.
+
+  This is so that code like this will compile:
+
+    include T
+    include Comparable.Make_using_comparator (T)
+
+- Changed `Timing_wheel_ns` so that it only supports times at or after
+  the epoch, i.e. only non-negative `Time_ns.t` values.  Times before
+  the epoch aren't needed, and supporting negative times unnecessarily
+  complicates the implementation.
+
+  Removed fields from `Timing_wheel_ns.t` that are now constants:
+
+    ; min_time         : Time_ns.t
+    ; max_time         : Time_ns.t
+    ; min_interval_num : Interval_num.t
+
+- In `Timing_wheel.t`, cache `alarm_upper_bound`, which allows us to
+  give an improved error message when `Timing_wheel.add` is called with
+  a time beyond `alarm_upper_bound`.
+
+- Add `Sequence.merge_with_duplicates`
+
+    (** `merge_with_duplicates_element t1 t2 ~cmp` interleaves the elements of `t1` and `t2`.
+        Where the two next available elements of `t1` and `t2` are unequal according to `cmp`,
+        the smaller is produced first. *)
+    val merge_with_duplicates
+      :  'a t
+      -> 'a t
+      -> cmp:('a -> 'a -> int)
+
+    module Merge_with_duplicates_element : sig
+      type 'a t =
+        | Left of 'a
+        | Right of 'a
+        | Both of 'a * 'a
+      `@@deriving bin_io, compare, sexp`
+    end
+
+- Add `Set.merge_to_sequence`
+
+    (** Produces the elements of the two sets between `greater_or_equal_to` and
+        `less_or_equal_to` in `order`, noting whether each element appears in the left set,
+        the right set, or both.  In the both case, both elements are returned, in case the
+        caller can distinguish between elements that are equal to the sets' comparator.  Runs
+        in O(length t + length t'). *)
+
+    val merge_to_sequence
+      :  ?order               : ` `Increasing (** default *) | `Decreasing `
+      -> ?greater_or_equal_to : 'a
+      -> ?less_or_equal_to    : 'a
+      -> ('a, 'cmp) t
+      -> ('a, 'cmp) t
+      -> 'a Merge_to_sequence_element.t Sequence.t
+
+    module Merge_to_sequence_element : sig
+      type 'a t = 'a Sequence.Merge_with_duplicates_element.t =
+        | Left of 'a
+        | Right of 'a
+        | Both of 'a * 'a
+      `@@deriving bin_io, compare, sexp`
+    end
+
+- Make `Hashtbl.merge_into` take explicit variant type
+
+    type 'a merge_into_action = Remove | Set_to of 'a
+
+    val merge_into
+    :  f:(key:'k key -> 'a1 -> 'a2 option -> 'a2 merge_into_action)
+    -> src:('k, 'a1) t
+    -> dst:('k, 'a2) t
+    -> unit
+
+  The `f` used to return 'a2 option, and it was unclear whether None
+  meant do nothing or remove.  (It meant do nothing.)
+
+- Some red-black tree code showed a 15-20% speedup by inlining the
+  comparison, rather than relying on the `caml_int_compare` external
+  call. I've tried to cleanly apply it to `Core_int` (though it can't
+  really be done without an Obj.magic), though this may be a better fit
+  for a compiler patch to treat int comparisons as an intrinsic.
+
+  Testing
+  -------
+  Added an inline test for boundary cases. Presently it returns the
+  identical values to `caml_int_compare`, though probably it should only
+  be held to same sign results.
+
+- Rename `Hashtbl.[filter_]replace_all[i]` to `Hashtbl.[filter_]map[i]_inplace`.
+
+- Import `debug.ml` from incremental.
+
+- `Float_intf` used 'float' sometimes where it means 't'.
+
+- Added `Identifiable.Make_with_comparator`, for situations where you want
+  to preserve the already known comparator, for example to define stable
+  sets and maps that are type equivalent to unstable types and sets.
+
 ## 113.24.00
 
 - Add `Container.Make0` for monomorphic container types.

@@ -319,7 +319,9 @@ val range'
   -> 'a
   -> 'a t
 
-(** [init n ~f] is [[(f 0); (f 1); ...; (f (n-1))]]. It is an error if [n < 0]. *)
+(** [init n ~f] is [[(f 0); (f 1); ...; (f (n-1))]].  It is an error if [n < 0].
+    [List.init] applies [f] to values in decreasing order; starting with [n-1], and ending
+    with [0]. This is the opposite order to [Array.init]. *)
 val init : int -> f:(int -> 'a) -> 'a t
 
 (** [rev_filter_map l ~f] is the reversed sublist of [l] containing

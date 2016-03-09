@@ -1,7 +1,6 @@
 (** One typically obtains a [Source_code_position.t] using a [[%here]] expression, which
     is implemented by the [ppx_here] preprocessor. *)
 
-open Sexplib
 
 type t
   = Lexing.position

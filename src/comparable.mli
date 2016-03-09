@@ -66,9 +66,23 @@ module Make (T : sig
   type t [@@deriving compare, sexp]
 end) : S with type t := T.t
 
+module Make_using_comparator (T : sig
+    type t [@@deriving sexp]
+    include Comparator.S with type t := t
+  end) : S
+  with type t := T.t
+  with type comparator_witness := T.comparator_witness
+
 module Make_binable (T : sig
   type t [@@deriving bin_io, compare, sexp]
 end) : S_binable with type t := T.t
+
+module Make_binable_using_comparator (T : sig
+    type t [@@deriving bin_io, sexp]
+    include Comparator.S with type t := t
+  end) : S_binable
+  with type t := T.t
+  with type comparator_witness := T.comparator_witness
 
 module Map_and_set_binable (T : sig type t [@@deriving bin_io, compare, sexp] end)
   : Map_and_set_binable with type t := T.t

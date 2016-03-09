@@ -476,32 +476,76 @@ let nth_exn s n =
   | None -> failwith "Sequence.nth"
   | Some x -> x
 
-let merge (Sequence (s1, next1)) (Sequence (s2, next2)) ~cmp =
+module Merge_with_duplicates_element = struct
+  type 'a t =
+    | Left of 'a
+    | Right of 'a
+    | Both of 'a * 'a
+  [@@deriving bin_io, compare, sexp]
+end
+
+let merge_with_duplicates (Sequence (s1, next1)) (Sequence (s2, next2)) ~cmp =
+  let open Merge_with_duplicates_element in
   let next = function
     | Skip s1, s2 -> Skip (next1 s1, s2)
-    | (s1, Skip s2) -> Skip (s1, next2 s2)
+    | s1, Skip s2 -> Skip (s1, next2 s2)
     | (Yield (a, s1') as s1), (Yield (b, s2') as s2) ->
-      if cmp a b <= 0
-      then Yield (a, (Skip s1', s2))
-      else Yield (b, (s1, Skip s2'))
+      let comparison = cmp a b in
+      if comparison < 0
+      then Yield (Left a, (Skip s1', s2))
+      else if comparison = 0
+      then Yield (Both (a, b), (Skip s1', Skip s2'))
+      else Yield (Right b, (s1, Skip s2'))
     | Done, Done -> Done
-    | Yield (a, s1), Done -> Yield (a, (Skip s1, Done))
-    | Done, Yield (b, s2) -> Yield (b, (Done, Skip s2))
+    | Yield (a, s1), Done -> Yield (Left  a, (Skip s1, Done))
+    | Done, Yield (b, s2) -> Yield (Right b, (Done, Skip s2))
   in
   Sequence((Skip s1, Skip s2), next)
 
-let%test _ = to_list (merge (of_list [1;3;4;6])
-                      (of_list [2;5;7]) ~cmp:Pervasives.compare) = [1;2;3;4;5;6;7]
+let merge s1 s2 ~cmp =
+  merge_with_duplicates s1 s2 ~cmp
+  |> map ~f:(function Left x | Right x | Both (x, _) -> x)
+
+let%test_module "Sequence.merge*" =
+  (module struct
+    let%test_unit _ =
+      [%test_eq: int Merge_with_duplicates_element.t list]
+        (to_list
+           (merge_with_duplicates
+              (of_list [ 1; 2; ])
+              (of_list [ 2; 3; ])
+              (* Can't use Core_int.compare because it would be a dependency cycle. *)
+              ~cmp:Pervasives.compare))
+        [ Left 1; Both (2, 2); Right 3; ]
+
+    let%test_unit _ =
+      [%test_eq: int Merge_with_duplicates_element.t list]
+        (to_list
+           (merge_with_duplicates
+              (of_list [ 2; 1; ])
+              (of_list [ 2; 3; ])
+              ~cmp:Pervasives.compare))
+        [ Both (2, 2); Left 1; Right 3; ]
+
+    let%test_unit _ =
+      [%test_eq: (int * string) list]
+        (to_list
+           (merge
+              (of_list [ (0, "A"); (1, "A"); ])
+              (of_list [ (1, "B"); (2, "B"); ])
+              ~cmp:(fun a b -> [%compare: int] (fst a) (fst b))))
+        [ (0, "A"); (1, "A"); (2, "B"); ]
+  end)
 
 let hd s =
- let rec loop s next =
-   match next s with
-   | Done -> None
-   | Skip s -> loop s next
-   | Yield(a,_) -> Some a
- in
- match s with
- | Sequence (s,next) -> loop s next
+  let rec loop s next =
+    match next s with
+    | Done -> None
+    | Skip s -> loop s next
+    | Yield(a,_) -> Some a
+  in
+  match s with
+  | Sequence (s,next) -> loop s next
 
 let%test _ = hd s12345 = Some 1
 let%test _ = hd sempty = None

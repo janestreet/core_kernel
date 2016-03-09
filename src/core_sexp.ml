@@ -23,22 +23,6 @@ end
 
 include T
 
-module Sexp_option = struct
-  type 'a t = 'a option [@@deriving bin_io, compare]
-end
-
-module Sexp_list = struct
-  type 'a t = 'a list [@@deriving bin_io, compare]
-end
-
-module Sexp_array = struct
-  type 'a t = 'a array [@@deriving bin_io, compare]
-end
-
-module Sexp_opaque = struct
-  type 'a t = 'a [@@deriving bin_io, compare]
-end
-
 module Sexp_maybe = struct
 
   type sexp = t [@@deriving bin_io, compare]             (* avoid recursive type *)

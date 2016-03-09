@@ -1,5 +1,7 @@
 module Sexp = Sexplib.Sexp
 
+(** For Quickcheck overview see: http://docs/programming/unit-testing/quickcheck.html *)
+
 module type Generator = sig
 
   (** An ['a t] a generates values of type ['a] with a specific probability

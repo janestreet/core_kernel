@@ -206,15 +206,14 @@ module type Accessors = sig
         -> ('k, 'c) t)
        map_options
 
-  (** Merge one hashtable into another.
+  (** Every [key] in [src] will be removed or set in [dst] according to the return value
+      of [f]. *)
+  type 'a merge_into_action = Remove | Set_to of 'a
 
-      After [merge_into f src dst], for every [key] in [src], [key] will be
-      re-mapped in [dst] to [v] if [f ~key d1 (find dst key) = Some v].
-  *)
   val merge_into
-    :  f:(key:'a key -> 'b -> 'c option -> 'c option)
-    -> src:('a, 'b) t
-    -> dst:('a, 'c) t
+    :  src:('k, 'a) t
+    -> dst:('k, 'b) t
+    -> f:(key:'k key -> 'a -> 'b option -> 'b merge_into_action)
     -> unit
 
   (** Returns the list of all keys for given hashtable. *)
@@ -226,12 +225,23 @@ module type Accessors = sig
   val filter_inplace : (_, 'b) t -> f:('b -> bool) -> unit
   val filteri_inplace : ('a, 'b) t -> f:(key:'a key -> data:'b -> bool) -> unit
   val filter_keys_inplace : ('a, _) t -> f:('a key -> bool) -> unit
-  (** [replace_all t ~f] applies f to all elements in [t], transforming them in place *)
+
+  (** [map_inplace t ~f] applies f to all elements in [t], transforming them in place *)
+  val map_inplace  : (_,  'b) t -> f:(                   'b -> 'b) -> unit
+  val mapi_inplace : ('a, 'b) t -> f:(key:'a key -> data:'b -> 'b) -> unit
+
+  (** [filter_map_inplace] combines the effects of [map_inplace] and [filter_inplace] *)
+  val filter_map_inplace  : (_,  'b) t -> f:(                   'b -> 'b option) -> unit
+  val filter_mapi_inplace : ('a, 'b) t -> f:(key:'a key -> data:'b -> 'b option) -> unit
+
   val replace_all : (_, 'b) t -> f:('b -> 'b) -> unit
+    [@@ocaml.deprecated "[since 2016-02] Use map_inplace instead"]
   val replace_alli : ('a, 'b) t -> f:(key:'a key -> data:'b -> 'b) -> unit
-  (** [filter_replace_all] combines the effects of [replace_all] and [filter_inplace] *)
+    [@@ocaml.deprecated "[since 2016-02] Use mapi_inplace instead"]
   val filter_replace_all : (_, 'b) t -> f:('b -> 'b option) -> unit
+    [@@ocaml.deprecated "[since 2016-02] Use filter_map_inplace instead"]
   val filter_replace_alli : ('a, 'b) t -> f:(key:'a key -> data:'b -> 'b option) -> unit
+    [@@ocaml.deprecated "[since 2016-02] Use filter_mapi_inplace instead"]
 
   (** [equal t1 t2 f] and [similar t1 t2 f] both return true iff [t1] and [t2] have the
       same keys and for all keys [k], [f (find_exn t1 k) (find_exn t2 k)].  [equal] and
@@ -247,7 +257,9 @@ module type Accessors = sig
     -> 'b Validate.check
     -> ('a, 'b) t Validate.check
 
-  val incr : ?by:int -> ('a, int) t -> 'a key -> unit
+  (** [remove_if_zero]'s default is [false]. *)
+  val incr : ?by:int -> ?remove_if_zero:bool -> ('a, int) t -> 'a key -> unit
+  val decr : ?by:int -> ?remove_if_zero:bool -> ('a, int) t -> 'a key -> unit
 end
 
 type ('key, 'data, 'z) create_options_without_hashable =

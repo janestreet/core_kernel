@@ -71,3 +71,11 @@ let obs =
 
 let shrinker =
   Quickcheck.Shrinker.empty ()
+
+(* We use [Obj.magic] here as other implementations generate a conditional jump and the
+   performance difference is noticeable. *)
+let to_int (x : bool) = (Obj.magic x : int)
+let () =
+  assert (Pervasives.(=) (to_int true ) 1 &&
+          Pervasives.(=) (to_int false) 0);
+;;

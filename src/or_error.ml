@@ -43,12 +43,14 @@ include Applicative.Make (struct
   end)
 
 module Let_syntax = struct
-  let return = return
-  let map    = map
-  let bind   = bind
-  let both   = both (* from Applicative.Make *)
-  module Open_on_rhs  = struct let return = return end
-  module Open_in_body = struct let return = return end
+  module Let_syntax = struct
+    let return = return
+    let map    = map
+    let bind   = bind
+    let both   = both (* from Applicative.Make *)
+    module Open_on_rhs  = struct let return = return end
+    module Open_in_body = struct let return = return end
+  end
 end
 
 let ignore = ignore_m

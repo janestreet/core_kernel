@@ -1,11 +1,17 @@
-(** Time represented as an [Int63.t] number of nanoseconds since the epoch. *)
+(** Time represented as an [Int63.t] number of nanoseconds since the epoch.
+
+    See {!Core.Time_ns} for important user documentation.
+
+    Internally, arithmetic is not overflow-checked.  Instead, overflows are silently
+    ignored, as for [int] arithmetic.  Conversions may (or may not) raise if prior
+    arithmetic operations overflowed. *)
 
 open Std_internal
 
 module Span : sig
-  (** [Core_int63.t] is immediate on 64bit boxes and so plays nicely with the GC write
-      barrier.  Unfortunately, [private Core_int63.t] is necessary for the compiler to
-      optimize uses. *)
+  (** [t] is immediate on 64bit boxes and so plays nicely with the GC write barrier.
+      Unfortunately, [private Core_int63.t] is necessary for the compiler to optimize
+      uses. *)
   type t = private Core_int63.t [@@deriving compare, typerep, bin_io]
 
   include Comparable.Infix     with type t := t
@@ -53,21 +59,23 @@ module Span : sig
   val min_value : t
   val max_value : t
 
-  val ( + ) : t -> t -> t
-  val ( - ) : t -> t -> t
-  val abs : t -> t
-  val neg : t -> t
+  val ( + ) : t -> t -> t (** overflows silently                *)
+  val ( - ) : t -> t -> t (** overflows silently                *)
+  val abs   : t -> t      (** overflows silently on [min_value] *)
+  val neg   : t -> t      (** overflows silently on [min_value] *)
+  val max : t -> t -> t
 
   val scale       : t -> float        -> t
-  val scale_int   : t -> int          -> t
-  val scale_int63 : t -> Core_int63.t -> t
+  val scale_int   : t -> int          -> t (** overflows silently *)
+  val scale_int63 : t -> Core_int63.t -> t (** overflows silently *)
 
   val div    : t -> t     -> Core_int63.t
   val ( / )  : t -> float -> t
   val ( // ) : t -> t     -> float
 
+  (** Overflows silently. *)
   val create
-    :  ?sign : Float.Sign.t
+    :  ?sign : Sign.t
     -> ?day : int
     -> ?hr  : int
     -> ?min : int
@@ -81,7 +89,7 @@ module Span : sig
   (** Similar to {!Time.Span.Parts}, but adding [ns]. *)
   module Parts : sig
     type t =
-      { sign : Float.Sign.t
+      { sign : Sign.t
       ; hr   : int
       ; min  : int
       ; sec  : int
@@ -93,7 +101,7 @@ module Span : sig
   end
 
   val to_parts : t -> Parts.t
-  val of_parts : Parts.t -> t
+  val of_parts : Parts.t -> t  (** overflows silently *)
 
   include Robustly_comparable with type t := t
 
@@ -131,19 +139,20 @@ val max_value : t
 
 val now : unit -> t
 
-val add : t -> Span.t -> t
-val sub : t -> Span.t -> t
-val diff : t -> t -> Span.t
-val abs_diff : t -> t -> Span.t
+val add : t -> Span.t -> t (** overflows silently *)
+val sub : t -> Span.t -> t (** overflows silently *)
+val diff     : t -> t -> Span.t (** overflows silently *)
+val abs_diff : t -> t -> Span.t (** overflows silently *)
+val max : t -> t -> t
 
 val to_span_since_epoch : t -> Span.t
 val of_span_since_epoch : Span.t -> t
 
-val to_int63_ns_since_epoch : t ->      Core_int63.t
-val of_int63_ns_since_epoch : Core_int63.t ->      t
+val to_int63_ns_since_epoch : t -> Core_int63.t
+val of_int63_ns_since_epoch : Core_int63.t -> t
 
 (** Will raise on 32-bit platforms.  Consider [to_int63_ns_since_epoch] instead. *)
-val to_int_ns_since_epoch : t   -> int
+val to_int_ns_since_epoch : t -> int
 val of_int_ns_since_epoch : int -> t
 
 (** [next_multiple ~base ~after ~interval] returns the smallest [time] of the form:
@@ -154,7 +163,9 @@ val of_int_ns_since_epoch : int -> t
 
     where [k >= 0] and [time > after].  It is an error if [interval <= 0].
 
-    Supplying [~can_equal_after:true] allows the result to satisfy [time >= after]. *)
+    Supplying [~can_equal_after:true] allows the result to satisfy [time >= after].
+
+    Overflows silently. *)
 val next_multiple
   :  ?can_equal_after:bool  (** default is [false] *)
   -> base:t

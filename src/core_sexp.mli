@@ -14,7 +14,7 @@ include Comparable     with type t := t
 include Stringable     with type t := t
 include Quickcheckable with type t := t
 
-include Sexp_intf.S with type t := t
+include (module type of struct include Sexp end) with type t := t
 
 exception Of_sexp_error of exn * t
 
@@ -27,28 +27,6 @@ val of_int_style : [ `Underscores | `No_underscores ] ref
 
     WARNING: The resulting [no_raise_of_sexp] can still raise. *)
 type 'a no_raise = 'a [@@deriving bin_io, sexp]
-
-(** Please refer to the Sexplib documentation in base/sexplib/doc to learn more about
-    sexp_option, sexp_list, and sexp_array generators. *)
-
-(** The purpose of these modules is to allow bin_io to work with these special sexp types.
-    The more direct method of adding "with bin_io" at the point of the initial declaration
-    of the types is not possible because sexplib does not (should not) depend on bin_io. *)
-module Sexp_option : sig
-  type 'a t = 'a option [@@deriving bin_io, compare]
-end
-
-module Sexp_list : sig
-  type 'a t = 'a list [@@deriving bin_io, compare]
-end
-
-module Sexp_array : sig
-  type 'a t = 'a array [@@deriving bin_io, compare]
-end
-
-module Sexp_opaque : sig
-  type 'a t = 'a [@@deriving bin_io, compare]
-end
 
 (** If [sexp_of_t fails], it returns [Error] rather than raising. You can convert values
     of this type to and from sexp in processes that can or cannot parse the underlying

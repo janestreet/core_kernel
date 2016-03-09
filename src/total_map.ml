@@ -1,6 +1,6 @@
 open Std_internal
 
-type ('key, 'a, 'cmp) t = ('key, 'a, 'cmp) Map.t
+type ('key, 'a, 'cmp, 'enum) t = ('key, 'a, 'cmp) Map.t
 
 let to_map x = x
 
@@ -63,22 +63,28 @@ module type S = sig
   module Key : Key
 
   type comparator_witness
+  type enumeration_witness
 
-  type nonrec 'a t = (Key.t, 'a, comparator_witness) t [@@deriving sexp, bin_io, compare]
+  type nonrec 'a t = (Key.t, 'a, comparator_witness, enumeration_witness) t
+  [@@deriving sexp, bin_io, compare]
 
   include Applicative with type 'a t := 'a t
 
   val create : (Key.t -> 'a) -> 'a t
 end
 
-module Make (Key : Key) = struct
+module Make_using_comparator (Key : sig
+    include Key
+    include Comparator.S with type t := t
+  end) = struct
 
   module Key = struct
     include Key
-    include Comparable.Make_binable (Key)
+    include Comparable.Make_binable_using_comparator (Key)
   end
 
   type comparator_witness = Key.comparator_witness
+  type enumeration_witness
 
   type 'a t = 'a Key.Map.t [@@deriving sexp, compare]
 
@@ -126,3 +132,8 @@ module Make (Key : Key) = struct
       let map = `Custom map
     end)
 end
+
+module Make (Key : Key) = Make_using_comparator (struct
+    include Key
+    include Comparable.Make_binable (Key)
+  end)

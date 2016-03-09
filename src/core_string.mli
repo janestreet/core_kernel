@@ -1,4 +1,4 @@
-(** An extension of the standard StringLabels. If you open Core.Std, you'll get
+(** An extension of the standard StringLabels. If you open! Core.Std, you'll get
     these in the String module. *)
 
 type t = string [@@deriving bin_io, sexp, typerep]
@@ -241,14 +241,12 @@ val tr : target : char -> replacement : char -> t -> t
     replacing every instance of [target] in [s] with [replacement]. *)
 val tr_inplace : target : char -> replacement : char -> t -> unit
 
-(** [chop_suffix s ~suf] returns a copy [s] without the trailing [suff]
-    @raise Invalid_argument is [suff] is not a suffix of [s]
-*)
+(** [chop_suffix_exn s ~suffix] returns a copy of [s] without the trailing [suffix]
+    @raise Invalid_argument if [suffix] is not a suffix of [s] *)
 val chop_suffix_exn : t -> suffix:t -> t
 
-(** [chop_prefix s ~pref] returns a copy [s] without the leading [pref]
-    @raise Invalid_argument is [pref] is not a prefix of [s]
-*)
+(** [chop_prefix_exn s ~prefix] returns a copy of [s] without the leading [prefix]
+    @raise Invalid_argument if [prefix] is not a prefix of [s] *)
 val chop_prefix_exn : t -> prefix:t -> t
 
 val chop_suffix : t -> suffix:t -> t option

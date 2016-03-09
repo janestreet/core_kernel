@@ -12,7 +12,7 @@
     timing wheel.  Alarms only fire in response to an [advance_clock] call.
 
     When one [create]s a timing wheel, one supplies an initial time, [start], and an
-    [alarm_precision].  The timing wheel breaks all time from [start] onwards into
+    [alarm_precision].  The timing wheel breaks all time from the epoch onwards into
     half-open intervals of size [alarm_precision], with the bottom half of each interval
     closed, and the top half open.  Alarms in the same interval fire in the same call to
     [advance_clock], as soon as [now t] is greater than all the times in the interval.
@@ -44,7 +44,7 @@
     {1 Implementation}
     ==================
     A timing wheel is implemented using a specialized priority queue in which the
-    half-open intervals from [start] onwards are numbered 0, 1, 2, etc.  Each time is
+    half-open intervals from the epoch onwards are numbered 0, 1, 2, etc.  Each time is
     stored in the priority queue with the key of its interval number.  Thus all alarms
     with a time in the same interval get the same key, and hence fire at the same time.
     More specifically, an alarm is fired when the clock reaches or passes the time at the
@@ -262,10 +262,9 @@ module type Timing_wheel = sig
   end
 
   (** [create ~config ~start] creates a new timing wheel with current time [start].
-
-      For a fixed [level_bits], a smaller (i.e. more precise) [alarm_precision] decreases
-      the representable range of times/keys and increases the constant factor for
-      [advance_clock]. *)
+      [create] raises if [start < Time.epoch].  For a fixed [level_bits], a smaller
+      (i.e. more precise) [alarm_precision] decreases the representable range of
+      times/keys and increases the constant factor for [advance_clock]. *)
   val create : config:Config.t -> start:Time.t -> 'a t
 
   (** Accessors *)
@@ -280,18 +279,15 @@ module type Timing_wheel = sig
   val iter : 'a t -> f:('a Alarm.t -> unit) -> unit
 
   (** [interval_num t time] returns the number of the interval that [time] is in, where
-      [0] is the interval that starts at [start].  [interval_num] raises if [time] is too
-      far in the past or future to represent.
+      [0] is the interval that starts at [Time.epoch].  [interval_num] raises if [Time.( <
+      ) time Time.epoch].
 
       [now_interval_num t] equals [interval_num t (now t)]. *)
   val interval_num     : _ t -> Time.t -> Interval_num.t
   val now_interval_num : _ t           -> Interval_num.t
 
-  (** [interval_num_start t n] is the start of the [n]'th interval in [t], i.e.:
-
-      {[
-        start t + n * alarm_precision t
-      ]}
+  (** [interval_num_start t n] is the start of the [n]'th interval in [t], i.e.
+      [n * alarm_precision t] after the epoch.
 
       [interval_start t time] is the start of the half-open interval containing [time],
       i.e.:

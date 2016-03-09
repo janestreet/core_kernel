@@ -22,6 +22,7 @@ open With_return
 module Array = Core_array
 module List = Core_list
 module Map = Core_map
+module Merge_to_sequence_element = Merge_to_sequence_element
 
 open Int_replace_polymorphic_compare
 
@@ -585,6 +586,7 @@ module Tree0 = struct
       in
       Sequence.unfold_step ~init:(of_set t1, of_set t2) ~f:step
     ;;
+
   end
 
   let to_sequence_increasing comparator ~from_elt t =
@@ -632,6 +634,18 @@ module Tree0 = struct
     | `Decreasing ->
       let t = Option.fold greater_or_equal_to ~init:t ~f:(inclusive_bound snd) in
       to_sequence_decreasing comparator ~from_elt:less_or_equal_to t
+  ;;
+
+  let merge_to_sequence comparator ?(order = `Increasing)
+        ?greater_or_equal_to ?less_or_equal_to t t' =
+    Sequence.merge_with_duplicates
+      (to_sequence comparator ~order ?greater_or_equal_to ?less_or_equal_to t)
+      (to_sequence comparator ~order ?greater_or_equal_to ?less_or_equal_to t')
+      ~cmp:begin
+        match order with
+        | `Increasing -> comparator.compare
+        | `Decreasing -> Fn.flip comparator.compare
+      end
   ;;
 
   let compare compare_elt s1 s2 =
@@ -987,6 +1001,14 @@ module Accessors_without_quickcheck = struct
   let sexp_of_t sexp_of_a t = Tree0.sexp_of_t sexp_of_a t.tree
   let to_sequence ?order ?greater_or_equal_to ?less_or_equal_to t =
     Tree0.to_sequence t.comparator ?order ?greater_or_equal_to ?less_or_equal_to t.tree
+  let merge_to_sequence ?order ?greater_or_equal_to ?less_or_equal_to t t' =
+    Tree0.merge_to_sequence
+      t.comparator
+      ?order
+      ?greater_or_equal_to
+      ?less_or_equal_to
+      t.tree
+      t'.tree
 
   let to_map t ~f = Tree0.to_map t.tree ~f ~comparator:t.comparator
 end
@@ -1243,6 +1265,9 @@ module Make_tree (Elt : Comparator.S1) = struct
   let to_sequence ?order ?greater_or_equal_to ?less_or_equal_to t =
     Tree0.to_sequence comparator ?order ?greater_or_equal_to ?less_or_equal_to t
 
+  let merge_to_sequence ?order ?greater_or_equal_to ?less_or_equal_to t t' =
+    Tree0.merge_to_sequence comparator ?order ?greater_or_equal_to ?less_or_equal_to t t'
+
   let of_map_keys = Tree0.of_map_keys
   let to_map t ~f = Tree0.to_map t ~f ~comparator
 
@@ -1469,6 +1494,9 @@ module Tree = struct
 
   let to_sequence ~comparator ?order ?greater_or_equal_to ?less_or_equal_to t =
     Tree0.to_sequence comparator ?order ?greater_or_equal_to ?less_or_equal_to t
+
+  let merge_to_sequence ~comparator ?order ?greater_or_equal_to ?less_or_equal_to t t' =
+    Tree0.merge_to_sequence comparator ?order ?greater_or_equal_to ?less_or_equal_to t t'
 
   let of_map_keys = Tree0.of_map_keys
   let to_map = Tree0.to_map

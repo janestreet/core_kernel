@@ -31,6 +31,14 @@ include Int_intf.S
 
 #endif
 
+(** Unlike the usual operations, these never overflow, preferring instead to raise. *)
+module Overflow_exn : sig
+  val ( + ) : t -> t -> t
+  val ( - ) : t -> t -> t
+  val abs : t -> t
+  val neg : t -> t
+end
+
 val of_int : int -> t
 val to_int : t -> int option
 

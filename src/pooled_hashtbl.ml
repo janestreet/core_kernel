@@ -399,16 +399,6 @@ let find_and_remove t key =
   else None
 ;;
 
-let incr ?(by=1) t key =
-  ensure_mutation_allowed t;
-  (* Core's implementation actually has a bug here and, if the key is missing, it sets
-     it to 1, not by. I believe "by" is correct. *)
-  let e = set_or_entry t ~key ~data:by in
-  if not (Entry.is_null e) then
-    let data = Entry.data t.entries e in
-    Entry.set_data t.entries e (data + by)
-;;
-
 let change =
   let call t f x =
     without_mutating t (fun () -> f x)
@@ -437,6 +427,27 @@ let change =
       match call t f None with
       | None -> ()
       | Some data -> insert_link t ~index ~key ~data ~it
+;;
+
+let incr_by ~remove_if_zero t key by =
+  if remove_if_zero
+  then
+    change t key ~f:(fun opt ->
+      match by + Option.value opt ~default:0 with
+      | 0 -> None
+      | n -> Some n)
+  else
+    begin
+      ensure_mutation_allowed t;
+      let e = set_or_entry t ~key ~data:by in
+      if not (Entry.is_null e) then
+        let data = Entry.data t.entries e in
+        Entry.set_data t.entries e (data + by)
+    end
+;;
+
+let incr ?(by = 1) ?(remove_if_zero = false) t key = incr_by ~remove_if_zero t key by
+let decr ?(by = 1) ?(remove_if_zero = false) t key = incr_by ~remove_if_zero t key (-by)
 ;;
 
 let update t key ~f = change t key ~f:(fun data -> Some (f data))
@@ -771,11 +782,21 @@ let merge =
     new_t
 ;;
 
-let merge_into ~f ~src ~dst =
+type 'a merge_into_action = Remove | Set_to of 'a
+
+let merge_into ~src ~dst ~f =
   iteri src ~f:(fun ~key ~data ->
-    match without_mutating dst (fun () -> f ~key data (find dst key)) with
-    | Some data -> replace dst ~key ~data
-    | None      -> ())
+    let dst_data = find dst key in
+    let action = without_mutating dst (fun () -> f ~key data dst_data) in
+    match action with
+    | Remove   -> remove dst key
+    | Set_to data ->
+      match dst_data with
+      | None -> replace dst ~key ~data
+      | Some dst_data ->
+        if not (phys_equal dst_data data)
+        then replace dst ~key ~data)
+;;
 
 let filteri_inplace t ~f =
   let to_remove =
@@ -793,7 +814,7 @@ let filter_keys_inplace t ~f =
   filteri_inplace t ~f:(fun ~key ~data:_ -> f key)
 ;;
 
-let filter_replace_alli t ~f =
+let filter_mapi_inplace t ~f =
   let map_results =
     fold t ~init:[] ~f:(fun ~key ~data ac -> (key, f ~key ~data) :: ac)
   in
@@ -804,18 +825,24 @@ let filter_replace_alli t ~f =
   );
 ;;
 
-let filter_replace_all t ~f =
-  filter_replace_alli t ~f:(fun ~key:_ ~data -> f data)
+let filter_map_inplace t ~f =
+  filter_mapi_inplace t ~f:(fun ~key:_ ~data -> f data)
 
-let replace_alli t ~f =
+let mapi_inplace t ~f =
   let map_results =
     fold t ~init:[] ~f:(fun ~key ~data ac -> (key, f ~key ~data) :: ac)
   in
   List.iter map_results ~f:(fun (key,data) -> set t ~key ~data);
 ;;
 
-let replace_all t ~f =
-  replace_alli t ~f:(fun ~key:_ ~data -> f data)
+let map_inplace t ~f =
+  mapi_inplace t ~f:(fun ~key:_ ~data -> f data)
+
+let replace_all         = map_inplace
+let replace_alli        = mapi_inplace
+let filter_replace_all  = filter_map_inplace
+let filter_replace_alli = filter_mapi_inplace
+;;
 
 let equal t t' equal =
   length t = length t' &&
@@ -850,64 +877,72 @@ let copy t =
 ;;
 
 module Accessors = struct
-  let clear           = clear
-  let copy            = copy
-  let remove          = remove
-  let replace         = replace
-  let set             = set
-  let add             = add
-  let add_or_error    = add_or_error
-  let add_exn         = add_exn
-  let change          = change
-  let update          = update
-  let add_multi       = add_multi
-  let remove_multi    = remove_multi
-  let mem             = mem
-  let iter_vals       = iter_vals
-  let iteri           = iteri
-  let iter_keys       = iter_keys
-  let iter            = iter
-  let exists          = exists
-  let existsi         = existsi
-  let for_all         = for_all
-  let for_alli        = for_alli
-  let count           = count
-  let counti          = counti
-  let fold            = fold
-  let length          = length
-  let is_empty        = is_empty
-  let map             = map
-  let mapi            = mapi
-  let filter_map      = filter_map
-  let filter_mapi     = filter_mapi
-  let filter          = filter
-  let filteri         = filteri
-  let partition_map   = partition_map
-  let partition_mapi  = partition_mapi
-  let partition_tf    = partition_tf
-  let partitioni_tf   = partitioni_tf
-  let find_or_add     = find_or_add
-  let find            = find
-  let find_exn        = find_exn
-  let find_and_call   = find_and_call
-  let find_and_remove = find_and_remove
-  let to_alist        = to_alist
-  let validate        = validate
-  let merge           = merge
-  let merge_into      = merge_into
-  let keys            = keys
-  let data            = data
-  let filter_inplace  = filter_inplace
-  let filteri_inplace = filteri_inplace
+
+  type nonrec 'a merge_into_action = 'a merge_into_action = Remove | Set_to of 'a
+
+  let clear               = clear
+  let copy                = copy
+  let remove              = remove
+  let replace             = replace
+  let set                 = set
+  let add                 = add
+  let add_or_error        = add_or_error
+  let add_exn             = add_exn
+  let change              = change
+  let update              = update
+  let add_multi           = add_multi
+  let remove_multi        = remove_multi
+  let mem                 = mem
+  let iter_vals           = iter_vals
+  let iteri               = iteri
+  let iter_keys           = iter_keys
+  let iter                = iter
+  let exists              = exists
+  let existsi             = existsi
+  let for_all             = for_all
+  let for_alli            = for_alli
+  let count               = count
+  let counti              = counti
+  let fold                = fold
+  let length              = length
+  let is_empty            = is_empty
+  let map                 = map
+  let mapi                = mapi
+  let filter_map          = filter_map
+  let filter_mapi         = filter_mapi
+  let filter              = filter
+  let filteri             = filteri
+  let partition_map       = partition_map
+  let partition_mapi      = partition_mapi
+  let partition_tf        = partition_tf
+  let partitioni_tf       = partitioni_tf
+  let find_or_add         = find_or_add
+  let find                = find
+  let find_exn            = find_exn
+  let find_and_call       = find_and_call
+  let find_and_remove     = find_and_remove
+  let to_alist            = to_alist
+  let validate            = validate
+  let merge               = merge
+  let merge_into          = merge_into
+  let keys                = keys
+  let data                = data
+  let filter_inplace      = filter_inplace
+  let filteri_inplace     = filteri_inplace
   let filter_keys_inplace = filter_keys_inplace
-  let replace_all     = replace_all
-  let replace_alli    = replace_alli
+  let map_inplace         = map_inplace
+  let mapi_inplace        = mapi_inplace
+  let filter_map_inplace  = filter_map_inplace
+  let filter_mapi_inplace = filter_mapi_inplace
+  let replace_all         = replace_all
+  let replace_alli        = replace_alli
   let filter_replace_all  = filter_replace_all
   let filter_replace_alli = filter_replace_alli
-  let equal           = equal
-  let similar         = similar
-  let incr            = incr
-  let sexp_of_key     = sexp_of_key
+  let equal               = equal
+  let similar             = similar
+  let incr                = incr
+  let decr                = decr
+  let sexp_of_key         = sexp_of_key
 end
 
 module type Key         = Key

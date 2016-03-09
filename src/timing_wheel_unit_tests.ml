@@ -433,6 +433,11 @@ module Make (Timing_wheel : Timing_wheel)
     create ~config:(Config.create ?level_bits ~alarm_precision ()) ~start
   ;;
 
+  let%test_unit "start after epoch" =
+    let t = create_unit ~start:(Time.add Time.epoch (Time.Span.of_sec 1.)) () in
+    invariant ignore t;
+  ;;
+
   let create = create
 
   let%test_unit _ =
@@ -454,7 +459,6 @@ module Make (Timing_wheel : Timing_wheel)
     let t = create_unit () in
     assert (not (mem t (Alarm.null ())));
     let start = start t in
-    assert (Time.( < ) (interval_num_start t (Interval_num.of_int ~-1)) start);
     List.iter
       [ 0.,   0
       ; 0.1,  0
@@ -759,10 +763,10 @@ module Make (Timing_wheel : Timing_wheel)
     for num_elts = 0 to 5 do
       let rec loop i ats =
         if i > 0
-        then begin
+        then (
           loop (i - 1) (at1 :: ats);
-          loop (i - 1) (at2 :: ats);
-        end else begin
+          loop (i - 1) (at2 :: ats))
+        else (
           let t =
             create ~start
               ~config:(Config.create ~alarm_precision:(Time.Span.of_sec 60.) ())
@@ -777,8 +781,7 @@ module Make (Timing_wheel : Timing_wheel)
             if Time.equal (Alarm.at t alarm) at1
             then incr num_fired
             else assert false);
-          [%test_result: int] !num_fired ~expect:(List.count ats ~f:(Time.equal at1));
-        end
+          [%test_result: int] !num_fired ~expect:(List.count ats ~f:(Time.equal at1)));
       in
       loop num_elts []
     done

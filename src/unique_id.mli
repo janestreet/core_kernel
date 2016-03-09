@@ -1,6 +1,5 @@
 (** Functors for creating modules that mint unique identifiers. *)
 
-open Std_internal
 open Unique_id_intf
 
 module type Id = Id

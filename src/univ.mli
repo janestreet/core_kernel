@@ -3,8 +3,6 @@
     Every type id ([Type_equal.Id.t]) corresponds to one branch of the variant type.
 *)
 
-open Sexplib
-
 type t [@@deriving sexp_of]
 
 val type_id_name : t -> string

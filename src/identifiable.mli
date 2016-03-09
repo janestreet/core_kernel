@@ -1,4 +1,4 @@
-(** a signature for opaque identifier types. *)
+(** a signature for identifier types. *)
 
 module type S = sig
   type t [@@deriving bin_io, sexp]
@@ -16,6 +16,7 @@ end
           type t = A | B [@@deriving bin_io, compare, sexp]
           let hash (t : t) = Hashtbl.hash t
           include Sexpable.To_stringable (struct type nonrec t = t [@@deriving sexp] end)
+          let module_name = "My_library.Std.Id"
         end
         include T
         include Identifiable.Make (T)
@@ -23,11 +24,19 @@ end
     ]}
 *)
 module Make (M : sig
-  type t [@@deriving bin_io, compare, sexp]
-  include Stringable.S with type t := t
-  val hash : t -> int
-  val module_name : string  (** for registering the pretty printer *)
-end) : S with type t := M.t
+    type t [@@deriving bin_io, compare, sexp]
+    include Stringable.S with type t := t
+    val hash : t -> int
+    val module_name : string  (** for registering the pretty printer *)
+  end) : S
+  with type t := M.t
 
-
-
+module Make_using_comparator (M : sig
+    type t [@@deriving bin_io, compare, sexp]
+    include Comparator.S with type t := t
+    include Stringable.S with type t := t
+    val hash : t -> int
+    val module_name : string
+  end) : S
+  with type t := M.t
+  with type comparator_witness := M.comparator_witness

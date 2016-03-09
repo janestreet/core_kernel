@@ -4,6 +4,7 @@
 #define _GNU_SOURCE
 
 #include <sys/uio.h>
+#include <errno.h>
 #include "ocaml_utils.h"
 #include "core_params.h"
 
@@ -28,6 +29,17 @@ static inline struct iovec * copy_iovecs(size_t *total_len, value v_iovecs, int 
     iovec->iov_base = get_bstr(v_iov_base, v_iov_pos);
   }
   return iovecs;
+}
+
+static inline ssize_t jane_writev(int fd, struct iovec *iov, int iovcnt)
+{
+  ssize_t ret = writev(fd, iov, iovcnt);
+  if (ret == -1 && errno == EINVAL && iovcnt == 0) {
+    /* On OSX [count = 0] is an error, but it's not on Linux. For
+       simplicity we always ignore [EINVAL] when [iovcnt] is 0. */
+    ret = 0;
+  }
+  return ret;
 }
 
 #endif /* UNIX_UTILS_H */

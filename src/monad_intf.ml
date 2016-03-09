@@ -40,17 +40,19 @@ end
 module type Syntax = sig
   type 'a t
   module Let_syntax : sig
-    val return : 'a -> 'a t
-    val bind : 'a t -> ('a -> 'b t) -> 'b t
-    val map  : 'a t -> f:('a -> 'b) -> 'b t
-    val both : 'a t -> 'b t -> ('a * 'b) t
-    module Open_on_rhs : sig
-      (** convenient to have in scope when programming with a monad *)
+    module Let_syntax : sig
       val return : 'a -> 'a t
-    end
-    module Open_in_body : sig
-      (** convenient to have in scope when programming with a monad *)
-      val return : 'a -> 'a t
+      val bind : 'a t -> ('a -> 'b t) -> 'b t
+      val map  : 'a t -> f:('a -> 'b) -> 'b t
+      val both : 'a t -> 'b t -> ('a * 'b) t
+      module Open_on_rhs : sig
+        (** convenient to have in scope when programming with a monad *)
+        val return : 'a -> 'a t
+      end
+      module Open_in_body : sig
+        (** convenient to have in scope when programming with a monad *)
+        val return : 'a -> 'a t
+      end
     end
   end
 end
@@ -116,13 +118,16 @@ end
 
 module type Syntax2 = sig
   type ('a, 'e) t
+
   module Let_syntax : sig
-    val return : 'a -> ('a, 'e) t
-    val bind : ('a, 'e) t -> ('a -> ('b, 'e) t) -> ('b, 'e) t
-    val map  : ('a, 'e) t -> f:('a -> 'b) -> ('b, 'e) t
-    val both : ('a, 'e) t -> ('b, 'e) t -> ('a * 'b, 'e) t
-    module Open_on_rhs  : sig val return : 'a -> ('a, 'e) t end
-    module Open_in_body : sig val return : 'a -> ('a, 'e) t end
+    module Let_syntax : sig
+      val return : 'a -> ('a, 'e) t
+      val bind : ('a, 'e) t -> ('a -> ('b, 'e) t) -> ('b, 'e) t
+      val map  : ('a, 'e) t -> f:('a -> 'b) -> ('b, 'e) t
+      val both : ('a, 'e) t -> ('b, 'e) t -> ('a * 'b, 'e) t
+      module Open_on_rhs  : sig val return : 'a -> ('a, 'e) t end
+      module Open_in_body : sig val return : 'a -> ('a, 'e) t end
+    end
   end
 end
 

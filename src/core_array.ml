@@ -877,6 +877,23 @@ module T = struct
       t
   ;;
 
+  let transpose tt =
+    if length tt = 0
+    then Some [||]
+    else
+      let width = length tt in
+      let depth = length tt.(0) in
+      if exists tt ~f:(fun t -> length t <> depth)
+      then None
+      else
+        Some
+          (Array.init depth ~f:(fun d -> Array.init width ~f:(fun w -> tt.(w).(d))))
+
+  let transpose_exn tt =
+    match transpose tt with
+    | None -> invalid_arg "Array.transpose_exn";
+    | Some tt' -> tt'
+
   include Binary_searchable.Make1 (struct
     type nonrec 'a t = 'a t
 
@@ -1032,6 +1049,8 @@ module type Permissioned = sig
   val cartesian_product
     :  ('a, [> read]) t -> ('b, [> read]) t
     -> ('a * 'b, [< _ perms]) t
+  val transpose : (('a, [> read]) t, [> read]) t -> (('a, [< _ perms]) t, [< _ perms]) t option
+  val transpose_exn : (('a, [> read]) t, [> read]) t -> (('a, [< _ perms]) t, [< _ perms]) t
   val normalize : ('a, _) t -> int -> int
   val slice : ('a, [> read]) t -> int -> int -> ('a, [< _ perms]) t
   val nget : ('a, [> read]) t -> int -> 'a
@@ -1190,6 +1209,8 @@ module type S = sig
   val partition_tf : 'a t -> f:('a -> bool) -> 'a t * 'a t
   val partitioni_tf : 'a t -> f:(int -> 'a -> bool) -> 'a t * 'a t
   val cartesian_product : 'a t -> 'b t -> ('a * 'b) t
+  val transpose : 'a t t -> 'a t t option
+  val transpose_exn : 'a t t -> 'a t t
   val normalize : 'a t -> int -> int
   val slice : 'a t -> int -> int -> 'a t
   val nget : 'a t -> int -> 'a

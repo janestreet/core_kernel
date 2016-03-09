@@ -118,13 +118,14 @@ module Level_bits = struct
   let create_exn ints =
     if List.is_empty ints then failwith "Level_bits.create_exn requires a nonempty list";
     if List.exists ints ~f:(fun bits -> bits <= 0)
-    then failwiths "Level_bits.create_exn got nonpositive num bits" ints
-           [%sexp_of: int list];
+    then raise_s [%message "Level_bits.create_exn got nonpositive num bits"
+                             ~_:(ints : int list)];
     let num_bits = List.fold ints ~init:0 ~f:(+) in
     if num_bits > max_num_bits
-    then failwiths "Level_bits.create_exn got too many bits"
-           (ints, `got num_bits, `max max_num_bits)
-           [%sexp_of: int list * [ `got of int ] * [ `max of int ]];
+    then raise_s [%message "Level_bits.create_exn got too many bits"
+                             ~_:(ints : int list)
+                             ~got:(num_bits : int)
+                             (max_num_bits : int)];
     List.map ints ~f:Num_key_bits.of_int
   ;;
 
@@ -435,7 +436,7 @@ module Priority_queue = struct
     let of_external_exn pool t =
       if is_valid pool t
       then t
-      else failwiths "Timing_wheel.Priority_queue got invalid elt" t [%sexp_of: _ t]
+      else raise_s [%message "Timing_wheel.Priority_queue got invalid elt" ~elt:(t : _ t)]
     ;;
 
     let unlink pool t =
@@ -573,21 +574,19 @@ module Priority_queue = struct
 
   let internal_iter t ~f =
     if t.length > 0
-    then begin
+    then (
       let pool = t.pool in
       let levels = t.levels in
       for level_index = 0 to Array.length levels - 1 do
         let level = levels.( level_index ) in
         if level.length > 0
-        then begin
+        then (
           let slots = level.slots in
           for slot_index = 0 to Array.length slots - 1 do
             let elt = slots.( slot_index ) in
             if not (Internal_elt.is_null elt) then Internal_elt.iter pool elt ~f;
-          done;
-        end;
-      done;
-    end;
+          done);
+      done);
   ;;
 
   let iter t ~f =
@@ -629,8 +628,8 @@ module Priority_queue = struct
 
   let sexp_of_t sexp_of_a t =
     match !sexp_of_t_style with
-    | `Internal -> [%sexp_of: a t_internal] t
-    | `Pretty -> [%sexp_of: a Pretty.t] (pretty t)
+    | `Internal -> [%sexp (t : a t_internal)]
+    | `Pretty   -> [%sexp (pretty t : a Pretty.t)]
   ;;
 
   let invariant invariant_a t : unit =
@@ -674,15 +673,14 @@ module Priority_queue = struct
           ~slots:(check (fun slots ->
             Array.iter slots ~f:(fun elt ->
               if not (Internal_elt.is_null elt)
-              then begin
+              then (
                 Internal_elt.invariant pool invariant_a elt;
                 Internal_elt.iter pool elt ~f:(fun elt ->
                   assert (Internal_elt.key pool elt >= level.min_allowed_key);
                   assert (Internal_elt.key pool elt <= level.max_allowed_key);
                   assert (Internal_elt.key pool elt >= t.elt_key_lower_bound);
                   assert (Internal_elt.level_index pool elt = level.index);
-                  invariant_a (Internal_elt.value pool elt));
-              end))))
+                  invariant_a (Internal_elt.value pool elt)))))))
     in
     Invariant.invariant [%here] t [%sexp_of: _ t_internal] (fun () ->
       let check f = Invariant.check_field t f in
@@ -695,10 +693,9 @@ module Priority_queue = struct
         ~pool:(check (Internal_elt.Pool.invariant ignore))
         ~min_elt:(check (fun elt_ ->
           if not (Internal_elt.is_null elt_)
-          then begin
+          then (
             assert (Internal_elt.is_valid t.pool elt_);
-            assert (t.elt_key_lower_bound = Internal_elt.key t.pool elt_);
-          end))
+            assert (t.elt_key_lower_bound = Internal_elt.key t.pool elt_))))
         ~elt_key_lower_bound:(check (fun elt_key_lower_bound ->
           assert (elt_key_lower_bound >= min_allowed_key t);
           assert (elt_key_lower_bound <= max_allowed_key t);
@@ -711,7 +708,7 @@ module Priority_queue = struct
             assert (level_index = Level.index level);
             level_invariant level;
             if level_index > 0
-            then begin
+            then (
               let prev_level = levels.( level_index - 1 ) in
               let module L = Level in
               [%test_result: Key.Span.t]
@@ -720,8 +717,7 @@ module Priority_queue = struct
               assert (L.min_allowed_key level <= bound);
               assert (Key.( > )
                         (Key.add (L.min_allowed_key level) (L.keys_per_slot level))
-                        bound);
-            end))))
+                        bound))))))
   ;;
 
   (* [min_elt_] returns [null] if it can't find the desired element.  We wrap it up
@@ -731,7 +727,7 @@ module Priority_queue = struct
     then Internal_elt.null ()
     else if not (Internal_elt.is_null t.min_elt)
     then t.min_elt
-    else begin
+    else (
       let pool = t.pool in
       let min_elt_already_found = ref (Internal_elt.null ()) in
       let min_key_already_found = ref (Key.succ Key.max_representable) in
@@ -745,7 +741,7 @@ module Priority_queue = struct
           level_index := num_levels
         else if level.length = 0
         then incr level_index
-        else begin
+        else (
           (* Look in [level]. *)
           let slots = level.slots in
           let slot_min_key =
@@ -763,17 +759,16 @@ module Priority_queue = struct
           done;
           let first = slots.( !slot ) in
           if not (Internal_elt.is_null first)
-          then begin
+          then (
             (* Visit all of the elts in this slot and find one with minimum key. *)
             let continue = ref true in
             let current = ref first in
             while !continue do
               let current_key = Internal_elt.key pool !current in
               if current_key < !min_key_already_found
-              then begin
+              then (
                 min_elt_already_found := !current;
-                min_key_already_found := current_key;
-              end;
+                min_key_already_found := current_key);
               let next = Internal_elt.next pool !current in
               (* If [!level_index = 0] then all elts in this slot have the same [key],
                  i.e. [!slot_min_key].  So, we don't have to check any elements after
@@ -782,16 +777,13 @@ module Priority_queue = struct
               if phys_equal next first || !level_index = 0
               then continue := false
               else current := next;
-            done;
-          end;
+            done);
           (* Finished looking in [level].  Move up to the next level. *)
-          incr level_index;
-        end;
+          incr level_index);
       done;
       t.min_elt <- !min_elt_already_found;
       t.elt_key_lower_bound <- !min_key_already_found;
-      t.min_elt;
-    end;
+      t.min_elt);
   ;;
 
   let min_elt t =
@@ -829,27 +821,25 @@ module Priority_queue = struct
     let first = slots.( slot ) in
     if not (Internal_elt.is_null first)
     then Internal_elt.link pool elt ~after:first
-    else begin
+    else (
       slots.( slot ) <- elt;
-      Internal_elt.link_to_self pool elt;
-    end
+      Internal_elt.link_to_self pool elt);
   ;;
 
   let internal_add_elt t elt =
     let key = Internal_elt.key t.pool elt in
     if key < t.elt_key_lower_bound
-    then begin
+    then (
       t.min_elt <- elt;
-      t.elt_key_lower_bound <- key;
-    end;
+      t.elt_key_lower_bound <- key);
     add_elt t elt;
     t.length <- t.length + 1;
   ;;
 
   let ensure_valid_key t ~key =
     if key < min_allowed_key t || key > max_allowed_key t
-    then failwiths "Timing_wheel.Priority_queue got invalid key" (key, t)
-           [%sexp_of: Key.t * _ t];
+    then raise_s [%message "Timing_wheel.Priority_queue got invalid key"
+                             (key : Key.t) ~timing_wheel:(t : _ t)];
   ;;
 
   let internal_add t ~key ~at value =
@@ -884,11 +874,10 @@ module Priority_queue = struct
       level.length <- level.length - 1;
       if Internal_elt.key pool !current >= t_min_allowed_key
       then add_elt t !current
-      else begin
+      else (
         t.length <- t.length - 1;
         handle_removed (Internal_elt.to_external !current);
-        Internal_elt.free pool !current;
-      end;
+        Internal_elt.free pool !current);
       if phys_equal next first
       then continue := false
       else current := next;
@@ -930,16 +919,14 @@ module Priority_queue = struct
         level_min_allowed_key :=
           Key.largest_multiple ~of_:keys_per_slot
             ~less_than_or_equal_to:max_level_min_allowed_key
-      else begin
+      else (
         let first = slots.( !slot ) in
         if not (Internal_elt.is_null first)
-        then begin
+        then (
           slots.( !slot ) <- Internal_elt.null ();
-          remove_or_re_add_elts t level first ~t_min_allowed_key ~handle_removed;
-        end;
+          remove_or_re_add_elts t level first ~t_min_allowed_key ~handle_removed);
         slot := Level.next_slot level !slot;
-        level_min_allowed_key := Key.add !level_min_allowed_key keys_per_slot;
-      end
+        level_min_allowed_key := Key.add !level_min_allowed_key keys_per_slot);
     done;
     assert (!level_min_allowed_key <= max_level_min_allowed_key);
     assert (Key.( > )
@@ -952,10 +939,10 @@ module Priority_queue = struct
 
   let increase_min_allowed_key t ~key ~handle_removed =
     if Key.( > ) key Key.max_representable
-    then failwiths "Timing_wheel.increase_min_allowed_key got invalid key" (key, t)
-           [%sexp_of: Key.t * _ t];
+    then raise_s [%message "Timing_wheel.increase_min_allowed_key got invalid key"
+                             (key : Key.t) ~timing_wheel:(t : _ t)];
     if key > min_allowed_key t
-    then begin
+    then (
       (* We increase the [min_allowed_key] of levels in order to restore the invariant
          that they have as large as possible a [min_allowed_key], while leaving no gaps in
          keys. *)
@@ -973,19 +960,16 @@ module Priority_queue = struct
         then
           (* This level did not shift.  Don't shift any higher levels. *)
           level_index := num_levels
-        else begin
+        else (
           (* Level [level_index] shifted.  Consider shifting higher levels. *)
           level_index := !level_index + 1;
-          max_level_min_allowed_key := Key.succ (Level.max_allowed_key level);
-        end;
+          max_level_min_allowed_key := Key.succ (Level.max_allowed_key level));
       done;
       if key > t.elt_key_lower_bound
-      then begin
+      then (
         (* We have removed [t.min_elt] or it was already null, so just set it to null. *)
         t.min_elt <- Internal_elt.null ();
-        t.elt_key_lower_bound <- min_allowed_key t;
-      end;
-    end;
+        t.elt_key_lower_bound <- min_allowed_key t));
   ;;
 
   let create ?level_bits () =
@@ -1046,11 +1030,10 @@ module Priority_queue = struct
   let internal_remove t elt =
     let pool = t.pool in
     if Internal_elt.equal elt t.min_elt
-    then begin
+    then (
       t.min_elt <- Internal_elt.null ();
       (* We keep [t.elt_lower_bound] since it is valid even though [t.min_elt] is being
-         removed. *)
-    end;
+         removed. *));
     t.length <- t.length - 1;
     let level = t.levels.( Internal_elt.level_index pool elt ) in
     level.length <- level.length - 1;
@@ -1061,10 +1044,9 @@ module Priority_queue = struct
     then
       (* [elt] is the only element in the slot *)
       slots.( slot ) <- Internal_elt.null ()
-    else begin
+    else (
       if phys_equal elt first then slots.( slot ) <- Internal_elt.next pool elt;
-      Internal_elt.unlink pool elt;
-    end;
+      Internal_elt.unlink pool elt);
   ;;
 
   let remove t elt =
@@ -1077,13 +1059,13 @@ module Priority_queue = struct
   let fire_past_alarms t ~handle_fired ~key ~now =
     let level = t.levels.( 0 ) in
     if level.length > 0
-    then
+    then (
       let slot = Level.slot level ~key in
       let slots = level.slots in
       let pool = t.pool in
       let first = ref slots.( slot ) in
       if not (Internal_elt.is_null !first)
-      then begin
+      then (
         let current = ref !first in
         let continue = ref true in
         while !continue do
@@ -1093,15 +1075,13 @@ module Priority_queue = struct
           then continue := false
           else current := next;
           if Time_ns.( <= ) (Internal_elt.at pool elt) now
-          then begin
+          then (
             handle_fired (Internal_elt.to_external elt);
             internal_remove t elt;
             Internal_elt.free pool elt;
             (* We recompute [first] because [internal_remove] may have changed it. *)
-            first := slots.( slot );
-          end;
-        done;
-      end
+            first := slots.( slot ));
+        done));
   ;;
 
   let change t elt ~key ~at =
@@ -1118,7 +1098,7 @@ module Priority_queue = struct
 
   let clear t =
     if not (is_empty t)
-    then begin
+    then (
       t.length <- 0;
       let pool = t.pool in
       let free_elt elt = Internal_elt.free pool elt in
@@ -1126,20 +1106,17 @@ module Priority_queue = struct
       for level_index = 0 to Array.length levels - 1 do
         let level = levels.( level_index ) in
         if level.length > 0
-        then begin
+        then (
           level.length <- 0;
           let slots = level.slots in
           for slot_index = 0 to Array.length slots - 1 do
             let elt = slots.( slot_index ) in
             if not (Internal_elt.is_null elt)
-            then begin
+            then (
               Internal_elt.iter pool elt ~f:free_elt;
-              slots.( slot_index ) <- Internal_elt.null ();
-            end;
-          done;
-        end;
-      done;
-    end;
+              slots.( slot_index ) <- Internal_elt.null ());
+          done);
+      done);
   ;;
 end
 
@@ -1147,24 +1124,37 @@ module Internal_elt = Priority_queue.Internal_elt
 module Key          = Priority_queue.Key
 module Interval_num = Key
 
-(* All time from [start] onwards is broken into half-open intervals of size
+(* [{max,min}_time] and [min_interval_num} are bounds on the times and interval numbers
+   supported by a timing wheel.  Be aware that:
+
+   {[
+     Time_ns.max_value < Time_ns.of_int_ns_since_epoch Int.max_value
+   ]}
+
+   and hence it is meaningful to do comparisons of the form:
+
+   {[
+     Time_ns.( > ) time max_time
+   ]}
+
+   to rule out invalid [Time_ns.t] values.
+*)
+let max_time         = Time_ns.max_value
+let min_time         = Time_ns.epoch
+let min_interval_num = Interval_num.zero
+
+(* All time from the epoch onwards is broken into half-open intervals of size
    [Config.alarm_precision config].  The intervals are numbered starting at zero, and a
    time's interval number serves as its key in [priority_queue]. *)
 type 'a t =
-  { config           : Config.t
-  ; start            : Time_ns.t
-  (* [{min,max}_{time,interval_num} are bounds on the times and interval numbers supported
-     by this timing wheel.
-
-     [min_time] and [max_time] are chosen so that if [min_time <= time <= max_time],
-     [Time.diff time start] doesn't overflow.  [min_interval_num] and [max_interval_num]
-     are the corresponding interval numbers. *)
-  ; min_time         : Time_ns.t
-  ; max_time         : Time_ns.t
-  ; min_interval_num : Interval_num.t
-  ; max_interval_num : Interval_num.t
-  ; mutable now      : Time_ns.t
-  ; priority_queue   : 'a Priority_queue.t
+  { config                         : Config.t
+  ; start                          : Time_ns.t
+  (* [max_interval_num] is the interval number of [max_time]. *)
+  ; max_interval_num               : Interval_num.t
+  ; mutable now                    : Time_ns.t
+  ; mutable now_interval_num_start : Time_ns.t
+  ; mutable alarm_upper_bound      : Time_ns.t
+  ; priority_queue                 : 'a Priority_queue.t
   }
 [@@deriving fields, sexp_of]
 
@@ -1172,7 +1162,7 @@ type 'a timing_wheel = 'a t
 
 type 'a t_now = 'a t
 
-let sexp_of_t_now _ t = t.now |> [%sexp_of: Time_ns.t]
+let sexp_of_t_now _ t = [%sexp (t.now : Time_ns.t)]
 
 let alarm_precision t = Config.alarm_precision t.config
 
@@ -1206,9 +1196,6 @@ module Pretty = struct
   type 'a t =
     { config           : Config.t
     ; start            : Time_ns.t
-    ; min_time         : Time_ns.t
-    ; max_time         : Time_ns.t
-    ; min_interval_num : Interval_num.t
     ; max_interval_num : Interval_num.t
     ; now              : Time_ns.t
     ; alarms           : 'a Alarm.t list
@@ -1216,7 +1203,9 @@ module Pretty = struct
   [@@deriving sexp_of]
 end
 
-let pretty ({ config; start; min_time; max_time; min_interval_num; max_interval_num; now
+let pretty ({ config; start; max_interval_num; now
+            ; now_interval_num_start = _
+            ; alarm_upper_bound = _
             ; priority_queue = _ } as t) =
   let r = ref [] in
   iter t ~f:(fun a -> r := Pretty.Alarm.create t a :: !r);
@@ -1224,9 +1213,6 @@ let pretty ({ config; start; min_time; max_time; min_interval_num; max_interval_
   { Pretty.
     config
   ; start
-  ; min_time
-  ; max_time
-  ; min_interval_num
   ; max_interval_num
   ; now
   ; alarms
@@ -1236,15 +1222,16 @@ let pretty ({ config; start; min_time; max_time; min_interval_num; max_interval_
 let sexp_of_t sexp_of_a t =
   match !sexp_of_t_style with
   | `Internal -> sexp_of_t_internal sexp_of_a t
-  | `Pretty -> [%sexp_of: a Pretty.t] (pretty t)
+  | `Pretty -> [%sexp (pretty t : a Pretty.t)]
 ;;
 
 let length t = Priority_queue.length t.priority_queue
 
 let is_empty t = length t = 0
 
-let interval_num_internal ~time ~start ~alarm_precision =
-  Interval_num.of_int63 (Time_ns.Span.div (Time_ns.diff time start) alarm_precision)
+let interval_num_internal ~time ~alarm_precision =
+  Interval_num.of_int63
+    (Time_ns.Span.div (Time_ns.to_span_since_epoch time) alarm_precision)
 ;;
 
 let%test_unit _ =
@@ -1262,42 +1249,42 @@ let%test_unit _ =
       [%test_result: int] ~expect
         (Interval_num.to_int_exn
            (interval_num_internal
-              ~start:Time_ns.epoch
               ~alarm_precision:(Time_ns.Span.of_int63_ns (Int63.of_int 3))
               ~time:(Time_ns.of_int63_ns_since_epoch (Int63.of_int time)))))
 ;;
 
 let interval_num_unchecked t time =
-  interval_num_internal ~time ~start:t.start ~alarm_precision:(alarm_precision t)
+  interval_num_internal ~time ~alarm_precision:(alarm_precision t)
 ;;
 
 let interval_num t time =
-  if Time_ns.( < ) time t.min_time
-  then failwiths "Timing_wheel.interval_num got time too far in the past" time
-         [%sexp_of: Time_ns.t];
-  if Time_ns.( > ) time t.max_time
-  then failwiths "Timing_wheel.interval_num got time too far in the future" time
-         [%sexp_of: Time_ns.t];
+  if Time_ns.( < ) time min_time
+  then raise_s [%message "Timing_wheel.interval_num got time too far in the past"
+                           (time : Time_ns.t)];
+  if Time_ns.( > ) time max_time
+  then raise_s [%message "Timing_wheel.interval_num got time too far in the future"
+                           (time : Time_ns.t)];
   interval_num_unchecked t time;
 ;;
 
-let interval_num_start_internal interval_num ~start ~alarm_precision =
-  Time_ns.add start
+let interval_num_start_internal interval_num ~alarm_precision =
+  Time_ns.of_span_since_epoch
     (Time_ns.Span.scale_int63 alarm_precision (Interval_num.to_int63 interval_num))
 ;;
 
 let interval_num_start_unchecked t interval_num =
-  interval_num_start_internal interval_num ~start:t.start
-    ~alarm_precision:(alarm_precision t)
+  interval_num_start_internal interval_num ~alarm_precision:(alarm_precision t)
 ;;
 
 let interval_num_start t interval_num =
-  if interval_num < t.min_interval_num
-  then failwiths "Timing_wheel.interval_num_start got too small interval_num" interval_num
-         [%sexp_of: Interval_num.t];
+  if interval_num < min_interval_num
+  then raise_s [%message "Timing_wheel.interval_num_start got too small interval_num"
+                           (interval_num : Interval_num.t)
+                           (min_interval_num : Interval_num.t)];
   if interval_num > t.max_interval_num
-  then failwiths "Timing_wheel.interval_num_start got too large interval_num" interval_num
-         [%sexp_of: Interval_num.t];
+  then raise_s [%message "Timing_wheel.interval_num_start got too large interval_num"
+                           (interval_num : Interval_num.t)
+                           (t.max_interval_num : Interval_num.t)];
   interval_num_start_unchecked t interval_num
 ;;
 
@@ -1306,26 +1293,27 @@ let interval_num_start t interval_num =
    {[
      interval_num t (interval_num_start t n)
      = interval_num t
-         (Time_ns.add t.start (Time_ns.Span.scale_int (alarm_precision t) n))
-     = Int63.to_int_exn
+         (Time_ns.of_span_since_epoch
+            (Time_ns.Span.scale_int63 (alarm_precision t) (Interval_num.to_int63 n)))
+     = Interval_num.of_int63
          (Time_ns.Span.div
-            (Time_ns.diff
-               (Time_ns.add t.start (Time_ns.Span.scale_int (alarm_precision t) n))
-               start)
-            alarm_precision)
-     = Int63.to_int_exn
+            (Time_ns.to_span_since_epoch
+               (Time_ns.of_span_since_epoch
+                  (Time_ns.Span.scale_int63 (alarm_precision t) (Interval_num.to_int63 n))))
+            (alarm_precision t))
+     = Interval_num.of_int63
          (Time_ns.Span.div
-            (Time_ns.Span.scale_int (alarm_precision t) n)
-            alarm_precision)
-     = Int63.to_int_exn n
+            (Time_ns.Span.scale_int63 (alarm_precision t) (Interval_num.to_int63 n))
+            (alarm_precision t))
+     = Interval_num.of_int63 (Interval_num.to_int63 n)
      = n
    ]}
 *)
 
-let alarm_upper_bound t =
+let compute_alarm_upper_bound t =
   interval_num_start_unchecked t
     (Interval_num.min t.max_interval_num
-       (Interval_num.succ (Priority_queue.max_allowed_key t.priority_queue)))
+       (Interval_num.succ (Priority_queue.max_allowed_key t.priority_queue)));
 ;;
 
 let now_interval_num t = Priority_queue.min_allowed_key t.priority_queue
@@ -1337,25 +1325,23 @@ let invariant invariant_a t =
     let check f = Invariant.check_field t f in
     Fields.iter
       ~config:(check Config.invariant)
-      ~start:ignore
-      ~min_time:(check (fun min_time ->
-        assert (Time_ns.( <= ) min_time t.start)))
-      ~max_time:(check (fun max_time ->
-        assert (Time_ns.( >= ) max_time t.start)))
-      ~min_interval_num:(check (fun min_interval_num ->
-        [%test_result: Interval_num.t] ~expect:min_interval_num (interval_num t t.min_time);
-        [%test_result: Interval_num.t] ~expect:min_interval_num
-          (interval_num t (interval_num_start t min_interval_num))))
+      ~start:(check (fun start ->
+        assert (Time_ns.( >= ) start min_time);
+        assert (Time_ns.( <= ) start max_time)))
       ~max_interval_num:(check (fun max_interval_num ->
-        [%test_result: Interval_num.t] ~expect:max_interval_num (interval_num t t.max_time);
+        [%test_result: Interval_num.t] ~expect:max_interval_num (interval_num t max_time);
         [%test_result: Interval_num.t] ~expect:max_interval_num
           (interval_num t (interval_num_start t max_interval_num))))
       ~now:(check (fun now ->
         assert (Time_ns.( >= ) now t.start);
-        assert (Time_ns.( <= ) now t.max_time);
+        assert (Time_ns.( <= ) now max_time);
         assert (interval_num t t.now = Priority_queue.min_allowed_key t.priority_queue)))
-      ~priority_queue:(check (Priority_queue.invariant invariant_a))
-    ;
+      ~now_interval_num_start:(check (fun now_interval_num_start ->
+        [%test_result: Time_ns.t] now_interval_num_start
+          ~expect:(interval_num_start t (now_interval_num t))))
+      ~alarm_upper_bound:(check (fun alarm_upper_bound ->
+        [%test_result: Time_ns.t] alarm_upper_bound ~expect:(compute_alarm_upper_bound t)))
+      ~priority_queue:(check (Priority_queue.invariant invariant_a));
     iter t ~f:(fun alarm ->
       assert (Alarm.interval_num t alarm = interval_num t (Alarm.at t alarm));
       assert (Time_ns.( >= )
@@ -1367,46 +1353,38 @@ let invariant invariant_a t =
     ))
 ;;
 
-let create ~config ~start =
-  let alarm_precision = Config.alarm_precision config in
-  let interval_num time = interval_num_internal ~time ~start ~alarm_precision in
-  let min_time =
-    if Time_ns.( <= ) start Time_ns.epoch
-    then Time_ns.min_value
-    else Time_ns.add start Time_ns.Span.min_value
-  in
-  (* We add one to define [min_interval_num] because [min_time] may not be at the start of
-     an interval, and we want to be sure that [interval_num_start t min_interval_num]
-     doesn't underflow. *)
-  let min_interval_num = Interval_num.succ (interval_num min_time) in
-  let min_time = interval_num_start_internal min_interval_num ~start ~alarm_precision in
-  let max_time =
-    if Time_ns.( >= ) start Time_ns.epoch
-    then Time_ns.max_value
-    else Time_ns.add start Time_ns.Span.max_value
-  in
-  { config
-  ; start
-  ; min_time
-  ; max_time
-  ; min_interval_num
-  ; max_interval_num = interval_num max_time
-  ; now              = start
-  ; priority_queue   = Priority_queue.create ~level_bits:config.level_bits ()
-  }
+let advance_clock t ~to_ ~handle_fired =
+  if Time_ns.( > ) to_ max_time
+  then raise_s [%message "Timing_wheel.advance_clock got time too far in the future"
+                           (to_ : Time_ns.t)
+                           (max_time : Time_ns.t)];
+  if Time_ns.( > ) to_ (now t)
+  then (
+    t.now <- to_;
+    let key = interval_num_unchecked t to_ in
+    t.now_interval_num_start <- interval_num_start_unchecked t key;
+    Priority_queue.increase_min_allowed_key t.priority_queue ~key
+      ~handle_removed:handle_fired;
+    t.alarm_upper_bound <- compute_alarm_upper_bound t);
 ;;
 
-let advance_clock t ~to_ ~handle_fired =
-  if Time_ns.( > ) to_ t.max_time
-  then failwiths "Timing_wheel.advance_clock got time too far in the future" to_
-         [%sexp_of: Time_ns.t];
-  if Time_ns.( > ) to_ (now t)
-  then begin
-    t.now <- to_;
-    Priority_queue.increase_min_allowed_key t.priority_queue
-      ~key:(interval_num_unchecked t to_)
-      ~handle_removed:handle_fired
-  end;
+let create ~config ~start =
+  if Time_ns.( < ) start Time_ns.epoch
+  then raise_s [%message "Timing_wheel_ns.create got start before the epoch"
+                           (start : Time_ns.t)];
+  let t =
+    { config
+    ; start
+    ; max_interval_num       = interval_num_internal ~time:Time_ns.max_value
+                                 ~alarm_precision:(Config.alarm_precision config)
+    ; now                    = Time_ns.min_value (* set by [advance_clock] below *)
+    ; now_interval_num_start = Time_ns.min_value (* set by [advance_clock] below *)
+    ; alarm_upper_bound      = Time_ns.max_value (* set by [advance_clock] below *)
+    ; priority_queue         = Priority_queue.create ~level_bits:config.level_bits ()
+    }
+  in
+  advance_clock t ~to_:start ~handle_fired:(fun _ -> assert false);
+  t
 ;;
 
 let add_at_interval_num t ~at value =
@@ -1416,12 +1394,15 @@ let add_at_interval_num t ~at value =
 ;;
 
 let ensure_can_schedule_alarm t ~at =
-  if Time_ns.( > ) at t.max_time
-  then failwiths "Timing_wheel cannot schedule alarm that far in the future" at
-         [%sexp_of: Time_ns.t];
-  if Time_ns.( < ) at t.start
-  then failwiths "Timing_wheel cannot schedule alarm before its clock start" at
-         [%sexp_of: Time_ns.t];
+  if Time_ns.( >= ) at t.alarm_upper_bound
+  then raise_s [%message "Timing_wheel cannot schedule alarm that far in the future"
+                           (at : Time_ns.t)
+                           ~alarm_upper_bound:(t.alarm_upper_bound : Time_ns.t)];
+  if Time_ns.( < ) at t.now_interval_num_start
+  then raise_s
+         [%message "Timing_wheel cannot schedule alarm before start of current interval"
+                     (at : Time_ns.t)
+                     ~now_interval_num_start:(t.now_interval_num_start : Time_ns.t)];
 ;;
 
 let add t ~at value =
@@ -1472,9 +1453,9 @@ let next_alarm_fires_at t =
 let next_alarm_fires_at_exn t =
   let elt = Priority_queue.min_elt_ t.priority_queue in
   if Internal_elt.is_null elt
-  then failwiths "Timing_wheel_exn.next_alarm_fires_at_exn of empty timing wheel" t
-         [%sexp_of: _ t]
-  else next_alarm_fires_at_internal t elt
+  then raise_s [%message "Timing_wheel_exn.next_alarm_fires_at_exn of empty timing wheel"
+                           ~timing_wheel:(t : _ t)];
+  next_alarm_fires_at_internal t elt
 ;;
 
 let fire_past_alarms t ~handle_fired =

@@ -30,48 +30,48 @@
 
 open Std_internal
 
-type ('key, 'a, 'cmp) t = private ('key, 'a, 'cmp) Map.t
+type ('key, 'a, 'cmp, 'enum) t = private ('key, 'a, 'cmp) Map.t
 
-val to_map : ('key, 'a, 'cmp) t -> ('key, 'a, 'cmp) Map.t
+val to_map : ('key, 'a, 'cmp, _) t -> ('key, 'a, 'cmp) Map.t
 
 (** Many of the functions below have types reflecting the fact that the maps are total
     (e.g., [find] does not return an option).  The fact that they won't raise exceptions
     relies on the enumeration passed to [Make] being complete. *)
 
-val map  : ('key, 'a, 'cmp) t -> f:(                 'a -> 'b) -> ('key, 'b, 'cmp) t
-val mapi : ('key, 'a, 'cmp) t -> f:(key:'key -> data:'a -> 'b) -> ('key, 'b, 'cmp) t
+val map  : ('key, 'a, 'c, 'e) t -> f:(                 'a -> 'b) -> ('key, 'b, 'c, 'e) t
+val mapi : ('key, 'a, 'c, 'e) t -> f:(key:'key -> data:'a -> 'b) -> ('key, 'b, 'c, 'e) t
 val map2
-  :  ('key, 'a, 'cmp) t
-  -> ('key, 'b, 'cmp) t
+  :  ('key, 'a, 'cmp, 'enum) t
+  -> ('key, 'b, 'cmp, 'enum) t
   -> f:('a -> 'b -> 'c)
-  -> ('key, 'c, 'cmp) t
+  -> ('key, 'c, 'cmp, 'enum) t
 
 
-val iter  : ('key, 'a, _) t -> f:(key:'key -> data:'a -> unit) -> unit
+val iter  : ('key, 'a, _, _) t -> f:(key:'key -> data:'a -> unit) -> unit
   [@@ocaml.deprecated "[since 2015-10] Use iteri instead"]
 
-val iteri : ('key, 'a, _) t -> f:(key:'key -> data:'a -> unit) -> unit
+val iteri : ('key, 'a, _, _) t -> f:(key:'key -> data:'a -> unit) -> unit
 val iter2
-  :  ('key, 'a, 'cmp) t
-  -> ('key, 'b, 'cmp) t
+  :  ('key, 'a, 'cmp, 'enum) t
+  -> ('key, 'b, 'cmp, 'enum) t
   -> f:(key:'key -> 'a -> 'b -> unit)
   -> unit
 
-val set : ('key, 'a, 'cmp) t -> 'key -> 'a -> ('key, 'a, 'cmp) t
+val set : ('key, 'a, 'cmp, 'enum) t -> 'key -> 'a -> ('key, 'a, 'cmp, 'enum) t
 
 val to_alist
   :  ?key_order:[ `Increasing | `Decreasing ]  (** default is [`Increasing] *)
-  -> ('key, 'a, _) t
+  -> ('key, 'a, _, _) t
   -> ('key * 'a) list
 
-val find : ('key, 'a, _) t -> 'key -> 'a
+val find : ('key, 'a, _, _) t -> 'key -> 'a
 
-val change : ('key, 'a, 'cmp) t -> 'key -> f:('a -> 'a) -> ('key, 'a, 'cmp) t
+val change : ('key, 'a, 'c, 'e) t -> 'key -> f:('a -> 'a) -> ('key, 'a, 'c, 'e) t
 
 (** Sequence a total map of computations in order of their keys resulting in computation
     of the total map of results. *)
 module Sequence (A : Applicative) : sig
-  val sequence : ('key, 'a A.t, 'cmp) t -> ('key, 'a, 'cmp) t A.t
+  val sequence : ('key, 'a A.t, 'cmp, 'enum) t -> ('key, 'a, 'cmp, 'enum) t A.t
 end
 
 (** The only reason that the Applicative interface isn't included here is that we don't
@@ -85,8 +85,10 @@ module type S = sig
   module Key : Key
 
   type comparator_witness
+  type enumeration_witness
 
-  type nonrec 'a t = (Key.t, 'a, comparator_witness) t [@@deriving sexp, bin_io, compare]
+  type nonrec 'a t = (Key.t, 'a, comparator_witness, enumeration_witness) t
+  [@@deriving sexp, bin_io, compare]
 
   include Applicative with type 'a t := 'a t
 
@@ -95,3 +97,9 @@ end
 
 module Make (Key : Key) : S with module Key = Key
 
+module Make_using_comparator (Key : sig
+    include Key
+    include Comparator.S with type t := t
+  end) : S
+  with module Key = Key
+  with type comparator_witness = Key.comparator_witness

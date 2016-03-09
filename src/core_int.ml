@@ -6,11 +6,20 @@ open Bin_prot.Std
 module T = struct
   type t = int [@@deriving bin_io, sexp, typerep]
 
-  (* According to estokes,
+  (*
      if i = j then 0 else if i < j then -1 else 1
      is only slightly faster, so we've decided to stick with
-     Pervasives.compare *)
-  let compare (x : t) y = compare x y
+     Pervasives.compare
+
+     The branch-free version here is essentially what [caml_int_compare] does,
+     and the assembly generated is very similar. The primary difference is the below may
+     be inlined, whereas the external call presently cannot be. If this ever becomes a
+     compiler instrinsic, we should switch to that. The below benchmarks should highlight
+     that. *)
+  let original_compare (x : t) y = compare x y
+
+  let compare (x : t) y = Bool.to_int (x > y) - Bool.to_int (x < y)
+
   let hash (x : t) = if x >= 0 then x else ~-x
 
   let of_string s =
@@ -207,6 +216,10 @@ let%test _ = pow max_value 1 = max_value
 
 include Int_pow2
 
+(* This is already defined by Comparable.Validate_with_zero, but Sign.of_int is
+   more direct. *)
+let sign = Sign.of_int
+
 include Pretty_printer.Register (struct
   type nonrec t = t
   let to_string = to_string
@@ -393,3 +406,53 @@ Estimated testing time 6m (36 benchmarks x 10s). Change using -quota SECS.
 *)
 
 include O (* [Int] and [Int.O] agree value-wise *)
+
+let%test "comparisons" =
+  let valid_compare x y =
+    let result = compare x y in
+    let expect = original_compare x y in
+    assert (Bool.(=) (result < 0) (expect < 0));
+    assert (Bool.(=) (result > 0) (expect > 0));
+    assert (Bool.(=) (result = 0) (expect = 0));
+    assert (result = expect);
+  in
+  (valid_compare min_value min_value);
+  (valid_compare min_value (-1));
+  (valid_compare (-1) min_value);
+  (valid_compare min_value 0);
+  (valid_compare 0    min_value);
+  (valid_compare max_value (-1));
+  (valid_compare (-1) max_value);
+  (valid_compare max_value min_value);
+  (valid_compare max_value max_value);
+  true
+;;
+
+let%bench_module "Int_compare" =
+  (module struct
+    (* For code which performs compare in an inner loop (this was motivated by some
+       Red-Black tree code) the potential gain here is probably as much as 20%.
+
+       On a non-uid box, with frame pointers:
+       Estimated testing time 20s (2 benchmarks x 10s). Change using -quota SECS.
+       ┌────────────────────────────────────────┬──────────┬────────────┐
+       │ Name                                   │ Time/Run │ Percentage │
+       ├────────────────────────────────────────┼──────────┼────────────┤
+       │ [core_int.ml:Int_compare] fast_compare │   3.93ns │     77.84% │
+       │ [core_int.ml:Int_compare] int_compare  │   5.05ns │    100.00% │
+       └────────────────────────────────────────┴──────────┴────────────┘
+
+       without frame pointers:
+       Estimated testing time 20s (2 benchmarks x 10s). Change using -quota SECS.
+       ┌────────────────────────────────────────┬──────────┬────────────┐
+       │ Name                                   │ Time/Run │ Percentage │
+       ├────────────────────────────────────────┼──────────┼────────────┤
+       │ [core_int.ml:Int_compare] fast_compare │   3.02ns │     73.18% │
+       │ [core_int.ml:Int_compare] int_compare  │   4.12ns │    100.00% │
+       └────────────────────────────────────────┴──────────┴────────────┘
+    *)
+    let c_value = ref 0 (* try to avoid constant folding with a ref *)
+    let%bench "fast_compare" = compare !c_value min_value
+    let%bench "int_compare" = original_compare !c_value min_value
+  end)
+;;

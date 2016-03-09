@@ -24,6 +24,9 @@ module type With_zero = sig
   val is_non_negative : t -> bool
   val is_negative     : t -> bool
   val is_non_positive : t -> bool
+
+  (** Returns [Neg], [Zero], or [Pos] in a way consistent with the above functions. *)
+  val sign : t -> Sign0.t
 end
 
 module type S_common = sig

@@ -32,6 +32,8 @@ module With_comparator    = Core_map_intf.With_comparator
 
 module Map = Core_map
 
+module Merge_to_sequence_element = Sequence.Merge_with_duplicates_element
+
 module type Accessors_generic = sig
 
   include Container.Generic_phantom
@@ -157,6 +159,16 @@ module type Accessors_generic = sig
        -> 'a elt Sequence.t
       ) options
 
+  val merge_to_sequence
+    : ('a, 'cmp,
+       ?order:[ `Increasing | `Decreasing ]
+       -> ?greater_or_equal_to:'a elt
+       -> ?less_or_equal_to:'a elt
+       -> ('a, 'cmp) t
+       -> ('a, 'cmp) t
+       -> 'a elt Merge_to_sequence_element.t Sequence.t
+      ) options
+
   val to_map
     : ('a, 'cmp,
        ('a, 'cmp) t -> f:('a elt -> 'b) -> ('a elt, 'b, 'cmp cmp) Map.t
@@ -211,6 +223,13 @@ module type Accessors0 = sig
     -> ?less_or_equal_to:elt
     -> t
     -> elt Sequence.t
+  val merge_to_sequence
+    :  ?order:[ `Increasing | `Decreasing ]
+    -> ?greater_or_equal_to:elt
+    -> ?less_or_equal_to:elt
+    -> t
+    -> t
+    -> elt Merge_to_sequence_element.t Sequence.t
   val to_map         : t -> f:(elt -> 'data) -> (elt, 'data, comparator_witness) Map.t
   val obs : elt Quickcheck.obs -> t Quickcheck.obs
   val shrinker : elt Quickcheck.shr -> t Quickcheck.shr
@@ -257,6 +276,13 @@ module type Accessors1 = sig
     -> ?less_or_equal_to:'a
     -> 'a t
     -> 'a Sequence.t
+  val merge_to_sequence
+    :  ?order:[ `Increasing | `Decreasing ]
+    -> ?greater_or_equal_to:'a
+    -> ?less_or_equal_to:'a
+    -> 'a t
+    -> 'a t
+    -> 'a Merge_to_sequence_element.t Sequence.t
   val to_map         : 'a t -> f:('a -> 'b) -> ('a, 'b, comparator_witness) Map.t
   val obs : 'a Quickcheck.obs -> 'a t Quickcheck.obs
   val shrinker : 'a Quickcheck.shr -> 'a t Quickcheck.shr
@@ -304,6 +330,13 @@ module type Accessors2 = sig
     -> ?less_or_equal_to:'a
     -> ('a, 'cmp) t
     -> 'a Sequence.t
+  val merge_to_sequence
+    :  ?order:[ `Increasing | `Decreasing ]
+    -> ?greater_or_equal_to:'a
+    -> ?less_or_equal_to:'a
+    -> ('a, 'cmp) t
+    -> ('a, 'cmp) t
+    -> 'a Merge_to_sequence_element.t Sequence.t
   val to_map         : ('a, 'cmp) t -> f:('a -> 'b) -> ('a, 'b, 'cmp) Map.t
   val obs : 'a Quickcheck.obs -> ('a, 'cmp) t Quickcheck.obs
   val shrinker : 'a Quickcheck.shr -> ('a, 'cmp) t Quickcheck.shr
@@ -325,7 +358,7 @@ module type Accessors2_with_comparator = sig
   val diff
     : comparator:('a, 'cmp) Comparator.t -> ('a, 'cmp) t -> ('a, 'cmp) t -> ('a, 'cmp) t
   val symmetric_diff
-    : comparator:('a, 'cmp) Comparator.t -> ('a, 'cmp) t -> ('a, 'comp) t
+    : comparator:('a, 'cmp) Comparator.t -> ('a, 'cmp) t -> ('a, 'cmp) t
     -> ('a, 'a) Either.t Sequence.t
   val compare_direct
     : comparator:('a, 'cmp) Comparator.t -> ('a, 'cmp) t -> ('a, 'cmp) t -> int
@@ -375,6 +408,14 @@ module type Accessors2_with_comparator = sig
     -> ?less_or_equal_to:'a
     -> ('a, 'cmp) t
     -> 'a Sequence.t
+  val merge_to_sequence
+    :  comparator:('a, 'cmp) Comparator.t
+    -> ?order:[ `Increasing | `Decreasing ]
+    -> ?greater_or_equal_to:'a
+    -> ?less_or_equal_to:'a
+    -> ('a, 'cmp) t
+    -> ('a, 'cmp) t
+    -> 'a Merge_to_sequence_element.t Sequence.t
   val to_map
     :  comparator:('a, 'cmp) Comparator.t
     -> ('a, 'cmp) t

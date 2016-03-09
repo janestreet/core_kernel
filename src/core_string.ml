@@ -645,22 +645,26 @@ let%test_unit _ =
 ;;
 
 (* [is_suffix s ~suff] returns [true] if the string [s] ends with the suffix [suff] *)
-let is_suffix s ~suffix =
-  let len_suff = String.length suffix in
-  let len_s = String.length s in
-  len_s >= len_suff
-  && (let rec loop i =
-        i = len_suff || (suffix.[len_suff - 1 - i] = s.[len_s - 1 - i] && loop (i + 1))
-      in
-      loop 0)
+ let is_suffix =
+  let rec loop s ~suffix idx_suff idx =
+    idx_suff < 0
+    || (suffix.[idx_suff] = s.[idx]
+        && loop s ~suffix (idx_suff - 1) (idx - 1))
+  in
+  fun s ~suffix ->
+    let len = String.length s in
+    let len_suffix = String.length suffix in
+    len >= len_suffix && loop s ~suffix (len_suffix - 1) (len - 1)
+;;
 
-let is_prefix s ~prefix =
-  let len_pref = String.length prefix in
-  String.length s >= len_pref
-  && (let rec loop i =
-        i = len_pref || (prefix.[i] = s.[i] && loop (i + 1))
-      in
-      loop 0)
+let is_prefix =
+  let rec loop s ~prefix i =
+    i < 0  || (prefix.[i] = s.[i] && loop s ~prefix (i - 1))
+  in
+  fun s ~prefix ->
+    let prefix_len = String.length prefix in
+    String.length s >= prefix_len
+    && (loop s ~prefix (prefix_len - 1))
 ;;
 
 let wrap_sub_n t n ~name ~pos ~len ~on_error =
@@ -799,10 +803,9 @@ let tr_inplace ~target ~replacement s = (* destructive version of tr *)
     if s.[i] = target then s.[i] <- replacement
   done
 
-let exists s ~f =
-  let length = length s in
-  let rec loop i = i < length && (f s.[i] || loop (i + 1)) in
-  loop 0
+let exists =
+  let rec loop s i ~len ~f = i < len && (f s.[i] || loop s (i + 1) ~len ~f) in
+  fun s ~f -> loop s 0 ~len:(length s) ~f
 ;;
 
 let%test _ = false = exists ""    ~f:(fun _ -> assert false)
@@ -811,10 +814,9 @@ let%test _ = true  = exists "abc" ~f:(Fn.const true)
 let%test _ = true  = exists "abc" ~f:(function
     'a' -> false | 'b' -> true | _ -> assert false)
 
-let for_all s ~f =
-  let length = length s in
-  let rec loop i = i = length || (f s.[i] && loop (i + 1)) in
-  loop 0
+let for_all =
+  let rec loop s i ~len ~f = i = len || (f s.[i] && loop s (i + 1) ~len ~f) in
+  fun s ~f -> loop s 0 ~len:(length s) ~f
 ;;
 
 let%test _ = true  = for_all ""    ~f:(fun _ -> assert false)

@@ -131,6 +131,6 @@ val fold_exn
 (** [unsubscribe t subscriber] removes the callback corresponding to [subscriber] from
     [t].  [unsubscribe] never raises and is idempotent.  As with [subscribe_exn],
     [unsubscribe t] during [write t] takes effect after the current [write] finishes.
-    Also like [subsribe_exn], [unsubscribe] takes time proportional to the number of
+    Also like [subscribe_exn], [unsubscribe] takes time proportional to the number of
     callbacks. *)
 val unsubscribe : 'callback Read_only.t -> 'callback Subscriber.t -> unit

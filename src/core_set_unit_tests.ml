@@ -60,6 +60,8 @@ module Unit_tests
     let to_array   = to_array
     let to_sequence ?order ?greater_or_equal_to ?less_or_equal_to x =
       simplify_accessor to_sequence ?order ?greater_or_equal_to ?less_or_equal_to x
+    let merge_to_sequence ?order ?greater_or_equal_to ?less_or_equal_to x y =
+      simplify_accessor merge_to_sequence ?order ?greater_or_equal_to ?less_or_equal_to x y
 
     let empty ()       = simplify_creator empty
     let singleton      = simplify_creator singleton
@@ -235,6 +237,79 @@ module Unit_tests
       Set.to_sequence ~order:`Decreasing ~less_or_equal_to:(Elt.of_int ~-1) m <=> []
 
   end)
+
+  let merge_to_sequence ?order:_ ?greater_or_equal_to:_ ?less_or_equal_to:_ _ _ : _ Sequence.t = assert false
+  let%test_module "merge_to_sequence Quickcheck" =
+    (module struct
+
+      open Quickcheck
+
+      module Merge_to_sequence_args = struct
+        type t = {
+          order : [ `Increasing | `Decreasing ] option;
+          greater_or_equal_to : Elt.t option;
+          less_or_equal_to : Elt.t option;
+          x : (int, Int.comparator_witness) Set.t_;
+          y : (int, Int.comparator_witness) Set.t_;
+        }
+
+        let gen =
+          let open Generator.Monad_infix in
+          let int_set_gen =
+            Generator.size
+            >>= fun size ->
+            List.gen' ~length:(`Exactly size) ~unique:true Int.gen
+            >>| fun ints ->
+            Set.of_list (List.map ints ~f:Elt.of_int)
+          in
+          Generator.tuple5
+            (Option.gen (Generator.of_list [ `Increasing; `Decreasing; ]))
+            (Option.gen (Int.gen >>| Elt.of_int))
+            (Option.gen (Int.gen >>| Elt.of_int))
+            int_set_gen
+            int_set_gen
+          >>| fun (order, greater_or_equal_to, less_or_equal_to, x, y) ->
+          { order; greater_or_equal_to; less_or_equal_to; x; y; }
+        ;;
+      end
+
+      let%test_unit "merge_to_sequence = symmetric diff + inter" =
+        Quickcheck.test Merge_to_sequence_args.gen ~f:(fun {
+          order; greater_or_equal_to; less_or_equal_to; x; y ;
+        } ->
+          let open Merge_to_sequence_element in
+          let value = function
+            | Left x | Right x | Both (x, _) -> Elt.to_int x
+          in
+          let expect = List.concat [
+            List.map ~f:(fun x -> Both (x, x)) (Set.to_list (Set.inter x y));
+            List.map ~f:(fun x -> Left x) (Set.to_list (Set.diff x y));
+            List.map ~f:(fun x -> Right x) (Set.to_list (Set.diff y x));
+          ] in
+          let expect =
+            Option.fold greater_or_equal_to ~init:expect ~f:(fun elts min ->
+              let min = Elt.to_int min in
+              List.filter elts ~f:(fun x -> Int.(>=) (value x) min))
+          in
+          let expect =
+            Option.fold less_or_equal_to ~init:expect ~f:(fun elts max ->
+              let max = Elt.to_int max in
+              List.filter elts ~f:(fun x -> Int.(<=) (value x) max))
+          in
+          let expect =
+            match order with
+            | None | Some `Increasing ->
+              List.sort expect ~cmp:(fun a b -> Int.compare (value a) (value b))
+            | Some `Decreasing ->
+              List.sort expect ~cmp:(fun a b -> Int.compare (value b) (value a))
+          in
+          [%test_result: Elt.t Merge_to_sequence_element.t list]
+            (Sequence.to_list
+               (Set.merge_to_sequence ?order ?greater_or_equal_to ?less_or_equal_to x y))
+            ~expect)
+      ;;
+
+    end)
 
   let of_sorted_array _ = assert false
   let of_sorted_array_unchecked _ = assert false

@@ -11,7 +11,7 @@ let   signed_max = Int32.to_int Int32.max_int
 let unsigned_max = Int64.to_int 0xffff_ffffL
 #endif
 
-type endian = [ `Big_endian | `Little_endian ] [@@deriving sexp]
+type endian = [ `Big_endian | `Little_endian ] [@@deriving compare, sexp]
 
 (* Computes the offset based on the total number of bytes, the byte order, and the
    byte number. The byte number is ordered by decreasing significance starting at zero

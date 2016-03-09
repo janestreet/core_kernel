@@ -6,7 +6,6 @@
     2. the stack frames unwound when an exception is raised ([Backtrace.Exn])
 *)
 
-open Std_internal
 
 (** A [Backtrace.t] is a snapshot of the stack obtained by calling [Backtrace.get].  It is
     represented as a string with newlines separating the frames.  [sexp_of_t] splits the

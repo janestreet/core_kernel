@@ -63,6 +63,7 @@ module Span : sig
   val ( - ) : t -> t -> t
   val abs : t -> t
   val neg : t -> t
+  val max : t -> t -> t
 
   val scale       : t -> float        -> t
   val scale_int   : t -> int          -> t
@@ -73,7 +74,7 @@ module Span : sig
   val ( // ) : t -> t     -> float
 
   val create
-    :  ?sign : Float.Sign.t
+    :  ?sign : Sign.t
     -> ?day : int
     -> ?hr  : int
     -> ?min : int
@@ -86,7 +87,7 @@ module Span : sig
 
   module Parts : sig
     type t =
-      { sign : Float.Sign.t
+      { sign : Sign.t
       ; hr   : int
       ; min  : int
       ; sec  : int
@@ -108,24 +109,23 @@ module Span : sig
     type nonrec t = t [@@deriving sexp]
   end
 end = struct
-  (* [Span] is basically a [Core_int63] *)
+  (* [Span] is basically a [Core_int63].  It even silently ignores overflow. *)
   module T = struct
     type t = Core_int63.t (** nanoseconds *)
     [@@deriving bin_io, typerep]
 
     let compare = Core_int63.compare
-    let equal = Core_int63.equal
-    let zero = Core_int63.zero
+    let equal   = Core_int63.equal
+    let zero    = Core_int63.zero
 
     include (Core_int63 : Comparable.Infix with type t := t)
-
   end
 
   include T
 
   module Parts = struct
     type t =
-      { sign : Float.Sign.t
+      { sign : Sign.t
       ; hr   : int
       ; min  : int
       ; sec  : int
@@ -146,47 +146,42 @@ end = struct
   let hour        = Core_int63.(of_int 60 * minute)
   let day         = Core_int63.(of_int 24 * hour)
 
-  (* Beyond this, not every microsecond can be represented as a [float] number of seconds.
-     (In fact, it is around 135y, but we leave a small margin.) *)
+  (* Beyond [min_value..max_value], not every microsecond can be represented as a [float]
+     number of seconds.  (In fact, it is around 135y, but we leave a small margin.)
+
+     In the presence of silently ignored overflow, note that [t] is not actually bound to
+     stay between these limits. *)
   let max_value = Core_int63.(of_int 135 * of_int 365 * day)
   let min_value = Core_int63.neg max_value
 
-  let check_range t =
-    if t < min_value || t > max_value then
-      failwiths "Span.t exceeds limits" (t, min_value, max_value)
-        [%sexp_of: Core_int63.t * Core_int63.t * Core_int63.t]
-    else t
-  ;;
-
   let create
-        ?(sign = Float.Sign.Pos)
-        ?day:(d = 0)
-        ?(hr  = 0)
-        ?(min = 0)
-        ?(sec = 0)
-        ?(ms  = 0)
-        ?(us  = 0)
-        ?(ns  = 0)
+        ?sign:(sign_  = Sign.Pos) (* rebind so not shadowed by [open Core_int63] below *)
+        ?day:(days    = 0)
+        ?(hr          = 0)
+        ?min:(minutes = 0)
+        ?(sec         = 0)
+        ?(ms          = 0)
+        ?(us          = 0)
+        ?(ns          = 0)
         () =
-    let minutes = min in
     let open Core_int63 in
     let t =
-      of_int d * day
-      + of_int hr * hour
+        of_int days    * day
+      + of_int hr      * hour
       + of_int minutes * minute
-      + of_int sec * second
-      + of_int ms * millisecond
-      + of_int us * microsecond
-      + of_int ns * nanosecond
+      + of_int sec     * second
+      + of_int ms      * millisecond
+      + of_int us      * microsecond
+      + of_int ns      * nanosecond
     in
-    check_range Float.Sign.(match sign with Neg -> -t | Pos | Zero -> t)
+    match sign_ with Neg -> neg t | Pos | Zero -> t
   ;;
 
   let to_parts t =
     let open Core_int63 in
     let mag = abs t in
     { Parts.
-      sign = Float.Sign.(if t < zero then Neg else if t > zero then Pos else Zero)
+      sign = if t < zero then Neg else if t > zero then Pos else Zero
     ; hr = to_int_exn (mag / hour)
     ; min = to_int_exn ((rem mag hour) / minute)
     ; sec = to_int_exn ((rem mag minute) / second)
@@ -197,20 +192,20 @@ end = struct
   ;;
 
   let of_parts { Parts. sign; hr; min; sec; ms; us; ns } =
-    check_range (create ~sign ~hr ~min ~sec ~ms ~us ~ns ())
+    create ~sign ~hr ~min ~sec ~ms ~us ~ns ()
   ;;
 
-  let of_ns       f = check_range (round_nearest f)
-  let of_int63_ns i = check_range i
-  let of_int_us   i = check_range Core_int63.(of_int i * microsecond)
-  let of_int_ms   i = check_range Core_int63.(of_int i * millisecond)
-  let of_int_sec  i = check_range Core_int63.(of_int i * second)
-  let of_us       f = check_range (round_nearest (f *. float microsecond))
-  let of_ms       f = check_range (round_nearest (f *. float millisecond))
-  let of_sec      f = check_range (round_nearest (f *. float second))
-  let of_min      f = check_range (round_nearest (f *. float minute))
-  let of_hr       f = check_range (round_nearest (f *. float hour))
-  let of_day      f = check_range (round_nearest (f *. float day))
+  let of_ns       f = round_nearest f
+  let of_int63_ns i = i
+  let of_int_us   i = Core_int63.(of_int i * microsecond)
+  let of_int_ms   i = Core_int63.(of_int i * millisecond)
+  let of_int_sec  i = Core_int63.(of_int i * second)
+  let of_us       f = round_nearest (f *. float microsecond)
+  let of_ms       f = round_nearest (f *. float millisecond)
+  let of_sec      f = round_nearest (f *. float second)
+  let of_min      f = round_nearest (f *. float minute)
+  let of_hr       f = round_nearest (f *. float hour)
+  let of_day      f = round_nearest (f *. float day)
 
   let of_sec_with_microsecond_precision sec =
     let us = round_nearest (sec *. 1e6) in
@@ -232,23 +227,57 @@ end = struct
 #if JSC_ARCH_SIXTYFOUR
   let%test _ = Int.(>) (to_int_sec Core_int63.max_value) 0 (* and doesn't raise *)
 
-  let of_int_ns i = check_range (of_int63_ns (Core_int63.of_int i))
+  let of_int_ns i = of_int63_ns (Core_int63.of_int i)
   let to_int_ns t = Core_int63.to_int_exn (to_int63_ns t)
 #else
   let of_int_ns _i = failwith "unsupported on 32bit machines"
   let to_int_ns _i = failwith "unsupported on 32bit machines"
 #endif
 
-  let (+) t u         = check_range (Core_int63.(+) t u)
-  let (-) t u         = check_range (Core_int63.(-) t u)
-  let abs             = Core_int63.(abs)
-  let neg             = Core_int63.(neg)
-  let scale t f       = check_range (round_nearest (float t *. f))
-  let scale_int63 t i = check_range (Core_int63.( * ) t i)
-  let scale_int t i   = check_range (scale_int63 t (Core_int63.of_int i))
+  let (+)         t u = Core_int63.(+) t u
+  let (-)         t u = Core_int63.(-) t u
+  let abs             = Core_int63.abs
+  let neg             = Core_int63.neg
+  let scale       t f = round_nearest (float t *. f)
+  let scale_int63 t i = Core_int63.( * ) t i
+  let scale_int   t i = scale_int63 t (Core_int63.of_int i)
   let div             = Core_int63.( /% )
-  let (/) t f         = check_range (round_nearest (float t /. f))
+  let (/)         t f = round_nearest (float t /. f)
   let (//)            = Core_int63.(//)
+  let max             = Core_int63.max
+
+  let%test_module "overflow silently" =
+    (module struct
+      let doesn't_raise = Fn.non Exn.does_raise
+
+      let%test "+ range up"   = doesn't_raise (fun () -> max_value +     nanosecond)
+      let%test "+ range down" = doesn't_raise (fun () -> min_value + neg nanosecond)
+      let%test "+ overflow"   = doesn't_raise (fun () -> max_value +     max_value)
+      let%test "+ underflow"  = doesn't_raise (fun () -> min_value +     min_value)
+      let%test "- range down" = doesn't_raise (fun () -> min_value -     nanosecond)
+      let%test "- range up"   = doesn't_raise (fun () -> max_value - neg nanosecond)
+      let%test "- underflow"  = doesn't_raise (fun () -> min_value -     max_value)
+      let%test "- overflow"   = doesn't_raise (fun () -> max_value -     min_value)
+
+      let%test_module "intermediate ( * )" =
+        (module struct
+          let wrap_days =
+            let margin_ns = Core_int63.(-) min_value Core_int63.min_value in
+            Core_int63.(max_value / day + one + margin_ns / day + one)
+          ;;
+          let%test_unit "wrap_days" =
+            [%test_pred: Core_int63.t]
+              (Core_int63.between ~low:min_value ~high:(Core_int63.neg nanosecond))
+              Core_int63.(wrap_days * day)
+          ;;
+          let wrap_days_int = Core_int63.to_int_exn wrap_days
+          let%test "scale_int63" = doesn't_raise (fun () -> scale_int63 day wrap_days)
+          let%test "scale_int"   = doesn't_raise (fun () -> scale_int   day wrap_days_int)
+          let%test "create"      = doesn't_raise (fun () -> create ()  ~day:wrap_days_int)
+        end)
+      ;;
+    end)
+  ;;
 
   (** The conversion code here is largely copied from [Core.Span] and edited to remove
       some of the stable versioning details. This makes it a little easier to think about
@@ -335,14 +364,14 @@ end = struct
       [%test_result: Parts.t] (to_parts t) ~expect:(to_parts expect);
       round_trip t
 
-    let%test_unit _ = eq (create ~us:2                       ()) (of_int 2    * microsecond)
-    let%test_unit _ = eq (create ~min:3                      ()) (of_int 3    * minute)
-    let%test_unit _ = eq (create ~ms:4                       ()) (of_int 4    * millisecond)
-    let%test_unit _ = eq (create ~sec:5                      ()) (of_int 5    * second)
-    let%test_unit _ = eq (create ~hr:6                       ()) (of_int 6    * hour)
-    let%test_unit _ = eq (create ~day:7                      ()) (of_int 7    * day)
-    let%test_unit _ = eq (create ~us:8 ~sign:Float.Sign.Neg  ()) (of_int (-8) * microsecond)
-    let%test_unit _ = eq (create ~ms:9 ~sign:Float.Sign.Zero ()) (of_int 9    * millisecond)
+    let%test_unit _ = eq (create ~us:2            ()) (of_int 2    * microsecond)
+    let%test_unit _ = eq (create ~min:3           ()) (of_int 3    * minute)
+    let%test_unit _ = eq (create ~ms:4            ()) (of_int 4    * millisecond)
+    let%test_unit _ = eq (create ~sec:5           ()) (of_int 5    * second)
+    let%test_unit _ = eq (create ~hr:6            ()) (of_int 6    * hour)
+    let%test_unit _ = eq (create ~day:7           ()) (of_int 7    * day)
+    let%test_unit _ = eq (create ~us:8 ~sign:Neg  ()) (of_int (-8) * microsecond)
+    let%test_unit _ = eq (create ~ms:9 ~sign:Zero ()) (of_int 9    * millisecond)
     let%test_unit _ =
       eq (create ~us:3 ~ns:242 () |> to_sec |> of_sec_with_microsecond_precision)
         (of_int 3 * microsecond)
@@ -363,8 +392,8 @@ end = struct
       round_trip parts
 
     let%test_unit _ =
-      eq (to_parts (create ~sign:Float.Sign.Neg ~hr:2 ~min:3 ~sec:4 ~ms:5 ~us:6 ~ns:7 ()))
-        { Parts. sign = Float.Sign.Neg; hr = 2; min = 3; sec = 4; ms = 5; us = 6; ns = 7 }
+      eq (to_parts (create ~sign:Neg ~hr:2 ~min:3 ~sec:4 ~ms:5 ~us:6 ~ns:7 ()))
+        { Parts. sign = Neg; hr = 2; min = 3; sec = 4; ms = 5; us = 6; ns = 7 }
     let%test_unit _ = round_trip (to_parts (create ~hr:25 ()))
     let%test_unit _ =
       let hr =
@@ -420,11 +449,12 @@ let equal = Span.equal
 let min_value = Span.min_value
 let max_value = Span.max_value
 
-let epoch = Span.zero
-let add = Span.(+)
-let sub = Span.(-)
-let diff = Span.(-)
+let epoch        = Span.zero
+let add          = Span.(+)
+let sub          = Span.(-)
+let diff         = Span.(-)
 let abs_diff t u = Span.abs (diff t u)
+let max = Span.max
 
 let to_span_since_epoch t = t
 let of_span_since_epoch s = s
