@@ -14,6 +14,8 @@
 #include <caml/unixsupport.h>
 #include <caml/threads.h>
 
+#include <stdint.h>
+
 #define XSTR(S) STR(S)
 #define STR(S) #S
 
