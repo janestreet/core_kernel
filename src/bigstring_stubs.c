@@ -202,3 +202,14 @@ CAMLprim value bigstring_destroy_stub(value v_bstr)
   core_bigstring_destroy(Caml_ba_array_val(v_bstr), 0);
   return Val_unit;
 }
+
+CAMLprim value core_bigstring_test_allocation(value v_unit)
+{
+  int i;
+  value v;
+  v_unit = v_unit;
+  for (i = 0; i < 20; i++) { 
+    v = caml_alloc_small(100, 0);
+  }
+  return v;
+}

@@ -15,7 +15,7 @@ module T = struct
   type t = float [@@deriving sexp, bin_io, typerep]
   let compare (x : t) y = compare x y
   let equal (x : t) y = x = y
-  external hash : float -> int = "caml_hash_double" "noalloc"
+  external hash : float -> int = "caml_hash_double" [@@noalloc]
 
   let%test_unit _ =
     List.iter ~f:(fun float -> assert (hash float = Caml.Hashtbl.hash float))
@@ -381,6 +381,7 @@ let iround_up_exn t =
     else
       invalid_argf "Float.iround_up_exn: argument (%f) is too small or NaN" (box t) ()
   end
+[@@ocaml.inline always]
 
 let iround_down t =
   if t >= 0.0 then begin
@@ -409,6 +410,7 @@ let iround_down_exn t =
     else
       invalid_argf "Float.iround_down_exn: argument (%f) is too small or NaN" (box t) ()
   end
+[@@ocaml.inline always]
 
 let iround_towards_zero t =
   if t >= iround_lbound && t <= iround_ubound then
@@ -481,6 +483,7 @@ let iround_nearest_exn t =
       else
         invalid_argf "Float.iround_nearest_exn: argument (%f) is too small or NaN" (box t)
           ()
+[@@ocaml.inline always]
 
 (* The following [iround_exn] and [iround] functions are slower than the ones above.
    Their equivalence to those functions is tested in the unit tests below. *)

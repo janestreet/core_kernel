@@ -83,7 +83,7 @@ external get : t -> int -> char = "%caml_ba_ref_1"
 (** [set t pos] sets the character at [pos] *)
 external set : t -> int -> char -> unit = "%caml_ba_set_1"
 
-external is_mmapped : t -> bool = "bigstring_is_mmapped_stub" "noalloc"
+external is_mmapped : t -> bool = "bigstring_is_mmapped_stub" [@@noalloc]
 (** [is_mmapped bstr] @return whether the bigstring [bstr] is
     memory-mapped. *)
 
@@ -159,7 +159,7 @@ val find
 
 (** Same as [find], but does no bounds checking, and returns a negative value instead of
     [None] if [char] is not found. *)
-external unsafe_find : t -> char -> pos:int -> len:int -> int = "bigstring_find" "noalloc"
+external unsafe_find : t -> char -> pos:int -> len:int -> int = "bigstring_find" [@@noalloc]
 
 
 (** {6 Destruction} *)

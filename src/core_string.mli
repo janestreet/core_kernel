@@ -269,7 +269,7 @@ val drop_prefix : t -> int -> t
 val concat_array : ?sep : t -> t array -> t
 
 (** slightly faster hash function on strings *)
-external hash : t -> int = "caml_hash_string" "noalloc"
+external hash : t -> int = "caml_hash_string" [@@noalloc]
 
 (** fast equality function on strings, doesn't use compare_val *)
 val equal : t -> t -> bool

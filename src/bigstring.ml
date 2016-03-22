@@ -16,6 +16,8 @@ include Z
 
 external aux_create: max_mem_waiting_gc:int -> size:int -> t = "bigstring_alloc"
 
+external test_allocation : unit -> 'a = "core_bigstring_test_allocation"
+
 let create ?max_mem_waiting_gc size =
   let max_mem_waiting_gc =
     match max_mem_waiting_gc with
@@ -35,6 +37,7 @@ let%test "create with different max_mem_waiting_gc" =
     let max_mem_waiting_gc = Byte_units.create mem_units 256. in
     for _ = 0 to large_int do
       let (_ : t) = create ~max_mem_waiting_gc large_int in
+      ignore (test_allocation ());  (* ensure we allocate something *)
       ()
     done;
     Alarm.delete alarm;
@@ -48,7 +51,7 @@ let%test "create with different max_mem_waiting_gc" =
 
 let length = Array1.dim
 
-external is_mmapped : t -> bool = "bigstring_is_mmapped_stub" "noalloc"
+external is_mmapped : t -> bool = "bigstring_is_mmapped_stub" [@@noalloc]
 
 let init n ~f =
   let t = create n in
@@ -119,7 +122,7 @@ module From_string =
     (struct
       external unsafe_blit
         : src : string -> src_pos : int -> dst : t -> dst_pos : int -> len : int -> unit
-        = "bigstring_blit_string_bigstring_stub" "noalloc"
+        = "bigstring_blit_string_bigstring_stub" [@@noalloc]
       include Bigstring_sequence
     end)
 ;;
@@ -131,7 +134,7 @@ module To_string =
     (struct
       external unsafe_blit
         : src : t -> src_pos : int -> dst : string -> dst_pos : int -> len : int -> unit
-        = "bigstring_blit_bigstring_string_stub" "noalloc"
+        = "bigstring_blit_bigstring_string_stub" [@@noalloc]
       include String_sequence
     end)
 ;;
@@ -200,7 +203,7 @@ let%test_module "concat" =
 
 external unsafe_memcmp
   : t1 : t -> t1_pos : int -> t2 : t -> t2_pos : int -> len : int -> int
-  = "bigstring_memcmp_stub" "noalloc"
+  = "bigstring_memcmp_stub" [@@noalloc]
 
 let compare t1 t2 =
   if phys_equal t1 t2 then 0 else
@@ -395,7 +398,7 @@ let map_file ~shared fd n = Array1.map_file fd Bigarray.char c_layout shared n
 
 (* Search *)
 
-external unsafe_find : t -> char -> pos:int -> len:int -> int = "bigstring_find" "noalloc"
+external unsafe_find : t -> char -> pos:int -> len:int -> int = "bigstring_find" [@@noalloc]
 
 let find ?(pos = 0) ?len chr bstr =
   let len = get_opt_len bstr ~pos len in

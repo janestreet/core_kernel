@@ -11,8 +11,8 @@ extern uintnat caml_allocated_words;
 
 extern intnat caml_stat_minor_collections;
 extern intnat caml_stat_major_collections;
-extern intnat caml_stat_heap_size;
-extern intnat caml_stat_top_heap_size;
+extern intnat caml_stat_heap_wsz;
+extern intnat caml_stat_top_heap_wsz;
 extern intnat caml_stat_compactions;
 extern intnat caml_stat_heap_chunks;
 
@@ -54,7 +54,7 @@ CAMLprim value core_kernel_gc_major_collections(value unit __attribute__((unused
 
 CAMLprim value core_kernel_gc_heap_words(value unit __attribute__((unused)))
 {
-  return Val_long(caml_stat_heap_size / sizeof (value));
+  return Val_long(caml_stat_heap_wsz);
 }
 
 CAMLprim value core_kernel_gc_heap_chunks(value unit __attribute__((unused)))
@@ -69,7 +69,7 @@ CAMLprim value core_kernel_gc_compactions(value unit __attribute__((unused)))
 
 CAMLprim value core_kernel_gc_top_heap_words(value unit __attribute__((unused)))
 {
-  return Val_long(caml_stat_top_heap_size / sizeof (value));
+  return Val_long(caml_stat_top_heap_wsz);
 }
 
 CAMLprim value core_kernel_gc_major_plus_minor_words(value unit __attribute__((unused)))

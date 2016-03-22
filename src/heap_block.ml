@@ -1,6 +1,6 @@
 type 'a t = 'a [@@deriving sexp_of]
 
-external is_heap_block : Obj.t -> bool = "core_heap_block_is_heap_block" "noalloc"
+external is_heap_block : Obj.t -> bool = "core_heap_block_is_heap_block" [@@noalloc]
 
 let is_ok v = is_heap_block (Obj.repr v)
 

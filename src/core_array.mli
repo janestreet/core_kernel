@@ -97,7 +97,7 @@ module Int : sig
 
   external unsafe_blit
     : src:t -> src_pos:int -> dst:t -> dst_pos:int -> len:int -> unit
-    = "core_array_unsafe_int_blit" "noalloc"
+    = "core_array_unsafe_int_blit" [@@noalloc]
 end
 
 module Float : sig
@@ -107,7 +107,7 @@ module Float : sig
 
   external unsafe_blit
     : src:t -> src_pos:int -> dst:t -> dst_pos:int -> len:int -> unit
-    = "core_array_unsafe_float_blit" "noalloc"
+    = "core_array_unsafe_float_blit" [@@noalloc]
 end
 
 (** [Array.of_list l] returns a fresh array containing the elements of [l]. *)
@@ -332,7 +332,7 @@ module Permissioned : sig
 
     external unsafe_blit
       : src:[> read] t -> src_pos:int -> dst:[> write] t -> dst_pos:int -> len:int -> unit
-      = "core_array_unsafe_int_blit" "noalloc"
+      = "core_array_unsafe_int_blit" [@@noalloc]
   end
 
   module Float : sig
@@ -342,7 +342,7 @@ module Permissioned : sig
 
     external unsafe_blit
       : src:[> read] t -> src_pos:int -> dst:[> write] t -> dst_pos:int -> len:int -> unit
-      = "core_array_unsafe_float_blit" "noalloc"
+      = "core_array_unsafe_float_blit" [@@noalloc]
   end
 
   (** [of_array_id] and [to_array_id] return the same underlying array.  On the other

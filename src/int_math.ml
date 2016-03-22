@@ -8,7 +8,7 @@ let overflow () =
   Core_printf.invalid_argf "integer overflow in pow" ()
 
 (* To implement [int64_pow], we use C code rather than OCaml to eliminate allocation. *)
-external int_math_int_pow   : int   -> int   -> int   = "int_math_int_pow_stub" "noalloc"
+external int_math_int_pow   : int   -> int   -> int   = "int_math_int_pow_stub" [@@noalloc]
 external int_math_int64_pow : int64 -> int64 -> int64 = "int_math_int64_pow_stub"
 
 let int_pow base exponent =
