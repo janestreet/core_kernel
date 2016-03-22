@@ -1,3 +1,9 @@
+## 113.33.01
+
+- Fix segfault in [Stack]
+
+- Fix BSD build problem related to endian.h
+
 ## 113.33.00
 
 - Rename Tuple.T2.map1 and Tuple.T2.map2 to `map_fst` and `map_snd`,
