@@ -12,7 +12,7 @@ type 'a t =
     mutable length : int;
     mutable elts : 'a array;
   }
-[@@deriving bin_io, fields, sexp_of]
+[@@deriving fields, sexp_of]
 
 let sexp_of_t_internal = sexp_of_t
 let sexp_of_t = `Rebound_later
@@ -109,10 +109,18 @@ let sexp_of_t sexp_of_a t = [%sexp_of: a list] (to_list t)
 
 let t_of_sexp a_of_sexp sexp = of_list ([%of_sexp: a list] sexp)
 
+include
+  Bin_prot.Utils.Make_binable1 (struct
+    type nonrec 'a t = 'a t
+    module Binable = Core_list
+    let to_binable = to_list
+    let of_binable = of_list
+  end)
+
 let resize t size =
-  t.elts <-
-    Array.init size ~f:(fun i ->
-      if i < t.length then t.elts.(i) else t.dummy);
+  let arr = Array.create ~len:size t.dummy in
+  Array.blit ~src:t.elts ~dst:arr ~src_pos:0 ~dst_pos:0 ~len:t.length;
+  t.elts <- arr
 ;;
 
 let set_capacity t new_capacity =

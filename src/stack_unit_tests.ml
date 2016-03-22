@@ -204,6 +204,12 @@ module Test (Stack : Stack_intf.S)
     done
   ;;
 
+  let%test_unit "float test" =
+    let s = create () in
+    push s 1.0;
+    push s 2.0;
+    push s 3.0
+
 end
 
 include (Test (Debug (Linked_stack)) : sig end)
