@@ -1,3 +1,469 @@
+## 113.43.00
+
+- This feature implements `String.Caseless.is_prefix` and
+  `String.Caseless.is_suffix` functions which check if some string is
+  prefix or suffix of another ignoring case.
+
+- `Hash_set` now supports the intersection operation
+
+- Add functions to create Maps and Sets from Hashtbls or a Hash_sets.  Existing
+  code that do that sort of things usually end up going through an intermediate
+  assoc list, which is not particularly efficient.  The friction of inlining
+  something better at the app level feels just too verbose so usually it's not
+  done.  We hope that by offering the right util in core, those call sites can be
+  updated for something both shorter and more efficient.
+
+  Note: we do not currently carry `'cmp cmp` witnesses into our Hashtbls and
+  Hash_sets the same way we do it for Maps and Sets.  There exists cases where the
+  following code would actually raise:
+
+  let map_of_hashtbl (hashtbl : (M.t, 'a) Hashtbl.t) =
+    hashtbl
+    |> Hashtbl.to_alist
+    |> M.Map.of_alist_exn
+  ;;
+
+  If the hashtbl and the M.Map do not use the same compare function, and there
+  exists some keys a1, and a2 such that:
+
+  (Hashtbl.hashable hashtbl).compare a1 a2 <> 0 && M.compare a1 a2 = 0
+
+  So, in the context of that feature there was a choice to be made.  Either
+  `Map.of_hashtbl` can silently replace previous binding while folding over the
+  hashtbl, or can raise.
+
+  Conservatively, the choise to raise was taken, thus the function has the usual
+  `_exn` suffix: `Map.of_hashtbl_exn`
+
+  For sets, the context is suffisiently different so as to deliberatly not apply
+  the same approach.  Like when using `Set.of_list` one wants to aggreate values
+  from a container into a set.  Hashtbl keys and Hash_set values are just a
+  different kind of container than a list, but the added value of raising in that
+  function in case the hash set or the hashtbl have dups is not clear, so that
+  path was not pursued.
+
+  With more work, we could (and someday maybe will) have `Hashtbl` and `Hash_set`
+  carry comparison witnesses and create versions of those functions that cannot
+  raise and reuse the comparison and the compare witness of the hashtbl or
+  hash_set.
+
+  In the process of implementing `Map.of_hashtbl_exn` it appeared that
+  `Map.of_alist` was inefficiently doing the lookup twice for each element to be
+  inserted.  The feature fixes this.
+
+- Name the non-`t` arguments to `Error.tag` and similar functions to allow
+  easier partial application.
+
+- Name the non-`t` arguments to `Error.tag` and similar functions to allow
+  easier partial application.
+
+- Map.Stable
+
+  Added Map.Stable, including a Make functor for making stable map types.
+
+- Binary search by time for `Queue_ts`.
+
+- Automatic, randomized testing based on Haskell's "Quickcheck" library.
+
+- Introduce `Quickcheck.Generator.geometric` and add/modify functions based on it:
+
+  - rename `Generator.size` to `Generator.small_non_negative_int`
+  - add `Generator.small_positive_int`
+  - document the above in terms of `Generator.geometric`
+
+- The following segfaults:
+
+    open Core.Std;;
+    let s = Stack.create();;
+    Stack.push s 1.0;;
+    Stack.push s 2.0;;
+    Stack.push s 3.0;;
+
+  This is because we put floats together with non-floats in the same
+  array without care.
+
+  In particular, if you call `Array.init ~f` such that `f 0` returns a
+  float, then ocaml will decide to create an unboxed float array (tagged
+  with `Double_array`). It will then proceed to call `f i` and try to
+  unbox each assuming they all are pointers to floats. If `f i` happens
+  to return an immediate (such as `Obj.magic ()`) instead of a pointer,
+  this segfaults.
+
+  `Queue` and `Deque` don't seem to suffer from the same problem because
+  they both create arrays initially populated with immediates so the
+  arrays end up not tagged with `Double_array`. It happens that it's
+  safe to put floats into such arrays, so let's use the same trick in
+  `Stack`. The plan is to eventually use (a safety wrapper over)
+  `Obj_array` in all of `Stack`, `Queue`, `Deque` (`jane/stack-segfault`
+  feature).
+
+- Added Set.Stable, including a Make functor for making stable set types.
+
+- Renamed the "Stable" module type to "Stable_without_comparator", in anticipation
+  of requiring a comparator and comparator witness in the module type called
+  "Stable".
+
+  This is the first in a chain of features which will push us towards
+  including comparator witnesses in stable type definitions, so that
+  defining stable sets and maps is easier.
+
+- Added back a "Stable" module type that now includes a comparator
+  witness type and corresponding comparator value.
+
+  Defining the comparator stuff in a stable way will allow us to define
+  stable set and map types that are equivalent to their non-stable
+  counterparts.  (See child features)
+
+  Along the way, added `Identifiable.Make_using_comparator` to the
+  family of `_using_comparator` functors, to help with this task.
+
+- Introduce a Blang submodule which has infix operators and other convenient shortcuts.
+
+  In a world where increasingly we are writing configuration as OCaml code, it seems right
+  that we should focus not only on the sexp DSL but the OCaml one as well.
+
+- Moved the Stable `Comparable.V1.Make` into `comparable.ml` (as usual)
+  rather than in `stable_containers.ml`.
+
+- Renamed:
+
+    lib/core_kernel/test --> lib/core_kernel/test-bin
+
+  since these directories contain executables to run rather than
+  libraries with standard unit tests.  This is in preparation for moving
+  the standard unit tests to a more "normal" test directory.
+
+- Move unit tests from `core_kernel/src` to `core_kernel/test`.
+
+- Split out a sub-signature of `Binable.S` containing only functions, for
+  use in the definition of recursive modules.
+
+- Split out a `*_using_comparator` variant of the functor
+  `Comparable.Map_and_set_binable`.
+
+- Automatic, randomized testing based on Haskell's "Quickcheck" library.
+
+- Add a flag to `Quickcheck.test_no_duplicates` to allow some percentage of values to be
+  duplicates.
+
+  This is primarily in preparation for changing the "no-duplicates" tests for random
+  function generation to be extensional (based on results for a fixed set of inputs) rather
+  than intensional (based on sexps constructed by Quickcheck).  This design change is also a
+  good axis of flexibility in general.
+
+- Remove the `exception` declarations in quickcheck.ml and use `Error.raise_s` and
+  ``%message`` instead.
+
+- In quickcheck.ml, swap the order of `module Observer` and `module Generator`.  This
+  feature just swaps them and makes no other change.  This is in preparation for an upcoming
+  feature that will introduce dependency of `Generator` on `Observer`, which will be easier
+  to read as an incremental diff.
+
+- Add a top-level filter option to `Quickcheck.test`.  The behavior of top-level filter is a
+  lot easier to reason about than nested recursive filters, especially with respect to
+  attempts-vs-failures.  This is in preparation for removing generator "failure" as a
+  first-order concept and simplifying the model of generators.
+
+- Add `Container.S0` + a `sub` function to substring stuff
+
+- Adds phantom type to Validated as witness of invariant
+
+  The witness prevents types from different applications of the Validated functors
+  from unifying with one another.
+
+- Added Int.Stable to Core.Stable.
+
+- Added `Fqueue.of_list`, an inverse of `Fqueue.to_list`.
+
+- Added Int.Stable.V1, implementing Comparable.Stable.V1.S, so that one
+  can use Int.V1.Map.t and Int.V1.Set.t in stable types.
+
+- Remove the `Quickcheck.Generator.fn_with_sexp` type and all the sexp arguments to
+  `Quickcheck.Observer.t` constructors.
+
+- Added String.Stable.V1, implementing Comparable.Stable.V1.S, so that
+  one can use String.V1.Map.t and String.V1.Set.t in stable types.
+
+- Added to `Monad.Syntax.Let_syntax`:
+
+    val return : 'a -> 'a t
+
+  so that when one does:
+
+    open Some_random_monad.Let_syntax
+
+  `return` is in scope.
+
+  Most of the diff is the addition of `let return = return` in the
+  necessary places.  The rest is changing uses of `return` to
+  `Deferred.return` in contexts where some other monad was `open`ed,
+  shadowing `Deferred.return`.
+
+- Implement `Sequence.of_lazy` to allow entirely lazily-computed sequences
+  (rather than just lazily computing the elements).
+
+- Add Array.random_element
+
+- Container.fold_result-and-until
+
+  `Containers` learned to fold using a `f` that returns a `Result.t`, bailing out early if necessary
+
+  `Containers` also learned to `fold_until`: fold using a `f` that returns
+
+    `Continue of 'a | Stop of 'b`
+
+  terminating the fold when `f` returns `Stop _`.
+
+  `fold_until` evaluates to
+  `Finished      of 'a` if `f` never returns `Stop _`
+  `Stopped_early of 'b` when the `f` returns `Stop _`
+
+- Deprecates most of the `In_channel` and `Out_channel` equivalents in
+  Pervasives, deleting a little bit of garbage along the way
+
+- Emulate 63bit integers on 32bit platform so that we have same semantic
+  in 32bit and 64bit arch.
+   - same bin_prot
+   - same max_value/min_value
+
+  We use the same kind of encoding as native int on 64bit architecture (with a
+  twist). A 63bit integer is a 64bit integer with its bits shifted to the left.
+  (In OCaml, in 64 bit, an int is a 64 bit integer shifted to the left, with the
+  immediate bit set to 1).
+
+- Add `Fqueue.map` implementation.
+
+- This is the followup to the earlier deprecation of `Map.iter` and
+  `Hashtbl.iter`.
+
+  * Changes the deprecated `Map.iter` and `Hashtbl.iter` and
+    `Map.filter` functions to iterate over values only instead of both
+    keys and values. (For the old behavior, use the non-deprecated
+    `iteri` or `filteri` functions instead).
+
+  * Analogous changes have been made to `Deferred_map`, `Multi_map`,
+    `Total_map`, `Fold_map`, `Extended_hashtbl`, `Pooled_hashtbl`,
+    `Bounded_int_table`, `Imm_hash`.
+
+  This may break code that upgrades directly to this version from
+  before these functions were deprecated, or code that continued to
+  use `Map.iter` or `Hashtbl.iter` or `Map.filter` after
+  deprecation. As mentioned above, use `iteri` and `filteri` instead.
+
+  Additionally:
+
+  * Deprecates `Hashtbl.iter_vals`. (Use `Hashtbl.iter` instead.)
+
+  * Adds some missing functions to a few of the minor associative
+    container classes.
+
+- Add popcount (count # of 1 bits in representation) operation for int types.
+
+    ┌───────────────────────────────────────┬──────────┬────────────┐
+    │ Name                                  │ Time/Run │ Percentage │
+    ├───────────────────────────────────────┼──────────┼────────────┤
+    │ `int_math.ml` popcount_bench_overhead │   2.11ns │     57.12% │
+    │ `int_math.ml` int_popcount            │   3.17ns │     85.72% │
+    │ `int_math.ml` int32_popcount          │   3.70ns │     99.95% │
+    │ `int_math.ml` int64_popcount          │   3.70ns │     99.96% │
+    │ `int_math.ml` nativeint_popcount      │   3.70ns │    100.00% │
+    └───────────────────────────────────────┴──────────┴────────────┘
+
+- Fix `Time_ns.next_multiple` to use integer division instead of floating point division.
+
+- Move the contents of `time_ns.mli` to `time_ns_intf.ml` in both core and core\_kernel,
+  and clean up the presentation of the signatures a bit in both.
+
+  Also adds `Int63` to `Std_internal`.
+
+- Move `Unit_of_time` out of `Core.Time.Span` and into `Core_kernel`.
+  Move `Core.Time_ns.Span.{to,of}_unit_of_time` into `Core_kernel.Time_ns.Span`.
+
+- Add a stable submodule to Byte_units
+
+- Deleted `Core_kernel.Flat_queue`, which is unused.
+
+- Deprecated `Array.empty`, in favor of ` `||` `.
+
+- Add some useful functions to Or_error
+
+- Improve the interface and error message of `Quickcheck.test_no_duplicates`.
+
+  The function no longer supports equality-based duplicate tests, which were
+  unused and inefficient.  It only supports compare-based tests.
+
+  The error message now groups values with the number of duplicates produced,
+  sorted in descending order so the most common duplicates come early.  It also
+  includes all duplicates generated up to the maximum trial count, rather than
+  stopping as soon as the cutoff threshold is reached.
+
+- Now that the Decimal module no longer means "decimal" (it's only
+  functionality is to change sexp converters and bin-io to rejecting nan
+  and inf values), rename it as `Float_with_finite_only_serialization`, to better
+  befit its semantics.
+
+  In addition to a pile of renames, this also changes many references to
+  `Decimal.t` or `decimal` in mlis to `float`, since the decimal type
+  didn't really convey any extra semantics about the type; just about
+  the serializers.
+
+- Prompted by the embarrassing Stack segfault bug we decided to put the
+  unsafe `Obj.magic` stuff present in various array-backed data
+  structures (Queue, Deque, Stack) in a single place.
+
+  We introduce the following new modules:
+
+  * `Uniform_array`: a wrapper on top of `Obj_array` that makes the
+    elements homogeneous. It's equivalent to `Array` in semantics, but
+    differs in performance and in how it interacts with `Obj.magic`.
+
+  * `Option_array`: `'a Option_array.t` is semantically equivalent to
+    `'a Option.t Array.t`, but avoids allocation of `Some` values,
+    instead representing `None` by `Obj.magic`'ing a distinguished
+    value.
+
+  On top of making things safer, this feature happens to improve
+  performance:
+
+  Original benchmarks:
+
+    $ ./array_queue_old.exe -quota 2
+    Estimated testing time 1.43333m (43 benchmarks x 2s). Change using -quota SECS.
+    ┌────────────────────────────────────┬─────────────────┬─────────────┬───────────────┬──────────┬────────────┐
+    │ Name                               │        Time/Run │     mWd/Run │      mjWd/Run │ Prom/Run │ Percentage │
+    ├────────────────────────────────────┼─────────────────┼─────────────┼───────────────┼──────────┼────────────┤
+    │ enqueue_dequeue_mixed              │ 36_016_512.46ns │ 999_835.00w │ 2_096_659.14w │    7.14w │    100.00% │
+    │ pipeline                           │        175.89ns │             │               │          │            │
+    │ blit_transfer 0                    │          7.39ns │             │               │          │            │
+    │ blit_transfer 1                    │         78.26ns │             │               │          │            │
+    │ blit_transfer 2                    │         93.91ns │             │               │          │            │
+    │ blit_transfer 4                    │        127.53ns │             │               │          │            │
+    │ blit_transfer 8                    │        195.41ns │             │               │          │            │
+    │ blit_transfer 16                   │        351.20ns │             │               │          │            │
+    │ blit_transfer 32                   │        647.15ns │             │               │          │            │
+    │ blit_transfer 64                   │      1_168.12ns │             │               │          │            │
+    │ blit_transfer 128                  │      2_288.00ns │             │               │          │            │
+    │ enqueue 10                         │        440.79ns │      42.00w │               │          │            │
+    │ enqueue 1000000                    │ 23_268_213.72ns │     526.00w │ 2_096_658.71w │    6.71w │     64.60% │
+    │ Queue.enqueue + dequeue:1          │         15.59ns │             │               │          │            │
+    │ Queue.enqueue + dequeue:2          │         14.38ns │             │               │          │            │
+    │ Queue.enqueue + dequeue:4          │         15.23ns │             │               │          │            │
+    │ Queue.enqueue + dequeue:8          │         16.40ns │             │               │          │            │
+    │ Queue.enqueue + dequeue:16         │         16.33ns │             │               │          │            │
+    │ Queue.enqueue + dequeue:32         │         16.44ns │             │               │          │            │
+    │ Queue.enqueue + dequeue:64         │         16.54ns │             │               │          │            │
+    │ Queue.enqueue + dequeue:128        │         15.18ns │             │               │          │            │
+    │ Queue.enqueue + dequeue:256        │         16.58ns │             │               │          │            │
+    │ Queue.enqueue + dequeue:512        │         16.65ns │             │               │          │            │
+    │ Linked_queue.enqueue + dequeue:1   │         53.33ns │       3.00w │         3.02w │    3.02w │            │
+    │ Linked_queue.enqueue + dequeue:2   │         53.95ns │       3.00w │         3.02w │    3.02w │            │
+    │ Linked_queue.enqueue + dequeue:4   │         54.64ns │       3.00w │         3.02w │    3.02w │            │
+    │ Linked_queue.enqueue + dequeue:8   │         55.18ns │       3.00w │         3.02w │    3.02w │            │
+    │ Linked_queue.enqueue + dequeue:16  │         55.57ns │       3.00w │         3.02w │    3.02w │            │
+    │ Linked_queue.enqueue + dequeue:32  │         55.78ns │       3.00w │         3.03w │    3.03w │            │
+    │ Linked_queue.enqueue + dequeue:64  │         55.67ns │       3.00w │         3.02w │    3.02w │            │
+    │ Linked_queue.enqueue + dequeue:128 │         56.64ns │       3.00w │         3.03w │    3.03w │            │
+    │ Linked_queue.enqueue + dequeue:256 │         56.28ns │       3.00w │         3.03w │    3.03w │            │
+    │ Linked_queue.enqueue + dequeue:512 │         56.15ns │       3.00w │         3.03w │    3.03w │            │
+    │ Deque.enqueue + dequeue:1          │         16.36ns │             │               │          │            │
+    │ Deque.enqueue + dequeue:2          │         15.06ns │             │               │          │            │
+    │ Deque.enqueue + dequeue:4          │         15.07ns │             │               │          │            │
+    │ Deque.enqueue + dequeue:8          │         17.13ns │             │               │          │            │
+    │ Deque.enqueue + dequeue:16         │         17.22ns │             │               │          │            │
+    │ Deque.enqueue + dequeue:32         │         17.37ns │             │               │          │            │
+    │ Deque.enqueue + dequeue:64         │         17.23ns │             │               │          │            │
+    │ Deque.enqueue + dequeue:128        │         16.69ns │             │               │          │            │
+    │ Deque.enqueue + dequeue:256        │         16.99ns │             │               │          │            │
+    │ Deque.enqueue + dequeue:512        │         17.52ns │             │               │          │            │
+    └────────────────────────────────────┴─────────────────┴─────────────┴───────────────┴──────────┴────────────┘
+
+  New benchmarks:
+
+    ./array_queue.exe -quota 2;
+    Estimated testing time 1.43333m (43 benchmarks x 2s). Change using -quota SECS.
+    ┌────────────────────────────────────┬─────────────────┬─────────────┬───────────────┬──────────┬────────────┐
+    │ Name                               │        Time/Run │     mWd/Run │      mjWd/Run │ Prom/Run │ Percentage │
+    ├────────────────────────────────────┼─────────────────┼─────────────┼───────────────┼──────────┼────────────┤
+    │ enqueue_dequeue_mixed              │ 28_693_436.79ns │ 999_835.00w │ 2_096_658.82w │    6.82w │    100.00% │
+    │ pipeline                           │        163.08ns │             │               │          │            │
+    │ blit_transfer 0                    │          7.40ns │             │               │          │            │
+    │ blit_transfer 1                    │         78.14ns │             │               │          │            │
+    │ blit_transfer 2                    │         86.72ns │             │               │          │            │
+    │ blit_transfer 4                    │        105.65ns │             │               │          │            │
+    │ blit_transfer 8                    │        143.44ns │             │               │          │            │
+    │ blit_transfer 16                   │        219.64ns │             │               │          │            │
+    │ blit_transfer 32                   │        386.75ns │             │               │          │            │
+    │ blit_transfer 64                   │        692.08ns │             │               │          │            │
+    │ blit_transfer 128                  │      1_331.16ns │             │               │          │            │
+    │ enqueue 10                         │        393.34ns │      42.00w │               │          │            │
+    │ enqueue 1000000                    │ 18_775_585.92ns │     526.00w │ 2_096_658.55w │    6.55w │     65.44% │
+    │ Queue.enqueue + dequeue:1          │         14.53ns │             │               │          │            │
+    │ Queue.enqueue + dequeue:2          │         13.73ns │             │               │          │            │
+    │ Queue.enqueue + dequeue:4          │         10.61ns │             │               │          │            │
+    │ Queue.enqueue + dequeue:8          │         14.56ns │             │               │          │            │
+    │ Queue.enqueue + dequeue:16         │         12.14ns │             │               │          │            │
+    │ Queue.enqueue + dequeue:32         │         11.10ns │             │               │          │            │
+    │ Queue.enqueue + dequeue:64         │         11.22ns │             │               │          │            │
+    │ Queue.enqueue + dequeue:128        │         11.52ns │             │               │          │            │
+    │ Queue.enqueue + dequeue:256        │         11.52ns │             │               │          │            │
+    │ Queue.enqueue + dequeue:512        │         11.00ns │             │               │          │            │
+    │ Linked_queue.enqueue + dequeue:1   │         52.42ns │       3.00w │         3.03w │    3.03w │            │
+    │ Linked_queue.enqueue + dequeue:2   │         52.52ns │       3.00w │         2.98w │    2.98w │            │
+    │ Linked_queue.enqueue + dequeue:4   │         52.68ns │       3.00w │         2.98w │    2.98w │            │
+    │ Linked_queue.enqueue + dequeue:8   │         53.21ns │       3.00w │         2.98w │    2.98w │            │
+    │ Linked_queue.enqueue + dequeue:16  │         69.40ns │       3.00w │         2.97w │    2.97w │            │
+    │ Linked_queue.enqueue + dequeue:32  │         55.23ns │       3.00w │         3.02w │    3.02w │            │
+    │ Linked_queue.enqueue + dequeue:64  │         54.24ns │       3.00w │         3.02w │    3.02w │            │
+    │ Linked_queue.enqueue + dequeue:128 │         55.25ns │       3.00w │         3.02w │    3.02w │            │
+    │ Linked_queue.enqueue + dequeue:256 │         55.10ns │       3.00w │         3.02w │    3.02w │            │
+    │ Linked_queue.enqueue + dequeue:512 │         55.47ns │       3.00w │         3.02w │    3.02w │            │
+    │ Deque.enqueue + dequeue:1          │         11.73ns │             │               │          │            │
+    │ Deque.enqueue + dequeue:2          │         11.63ns │             │               │          │            │
+    │ Deque.enqueue + dequeue:4          │         11.65ns │             │               │          │            │
+    │ Deque.enqueue + dequeue:8          │         12.86ns │             │               │          │            │
+    │ Deque.enqueue + dequeue:16         │         12.86ns │             │               │          │            │
+    │ Deque.enqueue + dequeue:32         │         12.99ns │             │               │          │            │
+    │ Deque.enqueue + dequeue:64         │         12.86ns │             │               │          │            │
+    │ Deque.enqueue + dequeue:128        │         12.91ns │             │               │          │            │
+    │ Deque.enqueue + dequeue:256        │         12.81ns │             │               │          │            │
+    │ Deque.enqueue + dequeue:512        │         12.85ns │             │               │          │            │
+    └────────────────────────────────────┴─────────────────┴─────────────┴───────────────┴──────────┴────────────┘
+
+- `Array.truncate` makes it really hard to use `unsafe_get` safely: even
+  things in `Array` module itself fail to do it properly.
+
+  For example, this thing reliably segfaults:
+
+      let a = Array.create ~len:2 "foo" in
+      Array.iter a ~f:(fun s ->
+        printf "%s" s;
+        Array.truncate a ~len:1)
+
+  We should rename `truncate` to `unsafe_truncate` and stop claiming
+  that the array length is allowed to change over time.
+
+- `Byte_units.Stable` uses type substitution, not equality, so there
+  is no `Byte_units.Stable.V1.t`
+
+  Fix this by changing to type equality
+
+- Remove `Quickcheck.Generator.failure`.
+
+  This is in preparation for moving to a model of generators for which there is
+  no notion of "failure".
+
+- Change `Int*.gen*` to use a uniform distribution.
+
+  A simple distribution is easier to reason about, and does not require tricky
+  tuning.  The previous distribution was tuned to hit some notion of "common
+  values", and so that it might frequently produce duplicates with itself, which
+  was arbitrary, hard to tune, and meant it spent a lot of time generating only
+  border cases.
+
+  While some use cases might still want some border-case tuning, uniform
+  distributions are probably a better basic building block, and are much easier to
+  implement.
+
 ## 113.33.01
 
 - Fix segfault in [Stack]
@@ -2296,4 +2762,3 @@ by `compare`.
   These are more efficient than using `{front,back}_index` and then
   `Option.value_exn`.
 - Exposed `Core.String.unsafe_{get,set}`.
-
