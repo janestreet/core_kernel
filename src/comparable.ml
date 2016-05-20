@@ -55,15 +55,20 @@ module Validate_with_zero
   include With_zero (struct include T include V end)
 end
 
-module Map_and_set_binable (T : sig type t [@@deriving bin_io, compare, sexp] end) = struct
-  module C = struct
+module Map_and_set_binable_using_comparator (T : sig
+    type t [@@deriving bin_io, compare, sexp]
+    include Comparator.S with type t := t
+  end) = struct
+  include T
+  module Map = Core_map.Make_binable_using_comparator (T)
+  module Set = Core_set.Make_binable_using_comparator (T)
+end
+
+module Map_and_set_binable (T : sig type t [@@deriving bin_io, compare, sexp] end) =
+  Map_and_set_binable_using_comparator (struct
     include T
     include Comparator.Make (T)
-  end
-  include C
-  module Map = Core_map.Make_binable_using_comparator (C)
-  module Set = Core_set.Make_binable_using_comparator (C)
-end
+  end)
 
 module Poly (T : sig type t [@@deriving sexp] end) = struct
   module Replace_polymorphic_compare = struct
@@ -227,3 +232,25 @@ let lexicographic cmps x y =
   in
   loop cmps
 ;;
+
+module Stable = struct
+  module V1 = struct
+    module type S = sig
+      type comparable
+      type comparator_witness
+
+      module Map : Core_map.Stable.V1.S
+        with type key := comparable
+        with type comparator_witness := comparator_witness
+
+      module Set : Core_set.Stable.V1.S
+        with type elt := comparable
+        with type elt_comparator_witness := comparator_witness
+    end
+
+    module Make (X : Stable_module_types.S0) = struct
+      module Map = Core_map.Stable.V1.Make (X)
+      module Set = Core_set.Stable.V1.Make (X)
+    end
+  end
+end

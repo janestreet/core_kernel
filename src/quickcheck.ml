@@ -5,7 +5,6 @@ module Sexp = Sexplib.Sexp
 module List  = Core_list0
 module Array = Caml.ArrayLabels
 
-
 module Pre_float : Polymorphic_compare_intf.Infix with type t = float = struct
   type t = float
 
@@ -22,23 +21,20 @@ end
 module Pre_int : Quickcheck_intf.Pre_int with type t = int = struct
   type t = int [@@deriving sexp, compare]
   include Int_replace_polymorphic_compare
-  let num_bits    = Word_size.num_bits Word_size.word_size - 1
-  let (+)         = (+)
-  let (-)         = (-)
-  let (~-)        = (~-)
-  let zero        = 0
-  let one         = 1
-  let min_value   = min_int
-  let max_value   = max_int
-  let abs         = abs
-  let succ        = succ
-  let bit_not     = (lnot)
-  let bit_and     = (land)
-  let shift_left  = (lsl)
-  let shift_right = (asr)
-  let of_int_exn  = Fn.id
-  let to_int_exn  = Fn.id
-  let to_float    = float_of_int
+  let (+)                 = (+)
+  let (-)                 = (-)
+  let (~-)                = (~-)
+  let zero                = 0
+  let one                 = 1
+  let min_value           = min_int
+  let max_value           = max_int
+  let succ                = succ
+  let bit_and             = (land)
+  let shift_left          = (lsl)
+  let shift_right         = (asr)
+  let shift_right_logical = (lsr)
+  let of_int_exn          = Fn.id
+  let to_float            = float_of_int
 end
 
 let count_bits_non_negative
@@ -284,20 +280,6 @@ module Raw_generator = struct
     Pervasives.(=) (weighted_union [ 0., Singleton 1 ; 0., Singleton 2 ]) Failure
   let%test _ =
     Pervasives.(=) (weighted_union [ 0., Singleton 1 ; 1., Singleton 2 ]) (Singleton 2)
-
-  let rec inspect_weighted w t acc =
-    match t with
-    | Weighted (w', t1, t2) ->
-      inspect_weighted (w *. w') t1
-        (inspect_weighted (w *. (1. -. w')) t2 acc)
-    | _ -> (w, t) :: acc
-
-  let rec inspect t =
-    match t with
-    | Failure       -> `Failure
-    | Singleton x   -> `Singleton x
-    | Of_fun (r, f) -> inspect (apply_fun r f)
-    | _             -> `Weighted_union (inspect_weighted 1. t [])
 
   module Attempt : sig
     type 'a gen = 'a t
@@ -616,12 +598,11 @@ module Raw_generator = struct
 
       let to_set t = to_list t |> Int_set.of_list
 
-      exception Quickcheck of string * Sexp.t * exn [@@deriving sexp]
-
-      let with_note msg sexp_of_a a f =
+      let with_note msg sexp_of_value value f =
         match f () with
         | x -> x
-        | exception exn -> raise (Quickcheck (msg, sexp_of_a a, exn))
+        | exception exn ->
+          Error.raise_s [%message msg (value : value) (exn : exn)]
 
       let iter list msg sexp_of f =
         List.iter list ~f:(fun x ->
@@ -689,54 +670,6 @@ type 'a gen = 'a Raw_generator.t
 
 module Raw_observer = struct
 
-  module Sexpable_fn = struct
-
-    type ('a, 'b) t = ('a -> 'b) * (unit -> Sexp.t)
-
-    let create ~f ~f_sexp = f, f_sexp
-
-    let const x ~sexp_of =
-      create
-        ~f:(fun _ -> x)
-        ~f_sexp:(fun () ->
-          [%sexp_of: [`const of Sexp.t]]
-            (`const (sexp_of x)))
-
-    let cases ~a:(f_a, mk_sexp_a) ~b:(f_b, mk_sexp_b) =
-      create
-        ~f:(function `A a -> f_a a | `B b -> f_b b)
-        ~f_sexp:(fun () ->
-          [%sexp_of: [`cases of [`A of Sexp.t] * [`B of Sexp.t]]]
-            (`cases (`A (mk_sexp_a ()), `B (mk_sexp_b ()))))
-
-    let compose ~fst:(f1, mk_sexp1) ~snd:(f2, mk_sexp2) =
-      create
-        ~f:(fun x -> f2 (f1 x))
-        ~f_sexp:(fun () ->
-          [%sexp_of: [`compose_left_to_right of Sexp.t * Sexp.t]]
-            (`compose_left_to_right (mk_sexp1 (), mk_sexp2 ())))
-
-    let duplicate () =
-      create
-        ~f:(fun x -> x, x)
-        ~f_sexp:(fun () -> Sexp.Atom "duplicate")
-
-    let lift_variant_from_fst () =
-      create
-        ~f:(function
-          | (`A x), y -> `A (x, y)
-          | (`B x), y -> `B (x, y))
-        ~f_sexp:(fun () -> Sexp.Atom "lift_variant_from_fst")
-
-    let lift_to_fst (f, mk_sexp) =
-      create
-        ~f:(fun (x, y) -> (f x, y))
-        ~f_sexp:(fun () ->
-          [%sexp_of: [`lift_to_fst of Sexp.t]]
-            (`lift_to_fst (mk_sexp ())))
-
-  end
-
   (* [t] represents a family of decision trees used to observe properties of some input
      type.  The [observe] function randomly chooses a single decision tree from the family
      represented by a [t].  It does so by choosing a subset of the available observations
@@ -757,21 +690,21 @@ module Raw_observer = struct
      mapping a value to a variant for use with [Variant2].  [fn] performs the conversion
      and [t] observes the output of that conversion.  Invariant: [t] is never [Singleton].
 
-     [Fn (p, gen, t, sexp_of)] produces decision tree nodes for observing a function by
-     randomly generating inputs for the function from [gen] and then observing the
-     function's output using [t].  If previous outputs have been generated, [observe]
-     chooses a new input with probability [p] and a previous input with probability [1-p].
-     Each input can be rendered using [sexp_of].  Invariant: [t] is never [Singleton].
+     [Fn (p, gen, t)] produces decision tree nodes for observing a function by randomly
+     generating inputs for the function from [gen] and then observing the function's
+     output using [t].  If previous outputs have been generated, [observe] chooses a new
+     input with probability [p] and a previous input with probability [1-p].  Invariant:
+     [t] is never [Singleton].
 
      [Of_fun f] lazily produces a [t]; it is generally used to short-circuit values that
      may be infinite or intractably large so that they can be explored on demand. *)
   type 'a t =
     | Singleton : _ t
-    | Variant2  : 'a t * 'b t                            -> [ `A of 'a | `B of 'b ] t
-    | Random    : (float * 'a t) list                    -> 'a t
-    | Unmap     : 'b t * ('a, 'b) Sexpable_fn.t          -> 'a t
-    | Fn        : float * 'a gen * 'b t * ('a -> Sexp.t) -> ('a -> 'b) t
-    | Of_fun    : (unit -> 'a t)                         -> 'a t
+    | Variant2  : 'a t * 'b t           -> [ `A of 'a | `B of 'b ] t
+    | Random    : (float * 'a t) list   -> 'a t
+    | Unmap     : 'b t * ('a -> 'b)     -> 'a t
+    | Fn        : float * 'a gen * 'b t -> ('a -> 'b) t
+    | Of_fun    : (unit -> 'a t)        -> 'a t
 
   let rec limited_branching_factor
     : type a . a t -> limit:int -> int
@@ -825,20 +758,20 @@ module Raw_observer = struct
     | [ (_, t) ] -> t
     | alist      -> Random alist
 
-  let unmap t ~f ~f_sexp =
+  let unmap t ~f =
     match t with
     | Singleton -> Singleton
-    | _         -> Unmap (t, Sexpable_fn.create ~f ~f_sexp)
+    | _         -> Unmap (t, f)
 
   let of_fun f = Of_fun f
 
-  let fn ?(p = 0.25) dom_gen rng_t ~sexp_of_dom =
+  let fn ?(p = 0.25) dom_gen rng_t =
     match rng_t with
     | Singleton -> Singleton
-    | _         -> Fn (p, dom_gen, rng_t, sexp_of_dom)
+    | _         -> Fn (p, dom_gen, rng_t)
 
-  let unmap_fst t = unmap t ~f:fst ~f_sexp:(fun () -> Sexp.Atom "fst")
-  let unmap_snd t = unmap t ~f:snd ~f_sexp:(fun () -> Sexp.Atom "snd")
+  let unmap_fst t = unmap t ~f:fst
+  let unmap_snd t = unmap t ~f:snd
 
   let tuple2 a b =
     weighted_union
@@ -848,42 +781,36 @@ module Raw_observer = struct
 
   let tuple3 a b c =
     weighted_union
-      [ 1., unmap a ~f:(fun (x, _, _) -> x) ~f_sexp:(fun () -> Sexp.Atom "get_1st_of_3")
-      ; 1., unmap b ~f:(fun (_, x, _) -> x) ~f_sexp:(fun () -> Sexp.Atom "get_2nd_of_3")
-      ; 1., unmap c ~f:(fun (_, _, x) -> x) ~f_sexp:(fun () -> Sexp.Atom "get_3rd_of_3")
+      [ 1., unmap a ~f:(fun (x, _, _) -> x)
+      ; 1., unmap b ~f:(fun (_, x, _) -> x)
+      ; 1., unmap c ~f:(fun (_, _, x) -> x)
       ]
 
   let tuple4 a b c d =
     weighted_union
-      [ 1., unmap a ~f:(fun (x,_,_,_) -> x) ~f_sexp:(fun () -> Sexp.Atom "get_1st_of_4")
-      ; 1., unmap b ~f:(fun (_,x,_,_) -> x) ~f_sexp:(fun () -> Sexp.Atom "get_2nd_of_4")
-      ; 1., unmap c ~f:(fun (_,_,x,_) -> x) ~f_sexp:(fun () -> Sexp.Atom "get_3rd_of_4")
-      ; 1., unmap d ~f:(fun (_,_,_,x) -> x) ~f_sexp:(fun () -> Sexp.Atom "get_4th_of_4")
+      [ 1., unmap a ~f:(fun (x,_,_,_) -> x)
+      ; 1., unmap b ~f:(fun (_,x,_,_) -> x)
+      ; 1., unmap c ~f:(fun (_,_,x,_) -> x)
+      ; 1., unmap d ~f:(fun (_,_,_,x) -> x)
       ]
 
   let tuple5 a b c d e =
     weighted_union
-      [ 1., unmap a ~f:(fun (x,_,_,_,_) -> x) ~f_sexp:(fun () -> Sexp.Atom "get_1st_of_5")
-      ; 1., unmap b ~f:(fun (_,x,_,_,_) -> x) ~f_sexp:(fun () -> Sexp.Atom "get_2nd_of_5")
-      ; 1., unmap c ~f:(fun (_,_,x,_,_) -> x) ~f_sexp:(fun () -> Sexp.Atom "get_3rd_of_5")
-      ; 1., unmap d ~f:(fun (_,_,_,x,_) -> x) ~f_sexp:(fun () -> Sexp.Atom "get_4th_of_5")
-      ; 1., unmap e ~f:(fun (_,_,_,_,x) -> x) ~f_sexp:(fun () -> Sexp.Atom "get_5th_of_5")
+      [ 1., unmap a ~f:(fun (x,_,_,_,_) -> x)
+      ; 1., unmap b ~f:(fun (_,x,_,_,_) -> x)
+      ; 1., unmap c ~f:(fun (_,_,x,_,_) -> x)
+      ; 1., unmap d ~f:(fun (_,_,_,x,_) -> x)
+      ; 1., unmap e ~f:(fun (_,_,_,_,x) -> x)
       ]
 
   let tuple6 a b c d e f =
     weighted_union
       [ 1., unmap a ~f:(fun (x,_,_,_,_,_) -> x)
-              ~f_sexp:(fun () -> Sexp.Atom "get_1st_of_6")
       ; 1., unmap b ~f:(fun (_,x,_,_,_,_) -> x)
-              ~f_sexp:(fun () -> Sexp.Atom "get_2nd_of_6")
       ; 1., unmap c ~f:(fun (_,_,x,_,_,_) -> x)
-              ~f_sexp:(fun () -> Sexp.Atom "get_3rd_of_6")
       ; 1., unmap d ~f:(fun (_,_,_,x,_,_) -> x)
-              ~f_sexp:(fun () -> Sexp.Atom "get_4th_of_6")
       ; 1., unmap e ~f:(fun (_,_,_,_,x,_) -> x)
-              ~f_sexp:(fun () -> Sexp.Atom "get_5th_of_6")
       ; 1., unmap f ~f:(fun (_,_,_,_,_,x) -> x)
-              ~f_sexp:(fun () -> Sexp.Atom "get_6th_of_6")
       ]
 
   (* [gen_uniform_between ~lo ~hi] produces numbers uniformly distributed between [lo] and
@@ -921,8 +848,8 @@ module Raw_observer = struct
      [Apply (fn, decision)] represents a "wrapper" for a node that first applies [fn] to
      an input, and then uses [decision] to observe the result. *)
   type 'a decision =
-    | Decide : 'a t * 'b t                          -> [ `A of 'a | `B of 'b ] decision
-    | Apply  : ('a, 'b) Sexpable_fn.t * 'b decision -> 'a decision
+    | Decide : 'a t * 'b t              -> [ `A of 'a | `B of 'b ] decision
+    | Apply  : ('a -> 'b) * 'b decision -> 'a decision
 
   (* [randomize_decision decision i alist] is used when [decision] was chosen as one
      possible decision tree node from index [i] of [alist], which is a list of [t]s with
@@ -934,7 +861,7 @@ module Raw_observer = struct
       : type typ . typ decision -> (typ * dom) decision
       = function
         | Apply (fn, decision) ->
-          Apply (Sexpable_fn.lift_to_fst fn, loop decision)
+          Apply ((fun (x, y) -> (fn x, y)), loop decision)
         | Decide (t_a, t_b) ->
           let t_a' =
             weighted_union (List.mapi alist ~f:(fun j (wt, t) ->
@@ -948,9 +875,10 @@ module Raw_observer = struct
               then wt, unmap_fst t_b
               else wt, unmap_snd t))
           in
-          Apply (Sexpable_fn.lift_variant_from_fst (), Decide (t_a', t_b'))
+          Apply ((function (`A x), y -> `A (x, y) | (`B x), y -> `B (x, y)),
+                 Decide (t_a', t_b'))
     in
-    Apply (Sexpable_fn.duplicate (), loop decision)
+    Apply ((fun x -> (x, x)), loop decision)
 
   (* [decide t] produces a random generator of all initial [`A _]-versus-[`B _] decisions
      that [t] can make. *)
@@ -970,7 +898,7 @@ module Raw_observer = struct
       Raw_generator.bind gen (fun (i, t) ->
         Raw_generator.bind (decide t) (fun decision ->
           Raw_generator.singleton (randomize_decision decision i alist)))
-    | Fn (p, gen, t, sexp_of) ->
+    | Fn (p, gen, t) ->
       Raw_generator.bind_choice gen (fun choice ->
         (* We don't want to repeat this choice of values again, so we strip out this
            choice of input from [gen].  We do want to allow different orders of the same
@@ -979,22 +907,17 @@ module Raw_observer = struct
         let gen' =
           Raw_generator.Choice.updated_gen choice ~keep:`All_choices_except_this_choice
         in
-        let t' =
-          unmap t ~f:(fun f -> f dom)
-            ~f_sexp:(fun () ->
-              [%sexp_of: [`apply_to of Sexp.t]]
-                (`apply_to (sexp_of dom)))
-        in
+        let t' = unmap t ~f:(fun f -> f dom) in
         let alist =
           [ 1. -. p, t'
-          ;       p, Fn (p, gen', t, sexp_of)
+          ;       p, Fn (p, gen', t)
           ]
         in
         Raw_generator.bind (decide t') (fun decision ->
           Raw_generator.singleton (randomize_decision decision 0 alist)))
 
   module type S = sig
-    type t [@@deriving sexp_of]
+    type t
     val gen : t Raw_generator.t
   end
 
@@ -1003,18 +926,18 @@ module Raw_observer = struct
     val fn_gen_of_t
       :  'a t
       -> branching_factor:int
-      -> ('a, T.t) Sexpable_fn.t Raw_generator.t
+      -> ('a -> T.t) Raw_generator.t
 
   end = struct
 
     let rec fn_gen_of_t
       : type dom .
-        (dom t -> branching_factor : int -> (dom, T.t) Sexpable_fn.t Raw_generator.t)
+        (dom t -> branching_factor : int -> (dom -> T.t) Raw_generator.t)
       = fun t ~branching_factor ->
         if branching_factor = 0
         then
           Raw_generator.bind T.gen (fun x ->
-            Raw_generator.singleton (Sexpable_fn.const x ~sexp_of:[%sexp_of: T.t]))
+            Raw_generator.singleton (fun _ -> x))
         else
           Raw_generator.bind (decide t) (fun decision ->
             fn_gen_of_decision decision ~branching_factor)
@@ -1023,12 +946,12 @@ module Raw_observer = struct
       : type dom .
         (dom decision
          -> branching_factor : int
-         -> (dom, T.t) Sexpable_fn.t Raw_generator.t)
+         -> (dom -> T.t) Raw_generator.t)
       = fun decision ~branching_factor ->
         match decision with
         | Apply (fn1, decision) ->
           Raw_generator.bind (fn_gen_of_decision decision ~branching_factor) (fun fn2 ->
-            Raw_generator.singleton (Sexpable_fn.compose ~fst:fn1 ~snd:fn2))
+            Raw_generator.singleton (fun x -> fn2 (fn1 x)))
         | Decide (t_a, t_b) ->
           let limit = branching_factor - 1 in
           let limit_a = limited_branching_factor t_a ~limit in
@@ -1039,23 +962,170 @@ module Raw_observer = struct
                  (fun fn_a ->
                     Raw_generator.bind (fn_gen_of_t t_b ~branching_factor:n_b)
                       (fun fn_b ->
-                         Raw_generator.singleton (Sexpable_fn.cases ~a:fn_a ~b:fn_b))))
+                         Raw_generator.singleton (function
+                           | `A a -> fn_a a
+                           | `B b -> fn_b b))))
 
   end
 
-  let observe (type rng) t gen ~sexp_of_rng ~branching_factor =
+  let observe (type rng) t gen ~branching_factor =
     if branching_factor < 0
     then failwith "Observer.observe: negative branching factor"
     else if branching_factor > max_branching_factor
     then Raw_generator.failure
     else
-      let module T = struct type t = rng [@@deriving sexp_of] let gen = gen end in
+      let module T = struct type t = rng let gen = gen end in
       let module M = Make (T) in
       M.fn_gen_of_t t ~branching_factor
 
 end
 
 type 'a obs = 'a Raw_observer.t
+
+module Observer = struct
+
+  include Raw_observer
+
+  let of_predicate a b ~f =
+    unmap (variant2 a b)
+      ~f:(fun x -> if f x then `A x else `B x)
+
+  let doubleton f =
+    of_predicate (singleton ()) (singleton ()) ~f
+
+  let union ts =
+    weighted_union (List.map ts ~f:(fun t -> (1.0, t)))
+
+  module Make_int_observer (M : Quickcheck_intf.Pre_int) : sig
+    val obs : M.t t
+    val obs_between
+      :  lower_bound:M.t Maybe_bound.t
+      -> upper_bound:M.t Maybe_bound.t
+      -> M.t t
+  end = struct
+
+    open M
+
+    let bit_is_one index =
+      unmap (variant2 (singleton ()) (singleton ()))
+        ~f:(fun t -> if bit_and t (shift_left one index) <> zero then `A () else `B ())
+
+    (* By treating the maximum value of a range starting at zero as an "unsigned" bit
+       pattern, we can observe each bit independently and uniformly, without having to
+       treat the sign bit differently.  We use [bit_is_one] at each index, and shift the
+       maximum right until all its bits have been zeroed out. *)
+    let obs_bits_up_to ~unsigned_maximum =
+      Sequence.unfold ~init:(0, unsigned_maximum) ~f:(fun (index, unsigned_maximum) ->
+        if unsigned_maximum = zero
+        then None
+        else Some ( bit_is_one index
+                  , (Pre_int.succ index, shift_right_logical unsigned_maximum 1)
+                  ))
+      |> Sequence.to_list
+      |> union
+
+    let obs_between_inclusive ~lower_bound ~upper_bound =
+      unmap ~f:(fun x -> x - lower_bound)
+        (obs_bits_up_to ~unsigned_maximum:(upper_bound - lower_bound))
+
+    let obs_between ~lower_bound ~upper_bound =
+      match
+        (lower_bound : t Maybe_bound.t),
+        (upper_bound : t Maybe_bound.t)
+      with
+      | Excl lower, _ when lower = max_value ->
+        failwith "Int.obs_between: lower bound > max_value"
+      | _, Excl upper when upper = min_value ->
+        failwith "Int.obs_between: upper bound < min_value"
+      | _ ->
+        let lower_inclusive =
+          match lower_bound with
+          | Unbounded        -> min_value
+          | Incl lower_bound -> lower_bound
+          | Excl lower_bound -> lower_bound + one
+        in
+        let upper_inclusive =
+          match upper_bound with
+          | Unbounded        -> max_value
+          | Incl upper_bound -> upper_bound
+          | Excl upper_bound -> upper_bound - one
+        in
+        if lower_inclusive > upper_inclusive then
+          Error.failwiths "Int.obs_between: bounds are crossed"
+            (`lower_bound lower_bound, `upper_bound upper_bound)
+            [%sexp_of: [`lower_bound of t Maybe_bound.t] *
+                       [`upper_bound of t Maybe_bound.t]];
+        obs_between_inclusive
+          ~lower_bound:lower_inclusive
+          ~upper_bound:upper_inclusive
+
+    let obs =
+      obs_between
+        ~lower_bound:Unbounded
+        ~upper_bound:Unbounded
+
+  end
+
+  module For_int = Make_int_observer (Pre_int)
+
+  let enum n ~f =
+    let index =
+      For_int.obs_between
+        ~lower_bound:(Incl 0)
+        ~upper_bound:(Excl n)
+    in
+    unmap index ~f
+
+  let of_list list ~equal =
+    let f x =
+      match List.findi list ~f:(fun _ y -> equal x y) with
+      | None        -> failwith "Quickcheck.Observer.of_list: value not found"
+      | Some (i, _) -> i
+    in
+    enum (List.length list) ~f
+
+  let recursive f =
+    let rec self () = f (of_fun self) in
+    of_fun self
+
+  let variant3 a b c =
+    unmap (variant2 a (variant2 b c)) ~f:(function
+      | `A x -> `A x
+      | `B x -> `B (`A x)
+      | `C x -> `B (`B x))
+
+  let variant4 a b c d =
+    unmap (variant2 (variant2 a b) (variant2 c d)) ~f:(function
+      | `A x -> `A (`A x)
+      | `B x -> `A (`B x)
+      | `C x -> `B (`A x)
+      | `D x -> `B (`B x))
+
+  let variant5 a b c d e =
+    unmap (variant2 (variant2 a b) (variant2 c (variant2 d e))) ~f:(function
+      | `A x -> `A (`A x)
+      | `B x -> `A (`B x)
+      | `C x -> `B (`A x)
+      | `D x -> `B (`B (`A x))
+      | `E x -> `B (`B (`B x)))
+
+  let variant6 a b c d e f =
+    unmap (variant2 (variant2 a (variant2 b c)) (variant2 d (variant2 e f))) ~f:(function
+      | `A x -> `A (`A x)
+      | `B x -> `A (`B (`A x))
+      | `C x -> `A (`B (`B x))
+      | `D x -> `B (`A x)
+      | `E x -> `B (`B (`A x))
+      | `F x -> `B (`B (`B x)))
+
+  let comparison ~compare ~eq ~lt ~gt =
+    unmap (variant3 lt (singleton ()) gt) ~f:(fun x ->
+      let c = compare x eq in
+      if c < 0 then `A x else
+      if c > 0 then `C x else
+        `B x)
+
+end
 
 module Generator = struct
 
@@ -1065,12 +1135,6 @@ module Generator = struct
       let return = singleton
       let map = `Define_using_bind
     end)
-
-  type ('a, 'b) fn_with_sexp = ('a -> 'b) * (unit -> Sexp.t)
-
-  let fn_sexp (_, mk_sexp) = mk_sexp ()
-
-  let sexp_of_fn_with_sexp _ _ fn = fn_sexp fn
 
   let filter_map t ~f =
     t >>= fun x ->
@@ -1091,8 +1155,8 @@ module Generator = struct
 
   let of_list list = union (List.map list ~f:singleton)
 
-  let of_sequence ?(p = 0.25) seq =
-    if Pervasives.( < ) p 0. || Pervasives.( > ) p 1. then
+  let of_sequence ~p seq =
+    if Pervasives.( <= ) p 0. || Pervasives.( > ) p 1. then
       failwith (Printf.sprintf "Generator.of_sequence: probability [%f] out of bounds" p);
     Sequence.delayed_fold seq
       ~init:()
@@ -1103,19 +1167,20 @@ module Generator = struct
           ; 1. -. p, of_fun k
           ])
 
-  let geometric ?p ?maximum () =
-    let stop =
-      match maximum with
-      | None   -> (fun n -> n < 0)
-      | Some m -> (fun n -> n < 0 || n > m)
-    in
-    of_sequence ?p
-      (Sequence.unfold ~init:0 ~f:(fun n ->
-         if stop n
-         then None
-         else Some (n, n+1)))
+  let rec bounded_geometric ~p ~maximum init =
+    if init = maximum
+    then singleton maximum
+    else
+      weighted_union
+        [       p, singleton init
+        ; 1. -. p, of_fun (fun () -> bounded_geometric ~p ~maximum (init + 1))
+        ]
 
-  let size = geometric ()
+  let geometric ~p init =
+    bounded_geometric ~p ~maximum:Pre_int.max_value init
+
+  let small_non_negative_int = geometric ~p:0.25 0
+  let small_positive_int     = geometric ~p:0.25 1
 
   module Make_int_generator (M : Quickcheck_intf.Pre_int) : sig
     val gen : M.t t
@@ -1147,76 +1212,11 @@ module Generator = struct
       check [%here] max_value max_value ~expect:max_value;
       check [%here] min_value min_value ~expect:min_value
 
-    let rec lower_ranges ~lower_bound ~upper_bound =
-      if lower_bound = upper_bound
-      then [ (lower_bound, upper_bound) ]
-      else
-        let lower_middle = average_rounded_down lower_bound upper_bound in
-        let upper_middle = succ lower_middle in
-        (upper_middle, upper_bound) :: lower_ranges ~lower_bound ~upper_bound:lower_middle
-
-    let upper_ranges ~lower_bound ~upper_bound =
-      let flip x = upper_bound - x + lower_bound in
-      List.map (lower_ranges ~lower_bound ~upper_bound) ~f:(fun (lower, upper) ->
-        (flip upper, flip lower))
-
-    let non_negative_ranges_by_magnitude ~lower_bound ~upper_bound =
-      if lower_bound = upper_bound
-      then [ (lower_bound, upper_bound) ]
-      else
-        let lower_middle = average_rounded_down lower_bound upper_bound in
-        let upper_middle = succ lower_middle in
-        lower_ranges ~lower_bound ~upper_bound:lower_middle @
-        upper_ranges ~lower_bound:upper_middle ~upper_bound
-
-    let negative_ranges_by_magnitude ~lower_bound ~upper_bound =
-      List.map ~f:(fun (lower, upper) -> (bit_not upper, bit_not lower))
-        (non_negative_ranges_by_magnitude
-           ~lower_bound:(bit_not upper_bound)
-           ~upper_bound:(bit_not lower_bound))
-
-    let ranges_by_magnitude_and_sign ~lower_bound ~upper_bound =
-      if lower_bound >= zero
-      then non_negative_ranges_by_magnitude ~lower_bound ~upper_bound
-      else if upper_bound < zero
-      then negative_ranges_by_magnitude ~lower_bound ~upper_bound
-      else
-        negative_ranges_by_magnitude ~lower_bound ~upper_bound:(- one) @
-        non_negative_ranges_by_magnitude ~lower_bound:zero ~upper_bound
-
-    let%test_unit "ranges_by_magnitude_and_sign exhaustive" =
-      let low = (-100) in
-      let high = 100 in
-      let lower_bound = of_int_exn low and upper_bound = of_int_exn high in
-      let ranges =
-        ranges_by_magnitude_and_sign ~lower_bound ~upper_bound
-        |> List.map ~f:(fun (a, b) -> to_int_exn a, to_int_exn b)
-      in
-      let mem n =
-        List.exists ranges ~f:(fun (lower, upper) ->
-          Pervasives.(<=) lower n && Pervasives.(<=) n upper)
-      in
-      assert (not (mem (Pervasives.pred low)));
-      assert (not (mem (Pervasives.succ high)));
-      for i = low to high do assert (mem i) done
-    ;;
-
-    let%test_unit "ranges_by_magnitude_and_sign num_ranges grows slowly" =
-      for i = 0 to Pervasives.(-) num_bits 2 do
-        let n = shift_left one i in
-        let num_ranges =
-          ranges_by_magnitude_and_sign ~lower_bound:zero ~upper_bound:n
-          |> List.length
-        in
-        assert (Pervasives.(num_ranges <= 2 * (i + 1)))
-      done
-    ;;
-
     let rec weighted_uniform ~lower_bound ~upper_bound =
       if lower_bound = upper_bound
       then 1., singleton lower_bound
       else
-        ( to_float (succ (upper_bound - lower_bound))
+        ( 1. +. (to_float upper_bound -. to_float lower_bound)
         , of_fun (fun () ->
             let lower_middle = average_rounded_down lower_bound upper_bound in
             let upper_middle = succ lower_middle in
@@ -1226,30 +1226,8 @@ module Generator = struct
               ])
         )
 
-    let gen_uniform ~lower_bound ~upper_bound =
-      snd (weighted_uniform ~lower_bound ~upper_bound)
-
     let gen_between_inclusive ~lower_bound ~upper_bound =
-      if lower_bound > upper_bound
-      then failure
-      else
-        (* [ranges] is a list of tuples representing inclusive lower and upper bounds of
-           disjoint ranges that add up to the entirety of [lower_bound, upper_bound].
-           These ranges are constructed to start at size 1 at the boundaries and
-           approximately double in size as they approach the middle of the range.  Each
-           range is converted into a uniform distribution of values.
-
-           The final generator is constructed as a union of these ranges, weighted in
-           inverse proportion to the log of their sizes.  The intention is to consistently
-           exercise boundary conditions, while still leaving a fair probability of
-           choosing arbitrary values out of the middle of the distribution. *)
-        let ranges = ranges_by_magnitude_and_sign ~lower_bound ~upper_bound in
-        weighted_union (List.map ranges ~f:(fun (lower, upper) ->
-          let inverse_wt =
-            count_bits_non_negative (module M) (succ (abs (upper - lower)))
-          in
-          1. /. Pervasives.float_of_int inverse_wt,
-          gen_uniform ~lower_bound:lower ~upper_bound:upper))
+      snd (weighted_uniform ~lower_bound ~upper_bound)
 
     let gen_between ~lower_bound ~upper_bound =
       match
@@ -1363,268 +1341,60 @@ module Generator = struct
     t6 >>| fun x6 ->
     (x1, x2, x3, x4, x5, x6)
 
-  let fn_with_sexp ?branching_factor dom rng ~sexp_of_rng =
+  let fn ?branching_factor dom rng =
     let branching_factor =
       match branching_factor with
       | Some t -> t
-      | None   -> geometric () ~maximum:(Raw_observer.branching_factor dom)
+      | None   -> bounded_geometric ~p:0.1 ~maximum:(Raw_observer.branching_factor dom) 0
     in
     branching_factor
     >>= fun branching_factor ->
-    Raw_observer.observe ~branching_factor dom rng ~sexp_of_rng
+    Raw_observer.observe ~branching_factor dom rng
 
-  let fn2_with_sexp ?branching_factor dom1 dom2 rng ~sexp_of_rng =
-    fn_with_sexp ?branching_factor
+  let fn2 ?branching_factor dom1 dom2 rng =
+    fn ?branching_factor
       (Raw_observer.tuple2 dom1 dom2)
-      rng ~sexp_of_rng
-    >>| fun (f, mk_sexp) ->
-    (fun x1 x2 -> f (x1, x2)),
-    (fun () -> [%sexp_of: [`curry of Sexp.t]] (`curry (mk_sexp ())))
+      rng
+    >>| fun f ->
+    (fun x1 x2 -> f (x1, x2))
 
-  let fn3_with_sexp ?branching_factor dom1 dom2 dom3 rng ~sexp_of_rng =
-    fn_with_sexp ?branching_factor
+  let fn3 ?branching_factor dom1 dom2 dom3 rng =
+    fn ?branching_factor
       (Raw_observer.tuple3 dom1 dom2 dom3)
-      rng ~sexp_of_rng
-    >>| fun (f, mk_sexp) ->
-    (fun x1 x2 x3 -> f (x1, x2, x3)),
-    (fun () -> [%sexp_of: [`curry3 of Sexp.t]] (`curry3 (mk_sexp ())))
+      rng
+    >>| fun f ->
+    (fun x1 x2 x3 -> f (x1, x2, x3))
 
-  let fn4_with_sexp ?branching_factor dom1 dom2 dom3 dom4 rng ~sexp_of_rng =
-    fn_with_sexp ?branching_factor
+  let fn4 ?branching_factor dom1 dom2 dom3 dom4 rng =
+    fn ?branching_factor
       (Raw_observer.tuple4 dom1 dom2 dom3 dom4)
-      rng ~sexp_of_rng
-    >>| fun (f, mk_sexp) ->
-    (fun x1 x2 x3 x4 -> f (x1, x2, x3, x4)),
-    (fun () -> [%sexp_of: [`curry4 of Sexp.t]] (`curry4 (mk_sexp ())))
+      rng
+    >>| fun f ->
+    (fun x1 x2 x3 x4 -> f (x1, x2, x3, x4))
 
-  let fn5_with_sexp ?branching_factor dom1 dom2 dom3 dom4 dom5 rng ~sexp_of_rng =
-    fn_with_sexp ?branching_factor
+  let fn5 ?branching_factor dom1 dom2 dom3 dom4 dom5 rng =
+    fn ?branching_factor
       (Raw_observer.tuple5 dom1 dom2 dom3 dom4 dom5)
-      rng ~sexp_of_rng
-    >>| fun (f, mk_sexp) ->
-    (fun x1 x2 x3 x4 x5 -> f (x1, x2, x3, x4, x5)),
-    (fun () -> [%sexp_of: [`curry5 of Sexp.t]] (`curry5 (mk_sexp ())))
+      rng
+    >>| fun f ->
+    (fun x1 x2 x3 x4 x5 -> f (x1, x2, x3, x4, x5))
 
-  let fn6_with_sexp ?branching_factor dom1 dom2 dom3 dom4 dom5 dom6 rng ~sexp_of_rng =
-    fn_with_sexp ?branching_factor
+  let fn6 ?branching_factor dom1 dom2 dom3 dom4 dom5 dom6 rng =
+    fn ?branching_factor
       (Raw_observer.tuple6 dom1 dom2 dom3 dom4 dom5 dom6)
-      rng ~sexp_of_rng
-    >>| fun (f, mk_sexp) ->
-    (fun x1 x2 x3 x4 x5 x6 -> f (x1, x2, x3, x4, x5, x6)),
-    (fun () -> [%sexp_of: [`curry6 of Sexp.t]] (`curry6 (mk_sexp ())))
+      rng
+    >>| fun f ->
+    (fun x1 x2 x3 x4 x5 x6 -> f (x1, x2, x3, x4, x5, x6))
 
-  let compare_fn_with_sexp ?branching_factor dom =
-    fn_with_sexp ?branching_factor dom For_int.gen
-      ~sexp_of_rng:[%sexp_of: int]
-    >>| fun (get_index, mk_sexp) ->
-    (fun x y -> [%compare: int] (get_index x) (get_index y)),
-    (fun () ->
-       [%sexp_of: [`compare_using_index_fn of Sexp.t]]
-         (`compare_using_index_fn (mk_sexp ())))
+  let compare_fn ?branching_factor dom =
+    fn ?branching_factor dom For_int.gen
+    >>| fun get_index ->
+    (fun x y -> [%compare: int] (get_index x) (get_index y))
 
-  let equal_fn_with_sexp ?branching_factor dom =
-    compare_fn_with_sexp ?branching_factor dom
-    >>| fun (cmp, mk_sexp) ->
-    (fun x y -> Pervasives.( = ) (cmp x y) 0),
-    (fun () ->
-       [%sexp_of: [`equal_fn_of_compare_fn of Sexp.t]]
-         (`equal_fn_of_compare_fn (mk_sexp ())))
-
-  let fn ?branching_factor a b =
-    fn_with_sexp  ?branching_factor a b           ~sexp_of_rng:[%sexp_of: _] >>| fst
-  let fn2 ?branching_factor a b c =
-    fn2_with_sexp ?branching_factor a b c         ~sexp_of_rng:[%sexp_of: _] >>| fst
-  let fn3 ?branching_factor a b c d =
-    fn3_with_sexp ?branching_factor a b c d       ~sexp_of_rng:[%sexp_of: _] >>| fst
-  let fn4 ?branching_factor a b c d e =
-    fn4_with_sexp ?branching_factor a b c d e     ~sexp_of_rng:[%sexp_of: _] >>| fst
-  let fn5 ?branching_factor a b c d e f =
-    fn5_with_sexp ?branching_factor a b c d e f   ~sexp_of_rng:[%sexp_of: _] >>| fst
-  let fn6 ?branching_factor a b c d e f g =
-    fn6_with_sexp ?branching_factor a b c d e f g ~sexp_of_rng:[%sexp_of: _] >>| fst
-
-  let compare_fn ?branching_factor a = compare_fn_with_sexp ?branching_factor a >>| fst
-  let equal_fn   ?branching_factor a = equal_fn_with_sexp   ?branching_factor a >>| fst
-
-end
-
-module Observer = struct
-
-  include Raw_observer
-
-  let of_predicate a b ~f ~f_sexp =
-    unmap (variant2 a b)
-      ~f:(fun x -> if f x then `A x else `B x)
-      ~f_sexp:(fun () ->
-        [%sexp_of: [`variant_by_predicate of Sexp.t]]
-          (`variant_by_predicate (f_sexp ())))
-
-  let doubleton f ~f_sexp =
-    of_predicate (singleton ()) (singleton ()) ~f ~f_sexp
-
-  module Make_int_observer (M : Quickcheck_intf.Pre_int) : sig
-    val obs : M.t t
-    val obs_between
-      :  lower_bound:M.t Maybe_bound.t
-      -> upper_bound:M.t Maybe_bound.t
-      -> M.t t
-  end = struct
-
-    open M
-
-    let bit_is_one index =
-      unmap (variant2 (singleton ()) (singleton ()))
-        ~f:(fun t -> if bit_and t (shift_left one index) <> zero then `A () else `B ())
-        ~f_sexp:(fun () -> [%sexp_of: [`bit_is_one of int]] (`bit_is_one index))
-
-    let non_negative_up_to_inclusive upper_bound =
-      let bit_count = count_bits_non_negative (module M) upper_bound in
-      (* These weights are chosen to bias observations towards the most and least
-         significant bits and away from the "center" bits. *)
-      weighted_union
-        (List.init bit_count ~f:(fun i ->
-           let inverse_wt =
-             Pervasives.succ
-               (count_bits_non_negative (module Pre_int)
-                  (Pervasives.min i (Pervasives.( - ) bit_count i)))
-           in
-           1. /. Pervasives.float_of_int inverse_wt,
-           bit_is_one i))
-
-    let non_negative_between_inclusive ~lower_bound ~upper_bound =
-      unmap (non_negative_up_to_inclusive (upper_bound - lower_bound))
-        ~f:(fun x -> x - lower_bound)
-        ~f_sexp:(fun () -> [%sexp_of: [`decrement_by of t]] (`decrement_by lower_bound))
-
-    let negative_between_inclusive ~lower_bound ~upper_bound =
-      unmap (non_negative_between_inclusive
-               ~lower_bound:(bit_not upper_bound)
-               ~upper_bound:(bit_not lower_bound))
-        ~f:bit_not
-        ~f_sexp:(fun () -> Sexp.Atom "bit_not")
-
-    let signed_between_inclusive ~lower_bound ~upper_bound =
-      unmap (variant2
-               (non_negative_between_inclusive ~lower_bound:zero ~upper_bound)
-               (negative_between_inclusive ~lower_bound ~upper_bound:(- one)))
-        ~f:(fun x -> if x < zero then `A x else `B x)
-        ~f_sexp:(fun () -> Sexp.Atom "variant_by_sign")
-
-    let obs_between_inclusive ~lower_bound ~upper_bound =
-      if lower_bound >= upper_bound
-      then singleton ()
-      else if lower_bound >= zero
-      then non_negative_between_inclusive ~lower_bound ~upper_bound
-      else if upper_bound < zero
-      then negative_between_inclusive ~lower_bound ~upper_bound
-      else signed_between_inclusive ~lower_bound ~upper_bound
-
-    let obs_between ~lower_bound ~upper_bound =
-      match
-        (lower_bound : t Maybe_bound.t),
-        (upper_bound : t Maybe_bound.t)
-      with
-      | Excl lower, _ when lower = max_value ->
-        failwith "Int.obs_between: lower bound > max_value"
-      | _, Excl upper when upper = min_value ->
-        failwith "Int.obs_between: upper bound < min_value"
-      | _ ->
-        let lower_inclusive =
-          match lower_bound with
-          | Unbounded        -> min_value
-          | Incl lower_bound -> lower_bound
-          | Excl lower_bound -> lower_bound + one
-        in
-        let upper_inclusive =
-          match upper_bound with
-          | Unbounded        -> max_value
-          | Incl upper_bound -> upper_bound
-          | Excl upper_bound -> upper_bound - one
-        in
-        if lower_inclusive > upper_inclusive then
-          Error.failwiths "Int.obs_between: bounds are crossed"
-            (`lower_bound lower_bound, `upper_bound upper_bound)
-            [%sexp_of: [`lower_bound of t Maybe_bound.t] *
-                       [`upper_bound of t Maybe_bound.t]];
-        obs_between_inclusive
-          ~lower_bound:lower_inclusive
-          ~upper_bound:upper_inclusive
-
-    let obs =
-      obs_between
-        ~lower_bound:Unbounded
-        ~upper_bound:Unbounded
-
-  end
-
-  module For_int = Make_int_observer (Pre_int)
-
-  let enum n ~f ~f_sexp =
-    let index =
-      For_int.obs_between
-        ~lower_bound:(Incl 0)
-        ~upper_bound:(Excl n)
-    in
-    unmap index ~f ~f_sexp
-
-  let of_list list ~equal ~sexp_of_elt =
-    let f x =
-      match List.findi list ~f:(fun _ y -> equal x y) with
-      | None        -> failwith "Quickcheck.Observer.of_list: value not found"
-      | Some (i, _) -> i
-    in
-    enum (List.length list) ~f
-      ~f_sexp:(fun () ->
-        [%sexp_of: [`find_index_in_list of elt list]]
-          (`find_index_in_list list))
-
-  let recursive f =
-    let rec self () = f (of_fun self) in
-    of_fun self
-
-  let variant3 a b c =
-    unmap (variant2 a (variant2 b c)) ~f:(function
-      | `A x -> `A x
-      | `B x -> `B (`A x)
-      | `C x -> `B (`B x))
-      ~f_sexp:(fun () -> Sexp.Atom "variant_of_variant3")
-
-  let variant4 a b c d =
-    unmap (variant2 (variant2 a b) (variant2 c d)) ~f:(function
-      | `A x -> `A (`A x)
-      | `B x -> `A (`B x)
-      | `C x -> `B (`A x)
-      | `D x -> `B (`B x))
-      ~f_sexp:(fun () -> Sexp.Atom "variant_of_variant4")
-
-  let variant5 a b c d e =
-    unmap (variant2 (variant2 a b) (variant2 c (variant2 d e))) ~f:(function
-      | `A x -> `A (`A x)
-      | `B x -> `A (`B x)
-      | `C x -> `B (`A x)
-      | `D x -> `B (`B (`A x))
-      | `E x -> `B (`B (`B x)))
-      ~f_sexp:(fun () -> Sexp.Atom "variant_of_variant5")
-
-  let variant6 a b c d e f =
-    unmap (variant2 (variant2 a (variant2 b c)) (variant2 d (variant2 e f))) ~f:(function
-      | `A x -> `A (`A x)
-      | `B x -> `A (`B (`A x))
-      | `C x -> `A (`B (`B x))
-      | `D x -> `B (`A x)
-      | `E x -> `B (`B (`A x))
-      | `F x -> `B (`B (`B x)))
-      ~f_sexp:(fun () -> Sexp.Atom "variant_of_variant6")
-
-  let comparison ~compare ~eq ~lt ~gt ~compare_sexp ~sexp_of_eq =
-    unmap (variant3 lt (singleton ()) gt) ~f:(fun x ->
-      let c = compare x eq in
-      if c < 0 then `A x else
-      if c > 0 then `C x else
-        `B x)
-      ~f_sexp:(fun () ->
-        [%sexp_of: [`variant3_by_comparison_to of (eq * Sexp.t)]]
-          (`variant3_by_comparison_to (eq, compare_sexp ())))
+  let equal_fn ?branching_factor dom =
+    compare_fn ?branching_factor dom
+    >>| fun cmp ->
+    (fun x y -> Pervasives.( = ) (cmp x y) 0)
 
 end
 
@@ -2017,9 +1787,15 @@ module Configure (Config : Quickcheck_intf.Quickcheck_config) = struct
         ?(seed     = default_seed)
         ?(trials   = default_trial_count)
         ?(attempts = scale ~n:trials ~f:default_attempts_per_trial)
+        ?filter
         ?(probability_threshold_to_remember_choice
           = default_probability_threshold_to_remember_choice)
         gen ~f =
+    let gen =
+      match filter with
+      | None   -> gen
+      | Some f -> Generator.filter gen ~f
+    in
     let random_state = random_state_of_seed seed in
     let random_float_between_zero_and_one () =
       Core_random.State.float random_state 1.
@@ -2062,11 +1838,6 @@ module Configure (Config : Quickcheck_intf.Quickcheck_config) = struct
     | None   -> raise Not_found
     | Some x -> x
 
-  exception Random_input of Sexp.t * exn [@@deriving sexp]
-  exception Shrunk_random_input of
-      [ `Original of Sexp.t * exn ] * [ `Shrunk of Sexp.t * exn ]
-  [@@deriving sexp]
-
   let shrink_iter
         ?sexp_of
         ~value
@@ -2094,23 +1865,33 @@ module Configure (Config : Quickcheck_intf.Quickcheck_config) = struct
     in
     match shrink_loop (Shrinker.shrink shrinker value) 0 None with
     | Some (shr_value, shr_exn) ->
-      let sexp_of =
+      let sexp_of_value =
         match sexp_of with
         | Some f -> f
         | None   -> [%sexp_of: _]
       in
-      raise (Shrunk_random_input
-               (`Original (sexp_of value,     exn),
-                `Shrunk   (sexp_of shr_value, shr_exn)))
+      Error.raise_s
+        [%message
+           "shrunk random input"
+             ~shrunk_value:  (shr_value : value)
+             ~shrunk_error:  (shr_exn   : exn)
+             ~original_value:(value     : value)
+             ~original_error:(exn       : exn)]
     | None ->
       match sexp_of with
-      | None             -> raise exn
-      | Some sexp_of_arg -> raise (Random_input (sexp_of_arg value, exn))
+      | None               -> raise exn
+      | Some sexp_of_value ->
+        Error.raise_s
+          [%message
+             "random input"
+               ~value:(value : value)
+               ~error:(exn   : exn)]
 
   let test
         ?seed
         ?trials
         ?attempts
+        ?filter
         ?shrinker
         ?shrink_attempts
         ?probability_threshold_to_remember_choice
@@ -2127,81 +1908,164 @@ module Configure (Config : Quickcheck_intf.Quickcheck_config) = struct
              shrink_iter ~value:x ~exn ?sexp_of ~shrinker ?shrink_attempts ~f)
       | None ->
         match sexp_of with
-        | Some sexp_of_arg ->
-          (fun x ->
-             try f x with exn ->
-               raise (Random_input (sexp_of_arg x, exn)))
+        | Some sexp_of_value ->
+          (fun value ->
+             try f value with exn ->
+               Error.raise_s
+                 [%message
+                   "random input"
+                     ~value:(value : value)
+                     ~error:(exn   : exn)])
         | None -> f
     in
     List.iter examples ~f:f';
-    iter ?seed ?trials ?attempts ?probability_threshold_to_remember_choice gen ~f:f'
+    iter ?seed ?trials ?attempts ?filter ?probability_threshold_to_remember_choice
+      gen
+      ~f:f'
 
-  exception Duplicate_value [@@deriving sexp]
-  exception Duplicate_values of Sexp.t * Sexp.t [@@deriving sexp]
+  let fail_if_duplicate (type key) ~compare ~acceptable_duplicate_count ~fail =
+    let module M = Caml.Map.Make (struct type t = key let compare = compare end) in
+    let map = ref M.empty in
+    let total = ref 0 in
+    let record value =
+      match M.find value !map with
+      | exception Not_found -> map := M.add value (ref 0) !map
+      | count_ref           -> incr count_ref; incr total
+    in
+    let duplicate_count_by_original () =
+      List.filter_map (M.bindings !map) ~f:(fun (original, count_ref) ->
+        match !count_ref with
+        | 0 -> None
+        | n -> Some (original, n))
+    in
+    let report () =
+      if !total > acceptable_duplicate_count then
+        fail ~duplicate_count:!total
+          (duplicate_count_by_original ())
+    in
+    record, report
 
-  let test_no_duplicates (type a)
+  let%test_module "fail_if_duplicate" =
+    (module struct
+
+      let fail ~duplicate_count alist =
+        Error.raise_s
+          [%message
+            "duplicate"
+              (duplicate_count : int)
+              (alist           : (int * int) list)]
+
+      let acceptable_duplicate_count = 3
+
+      let compare = Pre_int.compare
+
+      let test f =
+        f 1; (* original *)
+        f 2;
+        f 1; (* duplicate 1 *)
+        f 3;
+        f 1; (* duplicate 2 *)
+        f 4;
+        f 1; (* duplicate 3 *)
+        f 5;
+        (* duplicate 4: boom *)
+        assert (Exn.does_raise (fun () -> f 1))
+
+      let%test_unit "by comparison" =
+        let record, report =
+          fail_if_duplicate ~acceptable_duplicate_count ~fail ~compare
+        in
+        test (fun x ->
+          record x;
+          report ())
+
+    end)
+
+  let test_no_duplicates
         ?seed
         ?(trials = computed_default_trial_count_for_test_no_duplicates)
         ?attempts
+        ?filter
         ?probability_threshold_to_remember_choice
+        ?(acceptable_duplicate_per_trial_ratio = 0.)
         ?sexp_of
-        gen ~by =
+        gen
+        ~compare
+    =
+    let acceptable_duplicate_count =
+      if Pre_float.(<)  acceptable_duplicate_per_trial_ratio 0.
+      || Pre_float.(>=) acceptable_duplicate_per_trial_ratio 1.
+      then
+        Error.raise_s
+          [%message
+            "Quickcheck.test_no_duplicates: duplicate ratio out of bounds"
+              (acceptable_duplicate_per_trial_ratio : float)]
+      else
+        int_of_float (floor (acceptable_duplicate_per_trial_ratio  *. float_of_int trials))
+    in
     let fail =
       match sexp_of with
-      | None   -> fun _  _  -> raise Duplicate_value
-      | Some f -> fun v1 v2 -> raise (Duplicate_values (f v1, f v2))
+      | None ->
+        fun ~duplicate_count _ ->
+          Error.raise_s
+            [%message "duplicate values" ~count:(duplicate_count : int)]
+      | Some sexp_of_value ->
+        fun ~duplicate_count alist ->
+          Error.raise_s
+            [%message
+              "duplicate values"
+                ~total:(duplicate_count : int)
+                ~_:(List.sort alist ~cmp:(fun (_,x) (_,y) -> Pre_int.compare y x)
+                    |> List.map ~f:(fun (value, duplicates) ->
+                      [%message "" (value : value) (duplicates : int)])
+                    : Sexp.t list)]
     in
-    let f =
-      match by with
-      | `Equal equal ->
-        let r = ref [] in
-        (fun x ->
-           match List.find !r ~f:(fun y -> equal x y) with
-           | Some y -> fail x y
-           | None   -> r := x :: !r)
-      | `Compare compare ->
-        let module T = struct
-          type t = a
-          let compare = compare
-        end in
-        let module M = Caml.Map.Make (T) in
-        let map = ref M.empty in
-        (fun x ->
-           match M.find x !map with
-           | y                   -> fail x y
-           | exception Not_found -> map := M.add x x !map)
-    in
-    test ?seed ~trials ?attempts ?probability_threshold_to_remember_choice ?sexp_of gen ~f
-
-  exception Can_generate
-  exception Cannot_generate [@@deriving sexp]
-  exception Cannot_generate_from_any_of of Sexp.t [@@deriving sexp]
+    let record, report = fail_if_duplicate ~acceptable_duplicate_count ~fail ~compare in
+    iter
+      ?seed
+      ~trials
+      ?attempts
+      ?filter
+      ?probability_threshold_to_remember_choice
+      gen
+      ~f:record;
+    report ()
 
   let test_can_generate
         ?seed
         ?trials
         ?attempts
+        ?filter
         ?probability_threshold_to_remember_choice
         ?sexp_of
         gen ~f =
     let r = ref [] in
-    let f_and_enqueue x = r := x :: !r; if f x then raise Can_generate in
+    let f_and_enqueue return x =
+      if f x
+      then return `Can_generate
+      else r := x :: !r
+    in
     match
-      iter
-        ?seed
-        ?trials
-        ?attempts
-        ?probability_threshold_to_remember_choice
-        gen
-        ~f:f_and_enqueue
+      With_return.with_return (fun return ->
+        iter
+          ?seed
+          ?trials
+          ?attempts
+          ?filter
+          ?probability_threshold_to_remember_choice
+          gen
+          ~f:(f_and_enqueue return.return);
+        `Cannot_generate)
     with
-    | exception Can_generate -> ()
-    | () ->
+    | `Can_generate    -> ()
+    | `Cannot_generate ->
       match sexp_of with
-      | None ->
-        raise Cannot_generate
+      | None -> failwith "cannot generate"
       | Some sexp_of_value ->
-        raise (Cannot_generate_from_any_of ([%sexp_of: value list] !r))
+        Error.raise_s
+          [%message
+             "cannot generate"
+               ~attempts:(!r : value list)]
 
 end
 

@@ -5,6 +5,7 @@ include Make_substring.F (struct
 
   let create = String.create
   let length = String.length
+  let get = String.get
   module Blit = Make_substring.Blit
   let blit = Blit.string_string
   let blit_to_string = Blit.string_string

@@ -2,7 +2,6 @@ open Sexplib.Std
 open Bin_prot.Std
 include Caml.Gc
 
-module Int = Core_int
 module Sexp = Sexplib.Sexp
 let sprintf = Printf.sprintf
 

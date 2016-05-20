@@ -30,3 +30,20 @@ val floor_pow2 : int -> int
 
 (** [is_pow2 x] returns true iff [x] is a power of 2.  [is_pow2] raises if [x <= 0]. *)
 val is_pow2 : int -> bool
+
+(** Note that [int] is already stable by itself, since as a primitive type it is an
+    integral part of the sexp / bin_io protocol. [Int.Stable] exists only to introduce
+    [Int.Stable.Set] and [Int.Stable.Map], and provide interface uniformity with other
+    stable types. *)
+module Stable : sig
+  module V1 : sig
+    type nonrec t = t
+    type nonrec comparator_witness = comparator_witness
+    include Stable_module_types.S0
+      with type t := t
+      with type comparator_witness := comparator_witness
+    include Comparable.Stable.V1.S
+      with type comparable := t
+      with type comparator_witness := comparator_witness
+  end
+end

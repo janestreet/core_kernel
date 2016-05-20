@@ -31,6 +31,7 @@ end
 
 module type S_common = sig
   include Polymorphic_compare
+
   (** [ascending] is identical to [compare]. [descending x y = ascending y x].  These are
       intended to be mnemonic when used like [List.sort ~cmp:ascending] and [List.sort
       ~cmp:descending], since they cause the list to be sorted in ascending or descending

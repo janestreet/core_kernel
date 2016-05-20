@@ -34,11 +34,17 @@ module type S = sig
   val find_pop : 'a t -> Key.t -> 'a option
   val find_exn : 'a t -> Key.t -> 'a
   val find_pop_exn : 'a t -> Key.t -> 'a
+
   (** Mutation of the heap during iteration is not supported, but there is no check to
       prevent it.  The behavior of a heap that is mutated during iteration is
       undefined. *)
-  val iter : 'a t -> f:(key:Key.t -> data:'a -> unit) -> unit
+  val iter_keys :  _ t -> f:(Key.t -> unit) -> unit
+  val iter      : 'a t -> f:('a -> unit) -> unit
+  val iteri     : 'a t -> f:(key:Key.t -> data:'a -> unit) -> unit
+
   val iter_vals : 'a t -> f:('a -> unit) -> unit
+    [@@deprecated "[since 2016-04] Use iter instead"]
+
   (** Returns the list of all (key, value) pairs for given [Hash_heap]. *)
   val to_alist : 'a t -> (Key.t * 'a) list
   val length : 'a t -> int
@@ -170,8 +176,10 @@ module Make (Key : Key) : S with module Key = Key = struct
     | Some el -> el
     | None -> raise (Key_not_found key)
 
-  let iter t ~f = Heap.iter t.heap ~f:(fun (k, v) -> f ~key:k ~data:v)
-  let iter_vals t ~f = Heap.iter t.heap ~f:(fun (_k, v) -> f v)
+  let iteri t ~f = Heap.iter t.heap ~f:(fun (k, v) -> f ~key:k ~data:v)
+  let iter t ~f = Heap.iter t.heap ~f:(fun (_k, v) -> f v)
+  let iter_keys t ~f = Heap.iter t.heap ~f:(fun (k, _v) -> f k)
+  let iter_vals = iter
 
   let to_alist t = Heap.to_list t.heap
 
@@ -181,7 +189,7 @@ module Make (Key : Key) : S with module Key = Key = struct
 
   let copy t =
     let t' = create t.cmp in
-    iter t ~f:(fun ~key ~data -> push_exn t' ~key ~data);
+    iteri t ~f:(fun ~key ~data -> push_exn t' ~key ~data);
     t'
   ;;
 end

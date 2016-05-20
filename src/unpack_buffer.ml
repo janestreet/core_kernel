@@ -1,5 +1,7 @@
 open Std_internal
 
+module Queue = Core_queue
+
 let debug = ref false
 
 module Unpack_one = struct
@@ -293,7 +295,7 @@ let unpack_iter t ~f =
         | exception exn -> error (Error.create "unpack error" exn [%sexp_of: Exn.t])
         | unpack_result ->
           match unpack_result with
-          | `Invalid_data e -> error (Error.tag e "invalid data")
+          | `Invalid_data e -> error (Error.tag e ~tag:"invalid data")
           | `Ok (one, num_bytes) ->
             (* In order to get a value we either need to consume some bytes or have
                partially unpacked data, otherwise it is a bug in [unpack_one].  The case

@@ -106,11 +106,11 @@ end
     On the other hand:
     module Foo = struct
       type t = String.t * Int.t
-      include Tuple.Comparable (String.t) (Int)
-      include Tuple.Hashable (String.t) (Int)
+      include Tuple.Comparable (String) (Int)
+      include Tuple.Hashable (String) (Int)
     end
 
-    If we used [Hashable_t] above, compiler would compile that we have two types [t]
+    If we used [Hashable_t] above, the compiler would complain that we have two types [t]
     defined.
 
     Unfortunately, it is not possible to define just one functor that could be used in

@@ -2,37 +2,33 @@
 
 set -e
 
-if [ $# -lt 2 ]; then
-    echo "Usage: discover.sh OCAMLC ML_OUTFILE C_OUTFILE" >&2
+if [ $# -ne 2 ]; then
+    echo "Usage: discover.sh OCAMLC OUTFILE" >&2
     exit 2
 fi
 
 OCAMLC="$1"
-ML_OUTFILE="$2"
-C_OUTFILE="$3"
-shift 3
+OUTFILE="$2"
+shift 2
 
 OCAML_CFLAGS=
 . ./setup.data
 [ "$posix_timers" = true ] && OCAML_CFLAGS="$OCAML_CFLAGS -ccopt -DPOSIX_TIMERS"
 
 SRC=config/test.c
-OUT=config/test.out
+OUT=config/result.h
 trap "rm -f $OUT" EXIT
 
-$OCAMLC -ccopt -E $OCAML_CFLAGS -c $SRC | grep '^"OUT:[^"]*"$' | sed 's/"OUT:\([^"]*\)"/\1/' | tee > $OUT
-
-mv "$OUT" "$ML_OUTFILE"
-
-{
-    sentinel="CORE_`basename "$C_OUTFILE" | tr a-z. A-Z_`"
-    cat  <<EOF
+sentinel="CORE_`basename "$OUTFILE" | tr a-z. A-Z_`"
+cat > $OUT  <<EOF
 #ifndef $sentinel
 #define $sentinel
 EOF
-    sed 's|^#let *\([A-Za-z_0-9]*\) *= *true *$|#define \1|;
-         s|^#let *\([A-Za-z_0-9]*\) *= *false *$|#undef \1|' "$ML_OUTFILE"
-    cat  <<EOF
-#endif /* $sentinel */
+
+$OCAMLC -ccopt -E $OCAML_CFLAGS -c $SRC | grep '^"OUT:[^"]*"$' | sed 's/"OUT:\([^"]*\)"/\1/' | tee >> $OUT
+
+cat >> $OUT  <<EOF
+#endif
 EOF
-} > "$C_OUTFILE"
+
+mv $OUT $OUTFILE

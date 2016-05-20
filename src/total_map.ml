@@ -48,11 +48,12 @@ end
 
 include struct
   open Map
-  let map      = map
-  let mapi     = mapi
-  let to_alist = to_alist
-  let iter     = iteri
-  let iteri    = iteri
+  let map       = map
+  let mapi      = mapi
+  let to_alist  = to_alist
+  let iter_keys = iter_keys
+  let iter      = iter
+  let iteri     = iteri
 end
 
 module type Key = sig

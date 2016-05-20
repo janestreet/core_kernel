@@ -2,8 +2,8 @@
    commented in the various Core modules implementing [Int_intf.S]. *)
 open Interfaces
 
-(* This interface is not defined in int_intf.ml because we don't want users of Core to
-   think about it. *)
+(*_ This interface is not defined in int_intf.ml because we don't want users of Core to
+    think about it. *)
 module type T = sig
   type t
   include Floatable with type t := t
@@ -34,3 +34,10 @@ end
 
 val int_pow   : int   -> int   -> int
 val int64_pow : int64 -> int64 -> int64
+
+val int63_pow_on_int64 : int64 -> int64 -> int64
+
+val int_popcount       : int       -> int
+val int32_popcount     : int32     -> int
+val int64_popcount     : int64     -> int
+val nativeint_popcount : nativeint -> int

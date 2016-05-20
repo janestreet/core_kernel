@@ -11,21 +11,6 @@
     The fact that we construct our own default random state means that code using
     Core.Std.Random and code using OCaml's Random will not share the default state. *)
 
-(***********************************************************************)
-(*                                                                     *)
-(*                           Objective Caml                            *)
-(*                                                                     *)
-(*              Damien Doligez, projet Para, INRIA Rocquencourt        *)
-(*                                                                     *)
-(*  Copyright 1996 Institut National de Recherche en Informatique et   *)
-(*  en Automatique.  All rights reserved.  This file is distributed    *)
-(*  under the terms of the GNU Library General Public License, with    *)
-(*  the special exception on linking described in file ../LICENSE.     *)
-(*                                                                     *)
-(***********************************************************************)
-
-(* $Id: random.mli 10457 2010-05-21 18:30:12Z doligez $ *)
-
 (** Pseudo-random number generators (PRNG). *)
 
 (** {6 Basic functions} *)
@@ -57,15 +42,15 @@ val int : int -> int
 
 (** [Random.int32 bound] returns a random integer between 0 (inclusive) and [bound]
     (exclusive).  [bound] must be greater than 0. *)
-val int32 : Int32.t -> Int32.t;;
+val int32 : Int32.t -> Int32.t
 
 (** [Random.nativeint bound] returns a random integer between 0 (inclusive) and [bound]
     (exclusive).  [bound] must be greater than 0. *)
-val nativeint : Nativeint.t -> Nativeint.t;;
+val nativeint : Nativeint.t -> Nativeint.t
 
 (** [Random.int64 bound] returns a random integer between 0 (inclusive) and [bound]
     (exclusive).  [bound] must be greater than 0. *)
-val int64 : Int64.t -> Int64.t;;
+val int64 : Int64.t -> Int64.t
 
 (** [Random.float bound] returns a random floating-point number between 0 (inclusive) and
     [bound] (exclusive).  If [bound] is negative, the result is negative or zero.  If
@@ -77,12 +62,12 @@ val bool : unit -> bool
 
 (** {6 Advanced functions} *)
 
-(** The functions from module [State] manipulate the current state
-    of the random generator explicitely.
-    This allows using one or several deterministic PRNGs,
-    even in a multi-threaded program, without interference from
-    other parts of the program.
-*)
+(** The functions from module [State] manipulate the current state of the random generator
+    explicitly.  This allows using one or several deterministic PRNGs, even in a
+    multi-threaded program, without interference from other parts of the program.
+
+    Obtaining multiple generators with good independence properties is nontrivial; see
+    [Splittable_random]. *)
 module State : sig
   type t
 
@@ -105,7 +90,7 @@ module State : sig
   val int64 : t -> Int64.t -> Int64.t
   val float : t -> float -> float
   val bool : t -> bool
-end;;
+end
 
 (** OCaml's [Random.get_state] makes a copy of the default state, which is almost
     certainly not what you want.  [State.default], which is the actual default state, is

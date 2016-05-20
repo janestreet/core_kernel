@@ -89,7 +89,6 @@ module For_quickcheck = struct
   let obs a b =
     Observer.unmap (Observer.variant2 a b)
       ~f:to_poly
-      ~f_sexp:(fun () -> Atom "variant_of_either")
 
   let shrinker a b =
     Shrinker.map
@@ -195,6 +194,12 @@ module Make_focused (M : sig
   ;;
 
   let fold t ~init ~f = either t ~return:(fun x -> f init x) ~other:(fun _ -> init)
+  ;;
+
+  let fold_result t ~init ~f = Container.fold_result ~fold ~init ~f t
+  ;;
+
+  let fold_until  t ~init ~f = Container.fold_until  ~fold ~init ~f t
   ;;
 
   let value t ~default = either t ~return:(fun x -> x) ~other:(fun _ -> default)

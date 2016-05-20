@@ -1,4 +1,4 @@
-#import "config.mlh"
+#import "config.h"
 
 (* Unfortunately, because the standard library does not expose [Random.State.default],
    we have to construct our own.  We then build the [Random.int], [Random.bool] functions
@@ -10,6 +10,10 @@
    and use [Obj.magic] to get access to the underlying implementation. *)
 open Random
 
+(* Regression tests ought to be deterministic because that way anyone who breaks the test
+   knows that it's their code that broke the test.  If tests are nondeterministic, a test
+   failure may instead happen because the test runner got unlucky and uncovered an
+   existing bug in the code supposedly being "protected" by the test in question. *)
 let forbid_nondeterminism_in_tests ~allow_in_tests =
   if Ppx_inline_test_lib.Runtime.testing then
     match allow_in_tests with
@@ -67,7 +71,7 @@ module State = struct
     t
   ;;
 
-#if JSC_ARCH_SIXTYFOUR
+#ifdef JSC_ARCH_SIXTYFOUR
   let int t bound =
     if bound < (1 lsl 30)
     then int t bound

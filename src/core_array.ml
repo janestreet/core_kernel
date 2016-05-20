@@ -394,6 +394,8 @@ module T = struct
 
   let fold t ~init ~f = Array.fold_left t ~init ~f
 
+  let fold_result t ~init ~f = Container.fold_result ~fold ~init ~f t
+  let fold_until  t ~init ~f = Container.fold_until  ~fold ~init ~f t
   let count t ~f = Container.count ~fold t ~f
   let sum m t ~f = Container.sum ~fold m t ~f
   let min_elt t ~cmp = Container.min_elt ~fold t ~cmp
@@ -504,20 +506,18 @@ module T = struct
     rev_inplace t;
     t
 
-  (* [Array.truncate] is a safe wrapper for calling [Obj.truncate] on an array.
-     [Obj.truncate] reduces the size of a block on the ocaml heap.  For arrays, the block
-     size is the array length.  The precondition checked for [len] is exactly the one
-     required by [Obj.truncate]. *)
-  let truncate t ~len =
+  (* [Obj.truncate] reduces the size of a block on the ocaml heap.  For arrays, the block
+     size is the array length. This holds even for float arrays. *)
+  let unsafe_truncate t ~len =
     if len <= 0 || len > length t then
-      failwiths "Array.truncate got invalid len" len [%sexp_of: int];
+      failwiths "Array.unsafe_truncate got invalid len" len [%sexp_of: int];
     if len < length t then Obj.truncate (Obj.repr t) len;
   ;;
 
   let%test_unit _ =
     List.iter
       ~f:(fun (t, len) ->
-        assert (Exn.does_raise (fun () -> truncate t ~len)))
+        assert (Exn.does_raise (fun () -> unsafe_truncate t ~len)))
       [ [| |]  , -1
       ; [| |]  , 0
       ; [| |]  , 1
@@ -531,7 +531,7 @@ module T = struct
     for orig_len = 1 to 5 do
       for new_len = 1 to orig_len do
         let t = init orig_len ~f:Fn.id in
-        truncate t ~len:new_len;
+        unsafe_truncate t ~len:new_len;
         assert (length t = new_len);
         for i = 0 to new_len - 1 do
           assert (t.(i) = i);
@@ -554,7 +554,7 @@ module T = struct
         incr k;
     done;
     if !k > 0 then begin
-      truncate !r ~len:!k;
+      unsafe_truncate !r ~len:!k;
       !r
     end else
       [||]
@@ -798,6 +798,18 @@ module T = struct
 
   let permute = Array_permute.permute
 
+  let random_element_exn ?(random_state = Core_random.State.default) t =
+    if is_empty t
+    then failwith "Array.random_element_exn: empty array"
+    else t.(Core_random.State.int random_state (length t))
+
+  let random_element ?(random_state = Core_random.State.default) t =
+    try Some (random_element_exn ~random_state t)
+    with _ -> None
+
+  let%test _ = random_element [| |] = None
+  let%test _ = random_element [| 0 |] = Some 0
+
   let zip t1 t2 =
     if length t1 <> length t2 then None
     else Some (map2_exn t1 t2 ~f:(fun x1 x2 -> x1, x2))
@@ -856,13 +868,13 @@ module T = struct
         assert (Sequence.to_array (to_sequence t) = t))
   ;;
 
-  (* We use [init 0] rather than [||] because all [||] are physically equal, and
-     we want [empty] to create a new array. *)
-  let empty () = init 0 ~f:(fun _ -> assert false)
+  (* As far as I can tell, all empty arrays are physically equal in recent versions of the
+     OCaml compiler, whether created with [ [||] ] or with [init 0]. *)
+  let empty () = [||]
 
   let cartesian_product t1 t2 =
     if is_empty t1 || is_empty t2 then
-      empty ()
+      [||]
     else
       let n1 = length t1 in
       let n2 = length t2 in
@@ -1108,6 +1120,8 @@ module type Permissioned = sig
   val reduce     : ('a, [> read]) t -> f:('a -> 'a -> 'a) -> 'a option
   val reduce_exn : ('a, [> read]) t -> f:('a -> 'a -> 'a) -> 'a
   val permute : ?random_state:Core_random.State.t -> ('a, [> read_write]) t -> unit
+  val random_element : ?random_state:Core_random.State.t -> ('a, [> read]) t -> 'a option
+  val random_element_exn : ?random_state:Core_random.State.t -> ('a, [> read]) t -> 'a
   val zip     : ('a, [> read]) t -> ('b, [> read]) t -> ('a * 'b, [< _ perms]) t option
   val zip_exn : ('a, [> read]) t -> ('b, [> read]) t -> ('a * 'b, [< _ perms]) t
   val unzip : ('a * 'b, [> read]) t -> ('a, [< _ perms]) t * ('b, [< _ perms]) t
@@ -1115,7 +1129,7 @@ module type Permissioned = sig
   val last : ('a, [> read]) t -> 'a
   val empty : unit -> ('a, [< _ perms]) t
   val equal : ('a, [> read]) t -> ('a, [> read]) t -> equal:('a -> 'a -> bool) -> bool
-  val truncate : (_, [> write]) t -> len:int -> unit
+  val unsafe_truncate : (_, [> write]) t -> len:int -> unit
 
   val to_sequence : ('a, [> read]) t -> 'a Sequence.t
   val to_sequence_mutable : ('a, [> read]) t -> 'a Sequence.t
@@ -1245,6 +1259,8 @@ module type S = sig
   val reduce     : 'a t -> f:('a -> 'a -> 'a) -> 'a option
   val reduce_exn : 'a t -> f:('a -> 'a -> 'a) -> 'a
   val permute : ?random_state:Core_random.State.t -> 'a t -> unit
+  val random_element : ?random_state:Core_random.State.t -> 'a t -> 'a option
+  val random_element_exn : ?random_state:Core_random.State.t -> 'a t -> 'a
   val zip     : 'a t -> 'b t -> ('a * 'b) t option
   val zip_exn : 'a t -> 'b t -> ('a * 'b) t
   val unzip : ('a * 'b) t -> 'a t * 'b t
@@ -1252,7 +1268,7 @@ module type S = sig
   val last : 'a t -> 'a
   val empty : unit -> 'a t
   val equal : 'a t -> 'a t -> equal:('a -> 'a -> bool) -> bool
-  val truncate : _ t -> len:int -> unit
+  val unsafe_truncate : _ t -> len:int -> unit
 
   val to_sequence : 'a t -> 'a Core_sequence.t
   val to_sequence_mutable : 'a t -> 'a Core_sequence.t

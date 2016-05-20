@@ -79,16 +79,16 @@ module type S = sig
 
   val dequeue_with_key_exn : 'a t -> (Key.t * 'a)
 
-    (** [dequeue_all t ~f] dequeues every element of the queue and applies f to each
-       one. *)
+  (** [dequeue_all t ~f] dequeues every element of the queue and applies f to each one. *)
   val dequeue_all : 'a t -> f:('a -> unit) -> unit
-    (** [remove q k] removes the key-value pair with key k from the queue. *)
+
+  (** [remove q k] removes the key-value pair with key k from the queue. *)
   val remove : 'a t -> Key.t -> [ `Ok | `No_such_key ]
 
   val remove_exn : 'a t -> Key.t -> unit
 
 
-    (** [replace q k v] changes the value of key k in the queue to v. *)
+  (** [replace q k v] changes the value of key k in the queue to v. *)
   val replace : 'a t -> Key.t -> 'a -> [ `Ok | `No_such_key ]
 
   val replace_exn : 'a t -> Key.t -> 'a -> unit
@@ -292,6 +292,8 @@ module Make (Key : Key) : S with module Key = Key = struct
   let sum m t ~f = Container.sum m ~fold t ~f
   let min_elt t ~cmp = Container.min_elt ~fold t ~cmp
   let max_elt t ~cmp = Container.max_elt ~fold t ~cmp
+  let fold_result t ~init ~f = Container.fold_result ~fold ~init ~f t
+  let fold_until  t ~init ~f = Container.fold_until  ~fold ~init ~f t
 
   let dequeue_all t ~f =
     let rec loop () =

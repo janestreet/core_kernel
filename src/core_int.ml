@@ -1,24 +1,56 @@
+open Bin_prot.Std
+open Sexplib.Std
+
+module Stable_workaround = struct
+  open Bin_prot.Std
+  open Sexplib.Std
+
+  module V1 = struct
+    module T = struct
+      type t = int [@@deriving bin_io, sexp]
+
+      (*
+         if i = j then 0 else if i < j then -1 else 1
+         is only slightly faster, so we've decided to stick with
+         Pervasives.compare
+
+         The branch-free version here is essentially what [caml_int_compare] does, and the
+         assembly generated is very similar. The primary difference is the below may be
+         inlined, whereas the external call presently cannot be. If this ever becomes a
+         compiler instrinsic, we should switch to that. The below benchmarks should
+         highlight that. *)
+      let original_compare (x : t) y = compare x y
+
+      let compare (x : t) y = Bool.to_int (x > y) - Bool.to_int (x < y)
+    end
+    module C = Comparator.Stable.V1.Make (T)
+    module M = Comparable.Stable.V1.Make (struct include T include C end)
+  end
+end
+
+module Stable = struct
+  module V1 = struct
+    include Stable_workaround.V1.T
+    include Stable_workaround.V1.C
+    include Stable_workaround.V1.M
+  end
+end
+
 open Common
 open Typerep_lib.Std
-open Sexplib.Std
-open Bin_prot.Std
 
 module T = struct
-  type t = int [@@deriving bin_io, sexp, typerep]
+  type t = Stable.V1.t [@@deriving bin_io, compare, sexp]
 
-  (*
-     if i = j then 0 else if i < j then -1 else 1
-     is only slightly faster, so we've decided to stick with
-     Pervasives.compare
+  module X = struct
+    type t = int [@@deriving typerep]
+  end
+  include (X : module type of X with type t := t)
 
-     The branch-free version here is essentially what [caml_int_compare] does,
-     and the assembly generated is very similar. The primary difference is the below may
-     be inlined, whereas the external call presently cannot be. If this ever becomes a
-     compiler instrinsic, we should switch to that. The below benchmarks should highlight
-     that. *)
-  let original_compare (x : t) y = compare x y
+  type comparator_witness = Stable.V1.comparator_witness
+  let comparator = Stable.V1.comparator
 
-  let compare (x : t) y = Bool.to_int (x > y) - Bool.to_int (x < y)
+  let original_compare = Stable.V1.original_compare
 
   let hash (x : t) = if x >= 0 then x else ~-x
 
@@ -74,7 +106,7 @@ end
 include Replace_polymorphic_compare
 
 include Hashable.Make_binable (T)
-include Comparable.Map_and_set_binable (T)
+include Comparable.Map_and_set_binable_using_comparator (T)
 
 let zero = 0
 let one = 1
@@ -220,6 +252,8 @@ include Int_pow2
    more direct. *)
 let sign = Sign.of_int
 
+let popcount = Int_math.int_popcount
+
 include Pretty_printer.Register (struct
   type nonrec t = t
   let to_string = to_string
@@ -230,23 +264,20 @@ include Quickcheck.Make_int (struct
     type nonrec t = t [@@deriving sexp, compare]
     include (Replace_polymorphic_compare
              : Polymorphic_compare_intf.Infix with type t := t)
-    let num_bits    = num_bits
-    let (+)         = (+)
-    let (-)         = (-)
-    let (~-)        = (~-)
-    let zero        = zero
-    let one         = one
-    let min_value   = min_value
-    let max_value   = max_value
-    let abs         = abs
-    let succ        = succ
-    let bit_not     = bit_not
-    let bit_and     = bit_and
-    let shift_left  = shift_left
-    let shift_right = shift_right
-    let of_int_exn  = of_int_exn
-    let to_int_exn  = to_int_exn
-    let to_float    = to_float
+    let (+)                 = (+)
+    let (-)                 = (-)
+    let (~-)                = (~-)
+    let zero                = zero
+    let one                 = one
+    let min_value           = min_value
+    let max_value           = max_value
+    let succ                = succ
+    let bit_and             = bit_and
+    let shift_left          = shift_left
+    let shift_right         = shift_right
+    let shift_right_logical = shift_right_logical
+    let of_int_exn          = of_int_exn
+    let to_float            = to_float
   end)
 
 module Pre_O = struct

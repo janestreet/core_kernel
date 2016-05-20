@@ -23,3 +23,4 @@
 <src/stable_unit_test_intf.*>: -open_result_wrapper
 <src/applicative.*>: -open_result_wrapper
 <src/applicative_intf.*>: -open_result_wrapper
+<src/comparator.*>: -open_result_wrapper

@@ -31,6 +31,7 @@ module Elt : sig
 
   val value : 'a t -> 'a
   val equal : 'a t -> 'a t -> bool (** pointer equality *)
+
   val sexp_of_t : ('a -> Sexp.t) -> 'a t -> Sexp.t
 end
 
@@ -49,6 +50,7 @@ val of_list : 'a list -> 'a t
 
 (** predicates *)
 val equal : 'a t -> 'a t -> bool (** pointer equality *)
+
 val is_first : 'a t -> 'a Elt.t -> bool
 val is_last  : 'a t -> 'a Elt.t -> bool
 val mem_elt  : 'a t -> 'a Elt.t -> bool
@@ -122,6 +124,6 @@ val filter_inplace : 'a t -> f:('a -> bool) -> unit
     detected (presumably leading to an infinite loop) . *)
 val unchecked_iter : 'a t -> f:('a -> unit) -> unit
 
-(* A lazy sequence of values from the doubly linked list.  The returned sequence is immune
+(** A lazy sequence of values from the doubly linked list.  The returned sequence is immune
    to any subsequent mutation of the list. *)
 val to_sequence : 'a t -> 'a Sequence.t

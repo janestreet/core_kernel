@@ -14,6 +14,7 @@ type 'a t [@@deriving bin_io, compare, sexp]
     [is_empty] and [length] have worst-case complexity O(1). *)
 include Container.S1 with type 'a t := 'a t
 include Invariant.S1 with type 'a t := 'a t
+include Monad.S      with type 'a t := 'a t
 
 (** Traverse deque elements in arbitrary order. *)
 module Arbitrary_order : sig
@@ -89,7 +90,5 @@ val dequeue_back      : 'a t ->                       ('a * 'a t) option
 val dequeue_back_exn  : 'a t ->                       ('a * 'a t)
 
 module Stable : sig
-  module V1 : sig
-    type nonrec 'a t = 'a t [@@deriving bin_io, compare, sexp]
-  end
+  module V1 : Stable_module_types.S1 with type 'a t = 'a t
 end

@@ -43,13 +43,13 @@ include Applicative.Make (struct
   end)
 
 module Let_syntax = struct
+  let return = return
   module Let_syntax = struct
     let return = return
     let map    = map
     let bind   = bind
     let both   = both (* from Applicative.Make *)
     module Open_on_rhs  = struct let return = return end
-    module Open_in_body = struct let return = return end
   end
 end
 
@@ -86,7 +86,7 @@ let errorf format = Printf.ksprintf error_string format
 
 let%test _ = errorf "foo %d" 13 = error_string "foo 13"
 
-let tag t message = Result.map_error t ~f:(fun e -> Error.tag e message)
+let tag t ~tag = Result.map_error t ~f:(Error.tag ~tag)
 let tag_arg t message a sexp_of_a =
   Result.map_error t ~f:(fun e -> Error.tag_arg e message a sexp_of_a)
 
@@ -116,3 +116,26 @@ let%test _ =
   match combine_errors_unit [Ok (); Error a; Ok (); Error b] with
   | Ok _ -> false
   | Error e -> Error.to_string_hum e = Error.to_string_hum (Error.of_list [a;b])
+
+let filter_ok_at_least_one l =
+  let ok, errs = List.partition_map l ~f:Result.ok_fst in
+  match ok with
+  | [] -> Error (Error.of_list errs)
+  | _ -> Ok ok
+
+let find_ok l =
+  match List.find_map l ~f:Result.ok with
+  | Some x -> Ok x
+  | None ->
+    Error (Error.of_list (List.map l ~f:(function
+      | Ok _ -> assert false
+      | Error err -> err)))
+
+let find_map_ok l ~f =
+  With_return.with_return (fun {return} ->
+    Error (Error.of_list (List.map l ~f:(fun elt ->
+      match f elt with
+      | (Ok _ as x) -> return x
+      | Error err -> err))))
+
+

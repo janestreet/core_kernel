@@ -15,6 +15,24 @@
 
 (* Sets over ordered types *)
 
+module Stable0 = struct
+  module Comparator = Comparator.Stable (* shadow out non-stable stuff *)
+  module Tree0 = struct
+    module V1 = struct
+      type 'a t =
+        | Empty
+        | Leaf of 'a
+        | Node of 'a t * 'a * 'a t * int * int
+    end
+  end
+  module V1 = struct
+    type ('a, 'comparator) t = {
+      comparator : ('a, 'comparator) Comparator.V1.t;
+      tree : 'a Tree0.V1.t;
+    }
+  end
+end
+
 open Sexplib
 open Core_set_intf
 open With_return
@@ -31,7 +49,7 @@ module type Elt = Elt
 module type Elt_binable = Elt_binable
 
 module Tree0 = struct
-  type 'a t =
+  type 'a t = 'a Stable0.Tree0.V1.t =
   | Empty
   (* (Leaf x) is the same as (Node (Empty, x, Empty, 1, 1)) but uses less space. *)
   | Leaf of 'a
@@ -277,24 +295,22 @@ module Tree0 = struct
     | Some v -> v
   ;;
 
-  let fold_until t ~init ~f =
+  let fold_until t ~init ~f : ('a, 'b) Container_intf.Finished_or_stopped_early.t =
     let rec fold_until_helper ~f t acc =
       match t with
-      | Empty -> `Continue acc
+      | Empty -> Container_intf.Continue_or_stop.Continue acc
       | Leaf value -> f acc value
       | Node(left, value, right, _, _) ->
           match fold_until_helper ~f left acc with
-          | `Stop _a as x -> x
-          | `Continue acc ->
+          | Stop _a as x -> x
+          | Continue acc ->
               match f acc value with
-              | `Stop _a as x -> x
-              | `Continue a -> fold_until_helper ~f right a
+              | Stop _a as x -> x
+              | Continue a -> fold_until_helper ~f right a
     in
     match fold_until_helper ~f t init with
-    | `Stop a -> a
-    (* `Continue case is reached if Set is exhausted without `Stop being returned.
-       This will happen if t is empty, for example. *)
-    | `Continue a -> a
+    | Continue x -> Finished       x
+    | Stop     x -> Stopped_early  x
   ;;
 
   let rec max_elt = function
@@ -788,6 +804,15 @@ module Tree0 = struct
     List.fold lst ~init:empty ~f:(fun t x -> add t x ~compare_elt)
   ;;
 
+  let of_hash_set hset ~compare_elt =
+    Hash_set.fold hset ~init:empty ~f:(fun t x -> add t x ~compare_elt)
+  ;;
+
+  let of_hashtbl_keys hashtbl ~compare_elt =
+    Core_hashtbl.fold hashtbl ~init:empty
+      ~f:(fun ~key:x ~data:_ t -> add t x ~compare_elt)
+  ;;
+
   let to_list s = elements s
 
   let of_array a ~compare_elt =
@@ -930,7 +955,7 @@ module Tree0 = struct
   ;;
 end
 
-type ('a, 'comparator) t =
+type ('a, 'comparator) t = ('a, 'comparator) Stable0.V1.t =
   { (* [comparator] is the first field so that polymorphic comparisons fail on a map due
        to the functional value in the comparator. *)
     comparator : ('a, 'comparator) Comparator.t;
@@ -964,6 +989,8 @@ module Accessors_without_quickcheck = struct
   let fold       t ~init ~f = Tree0.fold       t.tree ~init ~f
   let fold_until t ~init ~f = Tree0.fold_until t.tree ~init ~f
   let fold_right t ~init ~f = Tree0.fold_right t.tree ~init ~f
+  let fold_result t ~init ~f = Container.fold_result ~fold ~init ~f t
+
   let iter     t ~f = Tree0.iter     t.tree ~f
   let iter2  a b ~f = Tree0.iter2 a.tree b.tree ~f ~compare_elt:(compare_elt a)
   let exists   t ~f = Tree0.exists   t.tree ~f
@@ -1040,6 +1067,16 @@ let of_list ~comparator l =
   { comparator; tree = Tree0.of_list l ~compare_elt:comparator.Comparator.compare }
 ;;
 
+let of_hash_set ~comparator h =
+  { comparator; tree = Tree0.of_hash_set h ~compare_elt:comparator.Comparator.compare }
+;;
+
+let of_hashtbl_keys ~comparator h =
+  { comparator
+  ; tree = Tree0.of_hashtbl_keys h ~compare_elt:comparator.Comparator.compare
+  }
+;;
+
 let of_array ~comparator a =
   { comparator; tree = Tree0.of_array a ~compare_elt:comparator.Comparator.compare }
 ;;
@@ -1071,7 +1108,7 @@ module For_quickcheck = struct
   open Generator.Monad_infix
 
   let gen_list elt_gen =
-    List.gen' ~unique:true ~sorted:`Arbitrarily elt_gen
+    List.gen elt_gen
 
   let gen ~comparator elt_gen =
     gen_list elt_gen
@@ -1084,12 +1121,10 @@ module For_quickcheck = struct
   let obs elt_obs =
     Observer.unmap (List.obs elt_obs)
       ~f:to_list
-      ~f_sexp:(fun () -> Atom "Set.to_list")
 
   let obs_tree elt_obs =
     Observer.unmap (List.obs elt_obs)
       ~f:Tree0.to_list
-      ~f_sexp:(fun () -> Atom "Set.Tree.to_list")
 
   let shrink elt_shr t =
     let seq = to_sequence t in
@@ -1178,6 +1213,10 @@ end = struct
 
   let of_list l = of_list ~comparator l
 
+  let of_hash_set h = of_hash_set ~comparator h
+
+  let of_hashtbl_keys h = of_hashtbl_keys ~comparator h
+
   let of_array a = of_array ~comparator a
 
   let stable_dedup_list xs = stable_dedup_list ~comparator xs
@@ -1228,6 +1267,7 @@ module Make_tree (Elt : Comparator.S1) = struct
   let fold       t ~init ~f = Tree0.fold       t ~init ~f
   let fold_until t ~init ~f = Tree0.fold_until t ~init ~f
   let fold_right t ~init ~f = Tree0.fold_right t ~init ~f
+  let fold_result t ~init ~f = Container.fold_result ~fold ~init ~f t
 
   let map          t ~f = Tree0.map          t ~f ~compare_elt
   let filter       t ~f = Tree0.filter       t ~f ~compare_elt
@@ -1248,6 +1288,8 @@ module Make_tree (Elt : Comparator.S1) = struct
   let subset  t1 t2 = Tree0.subset  t1 t2 ~compare_elt
 
   let of_list  l = Tree0.of_list  l ~compare_elt
+  let of_hash_set h = Tree0.of_hash_set h ~compare_elt
+  let of_hashtbl_keys h = Tree0.of_hashtbl_keys h ~compare_elt
   let of_array a = Tree0.of_array a ~compare_elt
   let of_sorted_array_unchecked a = Tree0.of_sorted_array_unchecked a ~compare_elt
   let of_sorted_array a = Tree0.of_sorted_array a ~compare_elt
@@ -1473,6 +1515,8 @@ module Tree = struct
   let subset  ~comparator t1 t2 = Tree0.subset  t1 t2 ~compare_elt:(ce comparator)
 
   let of_list  ~comparator l = Tree0.of_list  l ~compare_elt:(ce comparator)
+  let of_hash_set ~comparator h = Tree0.of_hash_set h ~compare_elt:(ce comparator)
+  let of_hashtbl_keys ~comparator h = Tree0.of_hashtbl_keys h ~compare_elt:(ce comparator)
   let of_array ~comparator a = Tree0.of_array a ~compare_elt:(ce comparator)
   let of_sorted_array_unchecked ~comparator a =
     Tree0.of_sorted_array_unchecked a ~compare_elt:(ce comparator)
@@ -1500,8 +1544,26 @@ module Tree = struct
 
   let of_map_keys = Tree0.of_map_keys
   let to_map = Tree0.to_map
+  let fold_result t ~init ~f = Container.fold_result ~fold ~init ~f t
 
   let gen = For_quickcheck.gen_tree
   let obs = For_quickcheck.obs_tree
   let shrinker = For_quickcheck.shr_tree
+end
+
+module Stable = struct
+  open Stable0
+  module V1 = struct
+    include V1
+
+    module type S = sig
+      type elt
+      type elt_comparator_witness
+      type nonrec t = (elt, elt_comparator_witness) t
+      include Stable_module_types.S0_without_comparator with type t := t
+    end
+
+    module Make (Elt : Stable_module_types.S0) =
+      Make_binable_using_comparator (Elt)
+  end
 end

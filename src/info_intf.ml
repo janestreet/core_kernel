@@ -82,7 +82,7 @@ module type S = sig
   val createf : ('a, unit, string, t) format4 -> 'a
 
   (** Add a string to the front. *)
-  val tag : t -> string -> t
+  val tag : t -> tag:string -> t
 
   (** Add a string and some other data in the form of an s-expression at the front. *)
   val tag_arg : t -> string -> 'a -> ('a -> Sexp.t) -> t

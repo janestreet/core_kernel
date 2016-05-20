@@ -1,4 +1,4 @@
-#import "config.mlh"
+#import "config.h"
 
 open Std_internal
 open Bigarray
@@ -25,7 +25,7 @@ let create ?max_mem_waiting_gc size =
   if size < 0 then invalid_argf "create: size = %d < 0" size ();
   aux_create ~max_mem_waiting_gc ~size
 
-let%test "create with different max_mem_waiting_gc" =
+let%test "create with different max_mem_waiting_gc" [@tags "no-js"] =
   Core_gc.full_major ();
   let module Alarm = Core_gc.Expert.Alarm in
   let count_gc_cycles mem_units =
@@ -340,7 +340,7 @@ end)
 let read_bin_prot t ?pos ?len reader =
   match read_bin_prot_verbose_errors t ?pos ?len reader with
   | `Ok x -> Ok x
-  | `Invalid_data e -> Error (Error.tag e "Invalid data")
+  | `Invalid_data e -> Error (Error.tag e ~tag:"Invalid data")
   | `Not_enough_data -> Or_error.error_string "not enough data"
 
 let write_bin_prot t ?(pos = 0) writer v =
@@ -467,7 +467,7 @@ let unsafe_write_int64_swap t ~pos x  = unsafe_set_64 t pos (swap64 x)
 let unsafe_write_int64_int t ~pos x       = unsafe_set_64 t pos (int64_of_int x)
 let unsafe_write_int64_int_swap t ~pos x  = unsafe_set_64 t pos (swap64 (int64_of_int x))
 
-#if JSC_ARCH_BIG_ENDIAN
+#ifdef JSC_ARCH_BIG_ENDIAN
 
 let unsafe_get_int16_be  = unsafe_read_int16
 let unsafe_get_int16_le  = unsafe_read_int16_swap
@@ -541,7 +541,7 @@ let uint64_conv_error () =
   failwith "unsafe_read_uint64: value cannot be represented unboxed!"
 ;;
 
-#if JSC_ARCH_SIXTYFOUR
+#ifdef JSC_ARCH_SIXTYFOUR
 
 let int64_to_int_exn n =
   if n >= -0x4000_0000_0000_0000L && n < 0x4000_0000_0000_0000L then
@@ -614,18 +614,19 @@ let unsafe_get_int8 (t : t) ~pos =
   let n = Char.to_int (Array1.unsafe_get t pos) in
   if n >= 128 then n - 256 else n
 
+let not_on_32bit = Sys.word_size > 32
 let unsafe_set_uint32_le t ~pos n =
-  let n = if n >= 1 lsl 31 then n - 1 lsl 32 else n in
+  let n = if not_on_32bit && n >= 1 lsl 31 then n - 1 lsl 32 else n in
   unsafe_set_int32_le t ~pos n
 let unsafe_set_uint32_be t ~pos n =
-  let n = if n >= 1 lsl 31 then n - 1 lsl 32 else n in
+  let n = if not_on_32bit && n >= 1 lsl 31 then n - 1 lsl 32 else n in
   unsafe_set_int32_be t ~pos n
 let unsafe_get_uint32_le t ~pos =
   let n = unsafe_get_int32_le t ~pos in
-  if n < 0 then n + 1 lsl 32 else n
+  if not_on_32bit && n < 0 then n + 1 lsl 32 else n
 let unsafe_get_uint32_be t ~pos =
   let n = unsafe_get_int32_be t ~pos in
-  if n < 0 then n + 1 lsl 32 else n
+  if not_on_32bit && n < 0 then n + 1 lsl 32 else n
 
 let%test_module "binary accessors" = (module struct
 
@@ -660,7 +661,7 @@ let%test_module "binary accessors" = (module struct
     [0; 1; 65535]
 
 
-#if JSC_ARCH_SIXTYFOUR
+#ifdef JSC_ARCH_SIXTYFOUR
 
   let%test _ = test_accessor ~buf Int.to_string
     ~fget:unsafe_get_int32_le

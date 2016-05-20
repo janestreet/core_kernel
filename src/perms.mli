@@ -5,7 +5,7 @@
 
     Here's a hypothetical interface to an on-off switch which uses them:
 
-    {|
+    {[
       open Perms.Export
 
       module Switch : sig
@@ -15,17 +15,17 @@
         val read  : [> read] t  -> [`On | `Off]
         val write : [> write] t -> [`On | `Off] -> unit
       end
-    |}
+    ]}
 
     Note that the permissions parameter must be contravariant -- you are allowed to forget
     that you have any particular permissions, but not give yourself new permissions.
 
     You can now create different "views" of a switch. For example, in:
 
-    {|
+    {[
       let read_write_s1 : read_write Switch.t = Switch.create ()
       let read_only_s1 = (read_write_s1 :> read t)
-    |}
+    ]}
 
     [read_write_s1] and [read_only_s1] are physically equal, but calling
     [Switch.write read_only_s1] is a type error, while [Switch.write read_write_s1] is
@@ -33,21 +33,33 @@
 
     Also note that this is a type error:
 
-    {|
+    {[
       let s1 = Switch.create ()
       let read_write_s1 = (s1 :> read_write t)
       let immutable_s1  = (s1 :> immutable  t)
-    |}
+    ]}
 
     which is good, since it would be incorrect if it were allowed.  This is enforced by:
 
-    1. Having the permissions parameter be contravariant, which causes the compiler to
-    require that the result of a [create ()] call has a concrete type (due to the value
-    restriction).
+    1. Having the permissions parameter be contravariant and the only way to create a [t]
+    be a function call.  This causes the compiler to require that created [t]s have a
+    concrete type (due to the value restriction).
 
     2. Ensuring that there is no type that has both [read_write] and [immutable] as
     subtypes.  This is why the variants are [`Who_can_write of Me.t] and [`Who_can_write
     of Nobody.t] rather than [`I_can_write] and [`Nobody_can_write].
+
+    Note that, as a consequence of 1, exposing a global switch as in:
+
+    {[
+       module Switch : sig
+         ...
+         val global : [< _ perms] t
+       end
+    ]}
+
+    would be a mistake, since one library could annotate [Switch.global] as an
+    [immutable Switch.t], while another library writes to it.
 
     {1 More Usage Patterns}
 

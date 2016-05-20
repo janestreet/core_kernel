@@ -8,25 +8,18 @@ module For_quickcheck = struct
 
   open Generator.Monad_infix
 
-  let gen elem_gen ~lo ~hi keep =
-    let rec loop elem_gen len tail =
+  let gen_with_len_between elem_gen ~lo ~hi =
+    let rec loop len tail =
       let weight_for_len  = if lo <= len && len <= hi then 1. else 0. in
       let weight_for_more = if              len <  hi then 1. else 0. in
       Generator.weighted_union
         [ weight_for_len,  Generator.singleton tail
-        ; weight_for_more, Generator.bind_choice elem_gen (fun choice ->
-            let elem = Generator.Choice.value choice in
-            loop (Generator.Choice.updated_gen choice ~keep) (len+1) (elem::tail))
+        ; weight_for_more, Generator.bind elem_gen (fun elem -> loop (len+1) (elem::tail))
         ]
     in
-    loop elem_gen 0 []
+    loop 0 []
 
-  let sort_by by t =
-    match by with
-    | `Arbitrarily -> t
-    | `By cmp      -> Generator.map t ~f:(List.sort ~cmp)
-
-  let gen' ?(length = `At_least 0) ?(unique = false) ?sorted elem_gen =
+  let gen' ?(length = `At_least 0) elem_gen =
     let lo, hi =
       match length with
       | `Exactly           n      -> n, n
@@ -35,13 +28,7 @@ module For_quickcheck = struct
       | `Between_inclusive (x, y) -> x, y
     in
     if lo < 0 || lo > hi then failwith "Generator.list: invalid length argument";
-    match unique, sorted with
-    | false, None    -> gen elem_gen ~lo ~hi `All_choices
-    | true,  None    -> gen elem_gen ~lo ~hi `All_choices_except_this_choice
-    | false, Some by -> gen elem_gen ~lo ~hi `This_choice_and_all_choices_to_the_left
-                        |> sort_by by
-    | true,  Some by -> gen elem_gen ~lo ~hi `Choices_to_the_left_of_this_choice_only
-                        |> sort_by by
+    gen_with_len_between elem_gen ~lo ~hi
 
   let gen elem_gen =
     gen' elem_gen
@@ -67,8 +54,7 @@ module For_quickcheck = struct
            (Observer.tuple2 elem_obs t_obs))
         ~f:(function
           | []        -> `A ()
-          | x :: list -> `B (x, list))
-        ~f_sexp:(fun () -> Atom "variant_of_list"))
+          | x :: list -> `B (x, list)))
 
   let shrinker t_elt =
     Shrinker.recursive (fun t_list ->

@@ -6,10 +6,15 @@ type t = string [@@deriving bin_io, sexp, typerep]
 (** [Caseless] compares and hashes strings ignoring case, so that for example
     [Caseless.equal "OCaml" "ocaml"] and [Caseless.("apple" < "Banana")] are [true], and
     [Caseless.Map], [Caseless.Table] lookup and [Caseless.Set] membership is
-    case-insensitive. *)
+    case-insensitive. [Caseless] also provides case insensitive is_suffix and is_prefix
+    functions, so that for example [Caseless.is_suffix "OCaml" ~suffix:"AmL"] and
+    [Caseless.is_prefix "OCaml" ~prefix:"oc"] are [true]. *)
 module Caseless : sig
   include Comparable.S_binable with type t := t
   include Hashable.  S_binable with type t := t
+
+  val is_suffix : t -> suffix:t -> bool
+  val is_prefix : t -> prefix:t -> bool
 end
 
 include Blit.S           with type t := t
@@ -43,9 +48,6 @@ val ( ^ ) : t -> t -> t
 
 (** concatanate all strings in the list using separator [sep] (default sep "") *)
 val concat : ?sep:t -> t list -> t
-
-(* (** Like concat, but uses the Container typeclass *)
-val tc_concat : (t, 'container) Container.tc -> sep:t -> 'container -> t *)
 
 (** Warning: Only returns a copy if changes are necessary!  Special characters are
     represented by escape sequences, following the lexical conventions of Objective
@@ -92,10 +94,10 @@ module Search_pattern : sig
       looking for another one at the very next position ([~may_overlap:true]), or jump to
       the end of that match and continue from there ([~may_overlap:false]), e.g.:
 
-      {|
+      {[
         index_all (create "aaa") ~may_overlap:false ~in_:"aaaaBaaaaaa" = [0; 5; 8]
         index_all (create "aaa") ~may_overlap:true  ~in_:"aaaaBaaaaaa" = [0; 1; 5; 6; 7; 8]
-      |}
+      ]}
 
       E.g. [replace_all] internally calls [index_all ~may_overlap:false].
   *)
@@ -105,7 +107,7 @@ module Search_pattern : sig
       contain [pattern], e.g.
 
       {[
-        replace_all (create "bc") ~in:"aabbcc" ~with_:"cb" = "aabcbc"
+        replace_all (create "bc") ~in_:"aabbcc" ~with_:"cb" = "aabcbc"
       ]}
   *)
   val replace_first : ?pos:int -> t -> in_:string -> with_:string -> string
@@ -122,6 +124,7 @@ val substr_index_exn : ?pos:int -> t -> pattern:t -> int
 val substr_index_all : t -> may_overlap:bool -> pattern:t -> int list
 
 val substr_replace_first : ?pos:int -> t -> pattern:t -> with_:t -> t
+
 (** As with [Search_pattern.replace_all], the result may still contain [pattern]. *)
 val substr_replace_all   :             t -> pattern:t -> with_:t -> t
 
@@ -284,7 +287,8 @@ val of_char_list : char list -> t
 (** [gen' ?length char_gen] generates strings using the given distributions for string
     length and each character. *)
 val gen'
-  :  ?length : int Quickcheck.Generator.t  (** defaults to [Quickcheck.Generator.size] *)
+  :  ?length : int Quickcheck.Generator.t
+     (** defaults to [Quickcheck.Generator.small_non_negative_int] *)
   -> char Quickcheck.Generator.t
   -> t    Quickcheck.Generator.t
 
@@ -349,8 +353,8 @@ module Escaping : sig
       false otherwise. *)
   val is_char_escaped : string -> escape_char:char -> int -> bool
 
-  (** [is_literal s ~escape_char pos] return true if the char at [pos] is not escaped or
-      escaping. *)
+  (** [is_char_literal s ~escape_char pos] return true if the char at [pos] is not escaped
+      or escaping. *)
   val is_char_literal : string -> escape_char:char -> int -> bool
 
   (** [index s ~escape_char char] find the first literal (not escaped) instance of
@@ -403,4 +407,21 @@ end
 
 external unsafe_get : string -> int -> char         = "%string_unsafe_get"
 external unsafe_set : string -> int -> char -> unit = "%string_unsafe_set"
+
+(** Note that [string] is already stable by itself, since as a primitive type it is an
+    integral part of the sexp / bin_io protocol. [String.Stable] exists only to introduce
+    [String.Stable.Set] and [String.Stable.Map], and provide interface uniformity with
+    other stable types. *)
+module Stable : sig
+  module V1 : sig
+    type nonrec t = t
+    type nonrec comparator_witness = comparator_witness
+    include Stable_module_types.S0
+      with type t := t
+      with type comparator_witness := comparator_witness
+    include Comparable.Stable.V1.S
+      with type comparable := t
+      with type comparator_witness := comparator_witness
+  end
+end
 

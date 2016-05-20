@@ -94,6 +94,8 @@ let of_int64 t = t
 let of_int64_exn = of_int64
 let to_int64 t = t
 
+let popcount = Int_math.int64_popcount
+
 module Conv = Int_conversions
 let of_int = Conv.int_to_int64
 let of_int_exn = of_int
@@ -134,23 +136,20 @@ include Quickcheck.Make_int (struct
     type nonrec t = t [@@deriving sexp, compare]
     include (Replace_polymorphic_compare
              : Polymorphic_compare_intf.Infix with type t := t)
-    let num_bits    = num_bits
-    let (+)         = (+)
-    let (-)         = (-)
-    let (~-)        = (~-)
-    let zero        = zero
-    let one         = one
-    let min_value   = min_value
-    let max_value   = max_value
-    let abs         = abs
-    let succ        = succ
-    let bit_not     = bit_not
-    let bit_and     = bit_and
-    let shift_left  = shift_left
-    let shift_right = shift_right
-    let of_int_exn  = of_int_exn
-    let to_int_exn  = to_int_exn
-    let to_float    = to_float
+    let (+)                 = (+)
+    let (-)                 = (-)
+    let (~-)                = (~-)
+    let zero                = zero
+    let one                 = one
+    let min_value           = min_value
+    let max_value           = max_value
+    let succ                = succ
+    let bit_and             = bit_and
+    let shift_left          = shift_left
+    let shift_right         = shift_right
+    let shift_right_logical = shift_right_logical
+    let of_int_exn          = of_int_exn
+    let to_float            = to_float
   end)
 
 module Pre_O = struct

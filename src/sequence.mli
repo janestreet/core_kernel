@@ -295,7 +295,7 @@ val intersperse : 'a t -> sep:'a -> 'a t
 val cycle_list_exn : 'a list -> 'a t
 
 (** [repeat a] repeats [a] forever. *)
-val repeat : 'a -> ' a t
+val repeat : 'a -> 'a t
 
 (** [singleton a] produces [a] exactly once. *)
 val singleton : 'a -> 'a t
@@ -329,6 +329,10 @@ val to_list : 'a t -> 'a list
 val to_list_rev : 'a t -> 'a list
 
 val of_list : 'a list -> 'a t
+
+(** [of_lazy t_lazy] produces a sequence that forces [t_lazy] the first time it needs to
+    compute an element. *)
+val of_lazy : 'a t Core_lazy.t -> 'a t
 
 (** [memoize t] produces each element of [t], but also memoizes them so that if you
     consume the same element multiple times it is only computed once.  It's a non-eager

@@ -66,9 +66,9 @@ val error_string : string -> _ t
     instead. *)
 val errorf : ('a, unit, string, _ t) format4 -> 'a
 
-(** [tag t string] is [Result.map_error t ~f:(fun e -> Error.tag e string)].
+(** [tag t ~tag] is [Result.map_error t ~f:(Error.tag ~tag)].
     [tag_arg] is similar. *)
-val tag : 'a t -> string -> 'a t
+val tag : 'a t -> tag:string -> 'a t
 val tag_arg : 'a t -> string -> 'b -> ('b -> Sexp.t) -> 'a t
 
 (** For marking a given value as unimplemented.  Typically combined with conditional
@@ -88,6 +88,18 @@ val combine_errors : 'a t list -> 'a list t
 (** [combine_errors_unit] returns [Ok] if every element in [ts] is [Ok ()], else it
     returns [Error] with all the errors in [ts], like [combine_errors]. *)
 val combine_errors_unit : unit t list -> unit t
+
+(** [filter_ok_at_least_one ts] returns all values in [ts] that are [Ok] if there is at
+    least one, otherwise it returns the same error as [combine_errors ts]. *)
+val filter_ok_at_least_one : 'a t list -> 'a list t
+
+(** [find_ok ts] returns the first value in [ts] that is [Ok], otherwise it returns the
+    same error as [combine_errors ts]. *)
+val find_ok : 'a t list -> 'a t
+
+(** [find_map_ok l ~f] returns the first value in [l] for which [f] returns [Ok],
+    otherwise it returns the same error as [combine_errors (List.map l ~f)]. *)
+val find_map_ok : 'a list -> f:('a -> 'b t) -> 'b t
 
 module Stable : sig
   (** [Or_error.t] is wire compatible with [V2.t], but not [V1.t], like [Info.Stable]

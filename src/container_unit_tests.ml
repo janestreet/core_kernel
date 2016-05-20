@@ -26,17 +26,19 @@ module Test_generic
 
     open Container
 
-    let find      = find
-    let find_map  = find_map
-    let fold      = fold
-    let is_empty  = is_empty
-    let iter      = iter
-    let length    = length
-    let mem       = mem
-    let sexp_of_t = sexp_of_t
-    let t_of_sexp = t_of_sexp
-    let to_array  = to_array
-    let to_list   = to_list
+    let find        = find
+    let find_map    = find_map
+    let fold        = fold
+    let is_empty    = is_empty
+    let iter        = iter
+    let length      = length
+    let mem         = mem
+    let sexp_of_t   = sexp_of_t
+    let t_of_sexp   = t_of_sexp
+    let to_array    = to_array
+    let to_list     = to_list
+    let fold_result = fold_result
+    let fold_until  = fold_until
 
     let%test_unit _ =
       List.iter [ 0; 1; 2; 3; 4; 8; 1024 ] ~f:(fun n ->
@@ -77,7 +79,16 @@ module Test_generic
           assert (!r = (n * (n-1) / 2));
           assert (Option.map ~f:Elt.to_int (min_elt ~cmp:compare_elt c) = Some 0);
           assert (Option.map ~f:Elt.to_int (max_elt ~cmp:compare_elt c) = Some (pred n));
-        end
+        end;
+        let mid = Container.length c / 2 in
+        match
+          Container.fold_result c
+            ~init:0
+            ~f:(fun count _elt -> if count = mid then Error count else Ok (count + 1))
+        with
+        | Ok 0 -> assert (Container.length c = 0)
+        | Ok _ -> failwith "Expected fold to stop early"
+        | Error x -> assert (mid = x)
       )
     ;;
 
@@ -129,5 +140,5 @@ include (Test_S1 (Bag)           : sig end)
 include (Test_S1 (Doubly_linked) : sig end)
 include (Test_S1 (Linked_stack)  : sig end)
 include (Test_S1 (List)          : sig end)
-include (Test_S1 (Queue)         : sig end)
+include (Test_S1 (Core_queue)    : sig end)
 include (Test_S1 (Core_stack)    : sig end)

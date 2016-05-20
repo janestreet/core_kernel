@@ -1,4 +1,4 @@
-let polymorphic_compare = (=)
+let polymorphic_equals = (=)
 open Int_replace_polymorphic_compare
 include Binary_searchable_intf
 
@@ -12,6 +12,7 @@ end
 module type Arg = sig
   include Arg_without_tests
   module For_test : sig
+    val compare  : bool elt -> bool elt -> int
     val small    : bool elt
     val big      : bool elt
     val of_array : bool elt array -> bool t
@@ -134,10 +135,7 @@ module Make_gen (T : Arg) = struct
   include Make_gen_without_tests (T)
 
   let%test_module "test_binary_searchable" = (module struct
-    let compare x y =
-      if x == y then 0 else
-      if x == T.For_test.small then -1 else 1
-
+    let compare = T.For_test.compare
     let elt_compare = compare
 
     let s = T.For_test.small
@@ -146,7 +144,7 @@ module Make_gen (T : Arg) = struct
     let binary_search ?pos ?len ~compare t how v =
       binary_search ?pos ?len ~compare (T.For_test.of_array t) how v
 
-    let (=) = polymorphic_compare
+    let (=) = polymorphic_equals
 
     let%test _ = binary_search ~compare [|          |]  `First_equal_to s = None
     let%test _ = binary_search ~compare [| s        |]  `First_equal_to s = Some 0
@@ -324,7 +322,7 @@ module Make_gen (T : Arg) = struct
               in
               let result =
                 Or_error.try_with (fun () ->
-                  binary_search arr  ~pos ~len ~compare:elt_compare `Last_equal_to s)
+                  binary_search arr ~pos ~len ~compare:elt_compare `Last_equal_to s)
               in
               match should_raise, result with
               | true , Error _   -> ()
@@ -408,7 +406,8 @@ module Make1 (T : Indexable1) =
     module For_test = struct
       include T.For_test
 
+      let compare (a : bool) b = Caml.compare a b
       let small = false
-      let big   = true
+      let big = true
     end
   end)

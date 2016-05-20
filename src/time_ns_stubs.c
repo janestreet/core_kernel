@@ -21,15 +21,6 @@
 
 #define NANOS_PER_SECOND 1000000000
 
-#ifdef JSC_ARCH_SIXTYFOUR
-#  define caml_alloc_int63(v) Val_long(v)
-#  define Int63_val(v) Long_val(v)
-#else
-#  define caml_alloc_int63(v) caml_copy_int64(v)
-#  define Int63_val(v) Int64_val(v)
-#endif
-
-
 #if defined(JSC_POSIX_TIMERS)
 
 /* Note: this is imported noalloc if (and only if) ARCH_SIXTYFOUR is defined.

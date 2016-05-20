@@ -1,15 +1,15 @@
-#import "config.mlh"
+#import "config.h"
 module type Int_or_more = sig
   include Int_intf.S
   val of_int : int -> t
   val to_int : t -> int option
 end
-#if JSC_ARCH_SIXTYFOUR
+#ifdef JSC_ARCH_SIXTYFOUR
 include
   (struct include Core_int let to_int x = Some x end
    : Int_or_more with type t = private int)
 #else
-include (Core_int64 : Int_or_more)
+include (Core_int63_emul : Int_or_more)
 #endif
 
 module Overflow_exn = struct
@@ -52,7 +52,10 @@ module Overflow_exn = struct
   let neg t = if t = min_value then failwith "neg overflow" else neg t
 end
 
-let () = assert (Core_int.(>=) num_bits 63)
+let%test_unit _ = [%test_result: t] max_value ~expect:(of_int64_exn 4611686018427387903L)
+let%test_unit _ = [%test_result: t] min_value ~expect:(of_int64_exn (-4611686018427387904L))
+
+let () = assert (Core_int.(=) num_bits 63)
 
 (* Even for ARCH_SIXTYFOUR, we can't use Core_random.State.int, because the bound is very
    limited in range.  We actually want a bound that spans the type. *)

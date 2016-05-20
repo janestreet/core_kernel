@@ -7,7 +7,7 @@ module Sexp = Sexplib.Sexp
 module String = Core_string
 open Core_printf
 
-#import "config.mlh"
+#import "config.h"
 
 let failwiths = Error.failwiths
 
@@ -436,7 +436,7 @@ let iround_towards_zero_exn t =
    # naive_round_nearest x;;
    - :     float = 4503599627370498.
 *)
-#if JSC_ARCH_SIXTYFOUR
+#ifdef JSC_ARCH_SIXTYFOUR
 let round_nearest_lb = -.(2. ** 52.)
 let round_nearest_ub =    2. ** 52.
 #else
@@ -600,7 +600,7 @@ end)
 
 let int63_round_nearest_arch64_noalloc_exn f = Core_int63.of_int (iround_nearest_exn f)
 
-#if JSC_ARCH_SIXTYFOUR
+#ifdef JSC_ARCH_SIXTYFOUR
 let int63_round_nearest_exn = int63_round_nearest_arch64_noalloc_exn
 let%test _ =
   let before = Core_gc.minor_words () in
@@ -911,9 +911,13 @@ let%test_module _ = (module struct
   let%test_unit _ = boundary                       0.05 ~closer_to_zero:  "0  " ~at:    "0.1"
   let%test_unit _ = boundary                       0.15 ~closer_to_zero:  "0.1" ~at:    "0.2"
   (* glibc printf resolves ties to even, cf.
-     http://www.exploringbinary.com/inconsistent-rounding-of-printed-floating-point-numbers/ *)
-  let%test_unit _ = boundary (* tie *)             0.25 ~closer_to_zero:  "0.2" ~at:    "0.2"
-  let%test_unit _ = boundary                 (incr 0.25)~closer_to_zero:  "0.2" ~at:    "0.3"
+     http://www.exploringbinary.com/inconsistent-rounding-of-printed-floating-point-numbers/
+     Ties are resolved differently in JavaScript - mark some tests as no running with JavaScript.
+  *)
+  let%test_unit __ [@tags "no-js"] =
+                    boundary (* tie *)             0.25 ~closer_to_zero:  "0.2" ~at:    "0.2"
+  let%test_unit __ [@tags "no-js"] =
+                    boundary                 (incr 0.25)~closer_to_zero:  "0.2" ~at:    "0.3"
   let%test_unit _ = boundary                       0.35 ~closer_to_zero:  "0.3" ~at:    "0.4"
   let%test_unit _ = boundary                       0.45 ~closer_to_zero:  "0.4" ~at:    "0.5"
   let%test_unit _ = both                           0.50                                 "0.5"
@@ -924,14 +928,18 @@ let%test_module _ = (module struct
   let%test_unit _ = boundary                       0.85 ~closer_to_zero:  "0.8" ~at:    "0.9"
   let%test_unit _ = boundary                       0.95 ~closer_to_zero:  "0.9" ~at:    "1  "
   let%test_unit _ = boundary                       1.05 ~closer_to_zero:  "1  " ~at:    "1.1"
-  let%test_unit _ = boundary                       3.25 ~closer_to_zero:  "3.2" ~at:    "3.2"
-  let%test_unit _ = boundary                 (incr 3.25)~closer_to_zero:  "3.2" ~at:    "3.3"
+  let%test_unit __ [@tags "no-js"] =
+                    boundary                       3.25 ~closer_to_zero:  "3.2" ~at:    "3.2"
+  let%test_unit __ [@tags "no-js"] =
+                    boundary                 (incr 3.25)~closer_to_zero:  "3.2" ~at:    "3.3"
   let%test_unit _ = boundary                       3.75 ~closer_to_zero:  "3.7" ~at:    "3.8"
   let%test_unit _ = boundary                       9.95 ~closer_to_zero:  "9.9" ~at:   "10  "
   let%test_unit _ = boundary                      10.05 ~closer_to_zero: "10  " ~at:   "10.1"
   let%test_unit _ = boundary                     100.05 ~closer_to_zero:"100  " ~at:  "100.1"
-  let%test_unit _ = boundary (* tie *)           999.25 ~closer_to_zero:"999.2" ~at:  "999.2"
-  let%test_unit _ = boundary               (incr 999.25)~closer_to_zero:"999.2" ~at:  "999.3"
+  let%test_unit __ [@tags "no-js"] =
+                    boundary (* tie *)           999.25 ~closer_to_zero:"999.2" ~at:  "999.2"
+  let%test_unit __ [@tags "no-js"] =
+                    boundary               (incr 999.25)~closer_to_zero:"999.2" ~at:  "999.3"
   let%test_unit _ = boundary                     999.75 ~closer_to_zero:"999.7" ~at:  "999.8"
   let%test_unit _ = boundary                     999.95 ~closer_to_zero:"999.9" ~at:    "1k "
   let%test_unit _ = both                        1000.                                   "1k "
@@ -1032,6 +1040,7 @@ let%test "int_pow misc" =
   && int_pow (-1.) Pervasives.max_int = -1.
   && int_pow (-1.) Pervasives.min_int = 1.
 
+#ifdef JSC_ARCH_SIXTYFOUR
 (* some ugly corner cases with extremely large exponents and some serious precision loss *)
 let%test "int_pow bad cases" =
   let a = one_ulp `Down 1. in
@@ -1044,6 +1053,7 @@ let%test "int_pow bad cases" =
   &&  int_pow a small = 2.2844048619719663e+222
   &&  int_pow b large = 2.2844048619719663e+222
   && b ** float large = 2.2844135865396268e+222
+#endif
 
 module Replace_polymorphic_compare = struct
   let equal = equal
@@ -1157,6 +1167,10 @@ let%test _ =
   match sign_exn nan with
   | Neg | Zero | Pos -> false
   | exception _ -> true
+
+let%test_unit _ =
+  [%test_result: Core_int64.t]
+    (Int64.bits_of_float 1.1235582092889474E+307) ~expect:0x7fb0000000000000L
 
 let ieee_negative t =
   let bits = Int64.bits_of_float t in
@@ -1492,7 +1506,6 @@ module For_quickcheck = struct
   let obs_zero =
     Observer.unmap Bool.obs
       ~f:ieee_negative
-      ~f_sexp:(fun () -> Atom "ieee_negative")
 
   let obs_subnormal =
     let mantissa =
@@ -1504,7 +1517,6 @@ module For_quickcheck = struct
       ~f:(fun float ->
         ieee_negative float,
         ieee_mantissa float)
-      ~f_sexp:(fun () -> Atom "ieee_negative_and_mantissa")
 
   let obs_normal =
     let exponent =
@@ -1522,12 +1534,10 @@ module For_quickcheck = struct
         ieee_negative float,
         ieee_exponent float,
         ieee_mantissa float)
-      ~f_sexp:(fun () -> Atom "ieee_negative_and_exponent_and_mantissa")
 
   let obs_infinite =
     Observer.unmap Bool.obs
       ~f:ieee_negative
-      ~f_sexp:(fun () -> Atom "ieee_negative")
 
   let obs_nan =
     Observer.singleton ()
@@ -1547,7 +1557,6 @@ module For_quickcheck = struct
         | Normal    -> `C float
         | Infinite  -> `D float
         | Nan       -> `E float)
-      ~f_sexp:(fun () -> Atom "variant5_of_float_by_classification")
 
   let shrinker =
     Shrinker.empty ()
@@ -2073,7 +2082,7 @@ let%bench_module "int_pow" = (module struct
        done
     )
 
-#if JSC_ARCH_SIXTYFOUR
+#ifdef JSC_ARCH_SIXTYFOUR
   let int_1_111_111_111     = Int64.to_int 1_111_111_111L
   let int_1_111_111_111_111 = Int64.to_int 1_111_111_111_111L
 

@@ -27,19 +27,25 @@ val with_file : ?binary:bool (** defaults to [true] *) -> string -> f:(t -> 'a) 
 val close : t -> unit
 
 val input : t -> buf:string -> pos:int -> len:int -> int
-val really_input : t -> buf:string -> pos:int -> len:int -> unit option
+val really_input     : t -> buf:string -> pos:int -> len:int -> unit option
+
+(** Same as [Pervasives.really_input], for backwards compatibility *)
+val really_input_exn : t -> buf:string -> pos:int -> len:int -> unit
+
 val input_byte : t -> int option
 val input_char : t -> char option
 
 val input_binary_int : t -> int option
-val unsafe_input_value : t -> _ option  (* Ocaml's built-in marshal format *)
+val unsafe_input_value : t -> _ option  (** Ocaml's built-in marshal format *)
+
 val input_all : t -> string
 
 (** [input_line ?fix_win_eol t] reads a line from [t] and returns it, without
     the newline ("\n") character at the end, and, if [fix_win_eol] the trailing
     "\r\n" is dropped.
 *)
-val input_line : ?fix_win_eol:bool (** defaults to [true] *) -> t -> string option
+val input_line     : ?fix_win_eol:bool (** defaults to [true] *) -> t -> string option
+val input_line_exn : ?fix_win_eol:bool (** defaults to [true] *) -> t -> string
 
 (** [fold_lines ?fix_win_eol t ~init ~f] folds over the lines read from [t]
     using [input_line].  Lines are provided to [f] in the order they are

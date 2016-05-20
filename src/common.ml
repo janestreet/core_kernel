@@ -91,4 +91,4 @@ exception Bug of string [@@deriving sexp]
 
 exception C_malloc_exn of int * int (* errno, size *)
 let () =
-  Callback.register_exception "C_malloc_exn" (C_malloc_exn (0, 0));
+  Callback.register_exception "C_malloc_exn" (C_malloc_exn (0, 0))

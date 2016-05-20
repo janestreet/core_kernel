@@ -4,8 +4,9 @@ val stdout : t
 val stderr : t
 
 type 'a with_create_args =
-  ?binary:bool (** defaults to [true] *)
-  -> ?append:bool (** defaults to [false] *)
+  ?binary:bool            (** defaults to [true] *)
+  -> ?append:bool         (** defaults to [false] *)
+  -> ?fail_if_exists:bool (** defaults to [false] *)
   -> ?perm:int
   -> 'a
 
@@ -44,7 +45,7 @@ val output_string : t -> string -> unit
 val output_char : t -> char -> unit
 val output_byte : t -> int -> unit
 val output_binary_int : t -> int -> unit
-val output_value : t -> _ -> unit
+val output_value : t -> _ -> unit  (** OCaml's internal Marshal format *)
 
 val newline : t -> unit
 

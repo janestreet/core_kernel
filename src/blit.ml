@@ -161,8 +161,6 @@ module Make_gen
 
 end
 
-type 'a poly = 'a
-
 module Make1
     (Sequence : sig
        include Sequence_gen with type 'a elt := 'a poly
@@ -175,6 +173,17 @@ module Make1
       let equal = (=)
       let of_bool = Fn.id
     end)
+    (Sequence)
+    (struct
+      include Sequence
+      let overlapping_src_dst = `Check Fn.id
+    end)
+
+module Make1_generic
+    (Elt : Elt1)
+    (Sequence : Sequence1 with type 'a elt := 'a Elt.t) =
+  Make_gen
+    (Elt)
     (Sequence)
     (struct
       include Sequence

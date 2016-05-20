@@ -141,6 +141,7 @@ module type S = sig
 
   (** The largest representable integer *)
   val max_value : t
+
   (** The smallest representable integer *)
   val min_value : t
 
@@ -157,8 +158,10 @@ module type S = sig
 
   (** shifts left, filling in with zeroes *)
   val shift_left : t -> int -> t
+
   (** shifts right, preserving the sign of the input. *)
   val shift_right : t -> int -> t
+
   (** shifts right, filling in with zeroes, which will not preserve the sign of the
       input *)
   val shift_right_logical : t -> int -> t
@@ -167,6 +170,11 @@ module type S = sig
 
   val decr : t ref -> unit
   val incr : t ref -> unit
+
+  (** {9 Population count} *)
+
+  (** returns the number of 1 bits in the binary representation of the input *)
+  val popcount : t -> int
 
   (** {9 Conversion functions to related integer types} *)
 

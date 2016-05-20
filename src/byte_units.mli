@@ -31,9 +31,14 @@ val scale : t -> float -> t
 module Infix : sig
   val ( - ) : t -> t -> t
   val ( + ) : t -> t -> t
+
   (** [( / ) t mul] scales [t] by [1/mul] *)
   val (/)   : t -> float -> t
 
   (** [( // ) t1 t2] returns the ratio of t1 to t2 *)
   val (//)  : t -> t -> float
+end
+
+module Stable : sig
+  module V1 : Stable_module_types.S0_without_comparator with type t = t
 end

@@ -36,6 +36,12 @@ module T = struct
 
   let fold t ~init ~f = f init !t
 
+  let fold_result t ~init ~f = f init !t
+  let fold_until  t ~init ~f : ('a, 'b) Container_intf.Finished_or_stopped_early.t =
+    match (f init !t : ('a, 'b) Container_intf.Continue_or_stop.t) with
+    | Stop     x -> Stopped_early  x
+    | Continue x -> Finished       x
+
   let count t ~f = if f !t then 1 else 0
   let sum _ t ~f = f !t
 

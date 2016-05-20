@@ -2,7 +2,7 @@ open Std_internal
 
 type 'a t = {
   (* [arr] is a cyclic buffer *)
-  mutable arr                  : 'a array;
+  mutable arr                  : 'a Option_array.t;
   (* [front_index] and [back_index] are the positions in which new elements may be
      enqueued.  This makes the active part of [arr] the range from [front_index+1] to
      [back_index-1] (modulo the length of [arr] and wrapping around if necessary).  Note
@@ -19,7 +19,6 @@ type 'a t = {
      meaningfully slower. *)
   mutable arr_length           : int;
   never_shrink                 : bool;
-  dummy                        : 'a;
 }
 
 let create ?initial_length ?never_shrink () =
@@ -35,16 +34,14 @@ let create ?initial_length ?never_shrink () =
   (* Make the initial array length be [initial_length + 1] so we can fit [initial_length]
      elements without growing.  We never quite use the whole array. *)
   let arr_length = initial_length + 1 in
-  let dummy = (Obj.magic () : 'a) in
   {
-    arr                  = Array.create ~len:arr_length dummy;
+    arr                  = Option_array.create ~len:arr_length;
     front_index          = 0;
     back_index           = 1;
     apparent_front_index = 0;
     length               = 0;
     arr_length;
     never_shrink;
-    dummy;
   }
 ;;
 let%test_unit _ = ignore (create ~initial_length:0 () : _ t)
@@ -69,14 +66,14 @@ let clear t =
   begin
     if t.never_shrink then
       (* clear the array to allow elements to be garbage collected *)
-      Array.replace_all ~f:(fun _ -> t.dummy) t.arr
+      Option_array.clear t.arr
     else
-      t.arr <- Array.create ~len:8 t.dummy
+      t.arr <- Option_array.create ~len:8
   end;
   t.front_index <- 0;
   t.back_index  <- 1;
   t.length      <- 0;
-  t.arr_length  <- Array.length t.arr;
+  t.arr_length  <- Option_array.length t.arr;
 ;;
 
 (* The various "when_not_empty" functions return misleading numbers when the dequeue is
@@ -118,7 +115,7 @@ let foldi' t dir ~init ~f =
       then (acc, apparent_i)
       else
         loop
-          (f apparent_i acc t.arr.(real_i))
+          (f apparent_i acc (Option_array.get_some_exn t.arr real_i))
           ~apparent_i:(apparent_i + step)
           ~real_i:(real_i + step)
           ~stop_pos
@@ -186,7 +183,7 @@ let iter t ~f =
     let actual_back  = actual_back_index_when_not_empty t in
     let rec loop ~real_i ~stop_pos =
       if real_i < stop_pos then begin
-        f t.arr.(real_i);
+        f (Option_array.get_some_exn t.arr real_i);
         loop ~real_i:(real_i + 1) ~stop_pos
       end
     in
@@ -208,16 +205,18 @@ module C = Container.Make (struct
   let iter = `Custom iter
 end)
 
-let count      = C.count
-let sum        = C.sum
-let exists     = C.exists
-let mem        = C.mem
-let for_all    = C.for_all
-let find_map   = C.find_map
-let find       = C.find
-let to_list    = C.to_list
-let min_elt    = C.min_elt
-let max_elt    = C.max_elt
+let count       = C.count
+let sum         = C.sum
+let exists      = C.exists
+let mem         = C.mem
+let for_all     = C.for_all
+let find_map    = C.find_map
+let find        = C.find
+let to_list     = C.to_list
+let min_elt     = C.min_elt
+let max_elt     = C.max_elt
+let fold_result = C.fold_result
+let fold_until  = C.fold_until
 
 let blit new_arr t =
   assert (not (is_empty t));
@@ -225,25 +224,25 @@ let blit new_arr t =
   let actual_back  = actual_back_index_when_not_empty t in
   let old_arr = t.arr in
   if actual_front <= actual_back then
-    Array.blit ~src:old_arr ~dst:new_arr ~src_pos:actual_front ~dst_pos:0
+    Option_array.blit ~src:old_arr ~dst:new_arr ~src_pos:actual_front ~dst_pos:0
       ~len:(length t)
   else begin
-    let break_pos = Array.length old_arr - actual_front in
-    Array.blit ~src:old_arr ~dst:new_arr ~src_pos:actual_front ~dst_pos:0
+    let break_pos = Option_array.length old_arr - actual_front in
+    Option_array.blit ~src:old_arr ~dst:new_arr ~src_pos:actual_front ~dst_pos:0
       ~len:break_pos;
-    Array.blit ~src:old_arr ~dst:new_arr ~src_pos:0 ~dst_pos:break_pos
+    Option_array.blit ~src:old_arr ~dst:new_arr ~src_pos:0 ~dst_pos:break_pos
       ~len:(actual_back + 1);
   end;
   (* length depends on t.arr and t.front_index, so this needs to be first *)
   t.back_index  <- length t;
   t.arr         <- new_arr;
-  t.arr_length  <- Array.length new_arr;
-  t.front_index <- Array.length new_arr - 1;
-  (* Since t.front_index = Array.length new_arr - 1, this is asserting that t.back_index
+  t.arr_length  <- Option_array.length new_arr;
+  t.front_index <- Option_array.length new_arr - 1;
+  (* Since t.front_index = Option_array.length new_arr - 1, this is asserting that t.back_index
      is a valid index in the array and that the array can support at least one more
      element -- recall, if t.front_index = t.back_index then the array is full.
 
-     Note that this is true if and only if Array.length new_arr > length t + 1.
+     Note that this is true if and only if Option_array.length new_arr > length t + 1.
   *)
   assert (t.front_index > t.back_index)
 ;;
@@ -253,26 +252,26 @@ let maybe_shrink_underlying t =
      && t.arr_length > 10
      && t.arr_length / 3 > length t
   then begin
-    let new_arr = Array.create ~len:(t.arr_length / 2) t.dummy in
+    let new_arr = Option_array.create ~len:(t.arr_length / 2) in
     blit new_arr t;
   end
 ;;
 
 let grow_underlying t =
-  let new_arr = Array.create ~len:(t.arr_length * 2) t.dummy in
+  let new_arr = Option_array.create ~len:(t.arr_length * 2) in
   blit new_arr t
 ;;
 
 let enqueue_back t v =
   if t.front_index = t.back_index then grow_underlying t;
-  t.arr.(t.back_index) <- v;
+  Option_array.set_some t.arr t.back_index v;
   t.back_index         <- if t.back_index = t.arr_length - 1 then 0 else t.back_index + 1;
   t.length             <- t.length + 1;
 ;;
 
 let enqueue_front t v =
   if t.front_index = t.back_index then grow_underlying t;
-  t.arr.(t.front_index)  <- v;
+  Option_array.set_some t.arr t.front_index v;
   t.front_index          <- if t.front_index = 0
                             then t.arr_length - 1
                             else t.front_index - 1;
@@ -287,7 +286,7 @@ let enqueue t back_or_front v =
 ;;
 
 let peek_front_nonempty t =
-  t.arr.(actual_front_index_when_not_empty t)
+  Option_array.get_some_exn t.arr (actual_front_index_when_not_empty t)
 ;;
 
 let peek_front_exn t =
@@ -303,7 +302,7 @@ let peek_front t =
 ;;
 
 let peek_back_nonempty t =
-  t.arr.(actual_back_index_when_not_empty t)
+  Option_array.get_some_exn t.arr (actual_back_index_when_not_empty t)
 ;;
 
 let peek_back_exn t =
@@ -326,8 +325,8 @@ let peek t back_or_front =
 
 let dequeue_front_nonempty t =
   let i = actual_front_index_when_not_empty t in
-  let res = t.arr.(i) in
-  t.arr.(i)              <- t.dummy;
+  let res = Option_array.get_some_exn t.arr i in
+  Option_array.set_none t.arr i;
   t.front_index          <- i;
   t.apparent_front_index <- t.apparent_front_index + 1;
   t.length               <- t.length - 1;
@@ -349,8 +348,8 @@ let dequeue_front t =
 
 let dequeue_back_nonempty t =
   let i = actual_back_index_when_not_empty t in
-  let res = t.arr.(i) in
-  t.arr.(i)    <- t.dummy;
+  let res = Option_array.get_some_exn t.arr i in
+  Option_array.set_none t.arr i;
   t.back_index <- i;
   t.length     <- t.length - 1;
   maybe_shrink_underlying t;
@@ -421,18 +420,18 @@ let true_index_exn t i =
   else true_i
 ;;
 
-let get t i = t.arr.(true_index_exn t i)
+let get t i = Option_array.get_some_exn t.arr (true_index_exn t i)
 
 let get_opt t i = try Some (get t i) with _ -> None
 
-let set_exn t i v = t.arr.(true_index_exn t i) <- v
+let set_exn t i v = Option_array.set_some t.arr (true_index_exn t i) v
 
 let to_array t =
   match peek_front t with
   | None -> [| |]
   | Some front ->
     let arr = Array.create ~len:(length t) front in
-    ignore (fold t ~init:0 ~f:(fun i v -> arr.(i) <- v; i + 1));
+    ignore (fold t ~init:0 ~f:(fun i v -> Array.set arr i v; i + 1));
     arr
 ;;
 

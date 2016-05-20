@@ -40,14 +40,15 @@ val is_sun_or_sat : t -> bool
 
 val all      : t list
 val weekdays : t list (** [ Mon; Tue; Wed; Thu; Fri ] *)
+
 val weekends : t list (** [ Sat; Sun ] *)
 
 module Stable : sig
   module V1 : sig
     type nonrec t = t [@@deriving bin_io, sexp, compare]
 
-    include Stable_containers.Comparable.V1.S
-      with type key := t
+    include Comparable.Stable.V1.S
+      with type comparable := t
       with type comparator_witness := comparator_witness
 
     include Stable_containers.Hashable.V1.S

@@ -120,6 +120,16 @@ val of_alist_exn
   :  comparator:('a, 'cmp) Comparator.t
   -> ('a * 'b) list -> ('a, 'b, 'cmp) t
 
+(** [of_hashtbl_exn] creates a map from bindings present in a hash table.
+    [of_hashtbl_exn] raises if there are distinct keys [a1] and [a2] in the table with
+    [comparator.compare a1 a2 = 0], which is only possible if the hash-table comparison
+    function is different than [comparator.compare].  In the common case, the comparison
+    is the same, in which case [of_hashtbl_exn] does not raise, regardless of the keys
+    present in the table. *)
+val of_hashtbl_exn
+  :  comparator:('a, 'cmp) Comparator.t
+  -> ('a, 'b) Core_hashtbl.t -> ('a, 'b, 'cmp) t
+
 (** creates map from association list with possibly repeated keys. *)
 val of_alist_multi
   :  comparator:('a, 'cmp) Comparator.t
@@ -208,12 +218,9 @@ val remove : ('k, 'v, 'cmp) t -> 'k -> ('k, 'v, 'cmp) t
 (** [mem map key] tests whether [map] contains a binding for [key] *)
 val mem : ('k, _, 'cmp) t -> 'k -> bool
 
-val iter : ('k, 'v, _) t -> f:(key:'k -> data:'v -> unit) -> unit
-  [@@ocaml.deprecated "[since 2015-10] Use iteri instead"]
-
-val iteri : ('k, 'v, _) t -> f:(key:'k -> data:'v -> unit) -> unit
-
 val iter_keys : ('k, _, _) t -> f:('k -> unit) -> unit
+val iter      : (_, 'v, _) t -> f:('v -> unit) -> unit
+val iteri     : ('k, 'v, _) t -> f:(key:'k -> data:'v -> unit) -> unit
 
 (** Iterate two maps side by side.  Complexity of this function is O(M+N).  If two inputs
     are [(0, a); (1, a)] and [(1, b); (2, b)], [f] will be called with [(0, `Left a); (1,
@@ -247,23 +254,12 @@ val fold2
   -> f:(key:'k -> data:[ `Left of 'v1 | `Right of 'v2 | `Both of 'v1 * 'v2 ] -> 'a -> 'a)
   -> 'a
 
-val filter
-  :  ('k, 'v, 'cmp) t
-  -> f:(key:'k -> data:'v -> bool)
-  -> ('k, 'v, 'cmp) t
-  [@@ocaml.deprecated "[since 2015-10] Use filteri instead"]
-
-(** [filteri], [filter_map], and [filter_mapi] run in O(n * lg n) time; they simply
-    accumulate each key & data retained by [f] into a new map using [add]. *)
-val filteri
-  :  ('k, 'v, 'cmp) t
-  -> f:(key:'k -> data:'v -> bool)
-  -> ('k, 'v, 'cmp) t
-
-val filter_keys
-  :  ('k, 'v, 'cmp) t
-  -> f:('k -> bool)
-  -> ('k, 'v, 'cmp) t
+(** [filter], [filteri], [filter_keys], [filter_map], and [filter_mapi] run in O(n * lg n)
+    time; they simply accumulate each key & data retained by [f] into a new map using
+    [add]. *)
+val filter_keys : ('k, 'v, 'cmp) t -> f:('k -> bool) -> ('k, 'v, 'cmp) t
+val filter      : ('k, 'v, 'cmp) t -> f:('v -> bool) -> ('k, 'v, 'cmp) t
+val filteri     : ('k, 'v, 'cmp) t -> f:(key:'k -> data:'v -> bool) -> ('k, 'v, 'cmp) t
 
 (** returns new map with bound values filtered by f applied to the bound values *)
 val filter_map
@@ -516,3 +512,21 @@ end)
   : S_binable
     with type Key.t                  = Key.t
     with type Key.comparator_witness = Key.comparator_witness
+
+(** The following functors may be used to define stable modules *)
+module Stable : sig
+  module V1 : sig
+    type nonrec ('a, 'b, 'c) t = ('a, 'b, 'c) t
+
+    module type S = sig
+      type key
+      type comparator_witness
+      type nonrec 'a t = (key, 'a, comparator_witness) t
+      include Stable_module_types.S1 with type 'a t := 'a t
+    end
+
+    module Make (Key : Stable_module_types.S0) : S
+      with type key := Key.t
+      with type comparator_witness := Key.comparator_witness
+  end
+end

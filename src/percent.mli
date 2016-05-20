@@ -6,6 +6,7 @@ type t
 
 (** of_string and t_of_sexp disallow nan, inf, etc. *)
 include Stringable with type t := t
+
 (** sexps are of the form 5bp or 0.05% or 0.0005x *)
 include Sexpable   with type t := t
 include Binable    with type t := t

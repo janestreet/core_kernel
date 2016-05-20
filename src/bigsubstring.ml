@@ -3,6 +3,7 @@ include Make_substring.F (struct
 
   let create = Bigstring.create ?max_mem_waiting_gc:None
   let length = Bigstring.length
+  let get = Bigstring.get
   module Blit = Make_substring.Blit
   let blit = Blit.bigstring_bigstring
   let blit_to_string = Blit.bigstring_string

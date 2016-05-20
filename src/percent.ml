@@ -49,8 +49,7 @@ module Stable = struct
               failwithf "Percent.of_string: must end in x, %%, or bp: %s" str ()
 
       let of_string str =
-        (* we use decimal to prevent nan, inf, etc. *)
-        let float str = Decimal.t_of_sexp (Sexp.Atom str) in
+        let float str = Float_with_finite_only_serialization.t_of_sexp (Sexp.Atom str) in
         really_of_string str float
 
       let of_string_allow_nan_and_inf str =

@@ -174,7 +174,7 @@ module Stable = struct
       | [x] -> x
       | _ ->
         let n = List.length args in
-        of_sexp_error (sprintf "%s expects one argument, %d found" name n) sexp
+       of_sexp_error (sprintf "%s expects one argument, %d found" name n) sexp
 
     let ternary name args sexp =
       match args with
@@ -310,6 +310,28 @@ end)
 
 let constant b = if b then true_ else false_
 
+module type Constructors = sig
+  val base     : 'a -> 'a t
+  val true_    : _ t
+  val false_   : _ t
+  val constant : bool -> _ t
+  val not_     : 'a t -> 'a t
+  val and_     : 'a t list -> 'a t
+  val or_      : 'a t list -> 'a t
+  val if_      : 'a t -> 'a t -> 'a t -> 'a t
+end
+
+module O = struct
+  include T
+  let not = not_
+  let and_ = and_
+  let or_ = or_
+  let constant = constant
+  let (&&) = andalso
+  let (||) = orelse
+  let (==>) a b = not a || b
+end
+
 let constant_value = function
   | True -> Some true
   | False -> Some false
@@ -401,6 +423,8 @@ let to_array = C.to_array
 let to_list  = C.to_list
 let min_elt  = C.min_elt
 let max_elt  = C.max_elt
+let fold_result = C.fold_result
+let fold_until = C.fold_until
 
 include Monad.Make (struct
 

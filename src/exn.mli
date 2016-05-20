@@ -32,8 +32,9 @@ val reraise : t -> string -> _
 *)
 val reraisef : t -> ('a, unit, string, unit -> _) format4 -> 'a
 
-val to_string      : t -> string (* human-readable, multi-lines *)
-val to_string_mach : t -> string (* machine format, single-line *)
+val to_string      : t -> string (** human-readable, multi-lines *)
+
+val to_string_mach : t -> string (** machine format, single-line *)
 
 (** Executes [f] and afterwards executes [finally], whether [f] throws an exception or
     not.

@@ -3,7 +3,7 @@
 (* We have to use Int64.to_int_exn instead of int constants to make
    sure that file can be preprocessed on 32-bit machines. *)
 
-#import "config.mlh"
+#import "config.h"
 
 let overflow_bound_max_int32_value : int32 =
   2147483647l
@@ -76,7 +76,7 @@ let int32_positive_overflow_bounds : int32 array =
     1l;
   |]
 
-#if JSC_ARCH_SIXTYFOUR
+#ifdef JSC_ARCH_SIXTYFOUR
 
 let overflow_bound_max_int_value : int =
   if Int_conversions.num_bits_int = 32 then
@@ -235,6 +235,77 @@ let int_positive_overflow_bounds : int array =
   |]
 
 #endif
+
+let overflow_bound_max_int63_on_int64_value : int64 =
+  4611686018427387903L
+
+let int63_on_int64_positive_overflow_bounds : int64 array =
+  [|
+    4611686018427387903L;
+    4611686018427387903L;
+    2147483647L;
+    1664510L;
+    46340L;
+    5404L;
+    1290L;
+    463L;
+    215L;
+    118L;
+    73L;
+    49L;
+    35L;
+    27L;
+    21L;
+    17L;
+    14L;
+    12L;
+    10L;
+    9L;
+    8L;
+    7L;
+    7L;
+    6L;
+    5L;
+    5L;
+    5L;
+    4L;
+    4L;
+    4L;
+    4L;
+    3L;
+    3L;
+    3L;
+    3L;
+    3L;
+    3L;
+    3L;
+    3L;
+    3L;
+    2L;
+    2L;
+    2L;
+    2L;
+    2L;
+    2L;
+    2L;
+    2L;
+    2L;
+    2L;
+    2L;
+    2L;
+    2L;
+    2L;
+    2L;
+    2L;
+    2L;
+    2L;
+    2L;
+    2L;
+    2L;
+    2L;
+    1L;
+    1L;
+  |]
 
 let overflow_bound_max_int64_value : int64 =
   9223372036854775807L

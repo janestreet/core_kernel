@@ -4,9 +4,9 @@ module Char = Caml.Char
 module Int32 = Caml.Int32
 module Int64 = Caml.Int64
 
-#import "config.mlh"
+#import "config.h"
 
-#if JSC_ARCH_SIXTYFOUR
+#ifdef JSC_ARCH_SIXTYFOUR
 let   signed_max = Int32.to_int Int32.max_int
 let unsigned_max = Int64.to_int 0xffff_ffffL
 #endif
@@ -281,7 +281,7 @@ end))
 
 exception Pack_unsigned_32_argument_out_of_range of int [@@deriving sexp]
 let check_unsigned_32_in_range n =
-#if JSC_ARCH_SIXTYFOUR
+#ifdef JSC_ARCH_SIXTYFOUR
     if n > unsigned_max || n < 0 then
       raise (Pack_unsigned_32_argument_out_of_range n)
 #else
@@ -316,7 +316,7 @@ let pack_unsigned_32_int_little_endian ~buf ~pos n =
 
 exception Pack_signed_32_argument_out_of_range of int [@@deriving sexp]
 let check_signed_32_in_range n =
-#if JSC_ARCH_SIXTYFOUR
+#ifdef JSC_ARCH_SIXTYFOUR
     if n > signed_max || n < -(signed_max + 1) then
       raise (Pack_signed_32_argument_out_of_range n)
 #else
@@ -394,7 +394,7 @@ let unpack_unsigned_32_int_little_endian ~buf ~pos =
   b1 lor b2 lor b3 lor b4
 ;;
 
-#if JSC_ARCH_SIXTYFOUR
+#ifdef JSC_ARCH_SIXTYFOUR
 
 let unpack_signed_32_int ~byte_order ~buf ~pos =
   let n = unpack_unsigned_32_int ~byte_order ~buf ~pos in
@@ -536,7 +536,7 @@ let unpack_signed_64_big_endian ~buf ~pos =
   and b6 = Char.code (Caml.Bytes.unsafe_get buf (pos + 5))
   and b7 = Char.code (Caml.Bytes.unsafe_get buf (pos + 6)) in
 
-#if JSC_ARCH_SIXTYFOUR
+#ifdef JSC_ARCH_SIXTYFOUR
 
   let i1 = Int64.of_int (                                b1)
   and i2 = Int64.of_int ((b2 lsl 48) lor (b3 lsl 40) lor
@@ -566,7 +566,7 @@ let unpack_signed_64_little_endian ~buf ~pos =
   and b6 = Char.code (Caml.Bytes.unsafe_get buf (pos + 5))
   and b7 = Char.code (Caml.Bytes.unsafe_get buf (pos + 6)) in
 
-#if JSC_ARCH_SIXTYFOUR
+#ifdef JSC_ARCH_SIXTYFOUR
 
   let i1 = Int64.of_int ( b1         lor (b2 lsl  8) lor
                          (b3 lsl 16) lor (b4 lsl 24) lor
@@ -688,7 +688,7 @@ let unpack_signed_64_int_little_endian ~buf ~pos =
   (b7 lsl 48) lor (b8 lsl 56)
 ;;
 
-#if JSC_ARCH_SIXTYFOUR
+#ifdef JSC_ARCH_SIXTYFOUR
 let%test_unit "63 bits overflow" =
   let buf = String.create 8 in
   let pos = 0 in
@@ -731,7 +731,7 @@ let%test_module "inline_signed_64" = (module Make_inline_tests (struct
   let unpack_little_endian = unpack_signed_64_little_endian
 end))
 
-#if JSC_ARCH_SIXTYFOUR
+#ifdef JSC_ARCH_SIXTYFOUR
 
 let%test_module "inline_signed_64_int" =
   (module Make_inline_tests (struct

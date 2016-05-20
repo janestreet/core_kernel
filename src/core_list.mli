@@ -94,8 +94,13 @@ val filteri : 'a t -> f: (int -> 'a -> bool) -> 'a t
 (** [partition_map t ~f] partitions [t] according to [f]. *)
 val partition_map : 'a t -> f:('a -> [ `Fst of 'b | `Snd of 'c ]) -> 'b t * 'c t
 
-(** [partition_tf l ~f] returns a pair of lists [(l1, l2)], where [l1] is the list of all the
-    elements of [l] that satisfy the predicate [p], and [l2] is the list of all the
+val partition3_map
+  :  'a t
+  -> f:('a -> [ `Fst of 'b | `Snd of 'c | `Trd of 'd])
+  -> 'b t * 'c t * 'd t
+
+(** [partition_tf l ~f] returns a pair of lists [(l1, l2)], where [l1] is the list of all
+    the elements of [l] that satisfy the predicate [p], and [l2] is the list of all the
     elements of [l] that do not satisfy [p].  The order of the elements in the input list
     is preserved.  The "tf" suffix is mnemonic to remind readers at a call that the result
     is (trues, falses). *)
@@ -155,8 +160,8 @@ val find_mapi_exn : 'a t -> f:(int -> 'a -> 'b option) -> 'b
 (** E.g. [append [1; 2] [3; 4; 5]] is [[1; 2; 3; 4; 5]] *)
 val append : 'a t -> 'a t -> 'a t
 
-(** [List.map f [a1; ...; an]] applies function [f] to [a1, ..., an], and builds the list
-    [[f a1; ...; f an]] with the results returned by [f]. *)
+(** [List.map f [a1; ...; an]] applies function [f] to [a1], [a2], ..., [an], in order,
+    and builds the list [[f a1; ...; f an]] with the results returned by [f]. *)
 val map : 'a t -> f:('a -> 'b) -> 'b t
 
 (** [concat_map t ~f] is [concat (map t ~f)], except that there is no guarantee about the
@@ -351,7 +356,7 @@ val filter_opt : 'a option t -> 'a t
 
     is always the same as (or at least sort of isomorphic to):
 
-    {[ Map.xxx (alist |! Map.of_alist_multi |! Map.map ~f:List.hd) ...args... }]
+    {[ Map.xxx (alist |! Map.of_alist_multi |! Map.map ~f:List.hd) ...args... ]}
 *)
 module Assoc : sig
 
@@ -363,11 +368,13 @@ module Assoc : sig
   val mem      : ('a, 'b) t -> ?equal:('a -> 'a -> bool) -> 'a -> bool
   val remove   : ('a, 'b) t -> ?equal:('a -> 'a -> bool) -> 'a -> ('a, 'b) t
   val map      : ('a, 'b) t -> f:('b -> 'c) -> ('a, 'c) t
+
   (** Bijectivity is not guaranteed because we allow a key to appear more than once. *)
   val inverse  : ('a, 'b) t -> ('b, 'a) t
 end
 
 (** Note that [sub], unlike [slice], doesn't use python-style indices! *)
+
 (** [sub pos len l] is the [len]-element sublist of [l], starting at [pos]. *)
 val sub : 'a t -> pos:int -> len:int -> 'a t
 
@@ -412,6 +419,14 @@ val to_string : f:('a -> string) -> 'a t -> string
     If [random_state] is not supplied, [permute] uses [Random.State.default]. *)
 val permute : ?random_state:Core_random.State.t -> 'a t -> 'a t
 
+(** [random_element ?random_state t] is [None] if [t] is empty, else it is [Some x] for
+    some [x] chosen uniformly at random from [t].
+
+    [random_element] side affects [random_state] by calling [Random.State.int]. If
+    [random_state] is not supplied, [random_element] uses [Random.State.default]. *)
+val random_element     : ?random_state:Core_random.State.t -> 'a t -> 'a option
+val random_element_exn : ?random_state:Core_random.State.t -> 'a t -> 'a
+
 (** [is_sorted t ~compare] returns [true] iff forall adjacent [a1; a2] in [t], [compare a1
     a2 <= 0].
 
@@ -451,41 +466,19 @@ val intersperse : 'a t -> sep:'a -> 'a t
 
     [List.gen' t] produces a generator for arbitrary lists of values from [t].
 
-    Adding [~unique:true] guarantees that every value from [t] is included in each list
-    at most once.
-
     - Adding [~length:(`Exactly n)] produces only lists of length [n].
     - Adding [~length:(`At_least n)] produces only lists of length [n] or greater.
     - Adding [~length:(`At_most n)] produces only lists of length [n] or less.
     - Adding [~length:(`Between_inclusive (m,n))] produces only lists of length [k] such
       that [m <= k] and [k <= n].
 
-    Adding [~sorted:`Arbitrarily] produces lists that are sorted in a deterministic
-    order based on the construction of [t], but not guaranteed to correspond to any
-    specific comparison function.
-
-    Adding [~sorted:(`By cmp)] produces lists that are sorted in ascending order by
-    [cmp].
-
-    The optional arguments can be combined; for example, the following expression
-    creates lists of 10 to 20 integers each that are strictly sorted (no duplicates):
-
-    {[
-      gen' Int.gen
-        ~unique:true
-        ~sorted:(`By Int.compare)
-        ~length:(`Between_inclusive (10,20))
-    ]}
-
-    Regardless of the options provided, the lists in the output of [list t] are
-    generated uniquely, so long as the values in [t] are generated uniquely. *)
+    The lists in the output of [list t] are generated uniquely, so long as the values in
+    [t] are generated uniquely. *)
 val gen'
   :  ?length : [ `Exactly           of int
                | `At_least          of int
                | `At_most           of int
                | `Between_inclusive of int * int ]
-  -> ?unique : bool
-  -> ?sorted : [ `Arbitrarily | `By of ('a -> 'a -> int) ]
   -> 'a Quickcheck.Generator.t
   -> 'a t Quickcheck.Generator.t
 

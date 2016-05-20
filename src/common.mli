@@ -23,6 +23,7 @@ type never_returns = Never_returns.never_returns [@@deriving sexp_of]
 val never_returns : never_returns -> _
 
 (** {6 Error handling} *)
+
 (** See exn.mli *)
 val protect  : f:(unit -> 'a)       -> finally:(unit -> unit) -> 'a
 val protectx : f:('b   -> 'a) -> 'b -> finally:('b   -> unit) -> 'a

@@ -1,4 +1,4 @@
-(* This is factored out of float.ml in order to break a module dependency cycle.  *)
+(*_ This is factored out of float.ml in order to break a module dependency cycle.  *)
 
 module type S = sig
   (** intended to be a tolerance on human-entered floats *)

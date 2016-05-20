@@ -70,6 +70,8 @@ let is_empty t = t.length = 0
 let iter t ~f = List.iter t.elts ~f
 
 let fold t ~init ~f = List.fold t.elts ~init ~f
+let fold_result t ~init ~f = Container.fold_result ~fold ~init ~f t
+let fold_until  t ~init ~f = Container.fold_until  ~fold ~init ~f t
 
 let count t ~f = List.count t.elts ~f
 let sum m t ~f = List.sum m t.elts ~f

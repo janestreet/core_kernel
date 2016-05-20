@@ -1,34 +1,24 @@
-(** 63 or 64 bit integers.
+(** 63-bit integers.
 
-    The size of Int63 is always at least 63 bits.  On a 64-bit platform it is just an int
-    (63-bits), and on a 32-bit platform it is an int64.
+    The size of Int63 is always 63 bits.  On a 64-bit platform it is just an int
+    (63-bits), and on a 32-bit platform it is an int64 wrapped to respect the
+    semantic of 63bit integers.
 
-    Because Int63 has different sizes on 32-bit and 64-bit platforms, there are several
-    pitfalls to be aware of:
+    Because Int63 has different representations on 32-bit and 64-bit platforms,
+    marshalling Int63 will not work between 32-bit and 64-bit platforms.
+    unmarshal will segfault.
+*)
 
-    - Int63 will behave differently in the case of overflow.
+#import "config.h"
 
-    - marshalling Int63 will not work between 32-bit and 64-bit platforms.
-      unmarshal will segfault.
-
-    - bin_io will work, except that it will raise an overflow exception when you send too
-      large of an int from a 32-bit to a 64-bit platform.  This is counterintuitive
-      because the 32-bit platform has the larger int size. *)
-
-#import "config.mlh"
-
-#if JSC_ARCH_SIXTYFOUR
-
-(** We expose [private int] so that the compiler can omit caml_modify when dealing with
-    record fields holding [Int63.t].  Code should not explicitly make use of the
-    [private], e.g. via [(i :> int)], since such code will not compile on 32-bit
-    platforms. *)
+(** In 64bit architectures, we expose [type t = private int] so that the compiler can
+    omit caml_modify when dealing with record fields holding [Int63.t].
+    Code should not explicitly make use of the [private], e.g. via [(i :> int)], since
+    such code will not compile on 32-bit platforms. *)
+#ifdef JSC_ARCH_SIXTYFOUR
 include Int_intf.S with type t = private int
-
 #else
-
 include Int_intf.S
-
 #endif
 
 (** Unlike the usual operations, these never overflow, preferring instead to raise. *)

@@ -47,10 +47,9 @@ val map2
   -> ('key, 'c, 'cmp, 'enum) t
 
 
-val iter  : ('key, 'a, _, _) t -> f:(key:'key -> data:'a -> unit) -> unit
-  [@@ocaml.deprecated "[since 2015-10] Use iteri instead"]
-
-val iteri : ('key, 'a, _, _) t -> f:(key:'key -> data:'a -> unit) -> unit
+val iter_keys: ('key,  _, _, _) t -> f:(    'key            -> unit) -> unit
+val iter     : (   _, 'a, _, _) t -> f:(                 'a -> unit) -> unit
+val iteri    : ('key, 'a, _, _) t -> f:(key:'key -> data:'a -> unit) -> unit
 val iter2
   :  ('key, 'a, 'cmp, 'enum) t
   -> ('key, 'b, 'cmp, 'enum) t

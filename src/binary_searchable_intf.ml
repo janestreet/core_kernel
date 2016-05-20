@@ -15,10 +15,11 @@ end
 module type Indexable = sig
   include Indexable_without_tests
 
-  (** To implement the test provided by [Binary_searchable], we need to be able to
-      construct [t] with two different values [small < big].  We also need to be able to
-      build a [t] from an [elt array]. *)
+  (** To implement the tests provided by [Binary_searchable], we need two
+      different [elt] values [small < big], to be able to compare those values,
+      and to be able to construct a [t] containing those values. *)
   module For_test : sig
+    val compare  : elt -> elt -> int
     val small    : elt
     val big      : elt
     val of_array : elt array -> t

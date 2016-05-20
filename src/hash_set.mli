@@ -1,4 +1,4 @@
-(* A mutable set of elements *)
+(** A mutable set of elements *)
 
 open Hash_set_intf
 
@@ -17,6 +17,10 @@ include Creators
 include Accessors with type 'a t := 'a t with type 'a elt := 'a elt
 
 val hashable : 'key t -> 'key Core_hashtbl_intf.Hashable.t
+
+(** [inter t1 t2] computes the set intersection of [t1] and [t2].  Runs in O(max(length
+    t1, length t2)) *)
+val inter : 'key t -> 'key t -> 'key t
 
 module type Elt         = Core_hashtbl.Key
 module type Elt_binable = Core_hashtbl.Key_binable

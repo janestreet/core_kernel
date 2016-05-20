@@ -48,9 +48,10 @@ module type Raw_binable = sig
 end
 
 module type Validated = sig
-  type 'a validated
+  type ('raw, 'witness) validated
+  type witness
   type raw
-  type t = raw validated [@@deriving sexp]
+  type t = (raw, witness) validated [@@deriving sexp]
 
   val create     : raw -> t Or_error.t
   val create_exn : raw -> t
@@ -60,18 +61,20 @@ end
 
 module type Validated_binable = sig
   include Validated
-  include sig type t = raw validated [@@deriving bin_io] end with type t := t
+  include sig type t = (raw, witness) validated [@@deriving bin_io] end with type t := t
 end
 
 module type S = sig
-  type 'a t = private 'a
+  type ('raw, 'witness) t = private 'raw
 
-  val raw : 'a t -> 'a
+  val raw : ('raw, _) t -> 'raw
 
   module type Raw = Raw
 
-  module type Validated         = Validated         with type 'a validated := 'a t
-  module type Validated_binable = Validated_binable with type 'a validated := 'a t
+  module type Validated = Validated
+    with type ('a, 'b) validated := ('a, 'b) t
+  module type Validated_binable = Validated_binable
+    with type ('a, 'b) validated := ('a, 'b) t
 
   module Make         (Raw : Raw)         : Validated         with type raw := Raw.t
   module Make_binable (Raw : Raw_binable) : Validated_binable with type raw := Raw.t

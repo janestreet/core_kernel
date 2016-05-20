@@ -368,17 +368,19 @@ module C = Container.Make (struct
   let iter = `Custom iter
 end)
 
-let count    = C.count
-let sum      = C.sum
-let exists   = C.exists
-let find     = C.find
-let find_map = C.find_map
-let fold     = C.fold
-let for_all  = C.for_all
-let mem      = C.mem
-let to_array = C.to_array
-let min_elt  = C.min_elt
-let max_elt  = C.max_elt
+let count       = C.count
+let sum         = C.sum
+let exists      = C.exists
+let find        = C.find
+let find_map    = C.find_map
+let fold        = C.fold
+let for_all     = C.for_all
+let mem         = C.mem
+let to_array    = C.to_array
+let min_elt     = C.min_elt
+let max_elt     = C.max_elt
+let fold_result = C.fold_result
+let fold_until  = C.fold_until
 
 let unchecked_iter t ~f =
   match !t with

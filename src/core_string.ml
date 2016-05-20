@@ -1,13 +1,35 @@
+module String = Caml.BytesLabels
+
+module Stable_workaround = struct
+  open Bin_prot.Std
+  open Sexplib.Std
+
+  module V1 = struct
+    module T = struct
+      type t = string [@@deriving bin_io, sexp]
+      let compare = String.compare
+    end
+    module C = Comparator.Stable.V1.Make (T)
+    module M = Comparable.Stable.V1.Make (struct include T include C end)
+  end
+end
+
+module Stable = struct
+  module V1 = struct
+    include Stable_workaround.V1.T
+    include Stable_workaround.V1.C
+    include Stable_workaround.V1.M
+  end
+end
+
 module Array = Caml.ArrayLabels
 module Char = Core_char
-module String = Caml.BytesLabels
 module List = Core_list
 open Typerep_lib.Std
 open Sexplib.Std
 open Bin_prot.Std
 open Result.Export
 open Staged
-
 
 let phys_equal = (==)
 
@@ -18,6 +40,9 @@ let failwiths = Error.failwiths
 module T = struct
   type t = string [@@deriving sexp, bin_io, typerep]
   let compare = String.compare
+
+  type comparator_witness = Stable.V1.comparator_witness
+  let comparator = Stable.V1.comparator
 
   (* = on two strings avoids calling compare_val, which is what happens
      with String.compare *)
@@ -51,6 +76,29 @@ external unsafe_get : string -> int -> char = "%string_unsafe_get"
 external length : string -> int = "%string_length"
 external set        : string -> int -> char -> unit = "%string_safe_set"
 external unsafe_set : string -> int -> char -> unit = "%string_unsafe_set"
+
+let is_suffix_gen =
+  let rec loop s ~suffix ~char_equal idx_suff idx =
+    idx_suff < 0
+    || ((char_equal suffix.[idx_suff] s.[idx])
+        && loop s ~suffix ~char_equal (idx_suff - 1) (idx - 1))
+  in
+  fun s ~suffix ~char_equal ->
+    let len = String.length s in
+    let len_suffix = String.length suffix in
+    len >= len_suffix && loop s ~suffix ~char_equal (len_suffix - 1) (len - 1)
+;;
+
+let is_prefix_gen =
+  let rec loop s ~prefix ~char_equal i =
+    i < 0
+    || ((char_equal prefix.[i] s.[i])
+        && loop s ~prefix ~char_equal (i - 1))
+  in
+  fun s ~prefix ~char_equal ->
+    let prefix_len = String.length prefix in
+    String.length s >= prefix_len && loop s ~prefix ~char_equal (prefix_len - 1)
+;;
 
 module Caseless = struct
   module T = struct
@@ -96,6 +144,11 @@ module Caseless = struct
     let%bench_fun "hash" =
       let s = String.init 1000 ~f:(fun i -> Char.of_int_exn (i mod 256)) in
       fun () -> ignore (hash s)
+
+    let char_equal_caseless c1 c2 = Char.equal (Char.lowercase c1) (Char.lowercase c2)
+
+    let is_suffix s ~suffix = is_suffix_gen s ~suffix ~char_equal:char_equal_caseless
+    let is_prefix s ~prefix = is_prefix_gen s ~prefix ~char_equal:char_equal_caseless
   end
 
   include T
@@ -103,7 +156,20 @@ module Caseless = struct
   include Hashable.Make_binable(T)
 end
 
-let%test_module "Caseless" = (module struct
+let%test_module "Caseless Suffix/Prefix" = (module struct
+  let%test _ = Caseless.is_suffix "OCaml" ~suffix:"AmL"
+  let%test _ = Caseless.is_suffix "OCaml" ~suffix:"ocAmL"
+  let%test _ = Caseless.is_suffix "a@!$b" ~suffix:"a@!$B"
+  let%test _ = not (Caseless.is_suffix "a@!$b" ~suffix:"C@!$B")
+  let%test _ = not (Caseless.is_suffix "aa" ~suffix:"aaa")
+  let%test _ = Caseless.is_prefix "OCaml" ~prefix:"oc"
+  let%test _ = Caseless.is_prefix "OCaml" ~prefix:"ocAmL"
+  let%test _ = Caseless.is_prefix "a@!$b" ~prefix:"a@!$B"
+  let%test _ = not (Caseless.is_prefix "a@!$b" ~prefix:"a@!$C")
+  let%test _ = not (Caseless.is_prefix "aa" ~prefix:"aaa")
+end)
+
+let%test_module "Caseless Comparable" = (module struct
   (* examples from docs *)
   let%test _ = Caseless.equal "OCaml" "ocaml"
   let%test _ = Caseless.("apple" < "Banana")
@@ -120,7 +186,9 @@ let%test_module "Caseless" = (module struct
 
   let%test _ = Core_set.mem (Caseless.Set.of_list ["hello"; "world"]) "heLLO"
   let%test _ = Core_set.length (Caseless.Set.of_list ["a"; "A"]) = 1
+end)
 
+let%test_module "Caseless Hashable" = (module struct
   let%test _ =
     Core_hashtbl.hash "x" <> Core_hashtbl.hash "X"
       && Caseless.hash "x" = Caseless.hash "X"
@@ -645,27 +713,8 @@ let%test_unit _ =
 ;;
 
 (* [is_suffix s ~suff] returns [true] if the string [s] ends with the suffix [suff] *)
- let is_suffix =
-  let rec loop s ~suffix idx_suff idx =
-    idx_suff < 0
-    || (suffix.[idx_suff] = s.[idx]
-        && loop s ~suffix (idx_suff - 1) (idx - 1))
-  in
-  fun s ~suffix ->
-    let len = String.length s in
-    let len_suffix = String.length suffix in
-    len >= len_suffix && loop s ~suffix (len_suffix - 1) (len - 1)
-;;
-
-let is_prefix =
-  let rec loop s ~prefix i =
-    i < 0  || (prefix.[i] = s.[i] && loop s ~prefix (i - 1))
-  in
-  fun s ~prefix ->
-    let prefix_len = String.length prefix in
-    String.length s >= prefix_len
-    && (loop s ~prefix (prefix_len - 1))
-;;
+let is_suffix s ~suffix = is_suffix_gen s ~suffix ~char_equal:Char.equal
+let is_prefix s ~prefix = is_prefix_gen s ~prefix ~char_equal:Char.equal
 
 let wrap_sub_n t n ~name ~pos ~len ~on_error =
   if n < 0 then
@@ -845,6 +894,8 @@ let sum m t ~f = Container.sum ~fold m t ~f
 
 let min_elt t = Container.min_elt ~fold t
 let max_elt t = Container.max_elt ~fold t
+let fold_result t ~init ~f = Container.fold_result ~fold ~init ~f t
+let fold_until  t ~init ~f = Container.fold_until  ~fold ~init ~f t
 
 let mem ?(equal = Char.(=)) t c =
   let rec loop i = i < length t && (equal c t.[i] || loop (i + 1)) in
@@ -971,7 +1022,7 @@ end) : Hashable.S_binable with type t := t)
 include Hash
 
 
-include Comparable.Map_and_set_binable (T)
+include Comparable.Map_and_set_binable_using_comparator (T)
 include Comparable.Validate (T)
 
 (* for interactive top-levels -- modules deriving from String should have String's pretty
@@ -1023,7 +1074,7 @@ module For_quickcheck = struct
 
   open Generator.Monad_infix
 
-  let gen' ?(length = Generator.size) char_gen =
+  let gen' ?(length = Generator.small_non_negative_int) char_gen =
     length
     >>= fun len ->
     List.gen' char_gen ~length:(`Exactly len)
@@ -1034,7 +1085,6 @@ module For_quickcheck = struct
   let obs =
     Observer.unmap (List.obs Char.obs)
       ~f:to_list
-      ~f_sexp:(fun () -> Atom "String.to_list")
 
   let shrinker =
     Shrinker.map (List.shrinker Char.shrinker) ~f:of_char_list ~f_inverse:to_list
@@ -1322,9 +1372,6 @@ module Escaping = struct
               "string: %s\nescaped string: %s\nunescaped string: %s"
               str escaped unescaped)
       in
-      let array_random_elem arr =
-        arr.(Random.int (Array.length arr))
-      in
       let random_char =
         let print_chars =
           List.range (Char.to_int Char.min_value) (Char.to_int Char.max_value + 1)
@@ -1332,7 +1379,7 @@ module Escaping = struct
           |! List.filter ~f:Char.is_print
           |! Array.of_list
         in
-        fun () -> array_random_elem print_chars
+        fun () -> Core_array.random_element_exn print_chars
       in
       let escapeworthy_chars =
         List.map escapeworthy_map ~f:fst |! Array.of_list
@@ -1345,7 +1392,7 @@ module Escaping = struct
               if p < 10 then
                 escape_char
               else if p < 25 then
-                array_random_elem escapeworthy_chars
+                Core_array.random_element_exn escapeworthy_chars
               else
                 random_char ()
             )

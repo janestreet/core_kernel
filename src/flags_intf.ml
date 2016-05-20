@@ -22,9 +22,11 @@ module type S = sig
   val empty : t
 
   val (+) : t -> t -> t       (** set union, bitwise or *)
+
   val (-) : t -> t -> t       (** set difference *)
 
   val intersect : t -> t -> t   (** bitwise and *)
+
   val complement : t -> t       (** bitwise not *)
 
   val is_empty     : t -> bool

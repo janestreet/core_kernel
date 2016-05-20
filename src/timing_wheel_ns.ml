@@ -1,4 +1,4 @@
-(* Be sure and first read the implementation overview in timing_wheel_intf.ml.
+(* Be sure and first read the implementation overview in timing_wheel_ns_intf.ml.
 
    A timing wheel is represented as an array of "levels", where each level is an array of
    "slots".  Each slot represents a range of keys, and holds elements associated with
@@ -204,7 +204,7 @@ module Priority_queue = struct
   module Key : sig
     (* [Interval_num] is the public API.  Everything following in the signature is
        for internal use. *)
-    include Timing_wheel_intf.Interval_num
+    include Timing_wheel_ns_intf.Interval_num
 
     (* [Slots_mask] is used to quickly determine a key's slot in a given level. *)
     module Slots_mask : sig
@@ -373,9 +373,11 @@ module Priority_queue = struct
 
     (* Iterators.  [iter p t ~init ~f] visits each element in the doubly-linked list
        containing [t], starting at [t], and following [next] pointers.  [length] counts by
-       visiting each element in the list. *)
-    val iter   : 'a Pool.t -> 'a t -> f:('a t -> unit) -> unit
-    val length : 'a Pool.t -> 'a t -> int
+       visiting each element in the list.   [max_alarm_time] finds the max [at] in the
+       list, returning [Time_ns.epoch] if the list is empty. *)
+    val iter           : 'a Pool.t -> 'a t -> f:('a t -> unit) -> unit
+    val length         : 'a Pool.t -> 'a t -> int
+    val max_alarm_time : 'a Pool.t -> 'a t -> Time_ns.t
 
   end = struct
 
@@ -478,6 +480,18 @@ module Priority_queue = struct
         if phys_equal next first then continue := false else current := next;
       done;
       !r
+    ;;
+
+    let max_alarm_time pool first =
+      let max_alarm_time = ref Time_ns.epoch in
+      let current = ref first in
+      let continue = ref true in
+      while !continue do
+        let next = next pool !current in
+        max_alarm_time := Time_ns.max (at pool !current) !max_alarm_time;
+        if phys_equal next first then continue := false else current := next;
+      done;
+      !max_alarm_time
     ;;
   end
 
@@ -1431,6 +1445,39 @@ let reschedule t alarm ~at =
 
 let reschedule_at_interval_num t alarm ~at =
   reschedule_gen t alarm ~key:at ~at:(interval_num_start t at);
+;;
+
+let min_alarm_interval_num t =
+  let elt = Priority_queue.min_elt_ t.priority_queue in
+  if Internal_elt.is_null elt
+  then None
+  else Some (Internal_elt.key t.priority_queue.pool elt)
+;;
+
+let min_alarm_interval_num_exn t =
+  let elt = Priority_queue.min_elt_ t.priority_queue in
+  if Internal_elt.is_null elt
+  then raise_s [%message "Timing_wheel.min_alarm_interval_num_exn of empty timing_wheel"
+                           ~timing_wheel:(t : _ t)]
+  else Internal_elt.key t.priority_queue.pool elt
+;;
+
+let max_alarm_time_in_list t elt = Internal_elt.max_alarm_time t.priority_queue.pool elt
+
+let max_alarm_time_in_min_interval t =
+  let elt = Priority_queue.min_elt_ t.priority_queue in
+  if Internal_elt.is_null elt
+  then None
+  else Some (max_alarm_time_in_list t elt)
+;;
+
+let max_alarm_time_in_min_interval_exn t =
+  let elt = Priority_queue.min_elt_ t.priority_queue in
+  if Internal_elt.is_null elt
+  then raise_s [%message "\
+Timing_wheel_ns.max_alarm_time_in_min_interval_exn of empty timing wheel"
+                           ~timing_wheel:(t : _ t)];
+  max_alarm_time_in_list t elt
 ;;
 
 let next_alarm_fires_at_internal t elt =

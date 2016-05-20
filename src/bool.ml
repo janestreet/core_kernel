@@ -67,7 +67,6 @@ let gen =
 
 let obs =
   Quickcheck.Observer.doubleton Fn.id
-    ~f_sexp:(fun () -> Atom "Fn.id")
 
 let shrinker =
   Quickcheck.Shrinker.empty ()

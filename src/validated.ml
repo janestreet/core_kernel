@@ -4,14 +4,18 @@ open Validated_intf
 
 module type Raw = Raw
 
-type 'a t = 'a
+type ('raw, 'witness) t = 'raw
 
-module type Validated         = Validated         with type 'a validated := 'a t
-module type Validated_binable = Validated_binable with type 'a validated := 'a t
+module type Validated = Validated
+  with type ('a, 'b) validated := ('a, 'b) t
+module type Validated_binable = Validated_binable
+  with type ('a, 'b) validated := ('a, 'b) t
 
 let raw t = t
 
 module Make (Raw : Raw) = struct
+
+  type witness
 
   type t = Raw.t [@@deriving sexp_of]
 
@@ -76,6 +80,8 @@ let%test_module _ = (module struct
     end)
 
     open M
+
+    type witness
 
     type nonrec t = t
 

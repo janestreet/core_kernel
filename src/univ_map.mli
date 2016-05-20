@@ -43,8 +43,11 @@ module With_fold : sig
       -> ('a, 'b) t
   end
   val set    : t -> ('a, 'b) Key.t -> 'b -> t (** reset the accumulator *)
+
   val find   : t -> ('a, 'b) Key.t -> 'b      (** the current accumulator *)
+
   val add    : t -> ('a, 'b) Key.t -> 'a -> t (** fold value into accumulator *)
+
   val change : t -> ('a, 'b) Key.t -> f:('b -> 'b) -> t (** accumulator update *)
 end
 

@@ -9,6 +9,7 @@ type 'a t [@@deriving bin_io, compare, sexp]
 
 include Container.S1 with type 'a t := 'a t
 include Invariant.S1 with type 'a t := 'a t
+include Monad.S      with type 'a t := 'a t
 
 (** The empty queue *)
 val empty : 'a t
@@ -52,15 +53,17 @@ val discard_exn : 'a t -> 'a t
     (at the head) to most-recently added (at the tail). Complexity: O(n) *)
 val to_list : 'a t -> 'a list
 
+(** [of_list] is the inverse of [to_list]. Complexity: O(n) *)
+val of_list : 'a list -> 'a t
+
 (** complexity: O(1) *)
 val length : 'a t -> int
+
 (** complexity: O(1) *)
 val is_empty : 'a t -> bool
 
 val singleton : 'a -> 'a t
 
 module Stable : sig
-  module V1 : sig
-    type nonrec 'a t = 'a t [@@deriving bin_io, compare, sexp]
-  end
+  module V1 : Stable_module_types.S1 with type 'a t = 'a t
 end

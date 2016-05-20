@@ -99,12 +99,9 @@ module type Accessors_generic = sig
 
   val mem : ('k, 'cmp, ('k, _, 'cmp) t -> 'k key -> bool) options
 
-  val iter  : ('k, 'v, _) t -> f:(key:'k key -> data:'v -> unit) -> unit
-    [@@ocaml.deprecated "[since 2015-10] Use iteri instead"]
-
-  val iteri : ('k, 'v, _) t -> f:(key:'k key -> data:'v -> unit) -> unit
-
-  val iter_keys : ('k, _, _) t -> f:('k key -> unit) -> unit
+  val iter_keys : ('k,  _, _) t -> f:('k key -> unit) -> unit
+  val iter      : ( _, 'v, _) t -> f:('v -> unit) -> unit
+  val iteri     : ('k, 'v, _) t -> f:(key:'k key -> data:'v -> unit) -> unit
 
   val iter2
     : ('k, 'cmp,
@@ -138,25 +135,24 @@ module type Accessors_generic = sig
        -> 'a
       ) options
 
+  val filter_keys
+    : ('k, 'cmp,
+       ('k, 'v, 'cmp) t
+       -> f:('k key -> bool)
+       -> ('k, 'v, 'cmp) t
+      ) options
+
   val filter
     : ('k, 'cmp,
        ('k, 'v, 'cmp) t
-       -> f:(key:'k key -> data:'v -> bool)
+       -> f:('v -> bool)
        -> ('k, 'v, 'cmp) t
       ) options
-    [@@ocaml.deprecated "[since 2015-10] Use filteri instead"]
 
   val filteri
     : ('k, 'cmp,
        ('k, 'v, 'cmp) t
        -> f:(key:'k key -> data:'v -> bool)
-       -> ('k, 'v, 'cmp) t
-      ) options
-
-  val filter_keys
-    : ('k, 'cmp,
-       ('k, 'v, 'cmp) t
-       -> f:('k key -> bool)
        -> ('k, 'v, 'cmp) t
       ) options
 
@@ -348,11 +344,9 @@ module type Accessors1 = sig
   val remove         : 'a t -> key -> 'a t
   val mem            : _ t -> key -> bool
 
-  val iter           : 'a t -> f:(key:key -> data:'a -> unit) -> unit
-    [@@ocaml.deprecated "[since 2015-10] Use iteri instead"]
-
+  val iter_keys      :  _ t -> f:(key -> unit) -> unit
+  val iter           : 'a t -> f:('a -> unit) -> unit
   val iteri          : 'a t -> f:(key:key -> data:'a -> unit) -> unit
-  val iter_keys      : _ t -> f:(key -> unit) -> unit
   val iter2
     :  'a t
     -> 'b t
@@ -369,11 +363,9 @@ module type Accessors1 = sig
     -> f:(key:key -> data:[ `Left of 'a | `Right of 'b | `Both of 'a * 'b ] -> 'c -> 'c)
     -> 'c
 
-  val filter        : 'a t -> f:(key:key -> data:'a -> bool) -> 'a t
-    [@@ocaml.deprecated "[since 2015-10] Use filteri instead"]
-
-  val filteri        : 'a t -> f:(key:key -> data:'a -> bool) -> 'a t
   val filter_keys    : 'a t -> f:(key -> bool) -> 'a t
+  val filter         : 'a t -> f:('a -> bool) -> 'a t
+  val filteri        : 'a t -> f:(key:key -> data:'a -> bool) -> 'a t
   val filter_map     : 'a t -> f:('a -> 'b option) -> 'b t
   val filter_mapi    : 'a t -> f:(key:key -> data:'a -> 'b option) -> 'b t
   val partition_mapi
@@ -469,11 +461,9 @@ module type Accessors2 = sig
   val remove         : ('a, 'b) t -> 'a -> ('a, 'b) t
   val mem            : ('a, 'b) t -> 'a -> bool
 
-  val iter           : ('a, 'b) t -> f:(key:'a -> data:'b -> unit) -> unit
-    [@@ocaml.deprecated "[since 2015-10] Use iteri instead"]
-
-  val iteri          : ('a, 'b) t -> f:(key:'a -> data:'b -> unit) -> unit
   val iter_keys      : ('a,  _) t -> f:('a -> unit) -> unit
+  val iter           : ( _, 'b) t -> f:('b -> unit) -> unit
+  val iteri          : ('a, 'b) t -> f:(key:'a -> data:'b -> unit) -> unit
   val iter2
     :  ('a, 'b) t
     -> ('a, 'c) t
@@ -490,11 +480,9 @@ module type Accessors2 = sig
     -> f:(key:'a -> data:[ `Left of 'b | `Right of 'c | `Both of 'b * 'c ] -> 'd -> 'd)
     -> 'd
 
-  val filter        : ('a, 'b) t -> f:(key:'a -> data:'b -> bool) -> ('a, 'b) t
-    [@@ocaml.deprecated "[since 2015-10] Use filteri instead"]
-
-  val filteri        : ('a, 'b) t -> f:(key:'a -> data:'b -> bool) -> ('a, 'b) t
   val filter_keys    : ('a, 'b) t -> f:('a -> bool) -> ('a, 'b) t
+  val filter         : ('a, 'b) t -> f:('b -> bool) -> ('a, 'b) t
+  val filteri        : ('a, 'b) t -> f:(key:'a -> data:'b -> bool) -> ('a, 'b) t
   val filter_map     : ('a, 'b) t -> f:('b -> 'c option) -> ('a, 'c) t
   val filter_mapi    : ('a, 'b) t -> f:(key:'a -> data:'b -> 'c option) -> ('a, 'c) t
   val partition_mapi
@@ -586,11 +574,9 @@ module type Accessors3 = sig
   val remove         : ('a, 'b, 'cmp) t -> 'a -> ('a, 'b, 'cmp) t
   val mem            : ('a, 'b, 'cmp) t -> 'a -> bool
 
-  val iter           : ('a, 'b, 'cmp) t -> f:(key:'a -> data:'b -> unit) -> unit
-    [@@ocaml.deprecated "[since 2015-10] Use iteri instead"]
-
-  val iteri          : ('a, 'b, 'cmp) t -> f:(key:'a -> data:'b -> unit) -> unit
   val iter_keys      : ('a,  _, 'cmp) t -> f:('a -> unit) -> unit
+  val iter           : ( _, 'b, 'cmp) t -> f:('b -> unit) -> unit
+  val iteri          : ('a, 'b, 'cmp) t -> f:(key:'a -> data:'b -> unit) -> unit
   val iter2
     :  ('a, 'b, 'cmp) t
     -> ('a, 'c, 'cmp) t
@@ -607,11 +593,9 @@ module type Accessors3 = sig
     -> f:(key:'a -> data:[ `Left of 'b | `Right of 'c | `Both of 'b * 'c ] -> 'd -> 'd)
     -> 'd
 
-  val filter         : ('a, 'b, 'cmp) t -> f:(key:'a -> data:'b -> bool) -> ('a, 'b, 'cmp) t
-    [@@ocaml.deprecated "[since 2015-10] Use filteri instead"]
-
-  val filteri        : ('a, 'b, 'cmp) t -> f:(key:'a -> data:'b -> bool) -> ('a, 'b, 'cmp) t
   val filter_keys    : ('a, 'b, 'cmp) t -> f:('a -> bool) -> ('a, 'b, 'cmp) t
+  val filter         : ('a, 'b, 'cmp) t -> f:('b -> bool) -> ('a, 'b, 'cmp) t
+  val filteri        : ('a, 'b, 'cmp) t -> f:(key:'a -> data:'b -> bool) -> ('a, 'b, 'cmp) t
   val filter_map     : ('a, 'b, 'cmp) t -> f:('b -> 'c option) -> ('a, 'c, 'cmp) t
   val filter_mapi
     : ('a, 'b, 'cmp) t -> f:(key:'a -> data:'b -> 'c option) -> ('a, 'c, 'cmp) t
@@ -729,11 +713,9 @@ module type Accessors3_with_comparator = sig
     :  comparator:('a, 'cmp) Comparator.t
     -> ('a, 'b, 'cmp) t -> 'a -> bool
 
-  val iter      : ('a, 'b, 'cmp) t -> f:(key:'a -> data:'b -> unit) -> unit
-    [@@ocaml.deprecated "[since 2015-10] Use iteri instead"]
-
+  val iter_keys : ('a,  _, 'cmp) t -> f:('a -> unit) -> unit
+  val iter      : ( _, 'b, 'cmp) t -> f:('b -> unit) -> unit
   val iteri     : ('a, 'b, 'cmp) t -> f:(key:'a -> data:'b -> unit) -> unit
-  val iter_keys : ('a, 'b, 'cmp) t -> f:('a -> unit) -> unit
   val iter2
     :  comparator:('a, 'cmp) Comparator.t
     -> ('a, 'b, 'cmp) t -> ('a, 'c, 'cmp) t
@@ -750,17 +732,15 @@ module type Accessors3_with_comparator = sig
     -> f:(key:'a -> data:[ `Left of 'b | `Right of 'c | `Both of 'b * 'c] -> 'd -> 'd)
     -> 'd
 
-  val filter
-    :  comparator:('a, 'cmp) Comparator.t
-    -> ('a, 'b, 'cmp) t -> f:(key:'a -> data:'b -> bool) -> ('a, 'b, 'cmp) t
-    [@@ocaml.deprecated "[since 2015-10] Use filteri instead"]
-
-  val filteri
-    :  comparator:('a, 'cmp) Comparator.t
-    -> ('a, 'b, 'cmp) t -> f:(key:'a -> data:'b -> bool) -> ('a, 'b, 'cmp) t
   val filter_keys
     :  comparator:('a, 'cmp) Comparator.t
     -> ('a, 'b, 'cmp) t -> f:('a -> bool) -> ('a, 'b, 'cmp) t
+  val filter
+    :  comparator:('a, 'cmp) Comparator.t
+    -> ('a, 'b, 'cmp) t -> f:('b -> bool) -> ('a, 'b, 'cmp) t
+  val filteri
+    :  comparator:('a, 'cmp) Comparator.t
+    -> ('a, 'b, 'cmp) t -> f:(key:'a -> data:'b -> bool) -> ('a, 'b, 'cmp) t
   val filter_map
     :  comparator:('a, 'cmp) Comparator.t
     -> ('a, 'b, 'cmp) t -> f:('b -> 'c option) -> ('a, 'c, 'cmp) t
@@ -938,6 +918,8 @@ module type Creators_generic = sig
 
   val of_alist_exn : ('k, 'cmp, ('k key * 'v) list -> ('k, 'v, 'cmp) t) options
 
+  val of_hashtbl_exn : ('k, 'cmp, ('k key, 'v) Core_hashtbl.t -> ('k, 'v, 'cmp) t) options
+
   val of_alist_multi : ('k, 'cmp, ('k key * 'v) list -> ('k, 'v list, 'cmp) t) options
 
   val of_alist_fold
@@ -977,6 +959,7 @@ module type Creators1 = sig
   val of_alist        : (key * 'a) list -> [ `Ok of 'a t | `Duplicate_key of key ]
   val of_alist_or_error : (key * 'a) list -> 'a t Or_error.t
   val of_alist_exn    : (key * 'a) list -> 'a t
+  val of_hashtbl_exn  : (key, 'a) Core_hashtbl.t -> 'a t
   val of_alist_multi  : (key * 'a) list -> 'a list t
   val of_alist_fold   : (key * 'a) list -> init:'b -> f:('b -> 'a -> 'b) -> 'b t
   val of_alist_reduce : (key * 'a) list -> f:('a -> 'a -> 'a) -> 'a t
@@ -997,6 +980,7 @@ module type Creators2 = sig
   val of_alist        : ('a * 'b) list -> [ `Ok of ('a, 'b) t | `Duplicate_key of 'a ]
   val of_alist_or_error : ('a * 'b) list -> ('a, 'b) t Or_error.t
   val of_alist_exn    : ('a * 'b) list -> ('a, 'b) t
+  val of_hashtbl_exn  : ('a, 'b) Core_hashtbl.t -> ('a, 'b) t
   val of_alist_multi  : ('a * 'b) list -> ('a, 'b list) t
   val of_alist_fold   : ('a * 'b) list -> init:'c -> f:('c -> 'b -> 'c) -> ('a, 'c) t
   val of_alist_reduce : ('a * 'b) list -> f:('b -> 'b -> 'b) -> ('a, 'b) t
@@ -1023,6 +1007,9 @@ module type Creators3_with_comparator = sig
   val of_alist_exn
     :  comparator:('a, 'cmp) Comparator.t
     -> ('a * 'b) list -> ('a, 'b, 'cmp) t
+  val of_hashtbl_exn
+    :  comparator:('a, 'cmp) Comparator.t
+    -> ('a, 'b) Core_hashtbl.t -> ('a, 'b, 'cmp) t
   val of_alist_multi
     :  comparator:('a, 'cmp) Comparator.t
     -> ('a * 'b) list -> ('a, 'b list, 'cmp) t

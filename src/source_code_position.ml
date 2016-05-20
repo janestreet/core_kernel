@@ -1,4 +1,3 @@
-
 module Int = Core_int
 module String = Core_string
 
@@ -14,5 +13,5 @@ module T = struct
 end
 
 include T
-include Comparable.Make (T)
+include Comparable.Make_using_comparator (T)
 include Hashable  .Make (T)

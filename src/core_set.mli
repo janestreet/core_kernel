@@ -40,7 +40,7 @@ val empty : comparator:('a, 'cmp) Comparator.t -> ('a, 'cmp) t
     element. *)
 val singleton : comparator:('a, 'cmp) Comparator.t -> 'a -> ('a, 'cmp) t
 
-(** Returns the number of elements in the set.  [O(1)]. *)
+(** Returns the cardinality of the set. [O(1)]. *)
 val length : (_, _) t -> int
 
 (** [is_empty t] is [true] iff [t] is empty.  [O(1)]. *)
@@ -138,6 +138,11 @@ val subset : ('a, 'cmp) t -> ('a, 'cmp) t -> bool
 val of_list  : comparator:('a, 'cmp) Comparator.t -> 'a list  -> ('a, 'cmp) t
 val of_array : comparator:('a, 'cmp) Comparator.t -> 'a array -> ('a, 'cmp) t
 
+val of_hash_set
+  : comparator:('a, 'cmp) Comparator.t ->  'a     Hash_set.t     -> ('a, 'cmp) t
+val of_hashtbl_keys
+  : comparator:('a, 'cmp) Comparator.t -> ('a, _) Core_hashtbl.t -> ('a, 'cmp) t
+
 (** [to_list] and [to_array] produce sequences sorted in ascending order according to the
     comparator. *)
 val to_list  : ('a, _) t -> 'a list
@@ -192,12 +197,22 @@ val fold
   -> f:('accum -> 'a -> 'accum)
   -> 'accum
 
-(** Like {!fold}, except that it will terminate early, if [f] returns [`Stop]. *)
+(** [fold_result ~init ~f] folds over the elements of the set from smallest to
+    largest, short circuiting the fold if [f accum x] is an [Error _] *)
+val fold_result
+  :  ('a, _) t
+  -> init:'accum
+  -> f:('accum -> 'a -> ('accum, 'e) Result.t)
+  -> ('accum, 'e) Result.t
+
+(** [fold_until t ~init ~f] is a short-circuiting version of [fold]. If [f]
+    returns [Stop _] the computation ceases and results in that value. If [f] returns
+    [Continue _], the fold will proceed. *)
 val fold_until
   :  ('a, _) t
   -> init:'accum
-  -> f:('accum -> 'a -> [ `Continue of 'accum | `Stop of 'accum ])
-  -> 'accum
+  -> f:('accum -> 'a -> ('accum, 'stop) Continue_or_stop.t)
+  -> ('accum, 'stop) Finished_or_stopped_early.t
 
 (** Like {!fold}, except that it goes from the largest to the smallest element. *)
 val fold_right
@@ -231,16 +246,19 @@ val elements : ('a, _) t -> 'a list
 
 (** Returns the smallest element of the set.  [O(log n)]. *)
 val min_elt : ('a, _) t -> 'a option
+
 (** Like {!min_elt}, but throws an exception when given an empty set. *)
 val min_elt_exn : ('a, _) t -> 'a
 
 (** Returns the largest element of the set.  [O(log n)].  *)
 val max_elt : ('a, _) t -> 'a option
+
 (** Like {!max_elt}, but throws an exception when given an empty set. *)
 val max_elt_exn : ('a, _) t -> 'a
 
 (** returns an arbitrary element, or [None] if the set is empty. *)
 val choose : ('a, _) t -> 'a option
+
 (** Like {!choose}, but throws an exception on an empty set. *)
 val choose_exn : ('a, _) t -> 'a
 
@@ -386,3 +404,21 @@ end)
   : S_binable
     with type Elt.t = Elt.t
     with type Elt.comparator_witness = Elt.comparator_witness
+
+(** The following types and functors may be used to define stable modules *)
+module Stable : sig
+  module V1 : sig
+    type nonrec ('a, 'b) t = ('a, 'b) t
+
+    module type S = sig
+      type elt
+      type elt_comparator_witness
+      type nonrec t = (elt, elt_comparator_witness) t
+      include Stable_module_types.S0_without_comparator with type t := t
+    end
+
+    module Make (Elt : Stable_module_types.S0) : S
+      with type elt := Elt.t
+      with type elt_comparator_witness := Elt.comparator_witness
+  end
+end

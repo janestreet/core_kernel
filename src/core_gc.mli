@@ -1,19 +1,6 @@
-(***********************************************************************)
-(*                                                                     *)
-(*                           Objective Caml                            *)
-(*                                                                     *)
-(*             Damien Doligez, projet Para, INRIA Rocquencourt         *)
-(*                                                                     *)
-(*  Copyright 1996 Institut National de Recherche en Informatique et   *)
-(*  en Automatique.  All rights reserved.  This file is distributed    *)
-(*  under the terms of the GNU Library General Public License, with    *)
-(*  the special exception on linking described in file ../LICENSE.     *)
-(*                                                                     *)
-(***********************************************************************)
+(** Memory management control and statistics; finalized values.
 
-(* $Id: gc.mli,v 1.42 2005-10-25 18:34:07 doligez Exp $ *)
-
-(** Memory management control and statistics; finalised values. *)
+    This a wrapper around INRIA's standard [Gc] module. *)
 
 module Stat : sig
   type t = {
@@ -241,9 +228,9 @@ val allocated_bytes : unit -> float
    started.  It is returned as a [float] to avoid overflow problems
    with [int] on 32-bit machines. *)
 
-(* [keep_alive a] ensures that [a] is live at the point where [keep_alive a] is called.
-   It is like [ignore a], except that the compiler won't be able to simplify it and
-   potentially collect [a] too soon. *)
+(** [keep_alive a] ensures that [a] is live at the point where [keep_alive a] is called.
+    It is like [ignore a], except that the compiler won't be able to simplify it and
+    potentially collect [a] too soon. *)
 val keep_alive : _ -> unit
 
 (** Adjust the specified GC parameters. *)

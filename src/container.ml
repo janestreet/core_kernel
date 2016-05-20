@@ -13,6 +13,22 @@ let sum (type a) ~fold (module M : Commutative_group.S with type t = a) t ~f =
   fold t ~init:M.zero ~f:(fun n a -> M.(+) n (f a))
 ;;
 
+let fold_result ~fold ~init ~f t =
+  with_return (fun {return} ->
+    Result.Ok (fold t ~init ~f:(fun acc item ->
+      match f acc item with
+      | Result.Ok x -> x
+      | Error _ as e -> return e)))
+;;
+
+let fold_until ~fold ~init ~f t =
+  with_return (fun {return} ->
+    Finished_or_stopped_early.Finished (fold t ~init ~f:(fun acc item ->
+      match f acc item with
+      | Continue_or_stop.Continue x -> x
+      | Stop x -> return (Stopped_early x))))
+;;
+
 let min_elt ~fold t ~cmp =
   fold t ~init:None ~f:(fun acc elt ->
     match acc with
@@ -89,6 +105,8 @@ end = struct
   let mem ?equal t a = mem      ~iter ?equal t a
   let min_elt t ~cmp = min_elt  ~fold t ~cmp
   let max_elt t ~cmp = max_elt  ~fold t ~cmp
+  let fold_result t ~init ~f = fold_result t ~fold ~init ~f
+  let fold_until t ~init ~f = fold_until t ~fold ~init ~f
 end
 
 module Make (T : Make_arg) = Make_gen (struct

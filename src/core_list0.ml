@@ -1033,6 +1033,19 @@ let partition_map t ~f =
   loop t [] []
 ;;
 
+let partition3_map t ~f =
+  let rec loop t fst snd trd =
+    match t with
+    | [] -> (rev fst, rev snd, rev trd)
+    | x :: t ->
+      match f x with
+      | `Fst y -> loop t (y :: fst) snd trd
+      | `Snd y -> loop t fst (y :: snd) trd
+      | `Trd y -> loop t fst snd (y :: trd)
+  in
+  loop t [] [] []
+;;
+
 let partition_tf t ~f =
   let f x = if f x then `Fst x else `Snd x in
   partition_map t ~f
@@ -1221,6 +1234,20 @@ let permute ?(random_state = Random.State.default) list =
     Array.to_list arr;
 ;;
 
+let random_element_exn ?(random_state = Random.State.default) list =
+  if is_empty list
+  then failwith "List.random_element_exn: empty list"
+  else nth_exn list (Random.State.int random_state (length list))
+;;
+
+let random_element ?(random_state = Random.State.default) list =
+  try Some (random_element_exn ~random_state list)
+  with _ -> None
+;;
+
+let%test _ = random_element [] = None
+let%test _ = random_element [0] = Some 0
+
 let to_string ~f t =
   Sexplib.Sexp.to_string
     (sexp_of_t (fun x -> Sexplib.Sexp.Atom x) (List.map t ~f))
@@ -1313,3 +1340,6 @@ let%test _ = intersperse [1;2;3] ~sep:0 = [1;0;2;0;3]
 let%test _ = intersperse [1;2]   ~sep:0 = [1;0;2]
 let%test _ = intersperse [1]     ~sep:0 = [1]
 let%test _ = intersperse []      ~sep:0 = []
+
+let fold_result t ~init ~f = Container.fold_result ~fold ~init ~f t
+let fold_until  t ~init ~f = Container.fold_until  ~fold ~init ~f t

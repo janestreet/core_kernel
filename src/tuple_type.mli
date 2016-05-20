@@ -1,4 +1,4 @@
-(** Tuple-like types used in [Flat_array] and [Pool].
+(** Tuple-like types used in [Pool].
 
     See {!Tuple_type_intf} for documentation. *)
 open Tuple_type_intf

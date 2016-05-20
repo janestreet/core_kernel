@@ -116,17 +116,19 @@ end)
 let length t   = t.length
 let is_empty t = t.heap = None
 
-let iter       = C.iter
-let mem        = C.mem
-let min_elt    = C.min_elt
-let max_elt    = C.max_elt
-let find       = C.find
-let find_map   = C.find_map
-let for_all    = C.for_all
-let exists     = C.exists
-let sum        = C.sum
-let count      = C.count
-let to_list    = C.to_list
+let iter        = C.iter
+let mem         = C.mem
+let min_elt     = C.min_elt
+let max_elt     = C.max_elt
+let find        = C.find
+let find_map    = C.find_map
+let for_all     = C.for_all
+let exists      = C.exists
+let sum         = C.sum
+let count       = C.count
+let to_list     = C.to_list
+let fold_result = C.fold_result
+let fold_until  = C.fold_until
 
 (* We could avoid the intermediate list here, but it doesn't seem like a big deal. *)
 let to_array = C.to_array

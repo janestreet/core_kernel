@@ -59,7 +59,9 @@ type t
 type 'a check = 'a -> t                 (** to make function signatures easier to read *)
 
 val pass      : t                       (** A result containing no errors *)
+
 val fail      : string -> t             (** A result containing a single error *)
+
 val fails
   :  string
   -> 'a
@@ -73,7 +75,9 @@ val failf     : ('a, unit, string, t) format4 -> 'a
 val combine : t -> t -> t
 
 val of_list   : t list -> t             (** combine multiple results, merging errors *)
+
 val name      : string -> t -> t        (** extend location path by one name *)
+
 val name_list : string -> t list -> t
 
 (** [fail_fn err] returns a function that always returns fail, with [err] as the error
@@ -156,6 +160,6 @@ val bounded
   -> 'a check
 
 module Infix : sig
-  val (++) : t -> t -> t (* infix operator for [combine] above *)
+  val (++) : t -> t -> t (** infix operator for [combine] above *)
 end
 

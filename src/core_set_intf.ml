@@ -32,6 +32,9 @@ module With_comparator    = Core_map_intf.With_comparator
 
 module Map = Core_map
 
+module Continue_or_stop          = Container_intf.Continue_or_stop
+module Finished_or_stopped_early = Container_intf.Finished_or_stopped_early
+
 module Merge_to_sequence_element = Sequence.Merge_with_duplicates_element
 
 module type Accessors_generic = sig
@@ -93,8 +96,8 @@ module type Accessors_generic = sig
   val fold_until
     :  ('a, _) t
     -> init:'b
-    -> f:('b -> 'a elt -> [ `Continue of 'b | `Stop of 'b ])
-    -> 'b
+    -> f:('b -> 'a elt -> ('b, 'stop) Continue_or_stop.t)
+    -> ('b, 'stop) Finished_or_stopped_early.t
   val fold_right
     :  ('a, _) t
     -> init:'b
@@ -198,7 +201,10 @@ module type Accessors0 = sig
   val equal          : t -> t -> bool
   val subset         : t -> t -> bool
   val fold_until
-    : t -> init:'b -> f:('b -> elt -> [ `Continue of 'b | `Stop of 'b ]) -> 'b
+    : t
+    -> init:'b
+    -> f:('b -> elt -> ('b, 'stop) Continue_or_stop.t)
+    -> ('b, 'stop) Finished_or_stopped_early.t
   val fold_right     : t -> init:'b -> f:(elt -> 'b -> 'b) -> 'b
   val iter2
     :  t -> t -> f:([ `Left of elt | `Right of elt | `Both of elt * elt ] -> unit) -> unit
@@ -251,7 +257,10 @@ module type Accessors1 = sig
   val equal          : 'a t -> 'a t -> bool
   val subset         : 'a t -> 'a t -> bool
   val fold_until
-    : 'a t -> init:'b -> f:('b -> 'a -> [ `Continue of 'b | `Stop of 'b ]) -> 'b
+    : 'a t
+    -> init:'b
+    -> f:('b -> 'a -> ('b, 'stop) Continue_or_stop.t)
+    -> ('b, 'stop) Finished_or_stopped_early.t
   val fold_right     :  'a t -> init:'b -> f:('a -> 'b -> 'b) -> 'b
   val iter2
     : 'a t -> 'a t -> f:([ `Left of 'a | `Right of 'a | `Both of 'a * 'a ] -> unit) -> unit
@@ -303,7 +312,11 @@ module type Accessors2 = sig
   val equal          : ('a, 'cmp) t -> ('a, 'cmp) t -> bool
   val subset         : ('a, 'cmp) t -> ('a, 'cmp) t -> bool
   val fold_until
-    : ('a, _) t -> init:'b -> f:('b -> 'a -> [ `Continue of 'b | `Stop of 'b ]) -> 'b
+    : ('a, _) t
+    -> init:'b
+    -> f:('b -> 'a -> ('b, 'stop) Continue_or_stop.t)
+    -> ('b, 'stop) Finished_or_stopped_early.t
+
   val fold_right     : ('a, _) t -> init:'b -> f:('a -> 'b -> 'b) -> 'b
   val iter2
     :  ('a, 'cmp) t
@@ -369,8 +382,9 @@ module type Accessors2_with_comparator = sig
   val fold_until
     :  ('a, _) t
     -> init:'accum
-    -> f:('accum -> 'a -> [ `Continue of 'accum | `Stop of 'accum ])
-    -> 'accum
+    -> f:('accum -> 'a -> ('accum, 'stop) Continue_or_stop.t)
+    -> ('accum, 'stop) Finished_or_stopped_early.t
+
   val fold_right : ('a, _) t -> init:'accum -> f:('a -> 'accum -> 'accum) -> 'accum
   val iter2
     :  comparator:('a, 'cmp) Comparator.t
@@ -495,6 +509,9 @@ module type Creators_generic = sig
 
   val of_sorted_array_unchecked : ('a, 'cmp, 'a elt array -> ('a, 'cmp) t) options
 
+  val of_hash_set     : ('a, 'cmp,  'a elt     Hash_set.t     -> ('a, 'cmp) t) options
+  val of_hashtbl_keys : ('a, 'cmp, ('a elt, _) Core_hashtbl.t -> ('a, 'cmp) t) options
+
   val stable_dedup_list : ('a, _, 'a elt list -> 'a elt list) options
 
   (** The types of [map] and [filter_map] are subtle.  The input set, [('a, _) set],
@@ -538,6 +555,8 @@ module type Creators0 = sig
   val singleton                 : elt -> t
   val union_list                : t list -> t
   val of_list                   : elt list -> t
+  val of_hash_set               : elt Hash_set.t  -> t
+  val of_hashtbl_keys           : (elt, _) Core_hashtbl.t -> t
   val of_array                  : elt array -> t
   val of_sorted_array           : elt array -> t Or_error.t
   val of_sorted_array_unchecked : elt array -> t
@@ -558,6 +577,8 @@ module type Creators1 = sig
   val singleton                 : 'a -> 'a t
   val union_list                : 'a t list -> 'a t
   val of_list                   : 'a list -> 'a t
+  val of_hash_set               : 'a Hash_set.t  -> 'a t
+  val of_hashtbl_keys           : ('a, _) Core_hashtbl.t -> 'a t
   val of_array                  : 'a array -> 'a t
   val of_sorted_array           : 'a array -> 'a t Or_error.t
   val of_sorted_array_unchecked : 'a array -> 'a t
@@ -577,6 +598,8 @@ module type Creators2 = sig
   val singleton                 : 'a -> ('a, 'cmp) t
   val union_list                : ('a, 'cmp) t list -> ('a, 'cmp) t
   val of_list                   : 'a list -> ('a, 'cmp) t
+  val of_hash_set               : 'a Hash_set.t  -> ('a, 'cmp) t
+  val of_hashtbl_keys           : ('a, _) Core_hashtbl.t -> ('a, 'cmp) t
   val of_array                  : 'a array -> ('a, 'cmp) t
   val of_sorted_array           : 'a array -> ('a, 'cmp) t Or_error.t
   val of_sorted_array_unchecked : 'a array -> ('a, 'cmp) t
@@ -600,6 +623,10 @@ module type Creators2_with_comparator = sig
     -> ('a, 'cmp) t
   val of_list                   : comparator:('a, 'cmp) Comparator.t -> 'a list
     -> ('a, 'cmp) t
+  val of_hash_set               : comparator:('a, 'cmp) Comparator.t -> 'a Hash_set.t
+    -> ('a, 'cmp) t
+  val of_hashtbl_keys           : comparator:('a, 'cmp) Comparator.t
+    -> ('a, _) Core_hashtbl.t -> ('a, 'cmp) t
   val of_array                  : comparator:('a, 'cmp) Comparator.t -> 'a array
     -> ('a, 'cmp) t
   val of_sorted_array           : comparator:('a, 'cmp) Comparator.t -> 'a array

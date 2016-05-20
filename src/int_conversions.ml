@@ -62,6 +62,15 @@ let int32 = {
   compare = Int32.compare;
 }
 
+let int63 = {
+  name = "int63";
+  num_bits = 63;
+  max = Int64.shift_right Int64.max_int 1;
+  min = Int64.shift_right Int64.min_int 1;
+  to_string = Int64.to_string;
+  compare = Int64.compare;
+}
+
 let int64 = {
   name = "int64";
   num_bits = 64;
@@ -106,6 +115,11 @@ let (int64_to_nativeint, int64_to_nativeint_exn) =
   convert int64 nativeint Int64.to_nativeint Int64.of_nativeint
 ;;
 let nativeint_to_int64 = Int64.of_nativeint
+
+let int64_fit_on_int63_exn =
+  let (_, int64_to_int63_exn) = convert int64 int63 Fn.id Fn.id in
+  fun x -> ignore (int64_to_int63_exn x : int64)
+;;
 
 let num_bits_int       = int.num_bits
 let num_bits_int32     = int32.num_bits

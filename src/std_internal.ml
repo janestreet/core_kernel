@@ -11,6 +11,7 @@ module Hashtbl = Core_hashtbl
 module String = Core_string
 module List = struct
   include Core_list
+
   (** [stable_dedup] Same as [dedup] but maintains the order of the list and doesn't allow
       compare function to be specified (otherwise, the implementation in terms of Set.t
       would hide a heavyweight functor instantiation at each call). *)
@@ -35,7 +36,6 @@ module List = struct
 end
 include List.Infix
 
-module Queue = Core_queue
 module Linked_queue = Linked_queue
 module Random = Core_random
 module Char = Core_char
@@ -48,6 +48,7 @@ let ( %  ) = Int.( %  )
 let ( /% ) = Int.( /% )
 let ( // ) = Int.( // )
 module Int32 = Core_int32
+module Int63 = Core_int63
 module Int64 = Core_int64
 module Nativeint = Core_nativeint
 

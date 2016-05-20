@@ -122,13 +122,11 @@ let fold t ~init ~f =
   loop 0 init
 ;;
 
-let iteri t ~f = fold t ~init:() ~f:(fun ~key ~data () -> f ~key ~data)
+let iteri     t ~f = fold  t ~init:() ~f:(fun ~key    ~data () -> f ~key ~data)
+let iter      t ~f = iteri t          ~f:(fun ~key: _ ~data    -> f data)
+let iter_keys t ~f = iteri t          ~f:(fun ~key    ~data:_  -> f key)
 
-(* DEPRECATED - leaving here for a little while so as to ease the transition for
-   external core users. (But marking as deprecated in the mli *)
-let iter = iteri
-
-let iter_vals t ~f = iteri t ~f:(fun ~key:_ ~data -> f data)
+let iter_vals = iter
 
 let map_entries t ~f = fold t ~init:[] ~f:(fun ~key ~data ac -> f ~key ~data :: ac)
 
@@ -426,9 +424,17 @@ let filter_mapi t ~f =
   result
 ;;
 
-let ignore_key f = fun ~key:_ ~data -> f data
+let ignore_key  f = fun ~key:_ ~data   -> f data
+let ignore_data f = fun ~key   ~data:_ -> f key
 
 let filter_map t ~f = filter_mapi t ~f:(ignore_key f)
+
+let filteri t ~f =
+  filter_mapi t ~f:(fun ~key ~data -> if f ~key ~data then Some data else None)
+;;
+
+let filter      t ~f = filteri t ~f:(ignore_key  f)
+let filter_keys t ~f = filteri t ~f:(ignore_data f)
 
 let mapi t ~f = filter_mapi t ~f:(fun ~key ~data -> Some (f ~key ~data))
 
@@ -612,9 +618,15 @@ let%test_module _ =
         in
         ensure_equal "t_of_sexp" t (Table.t_of_sexp Int.t_of_sexp sexp);
         ensure_equal "filter_mapi" t (filter_mapi t ~f:(fun ~key ~data:_ -> Some key));
-        ensure_equal "filter_map" t (filter_map t ~f:(fun data -> Some data));
-        ensure_equal "filter_map None" empty (filter_map t ~f:(fun _ -> None));
-        ensure_equal "map" t (map t ~f:Fn.id);
+        ensure_equal "filter_map"      t     (filter_map t ~f:(fun data -> Some  data));
+        ensure_equal "filter_map None" empty (filter_map t ~f:(fun _    -> None)      );
+        ensure_equal "filter_i true"  t     (filteri t ~f:(fun ~key:_ ~data:_ -> true) );
+        ensure_equal "filter_i false" empty (filteri t ~f:(fun ~key:_ ~data:_ -> false));
+        ensure_equal "filter true"  t     (filter t ~f:(fun _ -> true) );
+        ensure_equal "filter false" empty (filter t ~f:(fun _ -> false));
+        ensure_equal "filter_keys true"  t     (filter_keys t ~f:(fun _ -> true) );
+        ensure_equal "filter_keys false" empty (filter_keys t ~f:(fun _ -> false));
+        ensure_equal "map"  t (map  t ~f:Fn.id)                     ;
         ensure_equal "mapi" t (mapi t ~f:(fun ~key:_ ~data -> data));
         ensure_equal "map and mapi"
           (map t ~f:(fun x -> x + 1))

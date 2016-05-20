@@ -2,17 +2,17 @@
     is implemented by the [ppx_here] preprocessor. *)
 
 
+(** See INRIA's OCaml documentation for a description of these fields. *)
 type t
   = Lexing.position
-  (** See INRIA's OCaml documentation for a description of these fields. *)
   = { pos_fname : string
     ; pos_lnum  : int
     ; pos_bol   : int
     ; pos_cnum  : int
     }
-    (** [sexp_of_t] uses the form ["FILE:LINE:COL"], and does not have a corresponding
-        [of_sexp]. *)
   [@@deriving sexp_of]
+(** [sexp_of_t] uses the form ["FILE:LINE:COL"], and does not have a corresponding
+    [of_sexp]. *)
 
 include Comparable.S with type t := t
 include Hashable.S   with type t := t

@@ -1,4 +1,4 @@
-#import "config.mlh"
+#import "config.h"
 
 open Int_replace_polymorphic_compare
 open Sexplib.Conv
@@ -102,7 +102,7 @@ module Pool = struct
    address-space sizes, so we choose [array_index_num_bits] differently.  We write
    both numbers as constants for performance reasons -- the compiler generates better
    code when they are constants rather than expressions. *)
-#if JSC_ARCH_SIXTYFOUR
+#ifdef JSC_ARCH_SIXTYFOUR
 
 let () = assert (Int.num_bits = 63)
 let array_index_num_bits = 30
@@ -152,7 +152,7 @@ end = struct
   let init = 0
 
   let next t =
-#if JSC_ARCH_SIXTYFOUR
+#ifdef JSC_ARCH_SIXTYFOUR
     t + 1
 #else
     if t = Int.max_value then 0 else t + 1

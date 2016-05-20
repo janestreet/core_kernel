@@ -53,20 +53,23 @@ val fold
   -> f    : (key:'key -> data:'data -> 'accum -> 'accum)
   -> 'accum
 
-val iter      : ('key, 'data) t -> f:(key:'key -> data:'data -> unit) -> unit
-  [@@ocaml.deprecated "[since 2015-10] Use iteri instead"]
-
+val iter_keys : ('key,     _) t -> f:(    'key               -> unit) -> unit
+val iter      : (_   , 'data) t -> f:(                 'data -> unit) -> unit
 val iteri     : ('key, 'data) t -> f:(key:'key -> data:'data -> unit) -> unit
+
 val iter_vals : (_   , 'data) t -> f:(                 'data -> unit) -> unit
+    [@@deprecated "[since 2016-04] Use iter instead"]
 
 val filter_mapi
-  :  ('key, 'data1) t
-  -> f : (key:'key -> data:'data1 -> 'data2 option)
-  -> ('key, 'data2) t
+  : ('key, 'data1) t -> f:(key:'key -> data:'data1 -> 'data2 option) -> ('key, 'data2) t
 val filter_map
-  :  ('key, 'data1) t
-  -> f : ('data1 -> 'data2 option)
-  -> ('key, 'data2) t
+  : ('key, 'data1) t -> f:('data1 -> 'data2 option) -> ('key, 'data2) t
+val filter_keys
+  : ('key, 'data1) t -> f:('key   -> bool) -> ('key, 'data1) t
+val filter
+  : ('key, 'data1) t -> f:('data1 -> bool) -> ('key, 'data1) t
+val filteri
+  : ('key, 'data1) t -> f:(key:'key -> data:'data1 -> bool) -> ('key, 'data1) t
 
 val mapi : ('key, 'data1) t -> f:(key:'key -> data:'data1 -> 'data2) -> ('key, 'data2) t
 val map  : ('key, 'data1) t -> f:(                 'data1 -> 'data2) -> ('key, 'data2) t

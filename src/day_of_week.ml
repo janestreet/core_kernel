@@ -96,7 +96,7 @@ module Stable = struct
       include (Comparable.Make_binable (T) : Comparable.S_binable with type t := t)
       include Hashable.   Make_binable (T)
     end
-    include Stable_containers.Comparable.V1.Make (Unstable)
+    include Comparable.Stable.V1.Make (Unstable)
     include Stable_containers.Hashable.V1.Make   (Unstable)
   end
 

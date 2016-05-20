@@ -1,4 +1,4 @@
-(* This file is a modified version of lazy.mli from the OCaml distribution. *)
+(** This file is a modified version of lazy.mli from the OCaml distribution. *)
 
 (** A value of type ['a Lazy.t] is a deferred computation, called
    a suspension, that has a result of type ['a].  The special

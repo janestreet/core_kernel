@@ -209,7 +209,6 @@ module For_quickcheck = struct
   let obs =
     Observer.enum 256
       ~f:to_int
-      ~f_sexp:(fun () -> Atom "Char.to_int")
 
   let%bench_module "generators" =
     (module struct

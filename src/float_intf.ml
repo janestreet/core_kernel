@@ -9,11 +9,13 @@ module type S = sig
 
 
   include Floatable.S with type t := t
+
   (** [max] and [min] will return nan if either argument is nan.
 
       The [validate_*] functions always fail if class is [Nan] or [Infinite]. *)
   include Identifiable.S with type t := t
   include Comparable.With_zero with type t := t
+
   (** The results of robust comparisons on [nan] should be considered undefined. *)
   include Robustly_comparable.S with type t := t
   include Quickcheckable.S with type t := t
@@ -27,7 +29,9 @@ module type S = sig
   val neg_infinity : t
 
   val max_value : t                   (** equal to [infinity] *)
+
   val min_value : t                   (** equal to [neg_infinity] *)
+
   val zero : t
   val one : t
   val minus_one : t
@@ -59,6 +63,7 @@ module type S = sig
       Note both 0. and -0. map to 0L. *)
   val to_int64_preserve_order : t -> int64 option
   val to_int64_preserve_order_exn : t -> int64
+
   (** returns [nan] if the absolute value of the argument is too large *)
   val of_int64_preserve_order : int64 -> t
 
@@ -83,7 +88,7 @@ module type S = sig
       v}
 
       [iround_exn] raises when trying to handle nan or trying to handle a float outside the
-      range [float min_int, float max_int).
+      range \[float min_int, float max_int).
 
 
       Here are some examples for [round] for each direction:
@@ -262,12 +267,12 @@ module type S = sig
 
       Exact ties are resolved to even in the decimal:
 
-      {|
+      {[
         to_padded_compact_string      3.25 =  "3.2"
         to_padded_compact_string      3.75 =  "3.8"
         to_padded_compact_string 33_250.   = "33k2"
         to_padded_compact_string 33_350.   = "33k4"
-      |}
+      ]}
 
   *)
   val to_padded_compact_string : t -> string
@@ -332,8 +337,8 @@ module type S = sig
   (** [is_finite t] returns [true] iff [classify t] is in [Normal; Subnormal; Zero;]. *)
   val is_finite : t -> bool
 
-  (* Caution: If we remove this sig item, [sign] will still be present from
-     [Comparable.With_zero]. *)
+  (*_ Caution: If we remove this sig item, [sign] will still be present from
+      [Comparable.With_zero]. *)
   val sign : t -> Sign.t
      [@@deprecated "[since 2016-01] Replace [sign] with [robust_sign] or [sign_exn]"]
 

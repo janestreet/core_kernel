@@ -6,7 +6,24 @@
 
 open Perms.Export
 
-(* Signature for monomorphic container, e.g., string *)
+(** [Continue_or_stop.t] is used by the [f] argument to [fold_until] in order to
+    indicate if folding should continue, or stop early *)
+module Continue_or_stop = struct
+  type ('a, 'b) t =
+    | Continue of 'a
+    | Stop     of 'b
+end
+
+(** [Finished_or_stopped_early.t] is returned by [fold_until] to indicate if
+    [f] requested the fold stop, or if the fold completed *)
+module Finished_or_stopped_early = struct
+  type ('a, 'b) t =
+    | Finished      of 'a
+    | Stopped_early of 'b
+end
+
+
+(** Signature for monomorphic container, e.g., string *)
 module type S0 = sig
   type t
   type elt
@@ -26,6 +43,24 @@ module type S0 = sig
   (** [fold t ~init ~f] returns [f (... f (f (f init e1) e2) e3 ...) en], where [e1..en]
       are the elements of [t]  *)
   val fold     : t -> init:'accum -> f:('accum -> elt -> 'accum) -> 'accum
+
+  (** [fold_result t ~init ~f] is a short-circuiting version of [fold] that runs in the
+      [Result] monad.  If [f] returns an [Error _], that value is returned without any
+      additional invocations of [f]. *)
+  val fold_result
+    :  t
+    -> init:'accum
+    -> f:('accum -> elt -> ('accum, 'e) Result.t)
+    -> ('accum, 'e) Result.t
+
+  (** [fold_until t ~init ~f] is a short-circuiting version of [fold]. If [f]
+      returns [Stop _] the computation ceases and results in that value. If [f] returns
+      [Continue _], the fold will proceed. *)
+  val fold_until
+    :  t
+    -> init:'accum
+    -> f:('accum -> elt -> ('accum, 'stop) Continue_or_stop.t)
+    -> ('accum, 'stop) Finished_or_stopped_early.t
 
   (** Returns [true] if and only if there exists an element for which the provided
       function evaluates to [true].  This is a short-circuiting operation. *)
@@ -79,6 +114,24 @@ module type S0_phantom = sig
       are the elements of [t]  *)
   val fold     : _ t -> init:'accum -> f:('accum -> elt -> 'accum) -> 'accum
 
+  (** [fold_result t ~init ~f] is a short-circuiting version of [fold] that runs in the
+      [Result] monad.  If [f] returns an [Error _], that value is returned without any
+      additional invocations of [f]. *)
+  val fold_result
+    :  _ t
+    -> init:'accum
+    -> f:('accum -> elt -> ('accum, 'e) Result.t)
+    -> ('accum, 'e) Result.t
+
+  (** [fold_until t ~init ~f] is a short-circuiting version of [fold]. If [f]
+      returns [Stop _] the computation ceases and results in that value. If [f] returns
+      [Continue _], the fold will proceed. *)
+  val fold_until
+    :  _ t
+    -> init:'accum
+    -> f:('accum -> elt -> ('accum, 'stop) Continue_or_stop.t)
+    -> ('accum, 'stop) Finished_or_stopped_early.t
+
   (** Returns [true] if and only if there exists an element for which the provided
       function evaluates to [true].  This is a short-circuiting operation. *)
   val exists   : _ t -> f:(elt -> bool) -> bool
@@ -112,7 +165,7 @@ module type S0_phantom = sig
   val max_elt : _ t -> cmp:(elt -> elt -> int) -> elt option
 end
 
-(* Signature for polymorphic container, e.g., 'a list or 'a array *)
+(** Signature for polymorphic container, e.g., 'a list or 'a array *)
 module type S1 = sig
   type 'a t
 
@@ -129,6 +182,24 @@ module type S1 = sig
   (** [fold t ~init ~f] returns [f (... f (f (f init e1) e2) e3 ...) en], where [e1..en]
       are the elements of [t]  *)
   val fold     : 'a t -> init:'accum -> f:('accum -> 'a -> 'accum) -> 'accum
+
+  (** [fold_result t ~init ~f] is a short-circuiting version of [fold] that runs in the
+      [Result] monad.  If [f] returns an [Error _], that value is returned without any
+      additional invocations of [f]. *)
+  val fold_result
+    :  'a t
+    -> init:'accum
+    -> f:('accum -> 'a -> ('accum, 'e) Result.t)
+    -> ('accum, 'e) Result.t
+
+  (** [fold_until t ~init ~f] is a short-circuiting version of [fold]. If [f]
+      returns [Stop _] the computation ceases and results in that value. If [f] returns
+      [Continue _], the fold will proceed. *)
+  val fold_until
+    :  'a t
+    -> init:'accum
+    -> f:('accum -> 'a -> ('accum, 'stop) Continue_or_stop.t)
+    -> ('accum, 'stop) Finished_or_stopped_early.t
 
   (** Returns [true] if and only if there exists an element for which the provided
       function evaluates to [true].  This is a short-circuiting operation. *)
@@ -178,6 +249,24 @@ module type S1_phantom_invariant = sig
   (** [fold t ~init ~f] returns [f (... f (f (f init e1) e2) e3 ...) en], where [e1..en]
       are the elements of [t]  *)
   val fold     : ('a, _) t -> init:'accum -> f:('accum -> 'a -> 'accum) -> 'accum
+
+  (** [fold_result t ~init ~f] is a short-circuiting version of [fold] that runs in the
+      [Result] monad.  If [f] returns an [Error _], that value is returned without any
+      additional invocations of [f]. *)
+  val fold_result
+    :  ('a, _) t
+    -> init:'accum
+    -> f:('accum -> 'a -> ('accum, 'e) Result.t)
+    -> ('accum, 'e) Result.t
+
+  (** [fold_until t ~init ~f] is a short-circuiting version of [fold]. If [f]
+      returns [Stop _] the computation ceases and results in that value. If [f] returns
+      [Continue _], the fold will proceed. *)
+  val fold_until
+    :  ('a, _) t
+    -> init:'accum
+    -> f:('accum -> 'a -> ('accum, 'stop) Continue_or_stop.t)
+    -> ('accum, 'stop) Finished_or_stopped_early.t
 
   (** Returns [true] if and only if there exists an element for which the provided
       function evaluates to [true].  This is a short-circuiting operation. *)
@@ -233,6 +322,24 @@ module type S1_permissions = sig
       are the elements of [t]  *)
   val fold     : ('a, [> read ]) t -> init:'accum -> f:('accum -> 'a -> 'accum) -> 'accum
 
+  (** [fold_result t ~init ~f] is a short-circuiting version of [fold] that runs in the
+      [Result] monad.  If [f] returns an [Error _], that value is returned without any
+      additional invocations of [f]. *)
+  val fold_result
+    :  ('a, [> read]) t
+    -> init:'accum
+    -> f:('accum -> 'a -> ('accum, 'e) Result.t)
+    -> ('accum, 'e) Result.t
+
+  (** [fold_until t ~init ~f] is a short-circuiting version of [fold]. If [f]
+      returns [Stop _] the computation ceases and results in that value. If [f] returns
+      [Continue _], the fold will proceed. *)
+  val fold_until
+    :  ('a, [> read]) t
+    -> init:'accum
+    -> f:('accum -> 'a -> ('accum, 'stop) Continue_or_stop.t)
+    -> ('accum, 'stop) Finished_or_stopped_early.t
+
   (** Returns [true] if and only if there exists an element for which the provided
       function evaluates to [true].  This is a short-circuiting operation. *)
   val exists   : ('a, [> read ]) t -> f:('a -> bool) -> bool
@@ -275,6 +382,18 @@ module type Generic = sig
   val is_empty : _  t -> bool
   val iter     : 'a t -> f:('a elt -> unit) -> unit
   val fold     : 'a t -> init:'accum -> f:('accum -> 'a elt -> 'accum) -> 'accum
+  val fold_result
+    :  'a t
+    -> init:'accum
+    -> f:('accum -> 'a elt -> ('accum, 'e) Result.t)
+    -> ('accum, 'e) Result.t
+
+  val fold_until
+    :  'a t
+    -> init:'accum
+    -> f:('accum -> 'a elt -> ('accum, 'stop) Continue_or_stop.t)
+    -> ('accum, 'stop) Finished_or_stopped_early.t
+
   val exists   : 'a t -> f:('a elt -> bool) -> bool
   val for_all  : 'a t -> f:('a elt -> bool) -> bool
   val count    : 'a t -> f:('a elt -> bool) -> int
@@ -297,6 +416,16 @@ module type Generic_phantom = sig
   val is_empty : (_, _) t -> bool
   val iter     : ('a, _) t -> f:('a elt -> unit) -> unit
   val fold     : ('a, _) t -> init:'accum -> f:('accum -> 'a elt -> 'accum) -> 'accum
+  val fold_result
+    :  ('a, _) t
+    -> init:'accum
+    -> f:('accum -> 'a elt -> ('accum, 'e) Result.t)
+    -> ('accum, 'e) Result.t
+  val fold_until
+    :  ('a, _) t
+    -> init:'accum
+    -> f:('accum -> 'a elt -> ('accum, 'stop) Continue_or_stop.t)
+    -> ('accum, 'stop) Finished_or_stopped_early.t
   val exists   : ('a, _) t -> f:('a elt -> bool) -> bool
   val for_all  : ('a, _) t -> f:('a elt -> bool) -> bool
   val count    : ('a, _) t -> f:('a elt -> bool) -> int
@@ -373,6 +502,20 @@ module type Container = sig
     :  fold : ('t, 'a, 'sum) fold
     -> (module Commutative_group.S with type t = 'sum)
     -> 't -> f:('a -> 'sum) -> 'sum
+
+  val fold_result
+    :  fold:('t, 'a, 'b) fold
+    -> init:'b
+    -> f:('b -> 'a -> ('b, 'e) Result.t)
+    -> 't
+    -> ('b, 'e) Result.t
+
+  val fold_until
+    :  fold:('t, 'a, 'b) fold
+    -> init:'b
+    -> f:('b -> 'a -> ('b, 'stop) Continue_or_stop.t)
+    -> 't
+    -> ('b, 'stop) Finished_or_stopped_early.t
 
   (** Generic definitions of container operations in terms of [iter]. *)
   val is_empty : iter:('t, 'a) iter -> 't -> bool

@@ -183,8 +183,7 @@ module For_quickcheck = struct
            (Core_list.obs t_obs))
         ~f:(function
           | Sexp.Atom atom -> `A atom
-          | Sexp.List list -> `B list)
-        ~f_sexp:(fun () -> Sexp.Atom "variant_of_sexp"))
+          | Sexp.List list -> `B list))
 
   let shrinker =
     let open Sequence.Monad_infix in

@@ -130,3 +130,8 @@ module Of_binable1   = Stable.Of_binable1.V1
 module Of_binable2   = Stable.Of_binable2.V1
 module Of_sexpable   = Stable.Of_sexpable.V1
 module Of_stringable = Stable.Of_stringable.V1
+
+(* check that only the functions are sufficient for [@@deriving bin_io] *)
+module Of_only_functions (X : S_only_functions) : S = struct
+  type t = X.t [@@deriving bin_io]
+end

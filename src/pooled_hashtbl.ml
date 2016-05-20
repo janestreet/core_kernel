@@ -520,12 +520,9 @@ let iteri =
         raise exn
     end
 ;;
-let iter_vals t ~f = iteri t ~f:(fun ~key:_ ~data -> f data) ;;
+let iter      t ~f = iteri t ~f:(fun ~key:_ ~data -> f data) ;;
 let iter_keys t ~f = iteri t ~f:(fun ~key ~data:_ -> f key) ;;
-
-(* DEPRECATED - leaving here for a little while so as to ease the transition for
-   external core users. (But marking as deprecated in the mli *)
-let iter = iteri
+let iter_vals = iter ;;
 
 let fold =
   let rec fold_entries t e acc f =
@@ -628,6 +625,7 @@ let filteri t ~f =
 ;;
 
 let filter t ~f = filteri t ~f:(fun ~key:_ ~data -> f data) ;;
+let filter_keys t ~f = filteri t ~f:(fun ~key ~data:_ -> f key) ;;
 
 let partition_mapi t ~f =
   let t0 =
@@ -893,10 +891,10 @@ module Accessors = struct
   let add_multi           = add_multi
   let remove_multi        = remove_multi
   let mem                 = mem
-  let iter_vals           = iter_vals
-  let iteri               = iteri
   let iter_keys           = iter_keys
   let iter                = iter
+  let iteri               = iteri
+  let iter_vals           = iter_vals
   let exists              = exists
   let existsi             = existsi
   let for_all             = for_all
@@ -910,6 +908,7 @@ module Accessors = struct
   let mapi                = mapi
   let filter_map          = filter_map
   let filter_mapi         = filter_mapi
+  let filter_keys         = filter_keys
   let filter              = filter
   let filteri             = filteri
   let partition_map       = partition_map
@@ -927,9 +926,9 @@ module Accessors = struct
   let merge_into          = merge_into
   let keys                = keys
   let data                = data
+  let filter_keys_inplace = filter_keys_inplace
   let filter_inplace      = filter_inplace
   let filteri_inplace     = filteri_inplace
-  let filter_keys_inplace = filter_keys_inplace
   let map_inplace         = map_inplace
   let mapi_inplace        = mapi_inplace
   let filter_map_inplace  = filter_map_inplace

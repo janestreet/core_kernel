@@ -2,6 +2,7 @@ open Sexplib.Conv
 
 module List  = Caml.ListLabels
 module Array = Caml.ArrayLabels
+module Lazy  = Core_lazy
 
 module List_helpers = struct
 
@@ -160,6 +161,20 @@ let%test _ = to_list (range ~stride:(-2) 5 1) = [5;3]
 
 (* Test for to_list *)
 let%test _ = to_list (range 0 5000) = List_helpers.range 0 5000
+
+let of_lazy t_lazy =
+  unfold_step ~init:t_lazy ~f:(fun t_lazy ->
+    let Sequence (s, next) = Lazy.force t_lazy in
+    match next s with
+    | Done         -> Done
+    | Skip s       -> Skip (let v = Sequence (s, next) in lazy v)
+    | Yield (x, s) -> Yield (x, let v = Sequence (s, next) in lazy v))
+
+let%test_unit "of_lazy" =
+  let t = range 0 100 in
+  [%test_result: int list]
+    (to_list (of_lazy (lazy t)))
+    ~expect:(to_list t)
 
 (* Functions used for testing by comparing to List implementation*)
 let test_to_list s f g =
@@ -998,6 +1013,20 @@ let%test _ =
         a)
     ~finish:(fun _ -> assert false)
   = 6.0
+
+let fold_result t ~init ~f =
+  delayed_fold t ~init
+    ~f:(fun acc x ~k -> Result.bind (f acc x) k)
+    ~finish:Result.return
+
+let fold_until t ~init ~f =
+  delayed_fold t ~init
+    ~f:(fun acc x ~k ->
+      match (f acc x : ('a, 'b) Container_intf.Continue_or_stop.t) with
+      | Stop     x  -> Container_intf.Finished_or_stopped_early.Stopped_early x
+      | Continue x -> k x
+    )
+    ~finish:(fun x -> Finished x)
 
 let force_eagerly t = of_list (to_list t)
 

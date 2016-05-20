@@ -10,15 +10,17 @@ let stdout = Pervasives.stdout
 let stderr = Pervasives.stderr
 
 type 'a with_create_args =
-  ?binary:bool (* defaults to true *)
-  -> ?append:bool (* defaults to false *)
+  ?binary:bool
+  -> ?append:bool
+  -> ?fail_if_exists:bool
   -> ?perm:int
   -> 'a
 
-let create ?(binary = true) ?(append = false) ?(perm = 0o666) file =
+let create ?(binary = true) ?(append = false) ?(fail_if_exists = false) ?(perm = 0o666) file =
   let flags = [Open_wronly; Open_creat] in
   let flags = (if binary then Open_binary else Open_text) :: flags in
   let flags = (if append then Open_append else Open_trunc) :: flags in
+  let flags = (if fail_if_exists then Open_excl :: flags else flags) in
   open_out_gen flags perm file
 ;;
 
@@ -41,8 +43,8 @@ let output_lines t lines =
   List.iter lines ~f:(fun line -> output_string t line; newline t)
 ;;
 
-let with_file ?binary ?append ?perm file ~f =
-  Exn.protectx (create ?binary ?append ?perm file) ~f ~finally:close
+let with_file ?binary ?append ?fail_if_exists ?perm file ~f =
+  Exn.protectx (create ?binary ?append ?fail_if_exists ?perm file) ~f ~finally:close
 ;;
 
 let write_lines file lines = with_file file ~f:(fun t -> output_lines t lines)

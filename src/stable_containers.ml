@@ -77,15 +77,16 @@ end
 
 module Map = struct
   module V1 (Key : sig
-    type t [@@deriving bin_io, sexp]
-    include Comparator.S with type t := t
-  end) : sig
+      type t [@@deriving bin_io, sexp]
+      include Comparator.S with type t := t
+    end) : sig
     type 'a t = (Key.t, 'a, Key.comparator_witness) Map.t
     include Stable_module_types.S1 with type 'a t := 'a t
-  end = struct
-    include Map.Make_binable_using_comparator (Key)
-    let map = Map.map
-  end
+  end =
+    Map.Stable.V1.Make (struct
+      include Key
+      let compare = comparator.compare
+    end)
 
   let%test_module "Map.V1" = (module Stable_unit_test.Make (struct
     module Map = V1 (Int)
@@ -104,13 +105,17 @@ end
 
 module Set = struct
   module V1 (
-    Elt : sig
-      type t [@@deriving bin_io, sexp]
-      include Comparator.S with type t := t
-    end
-  ) : sig
+      Elt : sig
+        type t [@@deriving bin_io, sexp]
+        include Comparator.S with type t := t
+      end
+    ) : sig
     type t = (Elt.t, Elt.comparator_witness) Set.t [@@deriving sexp, bin_io, compare]
-  end = Set.Make_binable_using_comparator (Elt)
+  end =
+    Set.Stable.V1.Make (struct
+      include Elt
+      let compare = comparator.compare
+    end)
 
   let%test_module "Set.V1" = (module Stable_unit_test.Make (struct
     include V1 (Int)
@@ -125,36 +130,6 @@ module Set = struct
         Int.Set.singleton 0, "(0)", "\001\000";
       ]
   end))
-end
-
-module Comparable = struct
-  module V1 = struct
-    module type S = sig
-      type key
-      type comparator_witness
-
-      module Map : sig
-        type 'a t = (key, 'a, comparator_witness) Core_map.t
-        include Stable_module_types.S1 with type 'a t := 'a t
-      end
-
-      module Set : sig
-        type t = (key, comparator_witness) Core_set.t
-        include Stable_module_types.S0 with type t := t
-      end
-    end
-
-    module Make (
-      Key : sig
-        type t [@@deriving bin_io, sexp]
-        include Comparator.S with type t := t
-      end
-    ) : S with type key := Key.t and type comparator_witness := Key.comparator_witness
-    = struct
-      module Map = Map.V1 (Key)
-      module Set = Set.V1 (Key)
-    end
-  end
 end
 
 module Hashable = struct

@@ -68,12 +68,13 @@ module type Accessors = sig
   val clear : (_, _) t -> unit
   val copy : ('a, 'b) t -> ('a, 'b) t
   val fold : ('a, 'b) t -> init:'c -> f:(key:'a key -> data:'b -> 'c -> 'c) -> 'c
-  val iter_vals : ( _, 'b) t -> f:(                   'b -> unit) -> unit
-  val iteri     : ('a, 'b) t -> f:(key:'a key -> data:'b -> unit) -> unit
-  val iter_keys : ('a,  _) t -> f:(    'a key            -> unit) -> unit
 
-  val iter     : ('a, 'b) t -> f:(key:'a key -> data:'b -> unit) -> unit
-    [@@ocaml.deprecated "[since 2015-10] Use iteri instead"]
+  val iter_keys : ('a,  _) t -> f:(    'a key            -> unit) -> unit
+  val iter      : ( _, 'b) t -> f:(                   'b -> unit) -> unit
+  val iteri     : ('a, 'b) t -> f:(key:'a key -> data:'b -> unit) -> unit
+
+  val iter_vals : ( _, 'b) t -> f:(                   'b -> unit) -> unit
+    [@@deprecated "[since 2016-04] Use iter instead"]
 
   val existsi  : ('a, 'b) t -> f:(key:'a key -> data:'b -> bool) -> bool
   val exists   : (_ , 'b) t -> f:(                   'b -> bool) -> bool
@@ -88,7 +89,7 @@ module type Accessors = sig
   val remove : ('a, _) t -> 'a key -> unit
 
   val replace      : ('a, 'b) t -> key:'a key -> data:'b -> unit
-    [@@ocaml.deprecated "[since 2015-10] Use set instead"]
+    [@@deprecated "[since 2015-10] Use set instead"]
   val set          : ('a, 'b) t -> key:'a key -> data:'b -> unit
   val add          : ('a, 'b) t -> key:'a key -> data:'b -> [ `Ok | `Duplicate ]
   val add_or_error : ('a, 'b) t -> key:'a key -> data:'b -> unit Or_error.t
@@ -124,8 +125,9 @@ module type Accessors = sig
   val filter_mapi
     : ('c, ('a, 'b) t -> f:(key:'a key -> data:'b -> 'c option) -> ('a, 'c) t) map_options
 
-  val filter : ('a, 'b) t -> f:('b -> bool) -> ('a, 'b) t
-  val filteri : ('a, 'b) t -> f:(key:'a key -> data:'b -> bool) -> ('a, 'b) t
+  val filter_keys : ('a, 'b) t -> f:('a key -> bool) -> ('a, 'b) t
+  val filter      : ('a, 'b) t -> f:('b -> bool) -> ('a, 'b) t
+  val filteri     : ('a, 'b) t -> f:(key:'a key -> data:'b -> bool) -> ('a, 'b) t
 
   (** returns new maps with bound values partitioned by f applied to the bound values *)
   val partition_map
@@ -218,13 +220,14 @@ module type Accessors = sig
 
   (** Returns the list of all keys for given hashtable. *)
   val keys : ('a, _) t -> 'a key list
+
   (** Returns the list of all data for given hashtable. *)
   val data : (_, 'b) t -> 'b list
 
   (** [filter_inplace t ~f] removes all the elements from [t] that don't satisfy [f]. *)
-  val filter_inplace : (_, 'b) t -> f:('b -> bool) -> unit
-  val filteri_inplace : ('a, 'b) t -> f:(key:'a key -> data:'b -> bool) -> unit
-  val filter_keys_inplace : ('a, _) t -> f:('a key -> bool) -> unit
+  val filter_keys_inplace : ('a,  _) t -> f:('a key -> bool) -> unit
+  val filter_inplace      : ( _, 'b) t -> f:('b -> bool) -> unit
+  val filteri_inplace     : ('a, 'b) t -> f:(key:'a key -> data:'b -> bool) -> unit
 
   (** [map_inplace t ~f] applies f to all elements in [t], transforming them in place *)
   val map_inplace  : (_,  'b) t -> f:(                   'b -> 'b) -> unit
@@ -235,13 +238,13 @@ module type Accessors = sig
   val filter_mapi_inplace : ('a, 'b) t -> f:(key:'a key -> data:'b -> 'b option) -> unit
 
   val replace_all : (_, 'b) t -> f:('b -> 'b) -> unit
-    [@@ocaml.deprecated "[since 2016-02] Use map_inplace instead"]
+    [@@deprecated "[since 2016-02] Use map_inplace instead"]
   val replace_alli : ('a, 'b) t -> f:(key:'a key -> data:'b -> 'b) -> unit
-    [@@ocaml.deprecated "[since 2016-02] Use mapi_inplace instead"]
+    [@@deprecated "[since 2016-02] Use mapi_inplace instead"]
   val filter_replace_all : (_, 'b) t -> f:('b -> 'b option) -> unit
-    [@@ocaml.deprecated "[since 2016-02] Use filter_map_inplace instead"]
+    [@@deprecated "[since 2016-02] Use filter_map_inplace instead"]
   val filter_replace_alli : ('a, 'b) t -> f:(key:'a key -> data:'b -> 'b option) -> unit
-    [@@ocaml.deprecated "[since 2016-02] Use filter_mapi_inplace instead"]
+    [@@deprecated "[since 2016-02] Use filter_mapi_inplace instead"]
 
   (** [equal t1 t2 f] and [similar t1 t2 f] both return true iff [t1] and [t2] have the
       same keys and for all keys [k], [f (find_exn t1 k) (find_exn t2 k)].  [equal] and

@@ -99,7 +99,7 @@ include Blit.S with type t := t
 module To_string   : Blit.S_distinct with type src := t      with type dst := string
 module From_string : Blit.S_distinct with type src := string with type dst := t
 
-(** {6 Reading/writing bin-prot *)
+(** {6 Reading/writing bin-prot} *)
 
 (** These functions write the "size-prefixed" bin-prot format that is used by, e.g.,
     async's [Writer.write_bin_prot], [Reader.read_bin_prot] and

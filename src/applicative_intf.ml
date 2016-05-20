@@ -20,10 +20,10 @@ module type Basic = sig
   val apply : ('a -> 'b) t -> 'a t -> 'b t
   (** The following identities ought to hold for every Applicative (for some value of =):
 
-      - [return Fn.id <*> t = t]
-      - [return Fn.compose <*> tf <*> tg <*> tx = tf <*> (tg <*> tx)]
-      - [return f <*> return x = return (f x)]
-      - [tf <*> return x = return (fun f -> f x) <*> tf]
+      - identity:     [return Fn.id <*> t = t]
+      - composition:  [return Fn.compose <*> tf <*> tg <*> tx = tf <*> (tg <*> tx)]
+      - homomorphism: [return f <*> return x = return (f x)]
+      - interchange:  [tf <*> return x = return (fun f -> f x) <*> tf]
 
       Note: <*> is the infix notation for apply.
   *)
@@ -58,6 +58,7 @@ module type S = sig
 
   module Applicative_infix : sig
     val ( <*> ) : ('a -> 'b) t -> 'a t -> 'b t (** same as [apply] *)
+
     val ( <*  ) : 'a t -> unit t -> 'a t
     val (  *> ) : unit t -> 'a t -> 'a t
   end

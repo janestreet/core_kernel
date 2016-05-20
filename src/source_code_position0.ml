@@ -5,13 +5,18 @@ module Sexp = Sexplib.Sexp
 
 module Stable = struct
   module V1 = struct
-    type t = Lexing.position =
-      { pos_fname : string;
-        pos_lnum : int;
-        pos_bol : int;
-        pos_cnum : int;
-      }
-    [@@deriving bin_io, compare, sexp]
+    (* named T' rather than T so as not to collide with Source_code_position.T *)
+    module T' = struct
+      type t = Lexing.position =
+        { pos_fname : string;
+          pos_lnum : int;
+          pos_bol : int;
+          pos_cnum : int;
+        }
+      [@@deriving bin_io, compare, sexp]
+    end
+    include T'
+    include Comparator.Stable.V1.Make (T')
   end
 end
 

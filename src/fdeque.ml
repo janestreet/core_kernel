@@ -225,6 +225,11 @@ module Arbitrary_order = struct
     List.fold t.back  ~init ~f
   ;;
 
+  let fold_result t ~init ~f = Container.fold_result ~fold ~init ~f t
+  ;;
+  let fold_until  t ~init ~f = Container.fold_until  ~fold ~init ~f t
+  ;;
+
   let find t ~f =
     match     List.find t.front ~f with
     | None -> List.find t.back  ~f
@@ -269,6 +274,9 @@ module Make_container(F : sig val to_list : 'a t -> 'a list end) = struct
   let to_array   t          = List.to_array   (to_list t)
   let min_elt    t ~cmp     = List.min_elt    (to_list t) ~cmp
   let max_elt    t ~cmp     = List.max_elt    (to_list t) ~cmp
+  let fold_result t ~init ~f = Container.fold_result ~fold ~init ~f t
+  let fold_until  t ~init ~f = Container.fold_until  ~fold ~init ~f t
+
 end
 
 module Front_to_back = struct
@@ -276,7 +284,10 @@ module Front_to_back = struct
   let of_list list = make ~length:(List.length list) ~front:list ~back:[]
   let to_list t = t.front @ List.rev t.back
 
-  let%test _ = List.equal [1;2;3] (to_list (of_list [1;2;3])) ~equal:Int.equal
+  let%test_unit _ =
+    [%test_result: int list]
+      ~expect:[1;2;3]
+      (to_list (of_list [1;2;3]))
 
   include Make_container(struct let to_list = to_list end)
 
@@ -287,7 +298,10 @@ module Back_to_front = struct
   let to_list t = t.back @ List.rev t.front
   let of_list list = make ~length:(List.length list) ~back:list ~front:[]
 
-  let%test _ = List.equal [1;2;3] (to_list (of_list [1;2;3])) ~equal:Int.equal
+  let%test_unit _ =
+    [%test_result: int list]
+      ~expect:[1;2;3]
+      (to_list (of_list [1;2;3]))
 
   include Make_container(struct let to_list = to_list end)
 
@@ -296,6 +310,34 @@ end
 include Front_to_back
 
 let singleton x = of_list [x]
+
+include Monad.Make (struct
+    type nonrec 'a t = 'a t
+
+    let bind t f =
+      fold t ~init:empty ~f:(fun t elt ->
+        fold (f elt) ~init:t ~f:enqueue_back)
+
+    let return = singleton
+
+    let map = `Custom (fun t ~f ->
+      { front  = List.map t.front ~f
+      ; back   = List.map t.back  ~f
+      ; length = t.length
+      })
+  end)
+
+let%test_unit _ =
+  [%test_result: int list]
+    ~expect:[1;2;3;4]
+    (bind (of_list [[1;2];[3;4]]) of_list
+     |> to_list)
+
+let%test_unit _ =
+  [%test_result: int list]
+    ~expect:[2;3;4;5]
+    (map (of_list [1;2;3;4]) ~f:succ
+     |> to_list)
 
 let compare cmp t1 t2 =
   List.compare cmp
@@ -316,14 +358,15 @@ module Stable = struct
     let t_of_sexp elt_of_sexp sexp =
       of_list (Sexplib.Conv.list_of_sexp elt_of_sexp sexp)
 
-    let%test _ =
-      List.equal
-        [1;2;3]
+    let map = map
+
+    let%test_unit _ =
+      [%test_result: int list]
+        ~expect:[1;2;3]
         (to_list
            (t_of_sexp Int.t_of_sexp
               (sexp_of_t Int.sexp_of_t
                  (of_list [1;2;3]))))
-        ~equal:Int.equal
     ;;
 
     include Bin_prot.Utils.Make_iterable_binable1 (struct

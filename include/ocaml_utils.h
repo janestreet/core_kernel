@@ -23,8 +23,12 @@
 #  define caml_alloc_int63(v) Val_long(v)
 #  define Int63_val(v) Long_val(v)
 #else
-#  define caml_alloc_int63(v) caml_copy_int64(v)
-#  define Int63_val(v) Int64_val(v)
+/* On 32bit architectures, an OCaml [int63] is represented as a 64 bit
+ * integer with its bits shifted to the left and the least significant bit set to 0.
+ * It makes int64 arithmetic operations work on [int63] with proper overflow handling.
+ */
+#  define caml_alloc_int63(v) caml_copy_int64(((int64_t) (v)) << 1)
+#  define Int63_val(v) (Int64_val(v)) >> 1
 #endif
 
 typedef int64_t int63;

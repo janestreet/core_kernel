@@ -324,3 +324,47 @@ let unsubscribe t (subscription : _ Subscriber.t) =
   t.subscribers <- Map.remove t.subscribers subscription.id;
   update_write t;
 ;;
+
+let%test_module _ =
+  (module struct
+    module Gc = Core_gc
+
+    let assert_no_allocation bus callback write =
+      let bus_r = read_only bus in
+      ignore (subscribe_exn bus_r [%here] ~f:callback);
+      let starting_minor_words = Gc.minor_words () in
+      let starting_major_words = Gc.major_words () in
+      write ();
+      let ending_minor_words = Gc.minor_words () in
+      let ending_major_words = Gc.major_words () in
+      [%test_result: int] (ending_minor_words - starting_minor_words) ~expect:0;
+      [%test_result: int] (ending_major_words - starting_major_words) ~expect:0;
+    ;;
+
+    (* This test only works when [write] is properly inlined.  It does not guarantee that
+       [write] never allocates in any situation.  For example, if this test is moved to
+       another library and run with X_LIBRARY_INLINING=false, it fails. *)
+    let%test_unit "write doesn't allocate when inlined" =
+      let allow_subscription_after_first_write = false in
+      let create created_from arity =
+        create created_from arity ~allow_subscription_after_first_write
+          ~on_callback_raise:Error.raise
+      in
+      let bus1 = create [%here] Arity1 in
+      let bus2 = create [%here] Arity2 in
+      let bus3 = create [%here] Arity3 in
+      let bus4 = create [%here] Arity4 in
+      assert_no_allocation bus1
+        (fun () -> ())
+        (fun () -> write bus1 ());
+      assert_no_allocation bus2
+        (fun () () -> ())
+        (fun () -> write bus2 () ());
+      assert_no_allocation bus3
+        (fun () () () -> ())
+        (fun () -> write bus3 () () ());
+      assert_no_allocation bus4
+        (fun () () () () -> ())
+        (fun () -> write bus4 () () () ());
+    ;;
+  end)

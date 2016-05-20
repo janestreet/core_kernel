@@ -29,6 +29,8 @@ let sexp_of_t t =
 
 let zero_obj = Obj.repr (0 : int)
 
+(* We call [Array.create] with a value that is not a float so that the array doesn't get
+   tagged with [Double_array_tag]. *)
 let create ~len = Array.create ~len zero_obj
 
 let empty = [||]

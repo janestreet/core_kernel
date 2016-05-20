@@ -87,6 +87,15 @@ module Make_binable_using_comparator (T : sig
 module Map_and_set_binable (T : sig type t [@@deriving bin_io, compare, sexp] end)
   : Map_and_set_binable with type t := T.t
 
+module Map_and_set_binable_using_comparator
+    (T : sig
+       type t [@@deriving bin_io, compare, sexp]
+       include Comparator.S with type t := t
+     end)
+  : Map_and_set_binable
+    with type t := T.t
+    with type comparator_witness := T.comparator_witness
+
 module Poly (T : sig type t [@@deriving sexp] end) : S with type t := T.t
 
 module Validate (T : sig type t [@@deriving compare, sexp] end) : Validate with type t := T.t
@@ -115,3 +124,25 @@ module Check_sexp_conversion (M : sig
   include S with type t := t
   val examples : t list
 end) : sig end
+
+(** The following module types and functors may be used to define stable modules *)
+module Stable : sig
+  module V1 : sig
+    module type S = sig
+      type comparable
+      type comparator_witness
+
+      module Map : Core_map.Stable.V1.S
+        with type key := comparable
+        with type comparator_witness := comparator_witness
+
+      module Set : Core_set.Stable.V1.S
+        with type elt := comparable
+        with type elt_comparator_witness := comparator_witness
+    end
+
+    module Make (X : Stable_module_types.S0) : S
+      with type comparable := X.t
+      with type comparator_witness := X.comparator_witness
+  end
+end

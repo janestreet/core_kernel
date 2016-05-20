@@ -120,7 +120,7 @@ let raise_without_backtrace e =
   raise_notrace e
 ;;
 
-let%test_module _ = (module struct
+let%test_module __ [@tags "no-js"] = (module struct
   exception Test_exception
 
   let with_backtraces_enabled f =

@@ -5,10 +5,14 @@ module type S = sig
 
   module Stable : sig
     module V1 : sig
-      type nonrec t = t [@@deriving sexp, bin_io, compare]
+      type nonrec t = t
 
-      include Stable_containers.Comparable.V1.S
-        with type key := t
+      include Stable
+        with type t := t
+        with type comparator_witness = comparator_witness
+
+      include Comparable.Stable.V1.S
+        with type comparable := t
         with type comparator_witness := comparator_witness
     end
   end
@@ -17,7 +21,7 @@ end
 module Make_without_pretty_printer (M : sig val module_name : string end) () = struct
   module Stable = struct
     module V1 = struct
-      include String
+      include (String : module type of String with module Stable := String.Stable)
 
       let check =
         let invalid s reason =

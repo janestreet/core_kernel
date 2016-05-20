@@ -47,7 +47,7 @@ let value_exn ?here ?error ?message t =
       | None  , None  , None   -> Error.of_string "Option.value_exn None"
       | None  , None  , Some m -> Error.of_string m
       | None  , Some e, None   -> e
-      | None  , Some e, Some m -> Error.tag e m
+      | None  , Some e, Some m -> Error.tag e ~tag:m
       | Some p, None  , None   ->
         Error.create "Option.value_exn" p [%sexp_of: Source_code_position0.t]
       | Some p, None  , Some m ->
@@ -186,6 +186,9 @@ include Monad.Make (struct
     | Some x -> f x
 end)
 
+let fold_result t ~init ~f = Container.fold_result ~fold ~init ~f t
+let fold_until  t ~init ~f = Container.fold_until  ~fold ~init ~f t
+
 let validate ~none ~some t =
   let module V = Validate in
   match t with
@@ -212,7 +215,6 @@ module For_quickcheck = struct
       ~f:(function
         | None   -> `A ()
         | Some x -> `B x)
-      ~f_sexp:(fun () -> Atom "variant_of_option")
 
   let shrinker elt_shr =
     let shrinker = function

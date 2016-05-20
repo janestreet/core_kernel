@@ -35,8 +35,8 @@ module Binable_exn = struct
 
           exception Exn of Sexp.t
 
-          (* We install a custom exn-converter rather than use [exception Exn of t with
-             sexp] to eliminate the extra wrapping of "(Exn ...)". *)
+          (* We install a custom exn-converter rather than use [exception Exn of t
+             [@@deriving sexp]] to eliminate the extra wrapping of "(Exn ...)". *)
           let () =
             Sexplib.Conv.Exn_converter.add_auto (Exn (Atom "<template>"))
               (function
@@ -162,23 +162,27 @@ let to_message t = protect (fun () -> Lazy.force t)
 let of_message message = Lazy.from_val message
 
 module Stable_v2 = struct
-  type nonrec t = t
+  module T = struct
+    type nonrec t = t
 
-  (* It is OK to use [Message.to_sexp_hum], which is not stable, because [t_of_sexp]
-     below can handle any sexp. *)
-  let sexp_of_t t = Message.to_sexp_hum (to_message t)
+    (* It is OK to use [Message.to_sexp_hum], which is not stable, because [t_of_sexp]
+       below can handle any sexp. *)
+    let sexp_of_t t = Message.to_sexp_hum (to_message t)
 
-  let t_of_sexp sexp = lazy (Message.Sexp sexp)
+    let t_of_sexp sexp = lazy (Message.Sexp sexp)
 
-  let compare t1 t2 =
-    [%compare: Sexp.t] (t1 |> [%sexp_of: t]) (t2 |> [%sexp_of: t])
-  ;;
+    let compare t1 t2 =
+      [%compare: Sexp.t] (t1 |> [%sexp_of: t]) (t2 |> [%sexp_of: t])
+    ;;
 
-  include Binable.Stable.Of_binable.V1 (Message.Stable.V2) (struct
-      type nonrec t = t
-      let to_binable = to_message
-      let of_binable = of_message
-    end)
+    include Binable.Stable.Of_binable.V1 (Message.Stable.V2) (struct
+        type nonrec t = t
+        let to_binable = to_message
+        let of_binable = of_message
+      end)
+  end
+  include T
+  include Comparator.Stable.V1.Make (T)
 end
 
 include (Stable_v2 : sig
@@ -213,7 +217,7 @@ let create ?here ?strict tag x sexp_of_x =
 
 let create_s sexp = Lazy.from_val (Sexp sexp)
 
-let tag t tag = lazy (Tag_t (tag, to_message t))
+let tag t ~tag = lazy (Tag_t (tag, to_message t))
 
 let tag_arg t tag x sexp_of_x =
   lazy (protect (fun () -> Tag_arg (tag, sexp_of_x x, to_message t)))
@@ -264,15 +268,19 @@ module Stable = struct
   module V2 = Stable_v2
 
   module V1 = struct
-    type nonrec t = t
+    module T = struct
+      type nonrec t = t
 
-    include Sexpable.Stable.Of_sexpable.V1 (Sexp) (struct
+      include Sexpable.Stable.Of_sexpable.V1 (Sexp) (struct
         type nonrec t = t
         let to_sexpable = sexp_of_t
         let of_sexpable = t_of_sexp
       end)
 
-    let compare = compare
+      let compare = compare
+    end
+    include T
+    include Comparator.Stable.V1.Make (T)
 
     include Binable.Stable.Of_binable.V1 (Sexp) (struct
         type nonrec t = t
@@ -292,7 +300,7 @@ let%test_module "Info" = (module struct
   ;;
 
   let%test_unit _ =
-    [%test_result: string] (to_string_hum (tag (of_string "b") "a"))
+    [%test_result: string] (to_string_hum (tag (of_string "b") ~tag:"a"))
       ~expect:"(a b)"
   ;;
 
@@ -338,8 +346,9 @@ let%test_module "Info" = (module struct
   let%test _ = round (of_string "hello")
   let%test _ = round (of_thunk (fun () -> "hello"))
   let%test _ = round (create "tag" 13 [%sexp_of: int])
-  let%test _ = round (tag (of_string "hello") "tag")
-  let%test _ = round (tag_arg (of_string "hello") "tag" 13 [%sexp_of: int])
+  let%test _ = round (tag (of_string "hello") ~tag:"tag")
+  let%test _ = round (tag_arg (of_string "hello") "tag" 13
+                        [%sexp_of: int])
   let%test _ = round (of_list [ of_string "hello"; of_string "goodbye" ])
   let%test _ = round (t_of_sexp (Sexp.of_string "((random sexp 1)(b 2)((c (1 2 3))))"))
 end)

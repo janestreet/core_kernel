@@ -23,6 +23,8 @@ let may_eof f = try Some (f ()) with End_of_file -> None
 let input t ~buf ~pos ~len = Pervasives.input t buf pos len
 let really_input t ~buf ~pos ~len =
   may_eof (fun () -> Pervasives.really_input t buf pos len)
+let really_input_exn t ~buf ~pos ~len =
+  Pervasives.really_input t buf pos len
 let input_byte t = may_eof (fun () -> Pervasives.input_byte t)
 let input_char t = may_eof (fun () -> Pervasives.input_char t)
 let input_binary_int t = may_eof (fun () -> Pervasives.input_binary_int t)
@@ -46,20 +48,22 @@ let input_all t =
   Buffer.contents buffer;
 ;;
 
+let trim ~fix_win_eol line =
+  if fix_win_eol
+    && String.length line > 0
+    && String.nget line (-1) = '\r'
+  then String.slice line 0 (-1)
+  else line
+
 let input_line ?(fix_win_eol = true) t =
   match may_eof (fun () -> Pervasives.input_line t) with
   | None -> None
-  | Some line ->
-      let remove_trailing_return =
-        fix_win_eol
-        && String.length line > 0
-        && String.nget line (-1) = '\r'
-      in
-      if remove_trailing_return then
-        Some (String.slice line 0 (-1))
-      else
-        Some line
+  | Some line -> Some (trim ~fix_win_eol line)
 ;;
+
+let input_line_exn ?(fix_win_eol = true) t =
+  let line = Pervasives.input_line t in
+  trim ~fix_win_eol line
 
 let fold_lines ?fix_win_eol t ~init ~f =
   let rec loop ac =

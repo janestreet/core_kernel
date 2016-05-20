@@ -38,6 +38,17 @@ let int64_pow base exponent =
   int_math_int64_pow base exponent
 ;;
 
+let int63_pow_on_int64 base exponent =
+  if exponent < 0L then negative_exponent ();
+
+  if Int64.abs(base) > 1L &&
+     (exponent > 63L ||
+      Int64.abs(base) > Pow_overflow_bounds.int63_on_int64_positive_overflow_bounds.(Int64.to_int exponent))
+  then overflow ();
+
+  int_math_int64_pow base exponent
+;;
+
 let%test_unit _ =
   let x = match Word_size.word_size with W32 -> 9 | W64 -> 10 in
   for i = 0 to x do
@@ -60,6 +71,149 @@ let%bench_module "int_math_pow" = (module struct
   let%bench "2L ^ 30L" = int64_pow 2L 30L
   let%bench "2L ^ 60L" = int64_pow 2L 60L
 end)
+
+(* C stub for int popcount to use the POPCNT instruction where possible *)
+external int_popcount : int -> int = "int_math_int_popcount" "noalloc"
+
+(* To maintain javascript compatibility and enable unboxing, we implement popcount in
+   OCaml rather than use C stubs. Implementation adapted from:
+   https://en.wikipedia.org/wiki/Hamming_weight#Efficient_implementation *)
+let int64_popcount =
+  let open Int64 in
+  let ( + ) = add in
+  let ( - ) = sub in
+  let ( * ) = mul in
+  let ( lsr ) = shift_right_logical in
+  let ( land ) = logand in
+  let m1  = 0x5555555555555555L in (* 0b01010101... *)
+  let m2  = 0x3333333333333333L in (* 0b00110011... *)
+  let m4  = 0x0f0f0f0f0f0f0f0fL in (* 0b00001111... *)
+  let h01 = 0x0101010101010101L in (* 1 bit set per byte *)
+  fun x ->
+    (* gather the bit count for every pair of bits *)
+    let x = x - ((x lsr 1) land m1) in
+    (* gather the bit count for every 4 bits *)
+    let x = (x land m2) + ((x lsr 2) land m2) in
+    (* gather the bit count for every byte *)
+    let x = (x + (x lsr 4)) land m4 in
+    (* sum the bit counts in the top byte and shift it down *)
+    to_int ((x * h01) lsr 56)
+
+let int32_popcount =
+  (* On 64-bit systems, this is faster than implementing using [int32] arithmetic. *)
+  let mask = 0xffff_ffffL in
+  fun x -> int64_popcount (Int64.logand (Int64.of_int32 x) mask)
+
+let nativeint_popcount =
+  match Nativeint.size with
+  | 32 -> (fun x -> int32_popcount (Nativeint.to_int32 x))
+  | 64 -> (fun x -> int64_popcount (Int64.of_nativeint x))
+  | _  -> assert false
+
+(* Using [%bench_fun] to bind the input outside the benchmarked code actually has less
+   overhead then using [%bench] naively. *)
+let%bench_fun "popcount_bench_overhead" = let n = 0  in fun () -> Fn.id              n
+let%bench_fun "int_popcount"            = let n = 0  in fun () -> int_popcount       n
+let%bench_fun "int32_popcount"          = let n = 0l in fun () -> int32_popcount     n
+let%bench_fun "int64_popcount"          = let n = 0L in fun () -> int64_popcount     n
+let%bench_fun "nativeint_popcount"      = let n = 0n in fun () -> nativeint_popcount n
+
+let%test_module "popcount" =
+  (module struct
+    open Sexplib.Std
+
+    let test_int       n bits = [%test_result: int] (int_popcount       n) ~expect:bits
+    let test_int32     n bits = [%test_result: int] (int32_popcount     n) ~expect:bits
+    let test_int64     n bits = [%test_result: int] (int64_popcount     n) ~expect:bits
+    let test_nativeint n bits = [%test_result: int] (nativeint_popcount n) ~expect:bits
+
+    (* test simple constants and boundary conditions *)
+
+    let%test_unit _ = test_int       0                  0
+    let%test_unit _ = test_int       1                  1
+    let%test_unit _ = test_int       (-1)               Int_conversions.num_bits_int
+    let%test_unit _ = test_int       Pervasives.max_int (Int_conversions.num_bits_int - 1)
+    let%test_unit _ = test_int       Pervasives.min_int 1
+
+    let%test_unit _ = test_int32     0l                 0
+    let%test_unit _ = test_int32     1l                 1
+    let%test_unit _ = test_int32     (-1l)              32
+    let%test_unit _ = test_int32     Int32.max_int      31
+    let%test_unit _ = test_int32     Int32.min_int      1
+
+    let%test_unit _ = test_int64     0L                 0
+    let%test_unit _ = test_int64     1L                 1
+    let%test_unit _ = test_int64     (-1L)              64
+    let%test_unit _ = test_int64     Int64.max_int      63
+    let%test_unit _ = test_int64     Int64.min_int      1
+
+    let%test_unit _ = test_nativeint 0n                 0
+    let%test_unit _ = test_nativeint 1n                 1
+    let%test_unit _ = test_nativeint (-1n)              Nativeint.size
+    let%test_unit _ = test_nativeint Nativeint.max_int  (Nativeint.size - 1)
+    let%test_unit _ = test_nativeint Nativeint.min_int  1
+
+    (* test that we can account for each bit individually *)
+
+    let%test_unit _ =
+      for i = 0 to Int_conversions.num_bits_int - 1 do
+        let n = 1 lsl i in
+        test_int n 1;
+        test_int (lnot n) (Int_conversions.num_bits_int - 1)
+      done
+
+    let%test_unit _ =
+      for i = 0 to 31 do
+        let n = Int32.shift_left 1l i in
+        test_int32 n 1;
+        test_int32 (Int32.lognot n) 31
+      done
+
+    let%test_unit _ =
+      for i = 0 to 63 do
+        let n = Int64.shift_left 1L i in
+        test_int64 n 1;
+        test_int64 (Int64.lognot n) 63
+      done
+
+    let%test_unit _ =
+      for i = 0 to Nativeint.size - 1 do
+        let n = Nativeint.shift_left 1n i in
+        test_nativeint n 1;
+        test_nativeint (Nativeint.lognot n) (Nativeint.size - 1)
+      done
+
+    (* Make sure unboxing works as expected and so forth, which it wouldn't if we used C
+       stubs with boxed values for [int64], [int32], and [nativeint].  Use random inputs
+       to make sure the compiler can't inline and precompute results. *)
+
+    let does_not_allocate f =
+      let test () =
+        let len = 100 in
+        let inputs = ArrayLabels.init len ~f:(fun _ -> Random.bits ()) in
+        let minor_before = Core_gc.minor_words () in
+        for i = 0 to len-1 do
+          ignore (f inputs.(i) : int)
+        done;
+        let minor_after = Core_gc.minor_words () in
+        [%test_result: int]
+          (minor_after - minor_before)
+          ~expect:0
+          ~message:"number of words allocated"
+      in
+      (* On 32-bit systems, int64 cannot be unboxed, so this test only makes sense on
+         64-bit systems. *)
+      match Nativeint.size with
+      | 32 -> ()
+      | 64 -> test ()
+      | _  -> assert false
+
+    let%test_unit _ = does_not_allocate (fun x -> int_popcount x)
+    let%test_unit _ = does_not_allocate (fun x -> int32_popcount     (Int32.of_int     x))
+    let%test_unit _ = does_not_allocate (fun x -> int64_popcount     (Int64.of_int     x))
+    let%test_unit _ = does_not_allocate (fun x -> nativeint_popcount (Nativeint.of_int x))
+
+  end)
 
 module type T = sig
   type t
@@ -252,6 +406,7 @@ module Make (X : T) = struct
         check_natural_numbers x y
       done
   end)
+
 end
 
 let%test_module "pow" = (module struct

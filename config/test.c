@@ -1,25 +1,25 @@
 /* This file is just preprocessed.  Lines of the form "OUT:XXX" are
    kept and replaced by XXX in the output to produce
-   lib/config.mlh. */
+   lib/config.h. */
 
 #include <caml/config.h>
 
 /* Defined in <caml/config.h> */
 #if defined(ARCH_SIXTYFOUR)
-"OUT:#let JSC_ARCH_SIXTYFOUR = true"
+"OUT:#define JSC_ARCH_SIXTYFOUR"
 #else
-"OUT:#let JSC_ARCH_SIXTYFOUR = false"
+"OUT:#undef JSC_ARCH_SIXTYFOUR"
 #endif
 
 /* Defined in <caml/config.h> */
 #if defined(ARCH_BIG_ENDIAN)
-"OUT:#let JSC_ARCH_BIG_ENDIAN = true"
+"OUT:#define JSC_ARCH_BIG_ENDIAN"
 #else
-"OUT:#let JSC_ARCH_BIG_ENDIAN = false"
+"OUT:#undef JSC_ARCH_BIG_ENDIAN"
 #endif
 
 #if defined(POSIX_TIMERS)
-"OUT:#let JSC_POSIX_TIMERS = true"
+"OUT:#define JSC_POSIX_TIMERS"
 #else
-"OUT:#let JSC_POSIX_TIMERS = false"
+"OUT:#undef JSC_POSIX_TIMERS"
 #endif

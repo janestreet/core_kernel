@@ -4,8 +4,6 @@ type 'a t = 'a array [@@deriving bin_io, compare, sexp, typerep]
 
 include Binary_searchable.S1 with type 'a t := 'a t
 
-(** Note: [Array.length] is not constant for a given array, as one can reduce it with
-    [Array.truncate] *)
 include Container.S1 with type 'a t := 'a t
 
 include Invariant.S1 with type 'a t := 'a t
@@ -281,6 +279,14 @@ val reduce_exn : 'a t -> f:('a -> 'a -> 'a) -> 'a
     If [random_state] is not supplied, [permute] uses [Random.State.default]. *)
 val permute : ?random_state:Core_random.State.t -> 'a t -> unit
 
+(** [random_element ?random_state t] is [None] if [t] is empty, else it is [Some x] for
+    some [x] chosen uniformly at random from [t].
+
+    [random_element] side affects [random_state] by calling [Random.State.int]. If
+    [random_state] is not supplied, [random_element] uses [Random.State.default]. *)
+val random_element     : ?random_state:Core_random.State.t -> 'a t -> 'a option
+val random_element_exn : ?random_state:Core_random.State.t -> 'a t -> 'a
+
 (** [zip] is like [List.zip], but for arrays. *)
 val zip     : 'a t -> 'b t -> ('a * 'b) t option
 val zip_exn : 'a t -> 'b t -> ('a * 'b) t
@@ -294,23 +300,28 @@ val sorted_copy : 'a t -> cmp:('a -> 'a -> int) -> 'a t
 
 val last : 'a t -> 'a
 
-(** [empty ()] creates an empty array *)
+(** [empty ()] creates an empty array, physically equal to [ [||] ]. *)
 val empty : unit -> 'a t
+  [@@deprecated "[since 2016-04] Use [ [||] ]"]
 
 val equal : 'a t -> 'a t -> equal:('a -> 'a -> bool) -> bool
 
-(** [truncate t ~len] drops [length t - len] elements from the end of [t], changing [t]
-    so that [length t = len] afterwards.  [truncate] raises if [len <= 0 || len > length
-    t]. *)
-val truncate : _ t -> len:int -> unit
+(** [unsafe_truncate t ~len] drops [length t - len] elements from the end of [t], changing
+    [t] so that [length t = len] afterwards.  [unsafe_truncate] raises if [len <= 0 || len
+    > length t].  It is not safe to do [unsafe_truncate] in the middle of a call to [map],
+    [iter], etc, or if you have given this array out to anything not under your control:
+    in general, code can rely on an array's length not changing.  One must ensure code
+    that calls [unsafe_truncate] on an array does not interfere with other code that
+    manipulates the array. *)
+val unsafe_truncate : _ t -> len:int -> unit
 
 
-(** [to_sequence t] converts [t] to a sequence. [t] is copied internally so that future
-    modifications of [t] do not change the sequence. *)
+(** The input array is copied internally so that future modifications of it do not change
+    the sequence. *)
 val to_sequence : 'a t -> 'a Sequence.t
 
-(** [to_sequence_mutable t] converts [t] to a sequence. [t] is shared with the sequence
-    and modifications of [t] will result in modification of the sequence. *)
+(** The input array is shared with the sequence and modifications of it will result in
+    modification of the sequence. *)
 val to_sequence_mutable : 'a t -> 'a Sequence.t
 
 (** The [Permissioned] module gives the ability to restrict permissions on an array, so
@@ -499,7 +510,7 @@ module Permissioned : sig
   val last : ('a, [> read]) t -> 'a
   val empty : unit -> ('a, [< _ perms]) t
   val equal : ('a, [> read]) t -> ('a, [> read]) t -> equal:('a -> 'a -> bool) -> bool
-  val truncate : (_, [> write]) t -> len:int -> unit
+  val unsafe_truncate : (_, [> write]) t -> len:int -> unit
 
   val to_sequence         : ('a, [> read]) t -> 'a Sequence.t
   val to_sequence_mutable : ('a, [> read]) t -> 'a Sequence.t

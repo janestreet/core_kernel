@@ -351,6 +351,8 @@ module T = struct
   let to_array = C.to_array
   let min_elt  = C.min_elt
   let max_elt  = C.max_elt
+  let fold_result = C.fold_result
+  let fold_until  = C.fold_until
 
   let of_array arr ~cmp =
     let t = create ~min_size:(Array.length arr) ~cmp () in
@@ -454,6 +456,12 @@ module Removable = struct
       match !token with
       | None   -> acc
       | Some v -> f acc v)
+  ;;
+
+  let fold_result t ~init ~f = Container.fold_result ~fold ~init ~f t
+  ;;
+
+  let fold_until  t ~init ~f = Container.fold_until  ~fold ~init ~f t
   ;;
 
   let iter t ~f =

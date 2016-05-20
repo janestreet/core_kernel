@@ -4,13 +4,14 @@
 open Bin_prot.Binable
 open Bigarray
 
-(* We copy the definition of the bigstring type here, because we cannot depend on
-   bigstring.ml *)
+(** We copy the definition of the bigstring type here, because we cannot depend on
+    bigstring.ml *)
 type bigstring = (char, int8_unsigned_elt, c_layout) Array1.t
 
 (** New code should use [@@deriving bin_io].  These module types (S, S1, and S2) are
     exported only for backwards compatibility.**)
 module type S  = S
+module type S_only_functions = S_only_functions
 module type S1 = S1
 module type S2 = S2
 

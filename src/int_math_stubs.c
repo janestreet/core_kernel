@@ -4,6 +4,7 @@
 #include <caml/alloc.h>
 #include <caml/mlvalues.h>
 #include <caml/memory.h>
+#include "config.h"
 
 static int64_t int_pow(int64_t base, int64_t exponent) {
   int64_t ret = 1;
@@ -30,4 +31,15 @@ CAMLprim value int_math_int_pow_stub(value base, value exponent) {
 CAMLprim value int_math_int64_pow_stub(value base, value exponent) {
   CAMLparam2(base, exponent);
   CAMLreturn(caml_copy_int64(int_pow(Int64_val(base), Int64_val(exponent))));
+}
+
+/* This implementation is faster than [__builtin_popcount(v) - 1], even though
+ * it seems more complicated.  The [&] clears the shifted sign bit after
+ * [Long_val] or [Int_val]. */
+CAMLprim value int_math_int_popcount(value v) {
+#ifdef JSC_ARCH_SIXTYFOUR
+  return Val_int (__builtin_popcountll (Long_val (v) & ~((uint64_t)1 << 63)));
+#else
+  return Val_int (__builtin_popcount   (Int_val  (v) & ~((uint32_t)1 << 31)));
+#endif
 }

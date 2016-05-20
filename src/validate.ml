@@ -59,7 +59,7 @@ let path_string path = String.concat ~sep:"." path
 
 let errors t =
   List.map t ~f:(fun { path; error } ->
-    (Error.to_string_hum (Error.tag error (path_string path))))
+    (Error.to_string_hum (Error.tag error ~tag:(path_string path))))
 ;;
 
 let result_fail t =

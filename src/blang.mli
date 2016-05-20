@@ -39,21 +39,41 @@ type 'a t = private
   | Not of 'a t
   | If of 'a t * 'a t * 'a t
   | Base of 'a
-[@@deriving bin_io, compare, sexp]
+  [@@deriving bin_io, compare, sexp]
 (** Note that the sexps are not directly inferred from the type above -- there are lots of
     fancy shortcuts.  Also, the sexps for ['a] must not look anything like blang sexps.
     Otherwise [t_of_sexp] will fail. *)
 
 (** {6 smart constructors that simplify away constants whenever possible} *)
 
-val base     : 'a -> 'a t
-val true_    : _ t
-val false_   : _ t
-val constant : bool -> _ t (** [function true -> true_ | false -> false_] *)
-val not_     : 'a t -> 'a t
-val and_     : 'a t list -> 'a t (** n-ary [And] *)
-val or_      : 'a t list -> 'a t (** n-ary [Or] *)
-val if_      : 'a t -> 'a t -> 'a t -> 'a t (** [if_ if then else] *)
+module type Constructors = sig
+  val base     : 'a -> 'a t
+  val true_    : _ t
+  val false_   : _ t
+  val constant : bool -> _ t (** [function true -> true_ | false -> false_] *)
+
+  val not_     : 'a t -> 'a t
+  val and_     : 'a t list -> 'a t (** n-ary [And] *)
+
+  val or_      : 'a t list -> 'a t (** n-ary [Or] *)
+
+  val if_      : 'a t -> 'a t -> 'a t -> 'a t (** [if_ if then else] *)
+end
+
+include Constructors
+
+module O : sig
+  include Constructors
+
+  val (&&)  : 'a t -> 'a t -> 'a t
+  val (||)  : 'a t -> 'a t -> 'a t
+
+  (** [a ==> b] is "a implies b".  This is not [=>] to avoid making it look like a
+      comparison operator. *)
+  val (==>) : 'a t -> 'a t -> 'a t
+
+  val not : 'a t -> 'a t
+end
 
 (** [constant_value t = Some b] iff [t = constant b] *)
 val constant_value : 'a t -> bool option
@@ -81,6 +101,7 @@ val constant_value : 'a t -> bool option
       | ...
     ]}
 *)
+
 (** [gather_conjuncts t] gathers up all toplevel conjuncts in [t].  For example,
     {ul {- [gather_conjuncts (and_ ts) = ts] }
         {- [gather_conjuncts (And (t1, t2)) = gather_conjuncts t1 @ gather_conjuncts t2] }

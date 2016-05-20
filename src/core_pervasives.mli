@@ -136,15 +136,19 @@ external __LOC__ : string = "%loc_LOC"
 (** [__LOC__] returns the location at which this expression appears in
     the file currently being parsed by the compiler, with the standard
     error format of OCaml: "File %S, line %d, characters %d-%d" *)
+
 external __FILE__ : string = "%loc_FILE"
 (** [__FILE__] returns the name of the file currently being
     parsed by the compiler. *)
+
 external __LINE__ : int = "%loc_LINE"
 (** [__LINE__] returns the line number at which this expression
     appears in the file currently being parsed by the compiler. *)
+
 external __MODULE__ : string = "%loc_MODULE"
 (** [__MODULE__] returns the module name of the file being
     parsed by the compiler. *)
+
 external __POS__ : string * int * int * int = "%loc_POS"
 (** [__POS__] returns a tuple [(file,lnum,cnum,enum)], corresponding
     to the location at which this expression appears in the file
@@ -157,10 +161,12 @@ external __LOC_OF__ : 'a -> string * 'a = "%loc_LOC"
     location of [expr] in the file currently being parsed by the
     compiler, with the standard error format of OCaml: "File %S, line
     %d, characters %d-%d" *)
+
 external __LINE_OF__ : 'a -> int * 'a = "%loc_LINE"
 (** [__LINE_OF__ expr] returns a pair [(line, expr)], where [line] is the
     line number at which the expression [expr] appears in the file
     currently being parsed by the compiler. *)
+
 external __POS_OF__ : 'a -> (string * int * int * int) * 'a = "%loc_POS"
 (** [__POS_OF__ expr] returns a pair [(expr,loc)], where [loc] is a
     tuple [(file,lnum,cnum,enum)] corresponding to the location at
@@ -576,36 +582,43 @@ val ( @ ) : 'a list -> 'a list -> 'a list
     calls they invoke fail. *)
 
 type in_channel = Pervasives.in_channel
+  [@@deprecated "[since 2016-04] Use [Core.Std.In_channel]"]
 (** The type of input channel. *)
 
 type out_channel = Pervasives.out_channel
+  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
 (** The type of output channel. *)
 
-val stdin : in_channel
+val stdin : Pervasives.in_channel
+  [@@deprecated "[since 2016-04] Use [Core.Std.In_channel]"]
 (** The standard input for the process. *)
 
-val stdout : out_channel
+val stdout : Pervasives.out_channel
 (** The standard output for the process. *)
 
-val stderr : out_channel
+val stderr : Pervasives.out_channel
 (** The standard error output for the process. *)
 
 
 (** {7 Output functions on standard output} *)
 
 val print_char : char -> unit
+  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
 (** Print a character on standard output. *)
 
 val print_string : string -> unit
 (** Print a string on standard output. *)
 
 val print_bytes : bytes -> unit
+  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
 (** Print a byte sequence on standard output. *)
 
 val print_int : int -> unit
+  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
 (** Print an integer, in decimal, on standard output. *)
 
 val print_float : float -> unit
+  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
 (** Print a floating-point number, in decimal, on standard output. *)
 
 val print_endline : string -> unit
@@ -613,6 +626,7 @@ val print_endline : string -> unit
    standard output and flush standard output. *)
 
 val print_newline : unit -> unit
+  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
 (** Print a newline character on standard output, and flush
    standard output. This can be used to simulate line
    buffering of standard output. *)
@@ -621,18 +635,23 @@ val print_newline : unit -> unit
 (** {7 Output functions on standard error} *)
 
 val prerr_char : char -> unit
+  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
 (** Print a character on standard error. *)
 
 val prerr_string : string -> unit
+  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
 (** Print a string on standard error. *)
 
 val prerr_bytes : bytes -> unit
+  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
 (** Print a byte sequence on standard error. *)
 
 val prerr_int : int -> unit
+  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
 (** Print an integer, in decimal, on standard error. *)
 
 val prerr_float : float -> unit
+  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
 (** Print a floating-point number, in decimal, on standard error. *)
 
 val prerr_endline : string -> unit
@@ -640,6 +659,7 @@ val prerr_endline : string -> unit
    error and flush standard error. *)
 
 val prerr_newline : unit -> unit
+  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
 (** Print a newline character on standard error, and flush
    standard error. *)
 
@@ -647,16 +667,19 @@ val prerr_newline : unit -> unit
 (** {7 Input functions on standard input} *)
 
 val read_line : unit -> string
+  [@@deprecated "[since 2016-04] Use [Core.Std.In_channel]"]
 (** Flush standard output, then read characters from standard input
    until a newline character is encountered. Return the string of
    all characters read, without the newline character at the end. *)
 
 val read_int : unit -> int
+  [@@deprecated "[since 2016-04] Use [Core.Std.In_channel]"]
 (** Flush standard output, then read one line from standard input
    and convert it to an integer. Raise [Failure "int_of_string"]
    if the line read is not a valid representation of an integer. *)
 
 val read_float : unit -> float
+  [@@deprecated "[since 2016-04] Use [Core.Std.In_channel]"]
 (** Flush standard output, then read one line from standard input
    and convert it to a floating-point number.
    The result is unspecified if the line read is not a valid
@@ -675,22 +698,26 @@ type open_flag = Pervasives.open_flag =
   | Open_binary      (** open in binary mode (no conversion). *)
   | Open_text        (** open in text mode (may perform conversions). *)
   | Open_nonblock    (** open in non-blocking mode. *)
+  [@@deprecated "[since 2016-04] Use [Core.Std.In_channel] and [Core.Std.Out_channel]"]
 (** Opening modes for {!Pervasives.open_out_gen} and
   {!Pervasives.open_in_gen}. *)
 
-val open_out : string -> out_channel
+val open_out : string -> Pervasives.out_channel
+  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
 (** Open the named file for writing, and return a new output channel
    on that file, positionned at the beginning of the file. The
    file is truncated to zero length if it already exists. It
    is created if it does not already exists. *)
 
-val open_out_bin : string -> out_channel
+val open_out_bin : string -> Pervasives.out_channel
+  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
 (** Same as {!Pervasives.open_out}, but the file is opened in binary mode,
    so that no translation takes place during writes. On operating
    systems that do not distinguish between text mode and binary
    mode, this function behaves like {!Pervasives.open_out}. *)
 
-val open_out_gen : open_flag list -> int -> string -> out_channel
+val open_out_gen : Pervasives.open_flag list -> int -> string -> Pervasives.out_channel
+  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
 (** [open_out_gen mode perm filename] opens the named file for writing,
    as described above. The extra argument [mode]
    specify the opening mode. The extra argument [perm] specifies
@@ -698,40 +725,49 @@ val open_out_gen : open_flag list -> int -> string -> out_channel
    {!Pervasives.open_out} and {!Pervasives.open_out_bin} are special
    cases of this function. *)
 
-val flush : out_channel -> unit
+val flush : Pervasives.out_channel -> unit
+  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
 (** Flush the buffer associated with the given output channel,
    performing all pending writes on that channel.
    Interactive programs must be careful about flushing standard
    output and standard error at the right time. *)
 
 val flush_all : unit -> unit
+  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
 (** Flush all open output channels; ignore errors. *)
 
-val output_char : out_channel -> char -> unit
+val output_char : Pervasives.out_channel -> char -> unit
+  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
 (** Write the character on the given output channel. *)
 
-val output_string : out_channel -> string -> unit
+val output_string : Pervasives.out_channel -> string -> unit
+  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
 (** Write the string on the given output channel. *)
 
-val output_bytes : out_channel -> bytes -> unit
+val output_bytes : Pervasives.out_channel -> bytes -> unit
+  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
 (** Write the byte sequence on the given output channel. *)
 
-val output : out_channel -> bytes -> int -> int -> unit
+val output : Pervasives.out_channel -> bytes -> int -> int -> unit
+  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
 (** [output oc buf pos len] writes [len] characters from byte sequence [buf],
    starting at offset [pos], to the given output channel [oc].
    Raise [Invalid_argument "output"] if [pos] and [len] do not
    designate a valid range of [buf]. *)
 
-val output_substring : out_channel -> string -> int -> int -> unit
+val output_substring : Pervasives.out_channel -> string -> int -> int -> unit
+  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
 (** Same as [output] but take a string as argument instead of
    a byte sequence. *)
 
-val output_byte : out_channel -> int -> unit
+val output_byte : Pervasives.out_channel -> int -> unit
+  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
 (** Write one 8-bit integer (as the single character with that code)
    on the given output channel. The given integer is taken modulo
    256. *)
 
-val output_binary_int : out_channel -> int -> unit
+val output_binary_int : Pervasives.out_channel -> int -> unit
+  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
 (** Write one integer in binary format (4 bytes, big-endian)
    on the given output channel.
    The given integer is taken modulo 2{^32}.
@@ -739,7 +775,8 @@ val output_binary_int : out_channel -> int -> unit
    {!Pervasives.input_binary_int} function. The format is compatible across
    all machines for a given version of OCaml. *)
 
-val output_value : out_channel -> 'a -> unit
+val output_value : Pervasives.out_channel -> 'a -> unit
+  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
 (** Write the representation of a structured value of any type
    to a channel. Circularities and sharing inside the value
    are detected and preserved. The object can be read back,
@@ -747,26 +784,26 @@ val output_value : out_channel -> 'a -> unit
    {!Marshal} for more information. {!Pervasives.output_value} is equivalent
    to {!Marshal.to_channel} with an empty list of flags. *)
 
-val seek_out : out_channel -> int -> unit
+val seek_out : Pervasives.out_channel -> int -> unit
   [@@deprecated "[since 2014-10] Use [Out_channel]"]
 (** [seek_out chan pos] sets the current writing position to [pos]
    for channel [chan]. This works only for regular files. On
    files of other kinds (such as terminals, pipes and sockets),
    the behavior is unspecified. *)
 
-val pos_out : out_channel -> int
+val pos_out : Pervasives.out_channel -> int
   [@@deprecated "[since 2014-10] Use [Out_channel]"]
 (** Return the current writing position for the given channel.  Does
     not work on channels opened with the [Open_append] flag (returns
     unspecified results). *)
 
-val out_channel_length : out_channel -> int
+val out_channel_length : Pervasives.out_channel -> int
   [@@deprecated "[since 2014-10] Use [Out_channel]"]
 (** Return the size (number of characters) of the regular file
    on which the given channel is opened.  If the channel is opened
     on a file that is not a regular file, the result is meaningless. *)
 
-val close_out : out_channel -> unit
+val close_out : Pervasives.out_channel -> unit
   [@@deprecated "[since 2014-10] Use [Out_channel]"]
 (** Close the given channel, flushing all buffered write operations.
    Output functions raise a [Sys_error] exception when they are
@@ -775,10 +812,12 @@ val close_out : out_channel -> unit
    Note that [close_out] may raise [Sys_error] if the operating
    system signals an error when flushing or closing. *)
 
-val close_out_noerr : out_channel -> unit
+val close_out_noerr : Pervasives.out_channel -> unit
+  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
 (** Same as [close_out], but ignore all errors. *)
 
-val set_binary_mode_out : out_channel -> bool -> unit
+val set_binary_mode_out : Pervasives.out_channel -> bool -> unit
+  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
 (** [set_binary_mode_out oc true] sets the channel [oc] to binary
    mode: no translations take place during output.
    [set_binary_mode_out oc false] sets the channel [oc] to text
@@ -791,35 +830,41 @@ val set_binary_mode_out : out_channel -> bool -> unit
 
 (** {7 General input functions} *)
 
-val open_in : string -> in_channel
+val open_in : string -> Pervasives.in_channel
+  [@@deprecated "[since 2016-04] Use [Core.Std.In_channel]"]
 (** Open the named file for reading, and return a new input channel
    on that file, positionned at the beginning of the file. *)
 
-val open_in_bin : string -> in_channel
+val open_in_bin : string -> Pervasives.in_channel
+  [@@deprecated "[since 2016-04] Use [Core.Std.In_channel]"]
 (** Same as {!Pervasives.open_in}, but the file is opened in binary mode,
    so that no translation takes place during reads. On operating
    systems that do not distinguish between text mode and binary
    mode, this function behaves like {!Pervasives.open_in}. *)
 
-val open_in_gen : open_flag list -> int -> string -> in_channel
+val open_in_gen : Pervasives.open_flag list -> int -> string -> Pervasives.in_channel
+  [@@deprecated "[since 2016-04] Use [Core.Std.In_channel]"]
 (** [open_in_gen mode perm filename] opens the named file for reading,
    as described above. The extra arguments
    [mode] and [perm] specify the opening mode and file permissions.
    {!Pervasives.open_in} and {!Pervasives.open_in_bin} are special
    cases of this function. *)
 
-val input_char : in_channel -> char
+val input_char : Pervasives.in_channel -> char
+  [@@deprecated "[since 2016-04] Use [Core.Std.In_channel]"]
 (** Read one character from the given input channel.
-   Raise [End_of_file] if there are no more characters to read. *)
+    Raise [End_of_file] if there are no more characters to read. *)
 
-val input_line : in_channel -> string
+val input_line : Pervasives.in_channel -> string
+  [@@deprecated "[since 2016-04] Use [Core.Std.In_channel]"]
 (** Read characters from the given input channel, until a
    newline character is encountered. Return the string of
    all characters read, without the newline character at the end.
    Raise [End_of_file] if the end of the file is reached
    at the beginning of line. *)
 
-val input : in_channel -> bytes -> int -> int -> int
+val input : Pervasives.in_channel -> bytes -> int -> int -> int
+  [@@deprecated "[since 2016-04] Use [Core.Std.In_channel]"]
 (** [input ic buf pos len] reads up to [len] characters from
    the given channel [ic], storing them in byte sequence [buf], starting at
    character number [pos].
@@ -836,7 +881,8 @@ val input : in_channel -> bytes -> int -> int -> int
    Exception [Invalid_argument "input"] is raised if [pos] and [len]
    do not designate a valid range of [buf]. *)
 
-val really_input : in_channel -> bytes -> int -> int -> unit
+val really_input : Pervasives.in_channel -> bytes -> int -> int -> unit
+  [@@deprecated "[since 2016-04] Use [Core.Std.In_channel]"]
 (** [really_input ic buf pos len] reads [len] characters from channel [ic],
    storing them in byte sequence [buf], starting at character number [pos].
    Raise [End_of_file] if the end of file is reached before [len]
@@ -844,41 +890,45 @@ val really_input : in_channel -> bytes -> int -> int -> unit
    Raise [Invalid_argument "really_input"] if
    [pos] and [len] do not designate a valid range of [buf]. *)
 
-val really_input_string : in_channel -> int -> string
+val really_input_string : Pervasives.in_channel -> int -> string
+  [@@deprecated "[since 2016-04] Use [Core.Std.In_channel]"]
 (** [really_input_string ic len] reads [len] characters from channel [ic]
    and returns them in a new string.
    Raise [End_of_file] if the end of file is reached before [len]
    characters have been read. *)
 
-val input_byte : in_channel -> int
+val input_byte : Pervasives.in_channel -> int
+  [@@deprecated "[since 2016-04] Use [Core.Std.In_channel]"]
 (** Same as {!Pervasives.input_char}, but return the 8-bit integer representing
    the character.
    Raise [End_of_file] if an end of file was reached. *)
 
-val input_binary_int : in_channel -> int
+val input_binary_int : Pervasives.in_channel -> int
+  [@@deprecated "[since 2016-04] Use [Core.Std.In_channel]"]
 (** Read an integer encoded in binary format (4 bytes, big-endian)
    from the given input channel. See {!Pervasives.output_binary_int}.
    Raise [End_of_file] if an end of file was reached while reading the
    integer. *)
 
-val input_value : in_channel -> 'a
+val input_value : Pervasives.in_channel -> 'a
+  [@@deprecated "[since 2016-04] Use [Core.Std.In_channel]"]
 (** Read the representation of a structured value, as produced
    by {!Pervasives.output_value}, and return the corresponding value.
    This function is identical to {!Marshal.from_channel};
    see the description of module {!Marshal} for more information,
    in particular concerning the lack of type safety. *)
 
-val seek_in : in_channel -> int -> unit
+val seek_in : Pervasives.in_channel -> int -> unit
   [@@deprecated "[since 2014-10] Use [In_channel]"]
 (** [seek_in chan pos] sets the current reading position to [pos]
    for channel [chan]. This works only for regular files. On
    files of other kinds, the behavior is unspecified. *)
 
-val pos_in : in_channel -> int
+val pos_in : Pervasives.in_channel -> int
   [@@deprecated "[since 2014-10] Use [In_channel]"]
 (** Return the current reading position for the given channel. *)
 
-val in_channel_length : in_channel -> int
+val in_channel_length : Pervasives.in_channel -> int
   [@@deprecated "[since 2014-10] Use [In_channel]"]
 (** Return the size (number of characters) of the regular file
     on which the given channel is opened.  If the channel is opened
@@ -887,17 +937,19 @@ val in_channel_length : in_channel -> int
     translations that can be performed when reading from a channel
     opened in text mode. *)
 
-val close_in : in_channel -> unit
+val close_in : Pervasives.in_channel -> unit
   [@@deprecated "[since 2014-10] Use [In_channel]"]
 (** Close the given channel.  Input functions raise a [Sys_error]
   exception when they are applied to a closed input channel,
   except [close_in], which does nothing when applied to an already
   closed channel. *)
 
-val close_in_noerr : in_channel -> unit
+val close_in_noerr : Pervasives.in_channel -> unit
+  [@@deprecated "[since 2016-04] Use [Core.Std.In_channel]"]
 (** Same as [close_in], but ignore all errors. *)
 
-val set_binary_mode_in : in_channel -> bool -> unit
+val set_binary_mode_in : Pervasives.in_channel -> bool -> unit
+  [@@deprecated "[since 2016-04] Use [Core.Std.In_channel]"]
 (** [set_binary_mode_in ic true] sets the channel [ic] to binary
    mode: no translations take place during input.
    [set_binary_mode_out ic false] sets the channel [ic] to text
@@ -912,13 +964,14 @@ val set_binary_mode_in : in_channel -> bool -> unit
 
 module LargeFile :
   sig
-    val seek_out : out_channel -> int64 -> unit
-    val pos_out : out_channel -> int64
-    val out_channel_length : out_channel -> int64
-    val seek_in : in_channel -> int64 -> unit
-    val pos_in : in_channel -> int64
-    val in_channel_length : in_channel -> int64
+    val seek_out : Pervasives.out_channel -> int64 -> unit
+    val pos_out : Pervasives.out_channel -> int64
+    val out_channel_length : Pervasives.out_channel -> int64
+    val seek_in : Pervasives.in_channel -> int64 -> unit
+    val pos_in : Pervasives.in_channel -> int64
+    val in_channel_length : Pervasives.in_channel -> int64
   end
+  [@@deprecated "[since 2016-04] Use [Core.Std.In_channel] and [Core.Std.Out_channel]"]
 (** Operations on large files.
   This sub-module provides 64-bit variants of the channel functions
   that manipulate file positions and file sizes.  By representing
@@ -1076,12 +1129,12 @@ val at_exit : (unit -> unit) -> unit
 
 (**/**)
 
-(* The following is for system use only. Do not call directly. *)
+(** The following is for system use only. Do not call directly. *)
 
 val valid_float_lexem : string -> string
   [@@deprecated "[since 2015-11] Do not use."]
 
-val unsafe_really_input : in_channel -> bytes -> int -> int -> unit
+val unsafe_really_input : Pervasives.in_channel -> bytes -> int -> int -> unit
   [@@deprecated "[since 2015-11] Do not use."]
 
 val do_at_exit : unit -> unit

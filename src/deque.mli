@@ -23,7 +23,7 @@ include Container.        S1 with type 'a t := 'a t
     [false]. *)
 val create
   :  ?initial_length:int  (** defaults to 7 *)
-  -> ?never_shrink:bool   (* see comment above *)
+  -> ?never_shrink:bool   (** see comment above *)
   -> unit
   -> _ t
 

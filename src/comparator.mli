@@ -46,3 +46,32 @@ module Make1 (M : sig
   val compare : 'a t -> 'a t -> int
   val sexp_of_t : _ t -> Sexp.t
 end) : S1 with type 'a t := 'a M.t
+
+module Stable : sig
+  module V1 : sig
+    type nonrec ('a, 'b) t = ('a, 'b) t =
+      private
+      { compare   : 'a -> 'a -> int
+      ; sexp_of_t : 'a -> Sexp.t
+      }
+
+    type ('a, 'b) comparator = ('a, 'b) t
+
+    (** The following module types and functors may be used to define stable modules *)
+
+    module type S = sig
+      type t
+      type comparator_witness
+      val comparator : (t, comparator_witness) comparator
+    end
+
+    module type S1 = sig
+      type 'a t
+      type comparator_witness
+      val comparator : ('a t, comparator_witness) comparator
+    end
+
+    module Make  : module type of Make
+    module Make1 : module type of Make1
+  end
+end

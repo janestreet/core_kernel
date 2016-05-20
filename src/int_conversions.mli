@@ -51,6 +51,8 @@ val int64_to_int32_exn     : int64     -> int32
 val int64_to_nativeint     : int64     -> nativeint option
 val int64_to_nativeint_exn : int64     -> nativeint
 
+val int64_fit_on_int63_exn : int64     -> unit
+
 val nativeint_to_int       : nativeint -> int option
 val nativeint_to_int_exn   : nativeint -> int
 val nativeint_to_int32     : nativeint -> int32 option
@@ -82,6 +84,7 @@ end
 
 module Make_hex (I : sig
                    type t [@@deriving bin_io, compare, typerep]
+
                    (** [to_string] and [of_string] convert between [t] and unsigned,
                        unprefixed hexadecimal *)
                    val to_string : t -> string
@@ -91,9 +94,9 @@ module Make_hex (I : sig
                    val neg : t -> t
                    val module_name : string
                  end)
-  (** in the output, [to_string], [of_string], [sexp_of_t], and [t_of_sexp] convert
-      between [t] and signed hexadecimal with an optional "0x" or "0X" prefix. *)
   : Int_intf.Hexable with type t := I.t
+(** in the output, [to_string], [of_string], [sexp_of_t], and [t_of_sexp] convert
+    between [t] and signed hexadecimal with an optional "0x" or "0X" prefix. *)
 
 (** global ref affecting whether the [sexp_of_t] returned by [Make]
     is consistent with the [to_string] input or the [to_string_hum] output *)
