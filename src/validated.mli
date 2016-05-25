@@ -1,5 +1,5 @@
 
 (** See {!Validated_intf} for documentation. *)
 
-include Validated_intf.S
+include Validated_intf.Validated
 

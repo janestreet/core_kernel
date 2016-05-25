@@ -26,7 +26,6 @@ module Container                            = Container
 module Day_of_week                          = Day_of_week
 module Debug                                = Debug
 module Deque                                = Deque
-module Dequeue                              = Dequeue
 module Doubly_linked                        = Doubly_linked
 module Either                               = Either
 module Equal                                = Equal
@@ -125,7 +124,6 @@ module With_return                          = With_return
 module Word_size                            = Word_size
 
 module type Unique_id = Unique_id.Id
-module type Validated = Validated.Validated
 
 include T
 

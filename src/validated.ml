@@ -6,9 +6,9 @@ module type Raw = Raw
 
 type ('raw, 'witness) t = 'raw
 
-module type Validated = Validated
+module type S = S
   with type ('a, 'b) validated := ('a, 'b) t
-module type Validated_binable = Validated_binable
+module type S_binable = S_binable
   with type ('a, 'b) validated := ('a, 'b) t
 
 let raw t = t
@@ -70,9 +70,9 @@ let%test_module _ = (module struct
 
   let does_raise = Exn.does_raise
 
-  (* The [: Validated] is to remind us to add a unit test whenever the [Validated]
+  (* The [: S] is to remind us to add a unit test whenever the [S]
      interface changes. *)
-  module M : Validated with type raw := int = struct
+  module M : S with type raw := int = struct
 
     module M = Make (struct
       let here = [%here]
