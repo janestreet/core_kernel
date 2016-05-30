@@ -73,6 +73,9 @@ val add_substring : t -> string -> int -> int -> unit
 (** [add_substring b s ofs len] takes [len] characters from offset
    [ofs] in string [s] and appends them at the end of the buffer [b]. *)
 
+val add_bigstring : t -> Bigstring.t -> unit
+(** [add_bigstring b s] appends the bigstring [s] at the end of the buffer [b]. *)
+
 val add_substitute : t -> (string -> string) -> string -> unit
 (** [add_substitute b f s] appends the string pattern [s] at the end
    of the buffer [b] with substitution.

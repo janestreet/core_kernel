@@ -87,6 +87,14 @@ let add_substring buf src src_pos len =
   buf.pos <- new_pos;
 ;;
 
+let add_bigstring buf src =
+  let len = Bigstring.length src in
+  let new_pos = buf.pos + len in
+  if new_pos > buf.len then resize buf len;
+  Bigstring.blito ~src ~src_len:len ~dst:buf.bstr ~dst_pos:buf.pos ();
+  buf.pos <- new_pos;
+;;
+
 let add_string buf src =
   let len = String.length src in
   let new_pos = buf.pos + len in

@@ -40,8 +40,12 @@ end
 module type Syntax = sig
   type 'a t
   module Let_syntax : sig
-    (** convenient to have in scope when programming with a monad *)
+
+    (** These are convenient to have in scope when programming with a monad *)
+
     val return : 'a -> 'a t
+    include Infix with type 'a t := 'a t
+
     module Let_syntax : sig
       val return : 'a -> 'a t
       val bind : 'a t -> ('a -> 'b t) -> 'b t
@@ -119,6 +123,7 @@ module type Syntax2 = sig
 
   module Let_syntax : sig
     val return : 'a -> ('a, 'e) t
+    include Infix2 with type ('a,'e) t := ('a,'e) t
     module Let_syntax : sig
       val return : 'a -> ('a, 'e) t
       val bind : ('a, 'e) t -> ('a -> ('b, 'e) t) -> ('b, 'e) t

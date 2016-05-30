@@ -44,6 +44,7 @@ include Applicative.Make (struct
 
 module Let_syntax = struct
   let return = return
+  include Monad_infix
   module Let_syntax = struct
     let return = return
     let map    = map

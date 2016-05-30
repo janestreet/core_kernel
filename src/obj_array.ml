@@ -62,7 +62,8 @@ let set t i obj =
     (* It is OK to skip [caml_modify] if both the old and new values are integers. *)
     Array.unsafe_set (Obj.magic (t : t) : int array) i (Obj.obj obj : int)
   else if not (phys_equal old_obj obj)
-  then Array.unsafe_set t i obj
+  then
+    Array.unsafe_set t i obj
 ;;
 
 let unsafe_set t i obj =

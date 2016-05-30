@@ -663,8 +663,11 @@ end = struct
 
 end
 
+open Ppx_hash_lib.Std.Hash.Builtin
+
 module Int_key = struct
   include Int
+  let hash s = [%hash: int] s
   let module_name = "Int"
 end
 
@@ -679,6 +682,7 @@ end
 
 module String_key = struct
   include String
+  let hash = [%hash: string]
   let module_name = "String"
   let of_int_exn i = sprintf "%016x" i
 end
@@ -692,9 +696,7 @@ module Compound_key = struct
     ; string : string
     ; tuple  : bool option * char
     }
-  [@@deriving sexp, compare]
-
-  let hash = Hashtbl.hash
+  [@@deriving sexp, compare, hash]
 
   let of_int_exn int =
     let option =

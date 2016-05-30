@@ -19,7 +19,10 @@ module Make2 (M : Basic2) : S2 with type ('a, 'e) t := ('a, 'e) M.t = struct
   include Monad_infix
 
   module Let_syntax = struct
+
     let return = return
+    include Monad_infix
+
     module Let_syntax = struct
       let return = return
       let bind   = bind
