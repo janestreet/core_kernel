@@ -363,6 +363,18 @@ end = struct
     let t = since_unix_epoch_or_zero () in
     if t <> zero then t else gettime_failed ()
   ;;
+
+  let random ?state () =
+    Int63.random ?state (max_value     + Int63.one) -
+    Int63.random ?state (neg min_value + Int63.one)
+  ;;
+
+  let%test_unit "random smoke" =
+    let state = Random.State.make [| |] in
+    for _ = 1 to 1000 do
+      ignore (random ~state () : t)
+    done
+  ;;
 end
 
 type t = Span.t (* since the Unix epoch (1970-01-01 00:00:00 UTC) *)
@@ -415,6 +427,16 @@ let next_multiple ?(can_equal_after = false) ~base ~after ~interval () =
     then next
     else add next interval
   end
+;;
+
+let random ?state () = Span.random ?state ()
+;;
+
+let%test_unit "random smoke" =
+  let state = Random.State.make [| |] in
+  for _ = 1 to 1000 do
+    ignore (random ~state () : t)
+  done
 ;;
 
 module Alternate_sexp = struct

@@ -62,3 +62,4 @@ let () = assert (Core_int.(=) num_bits 63)
 let random ?(state = Core_random.State.default) bound =
   of_int64_exn (Core_random.State.int64 state (to_int64 bound))
 ;;
+let%test "typical random 0" = Exn.does_raise (fun () -> random zero)

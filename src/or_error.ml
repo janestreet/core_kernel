@@ -50,7 +50,7 @@ module Let_syntax = struct
     let map    = map
     let bind   = bind
     let both   = both (* from Applicative.Make *)
-    module Open_on_rhs  = struct let return = return end
+    module Open_on_rhs  = struct end
   end
 end
 

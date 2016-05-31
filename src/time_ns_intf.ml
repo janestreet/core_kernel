@@ -116,6 +116,8 @@ module type Span = sig
 
   val since_unix_epoch : unit -> t
 
+  val random : ?state:Random.State.t -> unit -> t
+
   (** Note that we expose a sexp format that is not the one exposed in [Core]. *)
   module Alternate_sexp : sig
     type nonrec t = t [@@deriving sexp]
@@ -188,5 +190,7 @@ module type Time_ns = sig
     -> interval:Span.t
     -> unit
     -> t
+
+  val random : ?state:Random.State.t -> unit -> t
 
 end

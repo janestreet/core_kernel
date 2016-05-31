@@ -28,7 +28,7 @@ module Make2 (M : Basic2) : S2 with type ('a, 'e) t := ('a, 'e) M.t = struct
       let bind   = bind
       let map    = map
       let both a b = a >>= fun a -> b >>| fun b -> (a, b)
-      module Open_on_rhs  = struct let return = return end
+      module Open_on_rhs  = struct end
     end
   end
 
