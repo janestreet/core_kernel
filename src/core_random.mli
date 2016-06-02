@@ -11,6 +11,23 @@
     The fact that we construct our own default random state means that code using
     Core.Std.Random and code using OCaml's Random will not share the default state. *)
 
+(*_
+(***********************************************************************)
+(*                                                                     *)
+(*                           Objective Caml                            *)
+(*                                                                     *)
+(*              Damien Doligez, projet Para, INRIA Rocquencourt        *)
+(*                                                                     *)
+(*  Copyright 1996 Institut National de Recherche en Informatique et   *)
+(*  en Automatique.  All rights reserved.  This file is distributed    *)
+(*  under the terms of the GNU Library General Public License, with    *)
+(*  the special exception on linking described in file ../LICENSE.     *)
+(*                                                                     *)
+(***********************************************************************)
+
+(* $Id: random.mli 10457 2010-05-21 18:30:12Z doligez $ *)
+*)
+
 (** Pseudo-random number generators (PRNG). *)
 
 (** {6 Basic functions} *)

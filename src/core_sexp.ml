@@ -11,8 +11,8 @@ module O = struct
 end
 
 module T : sig
-  include Interfaces.Sexpable with type t := Sexp.t
-  include Interfaces.Binable  with type t := Sexp.t
+  include Sexpable.S         with type t := Sexp.t
+  include Bin_prot.Binable.S with type t := Sexp.t
   val compare : t -> t -> int
 end = struct
   type t = Sexp.t = Atom of string | List of t list [@@deriving bin_io, compare]

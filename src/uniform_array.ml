@@ -74,16 +74,20 @@ let create ~len x =
   done;
   res
 
-include Sexpable.Of_sexpable1(List)(struct
+(* It is not safe for [to_array] to be the identity function because we have code that
+   relies on [float array]s being unboxed, for example in [bin_write_array]. *)
+let to_array t = Core_array.init (length t) ~f:(fun i -> unsafe_get t i)
+
+include Sexpable.Of_sexpable1(Core_array)(struct
     type nonrec 'a t = 'a t
-    let to_sexpable = to_list
-    let of_sexpable = of_list
+    let to_sexpable = to_array
+    let of_sexpable = of_array
   end)
 
-include Binable.Of_binable1(List)(struct
+include Binable.Of_binable1(Core_array)(struct
     type nonrec 'a t = 'a t
-    let to_binable = to_list
-    let of_binable = of_list
+    let to_binable = to_array
+    let of_binable = of_array
   end)
 
 module Sequence = struct

@@ -1,5 +1,3 @@
-open Interfaces
-
 module type Round = sig
   type t
 
@@ -40,7 +38,7 @@ module type Hexable = sig
   module Hex : sig
     type nonrec t = t [@@deriving bin_io, sexp, compare, typerep]
 
-    include Stringable with type t := t
+    include Stringable.S with type t := t
 
     val to_string_hum : ?delimiter:char -> t -> string
   end
@@ -49,9 +47,9 @@ end
 module type S = sig
   type t [@@deriving bin_io, sexp, typerep]
 
-  include Floatable                with type t := t
-  include Intable                  with type t := t
-  include Identifiable             with type t := t
+  include Floatable.S              with type t := t
+  include Intable.S                with type t := t
+  include Identifiable.S           with type t := t
   include Comparable.With_zero     with type t := t
   include Hexable                  with type t := t
   include Quickcheckable.S_bounded with type t := t

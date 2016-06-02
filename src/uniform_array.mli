@@ -29,6 +29,12 @@ val map : 'a t -> f:('a -> 'b) -> 'b t
 val iter : 'a t -> f:('a -> unit) -> unit
 
 val of_array : 'a array -> 'a t
+
+(** [to_array t] returns a fresh array with the same contents as [t], rather than
+    returning a reference to the underlying array. *)
+val to_array : 'a t -> 'a array
+
+val of_list : 'a list -> 'a t
 val to_list : 'a t -> 'a list
 
 include Blit.S1 with type 'a t := 'a t

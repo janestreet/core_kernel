@@ -1,4 +1,3 @@
-open Interfaces
 open Sexplib
 
 (** Code for managing s-expressions *)
@@ -10,9 +9,9 @@ module O : sig
   type sexp = Sexp.t = Atom of string | List of t list
 end
 
-include Comparable     with type t := t
-include Stringable     with type t := t
-include Quickcheckable with type t := t
+include Comparable.S     with type t := t
+include Stringable.S     with type t := t
+include Quickcheckable.S with type t := t
 
 include (module type of struct include Sexp end) with type t := t
 

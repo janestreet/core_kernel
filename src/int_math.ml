@@ -1,5 +1,4 @@
 open Common
-open Interfaces
 
 let negative_exponent () =
   Core_printf.invalid_argf "exponent can not be negative" ()
@@ -217,8 +216,8 @@ let%test_module "popcount" =
 
 module type T = sig
   type t
-  include Floatable with type t := t
-  include Stringable with type t := t
+  include Floatable.S  with type t := t
+  include Stringable.S with type t := t
 
   val ( + ) : t -> t -> t
   val ( - ) : t -> t -> t
