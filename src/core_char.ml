@@ -115,11 +115,17 @@ let lowercase = Char.lowercase
 
 let uppercase = Char.uppercase
 
-let is_lowercase t = 'a' <= t && t <= 'z'
+let is_lowercase = function
+  | 'a' .. 'z' -> true
+  | _ -> false
 
-let is_uppercase t = 'A' <= t && t <= 'Z'
+let is_uppercase = function
+  | 'A' .. 'Z' -> true
+  | _ -> false
 
-let is_print t = ' ' <= t && t <= '~'
+let is_print = function
+  | ' ' .. '~' -> true
+  | _ -> false
 
 let is_whitespace = function
   | '\t'
@@ -142,11 +148,19 @@ let%test _ =      is_whitespace '\013'  (* '\r': carriage return *)
 let%test _ = not (is_whitespace '\014') (* shift out *)
 let%test _ =      is_whitespace '\032'  (* space *)
 
-let is_digit t = '0' <= t && t <= '9'
+let is_digit = function
+  | '0' .. '9' -> true
+  | _ -> false
 
-let is_alpha t = is_lowercase t || is_uppercase t
+let is_alpha = function
+  | 'a' .. 'z' | 'A' .. 'Z' -> true
+  | _ -> false
 
-let is_alphanum t = is_alpha t || is_digit t
+(* Writing these out, instead of calling [is_alpha] and [is_digit], reduces
+   runtime by approx. 30% *)
+let is_alphanum = function
+  | 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' -> true
+  | _ -> false
 
 let get_digit_unsafe t = to_int t - to_int '0'
 
@@ -157,6 +171,20 @@ let get_digit_exn t =
 ;;
 
 let get_digit t = if is_digit t then Some (get_digit_unsafe t) else None
+
+let%bench_module "character classifiers" =
+  (module struct
+    let all_chars = Core_list.init 255 ~f:char_of_int
+
+    let%bench_fun "is_lowercase"  = let f = fun c -> ignore (is_lowercase c) in fun () -> List.iter all_chars ~f
+    let%bench_fun "is_uppercase"  = let f = fun c -> ignore (is_uppercase c)  in fun () -> List.iter all_chars ~f
+    let%bench_fun "is_print"      = let f = fun c -> ignore (is_print c)      in fun () -> List.iter all_chars ~f
+    let%bench_fun "is_whitespace" = let f = fun c -> ignore (is_whitespace c) in fun () -> List.iter all_chars ~f
+    let%bench_fun "is_digit"      = let f = fun c -> ignore (is_digit c)      in fun () -> List.iter all_chars ~f
+    let%bench_fun "is_alpha"      = let f = fun c -> ignore (is_alpha c)      in fun () -> List.iter all_chars ~f
+    let%bench_fun "is_alphanum"   = let f = fun c -> ignore (is_alphanum c)   in fun () -> List.iter all_chars ~f
+
+  end)
 
 module For_quickcheck = struct
 

@@ -14,6 +14,7 @@ module Binary_packing                       = Binary_packing
 module Binary_searchable                    = Binary_searchable
 module Blang                                = Blang
 module Blit                                 = Blit
+module Bounded_index                        = Bounded_index
 module Bounded_int_table                    = Bounded_int_table
 module Bucket                               = Bucket
 module Bus                                  = Bus
