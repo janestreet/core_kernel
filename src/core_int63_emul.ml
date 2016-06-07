@@ -177,6 +177,9 @@ include T
 
 let num_bits = 63
 
+let float_lower_bound = Float0.lower_bound_for_int num_bits
+let float_upper_bound = Float0.upper_bound_for_int num_bits
+
 let shift_right_logical = shift_right_logical
 let shift_right = shift_right
 let shift_left = shift_left
@@ -198,7 +201,14 @@ let one = wrap_exn Int64.one
 let zero = wrap_exn Int64.zero
 let compare = compare
 let to_float x = Int64.to_float (unwrap x)
-let of_float x = wrap_modulo (Int64.of_float x)
+let of_float_unchecked x = wrap_modulo (Int64.of_float x)
+let of_float t =
+  if t >= float_lower_bound && t <= float_upper_bound then
+    wrap_modulo (Int64.of_float t)
+  else
+    Common.invalid_argf "Int63.of_float: argument (%f) is out of range or NaN"
+      (Float0.box t)
+      ()
 let of_int64_exn = of_int64_exn
 let to_int64 = to_int64
 

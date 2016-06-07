@@ -1,4 +1,11 @@
-(** Floating-point representation and utilities. *)
+(** Floating-point representation and utilities.
+
+    If using 32-bit OCaml, you cannot quite assume operations act as you'd expect for IEEE
+    64-bit floats.  E.g., one can have [let x = ~-. (2. ** 62.) in x = x -. 1.] evaluate
+    to [false] while [let x = ~-. (2. ** 62.) in let y = x -. 1 in x = y] evaluates to
+    [true].  This is related to 80-bit registers being used for calculations; you can
+    force representation as a 64-bit value by let-binding.
+*)
 
 module Binable = Binable0
 
@@ -133,6 +140,8 @@ module type S = sig
   val iround_up_exn           : t -> int
   val iround_nearest_exn      : t -> int
 
+  val int63_round_down_exn    : t -> Core_int63.t
+  val int63_round_up_exn      : t -> Core_int63.t
   val int63_round_nearest_exn : t -> Core_int63.t
 
   (** If [f <= iround_lbound || f >= iround_ubound], then [iround*] functions will refuse

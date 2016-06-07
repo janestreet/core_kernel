@@ -67,12 +67,18 @@ include T
 
 let num_bits = Int_conversions.num_bits_int
 
-let to_float = Pervasives.float_of_int
+let float_lower_bound = Float0.lower_bound_for_int num_bits
+let float_upper_bound = Float0.upper_bound_for_int num_bits
 
+let to_float = Pervasives.float_of_int
+let of_float_unchecked = Pervasives.int_of_float
 let of_float f =
-  match Pervasives.classify_float f with
-  | FP_normal | FP_subnormal | FP_zero -> Pervasives.int_of_float f
-  | FP_infinite | FP_nan -> invalid_arg "Int.of_float on nan or inf"
+  if f >= float_lower_bound && f <= float_upper_bound then
+    Pervasives.int_of_float f
+  else
+    invalid_argf "Core_int.of_float: argument (%f) is out of range or NaN"
+      (Float0.box f)
+      ()
 
 module Replace_polymorphic_compare = struct
   let min (x : t) y = if x < y then x else y

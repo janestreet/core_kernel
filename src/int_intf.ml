@@ -183,6 +183,12 @@ module type S = sig
   val of_nativeint_exn : nativeint -> t
   val to_nativeint_exn : t -> nativeint
 
+  (** [of_float_unchecked] truncates the given floating point number to an integer,
+      rounding towards zero.
+      The result is unspecified if the argument is nan or falls outside the range
+      of representable integers. *)
+  val of_float_unchecked : float -> t
+
 end
 
 let%test_module _ = (module struct

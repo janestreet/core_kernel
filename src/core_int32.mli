@@ -12,13 +12,22 @@
 
 include Int_intf.S with type t = int32
 
-val bits_of_float : float -> t
-val float_of_bits : t -> float
-
 val of_int : int -> t option
 val to_int : t -> int option
+
 val of_int32 : int32 -> t
 val to_int32 : t -> int32
-val of_int64 : int64 -> t option
+
 val of_nativeint : nativeint -> t option
 val to_nativeint : t -> nativeint
+
+val of_int64 : int64 -> t option
+
+(** Round a regular 64-bit OCaml float to a 32-bit IEEE-754 'single' float, and return its
+    bit representation.  We make no promises about the exact rounding behavior, or what
+    happens in case of over- or underflow. *)
+val bits_of_float : float -> t
+
+(** Create a 32-bit IEEE-754 'single' float from the given bits, and convert it to a
+    regular 64-bit OCaml float *)
+val float_of_bits : t -> float

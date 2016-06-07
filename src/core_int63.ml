@@ -3,6 +3,7 @@ module type Int_or_more = sig
   include Int_intf.S
   val of_int : int -> t
   val to_int : t -> int option
+  val of_float_unchecked : float -> t
 end
 #ifdef JSC_ARCH_SIXTYFOUR
 include

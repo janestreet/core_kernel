@@ -11,6 +11,17 @@ include Container.S1      with type 'a t := 'a t
 include Monad.S           with type 'a t := 'a t
 include Quickcheckable.S1 with type 'a t := 'a t
 
+(** [Or_unequal_lengths] is used for functions that take multiple lists and that only make
+    sense if all the lists have the same length, e.g. [iter2], [map3].  Such functions
+    check the list lengths prior to doing anything else, and return [Unequal_lengths] if
+    not all the lists have the same length. *)
+module Or_unequal_lengths : sig
+  type 'a t =
+    | Ok of 'a
+    | Unequal_lengths
+  [@@deriving sexp_of]
+end
+
 (** [of_list] is the identity function.  It is useful so that the [List] module matches
     the same signature that other container modules do, namely:
 
@@ -49,38 +60,38 @@ val rev_map : 'a t -> f:('a -> 'b) -> 'b t
 *)
 val fold_left : 'a t -> init:'b -> f:('b -> 'a -> 'b) -> 'b
 
-(** [List.iter2_exn [a1; ...; an] [b1; ...; bn] ~f] calls in turn
+(** [List.iter2 [a1; ...; an] [b1; ...; bn] ~f] calls in turn
     [f a1 b1; ...; f an bn].
-    Raise if the two lists have different lengths. *)
+    The exn version will raise if the two lists have different lengths. *)
 val iter2_exn : 'a t -> 'b t -> f:('a -> 'b -> unit) -> unit
+val iter2     : 'a t -> 'b t -> f:('a -> 'b -> unit) -> unit Or_unequal_lengths.t
 
 (** [List.rev_map2_exn l1 l2 ~f] gives the same result as
     [List.rev (List.map2_exn l1 l2 ~f)], but is more efficient. *)
-val rev_map2_exn: 'a t -> 'b t -> f:('a -> 'b -> 'c) -> 'c t
+val rev_map2_exn : 'a t -> 'b t -> f:('a -> 'b -> 'c) -> 'c t
+val rev_map2     : 'a t -> 'b t -> f:('a -> 'b -> 'c) -> 'c t Or_unequal_lengths.t
 
-(** [List.fold2_exn ~f ~init:a [b1; ...; bn] [c1; ...; cn]] is
-   [f (... (f (f a b1 c1) b2 c2) ...) bn cn].
-   Raise if the two lists have different lengths. *)
-val fold2_exn
-  :  'a t
-  -> 'b t
-  -> init:'c
-  -> f:('c -> 'a -> 'b -> 'c)
-  -> 'c
+(** [List.fold2 ~f ~init:a [b1; ...; bn] [c1; ...; cn]] is
+    [f (... (f (f a b1 c1) b2 c2) ...) bn cn].
+    The exn version will raise if the two lists have different lengths. *)
+val fold2_exn : 'a t -> 'b t -> init:'c -> f:('c -> 'a -> 'b -> 'c) -> 'c
+val fold2     : 'a t -> 'b t -> init:'c -> f:('c -> 'a -> 'b -> 'c) -> 'c Or_unequal_lengths.t
 
 (** Like {!List.for_all}, but passes the index as an argument. *)
 val for_alli : 'a t -> f:(int -> 'a -> bool) -> bool
 
 (** Like {!List.for_all}, but for a two-argument predicate.
-   Raise if the two lists have different lengths. *)
+   The exn version will raise if the two lists have different lengths. *)
 val for_all2_exn : 'a t -> 'b t -> f:('a -> 'b -> bool) -> bool
+val for_all2     : 'a t -> 'b t -> f:('a -> 'b -> bool) -> bool Or_unequal_lengths.t
 
 (** Like {!List.exists}, but passes the index as an argument. *)
 val existsi : 'a t -> f:(int -> 'a -> bool) -> bool
 
-(** Like {!List.exists}, but for a two-argument predicate.  Raise
-    if the end of one list is reached before the end of the other. *)
+(** Like {!List.exists}, but for a two-argument predicate.
+    The exn version will raise if the two lists have different lengths. *)
 val exists2_exn : 'a t -> 'b t -> f:('a -> 'b -> bool) -> bool
+val exists2     : 'a t -> 'b t -> f:('a -> 'b -> bool) -> bool Or_unequal_lengths.t
 
 (** [filter l ~f] returns all the elements of the list [l] that satisfy the predicate [p].
     The order of the elements in the input list is preserved. *)
@@ -172,12 +183,18 @@ val concat_map : 'a t -> f:('a -> 'b t) -> 'b t
 *)
 val concat_mapi : 'a t -> f:(int -> 'a -> 'b t) -> 'b t
 
-(** [List.map2_exn [a1; ...; an] [b1; ...; bn] ~f] is [[f a1 b1; ...; f an bn]].  Raise
-    if the two lists have different lengths. *)
-val map2_exn :'a t -> 'b t ->  f:('a -> 'b -> 'c) -> 'c t
+(** [List.map2 [a1; ...; an] [b1; ...; bn] ~f] is [[f a1 b1; ...; f an bn]].
+    The exn version will raise if the two lists have different lengths. *)
+val map2_exn :'a t -> 'b t -> f:('a -> 'b -> 'c) -> 'c t
+val map2     :'a t -> 'b t -> f:('a -> 'b -> 'c) -> 'c t Or_unequal_lengths.t
 
+(** analogous to [rev_map2] *)
 val rev_map3_exn : 'a t -> 'b t -> 'c t -> f:('a -> 'b -> 'c -> 'd) -> 'd t
+val rev_map3     : 'a t -> 'b t -> 'c t -> f:('a -> 'b -> 'c -> 'd) -> 'd t Or_unequal_lengths.t
+
+(** analogous to [map2] *)
 val map3_exn : 'a t -> 'b t -> 'c t -> f:('a -> 'b -> 'c -> 'd) -> 'd t
+val map3     : 'a t -> 'b t -> 'c t -> f:('a -> 'b -> 'c -> 'd) -> 'd t Or_unequal_lengths.t
 
 (** [rev_map_append l1 l2 ~f] reverses [l1] mapping [f] over each
     element, and appends the result to the front of [l2]. *)
@@ -360,7 +377,10 @@ val filter_opt : 'a option t -> 'a t
 *)
 module Assoc : sig
 
-  type ('a, 'b) t = ('a * 'b) list [@@deriving bin_io, sexp, compare]
+  type ('a, 'b) t = ('a * 'b) list [@@deriving bin_io, sexp]
+
+  val compare : ('a -> 'a -> int) -> ('b -> 'b -> int) -> ('a * 'b) list -> ('a * 'b) list -> int
+    [@@deprecated "[since 2016-06] This does not respect the equivalence class promised by List.Assoc. Use List.compare directly if that's what you want."]
 
   val add      : ('a, 'b) t -> ?equal:('a -> 'a -> bool) -> 'a -> 'b -> ('a, 'b) t
   val find     : ('a, 'b) t -> ?equal:('a -> 'a -> bool) -> 'a -> 'b option

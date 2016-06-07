@@ -17,6 +17,8 @@ end
 include T
 
 let num_bits = Word_size.num_bits Word_size.word_size
+let float_lower_bound = Float0.lower_bound_for_int num_bits
+let float_upper_bound = Float0.upper_bound_for_int num_bits
 
 let shift_right_logical = shift_right_logical
 let shift_right = shift_right
@@ -36,7 +38,14 @@ let minus_one = minus_one
 let one = one
 let zero = zero
 let to_float = to_float
-let of_float = of_float
+let of_float_unchecked = of_float
+let of_float f =
+  if f >= float_lower_bound && f <= float_upper_bound then
+    of_float f
+  else
+    Common.invalid_argf "Nativeint.of_float: argument (%f) is out of range or NaN"
+      (Float0.box f)
+      ()
 
 include Comparable.Validate_with_zero (struct
   include T

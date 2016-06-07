@@ -12,6 +12,13 @@ module T = struct
   type 'a t = 'a list [@@deriving sexp, bin_io, typerep]
 end
 
+module Or_unequal_lengths = struct
+  type 'a t =
+    | Ok of 'a
+    | Unequal_lengths
+  [@@deriving sexp_of]
+end
+
 include T
 
 let of_list t = t
@@ -259,47 +266,82 @@ let rev_map t ~f = List.rev_map t ~f
 
 exception Length_mismatch of string * int * int [@@deriving sexp]
 
-let check_length2 name l1 l2 =
+let check_length2_exn name l1 l2 =
   let n1 = length l1 in
   let n2 = length l2 in
-  if n1 <> n2 then
-    raise (invalid_argf "length mismatch in %s: %d <> %d " name n1 n2 ())
+  if n1 <> n2
+  then raise (invalid_argf "length mismatch in %s: %d <> %d " name n1 n2 ())
 ;;
 
-let check_length3 name l1 l2 l3 =
+let check_length3_exn name l1 l2 l3 =
   let n1 = length l1 in
   let n2 = length l2 in
   let n3 = length l3 in
-  if n1 <> n2 || n2 <> n3 then
-    raise (invalid_argf "length mismatch in %s: %d <> %d || %d <> %d"
-             name n1 n2 n2 n3 ())
+  if n1 <> n2 || n2 <> n3
+  then raise (invalid_argf "length mismatch in %s: %d <> %d || %d <> %d"
+                name n1 n2 n2 n3 ())
 ;;
+
+let check_length2 l1 l2 ~f =
+  if length l1 <> length l2
+  then Or_unequal_lengths.Unequal_lengths
+  else Ok (f l1 l2)
+;;
+
+let check_length3 l1 l2 l3 ~f =
+  let n1 = length l1 in
+  let n2 = length l2 in
+  let n3 = length l3 in
+  if n1 <> n2 || n2 <> n3
+  then Or_unequal_lengths.Unequal_lengths
+  else Ok (f l1 l2 l3)
+;;
+
+let iter2_ok l1 l2 ~f = List.iter2 l1 l2 ~f
+
+let iter2 l1 l2 ~f = check_length2 l1 l2 ~f:(iter2_ok ~f)
 
 let iter2_exn l1 l2 ~f =
-  check_length2 "iter2_exn" l1 l2;
-  List.iter2 l1 l2 ~f;
+  check_length2_exn "iter2_exn" l1 l2;
+  iter2_ok l1 l2 ~f;
 ;;
+
+let rev_map2_ok l1 l2 ~f = List.rev_map2 l1 l2 ~f
+
+let rev_map2 l1 l2 ~f = check_length2 l1 l2 ~f:(rev_map2_ok ~f)
 
 let rev_map2_exn l1 l2 ~f  =
-  check_length2 "rev_map2_exn" l1 l2;
-  List.rev_map2 l1 l2 ~f;
+  check_length2_exn "rev_map2_exn" l1 l2;
+  rev_map2_ok l1 l2 ~f;
 ;;
+
+let fold2_ok l1 l2 ~init ~f = List.fold_left2 l1 l2 ~init ~f
+
+let fold2 l1 l2 ~init ~f = check_length2 l1 l2 ~f:(fold2_ok ~init ~f)
 
 let fold2_exn l1 l2 ~init ~f =
-  check_length2 "fold2_exn" l1 l2;
-  List.fold_left2 l1 l2 ~init ~f;
+  check_length2_exn "fold2_exn" l1 l2;
+  fold2_ok l1 l2 ~init ~f;
 ;;
 
+let for_all2_ok l1 l2 ~f = List.for_all2 l1 l2 ~f
+
+let for_all2 l1 l2 ~f = check_length2 l1 l2 ~f:(for_all2_ok ~f)
+
 let for_all2_exn l1 l2 ~f =
-  check_length2 "for_all2_exn" l1 l2;
-  List.for_all2 l1 l2 ~f;
+  check_length2_exn "for_all2_exn" l1 l2;
+  for_all2_ok l1 l2 ~f;
 ;;
 
 let%test _ = for_all2_exn [] [] ~f:(fun _ _ -> assert false)
 
+let exists2_ok l1 l2 ~f = List.exists2 l1 l2 ~f
+
+let exists2 l1 l2 ~f = check_length2 l1 l2 ~f:(exists2_ok ~f)
+
 let exists2_exn l1 l2 ~f =
-  check_length2 "exists2_exn" l1 l2;
-  List.exists2 l1 l2 ~f;
+  check_length2_exn "exists2_exn" l1 l2;
+  exists2_ok l1 l2 ~f;
 ;;
 
 let mem ?(equal = (=)) t a = List.exists t ~f:(equal a)
@@ -498,7 +540,14 @@ let%test_unit _ =
 
 let (>>|) l f = map l ~f
 
-let map2_exn l1 l2 ~f = List.rev (rev_map2_exn l1 l2 ~f)
+let map2_ok l1 l2 ~f = List.rev (rev_map2_ok l1 l2 ~f)
+
+let map2 l1 l2 ~f = check_length2 l1 l2 ~f:(map2_ok ~f)
+
+let map2_exn l1 l2 ~f =
+  check_length2_exn "map2_exn" l1 l2;
+  map2_ok l1 l2 ~f
+;;
 
 let%test _ = map2_exn ~f:(fun a b -> a, b) [1;2;3] ['a';'b';'c']
     = [(1,'a'); (2,'b'); (3,'c')]
@@ -507,18 +556,33 @@ let%test_unit _ =
   let long = Test_values.long1 () in
   ignore (map2_exn ~f:(fun _ _ -> ()) long long:unit list)
 
-let rev_map3_exn l1 l2 l3 ~f =
-  check_length3 "rev_map3" l1 l2 l3;
+let rev_map3_ok l1 l2 l3 ~f =
   let rec loop l1 l2 l3 ac =
     match (l1, l2, l3) with
     | ([], [], []) -> ac
     | (x1 :: l1, x2 :: l2, x3 :: l3) -> loop l1 l2 l3 (f x1 x2 x3 :: ac)
     | _ -> assert false
   in
-  loop l1 l2 l3 []
+  loop l1 l2 l3 [];
 ;;
 
-let map3_exn l1 l2 l3 ~f = List.rev (rev_map3_exn l1 l2 l3 ~f)
+let rev_map3 l1 l2 l3 ~f =
+  check_length3 l1 l2 l3 ~f:(rev_map3_ok ~f)
+;;
+
+let rev_map3_exn l1 l2 l3 ~f =
+  check_length3_exn "rev_map3_exn" l1 l2 l3;
+  rev_map3_ok l1 l2 l3 ~f
+;;
+
+let map3_ok l1 l2 l3 ~f = List.rev (rev_map3_ok l1 l2 l3 ~f)
+
+let map3 l1 l2 l3 ~f = check_length3 l1 l2 l3 ~f:(map3_ok ~f)
+
+let map3_exn l1 l2 l3 ~f =
+  check_length3_exn "map3_exn" l1 l2 l3;
+  map3_ok l1 l2 l3 ~f;
+;;
 
 let rec rev_map_append l1 l2 ~f =
   match l1 with
@@ -1053,7 +1117,10 @@ let partition_tf t ~f =
 
 module Assoc = struct
 
-  type ('a, 'b) t = ('a * 'b) list [@@deriving bin_io, sexp, compare]
+  type ('a, 'b) t = ('a * 'b) list [@@deriving bin_io, sexp]
+
+  let compare (type a) (type b) compare_a compare_b = [%compare: (a * b) list]
+    [@@deprecated "[since 2016-06] This does not respect the equivalence class promised by List.Assoc. Use List.compare directly if that's what you want."]
 
   let find t ?(equal=Poly.equal) key =
     match find t ~f:(fun (key', _) -> equal key key') with

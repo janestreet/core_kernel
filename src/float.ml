@@ -7,6 +7,7 @@ module Sexp = Sexplib.Sexp
 module String = Core_string
 open Core_printf
 
+include Float0
 #import "config.h"
 
 let failwiths = Error.failwiths
@@ -174,50 +175,6 @@ let max_finite_value = Pervasives.max_float
 let min_positive_subnormal_value = 2. ** -1074.
 let min_positive_normal_value = 2. ** -1022.
 
-let is_nan x = (x : t) <> x
-
-(* An order-preserving bijection between all floats except for NaNs, and 99.95% of
-   int64s.
-
-   Note we don't distinguish 0. and -0. as separate values here, they both map to 0L, which
-   maps back to 0.
-
-   This should work both on little-endian and high-endian CPUs.  Wikipedia says: "on
-   modern standard computers (i.e., implementing IEEE 754), one may in practice safely
-   assume that the endianness is the same for floating point numbers as for integers"
-   (http://en.wikipedia.org/wiki/Endianness#Floating-point_and_endianness).
-*)
-let to_int64_preserve_order t =
-  if is_nan t then
-    None
-  else
-  if t = 0. then (* also includes -0. *)
-    Some 0L
-  else
-  if t > 0. then
-    Some (Int64.bits_of_float t)
-  else
-    Some (Int64.neg (Int64.bits_of_float (~-. t)))
-;;
-
-let to_int64_preserve_order_exn x =
-  Option.value_exn (to_int64_preserve_order x)
-;;
-
-let of_int64_preserve_order x =
-    if x >= 0L then
-      Int64.float_of_bits x
-    else
-      ~-. (Int64.float_of_bits (Int64.neg x))
-;;
-
-let one_ulp dir t =
-  match to_int64_preserve_order t with
-  | None -> nan
-  | Some x ->
-    of_int64_preserve_order (Int64.add x (match dir with `Up -> 1L | `Down -> -1L))
-;;
-
 let%test_module _ = (module struct
 
   let test_both_ways a b =
@@ -316,26 +273,10 @@ let to_int = Core_int.of_float
 
 let of_int64 i = Int64.to_float i
 
-let to_int64 f =
-  let module P = Pervasives in
-  match P.classify_float f with
-  | P.FP_normal | P.FP_subnormal | P.FP_zero -> Int64.of_float f
-  | P.FP_infinite | P.FP_nan -> invalid_arg "Float.to_int64 on nan or inf"
+let to_int64 = Core_int64.of_float
 
-(* max_int/min_int are architecture dependent, e.g. +/- 2^30, +/- 2^62 if 32-bit, 64-bit
-   (respectively) while float is IEEE standard for double (52 significant bits).
-
-   In both cases, we want to guarantee that if [iround_lbound <= x <= iround_ubound],
-   then [int_of_float x] fits in an int.  2.0 ** 62.0 -. 512. is the greatest
-   representable double <= max_int on a 64-bit box, so we choose that for the upper
-   bound.  For the lower bound, [min_int] is already representable, so we use that.
-
-   Minor point: [iround_lbound] and [iround_ubound] are integers (in the mathematical
-   sense), so if [iround_lbound <= t <= iround_ubound], then
-   [iround_lbound <= floor t <= ceil t <= iround_ubound].
-*)
-let iround_lbound = of_int min_int
-let iround_ubound = min (of_int max_int) (2.0 ** 62.0 -. 512.)
+let iround_lbound = lower_bound_for_int Core_int.num_bits
+let iround_ubound = upper_bound_for_int Core_int.num_bits
 
 (* The performance of the "exn" rounding functions is important, so they are written
    out separately, and tuned individually.  (We could have the option versions call
@@ -345,19 +286,16 @@ let iround_ubound = min (of_int max_int) (2.0 ** 62.0 -. 512.)
 
 (* Error reporting below is very carefully arranged so that, e.g., [iround_nearest_exn]
    itself can be inlined into callers such that they don't need to allocate a box for the
-   [float] argument.  This is done with a [box] function carefully chosen to allow the
+   [float] argument.  This is done with a box [box] function carefully chosen to allow the
    compiler to create a separate box for the float only in error cases.  See, e.g.,
    [../../zero/test/price_test.ml] for a mechanical test of this property when building
    with [X_LIBRARY_INLINING=true]. *)
-let box =
-  (* Prevent potential constant folding of [+. 0.] in the near ocamlopt future. *)
-  let x = if Random.bool () then 0. else 0. in
-  (fun f -> f +. x)
 
 let iround_up t =
   if t > 0.0 then begin
-    if t <= iround_ubound then
-      Some (int_of_float (ceil t))
+    let t' = ceil t in
+    if t' <= iround_ubound then
+      Some (int_of_float t')
     else
       None
   end
@@ -370,8 +308,9 @@ let iround_up t =
 
 let iround_up_exn t =
   if t > 0.0 then begin
-    if t <= iround_ubound then
-      int_of_float (ceil t)
+    let t' = ceil t in
+    if t' <= iround_ubound then
+      int_of_float t'
     else
       invalid_argf "Float.iround_up_exn: argument (%f) is too large" (box t) ()
   end
@@ -390,8 +329,9 @@ let iround_down t =
       None
   end
   else begin
-    if t >= iround_lbound then
-      Some (int_of_float (floor t))
+    let t' = floor t in
+    if t' >= iround_lbound then
+      Some (int_of_float t')
     else
       None
   end
@@ -404,8 +344,9 @@ let iround_down_exn t =
       invalid_argf "Float.iround_down_exn: argument (%f) is too large" (box t) ()
   end
   else begin
-    if t >= iround_lbound then
-      int_of_float (floor t)
+    let t' = floor t in
+    if t' >= iround_lbound then
+      int_of_float t'
     else
       invalid_argf "Float.iround_down_exn: argument (%f) is too small or NaN" (box t) ()
   end
@@ -424,7 +365,7 @@ let iround_towards_zero_exn t =
       (box t)
       ()
 
-(* Outside of the range [round_nearest_lb..round_nearest_ub], all representable doubles
+(* Outside of the range (round_nearest_lb..round_nearest_ub), all representable doubles
    are integers in the mathematical sense, and [round_nearest] should be identity.
 
    However, for odd numbers with the absolute value between 2**52 and 2**53, the formula
@@ -436,51 +377,89 @@ let iround_towards_zero_exn t =
    # naive_round_nearest x;;
    - :     float = 4503599627370498.
 *)
-#ifdef JSC_ARCH_SIXTYFOUR
+
 let round_nearest_lb = -.(2. ** 52.)
 let round_nearest_ub =    2. ** 52.
-#else
-let int_size_minus_one = float_of_int (Core_int.num_bits - 1)
-let round_nearest_lb = -.(2. ** int_size_minus_one)
-let round_nearest_ub =   (2. ** int_size_minus_one) -. 1.
-#endif
 
-let iround_nearest t =
+let iround_nearest_32 t =
   if t >= 0. then
-    if t <= round_nearest_ub then
+    let t' = t +. 0.5 in
+    if t' <= iround_ubound then
+      Some (int_of_float t')
+    else
+      None
+  else
+    let t' = floor (t +. 0.5) in
+    if t' >= iround_lbound then
+      Some (int_of_float t')
+    else
+      None
+
+let iround_nearest_64 t =
+  if t >= 0. then
+    if t < round_nearest_ub then
       Some (int_of_float (t +. 0.5))
     else
-      if t <= iround_ubound then
-        Some (int_of_float t)
-      else
-        None
-  else
-    if t >= round_nearest_lb then
-      Some (int_of_float (floor (t +. 0.5)))
+    if t <= iround_ubound then
+      Some (int_of_float t)
     else
-      if t >= iround_lbound then
-        Some (int_of_float t)
-      else
-        None
+      None
+  else
+  if t > round_nearest_lb then
+    Some (int_of_float (floor (t +. 0.5)))
+  else
+  if t >= iround_lbound then
+    Some (int_of_float t)
+  else
+    None
 
-let iround_nearest_exn t =
+let iround_nearest =
+  if Sys.word_size = 64
+  then iround_nearest_64
+  else iround_nearest_32
+
+let iround_nearest_exn_32 t =
   if t >= 0. then
-    if t <= round_nearest_ub then
+    let t' = t +. 0.5 in
+    if t' <= iround_ubound then
+      int_of_float t'
+    else
+      invalid_argf "Float.iround_nearest_exn: argument (%f) is too large" (box t) ()
+  else
+    let t' = floor (t +. 0.5) in
+    if t' >= iround_lbound then
+      int_of_float t'
+    else
+      invalid_argf "Float.iround_nearest_exn: argument (%f) is too small" (box t) ()
+
+let iround_nearest_exn_64 t =
+  if t >= 0. then
+    if t < round_nearest_ub then
       int_of_float (t +. 0.5)
     else
-      if t <= iround_ubound then
-        int_of_float t
-      else
-        invalid_argf "Float.iround_nearest_exn: argument (%f) is too large" (box t) ()
-  else
-    if t >= round_nearest_lb then
-      int_of_float (floor (t +. 0.5))
+    if t <= iround_ubound then
+      int_of_float t
     else
-      if t >= iround_lbound then
-        int_of_float t
-      else
-        invalid_argf "Float.iround_nearest_exn: argument (%f) is too small or NaN" (box t)
-          ()
+      invalid_argf "Float.iround_nearest_exn: argument (%f) is too large" (box t) ()
+  else
+  if t > round_nearest_lb then
+    int_of_float (floor (t +. 0.5))
+  else
+  if t >= iround_lbound then
+    int_of_float t
+  else
+    invalid_argf "Float.iround_nearest_exn: argument (%f) is too small or NaN" (box t) ()
+
+let iround_nearest_exn =
+  if Sys.word_size = 64
+  then iround_nearest_exn_64
+  else iround_nearest_exn_32
+
+let%bench_module "round_nearest 64/runtime" = (module struct
+  let f = if Random.bool () then 1.0 else 2.0
+  let%bench "iround_nearest_exn_64"      = iround_nearest_exn_64 f
+  let%bench "iround_nearest_exn_runtime" = iround_nearest_exn f
+end)
 
 (* The following [iround_exn] and [iround] functions are slower than the ones above.
    Their equivalence to those functions is tested in the unit tests below. *)
@@ -557,36 +536,71 @@ let%test _ =
 
 (* see the comment above [round_nearest_lb] and [round_nearest_ub] for an explanation *)
 let round_nearest t =
-  if t >= round_nearest_lb && t <= round_nearest_ub then
+  if t > round_nearest_lb && t < round_nearest_ub then
     floor (t +. 0.5)
   else
     t
 
-(* See [iround_lbound] and [iround_ubound] for more explanation. *)
-let int63_round_lbound = ~-. (2. ** 62.)
-let int63_round_ubound = 2.0 ** 62.0 -. 512.
+let int63_round_lbound = lower_bound_for_int Core_int63.num_bits
+let int63_round_ubound = upper_bound_for_int Core_int63.num_bits
 
-let int63_round_nearest_portable_alloc_exn t =
+let int63_round_up_exn t =
+  if t > 0.0 then begin
+    let t' = ceil t in
+    if t' <= int63_round_ubound then
+      Core_int63.of_float_unchecked t'
+    else
+      invalid_argf "Float.int63_round_up_exn: argument (%f) is too large" (Float0.box t) ()
+  end
+  else begin
+    if t >= int63_round_lbound then
+      Core_int63.of_float_unchecked t
+    else
+      invalid_argf "Float.int63_round_up_exn: argument (%f) is too small or NaN"
+        (Float0.box t) ()
+  end
+
+let int63_round_down_exn t =
+  if t >= 0.0 then begin
+    if t <= int63_round_ubound then
+      Core_int63.of_float_unchecked t
+    else
+      invalid_argf "Float.int63_round_down_exn: argument (%f) is too large"
+        (Float0.box t) ()
+  end
+  else begin
+    let t' = floor t in
+    if t' >= int63_round_lbound then
+      Core_int63.of_float_unchecked t'
+    else
+      invalid_argf "Float.int63_round_down_exn: argument (%f) is too small or NaN"
+        (Float0.box t) ()
+  end
+
+let int63_round_nearest_portable_alloc_exn t0 =
+  let t = round_nearest t0 in
   if t > 0.
   then begin
     if t <= int63_round_ubound
-    then Core_int63.of_float (round_nearest t)
+    then Core_int63.of_float_unchecked t
     else invalid_argf
-           "Float.int63_round_nearest_portable_alloc_exn: argument (%f) is too large" t ()
+           "Float.int63_round_nearest_portable_alloc_exn: argument (%f) is too large"
+           (box t0)
+           ()
   end
   else begin
     if t >= int63_round_lbound
-    then Core_int63.of_float (round_nearest t)
+    then Core_int63.of_float_unchecked t
     else invalid_argf
-           "Float.int63_round_nearest_portable_alloc_exn: argument (%f) is too small or NaN" t ()
+           "Float.int63_round_nearest_portable_alloc_exn: argument (%f) is too small or NaN"
+           (box t0)
+           ()
   end
 
 let%test_module _ = (module struct
   (* check we raise on invalid input *)
   let must_fail f x = try ignore (f x); false with _ -> true
-  let must_succeed f x = try ignore (f x); true with err ->
-    print_endline (Exn.to_string err);
-    false
+  let must_succeed f x = ignore (f x); true
   let%test _ = must_fail int63_round_nearest_portable_alloc_exn nan
   let%test _ = must_fail int63_round_nearest_portable_alloc_exn max_value
   let%test _ = must_fail int63_round_nearest_portable_alloc_exn min_value
@@ -1697,24 +1711,32 @@ let%test_module _ = (module struct
       else
         1
     in
-      ((iround_up_exn x) - (iround_down_exn x)) = expected_difference
+    match iround_up x, iround_down x with
+    | Some x, Some y -> x - y = expected_difference
+    | _, _ -> true
 
-  let test_all_four x ~specialized_iround ~specialized_iround_exn ~dir ~validate =
+  let test_all_six x
+        ~specialized_iround ~specialized_iround_exn ~float_rounding
+        ~dir ~validate =
     let result1 = iround x ~dir in
     let result2 = try Some (iround_exn x ~dir) with _exn -> None in
     let result3 = specialized_iround x in
     let result4 = try Some (specialized_iround_exn x) with _exn -> None in
+    let result5 = try Some (Core_int.of_float (float_rounding x)) with _exn -> None in
+    let result6 = try Some (Core_int.of_float (round ~dir x)) with _exn -> None in
     let (=) = Pervasives.(=) in
-    if result1 = result2 && result2 = result3 && result3 = result4 then
+    if result1 = result2 && result2 = result3 && result3 = result4
+       && result4 = result5 && result5 = result6 then
       validate result1
     else
       false
 
   (* iround ~dir:`Nearest built so this should always be true *)
   let iround_nearest_test x =
-    test_all_four x
+    test_all_six x
       ~specialized_iround:iround_nearest
       ~specialized_iround_exn:iround_nearest_exn
+      ~float_rounding:round_nearest
       ~dir:`Nearest
       ~validate:(function
         | None -> true
@@ -1729,9 +1751,10 @@ let%test_module _ = (module struct
      so x -. iround_down x should be in [0,1)
   *)
   let iround_down_test x =
-    test_all_four x
+    test_all_six x
       ~specialized_iround:iround_down
       ~specialized_iround_exn:iround_down_exn
+      ~float_rounding:round_down
       ~dir:`Down
       ~validate:(function
         | None -> true
@@ -1746,9 +1769,10 @@ let%test_module _ = (module struct
      so iround_up x -. x should be in [0,1)
   *)
   let iround_up_test x =
-    test_all_four x
+    test_all_six x
       ~specialized_iround:iround_up
       ~specialized_iround_exn:iround_up_exn
+      ~float_rounding:round_up
       ~dir:`Up
       ~validate:(function
         | None -> true
@@ -1763,9 +1787,10 @@ let%test_module _ = (module struct
      so abs x -. abs (iround_towards_zero x) should be in [0,1)
   *)
   let iround_towards_zero_test x =
-    test_all_four x
+    test_all_six x
       ~specialized_iround:iround_towards_zero
       ~specialized_iround_exn:iround_towards_zero_exn
+      ~float_rounding:round_towards_zero
       ~dir:`Zero
       ~validate:(function
         | None -> true
@@ -1941,7 +1966,7 @@ let%test_module _ = (module struct
 
   let numbers_near_powers_of_two =
     Core_list.concat (
-      Core_list.init (if is_64_bit_platform then 62 else 30) ~f:(fun i ->
+      Core_list.init 64 ~f:(fun i ->
         let pow2 = 2. ** float i in
         let x =
           [ pow2;
@@ -1954,6 +1979,8 @@ let%test_module _ = (module struct
             one_ulp `Down (pow2 +. 2.0);
             pow2 +. 2.0;
             one_ulp `Down (pow2 *. 2.0 -. 1.0);
+            one_ulp `Down pow2;
+            one_ulp `Up pow2
           ]
         in
         x @ (List.map x ~f:neg)
@@ -2118,3 +2145,63 @@ let%bench_module "int_pow" = (module struct
     )
 #endif
 end)
+
+
+module Test_bounds (
+    I : sig
+      type t
+      val num_bits : int
+      val of_float : float -> t
+      val to_int64 : t -> Int64.t
+      val max_value : t
+      val min_value : t
+    end
+  ) = struct
+  open I
+
+  let float_lower_bound = lower_bound_for_int num_bits
+  let float_upper_bound = upper_bound_for_int num_bits
+
+  let%test_unit "lower bound is valid" = ignore (of_float float_lower_bound : t)
+  let%test_unit "upper bound is valid" = ignore (of_float float_upper_bound : t)
+
+  let does_raise f x = try ignore (f x : t); false with _ -> true
+
+  let%test "smaller than lower bound is not valid" =
+    does_raise of_float (one_ulp `Down float_lower_bound)
+  let%test "bigger than upper bound is not valid" =
+    does_raise of_float (one_ulp `Up float_upper_bound)
+
+  let%test "smaller than lower bound overflows" =
+    let lower_bound = Int64.of_float float_lower_bound in
+    let lower_bound_minus_epsilon = Int64.of_float (one_ulp `Down float_lower_bound) in
+    let min_value = to_int64 min_value in
+    if Core_int.(=) num_bits 64
+    (* We cannot detect overflow because on Intel overflow results in min_value. *)
+    then true
+    else begin
+      assert (Core_int64.(<=) lower_bound_minus_epsilon lower_bound);
+      (* a value smaller than min_value would overflow if converted to [t] *)
+      Core_int64.(<) lower_bound_minus_epsilon min_value
+    end
+
+  let%test "bigger than upper bound overflows" =
+    let upper_bound = Int64.of_float float_upper_bound in
+    let upper_bound_plus_epsilon = Int64.of_float (one_ulp `Up float_upper_bound) in
+    let max_value = to_int64 max_value in
+    if Core_int.(=) num_bits 64
+    (* upper_bound_plus_epsilon is not representable as a Int64.t, it has overflowed *)
+    then Core_int64.(<) upper_bound_plus_epsilon upper_bound
+    else begin
+      assert (Core_int64.(>=) upper_bound_plus_epsilon upper_bound);
+      (* a value greater than max_value would overflow if converted to [t] *)
+      Core_int64.(>) upper_bound_plus_epsilon max_value
+    end
+end
+
+let%test_module "Core_int"        = (module Test_bounds(Core_int))
+let%test_module "Core_int32"      = (module Test_bounds(Core_int32))
+let%test_module "Core_int63"      = (module Test_bounds(Core_int63))
+let%test_module "Core_int63_emul" = (module Test_bounds(Core_int63_emul))
+let%test_module "Core_int64"      = (module Test_bounds(Core_int64))
+let%test_module "Core_nativeint"  = (module Test_bounds(Core_nativeint))

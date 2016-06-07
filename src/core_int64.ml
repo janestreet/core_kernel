@@ -17,6 +17,8 @@ end
 include T
 
 let num_bits = 64
+let float_lower_bound = Float0.lower_bound_for_int num_bits
+let float_upper_bound = Float0.upper_bound_for_int num_bits
 
 let float_of_bits = float_of_bits
 let bits_of_float = bits_of_float
@@ -40,7 +42,14 @@ let one = one
 let zero = zero
 let compare = compare
 let to_float = to_float
-let of_float = of_float
+let of_float_unchecked = Int64.of_float
+let of_float f =
+  if f >= float_lower_bound && f <= float_upper_bound then
+    Int64.of_float f
+  else
+    Common.invalid_argf "Int64.of_float: argument (%f) is out of range or NaN"
+      (Float0.box f)
+      ()
 
 include Comparable.Validate_with_zero (struct
   include T
