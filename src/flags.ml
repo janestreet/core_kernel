@@ -25,6 +25,10 @@ module Make (M : Make_arg) = struct
   let intersect  = Int63.bit_and
   let complement = Int63.bit_not
 
+  let equal t1 t2 = Int63.(=) t1 t2
+
+  let subset t1 t2 = equal t1 (intersect t1 t2)
+
   let do_intersect t1 t2 = Int63.(<>) (Int63.bit_and t1 t2) Int63.zero
   let are_disjoint t1 t2 = Int63.(=)  (Int63.bit_and t1 t2) Int63.zero
 
@@ -96,11 +100,12 @@ module Make (M : Make_arg) = struct
       | None -> of_sexp_error (sprintf "Flags.t_of_sexp got unknown name: %s" name) sexp)
   ;;
 
+  (* total order such that [subset a b] implies [a <= b] *)
   let compare t u =
-    if t = u then 0
-    else if t - u = empty then -1
-    else if u - t = empty then 1
-    else compare t u                    (* arbitrary but consistent with subset *)
+    (* This is the same as {| Int63.(i bit_xor (one shift_left 62)) |} *)
+    let flip_top_bit i = Int63.(+) i Int63.min_value in
+    Int63.compare (flip_top_bit t) (flip_top_bit u)
+  ;;
 
   include Comparable.Make (struct type nonrec t = t [@@deriving sexp, compare] end)
 end

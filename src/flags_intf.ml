@@ -32,6 +32,9 @@ module type S = sig
   val is_empty     : t -> bool
   val do_intersect : t -> t -> bool
   val are_disjoint : t -> t -> bool
+
+  (** [subset a b = is_empty (a - b)] *)
+  val subset : t -> t -> bool
 end
 
 module type Make_arg = sig
