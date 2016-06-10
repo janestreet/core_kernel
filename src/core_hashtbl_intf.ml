@@ -3,17 +3,27 @@ open Sexplib
 
 module Binable = Binable0
 
-module type Key = sig
-  type t [@@deriving compare, sexp]
+module type Key_common = sig
+  type t [@@deriving compare]
 
   (** Values returned by [hash] must be non-negative.  An exception will be raised in the
       case that [hash] returns a negative value. *)
   val hash : t -> int
 end
 
+module type Key_plain = sig
+  type t [@@deriving sexp_of]
+  include Key_common with type t := t
+end
+
+module type Key = sig
+  type t [@@deriving sexp]
+  include Key_common with type t := t
+end
+
 module type Key_binable = sig
-  type t [@@deriving bin_io]
-  include Key with type t := t
+  type t [@@deriving bin_io, sexp]
+  include Key_common with type t := t
 end
 
 module Hashable = struct
@@ -32,7 +42,7 @@ module Hashable = struct
              }
 
   let of_key (type a) k =
-    let module Key = (val k : Key with type t = a) in
+    let module Key = (val k : Key_plain with type t = a) in
     { hash = Key.hash;
       compare = Key.compare;
       sexp_of_t = Key.sexp_of_t;
@@ -50,7 +60,7 @@ module type Hashable = sig
 
   val poly : 'a t
 
-  val of_key : (module Key with type t = 'a) -> 'a t
+  val of_key : (module Key_plain with type t = 'a) -> 'a t
 
   val hash_param : int -> int -> 'a -> int
 
@@ -352,10 +362,10 @@ module type Creators = sig
        -> ('a, 'b) t) create_options
 end
 
-module type S = sig
+module type S_plain = sig
   type key
   type ('a, 'b) hashtbl
-  type 'b t = (key, 'b) hashtbl [@@deriving sexp]
+  type 'b t = (key, 'b) hashtbl [@@deriving sexp_of]
   type ('a, 'b) t_ = 'b t
   type 'a key_ = key
 
@@ -373,6 +383,17 @@ module type S = sig
     with type 'a key := 'a key_
     with type ('a,'z) map_options := ('a,'z) no_map_options
 
+  module Provide_of_sexp (Key : sig type t [@@deriving of_sexp] end with type t := key)
+    : sig type _ t [@@deriving of_sexp] end with type 'a t := 'a t
+  module Provide_bin_io (Key : sig type t [@@deriving bin_io] end with type t := key)
+    : sig type 'a t [@@deriving bin_io] end with type 'a t := 'a t
+end
+
+module type S = sig
+  include S_plain
+  include sig
+    type _ t [@@deriving of_sexp]
+  end with type 'a t := 'a t
 end
 
 module type S_binable = sig
@@ -429,12 +450,15 @@ module type Hashtbl = sig
 
   end with type ('a, 'b) t = ('a, 'b) t
 
+  module type Key_plain   = Key_plain
   module type Key         = Key
   module type Key_binable = Key_binable
 
+  module type S_plain   = S_plain   with type ('a, 'b) hashtbl = ('a, 'b) t
   module type S         = S         with type ('a, 'b) hashtbl = ('a, 'b) t
   module type S_binable = S_binable with type ('a, 'b) hashtbl = ('a, 'b) t
 
+  module Make_plain   (Key : Key_plain)   : S_plain   with type key = Key.t
   module Make         (Key : Key        ) : S         with type key = Key.t
   module Make_binable (Key : Key_binable) : S_binable with type key = Key.t
 end

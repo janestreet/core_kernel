@@ -117,6 +117,9 @@ end = struct
     type ('k, 'v) t_      = ('k, 'v) Table.t_
     type  'k      key_    =  'k      Table.key_
 
+    module Provide_of_sexp = Table.Provide_of_sexp
+    module Provide_bin_io  = Table.Provide_bin_io
+
     type 'a merge_into_action = 'a Table.merge_into_action =
       | Remove
       | Set_to of 'a

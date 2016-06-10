@@ -14,6 +14,9 @@ module W : sig
   val wrap_exn   : Int64.t -> t
   val wrap_modulo : Int64.t -> t
   val unwrap : t -> Int64.t
+
+  (** Returns a non-negative int64 that is equal to the input int63 modulo 2^63. *)
+  val unwrap_unsigned : t -> Int64.t
   val add    : t -> t -> t
   val sub    : t -> t -> t
   val neg    : t -> t
@@ -50,6 +53,8 @@ end = struct
     Int64.mul x 2L
   let unwrap x =
     Int64.shift_right x 1
+  let unwrap_unsigned x =
+    Int64.shift_right_logical x 1
 
   (* This does not use wrap or unwrap to avoid generating exceptions in the case of
      overflows. This is to preserve the semantics of int type on 64 bit architecture. *)
@@ -282,9 +287,10 @@ include Conv.Make_hex(struct
   let zero = zero
   let neg = (~-)
   let (<) = (<)
-  let to_string i = Printf.sprintf "%Lx" (unwrap i)
-  let of_string s = Scanf.sscanf s "%Lx" wrap_exn
-
+  let to_string i =
+    (* the use of [unwrap_unsigned] here is important for the case of [min_value] *)
+    Printf.sprintf "%Lx" (unwrap_unsigned i)
+  let of_string s = of_string ("0x"^s)
   let module_name = "Core_kernel.Std.Int63.Hex"
 
 end)

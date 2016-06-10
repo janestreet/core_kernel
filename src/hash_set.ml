@@ -14,8 +14,9 @@ type 'a t = ('a, unit) Hashtbl.t
 type 'a hash_set = 'a t
 type 'a elt = 'a
 
-module type S         = S         with type 'a hash_set = 'a t
-module type S_binable = S_binable with type 'a hash_set = 'a t
+module type S_plain   = S_plain   with type 'a hash_set := 'a t
+module type S         = S         with type 'a hash_set := 'a t
+module type S_binable = S_binable with type 'a hash_set := 'a t
 
 module Accessors = struct
 
@@ -183,46 +184,54 @@ module Poly = struct
 
 end
 
+module type Elt_plain = Hashtbl.Key_plain
 module type Elt         = Hashtbl.Key
 module type Elt_binable = Hashtbl.Key_binable
 
-module Make (Elt : Elt) = struct
-
-  module T = Hashtbl.Make (Elt)
-
+module Make_plain (Elt : Elt_plain) = struct
   type elt = Elt.t
-  type 'a hash_set = 'a t
   type t = elt hash_set
   type 'a elt_ = elt
 
-  include Creators (struct type 'a t = Elt.t let hashable = T.hashable end)
+  include Creators (struct
+      type 'a t = Elt.t
+      let hashable = Hashtbl.Hashable.of_key (module Elt)
+    end)
 
   let sexp_of_t t = Poly.sexp_of_t Elt.sexp_of_t t
 
-  let t_of_sexp sexp = t_of_sexp Elt.t_of_sexp sexp
+  module Provide_of_sexp(X : sig type t [@@deriving of_sexp] end with type t := elt) =
+  struct
+    let t_of_sexp sexp = t_of_sexp X.t_of_sexp sexp
+  end
 
+  module Provide_bin_io(X : sig type t [@@deriving bin_io] end with type t := elt) =
+    Bin_prot.Utils.Make_iterable_binable (struct
+      module Elt = struct include Elt include X end
+      type t = elt hash_set
+      type el = Elt.t [@@deriving bin_io]
+      let _ = bin_el
+      let module_name = Some "Core.Std.Hash_set"
+      let length = length
+      let iter = iter
+      let init ~len ~next =
+        let t = create ~size:len () in
+        for _i = 0 to len - 1 do
+          let v = next () in
+          add t v;
+        done;
+        t
+    end)
+end
+
+module Make (Elt : Elt) = struct
+  include Make_plain (Elt)
+  include Provide_of_sexp (Elt)
 end
 
 module Make_binable (Elt : Elt_binable) = struct
-
   include Make (Elt)
-
-  include Bin_prot.Utils.Make_iterable_binable (struct
-    type t = elt hash_set
-    type el = Elt.t [@@deriving bin_io]
-    let _ = bin_el
-    let module_name = Some "Core.Std.Hash_set"
-    let length = length
-    let iter = iter
-    let init ~len ~next =
-      let t = create ~size:len () in
-      for _i = 0 to len - 1 do
-        let v = next () in
-        add t v;
-      done;
-      t
-  end)
-
+  include Provide_bin_io (Elt)
 end
 
 let%test_module "Set Intersection" = (module struct

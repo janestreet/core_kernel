@@ -45,7 +45,8 @@ module Merge_to_sequence_element = Merge_to_sequence_element
 open Int_replace_polymorphic_compare
 
 
-module type Elt = Elt
+module type Elt_plain   = Elt_plain
+module type Elt         = Elt
 module type Elt_binable = Elt_binable
 
 module Tree0 = struct
@@ -1382,16 +1383,14 @@ module Poly = struct
   end)
 end
 
-module type S = S0
-  with type ('a, 'b) set  := ('a, 'b) t
-  with type ('a, 'b) tree := ('a, 'b) tree
+module Set_and_tree = struct
+  type ('a, 'b) set  = ('a, 'b) t
+  type nonrec ('a, 'b) tree = ('a, 'b) tree
+end
+include Make_S (Set_and_tree)
 
-module type S_binable = S0_binable
-  with type ('a, 'b) set  := ('a, 'b) t
-  with type ('a, 'b) tree := ('a, 'b) tree
-
-module Make_using_comparator (Elt : sig
-  type t [@@deriving sexp]
+module Make_plain_using_comparator (Elt : sig
+  type t [@@deriving sexp_of]
   include Comparator.S with type t := t
 end) = struct
 
@@ -1409,7 +1408,25 @@ end) = struct
 
   let sexp_of_t t = sexp_of_t Elt.sexp_of_t t
 
-  let t_of_sexp sexp = t_of_sexp Elt.t_of_sexp sexp
+  module Provide_of_sexp (Elt : sig type t [@@deriving of_sexp] end with type t := Elt.t) =
+  struct
+    let t_of_sexp sexp = t_of_sexp Elt.t_of_sexp sexp
+  end
+
+  module Provide_bin_io (Elt' : sig type t [@@deriving bin_io] end with type t := Elt.t) =
+    Bin_prot.Utils.Make_iterable_binable (struct
+      module Elt = struct include Elt include Elt' end
+      type nonrec t = t
+      type el = Elt.t [@@deriving bin_io]
+      let _ = bin_el
+
+      let module_name = Some "Core_kernel.Std.Set"
+      let length = length
+      let iter t ~f = iter ~f:(fun key -> f key) t
+      let init ~len ~next =
+        init_for_bin_prot ~len ~f:(fun _ -> next ()) ~comparator:Elt.comparator
+    end)
+
 
   module Tree = struct
     include Make_tree (Elt_S1)
@@ -1420,9 +1437,34 @@ end) = struct
 
     let sexp_of_t t = Tree0.sexp_of_t Elt.sexp_of_t t
 
-    let t_of_sexp sexp =
-      Tree0.t_of_sexp Elt.t_of_sexp sexp ~compare_elt:Elt_S1.comparator.Comparator.compare
-    ;;
+    module Provide_of_sexp (X : sig type t [@@deriving of_sexp] end with type t := Elt.t) =
+    struct
+      let t_of_sexp sexp =
+        Tree0.t_of_sexp X.t_of_sexp sexp ~compare_elt:Elt_S1.comparator.Comparator.compare
+      ;;
+    end
+  end
+end
+
+module Make_plain (Elt : Elt_plain) =
+  Make_plain_using_comparator (struct
+    include Elt
+    include Comparator.Make (Elt)
+  end)
+
+module Make_using_comparator (Elt : sig
+  type t [@@deriving sexp]
+  include Comparator.S with type t := t
+end) = struct
+  module Elt = Elt
+  module M1 = Make_plain_using_comparator(Elt)
+  include (M1 : module type of M1
+             with module Tree := M1.Tree
+             with module Elt := Elt)
+  include Provide_of_sexp (Elt)
+  module Tree = struct
+    include M1.Tree
+    include Provide_of_sexp (Elt)
   end
 end
 
@@ -1432,26 +1474,14 @@ module Make (Elt : Elt) =
     include Comparator.Make (Elt)
   end)
 
-module Make_binable_using_comparator (Elt' : sig
+module Make_binable_using_comparator (Elt : sig
   type t [@@deriving bin_io, sexp]
   include Comparator.S with type t := t
 end) = struct
-
-  include (Make_using_comparator (Elt'))
-
-  include Bin_prot.Utils.Make_iterable_binable (struct
-    type nonrec t = t
-    type el = Elt'.t [@@deriving bin_io]
-    let _ = bin_el
-
-    let module_name = Some "Core_kernel.Std.Set"
-    let length = length
-    let iter t ~f = iter ~f:(fun key -> f key) t
-    let init ~len ~next =
-      init_for_bin_prot ~len ~f:(fun _ -> next ()) ~comparator:Elt'.comparator
-
-  end)
-
+  module Elt = Elt
+  module M2 = Make_using_comparator (Elt)
+  include (M2 : module type of M2 with module Elt := Elt)
+  include Provide_bin_io (Elt)
 end
 
 module Make_binable (Elt : Elt_binable) =

@@ -18,6 +18,10 @@ open T
 module Binable = Binable0
 module List = Core_list
 
+module type Key_plain = sig
+  type t [@@deriving compare, sexp_of]
+end
+
 module type Key = sig
   type t [@@deriving compare, sexp]
 end
@@ -1098,30 +1102,67 @@ module type Creators_and_accessors3_with_comparator = sig
     with type ('a, 'b, 'c) tree := ('a, 'b, 'c) tree
 end
 
-module type S = sig
-  type ('k, +'v, 'cmp) map
-  type ('k, +'v, 'cmp) tree
+module Make_S
+    (X : sig
+       type ('k, +'v, 'cmp) map
+       type ('k, +'v, 'cmp) tree
+     end) = struct
 
-  module Key : Comparator.S
+  module Make_S_plain_tree (Key : Comparator.S) = struct
+    module type S = sig
 
-  module Tree : sig
-    type 'a t = (Key.t, 'a, Key.comparator_witness) tree [@@deriving sexp]
+      type 'a t = (Key.t, 'a, Key.comparator_witness) X.tree [@@deriving sexp_of]
+
+      include Creators_and_accessors1
+        with type 'a t    := 'a t
+        with type 'a tree := 'a t
+        with type key     := Key.t
+
+      module Provide_of_sexp (X : sig type t [@@deriving of_sexp] end with type t := Key.t)
+        : sig type _ t [@@deriving of_sexp] end with type 'a t := 'a t
+    end
+  end
+
+  module type S_plain = sig
+    module Key : sig
+      type t [@@deriving sexp_of]
+      include Comparator.S with type t := t
+    end
+
+    module Tree : Make_S_plain_tree (Key).S
+
+    type +'a t = (Key.t, 'a, Key.comparator_witness) X.map [@@deriving compare, sexp_of]
 
     include Creators_and_accessors1
       with type 'a t    := 'a t
-      with type 'a tree := 'a t
+      with type 'a tree := 'a Tree.t
       with type key     := Key.t
+
+    module Provide_of_sexp (Key : sig type t [@@deriving of_sexp] end with type t := Key.t)
+      : sig type _ t [@@deriving of_sexp] end with type 'a t := 'a t
+    module Provide_bin_io (Key : sig type t [@@deriving bin_io] end with type t := Key.t)
+      : Binable.S1 with type 'a t := 'a t
   end
 
-  type +'a t = (Key.t, 'a, Key.comparator_witness) map [@@deriving compare, sexp]
+  module type S = sig
+    module Key : sig
+      type t [@@deriving sexp]
+      include Comparator.S with type t := t
+    end
+    module Tree : sig
+      include Make_S_plain_tree (Key).S
+      include Sexpable.S1 with type 'a t := 'a t
+    end
+    include S_plain with module Key := Key and module Tree := Tree
+    include Sexpable.S1 with type 'a t := 'a t
+  end
 
-  include Creators_and_accessors1
-    with type 'a t    := 'a t
-    with type 'a tree := 'a Tree.t
-    with type key     := Key.t
-end
-
-module type S_binable = sig
-  include S
-  include Binable.S1 with type 'a t := 'a t
+  module type S_binable = sig
+    module Key : sig
+      type t [@@deriving bin_io, sexp]
+      include Comparator.S with type t := t
+    end
+    include S with module Key := Key
+    include Binable.S1 with type 'a t := 'a t
+  end
 end

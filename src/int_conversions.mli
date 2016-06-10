@@ -86,7 +86,10 @@ module Make_hex (I : sig
                    type t [@@deriving bin_io, compare, typerep]
 
                    (** [to_string] and [of_string] convert between [t] and unsigned,
-                       unprefixed hexadecimal *)
+                       unprefixed hexadecimal.
+                       They must be able to handle all non-negative values and also
+                       [min_value]. [to_string min_value] must write a positive hex
+                       representation. *)
                    val to_string : t -> string
                    val of_string : string -> t
                    val zero : t

@@ -75,6 +75,28 @@ module Make_tests(Int : Int_intf.S) : sig end = struct
   let%test_unit _ = [%test_result:int] (popcount max_value) ~expect:62
   let%test_unit _ = [%test_result:int] (popcount min_value) ~expect: 1
 
+
+  let%test_unit _ = [%test_result:string] (Hex.to_string max_value)
+                      ~expect:"0x3fffffffffffffff"
+  let%test_unit _ = [%test_result:string] (Hex.to_string (max_value - one))
+                      ~expect:"0x3ffffffffffffffe"
+  let%test_unit _ = [%test_result:string] (Hex.to_string min_value)
+                      ~expect:"-0x4000000000000000"
+  let%test_unit _ = [%test_result:string] (Hex.to_string (min_value + one))
+                      ~expect:"-0x3fffffffffffffff"
+  let%test_unit _ = [%test_result:string] (Hex.to_string zero) ~expect:"0x0"
+  let%test_unit _ = [%test_result:string] (Hex.to_string one) ~expect:"0x1"
+  let%test_unit _ = [%test_result:string] (Hex.to_string (neg one)) ~expect:"-0x1"
+
+
+  let%test_unit _ = [%test_result:t] (Hex.of_string "0x3fffffffffffffff") ~expect:max_value
+  let%test_unit _ = [%test_result:t] (Hex.of_string "0x3ffffffffffffffe") ~expect:(max_value - one)
+  let%test_unit _ = [%test_result:t] (Hex.of_string "-0x4000000000000000") ~expect:min_value
+  let%test_unit _ = [%test_result:t] (Hex.of_string "-0x3fffffffffffffff") ~expect:(min_value + one)
+  let%test_unit _ = [%test_result:t] (Hex.of_string "0x0") ~expect:zero
+  let%test_unit _ = [%test_result:t] (Hex.of_string "0x1") ~expect:one
+  let%test_unit _ = [%test_result:t] (Hex.of_string "-0x1") ~expect:(neg one)
+
   let%test_unit _ =
     if String.is_prefix ~prefix:"4.03" Sys.ocaml_version
     then assert ((of_string "0u4611686018427387904") = min_value)

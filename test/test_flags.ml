@@ -31,9 +31,9 @@ let%expect_test _ =
   print_hex 1;
   [%expect {|
     0x2 |}];
-  (* print_hex 62;
-   * [%expect {|
-   *   -0x4000_0000_0000_0000 |}]; *)
+  print_hex 62;
+  [%expect {|
+    -0x4000_0000_0000_0000 |}];
 ;;
 
 module M = Make (struct

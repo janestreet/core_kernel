@@ -65,6 +65,18 @@ end
     ]}
 
     Then use [Comparable.Make] in the struct (see comparable.mli for an example). *)
+
+module type S_plain = sig
+  include S_common
+
+  module Map : Core_map.S_plain
+    with type Key.t = t
+    with type Key.comparator_witness = comparator_witness
+  module Set : Core_set.S_plain
+    with type Elt.t = t
+    with type Elt.comparator_witness = comparator_witness
+end
+
 module type S = sig
   include S_common
 

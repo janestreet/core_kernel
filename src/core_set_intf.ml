@@ -19,6 +19,10 @@ open T
 
 module Binable = Binable0
 
+module type Elt_plain = sig
+  type t [@@deriving compare, sexp_of]
+end
+
 module type Elt = sig
   type t [@@deriving compare, sexp]
 end
@@ -735,37 +739,64 @@ module type Creators_and_accessors2_with_comparator = sig
     with type ('a, 'b) tree := ('a, 'b) tree
 end
 
-module type S0 = sig
-  type ('a, 'cmp) set
-  type ('a, 'cmp) tree
+module Make_S (X : sig type ('a, 'cmp) set type ('a, 'cmp) tree end) = struct
+  module Make_S_plain_tree (Elt : Comparator.S) = struct
+    module type S = sig
+      type t = (Elt.t, Elt.comparator_witness) X.tree [@@deriving compare, sexp_of]
 
-  module Elt : sig
-    type t [@@deriving sexp]
-    include Comparator.S with type t := t
+      include Creators_and_accessors0
+        with type ('a, 'b) set := ('a, 'b) X.tree
+        with type t            := t
+        with type tree         := t
+        with type elt          := Elt.t
+        with type comparator_witness := Elt.comparator_witness
+
+      module Provide_of_sexp (Elt : sig type t [@@deriving of_sexp] end with type t := Elt.t)
+        : sig type t [@@deriving of_sexp] end with type t := t
+    end
   end
 
-  module Tree : sig
-    type t = (Elt.t, Elt.comparator_witness) tree [@@deriving compare, sexp]
+  module type S_plain = sig
+    module Elt : sig
+      type t [@@deriving sexp_of]
+      include Comparator.S with type t := t
+    end
+    module Tree : Make_S_plain_tree (Elt).S
+
+    type t = (Elt.t, Elt.comparator_witness) X.set [@@deriving compare, sexp_of]
 
     include Creators_and_accessors0
-      with type ('a, 'b) set := ('a, 'b) tree
+      with type ('a, 'b) set := ('a, 'b) X.set
       with type t            := t
-      with type tree         := t
+      with type tree         := Tree.t
       with type elt          := Elt.t
       with type comparator_witness := Elt.comparator_witness
+
+    module Provide_of_sexp (Elt : sig type t [@@deriving of_sexp] end with type t := Elt.t)
+      : sig type t [@@deriving of_sexp] end with type t := t
+    module Provide_bin_io (Elt : sig type t [@@deriving bin_io] end with type t := Elt.t)
+      : Binable.S with type t := t
   end
 
-  type t = (Elt.t, Elt.comparator_witness) set [@@deriving compare, sexp]
+  module type S = sig
+    module Elt : sig
+      type t [@@deriving sexp]
+      include Comparator.S with type t := t
+    end
+    module Tree : sig
+      include Make_S_plain_tree (Elt).S
+      include Sexpable.S with type t := t
+    end
+    include S_plain with module Elt := Elt and module Tree := Tree
+    include Sexpable.S with type t := t
+  end
 
-  include Creators_and_accessors0
-    with type ('a, 'b) set := ('a, 'b) set
-    with type t            := t
-    with type tree         := Tree.t
-    with type elt          := Elt.t
-    with type comparator_witness := Elt.comparator_witness
-end
-
-module type S0_binable = sig
-  include S0
-  include Binable.S with type t := t
+  module type S_binable = sig
+    module Elt : sig
+      type t [@@deriving sexp, bin_io]
+      include Comparator.S with type t := t
+    end
+    include S with module Elt := Elt
+    include Binable.S with type t := t
+  end
 end

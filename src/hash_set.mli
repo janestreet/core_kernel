@@ -22,10 +22,12 @@ val hashable : 'key t -> 'key Core_hashtbl_intf.Hashable.t
     t1, length t2)) *)
 val inter : 'key t -> 'key t -> 'key t
 
+module type Elt_plain   = Core_hashtbl.Key_plain
 module type Elt         = Core_hashtbl.Key
 module type Elt_binable = Core_hashtbl.Key_binable
-module type S         = S         with type 'a hash_set = 'a t
-module type S_binable = S_binable with type 'a hash_set = 'a t
+module type S_plain   = S_plain   with type 'a hash_set := 'a t
+module type S         = S         with type 'a hash_set := 'a t
+module type S_binable = S_binable with type 'a hash_set := 'a t
 
 (** A hash set that uses polymorphic comparison *)
 module Poly : sig
@@ -41,5 +43,6 @@ module Poly : sig
 
 end with type 'a t = 'a t
 
+module Make_plain   (Elt : Elt_plain  ) : S_plain   with type elt = Elt.t
 module Make         (Elt : Elt        ) : S         with type elt = Elt.t
 module Make_binable (Elt : Elt_binable) : S_binable with type elt = Elt.t

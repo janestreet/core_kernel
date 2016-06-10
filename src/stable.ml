@@ -10,6 +10,7 @@ module type Stable                    = Stable_module_types.S0
 module type Stable_without_comparator = Stable_module_types.S0_without_comparator
 module type Stable1                   = Stable_module_types.S1
 module type Stable2                   = Stable_module_types.S2
+module type Stable3                   = Stable_module_types.S3
 
 include Stable_internal
 include Stable_containers

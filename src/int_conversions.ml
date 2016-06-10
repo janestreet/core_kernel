@@ -207,14 +207,14 @@ end) = struct
 end
 
 module Make_hex (I : sig
-                   type t [@@deriving bin_io, compare, typerep]
-                   val to_string : t -> string
-                   val of_string : string -> t
-                   val zero : t
-                   val (<) : t -> t -> bool
-                   val neg : t -> t
-                   val module_name : string
-                 end) =
+    type t [@@deriving bin_io, compare, typerep]
+    val to_string : t -> string
+    val of_string : string -> t
+    val zero : t
+    val (<) : t -> t -> bool
+    val neg : t -> t
+    val module_name : string
+  end) =
 struct
 
   module T_hex = struct

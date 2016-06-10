@@ -5,7 +5,7 @@ module List = ListLabels
 include Comparable_intf
 
 module Validate
-    (T : sig type t [@@deriving compare, sexp] end) : Validate with type t := T.t =
+    (T : sig type t [@@deriving compare, sexp_of] end) : Validate with type t := T.t =
 struct
 
   module V = Validate
@@ -105,7 +105,7 @@ module Poly (T : sig type t [@@deriving sexp] end) = struct
 end
 
 module Make_common (T : sig
-  type t [@@deriving compare, sexp]
+  type t [@@deriving compare, sexp_of]
 end) = struct
   module Replace_polymorphic_compare = struct
     module Without_squelch = struct
@@ -144,6 +144,26 @@ end) = struct
   include Validate (T)
 end
 
+module Make_plain_using_comparator (T : sig
+    type t [@@deriving sexp_of]
+    include Comparator.S with type t := t
+  end) : S_plain with type t := T.t and type comparator_witness = T.comparator_witness = struct
+  include T
+  include Make_common (struct
+      include T
+      let compare = comparator.compare
+    end)
+  module Map = Core_map.Make_plain_using_comparator (T)
+  module Set = Core_set.Make_plain_using_comparator (T)
+end
+
+module Make_plain (T : sig
+  type t [@@deriving compare, sexp_of]
+end) = Make_plain_using_comparator(struct
+    include T
+    include Comparator.Make (T)
+  end)
+
 module Make_using_comparator (T : sig
     type t [@@deriving sexp]
     include Comparator.S with type t := t
@@ -159,13 +179,11 @@ end
 
 module Make (T : sig
   type t [@@deriving compare, sexp]
-end) : S with type t := T.t = struct
-  module C = struct
+end) : S with type t := T.t =
+  Make_using_comparator (struct
     include T
     include Comparator.Make (T)
-  end
-  include Make_using_comparator (C)
-end
+  end)
 
 module Make_binable_using_comparator (T : sig
   type t [@@deriving bin_io, sexp]
@@ -182,13 +200,10 @@ end
 
 module Make_binable (T : sig
   type t [@@deriving bin_io, compare, sexp]
-end) = struct
-  module C = struct
+  end) = Make_binable_using_comparator (struct
     include T
     include Comparator.Make (T)
-  end
-  include Make_binable_using_comparator (C)
-end
+  end)
 
 module Inherit
   (C : sig type t [@@deriving compare] end)

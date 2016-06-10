@@ -1540,21 +1540,21 @@ module Poly = struct
   end
 end
 
-module type Key = Key
+module type Key_plain   = Key_plain
+module type Key         = Key
 module type Key_binable = Key_binable
 
-module type S = S
-  with type ('a, 'b, 'c) map  := ('a, 'b, 'c) t
-  with type ('a, 'b, 'c) tree := ('a, 'b, 'c) tree
+module Map_and_tree = struct
+  type ('a, 'b, 'c) map  = ('a, 'b, 'c) t
+  type nonrec ('a, 'b, 'c) tree = ('a, 'b, 'c) tree
+end
 
-module type S_binable = S_binable
-  with type ('a, 'b, 'c) map  := ('a, 'b, 'c) t
-  with type ('a, 'b, 'c) tree := ('a, 'b, 'c) tree
+include Make_S (Map_and_tree)
 
-module Make_using_comparator (Key : sig
-  type t [@@deriving sexp]
-  include Comparator.S with type t := t
-end) = struct
+module Make_plain_using_comparator (Key : sig
+    type t [@@deriving sexp_of]
+    include Comparator.S with type t := t
+  end) = struct
 
   module Key = Key
 
@@ -1571,16 +1571,58 @@ end) = struct
 
   let sexp_of_t sexp_of_v t = sexp_of_t Key.sexp_of_t sexp_of_v t
 
-  let t_of_sexp v_of_sexp sexp = t_of_sexp Key.t_of_sexp v_of_sexp sexp
+  module Provide_of_sexp (Key : sig type t [@@deriving of_sexp] end with type t := Key.t) =
+  struct
+    let t_of_sexp v_of_sexp sexp = t_of_sexp Key.t_of_sexp v_of_sexp sexp
+  end
+
+  module Provide_bin_io (Key' : sig type t [@@deriving bin_io] end with type t := Key.t) =
+    Bin_prot.Utils.Make_iterable_binable1 (struct
+      module Key = struct include Key include Key' end
+      type nonrec 'v t = 'v t
+      type 'v el = Key.t * 'v [@@deriving bin_io]
+      let _ = bin_el
+      let module_name = Some "Core.Std.Map"
+      let length = length
+      let iter t ~f = iteri t ~f:(fun ~key ~data -> f (key, data))
+      let init ~len ~next =
+        init_for_bin_prot
+          ~len
+          ~f:(fun _ -> next ())
+          ~comparator:Key.comparator
+    end)
 
   module Tree = struct
     include Make_tree (Key_S1)
     type +'v t = (Key.t, 'v, Key.comparator_witness) tree
 
     let sexp_of_t sexp_of_v t = Tree0.sexp_of_t Key.sexp_of_t sexp_of_v t
-    let t_of_sexp v_of_sexp sexp =
-      Tree0.t_of_sexp Key.t_of_sexp v_of_sexp ~comparator:Key.comparator sexp
-      |> fst
+
+    module Provide_of_sexp (X : sig type t [@@deriving of_sexp] end with type t := Key.t) =
+    struct
+      let t_of_sexp v_of_sexp sexp =
+        Tree0.t_of_sexp X.t_of_sexp v_of_sexp ~comparator:Key.comparator sexp
+        |> fst
+    end
+  end
+end
+
+module Make_plain (Key : Key_plain) =
+  Make_plain_using_comparator (struct
+    include Key
+    include Comparator.Make (Key)
+  end)
+
+module Make_using_comparator
+    (Key : sig type t [@@deriving sexp] include Comparator.S with type t := t end) =
+struct
+  module Key = Key
+  module M1 = Make_plain_using_comparator (Key)
+  include (M1 : module type of M1 with module Tree := M1.Tree with module Key := Key)
+  include Provide_of_sexp (Key)
+  module Tree = struct
+    include M1.Tree
+    include Provide_of_sexp (Key)
   end
 end
 
@@ -1590,25 +1632,14 @@ module Make (Key : Key) =
     include Comparator.Make (Key)
   end)
 
-module Make_binable_using_comparator (Key' : sig
+module Make_binable_using_comparator (Key : sig
   type t [@@deriving bin_io, sexp]
   include Comparator.S with type t := t
 end) = struct
-
-  include Make_using_comparator (Key')
-  include Bin_prot.Utils.Make_iterable_binable1 (struct
-      type nonrec 'v t = 'v t
-      type 'v el = Key'.t * 'v [@@deriving bin_io]
-      let _ = bin_el
-      let module_name = Some "Core.Std.Map"
-      let length = length
-      let iter t ~f = iteri t ~f:(fun ~key ~data -> f (key, data))
-      let init ~len ~next =
-        init_for_bin_prot
-          ~len
-          ~f:(fun _ -> next ())
-          ~comparator:Key'.comparator
-    end)
+  module Key = Key
+  module M2 = Make_using_comparator (Key)
+  include (M2 : module type of M2 with module Key := Key)
+  include Provide_bin_io (Key)
 end
 
 module Make_binable (Key : Key_binable) =

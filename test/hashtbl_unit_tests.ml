@@ -1304,14 +1304,16 @@ module Make (Hashtbl : Hashtbl_intf.Hashtbl) = struct
 
       module type S_binable   = Hashtbl.S_binable
       module type S           = Hashtbl.S
+      module type S_plain     = Hashtbl.S_plain
       module type Key_binable = Hashtbl.Key_binable
       module type Key         = Hashtbl.Key
+      module type Key_plain   = Hashtbl.Key_plain
 
       module Hashable     = Hashtbl.Hashable
       module Poly         = Hashtbl.Poly
+      module Make_plain   = Hashtbl.Make_plain
       module Make         = Hashtbl.Make
       module Make_binable = Hashtbl.Make_binable
-
     end : Hashtbl_intf.Hashtbl))
 
   let%test_module "mutation in callbacks" =
@@ -2146,11 +2148,14 @@ module Make (Hashtbl : Hashtbl_intf.Hashtbl) = struct
 
       module type S_binable   = Hashtbl.S_binable
       module type S           = Hashtbl.S
+      module type S_plain     = Hashtbl.S_plain
       module type Key_binable = Hashtbl.Key_binable
       module type Key         = Hashtbl.Key
+      module type Key_plain   = Hashtbl.Key_plain
 
       module Hashable     = Hashtbl.Hashable
       module Poly         = Hashtbl.Poly
+      module Make_plain   = Hashtbl.Make_plain
       module Make         = Hashtbl.Make
       module Make_binable = Hashtbl.Make_binable
 

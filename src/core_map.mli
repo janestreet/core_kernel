@@ -482,16 +482,27 @@ module Poly : sig
 end
   with type ('a, 'b, 'c) map = ('a, 'b, 'c) t
 
+module type Key_plain   = Key_plain
 module type Key         = Key
 module type Key_binable = Key_binable
 
-module type S = S
-  with type ('a, 'b, 'c) map  := ('a, 'b, 'c) t
-  with type ('a, 'b, 'c) tree := ('a, 'b, 'c) Tree.t
+module Map_and_tree : sig
+  type ('a, 'b, 'c) map  = ('a, 'b, 'c) t
+  type ('a, 'b, 'c) tree = ('a, 'b, 'c) Tree.t
+end
+module type S_plain   = Make_S (Map_and_tree).S_plain
+module type S         = Make_S (Map_and_tree).S
+module type S_binable = Make_S (Map_and_tree).S_binable
 
-module type S_binable = S_binable
-  with type ('a, 'b, 'c) map  := ('a, 'b, 'c) t
-  with type ('a, 'b, 'c) tree := ('a, 'b, 'c) Tree.t
+module Make_plain (Key : Key_plain) : S_plain with type Key.t = Key.t
+
+module Make_plain_using_comparator (Key : sig
+  type t [@@deriving sexp_of]
+  include Comparator.S with type t := t
+end)
+  : S_plain
+    with type Key.t                  = Key.t
+    with type Key.comparator_witness = Key.comparator_witness
 
 module Make (Key : Key) : S with type Key.t = Key.t
 

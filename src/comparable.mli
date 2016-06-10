@@ -2,6 +2,7 @@ open Comparable_intf
 
 module type Infix               = Infix
 module type Map_and_set_binable = Map_and_set_binable
+module type S_plain             = S_plain
 module type S                   = S
 module type S_binable           = S_binable
 module type S_common            = S_common
@@ -62,9 +63,21 @@ module Inherit
       Date.O.(now > someday)
     ]}
 *)
+
+module Make_plain (T : sig
+    type t [@@deriving compare, sexp_of]
+  end) : S_plain with type t := T.t
+
 module Make (T : sig
   type t [@@deriving compare, sexp]
 end) : S with type t := T.t
+
+module Make_plain_using_comparator (T : sig
+    type t [@@deriving sexp_of]
+    include Comparator.S with type t := t
+  end) : S_plain
+  with type t := T.t
+  with type comparator_witness := T.comparator_witness
 
 module Make_using_comparator (T : sig
     type t [@@deriving sexp]

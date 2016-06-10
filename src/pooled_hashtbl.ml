@@ -111,6 +111,7 @@ type ('k, 'd) t = ('k, 'd) hashtbl
 
 type 'a key = 'a
 
+module type S_plain   = S_plain   with type ('a, 'b) hashtbl = ('a, 'b) t
 module type S         = S         with type ('a, 'b) hashtbl = ('a, 'b) t
 module type S_binable = S_binable with type ('a, 'b) hashtbl = ('a, 'b) t
 
@@ -944,6 +945,7 @@ module Accessors = struct
   let sexp_of_key         = sexp_of_key
 end
 
+module type Key_plain   = Key_plain
 module type Key         = Key
 module type Key_binable = Key_binable
 
@@ -1057,7 +1059,7 @@ module Poly = struct
 
 end
 
-module Make (Key : Key) = struct
+module Make_plain (Key : Key_plain) = struct
 
   let hashable =
     { Hashable.
@@ -1082,8 +1084,38 @@ module Make (Key : Key) = struct
   include Accessors
 
   let sexp_of_t sexp_of_v t = Poly.sexp_of_t Key.sexp_of_t sexp_of_v t
-  let t_of_sexp v_of_sexp sexp = t_of_sexp Key.t_of_sexp v_of_sexp sexp
 
+  module Provide_of_sexp(X : sig type t [@@deriving of_sexp] end with type t := key) =
+  struct
+    let t_of_sexp v_of_sexp sexp = t_of_sexp X.t_of_sexp v_of_sexp sexp
+  end
+
+  module Provide_bin_io(X : sig type t [@@deriving bin_io] end with type t := key) =
+    Bin_prot.Utils.Make_iterable_binable1 (struct
+      module Key = struct include Key include X end
+      type nonrec 'a t = 'a t
+      type 'a el = Key.t * 'a [@@deriving bin_io]
+
+      let module_name = Some "Pooled_hashtbl"
+      let length = length
+      let iter t ~f = iteri t ~f:(fun ~key ~data -> f (key, data))
+      let init ~len ~next =
+        let t = create ~size:len () in
+        for _i = 0 to len - 1 do
+          let (key, data) = next () in
+          match find t key with
+          | None -> replace t ~key ~data
+          | Some _ -> failwiths "Pooled_hashtbl.bin_read_t: duplicate key"
+                        key [%sexp_of: Key.t]
+        done;
+        t
+      ;;
+    end)
+end
+
+module Make (Key : Key) = struct
+  include Make_plain (Key)
+  include Provide_of_sexp (Key)
 end
 
 module Make_binable (Key : sig
@@ -1091,27 +1123,7 @@ module Make_binable (Key : sig
   include Binable.S with type t := t
 end) = struct
   include Make (Key)
-
-  include Bin_prot.Utils.Make_iterable_binable1 (struct
-    type nonrec 'a t = 'a t
-    type 'a el = Key.t * 'a [@@deriving bin_io]
-
-    let module_name = Some "Pooled_hashtbl"
-    let length = length
-    let iter t ~f = iteri t ~f:(fun ~key ~data -> f (key, data))
-    let init ~len ~next =
-      let t = create ~size:len () in
-      for _i = 0 to len - 1 do
-        let (key, data) = next () in
-        match find t key with
-        | None -> replace t ~key ~data
-        | Some _ -> failwiths "Pooled_hashtbl.bin_read_t: duplicate key"
-                      key [%sexp_of: Key.t]
-      done;
-      t
-    ;;
-  end)
-
+  include Provide_bin_io (Key)
 end
 
 let%bench_module "Pooled_hashtbl" = (module struct

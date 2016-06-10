@@ -361,6 +361,8 @@ end
 
 (** {1 Signatures and functors for building [Set] modules}  *)
 
+module type Elt_plain = Elt_plain
+
 (** The signature that something needs to match in order to be used as a set element. *)
 module type Elt = Elt
 
@@ -368,22 +370,35 @@ module type Elt = Elt
     the resulting set is going to support [bin_io]. *)
 module type Elt_binable = Elt_binable
 
+module Set_and_tree : sig
+  type ('a, 'b) set  = ('a, 'b) t
+  type ('a, 'b) tree = ('a, 'b) Tree.t
+end
+
+(** Module signature for a Set that doesn't support [of_sexp]. *)
+module type S_plain = Make_S (Set_and_tree).S_plain
+
 (** Module signature for a Set. *)
-module type S = S0
-  with type ('a, 'b) set  := ('a, 'b) t
-  with type ('a, 'b) tree := ('a, 'b) Tree.t
+module type S = Make_S (Set_and_tree).S
 
 (** Module signature for a Set that supports [bin_io]. *)
-module type S_binable = S0_binable
-  with type ('a, 'b) set  := ('a, 'b) t
-  with type ('a, 'b) tree := ('a, 'b) Tree.t
+module type S_binable = Make_S (Set_and_tree).S_binable
 
 (** [Make] builds a set from an element type that has a [compare] function but doesn't
     have a comparator.  This generates a new comparator.
 
     [Make_binable] is similar, except the element and set types support [bin_io]. *)
+module Make_plain   (Elt : Elt_plain)   : S_plain   with type Elt.t = Elt.t
 module Make         (Elt : Elt)         : S         with type Elt.t = Elt.t
 module Make_binable (Elt : Elt_binable) : S_binable with type Elt.t = Elt.t
+
+module Make_plain_using_comparator (Elt : sig
+  type t [@@deriving sexp_of]
+  include Comparator.S with type t := t
+end)
+  : S_plain
+    with type Elt.t = Elt.t
+    with type Elt.comparator_witness = Elt.comparator_witness
 
 (** [Make_using_comparator] builds a set from an element type that has a comparator.
 

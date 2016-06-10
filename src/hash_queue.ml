@@ -16,7 +16,7 @@ module Array = Core_array
 module Hashtbl = Core_hashtbl
 
 (* The key is used for the hashtable of queue elements. *)
-module type Key = Hashtbl.Key
+module type Key = Hashtbl.Key_plain
 
 module type S = sig
   module Key : Key
@@ -101,7 +101,7 @@ end
 
 module Make (Key : Key) : S with module Key = Key = struct
   module Key = Key
-  module Table = Hashtbl.Make (Key)
+  module Table = Hashtbl.Make_plain (Key)
 
   module Key_value = struct
     module T = struct

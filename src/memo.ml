@@ -19,14 +19,12 @@ let unit f =
   let l = Lazy.from_fun f in
   (fun () -> Lazy.force l)
 
-let unbounded (type a) ?hashable f =
+let unbounded (type a) ?(hashable = Hashtbl.Hashable.poly) f =
   let cache =
     let module A =
-      Hashable.Make (struct
+      Hashable.Make_plain (struct
         type t = a
-        let {Hashtbl.Hashable.hash; compare; sexp_of_t} =
-          Option.value ~default:Hashtbl.Hashable.poly hashable
-        let t_of_sexp _ = assert false (* ditto the comment below in [lru] *)
+        let {Hashtbl.Hashable.hash; compare; sexp_of_t} = hashable
       end)
     in
     A.Table.create () ~size:0
@@ -38,18 +36,13 @@ let unbounded (type a) ?hashable f =
     end)
 
 (* the same but with a bound on cache size *)
-let lru (type a) ?hashable ~max_cache_size f =
+let lru (type a) ?(hashable = Hashtbl.Hashable.poly) ~max_cache_size f =
   if max_cache_size <= 0
   then failwithf "Memo.lru: max_cache_size of %i <= 0" max_cache_size ();
   let module Cache =
     Hash_queue.Make (struct
       type t = a
-      let {Hashtbl.Hashable.hash; compare; sexp_of_t} =
-        Option.value ~default:Hashtbl.Hashable.poly hashable
-      (* this [assert false] is unreachable because the only use of [t_of_sexp] by
-         [Hash_queue.Make] is to define [t_of_sexp] on the returned hash queue type,
-         and we never call that function. *)
-      let t_of_sexp _ = assert false
+      let {Hashtbl.Hashable.hash; compare; sexp_of_t} = hashable
     end)
   in
   let cache = Cache.create () in
