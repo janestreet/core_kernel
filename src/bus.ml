@@ -22,12 +22,12 @@ module Callback_arity = struct
     | Arity4 : ('a -> 'b -> 'c -> 'd -> unit) t
   [@@deriving sexp_of]
 
-  let dummy_callback (type a) (arity : a t) : a =
+  let create_callback (type a) (arity : a t) ~f : a =
     match arity with
-    | Arity1 -> (fun _       -> assert false)
-    | Arity2 -> (fun _ _     -> assert false)
-    | Arity3 -> (fun _ _ _   -> assert false)
-    | Arity4 -> (fun _ _ _ _ -> assert false)
+    | Arity1 -> (fun _       -> f ())
+    | Arity2 -> (fun _ _     -> f ())
+    | Arity3 -> (fun _ _ _   -> f ())
+    | Arity4 -> (fun _ _ _ _ -> f ())
   ;;
 end
 
@@ -72,10 +72,10 @@ type ('callback, 'phantom) t =
   ; mutable state                        : State.t
   ; mutable write_ever_called            : bool
   ; mutable subscribers                  : 'callback Subscriber.t Subscriber_id.Map.t
-  (* [t.write] is a closure closed over [t], that implements [Bus.write].  We recompute
-     [write] everytime the set of subscribers changes.  This lets us allocate the closure
-     during rare operations ([subscribe_exn]/[unsubscribe]), and reuse the closure without
-     allocating during the common operation, [Bus.write]. *)
+  (* [t.write] is a closure closed over [t], that implements [Bus.write].  We
+     recompute [write] everytime the set of subscribers changes.  This lets us
+     allocate the closure during rare operations ([subscribe_exn]/[unsubscribe]), and
+     reuse the closure without allocating during the common operation, [Bus.write]. *)
   ; mutable write                        : 'callback
   ; on_callback_raise                    : Error.t -> unit }
 [@@deriving fields, sexp_of]
@@ -121,10 +121,9 @@ let start_write t =
   t.write_ever_called <- true;
   match t.state with
   | Closed ->
-    failwiths "Bus.Publisher.write called on closed bus" t [%sexp_of: (_, _) t];
+    failwiths "[Bus.write] called on closed bus" t [%sexp_of: (_, _) t];
   | Write_in_progress ->
-    failwiths "Bus.Publisher.write called from callback on the same bus" t
-      [%sexp_of: (_, _) t];
+    failwiths "[Bus.write] called from callback on the same bus" t [%sexp_of: (_, _) t];
   | Ok_to_write ->
     t.state <- Write_in_progress
 ;;
@@ -142,7 +141,8 @@ let close t =
   | Ok_to_write | Write_in_progress ->
     t.state       <- Closed;
     t.subscribers <- Subscriber_id.Map.empty;
-    t.write       <- Callback_arity.dummy_callback t.callback_arity;
+    t.write       <- Callback_arity.create_callback t.callback_arity
+                       ~f:(fun () -> start_write t; assert false);
 ;;
 
 let update_write (type callback) (t : (callback, _) t) =
@@ -265,7 +265,9 @@ let create
     ; on_callback_raise
     ; allow_subscription_after_first_write
     ; subscribers                          = Subscriber_id.Map.empty
-    ; write                                = Callback_arity.dummy_callback callback_arity
+    ; write                                = Callback_arity.create_callback callback_arity
+                                               ~f:(fun () ->
+                                                 failwith "bug in Bus.create ()")
     ; state                                = Ok_to_write
     ; write_ever_called                    = false }
   in

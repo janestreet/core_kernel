@@ -260,9 +260,28 @@ include (struct
     print_s [%message (is_closed bus : bool)];
     [%expect {|
       ("is_closed bus" true) |}];
-    show_raise (fun () -> write bus ());
+    show_raise ~hide_positions:true (fun () -> write bus ());
     [%expect {|
-      (raised (exn "Assert_failure bus.ml:27:32")) |}];
+      (raised (
+        exn (
+          "[Bus.write] called on closed bus"
+          ((name ())
+           (callback_arity Arity1)
+           (created_from lib/core_kernel/test/test_bus.ml:LINE:COL)
+           (allow_subscription_after_first_write false)
+           (state                                Closed)
+           (write_ever_called                    true)
+           (subscribers ())
+           (write             _)
+           (on_callback_raise <fun>))
+          lib/core_kernel/src/bus.ml:LINE:COL))) |}];
+  ;;
+
+  let%expect_test "after [close], [write t] without the value to be written" =
+    let bus = create1 [%here] ~allow_subscription_after_first_write:false in
+    close bus;
+    show_raise ~hide_positions:true (fun () -> write bus);
+    [%expect {| "did not raise" |}]
   ;;
 
   let%expect_test "close takes effect after all writes" =
