@@ -1,4 +1,4 @@
-type t = Less | Equal | Greater [@@deriving bin_io, compare, enumerate, sexp]
+type t = Less | Equal | Greater [@@deriving bin_io, compare, hash, enumerate, sexp]
 
 module Export = struct
   type _ordering = t =

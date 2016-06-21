@@ -127,3 +127,8 @@ module Sexpable (S1 : Sexpable.S) (S2 : Sexpable.S)
 
 module Binable (B1 : Binable.S) (B2 : Binable.S)
   : Binable.S with type t := Make (B1) (B2).t
+
+module Hasher
+    (H1 : sig type t [@@deriving compare, hash, sexp] end)
+    (H2 : sig type t [@@deriving compare, hash, sexp] end)
+  : Hashable_sexpable with type t := Make (H1) (H2).t

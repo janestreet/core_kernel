@@ -10,7 +10,7 @@ type t
     ; pos_bol   : int
     ; pos_cnum  : int
     }
-  [@@deriving sexp_of]
+  [@@deriving hash, sexp_of]
 (** [sexp_of_t] uses the form ["FILE:LINE:COL"], and does not have a corresponding
     [of_sexp]. *)
 

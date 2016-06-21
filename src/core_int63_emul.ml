@@ -6,11 +6,12 @@
 open Typerep_lib.Std
 open Sexplib.Std
 open Bin_prot.Std
+open Hash.Builtin
 
 module Conv = Int_conversions
 
 module W : sig
-  type t [@@deriving sexp, typerep]
+  type t [@@deriving hash, sexp, typerep]
   val wrap_exn   : Int64.t -> t
   val wrap_modulo : Int64.t -> t
   val unwrap : t -> Int64.t
@@ -43,7 +44,7 @@ module W : sig
 
   val compare : t -> t -> int
 end = struct
-  type t = int64 [@@deriving typerep]
+  type t = int64 [@@deriving hash, typerep]
 
   let wrap_exn x =
     (* Raises if the int64 value does not fit on int63. *)
@@ -99,7 +100,7 @@ end
 open W
 
 module T = struct
-  type t = W.t [@@deriving sexp, typerep]
+  type t = W.t [@@deriving hash, sexp, typerep]
 
   let compare = W.compare
 
@@ -282,7 +283,7 @@ include Conv.Make (T)
 
 include Conv.Make_hex(struct
 
-  type t = T.t [@@deriving bin_io, compare, typerep]
+  type t = T.t [@@deriving bin_io, compare, hash, typerep]
 
   let zero = zero
   let neg = (~-)

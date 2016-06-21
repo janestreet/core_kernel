@@ -1,14 +1,11 @@
 module Stable = struct
   module V1 = struct
-    type t = Nothing0.t [@@deriving sexp, bin_io, compare, enumerate]
+    type t = Nothing0.t [@@deriving sexp, bin_io, compare, hash, enumerate]
   end
 end
 
 module T = struct
   include Stable.V1
-
-  let hash (_ : t) =
-    failwith "Nothing.hash: impossible, values of this type don't exist"
 
   let to_string (_ : t) =
     failwith "Nothing.to_string: impossible, values of this type don't exist"

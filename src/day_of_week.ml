@@ -18,9 +18,7 @@ module Stable = struct
         | Thu
         | Fri
         | Sat
-      [@@deriving bin_io, compare]
-
-      let hash = Hashtbl.hash
+      [@@deriving bin_io, compare, hash]
 
       let to_string t =
         match t with

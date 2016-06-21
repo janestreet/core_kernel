@@ -102,7 +102,7 @@ module Merge_with_duplicates_element : sig
     | Left of 'a
     | Right of 'a
     | Both of 'a * 'a
-  [@@deriving bin_io, compare, sexp]
+  [@@deriving bin_io, compare, hash, sexp]
 end
 
 (** [merge_with_duplicates_element t1 t2 ~cmp] is like [merge], except that for each

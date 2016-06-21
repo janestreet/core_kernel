@@ -1,7 +1,7 @@
 (** An extension of the standard StringLabels. If you open! Core.Std, you'll get
     these in the String module. *)
 
-type t = string [@@deriving bin_io, sexp, typerep]
+type t = string [@@deriving hash, bin_io, sexp, typerep]
 
 (** [Caseless] compares and hashes strings ignoring case, so that for example
     [Caseless.equal "OCaml" "ocaml"] and [Caseless.("apple" < "Banana")] are [true], and

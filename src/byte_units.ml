@@ -40,7 +40,7 @@ end
 
 module Stable = struct
   module V1 = struct
-    type t = float [@@deriving bin_io, compare]
+    type t = float [@@deriving bin_io, compare, hash]
 
     let scale = Float.( * )
 

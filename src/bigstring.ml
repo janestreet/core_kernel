@@ -81,7 +81,6 @@ external unsafe_blit
 
 (* Exposing the external version of get/set supports better inlining *)
 external get : t -> int -> char = "%caml_ba_ref_1"
-
 external set : t -> int -> char -> unit = "%caml_ba_set_1"
 
 module Bigstring_sequence = struct
@@ -213,6 +212,32 @@ let compare t1 t2 =
       if len1 > len2 then  1 else
         0
     | n -> n
+
+external internalhash_fold_bigstring :
+  Ppx_hash_lib.Internalhash.state -> t -> Ppx_hash_lib.Internalhash.state
+  = "internalhash_fold_bigstring" "noalloc"
+
+let hash_fold_t = internalhash_fold_bigstring
+let hash = [%hash: t]
+
+let%test_unit _ =
+  let check s = [%test_result: int] (hash (of_string s)) ~expect:([%hash: string] s) in
+  List.iter ~f:check [
+    ""; "a"; "ab"; "abc"; "abcd";
+    "string hashing for bigstrings is the same as for standard strings";
+  ]
+
+let%bench_module "hash" = (module struct
+  let short_string = of_string "short"
+  let long_string  =
+    of_string "somewhat longer but admittedly still not long by most standards"
+
+  let%bench "hash long string"  = hash long_string
+  let%bench "hash short string" = hash short_string
+
+end)
+
+type t_frozen = t [@@deriving bin_io, compare, hash, sexp]
 
 let equal t1 t2 =
   if phys_equal t1 t2 then true else
@@ -840,4 +865,3 @@ let set_head_padded_fixed_string ~padding t ~pos ~len value =
 let get_head_padded_fixed_string ~padding t ~pos ~len () =
   let data_begin = first_nonmatch ~buf:t ~pos ~max_pos:(pos + len - 1) ~char: padding in
   to_string t ~pos:data_begin ~len:(len - (data_begin - pos))
-

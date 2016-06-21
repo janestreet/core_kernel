@@ -2,14 +2,12 @@ open Std_internal
 
 module Stable = struct
   module V1 = struct
-    type t = string * int [@@deriving sexp, bin_io, compare]
+    type t = string * int [@@deriving sexp, bin_io, compare, hash]
   end
 end
 
 module T = struct
   include Stable.V1
-
-  let hash = Hashtbl.hash
 end
 include T
 

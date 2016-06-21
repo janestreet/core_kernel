@@ -4,10 +4,13 @@ open Bin_prot.Std
 
 module Stable = struct
   module V1 = struct
+    open Ppx_hash_lib.Std
+
     type 'a t = 'a lazy_t [@@deriving bin_io, sexp, typerep]
 
     let map t ~f = lazy (f (Lazy.force t))
     let compare compare_a t1 t2 = compare_a (Lazy.force t1) (Lazy.force t2)
+    let hash_fold_t = Hash.Builtin.hash_fold_lazy_t
   end
 end
 

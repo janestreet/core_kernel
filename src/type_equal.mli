@@ -174,7 +174,7 @@ module Id : sig
   (** Every [Id.t] contains a unique id that is distinct from the [Uid.t] in any other
       [Id.t]. *)
   module Uid : sig
-    type t
+    type t [@@deriving hash]
     include Comparable.S with type t := t
     include Hashable.S   with type t := t
   end

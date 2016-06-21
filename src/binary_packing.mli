@@ -9,7 +9,7 @@
    is no difference because endian-ness only changes the order of bytes, not bits.
 *)
 
-type endian = [ `Big_endian | `Little_endian ] [@@deriving compare, sexp]
+type endian = [ `Big_endian | `Little_endian ] [@@deriving compare, hash, sexp]
 
 
 val unpack_signed_8      :                      buf:string -> pos:int -> int

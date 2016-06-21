@@ -51,7 +51,7 @@ let%test_module _ = (module struct
     | Sexp_of_t
     | T_of_sexp
     | To_string
-    [@@deriving compare, sexp]
+    [@@deriving compare, hash, sexp]
   end
 
   open Counter
@@ -79,9 +79,7 @@ let%test_module _ = (module struct
 
     let module_name = "Core.Std.Identifiable.T"
 
-    type t = A | B [@@deriving bin_io, compare, sexp]
-
-    let hash (t : t) = Hashtbl.hash t
+    type t = A | B [@@deriving bin_io, compare, hash, sexp]
 
     include Sexpable.To_stringable (struct type nonrec t = t [@@deriving sexp] end)
 

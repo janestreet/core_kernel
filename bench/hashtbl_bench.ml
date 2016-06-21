@@ -666,8 +666,6 @@ end = struct
 
 end
 
-open Ppx_hash_lib.Std.Hash.Builtin
-
 module Int_key = struct
   include Int
   let hash s = [%hash: int] s

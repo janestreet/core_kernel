@@ -33,6 +33,7 @@ module Stable0 = struct
   end
 end
 
+open Hash.Builtin
 open Sexplib
 open Core_set_intf
 open With_return
@@ -719,6 +720,10 @@ module Tree0 = struct
     | Node(l, v, r, _, _) -> fold ~f r ~init:(f (fold ~f l ~init:accu) v)
   ;;
 
+  let hash_fold_t_ignoring_structure hash_fold_elem state t =
+    fold t ~init:(hash_fold_int state (length t)) ~f:hash_fold_elem
+  ;;
+
   let count t ~f = Container.count ~fold t ~f
   let sum m t ~f = Container.sum ~fold m t ~f
 
@@ -1383,6 +1388,9 @@ module Poly = struct
   end)
 end
 
+let hash_fold_direct hash_fold_key state t =
+  Tree0.hash_fold_t_ignoring_structure hash_fold_key state t.tree
+
 module Set_and_tree = struct
   type ('a, 'b) set  = ('a, 'b) t
   type nonrec ('a, 'b) tree = ('a, 'b) tree
@@ -1411,6 +1419,12 @@ end) = struct
   module Provide_of_sexp (Elt : sig type t [@@deriving of_sexp] end with type t := Elt.t) =
   struct
     let t_of_sexp sexp = t_of_sexp Elt.t_of_sexp sexp
+  end
+
+  module Provide_hash (Elt : Hasher.S with type t := Elt.t) =
+  struct
+    let hash_fold_t state t = hash_fold_direct Elt.hash_fold_t state t
+    let hash = [%hash: t]
   end
 
   module Provide_bin_io (Elt' : sig type t [@@deriving bin_io] end with type t := Elt.t) =

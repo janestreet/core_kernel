@@ -3,7 +3,7 @@ open Sexplib
 (** Code for managing s-expressions *)
 
 type t = Sexp.t = Atom of string | List of t list
-[@@deriving bin_io, sexp]
+[@@deriving bin_io, hash, sexp]
 
 module O : sig
   type sexp = Sexp.t = Atom of string | List of t list
@@ -45,7 +45,7 @@ type 'a no_raise = 'a [@@deriving bin_io, sexp]
     If [Reason_to_stop.t_of_sexp] fails, you can still tell it was a [Stop] query.
 *)
 module Sexp_maybe : sig
-  type 'a t = ('a, Sexp.t * Error.t) Result.t [@@deriving bin_io, compare, sexp]
+  type 'a t = ('a, Sexp.t * Error.t) Result.t [@@deriving bin_io, compare, hash, sexp]
 end
 
 (** A [With_text.t] is a value paired with the full textual representation of its sexp.

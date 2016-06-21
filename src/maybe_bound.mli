@@ -20,7 +20,7 @@ type interval_comparison =
   | Below_lower_bound
   | In_range
   | Above_upper_bound
-[@@deriving sexp, compare]
+[@@deriving sexp, compare, hash]
 
 (** [compare_to_interval_exn ~lower ~upper x ~compare] raises if [lower] and [upper] are
     crossed. *)

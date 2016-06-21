@@ -32,7 +32,7 @@ module type S = sig
   open Sexplib
 
   (** Serialization and comparison force the lazy message. *)
-  type t [@@deriving bin_io, compare, sexp]
+  type t [@@deriving bin_io, compare, hash, sexp]
 
   include Invariant_intf.S with type t := t
 

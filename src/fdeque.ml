@@ -344,6 +344,9 @@ let compare cmp t1 t2 =
     (to_list t1)
     (to_list t2)
 
+let hash_fold_t hash_fold_a state t =
+  fold ~f:hash_fold_a ~init:([%hash_fold: int] state (length t)) t
+
 module Stable = struct
 
   module V1 = struct

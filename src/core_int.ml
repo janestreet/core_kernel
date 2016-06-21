@@ -1,5 +1,6 @@
 open Bin_prot.Std
 open Sexplib.Std
+open Hash.Builtin
 
 module Stable_workaround = struct
   open Bin_prot.Std
@@ -7,7 +8,7 @@ module Stable_workaround = struct
 
   module V1 = struct
     module T = struct
-      type t = int [@@deriving bin_io, sexp]
+      type t = int [@@deriving hash, bin_io, sexp]
 
       (*
          if i = j then 0 else if i < j then -1 else 1
@@ -40,7 +41,7 @@ open Common
 open Typerep_lib.Std
 
 module T = struct
-  type t = Stable.V1.t [@@deriving bin_io, compare, sexp]
+  type t = Stable.V1.t [@@deriving bin_io, compare, hash, sexp]
 
   module X = struct
     type t = int [@@deriving typerep]
@@ -52,6 +53,10 @@ module T = struct
 
   let original_compare = Stable.V1.original_compare
 
+  (* This shadows the [hash] definition coming from [@@deriving hash].
+     The hash function there is different (significantly slower).
+     Unfortunately, this means that the user writing [%hash: Int.t] will  get a different
+     hash function from what they get when writing [Int.hash]. *)
   let hash (x : t) = if x >= 0 then x else ~-x
 
   let of_string s =
@@ -151,7 +156,7 @@ include Conv.Make (T)
 
 include Conv.Make_hex(struct
 
-  type t = int [@@deriving bin_io, compare, typerep]
+  type t = int [@@deriving bin_io, compare, hash, typerep]
 
   let zero = zero
   let neg = (~-)

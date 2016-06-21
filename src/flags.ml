@@ -10,7 +10,7 @@ let create ~bit:n =
 ;;
 
 module Make (M : Make_arg) = struct
-  type t = Int63.t [@@deriving typerep]
+  type t = Int63.t [@@deriving hash, typerep]
 
   let of_int     = Int63.of_int
   let to_int_exn = Int63.to_int_exn
@@ -107,7 +107,7 @@ module Make (M : Make_arg) = struct
     Int63.compare (flip_top_bit t) (flip_top_bit u)
   ;;
 
-  include Comparable.Make (struct type nonrec t = t [@@deriving sexp, compare] end)
+  include Comparable.Make (struct type nonrec t = t [@@deriving sexp, compare, hash] end)
 end
 
 (* Check that conflicting flags leads to an error. *)

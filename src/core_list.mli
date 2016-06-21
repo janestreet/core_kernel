@@ -5,7 +5,7 @@
     comparison functions on lists are lexicographic.
 *)
 
-type 'a t = 'a list [@@deriving bin_io, compare, sexp, typerep]
+type 'a t = 'a list [@@deriving bin_io, compare, hash, sexp, typerep]
 
 include Container.S1      with type 'a t := 'a t
 include Monad.S           with type 'a t := 'a t
@@ -373,7 +373,7 @@ val filter_opt : 'a option t -> 'a t
 
     is always the same as (or at least sort of isomorphic to):
 
-    {[ Map.xxx (alist |! Map.of_alist_multi |! Map.map ~f:List.hd) ...args... ]}
+    {[ Map.xxx (alist |> Map.of_alist_multi |> Map.map ~f:List.hd) ...args... ]}
 *)
 module Assoc : sig
 

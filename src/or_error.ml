@@ -18,7 +18,7 @@ end
    format, and we don't want to change this "unstable" format, which is in use.  We just
    introduced the stable format, so people haven't yet had the time to adjust code to use
    it. *)
-type 'a t = ('a, Error.t) Result.t [@@deriving bin_io, compare, sexp]
+type 'a t = ('a, Error.t) Result.t [@@deriving bin_io, compare, hash, sexp]
 
 let invariant invariant_a t =
   match t with

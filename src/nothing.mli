@@ -21,7 +21,7 @@
     another case where [[@deriving enumerate]] could be useful is when this type is part
     of some larger type.
 *)
-type t = Nothing0.t [@@deriving enumerate]
+type t = Nothing0.t [@@deriving hash, enumerate]
 
 (** Because there are no values of type [Nothing.t], a piece of code that has a value of
     type [Nothing.t] must be unreachable.  In such an unreachable piece of code, one can
@@ -46,6 +46,6 @@ include Identifiable.S with type t := t
 
 module Stable : sig
   module V1 : sig
-    type nonrec t = t [@@deriving sexp, bin_io, compare]
+    type nonrec t = t [@@deriving sexp, bin_io, compare, hash]
   end
 end

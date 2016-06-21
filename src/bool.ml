@@ -1,17 +1,26 @@
 open Typerep_lib.Std
 open Sexplib.Std
 open Bin_prot.Std
+open Hash.Builtin
 
 let invalid_argf = Core_printf.invalid_argf
 
 module T = struct
-  type t = bool [@@deriving bin_io, sexp, typerep]
+  type t = bool [@@deriving hash, bin_io, sexp, typerep]
   let compare (t : t) t' = compare t t'
 
   (* we use physical equality here because for bools it is the same *)
   let equal (t : t) t' = t == t'
 
+  (* This shadows the [hash] definition coming from [@@deriving hash] because that
+     function is significantly slower.
+
+     Unfortunately, this means [Bool.hash] and [%hash: Bool.t] produce different hash
+     values, but this is unavoidable if we want predictable name-based behavior from the
+     syntax extension.
+  *)
   let hash x = if x then 1 else 0
+
 end
 
 include T

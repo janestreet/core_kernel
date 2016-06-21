@@ -1,6 +1,7 @@
 #import "config.h"
 module type Int_or_more = sig
-  include Int_intf.S
+  type t [@@deriving hash]
+  include Int_intf.S with type t := t
   val of_int : int -> t
   val to_int : t -> int option
   val of_float_unchecked : float -> t

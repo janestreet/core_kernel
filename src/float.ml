@@ -1,6 +1,7 @@
 open Typerep_lib.Std
 open Sexplib.Std
 open Bin_prot.Std
+open Hash.Builtin
 open Result.Export
 module List = ListLabels
 module Sexp = Sexplib.Sexp
@@ -13,22 +14,34 @@ include Float0
 let failwiths = Error.failwiths
 
 module T = struct
-  type t = float [@@deriving sexp, bin_io, typerep]
+  type t = float [@@deriving hash, sexp, bin_io, typerep]
   let compare (x : t) y = compare x y
   let equal (x : t) y = x = y
-  external hash : float -> int = "caml_hash_double" "noalloc"
+
+  external specialized_hash : float -> int = "caml_hash_double" "noalloc"
 
   let%test_unit _ =
-    List.iter ~f:(fun float -> assert (hash float = Caml.Hashtbl.hash float))
-      [ 0.926038888360971146
-      ; 34.1638588598232076
-      ]
+    (* on 64-bit platform ppx_hash hashes floats exactly the same as polymorphic hash *)
+    if Core_int.num_bits = 63 then
+      List.iter ~f:(fun float ->
+        let hash1 = Caml.Hashtbl.hash float in
+        let hash2 = [%hash: float] float in
+        let hash3 = specialized_hash float in
+        if (not (hash1 = hash2 && hash1 = hash3))
+        then failwithf "bad %x %x %x" hash1 hash2 hash3 ()
+      )
+        [ 0.926038888360971146
+        ; 34.1638588598232076
+        ]
+  ;;
+
+  let hash = specialized_hash
   ;;
 
 end
 
 include T
-type outer = t [@@deriving sexp, bin_io, typerep] (* alias for use by sub-modules *)
+type outer = t [@@deriving hash, sexp, bin_io, typerep] (* alias for use by sub-modules *)
 
 let to_float x = x
 let of_float x = x

@@ -776,6 +776,8 @@ module Make_S (X : sig type ('a, 'cmp) set type ('a, 'cmp) tree end) = struct
       : sig type t [@@deriving of_sexp] end with type t := t
     module Provide_bin_io (Elt : sig type t [@@deriving bin_io] end with type t := Elt.t)
       : Binable.S with type t := t
+    module Provide_hash (Elt : Hasher.S with type t := Elt.t)
+      : sig type t [@@deriving hash] end with type t := t
   end
 
   module type S = sig

@@ -35,7 +35,7 @@ module type S = sig
   type ('f, 's) t =
     | First  of 'f
     | Second of 's
-  [@@deriving bin_io, compare, sexp, typerep]
+  [@@deriving bin_io, compare, hash, sexp, typerep]
 
   include Invariant.S2      with type ('a, 'b) t := ('a, 'b) t
   include Quickcheckable.S2 with type ('a, 'b) t := ('a, 'b) t

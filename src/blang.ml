@@ -20,7 +20,7 @@ module T : sig
     | Not of 'a t
     | If of 'a t * 'a t * 'a t
     | Base of 'a
-  [@@deriving bin_io, compare]
+  [@@deriving bin_io, compare, hash]
 
   val invariant : 'a t -> unit
 
@@ -42,7 +42,7 @@ end = struct
     | Not of 'a t
     | If of 'a t * 'a t * 'a t
     | Base of 'a
-  [@@deriving bin_io, compare]
+  [@@deriving bin_io, compare, hash]
 
   let invariant =
     let subterms = function
@@ -107,7 +107,7 @@ module Stable = struct
     | Not of 'a t
     | If of 'a t * 'a t * 'a t
     | Base of 'a
-    [@@deriving bin_io, compare, sexp]
+    [@@deriving bin_io, compare, hash, sexp]
 
     (* the remainder of this signature consists of functions used in the definitions
        of sexp conversions that are also useful more generally *)
@@ -129,7 +129,7 @@ module Stable = struct
     | If of 'a t * 'a t * 'a t
     | Base of 'a
 
-    include (T : sig type 'a t [@@deriving bin_io, compare] end with type 'a t := 'a t)
+    include (T : sig type 'a t [@@deriving bin_io, compare, hash] end with type 'a t := 'a t)
 
     type sexp = Sexp.t = Atom of string | List of sexp list (* cheap import *)
 

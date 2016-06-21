@@ -17,6 +17,7 @@ module Stable0 = struct
   end
 end
 
+open Hash.Builtin
 open Sexplib
 open Sexplib.Conv
 open Core_map_intf
@@ -756,6 +757,11 @@ module Tree0 = struct
     | Empty -> 0
     | Leaf _ -> 1
     | Node (l, _, _, r, _) -> length l + length r + 1
+  ;;
+
+  let hash_fold_t_ignoring_structure hash_fold_key hash_fold_data state t =
+    fold t ~init:(hash_fold_int state (length t))
+      ~f:(fun ~key ~data state -> hash_fold_data (hash_fold_key state key) data)
   ;;
 
   let of_alist_fold alist ~init ~f ~compare_key =
@@ -1543,6 +1549,8 @@ end
 module type Key_plain   = Key_plain
 module type Key         = Key
 module type Key_binable = Key_binable
+module type Key_hashable = Key_hashable
+module type Key_binable_hashable = Key_binable_hashable
 
 module Map_and_tree = struct
   type ('a, 'b, 'c) map  = ('a, 'b, 'c) t
@@ -1550,6 +1558,9 @@ module Map_and_tree = struct
 end
 
 include Make_S (Map_and_tree)
+
+let hash_fold_direct hash_fold_key hash_fold_data state t =
+  Tree0.hash_fold_t_ignoring_structure hash_fold_key hash_fold_data state t.tree
 
 module Make_plain_using_comparator (Key : sig
     type t [@@deriving sexp_of]
@@ -1574,6 +1585,11 @@ module Make_plain_using_comparator (Key : sig
   module Provide_of_sexp (Key : sig type t [@@deriving of_sexp] end with type t := Key.t) =
   struct
     let t_of_sexp v_of_sexp sexp = t_of_sexp Key.t_of_sexp v_of_sexp sexp
+  end
+
+  module Provide_hash (Key' : Hasher.S with type t := Key.t) = struct
+    let hash_fold_t (type a) hash_fold_data state (t : a t)  =
+      hash_fold_direct Key'.hash_fold_t hash_fold_data state t
   end
 
   module Provide_bin_io (Key' : sig type t [@@deriving bin_io] end with type t := Key.t) =

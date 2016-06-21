@@ -24,3 +24,4 @@
 <src/applicative.*>: -open_result_wrapper
 <src/applicative_intf.*>: -open_result_wrapper
 <src/comparator.*>: -open_result_wrapper
+<src/hash.*>: -open_result_wrapper

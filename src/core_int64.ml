@@ -1,14 +1,14 @@
 open Typerep_lib.Std
 open Sexplib.Std
 open Bin_prot.Std
+open Hash.Builtin
 open Int64
 
 module T = struct
-  type t = int64 [@@deriving sexp, bin_io, typerep]
+  type t = int64 [@@deriving hash, sexp, bin_io, typerep]
 
   let compare (x : t) y = compare x y
   let equal (x : t) y = x = y
-  let hash (x : t) = Hashtbl.hash x
 
   let to_string = to_string
   let of_string = of_string
@@ -123,7 +123,7 @@ include Conv.Make (T)
 
 include Conv.Make_hex(struct
 
-  type t = int64 [@@deriving bin_io, compare, typerep]
+  type t = int64 [@@deriving bin_io, compare, hash, typerep]
 
   let zero = zero
   let neg = (~-)

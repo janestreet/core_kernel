@@ -4,6 +4,7 @@
 
 open Sexplib.Std
 open Bin_prot.Std
+open Hash.Builtin
 
 module Binable = Binable0
 
@@ -14,14 +15,15 @@ module List = Core_list0
 module Sexp = struct
   include Sexplib.Sexp
   include (struct
-    type t = Sexplib.Sexp.t = Atom of string | List of t list [@@deriving bin_io, compare]
+    type t = Sexplib.Sexp.t = Atom of string | List of t list
+    [@@deriving bin_io, compare, hash]
   end : sig
-    type t [@@deriving bin_io, compare]
+    type t [@@deriving bin_io, compare, hash]
   end with type t := t)
 end
 
 type sexp = Sexp.t = Atom of string | List of sexp list (* constructor import *)
-[@@deriving compare]
+[@@deriving compare, hash]
 
 module Binable_exn = struct
   module Stable = struct
@@ -175,6 +177,9 @@ module Stable_v2 = struct
       [%compare: Sexp.t] (t1 |> [%sexp_of: t]) (t2 |> [%sexp_of: t])
     ;;
 
+    let hash_fold_t state t = [%hash_fold: Sexp.t] state (t |> [%sexp_of: t])
+    let hash = [%hash: t]
+
     include Binable.Stable.Of_binable.V1 (Message.Stable.V2) (struct
         type nonrec t = t
         let to_binable = to_message
@@ -186,7 +191,7 @@ module Stable_v2 = struct
 end
 
 include (Stable_v2 : sig
-           type t [@@deriving bin_io, compare, sexp]
+           type t [@@deriving bin_io, compare, hash, sexp]
          end with type t := t)
 
 let to_string_hum t =

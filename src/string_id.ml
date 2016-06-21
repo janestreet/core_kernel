@@ -1,7 +1,8 @@
 open Std_internal
 
 module type S = sig
-  include Identifiable with type t = private string
+  type t = private string [@@deriving hash]
+  include Identifiable with type t := t
 
   module Stable : sig
     module V1 : sig

@@ -6,4 +6,4 @@
     does NOT make sense to use this in an mli, since it makes no guarantee at that level.
 *)
 
-type t = float [@@deriving bin_io, sexp, compare]
+type t = float [@@deriving bin_io, sexp, compare, hash]

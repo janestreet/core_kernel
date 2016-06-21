@@ -3,7 +3,7 @@ open Typerep_lib.Std
 
 module Stable = struct
   module V1 = struct
-    type t = Neg | Zero | Pos [@@deriving sexp, bin_io, compare, typerep, enumerate]
+    type t = Neg | Zero | Pos [@@deriving sexp, bin_io, compare, hash, typerep, enumerate]
   end
 end
 

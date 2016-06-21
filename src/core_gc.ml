@@ -1,12 +1,13 @@
 open Sexplib.Std
 open Bin_prot.Std
+open Hash.Builtin
 include Caml.Gc
 
 module Sexp = Sexplib.Sexp
 let sprintf = Printf.sprintf
 
 module Stat = struct
-  type pretty_float = float [@@deriving compare, bin_io, sexp]
+  type pretty_float = float [@@deriving compare, hash, bin_io, sexp]
   let sexp_of_pretty_float f = Sexp.Atom (sprintf "%.2e" f)
 
   module T = struct
@@ -27,7 +28,7 @@ module Stat = struct
       compactions : int;
       top_heap_words : int;
       stack_size : int
-    } [@@deriving compare, bin_io, sexp, fields]
+    } [@@deriving compare, hash, bin_io, sexp, fields]
   end
 
   include T

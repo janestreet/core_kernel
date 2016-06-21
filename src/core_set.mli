@@ -87,6 +87,14 @@ val symmetric_diff
     type parameters of the set.  [O(length t1 + length t2)]. *)
 val compare_direct : ('a, 'cmp) t -> ('a, 'cmp) t -> int
 
+(** Hash function: a building block to use when hashing data structures containing sets in
+    them. [hash_fold_direct hash_fold_key] is compatible with [compare_direct] iff
+    [hash_fold_key] is compatible with [(comparator s).compare] of the set [s] being
+    hashed. *)
+val hash_fold_direct
+  :  'a Hash.folder
+  -> ('a, 'cmp) t Hash.folder
+
 (** [equal t1 t2] returns [true] iff the two sets have the same elements.  [O(length t1 +
     length t2)] *)
 val equal : ('a, 'cmp) t -> ('a, 'cmp) t -> bool

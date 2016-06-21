@@ -1,6 +1,6 @@
 (** A simple type for representing the sign of a numeric value. *)
 
-type t = Sign0.t = Neg | Zero | Pos [@@deriving typerep]
+type t = Sign0.t = Neg | Zero | Pos [@@deriving hash, typerep]
 
 (** This provides [to_string]/[of_string], sexp/bin_io conversion, Map, Hashtbl, etc. *)
 include Identifiable.S with type t := t
@@ -22,6 +22,6 @@ val ( * ) : t -> t -> t
 
 module Stable : sig
   module V1 : sig
-    type nonrec t = t = Neg | Zero | Pos [@@deriving sexp, bin_io, compare]
+    type nonrec t = t = Neg | Zero | Pos [@@deriving sexp, bin_io, compare, hash]
   end
 end

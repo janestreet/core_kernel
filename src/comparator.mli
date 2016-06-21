@@ -35,7 +35,9 @@ module S_to_S1 (S : S) : S1
 
 (** [Make] creates a [comparator] value and its phantom [comparator_witness] type for a
     nullary type. *)
-module Make (M : sig type t [@@deriving compare, sexp_of] end) : S with type t := M.t
+module Make (M : sig
+  type t [@@deriving compare, sexp_of]
+end) : S with type t := M.t
 
 (** [Make1] creates a [comparator] value and its phantom [comparator_witness] type for a
     unary type.  It takes a [compare] and [sexp_of_t] that have

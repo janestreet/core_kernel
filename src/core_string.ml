@@ -3,10 +3,11 @@ module String = Caml.BytesLabels
 module Stable_workaround = struct
   open Bin_prot.Std
   open Sexplib.Std
+  open Hash.Builtin
 
   module V1 = struct
     module T = struct
-      type t = string [@@deriving bin_io, sexp]
+      type t = string [@@deriving hash, bin_io, sexp]
       let compare = String.compare
     end
     module C = Comparator.Stable.V1.Make (T)
@@ -28,6 +29,8 @@ module List = Core_list
 open Typerep_lib.Std
 open Sexplib.Std
 open Bin_prot.Std
+open Ppx_hash_lib.Std
+open Hash.Builtin
 open Result.Export
 open Staged
 
@@ -38,7 +41,7 @@ let invalid_argf = Core_printf.invalid_argf
 let failwiths = Error.failwiths
 
 module T = struct
-  type t = string [@@deriving sexp, bin_io, typerep]
+  type t = string [@@deriving hash, sexp, bin_io, typerep]
   let compare = String.compare
 
   type comparator_witness = Stable.V1.comparator_witness
@@ -131,15 +134,15 @@ module Caseless = struct
       let s2 = copy s1 in
       fun () -> ignore (compare s1 s2)
 
-    let hash s =
-      let len_s = length s in
-      let rec loop acc i =
-        if i = len_s
-        then acc
-        else loop (Hashtbl.seeded_hash acc (Char.lowercase s.[i])) (i + 1)
-      in
-      loop 0 0
-    ;;
+    let hash_fold_t state t =
+      let len = length t in
+      let state = ref (hash_fold_int state len) in
+      for pos = 0 to len - 1 do
+        state := hash_fold_char !state (Char.lowercase (unsafe_get t pos))
+      done;
+      !state
+
+    let hash = [%hash: t]
 
     let%bench_fun "hash" =
       let s = String.init 1000 ~f:(fun i -> Char.of_int_exn (i mod 256)) in
@@ -190,7 +193,7 @@ end)
 
 let%test_module "Caseless Hashable" = (module struct
   let%test _ =
-    Core_hashtbl.hash "x" <> Core_hashtbl.hash "X"
+    hash "x" <> hash "X"
       && Caseless.hash "x" = Caseless.hash "X"
   let%test _ = Caseless.hash "OCaml" = Caseless.hash "ocaml"
   let%test _ = Caseless.hash "aaa" <> Caseless.hash "aaaa"
@@ -1003,9 +1006,19 @@ module Hash = struct
   external hash : string -> int = "caml_hash_string" "noalloc"
 
   let%test_unit _ =
-    List.iter ~f:(fun string -> assert (hash string = Caml.Hashtbl.hash string))
+    List.iter ~f:(fun string ->
+      assert (hash string = Caml.Hashtbl.hash string);
+      (* with 31-bit integers, the hash computed by ppx_hash overflows so it doesn't match
+         polymorphic hash exactly. *)
+      let int_is_more_than_31_bit =
+        (* can't use [Int_conversions.num_bits_int] because of a dependency cycle *)
+        max_int > 0x3fff_ffff in
+      if int_is_more_than_31_bit then
+        assert (hash string = [%hash: string] string)
+    )
       [ "Oh Gloria inmarcesible! Oh jubilo inmortal!"
       ; "Oh say can you see, by the dawn's early light"
+      ; "Hahahaha\200"
       ]
   ;;
 

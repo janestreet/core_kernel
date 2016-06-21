@@ -235,9 +235,10 @@ module Make_binable (Elt : Elt_binable) = struct
 end
 
 let%test_module "Set Intersection" = (module struct
+  open Hash.Builtin
   let hashable = {
      Hashtbl.Hashable.
-     hash = Hashtbl.hash;
+     hash = [%hash: string];
      compare = String.compare;
      sexp_of_t = fun t -> Atom t;
    }

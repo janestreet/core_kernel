@@ -63,9 +63,7 @@
       {[
         module Key = struct
           module T = struct
-            type t = String.t * Int63.t [@@deriving sexp]
-            let compare = compare
-            let hash = Hashtbl.hash
+            type t = String.t * Int63.t [@@deriving compare, hash, sexp]
           end
           include T
           include Hashable.Make (T)

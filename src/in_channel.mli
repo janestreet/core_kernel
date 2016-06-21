@@ -23,7 +23,8 @@ val create : ?binary:bool (** defaults to [true] *) -> string -> t
     [fname], and closes it afterwards. *)
 val with_file : ?binary:bool (** defaults to [true] *) -> string -> f:(t -> 'a) -> 'a
 
-(** [close t] closes t, and may raise an exception. *)
+(** [close t] closes [t], or does nothing if [t] is already closed, and may raise an
+    exception. *)
 val close : t -> unit
 
 val input : t -> buf:string -> pos:int -> len:int -> int
@@ -32,11 +33,21 @@ val really_input     : t -> buf:string -> pos:int -> len:int -> unit option
 (** Same as [Pervasives.really_input], for backwards compatibility *)
 val really_input_exn : t -> buf:string -> pos:int -> len:int -> unit
 
-val input_byte : t -> int option
+(** Read one character from the given input channel.  Return [None] if there are no more
+    characters to read. *)
 val input_char : t -> char option
 
+(** Same as [input_char], but return the 8-bit integer representing the character. Return
+    [None] if an end of file was reached. *)
+val input_byte : t -> int option
+
+(** Read an integer encoded in binary format (4 bytes, big-endian) from the given input
+    channel.  See {!Pervasives.output_binary_int}.  Return [None] if an end of file was
+    reached while reading the integer. *)
 val input_binary_int : t -> int option
-val unsafe_input_value : t -> _ option  (** Ocaml's built-in marshal format *)
+
+(** Ocaml's built-in marshal format *)
+val unsafe_input_value : t -> _ option
 
 val input_all : t -> string
 
@@ -69,16 +80,22 @@ val iter_lines
   -> f:(string -> unit)
   -> unit
 
+(** This works only for regular files.  On files of other kinds, the behavior is
+    unspecified. *)
 val seek : t -> int64 -> unit
+
 val pos : t -> int64
+
+(** Return the size (number of characters) of the regular file on which the given channel
+    is opened.  If the channel is opened on a file that is not a regular file, the result
+    is meaningless.  The returned size does not take into account the end-of-line
+    translations that can be performed when reading from a channel opened in text mode. *)
 val length : t -> int64
 
 (** same as [Pervasives.set_binary_mode_in], only applicable for Windows or Cygwin, no-op
     otherwise *)
 val set_binary_mode : t -> bool -> unit
 
-(** [read_lines filename] Opens filename, reads all lines, and closes the file. *)
+(** These open the filename, read all lines, and close the file. *)
 val read_lines : string -> string list
-
-(** [read_all filename] Opens filename, reads all input, and closes the file. *)
-val read_all : string -> string
+val read_all   : string -> string

@@ -1,6 +1,7 @@
 module Sexp = Sexplib.Sexp
 open Sexplib.Std
 open Bin_prot.Std
+open Hash.Builtin
 
 include Sexp
 
@@ -11,11 +12,9 @@ module O = struct
 end
 
 module T : sig
-  include Sexpable.S         with type t := Sexp.t
-  include Bin_prot.Binable.S with type t := Sexp.t
-  val compare : t -> t -> int
-end = struct
-  type t = Sexp.t = Atom of string | List of t list [@@deriving bin_io, compare]
+  type t [@@deriving hash, compare, bin_io, sexp]
+end with type t := Sexp.t = struct
+  type t = Sexp.t = Atom of string | List of t list [@@deriving bin_io, compare, hash]
 
   let sexp_of_t t = t
   let t_of_sexp t = t
@@ -25,7 +24,7 @@ include T
 
 module Sexp_maybe = struct
 
-  type sexp = t [@@deriving bin_io, compare]             (* avoid recursive type *)
+  type sexp = t [@@deriving bin_io, compare, hash]             (* avoid recursive type *)
 
   (* to satisfy pa_compare *)
   module Error = struct
@@ -33,7 +32,7 @@ module Sexp_maybe = struct
     include Comparable.Poly (Error)
   end
 
-  type 'a t = ('a, sexp * Error.t) Result.t [@@deriving bin_io, compare]
+  type 'a t = ('a, sexp * Error.t) Result.t [@@deriving bin_io, compare, hash]
 
   let sexp_of_t sexp_of_a t =
     match t with

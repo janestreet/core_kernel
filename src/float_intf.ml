@@ -10,7 +10,7 @@
 module Binable = Binable0
 
 module type S = sig
-  type t [@@deriving typerep]
+  type t [@@deriving hash, typerep]
   type outer = t
   [@@deriving bin_io, sexp, typerep]
 

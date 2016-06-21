@@ -11,14 +11,14 @@ let float x = Int63.to_float x
 module Span : sig
   (* Note that the [sexp] below is implemented only for some debug text later in this
      module. It is not exposed in the mli. *)
-  type t = Int63.t [@@deriving typerep, sexp]
+  type t = Int63.t [@@deriving hash, typerep, sexp]
 
   include Time_ns_intf.Span with type t := t
 end = struct
   (* [Span] is basically a [Int63].  It even silently ignores overflow. *)
   module T = struct
     type t = Int63.t (* nanoseconds *)
-    [@@deriving bin_io, typerep]
+    [@@deriving hash, bin_io, typerep]
 
     let compare = Int63.compare
     let equal   = Int63.equal
@@ -378,7 +378,7 @@ end = struct
 end
 
 type t = Span.t (* since the Unix epoch (1970-01-01 00:00:00 UTC) *)
-[@@deriving bin_io, compare, typerep]
+[@@deriving bin_io, compare, hash, typerep]
 
 include (Span : Comparable.Infix with type t := t)
 

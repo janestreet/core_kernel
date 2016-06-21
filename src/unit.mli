@@ -1,6 +1,6 @@
 (** Module for the type [unit].  This is mostly useful for building functor arguments. *)
 
-type t = unit [@@deriving typerep]
+type t = unit [@@deriving hash, typerep]
 
 include Identifiable.S   with type t := t
 include Invariant.S      with type t := t

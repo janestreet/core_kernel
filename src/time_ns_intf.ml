@@ -3,7 +3,7 @@ open Std_internal
 module type Span = sig
   (** [t] is immediate on 64bit boxes and so plays nicely with the GC write barrier.
       Unfortunately, [private Int63.t] is necessary for the compiler to optimize uses. *)
-  type t = private Int63.t [@@deriving compare, typerep, bin_io]
+  type t = private Int63.t [@@deriving compare, hash, typerep, bin_io]
 
   include Comparable.Infix     with type t := t
   include Comparable.Validate  with type t := t
@@ -135,7 +135,7 @@ module type Time_ns = sig
 
   module Span : Span
 
-  type t = private Int63.t [@@deriving compare, typerep, bin_io]
+  type t = private Int63.t [@@deriving compare, hash, typerep, bin_io]
 
   include Comparable.Infix with type t := t
   include Equal.S          with type t := t

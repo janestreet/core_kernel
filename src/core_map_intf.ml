@@ -30,6 +30,14 @@ module type Key_binable = sig
   type t [@@deriving bin_io, compare, sexp]
 end
 
+module type Key_hashable = sig
+  type t [@@deriving compare, hash, sexp]
+end
+
+module type Key_binable_hashable = sig
+  type t [@@deriving bin_io, compare, hash, sexp]
+end
+
 module Without_comparator = struct
   type ('key, 'cmp, 'z) t = 'z
 end
@@ -856,12 +864,12 @@ end
 
 (** Consistency checks (same as in [Container]). *)
 module Check_accessors (T : T3) (Tree : T3) (Key : T1) (Options : T3)
-  (M : Accessors_generic
+    (M : Accessors_generic
      with type ('a, 'b, 'c) options := ('a, 'b, 'c) Options.t
      with type ('a, 'b, 'c) t       := ('a, 'b, 'c) T.t
      with type ('a, 'b, 'c) tree    := ('a, 'b, 'c) Tree.t
      with type 'a key               := 'a Key.t)
-  = struct end
+= struct end
 
 module Check_accessors1 (M : Accessors1) =
   Check_accessors
@@ -1040,12 +1048,12 @@ module type Creators3_with_comparator = sig
 end
 
 module Check_creators (T : T3) (Tree : T3) (Key : T1) (Options : T3)
-  (M : Creators_generic
+    (M : Creators_generic
      with type ('a, 'b, 'c) options := ('a, 'b, 'c) Options.t
      with type ('a, 'b, 'c) t       := ('a, 'b, 'c) T.t
      with type ('a, 'b, 'c) tree    := ('a, 'b, 'c) Tree.t
      with type 'a key               := 'a Key.t)
-  = struct end
+= struct end
 
 module Check_creators1 (M : Creators1) =
   Check_creators
@@ -1142,6 +1150,8 @@ module Make_S
       : sig type _ t [@@deriving of_sexp] end with type 'a t := 'a t
     module Provide_bin_io (Key : sig type t [@@deriving bin_io] end with type t := Key.t)
       : Binable.S1 with type 'a t := 'a t
+    module Provide_hash (Key : Hasher.S with type t := Key.t)
+      : sig type 'a t [@@deriving hash] end with type 'a t := 'a t
   end
 
   module type S = sig

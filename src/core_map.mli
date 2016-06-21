@@ -315,6 +315,15 @@ val compare_direct
   -> ('k, 'v, 'cmp) t
   -> int
 
+(** Hash function: a building block to use when hashing data structures containing
+    maps in them. [hash_fold_direct hash_fold_key] is compatible with
+    [compare_direct] iff [hash_fold_key] is compatible with [(comparator m).compare]
+    of the map [m] being hashed. *)
+val hash_fold_direct
+  :  'k Hash.folder
+  -> 'v Hash.folder
+  -> ('k, 'v, 'cmp) t Hash.folder
+
 (** [equal cmp m1 m2] tests whether the maps [m1] and [m2] are equal, that is, contain
     equal keys and associate them with equal data.  [cmp] is the equality predicate used
     to compare the data associated with the keys. *)

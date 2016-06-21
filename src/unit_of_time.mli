@@ -9,4 +9,4 @@ type t =
   | Minute
   | Hour
   | Day
-[@@deriving sexp, compare]
+[@@deriving sexp, compare, hash]

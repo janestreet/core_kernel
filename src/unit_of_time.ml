@@ -8,7 +8,7 @@ type t =
   | Minute
   | Hour
   | Day
-[@@deriving sexp, compare]
+[@@deriving sexp, compare, hash]
 
 let%test_unit "Span.Unit_of_time.t" =
   [%test_result: int] (compare Nanosecond  Microsecond) ~expect:(-1);

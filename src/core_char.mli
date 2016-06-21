@@ -1,7 +1,7 @@
 (** Character operations. *)
 
 (** An alias for the type of characters. *)
-type t = char [@@deriving bin_io, sexp, typerep]
+type t = char [@@deriving hash, bin_io, sexp, typerep]
 include Identifiable.S   with type t := t
 include Quickcheckable.S with type t := t
 

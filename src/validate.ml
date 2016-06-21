@@ -4,6 +4,7 @@ module String = StringLabels
 open Fieldslib
 open Result.Export
 open Sexplib.Conv
+open Hash.Builtin
 
 (** Each single_error is a path indicating the location within the datastructure in
     question that is being validated, along with an error message. *)
@@ -11,9 +12,9 @@ type single_error =
   { path : string list;
     error : Error.t;
   }
-[@@deriving compare, sexp]
+[@@deriving compare, hash, sexp]
 
-type t = single_error list [@@deriving compare, sexp]
+type t = single_error list [@@deriving compare, hash, sexp]
 
 type 'a check = 'a -> t
 

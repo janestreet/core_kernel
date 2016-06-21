@@ -2,7 +2,7 @@ open Std_internal
 
 module Stable = struct
   module V1 = struct
-    type t = float
+    type t = float [@@deriving hash]
 
     let of_mult f = f
     let to_mult t = t

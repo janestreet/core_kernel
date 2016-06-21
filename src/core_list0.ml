@@ -3,6 +3,7 @@ module String = StdLabels.String
 open Typerep_lib.Std
 open Sexplib.Std
 open Bin_prot.Std
+open Hash.Builtin
 
 module Random = Core_random
 
@@ -1333,6 +1334,8 @@ let compare cmp a b =
   in
   loop a b
 ;;
+
+let hash_fold_t = hash_fold_list
 
 let equal t1 t2 ~equal =
   let rec loop t1 t2 =

@@ -39,7 +39,7 @@ type 'a t = private
   | Not of 'a t
   | If of 'a t * 'a t * 'a t
   | Base of 'a
-  [@@deriving bin_io, compare, sexp]
+  [@@deriving bin_io, compare, hash, sexp]
 (** Note that the sexps are not directly inferred from the type above -- there are lots of
     fancy shortcuts.  Also, the sexps for ['a] must not look anything like blang sexps.
     Otherwise [t_of_sexp] will fail. *)
@@ -188,6 +188,6 @@ module Stable : sig
       | Not of 'a t
       | If of 'a t * 'a t * 'a t
       | Base of 'a
-    [@@deriving sexp, bin_io, compare]
+    [@@deriving sexp, bin_io, compare, hash]
   end
 end

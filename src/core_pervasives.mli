@@ -240,11 +240,11 @@ val abs : int -> int
   negative if the argument is [min_int]. *)
 
 val max_int : int
-  [@@deprecated "[since 2014-10] Use [Int]"]
+  [@@deprecated "[since 2014-10] Use [Int.max_value]"]
 (** The greatest representable integer. *)
 
 val min_int : int
-  [@@deprecated "[since 2014-10] Use [Int]"]
+  [@@deprecated "[since 2014-10] Use [Int.min_value]"]
 (** The smallest representable integer. *)
 
 
@@ -385,20 +385,20 @@ external tanh : float -> float = "caml_tanh_float" "tanh" "float"
 (** Hyperbolic tangent.  Argument is in radians. *)
 
 external ceil : float -> float = "caml_ceil_float" "ceil" "float"
-  [@@deprecated "[since 2014-10] Use [Float]"]
+  [@@deprecated "[since 2014-10] Use [Float.round_up]"]
 (** Round above to an integer value.
     [ceil f] returns the least integer value greater than or equal to [f].
     The result is returned as a float. *)
 
 external floor : float -> float = "caml_floor_float" "floor" "float"
-  [@@deprecated "[since 2014-10] Use [Float]"]
+  [@@deprecated "[since 2014-10] Use [Float.round_down]"]
 (** Round below to an integer value.
     [floor f] returns the greatest integer value less than or
     equal to [f].
     The result is returned as a float. *)
 
 external abs_float : float -> float = "%absfloat"
-  [@@deprecated "[since 2014-10] Use [Float]"]
+  [@@deprecated "[since 2014-10] Use [Float.abs]"]
 (** [abs_float f] returns the absolute value of [f]. *)
 
 external copysign : float -> float -> float
@@ -410,13 +410,13 @@ external copysign : float -> float -> float
   @since 4.00.0  *)
 
 external mod_float : float -> float -> float = "caml_fmod_float" "fmod" "float"
-  [@@deprecated "[since 2014-10] Use [Float]"]
+  [@@deprecated "[since 2014-10] Use [Float.mod_float]"]
 (** [mod_float a b] returns the remainder of [a] with respect to
    [b].  The returned value is [a -. n *. b], where [n]
    is the quotient [a /. b] rounded towards zero to an integer. *)
 
 external frexp : float -> float * int = "caml_frexp_float"
-  [@@deprecated "[since 2014-10] Use [Float]"]
+  [@@deprecated "[since 2014-10] Use [Float.frexp]"]
 (** [frexp f] returns the pair of the significant
    and the exponent of [f].  When [f] is zero, the
    significant [x] and the exponent [n] of [f] are equal to
@@ -424,11 +424,11 @@ external frexp : float -> float * int = "caml_frexp_float"
    [f = x *. 2 ** n] and [0.5 <= x < 1.0]. *)
 
 external ldexp : float -> int -> float = "caml_ldexp_float"
-  [@@deprecated "[since 2014-10] Use [Float]"]
+  [@@deprecated "[since 2014-10] Use [Float.ldexp]"]
 (** [ldexp x n] returns [x *. 2 ** n]. *)
 
 external modf : float -> float * float = "caml_modf_float"
-  [@@deprecated "[since 2014-10] Use [Float]"]
+  [@@deprecated "[since 2014-10] Use [Float.modf]"]
 (** [modf f] returns the pair of the fractional and integral
    part of [f]. *)
 
@@ -439,7 +439,7 @@ external float_of_int : int -> float = "%floatofint"
 (** Convert an integer to floating-point. *)
 
 external truncate : float -> int = "%intoffloat"
-  [@@deprecated "[since 2014-10] Use [Float]"]
+  [@@deprecated "[since 2014-10] Use [Float.iround_towards_zero_exn]"]
 (** Same as {!Pervasives.int_of_float}. *)
 
 external int_of_float : float -> int = "%intoffloat"
@@ -448,15 +448,15 @@ external int_of_float : float -> int = "%intoffloat"
    range of representable integers. *)
 
 val infinity : float
-  [@@deprecated "[since 2014-10] Use [Float]"]
+  [@@deprecated "[since 2014-10] Use [Float.infinity]"]
 (** Positive infinity. *)
 
 val neg_infinity : float
-  [@@deprecated "[since 2014-10] Use [Float]"]
+  [@@deprecated "[since 2014-10] Use [Float.neg_infinity]"]
 (** Negative infinity. *)
 
 val nan : float
-  [@@deprecated "[since 2014-10] Use [Float]"]
+  [@@deprecated "[since 2014-10] Use [Float.nan]"]
 (** A special floating-point value denoting the result of an
    undefined operation such as [0.0 /. 0.0].  Stands for
    'not a number'.  Any floating-point operation with [nan] as
@@ -465,15 +465,15 @@ val nan : float
    if one or both of their arguments is [nan]. *)
 
 val max_float : float
-  [@@deprecated "[since 2014-10] Use [Float]"]
+  [@@deprecated "[since 2014-10] Use [Float.max_value]"]
 (** The largest positive finite value of type [float]. *)
 
 val min_float : float
-  [@@deprecated "[since 2014-10] Use [Float]"]
+  [@@deprecated "[since 2014-10] Use [Float.min_value]"]
 (** The smallest positive, non-zero, non-denormalized value of type [float]. *)
 
 val epsilon_float : float
-  [@@deprecated "[since 2014-10] Use [Float]"]
+  [@@deprecated "[since 2014-10] Use [Float.epsilon_float]"]
 (** The difference between [1.0] and the smallest exactly representable
     floating-point number greater than [1.0]. *)
 
@@ -487,7 +487,7 @@ type fpclass = Pervasives.fpclass =
    the {!Pervasives.classify_float} function. *)
 
 external classify_float : float -> fpclass = "caml_classify_float"
-  [@@deprecated "[since 2014-10] Use [Float]"]
+  [@@deprecated "[since 2014-10] Use [Float.classify]"]
 (** Return the class of the given floating-point number:
    normal, subnormal, zero, infinite, or not a number. *)
 
@@ -573,7 +573,7 @@ external snd : 'a * 'b -> 'b = "%field1"
 *)
 
 val ( @ ) : 'a list -> 'a list -> 'a list
-  [@@deprecated "[since 2014-10] Use [Core.Std.List.Infix]"]
+  [@@deprecated "[since 2014-10] Use [List.Infix]"]
 (** List concatenation. *)
 
 
@@ -582,15 +582,15 @@ val ( @ ) : 'a list -> 'a list -> 'a list
     calls they invoke fail. *)
 
 type in_channel = Pervasives.in_channel
-  [@@deprecated "[since 2016-04] Use [Core.Std.In_channel]"]
+  [@@deprecated "[since 2016-04] Use [In_channel.t]"]
 (** The type of input channel. *)
 
 type out_channel = Pervasives.out_channel
-  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
+  [@@deprecated "[since 2016-04] Use [Out_channel.t]"]
 (** The type of output channel. *)
 
 val stdin : Pervasives.in_channel
-  [@@deprecated "[since 2016-04] Use [Core.Std.In_channel]"]
+  [@@deprecated "[since 2016-04] Use [In_channel.stdin]"]
 (** The standard input for the process. *)
 
 val stdout : Pervasives.out_channel
@@ -603,22 +603,22 @@ val stderr : Pervasives.out_channel
 (** {7 Output functions on standard output} *)
 
 val print_char : char -> unit
-  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
+  [@@deprecated "[since 2016-04] Use [Out_channel.output_char stdout]"]
 (** Print a character on standard output. *)
 
 val print_string : string -> unit
 (** Print a string on standard output. *)
 
 val print_bytes : bytes -> unit
-  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
+  [@@deprecated "[since 2016-04] Core doesn't support [bytes] yet."]
 (** Print a byte sequence on standard output. *)
 
 val print_int : int -> unit
-  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
+  [@@deprecated "[since 2016-04] Use [Out_channel.output_string stdout]"]
 (** Print an integer, in decimal, on standard output. *)
 
 val print_float : float -> unit
-  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
+  [@@deprecated "[since 2016-04] Use [Out_channel.output_string stdout]"]
 (** Print a floating-point number, in decimal, on standard output. *)
 
 val print_endline : string -> unit
@@ -626,7 +626,7 @@ val print_endline : string -> unit
    standard output and flush standard output. *)
 
 val print_newline : unit -> unit
-  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
+  [@@deprecated "[since 2016-04] Use [Out_channel.newline stdout]"]
 (** Print a newline character on standard output, and flush
    standard output. This can be used to simulate line
    buffering of standard output. *)
@@ -635,23 +635,23 @@ val print_newline : unit -> unit
 (** {7 Output functions on standard error} *)
 
 val prerr_char : char -> unit
-  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
+  [@@deprecated "[since 2016-04] Use [Out_channel.output_char stderr]"]
 (** Print a character on standard error. *)
 
 val prerr_string : string -> unit
-  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
+  [@@deprecated "[since 2016-04] Use [Out_channel.output_string stderr]"]
 (** Print a string on standard error. *)
 
 val prerr_bytes : bytes -> unit
-  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
+  [@@deprecated "[since 2016-04] Core doesn't support [bytes] yet"]
 (** Print a byte sequence on standard error. *)
 
 val prerr_int : int -> unit
-  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
+  [@@deprecated "[since 2016-04] Use [Out_channel.output_string stderr]"]
 (** Print an integer, in decimal, on standard error. *)
 
 val prerr_float : float -> unit
-  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
+  [@@deprecated "[since 2016-04] Use [Out_channel.output_string stderr]"]
 (** Print a floating-point number, in decimal, on standard error. *)
 
 val prerr_endline : string -> unit
@@ -659,7 +659,7 @@ val prerr_endline : string -> unit
    error and flush standard error. *)
 
 val prerr_newline : unit -> unit
-  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
+  [@@deprecated "[since 2016-04] Use [Out_channel.newline stderr]"]
 (** Print a newline character on standard error, and flush
    standard error. *)
 
@@ -667,19 +667,25 @@ val prerr_newline : unit -> unit
 (** {7 Input functions on standard input} *)
 
 val read_line : unit -> string
-  [@@deprecated "[since 2016-04] Use [Core.Std.In_channel]"]
+  [@@deprecated
+    "[since 2016-04] Use
+[Out_channel.(flush stdout); In_channel.(input_line_exn stdin)]"]
 (** Flush standard output, then read characters from standard input
    until a newline character is encountered. Return the string of
    all characters read, without the newline character at the end. *)
 
 val read_int : unit -> int
-  [@@deprecated "[since 2016-04] Use [Core.Std.In_channel]"]
+  [@@deprecated "\
+[since 2016-04] Use
+[Out_channel.(flush stdout); Int.of_string In_channel.(input_line_exn stdin)]"]
 (** Flush standard output, then read one line from standard input
    and convert it to an integer. Raise [Failure "int_of_string"]
    if the line read is not a valid representation of an integer. *)
 
 val read_float : unit -> float
-  [@@deprecated "[since 2016-04] Use [Core.Std.In_channel]"]
+  [@@deprecated "\
+[since 2016-04] Use
+[Out_channel.(flush stdout); Float.of_string In_channel.(input_line_exn stdin)]"]
 (** Flush standard output, then read one line from standard input
    and convert it to a floating-point number.
    The result is unspecified if the line read is not a valid
@@ -698,26 +704,26 @@ type open_flag = Pervasives.open_flag =
   | Open_binary      (** open in binary mode (no conversion). *)
   | Open_text        (** open in text mode (may perform conversions). *)
   | Open_nonblock    (** open in non-blocking mode. *)
-  [@@deprecated "[since 2016-04] Use [Core.Std.In_channel] and [Core.Std.Out_channel]"]
+  [@@deprecated "[since 2016-04] Use [In_channel.create] and [Out_channel.create]"]
 (** Opening modes for {!Pervasives.open_out_gen} and
   {!Pervasives.open_in_gen}. *)
 
 val open_out : string -> Pervasives.out_channel
-  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
+  [@@deprecated "[since 2016-04] Use [Out_channel.create]"]
 (** Open the named file for writing, and return a new output channel
    on that file, positionned at the beginning of the file. The
    file is truncated to zero length if it already exists. It
    is created if it does not already exists. *)
 
 val open_out_bin : string -> Pervasives.out_channel
-  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
+  [@@deprecated "[since 2016-04] Use [Out_channel.create]"]
 (** Same as {!Pervasives.open_out}, but the file is opened in binary mode,
    so that no translation takes place during writes. On operating
    systems that do not distinguish between text mode and binary
    mode, this function behaves like {!Pervasives.open_out}. *)
 
 val open_out_gen : Pervasives.open_flag list -> int -> string -> Pervasives.out_channel
-  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
+  [@@deprecated "[since 2016-04] Use [Out_channel.create]"]
 (** [open_out_gen mode perm filename] opens the named file for writing,
    as described above. The extra argument [mode]
    specify the opening mode. The extra argument [perm] specifies
@@ -726,48 +732,48 @@ val open_out_gen : Pervasives.open_flag list -> int -> string -> Pervasives.out_
    cases of this function. *)
 
 val flush : Pervasives.out_channel -> unit
-  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
+  [@@deprecated "[since 2016-04] Use [Out_channel.flush]"]
 (** Flush the buffer associated with the given output channel,
    performing all pending writes on that channel.
    Interactive programs must be careful about flushing standard
    output and standard error at the right time. *)
 
 val flush_all : unit -> unit
-  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
+  [@@deprecated "[since 2016-04]"]
 (** Flush all open output channels; ignore errors. *)
 
 val output_char : Pervasives.out_channel -> char -> unit
-  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
+  [@@deprecated "[since 2016-04] Use [Out_channel.output_char]"]
 (** Write the character on the given output channel. *)
 
 val output_string : Pervasives.out_channel -> string -> unit
-  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
+  [@@deprecated "[since 2016-04] Use [Out_channel.output_string]"]
 (** Write the string on the given output channel. *)
 
 val output_bytes : Pervasives.out_channel -> bytes -> unit
-  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
+  [@@deprecated "[since 2016-04] Core doesn't yet support bytes."]
 (** Write the byte sequence on the given output channel. *)
 
 val output : Pervasives.out_channel -> bytes -> int -> int -> unit
-  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
+  [@@deprecated "[since 2016-04] Core doesn't yet support bytes."]
 (** [output oc buf pos len] writes [len] characters from byte sequence [buf],
    starting at offset [pos], to the given output channel [oc].
    Raise [Invalid_argument "output"] if [pos] and [len] do not
    designate a valid range of [buf]. *)
 
 val output_substring : Pervasives.out_channel -> string -> int -> int -> unit
-  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
+  [@@deprecated "[since 2016-04] Use [Out_channel.output]"]
 (** Same as [output] but take a string as argument instead of
    a byte sequence. *)
 
 val output_byte : Pervasives.out_channel -> int -> unit
-  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
+  [@@deprecated "[since 2016-04] Use [Out_channel.output_byte]"]
 (** Write one 8-bit integer (as the single character with that code)
    on the given output channel. The given integer is taken modulo
    256. *)
 
 val output_binary_int : Pervasives.out_channel -> int -> unit
-  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
+  [@@deprecated "[since 2016-04] Use [Out_channel.output_binary_int]"]
 (** Write one integer in binary format (4 bytes, big-endian)
    on the given output channel.
    The given integer is taken modulo 2{^32}.
@@ -776,7 +782,7 @@ val output_binary_int : Pervasives.out_channel -> int -> unit
    all machines for a given version of OCaml. *)
 
 val output_value : Pervasives.out_channel -> 'a -> unit
-  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
+  [@@deprecated "[since 2016-04] Use [Out_channel.output_value]"]
 (** Write the representation of a structured value of any type
    to a channel. Circularities and sharing inside the value
    are detected and preserved. The object can be read back,
@@ -785,26 +791,26 @@ val output_value : Pervasives.out_channel -> 'a -> unit
    to {!Marshal.to_channel} with an empty list of flags. *)
 
 val seek_out : Pervasives.out_channel -> int -> unit
-  [@@deprecated "[since 2014-10] Use [Out_channel]"]
+  [@@deprecated "[since 2014-10] Use [Out_channel.seek]"]
 (** [seek_out chan pos] sets the current writing position to [pos]
    for channel [chan]. This works only for regular files. On
    files of other kinds (such as terminals, pipes and sockets),
    the behavior is unspecified. *)
 
 val pos_out : Pervasives.out_channel -> int
-  [@@deprecated "[since 2014-10] Use [Out_channel]"]
+  [@@deprecated "[since 2014-10] Use [Out_channel.pos]"]
 (** Return the current writing position for the given channel.  Does
     not work on channels opened with the [Open_append] flag (returns
     unspecified results). *)
 
 val out_channel_length : Pervasives.out_channel -> int
-  [@@deprecated "[since 2014-10] Use [Out_channel]"]
+  [@@deprecated "[since 2014-10] Use [Out_channel.length]"]
 (** Return the size (number of characters) of the regular file
    on which the given channel is opened.  If the channel is opened
     on a file that is not a regular file, the result is meaningless. *)
 
 val close_out : Pervasives.out_channel -> unit
-  [@@deprecated "[since 2014-10] Use [Out_channel]"]
+  [@@deprecated "[since 2014-10] Use [Out_channel.close]"]
 (** Close the given channel, flushing all buffered write operations.
    Output functions raise a [Sys_error] exception when they are
    applied to a closed output channel, except [close_out] and [flush],
@@ -813,11 +819,11 @@ val close_out : Pervasives.out_channel -> unit
    system signals an error when flushing or closing. *)
 
 val close_out_noerr : Pervasives.out_channel -> unit
-  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
+  [@@deprecated "[since 2016-04] Use [Out_channel.close] and catch exceptions"]
 (** Same as [close_out], but ignore all errors. *)
 
 val set_binary_mode_out : Pervasives.out_channel -> bool -> unit
-  [@@deprecated "[since 2016-04] Use [Core.Std.Out_channel]"]
+  [@@deprecated "[since 2016-04] Use [Out_channel.set_binary_mode]"]
 (** [set_binary_mode_out oc true] sets the channel [oc] to binary
    mode: no translations take place during output.
    [set_binary_mode_out oc false] sets the channel [oc] to text
@@ -831,19 +837,19 @@ val set_binary_mode_out : Pervasives.out_channel -> bool -> unit
 (** {7 General input functions} *)
 
 val open_in : string -> Pervasives.in_channel
-  [@@deprecated "[since 2016-04] Use [Core.Std.In_channel]"]
+  [@@deprecated "[since 2016-04] Use [In_channel.create]"]
 (** Open the named file for reading, and return a new input channel
    on that file, positionned at the beginning of the file. *)
 
 val open_in_bin : string -> Pervasives.in_channel
-  [@@deprecated "[since 2016-04] Use [Core.Std.In_channel]"]
+  [@@deprecated "[since 2016-04] Use [In_channel.create]"]
 (** Same as {!Pervasives.open_in}, but the file is opened in binary mode,
    so that no translation takes place during reads. On operating
    systems that do not distinguish between text mode and binary
    mode, this function behaves like {!Pervasives.open_in}. *)
 
 val open_in_gen : Pervasives.open_flag list -> int -> string -> Pervasives.in_channel
-  [@@deprecated "[since 2016-04] Use [Core.Std.In_channel]"]
+  [@@deprecated "[since 2016-04] Use [In_channel.create]"]
 (** [open_in_gen mode perm filename] opens the named file for reading,
    as described above. The extra arguments
    [mode] and [perm] specify the opening mode and file permissions.
@@ -851,12 +857,12 @@ val open_in_gen : Pervasives.open_flag list -> int -> string -> Pervasives.in_ch
    cases of this function. *)
 
 val input_char : Pervasives.in_channel -> char
-  [@@deprecated "[since 2016-04] Use [Core.Std.In_channel]"]
+  [@@deprecated "[since 2016-04] Use [In_channel.input_char]"]
 (** Read one character from the given input channel.
     Raise [End_of_file] if there are no more characters to read. *)
 
 val input_line : Pervasives.in_channel -> string
-  [@@deprecated "[since 2016-04] Use [Core.Std.In_channel]"]
+  [@@deprecated "[since 2016-04] Use [In_channel.input_line]"]
 (** Read characters from the given input channel, until a
    newline character is encountered. Return the string of
    all characters read, without the newline character at the end.
@@ -864,7 +870,7 @@ val input_line : Pervasives.in_channel -> string
    at the beginning of line. *)
 
 val input : Pervasives.in_channel -> bytes -> int -> int -> int
-  [@@deprecated "[since 2016-04] Use [Core.Std.In_channel]"]
+  [@@deprecated "[since 2016-04] Core doesn't yet support bytes."]
 (** [input ic buf pos len] reads up to [len] characters from
    the given channel [ic], storing them in byte sequence [buf], starting at
    character number [pos].
@@ -882,7 +888,7 @@ val input : Pervasives.in_channel -> bytes -> int -> int -> int
    do not designate a valid range of [buf]. *)
 
 val really_input : Pervasives.in_channel -> bytes -> int -> int -> unit
-  [@@deprecated "[since 2016-04] Use [Core.Std.In_channel]"]
+  [@@deprecated "[since 2016-04] Core doesn't yet support bytes."]
 (** [really_input ic buf pos len] reads [len] characters from channel [ic],
    storing them in byte sequence [buf], starting at character number [pos].
    Raise [End_of_file] if the end of file is reached before [len]
@@ -891,27 +897,27 @@ val really_input : Pervasives.in_channel -> bytes -> int -> int -> unit
    [pos] and [len] do not designate a valid range of [buf]. *)
 
 val really_input_string : Pervasives.in_channel -> int -> string
-  [@@deprecated "[since 2016-04] Use [Core.Std.In_channel]"]
+  [@@deprecated "[since 2016-04] Use [In_channel.really_input_exn ~pos:0]"]
 (** [really_input_string ic len] reads [len] characters from channel [ic]
    and returns them in a new string.
    Raise [End_of_file] if the end of file is reached before [len]
    characters have been read. *)
 
 val input_byte : Pervasives.in_channel -> int
-  [@@deprecated "[since 2016-04] Use [Core.Std.In_channel]"]
+  [@@deprecated "[since 2016-04] Use [In_channel.input_byte]"]
 (** Same as {!Pervasives.input_char}, but return the 8-bit integer representing
    the character.
    Raise [End_of_file] if an end of file was reached. *)
 
 val input_binary_int : Pervasives.in_channel -> int
-  [@@deprecated "[since 2016-04] Use [Core.Std.In_channel]"]
+  [@@deprecated "[since 2016-04] Use [In_channel.input_binary_int]"]
 (** Read an integer encoded in binary format (4 bytes, big-endian)
    from the given input channel. See {!Pervasives.output_binary_int}.
    Raise [End_of_file] if an end of file was reached while reading the
    integer. *)
 
 val input_value : Pervasives.in_channel -> 'a
-  [@@deprecated "[since 2016-04] Use [Core.Std.In_channel]"]
+  [@@deprecated "[since 2016-04] Use [In_channel.unsafe_input_value]"]
 (** Read the representation of a structured value, as produced
    by {!Pervasives.output_value}, and return the corresponding value.
    This function is identical to {!Marshal.from_channel};
@@ -919,17 +925,17 @@ val input_value : Pervasives.in_channel -> 'a
    in particular concerning the lack of type safety. *)
 
 val seek_in : Pervasives.in_channel -> int -> unit
-  [@@deprecated "[since 2014-10] Use [In_channel]"]
+  [@@deprecated "[since 2014-10] Use [In_channel.seek]"]
 (** [seek_in chan pos] sets the current reading position to [pos]
    for channel [chan]. This works only for regular files. On
    files of other kinds, the behavior is unspecified. *)
 
 val pos_in : Pervasives.in_channel -> int
-  [@@deprecated "[since 2014-10] Use [In_channel]"]
+  [@@deprecated "[since 2014-10] Use [In_channel.pos]"]
 (** Return the current reading position for the given channel. *)
 
 val in_channel_length : Pervasives.in_channel -> int
-  [@@deprecated "[since 2014-10] Use [In_channel]"]
+  [@@deprecated "[since 2014-10] Use [In_channel.length]"]
 (** Return the size (number of characters) of the regular file
     on which the given channel is opened.  If the channel is opened
     on a file that is not a regular file, the result is meaningless.
@@ -938,18 +944,18 @@ val in_channel_length : Pervasives.in_channel -> int
     opened in text mode. *)
 
 val close_in : Pervasives.in_channel -> unit
-  [@@deprecated "[since 2014-10] Use [In_channel]"]
+  [@@deprecated "[since 2014-10] Use [In_channel.close]"]
 (** Close the given channel.  Input functions raise a [Sys_error]
   exception when they are applied to a closed input channel,
   except [close_in], which does nothing when applied to an already
   closed channel. *)
 
 val close_in_noerr : Pervasives.in_channel -> unit
-  [@@deprecated "[since 2016-04] Use [Core.Std.In_channel]"]
+  [@@deprecated "[since 2016-04] Use [In_channel.close] and catch exceptions"]
 (** Same as [close_in], but ignore all errors. *)
 
 val set_binary_mode_in : Pervasives.in_channel -> bool -> unit
-  [@@deprecated "[since 2016-04] Use [Core.Std.In_channel]"]
+  [@@deprecated "[since 2016-04] Use [In_channel.set_binary_mode]"]
 (** [set_binary_mode_in ic true] sets the channel [ic] to binary
    mode: no translations take place during input.
    [set_binary_mode_out ic false] sets the channel [ic] to text
@@ -971,7 +977,7 @@ module LargeFile :
     val pos_in : Pervasives.in_channel -> int64
     val in_channel_length : Pervasives.in_channel -> int64
   end
-  [@@deprecated "[since 2016-04] Use [Core.Std.In_channel] and [Core.Std.Out_channel]"]
+  [@@deprecated "[since 2016-04] Use [In_channel] and [Out_channel]"]
 (** Operations on large files.
   This sub-module provides 64-bit variants of the channel functions
   that manipulate file positions and file sizes.  By representing

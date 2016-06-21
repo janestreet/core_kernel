@@ -1,8 +1,9 @@
 open Sexplib
+open Hash.Builtin
 
 exception Nan_or_inf [@@deriving sexp]
 
-type t = float [@@deriving compare]
+type t = float [@@deriving compare, hash]
 
 let verify t =
   match Pervasives.classify_float t with

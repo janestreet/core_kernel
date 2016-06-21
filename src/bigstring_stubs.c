@@ -53,6 +53,7 @@
 #include <caml/bigarray.h>
 #include <core_params.h>
 #include "core_bigstring.h"
+#include <internalhash.h>
 
 static inline char * get_bstr(value v_bstr, value v_pos)
 {
@@ -144,6 +145,22 @@ CAMLprim value bigstring_memcmp_stub(value v_s1, value v_s1_pos,
   if (res < 0) return Val_int(-1);
   if (res > 0) return Val_int(1);
   return Val_int(0);
+}
+
+/* Hashing */
+
+CAMLprim value internalhash_fold_bigstring(value st, value v_str) /* noalloc */
+{
+  uint32_t h = Long_val(st);
+
+  struct caml_ba_array *ba = Caml_ba_array_val(v_str);
+  uint8_t *s = (uint8_t *) ba->data;
+
+  mlsize_t len = ba->dim[0];
+
+  h = internalhash_fold_blob(h, len, s);
+
+  return Val_long(h);
 }
 
 /* Search */

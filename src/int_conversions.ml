@@ -207,7 +207,7 @@ end) = struct
 end
 
 module Make_hex (I : sig
-    type t [@@deriving bin_io, compare, typerep]
+    type t [@@deriving bin_io, compare, hash, typerep]
     val to_string : t -> string
     val of_string : string -> t
     val zero : t
@@ -219,7 +219,7 @@ struct
 
   module T_hex = struct
 
-    type t = I.t [@@deriving bin_io, compare, typerep]
+    type t = I.t [@@deriving bin_io, compare, hash, typerep]
 
     let chars_per_delimiter = 4
 

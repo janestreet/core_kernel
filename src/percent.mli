@@ -2,7 +2,7 @@
 
 open Std_internal
 
-type t
+type t [@@deriving hash]
 
 (** of_string and t_of_sexp disallow nan, inf, etc. *)
 include Stringable with type t := t
@@ -54,7 +54,7 @@ val validate : t -> Validate.t
 
 module Stable : sig
   module V1 : sig
-    type nonrec t = t [@@deriving sexp, bin_io, compare]
+    type nonrec t = t [@@deriving sexp, bin_io, compare, hash]
   end
 end
 
