@@ -11,6 +11,7 @@ module Bigsubstring                         = Bigsubstring
 module Bin_prot                             = Core_bin_prot
 module Binable                              = Binable
 module Binary_packing                       = Binary_packing
+module Binary_search                        = Binary_search
 module Binary_searchable                    = Binary_searchable
 module Blang                                = Blang
 module Blit                                 = Blit
@@ -123,6 +124,7 @@ module Unpack_buffer                        = Unpack_buffer
 module Validate                             = Validate
 module Validated                            = Validated
 module Weak                                 = Core_weak
+module Weak_pointer                         = Weak_pointer
 module With_return                          = With_return
 module Word_size                            = Word_size
 

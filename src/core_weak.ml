@@ -19,4 +19,4 @@ let to_array t = Array.init (length t) ~f:(fun i -> get t i)
 
 let sexp_of_t sexp_of_a t = [%sexp_of: a Heap_block.t option array] (to_array t)
 
-module Make = Weak.Make
+

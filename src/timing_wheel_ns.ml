@@ -42,7 +42,8 @@
    However, the code is completely new.
 *)
 
-open Std_internal
+open! Std_internal
+open! Int_replace_polymorphic_compare
 
 module Int63 = Core_int63
 
@@ -219,6 +220,8 @@ module Priority_queue = struct
        same slot as a given key. *)
     module Min_key_in_same_slot_mask : sig
       type t = private Int63.t [@@deriving compare, sexp_of]
+
+      include Equal.S with type t := t
 
       val create : bits_per_slot:Num_key_bits.t -> t
     end
@@ -662,9 +665,10 @@ module Priority_queue = struct
             [%test_result: Key.Span.t] keys_per_slot
               ~expect:(Key.num_keys level.bits_per_slot)))
           ~min_key_in_same_slot_mask:(check (fun min_key_in_same_slot_mask ->
-            assert (min_key_in_same_slot_mask
-                    = Min_key_in_same_slot_mask.create
-                        ~bits_per_slot:level.bits_per_slot)))
+            assert (Min_key_in_same_slot_mask.equal
+                      min_key_in_same_slot_mask
+                      (Min_key_in_same_slot_mask.create
+                         ~bits_per_slot:level.bits_per_slot))))
           ~num_allowed_keys:(check (fun num_allowed_keys ->
             [%test_result: Key.Span.t] num_allowed_keys
               ~expect:(Key.Span.scale_int level.keys_per_slot (Level.num_slots level))))
@@ -690,18 +694,18 @@ module Priority_queue = struct
               then (
                 Internal_elt.invariant pool invariant_a elt;
                 Internal_elt.iter pool elt ~f:(fun elt ->
-                  assert (Internal_elt.key pool elt >= level.min_allowed_key);
-                  assert (Internal_elt.key pool elt <= level.max_allowed_key);
-                  assert (Internal_elt.key pool elt >= t.elt_key_lower_bound);
+                  assert (Key.( >= ) (Internal_elt.key pool elt) level.min_allowed_key);
+                  assert (Key.( <= ) (Internal_elt.key pool elt) level.max_allowed_key);
+                  assert (Key.( >= ) (Internal_elt.key pool elt) t.elt_key_lower_bound);
                   assert (Internal_elt.level_index pool elt = level.index);
                   invariant_a (Internal_elt.value pool elt)))))))
     in
     Invariant.invariant [%here] t [%sexp_of: _ t_internal] (fun () ->
       let check f = Invariant.check_field t f in
-      assert (min_allowed_key t >= Key.zero);
-      assert (min_allowed_key t <= Key.max_representable);
-      assert (max_allowed_key t >= min_allowed_key t);
-      assert (max_allowed_key t <= Key.max_representable);
+      assert (Key.( >= ) (min_allowed_key t) Key.zero);
+      assert (Key.( <= ) (min_allowed_key t) Key.max_representable);
+      assert (Key.( >= ) (max_allowed_key t) (min_allowed_key t));
+      assert (Key.( <= ) (max_allowed_key t) Key.max_representable);
       Fields.iter
         ~length:(check (fun length -> assert (length >= 0)))
         ~pool:(check (Internal_elt.Pool.invariant ignore))
@@ -709,13 +713,12 @@ module Priority_queue = struct
           if not (Internal_elt.is_null elt_)
           then (
             assert (Internal_elt.is_valid t.pool elt_);
-            assert (t.elt_key_lower_bound = Internal_elt.key t.pool elt_))))
+            assert (Key.equal t.elt_key_lower_bound (Internal_elt.key t.pool elt_)))))
         ~elt_key_lower_bound:(check (fun elt_key_lower_bound ->
-          assert (elt_key_lower_bound >= min_allowed_key t);
-          assert (elt_key_lower_bound <= max_allowed_key t);
+          assert (Key.( >= ) elt_key_lower_bound (min_allowed_key t));
+          assert (Key.( <= ) elt_key_lower_bound (max_allowed_key t));
           if not (Internal_elt.is_null t.min_elt)
-          then assert (elt_key_lower_bound = Internal_elt.key t.pool t.min_elt);
-        ))
+          then assert (Key.equal elt_key_lower_bound (Internal_elt.key t.pool t.min_elt))))
         ~levels:(check (fun levels ->
           assert (num_levels t > 0);
           Array.iteri levels ~f:(fun level_index level ->
@@ -728,7 +731,7 @@ module Priority_queue = struct
               [%test_result: Key.Span.t]
                 (L.keys_per_slot level) ~expect:(L.num_allowed_keys prev_level);
               let bound = Key.succ (L.max_allowed_key prev_level) in
-              assert (L.min_allowed_key level <= bound);
+              assert (Key.( <= ) (L.min_allowed_key level) bound);
               assert (Key.( > )
                         (Key.add (L.min_allowed_key level) (L.keys_per_slot level))
                         bound))))))
@@ -749,7 +752,7 @@ module Priority_queue = struct
       let num_levels = num_levels t in
       while !level_index < num_levels do
         let level = t.levels.( !level_index ) in
-        if Level.min_allowed_key level >= !min_key_already_found
+        if Key.( >= ) (Level.min_allowed_key level) !min_key_already_found
         then
           (* We don't need to consider any more levels.  Quit the loop. *)
           level_index := num_levels
@@ -766,7 +769,7 @@ module Priority_queue = struct
           (* Find the first nonempty slot with a small enough [slot_min_key]. *)
           while
             Internal_elt.is_null slots.( !slot )
-            && !slot_min_key < !min_key_already_found
+            && Key.( < ) !slot_min_key !min_key_already_found
           do
             slot := Level.next_slot level !slot;
             slot_min_key := Key.add !slot_min_key level.keys_per_slot;
@@ -779,7 +782,7 @@ module Priority_queue = struct
             let current = ref first in
             while !continue do
               let current_key = Internal_elt.key pool !current in
-              if current_key < !min_key_already_found
+              if Key.( < ) current_key !min_key_already_found
               then (
                 min_elt_already_found := !current;
                 min_key_already_found := current_key);
@@ -817,17 +820,17 @@ module Priority_queue = struct
   let add_elt t elt =
     let pool = t.pool in
     let key = Internal_elt.key pool elt in
-    assert (key >= min_allowed_key t && key <= max_allowed_key t);
+    assert (Key.( >= ) key (min_allowed_key t) && Key.( <= ) key (max_allowed_key t));
     (* Find the lowest level that will hold [elt]. *)
     let level_index =
       let level_index = ref 0 in
-      while key > Level.max_allowed_key t.levels.( !level_index ) do
+      while Key.( > ) key (Level.max_allowed_key t.levels.( !level_index )) do
         incr level_index;
       done;
       !level_index
     in
     let level = t.levels.( level_index ) in
-    assert (key >= level.min_allowed_key && key <= level.max_allowed_key);
+    assert (Key.( >= ) key level.min_allowed_key && Key.( <= ) key level.max_allowed_key);
     level.length <- level.length + 1;
     Internal_elt.set_level_index pool elt level_index;
     let slot = Level.slot level ~key in
@@ -842,7 +845,7 @@ module Priority_queue = struct
 
   let internal_add_elt t elt =
     let key = Internal_elt.key t.pool elt in
-    if key < t.elt_key_lower_bound
+    if Key.( < ) key t.elt_key_lower_bound
     then (
       t.min_elt <- elt;
       t.elt_key_lower_bound <- key);
@@ -851,7 +854,7 @@ module Priority_queue = struct
   ;;
 
   let ensure_valid_key t ~key =
-    if key < min_allowed_key t || key > max_allowed_key t
+    if Key.( < ) key (min_allowed_key t) || Key.( > ) key (max_allowed_key t)
     then raise_s [%message "Timing_wheel.Priority_queue got invalid key"
                              (key : Key.t) ~timing_wheel:(t : _ t)];
   ;;
@@ -886,7 +889,7 @@ module Priority_queue = struct
          [current] before continuing the loop. *)
       let next = Internal_elt.next pool !current in
       level.length <- level.length - 1;
-      if Internal_elt.key pool !current >= t_min_allowed_key
+      if Key.( >= ) (Internal_elt.key pool !current) t_min_allowed_key
       then add_elt t !current
       else (
         t.length <- t.length - 1;
@@ -914,11 +917,11 @@ module Priority_queue = struct
        [keys_per_slot] each iteration of the loop. *)
     let level_min_allowed_key =
       Level.min_key_in_same_slot level
-        ~key:(min max_level_min_allowed_key
-                (max level.min_allowed_key t.elt_key_lower_bound))
+        ~key:(Key.min max_level_min_allowed_key
+                (Key.max level.min_allowed_key t.elt_key_lower_bound))
     in
     let level_min_allowed_key = ref level_min_allowed_key in
-    assert (!level_min_allowed_key <= max_level_min_allowed_key);
+    assert (Key.( <= ) !level_min_allowed_key max_level_min_allowed_key);
     let slot = ref (Level.slot level ~key:!level_min_allowed_key) in
     let keys_per_slot = level.keys_per_slot in
     let slots = level.slots in
@@ -942,7 +945,7 @@ module Priority_queue = struct
         slot := Level.next_slot level !slot;
         level_min_allowed_key := Key.add !level_min_allowed_key keys_per_slot);
     done;
-    assert (!level_min_allowed_key <= max_level_min_allowed_key);
+    assert (Key.( <= ) !level_min_allowed_key max_level_min_allowed_key);
     assert (Key.( > )
               (Key.add !level_min_allowed_key keys_per_slot)
               max_level_min_allowed_key);
@@ -955,7 +958,7 @@ module Priority_queue = struct
     if Key.( > ) key Key.max_representable
     then raise_s [%message "Timing_wheel.increase_min_allowed_key got invalid key"
                              (key : Key.t) ~timing_wheel:(t : _ t)];
-    if key > min_allowed_key t
+    if Key.( > ) key (min_allowed_key t)
     then (
       (* We increase the [min_allowed_key] of levels in order to restore the invariant
          that they have as large as possible a [min_allowed_key], while leaving no gaps in
@@ -970,7 +973,7 @@ module Priority_queue = struct
         increase_level_min_allowed_key t level
           ~max_level_min_allowed_key:!max_level_min_allowed_key
           ~t_min_allowed_key:key ~handle_removed;
-        if Level.min_allowed_key level = min_allowed_key_before
+        if Key.equal (Level.min_allowed_key level) min_allowed_key_before
         then
           (* This level did not shift.  Don't shift any higher levels. *)
           level_index := num_levels
@@ -979,7 +982,7 @@ module Priority_queue = struct
           level_index := !level_index + 1;
           max_level_min_allowed_key := Key.succ (Level.max_allowed_key level));
       done;
-      if key > t.elt_key_lower_bound
+      if Key.( > ) key t.elt_key_lower_bound
       then (
         (* We have removed [t.min_elt] or it was already null, so just set it to null. *)
         t.min_elt <- Internal_elt.null ();
@@ -1291,11 +1294,11 @@ let interval_num_start_unchecked t interval_num =
 ;;
 
 let interval_num_start t interval_num =
-  if interval_num < min_interval_num
+  if Interval_num.( < ) interval_num min_interval_num
   then raise_s [%message "Timing_wheel.interval_num_start got too small interval_num"
                            (interval_num : Interval_num.t)
                            (min_interval_num : Interval_num.t)];
-  if interval_num > t.max_interval_num
+  if Interval_num.( > ) interval_num t.max_interval_num
   then raise_s [%message "Timing_wheel.interval_num_start got too large interval_num"
                            (interval_num : Interval_num.t)
                            (t.max_interval_num : Interval_num.t)];
@@ -1349,7 +1352,8 @@ let invariant invariant_a t =
       ~now:(check (fun now ->
         assert (Time_ns.( >= ) now t.start);
         assert (Time_ns.( <= ) now max_time);
-        assert (interval_num t t.now = Priority_queue.min_allowed_key t.priority_queue)))
+        assert (Interval_num.equal (interval_num t t.now)
+                  (Priority_queue.min_allowed_key t.priority_queue))))
       ~now_interval_num_start:(check (fun now_interval_num_start ->
         [%test_result: Time_ns.t] now_interval_num_start
           ~expect:(interval_num_start t (now_interval_num t))))
@@ -1357,7 +1361,8 @@ let invariant invariant_a t =
         [%test_result: Time_ns.t] alarm_upper_bound ~expect:(compute_alarm_upper_bound t)))
       ~priority_queue:(check (Priority_queue.invariant invariant_a));
     iter t ~f:(fun alarm ->
-      assert (Alarm.interval_num t alarm = interval_num t (Alarm.at t alarm));
+      assert (Interval_num.equal (Alarm.interval_num t alarm)
+                (interval_num t (Alarm.at t alarm)));
       assert (Time_ns.( >= )
                 (interval_start t (Alarm.at t alarm))
                 (interval_start t (now t)));

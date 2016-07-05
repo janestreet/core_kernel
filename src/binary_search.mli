@@ -55,7 +55,7 @@ val binary_search
   -> 'elt
   -> int option
 
-(** [binary_search_segmented ?pos ?len t ~length ~get ~segment_of which] takes an
+(** [binary_search_segmented ?pos ?len t ~length ~get ~segment_of which] takes a
     [segment_of] function that divides [t] into two (possibly empty) segments:
 
     {v

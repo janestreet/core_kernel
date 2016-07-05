@@ -752,15 +752,11 @@ module Top_level = struct
   let spec =
     let open Command.Spec in
     let regex = Arg_type.create Re2.create_exn in
-    let comma_separated_ints =
-      Arg_type.create (fun str ->
-        str |> String.split ~on:',' |> List.map ~f:Int.of_string)
-    in
     step (fun f regex -> f ~regex)
     +> flag "-matching" (optional regex) ~doc:"REGEX Select tests matching given regex."
     ++
     step (fun f sizes -> f ~sizes)
-    +> flag "-sizes" (optional_with_default [1;32;1024] comma_separated_ints)
+    +> flag "-sizes" (optional_with_default [1;32;1024] (Arg_type.comma_separated int))
          ~doc:"INT,... Use hash tables of specified sizes."
     ++
     step (fun f list -> f ~list)

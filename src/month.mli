@@ -35,6 +35,8 @@ val shift : t -> int -> t
 
 module Export : sig
   type month = t = Jan | Feb | Mar | Apr | May | Jun | Jul | Aug | Sep | Oct | Nov | Dec
+    [@@deprecated "[since 2016-06] no longer needed since ocaml is now better at \
+                   inferring the module where a constructor is defined"]
 end
 
 module Stable : sig
