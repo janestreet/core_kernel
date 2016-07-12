@@ -263,7 +263,7 @@ include Int_pow2
    more direct. *)
 let sign = Sign.of_int
 
-let popcount = Int_math.int_popcount
+let popcount = Popcount.int_popcount
 
 include Pretty_printer.Register (struct
   type nonrec t = t
@@ -272,23 +272,14 @@ include Pretty_printer.Register (struct
 end)
 
 include Quickcheck.Make_int (struct
-    type nonrec t = t [@@deriving sexp, compare]
+    type nonrec t = t [@@deriving sexp, compare, hash]
     include (Replace_polymorphic_compare
              : Polymorphic_compare_intf.Infix with type t := t)
-    let (+)                 = (+)
-    let (-)                 = (-)
-    let (~-)                = (~-)
-    let zero                = zero
-    let one                 = one
-    let min_value           = min_value
-    let max_value           = max_value
-    let succ                = succ
-    let bit_and             = bit_and
-    let shift_left          = shift_left
-    let shift_right         = shift_right
-    let shift_right_logical = shift_right_logical
-    let of_int_exn          = of_int_exn
-    let to_float            = to_float
+    let min_value         = min_value
+    let max_value         = max_value
+    let succ              = succ
+    let pred              = pred
+    let splittable_random = Splittable_random.int
   end)
 
 module Pre_O = struct

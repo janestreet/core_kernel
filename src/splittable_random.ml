@@ -43,7 +43,7 @@ module Arith64 = struct
 
   let is_odd x = x lor 1L = x
 
-  let popcount = Int_math.int64_popcount
+  let popcount = Popcount.int64_popcount
 end
 
 open Arith64
@@ -285,29 +285,29 @@ let%test_module "random" =
        is correct. *)
     let test_bias_of_mean ~lo ~hi ~sample_size state =
       assert (lo < hi);
-      let lof = Float.of_int64 lo in
-      let hif = Float.of_int64 hi in
+      let lof = Int64.to_float lo in
+      let hif = Int64.to_float hi in
       let delta = hif -. lof in
-      let draw () = (Float.of_int64 (int64 state ~lo ~hi) -. lof) /. delta in
+      let draw () = (Int64.to_float (int64 state ~lo ~hi) -. lof) /. delta in
       let rec loop iters accum =
         if iters <= 0L
         then accum
         else loop (iters - 1L) (accum +. draw ())
       in
       let sum = loop sample_size 0. in
-      let mean = sum /. Float.of_int64 sample_size in
+      let mean = sum /. Int64.to_float sample_size in
       let n = delta +. 1. in
       (* We have n evenly spaced values from 0 to 1 inclusive, each with probability 1/n.
          This has variance (n+1)/(12(n-1)) per draw.  *)
       let standard_error =
-        sqrt ((n +. 1.) /. (12. *. (n -. 1.) *. Float.of_int64 sample_size))
+        sqrt ((n +. 1.) /. (12. *. (n -. 1.) *. Int64.to_float sample_size))
       in
       (mean -. 0.5) /. standard_error
 
     let%test_unit "bias" =
       let hi = 3689348814741910528L in (* about 0.4 * max_int *)
       let z = test_bias_of_mean ~lo:0L ~hi ~sample_size:1000L (State.of_int 0) in
-      assert (Float.abs z < 3.)
+      assert (abs_float z < 3.)
 
   end)
 

@@ -112,7 +112,8 @@ let reraise_uncaught str func =
   try func () with
   | exn -> raise (Reraised (str, exn))
 
-external clear_backtrace : unit -> unit = "clear_caml_backtrace_pos" "noalloc"
+external clear_backtrace : unit -> unit = "clear_caml_backtrace_pos" [@@noalloc]
+
 let raise_without_backtrace e =
   (* We clear the backtrace to reduce confusion, so that people don't think whatever
      is stored corresponds to this raise. *)
@@ -120,7 +121,7 @@ let raise_without_backtrace e =
   raise_notrace e
 ;;
 
-let%test_module __ [@tags "no-js"] = (module struct
+let%test_module _ [@tags "no-js"] = (module struct
   exception Test_exception
 
   let with_backtraces_enabled f =

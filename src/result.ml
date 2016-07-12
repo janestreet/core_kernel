@@ -1,6 +1,6 @@
 module Stable = struct
   module V1 = struct
-    type ('a, 'b) t = ('a, 'b) Result_lib.Result.result =
+    type ('a, 'b) t = ('a, 'b) Pervasives.result =
     | Ok of 'a
     | Error of 'b
     [@@deriving sexp, bin_io, compare, hash]

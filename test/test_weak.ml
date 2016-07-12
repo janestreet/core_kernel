@@ -39,10 +39,10 @@ let%expect_test "[get], [set]" =
     () |}];
   show_raise (fun () -> ignore (get t (-1) : _ option));
   [%expect {|
-    (raised (exn (Invalid_argument Weak.get))) |}];
+    (raised (exn (Invalid_argument Weak.get_key))) |}];
   show_raise (fun () -> ignore (get t 1 : _ option));
   [%expect {|
-    (raised (exn (Invalid_argument Weak.get))) |}];
+    (raised (exn (Invalid_argument Weak.get_key))) |}];
   let b = block 13 in
   set t 0 (Some b);
   print t;
@@ -104,7 +104,7 @@ let%expect_test "clearing, with a finalizer attached" =
     (finalized (b 13)) |}];
   print t;
   [%expect {|
-    (()) |}];
+    ((13)) |}];
   Gc.compact ();
   print t;
   [%expect {|

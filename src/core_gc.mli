@@ -152,6 +152,12 @@ module Control : sig
         first-fit policy, which can be slower in some cases but
         can be better for programs with fragmentation problems.
         Default: 0. *)
+
+    window_size : int;
+    (** The size of the window used by the major GC for smoothing
+        out variations in its workload. This is an integer between
+        1 and 50.
+        Default: 1. @since 4.03.0 *)
   }
   [@@deriving bin_io, sexp, fields]
 
@@ -189,21 +195,21 @@ external counters : unit -> float * float * float = "caml_gc_counters"
     (%r15 on x86-64) to the global variable [caml_young_ptr] before the C stub tries to
     read its value. *)
 external minor_words       : unit -> int = "core_kernel_gc_minor_words"
-external major_words       : unit -> int = "core_kernel_gc_major_words"       "noalloc"
-external promoted_words    : unit -> int = "core_kernel_gc_promoted_words"    "noalloc"
-external minor_collections : unit -> int = "core_kernel_gc_minor_collections" "noalloc"
-external major_collections : unit -> int = "core_kernel_gc_major_collections" "noalloc"
-external heap_words        : unit -> int = "core_kernel_gc_heap_words"        "noalloc"
-external heap_chunks       : unit -> int = "core_kernel_gc_heap_chunks"       "noalloc"
-external compactions       : unit -> int = "core_kernel_gc_compactions"       "noalloc"
-external top_heap_words    : unit -> int = "core_kernel_gc_top_heap_words"    "noalloc"
+external major_words       : unit -> int = "core_kernel_gc_major_words"       [@@noalloc]
+external promoted_words    : unit -> int = "core_kernel_gc_promoted_words"    [@@noalloc]
+external minor_collections : unit -> int = "core_kernel_gc_minor_collections" [@@noalloc]
+external major_collections : unit -> int = "core_kernel_gc_major_collections" [@@noalloc]
+external heap_words        : unit -> int = "core_kernel_gc_heap_words"        [@@noalloc]
+external heap_chunks       : unit -> int = "core_kernel_gc_heap_chunks"       [@@noalloc]
+external compactions       : unit -> int = "core_kernel_gc_compactions"       [@@noalloc]
+external top_heap_words    : unit -> int = "core_kernel_gc_top_heap_words"    [@@noalloc]
 
 (** This function returns [major_words () + minor_words ()].  It exists purely for speed
     (one call into C rather than two).  Like [major_words] and [minor_words],
     [major_plus_minor_words] avoids allocating a [stat] record or a float, and may
     overflow on 32-bit machines.
 
-    This function is not marked ["noalloc"] to ensure that the allocation pointer is
+    This function is not marked [[@@noalloc]] to ensure that the allocation pointer is
     up-to-date when the minor-heap measurement is made.
 *)
 external major_plus_minor_words : unit -> int = "core_kernel_gc_major_plus_minor_words"
@@ -260,6 +266,7 @@ val tune
   -> ?max_overhead         : int
   -> ?stack_limit          : int
   -> ?allocation_policy    : int
+  -> ?window_size          : int
   -> unit
   -> unit
 

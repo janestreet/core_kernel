@@ -25,7 +25,7 @@ val forever : (unit -> unit) -> exn
 (** [apply_n_times ~n f x] is the [n]-fold application of [f] to [x]. *)
 val apply_n_times : n:int -> ('a -> 'a) -> ('a -> 'a)
 
-(** The identity function*)
+(** The identity function.  Also see [Sys.opaque_identity]. *)
 external id : 'a -> 'a = "%identity"
 
 (** [compose f g x] is [f (g x)] *)

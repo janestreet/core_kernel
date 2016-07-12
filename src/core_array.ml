@@ -949,7 +949,7 @@ module T = struct
     module Unsafe_blit = struct
       external unsafe_blit
         : src:t_ -> src_pos:int -> dst:t_ -> dst_pos:int -> len:int -> unit
-        = "core_array_unsafe_int_blit" "noalloc"
+        = "core_array_unsafe_int_blit" [@@noalloc]
     end
 
     include
@@ -978,7 +978,7 @@ module T = struct
     module Unsafe_blit = struct
       external unsafe_blit
         : src:t_ -> src_pos:int -> dst:t_ -> dst_pos:int -> len:int -> unit
-        = "core_array_unsafe_float_blit" "noalloc"
+        = "core_array_unsafe_float_blit" [@@noalloc]
     end
 
     include
@@ -1145,7 +1145,7 @@ module Permissioned : sig
 
     external unsafe_blit
       : src:[> read] t -> src_pos:int -> dst:[> write] t -> dst_pos:int -> len:int -> unit
-      = "core_array_unsafe_int_blit" "noalloc"
+      = "core_array_unsafe_int_blit" [@@noalloc]
   end
 
   module Float : sig
@@ -1155,7 +1155,7 @@ module Permissioned : sig
 
     external unsafe_blit
       : src:[> read] t -> src_pos:int -> dst:[> write] t -> dst_pos:int -> len:int -> unit
-      = "core_array_unsafe_float_blit" "noalloc"
+      = "core_array_unsafe_float_blit" [@@noalloc]
   end
 
   val of_array_id : 'a array -> ('a, [< read_write]) t

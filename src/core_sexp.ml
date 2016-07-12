@@ -166,13 +166,13 @@ module For_quickcheck = struct
   open Generator.Monad_infix
 
   let gen =
-    Generator.recursive (fun t_gen ->
-      Generator.variant2
-        Core_string.gen
-        (Core_list.gen t_gen)
-      >>| function
-      | `A atom -> Sexp.Atom atom
-      | `B list -> Sexp.List list)
+    (* relying on [Core_list.gen] to distribute [size] over sub-sexps *)
+    Generator.recursive (fun f ~size ->
+      Bool.gen
+      >>= fun atomic ->
+      if atomic
+      then (Core_string.gen         >>| fun atom -> Atom atom)
+      else (Core_list.gen (f ~size) >>| fun list -> List list))
 
   let obs =
     Observer.recursive (fun t_obs ->

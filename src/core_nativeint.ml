@@ -100,7 +100,7 @@ let of_nativeint_exn = of_nativeint
 let to_nativeint t = t
 let to_nativeint_exn = to_nativeint
 
-let popcount = Int_math.nativeint_popcount
+let popcount = Popcount.nativeint_popcount
 
 module Conv = Int_conversions
 let of_int = Conv.int_to_nativeint
@@ -140,23 +140,14 @@ include Pretty_printer.Register (struct
 end)
 
 include Quickcheck.Make_int (struct
-    type nonrec t = t [@@deriving sexp, compare]
+    type nonrec t = t [@@deriving sexp, compare, hash]
     include (Replace_polymorphic_compare
              : Polymorphic_compare_intf.Infix with type t := t)
-    let (+)                 = (+)
-    let (-)                 = (-)
-    let (~-)                = (~-)
-    let zero                = zero
-    let one                 = one
-    let min_value           = min_value
-    let max_value           = max_value
-    let succ                = succ
-    let bit_and             = bit_and
-    let shift_left          = shift_left
-    let shift_right         = shift_right
-    let shift_right_logical = shift_right_logical
-    let of_int_exn          = of_int_exn
-    let to_float            = to_float
+    let min_value         = min_value
+    let max_value         = max_value
+    let succ              = succ
+    let pred              = pred
+    let splittable_random = Splittable_random.nativeint
   end)
 
 module Pre_O = struct

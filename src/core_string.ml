@@ -1003,17 +1003,14 @@ let chop_suffix_exn s ~suffix =
    divergence is to expose the macro redefined in hash_stubs.c in the hash.h header of
    the OCaml compiler.) *)
 module Hash = struct
-  external hash : string -> int = "caml_hash_string" "noalloc"
+  external hash : string -> int = "caml_hash_string" [@@noalloc]
 
   let%test_unit _ =
     List.iter ~f:(fun string ->
       assert (hash string = Caml.Hashtbl.hash string);
       (* with 31-bit integers, the hash computed by ppx_hash overflows so it doesn't match
          polymorphic hash exactly. *)
-      let int_is_more_than_31_bit =
-        (* can't use [Int_conversions.num_bits_int] because of a dependency cycle *)
-        max_int > 0x3fff_ffff in
-      if int_is_more_than_31_bit then
+      if Sys.int_size > 31 then
         assert (hash string = [%hash: string] string)
     )
       [ "Oh Gloria inmarcesible! Oh jubilo inmortal!"
@@ -1085,13 +1082,18 @@ module For_quickcheck = struct
   module Observer  = Quickcheck.Observer
   module Shrinker  = Quickcheck.Shrinker
 
-  open Generator.Monad_infix
+  open Generator.Let_syntax
 
-  let gen' ?(length = Generator.small_non_negative_int) char_gen =
-    length
-    >>= fun len ->
-    List.gen' char_gen ~length:(`Exactly len)
-    >>| of_char_list
+  let gen' ?length char_gen =
+    let%bind length =
+      match length with
+      | None     -> return None
+      | Some gen ->
+        let%bind len = gen in
+        return (Some (`Exactly len))
+    in
+    let%bind chars = List.gen' char_gen ?length in
+    return (of_char_list chars)
 
   let gen = gen' Char.gen
 

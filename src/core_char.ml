@@ -206,33 +206,14 @@ module For_quickcheck = struct
     Generator.of_fun (fun () ->
       Lazy.force lazy_gen)
 
-  let is_print_non_alphanum c =
-    is_print c
-    && not (is_alphanum c)
-
-  let is_non_print c =
-    not (is_print c)
-
   let gen_uppercase          = gen_matching_memoized is_uppercase
   let gen_lowercase          = gen_matching_memoized is_lowercase
   let gen_digit              = gen_matching_memoized is_digit
   let gen_whitespace         = gen_matching_memoized is_whitespace
   let gen_alpha              = gen_matching_memoized is_alpha
   let gen_alphanum           = gen_matching_memoized is_alphanum
-  let gen_print_non_alphanum = gen_matching_memoized is_print_non_alphanum
-  let gen_non_print          = gen_matching_memoized is_non_print
-
-  let gen_print =
-    Generator.weighted_union
-      [ 5., gen_alphanum
-      ; 1., gen_print_non_alphanum
-      ]
-
-  let gen =
-    Generator.weighted_union
-      [ 10., gen_print
-      ;  1., gen_non_print
-      ]
+  let gen_print              = gen_matching_memoized is_print
+  let gen                    = gen_matching_memoized (fun _ -> true)
 
   let obs =
     Observer.enum 256
@@ -261,11 +242,18 @@ module For_quickcheck = struct
       let test gen ~f =
         (* repeat to make sure changing random seed doesn't affect the outcome *)
         for _ = 1 to 10 do
-          [%test_result: Set.t]
-            (Quickcheck.random_sequence gen
-             |> Sequence.to_list
-             |> Set.of_list)
-            ~expect:(Set.filter all ~f)
+          let expect = Set.filter all ~f in
+          let actual =
+            Sequence.delayed_fold (Quickcheck.random_sequence gen)
+              ~init:Set.empty
+              ~finish:Fn.id
+              ~f:(fun set t ~k ->
+                let set = Set.add set t in
+                if Set.equal set expect
+                then set
+                else k set)
+          in
+          [%test_result: Set.t] actual ~expect
         done
 
       (* exported generators: *)

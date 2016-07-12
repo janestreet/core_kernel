@@ -8,27 +8,18 @@ module For_quickcheck = struct
 
   open Generator.Monad_infix
 
-  let gen_with_len_between elem_gen ~lo ~hi =
-    let rec loop len tail =
-      let weight_for_len  = if lo <= len && len <= hi then 1. else 0. in
-      let weight_for_more = if              len <  hi then 1. else 0. in
-      Generator.weighted_union
-        [ weight_for_len,  Generator.singleton tail
-        ; weight_for_more, Generator.bind elem_gen (fun elem -> loop (len+1) (elem::tail))
-        ]
-    in
-    loop 0 []
-
-  let gen' ?(length = `At_least 0) elem_gen =
-    let lo, hi =
+  let gen' ?length elem_gen =
+    let min_len, max_len =
       match length with
-      | `Exactly           n      -> n, n
-      | `At_least          n      -> n, Pervasives.max_int
-      | `At_most           n      -> 0, n
-      | `Between_inclusive (x, y) -> x, y
+      | None         -> None, None
+      | Some variant ->
+        match variant with
+        | `Exactly           n      -> Some n, Some n
+        | `At_least          n      -> Some n, None
+        | `At_most           n      -> None,   Some n
+        | `Between_inclusive (x, y) -> Some x, Some y
     in
-    if lo < 0 || lo > hi then failwith "Generator.list: invalid length argument";
-    gen_with_len_between elem_gen ~lo ~hi
+    Generator.list elem_gen ?min_len ?max_len
 
   let gen elem_gen =
     gen' elem_gen

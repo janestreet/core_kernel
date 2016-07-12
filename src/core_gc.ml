@@ -83,6 +83,7 @@ module Control = struct
           the first-fit policy, which can be slower in some cases but can be better for
           programs with fragmentation problems.  Default: 0. *)
       mutable allocation_policy : int;
+      window_size : int;
     } [@@deriving compare, bin_io, sexp, fields]
   end
 
@@ -91,7 +92,8 @@ module Control = struct
 end
 
 let tune ?logger ?minor_heap_size ?major_heap_increment ?space_overhead
-      ?verbose ?max_overhead ?stack_limit ?allocation_policy () =
+      ?verbose ?max_overhead ?stack_limit ?allocation_policy
+      ?window_size () =
   let module Field = Fieldslib.Field in
   let old_control_params = get () in
   let f opt to_string field =
@@ -113,6 +115,7 @@ let tune ?logger ?minor_heap_size ?major_heap_increment ?space_overhead
       ~max_overhead:        (f max_overhead         string_of_int)
       ~stack_limit:         (f stack_limit          string_of_int)
       ~allocation_policy:   (f allocation_policy    string_of_int)
+      ~window_size:         (f window_size          string_of_int)
   in
   set new_control_params
 ;;
@@ -141,14 +144,14 @@ let disable_compaction ?logger ~allocation_policy () =
 ;;
 
 external minor_words : unit -> int = "core_kernel_gc_minor_words"
-external major_words : unit -> int = "core_kernel_gc_major_words" "noalloc"
-external promoted_words : unit -> int = "core_kernel_gc_promoted_words" "noalloc"
-external minor_collections : unit -> int = "core_kernel_gc_minor_collections" "noalloc"
-external major_collections : unit -> int = "core_kernel_gc_major_collections" "noalloc"
-external heap_words : unit -> int = "core_kernel_gc_heap_words" "noalloc"
-external heap_chunks : unit -> int = "core_kernel_gc_heap_chunks" "noalloc"
-external compactions : unit -> int = "core_kernel_gc_compactions" "noalloc"
-external top_heap_words : unit -> int = "core_kernel_gc_top_heap_words" "noalloc"
+external major_words : unit -> int = "core_kernel_gc_major_words" [@@noalloc]
+external promoted_words : unit -> int = "core_kernel_gc_promoted_words" [@@noalloc]
+external minor_collections : unit -> int = "core_kernel_gc_minor_collections" [@@noalloc]
+external major_collections : unit -> int = "core_kernel_gc_major_collections" [@@noalloc]
+external heap_words : unit -> int = "core_kernel_gc_heap_words" [@@noalloc]
+external heap_chunks : unit -> int = "core_kernel_gc_heap_chunks" [@@noalloc]
+external compactions : unit -> int = "core_kernel_gc_compactions" [@@noalloc]
+external top_heap_words : unit -> int = "core_kernel_gc_top_heap_words" [@@noalloc]
 
 external major_plus_minor_words : unit -> int = "core_kernel_gc_major_plus_minor_words"
 
@@ -162,7 +165,7 @@ let%test_unit _ =
   let weak = Weak.create 1 in
   Weak.set weak 0 (Some r);
   Gc.compact ();
-  assert (Option.is_some (Weak.get weak 0));
+  assert (match Weak.get weak 0 with None -> false | Some _ -> true);
   keep_alive r
 ;;
 

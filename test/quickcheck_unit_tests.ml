@@ -24,6 +24,11 @@ module Test (S : sig val default_seed : Quickcheck_intf.seed end) : sig end = st
   module G = Quickcheck.Generator
   module O = Quickcheck.Observer
 
+  let memo k =
+    let hashable = Hashtbl_intf.Hashable.of_key k in
+    let memoize f = Memo.general f ~hashable in
+    (fun gen -> G.map gen ~f:memoize)
+
   let%test_module "examples" =
     (module struct
       let example = "some silly string that is unlikely to be generated randomly"
@@ -40,15 +45,6 @@ module Test (S : sig val default_seed : Quickcheck_intf.seed end) : sig end = st
 
   let%test_module "failure" =
     (module struct
-      let cannot_generate gen =
-        assert (Exn.does_raise (fun () ->
-          test_can_generate gen ~f:(fun _ -> true)))
-
-      let%test_unit _ =
-        cannot_generate G.(filter Unit.gen ~f:(fun _ -> false))
-      let%test_unit _ =
-        cannot_generate G.(filter Int.gen  ~f:(fun _ -> false))
-
       let%test_unit _ =
         test_can_generate
           (List.gen'
@@ -83,22 +79,18 @@ module Test (S : sig val default_seed : Quickcheck_intf.seed end) : sig end = st
   let%test_module "unit" =
     (module struct
       let sexp_of = Unit.sexp_of_t
-      let compare = Unit.compare
       let gen = Unit.gen
       let can_generate f = test_can_generate gen ~sexp_of ~f
 
-      let%test_unit _ = test_no_duplicates gen ~sexp_of ~compare
       let%test_unit _ = can_generate (fun () -> true)
     end)
 
   let%test_module "bool" =
     (module struct
       let sexp_of = Bool.sexp_of_t
-      let compare = Bool.compare
       let gen = Bool.gen
       let can_generate f = test_can_generate gen ~sexp_of ~f
 
-      let%test_unit _ = test_no_duplicates gen ~sexp_of ~compare
       let%test_unit _ = can_generate (fun x -> x = true)
       let%test_unit _ = can_generate (fun x -> x = false)
     end)
@@ -205,11 +197,9 @@ module Test (S : sig val default_seed : Quickcheck_intf.seed end) : sig end = st
   let%test_module "char" =
     (module struct
       let sexp_of = Char.sexp_of_t
-      let compare = Char.compare
       let gen = Char.gen
       let can_generate f = test_can_generate gen ~sexp_of ~f
 
-      let%test_unit _ = test_no_duplicates gen ~sexp_of ~compare
       let%test_unit _ = can_generate Char.is_digit
       let%test_unit _ = can_generate Char.is_lowercase
       let%test_unit _ = can_generate Char.is_uppercase
@@ -228,10 +218,10 @@ module Test (S : sig val default_seed : Quickcheck_intf.seed end) : sig end = st
       let sexp_of = [%sexp_of: char * char]
       let compare = [%compare: char * char]
       let gen = G.tuple2 Char.gen Char.gen
-      let can_generate f = test_can_generate gen ~sexp_of ~f
+      let can_generate ?trials f = test_can_generate gen ~sexp_of ~f ?trials
 
       let%test_unit _ = test_no_duplicates gen ~sexp_of ~compare
-      let%test_unit _ = can_generate (fun (x,y) -> Char.( = ) x y)
+      let%test_unit _ = can_generate (fun (x,y) -> Char.( = ) x y) ~trials:2_000
       let%test_unit _ = can_generate (fun (x,y) -> Char.( < ) x y)
       let%test_unit _ = can_generate (fun (x,y) -> Char.( > ) x y)
     end)
@@ -243,7 +233,10 @@ module Test (S : sig val default_seed : Quickcheck_intf.seed end) : sig end = st
       let gen = Option.gen Int.gen
       let can_generate f = test_can_generate gen ~sexp_of ~f
 
-      let%test_unit _ = test_no_duplicates gen ~sexp_of ~compare
+      let%test_unit _ =
+        (* obviously there are going to be a lot of [None] results, so just make sure
+           we still generate sensible [Some] results. *)
+        test_no_duplicates (G.filter gen ~f:Option.is_some) ~sexp_of ~compare
       let%test_unit _ = can_generate Option.is_none
       let%test_unit _ = can_generate Option.is_some
     end)
@@ -261,28 +254,24 @@ module Test (S : sig val default_seed : Quickcheck_intf.seed end) : sig end = st
         end)
       let sexp_of = [%sexp_of: F.t]
       let compare = [%compare: F.t]
-      let gen = G.(fn Int.obs Int.gen)
+      let gen =
+        (* memoizing these functions makes [test_no_duplicates] run much faster *)
+        G.(fn Int.obs Int.gen) |> memo (module Int)
       let can_generate f = test_can_generate gen ~sexp_of ~f
 
-      let%test_unit _ =
-        test_no_duplicates gen ~sexp_of ~compare ~acceptable_duplicate_per_trial_ratio:0.1
+      let%test_unit _ = test_no_duplicates gen ~sexp_of ~compare
 
-      let%test_unit _ = can_generate (fun f -> f 0 = f (-1))
       let%test_unit _ = can_generate (fun f -> f 0 < f (-1))
       let%test_unit _ = can_generate (fun f -> f 0 > f (-1))
 
-      let%test_unit _ = can_generate (fun f -> f 1 = f 0)
       let%test_unit _ = can_generate (fun f -> f 1 < f 0)
       let%test_unit _ = can_generate (fun f -> f 1 > f 0)
 
-      let%test_unit _ = can_generate (fun f -> f 2 = f 1)
       let%test_unit _ = can_generate (fun f -> f 2 < f 1)
       let%test_unit _ = can_generate (fun f -> f 2 > f 1)
 
       let%test_unit _ = can_generate (fun f ->
         f (-1) <> f 0 && f 0 <> f 1 && f 1 <> f (-1))
-      let%test_unit _ = can_generate (fun f ->
-        f (-1) =  f 0 && f 0 =  f 1 && f 1 =  f (-1))
       let%test_unit _ = can_generate (fun f ->
         f int_middle_bits <> f 0)
 
@@ -296,7 +285,7 @@ module Test (S : sig val default_seed : Quickcheck_intf.seed end) : sig end = st
          below. *)
       module First_order = struct
         type t = Id | Neg | Abs | Succ | Pred
-        [@@deriving sexp_of, compare, enumerate]
+        [@@deriving sexp_of, compare, enumerate, hash]
 
         let apply = function
           | Id   -> Fn.id
@@ -312,11 +301,13 @@ module Test (S : sig val default_seed : Quickcheck_intf.seed end) : sig end = st
 
       let sexp_of = [%sexp_of: Higher_order.t]
       let compare = [%compare: Higher_order.t]
-      let gen = G.(fn O.(fn Int.gen Int.obs |> unmap ~f:First_order.apply) Int.gen)
+      let gen =
+        (* memoizing these functions makes [test_no_duplicates] run much faster *)
+        G.(fn O.(fn Int.gen Int.obs |> unmap ~f:First_order.apply) Int.gen)
+        |> memo (module First_order)
       let can_generate f = test_can_generate gen ~f ~sexp_of
 
-      let%test_unit _ =
-        test_no_duplicates gen ~sexp_of ~compare ~acceptable_duplicate_per_trial_ratio:0.5
+      let%test_unit _ = test_no_duplicates gen ~sexp_of ~compare
 
       let%test_unit _ = can_generate (fun f -> f Succ = f Pred)
       let%test_unit _ = can_generate (fun f -> f Succ > f Pred)
@@ -341,14 +332,9 @@ module Test (S : sig val default_seed : Quickcheck_intf.seed end) : sig end = st
       let gen = List.gen Char.gen
       let can_generate f = test_can_generate gen ~sexp_of ~f
 
-      let is_sorted_with_dup list ~compare =
-        List.is_sorted list ~compare
-        && not (List.is_sorted_strictly list ~compare)
-
       let%test_unit _ = test_no_duplicates gen ~sexp_of ~compare
       let%test_unit _ = can_generate List.is_empty
       let%test_unit _ = can_generate (function [_]   -> true           | _ -> false)
-      let%test_unit _ = can_generate (function [x;y] -> Char.( = ) x y | _ -> false)
       let%test_unit _ = can_generate (function [x;y] -> Char.( < ) x y | _ -> false)
       let%test_unit _ = can_generate (function [x;y] -> Char.( > ) x y | _ -> false)
       let%test_unit _ = can_generate (fun list ->
@@ -356,25 +342,14 @@ module Test (S : sig val default_seed : Quickcheck_intf.seed end) : sig end = st
         && List.is_sorted_strictly list ~compare:Char.compare)
       let%test_unit _ = can_generate (fun list ->
         List.length list > 2
-        && is_sorted_with_dup list ~compare:Char.compare)
-      let%test_unit _ = can_generate (fun list ->
-        List.length list > 2
         && List.is_sorted_strictly (List.rev list) ~compare:Char.compare)
-      let%test_unit _ = can_generate (fun list ->
-        List.length list > 2
-        && is_sorted_with_dup (List.rev list) ~compare:Char.compare)
     end)
 
   let%test_module "sexp" =
     (module struct
       let sexp_of = [%sexp_of: Sexp.t]
       let compare = [%compare: Sexp.t]
-      let gen =
-        G.recursive (fun sexp_gen ->
-          G.map ~f:(function `A s -> Sexp.Atom s | `B l -> Sexp.List l)
-            (G.variant2
-               String.gen
-               (List.gen sexp_gen)))
+      let gen = Sexp.gen
       let can_generate f = test_can_generate gen ~sexp_of ~f
 
       let%test_unit _ = test_no_duplicates gen ~sexp_of ~compare
@@ -393,9 +368,13 @@ module Test (S : sig val default_seed : Quickcheck_intf.seed end) : sig end = st
   let%test_module "function on recursive data" =
     (module struct
 
+      module Bool_list = struct
+        type t = bool list [@@deriving sexp_of, compare, hash]
+      end
+
       module F =
         Fn_for_testing.Make
-          (struct type t = bool list [@@deriving sexp_of, compare] end)
+          (Bool_list)
           (Char)
           (struct
             let examples =
@@ -415,15 +394,12 @@ module Test (S : sig val default_seed : Quickcheck_intf.seed end) : sig end = st
 
       let sexp_of = [%sexp_of: F.t]
       let compare = [%compare: F.t]
-      let gen = G.(fn (List.obs Bool.obs) Char.gen)
+      let gen =
+        (* memoizing these functions makes [test_no_duplicates] run much faster *)
+        G.(fn (List.obs Bool.obs) Char.gen) |> memo (module Bool_list)
       let can_generate f = test_can_generate gen ~sexp_of ~f
 
-      let%test_unit _ =
-        test_no_duplicates gen ~sexp_of ~compare ~acceptable_duplicate_per_trial_ratio:0.1
-
-      let%test_unit _ = can_generate (fun f -> f []     = f [true])
-      let%test_unit _ = can_generate (fun f -> f []     = f [false])
-      let%test_unit _ = can_generate (fun f -> f [true] = f [false])
+      let%test_unit _ = test_no_duplicates gen ~sexp_of ~compare
 
       let%test_unit _ = can_generate (fun f -> f []     <> f [true])
       let%test_unit _ = can_generate (fun f -> f []     <> f [false])

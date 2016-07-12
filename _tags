@@ -5,23 +5,7 @@
 <src/*.ml>: for-pack(Core_kernel)
 <src/*.ml{,i}>: pp(ppx-jane -dump-ast -inline-test-drop -bench-drop -inline-test-lib fake_for_drop)
 <src/*.ml{,i}>: pp_deps_for_src
-<namespace_wrappers/*>: warn(-49)
-"namespace_wrappers": include
 <src/*.c>: needs_headers
 <check_caml_modify/*>: caml_modify_wrapper
 # OASIS_START
 # OASIS_STOP
-<src/*.ml{,i}>: open_result_wrapper
-<src/result_wrapper.*>: -open_result_wrapper
-<src/core_kernel.*>: -open_result_wrapper
-<src/core_result.*>: -open_result_wrapper
-<src/monad.*>: -open_result_wrapper
-<src/monad_intf.*>: -open_result_wrapper
-<src/stable_module_types.*>: -open_result_wrapper
-<src/core_list.*>: -open_result_wrapper
-<src/container.*>: -open_result_wrapper
-<src/stable_unit_test_intf.*>: -open_result_wrapper
-<src/applicative.*>: -open_result_wrapper
-<src/applicative_intf.*>: -open_result_wrapper
-<src/comparator.*>: -open_result_wrapper
-<src/hash.*>: -open_result_wrapper

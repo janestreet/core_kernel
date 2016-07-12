@@ -423,7 +423,8 @@ external frexp : float -> float * int = "caml_frexp_float"
    zero.  When [f] is non-zero, they are defined by
    [f = x *. 2 ** n] and [0.5 <= x < 1.0]. *)
 
-external ldexp : float -> int -> float = "caml_ldexp_float"
+external ldexp : (float [@unboxed]) -> (int [@untagged]) -> (float [@unboxed]) =
+  "caml_ldexp_float" "caml_ldexp_float_unboxed" [@@noalloc]
   [@@deprecated "[since 2014-10] Use [Float.ldexp]"]
 (** [ldexp x n] returns [x *. 2 ** n]. *)
 
@@ -486,7 +487,8 @@ type fpclass = Pervasives.fpclass =
 (** The five classes of floating-point numbers, as determined by
    the {!Pervasives.classify_float} function. *)
 
-external classify_float : float -> fpclass = "caml_classify_float"
+external classify_float : (float [@unboxed]) -> fpclass =
+  "caml_classify_float" "caml_classify_float_unboxed" [@@noalloc]
   [@@deprecated "[since 2014-10] Use [Float.classify]"]
 (** Return the class of the given floating-point number:
    normal, subnormal, zero, infinite, or not a number. *)
@@ -1012,6 +1014,10 @@ external decr : int ref -> unit = "%decr"
    Equivalent to [fun r -> r := pred !r]. *)
 
 
+(** Result type *)
+
+type ('a,'b) result = ('a, 'b) Pervasives.result = Ok of 'a | Error of 'b
+
 (** {6 Operations on format strings} *)
 
 (** Format strings are character strings with special lexical conventions
@@ -1112,7 +1118,6 @@ val ( ^^ ) :
   arguments from [f2]; in case of formatted input, it returns results from
   [f1], then results from [f2].
 *)
-
 
 (** {6 Program termination} *)
 

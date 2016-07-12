@@ -34,11 +34,7 @@ let convert a b a_to_b b_to_a =
 
 let compare_int (x : int) y = compare x y
 
-let int_num_bits =
-  let size = ref 0 in
-  let i = ref (-1) in
-  while !i <> 0 do i:= !i lsl 1; incr size done;
-  !size
+let int_num_bits = Sys.int_size
 
 let () = assert(   int_num_bits = 63
                 || int_num_bits = 31

@@ -7,12 +7,8 @@
     force representation as a 64-bit value by let-binding.
 *)
 
-module Binable = Binable0
-
 module type S = sig
   type t [@@deriving hash, typerep]
-  type outer = t
-  [@@deriving bin_io, sexp, typerep]
 
 
   include Floatable.S with type t := t
@@ -128,7 +124,9 @@ module type S = sig
   val round_towards_zero : t -> t
   val round_down         : t -> t
   val round_up           : t -> t
-  val round_nearest      : t -> t
+  val round_nearest      : t -> t  (** rounds half integers up *)
+
+  val round_nearest_half_to_even : t -> t  (** rounds half integers to the even integer *)
 
   val iround_towards_zero : t -> int option
   val iround_down         : t -> int option
@@ -170,10 +168,11 @@ module type S = sig
   (** Returns the fractional part and the whole (i.e. integer) part.  For example, [modf
       (-3.14)] returns [{ fractional = -0.14; integral = -3.; }]! *)
   module Parts : sig
+    type outer
     type t
     val fractional : t -> outer
     val integral : t -> outer
-  end
+  end with type outer := t
   val modf : t -> Parts.t
 
   (** [mod_float x y] returns a result with the same sign as [x].  It returns [nan] if [y]
@@ -405,7 +404,7 @@ module type S = sig
 
   (** S-expressions contain at most 8 significant digits. *)
   module Terse : sig
-    type t = outer [@@deriving bin_io, sexp]
+    type nonrec t = t [@@deriving bin_io, sexp]
     include Stringable.S with type t := t
   end
 

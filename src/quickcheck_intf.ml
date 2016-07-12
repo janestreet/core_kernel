@@ -1,14 +1,23 @@
 module Sexp = Sexplib.Sexp
 
-(** For Quickcheck overview see: http://docs/programming/unit-testing/quickcheck.html
-    Also there's a Quickcheck_examples library. *)
+(** For examples see: lib/core/example/quickcheck *)
 
 module type Generator = sig
 
-  (** An ['a t] a generates values of type ['a] with a specific probability
-      distribution. *)
+  (** An ['a t] a generates values of type ['a] with a specific probability distribution.
+
+      Generators are constructed as functions that produce a value from a splittable
+      pseudorandom number generator (see [Splittable_random]), with a [~size] argument
+      threaded through to bound the size of the result value and the depth of recursion.
+
+      There is no prescribed semantics for [size] other than that it must be non-negative.
+      Non-recursive generators are free to ignore it, and recursive generators need only
+      make sure it decreases in recursive calls and that recursion bottoms out at 0. *)
   type 'a t
   type 'a obs
+
+  val create   :         (size:int -> Splittable_random.State.t -> 'a) -> 'a t
+  val generate : 'a t -> (size:int -> Splittable_random.State.t -> 'a)
 
   (** Generators form a monad.  [t1 >>= fun x -> t2] replaces each value [x] in [t1] with
       the values in [t2]; each value's probability is the product of its probability in
@@ -78,51 +87,35 @@ module type Generator = sig
   (** [small_positive_int = geometric ~p:0.25 1] *)
   val small_positive_int : int t
 
-  (** Generators for functions; take observers for inputs and a generator for outputs.
-      The observer splits the space of possible inputs into a number of "buckets"; each
-      randomly generated function applies the observer to an input, and produces a
-      different output value for each bucket.
-
-      The [?branching_factor] argument determines how many branches the function's
-      decision tree has, and thus how many categories of inputs it can distinguish.  If
-      absent, [branching_factor] defaults to a geometric distribution with [p=0.1], capped
-      by the maximum branching factor of the domain observers. *)
+  (** Generators for functions; take observers for inputs and a generator for outputs. *)
   val fn
-    :  ?branching_factor:int t
-    -> 'a obs -> 'b t
+    :  'a obs -> 'b t
     -> ('a -> 'b) t
   val fn2
-    :  ?branching_factor:int t
-    -> 'a obs -> 'b obs -> 'c t
+    :  'a obs -> 'b obs -> 'c t
     -> ('a -> 'b -> 'c) t
   val fn3
-    :  ?branching_factor:int t
-    -> 'a obs -> 'b obs -> 'c obs -> 'd t
+    :  'a obs -> 'b obs -> 'c obs -> 'd t
     -> ('a -> 'b -> 'c -> 'd) t
   val fn4
-    :  ?branching_factor:int t
-    -> 'a obs -> 'b obs -> 'c obs -> 'd obs -> 'e t
+    :  'a obs -> 'b obs -> 'c obs -> 'd obs -> 'e t
     -> ('a -> 'b -> 'c -> 'd -> 'e) t
   val fn5
-    :  ?branching_factor:int t
-    -> 'a obs -> 'b obs -> 'c obs -> 'd obs -> 'e obs -> 'f t
+    :  'a obs -> 'b obs -> 'c obs -> 'd obs -> 'e obs -> 'f t
     -> ('a -> 'b -> 'c -> 'd -> 'e -> 'f) t
   val fn6
-    :  ?branching_factor:int t
-    -> 'a obs -> 'b obs -> 'c obs -> 'd obs -> 'e obs -> 'f obs -> 'g t
+    :  'a obs -> 'b obs -> 'c obs -> 'd obs -> 'e obs -> 'f obs -> 'g t
     -> ('a -> 'b -> 'c -> 'd -> 'e -> 'f -> 'g) t
 
   (** Generator for comparison functions; result is guaranteed to be a partial order. *)
   val compare_fn
-    :  ?branching_factor:int t
-    -> 'a obs
+    :  'a obs
     -> ('a -> 'a -> int) t
 
   (** Generator for equality functions; result is guaranteed to be an equivalence
       relation. *)
   val equal_fn
-    :  ?branching_factor:int t
-    -> 'a obs
+    :  'a obs
     -> ('a -> 'a -> bool) t
 
   (** [filter_map t ~f] produces [y] for every [x] in [t] such that [f x = Some y].
@@ -135,15 +128,19 @@ module type Generator = sig
   val filter_map : 'a t -> f:('a -> 'b option) -> 'b t
   val filter     : 'a t -> f:('a -> bool     ) -> 'a t
 
-  (** Fixed-point generator.  For example, the following produces a naive generator for
-      natural numbers:
+  (** Fixed-point generator, providing a [~size] argument threaded through the recursion
+      to bound the size of the value and the depth of the recursion.  There is no
+      prescribed semantics for [size] except that it must be non-negative. For example,
+      the following produces a naive generator for natural numbers:
 
       {[
-        recursive (fun t ->
-          union [ singleton 0 ; t >>| Int.succ ])
+        recursive (fun f ~size ->
+          if size = 0
+          then singleton 0
+          else f ~size:(size-1) >>| Int.succ)
       ]}
   *)
-  val recursive : ('a t -> 'a t) -> 'a t
+  val recursive : ((size:int -> 'a t) -> (size:int -> 'a t)) -> 'a t
 
   (** [weighted_union alist] produces a generator that combines the distributions of each
       [t] in [alist] with the associated weights, which must be finite positive floating
@@ -160,39 +157,39 @@ module type Generator = sig
       without bound over time. *)
   val of_fun : (unit -> 'a t) -> 'a t
 
+  (** [list ?min_len ?max_len t] creates a list generator with elements drawn from [t],
+      with optional bounds on its length specified by [min_len] and [max_len].  The size
+      passed to the list generator will be distributed among the generated elements.  This
+      is used to implement [List.gen] and [List.gen']; they produce identical
+      distributions. *)
+  val list : ?min_len:int -> ?max_len:int -> 'a t -> 'a list t
+
+end
+
+module type Deriving_hash = sig
+  type t [@@deriving hash]
 end
 
 module type Observer = sig
 
+  (** An ['a Quickcheck.Observer.t] represents a hash function on ['a].  Observers are
+      used to construct distributions of random functions; see [Quickcheck.Generator.fn].
 
-  (** An ['a Quickcheck.Observer.t] represents observations that can be made to
-      distinguish values of type ['a].  An observer maps values of type ['a] to disjoint
-      subsets ("buckets") using a finite number of observations.
+      Like generators, observers have a [~size] argument that is threaded through to bound
+      the depth of recursion in potentially infinite cases.  For finite values, [size] can
+      be ignored.
 
-      Observers are used to construct distributions of random functions; see
-      [Quickcheck.Generator.fn].
-
-      One constructs an observer by breaking down an input into basic type constituents
-      that can be individually observed.  Use built-in observers for basic types when
-      possible.  Use [either] or the [variant*] observers to distinguish clauses of
-      variants.  Use the [tuple*] observers to get at individual fields of tuples or
-      records.  When you have a custom type with no built-in observer, construct an
-      observer for an equivalent type, then use [unmap].  Use [recursive] to build
-      observers for recursive types.  See the below example for a binary search tree:
-
-      {[
-        type 'a bst = Leaf | Node of 'a bst * 'a * 'a bst
-
-        let bst_obs key_obs =
-          recursive (fun bst_of_key_obs ->
-            unmap (Either.obs Unit.obs (tuple3 bst_of_key_obs key_obs bst_of_key_obs))
-              ~f:(function
-                | Leaf           -> First ()
-                | Node (l, k, r) -> Second (l, k, r)))
-      ]}
+      For hashable types, one can construct an observer using [of_hash].  For other types,
+      use the built-in observers and observer combinators below, or use [create] directly.
   *)
   type 'a t
   type 'a gen
+
+  val create  :         ('a -> size:int -> Hash.state -> Hash.state) -> 'a t
+  val observe : 'a t -> ('a -> size:int -> Hash.state -> Hash.state)
+
+  (** [of_hash] creates an observer for any hashable type. *)
+  val of_hash : (module Deriving_hash with type t = 'a) -> 'a t
 
   (** [doubleton f] maps values to two "buckets" (as described in [t] above),
       depending on whether they satisfy [f]. *)
@@ -223,6 +220,9 @@ module type Observer = sig
   *)
   val recursive : ('a t -> 'a t) -> 'a t
 
+  val variant2
+    :  'a t -> 'b t
+    -> [ `A of 'a | `B of 'b ] t
   val variant3
     :  'a t -> 'b t -> 'c t
     -> [ `A of 'a | `B of 'b | `C of 'c ] t
@@ -254,45 +254,11 @@ module type Observer = sig
     -> gt:'a t
     -> 'a t
 
-  (** [branching_factor t] produces the number of nodes in the decision tree of [t], or
-      one less than the number of buckets in [t].  This value is artificially capped at
-      2^15-1 in order to avoid intractable function generators and overflow in arithmetic.
-      The result may be an overapproximation for observers constructed with [fn] or
-      [of_fun]. *)
-  val branching_factor : _ t -> int
-
-  (** [observe t gen ~branching_factor] constructs a generator for a function type using
-      [t] to observe the domain and [gen] to generate the range.  The size of the
-      function's decision tree is determined by [branching_factor].
-
-      The functions in the resulting generator will all be intensionally unique: no two
-      will make the same set of decisions in the same order.  However, as two such
-      functions may make the same set of decisions in a different order, they will not be
-      extensionally unique.  While it would be nice to have distributions of extensionally
-      unique functions, implementing such a generator is quite difficult, and likely not
-      worth the effort. *)
-  val observe
-    :  'a t
-    -> 'b gen
-    -> branching_factor:int
-    -> ('a -> 'b) gen
-
   (** maps all values to a single bucket. *)
   val singleton : unit -> _ t
 
   (** [unmap t ~f] applies [f] to values before observing them using [t]. *)
   val unmap : 'a t -> f:('b -> 'a) -> 'b t
-
-  (** Nondeterministic observer.  Presents a weighted choice of multiple observers.  When
-      [observe] builds a decision tree, it randomly chooses nodes from any of these
-      observers with probability proportional to the given weights.  All weights must be
-      finite and non-negative. *)
-  val weighted_union : (float * 'a t) list -> 'a t
-
-  (** [union [ t1 ; ... ; tn ] = weighted_union [ 1.,t1 ; ... ; 1.,tn ]] *)
-  val union : 'a t list -> 'a t
-
-  val variant2 : 'a t -> 'b t -> [ `A of 'a | `B of 'b ] t
 
   val tuple2 : 'a t -> 'b t -> ('a * 'b) t
   val tuple3 : 'a t -> 'b t -> 'c t -> ('a * 'b * 'c) t
@@ -302,20 +268,9 @@ module type Observer = sig
     :  'a t -> 'b t -> 'c t -> 'd t -> 'e t -> 'f t
     -> ('a * 'b * 'c * 'd * 'e * 'f) t
 
-  (** Observer for function type.  [fn ~p gen t] observes a function by
-      generating random inputs from [gen], applying the function, and observing the output
-      using [t].
-
-      When [observe] builds a single random decision tree node from the result of [fn], it
-      chooses between generating a new input and observing a previously generated input.
-      It does the former with probability [p] and the latter with probability [1. -. p].
-
-      [p] defaults to 0.25, and must be between 0 and 1 (both inclusive). *)
-  val fn
-    :  ?p:float
-    -> 'a gen
-    -> 'b t
-    -> ('a -> 'b) t
+  (** Observer for function type.  [fn gen t] observes a function by generating random
+      inputs from [gen], applying the function, and observing the output using [t]. *)
+  val fn : 'a gen -> 'b t -> ('a -> 'b) t
 
   (** [of_fun f] produces an observer that lazily applies [f].
 
@@ -407,28 +362,18 @@ module type Shrinker = sig
 end
 
 module type Pre_int = sig
-  type t [@@deriving sexp, compare]
+  type t
+  [@@deriving sexp, compare, hash]
 
   include Polymorphic_compare_intf.Infix with type t := t
 
-  val ( +  ) : t -> t -> t
-  val ( -  ) : t -> t -> t
-  val ( ~- ) : t -> t
-
-  val zero      : t
-  val one       : t
   val min_value : t
   val max_value : t
 
   val succ : t -> t
+  val pred : t -> t
 
-  val bit_and             : t -> t   -> t
-  val shift_left          : t -> int -> t
-  val shift_right         : t -> int -> t
-  val shift_right_logical : t -> int -> t
-
-  val of_int_exn : int -> t
-  val to_float : t -> float
+  val splittable_random : Splittable_random.State.t -> lo:t -> hi:t -> t
 end
 
 module type S = sig
@@ -498,6 +443,10 @@ module type Quickcheck_config = sig
       values from generators, in each test that is not provided its own seed. *)
   val default_seed : seed
 
+  (** [default_sizes] determines the default sequence of sizes used in generating
+      values. *)
+  val default_sizes : int Sequence.t
+
   (** [default_trial_count] determines the number of trials per test, except in tests
       that explicitly override it. *)
   val default_trial_count : int
@@ -515,12 +464,9 @@ module type Quickcheck_config = sig
       explicitly override it. *)
   val default_attempts_per_trial : float
 
-  (** [default_probability_threshold_to_remember_choice] determines the minimum
-      probability, out of 1.0, at which [Quickcheck.iter] and derived functions will
-      remember previous choices and avoid repeating them.  Below this threshold, it is
-      assumed that the space needed to record the choice outweighs the negligible chance
-      of repeating it. *)
-  val default_probability_threshold_to_remember_choice : float
+  (** [default_acceptable_duplicate_per_trial_ratio] determines the default rate at which
+      generators can generate duplicate values and still pass [test_no_duplicates]. *)
+  val default_acceptable_duplicate_per_trial_ratio : float
 
   (** [default_shrink_attempts] determines the number of attempts at shrinking
       when running [test] or [iter] with [~shrinker] and without
@@ -539,6 +485,7 @@ module type Quickcheck_configured = sig
   (** [random_value ~seed gen] produces a single value chosen from [gen] using [seed]. *)
   val random_value
     :  ?seed : seed
+    -> ?size : int
     -> 'a gen
     -> 'a
 
@@ -548,11 +495,11 @@ module type Quickcheck_configured = sig
       or if it fails to produce [trials] inputs from [gen] after [attempts] attempts.  If
       [filter] is provided, iteration proceeds over [Generator.filter gen ~f:filter].  *)
   val iter
-    :  ?seed                                     : seed
-    -> ?trials                                   : int
-    -> ?attempts                                 : int
-    -> ?filter                                   : ('a -> bool)
-    -> ?probability_threshold_to_remember_choice : float
+    :  ?seed     : seed
+    -> ?sizes    : int Sequence.t
+    -> ?trials   : int
+    -> ?attempts : int
+    -> ?filter   : ('a -> bool)
     -> 'a gen
     -> f:('a -> unit)
     -> unit
@@ -565,15 +512,15 @@ module type Quickcheck_configured = sig
       provided, it will be used to attempt to shrink the value that caused the exception
       with re-raising behaving the same as for unshrunk inputs. *)
   val test
-    :  ?seed                                     : seed
-    -> ?trials                                   : int
-    -> ?attempts                                 : int
-    -> ?filter                                   : ('a -> bool)
-    -> ?shrinker                                 : 'a shr
-    -> ?shrink_attempts                          : shrink_attempts
-    -> ?probability_threshold_to_remember_choice : float
-    -> ?sexp_of                                  : ('a -> Sexp.t)
-    -> ?examples                                 : 'a list
+    :  ?seed            : seed
+    -> ?sizes           : int Sequence.t
+    -> ?trials          : int
+    -> ?attempts        : int
+    -> ?filter          : ('a -> bool)
+    -> ?shrinker        : 'a shr
+    -> ?shrink_attempts : shrink_attempts
+    -> ?sexp_of         : ('a -> Sexp.t)
+    -> ?examples        : 'a list
     -> 'a gen
     -> f:('a -> unit)
     -> unit
@@ -585,12 +532,12 @@ module type Quickcheck_configured = sig
       raises an exception.  If [sexp_of] is provided, the exception includes all of the
       generated values. *)
   val test_can_generate
-    :  ?seed                                     : seed
-    -> ?trials                                   : int
-    -> ?attempts                                 : int
-    -> ?filter                                   : ('a -> bool)
-    -> ?probability_threshold_to_remember_choice : float
-    -> ?sexp_of                                  : ('a -> Sexp.t)
+    :  ?seed     : seed
+    -> ?sizes    : int Sequence.t
+    -> ?trials   : int
+    -> ?attempts : int
+    -> ?filter   : ('a -> bool)
+    -> ?sexp_of  : ('a -> Sexp.t)
     -> 'a gen
     -> f:('a -> bool)
     -> unit
@@ -599,32 +546,28 @@ module type Quickcheck_configured = sig
       do not create duplicate values.  It tests [gen] by generating up to [trials] values
       and comparing each pair of the generated values using [by].  If any of the pairs are
       identical, [test_no_duplicates] raises an exception.  If [sexp_of] is provided, the
-      exception includes the identical values.  If [acceptable_duplicate_per_trial_ratio]
-      is provided, it must be between 0 (inclusive) and 1 (exclusive), and up to
-      [acceptable_duplicate_per_trial_ratio * trials] duplicates will be allowed.  *)
+      exception includes the identical values.  [acceptable_duplicate_per_trial_ratio]
+      defaults to [default_acceptable_duplicate_per_trial_ratio], must be between 0
+      (inclusive) and 1 (exclusive), and up to [acceptable_duplicate_per_trial_ratio *
+      trials] duplicates will be allowed by the test.  *)
   val test_no_duplicates
-    :  ?seed                                     : seed
-    -> ?trials                                   : int
-    -> ?attempts                                 : int
-    -> ?filter                                   : ('a -> bool)
-    -> ?probability_threshold_to_remember_choice : float
-    -> ?acceptable_duplicate_per_trial_ratio     : float
-    -> ?sexp_of                                  : ('a -> Sexp.t)
+    :  ?seed                                 : seed
+    -> ?sizes                                : int Sequence.t
+    -> ?trials                               : int
+    -> ?attempts                             : int
+    -> ?filter                               : ('a -> bool)
+    -> ?acceptable_duplicate_per_trial_ratio : float
+    -> ?sexp_of                              : ('a -> Sexp.t)
     -> 'a gen
     -> compare:('a -> 'a -> int)
     -> unit
 
   (** [random_sequence ~seed gen] produces a sequence of values chosen from [gen]. *)
   val random_sequence
-    :  ?seed                                     : seed
-    -> ?probability_threshold_to_remember_choice : float
+    :  ?seed  : seed
+    -> ?sizes : int Sequence.t
     -> 'a gen
     -> 'a Sequence.t
-
-  (** [random_state_of_seed] constructs initial random states for a given seed.  This is
-      intended for building extensions to this interface, rather than for use in
-      individual tests. *)
-  val random_state_of_seed : seed -> Core_random.State.t
 
 end
 
@@ -634,9 +577,16 @@ module type Quickcheck = sig
   type 'a obs
   type 'a shr
 
-  module Generator : Generator with type 'a t = 'a gen with type 'a obs := 'a obs
-  module Observer  : Observer  with type 'a t = 'a obs with type 'a gen := 'a gen
-  module Shrinker  : Shrinker  with type 'a t = 'a shr
+  module Generator : Generator
+    with type 'a t    = 'a gen
+    with type 'a obs := 'a obs
+
+  module Observer : Observer
+    with type 'a t    = 'a obs
+    with type 'a gen := 'a gen
+
+  module Shrinker : Shrinker
+    with type 'a t = 'a shr
 
   module Make_int (M : Pre_int) : S_bounded
     with type    t   :=    M.t

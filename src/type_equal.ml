@@ -64,7 +64,8 @@ module Id = struct
       type _ t = ..
 
       let sexp_of_t _sexp_of_a t =
-        (`type_witness (Obj.extension_id t)) |> [%sexp_of: [ `type_witness of int ]]
+        (`type_witness (Obj.extension_id (Obj.extension_constructor t)))
+        |> [%sexp_of: [ `type_witness of int ]]
       ;;
     end
 
@@ -87,7 +88,8 @@ module Id = struct
       (module M : S with type t = t)
     ;;
 
-    let uid (type a) (module M : S with type t = a) = Obj.extension_id M.Key
+    let uid (type a) (module M : S with type t = a) =
+      Obj.extension_id (Obj.extension_constructor M.Key)
 
     (* We want a constant allocated once that [same] can return whenever it gets the same
        witnesses.  If we write the constant inside the body of [same], the native-code

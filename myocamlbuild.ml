@@ -25,25 +25,6 @@ let dispatch = function
           A "-cclib";
           A "caml_modify"]);
 
-    flag ["ocaml"; "dep"; "open_result_wrapper"] (S [A "-open"; A "Result_wrapper"]);
-    flag ["ocaml"; "compile"; "open_result_wrapper"] (S [A "-open"; A "Result_wrapper"]);
-
-    (* If we don't have the following, then we get:
-
-           Error: Unbound type constructor Result.t
-    *)
-    dep ["open_result_wrapper"] ["src/result_wrapper.cmi"
-                                ;"src/core_result.cmi"];
-
-    (* If we don't have the following, then we get:
-
-           Error: Forward reference to Core_result in file ...
-
-       when building the pack.
-    *)
-    dep ["open_result_wrapper"; "byte"] ["src/core_result.cmo"];
-    dep ["open_result_wrapper"; "native"] ["src/core_result.cmx"];
-
   | _ ->
     ()
 

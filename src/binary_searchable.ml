@@ -91,7 +91,10 @@ module Make_gen (T : Arg) = struct
 
     let both = (2531, 4717)
 
-    let%test _ = Option.is_some (binary_search (create_test_case only_small) ~compare `First_equal_to s)
+    let%test _ =
+      match binary_search (create_test_case only_small) ~compare `First_equal_to s with
+      | None   -> false
+      | Some _ -> true
 
     let%test _ =
       let arr = create_test_case both in
@@ -221,7 +224,7 @@ module Make_gen (T : Arg) = struct
                   Ordered_collection_common.check_pos_len_exn ~pos ~len ~length)
               in
               let result =
-                Or_error.try_with (fun () ->
+                Result.try_with (fun () ->
                   binary_search arr ~pos ~len ~compare:elt_compare `Last_equal_to s)
               in
               match should_raise, result with

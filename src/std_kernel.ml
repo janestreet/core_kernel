@@ -30,6 +30,7 @@ module Debug                                = Debug
 module Deque                                = Deque
 module Doubly_linked                        = Doubly_linked
 module Either                               = Either
+module Ephemeron                            = Core_ephemeron
 module Equal                                = Equal
 module Error                                = Error
 module Exn                                  = Exn

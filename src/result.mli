@@ -1,15 +1,21 @@
 (** [Result] is often used to handle error messages. *)
 
-(** ['a] is a function's expected return type, and ['b] is often an error message string.
-    {[let ric_of_ticker = function
-    | "IBM" -> Ok "IBM.N"
-    | "MSFT" -> Ok "MSFT.OQ"
-    | "AA" -> Ok "AA.N"
-    | "CSCO" -> Ok "CSCO.OQ"
-    | _ as ticker -> Error (sprintf "can't find ric of %s" ticker) ]}
+(** ['ok] is a function's expected return type, and ['err] is often an error message
+    string.
+
+    {[
+      let ric_of_ticker = function
+      | "IBM" -> Ok "IBM.N"
+      | "MSFT" -> Ok "MSFT.OQ"
+      | "AA" -> Ok "AA.N"
+      | "CSCO" -> Ok "CSCO.OQ"
+      | _ as ticker -> Error (sprintf "can't find ric of %s" ticker)
+    ]}
+
     The return type of ric_of_ticker could be [string option], but [(string, string)
-    Result.t] gives more control over the error message. *)
-type ('ok, 'err) t = ('ok, 'err) Result_lib.Result.result =
+    Result.t] gives more control over the error message.
+*)
+type ('ok, 'err) t = ('ok, 'err) Pervasives.result =
   | Ok of 'ok
   | Error of 'err
 [@@deriving bin_io, sexp, compare, hash]
@@ -90,3 +96,4 @@ module Stable : sig
       order to avoid circular dependencies.  The functor is instantiated in stable.ml. *)
   module V1_stable_unit_test : Stable_unit_test_intf.Arg
 end
+

@@ -18,7 +18,7 @@ module T = struct
   let compare (x : t) y = compare x y
   let equal (x : t) y = x = y
 
-  external specialized_hash : float -> int = "caml_hash_double" "noalloc"
+  external specialized_hash : float -> int = "caml_hash_double" [@@noalloc]
 
   let%test_unit _ =
     (* on 64-bit platform ppx_hash hashes floats exactly the same as polymorphic hash *)
@@ -41,7 +41,6 @@ module T = struct
 end
 
 include T
-type outer = t [@@deriving hash, sexp, bin_io, typerep] (* alias for use by sub-modules *)
 
 let to_float x = x
 let of_float x = x
@@ -333,6 +332,7 @@ let iround_up_exn t =
     else
       invalid_argf "Float.iround_up_exn: argument (%f) is too small or NaN" (box t) ()
   end
+[@@ocaml.inline always]
 
 let iround_down t =
   if t >= 0.0 then begin
@@ -363,6 +363,7 @@ let iround_down_exn t =
     else
       invalid_argf "Float.iround_down_exn: argument (%f) is too small or NaN" (box t) ()
   end
+[@@ocaml.inline always]
 
 let iround_towards_zero t =
   if t >= iround_lbound && t <= iround_ubound then
@@ -394,9 +395,20 @@ let iround_towards_zero_exn t =
 let round_nearest_lb = -.(2. ** 52.)
 let round_nearest_ub =    2. ** 52.
 
+(* For [x = one_ulp `Down 0.5], the formula [floor (x +. 0.5)] for rounding to nearest
+   does not work, because the exact result is halfway between [one_ulp `Down 1.] and [1.],
+   and it gets rounded up to [1.] due to the round-ties-to-even rule. *)
+let one_ulp_less_than_half = one_ulp `Down 0.5
+let%test _ = one_ulp_less_than_half = 0.49999999999999994
+let add_half_for_round_nearest t =
+  t +. (if t = one_ulp_less_than_half then
+          one_ulp_less_than_half (* since t < 0.5, make sure the result is < 1.0 *)
+        else
+          0.5)
+
 let iround_nearest_32 t =
   if t >= 0. then
-    let t' = t +. 0.5 in
+    let t' = add_half_for_round_nearest t in
     if t' <= iround_ubound then
       Some (int_of_float t')
     else
@@ -411,7 +423,7 @@ let iround_nearest_32 t =
 let iround_nearest_64 t =
   if t >= 0. then
     if t < round_nearest_ub then
-      Some (int_of_float (t +. 0.5))
+      Some (int_of_float (add_half_for_round_nearest t))
     else
     if t <= iround_ubound then
       Some (int_of_float t)
@@ -433,7 +445,7 @@ let iround_nearest =
 
 let iround_nearest_exn_32 t =
   if t >= 0. then
-    let t' = t +. 0.5 in
+    let t' = add_half_for_round_nearest t in
     if t' <= iround_ubound then
       int_of_float t'
     else
@@ -448,7 +460,7 @@ let iround_nearest_exn_32 t =
 let iround_nearest_exn_64 t =
   if t >= 0. then
     if t < round_nearest_ub then
-      int_of_float (t +. 0.5)
+      int_of_float (add_half_for_round_nearest t)
     else
     if t <= iround_ubound then
       int_of_float t
@@ -458,10 +470,11 @@ let iround_nearest_exn_64 t =
   if t > round_nearest_lb then
     int_of_float (floor (t +. 0.5))
   else
-  if t >= iround_lbound then
-    int_of_float t
-  else
-    invalid_argf "Float.iround_nearest_exn: argument (%f) is too small or NaN" (box t) ()
+    if t >= iround_lbound then
+      int_of_float t
+    else
+      invalid_argf "Float.iround_nearest_exn: argument (%f) is too small or NaN" (box t) ()
+[@@ocaml.inline always]
 
 let iround_nearest_exn =
   if Sys.word_size = 64
@@ -550,9 +563,59 @@ let%test _ =
 (* see the comment above [round_nearest_lb] and [round_nearest_ub] for an explanation *)
 let round_nearest t =
   if t > round_nearest_lb && t < round_nearest_ub then
-    floor (t +. 0.5)
+    floor (add_half_for_round_nearest t)
   else
     t
+
+let round_nearest_half_to_even t =
+  if t <= round_nearest_lb || t >= round_nearest_ub then
+    t
+  else
+    let floor        = floor t           in
+    (* [ceil_or_succ = if t is an integer then t +. 1. else ceil t].  Faster than [ceil]. *)
+    let ceil_or_succ = floor +. 1.       in
+    let diff_floor   = t -. floor        in
+    let diff_ceil    = ceil_or_succ -. t in
+    if diff_floor < diff_ceil then
+      floor
+    else
+    if diff_floor > diff_ceil then
+      ceil_or_succ
+    else
+      (* exact tie, pick the even *)
+      if mod_float floor 2. = 0. then
+        floor
+      else
+        ceil_or_succ
+
+let%bench_module "round_nearest_half_to_even" = (module struct
+  let f = of_string "1.5"
+  let g = of_string "1.5000000000001"
+  (* the special case for [add_half_for_round_nearest] *)
+  let z = of_string "0.49999999999999994"
+  let%bench "round_nearest f"              = round_nearest f
+  let%bench "round_nearest g"              = round_nearest g
+  let%bench "round_nearest z"              = round_nearest z
+  let%bench "round_nearest_half_to_even f" = round_nearest_half_to_even f
+  let%bench "round_nearest_half_to_even g" = round_nearest_half_to_even g
+  let%bench "round_nearest_half_to_even z" = round_nearest_half_to_even z
+end)
+
+
+let%test _ = round_nearest_half_to_even                  0.    =  0.
+let%test _ = round_nearest_half_to_even                  0.5   =  0.
+let%test _ = round_nearest_half_to_even                (-0.5)  =  0.
+let%test _ = round_nearest_half_to_even (one_ulp `Up     0.5)  =  1.
+let%test _ = round_nearest_half_to_even (one_ulp `Down   0.5)  =  0.
+let%test _ = round_nearest_half_to_even (one_ulp `Up   (-0.5)) =  0.
+let%test _ = round_nearest_half_to_even (one_ulp `Down (-0.5)) = -1.
+let%test _ = round_nearest_half_to_even                  3.5   =  4.
+let%test _ = round_nearest_half_to_even                  4.5   =  4.
+let%test _ = round_nearest_half_to_even (one_ulp `Up   (-5.5)) = -5.
+let%test _ = round_nearest_half_to_even                  5.5   =  6.
+let%test _ = round_nearest_half_to_even                  6.5   =  6.
+let%test _ = round_nearest_half_to_even (one_ulp `Up (-. (2. ** 52.))) =    -. (2. ** 52.)
+let%test _ = round_nearest              (one_ulp `Up (-. (2. ** 52.))) = 1. -. (2. ** 52.)
 
 let int63_round_lbound = lower_bound_for_int Core_int63.num_bits
 let int63_round_ubound = upper_bound_for_int Core_int63.num_bits
@@ -704,10 +767,8 @@ let classify t =
 ;;
 
 let is_finite t =
-  let module C = Class in
-  match classify t with
-  | C.Normal | C.Subnormal | C.Zero -> true
-  | C.Infinite | C.Nan -> false
+  not (t = infinity || t = neg_infinity || is_nan t)
+;;
 
 let to_string_hum ?(delimiter='_') ?(decimals=3) ?(strip_zero=false) f =
   if decimals < 0 then
@@ -941,9 +1002,9 @@ let%test_module _ = (module struct
      http://www.exploringbinary.com/inconsistent-rounding-of-printed-floating-point-numbers/
      Ties are resolved differently in JavaScript - mark some tests as no running with JavaScript.
   *)
-  let%test_unit __ [@tags "no-js"] =
+  let%test_unit _ [@tags "no-js"] =
                     boundary (* tie *)             0.25 ~closer_to_zero:  "0.2" ~at:    "0.2"
-  let%test_unit __ [@tags "no-js"] =
+  let%test_unit _ [@tags "no-js"] =
                     boundary                 (incr 0.25)~closer_to_zero:  "0.2" ~at:    "0.3"
   let%test_unit _ = boundary                       0.35 ~closer_to_zero:  "0.3" ~at:    "0.4"
   let%test_unit _ = boundary                       0.45 ~closer_to_zero:  "0.4" ~at:    "0.5"
@@ -955,17 +1016,17 @@ let%test_module _ = (module struct
   let%test_unit _ = boundary                       0.85 ~closer_to_zero:  "0.8" ~at:    "0.9"
   let%test_unit _ = boundary                       0.95 ~closer_to_zero:  "0.9" ~at:    "1  "
   let%test_unit _ = boundary                       1.05 ~closer_to_zero:  "1  " ~at:    "1.1"
-  let%test_unit __ [@tags "no-js"] =
+  let%test_unit _ [@tags "no-js"] =
                     boundary                       3.25 ~closer_to_zero:  "3.2" ~at:    "3.2"
-  let%test_unit __ [@tags "no-js"] =
+  let%test_unit _ [@tags "no-js"] =
                     boundary                 (incr 3.25)~closer_to_zero:  "3.2" ~at:    "3.3"
   let%test_unit _ = boundary                       3.75 ~closer_to_zero:  "3.7" ~at:    "3.8"
   let%test_unit _ = boundary                       9.95 ~closer_to_zero:  "9.9" ~at:   "10  "
   let%test_unit _ = boundary                      10.05 ~closer_to_zero: "10  " ~at:   "10.1"
   let%test_unit _ = boundary                     100.05 ~closer_to_zero:"100  " ~at:  "100.1"
-  let%test_unit __ [@tags "no-js"] =
+  let%test_unit _ [@tags "no-js"] =
                     boundary (* tie *)           999.25 ~closer_to_zero:"999.2" ~at:  "999.2"
-  let%test_unit __ [@tags "no-js"] =
+  let%test_unit _ [@tags "no-js"] =
                     boundary               (incr 999.25)~closer_to_zero:"999.2" ~at:  "999.3"
   let%test_unit _ = boundary                     999.75 ~closer_to_zero:"999.7" ~at:  "999.8"
   let%test_unit _ = boundary                     999.95 ~closer_to_zero:"999.9" ~at:    "1k "
@@ -1465,11 +1526,11 @@ module For_quickcheck = struct
   let gen_between_inclusive ~nan ~lower_bound ~upper_bound =
     assert (lower_bound <= upper_bound);
     maybe_weighted_union
-      [ 5., gen_normal    ~lower_bound ~upper_bound
-      ; 4., gen_subnormal ~lower_bound ~upper_bound
-      ; 3., gen_zero      ~lower_bound ~upper_bound
-      ; 2., gen_infinity  ~lower_bound ~upper_bound
-      ; 1., gen_nan       nan
+      [ 20., gen_normal    ~lower_bound ~upper_bound
+      ; 10., gen_subnormal ~lower_bound ~upper_bound
+      ;  1., gen_zero      ~lower_bound ~upper_bound
+      ;  1., gen_infinity  ~lower_bound ~upper_bound
+      ;  1., gen_nan       nan
       ]
     |> Option.value_exn ~message:"Float.gen_between: no values satisfy given constraints"
 
@@ -1598,7 +1659,7 @@ let obs             = For_quickcheck.obs
 let shrinker        = For_quickcheck.shrinker
 
 module Terse = struct
-  type t = outer [@@deriving bin_io]
+  type nonrec t = t [@@deriving bin_io]
   let t_of_sexp = t_of_sexp
 
   let to_string x = Core_printf.sprintf "%.8G" x

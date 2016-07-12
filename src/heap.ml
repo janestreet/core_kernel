@@ -160,8 +160,7 @@ module T = struct
      t defined as
 
      type 'a node = Node of 'a * 'a node list
-     type 'a t = 'a node option
-  *)
+     type 'a t = 'a node option *)
 
   type 'a t = {
     (* cmp is placed first to short-circuit polymorphic compare *)
@@ -172,18 +171,18 @@ module T = struct
   }
 
   let create ?(min_size = 1) ~cmp () =
-    { cmp;
-      pool = Node.Pool.create ~min_size;
-      heap = Node.empty ();
+    { cmp
+    ; pool = Node.Pool.create ~min_size
+    ; heap = Node.empty ()
     }
   ;;
 
   let copy t =
     let heap, pool = Node.Pool.copy t.pool t.heap ident in
     {
-      cmp = t.cmp;
-      pool;
-      heap;
+      cmp = t.cmp
+    ; pool
+    ; heap
     }
   ;;
 
@@ -236,21 +235,29 @@ module T = struct
      intuition is that this is somewhat like building a single level of a binary tree.
 
      The output heap does not contain the value that was at the root of the input heap.
+
+     We break the function into two parts.  A first stage that is willing to use limited
+     stack instead of heap allocation for bookkeeping, and a second stage that shifts to
+     using a list as an accumulator if we go too deep.
+
+     This can be made tail recursive and non-allocating by starting with an empty heap and
+     merging merged pairs into it. Unfortunately this "left fold" version is not what is
+     described in the original paper by Fredman et al.; they specifically say that
+     children should be merged together from the end of the list to the beginning of the
+     list. ([merge] is not associative, so order matters.)
   *)
   (* translation:
-     match t.heap with
-     | Node (_, children) ->
-       let rec loop acc = function
-         | [] -> acc
-         | [head] -> head :: acc
-         | head :: next1 :: next2 -> loop (merge head next1 :: acc) next2
-       in
-       match loop [] children with
-       | [] -> None
-       | [h] -> Some h
-       | x :: xs -> Some (List.fold xs ~init:x ~f:merge)
+     let rec loop acc = function
+       | [] -> acc
+       | [head] -> head :: acc
+       | head :: next1 :: next2 -> loop (merge head next1 :: acc) next2
+     in
+     match loop [] children with
+     | [] -> None
+     | [h] -> Some h
+     | x :: xs -> Some (List.fold xs ~init:x ~f:merge)
   *)
-  let merge_pairs t =
+  let allocating_merge_pairs t head =
     let rec loop acc head =
       if Node.is_empty head then
         acc
@@ -262,11 +269,53 @@ module T = struct
           let next2 = Node.disconnect_sibling t.pool next1 in
           loop (merge t head next1 :: acc) next2
     in
-    let head = Node.disconnect_child t.pool t.heap in
     match loop [] head with
     | []      -> Node.empty ()
     | [h]     -> h
     | x :: xs -> List.fold xs ~init:x ~f:(fun acc heap -> merge t acc heap)
+  ;;
+
+  (* translation:
+     match t.heap with
+     | Node (_, children) ->
+       let rec loop depth children =
+         if depth >= max_stack_depth
+         then allocating_merge_pairs t childen
+         else begin
+           match children with
+           | [] -> None
+           | [head] -> Some head
+           | head :: next1 :: next2 ->
+             merge (merge head next1) (loop (depth + 1) next2)
+         end
+       in
+       loop 0 children
+  *)
+  let merge_pairs t =
+    let max_stack_depth = 1_000 in
+    let rec loop depth head =
+      if depth >= max_stack_depth
+      then allocating_merge_pairs t head
+      else begin
+        if Node.is_empty head
+        then head
+        else begin
+          let next1 = Node.disconnect_sibling t.pool head in
+          if Node.is_empty next1
+          then head
+          else begin
+            let next2 = Node.disconnect_sibling t.pool next1 in
+            (* merge the first two nodes in our list, and then merge the result with the
+               result of recursively calling merge_pairs on the tail *)
+            merge t
+              (merge t head next1)
+              (loop (depth + 1) next2);
+          end
+        end
+      end
+    in
+    let head = Node.disconnect_child t.pool t.heap in
+    loop 0 head
   ;;
 
   let remove_top t =
@@ -287,11 +336,14 @@ module T = struct
 
   let pop_if t f =
     match top t with
-    | None -> None
-    | Some v when f v ->
-      remove_top t;
-      Some v
-    | Some _ -> None
+    | None   -> None
+    | Some v ->
+      if f v
+      then begin
+        remove_top t;
+        Some v
+      end else
+        None
   ;;
 
   (* pairing heaps are not balanced trees, and therefore we can't rely on a balance

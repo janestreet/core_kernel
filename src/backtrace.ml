@@ -16,7 +16,7 @@ let sexp_of_t t =
        ~f:(fun x -> Sexp.Atom x))
 ;;
 
-let%test_unit __ [@tags "no-js"] =
+let%test_unit _ [@tags "no-js"] =
   let t = get () in
   assert (String.length (to_string t) > 0)
 ;;
@@ -40,7 +40,7 @@ module Exn = struct
   ;;
 
 
-  let%test __ [@tags "no-js"]  = "" = with_recording false ~f:most_recent
+  let%test _ [@tags "no-js"]  = "" = with_recording false ~f:most_recent
 end
 
 let initialize_module () =

@@ -40,10 +40,17 @@ let%test_module "random" = (module struct
       end)
     ;;
 
+    let%test_unit "duplicates" =
+      Q.test_no_duplicates (List.gen gen)
+        ~sexp_of:[%sexp_of: t list]
+        ~compare:[%compare: t list]
+
     let%test_unit "mem true" =
       Q.test ~sexp_of:[%sexp_of: t * t list]
-        (List.gen  gen  >>= fun list        ->
-         G.of_list list >>| fun elt_of_list ->
+        (List.gen' gen ~length:(`At_least 1)
+         >>= fun list ->
+         G.of_list list
+         >>| fun elt_of_list ->
          elt_of_list, list)
         ~f:(fun (elt_of_list, list) ->
           [%test_result: bool]
@@ -673,31 +680,32 @@ let%test_module "random" = (module struct
 
   (* Float with bitwise comparison. *)
   module Float_ = struct
+    module T = struct
+      type t = float [@@deriving sexp]
 
-    include Float
+      let compare x y =
+        Int64.compare
+          (Int64.bits_of_float x)
+          (Int64.bits_of_float y)
+    end
 
-    let compare x y =
-      Int64.compare
-        (Int64.bits_of_float x)
-        (Int64.bits_of_float y)
+    include T
+    include Comparable.Make (T)
 
-    let equal x y =
-      Int64.equal
-        (Int64.bits_of_float x)
-        (Int64.bits_of_float y)
-
+    include (Float : Quickcheckable      with type t := float)
+    include (Float : Commutative_group.S with type t := float)
   end
 
   let%test _ = Float_.equal Float.nan Float.nan
 
-  module Bool'   = struct include Bool   let module_name = "Bool"   end
   module String' = struct include String let module_name = "String" end
   module Char'   = struct include Char   let module_name = "Char"   end
   module Int'    = struct include Int    let module_name = "Int"    end
   module Float'  = struct include Float_ let module_name = "Float"  end
   module Sexp'   = struct include Sexp   let module_name = "Sexp"   end
 
-  let%test_module "bool w/ float" = (module Make (Bool')   (Float'))
+  let%test_module "float w/ int"  = (module Make (Float')  (Int'))
+  let%test_module "int w/ float"  = (module Make (Int')    (Float'))
   let%test_module "string w/ int" = (module Make (String') (Int'))
   let%test_module "char w/ float" = (module Make (Char')   (Float'))
   let%test_module "sexp w/ int"   = (module Make (Sexp')   (Int'))

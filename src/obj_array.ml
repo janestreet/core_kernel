@@ -35,16 +35,22 @@ let create ~len = Array.create ~len zero_obj
 
 let empty = [||]
 
+type not_a_float = Not_a_float_0 | Not_a_float_1 of int
+let _not_a_float_0 = Not_a_float_0
+let _not_a_float_1 = Not_a_float_1 42
+
 let get t i =
-  (* Make the compiler believe [a] is an integer array so it does not check if [a] is
-     tagged with [Double_array_tag]. *)
-  Obj.repr (Array.get (Obj.magic (t : t) : int array) i : int)
+  (* Make the compiler believe [t] is an array not containing floats so it does not check
+     if [t] is tagged with [Double_array_tag].  It is NOT ok to use [int array] since (if
+     this function is inlined and the array contains in-heap boxed values) wrong register
+     typing may result, leading to a failure to register necessary GC roots. *)
+  Obj.repr (Array.get (Obj.magic (t : t) : not_a_float array) i : not_a_float)
 ;;
 
 let unsafe_get t i =
-  (* Make the compiler believe [a] is an integer array so it does not check if [a] is
-     tagged with [Double_array_tag]. *)
-  Obj.repr (Array.unsafe_get (Obj.magic (t : t) : int array) i : int)
+  (* Make the compiler believe [t] is an array not containing floats so it does not check
+     if [t] is tagged with [Double_array_tag]. *)
+  Obj.repr (Array.unsafe_get (Obj.magic (t : t) : not_a_float array) i : not_a_float)
 ;;
 
 (* For [set] and [unsafe_set], if a pointer is involved, we first do a physical-equality

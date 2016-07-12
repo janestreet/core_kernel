@@ -85,7 +85,7 @@ end = struct
   let mul a b = Int64.mul a (Int64.shift_right b 1)
   let div a b = wrap_modulo (Int64.div a b)
   let rem a b = Int64.rem a b
-  let popcount x = Int_math.int64_popcount x
+  let popcount x = Popcount.int64_popcount x
 
   let to_int64 t = unwrap t
   let of_int64_exn t = wrap_exn t
@@ -279,6 +279,9 @@ let to_int32_exn x = Conv.int64_to_int32_exn (unwrap x)
 let of_nativeint_exn x = wrap_exn (Conv.nativeint_to_int64 x)
 let to_nativeint_exn x = Conv.int64_to_nativeint_exn (unwrap x)
 
+let splittable_random random ~lo ~hi =
+  wrap_exn (Splittable_random.int64 random ~lo:(unwrap lo) ~hi:(unwrap hi))
+
 include Conv.Make (T)
 
 include Conv.Make_hex(struct
@@ -303,23 +306,14 @@ include Pretty_printer.Register (struct
 end)
 
 include Quickcheck.Make_int (struct
-    type nonrec t = t [@@deriving sexp, compare]
+    type nonrec t = t [@@deriving sexp, compare, hash]
     include (Replace_polymorphic_compare
              : Polymorphic_compare_intf.Infix with type t := t)
-    let (+)                 = (+)
-    let (-)                 = (-)
-    let (~-)                = (~-)
-    let zero                = zero
-    let one                 = one
-    let min_value           = min_value
-    let max_value           = max_value
-    let succ                = succ
-    let bit_and             = bit_and
-    let shift_left          = shift_left
-    let shift_right         = shift_right
-    let shift_right_logical = shift_right_logical
-    let of_int_exn          = of_int_exn
-    let to_float            = to_float
+    let min_value         = min_value
+    let max_value         = max_value
+    let succ              = succ
+    let pred              = pred
+    let splittable_random = splittable_random
   end)
 
 module Pre_O = struct

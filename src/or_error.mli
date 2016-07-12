@@ -16,6 +16,7 @@ type 'a t = ('a, Error.t) Result.t [@@deriving bin_io, compare, hash, sexp]
     the combination of [e1] and [e2], whereas it would only return [e1] if it were defined
     using [bind]. *)
 include Applicative.S      with type 'a t := 'a t
+include Container.S1       with type 'a t := 'a t
 include Invariant.S1       with type 'a t := 'a t
 include Monad.S            with type 'a t := 'a t
 

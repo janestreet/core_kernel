@@ -12,7 +12,7 @@ open Core_kernel.Core_map_intf
 
 module Unit_tests
   (Key : sig
-    type 'a t [@@deriving sexp, compare]
+    type 'a t [@@deriving sexp, compare, hash]
 
     val of_int : int -> int t
     val to_int : int t -> int
@@ -117,7 +117,7 @@ module Unit_tests
     let to_int = to_int
 
     module T = struct
-      type t = int Key.t [@@deriving sexp]
+      type t = int Key.t [@@deriving sexp, hash]
       let compare t t' = Pervasives.compare (to_int t) (to_int t')
       let equal t t' = compare t t' = 0
       let (<) t t' = compare t t' < 0
@@ -1321,8 +1321,7 @@ module Unit_tests
       let gen = Map.gen Key.gen Char.gen
       let can_generate f = test_can_generate gen ~sexp_of ~f
 
-      let%test_unit _ =
-        test_no_duplicates gen ~sexp_of ~compare ~acceptable_duplicate_per_trial_ratio:0.1
+      let%test_unit _ = test_no_duplicates gen ~sexp_of ~compare
       let%test_unit _ = can_generate (fun t -> Map.is_empty t)
       let%test_unit _ = can_generate (fun t -> Map.length t = 1)
       let%test_unit _ = can_generate (fun t -> Map.length t = 2)
@@ -1338,12 +1337,18 @@ module Unit_tests
   let%test_module _ =
     (module struct
       open Quickcheck
+
+      module Int_char_map = struct
+        type t = (int, char) Map.t
+        [@@deriving sexp_of, compare]
+
+        let hash_fold_t hash t = [%hash_fold: (Key.t * char) list] hash (Map.to_alist t)
+        let hash t = hash_fold_t (Hash.alloc ()) t |> Hash.get_hash_value
+      end
+
       module F =
         Fn_for_testing.Make
-          (struct
-            type t = (int, char) Map.t
-            [@@deriving sexp_of, compare]
-          end)
+          (Int_char_map)
           (Int)
           (struct
             let examples =
@@ -1357,11 +1362,14 @@ module Unit_tests
 
       let sexp_of = [%sexp_of: F.t]
       let compare = [%compare: F.t]
-      let gen = Generator.(fn (Map.obs Key.obs Char.obs) Int.gen)
+      let gen =
+        (* memoizing these functions makes [test_no_duplicates] run much faster *)
+        let hashable = Hashtbl_intf.Hashable.of_key (module Int_char_map) in
+        Generator.(fn (Map.obs Key.obs Char.obs) Int.gen
+                   |> map ~f:(fun f -> Memo.general f ~hashable))
       let can_generate ?trials f = test_can_generate gen ?trials ~sexp_of ~f
 
-      let%test_unit _ =
-        test_no_duplicates gen ~sexp_of ~compare ~acceptable_duplicate_per_trial_ratio:0.1
+      let%test_unit _ = test_no_duplicates gen ~sexp_of ~compare
 
       let%test_unit _ = can_generate (fun f ->
         f (Map.singleton (Key.of_int 0) 'a') <> f (Map.empty ()))
@@ -1423,13 +1431,13 @@ module Unit_tests
 end
 
 module Key_int = struct
-  type 'a t = int [@@deriving sexp, compare]
+  type 'a t = int [@@deriving sexp, compare, hash]
   let of_int = Fn.id
   let to_int = Fn.id
 end
 
 module Key_poly = struct
-  type 'a t = 'a [@@deriving sexp, compare]
+  type 'a t = 'a [@@deriving sexp, compare, hash]
   let of_int = Fn.id
   let to_int = Fn.id
 end

@@ -347,7 +347,7 @@ end = struct
 
 #ifdef JSC_ARCH_SIXTYFOUR
   external since_unix_epoch_or_zero : unit -> t
-    = "core_kernel_time_ns_gettime_or_zero" "noalloc"
+    = "core_kernel_time_ns_gettime_or_zero" [@@noalloc]
 #else
   external since_unix_epoch_or_zero : unit -> t
     = "core_kernel_time_ns_gettime_or_zero"

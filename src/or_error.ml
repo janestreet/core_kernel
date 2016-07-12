@@ -90,6 +90,7 @@ let%test _ = errorf "foo %d" 13 = error_string "foo 13"
 let tag t ~tag = Result.map_error t ~f:(Error.tag ~tag)
 let tag_arg t message a sexp_of_a =
   Result.map_error t ~f:(fun e -> Error.tag_arg e message a sexp_of_a)
+;;
 
 let unimplemented s = error "unimplemented" s [%sexp_of: string]
 
@@ -98,6 +99,7 @@ let combine_errors l =
   match errs with
   | [] -> Ok ok
   | _ -> Error (Error.of_list errs)
+;;
 
 let%test_unit _ =
   for i = 0 to 10; do
@@ -117,12 +119,14 @@ let%test _ =
   match combine_errors_unit [Ok (); Error a; Ok (); Error b] with
   | Ok _ -> false
   | Error e -> Error.to_string_hum e = Error.to_string_hum (Error.of_list [a;b])
+;;
 
 let filter_ok_at_least_one l =
   let ok, errs = List.partition_map l ~f:Result.ok_fst in
   match ok with
   | [] -> Error (Error.of_list errs)
   | _ -> Ok ok
+;;
 
 let find_ok l =
   match List.find_map l ~f:Result.ok with
@@ -131,6 +135,7 @@ let find_ok l =
     Error (Error.of_list (List.map l ~f:(function
       | Ok _ -> assert false
       | Error err -> err)))
+;;
 
 let find_map_ok l ~f =
   With_return.with_return (fun {return} ->
@@ -138,5 +143,38 @@ let find_map_ok l ~f =
       match f elt with
       | (Ok _ as x) -> return x
       | Error err -> err))))
+;;
 
+let fold t ~init ~f =
+  match t with
+  | Ok v    -> f init v
+  | Error _ -> init
+;;
 
+let iter t ~f =
+  match t with
+  | Ok v    -> f v
+  | Error _ -> ()
+;;
+
+module C = Container.Make (struct
+  type nonrec 'a t = 'a t
+  let fold = fold
+  let iter = `Custom iter
+end)
+
+let count       = C.count
+let exists      = C.exists
+let find        = C.find
+let find_map    = C.find_map
+let fold_result = C.fold_result
+let fold_until  = C.fold_until
+let for_all     = C.for_all
+let is_empty    = Result.is_error
+let length      = C.length
+let max_elt     = C.max_elt
+let min_elt     = C.min_elt
+let mem         = C.mem
+let sum         = C.sum
+let to_array    = C.to_array
+let to_list     = C.to_list

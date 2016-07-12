@@ -842,14 +842,15 @@ module Tree0 = struct
     match of_alist alist ~compare_key:comparator.Comparator.compare with
     | `Ok x -> Result.Ok x
     | `Duplicate_key key ->
-      let sexp_of_key = comparator.Comparator.sexp_of_t in
-      Or_error.error "Map.of_alist_exn: duplicate key" key [%sexp_of: key]
+      Or_error.error "Map.of_alist_or_error: duplicate key" key comparator.sexp_of_t
   ;;
 
   let of_alist_exn alist ~comparator =
-    match of_alist_or_error alist ~comparator with
-    | Result.Ok x -> x
-    | Result.Error e -> Error.raise e
+    match of_alist alist ~compare_key:comparator.Comparator.compare with
+    | `Ok x -> x
+    | `Duplicate_key key ->
+      Error.create "Map.of_alist_exn: duplicate key" key comparator.sexp_of_t
+      |> Error.raise
   ;;
 
   let of_alist_multi alist ~compare_key =
