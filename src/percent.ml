@@ -81,6 +81,17 @@ module Stable = struct
       ; 0.000075, "0.75bp", "a2U0*\169\019?"
       ]
   end))
+
+  let%test_unit {|
+    BUG: The sexp functions don't roundtrip.
+
+    In this case problem is [of_percentage] divides by 100, and [of_string]
+    scales by 0.01, which can yield different results.
+  |} =
+    let t = V1.of_percentage 3.638 in
+    [%test_result: int] (compare t (V1.t_of_sexp (V1.sexp_of_t t))) ~expect:(-1);
+  ;;
+
 end
 
 include Stable.V1
@@ -100,6 +111,7 @@ include (Float : sig
            val is_nan : t -> bool
            val is_inf : t -> bool
            include Comparable.With_zero with type t := t
+           include Robustly_comparable with type t := t
          end)
 
 let validate = Float.validate_ordinary
