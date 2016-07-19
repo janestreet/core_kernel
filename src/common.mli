@@ -44,7 +44,7 @@ val is_none : 'a option -> bool
 val is_some : 'a option -> bool
 
 (** {6 Functions from fn.ml} *)
-val (|!) : 'a -> ('a -> 'b) -> 'b
+include module type of Deprecate_pipe_bang
 
 val ident : 'a -> 'a
 val const : 'a -> _ -> 'a

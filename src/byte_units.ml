@@ -178,7 +178,7 @@ let%test_module "{of,to}_string" =
       if not result then begin
         let measure =
           [%sexp_of: [ `Specific of Measure.t | `Largest ]] measure
-          |! Sexp.to_string
+          |> Sexp.to_string
         in
         eprintf "\n(%s) %s -> %s != %s\n%!" measure input expected_output observed_output
       end;

@@ -156,7 +156,7 @@ let pair ~fst ~snd (fst_value,snd_value) =
 let list_indexed check list =
   List.mapi list ~f:(fun i el ->
     name (string_of_int (i+1)) (protect check el))
-  |! of_list
+  |> of_list
 ;;
 
 let list ~name:extract_name check list =
@@ -166,7 +166,7 @@ let list ~name:extract_name check list =
     | t ->
       (* extra level of protection in case extract_name throws an exception *)
       protect (fun t -> name (extract_name el) t) t)
-  |! of_list
+  |> of_list
 ;;
 
 let alist ~name f list' =

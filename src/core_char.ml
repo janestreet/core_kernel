@@ -111,9 +111,9 @@ let%bench_module "int to char conversion" =
 
 let escaped = Char.escaped
 
-let lowercase = Char.lowercase
+let lowercase = Char.lowercase_ascii
 
-let uppercase = Char.uppercase
+let uppercase = Char.uppercase_ascii
 
 let is_lowercase = function
   | 'a' .. 'z' -> true

@@ -1,6 +1,7 @@
 open Sexplib.Conv
 
 include Core_pervasives
+include Deprecate_pipe_bang
 
 (* See core_pervasives.ml for details *)
 module Modified_INRIA_pervasives = struct
@@ -22,7 +23,6 @@ exception Finally = Exn.Finally
 let protectx = Exn.protectx
 let protect = Exn.protect
 
-let (|!) = Fn.(|!)
 let ident = Fn.id
 let const = Fn.const
 let (==>) a b = (not a) || b

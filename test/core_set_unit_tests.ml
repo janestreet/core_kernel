@@ -323,12 +323,12 @@ module Unit_tests
   let of_sorted_array _ = assert false
   let of_sorted_array_unchecked _ = assert false
 
-  let%test _ = Set.of_sorted_array [||] |! Result.is_ok
-  let%test _ = Set.of_sorted_array [|Elt.of_int 0|] |! Result.is_ok
-  let%test _ = Set.of_sorted_array [|Elt.of_int 0; Elt.of_int 0|] |! Result.is_error
+  let%test _ = Set.of_sorted_array [||] |> Result.is_ok
+  let%test _ = Set.of_sorted_array [|Elt.of_int 0|] |> Result.is_ok
+  let%test _ = Set.of_sorted_array [|Elt.of_int 0; Elt.of_int 0|] |> Result.is_error
   let%test _ = Set.of_sorted_array [|Elt.of_int 1
                              ; Elt.of_int 0
-                             ; Elt.of_int 1|] |! Result.is_error
+                             ; Elt.of_int 1|] |> Result.is_error
 
   let%test _ =
     let list = List.init 100 ~f:Elt.of_int in
@@ -349,9 +349,9 @@ module Unit_tests
   let%test_unit _ =
     for n = 0 to 100 do
       let list = List.init n ~f:Elt.of_int in
-      assert (List.permute list |! Set.of_list |! Set.invariants);
-      assert (Array.of_list list |! Set.of_sorted_array_unchecked |! Set.invariants);
-      assert (List.rev list |! Array.of_list |! Set.of_sorted_array_unchecked |! Set.invariants);
+      assert (List.permute list |> Set.of_list |> Set.invariants);
+      assert (Array.of_list list |> Set.of_sorted_array_unchecked |> Set.invariants);
+      assert (List.rev list |> Array.of_list |> Set.of_sorted_array_unchecked |> Set.invariants);
     done
   ;;
 

@@ -371,10 +371,10 @@ module Unit_tests
   let of_sorted_array _ = assert false
 
   (* test detection of invalid input *)
-  let%test _ = Map.of_sorted_array [|Key.of_int 0, 0; Key.of_int 0, 0|] |! Result.is_error
+  let%test _ = Map.of_sorted_array [|Key.of_int 0, 0; Key.of_int 0, 0|] |> Result.is_error
   let%test _ = Map.of_sorted_array [|Key.of_int 1, 0
                          ; Key.of_int 0, 0
-                         ; Key.of_int 1, 0|] |! Result.is_error
+                         ; Key.of_int 1, 0|] |> Result.is_error
 
   let of_sorted_array_unchecked _ = assert false
 
@@ -399,9 +399,9 @@ module Unit_tests
   let%test_unit _ =
     for n = 0 to 100 do
       let alist = List.init n ~f:(fun i -> Key.of_int i, i) in
-      assert (List.permute alist |! Map.of_alist_exn |! Map.invariants);
-      assert (Array.of_list alist |! Map.of_sorted_array_unchecked |! Map.invariants);
-      assert (List.rev alist |! Array.of_list |! Map.of_sorted_array_unchecked |! Map.invariants);
+      assert (List.permute alist |> Map.of_alist_exn |> Map.invariants);
+      assert (Array.of_list alist |> Map.of_sorted_array_unchecked |> Map.invariants);
+      assert (List.rev alist |> Array.of_list |> Map.of_sorted_array_unchecked |> Map.invariants);
     done
   ;;
 

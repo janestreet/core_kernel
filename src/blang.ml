@@ -539,8 +539,8 @@ let%test_module "laws" = (module struct
       Random.State.make
         (String.to_list "31bb128c352e2569228fbacc590e937a29a8bb8f\
                          c4bfe7126504ce3dc400be7f401fa6f5be5dba38"
-          |! Array.of_list
-          |! Array.map ~f:Char.to_int)
+          |> Array.of_list
+          |> Array.map ~f:Char.to_int)
 
     let bool () = Random.State.bool prng
 

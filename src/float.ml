@@ -268,8 +268,53 @@ let%test _ = to_string_round_trippable 3e100                            = "3e+10
 let%test _ = to_string_round_trippable max_finite_value                 = "1.7976931348623157e+308"
 let%test _ = to_string_round_trippable min_positive_subnormal_value     = "4.94065645841247e-324"
 
-let frexp = Pervasives.frexp
-let ldexp = Pervasives.ldexp
+(* The bits of INRIA's [Pervasives] that we just want to expose in
+   [Float]. Most are already deprecated in [Core_pervasives], and
+   eventually all of them should be. *)
+include (Pervasives : sig
+  external frexp : float -> float * int = "caml_frexp_float"
+  external ldexp : (float [@unboxed]) -> (int [@untagged]) -> (float [@unboxed]) = "caml_ldexp_float" "caml_ldexp_float_unboxed" [@@noalloc]
+  external log10 : float -> float = "caml_log10_float" "log10"
+    [@@unboxed] [@@noalloc]
+  external expm1 : float -> float = "caml_expm1_float" "caml_expm1"
+    [@@unboxed] [@@noalloc]
+  external log1p : float -> float = "caml_log1p_float" "caml_log1p"
+    [@@unboxed] [@@noalloc]
+  external copysign : float -> float -> float = "caml_copysign_float" "caml_copysign"
+    [@@unboxed] [@@noalloc]
+  external cos : float -> float = "caml_cos_float" "cos"
+    [@@unboxed] [@@noalloc]
+  external sin : float -> float = "caml_sin_float" "sin"
+    [@@unboxed] [@@noalloc]
+  external tan : float -> float = "caml_tan_float" "tan"
+    [@@unboxed] [@@noalloc]
+  external acos : float -> float = "caml_acos_float" "acos"
+    [@@unboxed] [@@noalloc]
+  external asin : float -> float = "caml_asin_float" "asin"
+    [@@unboxed] [@@noalloc]
+  external atan : float -> float = "caml_atan_float" "atan"
+    [@@unboxed] [@@noalloc]
+  external atan2 : float -> float -> float = "caml_atan2_float" "atan2"
+    [@@unboxed] [@@noalloc]
+  external hypot : float -> float -> float = "caml_hypot_float" "caml_hypot"
+    [@@unboxed] [@@noalloc]
+  external cosh : float -> float = "caml_cosh_float" "cosh"
+    [@@unboxed] [@@noalloc]
+  external sinh : float -> float = "caml_sinh_float" "sinh"
+    [@@unboxed] [@@noalloc]
+  external tanh : float -> float = "caml_tanh_float" "tanh"
+    [@@unboxed] [@@noalloc]
+  external sqrt : float -> float = "caml_sqrt_float" "sqrt"
+    [@@unboxed] [@@noalloc]
+  external exp : float -> float = "caml_exp_float" "exp"
+    [@@unboxed] [@@noalloc]
+  external log : float -> float = "caml_log_float" "log"
+    [@@unboxed] [@@noalloc]
+end)
+
+(* We need this indirection because these are exposed as "val" instead of "external" *)
+let frexp = frexp
+let ldexp = ldexp
 
 module Robustly_comparable =
   Float_robust_compare.Make (struct let robust_comparison_tolerance = 1E-7 end)
@@ -837,7 +882,7 @@ let%test_module _ = (module struct
       let f = Random.float 1_000_000.0 -. 500_000.0 in
       let repeatable to_str =
         let s = to_str f in
-        if (String.split s ~on:',' |! String.concat |! of_string |! to_str) <> s
+        if (String.split s ~on:',' |> String.concat |> of_string |> to_str) <> s
         then failwithf "failed on testing %f" f ()
       in
       repeatable (to_string_hum ~decimals:3 ~strip_zero:false);

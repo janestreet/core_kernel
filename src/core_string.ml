@@ -1211,7 +1211,7 @@ module Escaping = struct
   ;;
 
   let escape_gen_exn ~escapeworthy_map ~escape_char =
-    Or_error.ok_exn (escape_gen ~escapeworthy_map ~escape_char) |! stage
+    Or_error.ok_exn (escape_gen ~escapeworthy_map ~escape_char) |> stage
   ;;
 
   let%test_module "escape_gen" = (module struct
@@ -1342,7 +1342,7 @@ module Escaping = struct
   ;;
 
   let unescape_gen_exn ~escapeworthy_map ~escape_char =
-    Or_error.ok_exn (unescape_gen ~escapeworthy_map ~escape_char) |! stage
+    Or_error.ok_exn (unescape_gen ~escapeworthy_map ~escape_char) |> stage
   ;;
 
   let%test_module "unescape_gen" = (module struct
@@ -1390,14 +1390,14 @@ module Escaping = struct
       let random_char =
         let print_chars =
           List.range (Char.to_int Char.min_value) (Char.to_int Char.max_value + 1)
-          |! List.filter_map ~f:Char.of_int
-          |! List.filter ~f:Char.is_print
-          |! Array.of_list
+          |> List.filter_map ~f:Char.of_int
+          |> List.filter ~f:Char.is_print
+          |> Array.of_list
         in
         fun () -> Core_array.random_element_exn print_chars
       in
       let escapeworthy_chars =
-        List.map escapeworthy_map ~f:fst |! Array.of_list
+        List.map escapeworthy_map ~f:fst |> Array.of_list
       in
       try
         for _ = 0 to n - 1 do
@@ -1411,7 +1411,7 @@ module Escaping = struct
               else
                 random_char ()
             )
-            |! of_char_list
+            |> of_char_list
           in
           test str
         done;
@@ -1672,8 +1672,8 @@ module Escaping = struct
     let%test _ = rsplit2_exn ~escape_char ~on "foo_,bar,baz_,0" = ("foo_,bar", "baz_,0")
     let%test _ = lsplit2 ~escape_char ~on "foo_,bar" = None
     let%test _ = rsplit2 ~escape_char ~on "foo_,bar" = None
-    let%test _ = try lsplit2_exn ~escape_char ~on "foo_,bar" |! Fn.const false with _ -> true
-    let%test _ = try rsplit2_exn ~escape_char ~on "foo_,bar" |! Fn.const false with _ -> true
+    let%test _ = try lsplit2_exn ~escape_char ~on "foo_,bar" |> Fn.const false with _ -> true
+    let%test _ = try rsplit2_exn ~escape_char ~on "foo_,bar" |> Fn.const false with _ -> true
   end)
 end
 ;;

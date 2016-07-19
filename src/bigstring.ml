@@ -194,7 +194,7 @@ let compare t1 t2 =
 
 external internalhash_fold_bigstring :
   Ppx_hash_lib.Internalhash.state -> t -> Ppx_hash_lib.Internalhash.state
-  = "internalhash_fold_bigstring" "noalloc"
+  = "internalhash_fold_bigstring" [@@noalloc]
 
 let hash_fold_t = internalhash_fold_bigstring
 let hash = [%hash: t]
