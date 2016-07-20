@@ -92,8 +92,6 @@ let _supplemental_hash h =
   h lxor (h lsr 7) lxor (h lsr 4)
 ;;
 
-exception Hash_value_must_be_non_negative [@@deriving sexp]
-
 let slot t key =
   let hash = t.hashable.Hashable.hash key in
   (* this is always non-negative because we do [land] with non-negative number *)

@@ -40,7 +40,7 @@ module Binable_exn = struct
           (* We install a custom exn-converter rather than use [exception Exn of t
              [@@deriving sexp]] to eliminate the extra wrapping of "(Exn ...)". *)
           let () =
-            Sexplib.Conv.Exn_converter.add_auto (Exn (Atom "<template>"))
+            Sexplib.Conv.Exn_converter.add [%extension_constructor Exn]
               (function
                 | Exn t -> t
                 | _ ->
@@ -238,7 +238,7 @@ let () =
   (* We install a custom exn-converter rather than use
      [exception Exn of t [@@deriving sexp]] to eliminate the extra wrapping of
      "(Exn ...)". *)
-  Sexplib.Conv.Exn_converter.add_auto (Exn (of_string "<template>"))
+  Sexplib.Conv.Exn_converter.add [%extension_constructor Exn]
     (function
     | Exn t -> sexp_of_t t
     | _ ->

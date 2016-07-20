@@ -2229,13 +2229,10 @@ let%bench_module "int_pow" = (module struct
     )
 
 #ifdef JSC_ARCH_SIXTYFOUR
-  let int_1_111_111_111     = Int64.to_int 1_111_111_111L
-  let int_1_111_111_111_111 = Int64.to_int 1_111_111_111_111L
-
   (* Now, some outrageously large exponents one probably never needs.  But if one does
      need them, the base is probably close to 1. *)
   let%bench_fun "int_pow huge exponent x10"
-                   [@indexed n = [int_1_111_111_111; int_1_111_111_111_111; Pervasives.max_int]] =
+                   [@indexed n = [1_111_111_111; 1_111_111_111_111; Pervasives.max_int]] =
     (fun () ->
        let base = box 1.000000000001 in
        for _ = 1 to 10 do
@@ -2254,7 +2251,7 @@ let%bench_module "int_pow" = (module struct
     )
 
   let%bench_fun "** huge exponent x10"
-                  [@indexed n = [int_1_111_111_111; int_1_111_111_111_111; Pervasives.max_int]] =
+                  [@indexed n = [1_111_111_111; 1_111_111_111_111; Pervasives.max_int]] =
     (fun () ->
        let base = box 1.000000000001 in
        let n = float n in

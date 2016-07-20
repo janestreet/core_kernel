@@ -18,11 +18,11 @@ let reraisef exc format =
 
 let install_sexp_converters () =
   StdLabels.List.iter
-    ~f:(fun (exc, handler) ->
-      Conv.Exn_converter.add_auto ~finalise:false exc handler)
+    ~f:(fun (extension_constructor, handler) ->
+      Conv.Exn_converter.add ~finalise:false extension_constructor handler)
     [
       (
-        Bin_prot.Common.Read_error (Bin_prot.Common.ReadError.Neg_int8, 0),
+        [%extension_constructor Bin_prot.Common.Read_error],
         (function
         | Bin_prot.Common.Read_error (err, pos) ->
             let str_err = Bin_prot.Common.ReadError.to_string err in

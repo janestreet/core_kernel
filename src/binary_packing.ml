@@ -738,11 +738,11 @@ let%test_module "inline_signed_64_int" =
   (* These numbers are written with one endianness and read with the opposite endianness,
      so the smallest byte becomes the biggest byte. Because of this, the range restriction
      that applies to the biggest byte also applies to the smallest byte. *)
-  let ns = [0x3f20_3040_5060_0708L;
-            0x7f20_3040_5060_0708L;
-           -0x7f20_3040_5060_0708L;
-            0x7fff_ffff_ffff_0000L;
-            0L] |> List.map ~f:Int64.to_int
+  let ns = [0x3f20_3040_5060_0708;
+            0x7f20_3040_5060_0708;
+           -0x7f20_3040_5060_0708;
+            0x7fff_ffff_ffff_0000;
+            0]
   let num_bytes = 8
   let signed = true
   type t = int

@@ -6,7 +6,7 @@ module Test (S : sig val default_seed : Quickcheck_intf.seed end) : sig end = st
 
   let int_middle_bits =
 #ifdef JSC_ARCH_SIXTYFOUR
-    Int64.to_int_exn 0x0000_ffff_ffff_0000L
+    0x0000_ffff_ffff_0000
 #else
     0x00ff_ff00
 #endif

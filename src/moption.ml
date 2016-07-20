@@ -5,14 +5,14 @@ type 'a t = 'a Option_array.t
 let the_index = 0
 let the_length = 1
 
-let is_some t = Option_array.is_some t the_index
+let is_some t = Option_array.unsafe_is_some t the_index
 let is_none t = not (is_some t)
 
-let get t = Option_array.get t the_index
+let get t = Option_array.unsafe_get t the_index
 
 let get_some_exn t =
   if is_none t then failwith "Moption.get_exn";
-  Option_array.get_some_exn t the_index;
+  Option_array.unsafe_get_some_exn t the_index;
 ;;
 
 let sexp_of_t sexp_of_a t = [%sexp (get t : a option)]
@@ -25,7 +25,7 @@ let invariant invariant_a t =
 
 let create () = Option_array.create ~len:the_length
 
-let set t o = Option_array.set t the_index o
+let set t o = Option_array.unsafe_set t the_index o
 
-let set_some t a = Option_array.set_some t the_index a
-let set_none t   = Option_array.set_none t the_index
+let set_some t a = Option_array.unsafe_set_some t the_index a
+let set_none t   = Option_array.unsafe_set_none t the_index
