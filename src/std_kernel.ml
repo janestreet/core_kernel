@@ -38,7 +38,6 @@ module Fdeque                               = Fdeque
 module Fheap                                = Fheap
 module Flags                                = Flags
 module Float                                = Float
-module Float_intf                           = Float_intf
 module Float_with_finite_only_serialization = Float_with_finite_only_serialization
 module Floatable                            = Floatable
 module Fn                                   = Fn

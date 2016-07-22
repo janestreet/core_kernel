@@ -1691,7 +1691,7 @@ module For_quickcheck = struct
         | Infinite  -> `D float
         | Nan       -> `E float)
 
-  let shrinker =
+  let shrinker : float Shrinker.t =
     Shrinker.empty ()
 
 end
