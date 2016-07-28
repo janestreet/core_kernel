@@ -142,7 +142,14 @@ type bytes =
   [ `This_type_does_not_equal_string_because_we_want_type_errors_to_say_string ]
 ;;
 
+(* We perform these side effects here because we want them to run for any code that uses
+   [Core_kernel].  If this were in another module in [Core_kernel] that was not used in
+   some program, then the side effects might not be run in that program.  This will run as
+   long as the program refers to at least one value directly in [Std_kernel]; referring to
+   values in [Std_kernel.Bool], for example, is not sufficient. *)
 let () =
   Backtrace.initialize_module ();
   Exn.initialize_module ();
 ;;
+
+let am_running_inline_test = Ppx_inline_test_lib.Runtime.am_running_inline_test

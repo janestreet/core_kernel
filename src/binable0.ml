@@ -1,6 +1,7 @@
 include Bin_prot.Binable
 open Sexplib.Std
 open Bin_prot.Std
+module Shape = Bin_prot.Shape
 
 module List = ListLabels
 
@@ -72,6 +73,7 @@ module Stable = struct
           type t = string [@@deriving bin_io]
         end
         type t = M.t
+
         let to_binable = M.to_string
 
         (* Wrap exception for improved diagnostics. *)
@@ -131,7 +133,13 @@ module Of_binable2   = Stable.Of_binable2.V1
 module Of_sexpable   = Stable.Of_sexpable.V1
 module Of_stringable = Stable.Of_stringable.V1
 
-(* check that only the functions are sufficient for [@@deriving bin_io] *)
-module Of_only_functions (X : S_only_functions) : S = struct
+module type S_only_functions_and_shape = sig
+  include S_only_functions
+  val bin_shape_t : Shape.t
+end
+
+(* check that only the functions & shape are sufficient for [@@deriving bin_io] *)
+module Of_only_functions_and_shape (X : S_only_functions_and_shape) : S = struct
   type t = X.t [@@deriving bin_io]
 end
+

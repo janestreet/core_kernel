@@ -10,9 +10,16 @@ end
 include
   (struct include Core_int let to_int x = Some x end
    : Int_or_more with type t = private int)
+let bin_shape_t = Bin_prot.Shape.bin_shape_int63
 #else
 include (Core_int63_emul : Int_or_more)
 #endif
+
+let%test _ =
+  let open Bin_prot.Shape in
+  Pervasives.(=)
+    (eval_to_digest_string bin_shape_t)
+    (eval_to_digest_string bin_shape_int63)
 
 module Overflow_exn = struct
   let ( + ) t u =

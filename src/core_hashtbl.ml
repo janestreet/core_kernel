@@ -846,6 +846,7 @@ module Poly = struct
     type ('a, 'b) t = ('a, 'b) z
     type ('a, 'b) el = 'a * 'b [@@deriving bin_io]
 
+    let caller_identity = Bin_prot.Shape.Uuid.of_string "8f3e445c-4992-11e6-a279-3703be311e7b"
     let module_name = Some "Core_kernel.Std.Hashtbl"
     let length = length
     let iter t ~f = iteri t ~f:(fun ~key ~data -> f (key, data))
@@ -900,6 +901,7 @@ module Make_plain (Key : Key_plain) = struct
       type nonrec 'a t = 'a t
       type 'a el = Key.t * 'a [@@deriving bin_io]
 
+      let caller_identity = Bin_prot.Shape.Uuid.of_string "8fabab0a-4992-11e6-8cca-9ba2c4686d9e"
       let module_name = Some "Core_kernel.Std.Hashtbl"
       let length = length
       let iter t ~f = iteri t ~f:(fun ~key ~data -> f (key, data))

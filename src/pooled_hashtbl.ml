@@ -1042,6 +1042,7 @@ module Poly = struct
     type ('a, 'b) t = ('a, 'b) z
     type ('a, 'b) el = 'a * 'b [@@deriving bin_io]
 
+    let caller_identity = Bin_prot.Shape.Uuid.of_string "a9b0d5e8-4992-11e6-a717-dfe192342aee"
     let module_name = Some "Pooled_hashtbl"
     let length = length
     let iter t ~f = iteri t ~f:(fun ~key ~data -> f (key, data))
@@ -1096,6 +1097,7 @@ module Make_plain (Key : Key_plain) = struct
       type nonrec 'a t = 'a t
       type 'a el = Key.t * 'a [@@deriving bin_io]
 
+      let caller_identity = Bin_prot.Shape.Uuid.of_string "aa942e1a-4992-11e6-8f73-876922b0953c"
       let module_name = Some "Pooled_hashtbl"
       let length = length
       let iter t ~f = iteri t ~f:(fun ~key ~data -> f (key, data))

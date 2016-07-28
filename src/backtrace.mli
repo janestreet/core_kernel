@@ -57,5 +57,6 @@ module Exn : sig
   val most_recent : unit -> string
 end
 
-(** Runs global side effects, which initializes [am_recording ()] as specified above. *)
+(** User code never calls this.  It is called only in [std_kernel.ml], as a top-level side
+    effect, to initialize [am_recording ()] as specified above. *)
 val initialize_module : unit -> unit

@@ -76,6 +76,7 @@ val does_raise : (unit -> _) -> bool
 (** The same as {!Printexc.get_backtrace} *)
 val backtrace : unit -> string
 
-(** Runs global side effects, which change the display of exceptions and install
-    an uncaught-exception printer. *)
+(** User code never calls this.  It is called in [std_kernel.ml], as a top-level side
+    effect, to change the display of exceptions and install an uncaught-exception
+    printer. *)
 val initialize_module : unit -> unit

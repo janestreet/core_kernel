@@ -141,6 +141,8 @@ include
     type 'a t = 'a Queue.t
     type 'a el = 'a [@@deriving bin_io]
 
+    let caller_identity = Bin_prot.Shape.Uuid.of_string "800df9a0-4992-11e6-881d-ffe1a5c8aced"
+
     let module_name = Some "Core_kernel.Std.Linked_queue"
 
     let length = length

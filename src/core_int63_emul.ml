@@ -177,6 +177,8 @@ module T = struct
         let of_binable = wrap_exn
         let to_binable = unwrap
       end)
+
+  let bin_shape_t = Bin_prot.Shape.bin_shape_int63
 end
 
 include T

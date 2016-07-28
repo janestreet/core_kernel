@@ -211,6 +211,7 @@ module Make_plain (Elt : Elt_plain) = struct
       type t = elt hash_set
       type el = Elt.t [@@deriving bin_io]
       let _ = bin_el
+      let caller_identity = Bin_prot.Shape.Uuid.of_string "ad381672-4992-11e6-9e36-b76dc8cd466f"
       let module_name = Some "Core.Std.Hash_set"
       let length = length
       let iter = iter

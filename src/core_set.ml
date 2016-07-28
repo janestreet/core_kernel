@@ -1359,6 +1359,7 @@ module Poly = struct
     type 'a el = 'a [@@deriving bin_io]
     let _ = bin_el
 
+    let caller_identity = Bin_prot.Shape.Uuid.of_string "88bcc478-4992-11e6-a95d-ff4831acf410"
     let module_name = Some "Core_kernel.Std.Set"
     let length = length
     let iter t ~f = iter ~f:(fun key -> f key) t
@@ -1434,6 +1435,7 @@ end) = struct
       type el = Elt.t [@@deriving bin_io]
       let _ = bin_el
 
+      let caller_identity = Bin_prot.Shape.Uuid.of_string "8989278e-4992-11e6-8f4a-6b89776b1e53"
       let module_name = Some "Core_kernel.Std.Set"
       let length = length
       let iter t ~f = iter ~f:(fun key -> f key) t

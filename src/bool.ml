@@ -83,6 +83,10 @@ let shrinker =
 (* We use [Obj.magic] here as other implementations generate a conditional jump and the
    performance difference is noticeable. *)
 let to_int (x : bool) = (Obj.magic x : int)
+
+(* We do this as a direct assert on the theory that it's a cheap thing to test and a
+   really core invariant that we never expect to break, and we should be happy for a
+   program to fail immediately if this is violated. *)
 let () =
   assert (Pervasives.(=) (to_int true ) 1 &&
           Pervasives.(=) (to_int false) 0);
