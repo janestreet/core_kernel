@@ -22,7 +22,7 @@ let%expect_test "\
      (is_none true)
      (is_some false)
      (get ())
-     (get_some_exn (Error (Failure Moption.get_exn)))) |}];
+     (get_some_exn (Error Moption.get_some_exn))) |}];
   set_some t 13;
   print t;
   [%expect {|
@@ -38,7 +38,7 @@ let%expect_test "\
      (is_none true)
      (is_some false)
      (get ())
-     (get_some_exn (Error (Failure Moption.get_exn)))) |}];
+     (get_some_exn (Error Moption.get_some_exn))) |}];
   set t (Some 13);
   print t;
   [%expect {|
@@ -54,5 +54,5 @@ let%expect_test "\
      (is_none true)
      (is_some false)
      (get ())
-     (get_some_exn (Error (Failure Moption.get_exn)))) |}];
+     (get_some_exn (Error Moption.get_some_exn))) |}];
 ;;

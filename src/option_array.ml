@@ -36,7 +36,10 @@ module Cheap_option = struct
 
        It would be simpler to use this value as [none], but we use an immediate instead
        because it lets us avoid caml_modify when setting to [none], making certain
-       benchmarks significantly faster (e.g. ../bench/array_queue.exe). *)
+       benchmarks significantly faster (e.g. ../bench/array_queue.exe).
+
+       this code is duplicated in Moption, and if we find yet another place where we want
+       it we should reconsider making it shared. *)
     let none_substitute : _ t = Obj.obj (Obj.new_block Obj.abstract_tag 1)
 
     let none : _ t =
