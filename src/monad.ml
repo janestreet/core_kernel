@@ -5,7 +5,7 @@ module Make2 (M : Basic2) : S2 with type ('a, 'e) t := ('a, 'e) M.t = struct
   let bind   = M.bind
   let return = M.return
 
-  let map_via_bind ma ~f = M.bind ma (fun a -> M.return (f a))
+  let map_via_bind ma ~f = M.bind ma ~f:(fun a -> M.return (f a))
 
   let map =
     match M.map with
@@ -13,8 +13,8 @@ module Make2 (M : Basic2) : S2 with type ('a, 'e) t := ('a, 'e) M.t = struct
     | `Custom x -> x
 
   module Monad_infix = struct
-    let (>>=) = bind
-    let (>>|) t f = map t ~f
+    let (>>=) t f = bind t ~f
+    let (>>|) t f = map  t ~f
   end
   include Monad_infix
 
@@ -60,7 +60,7 @@ module Ident = struct
   type 'a t = 'a
   include Make (struct
       type nonrec 'a t = 'a t
-      let bind a f = f a
+      let bind a ~f = f a
       let return a = a
       let map = `Custom (fun a ~f -> f a)
     end)

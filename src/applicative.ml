@@ -73,7 +73,7 @@ module Of_monad (M : Monad.S) : S with type 'a t := 'a M.t =
   Make (struct
     type 'a t = 'a M.t
     let return = M.return
-    let apply mf mx = M.bind mf (fun f -> M.map mx ~f)
+    let apply mf mx = M.bind mf ~f:(fun f -> M.map mx ~f)
     let map = `Custom M.map
   end)
 

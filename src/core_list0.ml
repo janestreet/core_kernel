@@ -829,7 +829,7 @@ include struct
    *)
   module Monad = Monad.Make (struct
     type 'a t = 'a list
-    let bind x f = concat_map x ~f
+    let bind x ~f = concat_map x ~f
     let map = `Custom map
     let return x = [x]
   end)
@@ -839,7 +839,7 @@ include struct
   let ignore_m = ignore_m
   let join = join
   let bind = bind
-  let (>>=) = bind
+  let (>>=) t f = bind t ~f
   let return = return
   let all = all
   let all_ignore = all_ignore

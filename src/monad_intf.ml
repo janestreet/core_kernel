@@ -1,6 +1,6 @@
 module type Basic = sig
   type 'a t
-  val bind : 'a t -> ('a -> 'b t) -> 'b t
+  val bind : 'a t -> f:('a -> 'b t) -> 'b t
   val return : 'a -> 'a t
   (** The following identities ought to hold (for some value of =):
 
@@ -12,7 +12,7 @@ module type Basic = sig
   *)
 
   (** The [map] argument to [Monad.Make] says how to implement the monad's [map] function.
-      [`Define_using_bind] means to define [map t ~f = bind t (fun a -> return (f a))].
+      [`Define_using_bind] means to define [map t ~f = bind t ~f:(fun a -> return (f a))].
       [`Custom] overrides the default implementation, presumably with something more
       efficient.
 
@@ -48,8 +48,8 @@ module type Syntax = sig
 
     module Let_syntax : sig
       val return : 'a -> 'a t
-      val bind : 'a t -> ('a -> 'b t) -> 'b t
-      val map  : 'a t -> f:('a -> 'b) -> 'b t
+      val bind : 'a t -> f:('a -> 'b t) -> 'b t
+      val map  : 'a t -> f:('a -> 'b)   -> 'b t
       val both : 'a t -> 'b t -> ('a * 'b) t
       module Open_on_rhs : sig end
     end
@@ -64,8 +64,8 @@ module type S_without_syntax = sig
 
   module Monad_infix : Infix  with type 'a t := 'a t
 
-  (** [bind t f] = [t >>= f] *)
-  val bind : 'a t -> ('a -> 'b t) -> 'b t
+  (** [bind t ~f] = [t >>= f] *)
+  val bind : 'a t -> f:('a -> 'b t) -> 'b t
 
   (** [return v] returns the (trivial) computation that returns v. *)
   val return : 'a -> 'a t
@@ -100,7 +100,7 @@ end
 *)
 module type Basic2 = sig
   type ('a, 'e) t
-  val bind : ('a, 'e) t -> ('a -> ('b, 'e) t) -> ('b, 'e) t
+  val bind : ('a, 'e) t -> f:('a -> ('b, 'e) t) -> ('b, 'e) t
   val map : [ `Define_using_bind
             | `Custom of (('a, 'e) t -> f:('a -> 'b) -> ('b, 'e) t)
             ]
@@ -123,8 +123,8 @@ module type Syntax2 = sig
     include Infix2 with type ('a,'e) t := ('a,'e) t
     module Let_syntax : sig
       val return : 'a -> ('a, 'e) t
-      val bind : ('a, 'e) t -> ('a -> ('b, 'e) t) -> ('b, 'e) t
-      val map  : ('a, 'e) t -> f:('a -> 'b) -> ('b, 'e) t
+      val bind : ('a, 'e) t -> f:('a -> ('b, 'e) t) -> ('b, 'e) t
+      val map  : ('a, 'e) t -> f:('a -> 'b)         -> ('b, 'e) t
       val both : ('a, 'e) t -> ('b, 'e) t -> ('a * 'b, 'e) t
       module Open_on_rhs  : sig end
     end
@@ -140,7 +140,7 @@ module type S2 = sig
 
   module Monad_infix : Infix2 with type ('a, 'e) t := ('a, 'e) t
 
-  val bind : ('a, 'e) t -> ('a -> ('b, 'e) t) -> ('b, 'e) t
+  val bind : ('a, 'e) t -> f:('a -> ('b, 'e) t) -> ('b, 'e) t
 
   val return : 'a -> ('a, _) t
 

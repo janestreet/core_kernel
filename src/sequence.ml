@@ -416,7 +416,7 @@ let empty =
 
 let%test _ = to_list empty = []
 
-let bind t f =
+let bind t ~f =
   unfold_step
     ~f:(function
       | Sequence(seed,next), rest ->
@@ -434,9 +434,9 @@ let bind t f =
         | Yield(a,s) -> Yield(a, (Sequence(s,next) , rest)))
     ~init:(empty,t)
 
-let%test _ = to_list (bind sempty (fun _ -> s12345)) = []
-let%test _ = to_list (bind s12345 (fun _ -> sempty)) = []
-let%test _ = to_list (bind s12345 (fun x -> of_list [x;-x])) = [1;-1;2;-2;3;-3;4;-4;5;-5]
+let%test _ = to_list (bind sempty ~f:(fun _ -> s12345)) = []
+let%test _ = to_list (bind s12345 ~f:(fun _ -> sempty)) = []
+let%test _ = to_list (bind s12345 ~f:(fun x -> of_list [x;-x])) = [1;-1;2;-2;3;-3;4;-4;5;-5]
 
 let return x =
   unfold_step ~init:(Some x)
@@ -462,7 +462,7 @@ let%bench "many binds" [@indexed len = [10; 20; 30; 40; 50]] =
     let rec go acc n =
       if n = 0
       then acc
-      else go (bind acc return) (n - 1)
+      else go (bind acc ~f:return) (n - 1)
     in
     go (return ()) len
   in
@@ -712,7 +712,7 @@ let%bench "many appends" [@indexed len = [10; 20; 30; 40; 50]] =
   in
   iter data ~f:ignore
 
-let concat_map s ~f = bind s f
+let concat_map s ~f = bind s ~f
 
 let concat s = concat_map s ~f:Fn.id
 
@@ -1016,7 +1016,7 @@ let%test _ =
 
 let fold_result t ~init ~f =
   delayed_fold t ~init
-    ~f:(fun acc x ~k -> Result.bind (f acc x) k)
+    ~f:(fun acc x ~k -> Result.bind (f acc x) ~f:k)
     ~finish:Result.return
 
 let fold_until t ~init ~f =
@@ -1166,7 +1166,7 @@ module Generator = struct
   module T = struct
     type ('a, 'elt) t = ('a -> 'elt steps) -> 'elt steps
     let return x = (); fun k -> k x
-    let bind m f = (); fun k -> m (fun a -> let m' = f a in m' k)
+    let bind m ~f = (); fun k -> m (fun a -> let m' = f a in m' k)
     let map m ~f = (); fun k -> m (fun a -> k (f a))
     let map = `Custom map
   end

@@ -211,14 +211,14 @@ let%test_module "random" = (module struct
         ~f:(fun (list, f) ->
           [%test_eq: t list]
             (List.map list ~f)
-            (List.bind list (fun x -> [ f x ])))
+            (List.bind list ~f:(fun x -> [ f x ])))
 
     let%test_unit "monad left identity" =
       Q.test ~sexp_of:[%sexp_of: t * (t -> t list)]
         (G.tuple2 gen (G.fn obs (List.gen gen)))
         ~f:(fun (x, f) ->
           [%test_eq: t list]
-            (List.bind (List.return x) f)
+            (List.bind (List.return x) ~f)
             (f x))
 
     let%test_unit "monad right identity" =
@@ -226,7 +226,7 @@ let%test_module "random" = (module struct
         (List.gen gen)
         ~f:(fun list ->
           [%test_result: t list]
-            (List.bind list List.return)
+            (List.bind list ~f:List.return)
             ~expect:list)
 
     let%test_unit "monad associativity" =
@@ -237,8 +237,8 @@ let%test_module "random" = (module struct
            (G.fn obs (List.gen gen)))
         ~f:(fun (list, f, g) ->
           [%test_eq: t list]
-            (List.bind (List.bind list f) g)
-            (List.bind list (fun x -> List.bind (f x) g)))
+            (List.bind (List.bind list ~f) ~f:g)
+            (List.bind list ~f:(fun x -> List.bind (f x) ~f:g)))
 
     let%test_unit "join" =
       Q.test ~sexp_of:[%sexp_of: t list list]
@@ -246,7 +246,7 @@ let%test_module "random" = (module struct
         ~f:(fun list ->
           [%test_eq: t list]
             (List.join list)
-            (List.bind list Fn.id))
+            (List.bind list ~f:Fn.id))
 
     let%test_unit "ignore" =
       Q.test ~sexp_of:[%sexp_of: t list]

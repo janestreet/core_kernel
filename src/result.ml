@@ -35,7 +35,7 @@ type ('a, 'b) _t = ('a, 'b) t
 include Monad.Make2 (struct
   type ('a, 'b) t = ('a,'b) _t
 
-  let bind x f = match x with
+  let bind x ~f = match x with
     | Error _ as x -> x
     | Ok x -> f x
 

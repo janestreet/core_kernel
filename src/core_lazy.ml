@@ -23,7 +23,7 @@ include Monad.Make (struct
 
   let return x = from_val x
 
-  let bind t f = lazy (force (f (force t)))
+  let bind t ~f = lazy (force (f (force t)))
 
   let map = map
 

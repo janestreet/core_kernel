@@ -276,7 +276,7 @@ module Generator = struct
       let return x =
         create (fun ~size:_ _ -> x)
 
-      let bind t1 f =
+      let bind t1 ~f =
         create (fun ~size random ->
           let x = generate t1 ~size random in
           let t2 = f x in

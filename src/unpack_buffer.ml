@@ -56,7 +56,7 @@ module Unpack_one = struct
           | `Not_enough_data (pb, nb) -> `Not_enough_data (B (pb, ub), nb + na)
           | `Ok (b, nb) -> `Ok (b, na + nb)
         in
-        fun (T ua) f ->
+        fun (T ua) ~f ->
           let do_a partial_unpack buf ~pos ~len =
             match ua ?partial_unpack ~pos ~len buf with
             | `Invalid_data _ as x -> x

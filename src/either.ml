@@ -128,7 +128,7 @@ module Make_focused (M : sig
       let return = return
       ;;
 
-      let bind t f = either t ~return:f ~other
+      let bind t ~f = either t ~return:f ~other
       ;;
 
       let map = `Custom map

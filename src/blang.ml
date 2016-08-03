@@ -432,30 +432,30 @@ include Monad.Make (struct
 
   let return = base
 
-  let rec bind t k =
+  let rec bind t ~f:k =
     match t with
     | Base v -> k v
     | True -> true_
     | False -> false_
-    | Not t1 -> not_ (bind t1 k)
+    | Not t1 -> not_ (bind t1 ~f:k)
     (* Unfortunately we need to duplicate some of the short-circuiting from [andalso] and
        friends here. In principle we could do something involving [Lazy.t] but the
        overhead probably wouldn't be worth it. *)
     | And (t1, t2) ->
-      begin match bind t1 k with
+      begin match bind t1 ~f:k with
       | False -> false_
-      | other -> andalso other (bind t2 k)
+      | other -> andalso other (bind t2 ~f:k)
       end
     | Or (t1, t2) ->
-      begin match bind t1 k with
+      begin match bind t1 ~f:k with
       | True -> true_
-      | other -> orelse other (bind t2 k)
+      | other -> orelse other (bind t2 ~f:k)
       end
     | If (t1, t2, t3) ->
-      begin match bind t1 k with
-      | True -> bind t2 k
-      | False -> bind t3 k
-      | other -> if_ other (bind t2 k) (bind t3 k)
+      begin match bind t1 ~f:k with
+      | True -> bind t2 ~f:k
+      | False -> bind t3 ~f:k
+      | other -> if_ other (bind t2 ~f:k) (bind t3 ~f:k)
       end
   ;;
 
@@ -470,7 +470,7 @@ let%test_module "bind short-circuiting" = (module struct
       visited := var :: !visited;
       false_
     in
-    match bind expr f with
+    match bind expr ~f with
     | True -> List.equal ~equal:Int.equal expected_visits (List.rev !visited)
     | _ -> false
 
@@ -494,7 +494,7 @@ let eval t base_eval =
   eval t
 
 let specialize t f =
-  bind t (fun v ->
+  bind t ~f:(fun v ->
     match f v with
     | `Known c -> constant c
     | `Unknown -> base v)

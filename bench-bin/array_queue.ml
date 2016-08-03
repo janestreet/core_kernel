@@ -42,7 +42,7 @@ let queue_pipeline () =
 ;;
 
 let blit_transfer_tests =
-  List.bind [ 0; 1; 2; 4; 8; 16; 32; 64; 128 ] (fun len ->
+  List.bind [ 0; 1; 2; 4; 8; 16; 32; 64; 128 ] ~f:(fun len ->
     let half_len = len / 2 in
     let src = Queue.create () in
     let dst = Queue.create () in

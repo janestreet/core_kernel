@@ -314,7 +314,7 @@ let singleton x = of_list [x]
 include Monad.Make (struct
     type nonrec 'a t = 'a t
 
-    let bind t f =
+    let bind t ~f =
       fold t ~init:empty ~f:(fun t elt ->
         fold (f elt) ~init:t ~f:enqueue_back)
 
@@ -330,7 +330,7 @@ include Monad.Make (struct
 let%test_unit _ =
   [%test_result: int list]
     ~expect:[1;2;3;4]
-    (bind (of_list [[1;2];[3;4]]) of_list
+    (bind (of_list [[1;2];[3;4]]) ~f:of_list
      |> to_list)
 
 let%test_unit _ =
