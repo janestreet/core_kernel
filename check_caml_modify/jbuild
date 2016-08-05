@@ -1,0 +1,5 @@
+(library
+ ((name check_caml_modify)
+  (library_flags (-cclib -Xlinker -cclib --wrap -cclib -Xlinker -cclib caml_modify))
+  (c_names (caml_modify_stub))
+  (preprocess (((pps (ppx_inline_test)) All)))))

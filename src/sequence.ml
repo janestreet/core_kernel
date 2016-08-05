@@ -453,21 +453,6 @@ include Monad.Make(struct
   let return = return
 end)
 
-(* This benchmark demonstrates that using [n] binds takes time quadratic in [n]. This is
-   because Skip nodes are always preserved, and each bind both walks over all the existing
-   nodes and adds at least one more Skip node to the output than was in its input. This is
-   probably not avoidable without making the step function recursive. *)
-let%bench "many binds" [@indexed len = [10; 20; 30; 40; 50]] =
-  let data =
-    let rec go acc n =
-      if n = 0
-      then acc
-      else go (bind acc ~f:return) (n - 1)
-    in
-    go (return ()) len
-  in
-  iter data ~f:ignore
-
 let nth s n =
   if n < 0 then None
   else
@@ -698,19 +683,6 @@ let append s1 s2 =
 
 let%test _ = to_list (append s12345 s12345) = [1;2;3;4;5;1;2;3;4;5]
 let%test _ = to_list (append sempty s12345) = [1;2;3;4;5]
-
-(* This benchmark exhibits quadratic runtime -- a consequence of the fact that using a
-   sequence constructed from [n] appends takes [O(n)] time per element. *)
-let%bench "many appends" [@indexed len = [10; 20; 30; 40; 50]] =
-  let data =
-    let rec go acc n =
-      if n = 0
-      then acc
-      else go (append acc (return ())) (n - 1)
-    in
-    go empty len
-  in
-  iter data ~f:ignore
 
 let concat_map s ~f = bind s ~f
 

@@ -749,17 +749,6 @@ let%test_module "reduce_balanced" = (module struct
           ~expect:(actual_index, expected_num_f) (computed_index, num_f))
 end)
 
-let%bench_fun "reduce_balanced" [@indexed i = [5; 7; 9; 11; 13; 20]] =
-  let l = range 0 (1 lsl i) in
-  fun () ->
-    reduce_balanced l ~f:(+)
-
-let%bench_fun "reduce_imbalanced" [@indexed i = [5; 7; 9; 11; 13; 20]] =
-  let l = range 0 (1 lsl i) in
-  fun () ->
-    reduce l ~f:(+)
-
-
 let groupi l ~break =
   let groups =
     foldi l ~init:[] ~f:(fun i acc x ->

@@ -1,0 +1,21 @@
+(alias
+ ((name runtest)
+  (deps (float_test.exe))
+  (action "./float_test.exe")))
+
+(alias
+ ((name runtest)
+  (deps (pool_caml_modify_check.exe))
+  (action "./pool_caml_modify_check.exe")))
+
+(alias
+ ((name runtest)
+  (deps (just_raise.exe just_raise.expected-output uncaught_exception_test.sh))
+  (action "./uncaught_exception_test.sh")))
+
+(executables
+ ((names (float_test pool_caml_modify_check just_raise))
+  (libraries (check_caml_modify
+              core))))
+
+(toplevel_expect_tests ((libraries (core_kernel))))

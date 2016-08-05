@@ -633,20 +633,6 @@ let round_nearest_half_to_even t =
       else
         ceil_or_succ
 
-let%bench_module "round_nearest_half_to_even" = (module struct
-  let f = of_string "1.5"
-  let g = of_string "1.5000000000001"
-  (* the special case for [add_half_for_round_nearest] *)
-  let z = of_string "0.49999999999999994"
-  let%bench "round_nearest f"              = round_nearest f
-  let%bench "round_nearest g"              = round_nearest g
-  let%bench "round_nearest z"              = round_nearest z
-  let%bench "round_nearest_half_to_even f" = round_nearest_half_to_even f
-  let%bench "round_nearest_half_to_even g" = round_nearest_half_to_even g
-  let%bench "round_nearest_half_to_even z" = round_nearest_half_to_even z
-end)
-
-
 let%test _ = round_nearest_half_to_even                  0.    =  0.
 let%test _ = round_nearest_half_to_even                  0.5   =  0.
 let%test _ = round_nearest_half_to_even                (-0.5)  =  0.
@@ -745,7 +731,6 @@ let%test _ =
 #else
 let int63_round_nearest_exn = int63_round_nearest_portable_alloc_exn
 #endif
-
 
 let%bench_module "round_nearest portability/performance" = (module struct
   let f = if Random.bool () then 1.0 else 2.0
@@ -2152,116 +2137,6 @@ let%test_module _ = (module struct
   let%test _ = iround_nearest_test (of_int max_int)
   let%test _ = iround_nearest_test (of_int min_int)
 end)
-
-
-let%bench_module "Simple" = (module struct
-  (* The [of_string] is so that won't get inlined. The values of [x] and [y] have no
-     special significance. *)
-  let x = of_string "1.0000000001000000111"
-  let y = of_string "2.0000000001000000111"
-
-  let%bench "add" = x +. y
-  let%bench "mul" = x *. y
-  let%bench "div" = x /. y
-  let%bench "exp" = x ** y
-  let%bench "log" = log x
-  let%bench "sqrt"  = sqrt x
-end)
-
-let%bench_module "Rounding" = (module struct
-  let x = of_string "1.0000000001000000111"
-  let%bench "iround_down_exn"         = iround_down_exn         x
-  let%bench "iround_nearest_exn"      = iround_nearest_exn      x
-  let%bench "iround_up_exn"           = iround_up_exn           x
-  let%bench "iround_towards_zero_exn" = iround_towards_zero_exn x
-  let%bench "Pervasives.int_of_float" = Pervasives.int_of_float x
-
-  let%bench_module "imm" = (module struct
-    (* Here we check that rounding functions don't force boxing.  We observe this by
-       noting the lack of allocation when calling with a float that compiler can avoid
-       boxing.  Without the tuning above that allows, e.g., [iround_nearest_exn] to avoid
-       forcing callers to box floats, these allocate:
-
-       Estimated testing time 5s (5 benchmarks x 1s). Change using -quota SECS.
-       ┌─────────────────────────────────────────────────┬──────────┬────────────┐
-       │ Name                                            │ Time/Run │ Percentage │
-       ├─────────────────────────────────────────────────┼──────────┼────────────┤
-       │ [float.ml:Rounding.imm] iround_down_exn         │   3.69ns │     45.10% │
-       │ [float.ml:Rounding.imm] iround_nearest_exn      │   3.96ns │     48.42% │
-       │ [float.ml:Rounding.imm] iround_up_exn           │   8.19ns │    100.00% │
-       │ [float.ml:Rounding.imm] iround_towards_zero_exn │   3.73ns │     45.52% │
-       │ [float.ml:Rounding.imm] Pervasives.int_of_float │   3.36ns │     41.10% │
-       └─────────────────────────────────────────────────┴──────────┴────────────┘ *)
-    let x = [| x |]
-    let%bench "iround_down_exn"         = iround_down_exn         x.(0)
-    let%bench "iround_nearest_exn"      = iround_nearest_exn      x.(0)
-    let%bench "iround_up_exn"           = iround_up_exn           x.(0)
-    let%bench "iround_towards_zero_exn" = iround_towards_zero_exn x.(0)
-    let%bench "Pervasives.int_of_float" = Pervasives.int_of_float x.(0)
-  end)
-end)
-
-(* These tests show the degenerate cases for the OCaml [**] operator.  The slowness of
-   this primitive can be traced back to the implementation of [pow] in [glibc].  Also see
-   our Perf notes for more about this issue. *)
-let%bench_module "pow (**)" = (module struct
-  let%bench "very slow" = 1.0000000000000020 ** 0.5000000000000000
-  let%bench "slow"      = 1.0000000000000020 ** 0.5000000000100000
-  let%bench "slow"      = 1.0000000000000020 ** 0.4999999999000000
-  let%bench "fast"      = 1.0000000000000020 ** 0.4999900000000000
-end)
-
-let%bench_module "int_pow" = (module struct
-  (* Forcing the compiler to box the base is important in these benchmarks: Without the
-     boxing, the compiler was doing something clever to avoid allocation, and this hid the
-     fact that calling int_pow with a boxed argument wasn't merely causing a couple words
-     to be allocated, but was causing int_pow to allocate *on every iteration* inside
-     int_pow.  (That problem with int_pow has been fixed, but we still force the boxing
-     here.) *)
-  let%bench_fun "int_pow x10" [@indexed n = [1;2;3;5;20;61;-61;1010]] =
-    (fun () ->
-       let base = box 1.07 in
-       for _ = 1 to 10 do
-         (* The [0. +.] prevents a certain allocation from occurring (with OCaml 4.02.3,
-            at least).  This allegedly won't matter in future versions of the compiler. *)
-         let _ =  0. +. int_pow base n in ()
-       done
-    )
-
-#ifdef JSC_ARCH_SIXTYFOUR
-  (* Now, some outrageously large exponents one probably never needs.  But if one does
-     need them, the base is probably close to 1. *)
-  let%bench_fun "int_pow huge exponent x10"
-                   [@indexed n = [1_111_111_111; 1_111_111_111_111; Pervasives.max_int]] =
-    (fun () ->
-       let base = box 1.000000000001 in
-       for _ = 1 to 10 do
-         let _ =  0. +. int_pow base n in ()
-       done
-    )
-
-  (* For comparison: *)
-  let%bench_fun "** x10" [@indexed n = [1;2;3;5;20;61;-61;1010]] =
-    (fun () ->
-       let base = box 1.07 in
-       let n = float n in
-       for _ = 1 to 10 do
-         let _ =  0. +. base ** n in ()
-       done
-    )
-
-  let%bench_fun "** huge exponent x10"
-                  [@indexed n = [1_111_111_111; 1_111_111_111_111; Pervasives.max_int]] =
-    (fun () ->
-       let base = box 1.000000000001 in
-       let n = float n in
-       for _ = 1 to 10 do
-         let _ =  0. +. base ** n in ()
-       done
-    )
-#endif
-end)
-
 
 module Test_bounds (
     I : sig

@@ -35,11 +35,3 @@ let nativeint_popcount =
   | 32 -> (fun x -> int32_popcount (Nativeint.to_int32 x)) [@inline]
   | 64 -> (fun x -> int64_popcount (Int64.of_nativeint x)) [@inline]
   | _  -> assert false
-
-(* Using [%bench_fun] to bind the input outside the benchmarked code actually has less
-   overhead then using [%bench] naively. *)
-let%bench_fun "popcount_bench_overhead" = let n = 0  in fun () -> Fn.id              n
-let%bench_fun "int_popcount"            = let n = 0  in fun () -> int_popcount       n
-let%bench_fun "int32_popcount"          = let n = 0l in fun () -> int32_popcount     n
-let%bench_fun "int64_popcount"          = let n = 0L in fun () -> int64_popcount     n
-let%bench_fun "nativeint_popcount"      = let n = 0n in fun () -> nativeint_popcount n

@@ -735,20 +735,12 @@ let%test_module _ = (module struct
   let%test_unit _ = test ()
 end)
 
-let%bench_module "Deque" = (module struct
+let%bench_module "Deque" =
+  (module struct
 
-  (* this is the old way we used to implement the option versions of peek and
-     dequeue, which did a failwithf. *)
-  let%bench_fun "assert_not_empty" =
-    let t = create () in
-    fun () -> try assert_not_empty t "Queue.dequeue_front" with _ -> ()
-
-  let%bench_fun "dequeue_front empty" =
-    let t = create () in
-    fun () -> ignore (dequeue_front t : _ option)
-
-  let%bench_fun "peek_back non-empty" =
-    let t = create () in
-    let () = enqueue_back t 2 in
-    fun () -> ignore (peek_back t : _ option)
-end)
+    (* this is the old way we used to implement the option versions of peek and
+       dequeue, which did a failwithf. *)
+    let%bench_fun "assert_not_empty" =
+      let t = create () in
+      fun () -> try assert_not_empty t "Queue.dequeue_front" with _ -> ()
+  end)

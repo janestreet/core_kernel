@@ -79,9 +79,3 @@ module Make (M : sig val module_name : string end) () = struct
 end
 
 include Make (struct let module_name = "Core_kernel.String_id" end) ()
-
-let%bench_module "String_id" = (module struct
-  let%bench "of_string(AAA)"       = of_string "AAA"
-  let%bench "of_string(AAABBB)"    = of_string "AAABBB"
-  let%bench "of_string(AAABBBCCC)" = of_string "AAABBBCCC"
-end)

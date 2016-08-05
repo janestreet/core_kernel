@@ -343,6 +343,7 @@ module O = struct
   ;;
 end
 
+
 let%bench_module "Core_int_inline_ops" = (module struct
   (* The [of_string] and [Random.bool] are so that the values won't get inlined. *)
   let small = of_string "37"

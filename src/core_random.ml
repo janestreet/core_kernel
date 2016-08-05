@@ -85,11 +85,7 @@ module State = struct
       if n < 0 || n >= bound then
         failwith (Printf.sprintf "random result %d out of bounds (0,%d)" n (bound-1))
     done
-
-  let%bench "random int above 2^30" = int default (1 lsl 40)
 #endif
-
-  let%bench "random int below 2^30" = int default (1 lsl 20)
 
 end
 

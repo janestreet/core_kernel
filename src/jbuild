@@ -1,0 +1,56 @@
+;; config.h is created atomically by discover.sh to avoid a problem where gcc -MM on some
+;; file that includes config.h reads a partial written file, and fails
+(rule
+ ((targets (config.h))
+  (deps (discover.sh test.c))
+  (action "./${<} ${OCAMLC} config.h")))
+
+;; Create the target atomically to avoid having a window where the file is truncated but
+;; not yet written to, which is problematic because the file is committed.
+(rule
+ ((targets (pow_overflow_bounds.ml))
+  (deps (../generate/generate_pow_overflow_bounds.exe))
+  (action "tmp=\"$(mktemp --tmpdir pow_overflowXXXXXX)\"
+           ${<} > \"$tmp\"
+           mv \"$tmp\" ${@}")))
+
+(library
+ ((name core_kernel)
+  (inline_tests ((javascript build_and_run)))
+  (public_name core_kernel)
+  (libraries
+   (bin_prot
+    fieldslib
+    nums
+    ppx_assert_lib
+    ppx_hash_lib
+    ppx_inline_test_lib
+    sexplib
+    typerep_lib
+    variantslib))
+  (c_flags (:standard -D_LARGEFILE64_SOURCE -mpopcnt))
+  (library_flags (-cclib -lrt))
+  (c_names
+   ;; If you add c stubs in here, ask yourself this question: would it make sense/can it
+   ;; be implemented under windows and in javascript? If not, perhaps this piece of code
+   ;; should go in core instead, since core_kernel is supposed to be the portable subset
+   ;; of core.
+   (bigstring_marshal_stubs
+    bigstring_stubs
+    core_array_stubs
+    core_gc_stubs
+    exn_stubs
+    hash_stubs
+    heap_block_stubs
+    int_math_stubs
+    time_ns_stubs))
+  (preprocess (((pps (JANE_KERNEL -check-doc-comments)) All)))
+  (preprocessor_deps (config.h))
+  (js_of_ocaml ())))
+
+(ocamllex (hex_lexer))
+
+(alias
+ ((name save_benchmarks)
+  (deps (inline_benchmarks_runner inline_benchmarks_runner.exe))
+  (action "./inline_benchmarks_runner jenga-save-benchmarks")))

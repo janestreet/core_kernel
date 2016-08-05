@@ -62,11 +62,7 @@ module State = struct
     ; odd_gamma = golden_gamma
     }
 
-  let%bench_fun "of_int" = let i = ref 0 in fun () -> incr i; of_int !i
-
   let copy { seed ; odd_gamma } = { seed ; odd_gamma }
-
-  let%bench_fun "copy" = let t = of_int 0 in fun () -> copy t
 
   let mix_bits z n =
     z lxor (z lsr n)
@@ -118,14 +114,10 @@ module State = struct
       ; odd_gamma = mix_odd_gamma (s + golden_gamma)
       }
 
-  let%bench "create" = create ()
-
   let split t =
     let seed      = mix64         (next_seed t) in
     let odd_gamma = mix_odd_gamma (next_seed t) in
     { seed ; odd_gamma }
-
-  let%bench_fun "split" = let t = of_int 0 in fun () -> split t
 
   let next_int64 t = mix64 (next_seed t)
 
@@ -138,8 +130,6 @@ module State = struct
 end
 
 let bool state = is_odd (State.next_int64 state)
-
-let%bench_fun "bool" = let state = State.of_int 0 in fun () -> bool state
 
 let%test_unit "bool fairness" =
   for _ = 1 to 1_000 do
@@ -311,70 +301,20 @@ let%test_module "random" =
 
   end)
 
-let%bench_fun "int64 all" =
-  let state = State.of_int 0 in
-  fun () -> int64 state ~lo:Int64.min_int ~hi:Int64.max_int |> Int64.to_int
-
-let%bench_fun "int64 nat" =
-  let state = State.of_int 0 in
-  fun () -> int64 state ~lo:0L ~hi:Int64.max_int |> Int64.to_int
-
-let%bench_fun "int64 million" =
-  let state = State.of_int 0 in
-  fun () -> int64 state ~lo:1L ~hi:1_000_000L |> Int64.to_int
-
 let int state ~lo ~hi =
   let lo = Int64.of_int lo in
   let hi = Int64.of_int hi in
   Int64.to_int (int64 state ~lo ~hi)
-
-let%bench_fun "int all" =
-  let state = State.of_int 0 in
-  fun () -> int state ~lo:Pervasives.min_int ~hi:Pervasives.max_int
-
-let%bench_fun "int nat" =
-  let state = State.of_int 0 in
-  fun () -> int state ~lo:0 ~hi:Pervasives.max_int
-
-let%bench_fun "int million" =
-  let state = State.of_int 0 in
-  fun () -> int state ~lo:1 ~hi:1_000_000
 
 let int32 state ~lo ~hi =
   let lo = Int64.of_int32 lo in
   let hi = Int64.of_int32 hi in
   Int64.to_int32 (int64 state ~lo ~hi)
 
-let%bench_fun "int32 all" =
-  let state = State.of_int 0 in
-  fun () -> int32 state ~lo:Int32.min_int ~hi:Int32.max_int |> Int32.to_int
-
-let%bench_fun "int32 nat" =
-  let state = State.of_int 0 in
-  fun () -> int32 state ~lo:0l ~hi:Int32.max_int |> Int32.to_int
-
-let%bench_fun "int32 million" =
-  let state = State.of_int 0 in
-  fun () -> int32 state ~lo:1l ~hi:1_000_000l |> Int32.to_int
-
 let nativeint state ~lo ~hi =
   let lo = Int64.of_nativeint lo in
   let hi = Int64.of_nativeint hi in
   Int64.to_nativeint (int64 state ~lo ~hi)
-
-let%bench_fun "nativeint all" =
-  let state = State.of_int 0 in
-  fun () ->
-    nativeint state ~lo:Nativeint.min_int ~hi:Nativeint.max_int
-    |> Nativeint.to_int
-
-let%bench_fun "nativeint nat" =
-  let state = State.of_int 0 in
-  fun () -> nativeint state ~lo:0n ~hi:Nativeint.max_int |> Nativeint.to_int
-
-let%bench_fun "nativeint million" =
-  let state = State.of_int 0 in
-  fun () -> nativeint state ~lo:1n ~hi:1_000_000n |> Nativeint.to_int
 
 let double_ulp = 2. ** -53.
 
@@ -415,16 +355,6 @@ let float state ~lo ~hi =
 let%bench_fun "unit_float_from_int64" =
   let int64 = 1L in
   fun () -> unit_float_from_int64 int64
-
-let%bench_fun "unit_float" =
-  let state = State.of_int 0 in
-  fun () -> unit_float state
-
-let%bench_fun "float" =
-  let state = State.of_int 0 in
-  let lo = -1_000. in
-  let hi =  1_000. in
-  fun () -> float state ~lo ~hi
 
 let%test_module "float" =
   (module struct

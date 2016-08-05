@@ -85,30 +85,6 @@ let%test_module "int to char conversion" =
 
   end)
 
-let%bench_module "int to char conversion" =
-  (module struct
-
-    let r = ref ' '
-
-    let%bench "unsafe_of_int" =
-      for i = 0 to 255 do
-        r := unsafe_of_int i
-      done
-
-    let%bench "of_int_exn" =
-      for i = 0 to 255 do
-        r := of_int_exn i
-      done
-
-    let%bench "of_int" =
-      for i = 0 to 255 do
-        match of_int i with
-        | Some t -> r := t
-        | None   -> ()
-      done
-
-  end)
-
 let escaped = Char.escaped
 
 let lowercase = Char.lowercase_ascii
@@ -172,20 +148,6 @@ let get_digit_exn t =
 
 let get_digit t = if is_digit t then Some (get_digit_unsafe t) else None
 
-let%bench_module "character classifiers" =
-  (module struct
-    let all_chars = Core_list.init 255 ~f:char_of_int
-
-    let%bench_fun "is_lowercase"  = let f = fun c -> ignore (is_lowercase c) in fun () -> List.iter all_chars ~f
-    let%bench_fun "is_uppercase"  = let f = fun c -> ignore (is_uppercase c)  in fun () -> List.iter all_chars ~f
-    let%bench_fun "is_print"      = let f = fun c -> ignore (is_print c)      in fun () -> List.iter all_chars ~f
-    let%bench_fun "is_whitespace" = let f = fun c -> ignore (is_whitespace c) in fun () -> List.iter all_chars ~f
-    let%bench_fun "is_digit"      = let f = fun c -> ignore (is_digit c)      in fun () -> List.iter all_chars ~f
-    let%bench_fun "is_alpha"      = let f = fun c -> ignore (is_alpha c)      in fun () -> List.iter all_chars ~f
-    let%bench_fun "is_alphanum"   = let f = fun c -> ignore (is_alphanum c)   in fun () -> List.iter all_chars ~f
-
-  end)
-
 module For_quickcheck = struct
 
   module Generator = Quickcheck.Generator
@@ -218,21 +180,6 @@ module For_quickcheck = struct
   let obs =
     Observer.enum 256
       ~f:to_int
-
-  let%bench_module "generators" =
-    (module struct
-
-      (* exported generators: *)
-      let%bench "default"    = Quickcheck.iter gen            ~f:ignore
-      let%bench "digit"      = Quickcheck.iter gen_digit      ~f:ignore
-      let%bench "lowercase"  = Quickcheck.iter gen_lowercase  ~f:ignore
-      let%bench "uppercase"  = Quickcheck.iter gen_uppercase  ~f:ignore
-      let%bench "alpha"      = Quickcheck.iter gen_alpha      ~f:ignore
-      let%bench "alphanum"   = Quickcheck.iter gen_alphanum   ~f:ignore
-      let%bench "print"      = Quickcheck.iter gen_print      ~f:ignore
-      let%bench "whitespace" = Quickcheck.iter gen_whitespace ~f:ignore
-
-    end)
 
   let%test_module "generators" =
     (module struct

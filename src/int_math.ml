@@ -57,20 +57,6 @@ let%test_unit _ =
     done
   done
 
-let%bench_module "int_math_pow" = (module struct
-  let a = Array.init 10000 (fun _ -> Random.int 5)
-  let%bench "random[ 5] x 10000" = Array.iter (fun x -> let _ = int_pow 2 x in ()) a
-  let a = Array.init 10000 (fun _ -> Random.int 10)
-  let%bench "random[10] x 10000" = Array.iter (fun x -> let _ = int_pow 2 x in ()) a
-  let a = Array.init 10000 (fun _ -> Random.int 30)
-  let%bench "random[30] x 10000" = Array.iter (fun x -> let _ = int_pow 2 x in ()) a
-  let a = Array.init 10000 (fun _ -> Random.int 60)
-  let%bench "random[60] x 10000" = Array.iter (fun x -> let _ = int_pow 2 x in ()) a
-  let%bench "2 ^ 30"   = int_pow 2 30
-  let%bench "2L ^ 30L" = int64_pow 2L 30L
-  let%bench "2L ^ 60L" = int64_pow 2L 60L
-end)
-
 module type T = sig
   type t
   include Floatable.S  with type t := t

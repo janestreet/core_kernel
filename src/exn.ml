@@ -156,32 +156,6 @@ let%test_module _ [@tags "no-js"] = (module struct
   let%test _ = check_if_empty_backtrace raise_without_backtrace
 end)
 
-let%bench_module "raise" = (module struct
-
-  exception Test_exception
-
-  let nested_raise raise_f depth =
-    let rec loop d =
-      if d = 0
-      then raise_f Test_exception
-      else loop (d - 1) + 1
-    in
-    (fun () ->
-       try
-         ignore (loop depth : int)
-       with
-       | Test_exception -> ())
-  ;;
-
-  let depths = [ 0; 10; 100; 1000; 10_000 ]
-
-  let%bench_fun "raise" [@indexed depth = depths] = nested_raise raise depth
-
-  let%bench_fun "raise_without_backtrace" [@indexed depth = depths] =
-    nested_raise raise_without_backtrace  depth
-  ;;
-end)
-
 let initialize_module () =
   install_sexp_converters ();
   set_uncaught_exception_handler ();

@@ -206,16 +206,6 @@ let%test_unit _ =
     "string hashing for bigstrings is the same as for standard strings";
   ]
 
-let%bench_module "hash" = (module struct
-  let short_string = of_string "short"
-  let long_string  =
-    of_string "somewhat longer but admittedly still not long by most standards"
-
-  let%bench "hash long string"  = hash long_string
-  let%bench "hash short string" = hash short_string
-
-end)
-
 type t_frozen = t [@@deriving bin_io, compare, hash, sexp]
 
 let equal t1 t2 =
@@ -244,13 +234,6 @@ let%test_module "comparison" = (module struct
   let%test_unit _ = check (of_string "c")   (of_string "cat") ~-1
   let%test_unit _ = check (of_string "cat") (of_string "dog") ~-1
   let%test_unit _ = check (of_string "dog") (of_string "cat")   1
-end)
-
-let%bench_module "comparison" = (module struct
-  let t1 = of_string "microsoft"
-  let t2 = of_string "microsoff"
-
-  let%bench "equal" = equal t1 t2
 end)
 
 (* Reading / writing bin-prot *)
@@ -587,16 +570,6 @@ let unsafe_get_uint64_le_exn t ~pos = uint64_to_int_exn (unsafe_get_int64_t_le t
 
 let unsafe_set_uint64_be = unsafe_set_int64_be
 let unsafe_set_uint64_le = unsafe_set_int64_le
-
-let%bench_module "unsafe_get_*int64_* don't allocate intermediate boxes" =
-  (module struct
-    let t = init 8 ~f:Char.of_int_exn
-    let%bench "int64_be_exn"    = unsafe_get_int64_be_exn  t ~pos:0
-    let%bench "int64_le_exn"    = unsafe_get_int64_le_exn  t ~pos:0
-    let%bench "uint64_be_exn"   = unsafe_get_uint64_be_exn t ~pos:0
-    let%bench "uint64_le_exn"   = unsafe_get_uint64_le_exn t ~pos:0
-  end)
-;;
 
 (* Type annotations on the [t]s are important here: in order for the compiler to generate
    optimized code, it needs to know the fully instantiated type of the bigarray. This is

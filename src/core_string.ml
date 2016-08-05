@@ -127,13 +127,6 @@ module Caseless = struct
         (* the Int module is not available here, and [compare] is string comparison *)
         Polymorphic_compare.compare (length s1) (length s2))
 
-    let%bench_fun "compare" =
-      let s1 =
-        String.init 1000 ~f:(fun i -> "aBcDeFgHiJkLmNoPqRsTuVwXyZ !?.".[i mod 30])
-      in
-      let s2 = copy s1 in
-      fun () -> ignore (compare s1 s2)
-
     let hash_fold_t state t =
       let len = length t in
       let state = ref (hash_fold_int state len) in
@@ -143,10 +136,6 @@ module Caseless = struct
       !state
 
     let hash = [%hash: t]
-
-    let%bench_fun "hash" =
-      let s = String.init 1000 ~f:(fun i -> Char.of_int_exn (i mod 256)) in
-      fun () -> ignore (hash s)
 
     let char_equal_caseless c1 c2 = Char.equal (Char.lowercase c1) (Char.lowercase c2)
 

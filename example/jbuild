@@ -1,0 +1,3 @@
+(executables
+ ((names (o))
+  (libraries (core_kernel))))

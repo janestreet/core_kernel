@@ -195,18 +195,3 @@ module Expert = struct
     let delete = delete_alarm
   end
 end
-
-(* Simple inline benchmarks for GC functions *)
-let%bench "minor_words" = minor_words ()
-let%bench "major_words" = major_words ()
-let%bench "major_plus_minor_words" = major_plus_minor_words ()
-let%bench "promoted_words" = promoted_words ()
-let%bench "minor_collections" = minor_collections ()
-let%bench "major_collections" = major_collections ()
-let%bench "heap_words" = heap_words ()
-let%bench "heap_chunks" = heap_chunks ()
-let%bench "compactions" = compactions ()
-let%bench "top_heap_words" = top_heap_words ()
-let%bench "stat" = stat ()
-let%bench "quick_stat" = quick_stat ()
-let%bench "counters" = counters ()
