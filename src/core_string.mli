@@ -200,8 +200,7 @@ val lfindi : ?pos : int -> t -> f:(int -> char -> bool) -> int option
     such an [i].  By default [pos = length t - 1]. *)
 val rfindi : ?pos : int -> t -> f:(int -> char -> bool) -> int option
 
-(** Warning: the following strip functions have copy-on-write semantics (i.e. they may
-    return the same string passed in) *)
+(** Warning: the following strip functions may return the same string passed in *)
 
 (** [lstrip ?drop s] returns a string with consecutive chars satisfying [drop] (by default
     white space, e.g. tabs, spaces, newlines, and carriage returns) stripped from the
@@ -402,6 +401,15 @@ module Escaping : sig
       [on] (meaning the first unescaped instance) starting from the right. *)
   val rsplit2     : string -> on:char -> escape_char:char -> (string * string) option
   val rsplit2_exn : string -> on:char -> escape_char:char -> (string * string)
+
+  (** These are the same as [lstrip], [rstrip], and [strip] for generic strings, except
+      that they only drop literal characters - they do not drop characters that are
+      escaping or escaped.  This makes sense if you're trying to get rid of junk
+      whitespace (for example), because escaped whitespace seems more likely to be
+      deliberate and not junk. *)
+  val lstrip_literal : ?drop:(char -> bool) -> t -> escape_char:char -> t
+  val rstrip_literal : ?drop:(char -> bool) -> t -> escape_char:char -> t
+  val strip_literal  : ?drop:(char -> bool) -> t -> escape_char:char -> t
 end
 
 

@@ -1664,8 +1664,74 @@ module Escaping = struct
     let%test _ = try lsplit2_exn ~escape_char ~on "foo_,bar" |> Fn.const false with _ -> true
     let%test _ = try rsplit2_exn ~escape_char ~on "foo_,bar" |> Fn.const false with _ -> true
   end)
+
+  (* [last_non_drop_literal] and [first_non_drop_literal] are either both [None] or both
+     [Some]. If [Some], then the former is >= the latter. *)
+  let last_non_drop_literal ~drop ~escape_char t =
+    rfindi t ~f:(fun i c ->
+      not (drop c)
+      || is_char_escaping t ~escape_char i
+      || is_char_escaped t ~escape_char i)
+  let first_non_drop_literal ~drop ~escape_char t =
+    lfindi t ~f:(fun i c ->
+      not (drop c)
+      || is_char_escaping t ~escape_char i
+      || is_char_escaped t ~escape_char i)
+
+  let rstrip_literal ?(drop=Char.is_whitespace) t ~escape_char =
+    match last_non_drop_literal t ~drop ~escape_char with
+    | None -> ""
+    | Some i ->
+      if i = length t - 1
+      then t
+      else prefix t (i + 1)
+  ;;
+
+  let lstrip_literal ?(drop=Char.is_whitespace) t ~escape_char =
+    match first_non_drop_literal t ~drop ~escape_char with
+    | None -> ""
+    | Some 0 -> t
+    | Some n -> drop_prefix t n
+  ;;
+
+  (* [strip t] could be implemented as [lstrip (rstrip t)].  The implementation
+     below saves (at least) a factor of two allocation, by only allocating the
+     final result.  This also saves some amount of time. *)
+  let strip_literal ?(drop=Char.is_whitespace) t ~escape_char =
+    let length = length t in
+    (* performance hack: avoid copying [t] in common cases *)
+    if length = 0 || not (drop t.[0] || drop t.[length - 1])
+    then t
+    else
+      match first_non_drop_literal t ~drop ~escape_char with
+      | None -> ""
+      | Some first ->
+        match last_non_drop_literal t ~drop ~escape_char with
+        | None -> assert false
+        | Some last -> sub t ~pos:first ~len:(last - first + 1)
+  ;;
+
+  let%test _ = strip_literal ~escape_char:' ' " foo bar \n" = " foo bar \n"
+  let%test _ = strip_literal ~escape_char:' ' " foo bar \n\n" = " foo bar \n"
+  let%test _ = strip_literal ~escape_char:'\n' " foo bar \n" = "foo bar \n"
+
+  let%test _ = lstrip_literal ~escape_char:' ' " foo bar \n\n" = " foo bar \n\n"
+  let%test _ = rstrip_literal ~escape_char:' ' " foo bar \n\n" = " foo bar \n"
+  let%test _ = lstrip_literal ~escape_char:'\n' " foo bar \n" = "foo bar \n"
+  let%test _ = rstrip_literal ~escape_char:'\n' " foo bar \n" = " foo bar \n"
+
+  let%test _ = strip_literal ~drop:(Char.is_alpha) ~escape_char:'\\' "foo boar" = " "
+  let%test _ = strip_literal ~drop:(Char.is_alpha) ~escape_char:'\\' "fooboar" = ""
+  let%test _ = strip_literal ~drop:(Char.is_alpha) ~escape_char:'o' "foo boar" = "oo boa"
+  let%test _ = strip_literal ~drop:(Char.is_alpha) ~escape_char:'a' "foo boar" = " boar"
+  let%test _ = strip_literal ~drop:(Char.is_alpha) ~escape_char:'b' "foo boar" = " bo"
+
+  let%test _ = lstrip_literal ~drop:(Char.is_alpha) ~escape_char:'o' "foo boar" = "oo boar"
+  let%test _ = rstrip_literal ~drop:(Char.is_alpha) ~escape_char:'o' "foo boar" = "foo boa"
+  let%test _ = lstrip_literal ~drop:(Char.is_alpha) ~escape_char:'b' "foo boar" = " boar"
+  let%test _ = rstrip_literal ~drop:(Char.is_alpha) ~escape_char:'b' "foo boar" = "foo bo"
+
 end
-;;
 
 module Replace_polymorphic_compare = struct
   let equal = equal
