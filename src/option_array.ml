@@ -23,6 +23,7 @@ module Cheap_option = struct
     type 'a t
     val none : _ t
     val some : 'a -> 'a t
+    val is_none : _ t -> bool
     val is_some : _ t -> bool
     val value_exn    : 'a t -> 'a
     val value_unsafe : 'a t -> 'a
@@ -55,6 +56,8 @@ module Cheap_option = struct
          fixed in https://github.com/ocaml/ocaml/pull/555.  The "memory corruption" test
          below demonstrates the issue.  *)
       Obj.magic `x6e8ee3478e1d7449
+
+    let is_none x = phys_equal x none
 
     let is_some x = not (phys_equal x none)
 
@@ -147,6 +150,8 @@ let length = Uniform_array.length
 let get t i = Cheap_option.to_option (Uniform_array.get t i)
 
 let get_some_exn t i = Cheap_option.value_exn (Uniform_array.get t i)
+
+let is_none t i = Cheap_option.is_none (Uniform_array.get t i)
 
 let is_some t i = Cheap_option.is_some (Uniform_array.get t i)
 

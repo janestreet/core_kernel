@@ -23,6 +23,9 @@ val get : 'a t -> int -> 'a option
 (** Raises if the element number [i] is [None]. *)
 val get_some_exn : 'a t -> int -> 'a
 
+(** [is_none t i = Option.is_none (get t i)] *)
+val is_none : _ t -> int -> bool
+
 (** [is_some t i = Option.is_some (get t i)] *)
 val is_some : _ t -> int -> bool
 
