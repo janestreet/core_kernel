@@ -183,7 +183,7 @@ let find_and_call t key ~if_found ~if_not_found =
      function call in most cases. *)
   match t.table.(slot t key) with
   | Avltree.Empty -> if_not_found key
-  | Avltree.Leaf (k, v) ->
+  | Avltree.Leaf { key = k; value = v } ->
     if compare_key t k key = 0 then if_found v
     else if_not_found key
   | tree ->
@@ -200,7 +200,7 @@ let find =
 let mem t key =
   match t.table.(slot t key) with
   | Avltree.Empty -> false
-  | Avltree.Leaf (k, _) -> compare_key t k key = 0
+  | Avltree.Leaf { key = k; value = _ } -> compare_key t k key = 0
   | tree -> Avltree.mem tree ~compare:(compare_key t) key
 ;;
 
@@ -235,7 +235,7 @@ let fold t ~init ~f =
       for i = 0 to n - 1 do
         match Array.unsafe_get t.table i with
         | Avltree.Empty -> ()
-        | Avltree.Leaf (key, data) -> acc := f ~key ~data !acc
+        | Avltree.Leaf { key; value = data } -> acc := f ~key ~data !acc
         | bucket -> acc := Avltree.fold bucket ~init:!acc ~f
       done
     with
@@ -258,7 +258,7 @@ let iteri t ~f =
       for i = 0 to n - 1 do
         match Array.unsafe_get t.table i with
         | Avltree.Empty -> ()
-        | Avltree.Leaf (key, data) -> f ~key ~data
+        | Avltree.Leaf { key; value = data } -> f ~key ~data
         | bucket -> Avltree.iter bucket ~f
       done
     with

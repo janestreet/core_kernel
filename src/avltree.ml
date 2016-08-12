@@ -14,79 +14,40 @@ let phys_equal = (==)
    use any memory (besides the array cell) *)
 type ('k, 'v) t =
 | Empty
-| Node of ('k, 'v) t * 'k * 'v * int * ('k, 'v) t
-| Leaf of 'k * 'v
+| Node of { mutable left   : ('k, 'v) t
+          ;         key    : 'k
+          ; mutable value  : 'v
+          ; mutable height : int
+          ; mutable right  : ('k, 'v) t
+          }
+| Leaf of {         key    : 'k
+          ; mutable value  : 'v
+          }
 
-(* We do this 'crazy' magic because we want to remove a level of
-   indirection in the tree. If we didn't do this, we'd need to use a
-   record, and then the variant would be a block with a pointer to
-   the record. Where as now the 'record' is tagged with the
-   constructor, thus removing a level of indirection. This is even
-   reasonably safe, certainly no more dangerous than a C binding.
-   The extra checking is probably free, since the block will already
-   be in L1 cache, and the branch predictor is very likely to
-   predict correctly. *)
-module Update : sig
-  val leaf_val    : ('k, 'v) t -> 'v -> unit
-  val node_val    : ('k, 'v) t -> 'v -> unit
-  val node_left   : ('k, 'v) t -> ('k, 'v) t -> unit
-  val node_height : ('k, 'v) t -> int -> unit
-  val node_right  : ('k, 'v) t -> ('k, 'v) t -> unit
-end = struct
-
-  let set_field (to_update: ('k, 'v) t) (n: int) v =
-    Obj.set_field (Obj.repr to_update) n (Obj.repr v)
-
-  let node_left to_update v =
-    match to_update with
-    | Node _ -> set_field to_update 0 v
-    | _ -> assert false
-
-  let leaf_val to_update v =
-    match to_update with
-    | Leaf _ -> set_field to_update 1 v
-    | _ -> assert false
-
-  let node_val to_update v =
-    match to_update with
-    | Node _ -> set_field to_update 2 v
-    | _ -> assert false
-
-  let node_height to_update v =
-    match to_update with
-    | Node _ -> set_field to_update 3 v
-    | _ -> assert false
-
-  let node_right to_update v =
-    match to_update with
-    | Node _ -> set_field to_update 4 v
-    | _ -> assert false
-
-end
 
 let empty = Empty
 
 let height = function
    | Empty -> 0
    | Leaf _ -> 1
-   | Node (_l, _k, _v, height, _r) -> height
+   | Node { left = _; key = _; value = _; height; right = _ } -> height
 
 let invariant compare =
   let legal_left_key key = function
     | Empty -> ()
-    | Leaf (left_key, _)
-    | Node (_, left_key, _, _, _) ->
+    | Leaf { key = left_key; value = _; }
+    | Node { left = _; key = left_key; value = _; height = _; right = _ } ->
       assert (compare left_key key < 0)
   in
   let legal_right_key key = function
     | Empty -> ()
-    | Leaf (right_key, _)
-    | Node (_, right_key, _, _, _) ->
+    | Leaf { key = right_key; value = _; }
+    | Node { left = _; key = right_key; value = _; height = _; right = _ } ->
       assert (compare right_key key > 0)
   in
   let rec inv = function
     | Empty | Leaf _ -> ()
-    | Node (left, k, _v, h, right) ->
+    | Node { left; key = k; value = _; height = h; right } ->
       let (hl, hr) = (height left, height right) in
       inv left;
       inv right;
@@ -106,36 +67,22 @@ let invariant t ~compare = invariant compare t
      differ by at most 3.
 *)
 
-(* In the following comments,
-   't is balanced' means that 'invariant t' does not
-     raise an exception.  This implies of course that each node's height field is
-     correct.
-   't is balanceable' means that height of the left and right subtrees of t
-     differ by at most 3.
-*)
-
 (* @pre: left and right subtrees have correct heights
    @post: output has the correct height *)
-let update_height n =
-  match n with
-  | Node (left, _, _, old_height, right) ->
+let update_height = function
+  | Node ({ left; key = _; value = _; height = old_height; right } as x) ->
     let new_height = (Int.max (height left) (height right)) + 1 in
-    if new_height <> old_height then Update.node_height n new_height
-  | _ -> assert false
-
-(*let balanceable = function
-  | Empty | Leaf _ -> true
-  | Node(l, _, _, _, r) -> abs (height l - height r) <= 3*)
+    if new_height <> old_height then x.height <- new_height
+  | Empty | Leaf _ -> assert false
 
 (* @pre: left and right subtrees are balanced
    @pre: tree is balanceable
    @post: output is balanced (in particular, height is correct)
 *)
 let balance tree =
-  (* assert (balanceable tree); *)
   match tree with
   | Empty | Leaf _ -> tree
-  | Node (left, _k, _v, _h, right) as root_node ->
+  | Node ({ left; key = _; value = _; height = _; right } as root_node) ->
     let hl = height left and hr = height right in
     (* + 2 is critically important, lowering it to 1 will break the Leaf
        assumptions in the code below, and will force us to promote leaf nodes in
@@ -148,52 +95,59 @@ let balance tree =
       (* It cannot be a leaf, because even if right is empty, a leaf
          is only height 1 *)
       | Empty | Leaf _ -> assert false
-      | Node (left_node_left, _, _, _, left_node_right) as left_node ->
+      | Node ({ left = left_node_left; key = _; value = _; height = _;
+                right = left_node_right; }
+              as left_node) ->
         if height left_node_left >= height left_node_right then begin
-          Update.node_left root_node left_node_right;
-          Update.node_right left_node root_node;
-          update_height root_node;
-          update_height left_node;
-          left_node
+          root_node.left  <- left_node_right;
+          left_node.right <- tree;
+          update_height tree;
+          update_height left;
+          left
         end else begin
           (* if right is a leaf, then left must be empty. That means
              height is 2. Even if hr is empty we still can't get here. *)
           match left_node_right with
           | Empty | Leaf _ -> assert false
-          | Node (lr_left, _, _, _, lr_right) as lr_node ->
-            Update.node_right left_node lr_left;
-            Update.node_left root_node lr_right;
-            Update.node_right lr_node root_node;
-            Update.node_left lr_node left_node;
-            update_height left_node;
-            update_height root_node;
-            update_height lr_node;
-            lr_node
+          | Node ({ left = lr_left; key = _; value = _; height = _; right = lr_right; }
+                  as lr_node) ->
+            left_node.right <- lr_left;
+            root_node.left  <- lr_right;
+            lr_node  .right <- tree;
+            lr_node  .left  <- left;
+            update_height left;
+            update_height tree;
+            update_height left_node_right;
+            left_node_right
         end
     end else if hr > hl + 2 then begin
       (* see above for an explanation of why right cannot be a leaf *)
       match right with
       | Empty | Leaf _ -> assert false
-      | Node (right_node_left, _, _, _, right_node_right) as right_node ->
+      | Node ({ left = right_node_left; key = _; value = _; height = _;
+                right = right_node_right }
+              as right_node) ->
         if height right_node_right >= height right_node_left then begin
-          Update.node_right root_node right_node_left;
-          Update.node_left right_node root_node;
-          update_height root_node;
-          update_height right_node;
-          right_node
+          root_node .right <- right_node_left;
+          right_node.left  <- tree;
+          update_height tree;
+          update_height right;
+          right
         end else begin
           (* see above for an explanation of why this cannot be a leaf *)
           match right_node_left with
           | Empty | Leaf _ -> assert false
-          | Node (rl_left, _, _, _, rl_right) as rl_node ->
-            Update.node_left right_node rl_right;
-            Update.node_right root_node rl_left;
-            Update.node_left rl_node root_node;
-            Update.node_right rl_node right_node;
-            update_height right_node;
-            update_height root_node;
-            update_height rl_node;
-            rl_node
+          | Node ({ left = rl_left; key = _; value = _; height = _; right = rl_right }
+                  as rl_node)
+            ->
+            right_node.left  <- rl_right;
+            root_node .right <- rl_left;
+            rl_node   .left  <- tree;
+            rl_node   .right <- right;
+            update_height right;
+            update_height tree;
+            update_height right_node_left;
+            right_node_left
         end
     end else begin
           update_height tree;
@@ -213,10 +167,10 @@ let balance tree =
 let set_left node tree =
   let tree = balance tree in
   match node with
-  | Node (left, _, _, _, _) ->
+  | Node ({ left; key = _; value = _; height = _; right = _ } as r) ->
     if phys_equal left tree then ()
     else
-      Update.node_left node tree;
+      r.left <- tree;
     update_height node
   | _ -> assert false
 
@@ -227,10 +181,10 @@ let set_left node tree =
 let set_right node tree =
   let tree = balance tree in
   match node with
-  | Node (_, _, _, _, right) ->
+  | Node ({ left = _; key = _; value = _; height = _; right } as r) ->
     if phys_equal right tree then ()
     else
-      Update.node_right node tree;
+      r.right <- tree;
     update_height node
   | _ -> assert false
 
@@ -242,28 +196,28 @@ let add =
     match t with
     | Empty ->
       added := true;
-      Leaf (k, v)
-    | Leaf (k', _) ->
+      Leaf { key = k; value = v }
+    | Leaf ({ key = k'; value = _ } as r) ->
       let c = compare k' k in
       (* This compare is reversed on purpose, we are pretending
          that the leaf was just inserted instead of the other way
          round, that way we only allocate one node. *)
       if c = 0 then begin
         added := false;
-        if replace then Update.leaf_val t v;
+        if replace then r.value <- v;
         t
       end else begin
         added := true;
         if c < 0 then
-          Node(t, k, v, 2, Empty)
+          Node { left = t; key = k; value = v; height = 2; right = Empty }
         else
-          Node(Empty, k, v, 2, t)
+          Node { left = Empty; key = k; value = v; height = 2; right = t }
       end
-    | Node (left, k', _, _, right) ->
+    | Node ({left; key = k'; value = _; height = _; right } as r) ->
       let c = compare k k' in
       if c = 0 then begin
         added := false;
-        if replace then Update.node_val t v;
+        if replace then r.value <- v;
       end else if c < 0 then
           set_left t (add left replace added compare k v)
         else
@@ -278,17 +232,17 @@ let add =
 let rec first t =
   match t with
   | Empty -> None
-  | Leaf (k, v)
-  | Node (Empty, k, v, _, _) -> Some (k, v)
-  | Node (l, _, _, _, _) -> first l
+  | Leaf { key = k; value = v }
+  | Node { left = Empty; key = k; value = v; height = _; right = _ } -> Some (k, v)
+  | Node { left = l; key = _; value = _; height = _; right = _ } -> first l
 ;;
 
 let rec last t =
   match t with
   | Empty -> None
-  | Leaf (k, v)
-  | Node (_, k, v, _, Empty) -> Some (k, v)
-  | Node (_, _, _, _, r) -> last r
+  | Leaf { key = k; value = v }
+  | Node { left = _; key = k; value = v; height = _; right = Empty } -> Some (k, v)
+  | Node { left = _; key = _; value = _; height = _; right = r } -> last r
 ;;
 
 
@@ -297,32 +251,34 @@ let rec find_and_call t ~compare k ~if_found ~if_not_found =
      This is really worth 5% on average *)
   match t with
   | Empty -> if_not_found k
-  | Leaf (k', v) ->
+  | Leaf { key = k'; value = v } ->
     if compare k k' = 0 then if_found v
     else if_not_found k
-  | Node (left, k', v, _, right) ->
+  | Node { left; key = k'; value = v; height = _; right } ->
     let c = compare k k' in
     if c = 0 then if_found v
     else if c < 0 then begin
       match left with
       | Empty -> if_not_found k
-      | Leaf (k', v) ->
+      | Leaf { key = k'; value = v }->
         if compare k k' = 0 then if_found v
         else if_not_found k
-      | Node (left, k', v, _, right) ->
+      | Node { left; key = k'; value = v; height = _; right } ->
         let c = compare k k' in
         if c = 0 then if_found v
-        else find_and_call (if c < 0 then left else right) ~compare k ~if_found ~if_not_found
+        else
+          find_and_call (if c < 0 then left else right) ~compare k ~if_found ~if_not_found
     end else begin
       match right with
       | Empty -> if_not_found k
-      | Leaf (k', v) ->
+      | Leaf { key = k'; value = v } ->
         if compare k k' = 0 then if_found v
         else if_not_found k
-      | Node (left, k', v, _, right) ->
+      | Node { left; key = k'; value = v; height = _; right } ->
         let c = compare k k' in
         if c = 0 then if_found v
-        else find_and_call (if c < 0 then left else right) ~compare k ~if_found ~if_not_found
+        else
+          find_and_call (if c < 0 then left else right) ~compare k ~if_found ~if_not_found
     end
 ;;
 
@@ -343,17 +299,19 @@ let remove =
     match tree with
     | Empty -> Empty
     | Leaf _ -> tree
-    | Node (Empty, _, _, _, _) -> tree
-    | Node (left, _, _, _, _) -> min_elt left
+    | Node { left = Empty; key = _; value = _; height = _; right = _ } -> tree
+    | Node { left; key = _; value = _; height = _; right = _ } -> min_elt left
   in
   let rec remove_min_elt tree =
     match tree with
     | Empty -> assert false
     | Leaf _ -> Empty (* This must be the root *)
-    | Node (Empty, _, _, _, right) -> right
-    | Node (Leaf _, k, v, _, Empty) -> Leaf (k, v)
-    | Node (Leaf _, _, _, _, _) as node -> set_left node Empty; tree
-    | Node (left, _, _, _, _) as node ->
+    | Node { left = Empty; key = _; value = _; height = _; right } -> right
+    | Node { left = Leaf _; key = k; value = v; height = _; right = Empty } ->
+      Leaf { key = k; value = v }
+    | Node { left = Leaf _; key = _; value = _; height = _; right = _ } as node ->
+      set_left node Empty; tree
+    | Node { left; key = _; value = _; height = _; right = _ } as node ->
       set_left node (remove_min_elt left); tree
   in
   let merge t1 t2 =
@@ -364,9 +322,11 @@ let remove =
       let tree = min_elt t2 in
       match tree with
       | Empty -> assert false
-      | Leaf (k, v) ->
+      | Leaf { key = k; value = v } ->
         let t2 = balance (remove_min_elt t2) in
-        Node (t1, k, v, Int.max (height t1) (height t2) + 1, t2)
+        Node { left = t1; key = k; value = v;
+               height = Int.max (height t1) (height t2) + 1; right = t2
+             }
       | Node _ as node ->
         set_right node (remove_min_elt t2);
         set_left node t1;
@@ -377,7 +337,7 @@ let remove =
     | Empty ->
       removed := false;
       Empty
-    | Leaf (k', _) ->
+    | Leaf { key = k'; value = _ } ->
       if compare k k' = 0 then begin
         removed := true;
         Empty
@@ -385,7 +345,7 @@ let remove =
         removed := false;
         t
       end
-    | Node (left, k', _, _, right) ->
+    | Node { left; key = k'; value = _; height = _; right } ->
       let c = compare k k' in
       if c = 0 then begin
         removed := true;
@@ -404,22 +364,32 @@ let remove =
 let rec fold t ~init ~f =
   match t with
   | Empty -> init
-  | Leaf (key, data) -> f ~key ~data init
-  | Node (Leaf (lkey, ldata), key, data, _, Leaf (rkey, rdata)) ->
+  | Leaf { key; value = data } -> f ~key ~data init
+  | Node { left = Leaf { key = lkey; value = ldata };
+           key; value = data; height = _;
+           right = Leaf { key = rkey; value = rdata }
+         } ->
     f ~key:rkey ~data:rdata (f ~key ~data (f ~key:lkey ~data:ldata init))
-  | Node (Leaf (lkey, ldata), key, data, _, Empty) ->
-    f ~key ~data (f ~key:lkey ~data:ldata init)
-  | Node (Empty, key, data, _, Leaf (rkey, rdata)) ->
+  | Node { left = Leaf { key = lkey; value = ldata}; key; value = data; height = _;
+           right = Empty }
+    -> f ~key ~data (f ~key:lkey ~data:ldata init)
+  | Node { left = Empty; key; value = data; height = _;
+           right = Leaf { key = rkey; value = rdata }
+         } ->
     f ~key:rkey ~data:rdata (f ~key ~data init)
-  | Node (left, key, data, _, Leaf (rkey, rdata)) ->
+  | Node { left; key; value = data; height = _; right = Leaf { key = rkey; value = rdata }
+         } ->
     f ~key:rkey ~data:rdata (f ~key ~data (fold left ~init ~f))
-  | Node (Leaf (lkey, ldata), key, data, _, right) ->
+  | Node { left = Leaf { key = lkey; value = ldata}; key; value = data; height = _; right } ->
     fold right ~init:(f ~key ~data (f ~key:lkey ~data:ldata init)) ~f
-  | Node (left, key, data, _, right) ->
+  | Node { left; key; value = data; height = _; right } ->
     fold right ~init:(f ~key ~data (fold left ~init ~f)) ~f
 
 let rec iter t ~f =
   match t with
   | Empty                            -> ()
-  | Leaf (key, data)                 -> f ~key ~data
-  | Node (left, key, data, _, right) -> iter left ~f; f ~key ~data; iter right ~f
+  | Leaf { key; value = data }       -> f ~key ~data
+  | Node { left; key; value = data; height = _; right } ->
+    iter left ~f;
+    f ~key ~data;
+    iter right ~f

@@ -7,8 +7,15 @@ let%test_module _ =
 
     type ('k, 'v) t = ('k, 'v) Avltree.t = private
       | Empty
-      | Node of ('k, 'v) t * 'k * 'v * int * ('k, 'v) t
-      | Leaf of 'k * 'v
+      | Node of { mutable left   : ('k, 'v) t
+                ;         key    : 'k
+                ; mutable value  : 'v
+                ; mutable height : int
+                ; mutable right  : ('k, 'v) t
+                }
+      | Leaf of {         key    : 'k
+                ; mutable value  : 'v
+                }
 
     module For_quickcheck = struct
 
@@ -91,8 +98,8 @@ let%test_module _ =
 
       let rec to_map = function
         | Empty                            -> Key.Map.empty
-        | Leaf (key, data)                 -> Key.Map.singleton key data
-        | Node (left, key, data, _, right) ->
+        | Leaf { key; value = data }       -> Key.Map.singleton key data
+        | Node { left; key; value = data; height = _; right } ->
           merge (Key.Map.singleton key data)
             (merge (to_map left) (to_map right))
 

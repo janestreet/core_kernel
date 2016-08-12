@@ -38,32 +38,19 @@
 *)
 
 (** We expose [t] to allow an optimization in Hashtbl that makes iter and fold more than
-    twice as fast.
-
-    It is however private so that ['k] and ['v] are invariant.  This avoids the following
-    segfault.  The segfault works by creating a tree containing [[`A of string]] keys,
-    mutating it to contain [[`A of string | `B of int]] keys, and then pattern matching
-    against keys at the first type.
-
-    {[
-      let added = ref false in
-      let tree =
-        Avltree.add Avltree.empty ~key:0 ~data:(`A "Hello, world!") ~compare
-          ~added ~replace:true
-      in
-      let x : (int, [ `A of string ]) Avltree.t = tree in
-      ignore (Avltree.add tree ~key:0 ~data:(`B 0) ~compare
-                ~added ~replace:true : (_, _) Avltree.t);
-      match Avltree.find x 0 ~compare:compare with
-      | None -> assert false
-      | Some (`A str) -> print_string str (* BOOM! *)
-    ]}
-*)
-type ('k, 'v) t =
-  private
+    twice as fast.  We keep the type private to reduce opportunities for external code to
+    violate avltree invariants. *)
+type ('k, 'v) t = private
   | Empty
-  | Node of ('k, 'v) t * 'k * 'v * int * ('k, 'v) t
-  | Leaf of 'k * 'v
+  | Node of { mutable left   : ('k, 'v) t
+            ;         key    : 'k
+            ; mutable value  : 'v
+            ; mutable height : int
+            ; mutable right  : ('k, 'v) t
+            }
+  | Leaf of {         key    : 'k
+            ; mutable value  : 'v
+            }
 
 val empty : ('k, 'v) t
 
