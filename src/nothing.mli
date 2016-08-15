@@ -21,7 +21,7 @@
     another case where [[@deriving enumerate]] could be useful is when this type is part
     of some larger type.
 *)
-type t = Nothing0.t [@@deriving hash, enumerate]
+type t = (unit, int) Typerep_lib.Std.Type_equal.t [@@deriving hash, enumerate]
 
 (** Because there are no values of type [Nothing.t], a piece of code that has a value of
     type [Nothing.t] must be unreachable.  In such an unreachable piece of code, one can
@@ -33,7 +33,15 @@ type t = Nothing0.t [@@deriving hash, enumerate]
         | Ok i -> i
         | Error n -> Nothing.unreachable_code n
       ;;
-    ]} *)
+    ]}
+
+    Note that the compiler knows that [Nothing.t] is uninhabited, hence this will type
+    without warning:
+
+    {[
+      let f (Ok i : (int, Nothing.t) Result.t) = i
+    ]}
+*)
 val unreachable_code : t -> _
 
 (** It may seem weird that this is identifiable, but we're just trying to anticipate all
