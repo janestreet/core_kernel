@@ -6,26 +6,27 @@ include Hash.Builtin
    Stable_containers. *)
 include
   (Sexplib.Std : sig
-     val sexp_of_array : ('a -> Sexplib.Sexp.t) -> 'a array -> Sexplib.Sexp.t
-     val array_of_sexp : (Sexplib.Sexp.t -> 'a) -> Sexplib.Sexp.t -> 'a array
-     val sexp_of_bool : bool -> Sexplib.Sexp.t
-     val bool_of_sexp : Sexplib.Sexp.t -> bool
-     val sexp_of_char : char -> Sexplib.Sexp.t
-     val char_of_sexp : Sexplib.Sexp.t -> char
-     val sexp_of_exn : exn -> Sexplib.Sexp.t
-     val sexp_of_float : float -> Sexplib.Sexp.t
-     val float_of_sexp : Sexplib.Sexp.t -> float
-     val sexp_of_list : ('a -> Sexplib.Sexp.t) -> 'a list -> Sexplib.Sexp.t
-     val list_of_sexp : (Sexplib.Sexp.t -> 'a) -> Sexplib.Sexp.t -> 'a list
-     val sexp_of_option : ('a -> Sexplib.Sexp.t) -> 'a option -> Sexplib.Sexp.t
-     val option_of_sexp : (Sexplib.Sexp.t -> 'a) -> Sexplib.Sexp.t -> 'a option
-     val sexp_of_string : string -> Sexplib.Sexp.t
-     val string_of_sexp : Sexplib.Sexp.t -> string
-     val ref_of_sexp : (Sexplib.Sexp.t -> 'a) -> Sexplib.Sexp.t -> 'a ref
-     val sexp_of_ref : ('a -> Sexplib.Sexp.t) -> 'a ref -> Sexplib.Sexp.t
-     val unit_of_sexp : Sexplib.Sexp.t -> unit
-     val sexp_of_unit : unit -> Sexplib.Sexp.t
-   end)
+     type nonrec 'a array  = 'a array  [@@deriving sexp]
+     type nonrec bool      = bool      [@@deriving sexp]
+     type nonrec char      = char      [@@deriving sexp]
+     type nonrec exn       = exn       [@@deriving sexp_of]
+     type nonrec float     = float     [@@deriving sexp]
+     type nonrec 'a list   = 'a list   [@@deriving sexp]
+     type nonrec 'a option = 'a option [@@deriving sexp]
+     type nonrec string    = string    [@@deriving sexp]
+     type nonrec 'a ref    = 'a ref    [@@deriving sexp]
+     type nonrec unit      = unit      [@@deriving sexp]
+   end
+   with type 'a array  := 'a array
+   with type bool      := bool
+   with type char      := char
+   with type exn       := exn
+   with type float     := float
+   with type 'a list   := 'a list
+   with type 'a option := 'a option
+   with type string    := string
+   with type 'a ref    := 'a ref
+   with type unit      := unit)
 
 include
   (Std_internal : sig

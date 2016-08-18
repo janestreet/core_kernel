@@ -72,8 +72,10 @@ val unfold : init:'s -> f:('s -> ('a * 's) option) -> 'a t
 val unfold_with : 'a t -> init:'s -> f:('s -> 'a -> ('b, 's) Step.t) -> 'b t
 
 (** [unfold_with_and_finish t ~init ~running_step ~inner_finished ~finishing_step] folds a
-    state through the sequence [t] to create a new sequence.  The new sequence can
-    continue once [t] has finished. *)
+    state through [t] to create a new sequence (like
+    [unfold_with t ~init ~f:running_step]), and then continues the new sequence by
+    unfolding the final state (like
+    [unfold_step ~init:(inner_finished final_state) ~f:finishing_step]). *)
 val unfold_with_and_finish
   :  'a t
   -> init           : 's_a
