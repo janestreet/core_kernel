@@ -121,6 +121,15 @@ let%test_unit "upper/lower_bound_for_int" =
            9223372036854774784.)])
 ;;
 
+(* This is structured slightly differently than in other modules in this library so that
+   we get the behavior of [clamp_unchecked nan ~min ~max = nan] (for any [min] and
+   [max]) for free
+*)
+let clamp_unchecked t ~min ~max =
+  if t < min then min
+  else if max < t then max
+  else t
+
 let box =
   (* Prevent potential constant folding of [+. 0.] in the near ocamlopt future. *)
   let x = if Random.bool () then 0. else 0. in

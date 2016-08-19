@@ -1188,18 +1188,10 @@ module Replace_polymorphic_compare = struct
   let ( <> ) (x : t) y = x <> y
   let between t ~low ~high = low <= t && t <= high
 
-  (* This is structured slightly differently than in other modules in this library so that
-     we get the behavior of [clamp_unchecked nan ~min ~max = nan] (for any [min] and
-     [max]) for free
-  *)
-  let clamp_unchecked t ~min ~max =
-    if t < min then min
-    else if max < t then max
-    else t
-
   let clamp_exn t ~min ~max =
     (* Also fails if [min] or [max] is nan *)
     assert (min <= max);
+    (* clamp_unchecked is in float0.ml *)
     clamp_unchecked t ~min ~max
 
   let clamp t ~min ~max =
@@ -1210,17 +1202,17 @@ module Replace_polymorphic_compare = struct
       Or_error.error "clamp requires [min <= max]"
         (`Min min, `Max max) [%sexp_of: [`Min of T.t] * [`Max of T.t]]
 
-  let%bench_module "clamping" = (module struct
-    (* The [of_string] is to prevent inlining. *)
-    let a = of_string "1.1"
-    let b = of_string "2.1"
-    let c = of_string "2.2"
+  let%test _ = clamp_exn 1.0 ~min:2. ~max:3. = 2.
+  let%test _ = clamp_exn 2.5 ~min:2. ~max:3. = 2.5
+  let%test _ = clamp_exn 3.5 ~min:2. ~max:3. = 3.
 
-    let%bench "clamp_unchecked" = clamp_unchecked ~min:a ~max:b c
+  let%test_unit "clamp" =
+    [%test_result: float Or_error.t] (clamp 3.5 ~min:2. ~max:3.) ~expect:(Ok 3.)
 
-    let%bench "clamp" = clamp ~min:a ~max:b c
+  let%test_unit "clamp nan" =
+    [%test_result: float Or_error.t] (clamp nan ~min:2. ~max:3.) ~expect:(Ok nan)
 
-  end)
+  let%test "clamp bad" = Or_error.is_empty (clamp 2.5 ~min:3. ~max:2.)
 
 end
 
