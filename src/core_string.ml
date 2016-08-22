@@ -1573,19 +1573,24 @@ module Escaping = struct
   ;;
 
   let rindex str ~escape_char char =
-    rindex_from str ~escape_char (String.length str - 1) char
+    if is_empty str
+    then None
+    else rindex_from str ~escape_char (String.length str - 1) char
   ;;
 
   let rindex_exn str ~escape_char char =
     rindex_from_exn str ~escape_char (String.length str - 1) char
   ;;
 
-  let%test_module "rindex_from" = (module struct
+  let%test_module "rindex" = (module struct
     let f = rindex_from ~escape_char:'_'
     let%test _ = f "__" 0 '_' = None
     let%test _ = f "123456_37839" 9 '3' = Some 2
     let%test _ = f "123_2321" 6 '2' = Some 6
     let%test _ = f "123_2321" 5 '2' = Some 1
+
+    let%test _ = rindex "" ~escape_char:'_' 'x' = None
+    let%test _ = rindex "a_a" ~escape_char:'_' 'a' = Some 0
   end)
 
   (* [split_gen str ~escape_char ~on] works similarly to [String.split_gen], with an
