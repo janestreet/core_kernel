@@ -9,7 +9,7 @@ let phys_equal = Caml.( == )
 
 module Sexp = Sexplib.Sexp
 module List = Core_list
-module Field = Core_field
+module Field = Fieldslib.Field
 module Array = Core_array
 
 module Int = struct

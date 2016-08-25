@@ -54,7 +54,7 @@ module Nativeint = Core_nativeint
 
 module Lazy = Core_lazy
 
-module Field = Core_field
+module Field = Fieldslib.Field
 
 module Ref = Ref
 
