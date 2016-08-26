@@ -1,36 +1,41 @@
 (** A rope is a standard data structure that represents a single string as a tree of
-    strings, and supports constant-time concatenation.  The [Rope] module provides a
-    subset of the interface of a standard rope implementation.  A more complete
-    implementation (including Unicode support) is available in the zed library.
+    strings, allowing concatenation to do no work up front -- a string formed by many
+    [Rope] concatenations followed by a [to_string] needs only copy each input to the
+    output once, whereas a string expression looking like [a ^ b ^ c ^ ... ^ z] must
+    create an intermediate string for every concatenation, and will copy the original data
+    into and out of short-lived temporary strings many times.
 
-    Rope concatenation is unlike n-ary string concatenation, [s1 ^ s2 ^ s3 ...], which is
-    quadratic in the number of strings, with each [^] allocating a string.  Rope
-    concatenation:
+    On the other hand, because [String.concat [ s1; s2; s3; ... ]] allocates a single
+    string and copies the inputs into it, [Rope] is no improvement over that usage.
+    [Rope] becomes useful when the construction of the sequence of strings is more
+    complex, e.g. appending on both sides, or recursion.
 
-    {[
-      Rope.(to_string (of_string s1 ^ of_string s2 ^ of_string s3 ^ ...))
-    ]}
+    Any operations that would produce a [Rope] longer than [String.max_length] raise
+    instead. They are not marked with _exn on their names since (at least on 64-bit) this
+    number is far in excess than the size of your memory, so isn't likely to come up in
+    practice.
 
-    is linear, because each [Rope.of_string] and [Rope.(^)] is constant time, and
-    [Rope.to_string] allocates a single string and then copies all the inputs into it.
-
-    Similarly, [String.concat [ s1; s2; s3; ... ]] allocates a single string and copies
-    the inputs into it -- so [Rope] is no improvement over that usage.  [Rope] becomes
-    useful when the construction of the sequence of strings is more complex, e.g.
-    appending on both sides, or recursion.
+    A more fully-featured Rope implementation is available in the zed library.
 *)
 
 type t
 
-(** takes O(1) time *)
+(** Takes O(1) time. The string isn't copied, so don't mutate it. *)
 val of_string : string -> t
 
-(** takes time proportional to [n+m] where [n] is the total size of the result and [m]
-    is the number of strings being concatenated *)
+val empty : t
+
+val is_empty : t -> bool
+val length   : t -> int
+
+(** Allocates a fresh string, so takes time proportional to the total
+    size of the result. *)
 val to_string : t -> string
 
-(** takes O(1) time *)
-val ( ^ ) : t -> t -> t
+(** These take time proportional to the number of [t]'s passed. *)
+val ( ^ )        :      t -> t       -> t
+val concat       : ?sep:t -> t list  -> t
+val concat_array : ?sep:t -> t array -> t
 
-(** Appends the contents of the Rope at the end of a destination buffer *)
+(** Appends the contents of the Rope at the end of a destination buffer. *)
 val add_to_buffer : t -> Buffer.t -> unit

@@ -1,6 +1,14 @@
+open Sexplib.Std
+module Array = Core_array
 module List = Core_list
 module String = Core_string
 
+(* Invariants:
+
+   - [Append (x, y)] must have both [x] and [y] non-empty (complexity analysis
+     of [to_string] relies on it).
+   - Overall length is less than [String.max_length] (so [to_string] can work, at least in
+     principle). *)
 type tree =
   | Base of string
   | Append of tree * tree
@@ -8,6 +16,14 @@ type tree =
 type t = { len : int; tree : tree }
 
 let of_string s = { len = String.length s; tree = Base s }
+
+let empty = of_string ""
+
+let length t = t.len
+let is_empty t = length t = 0
+
+let%test _ = is_empty empty
+let%test _ = not (is_empty (of_string "non-empty"))
 
 let to_string { len; tree } =
   match tree with
@@ -31,7 +47,38 @@ let to_string { len; tree } =
     buf
 ;;
 
-let (^) a b = { len = a.len + b.len; tree = Append (a.tree, b.tree) }
+(* We could imagine loosening the [String.max_length] length restriction if we gave
+   another way of getting data out of [Rope]s other than [to_string]. However, we may then
+   want to consider swapping it with [Int.max_length] to avoid potential overflow. *)
+let (^) a b =
+  if is_empty a then b else if is_empty b then a
+  else if String.max_length - a.len < b.len
+  then Error.raise_s [%message
+         "Rope.(a ^ b) would be longer than String.max_length"
+           (length a : int) (length b : int) (String.max_length : int)]
+  else { len = a.len + b.len; tree = Append (a.tree, b.tree) }
+
+(* Note that it's possible to hit the length restriction while only using logarithmic
+   amounts of memory. *)
+let%test "length overflow" =
+  let x = of_string "x" in
+  Exn.does_raise (fun () -> Fn.apply_n_times ~n:Core_int.num_bits (fun x -> x ^ x) x)
+
+let concat ?(sep=empty) ts =
+  List.reduce ts ~f:(fun x y -> x ^ sep ^ y)
+  |> Option.value ~default:empty
+
+let%test_unit _ =
+  [%test_result: string] ~expect:""
+    (concat ~sep:(of_string ", ") []
+    |> to_string);
+  [%test_result: string] ~expect:"one, two, three"
+    (concat ~sep:(of_string ", ") [of_string "one"; of_string "two"; of_string "three"]
+    |> to_string)
+
+let concat_array ?(sep=empty) ts =
+  Array.reduce ts ~f:(fun x y -> x ^ sep ^ y)
+  |> Option.value ~default:empty
 
 let rec add_to_buffer_internal buffer todo = function
   | Append (s1, s2) -> add_to_buffer_internal buffer (s2::todo) s1
