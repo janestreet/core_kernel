@@ -17,8 +17,18 @@ include Floatable.S with type t := t
 include Identifiable.S with type t := t
 include Comparable.With_zero with type t := t
 
+module Robust_compare : sig
+  module type S = sig
+    (** intended to be a tolerance on human-entered floats *)
+    val robust_comparison_tolerance : float
+    include Robustly_comparable.S with type t := float
+  end
+
+  module Make(T : sig val robust_comparison_tolerance : float end) : S
+end
+
 (** The results of robust comparisons on [nan] should be considered undefined. *)
-include Robustly_comparable.S with type t := t
+include Robust_compare.S
 include Quickcheckable.S with type t := t
 
 (** [validate_ordinary] fails if class is [Nan] or [Infinite]. *)
@@ -37,9 +47,6 @@ val zero : t
 val one : t
 val minus_one : t
 
-(** See {!module:Robust_compare} *)
-val robust_comparison_tolerance : t
-
 (** The difference between 1.0 and the smallest exactly representable floating-point
     number greater than 1.0.  That is:
 
@@ -49,6 +56,8 @@ val robust_comparison_tolerance : t
     order of [x], the roundoff error is on the order of [x *. float_epsilon].
 
     See also: http://en.wikipedia.org/wiki/Machine_epsilon
+
+    (Not to be confused with {!val:robust_comparison_tolerance}.)
 *)
 val epsilon_float : t
 
