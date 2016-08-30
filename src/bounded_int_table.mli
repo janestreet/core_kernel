@@ -41,6 +41,8 @@ val create
   -> unit
   -> ('key, 'data) t
 
+val num_keys : _ t -> int
+
 (** Standard hashtbl functions. *)
 val keys : ('key, _    ) t -> 'key  list
 val data : (_   , 'data) t -> 'data list
