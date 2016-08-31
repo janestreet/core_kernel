@@ -6,8 +6,5 @@ open Oasis2opam_install;;
 generate ~package:"core_kernel"
   [ oasis_lib "core_kernel"
   ; file "META" ~section:"lib"
-  ; file "include/core_params.h" ~section:"lib"
-  ; file "include/jane_common.h" ~section:"lib"
-  ; file "include/ocaml_utils.h" ~section:"lib"
   ; file "src/time_ns_stubs.h" ~section:"lib"
   ]
