@@ -28,6 +28,7 @@ module Fqueue        = Fqueue        .Stable
 module Host_and_port = Host_and_port .Stable
 module Info          = Info          .Stable
 module Int           = Core_int      .Stable
+module Int63         = Core_int63    .Stable
 module Lazy          = Core_lazy     .Stable
 module Map           = Core_map      .Stable
 module Month         = Month         .Stable

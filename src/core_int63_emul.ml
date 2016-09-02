@@ -8,10 +8,26 @@ open Sexplib.Std
 open Bin_prot.Std
 open Hash.Builtin
 
+module Stable = struct
+  module V1 = struct
+    module T = struct
+      type t = int64 [@@deriving bin_io, compare, hash, sexp, typerep]
+    end
+
+    include T
+    module C = Comparator.Stable.V1.Make (T)
+    include C
+    include Comparable.Stable.V1.Make (struct include T include C end)
+  end
+end
+
+module Latest = Stable.V1
+
 module Conv = Int_conversions
 
 module W : sig
-  type t [@@deriving hash, sexp, typerep]
+  type t = Latest.t [@@deriving hash, sexp, typerep]
+  include Comparator.S with type t := t and type comparator_witness = Latest.comparator_witness
   val wrap_exn   : Int64.t -> t
   val wrap_modulo : Int64.t -> t
   val unwrap : t -> Int64.t
@@ -45,6 +61,8 @@ module W : sig
   val compare : t -> t -> int
 end = struct
   type t = int64 [@@deriving hash, typerep]
+  type comparator_witness = Latest.comparator_witness
+  let comparator = Latest.comparator
 
   let wrap_exn x =
     (* Raises if the int64 value does not fit on int63. *)
@@ -101,6 +119,8 @@ open W
 
 module T = struct
   type t = W.t [@@deriving hash, sexp, typerep]
+  type comparator_witness = W.comparator_witness
+  let comparator = W.comparator
 
   let compare = W.compare
 
@@ -257,7 +277,7 @@ end
 include Replace_polymorphic_compare
 
 include Hashable.Make_binable (T)
-include Comparable.Map_and_set_binable (T)
+include Comparable.Map_and_set_binable_using_comparator (T)
 
 let ( / ) = div
 let ( * ) = mul

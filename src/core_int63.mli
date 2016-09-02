@@ -16,9 +16,9 @@
     Code should not explicitly make use of the [private], e.g. via [(i :> int)], since
     such code will not compile on 32-bit platforms. *)
 #ifdef JSC_ARCH_SIXTYFOUR
-include Int_intf.S with type t = private int
+include Int_intf.S_with_stable with type t = private int
 #else
-include Int_intf.S
+include Int_intf.S_with_stable
 #endif
 
 (** Unlike the usual operations, these never overflow, preferring instead to raise. *)

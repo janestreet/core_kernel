@@ -44,6 +44,19 @@ module type Hexable = sig
   end
 end
 
+module type Stable = sig
+  module V1 : sig
+    type t
+    type comparator_witness
+    include Stable_module_types.S0
+      with type t := t
+      with type comparator_witness := comparator_witness
+    include Comparable.Stable.V1.S
+      with type comparable := t
+      with type comparator_witness := comparator_witness
+  end
+end
+
 module type S = sig
   type t [@@deriving bin_io, hash, sexp, typerep]
 
@@ -189,6 +202,13 @@ module type S = sig
       of representable integers. *)
   val of_float_unchecked : float -> t
 
+end
+
+module type S_with_stable = sig
+  include S
+  module Stable : Stable
+    with type V1.t = t
+     and type V1.comparator_witness = comparator_witness
 end
 
 let%test_module _ = (module struct

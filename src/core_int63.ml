@@ -1,25 +1,27 @@
 #import "config.h"
 module type Int_or_more = sig
   type t [@@deriving hash]
-  include Int_intf.S with type t := t
+  include Int_intf.S_with_stable with type t := t
   val of_int : int -> t
   val to_int : t -> int option
   val of_float_unchecked : float -> t
 end
 #ifdef JSC_ARCH_SIXTYFOUR
-include
-  (struct include Core_int let to_int x = Some x end
-   : Int_or_more with type t = private int)
-let bin_shape_t = Bin_prot.Shape.bin_shape_int63
+include (struct
+  include (Core_int : module type of struct include Core_int end
+           with module Stable := Core_int.Stable)
+  module Stable = struct
+    module V1 = struct
+      include Core_int.Stable.V1
+      let bin_shape_t = Bin_prot.Shape.bin_shape_int63
+    end
+  end
+  let bin_shape_t = Stable.V1.bin_shape_t
+  let to_int x = Some x
+end : Int_or_more with type t = private int)
 #else
 include (Core_int63_emul : Int_or_more)
 #endif
-
-let%test _ =
-  let open Bin_prot.Shape in
-  Pervasives.(=)
-    (eval_to_digest_string bin_shape_t)
-    (eval_to_digest_string bin_shape_int63)
 
 module Overflow_exn = struct
   let ( + ) t u =

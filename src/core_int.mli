@@ -7,17 +7,11 @@
     [int]s always fit in a machine word.
 *)
 
-include Int_intf.S with type t = int
-
-(** {9 Conversion functions} *)
-
-val of_int : int -> t
-val to_int : t -> int
-val of_int32 : int32 -> t option
-val to_int32 : t -> int32 option
-val of_int64 : int64 -> t option
-val of_nativeint : nativeint -> t option
-val to_nativeint : t -> nativeint
+(** Note that [int] is already stable by itself, since as a primitive type it is an
+    integral part of the sexp / bin_io protocol.  [Int.Stable] exists only to introduce
+    [Int.Stable.Set] and [Int.Stable.Map], and provide interface uniformity with other
+    stable types. *)
+include Int_intf.S_with_stable with type t = int
 
 (** [ceil_pow2 x] returns the smallest power of 2 that is greater than or equal to [x].
     The implementation may only be called for [x > 0].  Example: [ceil_pow2 17 = 32] *)
@@ -30,19 +24,12 @@ val floor_pow2 : int -> int
 (** [is_pow2 x] returns true iff [x] is a power of 2.  [is_pow2] raises if [x <= 0]. *)
 val is_pow2 : int -> bool
 
-(** Note that [int] is already stable by itself, since as a primitive type it is an
-    integral part of the sexp / bin_io protocol. [Int.Stable] exists only to introduce
-    [Int.Stable.Set] and [Int.Stable.Map], and provide interface uniformity with other
-    stable types. *)
-module Stable : sig
-  module V1 : sig
-    type nonrec t = t
-    type nonrec comparator_witness = comparator_witness
-    include Stable_module_types.S0
-      with type t := t
-      with type comparator_witness := comparator_witness
-    include Comparable.Stable.V1.S
-      with type comparable := t
-      with type comparator_witness := comparator_witness
-  end
-end
+(** {2 Conversion functions} *)
+
+val of_int : int -> t
+val to_int : t -> int
+val of_int32 : int32 -> t option
+val to_int32 : t -> int32 option
+val of_int64 : int64 -> t option
+val of_nativeint : nativeint -> t option
+val to_nativeint : t -> nativeint

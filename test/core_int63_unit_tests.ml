@@ -123,3 +123,15 @@ end
 
 let%test_module "Int63_emul" = (module Make_tests(Core_kernel.Core_int63_emul))
 let%test_module "Int63_maybe_native" = (module Make_tests(Int63))
+
+let%test _ =
+  let open Bin_prot.Shape in
+  Pervasives.(=)
+    (eval_to_digest_string Int63.bin_shape_t)
+    (eval_to_digest_string bin_shape_int63)
+
+let%test _ =
+  let open Bin_prot.Shape in
+  Pervasives.(=)
+    (eval_to_digest_string Int63.Stable.V1.bin_shape_t)
+    (eval_to_digest_string bin_shape_int63)
