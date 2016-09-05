@@ -1,9 +1,6 @@
 (** various combinators for functions *)
 
 (** A 'pipe' operator. *)
-include module type of Deprecate_pipe_bang
-
-(** A pipe operator, equivalent to |!, but this notation is more broadly accepted *)
 external ( |> ) : 'a -> ( 'a -> 'b) -> 'b = "%revapply"
 
 (** produces a function that just returns its first argument *)

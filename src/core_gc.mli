@@ -2,6 +2,8 @@
 
     This is a wrapper around INRIA's standard [Gc] module. *)
 
+open! Import
+
 (*_
 (***********************************************************************)
 (*                                                                     *)

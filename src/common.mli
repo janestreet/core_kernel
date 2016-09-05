@@ -1,4 +1,6 @@
 (** Basic types and definitions required throughout the system. *)
+
+open! Import
 open Sexplib
 
 include module type of Core_pervasives

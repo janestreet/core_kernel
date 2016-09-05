@@ -53,6 +53,8 @@
     ]}
 *)
 
+open! Import
+
 (** The result of a validation.  This effectively contains the list of errors, qualified
     by their location path *)
 type t

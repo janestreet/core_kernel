@@ -1,5 +1,6 @@
 (* Conversions between units of measure based on bytes. *)
 
+open! Import
 open Std_internal
 
 let bytes_per_word =

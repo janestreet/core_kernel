@@ -1,3 +1,5 @@
+open! Import
+
 include Core_list0
 
 module For_quickcheck = struct

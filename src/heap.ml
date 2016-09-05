@@ -1,4 +1,6 @@
+open! Import
 open Std_internal
+
 module Pointer = Pool.Pointer
 
 (* This pool holds nodes that would be represented more traditionally as:

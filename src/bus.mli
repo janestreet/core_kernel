@@ -14,6 +14,7 @@
     meant to avoid unintentional reads from code that should only be writing.
 *)
 
+open! Import
 open Std_internal
 
 (** [Callback_arity] states the type of callbacks stored in a bus.  Using [Callback_arity]

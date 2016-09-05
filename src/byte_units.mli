@@ -1,5 +1,7 @@
 (** Conversions between units of measure based on bytes. *)
 
+open! Import
+
 module Measure : sig
   type t = [ `Bytes | `Kilobytes | `Megabytes | `Gigabytes | `Words ]
   [@@deriving sexp, bin_io]

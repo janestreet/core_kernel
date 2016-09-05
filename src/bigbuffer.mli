@@ -8,6 +8,8 @@
    buffer size, and improves I/O-performance when reading/writing from/to channels.
 *)
 
+open! Import
+
 type t [@@deriving sexp_of]
 (** The abstract type of buffers. *)
 

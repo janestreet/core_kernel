@@ -1,3 +1,4 @@
+open! Import
 open Common
 
 type 'a t = 'a ref = { mutable contents : 'a }

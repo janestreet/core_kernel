@@ -1,3 +1,5 @@
+open! Import
+
 let is_nan x = (x : float) <> x
 
 (* An order-preserving bijection between all floats except for NaNs, and 99.95% of

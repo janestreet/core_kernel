@@ -1,3 +1,5 @@
+open! Import
+
 module Binable = Binable0
 
 (* All the types as exposed in the mli are defined in this [Types] module.  The rest of

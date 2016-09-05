@@ -1,3 +1,5 @@
+open! Import
+
 module Sexp = Sexplib.Sexp
 
 (** For examples see: lib/core/example/quickcheck *)

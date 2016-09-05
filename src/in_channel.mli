@@ -9,6 +9,8 @@
     directly to the major heap. Creating a lot of in_channels can result in many major
     collections and poor performance. *)
 
+open! Import
+
 type t = in_channel
 
 val stdin : t

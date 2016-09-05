@@ -1,5 +1,7 @@
 (* Some code taken from INRIA's buffer module. *)
 
+open! Import
+
 open Bigstring
 
 include Bigbuffer_internal

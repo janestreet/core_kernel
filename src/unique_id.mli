@@ -1,5 +1,6 @@
 (** Functors for creating modules that mint unique identifiers. *)
 
+open! Import
 open Unique_id_intf
 
 module type Id = Id

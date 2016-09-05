@@ -1,3 +1,5 @@
+open! Import
+
 (* A [Time_ns] that uses its alternate sexp representation. *)
 include (Time_ns : (module type of struct include Time_ns end
                      with module Span := Time_ns.Span))

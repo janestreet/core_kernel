@@ -28,13 +28,15 @@
     Note that an [Info.t] can be created from any arbritrary sexp with [Info.t_of_sexp].
 *)
 
+open! Import
+
 module type S = sig
   open Sexplib
 
   (** Serialization and comparison force the lazy message. *)
   type t [@@deriving bin_io, compare, hash, sexp]
 
-  include Invariant_intf.S with type t := t
+  include Base0.Invariant_intf.S with type t := t
 
   (** [to_string_hum] forces the lazy message, which might be an expensive operation.
 

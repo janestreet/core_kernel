@@ -1,3 +1,5 @@
+open! Import
+
 include Make_substring.F (struct
   type t = Bigstring.t
 

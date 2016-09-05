@@ -1,3 +1,5 @@
+open! Import
+
 let polymorphic_equals = (=)
 open Int_replace_polymorphic_compare
 include Binary_searchable_intf

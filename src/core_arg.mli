@@ -2,6 +2,8 @@
 
     The [Command] module is generally recommended over direct use of this library.. *)
 
+open! Import
+
 include module type of Caml.Arg
 
 type t = key * spec * doc

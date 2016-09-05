@@ -11,6 +11,8 @@
     This implementation is not thread-safe.
 *)
 
+open! Import
+
 (** [type 'a t] is the type of objects, where each object is part of an
     equivalence class that is associated with a single value of type ['a]. *)
 type 'a t

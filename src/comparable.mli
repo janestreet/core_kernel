@@ -1,3 +1,4 @@
+open! Import
 open Comparable_intf
 
 module type Infix               = Infix
@@ -74,7 +75,7 @@ end) : S with type t := T.t
 
 module Make_plain_using_comparator (T : sig
     type t [@@deriving sexp_of]
-    include Comparator.S with type t := t
+    include Core_comparator.S with type t := t
   end) : S_plain
   with type t := T.t
   with type comparator_witness := T.comparator_witness

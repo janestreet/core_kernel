@@ -1,5 +1,6 @@
 #import "config.h"
 
+open! Import
 open Int_replace_polymorphic_compare
 open Sexplib.Conv
 open Pool_intf

@@ -1,3 +1,5 @@
+open! Import
+
 include Bin_prot.Binable
 open Sexplib.Std
 open Bin_prot.Std

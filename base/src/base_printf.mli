@@ -1,4 +1,3 @@
-
 val fprintf  : out_channel -> ('r, out_channel, unit) format -> 'r
 val printf   :                ('r, out_channel, unit) format -> 'r
 val eprintf  :                ('r, out_channel, unit) format -> 'r

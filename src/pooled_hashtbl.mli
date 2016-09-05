@@ -8,6 +8,8 @@
     that garbage collection and the [caml_modify] write barrier are a significant part of
     your execution time. *)
 
+open! Import
+
 include Core_hashtbl_intf.Hashtbl
 
 (** [resize t size] ensures that [t] can hold at least [size] entries without resizing

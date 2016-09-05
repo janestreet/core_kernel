@@ -8,6 +8,8 @@
  * queue (e.g. iter, fold, for_all, exists) and if so, raise an exception.
  *)
 
+open! Import
+
 (* for tail-recursive versions of List functions
    Can't open Std_internal due to cyclic dependencies
 *)

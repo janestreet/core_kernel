@@ -1,6 +1,8 @@
 (** An interface for stacks that follows [Core]'s conventions, as opposed to OCaml's
     standard [Stack] module. *)
 
+open! Import
+
 module type S = sig
 
   type 'a t [@@deriving bin_io, sexp]

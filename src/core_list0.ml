@@ -1,9 +1,11 @@
-module List = StdLabels.List
-module String = StdLabels.String
+open! Import
 open Typerep_lib.Std
 open Sexplib.Std
 open Bin_prot.Std
 open Hash.Builtin
+
+module List   = StdLabels.List
+module String = StdLabels.String
 
 module Random = Core_random
 

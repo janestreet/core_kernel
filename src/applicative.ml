@@ -1,3 +1,5 @@
+open! Import
+
 include Applicative_intf
 
 module Make2 (X : Basic2) : S2 with type ('a, 'e) t := ('a, 'e) X.t = struct

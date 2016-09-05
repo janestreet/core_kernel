@@ -1,5 +1,6 @@
 (** An abstract type of scale factors *)
 
+open! Import
 open Std_internal
 
 type t [@@deriving hash]

@@ -4,6 +4,8 @@
     See [stable_unit_test_intf.ml] for documentation regarding the argument module
     types. *)
 
+open! Import
+
 (** We provide separate access to sexp serialization and deserialization tests because
     some stable types will have varying sexp serializations.  Notably, Time.sexp_of_t
     depends on the local timezone. For such types it is still important to check that all

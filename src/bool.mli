@@ -1,3 +1,5 @@
+open! Import
+
 type t = bool [@@deriving hash, bin_io, sexp, typerep]
 
 include Comparable.S     with type t := t

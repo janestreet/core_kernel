@@ -9,6 +9,8 @@
     unmarshal will segfault.
 *)
 
+open! Import
+
 #import "config.h"
 
 (** In 64bit architectures, we expose [type t = private int] so that the compiler can

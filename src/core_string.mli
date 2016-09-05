@@ -1,6 +1,8 @@
 (** An extension of the standard StringLabels. If you open! Core.Std, you'll get
     these in the String module. *)
 
+open! Import
+
 type t = string [@@deriving hash, bin_io, sexp, typerep]
 
 (** [Caseless] compares and hashes strings ignoring case, so that for example

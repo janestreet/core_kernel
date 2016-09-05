@@ -29,6 +29,8 @@
     sequence (the [f] passed to [unfold]) raises, in which case the exception will
     cascade. *)
 
+open! Import
+
 type +'a t [@@deriving compare, sexp_of]
 type 'a sequence = 'a t
 

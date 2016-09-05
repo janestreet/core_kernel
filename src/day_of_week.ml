@@ -1,3 +1,5 @@
+open! Import
+
 module Array   = Core_array
 module Int     = Core_int
 module List    = Core_list

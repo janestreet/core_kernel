@@ -1,6 +1,8 @@
 (** An interface for creating unit tests to check stability of sexp and bin-io
     serializations *)
 
+open! Import
+
 
 module type Arg = sig
   type t [@@deriving sexp, bin_io]

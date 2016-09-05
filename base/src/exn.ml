@@ -1,6 +1,7 @@
+open Sexplib.Std
+
 module Sexp = Sexplib.Sexp
 module Conv = Sexplib.Conv
-open Sexplib.Std
 
 let sexp_of_exn = Conv.sexp_of_exn
 let sexp_of_exn_opt = Conv.sexp_of_exn_opt

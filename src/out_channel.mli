@@ -1,3 +1,5 @@
+open! Import
+
 type t = out_channel
 
 val stdout : t

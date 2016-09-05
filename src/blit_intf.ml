@@ -1,6 +1,8 @@
 (** Standard type for [blit] functions, and reusable code for validating [blit]
     arguments. *)
 
+open! Import
+
 (** If [blit : (src, dst) blit], then [blit ~src ~src_pos ~len ~dst ~dst_pos] blits [len]
     values from [src] starting at position [src_pos] to [dst] at position [dst_pos].
     Furthermore, [blit] raises if [src_pos], [len], and [dst_pos] don't specify valid

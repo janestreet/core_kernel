@@ -1,7 +1,7 @@
 (** An internal-only module factored out due to a circular dependency between core_array
     and core_list.  Contains code for permuting an array. *)
 
-module Random = Core_random
+module Random = Base_random
 
 let swap t i j =
   let tmp = t.(i) in

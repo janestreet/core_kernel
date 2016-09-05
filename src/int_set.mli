@@ -6,6 +6,8 @@
     throw exceptions since some of the code is not tail-recursive.
 *)
 
+open! Import
+
 type t
 
 val empty : t

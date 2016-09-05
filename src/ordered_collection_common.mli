@@ -1,3 +1,5 @@
+open! Import
+
 (** [normalize length_fun thing_with_length i] is just [i], unless
     [i] is negative, in which case it's [length_fun thing_with_length + i].
     This is used by various python-style slice functions. *)

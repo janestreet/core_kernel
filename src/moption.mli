@@ -1,6 +1,8 @@
 (** A [Moption] is a mutable option, like ['a option ref], but with a more efficient
     implementation; in particular, [set_some] does not allocate. *)
 
+open! Import
+
 type 'a t [@@deriving sexp_of]
 
 include Invariant.S1 with type 'a t := 'a t

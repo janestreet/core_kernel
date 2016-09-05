@@ -10,6 +10,8 @@
 
     All operations are amortized O(1) with a small constant. *)
 
+open! Import
+
 type 'a t [@@deriving bin_io, sexp]
 
 include Binary_searchable.S1 with type 'a t := 'a t

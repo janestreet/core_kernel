@@ -18,6 +18,8 @@
     A more fully-featured Rope implementation is available in the zed library.
 *)
 
+open! Import
+
 type t
 
 (** Takes O(1) time. The string isn't copied, so don't mutate it. *)

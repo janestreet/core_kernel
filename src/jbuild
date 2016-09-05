@@ -19,7 +19,8 @@
   (inline_tests ((javascript build_and_run)))
   (public_name core_kernel)
   (libraries
-   (bin_prot
+   (base
+    bin_prot
     fieldslib
     nums
     ppx_assert_lib
@@ -39,9 +40,7 @@
     bigstring_stubs
     core_array_stubs
     core_gc_stubs
-    exn_stubs
     hash_stubs
-    heap_block_stubs
     int_math_stubs
     time_ns_stubs))
   (preprocess (((pps (JANE_KERNEL -check-doc-comments)) All)))

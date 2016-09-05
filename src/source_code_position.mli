@@ -1,6 +1,7 @@
 (** One typically obtains a [Source_code_position.t] using a [[%here]] expression, which
     is implemented by the [ppx_here] preprocessor. *)
 
+open! Import
 
 (** See INRIA's OCaml documentation for a description of these fields. *)
 type t

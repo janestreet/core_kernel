@@ -18,6 +18,8 @@
     to get the [int] from a [Positive_int.t].
 *)
 
+open! Import
+
 module type Raw = sig
   type t [@@deriving sexp]
 

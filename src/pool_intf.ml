@@ -25,6 +25,8 @@
     to help debug incorrect pointer usage.
 *)
 
+open! Import
+
 module Int63 = Core_int63
 
 (** [S] is the module type for a pool. *)

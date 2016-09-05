@@ -6,6 +6,8 @@
     For instance, [Async.Std.Rpc.Pipe_rpc.t] is parameterized by an error type, but a user
     may want to define a Pipe RPC that can't fail. *)
 
+open! Import
+
 (** Having [[@@deriving enumerate]] may seem strange due to the fact that generated
     [val all : t list] is the empty list, so it seems like it could be of no use.
 

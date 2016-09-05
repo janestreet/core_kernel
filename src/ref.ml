@@ -1,3 +1,5 @@
+open! Import
+
 module T = struct
   (* In the definition of [t], we do not have [[@@deriving bin_io, compare, sexp]] because
      in general, syntax extensions tend to use the implementation when available rather

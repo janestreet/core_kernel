@@ -1,3 +1,5 @@
+open! Import
+
 module T0 = struct
   open Typerep_lib.Std
   open Sexplib.Std

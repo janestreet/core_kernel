@@ -1,3 +1,5 @@
+open! Import
+
 module type Applicative                        = Applicative.S
 module type Binable                            = Binable0.S
 module type Comparable                         = Comparable.S

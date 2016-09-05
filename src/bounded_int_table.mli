@@ -19,6 +19,7 @@
     of the table, not [num_keys].
 *)
 
+open! Import
 open Std_internal
 
 type ('key, 'data) t [@@deriving sexp_of]

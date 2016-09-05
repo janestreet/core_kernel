@@ -1,4 +1,6 @@
+open! Import
 open Std_internal
+
 include Fdeque
 
 let enqueue     = enqueue_back

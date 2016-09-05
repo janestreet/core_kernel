@@ -2,6 +2,8 @@
     may be set only once. If one tries to set it twice a run time
     error is generated. *)
 
+open! Import
+
 exception Already_set
 
 type 'a t [@@deriving bin_io, sexp]

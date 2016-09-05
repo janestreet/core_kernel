@@ -43,6 +43,8 @@
     [Key.hash].
  *)
 
+open! Import
+
 (** For many students of ocaml, using hashtables is complicated by the
     functors.  Here are a few tips: *)
 

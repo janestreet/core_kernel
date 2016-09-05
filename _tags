@@ -2,10 +2,14 @@
 <**/*>: thread
 # This prevents the implicit addition of -ppx options by ocamlfind
 <**/*>: predicate(custom_ppx)
+<base/src/*.ml>: for-pack(Base0)
 <src/*.ml>: for-pack(Core_kernel)
+<base/src/*.ml{,i}>: pp(ppx-jane -dump-ast -inline-test-drop -bench-drop -inline-test-lib fake_for_drop)
+<base/src/*.ml{,i}>: pp_deps_for_base_src
+<base/wrapper/*.ml{,i}>: pp(ppx-jane -dump-ast -inline-test-drop -bench-drop -inline-test-lib fake_for_drop)
 <src/*.ml{,i}>: pp(ppx-jane -dump-ast -inline-test-drop -bench-drop -inline-test-lib fake_for_drop)
 <src/*.ml{,i}>: pp_deps_for_src
-<src/*.c>: needs_headers
 <check_caml_modify/*>: caml_modify_wrapper
+<src/*>: ugly_hack_to_workaround_ocamlbuild_nightmare
 # OASIS_START
 # OASIS_STOP

@@ -11,6 +11,8 @@
       [transfer]'s arguments are labeled.
 *)
 
+open! Import
+
 type 'a t [@@deriving bin_io, sexp]
 
 include Container.S1 with type 'a t := 'a t

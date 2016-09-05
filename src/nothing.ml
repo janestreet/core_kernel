@@ -1,3 +1,5 @@
+open! Import
+
 (* This uses [Typerep_lib....] to avoid a cyclic dependency... *)
 let unreachable_code : (unit, int) Typerep_lib.Std.Type_equal.t -> _ = function _ -> .
 

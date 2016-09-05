@@ -4,6 +4,8 @@
     for every container-like data structure (Array, List, String, ...) to ensure a
     consistent interface. *)
 
+open! Import
+
 open Perms.Export
 
 (** [Continue_or_stop.t] is used by the [f] argument to [fold_until] in order to

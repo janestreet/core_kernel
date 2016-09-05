@@ -1,3 +1,5 @@
+open! Import
+
 include Caml.Arg
 
 type t = key * spec * doc

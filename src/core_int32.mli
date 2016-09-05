@@ -10,6 +10,8 @@
     [Int32.t] is boxed on both 32-bit and 64-bit machines.
 *)
 
+open! Import
+
 include Int_intf.S with type t = int32
 
 val of_int : int -> t option

@@ -1,6 +1,8 @@
+open! Import
 open Int_replace_polymorphic_compare
 open Hash.Builtin
 open Sexplib.Std
+
 module Sexp = Sexplib.Sexp
 
 module List  = Core_list0

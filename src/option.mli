@@ -1,4 +1,6 @@
 
+open! Import
+
 type 'a t = 'a option [@@deriving bin_io, compare, hash, sexp, typerep]
 
 include Container.S1      with type 'a t := 'a t

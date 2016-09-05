@@ -1,3 +1,4 @@
+open! Import
 open Std_internal
 
 include Univ_map_intf

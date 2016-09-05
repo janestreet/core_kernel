@@ -1,3 +1,5 @@
+open! Import
+
 type compare =
   [`no_polymorphic_compare]
   -> [`no_polymorphic_compare]

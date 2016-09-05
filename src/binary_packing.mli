@@ -9,6 +9,8 @@
    is no difference because endian-ness only changes the order of bytes, not bits.
 *)
 
+open! Import
+
 type endian = [ `Big_endian | `Little_endian ] [@@deriving compare, hash, sexp]
 
 

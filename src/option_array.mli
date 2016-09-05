@@ -3,6 +3,8 @@
     instead.  It uses a special representation for [None] that's guaranteed to never
     collide with any representation of [Some x]. *)
 
+open! Import
+
 type 'a t [@@deriving sexp, bin_io]
 
 val empty : _ t

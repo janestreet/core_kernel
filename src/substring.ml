@@ -1,3 +1,5 @@
+open! Import
+
 module String = Bytes
 
 include Make_substring.F (struct

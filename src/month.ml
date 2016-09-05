@@ -1,3 +1,5 @@
+open! Import
+
 module Stable = struct
   module V1 = struct
     type t =

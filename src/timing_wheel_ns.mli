@@ -1,3 +1,4 @@
+open! Import
 open Timing_wheel_ns_intf
 
 include Timing_wheel

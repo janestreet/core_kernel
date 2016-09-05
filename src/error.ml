@@ -2,6 +2,8 @@
    [Error] and [Or_error] to be used in various places.  Please avoid adding new
    dependencies. *)
 
+open! Import
+
 include Info
 
 let raise t = raise (to_exn t)

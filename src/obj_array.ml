@@ -1,3 +1,4 @@
+open! Import
 open Int_replace_polymorphic_compare
 
 module Sexp = Sexplib.Sexp

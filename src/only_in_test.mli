@@ -32,6 +32,8 @@
        Only_in_test.return (factorial 100)]
 *)
 
+open! Import
+
 type 'a t
 
 include Monad.S with type 'a t := 'a t

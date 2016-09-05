@@ -11,6 +11,8 @@
    do not violate the above assumptions.  It is prudent to disassemble the .o file (using
    [objdump -dr]) and examine it. *)
 
+open! Import
+
 open Std_internal
 
 (* This [Uopt] type is not exposed to users, and is only used as an [Elt.value] field. *)

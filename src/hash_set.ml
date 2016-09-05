@@ -1,3 +1,4 @@
+open! Import
 module Hashtbl = Core_hashtbl
 module List = StdLabels.List
 open Sexplib

@@ -1,3 +1,5 @@
+open! Import
+
 include Doubly_linked
 
 let add = insert_first

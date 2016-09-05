@@ -1,3 +1,5 @@
+open! Import
+
 module Binable = Binable0
 module Map = Core_map
 module Sexp = Sexplib.Sexp
@@ -26,7 +28,7 @@ end
 
 module Make_using_comparator (T : sig
   type t [@@deriving bin_io, compare, sexp]
-  include Comparator.S with type t := t
+  include Core_comparator.S with type t := t
   include Stringable.S with type t := t
   val hash : t -> int
   val module_name : string

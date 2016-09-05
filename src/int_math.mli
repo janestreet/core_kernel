@@ -1,6 +1,8 @@
 (** This module is not exposed in Core.Std.  Instead, these functions are accessed and
    commented in the various Core modules implementing [Int_intf.S]. *)
 
+open! Import
+
 (*_ This interface is not defined in int_intf.ml because we don't want users of Core to
     think about it. *)
 module type T = sig

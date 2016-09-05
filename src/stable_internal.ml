@@ -1,3 +1,4 @@
+open! Import
 include Bin_prot.Std
 include Hash.Builtin
 

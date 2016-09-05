@@ -1,3 +1,4 @@
+open! Import
 open Std_internal
 
 type ('key, 'a, 'cmp, 'enum) t = ('key, 'a, 'cmp) Map.t

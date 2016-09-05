@@ -1,3 +1,5 @@
+open! Import
+
 module Binable = Binable0
 
 module type Accessors = sig

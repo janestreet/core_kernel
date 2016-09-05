@@ -1,8 +1,10 @@
+open! Import
 open Typerep_lib.Std
 open Sexplib.Std
 open Bin_prot.Std
 open Hash.Builtin
 open Result.Export
+
 module List = ListLabels
 module Sexp = Sexplib.Sexp
 module String = Core_string
@@ -1277,7 +1279,7 @@ let sign_or_nan t : Sign_or_nan.t =
   else Nan
 
 let%test_unit "robust_sign" =
-  List.iter ~f:(fun (input,expect) -> assert (Sign.equal (robust_sign input) expect))
+  List.iter ~f:(fun (input,expect) -> assert (Core_sign.equal (robust_sign input) expect))
     [ (1e-6,         Pos)
     ; (1e-8,         Zero)
     ; (-1e-6,        Neg)
@@ -1289,7 +1291,7 @@ let%test_unit "robust_sign" =
     ]
 
 let%test_unit "sign_exn" =
-  List.iter ~f:(fun (input,expect) -> assert (Sign.equal (sign_exn input) expect))
+  List.iter ~f:(fun (input,expect) -> assert (Core_sign.equal (sign_exn input) expect))
     [ (1e-30,        Pos)
     ; (-0.,          Zero)
     ; (0.,           Zero)

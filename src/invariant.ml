@@ -1,7 +1,8 @@
+open! Import
 open Fieldslib
 open Sexplib.Conv
 
-include Invariant_intf
+include Base0.Invariant_intf
 
 let failwiths = Error.failwiths
 

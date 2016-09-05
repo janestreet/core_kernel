@@ -8,6 +8,7 @@
     This is similar to [Univ] in spirit.
 *)
 
+open! Import
 open Std_internal
 
 include module type of Univ_map_intf

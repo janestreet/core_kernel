@@ -6,4 +6,6 @@
     does NOT make sense to use this in an mli, since it makes no guarantee at that level.
 *)
 
+open! Import
+
 type t = float [@@deriving bin_io, sexp, compare, hash]

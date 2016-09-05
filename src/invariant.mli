@@ -1,1 +1,3 @@
-include Invariant_intf.Invariant
+open! Import
+
+include Base0.Invariant_intf.Invariant

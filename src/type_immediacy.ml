@@ -4,6 +4,8 @@
    representations are tested thoroughly in [../test/test_witness.ml] and
    [../test/test_conversions.ml]
 *)
+
+open! Import
 open Typerep_lib.Std
 
 module List = ListLabels

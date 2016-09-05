@@ -5,6 +5,8 @@
     Amortized running times assume that enqueue/dequeue are used sequentially, threading
     the changing deque through the calls. *)
 
+open! Import
+
 type 'a t [@@deriving bin_io, compare, hash, sexp]
 
 (** [Container] operations traverse deque elements front-to-back, like [Front_to_back]

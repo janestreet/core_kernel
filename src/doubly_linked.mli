@@ -24,6 +24,7 @@
     5. Another property permitted by (3) and (4) is that [length] is O(1).
 *)
 
+open! Import
 open Sexplib
 
 module Elt : sig

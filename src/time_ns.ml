@@ -1,4 +1,5 @@
 #import "config.h"
+open! Import
 open Std_internal
 
 let round_nearest = Float.int63_round_nearest_exn

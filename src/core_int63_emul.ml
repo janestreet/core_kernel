@@ -3,21 +3,30 @@
    This is the same kind of encoding as OCaml int on 64bit architecture.
    The only difference being the lowest bit (immediate bit) set to 1.
 *)
+
+open! Import
 open Typerep_lib.Std
 open Sexplib.Std
 open Bin_prot.Std
 open Hash.Builtin
 
-module Stable = struct
+module Stable_workaround = struct
   module V1 = struct
     module T = struct
-      type t = int64 [@@deriving bin_io, compare, hash, sexp, typerep]
+      type t = int64 [@@deriving bin_io, compare, hash, sexp]
+      let bin_shape_t = Bin_prot.Shape.bin_shape_int63
     end
 
     include T
-    module C = Comparator.Stable.V1.Make (T)
+    module C = Core_comparator.Stable.V1.Make (T)
     include C
     include Comparable.Stable.V1.Make (struct include T include C end)
+  end
+end
+
+module Stable = struct
+  module V1 = struct
+    include Stable_workaround.V1
   end
 end
 
@@ -26,8 +35,8 @@ module Latest = Stable.V1
 module Conv = Int_conversions
 
 module W : sig
-  type t = Latest.t [@@deriving hash, sexp, typerep]
-  include Comparator.S with type t := t and type comparator_witness = Latest.comparator_witness
+  type t = Latest.t [@@deriving typerep]
+  include (module type of struct include Latest end with type t := t)
   val wrap_exn   : Int64.t -> t
   val wrap_modulo : Int64.t -> t
   val unwrap : t -> Int64.t
@@ -61,8 +70,7 @@ module W : sig
   val compare : t -> t -> int
 end = struct
   type t = int64 [@@deriving hash, typerep]
-  type comparator_witness = Latest.comparator_witness
-  let comparator = Latest.comparator
+  include (Latest : module type of struct include Latest end with type t := t)
 
   let wrap_exn x =
     (* Raises if the int64 value does not fit on int63. *)
@@ -189,16 +197,14 @@ module T = struct
     with _ -> invalid_str str
 
   include Binable0.Of_binable
-      (struct
-        type t = int64 [@@deriving bin_io]
-      end)
+      (W)
       (struct
         type t = W.t
         let of_binable = wrap_exn
         let to_binable = unwrap
       end)
 
-  let bin_shape_t = Bin_prot.Shape.bin_shape_int63
+  let bin_shape_t = W.bin_shape_t
 end
 
 include T

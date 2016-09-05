@@ -1,3 +1,4 @@
+open! Import
 open Std_internal
 
 (* the module [T] serves to enforce the invariant that all Blang.t values are in a

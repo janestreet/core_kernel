@@ -1,3 +1,4 @@
+open! Import
 open Std_internal
 
 module Weak = Caml.Weak

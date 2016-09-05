@@ -1,6 +1,8 @@
 (** Module types for a [binary_search] function for a sequence, and functors for building
     [binary_search] functions. *)
 
+open! Import
+
 (** An [Indexable] type is a finite sequence of elements indexed by consecutive integers
     [0] ... [length t - 1].  [get] and [length] must be O(1) for the resulting
     [binary_search] to be lg(n). *)

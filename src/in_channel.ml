@@ -1,3 +1,5 @@
+open! Import
+
 module String = Core_string
 
 type t = in_channel

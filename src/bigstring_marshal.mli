@@ -4,6 +4,8 @@
     and an exception is raised if that index is invalid.  The default is 0.
 *)
 
+open! Import
+
 (** marshals value [_] to the bigstring at most [len] bytes. *)
 val marshal_blit
   : ?flags : Marshal.extern_flags list  (** default = [] *)

@@ -28,6 +28,7 @@
     determined by the comparison function.
 *)
 
+open! Import
 open Std_internal
 
 type ('key, 'a, 'cmp, 'enum) t = private ('key, 'a, 'cmp) Map.t

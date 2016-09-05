@@ -1,3 +1,4 @@
+open! Import
 open Sexplib.Std
 open Bin_prot.Std
 open Hash.Builtin

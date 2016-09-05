@@ -1,5 +1,6 @@
 (** Utilities for printing debug messages. *)
 
+open! Import
 open Sexplib
 
 (** [eprint message] prints to stderr [message], followed by a newline and flush.  This is

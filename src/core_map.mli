@@ -79,6 +79,7 @@
     which used for trees since the comparator is not known.
 *)
 
+open! Import
 open Core_map_intf
 
 module Tree : sig

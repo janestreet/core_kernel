@@ -6,6 +6,8 @@
     rendered values, deserializing sexps, and typechecking.  Consider using
     [Bounded_index] to label fixed pools of resources such as cores in a cpu, worker
     processes in a parallel application, or machines in a cluster. *)
+
+open! Import
 open! Std_internal
 
 module type S = sig

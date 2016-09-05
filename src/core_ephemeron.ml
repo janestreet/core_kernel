@@ -1,3 +1,4 @@
+open! Import
 open Std_internal
 
 module Ephemeron = Caml.Ephemeron.K1

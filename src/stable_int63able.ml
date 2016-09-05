@@ -1,3 +1,5 @@
+open! Import
+
 module type S = sig
   include Stable_module_types.S0
 

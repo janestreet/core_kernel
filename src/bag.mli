@@ -8,6 +8,8 @@
 
     It is an error to modify a bag ([add], [remove], [remove_one], ...) during iteration
     ([fold], [iter], ...).  *)
+
+open! Import
 open Std_internal
 
 module Elt : sig

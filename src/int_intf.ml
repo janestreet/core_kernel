@@ -1,3 +1,5 @@
+open! Import
+
 module type Round = sig
   type t
 

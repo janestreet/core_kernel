@@ -3,6 +3,8 @@
     elements in addition to the normal heap operations. *)
 
 
+open! Import
+
 module Hashtbl = Core_hashtbl
 module Heap = Heap.Removable
 

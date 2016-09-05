@@ -1,3 +1,5 @@
+open! Import
+
 module String = Caml.BytesLabels
 
 module Stable_workaround = struct
@@ -10,7 +12,7 @@ module Stable_workaround = struct
       type t = string [@@deriving hash, bin_io, sexp]
       let compare = String.compare
     end
-    module C = Comparator.Stable.V1.Make (T)
+    module C = Core_comparator.Stable.V1.Make (T)
     module M = Comparable.Stable.V1.Make (struct include T include C end)
   end
 end

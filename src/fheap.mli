@@ -1,6 +1,8 @@
 (** Functional Heap implementation based on pairing-heap algorithm and immutable data
     structures.  See more info at http://en.wikipedia.org/wiki/Pairing_heap. *)
 
+open! Import
+
 (** [t_of_sexp] is not supported, because of the difficulty involved in recreating the
     comparison function. *)
 type 'a t [@@deriving sexp_of]

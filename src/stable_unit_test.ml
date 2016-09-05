@@ -1,3 +1,4 @@
+open! Import
 open Std_internal
 
 module Make_sexp_deserialization_test (T : Stable_unit_test_intf.Arg) = struct

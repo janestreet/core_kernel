@@ -13,6 +13,7 @@
     matches [Creators3_with_comparator] but [Accessors3] (without comparator).
 *)
 
+open! Import
 open T
 
 module Binable = Binable0

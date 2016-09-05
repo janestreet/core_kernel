@@ -1,5 +1,6 @@
 (** New code should use the [@@deriving sexp] syntax directly.  These module types
     (S, S1, S2, and S3) are exported for backwards compatibility only. **)
+
 module type S  = sig type              t [@@deriving sexp] end
 module type S1 = sig type 'a           t [@@deriving sexp] end
 module type S2 = sig type ('a, 'b)     t [@@deriving sexp] end

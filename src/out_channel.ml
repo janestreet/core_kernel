@@ -1,3 +1,5 @@
+open! Import
+
 module List = Core_list
 
 type t = out_channel

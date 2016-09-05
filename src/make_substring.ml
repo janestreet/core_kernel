@@ -1,7 +1,10 @@
 (* A substring is a contiguous sequence of characters in a string.  We use a
    functor because we want substrings of [string] and [bigstring].
 *)
+
+open! Import
 open Std_internal
+
 type bigstring = Bigstring.t
 
 module Blit : sig

@@ -1,6 +1,8 @@
 (** Module types and utilities for dealing with types that support the bin-io binary
     encoding. *)
 
+open! Import
+
 open Bin_prot.Binable
 open Bigarray
 

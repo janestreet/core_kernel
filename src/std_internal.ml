@@ -1,14 +1,22 @@
 (* We don't just include Sexplib.Std because one can only define Hashtbl once in this
    module. *)
 
+(* Do not [open! Import] here.  It will shadow modules defined in [Core_kernel] with the
+   corresponding one defined in Base. *)
+
 (* handy shortcuts *)
 include Common
 
-module Set = Core_set
-module Map = Core_map
-module Array = Core_array
+module Exn    = Base.Exn
+module Staged = Base.Staged
+
+module Set     = Core_set
+module Map     = Core_map
+module Array   = Core_array
 module Hashtbl = Core_hashtbl
-module String = Core_string
+module Result  = Core_result
+module String  = Core_string
+
 module List = struct
   include Core_list
 
@@ -41,6 +49,7 @@ module Random = Core_random
 module Char = Core_char
 
 module Ordering = Ordering
+module Comparator = Core_comparator
 
 module Bool = Bool
 module Int = Core_int

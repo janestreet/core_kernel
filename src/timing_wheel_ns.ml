@@ -42,6 +42,7 @@
    However, the code is completely new.
 *)
 
+open! Import
 open! Std_internal
 open! Int_replace_polymorphic_compare
 

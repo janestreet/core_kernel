@@ -146,6 +146,8 @@
     because the type has a different witness (e.g. [Sometimes] instead of [Always]).
 *)
 
+open! Import
+
 open Typerep_lib.Std
 
 type 'a t

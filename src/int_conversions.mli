@@ -1,5 +1,7 @@
 (** Conversions between various integer types *)
 
+open! Import
+
 (** Ocaml has the following integer types, with the following bit widths
     on 32-bit and 64-bit architectures.
 

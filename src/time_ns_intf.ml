@@ -1,3 +1,4 @@
+open! Import
 open Std_internal
 
 module type Span = sig

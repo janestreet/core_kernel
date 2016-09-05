@@ -1,3 +1,4 @@
+open! Import
 open Bin_prot.Std
 open Sexplib.Std
 open Hash.Builtin
@@ -24,7 +25,7 @@ module Stable_workaround = struct
 
       let compare (x : t) y = Bool.to_int (x > y) - Bool.to_int (x < y)
     end
-    module C = Comparator.Stable.V1.Make (T)
+    module C = Core_comparator.Stable.V1.Make (T)
     module M = Comparable.Stable.V1.Make (struct include T include C end)
   end
 end

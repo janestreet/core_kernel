@@ -13,6 +13,8 @@
     data structures.
 *)
 
+open! Import
+
 type t [@@deriving sexp_of]
 
 include Blit.     S with type t := t

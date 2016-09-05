@@ -1,3 +1,4 @@
+open! Import
 open Perms.Export
 module Array = StdLabels.Array
 module Core_sequence = Sequence

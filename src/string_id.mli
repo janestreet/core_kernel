@@ -1,6 +1,7 @@
 (** Disallows whitespace around the edges in [of_string] and [t_of_sexp], but doesn't
     check when reading from bin_io. *)
 
+open! Import
 open Std_internal
 
 module type S = sig

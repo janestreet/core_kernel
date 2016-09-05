@@ -14,6 +14,8 @@
     tests, while [Splittable_random] fails some Diehard tests.
 *)
 
+open! Import
+
 module State : sig
   type t
 

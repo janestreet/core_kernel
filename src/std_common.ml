@@ -1,3 +1,5 @@
+open! Import
+
 (* Modules that are overridden by Core.Std *)
 module Bigbuffer         = Bigbuffer
 module Bigstring         = Bigstring

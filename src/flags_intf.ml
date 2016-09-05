@@ -4,6 +4,8 @@
     [Flags] defines a module type [Flags.S], the interface for a flags, and a functor
     [Flags.Make] for creating a flags implementation. *)
 
+open! Import
+
 module Int63 = Core_int63
 
 (** [module type S] is the interface for a set of flags.  Values of [type t] are set of

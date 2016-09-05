@@ -1,3 +1,4 @@
+open! Import
 module Sexp = Sexplib.Sexp
 open Sexplib.Std
 open Bin_prot.Std
@@ -32,7 +33,7 @@ module Sexp_maybe = struct
     include Comparable.Poly (Error)
   end
 
-  type 'a t = ('a, sexp * Error.t) Result.t [@@deriving bin_io, compare, hash]
+  type 'a t = ('a, sexp * Error.t) Core_result.t [@@deriving bin_io, compare, hash]
 
   let sexp_of_t sexp_of_a t =
     match t with

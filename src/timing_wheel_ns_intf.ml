@@ -77,6 +77,8 @@
     v}
 *)
 
+open! Import
+
 module Int63 = Core_int63
 
 (** [Timing_wheel_time] is used to parameterize the timing-wheel interface over both

@@ -18,7 +18,7 @@
 type ('ok, 'err) t = ('ok, 'err) Pervasives.result =
   | Ok of 'ok
   | Error of 'err
-[@@deriving bin_io, sexp, compare, hash]
+[@@deriving sexp, compare, hash]
 
 include Monad.S2 with type ('a,'err) t := ('a,'err) t
 
@@ -80,20 +80,5 @@ module Export : sig
 
   val is_ok    : (_, _) t -> bool
   val is_error : (_, _) t -> bool
-end
-
-module Stable : sig
-  module V1 : sig
-    type nonrec ('ok, 'err) t
-      = ('ok, 'err) t
-      = Ok of 'ok
-      | Error of 'err
-
-    include Stable_module_types.S2 with type ('ok, 'err) t := ('ok, 'err) t
-  end
-
-  (** We export the unit test arg rather than instantiate the functor inside result.ml in
-      order to avoid circular dependencies.  The functor is instantiated in stable.ml. *)
-  module V1_stable_unit_test : Stable_unit_test_intf.Arg
 end
 

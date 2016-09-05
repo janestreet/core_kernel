@@ -1,6 +1,8 @@
 (** A substring is a contiguous set of characters within a string. Creating a substring
     does not copy. Therefore modifying the string also modifies the substring. *)
 
+open! Import
+
 module type S = sig
   (** the type of strings that type t is a substring of *)
   type base

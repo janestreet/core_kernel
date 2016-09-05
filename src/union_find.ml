@@ -8,6 +8,8 @@
  * See the file MLton-LICENSE for details.
  *)
 
+open! Import
+
 include struct
   module List = Core_list
   let phys_equal = (==)

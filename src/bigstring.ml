@@ -1,5 +1,6 @@
 #import "config.h"
 
+open! Import
 open Std_internal
 open Bigarray
 

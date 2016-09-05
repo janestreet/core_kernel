@@ -1,3 +1,4 @@
+open! Import
 open Common
 
 open Bin_prot.Std

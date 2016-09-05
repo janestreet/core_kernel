@@ -15,8 +15,10 @@
 
 (* Sets over ordered types *)
 
+open! Import
+
 module Stable0 = struct
-  module Comparator = Comparator.Stable (* shadow out non-stable stuff *)
+  module Comparator = Core_comparator.Stable (* shadow out non-stable stuff *)
   module Tree0 = struct
     module V1 = struct
       type 'a t =

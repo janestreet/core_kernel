@@ -1,3 +1,4 @@
+open! Import
 open Perms.Export
 
 type 'a t = 'a array [@@deriving bin_io, compare, sexp, typerep]

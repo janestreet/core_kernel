@@ -1,5 +1,6 @@
 (** Signature for use by {! module : Unique_id }. *)
 
+open! Import
 open Std_internal
 
 module type Id = sig

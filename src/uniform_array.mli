@@ -6,6 +6,7 @@
     It can often be faster than [Array] if you use it with non-floats.
 *)
 
+open! Import
 
 (** See [Core.Std.Array] for comments. *)
 type 'a t [@@deriving bin_io, sexp]

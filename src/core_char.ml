@@ -1,3 +1,4 @@
+open! Import
 open Typerep_lib.Std
 open Sexplib.Std
 open Bin_prot.Std

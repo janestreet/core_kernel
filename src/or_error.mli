@@ -6,6 +6,7 @@
     val do_something_linux_specific : (unit -> unit) Or_error.t
 *)
 
+open! Import
 open Sexplib
 
 (** Serialization and comparison of an [Error] force the error's lazy message. **)

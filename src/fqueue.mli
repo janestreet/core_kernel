@@ -5,6 +5,8 @@
     Amortized running times assumes that enqueue/dequeue are used sequentially, threading
     the changing Fqueue through the calls. *)
 
+open! Import
+
 type 'a t [@@deriving bin_io, compare, hash, sexp]
 
 include Container.S1 with type 'a t := 'a t

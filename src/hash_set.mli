@@ -1,5 +1,6 @@
 (** A mutable set of elements *)
 
+open! Import
 open Hash_set_intf
 
 type 'a t [@@deriving sexp_of]

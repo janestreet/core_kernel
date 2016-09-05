@@ -1,5 +1,7 @@
 (* Modules that are not overridden by Core.Std *)
 
+open! Import
+
 include Std_internal
 
 module Applicative                          = Applicative
@@ -23,7 +25,6 @@ module Bytes                                = Core_bytes
 module Byte_units                           = Byte_units
 module Commutative_group                    = Commutative_group
 module Comparable                           = Comparable
-module Comparator                           = Comparator
 module Container                            = Container
 module Day_of_week                          = Day_of_week
 module Debug                                = Debug
@@ -33,7 +34,6 @@ module Either                               = Either
 module Ephemeron                            = Core_ephemeron
 module Equal                                = Equal
 module Error                                = Error
-module Exn                                  = Exn
 module Fdeque                               = Fdeque
 module Fheap                                = Fheap
 module Flags                                = Flags
@@ -88,19 +88,17 @@ module Queue                                = Core_queue
 module Quickcheck_intf                      = Quickcheck_intf
 module Quickcheck                           = Quickcheck
 module Quickcheckable                       = Quickcheckable
-module Result                               = Result
 module Robustly_comparable                  = Robustly_comparable
 module Rope                                 = Rope
 module Sequence                             = Sequence
 module Set_once                             = Set_once
 module Sexp_maybe                           = Core_sexp.Sexp_maybe
 module Sexpable                             = Sexpable
-module Sign                                 = Sign
+module Sign                                 = Core_sign
 module Source_code_position                 = Source_code_position
 module Splittable_random                    = Splittable_random
 module Stable_unit_test                     = Stable_unit_test
 module Stack                                = Core_stack
-module Staged                               = Staged
 module String_id                            = String_id
 module Stringable                           = Stringable
 module Substring                            = Substring

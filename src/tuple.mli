@@ -1,5 +1,7 @@
 (** Functors and signatures for dealing with modules for tuples.  *)
 
+open! Import
+
 (** Signature for a 2-tuple module *)
 module T2 : sig
   type ('a, 'b) t = 'a * 'b [@@deriving sexp, typerep]

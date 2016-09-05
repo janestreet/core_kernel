@@ -1,7 +1,5 @@
-(* The Caml module binds everything that is available in the standard
-   environment so that we can easily refer to standard things even if they've
-   been rebound.
-*)
+(** The Caml module binds everything that is available in the standard environment so that
+    we can easily refer to standard things even if they've been rebound. *)
 
 module Arg = Arg
 module Array = Array

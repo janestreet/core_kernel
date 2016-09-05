@@ -1,5 +1,7 @@
 (* belongs in Common, but moved here to avoid circular dependencies *)
 
+open! Import
+
 type 'a return = { return : 'b. 'a -> 'b }
 
 let with_return (type a) f =

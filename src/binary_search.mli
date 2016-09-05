@@ -21,6 +21,8 @@
    ]}
 *)
 
+open! Import
+
 (** [binary_search ?pos ?len t ~length ~get ~compare which elt] takes [t] that is sorted
     in nondecreasing order according to [compare], where [compare] and [elt] divide [t]
     into three (possibly empty) segments:

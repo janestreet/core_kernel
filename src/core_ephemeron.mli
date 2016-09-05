@@ -9,6 +9,8 @@
     This module is like the OCaml standard library module Ephemerons.K1, except that it
     requires that the keys and data are heap blocks. *)
 
+open! Import
+
 type ('a, 'b) t [@@deriving sexp_of]
 
 val create : unit -> _ t

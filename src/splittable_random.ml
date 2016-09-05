@@ -18,6 +18,8 @@
     (2) Schaathun, "Evaluation of splittable pseudo-random generators", JFP 2015.
         http://www.hg.schaathun.net/research/Papers/hgs2015jfp.pdf
 *)
+
+open! Import
 open Sexplib.Std
 
 module List  = ListLabels

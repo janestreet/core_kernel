@@ -8,6 +8,7 @@
     type.
 *)
 
+open! Import
 open Core_set_intf
 
 (** The type of a set.  The first type parameter identifies the type of the element, and

@@ -7,6 +7,8 @@
     [int]s always fit in a machine word.
 *)
 
+open! Import
+
 (** Note that [int] is already stable by itself, since as a primitive type it is an
     integral part of the sexp / bin_io protocol.  [Int.Stable] exists only to introduce
     [Int.Stable.Set] and [Int.Stable.Map], and provide interface uniformity with other

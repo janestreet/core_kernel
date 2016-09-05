@@ -1,3 +1,4 @@
+open! Import
 open Bigstring
 
 (* Marshalling to/from bigstrings *)

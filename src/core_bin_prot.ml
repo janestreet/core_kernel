@@ -1,3 +1,5 @@
+open! Import
+
 include Bin_prot
 
 module Writer = struct

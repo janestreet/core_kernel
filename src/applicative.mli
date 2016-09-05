@@ -1,3 +1,5 @@
+open! Import
+
 include module type of Applicative_intf
 
 module Make  (X : Basic ) : S  with type  'a      t :=  'a      X.t

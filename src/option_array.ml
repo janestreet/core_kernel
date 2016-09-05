@@ -1,4 +1,6 @@
+open! Import
 open Common
+
 module Sexp = Core_sexp
 module String = Core_string
 

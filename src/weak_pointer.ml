@@ -12,6 +12,7 @@
    when the ephemeron is cleared and it does not keep alive the value pointed to by the
    weak pointer. *)
 
+open! Import
 open! Std_internal
 
 module Ephemeron = Core_ephemeron

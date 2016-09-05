@@ -107,6 +107,8 @@
     explicitness.
 *)
 
+open! Import
+
 (** Every type in this module besides the following two represent permission sets; these
     two represent who is allowed to write in the [Write.t] and [Immutable.t] types. *)
 type nobody [@@deriving bin_io, compare, hash, sexp]

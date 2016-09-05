@@ -4,6 +4,8 @@
     1. We guarantee their serializations independent of the implementation of those modules
     2. Given 1. it is cleaner (and still okay) to separate the code into a separate file *)
 
+open! Import
+
 open Std_internal
 
 module Hashable : sig

@@ -7,6 +7,8 @@
     force representation as a 64-bit value by let-binding.
 *)
 
+open! Import
+
 type t = float [@@deriving hash, typerep]
 
 include Floatable.S with type t := t

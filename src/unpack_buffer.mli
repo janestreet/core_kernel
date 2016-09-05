@@ -4,6 +4,8 @@
     from the buffer to produce a queue of values.
 *)
 
+open! Import
+
 open Std_internal
 
 module Unpack_one : sig

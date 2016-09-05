@@ -1,3 +1,5 @@
+open! Import
+
 #import "config.h"
 module type Int_or_more = sig
   type t [@@deriving hash]

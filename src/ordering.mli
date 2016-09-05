@@ -1,58 +1,9 @@
-(** [Ordering] is intended to make code that matches on the result of a comparison
-    more concise and easier to read.  For example, one would write:
+open! Import
 
-    {[
-      match Ordering.of_int (compare x y) with
-      | Less -> ...
-      | Equal -> ...
-      | Greater -> ...
-    ]}
-
-    rather than:
-
-    {[
-      let r = compare x y in
-      if r < 0 then
-        ...
-      else if r = 0 then
-        ...
-      else
-        ...
-    ]}
-*)
-
-type t =
-| Less
-| Equal
-| Greater
-[@@deriving bin_io, compare, hash, sexp]
-
-(** [of_int n] is:
-
-    {v
-      Less     if n < 0
-      Equal    if n = 0
-      Greater  if n > 0
-    v}
-*)
-val of_int : int -> t
-
-(** [to_int t] is:
-
-    {v
-      Less     -> -1
-      Equal    -> 0
-      Greater  -> 1
-    v}
-
-    It can be useful when writing a comparison function to allow one to return
-    [Ordering.t] values and transform them to [int]s later.
-*)
-val to_int : t -> int
-
-module Export : sig
-  type _ordering = t =
+type t = Base.Ordering.t =
   | Less
   | Equal
   | Greater
-end
+[@@deriving bin_io, compare, hash, sexp]
+
+include module type of Base.Ordering with type t := t

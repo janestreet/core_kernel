@@ -1,5 +1,7 @@
 (** Process ID. *)
 
+open! Import
+
 type t [@@deriving bin_io, hash, sexp]
 
 include Comparable.S with type t := t

@@ -1,3 +1,5 @@
+open! Import
+
 (** Many functions in [Either] focus on just one constructor.  The [Focused] signature
     abstracts over which constructor is the focus.  To use these functions, use the
     [First] or [Second] modules in [S]. *)

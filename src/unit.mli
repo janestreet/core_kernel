@@ -1,5 +1,7 @@
 (** Module for the type [unit].  This is mostly useful for building functor arguments. *)
 
+open! Import
+
 type t = unit [@@deriving hash, typerep]
 
 include Identifiable.S   with type t := t

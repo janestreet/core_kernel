@@ -1,6 +1,8 @@
 (** While I would have preferred to put these functions with Core_int, there is a
     dependency between Core_hashtbl, where it is used, and Core_int that prevents it. *)
 
+open! Import
+
 (** Common bit-twiddling hacks for computing floor/ceiling power of 2, without a built in
     fast bsr (bit scan reverse). As some have observed, these would return 0 for values of
     0, and do not support negative numbers *)

@@ -6,6 +6,8 @@
     specialized to integer keys, and with some other performance differences and usage
     restrictions. *)
 
+open! Import
+
 include Heap_intf.S
 
 (** Removable augments a heap with the ability to remove elements from the heap in lg(n)

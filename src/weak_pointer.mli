@@ -3,6 +3,7 @@
     then the weak pointer remains pointed to the block.  If the block is collected, then
     the weak pointer is cleared. *)
 
+open! Import
 open! Std_internal
 
 type 'a t [@@deriving sexp_of]

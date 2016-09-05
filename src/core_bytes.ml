@@ -1,3 +1,4 @@
+open! Import
 type t = bytes
 
 let create = Bytes.create

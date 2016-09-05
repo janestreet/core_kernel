@@ -4,6 +4,8 @@
     shrink the array.  One can use [set_capacity] to explicitly resize the array.
 *)
 
+open! Import
+
 include Stack_intf.S
 
 (** [capacity t] returns the length of the array backing [t]. *)

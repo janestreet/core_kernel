@@ -1,4 +1,6 @@
 
+open! Import
+
 module type Infix               = Polymorphic_compare_intf.Infix
 module type Polymorphic_compare = Polymorphic_compare_intf.S
 
@@ -26,7 +28,7 @@ module type With_zero = sig
   val is_non_positive : t -> bool
 
   (** Returns [Neg], [Zero], or [Pos] in a way consistent with the above functions. *)
-  val sign : t -> Sign0.t
+  val sign : t -> Base.Sign.t
 end
 
 module type S_common = sig
@@ -50,7 +52,7 @@ module type S_common = sig
 
   module Replace_polymorphic_compare : Polymorphic_compare with type t := t
 
-  include Comparator.S with type t := t
+  include Core_comparator.S with type t := t
 
   include Validate with type t := t
 end
@@ -90,7 +92,7 @@ end
 
 module type Map_and_set_binable = sig
   type t
-  include Comparator.S with type t := t
+  include Core_comparator.S with type t := t
   module Map : Core_map.S_binable
     with type Key.t = t
     with type Key.comparator_witness = comparator_witness

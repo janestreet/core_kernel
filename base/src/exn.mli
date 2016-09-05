@@ -1,4 +1,3 @@
-
 (** [sexp_of_t] uses a global table of sexp converters.  To register a converter for a new
     exception, add [[@@deriving sexp]] to its definition. If no suitable converter is
     found, the standard converter in [Printexc] will be used to generate an atomic

@@ -1,3 +1,4 @@
+open! Import
 open! Stable_internal
 
 module Stable = struct
@@ -37,7 +38,7 @@ module Stable = struct
             else Error.raise_s [%message "invalid sexp for index" ~label:M.label]
         end)
 
-      include Comparator.Stable.V1.Make (struct
+      include Core_comparator.Stable.V1.Make (struct
           type nonrec t = t [@@deriving sexp_of, compare]
         end)
 

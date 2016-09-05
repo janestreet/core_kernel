@@ -1,15 +1,6 @@
 open Sexplib
 
-module Stable0 = struct
-  module V1 = struct
-    type ('a, 'witness) t =
-      { compare   : 'a -> 'a -> int
-      ; sexp_of_t : 'a -> Sexp.t
-      }
-  end
-end
-
-type ('a, 'witness) t = ('a, 'witness) Stable0.V1.t =
+type ('a, 'witness) t =
   { compare   : 'a -> 'a -> int
   ; sexp_of_t : 'a -> Sexp.t
   }
@@ -57,15 +48,4 @@ module Poly = struct
     let compare = Pervasives.compare
     let sexp_of_t = [%sexp_of: _]
   end)
-end
-
-module Stable = struct
-  module V1 = struct
-    include Stable0.V1
-    type ('a, 'b) comparator = ('a, 'b) t
-    module type S = S
-    module type S1 = S1
-    module Make  = Make
-    module Make1 = Make1
-  end
 end

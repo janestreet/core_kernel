@@ -1,5 +1,7 @@
 (** A simple boolean domain-specific language *)
 
+open! Import
+
 (** Blang provides infrastructure for writing simple boolean DSLs.
     All expressions in a Blang language evaluate to a bool.  The language
     is parameterized over another language of base propositions.

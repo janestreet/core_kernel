@@ -5,6 +5,7 @@
     - if queue has >= 2 elements, neither front nor back are empty
 *)
 
+open! Import
 open Std_internal
 
 exception Empty [@@deriving sexp]

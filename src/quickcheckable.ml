@@ -1,3 +1,5 @@
+open! Import
+
 module type S = Quickcheck_intf.S
   with type 'a gen := 'a Quickcheck.gen
   with type 'a obs := 'a Quickcheck.obs

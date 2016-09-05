@@ -15,6 +15,7 @@
     to the appropriate function in core_set.mli.
 *)
 
+open! Import
 open T
 
 module Binable = Binable0

@@ -1,5 +1,7 @@
 (** Character operations. *)
 
+open! Import
+
 (** An alias for the type of characters. *)
 type t = char [@@deriving hash, bin_io, sexp, typerep]
 include Identifiable.S   with type t := t

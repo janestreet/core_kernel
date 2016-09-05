@@ -2,6 +2,10 @@
    [Info], [Error], and [Or_error] to be used in is many places places as possible.
    Please avoid adding new dependencies. *)
 
+module Core_source_code_position0 = Source_code_position0
+
+open! Import
+
 open Sexplib.Std
 open Bin_prot.Std
 open Hash.Builtin
@@ -61,12 +65,12 @@ module Message = struct
 
     module Source_code_position = struct
       module V1 = struct
-        type t = Source_code_position0.Stable.V1.t [@@deriving bin_io]
+        type t = Core_source_code_position0.Stable.V1.t [@@deriving bin_io]
 
         (* [sexp_of_t] as defined here is unstable; this is OK because there is no
            [t_of_sexp].  [sexp_of_t] is only used to produce a sexp that is never
            deserialized as a [Source_code_position]. *)
-        let sexp_of_t = Source_code_position0.sexp_of_t
+        let sexp_of_t = Core_source_code_position0.sexp_of_t
       end
     end
 
@@ -187,7 +191,7 @@ module Stable_v2 = struct
       end)
   end
   include T
-  include Comparator.Stable.V1.Make (T)
+  include Core_comparator.Stable.V1.Make (T)
 end
 
 include (Stable_v2 : sig
@@ -285,7 +289,7 @@ module Stable = struct
       let compare = compare
     end
     include T
-    include Comparator.Stable.V1.Make (T)
+    include Core_comparator.Stable.V1.Make (T)
 
     include Binable.Stable.Of_binable.V1 (Sexp) (struct
         type nonrec t = t

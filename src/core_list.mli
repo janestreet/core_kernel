@@ -5,6 +5,8 @@
     comparison functions on lists are lexicographic.
 *)
 
+open! Import
+
 type 'a t = 'a list [@@deriving bin_io, compare, hash, sexp, typerep]
 
 include Container.S1      with type 'a t := 'a t

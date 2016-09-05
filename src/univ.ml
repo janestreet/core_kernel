@@ -1,3 +1,4 @@
+open! Import
 open Std_internal
 
 module Id = Type_equal.Id

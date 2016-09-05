@@ -1,3 +1,5 @@
+open! Import
+
 module Key = Type_equal.Id
 
 module type S = sig

@@ -31,6 +31,7 @@
     principle, not pass around values of type [Type_equal.t] at run time.
 *)
 
+open! Import
 open Sexplib
 open T
 

@@ -1,4 +1,6 @@
-include Sign0
+open! Import
+
+include Base.Sign
 
 include Identifiable.Make(T)
 

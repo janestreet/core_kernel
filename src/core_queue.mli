@@ -17,6 +17,8 @@
     [blit_transfer] replaces [transfer] but is markedly different; see below.
 *)
 
+open! Import
+
 
 type 'a t [@@deriving bin_io, compare, sexp]
 

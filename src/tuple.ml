@@ -1,3 +1,4 @@
+open! Import
 open Typerep_lib.Std
 
 module type T = sig type t end

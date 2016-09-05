@@ -1,3 +1,4 @@
+open! Import
 open Sexplib.Conv
 module Sexp = Sexplib.Sexp
 module List = ListLabels
@@ -42,7 +43,7 @@ module With_zero
   let is_non_negative t = compare t zero >= 0
   let is_negative     t = compare t zero <  0
   let is_non_positive t = compare t zero <= 0
-  let sign t = Sign0.of_int (compare t zero)
+  let sign t = Base.Sign.of_int (compare t zero)
 end
 
 module Validate_with_zero
@@ -57,7 +58,7 @@ end
 
 module Map_and_set_binable_using_comparator (T : sig
     type t [@@deriving bin_io, compare, sexp]
-    include Comparator.S with type t := t
+    include Core_comparator.S with type t := t
   end) = struct
   include T
   module Map = Core_map.Make_binable_using_comparator (T)

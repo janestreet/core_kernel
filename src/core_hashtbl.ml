@@ -1,9 +1,11 @@
+open! Import
 open Sexplib
 open Sexplib.Conv
 open Int_replace_polymorphic_compare
 open Core_hashtbl_intf
 open With_return
 
+module Avltree = Avltree
 module Binable = Binable0
 
 let failwiths = Error.failwiths

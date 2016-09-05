@@ -8,13 +8,12 @@ let dev_mode = true
 
 let setup_preprocessor_deps = function
   | After_rules ->
+    dep ["pp_deps_for_base_src"] ["base/src/config.h"];
     dep ["pp_deps_for_src"] ["src/config.h"];
   | _ -> ()
 
 let dispatch = function
   | After_rules ->
-    flag  ["c"; "compile"; "needs_headers"] & S[ A"-I"; A "include" ];
-
     flag ["ocaml"; "link"; "native"; "caml_modify_wrapper"]
       (S [A "-cclib";
           A "-Xlinker";
@@ -24,6 +23,38 @@ let dispatch = function
           A "-Xlinker";
           A "-cclib";
           A "caml_modify"]);
+
+    let hack = "ugly_hack_to_workaround_ocamlbuild_nightmare" in
+    mark_tag_used hack;
+    dep [hack] [hack];
+
+    let add_exts fn exts =
+      List.map (fun ext -> fn ^ ext)  exts
+    in
+
+    let mlpack = "base/src/base0.mlpack" in
+    rule hack
+      ~prod:hack
+      ~deps:(mlpack :: add_exts "base/src/base0" [".cmx"; ".cmi"; ".cmo"])
+      (fun _ _ ->
+         let mods = string_list_of_file mlpack in
+         let to_remove =
+           StdLabels.List.map mods ~f:(fun fn ->
+             add_exts ("base/src/" ^ String.uncapitalize_ascii fn)
+               [ ".cmx"
+               ; ".cmi"
+               ; ".cmo"
+               ; ".ml"
+               ; ".mli"
+               ; ".ml.depends"
+               ; ".mli.depends"
+               ; ".o"
+               ])
+           |> List.concat
+         in
+         Seq
+           [ Seq (List.map rm_f to_remove)
+           ; Echo ([], hack) ])
 
   | _ ->
     ()

@@ -1,3 +1,5 @@
+open! Import
+
 module type S = sig
   (** of_sexp and bin_io functions aren't supplied for heaps due to the difficulties in
       reconstructing the correct comparison function when de-serializing. *)

@@ -1,3 +1,5 @@
+open! Import
+
 module List = Core_list
 
 (* INVARIANT: This exception is raised if a list is mutated during a pending iteration.

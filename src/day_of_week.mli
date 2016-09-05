@@ -1,5 +1,7 @@
 (** For representing a day of the week. *)
 
+open! Import
+
 type t =
   | Sun
   | Mon
