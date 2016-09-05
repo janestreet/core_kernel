@@ -33,6 +33,11 @@ module Stable : sig
       val comparator : ('a t, comparator_witness) comparator
     end
 
+    val make
+      :  compare:('a -> 'a -> int)
+      -> sexp_of_t:('a -> Sexp.t)
+      -> (module S_fc with type comparable_t = 'a)
+
     module Make  : module type of Make
     module Make1 : module type of Make1
   end

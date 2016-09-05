@@ -26,6 +26,19 @@ module type S1 = sig
   val comparator : ('a t, comparator_witness) comparator
 end
 
+module type S_fc = sig
+  type comparable_t
+  include S with type t := comparable_t
+end
+
+(** [make] creates a comparator witness for the given comparison. It is intended as a
+    lightweight alternative to the functors below, to be used like so:
+    [include (val Comparator.make ~compare ~sexp_of_t)] *)
+val make
+  :  compare:('a -> 'a -> int)
+  -> sexp_of_t:('a -> Sexp.t)
+  -> (module S_fc with type comparable_t = 'a)
+
 module Poly : S1 with type 'a t = 'a
 
 module S_to_S1 (S : S) : S1

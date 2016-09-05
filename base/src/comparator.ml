@@ -19,6 +19,18 @@ module type S1 = sig
   val comparator : ('a t, comparator_witness) comparator
 end
 
+module type S_fc = sig
+  type comparable_t
+  include S with type t := comparable_t
+end
+
+let make (type t) ~compare ~sexp_of_t =
+  (module struct
+    type comparable_t = t
+    type comparator_witness
+    let comparator = { compare; sexp_of_t }
+  end : S_fc with type comparable_t = t)
+
 module S_to_S1 (S : S) = struct
   type 'a t = S.t
   type comparator_witness = S.comparator_witness

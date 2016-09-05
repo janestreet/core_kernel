@@ -1,6 +1,7 @@
 open! Import
 
 #import "config.h"
+
 module type Int_or_more = sig
   type t [@@deriving hash]
   include Int_intf.S_with_stable with type t := t
@@ -8,7 +9,9 @@ module type Int_or_more = sig
   val to_int : t -> int option
   val of_float_unchecked : float -> t
 end
+
 #ifdef JSC_ARCH_SIXTYFOUR
+
 include (struct
   include (Core_int : module type of struct include Core_int end
            with module Stable := Core_int.Stable)
@@ -22,7 +25,9 @@ include (struct
   let to_int x = Some x
 end : Int_or_more with type t = private int)
 #else
+
 include (Core_int63_emul : Int_or_more)
+
 #endif
 
 module Overflow_exn = struct

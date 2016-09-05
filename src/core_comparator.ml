@@ -22,6 +22,7 @@ module Stable = struct
     type ('a, 'b) comparator = ('a, 'b) t
     module type S = S
     module type S1 = S1
+    let make = make
     module Make  = Make
     module Make1 = Make1
   end
