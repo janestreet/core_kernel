@@ -40,6 +40,10 @@ let value t ~default =
   | Some x -> x
 ;;
 
+let (|?) t default =
+    value t ~default
+;;
+
 let value_exn ?here ?error ?message t =
   match t with
   | Some x -> x
