@@ -11,6 +11,8 @@ module Make
 
   open Timing_wheel
 
+  module Alarm_precision = Alarm_precision
+
   type nonrec 'a t = 'a t [@@deriving sexp_of]
 
   type nonrec 'a t_now = 'a t_now [@@deriving sexp_of]

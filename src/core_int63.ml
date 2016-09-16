@@ -1,83 +1,89 @@
-open! Import
+open Import
 
 #import "config.h"
 
-module type Int_or_more = sig
-  type t [@@deriving hash]
-  include Int_intf.S_with_stable with type t := t
-  val of_int : int -> t
-  val to_int : t -> int option
-  val of_float_unchecked : float -> t
+module Bin = struct
+#ifdef JSC_ARCH_SIXTYFOUR
+  include Binable0.Of_binable(Core_int)(struct
+    type t = Base.Int63.t
+    let of_binable = Base.Int63.of_int
+    let to_binable = Base.Int63.to_int_exn
+  end)
+#else
+  include Binable0.Of_binable(Core_int64)(struct
+    type t = Base.Int63.t
+    let of_binable = Base0.Base_int63_emul.W.wrap_exn
+    let to_binable = Base0.Base_int63_emul.W.unwrap
+  end)
+#endif
+  let bin_shape_t = Bin_prot.Shape.bin_shape_int63
 end
 
-#ifdef JSC_ARCH_SIXTYFOUR
-
-include (struct
-  include (Core_int : module type of struct include Core_int end
-           with module Stable := Core_int.Stable)
-  module Stable = struct
-    module V1 = struct
-      include Core_int.Stable.V1
-      let bin_shape_t = Bin_prot.Shape.bin_shape_int63
+module Stable_workaround = struct
+  module V1 = struct
+    module T = struct
+      type t = Base.Int63.t [@@deriving hash, sexp]
+      include Bin
+      include (Base.Int63 : Base.Comparable.S
+               with type t := t
+               with type comparator_witness = Base.Int63.comparator_witness)
     end
+    include T
+    include Comparable.Stable.V1.Make (T)
   end
-  let bin_shape_t = Stable.V1.bin_shape_t
-  let to_int x = Some x
-end : Int_or_more with type t = private int)
+end
+
+module Stable = struct
+  module V1 = struct
+    include Stable_workaround.V1
+  end
+end
+
+module type Typerepable = sig
+  type t [@@deriving typerep]
+end
+type 'a typerepable = (module Typerepable with type t = 'a)
+let typerep : _ typerepable =
+#ifdef JSC_ARCH_SIXTYFOUR
+  (module Core_int)
 #else
-
-include (Core_int63_emul : Int_or_more)
-
+  (module Core_int64)
 #endif
 
-module Overflow_exn = struct
-  let ( + ) t u =
-    let sum = t + u in
-    if bit_or (bit_xor t u) (bit_xor t (bit_not sum)) < zero
-    then sum
-    else Common.failwiths "( + ) overflow" (t, u, sum) [%sexp_of: t * t * t]
-  ;;
-  let%test_module "( + )" =
-    (module struct
-      let test t = Exn.does_raise (fun () -> t + t)
-      let%test "max_value / 2 + 1"     = test (succ (max_value / of_int 2))
-      let%test "min_value / 2 - 1"     = test (pred (min_value / of_int 2))
-      let%test "min_value + min_value" = test min_value
-      let%test "max_value + max_value" = test max_value
-    end)
-  ;;
-  let ( - ) t u =
-    let diff = t - u in
-    let pos_diff = t > u in
-    if t <> u && Bool.(<>) pos_diff (is_positive diff) then
-      Common.failwiths "( - ) overflow" (t, u, diff) [%sexp_of: t * t * t]
-    else diff
-  ;;
-  let%test_module "( - )" =
-    (module struct
-      let%test "min_value -  1" = Exn.does_raise (fun () -> min_value -     one)
-      let%test "max_value - -1" = Exn.does_raise (fun () -> max_value - neg one)
-      let%test "min_value / 2 - max_value / 2 - 2" =
-        Exn.does_raise (fun () -> min_value / of_int 2 - max_value / of_int 2 - of_int 2)
-      let%test "min_value - max_value" = Exn.does_raise (fun () -> min_value - max_value)
-      let%test "max_value - min_value" = Exn.does_raise (fun () -> max_value - min_value)
-      let%test "max_value - -max_value" =
-        Exn.does_raise (fun () -> max_value - neg max_value)
-    end)
-  ;;
+include (val (Obj.magic typerep : Base.Int63.t typerepable))
 
-  let abs t = if t = min_value then failwith "abs overflow" else abs t
-  let neg t = if t = min_value then failwith "neg overflow" else neg t
+include Identifiable.Extend (Base.Int63) (struct
+    type nonrec t = t
+    include Bin
+  end)
+
+module Hex = struct
+  type nonrec t = t [@@deriving typerep, bin_io]
+  include (Base.Int63.Hex : module type of struct include Base.Int63.Hex end
+           with type t := t)
 end
 
-let%test_unit _ = [%test_result: t] max_value ~expect:(of_int64_exn 4611686018427387903L)
-let%test_unit _ = [%test_result: t] min_value ~expect:(of_int64_exn (-4611686018427387904L))
+include (Base.Int63
+         : module type of struct include Base.Int63 end
+         with type t := t
+         with module Hex := Hex)
 
-let () = assert (Core_int.(=) num_bits 63)
+#ifdef JSC_ARCH_SIXTYFOUR
+let splittable_random random ~lo ~hi =
+  of_int (Splittable_random.int random ~lo:(to_int_exn lo) ~hi:(to_int_exn hi))
+#else
+let splittable_random random ~lo ~hi =
+  let open Base0.Base_int63_emul.W in
+  wrap_exn (Splittable_random.int64 random ~lo:(unwrap lo) ~hi:(unwrap hi))
+#endif
 
-(* Even for ARCH_SIXTYFOUR, we can't use Core_random.State.int, because the bound is very
-   limited in range.  We actually want a bound that spans the type. *)
-let random ?(state = Core_random.State.default) bound =
-  of_int64_exn (Core_random.State.int64 state (to_int64 bound))
-;;
-let%test "typical random 0" = Exn.does_raise (fun () -> random zero)
+include Quickcheck.Make_int (struct
+    type nonrec t = t [@@deriving sexp, compare, hash]
+    include (Replace_polymorphic_compare
+             : Polymorphic_compare_intf.Infix with type t := t)
+    let min_value         = min_value
+    let max_value         = max_value
+    let succ              = succ
+    let pred              = pred
+    let splittable_random = splittable_random
+  end)

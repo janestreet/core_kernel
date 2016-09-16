@@ -25,6 +25,7 @@ module Make (Timing_wheel : Timing_wheel)
   open Timing_wheel
   module Debug = Debug_in_this_dir
 
+  module Alarm_precision = Alarm_precision
   module Interval_num = Interval_num
   module Time = Time
 
@@ -93,9 +94,16 @@ module Make (Timing_wheel : Timing_wheel)
     let create = create
     let alarm_precision = alarm_precision
 
-    let%test _ = does_raise (fun () -> create ~alarm_precision:(sec (-1.)) ())
-    let%test _ = does_raise (fun () -> create ~alarm_precision:(sec 0.) ())
-    let%test _ = Time.Span.equal (sec 1.) (alarm_precision (create ~alarm_precision:(sec 1.) ()))
+    let create_ ?level_bits ~alarm_precision () =
+      create ?level_bits ()
+        ~alarm_precision:(alarm_precision |> Alarm_precision.of_span)
+    ;;
+
+    let%test _ = does_raise (fun () -> create_ ~alarm_precision:(sec (-1.)) ())
+    let%test _ = does_raise (fun () -> create_ ~alarm_precision:(sec 0.) ())
+    let%test _ = Time.Span.equal
+                   (sec 1.)
+                   (alarm_precision (create_ ~alarm_precision:(sec 1.) ()))
 
     let level_bits = level_bits
 
@@ -108,7 +116,7 @@ module Make (Timing_wheel : Timing_wheel)
         ]
         ~f:(fun (level_bits, expect) ->
           assert (Poly.equal expect
-                    (durations (create
+                    (durations (create_
                                   ~alarm_precision:(sec 1.)
                                   ~level_bits:(Level_bits.create_exn level_bits)
                                   ()))))
@@ -430,7 +438,9 @@ module Make (Timing_wheel : Timing_wheel)
   let invariant = invariant
 
   let create_unit ?level_bits ?(start = Time.epoch) ?(alarm_precision = sec 1.) () =
-    create ~config:(Config.create ?level_bits ~alarm_precision ()) ~start
+    create
+      ~config:(Config.create_ ?level_bits () ~alarm_precision)
+      ~start
   ;;
 
   let%test_unit "start after epoch" =
@@ -539,7 +549,7 @@ module Make (Timing_wheel : Timing_wheel)
   let%test_unit _ =
     let t =
       create
-        ~config:(Config.create ~alarm_precision:(sec 1.) ())
+        ~config:(Config.create_ ~alarm_precision:(sec 1.) ())
         ~start:Time.epoch
     in
     let alarm = add t ~at:(Time.add (now t) (sec 5.)) (ref 1) in
@@ -565,7 +575,7 @@ module Make (Timing_wheel : Timing_wheel)
         let epoch_plus n_seconds = Time.add Time.epoch (sec n_seconds) in
         let t =
           create
-            ~config:(Config.create ~alarm_precision:(sec 1.) ())
+            ~config:(Config.create_ ~alarm_precision:(sec 1.) ())
             ~start:(epoch_plus 0.)
         in
         (* add alarm1 before alarm2, test initial conditions *)
@@ -656,7 +666,7 @@ module Make (Timing_wheel : Timing_wheel)
       then Debug.eprints "test" (num_alarms, alarm_precision, alarm_separation, advance_by)
              [%sexp_of: int * Time.Span.t * Time.Span.t * Time.Span.t];
       let t =
-        create ~config:(Config.create ~alarm_precision ()) ~start:Time.epoch
+        create ~config:(Config.create_ ~alarm_precision ()) ~start:Time.epoch
       in
       for i = 1 to num_alarms do
         let at = Time.add (now t) (Time.Span.scale alarm_separation (Float.of_int i)) in
@@ -686,7 +696,7 @@ module Make (Timing_wheel : Timing_wheel)
   let%test_unit _ =
     let t =
       create
-        ~config:(Config.create
+        ~config:(Config.create_
                    ~alarm_precision:(sec 1.)
                    ~level_bits:(Level_bits.create_exn [ 10 ])
                    ())
@@ -781,7 +791,7 @@ module Make (Timing_wheel : Timing_wheel)
         else (
           let t =
             create ~start
-              ~config:(Config.create ~alarm_precision:(Time.Span.of_sec 60.) ())
+              ~config:(Config.create_ ~alarm_precision:(Time.Span.of_sec 60.) ())
           in
           let num_fired = ref 0 in
           List.iter ats ~f:(fun at ->
@@ -802,7 +812,7 @@ module Make (Timing_wheel : Timing_wheel)
   let%test_unit _ =
     let start = Time.epoch in
     let t : bool ref t =
-      create ~config:(Config.create ~alarm_precision:(sec 1.) ()) ~start
+      create ~config:(Config.create_ ~alarm_precision:(sec 1.) ()) ~start
     in
     let handle_fired (a : bool ref Alarm.t) : unit =
       let r = Alarm.value t a in

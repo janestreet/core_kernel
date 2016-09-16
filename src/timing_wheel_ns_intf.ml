@@ -112,7 +112,7 @@ end
 module type Interval_num = sig
 
   module Span : sig
-    type t = private Int63.t [@@deriving bin_io, compare, sexp]
+    type t = private Int63.t [@@deriving sexp_of]
 
     include Comparable.S with type t := t
 
@@ -133,7 +133,7 @@ module type Interval_num = sig
     val succ : t -> t
   end
 
-  type t = private Int63.t [@@deriving bin_io, compare, sexp]
+  type t = private Int63.t [@@deriving sexp_of]
 
   include Comparable.S with type t := t
   include Hashable.S   with type t := t
@@ -174,6 +174,19 @@ end
 
 module type Timing_wheel = sig
   module Time : Timing_wheel_time
+
+  module Alarm_precision : sig
+    type t [@@deriving compare, sexp_of]
+
+    include Equal.S with type t := t
+
+    val of_span : Time.Span.t -> t
+    val to_span : t -> Time.Span.t
+
+    module Unstable : sig
+      type nonrec t = t [@@deriving bin_io, sexp]
+    end
+  end
 
   type 'a t [@@deriving sexp_of]
 
@@ -251,7 +264,7 @@ module type Timing_wheel = sig
     (** [create] raises if [alarm_precision <= 0]. *)
     val create
       :  ?level_bits     : Level_bits.t
-      -> alarm_precision : Time.Span.t
+      -> alarm_precision : Alarm_precision.t
       -> unit
       -> t
 

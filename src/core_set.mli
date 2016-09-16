@@ -15,13 +15,13 @@ open Core_set_intf
     the second identifies the comparator, which determines the comparison function that is
     used for ordering elements in this set.  Many operations (e.g., {!union}), require
     that they be passed sets with the same element type and the same comparator type. *)
-type ('elt, 'cmp) t [@@deriving compare]
+type ('elt, 'cmp) t = ('elt, 'cmp) Base.Set.t [@@deriving compare]
 
 module Tree : sig
   (** A [Tree.t] contains just the tree data structure that a set is based on, without
       including the comparator.  Accordingly, any operation on a [Tree.t] must also take
       as an argument the corresponding comparator. *)
-  type ('a, 'cmp) t [@@deriving sexp_of]
+  type ('elt, 'cmp) t = ('elt, 'cmp) Tree.t [@@deriving sexp_of]
 
   include Creators_and_accessors2_with_comparator
     with type ('a, 'b) set  := ('a, 'b) t
@@ -172,6 +172,17 @@ val of_sorted_array
 val of_sorted_array_unchecked
   :  comparator:('a, 'cmp) Comparator.t
   -> 'a array
+  -> ('a, 'cmp) t
+
+(** [of_increasing_iterator_unchecked ~comparator ~len ~f] behaves like
+    [of_sorted_array_unchecked ~comparator (Array.init len ~f)], with the additional
+    restriction that a decreasing order is not supported.  The advantage is not requiring
+    you to allocate an intermediate array.  [f] will be called with 0, 1, ... [len - 1],
+    in order. *)
+val of_increasing_iterator_unchecked
+  :  comparator:('a, 'cmp) Comparator.t
+  -> len:int
+  -> f:(int -> 'a)
   -> ('a, 'cmp) t
 
 (** [stable_dedup_list] is here rather than in the [List] module because the
@@ -379,19 +390,14 @@ module type Elt = Elt
     the resulting set is going to support [bin_io]. *)
 module type Elt_binable = Elt_binable
 
-module Set_and_tree : sig
-  type ('a, 'b) set  = ('a, 'b) t
-  type ('a, 'b) tree = ('a, 'b) Tree.t
-end
-
 (** Module signature for a Set that doesn't support [of_sexp]. *)
-module type S_plain = Make_S (Set_and_tree).S_plain
+module type S_plain = S_plain
 
 (** Module signature for a Set. *)
-module type S = Make_S (Set_and_tree).S
+module type S = S
 
 (** Module signature for a Set that supports [bin_io]. *)
-module type S_binable = Make_S (Set_and_tree).S_binable
+module type S_binable = S_binable
 
 (** [Make] builds a set from an element type that has a [compare] function but doesn't
     have a comparator.  This generates a new comparator.

@@ -5,21 +5,13 @@
   (deps (discover.sh test.c))
   (action "./${<} ${OCAMLC} config.h")))
 
-;; Create the target atomically to avoid having a window where the file is truncated but
-;; not yet written to, which is problematic because the file is committed.
-(rule
- ((targets (pow_overflow_bounds.ml))
-  (deps (../generate/generate_pow_overflow_bounds.exe))
-  (action "tmp=\"$(mktemp --tmpdir pow_overflowXXXXXX)\"
-           ${<} > \"$tmp\"
-           mv \"$tmp\" ${@}")))
-
 (library
  ((name core_kernel)
   (inline_tests ((javascript build_and_run)))
   (public_name core_kernel)
   (libraries
    (base
+    caml
     bin_prot
     fieldslib
     nums
@@ -40,14 +32,10 @@
     bigstring_stubs
     core_array_stubs
     core_gc_stubs
-    hash_stubs
-    int_math_stubs
     time_ns_stubs))
   (preprocess (((pps (JANE_KERNEL -check-doc-comments)) All)))
   (preprocessor_deps (config.h))
   (js_of_ocaml ())))
-
-(ocamllex (hex_lexer))
 
 (alias
  ((name save_benchmarks)

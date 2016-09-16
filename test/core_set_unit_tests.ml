@@ -1,6 +1,11 @@
 module Caml_set = Set
 open! Core_kernel.Std
-open Core_kernel.Core_set_intf
+
+module Set_intf = Core_kernel.Core_set_intf
+
+module Merge_to_sequence_element = Set_intf.Merge_to_sequence_element
+module With_comparator           = Set_intf.With_comparator
+module Without_comparator        = Set_intf.Without_comparator
 
 module Unit_tests
   (Elt : sig
@@ -16,7 +21,7 @@ module Unit_tests
 
     type ('a, 'b, 'c) create_options
 
-    include Creators_generic
+    include Set_intf.Creators_generic
       with type ('a, 'b) t           := ('a, 'b) t_
       with type ('a, 'b) set         := ('a, 'b) set
       with type ('a, 'b) tree        := ('a, 'b) tree
@@ -27,7 +32,7 @@ module Unit_tests
 
     type ('a, 'b, 'c) access_options
 
-    include Accessors_generic
+    include Set_intf.Accessors_generic
       with type ('a, 'b) t           := ('a, 'b) t_
       with type ('a, 'b) tree        := ('a, 'b) tree
       with type 'a elt               := 'a Elt.t
@@ -39,7 +44,7 @@ module Unit_tests
     val kind : [ `Set | `Tree ]
   end)
 
-  : Creators_and_accessors_generic = struct
+  : Set_intf.Creators_and_accessors_generic = struct
 
   module Set = struct
     include Set
@@ -286,7 +291,7 @@ module Unit_tests
         Quickcheck.test Merge_to_sequence_args.gen ~f:(fun {
           order; greater_or_equal_to; less_or_equal_to; x; y ;
         } ->
-          let open Merge_to_sequence_element in
+          let open Set_intf.Merge_to_sequence_element in
           let value = function
             | Left x | Right x | Both (x, _) -> Elt.to_int x
           in
@@ -322,6 +327,8 @@ module Unit_tests
 
   let of_sorted_array _ = assert false
   let of_sorted_array_unchecked _ = assert false
+  let of_increasing_iterator_unchecked ~len:_ = assert false
+  let _ = of_increasing_iterator_unchecked (* tested in of_sorted_array *)
 
   let%test _ = Set.of_sorted_array [||] |> Result.is_ok
   let%test _ = Set.of_sorted_array [|Elt.of_int 0|] |> Result.is_ok

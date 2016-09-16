@@ -18,7 +18,8 @@ include (module type of struct include Sexp end) with type t := t
 
 exception Of_sexp_error of exn * t
 
-val of_int_style : [ `Underscores | `No_underscores ] ref
+val of_float_style : [ `Underscores | `No_underscores ] ref
+val of_int_style   : [ `Underscores | `No_underscores ] ref
 
 (** [no_raise] is the identity, but by using ['a no_raise] in a sexpable type, the
     resulting use [sexp_of_no_raise] protects the conversion of ['a] to a sexp so that if

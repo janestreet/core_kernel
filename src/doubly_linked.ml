@@ -1,6 +1,7 @@
 open! Import
 
-module List = Core_list
+module Array = Core_array
+module List  = Core_list
 
 (* INVARIANT: This exception is raised if a list is mutated during a pending iteration.
 
@@ -657,7 +658,7 @@ let%test_module "move functions" = (module struct
 
   let test k expected =
     let t = create () in
-    let a = Array.init n (fun i -> insert_last t i) in
+    let a = Array.init n ~f:(fun i -> insert_last t i) in
     k t a;
     invariant ignore t;
     assert (length t = n);

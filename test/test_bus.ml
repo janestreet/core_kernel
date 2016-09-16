@@ -104,6 +104,29 @@ include (struct
        (call_count      1)) |}];
   ;;
 
+  let%expect_test "subscriber raise" =
+    let bus = create1 [%here] ~allow_subscription_after_first_write:false in
+    let bus_r = read_only bus in
+    ignore (subscribe_exn bus_r [%here]
+              ~f:(fun _ -> raise_s [%message "subscriber raising"])
+            : _ Subscriber.t);
+    show_raise ~hide_positions:true (fun () -> write bus ());
+    [%expect {|
+      (raised (
+        exn (
+          "Bus subscriber raised"
+          (exn "subscriber raising")
+          (backtrace (
+            "Raised at file \"error.ml\", line LINE, characters C1-C2"
+            "Called from file \"bus.ml\", line LINE, characters C1-C2"))
+          (subscriber (
+            Bus.Subscriber.t (
+              (id       2)
+              (callback _)
+              (on_callback_raise ())
+              (subscribed_from lib/core_kernel/test/test_bus.ml:LINE:COL))))))) |}];
+  ;;
+
   let%expect_test "~allow_subscription_after_first_write:false" =
     let callback _ = () in
     let bus = create1 [%here] ~allow_subscription_after_first_write:false in

@@ -5,8 +5,9 @@ open Sexplib.Std
 
 module Sexp = Sexplib.Sexp
 
-module List  = Core_list0
 module Array = Caml.ArrayLabels
+
+module List = Base.List
 
 module Pre_float : Polymorphic_compare_intf.S with type t = float = struct
   type t = float
@@ -578,7 +579,6 @@ module Shrinker = struct
 
   open Sexplib.Std
   module Sexp = Sexplib.Sexp
-  module List = Core_list0
 
   type 'a t = ('a -> 'a Sequence.t) Staged.t
 

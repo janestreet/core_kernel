@@ -10,7 +10,7 @@ module type S = sig
   type t [@@deriving bin_io, sexp]
   include Stringable.S         with type t := t
   include Comparable.S_binable with type t := t
-  include Hashable  .S_binable with type t := t
+  include Hashable.S_binable   with type t := t
   include Pretty_printer.S     with type t := t
 end
 
@@ -22,21 +22,32 @@ module Make (T : sig
 end) = struct
   include T
   include Comparable.Make_binable (T)
-  include Hashable  .Make_binable (T)
+  include Hashable.Make_binable (T)
   include Pretty_printer.Register (T)
 end
 
 module Make_using_comparator (T : sig
   type t [@@deriving bin_io, compare, sexp]
-  include Core_comparator.S with type t := t
+  include Comparator.S with type t := t
   include Stringable.S with type t := t
   val hash : t -> int
   val module_name : string
 end) = struct
   include T
   include Comparable.Make_binable_using_comparator (T)
-  include Hashable  .Make_binable (T)
+  include Hashable.Make_binable (T)
   include Pretty_printer.Register (T)
+end
+
+module Extend(M : Base.Identifiable.S)(B : Binable0.S with type t = M.t) =
+struct
+  module T = struct
+    include M
+    include (B : Binable.S with type t := t)
+  end
+  include T
+  include Comparable.Extend_binable (M) (T)
+  include Hashable.Make_binable (T)
 end
 
 (* The unit test below checks that for a call to [Identifiable.Make], the functions in the
@@ -73,7 +84,7 @@ let%test_module _ = (module struct
     let check location =
       if not (Map.equal (=) !actual !expected) then
         failwiths "mismatch" (location, `actual actual, `expected expected)
-          [%sexp_of: Source_code_position0.t * [ `actual of t ] * [ `expected of t ]]
+          [%sexp_of: Source_code_position.t * [ `actual of t ] * [ `expected of t ]]
     ;;
   end
 

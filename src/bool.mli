@@ -1,13 +1,12 @@
-open! Import
+(** This module extends the Base [Bool] module *)
 
-type t = bool [@@deriving hash, bin_io, sexp, typerep]
+type t = bool [@@deriving bin_io, typerep]
 
-include Comparable.S     with type t := t
+include module type of Base.Bool with type t := t
+
+include Comparable.S
+  with type t := t
+   and type comparator_witness := Base.Bool.comparator_witness
+
 include Hashable.S       with type t := t
-include Stringable.S     with type t := t
 include Quickcheckable.S with type t := t
-
-(** - [to_int true = 1]
-    - [to_int false = 0]
-*)
-val to_int : t -> int

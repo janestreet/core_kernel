@@ -2,42 +2,7 @@ open! Import
 
 module Binable = Binable0
 
-module type Accessors = sig
-  include Container.Generic
-
-  val mem : 'a t -> 'a -> bool (** override [Container.Generic.mem] *)
-
-  val copy : 'a t -> 'a t      (** preserves the equality function *)
-
-  val add               : 'a t -> 'a -> unit
-  val strict_add        : 'a t -> 'a -> unit Or_error.t
-  val strict_add_exn    : 'a t -> 'a -> unit
-  val remove            : 'a t -> 'a -> unit
-  val strict_remove     : 'a t -> 'a -> unit Or_error.t
-  val strict_remove_exn : 'a t -> 'a -> unit
-  val clear : 'a t -> unit
-  val equal : 'a t -> 'a t -> bool
-  val filter : 'a t -> f:('a -> bool) -> 'a t
-  val diff : 'a t -> 'a t -> 'a t
-  val of_hashtbl_keys : ('a, _) Core_hashtbl.t -> 'a t
-  val to_hashtbl : 'key t -> f:('key -> 'data) -> ('key, 'data) Core_hashtbl.t
-  val filter_inplace : 'a t -> f:('a -> bool) -> unit
-end
-
-type ('key, 'z) create_options_without_hashable =
-  ('key, unit, 'z) Core_hashtbl_intf.create_options_without_hashable
-
-type ('key, 'z) create_options_with_hashable_required =
-  ('key, unit, 'z) Core_hashtbl_intf.create_options_with_hashable
-
-module type Creators = sig
-  type 'a t
-  type 'a elt
-  type ('a, 'z) create_options
-
-  val create  : ('a, unit        -> 'a t) create_options
-  val of_list : ('a, 'a elt list -> 'a t) create_options
-end
+include Base.Hash_set_intf
 
 module type S_plain = sig
   type elt

@@ -11,7 +11,6 @@ include
      type nonrec bool      = bool      [@@deriving sexp]
      type nonrec char      = char      [@@deriving sexp]
      type nonrec exn       = exn       [@@deriving sexp_of]
-     type nonrec float     = float     [@@deriving sexp]
      type nonrec 'a list   = 'a list   [@@deriving sexp]
      type nonrec 'a option = 'a option [@@deriving sexp]
      type nonrec string    = string    [@@deriving sexp]
@@ -22,7 +21,6 @@ include
    with type bool      := bool
    with type char      := char
    with type exn       := exn
-   with type float     := float
    with type 'a list   := 'a list
    with type 'a option := 'a option
    with type string    := string
@@ -31,11 +29,13 @@ include
 
 include
   (Std_internal : sig
+     type nonrec float     = float     [@@deriving sexp]
      type nonrec int       = int       [@@deriving sexp]
      type nonrec int32     = int32     [@@deriving sexp]
      type nonrec int64     = int64     [@@deriving sexp]
      type nonrec nativeint = nativeint [@@deriving sexp]
    end
+   with type float       := float
    with type int         := int
    with type int32       := int32
    with type int64       := int64

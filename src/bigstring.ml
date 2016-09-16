@@ -194,8 +194,10 @@ let compare t1 t2 =
     | n -> n
 
 external internalhash_fold_bigstring :
-  Ppx_hash_lib.Internalhash.state -> t -> Ppx_hash_lib.Internalhash.state
+  Hash.state -> t -> Hash.state
   = "internalhash_fold_bigstring" [@@noalloc]
+
+let _making_sure_the_C_binding_takes_an_int (x : Hash.state) = (x :> int)
 
 let hash_fold_t = internalhash_fold_bigstring
 let hash = [%hash: t]

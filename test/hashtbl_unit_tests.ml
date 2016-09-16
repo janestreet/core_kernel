@@ -381,7 +381,6 @@ module Make (Hashtbl : Hashtbl_intf.Hashtbl) = struct
         include Hashtbl_intf.Accessors
           with type ('a, 'b) t := ('a, 'b) Hashtbl.t
           with type 'a key := 'a Hashtbl.key
-          with type ('a, 'b) map_options := ('a, 'b) Hashtbl_intf.no_map_options
         val invariant
           :  'a Invariant.t
           -> 'b Invariant.t

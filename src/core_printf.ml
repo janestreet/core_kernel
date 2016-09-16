@@ -1,3 +1,4 @@
 open! Import
 
-include Printf
+include Base.Printf
+

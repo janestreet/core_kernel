@@ -33,7 +33,7 @@ module Sexp_maybe = struct
     include Comparable.Poly (Error)
   end
 
-  type 'a t = ('a, sexp * Error.t) Core_result.t [@@deriving bin_io, compare, hash]
+  type 'a t = ('a, sexp * Error.t) Result.t [@@deriving bin_io, compare, hash]
 
   let sexp_of_t sexp_of_a t =
     match t with
@@ -135,8 +135,9 @@ module With_text = struct
   end)
 end
 
+let of_float_style = Base0.Import.Sexp.of_float_style
 
-let of_int_style = Int_conversions.sexp_of_int_style
+let of_int_style = Base0.Int_conversions.sexp_of_int_style
 
 type 'a no_raise = 'a [@@deriving bin_io, sexp]
 

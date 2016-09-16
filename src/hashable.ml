@@ -4,9 +4,7 @@ module Binable = Binable0
 module Hashtbl = Core_hashtbl
 
 module type Common = sig
-  type t
-  val hash : t -> int
-  val compare : t -> t -> int
+  include Base.Hashable.S
   val hashable : t Hashtbl.Hashable.t
 end
 

@@ -1,5 +1,5 @@
 open Core_kernel.Std
-module Make_tests(Int : Int_intf.S) : sig end = struct
+module Make_tests(Int : Base.Int_intf.S) : sig end = struct
   open Int
   let p1 = of_int64_exn (1L)
   let p2 = of_int64_exn (2L)
@@ -101,28 +101,29 @@ module Make_tests(Int : Int_intf.S) : sig end = struct
     if String.is_prefix ~prefix:"4.03" Sys.ocaml_version
     then assert ((of_string "0u4611686018427387904") = min_value)
     else ()
-
-  let test int63 str =
-    let s = bin_size_t int63 in
-    let bs = Bigstring.create s in
-    let _pos = bin_write_t bs ~pos:0 int63 in
-    let str_2 = Bigstring.to_string bs in
-    let bs_2  = Bigstring.of_string str in
-    let int63_2 = bin_read_t bs_2 ~pos_ref:(ref 0) in
-    [%test_eq: string] str str_2;
-    [%test_eq: t] int63 int63_2
-
-  let%test_unit _ =
-    test min_value "\252\000\000\000\000\000\000\000\192";
-    test max_value "\252\255\255\255\255\255\255\255?";
-    test zero      "\000";
-    test one       "\001";
-    test (neg one) "\255\255"
-
 end
 
-let%test_module "Int63_emul" = (module Make_tests(Core_kernel.Core_int63_emul))
+let%test_module "Int63_emul" = (module Make_tests(Base0.Base_int63_emul))
 let%test_module "Int63_maybe_native" = (module Make_tests(Int63))
+
+let test int63 str =
+  let open Int63 in
+  let s = bin_size_t int63 in
+  let bs = Bigstring.create s in
+  let _pos = bin_write_t bs ~pos:0 int63 in
+  let str_2 = Bigstring.to_string bs in
+  let bs_2  = Bigstring.of_string str in
+  let int63_2 = bin_read_t bs_2 ~pos_ref:(ref 0) in
+  [%test_eq: string] str str_2;
+  [%test_eq: t] int63 int63_2
+
+let%test_unit _ =
+  let open Int63 in
+  test min_value "\252\000\000\000\000\000\000\000\192";
+  test max_value "\252\255\255\255\255\255\255\255?";
+  test zero      "\000";
+  test one       "\001";
+  test (neg one) "\255\255"
 
 let%test _ =
   let open Bin_prot.Shape in

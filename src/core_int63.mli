@@ -1,41 +1,6 @@
-(** 63-bit integers.
+include module type of struct include Base.Int63 end
+  with module Hex := Base.Int63.Hex
 
-    The size of Int63 is always 63 bits.  On a 64-bit platform it is just an int
-    (63-bits), and on a 32-bit platform it is an int64 wrapped to respect the
-    semantic of 63bit integers.
-
-    Because Int63 has different representations on 32-bit and 64-bit platforms,
-    marshalling Int63 will not work between 32-bit and 64-bit platforms.
-    unmarshal will segfault.
-*)
-
-open! Import
-
-#import "config.h"
-
-(** In 64bit architectures, we expose [type t = private int] so that the compiler can
-    omit caml_modify when dealing with record fields holding [Int63.t].
-    Code should not explicitly make use of the [private], e.g. via [(i :> int)], since
-    such code will not compile on 32-bit platforms. *)
-#ifdef JSC_ARCH_SIXTYFOUR
-include Int_intf.S_with_stable with type t = private int
-#else
-include Int_intf.S_with_stable
-#endif
-
-(** Unlike the usual operations, these never overflow, preferring instead to raise. *)
-module Overflow_exn : sig
-  val ( + ) : t -> t -> t
-  val ( - ) : t -> t -> t
-  val abs : t -> t
-  val neg : t -> t
-end
-
-val of_int : int -> t
-val to_int : t -> int option
-
-(** [random ~state bound] returns a random integer between 0 (inclusive) and [bound]
-    (exclusive).  [bound] must be greater than 0.
-
-    The default [~state] is [Random.State.default]. *)
-val random : ?state : Core_random.State.t -> t -> t
+include Int_intf.Extension_with_stable
+  with type t := t
+   and type comparator_witness := comparator_witness

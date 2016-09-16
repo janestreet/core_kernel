@@ -2,7 +2,7 @@ OASISFormat:           0.4
 OCamlVersion:          >= 4.03.0
 FindlibVersion:        >= 1.3.2
 Name:                  core_kernel
-Version:               114.09+06
+Version:               114.10+84
 Synopsis:              Industrial strength alternative to OCaml's standard library
 Authors:               Jane Street Group, LLC <opensource@janestreet.com>
 Copyrights:            (C) 2008-2016 Jane Street Group LLC <opensource@janestreet.com>
@@ -26,88 +26,13 @@ Description:
   Core_kernel is the system-independent part of Core.
 
 PreConfCommand:       config/detect.sh
-PostConfCommand:      config/discover.sh $ocamlc src/config.h && cd base/src && ./discover.sh $ocamlc config.h
-PreDistCleanCommand:  $rm src/config.h base/src/config.h
-PreBuildCommand:      $rm _build/ugly_hack_to_workaround_ocamlbuild_nightmare
-
-Library base
-  Path:         base/wrapper
-  Pack:         false
-  Modules:      Base
-  BuildDepends: base0,
-                bin_prot,
-                fieldslib,
-                ppx_assert.runtime-lib,
-                ppx_bench.runtime-lib,
-                ppx_hash.runtime-lib,
-                ppx_inline_test.runtime-lib,
-                sexplib,
-                typerep,
-                variantslib
-
-Library base0
-  Path:         base/src
-  Pack:         true
-  Modules:      Applicative_intf,
-                Array_permute,
-                Avltree,
-                Base_lazy,
-                Base_pervasives,
-                Base_printf,
-                Base_random,
-                Caml,
-                Commutative_group,
-                Comparator,
-                Equal,
-                Exn,
-                Floatable,
-                Fn,
-                Hash,
-                Hasher,
-                Heap_block,
-                Int_replace_polymorphic_compare,
-                Intable,
-                Invariant_intf,
-                Maybe_bound,
-                Monad,
-                Monad_intf,
-                Ordering,
-                Poly,
-                Polymorphic_compare,
-                Polymorphic_compare_intf,
-                Popcount,
-                Pretty_printer,
-                Result,
-                Robustly_comparable,
-                Sexpable,
-                Sign,
-                Sign0,
-                Source_code_position0,
-                Staged,
-                Std,
-                Stringable,
-                T,
-                Word_size
-  BuildDepends: bin_prot,
-                fieldslib,
-                num,
-                ppx_assert.runtime-lib,
-                ppx_bench.runtime-lib,
-                ppx_hash.runtime-lib,
-                ppx_inline_test.runtime-lib,
-                sexplib,
-                typerep,
-                variantslib
-  CSources:     config.h,
-                exn_stubs.c,
-                heap_block_stubs.c,
-                int_math_stubs.c
+PostConfCommand:      config/discover.sh $ocamlc src/config.h
+PreDistCleanCommand:  $rm src/config.h
 
 Library core_kernel
   Path:         src
   Pack:         true
-  Modules:      Applicative,
-                Backtrace,
+  Modules:      Backtrace,
                 Bag,
                 Bigbuffer,
                 Bigbuffer_internal,
@@ -117,7 +42,6 @@ Library core_kernel
                 Binable,
                 Binable0,
                 Binary_packing,
-                Binary_search,
                 Binary_searchable,
                 Binary_searchable_intf,
                 Blang,
@@ -133,6 +57,7 @@ Library core_kernel
                 Common,
                 Comparable,
                 Comparable_intf,
+                Comparator,
                 Constrained_float,
                 Container,
                 Container_intf,
@@ -142,7 +67,6 @@ Library core_kernel
                 Core_bin_prot,
                 Core_bytes,
                 Core_char,
-                Core_comparator,
                 Core_ephemeron,
                 Core_gc,
                 Core_hashtbl,
@@ -150,11 +74,9 @@ Library core_kernel
                 Core_int,
                 Core_int32,
                 Core_int63,
-                Core_int63_emul,
                 Core_int64,
                 Core_lazy,
                 Core_list,
-                Core_list0,
                 Core_map,
                 Core_map_intf,
                 Core_nativeint,
@@ -163,11 +85,9 @@ Library core_kernel
                 Core_printf,
                 Core_queue,
                 Core_random,
-                Core_result,
                 Core_set,
                 Core_set_intf,
                 Core_sexp,
-                Core_sign,
                 Core_stack,
                 Core_string,
                 Core_weak,
@@ -177,14 +97,13 @@ Library core_kernel
                 Deque,
                 Doubly_linked,
                 Either,
-                Either_intf,
                 Error,
+                Exn,
                 Fdeque,
                 Fheap,
                 Flags,
                 Flags_intf,
                 Float,
-                Float0,
                 Float_with_finite_only_serialization,
                 Fn,
                 Force_once,
@@ -196,21 +115,16 @@ Library core_kernel
                 Hashable,
                 Heap,
                 Heap_intf,
-                Hex_lexer,
                 Host_and_port,
                 Identifiable,
                 Import,
                 In_channel,
                 Info,
                 Info_intf,
-                Int_conversions,
                 Int_intf,
-                Int_math,
-                Int_pow2,
                 Int_replace_polymorphic_compare,
                 Int_set,
                 Interfaces,
-                Invariant,
                 Linked_queue,
                 Linked_stack,
                 Make_substring,
@@ -225,7 +139,6 @@ Library core_kernel
                 Option,
                 Option_array,
                 Or_error,
-                Ordered_collection_common,
                 Ordering,
                 Out_channel,
                 Percent,
@@ -235,14 +148,17 @@ Library core_kernel
                 Pool,
                 Pool_intf,
                 Pooled_hashtbl,
-                Pow_overflow_bounds,
                 Quickcheck,
                 Quickcheck_intf,
                 Quickcheckable,
                 Ref,
+                Result,
+                Robustly_comparable,
                 Rope,
                 Sequence,
                 Set_once,
+                Sexpable,
+                Sign,
                 Source_code_position,
                 Source_code_position0,
                 Splittable_random,
@@ -284,12 +200,11 @@ Library core_kernel
                 Univ_map,
                 Univ_map_intf,
                 Unpack_buffer,
-                Validate,
                 Validated,
                 Validated_intf,
-                Weak_pointer,
-                With_return
+                Weak_pointer
   BuildDepends: base,
+                base.caml,
                 bin_prot,
                 fieldslib,
                 jane-street-headers,
@@ -307,7 +222,5 @@ Library core_kernel
                 core_array_stubs.c,
                 core_bigstring.h,
                 core_gc_stubs.c,
-                hash_stubs.c,
-                int_math_stubs.c,
                 time_ns_stubs.c,
                 time_ns_stubs.h

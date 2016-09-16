@@ -43,8 +43,8 @@ module Hashtbl = struct
 end
 
 module Hash_set = struct
-  module V1 (Elt : Hash_set.Elt_binable) : sig
-    type t = Elt.t Hash_set.t [@@deriving sexp, bin_io]
+  module V1 (Elt : Core_hash_set.Elt_binable) : sig
+    type t = Elt.t Core_hash_set.t [@@deriving sexp, bin_io]
   end = Hash_set.Make_binable (Elt)
 
   let%test_module "Hash_set.V1" = (module Stable_unit_test.Make_unordered_container (struct

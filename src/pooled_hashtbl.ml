@@ -6,20 +6,14 @@ open With_return
 
 module Binable = Binable0
 
+module Int = Core_int
+
 let failwiths = Error.failwiths
 
 module Hashable = Core_hashtbl_intf.Hashable
 
 let hash_param = Hashable.hash_param
 let hash       = Hashable.hash
-
-module Int = struct
-  type t = int
-
-  let max (x : t) y = if x > y then x else y
-  let min (x : t) y = if x < y then x else y
-  include Int_pow2
-end
 
 module List = Core_list
 module Array = Core_array
@@ -141,7 +135,7 @@ let without_mutating t f =
    plumb it through functions like map which call create. *)
 let load_factor = 0.85 ;;
 
-let max_table_length = Int_pow2.floor_pow2 Sys.max_array_length ;;
+let max_table_length = Int.floor_pow2 Sys.max_array_length ;;
 
 let calculate_table_size size =
   (* Ensure we can fit size elements in the table. *)

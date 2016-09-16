@@ -8,7 +8,10 @@
 module Caml_map = Map
 open! Core_kernel.Std
 
-open Core_kernel.Core_map_intf
+module Map_intf = Core_kernel.Core_map_intf
+
+module With_comparator    = Map_intf.With_comparator
+module Without_comparator = Map_intf.Without_comparator
 
 module Unit_tests
   (Key : sig
@@ -23,7 +26,7 @@ module Unit_tests
 
     type ('a, 'b, 'c) create_options
 
-    include Creators_generic
+    include Map_intf.Creators_generic
       with type ('a, 'b, 'c) t       := ('a, 'b, 'c) t_
       with type ('a, 'b, 'c) tree    := ('a, 'b, 'c) tree
       with type 'a key               := 'a Key.t
@@ -33,7 +36,7 @@ module Unit_tests
 
     type ('a, 'b, 'c) access_options
 
-    include Accessors_generic
+    include Map_intf.Accessors_generic
       with type ('a, 'b, 'c) t       := ('a, 'b, 'c) t_
       with type ('a, 'b, 'c) tree    := ('a, 'b, 'c) tree
       with type 'a key               := 'a Key.t
@@ -45,7 +48,7 @@ module Unit_tests
   end)
   (* The result signature doesn't actually mean anything -- the values are required so
      that implementors are reminded to add a unit test for each one. *)
-  : Creators_and_accessors_generic = struct
+  : Map_intf.Creators_and_accessors_generic = struct
   module Map = struct
     include Map
     let add                        x = simplify_accessor add x
@@ -78,6 +81,7 @@ module Unit_tests
     let range_to_alist             x = simplify_accessor range_to_alist x
     let closest_key                x = simplify_accessor closest_key x
     let nth                        x = simplify_accessor nth x
+    let nth_exn                    x = simplify_accessor nth_exn x
     let rank                       x = simplify_accessor rank x
     let shrinker                   x = simplify_accessor shrinker x
     let to_sequence ?order ?keys_greater_or_equal_to ?keys_less_or_equal_to x =
@@ -89,6 +93,8 @@ module Unit_tests
     let singleton                 x = simplify_creator singleton x
     let of_sorted_array_unchecked x = simplify_creator of_sorted_array_unchecked x
     let of_sorted_array           x = simplify_creator of_sorted_array x
+    let of_increasing_iterator_unchecked ~len ~f =
+      simplify_creator of_increasing_iterator_unchecked ~len ~f
     let of_alist                  x = simplify_creator of_alist x
     let of_alist_or_error         x = simplify_creator of_alist_or_error x
     let of_alist_exn              x = simplify_creator of_alist_exn x
@@ -96,6 +102,7 @@ module Unit_tests
     let of_alist_multi            x = simplify_creator of_alist_multi x
     let of_alist_fold             x = simplify_creator of_alist_fold x
     let of_alist_reduce           x = simplify_creator of_alist_reduce x
+    let of_iteri             ~iteri = simplify_creator of_iteri ~iteri
     let of_tree                   x = simplify_creator of_tree x
     let gen                       x = simplify_creator gen x
 
@@ -405,6 +412,9 @@ module Unit_tests
     done
   ;;
 
+  let of_increasing_iterator_unchecked ~len:_ = assert false
+  let _ = Map.of_increasing_iterator_unchecked (* already tested in the array functions *)
+
   let of_alist _ = assert false
 
   let%test _ =
@@ -495,6 +505,22 @@ module Unit_tests
   let%test _ =
     equal_maps ~caml_map:(Caml_map.add Key.sample [0; 1] Caml_map.empty)
       (Map.of_alist_multi [Key.sample, 0; Key.sample, 1])
+  ;;
+
+  let of_iteri ~iteri:_ = assert false
+
+  let alist_iteri alist ~f = List.iter alist ~f:(fun (key, data) -> f ~key ~data)
+  let%test _ =
+    let alist = random_alist Key.samples in
+    match Map.of_iteri ~iteri:(alist_iteri alist) with
+    | `Duplicate_key _ -> false
+    | `Ok map -> alist_equal (Map.to_alist map) alist
+  ;;
+
+  let%test _ =
+    match Map.of_iteri ~iteri:(alist_iteri [Key.sample, 0; Key.sample, 1]) with
+    | `Ok _ -> false
+    | `Duplicate_key _ -> true
   ;;
 
   let is_empty _ = assert false
@@ -1175,6 +1201,7 @@ module Unit_tests
   let range_to_alist       _ = assert false
   let closest_key          _ = assert false
   let nth                  _ = assert false
+  let nth_exn              _ = assert false
   let rank                 _ = assert false
 
   let%test_unit _ =
@@ -1193,6 +1220,12 @@ module Unit_tests
     in
     let length = Map.length map in
     (* fold_range_inclusive *)
+    (* The two [Key.(>)] assertions below verify that the intervals in the
+       two assertions following them are indeed empty.*)
+    assert (Key.(>) before_max min_key);
+    assert (Key.(>) max_key min_key);
+    assert (keys_between ~min:before_max ~max:min_key = 0);
+    assert (keys_between ~min:max_key ~max:min_key = 0);
     assert (keys_between ~min:min_key ~max:max_key = length);
     assert (keys_between ~min:after_min ~max:before_max = length - 2);
     (* closest_key *)
@@ -1247,6 +1280,7 @@ module Unit_tests
     assert (Option.is_none (Map.nth map (Map.length map)))
   ;;
 
+  let _ = Map.nth_exn (* same testing as nth *)
   let split _ = assert false
 
   let%test_unit _ =

@@ -1,9 +1,27 @@
 open! Import
+open! Typerep_lib.Std
 
-include Core_list0
+module List = Base.List
+
+type 'a t = 'a list [@@deriving bin_io, typerep]
+
+module Assoc = struct
+  type ('a, 'b) t = ('a * 'b) list [@@deriving bin_io]
+
+  include (List.Assoc : module type of struct include List.Assoc end
+           with type ('a, 'b) t := ('a, 'b) t)
+end
+
+include (List : module type of struct include List end
+         with type 'a t := 'a t
+         with module Assoc := Assoc)
+
+let to_string ~f t =
+  Sexp.to_string
+    (sexp_of_t (fun x -> Sexp.Atom x) (List.map t ~f))
+;;
 
 module For_quickcheck = struct
-
   module Generator = Quickcheck.Generator
   module Observer  = Quickcheck.Observer
   module Shrinker  = Quickcheck.Shrinker
@@ -26,18 +44,23 @@ module For_quickcheck = struct
   let gen elem_gen =
     gen' elem_gen
 
-  let rec gen_permutations list =
+  let gen_permutations list =
     match list with
-    | []        -> Generator.singleton []
-    | x :: list ->
-      gen_permutations list
-      >>= fun list ->
-      Quickcheck.For_int.gen_between
-        ~lower_bound:(Incl 0)
-        ~upper_bound:(Incl (length list))
-      >>| fun index ->
-      let prefix, suffix = split_n list index in
-      prefix @ [ x ] @ suffix
+    | [] -> Generator.singleton []
+    | _ :: _ ->
+      let len = List.length list in
+      let index_generator =
+        init (len - 1) ~f:(fun i ->
+          Quickcheck.For_int.gen_between
+            ~lower_bound:(Incl i) ~upper_bound:(Excl len))
+        |> Quickcheck.Generator.all
+      in
+      index_generator
+      >>| fun indices ->
+      let arr = Array.of_list list in
+      List.iteri indices ~f:(fun i j -> Array_permute.swap arr i j);
+      Array.to_list arr
+  ;;
 
   let obs elem_obs =
     Observer.recursive (fun t_obs ->

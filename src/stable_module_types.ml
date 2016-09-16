@@ -6,7 +6,7 @@ end
 
 module type S0 = sig
   include S0_without_comparator
-  include Core_comparator.Stable.V1.S with type t := t
+  include Comparator.Stable.V1.S with type t := t
 end
 
 (** The polymorphic signatures require a mapping function so people can write conversion

@@ -1,3 +1,4 @@
 open! Import
 
-include Random
+include Base.Random
+

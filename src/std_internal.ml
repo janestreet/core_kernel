@@ -1,8 +1,7 @@
 (* We don't just include Sexplib.Std because one can only define Hashtbl once in this
    module. *)
 
-(* Do not [open! Import] here.  It will shadow modules defined in [Core_kernel] with the
-   corresponding one defined in Base. *)
+open! Import
 
 (* handy shortcuts *)
 include Common
@@ -10,12 +9,12 @@ include Common
 module Exn    = Base.Exn
 module Staged = Base.Staged
 
-module Set     = Core_set
-module Map     = Core_map
-module Array   = Core_array
-module Hashtbl = Core_hashtbl
-module Result  = Core_result
-module String  = Core_string
+module Set      = Core_set
+module Map      = Core_map
+module Array    = Core_array
+module Hashtbl  = Core_hashtbl
+module Result   = Result
+module String   = Core_string
 
 module List = struct
   include Core_list
@@ -49,7 +48,7 @@ module Random = Core_random
 module Char = Core_char
 
 module Ordering = Ordering
-module Comparator = Core_comparator
+module Comparator = Comparator
 
 module Bool = Bool
 module Int = Core_int
@@ -232,7 +231,9 @@ let () =
       with type ('a, 'b) set  := ('a, 'b) t
       with type ('a, 'b) t    := ('a, 'b) t
       with type ('a, 'b) tree := ('a, 'b) Tree.t
-  end = Set in ()
+  end = Set
+  in
+  ()
 
 let () =
   let module M : sig
@@ -255,4 +256,6 @@ let () =
     include Creators3_with_comparator
       with type ('a, 'b, 'c) t    := ('a, 'b, 'c) t
       with type ('a, 'b, 'c) tree := ('a, 'b, 'c) Tree.t
-  end = Map in ()
+  end = Map
+  in
+  ()

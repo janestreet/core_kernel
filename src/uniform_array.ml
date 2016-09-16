@@ -16,7 +16,7 @@ module Trusted : sig
   val unsafe_get : 'a t -> int -> 'a
   val unsafe_set : 'a t -> int -> 'a -> unit
   val length : 'a t -> int
-  val unsafe_blit : ('a t, 'a t) Blit_intf.blit
+  val unsafe_blit : ('a t, 'a t) Blit.blit
   val copy : 'a t -> 'a t
 
 end = struct

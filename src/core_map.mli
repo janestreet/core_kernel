@@ -83,14 +83,15 @@ open! Import
 open Core_map_intf
 
 module Tree : sig
-  type ('k, +'v, 'cmp) t [@@deriving sexp_of]
+  type ('k, +'v, 'cmp) t = ('k, 'v, 'cmp) Tree.t
+  [@@deriving sexp_of]
 
   include Creators_and_accessors3_with_comparator
     with type ('a, 'b, 'c) t    := ('a, 'b, 'c) t
     with type ('a, 'b, 'c) tree := ('a, 'b, 'c) t
 end
 
-type ('key, +'value, 'cmp) t
+type ('key, +'value, 'cmp) t = ('key, 'value, 'cmp) Base.Map.t
 
 (** Test if invariants of internal AVL search tree hold. *)
 val invariants : (_, _, _) t -> bool
@@ -148,6 +149,15 @@ val of_alist_reduce
   :  comparator:('a, 'cmp) Comparator.t
   -> ('a * 'b) list -> f:('b -> 'b -> 'b) -> ('a, 'b, 'cmp) t
 
+(** [of_iteri ~iteri] behaves like [of_alist], except that instead of taking a concrete
+    datastruture, it takes an iteration function. For instance, to convert a string table
+    into a map: [of_iteri ~comparator ~f:(Hashtbl.iteri table)].
+    It is faster than adding the elements one by one. *)
+val of_iteri
+  :  comparator:('a, 'cmp) Comparator.t
+  -> iteri:(f:(key:'a -> data:'b -> unit) -> unit)
+  -> [ `Ok of ('a, 'b, 'cmp) t | `Duplicate_key of 'a ]
+
 val to_tree : ('k, 'v, 'cmp) t -> ('k, 'v, 'cmp) Tree.t
 
 (** Creates a [t] from a [Tree.t] and a [Comparator.t].  This is an O(n) operation as it
@@ -163,11 +173,22 @@ val of_sorted_array
   :  comparator:('a, 'cmp) Comparator.t
   -> ('a * 'b) array -> ('a, 'b, 'cmp) t Or_error.t
 
-(** Like [of_sorted_array] except behavior is undefined when an [Error] would have been
-    returned. *)
+(** Like [of_sorted_array] except it returns a map with broken invariants when an [Error]
+    would have been returned. *)
 val of_sorted_array_unchecked
   :  comparator:('a, 'cmp) Comparator.t
   -> ('a * 'b) array -> ('a, 'b, 'cmp) t
+
+(** [if_increasing_iterator_unchecked ~comparator ~len ~f] behaves like
+    [of_sorted_array_unchecked ~comparator (Array.init len ~f)], with the additional
+    restriction that a decreasing order is not supported.  The advantage is not requiring
+    you to allocate an intermediate array.  [f] will be called with 0, 1, ... [len - 1],
+    in order. *)
+val of_increasing_iterator_unchecked
+  :  comparator:('a, 'cmp) Comparator.t
+  -> len:int
+  -> f:(int -> ('a * 'b))
+  -> ('a, 'b, 'cmp) t
 
 (** Test whether a map is empty or not. *)
 val is_empty : (_, _, _) t -> bool
@@ -496,13 +517,9 @@ module type Key_plain   = Key_plain
 module type Key         = Key
 module type Key_binable = Key_binable
 
-module Map_and_tree : sig
-  type ('a, 'b, 'c) map  = ('a, 'b, 'c) t
-  type ('a, 'b, 'c) tree = ('a, 'b, 'c) Tree.t
-end
-module type S_plain   = Make_S (Map_and_tree).S_plain
-module type S         = Make_S (Map_and_tree).S
-module type S_binable = Make_S (Map_and_tree).S_binable
+module type S_plain   = S_plain
+module type S         = S
+module type S_binable = S_binable
 
 module Make_plain (Key : Key_plain) : S_plain with type Key.t = Key.t
 
@@ -551,3 +568,4 @@ module Stable : sig
       with type comparator_witness := Key.comparator_witness
   end
 end
+

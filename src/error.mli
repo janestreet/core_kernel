@@ -1,16 +1,11 @@
-open! Import
-open Sexplib
+(** This module extends the Base [Error] module with bin_io *)
 
-include Info_intf.S
+include module type of struct include Base.Error end
 
-(** Note that the exception raised by this function maintains a reference to the [t]
-    passed in. *)
-val raise : t -> _
+include Info_intf.Extension with type t := t
 
-val raise_s : Sexp.t -> _
-
-val to_info : t -> Info.t
-val of_info : Info.t -> t
+(** [Error.t] is NOT wire-compatible with [Error.Stable.V1.t].  See info.mli for
+    details. *)
 
 (** {[
       failwiths ?strict ?here message a sexp_of_a
@@ -36,7 +31,7 @@ val failwiths
   -> ?here   : Lexing.position
   -> string
   -> 'a
-  -> ('a -> Sexp.t)
+  -> ('a -> Sexplib.Sexp.t)
   -> _
 
 val failwithp
@@ -44,8 +39,5 @@ val failwithp
   -> Lexing.position
   -> string
   -> 'a
-  -> ('a -> Sexp.t)
+  -> ('a -> Sexplib.Sexp.t)
   -> _
-
-(** [Error.t] is NOT wire-compatible with [Error.Stable.V1.t].  See info.mli for
-    details. *)

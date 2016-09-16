@@ -1,197 +1,24 @@
 open! Import
-module Hashtbl = Core_hashtbl
-module List = StdLabels.List
-open Sexplib
-open Sexplib.Conv
-open With_return
-open Result.Export
 open Hash_set_intf
+module Hashtbl = Core_hashtbl
 
-module Binable = Binable0
-
-module Hashable = Hashtbl.Hashable
-
-type 'a t = ('a, unit) Hashtbl.t
-type 'a hash_set = 'a t
-type 'a elt = 'a
+module Creators = Base.Hash_set.Creators
+module Poly = Base.Hash_set.Poly
+let sexp_of_t = Base.Hash_set.sexp_of_t
+let hashable = Base.Hash_set.hashable
+include Base.Hash_set.Using_hashable
 
 module type S_plain   = S_plain   with type 'a hash_set := 'a t
 module type S         = S         with type 'a hash_set := 'a t
 module type S_binable = S_binable with type 'a hash_set := 'a t
 
-module Accessors = struct
-
-  let hashable = Hashtbl.hashable
-  let clear = Hashtbl.clear
-  let length = Hashtbl.length
-  let mem = Hashtbl.mem
-
-  let is_empty t = Hashtbl.is_empty t
-
-  let find_map t ~f =
-    with_return (fun r ->
-      Hashtbl.iter_keys t ~f:(fun elt ->
-        match f elt with
-        | None -> ()
-        | Some _ as o -> r.return o);
-      None)
-  ;;
-
-  let find t ~f = find_map t ~f:(fun a -> if f a then Some a else None)
-
-  let add t k = Hashtbl.set t ~key:k ~data:()
-
-  let strict_add t k =
-    if mem t k then Or_error.error_string "element already exists"
-    else begin
-      Hashtbl.set t ~key:k ~data:();
-      Result.Ok ()
-    end
-  ;;
-
-  let strict_add_exn t k = Or_error.ok_exn (strict_add t k)
-
-  let remove = Hashtbl.remove
-
-  let strict_remove t k =
-    if mem t k then begin
-      remove t k;
-      Result.Ok ()
-    end else
-      Or_error.error "element not in set" k (Hashtbl.sexp_of_key t)
-  ;;
-
-  let strict_remove_exn t k = Or_error.ok_exn (strict_remove t k)
-
-  let fold t ~init ~f = Hashtbl.fold t ~init ~f:(fun ~key ~data:() acc -> f acc key)
-  let iter t ~f = Hashtbl.iter_keys t ~f
-
-  let count t ~f = Container.count ~fold t ~f
-  let sum m t ~f = Container.sum ~fold m t ~f
-  let min_elt t ~cmp = Container.min_elt ~fold t ~cmp
-  let max_elt t ~cmp = Container.max_elt ~fold t ~cmp
-  let fold_result t ~init ~f = Container.fold_result ~fold ~init ~f t
-  let fold_until  t ~init ~f = Container.fold_until  ~fold ~init ~f t
-
-  let to_list = Hashtbl.keys
-
-  let sexp_of_t sexp_of_e t = sexp_of_list sexp_of_e (to_list t)
-
-  let to_array t = Array.of_list (to_list t)
-
-  let exists  t ~f =      Hashtbl.existsi t ~f:(fun ~key ~data:() ->      f key)
-  let for_all t ~f = not (Hashtbl.existsi t ~f:(fun ~key ~data:() -> not (f key)))
-
-  let equal t1 t2 = Hashtbl.equal t1 t2 (fun () () -> true)
-
-  let copy t = Hashtbl.copy t
-
-  let filter t ~f = Hashtbl.filteri t ~f:(fun ~key ~data:() -> f key)
-
-  let diff t1 t2 = filter t1 ~f:(fun key -> not (Hashtbl.mem t2 key))
-
-  let inter t1 t2 =
-    let smaller, larger = if length t1 > length t2 then (t2, t1) else (t1, t2) in
-    Hashtbl.filteri smaller ~f:(fun ~key ~data:() -> Hashtbl.mem larger key)
-
-  let filter_inplace t ~f =
-    let to_remove =
-      fold t ~init:[] ~f:(fun ac x ->
-        if f x then ac else x :: ac)
-    in
-    List.iter to_remove ~f:(fun x -> remove t x)
-  ;;
-
-  let of_hashtbl_keys hashtbl = Hashtbl.map hashtbl ~f:ignore
-
-  let to_hashtbl t ~f = Hashtbl.mapi t ~f:(fun ~key ~data:() -> f key)
-end
-
-include Accessors
-
-let create ?growth_allowed ?size ~hashable () =
-  Hashtbl.create ?growth_allowed ?size ~hashable ()
-;;
-
-let of_list ?growth_allowed ?size ~hashable l =
-  let size = match size with Some x -> x | None -> List.length l in
-  let t = Hashtbl.create ?growth_allowed ~size ~hashable () in
-  List.iter l ~f:(fun k -> add t k);
-  t
-;;
-
-module Creators (Elt : sig
-  type 'a t
-
-  val hashable : 'a t Hashable.t
-end) : sig
-
-  type 'a t_ = 'a Elt.t t
-
-  val t_of_sexp : (Sexp.t -> 'a Elt.t) -> Sexp.t -> 'a t_
-
-  include Creators
-    with type 'a t := 'a t_
-    with type 'a elt := 'a Elt.t
-    with type ('elt, 'z) create_options := ('elt, 'z) create_options_without_hashable
-
-end = struct
-
-  type 'a t_ = 'a Elt.t t
-
-  let hashable = Elt.hashable
-
-  let create ?growth_allowed ?size () = Hashtbl.create ?growth_allowed ~hashable ?size ()
-
-  let of_list ?growth_allowed ?size l = of_list ?growth_allowed ?size ~hashable l
-
-  let t_of_sexp e_of_sexp sexp =
-    match sexp with
-    | Sexp.Atom _ ->
-      raise (Of_sexp_error (Failure "Hash_set.t_of_sexp requires a list", sexp))
-    | Sexp.List list ->
-      let t = create ~size:(List.length list) () in
-      List.iter list ~f:(fun sexp ->
-        let e = e_of_sexp sexp in
-        match strict_add t e with
-        | Ok () -> ()
-        | Error _ ->
-          raise (Of_sexp_error
-                   (Error.to_exn
-                      (Error.create "Hash_set.t_of_sexp got a duplicate element"
-                         sexp Fn.id),
-                    sexp)));
-      t
-  ;;
-
-end
-
-module Poly = struct
-
-  type 'a t = 'a hash_set
-
-  type 'a elt = 'a
-
-  let hashable = Hashtbl.Poly.hashable
-
-  include Creators (struct
-    type 'a t = 'a
-    let hashable = hashable
-  end)
-
-  include Accessors
-
-  let sexp_of_t = sexp_of_t
-
-end
-
-module type Elt_plain = Hashtbl.Key_plain
+module type Elt_plain   = Hashtbl.Key_plain
 module type Elt         = Hashtbl.Key
 module type Elt_binable = Hashtbl.Key_binable
 
 module Make_plain (Elt : Elt_plain) = struct
   type elt = Elt.t
-  type t = elt hash_set
+  type nonrec t = elt t
   type 'a elt_ = elt
 
   include Creators (struct
@@ -209,7 +36,7 @@ module Make_plain (Elt : Elt_plain) = struct
   module Provide_bin_io(X : sig type t [@@deriving bin_io] end with type t := elt) =
     Bin_prot.Utils.Make_iterable_binable (struct
       module Elt = struct include Elt include X end
-      type t = elt hash_set
+      type nonrec t = t
       type el = Elt.t [@@deriving bin_io]
       let _ = bin_el
       let caller_identity = Bin_prot.Shape.Uuid.of_string "ad381672-4992-11e6-9e36-b76dc8cd466f"
@@ -235,48 +62,3 @@ module Make_binable (Elt : Elt_binable) = struct
   include Make (Elt)
   include Provide_bin_io (Elt)
 end
-
-let%test_module "Set Intersection" = (module struct
-  open Hash.Builtin
-  let hashable = {
-     Hashtbl.Hashable.
-     hash = [%hash: string];
-     compare = String.compare;
-     sexp_of_t = fun t -> Atom t;
-   }
-  ;;
-
-  let run_test first_contents second_contents ~expect =
-    let of_list lst =
-      let s = create ~hashable () in
-      List.iter lst ~f:(add s);
-      s
-    in
-    let s1 = of_list first_contents in
-    let s2 = of_list second_contents in
-    let expect = of_list expect in
-    let result = inter s1 s2 in
-    iter result ~f:(fun x -> assert (mem expect x));
-    iter expect ~f:(fun x -> assert (mem result x));
-    let equal x y = 0 = String.compare x y in
-    assert (Core_list.equal ~equal (to_list result) (to_list expect));
-    assert ((length result) = (length expect));
-    (* Make sure the sets are unmodified by the inter *)
-    assert ((List.length first_contents)  = length s1);
-    assert ((List.length second_contents) = length s2)
-  ;;
-
-  let%test_unit "First smaller" =
-    run_test  ["0";        "3"; "99"]
-              ["0";"1";"2";"3"]
-      ~expect:["0";        "3"]
-
-  let%test_unit "Second smaller" =
-    run_test  ["a";"b";"c";"d"]
-              [    "b";    "d"]
-      ~expect:[    "b";    "d"]
-
-  let%test_unit "No intersection" =
-    run_test ~expect:[] ["a";"b";"c";"d"] ["1";"2";"3";"4"]
-end)
-

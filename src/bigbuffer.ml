@@ -4,6 +4,8 @@ open! Import
 
 open Bigstring
 
+module String = Core_string
+
 include Bigbuffer_internal
 
 let __internal (t : t) = t
@@ -152,11 +154,11 @@ let find_ident s start =
   | '(' | '{' as c ->
      let new_start = start + 1 in
      let stop = advance_to_closing c (closing c) 0 s new_start in
-     String.sub s new_start (stop - start - 1), stop + 1
+     String.sub s ~pos:new_start ~len:(stop - start - 1), stop + 1
   (* Regular ident *)
   | _ ->
      let stop = advance_to_non_alpha s (start + 1) in
-     String.sub s start (stop - start), stop
+     String.sub s ~pos:start ~len:(stop - start), stop
 
 (* Substitute $ident, $(ident), or ${ident} in s,
     according to the function mapping f. *)

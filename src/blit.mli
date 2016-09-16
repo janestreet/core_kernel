@@ -1,5 +1,3 @@
-(** See {!Blit_intf} for documentation. *)
-
-open! Import
+(** This module extends the Base [Blit] module *)
 
 include Blit_intf.Blit

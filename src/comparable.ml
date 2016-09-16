@@ -5,60 +5,26 @@ module List = ListLabels
 
 include Comparable_intf
 
-module Validate
-    (T : sig type t [@@deriving compare, sexp_of] end) : Validate with type t := T.t =
-struct
-
-  module V = Validate
-  open Maybe_bound
-
-  let to_string t = Sexp.to_string (T.sexp_of_t t)
-
-  let validate_bound ~min ~max t =
-    V.bounded ~name:to_string ~lower:min ~upper:max ~compare:T.compare t
-  ;;
-
-  let validate_lbound ~min t = validate_bound ~min ~max:Unbounded t
-  let validate_ubound ~max t = validate_bound ~max ~min:Unbounded t
-end
+module Validate = Base.Comparable.Validate
 
 module With_zero
     (T : sig
        type t [@@deriving compare, sexp]
        val zero : t
        include Validate with type t := t
-     end) = struct
-  open T
-
-  (* Preallocate the interesting bounds to minimize allocation in the implementations of
-     [validate_*]. *)
-  let excl_zero = Maybe_bound.Excl zero
-  let incl_zero = Maybe_bound.Incl zero
-
-  let validate_positive     t = validate_lbound ~min:excl_zero t
-  let validate_non_negative t = validate_lbound ~min:incl_zero t
-  let validate_negative     t = validate_ubound ~max:excl_zero t
-  let validate_non_positive t = validate_ubound ~max:incl_zero t
-  let is_positive     t = compare t zero >  0
-  let is_non_negative t = compare t zero >= 0
-  let is_negative     t = compare t zero <  0
-  let is_non_positive t = compare t zero <= 0
-  let sign t = Base.Sign.of_int (compare t zero)
-end
+     end)
+  = Base.Comparable.With_zero(T)
 
 module Validate_with_zero
-         (T : sig
-            type t [@@deriving compare, sexp]
-            val zero : t
-          end) = struct
-  module V = Validate (T)
-  include V
-  include With_zero (struct include T include V end)
-end
+    (T : sig
+       type t [@@deriving compare, sexp]
+       val zero : t
+     end)
+  = Base.Comparable.Validate_with_zero(T)
 
 module Map_and_set_binable_using_comparator (T : sig
     type t [@@deriving bin_io, compare, sexp]
-    include Core_comparator.S with type t := t
+    include Comparator.S with type t := t
   end) = struct
   include T
   module Map = Core_map.Make_binable_using_comparator (T)
@@ -72,77 +38,14 @@ module Map_and_set_binable (T : sig type t [@@deriving bin_io, compare, sexp] en
   end)
 
 module Poly (T : sig type t [@@deriving sexp] end) = struct
-  module Replace_polymorphic_compare = struct
-    type t = T.t [@@deriving sexp]
-    include Polymorphic_compare
-  end
-  include Polymorphic_compare
-  let ascending = compare
-  let descending x y = compare y x
-  let between t ~low ~high = low <= t && t <= high
-
-  let clamp_unchecked t ~min ~max =
-    if t < min then min else if t <= max then t else max
-
-  let clamp_exn t ~min ~max =
-    assert (min <= max);
-    clamp_unchecked t ~min ~max
-
-  let clamp t ~min ~max =
-    if min > max then
-      Or_error.error "clamp requires [min <= max]"
-        (`Min min, `Max max) [%sexp_of: [`Min of T.t] * [`Max of T.t]]
-    else
-      Ok (clamp_unchecked t ~min ~max)
-
   module C = struct
     include T
-    include Comparator.Make (Replace_polymorphic_compare)
+    include Base.Comparable.Poly(T)
   end
   include C
+  module Replace_polymorphic_compare = (C : Polymorphic_compare with type t := t)
   module Map = Core_map.Make_using_comparator (C)
   module Set = Core_set.Make_using_comparator (C)
-  include Validate (struct type nonrec t = t [@@deriving compare, sexp] end)
-end
-
-module Make_common (T : sig
-  type t [@@deriving compare, sexp_of]
-end) = struct
-  module Replace_polymorphic_compare = struct
-    module Without_squelch = struct
-      let compare = T.compare
-      let (>) a b = compare a b > 0
-      let (<) a b = compare a b < 0
-      let (>=) a b = compare a b >= 0
-      let (<=) a b = compare a b <= 0
-      let (=) a b = compare a b = 0
-      let (<>) a b = compare a b <> 0
-      let equal = (=)
-      let min t t' = if t <= t' then t else t'
-      let max t t' = if t >= t' then t else t'
-    end
-    include Without_squelch
-  end
-  include Replace_polymorphic_compare.Without_squelch
-  let ascending = compare
-  let descending t t' = compare t' t
-  let between t ~low ~high = low <= t && t <= high
-
-  let clamp_unchecked t ~min ~max =
-    if t < min then min else if t <= max then t else max
-
-  let clamp_exn t ~min ~max =
-    assert (min <= max);
-    clamp_unchecked t ~min ~max
-
-  let clamp t ~min ~max =
-    if min > max then
-      Or_error.error "clamp requires [min <= max]"
-        (`Min min, `Max max) [%sexp_of: [`Min of T.t] * [`Max of T.t]]
-    else
-      Ok (clamp_unchecked t ~min ~max)
-
-  include Validate (T)
 end
 
 module Make_plain_using_comparator (T : sig
@@ -150,10 +53,9 @@ module Make_plain_using_comparator (T : sig
     include Comparator.S with type t := t
   end) : S_plain with type t := T.t and type comparator_witness = T.comparator_witness = struct
   include T
-  include Make_common (struct
-      include T
-      let compare = comparator.compare
-    end)
+  module M = Base.Comparable.Make_using_comparator(T)
+  include M
+  module Replace_polymorphic_compare = (M : Polymorphic_compare with type t := t)
   module Map = Core_map.Make_plain_using_comparator (T)
   module Set = Core_set.Make_plain_using_comparator (T)
 end
@@ -170,10 +72,9 @@ module Make_using_comparator (T : sig
     include Comparator.S with type t := t
   end) : S with type t := T.t and type comparator_witness = T.comparator_witness = struct
   include T
-  include Make_common (struct
-      include T
-      let compare = comparator.compare
-    end)
+  module M = Base.Comparable.Make_using_comparator(T)
+  include M
+  module Replace_polymorphic_compare = (M : Polymorphic_compare with type t := t)
   module Map = Core_map.Make_using_comparator (T)
   module Set = Core_set.Make_using_comparator (T)
 end
@@ -191,10 +92,9 @@ module Make_binable_using_comparator (T : sig
   include Comparator.S with type t := t
 end) = struct
   include T
-  include Make_common (struct
-      include T
-      let compare = comparator.compare
-    end)
+  module M = Base.Comparable.Make_using_comparator(T)
+  include M
+  module Replace_polymorphic_compare = (M : Polymorphic_compare with type t := t)
   module Map = Core_map.Make_binable_using_comparator (T)
   module Set = Core_set.Make_binable_using_comparator (T)
 end
@@ -205,6 +105,31 @@ module Make_binable (T : sig
     include T
     include Comparator.Make (T)
   end)
+
+module Extend(M : Base.Comparable.S)(X : sig type t = M.t [@@deriving sexp] end) =
+struct
+  module T = struct
+    include M
+    include (X : sig type t = M.t [@@deriving sexp] end with type t := t)
+  end
+  include T
+  module Replace_polymorphic_compare = (M : Polymorphic_compare_intf.S with type t := t)
+  module Map = Core_map.Make_using_comparator (T)
+  module Set = Core_set.Make_using_comparator (T)
+end
+
+module Extend_binable(M : Base.Comparable.S)
+    (X : sig type t = M.t [@@deriving bin_io, sexp] end) =
+struct
+  module T = struct
+    include M
+    include (X : sig type t = M.t [@@deriving bin_io, sexp] end with type t := t)
+  end
+  include T
+  module Replace_polymorphic_compare = (M : Polymorphic_compare_intf.S with type t := t)
+  module Map = Core_map.Make_binable_using_comparator (T)
+  module Set = Core_set.Make_binable_using_comparator (T)
+end
 
 module Inherit
   (C : sig type t [@@deriving compare] end)
@@ -240,14 +165,7 @@ end) : sig end = struct
   ;;
 end
 
-(* compare [x] and [y] lexicographically using functions in the list [cmps] *)
-let lexicographic cmps x y =
-  let rec loop = function
-    | cmp :: cmps -> let res = cmp x y in if res = 0 then loop cmps else res
-    | [] -> 0
-  in
-  loop cmps
-;;
+let lexicographic = Base.Comparable.lexicographic
 
 module Stable = struct
   module V1 = struct

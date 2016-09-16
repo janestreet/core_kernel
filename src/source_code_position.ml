@@ -1,20 +1,11 @@
-module Core_source_code_position0 = Source_code_position0
 open! Import
 
-module Int = Core_int
-module String = Core_string
+include Base.Source_code_position
 
-module T = struct
-  include Core_source_code_position0
+include (Source_code_position0
+         : (module type of Source_code_position0
+             with type t := t
+             with type comparator_witness := comparator_witness))
 
-  let hash { Lexing. pos_fname; pos_lnum; pos_bol; pos_cnum } =
-    String.hash pos_fname
-    lxor Int.hash pos_lnum
-    lxor Int.hash pos_bol
-    lxor Int.hash pos_cnum
-  ;;
-end
-
-include T
-include Comparable.Make_using_comparator (T)
-include Hashable  .Make (T)
+include Comparable.Extend (Base.Source_code_position) (Source_code_position0)
+include Hashable.Make (Source_code_position0)

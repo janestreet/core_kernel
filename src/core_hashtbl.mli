@@ -83,3 +83,4 @@ open! Import
         let hash (x, y) = String.hash x + Int63.hash y * 65599 ]} *)
 
 include Core_hashtbl_intf.Hashtbl
+  with type ('a, 'b) t = ('a, 'b) Base.Hashtbl.t

@@ -24,6 +24,7 @@ open Sexplib.Std
 
 module List  = ListLabels
 module Array = ArrayLabels
+module Int64 = Caml.Int64
 
 module Arith64 = struct
   open Int64

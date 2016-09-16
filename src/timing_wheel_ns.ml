@@ -134,14 +134,28 @@ module Level_bits = struct
   let default = create_exn [ 11; 10; 10; 10; 10; 10 ]
 end
 
-module Config = struct
-  module Alarm_precision =
-    Validated.Make (struct
+module Alarm_precision = struct
+  module T =
+    Validated.Make_binable (struct
       include Time_ns.Span
       let here = [%here]
       let validate = Time_ns.Span.validate_positive
+      let validate_binio_deserialization = true
     end)
 
+  include T
+
+  let of_span = create_exn
+  let to_span = raw
+
+  let compare t1 t2 = Time_ns.Span.compare (to_span t1) (to_span t2)
+
+  let equal = [%compare.equal: t]
+
+  module Unstable = T
+end
+
+module Config = struct
   let level_bits_default = Level_bits.default
 
   type t =
@@ -150,7 +164,7 @@ module Config = struct
     }
   [@@deriving fields, sexp]
 
-  let alarm_precision t = Alarm_precision.raw t.alarm_precision
+  let alarm_precision t = Alarm_precision.to_span t.alarm_precision
 
   let invariant t =
     Invariant.invariant [%here] t [%sexp_of: t] (fun () ->
@@ -165,7 +179,7 @@ module Config = struct
         ~alarm_precision
         ()
     =
-    { alarm_precision = Alarm_precision.create_exn alarm_precision
+    { alarm_precision
     ; level_bits
     }
   ;;
@@ -1369,8 +1383,7 @@ let invariant invariant_a t =
                 (interval_start t (now t)));
       assert (Time_ns.( > )
                 (Alarm.at t alarm)
-                (Time_ns.sub (now t) (alarm_precision t)));
-    ))
+                (Time_ns.sub (now t) (alarm_precision t)))))
 ;;
 
 let advance_clock t ~to_ ~handle_fired =

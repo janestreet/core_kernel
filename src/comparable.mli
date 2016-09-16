@@ -1,4 +1,3 @@
-open! Import
 open Comparable_intf
 
 module type Infix               = Infix
@@ -75,7 +74,7 @@ end) : S with type t := T.t
 
 module Make_plain_using_comparator (T : sig
     type t [@@deriving sexp_of]
-    include Core_comparator.S with type t := t
+    include Comparator.S with type t := t
   end) : S_plain
   with type t := T.t
   with type comparator_witness := T.comparator_witness
@@ -97,6 +96,18 @@ module Make_binable_using_comparator (T : sig
   end) : S_binable
   with type t := T.t
   with type comparator_witness := T.comparator_witness
+
+module Extend(M : Base.Comparable.S)
+    (X : sig type t = M.t [@@deriving sexp] end)
+  : S
+    with type t := M.t
+    with type comparator_witness := M.comparator_witness
+
+module Extend_binable(M : Base.Comparable.S)
+    (X : sig type t = M.t [@@deriving bin_io, sexp] end)
+  : S_binable
+    with type t := M.t
+    with type comparator_witness := M.comparator_witness
 
 module Map_and_set_binable (T : sig type t [@@deriving bin_io, compare, sexp] end)
   : Map_and_set_binable with type t := T.t

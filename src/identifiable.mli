@@ -34,10 +34,15 @@ module Make (M : sig
 
 module Make_using_comparator (M : sig
     type t [@@deriving bin_io, compare, sexp]
-    include Core_comparator.S with type t := t
+    include Comparator.S with type t := t
     include Stringable.S with type t := t
     val hash : t -> int
     val module_name : string
   end) : S
   with type t := M.t
   with type comparator_witness := M.comparator_witness
+
+module Extend (M : Base.Identifiable.S) (B : Binable0.S with type t = M.t)
+  : S
+    with type t                  := M.t
+    with type comparator_witness := M.comparator_witness

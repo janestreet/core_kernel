@@ -10,17 +10,18 @@ open Typerep_lib.Std
 
 module List = ListLabels
 
+module Hash_set = Base.Hash_set
+
 let sprintf = Printf.sprintf
 
-module Int_hashtbl = Hashtbl.Make (struct
-  type t = int
-  let equal = ((=) : int -> int -> bool)
+module Key = struct
+  type t = int [@@deriving compare, sexp_of]
   let hash =
     (* The integers here are the values underlying the polymorphic variants, they already
        are hashes of constructor names, and hence are expected to be uniformly
        distributed. *)
     fun x -> x
-end)
+end
 
 module Allowed_ints = struct
 
@@ -28,11 +29,11 @@ module Allowed_ints = struct
   type t =
     | None
     | All
-    | Hashtbl of unit Int_hashtbl.t
+    | Hash_set of Hash_set.M(Key).t
     | From_zero_to of int
 
   let _invariant = function
-    | None | All | Hashtbl _ -> ()
+    | None | All | Hash_set _ -> ()
     | From_zero_to n -> assert (n >= 0)
   ;;
 
@@ -40,7 +41,7 @@ module Allowed_ints = struct
     match t with
     | None -> false
     | All -> true
-    | Hashtbl hashtbl -> Int_hashtbl.mem hashtbl i
+    | Hash_set hash_set -> Hash_set.mem hash_set i
     | From_zero_to n -> 0 <= i && i <= n
   ;;
 end
@@ -199,14 +200,14 @@ module Computation_impl = struct
         if not (Variant.is_polymorphic variant)
         then Allowed_ints.From_zero_to (no_arg_count - 1)
         else
-          let hashtbl = Int_hashtbl.create (no_arg_count * 2) in
+          let hash_set = Hash_set.create (module Key) ~size:(no_arg_count * 2) () in
           List.iter no_arg_list ~f:(function
             | Variant.Tag tag ->
               match Tag.create tag with
-              | Tag.Const _ -> Int_hashtbl.add hashtbl (Tag.ocaml_repr tag) ()
+              | Tag.Const _ -> Hash_set.add hash_set (Tag.ocaml_repr tag)
               | Tag.Args _ -> assert false
           );
-          Allowed_ints.Hashtbl hashtbl
+          Allowed_ints.Hash_set hash_set
       in
       let immediacy =
         if Variant.length variant > no_arg_count
