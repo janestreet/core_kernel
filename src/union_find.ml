@@ -93,6 +93,8 @@ let get_root (Inner inner) =
       inner.parent <- Node repr;
       root
 
+let get_rank t = let Root r = get_root t in r.rank
+
 let get t = let Root r = get_root t in r.value
 
 let set t x = let Root r = get_root t in r.value <- x
@@ -116,14 +118,14 @@ let union t1 t2 =
 
 let%test_module _ = (module struct
 
-  let is_compressed (Inner t) =
+  let is_compressed (Inner inner as t) =
     invariant t;
-    match t.parent with
-    | Root _ -> true
-    | Inner t ->
-      match t.parent with
-      | Root _ -> true
-      | Inner _ -> false
+    match inner.parent with
+    | Node Root _ -> true
+    | Node (Inner inner) ->
+      match inner.parent with
+      | Node Root _ -> true
+      | Node (Inner _) -> false
   ;;
 
   (* invariant checking wrapper functions *)
@@ -206,7 +208,7 @@ let%test_module _ = (module struct
     let n = 1000 in
     let ts = List.init n ~f:create in
     let t = List.reduce_exn ts ~f:(fun a b -> union a b; b) in
-    let max_rank = List.fold ts ~init:0 ~f:(fun acc t -> max acc (root t).rank) in
+    let max_rank = List.fold ts ~init:0 ~f:(fun acc t -> max acc (get_rank t)) in
     assert (max_rank = 1);
     set t 42;
     assert (List.for_all ts ~f:(fun t' -> same_class t t' && get t' = 42))
@@ -231,7 +233,7 @@ let%test_module _ = (module struct
     let t = sub 0 (pred n) in
     Array.iter ts ~f:invariant;
     assert (Array.exists ts ~f:(fun t -> not (is_compressed t)));
-    let max_rank = Array.fold ts ~init:0 ~f:(fun acc t -> max acc (root t).rank) in
+    let max_rank = Array.fold ts ~init:0 ~f:(fun acc t -> max acc (get_rank t)) in
     assert (max_rank <= log2 n);
     set t 42;
     assert (Array.for_all ts ~f:(fun t' -> same_class t t' && get t' = 42));
