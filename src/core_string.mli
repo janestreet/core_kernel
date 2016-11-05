@@ -22,7 +22,7 @@ val max_length : int
 
 external length : t -> int = "%string_length"
 external get : t -> int -> char = "%string_safe_get"
-external set : t -> int -> char -> unit = "%string_safe_set"
+external set : t -> int -> char -> unit = "%bytes_safe_set"
 
 external create : int -> t = "caml_create_string"
 val make : int -> char -> t
@@ -402,5 +402,5 @@ end
 
 
 external unsafe_get : string -> int -> char         = "%string_unsafe_get"
-external unsafe_set : string -> int -> char -> unit = "%string_unsafe_set"
+external unsafe_set : string -> int -> char -> unit = "%bytes_unsafe_set"
 

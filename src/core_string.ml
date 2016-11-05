@@ -49,8 +49,8 @@ external create : int -> string = "caml_create_string"
 external get        : string -> int -> char = "%string_safe_get"
 external unsafe_get : string -> int -> char = "%string_unsafe_get"
 external length : string -> int = "%string_length"
-external set        : string -> int -> char -> unit = "%string_safe_set"
-external unsafe_set : string -> int -> char -> unit = "%string_unsafe_set"
+external set        : string -> int -> char -> unit = "%bytes_safe_set"
+external unsafe_set : string -> int -> char -> unit = "%bytes_unsafe_set"
 
 module Caseless = struct
   module T = struct
