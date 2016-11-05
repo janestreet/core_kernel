@@ -8,8 +8,8 @@ PREFIX = $(shell grep ^prefix= setup.data | cut -d\" -f 2)
 default: build
 
 setup.exe: _oasis setup.ml
-	ocamlfind ocamlopt -o $@ -linkpkg -package ocamlbuild,oasis.dynrun setup.ml || \
-	  ocamlfind ocamlc -o $@ -linkpkg -package ocamlbuild,oasis.dynrun setup.ml || true
+	ocamlfind ocamlopt -o $@ setup.ml || \
+	  ocamlfind ocamlc -o $@ setup.ml || true
 	for f in setup.*; do [ $$f = $@ -o $$f = setup.ml ] || rm -f $$f; done
 
 build: $(SETUP) setup.data
