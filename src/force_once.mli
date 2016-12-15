@@ -1,5 +1,4 @@
 open! Import
-open Sexplib
 
 (** A "force_once" is a thunk that can only be forced once.  Subsequent forces
     will raise an exception. *)

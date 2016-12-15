@@ -1,6 +1,6 @@
 (** This module extends the Base [Container_intf] module *)
 
-open Import
+open! Import
 open Perms.Export
 open Base.Container_intf
 

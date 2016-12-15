@@ -32,7 +32,9 @@ let%test_module _ = (module (struct
     enqueue t 4;
     enqueue t 5;
     set_capacity t 0;
-    assert (capacity t = 8)
+    assert (capacity t = 8);
+    set_capacity t (-1);
+    assert (capacity t = 8);
   ;;
 
 
@@ -48,6 +50,24 @@ let%test_module _ = (module (struct
   let invariant = invariant
 
   let create = create
+  let%test_unit _ =
+    let t = create () in
+    assert (length t = 0);
+    assert (capacity t = 1);
+  ;;
+  let%test_unit _ =
+    let t = create ~capacity:0 () in
+    assert (length t = 0);
+    assert (capacity t = 1);
+  ;;
+  let%test_unit _ =
+    let t = create ~capacity:6 () in
+    assert (length t = 0);
+    assert (capacity t = 8);
+  ;;
+  let%test_unit _ =
+    assert (does_raise (fun () -> (create ~capacity:(-1) () : _ Queue.t)))
+  ;;
 
   let singleton = singleton
   let%test_unit _ =
@@ -56,6 +76,26 @@ let%test_module _ = (module (struct
     assert (capacity t = 1);
     assert (dequeue t = Some 7);
     assert (dequeue t = None)
+  ;;
+
+  let init = init
+  let%test_unit _ =
+    let t = init 0 ~f:(fun _ -> assert false) in
+    assert (length t = 0);
+    assert (capacity t = 1);
+    assert (dequeue t = None);
+  ;;
+  let%test_unit _ =
+    let t = init 3 ~f:(fun i -> i * 2) in
+    assert (length t = 3);
+    assert (capacity t = 4);
+    assert (dequeue t = Some 0);
+    assert (dequeue t = Some 2);
+    assert (dequeue t = Some 4);
+    assert (dequeue t = None);
+  ;;
+  let%test_unit _ =
+    assert (does_raise (fun () -> (init (-1) ~f:(fun _ -> ()) : unit Queue.t)))
   ;;
 
   let get = get
@@ -98,6 +138,24 @@ let%test_module _ = (module (struct
   let%test_unit _ =
     let t = create () in
     let t' = map t ~f:(fun x -> x * 2) in
+    assert (length t' = length t);
+    assert (length t' = 0);
+    assert (to_list t' = [])
+  ;;
+
+  let mapi = mapi
+  let%test_unit _ =
+    for i = 0 to 5 do
+      let l = List.init i ~f:Fn.id in
+      let t = of_list l in
+      let f i x = (i, x * 2) in
+      let t' = mapi t ~f in
+      assert (to_list t' = List.mapi l ~f);
+    done
+
+  let%test_unit _ =
+    let t = create () in
+    let t' = mapi t ~f:(fun i x -> (i, x * 2)) in
     assert (length t' = length t);
     assert (length t' = 0);
     assert (to_list t' = [])
@@ -218,7 +276,6 @@ let%test_module _ = (module (struct
   end)
 
   let clear          = clear
-  let concat_map     = concat_map
 
   let blit_transfer  = blit_transfer
 
@@ -255,12 +312,23 @@ let%test_module _ = (module (struct
     assert (to_list q = [6])
   ;;
 
-  let copy           = copy
-  let dequeue        = dequeue
-  let filter         = filter
-  let filter_inplace = filter_inplace
-  let filter_map     = filter_map
-  let iter           = iter
+  let copy            = copy
+  let dequeue         = dequeue
+  let filter          = filter
+  let filteri         = filteri
+  let filter_inplace  = filter_inplace
+  let filteri_inplace = filteri_inplace
+  let concat_map      = concat_map
+  let concat_mapi     = concat_mapi
+  let filter_map      = filter_map
+  let filter_mapi     = filter_mapi
+  let existsi         = existsi
+  let for_alli        = for_alli
+  let iter            = iter
+  let iteri           = iteri
+  let foldi           = foldi
+  let findi           = findi
+  let find_mapi       = find_mapi
 
   let%test_module "Linked_queue bisimulation" = (module struct
     module type Queue_intf = sig
@@ -271,18 +339,64 @@ let%test_module _ = (module (struct
       val dequeue : 'a t -> 'a option
       val to_array : 'a t -> 'a array
       val fold : 'a t -> init:'b -> f:('b -> 'a -> 'b) -> 'b
+      val foldi : 'a t -> init:'b -> f:(int -> 'b -> 'a -> 'b) -> 'b
       val iter : 'a t -> f:('a -> unit) -> unit
+      val iteri : 'a t -> f:(int -> 'a -> unit) -> unit
       val length : 'a t -> int
       val clear : 'a t -> unit
-      val concat_map : 'a t -> f:('a -> 'b list) -> 'b t
-      val filter_map     : 'a t -> f:('a -> 'b option) -> 'b t
-      val filter         : 'a t -> f:('a -> bool)      -> 'a t
-      val filter_inplace : 'a t -> f:('a -> bool)      -> unit
+      val concat_map      : 'a t -> f:(       'a -> 'b list)   -> 'b t
+      val concat_mapi     : 'a t -> f:(int -> 'a -> 'b list)   -> 'b t
+      val filter_map      : 'a t -> f:(       'a -> 'b option) -> 'b t
+      val filter_mapi     : 'a t -> f:(int -> 'a -> 'b option) -> 'b t
+      val filter          : 'a t -> f:(       'a -> bool)      -> 'a t
+      val filteri         : 'a t -> f:(int -> 'a -> bool)      -> 'a t
+      val filter_inplace  : 'a t -> f:(       'a -> bool)      -> unit
+      val filteri_inplace : 'a t -> f:(int -> 'a -> bool)      -> unit
+      val map             : 'a t -> f:(       'a -> 'b)        -> 'b t
+      val mapi            : 'a t -> f:(int -> 'a -> 'b)        -> 'b t
+      val existsi         : 'a t -> f:(int -> 'a -> bool)      -> bool
+      val for_alli        : 'a t -> f:(int -> 'a -> bool)      -> bool
+      val findi           : 'a t -> f:(int -> 'a -> bool)      -> (int * 'a) option
+      val find_mapi       : 'a t -> f:(int -> 'a -> 'b option) -> 'b option
       val transfer : src:'a t -> dst:'a t -> unit
       val copy : 'a t -> 'a t
     end
 
-    module That_queue : Queue_intf = Linked_queue
+    module That_queue : Queue_intf = struct
+      include Linked_queue
+      let iteri t ~f =
+        let i = ref 0 in
+        iter t ~f:(fun x -> let y = f !i x in incr i; y)
+      let foldi t ~init ~f =
+        let i = ref 0 in
+        fold ~init t ~f:(fun acc x -> let y = f !i acc x in incr i; y)
+      let filteri t ~f =
+        let i = ref 0 in
+        filter t ~f:(fun x -> let y = f !i x in incr i; y)
+      let filteri_inplace t ~f =
+        let i = ref 0 in
+        filter_inplace t ~f:(fun x -> let y = f !i x in incr i; y)
+      let filter_mapi t ~f =
+        let i = ref 0 in
+        filter_map t ~f:(fun x -> let y = f !i x in incr i; y)
+      let concat_mapi t ~f =
+        let i = ref 0 in
+        concat_map t ~f:(fun x -> let y = f !i x in incr i; y)
+      let mapi t ~f =
+        let i = ref 0 in
+        map t ~f:(fun x -> let y = f !i x in incr i; y)
+      let for_alli t ~f =
+        let i = ref 0 in
+        for_all t ~f:(fun x -> let y = f !i x in incr i; y)
+      let existsi t ~f =
+        let i = ref 0 in
+        exists t ~f:(fun x -> let y = f !i x in incr i; y)
+      let find_mapi t ~f =
+        let i = ref 0 in
+        find_map t ~f:(fun x -> let y = f !i x in incr i; y)
+      let findi t ~f =
+        find_mapi t ~f:(fun i x -> if f i x then Some (i,x) else None)
+    end
 
     module This_queue : Queue_intf = struct
       include Core_queue
@@ -334,6 +448,19 @@ let%test_module _ = (module (struct
              ()
     ;;
 
+    let iteri (t_a, t_b) =
+      let r_a, r_b = ref 0, ref 0 in
+      This_queue.iteri t_a ~f:(fun i x -> r_a := !r_a + x lxor i);
+      That_queue.iteri t_b ~f:(fun i x -> r_b := !r_b + x lxor i);
+      if !r_a <> !r_b
+      then failwithf "error in iteri: %s (from %s) <> %s (from %s)"
+             (Int.to_string !r_a)
+             (this_to_string t_a)
+             (Int.to_string !r_b)
+             (that_to_string t_b)
+             ()
+    ;;
+
     let dequeue (t_a, t_b) =
       let start_a = This_queue.to_array t_a in
       let start_b = That_queue.to_array t_b in
@@ -370,6 +497,18 @@ let%test_module _ = (module (struct
              ()
     ;;
 
+    let filteri (t_a, t_b) =
+      let t_a' = This_queue.filteri t_a ~f:(fun i j -> is_even i = is_even j) in
+      let t_b' = That_queue.filteri t_b ~f:(fun i j -> is_even i = is_even j) in
+      if This_queue.to_array t_a' <> That_queue.to_array t_b'
+      then failwithf "error in filteri: %s -> %s vs. %s -> %s"
+             (this_to_string t_a)
+             (this_to_string t_a')
+             (that_to_string t_b)
+             (that_to_string t_b')
+             ()
+    ;;
+
     let filter_inplace (t_a, t_b) =
       let start_a = This_queue.to_array t_a in
       let start_b = That_queue.to_array t_b in
@@ -379,6 +518,23 @@ let%test_module _ = (module (struct
       let end_b = That_queue.to_array t_b in
       if end_a <> end_b
       then failwithf "error in filter_inplace: %s -> %s vs. %s -> %s"
+             (array_string start_a)
+             (array_string end_a)
+             (array_string start_b)
+             (array_string end_b)
+             ()
+    ;;
+
+    let filteri_inplace (t_a, t_b) =
+      let start_a = This_queue.to_array t_a in
+      let start_b = That_queue.to_array t_b in
+      let f i x = is_even i = is_even x in
+      This_queue.filteri_inplace t_a ~f;
+      That_queue.filteri_inplace t_b ~f;
+      let end_a = This_queue.to_array t_a in
+      let end_b = That_queue.to_array t_b in
+      if end_a <> end_b
+      then failwithf "error in filteri_inplace: %s -> %s vs. %s -> %s"
              (array_string start_a)
              (array_string end_a)
              (array_string start_b)
@@ -399,6 +555,19 @@ let%test_module _ = (module (struct
              ()
     ;;
 
+    let concat_mapi (t_a, t_b) =
+      let f i x = [x; x + 1; x + 2; x + i] in
+      let t_a' = This_queue.concat_mapi t_a ~f in
+      let t_b' = That_queue.concat_mapi t_b ~f in
+      if (This_queue.to_array t_a') <> (That_queue.to_array t_b')
+      then failwithf "error in concat_mapi: %s (for %s) <> %s (for %s)"
+             (this_to_string t_a')
+             (this_to_string t_a)
+             (that_to_string t_b')
+             (that_to_string t_b)
+             ()
+    ;;
+
     let filter_map (t_a, t_b) =
       let f x = if is_even x then None else Some (x + 1) in
       let t_a' = This_queue.filter_map t_a ~f in
@@ -408,6 +577,97 @@ let%test_module _ = (module (struct
              (this_to_string t_a')
              (this_to_string t_a)
              (that_to_string t_b')
+             (that_to_string t_b)
+             ()
+    ;;
+
+    let filter_mapi (t_a, t_b) =
+      let f i x = if is_even i = is_even x then None else Some (x + 1 + i) in
+      let t_a' = This_queue.filter_mapi t_a ~f in
+      let t_b' = That_queue.filter_mapi t_b ~f in
+      if (This_queue.to_array t_a') <> (That_queue.to_array t_b')
+      then failwithf "error in filter_mapi: %s (for %s) <> %s (for %s)"
+             (this_to_string t_a')
+             (this_to_string t_a)
+             (that_to_string t_b')
+             (that_to_string t_b)
+             ()
+    ;;
+
+    let map (t_a, t_b) =
+      let f x = x * 7 in
+      let t_a' = This_queue.map t_a ~f in
+      let t_b' = That_queue.map t_b ~f in
+      if (This_queue.to_array t_a') <> (That_queue.to_array t_b')
+      then failwithf "error in map: %s (for %s) <> %s (for %s)"
+             (this_to_string t_a')
+             (this_to_string t_a)
+             (that_to_string t_b')
+             (that_to_string t_b)
+             ()
+    ;;
+
+    let mapi (t_a, t_b) =
+      let f i x = (x + 3) lxor i in
+      let t_a' = This_queue.mapi t_a ~f in
+      let t_b' = That_queue.mapi t_b ~f in
+      if (This_queue.to_array t_a') <> (That_queue.to_array t_b')
+      then failwithf "error in mapi: %s (for %s) <> %s (for %s)"
+             (this_to_string t_a')
+             (this_to_string t_a)
+             (that_to_string t_b')
+             (that_to_string t_b)
+             ()
+    ;;
+
+    let existsi (t_a, t_b) =
+      let f i x = i < 7 && (i % 7 = x % 7) in
+      let a' = This_queue.existsi t_a ~f in
+      let b' = That_queue.existsi t_b ~f in
+      if a' <> b'
+      then failwithf "error in existsi: %b (for %s) <> %b (for %s)"
+             (a')
+             (this_to_string t_a)
+             (b')
+             (that_to_string t_b)
+             ()
+    ;;
+
+    let for_alli (t_a, t_b) =
+      let f i x = i >= 7 || (i % 7 <> x % 7) in
+      let a' = This_queue.for_alli t_a ~f in
+      let b' = That_queue.for_alli t_b ~f in
+      if a' <> b'
+      then failwithf "error in for_alli: %b (for %s) <> %b (for %s)"
+             (a')
+             (this_to_string t_a)
+             (b')
+             (that_to_string t_b)
+             ()
+    ;;
+
+    let findi (t_a, t_b) =
+      let f i x = i < 7 && (i % 7 = x % 7) in
+      let a' = This_queue.findi t_a ~f in
+      let b' = That_queue.findi t_b ~f in
+      if a' <> b'
+      then failwithf "error in findi: %s (for %s) <> %s (for %s)"
+             (Sexp.to_string ([%sexp_of: (int * int) option] a'))
+             (this_to_string t_a)
+             (Sexp.to_string ([%sexp_of: (int * int) option] b'))
+             (that_to_string t_b)
+             ()
+    ;;
+
+    let find_mapi (t_a, t_b) =
+      let f i x = if i < 7 && (i % 7 = x % 7) then Some (i + x) else None in
+      let a' = This_queue.find_mapi t_a ~f in
+      let b' = That_queue.find_mapi t_b ~f in
+      if a' <> b'
+      then failwithf "error in find_mapi: %s (for %s) <> %s (for %s)"
+             (Sexp.to_string ([%sexp_of: int option] a'))
+             (this_to_string t_a)
+             (Sexp.to_string ([%sexp_of: int option] b'))
              (that_to_string t_b)
              ()
     ;;
@@ -472,6 +732,21 @@ let%test_module _ = (module (struct
              ()
     ;;
 
+    let foldi_check (t_a, t_b) =
+      let make_list foldi t =
+        foldi t ~init:[] ~f:(fun i acc x -> (i,x) :: acc)
+      in
+      let this_l = make_list This_queue.foldi t_a in
+      let that_l = make_list That_queue.foldi t_b in
+      if this_l <> that_l
+      then failwithf "error in foldi:  %s (from %s) <> %s (from %s)"
+             (Sexp.to_string (this_l |> [%sexp_of: (int * int) list]))
+             (this_to_string t_a)
+             (Sexp.to_string (that_l |> [%sexp_of: (int * int) list]))
+             (that_to_string t_b)
+             ()
+    ;;
+
     let length_check (t_a, t_b) =
       let this_len = This_queue.length t_a in
       let that_len = That_queue.length t_b in
@@ -497,7 +772,7 @@ let%test_module _ = (module (struct
                  ()
         end else begin
           let queue_was_empty = This_queue.length (fst t) = 0 in
-          let r = Random.int 160 in
+          let r = Random.int 190 in
           begin
             if r < 60
             then enqueue t (Random.int 10_000)
@@ -507,28 +782,54 @@ let%test_module _ = (module (struct
             then clear t
             else if r < 80
             then iter t
+            else if r < 85
+            then iteri t
             else if r < 90
             then fold_check t
+            else if r < 95
+            then foldi_check t
             else if r < 100
             then filter t
+            else if r < 105
+            then filteri t
             else if r < 110
             then concat_map t
+            else if r < 115
+            then concat_mapi t
             else if r < 120
             then transfer t
             else if r < 130
             then filter_map t
+            else if r < 135
+            then filter_mapi t
             else if r < 140
             then copy t
             else if r < 150
             then filter_inplace t
-            else length_check t
+            else if r < 155
+            then for_alli t
+            else if r < 160
+            then existsi t
+            else if r < 165
+            then findi t
+            else if r < 170
+            then find_mapi t
+            else if r < 175
+            then map t
+            else if r < 180
+            then mapi t
+            else if r < 185
+            then filteri_inplace t
+            else if r < 190
+            then length_check t
+            else failwith "Impossible: We did [Random.int 190] above"
           end;
           loop
             ~all_ops:(all_ops - 1)
             ~non_empty_ops:(if queue_was_empty then non_empty_ops else non_empty_ops - 1)
         end
       in
-      loop ~all_ops:7_500 ~non_empty_ops:5_000
+      loop ~all_ops:30_000 ~non_empty_ops:20_000
     ;;
   end)
 

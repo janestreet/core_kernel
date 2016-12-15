@@ -52,7 +52,8 @@ module type S = sig
 
   val lookup_exn : 'a t -> Key.t -> 'a
 
-  (* Adding, removing, and replacing elements. *)
+  (* Adding, removing, and replacing elements. Note that even the non-[*_exn] versions can
+     raise, but only if there is an ongoing iteration. *)
     (** [enqueue t k v] adds the key-value pair (k, v) to the end of the queue,
        returning `Ok if the pair was added, or `Key_already_present
        if there is already a (k, v') in the queue.
@@ -60,6 +61,10 @@ module type S = sig
   val enqueue : 'a t -> Key.t -> 'a -> [ `Ok | `Key_already_present ]
 
   val enqueue_exn : 'a t -> Key.t -> 'a -> unit
+
+  val lookup_and_move_to_back     : 'a t -> Key.t -> 'a option
+
+  val lookup_and_move_to_back_exn : 'a t -> Key.t -> 'a
 
   (** [first t] returns the front element of the queue, without removing it. *)
   val first : 'a t -> 'a option
@@ -227,6 +232,23 @@ module Make (Key : Key) : S with module Key = Key = struct
     match enqueue t key value with
     | `Key_already_present -> raise (Enqueue_duplicate_key key)
     | `Ok -> ()
+  ;;
+
+  (* Performance hack: we implement this version separately to avoid allocation from the
+     option. *)
+  let lookup_and_move_to_back_exn t key =
+    ensure_can_modify t;
+    let elt = Hashtbl.find_exn t.table key in
+    Doubly_linked.move_to_back t.queue elt;
+    Key_value.value (Elt.value elt)
+  ;;
+
+  let lookup_and_move_to_back t key =
+    let open Option.Let_syntax in
+    ensure_can_modify t;
+    let%map elt = Hashtbl.find t.table key in
+    Doubly_linked.move_to_back t.queue elt;
+    Key_value.value (Elt.value elt)
   ;;
 
   let dequeue_with_key t =

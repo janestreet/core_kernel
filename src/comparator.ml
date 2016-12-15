@@ -1,5 +1,4 @@
 open! Import
-open Sexplib
 
 module Comparator = Base.Comparator
 

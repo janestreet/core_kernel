@@ -9,8 +9,6 @@ module Binable = Binable0
 module Z : sig
   type t = (char, int8_unsigned_elt, c_layout) Array1.t [@@deriving bin_io, sexp]
 end = struct
-  include Bin_prot.Std
-  include Sexplib.Conv
   type t = bigstring [@@deriving bin_io, sexp]
 end
 include Z
@@ -84,7 +82,7 @@ module Blit_elt = struct
   let of_bool b = if b then 'a' else 'b'
 end
 
-include Blit.Make
+include Test_blit.Make_and_test
           (Blit_elt)
           (struct
             include Bigstring_sequence
@@ -92,7 +90,7 @@ include Blit.Make
           end)
 
 module From_string =
-  Blit.Make_distinct
+  Test_blit.Make_distinct_and_test
     (Blit_elt)
     (String_sequence)
     (struct
@@ -104,7 +102,7 @@ module From_string =
 ;;
 
 module To_string =
-  Blit.Make_distinct
+  Test_blit.Make_distinct_and_test
     (Blit_elt)
     (Bigstring_sequence)
     (struct
@@ -396,6 +394,15 @@ let find ?(pos = 0) ?len chr bstr =
 (* Destruction *)
 
 external unsafe_destroy : t -> unit = "bigstring_destroy_stub"
+
+(* Hex dump *)
+
+include Hexdump.Of_indexable (struct
+    type nonrec t = t
+    let length = length
+    let get    = get
+  end)
+;;
 
 (* vim: set filetype=ocaml : *)
 

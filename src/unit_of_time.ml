@@ -1,5 +1,4 @@
 open! Import
-open Sexplib.Std
 
 type t =
   | Nanosecond

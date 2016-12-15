@@ -387,7 +387,7 @@ end
 
 (** [symmetric_diff t1 t2 ~data_equal] returns a list of changes between [t1] and [t2].
     It is intended to be efficient in the case where [t1] and [t2] share a large amount of
-    structure. *)
+    structure.  The keys in the output sequence will be in sorted order. *)
 val symmetric_diff
   :  ('k, 'v, 'cmp) t
   -> ('k, 'v, 'cmp) t
@@ -413,11 +413,50 @@ val count    : ('k, 'v, _) t -> f:(               'v -> bool) -> int
 val counti   : ('k, 'v, _) t -> f:(key:'k -> data:'v -> bool) -> int
 
 (** [split t key] returns a map of keys strictly less than [key], the mapping of [key] if
-    any, and a map of keys strictly greater than [key]. **)
+    any, and a map of keys strictly greater than [key].
+
+    Runtime is O(m + log n) where n is the size of the input map, and m is the size of the
+    smaller of the two output maps.  The O(m) term is due to the need to calculate the
+    length of the output maps. **)
 val split
   :  ('k, 'v, 'cmp) t
   -> 'k
   -> ('k, 'v, 'cmp) t * ('k * 'v) option * ('k, 'v, 'cmp) t
+
+(** [append ~lower_part ~upper_part] returns [`Ok map] where map contains all the [(key,
+    value)] pairs from the two input maps if all the keys from [lower_part] are less than
+    all the keys from [upper_part].  Otherwise it returns [`Overlapping_key_ranges].
+
+    Runtime is O(log n) where n is the size of the larger input map.  This can be
+    significantly faster than [Map.merge] or repeated [Map.add].
+
+    {[
+      assert (match Map.append ~lower_part ~upper_part with
+        | `Ok whole_map ->
+          whole_map
+          = Map.(of_alist_exn (List.append (to_alist lower_part) (to_alist upper_part)))
+        | `Overlapping_key_ranges -> true);
+    ]}
+*)
+val append
+  :  lower_part:('k, 'v, 'cmp) t
+  -> upper_part:('k, 'v, 'cmp) t
+  -> [ `Ok of ('k, 'v, 'cmp) t
+     | `Overlapping_key_ranges ]
+
+(** [subrange t ~lower_bound ~upper_bound] returns a map containing
+    all the entries from [t] whose keys lie inside the interval
+    indicated by [~lower_bound] and [~upper_bound].
+    If this interval is empty, an empty map is returned.
+
+    Runtime is O(m + log n) where n is the size of the input map, and m is the size of the
+    output map.  The O(m) term is due to the need to calculate the length of the output
+    map. *)
+val subrange
+  :  ('k, 'v, 'cmp) t
+  -> lower_bound:'k Maybe_bound.t
+  -> upper_bound:'k Maybe_bound.t
+  -> ('k, 'v, 'cmp) t
 
 (** [fold_range_inclusive t ~min ~max ~init ~f]
     folds f (with initial value ~init) over all keys (and their associated values)

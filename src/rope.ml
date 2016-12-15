@@ -1,5 +1,5 @@
 open! Import
-open Sexplib.Std
+
 module Array = Core_array
 module List = Core_list
 module String = Core_string
@@ -100,19 +100,25 @@ let%test_unit _ =
   [%test_result: String.t] ~expect:"abcdefghijkl" (Buffer.to_bytes buffer)
 ;;
 
-let%test "no stack overflow" = to_string (
-  List.fold_left ~init:(of_string "") ~f:(^) (
-    List.init 1000000 ~f:(fun _x -> of_string "x")))
-        = String.make 1000000 'x'
+let%test_unit "no stack overflow" =
+  [%test_result: string]
+    (to_string (
+       List.fold_left ~init:(of_string "") ~f:(^) (
+         List.init 1000000 ~f:(fun _x -> of_string "x"))))
+    ~expect:(String.make 1000000 'x')
 ;;
 
-let%test _ = to_string (of_string "") = ""
-let%test _ = to_string (of_string "x") = "x"
-let%test _ = to_string (of_string "ab" ^ of_string "cd" ^ of_string "efg") = "abcdefg"
-let%test _ =
+let%test_unit _ = [%test_result: string] (to_string (of_string "")) ~expect:""
+let%test_unit _ = [%test_result: string] (to_string (of_string "x")) ~expect:"x"
+let%test_unit _ = [%test_result: string]
+                    (to_string (of_string "ab" ^ of_string "cd" ^ of_string "efg"))
+                    ~expect:"abcdefg"
+let%test_unit _ =
   let rec go = function
     | 0 -> of_string "0"
     | n -> go (n - 1) ^ of_string (string_of_int n) ^ go (n - 1)
   in
-  to_string (go 4) = "0102010301020104010201030102010"
+  [%test_result: string]
+    (to_string (go 4))
+    ~expect:"0102010301020104010201030102010"
 ;;

@@ -6,9 +6,8 @@
 *)
 
 open! Import
-open Typerep_lib.Std
 
-module List = ListLabels
+module List = Base.List
 
 module Hash_set = Base.Hash_set
 
@@ -47,9 +46,9 @@ module Allowed_ints = struct
 end
 
 module Immediacy = struct
-  type t = Always | Sometimes | Never
+  type t = Always | Sometimes | Never [@@deriving compare]
 
-  let equal (t1 : t) t2 = t1 = t2
+  let equal = [%compare.equal: t]
 
   let to_string = function
     | Always    -> "Always"

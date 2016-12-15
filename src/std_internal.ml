@@ -3,18 +3,42 @@
 
 open! Import
 
-(* handy shortcuts *)
-include Common
+include Core_pervasives (* [include]d first so that everything else shadows it *)
 
-module Exn    = Base.Exn
-module Staged = Base.Staged
+include Deprecate_pipe_bang
+include Either.Export
+include (Float : Interfaces.Robustly_comparable with type t := float)
+include From_sexplib
+include Interfaces
+include Core_list.Infix
+include Never_returns
+include Ordering.Export
+include Perms.Export
+include Result.Export
 
-module Set      = Core_set
-module Map      = Core_map
-module Array    = Core_array
-module Hashtbl  = Core_hashtbl
-module Result   = Result
-module String   = Core_string
+module Array        = Core_array
+module Bool         = Bool
+module Char         = Core_char
+module Comparator   = Comparator
+module Exn          = Base.Exn
+module Field        = Field
+module Hashtbl      = Core_hashtbl
+module Int          = Core_int
+module Int32        = Core_int32
+module Int63        = Core_int63
+module Int64        = Core_int64
+module Lazy         = Core_lazy
+module Linked_queue = Linked_queue
+module Map          = Core_map
+module Nativeint    = Core_nativeint
+module Ordering     = Ordering
+module Random       = Core_random
+module Ref          = Ref
+module Result       = Result
+module Set          = Core_set
+module Sexp         = Core_sexp
+module Staged       = Base.Staged
+module String       = Core_string
 
 module List = struct
   include Core_list
@@ -39,71 +63,68 @@ module List = struct
     in
     Staged.stage Set.stable_dedup_list
   ;;
-
 end
-include List.Infix
 
-module Linked_queue = Linked_queue
-module Random = Core_random
-module Char = Core_char
+type -'a return = 'a With_return.return = private {
+  return : 'b. 'a -> 'b;
+}
 
-module Ordering = Ordering
-module Comparator = Comparator
+exception Bug of string [@@deriving sexp]
 
-module Bool = Bool
-module Int = Core_int
+(** Raised if malloc in C bindings fail (errno * size). *)
+exception C_malloc_exn of int * int (* errno, size *)
+let () =
+  Callback.register_exception "C_malloc_exn" (C_malloc_exn (0, 0))
+
+exception Finally = Exn.Finally
+
+let fst3 (x,_,_) = x
+let snd3 (_,y,_) = y
+let trd3 (_,_,z) = z
+
+let uw = function Some x -> x | None -> raise Not_found
+
+(** [phys_same] is like [phys_equal], but with a more general type.  [phys_same] is useful
+    when dealing with existential types, when one has a packed value and an unpacked value
+    that one wants to check are physically equal.  One can't use [phys_equal] in such a
+    situation because the types are different. *)
+let phys_same (type a) (type b) (a : a) (b : b) = phys_equal a (Obj.magic b : a)
+
 let ( %  ) = Int.( %  )
 let ( /% ) = Int.( /% )
 let ( // ) = Int.( // )
-module Int32 = Core_int32
-module Int63 = Core_int63
-module Int64 = Core_int64
-module Nativeint = Core_nativeint
 
-module Lazy = Core_lazy
+let (==>) a b = (not a) || b
 
-module Field = Fieldslib.Field
+let bprintf            = Printf.bprintf
+let const              = Fn.const
+let eprintf            = Printf.eprintf
+let error              = Or_error.error
+let error_s            = Or_error.error_s
+let failwithf          = Base.Printf.failwithf
+let failwithp          = Error.failwithp
+let failwiths          = Error.failwiths
+let force              = Base.Lazy.force
+let fprintf            = Printf.fprintf
+let ident              = Fn.id
+let invalid_argf       = Base.Printf.invalid_argf
+let is_none            = Option.is_none
+let is_some            = Option.is_some
+let ksprintf           = Printf.ksprintf
+let ok_exn             = Or_error.ok_exn
+let phys_equal         = Base.phys_equal
+let phys_same          = phys_same
+let printf             = Printf.printf
+let protect            = Exn.protect
+let protectx           = Exn.protectx
+let raise_s            = Error.raise_s
+let round              = Float.round
+let sprintf            = Printf.sprintf
+let stage              = Staged.stage
+let unstage            = Staged.unstage
+let with_return        = With_return.with_return
+let with_return_option = With_return.with_return_option
 
-module Ref = Ref
-
-include (Float : Interfaces.Robustly_comparable with type t := float)
-
-let round = Float.round
-
-include Interfaces
-
-module Sexp = Core_sexp
-
-include (Sexplib.Conv : sig
-
-  type bigstring = Sexplib.Conv.bigstring [@@deriving sexp]
-  type mat = Sexplib.Conv.mat [@@deriving sexp]
-  type vec = Sexplib.Conv.vec [@@deriving sexp]
-
-  (* [sexp_of_opaque] and [opaque_of_sexp] are used by the code generated from
-     [[@@deriving sexp]], [[%sexp_of: ]], and [[%of_sexp: ]].  The type [_ sexp_opaque]
-     expands to uses of [sexp_of_opaque] and [opaque_of_sexp]. *)
-  val sexp_of_opaque : _ -> Sexp.t
-  val opaque_of_sexp : Sexp.t -> _
-
-  val sexp_of_pair : ('a -> Sexp.t) -> ('b -> Sexp.t) -> 'a * 'b -> Sexp.t
-  val pair_of_sexp:  (Sexp.t -> 'a) -> (Sexp.t -> 'b) -> Sexp.t -> 'a * 'b
-
-  exception Of_sexp_error of exn * Sexp.t
-  val of_sexp_error : string -> Sexp.t -> _
-  val of_sexp_error_exn : exn -> Sexp.t -> _
-
-end)
-
-let printf   = Printf.printf
-let bprintf  = Printf.bprintf
-let eprintf  = Printf.eprintf
-let fprintf  = Printf.fprintf
-let sprintf  = Printf.sprintf
-let ksprintf = Printf.ksprintf
-
-include Result.Export
-include Either.Export
 (* With the following aliases, we are just making extra sure that the toplevel sexp
    converters line up with the ones in our modules. *)
 
@@ -202,8 +223,6 @@ type 'a sexp_option = 'a option [@@deriving bin_io, compare, hash, typerep]
 
 type 'a sexp_opaque = 'a        [@@deriving bin_io, compare, hash, typerep]
 
-include Ordering.Export
-
 (* The code below checks that the signatures in core_map.mli and core_set.mli are
    consistent with the generic map and set signatures defined in core_map_intf.ml
    and core_set_intf.ml. *)
@@ -259,3 +278,4 @@ let () =
   end = Map
   in
   ()
+

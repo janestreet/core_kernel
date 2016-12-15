@@ -1,8 +1,5 @@
 open! Import
-open Common
-
-module Sexp = Core_sexp
-module String = Core_string
+open! Std_internal
 
 (* ['a Cheap_option.t] is like ['a option], but it doesn't box [some _] values.
 
@@ -188,7 +185,7 @@ module Sequence = struct
 end
 
 include
-  Blit.Make1_generic
+  Test_blit.Make1_generic_and_test
     (struct
       include Option
       let of_bool b = Some b

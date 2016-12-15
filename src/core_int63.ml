@@ -1,4 +1,4 @@
-open Import
+open! Import
 
 #import "config.h"
 
@@ -12,8 +12,8 @@ module Bin = struct
 #else
   include Binable0.Of_binable(Core_int64)(struct
     type t = Base.Int63.t
-    let of_binable = Base0.Base_int63_emul.W.wrap_exn
-    let to_binable = Base0.Base_int63_emul.W.unwrap
+    let of_binable = Base.Not_exposed_properly.Int63_emul.W.wrap_exn
+    let to_binable = Base.Not_exposed_properly.Int63_emul.W.unwrap
   end)
 #endif
   let bin_shape_t = Bin_prot.Shape.bin_shape_int63
@@ -43,14 +43,10 @@ module type Typerepable = sig
   type t [@@deriving typerep]
 end
 type 'a typerepable = (module Typerepable with type t = 'a)
-let typerep : _ typerepable =
-#ifdef JSC_ARCH_SIXTYFOUR
-  (module Core_int)
-#else
-  (module Core_int64)
-#endif
-
-include (val (Obj.magic typerep : Base.Int63.t typerepable))
+let typerep_of_repr : type a. a Base.Int63.Private.Repr.t -> a typerepable = function
+  | Base.Int63.Private.Repr.Int   -> (module Core_int)
+  | Base.Int63.Private.Repr.Int64 -> (module Core_int64)
+include (val (typerep_of_repr Base.Int63.Private.repr : Base.Int63.t typerepable))
 
 include Identifiable.Extend (Base.Int63) (struct
     type nonrec t = t
@@ -64,16 +60,16 @@ module Hex = struct
 end
 
 include (Base.Int63
-         : module type of struct include Base.Int63 end
-         with type t := t
-         with module Hex := Hex)
+         : (module type of struct include Base.Int63 end
+             with type t := t
+             with module Hex := Hex))
 
 #ifdef JSC_ARCH_SIXTYFOUR
 let splittable_random random ~lo ~hi =
   of_int (Splittable_random.int random ~lo:(to_int_exn lo) ~hi:(to_int_exn hi))
 #else
 let splittable_random random ~lo ~hi =
-  let open Base0.Base_int63_emul.W in
+  let open Base.Not_exposed_properly.Int63_emul.W in
   wrap_exn (Splittable_random.int64 random ~lo:(unwrap lo) ~hi:(unwrap hi))
 #endif
 

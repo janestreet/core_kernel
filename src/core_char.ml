@@ -1,6 +1,4 @@
-open Import
-open Bin_prot.Std
-open Typerep_lib.Std
+open! Import
 
 module Array = Core_array
 module List  = Core_list

@@ -116,9 +116,7 @@ include (struct
         exn (
           "Bus subscriber raised"
           (exn "subscriber raising")
-          (backtrace (
-            "Raised at file \"error.ml\", line LINE, characters C1-C2"
-            "Called from file \"bus.ml\", line LINE, characters C1-C2"))
+          (backtrace ("Called from file \"bus.ml\", line LINE, characters C1-C2"))
           (subscriber (
             Bus.Subscriber.t (
               (id       2)

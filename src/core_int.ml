@@ -1,6 +1,4 @@
-open Import
-open Bin_prot.Std
-open Typerep_lib.Std
+open! Import
 
 module Stable_workaround = struct
   module V1 = struct

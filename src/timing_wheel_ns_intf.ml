@@ -172,21 +172,47 @@ module type Interval_num = sig
   val rem : t -> Span.t -> Span.t
 end
 
+module type Alarm_precision = sig
+  module Time : Timing_wheel_time
+
+  type t [@@deriving compare, sexp_of]
+
+  include Equal.S with type t := t
+
+  val of_span : Time.Span.t -> t
+
+  (** [of_span_floor_pow2_ns span] returns the largest alarm precision less than or equal
+      to [span] that is a power of two number of nanoseconds. *)
+  val of_span_floor_pow2_ns : Time.Span.t -> t
+
+  val to_span : t -> Time.Span.t
+
+  val one_nanosecond : t
+
+  (** Constants that are the closest power of two number of nanoseconds to the stated
+      span. *)
+  val about_one_day         : t  (*_ ~19.5 h  *)
+  val about_one_microsecond : t  (*_  1024 us *)
+  val about_one_millisecond : t  (*_ ~1.05 ms *)
+  val about_one_second      : t  (*_ ~1.07 s  *)
+
+  (** [mul t ~pow2] is [t * 2^pow2].  [pow2] may be negative, but [mul] does not check for
+      overflow or underflow. *)
+  val mul : t -> pow2:int -> t
+
+  (** [div t ~pow2] is [t / 2^pow2].  [pow2] may be negative, but [div] does not check
+      for overflow or underflow. *)
+  val div : t -> pow2:int -> t
+
+  module Unstable : sig
+    type nonrec t = t [@@deriving bin_io, compare, sexp]
+  end
+end
+
 module type Timing_wheel = sig
   module Time : Timing_wheel_time
 
-  module Alarm_precision : sig
-    type t [@@deriving compare, sexp_of]
-
-    include Equal.S with type t := t
-
-    val of_span : Time.Span.t -> t
-    val to_span : t -> Time.Span.t
-
-    module Unstable : sig
-      type nonrec t = t [@@deriving bin_io, sexp]
-    end
-  end
+  module Alarm_precision : Alarm_precision with module Time := Time
 
   type 'a t [@@deriving sexp_of]
 

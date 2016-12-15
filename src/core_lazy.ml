@@ -1,13 +1,10 @@
 open! Import
 
-open Typerep_lib.Std
-open Sexplib.Std
-open Bin_prot.Std
-
 module Stable = struct
   module V1 = struct
+    open Sexplib.Std
     type 'a t = 'a lazy_t
-      [@@deriving bin_io, sexp, typerep]
+    [@@deriving bin_io, sexp, typerep]
 
     let map = Base.Lazy.map
     let compare = Base.Lazy.compare

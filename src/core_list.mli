@@ -5,6 +5,11 @@ type 'a t = 'a list [@@deriving bin_io, typerep]
 module Assoc : sig
   type ('a, 'b) t = ('a, 'b) Base.List.Assoc.t [@@deriving bin_io]
 
+  val compare : [%compare: 'a] -> [%compare: 'b] -> [%compare: ('a, 'b) t]
+  [@@deprecated
+    "[since 2016-06] This does not respect the equivalence class promised by List.Assoc.\n\
+     Use List.compare directly if that's what you want."]
+
   include (module type of struct include Base.List.Assoc end
             with type ('a, 'b) t := ('a, 'b) t)
 end

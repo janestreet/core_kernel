@@ -1,5 +1,4 @@
 open! Import
-open Sexplib.Conv
 
 include Core_int
 
@@ -11,7 +10,7 @@ let of_int i = ensure i
 
 let of_string string = ensure (of_string string)
 
-let t_of_sexp sexp = 
+let t_of_sexp sexp =
   let t = t_of_sexp sexp in
   try
     ensure t

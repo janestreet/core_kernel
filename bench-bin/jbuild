@@ -7,5 +7,5 @@
   (libraries
    (core
     core_bench
-    ppx_hash_lib
+    ppx_hash.runtime-lib
     re2))))

@@ -1,6 +1,4 @@
-open Import
-open Bin_prot.Std
-open Typerep_lib.Std
+open! Import
 
 type t = bool [@@deriving bin_io, typerep]
 

@@ -32,7 +32,6 @@
 *)
 
 open! Import
-open Sexplib
 open T
 
 type ('a, 'b) t = ('a, 'b) Typerep_lib.Std.Type_equal.t = T : ('a, 'a) t

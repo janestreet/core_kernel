@@ -17,14 +17,11 @@ module Stable = struct
   end
 
   module V1_stable_unit_test = struct
-    open Sexplib.Std
-    open Bin_prot.Std
-    open Hash.Builtin
 
     type t = (string, int) V1.t
     [@@deriving bin_io, compare, hash, sexp]
 
-    let equal = (=)
+    let equal = [%compare.equal: t]
 
     let tests =
       [ V1.Ok "foo", "(Ok foo)",  "\000\003foo"

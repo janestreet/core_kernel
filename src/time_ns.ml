@@ -186,10 +186,10 @@ end = struct
     end)
   ;;
 
-  (** The conversion code here is largely copied from [Core.Span] and edited to remove
-      some of the stable versioning details. This makes it a little easier to think about
-      and we get a compatible sexp format that can subsequently live in [Core_kernel] and
-      [Async_kernel] *)
+(* The conversion code here is largely copied from [Core_kernel.Span] and edited to remove
+   some of the stable versioning details. This makes it a little easier to think about
+   and we get a compatible sexp format that can subsequently live in [Core_kernel] and
+   [Async_kernel] *)
   module Alternate_sexp = struct
     type nonrec t = t
 

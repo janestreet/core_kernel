@@ -1,8 +1,6 @@
 open! Import
 open Std_internal
 
-module Array = Core_array
-
 module Entry = struct
   type ('key, 'data) t =
     { (* the int is fixed, but the 'key can change *)

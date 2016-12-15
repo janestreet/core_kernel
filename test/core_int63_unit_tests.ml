@@ -97,42 +97,41 @@ module Make_tests(Int : Base.Int_intf.S) : sig end = struct
   let%test_unit _ = [%test_result:t] (Hex.of_string "0x1") ~expect:one
   let%test_unit _ = [%test_result:t] (Hex.of_string "-0x1") ~expect:(neg one)
 
-  let%test_unit _ =
-    if String.is_prefix ~prefix:"4.03" Sys.ocaml_version
-    then assert ((of_string "0u4611686018427387904") = min_value)
-    else ()
+  let%test_unit _ = [%test_result:t] (of_string "0u4611686018427387904") ~expect:min_value
 end
 
-let%test_module "Int63_emul" = (module Make_tests(Base0.Base_int63_emul))
+let%test_module "Int63_emul" = (module Make_tests(Base.Not_exposed_properly.Int63_emul))
 let%test_module "Int63_maybe_native" = (module Make_tests(Int63))
 
-let test int63 str =
-  let open Int63 in
-  let s = bin_size_t int63 in
-  let bs = Bigstring.create s in
-  let _pos = bin_write_t bs ~pos:0 int63 in
-  let str_2 = Bigstring.to_string bs in
-  let bs_2  = Bigstring.of_string str in
-  let int63_2 = bin_read_t bs_2 ~pos_ref:(ref 0) in
-  [%test_eq: string] str str_2;
-  [%test_eq: t] int63 int63_2
+module Make_tests_bin_io
+    (B : sig type t = Int63.t [@@deriving bin_io] end)
+  : sig end = struct
+  let test int63 str =
+    let open Int63 in
+    let s = B.bin_size_t int63 in
+    let bs = Bigstring.create s in
+    let _pos = B.bin_write_t bs ~pos:0 int63 in
+    let str_2 = Bigstring.to_string bs in
+    let bs_2  = Bigstring.of_string str in
+    let int63_2 = B.bin_read_t bs_2 ~pos_ref:(ref 0) in
+    [%test_eq: string] str str_2;
+    [%test_eq: t] int63 int63_2
 
-let%test_unit _ =
-  let open Int63 in
-  test min_value "\252\000\000\000\000\000\000\000\192";
-  test max_value "\252\255\255\255\255\255\255\255?";
-  test zero      "\000";
-  test one       "\001";
-  test (neg one) "\255\255"
+  let%test_unit _ =
+    let open Int63 in
+    test min_value "\252\000\000\000\000\000\000\000\192";
+    test max_value "\252\255\255\255\255\255\255\255?";
+    test zero      "\000";
+    test one       "\001";
+    test (neg one) "\255\255"
 
-let%test _ =
-  let open Bin_prot.Shape in
-  Pervasives.(=)
-    (eval_to_digest_string Int63.bin_shape_t)
-    (eval_to_digest_string bin_shape_int63)
 
-let%test _ =
-  let open Bin_prot.Shape in
-  Pervasives.(=)
-    (eval_to_digest_string Int63.Stable.V1.bin_shape_t)
-    (eval_to_digest_string bin_shape_int63)
+  let%test _ =
+    let open Bin_prot.Shape in
+    Pervasives.(=)
+      (eval_to_digest_string B.bin_shape_t)
+      (eval_to_digest_string bin_shape_int63)
+end
+
+let%test_module "Int63_bin_io_maybe_native" = (module Make_tests_bin_io(Int63))
+let%test_module "Int63_bin_io_maybe_native_stable" = (module Make_tests_bin_io(Int63.Stable.V1))

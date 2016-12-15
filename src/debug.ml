@@ -1,9 +1,7 @@
 open! Import
-open Sexplib
-open Sexplib.Conv
 
-module List = ListLabels
-module String = StringLabels
+module List   = Base.List
+module String = Base.String
 
 let eprint message = Printf.eprintf "%s\n%!" message
 

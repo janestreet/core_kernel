@@ -20,6 +20,7 @@ module Blang         = Blang         .Stable
 module Byte_units    = Byte_units    .Stable
 module Comparable    = Comparable    .Stable
 module Comparator    = Comparator    .Stable
+module Date          = Date          .Stable
 module Day_of_week   = Day_of_week   .Stable
 module Either        = Either        .Stable
 module Error         = Error         .Stable

@@ -1,0 +1,31 @@
+open! Import
+
+include (Base.Maybe_bound : module type of struct include Base.Maybe_bound end)
+
+let compare_one_sided ~side compare_a t1 t2 =
+  match t1, t2 with
+  | Unbounded , Unbounded -> 0
+  | Unbounded , _         -> (match side with `Lower -> -1 | `Upper ->  1)
+  | _         , Unbounded -> (match side with `Lower ->  1 | `Upper -> -1)
+  | Incl a1   , Incl a2   -> compare_a a1 a2
+  | Excl a1   , Excl a2   -> compare_a a1 a2
+  | Incl a1   , Excl a2   ->
+    let c = compare_a a1 a2 in
+    if c = 0
+    then (match side with `Lower -> -1 | `Upper ->  1)
+    else c
+  | Excl a1   , Incl a2 ->
+    let c = compare_a a1 a2 in
+    if c = 0
+    then (match side with `Lower ->  1 | `Upper -> -1)
+    else c
+
+module As_lower_bound = struct
+  type nonrec 'a t = 'a t
+  let compare compare_a t1 t2 = compare_one_sided ~side:`Lower compare_a t1 t2
+end
+
+module As_upper_bound = struct
+  type nonrec 'a t = 'a t
+  let compare compare_a t1 t2 = compare_one_sided ~side:`Upper compare_a t1 t2
+end

@@ -25,7 +25,6 @@
 *)
 
 open! Import
-open Sexplib
 
 module Elt : sig
   type 'a t

@@ -3,10 +3,8 @@
    extend, because we want code in [Core_kernel] to be clear when it references a [Base]
    module that [Core_kernel] is overriding. *)
 module Applicative               = Base.Applicative
-module Array_permute             = Base.Array_permute
 module Avltree                   = Base.Avltree
 module Binary_search             = Base.Binary_search
-module Caml                      = Base.Caml
 module Commutative_group         = Base.Commutative_group
 module Equal                     = Base.Equal
 module Exn                       = Base.Exn
@@ -16,7 +14,6 @@ module Hasher                    = Base.Hasher
 module Heap_block                = Base.Heap_block
 module Invariant                 = Base.Invariant
 module Intable                   = Base.Intable
-module Maybe_bound               = Base.Maybe_bound
 module Monad                     = Base.Monad
 module Ordered_collection_common = Base.Ordered_collection_common
 module Poly                      = Base.Poly
@@ -33,34 +30,51 @@ module Word_size                 = Base.Word_size
    any confusion, and duplicating them would be error prone. *)
 include Base.Export
 
-include Polymorphic_compare
+include Stdio
 
-module Bin_prot    = Bin_prot
-module Fieldslib   = Fieldslib
-module Typerep_lib = Typerep_lib
-module Variantslib = Variantslib
+include Base_for_tests
 
 include Bin_prot.Std
 
-module Sexplib = struct
-  include (Sexplib : (module type of struct include Sexplib end
-                       with module Conv := Sexplib.Conv))
+module Field = Fieldslib.Field
 
-  module Conv = struct
-    include Sexplib.Conv
-    include
-      (struct
-        let sexp_of_float = sexp_of_float
-      end : sig
-         (* We want every float-to-sexp conversion done by [Core_kernel] to use its
-            [Float.sexp_of_t], which respect [Sexp.of_float_style].  So we deprecate
-            [Sexplib]'s [sexp_of_float] to avoid accidentally using it.  [Core_kernel.Std]
-            re-exports [sexp_of_float] as [Float.sexp_of_t], so the deprecation only
-            applies within [Core_kernel]. *)
-         val sexp_of_float : float -> Sexp.t
-           [@@deprecated "[since 2016-09] Use [Float.sexp_of_t]"]
-       end)
-  end
-end
+include Hash.Builtin
 
 module Sexp = Sexplib.Sexp
+
+module From_sexplib =
+  (Sexplib.Conv : sig
+
+     type bigstring = Sexplib.Conv.bigstring [@@deriving sexp]
+     type mat       = Sexplib.Conv.mat       [@@deriving sexp]
+     type vec       = Sexplib.Conv.vec       [@@deriving sexp]
+
+     (* [sexp_of_opaque] and [opaque_of_sexp] are used by the code generated from
+        [[@@deriving sexp]], [[%sexp_of: ]], and [[%of_sexp: ]].  The type [_ sexp_opaque]
+        expands to uses of [sexp_of_opaque] and [opaque_of_sexp]. *)
+     val sexp_of_opaque : _ -> Sexp.t
+     val opaque_of_sexp : Sexp.t -> _
+
+     val sexp_of_pair : ('a -> Sexp.t) -> ('b -> Sexp.t) -> 'a * 'b -> Sexp.t
+     val pair_of_sexp:  (Sexp.t -> 'a) -> (Sexp.t -> 'b) -> Sexp.t -> 'a * 'b
+
+     exception Of_sexp_error of exn * Sexp.t
+     val of_sexp_error : string -> Sexp.t -> _
+     val of_sexp_error_exn : exn -> Sexp.t -> _
+   end)
+
+include From_sexplib
+
+(* [sexp_opaque] indicates to [ppx_sexp_conv] that a value should be rendered as [_], i.e.
+   [Sexp.Atom "_"].  We define [sexp_opaque] here along with [@@deriving] so that other
+   ppx's treat [sexp_opaque] correctly, by ignoring it and processing the underlying
+   type. *)
+type 'a sexp_opaque = 'a [@@deriving bin_io, compare, hash, typerep]
+
+include
+  (Typerep_lib.Std : (module type of struct include Typerep_lib.Std end
+                       with module Type_equal := Typerep_lib.Std.Type_equal))
+
+module Variant = Variantslib.Variant
+
+let with_return = With_return.with_return

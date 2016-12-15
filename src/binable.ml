@@ -1,6 +1,4 @@
 open! Import
-open Bin_prot.Std
-open Sexplib.Std
 
 module Int = Core_int
 

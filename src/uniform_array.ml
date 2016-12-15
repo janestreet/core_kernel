@@ -99,7 +99,7 @@ module Sequence = struct
 end
 
 include
-  Blit.Make1
+  Test_blit.Make1_and_test
     (struct
       type nonrec 'a t = 'a t [@@deriving sexp_of]
       type 'a z = 'a

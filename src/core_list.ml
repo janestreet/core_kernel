@@ -1,12 +1,18 @@
 open! Import
 open! Typerep_lib.Std
 
-module List = Base.List
+module Array = Base.Array
+module List  = Base.List
 
 type 'a t = 'a list [@@deriving bin_io, typerep]
 
 module Assoc = struct
   type ('a, 'b) t = ('a * 'b) list [@@deriving bin_io]
+
+  let compare (type a) (type b) compare_a compare_b = [%compare: (a * b) list]
+  [@@deprecated
+    "[since 2016-06] This does not respect the equivalence class promised by List.Assoc. \
+     Use List.compare directly if that's what you want."]
 
   include (List.Assoc : module type of struct include List.Assoc end
            with type ('a, 'b) t := ('a, 'b) t)
@@ -58,7 +64,7 @@ module For_quickcheck = struct
       index_generator
       >>| fun indices ->
       let arr = Array.of_list list in
-      List.iteri indices ~f:(fun i j -> Array_permute.swap arr i j);
+      List.iteri indices ~f:(fun i j -> Array.swap arr i j);
       Array.to_list arr
   ;;
 
@@ -86,9 +92,6 @@ module For_quickcheck = struct
 
   let%test_module "shrinker" =
     (module struct
-
-      open Sexplib.Std
-      module Sexp = Sexplib.Sexp
 
       let t0 =
         Shrinker.create (fun v ->

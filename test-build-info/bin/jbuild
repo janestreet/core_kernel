@@ -1,0 +1,13 @@
+(executables
+ ((names (main))
+  (libraries (core_kernel build_info_test))
+  (js_of_ocaml ())
+  (preprocess (pps (ppx_jane.kernel)))))
+
+
+;; Make sure that [Js_of_ocaml_extended.Version_util] can read/parse build_info.
+;; Do not rely on inline_tests as build_info is not included when building tests.
+(alias
+ ((name DEFAULT)
+  (deps (main.exe))
+  (action "./main.exe > /dev/null")))

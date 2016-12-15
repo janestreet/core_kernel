@@ -148,8 +148,6 @@
 
 open! Import
 
-open Typerep_lib.Std
-
 type 'a t
 
 module Always : sig

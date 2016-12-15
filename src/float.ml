@@ -1,8 +1,6 @@
 module Core_bool = Bool
 
-open Import
-open Bin_prot.Std
-open Typerep_lib.Std
+open! Import
 
 module Bool  = Core_bool
 module Int63 = Core_int63

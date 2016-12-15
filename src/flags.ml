@@ -98,7 +98,8 @@ module Make (M : Make_arg) = struct
     List.fold (sexp |> [%of_sexp: sexp_format]) ~init:empty ~f:(fun t name ->
       match Hashtbl.find known_by_name name with
       | Some mask -> t + mask
-      | None -> of_sexp_error (sprintf "Flags.t_of_sexp got unknown name: %s" name) sexp)
+      | None ->
+        of_sexp_error (sprintf "Flags.t_of_sexp got unknown name: %s" name) sexp)
   ;;
 
   (* total order such that [subset a b] implies [a <= b] *)

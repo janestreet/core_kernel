@@ -1,6 +1,4 @@
-open Import
-open Bin_prot.Std
-open Typerep_lib.Std
+open! Import
 
 type t = int64 [@@deriving typerep]
 
@@ -15,9 +13,9 @@ module Hex = struct
 end
 
 include (Base.Int64
-         : module type of struct include Base.Int64 end
-         with type t := t
-         with module Hex := Hex)
+         : (module type of struct include Base.Int64 end
+             with type t := t
+             with module Hex := Hex))
 
 include Quickcheck.Make_int (struct
     type nonrec t = t [@@deriving sexp, compare, hash]

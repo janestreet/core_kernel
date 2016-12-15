@@ -15,7 +15,8 @@ type t = (char, int8_unsigned_elt, c_layout) Array1.t
 (** Type of bigstrings which support hashing. Note that mutation invalidates previous hashes. *)
 type t_frozen = t [@@deriving bin_io, compare, hash, sexp]
 
-include Equal.S with type t := t
+include Equal.S   with type t := t
+include Hexdump.S with type t := t
 
 (** {6 Creation and string conversion} *)
 

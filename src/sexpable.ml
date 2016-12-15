@@ -1,5 +1,4 @@
-open Import
-open Sexplib
+open! Import
 
 include Base.Sexpable
 
@@ -17,7 +16,7 @@ module Stable = struct
     struct
       let t_of_sexp sexp =
         let s = Sexpable.t_of_sexp sexp in
-        (try M.of_sexpable s with exn -> Conv.of_sexp_error_exn exn sexp)
+        (try M.of_sexpable s with exn -> of_sexp_error_exn exn sexp)
 
       let sexp_of_t t = Sexpable.sexp_of_t (M.to_sexpable t)
     end
@@ -35,7 +34,7 @@ module Stable = struct
     struct
       let t_of_sexp a_of_sexp sexp =
         let s = Sexpable.t_of_sexp a_of_sexp sexp in
-        (try M.of_sexpable s with exn -> Conv.of_sexp_error_exn exn sexp)
+        (try M.of_sexpable s with exn -> of_sexp_error_exn exn sexp)
 
       let sexp_of_t sexp_of_a t = Sexpable.sexp_of_t sexp_of_a (M.to_sexpable t)
     end
@@ -53,7 +52,7 @@ module Stable = struct
     struct
       let t_of_sexp a_of_sexp b_of_sexp sexp =
         let s = Sexpable.t_of_sexp a_of_sexp b_of_sexp sexp in
-        (try M.of_sexpable s with exn -> Conv.of_sexp_error_exn exn sexp)
+        (try M.of_sexpable s with exn -> of_sexp_error_exn exn sexp)
 
       let sexp_of_t sexp_of_a sexp_of_b t =
         Sexpable.sexp_of_t sexp_of_a sexp_of_b (M.to_sexpable t)
@@ -65,9 +64,9 @@ module Stable = struct
       let t_of_sexp sexp =
         match sexp with
         | Sexp.Atom s ->
-          (try M.of_string s with exn -> Conv.of_sexp_error_exn exn sexp)
+          (try M.of_string s with exn -> of_sexp_error_exn exn sexp)
         | Sexp.List _ ->
-          Conv.of_sexp_error
+          of_sexp_error
             "Sexpable.Of_stringable.t_of_sexp expected an atom, but got a list" sexp
 
       let sexp_of_t t = Sexp.Atom (M.to_string t)
@@ -76,8 +75,8 @@ module Stable = struct
 
   module To_stringable = struct
     module V1 (M : S) : Stringable.S with type t := M.t = struct
-      let of_string x = Conv.of_string__of__of_sexp M.t_of_sexp x
-      let to_string x = Conv.string_of__of__sexp_of M.sexp_of_t x
+      let of_string x = Sexplib.Conv.of_string__of__of_sexp M.t_of_sexp x
+      let to_string x = Sexplib.Conv.string_of__of__sexp_of M.sexp_of_t x
     end
   end
 

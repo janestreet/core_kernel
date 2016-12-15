@@ -44,9 +44,7 @@
 
 open! Import
 open! Std_internal
-open! Int_replace_polymorphic_compare
-
-module Int63 = Core_int63
+open! Timing_wheel_ns_intf
 
 module Time_ns = Time_ns_alternate_sexp
 
@@ -134,32 +132,60 @@ module Level_bits = struct
   let default = create_exn [ 11; 10; 10; 10; 10; 10 ]
 end
 
-module Alarm_precision = struct
-  module T =
-    Validated.Make_binable (struct
-      include Time_ns.Span
-      let here = [%here]
-      let validate = Time_ns.Span.validate_positive
-      let validate_binio_deserialization = true
-    end)
+module Alarm_precision : Alarm_precision with module Time := Time_ns = struct
+  module Unstable = struct
+    include
+      Validated.Make_bin_io_compare_hash_sexp (struct
+        include Time_ns.Span
+        let here = [%here]
+        let validate = Time_ns.Span.validate_positive
+        let validate_binio_deserialization = true
+      end)
 
-  include T
+    let of_span = create_exn
+    let to_span = raw
+  end
 
-  let of_span = create_exn
-  let to_span = raw
-
-  let compare t1 t2 = Time_ns.Span.compare (to_span t1) (to_span t2)
+  include Unstable
 
   let equal = [%compare.equal: t]
 
-  module Unstable = T
+  let of_int63_ns i = i |> Time_ns.Span.of_int63_ns |> of_span
+  let to_int63_ns t = t |> to_span |> Time_ns.Span.to_int63_ns
+
+  let pow2_ns i = Int63.(shift_left one) i |> of_int63_ns
+
+  let one_nanosecond        =  0 |> pow2_ns
+  let about_one_microsecond = 10 |> pow2_ns
+  let about_one_millisecond = 20 |> pow2_ns
+  let about_one_second      = 30 |> pow2_ns
+  let about_one_day         = 46 |> pow2_ns
+
+  let mul t ~pow2 =
+    let ns = to_int63_ns t in
+    of_int63_ns (
+      if pow2 >= 0
+      then Int63.shift_left  ns pow2
+      else Int63.shift_right ns (- pow2))
+  ;;
+
+  let div t ~pow2 = mul t ~pow2:(- pow2)
+
+  let of_span_floor_pow2_ns span =
+    span
+    |> Time_ns.Span.to_int63_ns
+    |> Int63.to_int_exn
+    |> Int.floor_pow2
+    |> Int63.of_int
+    |> of_int63_ns
+  ;;
 end
 
 module Config = struct
   let level_bits_default = Level_bits.default
 
   type t =
-    { alarm_precision : Alarm_precision.t
+    { alarm_precision : Alarm_precision.Unstable.t
     ; level_bits      : Level_bits.t [@default level_bits_default] [@sexp_drop_default]
     }
   [@@deriving fields, sexp]

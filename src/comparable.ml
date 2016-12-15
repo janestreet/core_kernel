@@ -1,7 +1,6 @@
 open! Import
-open Sexplib.Conv
-module Sexp = Sexplib.Sexp
-module List = ListLabels
+
+module List = Base.List
 
 include Comparable_intf
 
@@ -166,6 +165,8 @@ end) : sig end = struct
 end
 
 let lexicographic = Base.Comparable.lexicographic
+
+let lift = Base.Comparable.lift
 
 module Stable = struct
   module V1 = struct

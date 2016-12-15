@@ -77,6 +77,7 @@ module Unit_tests
     let symmetric_diff             x = simplify_accessor symmetric_diff x
     let merge                      x = simplify_accessor merge x
     let split                      x = simplify_accessor split x
+    let subrange                   x = simplify_accessor subrange x
     let fold_range_inclusive       x = simplify_accessor fold_range_inclusive x
     let range_to_alist             x = simplify_accessor range_to_alist x
     let closest_key                x = simplify_accessor closest_key x
@@ -88,6 +89,7 @@ module Unit_tests
       simplify_accessor to_sequence ?order ?keys_greater_or_equal_to
         ?keys_less_or_equal_to x
     ;;
+    let append ~lower_part ~upper_part = simplify_accessor append ~lower_part ~upper_part
 
     let empty ()                    = simplify_creator empty
     let singleton                 x = simplify_creator singleton x
@@ -1302,6 +1304,101 @@ module Unit_tests
     check [%here] map Key.mid;
     let map = Map.remove map Key.mid in
     check [%here] map Key.mid
+  ;;
+
+  let subrange _ = assert false
+
+  let%test_unit "subrange" =
+    let check here map ~lower_bound ~upper_bound =
+      let res  = Map.subrange map ~lower_bound ~upper_bound in
+      assert (Map.invariants res);
+      let subrange_computed_naively =
+        try
+          Map.fold map ~init:(Map.empty ()) ~f:(fun ~key ~data acc ->
+            if Maybe_bound.interval_contains_exn key ~lower:lower_bound ~upper:upper_bound ~compare:(Key.compare)
+            then Map.add acc ~key ~data
+            else acc
+          )
+        with _ -> Map.empty ()
+      in
+      [%test_result: (int, int) Map.t] ~here:[here; [%here]]
+        ~expect:subrange_computed_naively res
+    in
+    let map = random_map Key.samples in
+    check [%here] map ~lower_bound:Unbounded ~upper_bound:Unbounded;
+
+    check [%here] map ~lower_bound:(Incl Key.min) ~upper_bound:(Incl Key.max);
+    check [%here] map ~lower_bound:(Excl Key.min) ~upper_bound:(Incl Key.max);
+    check [%here] map ~lower_bound:(Incl Key.min) ~upper_bound:(Excl Key.max);
+    check [%here] map ~lower_bound:(Excl Key.min) ~upper_bound:(Excl Key.max);
+    check [%here] map ~lower_bound:(Excl Key.min) ~upper_bound:Unbounded;
+
+    check [%here] map ~lower_bound:(Incl Key.max) ~upper_bound:(Excl Key.min);
+
+    check [%here] map ~lower_bound:(Incl Key.min) ~upper_bound:(Excl Key.mid);
+    check [%here] map ~lower_bound:(Incl Key.min) ~upper_bound:(Incl Key.mid);
+
+    let map = Map.remove map Key.mid in
+    check [%here] map ~lower_bound:(Incl Key.min) ~upper_bound:(Excl Key.mid);
+    check [%here] map ~lower_bound:(Incl Key.min) ~upper_bound:(Incl Key.mid);
+
+    let lmid = Key.(of_int ((to_int min + to_int mid) / 2))
+    and rmid = Key.(of_int ((to_int mid + to_int max) / 2))
+    in
+    check [%here] map ~lower_bound:(Incl lmid) ~upper_bound:(Incl rmid);
+    check [%here] map ~lower_bound:(Incl lmid) ~upper_bound:(Excl rmid);
+    check [%here] map ~lower_bound:(Excl lmid) ~upper_bound:(Incl rmid);
+    check [%here] map ~lower_bound:(Excl lmid) ~upper_bound:(Excl rmid);
+  ;;
+
+  let append ~lower_part:_ ~upper_part:_ = assert false
+
+  let %test_unit "append" =
+    let check whole lower_part upper_part =
+      match Map.append ~lower_part ~upper_part with
+      | `Ok whole2 ->
+        assert (Map.invariants whole2);
+        assert (0 = Map.compare Int.compare (fun x y -> if phys_equal x y then 0 else 1) whole2 whole);
+      | `Overlapping_key_ranges -> failwith "expected Ok"
+    in
+    let check_fail lower_part upper_part =
+      match Map.append ~lower_part ~upper_part with
+      | `Ok _ -> failwith "expected Error"
+      | `Overlapping_key_ranges -> ()
+    in
+    let map = random_map Key.samples in
+    let mid_value = Map.find map Key.mid |> Option.value_exn in
+    let map_without_mid = Map.remove map Key.mid in
+    let lower_part, _, upper_part = Map.split map_without_mid Key.mid in
+    check map_without_mid lower_part upper_part;
+    check_fail upper_part lower_part;
+    check_fail (Map.add lower_part ~key:Key.mid ~data:mid_value) (Map.add upper_part ~key:Key.mid ~data:mid_value);
+    let check_via_alist lower_part upper_part =
+      match Map.append ~lower_part ~upper_part with
+      | `Ok whole_map ->
+        assert (Map.invariants whole_map);
+        let expected_whole_map = Map.of_alist_exn (
+          List.append (Map.to_alist lower_part) (Map.to_alist upper_part))
+        and compare =
+          Map.compare Int.compare (fun x y -> if phys_equal x y then 0 else 1)
+        in
+        assert (compare expected_whole_map whole_map = 0);
+      | `Overlapping_key_ranges ->
+        let lower_part_max = Key.to_int (fst (Map.max_elt_exn lower_part))
+        and upper_part_min = Key.to_int (fst (Map.min_elt_exn upper_part)) in
+        assert (Int.compare lower_part_max upper_part_min >= 0);
+    in
+    let examples =
+      List.map ~f:(fun l ->
+        Map.of_alist_exn (List.map ~f:(Tuple2.map_fst ~f:Key.of_int) l)) [
+        [1, 1; 2, 2; 3, 3];
+        [3, 3; 4, 4; 5, 5];
+        [6, 6];
+        [1, 1; 6, 6];
+        [1, 1; 2, 2]; ]
+    in
+    List.Let_syntax.(let%map l = examples and r = examples in l, r)
+    |> List.iter ~f:(fun (l, r) -> check_via_alist l r)
   ;;
 
   let%test _ = Map.closest_key (Map.empty ()) `Greater_or_equal_to Key.sample = None

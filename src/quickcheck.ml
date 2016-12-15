@@ -1,11 +1,6 @@
 open! Import
-open Int_replace_polymorphic_compare
-open Hash.Builtin
-open Sexplib.Std
 
-module Sexp = Sexplib.Sexp
-
-module Array = Caml.ArrayLabels
+module Array = Base.Array
 
 module List = Base.List
 
@@ -264,7 +259,7 @@ module Observer = struct
     create (fun f ~size hash ->
       let random = Splittable_random.State.of_int (Hash.get_hash_value hash) in
       let sizes = Raw_generator.sizes_for_elements ~size random in
-      Array.fold_left sizes ~init:hash ~f:(fun hash size ->
+      Array.fold sizes ~init:hash ~f:(fun hash size ->
         let x = Raw_generator.generate dom ~size random in
         observe rng (f x) ~size hash))
 end
@@ -305,7 +300,7 @@ module Generator = struct
       then Some x
       else None)
 
-  module Binary_search_array = Binary_searchable.Make1_without_tests (struct
+  module Binary_search_array = Binary_searchable.Make1 (struct
       type 'a t = 'a array
       let get    = Array.get
       let length = Array.length
@@ -576,9 +571,6 @@ module Generator = struct
 end
 
 module Shrinker = struct
-
-  open Sexplib.Std
-  module Sexp = Sexplib.Sexp
 
   type 'a t = ('a -> 'a Sequence.t) Staged.t
 
@@ -1211,7 +1203,7 @@ end
 
 include Configure (struct
     let default_seed = `Deterministic "an arbitrary but deterministic string"
-    let default_trial_count        = 100
+    let default_trial_count        = 1_000
     let default_attempts_per_trial = 10.
     let default_shrink_attempts    = `Limit 1000
     let default_trial_count_for_test_no_duplicates

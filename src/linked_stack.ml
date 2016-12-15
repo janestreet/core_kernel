@@ -1,8 +1,6 @@
 open! Import
 open Std_internal
 
-module Field = Fieldslib.Field
-
 type 'a t =
   { mutable elts : 'a list;
     mutable length : int;
@@ -96,10 +94,10 @@ let of_list l = { elts = l; length = List.length l }
 
 let to_array t = Array.of_list t.elts
 
-let sexp_of_t sexp_of_a t = Sexplib.Conv.sexp_of_list sexp_of_a (to_list t)
+let sexp_of_t sexp_of_a t = [%sexp_of: a list] (to_list t)
 
 let t_of_sexp a_of_sexp sexp =
-  let elts = Sexplib.Conv.list_of_sexp a_of_sexp sexp in
+  let elts = [%of_sexp: a list] sexp in
   { elts = elts; length = List.length elts; }
 ;;
 

@@ -1,8 +1,4 @@
 open! Import
-open Common
-
-open Bin_prot.Std
-open Sexplib.Conv
 
 module Array = Core_array
 module Binable = Binable0
@@ -117,7 +113,7 @@ let find_map t ~f =
 let exists t ~f = Option.is_some (find t ~f)
 let for_all t ~f = not (exists t ~f:(fun x -> not (f x)))
 
-let mem ?(equal = (=)) t a = exists t ~f:(equal a)
+let mem ?(equal = Poly.equal) t a = exists t ~f:(equal a)
 
 let partial_iter t ~f =
   with_return (fun r ->
@@ -175,7 +171,7 @@ let%test_module _ = (module struct
     let t = of_list list in
     let bigstring = Binable.to_bigstring m t in
     let list' = to_list (Binable.of_bigstring m bigstring) in
-    list = list'
+    [%compare.equal: int list] list list'
   ;;
 
   let%test _ = test []

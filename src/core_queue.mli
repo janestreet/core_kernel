@@ -8,13 +8,7 @@
     [filter_inplace], and some functions from [Container.S1]) will raise if the queue is
     modified during iteration.
 
-    Differences from the standard module:
-    [enqueue] replaces [push] and [add], and takes the queue first.
-    [dequeue] replaces [pop] and [take], and returns an option rather than raising
-    [Empty].
-    [dequeue_exn] is available if you want to raise [Empty].
-    [iter] and [fold] take labeled arguments.
-    [blit_transfer] replaces [transfer] but is markedly different; see below.
+    Also see [Linked_queue], which has different performance characteristics.
 *)
 
 open! Import
@@ -35,6 +29,15 @@ val create
 
 (** Create a queue with one element. *)
 val singleton : 'a -> 'a t
+
+(** [of_list list] returns a queue [t] with the elements of [list] in the same order as
+    the elements of [list] (i.e. the first element of [t] is the first element of the
+    list). *)
+val of_list : 'a list -> 'a t
+val of_array : 'a array -> 'a t
+
+(** [init n ~f] is equivalent to [of_list (List.init n ~f)] *)
+val init : int -> f:(int -> 'a) -> 'a t
 
 (** [enqueue t a] adds [a] to the end of [t]. *)
 val enqueue : 'a t -> 'a -> unit
@@ -69,29 +72,39 @@ val blit_transfer
   -> unit
   -> unit
 
-(** [of_list list] returns a queue [t] with the elements of [list] in the same order as
-    the elements of [list] (i.e. the first element of [t] is the first element of the
-    list). *)
-val of_list : 'a list -> 'a t
+(** [iteri], [foldi], etc., are like their non-[i] counterparts, but they also pass the
+    index as an argument. *)
+val iteri: 'a t -> f:(int -> 'a -> unit) -> unit
+val foldi: 'a t -> init:'b -> f:(int -> 'b -> 'a -> 'b) -> 'b
 
-val map : 'a t -> f:('a -> 'b) -> 'b t
+val findi:     'a t -> f:(int -> 'a -> bool)      -> (int * 'a) option
+val find_mapi: 'a t -> f:(int -> 'a -> 'b option) -> 'b         option
+
+val map  : 'a t -> f:(       'a -> 'b) -> 'b t
+val mapi : 'a t -> f:(int -> 'a -> 'b) -> 'b t
 
 (** creates a new queue with elements equal to [List.concat_map ~f (to_list t)]. *)
-val concat_map : 'a t -> f:('a -> 'b list) -> 'b t
+val concat_map  : 'a t -> f:(       'a -> 'b list) -> 'b t
+val concat_mapi : 'a t -> f:(int -> 'a -> 'b list) -> 'b t
 
 (** [filter_map] creates a new queue with elements equal to [List.filter_map ~f (to_list
     t)]. *)
-val filter_map : 'a t -> f:('a -> 'b option) -> 'b t
+val filter_map  : 'a t -> f:(       'a -> 'b option) -> 'b t
+val filter_mapi : 'a t -> f:(int -> 'a -> 'b option) -> 'b t
 
 (** [filter] is like [filter_map], except with [List.filter]. *)
-val filter : 'a t -> f:('a -> bool) -> 'a t
+val filter  : 'a t -> f:(       'a -> bool) -> 'a t
+val filteri : 'a t -> f:(int -> 'a -> bool) -> 'a t
 
 (** [filter_inplace t ~f] removes all elements of [t] that don't satisfy [f].  If [f]
     raises, [t] is unchanged.  This is inplace in that it modifies [t]; however, it uses
     space linear in the final length of [t]. *)
-val filter_inplace : 'a t -> f:('a -> bool) -> unit
+val filter_inplace  : 'a t -> f:(       'a -> bool) -> unit
+val filteri_inplace : 'a t -> f:(int -> 'a -> bool) -> unit
 
-val of_array : 'a array -> 'a t
+val for_alli : 'a t -> f:(int -> 'a -> bool) -> bool
+
+val existsi : 'a t -> f:(int -> 'a -> bool) -> bool
 
 (** [get t i] returns the [i]'th element in [t], where the 0'th element is at the front of
     [t] and the [length t - 1] element is at the back. *)

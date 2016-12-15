@@ -44,9 +44,19 @@ module Debug (Queue : module type of Queue) = struct
       (fun () -> iter t ~f)
   ;;
 
+  let iteri t ~f =
+    debug "iteri" [ t ] t [%sexp_of: _ t] [%sexp_of: unit]
+      (fun () -> iteri t ~f)
+  ;;
+
   let fold t ~init ~f =
     debug "fold" [ t ] t [%sexp_of: _ t] [%sexp_of: _]
       (fun () -> fold t ~init ~f)
+  ;;
+
+  let foldi t ~init ~f =
+    debug "foldi" [ t ] t [%sexp_of: _ t] [%sexp_of: _]
+      (fun () -> foldi t ~init ~f)
   ;;
 
   let fold_result t ~init ~f =
@@ -64,9 +74,19 @@ module Debug (Queue : module type of Queue) = struct
       (fun () -> exists t ~f)
   ;;
 
+  let existsi t ~f =
+    debug "existsi" [ t ] t [%sexp_of: _ t] [%sexp_of: bool]
+      (fun () -> existsi t ~f)
+  ;;
+
   let for_all t ~f =
     debug "for_all" [ t ] t [%sexp_of: _ t] [%sexp_of: bool]
       (fun () -> for_all t ~f)
+  ;;
+
+  let for_alli t ~f =
+    debug "for_alli" [ t ] t [%sexp_of: _ t] [%sexp_of: bool]
+      (fun () -> for_alli t ~f)
   ;;
 
   let count t ~f =
@@ -84,9 +104,19 @@ module Debug (Queue : module type of Queue) = struct
       (fun () -> find t ~f)
   ;;
 
+  let findi t ~f =
+    debug "findi" [ t ] t [%sexp_of: _ t] [%sexp_of: _ option]
+      (fun () -> findi t ~f)
+  ;;
+
   let find_map t ~f =
     debug "find_map" [ t ] t [%sexp_of: _ t] [%sexp_of: _ option]
       (fun () -> find_map t ~f)
+  ;;
+
+  let find_mapi t ~f =
+    debug "find_mapi" [ t ] t [%sexp_of: _ t] [%sexp_of: _ option]
+      (fun () -> find_mapi t ~f)
   ;;
 
   let min_elt t ~cmp =
@@ -117,6 +147,11 @@ module Debug (Queue : module type of Queue) = struct
   let singleton a =
     debug "singleton" [ ] () [%sexp_of: unit] [%sexp_of: _ t]
       (fun () -> singleton a)
+  ;;
+
+  let init n ~f =
+    debug "init" [ ] n [%sexp_of: int] [%sexp_of: _ t]
+      (fun () -> init n ~f)
   ;;
 
   let enqueue t a =
@@ -180,9 +215,19 @@ module Debug (Queue : module type of Queue) = struct
       (fun () -> of_list l)
   ;;
 
+  let of_array a =
+    debug "of_array" [ ] a [%sexp_of: _ array] [%sexp_of: _ t]
+      (fun () -> of_array a)
+  ;;
+
   let map t ~f =
     debug "map" [ t ] t [%sexp_of: _ t] [%sexp_of: _ t]
       (fun () -> map t ~f)
+  ;;
+
+  let mapi t ~f =
+    debug "mapi" [ t ] t [%sexp_of: _ t] [%sexp_of: _ t]
+      (fun () -> mapi t ~f)
   ;;
 
   let concat_map t ~f =
@@ -190,9 +235,19 @@ module Debug (Queue : module type of Queue) = struct
       (fun () -> concat_map t ~f)
   ;;
 
+  let concat_mapi t ~f =
+    debug "concat_mapi" [ t ] t [%sexp_of: _ t] [%sexp_of: _ t]
+      (fun () -> concat_mapi t ~f)
+  ;;
+
   let filter_map t ~f =
     debug "filter_map" [ t ] t [%sexp_of: _ t] [%sexp_of: _ t]
       (fun () -> filter_map t ~f)
+  ;;
+
+  let filter_mapi t ~f =
+    debug "filter_mapi" [ t ] t [%sexp_of: _ t] [%sexp_of: _ t]
+      (fun () -> filter_mapi t ~f)
   ;;
 
   let filter t ~f =
@@ -200,14 +255,19 @@ module Debug (Queue : module type of Queue) = struct
       (fun () -> filter t ~f)
   ;;
 
+  let filteri t ~f =
+    debug "filteri" [ t ] t [%sexp_of: _ t] [%sexp_of: _ t]
+      (fun () -> filteri t ~f)
+  ;;
+
   let filter_inplace t ~f =
     debug "filter_inplace" [ t ] t [%sexp_of: _ t] [%sexp_of: unit]
       (fun () -> filter_inplace t ~f)
   ;;
 
-  let of_array a =
-    debug "of_array" [ ] a [%sexp_of: _ array] [%sexp_of: _ t]
-      (fun () -> of_array a)
+  let filteri_inplace t ~f =
+    debug "filteri_inplace" [ t ] t [%sexp_of: _ t] [%sexp_of: unit]
+      (fun () -> filteri_inplace t ~f)
   ;;
 
   let get t i =

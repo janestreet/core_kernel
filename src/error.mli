@@ -1,5 +1,7 @@
 (** This module extends the Base [Error] module with bin_io *)
 
+open! Import
+
 include module type of struct include Base.Error end
 
 include Info_intf.Extension with type t := t
@@ -31,7 +33,7 @@ val failwiths
   -> ?here   : Lexing.position
   -> string
   -> 'a
-  -> ('a -> Sexplib.Sexp.t)
+  -> ('a -> Sexp.t)
   -> _
 
 val failwithp
@@ -39,5 +41,5 @@ val failwithp
   -> Lexing.position
   -> string
   -> 'a
-  -> ('a -> Sexplib.Sexp.t)
+  -> ('a -> Sexp.t)
   -> _

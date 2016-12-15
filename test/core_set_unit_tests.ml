@@ -56,7 +56,8 @@ module Unit_tests
     let equal          = simplify_accessor equal
     let inter          = simplify_accessor inter
     let union          = simplify_accessor union
-    let subset         = simplify_accessor subset
+    let is_subset      = simplify_accessor is_subset
+    let subset _       = assert false (* deprecated *)
     let iter2          = simplify_accessor iter2
     let invariants     = simplify_accessor invariants
     let to_map         = simplify_accessor to_map
@@ -157,12 +158,16 @@ module Unit_tests
   ;;
   let%test _ = Set.equal set_nonempty (Set.inter set_nonempty set_nonempty)
 
+  let is_subset _ ~of_:_ = assert false
+  let%test _ = Set.is_subset set_empty ~of_:set_nonempty
+  let%test _ = not (Set.is_subset set_nonempty ~of_:set_empty)
+  let%test _ = Set.is_subset set_nonempty ~of_:set_nonempty
+  let%test _ = Set.is_subset set_empty ~of_:set_empty
+  let%test _ = not (Set.is_subset set_nonempty ~of_:(Set.singleton Elt.present))
+
+  (* deprecated *)
   let subset _ = assert false
-  let%test _ = Set.subset set_empty set_nonempty
-  let%test _ = not (Set.subset set_nonempty set_empty)
-  let%test _ = Set.subset set_nonempty set_nonempty
-  let%test _ = Set.subset set_empty set_empty
-  let%test _ = not (Set.subset set_nonempty (Set.singleton Elt.present))
+  let _ = Set.subset
 
   let to_list _ = assert false
   let%test _ =
@@ -317,7 +322,7 @@ module Unit_tests
             | Some `Decreasing ->
               List.sort expect ~cmp:(fun a b -> Int.compare (value b) (value a))
           in
-          [%test_result: Elt.t Merge_to_sequence_element.t list]
+          [%test_result: (Elt.t, Elt.t) Merge_to_sequence_element.t list]
             (Sequence.to_list
                (Set.merge_to_sequence ?order ?greater_or_equal_to ?less_or_equal_to x y))
             ~expect)
@@ -688,6 +693,7 @@ module Unit_tests
 
   let to_tree _           = assert false
   let remove_index _      = assert false
+  let nth _               = assert false
   let find_index _        = assert false
   let find_exn _          = assert false
   let group_by _          = assert false

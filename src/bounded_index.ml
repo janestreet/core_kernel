@@ -33,7 +33,9 @@ module Stable = struct
             (M.label, t.index, "of", t.min_index, "to", t.max_index)
 
           let of_sexpable (label, index, of_, min, to_, max) =
-            if label = M.label && of_ = "of" && to_ = "to"
+            if String.equal label M.label
+            && String.equal of_ "of"
+            && String.equal to_ "to"
             then create index ~min ~max
             else Error.raise_s [%message "invalid sexp for index" ~label:M.label]
         end)

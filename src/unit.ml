@@ -1,11 +1,6 @@
 open! Import
 
 module T0 = struct
-  open Typerep_lib.Std
-  open Sexplib.Std
-  open Bin_prot.Std
-  open Hash.Builtin
-
   type t = unit [@@deriving hash, sexp, bin_io, typerep]
 
   let compare _ _ = 0

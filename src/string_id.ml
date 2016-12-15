@@ -1,24 +1,7 @@
 open! Import
 open Std_internal
 
-module type S = sig
-  type t = private string [@@deriving hash]
-  include Identifiable with type t := t
-
-  module Stable : sig
-    module V1 : sig
-      type nonrec t = t
-
-      include Stable
-        with type t := t
-        with type comparator_witness = comparator_witness
-
-      include Comparable.Stable.V1.S
-        with type comparable := t
-        with type comparator_witness := comparator_witness
-    end
-  end
-end
+include String_id_intf
 
 module Make_without_pretty_printer (M : sig val module_name : string end) () = struct
   module Stable = struct

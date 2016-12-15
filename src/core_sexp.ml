@@ -1,27 +1,18 @@
 open! Import
-module Sexp = Sexplib.Sexp
-open Sexplib.Std
-open Bin_prot.Std
-open Hash.Builtin
 
 include Sexp
 
-exception Of_sexp_error = Sexplib.Conv.Of_sexp_error
+include (Base.Sexp : module type of struct include Base.Sexp end with type t := t)
+
+include (struct
+  type t = Base.Sexp.t = Atom of string | List of t list [@@deriving bin_io]
+end : sig
+  type t [@@deriving bin_io]
+end with type t := t)
 
 module O = struct
   type sexp = Sexp.t = Atom of string | List of t list
 end
-
-module T : sig
-  type t [@@deriving hash, compare, bin_io, sexp]
-end with type t := Sexp.t = struct
-  type t = Sexp.t = Atom of string | List of t list [@@deriving bin_io, compare, hash]
-
-  let sexp_of_t t = t
-  let t_of_sexp t = t
-end
-
-include T
 
 module Sexp_maybe = struct
 
@@ -78,7 +69,7 @@ module With_text = struct
   let t_of_sexp a_of_sexp sexp =
     match sexp with
     | List _ ->
-      Sexplib.Conv.of_sexp_error
+      of_sexp_error
         "With_text.t should be stored as an atom, but instead a list was found." sexp
     | Atom text ->
       of_text a_of_sexp text |> Or_error.ok_exn
@@ -98,13 +89,16 @@ module With_text = struct
     let il_of_value il  = of_value sexp_of_il il
 
     let t = il_of_value [3;4]
-    let%test _ = t.text = "(3 4)"
+    let%test _ = String.equal t.text "(3 4)"
     let t' = il_of_text (text t)
-    let%test _ = t'.value = [3;4]
+    let%test _ = [%compare.equal: int list] t'.value [3;4]
     let%test _ = sexp_of_t sexp_of_il t = Atom "(3 4)"
-    let%test _ = (t_of_sexp il_of_sexp (Atom "(3 4)")).value = [3;4]
+    let%test _ =
+      [%compare.equal: int list] (t_of_sexp il_of_sexp (Atom "(3 4)")).value [3;4]
 
-    let%test _ = [8;9] = (il_of_text ";this is a comment\n (8; foo\n 9)   \n ").value
+    let%test _ =
+      [%compare.equal: int list] [8;9]
+        (il_of_text ";this is a comment\n (8; foo\n 9)   \n ").value
 
     let check_error f input ~expected =
       let normalize str = try Sexp.to_string (Sexp.of_string str) with _ -> str in
@@ -116,7 +110,7 @@ module With_text = struct
                            but got converted successfully." input)
       with e ->
         let error = normalize (Printexc.to_string e) in
-        if error <> expected then
+        if not (String.equal error expected) then
           failwith (Printf.sprintf "%s generated error %s, expected %s"
                       input error expected)
 
@@ -135,10 +129,6 @@ module With_text = struct
   end)
 end
 
-let of_float_style = Base0.Import.Sexp.of_float_style
-
-let of_int_style = Base0.Int_conversions.sexp_of_int_style
-
 type 'a no_raise = 'a [@@deriving bin_io, sexp]
 
 let sexp_of_no_raise sexp_of_a a =
@@ -148,10 +138,7 @@ let sexp_of_no_raise sexp_of_a a =
     with _ -> Atom "could not build sexp for exn raised when building sexp for value"
 ;;
 
-include Comparable.Make (struct
-  type t = Sexp.t
-  include T
-end)
+include Comparable.Extend(Base.Sexp)(Base.Sexp)
 
 let of_sexp_allow_extra_fields of_sexp sexp =
   let r = Sexplib.Conv.record_check_extra_fields in

@@ -9,9 +9,6 @@ module T = struct
   type 'a t = 'a ref = { mutable contents : 'a }
 
   include (struct
-    open Typerep_lib.Std
-    open Sexplib.Conv
-    open Bin_prot.Std
     type 'a t = 'a ref [@@deriving bin_io, compare, sexp, typerep]
   end : sig
     type 'a t = 'a ref [@@deriving bin_io, compare, sexp, typerep]
@@ -51,7 +48,7 @@ module T = struct
 
   let for_all t ~f = f !t
 
-  let mem ?(equal = (=)) t a = equal a !t
+  let mem ?(equal = Poly.equal) t a = equal a !t
 
   let find t ~f = let a = !t in if f a then Some a else None
 

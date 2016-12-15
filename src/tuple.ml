@@ -1,5 +1,4 @@
 open! Import
-open Typerep_lib.Std
 
 module type T = sig type t end
 
@@ -119,7 +118,7 @@ end
 module Hasher_sexpable_of_hashable_sexpable (S : Hashable_sexpable)
   : Hasher_sexpable with type t = S.t = struct
   include S
-  let hash_fold_t state t = Hash.Builtin.hash_fold_int state (hash t)
+  let hash_fold_t state t = hash_fold_int state (hash t)
 end
 
 module Hashable_t

@@ -1,10 +1,7 @@
 open! Import
 open Perms.Export
-module Array = StdLabels.Array
+module Array = Base.Array
 module Core_sequence = Sequence
-open Typerep_lib.Std
-open Sexplib.Std
-open Bin_prot.Std
 
 module List = Core_list
 
@@ -14,37 +11,10 @@ include (Base.Array : sig
            type 'a t = 'a array [@@deriving sexp, compare]
          end with type 'a t := 'a t)
 
+module Private = Base.Array.Private
+
 module T = struct
   include Base.Array
-
-  (* This module implements a new in-place, constant heap sorting algorithm to replace the
-     one used by the standard libraries.  Its only purpose is to be faster (hopefully
-     strictly faster) than the base sort and stable_sort.
-
-     At a high level the algorithm is:
-     - pick two pivot points by:
-     - pick 5 arbitrary elements from the array
-     - sort them within the array
-     - take the elements on either side of the middle element of the sort as the pivots
-     - sort the array with:
-     - all elements less than pivot1 to the left (range 1)
-     - all elements >= pivot1 and <= pivot2 in the middle (range 2)
-     - all elements > pivot2 to the right (range 3)
-     - if pivot1 and pivot2 are equal, then the middle range is sorted, so ignore it
-     - recurse into range 1, 2 (if pivot1 and pivot2 are unequal), and 3
-     - during recursion there are two inflection points:
-     - if the size of the current range is small, use insertion sort to sort it
-     - if the stack depth is large, sort the range with heap-sort to avoid n^2 worst-case
-     behavior
-
-     See the following for more information:
-     - "Dual-Pivot Quicksort" by Vladimir Yaroslavskiy.
-     Available at http://iaroslavski.narod.ru/quicksort/DualPivotQuicksort.pdf
-     - "Quicksort is Optimal" by Sedgewick and Bentley.
-     Slides at http://www.cs.princeton.edu/~rs/talks/QuicksortIsOptimal.pdf
-     - http://www.sorting-algorithms.com/quick-sort-3-way
-
-  *)
 
   module Sequence = struct
     open Base.Array
@@ -67,7 +37,7 @@ module T = struct
     end
 
     include
-      Blit.Make
+      Test_blit.Make_and_test
         (struct
           type t = int
           let equal = (=)
@@ -96,10 +66,10 @@ module T = struct
     end
 
     include
-      Blit.Make
+      Test_blit.Make_and_test
         (struct
           type t = float
-          let equal = (=)
+          let equal = Base.Float.equal
           let of_bool b = if b then 1. else 0.
         end)
         (struct

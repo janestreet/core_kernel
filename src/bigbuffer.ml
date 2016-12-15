@@ -42,10 +42,10 @@ let add_char buf c =
 ;;
 
 include
-  Blit.Make_distinct
+  Test_blit.Make_distinct_and_test
     (struct
       type t = char
-      let equal = (=)
+      let equal = Char.equal
       let of_bool b = if b then 'a' else 'b'
     end)
     (struct
@@ -128,8 +128,8 @@ let closing = function
 let advance_to_closing opening closing k s start =
   let rec advance k i lim =
     if i >= lim then raise Not_found else
-    if s.[i] = opening then advance (k + 1) (i + 1) lim else
-    if s.[i] = closing then
+    if Char.equal s.[i] opening then advance (k + 1) (i + 1) lim else
+    if Char.equal s.[i] closing then
       if k = 0 then i else advance (k - 1) (i + 1) lim
     else advance k (i + 1) lim in
   advance k start (String.length s)
@@ -167,14 +167,14 @@ let add_substitute buf f s =
   let rec subst previous i =
     if i < lim then begin
       match s.[i] with
-      | '$' as current when previous = '\\' ->
+      | '$' as current when Char.equal previous '\\' ->
          add_char buf current;
          subst current (i + 1)
       | '$' ->
          let ident, next_i = find_ident s (i + 1) in
          add_string buf (f ident);
          subst ' ' next_i
-      | current when previous = '\\' ->
+      | current when Char.equal previous '\\' ->
          add_char buf '\\';
          add_char buf current;
          subst current (i + 1)

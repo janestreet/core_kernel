@@ -48,20 +48,17 @@ let lru (type a) ?(hashable = Hashtbl.Hashable.poly) ~max_cache_size f =
   in
   let cache = Cache.create () in
   (fun arg ->
-    Result.return begin
-      match Cache.lookup cache arg with
-      | Some result ->
-        (* move to back of the queue *)
-        Cache.remove_exn cache arg;
-        Cache.enqueue_exn cache arg result;
-        result
-      | None ->
-        let result = Result.capture f arg in
-        Cache.enqueue_exn cache arg result;
-        (* eject least recently used cache entry *)
-        if Cache.length cache > max_cache_size then ignore (Cache.dequeue_exn cache);
-        result
-    end)
+     Result.return begin
+       match Cache.lookup_and_move_to_back cache arg with
+       | Some result ->
+         result
+       | None ->
+         let result = Result.capture f arg in
+         Cache.enqueue_exn cache arg result;
+         (* eject least recently used cache entry *)
+         if Cache.length cache > max_cache_size then ignore (Cache.dequeue_exn cache);
+         result
+     end)
 
 let general ?hashable ?cache_size_bound f =
   match cache_size_bound with

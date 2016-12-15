@@ -13,3 +13,10 @@ under the following licenses:
 
   See also the disclaimer INRIA-DISCLAIMER.txt.
 
+- strftime.js in src/ is based on https://github.com/samsonjs/strftime
+  License can be found at:
+
+     http://sjs.mit-license.org
+
+  See copy strftime.js-license.txt
+  

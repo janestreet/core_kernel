@@ -9,9 +9,9 @@ module Source_code_position = Source_code_position0
 module Binable = Binable0
 
 module Sexp = struct
-  include Sexplib.Sexp
+  include Sexp
   include (struct
-    type t = Sexplib.Sexp.t = Atom of string | List of t list
+    type t = Sexp.t = Atom of string | List of t list
     [@@deriving bin_io, compare, hash]
   end : sig
              type t [@@deriving bin_io, compare, hash]
@@ -28,21 +28,8 @@ module Binable_exn = struct
       include Binable.Stable.Of_binable.V1 (Sexp) (struct
           include T
 
-          exception Exn of Sexp.t
-
-          (* We install a custom exn-converter rather than use [exception Exn of t
-           [@@deriving sexp]] to eliminate the extra wrapping of "(Exn ...)". *)
-          let () =
-            Sexplib.Conv.Exn_converter.add [%extension_constructor Exn]
-              (function
-                | Exn t -> t
-                | _ ->
-                  (* Reaching this branch indicates a bug in sexplib. *)
-                  assert false)
-          ;;
-
           let to_binable t = t |> [%sexp_of: t]
-          let of_binable sexp = Exn sexp
+          let of_binable = Exn.create_s
         end)
     end
   end
@@ -102,7 +89,7 @@ module Extend (Info : Base.Info_intf.S) = struct
 
     module V1 = struct
       module T = struct
-        type t = Info.t
+        type t = Info.t [@@deriving compare]
 
         include Sexpable.Stable.Of_sexpable.V1 (Sexp) (struct
             type nonrec t = t

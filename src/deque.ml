@@ -476,7 +476,7 @@ let front_index_exn t =
   apparent_front_index_when_not_empty t
 ;;
 
-module Binary_searchable = Binary_searchable.Make1 (struct
+module Binary_searchable = Test_binary_searchable.Make1_and_test (struct
   type nonrec 'a t = 'a t
 
   let get t i = get t (front_index_exn t + i)

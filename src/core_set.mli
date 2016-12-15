@@ -131,17 +131,23 @@ val find_map : ('a, _) t -> f:('a -> 'b option) -> 'b option
 (** Like [find], but throws an exception on failure. *)
 val find_exn : ('a, _) t -> f:('a -> bool) -> 'a
 
-(** [find_index t i] returns the [i]th smallest element of [t], in [O(log n)] time.  The
+(** [nth t i] returns the [i]th smallest element of [t], in [O(log n)] time.  The
     smallest element has [i = 0].  Returns [None] if [i < 0] or [i >= length t]. *)
+val nth        : ('a, _) t -> int -> 'a option
 val find_index : ('a, _) t -> int -> 'a option
+  [@@deprecated "[since 2016-10] Use [nth]"]
 
 (** [remove_index t i] returns a version of [t] with the [i]th smallest element removed,
     in [O(log n)] time.  The smallest element has [i = 0].  Returns [t] if [i < 0] or
     [i >= length t]. *)
 val remove_index : ('a, 'cmp) t -> int -> ('a, 'cmp) t
 
-(** [subset t1 t2] returns true iff [t1] is a subset of [t2]. *)
+(** [is_subset t1 ~of_:t2] returns true iff [t1] is a subset of [t2]. *)
+val is_subset : ('a, 'cmp) t -> of_:('a, 'cmp) t -> bool
+
+(** [subset] is a synonym for [is_subset]. *)
 val subset : ('a, 'cmp) t -> ('a, 'cmp) t -> bool
+  [@@deprecated "[since 2016-09] Replace [Set.subset t1 t2] with [Set.is_subset t1 ~of_:t2]"]
 
 (** The list or array given to [of_list] and [of_array] need not be sorted. *)
 val of_list  : comparator:('a, 'cmp) Comparator.t -> 'a list  -> ('a, 'cmp) t
@@ -323,10 +329,10 @@ val to_sequence
     caller can distinguish between elements that are equal to the sets' comparator.  Runs
     in O(length t + length t'). *)
 module Merge_to_sequence_element : sig
-  type 'a t = 'a Sequence.Merge_with_duplicates_element.t =
+  type ('a, 'b) t = ('a, 'b) Sequence.Merge_with_duplicates_element.t =
     | Left of 'a
-    | Right of 'a
-    | Both of 'a * 'a
+    | Right of 'b
+    | Both of 'a * 'b
   [@@deriving bin_io, compare, sexp]
 end
 val merge_to_sequence
@@ -335,7 +341,7 @@ val merge_to_sequence
   -> ?less_or_equal_to    : 'a
   -> ('a, 'cmp) t
   -> ('a, 'cmp) t
-  -> 'a Merge_to_sequence_element.t Sequence.t
+  -> ('a, 'a) Merge_to_sequence_element.t Sequence.t
 
 (** Convert a set to or from a map.  [to_map] takes a function to produce data for each
     key.  Both functions run in O(n) time (assuming the function passed to [to_map] runs

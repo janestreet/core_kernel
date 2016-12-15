@@ -20,10 +20,11 @@
 *)
 
 open! Import
-open Sexplib.Std
 
-module List  = ListLabels
-module Array = ArrayLabels
+open! Polymorphic_compare
+
+module List  = Base.List
+module Array = Base.Array
 module Int64 = Caml.Int64
 
 module Arith64 = struct

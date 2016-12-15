@@ -11,7 +11,12 @@ module type S = sig
 
   (** [fold], [iter], [find], and [find_map] visit the elements in order from the top of
       the stack to the bottom.  [to_list] and [to_array] return the elements in order from
-      the top of the stack to the bottom. *)
+      the top of the stack to the bottom.
+
+      Iteration functions ([iter], [fold], etc.) have unspecified behavior (although they
+      should still be memory-safe) when the stack is mutated while they are running (e.g.
+      by having the passed-in function call [push] or [pop] on the stack).
+  *)
   include Container.S1 with type 'a t := 'a t
 
   (** [of_list l] returns a stack whose top is the first element of [l] and bottom is the

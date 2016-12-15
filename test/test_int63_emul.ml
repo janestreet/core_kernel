@@ -1,7 +1,7 @@
 open! Core_kernel.Std
 open! Expect_test_helpers_kernel.Std
 
-module Int63_emul = Base0.Base_int63_emul
+module Int63_emul = Base.Not_exposed_properly.Int63_emul
 
 let%expect_test _ =
   let s63      = Int63.(     Hex.to_string min_value) in

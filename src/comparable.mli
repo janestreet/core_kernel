@@ -13,6 +13,9 @@ module type With_zero           = With_zero
     list [cmps]. *)
 val lexicographic : ('a -> 'a -> int) list -> 'a -> 'a -> int
 
+(** [lift cmp ~f x y] compares [x] and [y] by comparing [f x] and [f y] via [cmp]. *)
+val lift : ('a -> 'a -> 'int_or_bool) -> f:('b -> 'a) -> ('b -> 'b -> 'int_or_bool)
+
 (** Inherit comparability from a component. *)
 module Inherit
   (C : sig type t [@@deriving compare] end)

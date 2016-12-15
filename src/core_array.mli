@@ -4,7 +4,8 @@ open Perms.Export
 
 type 'a t = 'a Base.Array.t [@@deriving bin_io, typerep]
 
-include module type of struct include Base.Array end with type 'a t := 'a t
+include module type of struct include Base.Array end
+  with type 'a t := 'a t
 
 module Int : sig
   type nonrec t = int t [@@deriving bin_io, compare, sexp]

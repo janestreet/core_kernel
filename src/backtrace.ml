@@ -1,8 +1,6 @@
 open! Import
 open Std_internal
 
-module Sexp = Sexplib.Sexp
-
 type t = Printexc.raw_backtrace
 
 let get ?(at_most_num_frames = Int.max_value) () =

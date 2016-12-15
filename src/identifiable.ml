@@ -2,7 +2,6 @@ open! Import
 
 module Binable = Binable0
 module Map = Core_map
-module Sexp = Sexplib.Sexp
 
 let failwiths = Error.failwiths
 
@@ -54,7 +53,6 @@ end
    resulting module call the functions in the argument module the correct number of
    times. *)
 let%test_module _ = (module struct
-  open Sexplib.Conv
 
   module Counter = struct
     type t =
@@ -108,8 +106,7 @@ let%test_module _ = (module struct
 
   module Id = Make (T)
 
-  let poly_equal = (=)
-  let int_equal (i1 : int) i2 = poly_equal i1 i2
+  let int_equal (i1 : int) i2 = Poly.equal i1 i2
 
   let%test_unit _ =
     let open T in
@@ -143,7 +140,7 @@ let%test_module _ = (module struct
     check [%here];
     let bigstring = Binable.to_bigstring (module T) A in
     check [%here];
-    assert (poly_equal A (Binable.of_bigstring (module T) bigstring));
+    assert (Poly.equal A (Binable.of_bigstring (module T) bigstring));
     check [%here]
   ;;
 end)

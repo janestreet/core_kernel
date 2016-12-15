@@ -1,12 +1,5 @@
 open! Import
-open Common
-open Sexplib.Conv
-open Int_replace_polymorphic_compare
-
-module Sexp  = Core_sexp
-module List  = Core_list
-module Array = Core_array
-module Int   = Core_int
+open! Std_internal
 
 
 (* [t] stores the [t.length] queue elements at consecutive increasing indices of [t.elts],
@@ -287,11 +280,29 @@ let fold t ~init ~f =
   end;
 ;;
 
-(* [iter] is implemented directly because implementing it in terms of fold is slower *)
+let foldi t ~init ~f =
+  let i = ref 0 in
+  fold t ~init ~f:(fun acc a ->
+    let acc = f !i acc a in
+    i := !i + 1;
+    acc)
+;;
+
+
+(* [iter] is implemented directly because implementing it in terms of [fold] is
+   slower. *)
 let iter t ~f =
   let num_mutations = t.num_mutations in
   for i = 0 to t.length - 1 do
     f (unsafe_get t i);
+    ensure_no_mutation t num_mutations;
+  done;
+;;
+
+let iteri t ~f =
+  let num_mutations = t.num_mutations in
+  for i = 0 to t.length - 1 do
+    f i (unsafe_get t i);
     ensure_no_mutation t num_mutations;
   done;
 ;;
@@ -316,11 +327,45 @@ let max_elt     = C.max_elt
 let fold_result = C.fold_result
 let fold_until  = C.fold_until
 
+let findi t ~f =
+  with_return (fun r ->
+    iteri t ~f:(fun i a -> if f i a then r.return (Some (i, a)));
+    None)
+;;
+
+let find_mapi t ~f =
+  with_return (fun r ->
+    iteri t ~f:(fun i a ->
+      match f i a with
+      | Some _ as ret -> r.return ret
+      | None -> ());
+    None)
+;;
+
+let for_alli t ~f =
+  with_return (fun r ->
+    iteri t ~f:(fun i a -> if not (f i a) then r.return false);
+    true)
+;;
+
+let existsi t ~f =
+  with_return (fun r ->
+    iteri t ~f:(fun i a -> if f i a then r.return true);
+    false)
+;;
+
+
 (* For [concat_map], [filter_map], and [filter], we don't create [t_result] with [t]'s
    capacity because we have no idea how many elements [t_result] will ultimately hold. *)
 let concat_map t ~f =
   let t_result = create () in
   iter t ~f:(fun a -> List.iter (f a) ~f:(fun b -> enqueue t_result b));
+  t_result
+;;
+
+let concat_mapi t ~f =
+  let t_result = create () in
+  iteri t ~f:(fun i a -> List.iter (f i a) ~f:(fun b -> enqueue t_result b));
   t_result
 ;;
 
@@ -333,14 +378,35 @@ let filter_map t ~f =
   t_result
 ;;
 
+let filter_mapi t ~f =
+  let t_result = create () in
+  iteri t ~f:(fun i a ->
+    match f i a with
+    | None   -> ()
+    | Some b -> enqueue t_result b);
+  t_result
+;;
+
 let filter t ~f =
   let t_result = create () in
   iter t ~f:(fun a -> if f a then enqueue t_result a);
   t_result
 ;;
 
+let filteri t ~f =
+  let t_result = create () in
+  iteri t ~f:(fun i a -> if f i a then enqueue t_result a);
+  t_result
+;;
+
 let filter_inplace t ~f =
   let t2 = filter t ~f in
+  clear t;
+  blit_transfer ~src:t2 ~dst:t ();
+;;
+
+let filteri_inplace t ~f =
+  let t2 = filteri t ~f in
   clear t;
   blit_transfer ~src:t2 ~dst:t ();
 ;;
@@ -365,6 +431,18 @@ let of_list l =
    the blit to maintain all the invariants: [t.length] is equal to the number of elements
    in the queue, [t.front] is the array index of the first element in the queue, and
    [capacity t = Option_array.length t.elts]. *)
+let init len ~f =
+  if len < 0
+  then failwiths "Queue.init: negative length" len [%sexp_of: int];
+  let t = create ~capacity:len () in
+  assert (Option_array.length t.elts >= len);
+  for i = 0 to len - 1 do
+    Option_array.unsafe_set_some t.elts i (f i);
+  done;
+  t.length <- len;
+  t
+;;
+
 let of_array a =
   let len = Array.length a in
   let t = create ~capacity:len () in
@@ -388,6 +466,14 @@ let map ta ~f =
     Option_array.unsafe_set_some tb.elts i b;
   done;
   tb
+;;
+
+let mapi t ~f =
+  let i = ref 0 in
+  map t ~f:(fun a ->
+    let result = f !i a in
+    i := !i + 1;
+    result)
 ;;
 
 let singleton x =
@@ -420,7 +506,7 @@ include
   end)
 
 include
-  Binary_searchable.Make1 (struct
+  Test_binary_searchable.Make1_and_test (struct
     type nonrec 'a t = 'a t
 
     let get = get

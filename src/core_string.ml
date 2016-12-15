@@ -1,6 +1,4 @@
 open! Import
-open Bin_prot.Std
-open Typerep_lib.Std
 
 module Char = Core_char
 module Int  = Core_int
@@ -9,10 +7,9 @@ module List = Core_list
 module Stable_workaround = struct
   module V1 = struct
     module T = struct
-      type t = string [@@deriving hash, bin_io, sexp]
-      include (Base.String : Base.Comparable.S
-               with type t := t
-               with type comparator_witness = Base.String.comparator_witness)
+      type t = string [@@deriving bin_io]
+      include (Base.String : module type of struct include Base.String end
+               with type t := t)
     end
     include T
     include Comparable.Stable.V1.Make (T)
@@ -27,8 +24,9 @@ end
 
 module Caseless = struct
   module T = struct
-    type t = string [@@deriving bin_io, sexp]
-    include Base.String.Caseless
+    type t = string [@@deriving bin_io]
+    include (Base.String.Caseless : module type of struct include Base.String.Caseless end
+             with type t := t)
   end
   include T
   include Comparable.Make_binable_using_comparator(T)
@@ -44,6 +42,12 @@ include (Base.String
 
 include Identifiable.Extend (Base.String) (struct
     type t = string [@@deriving bin_io]
+  end)
+
+include Hexdump.Of_indexable (struct
+    type t = string
+    let length = length
+    let get    = get
   end)
 
 module For_quickcheck = struct

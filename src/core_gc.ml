@@ -1,10 +1,7 @@
 open! Import
-open Sexplib.Std
-open Bin_prot.Std
-open Hash.Builtin
+
 include Caml.Gc
 
-module Sexp = Sexplib.Sexp
 let sprintf = Printf.sprintf
 
 module Stat = struct
@@ -95,7 +92,6 @@ end
 let tune ?logger ?minor_heap_size ?major_heap_increment ?space_overhead
       ?verbose ?max_overhead ?stack_limit ?allocation_policy
       ?window_size () =
-  let module Field = Fieldslib.Field in
   let old_control_params = get () in
   let f opt to_string field =
     let old_value = Field.get field old_control_params in

@@ -1,6 +1,4 @@
 open! Import
-open Sexplib
-open Hash.Builtin
 
 exception Nan_or_inf [@@deriving sexp]
 
@@ -28,9 +26,9 @@ let t_of_sexp = function
     begin
       try
         verify t
-      with e -> Conv.of_sexp_error (Exn.to_string e) sexp
+      with e -> of_sexp_error (Exn.to_string e) sexp
     end;
     t
   | s ->
-    Conv.of_sexp_error "Decimal.t_of_sexp: Expected Atom, found List" s
+    of_sexp_error "Decimal.t_of_sexp: Expected Atom, found List" s
 ;;

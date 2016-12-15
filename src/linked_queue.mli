@@ -1,14 +1,7 @@
-
-(** Linked_queue is a wrapper around OCaml's standard Queue module that follows Core
+(** [Linked_queue] is a wrapper around OCaml's standard [Queue] module that follows Core
     idioms and adds some functions.
 
-    Differences from the standard module:
-      [enqueue] replaces [push], [add], and takes the queue first.
-      [dequeue] replaces [pop], [take], takes the queue first, and returns an
-        option rather than raising [Empty].
-      [dequeue_exn] is available if you want to raise [Empty].
-      [iter] takes a labeled argument.
-      [transfer]'s arguments are labeled.
+    Also see [Queue], which has different performance characteristics.
 *)
 
 open! Import
@@ -71,7 +64,5 @@ val filter     : 'a t -> f:('a -> bool     ) -> 'a t
 
 val of_array : 'a array -> 'a t
 val to_array : 'a t -> 'a array
-
-val fold : 'a t -> init:'b -> f:('b -> 'a -> 'b) -> 'b
 
 val singleton : 'a -> 'a t

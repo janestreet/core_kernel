@@ -5,24 +5,33 @@
   (deps (discover.sh test.c))
   (action "./${<} ${OCAMLC} config.h")))
 
+(rule
+ ((targets (rt-flags))
+  (deps    ("rt-flags.sh"))
+  (action "./${<} > ${@}")))
+
 (library
  ((name core_kernel)
   (inline_tests ((javascript build_and_run)))
   (public_name core_kernel)
+  (public_headers (time_ns_stubs))
   (libraries
    (base
-    caml
+    base_for_tests
+    base.caml
+    stdio
     bin_prot
     fieldslib
-    nums
-    ppx_assert_lib
-    ppx_hash_lib
-    ppx_inline_test_lib
+    jane-street-headers
+    num
+    ppx_assert.runtime-lib
+    ppx_hash.runtime-lib
+    ppx_inline_test.runtime-lib
     sexplib
-    typerep_lib
+    typerep
     variantslib))
   (c_flags (:standard -D_LARGEFILE64_SOURCE -mpopcnt))
-  (library_flags (-cclib -lrt))
+  (cclibs (< rt-flags))
   (c_names
    ;; If you add c stubs in here, ask yourself this question: would it make sense/can it
    ;; be implemented under windows and in javascript? If not, perhaps this piece of code
@@ -32,10 +41,13 @@
     bigstring_stubs
     core_array_stubs
     core_gc_stubs
-    time_ns_stubs))
-  (preprocess (((pps (JANE_KERNEL -check-doc-comments)) All)))
+    time_ns_stubs
+    version_util_fallback_stubs))
+  (preprocess (pps (ppx_jane.kernel -check-doc-comments)))
   (preprocessor_deps (config.h))
-  (js_of_ocaml ())))
+  (js_of_ocaml (
+    (javascript_files (strftime.js runtime.js))
+    ))))
 
 (alias
  ((name save_benchmarks)

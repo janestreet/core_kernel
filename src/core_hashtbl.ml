@@ -1,5 +1,4 @@
 open! Import
-open Sexplib.Conv
 open Core_hashtbl_intf
 
 module Avltree = Avltree
@@ -127,7 +126,6 @@ end
 let%test_unit _ = (* [sexp_of_t] output is sorted by key *)
   let module Table =
     Make (struct
-      open Bin_prot.Std
       type t = int [@@deriving bin_io, compare, sexp]
       let hash (x : t) = if x >= 0 then x else ~-x
     end)

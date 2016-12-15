@@ -1,16 +1,12 @@
 #import "config.h"
 
 open! Import
-open Int_replace_polymorphic_compare
-open Sexplib.Conv
 open Pool_intf
 
 let failwiths = Error.failwiths
 let phys_equal = Caml.( == )
 
-module Sexp = Sexplib.Sexp
 module List = Core_list
-module Field = Fieldslib.Field
 module Array = Core_array
 
 module Int = struct
@@ -21,7 +17,7 @@ end
 
 let sprintf = Core_printf.sprintf
 
-let concat l = Caml.StringLabels.concat ~sep:"" l
+let concat l = Base.String.concat ~sep:"" l
 
 module type S = S
 

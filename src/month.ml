@@ -67,7 +67,7 @@ module Stable = struct
     include V1
     let equal t1 t2 = Core_int.(=) 0 (compare t1 t2)
     let tests =
-      let module V = Variantslib.Variant in
+      let module V = Variant in
       let c rank sexp bin_io tests variant =
         assert (variant.V.rank = rank);
         (variant.V.constructor, sexp, bin_io) :: tests
@@ -116,12 +116,12 @@ module T = struct
 
   let%test _ = List.length all = num_months
 
-  let%test _ =
-    List.fold (List.tl_exn all) ~init:Jan ~f:(fun last cur ->
-      assert (compare last cur = (-1));
-      cur)
-  = Dec
-
+  let%test_unit _ =
+    [%test_result: t]
+      (List.fold (List.tl_exn all) ~init:Jan ~f:(fun last cur ->
+         assert (compare last cur = (-1));
+         cur))
+      ~expect:Dec
 
   let hash = to_int
 end

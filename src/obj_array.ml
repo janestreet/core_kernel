@@ -1,8 +1,6 @@
 open! Import
-open Int_replace_polymorphic_compare
 
-module Sexp = Sexplib.Sexp
-module String = Caml.StringLabels
+module String = Base.String
 module Array = Core_array
 
 let phys_equal = Caml.(==)
@@ -130,7 +128,7 @@ let unsafe_blit ~src ~src_pos ~dst ~dst_pos ~len =
 ;;
 
 include
-  Blit.Make
+  Test_blit.Make_and_test
     (struct
       type t = Obj.t
       let equal = phys_equal

@@ -1,5 +1,4 @@
 open! Import
-open Typerep_lib.Std
 
 module List = Core_list
 

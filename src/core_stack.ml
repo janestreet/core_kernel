@@ -1,6 +1,5 @@
 open! Import
 open Std_internal
-open Fieldslib
 
 (* This implementation is similar to [Deque] in that it uses an array of ['a] and
    a mutable [int] to indicate what in the array is used.  We choose to implement [Stack]

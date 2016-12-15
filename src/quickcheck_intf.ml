@@ -1,7 +1,5 @@
 open! Import
 
-module Sexp = Sexplib.Sexp
-
 (** For examples see: lib/core/example/quickcheck *)
 
 module type Generator = sig
@@ -151,12 +149,11 @@ module type Generator = sig
 
   (** [of_fun f] produces a generator that lazily applies [f].
 
-      [f] *MUST* be deterministic or else random value generation will fail.  However, it
-      is recommended that [f] not be memoized.  Instead, spread out the work of generating
-      a whole distribution over many [of_fun] calls combined with [weighted_union].  This
-      allows lazily generated generators to be garbage collected after each test and the
-      relevant portions cheaply recomputed in subsequent tests, rather than accumulating
-      without bound over time. *)
+      It is recommended that [f] not be memoized.  Instead, spread out the work of
+      generating a whole distribution over many [of_fun] calls combined with
+      [weighted_union].  This allows lazily generated generators to be garbage collected
+      after each test and the relevant portions cheaply recomputed in subsequent tests,
+      rather than accumulating without bound over time. *)
   val of_fun : (unit -> 'a t) -> 'a t
 
   (** [list ?min_len ?max_len t] creates a list generator with elements drawn from [t],

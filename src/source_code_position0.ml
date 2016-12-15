@@ -1,5 +1,4 @@
-open Import
-open Bin_prot.Std
+open! Import
 
 module Stable = struct
   module V1 = struct

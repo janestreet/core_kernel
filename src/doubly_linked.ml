@@ -1,5 +1,7 @@
 open! Import
 
+open! Polymorphic_compare
+
 module Array = Core_array
 module List  = Core_list
 
@@ -664,7 +666,6 @@ let%test_module "move functions" = (module struct
     assert (length t = n);
     let observed = to_list t in
     if observed <> expected then begin
-      let open Sexplib.Conv in
       Error.failwiths "mismatch"
         (`Expected expected, `Observed observed)
         [%sexp_of: [`Expected of int list] *
@@ -723,7 +724,6 @@ let%test_unit "mem_elt" =
   let t1 = create () in
   let a = insert_first t1 'a' in
   let b = insert_first t1 'b' in
-  let sexp_of_bool = Sexplib.Conv.sexp_of_bool in
   [%test_result: bool] (mem_elt t1 a) ~expect:true;
   [%test_result: bool] (mem_elt t1 b) ~expect:true;
   let t2 = create () in

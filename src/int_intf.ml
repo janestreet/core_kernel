@@ -48,12 +48,3 @@ module type Extension_with_stable = sig
     with type V1.t = t
      and type V1.comparator_witness = comparator_witness
 end
-
-module type S_with_stable = sig
-  include Extension_with_stable
-  include Base.Int_intf.S
-    with type t := t
-    with type comparator_witness := comparator_witness
-    with module Hex := Hex
-end
-

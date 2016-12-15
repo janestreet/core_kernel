@@ -372,7 +372,21 @@ let%test_module "unpack-buffer" = (module struct
   let test (type value) (module V : Value with type t = value) values =
     let input = Bigstring.of_string (V.pack values) in
     let input_size = Bigstring.length input in
-    for chunk_size = 1 to input_size do
+    let chunk_sizes =
+      List.filter ~f:(fun n -> 1 <= n && n <= input_size)
+        [ 1
+        ; 2
+        ; 13
+        ; input_size / 4
+        ; input_size / 2 - 1
+        ; input_size / 2
+        ; input_size / 2 + 1
+        ; input_size * 3  / 4
+        ; input_size - 1
+        ; input_size
+        ]
+    in
+    List.iter chunk_sizes ~f:(fun chunk_size ->
       let t = create V.unpack_one in
       try
         assert (is_empty_exn t);
@@ -399,8 +413,7 @@ let%test_module "unpack-buffer" = (module struct
                        * [ `chunk_size of int ]
                        * [ `input of Bigstring.t ]
                        * V.t list
-                       * V.t t)];
-    done;
+                       * V.t t)]);
   ;;
 
   let%test_unit _ =

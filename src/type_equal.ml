@@ -1,6 +1,4 @@
 open! Import
-module Sexp = Sexplib.Sexp
-open Sexplib.Std
 
 let failwiths = Error.failwiths
 

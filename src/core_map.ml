@@ -1,12 +1,9 @@
 open! Import
 open Core_map_intf
-open Sexplib
 
 module Symmetric_diff_element = Symmetric_diff_element
 
 module List = Core_list
-
-open! Int_replace_polymorphic_compare
 
 module For_quickcheck = struct
 
@@ -236,6 +233,8 @@ module Make_tree (Key : Comparator.S1) = struct
   let count = count
   let counti = counti
   let split a b = split a b ~comparator
+  let append ~lower_part ~upper_part = append ~lower_part ~upper_part ~comparator
+  let subrange t ~lower_bound ~upper_bound = subrange t ~lower_bound ~upper_bound ~comparator
   let fold_range_inclusive t ~min ~max ~init ~f =
     fold_range_inclusive t ~min ~max ~init ~f ~comparator
   let range_to_alist t ~min ~max = range_to_alist t ~min ~max ~comparator

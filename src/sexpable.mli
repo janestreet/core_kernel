@@ -1,6 +1,8 @@
+open! Import
+
 include module type of struct include Base.Sexpable end
 
-module To_stringable (M : S) : Base.Stringable.S with type t := M.t
+module To_stringable (M : S) : Stringable.S with type t := M.t
 
 (** The following functors preserve stability: if applied to stable types with stable
     (de)serializations, they will produce stable types with stable (de)serializations.

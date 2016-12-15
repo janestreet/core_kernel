@@ -1,5 +1,5 @@
 open! Import
-open Common
+open Perms.Export
 
 type 'a t = 'a ref = { mutable contents : 'a }
 [@@deriving bin_io, compare, sexp, typerep]

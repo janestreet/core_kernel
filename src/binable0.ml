@@ -1,11 +1,10 @@
 open! Import
 
 include Bin_prot.Binable
-open Sexplib.Std
-open Bin_prot.Std
+
 module Shape = Bin_prot.Shape
 
-module List = ListLabels
+module List = Base.List
 
 module Stable = struct
 
@@ -58,7 +57,6 @@ module Stable = struct
     module V1 (M : Sexpable.S) =
       Of_binable.V1
         (struct
-          module Sexp = Sexplib.Sexp
           type t = Sexp.t = Atom of string | List of t list [@@deriving bin_io]
         end)
         (struct

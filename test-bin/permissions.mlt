@@ -7,8 +7,9 @@ let r' = (r : (int, foo) Ref.Permissioned.t)
 [%%expect{|
 Line _, characters 10-11:
 Error: This expression has type
-         * (glob)
-       but an expression was expected of type * (glob)
+         (int, *) (glob)
+         Ref.Permissioned.t
+       but an expression was expected of type (int, foo) Ref.Permissioned.t
        Type 'a = [< `Read | `Who_can_write of 'b ]
        is not compatible with type foo
 |}]
@@ -21,6 +22,7 @@ let () = Ref.Permissioned.set r 1
 Line _, characters 30-31:
 Error: This expression has type * (glob)
        but an expression was expected of type
+         * (glob)
          * (glob)
        Type
          immutable = [ `Read | `Who_can_write of Core_kernel.Perms.nobody ]
@@ -40,8 +42,9 @@ Error: This expression has type
          * (glob)
          * (glob)
          * (glob)
-       but an expression was expected of type
          * (glob)
+       but an expression was expected of type
+         (int, immutable) Ref.Permissioned.t
        Type
          'a =
            [< `Read | `Who_can_write of Core_kernel.Perms.me
