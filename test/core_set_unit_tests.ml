@@ -635,7 +635,7 @@ module Unit_tests
                    |> map ~f:(fun f -> Memo.general f ~hashable))
       let can_generate f = test_can_generate gen ~sexp_of ~f
 
-      let%test_unit _ = test_no_duplicates gen ~sexp_of ~compare
+      let%test_unit _ [@tags "no-js"] = test_no_duplicates gen ~sexp_of ~compare
 
       let%test_unit _ = can_generate (fun f ->
         f (Set.singleton (Elt.of_int 0)) <> f (Set.empty ()))

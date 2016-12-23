@@ -2,7 +2,7 @@
  ((names (main))
   (libraries (core_kernel build_info_test))
   (js_of_ocaml ())
-  (preprocess (pps (ppx_jane.kernel)))))
+  ))
 
 
 ;; Make sure that [Js_of_ocaml_extended.Version_util] can read/parse build_info.
@@ -11,3 +11,9 @@
  ((name DEFAULT)
   (deps (main.exe))
   (action "./main.exe > /dev/null")))
+
+
+(alias
+ ((name javascript)
+  (deps (main.bc.js))
+  (action "${NODE} main.bc.js > /dev/null")))

@@ -50,12 +50,11 @@ function core_kernel_gc_top_heap_words () { return 0 }
 //Requires: caml_hash_mix_bigstring
 var internalhash_fold_bigstring = caml_hash_mix_bigstring
 
-
 //Provides: generated_build_info
-//Requires: caml_fs_file_content, caml_new_string
+//Requires: caml_read_file_content, caml_new_string
 function generated_build_info () {
   try {
-    return caml_fs_file_content("/build_info.sexp");
+    return caml_read_file_content("/static/build_info.sexp");
   } catch (e) {
     return caml_new_string(
       '('
@@ -76,10 +75,10 @@ function generated_build_info () {
 
 
 //Provides: generated_hg_version
-//Requires: caml_fs_file_content, caml_new_string
+//Requires: caml_read_file_content, caml_new_string
 function generated_hg_version () {
   try {
-    return caml_fs_file_content("/hg_version.out");
+    return caml_read_file_content("/static/hg_version.out");
   } catch (e) {
     return caml_new_string("NO_VERSION_UTIL");
   }

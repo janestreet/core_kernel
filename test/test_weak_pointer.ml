@@ -24,7 +24,7 @@ let print t =
       ~get:(get t : contents Heap_block.t option)]
 ;;
 
-let%expect_test "[create], [get], [set], clearing via GC" =
+let%expect_test "[create], [get], [set], clearing via GC" [@tags "no-js"] =
   let t = create () in
   print t;
   [%expect {|
@@ -49,7 +49,7 @@ let%expect_test "[create], [get], [set], clearing via GC" =
     (() (is_some false) (get ())) |}];
 ;;
 
-let%expect_test "multiple [set]s and clearing" =
+let%expect_test "multiple [set]s and clearing" [@tags "no-js"] =
   let t = create () in
   let b1 = heap_block "b1" 13 in
   let b2 = heap_block "b2" 14 in

@@ -1500,7 +1500,7 @@ module Unit_tests
                    |> map ~f:(fun f -> Memo.general f ~hashable))
       let can_generate ?trials f = test_can_generate gen ?trials ~sexp_of ~f
 
-      let%test_unit _ = test_no_duplicates gen ~sexp_of ~compare
+      let%test_unit _ [@tags "no-js"] = test_no_duplicates gen ~sexp_of ~compare
 
       let%test_unit _ = can_generate (fun f ->
         f (Map.singleton (Key.of_int 0) 'a') <> f (Map.empty ()))

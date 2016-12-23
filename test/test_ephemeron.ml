@@ -13,7 +13,7 @@ let print t =
       ~data:(get_data t : heap_block option)]
 ;;
 
-let%expect_test "data isn't nulled by [set_key None]" =
+let%expect_test "data isn't nulled by [set_key None]" [@tags "no-js"] =
   let t = create () in
   let data = heap_block 14 in
   set_data t (Some data);
@@ -28,7 +28,8 @@ let%expect_test "data isn't nulled by [set_key None]" =
 ;;
 
 let%expect_test "\
-data is nulled when the key becomes unreachable, even if the data is reachable" =
+data is nulled when the key becomes unreachable, even if the data is reachable"
+  [@tags "no-js"] =
   let t = create () in
   let data = heap_block 14 in
   set_data t (Some data);
@@ -47,7 +48,7 @@ data is nulled when the key becomes unreachable, even if the data is reachable" 
     (data 14) |}];
 ;;
 
-let%expect_test "data is kept alive by the key" =
+let%expect_test "data is kept alive by the key" [@tags "no-js"] =
   let t = create () in
   print t;
   [%expect {|
@@ -90,7 +91,7 @@ let%expect_test "data is kept alive by the key" =
      (data ())) |}];
 ;;
 
-let%expect_test "finalizers and clearing" =
+let%expect_test "finalizers and clearing" [@tags "no-js"] =
   let t = create () in
   let key = heap_block 14 in
   let data = heap_block 13 in

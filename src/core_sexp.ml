@@ -59,7 +59,7 @@ module With_text = struct
   let of_text value_of_sexp ?(filename="") text =
     match
       Or_error.try_with (fun () ->
-        Sexp.of_string_conv (Core_string.strip text) value_of_sexp)
+        Sexp.of_string_conv text value_of_sexp)
     with
     | Ok (`Result value) -> Ok { value; text }
     | Error _ as err -> err

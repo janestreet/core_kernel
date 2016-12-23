@@ -77,7 +77,7 @@ let%expect_test "[Sexp.of_float_style = `Underscores]" =
     (INF INF)
     (-INF -INF)
     (NAN NAN)
-    (-NAN -NAN) |}];
+    ({-,}NAN {-,}NAN) (glob) |}];
 ;;
 
 let%test_unit "round_nearest_half_to_even quickcheck" =

@@ -52,6 +52,56 @@ val to_bp_int : t -> int  (** rounds down *)
 val t_of_sexp_allow_nan_and_inf : Sexp.t -> t
 val of_string_allow_nan_and_inf : string -> t
 
+(** A [Format.t] tells [Percent.format] how to render a floating-point value as a string.
+    Many of the [Format.t] values correspond to [printf] conversion specifications.  For
+    example:
+
+    {[
+      format (Format.exponent ~precision) = sprintf "%.e" precision
+    ]}
+
+    The [_E] naming suffix in [Format] values is mnenomic of a capital [E] (rather than
+    [e]) being used in floating-point exponent notation.
+
+    Here is the documentation of the floating-point conversion specifications from the
+    OCaml manual:
+
+    - f: convert a floating-point argument to decimal notation, in the style dddd.ddd.
+
+    - F: convert a floating-point argument to OCaml syntax (dddd. or dddd.ddd or d.ddd
+    e+-dd).
+
+    - e or E: convert a floating-point argument to decimal notation, in the style d.ddd
+    e+-dd (mantissa and exponent).
+
+    - g or G: convert a floating-point argument to decimal notation, in style f or e, E
+    (whichever is more compact).
+
+    - h or H: convert a floating-point argument to hexadecimal notation, in the style
+    0xh.hhhh e+-dd (hexadecimal mantissa, exponent in decimal and denotes a power of
+    2). *)
+module Format : sig
+  type t [@@deriving sexp_of]
+
+  val exponent   : precision : int -> t (** [sprintf "%.*e" precision] *)
+
+  val exponent_E : precision : int -> t (** [sprintf "%.*E" precision] *)
+
+  val decimal    : precision : int -> t (** [sprintf "%.*f" precision] *)
+
+  val ocaml      :                    t (** [sprintf   "%F"          ] *)
+
+  val compact    : precision : int -> t (** [sprintf "%.*g" precision] *)
+
+  val compact_E  : precision : int -> t (** [sprintf "%.*G" precision] *)
+
+  val hex        : precision : int -> t (** [sprintf "%.*h" precision] *)
+
+  val hex_E      : precision : int -> t (** [sprintf "%.*H" precision] *)
+end
+
+val format : t -> Format.t -> string
+
 val validate : t -> Validate.t
 
 module Stable : sig

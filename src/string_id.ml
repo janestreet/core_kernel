@@ -62,4 +62,4 @@ module Make (M : sig val module_name : string end) () = struct
     end)
 end
 
-include Make (struct let module_name = "Core_kernel.String_id" end) ()
+include Make (struct let module_name = "Core_kernel.Std.String_id" end) ()

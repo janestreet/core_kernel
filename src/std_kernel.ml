@@ -35,6 +35,7 @@ module Either                               = Either
 module Ephemeron                            = Core_ephemeron
 module Equal                                = Equal
 module Error                                = Error
+module Expect_test_config                   = Expect_test_config
 module Fdeque                               = Fdeque
 module Fheap                                = Fheap
 module Flags                                = Flags

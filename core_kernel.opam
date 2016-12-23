@@ -11,6 +11,7 @@ build: [
 depends: [
   "base"
   "bin_prot"
+  "configurator"
   "fieldslib"
   "jane-street-headers"
   "jbuilder"

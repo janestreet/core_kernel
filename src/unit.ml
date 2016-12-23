@@ -9,7 +9,7 @@ end
 module T1 = struct
   include T0
   include Sexpable.To_stringable (T0)
-  let module_name = "Core.Std.Unit"
+  let module_name = "Core_kernel.Std.Unit"
 end
 
 include T1

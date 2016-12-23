@@ -57,7 +57,10 @@ CAMLprim value core_kernel_time_ns_format_tm(struct tm * tm, value v_fmt)
   char* buf;
   int buf_len;
   value v_str;
-  buf_len = 128*1024 + caml_string_length(v_fmt);
+  /* 100 * length should be large enough to contain the output of strftime. The
+     longest expansion we know of is "%c" in the km_KH.utf8 locale, which
+     requires 151 bytes. */
+  buf_len = 100 * caml_string_length(v_fmt);
   buf = malloc(buf_len);
   if (!buf) caml_failwith("core_kernel_time_ns_format_tm: malloc failed");
   len = strftime(buf, buf_len, String_val(v_fmt), tm);

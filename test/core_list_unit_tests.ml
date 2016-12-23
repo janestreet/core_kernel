@@ -229,7 +229,7 @@ let%test_module "random" = (module struct
             (List.bind list ~f:List.return)
             ~expect:list)
 
-    let%test_unit "monad associativity" =
+    let%test_unit "monad associativity" [@tags "no-js"] =
       Q.test ~sexp_of:[%sexp_of: t list * (t -> t list) * (t -> t list)]
         (G.tuple3
            (List.gen gen)
@@ -708,7 +708,7 @@ let%test_module "random" = (module struct
   let%test_module "int w/ float"  = (module Make (Int')    (Float'))
   let%test_module "string w/ int" = (module Make (String') (Int'))
   let%test_module "char w/ float" = (module Make (Char')   (Float'))
-  let%test_module "sexp w/ int"   = (module Make (Sexp')   (Int'))
+  let%test_module "sexp w/ int" [@tags "no-js"] = (module Make (Sexp')   (Int'))
 
   let%test_unit "List.fold_right doesn't allocate on empty lists" =
     let initial_words = Gc.minor_words () in

@@ -933,33 +933,37 @@ module Configure (Config : Quickcheck_intf.Quickcheck_config) = struct
         gen
         ~f
     =
-    Sequence.delayed_fold (random_sequence ?seed ?sizes gen)
-      ~init:(0, 0)
-      ~finish:(fun (successes, failures) ->
-        Error.raise_s [%message
-          "Quickcheck.iter: ran out of values"
-            (successes : int)
-            (failures  : int)])
-      ~f:(fun (successes, failures) value ~k ->
-        let successes, failures =
-          if filter value
+    let finished_or_stopped_early =
+      Sequence.fold_until (random_sequence ?seed ?sizes gen)
+        ~init:(0, 0)
+        ~f:(fun (successes, failures) value ->
+          let successes, failures =
+            if filter value
+            then begin
+              f value;
+              (successes + 1, failures)
+            end else begin
+              (successes, failures + 1)
+            end
+          in
+          if successes >= trials
+          then Stop ()
+          else if successes + failures >= attempts
           then begin
-            f value;
-            (successes + 1, failures)
-          end else begin
-            (successes, failures + 1)
+            Error.raise_s [%message
+              "Quickcheck.iter: too many failures"
+                (successes : int)
+                (failures  : int)]
           end
-        in
-        if successes >= trials
-        then ()
-        else if successes + failures >= attempts
-        then begin
-          Error.raise_s [%message
-            "Quickcheck.iter: too many failures"
-              (successes : int)
-              (failures  : int)]
-        end
-        else k (successes, failures))
+          else Continue (successes, failures))
+    in
+    match finished_or_stopped_early with
+    | Finished (successes, failures) ->
+      Error.raise_s [%message
+        "Quickcheck.iter: ran out of values"
+          (successes : int)
+          (failures  : int)]
+    | Stopped_early () -> ()
 
   let random_value ?(seed = default_seed) ?(size = 30) gen =
     let random = random_state_of_seed seed in

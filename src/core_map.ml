@@ -287,7 +287,7 @@ module Poly = struct
       type ('a, 'b) el = 'a * 'b [@@deriving bin_io]
       let _ = bin_el
       let caller_identity = Bin_prot.Shape.Uuid.of_string "b7d7b1a0-4992-11e6-8a32-bbb221fa025c"
-      let module_name = Some "Core.Std.Map"
+      let module_name = Some "Core_kernel.Std.Map"
       let length = length
       let iter t ~f = iteri t ~f:(fun ~key ~data -> f (key, data))
       let init ~len ~next =
@@ -352,7 +352,7 @@ module Make_plain_using_comparator (Key : sig
       type 'v el = Key.t * 'v [@@deriving bin_io]
       let _ = bin_el
       let caller_identity = Bin_prot.Shape.Uuid.of_string "dfb300f8-4992-11e6-9c15-73a2ac6b815c"
-      let module_name = Some "Core.Std.Map"
+      let module_name = Some "Core_kernel.Std.Map"
       let length = length
       let iter t ~f = iteri t ~f:(fun ~key ~data -> f (key, data))
       let init ~len ~next =

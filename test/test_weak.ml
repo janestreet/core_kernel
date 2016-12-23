@@ -71,7 +71,7 @@ let%expect_test "[is_none], [is_some]" =
   ignore (b : block);
 ;;
 
-let%expect_test "clearing, with no finalizer attached" =
+let%expect_test "clearing, with no finalizer attached" [@tags "no-js"] =
   let t = create ~len:1 in
   let b = block 13 in
   set t 0 (Some b);
@@ -91,7 +91,7 @@ let%expect_test "clearing, with no finalizer attached" =
 (* This test demonstrates a difference between OCaml 4.02 and 4.03.  In 4.02, a weak
    pointer with an attached finalizer is cleared after the first compaction.  In 4.03, the
    weak is not cleared until the second compaction. *)
-let%expect_test "clearing, with a finalizer attached" =
+let%expect_test "clearing, with a finalizer attached" [@tags "no-js"] =
   let t = create ~len:1 in
   let b = block 13 in
   set t 0 (Some b);

@@ -16,6 +16,51 @@ module Stable = struct
 
     let of_bp_int i = of_bp (Float.of_int i)
     let to_bp_int t = Float.to_int (to_bp t)
+
+    module Format = struct
+      type t =
+        | Exponent of int
+        | Exponent_E of int
+        | Decimal of int
+        | Ocaml
+        | Compact of int
+        | Compact_E of int
+        | Hex of int
+        | Hex_E of int
+      [@@deriving sexp_of]
+
+      let exponent   ~precision = Exponent    precision
+      let exponent_E ~precision = Exponent_E  precision
+      let decimal    ~precision = Decimal     precision
+      let ocaml                 = Ocaml
+      let compact    ~precision = Compact     precision
+      let compact_E  ~precision = Compact_E   precision
+      let hex        ~precision = Hex         precision
+      let hex_E      ~precision = Hex_E       precision
+
+      let format_float t =
+        match t with
+        | Exponent   precision -> sprintf "%.*e" precision
+        | Exponent_E precision -> sprintf "%.*E" precision
+        | Decimal    precision -> sprintf "%.*f" precision
+        | Ocaml                -> sprintf   "%F"
+        | Compact    precision -> sprintf "%.*g" precision
+        | Compact_E  precision -> sprintf "%.*G" precision
+        | Hex        precision -> sprintf "%.*h" precision
+        | Hex_E      precision -> sprintf "%.*H" precision
+    end
+
+    let format x format =
+      let x_abs = Float.abs x in
+      let string float = Format.format_float format float in
+      if x_abs = 0. then "0x"
+      else if x_abs >= 1. then
+        string (x *. 1.) ^ "x"
+      else if x_abs >= 0.01 then
+        string (x *. 100.) ^ "%"
+      else
+        string (x *. 10_000.) ^ "bp"
+
     module Stringable = struct
 
       type t = float
@@ -174,5 +219,19 @@ let%test_unit _ = (* [sexp_of_t] and [t_of_sexp] *)
     ; 0.0001 , "1bp"
     ; 0.00001, "0.1bp"
     ; 0.5    , "50%"
+    ]
+;;
+
+let%test_unit _ = (* [to_string'] and [to_string_f] *)
+  List.iter ~f:(fun (t, precision, format', expect, expectf) ->
+    let output' = format t (Format.compact_E ~precision) in
+    assert (String.equal output' expect);
+    let outputf = format t format' in
+    assert (String.equal outputf expectf)
+  )
+    [ 0.3       , 3, (Format.decimal ~precision:3), "30%"    , "30.000%"
+    ; 0.333     , 4, (Format.decimal ~precision:2), "33.3%"  , "33.30%"
+    ; 0.333333  , 4, (Format.decimal ~precision:2), "33.33%" , "33.33%"
+    ; 0.000333  , 2, (Format.decimal ~precision:2), "3.3bp"  , "3.33bp"
     ]
 ;;

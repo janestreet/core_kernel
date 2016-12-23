@@ -319,7 +319,7 @@ end) : Hashable.S_binable with type t := t)
 
 include Pretty_printer.Register (struct
   type nonrec t = t
-  let module_name = "Core.Std.Date"
+  let module_name = "Core_kernel.Std.Date"
   let to_string = to_string
 end)
 

@@ -244,12 +244,14 @@ end = struct
     unsafe_split_or_splice_after t node;
     node
 
+  let dummy_header = Header.create ()
+
   let unlink_before t =
     let node = t.prev in
     if is_singleton node then node else begin
       Header.incr_length t.header ~by:(-1);
       unsafe_split_or_splice_before t node;
-      node.header <- Header.create ();
+      node.header <- dummy_header;
       node
     end
 
@@ -258,7 +260,7 @@ end = struct
     if is_singleton node then node else begin
       Header.incr_length t.header ~by:(-1);
       unsafe_split_or_splice_after t node;
-      node.header <- Header.create ();
+      node.header <- dummy_header;
       node
     end
 

@@ -23,7 +23,14 @@ let%test_unit _ [@tags "no-js"] =
 module Exn = struct
   let set_recording = Printexc.record_backtrace
   let am_recording  = Printexc.backtrace_status
-  let most_recent   = Printexc.get_backtrace
+
+  let most_recent () =
+    if am_running_inline_test
+    then "<backtrace elided in test>"
+    else if not (am_recording ())
+    then ""
+    else Printexc.get_backtrace ()
+  ;;
 
   (* We turn on backtraces by default if OCAMLRUNPARAM isn't set. *)
   let maybe_set_recording () =
@@ -38,8 +45,11 @@ module Exn = struct
     protect ~f ~finally:(fun () -> set_recording saved)
   ;;
 
-
-  let%test _ [@tags "no-js"]  = "" = with_recording false ~f:most_recent
+  let%expect_test _ =
+    print_string (with_recording false ~f:most_recent);
+    [%expect {|
+      <backtrace elided in test> |}];
+  ;;
 end
 
 let initialize_module () =
