@@ -44,10 +44,10 @@ let () =
 
        :: ocaml_vars);
 
-    let rt_lib : Sexp.t =
+    let rt_flags : Sexp.t =
       match posix_timers with
-      | Available { need_lrt = true } -> List [Atom "rt"]
+      | Available { need_lrt = true } -> List [Atom "-lrt"]
       | _ -> List []
     in
-    Stdio.Out_channel.write_all "rt-lib" ~data:(Sexp.to_string rt_lib))
+    Stdio.Out_channel.write_all "rt-flags" ~data:(Sexp.to_string rt_flags))
 

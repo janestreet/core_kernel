@@ -1,7 +1,7 @@
 ;; config.h is created atomically by discover.sh to avoid a problem where gcc -MM on some
 ;; file that includes config.h reads a partial written file, and fails
 (rule
- ((targets (config.h rt-lib))
+ ((targets (config.h rt-flags))
   (deps    (config/discover.exe))
   (action  (run ${<} -ocamlc ${OCAMLC}))))
 
@@ -26,7 +26,7 @@
     typerep
     variantslib))
   (c_flags (:standard -D_LARGEFILE64_SOURCE -mpopcnt))
-  (c_libraries (:include rt-lib))
+  (c_library_flags (:include rt-flags))
   (c_names
    ;; If you add c stubs in here, ask yourself this question: would it make sense/can it
    ;; be implemented under windows and in javascript? If not, perhaps this piece of code
