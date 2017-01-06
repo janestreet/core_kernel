@@ -2,21 +2,20 @@ open! Import
 
 #import "config.h"
 
-module Bin = struct
-#ifdef JSC_ARCH_SIXTYFOUR
-  include Binable0.Of_binable(Core_int)(struct
-    type t = Base.Int63.t
-    let of_binable = Base.Int63.of_int
-    let to_binable = Base.Int63.to_int_exn
-  end)
-#else
-  include Binable0.Of_binable(Core_int64)(struct
-    type t = Base.Int63.t
-    let of_binable = Base.Not_exposed_properly.Int63_emul.W.wrap_exn
-    let to_binable = Base.Not_exposed_properly.Int63_emul.W.unwrap
-  end)
-#endif
-  let bin_shape_t = Bin_prot.Shape.bin_shape_int63
+module Bin : Binable0.S with type t := Base.Int63.t = struct
+  module Bin_emulated = struct
+    type t = Base.Not_exposed_properly.Int63_emul.t
+    include Binable0.Of_binable(Core_int64)(struct
+        type nonrec t = t
+        let of_binable = Base.Not_exposed_properly.Int63_emul.W.wrap_exn
+        let to_binable = Base.Not_exposed_properly.Int63_emul.W.unwrap
+      end)
+  end
+  type 'a binable = (module Binable0.S with type t = 'a)
+  let binable_of_repr : type a b. (a, b) Base.Int63.Private.Repr.t -> b binable = function
+    | Base.Int63.Private.Repr.Int   -> (module Core_int)
+    | Base.Int63.Private.Repr.Int64 -> (module Bin_emulated)
+  include (val (binable_of_repr Base.Int63.Private.repr : Base.Int63.t binable))
 end
 
 module Stable_workaround = struct
@@ -43,9 +42,10 @@ module type Typerepable = sig
   type t [@@deriving typerep]
 end
 type 'a typerepable = (module Typerepable with type t = 'a)
-let typerep_of_repr : type a. a Base.Int63.Private.Repr.t -> a typerepable = function
-  | Base.Int63.Private.Repr.Int   -> (module Core_int)
-  | Base.Int63.Private.Repr.Int64 -> (module Core_int64)
+let typerep_of_repr : type a b. (a, b) Base.Int63.Private.Repr.t -> a typerepable
+  = function
+    | Base.Int63.Private.Repr.Int   -> (module Core_int)
+    | Base.Int63.Private.Repr.Int64 -> (module Core_int64)
 include (val (typerep_of_repr Base.Int63.Private.repr : Base.Int63.t typerepable))
 
 include Identifiable.Extend (Base.Int63) (struct
@@ -64,14 +64,21 @@ include (Base.Int63
              with type t := t
              with module Hex := Hex))
 
-#ifdef JSC_ARCH_SIXTYFOUR
-let splittable_random random ~lo ~hi =
-  of_int (Splittable_random.int random ~lo:(to_int_exn lo) ~hi:(to_int_exn hi))
-#else
-let splittable_random random ~lo ~hi =
+let splittable_random_emulated random ~lo ~hi =
   let open Base.Not_exposed_properly.Int63_emul.W in
   wrap_exn (Splittable_random.int64 random ~lo:(unwrap lo) ~hi:(unwrap hi))
-#endif
+
+let splittable_random_of_repr
+  :  type a b. (a, b) Base.Int63.Private.Repr.t
+  -> Splittable_random.State.t
+  -> lo:b
+  -> hi:b
+  -> b
+  = function
+    | Base.Int63.Private.Repr.Int   -> Splittable_random.int
+    | Base.Int63.Private.Repr.Int64 -> splittable_random_emulated
+
+let splittable_random = splittable_random_of_repr Base.Int63.Private.repr
 
 include Quickcheck.Make_int (struct
     type nonrec t = t [@@deriving sexp, compare, hash]
