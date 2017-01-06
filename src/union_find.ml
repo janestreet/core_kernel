@@ -44,79 +44,88 @@ end
   deepest node takes Theta(N) time.  With the balancing scheme of never
   increasing the rank of a node unnecessarily, it would take O(log N).
 *)
-type 'a root = {
-  mutable value: 'a;
-  mutable rank: int;
-}
 
-type 'a t = { mutable node : 'a node; }
+(* NOTE: This does not work yet due to an OCaml 4.04 beta bug.  Should be
+   fixed before the release of OCaml 4.04. *)
+(* type ('a, 'kind) tree = *)
+(*   | Root : { mutable value : 'a; mutable rank : int } -> ('a, [ `root ]) tree *)
+(*   | Inner : { mutable parent : 'a node } -> ('a, [ `inner ]) tree *)
+(*  *)
+(* and 'a node = Node : ('a, _) tree -> 'a node  [@@ocaml.unboxed] *)
+(*  *)
+(* type 'a t = ('a, [ `inner ]) tree *)
 
-and 'a node =
-  | Inner of 'a t (* [Inner x] is a node whose parent is [x]. *)
-  | Root of 'a root
+type ('a, 'kind, 'parent) tree =
+  | Root : { mutable value : 'a; mutable rank : int } ->
+    ('a, [ `root ], 'parent) tree
+  | Inner : { mutable parent : 'parent } -> ('a, [ `inner ], 'parent) tree
+
+type 'a node = Node : ('a, _, 'a node) tree -> 'a node  [@@ocaml.unboxed]
+
+type 'a t = ('a, [ `inner ], 'a node) tree
 
 let invariant t =
-  let rec loop t depth =
-    match t.node with
-    | Inner t -> loop t (depth + 1)
-    | Root r -> assert (depth <= r.rank)
+  let rec loop (Inner inner) depth =
+    match inner.parent with
+    | Node (Inner _ as parent) -> loop parent (depth + 1)
+    | Node (Root r) -> assert (depth <= r.rank)
   in
   loop t 0
 
-let create v = { node = Root { value = v; rank = 0; }; }
+let create v = Inner { parent = Node (Root { value = v; rank = 0 }) }
 
-(* invariants:
-   [inner.node] = [inner_node] = [Inner t].
-   [descendants] are the proper descendants of [inner] we've visited.
-*)
-let rec compress t ~inner_node ~inner ~descendants =
-  match t.node with
-  | Root r ->
-    (* t is the root of the tree.
-       Re-point all descendants directly to it by setting them to [Inner t].
-       Note: we don't re-point [inner] as it already points there. *)
-    List.iter descendants ~f:(fun t -> t.node <- inner_node); (t, r)
-  | Inner t' as node ->
-    compress t' ~inner_node:node ~inner:t ~descendants:(inner :: descendants)
+(* NOTE: does not use tail-recursion like previous implementation, because
+   the depth should never exceed O(log N) anyway.  It's faster this way. *)
+let rec compress ~repr:(Inner inner as repr) = function
+  | Node (Root _ as root) -> repr, root
+  | Node (Inner next_inner as repr) ->
+      let repr, _ as res = compress ~repr next_inner.parent in
+      inner.parent <- Node repr;
+      res
 
-let representative t =
-  match t.node with
-  | Root r -> (t, r)
-  | Inner t' as node -> compress t' ~inner_node:node ~inner:t ~descendants:[]
+let compress_inner (Inner inner as repr) = compress ~repr inner.parent
 
-let root t = snd (representative t)
+let get_root (Inner inner) =
+  match inner.parent with
+  | Node (Root _ as root) -> root  (* Avoids compression call *)
+  | Node (Inner _ as repr) ->
+      let repr, root = compress_inner repr in
+      inner.parent <- Node repr;
+      root
 
-let get t = (root t).value
+let get_rank t = let Root r = get_root t in r.rank
 
-let set t v = (root t).value <- v
+let get t = let Root r = get_root t in r.value
 
-let same_class t1 t2 = phys_equal (root t1) (root t2)
+let set t x = let Root r = get_root t in r.value <- x
+
+let same_class t1 t2 = phys_equal (get_root t1) (get_root t2)
 
 let union t1 t2 =
-  let (t1, r1) = representative t1 in
-  let (t2, r2) = representative t2 in
-  if phys_equal r1 r2 then
+  let Inner inner1 as repr1, (Root r1 as root1) = compress_inner t1 in
+  let Inner inner2 as repr2, (Root r2 as root2) = compress_inner t2 in
+  if phys_equal root1 root2 then
     ()
   else
     let n1 = r1.rank in
     let n2 = r2.rank in
     if n1 < n2 then
-      t1.node <- Inner t2
+      inner1.parent <- Node repr2
     else begin
-      t2.node <- Inner t1;
+      inner2.parent <- Node repr1;
       if n1 = n2 then r1.rank <- r1.rank + 1;
     end
 
 let%test_module _ = (module struct
 
-  let is_compressed t =
+  let is_compressed (Inner inner as t) =
     invariant t;
-    match t.node with
-    | Root _ -> true
-    | Inner t ->
-      match t.node with
-      | Root _ -> true
-      | Inner _ -> false
+    match inner.parent with
+    | Node Root _ -> true
+    | Node (Inner inner) ->
+      match inner.parent with
+      | Node Root _ -> true
+      | Node (Inner _) -> false
   ;;
 
   (* invariant checking wrapper functions *)
@@ -199,7 +208,7 @@ let%test_module _ = (module struct
     let n = 1000 in
     let ts = List.init n ~f:create in
     let t = List.reduce_exn ts ~f:(fun a b -> union a b; b) in
-    let max_rank = List.fold ts ~init:0 ~f:(fun acc t -> max acc (root t).rank) in
+    let max_rank = List.fold ts ~init:0 ~f:(fun acc t -> max acc (get_rank t)) in
     assert (max_rank = 1);
     set t 42;
     assert (List.for_all ts ~f:(fun t' -> same_class t t' && get t' = 42))
@@ -224,7 +233,7 @@ let%test_module _ = (module struct
     let t = sub 0 (pred n) in
     Array.iter ts ~f:invariant;
     assert (Array.exists ts ~f:(fun t -> not (is_compressed t)));
-    let max_rank = Array.fold ts ~init:0 ~f:(fun acc t -> max acc (root t).rank) in
+    let max_rank = Array.fold ts ~init:0 ~f:(fun acc t -> max acc (get_rank t)) in
     assert (max_rank <= log2 n);
     set t 42;
     assert (Array.for_all ts ~f:(fun t' -> same_class t t' && get t' = 42));
