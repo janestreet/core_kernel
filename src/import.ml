@@ -12,6 +12,7 @@ module Floatable                 = Base.Floatable
 module Hash                      = Base.Hash
 module Hasher                    = Base.Hasher
 module Heap_block                = Base.Heap_block
+module Indexed_container         = Base.Indexed_container
 module Invariant                 = Base.Invariant
 module Intable                   = Base.Intable
 module Monad                     = Base.Monad
@@ -37,8 +38,6 @@ include Base_for_tests
 include Bin_prot.Std
 
 module Field = Fieldslib.Field
-
-include Hash.Builtin
 
 module Sexp = Sexplib.Sexp
 

@@ -1,5 +1,5 @@
 open! Core_kernel.Std
-open! Expect_test_helpers_kernel.Std
+open! Expect_test_helpers_kernel
 open! Moption
 
 let print t =

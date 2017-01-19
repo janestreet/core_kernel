@@ -3,6 +3,8 @@
 type t = string [@@deriving bin_io, typerep]
 
 module Caseless : sig
+  type nonrec t = t [@@deriving bin_io, hash, sexp]
+
   include Comparable.S_binable with type t := t
   include Hashable.S_binable   with type t := t
 

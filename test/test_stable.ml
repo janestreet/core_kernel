@@ -1,5 +1,5 @@
 open! Core_kernel.Std
-open! Expect_test_helpers_kernel.Std
+open! Expect_test_helpers_kernel
 
 let%expect_test "[sexp_of_int] respects [sexp_of_int_style]" =
   let sexp_of_int = Core_kernel.Stable.sexp_of_int in

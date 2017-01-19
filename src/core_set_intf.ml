@@ -55,33 +55,33 @@ module type Accessors_generic = sig
        ('a, 'cmp) t -> f:('a elt -> 'b) -> ('a elt, 'b, 'cmp cmp) Map.t
     ) options
 
-  val obs : 'a elt Quickcheck.obs -> ('a, 'cmp) t Quickcheck.obs
+  val obs : 'a elt Quickcheck.Observer.t -> ('a, 'cmp) t Quickcheck.Observer.t
 
   val shrinker
     : ('a, 'cmp,
-       'a elt Quickcheck.shr -> ('a, 'cmp) t Quickcheck.shr
+       'a elt Quickcheck.Shrinker.t -> ('a, 'cmp) t Quickcheck.Shrinker.t
       ) options
 end
 
 module type Accessors0 = sig
   include Set_intf.Accessors0
   val to_map : t -> f:(elt -> 'data) -> (elt, 'data, comparator_witness) Map.t
-  val obs : elt Quickcheck.obs -> t Quickcheck.obs
-  val shrinker : elt Quickcheck.shr -> t Quickcheck.shr
+  val obs : elt Quickcheck.Observer.t -> t Quickcheck.Observer.t
+  val shrinker : elt Quickcheck.Shrinker.t -> t Quickcheck.Shrinker.t
 end
 
 module type Accessors1 = sig
   include Set_intf.Accessors1
   val to_map         : 'a t -> f:('a -> 'b) -> ('a, 'b, comparator_witness) Map.t
-  val obs : 'a Quickcheck.obs -> 'a t Quickcheck.obs
-  val shrinker : 'a Quickcheck.shr -> 'a t Quickcheck.shr
+  val obs : 'a Quickcheck.Observer.t -> 'a t Quickcheck.Observer.t
+  val shrinker : 'a Quickcheck.Shrinker.t -> 'a t Quickcheck.Shrinker.t
 end
 
 module type Accessors2 = sig
   include Set_intf.Accessors2
   val to_map         : ('a, 'cmp) t -> f:('a -> 'b) -> ('a, 'b, 'cmp) Map.t
-  val obs : 'a Quickcheck.obs -> ('a, 'cmp) t Quickcheck.obs
-  val shrinker : 'a Quickcheck.shr -> ('a, 'cmp) t Quickcheck.shr
+  val obs : 'a Quickcheck.Observer.t -> ('a, 'cmp) t Quickcheck.Observer.t
+  val shrinker : 'a Quickcheck.Shrinker.t -> ('a, 'cmp) t Quickcheck.Shrinker.t
 end
 
 module type Accessors2_with_comparator = sig
@@ -91,11 +91,11 @@ module type Accessors2_with_comparator = sig
     -> ('a, 'cmp) t
     -> f:('a -> 'b)
     -> ('a, 'b, 'cmp) Map.t
-  val obs : 'a Quickcheck.obs -> ('a, 'cmp) t Quickcheck.obs
+  val obs : 'a Quickcheck.Observer.t -> ('a, 'cmp) t Quickcheck.Observer.t
   val shrinker
     :  comparator:('a, 'cmp) Comparator.t
-    -> 'a Quickcheck.shr
-    -> ('a, 'cmp) t Quickcheck.shr
+    -> 'a Quickcheck.Shrinker.t
+    -> ('a, 'cmp) t Quickcheck.Shrinker.t
 end
 
 (** Consistency checks (same as in [Container]). *)

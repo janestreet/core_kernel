@@ -57,8 +57,8 @@ module For_quickcheck = struct
       let len = List.length list in
       let index_generator =
         init (len - 1) ~f:(fun i ->
-          Quickcheck.For_int.gen_between
-            ~lower_bound:(Incl i) ~upper_bound:(Excl len))
+          (* choose uniformly among indices to create uniform choice among permutations *)
+          Quickcheck.For_int.gen_uniform_incl i (len - 1))
         |> Quickcheck.Generator.all
       in
       index_generator

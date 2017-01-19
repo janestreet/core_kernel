@@ -115,6 +115,10 @@ module type Span = sig
   val to_int_ns : t   -> int
   val of_int_ns : int -> t
 
+  (** The only condition [to_proportional_float] is supposed to satisfy is that for all
+      [t1, t2 : t]: [to_proportional_float t1 /. to_proportional_float t2 = t1 // t2]. *)
+  val to_proportional_float : t -> float
+
   val since_unix_epoch : unit -> t
 
   val random : ?state:Random.State.t -> unit -> t
@@ -193,5 +197,21 @@ module type Time_ns = sig
     -> t
 
   val random : ?state:Random.State.t -> unit -> t
+
+  module Utc : sig
+    (** [to_date_and_span_since_start_of_day] computes the date and intraday-offset of a
+        time in UTC.  It may be slower than [Core.Std.Time_ns.to_date_ofday], as this
+        function does not cache partial results while the latter does. *)
+    val to_date_and_span_since_start_of_day : t -> Date.t * Span.t
+
+    (** The inverse of [to_date_and_span_since_start_of_day]. *)
+    val of_date_and_span_since_start_of_day : Date.t -> Span.t -> t
+  end
+
+  module Stable : sig
+    module Alternate_sexp : sig
+      module V1 : Stable_without_comparator with type t = Alternate_sexp.t
+    end
+  end
 
 end

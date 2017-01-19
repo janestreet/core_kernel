@@ -34,6 +34,14 @@ module type Extension = sig
   include Quickcheckable.S_bounded with type t := t
 end
 
+module type S_unbounded = sig
+  include Extension
+  include Base.Int_intf.S_unbounded
+    with type t := t
+    with type comparator_witness := comparator_witness
+    with module Hex := Hex
+end
+
 module type S = sig
   include Extension
   include Base.Int_intf.S

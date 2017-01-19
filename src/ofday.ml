@@ -35,11 +35,14 @@ module Stable = struct
 
       let to_span_since_start_of_day t = Span.of_sec t
 
-      (* another reasonable choice would be only allowing Ofday.t to be < 24hr, but this
+      (* Another reasonable choice would be only allowing Ofday.t to be < 24hr, but this
          choice was made early on and people became used to being able to easily call 24hr
          the end of the day.  It's a bit sad because it shares that moment with the
          beginning of the next day, and round trips oddly if passed through
-         Time.to_date_ofday/Time.of_date_ofday *)
+         Time.to_date_ofday/Time.of_date_ofday.
+
+         Note: [Schedule.t] requires that the end of day be representable, as it's the
+         only way to write a schedule in terms of [Ofday.t]s that spans two weekdays. *)
       (* ofday must be >= 0 and <= 24h *)
       let is_valid (t:t) =
         let t = to_span_since_start_of_day t in

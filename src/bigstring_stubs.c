@@ -158,7 +158,7 @@ CAMLprim value internalhash_fold_bigstring(value st, value v_str) /* noalloc */
 
   mlsize_t len = ba->dim[0];
 
-  h = internalhash_fold_blob(h, len, s);
+  h = Base_internalhash_fold_blob(h, len, s);
 
   return Val_long(h);
 }

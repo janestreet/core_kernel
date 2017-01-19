@@ -82,7 +82,7 @@ let reset buf =
   buf.len <- Bigstring.length buf.bstr;
 ;;
 
-let add_substring buf src src_pos len =
+let add_substring buf src ~pos:src_pos ~len =
   if src_pos < 0 || len < 0 || src_pos > String.length src - len
   then invalid_arg "Bigbuffer.add_substring";
   let new_pos = buf.pos + len in
@@ -187,7 +187,8 @@ let add_substitute buf f s =
   subst ' ' 0
 
 module Format = struct
-  let formatter_of_buffer buf = Format.make_formatter (add_substring buf) ignore
+  let formatter_of_buffer buf =
+    Format.make_formatter (fun s pos len -> add_substring buf s ~pos ~len) ignore
   let bprintf buf = Format.kfprintf ignore (formatter_of_buffer buf)
 end
 

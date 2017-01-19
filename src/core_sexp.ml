@@ -152,16 +152,18 @@ module For_quickcheck = struct
   module Observer  = Quickcheck.Observer
   module Shrinker  = Quickcheck.Shrinker
 
-  open Generator.Monad_infix
+  open Generator.Let_syntax
 
   let gen =
-    (* relying on [Core_list.gen] to distribute [size] over sub-sexps *)
-    Generator.recursive (fun f ~size ->
-      Bool.gen
-      >>= fun atomic ->
-      if atomic
-      then (Core_string.gen         >>| fun atom -> Atom atom)
-      else (Core_list.gen (f ~size) >>| fun list -> List list))
+    Generator.recursive (fun self ->
+      let%bind size = Generator.size in
+      (* choose a number weighted low so we have a decreasing, but not vanishing, chance
+         to generate atoms as size grows *)
+      match%bind Core_int.gen_log_uniform_incl 0 (size + 1) with
+      (* generate a non-empty string based on the given size *)
+      | 0 -> let%map atom = Core_string.gen    in Atom atom
+      (* relying on [Core_list.gen] to distribute [size] over sub-sexps *)
+      | _ -> let%map list = Core_list.gen self in List list)
 
   let obs =
     Observer.recursive (fun t_obs ->

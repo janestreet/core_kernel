@@ -385,6 +385,8 @@ let%test_module "conversion compatibility" = (module struct
 
 end)
 
+let to_proportional_float = to_float
+
 let to_unit_of_time t : Unit_of_time.t =
   let abs_t = abs t in
   if abs_t >= day         then Day         else

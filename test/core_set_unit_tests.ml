@@ -593,7 +593,8 @@ module Unit_tests
       let gen = Set.gen Elt.gen
       let can_generate f = test_can_generate gen ~sexp_of ~f
 
-      let%test_unit _ = test_no_duplicates gen ~sexp_of ~compare
+      let%test_unit _ = test_distinct_values gen ~sexp_of ~compare
+                          ~trials:1_000 ~distinct_values:500
       let%test_unit _ = can_generate (fun t -> Set.is_empty t)
       let%test_unit _ = can_generate (fun t -> Set.length t = 1)
       let%test_unit _ = can_generate (fun t -> Set.length t = 2)
@@ -635,7 +636,9 @@ module Unit_tests
                    |> map ~f:(fun f -> Memo.general f ~hashable))
       let can_generate f = test_can_generate gen ~sexp_of ~f
 
-      let%test_unit _ [@tags "no-js"] = test_no_duplicates gen ~sexp_of ~compare
+      let%test_unit _ [@tags "no-js"] =
+        test_distinct_values gen ~sexp_of ~compare
+          ~trials:1_000 ~distinct_values:500
 
       let%test_unit _ = can_generate (fun f ->
         f (Set.singleton (Elt.of_int 0)) <> f (Set.empty ()))

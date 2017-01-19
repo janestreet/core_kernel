@@ -137,8 +137,8 @@ end = struct
   let of_int_ns i = of_int63_ns (Int63.of_int i)
   let to_int_ns t = Int63.to_int_exn (to_int63_ns t)
 #else
-  let of_int_ns _i = failwith "unsupported on 32bit machines"
-  let to_int_ns _i = failwith "unsupported on 32bit machines"
+  let of_int_ns _i = failwith "Time_ns.Span.of_int_ns: unsupported on 32bit machines"
+  let to_int_ns _i = failwith "Time_ns.Span.to_int_ns: unsupported on 32bit machines"
 #endif
 
   let (+)         t u = Int63.(+) t u
@@ -152,6 +152,8 @@ end = struct
   let (/)         t f = round_nearest (float t /. f)
   let (//)            = Int63.(//)
   let max             = Int63.max
+
+  let to_proportional_float t = Int63.to_float t
 
   let%test_module "overflow silently" =
     (module struct
@@ -400,15 +402,15 @@ let max = Span.max
 let to_span_since_epoch t = t
 let of_span_since_epoch s = s
 
-let to_int63_ns_since_epoch t = Span.to_int63_ns (to_span_since_epoch t)
+let to_int63_ns_since_epoch t : Int63.t = Span.to_int63_ns (to_span_since_epoch t)
 let of_int63_ns_since_epoch i = of_span_since_epoch (Span.of_int63_ns i)
 
 #ifdef JSC_ARCH_SIXTYFOUR
 let to_int_ns_since_epoch t = Int63.to_int_exn (to_int63_ns_since_epoch t)
 let of_int_ns_since_epoch i = of_int63_ns_since_epoch (Int63.of_int i)
 #else
-let to_int_ns_since_epoch _t = failwith "unsupported on 32bit machines"
-let of_int_ns_since_epoch _i = failwith "unsupported on 32bit machines"
+let to_int_ns_since_epoch _t = failwith "Time_ns.to_int_ns_since_epoch: unsupported on 32bit machines"
+let of_int_ns_since_epoch _i = failwith "Time_ns.of_int_ns_since_epoch: unsupported on 32bit machines"
 #endif
 
 let next_multiple ?(can_equal_after = false) ~base ~after ~interval () =
@@ -440,32 +442,244 @@ let%test_unit "random smoke" =
   done
 ;;
 
+module Utc : sig
+  val to_date_and_span_since_start_of_day : t -> Date.t * Span.t
+  val of_date_and_span_since_start_of_day : Date.t -> Span.t -> t
+end = struct
+  open Int.O
+
+  let rem = Int.rem
+
+  (* This function exists to help inlining of [days_per_month]. *)
+  let [@inline never] invalid_month month =
+    raise_s [%message
+      "invalid month passed to [days_per_month]"
+        (month : int)]
+  ;;
+
+  let [@inline always] days_per_month ~month ~is_leap_year =
+    match month with
+    | 1  -> 31
+    | 2  -> if is_leap_year then 29 else 28
+    | 3  -> 31
+    | 4  -> 30
+    | 5  -> 31
+    | 6  -> 30
+    | 7  -> 31
+    | 8  -> 31
+    | 9  -> 30
+    | 10 -> 31
+    | 11 -> 30
+    | 12 -> 31
+    | _  -> invalid_month month
+  ;;
+
+  let is_leap_year year =
+    (rem year 4 = 0)
+    && (rem year 100 <> 0 || rem year 400 = 0)
+  ;;
+
+  let year_size year =
+    if is_leap_year year
+    then 366
+    else 365
+  ;;
+
+  (* This is a faithless recreation of the algorithm used by gmtime in glibc
+     (see time/offtime.c in any recent version of glibc).  This accounts for the lack of
+     clarity of the algorithm when compared to a simpler looping approach through year
+     sized chunks of days.  Unfortunately, the more naive algorithm is meaningfully
+     slower. *)
+  let [@inline always] calculate_year_and_day_of_year ~days_from_epoch =
+    let div a b = a / b - (if Int.rem a b < 0 then 1 else 0) in
+    let num_leaps_thru_end_of year = div year 4 - div year 100 + div year 400 in
+    let days = ref days_from_epoch in
+    let year = ref 1970 in
+    while !days < 0 || !days >= year_size !year do
+      let year_guess = !year + div !days 365 in
+      days := !days - ((year_guess - !year) * 365
+                       + num_leaps_thru_end_of (year_guess - 1)
+                       - num_leaps_thru_end_of (!year - 1));
+      year := year_guess;
+    done;
+    !year, !days + 1
+  ;;
+
+  (* Written with refs and a loop for speed.  Comparision with a let rec loop version
+     showed that this was faster. *)
+  let [@inline always] calculate_month_and_day_of_month ~day_of_year ~year =
+    let month        = ref 1 in
+    let days_left    = ref day_of_year in
+    let is_leap_year = is_leap_year year in
+    while !days_left > days_per_month ~month:!month ~is_leap_year do
+      days_left := !days_left - days_per_month ~month:!month ~is_leap_year;
+      incr month;
+    done;
+    (!month, !days_left)
+  ;;
+
+  (* a recreation of the system call gmtime specialized to the fields we need that also
+     doesn't rely on Unix. *)
+  let to_date_and_span_since_start_of_day t =
+    let open Int63.O in
+    let (!<) i = of_int_exn i in
+    let (!>) t = Int63.to_int_exn t in
+    let ns_since_epoch  = to_int63_ns_since_epoch t   in
+    let ns_per_day      = !<86_400 * !<1_000_000_000  in
+    let approx_days_from_epoch = ns_since_epoch / ns_per_day in
+    let days_from_epoch =
+      if t < !<0 && approx_days_from_epoch * ns_per_day <> ns_since_epoch
+      then approx_days_from_epoch - !<1
+      else approx_days_from_epoch
+    in
+    let ns_since_start_of_day = ns_since_epoch - (ns_per_day * days_from_epoch) in
+    let year, day_of_year =
+      calculate_year_and_day_of_year ~days_from_epoch:(!>days_from_epoch)
+    in
+    let month, day_of_month = calculate_month_and_day_of_month ~day_of_year ~year in
+    let date =
+      Date.create_exn ~y:year ~m:(Month.of_int_exn month) ~d:day_of_month
+    in
+    let span_since_start_of_day = Span.of_int63_ns ns_since_start_of_day in
+    date, span_since_start_of_day
+  ;;
+
+  let epoch_date = Date.create_exn ~y:1970 ~m:Jan ~d:1
+  ;;
+
+  let of_date_and_span_since_start_of_day date span_since_start_of_day =
+    assert (Span.( >= ) span_since_start_of_day Span.zero
+            && Span.( < ) span_since_start_of_day Span.day);
+    let days_from_epoch = Date.diff date epoch_date in
+    let span_in_days_since_epoch = Span.scale_int Span.day days_from_epoch in
+    let span_since_epoch = Span.( + ) span_in_days_since_epoch span_since_start_of_day in
+    of_span_since_epoch span_since_epoch
+  ;;
+end
+
 module Alternate_sexp = struct
-  module Sexp_repr = struct
-    type t =
-      { human_readable       : string
-      ; int63_ns_since_epoch : Int63.t
-      }
-    [@@deriving sexp]
-
-    let time_format = "%Y-%m-%dT%H:%M:%S%z"
-
-    (* We have pulled this up here so that we have a way for formatting times in their
-       sexp representation. *)
-    external format : float -> string -> string = "core_kernel_time_ns_format"
-
-    let of_time time =
-      { human_readable = format (Span.to_sec time) time_format
-      ; int63_ns_since_epoch = to_int63_ns_since_epoch time
-      }
-
-    let to_time t = of_int63_ns_since_epoch t.int63_ns_since_epoch
-  end
-
   type nonrec t = t
 
-  let sexp_of_t t = Sexp_repr.sexp_of_t (Sexp_repr.of_time t)
-  let t_of_sexp s = Sexp_repr.to_time (Sexp_repr.t_of_sexp s)
+  module Ofday_as_span = struct
+    open Int.O
+
+    let seconds_to_string seconds_span =
+      let seconds = Span.to_int_sec seconds_span in
+      let h = seconds / 3600 in
+      let m = (seconds / 60) % 60 in
+      let s = seconds % 60 in
+      sprintf "%02d:%02d:%02d" h m s
+
+    let two_digit_of_string string =
+      assert (String.length string = 2
+              && String.for_all string ~f:Char.is_digit);
+      Int.of_string string
+
+    let seconds_of_string seconds_string =
+      match String.split seconds_string ~on:':' with
+      | [ h_string ; m_string ; s_string ] ->
+        let h = two_digit_of_string h_string in
+        let m = two_digit_of_string m_string in
+        let s = two_digit_of_string s_string in
+        Span.of_int_sec ((((h * 60) + m) * 60) + s)
+      | _ -> assert false
+
+    let ns_of_100_ms = 100_000_000
+    let ns_of_10_ms  =  10_000_000
+    let ns_of_1_ms   =   1_000_000
+    let ns_of_100_us =     100_000
+    let ns_of_10_us  =      10_000
+    let ns_of_1_us   =       1_000
+    let ns_of_100_ns =         100
+    let ns_of_10_ns  =          10
+    let ns_of_1_ns   =           1
+
+    let sub_second_to_string sub_second_span =
+      let open Int.O in
+      let ns = Span.to_int63_ns sub_second_span |> Int63.to_int_exn in
+      if ns = 0
+      then ""
+      else begin
+        if ns % ns_of_100_ms = 0 then sprintf ".%01d" (ns / ns_of_100_ms) else
+        if ns % ns_of_10_ms  = 0 then sprintf ".%02d" (ns / ns_of_10_ms)  else
+        if ns % ns_of_1_ms   = 0 then sprintf ".%03d" (ns / ns_of_1_ms)   else
+        if ns % ns_of_100_us = 0 then sprintf ".%04d" (ns / ns_of_100_us) else
+        if ns % ns_of_10_us  = 0 then sprintf ".%05d" (ns / ns_of_10_us)  else
+        if ns % ns_of_1_us   = 0 then sprintf ".%06d" (ns / ns_of_1_us)   else
+        if ns % ns_of_100_ns = 0 then sprintf ".%07d" (ns / ns_of_100_ns) else
+        if ns % ns_of_10_ns  = 0 then sprintf ".%08d" (ns / ns_of_10_ns)  else
+          sprintf ".%09d" ns
+      end
+
+    let sub_second_of_string string =
+      if String.is_empty string
+      then Span.zero
+      else begin
+        let digits = String.chop_prefix_exn string ~prefix:"." in
+        assert (String.for_all digits ~f:Char.is_digit);
+        let multiplier =
+          match String.length digits with
+          | 1 -> ns_of_100_ms
+          | 2 -> ns_of_10_ms
+          | 3 -> ns_of_1_ms
+          | 4 -> ns_of_100_us
+          | 5 -> ns_of_10_us
+          | 6 -> ns_of_1_us
+          | 7 -> ns_of_100_ns
+          | 8 -> ns_of_10_ns
+          | 9 -> ns_of_1_ns
+          | _ -> assert false
+        in
+        Span.of_int63_ns (Int63.of_int (Int.of_string digits * multiplier))
+      end
+
+    let to_string span =
+      assert (Span.( >= ) span Span.zero && Span.( < ) span Span.day);
+      let seconds_span = span |> Span.to_int_sec |> Span.of_int_sec in
+      let sub_second_span = Span.( - ) span seconds_span in
+      seconds_to_string seconds_span ^ sub_second_to_string sub_second_span
+
+    let of_string string =
+      let len = String.length string in
+      let prefix_len = 8 in (* "HH:MM:DD" *)
+      let suffix_len = len - prefix_len in
+      let seconds_string    = String.sub string ~pos:0          ~len:prefix_len in
+      let sub_second_string = String.sub string ~pos:prefix_len ~len:suffix_len in
+      let seconds_span    = seconds_of_string    seconds_string    in
+      let sub_second_span = sub_second_of_string sub_second_string in
+      Span.( + ) seconds_span sub_second_span
+  end
+  let to_string t =
+    let date, span_since_start_of_day = Utc.to_date_and_span_since_start_of_day t in
+    Date.to_string date
+    ^ " "
+    ^ Ofday_as_span.to_string span_since_start_of_day
+    ^ "Z"
+
+  let of_string string =
+    let date_string, ofday_string_with_zone =
+      String.lsplit2_exn string ~on:' '
+    in
+    let ofday_string =
+      String.chop_suffix_exn ofday_string_with_zone ~suffix:"Z"
+    in
+    let date = Date.of_string date_string in
+    let ofday = Ofday_as_span.of_string ofday_string in
+    Utc.of_date_and_span_since_start_of_day date ofday
+
+  include Sexpable.Of_stringable (struct
+      type nonrec t = t
+      let to_string = to_string
+      let of_string = of_string
+    end)
+
+  module Stable = struct
+    module V1 = struct
+      (* see tests in lib/core_kernel/test/test_time_ns that ensure stability of this
+         representation *)
+      type nonrec t = t [@@deriving bin_io, compare, sexp]
+    end
+  end
 end
 
 let%test_module "next_multiple" =
@@ -648,3 +862,7 @@ let%test_module "next_multiple" =
     let%test_unit _ = test true    3609444 1802393395129668217L
 
   end)
+
+module Stable = struct
+  module Alternate_sexp = Alternate_sexp.Stable
+end

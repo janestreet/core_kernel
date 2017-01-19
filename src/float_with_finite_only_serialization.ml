@@ -1,3 +1,5 @@
+open Ppx_compare_lib.Builtin
+
 module Stable = struct
   open Stable_internal
   module Binable = Binable.Stable

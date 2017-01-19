@@ -58,15 +58,18 @@ module For_quickcheck = struct
 
   open Generator.Let_syntax
 
-  let gen' ?length char_gen =
-    let%bind length =
-      match length with
-      | None     -> return None
-      | Some gen ->
-        let%bind len = gen in
-        return (Some (`Exactly len))
-    in
-    let%bind chars = List.gen' char_gen ?length in
+  let default_length =
+    let%bind size = Generator.size in
+    (* Generating the empty string for every size 0 case is far more tests of the empty
+       string than we need.  Instead, at size 0 we generate strings of length 0 and length
+       1.  At size N>0 we generate strings of length N+1. *)
+    if Int.equal size 0
+    then Generator.weighted_union [ 1., return 0; 10., return 1 ]
+    else return (size + 1)
+
+  let gen' ?(length = default_length) char_gen =
+    let%bind len   = length in
+    let%bind chars = List.gen' char_gen ~length:(`Exactly len) in
     return (of_char_list chars)
 
   let gen = gen' Char.gen
@@ -91,4 +94,9 @@ let%test_module "Caseless Comparable" = (module struct
 
   let%test _ = Core_set.mem (Caseless.Set.of_list ["hello"; "world"]) "heLLO"
   let%test _ = Int.equal (Core_set.length (Caseless.Set.of_list ["a"; "A"])) 1
+
+end)
+
+let%test_module "Caseless Hash" = (module struct
+  let%test _ = Int.equal (Caseless.hash "Hello") (Caseless.hash "HELLO")
 end)

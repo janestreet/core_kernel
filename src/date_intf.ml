@@ -106,9 +106,15 @@ module type Date = sig
   val first_strictly_after : t -> on:Day_of_week.t -> t
 
   module Stable : sig
-    module V1 : Stable
-      with type t = t
-      with type comparator_witness = comparator_witness
+    module V1 : sig
+      include Stable
+        with type t = t
+        with type comparator_witness = comparator_witness
+
+      include Comparable.Stable.V1.S
+        with type comparable := t
+        with type comparator_witness := comparator_witness
+    end
   end
 
   module O : sig

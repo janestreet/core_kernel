@@ -19,32 +19,45 @@ module For_quickcheck = struct
   module Observer  = Quickcheck.Observer
   module Shrinker  = Quickcheck.Shrinker
 
-  let gen_matching_memoized f =
-    (* Contrary to the usual advice for [Generator.of_fun], we use memoization here.  We
-       don't want to compute all of the char-category generators in every program, but any
-       individual generator that is used should be computed just once.  This doesn't cause
-       the memory-leak problems that can arise from memoized generators because the
-       maximum total space used is a small constant. *)
-    let lazy_gen =
-      lazy
-        (Generator.of_list
-           (List.filter ~f (Array.to_list (Array.init 256 ~f:of_int_exn))))
-    in
-    Generator.of_fun (fun () ->
-      Lazy.force lazy_gen)
+  let gen_range lo hi =
+    Generator.create (fun ~size:_ random ->
+      Splittable_random.int random ~lo:(to_int lo) ~hi:(to_int hi)
+      |> unsafe_of_int)
 
-  let gen_uppercase          = gen_matching_memoized is_uppercase
-  let gen_lowercase          = gen_matching_memoized is_lowercase
-  let gen_digit              = gen_matching_memoized is_digit
-  let gen_whitespace         = gen_matching_memoized is_whitespace
-  let gen_alpha              = gen_matching_memoized is_alpha
-  let gen_alphanum           = gen_matching_memoized is_alphanum
-  let gen_print              = gen_matching_memoized is_print
-  let gen                    = gen_matching_memoized (fun _ -> true)
+  let gen_uppercase     = gen_range 'A' 'Z'
+  let gen_lowercase     = gen_range 'a' 'z'
+  let gen_digit         = gen_range '0' '9'
+  let gen_print_uniform = gen_range ' ' '~'
+
+  let gen_uniform = gen_range min_value max_value
+
+  let gen_alpha    = Generator.union [ gen_lowercase ; gen_uppercase ]
+  let gen_alphanum =
+    Generator.weighted_union
+      (* Most people probably expect this to be a uniform distribution, not weighted
+         toward digits like we would get with [Generator.union] (since there are fewer
+         digits than letters). *)
+      [ 52., gen_alpha
+      ; 10., gen_digit
+      ]
+
+  let gen_whitespace = Generator.of_list (List.filter all ~f:is_whitespace)
+
+  let gen_print =
+    Generator.weighted_union
+      [ 10., gen_alphanum
+      ;  1., gen_print_uniform
+      ]
+
+  let gen =
+    Generator.weighted_union
+      [ 10., gen_print
+      ;  1., gen_uniform
+      ]
 
   let obs =
-    Observer.enum 256
-      ~f:to_int
+    Observer.create (fun t ~size:_ hash ->
+      [%hash_fold: t] hash t)
 
   let%test_module "generators" =
     (module struct
@@ -56,14 +69,12 @@ module For_quickcheck = struct
         for _ = 1 to 10 do
           let expect = Set.filter all ~f in
           let actual =
-            Sequence.delayed_fold (Quickcheck.random_sequence gen)
-              ~init:Set.empty
-              ~finish:Fn.id
-              ~f:(fun set t ~k ->
-                let set = Set.add set t in
-                if Set.equal set expect
-                then set
-                else k set)
+            let set = ref Set.empty in
+            with_return (fun return ->
+              Sequence.iter (Quickcheck.random_sequence gen) ~f:(fun t ->
+                set := Set.add !set t;
+                if Set.equal !set expect then return.return ()));
+            !set
           in
           [%test_result: Set.t] actual ~expect
         done

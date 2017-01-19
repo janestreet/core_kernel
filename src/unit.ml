@@ -1,21 +1,13 @@
 open! Import
 
-module T0 = struct
-  type t = unit [@@deriving hash, sexp, bin_io, typerep]
+type t = unit [@@deriving typerep]
 
-  let compare _ _ = 0
-end
+include Identifiable.Extend(Base.Unit)(struct
+    type t = unit [@@deriving bin_io]
+  end)
 
-module T1 = struct
-  include T0
-  include Sexpable.To_stringable (T0)
-  let module_name = "Core_kernel.Std.Unit"
-end
-
-include T1
-include Identifiable.Make (T1)
-
-let invariant () = ()
+include (Base.Unit
+         : module type of struct include Base.Unit end with type t := t)
 
 let gen      = Quickcheck.Generator.singleton ()
 let obs      = Quickcheck.Observer.singleton  ()

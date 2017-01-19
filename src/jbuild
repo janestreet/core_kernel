@@ -9,7 +9,7 @@
  ((name core_kernel)
   (inline_tests ((javascript build_and_run)))
   (public_name core_kernel)
-  (public_headers (time_ns_stubs))
+  (install_c_headers (time_ns_stubs))
   (libraries
    (base
     base_for_tests

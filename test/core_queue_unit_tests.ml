@@ -322,6 +322,7 @@ let%test_module _ = (module (struct
   let concat_mapi     = concat_mapi
   let filter_map      = filter_map
   let filter_mapi     = filter_mapi
+  let counti          = counti
   let existsi         = existsi
   let for_alli        = for_alli
   let iter            = iter
@@ -354,6 +355,7 @@ let%test_module _ = (module (struct
       val filteri_inplace : 'a t -> f:(int -> 'a -> bool)      -> unit
       val map             : 'a t -> f:(       'a -> 'b)        -> 'b t
       val mapi            : 'a t -> f:(int -> 'a -> 'b)        -> 'b t
+      val counti          : 'a t -> f:(int -> 'a -> bool)      -> int
       val existsi         : 'a t -> f:(int -> 'a -> bool)      -> bool
       val for_alli        : 'a t -> f:(int -> 'a -> bool)      -> bool
       val findi           : 'a t -> f:(int -> 'a -> bool)      -> (int * 'a) option
@@ -364,38 +366,6 @@ let%test_module _ = (module (struct
 
     module That_queue : Queue_intf = struct
       include Linked_queue
-      let iteri t ~f =
-        let i = ref 0 in
-        iter t ~f:(fun x -> let y = f !i x in incr i; y)
-      let foldi t ~init ~f =
-        let i = ref 0 in
-        fold ~init t ~f:(fun acc x -> let y = f !i acc x in incr i; y)
-      let filteri t ~f =
-        let i = ref 0 in
-        filter t ~f:(fun x -> let y = f !i x in incr i; y)
-      let filteri_inplace t ~f =
-        let i = ref 0 in
-        filter_inplace t ~f:(fun x -> let y = f !i x in incr i; y)
-      let filter_mapi t ~f =
-        let i = ref 0 in
-        filter_map t ~f:(fun x -> let y = f !i x in incr i; y)
-      let concat_mapi t ~f =
-        let i = ref 0 in
-        concat_map t ~f:(fun x -> let y = f !i x in incr i; y)
-      let mapi t ~f =
-        let i = ref 0 in
-        map t ~f:(fun x -> let y = f !i x in incr i; y)
-      let for_alli t ~f =
-        let i = ref 0 in
-        for_all t ~f:(fun x -> let y = f !i x in incr i; y)
-      let existsi t ~f =
-        let i = ref 0 in
-        exists t ~f:(fun x -> let y = f !i x in incr i; y)
-      let find_mapi t ~f =
-        let i = ref 0 in
-        find_map t ~f:(fun x -> let y = f !i x in incr i; y)
-      let findi t ~f =
-        find_mapi t ~f:(fun i x -> if f i x then Some (i,x) else None)
     end
 
     module This_queue : Queue_intf = struct
@@ -620,6 +590,19 @@ let%test_module _ = (module (struct
              ()
     ;;
 
+    let counti (t_a, t_b) =
+      let f i x = i < 7 && (i % 7 = x % 7) in
+      let a' = This_queue.counti t_a ~f in
+      let b' = That_queue.counti t_b ~f in
+      if a' <> b'
+      then failwithf "error in counti: %d (for %s) <> %d (for %s)"
+             (a')
+             (this_to_string t_a)
+             (b')
+             (that_to_string t_b)
+             ()
+    ;;
+
     let existsi (t_a, t_b) =
       let f i x = i < 7 && (i % 7 = x % 7) in
       let a' = This_queue.existsi t_a ~f in
@@ -772,7 +755,7 @@ let%test_module _ = (module (struct
                  ()
         end else begin
           let queue_was_empty = This_queue.length (fst t) = 0 in
-          let r = Random.int 190 in
+          let r = Random.int 195 in
           begin
             if r < 60
             then enqueue t (Random.int 10_000)
@@ -811,18 +794,20 @@ let%test_module _ = (module (struct
             else if r < 160
             then existsi t
             else if r < 165
-            then findi t
+            then counti t
             else if r < 170
-            then find_mapi t
+            then findi t
             else if r < 175
-            then map t
+            then find_mapi t
             else if r < 180
-            then mapi t
+            then map t
             else if r < 185
-            then filteri_inplace t
+            then mapi t
             else if r < 190
+            then filteri_inplace t
+            else if r < 195
             then length_check t
-            else failwith "Impossible: We did [Random.int 190] above"
+            else failwith "Impossible: We did [Random.int 195] above"
           end;
           loop
             ~all_ops:(all_ops - 1)

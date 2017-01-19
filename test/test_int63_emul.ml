@@ -1,5 +1,5 @@
 open! Core_kernel.Std
-open! Expect_test_helpers_kernel.Std
+open! Expect_test_helpers_kernel
 
 module Int63_emul = Base.Not_exposed_properly.Int63_emul
 

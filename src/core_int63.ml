@@ -16,6 +16,7 @@ module Bin : Binable0.S with type t := Base.Int63.t = struct
     | Base.Int63.Private.Repr.Int   -> (module Core_int)
     | Base.Int63.Private.Repr.Int64 -> (module Bin_emulated)
   include (val (binable_of_repr Base.Int63.Private.repr : Base.Int63.t binable))
+  let bin_shape_t = Bin_prot.Shape.bin_shape_int63
 end
 
 module Stable_workaround = struct
@@ -81,12 +82,10 @@ let splittable_random_of_repr
 let splittable_random = splittable_random_of_repr Base.Int63.Private.repr
 
 include Quickcheck.Make_int (struct
-    type nonrec t = t [@@deriving sexp, compare, hash]
-    include (Replace_polymorphic_compare
-             : Polymorphic_compare_intf.Infix with type t := t)
-    let min_value         = min_value
-    let max_value         = max_value
-    let succ              = succ
-    let pred              = pred
+    include Base.Int63
     let splittable_random = splittable_random
   end)
+
+let%expect_test _ =
+  print_string [%bin_digest: t];
+  [%expect{| 2b528f4b22f08e28876ffe0239315ac2 |}]

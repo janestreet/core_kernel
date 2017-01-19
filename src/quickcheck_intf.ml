@@ -13,8 +13,8 @@ module type Generator = sig
       There is no prescribed semantics for [size] other than that it must be non-negative.
       Non-recursive generators are free to ignore it, and recursive generators need only
       make sure it decreases in recursive calls and that recursion bottoms out at 0. *)
-  type 'a t
-  type 'a obs
+  type +'a t
+  type -'a obs
 
   val create   :         (size:int -> Splittable_random.State.t -> 'a) -> 'a t
   val generate : 'a t -> (size:int -> Splittable_random.State.t -> 'a)
@@ -29,14 +29,18 @@ module type Generator = sig
       {[
         Int.gen
         >>= fun x ->
-        Int.gen_between
-          ~lower_bound:(Incl x)
-          ~upper_bound:(Incl Int.max_value)
+        Int.gen_incl x Int.max_value
         >>| fun y ->
         x, y
       ]}
   *)
   include Monad.S with type 'a t := 'a t
+
+  (** [size = create (fun ~size _ -> size)] *)
+  val size : int t
+
+  (** [with_size t ~size = create (fun ~size:_ random -> generate t ~size random)] *)
+  val with_size : 'a t -> size:int -> 'a t
 
   val singleton : 'a -> 'a t
   val doubleton : 'a -> 'a -> 'a t
@@ -128,19 +132,19 @@ module type Generator = sig
   val filter_map : 'a t -> f:('a -> 'b option) -> 'b t
   val filter     : 'a t -> f:('a -> bool     ) -> 'a t
 
-  (** Fixed-point generator, providing a [~size] argument threaded through the recursion
-      to bound the size of the value and the depth of the recursion.  There is no
-      prescribed semantics for [size] except that it must be non-negative. For example,
-      the following produces a naive generator for natural numbers:
+  (** Fixed-point generator. Use [size] to bound the size of the value and the depth of
+      the recursion. There is no prescribed semantics for [size] except that it must be
+      non-negative. For example, the following produces a naive generator for natural
+      numbers:
 
       {[
-        recursive (fun f ~size ->
-          if size = 0
-          then singleton 0
-          else f ~size:(size-1) >>| Int.succ)
+        recursive (fun self ->
+          match%bind size with
+          | 0 -> singleton 0
+          | n -> with_size self ~size:(n-1) >>| Int.succ)
       ]}
   *)
-  val recursive : ((size:int -> 'a t) -> (size:int -> 'a t)) -> 'a t
+  val recursive : ('a t -> 'a t) -> 'a t
 
   (** [weighted_union alist] produces a generator that combines the distributions of each
       [t] in [alist] with the associated weights, which must be finite positive floating
@@ -181,8 +185,8 @@ module type Observer = sig
       For hashable types, one can construct an observer using [of_hash].  For other types,
       use the built-in observers and observer combinators below, or use [create] directly.
   *)
-  type 'a t
-  type 'a gen
+  type -'a t
+  type +'a gen
 
   val create  :         ('a -> size:int -> Hash.state -> Hash.state) -> 'a t
   val observe : 'a t -> ('a -> size:int -> Hash.state -> Hash.state)
@@ -361,16 +365,7 @@ module type Shrinker = sig
 end
 
 module type Pre_int = sig
-  type t
-  [@@deriving sexp, compare, hash]
-
-  include Polymorphic_compare_intf.Infix with type t := t
-
-  val min_value : t
-  val max_value : t
-
-  val succ : t -> t
-  val pred : t -> t
+  include Base.Int_intf.S
 
   val splittable_random : Splittable_random.State.t -> lo:t -> hi:t -> t
 end
@@ -408,17 +403,27 @@ end
 module type S_bounded = sig
   include S
 
-  (** [gen_between] and [obs_between] produce generators and observers for values
-      satisfying [lower_bound] and [upper_bound].  Both functions raise an exception if
-      no values satisfy both [lower_bound] and [upper_bound]. *)
-  val gen_between
-    :  lower_bound : t Maybe_bound.t
-    -> upper_bound : t Maybe_bound.t
-    -> t gen
-  val obs_between
-    :  lower_bound : t Maybe_bound.t
-    -> upper_bound : t Maybe_bound.t
-    -> t obs
+  (** [gen_incl lower_bound upper_bound] produces values between [lower_bound] and
+      [upper_bound], inclusive.  It uses an ad hoc distribution that stresses boundary
+      conditions more often than a uniform distribution, while still able to produce any
+      value in the range.  Raises if [lower_bound > upper_bound]. *)
+  val gen_incl : t -> t -> t gen
+
+  (** [gen_uniform_incl lower_bound upper_bound] produces a generator for values uniformly
+      distributed between [lower_bound] and [upper_bound], inclusive.  Raises if
+      [lower_bound > upper_bound]. *)
+  val gen_uniform_incl : t -> t -> t gen
+
+  (** [gen_log_uniform_incl lower_bound upper_bound] produces a generator for values
+      between [lower_bound] and [upper_bound], inclusive, where the number of bits used to
+      represent the value is uniformly distributed.  Raises if [(lower_bound < 0) ||
+      (lower_bound > upper_bound)]. *)
+  val gen_log_uniform_incl : t -> t -> t gen
+
+  (** [gen_log_incl lower_bound upper_bound] is like [gen_log_uniform_incl], but weighted
+      slightly more in favor of generating [lower_bound] and [upper_bound]
+      specifically. *)
+  val gen_log_incl : t -> t -> t gen
 end
 
 (** [seed] specifies how to initialize a pseudo-random number generator.  When multiple
@@ -450,22 +455,14 @@ module type Quickcheck_config = sig
       that explicitly override it. *)
   val default_trial_count : int
 
-  (** [default_trial_count_for_test_no_duplicates] determines the number of trials when
-      running [test_no_duplicates] without [~trials], either as a constant or as a factor
-      of [default_trial_count]. *)
-  val default_trial_count_for_test_no_duplicates
-    : [ `Constant of int
-      | `Scale_of_default_trial_count of float
-      ]
+  (** [default_can_generate_trial_count] determines the number of trials used in attempts
+      to generate satisfying values, except in tests that explicitly override it. *)
+  val default_can_generate_trial_count : int
 
   (** [default_attempts_per_trial] determines the maximum number of attempts to generate
       inputs for trials, as a multiplier for the number of trials, except in tests that
       explicitly override it. *)
   val default_attempts_per_trial : float
-
-  (** [default_acceptable_duplicate_per_trial_ratio] determines the default rate at which
-      generators can generate duplicate values and still pass [test_no_duplicates]. *)
-  val default_acceptable_duplicate_per_trial_ratio : float
 
   (** [default_shrink_attempts] determines the number of attempts at shrinking
       when running [test] or [iter] with [~shrinker] and without
@@ -541,24 +538,22 @@ module type Quickcheck_configured = sig
     -> f:('a -> bool)
     -> unit
 
-  (** [test_no_duplicates gen ~by] is useful for testing [gen] values, to make sure they
-      do not create duplicate values.  It tests [gen] by generating up to [trials] values
-      and comparing each pair of the generated values using [by].  If any of the pairs are
-      identical, [test_no_duplicates] raises an exception.  If [sexp_of] is provided, the
-      exception includes the identical values.  [acceptable_duplicate_per_trial_ratio]
-      defaults to [default_acceptable_duplicate_per_trial_ratio], must be between 0
-      (inclusive) and 1 (exclusive), and up to [acceptable_duplicate_per_trial_ratio *
-      trials] duplicates will be allowed by the test.  *)
-  val test_no_duplicates
-    :  ?seed                                 : seed
-    -> ?sizes                                : int Sequence.t
-    -> ?trials                               : int
-    -> ?attempts                             : int
-    -> ?filter                               : ('a -> bool)
-    -> ?acceptable_duplicate_per_trial_ratio : float
-    -> ?sexp_of                              : ('a -> Sexp.t)
+  (** [test_distinct_values gen ~compare ~trials ~distinct_values] is useful for testing
+      [gen] values, to make sure they create sufficient distinct values.  It tests [gen]
+      by generating up to [trials] values and making sure at least [distinct_values] of
+      the resulting values are unique with respect to [compare].  If too few distinct
+      values are generated, [test_distinct_values] raises an exception.  If [sexp_of] is
+      provided, the exception includes the values generated.  *)
+  val test_distinct_values
+    :  ?seed           : seed
+    -> ?sizes          : int Sequence.t
+    -> ?attempts       : int
+    -> ?filter         : ('a -> bool)
+    -> ?sexp_of        : ('a -> Sexp.t)
     -> 'a gen
-    -> compare:('a -> 'a -> int)
+    -> trials          : int
+    -> distinct_values : int
+    -> compare         : ('a -> 'a -> int)
     -> unit
 
   (** [random_sequence ~seed gen] produces a sequence of values chosen from [gen]. *)
@@ -572,39 +567,29 @@ end
 
 module type Quickcheck = sig
 
-  type 'a gen
-  type 'a obs
-  type 'a shr
-
-  module Generator : Generator
-    with type 'a t    = 'a gen
-    with type 'a obs := 'a obs
-
-  module Observer : Observer
-    with type 'a t    = 'a obs
-    with type 'a gen := 'a gen
+  module rec Generator : (Generator with type 'a obs := 'a Observer.t)
+  and        Observer  : (Observer  with type 'a gen := 'a Generator.t)
 
   module Shrinker : Shrinker
-    with type 'a t = 'a shr
 
   module Make_int (M : Pre_int) : S_bounded
     with type    t   :=    M.t
-    with type 'a gen := 'a gen
-    with type 'a obs := 'a obs
-    with type 'a shr := 'a shr
+    with type 'a gen := 'a Generator.t
+    with type 'a obs := 'a Observer.t
+    with type 'a shr := 'a Shrinker.t
 
   module For_int : S_bounded
     with type    t   :=    int
-    with type 'a gen := 'a gen
-    with type 'a obs := 'a obs
-    with type 'a shr := 'a shr
+    with type 'a gen := 'a Generator.t
+    with type 'a obs := 'a Observer.t
+    with type 'a shr := 'a Shrinker.t
 
   (** with a default config *)
   include Quickcheck_configured
-    with type 'a gen := 'a gen
-    with type 'a shr := 'a shr
+    with type 'a gen := 'a Generator.t
+    with type 'a shr := 'a Shrinker.t
 
   module Configure (Config : Quickcheck_config) : Quickcheck_configured
-    with type 'a gen := 'a gen
+    with type 'a gen := 'a Generator.t
 
 end

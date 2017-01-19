@@ -114,7 +114,6 @@ module Total_map                            = Total_map
 module Tuple                                = Tuple
 module Tuple2                               = Tuple.T2
 module Tuple3                               = Tuple.T3
-module Type_equal                           = Type_equal
 module Type_immediacy                       = Type_immediacy
 module Uniform_array                        = Uniform_array
 module Union_find                           = Union_find

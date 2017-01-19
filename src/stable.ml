@@ -46,5 +46,8 @@ module Set                                  = Core_set                          
 module Sexpable                             = Sexpable                             .Stable
 module String                               = Core_string                          .Stable
 module String_id                            = String_id                            .Stable
+module Time_ns                              = Time_ns                              .Stable
 
 include Perms.Export
+
+include Ppx_compare_lib.Builtin

@@ -1,6 +1,6 @@
 (** Core_hashtbl is a reimplementation of the standard MoreLabels.Hashtbl.  Its worst case
     time complexity is O(log(N)) for lookups and additions, unlike the standard
-    MoreLabels.Hashtbl, which is O(N)
+    MoreLabels.Hashtbl, which is O(N).
 
     A hash table is implemented as an array of AVL trees (see [Avltree]). If
     [growth_allowed] (default true) is false then [size] is the final size of the array,

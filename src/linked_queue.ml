@@ -11,7 +11,6 @@ let create = Queue.create
 
 let enqueue t x = Queue.push x t
 
-
 let is_empty = Queue.is_empty
 
 let dequeue t = if is_empty t then None else Some (Queue.pop t)
@@ -32,14 +31,35 @@ let iter t ~f = Queue.iter f t
 
 let fold t ~init ~f = Queue.fold f init t
 
-let to_list t = List.rev (fold t ~init:[] ~f:(fun acc elem -> elem::acc))
+module C =
+  Indexed_container.Make (struct
+    type nonrec 'a t = 'a t
+    let fold = fold
+    let iter = `Custom iter
+    let foldi = `Define_using_fold
+    let iteri = `Define_using_fold
+  end)
 
-let count t ~f = Container.count ~fold t ~f
-let sum m t ~f = Container.sum m ~fold t ~f
-let min_elt t ~cmp = Container.min_elt ~fold t ~cmp
-let max_elt t ~cmp = Container.max_elt ~fold t ~cmp
-let fold_result t ~init ~f = Container.fold_result ~fold ~init ~f t
-let fold_until  t ~init ~f = Container.fold_until  ~fold ~init ~f t
+let count       = C.count
+let exists      = C.exists
+let find        = C.find
+let find_map    = C.find_map
+let fold_result = C.fold_result
+let fold_until  = C.fold_until
+let for_all     = C.for_all
+let max_elt     = C.max_elt
+let mem         = C.mem
+let min_elt     = C.min_elt
+let sum         = C.sum
+let to_list     = C.to_list
+
+let counti    = C.counti
+let existsi   = C.existsi
+let find_mapi = C.find_mapi
+let findi     = C.findi
+let foldi     = C.foldi
+let for_alli  = C.for_alli
+let iteri     = C.iteri
 
 let transfer ~src ~dst = Queue.transfer src dst
 
@@ -47,6 +67,13 @@ let concat_map t ~f =
   let res = create () in
   iter t ~f:(fun a ->
     List.iter (f a) ~f:(fun b -> enqueue res b));
+  res
+;;
+
+let concat_mapi t ~f =
+  let res = create () in
+  iteri t ~f:(fun i a ->
+    List.iter (f i a) ~f:(fun b -> enqueue res b));
   res
 ;;
 
@@ -59,9 +86,24 @@ let filter_map t ~f =
   res;
 ;;
 
+let filter_mapi t ~f =
+  let res = create () in
+  iteri t ~f:(fun i a ->
+    match f i a with
+    | None -> ()
+    | Some b -> enqueue res b);
+  res;
+;;
+
 let filter t ~f =
   let res = create () in
   iter t ~f:(fun a -> if f a then enqueue res a);
+  res;
+;;
+
+let filteri t ~f =
+  let res = create () in
+  iteri t ~f:(fun i a -> if f i a then enqueue res a);
   res;
 ;;
 
@@ -71,19 +113,45 @@ let map t ~f =
   res;
 ;;
 
+let mapi t ~f =
+  let res = create () in
+  iteri t ~f:(fun i a -> enqueue res (f i a));
+  res;
+;;
+
 let filter_inplace q ~f =
-  let q' = create () in
-  transfer ~src:q ~dst:q';
-  iter q' ~f:(fun x -> if f x then enqueue q x)
+  let q' = filter q ~f in
+  clear q;
+  transfer ~src:q' ~dst:q;
+;;
+
+let filteri_inplace q ~f =
+  let q' = filteri q ~f in
+  clear q;
+  transfer ~src:q' ~dst:q;
+;;
+
+let enqueue_all t list =
+  List.iter list ~f:(fun x -> enqueue t x)
+;;
 
 let of_list list =
   let t = create () in
   List.iter list ~f:(fun x -> enqueue t x);
   t
+;;
 
 let of_array array =
   let t = create () in
   Array.iter array ~f:(fun x -> enqueue t x);
+  t
+;;
+
+let init len ~f =
+  let t = create () in
+  for i = 0 to len - 1 do
+    enqueue t (f i)
+  done;
   t
 ;;
 
@@ -97,23 +165,7 @@ let to_array t =
       arr.(!i) <- v;
       incr i);
     arr
-
-let find t ~f =
-  with_return (fun r ->
-    iter t ~f:(fun x -> if f x then r.return (Some x));
-    None)
 ;;
-
-let find_map t ~f =
-  with_return (fun r ->
-    iter t ~f:(fun x -> match f x with None -> () | Some _ as res -> r.return res);
-    None)
-;;
-
-let exists t ~f = Option.is_some (find t ~f)
-let for_all t ~f = not (exists t ~f:(fun x -> not (f x)))
-
-let mem ?(equal = Poly.equal) t a = exists t ~f:(equal a)
 
 let partial_iter t ~f =
   with_return (fun r ->

@@ -32,6 +32,7 @@ let%test_module "random" = (module struct
 
     module Q = Quickcheck.Configure (struct
         include Quickcheck
+        let default_sizes = Sequence.cycle_list_exn (List.range 0 10 ~stop:`inclusive)
         let default_seed =
           `Deterministic
             (sprintf "%s values with %s operators."
@@ -41,7 +42,9 @@ let%test_module "random" = (module struct
     ;;
 
     let%test_unit "duplicates" =
-      Q.test_no_duplicates (List.gen gen)
+      Q.test_distinct_values (List.gen gen)
+        ~trials:          1_000
+        ~distinct_values:   500
         ~sexp_of:[%sexp_of: t list]
         ~compare:[%compare: t list]
 
@@ -279,9 +282,7 @@ let%test_module "random" = (module struct
          let size = size + 1 in
          G.tuple3
            (G.return size)
-           (Int.gen_between
-              ~lower_bound:(Incl 0)
-              ~upper_bound:(Excl size))
+           (Int.gen_incl 0 (size - 1))
            (G.fn Int.obs gen))
         ~f:(fun (size, i, f) ->
           [%test_result: t]

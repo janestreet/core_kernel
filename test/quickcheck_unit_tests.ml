@@ -1,25 +1,18 @@
-#import "../src/config.h"
-
 open! Core_kernel.Std
 
 module Test (S : sig val default_seed : Quickcheck_intf.seed end) : sig end = struct
 
   let int_middle_bits =
-#ifdef JSC_ARCH_SIXTYFOUR
-    0x0000_ffff_ffff_0000
-#else
-    0x00ff_ff00
-#endif
+    match Word_size.word_size with
+    | W64 -> Int.of_string "0x0000_ffff_ffff_0000"
+    | W32 -> Int.of_string "0x00ff_ff00"
 
-  module JC = Quickcheck.Configure (struct
+  module Q = Quickcheck.Configure (struct
       include Quickcheck
       include S
-      let default_trial_count = default_trial_count * 10
-      let default_trial_count_for_test_no_duplicates =
-        `Scale_of_default_trial_count 1.
     end)
 
-  open JC
+  open Q
 
   module G = Quickcheck.Generator
   module O = Quickcheck.Observer
@@ -69,11 +62,10 @@ module Test (S : sig val default_seed : Quickcheck_intf.seed end) : sig end = st
 
       let%test_unit _ =
         assert (Exn.does_raise (fun () ->
-          test_no_duplicates gen ~sexp_of ~compare ~trials:100))
+          test_distinct_values gen ~sexp_of ~compare ~trials:1_000 ~distinct_values:2))
 
       let%test_unit _ =
-        test_no_duplicates gen ~sexp_of ~compare ~trials:100
-          ~acceptable_duplicate_per_trial_ratio:0.99
+        test_distinct_values gen ~sexp_of ~compare ~trials:1_000 ~distinct_values:1
     end)
 
   let%test_module "unit" =
@@ -102,7 +94,8 @@ module Test (S : sig val default_seed : Quickcheck_intf.seed end) : sig end = st
       let gen = Int.gen
       let can_generate f = test_can_generate gen ~sexp_of ~f
 
-      let%test_unit _ = test_no_duplicates gen ~sexp_of ~compare
+      let%test_unit _ = test_distinct_values gen ~sexp_of ~compare
+                          ~trials:1_000 ~distinct_values:500
       let%test_unit _ = can_generate (fun x -> Int.popcount x < Int.num_bits / 2)
       let%test_unit _ = can_generate (fun x -> Int.popcount x > Int.num_bits / 2)
       let%test_unit _ =
@@ -134,7 +127,8 @@ module Test (S : sig val default_seed : Quickcheck_intf.seed end) : sig end = st
           -> true
         | _ -> false
 
-      let%test_unit _ = test_no_duplicates gen ~sexp_of ~compare
+      let%test_unit _ = test_distinct_values gen ~sexp_of ~compare
+                          ~trials:1_000 ~distinct_values:500
       let%test_unit _ = can_generate (fun x -> has_class x Infinite)
       let%test_unit _ = can_generate (fun x -> has_class x Nan)
       let%test_unit _ = can_generate (fun x -> has_class x Normal)
@@ -147,16 +141,16 @@ module Test (S : sig val default_seed : Quickcheck_intf.seed end) : sig end = st
       let%test_unit _ = can_generate (fun x -> Float.(=) x Float.neg_infinity)
 
       let%test_unit _ =
-        test_can_generate Float.gen_without_nan ~f:(fun f ->
+        test_can_generate ~sexp_of Float.gen_without_nan ~f:(fun f ->
           Float.equal f Float.infinity)
       let%test_unit _ =
-        test_can_generate Float.gen_without_nan ~f:(fun f ->
+        test_can_generate ~sexp_of Float.gen_without_nan ~f:(fun f ->
           Float.equal f Float.neg_infinity)
       let%test_unit _ =
-        test_can_generate Float.gen_without_nan ~f:(fun f ->
+        test_can_generate ~sexp_of Float.gen_without_nan ~f:(fun f ->
           Float.is_finite f)
       let%test_unit _ =
-        test Float.gen_without_nan ~f:(fun f ->
+        test ~sexp_of Float.gen_without_nan ~f:(fun f ->
           assert (not (Float.is_nan f)))
 
       let%test_unit _ =
@@ -166,11 +160,39 @@ module Test (S : sig val default_seed : Quickcheck_intf.seed end) : sig end = st
         test_can_generate Float.gen_finite ~f:(fun f ->
           not (Float.equal f 0.) && Float.equal (f +. 1.0) 1.0)
       let%test_unit _ =
-        test Float.gen_finite ~f:(fun f ->
+        test ~sexp_of Float.gen_finite ~f:(fun f ->
           assert (not (Float.is_nan f)))
       let%test_unit _ =
-        test Float.gen_finite ~f:(fun f ->
+        test ~sexp_of Float.gen_finite ~f:(fun f ->
           assert (not (Float.is_inf f)))
+
+      let%test_unit _ =
+        test ~sexp_of Float.gen_positive ~f:(fun f -> assert (f > 0.))
+      let%test_unit _ =
+        test_can_generate ~sexp_of Float.gen_positive ~f:(fun x ->
+          has_class x Subnormal)
+      let%test_unit _ =
+        test_can_generate ~sexp_of Float.gen_positive ~f:(fun x ->
+          has_class x Normal)
+
+      let%test_unit _ =
+        test ~sexp_of Float.gen_negative ~f:(fun f -> assert (f < 0.))
+      let%test_unit _ =
+        test_can_generate ~sexp_of Float.gen_negative ~f:(fun x ->
+          has_class x Subnormal)
+      let%test_unit _ =
+        test_can_generate ~sexp_of Float.gen_negative ~f:(fun x ->
+          has_class x Normal)
+
+      let%test_unit _ =
+        test ~sexp_of (Float.gen_uniform_excl (-1.) (1.)) ~f:(fun f ->
+          assert (f > -1. && f < 1.))
+      let%test_unit _ =
+        test_can_generate ~sexp_of (Float.gen_uniform_excl (-1.) (1.)) ~f:(fun f ->
+          f < 0.)
+      let%test_unit _ =
+        test_can_generate ~sexp_of (Float.gen_uniform_excl (-1.) (1.)) ~f:(fun f ->
+          f > 0.)
 
     end)
 
@@ -181,7 +203,8 @@ module Test (S : sig val default_seed : Quickcheck_intf.seed end) : sig end = st
       let gen = String.gen
       let can_generate f = test_can_generate gen ~sexp_of ~f
 
-      let%test_unit _ = test_no_duplicates gen ~sexp_of ~compare
+      let%test_unit _ = test_distinct_values gen ~sexp_of ~compare
+                          ~trials:1_000 ~distinct_values:500
       let%test_unit _ = can_generate (fun x -> String.length x = 0)
       let%test_unit _ = can_generate (fun x -> String.length x = 1)
       let%test_unit _ = can_generate (fun x -> String.length x = 2)
@@ -220,7 +243,8 @@ module Test (S : sig val default_seed : Quickcheck_intf.seed end) : sig end = st
       let gen = G.tuple2 Char.gen Char.gen
       let can_generate ?trials f = test_can_generate gen ~sexp_of ~f ?trials
 
-      let%test_unit _ = test_no_duplicates gen ~sexp_of ~compare
+      let%test_unit _ = test_distinct_values gen ~sexp_of ~compare
+                          ~trials:1_000 ~distinct_values:500
       let%test_unit _ = can_generate (fun (x,y) -> Char.( = ) x y) ~trials:2_000
       let%test_unit _ = can_generate (fun (x,y) -> Char.( < ) x y)
       let%test_unit _ = can_generate (fun (x,y) -> Char.( > ) x y)
@@ -234,9 +258,8 @@ module Test (S : sig val default_seed : Quickcheck_intf.seed end) : sig end = st
       let can_generate f = test_can_generate gen ~sexp_of ~f
 
       let%test_unit _ =
-        (* obviously there are going to be a lot of [None] results, so just make sure
-           we still generate sensible [Some] results. *)
-        test_no_duplicates (G.filter gen ~f:Option.is_some) ~sexp_of ~compare
+        test_distinct_values (G.filter gen ~f:Option.is_some) ~sexp_of ~compare
+          ~trials:1_000 ~distinct_values:500
       let%test_unit _ = can_generate Option.is_none
       let%test_unit _ = can_generate Option.is_some
     end)
@@ -259,7 +282,8 @@ module Test (S : sig val default_seed : Quickcheck_intf.seed end) : sig end = st
         G.(fn Int.obs Int.gen) |> memo (module Int)
       let can_generate f = test_can_generate gen ~sexp_of ~f
 
-      let%test_unit _ = test_no_duplicates gen ~sexp_of ~compare
+      let%test_unit _ = test_distinct_values gen ~sexp_of ~compare
+                          ~trials:1_000 ~distinct_values:500
 
       let%test_unit _ = can_generate (fun f -> f 0 < f (-1))
       let%test_unit _ = can_generate (fun f -> f 0 > f (-1))
@@ -307,7 +331,8 @@ module Test (S : sig val default_seed : Quickcheck_intf.seed end) : sig end = st
         |> memo (module First_order)
       let can_generate f = test_can_generate gen ~f ~sexp_of
 
-      let%test_unit _ = test_no_duplicates gen ~sexp_of ~compare
+      let%test_unit _ = test_distinct_values gen ~sexp_of ~compare
+                          ~trials:1_000 ~distinct_values:500
 
       let%test_unit _ = can_generate (fun f -> f Succ = f Pred)
       let%test_unit _ = can_generate (fun f -> f Succ > f Pred)
@@ -332,7 +357,8 @@ module Test (S : sig val default_seed : Quickcheck_intf.seed end) : sig end = st
       let gen = List.gen Char.gen
       let can_generate f = test_can_generate gen ~sexp_of ~f
 
-      let%test_unit _ = test_no_duplicates gen ~sexp_of ~compare
+      let%test_unit _ = test_distinct_values gen ~sexp_of ~compare
+                          ~trials:1_000 ~distinct_values:500
       let%test_unit _ = can_generate List.is_empty
       let%test_unit _ = can_generate (function [_]   -> true           | _ -> false)
       let%test_unit _ = can_generate (function [x;y] -> Char.( < ) x y | _ -> false)
@@ -352,7 +378,8 @@ module Test (S : sig val default_seed : Quickcheck_intf.seed end) : sig end = st
       let gen = Sexp.gen
       let can_generate f = test_can_generate gen ~sexp_of ~f
 
-      let%test_unit _ = test_no_duplicates gen ~sexp_of ~compare
+      let%test_unit _ = test_distinct_values gen ~sexp_of ~compare
+                          ~trials:1_000 ~distinct_values:500
       let%test_unit _ = can_generate (function Sexp.Atom _       -> true | _ -> false)
       let%test_unit _ = can_generate (function Sexp.List _       -> true | _ -> false)
       let%test_unit _ = can_generate (function Sexp.Atom ""      -> true | _ -> false)
@@ -399,7 +426,8 @@ module Test (S : sig val default_seed : Quickcheck_intf.seed end) : sig end = st
         G.(fn (List.obs Bool.obs) Char.gen) |> memo (module Bool_list)
       let can_generate f = test_can_generate gen ~sexp_of ~f
 
-      let%test_unit _ = test_no_duplicates gen ~sexp_of ~compare
+      let%test_unit _ = test_distinct_values gen ~sexp_of ~compare
+                          ~trials:1_000 ~distinct_values:500
 
       let%test_unit _ = can_generate (fun f -> f []     <> f [true])
       let%test_unit _ = can_generate (fun f -> f []     <> f [false])

@@ -37,12 +37,6 @@ include (Base.Int
              with module Hex := Hex))
 
 include Quickcheck.Make_int (struct
-    type nonrec t = t [@@deriving sexp, compare, hash]
-    include (Replace_polymorphic_compare
-             : Polymorphic_compare_intf.Infix with type t := t)
-    let min_value         = min_value
-    let max_value         = max_value
-    let succ              = succ
-    let pred              = pred
+    include Base.Int
     let splittable_random = Splittable_random.int
   end)

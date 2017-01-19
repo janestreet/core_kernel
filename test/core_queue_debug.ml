@@ -94,6 +94,11 @@ module Debug (Queue : module type of Queue) = struct
       (fun () -> count t ~f)
   ;;
 
+  let counti t ~f =
+    debug "counti" [ t ] t [%sexp_of: _ t] [%sexp_of: int]
+      (fun () -> counti t ~f)
+  ;;
+
   let sum (type a) (module M : Commutative_group.S with type t = a) t ~f =
     debug "sum" [ t ] t [%sexp_of: _ t] [%sexp_of: M.t]
       (fun () -> sum (module M) t ~f)

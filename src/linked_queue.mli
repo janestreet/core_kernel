@@ -1,39 +1,10 @@
 (** [Linked_queue] is a wrapper around OCaml's standard [Queue] module that follows Core
-    idioms and adds some functions.
-
-    Also see [Queue], which has different performance characteristics.
-*)
+    idioms and adds some functions.  See [Queue_intf] for documentation of standard queue
+    functions.  Also see [Queue], which has different performance characteristics. *)
 
 open! Import
 
-type 'a t [@@deriving bin_io, sexp]
-
-include Container.S1 with type 'a t := 'a t
-
-(** [create ()] returns an empty queue. *)
-val create : unit -> 'a t
-
-(** [enqueue t x] adds [x] to the end of [t].*)
-val enqueue : 'a t -> 'a -> unit
-
-(** [dequeue t] returns [None] if [t] is empty, otherwise it removes and returns the front
-    of [t] *)
-val dequeue     : 'a t -> 'a option
-val dequeue_exn : 'a t -> 'a
-
-(** [peek t] returns [None] if [t] is empty, otherwise it returns [Some x] where [x] is
-    the front of [t]. *)
-val peek     : 'a t -> 'a option
-val peek_exn : 'a t -> 'a
-
-(** [clear t] discards all elements from [t]. *)
-val clear : 'a t -> unit
-
-(** [copy t] returns a copy of [t]. *)
-val copy : 'a t -> 'a t
-
-(** [filter_inplace t ~f] removes all elements of [t] that don't satisfy [f]. *)
-val filter_inplace : 'a t -> f:('a -> bool) -> unit
+include Queue_intf.S
 
 (** [transfer ~src ~dst] adds all of the elements of [src] to the end of [dst], then
     clears [src].  It is equivalent to the sequence:
@@ -46,23 +17,5 @@ val filter_inplace : 'a t -> f:('a -> bool) -> unit
     but runs in constant time. *)
 val transfer : src:'a t -> dst:'a t -> unit
 
-(** [of_list list] returns a queue [t] with the elements of [list] in the same order as
-    the elements of [list] (i.e. the first element of [t] is the first element of the
-    list). *)
-val of_list : 'a list -> 'a t
-val to_list : 'a t -> 'a list
-
 (** [partial_iter t ~f] iterates through t until f returns `Stop *)
 val partial_iter : 'a t -> f:('a -> [`Continue | `Stop]) -> unit
-
-val map : 'a t -> f:('a -> 'b) -> 'b t
-
-val concat_map : 'a t -> f:('a -> 'b list) -> 'b t
-
-val filter_map : 'a t -> f:('a -> 'b option) -> 'b t
-val filter     : 'a t -> f:('a -> bool     ) -> 'a t
-
-val of_array : 'a array -> 'a t
-val to_array : 'a t -> 'a array
-
-val singleton : 'a -> 'a t

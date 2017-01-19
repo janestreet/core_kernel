@@ -351,10 +351,10 @@ val of_map_keys : ('key, _, 'cmp) Map.t -> ('key, 'cmp) t
 
 val gen
   :  comparator:('key, 'cmp) Comparator.t
-  -> 'key Quickcheck.gen
-  -> ('key, 'cmp) t Quickcheck.gen
-val obs : 'key Quickcheck.obs -> ('key, 'cmp) t Quickcheck.obs
-val shrinker : 'key Quickcheck.shr -> ('key, 'cmp) t Quickcheck.shr
+  -> 'key Quickcheck.Generator.t
+  -> ('key, 'cmp) t Quickcheck.Generator.t
+val obs : 'key Quickcheck.Observer.t -> ('key, 'cmp) t Quickcheck.Observer.t
+val shrinker : 'key Quickcheck.Shrinker.t -> ('key, 'cmp) t Quickcheck.Shrinker.t
 
 (** {1 Polymorphic sets}
 

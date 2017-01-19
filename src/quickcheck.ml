@@ -1,8 +1,8 @@
 open! Import
 
 module Array = Base.Array
-
-module List = Base.List
+module Int   = Base.Int
+module List  = Base.List
 
 module Pre_float : Polymorphic_compare_intf.S with type t = float = struct
   type t = float
@@ -23,20 +23,115 @@ module Pre_float : Polymorphic_compare_intf.S with type t = float = struct
 end
 
 module Pre_int : Quickcheck_intf.Pre_int with type t = int = struct
-  type t = int [@@deriving sexp, compare, hash]
-  include Int_replace_polymorphic_compare
-  let min_value         = min_int
-  let max_value         = max_int
-  let succ              = succ
-  let pred              = pred
+  include Base.Int
   let splittable_random = Splittable_random.int
 end
 
 let check_size str size =
   if size < 0 then Error.raise_s [%message str "size is negative" (size : int)]
 
+let bounds_error name lower_bound upper_bound sexp_of_bound =
+  raise_s [%message
+    name
+      "invalid bounds"
+      (lower_bound : bound)
+      (upper_bound : bound)]
+
+module Make_int_random (M : Quickcheck_intf.Pre_int) : sig
+  open M
+
+  val uniform_incl     : Splittable_random.State.t -> lo:t -> hi:t -> t
+  val log_uniform_incl : Splittable_random.State.t -> lo:t -> hi:t -> t
+
+  module For_testing : sig
+    val bits_to_represent         : t -> int
+    val min_represented_by_n_bits : int -> t
+    val max_represented_by_n_bits : int -> t
+  end
+end = struct
+  open M
+
+  module For_testing = struct
+    let bits_to_represent t =
+      assert (t >= zero);
+      let t = ref t in
+      let n = ref 0 in
+      while !t > zero do
+        t := shift_right !t 1;
+        Int.incr n;
+      done;
+      !n
+
+    let min_represented_by_n_bits n =
+      if Int.equal n 0
+      then zero
+      else shift_left one (Int.pred n)
+
+    let max_represented_by_n_bits n =
+      pred (shift_left one n)
+  end
+
+  include For_testing
+
+  let uniform_incl = splittable_random
+
+  let log_uniform_incl state ~lo ~hi =
+    let min_bits = bits_to_represent lo in
+    let max_bits = bits_to_represent hi in
+    let bits = Pre_int.splittable_random state ~lo:min_bits ~hi:max_bits in
+    uniform_incl state
+      ~lo:(min_represented_by_n_bits bits |> max lo)
+      ~hi:(max_represented_by_n_bits bits |> min hi)
+end
+
+module Int_random = Make_int_random (Pre_int)
+
+let%test_module "Make_int_random bitwise helpers" =
+  (module struct
+    open Int_random
+    open For_testing
+
+    let%test_unit "bits_to_represent" =
+      let test n expect = [%test_result: int] (bits_to_represent n) ~expect in
+      test 0 0;
+      test 1 1;
+      test 2 2;
+      test 3 2;
+      test 4 3;
+      test 5 3;
+      test 6 3;
+      test 7 3;
+      test 8 4;
+      test 100 7;
+      test Int.max_value (Int.pred Int.num_bits);
+    ;;
+
+    let%test_unit "min_represented_by_n_bits" =
+      let test n expect = [%test_result: int] (min_represented_by_n_bits n) ~expect in
+      test 0 0;
+      test 1 1;
+      test 2 2;
+      test 3 4;
+      test 4 8;
+      test 7 64;
+      test (Int.pred Int.num_bits) (Int.shift_right_logical Int.min_value 1);
+    ;;
+
+    let%test_unit "max_represented_by_n_bits" =
+      let test n expect = [%test_result: int] (max_represented_by_n_bits n) ~expect in
+      test 0 0;
+      test 1 1;
+      test 2 3;
+      test 3 7;
+      test 4 15;
+      test 7 127;
+      test (Int.pred Int.num_bits) Int.max_value;
+    ;;
+
+  end)
+
 module Raw_generator : sig
-  type 'a t
+  type +'a t
 
   val create   :         (size:int -> Splittable_random.State.t -> 'a) -> 'a t
   val generate : 'a t -> (size:int -> Splittable_random.State.t -> 'a)
@@ -72,17 +167,24 @@ end = struct
       else max_len
     in
     (* if there's no extra size to spend on elements, return an empty array, otherwise
-       return a non-empty array with the size distributed among the elements. *)
+       return a non-empty array with the size distributed among the elements *)
     if max_len = 0 then [||] else begin
-      let min_len = max min_len 1 in
-      let len = Splittable_random.int random ~lo:min_len ~hi:max_len in
+      (* pick a length, weighted low so that most of the size is spent on elements *)
+      let len = Int_random.log_uniform_incl random ~lo:(max min_len 1) ~hi:max_len in
       let sizes = Array.init len ~f:(fun _ -> 0) in
-      let remaining = size - len in
+      let remaining = size - (len - min_len) in
       let max_index = len - 1 in
       for _ = 1 to remaining do
-        let index = Splittable_random.int random ~lo:0 ~hi:max_index in
+        (* pick an index, weighted low so that we see unbalanced distributions often *)
+        let index = Int_random.log_uniform_incl random ~lo:0 ~hi:max_index in
         sizes.(index) <- sizes.(index) + 1
       done;
+      (* permute the array so that no index is favored over another *)
+      for i = 0 to max_index - 1 do
+        let j = Splittable_random.int random ~lo:i ~hi:max_index in
+        Array.swap sizes i j
+      done;
+      assert (Array.sum (module Int) sizes ~f:Fn.id + (len - min_len) = size);
       sizes
     end
 end
@@ -90,7 +192,7 @@ end
 type 'a gen = 'a Raw_generator.t
 
 module Raw_observer : sig
-  type 'a t
+  type -'a t
 
   val create  :         ('a -> size:int -> Hash.state -> Hash.state) -> 'a t
   val observe : 'a t -> ('a -> size:int -> Hash.state -> Hash.state)
@@ -210,27 +312,16 @@ module Observer = struct
 
   module Make_int_observer (M : Quickcheck_intf.Pre_int) : sig
     val obs : M.t t
-    val obs_between
-      :  lower_bound:M.t Maybe_bound.t
-      -> upper_bound:M.t Maybe_bound.t
-      -> M.t t
   end = struct
     let obs =
       create (fun x ~size:_ hash ->
         [%hash_fold: M.t] hash x)
-
-    let obs_between ~lower_bound:_ ~upper_bound:_ = obs
   end
 
   module For_int = Make_int_observer (Pre_int)
 
-  let enum n ~f =
-    let index =
-      For_int.obs_between
-        ~lower_bound:(Incl 0)
-        ~upper_bound:(Excl n)
-    in
-    unmap index ~f
+  let enum _ ~f =
+    unmap For_int.obs ~f
 
   let of_list list ~equal =
     let f x =
@@ -282,6 +373,14 @@ module Generator = struct
 
       let map = `Define_using_bind
     end)
+
+  open Let_syntax
+
+  let size = create (fun ~size _ -> size)
+
+  let with_size t ~size =
+    create (fun ~size:_ random ->
+      generate t ~size random)
 
   let singleton = return
 
@@ -337,12 +436,11 @@ module Generator = struct
     weighted_choice alist
     |> join
 
-  let union ts =
-    weighted_union (List.map ts ~f:(fun t -> (1., t)))
-
-  let doubleton x y = union [ singleton x ; singleton y ]
-
-  let of_list list = union (List.map list ~f:singleton)
+  let doubleton x y =
+    create (fun ~size:_ random ->
+      if Splittable_random.bool random
+      then x
+      else y)
 
   let of_fun f =
     create (fun ~size random ->
@@ -376,70 +474,66 @@ module Generator = struct
   let small_positive_int     = geometric ~p:0.25 1
 
   module Make_int_generator (M : Quickcheck_intf.Pre_int) : sig
-    val gen : M.t t
-    val gen_between
-      :  lower_bound:M.t Maybe_bound.t
-      -> upper_bound:M.t Maybe_bound.t
-      -> M.t t
+    val gen                  :               M.t t
+    val gen_incl             : M.t -> M.t -> M.t t
+    val gen_uniform_incl     : M.t -> M.t -> M.t t
+    val gen_log_incl         : M.t -> M.t -> M.t t
+    val gen_log_uniform_incl : M.t -> M.t -> M.t t
   end = struct
-
     open M
 
-    let gen_between_inclusive ~lower_bound ~upper_bound =
-      create (fun ~size:_ random ->
-        M.splittable_random random ~lo:lower_bound ~hi:upper_bound)
+    module Random = Make_int_random (M)
 
-    let gen_between ~lower_bound ~upper_bound =
-      match
-        (lower_bound : t Maybe_bound.t),
-        (upper_bound : t Maybe_bound.t)
-      with
-      | Excl lower, _ when lower = max_value ->
-        failwith "Int.gen_between: lower bound > max_value"
-      | _, Excl upper when upper = min_value ->
-        failwith "Int.gen_between: upper bound < min_value"
-      | _ ->
-        let lower_inclusive =
-          match lower_bound with
-          | Unbounded        -> min_value
-          | Incl lower_bound -> lower_bound
-          | Excl lower_bound -> succ lower_bound
-        in
-        let upper_inclusive =
-          match upper_bound with
-          | Unbounded        -> max_value
-          | Incl upper_bound -> upper_bound
-          | Excl upper_bound -> pred upper_bound
-        in
-        if lower_inclusive > upper_inclusive then
-          Error.raise_s [%message
-            "Int.gen_between: bounds are crossed"
-              (lower_bound : t Maybe_bound.t)
-              (upper_bound : t Maybe_bound.t)];
-        gen_between_inclusive
-          ~lower_bound:lower_inclusive
-          ~upper_bound:upper_inclusive
+    let gen_uniform_incl lo hi =
+      if lo > hi then begin
+        bounds_error "Quickcheck.Make_int().gen_uniform_incl" lo hi [%sexp_of: t]
+      end;
+      create (fun ~size:_ random ->
+        Random.uniform_incl random ~lo ~hi)
+
+    let gen_log_uniform_incl lo hi =
+      if lo < zero || lo > hi then begin
+        bounds_error "Quickcheck.Make_int().gen_log_uniform_incl" lo hi [%sexp_of: t]
+      end;
+      create (fun ~size:_ random ->
+        Random.log_uniform_incl random ~lo ~hi)
+
+    let gen_incl lower_bound upper_bound =
+      weighted_union
+        [ 0.05, return lower_bound
+        ; 0.05, return upper_bound
+        ; 0.9,  gen_uniform_incl lower_bound upper_bound
+        ]
+
+    let gen_log_incl lower_bound upper_bound =
+      weighted_union
+        [ 0.05, return lower_bound
+        ; 0.05, return upper_bound
+        ; 0.9,  gen_log_uniform_incl lower_bound upper_bound
+        ]
 
     let gen =
-      gen_between ~lower_bound:Unbounded ~upper_bound:Unbounded
+      let%map sign = doubleton true false
+      and     bits = gen_log_incl zero max_value
+      in
+      if sign then bit_not bits else bits
 
   end
 
   module For_int = Make_int_generator (Pre_int)
 
+  let of_list list =
+    let array = Array.of_list list in
+    map (For_int.gen_uniform_incl 0 (Array.length array - 1)) ~f:(fun index ->
+      array.(index))
+
+  let union list = of_list list |> join
+
   let recursive f =
-    let rec self ~size =
-      if size < 0
-      then
-        Error.raise_s [%message
-          "Quickcheck.Generator.recursive: size is negative"
-            (size : int)]
-      else
-        f self ~size
+    let rec r ~size random =
+      generate (f (create r)) ~size random
     in
-    small_non_negative_int
-    >>= fun size ->
-    self ~size
+    create r
 
   let variant2 a b =
     union [ map a ~f:(fun a -> `A a)
@@ -793,9 +887,9 @@ module Shrinker = struct
       type var3 = [ `A of int | `B of int | `C of int ] [@@deriving sexp, compare]
       type var4 = [ `A of int | `B of int | `C of int | `D of int ] [@@deriving sexp, compare]
       type var5 = [ `A of int | `B of int | `C of int | `D of int | `E of int ]
-        [@@deriving sexp, compare]
+      [@@deriving sexp, compare]
       type var6 = [ `A of int | `B of int | `C of int | `D of int | `E of int | `F of int ]
-        [@@deriving sexp, compare]
+      [@@deriving sexp, compare]
 
       let%test_unit "variant2 shrinker" =
         let t = variant2 t0 t1 in
@@ -909,11 +1003,6 @@ module Configure (Config : Quickcheck_intf.Quickcheck_config) = struct
 
   let scale ~n ~f = Pervasives.int_of_float (f *. Pervasives.float_of_int n)
 
-  let computed_default_trial_count_for_test_no_duplicates =
-    match default_trial_count_for_test_no_duplicates with
-    | `Constant                     n -> n
-    | `Scale_of_default_trial_count f -> scale ~f ~n:default_trial_count
-
   let random_state_of_seed seed =
     match seed with
     | `Nondeterministic  -> Splittable_random.State.create ()
@@ -1003,20 +1092,20 @@ module Configure (Config : Quickcheck_intf.Quickcheck_config) = struct
       in
       Error.raise_s
         [%message
-           "shrunk random input"
-             ~shrunk_value:  (shr_value : value)
-             ~shrunk_error:  (shr_exn   : exn)
-             ~original_value:(value     : value)
-             ~original_error:(exn       : exn)]
+          "shrunk random input"
+            ~shrunk_value:  (shr_value : value)
+            ~shrunk_error:  (shr_exn   : exn)
+            ~original_value:(value     : value)
+            ~original_error:(exn       : exn)]
     | None ->
       match sexp_of with
       | None               -> raise exn
       | Some sexp_of_value ->
         Error.raise_s
           [%message
-             "random input"
-               ~value:(value : value)
-               ~error:(exn   : exn)]
+            "random input"
+              ~value:(value : value)
+              ~error:(exn   : exn)]
 
   let test
         ?seed
@@ -1052,125 +1141,45 @@ module Configure (Config : Quickcheck_intf.Quickcheck_config) = struct
     List.iter examples ~f;
     iter ?seed ?sizes ?trials ?attempts ?filter gen ~f
 
-  let fail_if_duplicate (type key) ~compare ~acceptable_duplicate_count ~fail =
-    let module M = Caml.Map.Make (struct type t = key let compare = compare end) in
-    let map = ref M.empty in
-    let total = ref 0 in
-    let record value =
-      match M.find value !map with
-      | exception Not_found -> map := M.add value (ref 0) !map
-      | count_ref           -> incr count_ref; incr total
-    in
-    let duplicate_count_by_original () =
-      List.filter_map (M.bindings !map) ~f:(fun (original, count_ref) ->
-        match !count_ref with
-        | 0 -> None
-        | n -> Some (original, n))
-    in
-    let report () =
-      if !total > acceptable_duplicate_count then
-        fail ~duplicate_count:!total
-          (duplicate_count_by_original ())
-    in
-    record, report
-
-  let%test_module "fail_if_duplicate" =
-    (module struct
-
-      let fail ~duplicate_count alist =
-        Error.raise_s
-          [%message
-            "duplicate"
-              (duplicate_count : int)
-              (alist           : (int * int) list)]
-
-      let acceptable_duplicate_count = 3
-
-      let compare = Pre_int.compare
-
-      let test f =
-        f 1; (* original *)
-        f 2;
-        f 1; (* duplicate 1 *)
-        f 3;
-        f 1; (* duplicate 2 *)
-        f 4;
-        f 1; (* duplicate 3 *)
-        f 5;
-        (* duplicate 4: boom *)
-        assert (Exn.does_raise (fun () -> f 1))
-
-      let%test_unit "by comparison" =
-        let record, report =
-          fail_if_duplicate ~acceptable_duplicate_count ~fail ~compare
-        in
-        test (fun x ->
-          record x;
-          report ())
-
-    end)
-
-  let test_no_duplicates
+  let test_distinct_values
+        (type key)
         ?seed
         ?sizes
-        ?(trials = computed_default_trial_count_for_test_no_duplicates)
         ?attempts
         ?filter
-        ?(acceptable_duplicate_per_trial_ratio
-          = default_acceptable_duplicate_per_trial_ratio)
         ?sexp_of
         gen
+        ~trials
+        ~distinct_values
         ~compare
     =
-    let acceptable_duplicate_count =
-      if Pre_float.(<)  acceptable_duplicate_per_trial_ratio 0.
-      || Pre_float.(>=) acceptable_duplicate_per_trial_ratio 1.
-      then
-        Error.raise_s
-          [%message
-            "Quickcheck.test_no_duplicates: duplicate ratio out of bounds"
-              (acceptable_duplicate_per_trial_ratio : float)]
-      else
-        int_of_float (floor (acceptable_duplicate_per_trial_ratio  *. float_of_int trials))
+    let module S = Caml.Set.Make (struct type t = key let compare = compare end) in
+    let fail set =
+      let expect_count = distinct_values in
+      let actual_count = S.cardinal set in
+      let values =
+        match sexp_of with
+        | None             -> None
+        | Some sexp_of_elt -> Some [%sexp (S.elements set : elt list)]
+      in
+      raise_s [%message
+        "insufficient distinct values"
+          (trials       : int)
+          (expect_count : int)
+          (actual_count : int)
+          (values       : Sexp.t sexp_option)]
     in
-    let fail =
-      match sexp_of with
-      | None ->
-        fun ~duplicate_count _ ->
-          let distinct_values = trials - duplicate_count in
-          Error.raise_s [%message
-            "duplicate values"
-              (trials          : int)
-              (distinct_values : int)
-              (duplicate_count : int)]
-      | Some sexp_of_value ->
-        fun ~duplicate_count alist ->
-          let distinct_values = trials - duplicate_count in
-          Error.raise_s [%message
-            "duplicate values"
-              (trials          : int)
-              (distinct_values : int)
-              (duplicate_count : int)
-              ~_:(List.sort alist ~cmp:(fun (_,x) (_,y) -> Pre_int.compare y x)
-                  |> List.map ~f:(fun (value, duplicates) ->
-                    [%message "" (value : value) (duplicates : int)])
-                  : Sexp.t list)]
-    in
-    let record, report = fail_if_duplicate ~acceptable_duplicate_count ~fail ~compare in
-    iter
-      ?seed
-      ?sizes
-      ~trials
-      ?attempts
-      ?filter
-      gen
-      ~f:record;
-    report ()
+    with_return (fun r ->
+      let set = ref S.empty in
+      iter ?seed ?sizes ~trials ?attempts ?filter gen ~f:(fun elt ->
+        set := S.add elt !set;
+        if S.cardinal !set >= distinct_values then r.return ());
+      fail !set)
 
   let test_can_generate
         ?seed
         ?sizes
-        ?trials
+        ?(trials = default_can_generate_trial_count)
         ?attempts
         ?filter
         ?sexp_of
@@ -1186,7 +1195,7 @@ module Configure (Config : Quickcheck_intf.Quickcheck_config) = struct
         iter
           ?seed
           ?sizes
-          ?trials
+          ~trials
           ?attempts
           ?filter
           gen
@@ -1200,20 +1209,20 @@ module Configure (Config : Quickcheck_intf.Quickcheck_config) = struct
       | Some sexp_of_value ->
         Error.raise_s
           [%message
-             "cannot generate"
-               ~attempts:(!r : value list)]
+            "cannot generate"
+              ~attempts:(!r : value list)]
 
 end
 
 include Configure (struct
     let default_seed = `Deterministic "an arbitrary but deterministic string"
-    let default_trial_count        = 1_000
+    let default_trial_count =
+      match Word_size.word_size with
+      | W64 -> 10_000
+      | W32 ->  1_000
+    let default_can_generate_trial_count = 10_000
     let default_attempts_per_trial = 10.
     let default_shrink_attempts    = `Limit 1000
-    let default_trial_count_for_test_no_duplicates
-      = `Scale_of_default_trial_count 10.
-    let default_acceptable_duplicate_per_trial_ratio = 0.25
     let default_sizes =
-      Sequence.unfold ~init:0 ~f:(fun i ->
-        Some (i, if i = 30 then 0 else i + 1))
+      Sequence.cycle_list_exn (List.range 0 30 ~stop:`inclusive)
   end)

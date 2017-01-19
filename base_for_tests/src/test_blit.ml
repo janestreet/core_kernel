@@ -3,8 +3,6 @@ open! Blit
 
 include Test_blit_intf
 
-let ( land ) = Int.bit_and
-
 module type S_gen = sig
   open Blit_intf
   type 'a src

@@ -308,51 +308,32 @@ let iteri t ~f =
 ;;
 
 module C =
-  Container.Make (struct
+  Indexed_container.Make (struct
     type nonrec 'a t = 'a t
     let fold = fold
     let iter = `Custom iter
+    let foldi = `Custom foldi
+    let iteri = `Custom iteri
   end)
 
-let to_list     = C.to_list
 let count       = C.count
-let sum         = C.sum
+let exists      = C.exists
 let find        = C.find
 let find_map    = C.find_map
-let exists      = C.exists
-let for_all     = C.for_all
-let mem         = C.mem
-let min_elt     = C.min_elt
-let max_elt     = C.max_elt
 let fold_result = C.fold_result
 let fold_until  = C.fold_until
+let for_all     = C.for_all
+let max_elt     = C.max_elt
+let mem         = C.mem
+let min_elt     = C.min_elt
+let sum         = C.sum
+let to_list     = C.to_list
 
-let findi t ~f =
-  with_return (fun r ->
-    iteri t ~f:(fun i a -> if f i a then r.return (Some (i, a)));
-    None)
-;;
-
-let find_mapi t ~f =
-  with_return (fun r ->
-    iteri t ~f:(fun i a ->
-      match f i a with
-      | Some _ as ret -> r.return ret
-      | None -> ());
-    None)
-;;
-
-let for_alli t ~f =
-  with_return (fun r ->
-    iteri t ~f:(fun i a -> if not (f i a) then r.return false);
-    true)
-;;
-
-let existsi t ~f =
-  with_return (fun r ->
-    iteri t ~f:(fun i a -> if f i a then r.return true);
-    false)
-;;
+let counti    = C.counti
+let existsi   = C.existsi
+let find_mapi = C.find_mapi
+let findi     = C.findi
+let for_alli  = C.for_alli
 
 
 (* For [concat_map], [filter_map], and [filter], we don't create [t_result] with [t]'s

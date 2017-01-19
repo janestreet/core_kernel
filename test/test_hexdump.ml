@@ -1,5 +1,5 @@
 open! Core_kernel.Std
-open  Expect_test_helpers_kernel.Std
+open  Expect_test_helpers_kernel
 
 let require_same here (name1, string1) (name2, string2) =
   require here (String.equal string1 string2)

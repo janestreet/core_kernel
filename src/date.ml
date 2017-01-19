@@ -13,270 +13,266 @@ let is_leap_year year =
 *)
 module Stable = struct
   module V1 = struct
-    module T : sig
-      type t [@@deriving bin_io, hash]
+    module Without_comparable = struct
+      module T : sig
+        type t [@@deriving bin_io, hash]
 
-      val create_exn : y:int -> m:Month.Stable.V1.t -> d:int -> t
+        val create_exn : y:int -> m:Month.Stable.V1.t -> d:int -> t
 
-      val year  : t -> int
-      val month : t -> Month.Stable.V1.t
-      val day   : t -> int
-    end = struct
-      (* We used to store dates like this:
-         type t = { y: int; m: Month.Stable.V1.t; d: int; }
-         In the below we make sure that the bin_io representation is
-         identical (and the stable unit tests check this)
+        val year  : t -> int
+        val month : t -> Month.Stable.V1.t
+        val day   : t -> int
+      end = struct
+        (* We used to store dates like this:
+           type t = { y: int; m: Month.Stable.V1.t; d: int; }
+           In the below we make sure that the bin_io representation is
+           identical (and the stable unit tests check this)
 
-         In memory we use the following much more compact representation:
-         2 bytes year
-         1 byte month
-         1 byte day
+           In memory we use the following much more compact representation:
+           2 bytes year
+           1 byte month
+           1 byte day
 
-         all packed into a single immediate int (so from 4 words down to 1).
-      *)
-      type t = int
-      [@@deriving hash, bin_shape ~basetype:"899ee3e0-490a-11e6-a10a-a3734f733566"]
+           all packed into a single immediate int (so from 4 words down to 1).
+        *)
+        type t = int
+        [@@deriving hash, bin_shape ~basetype:"899ee3e0-490a-11e6-a10a-a3734f733566"]
 
-      let create0 ~year ~month ~day =
-        (* create_exn's validation make sure that each value fits *)
-        (year lsl 16) lor (Month.to_int month lsl 8) lor day
-      ;;
+        let create0 ~year ~month ~day =
+          (* create_exn's validation make sure that each value fits *)
+          (year lsl 16) lor (Month.to_int month lsl 8) lor day
+        ;;
 
-      let year t = t lsr 16
-      let month t = Month.of_int_exn ((t lsr 8) land 0xff)
-      let day t = t land 0xff
+        let year t = t lsr 16
+        let month t = Month.of_int_exn ((t lsr 8) land 0xff)
+        let day t = t land 0xff
 
-      let%test_unit _ =
-        let test y m d =
-          let t = create0 ~year:y ~month:m ~day:d in
-          [%test_result: int] ~expect:y (year  t);
-          [%test_result: Month.t] ~expect:m (month t);
-          [%test_result: int] ~expect:d (day   t);
-        in
-        test 2014 Month.Sep 24;
-        test 9999 Month.Dec 31
-      ;;
+        let%test_unit _ =
+          let test y m d =
+            let t = create0 ~year:y ~month:m ~day:d in
+            [%test_result: int] ~expect:y (year  t);
+            [%test_result: Month.t] ~expect:m (month t);
+            [%test_result: int] ~expect:d (day   t);
+          in
+          test 2014 Month.Sep 24;
+          test 9999 Month.Dec 31
+        ;;
 
-      let create_exn ~y:year ~m:month ~d:day =
-        (* year, month, and day need to be passed as parameters to avoid allocating
-           a closure (see unit test below) *)
-        let invalid ~year ~month ~day msg =
-          invalid_argf "Date.create_exn ~y:%d ~m:%s ~d:%d error: %s"
-            year (Month.to_string month) day msg ()
-        in
-        if year < 0 || year > 9999 then invalid ~year ~month ~day "year outside of [0..9999]";
-        if day <= 0 then invalid ~year ~month ~day "day <= 0";
-        begin match month with
-        | Month.Apr | Month.Jun | Month.Sep | Month.Nov ->
-          if day > 30 then invalid ~year ~month ~day "30 day month violation"
-        | Month.Feb ->
-          if is_leap_year year then begin
-            if day > 29 then invalid ~year ~month ~day "29 day month violation" else ()
-          end else if day > 28 then begin
-            invalid ~year ~month ~day "28 day month violation"
-          end else ()
-        | Month.Jan | Month.Mar | Month.May | Month.Jul | Month.Aug | Month.Oct
-        | Month.Dec ->
-          if day > 31 then invalid ~year ~month ~day "31 day month violation"
-        end;
-        create0 ~year ~month:month ~day
-      ;;
+        let create_exn ~y:year ~m:month ~d:day =
+          (* year, month, and day need to be passed as parameters to avoid allocating
+             a closure (see unit test below) *)
+          let invalid ~year ~month ~day msg =
+            invalid_argf "Date.create_exn ~y:%d ~m:%s ~d:%d error: %s"
+              year (Month.to_string month) day msg ()
+          in
+          if year < 0 || year > 9999 then invalid ~year ~month ~day "year outside of [0..9999]";
+          if day <= 0 then invalid ~year ~month ~day "day <= 0";
+          begin match month with
+          | Month.Apr | Month.Jun | Month.Sep | Month.Nov ->
+            if day > 30 then invalid ~year ~month ~day "30 day month violation"
+          | Month.Feb ->
+            if is_leap_year year then begin
+              if day > 29 then invalid ~year ~month ~day "29 day month violation" else ()
+            end else if day > 28 then begin
+              invalid ~year ~month ~day "28 day month violation"
+            end else ()
+          | Month.Jan | Month.Mar | Month.May | Month.Jul | Month.Aug | Month.Oct
+          | Month.Dec ->
+            if day > 31 then invalid ~year ~month ~day "31 day month violation"
+          end;
+          create0 ~year ~month:month ~day
+        ;;
 
-      let%test_unit "create_exn doesn't allocate" =
-        let allocation_before = Core_gc.major_plus_minor_words () in
-        ignore (create_exn ~y:1999 ~m:Dec ~d:31 : t);
-        let allocation_after = Core_gc.major_plus_minor_words () in
-        [%test_eq: int] allocation_before allocation_after;
-      ;;
+        let%test_unit "create_exn doesn't allocate" =
+          let allocation_before = Core_gc.major_plus_minor_words () in
+          ignore (create_exn ~y:1999 ~m:Dec ~d:31 : t);
+          let allocation_after = Core_gc.major_plus_minor_words () in
+          [%test_eq: int] allocation_before allocation_after;
+        ;;
 
-      (* We don't use Make_binable here, because that would go via an immediate
-         tuple or record.  That is exactly the 32 bytes we worked so hard above to
-         get rid of.  We also don't want to just bin_io the integer directly
-         because that would mean a new bin_io format.  *)
+        (* We don't use Make_binable here, because that would go via an immediate
+           tuple or record.  That is exactly the 32 bytes we worked so hard above to
+           get rid of.  We also don't want to just bin_io the integer directly
+           because that would mean a new bin_io format.  *)
 
-      let bin_read_t buf ~pos_ref =
-        let year  = Int.bin_read_t buf ~pos_ref in
-        let month = Month.Stable.V1.bin_read_t buf ~pos_ref in
-        let day   = Int.bin_read_t buf ~pos_ref in
-        create0 ~year ~month ~day
-      ;;
+        let bin_read_t buf ~pos_ref =
+          let year  = Int.bin_read_t buf ~pos_ref in
+          let month = Month.Stable.V1.bin_read_t buf ~pos_ref in
+          let day   = Int.bin_read_t buf ~pos_ref in
+          create0 ~year ~month ~day
+        ;;
 
-      let __bin_read_t__ _buf ~pos_ref =
-        (* __bin_read_t is only needed for variants *)
-        Bin_prot.Common.raise_variant_wrong_type "Date.t" !pos_ref
-      ;;
+        let __bin_read_t__ _buf ~pos_ref =
+          (* __bin_read_t is only needed for variants *)
+          Bin_prot.Common.raise_variant_wrong_type "Date.t" !pos_ref
+        ;;
 
-      let bin_reader_t = {
-        Bin_prot.Type_class.
-        read = bin_read_t;
-        vtag_read = __bin_read_t__;
-      }
+        let bin_reader_t = {
+          Bin_prot.Type_class.
+          read = bin_read_t;
+          vtag_read = __bin_read_t__;
+        }
 
-      let bin_size_t t =
-        Int.bin_size_t (year t) + Month.bin_size_t (month t) + Int.bin_size_t (day t)
-      ;;
+        let bin_size_t t =
+          Int.bin_size_t (year t) + Month.bin_size_t (month t) + Int.bin_size_t (day t)
+        ;;
 
-      let bin_write_t buf ~pos t =
-        let pos = Int.bin_write_t buf ~pos (year t) in
-        let pos = Month.bin_write_t buf ~pos (month t) in
-        Int.bin_write_t buf ~pos (day t)
-      ;;
+        let bin_write_t buf ~pos t =
+          let pos = Int.bin_write_t buf ~pos (year t) in
+          let pos = Month.bin_write_t buf ~pos (month t) in
+          Int.bin_write_t buf ~pos (day t)
+        ;;
 
-      let bin_writer_t = {
-        Bin_prot.Type_class.
-        size   = bin_size_t;
-        write  = bin_write_t;
-      }
+        let bin_writer_t = {
+          Bin_prot.Type_class.
+          size   = bin_size_t;
+          write  = bin_write_t;
+        }
 
-      let bin_t = {
-        Bin_prot.Type_class.
-        reader = bin_reader_t;
-        writer = bin_writer_t;
-        shape = bin_shape_t;
-      }
-    end
-
-    include T
-
-    (** YYYY-MM-DD *)
-    let to_string_iso8601_extended t =
-      let buf = String.create 10 in
-      blit_string_of_int_4_digits buf ~pos:0 (year t);
-      buf.[4] <- '-';
-      blit_string_of_int_2_digits buf ~pos:5 (Month.to_int (month t));
-      buf.[7] <- '-';
-      blit_string_of_int_2_digits buf ~pos:8 (day t);
-      buf
-    ;;
-
-    let to_string = to_string_iso8601_extended
-
-    (** YYYYMMDD *)
-    let to_string_iso8601_basic t =
-      let buf = String.create 8 in
-      blit_string_of_int_4_digits buf ~pos:0 (year t);
-      blit_string_of_int_2_digits buf ~pos:4 (Month.to_int (month t));
-      blit_string_of_int_2_digits buf ~pos:6 (day t);
-      buf
-    ;;
-
-    (** MM/DD/YYYY *)
-    let to_string_american t =
-      let buf = String.create 10 in
-      blit_string_of_int_2_digits buf ~pos:0 (Month.to_int (month t));
-      buf.[2] <- '/';
-      blit_string_of_int_2_digits buf ~pos:3 (day t);
-      buf.[5] <- '/';
-      blit_string_of_int_4_digits buf ~pos:6 (year t);
-      buf
-    ;;
-
-    let parse_year4 str pos = parse_four_digits str pos
-
-    let parse_month str pos = Month.of_int_exn (parse_two_digits str pos)
-
-    let parse_day str pos = parse_two_digits str pos
-
-    (** YYYYMMDD *)
-    let of_string_iso8601_basic str ~pos =
-      if pos + 8 > String.length str then
-        invalid_arg "Date.of_string_iso8601_basic: pos + 8 > string length";
-      create_exn
-        ~y:(parse_year4 str pos)
-        ~m:(parse_month str (pos + 4))
-        ~d:(parse_day str (pos + 6))
-    ;;
-
-    (* WARNING: if you are going to change this function in a material way, be sure you
-       understand the implications of working in Stable *)
-    let of_string s =
-      let invalid () = failwith ("invalid date: " ^ s) in
-      let ensure b = if not b then invalid () in
-      let month_num ~year ~month ~day =
-        create_exn
-          ~y:(parse_year4 s year)
-          ~m:(parse_month s month)
-          ~d:(parse_day s day)
-      in
-      let month_abrv ~year ~month ~day =
-        create_exn
-          ~y:(parse_year4 s year)
-          ~m:(Month.of_string (String.sub s ~pos:month ~len:3))
-          ~d:(parse_day s day)
-      in
-      if String.contains s '/' then begin
-        let y,m,d =
-          match String.split s ~on:'/' with
-          | [a; b; c] ->
-            if String.length a = 4 then a,b,c (* y/m/d *)
-            else c,a,b (* m/d/y *)
-          | _ -> invalid ()
-        in
-        let year = Int.of_string y in
-        let year =
-          if year >= 100 then year
-          else if year < 75 then 2000 + year
-          else 1900 + year
-        in
-        let month = Month.of_int_exn (Int.of_string m) in
-        let day = Int.of_string d in
-        create_exn ~y:year ~m:month ~d:day
-      end else if String.contains s '-' then begin
-        (* yyyy-mm-dd *)
-        ensure (String.length s = 10 && s.[4] = '-' && s.[7] = '-');
-        month_num ~year:0 ~month:5 ~day:8;
-      end else if String.contains s ' ' then begin
-        if (String.length s = 11 && s.[2] = ' ' && s.[6] = ' ') then
-          (* DD MMM YYYY *)
-          month_abrv ~day:0 ~month:3 ~year:7
-        else begin
-          (* YYYY MMM DD *)
-          ensure (String.length s = 11 && s.[4] = ' ' && s.[8] = ' ');
-          month_abrv ~day:9 ~month:5 ~year:0;
-        end
-      end else if String.length s = 9 then begin
-        (* DDMMMYYYY *)
-        month_abrv ~day:0 ~month:2 ~year:5;
-      end else if String.length s = 8 then begin
-        (* assume YYYYMMDD *)
-        month_num ~year:0 ~month:4 ~day:6
-      end else invalid ()
-    ;;
-
-    let of_string s =
-      try of_string s with
-      | exn -> invalid_argf "Date.of_string (%s): %s" s (Exn.to_string exn) ()
-    ;;
-
-    module Sexpable = struct
-
-      module Old_date = struct
-        type t = { y: int; m: int; d: int; } [@@deriving sexp]
-
-        let to_date t = T.create_exn ~y:t.y ~m:(Month.of_int_exn t.m) ~d:t.d
+        let bin_t = {
+          Bin_prot.Type_class.
+          reader = bin_reader_t;
+          writer = bin_writer_t;
+          shape = bin_shape_t;
+        }
       end
 
-      let t_of_sexp = function
-        | Sexp.Atom s -> of_string s
-        | Sexp.List _ as sexp -> Old_date.to_date (Old_date.t_of_sexp sexp)
-      ;;
-
-      let t_of_sexp s =
-        try
-          t_of_sexp s
-        with
-        | (Of_sexp_error _) as exn -> raise exn
-        | Invalid_argument a -> of_sexp_error a s
-      ;;
-
-      let sexp_of_t t = Sexp.Atom (to_string t)
-    end
-    include Sexpable
-
-    module C = Comparable.Make_binable (struct
       include T
+
+      (** YYYY-MM-DD *)
+      let to_string_iso8601_extended t =
+        let buf = String.create 10 in
+        blit_string_of_int_4_digits buf ~pos:0 (year t);
+        buf.[4] <- '-';
+        blit_string_of_int_2_digits buf ~pos:5 (Month.to_int (month t));
+        buf.[7] <- '-';
+        blit_string_of_int_2_digits buf ~pos:8 (day t);
+        buf
+      ;;
+
+      let to_string = to_string_iso8601_extended
+
+      (** YYYYMMDD *)
+      let to_string_iso8601_basic t =
+        let buf = String.create 8 in
+        blit_string_of_int_4_digits buf ~pos:0 (year t);
+        blit_string_of_int_2_digits buf ~pos:4 (Month.to_int (month t));
+        blit_string_of_int_2_digits buf ~pos:6 (day t);
+        buf
+      ;;
+
+      (** MM/DD/YYYY *)
+      let to_string_american t =
+        let buf = String.create 10 in
+        blit_string_of_int_2_digits buf ~pos:0 (Month.to_int (month t));
+        buf.[2] <- '/';
+        blit_string_of_int_2_digits buf ~pos:3 (day t);
+        buf.[5] <- '/';
+        blit_string_of_int_4_digits buf ~pos:6 (year t);
+        buf
+      ;;
+
+      let parse_year4 str pos = parse_four_digits str pos
+
+      let parse_month str pos = Month.of_int_exn (parse_two_digits str pos)
+
+      let parse_day str pos = parse_two_digits str pos
+
+      (** YYYYMMDD *)
+      let of_string_iso8601_basic str ~pos =
+        if pos + 8 > String.length str then
+          invalid_arg "Date.of_string_iso8601_basic: pos + 8 > string length";
+        create_exn
+          ~y:(parse_year4 str pos)
+          ~m:(parse_month str (pos + 4))
+          ~d:(parse_day str (pos + 6))
+      ;;
+
+      (* WARNING: if you are going to change this function in a material way, be sure you
+         understand the implications of working in Stable *)
+      let of_string s =
+        let invalid () = failwith ("invalid date: " ^ s) in
+        let ensure b = if not b then invalid () in
+        let month_num ~year ~month ~day =
+          create_exn
+            ~y:(parse_year4 s year)
+            ~m:(parse_month s month)
+            ~d:(parse_day s day)
+        in
+        let month_abrv ~year ~month ~day =
+          create_exn
+            ~y:(parse_year4 s year)
+            ~m:(Month.of_string (String.sub s ~pos:month ~len:3))
+            ~d:(parse_day s day)
+        in
+        if String.contains s '/' then begin
+          let y,m,d =
+            match String.split s ~on:'/' with
+            | [a; b; c] ->
+              if String.length a = 4 then a,b,c (* y/m/d *)
+              else c,a,b (* m/d/y *)
+            | _ -> invalid ()
+          in
+          let year = Int.of_string y in
+          let year =
+            if year >= 100 then year
+            else if year < 75 then 2000 + year
+            else 1900 + year
+          in
+          let month = Month.of_int_exn (Int.of_string m) in
+          let day = Int.of_string d in
+          create_exn ~y:year ~m:month ~d:day
+        end else if String.contains s '-' then begin
+          (* yyyy-mm-dd *)
+          ensure (String.length s = 10 && s.[4] = '-' && s.[7] = '-');
+          month_num ~year:0 ~month:5 ~day:8;
+        end else if String.contains s ' ' then begin
+          if (String.length s = 11 && s.[2] = ' ' && s.[6] = ' ') then
+            (* DD MMM YYYY *)
+            month_abrv ~day:0 ~month:3 ~year:7
+          else begin
+            (* YYYY MMM DD *)
+            ensure (String.length s = 11 && s.[4] = ' ' && s.[8] = ' ');
+            month_abrv ~day:9 ~month:5 ~year:0;
+          end
+        end else if String.length s = 9 then begin
+          (* DDMMMYYYY *)
+          month_abrv ~day:0 ~month:2 ~year:5;
+        end else if String.length s = 8 then begin
+          (* assume YYYYMMDD *)
+          month_num ~year:0 ~month:4 ~day:6
+        end else invalid ()
+      ;;
+
+      let of_string s =
+        try of_string s with
+        | exn -> invalid_argf "Date.of_string (%s): %s" s (Exn.to_string exn) ()
+      ;;
+
+      module Sexpable = struct
+
+        module Old_date = struct
+          type t = { y: int; m: int; d: int; } [@@deriving sexp]
+
+          let to_date t = T.create_exn ~y:t.y ~m:(Month.of_int_exn t.m) ~d:t.d
+        end
+
+        let t_of_sexp = function
+          | Sexp.Atom s -> of_string s
+          | Sexp.List _ as sexp -> Old_date.to_date (Old_date.t_of_sexp sexp)
+        ;;
+
+        let t_of_sexp s =
+          try
+            t_of_sexp s
+          with
+          | (Of_sexp_error _) as exn -> raise exn
+          | Invalid_argument a -> of_sexp_error a s
+        ;;
+
+        let sexp_of_t t = Sexp.Atom (to_string t)
+      end
       include Sexpable
-      include Binable
 
       let compare t1 t2 =
         let n = Int.compare (year t1) (year t2) in
@@ -286,12 +282,12 @@ module Stable = struct
           if n <> 0 then n
           else Int.compare (day t1) (day t2)
       ;;
-    end)
 
-    include C
-    module O = struct
-      include (C : Comparable.Infix with type t := t)
+      include (val Comparator.Stable.V1.make ~compare ~sexp_of_t)
     end
+
+    include Without_comparable
+    include Comparable.Stable.V1.Make (Without_comparable)
   end
 
   let%test_module "Date.V1" = (module Stable_unit_test.Make (struct
@@ -308,7 +304,16 @@ module Stable = struct
   end))
 end
 
-include Stable.V1
+module Without_comparable = Stable.V1.Without_comparable
+
+include Without_comparable
+
+module C = Comparable.Make_binable_using_comparator (Without_comparable)
+
+include C
+module O = struct
+  include (C : Comparable.Infix with type t := t)
+end
 
 include (Hashable.Make_binable (struct
   include T

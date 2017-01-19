@@ -46,21 +46,35 @@ val sign : t -> Sign.t
     to [Zero]).  Also maps nan to [Zero].  Using this function is weakly discouraged. *)
 val robust_sign : t -> Sign.t
 
-(** [gen_between ~nan ~lower_bound ~upper_bound] creates a Quickcheck generator
-    producing [t] values that are either finite numbers satisfying [lower_bound] and
-    [upper_bound], or NaN values satisfying the [nan] distribution.  Raises an exception
-    if no values satisfy [lower_bound] and [upper_bound].  [~nan:Without] produces no
-    NaN values, [~nan:With_single] produces only the single NaN value [Float.nan], and
-    [~nan:With_all] produces all valid IEEE NaN values. *)
-val gen_between
-  :  nan : Nan_dist.t
-  -> lower_bound : t Maybe_bound.t
-  -> upper_bound : t Maybe_bound.t
-  -> t Quickcheck.Generator.t
+(** [gen_uniform_excl lo hi] creates a Quickcheck generator producing finite [t] values
+    between [lo] and [hi], exclusive.  The generator approximates a uniform distribution
+    over the interval (lo, hi).  Raises an exception if [lo] is not finite, [hi] is not
+    finite, or the requested range is empty.
+
+    The implementation chooses values uniformly distributed between 0 (inclusive) and 1
+    (exclusive) up to 52 bits of precision, then scales that interval to the requested
+    range.  Due to rounding errors and non-uniform floating point precision, the resulting
+    distribution may not be precisely uniform and may not include all values between [lo]
+    and [hi].
+*)
+val gen_uniform_excl : t -> t -> t Quickcheck.Generator.t
+
+(** [gen_incl lo hi] creates a Quickcheck generator that produces values between [lo] and
+    [hi], inclusive, approximately uniformly distributed, with extra weight given to
+    generating the endpoints [lo] and [hi].  Raises an exception if [lo] is not finite,
+    [hi] is not finite, or the requested range is empty. *)
+val gen_incl : t -> t -> t Quickcheck.Generator.t
+
 
 (** [gen_finite] produces all finite [t] values, excluding infinities and all NaN
     values. *)
 val gen_finite : t Quickcheck.Generator.t
+
+(** [gen_positive] produces all (strictly) positive finite [t] values. *)
+val gen_positive : t Quickcheck.Generator.t
+
+(** [gen_negative] produces all (strictly) negative finite [t] values. *)
+val gen_negative : t Quickcheck.Generator.t
 
 (** [gen_without_nan] produces all finite and infinite [t] values, excluding all NaN
     values. *)

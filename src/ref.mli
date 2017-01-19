@@ -1,26 +1,11 @@
 open! Import
 open Perms.Export
 
-type 'a t = 'a ref = { mutable contents : 'a }
-[@@deriving bin_io, compare, sexp, typerep]
+type 'a t = 'a Base.Ref.t = { mutable contents : 'a }
+[@@deriving bin_io, typerep]
 
-include Container.S1 with type 'a t := 'a t
-
-val create : 'a -> 'a t
-
-val (!) : 'a t -> 'a
-
-val (:=) : 'a t -> 'a -> unit
-
-(** [swap t1 t2] swaps the values in [t1] and [t2]. *)
-val swap : 'a t -> 'a t -> unit
-
-(** [replace t f] is [t := f !t] *)
-val replace : 'a t -> ('a -> 'a) -> unit
-
-(** [set_temporarily t a ~f] sets [t] to [a], calls [f ()], and then restores [t] to its
-    value prior to [set_temporarily] being called, whether [f] returns or raises. *)
-val set_temporarily : 'a t -> 'a -> f:(unit -> 'b) -> 'b
+include module type of struct include Base.Ref end
+  with type 'a t := 'a t
 
 module Permissioned : sig
   type ('a, -'perms) t [@@deriving sexp, bin_io]

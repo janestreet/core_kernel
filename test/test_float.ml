@@ -83,9 +83,7 @@ let%expect_test "[Sexp.of_float_style = `Underscores]" =
 let%test_unit "round_nearest_half_to_even quickcheck" =
   Quickcheck.test
     ~trials:200
-    (Int.gen_between
-       ~lower_bound:(Maybe_bound.Incl (-100_000_000))
-       ~upper_bound:(Maybe_bound.Incl   100_000_000))
+    (Int.gen_incl (-100_000_000) 100_000_000)
     ~f:(fun i ->
       let x = float i /. 10. in
       let y = Float.round_nearest_half_to_even x in
