@@ -119,10 +119,7 @@ include (struct
           (backtrace ("<backtrace elided in test>"))
           (subscriber (
             Bus.Subscriber.t (
-              (id       2)
-              (callback _)
-              (on_callback_raise ())
-              (subscribed_from lib/core_kernel/test/test_bus.ml:LINE:COL))))))) |}];
+              (id 2) (subscribed_from lib/core_kernel/test/test_bus.ml:LINE:COL))))))) |}];
   ;;
 
   let%expect_test "~allow_subscription_after_first_write:false" =
@@ -286,15 +283,12 @@ include (struct
       (raised (
         exn (
           "[Bus.write] called on closed bus"
-          ((name ())
-           (callback_arity Arity1)
+          ((callback_arity Arity1)
            (created_from lib/core_kernel/test/test_bus.ml:LINE:COL)
            (allow_subscription_after_first_write false)
            (state                                Closed)
            (write_ever_called                    true)
-           (subscribers ())
-           (write             _)
-           (on_callback_raise <fun>))
+           (subscribers ()))
           lib/core_kernel/src/bus.ml:LINE:COL))) |}];
   ;;
 

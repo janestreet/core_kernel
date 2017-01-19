@@ -41,9 +41,15 @@ module Subscriber = struct
     ; on_callback_raise : (Error.t -> unit) option
     ; subscribed_from   : Source_code_position.t
     }
-  [@@deriving fields, sexp_of]
+  [@@deriving fields]
 
-  let sexp_of_t _ t = Sexp.List [ Atom "Bus.Subscriber.t"; t |> [%sexp_of: _ t] ]
+  let sexp_of_t _ { callback = _; id; on_callback_raise; subscribed_from } : Sexp.t =
+    List [ Atom "Bus.Subscriber.t"
+         ; [%message ""
+                       (id : Subscriber_id.t)
+                       (on_callback_raise : (Error.t -> unit) sexp_option)
+                       (subscribed_from : Source_code_position.t)]]
+  ;;
 
   let invariant invariant_a t =
     Invariant.invariant [%here] t [%sexp_of: _ t] (fun () ->
@@ -65,7 +71,6 @@ module Subscriber = struct
 end
 
 type ('callback, 'phantom) t =
-  (* Fields in this record are ordered to aid readability of [%sexp_of: t]. *)
   { name                                 : Info.t option
   ; callback_arity                       : 'callback Callback_arity.t
   ; created_from                         : Source_code_position.t
@@ -79,7 +84,28 @@ type ('callback, 'phantom) t =
      reuse the closure without allocating during the common operation, [Bus.write]. *)
   ; mutable write                        : 'callback
   ; on_callback_raise                    : Error.t -> unit }
-[@@deriving fields, sexp_of]
+[@@deriving fields]
+
+let sexp_of_t _ _
+      { allow_subscription_after_first_write
+      ; callback_arity
+      ; created_from
+      ; name
+      ; on_callback_raise                    = _
+      ; state
+      ; subscribers
+      ; write                                = _
+      ; write_ever_called } =
+  [%message
+    ""
+      (name                                 : Info.t sexp_option)
+      (callback_arity                       : _ Callback_arity.t)
+      (created_from                         : Source_code_position.t)
+      (allow_subscription_after_first_write : bool)
+      (state                                : State.t)
+      (write_ever_called                    : bool)
+      (subscribers                          : _ Subscriber.t Subscriber_id.Map.t)]
+;;
 
 type ('callback, 'phantom) bus = ('callback, 'phantom) t [@@deriving sexp_of]
 
