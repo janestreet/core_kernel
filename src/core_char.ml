@@ -5,13 +5,21 @@ module List  = Core_list
 
 type t = char [@@deriving typerep]
 
+module Z =
+  Identifiable.Extend (Base.Char) (struct
+    type t = char [@@deriving bin_io]
+  end)
+
+include (Z : module type of struct include Z end
+         with module Replace_polymorphic_compare := Z.Replace_polymorphic_compare)
+
+(* include [Base.Char] after the application of [Identifiable.Extend] to replace the [Comparable]
+   functions with the pervasive versions *)
 include (Base.Char
          : module type of struct include Base.Char end
          with type t := t)
 
-include Identifiable.Extend (Base.Char) (struct
-    type t = char [@@deriving bin_io]
-  end)
+module Replace_polymorphic_compare = Base.Char
 
 module For_quickcheck = struct
 

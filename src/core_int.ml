@@ -21,9 +21,15 @@ end
 
 type t = int [@@deriving typerep]
 
-include Identifiable.Extend (Base.Int) (struct
+module Z =
+  Identifiable.Extend (Base.Int) (struct
     type t = int [@@deriving bin_io]
   end)
+
+include (Z : module type of struct include Z end
+         with module Replace_polymorphic_compare := Z.Replace_polymorphic_compare)
+
+module Replace_polymorphic_compare = Base.Int
 
 module Hex = struct
   type nonrec t = t [@@deriving typerep, bin_io]

@@ -30,19 +30,19 @@ let%expect_test "[get], [set]" =
     (()) |}];
   show_raise (fun () -> set t (-1) None);
   [%expect {|
-    (raised (exn (Invalid_argument Weak.set))) |}];
+    (raised (Invalid_argument Weak.set)) |}];
   show_raise (fun () -> set t 1 None);
   [%expect {|
-    (raised (exn (Invalid_argument Weak.set))) |}];
+    (raised (Invalid_argument Weak.set)) |}];
   print_s [%sexp (get t 0 : _ Heap_block.t option)];
   [%expect {|
     () |}];
   show_raise (fun () -> ignore (get t (-1) : _ option));
   [%expect {|
-    (raised (exn (Invalid_argument Weak.get_key))) |}];
+    (raised (Invalid_argument Weak.get_key)) |}];
   show_raise (fun () -> ignore (get t 1 : _ option));
   [%expect {|
-    (raised (exn (Invalid_argument Weak.get_key))) |}];
+    (raised (Invalid_argument Weak.get_key)) |}];
   let b = block 13 in
   set t 0 (Some b);
   print t;

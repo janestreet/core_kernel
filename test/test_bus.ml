@@ -113,13 +113,12 @@ include (struct
     show_raise ~hide_positions:true (fun () -> write bus ());
     [%expect {|
       (raised (
-        exn (
-          "Bus subscriber raised"
-          (exn "subscriber raising")
-          (backtrace ("<backtrace elided in test>"))
-          (subscriber (
-            Bus.Subscriber.t (
-              (id 2) (subscribed_from lib/core_kernel/test/test_bus.ml:LINE:COL))))))) |}];
+        "Bus subscriber raised"
+        (exn "subscriber raising")
+        (backtrace ("<backtrace elided in test>"))
+        (subscriber (
+          Bus.Subscriber.t (
+            (id 2) (subscribed_from lib/core_kernel/test/test_bus.ml:LINE:COL)))))) |}];
   ;;
 
   let%expect_test "~allow_subscription_after_first_write:false" =
@@ -281,15 +280,14 @@ include (struct
     show_raise ~hide_positions:true (fun () -> write bus ());
     [%expect {|
       (raised (
-        exn (
-          "[Bus.write] called on closed bus"
-          ((callback_arity Arity1)
-           (created_from lib/core_kernel/test/test_bus.ml:LINE:COL)
-           (allow_subscription_after_first_write false)
-           (state                                Closed)
-           (write_ever_called                    true)
-           (subscribers ()))
-          lib/core_kernel/src/bus.ml:LINE:COL))) |}];
+        "[Bus.write] called on closed bus"
+        ((callback_arity Arity1)
+         (created_from lib/core_kernel/test/test_bus.ml:LINE:COL)
+         (allow_subscription_after_first_write false)
+         (state                                Closed)
+         (write_ever_called                    true)
+         (subscribers ()))
+        lib/core_kernel/src/bus.ml:LINE:COL)) |}];
   ;;
 
   let%expect_test "after [close], [write t] without the value to be written" =

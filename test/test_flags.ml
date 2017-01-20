@@ -12,15 +12,13 @@ let%expect_test _ =
     show_raise ~hide_positions:true (fun () -> ignore (create ~bit : Int63.t)));
   [%expect {|
     (raised (
-      exn (
-        "Flags.create got invalid ~bit (must be between 0 and 62)"
-        -1
-        lib/core_kernel/src/flags.ml:LINE:COL)))
+      "Flags.create got invalid ~bit (must be between 0 and 62)"
+      -1
+      lib/core_kernel/src/flags.ml:LINE:COL))
     (raised (
-      exn (
-        "Flags.create got invalid ~bit (must be between 0 and 62)"
-        63
-        lib/core_kernel/src/flags.ml:LINE:COL))) |}];
+      "Flags.create got invalid ~bit (must be between 0 and 62)"
+      63
+      lib/core_kernel/src/flags.ml:LINE:COL)) |}];
 ;;
 
 let%expect_test _ =
@@ -106,20 +104,18 @@ let%expect_test _ =
       ignore (t_of_sexp (Sexp.of_string string) : t)));
   [%expect {|
     (input a)
-    (raised (
-      exn (Sexplib.Conv.Of_sexp_error (Failure "list_of_sexp: list needed") a)))
+    (raised (Sexplib.Conv.Of_sexp_error (Failure "list_of_sexp: list needed") a))
     (input "(())")
     (raised (
-      exn (Sexplib.Conv.Of_sexp_error (Failure "string_of_sexp: atom needed") ())))
+      Sexplib.Conv.Of_sexp_error (Failure "string_of_sexp: atom needed") ()))
     (input "(a ())")
     (raised (
-      exn (Sexplib.Conv.Of_sexp_error (Failure "string_of_sexp: atom needed") ())))
+      Sexplib.Conv.Of_sexp_error (Failure "string_of_sexp: atom needed") ()))
     (input "(d)")
     (raised (
-      exn (
-        Sexplib.Conv.Of_sexp_error
-        (Failure "Flags.t_of_sexp got unknown name: d")
-        (d)))) |}];
+      Sexplib.Conv.Of_sexp_error
+      (Failure "Flags.t_of_sexp got unknown name: d")
+      (d))) |}];
 ;;
 
 (* +, - *)
