@@ -1,1 +1,1 @@
-include Span_intf.Span
+include Span_intf.Span with type underlying = float

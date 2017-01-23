@@ -1,4 +1,4 @@
-(* Modules that are not overridden by Core.Std *)
+(** Modules that are not overridden by Core.Std *)
 
 open! Import
 
@@ -155,3 +155,5 @@ let () =
 ;;
 
 let am_running_inline_test = Ppx_inline_test_lib.Runtime.am_running_inline_test
+
+let sec = Time_float.Span.of_sec

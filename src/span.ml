@@ -17,6 +17,7 @@ module Stable = struct
 
     module type Like_a_float = sig
       type t [@@deriving bin_io]
+
       include Comparable.S_common  with type t := t
       include Comparable.With_zero with type t := t
       include Hashable_binable     with type t := t
@@ -32,7 +33,9 @@ module Stable = struct
     end
 
     module T : sig
-      type t = private float [@@deriving bin_io]
+      type underlying = float [@@deriving hash]
+      type t = private underlying [@@deriving bin_io, hash]
+
       include Like_a_float with type t := t
       include Robustly_comparable  with type t := t
 
@@ -50,8 +53,15 @@ module Stable = struct
       end
 
       val to_parts : t -> Parts.t
+
+      val next : t -> t
+      val prev : t -> t
     end = struct
-      type t = float
+      type underlying = float [@@deriving hash]
+      type t = underlying [@@deriving hash]
+
+      let next t = Float.one_ulp `Up t
+      let prev t = Float.one_ulp `Down t
 
       (* IF THIS REPRESENTATION EVER CHANGES, ENSURE THAT EITHER
          (1) all values serialize the same way in both representations, or
@@ -161,14 +171,19 @@ module Stable = struct
 
     let ( ** ) f (t:T.t) = T.of_float (f *. (t :> float))
     (* Division by 1E3 is more accurate than multiplying by 1E-3 *)
-    let of_ns x        = T.of_float (x /. T.Constant.nanoseconds_per_second)
-    let of_us x        = T.of_float (x /. T.Constant.microseconds_per_second)
-    let of_ms x        = T.of_float (x /. T.Constant.milliseconds_per_second)
-    let of_sec x       = T.of_float x
-    let of_int_sec x   = T.of_float (Float.of_int x)
-    let of_min x       = x ** T.Constant.minute
-    let of_hr x        = x ** T.Constant.hour
-    let of_day x       = x ** T.Constant.day
+    let of_ns x              = T.of_float (x /. T.Constant.nanoseconds_per_second)
+    let of_us x              = T.of_float (x /. T.Constant.microseconds_per_second)
+    let of_ms x              = T.of_float (x /. T.Constant.milliseconds_per_second)
+    let of_sec x             = T.of_float x
+    let of_int_sec x         = of_sec (Float.of_int x)
+    let of_int32_seconds sec = of_sec (Int32.to_float sec)
+    (* Note that [Int63.to_float] can lose precision, but only on inputs large enough that
+       [of_sec] in either the Time_ns or Time_float case would lose precision (or just be
+       plain out of bounds) anyway. *)
+    let of_int63_seconds sec = of_sec (Int63.to_float sec)
+    let of_min x             = x ** T.Constant.minute
+    let of_hr x              = x ** T.Constant.hour
+    let of_day x             = x ** T.Constant.day
 
     let randomize (t:T.t) ~percent =
       if (percent < 0. || percent > 1.0) then
@@ -447,7 +462,7 @@ let%test_unit "Span.to_string_hum" =
 include Pretty_printer.Register (struct
   type nonrec t = t
   let to_string = to_string
-  let module_name = "Core_kernel.Span"
+  let module_name = "Core_kernel.Std.Time.Span"
 end)
 
 module C = struct

@@ -2,7 +2,10 @@ open! Import
 open Std_internal
 
 module type Span = sig
-  type t = private float [@@deriving bin_io, sexp] (** number of seconds *)
+  (** Span.t represents a span of time (e.g. 7 minutes, 3 hours, 12.8 days).  The span
+     may be positive or negative. *)
+  type underlying
+  type t = private underlying [@@deriving bin_io, sexp]
 
   (** Parts represents the individual parts of a Span as if it were written out (it is the
       counterpart to create).  For example, (sec 90.) is represented by {Parts.hr = 0;
@@ -21,7 +24,6 @@ module type Span = sig
 
   include Comparable_binable   with type t := t
   include Comparable.With_zero with type t := t
-  include Floatable            with type t := t
   include Hashable_binable     with type t := t
   include Pretty_printer.S     with type t := t
   include Robustly_comparable  with type t := t
@@ -83,14 +85,16 @@ module type Span = sig
 
   (** {6 converters} *)
 
-  val of_ns      : float -> t
-  val of_us      : float -> t
-  val of_ms      : float -> t
-  val of_sec     : float -> t
-  val of_int_sec : int   -> t
-  val of_min     : float -> t
-  val of_hr      : float -> t
-  val of_day     : float -> t
+  val of_ns            : float -> t
+  val of_us            : float -> t
+  val of_ms            : float -> t
+  val of_sec           : float -> t
+  val of_int_sec       : int   -> t
+  val of_int32_seconds : Int32.t -> t
+  val of_int63_seconds : Int63.t -> t
+  val of_min           : float -> t
+  val of_hr            : float -> t
+  val of_day           : float -> t
 
   val to_ns  : t -> float
   val to_us  : t -> float
@@ -115,6 +119,12 @@ module type Span = sig
   val scale : t -> float -> t
   val (/)   : t -> float -> t
   val (//)  : t -> t -> float
+
+  (** [next t] return the next [t] (next t > t) *)
+  val next : t -> t
+
+  (** [prev t] return the previous [t] (prev t < t) *)
+  val prev : t -> t
 
   (** [to_short_string t] pretty-prints approximate time span using no more than
       five characters if the span is positive, and six if the span is negative.
@@ -161,10 +171,10 @@ module type Span = sig
 
   module Stable : sig
     module V1 : sig
-      type nonrec t = t [@@deriving sexp, bin_io, compare]
+      type nonrec t = t [@@deriving sexp, bin_io, compare, hash]
     end
     module V2 : sig
-      type nonrec t = t [@@deriving sexp, bin_io, compare]
+      type nonrec t = t [@@deriving sexp, bin_io, compare, hash]
     end
   end
 end

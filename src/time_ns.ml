@@ -443,8 +443,8 @@ let%test_unit "random smoke" =
 ;;
 
 module Utc : sig
-  val to_date_and_span_since_start_of_day : t -> Date.t * Span.t
-  val of_date_and_span_since_start_of_day : Date.t -> Span.t -> t
+  val to_date_and_span_since_start_of_day : t -> Date0.t * Span.t
+  val of_date_and_span_since_start_of_day : Date0.t -> Span.t -> t
 end = struct
   open Int.O
 
@@ -538,19 +538,19 @@ end = struct
     in
     let month, day_of_month = calculate_month_and_day_of_month ~day_of_year ~year in
     let date =
-      Date.create_exn ~y:year ~m:(Month.of_int_exn month) ~d:day_of_month
+      Date0.create_exn ~y:year ~m:(Month.of_int_exn month) ~d:day_of_month
     in
     let span_since_start_of_day = Span.of_int63_ns ns_since_start_of_day in
     date, span_since_start_of_day
   ;;
 
-  let epoch_date = Date.create_exn ~y:1970 ~m:Jan ~d:1
+  let epoch_date = Date0.create_exn ~y:1970 ~m:Jan ~d:1
   ;;
 
   let of_date_and_span_since_start_of_day date span_since_start_of_day =
     assert (Span.( >= ) span_since_start_of_day Span.zero
             && Span.( < ) span_since_start_of_day Span.day);
-    let days_from_epoch = Date.diff date epoch_date in
+    let days_from_epoch = Date0.diff date epoch_date in
     let span_in_days_since_epoch = Span.scale_int Span.day days_from_epoch in
     let span_since_epoch = Span.( + ) span_in_days_since_epoch span_since_start_of_day in
     of_span_since_epoch span_since_epoch
@@ -651,7 +651,7 @@ module Alternate_sexp = struct
   end
   let to_string t =
     let date, span_since_start_of_day = Utc.to_date_and_span_since_start_of_day t in
-    Date.to_string date
+    Date0.to_string date
     ^ " "
     ^ Ofday_as_span.to_string span_since_start_of_day
     ^ "Z"
@@ -663,7 +663,7 @@ module Alternate_sexp = struct
     let ofday_string =
       String.chop_suffix_exn ofday_string_with_zone ~suffix:"Z"
     in
-    let date = Date.of_string date_string in
+    let date = Date0.of_string date_string in
     let ofday = Ofday_as_span.of_string ofday_string in
     Utc.of_date_and_span_since_start_of_day date ofday
 

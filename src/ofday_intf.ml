@@ -12,14 +12,16 @@ module type Ofday = sig
       equivalent to knowing the current [t].
 
       (See {!Zone} for tools to help you cope with DST.) *)
-  type t = private float [@@deriving bin_io, sexp]
+  type underlying
+  type t = private underlying [@@deriving bin_io, sexp]
 
   include Comparable_binable   with type t := t
   include Comparable.With_zero with type t := t
-  include Floatable            with type t := t
   include Hashable_binable     with type t := t
   include Pretty_printer.S     with type t := t
   include Robustly_comparable  with type t := t
+
+  module Span : Span_intf.Span
 
   (** [of_string] supports and correctly interprets 12h strings with the following suffixes:
 
@@ -53,6 +55,12 @@ module type Ofday = sig
       is not in the same 24-hour day. *)
   val add : t -> Span.t -> t option
   val sub : t -> Span.t -> t option
+
+  (** [next t] return the next [t] (next t > t) or None if [t] = end of day. *)
+  val next : t -> t option
+
+  (** [prev t] return the previous [t] (prev t < t) or None if [t] = start of day. *)
+  val prev : t -> t option
 
   (** [diff t1 t2] returns the difference in time between two ofdays, as if they occurred on
       the same 24-hour day. *)

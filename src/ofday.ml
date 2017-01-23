@@ -1,6 +1,6 @@
 open! Import
 open Std_internal
-open Time_internal.Helpers
+open Digit_string_helpers
 
 (* Create an abstract type for Ofday to prevent us from confusing it with
     other floats.
@@ -8,7 +8,8 @@ open Time_internal.Helpers
 module Stable = struct
   module V1 = struct
     module T : sig
-      type t = private float [@@deriving bin_io, hash]
+      type underlying = float
+      type t = private underlying [@@deriving bin_io, hash]
       include Comparable.S_common  with type t := t
       include Comparable.With_zero with type t := t
       include Hashable_binable     with type t := t
@@ -17,12 +18,15 @@ module Stable = struct
       include Floatable            with type t := t
       val add                        : t -> Span.t -> t option
       val sub                        : t -> Span.t -> t option
+      val next                       : t -> t option
+      val prev                       : t -> t option
       val diff                       : t -> t -> Span.t
       val of_span_since_start_of_day : Span.t -> t
       val to_span_since_start_of_day : t -> Span.t
       val start_of_day               : t
     end = struct
       (* Number of seconds since midnight. *)
+      type underlying = Float.t
       include Float
       (* IF THIS REPRESENTATION EVER CHANGES, ENSURE THAT EITHER
          (1) all values serialize the same way in both representations, or
@@ -71,6 +75,20 @@ module Stable = struct
       let sub (t:t) (span:Span.t) =
         let t = t -. (Span.to_sec span) in
         if is_valid t then Some t else None
+
+      let next t =
+        let candidate = Float.one_ulp `Up t in
+        if is_valid candidate
+        then Some candidate
+        else None
+      ;;
+
+      let prev t =
+        let candidate = Float.one_ulp `Down t in
+        if is_valid candidate
+        then Some candidate
+        else None
+      ;;
 
       let diff t1 t2 =
         Span.(-) (to_span_since_start_of_day t1) (to_span_since_start_of_day t2)
@@ -254,7 +272,7 @@ module Stable = struct
     include Pretty_printer.Register (struct
       type nonrec t = t
       let to_string = to_string
-      let module_name = "Core_kernel.Ofday"
+      let module_name = "Core_kernel.Std.Time.Ofday"
     end)
 
     (* lifted allowed meridiem suffixes out so that tests can reuse them *)
@@ -406,8 +424,6 @@ module Stable = struct
     ;;
 
     let sexp_of_t span = Sexp.Atom (to_string span)
-
-    let of_float f = T.of_span_since_start_of_day (Span.of_sec f)
   end
 end
 

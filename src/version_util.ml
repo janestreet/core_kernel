@@ -42,7 +42,7 @@ type t = {
   hostname                    : string sexp_option;
   kernel                      : string sexp_option;
   build_date                  : Date.t sexp_option;
-  build_time                  : Ofday.t sexp_option;
+  build_time                  : Time_float.Ofday.t sexp_option;
   x_library_inlining          : bool;
   dynlinkable_code            : bool;
   ocaml_version               : string;

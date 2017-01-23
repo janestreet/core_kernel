@@ -202,10 +202,10 @@ module type Time_ns = sig
     (** [to_date_and_span_since_start_of_day] computes the date and intraday-offset of a
         time in UTC.  It may be slower than [Core.Std.Time_ns.to_date_ofday], as this
         function does not cache partial results while the latter does. *)
-    val to_date_and_span_since_start_of_day : t -> Date.t * Span.t
+    val to_date_and_span_since_start_of_day : t -> Date0.t * Span.t
 
     (** The inverse of [to_date_and_span_since_start_of_day]. *)
-    val of_date_and_span_since_start_of_day : Date.t -> Span.t -> t
+    val of_date_and_span_since_start_of_day : Date0.t -> Span.t -> t
   end
 
   module Stable : sig
