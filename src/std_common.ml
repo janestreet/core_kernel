@@ -1,6 +1,6 @@
 open! Import
 
-(* Modules that are overridden by Core.Std *)
+(* Modules that are overridden by Core *)
 module Bigbuffer         = Bigbuffer
 module Bigstring         = Bigstring
 module Bigstring_marshal = Bigstring_marshal

@@ -1,5 +1,5 @@
 open Core_bench.Std
-open Core.Std
+open Core
 
 let enqueue_tests =
   List.map [10;1_000_000] ~f:(fun n ->

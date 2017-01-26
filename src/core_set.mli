@@ -1,4 +1,4 @@
-(** This module defines the [Set] module for [Core.Std].  We use "core_set" as the file
+(** This module defines the [Set] module for [Core].  We use "core_set" as the file
     name rather than "set" to avoid conflicts with OCaml's standard set module.
 
     This module uses the same organizational approach as [Core_map].  See the

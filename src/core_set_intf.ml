@@ -1,4 +1,4 @@
-(** This module defines interfaces used in [Core.Std.Set].  This module uses the same
+(** This module defines interfaces used in [Core.Set].  This module uses the same
     organizational approach as [Core_map_intf].  See the documentation in core_map.mli for
     a description of the approach.
 

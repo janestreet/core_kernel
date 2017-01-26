@@ -1,4 +1,4 @@
-(** This module defines the [Map] module for [Core.Std].  We use "core_map" as the file
+(** This module defines the [Map] module for [Core].  We use "core_map" as the file
     name rather than "map" to avoid conflicts with OCaml's standard map module.  In this
     documentation, we use [Map] to mean this module, not the OCaml standard one.
 

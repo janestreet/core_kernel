@@ -27,7 +27,7 @@
    Similarly testing with hastable data that are immediate vs non-immediate had no
    appreciable effect on the test results.
 *)
-open Core.Std
+open Core
 open Core_bench.Std
 
 module Re2 = Re2.Std.Re2
@@ -725,12 +725,12 @@ module Bench_impl (Config : Config) (Impl : Impl) = struct
 end
 
 module Hash_impl : Impl = struct
-  include Core.Std.Hashtbl
+  include Core.Hashtbl
   let module_name = "Hashtbl"
 end
 
 module Pool_impl : Impl = struct
-  include Core.Std.Pooled_hashtbl
+  include Core.Pooled_hashtbl
   let module_name = "Pooled_hashtbl"
 end
 

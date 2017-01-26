@@ -1,4 +1,4 @@
-(** Modules that are not overridden by Core.Std *)
+(** Modules that are not overridden by Core *)
 
 open! Import
 

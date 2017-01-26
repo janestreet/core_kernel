@@ -46,8 +46,8 @@ module type Span = sig
   val zero : t
 
   (** The limits of [t] are chosen to allow conversion to and from [float] spans with
-      microsecond precision.  This property supports {!Core.Std.Timing_wheel_float} in
-      particular.  See also {!Core.Std.Time}. *)
+      microsecond precision.  This property supports {!Core.Timing_wheel_float} in
+      particular.  See also {!Core.Time}. *)
   val min_value : t
   val max_value : t
 
@@ -200,7 +200,7 @@ module type Time_ns = sig
 
   module Utc : sig
     (** [to_date_and_span_since_start_of_day] computes the date and intraday-offset of a
-        time in UTC.  It may be slower than [Core.Std.Time_ns.to_date_ofday], as this
+        time in UTC.  It may be slower than [Core.Time_ns.to_date_ofday], as this
         function does not cache partial results while the latter does. *)
     val to_date_and_span_since_start_of_day : t -> Date0.t * Span.t
 

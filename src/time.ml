@@ -431,7 +431,7 @@ module Make (Time0 : Time0_intf.S) = struct
   let of_string s =
     let default_zone () = Zone.utc in
     let find_zone zone_name =
-      failwithf "unable to lookup Zone %s.  Try using Core.Std.Time.of_string" zone_name ()
+      failwithf "unable to lookup Zone %s.  Try using Core.Time.of_string" zone_name ()
     in
     of_string_gen ~default_zone ~find_zone s
   ;;

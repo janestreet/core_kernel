@@ -8,7 +8,7 @@
 
 open! Import
 
-(** See [Core.Std.Array] for comments. *)
+(** See [Core.Array] for comments. *)
 type 'a t [@@deriving bin_io, sexp]
 
 

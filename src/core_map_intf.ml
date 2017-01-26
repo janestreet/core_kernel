@@ -1,4 +1,4 @@
-(** This module defines interfaces used in [Core.Std.Map].  See the documentation in
+(** This module defines interfaces used in [Core.Map].  See the documentation in
     core_map.mli for a description of the approach.
 
     CRs and comments about [Map] functions do not belong in this file.  They belong next

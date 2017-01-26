@@ -55,7 +55,7 @@ end
 
 (**/**)
 
-(** For Core.Std.Bigbuffer, not for users! *)
+(** For Core.Bigbuffer, not for users! *)
 val __internal : t -> Bigbuffer_internal.t
 
 
