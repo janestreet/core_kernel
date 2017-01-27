@@ -1,5 +1,5 @@
-external count : unit -> int = "check_caml_modify_count" [@@noalloc]
-external reset : unit -> unit = "check_caml_modify_reset" [@@noalloc]
+external count : unit -> int  = "replace_caml_modify_for_testing_count" [@@noalloc]
+external reset : unit -> unit = "replace_caml_modify_for_testing_reset" [@@noalloc]
 
 let%test_unit _ =
   let x = Array.make (32 * 1024) [Random.int 10] in

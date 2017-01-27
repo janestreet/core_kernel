@@ -15,7 +15,7 @@
 
 (executables
  ((names (float_test pool_caml_modify_check just_raise))
-  (libraries (check_caml_modify
+  (libraries (replace_caml_modify_for_testing
               core))))
 
 (toplevel_expect_tests ((libraries (core_kernel))))

@@ -10,12 +10,12 @@ CAMLprim void __wrap_caml_modify(value *fp, value v)
   __real_caml_modify(fp, v);
 }
 
-CAMLprim value check_caml_modify_count()
+CAMLprim value replace_caml_modify_for_testing_count()
 {
   return Val_long(count);
 }
 
-CAMLprim value check_caml_modify_reset()
+CAMLprim value replace_caml_modify_for_testing_reset()
 {
   count = 0;
   return Val_unit;

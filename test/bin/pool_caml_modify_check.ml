@@ -5,7 +5,8 @@
    this may have happened. *)
 
 open Core_kernel.Std
-open Check_caml_modify
+
+module Caml_modify = Replace_caml_modify_for_testing
 
 (* Big enough length so an array goes directly into the major heap. *)
 let big = 32 * 1024
