@@ -61,7 +61,7 @@ module Test (Stack : S)
 
   type nonrec 'a t = 'a t [@@deriving bin_io]
 
-  include Core_kernel.Container_unit_tests.Test_S1 (Stack)
+  include Core_kernel.Core_kernel_private.Container_unit_tests.Test_S1 (Stack)
 
   let invariant = invariant
 

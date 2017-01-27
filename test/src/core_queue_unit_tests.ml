@@ -161,7 +161,7 @@ let%test_module _ = (module (struct
     assert (to_list t' = [])
   ;;
 
-  include Core_kernel.Container_unit_tests.Test_S1 (Core_queue)
+  include Core_kernel.Core_kernel_private.Container_unit_tests.Test_S1 (Core_queue)
 
   let dequeue_exn = dequeue_exn
   let enqueue     = enqueue

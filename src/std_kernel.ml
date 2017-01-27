@@ -150,7 +150,6 @@ type bytes =
    long as the program refers to at least one value directly in [Std_kernel]; referring to
    values in [Std_kernel.Bool], for example, is not sufficient. *)
 let () =
-  Backtrace.initialize_module ();
   Exn.initialize_module ();
 ;;
 

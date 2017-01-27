@@ -14,6 +14,7 @@ Error: This expression has type
        is not compatible with type foo
 |}]
 
+
 (* Can't set a ref if some version has been made immutable *)
 let r = Ref.Permissioned.create 0
 let r_immutable = (r : (int, immutable) Ref.Permissioned.t)
@@ -25,9 +26,9 @@ Error: This expression has type * (glob)
          * (glob)
          * (glob)
        Type
-         immutable = [ `Read | `Who_can_write of Core_kernel.Perms.nobody ]
+         immutable = [ `Read | `Who_can_write of Core_kernel__Perms.nobody ]
        is not compatible with type
-         'a = [> `Who_can_write of Core_kernel.Perms.me ]
+         'a = [> `Who_can_write of Core_kernel__Perms.me ]
        Types for tag `Who_can_write are incompatible
 |}]
 
@@ -42,15 +43,15 @@ Error: This expression has type
          * (glob)
          * (glob)
          * (glob)
-         * (glob)
+         Ref.Permissioned.t
        but an expression was expected of type
          (int, immutable) Ref.Permissioned.t
        Type
          'a =
-           [< `Read | `Who_can_write of Core_kernel.Perms.me
+           [< `Read | `Who_can_write of Core_kernel__Perms.me
             > `Who_can_write ]
        is not compatible with type
-         immutable = [ `Read | `Who_can_write of Core_kernel.Perms.nobody ]
+         immutable = [ `Read | `Who_can_write of Core_kernel__Perms.nobody ]
        Types for tag `Who_can_write are incompatible
 |}]
 

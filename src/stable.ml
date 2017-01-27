@@ -12,6 +12,7 @@ module type Stable_without_comparator = Stable_module_types.S0_without_comparato
 module type Stable1                   = Stable_module_types.S1
 module type Stable2                   = Stable_module_types.S2
 module type Stable3                   = Stable_module_types.S3
+module type Stable4                   = Stable_module_types.S4
 
 module Make_stable = Make_stable
 

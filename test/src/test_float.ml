@@ -14,7 +14,7 @@ let%expect_test "[Sexp.of_float_style] is respected by the various names for [fl
   let print () =
     print_s [%sexp (f : float)];
     print_s [%sexp (f : Float.t)];
-    print_s [%sexp (f : Core_kernel.Stable.float)];
+    print_s [%sexp (f : Core_kernel.Core_kernel_stable.float)];
   in
   print ();
   [%expect {|

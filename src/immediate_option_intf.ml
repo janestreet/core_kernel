@@ -65,10 +65,14 @@ module type S = sig
   end
 end
 
-module type Int = S with type immediate := int
+module type Int = S
+  with type immediate := int
+   and type t = private int
 
 (** [Int63.t] is only immediate on 64-bit platforms. *)
-module type Int63 = S with type immediate := Base.Int63.t
+module type Int63 = S
+  with type immediate := Base.Int63.t
+   and type t = private Base.Int63.t
 
 module type Immediate_option = sig
   module type S     = S

@@ -32,3 +32,14 @@ module type S3 = sig
     -> f3:('a3 -> 'b3)
     -> ('b1, 'b2, 'b3) t
 end
+
+module type S4 = sig
+  type ('a1, 'a2, 'a3, 'a4) t [@@deriving bin_io, compare, sexp]
+  val map
+    :  ('a1, 'a2, 'a3, 'a4) t
+    -> f1:('a1 -> 'b1)
+    -> f2:('a2 -> 'b2)
+    -> f3:('a3 -> 'b3)
+    -> f4:('a4 -> 'b4)
+    -> ('b1, 'b2, 'b3, 'b4) t
+end
