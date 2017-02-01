@@ -1,4 +1,4 @@
-open! Core_kernel.Std
+open! Core_kernel
 open Core_kernel.Timing_wheel_ns_intf
 
 module Make

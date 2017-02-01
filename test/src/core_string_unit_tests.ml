@@ -1,4 +1,4 @@
-open! Core_kernel.Std
+open! Core_kernel
 
 let%test_unit "String.exists doesn't allocate" =
   let initial_words = Gc.minor_words () in

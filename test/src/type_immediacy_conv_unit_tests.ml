@@ -1,6 +1,6 @@
 (* Tests checking the correctness of conversions between values and ints. *)
 
-open! Core_kernel.Std
+open! Core_kernel
 
 let%test_module _ =
   (module struct

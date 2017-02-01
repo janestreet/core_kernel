@@ -1,4 +1,4 @@
-open! Core_kernel.Std
+open! Core_kernel
 
 let%test_unit "sexp_of_int respects sexp_of_int_style" =
   let r = Int_conversions.sexp_of_int_style in

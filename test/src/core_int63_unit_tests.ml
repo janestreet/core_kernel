@@ -1,4 +1,4 @@
-open Core_kernel.Std
+open Core_kernel
 module Make_tests(Int : Base.Int_intf.S) : sig end = struct
   open Int
   let p1 = of_int64_exn (1L)
@@ -98,7 +98,7 @@ module Make_tests(Int : Base.Int_intf.S) : sig end = struct
   let%test_unit _ = [%test_result:t] (Hex.of_string "-0x1") ~expect:(neg one)
 
   let%test_unit _ =
-    if Core_kernel.Std.Int.(=) Sys.word_size 64
+    if Core_kernel.Int.(=) Sys.word_size 64
     then [%test_result:t] (of_string "0u4611686018427387904") ~expect:min_value
 end
 

@@ -1,3 +1,3 @@
-open! Core_kernel.Std
+open! Core_kernel
 
 module Make (Hashtbl : Hashtbl_intf.Hashtbl) : sig end

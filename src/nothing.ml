@@ -57,5 +57,5 @@ end
 include T
 include Identifiable.Make (struct
     include T
-    let module_name = "Core_kernel.Std.Nothing"
+    let module_name = "Core_kernel.Nothing"
   end)

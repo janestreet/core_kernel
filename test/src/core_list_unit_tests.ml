@@ -1,4 +1,4 @@
-open! Core_kernel.Std
+open! Core_kernel
 
 let%test_module "random" =
   (module struct

@@ -1,4 +1,4 @@
-open! Core_kernel.Std
+open! Core_kernel
 open! Gc
 
 let%test_module "gc" [@tags "no-js"] =

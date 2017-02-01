@@ -1,4 +1,4 @@
-open! Core_kernel.Std
+open! Core_kernel
 open! Import
 
 let%expect_test "[Pervasives.float_of_string] supports underscores" =

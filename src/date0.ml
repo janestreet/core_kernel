@@ -324,7 +324,7 @@ include (Hashable.Make_binable (struct
 
 include Pretty_printer.Register (struct
     type nonrec t = t
-    let module_name = "Core_kernel.Std.Date"
+    let module_name = "Core_kernel.Date"
     let to_string = to_string
   end)
 

@@ -1,4 +1,4 @@
-open! Core_kernel.Std
+open! Core_kernel
 open Ref
 
 let%test_unit "[set_temporarily] without raise" =

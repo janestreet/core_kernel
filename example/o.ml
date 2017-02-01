@@ -1,4 +1,4 @@
-open Core_kernel.Std
+open Core_kernel
 
 let x =
   Float.O.((3. + 4.) / of_int 2)

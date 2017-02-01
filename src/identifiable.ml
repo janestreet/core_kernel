@@ -89,7 +89,7 @@ let%test_module _ =
 
     module T = struct
 
-      let module_name = "Core_kernel.Std.Identifiable.T"
+      let module_name = "Core_kernel.Identifiable.T"
 
       type t = A | B [@@deriving bin_io, compare, hash, sexp]
 

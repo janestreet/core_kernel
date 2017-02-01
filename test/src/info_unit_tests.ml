@@ -1,4 +1,4 @@
-open! Core_kernel.Std
+open! Core_kernel
 
 let%test_unit "[create_s sexp] produces an info whose [sexp_of_t] is [sexp]" =
   let sexp = [%sexp "foo"] in

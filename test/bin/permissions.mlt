@@ -1,4 +1,4 @@
-open Core_kernel.Std
+open Core_kernel
 
 (* Can't assign arbitrary types to ref *)
 type foo
@@ -98,7 +98,7 @@ Error: In this `with' constraint, the new definition of t
          type ('a, 'b) t = ('a, 'b) t
            constraint 'b = \[< `Read | `Who_can_write of .* \] (regexp)
        is not included in
-         type ('a, -'b) t constraint 'b = [< 'c Core_kernel.Std.perms ]
+         type ('a, -'b) t constraint 'b = [< 'c Core_kernel.perms ]
        *: Expected declaration (glob)
        *: Actual declaration (glob)
        Their constraints differ.
@@ -113,7 +113,7 @@ Error: Constraints are not satisfied in this type.
        Type
        \[< `Read | `Who_can_write of .* \] t (regexp)
        should be an instance of
-       \[< .* Core_kernel.Std.perms \] t (regexp)
+       \[< .* Core_kernel.perms \] t (regexp)
 |}]
 
 (* Constraints don't work with type aliases, part 2 *)
@@ -125,5 +125,5 @@ Error: Constraints are not satisfied in this type.
        Type
        \[< `Read | `Who_can_write of .* \] t (regexp)
        should be an instance of
-       \[< .* Core_kernel.Std.perms \] t (regexp)
+       \[< .* Core_kernel.perms \] t (regexp)
 |}]

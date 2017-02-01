@@ -1,4 +1,4 @@
-open! Core_kernel.Std
+open! Core_kernel
 
 module Test (S : sig val default_seed : Quickcheck_intf.seed end) : sig end = struct
 

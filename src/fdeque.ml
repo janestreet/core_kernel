@@ -379,7 +379,7 @@ module Stable = struct
         type 'a el = 'a [@@deriving bin_io]
         let caller_identity =
           Bin_prot.Shape.Uuid.of_string "83f96982-4992-11e6-919d-fbddcfdca576"
-        let module_name = Some "Core_kernel.Std.Fdeque"
+        let module_name = Some "Core_kernel.Fdeque"
         let length = length
         let iter t ~f = List.iter (to_list t) ~f
         let init ~len ~next =

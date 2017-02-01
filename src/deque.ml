@@ -447,7 +447,7 @@ include Bin_prot.Utils.Make_iterable_binable1 (struct
     type 'a el = 'a [@@deriving bin_io]
 
     let caller_identity = Bin_prot.Shape.Uuid.of_string "34c1e9ca-4992-11e6-a686-8b4bd4f87796"
-    let module_name  = Some "Core_kernel.Std.Deque"
+    let module_name  = Some "Core_kernel.Deque"
     let length       = length
     let iter t ~f    = iter t ~f
     let init ~len ~next =

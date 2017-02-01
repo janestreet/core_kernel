@@ -272,7 +272,7 @@ module Stable = struct
     include Pretty_printer.Register (struct
         type nonrec t = t
         let to_string = to_string
-        let module_name = "Core_kernel.Std.Time.Ofday"
+        let module_name = "Core_kernel.Time.Ofday"
       end)
 
     (* lifted allowed meridiem suffixes out so that tests can reuse them *)

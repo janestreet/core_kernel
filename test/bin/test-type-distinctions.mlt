@@ -1,5 +1,5 @@
 (* -*- tuareg -*- *)
-open Core_kernel.Std
+open Core_kernel
 
 let () =
   let added = ref false in

@@ -1,4 +1,4 @@
-open! Core_kernel.Std
+open! Core_kernel
 open  Expect_test_helpers_kernel
 
 type time_ns = Time_ns.t [@@deriving compare]
@@ -128,7 +128,7 @@ let%test_module "Time_ns.Utc.to_date_and_span_since_start_of_day" =
     let%expect_test "span is non-negative and less than 1 day" =
       quickcheck [%here] (fun time_ns ->
         let date, span_since_start_of_day =
-          Core_kernel.Std.Time_ns.Utc.to_date_and_span_since_start_of_day time_ns
+          Core_kernel.Time_ns.Utc.to_date_and_span_since_start_of_day time_ns
         in
         if Time_ns.Span.( <  ) span_since_start_of_day Time_ns.Span.zero
         || Time_ns.Span.( >= ) span_since_start_of_day Time_ns.Span.day
@@ -145,7 +145,7 @@ let%test_module "Time_ns.Utc.to_date_and_span_since_start_of_day" =
     let%expect_test "round-trip" =
       quickcheck [%here] (fun time_ns ->
         let date, span_since_start_of_day =
-          Core_kernel.Std.Time_ns.Utc.to_date_and_span_since_start_of_day time_ns
+          Core_kernel.Time_ns.Utc.to_date_and_span_since_start_of_day time_ns
         in
         let round_trip_time_ns =
           Time_ns.Utc.of_date_and_span_since_start_of_day date span_since_start_of_day

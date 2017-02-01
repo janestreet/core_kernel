@@ -1,4 +1,4 @@
-open! Core_kernel.Std
+open! Core_kernel
 
 module type S = Core_kernel.Stack_intf.S
 module Debug (Stack : S) : S with type 'a t = 'a Stack.t = struct

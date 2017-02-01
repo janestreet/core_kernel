@@ -1,4 +1,4 @@
-open! Core_kernel.Std
+open! Core_kernel
 open Or_error
 
 let%test_unit "[error_s] produces a value with the expected [sexp_of_t]" =

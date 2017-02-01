@@ -1,5 +1,5 @@
 module Caml_set = Set
-open! Core_kernel.Std
+open! Core_kernel
 
 module Set_intf = Core_kernel.Core_set_intf
 

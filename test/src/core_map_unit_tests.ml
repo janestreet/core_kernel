@@ -6,7 +6,7 @@
 
 
 module Caml_map = Map
-open! Core_kernel.Std
+open! Core_kernel
 
 module Map_intf = Core_kernel.Core_map_intf
 

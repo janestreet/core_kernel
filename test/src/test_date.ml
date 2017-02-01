@@ -1,4 +1,4 @@
-open! Core_kernel.Std
+open! Core_kernel
 open  Expect_test_helpers_kernel
 
 let%expect_test "Date.V1" =

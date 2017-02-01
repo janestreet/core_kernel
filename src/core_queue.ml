@@ -473,7 +473,7 @@ include
     type 'a el       = 'a [@@deriving bin_io]
 
     let caller_identity = Bin_prot.Shape.Uuid.of_string "b4c84254-4992-11e6-9ba7-734e154027bd"
-    let module_name = Some "Core_kernel.Std.Queue"
+    let module_name = Some "Core_kernel.Queue"
     let length      = length
     let iter        = iter
 

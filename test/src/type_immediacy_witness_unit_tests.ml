@@ -1,4 +1,4 @@
-open! Core_kernel.Std
+open! Core_kernel
 
 (* Tests to make sure the implementation of values hasn't changed and that witnesses are
    provided correctly.  *)
