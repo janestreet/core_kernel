@@ -14,38 +14,38 @@ module With_comparator    = Map_intf.With_comparator
 module Without_comparator = Map_intf.Without_comparator
 
 module Unit_tests
-  (Key : sig
-    type 'a t [@@deriving sexp, compare, hash]
+    (Key : sig
+       type 'a t [@@deriving sexp, compare, hash]
 
-    val of_int : int -> int t
-    val to_int : int t -> int
-  end)
-  (Map : sig
-    type ('a, 'b, 'c) t_
-    type ('a, 'b, 'c) tree
+       val of_int : int -> int t
+       val to_int : int t -> int
+     end)
+    (Map : sig
+       type ('a, 'b, 'c) t_
+       type ('a, 'b, 'c) tree
 
-    type ('a, 'b, 'c) create_options
+       type ('a, 'b, 'c) create_options
 
-    include Map_intf.Creators_generic
-      with type ('a, 'b, 'c) t       := ('a, 'b, 'c) t_
-      with type ('a, 'b, 'c) tree    := ('a, 'b, 'c) tree
-      with type 'a key               := 'a Key.t
-      with type ('a, 'b, 'c) options := ('a, 'b, 'c) create_options
+       include Map_intf.Creators_generic
+         with type ('a, 'b, 'c) t       := ('a, 'b, 'c) t_
+         with type ('a, 'b, 'c) tree    := ('a, 'b, 'c) tree
+         with type 'a key               := 'a Key.t
+         with type ('a, 'b, 'c) options := ('a, 'b, 'c) create_options
 
-    val simplify_creator : (int, Int.comparator_witness, 'c) create_options -> 'c
+       val simplify_creator : (int, Int.comparator_witness, 'c) create_options -> 'c
 
-    type ('a, 'b, 'c) access_options
+       type ('a, 'b, 'c) access_options
 
-    include Map_intf.Accessors_generic
-      with type ('a, 'b, 'c) t       := ('a, 'b, 'c) t_
-      with type ('a, 'b, 'c) tree    := ('a, 'b, 'c) tree
-      with type 'a key               := 'a Key.t
-      with type ('a, 'b, 'c) options := ('a, 'b, 'c) access_options
+       include Map_intf.Accessors_generic
+         with type ('a, 'b, 'c) t       := ('a, 'b, 'c) t_
+         with type ('a, 'b, 'c) tree    := ('a, 'b, 'c) tree
+         with type 'a key               := 'a Key.t
+         with type ('a, 'b, 'c) options := ('a, 'b, 'c) access_options
 
-    val simplify_accessor : (int, Int.comparator_witness, 'c) access_options -> 'c
+       val simplify_accessor : (int, Int.comparator_witness, 'c) access_options -> 'c
 
-    val kind : [ `Map | `Tree ]
-  end)
+       val kind : [ `Map | `Tree ]
+     end)
   (* The result signature doesn't actually mean anything -- the values are required so
      that implementors are reminded to add a unit test for each one. *)
   : Map_intf.Creators_and_accessors_generic = struct
@@ -198,104 +198,104 @@ module Unit_tests
   let%test _ =
     let rec loop n ~prev_caml_map ~caml_map ~prev_core_map ~core_map =
       if n = 0 then equal_maps ~caml_map core_map else
-      let remove key =
-        Caml_map.remove key caml_map,
-        Map.remove core_map key
-      in
-      let add key =
-        let data = Random.int 1000 in
-        Caml_map.add key data caml_map,
-        Map.add ~key ~data core_map
-      in
-      let caml_choose caml_map =
-        try Some (Caml_map.choose caml_map)
-        with _ -> None
-      in
-      let add_or_remove ~prefer =
-        match caml_choose caml_map, prefer with
-        | None, _ -> add Key.sample
-        | Some (key, _), `Remove -> remove key
-        | Some (key, _), `Add ->
-          match List.find Key.samples ~f:(fun key -> not (Caml_map.mem key caml_map)) with
-          | Some key -> add key
-          | None -> remove key
-      in
-      let old_values = caml_map, core_map in
-      let new_caml_map, new_core_map =
-        match Random.int 8 with
-        | 0 -> add_or_remove ~prefer:`Add
-        | 1 -> add_or_remove ~prefer:`Remove
-        | 2 ->
-          begin match caml_choose caml_map with
-          | None ->
-            assert (Map.is_empty core_map);
-            assert (Map.length core_map = 0)
-          | Some (key, data) ->
-            assert (Caml_map.find key caml_map = data);
-            assert (not (Map.is_empty core_map));
-            assert (Map.length core_map = Caml_map.cardinal caml_map);
-            assert (Map.mem core_map key);
-            assert (Map.find core_map key = Some data)
-          end;
-          old_values
-        | 3 ->
-          let target =
-            let sum = ref 0 in
-            Caml_map.iter (fun _ data -> sum := !sum + data) caml_map;
-            !sum
-          in
-          let actual =
-            let sum = ref 0 in
-            Map.iter ~f:(fun data -> sum := !sum + data) core_map;
-            !sum
-          in
-          let actual2 =
-            let sum = ref 0 in
-            Map.iteri ~f:(fun ~key:_ ~data -> sum := !sum + data) core_map;
-            !sum
-          in
-          assert (target = actual && actual = actual2);
-          old_values
-        | 4 ->
-          let target =
-            let sum = ref 0 in
-            Caml_map.iter (fun key _ -> sum := !sum + Key.to_int key) caml_map;
-            !sum
-          in
-          let actual =
-            let sum = ref 0 in
-            Map.iter_keys ~f:(fun key -> sum := !sum + Key.to_int key) core_map;
-            !sum
-          in
-          assert (target = actual);
-          old_values
-        | 5 ->
-          let caml_map = Caml_map.mapi (fun key data -> (key, data)) caml_map in
-          let core_map = Map.mapi ~f:(fun ~key ~data -> (key, data)) core_map in
-          let increment = Random.int 1000 in
-          let caml_map = Caml_map.map (fun (_, n) -> n + increment) caml_map in
-          let core_map = Map.map ~f:(fun (_, n) -> n + increment) core_map in
-          assert (equal_maps ~caml_map core_map);
-          old_values
-        | 6 ->
-          let caml_alist =
-            Caml_map.fold (fun key data acc -> (key, data) :: acc) caml_map []
-          in
-          let core_alist =
-            Map.fold ~f:(fun ~key ~data acc -> (key, data) :: acc) core_map ~init:[]
-          in
-          assert (alist_equal caml_alist core_alist);
-          old_values
-        | 7 ->
-          let unchanged = Caml_map.equal (=) prev_caml_map caml_map in
-          assert (unchanged = Map.equal (=) prev_core_map core_map);
-          assert (unchanged = (Map.compare_direct Int.compare prev_core_map core_map = 0));
-          old_values
-        | _ -> assert false
-      in
-      loop (n - 1)
-        ~prev_caml_map:caml_map ~caml_map:new_caml_map
-        ~prev_core_map:core_map ~core_map:new_core_map
+        let remove key =
+          Caml_map.remove key caml_map,
+          Map.remove core_map key
+        in
+        let add key =
+          let data = Random.int 1000 in
+          Caml_map.add key data caml_map,
+          Map.add ~key ~data core_map
+        in
+        let caml_choose caml_map =
+          try Some (Caml_map.choose caml_map)
+          with _ -> None
+        in
+        let add_or_remove ~prefer =
+          match caml_choose caml_map, prefer with
+          | None, _ -> add Key.sample
+          | Some (key, _), `Remove -> remove key
+          | Some (key, _), `Add ->
+            match List.find Key.samples ~f:(fun key -> not (Caml_map.mem key caml_map)) with
+            | Some key -> add key
+            | None -> remove key
+        in
+        let old_values = caml_map, core_map in
+        let new_caml_map, new_core_map =
+          match Random.int 8 with
+          | 0 -> add_or_remove ~prefer:`Add
+          | 1 -> add_or_remove ~prefer:`Remove
+          | 2 ->
+            begin match caml_choose caml_map with
+            | None ->
+              assert (Map.is_empty core_map);
+              assert (Map.length core_map = 0)
+            | Some (key, data) ->
+              assert (Caml_map.find key caml_map = data);
+              assert (not (Map.is_empty core_map));
+              assert (Map.length core_map = Caml_map.cardinal caml_map);
+              assert (Map.mem core_map key);
+              assert (Map.find core_map key = Some data)
+            end;
+            old_values
+          | 3 ->
+            let target =
+              let sum = ref 0 in
+              Caml_map.iter (fun _ data -> sum := !sum + data) caml_map;
+              !sum
+            in
+            let actual =
+              let sum = ref 0 in
+              Map.iter ~f:(fun data -> sum := !sum + data) core_map;
+              !sum
+            in
+            let actual2 =
+              let sum = ref 0 in
+              Map.iteri ~f:(fun ~key:_ ~data -> sum := !sum + data) core_map;
+              !sum
+            in
+            assert (target = actual && actual = actual2);
+            old_values
+          | 4 ->
+            let target =
+              let sum = ref 0 in
+              Caml_map.iter (fun key _ -> sum := !sum + Key.to_int key) caml_map;
+              !sum
+            in
+            let actual =
+              let sum = ref 0 in
+              Map.iter_keys ~f:(fun key -> sum := !sum + Key.to_int key) core_map;
+              !sum
+            in
+            assert (target = actual);
+            old_values
+          | 5 ->
+            let caml_map = Caml_map.mapi (fun key data -> (key, data)) caml_map in
+            let core_map = Map.mapi ~f:(fun ~key ~data -> (key, data)) core_map in
+            let increment = Random.int 1000 in
+            let caml_map = Caml_map.map (fun (_, n) -> n + increment) caml_map in
+            let core_map = Map.map ~f:(fun (_, n) -> n + increment) core_map in
+            assert (equal_maps ~caml_map core_map);
+            old_values
+          | 6 ->
+            let caml_alist =
+              Caml_map.fold (fun key data acc -> (key, data) :: acc) caml_map []
+            in
+            let core_alist =
+              Map.fold ~f:(fun ~key ~data acc -> (key, data) :: acc) core_map ~init:[]
+            in
+            assert (alist_equal caml_alist core_alist);
+            old_values
+          | 7 ->
+            let unchanged = Caml_map.equal (=) prev_caml_map caml_map in
+            assert (unchanged = Map.equal (=) prev_core_map core_map);
+            assert (unchanged = (Map.compare_direct Int.compare prev_core_map core_map = 0));
+            old_values
+          | _ -> assert false
+        in
+        loop (n - 1)
+          ~prev_caml_map:caml_map ~caml_map:new_caml_map
+          ~prev_core_map:core_map ~core_map:new_core_map
     in
     loop 10000
       ~prev_caml_map:Caml_map.empty ~caml_map:Caml_map.empty
@@ -382,8 +382,8 @@ module Unit_tests
   (* test detection of invalid input *)
   let%test _ = Map.of_sorted_array [|Key.of_int 0, 0; Key.of_int 0, 0|] |> Result.is_error
   let%test _ = Map.of_sorted_array [|Key.of_int 1, 0
-                         ; Key.of_int 0, 0
-                         ; Key.of_int 1, 0|] |> Result.is_error
+                                    ; Key.of_int 0, 0
+                                    ; Key.of_int 1, 0|] |> Result.is_error
 
   let of_sorted_array_unchecked _ = assert false
 
@@ -399,7 +399,7 @@ module Unit_tests
     let map_of_rev_array = Map.of_sorted_array_unchecked array_rev in
     let map_equal = Map.equal Int.equal in
     map_equal map_of_alist map_of_array &&
-      map_equal map_of_alist map_of_rev_array
+    map_equal map_of_alist map_of_rev_array
   ;;
 
   let invariants _ = assert false
@@ -806,7 +806,7 @@ module Unit_tests
     let m1 = random_map Key.samples in
     let m2 = Map.remove m1 key in
     Sequence.to_list (Map.symmetric_diff m1 m2 ~data_equal:(=)) =
-      [(key, `Left (Map.find_exn m1 key))]
+    [(key, `Left (Map.find_exn m1 key))]
   ;;
 
   let%test _ =
@@ -820,7 +820,7 @@ module Unit_tests
           Some 2_000)
     in
     Sequence.to_list (Map.symmetric_diff m1 m2 ~data_equal:(=)) =
-      [(key, `Unequal (Map.find_exn m1 key, 2000))]
+    [(key, `Unequal (Map.find_exn m1 key, 2000))]
   ;;
 
   let%test _ =
@@ -1052,152 +1052,154 @@ module Unit_tests
   let to_sequence ?order:_ ?keys_greater_or_equal_to:_ ?keys_less_or_equal_to:_ _ =
     assert false
 
-  let%test_module "to_sequence" = (module struct
+  let%test_module "to_sequence" =
+    (module struct
 
-    let m = random_map Key.samples
-    let (<=>) observed expected =
-      [%test_eq: (Key.t * int) list] (Sequence.to_list observed) expected
-    let limit_keys min max = List.filter ~f:(fun (key, _) -> key >= min && key <= max)
+      let m = random_map Key.samples
+      let (<=>) observed expected =
+        [%test_eq: (Key.t * int) list] (Sequence.to_list observed) expected
+      let limit_keys min max = List.filter ~f:(fun (key, _) -> key >= min && key <= max)
 
-    let%test_unit _ = Map.to_sequence ~order:`Increasing_key m <=> Map.to_alist m
+      let%test_unit _ = Map.to_sequence ~order:`Increasing_key m <=> Map.to_alist m
 
-    let%test_unit _ = Map.to_sequence ~order:`Decreasing_key m <=> List.rev (Map.to_alist m)
+      let%test_unit _ = Map.to_sequence ~order:`Decreasing_key m <=> List.rev (Map.to_alist m)
 
-    let%test_unit _ =
-      Map.to_sequence ~order:`Increasing_key ~keys_greater_or_equal_to:Key.mid m
-      <=> limit_keys Key.mid Key.max (Map.to_alist m)
-    ;;
+      let%test_unit _ =
+        Map.to_sequence ~order:`Increasing_key ~keys_greater_or_equal_to:Key.mid m
+        <=> limit_keys Key.mid Key.max (Map.to_alist m)
+      ;;
 
-    let%test_unit _ =
-      let keys_greater_or_equal_to, keys_less_or_equal_to = Key.mid, Key.pred Key.max in
-      Map.to_sequence m ~order:`Increasing_key ~keys_greater_or_equal_to
-        ~keys_less_or_equal_to
-      <=> limit_keys keys_greater_or_equal_to keys_less_or_equal_to (Map.to_alist m)
-    ;;
+      let%test_unit _ =
+        let keys_greater_or_equal_to, keys_less_or_equal_to = Key.mid, Key.pred Key.max in
+        Map.to_sequence m ~order:`Increasing_key ~keys_greater_or_equal_to
+          ~keys_less_or_equal_to
+        <=> limit_keys keys_greater_or_equal_to keys_less_or_equal_to (Map.to_alist m)
+      ;;
 
-    let%test_unit _ =
-      Map.to_sequence m ~order:`Increasing_key ~keys_less_or_equal_to:Key.mid
-      <=> limit_keys Key.min Key.mid (Map.to_alist m)
-    ;;
+      let%test_unit _ =
+        Map.to_sequence m ~order:`Increasing_key ~keys_less_or_equal_to:Key.mid
+        <=> limit_keys Key.min Key.mid (Map.to_alist m)
+      ;;
 
-    let%test_unit _ =
-      Map.to_sequence ~order:`Decreasing_key ~keys_less_or_equal_to:Key.mid m
-      <=> limit_keys Key.min Key.mid (List.rev (Map.to_alist m))
-    ;;
+      let%test_unit _ =
+        Map.to_sequence ~order:`Decreasing_key ~keys_less_or_equal_to:Key.mid m
+        <=> limit_keys Key.min Key.mid (List.rev (Map.to_alist m))
+      ;;
 
-    let%test_unit _ =
-      let keys_greater_or_equal_to, keys_less_or_equal_to = Key.succ Key.min, Key.mid in
-      Map.to_sequence m ~order:`Decreasing_key ~keys_greater_or_equal_to
-        ~keys_less_or_equal_to
-      <=> limit_keys keys_greater_or_equal_to keys_less_or_equal_to (List.rev (Map.to_alist m))
-    ;;
+      let%test_unit _ =
+        let keys_greater_or_equal_to, keys_less_or_equal_to = Key.succ Key.min, Key.mid in
+        Map.to_sequence m ~order:`Decreasing_key ~keys_greater_or_equal_to
+          ~keys_less_or_equal_to
+        <=> limit_keys keys_greater_or_equal_to keys_less_or_equal_to (List.rev (Map.to_alist m))
+      ;;
 
-    let%test_unit _ =
-      Map.to_sequence m ~order:`Decreasing_key ~keys_greater_or_equal_to:Key.mid
-      <=> limit_keys Key.mid Key.max (List.rev (Map.to_alist m))
-    ;;
+      let%test_unit _ =
+        Map.to_sequence m ~order:`Decreasing_key ~keys_greater_or_equal_to:Key.mid
+        <=> limit_keys Key.mid Key.max (List.rev (Map.to_alist m))
+      ;;
 
-    let%test_unit _ = Map.to_sequence ~order:`Increasing_key (Map.empty ()) <=> []
+      let%test_unit _ = Map.to_sequence ~order:`Increasing_key (Map.empty ()) <=> []
 
-    let%test_unit _ = Map.to_sequence ~order:`Decreasing_key (Map.empty ()) <=> []
+      let%test_unit _ = Map.to_sequence ~order:`Decreasing_key (Map.empty ()) <=> []
 
-    let%test_unit _ =
-      Map.to_sequence ~order:`Increasing_key
-        ~keys_greater_or_equal_to:(Key.succ Key.max) m
-      <=> []
+      let%test_unit _ =
+        Map.to_sequence ~order:`Increasing_key
+          ~keys_greater_or_equal_to:(Key.succ Key.max) m
+        <=> []
 
-    let%test_unit _ =
-      Map.to_sequence ~order:`Decreasing_key ~keys_less_or_equal_to:(Key.pred Key.min)
-        m
-      <=> []
+      let%test_unit _ =
+        Map.to_sequence ~order:`Decreasing_key ~keys_less_or_equal_to:(Key.pred Key.min)
+          m
+        <=> []
 
-    let%test_unit _ =
-      Map.to_sequence ~order:`Increasing_key ~keys_less_or_equal_to:Key.min
-        ~keys_greater_or_equal_to:Key.max m
-      <=> []
+      let%test_unit _ =
+        Map.to_sequence ~order:`Increasing_key ~keys_less_or_equal_to:Key.min
+          ~keys_greater_or_equal_to:Key.max m
+        <=> []
 
-  end)
+    end)
 
   let length _ = assert false
 
   (* Length has to be updated correctly by many operations, which should be tested here.
      Some basic operations are already tested above. *)
-  let%test_module "length" = (module struct
-    let sample_map = random_map Key.samples
-    let k1 = List.nth_exn (Map.keys sample_map) 0
-    let k2 = List.nth_exn (Map.keys sample_map) 1
-    let k3 = List.nth_exn (Map.keys sample_map) 2
-    let k4 = List.nth_exn (Map.keys sample_map) 3
+  let%test_module "length" =
+    (module struct
+      let sample_map = random_map Key.samples
+      let k1 = List.nth_exn (Map.keys sample_map) 0
+      let k2 = List.nth_exn (Map.keys sample_map) 1
+      let k3 = List.nth_exn (Map.keys sample_map) 2
+      let k4 = List.nth_exn (Map.keys sample_map) 3
 
-    let%test "change" =
-      let m = Map.add ~key:Key.sample ~data:1 (Map.empty ()) in
-      assert (Map.length m = 1);
-      let m = Map.change m Key.sample ~f:Fn.id in
-      let caml_map = Caml_map.add Key.sample 1 Caml_map.empty in
-      assert (equal_maps m ~caml_map);
-      let m = Map.change (Map.empty ()) Key.sample ~f:(Fn.const (Some 1)) in
-      assert (Map.length m = 1);
-      let m = Map.change m Key.sample ~f:(Fn.const (Some 1)) in
-      assert (Map.length m = 1);
-      let m = Map.change m Key.sample ~f:(Fn.const None) in
-      Map.length m = 0
-    ;;
+      let%test "change" =
+        let m = Map.add ~key:Key.sample ~data:1 (Map.empty ()) in
+        assert (Map.length m = 1);
+        let m = Map.change m Key.sample ~f:Fn.id in
+        let caml_map = Caml_map.add Key.sample 1 Caml_map.empty in
+        assert (equal_maps m ~caml_map);
+        let m = Map.change (Map.empty ()) Key.sample ~f:(Fn.const (Some 1)) in
+        assert (Map.length m = 1);
+        let m = Map.change m Key.sample ~f:(Fn.const (Some 1)) in
+        assert (Map.length m = 1);
+        let m = Map.change m Key.sample ~f:(Fn.const None) in
+        Map.length m = 0
+      ;;
 
-    let%test "update" =
-      let m = Map.add ~key:Key.sample ~data:1 (Map.empty ()) in
-      assert (Map.length m = 1);
-      let m = Map.update (Map.empty ()) Key.sample ~f:(Fn.const 1) in
-      assert (Map.length m = 1);
-      let m = Map.update m Key.sample ~f:(Fn.const 1) in
-      Map.length m = 1
-    ;;
+      let%test "update" =
+        let m = Map.add ~key:Key.sample ~data:1 (Map.empty ()) in
+        assert (Map.length m = 1);
+        let m = Map.update (Map.empty ()) Key.sample ~f:(Fn.const 1) in
+        assert (Map.length m = 1);
+        let m = Map.update m Key.sample ~f:(Fn.const 1) in
+        Map.length m = 1
+      ;;
 
-    let%test "filteri" =
-      let m' = Map.filteri sample_map ~f:(fun ~key:x ~data:_ -> x <> k1 && x <> k2) in
-      let m'' = Map.remove (Map.remove sample_map k1) k2 in
-      assert (Map.length m' = Map.length m'');
-      Map.length m' = Map.length sample_map - 2
+      let%test "filteri" =
+        let m' = Map.filteri sample_map ~f:(fun ~key:x ~data:_ -> x <> k1 && x <> k2) in
+        let m'' = Map.remove (Map.remove sample_map k1) k2 in
+        assert (Map.length m' = Map.length m'');
+        Map.length m' = Map.length sample_map - 2
 
-    let%test "of_alist_exn and of_alist_fold" =
-      let expected_length = List.length Key.samples in
-      let dup x = (x,x) in
-      let m = Map.of_alist_exn (List.map Key.samples ~f:dup) in
-      assert (Map.length m = List.length Key.samples);
-      let alist = List.map (Key.samples @ Key.samples) ~f:dup in
-      let m = Map.of_alist_fold alist ~init:Key.sample ~f:(fun x _ -> x) in
-      Map.length m = expected_length
+      let%test "of_alist_exn and of_alist_fold" =
+        let expected_length = List.length Key.samples in
+        let dup x = (x,x) in
+        let m = Map.of_alist_exn (List.map Key.samples ~f:dup) in
+        assert (Map.length m = List.length Key.samples);
+        let alist = List.map (Key.samples @ Key.samples) ~f:dup in
+        let m = Map.of_alist_fold alist ~init:Key.sample ~f:(fun x _ -> x) in
+        Map.length m = expected_length
 
-    let%test "merge" =
-      let m1 = Map.of_alist_exn [k1, 1] in
-      let m2 = Map.of_alist_exn [k2, 2] in
-      let m' =
-        Map.merge m1 m2 ~f:(fun ~key:_ -> function
-          | `Both _ -> assert false
-          | `Left x | `Right x -> Some x)
-      in
-      assert (Map.length m' = 2);
-      let m3 = Map.of_alist_exn [k1, 2] in
-      let m' =
-        Map.merge m1 m3 ~f:(fun ~key:_ -> function
-          | `Both (x,_) -> Some x
-          | `Left _ | `Right _ -> assert false)
-      in
-      assert (Map.length m' = 1);
-      let m' =
-        Map.merge m1 m3 ~f:(fun ~key:_ -> function
-          | `Both (_,_) -> None
-          | `Left _ | `Right _ -> assert false)
-      in
-      assert (Map.length m' = 0);
-      let m4 = Map.of_alist_exn [k1, 1; k2, 2; k3, 3] in
-      let m5 = Map.of_alist_exn [k3, 99; k4, 4] in
-      let m' =
-        Map.merge m4 m5 ~f:(fun ~key:_ -> function
-          | `Both (x,_) -> Some x
-          | `Left x | `Right x -> Some x)
-      in
-      Map.length m' = 4
-  end)
+      let%test "merge" =
+        let m1 = Map.of_alist_exn [k1, 1] in
+        let m2 = Map.of_alist_exn [k2, 2] in
+        let m' =
+          Map.merge m1 m2 ~f:(fun ~key:_ -> function
+            | `Both _ -> assert false
+            | `Left x | `Right x -> Some x)
+        in
+        assert (Map.length m' = 2);
+        let m3 = Map.of_alist_exn [k1, 2] in
+        let m' =
+          Map.merge m1 m3 ~f:(fun ~key:_ -> function
+            | `Both (x,_) -> Some x
+            | `Left _ | `Right _ -> assert false)
+        in
+        assert (Map.length m' = 1);
+        let m' =
+          Map.merge m1 m3 ~f:(fun ~key:_ -> function
+            | `Both (_,_) -> None
+            | `Left _ | `Right _ -> assert false)
+        in
+        assert (Map.length m' = 0);
+        let m4 = Map.of_alist_exn [k1, 1; k2, 2; k3, 3] in
+        let m5 = Map.of_alist_exn [k3, 99; k4, 4] in
+        let m' =
+          Map.merge m4 m5 ~f:(fun ~key:_ -> function
+            | `Both (x,_) -> Some x
+            | `Left x | `Right x -> Some x)
+        in
+        Map.length m' = 4
+    end)
 
   let fold_range_inclusive _ = assert false
   let range_to_alist       _ = assert false
@@ -1265,8 +1267,8 @@ module Unit_tests
     assert (alist_equal (Map.range_to_alist ~min:min_key ~max:max_key map)
               (Map.to_alist map));
     assert (alist_equal
-      (Map.range_to_alist ~min:after_min ~max:before_max map)
-      (Map.to_alist (Map.remove (Map.remove map min_key) max_key)));
+              (Map.range_to_alist ~min:after_min ~max:before_max map)
+              (Map.to_alist (Map.remove (Map.remove map min_key) max_key)));
     (* rank *)
     assert (Map.rank map min_key    = Some 0);
     assert (Map.rank map after_min  = Some 1);
@@ -1416,10 +1418,10 @@ module Unit_tests
               ~name:(fun key -> Sexp.to_string ([%sexp_of: Key.t] key))
               (Validate.of_error
                  (fun i ->
-                   if i mod 2 = 0 then
-                     Ok ()
-                   else
-                     error "must be even" i [%sexp_of: int]))
+                    if i mod 2 = 0 then
+                      Ok ()
+                    else
+                      error "must be even" i [%sexp_of: int]))
               map))
     in
     let is_ok = Result.is_ok in
@@ -1597,55 +1599,55 @@ module Access_options_with_comparator = struct
 end
 
 let%test_module "Map" = (module Unit_tests (Key_poly) (struct
-  include Map
-  type ('a, 'b, 'c) t_   = ('a, 'b, 'c) t
-  type ('a, 'b, 'c) tree = ('a, 'b, 'c) Tree.t
-  include Create_options_with_comparator
-  include Access_options_without_comparator
-  let kind = `Map
-end))
+    include Map
+    type ('a, 'b, 'c) t_   = ('a, 'b, 'c) t
+    type ('a, 'b, 'c) tree = ('a, 'b, 'c) Tree.t
+    include Create_options_with_comparator
+    include Access_options_without_comparator
+    let kind = `Map
+  end))
 
 let%test_module "Map.Poly" = (module Unit_tests (Key_poly) (struct
-  include Map.Poly
-  type ('a, 'b, 'c) t_   = ('a, 'b) t
-  type ('a, 'b, 'c) tree = ('a, 'b) Tree.t
-  include Create_options_without_comparator
-  include Access_options_without_comparator
-  let kind = `Map
-end))
+    include Map.Poly
+    type ('a, 'b, 'c) t_   = ('a, 'b) t
+    type ('a, 'b, 'c) tree = ('a, 'b) Tree.t
+    include Create_options_without_comparator
+    include Access_options_without_comparator
+    let kind = `Map
+  end))
 
 let%test_module "Int.Map" = (module Unit_tests (Key_int) (struct
-  include Int.Map
-  type ('a, 'b, 'c) t_   = 'b t
-  type ('a, 'b, 'c) tree = 'b Tree.t
-  include Create_options_without_comparator
-  include Access_options_without_comparator
-  let kind = `Map
-end))
+    include Int.Map
+    type ('a, 'b, 'c) t_   = 'b t
+    type ('a, 'b, 'c) tree = 'b Tree.t
+    include Create_options_without_comparator
+    include Access_options_without_comparator
+    let kind = `Map
+  end))
 
 let%test_module "Map.Tree" = (module Unit_tests (Key_poly) (struct
-  include Map.Tree
-  type ('a, 'b, 'c) t_   = ('a, 'b, 'c) t
-  type ('a, 'b, 'c) tree = ('a, 'b, 'c) t
-  include Create_options_with_comparator
-  include Access_options_with_comparator
-  let kind = `Tree
-end))
+    include Map.Tree
+    type ('a, 'b, 'c) t_   = ('a, 'b, 'c) t
+    type ('a, 'b, 'c) tree = ('a, 'b, 'c) t
+    include Create_options_with_comparator
+    include Access_options_with_comparator
+    let kind = `Tree
+  end))
 
 let%test_module "Map.Poly.Tree" = (module Unit_tests (Key_poly) (struct
-  include Map.Poly.Tree
-  type ('a, 'b, 'c) t_   = ('a, 'b) t
-  type ('a, 'b, 'c) tree = ('a, 'b) t
-  include Create_options_without_comparator
-  include Access_options_without_comparator
-  let kind = `Tree
-end))
+    include Map.Poly.Tree
+    type ('a, 'b, 'c) t_   = ('a, 'b) t
+    type ('a, 'b, 'c) tree = ('a, 'b) t
+    include Create_options_without_comparator
+    include Access_options_without_comparator
+    let kind = `Tree
+  end))
 
 let%test_module "Int.Map.Tree" = (module Unit_tests (Key_int) (struct
-  include Int.Map.Tree
-  type ('a, 'b, 'c) t_   = 'b t
-  type ('a, 'b, 'c) tree = 'b t
-  include Create_options_without_comparator
-  include Access_options_without_comparator
-  let kind = `Tree
-end))
+    include Int.Map.Tree
+    type ('a, 'b, 'c) t_   = 'b t
+    type ('a, 'b, 'c) tree = 'b t
+    include Create_options_without_comparator
+    include Access_options_without_comparator
+    let kind = `Tree
+  end))

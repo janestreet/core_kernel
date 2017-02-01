@@ -79,8 +79,8 @@ let shrinker = For_quickcheck.shrinker
 
 module Accessors = struct
   include (Map.Using_comparator : Map_intf.Accessors3
-             with type ('a, 'b, 'c) t    := ('a, 'b, 'c) Map.t
-             with type ('a, 'b, 'c) tree := ('a, 'b, 'c) Tree .t)
+           with type ('a, 'b, 'c) t    := ('a, 'b, 'c) Map.t
+           with type ('a, 'b, 'c) tree := ('a, 'b, 'c) Tree .t)
 
   let obs k v = obs k v
   let shrinker k v = shrinker k v
@@ -88,7 +88,7 @@ end
 
 include (Map.Using_comparator :
            module type of struct include Map.Using_comparator end
-           with module Tree := Tree)
+         with module Tree := Tree)
 
 let of_hashtbl_exn ~comparator hashtbl =
   match of_iteri ~comparator ~iteri:(Core_hashtbl.iteri hashtbl) with
@@ -401,9 +401,9 @@ module Make (Key : Key) =
   end)
 
 module Make_binable_using_comparator (Key : sig
-  type t [@@deriving bin_io, sexp]
-  include Comparator.S with type t := t
-end) = struct
+    type t [@@deriving bin_io, sexp]
+    include Comparator.S with type t := t
+  end) = struct
   module Key = Key
   module M2 = Make_using_comparator (Key)
   include (M2 : module type of M2 with module Key := Key)

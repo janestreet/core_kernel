@@ -258,15 +258,15 @@ let%test_module _ = (module Make (Pool))
 
 let%test_module _ =
   (module Make (struct
-    include Pool.Unsafe
+       include Pool.Unsafe
 
-    let create (type tuple) (slots : (tuple, _) Slots.t) ~capacity ~dummy:(_ : tuple) =
-      create slots ~capacity
-  end))
+       let create (type tuple) (slots : (tuple, _) Slots.t) ~capacity ~dummy:(_ : tuple) =
+         create slots ~capacity
+     end))
 
 let%test_module "Debug without messages" = (module Make (struct
-  include Pool.Debug (Pool)
-  let () = show_messages := false       (* or it prints too much *)
-end))
+    include Pool.Debug (Pool)
+    let () = show_messages := false       (* or it prints too much *)
+  end))
 
 let%test_module _ = (module Make (Pool.Error_check (Pool)))

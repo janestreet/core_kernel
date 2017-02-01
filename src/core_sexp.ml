@@ -7,8 +7,8 @@ include (Base.Sexp : module type of struct include Base.Sexp end with type t := 
 include (struct
   type t = Base.Sexp.t = Atom of string | List of t list [@@deriving bin_io]
 end : sig
-  type t [@@deriving bin_io]
-end with type t := t)
+           type t [@@deriving bin_io]
+         end with type t := t)
 
 module O = struct
   type sexp = Sexp.t = Atom of string | List of t list
@@ -81,52 +81,53 @@ module With_text = struct
     let text = sexp_of_value value |> Sexp.to_string_hum in
     { value; text }
 
-  let%test_module _ = (module struct
-    let sexp_of_il = sexp_of_list sexp_of_int
-    let il_of_sexp = list_of_sexp int_of_sexp
+  let%test_module _ =
+    (module struct
+      let sexp_of_il = sexp_of_list sexp_of_int
+      let il_of_sexp = list_of_sexp int_of_sexp
 
-    let il_of_text text = Or_error.ok_exn (of_text il_of_sexp text)
-    let il_of_value il  = of_value sexp_of_il il
+      let il_of_text text = Or_error.ok_exn (of_text il_of_sexp text)
+      let il_of_value il  = of_value sexp_of_il il
 
-    let t = il_of_value [3;4]
-    let%test _ = String.equal t.text "(3 4)"
-    let t' = il_of_text (text t)
-    let%test _ = [%compare.equal: int list] t'.value [3;4]
-    let%test _ = sexp_of_t sexp_of_il t = Atom "(3 4)"
-    let%test _ =
-      [%compare.equal: int list] (t_of_sexp il_of_sexp (Atom "(3 4)")).value [3;4]
+      let t = il_of_value [3;4]
+      let%test _ = String.equal t.text "(3 4)"
+      let t' = il_of_text (text t)
+      let%test _ = [%compare.equal: int list] t'.value [3;4]
+      let%test _ = sexp_of_t sexp_of_il t = Atom "(3 4)"
+      let%test _ =
+        [%compare.equal: int list] (t_of_sexp il_of_sexp (Atom "(3 4)")).value [3;4]
 
-    let%test _ =
-      [%compare.equal: int list] [8;9]
-        (il_of_text ";this is a comment\n (8; foo\n 9)   \n ").value
+      let%test _ =
+        [%compare.equal: int list] [8;9]
+          (il_of_text ";this is a comment\n (8; foo\n 9)   \n ").value
 
-    let check_error f input ~expected =
-      let normalize str = try Sexp.to_string (Sexp.of_string str) with _ -> str in
-      let expected = normalize expected in
-      try
-        ignore (f input);
-        failwith
-          (Printf.sprintf "%s expected to cause an exception, \
-                           but got converted successfully." input)
-      with e ->
-        let error = normalize (Printexc.to_string e) in
-        if not (String.equal error expected) then
-          failwith (Printf.sprintf "%s generated error %s, expected %s"
-                      input error expected)
+      let check_error f input ~expected =
+        let normalize str = try Sexp.to_string (Sexp.of_string str) with _ -> str in
+        let expected = normalize expected in
+        try
+          ignore (f input);
+          failwith
+            (Printf.sprintf "%s expected to cause an exception, \
+                             but got converted successfully." input)
+        with e ->
+          let error = normalize (Printexc.to_string e) in
+          if not (String.equal error expected) then
+            failwith (Printf.sprintf "%s generated error %s, expected %s"
+                        input error expected)
 
-    let expected =
-      "(Sexplib.Conv.Of_sexp_error(
+      let expected =
+        "(Sexplib.Conv.Of_sexp_error(
         Sexplib.Sexp.Annotated.Conv_exn
         :1:5(Failure\"int_of_sexp: (Failure int_of_string)\"))bla)"
 
-    let%test_unit _ =
-      check_error il_of_text
-        "(1 2 bla)" ~expected
+      let%test_unit _ =
+        check_error il_of_text
+          "(1 2 bla)" ~expected
 
-    let%test_unit _ =
-      check_error (fun s -> t_of_sexp il_of_sexp (Sexp.of_string s))
-        "\"(1 2 bla)\"" ~expected
-  end)
+      let%test_unit _ =
+        check_error (fun s -> t_of_sexp il_of_sexp (Sexp.of_string s))
+          "\"(1 2 bla)\"" ~expected
+    end)
 end
 
 type 'a no_raise = 'a [@@deriving bin_io, sexp]
@@ -134,8 +135,8 @@ type 'a no_raise = 'a [@@deriving bin_io, sexp]
 let sexp_of_no_raise sexp_of_a a =
   try sexp_of_a a
   with exn ->
-    try List [ Atom "failure building sexp"; sexp_of_exn exn ]
-    with _ -> Atom "could not build sexp for exn raised when building sexp for value"
+  try List [ Atom "failure building sexp"; sexp_of_exn exn ]
+  with _ -> Atom "could not build sexp for exn raised when building sexp for value"
 ;;
 
 include Comparable.Extend(Base.Sexp)(Base.Sexp)

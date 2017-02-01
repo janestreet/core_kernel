@@ -29,7 +29,7 @@ let%expect_test "data isn't nulled by [set_key None]" [@tags "no-js"] =
 
 let%expect_test "\
 data is nulled when the key becomes unreachable, even if the data is reachable"
-  [@tags "no-js"] =
+                  [@tags "no-js"] =
   let t = create () in
   let data = heap_block 14 in
   set_data t (Some data);

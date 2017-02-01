@@ -6,3 +6,5 @@
   (preprocessor_deps (../../src/config.h))))
 
 (toplevel_expect_tests ((libraries (core_kernel))))
+
+(enforce_style ())

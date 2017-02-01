@@ -244,8 +244,8 @@ let of_typerep typerep =
 ;;
 
 module For_all_parameters (M : sig
-                             val immediacy : Immediacy.t
-                           end) = struct
+    val immediacy : Immediacy.t
+  end) = struct
 
   let witness typerep1 typerep2 =
     let t1 = of_typerep typerep1 in

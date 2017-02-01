@@ -30,10 +30,10 @@ let of_string s =
   | _ -> failwithf "Host_and_port.of_string: %s" s ()
 
 include Pretty_printer.Register (struct
-  type nonrec t = t
-  let to_string = to_string
-  let module_name = "Core_kernel.Std.Host_and_port"
-end)
+    type nonrec t = t
+    let to_string = to_string
+    let module_name = "Core_kernel.Std.Host_and_port"
+  end)
 
 include (Hashable.Make_binable (T) : Hashable.S_binable with type t := t)
 

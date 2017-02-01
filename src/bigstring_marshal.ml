@@ -34,8 +34,8 @@ let unmarshal_next ?pos bstr =
     match pos with
     | None -> 0
     | Some pos ->
-        if pos < 0 then invalid_arg "Bigstring.unmarshal: pos < 0"
-        else pos
+      if pos < 0 then invalid_arg "Bigstring.unmarshal: pos < 0"
+      else pos
   in
   let len = length bstr in
   let len_header = len - Marshal.header_size in
@@ -59,8 +59,8 @@ let skip ?pos bstr =
     match pos with
     | None -> 0
     | Some pos ->
-        if pos < 0 then invalid_arg "Bigstring.skip: pos < 0"
-        else pos
+      if pos < 0 then invalid_arg "Bigstring.skip: pos < 0"
+      else pos
   in
   let len = length bstr in
   let len_header = len - Marshal.header_size in

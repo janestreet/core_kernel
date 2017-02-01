@@ -31,7 +31,7 @@
     Here is a table showing what classes of functions are available in each kind
     of hash-table module:
 
-                   creation   sexp-conv   accessors
+    creation   sexp-conv   accessors
     Hashtbl                                   X
     Hashtbl.Poly      X           X
     Key.Table         X           X           X'
@@ -41,7 +41,7 @@
     for hash-table creation and sexp conversion using polymorphic compare/hash, and
     [Key.Table] for hash-table creation and sexp conversion using [Key.compare] and
     [Key.hash].
- *)
+*)
 
 open! Import
 
@@ -51,36 +51,36 @@ open! Import
 (** For a list of hashtable functions see [Hashtbl_intf.S].*)
 
 (** To create a hashtable with string keys use String.Table.
-   {[
-    let table = String.Table.create () ~size:4 in
-    List.iter ~f:(fun (key, data) -> Hashtbl.set table ~key ~data)
-      [ ("A", 1); ("B", 2); ("C", 3); ];
-    Hashtbl.find table "C" ]}
+    {[
+      let table = String.Table.create () ~size:4 in
+      List.iter ~f:(fun (key, data) -> Hashtbl.set table ~key ~data)
+        [ ("A", 1); ("B", 2); ("C", 3); ];
+      Hashtbl.find table "C" ]}
     Here 4 need only be a guess at the hashtable's future size.
     There are other similar pre-made hashtables, eg
-      Int63.Table or Host_and_port.Table. *)
+    Int63.Table or Host_and_port.Table. *)
 
 
-  (** To create a hashtable with a custom key type use Hashable.
-      {[
-        module Key = struct
-          module T = struct
-            type t = String.t * Int63.t [@@deriving compare, hash, sexp]
-          end
-          include T
-          include Hashable.Make (T)
+(** To create a hashtable with a custom key type use Hashable.
+    {[
+      module Key = struct
+        module T = struct
+          type t = String.t * Int63.t [@@deriving compare, hash, sexp]
         end
-        let table = Key.Table.create () ~size:4 in
-        List.iter ~f:(fun (key, data) -> Hashtbl.set table ~key ~data)
-          [ (("pi", Int63.zero), 3.14159);
-            (("e", Int63.minus_one), 2.71828);
-            (("Euler", Int63.one), 0.577215);
-          ];
-        Hashtbl.find table ("pi", Int63.zero)]}
-      Performance {i may} improve if you define [equal] and [hash] explicitly, eg:
-      {[
-        let equal (x, y) (x', y') = String.(=) x x' && Int63.(=) y y'
-        let hash (x, y) = String.hash x + Int63.hash y * 65599 ]} *)
+        include T
+        include Hashable.Make (T)
+      end
+      let table = Key.Table.create () ~size:4 in
+      List.iter ~f:(fun (key, data) -> Hashtbl.set table ~key ~data)
+        [ (("pi", Int63.zero), 3.14159);
+          (("e", Int63.minus_one), 2.71828);
+          (("Euler", Int63.one), 0.577215);
+        ];
+      Hashtbl.find table ("pi", Int63.zero)]}
+    Performance {i may} improve if you define [equal] and [hash] explicitly, eg:
+    {[
+      let equal (x, y) (x', y') = String.(=) x x' && Int63.(=) y y'
+      let hash (x, y) = String.hash x + Int63.hash y * 65599 ]} *)
 
 include Core_hashtbl_intf.Hashtbl
   with type ('a, 'b) t = ('a, 'b) Base.Hashtbl.t

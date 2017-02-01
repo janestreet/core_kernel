@@ -1,3 +1,5 @@
 (executables
  ((names (o))
   (libraries (core_kernel))))
+
+(enforce_style ())

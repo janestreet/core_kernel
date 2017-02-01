@@ -27,7 +27,7 @@ val create : ?max_mem_waiting_gc:Byte_units.t -> int -> t
     the pressure in the garbage collector to be more agressive will increase.
     @return a new bigstring having [length].
     Content is undefined.
-  *)
+*)
 
 (** [init n ~f] creates a bigstring [t] of length [n], with [t.{i} = f i] *)
 val init : int -> f:(int -> char) -> t

@@ -567,8 +567,8 @@ module Priority_queue = struct
          max_allowed_key].  Also, [min_allowed_key] is a multiple of [keys_per_slot]. *)
       ; mutable min_allowed_key   : Key.t
       ; mutable max_allowed_key   : Key.t
-        (* [slots] holds the (possibly null) pointers to the circular doubly-linked lists
-           of elts.  [Array.length slots = 1 lsl bits]. *)
+      (* [slots] holds the (possibly null) pointers to the circular doubly-linked lists
+         of elts.  [Array.length slots = 1 lsl bits]. *)
       ; slots                     : 'a Internal_elt.t array sexp_opaque
       }
     [@@deriving fields, sexp_of]
@@ -992,7 +992,7 @@ module Priority_queue = struct
               max_level_min_allowed_key);
     level.min_allowed_key <- !level_min_allowed_key;
     level.max_allowed_key <- Key.add !level_min_allowed_key
-                                 (Key.Span.pred level.num_allowed_keys);
+                               (Key.Span.pred level.num_allowed_keys);
   ;;
 
   let increase_min_allowed_key t ~key ~handle_removed =
@@ -1067,8 +1067,8 @@ module Priority_queue = struct
                ; max_allowed_key
                ; slots                     =
                    Array.create
-                   ~len:(Int63.to_int_exn (Num_key_bits.pow2 level_bits))
-                   (Internal_elt.null ())
+                     ~len:(Int63.to_int_exn (Num_key_bits.pow2 level_bits))
+                     (Internal_elt.null ())
                }
              in
              (Num_key_bits.( + ) level_bits bits_per_slot,

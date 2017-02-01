@@ -24,9 +24,9 @@ module T2 : sig
   external get2 : (_, 'a) t -> 'a = "%field1"
 
   val map1 : f:('a -> 'c) -> ('a, 'b) t -> ('c, 'b) t
-    [@@deprecated "[since 2015-12] use map_fst"]
+  [@@deprecated "[since 2015-12] use map_fst"]
   val map2 : f:('b -> 'c) -> ('a, 'b) t -> ('a, 'c) t
-    [@@deprecated "[since 2015-12] use map_snd"]
+  [@@deprecated "[since 2015-12] use map_snd"]
 
   val map_fst : ('a, 'b) t -> f:('a -> 'c) -> ('c, 'b) t
   val map_snd : ('a, 'b) t -> f:('b -> 'c) -> ('a, 'c) t
@@ -56,11 +56,11 @@ module T3 : sig
   val get3 : (_, _, 'a) t -> 'a
 
   val map1 : f:('a -> 'd) -> ('a, 'b, 'c) t -> ('d, 'b, 'c) t
-    [@@deprecated "[since 2015-12] use map_fst"]
+  [@@deprecated "[since 2015-12] use map_fst"]
   val map2 : f:('b -> 'd) -> ('a, 'b, 'c) t -> ('a, 'd, 'c) t
-    [@@deprecated "[since 2015-12] use map_snd"]
+  [@@deprecated "[since 2015-12] use map_snd"]
   val map3 : f:('c -> 'd) -> ('a, 'b, 'c) t -> ('a, 'b, 'd) t
-    [@@deprecated "[since 2015-12] use map_trd"]
+  [@@deprecated "[since 2015-12] use map_trd"]
 
   val map_fst : ('a, 'b, 'c) t -> f:('a -> 'd) -> ('d, 'b, 'c) t
   val map_snd : ('a, 'b, 'c) t -> f:('b -> 'd) -> ('a, 'd, 'c) t
@@ -68,14 +68,14 @@ module T3 : sig
 end
 
 (** These functors allow users to write:
-  {[
-   module Foo = struct
-     include Tuple.Make       (String) (Int)
-     include Tuple.Comparable (String) (Int)
-     include Tuple.Hashable   (String) (Int)
-     include Tuple.Binable    (String) (Int)
-   end
-  ]}
+    {[
+      module Foo = struct
+        include Tuple.Make       (String) (Int)
+        include Tuple.Comparable (String) (Int)
+        include Tuple.Hashable   (String) (Int)
+        include Tuple.Binable    (String) (Int)
+      end
+    ]}
 *)
 
 module Make (T1 : sig type t end) (T2 : sig type t end) : sig type t = T1.t * T2.t end
@@ -100,16 +100,16 @@ end
 
     example:
     module Four_ints = Tuple.Hashable_t (Tuple.Hashable_t (Int)(Int))
-                                        (Tuple.Hashable_t (Int)(Int))
+    (Tuple.Hashable_t (Int)(Int))
 
     If instead we used [Hashable] compiler would complain that the input to outer functor
     doesn't have type [t].
 
     On the other hand:
     module Foo = struct
-      type t = String.t * Int.t
-      include Tuple.Comparable (String) (Int)
-      include Tuple.Hashable (String) (Int)
+    type t = String.t * Int.t
+    include Tuple.Comparable (String) (Int)
+    include Tuple.Hashable (String) (Int)
     end
 
     If we used [Hashable_t] above, the compiler would complain that we have two types [t]

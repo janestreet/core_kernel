@@ -373,7 +373,7 @@ let rec remove_key_r t index key e prev =
     Some data
   end
   else let next = Entry.next t.entries e in
-  if Entry.is_null next then None else remove_key_r t index key next e
+    if Entry.is_null next then None else remove_key_r t index key next e
 ;;
 
 let find_and_remove t key =
@@ -388,7 +388,7 @@ let find_and_remove t key =
       Some data
     end
     else let next = Entry.next t.entries e in
-    if Entry.is_null next then None else remove_key_r t index key next e
+      if Entry.is_null next then None else remove_key_r t index key next e
   end
   else None
 ;;
@@ -943,10 +943,10 @@ module type Key         = Key
 module type Key_binable = Key_binable
 
 module Creators (Key : sig
-  type 'a t
+    type 'a t
 
-  val hashable : 'a t Hashable.t
-end) : sig
+    val hashable : 'a t Hashable.t
+  end) : sig
 
   type ('a, 'b) t_ = ('a Key.t, 'b) t
 
@@ -1022,34 +1022,34 @@ module Poly = struct
   let invariant = invariant
 
   include Creators (struct
-    type 'a t = 'a
-    let hashable = hashable
-  end)
+      type 'a t = 'a
+      let hashable = hashable
+    end)
 
   include Accessors
 
   let sexp_of_t = sexp_of_t
 
   include Bin_prot.Utils.Make_iterable_binable2 (struct
-    type ('a, 'b) z = ('a, 'b) t
-    type ('a, 'b) t = ('a, 'b) z
-    type ('a, 'b) el = 'a * 'b [@@deriving bin_io]
+      type ('a, 'b) z = ('a, 'b) t
+      type ('a, 'b) t = ('a, 'b) z
+      type ('a, 'b) el = 'a * 'b [@@deriving bin_io]
 
-    let caller_identity = Bin_prot.Shape.Uuid.of_string "a9b0d5e8-4992-11e6-a717-dfe192342aee"
-    let module_name = Some "Pooled_hashtbl"
-    let length = length
-    let iter t ~f = iteri t ~f:(fun ~key ~data -> f (key, data))
-    let init ~len ~next =
-      let t = create ~size:len () in
-      for _i = 0 to len - 1 do
-        let key,data = next () in
-        match find t key with
-        | None -> replace t ~key ~data
-        | Some _ -> failwith "Pooled_hashtbl.bin_read_t_: duplicate key"
-      done;
-      t
-    ;;
-  end)
+      let caller_identity = Bin_prot.Shape.Uuid.of_string "a9b0d5e8-4992-11e6-a717-dfe192342aee"
+      let module_name = Some "Pooled_hashtbl"
+      let length = length
+      let iter t ~f = iteri t ~f:(fun ~key ~data -> f (key, data))
+      let init ~len ~next =
+        let t = create ~size:len () in
+        for _i = 0 to len - 1 do
+          let key,data = next () in
+          match find t key with
+          | None -> replace t ~key ~data
+          | Some _ -> failwith "Pooled_hashtbl.bin_read_t_: duplicate key"
+        done;
+        t
+      ;;
+    end)
 
 end
 
@@ -1071,9 +1071,9 @@ module Make_plain (Key : Key_plain) = struct
   let invariant invariant_data t = invariant ignore invariant_data t
 
   include Creators (struct
-    type 'a t = Key.t
-    let hashable = hashable
-  end)
+      type 'a t = Key.t
+      let hashable = hashable
+    end)
 
   include Accessors
 
@@ -1114,9 +1114,9 @@ module Make (Key : Key) = struct
 end
 
 module Make_binable (Key : sig
-  include Key
-  include Binable.S with type t := t
-end) = struct
+    include Key
+    include Binable.S with type t := t
+  end) = struct
   include Make (Key)
   include Provide_bin_io (Key)
 end

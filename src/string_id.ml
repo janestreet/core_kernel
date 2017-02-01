@@ -38,19 +38,20 @@ module Make_without_pretty_printer (M : sig val module_name : string end) () = s
 
 end
 
-let%test_module _ = (module struct
-  module M =
-    Make_without_pretty_printer (struct
-      let module_name = "test"
-    end) ()
+let%test_module _ =
+  (module struct
+    module M =
+      Make_without_pretty_printer (struct
+        let module_name = "test"
+      end) ()
 
-  let%test_unit "String_id's of_string shouldn't allocate on success" =
-    let initial_words = Core_gc.minor_words () in
-    ignore (M.of_string "FOOBAR");
-    let allocated = (Core_gc.minor_words ()) - initial_words in
-    [%test_result: int] allocated ~expect:0
-  ;;
-end)
+    let%test_unit "String_id's of_string shouldn't allocate on success" =
+      let initial_words = Core_gc.minor_words () in
+      ignore (M.of_string "FOOBAR");
+      let allocated = (Core_gc.minor_words ()) - initial_words in
+      [%test_result: int] allocated ~expect:0
+    ;;
+  end)
 
 module Make (M : sig val module_name : string end) () = struct
   include Make_without_pretty_printer(M) ()

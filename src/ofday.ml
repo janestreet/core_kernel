@@ -3,7 +3,7 @@ open Std_internal
 open Digit_string_helpers
 
 (* Create an abstract type for Ofday to prevent us from confusing it with
-    other floats.
+   other floats.
 *)
 module Stable = struct
   module V1 = struct
@@ -35,7 +35,7 @@ module Stable = struct
       (* due to precision limitations in float we can't expect better than microsecond
          precision *)
       include Float.Robust_compare.Make
-                (struct let robust_comparison_tolerance = 1E-6 end)
+          (struct let robust_comparison_tolerance = 1E-6 end)
 
       let to_span_since_start_of_day t = Span.of_sec t
 
@@ -251,15 +251,15 @@ module Stable = struct
     let small_diff =
       let hour = 3600. in
       (fun ofday1 ofday2 ->
-        let ofday1 = Span.to_sec (T.to_span_since_start_of_day ofday1) in
-        let ofday2 = Span.to_sec (T.to_span_since_start_of_day ofday2) in
-        let diff   = ofday1 -. ofday2 in
-        (*  d1 is in (-hour; hour) *)
-        let d1 = Float.mod_float diff hour in
-        (*  d2 is in (0;hour) *)
-        let d2 = Float.mod_float (d1 +. hour) hour in
-        let d = if d2 > hour /. 2. then d2 -. hour else d2 in
-        Span.of_sec d)
+         let ofday1 = Span.to_sec (T.to_span_since_start_of_day ofday1) in
+         let ofday2 = Span.to_sec (T.to_span_since_start_of_day ofday2) in
+         let diff   = ofday1 -. ofday2 in
+         (*  d1 is in (-hour; hour) *)
+         let d1 = Float.mod_float diff hour in
+         (*  d2 is in (0;hour) *)
+         let d2 = Float.mod_float (d1 +. hour) hour in
+         let d = if d2 > hour /. 2. then d2 -. hour else d2 in
+         Span.of_sec d)
     ;;
 
     (* There are a number of things that would be shadowed by this include because of the
@@ -270,10 +270,10 @@ module Stable = struct
     let to_string t = to_string_gen ~drop_ms:false ~drop_us:false ~trim:false t
 
     include Pretty_printer.Register (struct
-      type nonrec t = t
-      let to_string = to_string
-      let module_name = "Core_kernel.Std.Time.Ofday"
-    end)
+        type nonrec t = t
+        let to_string = to_string
+        let module_name = "Core_kernel.Std.Time.Ofday"
+      end)
 
     (* lifted allowed meridiem suffixes out so that tests can reuse them *)
     let plus_lowercase xs = xs @ List.map xs ~f:String.lowercase
@@ -403,7 +403,7 @@ module Stable = struct
           success (test_excluding_noon ~hr ~zeroes:":00:00" ~meridiem:None);
           success (test_excluding_noon ~hr ~zeroes:":00"    ~meridiem:None);
           failure (test_excluding_noon ~hr ~zeroes:""       ~meridiem:None);
-      );
+        );
       (* Test hour 12 *)
       assert ((create ~hr:12 ()) = (of_string "12:00:00 PM"));
       assert ((create ~hr:0 ())  = (of_string "12:00:00 AM"));
@@ -416,9 +416,9 @@ module Stable = struct
       match sexp with
       | Sexp.Atom s ->
         begin try
-                of_string s
-          with
-          | Invalid_argument s -> of_sexp_error ("Ofday.t_of_sexp: " ^ s) sexp
+          of_string s
+        with
+        | Invalid_argument s -> of_sexp_error ("Ofday.t_of_sexp: " ^ s) sexp
         end
       | _ -> of_sexp_error "Ofday.t_of_sexp" sexp
     ;;

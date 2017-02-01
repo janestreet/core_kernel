@@ -196,7 +196,7 @@ let update_write (type callback) (t : (callback, _) t) =
     let subscriber = subscribers.( i - 1 ) in
     let error =
       [%message "Bus subscriber raised"
-               (exn : exn) (backtrace : string list) (subscriber : _ Subscriber.t)]
+                  (exn : exn) (backtrace : string list) (subscriber : _ Subscriber.t)]
       |> [%of_sexp: Error.t]
     in
     match subscriber.on_callback_raise with
@@ -209,7 +209,7 @@ let update_write (type callback) (t : (callback, _) t) =
         call_on_callback_raise
           (let original_error = error in
            [%message "Bus subscriber's [on_callback_raise] raised"
-                    (exn : exn) (backtrace : string) (original_error : Error.t)]
+                       (exn : exn) (backtrace : string) (original_error : Error.t)]
            |> [%of_sexp: Error.t])
   in
   let len = Array.length callbacks in

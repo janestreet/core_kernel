@@ -100,8 +100,8 @@ end
 
 module Accessors = struct
   include (Set.Using_comparator : Set_intf.Accessors2
-             with type ('a, 'b) t    := ('a, 'b) Set.t
-             with type ('a, 'b) tree := ('a, 'b) Tree.t)
+           with type ('a, 'b) t    := ('a, 'b) Set.t
+           with type ('a, 'b) tree := ('a, 'b) Tree.t)
 
   let to_map t ~f = Tree.to_map ~comparator:(Set.Using_comparator.comparator t) (to_tree t) ~f
   let obs = obs
@@ -110,7 +110,7 @@ end
 
 include (Set.Using_comparator :
            module type of struct include Set.Using_comparator end
-           with module Tree := Tree)
+         with module Tree := Tree)
 
 let compare _ _ t1 t2 = compare_direct t1 t2
 
@@ -303,18 +303,18 @@ module Poly = struct
   let sexp_of_t sexp_of_k t = sexp_of_t sexp_of_k [%sexp_of: _] t
 
   include Bin_prot.Utils.Make_iterable_binable1 (struct
-    type nonrec 'a t = 'a t
-    type 'a el = 'a [@@deriving bin_io]
-    let _ = bin_el
+      type nonrec 'a t = 'a t
+      type 'a el = 'a [@@deriving bin_io]
+      let _ = bin_el
 
-    let caller_identity = Bin_prot.Shape.Uuid.of_string "88bcc478-4992-11e6-a95d-ff4831acf410"
-    let module_name = Some "Core_kernel.Std.Set"
-    let length = length
-    let iter t ~f = iter ~f:(fun key -> f key) t
-    let init ~len ~next =
-      init_for_bin_prot ~len ~f:(fun _ -> next ()) ~comparator:Comparator.Poly.comparator
+      let caller_identity = Bin_prot.Shape.Uuid.of_string "88bcc478-4992-11e6-a95d-ff4831acf410"
+      let module_name = Some "Core_kernel.Std.Set"
+      let length = length
+      let iter t ~f = iter ~f:(fun key -> f key) t
+      let init ~len ~next =
+        init_for_bin_prot ~len ~f:(fun _ -> next ()) ~comparator:Comparator.Poly.comparator
 
-  end)
+    end)
 
   module Tree = struct
     include Make_tree (Comparator.Poly)
@@ -330,11 +330,11 @@ module Poly = struct
   end
 
   let%test_module _ = (module struct
-    let (=) = Pervasives.(=)
-    let%test _ = stable_dedup_list [] = []
-    let%test _ = stable_dedup_list [5;5;5;5;5] = [5]
-    let%test _ = stable_dedup_list [5;9;3;5;2;2] = [5;9;3;2]
-  end)
+                        let (=) = Pervasives.(=)
+                        let%test _ = stable_dedup_list [] = []
+                        let%test _ = stable_dedup_list [5;5;5;5;5] = [5]
+                        let%test _ = stable_dedup_list [5;9;3;5;2;2] = [5;9;3;2]
+                      end)
 end
 
 module type S_plain = S_plain
@@ -342,9 +342,9 @@ module type S = S
 module type S_binable = S_binable
 
 module Make_plain_using_comparator (Elt : sig
-  type t [@@deriving sexp_of]
-  include Comparator.S with type t := t
-end) = struct
+    type t [@@deriving sexp_of]
+    include Comparator.S with type t := t
+  end) = struct
 
   module Elt = Elt
   module Elt_S1 = Comparator.S_to_S1 (Elt)
@@ -412,14 +412,14 @@ module Make_plain (Elt : Elt_plain) =
   end)
 
 module Make_using_comparator (Elt : sig
-  type t [@@deriving sexp]
-  include Comparator.S with type t := t
-end) = struct
+    type t [@@deriving sexp]
+    include Comparator.S with type t := t
+  end) = struct
   module Elt = Elt
   module M1 = Make_plain_using_comparator(Elt)
   include (M1 : module type of M1
-             with module Tree := M1.Tree
-             with module Elt := Elt)
+           with module Tree := M1.Tree
+           with module Elt := Elt)
   include Provide_of_sexp (Elt)
   module Tree = struct
     include M1.Tree
@@ -434,9 +434,9 @@ module Make (Elt : Elt) =
   end)
 
 module Make_binable_using_comparator (Elt : sig
-  type t [@@deriving bin_io, sexp]
-  include Comparator.S with type t := t
-end) = struct
+    type t [@@deriving bin_io, sexp]
+    include Comparator.S with type t := t
+  end) = struct
   module Elt = Elt
   module M2 = Make_using_comparator (Elt)
   include (M2 : module type of M2 with module Elt := Elt)

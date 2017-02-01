@@ -62,13 +62,12 @@ module F (Base : Base) : S with type base = Base.t = struct
     len : int;
   }
 
-(*
-  let invariant t =
-    assert (0 <= t.pos);
-    assert (0 <= t.len);
-    assert (t.pos + t.len <= Base.length t.base);
-  ;;
-*)
+  (* {[
+       let invariant t =
+         assert (0 <= t.pos);
+         assert (0 <= t.len);
+         assert (t.pos + t.len <= Base.length t.base);
+       ;; ]} *)
 
   let base t = t.base
   let pos t = t.pos
@@ -88,16 +87,17 @@ module F (Base : Base) : S with type base = Base.t = struct
     then Base.get (base t) (pos t + i)
     else raise (Invalid_argument "index out of bounds")
 
-  let%test_module "get" = (module struct
-    let hello = Base.of_string "hello"
+  let%test_module "get" =
+    (module struct
+      let hello = Base.of_string "hello"
 
-    let%test _ =
-      let lo = create ~pos:3 ~len:2 hello in
-      Char.equal (get lo 1) 'o'
+      let%test _ =
+        let lo = create ~pos:3 ~len:2 hello in
+        Char.equal (get lo 1) 'o'
 
-    let%test _ = Exn.does_raise (fun () -> get (create ~pos:1 ~len:3 hello) 3)
-    let%test _ = Exn.does_raise (fun () -> get (create hello) (-1))
-  end)
+      let%test _ = Exn.does_raise (fun () -> get (create ~pos:1 ~len:3 hello) 3)
+      let%test _ = Exn.does_raise (fun () -> get (create hello) (-1))
+    end)
 
   let sub ?pos ?len t =
     let (pos, len) =
@@ -107,25 +107,26 @@ module F (Base : Base) : S with type base = Base.t = struct
     { base = t.base; pos = t.pos + pos; len }
   ;;
 
-  let%test_module "sub" = (module struct
-    let base = Base.of_string "012345"
-    let t = create ~pos:1 ~len:4 base (* 1234 *)
+  let%test_module "sub" =
+    (module struct
+      let base = Base.of_string "012345"
+      let t = create ~pos:1 ~len:4 base (* 1234 *)
 
-    let%test_unit _ = ignore (sub ~pos:0 ~len:4 t : t)
-    let%test _ = Exn.does_raise (fun () -> sub ~pos:0 ~len:5 t)
-    let%test _ = Exn.does_raise (fun () -> sub ~pos:1 ~len:4 t)
+      let%test_unit _ = ignore (sub ~pos:0 ~len:4 t : t)
+      let%test _ = Exn.does_raise (fun () -> sub ~pos:0 ~len:5 t)
+      let%test _ = Exn.does_raise (fun () -> sub ~pos:1 ~len:4 t)
 
-    let%test _ =
-      let t2 = sub t ~pos:1 ~len:3 in
-      String.init (length t2) ~f:(get t2) = "234"
+      let%test _ =
+        let t2 = sub t ~pos:1 ~len:3 in
+        String.init (length t2) ~f:(get t2) = "234"
 
-    let%test _ =
-      let t2 = sub t ~pos:3 in
-      String.init (length t2) ~f:(get t2) = "4"
+      let%test _ =
+        let t2 = sub t ~pos:3 in
+        String.init (length t2) ~f:(get t2) = "4"
 
-    let%test_unit "empty substring" = ignore (sub ~pos:2 ~len:0 t : t)
-    let%test "invalid empty substring" = Exn.does_raise (fun () -> sub ~pos:5 ~len:0 t)
-  end)
+      let%test_unit "empty substring" = ignore (sub ~pos:2 ~len:0 t : t)
+      let%test "invalid empty substring" = Exn.does_raise (fun () -> sub ~pos:5 ~len:0 t)
+    end)
 
   module Make_arg = struct
     type nonrec t = t
@@ -155,17 +156,18 @@ module F (Base : Base) : S with type base = Base.t = struct
   let to_array t = Array.init (length t) ~f:(get t)
   let to_list t = List.init (length t) ~f:(get t)
 
-  let%test_module _ = (module struct
-    let ell = create ~pos:1 ~len:3 (Base.of_string "hello")
+  let%test_module _ =
+    (module struct
+      let ell = create ~pos:1 ~len:3 (Base.of_string "hello")
 
-    let%test _ = to_array ell = [|'e'; 'l'; 'l'|]
-    let%test _ = to_list ell = ['e'; 'l'; 'l']
-    let%test _ = fold ell ~init:[] ~f:(fun acc x -> x :: acc) = ['l'; 'l'; 'e']
-    let%test _ =
-      let stuff = ref [] in
-      iter ell ~f:(fun c -> stuff := c :: !stuff);
-      !stuff = ['l'; 'l'; 'e']
-  end)
+      let%test _ = to_array ell = [|'e'; 'l'; 'l'|]
+      let%test _ = to_list ell = ['e'; 'l'; 'l']
+      let%test _ = fold ell ~init:[] ~f:(fun acc x -> x :: acc) = ['l'; 'l'; 'e']
+      let%test _ =
+        let stuff = ref [] in
+        iter ell ~f:(fun c -> stuff := c :: !stuff);
+        !stuff = ['l'; 'l'; 'e']
+    end)
 
   let find_map = C.find_map
   let find = C.find
@@ -177,26 +179,27 @@ module F (Base : Base) : S with type base = Base.t = struct
   let min_elt = C.min_elt
   let max_elt = C.max_elt
 
-  let%test_module _ = (module struct
-    let bcdefghi = create ~pos:1 ~len:8 (Base.of_string "abcdefghijklmno ")
+  let%test_module _ =
+    (module struct
+      let bcdefghi = create ~pos:1 ~len:8 (Base.of_string "abcdefghijklmno ")
 
-    let%test _ = find bcdefghi ~f:Char.is_lowercase = Some 'b'
-    let%test _ = find bcdefghi ~f:Char.is_whitespace = None
-    let%test _ = exists bcdefghi ~f:(Char.equal 'h')
-    let%test _ = not (exists bcdefghi ~f:(Char.equal 'z'))
-    let%test _ = for_all bcdefghi ~f:Char.is_alpha
-    let%test _ = not (for_all bcdefghi ~f:(Char.equal 'h'))
-    let%test _ = not (mem bcdefghi 'a')
-    let%test _ = mem bcdefghi 'b'
-    let%test _ = mem bcdefghi 'i'
-    let%test _ = not (mem bcdefghi 'j')
-    let%test _ = count bcdefghi ~f:(String.mem "aeiou") = 2
-    let%test _ =
-      sum (module Int) bcdefghi ~f:(fun c -> Char.to_int c - Char.to_int 'a')
-      = 1 + 2 + 3 + 4 + 5 + 6 + 7 + 8
-    let%test _ = min_elt bcdefghi ~cmp:Char.compare = Some 'b'
-    let%test _ = max_elt bcdefghi ~cmp:Char.compare = Some 'i'
-  end)
+      let%test _ = find bcdefghi ~f:Char.is_lowercase = Some 'b'
+      let%test _ = find bcdefghi ~f:Char.is_whitespace = None
+      let%test _ = exists bcdefghi ~f:(Char.equal 'h')
+      let%test _ = not (exists bcdefghi ~f:(Char.equal 'z'))
+      let%test _ = for_all bcdefghi ~f:Char.is_alpha
+      let%test _ = not (for_all bcdefghi ~f:(Char.equal 'h'))
+      let%test _ = not (mem bcdefghi 'a')
+      let%test _ = mem bcdefghi 'b'
+      let%test _ = mem bcdefghi 'i'
+      let%test _ = not (mem bcdefghi 'j')
+      let%test _ = count bcdefghi ~f:(String.mem "aeiou") = 2
+      let%test _ =
+        sum (module Int) bcdefghi ~f:(fun c -> Char.to_int c - Char.to_int 'a')
+        = 1 + 2 + 3 + 4 + 5 + 6 + 7 + 8
+      let%test _ = min_elt bcdefghi ~cmp:Char.compare = Some 'b'
+      let%test _ = max_elt bcdefghi ~cmp:Char.compare = Some 'i'
+    end)
 
   let drop_prefix t n =
     if n > t.len then

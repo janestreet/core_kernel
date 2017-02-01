@@ -117,11 +117,11 @@ module Make_using_comparator (Key : sig
     t
 
   include Bin_prot.Utils.Make_binable1 (struct
-    type nonrec 'a t = 'a t
-    module Binable = Key.Map
-    let to_binable x = x
-    let of_binable x = validate_map_from_serialization x; x
-  end)
+      type nonrec 'a t = 'a t
+      module Binable = Key.Map
+      let to_binable x = x
+      let of_binable x = validate_map_from_serialization x; x
+    end)
 
   let create f =
     List.fold Key.all ~init:Key.Map.empty ~f:(fun t key ->

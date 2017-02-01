@@ -2,8 +2,8 @@ open! Core_kernel.Std
 open! Core_kernel.Timing_wheel_ns_intf
 
 module Make
-         (Time         : Timing_wheel_time)
-         (Timing_wheel : Timing_wheel with module Time := Time)
+    (Time         : Timing_wheel_time)
+    (Timing_wheel : Timing_wheel with module Time := Time)
   : sig
     include module type of struct include Timing_wheel end
 

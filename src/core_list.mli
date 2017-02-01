@@ -30,7 +30,7 @@ val to_string : f:('a -> string) -> 'a t -> string
     - Adding [~length:(`At_least n)] produces only lists of length [n] or greater.
     - Adding [~length:(`At_most n)] produces only lists of length [n] or less.
     - Adding [~length:(`Between_inclusive (m,n))] produces only lists of length [k] such
-      that [m <= k] and [k <= n].
+    that [m <= k] and [k <= n].
 
     The lists in the output of [list t] are generated uniquely, so long as the values in
     [t] are generated uniquely. *)

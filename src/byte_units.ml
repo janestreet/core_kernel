@@ -23,12 +23,12 @@ module External = struct
     | `Gigabytes of float
     | `Words of float
     ]
-    [@@deriving sexp]
+  [@@deriving sexp]
 end
 
 module Measure = struct
   type t = [ `Bytes | `Kilobytes | `Megabytes | `Gigabytes | `Words ]
-    [@@deriving sexp, bin_io]
+  [@@deriving sexp, bin_io]
 
   let bytes = function
     | `Bytes -> 1.

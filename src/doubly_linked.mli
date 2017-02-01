@@ -109,8 +109,8 @@ val copy : 'a t -> 'a t
     except that it runs in constant time.
 
     If [s = to_list src] and [d = to_list dst], then after [transfer ~src ~dst]:
-      [to_list src = []]
-      [to_list dst = d @ s] *)
+    [to_list src = []]
+    [to_list dst = d @ s] *)
 val transfer : src:'a t -> dst:'a t -> unit
 
 (** [filter_inplace t ~f] removes all elements of [t] that don't satisfy [f]. *)
@@ -125,5 +125,5 @@ val filter_inplace : 'a t -> f:('a -> bool) -> unit
 val unchecked_iter : 'a t -> f:('a -> unit) -> unit
 
 (** A lazy sequence of values from the doubly linked list.  The returned sequence is immune
-   to any subsequent mutation of the list. *)
+    to any subsequent mutation of the list. *)
 val to_sequence : 'a t -> 'a Sequence.t

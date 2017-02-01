@@ -183,22 +183,23 @@ end = struct
   let value t = t.value
 
   (*
-    [split_or_splice] is sufficient as the lone primitive for
-    accomplishing all pointer updates on cyclic loops of list nodes.
-    It takes two "gaps" between adjacent linked list nodes.  If the gaps
-    point into the same list, the result is that it will be split into
-    two lists afterwards.  If the gaps point into different lists, the
-    result is that they will be spliced together into one list afterwards.
+     [split_or_splice] is sufficient as the lone primitive for
+     accomplishing all pointer updates on cyclic loops of list nodes.
+     It takes two "gaps" between adjacent linked list nodes.  If the gaps
+     point into the same list, the result is that it will be split into
+     two lists afterwards.  If the gaps point into different lists, the
+     result is that they will be spliced together into one list afterwards.
 
-      Before                      After
-          -----+        +-----         -----+               +-----
-             A |  <-->  | B               A |  <---   --->  | B
-          -----+        +-----         -----+      \ /      +-----
-                                                    X
-          -----+        +-----         -----+      / \      +-----
-             C |  <-->  | D               C |  <---   --->  | D
-          -----+        +-----         -----+               +-----
-  *)
+     {v
+       Before                      After
+           -----+        +-----         -----+               +-----
+           A |  <-->  | B               A |  <---   --->  | B
+           -----+        +-----         -----+      \ /      +-----
+           X
+           -----+        +-----         -----+      / \      +-----
+           C |  <-->  | D               C |  <---   --->  | D
+           -----+        +-----         -----+               +-----
+     v} *)
 
   let unsafe_split_or_splice ~prev1:a ~next1:b ~prev2:c ~next2:d =
     a.next <- d; d.prev <- a;
@@ -206,17 +207,17 @@ end = struct
 
   let unsafe_split_or_splice_after t1 t2 =
     unsafe_split_or_splice
-     ~next1:t1.next
-     ~prev1:t1.next.prev
-     ~next2:t2.next
-     ~prev2:t2.next.prev
+      ~next1:t1.next
+      ~prev1:t1.next.prev
+      ~next2:t2.next
+      ~prev2:t2.next.prev
 
   let unsafe_split_or_splice_before t1 t2 =
     unsafe_split_or_splice
-     ~prev1:t1.prev
-     ~next1:t1.prev.next
-     ~prev2:t2.prev
-     ~next2:t2.prev.next
+      ~prev1:t1.prev
+      ~next1:t1.prev.next
+      ~prev2:t2.prev
+      ~next2:t2.prev.next
 
   let check_two_nodes_no_pending_iterations t1 t2 =
     Header.check_no_pending_iterations t1.header;
@@ -306,12 +307,12 @@ let fold_elt t ~init ~f =
       (Elt.header first)
       f init first
       (fun f init first ->
-      let rec loop f acc first elt =
-        let acc = f acc elt in
-        let next = Elt.next elt in
-        if phys_equal next first then acc else loop f acc first next
-      in
-      loop f init first first)
+         let rec loop f acc first elt =
+           let acc = f acc elt in
+           let next = Elt.next elt in
+           if phys_equal next first then acc else loop f acc first next
+         in
+         loop f init first first)
 ;;
 
 let fold_elt_1 t ~init ~f a =
@@ -322,12 +323,12 @@ let fold_elt_1 t ~init ~f a =
       (Elt.header first)
       f a init first
       (fun f a init first ->
-        let rec loop f a acc first elt =
-          let acc = f a acc elt in
-          let next = Elt.next elt in
-          if phys_equal next first then acc else loop f a acc first next
-        in
-        loop f a init first first)
+         let rec loop f a acc first elt =
+           let acc = f a acc elt in
+           let next = Elt.next elt in
+           if phys_equal next first then acc else loop f a acc first next
+         in
+         loop f a init first first)
 ;;
 
 let iter_elt t ~f = fold_elt_1 t ~init:() ~f:(fun f () elt -> f elt) f
@@ -369,11 +370,11 @@ let iter t ~f =
       (fun first f -> iter_loop first f first)
 
 module C = Container.Make (struct
-  type 'a t_ = 'a t
-  type 'a t = 'a t_
-  let fold t ~init ~f = fold_elt_1 t ~init f ~f:(fun f acc elt -> f acc (Elt.value elt))
-  let iter = `Custom iter
-end)
+    type 'a t_ = 'a t
+    type 'a t = 'a t_
+    let fold t ~init ~f = fold_elt_1 t ~init f ~f:(fun f acc elt -> f acc (Elt.value elt))
+    let iter = `Custom iter
+  end)
 
 let count       = C.count
 let sum         = C.sum
@@ -412,15 +413,15 @@ let fold_right t ~init ~f =
       (Elt.header first)
       f init first
       (fun f init first ->
-      let rec loop acc elt =
-        let prev = Elt.prev elt in
-        let acc = f (Elt.value prev) acc in
-        if phys_equal prev first
-        then acc
-        else loop acc prev
-      in
-      loop init first
-    )
+         let rec loop acc elt =
+           let prev = Elt.prev elt in
+           let acc = f (Elt.value prev) acc in
+           if phys_equal prev first
+           then acc
+           else loop acc prev
+         in
+         loop init first
+      )
 
 let to_list t = fold_right t ~init:[] ~f:(fun x tl -> x :: tl)
 
@@ -459,7 +460,7 @@ let filter_inplace t ~f =
   let to_remove =
     List.rev
       (fold_elt t ~init:[] ~f:(fun elts elt ->
-        if f (Elt.value elt) then elts else elt :: elts))
+         if f (Elt.value elt) then elts else elt :: elts))
   in
   List.iter to_remove ~f:(fun elt ->
     begin
@@ -656,52 +657,53 @@ let move_to_back t elt =
     let last = Elt.prev first in
     if not (Elt.equal elt last) then move_after t elt ~anchor:last
 
-let%test_module "move functions" = (module struct
+let%test_module "move functions" =
+  (module struct
 
-  let n = 5
+    let n = 5
 
-  let test k expected =
-    let t = create () in
-    let a = Array.init n ~f:(fun i -> insert_last t i) in
-    k t a;
-    invariant ignore t;
-    assert (length t = n);
-    let observed = to_list t in
-    if observed <> expected then begin
-      Error.failwiths "mismatch"
-        (`Expected expected, `Observed observed)
-        [%sexp_of: [`Expected of int list] *
-                   [`Observed of int list]]
-    end
+    let test k expected =
+      let t = create () in
+      let a = Array.init n ~f:(fun i -> insert_last t i) in
+      k t a;
+      invariant ignore t;
+      assert (length t = n);
+      let observed = to_list t in
+      if observed <> expected then begin
+        Error.failwiths "mismatch"
+          (`Expected expected, `Observed observed)
+          [%sexp_of: [`Expected of int list] *
+                     [`Observed of int list]]
+      end
 
-  let%test_unit _ = test (fun _ _ -> ()) [0; 1; 2; 3; 4]
+    let%test_unit _ = test (fun _ _ -> ()) [0; 1; 2; 3; 4]
 
-  let%test_unit _ = test (fun t a -> move_to_front t a.(4)) [4; 0; 1; 2; 3]
-  let%test_unit _ = test (fun t a -> move_to_front t a.(3)) [3; 0; 1; 2; 4]
-  let%test_unit _ = test (fun t a -> move_to_front t a.(2)) [2; 0; 1; 3; 4]
-  let%test_unit _ = test (fun t a -> move_to_front t a.(1)) [1; 0; 2; 3; 4]
-  let%test_unit _ = test (fun t a -> move_to_front t a.(0)) [0; 1; 2; 3; 4]
+    let%test_unit _ = test (fun t a -> move_to_front t a.(4)) [4; 0; 1; 2; 3]
+    let%test_unit _ = test (fun t a -> move_to_front t a.(3)) [3; 0; 1; 2; 4]
+    let%test_unit _ = test (fun t a -> move_to_front t a.(2)) [2; 0; 1; 3; 4]
+    let%test_unit _ = test (fun t a -> move_to_front t a.(1)) [1; 0; 2; 3; 4]
+    let%test_unit _ = test (fun t a -> move_to_front t a.(0)) [0; 1; 2; 3; 4]
 
-  let%test_unit _ = test (fun t a -> move_to_back  t a.(0)) [1; 2; 3; 4; 0]
-  let%test_unit _ = test (fun t a -> move_to_back  t a.(1)) [0; 2; 3; 4; 1]
-  let%test_unit _ = test (fun t a -> move_to_back  t a.(2)) [0; 1; 3; 4; 2]
-  let%test_unit _ = test (fun t a -> move_to_back  t a.(3)) [0; 1; 2; 4; 3]
-  let%test_unit _ = test (fun t a -> move_to_back  t a.(4)) [0; 1; 2; 3; 4]
+    let%test_unit _ = test (fun t a -> move_to_back  t a.(0)) [1; 2; 3; 4; 0]
+    let%test_unit _ = test (fun t a -> move_to_back  t a.(1)) [0; 2; 3; 4; 1]
+    let%test_unit _ = test (fun t a -> move_to_back  t a.(2)) [0; 1; 3; 4; 2]
+    let%test_unit _ = test (fun t a -> move_to_back  t a.(3)) [0; 1; 2; 4; 3]
+    let%test_unit _ = test (fun t a -> move_to_back  t a.(4)) [0; 1; 2; 3; 4]
 
-  let%test_unit _ = test (fun t a -> move_before t a.(2) ~anchor:a.(1)) [0; 2; 1; 3; 4]
-  let%test_unit _ = test (fun t a -> move_before t a.(2) ~anchor:a.(0)) [2; 0; 1; 3; 4]
-  let%test_unit _ = test (fun t a -> move_before t a.(1) ~anchor:a.(0)) [1; 0; 2; 3; 4]
-  let%test_unit _ = test (fun t a -> move_before t a.(0) ~anchor:a.(2)) [1; 0; 2; 3; 4]
-  let%test_unit _ = test (fun t a -> move_before t a.(0) ~anchor:a.(1)) [0; 1; 2; 3; 4]
-  let%test_unit _ = test (fun t a -> move_before t a.(3) ~anchor:a.(2)) [0; 1; 3; 2; 4]
-  let%test_unit _ = test (fun t a -> move_before t a.(2) ~anchor:a.(3)) [0; 1; 2; 3; 4]
+    let%test_unit _ = test (fun t a -> move_before t a.(2) ~anchor:a.(1)) [0; 2; 1; 3; 4]
+    let%test_unit _ = test (fun t a -> move_before t a.(2) ~anchor:a.(0)) [2; 0; 1; 3; 4]
+    let%test_unit _ = test (fun t a -> move_before t a.(1) ~anchor:a.(0)) [1; 0; 2; 3; 4]
+    let%test_unit _ = test (fun t a -> move_before t a.(0) ~anchor:a.(2)) [1; 0; 2; 3; 4]
+    let%test_unit _ = test (fun t a -> move_before t a.(0) ~anchor:a.(1)) [0; 1; 2; 3; 4]
+    let%test_unit _ = test (fun t a -> move_before t a.(3) ~anchor:a.(2)) [0; 1; 3; 2; 4]
+    let%test_unit _ = test (fun t a -> move_before t a.(2) ~anchor:a.(3)) [0; 1; 2; 3; 4]
 
-  let%test_unit _ = test (fun t a -> move_after  t a.(1) ~anchor:a.(3)) [0; 2; 3; 1; 4]
-  let%test_unit _ = test (fun t a -> move_after  t a.(0) ~anchor:a.(2)) [1; 2; 0; 3; 4]
-  let%test_unit _ = test (fun t a -> move_after  t a.(1) ~anchor:a.(4)) [0; 2; 3; 4; 1]
-  let%test_unit _ = test (fun t a -> move_after  t a.(3) ~anchor:a.(2)) [0; 1; 2; 3; 4]
-  let%test_unit _ = test (fun t a -> move_after  t a.(2) ~anchor:a.(3)) [0; 1; 3; 2; 4]
-end)
+    let%test_unit _ = test (fun t a -> move_after  t a.(1) ~anchor:a.(3)) [0; 2; 3; 1; 4]
+    let%test_unit _ = test (fun t a -> move_after  t a.(0) ~anchor:a.(2)) [1; 2; 0; 3; 4]
+    let%test_unit _ = test (fun t a -> move_after  t a.(1) ~anchor:a.(4)) [0; 2; 3; 4; 1]
+    let%test_unit _ = test (fun t a -> move_after  t a.(3) ~anchor:a.(2)) [0; 1; 2; 3; 4]
+    let%test_unit _ = test (fun t a -> move_after  t a.(2) ~anchor:a.(3)) [0; 1; 3; 2; 4]
+  end)
 
 let%test _ =
   let t1 = create () in
@@ -740,30 +742,31 @@ let%test_unit "mem_elt" =
   [%test_result: bool] (mem_elt t1 b) ~expect:false;
 ;;
 
-let%test_module "unchecked_iter" = (module struct
-  let b = of_list [0; 1; 2; 3; 4]
-  let element b n =
-    Option.value_exn (find_elt b ~f:(fun value -> value = n))
-  let remove b n =
-    remove b (element b n)
-  let insert_after b n_find n_add =
-    ignore (insert_after b (element b n_find) n_add)
-  let to_list f =
-    let r = ref [] in
-    let b = copy b in
-    unchecked_iter b ~f:(fun n ->
-      r := n :: !r;
-      f b n;
-    );
-    List.rev !r
-  let%test _ = to_list (fun _ _ -> ()) = [0; 1; 2; 3; 4]
-  let%test _ = to_list (fun b x -> if x = 0 then remove b 1) = [0; 2; 3; 4]
-  let%test _ = to_list (fun b x -> if x = 1 then remove b 0) = [0; 1; 2; 3; 4]
-  let%test _ = to_list (fun b x -> if x = 2 then remove b 1) = [0; 1; 2; 3; 4]
-  let%test _ = to_list (fun b x -> if x = 2 then begin remove b 4; remove b 3; end) = [0; 1; 2]
-  let%test _ = to_list (fun b x -> if x = 2 then insert_after b 1 5) = [0; 1; 2; 3; 4]
-  let%test _ = to_list (fun b x -> if x = 2 then insert_after b 2 5) = [0; 1; 2; 5; 3; 4]
-  let%test _ = to_list (fun b x -> if x = 2 then insert_after b 3 5) = [0; 1; 2; 3; 5; 4]
-end)
+let%test_module "unchecked_iter" =
+  (module struct
+    let b = of_list [0; 1; 2; 3; 4]
+    let element b n =
+      Option.value_exn (find_elt b ~f:(fun value -> value = n))
+    let remove b n =
+      remove b (element b n)
+    let insert_after b n_find n_add =
+      ignore (insert_after b (element b n_find) n_add)
+    let to_list f =
+      let r = ref [] in
+      let b = copy b in
+      unchecked_iter b ~f:(fun n ->
+        r := n :: !r;
+        f b n;
+      );
+      List.rev !r
+    let%test _ = to_list (fun _ _ -> ()) = [0; 1; 2; 3; 4]
+    let%test _ = to_list (fun b x -> if x = 0 then remove b 1) = [0; 2; 3; 4]
+    let%test _ = to_list (fun b x -> if x = 1 then remove b 0) = [0; 1; 2; 3; 4]
+    let%test _ = to_list (fun b x -> if x = 2 then remove b 1) = [0; 1; 2; 3; 4]
+    let%test _ = to_list (fun b x -> if x = 2 then begin remove b 4; remove b 3; end) = [0; 1; 2]
+    let%test _ = to_list (fun b x -> if x = 2 then insert_after b 1 5) = [0; 1; 2; 3; 4]
+    let%test _ = to_list (fun b x -> if x = 2 then insert_after b 2 5) = [0; 1; 2; 5; 3; 4]
+    let%test _ = to_list (fun b x -> if x = 2 then insert_after b 3 5) = [0; 1; 2; 3; 5; 4]
+  end)
 
 let to_sequence t = to_list t |> Sequence.of_list

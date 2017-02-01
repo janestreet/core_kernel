@@ -3,18 +3,18 @@ open! Import
 module Stable = struct
   module V1 = struct
     type t =
-    | Jan
-    | Feb
-    | Mar
-    | Apr
-    | May
-    | Jun
-    | Jul
-    | Aug
-    | Sep
-    | Oct
-    | Nov
-    | Dec
+      | Jan
+      | Feb
+      | Mar
+      | Apr
+      | May
+      | Jun
+      | Jul
+      | Aug
+      | Sep
+      | Oct
+      | Nov
+      | Dec
     [@@deriving sexp, compare, hash, variants]
 
     let failwithf = Core_printf.failwithf
@@ -57,35 +57,35 @@ module Stable = struct
       | Dec -> 12
 
     include Binable.Stable.Of_binable.V1 (Core_int) (struct
-      type nonrec t = t
-      let to_binable t = to_int t - 1
-      let of_binable i = of_int_exn (i + 1)
-    end)
+        type nonrec t = t
+        let to_binable t = to_int t - 1
+        let of_binable i = of_int_exn (i + 1)
+      end)
   end
 
   let%test_module "Month.V1" = (module Stable_unit_test.Make(struct
-    include V1
-    let equal t1 t2 = Core_int.(=) 0 (compare t1 t2)
-    let tests =
-      let module V = Variant in
-      let c rank sexp bin_io tests variant =
-        assert (variant.V.rank = rank);
-        (variant.V.constructor, sexp, bin_io) :: tests
-      in
-      Variants.fold ~init:[]
-        ~jan:(c 0 "Jan" "\000")
-        ~feb:(c 1 "Feb" "\001")
-        ~mar:(c 2 "Mar" "\002")
-        ~apr:(c 3 "Apr" "\003")
-        ~may:(c 4 "May" "\004")
-        ~jun:(c 5 "Jun" "\005")
-        ~jul:(c 6 "Jul" "\006")
-        ~aug:(c 7 "Aug" "\007")
-        ~sep:(c 8 "Sep" "\008")
-        ~oct:(c 9 "Oct" "\009")
-        ~nov:(c 10 "Nov" "\010")
-        ~dec:(c 11 "Dec" "\011")
-  end))
+      include V1
+      let equal t1 t2 = Core_int.(=) 0 (compare t1 t2)
+      let tests =
+        let module V = Variant in
+        let c rank sexp bin_io tests variant =
+          assert (variant.V.rank = rank);
+          (variant.V.constructor, sexp, bin_io) :: tests
+        in
+        Variants.fold ~init:[]
+          ~jan:(c 0 "Jan" "\000")
+          ~feb:(c 1 "Feb" "\001")
+          ~mar:(c 2 "Mar" "\002")
+          ~apr:(c 3 "Apr" "\003")
+          ~may:(c 4 "May" "\004")
+          ~jun:(c 5 "Jun" "\005")
+          ~jul:(c 6 "Jul" "\006")
+          ~aug:(c 7 "Aug" "\007")
+          ~sep:(c 8 "Sep" "\008")
+          ~oct:(c 9 "Oct" "\009")
+          ~nov:(c 10 "Nov" "\010")
+          ~dec:(c 11 "Dec" "\011")
+    end))
 end
 
 module Hashtbl = Core_hashtbl
@@ -102,17 +102,17 @@ module T = struct
 
   let all = [
     Jan
-    ; Feb
-    ; Mar
-    ; Apr
-    ; May
-    ; Jun
-    ; Jul
-    ; Aug
-    ; Sep
-    ; Oct
-    ; Nov
-    ; Dec ]
+  ; Feb
+  ; Mar
+  ; Apr
+  ; May
+  ; Jun
+  ; Jul
+  ; Aug
+  ; Sep
+  ; Oct
+  ; Nov
+  ; Dec ]
 
   let%test _ = List.length all = num_months
 
@@ -128,24 +128,24 @@ end
 include T
 
 include (Hashable.Make_binable (struct
-  include T
-end) : Hashable.S_binable with type t := t)
+           include T
+         end) : Hashable.S_binable with type t := t)
 
 include Comparable.Make_binable (struct
-  include T
+    include T
 
-  (* In 108.06a and earlier, months in sexps of Maps and Sets were raw ints.  From 108.07
-     through 109.13, the output format remained raw as before, but both the raw and
-     pretty format were accepted as input.  From 109.14 on, the output format was
-     changed from raw to pretty, while continuing to accept both formats.  Once we believe
-     most programs are beyond 109.14, we will switch the input format to no longer accept
-     raw. *)
-  let t_of_sexp sexp =
-    match Option.try_with (fun () -> Int.t_of_sexp sexp) with
-    | Some i -> of_int_exn (i + 1)
-    | None -> T.t_of_sexp sexp
-  ;;
-end)
+    (* In 108.06a and earlier, months in sexps of Maps and Sets were raw ints.  From 108.07
+       through 109.13, the output format remained raw as before, but both the raw and
+       pretty format were accepted as input.  From 109.14 on, the output format was
+       changed from raw to pretty, while continuing to accept both formats.  Once we believe
+       most programs are beyond 109.14, we will switch the input format to no longer accept
+       raw. *)
+    let t_of_sexp sexp =
+      match Option.try_with (fun () -> Int.t_of_sexp sexp) with
+      | Some i -> of_int_exn (i + 1)
+      | None -> T.t_of_sexp sexp
+    ;;
+  end)
 
 (* Replace the overriden sexp converters from [Comparable.Make_binable] with the ordinary
    symbolic converters. *)
@@ -168,7 +168,7 @@ let%test _ = shift Sep (-1) = Aug
 let all_strings = lazy
   (Array.of_list
      (List.map all ~f:(fun variant ->
-       Sexp.to_string (sexp_of_t variant))))
+        Sexp.to_string (sexp_of_t variant))))
 ;;
 
 let to_string (t:t) =

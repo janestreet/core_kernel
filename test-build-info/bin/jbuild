@@ -17,3 +17,5 @@
  ((name javascript)
   (deps (main.bc.js))
   (action "${NODE} main.bc.js > /dev/null")))
+
+(enforce_style ())

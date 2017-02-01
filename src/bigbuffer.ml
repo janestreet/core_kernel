@@ -12,11 +12,7 @@ let __internal (t : t) = t
 
 let length t = t.pos
 
-(*
-let invariant t =
-  assert (t.len == Bigstring.length t.bstr);
-;;
-*)
+(* {[ let invariant t = assert (t.len == Bigstring.length t.bstr) ]} *)
 
 let create n =
   let n = max 1 n in
@@ -137,14 +133,14 @@ let advance_to_closing opening closing k s start =
 let advance_to_non_alpha s start =
   let rec advance i lim =
     if i >= lim then lim else
-    match s.[i] with
-    | 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '_' |
-      'é'|'à'|'á'|'è'|'ù'|'â'|'ê'|
-      'î'|'ô'|'û'|'ë'|'ï'|'ü'|'ç'|
-      'É'|'À'|'Á'|'È'|'Ù'|'Â'|'Ê'|
-      'Î'|'Ô'|'Û'|'Ë'|'Ï'|'Ü'|'Ç' ->
+      match s.[i] with
+      | 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '_' |
+        'é'|'à'|'á'|'è'|'ù'|'â'|'ê'|
+        'î'|'ô'|'û'|'ë'|'ï'|'ü'|'ç'|
+        'É'|'À'|'Á'|'È'|'Ù'|'Â'|'Ê'|
+        'Î'|'Ô'|'Û'|'Ë'|'Ï'|'Ü'|'Ç' ->
         advance (i + 1) lim
-    | _ -> i in
+      | _ -> i in
   advance start (String.length s)
 
 (* We are just at the beginning of an ident in s, starting at start. *)
@@ -152,37 +148,37 @@ let find_ident s start =
   match s.[start] with
   (* Parenthesized ident ? *)
   | '(' | '{' as c ->
-     let new_start = start + 1 in
-     let stop = advance_to_closing c (closing c) 0 s new_start in
-     String.sub s ~pos:new_start ~len:(stop - start - 1), stop + 1
+    let new_start = start + 1 in
+    let stop = advance_to_closing c (closing c) 0 s new_start in
+    String.sub s ~pos:new_start ~len:(stop - start - 1), stop + 1
   (* Regular ident *)
   | _ ->
-     let stop = advance_to_non_alpha s (start + 1) in
-     String.sub s ~pos:start ~len:(stop - start), stop
+    let stop = advance_to_non_alpha s (start + 1) in
+    String.sub s ~pos:start ~len:(stop - start), stop
 
 (* Substitute $ident, $(ident), or ${ident} in s,
-    according to the function mapping f. *)
+   according to the function mapping f. *)
 let add_substitute buf f s =
   let lim = String.length s in
   let rec subst previous i =
     if i < lim then begin
       match s.[i] with
       | '$' as current when Char.equal previous '\\' ->
-         add_char buf current;
-         subst current (i + 1)
+        add_char buf current;
+        subst current (i + 1)
       | '$' ->
-         let ident, next_i = find_ident s (i + 1) in
-         add_string buf (f ident);
-         subst ' ' next_i
+        let ident, next_i = find_ident s (i + 1) in
+        add_string buf (f ident);
+        subst ' ' next_i
       | current when Char.equal previous '\\' ->
-         add_char buf '\\';
-         add_char buf current;
-         subst current (i + 1)
+        add_char buf '\\';
+        add_char buf current;
+        subst current (i + 1)
       | '\\' as current ->
-         subst current (i + 1)
+        subst current (i + 1)
       | current ->
-         add_char buf current;
-         subst current (i + 1)
+        add_char buf current;
+        subst current (i + 1)
     end in
   subst ' ' 0
 

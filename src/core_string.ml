@@ -88,15 +88,17 @@ let gen      = For_quickcheck.gen
 let obs      = For_quickcheck.obs
 let shrinker = For_quickcheck.shrinker
 
-let%test_module "Caseless Comparable" = (module struct
-  let%test _ =
-    Int.equal (Core_map.find_exn (Caseless.Map.of_alist_exn [("a", 4); ("b", 5)]) "A") 4
+let%test_module "Caseless Comparable" =
+  (module struct
+    let%test _ =
+      Int.equal (Core_map.find_exn (Caseless.Map.of_alist_exn [("a", 4); ("b", 5)]) "A") 4
 
-  let%test _ = Core_set.mem (Caseless.Set.of_list ["hello"; "world"]) "heLLO"
-  let%test _ = Int.equal (Core_set.length (Caseless.Set.of_list ["a"; "A"])) 1
+    let%test _ = Core_set.mem (Caseless.Set.of_list ["hello"; "world"]) "heLLO"
+    let%test _ = Int.equal (Core_set.length (Caseless.Set.of_list ["a"; "A"])) 1
 
-end)
+  end)
 
-let%test_module "Caseless Hash" = (module struct
-  let%test _ = Int.equal (Caseless.hash "Hello") (Caseless.hash "HELLO")
-end)
+let%test_module "Caseless Hash" =
+  (module struct
+    let%test _ = Int.equal (Caseless.hash "Hello") (Caseless.hash "HELLO")
+  end)

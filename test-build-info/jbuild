@@ -4,3 +4,5 @@
   (inline_tests ((javascript build_and_run)))
   (js_of_ocaml ())
   ))
+
+(enforce_style ())

@@ -154,7 +154,7 @@ end = struct
     let of_alist_exn = Table.of_alist_exn
     let () = (!!) "of_alist_exn [no dups]" (fun size ->
       let alist = Example.alist size in stage (fun () ->
-      ignore (of_alist_exn alist : int t)))
+        ignore (of_alist_exn alist : int t)))
 
     let of_alist_or_error = Table.of_alist_or_error
     let () = (!!) "of_alist_or_error [no dups]" (fun size ->
@@ -206,7 +206,7 @@ end = struct
     let sexp_of_key = Table.sexp_of_key
     let () = (!!) "sexp_of_key + <rand key>" (fun size ->
       let r = Example.random size in let t = Example.t size in stage (fun () ->
-      ignore (sexp_of_key t (Example.random_key r `present) : Sexp.t)))
+        ignore (sexp_of_key t (Example.random_key r `present) : Sexp.t)))
 
     let copy = Table.copy
     let () = (!!) "copy" (fun size ->

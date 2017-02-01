@@ -36,11 +36,11 @@ exception Exit
 
 external ( = ) : 'a -> 'a -> bool = "%equal"
 (** [e1 = e2] tests for structural equality of [e1] and [e2].
-   Mutable structures (e.g. references and arrays) are equal
-   if and only if their current contents are structurally equal,
-   even if the two mutable objects are not the same physical object.
-   Equality between functional values raises [Invalid_argument].
-   Equality between cyclic data structures may not terminate. *)
+    Mutable structures (e.g. references and arrays) are equal
+    if and only if their current contents are structurally equal,
+    even if the two mutable objects are not the same physical object.
+    Equality between functional values raises [Invalid_argument].
+    Equality between cyclic data structures may not terminate. *)
 
 external ( <> ) : 'a -> 'a -> bool = "%notequal"
 (** Negation of {!Pervasives.( = )}. *)
@@ -56,32 +56,32 @@ external ( <= ) : 'a -> 'a -> bool = "%lessequal"
 
 external ( >= ) : 'a -> 'a -> bool = "%greaterequal"
 (** Structural ordering functions. These functions coincide with
-   the usual orderings over integers, characters, strings, byte sequences
-   and floating-point numbers, and extend them to a
-   total ordering over all types.
-   The ordering is compatible with [( = )]. As in the case
-   of [( = )], mutable structures are compared by contents.
-   Comparison between functional values raises [Invalid_argument].
-   Comparison between cyclic structures may not terminate. *)
+    the usual orderings over integers, characters, strings, byte sequences
+    and floating-point numbers, and extend them to a
+    total ordering over all types.
+    The ordering is compatible with [( = )]. As in the case
+    of [( = )], mutable structures are compared by contents.
+    Comparison between functional values raises [Invalid_argument].
+    Comparison between cyclic structures may not terminate. *)
 
 external compare : 'a -> 'a -> int = "%compare"
 (** [compare x y] returns [0] if [x] is equal to [y],
-   a negative integer if [x] is less than [y], and a positive integer
-   if [x] is greater than [y].  The ordering implemented by [compare]
-   is compatible with the comparison predicates [=], [<] and [>]
-   defined above,  with one difference on the treatment of the float value
-   {!Pervasives.nan}.  Namely, the comparison predicates treat [nan]
-   as different from any other float value, including itself;
-   while [compare] treats [nan] as equal to itself and less than any
-   other float value.  This treatment of [nan] ensures that [compare]
-   defines a total ordering relation.
+    a negative integer if [x] is less than [y], and a positive integer
+    if [x] is greater than [y].  The ordering implemented by [compare]
+    is compatible with the comparison predicates [=], [<] and [>]
+    defined above,  with one difference on the treatment of the float value
+    {!Pervasives.nan}.  Namely, the comparison predicates treat [nan]
+    as different from any other float value, including itself;
+    while [compare] treats [nan] as equal to itself and less than any
+    other float value.  This treatment of [nan] ensures that [compare]
+    defines a total ordering relation.
 
-   [compare] applied to functional values may raise [Invalid_argument].
-   [compare] applied to cyclic structures may not terminate.
+    [compare] applied to functional values may raise [Invalid_argument].
+    [compare] applied to cyclic structures may not terminate.
 
-   The [compare] function can be used as the comparison function
-   required by the {!Set.Make} and {!Map.Make} functors, as well as
-   the {!List.sort} and {!Array.sort} functions. *)
+    The [compare] function can be used as the comparison function
+    required by the {!Set.Make} and {!Map.Make} functors, as well as
+    the {!List.sort} and {!Array.sort} functions. *)
 
 val min : 'a -> 'a -> 'a
 (** Return the smaller of the two arguments.
@@ -94,18 +94,18 @@ val max : 'a -> 'a -> 'a
     the float value [nan]. *)
 
 external ( == ) : 'a -> 'a -> bool = "%eq"
-  [@@deprecated "[since 2014-10] Use [phys_equal]"]
+[@@deprecated "[since 2014-10] Use [phys_equal]"]
 (** [e1 == e2] tests for physical equality of [e1] and [e2].
-   On mutable types such as references, arrays, byte sequences, records with
-   mutable fields and objects with mutable instance variables,
-   [e1 == e2] is true if and only if physical modification of [e1]
-   also affects [e2].
-   On non-mutable types, the behavior of [( == )] is
-   implementation-dependent; however, it is guaranteed that
-   [e1 == e2] implies [compare e1 e2 = 0]. *)
+    On mutable types such as references, arrays, byte sequences, records with
+    mutable fields and objects with mutable instance variables,
+    [e1 == e2] is true if and only if physical modification of [e1]
+    also affects [e2].
+    On non-mutable types, the behavior of [( == )] is
+    implementation-dependent; however, it is guaranteed that
+    [e1 == e2] implies [compare e1 e2 = 0]. *)
 
 external ( != ) : 'a -> 'a -> bool = "%noteq"
-  [@@deprecated "[since 2014-10] Use [phys_equal]"]
+[@@deprecated "[since 2014-10] Use [phys_equal]"]
 (** Negation of {!Pervasives.( == )}. *)
 
 
@@ -116,19 +116,19 @@ external not : bool -> bool = "%boolnot"
 
 external ( && ) : bool -> bool -> bool = "%sequand"
 (** The boolean 'and'. Evaluation is sequential, left-to-right:
-   in [e1 && e2], [e1] is evaluated first, and if it returns [false],
-   [e2] is not evaluated at all. *)
+    in [e1 && e2], [e1] is evaluated first, and if it returns [false],
+    [e2] is not evaluated at all. *)
 
 external ( & ) : bool -> bool -> bool = "%sequand"
-  [@@ocaml.deprecated "[since 2010-01] {!Pervasives.( && )} should be used instead."]
+[@@ocaml.deprecated "[since 2010-01] {!Pervasives.( && )} should be used instead."]
 
 external ( || ) : bool -> bool -> bool = "%sequor"
 (** The boolean 'or'. Evaluation is sequential, left-to-right:
-   in [e1 || e2], [e1] is evaluated first, and if it returns [true],
-   [e2] is not evaluated at all. *)
+    in [e1 || e2], [e1] is evaluated first, and if it returns [true],
+    [e2] is not evaluated at all. *)
 
 external ( or ) : bool -> bool -> bool = "%sequor"
-  [@@ocaml.deprecated "[since 2010-01] {!Pervasives.( || )} should be used instead."]
+[@@ocaml.deprecated "[since 2010-01] {!Pervasives.( || )} should be used instead."]
 
 (** {6 Debugging} *)
 
@@ -179,21 +179,21 @@ external __POS_OF__ : 'a -> (string * int * int * int) * 'a = "%loc_POS"
 
 external ( |> ) : 'a -> ('a -> 'b) -> 'b = "%revapply"
 (** Reverse-application operator: [x |> f |> g] is exactly equivalent
- to [g (f (x))].
-   @since 4.01
+    to [g (f (x))].
+    @since 4.01
 *)
 
 external ( @@ ) : ('a -> 'b) -> 'a -> 'b = "%apply"
 (** Application operator: [g @@ f @@ x] is exactly equivalent to
- [g (f (x))].
-   @since 4.01
+    [g (f (x))].
+    @since 4.01
 *)
 
 (** {6 Integer arithmetic} *)
 
 (** Integers are 31 bits wide (or 63 bits on 64-bit processors).
-   All operations are taken modulo 2{^31} (or 2{^63}).
-   They do not fail on overflow. *)
+    All operations are taken modulo 2{^31} (or 2{^63}).
+    They do not fail on overflow. *)
 
 external ( ~- ) : int -> int = "%negint"
 (** Unary negation. You can also write [- e] instead of [~- e]. *)
@@ -220,31 +220,31 @@ external ( * ) : int -> int -> int = "%mulint"
 
 external ( / ) : int -> int -> int = "%divint"
 (** Integer division.
-   Raise [Division_by_zero] if the second argument is 0.
-   Integer division rounds the real quotient of its arguments towards zero.
-   More precisely, if [x >= 0] and [y > 0], [x / y] is the greatest integer
-   less than or equal to the real quotient of [x] by [y].  Moreover,
-   [(- x) / y = x / (- y) = - (x / y)].  *)
+    Raise [Division_by_zero] if the second argument is 0.
+    Integer division rounds the real quotient of its arguments towards zero.
+    More precisely, if [x >= 0] and [y > 0], [x / y] is the greatest integer
+    less than or equal to the real quotient of [x] by [y].  Moreover,
+    [(- x) / y = x / (- y) = - (x / y)].  *)
 
 external ( mod ) : int -> int -> int = "%modint"
 (** Integer remainder.  If [y] is not zero, the result
-   of [x mod y] satisfies the following properties:
-   [x = (x / y) * y + x mod y] and
-   [abs(x mod y) <= abs(y) - 1].
-   If [y = 0], [x mod y] raises [Division_by_zero].
-   Note that [x mod y] is negative only if [x < 0].
-   Raise [Division_by_zero] if [y] is zero. *)
+    of [x mod y] satisfies the following properties:
+    [x = (x / y) * y + x mod y] and
+    [abs(x mod y) <= abs(y) - 1].
+    If [y = 0], [x mod y] raises [Division_by_zero].
+    Note that [x mod y] is negative only if [x < 0].
+    Raise [Division_by_zero] if [y] is zero. *)
 
 val abs : int -> int
 (** Return the absolute value of the argument.  Note that this may be
-  negative if the argument is [min_int]. *)
+    negative if the argument is [min_int]. *)
 
 val max_int : int
-  [@@deprecated "[since 2014-10] Use [Int.max_value]"]
+[@@deprecated "[since 2014-10] Use [Int.max_value]"]
 (** The greatest representable integer. *)
 
 val min_int : int
-  [@@deprecated "[since 2014-10] Use [Int.min_value]"]
+[@@deprecated "[since 2014-10] Use [Int.min_value]"]
 (** The smallest representable integer. *)
 
 
@@ -264,34 +264,34 @@ val lnot : int -> int
 
 external ( lsl ) : int -> int -> int = "%lslint"
 (** [n lsl m] shifts [n] to the left by [m] bits.
-   The result is unspecified if [m < 0] or [m >= bitsize],
-   where [bitsize] is [32] on a 32-bit platform and
-   [64] on a 64-bit platform. *)
+    The result is unspecified if [m < 0] or [m >= bitsize],
+    where [bitsize] is [32] on a 32-bit platform and
+    [64] on a 64-bit platform. *)
 
 external ( lsr ) : int -> int -> int = "%lsrint"
 (** [n lsr m] shifts [n] to the right by [m] bits.
-   This is a logical shift: zeroes are inserted regardless of
-   the sign of [n].
-   The result is unspecified if [m < 0] or [m >= bitsize]. *)
+    This is a logical shift: zeroes are inserted regardless of
+    the sign of [n].
+    The result is unspecified if [m < 0] or [m >= bitsize]. *)
 
 external ( asr ) : int -> int -> int = "%asrint"
 (** [n asr m] shifts [n] to the right by [m] bits.
-   This is an arithmetic shift: the sign bit of [n] is replicated.
-   The result is unspecified if [m < 0] or [m >= bitsize]. *)
+    This is an arithmetic shift: the sign bit of [n] is replicated.
+    The result is unspecified if [m < 0] or [m >= bitsize]. *)
 
 
 (** {6 Floating-point arithmetic}
 
-   OCaml's floating-point numbers follow the
-   IEEE 754 standard, using double precision (64 bits) numbers.
-   Floating-point operations never raise an exception on overflow,
-   underflow, division by zero, etc.  Instead, special IEEE numbers
-   are returned as appropriate, such as [infinity] for [1.0 /. 0.0],
-   [neg_infinity] for [-1.0 /. 0.0], and [nan] ('not a number')
-   for [0.0 /. 0.0].  These special numbers then propagate through
-   floating-point computations as expected: for instance,
-   [1.0 /. infinity] is [0.0], and any arithmetic operation with [nan]
-   as argument returns [nan] as result.
+    OCaml's floating-point numbers follow the
+    IEEE 754 standard, using double precision (64 bits) numbers.
+    Floating-point operations never raise an exception on overflow,
+    underflow, division by zero, etc.  Instead, special IEEE numbers
+    are returned as appropriate, such as [infinity] for [1.0 /. 0.0],
+    [neg_infinity] for [-1.0 /. 0.0], and [nan] ('not a number')
+    for [0.0 /. 0.0].  These special numbers then propagate through
+    floating-point computations as expected: for instance,
+    [1.0 /. infinity] is [0.0], and any arithmetic operation with [nan]
+    as argument returns [nan] as result.
 *)
 
 external ( ~-. ) : float -> float = "%negfloat"
@@ -315,28 +315,28 @@ external ( /. ) : float -> float -> float = "%divfloat"
 (** Floating-point division. *)
 
 external ( ** ) : float -> float -> float = "caml_power_float" "pow"
-  [@@unboxed] [@@noalloc]
+[@@unboxed] [@@noalloc]
 (** Exponentiation. *)
 
 external sqrt : float -> float = "caml_sqrt_float" "sqrt"
-  [@@unboxed] [@@noalloc]
+[@@unboxed] [@@noalloc]
 (** Square root. *)
 
 external exp : float -> float = "caml_exp_float" "exp"
-  [@@unboxed] [@@noalloc]
+[@@unboxed] [@@noalloc]
 (** Exponential. *)
 
 external log : float -> float = "caml_log_float" "log"
-  [@@unboxed] [@@noalloc]
+[@@unboxed] [@@noalloc]
 (** Natural logarithm. *)
 
 external log10 : float -> float = "caml_log10_float" "log10"
-  [@@unboxed] [@@noalloc]
+[@@unboxed] [@@noalloc]
 [@@deprecated "[since 2016-07] Use [Float.log10]"]
 (** Base 10 logarithm. *)
 
 external expm1 : float -> float = "caml_expm1_float" "caml_expm1"
-  [@@unboxed] [@@noalloc]
+[@@unboxed] [@@noalloc]
 [@@deprecated "[since 2016-07] Use [Float.expm1]"]
 (** [expm1 x] computes [exp x -. 1.0], giving numerically-accurate results
     even if [x] is close to [0.0].
@@ -344,7 +344,7 @@ external expm1 : float -> float = "caml_expm1_float" "caml_expm1"
 *)
 
 external log1p : float -> float = "caml_log1p_float" "caml_log1p"
-  [@@unboxed] [@@noalloc]
+[@@unboxed] [@@noalloc]
 [@@deprecated "[since 2016-07] Use [Float.log1p]"]
 (** [log1p x] computes [log(1.0 +. x)] (natural logarithm),
     giving numerically-accurate results even if [x] is close to [0.0].
@@ -352,40 +352,40 @@ external log1p : float -> float = "caml_log1p_float" "caml_log1p"
 *)
 
 external cos : float -> float = "caml_cos_float" "cos"
-  [@@unboxed] [@@noalloc]
+[@@unboxed] [@@noalloc]
 [@@deprecated "[since 2016-07] Use [Float.cos]"]
 (** Cosine.  Argument is in radians. *)
 
 external sin : float -> float = "caml_sin_float" "sin"
-  [@@unboxed] [@@noalloc]
+[@@unboxed] [@@noalloc]
 [@@deprecated "[since 2016-07] Use [Float.sin]"]
 (** Sine.  Argument is in radians. *)
 
 external tan : float -> float = "caml_tan_float" "tan"
-  [@@unboxed] [@@noalloc]
+[@@unboxed] [@@noalloc]
 [@@deprecated "[since 2016-07] Use [Float.tan]"]
 (** Tangent.  Argument is in radians. *)
 
 external acos : float -> float = "caml_acos_float" "acos"
-  [@@unboxed] [@@noalloc]
+[@@unboxed] [@@noalloc]
 [@@deprecated "[since 2016-07] Use [Float.acos]"]
 (** Arc cosine.  The argument must fall within the range [[-1.0, 1.0]].
     Result is in radians and is between [0.0] and [pi]. *)
 
 external asin : float -> float = "caml_asin_float" "asin"
-  [@@unboxed] [@@noalloc]
+[@@unboxed] [@@noalloc]
 [@@deprecated "[since 2016-07] Use [Float.asin]"]
 (** Arc sine.  The argument must fall within the range [[-1.0, 1.0]].
     Result is in radians and is between [-pi/2] and [pi/2]. *)
 
 external atan : float -> float = "caml_atan_float" "atan"
-  [@@unboxed] [@@noalloc]
+[@@unboxed] [@@noalloc]
 [@@deprecated "[since 2016-07] Use [Float.atan]"]
 (** Arc tangent.
     Result is in radians and is between [-pi/2] and [pi/2]. *)
 
 external atan2 : float -> float -> float = "caml_atan2_float" "atan2"
-  [@@unboxed] [@@noalloc]
+[@@unboxed] [@@noalloc]
 [@@deprecated "[since 2016-07] Use [Float.atan2]"]
 (** [atan2 y x] returns the arc tangent of [y /. x].  The signs of [x]
     and [y] are used to determine the quadrant of the result.
@@ -393,82 +393,82 @@ external atan2 : float -> float -> float = "caml_atan2_float" "atan2"
 
 external hypot : float -> float -> float
   = "caml_hypot_float" "caml_hypot"
-  [@@unboxed] [@@noalloc]
+[@@unboxed] [@@noalloc]
 [@@deprecated "[since 2016-07] Use [Float.hypot]"]
 (** [hypot x y] returns [sqrt(x *. x + y *. y)], that is, the length
-  of the hypotenuse of a right-angled triangle with sides of length
-  [x] and [y], or, equivalently, the distance of the point [(x,y)]
-  to origin.
-  @since 4.00.0  *)
+    of the hypotenuse of a right-angled triangle with sides of length
+    [x] and [y], or, equivalently, the distance of the point [(x,y)]
+    to origin.
+    @since 4.00.0  *)
 
 external cosh : float -> float = "caml_cosh_float" "cosh"
-  [@@unboxed] [@@noalloc]
+[@@unboxed] [@@noalloc]
 [@@deprecated "[since 2016-07] Use [Float.cosh]"]
 (** Hyperbolic cosine.  Argument is in radians. *)
 
 external sinh : float -> float = "caml_sinh_float" "sinh"
-  [@@unboxed] [@@noalloc]
+[@@unboxed] [@@noalloc]
 [@@deprecated "[since 2016-07] Use [Float.sinh]"]
 (** Hyperbolic sine.  Argument is in radians. *)
 
 external tanh : float -> float = "caml_tanh_float" "tanh"
-  [@@unboxed] [@@noalloc]
+[@@unboxed] [@@noalloc]
 [@@deprecated "[since 2016-07] Use [Float.tanh]"]
 (** Hyperbolic tangent.  Argument is in radians. *)
 
 external ceil : float -> float = "caml_ceil_float" "ceil"
-  [@@unboxed] [@@noalloc]
-  [@@deprecated "[since 2014-10] Use [Float.round_up]"]
+[@@unboxed] [@@noalloc]
+[@@deprecated "[since 2014-10] Use [Float.round_up]"]
 (** Round above to an integer value.
     [ceil f] returns the least integer value greater than or equal to [f].
     The result is returned as a float. *)
 
 external floor : float -> float = "caml_floor_float" "floor"
-  [@@unboxed] [@@noalloc]
-  [@@deprecated "[since 2014-10] Use [Float.round_down]"]
+[@@unboxed] [@@noalloc]
+[@@deprecated "[since 2014-10] Use [Float.round_down]"]
 (** Round below to an integer value.
     [floor f] returns the greatest integer value less than or
     equal to [f].
     The result is returned as a float. *)
 
 external abs_float : float -> float = "%absfloat"
-  [@@deprecated "[since 2014-10] Use [Float.abs]"]
+[@@deprecated "[since 2014-10] Use [Float.abs]"]
 (** [abs_float f] returns the absolute value of [f]. *)
 
 external copysign : float -> float -> float
   = "caml_copysign_float" "caml_copysign"
-  [@@unboxed] [@@noalloc]
-  [@@deprecated "[since 2016-07] Use [Float.copysign]"]
+[@@unboxed] [@@noalloc]
+[@@deprecated "[since 2016-07] Use [Float.copysign]"]
 (** [copysign x y] returns a float whose absolute value is that of [x]
-  and whose sign is that of [y].  If [x] is [nan], returns [nan].
-  If [y] is [nan], returns either [x] or [-. x], but it is not
-  specified which.
-  @since 4.00.0  *)
+    and whose sign is that of [y].  If [x] is [nan], returns [nan].
+    If [y] is [nan], returns either [x] or [-. x], but it is not
+    specified which.
+    @since 4.00.0  *)
 
 external mod_float : float -> float -> float = "caml_fmod_float" "fmod"
-  [@@unboxed] [@@noalloc]
-  [@@deprecated "[since 2014-10] Use [Float.mod_float]"]
+[@@unboxed] [@@noalloc]
+[@@deprecated "[since 2014-10] Use [Float.mod_float]"]
 (** [mod_float a b] returns the remainder of [a] with respect to
-   [b].  The returned value is [a -. n *. b], where [n]
-   is the quotient [a /. b] rounded towards zero to an integer. *)
+    [b].  The returned value is [a -. n *. b], where [n]
+    is the quotient [a /. b] rounded towards zero to an integer. *)
 
 external frexp : float -> float * int = "caml_frexp_float"
-  [@@deprecated "[since 2014-10] Use [Float.frexp]"]
+[@@deprecated "[since 2014-10] Use [Float.frexp]"]
 (** [frexp f] returns the pair of the significant
-   and the exponent of [f].  When [f] is zero, the
-   significant [x] and the exponent [n] of [f] are equal to
-   zero.  When [f] is non-zero, they are defined by
-   [f = x *. 2 ** n] and [0.5 <= x < 1.0]. *)
+    and the exponent of [f].  When [f] is zero, the
+    significant [x] and the exponent [n] of [f] are equal to
+    zero.  When [f] is non-zero, they are defined by
+    [f = x *. 2 ** n] and [0.5 <= x < 1.0]. *)
 
 external ldexp : (float [@unboxed]) -> (int [@untagged]) -> (float [@unboxed]) =
   "caml_ldexp_float" "caml_ldexp_float_unboxed" [@@noalloc]
-  [@@deprecated "[since 2014-10] Use [Float.ldexp]"]
+[@@deprecated "[since 2014-10] Use [Float.ldexp]"]
 (** [ldexp x n] returns [x *. 2 ** n]. *)
 
 external modf : float -> float * float = "caml_modf_float"
-  [@@deprecated "[since 2014-10] Use [Float.modf]"]
+[@@deprecated "[since 2014-10] Use [Float.modf]"]
 (** [modf f] returns the pair of the fractional and integral
-   part of [f]. *)
+    part of [f]. *)
 
 external float : int -> float = "%floatofint"
 (** Same as {!Pervasives.float_of_int}. *)
@@ -477,41 +477,41 @@ external float_of_int : int -> float = "%floatofint"
 (** Convert an integer to floating-point. *)
 
 external truncate : float -> int = "%intoffloat"
-  [@@deprecated "[since 2014-10] Use [Float.iround_towards_zero_exn]"]
+[@@deprecated "[since 2014-10] Use [Float.iround_towards_zero_exn]"]
 (** Same as {!Pervasives.int_of_float}. *)
 
 external int_of_float : float -> int = "%intoffloat"
 (** Truncate the given floating-point number to an integer.
-   The result is unspecified if the argument is [nan] or falls outside the
-   range of representable integers. *)
+    The result is unspecified if the argument is [nan] or falls outside the
+    range of representable integers. *)
 
 val infinity : float
-  [@@deprecated "[since 2014-10] Use [Float.infinity]"]
+[@@deprecated "[since 2014-10] Use [Float.infinity]"]
 (** Positive infinity. *)
 
 val neg_infinity : float
-  [@@deprecated "[since 2014-10] Use [Float.neg_infinity]"]
+[@@deprecated "[since 2014-10] Use [Float.neg_infinity]"]
 (** Negative infinity. *)
 
 val nan : float
-  [@@deprecated "[since 2014-10] Use [Float.nan]"]
+[@@deprecated "[since 2014-10] Use [Float.nan]"]
 (** A special floating-point value denoting the result of an
-   undefined operation such as [0.0 /. 0.0].  Stands for
-   'not a number'.  Any floating-point operation with [nan] as
-   argument returns [nan] as result.  As for floating-point comparisons,
-   [=], [<], [<=], [>] and [>=] return [false] and [<>] returns [true]
-   if one or both of their arguments is [nan]. *)
+    undefined operation such as [0.0 /. 0.0].  Stands for
+    'not a number'.  Any floating-point operation with [nan] as
+    argument returns [nan] as result.  As for floating-point comparisons,
+    [=], [<], [<=], [>] and [>=] return [false] and [<>] returns [true]
+    if one or both of their arguments is [nan]. *)
 
 val max_float : float
-  [@@deprecated "[since 2014-10] Use [Float.max_value]"]
+[@@deprecated "[since 2014-10] Use [Float.max_value]"]
 (** The largest positive finite value of type [float]. *)
 
 val min_float : float
-  [@@deprecated "[since 2014-10] Use [Float.min_value]"]
+[@@deprecated "[since 2014-10] Use [Float.min_value]"]
 (** The smallest positive, non-zero, non-denormalized value of type [float]. *)
 
 val epsilon_float : float
-  [@@deprecated "[since 2014-10] Use [Float.epsilon_float]"]
+[@@deprecated "[since 2014-10] Use [Float.epsilon_float]"]
 (** The difference between [1.0] and the smallest exactly representable
     floating-point number greater than [1.0]. *)
 
@@ -522,18 +522,18 @@ type fpclass = Pervasives.fpclass =
   | FP_infinite         (** Number is positive or negative infinity *)
   | FP_nan              (** Not a number: result of an undefined operation *)
 (** The five classes of floating-point numbers, as determined by
-   the {!Pervasives.classify_float} function. *)
+    the {!Pervasives.classify_float} function. *)
 
 external classify_float : (float [@unboxed]) -> fpclass =
   "caml_classify_float" "caml_classify_float_unboxed" [@@noalloc]
-  [@@deprecated "[since 2014-10] Use [Float.classify]"]
+[@@deprecated "[since 2014-10] Use [Float.classify]"]
 (** Return the class of the given floating-point number:
-   normal, subnormal, zero, infinite, or not a number. *)
+    normal, subnormal, zero, infinite, or not a number. *)
 
 
 (** {6 String operations}
 
-   More string operations are provided in module {!String}.
+    More string operations are provided in module {!String}.
 *)
 
 val ( ^ ) : string -> string -> string
@@ -542,7 +542,7 @@ val ( ^ ) : string -> string -> string
 
 (** {6 Character operations}
 
-   More character operations are provided in module {!Char}.
+    More character operations are provided in module {!Char}.
 *)
 
 external int_of_char : char -> int = "%identity"
@@ -550,51 +550,51 @@ external int_of_char : char -> int = "%identity"
 
 val char_of_int : int -> char
 (** Return the character with the given ASCII code.
-   Raise [Invalid_argument "char_of_int"] if the argument is
-   outside the range 0--255. *)
+    Raise [Invalid_argument "char_of_int"] if the argument is
+    outside the range 0--255. *)
 
 
 (** {6 Unit operations} *)
 
 external ignore : 'a -> unit = "%ignore"
 (** Discard the value of its argument and return [()].
-   For instance, [ignore(f x)] discards the result of
-   the side-effecting function [f].  It is equivalent to
-   [f x; ()], except that the latter may generate a
-   compiler warning; writing [ignore(f x)] instead
-   avoids the warning. *)
+    For instance, [ignore(f x)] discards the result of
+    the side-effecting function [f].  It is equivalent to
+    [f x; ()], except that the latter may generate a
+    compiler warning; writing [ignore(f x)] instead
+    avoids the warning. *)
 
 
 (** {6 String conversion functions} *)
 
 val string_of_bool : bool -> string
 (** Return the string representation of a boolean. As the returned values
-   may be shared, the user should not modify them directly.
+    may be shared, the user should not modify them directly.
 *)
 
 val bool_of_string : string -> bool
 (** Convert the given string to a boolean.
-   Raise [Invalid_argument "bool_of_string"] if the string is not
-   ["true"] or ["false"]. *)
+    Raise [Invalid_argument "bool_of_string"] if the string is not
+    ["true"] or ["false"]. *)
 
 val string_of_int : int -> string
 (** Return the string representation of an integer, in decimal. *)
 
 external int_of_string : string -> int = "caml_int_of_string"
 (** Convert the given string to an integer.
-   The string is read in decimal (by default) or in hexadecimal (if it
-   begins with [0x] or [0X]), octal (if it begins with [0o] or [0O]),
-   or binary (if it begins with [0b] or [0B]).
-   Raise [Failure "int_of_string"] if the given string is not
-   a valid representation of an integer, or if the integer represented
-   exceeds the range of integers representable in type [int]. *)
+    The string is read in decimal (by default) or in hexadecimal (if it
+    begins with [0x] or [0X]), octal (if it begins with [0o] or [0O]),
+    or binary (if it begins with [0b] or [0B]).
+    Raise [Failure "int_of_string"] if the given string is not
+    a valid representation of an integer, or if the integer represented
+    exceeds the range of integers representable in type [int]. *)
 
 val string_of_float : float -> string
 (** Return the string representation of a floating-point number. *)
 
 external float_of_string : string -> float = "caml_float_of_string"
 (** Convert the given string to a float.  Raise [Failure "float_of_string"]
-   if the given string is not a valid representation of a float. *)
+    if the given string is not a valid representation of a float. *)
 
 
 (** {6 Pair operations} *)
@@ -608,11 +608,11 @@ external snd : 'a * 'b -> 'b = "%field1"
 
 (** {6 List operations}
 
-   More list operations are provided in module {!List}.
+    More list operations are provided in module {!List}.
 *)
 
 val ( @ ) : 'a list -> 'a list -> 'a list
-  [@@deprecated "[since 2014-10] Use [List.Infix]"]
+[@@deprecated "[since 2014-10] Use [List.Infix]"]
 (** List concatenation. *)
 
 
@@ -621,15 +621,15 @@ val ( @ ) : 'a list -> 'a list -> 'a list
     calls they invoke fail. *)
 
 type in_channel = Pervasives.in_channel
-  [@@deprecated "[since 2016-04] Use [In_channel.t]"]
+[@@deprecated "[since 2016-04] Use [In_channel.t]"]
 (** The type of input channel. *)
 
 type out_channel = Pervasives.out_channel
-  [@@deprecated "[since 2016-04] Use [Out_channel.t]"]
+[@@deprecated "[since 2016-04] Use [Out_channel.t]"]
 (** The type of output channel. *)
 
 val stdin : Pervasives.in_channel
-  [@@deprecated "[since 2016-04] Use [In_channel.stdin]"]
+[@@deprecated "[since 2016-04] Use [In_channel.stdin]"]
 (** The standard input for the process. *)
 
 val stdout : Pervasives.out_channel
@@ -642,93 +642,93 @@ val stderr : Pervasives.out_channel
 (** {7 Output functions on standard output} *)
 
 val print_char : char -> unit
-  [@@deprecated "[since 2016-04] Use [Out_channel.output_char stdout]"]
+[@@deprecated "[since 2016-04] Use [Out_channel.output_char stdout]"]
 (** Print a character on standard output. *)
 
 val print_string : string -> unit
 (** Print a string on standard output. *)
 
 val print_bytes : bytes -> unit
-  [@@deprecated "[since 2016-04] Core doesn't support [bytes] yet."]
+[@@deprecated "[since 2016-04] Core doesn't support [bytes] yet."]
 (** Print a byte sequence on standard output. *)
 
 val print_int : int -> unit
-  [@@deprecated "[since 2016-04] Use [Out_channel.output_string stdout]"]
+[@@deprecated "[since 2016-04] Use [Out_channel.output_string stdout]"]
 (** Print an integer, in decimal, on standard output. *)
 
 val print_float : float -> unit
-  [@@deprecated "[since 2016-04] Use [Out_channel.output_string stdout]"]
+[@@deprecated "[since 2016-04] Use [Out_channel.output_string stdout]"]
 (** Print a floating-point number, in decimal, on standard output. *)
 
 val print_endline : string -> unit
 (** Print a string, followed by a newline character, on
-   standard output and flush standard output. *)
+    standard output and flush standard output. *)
 
 val print_newline : unit -> unit
-  [@@deprecated "[since 2016-04] Use [Out_channel.newline stdout]"]
+[@@deprecated "[since 2016-04] Use [Out_channel.newline stdout]"]
 (** Print a newline character on standard output, and flush
-   standard output. This can be used to simulate line
-   buffering of standard output. *)
+    standard output. This can be used to simulate line
+    buffering of standard output. *)
 
 
 (** {7 Output functions on standard error} *)
 
 val prerr_char : char -> unit
-  [@@deprecated "[since 2016-04] Use [Out_channel.output_char stderr]"]
+[@@deprecated "[since 2016-04] Use [Out_channel.output_char stderr]"]
 (** Print a character on standard error. *)
 
 val prerr_string : string -> unit
-  [@@deprecated "[since 2016-04] Use [Out_channel.output_string stderr]"]
+[@@deprecated "[since 2016-04] Use [Out_channel.output_string stderr]"]
 (** Print a string on standard error. *)
 
 val prerr_bytes : bytes -> unit
-  [@@deprecated "[since 2016-04] Core doesn't support [bytes] yet"]
+[@@deprecated "[since 2016-04] Core doesn't support [bytes] yet"]
 (** Print a byte sequence on standard error. *)
 
 val prerr_int : int -> unit
-  [@@deprecated "[since 2016-04] Use [Out_channel.output_string stderr]"]
+[@@deprecated "[since 2016-04] Use [Out_channel.output_string stderr]"]
 (** Print an integer, in decimal, on standard error. *)
 
 val prerr_float : float -> unit
-  [@@deprecated "[since 2016-04] Use [Out_channel.output_string stderr]"]
+[@@deprecated "[since 2016-04] Use [Out_channel.output_string stderr]"]
 (** Print a floating-point number, in decimal, on standard error. *)
 
 val prerr_endline : string -> unit
 (** Print a string, followed by a newline character on standard
-   error and flush standard error. *)
+    error and flush standard error. *)
 
 val prerr_newline : unit -> unit
-  [@@deprecated "[since 2016-04] Use [Out_channel.newline stderr]"]
+[@@deprecated "[since 2016-04] Use [Out_channel.newline stderr]"]
 (** Print a newline character on standard error, and flush
-   standard error. *)
+    standard error. *)
 
 
 (** {7 Input functions on standard input} *)
 
 val read_line : unit -> string
-  [@@deprecated
-    "[since 2016-04] Use
+[@@deprecated
+  "[since 2016-04] Use
 [Out_channel.(flush stdout); In_channel.(input_line_exn stdin)]"]
 (** Flush standard output, then read characters from standard input
-   until a newline character is encountered. Return the string of
-   all characters read, without the newline character at the end. *)
+    until a newline character is encountered. Return the string of
+    all characters read, without the newline character at the end. *)
 
 val read_int : unit -> int
-  [@@deprecated "\
+[@@deprecated "\
 [since 2016-04] Use
 [Out_channel.(flush stdout); Int.of_string In_channel.(input_line_exn stdin)]"]
 (** Flush standard output, then read one line from standard input
-   and convert it to an integer. Raise [Failure "int_of_string"]
-   if the line read is not a valid representation of an integer. *)
+    and convert it to an integer. Raise [Failure "int_of_string"]
+    if the line read is not a valid representation of an integer. *)
 
 val read_float : unit -> float
-  [@@deprecated "\
+[@@deprecated "\
 [since 2016-04] Use
 [Out_channel.(flush stdout); Float.of_string In_channel.(input_line_exn stdin)]"]
 (** Flush standard output, then read one line from standard input
-   and convert it to a floating-point number.
-   The result is unspecified if the line read is not a valid
-   representation of a floating-point number. *)
+    and convert it to a floating-point number.
+    The result is unspecified if the line read is not a valid
+    representation of a floating-point number. *)
 
 
 (** {7 General output functions} *)
@@ -743,238 +743,238 @@ type open_flag = Pervasives.open_flag =
   | Open_binary      (** open in binary mode (no conversion). *)
   | Open_text        (** open in text mode (may perform conversions). *)
   | Open_nonblock    (** open in non-blocking mode. *)
-  [@@deprecated "[since 2016-04] Use [In_channel.create] and [Out_channel.create]"]
+[@@deprecated "[since 2016-04] Use [In_channel.create] and [Out_channel.create]"]
 (** Opening modes for {!Pervasives.open_out_gen} and
-  {!Pervasives.open_in_gen}. *)
+    {!Pervasives.open_in_gen}. *)
 
 val open_out : string -> Pervasives.out_channel
-  [@@deprecated "[since 2016-04] Use [Out_channel.create]"]
+[@@deprecated "[since 2016-04] Use [Out_channel.create]"]
 (** Open the named file for writing, and return a new output channel
-   on that file, positionned at the beginning of the file. The
-   file is truncated to zero length if it already exists. It
-   is created if it does not already exists. *)
+    on that file, positionned at the beginning of the file. The
+    file is truncated to zero length if it already exists. It
+    is created if it does not already exists. *)
 
 val open_out_bin : string -> Pervasives.out_channel
-  [@@deprecated "[since 2016-04] Use [Out_channel.create]"]
+[@@deprecated "[since 2016-04] Use [Out_channel.create]"]
 (** Same as {!Pervasives.open_out}, but the file is opened in binary mode,
-   so that no translation takes place during writes. On operating
-   systems that do not distinguish between text mode and binary
-   mode, this function behaves like {!Pervasives.open_out}. *)
+    so that no translation takes place during writes. On operating
+    systems that do not distinguish between text mode and binary
+    mode, this function behaves like {!Pervasives.open_out}. *)
 
 val open_out_gen : Pervasives.open_flag list -> int -> string -> Pervasives.out_channel
-  [@@deprecated "[since 2016-04] Use [Out_channel.create]"]
+[@@deprecated "[since 2016-04] Use [Out_channel.create]"]
 (** [open_out_gen mode perm filename] opens the named file for writing,
-   as described above. The extra argument [mode]
-   specify the opening mode. The extra argument [perm] specifies
-   the file permissions, in case the file must be created.
-   {!Pervasives.open_out} and {!Pervasives.open_out_bin} are special
-   cases of this function. *)
+    as described above. The extra argument [mode]
+    specify the opening mode. The extra argument [perm] specifies
+    the file permissions, in case the file must be created.
+    {!Pervasives.open_out} and {!Pervasives.open_out_bin} are special
+    cases of this function. *)
 
 val flush : Pervasives.out_channel -> unit
-  [@@deprecated "[since 2016-04] Use [Out_channel.flush]"]
+[@@deprecated "[since 2016-04] Use [Out_channel.flush]"]
 (** Flush the buffer associated with the given output channel,
-   performing all pending writes on that channel.
-   Interactive programs must be careful about flushing standard
-   output and standard error at the right time. *)
+    performing all pending writes on that channel.
+    Interactive programs must be careful about flushing standard
+    output and standard error at the right time. *)
 
 val flush_all : unit -> unit
-  [@@deprecated "[since 2016-04]"]
+[@@deprecated "[since 2016-04]"]
 (** Flush all open output channels; ignore errors. *)
 
 val output_char : Pervasives.out_channel -> char -> unit
-  [@@deprecated "[since 2016-04] Use [Out_channel.output_char]"]
+[@@deprecated "[since 2016-04] Use [Out_channel.output_char]"]
 (** Write the character on the given output channel. *)
 
 val output_string : Pervasives.out_channel -> string -> unit
-  [@@deprecated "[since 2016-04] Use [Out_channel.output_string]"]
+[@@deprecated "[since 2016-04] Use [Out_channel.output_string]"]
 (** Write the string on the given output channel. *)
 
 val output_bytes : Pervasives.out_channel -> bytes -> unit
-  [@@deprecated "[since 2016-04] Core doesn't yet support bytes."]
+[@@deprecated "[since 2016-04] Core doesn't yet support bytes."]
 (** Write the byte sequence on the given output channel. *)
 
 val output : Pervasives.out_channel -> bytes -> int -> int -> unit
-  [@@deprecated "[since 2016-04] Core doesn't yet support bytes."]
+[@@deprecated "[since 2016-04] Core doesn't yet support bytes."]
 (** [output oc buf pos len] writes [len] characters from byte sequence [buf],
-   starting at offset [pos], to the given output channel [oc].
-   Raise [Invalid_argument "output"] if [pos] and [len] do not
-   designate a valid range of [buf]. *)
+    starting at offset [pos], to the given output channel [oc].
+    Raise [Invalid_argument "output"] if [pos] and [len] do not
+    designate a valid range of [buf]. *)
 
 val output_substring : Pervasives.out_channel -> string -> int -> int -> unit
-  [@@deprecated "[since 2016-04] Use [Out_channel.output]"]
+[@@deprecated "[since 2016-04] Use [Out_channel.output]"]
 (** Same as [output] but take a string as argument instead of
-   a byte sequence. *)
+    a byte sequence. *)
 
 val output_byte : Pervasives.out_channel -> int -> unit
-  [@@deprecated "[since 2016-04] Use [Out_channel.output_byte]"]
+[@@deprecated "[since 2016-04] Use [Out_channel.output_byte]"]
 (** Write one 8-bit integer (as the single character with that code)
-   on the given output channel. The given integer is taken modulo
-   256. *)
+    on the given output channel. The given integer is taken modulo
+    256. *)
 
 val output_binary_int : Pervasives.out_channel -> int -> unit
-  [@@deprecated "[since 2016-04] Use [Out_channel.output_binary_int]"]
+[@@deprecated "[since 2016-04] Use [Out_channel.output_binary_int]"]
 (** Write one integer in binary format (4 bytes, big-endian)
-   on the given output channel.
-   The given integer is taken modulo 2{^32}.
-   The only reliable way to read it back is through the
-   {!Pervasives.input_binary_int} function. The format is compatible across
-   all machines for a given version of OCaml. *)
+    on the given output channel.
+    The given integer is taken modulo 2{^32}.
+    The only reliable way to read it back is through the
+    {!Pervasives.input_binary_int} function. The format is compatible across
+    all machines for a given version of OCaml. *)
 
 val output_value : Pervasives.out_channel -> 'a -> unit
-  [@@deprecated "[since 2016-04] Use [Out_channel.output_value]"]
+[@@deprecated "[since 2016-04] Use [Out_channel.output_value]"]
 (** Write the representation of a structured value of any type
-   to a channel. Circularities and sharing inside the value
-   are detected and preserved. The object can be read back,
-   by the function {!Pervasives.input_value}. See the description of module
-   {!Marshal} for more information. {!Pervasives.output_value} is equivalent
-   to {!Marshal.to_channel} with an empty list of flags. *)
+    to a channel. Circularities and sharing inside the value
+    are detected and preserved. The object can be read back,
+    by the function {!Pervasives.input_value}. See the description of module
+    {!Marshal} for more information. {!Pervasives.output_value} is equivalent
+    to {!Marshal.to_channel} with an empty list of flags. *)
 
 val seek_out : Pervasives.out_channel -> int -> unit
-  [@@deprecated "[since 2014-10] Use [Out_channel.seek]"]
+[@@deprecated "[since 2014-10] Use [Out_channel.seek]"]
 (** [seek_out chan pos] sets the current writing position to [pos]
-   for channel [chan]. This works only for regular files. On
-   files of other kinds (such as terminals, pipes and sockets),
-   the behavior is unspecified. *)
+    for channel [chan]. This works only for regular files. On
+    files of other kinds (such as terminals, pipes and sockets),
+    the behavior is unspecified. *)
 
 val pos_out : Pervasives.out_channel -> int
-  [@@deprecated "[since 2014-10] Use [Out_channel.pos]"]
+[@@deprecated "[since 2014-10] Use [Out_channel.pos]"]
 (** Return the current writing position for the given channel.  Does
     not work on channels opened with the [Open_append] flag (returns
     unspecified results). *)
 
 val out_channel_length : Pervasives.out_channel -> int
-  [@@deprecated "[since 2014-10] Use [Out_channel.length]"]
+[@@deprecated "[since 2014-10] Use [Out_channel.length]"]
 (** Return the size (number of characters) of the regular file
-   on which the given channel is opened.  If the channel is opened
+    on which the given channel is opened.  If the channel is opened
     on a file that is not a regular file, the result is meaningless. *)
 
 val close_out : Pervasives.out_channel -> unit
-  [@@deprecated "[since 2014-10] Use [Out_channel.close]"]
+[@@deprecated "[since 2014-10] Use [Out_channel.close]"]
 (** Close the given channel, flushing all buffered write operations.
-   Output functions raise a [Sys_error] exception when they are
-   applied to a closed output channel, except [close_out] and [flush],
-   which do nothing when applied to an already closed channel.
-   Note that [close_out] may raise [Sys_error] if the operating
-   system signals an error when flushing or closing. *)
+    Output functions raise a [Sys_error] exception when they are
+    applied to a closed output channel, except [close_out] and [flush],
+    which do nothing when applied to an already closed channel.
+    Note that [close_out] may raise [Sys_error] if the operating
+    system signals an error when flushing or closing. *)
 
 val close_out_noerr : Pervasives.out_channel -> unit
-  [@@deprecated "[since 2016-04] Use [Out_channel.close] and catch exceptions"]
+[@@deprecated "[since 2016-04] Use [Out_channel.close] and catch exceptions"]
 (** Same as [close_out], but ignore all errors. *)
 
 val set_binary_mode_out : Pervasives.out_channel -> bool -> unit
-  [@@deprecated "[since 2016-04] Use [Out_channel.set_binary_mode]"]
+[@@deprecated "[since 2016-04] Use [Out_channel.set_binary_mode]"]
 (** [set_binary_mode_out oc true] sets the channel [oc] to binary
-   mode: no translations take place during output.
-   [set_binary_mode_out oc false] sets the channel [oc] to text
-   mode: depending on the operating system, some translations
-   may take place during output.  For instance, under Windows,
-   end-of-lines will be translated from [\n] to [\r\n].
-   This function has no effect under operating systems that
-   do not distinguish between text mode and binary mode. *)
+    mode: no translations take place during output.
+    [set_binary_mode_out oc false] sets the channel [oc] to text
+    mode: depending on the operating system, some translations
+    may take place during output.  For instance, under Windows,
+    end-of-lines will be translated from [\n] to [\r\n].
+    This function has no effect under operating systems that
+    do not distinguish between text mode and binary mode. *)
 
 
 (** {7 General input functions} *)
 
 val open_in : string -> Pervasives.in_channel
-  [@@deprecated "[since 2016-04] Use [In_channel.create]"]
+[@@deprecated "[since 2016-04] Use [In_channel.create]"]
 (** Open the named file for reading, and return a new input channel
-   on that file, positionned at the beginning of the file. *)
+    on that file, positionned at the beginning of the file. *)
 
 val open_in_bin : string -> Pervasives.in_channel
-  [@@deprecated "[since 2016-04] Use [In_channel.create]"]
+[@@deprecated "[since 2016-04] Use [In_channel.create]"]
 (** Same as {!Pervasives.open_in}, but the file is opened in binary mode,
-   so that no translation takes place during reads. On operating
-   systems that do not distinguish between text mode and binary
-   mode, this function behaves like {!Pervasives.open_in}. *)
+    so that no translation takes place during reads. On operating
+    systems that do not distinguish between text mode and binary
+    mode, this function behaves like {!Pervasives.open_in}. *)
 
 val open_in_gen : Pervasives.open_flag list -> int -> string -> Pervasives.in_channel
-  [@@deprecated "[since 2016-04] Use [In_channel.create]"]
+[@@deprecated "[since 2016-04] Use [In_channel.create]"]
 (** [open_in_gen mode perm filename] opens the named file for reading,
-   as described above. The extra arguments
-   [mode] and [perm] specify the opening mode and file permissions.
-   {!Pervasives.open_in} and {!Pervasives.open_in_bin} are special
-   cases of this function. *)
+    as described above. The extra arguments
+    [mode] and [perm] specify the opening mode and file permissions.
+    {!Pervasives.open_in} and {!Pervasives.open_in_bin} are special
+    cases of this function. *)
 
 val input_char : Pervasives.in_channel -> char
-  [@@deprecated "[since 2016-04] Use [In_channel.input_char]"]
+[@@deprecated "[since 2016-04] Use [In_channel.input_char]"]
 (** Read one character from the given input channel.
     Raise [End_of_file] if there are no more characters to read. *)
 
 val input_line : Pervasives.in_channel -> string
-  [@@deprecated "[since 2016-04] Use [In_channel.input_line]"]
+[@@deprecated "[since 2016-04] Use [In_channel.input_line]"]
 (** Read characters from the given input channel, until a
-   newline character is encountered. Return the string of
-   all characters read, without the newline character at the end.
-   Raise [End_of_file] if the end of the file is reached
-   at the beginning of line. *)
+    newline character is encountered. Return the string of
+    all characters read, without the newline character at the end.
+    Raise [End_of_file] if the end of the file is reached
+    at the beginning of line. *)
 
 val input : Pervasives.in_channel -> bytes -> int -> int -> int
-  [@@deprecated "[since 2016-04] Core doesn't yet support bytes."]
+[@@deprecated "[since 2016-04] Core doesn't yet support bytes."]
 (** [input ic buf pos len] reads up to [len] characters from
-   the given channel [ic], storing them in byte sequence [buf], starting at
-   character number [pos].
-   It returns the actual number of characters read, between 0 and
-   [len] (inclusive).
-   A return value of 0 means that the end of file was reached.
-   A return value between 0 and [len] exclusive means that
-   not all requested [len] characters were read, either because
-   no more characters were available at that time, or because
-   the implementation found it convenient to do a partial read;
-   [input] must be called again to read the remaining characters,
-   if desired.  (See also {!Pervasives.really_input} for reading
-   exactly [len] characters.)
-   Exception [Invalid_argument "input"] is raised if [pos] and [len]
-   do not designate a valid range of [buf]. *)
+    the given channel [ic], storing them in byte sequence [buf], starting at
+    character number [pos].
+    It returns the actual number of characters read, between 0 and
+    [len] (inclusive).
+    A return value of 0 means that the end of file was reached.
+    A return value between 0 and [len] exclusive means that
+    not all requested [len] characters were read, either because
+    no more characters were available at that time, or because
+    the implementation found it convenient to do a partial read;
+    [input] must be called again to read the remaining characters,
+    if desired.  (See also {!Pervasives.really_input} for reading
+    exactly [len] characters.)
+    Exception [Invalid_argument "input"] is raised if [pos] and [len]
+    do not designate a valid range of [buf]. *)
 
 val really_input : Pervasives.in_channel -> bytes -> int -> int -> unit
-  [@@deprecated "[since 2016-04] Core doesn't yet support bytes."]
+[@@deprecated "[since 2016-04] Core doesn't yet support bytes."]
 (** [really_input ic buf pos len] reads [len] characters from channel [ic],
-   storing them in byte sequence [buf], starting at character number [pos].
-   Raise [End_of_file] if the end of file is reached before [len]
-   characters have been read.
-   Raise [Invalid_argument "really_input"] if
-   [pos] and [len] do not designate a valid range of [buf]. *)
+    storing them in byte sequence [buf], starting at character number [pos].
+    Raise [End_of_file] if the end of file is reached before [len]
+    characters have been read.
+    Raise [Invalid_argument "really_input"] if
+    [pos] and [len] do not designate a valid range of [buf]. *)
 
 val really_input_string : Pervasives.in_channel -> int -> string
-  [@@deprecated "[since 2016-04] Use [In_channel.really_input_exn ~pos:0]"]
+[@@deprecated "[since 2016-04] Use [In_channel.really_input_exn ~pos:0]"]
 (** [really_input_string ic len] reads [len] characters from channel [ic]
-   and returns them in a new string.
-   Raise [End_of_file] if the end of file is reached before [len]
-   characters have been read. *)
+    and returns them in a new string.
+    Raise [End_of_file] if the end of file is reached before [len]
+    characters have been read. *)
 
 val input_byte : Pervasives.in_channel -> int
-  [@@deprecated "[since 2016-04] Use [In_channel.input_byte]"]
+[@@deprecated "[since 2016-04] Use [In_channel.input_byte]"]
 (** Same as {!Pervasives.input_char}, but return the 8-bit integer representing
-   the character.
-   Raise [End_of_file] if an end of file was reached. *)
+    the character.
+    Raise [End_of_file] if an end of file was reached. *)
 
 val input_binary_int : Pervasives.in_channel -> int
-  [@@deprecated "[since 2016-04] Use [In_channel.input_binary_int]"]
+[@@deprecated "[since 2016-04] Use [In_channel.input_binary_int]"]
 (** Read an integer encoded in binary format (4 bytes, big-endian)
-   from the given input channel. See {!Pervasives.output_binary_int}.
-   Raise [End_of_file] if an end of file was reached while reading the
-   integer. *)
+    from the given input channel. See {!Pervasives.output_binary_int}.
+    Raise [End_of_file] if an end of file was reached while reading the
+    integer. *)
 
 val input_value : Pervasives.in_channel -> 'a
-  [@@deprecated "[since 2016-04] Use [In_channel.unsafe_input_value]"]
+[@@deprecated "[since 2016-04] Use [In_channel.unsafe_input_value]"]
 (** Read the representation of a structured value, as produced
-   by {!Pervasives.output_value}, and return the corresponding value.
-   This function is identical to {!Marshal.from_channel};
-   see the description of module {!Marshal} for more information,
-   in particular concerning the lack of type safety. *)
+    by {!Pervasives.output_value}, and return the corresponding value.
+    This function is identical to {!Marshal.from_channel};
+    see the description of module {!Marshal} for more information,
+    in particular concerning the lack of type safety. *)
 
 val seek_in : Pervasives.in_channel -> int -> unit
-  [@@deprecated "[since 2014-10] Use [In_channel.seek]"]
+[@@deprecated "[since 2014-10] Use [In_channel.seek]"]
 (** [seek_in chan pos] sets the current reading position to [pos]
-   for channel [chan]. This works only for regular files. On
-   files of other kinds, the behavior is unspecified. *)
+    for channel [chan]. This works only for regular files. On
+    files of other kinds, the behavior is unspecified. *)
 
 val pos_in : Pervasives.in_channel -> int
-  [@@deprecated "[since 2014-10] Use [In_channel.pos]"]
+[@@deprecated "[since 2014-10] Use [In_channel.pos]"]
 (** Return the current reading position for the given channel. *)
 
 val in_channel_length : Pervasives.in_channel -> int
-  [@@deprecated "[since 2014-10] Use [In_channel.length]"]
+[@@deprecated "[since 2014-10] Use [In_channel.length]"]
 (** Return the size (number of characters) of the regular file
     on which the given channel is opened.  If the channel is opened
     on a file that is not a regular file, the result is meaningless.
@@ -983,72 +983,72 @@ val in_channel_length : Pervasives.in_channel -> int
     opened in text mode. *)
 
 val close_in : Pervasives.in_channel -> unit
-  [@@deprecated "[since 2014-10] Use [In_channel.close]"]
+[@@deprecated "[since 2014-10] Use [In_channel.close]"]
 (** Close the given channel.  Input functions raise a [Sys_error]
-  exception when they are applied to a closed input channel,
-  except [close_in], which does nothing when applied to an already
-  closed channel. *)
+    exception when they are applied to a closed input channel,
+    except [close_in], which does nothing when applied to an already
+    closed channel. *)
 
 val close_in_noerr : Pervasives.in_channel -> unit
-  [@@deprecated "[since 2016-04] Use [In_channel.close] and catch exceptions"]
+[@@deprecated "[since 2016-04] Use [In_channel.close] and catch exceptions"]
 (** Same as [close_in], but ignore all errors. *)
 
 val set_binary_mode_in : Pervasives.in_channel -> bool -> unit
-  [@@deprecated "[since 2016-04] Use [In_channel.set_binary_mode]"]
+[@@deprecated "[since 2016-04] Use [In_channel.set_binary_mode]"]
 (** [set_binary_mode_in ic true] sets the channel [ic] to binary
-   mode: no translations take place during input.
-   [set_binary_mode_out ic false] sets the channel [ic] to text
-   mode: depending on the operating system, some translations
-   may take place during input.  For instance, under Windows,
-   end-of-lines will be translated from [\r\n] to [\n].
-   This function has no effect under operating systems that
-   do not distinguish between text mode and binary mode. *)
+    mode: no translations take place during input.
+    [set_binary_mode_out ic false] sets the channel [ic] to text
+    mode: depending on the operating system, some translations
+    may take place during input.  For instance, under Windows,
+    end-of-lines will be translated from [\r\n] to [\n].
+    This function has no effect under operating systems that
+    do not distinguish between text mode and binary mode. *)
 
 
 (** {7 Operations on large files} *)
 
 module LargeFile :
-  sig
-    val seek_out : Pervasives.out_channel -> int64 -> unit
-    val pos_out : Pervasives.out_channel -> int64
-    val out_channel_length : Pervasives.out_channel -> int64
-    val seek_in : Pervasives.in_channel -> int64 -> unit
-    val pos_in : Pervasives.in_channel -> int64
-    val in_channel_length : Pervasives.in_channel -> int64
-  end
-  [@@deprecated "[since 2016-04] Use [In_channel] and [Out_channel]"]
+sig
+  val seek_out : Pervasives.out_channel -> int64 -> unit
+  val pos_out : Pervasives.out_channel -> int64
+  val out_channel_length : Pervasives.out_channel -> int64
+  val seek_in : Pervasives.in_channel -> int64 -> unit
+  val pos_in : Pervasives.in_channel -> int64
+  val in_channel_length : Pervasives.in_channel -> int64
+end
+[@@deprecated "[since 2016-04] Use [In_channel] and [Out_channel]"]
 (** Operations on large files.
-  This sub-module provides 64-bit variants of the channel functions
-  that manipulate file positions and file sizes.  By representing
-  positions and sizes by 64-bit integers (type [int64]) instead of
-  regular integers (type [int]), these alternate functions allow
-  operating on files whose sizes are greater than [max_int]. *)
+    This sub-module provides 64-bit variants of the channel functions
+    that manipulate file positions and file sizes.  By representing
+    positions and sizes by 64-bit integers (type [int64]) instead of
+    regular integers (type [int]), these alternate functions allow
+    operating on files whose sizes are greater than [max_int]. *)
 
 
 (** {6 References} *)
 
 type 'a ref = 'a Pervasives.ref = { mutable contents : 'a }
 (** The type of references (mutable indirection cells) containing
-   a value of type ['a]. *)
+    a value of type ['a]. *)
 
 external ref : 'a -> 'a ref = "%makemutable"
 (** Return a fresh reference containing the given value. *)
 
 external ( ! ) : 'a ref -> 'a = "%field0"
 (** [!r] returns the current contents of reference [r].
-   Equivalent to [fun r -> r.contents]. *)
+    Equivalent to [fun r -> r.contents]. *)
 
 external ( := ) : 'a ref -> 'a -> unit = "%setfield0"
 (** [r := a] stores the value of [a] in reference [r].
-   Equivalent to [fun r v -> r.contents <- v]. *)
+    Equivalent to [fun r v -> r.contents <- v]. *)
 
 external incr : int ref -> unit = "%incr"
 (** Increment the integer contained in the given reference.
-   Equivalent to [fun r -> r := succ !r]. *)
+    Equivalent to [fun r -> r := succ !r]. *)
 
 external decr : int ref -> unit = "%decr"
 (** Decrement the integer contained in the given reference.
-   Equivalent to [fun r -> r := pred !r]. *)
+    Equivalent to [fun r -> r := pred !r]. *)
 
 
 (** Result type *)
@@ -1058,30 +1058,30 @@ type ('a,'b) result = ('a, 'b) Pervasives.result = Ok of 'a | Error of 'b
 (** {6 Operations on format strings} *)
 
 (** Format strings are character strings with special lexical conventions
-  that defines the functionality of formatted input/output functions. Format
-  strings are used to read data with formatted input functions from module
-  {!Scanf} and to print data with formatted output functions from modules
-  {!Printf} and {!Format}.
+    that defines the functionality of formatted input/output functions. Format
+    strings are used to read data with formatted input functions from module
+    {!Scanf} and to print data with formatted output functions from modules
+    {!Printf} and {!Format}.
 
-  Format strings are made of three kinds of entities:
-  - {e conversions specifications}, introduced by the special character ['%']
+    Format strings are made of three kinds of entities:
+    - {e conversions specifications}, introduced by the special character ['%']
     followed by one or more characters specifying what kind of argument to
     read or print,
-  - {e formatting indications}, introduced by the special character ['@']
+    - {e formatting indications}, introduced by the special character ['@']
     followed by one or more characters specifying how to read or print the
     argument,
-  - {e plain characters} that are regular characters with usual lexical
+    - {e plain characters} that are regular characters with usual lexical
     conventions. Plain characters specify string literals to be read in the
     input or printed in the output.
 
-  There is an additional lexical rule to escape the special characters ['%']
-  and ['@'] in format strings: if a special character follows a ['%']
-  character, it is treated as a plain character. In other words, ["%%"] is
-  considered as a plain ['%'] and ["%@"] as a plain ['@'].
+    There is an additional lexical rule to escape the special characters ['%']
+    and ['@'] in format strings: if a special character follows a ['%']
+    character, it is treated as a plain character. In other words, ["%%"] is
+    considered as a plain ['%'] and ["%@"] as a plain ['@'].
 
-  For more information about conversion specifications and formatting
-  indications available, read the documentation of modules {!Scanf},
-  {!Printf} and {!Format}.
+    For more information about conversion specifications and formatting
+    indications available, read the documentation of modules {!Scanf},
+    {!Printf} and {!Format}.
 *)
 
 (** Format strings have a general and highly polymorphic type
@@ -1093,36 +1093,36 @@ type ('a,'b) result = ('a, 'b) Pervasives.result = Ok of 'a | Error of 'b
     The meaning of format string type parameters is as follows:
 
     - ['a] is the type of the parameters of the format for formatted output
-      functions ([printf]-style functions);
-      ['a] is the type of the values read by the format for formatted input
-      functions ([scanf]-style functions).
+    functions ([printf]-style functions);
+    ['a] is the type of the values read by the format for formatted input
+    functions ([scanf]-style functions).
 
     - ['b] is the type of input source for formatted input functions and the
-      type of output target for formatted output functions.
-      For [printf]-style functions from module [Printf], ['b] is typically
-      [out_channel];
-      for [printf]-style functions from module [Format], ['b] is typically
-      [Format.formatter];
-      for [scanf]-style functions from module [Scanf], ['b] is typically
-      [Scanf.Scanning.in_channel].
+    type of output target for formatted output functions.
+    For [printf]-style functions from module [Printf], ['b] is typically
+    [out_channel];
+    for [printf]-style functions from module [Format], ['b] is typically
+    [Format.formatter];
+    for [scanf]-style functions from module [Scanf], ['b] is typically
+    [Scanf.Scanning.in_channel].
 
-      Type argument ['b] is also the type of the first argument given to
-      user's defined printing functions for [%a] and [%t] conversions,
-      and user's defined reading functions for [%r] conversion.
+    Type argument ['b] is also the type of the first argument given to
+    user's defined printing functions for [%a] and [%t] conversions,
+    and user's defined reading functions for [%r] conversion.
 
     - ['c] is the type of the result of the [%a] and [%t] printing
-      functions, and also the type of the argument transmitted to the
-      first argument of [kprintf]-style functions or to the
-      [kscanf]-style functions.
+    functions, and also the type of the argument transmitted to the
+    first argument of [kprintf]-style functions or to the
+    [kscanf]-style functions.
 
     - ['d] is the type of parameters for the [scanf]-style functions.
 
     - ['e] is the type of the receiver function for the [scanf]-style functions.
 
     - ['f] is the final result type of a formatted input/output function
-      invocation: for the [printf]-style functions, it is typically [unit];
-      for the [scanf]-style functions, it is typically the result type of the
-      receiver function.
+    invocation: for the [printf]-style functions, it is typically [unit];
+    for the [scanf]-style functions, it is typically the result type of the
+    receiver function.
 *)
 
 type ('a, 'b, 'c, 'd, 'e, 'f) format6 =
@@ -1146,44 +1146,44 @@ external format_of_string :
 *)
 
 val ( ^^ ) :
-      ('a, 'b, 'c, 'd, 'e, 'f) format6 ->
-      ('f, 'b, 'c, 'e, 'g, 'h) format6 ->
-      ('a, 'b, 'c, 'd, 'g, 'h) format6
+  ('a, 'b, 'c, 'd, 'e, 'f) format6 ->
+  ('f, 'b, 'c, 'e, 'g, 'h) format6 ->
+  ('a, 'b, 'c, 'd, 'g, 'h) format6
 (** [f1 ^^ f2] catenates format strings [f1] and [f2]. The result is a
-  format string that behaves as the concatenation of format strings [f1] and
-  [f2]: in case of formatted output, it accepts arguments from [f1], then
-  arguments from [f2]; in case of formatted input, it returns results from
-  [f1], then results from [f2].
+    format string that behaves as the concatenation of format strings [f1] and
+    [f2]: in case of formatted output, it accepts arguments from [f1], then
+    arguments from [f2]; in case of formatted input, it returns results from
+    [f1], then results from [f2].
 *)
 
 (** {6 Program termination} *)
 
 val exit : int -> 'a
 (** Terminate the process, returning the given status code
-   to the operating system: usually 0 to indicate no errors,
-   and a small positive integer to indicate failure.
-   All open output channels are flushed with [flush_all].
-   An implicit [exit 0] is performed each time a program
-   terminates normally.  An implicit [exit 2] is performed if the program
-   terminates early because of an uncaught exception. *)
+    to the operating system: usually 0 to indicate no errors,
+    and a small positive integer to indicate failure.
+    All open output channels are flushed with [flush_all].
+    An implicit [exit 0] is performed each time a program
+    terminates normally.  An implicit [exit 2] is performed if the program
+    terminates early because of an uncaught exception. *)
 
 val at_exit : (unit -> unit) -> unit
 (** Register the given function to be called at program
-   termination time. The functions registered with [at_exit]
-   will be called when the program executes {!Pervasives.exit},
-   or terminates, either normally or because of an uncaught exception.
-   The functions are called in 'last in, first out' order:
-   the function most recently added with [at_exit] is called first. *)
+    termination time. The functions registered with [at_exit]
+    will be called when the program executes {!Pervasives.exit},
+    or terminates, either normally or because of an uncaught exception.
+    The functions are called in 'last in, first out' order:
+    the function most recently added with [at_exit] is called first. *)
 
 (**/**)
 
 (** The following is for system use only. Do not call directly. *)
 
 val valid_float_lexem : string -> string
-  [@@deprecated "[since 2015-11] Do not use."]
+[@@deprecated "[since 2015-11] Do not use."]
 
 val unsafe_really_input : Pervasives.in_channel -> bytes -> int -> int -> unit
-  [@@deprecated "[since 2015-11] Do not use."]
+[@@deprecated "[since 2015-11] Do not use."]
 
 val do_at_exit : unit -> unit
-  [@@deprecated "[since 2015-11] Do not use."]
+[@@deprecated "[since 2015-11] Do not use."]

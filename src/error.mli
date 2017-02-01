@@ -10,9 +10,9 @@ include Info_intf.Extension with type t := t
     details. *)
 
 (** {[
-      failwiths ?strict ?here message a sexp_of_a
-      = Error.raise (Error.create ?strict ?here s a sexp_of_a)
-    ]}
+     failwiths ?strict ?here message a sexp_of_a
+     = Error.raise (Error.create ?strict ?here s a sexp_of_a)
+   ]}
 
    As with [Error.create], [sexp_of_a a] is lazily computed, when the error is converted
    to a sexp.  So, if [a] is mutated in the time between the call to [failwiths] and the

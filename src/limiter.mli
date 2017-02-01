@@ -8,9 +8,9 @@
     This version implements a closed system where tokens move through three possible
     states:
 
-      - in hopper
-      - in bucket
-      - in flight
+    - in hopper
+    - in bucket
+    - in flight
 
     tokens "drop" from the hopper into the bucket at a set rate, and can be taken from
     the bucket by clients and put into flight.  Once the client is finished with whatever
@@ -39,7 +39,7 @@ module Infinite_or_finite : sig
   type 'a t =
     | Infinite
     | Finite of 'a
-    [@@deriving sexp, bin_io, compare]
+  [@@deriving sexp, bin_io, compare]
 end
 
 module Try_take_result : sig

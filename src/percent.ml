@@ -103,10 +103,10 @@ module Stable = struct
     end
 
     include (Stringable : sig
-      type t
-      val of_string : string -> t
-      val to_string : t -> string
-    end with type t := t)
+               type t
+               val of_string : string -> t
+               val to_string : t -> string
+             end with type t := t)
 
     include (Sexpable.Stable.Of_stringable.V1 (Stringable) : Sexpable.S with type t := t)
     include (Float : Binable with type t := t)
@@ -114,19 +114,19 @@ module Stable = struct
   end
 
   let%test_module "Percent.V1" = (module Stable_unit_test.Make (struct
-    include V1
+      include V1
 
-    let _coerce t =
-      ignore (t : t);
-      ignore (t : float)
+      let _coerce t =
+        ignore (t : t);
+        ignore (t : float)
 
-    let tests =
-      [ 0.375, "37.5%", "\000\000\000\000\000\000\216?"
-      ; 4.5, "4.5x", "\000\000\000\000\000\000\018@"
-      ; 0.0002, "2bp", "-C\028\235\2266*?"
-      ; 0.000075, "0.75bp", "a2U0*\169\019?"
-      ]
-  end))
+      let tests =
+        [ 0.375, "37.5%", "\000\000\000\000\000\000\216?"
+        ; 4.5, "4.5x", "\000\000\000\000\000\000\018@"
+        ; 0.0002, "2bp", "-C\028\235\2266*?"
+        ; 0.000075, "0.75bp", "a2U0*\169\019?"
+        ]
+    end))
 
   let%test_unit {|
     BUG: The sexp functions don't roundtrip.

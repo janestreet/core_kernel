@@ -52,10 +52,10 @@
     Note that, as a consequence of 1, exposing a global switch as in:
 
     {[
-       module Switch : sig
-         ...
-         val global : [< _ perms] t
-       end
+      module Switch : sig
+        ...
+        val global : [< _ perms] t
+      end
     ]}
 
     would be a mistake, since one library could annotate [Switch.global] as an
@@ -69,7 +69,7 @@
     {- The permissions type parameter is contravariant with no constraints.}
     {- The result of creation functions is a [t] with [[< _ perms]] permissions.}
     {- Functions which take a [t] and access it in some way represent that access in the
-       type. }
+    type. }
     }
 
     The reason for having creation functions return a [t] with [[< _ perms]] permissions
@@ -83,7 +83,7 @@
     {- The permissions type parameter is contravariant with constraint [[< _ perms]].}
     {- The result of creation functions is a [t] with no constraint on the permissions.}
     {- Functions which take a [t] and access it in some way represent that access in the
-       type. }
+    type. }
     }
 
     Unfortunately, that doesn't work for us due to some quirks in the way constraints of
@@ -99,7 +99,7 @@
     {- The permissions type parameter is contravariant with constraint [[> read]].}
     {- The result of creation functions is a [t] with [[< _ perms]] permissions.}
     {- Functions which take a [t] and access it in some way represent that access in the
-       type, except that you don't have to specify read permissions. }
+    type, except that you don't have to specify read permissions. }
     }
 
     However, the standard usage pattern is again preferred to this one: [constraint] has

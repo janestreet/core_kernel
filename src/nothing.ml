@@ -50,12 +50,12 @@ module T = struct
 
   let to_string : t -> _ = function _ -> .
 
-  let of_string (_ : string) =
-    failwith "Nothing.of_string: not supported"
+    let of_string (_ : string) =
+      failwith "Nothing.of_string: not supported"
 end
 
 include T
 include Identifiable.Make (struct
-  include T
-  let module_name = "Core_kernel.Std.Nothing"
-end)
+    include T
+    let module_name = "Core_kernel.Std.Nothing"
+  end)

@@ -11,8 +11,8 @@
     matches [Creators2_with_comparator] but [Accessors2] (without comparator).
 *)
 (*
-    CRs and comments about [Set] functions do not belong in this file.  They belong next
-    to the appropriate function in core_set.mli.
+   CRs and comments about [Set] functions do not belong in this file.  They belong next
+   to the appropriate function in core_set.mli.
 *)
 
 open! Import
@@ -53,7 +53,7 @@ module type Accessors_generic = sig
   val to_map
     : ('a, 'cmp,
        ('a, 'cmp) t -> f:('a elt -> 'b) -> ('a elt, 'b, 'cmp cmp) Map.t
-    ) options
+      ) options
 
   val obs : 'a elt Quickcheck.Observer.t -> ('a, 'cmp) t Quickcheck.Observer.t
 
@@ -100,13 +100,13 @@ end
 
 (** Consistency checks (same as in [Container]). *)
 module Check_accessors (T : T2) (Tree : T2) (Elt : T1) (Cmp : T1) (Options : T3)
-  (M : Accessors_generic
+    (M : Accessors_generic
      with type ('a, 'b, 'c) options := ('a, 'b, 'c) Options.t
      with type ('a, 'b) t           := ('a, 'b) T.t
      with type ('a, 'b) tree        := ('a, 'b) Tree.t
      with type 'a elt               := 'a Elt.t
      with type 'cmp cmp             := 'cmp Cmp.t)
-  = struct end
+= struct end
 
 module Check_accessors0 (M : Accessors0) =
   Check_accessors
@@ -202,13 +202,13 @@ module type Creators2_with_comparator = sig
 end
 
 module Check_creators (T : T2) (Tree : T2) (Elt : T1) (Cmp : T1) (Options : T3)
-  (M : Creators_generic
+    (M : Creators_generic
      with type ('a, 'b, 'c) options := ('a, 'b, 'c) Options.t
      with type ('a, 'b) t           := ('a, 'b) T.t
      with type ('a, 'b) tree        := ('a, 'b) Tree.t
      with type 'a elt               := 'a Elt.t
      with type 'cmp cmp             := 'cmp Cmp.t)
-  = struct end
+= struct end
 
 module Check_creators0 (M : Creators0) =
   Check_creators

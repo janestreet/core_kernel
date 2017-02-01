@@ -3,7 +3,7 @@ open Std_internal
 
 module type Span = sig
   (** Span.t represents a span of time (e.g. 7 minutes, 3 hours, 12.8 days).  The span
-     may be positive or negative. *)
+      may be positive or negative. *)
   type underlying
   type t = private underlying [@@deriving bin_io, sexp]
 

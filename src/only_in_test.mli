@@ -9,14 +9,14 @@
     representation in unit tests.  You could write in the ml:
 
     {[let test_to_int t = Only_in_test.return t
-    [let test_of_int n = Only_in_test.return n]}
+                            [let test_of_int n = Only_in_test.return n]}
 
     You would then expose in the mli:
 
     {[type t
-    ... functions for use in regular programming...
-    val test_to_int : t -> int Only_in_test.t
-    val test_of_int : int -> t Only_in_test.t]}
+      ... functions for use in regular programming...
+      val test_to_int : t -> int Only_in_test.t
+      val test_of_int : int -> t Only_in_test.t]}
 
     Finally, if you have specific values that you might want to use in unit
     tests, but that have top-level side-effects or take too long to compute, you
@@ -24,12 +24,12 @@
     writing, e.g.:
 
     [let (test_special_value : t Only_in_test.t) =
-       Only_in_test.of_thunk (fun () ->  factorial 100)]
+    Only_in_test.of_thunk (fun () ->  factorial 100)]
 
     instead of
 
     [let (test_special_value : t Only_in_test.t) =
-       Only_in_test.return (factorial 100)]
+    Only_in_test.return (factorial 100)]
 *)
 
 open! Import

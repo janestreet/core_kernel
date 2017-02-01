@@ -40,8 +40,8 @@ module Make (Hashtbl : Hashtbl_intf.Hashtbl) = struct
     assert (Hashtbl.find our_hash "d" = Some 5);
     Hashtbl.invariant ignore ignore our_hash;
     assert (match duplicate, no_duplicate with
-            | `Duplicate, `Ok -> true
-            | _ -> false)
+      | `Duplicate, `Ok -> true
+      | _ -> false)
   ;;
 
   let%test "iter" =
@@ -70,32 +70,34 @@ module Make (Hashtbl : Hashtbl_intf.Hashtbl) = struct
     List.equal ~equal:String.equal predicted found
   ;;
 
-  let%test_module "of_alist" = (module struct
+  let%test_module "of_alist" =
+    (module struct
 
-    let%test "size" =
-      let predicted = List.length test_data in
-      let found = Hashtbl.length (Hashtbl.Poly.of_alist_exn test_data) in
-      predicted = found
-    ;;
+      let%test "size" =
+        let predicted = List.length test_data in
+        let found = Hashtbl.length (Hashtbl.Poly.of_alist_exn test_data) in
+        predicted = found
+      ;;
 
-    let%test "right keys" =
-      let predicted = List.map test_data ~f:(fun (k,_) -> k) in
-      let found = Hashtbl.keys (Hashtbl.Poly.of_alist_exn test_data) in
-      let sp = List.sort ~cmp:Poly.ascending predicted in
-      let sf = List.sort ~cmp:Poly.ascending found in
-      sp = sf
-    ;;
-  end)
+      let%test "right keys" =
+        let predicted = List.map test_data ~f:(fun (k,_) -> k) in
+        let found = Hashtbl.keys (Hashtbl.Poly.of_alist_exn test_data) in
+        let sp = List.sort ~cmp:Poly.ascending predicted in
+        let sf = List.sort ~cmp:Poly.ascending found in
+        sp = sf
+      ;;
+    end)
 
-  let%test_module "of_alist_or_error" = (module struct
+  let%test_module "of_alist_or_error" =
+    (module struct
 
-    let%test "unique" =
-      Result.is_ok (Hashtbl.Poly.of_alist_or_error test_data)
+      let%test "unique" =
+        Result.is_ok (Hashtbl.Poly.of_alist_or_error test_data)
 
-    let%test "duplicate" =
-      Result.is_error (Hashtbl.Poly.of_alist_or_error (test_data @ test_data))
+      let%test "duplicate" =
+        Result.is_error (Hashtbl.Poly.of_alist_or_error (test_data @ test_data))
 
-  end)
+    end)
 
   let%test "size and right keys" =
     let predicted = List.map test_data ~f:(fun (k,_) -> k) in
@@ -656,11 +658,11 @@ module Make (Hashtbl : Hashtbl_intf.Hashtbl) = struct
 
         let%test_unit _ =
           Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
-              let map, t = map_and_table constructor in
-              [%test_result: Data.t Key.Map.t]
-                (Hashtbl.fold t ~init:Key.Map.empty ~f:(fun ~key ~data map ->
-                   Map.add map ~key ~data))
-                ~expect:map)
+            let map, t = map_and_table constructor in
+            [%test_result: Data.t Key.Map.t]
+              (Hashtbl.fold t ~init:Key.Map.empty ~f:(fun ~key ~data map ->
+                 Map.add map ~key ~data))
+              ~expect:map)
 
         let iter  = Hashtbl.iter
 
@@ -979,10 +981,10 @@ module Make (Hashtbl : Hashtbl_intf.Hashtbl) = struct
 
         let%test_unit _ =
           Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
-              let map, t = map_and_table constructor in
-              [%test_result: Data.t Key.Map.t]
-                (to_map (Hashtbl.filter_map t ~f:Data.to_option))
-                ~expect:(Map.filter_map map ~f:Data.to_option))
+            let map, t = map_and_table constructor in
+            [%test_result: Data.t Key.Map.t]
+              (to_map (Hashtbl.filter_map t ~f:Data.to_option))
+              ~expect:(Map.filter_map map ~f:Data.to_option))
 
         let filter_mapi = Hashtbl.filter_mapi
 
@@ -1255,7 +1257,7 @@ module Make (Hashtbl : Hashtbl_intf.Hashtbl) = struct
               if Data.to_bool data
               then Validate.pass
               else Validate.fail "data"
-             in
+            in
             [%test_result: bool]
               (Result.is_ok (Validate.result (Hashtbl.validate ~name check_data t)))
               ~expect:(Map.for_all map ~f:Data.to_bool))

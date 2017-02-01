@@ -1,11 +1,11 @@
 (** Extensible string buffers based on Bigstrings.
 
-   This module implements string buffers that automatically expand as necessary.  It
-   provides accumulative concatenation of strings in quasi-linear time (instead of
-   quadratic time when strings are concatenated pairwise).
+    This module implements string buffers that automatically expand as necessary.  It
+    provides accumulative concatenation of strings in quasi-linear time (instead of
+    quadratic time when strings are concatenated pairwise).
 
-   This implementation uses Bigstrings instead of strings.  This removes the 16MB limit on
-   buffer size, and improves I/O-performance when reading/writing from/to channels.
+    This implementation uses Bigstrings instead of strings.  This removes the 16MB limit on
+    buffer size, and improves I/O-performance when reading/writing from/to channels.
 *)
 
 open! Import
@@ -14,7 +14,7 @@ include Base.Buffer.S
 
 val big_contents : t -> Bigstring.t
 (** Return a copy of the current contents of the buffer as a bigstring.
-   The buffer itself is unchanged. *)
+    The buffer itself is unchanged. *)
 
 val volatile_contents : t -> Bigstring.t
 (** Return the actual underlying bigstring used by this bigbuffer.
@@ -26,19 +26,19 @@ val add_bigstring : t -> Bigstring.t -> unit
 
 val add_substitute : t -> (string -> string) -> string -> unit
 (** [add_substitute b f s] appends the string pattern [s] at the end
-   of the buffer [b] with substitution.
-   The substitution process looks for variables into
-   the pattern and substitutes each variable name by its value, as
-   obtained by applying the mapping [f] to the variable name. Inside the
-   string pattern, a variable name immediately follows a non-escaped
-   [$] character and is one of the following:
-   - a non empty sequence of alphanumeric or [_] characters,
-   - an arbitrary sequence of characters enclosed by a pair of
-   matching parentheses or curly brackets.
-   An escaped [$] character is a [$] that immediately follows a backslash
-   character; it then stands for a plain [$].
-   Raise [Not_found] if the closing character of a parenthesized variable
-   cannot be found. *)
+    of the buffer [b] with substitution.
+    The substitution process looks for variables into
+    the pattern and substitutes each variable name by its value, as
+    obtained by applying the mapping [f] to the variable name. Inside the
+    string pattern, a variable name immediately follows a non-escaped
+    [$] character and is one of the following:
+    - a non empty sequence of alphanumeric or [_] characters,
+    - an arbitrary sequence of characters enclosed by a pair of
+    matching parentheses or curly brackets.
+    An escaped [$] character is a [$] that immediately follows a backslash
+    character; it then stands for a plain [$].
+    Raise [Not_found] if the closing character of a parenthesized variable
+    cannot be found. *)
 
 (** NOTE: additions *)
 

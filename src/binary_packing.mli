@@ -1,12 +1,12 @@
 (** Packs and unpacks various types of integers into and from strings.
 
-   Functions ending in _int should not be used on 32 bit programs because native ocaml
-   ints will not be big enough.
+    Functions ending in _int should not be used on 32 bit programs because native ocaml
+    ints will not be big enough.
 
-   [pos] arguments refer to the location in the buf string.
+    [pos] arguments refer to the location in the buf string.
 
-   We support big and little endian ints.  Note that for an 8 bit (1 byte) integer, there
-   is no difference because endian-ness only changes the order of bytes, not bits.
+    We support big and little endian ints.  Note that for an 8 bit (1 byte) integer, there
+    is no difference because endian-ness only changes the order of bytes, not bits.
 *)
 
 open! Import
@@ -21,9 +21,9 @@ val unpack_unsigned_8    :                      buf:string -> pos:int -> int
 val   pack_unsigned_8    :                      buf:string -> pos:int -> int -> unit
 
 (** The functions ending with [_big_endian] or [_little_endian] are faster than the ones
-   with explicit [byte_order] argument:
+    with explicit [byte_order] argument:
 
- {v
+    {v
                                 Name | Run time | S. dev. | Warnings
   ---------------------------------- | -------- | ------- | --------
         pack_signed_16_little_endian |     4 ns |    0 ns |

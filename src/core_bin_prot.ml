@@ -4,9 +4,9 @@ include Bin_prot
 
 module Writer = struct
   type 'a t = 'a Bin_prot.Type_class.writer
-    = { size : 'a Size.sizer;
-        write : 'a Write.writer;
-      }
+  = { size : 'a Size.sizer;
+      write : 'a Write.writer;
+    }
 
   let to_string t v =
     let len = t.size v in

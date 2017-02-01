@@ -291,8 +291,8 @@ module Make (Timing_wheel : Timing_wheel)
                                    `initial_min_allowed_key initial_min_allowed_key,
                                    `step step)
                [%sexp_of: [`num_bits of int] * [`level_bits of int list]
-                            * [`initial_min_allowed_key of Key.t]
-                            * [`step of Key.Span.t]];
+                          * [`initial_min_allowed_key of Key.t]
+                          * [`step of Key.Span.t]];
         let t = create_unit ~level_bits in
         try
           increase_min_allowed_key t ~key:initial_min_allowed_key ~handle_removed:ignore;

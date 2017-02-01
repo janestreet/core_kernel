@@ -135,7 +135,7 @@ val find_exn : ('a, _) t -> f:('a -> bool) -> 'a
     smallest element has [i = 0].  Returns [None] if [i < 0] or [i >= length t]. *)
 val nth        : ('a, _) t -> int -> 'a option
 val find_index : ('a, _) t -> int -> 'a option
-  [@@deprecated "[since 2016-10] Use [nth]"]
+[@@deprecated "[since 2016-10] Use [nth]"]
 
 (** [remove_index t i] returns a version of [t] with the [i]th smallest element removed,
     in [O(log n)] time.  The smallest element has [i = 0].  Returns [t] if [i < 0] or
@@ -147,7 +147,7 @@ val is_subset : ('a, 'cmp) t -> of_:('a, 'cmp) t -> bool
 
 (** [subset] is a synonym for [is_subset]. *)
 val subset : ('a, 'cmp) t -> ('a, 'cmp) t -> bool
-  [@@deprecated "[since 2016-09] Replace [Set.subset t1 t2] with [Set.is_subset t1 ~of_:t2]"]
+[@@deprecated "[since 2016-09] Replace [Set.subset t1 t2] with [Set.is_subset t1 ~of_:t2]"]
 
 (** The list or array given to [of_list] and [of_array] need not be sorted. *)
 val of_list  : comparator:('a, 'cmp) Comparator.t -> 'a list  -> ('a, 'cmp) t
@@ -383,7 +383,7 @@ module Poly : sig
     with type 'elt tree    := 'elt Tree.t
     with type comparator_witness := Comparator.Poly.comparator_witness
 end
-  with type ('a, 'b) set := ('a, 'b) t
+with type ('a, 'b) set := ('a, 'b) t
 
 (** {1 Signatures and functors for building [Set] modules}  *)
 
@@ -414,9 +414,9 @@ module Make         (Elt : Elt)         : S         with type Elt.t = Elt.t
 module Make_binable (Elt : Elt_binable) : S_binable with type Elt.t = Elt.t
 
 module Make_plain_using_comparator (Elt : sig
-  type t [@@deriving sexp_of]
-  include Comparator.S with type t := t
-end)
+    type t [@@deriving sexp_of]
+    include Comparator.S with type t := t
+  end)
   : S_plain
     with type Elt.t = Elt.t
     with type Elt.comparator_witness = Elt.comparator_witness
@@ -426,17 +426,17 @@ end)
     [Make_binable_using_comparator] is similar, except the element and set types support
     [bin_io]. *)
 module Make_using_comparator (Elt : sig
-  type t [@@deriving sexp]
-  include Comparator.S with type t := t
-end)
+    type t [@@deriving sexp]
+    include Comparator.S with type t := t
+  end)
   : S
     with type Elt.t = Elt.t
     with type Elt.comparator_witness = Elt.comparator_witness
 
 module Make_binable_using_comparator (Elt : sig
-  type t [@@deriving bin_io, sexp]
-  include Comparator.S with type t := t
-end)
+    type t [@@deriving bin_io, sexp]
+    include Comparator.S with type t := t
+  end)
   : S_binable
     with type Elt.t = Elt.t
     with type Elt.comparator_witness = Elt.comparator_witness

@@ -49,13 +49,13 @@ module Add_bin_io
      end)
     (Validated : S with type raw := Raw.t) = struct
   include Binable.Of_binable (Raw) (struct
-    type t = Raw.t
-    let of_binable raw =
-      if Raw.validate_binio_deserialization
-      then Validated.create_exn raw
-      else raw
-    ;;
-    let to_binable = Fn.id
+      type t = Raw.t
+      let of_binable raw =
+        if Raw.validate_binio_deserialization
+        then Validated.create_exn raw
+        else raw
+      ;;
+      let to_binable = Fn.id
     end)
 end
 
@@ -98,90 +98,91 @@ module Make_bin_io_compare_hash_sexp
   include (Add_hash (Raw) (T) : sig type t [@@deriving hash] end with type t := t)
 end
 
-let%test_module _ = (module struct
+let%test_module _ =
+  (module struct
 
-  module Positive_int = struct
-    type t = int [@@deriving bin_io, sexp]
-    let validate t =
-      if t > 0
-      then Validate.pass
-      else Validate.fail "must be positive"
-    ;;
-  end
+    module Positive_int = struct
+      type t = int [@@deriving bin_io, sexp]
+      let validate t =
+        if t > 0
+        then Validate.pass
+        else Validate.fail "must be positive"
+      ;;
+    end
 
-  let does_raise = Exn.does_raise
+    let does_raise = Exn.does_raise
 
-  (* The [: S] is to remind us to add a unit test whenever the [S]
-     interface changes. *)
-  module M : S with type raw := int = struct
+    (* The [: S] is to remind us to add a unit test whenever the [S]
+       interface changes. *)
+    module M : S with type raw := int = struct
 
-    module M = Make (struct
-      let here = [%here]
-      include Positive_int
-    end)
+      module M = Make (struct
+          let here = [%here]
+          include Positive_int
+        end)
 
-    open M
+      open M
 
-    type witness
+      type witness
 
-    type nonrec t = t
+      type nonrec t = t
 
-    let t_of_sexp = t_of_sexp
-    let sexp_of_t = sexp_of_t
+      let t_of_sexp = t_of_sexp
+      let sexp_of_t = sexp_of_t
 
-    let%test_unit _ = assert (does_raise (fun () -> t_of_sexp ([%sexp_of: int] 0)))
+      let%test_unit _ = assert (does_raise (fun () -> t_of_sexp ([%sexp_of: int] 0)))
 
-    let%test_unit _ =
-      let sexp = [%sexp_of: int] 13 in
-      assert (sexp_of_t (t_of_sexp sexp) = sexp)
-    ;;
+      let%test_unit _ =
+        let sexp = [%sexp_of: int] 13 in
+        assert (sexp_of_t (t_of_sexp sexp) = sexp)
+      ;;
 
-    let create     = create
-    let create_exn = create_exn
-    let raw        = raw
+      let create     = create
+      let create_exn = create_exn
+      let raw        = raw
 
-    let%test_unit _ = assert (does_raise (fun () -> create_exn 0))
+      let%test_unit _ = assert (does_raise (fun () -> create_exn 0))
 
-    let%test_unit _ =
-      match create 0 with
-      | Error _ -> ()
-      | Ok _ -> assert false
-    ;;
+      let%test_unit _ =
+        match create 0 with
+        | Error _ -> ()
+        | Ok _ -> assert false
+      ;;
 
-    let%test_unit _ =
-      let n = 13 in
-      let t = create_exn n in
-      assert (raw t = n)
-    ;;
+      let%test_unit _ =
+        let n = 13 in
+        let t = create_exn n in
+        assert (raw t = n)
+      ;;
 
-    let%test_unit _ =
-      let n = 13 in
-      match create n with
-      | Error _ -> assert false
-      | Ok t -> assert ((t :> int) = n)
-    ;;
-  end
+      let%test_unit _ =
+        let n = 13 in
+        match create n with
+        | Error _ -> assert false
+        | Ok t -> assert ((t :> int) = n)
+      ;;
+    end
 
-  module M1 = Make_binable (struct
-    let here = [%here]
-    let validate_binio_deserialization = true
-    include Positive_int
+    module M1 = Make_binable (struct
+        let here = [%here]
+        let validate_binio_deserialization = true
+        include Positive_int
+      end)
+
+    module M2 = Make_binable (struct
+        let here = [%here]
+        let validate_binio_deserialization = false
+        include Positive_int
+      end)
+
+    let int = 0
+    let string = Binable.to_string (module Int) int
+    let%test _ = does_raise (fun () -> Binable.of_string (module M1) string)
+    let%test _ = (Binable.of_string (module M2) string) = int
+
+    let int = 1
+    let string = Binable.to_string (module Int) int
+    let%test _ = Binable.of_string (module M1) string = int
+    let%test _ = Binable.of_string (module M2) string = int
+
   end)
-
-  module M2 = Make_binable (struct
-    let here = [%here]
-    let validate_binio_deserialization = false
-    include Positive_int
-  end)
-
-  let int = 0
-  let string = Binable.to_string (module Int) int
-  let%test _ = does_raise (fun () -> Binable.of_string (module M1) string)
-  let%test _ = (Binable.of_string (module M2) string) = int
-
-  let int = 1
-  let string = Binable.to_string (module Int) int
-  let%test _ = Binable.of_string (module M1) string = int
-  let%test _ = Binable.of_string (module M2) string = int
-
-end)

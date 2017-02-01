@@ -31,10 +31,10 @@ let unbounded (type a) ?(hashable = Hashtbl.Hashable.poly) f =
     A.Table.create () ~size:0
   in
   (fun arg ->
-    Result.return begin
-      Hashtbl.find_or_add cache arg
-        ~default:(fun () -> Result.capture f arg)
-    end)
+     Result.return begin
+       Hashtbl.find_or_add cache arg
+         ~default:(fun () -> Result.capture f arg)
+     end)
 
 (* the same but with a bound on cache size *)
 let lru (type a) ?(hashable = Hashtbl.Hashable.poly) ~max_cache_size f =
@@ -65,28 +65,29 @@ let general ?hashable ?cache_size_bound f =
   | None -> unbounded ?hashable f
   | Some n -> lru ?hashable ~max_cache_size:n f
 
-let%test_module "lru" = (module struct
-  let count = ref 0  (* number of times f underlying function is run *)
-  let f = lru ~max_cache_size:3 (fun i -> incr count; i)
+let%test_module "lru" =
+  (module struct
+    let count = ref 0  (* number of times f underlying function is run *)
+    let f = lru ~max_cache_size:3 (fun i -> incr count; i)
 
-  let%test _ = f 0 = 0
-  let%test _ = !count = 1
+    let%test _ = f 0 = 0
+    let%test _ = !count = 1
 
-  let%test _ = f 1 = 1
-  let%test _ = !count = 2
+    let%test _ = f 1 = 1
+    let%test _ = !count = 2
 
-  let%test _ = f 0 = 0
-  let%test _ = !count = 2
+    let%test _ = f 0 = 0
+    let%test _ = !count = 2
 
-  let%test _ = f 3 = 3                       (* cache full *)
-  let%test _ = !count = 3
+    let%test _ = f 3 = 3                       (* cache full *)
+    let%test _ = !count = 3
 
-  let%test _ = f 4 = 4                       (* evict 1 *)
-  let%test _ = !count = 4
+    let%test _ = f 4 = 4                       (* evict 1 *)
+    let%test _ = !count = 4
 
-  let%test _ = f 0 = 0
-  let%test _ = !count = 4
+    let%test _ = f 0 = 0
+    let%test _ = !count = 4
 
-  let%test _ = f 1 = 1                       (* recompute 1 *)
-  let%test _ = !count = 5
-end)
+    let%test _ = f 1 = 1                       (* recompute 1 *)
+    let%test _ = !count = 5
+  end)

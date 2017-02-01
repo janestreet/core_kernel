@@ -154,15 +154,15 @@ module Make (Time0 : Time0_intf.S) = struct
           let buf = Buffer.create len in
           let _,indexed_abbrvs =
             List.fold raw_abbrvs ~init:(0, Map.Poly.empty)
-                                   ~f:(fun (index,abbrvs) c ->
-                                     match c with
-                                     | '\000' ->
-                                       let data = Buffer.contents buf in
-                                       let next_index = index + (String.length data) + 1 in
-                                       let abbrvs = Map.add abbrvs ~key:index ~data in
-                                       Buffer.clear buf;
-                                       (next_index,abbrvs)
-                                     | c -> Buffer.add_char buf c; (index,abbrvs))
+              ~f:(fun (index,abbrvs) c ->
+                match c with
+                | '\000' ->
+                  let data = Buffer.contents buf in
+                  let next_index = index + (String.length data) + 1 in
+                  let abbrvs = Map.add abbrvs ~key:index ~data in
+                  Buffer.clear buf;
+                  (next_index,abbrvs)
+                | c -> Buffer.add_char buf c; (index,abbrvs))
           in
           if Buffer.length buf <> 0 then
             raise
@@ -373,8 +373,8 @@ module Make (Time0 : Time0_intf.S) = struct
     in
     ( zone.transitions.(i).start_time
     , (Time0.Span.(-)
-           zone.transitions.(i).new_regime.utc_off
-           previous_shift)
+         zone.transitions.(i).new_regime.utc_off
+         previous_shift)
     )
 
   let next_clock_shift zone ~after =

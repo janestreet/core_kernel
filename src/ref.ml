@@ -6,8 +6,8 @@ module T = struct
   include (struct
     type 'a t = 'a ref [@@deriving bin_io, typerep]
   end : sig
-    type 'a t = 'a ref [@@deriving bin_io, typerep]
-  end with type 'a t := 'a t)
+             type 'a t = 'a ref [@@deriving bin_io, typerep]
+           end with type 'a t := 'a t)
 end
 
 include T

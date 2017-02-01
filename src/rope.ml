@@ -7,9 +7,9 @@ module String = Core_string
 (* Invariants:
 
    - [Append (x, y)] must have both [x] and [y] non-empty (complexity analysis
-     of [to_string] relies on it).
+   of [to_string] relies on it).
    - Overall length is less than [String.max_length] (so [to_string] can work, at least in
-     principle). *)
+   principle). *)
 type tree =
   | Base of string
   | Append of tree * tree
@@ -38,9 +38,9 @@ let to_string { len; tree } =
         String.blit ~src:s ~src_pos:0 ~dst:buf ~dst_pos:start ~len:(String.length s);
         let start = start + String.length s in
         (match todo with
-          | [] -> assert (start = len)
-          | x :: xs ->
-            go xs start x)
+         | [] -> assert (start = len)
+         | x :: xs ->
+           go xs start x)
       | Append (s1, s2) ->
         go (s2 :: todo) start s1
     in
@@ -72,10 +72,10 @@ let concat ?(sep=empty) ts =
 let%test_unit _ =
   [%test_result: string] ~expect:""
     (concat ~sep:(of_string ", ") []
-    |> to_string);
+     |> to_string);
   [%test_result: string] ~expect:"one, two, three"
     (concat ~sep:(of_string ", ") [of_string "one"; of_string "two"; of_string "three"]
-    |> to_string)
+     |> to_string)
 
 let concat_array ?(sep=empty) ts =
   Array.reduce ts ~f:(fun x y -> x ^ sep ^ y)

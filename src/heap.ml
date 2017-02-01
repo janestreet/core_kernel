@@ -5,20 +5,22 @@ module Pointer = Pool.Pointer
 
 (* This pool holds nodes that would be represented more traditionally as:
 
-    type 'a t =
-    | Empty
-    | Heap of 'a * 'a t list
+   {[
+     type 'a t =
+       | Empty
+       | Heap of 'a * 'a t list ]}
 
-  We will represent them as a left-child, right-sibling tree in a triplet
-  (value * left_child * right_sibling).  The left child and all right siblings
-  of the left child form a linked list representing the subheaps of a given heap:
+   We will represent them as a left-child, right-sibling tree in a triplet
+   (value * left_child * right_sibling).  The left child and all right siblings
+   of the left child form a linked list representing the subheaps of a given heap:
 
-        A
-       /
-      B -> C -> D -> E -> F
-     /         /         /
-    G         H->I->J   K->L
-*)
+   {v
+         A
+        /
+       B -> C -> D -> E -> F
+      /         /         /
+     G         H->I->J   K->L
+   v} *)
 
 module Node : sig
   (* Exposing [private int] is a significant performance improvement, because it allows
@@ -102,9 +104,9 @@ end = struct
 
   let add_child pool node ~child:new_child =
     (* assertions we would make, but for speed:
-      assert (not (is_empty node));
-      assert (not (is_empty new_child));
-      assert (is_empty (sibling pool new_child));
+       assert (not (is_empty node));
+       assert (not (is_empty new_child));
+       assert (is_empty (sibling pool new_child));
     *)
     let current_child = disconnect_child pool node in
     (* add [new_child] to the list of [node]'s children (which may be empty) *)
@@ -133,7 +135,7 @@ end = struct
         else begin
           let new_node = allocate t' (transform (value_exn t node)) in
           let to_visit =
-               (new_node, Pool.Slot.t1, child t node)
+            (new_node, Pool.Slot.t1, child t node)
             :: (new_node, Pool.Slot.t2, sibling t node)
             :: to_visit
           in
@@ -199,9 +201,9 @@ module T = struct
      match heap1, heap2 with
      | None, h | h, None -> h
      | Some (Node (v1, children1)), Some (Node (v2, children2)) ->
-       if v1 < v2
-       then Some (Node (v1, heap2 :: children1))
-       else Some (Node (v2, heap1 :: children2))
+     if v1 < v2
+     then Some (Node (v1, heap2 :: children1))
+     else Some (Node (v2, heap1 :: children2))
   *)
   let merge t heap1 heap2 =
     if Node.is_empty heap1 then
@@ -250,9 +252,9 @@ module T = struct
   *)
   (* translation:
      let rec loop acc = function
-       | [] -> acc
-       | [head] -> head :: acc
-       | head :: next1 :: next2 -> loop (merge head next1 :: acc) next2
+     | [] -> acc
+     | [head] -> head :: acc
+     | head :: next1 :: next2 -> loop (merge head next1 :: acc) next2
      in
      match loop [] children with
      | [] -> None
@@ -280,18 +282,18 @@ module T = struct
   (* translation:
      match t.heap with
      | Node (_, children) ->
-       let rec loop depth children =
-         if depth >= max_stack_depth
-         then allocating_merge_pairs t childen
-         else begin
-           match children with
-           | [] -> None
-           | [head] -> Some head
-           | head :: next1 :: next2 ->
-             merge (merge head next1) (loop (depth + 1) next2)
-         end
-       in
-       loop 0 children
+     let rec loop depth children =
+     if depth >= max_stack_depth
+     then allocating_merge_pairs t childen
+     else begin
+     match children with
+     | [] -> None
+     | [head] -> Some head
+     | head :: next1 :: next2 ->
+     merge (merge head next1) (loop (depth + 1) next2)
+     end
+     in
+     loop 0 children
   *)
   let merge_pairs t =
     let max_stack_depth = 1_000 in
@@ -385,10 +387,10 @@ module T = struct
   ;;
 
   module C = Container.Make (struct
-    type nonrec 'a t = 'a t
-    let fold = fold
-    let iter = `Custom iter
-  end)
+      type nonrec 'a t = 'a t
+      let fold = fold
+      let iter = `Custom iter
+    end)
 
   (* we can do better than the O(n) of [C.length] *)
   let length t = Node.Pool.length t.pool
@@ -418,21 +420,22 @@ module T = struct
 
   let sexp_of_t f t = Array.sexp_of_t f (to_array t)
 
-  let%test_module _ = (module struct
-    let data = [ 0; 1; 2; 3; 4; 5; 6; 7 ]
-    let t = of_list data ~cmp:Int.compare
-    (* pop the zero at the top to force some heap structuring.  This does not touch the
-       sum. *)
-    let _ = pop t
-    let list_sum      = List.fold data ~init:0 ~f:(fun sum v -> sum + v)
-    let heap_fold_sum = fold t ~init:0 ~f:(fun sum v -> sum + v)
-    let heap_iter_sum =
-      let r = ref 0 in
-      iter t ~f:(fun v -> r := !r + v);
-      !r
-    let%test _ = Int.(=) list_sum heap_fold_sum
-    let%test _ = Int.(=) list_sum heap_iter_sum
-  end)
+  let%test_module _ =
+    (module struct
+      let data = [ 0; 1; 2; 3; 4; 5; 6; 7 ]
+      let t = of_list data ~cmp:Int.compare
+      (* pop the zero at the top to force some heap structuring.  This does not touch the
+         sum. *)
+      let _ = pop t
+      let list_sum      = List.fold data ~init:0 ~f:(fun sum v -> sum + v)
+      let heap_fold_sum = fold t ~init:0 ~f:(fun sum v -> sum + v)
+      let heap_iter_sum =
+        let r = ref 0 in
+        iter t ~f:(fun v -> r := !r + v);
+        !r
+      let%test _ = Int.(=) list_sum heap_fold_sum
+      let%test _ = Int.(=) list_sum heap_iter_sum
+    end)
 
 end
 
@@ -463,11 +466,11 @@ module Removable = struct
 
   let augment_cmp cmp =
     (fun v1 v2 ->
-      match !v1, !v2 with
-      | None, None       -> 0
-      | None, Some _     -> -1
-      | Some _, None     -> 1
-      | Some v1, Some v2 -> cmp v1 v2)
+       match !v1, !v2 with
+       | None, None       -> 0
+       | None, Some _     -> -1
+       | Some _, None     -> 1
+       | Some v1, Some v2 -> cmp v1 v2)
   ;;
 
   let create ?min_size ~cmp () =
@@ -533,10 +536,10 @@ module Removable = struct
   ;;
 
   module C = Container.Make (struct
-    type nonrec 'a t = 'a t
-    let fold = fold
-    let iter = `Custom iter
-  end)
+      type nonrec 'a t = 'a t
+      let fold = fold
+      let iter = `Custom iter
+    end)
 
   let length t = t.length
   let is_empty t = t.length = 0
@@ -595,136 +598,137 @@ end
 
 include T
 
-let%test_module _ = (module struct
-  module type Heap_intf = sig
-    type 'a t [@@deriving sexp_of]
+let%test_module _ =
+  (module struct
+    module type Heap_intf = sig
+      type 'a t [@@deriving sexp_of]
 
-    val create     : cmp:('a -> 'a -> int) -> 'a t
-    val add        : 'a t -> 'a -> unit
-    val pop        : 'a t -> 'a option
-    val length     : 'a t -> int
-    val top        : 'a t -> 'a option
-    val remove_top : 'a t -> unit
-    val to_list    : 'a t -> 'a list
-  end
+      val create     : cmp:('a -> 'a -> int) -> 'a t
+      val add        : 'a t -> 'a -> unit
+      val pop        : 'a t -> 'a option
+      val length     : 'a t -> int
+      val top        : 'a t -> 'a option
+      val remove_top : 'a t -> unit
+      val to_list    : 'a t -> 'a list
+    end
 
-  module That_heap : Heap_intf = struct
-    type 'a t = {
-      cmp          : 'a -> 'a -> int;
-      mutable heap : 'a list;
-    }
+    module That_heap : Heap_intf = struct
+      type 'a t = {
+        cmp          : 'a -> 'a -> int;
+        mutable heap : 'a list;
+      }
 
-    let sexp_of_t sexp_of_v t = List.sexp_of_t sexp_of_v t.heap
+      let sexp_of_t sexp_of_v t = List.sexp_of_t sexp_of_v t.heap
 
-    let create ~cmp = { cmp; heap = [] }
-    let add t v = t.heap <- List.sort ~cmp:t.cmp (v :: t.heap)
+      let create ~cmp = { cmp; heap = [] }
+      let add t v = t.heap <- List.sort ~cmp:t.cmp (v :: t.heap)
 
-    let pop t =
-      match t.heap with
-      | [] -> None
-      | x :: xs ->
-        t.heap <- xs;
-        Some x
+      let pop t =
+        match t.heap with
+        | [] -> None
+        | x :: xs ->
+          t.heap <- xs;
+          Some x
+      ;;
+
+      let length t     = List.length t.heap
+      let top t        = List.hd t.heap
+      let remove_top t = match t.heap with [] -> () | _ :: xs -> t.heap <- xs
+      let to_list t    = t.heap
+    end
+
+    module This_heap : Heap_intf = struct
+      type nonrec 'a t = 'a t [@@deriving sexp_of]
+
+      let create ~cmp = create ~cmp ()
+      let add         = add
+      let pop         = pop
+      let length      = length
+      let top         = top
+      let remove_top  = remove_top
+      let to_list     = to_list
+    end
+
+    let this_to_string this = Sexp.to_string (This_heap.sexp_of_t Int.sexp_of_t this)
+    let that_to_string that = Sexp.to_string (That_heap.sexp_of_t Int.sexp_of_t that)
+
+    let length_check (t_a, t_b) =
+      let this_len = This_heap.length t_a in
+      let that_len = That_heap.length t_b in
+      if this_len <> that_len then
+        failwithf "error in length: %i (for %s) <> %i (for %s)"
+          this_len (this_to_string t_a)
+          that_len (that_to_string t_b) ()
     ;;
 
-    let length t     = List.length t.heap
-    let top t        = List.hd t.heap
-    let remove_top t = match t.heap with [] -> () | _ :: xs -> t.heap <- xs
-    let to_list t    = t.heap
-  end
+    let create () =
+      let cmp = Int.compare in
+      (This_heap.create ~cmp, That_heap.create ~cmp)
+    ;;
 
-  module This_heap : Heap_intf = struct
-    type nonrec 'a t = 'a t [@@deriving sexp_of]
+    let add (this_t, that_t) v =
+      This_heap.add this_t v;
+      That_heap.add that_t v;
+      length_check (this_t, that_t)
+    ;;
 
-    let create ~cmp = create ~cmp ()
-    let add         = add
-    let pop         = pop
-    let length      = length
-    let top         = top
-    let remove_top  = remove_top
-    let to_list     = to_list
-  end
+    let pop (this_t, that_t) =
+      let res1 = This_heap.pop this_t in
+      let res2 = That_heap.pop that_t in
+      if res1 <> res2 then
+        failwithf "pop results differ (%s, %s)"
+          (Option.value ~default:"None" (Option.map ~f:Int.to_string res1))
+          (Option.value ~default:"None" (Option.map ~f:Int.to_string res2)) ()
+    ;;
 
-  let this_to_string this = Sexp.to_string (This_heap.sexp_of_t Int.sexp_of_t this)
-  let that_to_string that = Sexp.to_string (That_heap.sexp_of_t Int.sexp_of_t that)
+    let top (this_t, that_t) =
+      let res1 = This_heap.top this_t in
+      let res2 = That_heap.top that_t in
+      if res1 <> res2 then
+        failwithf "top results differ (%s, %s)"
+          (Option.value ~default:"None" (Option.map ~f:Int.to_string res1))
+          (Option.value ~default:"None" (Option.map ~f:Int.to_string res2)) ()
+    ;;
 
-  let length_check (t_a, t_b) =
-    let this_len = This_heap.length t_a in
-    let that_len = That_heap.length t_b in
-    if this_len <> that_len then
-      failwithf "error in length: %i (for %s) <> %i (for %s)"
-        this_len (this_to_string t_a)
-        that_len (that_to_string t_b) ()
-  ;;
+    let remove_top (this_t, that_t) =
+      This_heap.remove_top this_t;
+      That_heap.remove_top that_t;
+      length_check (this_t, that_t)
+    ;;
 
-  let create () =
-    let cmp = Int.compare in
-    (This_heap.create ~cmp, That_heap.create ~cmp)
-  ;;
+    let internal_check (this_t, that_t) =
+      let this_list = List.sort ~cmp:Int.compare (This_heap.to_list this_t) in
+      let that_list = List.sort ~cmp:Int.compare (That_heap.to_list that_t) in
+      assert (this_list = that_list)
+    ;;
 
-  let add (this_t, that_t) v =
-    This_heap.add this_t v;
-    That_heap.add that_t v;
-    length_check (this_t, that_t)
-  ;;
+    let test_dual_ops () =
+      let t = create () in
 
-  let pop (this_t, that_t) =
-    let res1 = This_heap.pop this_t in
-    let res2 = That_heap.pop that_t in
-    if res1 <> res2 then
-      failwithf "pop results differ (%s, %s)"
-        (Option.value ~default:"None" (Option.map ~f:Int.to_string res1))
-        (Option.value ~default:"None" (Option.map ~f:Int.to_string res2)) ()
-  ;;
+      let rec loop ops =
+        if ops = 0 then ()
+        else begin
+          let r = Random.int 100 in
+          begin
+            if r < 40 then
+              add t (Random.int 100_000)
+            else if r < 70 then
+              pop t
+            else if r < 80 then
+              top t
+            else if r < 90 then
+              remove_top t
+            else
+              internal_check t
+          end;
+          loop (ops - 1)
+        end
+      in
+      loop 1_000
+    ;;
 
-  let top (this_t, that_t) =
-    let res1 = This_heap.top this_t in
-    let res2 = That_heap.top that_t in
-    if res1 <> res2 then
-      failwithf "top results differ (%s, %s)"
-        (Option.value ~default:"None" (Option.map ~f:Int.to_string res1))
-        (Option.value ~default:"None" (Option.map ~f:Int.to_string res2)) ()
-  ;;
-
-  let remove_top (this_t, that_t) =
-    This_heap.remove_top this_t;
-    That_heap.remove_top that_t;
-    length_check (this_t, that_t)
-  ;;
-
-  let internal_check (this_t, that_t) =
-    let this_list = List.sort ~cmp:Int.compare (This_heap.to_list this_t) in
-    let that_list = List.sort ~cmp:Int.compare (That_heap.to_list that_t) in
-    assert (this_list = that_list)
-  ;;
-
-  let test_dual_ops () =
-    let t = create () in
-
-    let rec loop ops =
-      if ops = 0 then ()
-      else begin
-        let r = Random.int 100 in
-        begin
-          if r < 40 then
-            add t (Random.int 100_000)
-          else if r < 70 then
-            pop t
-          else if r < 80 then
-            top t
-          else if r < 90 then
-            remove_top t
-          else
-            internal_check t
-        end;
-        loop (ops - 1)
-      end
-    in
-    loop 1_000
-  ;;
-
-  let%test_unit _ = test_dual_ops ()
-end)
+    let%test_unit _ = test_dual_ops ()
+  end)
 
 let test_copy () =
   let sum t = fold t ~init:0 ~f:(fun acc i -> acc + i) in

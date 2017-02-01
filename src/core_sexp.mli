@@ -37,10 +37,10 @@ type 'a no_raise = 'a [@@deriving bin_io, sexp]
     e.g.:
 
     {[
-     type query =
-     | Start of Initial_config.t Sexp_maybe.t
-     | Stop of  Reason_to_stop.t Sexp_maybe.t
-     [@@deriving sexp]
+      type query =
+        | Start of Initial_config.t Sexp_maybe.t
+        | Stop of  Reason_to_stop.t Sexp_maybe.t
+      [@@deriving sexp]
     ]}
 
     If [Reason_to_stop.t_of_sexp] fails, you can still tell it was a [Stop] query.

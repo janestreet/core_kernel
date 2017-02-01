@@ -158,46 +158,47 @@ let dequeue_exn t side =
 
 let rev t = { t with front = t.back ; back = t.front }
 
-let%bench_module "accessors" = (module struct
+let%bench_module "accessors" =
+  (module struct
 
-  module Make (M : sig val t : int t end) = struct
+    module Make (M : sig val t : int t end) = struct
 
-    let%bench "rev" = rev M.t
+      let%bench "rev" = rev M.t
 
-    let%bench "enqueue_front" = enqueue_front M.t 0
-    let%bench "enqueue_back"  = enqueue_back  M.t 0
+      let%bench "enqueue_front" = enqueue_front M.t 0
+      let%bench "enqueue_back"  = enqueue_back  M.t 0
 
-    let%bench "peek_front"     = peek_front     M.t
-    let%bench "peek_back"      = peek_back      M.t
-    let%bench "peek_front_exn" = peek_front_exn M.t
-    let%bench "peek_back_exn"  = peek_back_exn  M.t
+      let%bench "peek_front"     = peek_front     M.t
+      let%bench "peek_back"      = peek_back      M.t
+      let%bench "peek_front_exn" = peek_front_exn M.t
+      let%bench "peek_back_exn"  = peek_back_exn  M.t
 
-    let%bench "drop_front"     = drop_front     M.t
-    let%bench "drop_back"      = drop_back      M.t
-    let%bench "drop_front_exn" = drop_front_exn M.t
-    let%bench "drop_back_exn"  = drop_back_exn  M.t
+      let%bench "drop_front"     = drop_front     M.t
+      let%bench "drop_back"      = drop_back      M.t
+      let%bench "drop_front_exn" = drop_front_exn M.t
+      let%bench "drop_back_exn"  = drop_back_exn  M.t
 
-    let%bench "dequeue_front"     = dequeue_front     M.t
-    let%bench "dequeue_back"      = dequeue_back      M.t
-    let%bench "dequeue_front_exn" = dequeue_front_exn M.t
-    let%bench "dequeue_back_exn"  = dequeue_back_exn  M.t
+      let%bench "dequeue_front"     = dequeue_front     M.t
+      let%bench "dequeue_back"      = dequeue_back      M.t
+      let%bench "dequeue_front_exn" = dequeue_front_exn M.t
+      let%bench "dequeue_back_exn"  = dequeue_back_exn  M.t
 
-  end
+    end
 
-  let build front back =
-    let length = List.length front + List.length back in
-    let t = { length ; front ; back } in
-    invariant ignore t;
-    t
-  ;;
+    let build front back =
+      let length = List.length front + List.length back in
+      let t = { length ; front ; back } in
+      invariant ignore t;
+      t
+    ;;
 
-  let list n = List.init n ~f:Int.succ
+    let list n = List.init n ~f:Int.succ
 
-  let%bench_module "balanced"    = (module Make (struct let t = build (list 50) (list 50) end))
-  let%bench_module "short back"  = (module Make (struct let t = build (list 99) (list  1) end))
-  let%bench_module "short front" = (module Make (struct let t = build (list  1) (list 99) end))
+    let%bench_module "balanced"    = (module Make (struct let t = build (list 50) (list 50) end))
+    let%bench_module "short back"  = (module Make (struct let t = build (list 99) (list  1) end))
+    let%bench_module "short front" = (module Make (struct let t = build (list  1) (list 99) end))
 
-end)
+  end)
 
 module Arbitrary_order = struct
 

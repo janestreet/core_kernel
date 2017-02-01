@@ -16,7 +16,7 @@
     Haskell's Quickcheck library for a long time.
 
     (2) Schaathun, "Evaluation of splittable pseudo-random generators", JFP 2015.
-        http://www.hg.schaathun.net/research/Papers/hgs2015jfp.pdf
+    http://www.hg.schaathun.net/research/Papers/hgs2015jfp.pdf
 *)
 
 open! Import

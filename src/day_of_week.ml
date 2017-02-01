@@ -33,26 +33,26 @@ module Stable = struct
         | Sat -> "SAT"
       ;;
 
-  let to_string_long t =
-    match t with
-    | Sun -> "Sunday"
-    | Mon -> "Monday"
-    | Tue -> "Tuesday"
-    | Wed -> "Wednesday"
-    | Thu -> "Thursday"
-    | Fri -> "Friday"
-    | Sat -> "Saturday"
-  ;;
+      let to_string_long t =
+        match t with
+        | Sun -> "Sunday"
+        | Mon -> "Monday"
+        | Tue -> "Tuesday"
+        | Wed -> "Wednesday"
+        | Thu -> "Thursday"
+        | Fri -> "Friday"
+        | Sat -> "Saturday"
+      ;;
 
       let of_string_internal s =
         match String.uppercase s with
-    | "SUN" | "SUNDAY"    -> Sun
-    | "MON" | "MONDAY"    -> Mon
-    | "TUE" | "TUESDAY"   -> Tue
-    | "WED" | "WEDNESDAY" -> Wed
-    | "THU" | "THURSDAY"  -> Thu
-    | "FRI" | "FRIDAY"    -> Fri
-    | "SAT" | "SATURDAY"  -> Sat
+        | "SUN" | "SUNDAY"    -> Sun
+        | "MON" | "MONDAY"    -> Mon
+        | "TUE" | "TUESDAY"   -> Tue
+        | "WED" | "WEDNESDAY" -> Wed
+        | "THU" | "THURSDAY"  -> Thu
+        | "FRI" | "FRIDAY"    -> Fri
+        | "SAT" | "SATURDAY"  -> Sat
         | _     -> failwithf "Day_of_week.of_string: %S" s ()
       ;;
 
@@ -102,20 +102,20 @@ module Stable = struct
 
   let%test_module "Day_of_week.V1" =
     (module Stable_unit_test.Make (struct
-      include V1
+         include V1
 
-      let equal a b = (compare a b) = 0
+         let equal a b = (compare a b) = 0
 
-      let tests =
-        [ Sun, "SUN", "\000"
-        ; Mon, "MON", "\001"
-        ; Tue, "TUE", "\002"
-        ; Wed, "WED", "\003"
-        ; Thu, "THU", "\004"
-        ; Fri, "FRI", "\005"
-        ; Sat, "SAT", "\006"
-        ]
-    end))
+         let tests =
+           [ Sun, "SUN", "\000"
+           ; Mon, "MON", "\001"
+           ; Tue, "TUE", "\002"
+           ; Wed, "WED", "\003"
+           ; Thu, "THU", "\004"
+           ; Fri, "FRI", "\005"
+           ; Sat, "SAT", "\006"
+           ]
+       end))
 end
 
 include Stable.V1.Unstable

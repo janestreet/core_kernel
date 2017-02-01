@@ -49,3 +49,13 @@
  ((name save_benchmarks)
   (deps (inline_benchmarks_runner inline_benchmarks_runner.exe))
   (action "./inline_benchmarks_runner jenga-save-benchmarks")))
+
+(enforce_style
+ ((exceptions
+   (bigstring.ml      ;; ocp-indent doesn't handle [#import]
+    binary_packing.ml ;; ocp-indent doesn't handle [#import]
+    core_int63.ml     ;; ocp-indent doesn't handle [#import]
+    float.ml          ;; ocp-indent doesn't handle [#import]
+    pool.ml           ;; ocp-indent doesn't handle [#import]
+    time_ns.ml        ;; ocp-indent doesn't handle [#import]
+    ))))

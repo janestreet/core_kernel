@@ -9,3 +9,5 @@
     core_bench
     ppx_hash.runtime-lib
     re2))))
+
+(enforce_style ())

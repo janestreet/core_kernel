@@ -30,25 +30,25 @@ module Poly = struct
   include Hashtbl.Poly
 
   include Bin_prot.Utils.Make_iterable_binable2 (struct
-    type ('a, 'b) z = ('a, 'b) t
-    type ('a, 'b) t = ('a, 'b) z
-    type ('a, 'b) el = 'a * 'b [@@deriving bin_io]
+      type ('a, 'b) z = ('a, 'b) t
+      type ('a, 'b) t = ('a, 'b) z
+      type ('a, 'b) el = 'a * 'b [@@deriving bin_io]
 
-    let caller_identity = Bin_prot.Shape.Uuid.of_string "8f3e445c-4992-11e6-a279-3703be311e7b"
-    let module_name = Some "Core_kernel.Std.Hashtbl"
-    let length = length
-    let iter t ~f = iteri t ~f:(fun ~key ~data -> f (key, data))
-    let init ~len ~next =
-      let t = create ~size:len () in
-      for _i = 0 to len - 1 do
-        let key,data = next () in
-        match find t key with
-        | None -> set t ~key ~data
-        | Some _ -> failwith "Core_hashtbl.bin_read_t_: duplicate key"
-      done;
-      t
-    ;;
-  end)
+      let caller_identity = Bin_prot.Shape.Uuid.of_string "8f3e445c-4992-11e6-a279-3703be311e7b"
+      let module_name = Some "Core_kernel.Std.Hashtbl"
+      let length = length
+      let iter t ~f = iteri t ~f:(fun ~key ~data -> f (key, data))
+      let init ~len ~next =
+        let t = create ~size:len () in
+        for _i = 0 to len - 1 do
+          let key,data = next () in
+          match find t key with
+          | None -> set t ~key ~data
+          | Some _ -> failwith "Core_hashtbl.bin_read_t_: duplicate key"
+        done;
+        t
+      ;;
+    end)
 end
 
 module Make_plain (Key : Key_plain) = struct
@@ -68,9 +68,9 @@ module Make_plain (Key : Key_plain) = struct
   type 'a key_ = Key.t
 
   include Creators (struct
-    type 'a t = Key.t
-    let hashable = hashable
-  end)
+      type 'a t = Key.t
+      let hashable = hashable
+    end)
 
   include (Hashtbl : sig
              include Hashtbl_intf.Accessors

@@ -1,8 +1,8 @@
 open! Import
 
 type 'a z =
-| Forced
-| Not_forced of (unit -> 'a)
+  | Forced
+  | Not_forced of (unit -> 'a)
 
 type 'a t = 'a z ref
 

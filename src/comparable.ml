@@ -60,8 +60,8 @@ module Make_plain_using_comparator (T : sig
 end
 
 module Make_plain (T : sig
-  type t [@@deriving compare, sexp_of]
-end) = Make_plain_using_comparator(struct
+    type t [@@deriving compare, sexp_of]
+  end) = Make_plain_using_comparator(struct
     include T
     include Comparator.Make (T)
   end)
@@ -79,17 +79,17 @@ module Make_using_comparator (T : sig
 end
 
 module Make (T : sig
-  type t [@@deriving compare, sexp]
-end) : S with type t := T.t =
+    type t [@@deriving compare, sexp]
+  end) : S with type t := T.t =
   Make_using_comparator (struct
     include T
     include Comparator.Make (T)
   end)
 
 module Make_binable_using_comparator (T : sig
-  type t [@@deriving bin_io, sexp]
-  include Comparator.S with type t := t
-end) = struct
+    type t [@@deriving bin_io, sexp]
+    include Comparator.S with type t := t
+  end) = struct
   include T
   module M = Base.Comparable.Make_using_comparator(T)
   include M
@@ -99,7 +99,7 @@ end) = struct
 end
 
 module Make_binable (T : sig
-  type t [@@deriving bin_io, compare, sexp]
+    type t [@@deriving bin_io, compare, sexp]
   end) = Make_binable_using_comparator (struct
     include T
     include Comparator.Make (T)
@@ -131,21 +131,21 @@ struct
 end
 
 module Inherit
-  (C : sig type t [@@deriving compare] end)
-  (T : sig
-    type t [@@deriving sexp]
-    val component : t -> C.t
-  end) =
+    (C : sig type t [@@deriving compare] end)
+    (T : sig
+       type t [@@deriving sexp]
+       val component : t -> C.t
+     end) =
   Make (struct
     type t = T.t [@@deriving sexp]
     let compare t t' = C.compare (T.component t) (T.component t')
   end)
 
 module Check_sexp_conversion (M : sig
-  type t [@@deriving sexp_of]
-  include S with type t := t
-  val examples : t list
-end) : sig end = struct
+    type t [@@deriving sexp_of]
+    include S with type t := t
+    val examples : t list
+  end) : sig end = struct
   open M
 
   let%test_unit _ =

@@ -18,11 +18,11 @@ val lift : ('a -> 'a -> 'int_or_bool) -> f:('b -> 'a) -> ('b -> 'b -> 'int_or_bo
 
 (** Inherit comparability from a component. *)
 module Inherit
-  (C : sig type t [@@deriving compare] end)
-  (T : sig
-    type t [@@deriving sexp]
-    val component : t -> C.t
-  end) : S with type t := T.t
+    (C : sig type t [@@deriving compare] end)
+    (T : sig
+       type t [@@deriving sexp]
+       val component : t -> C.t
+     end) : S with type t := T.t
 
 (** Usage example:
 
@@ -72,8 +72,8 @@ module Make_plain (T : sig
   end) : S_plain with type t := T.t
 
 module Make (T : sig
-  type t [@@deriving compare, sexp]
-end) : S with type t := T.t
+    type t [@@deriving compare, sexp]
+  end) : S with type t := T.t
 
 module Make_plain_using_comparator (T : sig
     type t [@@deriving sexp_of]
@@ -90,8 +90,8 @@ module Make_using_comparator (T : sig
   with type comparator_witness := T.comparator_witness
 
 module Make_binable (T : sig
-  type t [@@deriving bin_io, compare, sexp]
-end) : S_binable with type t := T.t
+    type t [@@deriving bin_io, compare, sexp]
+  end) : S_binable with type t := T.t
 
 module Make_binable_using_comparator (T : sig
     type t [@@deriving bin_io, sexp]
@@ -129,17 +129,17 @@ module Poly (T : sig type t [@@deriving sexp] end) : S with type t := T.t
 module Validate (T : sig type t [@@deriving compare, sexp] end) : Validate with type t := T.t
 
 module With_zero
-         (T : sig
-            type t [@@deriving compare, sexp]
-            val zero : t
-            include Validate with type t := t
-          end) : With_zero with type t := T.t
+    (T : sig
+       type t [@@deriving compare, sexp]
+       val zero : t
+       include Validate with type t := t
+     end) : With_zero with type t := T.t
 
 module Validate_with_zero
-         (T : sig
-            type t [@@deriving compare, sexp]
-            val zero : t
-          end)
+    (T : sig
+       type t [@@deriving compare, sexp]
+       val zero : t
+     end)
   : sig
     include Validate  with type t := T.t
     include With_zero with type t := T.t
@@ -148,10 +148,10 @@ module Validate_with_zero
 (** [Check_sexp_conversion] checks that conversion of a map or set to a sexp uses the same
     sexp conversion as the underlying element. *)
 module Check_sexp_conversion (M : sig
-  type t [@@deriving sexp_of]
-  include S with type t := t
-  val examples : t list
-end) : sig end
+    type t [@@deriving sexp_of]
+    include S with type t := t
+    val examples : t list
+  end) : sig end
 
 (** The following module types and functors may be used to define stable modules *)
 module Stable : sig

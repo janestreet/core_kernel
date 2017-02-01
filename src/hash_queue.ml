@@ -6,7 +6,7 @@
  * Calls to functions that would modify a hash-queue (e.g. enqueue, dequeue,
  * remove, replace) detect if a client is in the middle of iterating over the
  * queue (e.g. iter, fold, for_all, exists) and if so, raise an exception.
- *)
+*)
 
 open! Import
 
@@ -47,17 +47,17 @@ module type S = sig
   val mem : 'a t -> Key.t -> bool
 
   (** [lookup t k] returns the value of the key-value pair in the queue with
-     key k, if there is one. *)
+      key k, if there is one. *)
   val lookup : 'a t -> Key.t -> 'a option
 
   val lookup_exn : 'a t -> Key.t -> 'a
 
   (* Adding, removing, and replacing elements. Note that even the non-[*_exn] versions can
      raise, but only if there is an ongoing iteration. *)
-    (** [enqueue t k v] adds the key-value pair (k, v) to the end of the queue,
-       returning `Ok if the pair was added, or `Key_already_present
-       if there is already a (k, v') in the queue.
-    *)
+  (** [enqueue t k v] adds the key-value pair (k, v) to the end of the queue,
+      returning `Ok if the pair was added, or `Key_already_present
+      if there is already a (k, v') in the queue.
+  *)
   val enqueue : 'a t -> Key.t -> 'a -> [ `Ok | `Key_already_present ]
 
   val enqueue_exn : 'a t -> Key.t -> 'a -> unit
@@ -142,7 +142,7 @@ module Make (Key : Key) : S with module Key = Key = struct
     (* Look at each element in the queue, checking:
      *   - every element in the queue is in the hash table
      *   - there are no duplicate keys
-     *)
+    *)
     let keys = Table.create ~size:(Hashtbl.length t.table) () in
     Doubly_linked.iter t.queue ~f:(fun kv ->
       let key = kv.key in
@@ -332,9 +332,9 @@ module Make (Key : Key) : S with module Key = Key = struct
     match Hashtbl.find t.table k with
     | None -> `No_such_key
     | Some elt ->
-        Doubly_linked.remove t.queue elt;
-        Hashtbl.remove t.table (Elt.value elt).key;
-        `Ok
+      Doubly_linked.remove t.queue elt;
+      Hashtbl.remove t.table (Elt.value elt).key;
+      `Ok
   ;;
 
   exception Remove_unknown_key of Key.t [@@deriving sexp]
@@ -351,8 +351,8 @@ module Make (Key : Key) : S with module Key = Key = struct
     match Hashtbl.find t.table k with
     | None -> `No_such_key
     | Some elt ->
-        (Elt.value elt).value <- v;
-        `Ok
+      (Elt.value elt).value <- v;
+      `Ok
   ;;
 
   exception Replace_unknown_key of Key.t [@@deriving sexp]

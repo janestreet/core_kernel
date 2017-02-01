@@ -550,7 +550,7 @@ module Poly : sig
     with type ('a, 'b) t    := ('a, 'b) t
     with type ('a, 'b) tree := ('a, 'b) Tree.t
 end
-  with type ('a, 'b, 'c) map = ('a, 'b, 'c) t
+with type ('a, 'b, 'c) map = ('a, 'b, 'c) t
 
 module type Key_plain   = Key_plain
 module type Key         = Key
@@ -563,9 +563,9 @@ module type S_binable = S_binable
 module Make_plain (Key : Key_plain) : S_plain with type Key.t = Key.t
 
 module Make_plain_using_comparator (Key : sig
-  type t [@@deriving sexp_of]
-  include Comparator.S with type t := t
-end)
+    type t [@@deriving sexp_of]
+    include Comparator.S with type t := t
+  end)
   : S_plain
     with type Key.t                  = Key.t
     with type Key.comparator_witness = Key.comparator_witness
@@ -573,9 +573,9 @@ end)
 module Make (Key : Key) : S with type Key.t = Key.t
 
 module Make_using_comparator (Key : sig
-  type t [@@deriving sexp]
-  include Comparator.S with type t := t
-end)
+    type t [@@deriving sexp]
+    include Comparator.S with type t := t
+  end)
   : S
     with type Key.t                  = Key.t
     with type Key.comparator_witness = Key.comparator_witness
@@ -583,9 +583,9 @@ end)
 module Make_binable (Key : Key_binable) : S_binable with type Key.t = Key.t
 
 module Make_binable_using_comparator (Key : sig
-  type t [@@deriving bin_io, sexp]
-  include Comparator.S with type t := t
-end)
+    type t [@@deriving bin_io, sexp]
+    include Comparator.S with type t := t
+  end)
   : S_binable
     with type Key.t                  = Key.t
     with type Key.comparator_witness = Key.comparator_witness

@@ -23,8 +23,8 @@ val eprintf : ('r, unit, string, unit) format4 -> 'r
     {[
       module Foo = struct
         type t = ...
-          let invariant = ...
-            let bar t x y : Result.t = ...
+        let invariant = ...
+          let bar t x y : Result.t = ...
       end
       module Foo_debug = struct
         open Foo
@@ -63,7 +63,7 @@ end
 
     {[
       ...;
-      Debug.am [%here];
+    Debug.am [%here];
       ...;
       Debug.amf [%here] "hello (%s, %s)" (X.to_string x) (Y.to_string y);
       ...;

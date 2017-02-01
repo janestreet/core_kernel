@@ -19,3 +19,5 @@
               core))))
 
 (toplevel_expect_tests ((libraries (core_kernel))))
+
+(enforce_style ())

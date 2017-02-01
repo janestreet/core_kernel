@@ -5,12 +5,12 @@ open! Moption
 let print t =
   invariant ignore t;
   print_s [%message
-     ""
-       ~_:(t : int t)
-       ~is_none:(is_none t : bool)
-       ~is_some:(is_some t : bool)
-       ~get:(get t : int option)
-       ~get_some_exn:(Or_error.try_with (fun () -> get_some_exn t) : int Or_error.t)]
+    ""
+      ~_:(t : int t)
+      ~is_none:(is_none t : bool)
+      ~is_some:(is_some t : bool)
+      ~get:(get t : int option)
+      ~get_some_exn:(Or_error.try_with (fun () -> get_some_exn t) : int Or_error.t)]
 ;;
 
 let%expect_test "\

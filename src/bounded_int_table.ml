@@ -253,7 +253,7 @@ let remove t key =
         entry_to_put_in_hole.defined_entries_index <- hole;
     end;
     t.defined_entries.( last ) <- None;
-   end;
+  end;
   check_invariant t;
 ;;
 
@@ -280,66 +280,67 @@ let equal key_equal data_equal t1 t2 =
 ;;
 
 (* test [exists{,i}], [for_all{,i}] *)
-let%test_module _ = (module struct
-  let of_list keys =
-    let t = create ~num_keys:10 ~key_to_int:Fn.id ~sexp_of_key:Int.sexp_of_t () in
-    List.iter keys ~f:(fun key -> add_exn t ~key ~data:key);
-    t
-  ;;
-
-  let test_exists_like_function exists =
-    exists (of_list []) ~f:(fun _ -> assert false) = false
-    && exists (of_list [1]) ~f:(fun _ -> false) = false
-    && exists (of_list [1]) ~f:(fun _ -> true) = true
-    && exists (of_list [1]) ~f:(fun data -> data = 1) = true
-    && exists (of_list [1; 2; 3]) ~f:(fun _ -> false) = false
-    && exists (of_list [1; 2; 3]) ~f:(fun _ -> true) = true
-    && exists (of_list [1; 2; 3]) ~f:(fun data -> data = 3) = true
-  ;;
-
-  let%test _ = test_exists_like_function (fun t ~f -> existsi t ~f:(fun ~key:_ ~data -> f data))
-
-  let%test _ = test_exists_like_function exists
-
-  let%test _ =
-    test_exists_like_function (fun t ~f ->
-      not (for_alli t ~f:(fun ~key:_ ~data -> not (f data))))
-  ;;
-
-  let%test _ =
-    test_exists_like_function (fun t ~f -> not (for_all t ~f:(fun data -> not (f data))))
-  ;;
-
-  let equal_of_list l1 l2 = equal Int.equal Int.equal (of_list l1) (of_list l2)
-
-  let%test _ = equal_of_list [] [] = true
-  let%test _ = equal_of_list [] [1] = false
-  let%test _ = equal_of_list [1] [] = false
-  let%test _ = equal_of_list [1] [1] = true
-  let%test _ = equal_of_list [1] [1; 2] = false
-  let%test _ = equal_of_list [1; 2] [1; 2] = true
-  let%test _ = equal_of_list [1; 2] [2; 1] = true
-
-  (* test [equal] between tables that have different [to_int] functions. *)
-  let%test_unit _ =
-    let of_list ~offset keys =
-      let t = create ~num_keys:10 ~key_to_int:(fun i -> i + offset) () in
+let%test_module _ =
+  (module struct
+    let of_list keys =
+      let t = create ~num_keys:10 ~key_to_int:Fn.id ~sexp_of_key:Int.sexp_of_t () in
       List.iter keys ~f:(fun key -> add_exn t ~key ~data:key);
       t
-    in
-    let t0 = of_list [ 1; 2 ] ~offset:0 in
-    let t1 = of_list [ 1; 2 ] ~offset:1 in
-    let t2 = of_list [ 1; 2 ] ~offset:2 in
-    let t3 = of_list [ 2; 3 ] ~offset:0 in
-    let equal = equal Int.equal Int.equal in
-    assert (equal t0 t1);
-    assert (equal t0 t2);
-    assert (equal t1 t2);
-    assert (not (equal t0 t3));
-    assert (not (equal t1 t3));
-    assert (not (equal t2 t3))
-  ;;
-end)
+    ;;
+
+    let test_exists_like_function exists =
+      exists (of_list []) ~f:(fun _ -> assert false) = false
+      && exists (of_list [1]) ~f:(fun _ -> false) = false
+      && exists (of_list [1]) ~f:(fun _ -> true) = true
+      && exists (of_list [1]) ~f:(fun data -> data = 1) = true
+      && exists (of_list [1; 2; 3]) ~f:(fun _ -> false) = false
+      && exists (of_list [1; 2; 3]) ~f:(fun _ -> true) = true
+      && exists (of_list [1; 2; 3]) ~f:(fun data -> data = 3) = true
+    ;;
+
+    let%test _ = test_exists_like_function (fun t ~f -> existsi t ~f:(fun ~key:_ ~data -> f data))
+
+    let%test _ = test_exists_like_function exists
+
+    let%test _ =
+      test_exists_like_function (fun t ~f ->
+        not (for_alli t ~f:(fun ~key:_ ~data -> not (f data))))
+    ;;
+
+    let%test _ =
+      test_exists_like_function (fun t ~f -> not (for_all t ~f:(fun data -> not (f data))))
+    ;;
+
+    let equal_of_list l1 l2 = equal Int.equal Int.equal (of_list l1) (of_list l2)
+
+    let%test _ = equal_of_list [] [] = true
+    let%test _ = equal_of_list [] [1] = false
+    let%test _ = equal_of_list [1] [] = false
+    let%test _ = equal_of_list [1] [1] = true
+    let%test _ = equal_of_list [1] [1; 2] = false
+    let%test _ = equal_of_list [1; 2] [1; 2] = true
+    let%test _ = equal_of_list [1; 2] [2; 1] = true
+
+    (* test [equal] between tables that have different [to_int] functions. *)
+    let%test_unit _ =
+      let of_list ~offset keys =
+        let t = create ~num_keys:10 ~key_to_int:(fun i -> i + offset) () in
+        List.iter keys ~f:(fun key -> add_exn t ~key ~data:key);
+        t
+      in
+      let t0 = of_list [ 1; 2 ] ~offset:0 in
+      let t1 = of_list [ 1; 2 ] ~offset:1 in
+      let t2 = of_list [ 1; 2 ] ~offset:2 in
+      let t3 = of_list [ 2; 3 ] ~offset:0 in
+      let equal = equal Int.equal Int.equal in
+      assert (equal t0 t1);
+      assert (equal t0 t2);
+      assert (equal t1 t2);
+      assert (not (equal t0 t3));
+      assert (not (equal t1 t3));
+      assert (not (equal t2 t3))
+    ;;
+  end)
 
 module With_key (Key : sig
     type t [@@deriving bin_io, sexp]
@@ -388,31 +389,32 @@ module With_key (Key : sig
 end
 
 (* test [With_key] *)
-let%test_module _ = (module struct
-  include (With_key (Int))
+let%test_module _ =
+  (module struct
+    include (With_key (Int))
 
-  let%test _ = is_empty (create ~num_keys:1)
+    let%test _ = is_empty (create ~num_keys:1)
 
-  let%test _ = Result.is_ok (of_alist [ ])
-  let%test _ = Result.is_ok (of_alist [ (1, 1) ])
-  let%test _ = Result.is_error (of_alist [ (1, 1); (1, 2) ])
+    let%test _ = Result.is_ok (of_alist [ ])
+    let%test _ = Result.is_ok (of_alist [ (1, 1) ])
+    let%test _ = Result.is_error (of_alist [ (1, 1); (1, 2) ])
 
-  let%test _ = is_empty (of_alist_exn [])
+    let%test _ = is_empty (of_alist_exn [])
 
-  let%test_unit _ =
-    let t = of_alist_exn [ (1, 2) ] in
-    assert (length t = 1);
-    assert (keys t = [1]);
-    assert (data t = [2])
-  ;;
+    let%test_unit _ =
+      let t = of_alist_exn [ (1, 2) ] in
+      assert (length t = 1);
+      assert (keys t = [1]);
+      assert (data t = [2])
+    ;;
 
-  let%test_unit _ =
-    let t = of_alist_exn [ (1, 2); (3, 4) ] in
-    assert (length t = 2);
-    assert (keys t = [1; 3] || keys t = [3; 1]);
-    assert (data t = [2; 4] || data t = [4; 2])
-  ;;
-end)
+    let%test_unit _ =
+      let t = of_alist_exn [ (1, 2); (3, 4) ] in
+      assert (length t = 2);
+      assert (keys t = [1; 3] || keys t = [3; 1]);
+      assert (data t = [2; 4] || data t = [4; 2])
+    ;;
+  end)
 
 let filter_mapi t ~f =
   let result = create_like t in
@@ -440,35 +442,36 @@ let mapi t ~f = filter_mapi t ~f:(fun ~key ~data -> Some (f ~key ~data))
 let map t ~f = mapi t ~f:(ignore_key f)
 
 
-let%test_module _ = (module struct
-  include (With_key (Int))
+let%test_module _ =
+  (module struct
+    include (With_key (Int))
 
-  let equal = equal Int.equal Int.equal
+    let equal = equal Int.equal Int.equal
 
-  let test_filter_map input ~f expect =
-    equal (filter_map (of_alist_exn input) ~f) (of_alist_exn expect)
-  ;;
+    let test_filter_map input ~f expect =
+      equal (filter_map (of_alist_exn input) ~f) (of_alist_exn expect)
+    ;;
 
-  let%test _ = test_filter_map [] ~f:(fun _ -> assert false) []
-  let%test _ = test_filter_map [1, 2] ~f:(fun _ -> None) []
-  let%test _ = test_filter_map [1, 2] ~f:(fun x -> Some x) [1, 2]
-  let%test _ = test_filter_map [1, 2] ~f:(fun x -> Some (x + 1)) [1, 3]
-  let%test _ =
-    test_filter_map [(1, 2); (3, 4)] ~f:(fun x -> if x = 2 then Some x else None) [1, 2]
-  ;;
+    let%test _ = test_filter_map [] ~f:(fun _ -> assert false) []
+    let%test _ = test_filter_map [1, 2] ~f:(fun _ -> None) []
+    let%test _ = test_filter_map [1, 2] ~f:(fun x -> Some x) [1, 2]
+    let%test _ = test_filter_map [1, 2] ~f:(fun x -> Some (x + 1)) [1, 3]
+    let%test _ =
+      test_filter_map [(1, 2); (3, 4)] ~f:(fun x -> if x = 2 then Some x else None) [1, 2]
+    ;;
 
-  let test_map_like map =
-    let test input ~f expect =
-      equal (map (of_alist_exn input) ~f) (of_alist_exn expect)
-    in
-    test [] ~f:(fun _ -> assert false) []
-    && test [(1, 2)]         ~f:((+) 3)   [(1, 5)]
-    && test [(1, 2); (3, 4)] ~f:((+) 5)   [(1, 7); (3, 9)]
-  ;;
+    let test_map_like map =
+      let test input ~f expect =
+        equal (map (of_alist_exn input) ~f) (of_alist_exn expect)
+      in
+      test [] ~f:(fun _ -> assert false) []
+      && test [(1, 2)]         ~f:((+) 3)   [(1, 5)]
+      && test [(1, 2); (3, 4)] ~f:((+) 5)   [(1, 7); (3, 9)]
+    ;;
 
-  let%test _ = test_map_like (fun t ~f -> mapi t ~f:(fun ~key:_ ~data -> f data))
-  let%test _ = test_map_like map
-end)
+    let%test _ = test_map_like (fun t ~f -> mapi t ~f:(fun ~key:_ ~data -> f data))
+    let%test _ = test_map_like map
+  end)
 
 let%test_module _ =
   (module struct

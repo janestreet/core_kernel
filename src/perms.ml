@@ -68,20 +68,20 @@ module Only_used_as_phantom_type1 (Name : sig val name : string end)
   let hash_fold_t _ _ _ =
     failwithf "Unexpectedly called [%s.hash_fold_t]" Name.name ()
   include Binable.Of_binable1
-    (struct type 'a t = 'a [@@deriving bin_io] end)
-    (struct
-      type nonrec 'a t = 'a t
-      let to_binable _ =
-        failwithf "Unexpectedly used %s bin_io serialization" Name.name ()
-      let of_binable _ =
-        failwithf "Unexpectedly used %s bin_io deserialization" Name.name ()
-    end)
+      (struct type 'a t = 'a [@@deriving bin_io] end)
+      (struct
+        type nonrec 'a t = 'a t
+        let to_binable _ =
+          failwithf "Unexpectedly used %s bin_io serialization" Name.name ()
+        let of_binable _ =
+          failwithf "Unexpectedly used %s bin_io deserialization" Name.name ()
+      end)
 end
 
 module Only_used_as_phantom_type0 (T : sig
-  type t [@@deriving bin_io, compare, hash, sexp]
-  val name : string
-end) : sig
+    type t [@@deriving bin_io, compare, hash, sexp]
+    val name : string
+  end) : sig
   type t = T.t [@@deriving bin_io, compare, hash, sexp_poly]
 end = struct
   module M = Only_used_as_phantom_type1 (T)

@@ -213,30 +213,31 @@ end
 
 include (Test (Debug (Linked_stack)) : sig end)
 
-let%test_module _ = (module (struct
+let%test_module _ =
+  (module (struct
 
-  open Stack
+    open Stack
 
-  include Test (Debug (Stack))
+    include Test (Debug (Stack))
 
-  let capacity     = capacity
-  let set_capacity = set_capacity
+    let capacity     = capacity
+    let set_capacity = set_capacity
 
-  let%test_unit _ =
-    let t = create () in
-    assert (capacity t = 0);
-    set_capacity t (-1);
-    assert (capacity t = 0);
-    set_capacity t 10;
-    assert (capacity t = 10);
-    set_capacity t 0;
-    assert (capacity t = 0);
-    push t ();
-    set_capacity t 0;
-    assert (length t = 1);
-    assert (capacity t >= 1)
-  ;;
-end
-(* This signature constraint is here to remind us to add a unit test whenever the
-   interface to [Core_stack] changes. *)
-: module type of Stack))
+    let%test_unit _ =
+      let t = create () in
+      assert (capacity t = 0);
+      set_capacity t (-1);
+      assert (capacity t = 0);
+      set_capacity t 10;
+      assert (capacity t = 10);
+      set_capacity t 0;
+      assert (capacity t = 0);
+      push t ();
+      set_capacity t 0;
+      assert (length t = 1);
+      assert (capacity t >= 1)
+    ;;
+  end
+           (* This signature constraint is here to remind us to add a unit test whenever the
+              interface to [Core_stack] changes. *)
+           : module type of Stack))

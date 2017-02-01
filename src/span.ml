@@ -194,14 +194,14 @@ module Stable = struct
     ;;
 
     let create
-        ?(sign=Sign.Pos)
-        ?(day = 0)
-        ?(hr = 0)
-        ?(min = 0)
-        ?(sec = 0)
-        ?(ms = 0)
-        ?(us = 0)
-        () =
+          ?(sign=Sign.Pos)
+          ?(day = 0)
+          ?(hr = 0)
+          ?(min = 0)
+          ?(sec = 0)
+          ?(ms = 0)
+          ?(us = 0)
+          () =
       let (+) = T.(+) in
       let t =
         of_day   (Float.of_int day)
@@ -321,84 +321,85 @@ module Stable = struct
   end
 
   let%test_module "Span.V1" = (module Stable_unit_test.Make (struct
-    include V1
+      include V1
 
-    let equal t1 t2 = Int.(=) 0 (compare t1 t2)
+      let equal t1 t2 = Int.(=) 0 (compare t1 t2)
 
-    let tests =
-      let span = of_sec in
-      [ span 99e-12,     "9.9e-08ms", "\018\006\211\115\129\054\219\061";
-        span 1.2e-9,     "1.2e-06ms", "\076\206\097\227\167\157\020\062";
-        span 0.000001,   "0.001ms",   "\141\237\181\160\247\198\176\062";
-        span 0.707,      "707ms",     "\057\180\200\118\190\159\230\063";
-        span 42.,        "42s",       "\000\000\000\000\000\000\069\064";
-        span 1234.56,    "20.576m",   "\010\215\163\112\061\074\147\064";
-        span 39_996.,    "11.11h",    "\000\000\000\000\128\135\227\064";
-        span 80000006.4, "925.926d",  "\154\153\153\025\208\018\147\065";
-      ]
-  end))
+      let tests =
+        let span = of_sec in
+        [ span 99e-12,     "9.9e-08ms", "\018\006\211\115\129\054\219\061";
+          span 1.2e-9,     "1.2e-06ms", "\076\206\097\227\167\157\020\062";
+          span 0.000001,   "0.001ms",   "\141\237\181\160\247\198\176\062";
+          span 0.707,      "707ms",     "\057\180\200\118\190\159\230\063";
+          span 42.,        "42s",       "\000\000\000\000\000\000\069\064";
+          span 1234.56,    "20.576m",   "\010\215\163\112\061\074\147\064";
+          span 39_996.,    "11.11h",    "\000\000\000\000\128\135\227\064";
+          span 80000006.4, "925.926d",  "\154\153\153\025\208\018\147\065";
+        ]
+    end))
 
   let%test_module "Span.V2" = (module Stable_unit_test.Make (struct
-    include V2
+      include V2
 
-    let equal t1 t2 = Int.(=) 0 (compare t1 t2)
+      let equal t1 t2 = Int.(=) 0 (compare t1 t2)
 
-    let tests =
-      let span = of_sec in
-      [ span 99e-12,     "0.098999999999999991ns", "\018\006\211\115\129\054\219\061";
-        span 1.2e-9,     "1.2ns",                  "\076\206\097\227\167\157\020\062";
-        span 0.000001,   "1us",                    "\141\237\181\160\247\198\176\062";
-        span 0.707,      "707ms",                  "\057\180\200\118\190\159\230\063";
-        span 42.,        "42s",                    "\000\000\000\000\000\000\069\064";
-        span 1234.56,    "20.576m",                "\010\215\163\112\061\074\147\064";
-        span 39_996.,    "11.11h",                 "\000\000\000\000\128\135\227\064";
-        span 80000006.4, "925.926d",               "\154\153\153\025\208\018\147\065";
-      ]
-  end))
+      let tests =
+        let span = of_sec in
+        [ span 99e-12,     "0.098999999999999991ns", "\018\006\211\115\129\054\219\061";
+          span 1.2e-9,     "1.2ns",                  "\076\206\097\227\167\157\020\062";
+          span 0.000001,   "1us",                    "\141\237\181\160\247\198\176\062";
+          span 0.707,      "707ms",                  "\057\180\200\118\190\159\230\063";
+          span 42.,        "42s",                    "\000\000\000\000\000\000\069\064";
+          span 1234.56,    "20.576m",                "\010\215\163\112\061\074\147\064";
+          span 39_996.,    "11.11h",                 "\000\000\000\000\128\135\227\064";
+          span 80000006.4, "925.926d",               "\154\153\153\025\208\018\147\065";
+        ]
+    end))
 
 end
 include Stable.V2
 let sexp_of_t = Stable.V1.sexp_of_t
 let to_string = Stable.V1.to_string
 
-let%test_module "conversion compatibility" = (module struct
+let%test_module "conversion compatibility" =
+  (module struct
 
-  let tests =
-    let span = of_sec in
-    [ span 99e-12
-    ; span 1.2e-9
-    ; span 0.000001
-    ; span 0.707
-    ; span 42.
-    ; span 1234.56
-    ; span 39_996.
-    ; span 80000006.4
-    ]
+    let tests =
+      let span = of_sec in
+      [ span 99e-12
+      ; span 1.2e-9
+      ; span 0.000001
+      ; span 0.707
+      ; span 42.
+      ; span 1234.56
+      ; span 39_996.
+      ; span 80000006.4
+      ]
 
-  let%test_unit _ =
-    List.iter tests ~f:(fun t ->
-      begin
-        (* Output must match Stable.V1: *)
-        [%test_result: Sexp.t] (sexp_of_t t) ~expect:(Stable.V1.sexp_of_t t);
-        [%test_result: string] (to_string t) ~expect:(Stable.V1.to_string t);
-        (* Stable.V1 must accept output (slightly redundant): *)
-        [%test_result: t] (Stable.V1.t_of_sexp (sexp_of_t t)) ~expect:t;
-        [%test_result: t] (Stable.V1.of_string (to_string t)) ~expect:t;
-        (* Stable.V2 should accept output: *)
-        [%test_result: t] (Stable.V2.t_of_sexp (sexp_of_t t)) ~expect:t;
-        [%test_result: t] (Stable.V2.of_string (to_string t)) ~expect:t;
-        (* Should accept Stable.V1 output: *)
-        [%test_result: t] (t_of_sexp (Stable.V1.sexp_of_t t)) ~expect:t;
-        [%test_result: t] (of_string (Stable.V1.to_string t)) ~expect:t;
-        (* Should accept Stable.V2 output: *)
-        [%test_result: t] (t_of_sexp (Stable.V2.sexp_of_t t)) ~expect:t;
-        [%test_result: t] (of_string (Stable.V2.to_string t)) ~expect:t;
-        (* Must round-trip: *)
-        [%test_result: t] (t_of_sexp (sexp_of_t t)) ~expect:t;
-        [%test_result: t] (of_string (to_string t)) ~expect:t;
-      end)
+    let%test_unit _ =
+      List.iter tests ~f:(fun t ->
+        begin
+          (* Output must match Stable.V1: *)
+          [%test_result: Sexp.t] (sexp_of_t t) ~expect:(Stable.V1.sexp_of_t t);
+          [%test_result: string] (to_string t) ~expect:(Stable.V1.to_string t);
+          (* Stable.V1 must accept output (slightly redundant): *)
+          [%test_result: t] (Stable.V1.t_of_sexp (sexp_of_t t)) ~expect:t;
+          [%test_result: t] (Stable.V1.of_string (to_string t)) ~expect:t;
+          (* Stable.V2 should accept output: *)
+          [%test_result: t] (Stable.V2.t_of_sexp (sexp_of_t t)) ~expect:t;
+          [%test_result: t] (Stable.V2.of_string (to_string t)) ~expect:t;
+          (* Should accept Stable.V1 output: *)
+          [%test_result: t] (t_of_sexp (Stable.V1.sexp_of_t t)) ~expect:t;
+          [%test_result: t] (of_string (Stable.V1.to_string t)) ~expect:t;
+          (* Should accept Stable.V2 output: *)
+          [%test_result: t] (t_of_sexp (Stable.V2.sexp_of_t t)) ~expect:t;
+          [%test_result: t] (of_string (Stable.V2.to_string t)) ~expect:t;
+          (* Must round-trip: *)
+          [%test_result: t] (t_of_sexp (sexp_of_t t)) ~expect:t;
+          [%test_result: t] (of_string (to_string t)) ~expect:t;
+        end)
 
-end)
+  end)
 
 let to_proportional_float = to_float
 
@@ -460,10 +461,10 @@ let%test_unit "Span.to_string_hum" =
     ~expect:"0.042361d "
 
 include Pretty_printer.Register (struct
-  type nonrec t = t
-  let to_string = to_string
-  let module_name = "Core_kernel.Std.Time.Span"
-end)
+    type nonrec t = t
+    let to_string = to_string
+    let module_name = "Core_kernel.Std.Time.Span"
+  end)
 
 module C = struct
   type t = T.t [@@deriving bin_io]

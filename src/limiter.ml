@@ -6,7 +6,7 @@ module Infinite_or_finite = struct
     type 'a t =
       | Infinite
       | Finite of 'a
-      [@@deriving sexp, bin_io]
+    [@@deriving sexp, bin_io]
   end
   include T
 
@@ -112,7 +112,7 @@ type t =
   (** rate at which tokens "fall" from the hopper into the bucket *)
   ; hopper_to_bucket_rate_per_ns  : Float.t Iofm.t
   }
-  [@@deriving sexp_of, fields]
+[@@deriving sexp_of, fields]
 
 let fill_rate_must_be_positive fill_rate =
   if Iofm.is_finite fill_rate

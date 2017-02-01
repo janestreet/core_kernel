@@ -45,7 +45,7 @@ module type S = sig
   val iteri     : 'a t -> f:(key:Key.t -> data:'a -> unit) -> unit
 
   val iter_vals : 'a t -> f:('a -> unit) -> unit
-    [@@deprecated "[since 2016-04] Use iter instead"]
+  [@@deprecated "[since 2016-04] Use iter instead"]
 
   (** Returns the list of all (key, value) pairs for given [Hash_heap]. *)
   val to_alist : 'a t -> (Key.t * 'a) list
@@ -103,8 +103,8 @@ module Make (Key : Key) : S with module Key = Key = struct
     match Hashtbl.find t.tbl key with
     | None -> ()
     | Some el ->
-        Hashtbl.remove t.tbl key;
-        Heap.remove t.heap el
+      Hashtbl.remove t.tbl key;
+      Heap.remove t.heap el
   ;;
 
   let mem t key = Hashtbl.mem t.tbl key
@@ -143,8 +143,8 @@ module Make (Key : Key) : S with module Key = Key = struct
     match Heap.pop_if t.heap (fun (k, v) -> f ~key:k ~data:v) with
     | None -> None
     | Some (k, v) ->
-        Hashtbl.remove t.tbl k;
-        Some (k, v)
+      Hashtbl.remove t.tbl k;
+      Some (k, v)
 
   let pop_if t f =
     match pop_if_with_key t (fun ~key:_ ~data -> f data) with
@@ -168,10 +168,10 @@ module Make (Key : Key) : S with module Key = Key = struct
     match Hashtbl.find t.tbl key with
     | None -> None
     | Some el ->
-        let (_k, v) = Heap.Elt.value_exn el in
-        Hashtbl.remove t.tbl key;
-        Heap.remove t.heap el;
-        Some v
+      let (_k, v) = Heap.Elt.value_exn el in
+      Hashtbl.remove t.tbl key;
+      Heap.remove t.heap el;
+      Some v
 
   let find_pop_exn t key =
     match find_pop t key with
