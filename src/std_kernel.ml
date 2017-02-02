@@ -1,4 +1,5 @@
-(** Modules that are not overridden by Core *)
+(** [Std_kernel] defines modules exposed by [Core_kernel] that are not overridden by
+    [Core].  It is used in [core.ml] to re-export these modules. *)
 
 open! Import
 
