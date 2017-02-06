@@ -33,7 +33,7 @@ module Debug (Stack : S) : S with type 'a t = 'a Stack.t = struct
   let is_empty t : bool              = debug t (fun () -> is_empty t)
   let iter t ~f : unit               = debug t (fun () -> iter t ~f)
   let length t : int                 = debug t (fun () -> length t)
-  let mem ?equal t a : bool          = debug t (fun () -> mem ?equal t a)
+  let mem t a ~equal : bool          = debug t (fun () -> mem t a ~equal)
   let of_list l : _ t                = check_and_return (of_list l)
   let pop t : _ option               = debug t (fun () -> pop t)
   let pop_exn (type a) t : a         = debug t (fun () -> pop_exn t)

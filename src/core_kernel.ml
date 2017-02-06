@@ -11,6 +11,7 @@ module Std = struct
   module Core_set_intf                   = Core_set_intf
   module Int_replace_polymorphic_compare = Int_replace_polymorphic_compare
   module Obj_array                       = Obj_array
+  module Perms                           = Perms
   module Polymorphic_compare_intf        = Polymorphic_compare_intf
   module Stack_intf                      = Stack_intf
   module Timing_wheel_ns_intf            = Timing_wheel_ns_intf

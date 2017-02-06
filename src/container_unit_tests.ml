@@ -13,6 +13,7 @@ module Test_generic
        include Generic
          with type 'a t := 'a t
          with type 'a elt := 'a Elt.t
+       val mem : 'a t -> 'a Elt.t -> bool
        val of_list : 'a Elt.t list -> 'a t
      end)
   (* This signature constraint reminds us to add unit tests when functions are added to
@@ -20,6 +21,7 @@ module Test_generic
   : sig
     type 'a t [@@deriving sexp]
     include Generic with type 'a t := 'a t
+    val mem : 'a t -> 'a Elt.t -> bool
   end
   with type 'a t := 'a Container.t
   with type 'a elt := 'a Elt.t
@@ -129,12 +131,27 @@ module Test_generic
 
 end
 
-module Test_S1 =
-  Test_generic (struct
-    type 'a t = 'a
-    let of_int = Fn.id
-    let to_int = Fn.id
-  end)
+module Test_S1
+    (Container : sig
+       type 'a t [@@deriving sexp]
+       include Container.S1 with type 'a t := 'a t
+       val of_list : 'a list -> 'a t
+     end) = struct
+
+  include
+    Test_generic
+      (struct
+        type 'a t = 'a
+        let of_int = Fn.id
+        let to_int = Fn.id
+      end)
+      (struct
+        include Container
+        let mem t a = mem t a ~equal:Poly.equal
+      end)
+
+  let mem = Container.mem
+end
 
 include (Test_S1 (Array)         : sig end)
 include (Test_S1 (Bag)           : sig end)

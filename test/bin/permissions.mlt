@@ -25,10 +25,8 @@ Error: This expression has type * (glob)
        but an expression was expected of type
          * (glob)
          * (glob)
-       Type
-         immutable = [ `Read | `Who_can_write of Core_kernel__Perms.nobody ]
-       is not compatible with type
-         'a = [> `Who_can_write of Core_kernel__Perms.me ]
+       Type immutable = [ `Read | `Who_can_write of Perms.nobody ]
+       is not compatible with type 'a = [> `Who_can_write of Perms.me ]
        Types for tag `Who_can_write are incompatible
 |}]
 
@@ -43,15 +41,11 @@ Error: This expression has type
          * (glob)
          * (glob)
          * (glob)
-         Ref.Permissioned.t
        but an expression was expected of type
          (int, immutable) Ref.Permissioned.t
-       Type
-         'a =
-           [< `Read | `Who_can_write of Core_kernel__Perms.me
-            > `Who_can_write ]
+       Type 'a = [< `Read | `Who_can_write of Perms.me > `Who_can_write ]
        is not compatible with type
-         immutable = [ `Read | `Who_can_write of Core_kernel__Perms.nobody ]
+         immutable = [ `Read | `Who_can_write of Perms.nobody ]
        Types for tag `Who_can_write are incompatible
 |}]
 

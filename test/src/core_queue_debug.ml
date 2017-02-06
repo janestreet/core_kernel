@@ -24,9 +24,9 @@ module Debug (Queue : module type of Queue) = struct
       (fun () -> compare compare_elt t1 t2)
   ;;
 
-  let mem ?equal t elt =
+  let mem t elt ~equal =
     debug "mem" [ t ] t [%sexp_of: _ t] [%sexp_of: bool]
-      (fun () -> mem ?equal t elt)
+      (fun () -> mem t elt ~equal)
   ;;
 
   let length t =

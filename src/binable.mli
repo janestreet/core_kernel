@@ -16,6 +16,7 @@ module type S  = S
 module type S_only_functions = S_only_functions
 module type S1 = S1
 module type S2 = S2
+module type S3 = S3
 
 (** [Of_binable*] functors are for when you want the binary representation of one type to
     be the same as that for some other isomorphic type. *)
@@ -46,6 +47,15 @@ module Of_binable2
        val of_binable : ('a, 'b) Binable.t -> ('a, 'b) t
      end)
   : S2 with type ('a, 'b) t := ('a, 'b) M.t
+
+module Of_binable3
+    (Binable : S3)
+    (M : sig
+       type ('a, 'b, 'c) t
+       val to_binable : ('a, 'b, 'c) t -> ('a, 'b, 'c) Binable.t
+       val of_binable : ('a, 'b, 'c) Binable.t -> ('a, 'b, 'c) t
+     end)
+  : S3 with type ('a, 'b, 'c) t := ('a, 'b, 'c) M.t
 
 (** [Of_sexpable] serializes a value using the bin-io of the sexp serialization of the
     value.  This is not as efficient as using [@@deriving bin_io].  However, it is useful
@@ -80,6 +90,7 @@ module Stable : sig
   module Of_binable    : sig module V1 : module type of Of_binable    end
   module Of_binable1   : sig module V1 : module type of Of_binable1   end
   module Of_binable2   : sig module V1 : module type of Of_binable2   end
+  module Of_binable3   : sig module V1 : module type of Of_binable3   end
   module Of_sexpable   : sig module V1 : module type of Of_sexpable   end
   module Of_stringable : sig module V1 : module type of Of_stringable end
 end

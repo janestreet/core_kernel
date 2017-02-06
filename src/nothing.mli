@@ -3,7 +3,7 @@
     This is useful when interfaces require that a type be specified, but the implementer
     knows this type will not be used in their implementation of the interface.
 
-    For instance, [Async.Std.Rpc.Pipe_rpc.t] is parameterized by an error type, but a user
+    For instance, [Async.Rpc.Pipe_rpc.t] is parameterized by an error type, but a user
     may want to define a Pipe RPC that can't fail. *)
 
 open! Import

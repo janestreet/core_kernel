@@ -12,7 +12,7 @@ module type S1_permissions = sig
 
   (** Checks whether the provided element is there, using polymorphic compare if [equal]
       is not provided  *)
-  val mem : ?equal:('a -> 'a -> bool) -> ('a, [> read ]) t -> 'a -> bool
+  val mem : ('a, [> read ]) t -> 'a -> equal:('a -> 'a -> bool) -> bool
 
   val length   : (_, [> read ]) t -> int
   val is_empty : (_, [> read ]) t -> bool

@@ -80,7 +80,7 @@ let max_elt t ~cmp = List.max_elt t.elts ~cmp
 
 let exists t ~f = List.exists t.elts ~f
 
-let mem ?equal t a = List.mem ?equal t.elts a
+let mem t a ~equal = List.mem t.elts a ~equal
 
 let for_all t ~f = List.for_all t.elts ~f
 

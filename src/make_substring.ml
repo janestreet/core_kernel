@@ -130,7 +130,8 @@ module F (Base : Base) : S with type base = Base.t = struct
 
   module Make_arg = struct
     type nonrec t = t
-    type elt = char
+
+    module Elt = Char
 
     let fold t ~init ~f =
       let rec go acc i =

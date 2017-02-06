@@ -53,6 +53,21 @@ module Stable = struct
       end)
   end
 
+  module Of_binable3 = struct
+    module V1
+        (Binable : S3)
+        (M : sig
+           type ('a, 'b, 'c) t
+           val to_binable : ('a, 'b, 'c) t -> ('a, 'b, 'c) Binable.t
+           val of_binable : ('a, 'b, 'c) Binable.t -> ('a, 'b, 'c) t
+         end)
+      : S3 with type ('a, 'b, 'c) t := ('a, 'b, 'c) M.t
+      = Bin_prot.Utils.Make_binable3 (struct
+        module Binable = Binable
+        include M
+      end)
+  end
+
   module Of_sexpable  = struct
     module V1 (M : Sexpable.S) =
       Of_binable.V1
@@ -130,6 +145,7 @@ let to_bigstring ?(prefix_with_length = false) (type a) m t =
 module Of_binable    = Stable.Of_binable.V1
 module Of_binable1   = Stable.Of_binable1.V1
 module Of_binable2   = Stable.Of_binable2.V1
+module Of_binable3   = Stable.Of_binable3.V1
 module Of_sexpable   = Stable.Of_sexpable.V1
 module Of_stringable = Stable.Of_stringable.V1
 

@@ -218,7 +218,7 @@ module Arbitrary_order = struct
   let count      t ~f = List.count      t.front ~f +  List.count      t.back  ~f
   let for_all    t ~f = List.for_all    t.front ~f && List.for_all    t.back  ~f
   let exists     t ~f = List.exists     t.front ~f || List.exists     t.back  ~f
-  let mem ?equal t  x = List.mem ?equal t.front  x || List.mem ?equal t.back   x
+  let mem  t x ~equal = List.mem ~equal t.front  x || List.mem ~equal t.back   x
   let iter       t ~f = List.iter       t.front ~f ;  List.iter       t.back  ~f
   ;;
 
@@ -264,7 +264,9 @@ module Make_container(F : sig val to_list : 'a t -> 'a list end) = struct
   let to_list  = F.to_list
   let is_empty = is_empty
   let length   = length
-  let mem ?equal t        x = List.mem ?equal (to_list t)        x
+
+  let mem t x ~equal = List.mem ~equal (to_list t) x
+
   let iter       t       ~f = List.iter       (to_list t)       ~f
   let fold       t ~init ~f = List.fold       (to_list t) ~init ~f
   let exists     t       ~f = List.exists     (to_list t)       ~f
