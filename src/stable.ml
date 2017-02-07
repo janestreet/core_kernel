@@ -45,6 +45,7 @@ module Perms                                = Perms                             
 module Result                               = Result                               .Stable
 module Set                                  = Core_set                             .Stable
 module Sexpable                             = Sexpable                             .Stable
+module Source_code_position                 = Source_code_position                 .Stable
 module String                               = Core_string                          .Stable
 module String_id                            = String_id                            .Stable
 module Time_ns                              = Time_ns                              .Stable
