@@ -33,6 +33,7 @@ let%test_module "random" =
 
       module Q = Quickcheck.Configure (struct
           include Quickcheck
+          let default_trial_count = 1_000
           let default_sizes = Sequence.cycle_list_exn (List.range 0 10 ~stop:`inclusive)
           let default_seed =
             `Deterministic
@@ -680,37 +681,10 @@ let%test_module "random" =
 
     end
 
-    (* Float with bitwise comparison. *)
-    module Float_ = struct
-      module T = struct
-        type t = float [@@deriving sexp]
-
-        let compare x y =
-          Int64.compare
-            (Int64.bits_of_float x)
-            (Int64.bits_of_float y)
-      end
-
-      include T
-      include Comparable.Make (T)
-
-      include (Float : Quickcheckable      with type t := float)
-      include (Float : Commutative_group.S with type t := float)
-    end
-
-    let%test _ = Float_.equal Float.nan Float.nan
-
     module String' = struct include String let module_name = "String" end
-    module Char'   = struct include Char   let module_name = "Char"   end
     module Int'    = struct include Int    let module_name = "Int"    end
-    module Float'  = struct include Float_ let module_name = "Float"  end
-    module Sexp'   = struct include Sexp   let module_name = "Sexp"   end
 
-    let%test_module "float w/ int"  = (module Make (Float')  (Int'))
-    let%test_module "int w/ float"  = (module Make (Int')    (Float'))
     let%test_module "string w/ int" = (module Make (String') (Int'))
-    let%test_module "char w/ float" = (module Make (Char')   (Float'))
-    let%test_module "sexp w/ int" [@tags "no-js"] = (module Make (Sexp')   (Int'))
 
     let%test_unit "List.fold_right doesn't allocate on empty lists" =
       let initial_words = Gc.minor_words () in
