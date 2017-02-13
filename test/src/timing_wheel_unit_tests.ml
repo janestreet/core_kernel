@@ -93,6 +93,7 @@ module Make (Timing_wheel : Timing_wheel)
 
     let create = create
     let alarm_precision = alarm_precision
+    let microsecond_precision = microsecond_precision
 
     let create_ ?level_bits ~alarm_precision () =
       create ?level_bits ()

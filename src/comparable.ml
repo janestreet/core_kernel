@@ -141,29 +141,6 @@ module Inherit
     let compare t t' = C.compare (T.component t) (T.component t')
   end)
 
-module Check_sexp_conversion (M : sig
-    type t [@@deriving sexp_of]
-    include S with type t := t
-    val examples : t list
-  end) : sig end = struct
-  open M
-
-  let%test_unit _ =
-    (* These tests all use single element sets and maps, and so do not depend on the
-       order in which elements appear in sexps. *)
-    List.iter examples ~f:(fun t ->
-      let set = Set.of_list [ t ] in
-      let set_sexp = Sexp.List [ sexp_of_t t ] in
-      assert (Pervasives.(=) set_sexp ([%sexp_of: Set.t] set));
-      assert (Set.equal set (Set.t_of_sexp set_sexp));
-      let map = Map.of_alist_exn [ t, () ] in
-      let map_sexp = Sexp.List [ Sexp.List [ sexp_of_t t; Sexp.List [] ]] in
-      assert (Pervasives.(=) map_sexp ([%sexp_of: unit Map.t] map));
-      assert (Map.equal (fun () () -> true)
-                map (Map.t_of_sexp [%of_sexp: unit] map_sexp)))
-  ;;
-end
-
 let lexicographic = Base.Comparable.lexicographic
 
 let lift = Base.Comparable.lift

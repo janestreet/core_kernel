@@ -210,6 +210,12 @@ module Config = struct
     }
   ;;
 
+  let microsecond_precision () =
+    create ()
+      ~alarm_precision:Alarm_precision.about_one_microsecond
+      ~level_bits:(Level_bits.create_exn [ 10; 10; 6; 6; 5 ])
+  ;;
+
   let durations t =
     let _, durations =
       List.fold t.level_bits ~init:(alarm_precision t, [])

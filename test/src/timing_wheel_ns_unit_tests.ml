@@ -96,3 +96,17 @@ module Alarm_precision = struct
       ((span 1us) (alarm_precision (512ns 512ns))) |}];
   ;;
 end
+
+let%expect_test "[Config.microsecond_precision]" =
+  print_s [%sexp (Config.microsecond_precision () : Config.t)];
+  [%expect {|
+    ((alarm_precision 1.024us) (level_bits (10 10 6 6 5))) |}];
+  print_s [%sexp (Config.durations (Config.microsecond_precision ())
+                  : Time_ns.Span.Alternate_sexp.t list)];
+  [%expect {|
+    (1.048576ms
+     1.073741824s
+     1.1453246122666667m
+     1.2216795864177779h
+     1.6289061152237037d) |}];
+;;

@@ -208,17 +208,17 @@ module Make (Time0 : Time0_intf.S) = struct
       Zone.prev_clock_shift zone ~before:after_time_but_not_after_next
     in
     let also_skipped_earlier amount =
-      (* Using [date] and [Option.value_exn] here is OK on the assumption that clock
+      (* Using [date] and raising on [None] here is OK on the assumption that clock
          shifts can't cross date boundaries. This is true in all cases I've ever heard
          of (and [of_date_ofday_precise] would need revisiting if it turned out to be
          false) *)
-      `Also_skipped
-        ( date
-        , Option.value_exn
-            ~error:(Error.create "Time.to_date_ofday_precise"
-                      (time, zone) [%sexp_of: t * Zone.t])
-            (Ofday.sub ofday amount)
-        )
+      match Ofday.sub ofday amount with
+      | Some ofday -> `Also_skipped (date, ofday)
+      | None       ->
+        raise_s [%message
+          "Time.to_date_ofday_precise"
+            ~span_since_epoch:(to_span_since_epoch time : Span.t)
+            (zone : Zone.t)]
     in
     let ambiguity =
       (* Edge cases: the instant of transition belongs to the new zone regime. So if the

@@ -16,12 +16,10 @@ module Stable = struct
     end
 
     module type Like_a_float = sig
-      type t [@@deriving bin_io]
+      type t [@@deriving bin_io, hash]
 
       include Comparable.S_common  with type t := t
       include Comparable.With_zero with type t := t
-      include Hashable_binable     with type t := t
-      include Stringable           with type t := t
       include Floatable            with type t := t
       val (+)     : t -> t -> t
       val (-)     : t -> t -> t
@@ -464,6 +462,10 @@ include Pretty_printer.Register (struct
     type nonrec t = t
     let to_string = to_string
     let module_name = "Core_kernel.Time.Span"
+  end)
+
+include Hashable.Make_binable (struct
+    type nonrec t = t [@@deriving bin_io, compare, hash, sexp]
   end)
 
 module C = struct

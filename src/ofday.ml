@@ -12,9 +12,7 @@ module Stable = struct
       type t = private underlying [@@deriving bin_io, hash]
       include Comparable.S_common  with type t := t
       include Comparable.With_zero with type t := t
-      include Hashable_binable     with type t := t
       include Robustly_comparable  with type t := t
-      include Stringable           with type t := t
       include Floatable            with type t := t
       val add                        : t -> Span.t -> t option
       val sub                        : t -> Span.t -> t option
@@ -27,7 +25,14 @@ module Stable = struct
     end = struct
       (* Number of seconds since midnight. *)
       type underlying = Float.t
-      include Float
+      include
+        (Float : sig
+           type t = underlying [@@deriving bin_io, hash]
+           include Comparable.S_common  with type t := t
+           include Comparable.With_zero with type t := t
+           include Robustly_comparable  with type t := t
+           include Floatable            with type t := t
+         end)
       (* IF THIS REPRESENTATION EVER CHANGES, ENSURE THAT EITHER
          (1) all values serialize the same way in both representations, or
          (2) you add a new Time.Ofday version to stable.ml *)
@@ -429,6 +434,10 @@ end
 
 include Stable.V1
 
+include Hashable.Make_binable (struct
+    type nonrec t = t [@@deriving bin_io, compare, hash, sexp]
+  end)
+
 module C = struct
 
   type t = T.t [@@deriving bin_io]
@@ -459,4 +468,3 @@ let%test _ =
   Set.equal (Set.of_list [start_of_day])
     (Set.t_of_sexp (Sexp.List [Float.sexp_of_t (to_float start_of_day)]))
 ;;
-

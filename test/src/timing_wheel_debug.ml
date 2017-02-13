@@ -47,11 +47,12 @@ module Make
 
     type nonrec t = t [@@deriving sexp]
 
-    let alarm_precision = alarm_precision
-    let create          = create
-    let durations       = durations
-    let invariant       = invariant
-    let level_bits      = level_bits
+    let alarm_precision       = alarm_precision
+    let create                = create
+    let durations             = durations
+    let invariant             = invariant
+    let level_bits            = level_bits
+    let microsecond_precision = microsecond_precision
   end
 
   module Alarm = struct

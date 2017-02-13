@@ -2,7 +2,12 @@ open! Import
 open Std_internal
 
 type underlying = Float.t
-include Float
+include
+  (Float : sig
+     type t = float [@@deriving bin_io, hash, typerep]
+     include Comparable.S_common with type t := t
+     include module type of struct include Float.O end
+   end)
 
 module Span  = Span
 module Ofday = (Ofday : Ofday_intf.Ofday with type underlying = underlying and module Span := Span)

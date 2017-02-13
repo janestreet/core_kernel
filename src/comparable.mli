@@ -145,14 +145,6 @@ module Validate_with_zero
     include With_zero with type t := T.t
   end
 
-(** [Check_sexp_conversion] checks that conversion of a map or set to a sexp uses the same
-    sexp conversion as the underlying element. *)
-module Check_sexp_conversion (M : sig
-    type t [@@deriving sexp_of]
-    include S with type t := t
-    val examples : t list
-  end) : sig end
-
 (** The following module types and functors may be used to define stable modules *)
 module Stable : sig
   module V1 : sig

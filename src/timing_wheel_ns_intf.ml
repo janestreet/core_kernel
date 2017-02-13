@@ -300,6 +300,11 @@ module type Timing_wheel = sig
 
     (** [durations t] returns the durations of the levels in [t] *)
     val durations : t -> Time.Span.t list
+
+    (** [microsecond_precision ()] returns a reasonable configuration for a timing wheel
+        with microsecond [alarm_precision], and level durations of 1ms, 1s, 1m, 1h, 1d.
+        See the relevant expect test in [Core_kernel_test] library. *)
+    val microsecond_precision: unit -> t
   end
 
   (** [create ~config ~start] creates a new timing wheel with current time [start].

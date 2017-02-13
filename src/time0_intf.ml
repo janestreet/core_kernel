@@ -3,12 +3,10 @@ open Std_internal
 
 module type S = sig
   type underlying
-  type t = private underlying [@@deriving bin_io, compare, hash, sexp_of, typerep]
+  type t = private underlying [@@deriving bin_io, compare, hash, typerep]
 
   include Comparable.S_common with type t := t
-  include Hashable_binable    with type t := t
   include Robustly_comparable with type t := t
-  include Stringable          with type t := t
 
   module Span  : Span_intf.Span with type underlying = underlying
   module Ofday : Ofday_intf.Ofday with type underlying := underlying

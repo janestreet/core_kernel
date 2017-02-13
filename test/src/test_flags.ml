@@ -48,10 +48,18 @@ module M = Make (struct
 
 include M
 
-include Comparable.Check_sexp_conversion (struct
-    include M
-    let examples = [ a; b; c ]
-  end)
+let%expect_test _ =
+  print_and_check_comparable_sexps [%here] (module M) [a;b;c];
+  [%expect {|
+    (Set (
+      (a)
+      (b)
+      (c)))
+    (Map (
+      ((a) 0)
+      ((b) 1)
+      ((c) 2))) |}];
+;;
 
 (* [sexp_of_t] *)
 let print_sexp_of t = print_s [%sexp (t : t)]
