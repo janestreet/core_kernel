@@ -29,9 +29,9 @@ end
 module type Extension = sig
   type t [@@deriving bin_io, typerep]
 
-  include Hexable                  with type t := t
-  include Identifiable.S           with type t := t
-  include Quickcheckable.S_bounded with type t := t
+  include Hexable              with type t := t
+  include Identifiable.S       with type t := t
+  include Quickcheckable.S_int with type t := t
 end
 
 module type S_unbounded = sig

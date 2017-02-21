@@ -7,26 +7,33 @@ let%expect_test _ =
     Percent.of_bp         15.;
     Percent.of_percentage 15.;
     Percent.of_mult       15.;
-  ] ~cr:CR_soon ~hide_positions:true;
+  ];
   [%expect {|
-    (Set (0 0.0015 0.15 15))
-    ("set sexp does not match sorted list sexp"
-      (set_sexp         (0  0.0015 0.15 15))
-      (sorted_list_sexp (0x 15bp   15%  15x)))
+    (Set (0x 15bp 15% 15x))
     (Map (
-      (0      0)
-      (0.0015 1)
-      (0.15   2)
-      (15     3)))
-    ("map sexp does not match sorted alist sexp"
-     (map_sexp (
-       (0      0)
-       (0.0015 1)
-       (0.15   2)
-       (15     3)))
-     (sorted_alist_sexp (
-       (0x   0)
-       (15bp 1)
-       (15%  2)
-       (15x  3)))) |}];
+      (0x   0)
+      (15bp 1)
+      (15%  2)
+      (15x  3))) |}];
+;;
+
+let%expect_test "accept float in set and map sexps" =
+  let module Of_string (M : Sexpable.S1) = struct
+    type t = string M.t [@@deriving sexp]
+  end in
+  let test (module M : Sexpable) string =
+    print_s (M.sexp_of_t (M.t_of_sexp (Sexp.of_string string)))
+  in
+  test (module Percent.Set) {| (0 0.0001 0.01 1) |};
+  [%expect {| (0x 1bp 1% 1x) |}];
+  test (module Of_string (Percent.Map)) {|
+    ((0      "arbitrary value")
+     (0.0001 "arbitrary value")
+     (0.01   "arbitrary value")
+     (1      "arbitrary value")) |};
+  [%expect {|
+    ((0x  "arbitrary value")
+     (1bp "arbitrary value")
+     (1%  "arbitrary value")
+     (1x  "arbitrary value")) |}];
 ;;

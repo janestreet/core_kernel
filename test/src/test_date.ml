@@ -1,6 +1,25 @@
 open! Core_kernel
 open  Expect_test_helpers_kernel
 
+let%expect_test _ =
+  print_and_check_container_sexps [%here] (module Date) [
+    Date.of_string "1955-11-12";
+    Date.of_string "1985-10-26";
+    Date.of_string "2015-10-21";
+  ];
+  [%expect {|
+    (Set (1955-11-12 1985-10-26 2015-10-21))
+    (Map (
+      (1955-11-12 0)
+      (1985-10-26 1)
+      (2015-10-21 2)))
+    (Hash_set (1955-11-12 1985-10-26 2015-10-21))
+    (Table (
+      (1955-11-12 0)
+      (1985-10-26 1)
+      (2015-10-21 2))) |}];
+;;
+
 let%expect_test "Date.V1" =
   print_and_check_stable_type [%here] (module Date.Stable.V1) [
     Date.create_exn ~y:1066 ~m:Oct ~d:16;

@@ -47,6 +47,7 @@ val create : unit -> 'a t
     same order (i.e. the first element of [l] is the first element of [t]).  It is always
     the case that [l = to_list (of_list l)]. *)
 val of_list : 'a list -> 'a t
+val of_array : 'a array -> 'a t
 
 (** predicates *)
 val equal : 'a t -> 'a t -> bool (** pointer equality *)

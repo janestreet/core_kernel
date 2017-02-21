@@ -400,7 +400,7 @@ module type S2 = sig
   val shrinker : 'a shr -> 'b shr -> ('a, 'b) t shr
 end
 
-module type S_bounded = sig
+module type S_int = sig
   include S
 
   (** [gen_incl lower_bound upper_bound] produces values between [lower_bound] and
@@ -572,13 +572,13 @@ module type Quickcheck = sig
 
   module Shrinker : Shrinker
 
-  module Make_int (M : Pre_int) : S_bounded
+  module Make_int (M : Pre_int) : S_int
     with type    t   :=    M.t
     with type 'a gen := 'a Generator.t
     with type 'a obs := 'a Observer.t
     with type 'a shr := 'a Shrinker.t
 
-  module For_int : S_bounded
+  module For_int : S_int
     with type    t   :=    int
     with type 'a gen := 'a Generator.t
     with type 'a obs := 'a Observer.t

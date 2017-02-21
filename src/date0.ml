@@ -706,3 +706,55 @@ let%test_module "first_strictly_after" =
     let%test _ = equal (first_strictly_after mon1 ~on:Day_of_week.Sat) sat1
     let%test _ = equal (first_strictly_after mon1 ~on:Day_of_week.Sun) sun1
   end)
+
+module For_quickcheck = struct
+  open Quickcheck
+
+  let gen_uniform_incl d1 d2 =
+    if d1 > d2 then begin
+      raise_s [%message
+        "Date.gen_uniform_incl: bounds are crossed"
+          ~lower_bound:(d1 : t)
+          ~upper_bound:(d2 : t)]
+    end;
+    Generator.map (Int.gen_uniform_incl 0 (diff d2 d1)) ~f:(fun days ->
+      add_days d1 days)
+
+  let gen_incl d1 d2 =
+    Generator.weighted_union
+      [  1., Generator.return d1
+      ;  1., Generator.return d2
+      ; 18., gen_uniform_incl d1 d2
+      ]
+
+  let gen = gen_incl (of_string "1900-01-01") (of_string "2100-01-01")
+
+  let obs = Observer.create (fun t ~size:_ hash -> hash_fold_t hash t)
+
+  let shrinker = Shrinker.empty ()
+
+  let%test_unit _ =
+    test_can_generate gen ~sexp_of:sexp_of_t ~f:(fun t ->
+      t = of_string "1900-01-01")
+
+  let%test_unit _ =
+    test_can_generate gen ~sexp_of:sexp_of_t ~f:(fun t ->
+      t = of_string "2100-01-01")
+
+  let%test_unit _ =
+    test_can_generate gen ~sexp_of:sexp_of_t ~f:(fun t ->
+      of_string "1900-01-01" < t && t < of_string "2100-01-01")
+
+  let%test_unit _ =
+    test_distinct_values gen
+      ~sexp_of:sexp_of_t
+      ~compare
+      ~trials:1_000
+      ~distinct_values:500
+end
+
+let gen              = For_quickcheck.gen
+let gen_incl         = For_quickcheck.gen_incl
+let gen_uniform_incl = For_quickcheck.gen_uniform_incl
+let obs              = For_quickcheck.obs
+let shrinker         = For_quickcheck.shrinker

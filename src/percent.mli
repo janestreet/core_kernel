@@ -109,5 +109,3 @@ module Stable : sig
     type nonrec t = t [@@deriving sexp, bin_io, compare, hash]
   end
 end
-
-

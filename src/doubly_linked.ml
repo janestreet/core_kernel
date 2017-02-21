@@ -299,6 +299,17 @@ let of_list = function
     let _last = List.fold xs ~init:first ~f:Elt.insert_after in
     ref (Some first)
 
+let of_array = function
+  | [||] -> create ()
+  | arr ->
+    let first = Elt.create arr.(0) in
+    let rec loop arr elt i =
+      if i < Array.length arr then
+        loop arr (Elt.insert_after elt arr.(i)) (i + 1)
+    in
+    loop arr first 1;
+    ref (Some first)
+
 let fold_elt t ~init ~f =
   match !t with
   | None -> init
@@ -704,6 +715,18 @@ let%test_module "move functions" =
     let%test_unit _ = test (fun t a -> move_after  t a.(3) ~anchor:a.(2)) [0; 1; 2; 3; 4]
     let%test_unit _ = test (fun t a -> move_after  t a.(2) ~anchor:a.(3)) [0; 1; 3; 2; 4]
   end)
+
+let%test _ = to_list (of_list []) = []
+let%test _ = to_list (of_list [1;2;3]) = [1;2;3]
+let%test _ = to_array (of_array [||]) = [||]
+let%test _ = to_array (of_array [|1;2;3|]) = [|1;2;3|]
+
+let%test_unit _ =
+  invariant (fun (_:int) -> ()) (of_list []);
+  invariant (fun (_:int) -> ()) (of_list [1;2;3]);
+  invariant (fun (_:int) -> ()) (of_array [||]);
+  invariant (fun (_:int) -> ()) (of_array [|1;2;3;|]);
+;;
 
 let%test _ =
   let t1 = create () in

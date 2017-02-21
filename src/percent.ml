@@ -110,7 +110,17 @@ module Stable = struct
 
     include (Sexpable.Stable.Of_stringable.V1 (Stringable) : Sexpable.S with type t := t)
     include (Float : Binable with type t := t)
-    include (Float : Comparable with type t := t)
+    include Comparable.Make (struct
+        type nonrec t = t [@@deriving compare, sexp_of]
+
+        (* Previous versions rendered comparable-based containers using float
+           serialization rather than percent serialization, so when reading
+           comparable-based containers in we accept either serialization. *)
+        let t_of_sexp sexp =
+          match Float.t_of_sexp sexp with
+          | float       -> float
+          | exception _ -> t_of_sexp sexp
+      end)
   end
 
   let%test_module "Percent.V1" = (module Stable_unit_test.Make (struct

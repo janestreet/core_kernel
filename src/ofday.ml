@@ -435,7 +435,15 @@ end
 include Stable.V1
 
 include Hashable.Make_binable (struct
-    type nonrec t = t [@@deriving bin_io, compare, hash, sexp]
+    type nonrec t = t [@@deriving bin_io, compare, hash, sexp_of]
+
+    (* Previous versions rendered hash-based containers using float serialization rather
+       than time serialization, so when reading hash-based containers in we accept either
+       serialization. *)
+    let t_of_sexp sexp =
+      match Float.t_of_sexp sexp with
+      | float       -> of_float float
+      | exception _ -> t_of_sexp sexp
   end)
 
 module C = struct

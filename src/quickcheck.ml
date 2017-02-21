@@ -976,7 +976,7 @@ module Shrinker = struct
 end
 
 module Make_int (M : Quickcheck_intf.Pre_int)
-  : Quickcheck_intf.S_bounded
+  : Quickcheck_intf.S_int
     with type    t   :=    M.t
     with type 'a gen := 'a gen
     with type 'a obs := 'a obs
