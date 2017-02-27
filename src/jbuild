@@ -59,3 +59,5 @@
     pool.ml           ;; ocp-indent doesn't handle [#import]
     time_ns.ml        ;; ocp-indent doesn't handle [#import]
     ))))
+
+(jbuild_version jane_street)

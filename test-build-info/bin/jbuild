@@ -19,3 +19,5 @@
   (action "${NODE} main.bc.js > /dev/null")))
 
 (enforce_style ())
+
+(jbuild_version jane_street)

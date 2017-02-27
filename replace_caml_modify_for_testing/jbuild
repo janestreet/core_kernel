@@ -5,3 +5,5 @@
   (preprocess (pps (ppx_inline_test)))))
 
 (enforce_style ())
+
+(jbuild_version jane_street)

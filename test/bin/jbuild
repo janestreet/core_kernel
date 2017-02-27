@@ -21,3 +21,5 @@
 (toplevel_expect_tests ((libraries (core_kernel))))
 
 (enforce_style ())
+
+(jbuild_version jane_street)
