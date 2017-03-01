@@ -1,21 +1,10 @@
-(** [Linked_queue] is a wrapper around OCaml's standard [Queue] module that follows Core
-    idioms and adds some functions.  See [Queue_intf] for documentation of standard queue
-    functions.  Also see [Queue], which has different performance characteristics. *)
+(** This module extends the [Base.Queue] module with bin_io support.  As a reminder, the
+    [Base.Queue] module is a wrapper around OCaml's standard [Queue] module that follows
+    Base idioms and adds some functions.
 
-open! Import
+    See also [Queue], which has different performance characteristics. *)
 
-include Queue_intf.S
+type 'a t = 'a Base.Linked_queue.t [@@deriving bin_io]
 
-(** [transfer ~src ~dst] adds all of the elements of [src] to the end of [dst], then
-    clears [src].  It is equivalent to the sequence:
-
-    {[
-      iter ~src ~f:(enqueue dst);
-      clear src
-    ]}
-
-    but runs in constant time. *)
-val transfer : src:'a t -> dst:'a t -> unit
-
-(** [partial_iter t ~f] iterates through t until f returns `Stop *)
-val partial_iter : 'a t -> f:('a -> [`Continue | `Stop]) -> unit
+include module type of struct include Base.Linked_queue end
+  with type 'a t := 'a t

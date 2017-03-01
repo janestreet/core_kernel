@@ -34,7 +34,8 @@ module type Generator = sig
         x, y
       ]}
   *)
-  include Monad.S with type 'a t := 'a t
+  include Monad.S       with type 'a t := 'a t
+  include Applicative.S with type 'a t := 'a t
 
   (** [size = create (fun ~size _ -> size)] *)
   val size : int t
@@ -567,6 +568,9 @@ end
 
 module type Quickcheck = sig
 
+  type nonrec seed = seed
+  type nonrec shrink_attempts = shrink_attempts
+
   module rec Generator : (Generator with type 'a obs := 'a Observer.t)
   and        Observer  : (Observer  with type 'a gen := 'a Generator.t)
 
@@ -584,12 +588,15 @@ module type Quickcheck = sig
     with type 'a obs := 'a Observer.t
     with type 'a shr := 'a Shrinker.t
 
-  (** with a default config *)
-  include Quickcheck_configured
+  module type Quickcheck_config = Quickcheck_config
+
+  module type Quickcheck_configured = Quickcheck_configured
     with type 'a gen := 'a Generator.t
     with type 'a shr := 'a Shrinker.t
 
+  (** with a default config *)
+  include Quickcheck_configured
+
   module Configure (Config : Quickcheck_config) : Quickcheck_configured
-    with type 'a gen := 'a Generator.t
 
 end

@@ -225,10 +225,11 @@ module Make (Hashtbl : Hashtbl_intf.Hashtbl) = struct
           l
           [%sexp_of: [`Missing of int | `Wrong_data of int * int ] list]
     in
+    let equal = Int.equal in
     let rec loop i t =
       if i < 2000 then begin
         let k = Random.int 10_000 in
-        inserted := List.Assoc.add (List.Assoc.remove !inserted k) k i;
+        inserted := List.Assoc.add (List.Assoc.remove !inserted ~equal k) ~equal k i;
         Hashtbl.set t ~key:k ~data:i;
         Hashtbl.invariant ignore ignore t;
         verify_inserted t;
@@ -243,7 +244,7 @@ module Make (Hashtbl : Hashtbl_intf.Hashtbl) = struct
       | None -> ()
       | Some _ -> failwith (sprintf "present after removal: %d" x)
       end;
-      inserted := List.Assoc.remove !inserted x;
+      inserted := List.Assoc.remove !inserted ~equal x;
       verify_inserted t)
   ;;
 

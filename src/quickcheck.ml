@@ -359,11 +359,18 @@ module Generator = struct
 
   include Raw_generator
 
+  let return x =
+    create (fun ~size:_ _ -> x)
+
+  let custom_map t ~f =
+    create (fun ~size random ->
+      let x = generate t ~size random in
+      f x)
+
   include Monad.Make (struct
       type nonrec 'a t = 'a t
 
-      let return x =
-        create (fun ~size:_ _ -> x)
+      let return = return
 
       let bind t1 ~f =
         create (fun ~size random ->
@@ -371,7 +378,21 @@ module Generator = struct
           let t2 = f x in
           generate t2 ~size random)
 
-      let map = `Define_using_bind
+      let map = `Custom custom_map
+    end)
+
+  include Applicative.Make (struct
+      type nonrec 'a t = 'a t
+
+      let return = return
+
+      let apply t1 t2 =
+        create (fun ~size random ->
+          let f = generate t1 ~size random in
+          let x = generate t2 ~size random in
+          f x)
+
+      let map = `Custom custom_map
     end)
 
   open Let_syntax
@@ -1062,6 +1083,7 @@ module Configure (Config : Quickcheck_intf.Quickcheck_config) = struct
         ?sexp_of
         ~value
         ~exn
+        ~backtrace
         ~shrinker
         ?(shrink_attempts = default_shrink_attempts)
         ~f =
@@ -1078,13 +1100,14 @@ module Configure (Config : Quickcheck_intf.Quickcheck_config) = struct
           match f shr_value with
           | ()                -> shrink_loop seq_tl (attempts+1) result
           | exception shr_exn ->
+            let backtrace = Exn.backtrace () in
             let seq = Shrinker.shrink shrinker shr_value in
-            shrink_loop seq (attempts+1) (Some (shr_value, shr_exn))
+            shrink_loop seq (attempts+1) (Some (shr_value, shr_exn, backtrace))
       else
         result
     in
     match shrink_loop (Shrinker.shrink shrinker value) 0 None with
-    | Some (shr_value, shr_exn) ->
+    | Some (shr_value, shr_exn, shr_bt) ->
       let sexp_of_value =
         match sexp_of with
         | Some f -> f
@@ -1093,10 +1116,13 @@ module Configure (Config : Quickcheck_intf.Quickcheck_config) = struct
       Error.raise_s
         [%message
           "shrunk random input"
-            ~shrunk_value:  (shr_value : value)
-            ~shrunk_error:  (shr_exn   : exn)
-            ~original_value:(value     : value)
-            ~original_error:(exn       : exn)]
+            ~shrunk_value:      (shr_value     : value)
+            ~shrunk_error:      (shr_exn       : exn)
+            ~shrunk_backtrace:  (shr_bt        : string)
+            ~original_value:    (value         : value)
+            ~original_error:    (exn           : exn)
+            ~original_backtrace:(backtrace     : string)
+        ]
     | None ->
       match sexp_of with
       | None               -> raise exn
@@ -1104,8 +1130,9 @@ module Configure (Config : Quickcheck_intf.Quickcheck_config) = struct
         Error.raise_s
           [%message
             "random input"
-              ~value:(value : value)
-              ~error:(exn   : exn)]
+              ~value:    (value     : value)
+              ~error:    (exn       : exn)
+              ~backtrace:(backtrace : string)]
 
   let test
         ?seed
@@ -1125,17 +1152,20 @@ module Configure (Config : Quickcheck_intf.Quickcheck_config) = struct
       | Some shrinker ->
         (fun x ->
            try f x with exn ->
-             shrink_iter ~value:x ~exn ?sexp_of ~shrinker ?shrink_attempts ~f)
+             let backtrace = Exn.backtrace () in
+             shrink_iter ~value:x ~exn ~backtrace ?sexp_of ~shrinker ?shrink_attempts ~f)
       | None ->
         match sexp_of with
         | Some sexp_of_value ->
           (fun value ->
              try f value with exn ->
+               let backtrace = Exn.backtrace () in
                Error.raise_s
                  [%message
                    "random input"
-                     ~value:(value : value)
-                     ~error:(exn   : exn)])
+                     ~value:    (value     : value)
+                     ~error:    (exn       : exn)
+                     ~backtrace:(backtrace : string)])
         | None -> f
     in
     List.iter examples ~f;
@@ -1226,3 +1256,12 @@ include Configure (struct
     let default_sizes =
       Sequence.cycle_list_exn (List.range 0 30 ~stop:`inclusive)
   end)
+
+type seed            = Quickcheck_intf.seed
+type shrink_attempts = Quickcheck_intf.shrink_attempts
+
+module type Quickcheck_config = Quickcheck_intf.Quickcheck_config
+
+module type Quickcheck_configured = Quickcheck_intf.Quickcheck_configured
+  with type 'a gen := 'a gen
+   and type 'a shr := 'a shr

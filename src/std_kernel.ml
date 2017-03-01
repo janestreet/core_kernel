@@ -91,7 +91,6 @@ module Pretty_printer                       = Pretty_printer
 module Printexc                             = Core_printexc
 module Printf                               = Core_printf
 module Queue                                = Core_queue
-module Quickcheck_intf                      = Quickcheck_intf
 module Quickcheck                           = Quickcheck
 module Quickcheckable                       = Quickcheckable
 module Robustly_comparable                  = Robustly_comparable

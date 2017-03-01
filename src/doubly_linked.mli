@@ -125,6 +125,7 @@ val filter_inplace : 'a t -> f:('a -> bool) -> unit
     detected (presumably leading to an infinite loop) . *)
 val unchecked_iter : 'a t -> f:('a -> unit) -> unit
 
-(** A lazy sequence of values from the doubly linked list.  The returned sequence is immune
-    to any subsequent mutation of the list. *)
+(** A sequence of values from the doubly linked list. It makes an intermediate copy of the
+    list so that the returned sequence is immune to any subsequent mutation of the
+    original list. *)
 val to_sequence : 'a t -> 'a Sequence.t

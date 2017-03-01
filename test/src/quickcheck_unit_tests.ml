@@ -1,6 +1,6 @@
 open! Core_kernel
 
-module Test (S : sig val default_seed : Quickcheck_intf.seed end) : sig end = struct
+module Test (S : sig val default_seed : Quickcheck.seed end) : sig end = struct
 
   let int_middle_bits =
     match Word_size.word_size with

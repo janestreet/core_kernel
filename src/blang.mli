@@ -147,8 +147,8 @@ val eval : 'a t -> ('a -> bool) -> bool
     [universe].  If this doesn't hold, then [eval_set]'s result may contain elements not
     in [universe].
 
-    [And set1 set2] represent the elements that are both in set1 and set2, thus in the
-    intersection of set1 and set2.  Symmetrically, [Or set1 set2] represent the union of
+    [And set1 set2] represents the elements that are both in set1 and set2, thus in the
+    intersection of set1 and set2.  Symmetrically, [Or set1 set2] represents the union of
     set1 and set2. *)
 val eval_set
   :  universe : ('elt, 'comparator) Set.t Lazy.t
