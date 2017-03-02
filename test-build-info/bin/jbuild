@@ -1,7 +1,7 @@
 (executables
  ((names (main))
   (libraries (core_kernel build_info_test))
-  (js_of_ocaml ())
+  (preprocess (pps (ppx_jane)))
   ))
 
 
@@ -18,6 +18,5 @@
   (deps (main.bc.js))
   (action "${NODE} main.bc.js > /dev/null")))
 
-(enforce_style ())
 
 (jbuild_version jane_street)

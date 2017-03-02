@@ -1,12 +1,9 @@
 (library
  ((name core_kernel_test)
-  (inline_tests ((javascript build_and_run)))
-  (js_of_ocaml ())
   (libraries (core_kernel expect_test_helpers_kernel))
-  (preprocessor_deps (../../src/config.h))))
+  (preprocessor_deps (../../src/config.h))
+  (preprocess (pps (ppx_jane)))))
 
-(toplevel_expect_tests ((libraries (core_kernel))))
 
-(enforce_style ())
 
 (jbuild_version jane_street)

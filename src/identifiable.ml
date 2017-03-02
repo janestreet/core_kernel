@@ -5,6 +5,14 @@ module Map = Core_map
 
 let failwiths = Error.failwiths
 
+module type S_not_binable = sig
+  type t [@@deriving sexp]
+  include Stringable.S     with type t := t
+  include Comparable.S     with type t := t
+  include Hashable.S       with type t := t
+  include Pretty_printer.S with type t := t
+end
+
 module type S = sig
   type t [@@deriving bin_io, sexp]
   include Stringable.S         with type t := t

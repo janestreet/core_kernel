@@ -16,10 +16,9 @@
 (executables
  ((names (float_test pool_caml_modify_check just_raise))
   (libraries (replace_caml_modify_for_testing
-              core))))
+              core))
+  (preprocess (pps (ppx_jane)))))
 
-(toplevel_expect_tests ((libraries (core_kernel))))
 
-(enforce_style ())
 
 (jbuild_version jane_street)

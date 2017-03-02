@@ -1,10 +1,8 @@
 (library
  ((name build_info_test)
   (libraries (core_kernel))
-  (inline_tests ((javascript build_and_run)))
-  (js_of_ocaml ())
+  (preprocess (pps (ppx_jane)))
   ))
 
-(enforce_style ())
 
 (jbuild_version jane_street)

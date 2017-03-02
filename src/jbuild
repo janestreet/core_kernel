@@ -7,7 +7,6 @@
 
 (library
  ((name core_kernel)
-  (inline_tests ((javascript build_and_run)))
   (public_name core_kernel)
   (install_c_headers (time_ns_stubs))
   (libraries
@@ -38,26 +37,14 @@
     core_gc_stubs
     time_ns_stubs
     version_util_fallback_stubs))
-  (includes (../../base/src))
   (preprocess (pps (ppx_jane -check-doc-comments)))
   (preprocessor_deps (config.h))
-  (js_of_ocaml (
-    (javascript_files (strftime.js runtime.js))
-    ))))
+))
 
 (alias
  ((name save_benchmarks)
   (deps (inline_benchmarks_runner inline_benchmarks_runner.exe))
   (action "./inline_benchmarks_runner jenga-save-benchmarks")))
 
-(enforce_style
- ((exceptions
-   (bigstring.ml      ;; ocp-indent doesn't handle [#import]
-    binary_packing.ml ;; ocp-indent doesn't handle [#import]
-    core_int63.ml     ;; ocp-indent doesn't handle [#import]
-    float.ml          ;; ocp-indent doesn't handle [#import]
-    pool.ml           ;; ocp-indent doesn't handle [#import]
-    time_ns.ml        ;; ocp-indent doesn't handle [#import]
-    ))))
 
 (jbuild_version jane_street)

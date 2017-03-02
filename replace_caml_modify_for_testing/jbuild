@@ -4,6 +4,5 @@
   (c_names (replace_caml_modify_for_testing_stub))
   (preprocess (pps (ppx_inline_test)))))
 
-(enforce_style ())
 
 (jbuild_version jane_street)
