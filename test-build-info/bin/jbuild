@@ -10,13 +10,13 @@
 (alias
  ((name DEFAULT)
   (deps (main.exe))
-  (action "./main.exe > /dev/null")))
+  (action (bash "./main.exe > /dev/null"))))
 
 
 (alias
  ((name javascript)
   (deps (main.bc.js))
-  (action "${NODE} main.bc.js > /dev/null")))
+  (action (bash "${NODE} main.bc.js > /dev/null"))))
 
 
 (jbuild_version jane_street)
