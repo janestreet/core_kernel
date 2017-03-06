@@ -3,7 +3,7 @@
  ((name base_for_tests)
   (public_name core_kernel.base_for_tests)
   (libraries (base))
-  (preprocess (pps (ppx_base ppx_inline_test ppx_sexp_conv ppx_sexp_message)))))
+  (preprocess (pps (ppx_base ppx_inline_test ppx_sexp_conv ppx_sexp_message ppx_driver.runner)))))
 
 
 (jbuild_version jane_street)

@@ -42,6 +42,7 @@ module Nothing                              = Nothing                           
 module Or_error                             = Or_error                             .Stable
 module Percent                              = Percent                              .Stable
 module Perms                                = Perms                                .Stable
+module Pid                                  = Pid                                  .Stable
 module Result                               = Result                               .Stable
 module Set                                  = Core_set                             .Stable
 module Sexpable                             = Sexpable                             .Stable

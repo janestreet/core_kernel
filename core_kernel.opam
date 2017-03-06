@@ -14,7 +14,7 @@ depends: [
   "configurator"
   "fieldslib"
   "jane-street-headers"
-  "jbuilder"
+  "jbuilder"                {build}
   "ppx_assert"
   "ppx_base"
   "ppx_driver"
@@ -27,6 +27,7 @@ depends: [
   "stdio"
   "typerep"
   "variantslib"
+  "ocaml-migrate-parsetree"
 ]
 available: [ ocaml-version >= "4.03.0" ]
 descr: "

@@ -9,7 +9,7 @@
     core_bench
     ppx_hash.runtime-lib
     re2))
-  (preprocess (pps (ppx_jane)))))
+  (preprocess (pps (ppx_jane ppx_driver.runner)))))
 
 
 (jbuild_version jane_street)

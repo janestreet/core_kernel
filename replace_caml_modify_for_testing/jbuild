@@ -2,7 +2,7 @@
  ((name replace_caml_modify_for_testing)
   (library_flags (-cclib -Xlinker -cclib --wrap -cclib -Xlinker -cclib caml_modify))
   (c_names (replace_caml_modify_for_testing_stub))
-  (preprocess (pps (ppx_inline_test)))))
+  (preprocess (pps (ppx_inline_test ppx_driver.runner)))))
 
 
 (jbuild_version jane_street)

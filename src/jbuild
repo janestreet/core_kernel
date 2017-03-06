@@ -37,7 +37,7 @@
     core_gc_stubs
     time_ns_stubs
     version_util_fallback_stubs))
-  (preprocess (pps (ppx_jane -check-doc-comments)))
+  (preprocess (pps (ppx_jane -check-doc-comments ppx_driver.runner)))
   (preprocessor_deps (config.h))
 ))
 
