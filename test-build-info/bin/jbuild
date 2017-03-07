@@ -19,4 +19,4 @@
   (action (bash "${NODE} main.bc.js > /dev/null"))))
 
 
-(jbuild_version jane_street)
+(jbuild_version 1)

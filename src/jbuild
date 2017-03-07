@@ -47,4 +47,4 @@
   (action (bash "./inline_benchmarks_runner jenga-save-benchmarks"))))
 
 
-(jbuild_version jane_street)
+(jbuild_version 1)
