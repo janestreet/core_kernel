@@ -47,4 +47,6 @@
   (action (bash "./inline_benchmarks_runner jenga-save-benchmarks"))))
 
 
+(install ((section lib) (files (strftime.js runtime.js))))
+
 (jbuild_version 1)
