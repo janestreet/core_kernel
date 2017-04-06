@@ -169,16 +169,32 @@ let%test_unit _ =
 module Expert = struct
 
   let add_finalizer x f =
-    Caml.Gc.finalise
-      (fun x -> Exn.handle_uncaught_and_exit (fun () -> f x))
-      x
+    try
+      Caml.Gc.finalise
+        (fun x -> Exn.handle_uncaught_and_exit (fun () -> f x))
+        x
+    with Invalid_argument _ ->
+      (* The type of add_finalizer ensures that the only possible failure
+         is due to [x] being static data. In this case, we simply drop the
+         finalizer since static data would never have been collected by the
+         GC anyway. *)
+      ()
   ;;
 
   (* [add_finalizer_exn] is the same as [add_finalizer].  However, their types in
      core_gc.mli are different, and the type of [add_finalizer] guarantees that it always
      receives a heap block, which ensures that it will not raise, while
      [add_finalizer_exn] accepts any type, and so may raise. *)
-  let add_finalizer_exn = add_finalizer
+  let add_finalizer_exn x f =
+    try
+      Caml.Gc.finalise
+        (fun x -> Exn.handle_uncaught_and_exit (fun () -> f x))
+        x
+    with Invalid_argument _ ->
+      ignore (Heap_block.create x);
+      (* If [Heap_block.create] succeeds then [x] is static data and so
+         we can simply drop the finaliser. *)
+      ()
 
   let finalize_release = Caml.Gc.finalise_release
 

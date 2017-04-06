@@ -180,17 +180,17 @@ module Unit_tests
     Map.length map = Caml_map.cardinal caml_map
     && alist_equal (Map.to_alist map) (caml_map_to_alist caml_map)
 
-  let add       _ = assert false
-  let remove    _ = assert false
-  let find      _ = assert false
-  let mem       _ = assert false
-  let iter      _ = assert false
-  let iteri     _ = assert false
-  let iter_keys _ = assert false
-  let map       _ = assert false
-  let mapi      _ = assert false
-  let fold      _ = assert false
-  let equal     _ = assert false
+  let add       _      = assert false
+  let remove    _      = assert false
+  let find      _      = assert false
+  let mem       _      = assert false
+  let iter      _      = assert false
+  let iteri     _      = assert false
+  let iter_keys _      = assert false
+  let map       _      = assert false
+  let mapi      _      = assert false
+  let fold      _      = assert false
+  let equal     _      = assert false
   let compare_direct _ = assert false
 
   (* runs a series of random tests on a map of the input type and a Caml map to see if
@@ -597,7 +597,7 @@ module Unit_tests
     | Some _ -> false
   ;;
 
-  let find_exn _ = assert false
+  let find_exn      _ = assert false
 
   let%test _ =
     try ignore (Map.find_exn (Map.empty ()) Key.sample); false
@@ -1651,3 +1651,19 @@ let%test_module "Int.Map.Tree" = (module Unit_tests (Key_int) (struct
     include Access_options_without_comparator
     let kind = `Tree
   end))
+
+let%test_unit _ =
+  Core_kernel.Map.find_or_error (Int.Map.singleton 1 ()) 1
+  |> Or_error.ok_exn
+;;
+
+let%expect_test _ =
+  Core_kernel.Map.find_or_error Int.Map.empty 1
+  |> printf !"%{sexp: unit Or_error.t}";
+  [%expect {| (Error ("key not found" 1)) |}]
+;;
+
+let%expect_test _ =
+  Core_kernel.Map.find_or_error Map.Poly.empty 1
+  |> printf !"%{sexp: unit Or_error.t}";
+  [%expect {| (Error ("key not found" _)) |}]

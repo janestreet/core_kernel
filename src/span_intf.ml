@@ -5,7 +5,7 @@ module type Span = sig
   (** Span.t represents a span of time (e.g. 7 minutes, 3 hours, 12.8 days).  The span
       may be positive or negative. *)
   type underlying
-  type t = private underlying [@@deriving bin_io, sexp]
+  type t = private underlying [@@deriving bin_io, hash, sexp]
 
   (** Parts represents the individual parts of a Span as if it were written out (it is the
       counterpart to create).  For example, (sec 90.) is represented by {Parts.hr = 0;
@@ -96,13 +96,17 @@ module type Span = sig
   val of_hr            : float -> t
   val of_day           : float -> t
 
-  val to_ns  : t -> float
-  val to_us  : t -> float
-  val to_ms  : t -> float
-  val to_sec : t -> float
-  val to_min : t -> float
-  val to_hr  : t -> float
-  val to_day : t -> float
+  val to_ns            : t -> float
+  val to_us            : t -> float
+  val to_ms            : t -> float
+  val to_sec           : t -> float
+  val to_min           : t -> float
+  val to_hr            : t -> float
+  val to_day           : t -> float
+
+  (** [to_int63_seconds_round_down_exn t] returns the number of seconds represented by
+      [t], rounded down, raising if the result is not representable as an [Int63.t]. *)
+  val to_int63_seconds_round_down_exn : t -> Int63.t
 
   (** The only condition [to_proportional_float] is supposed to satisfy is that for all
       [t1, t2 : t]: [to_proportional_float t1 /. to_proportional_float t2 = t1 // t2]. *)
@@ -166,8 +170,8 @@ module type Span = sig
     -> string
 
   (** [randomize t ~percent] returns a span +/- percent * original span.  Percent must be
-      between 0 and 1, and must be positive. *)
-  val randomize : t -> percent:float -> t
+      between 0% and 100% inclusive, and must be positive. *)
+  val randomize : t -> percent:Percent.t -> t
 
   module Stable : sig
     module V1 : sig

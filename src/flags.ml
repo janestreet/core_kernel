@@ -26,9 +26,7 @@ module Make (M : Make_arg) = struct
   let intersect  = Int63.bit_and
   let complement = Int63.bit_not
 
-  let equal t1 t2 = Int63.(=) t1 t2
-
-  let subset t1 t2 = equal t1 (intersect t1 t2)
+  let subset t1 t2 = Int63.(=) t1 (intersect t1 t2)
 
   let do_intersect t1 t2 = Int63.(<>) (Int63.bit_and t1 t2) Int63.zero
   let are_disjoint t1 t2 = Int63.(=)  (Int63.bit_and t1 t2) Int63.zero
@@ -110,6 +108,12 @@ module Make (M : Make_arg) = struct
   ;;
 
   include Comparable.Make (struct type nonrec t = t [@@deriving sexp, compare, hash] end)
+
+  (* [Comparable.Make] turns [equal] into a function call to [compare] rather than the
+     much simpler (and equally correct) [Int63.(=)]. Restore it, as well as (=) and (<>). *)
+  let equal = Int63.(=)
+  let (=)   = Int63.(=)
+  let (<>)  = Int63.(<>)
 end
 
 (* Check that conflicting flags leads to an error. *)

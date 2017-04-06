@@ -1,13 +1,6 @@
 open! Import
 
-module type S = sig
-  (** The immediate value used to implement the immediate option.
-
-      [S] should be used with [immediate] replaced by a concrete type so the compiler can
-      optimize uses of [t] as an immediate value.  For example, use [S with type immediate
-      := int] or use the predefined instantiations below. *)
-  type immediate
-
+module type S_without_immediate = sig
   (** The immediate value carried by the immediate option.
 
       Given the presence of {!unchecked_value}, the [value] type should not have
@@ -22,11 +15,19 @@ module type S = sig
       type, assuming [immediate] is known to be immediate.  The interface does not enforce
       that [immediate] is immediate because some types, like [Int63.t], are only immediate
       on 64-bit platforms. *)
-  type t = private immediate [@@deriving compare, hash, sexp_of, typerep]
+  type t [@@deriving compare, hash, sexp_of, typerep]
 
-  (** Constructors analogous to [None] and [Some]. *)
+  (** Constructors analogous to [None] and [Some].  If [not (some_is_representable x)]
+      then [some x] may raise or return [none]. *)
   val none : t
   val some : value -> t
+
+  (** For some representations of immediate options, the encodings of [none] and [some]
+      overlap.  For these representations, [some_is_representable value = false] if
+      [value] cannot be represented as an option.  For example, [Int.Option] uses
+      [min_value] to represent [none].  For other representations, [some_is_representable]
+      always returns [true]. *)
+  val some_is_representable : value -> bool
 
   val is_none : t -> bool
   val is_some : t -> bool
@@ -65,17 +66,25 @@ module type S = sig
   end
 end
 
-module type Int = S
-  with type immediate := int
-   and type t = private int
+module type S = sig
+  type t [@@immediate]
+  include S_without_immediate with type t := t
+end
 
-(** [Int63.t] is only immediate on 64-bit platforms. *)
-module type Int63 = S
-  with type immediate := Base.Int63.t
-   and type t = private Base.Int63.t
+#import "config.h"
+module type S_on_64_bit =
+#ifdef JSC_ARCH_SIXTYFOUR
+  S
+#else
+  S_without_immediate
+#endif
 
 module type Immediate_option = sig
-  module type S     = S
-  module type Int   = Int
-  module type Int63 = Int63
+
+  module type S = S  (** always immediate *)
+
+  module type S_on_64_bit = S_on_64_bit  (** immediate only on 64-bit machines *)
+
+  module type S_without_immediate = S_without_immediate  (** never immediate *)
+
 end

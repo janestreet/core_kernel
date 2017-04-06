@@ -46,9 +46,17 @@ val unsafe_set : t -> int -> Obj.t -> unit
     check.
 
     [unsafe_set_int_assuming_currently_int] is similar, except the value being set is an
-    int. *)
+    int.
+
+    [unsafe_set_int] is similar but does not assume anything about the target. *)
 val unsafe_set_assuming_currently_int     : t -> int -> Obj.t -> unit
 val unsafe_set_int_assuming_currently_int : t -> int -> int   -> unit
+val unsafe_set_int                        : t -> int -> int   -> unit
+
+(** [unsafe_set_omit_phys_equal_check] is like [unsafe_set], except it doesn't do a
+    [phys_equal] check to try to skip [caml_modify].  It is safe to call this even if the
+    values are [phys_equal]. *)
+val unsafe_set_omit_phys_equal_check : t -> int -> Obj.t -> unit
 
 (** [unsafe_clear_if_pointer t i] prevents [t.(i)] from pointing to anything to prevent
     space leaks.  It does this by setting [t.(i)] to [Obj.repr 0].  As a performance hack,
@@ -58,3 +66,4 @@ val unsafe_clear_if_pointer : t -> int -> unit
 (** [truncate t ~len] shortens [t]'s length to [len].  It is an error if [len <= 0] or
     [len > length t].*)
 val truncate : t -> len:int -> unit
+

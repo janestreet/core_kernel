@@ -112,10 +112,30 @@ module type Permissioned = sig
   val copy : ('a, [> read]) t -> ('a, [< _ perms]) t
   val fill : ('a, [> write]) t -> pos:int -> len:int -> 'a -> unit
   val of_list : 'a list -> ('a, [< _ perms]) t
-  val map : f:('a -> 'b) -> ('a, [> read]) t -> ('b, [< _ perms]) t
-  val iteri : f:(int -> 'a -> unit) -> ('a, [> read]) t -> unit
-  val mapi : f:(int -> 'a -> 'b) -> ('a, [> read]) t -> ('b, [< _ perms]) t
+  val map : ('a, [> read]) t -> f:('a -> 'b) -> ('b, [< _ perms]) t
+  val folding_map
+    :  ('a, [> read]) t
+    -> init:'b
+    -> f:('b -> 'a -> 'b * 'c)
+    -> ('c, [< _ perms]) t
+  val fold_map
+    :  ('a, [> read]) t
+    -> init:'b
+    -> f:('b -> 'a -> 'b * 'c)
+    -> 'b * ('c, [< _ perms]) t
+  val mapi : ('a, [> read]) t -> f:(int -> 'a -> 'b) -> ('b, [< _ perms]) t
+  val iteri : ('a, [> read]) t -> f:(int -> 'a -> unit) -> unit
   val foldi : ('a, [> read]) t -> init:'b -> f:(int -> 'b -> 'a -> 'b) -> 'b
+  val folding_mapi
+    :  ('a, [> read]) t
+    -> init:'b
+    -> f:(int -> 'b -> 'a -> 'b * 'c)
+    -> ('c, [< _ perms]) t
+  val fold_mapi
+    :  ('a, [> read]) t
+    -> init:'b
+    -> f:(int -> 'b -> 'a -> 'b * 'c)
+    -> 'b * ('c, [< _ perms]) t
   val fold_right : ('a, [> read]) t -> f:('a -> 'b -> 'b) -> init:'b -> 'b
   val sort
     :  ?pos:int
@@ -182,8 +202,8 @@ module type Permissioned = sig
     -> ('b, [> read]) t
     -> f:('a -> 'b -> bool)
     -> bool
-  val filter : f:('a -> bool) -> ('a, [> read]) t -> ('a, [< _ perms]) t
-  val filteri : f:(int -> 'a -> bool) -> ('a, [> read]) t -> ('a, [< _ perms]) t
+  val filter : ('a, [> read]) t -> f:('a -> bool) -> ('a, [< _ perms]) t
+  val filteri : ('a, [> read]) t -> f:(int -> 'a -> bool) -> ('a, [< _ perms]) t
   val swap : ('a, [> read_write]) t -> int -> int -> unit
   val rev_inplace : ('a, [> read_write]) t -> unit
   val of_list_rev : 'a list -> ('a, [< _ perms]) t
@@ -293,10 +313,14 @@ module type S = sig
   include Blit.S1 with type 'a t := 'a t
 
   val of_list : 'a list -> 'a t
-  val map : f:('a -> 'b) -> 'a t -> 'b t
-  val iteri : f:(int -> 'a -> unit) -> 'a t -> unit
-  val mapi : f:(int -> 'a -> 'b) -> 'a t -> 'b t
+  val map : 'a t -> f:('a -> 'b) -> 'b t
+  val folding_map : 'a t -> init:'b -> f:('b -> 'a -> 'b * 'c) -> 'c t
+  val fold_map : 'a t -> init:'b -> f:('b -> 'a -> 'b * 'c) -> 'b * 'c t
+  val mapi : 'a t -> f:(int -> 'a -> 'b) -> 'b t
+  val iteri : 'a t -> f:(int -> 'a -> unit) -> unit
   val foldi : 'a t -> init:'b -> f:(int -> 'b -> 'a -> 'b) -> 'b
+  val folding_mapi : 'a t -> init:'b -> f:(int -> 'b -> 'a -> 'b * 'c) -> 'c t
+  val fold_mapi : 'a t -> init:'b -> f:(int -> 'b -> 'a -> 'b * 'c) -> 'b * 'c t
   val fold_right : 'a t -> f:('a -> 'b -> 'b) -> init:'b -> 'b
   val sort : ?pos:int -> ?len:int -> 'a t -> cmp:('a -> 'a -> int) -> unit
   val stable_sort : 'a t -> cmp:('a -> 'a -> int) -> unit
@@ -324,8 +348,8 @@ module type S = sig
   val fold2_exn : 'a t -> 'b t -> init:'c -> f:('c -> 'a -> 'b -> 'c) -> 'c
   val for_all2_exn : 'a t -> 'b t -> f:('a -> 'b -> bool) -> bool
   val exists2_exn : 'a t -> 'b t -> f:('a -> 'b -> bool) -> bool
-  val filter : f:('a -> bool) -> 'a t -> 'a t
-  val filteri : f:(int -> 'a -> bool) -> 'a t -> 'a t
+  val filter : 'a t -> f:('a -> bool) -> 'a t
+  val filteri : 'a t -> f:(int -> 'a -> bool) -> 'a t
   val swap : 'a t -> int -> int -> unit
   val rev_inplace : 'a t -> unit
   val of_list_rev : 'a list -> 'a t

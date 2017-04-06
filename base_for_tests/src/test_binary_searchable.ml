@@ -9,7 +9,7 @@ module type S_gen = sig
   type 'a t
   type 'a elt
 
-  val binary_search           : ('a t, 'a elt) binary_search
+  val binary_search           : ('a t, 'a elt, 'a elt) binary_search
   val binary_search_segmented : ('a t, 'a elt) binary_search_segmented
 end
 

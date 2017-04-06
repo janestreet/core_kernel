@@ -1,4 +1,5 @@
-(** An abstract type of scale factors *)
+(** An abstract type of scale factors, not bounded between 0% and 100%, internally
+    represented as a float. *)
 
 open! Import
 open Std_internal

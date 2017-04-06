@@ -96,3 +96,22 @@ let%expect_test "Date.V1.Map" =
      (bin_io
       "\003\254*\004\t\016\026not the Battle of Hastings\254\163\007\n\005\014flux capacitor\254\220\007\003\019\na Thursday")) |}];
 ;;
+
+let%test_unit "create_exn doesn't allocate" =
+  let allocation_before = Gc.major_plus_minor_words () in
+  ignore (Date.create_exn ~y:1999 ~m:Dec ~d:31 : Date.t);
+  let allocation_after = Gc.major_plus_minor_words () in
+  [%test_eq: int] allocation_before allocation_after;
+;;
+
+let%test_unit "creation and destruction" =
+  let test y m d =
+    let t = Date.create_exn ~y ~m ~d in
+    [%test_result: int] ~expect:y (Date.year  t);
+    [%test_result: Month.t] ~expect:m (Date.month t);
+    [%test_result: int] ~expect:d (Date.day   t);
+  in
+  test 2014 Month.Sep 24;
+  test 9999 Month.Dec 31
+;;
+

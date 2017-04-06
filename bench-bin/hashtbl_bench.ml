@@ -409,21 +409,6 @@ end = struct
         ignore (add t ~key:(Example.random_key r `either) ~data:0 : [`Ok | `Duplicate]);
         remove t (Example.random_key r `either)))
 
-    let add_or_error = Table.add_or_error
-    let () = (!!) "add_or_error or remove + mem + <rand key>" (fun size ->
-      let r = Example.random size in let t = Example.t size in
-      stage (fun () ->
-        let key = Example.random_key r `either in
-        if mem t key
-        then remove t key
-        else ignore (add_or_error t ~key ~data:0 : unit Or_error.t)))
-    let () = (!!) "add_or_error + <rand key> + remove + <rand key>" (fun size ->
-      let r = Example.random size in let t = Example.t size in
-      stage (fun () ->
-        ignore (add_or_error t ~key:(Example.random_key r `either) ~data:0
-                : unit Or_error.t);
-        remove t (Example.random_key r `either)))
-
     let add_multi    = Table.add_multi
     let remove_multi = Table.remove_multi
     let () = (!!) "add_multi + <rand key> + remove_multi + <rand key>" (fun size ->

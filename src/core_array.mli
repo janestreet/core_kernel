@@ -117,10 +117,20 @@ module Permissioned : sig
   val copy : ('a, [> read]) t -> ('a, [< _ perms]) t
   val fill : ('a, [> write]) t -> pos:int -> len:int -> 'a -> unit
   val of_list : 'a list -> ('a, [< _ perms]) t
-  val map   : f:('a -> 'b)          -> ('a, [> read]) t -> ('b, [< _ perms]) t
-  val iteri : f:(int -> 'a -> unit) -> ('a, [> read]) t -> unit
-  val mapi  : f:(int -> 'a -> 'b)   -> ('a, [> read]) t -> ('b, [< _ perms]) t
-  val foldi      : ('a, [> read]) t -> init:'b -> f:(int -> 'b -> 'a -> 'b) -> 'b
+  val map  : ('a, [> read]) t -> f:(       'a -> 'b) -> ('b, [< _ perms]) t
+  val mapi : ('a, [> read]) t -> f:(int -> 'a -> 'b) -> ('b, [< _ perms]) t
+  val folding_map
+    :  ('a, [> read]) t
+    -> init:'b
+    -> f:('b -> 'a -> 'b * 'c)
+    -> ('c, [< _ perms]) t
+  val iteri : ('a, [> read]) t -> f:(int -> 'a -> unit) -> unit
+  val foldi : ('a, [> read]) t -> init:'b -> f:(int -> 'b -> 'a -> 'b) -> 'b
+  val folding_mapi
+    :  ('a, [> read]) t
+    -> init:'b
+    -> f:(int -> 'b -> 'a -> 'b * 'c)
+    -> ('c, [< _ perms]) t
   val fold_right : ('a, [> read]) t -> f:('a -> 'b -> 'b) -> init:'b -> 'b
   val sort
     :  ?pos:int
@@ -184,8 +194,8 @@ module Permissioned : sig
     -> ('b, [> read]) t
     -> f:('a -> 'b -> bool)
     -> bool
-  val filter  : f:('a -> bool)        -> ('a, [> read]) t -> ('a, [< _ perms]) t
-  val filteri : f:(int -> 'a -> bool) -> ('a, [> read]) t -> ('a, [< _ perms]) t
+  val filter  : ('a, [> read]) t -> f:(       'a -> bool) -> ('a, [< _ perms]) t
+  val filteri : ('a, [> read]) t -> f:(int -> 'a -> bool) -> ('a, [< _ perms]) t
   val swap : ('a, [> read_write]) t -> int -> int -> unit
   val rev_inplace : ('a, [> read_write]) t -> unit
   val of_list_rev     : 'a list -> ('a, [< _ perms]) t

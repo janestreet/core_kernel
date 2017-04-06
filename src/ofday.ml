@@ -1,6 +1,7 @@
 open! Import
 open Std_internal
 open Digit_string_helpers
+open! Int.Replace_polymorphic_compare
 
 (* Create an abstract type for Ofday to prevent us from confusing it with
    other floats.
@@ -120,7 +121,7 @@ module Stable = struct
     let%test "create can handle a leap second" =
       let last_second = create ~hr:21 () in
       List.for_all
-        ~f:(fun v -> v = last_second)
+        ~f:(fun v -> T.equal v last_second)
         [ create ~hr:20 ~min:59 ~sec:60 ()
         ; create ~hr:20 ~min:59 ~sec:60 ~ms:500 ()
         ; create ~hr:20 ~min:59 ~sec:60 ~ms:500 ~us:500 ()
@@ -185,7 +186,8 @@ module Stable = struct
             let span = Span.of_hr (float hour) in
             if len = 2 then span
             else if len < 5 then failwith "2 < len < 5"
-            else if str.[pos + 2] <> ':' then failwith "first colon missing"
+            else if not (Char.equal str.[pos + 2] ':')
+            then failwith "first colon missing"
             else
               let minute = parse_two_digits str (pos + 3) in
               if minute >= 60 then failwith "minute > 60";
@@ -194,7 +196,8 @@ module Stable = struct
                 failwith "24 hours and non-zero minute";
               if len = 5 then span
               else if len < 8 then failwith "5 < len < 8"
-              else if str.[pos + 5] <> ':' then failwith "second colon missing"
+              else if not (Char.equal str.[pos + 5] ':')
+              then failwith "second colon missing"
               else
                 let second = parse_two_digits str (pos + 6) in
                 (* second can be 60 in the case of a leap second. Unfortunately, what with
@@ -244,7 +247,7 @@ module Stable = struct
     let%test "of_string_iso8601_extended supports leap seconds" =
       let last_second = create ~hr:21 () in
       List.for_all
-        ~f:(fun s -> of_string_iso8601_extended s = last_second)
+        ~f:(fun s -> T.equal (of_string_iso8601_extended s) last_second)
         [ "20:59:60"
         ; "20:59:60.500"
         ; "20:59:60.000" ]
@@ -263,7 +266,7 @@ module Stable = struct
          let d1 = Float.mod_float diff hour in
          (*  d2 is in (0;hour) *)
          let d2 = Float.mod_float (d1 +. hour) hour in
-         let d = if d2 > hour /. 2. then d2 -. hour else d2 in
+         let d = if Float.( > ) d2 (hour /. 2.) then d2 -. hour else d2 in
          Span.of_sec d)
     ;;
 

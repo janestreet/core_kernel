@@ -2,6 +2,7 @@
    of Core_kernel as Time (see core_kernel.ml and std.ml). *)
 open !Import
 open Std_internal
+open! Int.Replace_polymorphic_compare
 
 include Time_intf
 
@@ -168,23 +169,29 @@ module Make (Time0 : Time0_intf.S) = struct
     (cache, (date, ofday))
   ;;
 
+  let initial_gmtime_cache = fst (date_ofday_of_epoch_internal Zone.utc epoch)
+
+  let gmtime_cache = ref initial_gmtime_cache
+
+  let reset_gmtime_cache () =
+    gmtime_cache := initial_gmtime_cache
+
   (* A thin caching layer over the actual date_ofday_of_epoch
      (date_ofday_of_epoch_internal just above) used only to gain some speed when we
      translate the same time/date over and over again *)
   let date_ofday_of_epoch =
-    let cache = ref (fst (date_ofday_of_epoch_internal Zone.utc (now ()))) in
     (fun zone unshifted ->
        (* If at time T you are +H hours from UTC, then the correct local time at T is the
           time in UTC at T, plus an offset of H hours. But since UTC is nice and simple,
           that's the same as what the time in UTC will be in H hours' time (if only it were
           always that simple!) *)
        let time = Zone.shift_epoch_time zone `UTC unshifted in
-       let {Epoch_cache.zone = z; day_start = s; day_end = e; date = date} = !cache in
+       let {Epoch_cache.zone = z; day_start = s; day_end = e; date = date} = !gmtime_cache in
        if phys_equal zone z && time >= s && time < e then (
          (date, Ofday.of_span_since_start_of_day (diff time s)))
        else begin
          let (new_cache, r) = date_ofday_of_epoch_internal zone time in
-         cache := new_cache;
+         gmtime_cache := new_cache;
          r
        end)
   ;;

@@ -28,7 +28,6 @@ let offset ~len ~byte_order byte_nr =
   | `Big_endian -> byte_nr
 ;;
 
-(* byte order added to the _8 functions to make testing easier (uniformity) *)
 exception Pack_unsigned_8_argument_out_of_range of int [@@deriving sexp]
 let pack_unsigned_8 ~buf ~pos n =
   if n > 0xFF || n < 0 then

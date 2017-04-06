@@ -1,5 +1,6 @@
 open! Import
 open Std_internal
+open! Int.Replace_polymorphic_compare
 
 module Stable = struct
   module V1 = struct
@@ -153,7 +154,9 @@ module Stable = struct
         else if parts.ms  > 0 then format_decimal parts.ms  (parts.us / 100) "ms"
         else sprintf "%ius" parts.us
       in
-      if parts.sign = Neg then "-" ^ s else s
+      match parts.sign with
+      | Neg        -> "-" ^ s
+      | Zero | Pos ->       s
 
     let (/) t f = T.of_float ((t : T.t :> float) /. f)
     let (//) (f:T.t) (t:T.t) = (f :> float) /. (t :> float)
@@ -166,6 +169,9 @@ module Stable = struct
     let to_min x       = x // T.Constant.minute
     let to_hr x        = x // T.Constant.hour
     let to_day x       = x // T.Constant.day
+
+    let to_int63_seconds_round_down_exn x =
+      Float.int63_round_down_exn (to_sec x)
 
     let ( ** ) f (t:T.t) = T.of_float (f *. (t :> float))
     (* Division by 1E3 is more accurate than multiplying by 1E-3 *)
@@ -184,10 +190,12 @@ module Stable = struct
     let of_day x             = x ** T.Constant.day
 
     let randomize (t:T.t) ~percent =
-      if (percent < 0. || percent > 1.0) then
-        invalid_argf "percent must be between 0 and 1, %f given" percent ();
+      if Percent.( < ) percent (Percent.of_mult 0.)
+      || Percent.( > ) percent (Percent.of_mult 1.0) then
+        invalid_argf !"percent must be between 0%% and 100%%, %{Percent} given"
+          percent ();
       let t = to_sec t in
-      let distance = Random.float (t *. percent) in
+      let distance = Random.float (Percent.apply percent t) in
       of_sec (if Random.bool () then t +. distance else t -. distance)
     ;;
 

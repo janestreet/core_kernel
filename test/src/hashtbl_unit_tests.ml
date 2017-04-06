@@ -819,7 +819,6 @@ module Make (Hashtbl : Hashtbl_intf.Hashtbl) = struct
 
         let add          = Hashtbl.add
         let add_exn      = Hashtbl.add_exn
-        let add_or_error = Hashtbl.add_or_error
 
         let%test_unit _ =
           let f (name, add) =
@@ -842,15 +841,9 @@ module Make (Hashtbl : Hashtbl_intf.Hashtbl) = struct
             | ()          -> `Ok
             | exception _ -> `Duplicate
           in
-          let add_or_error t ~key ~data =
-            match add_or_error t ~key ~data with
-            | Ok ()   -> `Ok
-            | Error _ -> `Duplicate
-          in
           List.iter ~f
             [ "add"         , add
             ; "add_exn"     , add_exn
-            ; "add_or_error", add_or_error
             ]
 
         let change = Hashtbl.change
@@ -1772,7 +1765,6 @@ module Make (Hashtbl : Hashtbl_intf.Hashtbl) = struct
 
       let add          = Hashtbl.add
       let add_exn      = Hashtbl.add_exn
-      let add_or_error = Hashtbl.add_or_error
 
       let%test_unit "add" =
         for_each "key" sexp_of_key sample_keys (fun key ->

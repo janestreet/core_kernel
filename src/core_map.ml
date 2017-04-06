@@ -90,6 +90,15 @@ include (Map.Using_comparator :
            module type of struct include Map.Using_comparator end
          with module Tree := Tree)
 
+let find_or_error t key =
+  let comparator = comparator t in
+  match find t key with
+  | Some data -> Ok data
+  | None ->
+    let sexp_of_key = comparator.sexp_of_t in
+    Or_error.error_s [%message "key not found" ~_:(key : key)]
+;;
+
 let of_hashtbl_exn ~comparator hashtbl =
   match of_iteri ~comparator ~iteri:(Core_hashtbl.iteri hashtbl) with
   | `Ok map -> map

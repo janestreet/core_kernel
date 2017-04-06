@@ -91,6 +91,11 @@ module type S = sig
   val to_date  : t -> zone:Zone.t -> Date.t
   val to_ofday : t -> zone:Zone.t -> Ofday.t
 
+  (** For performance testing only; [reset_gmtime_cache ()] resets an internal cache used
+      to speed up [to_date_ofday] and related functions when called repeatedly on times
+      that fall within the same day. *)
+  val reset_gmtime_cache : unit -> unit
+
   (** Unlike [Time_ns], this module purposely omits [max_value] and [min_value]:
       1. They produce unintuitive corner cases because most people's mental models of time
       do not include +/- infinity as concrete values

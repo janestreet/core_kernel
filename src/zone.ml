@@ -10,26 +10,21 @@
 
 open Import
 open Std_internal
+open! Int.Replace_polymorphic_compare
 
 include Zone_intf
 exception Invalid_file_format of string [@@deriving sexp]
 
-module Make (Time0 : Time0_intf.S) = struct
-  let likely_machine_zones = ref [
-    "America/New_York";
-    "Europe/London";
-    "Asia/Hong_Kong";
-    "America/Chicago"
-  ]
-
+module Full_data = struct
   module Stable = struct
     module V1 = struct
       module Regime = struct
         type t = {
-          utc_off : Time0.Span.t;
-          is_dst  : bool;
-          abbrv   : string;
+          utc_offset_in_seconds : Int63.Stable.V1.t;
+          is_dst                : bool;
+          abbrv                 : string;
         }
+        [@@deriving bin_io, sexp]
       end
 
       (* holds information about when leap seconds should be applied - unused
@@ -37,40 +32,34 @@ module Make (Time0 : Time0_intf.S) = struct
          documentation). *)
       module Leap_second = struct
         type t = {
-          time    : Time0.t;
-          seconds : int;
+          time_in_seconds_since_epoch : Int63.Stable.V1.t;
+          seconds                     : int;
         }
+        [@@deriving bin_io, sexp]
       end
 
       module Transition = struct
         type t = {
-          start_time : Time0.t;
-          new_regime : Regime.t
+          start_time_in_seconds_since_epoch : Int63.Stable.V1.t;
+          new_regime                        : Regime.t;
         }
+        [@@deriving bin_io, sexp]
       end
 
-      (* IF THIS REPRESENTATION EVER CHANGES (particularly [name]), ENSURE THAT EITHER
-         (1) all values serialize the same way in both representations, or
-         (2) you add a new Time_internal.Zone version to stable.ml
-
-         Note that serialization is basically exclusively via the [name] field,
-         and we do not ultimately export the [sexp_of_t] that [with sexp_of]
-         generates. *)
       type t = {
         name                      : string;
         original_filename         : string option;
-        digest                    : Digest.t option;
+        digest                    : string option;
         transitions               : Transition.t array;
         (* caches the index of the last transition we used to make lookups faster *)
         mutable last_regime_index : int;
         default_local_time_type   : Regime.t;
         leap_seconds              : Leap_second.t list;
       }
+      [@@deriving bin_io, sexp]
 
       (* this relies on zones with the same name having the same transitions *)
       let compare t1 t2 = String.compare t1.name t2.name
-
-      let sexp_of_t t = Sexp.Atom t.name
 
       let original_filename zone = zone.original_filename
       let digest zone = zone.digest
@@ -97,17 +86,9 @@ module Make (Time0 : Time0_intf.S) = struct
            to hold small numbers that are never interpreted as timestamps. *)
         let input_long_as_int ic = Int32.to_int_exn (input_long_as_int32 ic)
 
-        let input_long_as_span ic =
-          input_long_as_int32 ic
-          |> Time0.Span.of_int32_seconds
-        ;;
+        let input_long_as_int63 ic = Int63.of_int32_exn (input_long_as_int32 ic)
 
-        let input_long_as_time ic =
-          input_long_as_span ic
-          |> Time0.of_span_since_epoch
-        ;;
-
-        let input_long_long_as_time ic =
+        let input_long_long_as_int63 ic =
           let int63_of_char chr = Int63.of_int_exn (int_of_char chr) in
           let shift c bits = Int63.shift_left (int63_of_char c) bits in
           let long_long = String.create 8 in
@@ -120,7 +101,7 @@ module Make (Time0 : Time0_intf.S) = struct
           let result = Int63.bit_or result (shift long_long.[5] 16) in
           let result = Int63.bit_or result (shift long_long.[6] 8) in
           let result = Int63.bit_or result (int63_of_char long_long.[7]) in
-          Time0.of_span_since_epoch (Time0.Span.of_int63_seconds result)
+          result
         ;;
 
         let input_list ic ~len ~f =
@@ -134,14 +115,14 @@ module Make (Time0 : Time0_intf.S) = struct
         let input_array ic ~len ~f = Array.of_list (input_list ic ~len ~f)
 
         let input_regime ic =
-          let utc_off = input_long_as_span ic in
+          let utc_offset_in_seconds = input_long_as_int63 ic in
           let is_dst = bool_of_int (Option.value_exn (In_channel.input_byte ic)) in
           let abbrv_index = Option.value_exn (In_channel.input_byte ic) in
           let lt abbrv =
             { Regime.
-              utc_off;
-              is_dst  = is_dst;
-              abbrv   = abbrv;
+              utc_offset_in_seconds;
+              is_dst = is_dst;
+              abbrv  = abbrv;
             }
           in
           (lt,abbrv_index)
@@ -224,11 +205,11 @@ module Make (Time0 : Time0_intf.S) = struct
             let rec make_transitions acc l =
               match l with
               | [] -> Array.of_list (List.rev acc)
-              | (start_time,regime) :: rest ->
+              | (start_time_in_seconds_since_epoch, new_regime) :: rest ->
                 make_transitions
                   ({Transition.
-                     start_time = start_time;
-                     new_regime = regime
+                     start_time_in_seconds_since_epoch;
+                     new_regime
                    } :: acc) rest
             in
             make_transitions [] raw_transitions
@@ -253,18 +234,18 @@ module Make (Time0 : Time0_intf.S) = struct
         ;;
 
         let input_leap_second_gen ~input_leap_second ic =
-          let leap_time = input_leap_second ic in
-          let seconds   = input_long_as_int ic in
+          let time_in_seconds_since_epoch = input_leap_second ic in
+          let seconds                     = input_long_as_int ic in
           { Leap_second.
-            time    = leap_time;
-            seconds = seconds;
+            time_in_seconds_since_epoch;
+            seconds;
           }
         ;;
 
         let read_header ic =
           let buf = String.create 4 in
           In_channel.really_input_exn ic ~buf ~pos:0 ~len:4;
-          if buf <> "TZif" then
+          if not (String.equal buf "TZif") then
             raise (Invalid_file_format "magic characters TZif not present");
           let version =
             match In_channel.input_char ic with
@@ -282,10 +263,9 @@ module Make (Time0 : Time0_intf.S) = struct
 
         let input_tz_file_v1 ic =
           let input_leap_second =
-            input_leap_second_gen ~input_leap_second:input_long_as_time
+            input_leap_second_gen ~input_leap_second:input_long_as_int63
           in
-
-          input_tz_file_gen ~input_transition:input_long_as_time
+          input_tz_file_gen ~input_transition:input_long_as_int63
             ~input_leap_second ic
         ;;
 
@@ -308,11 +288,11 @@ module Make (Time0 : Time0_intf.S) = struct
         let input_tz_file_v2 ic =
           let _ = input_tz_file_v1 ic in
           (* the header is fully repeated *)
-          assert (read_header ic = `V2);
+          assert ([%equal: [`V1 | `V2]] (read_header ic) `V2);
           let input_leap_second =
-            input_leap_second_gen ~input_leap_second:input_long_long_as_time
+            input_leap_second_gen ~input_leap_second:input_long_long_as_int63
           in
-          input_tz_file_gen ~input_transition:input_long_long_as_time
+          input_tz_file_gen ~input_transition:input_long_long_as_int63
             ~input_leap_second ic
         ;;
 
@@ -341,7 +321,7 @@ module Make (Time0 : Time0_intf.S) = struct
           if offset = 0 then "UTC"
           else sprintf "UTC%s%d" (if offset < 0 then "-" else "+") (abs offset)
         in
-        let utc_off = Time0.Span.of_int63_seconds (Int63.of_int (offset * 60 * 60)) in
+        let utc_offset_in_seconds = Int63.of_int (offset * 60 * 60) in
         {
           name                    = name;
           original_filename       = None;
@@ -349,37 +329,68 @@ module Make (Time0 : Time0_intf.S) = struct
           transitions             = [||];
           last_regime_index       = 0;
           default_local_time_type = {Regime.
-                                      utc_off;
-                                      is_dst  = false;
-                                      abbrv   = name;
+                                      utc_offset_in_seconds;
+                                      is_dst = false;
+                                      abbrv  = name;
                                     };
           leap_seconds = []
         }
       ;;
     end
   end
+end
 
-  include Stable.V1
+module Common = struct
+  include Full_data.Stable.V1
+
+  let sexp_of_t t = Sexp.Atom t.name
+
+  let likely_machine_zones = ref [
+    "America/New_York";
+    "Europe/London";
+    "Asia/Hong_Kong";
+    "America/Chicago"
+  ]
 
   let input_tz_file = Zone_file.input_tz_file
 
   let utc = of_utc_offset ~hours:0
 
+  let name zone = zone.name
+end
+
+include Common
+
+module Make (Time0 : Time0_intf.S) = struct
+  module Full_data = Full_data
+
+  include Common
+
+  let time_of_seconds seconds =
+    Time0.of_span_since_epoch (Time0.Span.of_int63_seconds seconds)
+
+  let seconds_of_time time =
+    (* This can raise, but only for times that are hundreds of billions of years away from
+       epoch. *)
+    Time0.Span.to_int63_seconds_round_down_exn (Time0.to_span_since_epoch time)
+
   let clock_shift_at zone i =
     let previous_shift =
       if i = 0
-      then zone.default_local_time_type.utc_off
-      else zone.transitions.(i - 1).new_regime.utc_off
+      then zone.default_local_time_type.utc_offset_in_seconds
+      else zone.transitions.(i - 1).new_regime.utc_offset_in_seconds
     in
-    ( zone.transitions.(i).start_time
-    , (Time0.Span.(-)
-         zone.transitions.(i).new_regime.utc_off
-         previous_shift)
+    ( time_of_seconds zone.transitions.(i).start_time_in_seconds_since_epoch
+    , Time0.Span.of_int63_seconds
+        (Int63.( - )
+           zone.transitions.(i).new_regime.utc_offset_in_seconds
+           previous_shift)
     )
 
   let next_clock_shift zone ~after =
+    let after_in_seconds = seconds_of_time after in
     let segment_of (transition : Transition.t) =
-      if Time0.(>) transition.start_time after
+      if Int63.(>) transition.start_time_in_seconds_since_epoch after_in_seconds
       then `Right
       else `Left
     in
@@ -388,8 +399,9 @@ module Make (Time0 : Time0_intf.S) = struct
   ;;
 
   let prev_clock_shift zone ~before =
+    let before_in_seconds = seconds_of_time before in
     let segment_of (transition : Transition.t) =
-      if Time0.(<) transition.start_time before
+      if Int63.(<) transition.start_time_in_seconds_since_epoch before_in_seconds
       then `Left
       else `Right
     in
@@ -399,18 +411,20 @@ module Make (Time0 : Time0_intf.S) = struct
 
   let convert_transition (transition : Transition.t) transtype =
     match transtype with
-    | `UTC   -> transition.start_time
-    | `Local -> Time0.add transition.start_time transition.new_regime.utc_off
+    | `UTC   -> transition.start_time_in_seconds_since_epoch
+    | `Local ->
+      Int63.( + )
+        transition.start_time_in_seconds_since_epoch
+        transition.new_regime.utc_offset_in_seconds
   ;;
 
   (* Determine if [time] is governed by the regime in [transitions.(index)]. *)
-  let in_transition transitions ~index time transtype =
-    try
-      let s = convert_transition transitions.(index) transtype in
-      let e = convert_transition transitions.(index + 1) transtype in
-      s <= time && time < e
-    with
-    | _ -> false
+  let in_transition transitions ~index seconds transtype =
+    let s = convert_transition transitions.(index) transtype in
+    Int63.( <= ) s seconds
+    && ((index + 1 = Array.length transitions)
+        || (let e = convert_transition transitions.(index + 1) transtype in
+            Int63.( < ) seconds e))
   ;;
 
   (* [find_local_regime zone `UTC time] finds the local time regime in force
@@ -423,17 +437,21 @@ module Make (Time0 : Time0_intf.S) = struct
     let module T = Transition in
     let transitions     = zone.transitions in
     let num_transitions = Array.length transitions in
+    let seconds = seconds_of_time time in
     if num_transitions = 0 then
       zone.default_local_time_type
-    else if transitions.(0).T.start_time > time then
+    else if Int63.( > )
+              transitions.(0).start_time_in_seconds_since_epoch
+              seconds
+    then
       zone.default_local_time_type
     else begin
-      if in_transition transitions ~index:zone.last_regime_index time transtype
+      if in_transition transitions ~index:zone.last_regime_index seconds transtype
       then transitions.(zone.last_regime_index).new_regime
       else begin
         let segment_of (transition : Transition.t) =
           let start_time = convert_transition transition transtype in
-          if time >= start_time
+          if Int63.( >= ) seconds start_time
           then `Left
           else `Right
         in
@@ -450,13 +468,15 @@ module Make (Time0 : Time0_intf.S) = struct
   let shift_epoch_time zone repr_type epoch =
     let r = find_local_regime zone repr_type epoch in
     match repr_type with
-    | `Local -> Time0.sub epoch r.Regime.utc_off
-    | `UTC   -> Time0.add epoch r.Regime.utc_off
+    | `Local -> Time0.sub epoch (Time0.Span.of_int63_seconds r.utc_offset_in_seconds)
+    | `UTC   -> Time0.add epoch (Time0.Span.of_int63_seconds r.utc_offset_in_seconds)
   ;;
 
   let abbreviation zone time =
     (find_local_regime zone `UTC time).Regime.abbrv
   ;;
 
-  let name zone = zone.name
+  let reset_transition_cache zone =
+    zone.last_regime_index <- 0;
+  ;;
 end

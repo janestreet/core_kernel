@@ -1,5 +1,6 @@
 open! Import
 open Std_internal
+open! Int.Replace_polymorphic_compare
 
 type underlying = Float.t
 include

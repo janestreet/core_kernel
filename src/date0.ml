@@ -47,17 +47,6 @@ module Stable = struct
         let month t = Month.of_int_exn ((t lsr 8) land 0xff)
         let day t = t land 0xff
 
-        let%test_unit _ =
-          let test y m d =
-            let t = create0 ~year:y ~month:m ~day:d in
-            [%test_result: int] ~expect:y (year  t);
-            [%test_result: Month.t] ~expect:m (month t);
-            [%test_result: int] ~expect:d (day   t);
-          in
-          test 2014 Month.Sep 24;
-          test 9999 Month.Dec 31
-        ;;
-
         let create_exn ~y:year ~m:month ~d:day =
           (* year, month, and day need to be passed as parameters to avoid allocating
              a closure (see unit test below) *)
@@ -81,13 +70,6 @@ module Stable = struct
             if day > 31 then invalid ~year ~month ~day "31 day month violation"
           end;
           create0 ~year ~month:month ~day
-        ;;
-
-        let%test_unit "create_exn doesn't allocate" =
-          let allocation_before = Core_gc.major_plus_minor_words () in
-          ignore (create_exn ~y:1999 ~m:Dec ~d:31 : t);
-          let allocation_after = Core_gc.major_plus_minor_words () in
-          [%test_eq: int] allocation_before allocation_after;
         ;;
 
         (* We don't use Make_binable here, because that would go via an immediate
@@ -289,19 +271,6 @@ module Stable = struct
     include Without_comparable
     include Comparable.Stable.V1.Make (Without_comparable)
   end
-
-  let%test_module "Date.V1" = (module Stable_unit_test.Make (struct
-      include V1
-
-      let equal = (=)
-
-      let tests =
-        let date y m d = create_exn ~y ~m ~d in
-        [ date 1066 Month.Oct 16, "1066-10-16", "\254\042\004\009\016";
-          date 1955 Month.Nov  5, "1955-11-05", "\254\163\007\010\005";
-          date 2012 Month.Apr 19, "2012-04-19", "\254\220\007\003\019";
-        ]
-    end))
 end
 
 module Without_comparable = Stable.V1.Without_comparable

@@ -312,16 +312,13 @@ let add t ~key ~data =
   if Entry.is_null e then `Ok else `Duplicate
 ;;
 
-let add_or_error t ~key ~data =
+let add_exn t ~key ~data =
   match add t ~key ~data with
-  | `Ok -> Result.Ok ()
+  | `Ok -> ()
   | `Duplicate ->
     let sexp_of_key = sexp_of_key t in
-    Or_error.error "Pooled_hashtbl.add_exn got key already present" key [%sexp_of: key]
-;;
-
-let add_exn t ~key ~data =
-  Or_error.ok_exn (add_or_error t ~key ~data)
+    let error = Error.create "Pooled_hashtbl.add_exn got key already present" key sexp_of_key in
+    Error.raise error
 ;;
 
 let find_or_add t key ~default =
@@ -878,7 +875,6 @@ module Accessors = struct
   let replace             = replace
   let set                 = set
   let add                 = add
-  let add_or_error        = add_or_error
   let add_exn             = add_exn
   let change              = change
   let update              = update

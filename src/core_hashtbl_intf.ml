@@ -5,20 +5,19 @@ module Binable = Binable0
 module Hashtbl      = Base.Hashtbl
 module Hashtbl_intf = Base.Hashtbl_intf
 
-module type Key_common = Hashtbl_intf.Key_common
-module type Key_plain  = Hashtbl_intf.Key_plain
+module type Key_plain  = Hashtbl_intf.Key
 
 module      Hashable = Hashtbl_intf.Hashable
 module type Hashable = Hashtbl_intf.Hashable
 
 module type Key = sig
   type t [@@deriving sexp]
-  include Key_common with type t := t
+  include Key_plain with type t := t
 end
 
 module type Key_binable = sig
   type t [@@deriving bin_io, sexp]
-  include Key_common with type t := t
+  include Key with type t := t
 end
 
 module type Creators  = Hashtbl_intf.Creators

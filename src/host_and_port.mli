@@ -1,6 +1,6 @@
 open Std_internal
 
-type t
+type t [@@deriving hash]
 
 val create : host:string -> port:int -> t
 

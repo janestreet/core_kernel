@@ -231,8 +231,9 @@ val update
   -> ('k, 'v, 'cmp) t
 
 (** returns the value bound to the given key, raising [Not_found] if none such exists *)
-val find     : ('k, 'v, 'cmp) t -> 'k -> 'v option
-val find_exn : ('k, 'v, 'cmp) t -> 'k -> 'v
+val find          : ('k, 'v, 'cmp) t -> 'k -> 'v option
+val find_exn      : ('k, 'v, 'cmp) t -> 'k -> 'v
+val find_or_error : ('k, 'v, 'cmp) t -> 'k -> 'v Or_error.t
 
 (** returns a new map with any binding for the key in question removed *)
 val remove : ('k, 'v, 'cmp) t -> 'k -> ('k, 'v, 'cmp) t

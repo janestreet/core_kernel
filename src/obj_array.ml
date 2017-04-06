@@ -52,6 +52,11 @@ let unsafe_get t i =
   Obj.repr (Array.unsafe_get (Obj.magic (t : t) : not_a_float array) i : not_a_float)
 ;;
 
+let [@inline always] unsafe_set_int_assuming_currently_int t i int =
+  (* This skips [caml_modify], which is OK if both the old and new values are integers. *)
+  Array.unsafe_set (Obj.magic (t : t) : int array) i int
+;;
+
 (* For [set] and [unsafe_set], if a pointer is involved, we first do a physical-equality
    test to see if the pointer is changing.  If not, we don't need to do the [set], which
    saves a call to [caml_modify].  We think this physical-equality test is worth it
@@ -63,9 +68,7 @@ let set t i obj =
      valid. *)
   let old_obj = get t i in
   if Obj.is_int old_obj && Obj.is_int obj
-  then
-    (* It is OK to skip [caml_modify] if both the old and new values are integers. *)
-    Array.unsafe_set (Obj.magic (t : t) : int array) i (Obj.obj obj : int)
+  then unsafe_set_int_assuming_currently_int t i (Obj.obj obj : int)
   else if not (phys_equal old_obj obj)
   then
     Array.unsafe_set t i obj
@@ -74,21 +77,22 @@ let set t i obj =
 let unsafe_set t i obj =
   let old_obj = unsafe_get t i in
   if Obj.is_int old_obj && Obj.is_int obj
-  then
-    (* It is OK to skip [caml_modify] if both the old and new values are integers. *)
-    Array.unsafe_set (Obj.magic (t : t) : int array) i (Obj.obj obj : int)
+  then unsafe_set_int_assuming_currently_int t i (Obj.obj obj : int)
   else if not (phys_equal old_obj obj)
   then Array.unsafe_set t i obj
+;;
+
+let unsafe_set_omit_phys_equal_check t i obj =
+  let old_obj = unsafe_get t i in
+  if Obj.is_int old_obj && Obj.is_int obj
+  then unsafe_set_int_assuming_currently_int t i (Obj.obj obj : int)
+  else Array.unsafe_set t i obj
 ;;
 
 let singleton obj =
   let t = create ~len:1 in
   unsafe_set t 0 obj;
   t;
-;;
-
-let unsafe_set_int_assuming_currently_int t i int =
-  Array.unsafe_set (Obj.magic (t : t) : int array) i int
 ;;
 
 (* Pre-condition: t.(i) is an integer. *)
@@ -99,6 +103,13 @@ let unsafe_set_assuming_currently_int t i obj =
     (* [t.(i)] is an integer and [obj] is not, so we do not need to check if they are
        equal. *)
     Array.unsafe_set t i obj
+;;
+
+let unsafe_set_int t i int =
+  let old_obj = unsafe_get t i in
+  if Obj.is_int old_obj
+  then unsafe_set_int_assuming_currently_int t i int
+  else Array.unsafe_set t i (Obj.repr int)
 ;;
 
 let unsafe_clear_if_pointer t i =

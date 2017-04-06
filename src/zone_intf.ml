@@ -2,9 +2,7 @@
 
 open! Import
 
-module type S = sig
-  module Time : Time0_intf.S
-
+module type S_common = sig
   (** {1 User-friendly interface} *)
 
   (** The type of a time-zone.
@@ -33,11 +31,6 @@ module type S = sig
   (** [utc] the UTC time zone.  Included for convenience *)
   val utc : t
 
-  (** [abbreviation t time] returns the abbreviation name (such as EDT, EST, JST) of given
-      zone [t] at [time].  This string conversion is one-way only, and cannot reliably be
-      turned back into a [t]. *)
-  val abbreviation : t -> Time.t -> string
-
   val name : t -> string
 
   (** [original_filename t] return the filename [t] was loaded from (if any) *)
@@ -45,6 +38,23 @@ module type S = sig
 
   (** [digest t] return the MD5 digest of the file the t was created from (if any) *)
   val digest : t -> string option
+
+  module Full_data : sig
+    module Stable : sig
+      module V1 : Stable_module_types.S0_without_comparator with type t = t
+    end
+  end
+end
+
+module type S = sig
+  module Time : Time0_intf.S
+
+  include S_common
+
+  (** [abbreviation t time] returns the abbreviation name (such as EDT, EST, JST) of given
+      zone [t] at [time].  This string conversion is one-way only, and cannot reliably be
+      turned back into a [t]. *)
+  val abbreviation : t -> Time.t -> string
 
   (** [shift_epoch_time zone [`Local | `UTC] time] Takes an epoch (aka "unix") time given
       either in local or in UTC (as indicated in the arguments) and shifts it according to
@@ -66,10 +76,16 @@ module type S = sig
     :  t
     -> before:Time.t
     -> (Time.t * Time.Span.t) option
+
+  (** For performance testing only; [reset_transition_cache t] resets an internal cache in
+      [t] used to speed up repeated lookups of the same clock shift transition. *)
+  val reset_transition_cache : t -> unit
 end
 
 module type Zone = sig
   module type S = S
 
-  module Make (Time : Time0_intf.S) : S with module Time := Time
+  include S_common
+
+  module Make (Time : Time0_intf.S) : S with type t = t and module Time := Time
 end
