@@ -1,3 +1,20 @@
+external format_float : string -> float -> string = "caml_format_float"
+
+(* Stolen from [pervasives.ml].  Adds a "." at the end if needed.  It is in
+   [pervasives.mli], but it also says not to use it directly, so we copy and paste the
+   code. It makes the assumption on the string passed in argument that it was returned by
+   [format_float] *)
+let valid_float_lexem s =
+  let l = String.length s in
+  let rec loop i =
+    if i >= l then s ^ "." else
+      match s.[i] with
+      | '0' .. '9' | '-' -> loop (i + 1)
+      | _ -> s
+  in
+  loop 0
+;;
+
 open! Import
 
 module Gc    = Core_gc
@@ -79,6 +96,12 @@ let robust_sign t : Sign.t =
    - Robustness aside, what we get from Comparable.With_zero would map nan to Neg.
 *)
 let sign = robust_sign
+
+(* Standard 12 significant digits, exponential notation used as necessary, guaranteed to
+   be a valid OCaml float lexem, not to look like an int. *)
+let to_string_12 x = valid_float_lexem (format_float "%.12g" x);;
+
+let to_string_round_trippable = Base.Float.to_string
 
 module For_quickcheck = struct
 
@@ -300,3 +323,5 @@ let%test_unit "Float.validate_positive doesn't allocate on success" =
   let allocated = Int.(-) (Gc.minor_words ()) initial_words in
   [%test_result: int] allocated ~expect:0
 ;;
+
+let to_string = to_string_12

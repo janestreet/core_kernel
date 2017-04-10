@@ -27,6 +27,10 @@ let to_string ~f t =
     (sexp_of_t (fun x -> Sexp.Atom x) (List.map t ~f))
 ;;
 
+include Comparator.Derived(struct
+    type nonrec 'a t = 'a t [@@deriving sexp_of, compare]
+  end)
+
 module For_quickcheck = struct
   module Generator = Quickcheck.Generator
   module Observer  = Quickcheck.Observer

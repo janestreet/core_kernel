@@ -18,6 +18,7 @@ include module type of struct include Base.List end
   with type 'a t := 'a t
   with module Assoc := Assoc
 
+include Comparator.Derived with type 'a t := 'a t
 include Quickcheckable.S1 with type 'a t := 'a t
 
 val to_string : f:('a -> string) -> 'a t -> string

@@ -6,6 +6,8 @@ open! Import
 module T2 : sig
   type ('a, 'b) t = 'a * 'b [@@deriving sexp, typerep]
 
+  include Comparator.Derived2 with type ('a, 'b) t := ('a, 'b) t
+
   val create : 'a -> 'b -> ('a, 'b) t
   val curry :  (('a, 'b) t -> 'c) -> 'a -> 'b -> 'c
   val uncurry : ('a -> 'b -> 'c) -> ('a, 'b) t -> 'c

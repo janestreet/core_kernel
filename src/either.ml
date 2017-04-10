@@ -18,6 +18,10 @@ include (Base.Either
          : module type of struct include Base.Either end
          with type ('f, 's) t := ('f, 's) t)
 
+include Comparator.Derived2(struct
+    type nonrec ('a, 'b) t = ('a, 'b) t [@@deriving sexp_of, compare]
+  end)
+
 module For_quickcheck = struct
 
   module Generator = Quickcheck.Generator

@@ -32,6 +32,11 @@ module T2 = struct
   let equal ~eq1 ~eq2 (x, y) (x', y') = eq1 x x' && eq2 y y'
 
   let swap (a, b) = (b, a)
+
+  include Comparator.Derived2(struct
+      type nonrec ('a, 'b) t = ('a, 'b) t [@@deriving sexp_of]
+      let compare cmp1 cmp2 = compare ~cmp1 ~cmp2
+    end)
 end
 
 module T3 = struct

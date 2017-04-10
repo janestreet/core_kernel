@@ -189,14 +189,14 @@ let update_write (type callback) (t : (callback, _) t) =
       raise exn
   in
   let callback_raised i exn =
-    let backtrace = Backtrace.Exn.most_recent () |> String.split_lines in
+    let backtrace = Backtrace.Exn.most_recent () in
     (* [i] was incremented before the callback was called, so we have to subtract one
        here.  We do this here, rather than at the call site, because there are multiple
        call sites due to the optimazations needed to keep this zero-alloc. *)
     let subscriber = subscribers.( i - 1 ) in
     let error =
       [%message "Bus subscriber raised"
-                  (exn : exn) (backtrace : string list) (subscriber : _ Subscriber.t)]
+                  (exn : exn) (backtrace : Backtrace.t) (subscriber : _ Subscriber.t)]
       |> [%of_sexp: Error.t]
     in
     match subscriber.on_callback_raise with
@@ -209,7 +209,7 @@ let update_write (type callback) (t : (callback, _) t) =
         call_on_callback_raise
           (let original_error = error in
            [%message "Bus subscriber's [on_callback_raise] raised"
-                       (exn : exn) (backtrace : string) (original_error : Error.t)]
+                       (exn : exn) (backtrace : Backtrace.t) (original_error : Error.t)]
            |> [%of_sexp: Error.t])
   in
   let len = Array.length callbacks in

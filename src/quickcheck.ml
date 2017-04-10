@@ -1083,7 +1083,7 @@ module Configure (Config : Quickcheck_intf.Quickcheck_config) = struct
         ?sexp_of
         ~value
         ~exn
-        ~backtrace
+        ~(backtrace : Backtrace.t)
         ~shrinker
         ?(shrink_attempts = default_shrink_attempts)
         ~f =
@@ -1118,10 +1118,10 @@ module Configure (Config : Quickcheck_intf.Quickcheck_config) = struct
           "shrunk random input"
             ~shrunk_value:      (shr_value     : value)
             ~shrunk_error:      (shr_exn       : exn)
-            ~shrunk_backtrace:  (shr_bt        : string)
+            ~shrunk_backtrace:  (shr_bt        : Backtrace.t)
             ~original_value:    (value         : value)
             ~original_error:    (exn           : exn)
-            ~original_backtrace:(backtrace     : string)
+            ~original_backtrace:(backtrace     : Backtrace.t)
         ]
     | None ->
       match sexp_of with
@@ -1132,7 +1132,7 @@ module Configure (Config : Quickcheck_intf.Quickcheck_config) = struct
             "random input"
               ~value:    (value     : value)
               ~error:    (exn       : exn)
-              ~backtrace:(backtrace : string)]
+              ~backtrace:(backtrace : Backtrace.t)]
 
   let test
         ?seed
@@ -1165,7 +1165,7 @@ module Configure (Config : Quickcheck_intf.Quickcheck_config) = struct
                    "random input"
                      ~value:    (value     : value)
                      ~error:    (exn       : exn)
-                     ~backtrace:(backtrace : string)])
+                     ~backtrace:(backtrace : Backtrace.t)])
         | None -> f
     in
     List.iter examples ~f;
