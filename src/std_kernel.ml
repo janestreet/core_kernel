@@ -3,7 +3,7 @@
 
 open! Import
 
-include Std_internal
+include Std_internal (** @inline *)
 
 module Applicative                          = Applicative
 module Arg                                  = Core_arg

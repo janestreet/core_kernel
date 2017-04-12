@@ -2,7 +2,7 @@ open! Import
 
 module Std = struct
   include Std_kernel
-  include Std_common
+  include Std_common (** @inline *)
 
   module Container_intf                  = Container_intf
   module Core_hashtbl_intf               = Core_hashtbl_intf
@@ -34,4 +34,4 @@ module Std = struct
   end
 end
 
-include Std
+include Std (** @inline *)
