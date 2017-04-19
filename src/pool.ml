@@ -36,7 +36,7 @@ module Pool = struct
 
   module Slots = Tuple_type.Slots
 
-  let max_slot = 12
+  let max_slot = 14
 
   (* The pool is represented as a single [Obj_array.t], where index zero has the metadata
      about the pool and the remaining indices are the tuples layed out one after the
@@ -83,8 +83,10 @@ module Pool = struct
     let t9 = 10
     let t10 = 11
     let t11 = 12
+    let t12 = 13
+    let t13 = 14
 
-    let%test _ = t11 = max_slot
+    let%test _ = t13 = max_slot
   end
 
 (* We only have [Int.num_bits] bits available for pool pointers.  The bits of a pool
@@ -823,6 +825,45 @@ let new12 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 =
   pointer;
 ;;
 
+let new13 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 =
+  let pointer = malloc t in
+  let offset = Pointer.header_index pointer in
+  Obj_array.unsafe_set t (offset + 1 ) (Obj.repr a0 );
+  Obj_array.unsafe_set t (offset + 2 ) (Obj.repr a1 );
+  Obj_array.unsafe_set t (offset + 3 ) (Obj.repr a2 );
+  Obj_array.unsafe_set t (offset + 4 ) (Obj.repr a3 );
+  Obj_array.unsafe_set t (offset + 5 ) (Obj.repr a4 );
+  Obj_array.unsafe_set t (offset + 6 ) (Obj.repr a5 );
+  Obj_array.unsafe_set t (offset + 7 ) (Obj.repr a6 );
+  Obj_array.unsafe_set t (offset + 8 ) (Obj.repr a7 );
+  Obj_array.unsafe_set t (offset + 9 ) (Obj.repr a8 );
+  Obj_array.unsafe_set t (offset + 10) (Obj.repr a9 );
+  Obj_array.unsafe_set t (offset + 11) (Obj.repr a10);
+  Obj_array.unsafe_set t (offset + 12) (Obj.repr a11);
+  Obj_array.unsafe_set t (offset + 13) (Obj.repr a12);
+  pointer;
+;;
+
+let new14 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 =
+  let pointer = malloc t in
+  let offset = Pointer.header_index pointer in
+  Obj_array.unsafe_set t (offset + 1 ) (Obj.repr a0 );
+  Obj_array.unsafe_set t (offset + 2 ) (Obj.repr a1 );
+  Obj_array.unsafe_set t (offset + 3 ) (Obj.repr a2 );
+  Obj_array.unsafe_set t (offset + 4 ) (Obj.repr a3 );
+  Obj_array.unsafe_set t (offset + 5 ) (Obj.repr a4 );
+  Obj_array.unsafe_set t (offset + 6 ) (Obj.repr a5 );
+  Obj_array.unsafe_set t (offset + 7 ) (Obj.repr a6 );
+  Obj_array.unsafe_set t (offset + 8 ) (Obj.repr a7 );
+  Obj_array.unsafe_set t (offset + 9 ) (Obj.repr a8 );
+  Obj_array.unsafe_set t (offset + 10) (Obj.repr a9 );
+  Obj_array.unsafe_set t (offset + 11) (Obj.repr a10);
+  Obj_array.unsafe_set t (offset + 12) (Obj.repr a11);
+  Obj_array.unsafe_set t (offset + 13) (Obj.repr a12);
+  Obj_array.unsafe_set t (offset + 14) (Obj.repr a13);
+  pointer;
+;;
+
 let get        t p slot = Obj.obj (Obj_array.get        t (Pointer.slot_index p slot))
 let unsafe_get t p slot = Obj.obj (Obj_array.unsafe_get t (Pointer.slot_index p slot))
 
@@ -993,6 +1034,10 @@ module Debug (Pool : S) = struct
     = debug_new t (fun () -> new11 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10)
   let new12 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11
     = debug_new t (fun () -> new12 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11)
+  let new13 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12
+    = debug_new t (fun () -> new13 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12)
+  let new14 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13
+    = debug_new t (fun () -> new14 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13)
 
   let get_tuple t pointer =
     debug "get_tuple" [t] pointer [%sexp_of: _ Pointer.t] [%sexp_of: _]
@@ -1116,4 +1161,8 @@ module Error_check (Pool : S) = struct
     = Pointer.create (Pool.new11 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10)
   let new12 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11
     = Pointer.create (Pool.new12 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11)
+  let new13 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12
+    = Pointer.create (Pool.new13 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12)
+  let new14 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13
+    = Pointer.create (Pool.new14 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13)
 end

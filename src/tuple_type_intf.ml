@@ -191,6 +191,45 @@ module type Slots = sig
     ) t
   [@@deriving sexp_of]
 
+  type ('a0, 'a1, 'a2, 'a3, 'a4, 'a5, 'a6, 'a7, 'a8, 'a9, 'a10, 'a11, 'a12) t13 =
+    ('a0 * 'a1 * 'a2 * 'a3 * 'a4 * 'a5 * 'a6 * 'a7 * 'a8 * 'a9 * 'a10 * 'a11 * 'a12,
+     [ `S0 of 'a0
+     | `S1 of 'a1
+     | `S2 of 'a2
+     | `S3 of 'a3
+     | `S4 of 'a4
+     | `S5 of 'a5
+     | `S6 of 'a6
+     | `S7 of 'a7
+     | `S8 of 'a8
+     | `S9 of 'a9
+     | `S10 of 'a10
+     | `S11 of 'a11
+     | `S12 of 'a12
+     ]
+    ) t
+  [@@deriving sexp_of]
+
+  type ('a0, 'a1, 'a2, 'a3, 'a4, 'a5, 'a6, 'a7, 'a8, 'a9, 'a10, 'a11, 'a12, 'a13) t14 =
+    ('a0 * 'a1 * 'a2 * 'a3 * 'a4 * 'a5 * 'a6 * 'a7 * 'a8 * 'a9 * 'a10 * 'a11 * 'a12 * 'a13,
+     [ `S0 of 'a0
+     | `S1 of 'a1
+     | `S2 of 'a2
+     | `S3 of 'a3
+     | `S4 of 'a4
+     | `S5 of 'a5
+     | `S6 of 'a6
+     | `S7 of 'a7
+     | `S8 of 'a8
+     | `S9 of 'a9
+     | `S10 of 'a10
+     | `S11 of 'a11
+     | `S12 of 'a12
+     | `S13 of 'a13
+     ]
+    ) t
+  [@@deriving sexp_of]
+
   val t1 : _ t1
   val t2 : (_, _) t2
   val t3 : (_, _, _) t3
@@ -203,6 +242,8 @@ module type Slots = sig
   val t10 : (_, _, _, _, _, _, _, _, _, _) t10
   val t11 : (_, _, _, _, _, _, _, _, _, _, _) t11
   val t12 : (_, _, _, _, _, _, _, _, _, _, _, _) t12
+  val t13 : (_, _, _, _, _, _, _, _, _, _, _, _, _) t13
+  val t14 : (_, _, _, _, _, _, _, _, _, _, _, _, _, _) t14
 end
 
 module type Slot = sig
@@ -225,4 +266,6 @@ module type Slot = sig
   val t9  : ([> `S9  of 'a ], 'a) t
   val t10 : ([> `S10 of 'a ], 'a) t
   val t11 : ([> `S11 of 'a ], 'a) t
+  val t12 : ([> `S12 of 'a ], 'a) t
+  val t13 : ([> `S13 of 'a ], 'a) t
 end

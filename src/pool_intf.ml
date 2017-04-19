@@ -185,6 +185,20 @@ module type S = sig
     -> 'a0 -> 'a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'a6 -> 'a7 -> 'a8 -> 'a9 -> 'a10 -> 'a11
     -> 'slots Pointer.t
 
+  val new13
+    :  (('a0, 'a1, 'a2, 'a3, 'a4, 'a5, 'a6, 'a7, 'a8, 'a9, 'a10, 'a11, 'a12) Slots.t13
+        as 'slots) t
+    -> 'a0 -> 'a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'a6 -> 'a7 -> 'a8 -> 'a9 -> 'a10 -> 'a11
+    -> 'a12
+    -> 'slots Pointer.t
+
+  val new14
+    :  (('a0, 'a1, 'a2, 'a3, 'a4, 'a5, 'a6, 'a7, 'a8, 'a9, 'a10, 'a11, 'a12, 'a13) Slots.t14
+        as 'slots) t
+    -> 'a0 -> 'a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'a6 -> 'a7 -> 'a8 -> 'a9 -> 'a10 -> 'a11
+    -> 'a12 -> 'a13
+    -> 'slots Pointer.t
+
   (** [get_tuple t pointer] allocates an OCaml tuple isomorphic to the pool [t]'s tuple
       pointed to by [pointer]. The tuple gets copied, but its slots do not. *)
   val get_tuple : (('tuple, _) Slots.t as 'slots) t -> 'slots Pointer.t -> 'tuple
