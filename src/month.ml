@@ -17,7 +17,7 @@ module Stable = struct
       | Dec
     [@@deriving sexp, compare, hash, variants]
 
-    let failwithf = Core_printf.failwithf
+    let failwithf = Printf.failwithf
 
     let of_int_exn i : t =
       match i with
@@ -56,7 +56,7 @@ module Stable = struct
       | Nov -> 11
       | Dec -> 12
 
-    include Binable.Stable.Of_binable.V1 (Core_int) (struct
+    include Binable.Stable.Of_binable.V1 (Int) (struct
         type nonrec t = t
         let to_binable t = to_int t - 1
         let of_binable i = of_int_exn (i + 1)
@@ -65,7 +65,7 @@ module Stable = struct
 
   let%test_module "Month.V1" = (module Stable_unit_test.Make(struct
       include V1
-      let equal t1 t2 = Core_int.(=) 0 (compare t1 t2)
+      let equal t1 t2 = Int.(=) 0 (compare t1 t2)
       let tests =
         let module V = Variant in
         let c rank sexp bin_io tests variant =
@@ -87,13 +87,6 @@ module Stable = struct
           ~dec:(c 11 "Dec" "\011")
     end))
 end
-
-module Hashtbl = Core_hashtbl
-module Array   = Core_array
-module Int     = Core_int
-module List    = Core_list
-module Sexp    = Core_sexp
-module String  = Core_string
 
 let num_months = 12
 

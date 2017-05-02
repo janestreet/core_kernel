@@ -4,7 +4,7 @@ module Array = Base.Array
 module Int   = Base.Int
 module List  = Base.List
 
-module Pre_float : Polymorphic_compare_intf.S with type t = float = struct
+module Pre_float : Comparisons.S with type t = float = struct
   type t = float
 
   open Pervasives
@@ -1016,6 +1016,15 @@ module For_int = struct
   include Observer.For_int
 end
 
+module Let_syntax = struct
+  module Let_syntax = struct
+    include Generator
+    module Open_on_rhs = Generator
+  end
+  include Generator.Monad_infix
+  let return = Generator.return
+end
+
 module Configure (Config : Quickcheck_intf.Quickcheck_config) = struct
 
   include Config
@@ -1197,7 +1206,7 @@ module Configure (Config : Quickcheck_intf.Quickcheck_config) = struct
           (trials       : int)
           (expect_count : int)
           (actual_count : int)
-          (values       : Sexp.t sexp_option)]
+          (values       : Sexplib.Sexp.t sexp_option)]
     in
     with_return (fun r ->
       let set = ref S.empty in

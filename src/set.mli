@@ -9,7 +9,7 @@
 *)
 
 open! Import
-open Core_set_intf
+open Set_intf
 
 (** The type of a set.  The first type parameter identifies the type of the element, and
     the second identifies the comparator, which determines the comparison function that is
@@ -154,9 +154,9 @@ val of_list  : comparator:('a, 'cmp) Comparator.t -> 'a list  -> ('a, 'cmp) t
 val of_array : comparator:('a, 'cmp) Comparator.t -> 'a array -> ('a, 'cmp) t
 
 val of_hash_set
-  : comparator:('a, 'cmp) Comparator.t ->  'a     Hash_set.t     -> ('a, 'cmp) t
+  : comparator:('a, 'cmp) Comparator.t ->  'a     Hash_set.t -> ('a, 'cmp) t
 val of_hashtbl_keys
-  : comparator:('a, 'cmp) Comparator.t -> ('a, _) Core_hashtbl.t -> ('a, 'cmp) t
+  : comparator:('a, 'cmp) Comparator.t -> ('a, _) Hashtbl.t  -> ('a, 'cmp) t
 
 (** [to_list] and [to_array] produce sequences sorted in ascending order according to the
     comparator. *)

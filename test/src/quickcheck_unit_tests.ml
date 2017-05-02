@@ -1,4 +1,29 @@
 open! Core_kernel
+open  Expect_test_helpers_kernel
+
+let%expect_test "Quickcheck.Let_syntax" [@tags "64-bits-only"] =
+  let open Quickcheck.Let_syntax in
+  let gen =
+    [%map_open
+      let triple = tuple3 Bool.gen Char.gen Float.gen
+      and choice = variant2 String.gen Int.gen
+      in
+      [%sexp (triple : bool * char * float), (choice : [`A of string | `B of int])]
+    ]
+  in
+  Quickcheck.iter gen ~trials:10 ~f:print_s;
+  [%expect {|
+    ((false 5 -2.2257080078125) (A L))
+    ((false 5 0.0028023128684253606) (B -14))
+    ((true 5 2.7105054312137611E-20) (B 24_202_329_494_286))
+    ((false h 2.8105414544196363E-149) (B 797_606_340))
+    ((false N -2.50491282441512E-320) (B 17_753_770_693_168))
+    ((true k -1.44810640796069E-320) (A "ln$\2133X"))
+    ((false 9 1.62109375) (A "O\235QL7Hq"))
+    ((false 1 -8.9875856046058369E-07) (A "\239Jk7jozA"))
+    ((true M 7.3640447691138419E+149) (B 49_456_430_847_851_229))
+    ((false "\246" 2439768798396416) (A 9IZRz6WAbj)) |}];
+;;
 
 module Test (S : sig val default_seed : Quickcheck.seed end) : sig end = struct
 

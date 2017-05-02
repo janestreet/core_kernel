@@ -30,9 +30,7 @@ let () =
     let ocaml_vars =
       List.map
         (C.C_define.import c ~includes:["caml/config.h"]
-           [ "ARCH_BIG_ENDIAN", Switch
-           ; "ARCH_SIXTYFOUR" , Switch
-           ])
+           [ "ARCH_SIXTYFOUR" , Switch ])
         ~f:(fun (name, v) -> ("JSC_" ^ name, v))
     in
 

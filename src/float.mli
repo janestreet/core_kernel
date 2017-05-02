@@ -37,22 +37,20 @@ include module type of struct include Base.Float end
 
 (** [to_string_12 x] builds a string representing [x] using up to 12 significant digits.
     It loses precision.  You can use ["%{Float#12}"] in formats, but consider ["%.12g"],
-    ["%{Float#hum}"], or ["%{Float#round_trippable}"] as alternatives.  *)
+    ["%{Float#hum}"], or ["%{Float}"] as alternatives.  *)
 val to_string_12 : t -> string
 
-val to_string : t -> string
-[@@deprecated "\
-[since 2017-03]: Use [to_string_round_trippable], [to_string_hum], or [sprintf] with the \
-desired float format."]
-
-(** [to_string_round_trippable x] builds a string [s] representing the float [x] that
-    guarantees the round trip, that is such that [Float.equal x (Float.of_string s)].
+(** [to_string x] builds a string [s] representing the float [x] that guarantees the round
+    trip, that is such that [Float.equal x (Float.of_string s)].
 
     It usually yields as few significant digits as possible.  That is, it won't print
     [3.14] as [3.1400000000000001243].  The only exception is that occasionally it will
     output 17 significant digits when the number can be represented with just 16 (but
     not 15 or less) of them. *)
+val to_string : t -> string
+
 val to_string_round_trippable : t -> string
+[@@deprecated "[since 2017-04] Use [Float.to_string]"]
 
 include Quickcheckable.S with type t := t
 

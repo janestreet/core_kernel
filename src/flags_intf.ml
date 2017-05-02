@@ -6,8 +6,6 @@
 
 open! Import
 
-module Int63 = Core_int63
-
 (** [module type S] is the interface for a set of flags.  Values of [type t] are set of
     flags, and the various functions operate on sets of flags.  There is a finite universe
     of flags (in particular 63 flags, one for each bit).

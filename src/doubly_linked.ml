@@ -2,9 +2,6 @@ open! Import
 
 open! Polymorphic_compare
 
-module Array = Core_array
-module List  = Core_list
-
 (* INVARIANT: This exception is raised if a list is mutated during a pending iteration.
 
    This invariant is guaranteed by the Header and Elt modules in conjunction.  All

@@ -215,7 +215,7 @@ module Permissioned : sig
     -> ('a * 'a) option
   val reduce     : ('a, [> read]) t -> f:('a -> 'a -> 'a) -> 'a option
   val reduce_exn : ('a, [> read]) t -> f:('a -> 'a -> 'a) -> 'a
-  val permute : ?random_state:Core_random.State.t -> ('a, [> read_write]) t -> unit
+  val permute : ?random_state:Random.State.t -> ('a, [> read_write]) t -> unit
   val zip     : ('a, [> read]) t -> ('b, [> read]) t -> ('a * 'b, [< _ perms]) t option
   val zip_exn : ('a, [> read]) t -> ('b, [> read]) t -> ('a * 'b, [< _ perms]) t
   val unzip : ('a * 'b, [> read]) t -> ('a, [< _ perms]) t * ('b, [< _ perms]) t

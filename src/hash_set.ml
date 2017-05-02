@@ -1,6 +1,5 @@
 open! Import
 open Hash_set_intf
-module Hashtbl = Core_hashtbl
 
 module Creators = Base.Hash_set.Creators
 module Poly = Base.Hash_set.Poly

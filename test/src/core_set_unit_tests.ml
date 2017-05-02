@@ -1,8 +1,6 @@
 module Caml_set = Set
 open! Core_kernel
 
-module Set_intf = Core_kernel.Core_set_intf
-
 module Merge_to_sequence_element = Set_intf.Merge_to_sequence_element
 module With_comparator           = Set_intf.With_comparator
 module Without_comparator        = Set_intf.Without_comparator
@@ -118,7 +116,7 @@ module Unit_tests
     include T
     include Hashable.Make (T)
 
-    let samples = List.dedup ~compare (List.init 10 ~f:(fun i -> of_int (i + 1)))
+    let samples = List.dedup_and_sort ~compare (List.init 10 ~f:(fun i -> of_int (i + 1)))
     let absent = of_int 0
     let present = of_int 1
     let () = assert(List.mem ~equal samples present)

@@ -1,20 +1,20 @@
 module Stable = struct
   module V1 = struct
     module Without_containers = struct
-      type nonrec t = Core_int.Stable.V1.t [@@deriving compare]
+      type nonrec t = Int.Stable.V1.t [@@deriving compare]
 
-      exception Pid_must_be_positive of Core_int.Stable.V1.t [@@deriving sexp]
+      exception Pid_must_be_positive of Int.Stable.V1.t [@@deriving sexp]
 
       let ensure i = if i <= 0 then raise (Pid_must_be_positive i) else i
 
-      include Sexpable.Stable.Of_sexpable.V1 (Core_int.Stable.V1) (struct
-          type t = Core_int.Stable.V1.t
+      include Sexpable.Stable.Of_sexpable.V1 (Int.Stable.V1) (struct
+          type t = Int.Stable.V1.t
           let to_sexpable = Fn.id
           let of_sexpable = ensure
         end)
 
-      include Binable.Stable.Of_binable.V1 (Core_int.Stable.V1) (struct
-          type t = Core_int.Stable.V1.t
+      include Binable.Stable.Of_binable.V1 (Int.Stable.V1) (struct
+          type t = Int.Stable.V1.t
           let to_binable = Fn.id
           let of_binable = ensure
         end)
@@ -38,8 +38,8 @@ include (struct type t = int [@@deriving hash] end
 let of_int i = ensure i
 let to_int   = Fn.id
 
-let of_string string = ensure (Core_int.of_string string)
-let to_string = Core_int.to_string
+let of_string string = ensure (Int.of_string string)
+let to_string = Int.to_string
 
 let init = of_int 1
 

@@ -4,8 +4,6 @@
 
 open! Import
 
-exception Already_set
-
 type 'a t [@@deriving bin_io, sexp]
 
 include Invariant.S1 with type 'a t := 'a t (** Passes when unset. *)

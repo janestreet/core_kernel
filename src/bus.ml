@@ -356,8 +356,6 @@ let unsubscribe t (subscription : _ Subscriber.t) =
 
 let%test_module _ =
   (module struct
-    module Gc = Core_gc
-
     let assert_no_allocation bus callback write =
       let bus_r = read_only bus in
       ignore (subscribe_exn bus_r [%here] ~f:callback);

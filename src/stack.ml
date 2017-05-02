@@ -109,7 +109,7 @@ let t_of_sexp a_of_sexp sexp = of_list ([%of_sexp: a list] sexp)
 include
   Bin_prot.Utils.Make_binable1 (struct
     type nonrec 'a t = 'a t
-    module Binable = Core_list
+    module Binable = List
     let to_binable = to_list
     let of_binable = of_list
   end)

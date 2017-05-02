@@ -1,20 +1,15 @@
 open! Import
-open Core_hashtbl_intf
+open Hashtbl_intf
 open With_return
 
 module Binable = Binable0
 
-module Int = Core_int
-
 let failwiths = Error.failwiths
 
-module Hashable = Core_hashtbl_intf.Hashable
+module Hashable = Hashtbl_intf.Hashable
 
 let hash_param = Hashable.hash_param
 let hash       = Hashable.hash
-
-module List = Core_list
-module Array = Core_array
 
 let phys_equal = (==)
 
@@ -655,7 +650,7 @@ let create_mapped ?growth_allowed ?size ~hashable ~get_key ~get_data rows =
       replace res ~key ~data);
   match !dupes with
   | [] -> `Ok res
-  | keys -> `Duplicate_keys (List.dedup ~compare:hashable.Hashable.compare keys)
+  | keys -> `Duplicate_keys (List.dedup_and_sort ~compare:hashable.Hashable.compare keys)
 ;;
 
 let create_mapped_multi ?growth_allowed ?size ~hashable ~get_key ~get_data rows =

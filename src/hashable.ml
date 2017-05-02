@@ -1,7 +1,6 @@
 open! Import
 
 module Binable = Binable0
-module Hashtbl = Core_hashtbl
 
 module type Common = sig
   type t

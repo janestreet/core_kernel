@@ -1,6 +1,6 @@
 open! Import
 
-module String = Bytes
+module String = Caml.Bytes
 
 include Make_substring.F (struct
     type t = string

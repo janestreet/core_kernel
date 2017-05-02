@@ -1,9 +1,7 @@
 open! Import
-open Core_map_intf
+open Map_intf
 
 module Symmetric_diff_element = Symmetric_diff_element
-
-module List = Core_list
 
 module For_quickcheck = struct
 
@@ -17,7 +15,7 @@ module For_quickcheck = struct
   let gen_alist k_gen v_gen ~comparator =
     List.gen k_gen
     >>= fun ks ->
-    let ks = List.dedup ks ~compare:comparator.Comparator.compare in
+    let ks = List.dedup_and_sort ks ~compare:comparator.Comparator.compare in
     List.gen' v_gen ~length:(`Exactly (List.length ks))
     >>| fun vs ->
     List.zip_exn ks vs
@@ -100,7 +98,7 @@ let find_or_error t key =
 ;;
 
 let of_hashtbl_exn ~comparator hashtbl =
-  match of_iteri ~comparator ~iteri:(Core_hashtbl.iteri hashtbl) with
+  match of_iteri ~comparator ~iteri:(Hashtbl.iteri hashtbl) with
   | `Ok map -> map
   | `Duplicate_key key ->
     Error.failwiths "Map.of_hashtbl_exn: duplicate key" key comparator.sexp_of_t
@@ -116,7 +114,7 @@ module Creators (Key : Comparator.S1) : sig
     ('a, 'b, Key.comparator_witness) Tree.t
   type ('a, 'b, 'c) options = ('a, 'b, 'c) Without_comparator.t
 
-  val t_of_sexp : (Sexp.t -> 'a Key.t) -> (Sexp.t -> 'b) -> Sexp.t -> ('a, 'b, _) t_
+  val t_of_sexp : (Sexplib.Sexp.t -> 'a Key.t) -> (Sexplib.Sexp.t -> 'b) -> Sexplib.Sexp.t -> ('a, 'b, _) t_
 
   include Creators_generic
     with type ('a, 'b, 'c) t    := ('a, 'b, 'c) t_

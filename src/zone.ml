@@ -288,7 +288,7 @@ module Full_data = struct
         let input_tz_file_v2 ic =
           let _ = input_tz_file_v1 ic in
           (* the header is fully repeated *)
-          assert ([%equal: [`V1 | `V2]] (read_header ic) `V2);
+          assert ([%compare.equal: [`V1 | `V2]] (read_header ic) `V2);
           let input_leap_second =
             input_leap_second_gen ~input_leap_second:input_long_long_as_int63
           in

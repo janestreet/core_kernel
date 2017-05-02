@@ -1,8 +1,6 @@
 open! Import
 open Std_internal
 
-module Queue = Core_queue
-
 let debug = ref false
 
 module Unpack_one = struct

@@ -5,7 +5,6 @@
 
 open! Import
 
-module Hashtbl = Core_hashtbl
 module Heap = Heap.Removable
 
 module type Key = Hashtbl.Key

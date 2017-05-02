@@ -1,9 +1,5 @@
 open! Import
 
-module Array = Core_array
-module List = Core_list
-module String = Core_string
-
 (* Invariants:
 
    - [Append (x, y)] must have both [x] and [y] non-empty (complexity analysis
@@ -63,7 +59,7 @@ let (^) a b =
    amounts of memory. *)
 let%test "length overflow" =
   let x = of_string "x" in
-  Exn.does_raise (fun () -> Fn.apply_n_times ~n:Core_int.num_bits (fun x -> x ^ x) x)
+  Exn.does_raise (fun () -> Fn.apply_n_times ~n:Int.num_bits (fun x -> x ^ x) x)
 
 let concat ?(sep=empty) ts =
   List.reduce ts ~f:(fun x y -> x ^ sep ^ y)

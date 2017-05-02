@@ -4,8 +4,6 @@ open! Import
 
 open Bigstring
 
-module String = Core_string
-
 include Bigbuffer_internal
 
 let __internal (t : t) = t
@@ -58,7 +56,7 @@ include
       let get t i   = Bigstring.get t.bstr i
     end)
     (struct
-      include Core_string
+      include String
       let create ~len = create len
       let unsafe_blit ~src ~src_pos ~dst ~dst_pos ~len =
         Bigstring.To_string.unsafe_blit ~src:src.bstr ~src_pos ~dst ~dst_pos ~len

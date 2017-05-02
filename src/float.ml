@@ -17,13 +17,7 @@ let valid_float_lexem s =
 
 open! Import
 
-module Gc    = Core_gc
-module Int   = Core_int
-module Int63 = Core_int63
-module Int64 = Core_int64
 module List  = Base.List
-
-#import "config.h"
 
 module T = struct
   type t = float [@@deriving bin_io, typerep]
@@ -36,7 +30,7 @@ end
 include T
 include Hashable  .Make_binable                         (T)
 include Comparable.Map_and_set_binable_using_comparator (T)
-module Replace_polymorphic_compare = (T : Polymorphic_compare_intf.S with type t := t)
+module Replace_polymorphic_compare = (T : Comparisons.S with type t := t)
 
 module Robust_compare = struct
   module type S = sig
@@ -92,7 +86,7 @@ let robust_sign t : Sign.t =
 
 (* There are two issues:
    - Float.sign used to use robust comparison, and users of [Core] might have come to
-     depend on this.
+   depend on this.
    - Robustness aside, what we get from Comparable.With_zero would map nan to Neg.
 *)
 let sign = robust_sign
@@ -100,8 +94,6 @@ let sign = robust_sign
 (* Standard 12 significant digits, exponential notation used as necessary, guaranteed to
    be a valid OCaml float lexem, not to look like an int. *)
 let to_string_12 x = valid_float_lexem (format_float "%.12g" x);;
-
-let to_string_round_trippable = Base.Float.to_string
 
 module For_quickcheck = struct
 
@@ -309,13 +301,11 @@ let shrinker         = For_quickcheck.shrinker
 
 (* Additional tests of Base.Float requiring the Gc module *)
 
-#ifdef JSC_ARCH_SIXTYFOUR
-let%test _ =
+let%test _ [@tags "64-bits-only"] =
   let before = Gc.minor_words () in
   assert (Int63.equal (int63_round_nearest_exn 0.8) (Int63.of_int_exn 1));
   let after = Gc.minor_words () in
   Int.equal before after
-#endif
 
 let%test_unit "Float.validate_positive doesn't allocate on success" =
   let initial_words = Gc.minor_words () in
@@ -324,4 +314,4 @@ let%test_unit "Float.validate_positive doesn't allocate on success" =
   [%test_result: int] allocated ~expect:0
 ;;
 
-let to_string = to_string_12
+let to_string_round_trippable = to_string

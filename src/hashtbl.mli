@@ -1,4 +1,4 @@
-(** Core_hashtbl is a reimplementation of the standard MoreLabels.Hashtbl.  Its worst case
+(** Hashtbl is a reimplementation of the standard MoreLabels.Hashtbl.  Its worst case
     time complexity is O(log(N)) for lookups and additions, unlike the standard
     MoreLabels.Hashtbl, which is O(N).
 
@@ -82,5 +82,5 @@ open! Import
       let equal (x, y) (x', y') = String.(=) x x' && Int63.(=) y y'
       let hash (x, y) = String.hash x + Int63.hash y * 65599 ]} *)
 
-include Core_hashtbl_intf.Hashtbl
+include Hashtbl_intf.Hashtbl
   with type ('a, 'b) t = ('a, 'b) Base.Hashtbl.t

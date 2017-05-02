@@ -1,7 +1,5 @@
 open! Import
 
-module List = Core_list
-
 type 'a t = 'a option [@@deriving bin_io, typerep]
 
 include (Base.Option : module type of struct include Base.Option end

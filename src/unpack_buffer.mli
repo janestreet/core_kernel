@@ -102,7 +102,7 @@ val feed_string : ?pos:int -> ?len:int -> _ t -> string      -> unit Or_error.t
     [q].  If there is an unpacking error, [unpack_into] returns an error, and subsequent
     [feed] and unpack operations on [t] will return that same error -- i.e. no more data
     can be fed to or unpacked from [t]. *)
-val unpack_into : 'a t -> 'a Core_queue.t -> unit Or_error.t
+val unpack_into : 'a t -> 'a Queue.t -> unit Or_error.t
 
 (** [unpack_iter t ~f] unpacks all the values that it can from [t], calling [f] on each
     value as it's unpacked.  If there is an unpacking error (including if [f] raises),

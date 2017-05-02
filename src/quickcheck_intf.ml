@@ -516,7 +516,7 @@ module type Quickcheck_configured = sig
     -> ?filter          : ('a -> bool)
     -> ?shrinker        : 'a shr
     -> ?shrink_attempts : shrink_attempts
-    -> ?sexp_of         : ('a -> Sexp.t)
+    -> ?sexp_of         : ('a -> Sexplib.Sexp.t)
     -> ?examples        : 'a list
     -> 'a gen
     -> f:('a -> unit)
@@ -534,7 +534,7 @@ module type Quickcheck_configured = sig
     -> ?trials   : int
     -> ?attempts : int
     -> ?filter   : ('a -> bool)
-    -> ?sexp_of  : ('a -> Sexp.t)
+    -> ?sexp_of  : ('a -> Sexplib.Sexp.t)
     -> 'a gen
     -> f:('a -> bool)
     -> unit
@@ -550,7 +550,7 @@ module type Quickcheck_configured = sig
     -> ?sizes          : int Sequence.t
     -> ?attempts       : int
     -> ?filter         : ('a -> bool)
-    -> ?sexp_of        : ('a -> Sexp.t)
+    -> ?sexp_of        : ('a -> Sexplib.Sexp.t)
     -> 'a gen
     -> trials          : int
     -> distinct_values : int
@@ -575,6 +575,9 @@ module type Quickcheck = sig
   and        Observer  : (Observer  with type 'a gen := 'a Generator.t)
 
   module Shrinker : Shrinker
+
+  module Let_syntax : module type of Generator.Let_syntax
+    with module Let_syntax.Open_on_rhs = Generator
 
   module Make_int (M : Pre_int) : S_int
     with type    t   :=    M.t

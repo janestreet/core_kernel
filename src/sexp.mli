@@ -2,18 +2,18 @@ open! Import
 
 (** Code for managing s-expressions *)
 
-type t = Sexp.t = Atom of string | List of t list
+type t = Sexplib.Sexp.t = Atom of string | List of t list
 [@@deriving bin_io, hash, sexp]
 
 module O : sig
-  type sexp = Sexp.t = Atom of string | List of t list
+  type sexp = Sexplib.Sexp.t = Atom of string | List of t list
 end
 
 include Comparable.S     with type t := t
 include Stringable.S     with type t := t
 include Quickcheckable.S with type t := t
 
-include (module type of struct include Sexp end) with type t := t
+include (module type of struct include Sexplib.Sexp end) with type t := t
 
 exception Of_sexp_error of exn * t
 
@@ -46,7 +46,7 @@ type 'a no_raise = 'a [@@deriving bin_io, sexp]
     If [Reason_to_stop.t_of_sexp] fails, you can still tell it was a [Stop] query.
 *)
 module Sexp_maybe : sig
-  type 'a t = ('a, Sexp.t * Error.t) Result.t [@@deriving bin_io, compare, hash, sexp]
+  type 'a t = ('a, Sexplib.Sexp.t * Error.t) Result.t [@@deriving bin_io, compare, hash, sexp]
 end
 
 (** A [With_text.t] is a value paired with the full textual representation of its sexp.
@@ -71,14 +71,14 @@ module With_text : sig
   (** Generates a [t] from the value by creating the text automatically using the provided
       s-expression converter. *)
   val of_value
-    :  ('a -> Sexp.t)
+    :  ('a -> Sexplib.Sexp.t)
     -> 'a
     -> 'a t
 
   (** Creates a [t] from the text, by first converting the text to an s-expression, and
       then parsing the s-expression with the provided converter. *)
   val of_text
-    :  (Sexp.t -> 'a)
+    :  (Sexplib.Sexp.t -> 'a)
     -> ?filename:string (** used for error reporting *)
     -> string
     -> 'a t Or_error.t
@@ -92,4 +92,4 @@ end
     value, but will not fail if there are any extra fields in a record (even deeply
     nested records).
     The implementation uses global state, so it is not thread safe. *)
-val of_sexp_allow_extra_fields : (Sexp.t -> 'a) -> Sexp.t -> 'a
+val of_sexp_allow_extra_fields : (Sexplib.Sexp.t -> 'a) -> Sexplib.Sexp.t -> 'a

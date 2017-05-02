@@ -32,7 +32,7 @@ module Elt : sig
   val value : 'a t -> 'a
   val equal : 'a t -> 'a t -> bool (** pointer equality *)
 
-  val sexp_of_t : ('a -> Sexp.t) -> 'a t -> Sexp.t
+  val sexp_of_t : ('a -> Sexplib.Sexp.t) -> 'a t -> Sexplib.Sexp.t
 end
 
 type 'a t [@@deriving sexp]

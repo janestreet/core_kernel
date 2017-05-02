@@ -1,7 +1,6 @@
 open! Import
 
 module Binable = Binable0
-module Map = Core_map
 
 let failwiths = Error.failwiths
 
@@ -129,10 +128,10 @@ let%test_module _ =
       ignore (of_string "A" : t);
       incr Of_string;
       check [%here];
-      ignore (t_of_sexp (Sexp.of_string "A") : t);
+      ignore (t_of_sexp (Sexplib.Sexp.of_string "A") : t);
       incr T_of_sexp;
       check [%here];
-      ignore (sexp_of_t A : Sexp.t);
+      ignore (sexp_of_t A : Sexplib.Sexp.t);
       incr Sexp_of_t;
       check [%here];
       assert (int_equal (compare A A) 0);

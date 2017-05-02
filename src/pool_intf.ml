@@ -27,8 +27,6 @@
 
 open! Import
 
-module Int63 = Core_int63
-
 (** [S] is the module type for a pool. *)
 module type S = sig
   module Slots : Tuple_type.Slots

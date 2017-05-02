@@ -1,7 +1,5 @@
 open! Import
 
-module Int = Core_int
-
 include Binable0
 
 (* [of_string] and [to_string] can't go in binable0.ml due to a cyclic dependency. *)

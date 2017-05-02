@@ -10,13 +10,6 @@
 
 open! Import
 
-(* for tail-recursive versions of List functions
-   Can't open Std_internal due to cyclic dependencies
-*)
-module List = Core_list
-module Array = Core_array
-module Hashtbl = Core_hashtbl
-
 (* The key is used for the hashtable of queue elements. *)
 module type Key = Hashtbl.Key_plain
 

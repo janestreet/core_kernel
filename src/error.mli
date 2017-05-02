@@ -33,7 +33,7 @@ val failwiths
   -> ?here   : Lexing.position
   -> string
   -> 'a
-  -> ('a -> Sexp.t)
+  -> ('a -> Sexplib.Sexp.t)
   -> _
 
 val failwithp
@@ -41,5 +41,5 @@ val failwithp
   -> Lexing.position
   -> string
   -> 'a
-  -> ('a -> Sexp.t)
+  -> ('a -> Sexplib.Sexp.t)
   -> _

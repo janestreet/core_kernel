@@ -2,6 +2,7 @@
 open! Import
 open Std_internal
 
+let arch_sixtyfour = Sys.word_size = 64
 let round_nearest = Float.int63_round_nearest_exn
 
 let float x = Int63.to_float x
@@ -131,15 +132,17 @@ end = struct
   let to_int_ms   t = Int63.(to_int_exn (t / millisecond))
   let to_int_sec  t = Int63.(to_int_exn (t / second))
 
-#ifdef JSC_ARCH_SIXTYFOUR
-  let%test _ = Int.(>) (to_int_sec Int63.max_value) 0 (* and doesn't raise *)
+  let%test _ [@tags "64-bits-only"] = Int.(>) (to_int_sec Int63.max_value) 0 (* and doesn't raise *)
 
-  let of_int_ns i = of_int63_ns (Int63.of_int i)
-  let to_int_ns t = Int63.to_int_exn (to_int63_ns t)
-#else
-  let of_int_ns _i = failwith "Time_ns.Span.of_int_ns: unsupported on 32bit machines"
-  let to_int_ns _i = failwith "Time_ns.Span.to_int_ns: unsupported on 32bit machines"
-#endif
+  let of_int_ns =
+    if arch_sixtyfour
+    then fun i -> of_int63_ns (Int63.of_int i)
+    else fun _ -> failwith "Time_ns.Span.of_int_ns: unsupported on 32bit machines"
+
+  let to_int_ns =
+    if arch_sixtyfour
+    then fun t -> Int63.to_int_exn (to_int63_ns t)
+    else fun _ -> failwith "Time_ns.Span.to_int_ns: unsupported on 32bit machines"
 
   let (+)         t u = Int63.(+) t u
   let (-)         t u = Int63.(-) t u
@@ -239,7 +242,7 @@ end = struct
     let to_string (t:T.t) =
       let string suffix float =
         (* This is the same float-to-string conversion used in [Float.sexp_of_t].  It's
-           like [Float.to_string_round_trippable], but may leave off trailing period. *)
+           like [Float.to_string], but may leave off trailing period. *)
         !Sexplib.Conv.default_string_of_float float ^ suffix
       in
       let abs_t = abs t in
@@ -329,8 +332,8 @@ end = struct
     let%test_unit _ =
       let hr =
         match Word_size.word_size with
-        | W32 -> Core_int.max_value
-        | W64 -> Core_int64.to_int_exn 2217989799822798757L
+        | W32 -> Int.max_value
+        | W64 -> Int64.to_int_exn 2217989799822798757L
       in
       round_trip (to_parts (create ~hr ()))
   end)
@@ -405,13 +408,15 @@ let of_span_since_epoch s = s
 let to_int63_ns_since_epoch t : Int63.t = Span.to_int63_ns (to_span_since_epoch t)
 let of_int63_ns_since_epoch i = of_span_since_epoch (Span.of_int63_ns i)
 
-#ifdef JSC_ARCH_SIXTYFOUR
-let to_int_ns_since_epoch t = Int63.to_int_exn (to_int63_ns_since_epoch t)
-let of_int_ns_since_epoch i = of_int63_ns_since_epoch (Int63.of_int i)
-#else
-let to_int_ns_since_epoch _t = failwith "Time_ns.to_int_ns_since_epoch: unsupported on 32bit machines"
-let of_int_ns_since_epoch _i = failwith "Time_ns.of_int_ns_since_epoch: unsupported on 32bit machines"
-#endif
+let to_int_ns_since_epoch =
+  if arch_sixtyfour
+  then fun t -> Int63.to_int_exn (to_int63_ns_since_epoch t)
+  else fun _ -> failwith "Time_ns.to_int_ns_since_epoch: unsupported on 32bit machines"
+
+let of_int_ns_since_epoch =
+  if arch_sixtyfour
+  then fun i -> of_int63_ns_since_epoch (Int63.of_int i)
+  else fun _ -> failwith "Time_ns.of_int_ns_since_epoch: unsupported on 32bit machines"
 
 let next_multiple ?(can_equal_after = false) ~base ~after ~interval () =
   if Span.(<=) interval Span.zero
@@ -687,8 +692,8 @@ let%test_module "next_multiple" =
 
     let test can_equal_after interval_ns after_ns =
       let base = epoch in
-      let interval = Span.of_int63_ns (Core_int63.of_int interval_ns) in
-      let after = of_int63_ns_since_epoch (Core_int63.of_int64_exn after_ns) in
+      let interval = Span.of_int63_ns (Int63.of_int interval_ns) in
+      let after = of_int63_ns_since_epoch (Int63.of_int64_exn after_ns) in
       let result = next_multiple ~can_equal_after ~interval ~base ~after () in
       let lower_bound, upper_bound =
         let after_interval = add after interval in

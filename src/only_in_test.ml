@@ -1,4 +1,4 @@
 open! Import
-include Core_lazy
+include Lazy
 
 let of_thunk = from_fun

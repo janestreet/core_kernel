@@ -33,8 +33,8 @@
    ;; of core.
    (bigstring_marshal_stubs
     bigstring_stubs
-    core_array_stubs
-    core_gc_stubs
+    array_stubs
+    gc_stubs
     time_ns_stubs
     version_util_fallback_stubs))
   (preprocess (pps (ppx_jane -check-doc-comments ppx_driver.runner)))

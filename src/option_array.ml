@@ -121,13 +121,13 @@ module Cheap_option = struct
 
       let%test_unit "memory corruption" =
         let make_list () =
-          Core_list.init ~f:(fun i -> Some i) 5
+          List.init ~f:(fun i -> Some i) 5
         in
         Gc.minor ();
         let x = value_unsafe (some (make_list ())) in
         Gc.minor ();
-        let _ = Core_list.init ~f:(fun i -> Some (i*100)) 10000 in
-        [%test_result: Core_int.t Option.t Core_list.t]
+        let _ = List.init ~f:(fun i -> Some (i*100)) 10000 in
+        [%test_result: Int.t Option.t List.t]
           ~expect:(make_list ()) x
 
     end)

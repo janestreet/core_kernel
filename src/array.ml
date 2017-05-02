@@ -3,8 +3,6 @@ open Perms.Export
 module Array = Base.Array
 module Core_sequence = Sequence
 
-module List = Core_list
-
 type 'a t = 'a array [@@deriving bin_io, typerep]
 
 include (Base.Array : sig
@@ -223,9 +221,9 @@ module type Permissioned = sig
     -> ('a * 'a) option
   val reduce     : ('a, [> read]) t -> f:('a -> 'a -> 'a) -> 'a option
   val reduce_exn : ('a, [> read]) t -> f:('a -> 'a -> 'a) -> 'a
-  val permute : ?random_state:Core_random.State.t -> ('a, [> read_write]) t -> unit
-  val random_element : ?random_state:Core_random.State.t -> ('a, [> read]) t -> 'a option
-  val random_element_exn : ?random_state:Core_random.State.t -> ('a, [> read]) t -> 'a
+  val permute : ?random_state:Random.State.t -> ('a, [> read_write]) t -> unit
+  val random_element : ?random_state:Random.State.t -> ('a, [> read]) t -> 'a option
+  val random_element_exn : ?random_state:Random.State.t -> ('a, [> read]) t -> 'a
   val zip     : ('a, [> read]) t -> ('b, [> read]) t -> ('a * 'b, [< _ perms]) t option
   val zip_exn : ('a, [> read]) t -> ('b, [> read]) t -> ('a * 'b, [< _ perms]) t
   val unzip : ('a * 'b, [> read]) t -> ('a, [< _ perms]) t * ('b, [< _ perms]) t
@@ -366,9 +364,9 @@ module type S = sig
   val find_consecutive_duplicate : 'a t -> equal:('a -> 'a -> bool) -> ('a * 'a) option
   val reduce     : 'a t -> f:('a -> 'a -> 'a) -> 'a option
   val reduce_exn : 'a t -> f:('a -> 'a -> 'a) -> 'a
-  val permute : ?random_state:Core_random.State.t -> 'a t -> unit
-  val random_element : ?random_state:Core_random.State.t -> 'a t -> 'a option
-  val random_element_exn : ?random_state:Core_random.State.t -> 'a t -> 'a
+  val permute : ?random_state:Random.State.t -> 'a t -> unit
+  val random_element : ?random_state:Random.State.t -> 'a t -> 'a option
+  val random_element_exn : ?random_state:Random.State.t -> 'a t -> 'a
   val zip     : 'a t -> 'b t -> ('a * 'b) t option
   val zip_exn : 'a t -> 'b t -> ('a * 'b) t
   val unzip : ('a * 'b) t -> 'a t * 'b t

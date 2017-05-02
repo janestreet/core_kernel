@@ -1,8 +1,5 @@
 open! Import
 
-module Array = Core_array
-module List  = Core_list
-
 type t = char [@@deriving typerep]
 
 module Z =

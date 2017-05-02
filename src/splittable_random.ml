@@ -105,7 +105,7 @@ module State = struct
     next
 
   let create =
-    let bits () = Int64.of_int (Core_random.bits ()) in
+    let bits () = Int64.of_int (Random.bits ()) in
     let initial_seed = (bits () lsl 60) lxor (bits () lsl 30) lxor (bits ()) in
     let default_gen = ref initial_seed in
     fun () ->

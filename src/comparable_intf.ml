@@ -25,10 +25,10 @@ end
 module type S_plain = sig
   include S_common
 
-  module Map : Core_map.S_plain
+  module Map : Map.S_plain
     with type Key.t = t
     with type Key.comparator_witness = comparator_witness
-  module Set : Core_set.S_plain
+  module Set : Set.S_plain
     with type Elt.t = t
     with type Elt.comparator_witness = comparator_witness
 end
@@ -36,10 +36,10 @@ end
 module type S = sig
   include S_common
 
-  module Map : Core_map.S
+  module Map : Map.S
     with type Key.t = t
     with type Key.comparator_witness = comparator_witness
-  module Set : Core_set.S
+  module Set : Set.S
     with type Elt.t = t
     with type Elt.comparator_witness = comparator_witness
 end
@@ -47,10 +47,10 @@ end
 module type Map_and_set_binable = sig
   type t
   include Comparator.S with type t := t
-  module Map : Core_map.S_binable
+  module Map : Map.S_binable
     with type Key.t = t
     with type Key.comparator_witness = comparator_witness
-  module Set : Core_set.S_binable
+  module Set : Set.S_binable
     with type Elt.t = t
     with type Elt.comparator_witness = comparator_witness
 end

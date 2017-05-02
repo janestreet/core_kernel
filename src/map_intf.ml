@@ -16,7 +16,6 @@
 open! Import
 open T
 module Binable = Binable0
-module List = Core_list
 
 module Map_intf = Base.Map_intf
 module Map      = Base.Map
@@ -164,7 +163,7 @@ module Check_accessors3_with_comparator (M : Accessors3_with_comparator) =
 module type Creators_generic = sig
   include Map_intf.Creators_generic
 
-  val of_hashtbl_exn : ('k, 'cmp, ('k key, 'v) Core_hashtbl.t -> ('k, 'v, 'cmp) t) options
+  val of_hashtbl_exn : ('k, 'cmp, ('k key, 'v) Hashtbl.t -> ('k, 'v, 'cmp) t) options
 
   val gen
     :  ('k, 'cmp,
@@ -177,7 +176,7 @@ end
 module type Creators1 = sig
   include Map_intf.Creators1
 
-  val of_hashtbl_exn  : (key, 'a) Core_hashtbl.t -> 'a t
+  val of_hashtbl_exn  : (key, 'a) Hashtbl.t -> 'a t
 
   val gen
     :  key Quickcheck.Generator.t
@@ -188,7 +187,7 @@ end
 module type Creators2 = sig
   include Map_intf.Creators2
 
-  val of_hashtbl_exn  : ('a, 'b) Core_hashtbl.t -> ('a, 'b) t
+  val of_hashtbl_exn  : ('a, 'b) Hashtbl.t -> ('a, 'b) t
 
   val gen
     :  'a Quickcheck.Generator.t
@@ -201,7 +200,7 @@ module type Creators3_with_comparator = sig
 
   val of_hashtbl_exn
     :  comparator:('a, 'cmp) Comparator.t
-    -> ('a, 'b) Core_hashtbl.t -> ('a, 'b, 'cmp) t
+    -> ('a, 'b) Hashtbl.t -> ('a, 'b, 'cmp) t
 
   val gen
     :  comparator:('a, 'cmp) Comparator.t

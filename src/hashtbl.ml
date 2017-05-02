@@ -1,12 +1,9 @@
 open! Import
-open Core_hashtbl_intf
+open Hashtbl_intf
 
 module Avltree = Avltree
 module Binable = Binable0
 module Hashable = Hashtbl_intf.Hashable
-
-module List = Core_list
-module Array = Core_array
 
 let failwiths = Error.failwiths
 
@@ -144,5 +141,5 @@ let%test_unit _ = (* [sexp_of_t] output is sorted by key *)
         |> [%sexp_of: t]
         |> [%of_sexp: (int * unit) list]
       in
-      assert (Core_list.is_sorted list ~compare:(fun (i1, _) (i2, _) -> i1 - i2)))
+      assert (List.is_sorted list ~compare:(fun (i1, _) (i2, _) -> i1 - i2)))
 ;;

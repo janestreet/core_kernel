@@ -279,7 +279,7 @@ module Stable = struct
     let string ~is_v2 suffix float =
       if is_v2
       (* This is the same float-to-string conversion used in [Float.sexp_of_t].  It's like
-         [Float.to_string_round_trippable], but may leave off trailing period. *)
+         [Float.to_string], but may leave off trailing period. *)
       then !Sexplib.Conv.default_string_of_float float ^ suffix
       else sprintf "%g%s" float suffix
 

@@ -23,8 +23,8 @@ include (List : module type of struct include List end
          with module Assoc := Assoc)
 
 let to_string ~f t =
-  Sexp.to_string
-    (sexp_of_t (fun x -> Sexp.Atom x) (List.map t ~f))
+  Sexplib.Sexp.to_string
+    (sexp_of_t (fun x -> Sexplib.Sexp.Atom x) (List.map t ~f))
 ;;
 
 include Comparator.Derived(struct

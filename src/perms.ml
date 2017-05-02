@@ -47,7 +47,7 @@ module Types = struct
   end
 end
 
-let failwithf = Core_printf.failwithf
+let failwithf = Printf.failwithf
 
 (* This is an explicit module type instead of just given inline as the return signature of
    [Only_used_as_phantom_type1] to avoid an unused value warning with bin_io values. *)

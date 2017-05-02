@@ -159,10 +159,10 @@ let rec keep_alive o =
 
 let%test_unit _ =
   let r = ref () in
-  let weak = Weak.create 1 in
-  Weak.set weak 0 (Some r);
-  Gc.compact ();
-  assert (match Weak.get weak 0 with None -> false | Some _ -> true);
+  let weak = Caml.Weak.create 1 in
+  Caml.Weak.set weak 0 (Some r);
+  Caml.Gc.compact ();
+  assert (match Caml.Weak.get weak 0 with None -> false | Some _ -> true);
   keep_alive r
 ;;
 

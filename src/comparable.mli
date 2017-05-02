@@ -152,11 +152,11 @@ module Stable : sig
       type comparable
       type comparator_witness
 
-      module Map : Core_map.Stable.V1.S
+      module Map : Map.Stable.V1.S
         with type key := comparable
         with type comparator_witness := comparator_witness
 
-      module Set : Core_set.Stable.V1.S
+      module Set : Set.Stable.V1.S
         with type elt := comparable
         with type elt_comparator_witness := comparator_witness
     end

@@ -82,13 +82,13 @@ module Stable = struct
     module V1 (M : Stringable.S) : S with type t := M.t = struct
       let t_of_sexp sexp =
         match sexp with
-        | Sexp.Atom s ->
+        | Sexplib.Sexp.Atom s ->
           (try M.of_string s with exn -> of_sexp_error_exn exn sexp)
-        | Sexp.List _ ->
+        | Sexplib.Sexp.List _ ->
           of_sexp_error
             "Sexpable.Of_stringable.t_of_sexp expected an atom, but got a list" sexp
 
-      let sexp_of_t t = Sexp.Atom (M.to_string t)
+      let sexp_of_t t = Sexplib.Sexp.Atom (M.to_string t)
     end
   end
 

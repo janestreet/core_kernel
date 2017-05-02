@@ -1,5 +1,7 @@
 open! Import
 
+module Sexp = Sexplib.Sexp
+
 include Sexp
 
 include (Base.Sexp : module type of struct include Base.Sexp end with type t := t)
@@ -110,7 +112,7 @@ module With_text = struct
             (Printf.sprintf "%s expected to cause an exception, \
                              but got converted successfully." input)
         with e ->
-          let error = normalize (Printexc.to_string e) in
+          let error = normalize (Exn.to_string e) in
           if not (String.equal error expected) then
             failwith (Printf.sprintf "%s generated error %s, expected %s"
                         input error expected)
@@ -160,18 +162,18 @@ module For_quickcheck = struct
       let%bind size = Generator.size in
       (* choose a number weighted low so we have a decreasing, but not vanishing, chance
          to generate atoms as size grows *)
-      match%bind Core_int.gen_log_uniform_incl 0 (size + 1) with
+      match%bind Int.gen_log_uniform_incl 0 (size + 1) with
       (* generate a non-empty string based on the given size *)
-      | 0 -> let%map atom = Core_string.gen    in Atom atom
-      (* relying on [Core_list.gen] to distribute [size] over sub-sexps *)
-      | _ -> let%map list = Core_list.gen self in List list)
+      | 0 -> let%map atom = String.gen    in Atom atom
+      (* relying on [List.gen] to distribute [size] over sub-sexps *)
+      | _ -> let%map list = List.gen self in List list)
 
   let obs =
     Observer.recursive (fun t_obs ->
       Observer.unmap
         (Observer.variant2
-           Core_string.obs
-           (Core_list.obs t_obs))
+           String.obs
+           (List.obs t_obs))
         ~f:(function
           | Sexp.Atom atom -> `A atom
           | Sexp.List list -> `B list))
@@ -183,7 +185,7 @@ module For_quickcheck = struct
         | Sexp.Atom _    -> Sequence.empty
         | Sexp.List list ->
           let shrink_list =
-            Shrinker.shrink (Core_list.shrinker shrinker) list
+            Shrinker.shrink (List.shrinker shrinker) list
             >>| fun l -> Sexp.List l
           in
           let shrink_tree = Sequence.of_list list in

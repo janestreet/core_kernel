@@ -1,7 +1,6 @@
 open! Import
 
 module String = Base.String
-module Array = Core_array
 
 let phys_equal = Caml.(==)
 

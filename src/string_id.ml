@@ -46,9 +46,9 @@ let%test_module _ =
       end) ()
 
     let%test_unit "String_id's of_string shouldn't allocate on success" =
-      let initial_words = Core_gc.minor_words () in
+      let initial_words = Gc.minor_words () in
       ignore (M.of_string "FOOBAR");
-      let allocated = (Core_gc.minor_words ()) - initial_words in
+      let allocated = (Gc.minor_words ()) - initial_words in
       [%test_result: int] allocated ~expect:0
     ;;
   end)

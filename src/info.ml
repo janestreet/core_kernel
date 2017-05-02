@@ -9,9 +9,9 @@ module Source_code_position = Source_code_position0
 module Binable = Binable0
 
 module Sexp = struct
-  include Sexp
+  include Sexplib.Sexp
   include (struct
-    type t = Sexp.t = Atom of string | List of t list
+    type t = Sexplib.Sexp.t = Atom of string | List of t list
     [@@deriving bin_io, compare, hash]
   end : sig
              type t [@@deriving bin_io, compare, hash]

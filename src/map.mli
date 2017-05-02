@@ -72,7 +72,7 @@
 
     Depending on the number of type variables [N], the type of accessor (resp. creator)
     functions are defined in the module type [AccessorsN] (resp. [CreatorsN]) in
-    {!Core_map_intf}.  Also for creators, when the comparison function is not fixed,
+    {!Map_intf}.  Also for creators, when the comparison function is not fixed,
     i.e. the ['cmp] variable of [Map.t] is free, we need to pass a comparator to the
     function creating the map.  The module type is called [Creators3_with_comparator].
     There is also a module type [Accessors3_with_comparator] in addition to [Accessors3]
@@ -80,7 +80,7 @@
 *)
 
 open! Import
-open Core_map_intf
+open Map_intf
 
 module Tree : sig
   type ('k, +'v, 'cmp) t = ('k, 'v, 'cmp) Tree.t
@@ -130,7 +130,7 @@ val of_alist_exn
     present in the table. *)
 val of_hashtbl_exn
   :  comparator:('a, 'cmp) Comparator.t
-  -> ('a, 'b) Core_hashtbl.t -> ('a, 'b, 'cmp) t
+  -> ('a, 'b) Hashtbl.t -> ('a, 'b, 'cmp) t
 
 (** creates map from association list with possibly repeated keys. *)
 val of_alist_multi

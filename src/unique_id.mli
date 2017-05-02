@@ -19,4 +19,4 @@ module type Id = Id
 module Int () : Id with type t = private int
 
 (** An abstract unique identifier based on 63 bit integers. *)
-module Int63 () : Id with type t = private Core_int63.t
+module Int63 () : Id with type t = private Int63.t

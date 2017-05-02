@@ -1,10 +1,7 @@
 open! Import
 
-open Core_set_intf
+open Set_intf
 
-module Array = Core_array
-module List = Core_list
-module Map = Core_map
 module Merge_to_sequence_element = Merge_to_sequence_element
 
 module type Elt_plain   = Elt_plain
@@ -89,7 +86,7 @@ module Tree = struct
   ;;
 
   let of_hashtbl_keys ~comparator hashtbl =
-    Core_hashtbl.fold hashtbl ~init:(empty ~comparator)
+    Hashtbl.fold hashtbl ~init:(empty ~comparator)
       ~f:(fun ~key:x ~data:_ t -> add t x ~comparator)
   ;;
 
@@ -126,7 +123,7 @@ module Creators (Elt : Comparator.S1) : sig
   type 'a elt_ = 'a Elt.t
   type 'a cmp_ = Elt.comparator_witness
 
-  val t_of_sexp : (Sexp.t -> 'a Elt.t) -> Sexp.t -> ('a, 'comparator) t_
+  val t_of_sexp : (Sexplib.Sexp.t -> 'a Elt.t) -> Sexplib.Sexp.t -> ('a, 'comparator) t_
 
   include Creators_generic
     with type ('a, 'b) t           := ('a, 'b) t_

@@ -10,38 +10,38 @@ include Either.Export
 include (Float : Interfaces.Robustly_comparable with type t := float)
 include From_sexplib
 include Interfaces
-include Core_list.Infix
+include List.Infix
 include Never_returns
 include Ordering.Export
 include Perms.Export
 include Result.Export
 
-module Array        = Core_array
+module Array        = Array
 module Bool         = Bool
-module Char         = Core_char
+module Char         = Char
 module Comparator   = Comparator
 module Exn          = Base.Exn
 module Field        = Field
-module Hashtbl      = Core_hashtbl
-module Int          = Core_int
-module Int32        = Core_int32
-module Int63        = Core_int63
-module Int64        = Core_int64
-module Lazy         = Core_lazy
+module Hashtbl      = Hashtbl
+module Int          = Int
+module Int32        = Int32
+module Int63        = Int63
+module Int64        = Int64
+module Lazy         = Lazy
 module Linked_queue = Linked_queue
-module Map          = Core_map
-module Nativeint    = Core_nativeint
+module Map          = Map
+module Nativeint    = Nativeint
 module Ordering     = Ordering
-module Random       = Core_random
+module Random       = Random
 module Ref          = Ref
 module Result       = Result
-module Set          = Core_set
-module Sexp         = Core_sexp
+module Set          = Set
+module Sexp         = Sexp
 module Staged       = Base.Staged
-module String       = Core_string
+module String       = String
 module Type_equal   = Type_equal
 module List = struct
-  include Core_list
+  include List (** @inline *)
 
   (** [stable_dedup] Same as [dedup] but maintains the order of the list and doesn't allow
       compare function to be specified (otherwise, the implementation in terms of Set.t
@@ -144,7 +144,7 @@ include (struct
   type int       = Int.         t [@@deriving bin_io, compare, hash, sexp, typerep]
   type int32     = Int32.       t [@@deriving bin_io, compare, hash, sexp, typerep]
   type int64     = Int64.       t [@@deriving bin_io, compare, hash, sexp, typerep]
-  type 'a lazy_t = 'a Core_lazy.t [@@deriving bin_io, compare, hash, sexp, typerep]
+  type 'a lazy_t = 'a Lazy.     t [@@deriving bin_io, compare, hash, sexp, typerep]
   type 'a list   = 'a List.     t [@@deriving bin_io, compare, hash, sexp, typerep]
   type nativeint = Nativeint.   t [@@deriving bin_io, compare, hash, sexp, typerep]
   type 'a option = 'a Option.   t [@@deriving bin_io, compare, hash, sexp, typerep]
@@ -224,12 +224,12 @@ type 'a sexp_option = 'a option [@@deriving bin_io, compare, hash, typerep]
 type 'a sexp_opaque = 'a        [@@deriving bin_io, compare, hash, typerep]
 
 (* The code below checks that the signatures in core_map.mli and core_set.mli are
-   consistent with the generic map and set signatures defined in core_map_intf.ml
+   consistent with the generic map and set signatures defined in map_intf.ml
    and core_set_intf.ml. *)
 
 let () =
   let module M : sig
-    open Core_set_intf
+    open Set_intf
 
     module Tree : sig
       type ('a, 'b) t
@@ -256,7 +256,7 @@ let () =
 
 let () =
   let module M : sig
-    open Core_map_intf
+    open Map_intf
 
     module Tree : sig
       type ('a, 'b, 'c) t

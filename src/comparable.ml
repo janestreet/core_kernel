@@ -26,8 +26,8 @@ module Map_and_set_binable_using_comparator (T : sig
     include Comparator.S with type t := t
   end) = struct
   include T
-  module Map = Core_map.Make_binable_using_comparator (T)
-  module Set = Core_set.Make_binable_using_comparator (T)
+  module Map = Map.Make_binable_using_comparator (T)
+  module Set = Set.Make_binable_using_comparator (T)
 end
 
 module Map_and_set_binable (T : sig type t [@@deriving bin_io, compare, sexp] end) =
@@ -43,8 +43,8 @@ module Poly (T : sig type t [@@deriving sexp] end) = struct
   end
   include C
   module Replace_polymorphic_compare = (C : Polymorphic_compare with type t := t)
-  module Map = Core_map.Make_using_comparator (C)
-  module Set = Core_set.Make_using_comparator (C)
+  module Map = Map.Make_using_comparator (C)
+  module Set = Set.Make_using_comparator (C)
 end
 
 module Make_plain_using_comparator (T : sig
@@ -55,8 +55,8 @@ module Make_plain_using_comparator (T : sig
   module M = Base.Comparable.Make_using_comparator(T)
   include M
   module Replace_polymorphic_compare = (M : Polymorphic_compare with type t := t)
-  module Map = Core_map.Make_plain_using_comparator (T)
-  module Set = Core_set.Make_plain_using_comparator (T)
+  module Map = Map.Make_plain_using_comparator (T)
+  module Set = Set.Make_plain_using_comparator (T)
 end
 
 module Make_plain (T : sig
@@ -74,8 +74,8 @@ module Make_using_comparator (T : sig
   module M = Base.Comparable.Make_using_comparator(T)
   include M
   module Replace_polymorphic_compare = (M : Polymorphic_compare with type t := t)
-  module Map = Core_map.Make_using_comparator (T)
-  module Set = Core_set.Make_using_comparator (T)
+  module Map = Map.Make_using_comparator (T)
+  module Set = Set.Make_using_comparator (T)
 end
 
 module Make (T : sig
@@ -94,8 +94,8 @@ module Make_binable_using_comparator (T : sig
   module M = Base.Comparable.Make_using_comparator(T)
   include M
   module Replace_polymorphic_compare = (M : Polymorphic_compare with type t := t)
-  module Map = Core_map.Make_binable_using_comparator (T)
-  module Set = Core_set.Make_binable_using_comparator (T)
+  module Map = Map.Make_binable_using_comparator (T)
+  module Set = Set.Make_binable_using_comparator (T)
 end
 
 module Make_binable (T : sig
@@ -112,9 +112,9 @@ struct
     include (X : sig type t = M.t [@@deriving sexp] end with type t := t)
   end
   include T
-  module Replace_polymorphic_compare = (M : Polymorphic_compare_intf.S with type t := t)
-  module Map = Core_map.Make_using_comparator (T)
-  module Set = Core_set.Make_using_comparator (T)
+  module Replace_polymorphic_compare = (M : Comparisons.S with type t := t)
+  module Map = Map.Make_using_comparator (T)
+  module Set = Set.Make_using_comparator (T)
 end
 
 module Extend_binable(M : Base.Comparable.S)
@@ -125,9 +125,9 @@ struct
     include (X : sig type t = M.t [@@deriving bin_io, sexp] end with type t := t)
   end
   include T
-  module Replace_polymorphic_compare = (M : Polymorphic_compare_intf.S with type t := t)
-  module Map = Core_map.Make_binable_using_comparator (T)
-  module Set = Core_set.Make_binable_using_comparator (T)
+  module Replace_polymorphic_compare = (M : Comparisons.S with type t := t)
+  module Map = Map.Make_binable_using_comparator (T)
+  module Set = Set.Make_binable_using_comparator (T)
 end
 
 module Inherit
@@ -151,18 +151,18 @@ module Stable = struct
       type comparable
       type comparator_witness
 
-      module Map : Core_map.Stable.V1.S
+      module Map : Map.Stable.V1.S
         with type key := comparable
         with type comparator_witness := comparator_witness
 
-      module Set : Core_set.Stable.V1.S
+      module Set : Set.Stable.V1.S
         with type elt := comparable
         with type elt_comparator_witness := comparator_witness
     end
 
     module Make (X : Stable_module_types.S0) = struct
-      module Map = Core_map.Stable.V1.Make (X)
-      module Set = Core_set.Stable.V1.Make (X)
+      module Map = Map.Stable.V1.Make (X)
+      module Set = Set.Stable.V1.Make (X)
     end
   end
 end

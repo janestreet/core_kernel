@@ -11,7 +11,6 @@
 open! Import
 
 include struct
-  module List = Core_list
   let phys_equal = (==)
 end
 
@@ -207,7 +206,6 @@ let%test_module _ =
     ;;
 
     let%test_unit "balanced" =
-      let module Array = Core_array in
       let log2 n = int_of_float (ceil (log (float_of_int n) /. log 2.)) in
       let n = 1000 in
       let ts = Array.init n ~f:create in

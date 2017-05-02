@@ -398,7 +398,7 @@ module Make (Hashtbl : Hashtbl_intf.Hashtbl) = struct
           | Some compare ->
             List.gen key_gen
             >>= fun keys ->
-            let keys = List.dedup keys ~compare in
+            let keys = List.dedup_and_sort keys ~compare in
             List.gen' data_gen ~length:(`Exactly (List.length keys))
             >>| fun data ->
             List.zip_exn keys data

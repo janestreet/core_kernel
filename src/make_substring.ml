@@ -22,7 +22,7 @@ end = struct
       Ordered_collection_common.get_pos_len_exn ?pos:src_pos ?len:src_len
         ~length:(String.length src)
     in
-    Core_string.blit ~src ~src_pos ~len ~dst ~dst_pos;
+    String.blit ~src ~src_pos ~len ~dst ~dst_pos;
   ;;
 
   let string_bigstring = Bigstring.From_string.blito

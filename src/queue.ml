@@ -499,10 +499,10 @@ include
         (* We enqueue everything twice, and dequeue it once to ensure:
            - that the queue has the same content as the array.
            - that it has, in most cases, an interesting internal structure*)
-        for i = 0 to Core_array.length a - 1 do
+        for i = 0 to Array.length a - 1 do
           enqueue r a.( i )
         done;
-        for i = 0 to Core_array.length a - 1 do
+        for i = 0 to Array.length a - 1 do
           ignore (dequeue_exn r : bool);
           enqueue r a.( i )
         done;

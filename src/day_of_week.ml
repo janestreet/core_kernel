@@ -1,13 +1,6 @@
 open! Import
 
-module Array   = Core_array
-module Int     = Core_int
-module List    = Core_list
-module String  = Core_string
-module Hashtbl = Core_hashtbl
-module Sexp    = Core_sexp
-
-let failwithf = Core_printf.failwithf
+let failwithf = Printf.failwithf
 
 module Stable = struct
   module V1 = struct

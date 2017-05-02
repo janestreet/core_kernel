@@ -1,5 +1,5 @@
 (** This module defines interfaces used in [Core.Set].  This module uses the same
-    organizational approach as [Core_map_intf].  See the documentation in core_map.mli for
+    organizational approach as [Map_intf].  See the documentation in core_map.mli for
     a description of the approach.
 
     This module defines module types
@@ -39,8 +39,6 @@ end
 
 module Without_comparator = Set_intf.Without_comparator
 module With_comparator    = Set_intf.With_comparator
-
-module Map = Core_map
 
 module Continue_or_stop          = Container_intf.Continue_or_stop
 module Finished_or_stopped_early = Container_intf.Finished_or_stopped_early
@@ -148,7 +146,7 @@ module type Creators_generic = sig
   include Set_intf.Creators_generic
 
   val of_hash_set     : ('a, 'cmp,  'a elt     Hash_set.t     -> ('a, 'cmp) t) options
-  val of_hashtbl_keys : ('a, 'cmp, ('a elt, _) Core_hashtbl.t -> ('a, 'cmp) t) options
+  val of_hashtbl_keys : ('a, 'cmp, ('a elt, _) Hashtbl.t -> ('a, 'cmp) t) options
 
   (** never requires a comparator because it can get one from the input [Map.t] *)
   val of_map_keys : ('a elt, _, 'cmp cmp) Map.t -> ('a, 'cmp) t
@@ -163,7 +161,7 @@ end
 module type Creators0 = sig
   include Set_intf.Creators0
   val of_hash_set               : elt Hash_set.t  -> t
-  val of_hashtbl_keys           : (elt, _) Core_hashtbl.t -> t
+  val of_hashtbl_keys           : (elt, _) Hashtbl.t -> t
   val of_map_keys               : (elt, _, comparator_witness) Map.t -> t
   val gen                       : elt Quickcheck.Generator.t -> t Quickcheck.Generator.t
 end
@@ -171,7 +169,7 @@ end
 module type Creators1 = sig
   include Set_intf.Creators1
   val of_hash_set               : 'a Hash_set.t  -> 'a t
-  val of_hashtbl_keys           : ('a, _) Core_hashtbl.t -> 'a t
+  val of_hashtbl_keys           : ('a, _) Hashtbl.t -> 'a t
   val of_map_keys               : ('a, _, comparator_witness) Map.t -> 'a t
   val gen                       : 'a Quickcheck.Generator.t -> 'a t Quickcheck.Generator.t
 end
@@ -179,7 +177,7 @@ end
 module type Creators2 = sig
   include Set_intf.Creators2
   val of_hash_set               : 'a Hash_set.t  -> ('a, 'cmp) t
-  val of_hashtbl_keys           : ('a, _) Core_hashtbl.t -> ('a, 'cmp) t
+  val of_hashtbl_keys           : ('a, _) Hashtbl.t -> ('a, 'cmp) t
   val of_map_keys               : ('a, _, 'cmp) Map.t -> ('a, 'cmp) t
   val gen
     :  'a Quickcheck.Generator.t
@@ -191,7 +189,7 @@ module type Creators2_with_comparator = sig
   val of_hash_set               : comparator:('a, 'cmp) Comparator.t -> 'a Hash_set.t
     -> ('a, 'cmp) t
   val of_hashtbl_keys           : comparator:('a, 'cmp) Comparator.t
-    -> ('a, _) Core_hashtbl.t -> ('a, 'cmp) t
+    -> ('a, _) Hashtbl.t -> ('a, 'cmp) t
 
   val of_map_keys : ('a, _, 'cmp) Map.t -> ('a, 'cmp) t
 

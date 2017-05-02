@@ -17,11 +17,11 @@ include Creators
 
 include Accessors with type 'a t := 'a t with type 'a elt := 'a elt
 
-val hashable : 'key t -> 'key Core_hashtbl_intf.Hashable.t
+val hashable : 'key t -> 'key Hashtbl_intf.Hashable.t
 
-module type Elt_plain   = Core_hashtbl.Key_plain
-module type Elt         = Core_hashtbl.Key
-module type Elt_binable = Core_hashtbl.Key_binable
+module type Elt_plain   = Hashtbl.Key_plain
+module type Elt         = Hashtbl.Key
+module type Elt_binable = Hashtbl.Key_binable
 module type S_plain   = S_plain   with type 'a hash_set := 'a t
 module type S         = S         with type 'a hash_set := 'a t
 module type S_binable = S_binable with type 'a hash_set := 'a t

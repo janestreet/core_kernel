@@ -5,7 +5,7 @@ module Comparator = Base.Comparator
 type ('a, 'witness) t = ('a, 'witness) Comparator.t =
   private
   { compare   : 'a -> 'a -> int
-  ; sexp_of_t : 'a -> Sexp.t
+  ; sexp_of_t : 'a -> Sexplib.Sexp.t
   }
 
 module type Base_mask =
@@ -18,7 +18,7 @@ module Stable = struct
     type nonrec ('a, 'witness) t = ('a, 'witness) t =
       private
       { compare   : 'a -> 'a -> int
-      ; sexp_of_t : 'a -> Sexp.t
+      ; sexp_of_t : 'a -> Sexplib.Sexp.t
       }
     type ('a, 'b) comparator = ('a, 'b) t
     module type S = S

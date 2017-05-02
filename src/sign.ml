@@ -1,7 +1,5 @@
 open! Import
 
-module List = Core_list
-
 module Sign = Base.Sign
 
 module Stable = struct

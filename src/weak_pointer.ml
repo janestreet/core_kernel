@@ -15,9 +15,6 @@
 open! Import
 open! Std_internal
 
-module Ephemeron = Core_ephemeron
-module Gc = Core_gc
-
 type 'a t =
   { mutable did_notify_cleared : bool
   ; ephemeron                  : ('a, unit ref) Ephemeron.t

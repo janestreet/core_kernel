@@ -8,8 +8,6 @@
 module Caml_map = Map
 open! Core_kernel
 
-module Map_intf = Core_kernel.Core_map_intf
-
 module With_comparator    = Map_intf.With_comparator
 module Without_comparator = Map_intf.Without_comparator
 
@@ -137,7 +135,7 @@ module Unit_tests
     let sample = of_int 0
     let samples =
       List.init 10 ~f:(fun i -> of_int (i + 1))
-      |> List.dedup ~compare
+      |> List.dedup_and_sort ~compare
       |> List.sort ~cmp:compare
     ;;
 
