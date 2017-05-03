@@ -2,24 +2,38 @@ open! Core_kernel
 open! Import
 open! Set_once
 
-module T = struct
-  type t = int Set_once.t [@@deriving bin_io, sexp]
-
-  let compare t1 t2 = Option.compare [%compare: int] (get t1) (get t2)
+module type Format = sig
+  type 'a t = 'a Set_once.t [@@deriving bin_io, sexp]
 end
 
-let%expect_test "serialization" =
+let test_serialization (module Format : Format) =
+  let module T = struct
+    type t = int Format.t [@@deriving bin_io, sexp]
+    let compare t1 t2 = Option.compare [%compare: int] (get t1) (get t2)
+  end in
   let t1 = create () in
   let t2 = create () in
   set_exn t2 13;
   print_and_check_stable_type [%here] (module T) [ t1; t2 ];
+;;
+
+let%expect_test "[Stable.V1] serialization" =
+  test_serialization (module Stable.V1);
   [%expect {|
     (bin_shape_digest 8b7c356301db5206ab98e334f4886c11)
     ((sexp ()) (bin_io "\000"))
     ((sexp (13)) (bin_io "\001\r")) |}];
 ;;
 
-open T
+let%expect_test "[Unstable] serialization" =
+  test_serialization (module Unstable);
+  [%expect {|
+    (bin_shape_digest 8b7c356301db5206ab98e334f4886c11)
+    ((sexp ()) (bin_io "\000"))
+    ((sexp (13)) (bin_io "\001\r")) |}];
+;;
+
+type t = int Set_once.t [@@deriving sexp_of]
 
 let show t =
   print_s [%message "" ~_:(t : t)];

@@ -1,5 +1,7 @@
 (** This module extends the Base [List] module with bin_io and quickcheck *)
 
+open! Import
+
 type 'a t = 'a list [@@deriving bin_io, typerep]
 
 module Assoc : sig
@@ -17,6 +19,15 @@ end
 include module type of struct include Base.List end
   with type 'a t := 'a t
   with module Assoc := Assoc
+
+(** [stable_dedup] Same as [dedup] but maintains the order of the list and doesn't allow
+    compare function to be specified (otherwise, the implementation in terms of Set.t
+    would hide a heavyweight functor instantiation at each call). *)
+val stable_dedup : 'a t -> 'a t
+
+val stable_dedup_staged
+  :  compare:('a -> 'a -> int)
+  -> ('a list -> 'a list) Staged.t
 
 include Comparator.Derived with type 'a t := 'a t
 include Quickcheckable.S1 with type 'a t := 'a t

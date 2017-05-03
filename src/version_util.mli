@@ -9,7 +9,6 @@
 *)
 
 open! Import
-open  Std_internal
 
 val version : string (** all hg repos and their versions *)
 

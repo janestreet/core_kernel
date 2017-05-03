@@ -4,6 +4,7 @@ open Hashtbl_intf
 module Avltree = Avltree
 module Binable = Binable0
 module Hashable = Hashtbl_intf.Hashable
+module List = List0
 
 let failwiths = Error.failwiths
 

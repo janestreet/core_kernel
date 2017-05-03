@@ -16,54 +16,6 @@ include Ordering.Export
 include Perms.Export
 include Result.Export
 
-module Array        = Array
-module Bool         = Bool
-module Char         = Char
-module Comparator   = Comparator
-module Exn          = Base.Exn
-module Field        = Field
-module Hashtbl      = Hashtbl
-module Int          = Int
-module Int32        = Int32
-module Int63        = Int63
-module Int64        = Int64
-module Lazy         = Lazy
-module Linked_queue = Linked_queue
-module Map          = Map
-module Nativeint    = Nativeint
-module Ordering     = Ordering
-module Random       = Random
-module Ref          = Ref
-module Result       = Result
-module Set          = Set
-module Sexp         = Sexp
-module Staged       = Base.Staged
-module String       = String
-module Type_equal   = Type_equal
-module List = struct
-  include List (** @inline *)
-
-  (** [stable_dedup] Same as [dedup] but maintains the order of the list and doesn't allow
-      compare function to be specified (otherwise, the implementation in terms of Set.t
-      would hide a heavyweight functor instantiation at each call). *)
-  let stable_dedup = Set.Poly.stable_dedup_list
-
-  (* This function is staged to indicate that real work (the functor application) takes
-     place after a partial application. *)
-  let stable_dedup_staged (type a) ~(compare : a -> a -> int)
-    : (a list -> a list) Staged.t =
-    let module Set =
-      Set.Make (struct
-        type t = a
-        let compare = compare
-        (* [stable_dedup_list] never calls these *)
-        let t_of_sexp _ = assert false
-        let sexp_of_t _ = assert false
-      end)
-    in
-    Staged.stage Set.stable_dedup_list
-  ;;
-end
 
 type -'a return = 'a With_return.return = private {
   return : 'b. 'a -> 'b;

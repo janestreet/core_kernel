@@ -9,7 +9,6 @@
 *)
 
 open! Import
-open Std_internal
 
 include module type of Univ_map_intf
 

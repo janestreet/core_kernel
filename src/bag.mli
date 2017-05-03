@@ -10,7 +10,6 @@
     ([fold], [iter], ...).  *)
 
 open! Import
-open Std_internal
 
 module Elt : sig
   type 'a t

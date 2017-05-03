@@ -1,133 +1,22 @@
-open! Import
-open! Typerep_lib.Std
+include List0 (** @inline *)
 
-module Array = Base.Array
-module List  = Base.List
+(** [stable_dedup] Same as [dedup] but maintains the order of the list and doesn't allow
+    compare function to be specified (otherwise, the implementation in terms of Set.t
+    would hide a heavyweight functor instantiation at each call). *)
+let stable_dedup = Set.Poly.stable_dedup_list
 
-type 'a t = 'a list [@@deriving bin_io, typerep]
-
-module Assoc = struct
-  type ('a, 'b) t = ('a * 'b) list [@@deriving bin_io]
-
-  let compare (type a) (type b) compare_a compare_b = [%compare: (a * b) list]
-  [@@deprecated
-    "[since 2016-06] This does not respect the equivalence class promised by List.Assoc. \
-     Use List.compare directly if that's what you want."]
-
-  include (List.Assoc : module type of struct include List.Assoc end
-           with type ('a, 'b) t := ('a, 'b) t)
-end
-
-include (List : module type of struct include List end
-         with type 'a t := 'a t
-         with module Assoc := Assoc)
-
-let to_string ~f t =
-  Sexplib.Sexp.to_string
-    (sexp_of_t (fun x -> Sexplib.Sexp.Atom x) (List.map t ~f))
-;;
-
-include Comparator.Derived(struct
-    type nonrec 'a t = 'a t [@@deriving sexp_of, compare]
-  end)
-
-module For_quickcheck = struct
-  module Generator = Quickcheck.Generator
-  module Observer  = Quickcheck.Observer
-  module Shrinker  = Quickcheck.Shrinker
-
-  open Generator.Monad_infix
-
-  let gen' ?length elem_gen =
-    let min_len, max_len =
-      match length with
-      | None         -> None, None
-      | Some variant ->
-        match variant with
-        | `Exactly           n      -> Some n, Some n
-        | `At_least          n      -> Some n, None
-        | `At_most           n      -> None,   Some n
-        | `Between_inclusive (x, y) -> Some x, Some y
-    in
-    Generator.list elem_gen ?min_len ?max_len
-
-  let gen elem_gen =
-    gen' elem_gen
-
-  let gen_permutations list =
-    match list with
-    | [] -> Generator.singleton []
-    | _ :: _ ->
-      let len = List.length list in
-      let index_generator =
-        init (len - 1) ~f:(fun i ->
-          (* choose uniformly among indices to create uniform choice among permutations *)
-          Quickcheck.For_int.gen_uniform_incl i (len - 1))
-        |> Quickcheck.Generator.all
-      in
-      index_generator
-      >>| fun indices ->
-      let arr = Array.of_list list in
-      List.iteri indices ~f:(fun i j -> Array.swap arr i j);
-      Array.to_list arr
-  ;;
-
-  let obs elem_obs =
-    Observer.recursive (fun t_obs ->
-      Observer.unmap
-        (Observer.variant2
-           (Observer.singleton ())
-           (Observer.tuple2 elem_obs t_obs))
-        ~f:(function
-          | []        -> `A ()
-          | x :: list -> `B (x, list)))
-
-  let shrinker t_elt =
-    Shrinker.recursive (fun t_list ->
-      Shrinker.create (function
-        | []    -> Sequence.empty
-        | h::tl ->
-          let open Sequence.Monad_infix in
-          let dropped     = Sequence.singleton tl in
-          let shrunk_head = Shrinker.shrink t_elt   h >>| fun shr_h  -> shr_h::tl in
-          let shrunk_tail = Shrinker.shrink t_list tl >>| fun shr_tl -> h::shr_tl in
-          Sequence.interleave
-            (Sequence.of_list [dropped; shrunk_head; shrunk_tail])))
-
-  let%test_module "shrinker" =
-    (module struct
-
-      let t0 =
-        Shrinker.create (fun v ->
-          if Pervasives.(=) 0 v
-          then Sequence.empty
-          else Sequence.singleton 0)
-
-      let test_list = [1;2;3]
-      let expect =
-        [[2;3]; [0;2;3]; [1;3]; [1;0;3]; [1;2]; [1;2;0]]
-        |> List.sort ~cmp:[%compare: int list ]
-
-      let%test_unit "shrinker produces expected outputs" =
-        let shrunk =
-          Shrinker.shrink (shrinker t0) test_list
-          |> Sequence.to_list
-          |> List.sort ~cmp:[%compare: int list ]
-        in
-        [%test_result: int list list] ~expect shrunk
-
-      let rec recursive_list = 1::5::recursive_list
-
-      let%test_unit "shrinker on infinite lists produces values" =
-        let shrunk = Shrinker.shrink (shrinker t0) recursive_list in
-        let result_length = Sequence.take shrunk 5 |> Sequence.to_list |> List.length in
-        [%test_result: int] ~expect:5 result_length
+(* This function is staged to indicate that real work (the functor application) takes
+   place after a partial application. *)
+let stable_dedup_staged (type a) ~(compare : a -> a -> int)
+  : (a list -> a list) Base.Staged.t =
+  let module Set =
+    Set.Make (struct
+      type t = a
+      let compare = compare
+      (* [stable_dedup_list] never calls these *)
+      let t_of_sexp _ = assert false
+      let sexp_of_t _ = assert false
     end)
-
-end
-
-let gen              = For_quickcheck.gen
-let gen'             = For_quickcheck.gen'
-let gen_permutations = For_quickcheck.gen_permutations
-let obs              = For_quickcheck.obs
-let shrinker         = For_quickcheck.shrinker
+  in
+  Base.Staged.stage Set.stable_dedup_list
+;;

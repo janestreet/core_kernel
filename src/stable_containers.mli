@@ -6,7 +6,6 @@
 
 open! Import
 
-open Std_internal
 
 module Hashable : sig
   module V1 : sig

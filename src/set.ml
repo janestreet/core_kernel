@@ -1,5 +1,7 @@
 open! Import
 
+module List = List0
+
 open Set_intf
 
 module Merge_to_sequence_element = Merge_to_sequence_element

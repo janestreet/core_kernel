@@ -1,6 +1,8 @@
 open! Import
 open Map_intf
 
+module List = List0
+
 module Symmetric_diff_element = Symmetric_diff_element
 
 module For_quickcheck = struct

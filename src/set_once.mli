@@ -4,7 +4,7 @@
 
 open! Import
 
-type 'a t [@@deriving bin_io, sexp]
+type 'a t [@@deriving sexp_of]
 
 include Invariant.S1 with type 'a t := 'a t (** Passes when unset. *)
 
@@ -15,3 +15,13 @@ val set_exn : 'a t -> 'a -> unit
 
 val get : 'a t -> 'a option
 val get_exn : 'a t -> 'a
+
+module Unstable : sig
+  type nonrec 'a t = 'a t [@@deriving bin_io, sexp]
+end
+
+module Stable : sig
+  module V1 : sig
+    type nonrec 'a t = 'a t [@@deriving bin_io, sexp]
+  end
+end

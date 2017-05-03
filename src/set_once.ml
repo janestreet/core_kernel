@@ -1,9 +1,18 @@
+module Stable = struct
+  open Stable_internal
+
+  module V1 = struct
+    type 'a t = 'a option ref [@@deriving bin_io, sexp]
+  end
+end
+
 open! Import
-open Result
 
 exception Already_set [@@deriving sexp]
 
-type 'a t = 'a option ref [@@deriving bin_io, sexp]
+module Unstable = Stable.V1
+
+type 'a t = 'a Unstable.t [@@deriving sexp_of]
 
 let invariant invariant_a t =
   match !t with

@@ -1,5 +1,4 @@
 open! Import
-open Std_internal
 
 
 (** Memoization code -- not re-entrant! *)
