@@ -2,11 +2,11 @@ open! Import
 
 (** Code for managing s-expressions *)
 
-type t = Sexplib.Sexp.t = Atom of string | List of t list
+type t = Base.Sexp.t = Atom of string | List of t list
 [@@deriving bin_io, hash, sexp]
 
 module O : sig
-  type sexp = Sexplib.Sexp.t = Atom of string | List of t list
+  type sexp = Base.Sexp.t = Atom of string | List of t list
 end
 
 include Comparable.S     with type t := t
@@ -46,7 +46,7 @@ type 'a no_raise = 'a [@@deriving bin_io, sexp]
     If [Reason_to_stop.t_of_sexp] fails, you can still tell it was a [Stop] query.
 *)
 module Sexp_maybe : sig
-  type 'a t = ('a, Sexplib.Sexp.t * Error.t) Result.t [@@deriving bin_io, compare, hash, sexp]
+  type 'a t = ('a, Base.Sexp.t * Error.t) Result.t [@@deriving bin_io, compare, hash, sexp]
 end
 
 (** A [With_text.t] is a value paired with the full textual representation of its sexp.
@@ -71,14 +71,14 @@ module With_text : sig
   (** Generates a [t] from the value by creating the text automatically using the provided
       s-expression converter. *)
   val of_value
-    :  ('a -> Sexplib.Sexp.t)
+    :  ('a -> Base.Sexp.t)
     -> 'a
     -> 'a t
 
   (** Creates a [t] from the text, by first converting the text to an s-expression, and
       then parsing the s-expression with the provided converter. *)
   val of_text
-    :  (Sexplib.Sexp.t -> 'a)
+    :  (Base.Sexp.t -> 'a)
     -> ?filename:string (** used for error reporting *)
     -> string
     -> 'a t Or_error.t
@@ -92,4 +92,4 @@ end
     value, but will not fail if there are any extra fields in a record (even deeply
     nested records).
     The implementation uses global state, so it is not thread safe. *)
-val of_sexp_allow_extra_fields : (Sexplib.Sexp.t -> 'a) -> Sexplib.Sexp.t -> 'a
+val of_sexp_allow_extra_fields : (Base.Sexp.t -> 'a) -> Base.Sexp.t -> 'a

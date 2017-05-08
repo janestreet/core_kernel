@@ -72,7 +72,7 @@ module Stable = struct
     module V1 (M : Sexpable.S) =
       Of_binable.V1
         (struct
-          type t = Sexplib.Sexp.t = Atom of string | List of t list [@@deriving bin_io]
+          type t = Base.Sexp.t = Atom of string | List of t list [@@deriving bin_io]
         end)
         (struct
           type t = M.t

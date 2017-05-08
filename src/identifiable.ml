@@ -131,7 +131,7 @@ let%test_module _ =
       ignore (t_of_sexp (Sexplib.Sexp.of_string "A") : t);
       incr T_of_sexp;
       check [%here];
-      ignore (sexp_of_t A : Sexplib.Sexp.t);
+      ignore (sexp_of_t A : Base.Sexp.t);
       incr Sexp_of_t;
       check [%here];
       assert (int_equal (compare A A) 0);

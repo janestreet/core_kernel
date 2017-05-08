@@ -410,7 +410,7 @@ let unpack_signed_32_int_little_endian ~buf ~pos =
 ;;
 
 let%test_module "inline_unsigned_32_int" [@tags "64-bits-only"] = (module Make_inline_tests (struct
-    let ns = [0x3f20_3040; 0x7f20_3040;
+    let ns = [0x3f20_3040; Int64.to_int 0x7f20_3040L;
               signed_max; signed_max + 1; unsigned_max; 0]
     let num_bytes = 4
     let signed = false
@@ -426,7 +426,7 @@ let%test_module "inline_unsigned_32_int" [@tags "64-bits-only"] = (module Make_i
   end))
 
 let%test_module "inline_signed_32_int" [@tags "64-bits-only"] = (module Make_inline_tests (struct
-    let ns = [0x3f20_3040; 0x7f20_3040; -0x7f20_3040;
+    let ns = [0x3f20_3040; Int64.to_int 0x7f20_3040L; Int64.to_int (-0x7f20_3040L);
               signed_max; -(signed_max + 1); 0]
     let num_bytes = 4
     let signed = true

@@ -11,7 +11,7 @@ module Binable = Binable0
 module Sexp = struct
   include Sexplib.Sexp
   include (struct
-    type t = Sexplib.Sexp.t = Atom of string | List of t list
+    type t = Base.Sexp.t = Atom of string | List of t list
     [@@deriving bin_io, compare, hash]
   end : sig
              type t [@@deriving bin_io, compare, hash]

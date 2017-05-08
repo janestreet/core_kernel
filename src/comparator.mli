@@ -3,7 +3,7 @@ open! Import
 type ('a, 'witness) t = ('a, 'witness) Base.Comparator.t =
   private
   { compare   : 'a -> 'a -> int
-  ; sexp_of_t : 'a -> Sexplib.Sexp.t
+  ; sexp_of_t : 'a -> Base.Sexp.t
   }
 
 include module type of Base.Comparator
@@ -14,7 +14,7 @@ module Stable : sig
     type nonrec ('a, 'b) t = ('a, 'b) t =
       private
       { compare   : 'a -> 'a -> int
-      ; sexp_of_t : 'a -> Sexplib.Sexp.t
+      ; sexp_of_t : 'a -> Base.Sexp.t
       }
 
     type ('a, 'b) comparator = ('a, 'b) t
@@ -35,7 +35,7 @@ module Stable : sig
 
     val make
       :  compare:('a -> 'a -> int)
-      -> sexp_of_t:('a -> Sexplib.Sexp.t)
+      -> sexp_of_t:('a -> Base.Sexp.t)
       -> (module S_fc with type comparable_t = 'a)
 
     module Make  : module type of Make

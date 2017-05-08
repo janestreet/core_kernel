@@ -516,7 +516,7 @@ module type Quickcheck_configured = sig
     -> ?filter          : ('a -> bool)
     -> ?shrinker        : 'a shr
     -> ?shrink_attempts : shrink_attempts
-    -> ?sexp_of         : ('a -> Sexplib.Sexp.t)
+    -> ?sexp_of         : ('a -> Base.Sexp.t)
     -> ?examples        : 'a list
     -> 'a gen
     -> f:('a -> unit)
@@ -534,7 +534,7 @@ module type Quickcheck_configured = sig
     -> ?trials   : int
     -> ?attempts : int
     -> ?filter   : ('a -> bool)
-    -> ?sexp_of  : ('a -> Sexplib.Sexp.t)
+    -> ?sexp_of  : ('a -> Base.Sexp.t)
     -> 'a gen
     -> f:('a -> bool)
     -> unit
@@ -550,7 +550,7 @@ module type Quickcheck_configured = sig
     -> ?sizes          : int Sequence.t
     -> ?attempts       : int
     -> ?filter         : ('a -> bool)
-    -> ?sexp_of        : ('a -> Sexplib.Sexp.t)
+    -> ?sexp_of        : ('a -> Base.Sexp.t)
     -> 'a gen
     -> trials          : int
     -> distinct_values : int

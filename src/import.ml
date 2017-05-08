@@ -40,7 +40,6 @@ include Bin_prot.Std
 
 module Field = Fieldslib.Field
 
-
 module From_sexplib =
   (Sexplib.Conv : sig
 
@@ -51,15 +50,15 @@ module From_sexplib =
      (* [sexp_of_opaque] and [opaque_of_sexp] are used by the code generated from
         [[@@deriving sexp]], [[%sexp_of: ]], and [[%of_sexp: ]].  The type [_ sexp_opaque]
         expands to uses of [sexp_of_opaque] and [opaque_of_sexp]. *)
-     val sexp_of_opaque : _ -> Sexplib.Sexp.t
-     val opaque_of_sexp : Sexplib.Sexp.t -> _
+     val sexp_of_opaque : _ -> Base.Sexp.t
+     val opaque_of_sexp : Base.Sexp.t -> _
 
-     val sexp_of_pair : ('a -> Sexplib.Sexp.t) -> ('b -> Sexplib.Sexp.t) -> 'a * 'b -> Sexplib.Sexp.t
-     val pair_of_sexp:  (Sexplib.Sexp.t -> 'a) -> (Sexplib.Sexp.t -> 'b) -> Sexplib.Sexp.t -> 'a * 'b
+     val sexp_of_pair : ('a -> Base.Sexp.t) -> ('b -> Base.Sexp.t) -> 'a * 'b -> Base.Sexp.t
+     val pair_of_sexp:  (Base.Sexp.t -> 'a) -> (Base.Sexp.t -> 'b) -> Base.Sexp.t -> 'a * 'b
 
-     exception Of_sexp_error of exn * Sexplib.Sexp.t
-     val of_sexp_error : string -> Sexplib.Sexp.t -> _
-     val of_sexp_error_exn : exn -> Sexplib.Sexp.t -> _
+     exception Of_sexp_error of exn * Base.Sexp.t
+     val of_sexp_error : string -> Base.Sexp.t -> _
+     val of_sexp_error_exn : exn -> Base.Sexp.t -> _
    end)
 
 include From_sexplib

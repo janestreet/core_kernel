@@ -39,14 +39,14 @@
     version_util_fallback_stubs))
   (preprocess (pps (ppx_jane -check-doc-comments ppx_driver.runner)))
   (preprocessor_deps (config.h))
-))
+  (js_of_ocaml (
+    (javascript_files (strftime.js runtime.js))
+    ))))
 
 (alias
  ((name save_benchmarks)
   (deps (inline_benchmarks_runner inline_benchmarks_runner.exe))
   (action (bash "./inline_benchmarks_runner jenga-save-benchmarks"))))
 
-
-(install ((section lib) (files (strftime.js runtime.js))))
 
 (jbuild_version 1)

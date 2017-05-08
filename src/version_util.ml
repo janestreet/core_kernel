@@ -44,6 +44,7 @@ type t = {
   build_date                  : Date.t sexp_option;
   build_time                  : Time_float.Ofday.t sexp_option;
   x_library_inlining          : bool;
+  portable_int63              : bool;
   dynlinkable_code            : bool;
   ocaml_version               : string;
   executable_path             : string;
@@ -61,6 +62,7 @@ let { username;
       build_date;
       build_time;
       x_library_inlining;
+      portable_int63;
       dynlinkable_code;
       ocaml_version;
       executable_path;

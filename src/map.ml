@@ -116,7 +116,7 @@ module Creators (Key : Comparator.S1) : sig
     ('a, 'b, Key.comparator_witness) Tree.t
   type ('a, 'b, 'c) options = ('a, 'b, 'c) Without_comparator.t
 
-  val t_of_sexp : (Sexplib.Sexp.t -> 'a Key.t) -> (Sexplib.Sexp.t -> 'b) -> Sexplib.Sexp.t -> ('a, 'b, _) t_
+  val t_of_sexp : (Base.Sexp.t -> 'a Key.t) -> (Base.Sexp.t -> 'b) -> Base.Sexp.t -> ('a, 'b, _) t_
 
   include Creators_generic
     with type ('a, 'b, 'c) t    := ('a, 'b, 'c) t_

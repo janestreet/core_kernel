@@ -34,6 +34,7 @@ val kernel                         : string option
 val build_date                     : Date.t option
 val build_time                     : Time_float.Ofday.t option
 val x_library_inlining             : bool
+val portable_int63                 : bool
 val dynlinkable_code               : bool
 val compiled_for_speed             : bool
 val application_specific_fields    : Application_specific_fields.t option

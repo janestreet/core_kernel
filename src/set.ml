@@ -125,7 +125,7 @@ module Creators (Elt : Comparator.S1) : sig
   type 'a elt_ = 'a Elt.t
   type 'a cmp_ = Elt.comparator_witness
 
-  val t_of_sexp : (Sexplib.Sexp.t -> 'a Elt.t) -> Sexplib.Sexp.t -> ('a, 'comparator) t_
+  val t_of_sexp : (Base.Sexp.t -> 'a Elt.t) -> Base.Sexp.t -> ('a, 'comparator) t_
 
   include Creators_generic
     with type ('a, 'b) t           := ('a, 'b) t_
