@@ -72,8 +72,11 @@ module type S = sig
 end
 
 #import "config.h"
-module type S_on_64_bit =
-#ifdef JSC_ARCH_SIXTYFOUR
+
+module type S_int63 =
+#ifdef JSC_PORTABLE_INT63
+  S_without_immediate
+#elifdef JSC_ARCH_SIXTYFOUR
   S
 #else
   S_without_immediate
@@ -83,7 +86,7 @@ module type Immediate_option = sig
 
   module type S = S  (** always immediate *)
 
-  module type S_on_64_bit = S_on_64_bit  (** immediate only on 64-bit machines *)
+  module type S_int63 = S_int63  (** immediate only on 64-bit machines with portable_int63 = false *)
 
   module type S_without_immediate = S_without_immediate  (** never immediate *)
 

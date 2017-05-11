@@ -17,7 +17,19 @@ type posix_timers =
   | Not_available
 
 let () =
-  C.main ~name:"core_kernel" (fun c ->
+  let portable_int63 = ref false in
+  let args =
+    [ "-portable-int63", Caml.Arg.Symbol
+                           (["true";"false";"!true";"!false"],
+                            fun x ->
+                              portable_int63 :=
+                                match x with
+                                | "true" | "!false" -> true
+                                | "false" | "!true" -> false
+                                | _ -> assert false),
+      " true if Base.Int63.t is selected at runtime, false if at compiler time" ]
+  in
+  C.main ~args ~name:"core_kernel" (fun c ->
     let posix_timers =
       if C.c_test c posix_timers_code ~link_flags:["-lrt"] then
         Available { need_lrt = true }
@@ -39,7 +51,7 @@ let () =
         match posix_timers with
         | Available _   -> Switch true
         | Not_available -> Switch false)
-
+       :: ("JSC_PORTABLE_INT63" , Switch !portable_int63)
        :: ocaml_vars);
 
     let rt_flags : Sexp.t =
