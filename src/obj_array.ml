@@ -180,12 +180,14 @@ let%test _ = phys_equal (get (singleton zero_obj) 0) zero_obj
 
 let%test _ = does_raise (fun () -> get (singleton zero_obj) 1)
 
-let%test_unit _ =
-  let f = 13. in
-  let t = singleton (Obj.repr f) in
-  invariant t;
-  assert (Polymorphic_compare.equal (Obj.repr f) (get t 0))
-;;
+(* {[
+     let%test_unit _ =
+       let f = 13. in
+       let t = singleton (Obj.repr f) in
+       invariant t;
+       assert (Polymorphic_compare.equal (Obj.repr f) (get t 0))
+     ;;
+   ]} *)
 
 (* [get], [unsafe_get], [set], [unsafe_set], [unsafe_set_assuming_currently_int] *)
 let%test_unit _ =

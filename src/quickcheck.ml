@@ -1,6 +1,10 @@
 open! Import
 
+open Quickcheck_intf
+
 module Array = Base.Array
+module Bool  = Base.Bool
+module Char  = Base.Char
 module Int   = Base.Int
 module List  = Base.List
 
@@ -22,7 +26,7 @@ module Pre_float : Comparisons.S with type t = float = struct
   let ( <> ) (x : t) (y : t) = (x <> y)
 end
 
-module Pre_int : Quickcheck_intf.Pre_int with type t = int = struct
+module Pre_int : Pre_int with type t = int = struct
   include Base.Int
   let splittable_random = Splittable_random.int
 end
@@ -37,7 +41,7 @@ let bounds_error name lower_bound upper_bound sexp_of_bound =
       (lower_bound : bound)
       (upper_bound : bound)]
 
-module Make_int_random (M : Quickcheck_intf.Pre_int) : sig
+module Make_int_random (M : Pre_int) : sig
   open M
 
   val uniform_incl     : Splittable_random.State.t -> lo:t -> hi:t -> t
@@ -212,9 +216,12 @@ module Observer = struct
 
   include Raw_observer
 
-  let of_hash (type a) (module M : Quickcheck_intf.Deriving_hash with type t = a) =
+  let of_hash (type a) (module M : Deriving_hash with type t = a) =
     create (fun x ~size:_ hash ->
       [%hash_fold: M.t] hash x)
+
+  let bool = of_hash (module Bool)
+  let char = of_hash (module Char)
 
   let variant2 t1 t2 =
     create (fun x ~size hash ->
@@ -310,7 +317,7 @@ module Observer = struct
   let doubleton f =
     of_predicate (singleton ()) (singleton ()) ~f
 
-  module Make_int_observer (M : Quickcheck_intf.Pre_int) : sig
+  module Make_int_observer (M : Pre_int) : sig
     val obs : M.t t
   end = struct
     let obs =
@@ -463,6 +470,8 @@ module Generator = struct
       then x
       else y)
 
+  let bool = doubleton true false
+
   let of_fun f =
     create (fun ~size random ->
       generate (f ()) ~size random)
@@ -494,7 +503,7 @@ module Generator = struct
   let small_non_negative_int = geometric ~p:0.25 0
   let small_positive_int     = geometric ~p:0.25 1
 
-  module Make_int_generator (M : Quickcheck_intf.Pre_int) : sig
+  module Make_int_generator (M : Pre_int) : sig
     val gen                  :               M.t t
     val gen_incl             : M.t -> M.t -> M.t t
     val gen_uniform_incl     : M.t -> M.t -> M.t t
@@ -683,6 +692,42 @@ module Generator = struct
     compare_fn dom
     >>| fun cmp ->
     (fun x y -> Pervasives.( = ) (cmp x y) 0)
+
+  let char_range lo hi =
+    create (fun ~size:_ random ->
+      Splittable_random.int random ~lo:(Char.to_int lo) ~hi:(Char.to_int hi)
+      |> Char.unsafe_of_int)
+
+  let char_uppercase     = char_range 'A' 'Z'
+  let char_lowercase     = char_range 'a' 'z'
+  let char_digit         = char_range '0' '9'
+  let char_print_uniform = char_range ' ' '~'
+
+  let char_uniform = char_range Char.min_value Char.max_value
+
+  let char_alpha    = union [ char_lowercase ; char_uppercase ]
+  let char_alphanum =
+    weighted_union
+      (* Most people probably expect this to be a uniform distribution, not weighted
+         toward digits like we would get with [union] (since there are fewer digits than
+         letters). *)
+      [ 52., char_alpha
+      ; 10., char_digit
+      ]
+
+  let char_whitespace = of_list (List.filter Char.all ~f:Char.is_whitespace)
+
+  let char_print =
+    weighted_union
+      [ 10., char_alphanum
+      ;  1., char_print_uniform
+      ]
+
+  let char =
+    weighted_union
+      [ 10., char_print
+      ;  1., char_uniform
+      ]
 end
 
 module Shrinker = struct
@@ -694,6 +739,9 @@ module Shrinker = struct
   let create t = Staged.stage t
 
   let empty () = create (fun _ -> Sequence.empty)
+
+  let bool = empty ()
+  let char = empty ()
 
   let map t ~f ~f_inverse =
     create (fun b ->
@@ -983,7 +1031,7 @@ module Shrinker = struct
     in
     create shrinker
 
-  module Make_int_shrinker (M : Quickcheck_intf.Pre_int) : sig
+  module Make_int_shrinker (M : Pre_int) : sig
     val shrinker  : M.t t
   end = struct
     (* Having smaller numbers generally doesn't make a bug easier to
@@ -996,8 +1044,8 @@ module Shrinker = struct
 
 end
 
-module Make_int (M : Quickcheck_intf.Pre_int)
-  : Quickcheck_intf.S_int
+module Make_int (M : Pre_int)
+  : S_int
     with type    t   :=    M.t
     with type 'a gen := 'a gen
     with type 'a obs := 'a obs
@@ -1025,7 +1073,7 @@ module Let_syntax = struct
   let return = Generator.return
 end
 
-module Configure (Config : Quickcheck_intf.Quickcheck_config) = struct
+module Configure (Config : Quickcheck_config) = struct
 
   include Config
 
@@ -1266,11 +1314,31 @@ include Configure (struct
       Sequence.cycle_list_exn (List.range 0 30 ~stop:`inclusive)
   end)
 
-type seed            = Quickcheck_intf.seed
-type shrink_attempts = Quickcheck_intf.shrink_attempts
+module type S = S
+  with type 'a gen := 'a Generator.t
+  with type 'a obs := 'a Observer.t
+  with type 'a shr := 'a Shrinker.t
 
-module type Quickcheck_config = Quickcheck_intf.Quickcheck_config
+module type S1 = S1
+  with type 'a gen := 'a Generator.t
+  with type 'a obs := 'a Observer.t
+  with type 'a shr := 'a Shrinker.t
 
-module type Quickcheck_configured = Quickcheck_intf.Quickcheck_configured
+module type S2 = S2
+  with type 'a gen := 'a Generator.t
+  with type 'a obs := 'a Observer.t
+  with type 'a shr := 'a Shrinker.t
+
+module type S_int = S_int
+  with type 'a gen := 'a Generator.t
+  with type 'a obs := 'a Observer.t
+  with type 'a shr := 'a Shrinker.t
+
+type nonrec seed            = seed
+type nonrec shrink_attempts = shrink_attempts
+
+module type Quickcheck_config = Quickcheck_config
+
+module type Quickcheck_configured = Quickcheck_configured
   with type 'a gen := 'a gen
    and type 'a shr := 'a shr

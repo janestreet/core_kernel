@@ -43,6 +43,17 @@ module type Generator = sig
   (** [with_size t ~size = create (fun ~size:_ random -> generate t ~size random)] *)
   val with_size : 'a t -> size:int -> 'a t
 
+  val bool : bool t
+  val char : char t
+
+  val char_digit      : char t
+  val char_lowercase  : char t
+  val char_uppercase  : char t
+  val char_alpha      : char t
+  val char_alphanum   : char t
+  val char_print      : char t
+  val char_whitespace : char t
+
   val singleton : 'a -> 'a t
   val doubleton : 'a -> 'a -> 'a t
 
@@ -195,6 +206,9 @@ module type Observer = sig
   (** [of_hash] creates an observer for any hashable type. *)
   val of_hash : (module Deriving_hash with type t = 'a) -> 'a t
 
+  val bool : bool t
+  val char : char t
+
   (** [doubleton f] maps values to two "buckets" (as described in [t] above),
       depending on whether they satisfy [f]. *)
   val doubleton : ('a -> bool) -> 'a t
@@ -314,6 +328,9 @@ module type Shrinker = sig
   val create : ('a -> 'a Sequence.t) -> 'a t
 
   val empty : unit -> 'a t
+
+  val bool : bool t
+  val char : char t
 
   val map : 'a t -> f:('a -> 'b) -> f_inverse:('b -> 'a) -> 'b t
 
@@ -576,20 +593,32 @@ module type Quickcheck = sig
 
   module Shrinker : Shrinker
 
+  module type S = S
+    with type 'a gen := 'a Generator.t
+    with type 'a obs := 'a Observer.t
+    with type 'a shr := 'a Shrinker.t
+
+  module type S1 = S1
+    with type 'a gen := 'a Generator.t
+    with type 'a obs := 'a Observer.t
+    with type 'a shr := 'a Shrinker.t
+
+  module type S2 = S2
+    with type 'a gen := 'a Generator.t
+    with type 'a obs := 'a Observer.t
+    with type 'a shr := 'a Shrinker.t
+
+  module type S_int = S_int
+    with type 'a gen := 'a Generator.t
+    with type 'a obs := 'a Observer.t
+    with type 'a shr := 'a Shrinker.t
+
   module Let_syntax : module type of Generator.Let_syntax
     with module Let_syntax.Open_on_rhs = Generator
 
-  module Make_int (M : Pre_int) : S_int
-    with type    t   :=    M.t
-    with type 'a gen := 'a Generator.t
-    with type 'a obs := 'a Observer.t
-    with type 'a shr := 'a Shrinker.t
+  module Make_int (M : Pre_int) : S_int with type t := M.t
 
-  module For_int : S_int
-    with type    t   :=    int
-    with type 'a gen := 'a Generator.t
-    with type 'a obs := 'a Observer.t
-    with type 'a shr := 'a Shrinker.t
+  module For_int : S_int with type t := int
 
   module type Quickcheck_config = Quickcheck_config
 

@@ -259,6 +259,32 @@ module Test (S : sig val default_seed : Quickcheck.seed end) : sig end = struct
         && not (Char.is_uppercase c)
         && not (Char.is_print c)
         && not (Char.is_whitespace c))
+
+      let test_coverage gen ~f =
+        let all = Char.Set.of_list Char.all in
+        (* repeat to make sure changing random seed doesn't affect the outcome *)
+        for _ = 1 to 10 do
+          let expect = Set.filter all ~f in
+          let actual =
+            let set = ref Char.Set.empty in
+            with_return (fun return ->
+              Sequence.iter (Quickcheck.random_sequence gen) ~f:(fun t ->
+                set := Set.add !set t;
+                if Set.equal !set expect then return.return ()));
+            !set
+          in
+          [%test_result: Char.Set.t] actual ~expect
+        done
+
+      (* exported generators: *)
+      let%test_unit "default"    = test_coverage Char.gen            ~f:(fun _ -> true)
+      let%test_unit "digit"      = test_coverage Char.gen_digit      ~f:Char.is_digit
+      let%test_unit "lowercase"  = test_coverage Char.gen_lowercase  ~f:Char.is_lowercase
+      let%test_unit "uppercase"  = test_coverage Char.gen_uppercase  ~f:Char.is_uppercase
+      let%test_unit "alpha"      = test_coverage Char.gen_alpha      ~f:Char.is_alpha
+      let%test_unit "alphanum"   = test_coverage Char.gen_alphanum   ~f:Char.is_alphanum
+      let%test_unit "print"      = test_coverage Char.gen_print      ~f:Char.is_print
+      let%test_unit "whitespace" = test_coverage Char.gen_whitespace ~f:Char.is_whitespace
     end)
 
   let%test_module "tuple2" =

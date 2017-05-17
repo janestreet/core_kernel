@@ -1435,12 +1435,12 @@ module Make (Hashtbl : Hashtbl_intf.Hashtbl) = struct
           mutate t
 
         let mutation_after_raising_callback_does_not_raise
-              (type a) ~make ~caller ~callback ~mutate ~test_result =
+              (type a) ~make ~caller ~callback:_ ~mutate ~test_result =
           let _ : a test_result = test_result in
           let t = make () in
           let _ : a Or_error.t =
             Or_error.try_with (fun () ->
-              caller t (fun x -> assert false; callback x))
+              caller t (fun _ -> assert false))
           in
           mutate t
 

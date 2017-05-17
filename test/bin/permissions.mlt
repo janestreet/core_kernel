@@ -25,7 +25,7 @@ Error: This expression has type * (glob)
        but an expression was expected of type
          * (glob)
          * (glob)
-       Type immutable = [ `Read | `Who_can_write of Perms.nobody ]
+       Type Perms.nobody perms = [ `Read | `Who_can_write of Perms.nobody ]
        is not compatible with type 'a = [> `Who_can_write of Perms.me ]
        Types for tag `Who_can_write are incompatible
 |}]
