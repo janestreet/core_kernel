@@ -199,6 +199,7 @@ module Make_tree (Key : Comparator.S1) = struct
   let add a ~key ~data = add a ~key ~data ~comparator
   let add_multi a ~key ~data = add_multi a ~key ~data ~comparator
   let remove_multi a b = remove_multi a b ~comparator
+  let find_multi a b = find_multi a b ~comparator
   let change a b ~f = change a b ~f ~comparator
   let update a b ~f = update a b ~f ~comparator
   let find_exn a b = find_exn a b ~comparator
@@ -223,8 +224,7 @@ module Make_tree (Key : Comparator.S1) = struct
   let partition_map t ~f = partition_map t ~f ~comparator
   let partitioni_tf t ~f = partitioni_tf t ~f ~comparator
   let partition_tf t ~f = partition_tf t ~f ~comparator
-  let compare_direct a b c = compare_direct a b c ~comparator
-  let equal a b c = equal a b c ~comparator
+  let compare_direct a b c = compare_direct a b c ~comparator  let equal a b c = equal a b c ~comparator
   let keys = keys
   let data = data
   let to_alist = to_alist

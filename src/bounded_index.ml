@@ -9,7 +9,7 @@ module Stable = struct
         ; min_index : int
         ; max_index : int
         }
-      [@@deriving bin_io, compare]
+      [@@deriving bin_io, compare, hash]
 
       let create index ~min ~max =
         if index < min || index > max
@@ -96,7 +96,7 @@ module Make (M : sig val label : string val module_name : string end) = struct
 
   open Stable.V1
 
-  type t = Stable.V1.t [@@deriving sexp, bin_io, compare]
+  type t = Stable.V1.t [@@deriving bin_io, compare, hash, sexp]
   type comparator_witness = Stable.V1.comparator_witness
 
   let create = Stable.V1.create

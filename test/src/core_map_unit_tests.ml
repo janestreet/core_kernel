@@ -51,6 +51,7 @@ module Unit_tests
     include Map
     let add                        x = simplify_accessor add x
     let add_multi                  x = simplify_accessor add_multi x
+    let find_multi                 x = simplify_accessor find_multi x
     let remove_multi               x = simplify_accessor remove_multi x
     let change                     x = simplify_accessor change x
     let update                     x = simplify_accessor update x
@@ -547,6 +548,15 @@ module Unit_tests
     equal_maps m2 ~caml_map:(Caml_map.add Key.sample [1; 0] Caml_map.empty)
   ;;
 
+  let find_multi _ = assert false
+
+  let%test _ =
+    let m1 = Map.add_multi (Map.empty ()) ~key:Key.sample ~data:0 in
+    let m2 = Map.add_multi m1 ~key:Key.sample ~data:1 in
+    List.equal ~equal:Int.equal (Map.find_multi m2 Key.sample)
+      (Caml_map.find Key.sample (Caml_map.add Key.sample [1; 0] Caml_map.empty));
+  ;;
+
   let remove_multi _ = assert false
 
   let%test _ =
@@ -600,6 +610,10 @@ module Unit_tests
   let%test _ =
     try ignore (Map.find_exn (Map.empty ()) Key.sample); false
     with Not_found -> true
+  ;;
+
+  let%test _ =
+    Map.find_multi (Map.empty ()) Key.sample = []
   ;;
 
   let fold_right _ = assert false

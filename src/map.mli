@@ -214,6 +214,13 @@ val remove_multi
   -> 'k
   -> ('k, 'v list, 'cmp) t
 
+(** [find_multi t key] returns the empty list if [key] is not present in the table,
+    returns [t]'s values for [key] otherwise *)
+val find_multi
+  :  ('k, 'v list, 'cmp) t
+  -> 'k
+  -> 'v list
+
 (** [change t key ~f] returns a new map [m] that is the same as [t] on all keys except for
     [key], and whose value for [key] is defined by [f], i.e. [find m key = f (find t
     key)]. *)

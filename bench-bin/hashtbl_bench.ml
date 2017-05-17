@@ -520,6 +520,11 @@ end = struct
       let r = Example.random size in let t = Example.t size in stage (fun () ->
         ignore (find t (Example.random_key r `either) : int option)))
 
+    let find_multi = Table.find_multi
+    let () = (!!) "find_multi + <rand key>" (fun size ->
+      let r = Example.random size in let t = Example.t_multi size in stage (fun () ->
+        ignore (find_multi t (Example.random_key r `either) : int list)))
+
     let find_and_call = Table.find_and_call
     let () = (!!) "find_and_call + <rand key>" (fun size ->
       let if_not_found _ = 0 in

@@ -902,6 +902,17 @@ module Make (Hashtbl : Hashtbl_intf.Hashtbl) = struct
                 (to_map t)
                 ~expect:(Map.remove_multi map key))
 
+        let find_multi = Hashtbl.find_multi
+
+        let%test_unit _ =
+          Qc.test (Gen.tuple2 multi_constructor_gen Key.gen)
+            ~sexp_of:[%sexp_of: multi_constructor * Key.t]
+            ~f:(fun (multi_constructor, key) ->
+              let map, t = map_and_table_multi multi_constructor in
+              [%test_result: Data.t list]
+                (Hashtbl.find_multi t key)
+                ~expect:(Map.find_multi map key))
+
         let map = Hashtbl.map
 
         let%test_unit _ =
@@ -2132,6 +2143,7 @@ module Make (Hashtbl : Hashtbl_intf.Hashtbl) = struct
       let mem                      = Hashtbl.mem
       let find                     = Hashtbl.find
       let find_exn                 = Hashtbl.find_exn
+      let find_multi               = Hashtbl.find_multi
       let to_alist                 = Hashtbl.to_alist
       let hashable                 = Hashtbl.hashable
 

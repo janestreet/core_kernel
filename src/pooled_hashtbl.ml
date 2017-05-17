@@ -474,6 +474,12 @@ let add_multi t ~key ~data =
   | Some l -> replace t ~key ~data:(data :: l)
 ;;
 
+let find_multi t key =
+  match find t key with
+  | None -> []
+  | Some l -> l
+;;
+
 let remove_multi t key =
   match find t key with
   | None               -> ()
@@ -875,6 +881,7 @@ module Accessors = struct
   let update              = update
   let add_multi           = add_multi
   let remove_multi        = remove_multi
+  let find_multi          = find_multi
   let mem                 = mem
   let iter_keys           = iter_keys
   let iter                = iter

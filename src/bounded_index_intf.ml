@@ -11,7 +11,7 @@ open! Import
 open! Std_internal
 
 module type S = sig
-  type t
+  type t [@@deriving hash]
 
   include Identifiable with type t := t
 
