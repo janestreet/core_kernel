@@ -172,12 +172,14 @@ module type Generator = sig
       rather than accumulating without bound over time. *)
   val of_fun : (unit -> 'a t) -> 'a t
 
-  (** [list ?min_len ?max_len t] creates a list generator with elements drawn from [t],
-      with optional bounds on its length specified by [min_len] and [max_len].  The size
-      passed to the list generator will be distributed among the generated elements.  This
-      is used to implement [List.gen] and [List.gen']; they produce identical
-      distributions. *)
-  val list : ?min_len:int -> ?max_len:int -> 'a t -> 'a list t
+  (** Generators for lists, choosing each element independently from the given element
+      generator. [list] and [list_non_empty] distribute [size] among the list length and
+      the sizes of each element. [list_non_empty] never generates the empty list.
+      [list_with_length] generates lists of the given length, and distributes [size] among
+      the sizes of the elements. *)
+  val list             :        'a t -> 'a list t
+  val list_non_empty   :        'a t -> 'a list t
+  val list_with_length : int -> 'a t -> 'a list t
 
 end
 

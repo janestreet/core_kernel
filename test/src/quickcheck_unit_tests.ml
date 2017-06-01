@@ -65,8 +65,7 @@ module Test (S : sig val default_seed : Quickcheck.seed end) : sig end = struct
     (module struct
       let%test_unit _ =
         test_can_generate
-          (List.gen'
-             ~length:(`Exactly 100)
+          (List.gen_with_length 100
              G.(filter Int.gen ~f:(fun x -> (x mod 2) = 0)))
           ~f:(fun _ -> true)
 
@@ -493,7 +492,7 @@ module Test (S : sig val default_seed : Quickcheck.seed end) : sig end = struct
     (module struct
 
       let test length =
-        test ~trials:1 (List.gen' Char.gen ~length:(`Exactly length)) ~f:(fun input ->
+        test ~trials:1 (List.gen_with_length length Char.gen) ~f:(fun input ->
           [%test_result: int] (List.length input) ~expect:length)
 
       let%test_unit "used to cause a stack overflow" = test 100_000

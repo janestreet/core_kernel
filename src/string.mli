@@ -20,13 +20,11 @@ include Hexdump.S        with type t := t
 include Identifiable.S   with type t := t and type comparator_witness := comparator_witness
 include Quickcheckable.S with type t := t
 
-(** [gen' ?length char_gen] generates strings using the given distributions for string
-    length and each character. *)
-val gen'
-  :  ?length : int Quickcheck.Generator.t
-  (** defaults to size passed to generator *)
-  -> char Quickcheck.Generator.t
-  -> t    Quickcheck.Generator.t
+(** Like [gen], but generate strings with the given distribution of characters. *)
+val gen' : char Quickcheck.Generator.t -> t Quickcheck.Generator.t
+
+(** Like [gen'], but generate strings with the given length. *)
+val gen_with_length : int -> char Quickcheck.Generator.t -> t Quickcheck.Generator.t
 
 (** Note that [string] is already stable by itself, since as a primitive type it is an
     integral part of the sexp / bin_io protocol. [String.Stable] exists only to introduce

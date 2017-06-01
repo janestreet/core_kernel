@@ -276,7 +276,7 @@ module Unit_tests
           let int_set_gen =
             Generator.small_non_negative_int
             >>= fun size ->
-            List.gen' ~length:(`Exactly size) Int.gen
+            List.gen_with_length size Int.gen
             >>| fun ints ->
             Set.of_list (List.map ints ~f:Elt.of_int)
           in

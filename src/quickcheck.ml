@@ -635,11 +635,15 @@ module Generator = struct
     t6 >>| fun x6 ->
     (x1, x2, x3, x4, x5, x6)
 
-  let list ?min_len ?max_len elem_gen =
+  let list_gen ?min_len ?max_len elem_gen =
     create (fun ~size random ->
       let sizes = sizes_for_elements ?min_len ?max_len ~size random in
       List.init (Array.length sizes) ~f:(fun i ->
         generate elem_gen ~size:sizes.(i) random))
+
+  let list                 elem_gen = list_gen elem_gen
+  let list_non_empty       elem_gen = list_gen elem_gen ~min_len:1
+  let list_with_length len elem_gen = list_gen elem_gen ~min_len:len ~max_len:len
 
   (* [fn] generates random functions that produce randomly assigned results for each
      input, but which produce identical results for identical inputs.  Each random

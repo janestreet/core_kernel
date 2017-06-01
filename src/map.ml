@@ -18,7 +18,7 @@ module For_quickcheck = struct
     List.gen k_gen
     >>= fun ks ->
     let ks = List.dedup_and_sort ks ~compare:comparator.Comparator.compare in
-    List.gen' v_gen ~length:(`Exactly (List.length ks))
+    List.gen_with_length (List.length ks) v_gen
     >>| fun vs ->
     List.zip_exn ks vs
 

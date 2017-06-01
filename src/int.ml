@@ -1,6 +1,6 @@
 open! Import
 
-module Stable_workaround = struct
+module Stable = struct
   module V1 = struct
     module T = struct
       type t = int [@@deriving hash, bin_io, sexp]
@@ -10,12 +10,6 @@ module Stable_workaround = struct
     end
     include T
     include Comparable.Stable.V1.Make (T)
-  end
-end
-
-module Stable = struct
-  module V1 = struct
-    include Stable_workaround.V1
   end
 end
 

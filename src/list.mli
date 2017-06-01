@@ -34,25 +34,11 @@ include Quickcheckable.S1 with type 'a t := 'a t
 
 val to_string : f:('a -> string) -> 'a t -> string
 
-(** Quickcheck generator for lists with additional customization.
+(** Like [gen], but never generates the empty list. *)
+val gen_non_empty : 'a Quickcheck.Generator.t -> 'a t Quickcheck.Generator.t
 
-    [List.gen' t] produces a generator for arbitrary lists of values from [t].
-
-    - Adding [~length:(`Exactly n)] produces only lists of length [n].
-    - Adding [~length:(`At_least n)] produces only lists of length [n] or greater.
-    - Adding [~length:(`At_most n)] produces only lists of length [n] or less.
-    - Adding [~length:(`Between_inclusive (m,n))] produces only lists of length [k] such
-    that [m <= k] and [k <= n].
-
-    The lists in the output of [list t] are generated uniquely, so long as the values in
-    [t] are generated uniquely. *)
-val gen'
-  :  ?length : [ `Exactly           of int
-               | `At_least          of int
-               | `At_most           of int
-               | `Between_inclusive of int * int ]
-  -> 'a Quickcheck.Generator.t
-  -> 'a t Quickcheck.Generator.t
+(** Like [gen], but generates lists with the given length. *)
+val gen_with_length : int -> 'a Quickcheck.Generator.t -> 'a t Quickcheck.Generator.t
 
 (** [gen_permutations t] generates all permutations of [list].  If [t] contains duplicate
     values, then [gen_permutations t] will produce duplicate lists. *)

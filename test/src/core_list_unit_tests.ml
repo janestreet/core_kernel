@@ -52,7 +52,7 @@ let%test_module "random" =
 
       let%test_unit "mem true" =
         Q.test ~sexp_of:[%sexp_of: t * t list]
-          (List.gen' gen ~length:(`At_least 1)
+          (List.gen_non_empty gen
            >>= fun list ->
            G.of_list list
            >>| fun elt_of_list ->
@@ -79,7 +79,7 @@ let%test_module "random" =
         Q.test ~sexp_of:[%sexp_of: int * t list]
           (G.small_non_negative_int
            >>= fun len  ->
-           List.gen' gen ~length:(`Exactly len)
+           List.gen_with_length len gen
            >>| fun list ->
            len, list)
           ~f:(fun (len, list) ->

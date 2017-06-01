@@ -5,7 +5,7 @@ open! Import
 module Core_map = Map
 module Core_set = Set
 
-module Stable_workaround = struct
+module Stable = struct
   module V1 = struct
     module T = struct
       type t = string [@@deriving bin_io]
@@ -14,12 +14,6 @@ module Stable_workaround = struct
     end
     include T
     include Comparable.Stable.V1.Make (T)
-  end
-end
-
-module Stable = struct
-  module V1 = struct
-    include Stable_workaround.V1
   end
 end
 
@@ -68,10 +62,13 @@ module For_quickcheck = struct
     then Generator.weighted_union [ 1., return 0; 10., return 1 ]
     else return (size + 1)
 
-  let gen' ?(length = default_length) char_gen =
-    let%bind len   = length in
-    let%bind chars = List.gen' char_gen ~length:(`Exactly len) in
+  let gen_with_length len char_gen =
+    let%bind chars = List.gen_with_length len char_gen in
     return (of_char_list chars)
+
+  let gen' char_gen =
+    let%bind len = default_length in
+    gen_with_length len char_gen
 
   let gen = gen' Char.gen
 
@@ -84,10 +81,11 @@ module For_quickcheck = struct
 
 end
 
-let gen'     = For_quickcheck.gen'
-let gen      = For_quickcheck.gen
-let obs      = For_quickcheck.obs
-let shrinker = For_quickcheck.shrinker
+let gen_with_length = For_quickcheck.gen_with_length
+let gen'            = For_quickcheck.gen'
+let gen             = For_quickcheck.gen
+let obs             = For_quickcheck.obs
+let shrinker        = For_quickcheck.shrinker
 
 let%test_module "Caseless Comparable" =
   (module struct

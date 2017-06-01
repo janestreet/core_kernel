@@ -38,21 +38,9 @@ module For_quickcheck = struct
 
   open Generator.Monad_infix
 
-  let gen' ?length elem_gen =
-    let min_len, max_len =
-      match length with
-      | None         -> None, None
-      | Some variant ->
-        match variant with
-        | `Exactly           n      -> Some n, Some n
-        | `At_least          n      -> Some n, None
-        | `At_most           n      -> None,   Some n
-        | `Between_inclusive (x, y) -> Some x, Some y
-    in
-    Generator.list elem_gen ?min_len ?max_len
-
-  let gen elem_gen =
-    gen' elem_gen
+  let gen             = Generator.list
+  let gen_non_empty   = Generator.list_non_empty
+  let gen_with_length = Generator.list_with_length
 
   let gen_permutations list =
     match list with
@@ -127,7 +115,8 @@ module For_quickcheck = struct
 end
 
 let gen              = For_quickcheck.gen
-let gen'             = For_quickcheck.gen'
+let gen_non_empty    = For_quickcheck.gen_non_empty
+let gen_with_length  = For_quickcheck.gen_with_length
 let gen_permutations = For_quickcheck.gen_permutations
 let obs              = For_quickcheck.obs
 let shrinker         = For_quickcheck.shrinker

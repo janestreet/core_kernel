@@ -17,7 +17,7 @@ module Bin : Binable0.S with type t := Base.Int63.t = struct
   let bin_shape_t = Bin_prot.Shape.bin_shape_int63
 end
 
-module Stable_workaround = struct
+module Stable = struct
   module V1 = struct
     module T = struct
       type t = Base.Int63.t [@@deriving hash, sexp]
@@ -28,12 +28,6 @@ module Stable_workaround = struct
     end
     include T
     include Comparable.Stable.V1.Make (T)
-  end
-end
-
-module Stable = struct
-  module V1 = struct
-    include Stable_workaround.V1
   end
 end
 
