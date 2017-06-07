@@ -21,21 +21,9 @@ val is_some : _ t -> bool
 
 val iter : 'a t -> f:('a -> unit) -> unit
 
-
-(** [Optional_syntax] defines functions used by [match%optional].  Usage looks like:
-
-    {[
-      let open Set_once.Optional_syntax in
-      match%optional some_set_once_value with
-      | None   -> ?
-      | Some a -> ?
-    ]} *)
-module Optional_syntax : sig
-  module Optional_syntax : sig
-    val is_none         : _  t -> bool
-    val unchecked_value : 'a t -> 'a
-  end
-end
+module Optional_syntax : Optional_syntax.S1
+  with type 'a t := 'a t
+  with type 'a value := 'a identity
 
 module Unstable : sig
   type nonrec 'a t = 'a t [@@deriving bin_io, sexp]

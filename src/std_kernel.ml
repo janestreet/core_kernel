@@ -94,6 +94,7 @@ module Nothing                              = Nothing
 module Only_in_test                         = Only_in_test
 module Option                               = Option
 module Option_array                         = Option_array
+module Optional_syntax                      = Optional_syntax
 module Ordered_collection_common            = Ordered_collection_common
 module Ordering                             = Ordering
 module Or_error                             = Or_error

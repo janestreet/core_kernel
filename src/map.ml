@@ -148,6 +148,9 @@ end = struct
   let of_increasing_iterator_unchecked ~len ~f =
     of_increasing_iterator_unchecked ~comparator ~len ~f
 
+  let of_increasing_sequence seq =
+    of_increasing_sequence ~comparator seq
+
   let of_alist alist = of_alist ~comparator alist
 
   let of_alist_or_error alist = of_alist_or_error ~comparator alist
@@ -184,6 +187,7 @@ module Make_tree (Key : Comparator.S1) = struct
   let of_sorted_array a = of_sorted_array a ~comparator
   let of_increasing_iterator_unchecked ~len ~f =
     of_increasing_iterator_unchecked ~len ~f ~comparator
+  let of_increasing_sequence seq = of_increasing_sequence ~comparator seq
   let of_alist a = of_alist a ~comparator
   let of_alist_or_error a = of_alist_or_error a ~comparator
   let of_alist_exn a = of_alist_exn a ~comparator

@@ -8,12 +8,8 @@ type heap_block = contents Heap_block.t [@@deriving sexp_of]
 
 let heap_block name int =
   let b = ref int |> Heap_block.create_exn in
-  Gc.Expert.add_finalizer b (fun _ -> print_s [%message "finalized" name]);
+  Gc.Expert.add_finalizer_last b (fun _ -> print_s [%message "finalized" name]);
   b
-;;
-
-let create () =
-  create () ~thread_safe_after_cleared:(fun () -> print_s [%message "cleared"])
 ;;
 
 let print t =
@@ -44,7 +40,6 @@ let%expect_test "[create], [get], [set], clearing via GC" [@tags "no-js"] =
   Gc.compact ();
   print t;
   [%expect {|
-    cleared
     (finalized b)
     (() (is_some false) (get ())) |}];
 ;;
@@ -66,7 +61,6 @@ let%expect_test "multiple [set]s and clearing" [@tags "no-js"] =
     14 |}];
   Gc.compact ();
   [%expect {|
-    cleared
     (finalized b2) |}];
   print t;
   [%expect {|

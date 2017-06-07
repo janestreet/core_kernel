@@ -8,14 +8,9 @@ open! Std_internal
 
 type 'a t [@@deriving sexp_of]
 
-(** [create] creates an empty weak pointer.  One must [set] it to point it to something.
-    Whenever [t] is cleared by the garbage collector, [thread_safe_after_cleared] is
-    called.  This happens via a finalizer, so the usual trickiness of finalization
-    applies; see [Gc.Expert] for more about finalizers. *)
-val create
-  :  ?thread_safe_after_cleared : (unit -> unit)
-  -> unit
-  -> _ t
+(** [create] creates an empty weak pointer.  One must [set] it to point it to
+    something. *)
+val create : unit -> _ t
 
 val get : 'a t -> 'a Heap_block.t option
 

@@ -1,7 +1,11 @@
-(** This module extends the Base [Maybe_bound] module with compare functions in the form
-    of As_lower_bound and As_upper_bound modules. *)
+(** This module extends the Base [Maybe_bound] module with bin_io and with compare
+    functions in the form of As_lower_bound and As_upper_bound modules. *)
+
+type 'a t = 'a Base.Maybe_bound.t = Incl of 'a | Excl of 'a | Unbounded
+[@@deriving bin_io]
 
 include module type of struct include Base.Maybe_bound end
+  with type 'a t := 'a t
 
 (** Compares [t] values as lower bounds, where [Unbounded] is lowest, [Incl x < Excl x],
     and other cases of [Incl] and/or [Excl] are compared based on ['a].  If
@@ -25,4 +29,8 @@ end
     ]} *)
 module As_upper_bound : sig
   type nonrec 'a t = 'a t [@@deriving compare]
+end
+
+module Stable : sig
+  module V1 : Stable_module_types.S1 with type 'a t = 'a t
 end

@@ -357,6 +357,14 @@ module Expert : sig
   val add_finalizer     : 'a Heap_block.t -> ('a Heap_block.t -> unit) -> unit
   val add_finalizer_exn : 'a -> ('a -> unit) -> unit
 
+  (** Same as {!add_finalizer} except that the function is not called until the value has
+      become unreachable for the last time.  This means that the finalization function
+      does not recieve the value as an argument.  Every weak pointer and ephemeron that
+      contained this value as key or data is unset before running the finalization
+      function. *)
+  val add_finalizer_last : 'a Heap_block.t -> (unit -> unit) -> unit
+  val add_finalizer_last_exn : 'a -> (unit -> unit) -> unit
+
   (** The runtime essentially maintains a bool ref:
 
       {[

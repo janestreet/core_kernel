@@ -381,10 +381,6 @@ let%test_module _ =
     ;;
   end)
 
-(* Memory mapping *)
-
-let map_file ~shared fd n = Array1.map_file fd Bigarray.char c_layout shared n
-
 (* Search *)
 
 external unsafe_find : t -> char -> pos:int -> len:int -> int = "bigstring_find" [@@noalloc]

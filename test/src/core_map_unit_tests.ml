@@ -96,6 +96,8 @@ module Unit_tests
     let of_sorted_array           x = simplify_creator of_sorted_array x
     let of_increasing_iterator_unchecked ~len ~f =
       simplify_creator of_increasing_iterator_unchecked ~len ~f
+    let of_increasing_sequence seq =
+      simplify_creator of_increasing_sequence seq
     let of_alist                  x = simplify_creator of_alist x
     let of_alist_or_error         x = simplify_creator of_alist_or_error x
     let of_alist_exn              x = simplify_creator of_alist_exn x
@@ -396,9 +398,11 @@ module Unit_tests
     let map_of_alist = Map.of_alist_exn alist in
     let map_of_array = Map.of_sorted_array_unchecked array in
     let map_of_rev_array = Map.of_sorted_array_unchecked array_rev in
+    let map_of_sequence = Sequence.of_list alist |> Map.of_increasing_sequence |> Or_error.ok_exn in
     let map_equal = Map.equal Int.equal in
     map_equal map_of_alist map_of_array &&
-    map_equal map_of_alist map_of_rev_array
+    map_equal map_of_alist map_of_rev_array &&
+    map_equal map_of_alist map_of_sequence
   ;;
 
   let invariants _ = assert false
@@ -410,6 +414,7 @@ module Unit_tests
       assert (List.permute alist |> Map.of_alist_exn |> Map.invariants);
       assert (Array.of_list alist |> Map.of_sorted_array_unchecked |> Map.invariants);
       assert (List.rev alist |> Array.of_list |> Map.of_sorted_array_unchecked |> Map.invariants);
+      assert (Sequence.of_list alist |> Map.of_increasing_sequence |> Or_error.ok_exn |> Map.invariants);
     done
   ;;
 
@@ -522,6 +527,32 @@ module Unit_tests
     match Map.of_iteri ~iteri:(alist_iteri [Key.sample, 0; Key.sample, 1]) with
     | `Ok _ -> false
     | `Duplicate_key _ -> true
+  ;;
+
+  let of_increasing_sequence _ = assert false
+
+  let%test "of_increasing_sequence: vs of_alist_or_error" =
+    let alist = random_alist Key.samples in
+    let increasing_alist =
+      List.sort alist ~cmp:(Comparable.lift ~f:fst Key.compare)
+      |> List.remove_consecutive_duplicates ~equal:(Comparable.lift ~f:fst Key.equal)
+    in
+    let duplicates_alist = match increasing_alist with
+      | [] -> failwith "empty alist in test"
+      | x :: xs -> x :: x :: xs
+    in
+    let decreasing_alist = List.rev increasing_alist in
+    begin match Map.of_increasing_sequence (Sequence.of_list duplicates_alist) with
+    | Error _ -> ()
+    | Ok _ -> failwith "of_increasing_sequence: expected to fail with duplicate key"
+    end;
+    begin match Map.of_increasing_sequence (Sequence.of_list decreasing_alist) with
+    | Error _ -> ()
+    | Ok _ -> failwith "of_increasing_sequence: expected to fail with non-increasing key"
+    end;
+    match Map.of_increasing_sequence (Sequence.of_list increasing_alist) with
+    | Error _ -> failwith "of_increasing_sequence: expected to get a map back"
+    | Ok map -> Map.equal Int.equal map (Map.of_alist_exn increasing_alist)
   ;;
 
   let is_empty _ = assert false

@@ -68,6 +68,8 @@ val find : ('key, 'a, _, _) t -> 'key -> 'a
 
 val change : ('key, 'a, 'c, 'e) t -> 'key -> f:('a -> 'a) -> ('key, 'a, 'c, 'e) t
 
+val data : (_, 'a, _, _) t -> 'a list
+
 (** Sequence a total map of computations in order of their keys resulting in computation
     of the total map of results. *)
 module Sequence (A : Applicative) : sig

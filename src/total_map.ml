@@ -3,7 +3,9 @@ open Std_internal
 
 type ('key, 'a, 'cmp, 'enum) t = ('key, 'a, 'cmp) Map.t
 
-let to_map x = x
+let to_map t = t
+
+let data = Map.data
 
 let key_not_in_enumeration t key =
   failwiths

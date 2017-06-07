@@ -1,6 +1,21 @@
 open! Import
 
-include (Base.Maybe_bound : module type of struct include Base.Maybe_bound end)
+module Stable = struct
+  module V1 = struct
+    type 'a t = 'a Base.Maybe_bound.t = Incl of 'a | Excl of 'a | Unbounded
+    [@@deriving bin_io, compare, sexp]
+
+    let map x ~f =
+      match x with
+      | Incl x -> Incl (f x)
+      | Excl x -> Excl (f x)
+      | Unbounded -> Unbounded
+  end
+end
+
+include Stable.V1
+include (Base.Maybe_bound : module type of struct include Base.Maybe_bound end
+         with type 'a t := 'a t)
 
 let compare_one_sided ~side compare_a t1 t2 =
   match t1, t2 with
@@ -29,3 +44,4 @@ module As_upper_bound = struct
   type nonrec 'a t = 'a t
   let compare compare_a t1 t2 = compare_one_sided ~side:`Upper compare_a t1 t2
 end
+

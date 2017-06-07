@@ -48,22 +48,9 @@ module type S_without_immediate = sig
   val to_option : t -> value option
   val of_option : value option -> t
 
-  (** Provides bindings used by the [match%optional] ppx transformer.  Example:
-
-      {[
-        let open Immediate.Int.Option.Optional_syntax in
-        match%optional Immediate.Int.Option.some 3 with
-        | None   -> ()
-        | Some x -> printf "%d" x
-      ]}
-
-  *)
-  module Optional_syntax : sig
-    module Optional_syntax : sig
-      val is_none         : t -> bool
-      val unchecked_value : t -> value
-    end
-  end
+  module Optional_syntax : Optional_syntax.S
+    with type t := t
+    with type value := value
 end
 
 module type S = sig

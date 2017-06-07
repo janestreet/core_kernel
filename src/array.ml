@@ -230,6 +230,7 @@ module type Permissioned = sig
   val sorted_copy : ('a, [> read]) t -> cmp:('a -> 'a -> int) -> ('a, [< _ perms]) t
   val last : ('a, [> read]) t -> 'a
   val empty : unit -> ('a, [< _ perms]) t
+  [@@deprecated "[since 2017-05] Use [ [||] ]"]
   val equal : ('a, [> read]) t -> ('a, [> read]) t -> equal:('a -> 'a -> bool) -> bool
   val unsafe_truncate : (_, [> write]) t -> len:int -> unit
 
@@ -373,6 +374,7 @@ module type S = sig
   val sorted_copy : 'a t -> cmp:('a -> 'a -> int) -> 'a t
   val last : 'a t -> 'a
   val empty : unit -> 'a t
+  [@@deprecated "[since 2017-05] Use [ [||] ]"]
   val equal : 'a t -> 'a t -> equal:('a -> 'a -> bool) -> bool
   val unsafe_truncate : _ t -> len:int -> unit
 

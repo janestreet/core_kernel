@@ -87,8 +87,17 @@ module type Date0 = sig
       [n=0]. [add_business_days ~is_holiday:(fun _ -> false) ...] is the same as
       [add_weekdays].
 
+      If you don't want to skip Saturday or Sunday, use [add_days_skipping].
+
   *)
   val add_business_days : t -> is_holiday:(t -> bool) -> int -> t
+
+  (** [add_days_skipping t ~skip n] adds [n] days to [t], ignoring any date satisfying
+      [skip], starting at the first date at or after [t] that does not satisfy [skip].
+      For example, if [skip t = true], then [add_days_skipping t ~skip 0 > t].
+
+      [add_business_days] and [add_weekdays] are special cases of [add_days_skipping]. *)
+  val add_days_skipping : t -> skip:(t -> bool) -> int -> t
 
   (** the following returns a closed interval (endpoints included) *)
   val dates_between : min:t -> max:t -> t list

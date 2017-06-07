@@ -222,6 +222,7 @@ module Permissioned : sig
   val sorted_copy : ('a, [> read]) t -> cmp:('a -> 'a -> int) -> ('a, [< _ perms]) t
   val last : ('a, [> read]) t -> 'a
   val empty : unit -> ('a, [< _ perms]) t
+  [@@deprecated "[since 2017-05] Use [ [||] ]"]
   val equal : ('a, [> read]) t -> ('a, [> read]) t -> equal:('a -> 'a -> bool) -> bool
   val unsafe_truncate : (_, [> write]) t -> len:int -> unit
 
