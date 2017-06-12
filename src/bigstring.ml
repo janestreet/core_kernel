@@ -199,10 +199,25 @@ external internalhash_fold_bigstring :
 let _making_sure_the_C_binding_takes_an_int (x : Hash.state) = (x :> int)
 
 let hash_fold_t = internalhash_fold_bigstring
-let hash = [%hash: t]
+let hash = Ppx_hash_lib.Std.Hash.of_fold hash_fold_t
+
+let%test_unit _ [@tags "64-bits-only"] =
+  let check s =
+    [%test_eq: int]
+      ([%hash: t] (of_string s))
+      ([%hash: string] s)
+  in
+  List.iter ~f:check [
+    ""; "a"; "ab"; "abc"; "abcd";
+    "string hashing for bigstrings is the same as for standard strings";
+  ]
 
 let%test_unit _ =
-  let check s = [%test_result: int] (hash (of_string s)) ~expect:([%hash: string] s) in
+  let check s =
+    [%test_eq: int]
+      (Hash.run [%hash_fold: t] (of_string s))
+      (Hash.run [%hash_fold: string] s)
+  in
   List.iter ~f:check [
     ""; "a"; "ab"; "abc"; "abcd";
     "string hashing for bigstrings is the same as for standard strings";

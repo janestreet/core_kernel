@@ -367,7 +367,9 @@ module Make_plain_using_comparator (Elt : sig
   module Provide_hash (Elt : Hasher.S with type t := Elt.t) =
   struct
     let hash_fold_t state t = hash_fold_direct Elt.hash_fold_t state t
-    let hash = [%hash: t]
+    let hash t =
+      Ppx_hash_lib.Std.Hash.get_hash_value
+        (hash_fold_t (Ppx_hash_lib.Std.Hash.create ()) t)
   end
 
   module Provide_bin_io (Elt' : sig type t [@@deriving bin_io] end with type t := Elt.t) =

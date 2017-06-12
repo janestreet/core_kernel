@@ -74,9 +74,8 @@ module Add_hash
        include Raw with type t := t
      end)
     (Validated : S with type raw := Raw.t) = struct
-  type t = Validated.t
   let hash_fold_t state t = Raw.hash_fold_t state (Validated.raw t)
-  let hash = [%hash: t]
+  let hash t = Raw.hash (Validated.raw t)
 end
 
 module Make_binable (Raw : Raw_bin_io) = struct
