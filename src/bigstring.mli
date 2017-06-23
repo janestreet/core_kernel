@@ -187,12 +187,11 @@ external unsafe_destroy : t -> unit = "bigstring_destroy_stub"
     making compact macros for the implementations.  The accessor names contain endian-ness
     to allow for branch-free implementations
 
-    <accessor>  ::= <unsafe><operation><type><endian><int>
-    <unsafe>    ::= unsafe_ | ''
+    <accessor>  ::= <unsafe><operation><type><endian>
+    <unsafe>    ::= unsafe_
     <operation> ::= get_ | set_
-    <type>      ::= int16 | uint16 | int32 | int64
+    <type>      ::= int8 | uint8 | int16 | uint16 | int32 | uint32 | int64 | uint64
     <endian>    ::= _le | _be | ''
-    <int>       ::= _int | ''
 
     The "unsafe_" prefix indicates that these functions do no bounds checking.  Performance
     testing demonstrated that the bounds check was 2-3 times slower due to the fact that

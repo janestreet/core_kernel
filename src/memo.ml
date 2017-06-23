@@ -23,7 +23,7 @@ let unit f =
 let unbounded (type a) ?(hashable = Hashtbl.Hashable.poly) f =
   let cache =
     let module A =
-      Hashable.Make_plain (struct
+      Hashable.Make_plain_and_derive_hash_fold_t (struct
         type t = a
         let {Hashtbl.Hashable.hash; compare; sexp_of_t} = hashable
       end)

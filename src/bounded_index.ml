@@ -112,19 +112,16 @@ module Make (M : sig val label : string val module_name : string end) = struct
   let max_index t = t.max_index
   let min_index t = t.min_index
 
-  let hash t = t.index
-
   include Sexpable.To_stringable (struct
       type nonrec t = t [@@deriving sexp]
     end)
 
   include Identifiable.Make_using_comparator (struct
-      type nonrec t = t [@@deriving sexp, bin_io, compare]
+      type nonrec t = t [@@deriving bin_io, compare, hash, sexp]
       type nonrec comparator_witness = comparator_witness
       let comparator = comparator
       let of_string = of_string
       let to_string = to_string
-      let hash = hash
       let module_name = M.module_name
     end)
 end

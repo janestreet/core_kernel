@@ -3,7 +3,7 @@
 open! Import
 
 module type S_not_binable = sig
-  type t [@@deriving sexp]
+  type t [@@deriving hash, sexp]
   include Stringable.S     with type t := t
   include Comparable.S     with type t := t
   include Hashable.S       with type t := t
@@ -11,7 +11,7 @@ module type S_not_binable = sig
 end
 
 module type S = sig
-  type t [@@deriving bin_io, sexp]
+  type t [@@deriving bin_io, hash, sexp]
   include Stringable.S         with type t := t
   include Comparable.S_binable with type t := t
   include Hashable.S_binable   with type t := t
@@ -33,6 +33,13 @@ end
     ]}
 *)
 module Make (M : sig
+    type t [@@deriving bin_io, compare, hash, sexp]
+    include Stringable.S with type t := t
+    val module_name : string  (** for registering the pretty printer *)
+  end) : S
+  with type t := M.t
+
+module Make_and_derive_hash_fold_t (M : sig
     type t [@@deriving bin_io, compare, sexp]
     include Stringable.S with type t := t
     val hash : t -> int
@@ -41,6 +48,15 @@ module Make (M : sig
   with type t := M.t
 
 module Make_using_comparator (M : sig
+    type t [@@deriving bin_io, compare, hash, sexp]
+    include Comparator.S with type t := t
+    include Stringable.S with type t := t
+    val module_name : string
+  end) : S
+  with type t := M.t
+  with type comparator_witness := M.comparator_witness
+
+module Make_using_comparator_and_derive_hash_fold_t (M : sig
     type t [@@deriving bin_io, compare, sexp]
     include Comparator.S with type t := t
     include Stringable.S with type t := t

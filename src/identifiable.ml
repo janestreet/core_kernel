@@ -21,9 +21,8 @@ module type S = sig
 end
 
 module Make (T : sig
-    type t [@@deriving bin_io, compare, sexp]
+    type t [@@deriving bin_io, compare, hash, sexp]
     include Stringable.S with type t := t
-    val hash : t -> int
     val module_name : string
   end) = struct
   include T
@@ -32,11 +31,21 @@ module Make (T : sig
   include Pretty_printer.Register (T)
 end
 
-module Make_using_comparator (T : sig
+module Make_and_derive_hash_fold_t (T : sig
     type t [@@deriving bin_io, compare, sexp]
-    include Comparator.S with type t := t
     include Stringable.S with type t := t
     val hash : t -> int
+    val module_name : string
+  end) =
+  Make (struct
+    include T
+    let hash_fold_t state t = hash_fold_int state (hash t)
+  end)
+
+module Make_using_comparator (T : sig
+    type t [@@deriving bin_io, compare, hash, sexp]
+    include Comparator.S with type t := t
+    include Stringable.S with type t := t
     val module_name : string
   end) = struct
   include T
@@ -44,6 +53,18 @@ module Make_using_comparator (T : sig
   include Hashable.Make_binable (T)
   include Pretty_printer.Register (T)
 end
+
+module Make_using_comparator_and_derive_hash_fold_t (T : sig
+    type t [@@deriving bin_io, compare, sexp]
+    include Comparator.S with type t := t
+    include Stringable.S with type t := t
+    val hash : t -> int
+    val module_name : string
+  end) =
+  Make_using_comparator (struct
+    include T
+    let hash_fold_t state t = hash_fold_int state (hash t)
+  end)
 
 module Extend(M : Base.Identifiable.S)(B : Binable0.S with type t = M.t) =
 struct

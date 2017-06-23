@@ -24,7 +24,6 @@ end
 
 module Allowed_ints = struct
 
-
   type t =
     | None
     | All
@@ -90,11 +89,11 @@ module T : sig
 
   val magic : _ t -> _ t
 end = struct
-  type t_ = {
-    immediacy    : Immediacy.t;
-    allowed_ints : Allowed_ints.t;
-    typename     : string;
-  }
+  type t_ =
+    { immediacy    : Immediacy.t
+    ; allowed_ints : Allowed_ints.t
+    ; typename     : string
+    }
 
   type 'a t = t_
 

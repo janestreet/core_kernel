@@ -297,7 +297,7 @@ module T = struct
   *)
   let merge_pairs t =
     let max_stack_depth = 1_000 in
-    let rec loop depth head =
+    let rec loop t depth head =
       if depth >= max_stack_depth
       then allocating_merge_pairs t head
       else begin
@@ -313,13 +313,13 @@ module T = struct
                result of recursively calling merge_pairs on the tail *)
             merge t
               (merge t head next1)
-              (loop (depth + 1) next2);
+              (loop t (depth + 1) next2);
           end
         end
       end
     in
     let head = Node.disconnect_child t.pool t.heap in
-    loop 0 head
+    loop t 0 head
   ;;
 
   let remove_top t =
