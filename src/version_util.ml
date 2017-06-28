@@ -37,12 +37,32 @@ module Application_specific_fields = struct
   type t = Sexp.t String.Map.t [@@deriving sexp]
 end
 
+module Time_float_with_limited_parsing = struct
+  type t = Time_float.t * Sexp.t
+  let t_of_sexp sexp =
+    let str = string_of_sexp sexp in
+    try
+      match String.chop_suffix str ~suffix:"Z" with
+      | None -> failwith "zone must be Z"
+      | Some rest ->
+        match String.lsplit2 rest ~on:' ' with
+        | None -> failwith "time must contain one space between date and ofday"
+        | Some (date, ofday) ->
+          let date = Date.t_of_sexp (sexp_of_string date) in
+          let ofday = Time_float.Ofday.t_of_sexp (sexp_of_string ofday) in
+          Time_float.utc_mktime date ofday, sexp
+    with
+    | Sexplib.Conv.Of_sexp_error (e, _) | e -> raise (Sexplib.Conv.Of_sexp_error (e, sexp))
+
+  let sexp_of_t_ref = ref (fun (_, sexp) -> sexp)
+  let sexp_of_t time = !sexp_of_t_ref time
+end
+
 type t = {
   username                    : string sexp_option;
   hostname                    : string sexp_option;
   kernel                      : string sexp_option;
-  build_date                  : Date.t sexp_option;
-  build_time                  : Time_float.Ofday.t sexp_option;
+  build_time                  : Time_float_with_limited_parsing.t sexp_option;
   x_library_inlining          : bool;
   portable_int63              : bool;
   dynlinkable_code            : bool;
@@ -50,17 +70,18 @@ type t = {
   executable_path             : string;
   build_system                : string;
   application_specific_fields : Application_specific_fields.t sexp_option;
-} [@@deriving of_sexp]
+} [@@deriving sexp]
 
 let build_info_as_sexp =
   Exn.handle_uncaught_and_exit (fun () -> Sexp.of_string build_info)
 ;;
 
+let t = Exn.handle_uncaught_and_exit (fun () -> t_of_sexp build_info_as_sexp)
+
 let { username;
       hostname;
       kernel;
-      build_date;
-      build_time;
+      build_time = build_time_and_sexp;
       x_library_inlining;
       portable_int63;
       dynlinkable_code;
@@ -68,8 +89,18 @@ let { username;
       executable_path;
       build_system;
       application_specific_fields;
-    } =
-  Exn.handle_uncaught_and_exit (fun () -> t_of_sexp build_info_as_sexp)
+    } = t
 ;;
+
+let build_time =
+  match build_time_and_sexp with
+  | None -> None
+  | Some (time, _sexp) -> Some time
+
+let reprint_build_info sexp_of_time =
+  Ref.set_temporarily
+    Time_float_with_limited_parsing.sexp_of_t_ref
+    (fun (time, _) -> sexp_of_time time)
+    ~f:(fun () -> Sexp.to_string (sexp_of_t t))
 
 let compiled_for_speed = x_library_inlining && not dynlinkable_code
