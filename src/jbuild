@@ -24,7 +24,7 @@
     sexplib
     typerep
     variantslib))
-  (c_flags (:standard -D_LARGEFILE64_SOURCE -mpopcnt))
+  (c_flags (:standard -D_LARGEFILE64_SOURCE (:include mpopcnt.sexp)))
   (c_library_flags (:include rt-flags))
   (c_names
    ;; If you add c stubs in here, ask yourself this question: would it make sense/can it
@@ -40,6 +40,17 @@
   (preprocess (pps (ppx_jane -check-doc-comments ppx_driver.runner)))
   (preprocessor_deps (config.h))
 ))
+
+(rule
+ ((targets (mpopcnt.sexp))
+  (deps ())
+  (action
+   (progn
+    (progn
+     (with-stdout-to popcnt_test.c
+      (echo "int main(int argc, char ** argv) { return __builtin_popcount(argc); }"))
+     (system "${CC} -mpopcnt -c popcnt_test.c 2> ${null} && \
+echo '(-mpopcnt)' > ${@} || echo '()' > ${@}"))))))
 
 (alias
  ((name save_benchmarks)
