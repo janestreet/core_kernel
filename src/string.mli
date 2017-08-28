@@ -16,6 +16,14 @@ include module type of struct include Base.String end
   with type t := t
   with module Caseless := Base.String.Caseless
 
+(** [take_while s ~f] returns the longest prefix of [s] satisfying [for_all prefix ~f]
+    (See [lstrip] to drop such a prefix) *)
+val take_while : t -> f:(char -> bool) -> t
+
+(** [rtake_while s ~f] returns the longest suffix of [s] satisfying [for_all suffix ~f]
+    (See [rstrip] to drop such a suffix) *)
+val rtake_while : t -> f:(char -> bool) -> t
+
 include Hexdump.S        with type t := t
 include Identifiable.S   with type t := t and type comparator_witness := comparator_witness
 include Quickcheckable.S with type t := t

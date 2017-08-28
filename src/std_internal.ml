@@ -48,6 +48,12 @@ let ( // ) = Int.( // )
 
 let (==>) a b = (not a) || b
 
+let print_s ?mach sexp =
+  print_endline
+    (match mach with
+     | Some () -> Sexp.to_string_mach sexp
+     | None    -> Sexp.to_string_hum  sexp)
+
 let bprintf            = Printf.bprintf
 let const              = Fn.const
 let eprintf            = Printf.eprintf

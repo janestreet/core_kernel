@@ -26,6 +26,7 @@ module Comparable                           = Comparable                        
 module Comparator                           = Comparator                           .Stable
 module Date                                 = Date                                 .Stable
 module Day_of_week                          = Day_of_week                          .Stable
+module Md5                                  = Md5                                  .Stable
 module Either                               = Either                               .Stable
 module Error                                = Error                                .Stable
 module Fdeque                               = Fdeque                               .Stable

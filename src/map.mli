@@ -247,8 +247,10 @@ val update
   -> f:('v option -> 'v)
   -> ('k, 'v, 'cmp) t
 
-(** returns the value bound to the given key, raising [Not_found] if none such exists *)
+(** returns the value bound to the given key if exists, and None otherwise *)
 val find          : ('k, 'v, 'cmp) t -> 'k -> 'v option
+
+(** returns the value bound to the given key, raising [Not_found] if none such exists *)
 val find_exn      : ('k, 'v, 'cmp) t -> 'k -> 'v
 val find_or_error : ('k, 'v, 'cmp) t -> 'k -> 'v Or_error.t
 

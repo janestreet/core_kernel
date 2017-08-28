@@ -418,7 +418,7 @@ module T = struct
 
   let of_list l ~cmp = of_array (Array.of_list l) ~cmp
 
-  let sexp_of_t f t = Array.sexp_of_t f (to_array t)
+  let sexp_of_t f t = Array.sexp_of_t f (to_array t |> Array.sorted_copy ~cmp:t.cmp)
 
   let%test_module _ =
     (module struct
@@ -436,7 +436,6 @@ module T = struct
       let%test _ = Int.(=) list_sum heap_fold_sum
       let%test _ = Int.(=) list_sum heap_iter_sum
     end)
-
 end
 
 module Removable = struct
@@ -454,7 +453,14 @@ module Removable = struct
   type 'a t = {
     heap           : 'a Elt.t T.t;
     mutable length : int;
-  } [@@deriving sexp_of]
+  }
+
+  let sexp_of_t sexp_of_elt t =
+    T.to_list t.heap
+    |> List.sort ~cmp:t.heap.cmp
+    |> List.filter_map ~f:(!)
+    |> [%sexp_of: elt list]
+  ;;
 
   let remove t token =
     match !token with

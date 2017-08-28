@@ -49,7 +49,7 @@ module Full_data = struct
       type t = {
         name                      : string;
         original_filename         : string option;
-        digest                    : string option;
+        digest                    : Md5.As_binary_string.t option;
         transitions               : Transition.t array;
         (* caches the index of the last transition we used to make lookups faster *)
         mutable last_regime_index : int;
@@ -251,6 +251,7 @@ module Full_data = struct
             match In_channel.input_char ic with
             | Some '\000' -> `V1
             | Some '2'    -> `V2
+            | Some '3'    -> `V3
             | None        ->
               raise (Invalid_file_format "expected version, found nothing")
             | Some bad_version ->
@@ -282,13 +283,25 @@ module Full_data = struct
            stored in the file (with nothing between the newlines if there is no
            POSIX representation for such instants)
 
-           We handle files in this format by parsing the first part exactly as a v1 timezone
-           file and then continuing to parse with 64bit reading functions in the right places.
+           We handle files in this format by parsing the first part exactly as a v1
+           timezone file and then continuing to parse with 64bit reading functions in the
+           right places.
+
+           Version 3 timezone files are the same as version 2, except the
+           POSIX-TZ-environment-variable-style string in part 3 may use two minor
+           extensions to the POSIX TZ format (the hours part of its transition
+           times may be signed and range from -167 through 167 instead of the
+           POSIX-required unsigned values from 0 through 24; and DST is in effect all
+           year if it starts January 1 at 00:00 and ends December 31 at 24:00 plus the
+           difference between daylight saving and standard time).
+
+           As we don't actually do anything with part 3 anyway, we can just read v3
+           files as v2.
         *)
-        let input_tz_file_v2 ic =
+        let input_tz_file_v2_or_v3 ~version ic =
           let _ = input_tz_file_v1 ic in
           (* the header is fully repeated *)
-          assert ([%compare.equal: [`V1 | `V2]] (read_header ic) `V2);
+          assert ([%compare.equal: [`V1 | `V2 | `V3]] (read_header ic) version);
           let input_leap_second =
             input_leap_second_gen ~input_leap_second:input_long_long_as_int63
           in
@@ -301,12 +314,12 @@ module Full_data = struct
             protectx (In_channel.create filename) ~finally:In_channel.close ~f:(fun ic ->
               let make_zone =
                 match read_header ic with
-                | `V1 ->
-                  input_tz_file_v1 ic
-                | `V2 ->
-                  input_tz_file_v2 ic
+                | `V1                  -> input_tz_file_v1 ic
+                | `V2 | `V3 as version -> input_tz_file_v2_or_v3 ~version ic
               in
-              let digest = Digest.file filename in
+              let digest =
+                Md5.digest_file_blocking_without_releasing_runtime_lock filename
+              in
               let r = make_zone zonename ~original_filename:filename ~digest in
               r)
           with

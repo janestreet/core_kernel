@@ -17,6 +17,7 @@
     bin_prot
     fieldslib
     jane-street-headers
+    base.md5
     num
     ppx_assert.runtime-lib
     ppx_hash.runtime-lib

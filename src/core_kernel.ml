@@ -13,6 +13,9 @@ module Std = struct
   module Date                            = Date
   module Int_replace_polymorphic_compare = Int_replace_polymorphic_compare
   module Map_intf                        = Map_intf
+  module Md5                             = Md5
+  module Digest                          = Md5
+  [@@ocaml.deprecated "[since 2017-05] Use Md5 instead."]
   module Obj_array                       = Obj_array
   module Perms                           = Perms
   module Set_intf                        = Set_intf

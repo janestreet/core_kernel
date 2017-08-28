@@ -215,6 +215,7 @@ module With_default = struct
   module Key = struct
     type 'a t = { key : 'a Key.t; default : 'a; }
     let create ~default ~name sexp_of = { default; key = Key.create ~name sexp_of }
+    let id t = t.key
   end
 
   let find t {Key.key; default} = Option.value ~default (find t key)
@@ -244,6 +245,7 @@ module With_fold = struct
     type ('a, 'b) t = { key : 'b With_default.Key.t; f : 'b -> 'a -> 'b; }
     let create ~init ~f ~name sexp_of =
       {f; key = With_default.Key.create ~default:init ~name sexp_of}
+    let id t = With_default.Key.id t.key
   end
 
   let find t {Key.key; f=_ } = With_default.find t key
@@ -279,6 +281,7 @@ module Multi = struct
     type 'a t = ('a, 'a list) Key.t
     let create ~name sexp_of =
       Key.create ~init:[] ~f:(fun xs x -> x :: xs) ~name (List.sexp_of_t sexp_of)
+    let id = With_fold.Key.id
   end
   let set = set
   let find = find

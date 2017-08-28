@@ -209,6 +209,13 @@ module type S = sig
     -> interval:Span.t
     -> unit
     -> t
+
+  module Stable : sig
+    module With_utc_sexp : sig
+      module V2 : Stable_without_comparator
+        with type t = t
+    end
+  end
 end
 
 module type Time = sig

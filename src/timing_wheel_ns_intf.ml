@@ -1,11 +1,5 @@
 (** A specialized priority queue for a set of time-based alarms.
 
-    There are two implementations of timing wheel, [Timing_wheel_float] and
-    [Timing_wheel_ns], which differ in the representation of time that they use, [Time] or
-    [Time_ns].  [Timing_wheel_ns] is the underlying implementation, whereas
-    [Timing_wheel_float] is a wrapper around [Timing_wheel_ns] that converts between the
-    two representations of time.
-
     A timing wheel is a data structure that maintains a clock with the current time and a
     set of alarms scheduled to fire in the future.  One can add and remove alarms, and
     advance the clock to cause alarms to fire.  There is nothing asynchronous about a
@@ -40,6 +34,12 @@
     which they were set.  But the implementation has no control over the times supplied to
     [advance_clock]; it can only guarantee that alarms will fire when [advance_clock] is
     called with a time at least [alarm_precision] greater than their scheduled time.
+
+    There are two implementations of timing wheel, [Timing_wheel_float] and
+    [Timing_wheel_ns], which differ in the representation of time that they use, [Time] or
+    [Time_ns].  [Timing_wheel_ns] is the underlying implementation, whereas
+    [Timing_wheel_float] is a wrapper around [Timing_wheel_ns] that converts between the
+    two representations of time.
 
     {1 Implementation}
     ==================

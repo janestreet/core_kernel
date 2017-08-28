@@ -350,7 +350,7 @@ module Make (Time0 : Time0_intf.S) = struct
         let ofday = Ofday.of_string time in
         of_date_ofday ~zone date ofday
     with e ->
-      Exn.reraise e "Time.of_localstring"
+      Exn.reraise e "Time.of_localized_string"
   ;;
 
   let occurrence before_or_after t ~ofday ~zone =
@@ -461,4 +461,30 @@ module Make (Time0 : Time0_intf.S) = struct
       else add next interval
     end
   ;;
+
+  module Stable = struct
+    module With_utc_sexp = struct
+      (* V2 is actually the first version of this in Core_kernel, but a V1 stable module
+         with generous parsing, unix-dependent [t_of_sexp] already existed in Core *)
+      module V2 = struct
+        type nonrec t = t [@@deriving bin_io, compare]
+
+        let sexp_of_t t =
+          [%sexp (to_string_abs_parts t ~zone:Zone.utc : string list)]
+
+        let t_of_sexp sexp =
+          try
+            match sexp with
+            | Sexp.List [Sexp.Atom date; Sexp.Atom ofday_and_possibly_zone] ->
+              of_string (date ^ " " ^ ofday_and_possibly_zone)
+            | _ -> of_sexp_error "Time.Stable.With_utc.V2.t_of_sexp" sexp
+          with
+          | Of_sexp_error _ as e -> raise e
+          | e ->
+            of_sexp_error
+              (sprintf "Time.Stable.With_utc.V2.t_of_sexp: %s" (Exn.to_string e))
+              sexp
+      end
+    end
+  end
 end

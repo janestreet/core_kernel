@@ -693,3 +693,33 @@ let%test_module "random" =
       [%test_result: int] allocated ~expect:0
 
   end)
+
+let%test_module "compare does not allocate" =
+  (module struct
+    let test_compare_alloc a b =
+      let minor_words = Gc.minor_words () in
+      ignore (List.compare Int.compare a b);
+      Int.equal minor_words (Gc.minor_words ())
+
+    let%test _ = test_compare_alloc [] []
+    let%test _ = test_compare_alloc [] [0]
+    let%test _ = test_compare_alloc [1] []
+    let%test _ = test_compare_alloc [2] [2]
+    let%test _ = test_compare_alloc [1; 2; 3] [4]
+    let%test _ = test_compare_alloc [4] [1; 2; 3]
+  end)
+
+let%test_module "equal does not allocate" =
+  (module struct
+    let test_equal_alloc a b =
+      let minor_words = Gc.minor_words () in
+      ignore (List.equal ~equal:Int.equal a b);
+      Int.equal minor_words (Gc.minor_words ())
+
+    let%test _ = test_equal_alloc [] []
+    let%test _ = test_equal_alloc [] [0]
+    let%test _ = test_equal_alloc [1] []
+    let%test _ = test_equal_alloc [2] [2]
+    let%test _ = test_equal_alloc [1; 2; 3] [4]
+    let%test _ = test_equal_alloc [4] [1; 2; 3]
+  end)

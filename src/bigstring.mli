@@ -26,8 +26,7 @@ val create : ?max_mem_waiting_gc:Byte_units.t -> int -> t
     the total allocation of calls to [create] approach [max_mem_waiting_gc],
     the pressure in the garbage collector to be more agressive will increase.
     @return a new bigstring having [length].
-    Content is undefined.
-*)
+    Content is undefined. *)
 
 (** [init n ~f] creates a bigstring [t] of length [n], with [t.{i} = f i] *)
 val init : int -> f:(int -> char) -> t
@@ -37,8 +36,7 @@ val of_string : ?pos : int -> ?len : int -> string -> t
     to the substring of length [len] in [str] starting at position [pos].
 
     @param pos default = 0
-    @param len default = [String.length str - pos]
-*)
+    @param len default = [String.length str - pos] *)
 
 val to_string : ?pos : int -> ?len : int -> t -> string
 (** [to_string ?pos ?len bstr] @return a new string that is equivalent
@@ -47,8 +45,7 @@ val to_string : ?pos : int -> ?len : int -> t -> string
     @param pos default = 0
     @param len default = [length bstr - pos]
 
-    @raise Invalid_argument if the string would exceed runtime limits.
-*)
+    @raise Invalid_argument if the string would exceed runtime limits. *)
 
 val concat : ?sep:t -> t list -> t
 (** [concat ?sep list] returns the concatenation of [list] with [sep] in between each. *)
@@ -81,8 +78,7 @@ val sub_shared : ?pos : int -> ?len : int -> t -> t
     the (usually bigger) original one around.
 
     @param pos default = 0
-    @param len default = [Bigstring.length bstr - pos]
-*)
+    @param len default = [Bigstring.length bstr - pos] *)
 
 (** [get t pos] returns the character at [pos] *)
 external get : t -> int -> char = "%caml_ba_ref_1"
@@ -99,8 +95,7 @@ external is_mmapped : t -> bool = "bigstring_is_mmapped_stub" [@@noalloc]
 (** [blit ~src ?src_pos ?src_len ~dst ?dst_pos ()] blits [src_len] characters
     from [src] starting at position [src_pos] to [dst] at position [dst_pos].
 
-    @raise Invalid_argument if the designated ranges are out of bounds.
-*)
+    @raise Invalid_argument if the designated ranges are out of bounds. *)
 
 include Blit.S with type t := t
 module To_string   : Blit.S_distinct with type src := t      with type dst := string
@@ -178,7 +173,7 @@ external unsafe_destroy : t -> unit = "bigstring_destroy_stub"
 
     1) Existing binary_packing requires copies and does not work with bigstrings
     2) The accessors rely on the implementation of bigstring, and hence should
-    changeshould the implementation of bigstring move away from Bigarray.
+    change should the implementation of bigstring move away from Bigarray.
     3) Bigstring already has some external C functions, so it didn't require many
     changes to the OMakefile ^_^.
 
@@ -188,41 +183,58 @@ external unsafe_destroy : t -> unit = "bigstring_destroy_stub"
     to allow for branch-free implementations
 
     <accessor>  ::= <unsafe><operation><type><endian>
-    <unsafe>    ::= unsafe_
+    <unsafe>    ::= unsafe_ | ''
     <operation> ::= get_ | set_
     <type>      ::= int8 | uint8 | int16 | uint16 | int32 | uint32 | int64 | uint64
     <endian>    ::= _le | _be | ''
 
-    The "unsafe_" prefix indicates that these functions do no bounds checking.  Performance
-    testing demonstrated that the bounds check was 2-3 times slower due to the fact that
-    Bigstring.length is a C call, and not even a noalloc one.  In practice, message parsers
-    can check the size of an outer message once, and use the unsafe accessors for
-    individual fields, so many bounds checks can end up being redundant as well. The
-    situation could be improved by having bigarray cache the length/dimensions. *)
-
-
+    The "unsafe_" prefix indicates that these functions do no bounds checking. *)
+val get_int8                : t -> pos:int -> int
+val set_int8                : t -> pos:int -> int -> unit
+val get_uint8               : t -> pos:int -> int
+val set_uint8               : t -> pos:int -> int -> unit
 
 val unsafe_get_int8         : t -> pos:int -> int
 val unsafe_set_int8         : t -> pos:int -> int -> unit
 val unsafe_get_uint8        : t -> pos:int -> int
 val unsafe_set_uint8        : t -> pos:int -> int -> unit
 
-(** {6 16 bit methods} *)
+(** {6 16-bit methods} *)
+val get_int16_le            : t -> pos:int -> int
+val get_int16_be            : t -> pos:int -> int
+val set_int16_le            : t -> pos:int -> int -> unit
+val set_int16_be            : t -> pos:int -> int -> unit
+
 val unsafe_get_int16_le     : t -> pos:int -> int
 val unsafe_get_int16_be     : t -> pos:int -> int
 val unsafe_set_int16_le     : t -> pos:int -> int -> unit
 val unsafe_set_int16_be     : t -> pos:int -> int -> unit
+
+val get_uint16_le    : t -> pos:int -> int
+val get_uint16_be    : t -> pos:int -> int
+val set_uint16_le    : t -> pos:int -> int -> unit
+val set_uint16_be    : t -> pos:int -> int -> unit
 
 val unsafe_get_uint16_le    : t -> pos:int -> int
 val unsafe_get_uint16_be    : t -> pos:int -> int
 val unsafe_set_uint16_le    : t -> pos:int -> int -> unit
 val unsafe_set_uint16_be    : t -> pos:int -> int -> unit
 
-(** {6 32 bit methods} *)
+(** {6 32-bit methods} *)
+val get_int32_le     : t -> pos:int -> int
+val get_int32_be     : t -> pos:int -> int
+val set_int32_le     : t -> pos:int -> int -> unit
+val set_int32_be     : t -> pos:int -> int -> unit
+
 val unsafe_get_int32_le     : t -> pos:int -> int
 val unsafe_get_int32_be     : t -> pos:int -> int
 val unsafe_set_int32_le     : t -> pos:int -> int -> unit
 val unsafe_set_int32_be     : t -> pos:int -> int -> unit
+
+val get_uint32_le    : t -> pos:int -> int
+val get_uint32_be    : t -> pos:int -> int
+val set_uint32_le    : t -> pos:int -> int -> unit
+val set_uint32_be    : t -> pos:int -> int -> unit
 
 val unsafe_get_uint32_le    : t -> pos:int -> int
 val unsafe_get_uint32_be    : t -> pos:int -> int
@@ -231,31 +243,53 @@ val unsafe_set_uint32_be    : t -> pos:int -> int -> unit
 
 (** Similar to the usage in binary_packing, the below methods are treating the value being
     read (or written), as an ocaml immediate integer, as such it is actually 63 bits. If
-    the user is confident that the range of values used in practice will not require 64
-    bit precision (i.e. Less than Max_Long), then we can avoid allocation and use an
+    the user is confident that the range of values used in practice will not require
+    64-bit precision (i.e. Less than Max_Long), then we can avoid allocation and use an
     immediate.  If the user is wrong, an exception will be thrown (for get). *)
 
 (** {6 64-bit signed values} *)
+val get_int64_le_exn   : t -> pos:int -> int
+val get_int64_be_exn   : t -> pos:int -> int
+val get_int64_le_trunc : t -> pos:int -> int
+val get_int64_be_trunc : t -> pos:int -> int
+val set_int64_le       : t -> pos:int -> int -> unit
+val set_int64_be       : t -> pos:int -> int -> unit
+
 val unsafe_get_int64_le_exn   : t -> pos:int -> int
 val unsafe_get_int64_be_exn   : t -> pos:int -> int
 val unsafe_get_int64_le_trunc : t -> pos:int -> int
 val unsafe_get_int64_be_trunc : t -> pos:int -> int
-val unsafe_set_int64_le  : t -> pos:int -> int -> unit
-val unsafe_set_int64_be  : t -> pos:int -> int -> unit
+val unsafe_set_int64_le       : t -> pos:int -> int -> unit
+val unsafe_set_int64_be       : t -> pos:int -> int -> unit
 
 (** {6 64-bit unsigned values} *)
+val get_uint64_be_exn : t -> pos:int -> int
+val get_uint64_le_exn : t -> pos:int -> int
+val set_uint64_le     : t -> pos:int -> int -> unit
+val set_uint64_be     : t -> pos:int -> int -> unit
+
 val unsafe_get_uint64_be_exn : t -> pos:int -> int
 val unsafe_get_uint64_le_exn : t -> pos:int -> int
 val unsafe_set_uint64_le     : t -> pos:int -> int -> unit
 val unsafe_set_uint64_be     : t -> pos:int -> int -> unit
 
 (** {6 32-bit methods w/ full precision} *)
+val get_int32_t_le : t -> pos:int -> Int32.t
+val get_int32_t_be : t -> pos:int -> Int32.t
+val set_int32_t_le : t -> pos:int -> Int32.t -> unit
+val set_int32_t_be : t -> pos:int -> Int32.t -> unit
+
 val unsafe_get_int32_t_le : t -> pos:int -> Int32.t
 val unsafe_get_int32_t_be : t -> pos:int -> Int32.t
 val unsafe_set_int32_t_le : t -> pos:int -> Int32.t -> unit
 val unsafe_set_int32_t_be : t -> pos:int -> Int32.t -> unit
 
 (** {6 64-bit methods w/ full precision} *)
+val get_int64_t_le : t -> pos:int -> Int64.t
+val get_int64_t_be : t -> pos:int -> Int64.t
+val set_int64_t_le : t -> pos:int -> Int64.t -> unit
+val set_int64_t_be : t -> pos:int -> Int64.t -> unit
+
 val unsafe_get_int64_t_le : t -> pos:int -> Int64.t
 val unsafe_get_int64_t_be : t -> pos:int -> Int64.t
 val unsafe_set_int64_t_le : t -> pos:int -> Int64.t -> unit

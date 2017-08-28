@@ -25,6 +25,7 @@ module With_default : sig
   module Key : sig
     type 'a t
     val create : default:'a -> name:string -> ('a -> Sexp.t) -> 'a t
+    val id : 'a t -> 'a Type_equal.Id.t
   end
   val set    : t -> 'a Key.t -> 'a -> t
   val find   : t -> 'a Key.t -> 'a
@@ -41,6 +42,7 @@ module With_fold : sig
       -> name:string
       -> ('b -> Sexp.t)
       -> ('a, 'b) t
+    val id : ('a, 'b) t -> 'b Type_equal.Id.t
   end
   val set    : t -> ('a, 'b) Key.t -> 'b -> t (** reset the accumulator *)
 
@@ -56,6 +58,7 @@ module Multi : sig
   module Key : sig
     type 'a t
     val create : name:string -> ('a -> Sexp.t) -> 'a t
+    val id : 'a t -> 'a list Type_equal.Id.t
   end
   val set    : t -> 'a Key.t -> 'a list -> t
   val find   : t -> 'a Key.t -> 'a list

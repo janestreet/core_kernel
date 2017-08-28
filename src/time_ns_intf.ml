@@ -177,6 +177,7 @@ module type Time_ns = sig
   val to_int_ns_since_epoch : t -> int
   val of_int_ns_since_epoch : int -> t
 
+
   (** [next_multiple ~base ~after ~interval] returns the smallest [time] of the form:
 
       {[

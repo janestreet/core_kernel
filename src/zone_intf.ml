@@ -37,7 +37,7 @@ module type S_common = sig
   val original_filename : t -> string option
 
   (** [digest t] return the MD5 digest of the file the t was created from (if any) *)
-  val digest : t -> string option
+  val digest : t -> Md5.t option
 
   module Full_data : sig
     module Stable : sig
