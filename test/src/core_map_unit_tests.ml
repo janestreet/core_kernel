@@ -1024,6 +1024,42 @@ module Unit_tests
       ]
   ;;
 
+  let%test_unit _ =
+    let test l1 l2 expect =
+      let map_of_alist l = Int.Map.of_alist_exn l in
+      let result =
+        Core_kernel.Map.merge_skewed (map_of_alist l1) (map_of_alist l2)
+          ~combine:(fun ~key:_ -> Int.max)
+        |> Int.Map.to_alist ~key_order:`Increasing
+      in
+      [%test_result: (int * int) list] result ~expect
+    in
+    test [] [] [];
+    test [0, 10] [] [0, 10];
+    test [] [0, 10] [0, 10];
+    test [0, 10] [0, 11] [0, 11];
+    test [0, 11] [0, 10] [0, 11];
+    test
+      [0, 10; 3, 13; 4, 14; 6, 16]
+      [1, 11; 3, 13; 4, 14; 5, 15]
+      [0, 10; 1, 11; 3, 13; 4, 14; 5, 15; 6, 16]
+    ;
+  ;;
+
+  let%test_unit _ =
+    let test l1 l2 expect =
+      let map_of_alist l = Int.Map.of_alist_exn l in
+      let result =
+        Core_kernel.Map.merge_skewed (map_of_alist l1) (map_of_alist l2)
+          ~combine:(fun ~key:_ n1 n2 -> n1 - n2)
+        |> Int.Map.to_alist ~key_order:`Increasing
+      in
+      [%test_result: (int * int) list] result ~expect
+    in
+    test [1, 2] [1, 1] [1, 1];
+    test [1, 1] [1, 2] [1, (-1)];
+  ;;
+
   let min_and_max_keys ~init keys =
     List.fold keys ~init:(init, init)
       ~f:(fun (min, max) key ->

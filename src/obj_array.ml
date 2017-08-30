@@ -45,7 +45,7 @@ let get t i =
   Obj.repr (Array.get (Obj.magic (t : t) : not_a_float array) i : not_a_float)
 ;;
 
-let unsafe_get t i =
+let [@inline always] unsafe_get t i =
   (* Make the compiler believe [t] is an array not containing floats so it does not check
      if [t] is tagged with [Double_array_tag]. *)
   Obj.repr (Array.unsafe_get (Obj.magic (t : t) : not_a_float array) i : not_a_float)
@@ -73,7 +73,7 @@ let set t i obj =
     Array.unsafe_set t i obj
 ;;
 
-let unsafe_set t i obj =
+let [@inline always] unsafe_set t i obj =
   let old_obj = unsafe_get t i in
   if Obj.is_int old_obj && Obj.is_int obj
   then unsafe_set_int_assuming_currently_int t i (Obj.obj obj : int)
@@ -81,7 +81,7 @@ let unsafe_set t i obj =
   then Array.unsafe_set t i obj
 ;;
 
-let unsafe_set_omit_phys_equal_check t i obj =
+let [@inline always] unsafe_set_omit_phys_equal_check t i obj =
   let old_obj = unsafe_get t i in
   if Obj.is_int old_obj && Obj.is_int obj
   then unsafe_set_int_assuming_currently_int t i (Obj.obj obj : int)

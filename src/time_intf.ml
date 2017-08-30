@@ -215,6 +215,17 @@ module type S = sig
       module V2 : Stable_without_comparator
         with type t = t
     end
+
+    module Span : sig
+      module V1 : sig
+        type t = Span.Stable.V1.t [@@deriving hash]
+        include Stable_without_comparator with type t := t
+      end
+      module V2 : sig
+        type t = Span.Stable.V2.t [@@deriving hash]
+        include Stable_without_comparator with type t := t
+      end
+    end
   end
 end
 

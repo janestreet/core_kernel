@@ -77,12 +77,35 @@ val is_closed : (_, _) t -> bool
     have not yet seen it before the close takes effect. *)
 val close : 'callback Read_write.t -> unit
 
-(** [write] calls all callbacks currently subscribed to the bus, with no guarantee on the
-    order in which they will be called.  [write] is fast and non-allocating, though the
-    callbacks themselves may allocate.
+(** [write] ... [write4] call all callbacks currently subscribed to the bus, with no
+    guarantee on the order in which they will be called.  [write] is non-allocating,
+    though the callbacks themselves may allocate.  Calling [writeN t] from within a
+    callback on [t] or if [is_closed t] will raise. *)
+val write
+  :  ('a -> unit) Read_write.t
+  -> 'a
+  -> unit
 
-    Calling [write t] from within a callback on [t] or if [is_closed t] will raise. *)
-val write : 'callback Read_write.t -> 'callback
+val write2
+  :  ('a -> 'b -> unit) Read_write.t
+  -> 'a
+  -> 'b
+  -> unit
+
+val write3
+  :  ('a -> 'b -> 'c -> unit) Read_write.t
+  -> 'a
+  -> 'b
+  -> 'c
+  -> unit
+
+val write4
+  :  ('a -> 'b -> 'c -> 'd -> unit) Read_write.t
+  -> 'a
+  -> 'b
+  -> 'c
+  -> 'd
+  -> unit
 
 module Subscriber : sig
   type 'callback t [@@deriving sexp_of]

@@ -40,7 +40,7 @@ val gen_with_length : int -> char Quickcheck.Generator.t -> t Quickcheck.Generat
     other stable types. *)
 module Stable : sig
   module V1 : sig
-    type nonrec t = t
+    type nonrec t = t [@@deriving hash]
     type nonrec comparator_witness = comparator_witness
     include Stable_module_types.S0
       with type t := t

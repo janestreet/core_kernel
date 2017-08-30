@@ -14,7 +14,6 @@ depends: [
   "configurator"
   "fieldslib"
   "jane-street-headers"
-  "jbuilder"                {build & >= "1.0+beta8"}
   "ppx_assert"
   "ppx_base"
   "ppx_driver"
@@ -27,6 +26,7 @@ depends: [
   "stdio"
   "typerep"
   "variantslib"
+  "jbuilder"                {build & >= "1.0+beta12"}
   "ocaml-migrate-parsetree" {>= "0.4"}
 ]
 depopts: [

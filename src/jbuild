@@ -25,7 +25,7 @@
     sexplib
     typerep
     variantslib))
-  (c_flags (:standard -D_LARGEFILE64_SOURCE -mpopcnt))
+  (c_flags (:standard -D_LARGEFILE64_SOURCE))
   (c_library_flags (:include rt-flags))
   (c_names
    ;; If you add c stubs in here, ask yourself this question: would it make sense/can it

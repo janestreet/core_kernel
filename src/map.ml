@@ -99,6 +99,9 @@ let find_or_error t key =
     Or_error.error_s [%message "key not found" ~_:(key : key)]
 ;;
 
+let merge_skewed = Map.merge_skewed
+;;
+
 let of_hashtbl_exn ~comparator hashtbl =
   match of_iteri ~comparator ~iteri:(Hashtbl.iteri hashtbl) with
   | `Ok map -> map

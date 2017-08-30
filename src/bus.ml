@@ -22,14 +22,6 @@ module Callback_arity = struct
     | Arity3 : ('a -> 'b -> 'c ->       unit) t
     | Arity4 : ('a -> 'b -> 'c -> 'd -> unit) t
   [@@deriving sexp_of]
-
-  let create_callback (type a) (arity : a t) ~f : a =
-    match arity with
-    | Arity1 -> (fun _       -> f ())
-    | Arity2 -> (fun _ _     -> f ())
-    | Arity3 -> (fun _ _ _   -> f ())
-    | Arity4 -> (fun _ _ _ _ -> f ())
-  ;;
 end
 
 module Subscriber_id = Unique_id.Int63 ()
@@ -45,10 +37,13 @@ module Subscriber = struct
 
   let sexp_of_t _ { callback = _; id; on_callback_raise; subscribed_from } : Sexp.t =
     List [ Atom "Bus.Subscriber.t"
-         ; [%message ""
-                       (id : Subscriber_id.t)
-                       (on_callback_raise : (Error.t -> unit) sexp_option)
-                       (subscribed_from : Source_code_position.t)]]
+         ; [%message
+           ""
+             ~id:(if am_running_inline_test
+                  then None
+                  else Some id : Subscriber_id.t sexp_option)
+             (on_callback_raise : (Error.t -> unit) sexp_option)
+             (subscribed_from : Source_code_position.t)]]
   ;;
 
   let invariant invariant_a t =
@@ -78,23 +73,21 @@ type ('callback, 'phantom) t =
   ; mutable state                        : State.t
   ; mutable write_ever_called            : bool
   ; mutable subscribers                  : 'callback Subscriber.t Subscriber_id.Map.t
-  (* [t.write] is a closure closed over [t], that implements [Bus.write].  We
-     recompute [write] everytime the set of subscribers changes.  This lets us
-     allocate the closure during rare operations ([subscribe_exn]/[unsubscribe]), and
-     reuse the closure without allocating during the common operation, [Bus.write]. *)
-  ; mutable write                        : 'callback
+  ; mutable callbacks                    : 'callback array
+  ; mutable callback_raised              : int -> exn -> unit
   ; on_callback_raise                    : Error.t -> unit }
 [@@deriving fields]
 
 let sexp_of_t _ _
       { allow_subscription_after_first_write
       ; callback_arity
+      ; callbacks                            = _
+      ; callback_raised                      = _
       ; created_from
       ; name
       ; on_callback_raise                    = _
       ; state
       ; subscribers
-      ; write                                = _
       ; write_ever_called } =
   [%message
     ""
@@ -116,6 +109,8 @@ let invariant invariant_a _ t =
     let check f = Invariant.check_field t f in
     Fields.iter
       ~name:ignore
+      ~callbacks:ignore
+      ~callback_raised:ignore
       ~callback_arity:ignore
       ~created_from:ignore
       ~allow_subscription_after_first_write:ignore
@@ -124,7 +119,6 @@ let invariant invariant_a _ t =
       ~subscribers:(check (fun subscribers ->
         Map.iteri subscribers ~f:(fun ~key:_ ~data:callback ->
           Subscriber.invariant invariant_a callback)))
-      ~write:ignore
       ~on_callback_raise:ignore)
 ;;
 
@@ -144,18 +138,17 @@ module Read_only = struct
   let invariant invariant_a t = invariant invariant_a ignore t
 end
 
-let start_write t =
-  t.write_ever_called <- true;
+let [@inline never] start_write_failing t =
   match t.state with
   | Closed ->
     failwiths "[Bus.write] called on closed bus" t [%sexp_of: (_, _) t];
   | Write_in_progress ->
     failwiths "[Bus.write] called from callback on the same bus" t [%sexp_of: (_, _) t];
   | Ok_to_write ->
-    t.state <- Write_in_progress
+    assert false
 ;;
 
-let finish_write t =
+let [@inline always] finish_write t =
   match t.state with
   | Closed -> ()
   | Ok_to_write -> assert false
@@ -168,8 +161,58 @@ let close t =
   | Ok_to_write | Write_in_progress ->
     t.state       <- Closed;
     t.subscribers <- Subscriber_id.Map.empty;
-    t.write       <- Callback_arity.create_callback t.callback_arity
-                       ~f:(fun () -> start_write t; assert false);
+;;
+
+let write_non_optimized t callbacks callback_raised a1 =
+  let len = Array.length callbacks in
+  let i = ref 0 in
+  while !i < len do
+    try
+      let callback = Array.unsafe_get callbacks !i in
+      incr i;
+      callback a1
+    with exn -> callback_raised !i exn
+  done;
+  finish_write t
+;;
+
+let write2_non_optimized t callbacks callback_raised a1 a2 =
+  let len = Array.length callbacks in
+  let i = ref 0 in
+  while !i < len do
+    try
+      let callback = Array.unsafe_get callbacks !i in
+      incr i;
+      callback a1 a2
+    with exn -> callback_raised !i exn
+  done;
+  finish_write t
+;;
+
+let write3_non_optimized t callbacks callback_raised a1 a2 a3 =
+  let len = Array.length callbacks in
+  let i = ref 0 in
+  while !i < len do
+    try
+      let callback = Array.unsafe_get callbacks !i in
+      incr i;
+      callback a1 a2 a3
+    with exn -> callback_raised !i exn
+  done;
+  finish_write t
+;;
+
+let write4_non_optimized t callbacks callback_raised a1 a2 a3 a4 =
+  let len = Array.length callbacks in
+  let i = ref 0 in
+  while !i < len do
+    try
+      let callback = Array.unsafe_get callbacks !i in
+      incr i;
+      callback a1 a2 a3 a4
+    with exn -> callback_raised !i exn
+  done;
+  finish_write t
 ;;
 
 let update_write (type callback) (t : (callback, _) t) =
@@ -212,70 +255,96 @@ let update_write (type callback) (t : (callback, _) t) =
                        (exn : exn) (backtrace : Backtrace.t) (original_error : Error.t)]
            |> [%of_sexp: Error.t])
   in
-  let len = Array.length callbacks in
-  (* [write] is closed over [callbacks] and iterates over that.  This makes it clear that
-     the set of callbacks [write] calls isn't affected by calls to [update_write] during
-     the [write].
+  t.callbacks <- callbacks;
+  t.callback_raised <- callback_raised;
+;;
 
-     The code uses a double while-loop structure so that each callback can raise without
-     preventing further callbacks from being called.  In the normal case this lets us only
-     do the work to setup a single try/with for the full set of callbacks. *)
-  let write : callback =
-    match t.callback_arity with
-    | Callback_arity.Arity1 -> (fun a1 ->
-      start_write t;
-      let i = ref 0 in
-      while !i < len do
-        try
-          while !i < len do
-            let callback = callbacks.( !i ) in
-            incr i;
-            callback a1;
-          done
-        with exn -> callback_raised !i exn
-      done;
-      finish_write t)
-    | Callback_arity.Arity2 -> (fun a1 a2 ->
-      start_write t;
-      let i = ref 0 in
-      while !i < len do
-        try
-          while !i < len do
-            let callback = callbacks.( !i ) in
-            incr i;
-            callback a1 a2;
-          done
-        with exn -> callback_raised !i exn
-      done;
-      finish_write t)
-    | Callback_arity.Arity3 -> (fun a1 a2 a3 ->
-      start_write t;
-      let i = ref 0 in
-      while !i < len do
-        try
-          while !i < len do
-            let callback = callbacks.( !i ) in
-            incr i;
-            callback a1 a2 a3;
-          done
-        with exn -> callback_raised !i exn
-      done;
-      finish_write t)
-    | Callback_arity.Arity4 -> (fun a1 a2 a3 a4 ->
-      start_write t;
-      let i = ref 0 in
-      while !i < len do
-        try
-          while !i < len do
-            let callback = callbacks.( !i ) in
-            incr i;
-            callback a1 a2 a3 a4;
-          done
-        with exn -> callback_raised !i exn
-      done;
-      finish_write t)
-  in
-  t.write <- write;
+(* The [write_N] functions are written to minimise registers live across function calls
+   (these have to be spilled).  They are also annotated for partial inlining (the
+   one-callback case becomes inlined whereas the >1-callback-case requires a further
+   direct call). *)
+
+let [@inline always] write t a1 =
+  (* Snapshot [callbacks] and [callback_raised] now just in case one of the callbacks
+     calls [update_write], above.  ([callbacks] is mutable but is never mutated; it is
+     replaced by a fresh array whenever it is changed.) *)
+  let callbacks = t.callbacks in
+  let callback_raised = t.callback_raised in
+  let len = Array.length callbacks in
+  t.write_ever_called <- true;
+  match t.state with
+  | Closed | Write_in_progress -> start_write_failing t
+  | Ok_to_write ->
+    t.state <- Write_in_progress;
+    if len = 1 then begin
+      begin
+        try (Array.unsafe_get callbacks 0) a1
+        with exn -> callback_raised 1 exn
+      end;
+      finish_write t
+    end else begin
+      (write_non_optimized [@inlined never]) t callbacks callback_raised a1
+    end
+;;
+
+let [@inline always] write2 t a1 a2 =
+  let callbacks = t.callbacks in
+  let callback_raised = t.callback_raised in
+  let len = Array.length callbacks in
+  t.write_ever_called <- true;
+  match t.state with
+  | Closed | Write_in_progress -> start_write_failing t
+  | Ok_to_write ->
+    t.state <- Write_in_progress;
+    if len = 1 then begin
+      begin
+        try (Array.unsafe_get callbacks 0) a1 a2
+        with exn -> callback_raised 1 exn
+      end;
+      finish_write t
+    end else begin
+      (write2_non_optimized [@inlined never]) t callbacks callback_raised a1 a2
+    end
+;;
+
+let [@inline always] write3 t a1 a2 a3 =
+  let callbacks = t.callbacks in
+  let callback_raised = t.callback_raised in
+  let len = Array.length callbacks in
+  t.write_ever_called <- true;
+  match t.state with
+  | Closed | Write_in_progress -> start_write_failing t
+  | Ok_to_write ->
+    t.state <- Write_in_progress;
+    if len = 1 then begin
+      begin
+        try (Array.unsafe_get callbacks 0) a1 a2 a3
+        with exn -> callback_raised 1 exn
+      end;
+      finish_write t
+    end else begin
+      (write3_non_optimized [@inlined never]) t callbacks callback_raised a1 a2 a3
+    end
+;;
+
+let [@inline always] write4 t a1 a2 a3 a4 =
+  let callbacks = t.callbacks in
+  let callback_raised = t.callback_raised in
+  let len = Array.length callbacks in
+  t.write_ever_called <- true;
+  match t.state with
+  | Closed | Write_in_progress -> start_write_failing t
+  | Ok_to_write ->
+    t.state <- Write_in_progress;
+    if len = 1 then begin
+      begin
+        try (Array.unsafe_get callbacks 0) a1 a2 a3 a4
+        with exn -> callback_raised 1 exn
+      end;
+      finish_write t
+    end else begin
+      (write4_non_optimized [@inlined never]) t callbacks callback_raised a1 a2 a3 a4
+    end
 ;;
 
 let create
@@ -292,9 +361,8 @@ let create
     ; on_callback_raise
     ; allow_subscription_after_first_write
     ; subscribers                          = Subscriber_id.Map.empty
-    ; write                                = Callback_arity.create_callback callback_arity
-                                               ~f:(fun () ->
-                                                 failwith "bug in Bus.create ()")
+    ; callbacks                            = [| |]
+    ; callback_raised                      = (fun _ _ -> assert false)
     ; state                                = Ok_to_write
     ; write_ever_called                    = false }
   in
@@ -386,12 +454,12 @@ let%test_module _ =
         (fun () -> write bus1 ());
       assert_no_allocation bus2
         (fun () () -> ())
-        (fun () -> write bus2 () ());
+        (fun () -> write2 bus2 () ());
       assert_no_allocation bus3
         (fun () () () -> ())
-        (fun () -> write bus3 () () ());
+        (fun () -> write3 bus3 () () ());
       assert_no_allocation bus4
         (fun () () () () -> ())
-        (fun () -> write bus4 () () () ());
+        (fun () -> write4 bus4 () () () ());
     ;;
   end)

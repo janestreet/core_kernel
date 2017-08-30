@@ -51,6 +51,7 @@ module Source_code_position                 = Source_code_position              
 module String                               = String                               .Stable
 module String_id                            = String_id                            .Stable
 module Time_ns                              = Time_ns                              .Stable
+module Time                                 = Time_float                           .Stable
 
 include Perms.Export
 

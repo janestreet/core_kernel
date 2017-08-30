@@ -63,20 +63,6 @@ let _invariant_length t =
   assert (length t = constructed_length)
 ;;
 
-let clear t =
-  begin
-    if t.never_shrink then
-      (* clear the array to allow elements to be garbage collected *)
-      Option_array.clear t.arr
-    else
-      t.arr <- Option_array.create ~len:8
-  end;
-  t.front_index <- 0;
-  t.back_index  <- 1;
-  t.length      <- 0;
-  t.arr_length  <- Option_array.length t.arr;
-;;
-
 (* The various "when_not_empty" functions return misleading numbers when the dequeue is
    empty.  They are safe to call if it is known that the dequeue is non-empty. *)
 let apparent_front_index_when_not_empty t = t.apparent_front_index
@@ -178,13 +164,13 @@ let fold   t     ~init ~f = fold'  t `front_to_back ~init ~f
 let foldi  t     ~init ~f = foldi' t `front_to_back ~init ~f
 let iteri  t           ~f = iteri' t `front_to_back ~f
 
-let iter t ~f =
+let iteri_internal t ~f =
   if not (is_empty t) then begin
     let actual_front = actual_front_index_when_not_empty t in
     let actual_back  = actual_back_index_when_not_empty t in
     let rec loop ~real_i ~stop_pos =
       if real_i < stop_pos then begin
-        f (Option_array.get_some_exn t.arr real_i);
+        f t.arr real_i;
         loop ~real_i:(real_i + 1) ~stop_pos
       end
     in
@@ -195,6 +181,22 @@ let iter t ~f =
       loop ~real_i:0 ~stop_pos:(actual_back + 1)
     end
   end
+;;
+
+let iter t ~f = iteri_internal t ~f:(fun arr i -> Option_array.get_some_exn arr i |> f)
+
+let clear t =
+  begin
+    if t.never_shrink then
+      (* clear the array to allow elements to be garbage collected *)
+      iteri_internal t ~f:Option_array.unsafe_set_none
+    else
+      t.arr <- Option_array.create ~len:8
+  end;
+  t.front_index <- 0;
+  t.back_index  <- 1;
+  t.length      <- 0;
+  t.arr_length  <- Option_array.length t.arr;
 ;;
 
 (* We have to be careful here, importing all of Container.Make would change the runtime of

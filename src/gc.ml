@@ -2,17 +2,12 @@ open! Import
 
 include Caml.Gc
 
-let sprintf = Printf.sprintf
-
 module Stat = struct
-  type pretty_float = float [@@deriving compare, hash, bin_io, sexp]
-  let sexp_of_pretty_float f = Sexp.Atom (sprintf "%.2e" f)
-
   module T = struct
     type t = Caml.Gc.stat = {
-      minor_words : pretty_float;
-      promoted_words : pretty_float;
-      major_words : pretty_float;
+      minor_words : float;
+      promoted_words : float;
+      major_words : float;
       minor_collections : int;
       major_collections : int;
       heap_words : int;
