@@ -66,6 +66,7 @@ let force              = Base.Lazy.force
 let fprintf            = Printf.fprintf
 let ident              = Fn.id
 let invalid_argf       = Base.Printf.invalid_argf
+let ifprintf           = Printf.ifprintf
 let is_none            = Option.is_none
 let is_some            = Option.is_some
 let ksprintf           = Printf.ksprintf

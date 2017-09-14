@@ -155,6 +155,7 @@ end = struct
   let (/)         t f = round_nearest (float t /. f)
   let (//)            = Int63.(//)
   let max             = Int63.max
+  let min             = Int63.min
 
   let to_proportional_float t = Int63.to_float t
 
@@ -401,6 +402,7 @@ let sub          = Span.(-)
 let diff         = Span.(-)
 let abs_diff t u = Span.abs (diff t u)
 let max          = Span.max
+let min          = Span.min
 
 let to_span_since_epoch t = t
 let of_span_since_epoch s = s

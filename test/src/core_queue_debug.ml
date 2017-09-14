@@ -308,4 +308,6 @@ module Debug (Queue : module type of Queue) = struct
       [%sexp_of: int option]
       (fun () -> binary_search_segmented ?pos ?len t ~segment_of which)
   ;;
+
+  module Stable = Stable
 end

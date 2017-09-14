@@ -463,29 +463,6 @@ let singleton x =
   t
 ;;
 
-let sexp_of_t sexp_of_a t = to_list t |> [%sexp_of: a list]
-
-let t_of_sexp a_of_sexp sexp = sexp |> [%of_sexp: a list] |> of_list
-
-include
-  Bin_prot.Utils.Make_iterable_binable1 (struct
-    type nonrec 'a t = 'a t
-    type 'a el       = 'a [@@deriving bin_io]
-
-    let caller_identity = Bin_prot.Shape.Uuid.of_string "b4c84254-4992-11e6-9ba7-734e154027bd"
-    let module_name = Some "Core_kernel.Queue"
-    let length      = length
-    let iter        = iter
-
-    let init ~len ~next =
-      let t = create ~capacity:len () in
-      for i = 0 to len - 1 do
-        Option_array.unsafe_set_some t.elts i (next ());
-      done;
-      t.length <- len;
-      t
-  end)
-
 include
   Test_binary_searchable.Make1_and_test (struct
     type nonrec 'a t = 'a t
@@ -509,3 +486,43 @@ include
         r
     end
   end)
+
+module Serialization_v1 = struct
+  let sexp_of_t sexp_of_a t = to_list t |> [%sexp_of: a list]
+
+  let t_of_sexp a_of_sexp sexp = sexp |> [%of_sexp: a list] |> of_list
+
+  include
+    Bin_prot.Utils.Make_iterable_binable1 (struct
+      type nonrec 'a t = 'a t
+      type 'a el       = 'a [@@deriving bin_io]
+
+      let caller_identity = Bin_prot.Shape.Uuid.of_string "b4c84254-4992-11e6-9ba7-734e154027bd"
+      let module_name = Some "Core_kernel.Queue"
+      let length      = length
+      let iter        = iter
+
+      let init ~len ~next =
+        let t = create ~capacity:len () in
+        for i = 0 to len - 1 do
+          Option_array.unsafe_set_some t.elts i (next ());
+        done;
+        t.length <- len;
+        t
+    end)
+end
+
+include Serialization_v1
+
+module Stable = struct
+  module V1 = struct
+    type nonrec 'a t = 'a t [@@deriving compare]
+
+    include Serialization_v1
+
+    (* We don't have a [%bin_digest] expect test here because the bin_io is mostly hand
+       written, and [core_queue_unit_tests.ml] has unit tests for specific values. *)
+
+    let map = map
+  end
+end

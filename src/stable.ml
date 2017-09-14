@@ -44,6 +44,7 @@ module Or_error                             = Or_error                          
 module Percent                              = Percent                              .Stable
 module Perms                                = Perms                                .Stable
 module Pid                                  = Pid                                  .Stable
+module Queue                                = Queue                                .Stable
 module Result                               = Result                               .Stable
 module Set                                  = Set                                  .Stable
 module Sexpable                             = Sexpable                             .Stable

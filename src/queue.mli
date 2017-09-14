@@ -57,3 +57,7 @@ val capacity : _ t -> int
     [c < capacity t]. *)
 val set_capacity : _ t -> int -> unit
 
+module Stable : sig
+  module V1 : Stable_module_types.S1 with type 'a t = 'a t
+end
+

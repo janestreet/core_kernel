@@ -4,12 +4,11 @@ open Std_internal
 module type Span = sig
   (** [t] is immediate on 64bit boxes and so plays nicely with the GC write barrier.
       Unfortunately, [private Int63.t] is necessary for the compiler to optimize uses. *)
-  type t = private Int63.t [@@deriving compare, hash, typerep, bin_io]
+  type t = private Int63.t [@@deriving hash, typerep, bin_io]
 
-  include Comparable.Infix     with type t := t
+  include Comparisons.S        with type t := t
   include Comparable.Validate  with type t := t
   include Comparable.With_zero with type t := t
-  include Equal.S              with type t := t
 
   val nanosecond  : t
   val microsecond : t
@@ -58,8 +57,6 @@ module type Span = sig
   val abs   : t -> t      (** overflows silently on [min_value] *)
 
   val neg   : t -> t      (** overflows silently on [min_value] *)
-
-  val max : t -> t -> t
 
   val scale       : t -> float        -> t
   val scale_int   : t -> int          -> t (** overflows silently *)
@@ -140,10 +137,9 @@ module type Time_ns = sig
 
   module Span : Span
 
-  type t = private Int63.t [@@deriving compare, hash, typerep, bin_io]
+  type t = private Int63.t [@@deriving hash, typerep, bin_io]
 
-  include Comparable.Infix with type t := t
-  include Equal.S          with type t := t
+  include Comparisons.S with type t := t
 
   (** Note that we expose a sexp format that is not the one exposed in [Core]. *)
   module Alternate_sexp : sig
@@ -164,8 +160,6 @@ module type Time_ns = sig
   val diff     : t -> t -> Span.t (** overflows silently *)
 
   val abs_diff : t -> t -> Span.t (** overflows silently *)
-
-  val max : t -> t -> t
 
   val to_span_since_epoch : t -> Span.t
   val of_span_since_epoch : Span.t -> t
