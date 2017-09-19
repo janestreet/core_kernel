@@ -10,11 +10,10 @@ module type S_without_immediate = sig
       {!Zero.Ext.Nullable}, for example. *)
   type value
 
-  (** Represents [value option] using [immediate] in order to avoid allocating a [Some]
-      tag.  Exports the representation so the compiler can optimize [t] as an immediate
-      type, assuming [immediate] is known to be immediate.  The interface does not enforce
-      that [immediate] is immediate because some types, like [Int63.t], are only immediate
-      on 64-bit platforms. *)
+  (** Represents [value option] without allocating a [Some] tag. The interface does not
+      enforce that [t] is immediate because some types, like [Int63.t], are only immediate
+      on 64-bit platforms. For representations whose type is immediate, use [S] below
+      which adds the [[@@immediate]] annotation. *)
   type t [@@deriving compare, hash, sexp_of, typerep]
 
   (** Constructors analogous to [None] and [Some].  If [not (some_is_representable x)]
