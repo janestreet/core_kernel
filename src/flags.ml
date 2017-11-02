@@ -26,7 +26,7 @@ module Make (M : Make_arg) = struct
   let intersect  = Int63.bit_and
   let complement = Int63.bit_not
 
-  let subset t1 t2 = Int63.(=) t1 (intersect t1 t2)
+  let is_subset t ~of_ = Int63.(=) t (intersect t of_)
 
   let do_intersect t1 t2 = Int63.(<>) (Int63.bit_and t1 t2) Int63.zero
   let are_disjoint t1 t2 = Int63.(=)  (Int63.bit_and t1 t2) Int63.zero

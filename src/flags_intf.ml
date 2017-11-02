@@ -33,8 +33,8 @@ module type S = sig
   val do_intersect : t -> t -> bool
   val are_disjoint : t -> t -> bool
 
-  (** [subset a b = is_empty (a - b)] *)
-  val subset : t -> t -> bool
+  (** [is_subset t ~of_] is [t = intersect t of_] *)
+  val is_subset : t -> of_:t -> bool
 end
 
 module type Make_arg = sig

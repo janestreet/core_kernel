@@ -505,7 +505,9 @@ module Pool = struct
   ;;
 
   let create_array (type slots) (metadata : slots Metadata.t) : slots t =
-    let t = Obj_array.create ~len:(Metadata.array_length metadata) in
+    let t =
+      Obj_array.create_zero ~len:(Metadata.array_length metadata)
+    in
     set_metadata t metadata;
     t
   ;;

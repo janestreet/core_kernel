@@ -1,11 +1,23 @@
 open! Core_kernel
 
-module Make (Hashtbl : Hashtbl_intf.Hashtbl) = struct
+module type Hashtbl_for_basic = sig
+  include Hashtbl_intf.Accessors with type 'key key = 'key
+  include Invariant.S2 with type ('key, 'data) t := ('key, 'data) t
 
+  (* we don't define [module Poly : Hashtbl_intf.S_poly] because we want to require only
+     the minimal number of constructors necessary to implement the tests, and also avoid
+     conflicting with any existing names. *)
+  val create_poly : ?size:int -> unit -> ('key, 'data) t
+
+  val of_alist_poly_exn : ('key * 'data) list -> ('key, 'data) t
+  val of_alist_poly_or_error : ('key * 'data) list -> ('key, 'data) t Or_error.t
+end
+
+module Make_basic (Hashtbl : Hashtbl_for_basic) = struct
   let test_data = [("a",1);("b",2);("c",3)]
 
   let test_hash = begin
-    let h = Hashtbl.Poly.create () ~size:10 in
+    let h = Hashtbl.create_poly () ~size:10 in
     List.iter test_data ~f:(fun (k,v) ->
       Hashtbl.set h ~key:k ~data:v
     );
@@ -75,13 +87,13 @@ module Make (Hashtbl : Hashtbl_intf.Hashtbl) = struct
 
       let%test "size" =
         let predicted = List.length test_data in
-        let found = Hashtbl.length (Hashtbl.Poly.of_alist_exn test_data) in
+        let found = Hashtbl.length (Hashtbl.of_alist_poly_exn test_data) in
         predicted = found
       ;;
 
       let%test "right keys" =
         let predicted = List.map test_data ~f:(fun (k,_) -> k) in
-        let found = Hashtbl.keys (Hashtbl.Poly.of_alist_exn test_data) in
+        let found = Hashtbl.keys (Hashtbl.of_alist_poly_exn test_data) in
         let sp = List.sort ~cmp:Poly.ascending predicted in
         let sf = List.sort ~cmp:Poly.ascending found in
         sp = sf
@@ -92,10 +104,10 @@ module Make (Hashtbl : Hashtbl_intf.Hashtbl) = struct
     (module struct
 
       let%test "unique" =
-        Result.is_ok (Hashtbl.Poly.of_alist_or_error test_data)
+        Result.is_ok (Hashtbl.of_alist_poly_or_error test_data)
 
       let%test "duplicate" =
-        Result.is_error (Hashtbl.Poly.of_alist_or_error (test_data @ test_data))
+        Result.is_error (Hashtbl.of_alist_poly_or_error (test_data @ test_data))
 
     end)
 
@@ -133,7 +145,7 @@ module Make (Hashtbl : Hashtbl_intf.Hashtbl) = struct
     let f x = Some x in
     let result = Hashtbl.filter_map test_hash ~f in
     assert (equal test_hash result Int.(=));
-    let is_even x = x mod 2 = 0 in
+    let is_even x = x % 2 = 0 in
     let add1_to_even x = if is_even x then Some (x + 1) else None in
     let predicted_data = List.filter_map test_data ~f:(fun (k,v) ->
       if is_even v then Some (k, v+1) else None)
@@ -206,7 +218,7 @@ module Make (Hashtbl : Hashtbl_intf.Hashtbl) = struct
   ;;
 
   let%test_unit "insert-find-remove" =
-    let t = Hashtbl.Poly.create () ~size:1 in
+    let t = Hashtbl.create_poly () ~size:1 in
     let inserted = ref [] in
     Random.init 123;
     let verify_inserted t =
@@ -220,10 +232,11 @@ module Make (Hashtbl : Hashtbl_intf.Hashtbl) = struct
       in
       match missing with
       | [] -> ()
-      | l ->
-        failwiths "some inserts are missing"
-          l
-          [%sexp_of: [`Missing of int | `Wrong_data of int * int ] list]
+      | _  ->
+        raise_s
+          [%message
+            "some inserts are missing"
+              (missing : [`Missing of int | `Wrong_data of int * int ] list) ]
     in
     let equal = Int.equal in
     let rec loop i t =
@@ -242,14 +255,14 @@ module Make (Hashtbl : Hashtbl_intf.Hashtbl) = struct
       Hashtbl.invariant ignore ignore t;
       begin match Hashtbl.find t x with
       | None -> ()
-      | Some _ -> failwith (sprintf "present after removal: %d" x)
+      | Some _ -> failwith (Printf.sprintf "present after removal: %d" x)
       end;
       inserted := List.Assoc.remove !inserted ~equal x;
       verify_inserted t)
   ;;
 
   let%test_unit "clear" =
-    let t = Hashtbl.Poly.create () ~size:1 in
+    let t = Hashtbl.create_poly () ~size:1 in
     let l = List.range 0 100 in
     let verify_present l = List.for_all l ~f:(Hashtbl.mem t) in
     let verify_not_present l =
@@ -271,7 +284,7 @@ module Make (Hashtbl : Hashtbl_intf.Hashtbl) = struct
   ;;
 
   let%test_unit "mem" =
-    let t = Hashtbl.Poly.create () ~size:1 in
+    let t = Hashtbl.create_poly () ~size:1 in
     Hashtbl.invariant ignore ignore t;
     assert (not (Hashtbl.mem t "Fred"));
     Hashtbl.invariant ignore ignore t;
@@ -286,7 +299,7 @@ module Make (Hashtbl : Hashtbl_intf.Hashtbl) = struct
   ;;
 
   let%test_unit "exists" =
-    let t = Hashtbl.Poly.create () in
+    let t = Hashtbl.create_poly () in
     assert (not (Hashtbl.exists t ~f:(fun _ -> failwith "can't be called")));
     assert (not (Hashtbl.existsi t ~f:(fun ~key:_ ~data:_ -> failwith "can't be called")));
     Hashtbl.set t ~key:7 ~data:3;
@@ -297,7 +310,7 @@ module Make (Hashtbl : Hashtbl_intf.Hashtbl) = struct
     assert (Hashtbl.existsi t ~f:(fun ~key ~data -> key + data = 14))
 
   let%test_unit "for_all" =
-    let t = Hashtbl.Poly.create () in
+    let t = Hashtbl.create_poly () in
     assert (Hashtbl.for_all t ~f:(fun _ -> failwith "can't be called"));
     assert (Hashtbl.for_alli t ~f:(fun ~key:_ ~data:_ -> failwith "can't be called"));
     Hashtbl.set t ~key:7 ~data:3;
@@ -308,7 +321,7 @@ module Make (Hashtbl : Hashtbl_intf.Hashtbl) = struct
     assert (Hashtbl.for_alli t ~f:(fun ~key ~data -> key - 4 = data))
 
   let%test_unit "count" =
-    let t = Hashtbl.Poly.create () in
+    let t = Hashtbl.create_poly () in
     assert (Hashtbl.count t ~f:(fun _ -> failwith "can't be called") = 0);
     assert (Hashtbl.counti t ~f:(fun ~key:_ ~data:_ -> failwith "can't be called") = 0);
     Hashtbl.set t ~key:7 ~data:3;
@@ -319,7 +332,7 @@ module Make (Hashtbl : Hashtbl_intf.Hashtbl) = struct
     assert (Hashtbl.counti t ~f:(fun ~key ~data -> key - 4 = data) = 3)
 
   let%test_unit "merge" =
-    let make alist = Hashtbl.of_alist_exn alist ~hashable:Int.hashable in
+    let make alist = Hashtbl.of_alist_poly_exn alist in
     let t1 = make [ 1, 111 ; 2, 222 ; 3, 333 ] in
     let t2 = make [ 1, 123 ; 2, 222 ; 4, 444 ] in
     [%test_result: (int * [`Left of int|`Right of int|`Both of int*int]) List.t]
@@ -330,7 +343,9 @@ module Make (Hashtbl : Hashtbl_intf.Hashtbl) = struct
        |> Hashtbl.to_alist
        |> List.sort ~cmp:(fun (x,_) (y,_) -> Int.compare x y))
       ~expect:[ 1, `Both (111,123) ; 3, `Left 333 ; 4, `Right 444 ]
+end
 
+module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struct
   let%test_module "quickcheck comparison to Map" =
     (module (struct
 
@@ -1321,7 +1336,9 @@ module Make (Hashtbl : Hashtbl_intf.Hashtbl) = struct
       module Make         = Hashtbl.Make
       module Make_binable = Hashtbl.Make_binable
     end : Hashtbl_intf.Hashtbl))
+end
 
+module Make_mutation_in_callbacks(Hashtbl : Hashtbl_intf.Hashtbl) = struct
   let%test_module "mutation in callbacks" =
     (module (struct
 
@@ -2166,6 +2183,19 @@ module Make (Hashtbl : Hashtbl_intf.Hashtbl) = struct
       module Make_binable = Hashtbl.Make_binable
 
     end : Hashtbl_intf.Hashtbl))
+end
+
+module Make (Hashtbl : Hashtbl_intf.Hashtbl) = struct
+  include Make_basic(struct
+      include Hashtbl
+
+      let create_poly ?size () = Poly.create ?size ()
+
+      let of_alist_poly_exn l = Poly.of_alist_exn l
+      let of_alist_poly_or_error l = Poly.of_alist_or_error l
+    end)
+  include Make_quickcheck_comparison_to_Map(Hashtbl)
+  include Make_mutation_in_callbacks(Hashtbl)
 end
 
 let%test_module _ = (module Make(Hashtbl))

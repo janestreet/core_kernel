@@ -115,3 +115,48 @@ let%test_unit "creation and destruction" =
   test 9999 Month.Dec 31
 ;;
 
+let%expect_test "add_years" =
+  let test string =
+    let date = Date.of_string string in
+    for years = -4 to 4 do
+      let date_plus_years = Date.add_years date years in
+      printf !"%{Date} + %2d years = %{Date}\n" date years date_plus_years;
+    done
+  in
+  (* non-leap day *)
+  test "2013-10-07";
+  [%expect {|
+    2013-10-07 + -4 years = 2009-10-07
+    2013-10-07 + -3 years = 2010-10-07
+    2013-10-07 + -2 years = 2011-10-07
+    2013-10-07 + -1 years = 2012-10-07
+    2013-10-07 +  0 years = 2013-10-07
+    2013-10-07 +  1 years = 2014-10-07
+    2013-10-07 +  2 years = 2015-10-07
+    2013-10-07 +  3 years = 2016-10-07
+    2013-10-07 +  4 years = 2017-10-07 |}];
+  (* leap day maps to Feb 28 on non-leap years (and 400-year century behaves properly) *)
+  test "2004-02-29";
+  [%expect {|
+    2004-02-29 + -4 years = 2000-02-29
+    2004-02-29 + -3 years = 2001-02-28
+    2004-02-29 + -2 years = 2002-02-28
+    2004-02-29 + -1 years = 2003-02-28
+    2004-02-29 +  0 years = 2004-02-29
+    2004-02-29 +  1 years = 2005-02-28
+    2004-02-29 +  2 years = 2006-02-28
+    2004-02-29 +  3 years = 2007-02-28
+    2004-02-29 +  4 years = 2008-02-29 |}];
+  (* non-leap year century behaves properly *)
+  test "1904-02-29";
+  [%expect {|
+    1904-02-29 + -4 years = 1900-02-28
+    1904-02-29 + -3 years = 1901-02-28
+    1904-02-29 + -2 years = 1902-02-28
+    1904-02-29 + -1 years = 1903-02-28
+    1904-02-29 +  0 years = 1904-02-29
+    1904-02-29 +  1 years = 1905-02-28
+    1904-02-29 +  2 years = 1906-02-28
+    1904-02-29 +  3 years = 1907-02-28
+    1904-02-29 +  4 years = 1908-02-29 |}];
+;;

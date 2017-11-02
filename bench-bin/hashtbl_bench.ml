@@ -737,42 +737,41 @@ let benchmarks ~regex ~sizes =
 
 module Top_level = struct
 
-  let summary = "Benchmarks for hash tables."
-
-  let spec =
+  let command =
+    let open Command.Let_syntax in
     let open Command.Spec in
     let regex = Arg_type.create Re2.create_exn in
-    step (fun f regex -> f ~regex)
-    +> flag "-matching" (optional regex) ~doc:"REGEX Select tests matching given regex."
-    ++
-    step (fun f sizes -> f ~sizes)
-    +> flag "-sizes" (optional_with_default [1;32;1024] (Arg_type.comma_separated int))
-         ~doc:"INT,... Use hash tables of specified sizes."
-    ++
-    step (fun f list -> f ~list)
-    +> flag "-list" no_arg ~doc:" List benchmark names; do not run benchmarks."
-
-
-  let main (analysis_configs, display_config, mode) ~regex ~sizes ~list () =
-    let tests = benchmarks ~regex ~sizes in
-    if list
-    then
-      begin
-        printf "There are %s benchmarks:\n"
-          (Int.to_string_hum (List.length tests * List.length sizes));
-        List.iter tests ~f:(fun test ->
-          List.iter sizes ~f:(fun size ->
-            printf "%s:%d\n" (Bench.Test.name test) size))
-      end
-    else
-      match mode with
-      | `From_file _ ->
-        failwith
-          "This executable is for running benchmarks, not analyzing saved measurements."
-      | `Run (save_to_file, run_config) ->
-        Bench.bench ~run_config ~analysis_configs ~display_config ?save_to_file tests
-
-  let command = Bench.make_command_ext ~summary ~extra_spec:spec ~f:main
+    Bench.make_command_ext ~summary:"Benchmarks for hash tables."
+      [%map_open
+        let regex =
+          flag "-matching" (optional regex)
+            ~doc:"REGEX Select tests matching given regex."
+        and sizes =
+          flag "-sizes"
+            (optional_with_default [1;32;1024] (Arg_type.comma_separated int))
+            ~doc:"INT,... Use hash tables of specified sizes."
+        and list =
+          flag "-list" no_arg ~doc:" List benchmark names; do not run benchmarks."
+        in
+        fun (analysis_configs, display_config, mode) ->
+          let tests = benchmarks ~regex ~sizes in
+          if list
+          then
+            begin
+              printf "There are %s benchmarks:\n"
+                (Int.to_string_hum (List.length tests * List.length sizes));
+              List.iter tests ~f:(fun test ->
+                List.iter sizes ~f:(fun size ->
+                  printf "%s:%d\n" (Bench.Test.name test) size))
+            end
+          else
+            match mode with
+            | `From_file _ ->
+              failwith
+                "This executable is for running benchmarks, not analyzing saved measurements."
+            | `Run (save_to_file, run_config) ->
+              Bench.bench ~run_config ~analysis_configs ~display_config ?save_to_file tests
+      ]
 
 end
 

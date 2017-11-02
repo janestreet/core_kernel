@@ -11,7 +11,7 @@ provides an overlay on the usual namespace, so the best way to use
 Core is to start your file with:
 
 ```ocaml
-open Core_kernel.Std
+open Core_kernel
 ```
 
 Please report bugs and feature requests on
@@ -20,3 +20,6 @@ else you can contact us at <ocaml-core@googlegroups.com>.
 
 You can find all of Jane Street's open-source libraries on
 [GitHub](https://github.com/janestreet).
+
+Documentation can be found
+[here](https://ocaml.janestreet.com/ocaml-core/latest/doc/core_kernel/index.html).

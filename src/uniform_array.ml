@@ -9,6 +9,7 @@ module Trusted : sig
   type 'a t
   val empty : 'a t
   val unsafe_create_uninitialized : len:int -> 'a t
+  val create : len:int -> 'a -> 'a t
   val get : 'a t -> int -> 'a
   val set : 'a t -> int -> 'a -> unit
   val unsafe_get : 'a t -> int -> 'a
@@ -23,7 +24,8 @@ end = struct
 
   let empty = Obj_array.empty
 
-  let unsafe_create_uninitialized ~len = Obj_array.create ~len
+  let unsafe_create_uninitialized ~len = Obj_array.create_zero ~len
+  let create ~len x = Obj_array.create ~len (Obj.repr x)
 
   let get arr i = Obj.obj (Obj_array.get arr i)
   let set arr i x = Obj_array.set arr i (Obj.repr x)
@@ -64,14 +66,6 @@ let of_list l =
   let len = List.length l in
   let res = unsafe_create_uninitialized ~len in
   List.iteri l ~f:(fun i x -> set res i x);
-  res
-
-let create ~len x =
-  let res = unsafe_create_uninitialized ~len in
-  for i = 0 to len-1
-  do
-    unsafe_set res i x
-  done;
   res
 
 (* It is not safe for [to_array] to be the identity function because we have code that

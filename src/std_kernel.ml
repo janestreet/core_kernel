@@ -91,6 +91,7 @@ module Moption                              = Moption
 module Nativeint                            = Nativeint
 module No_polymorphic_compare               = No_polymorphic_compare
 module Nothing                              = Nothing
+module Obj_array                            = Base.Obj_array
 module Only_in_test                         = Only_in_test
 module Option                               = Option
 module Option_array                         = Option_array

@@ -123,11 +123,11 @@ module Stable = struct
 
       (** YYYY-MM-DD *)
       let to_string_iso8601_extended t =
-        let buf = String.create 10 in
+        let buf = Bytes.create 10 in
         blit_string_of_int_4_digits buf ~pos:0 (year t);
-        buf.[4] <- '-';
+        Bytes.set buf 4 '-';
         blit_string_of_int_2_digits buf ~pos:5 (Month.to_int (month t));
-        buf.[7] <- '-';
+        Bytes.set buf 7 '-';
         blit_string_of_int_2_digits buf ~pos:8 (day t);
         buf
       ;;
@@ -136,7 +136,7 @@ module Stable = struct
 
       (** YYYYMMDD *)
       let to_string_iso8601_basic t =
-        let buf = String.create 8 in
+        let buf = Bytes.create 8 in
         blit_string_of_int_4_digits buf ~pos:0 (year t);
         blit_string_of_int_2_digits buf ~pos:4 (Month.to_int (month t));
         blit_string_of_int_2_digits buf ~pos:6 (day t);
@@ -145,11 +145,11 @@ module Stable = struct
 
       (** MM/DD/YYYY *)
       let to_string_american t =
-        let buf = String.create 10 in
+        let buf = Bytes.create 10 in
         blit_string_of_int_2_digits buf ~pos:0 (Month.to_int (month t));
-        buf.[2] <- '/';
+        Bytes.set buf 2 '/';
         blit_string_of_int_2_digits buf ~pos:3 (day t);
-        buf.[5] <- '/';
+        Bytes.set buf 5 '/';
         blit_string_of_int_4_digits buf ~pos:6 (year t);
         buf
       ;;
@@ -370,6 +370,10 @@ let add_months t n =
       try_create (d - 1)
   in
   try_create (day t)
+;;
+
+let add_years t n =
+  add_months t (n * 12)
 ;;
 
 (* http://en.wikipedia.org/wiki/Determination_of_the_day_of_the_week#Purely_mathematical_methods

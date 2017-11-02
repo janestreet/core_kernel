@@ -120,7 +120,7 @@ end = struct
 
     let create (type a) ~min_size:capacity : a t =
       Pool.create Pool.Slots.t3 ~capacity
-        ~dummy:((Obj.magic () : a), Pointer.null (), Pointer.null ())
+        ~dummy:((Obj.magic None : a), Pointer.null (), Pointer.null ())
     ;;
 
     let is_full t = Pool.is_full t

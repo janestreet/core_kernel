@@ -32,7 +32,7 @@ exception Pack_unsigned_8_argument_out_of_range of int [@@deriving sexp]
 let pack_unsigned_8 ~buf ~pos n =
   if n > 0xFF || n < 0 then
     raise (Pack_unsigned_8_argument_out_of_range n)
-  else buf.[pos] <- Char.unsafe_chr n;
+  else Bytes.set buf pos (Char.unsafe_chr n);
 ;;
 
 let unpack_unsigned_8 ~buf ~pos = Char.code buf.[pos]
@@ -41,7 +41,7 @@ exception Pack_signed_8_argument_out_of_range of int [@@deriving sexp]
 let pack_signed_8 ~buf ~pos n =
   if n > 0x7F || n < -0x80 then
     raise (Pack_signed_8_argument_out_of_range n)
-  else buf.[pos] <- Char.unsafe_chr n
+  else Bytes.set buf pos (Char.unsafe_chr n)
 ;;
 
 let unpack_signed_8 ~buf ~pos =
@@ -57,8 +57,8 @@ let pack_unsigned_16 ~byte_order ~buf ~pos n =
   if n >= 0x10000 || n < 0 then
     raise (Pack_unsigned_16_argument_out_of_range n)
   else begin
-    buf.[pos + offset ~len:2 ~byte_order 0] <- Char.unsafe_chr (0xFF land (n asr 8));
-    buf.[pos + offset ~len:2 ~byte_order 1] <- Char.unsafe_chr (0xFF land n)
+    Bytes.set buf (pos + offset ~len:2 ~byte_order 0) (Char.unsafe_chr (0xFF land (n asr 8)));
+    Bytes.set buf (pos + offset ~len:2 ~byte_order 1) (Char.unsafe_chr (0xFF land n))
   end
 ;;
 
@@ -66,8 +66,8 @@ let pack_unsigned_16_big_endian ~buf ~pos n =
   if n >= 0x10000 || n < 0 then
     raise (Pack_unsigned_16_argument_out_of_range n)
   else begin
-    buf.[pos    ] <- Char.unsafe_chr (0xFF land (n lsr 8));
-    buf.[pos + 1] <- Char.unsafe_chr (0xFF land n)
+    Bytes.set buf pos (Char.unsafe_chr (0xFF land (n lsr 8)));
+    Bytes.set buf (pos + 1) (Char.unsafe_chr (0xFF land n))
   end
 ;;
 
@@ -75,8 +75,8 @@ let pack_unsigned_16_little_endian ~buf ~pos n =
   if n >= 0x10000 || n < 0 then
     raise (Pack_unsigned_16_argument_out_of_range n)
   else begin
-    buf.[pos + 1] <- Char.unsafe_chr (0xFF land (n lsr 8));
-    buf.[pos    ] <- Char.unsafe_chr (0xFF land n)
+    Bytes.set buf (pos + 1) (Char.unsafe_chr (0xFF land (n lsr 8)));
+    Bytes.set buf pos (Char.unsafe_chr (0xFF land n))
   end
 ;;
 
@@ -85,8 +85,8 @@ let pack_signed_16 ~byte_order ~buf ~pos n =
   if n > 0x7FFF || n < -0x8000 then
     raise (Pack_signed_16_argument_out_of_range n)
   else begin
-    buf.[pos + offset ~len:2 ~byte_order 0] <- Char.unsafe_chr (0xFF land (n asr 8));
-    buf.[pos + offset ~len:2 ~byte_order 1] <- Char.unsafe_chr (0xFF land n)
+    Bytes.set buf (pos + offset ~len:2 ~byte_order 0) (Char.unsafe_chr (0xFF land (n asr 8)));
+    Bytes.set buf (pos + offset ~len:2 ~byte_order 1) (Char.unsafe_chr (0xFF land n))
   end
 ;;
 
@@ -94,8 +94,8 @@ let pack_signed_16_big_endian ~buf ~pos n =
   if n > 0x7FFF || n < -0x8000 then
     raise (Pack_signed_16_argument_out_of_range n)
   else begin
-    buf.[pos    ] <- Char.unsafe_chr (0xFF land (n asr 8));
-    buf.[pos + 1] <- Char.unsafe_chr (0xFF land n)
+    Bytes.set buf pos (Char.unsafe_chr (0xFF land (n asr 8)));
+    Bytes.set buf (pos + 1) (Char.unsafe_chr (0xFF land n))
   end
 ;;
 
@@ -103,8 +103,8 @@ let pack_signed_16_little_endian ~buf ~pos n =
   if n > 0x7FFF || n < -0x8000 then
     raise (Pack_signed_16_argument_out_of_range n)
   else begin
-    buf.[pos + 1] <- Char.unsafe_chr (0xFF land (n asr 8));
-    buf.[pos    ] <- Char.unsafe_chr (0xFF land n)
+    Bytes.set buf (pos + 1) (Char.unsafe_chr (0xFF land (n asr 8)));
+    Bytes.set buf pos (Char.unsafe_chr (0xFF land n))
   end
 ;;
 
@@ -293,24 +293,24 @@ let check_unsigned_32_in_range n =
 let pack_unsigned_32_int ~byte_order ~buf ~pos n =
   assert (Sys.word_size = 64);
   check_unsigned_32_in_range n;
-  buf.[pos + offset ~len:4 ~byte_order 0] <- Char.unsafe_chr (0xFF land (n asr 24)); (* MSB *)
-  buf.[pos + offset ~len:4 ~byte_order 1] <- Char.unsafe_chr (0xFF land (n asr 16));
-  buf.[pos + offset ~len:4 ~byte_order 2] <- Char.unsafe_chr (0xFF land (n asr 8));
-  buf.[pos + offset ~len:4 ~byte_order 3] <- Char.unsafe_chr (0xFF land n) (* LSB *)
+  Bytes.set buf (pos + offset ~len:4 ~byte_order 0) (Char.unsafe_chr (0xFF land (n asr 24))); (* MSB *)
+  Bytes.set buf (pos + offset ~len:4 ~byte_order 1) (Char.unsafe_chr (0xFF land (n asr 16)));
+  Bytes.set buf (pos + offset ~len:4 ~byte_order 2) (Char.unsafe_chr (0xFF land (n asr 8)));
+  Bytes.set buf (pos + offset ~len:4 ~byte_order 3) (Char.unsafe_chr (0xFF land n)) (* LSB *)
 ;;
 
 let pack_unsigned_32_int_big_endian ~buf ~pos n =
   check_unsigned_32_in_range n;
-  buf.[pos] <- Char.unsafe_chr (0xFF land (n lsr 24)); (* MSB *)
-  buf.[pos + 3] <- Char.unsafe_chr (0xFF land n); (* LSB *)
+  Bytes.set buf pos (Char.unsafe_chr (0xFF land (n lsr 24))); (* MSB *)
+  Bytes.set buf (pos + 3) (Char.unsafe_chr (0xFF land n)); (* LSB *)
   Caml.Bytes.unsafe_set buf (pos + 1) (Char.unsafe_chr (0xFF land (n lsr 16)));
   Caml.Bytes.unsafe_set buf (pos + 2) (Char.unsafe_chr (0xFF land (n lsr 8)));
 ;;
 
 let pack_unsigned_32_int_little_endian ~buf ~pos n =
   check_unsigned_32_in_range n;
-  buf.[pos + 3] <- Char.unsafe_chr (0xFF land (n lsr 24)); (* MSB *)
-  buf.[pos] <- Char.unsafe_chr (0xFF land n); (* LSB *)
+  Bytes.set buf (pos + 3) (Char.unsafe_chr (0xFF land (n lsr 24))); (* MSB *)
+  Bytes.set buf pos (Char.unsafe_chr (0xFF land n)); (* LSB *)
   Caml.Bytes.unsafe_set buf (pos + 2) (Char.unsafe_chr (0xFF land (n lsr 16)));
   Caml.Bytes.unsafe_set buf (pos + 1) (Char.unsafe_chr (0xFF land (n lsr 8)));
 ;;
@@ -326,36 +326,33 @@ let check_signed_32_in_range n =
 let pack_signed_32_int ~byte_order ~buf ~pos n =
   assert (Sys.word_size = 64);
   check_signed_32_in_range n;
-  buf.[pos + offset ~len:4 ~byte_order 0] <- Char.unsafe_chr (0xFF land (n asr 24)); (* MSB *)
-  buf.[pos + offset ~len:4 ~byte_order 1] <- Char.unsafe_chr (0xFF land (n asr 16));
-  buf.[pos + offset ~len:4 ~byte_order 2] <- Char.unsafe_chr (0xFF land (n asr 8));
-  buf.[pos + offset ~len:4 ~byte_order 3] <- Char.unsafe_chr (0xFF land n) (* LSB *)
+  Bytes.set buf (pos + offset ~len:4 ~byte_order 0) (Char.unsafe_chr (0xFF land (n asr 24))); (* MSB *)
+  Bytes.set buf (pos + offset ~len:4 ~byte_order 1) (Char.unsafe_chr (0xFF land (n asr 16)));
+  Bytes.set buf (pos + offset ~len:4 ~byte_order 2) (Char.unsafe_chr (0xFF land (n asr 8)));
+  Bytes.set buf (pos + offset ~len:4 ~byte_order 3) (Char.unsafe_chr (0xFF land n)) (* LSB *)
 ;;
 
 let pack_signed_32_int_big_endian ~buf ~pos n =
   check_signed_32_in_range n;
-  buf.[pos] <- Char.unsafe_chr (0xFF land (n asr 24)); (* MSB *)
-  buf.[pos + 3] <- Char.unsafe_chr (0xFF land n); (* LSB *)
+  Bytes.set buf pos (Char.unsafe_chr (0xFF land (n asr 24))); (* MSB *)
+  Bytes.set buf (pos + 3) (Char.unsafe_chr (0xFF land n)); (* LSB *)
   Caml.Bytes.unsafe_set buf (pos + 1) (Char.unsafe_chr (0xFF land (n asr 16)));
   Caml.Bytes.unsafe_set buf (pos + 2) (Char.unsafe_chr (0xFF land (n asr 8)));
 ;;
 
 let pack_signed_32_int_little_endian ~buf ~pos n =
   check_signed_32_in_range n;
-  buf.[pos + 3] <- Char.unsafe_chr (0xFF land (n asr 24)); (* MSB *)
-  buf.[pos] <- Char.unsafe_chr (0xFF land n); (* LSB *)
+  Bytes.set buf (pos + 3) (Char.unsafe_chr (0xFF land (n asr 24))); (* MSB *)
+  Bytes.set buf pos (Char.unsafe_chr (0xFF land n)); (* LSB *)
   Caml.Bytes.unsafe_set buf (pos + 2) (Char.unsafe_chr (0xFF land (n asr 16)));
   Caml.Bytes.unsafe_set buf (pos + 1) (Char.unsafe_chr (0xFF land (n asr 8)));
 ;;
 
 let pack_signed_32 ~byte_order ~buf ~pos n =
-  buf.[pos + offset ~len:4 ~byte_order 0] <-
-    Char.unsafe_chr (0xFF land Int32.to_int (Int32.shift_right n 24));
-  buf.[pos + offset ~len:4 ~byte_order 1] <-
-    Char.unsafe_chr (0xFF land Int32.to_int (Int32.shift_right n 16));
-  buf.[pos + offset ~len:4 ~byte_order 2] <-
-    Char.unsafe_chr (0xFF land Int32.to_int (Int32.shift_right n 8));
-  buf.[pos + offset ~len:4 ~byte_order 3] <- Char.unsafe_chr (0xFF land Int32.to_int n)
+  Bytes.set buf (pos + offset ~len:4 ~byte_order 0) (Char.unsafe_chr (0xFF land Int32.to_int (Int32.shift_right n 24)));
+  Bytes.set buf (pos + offset ~len:4 ~byte_order 1) (Char.unsafe_chr (0xFF land Int32.to_int (Int32.shift_right n 16)));
+  Bytes.set buf (pos + offset ~len:4 ~byte_order 2) (Char.unsafe_chr (0xFF land Int32.to_int (Int32.shift_right n 8)));
+  Bytes.set buf (pos + offset ~len:4 ~byte_order 3) (Char.unsafe_chr (0xFF land Int32.to_int n))
 ;;
 
 let unpack_signed_32 ~byte_order ~buf ~pos =
@@ -445,21 +442,20 @@ let pack_signed_64 ~byte_order ~buf ~pos v =
   let top3 = Int64.to_int (Int64.shift_right v 40) in
   let mid3 = Int64.to_int (Int64.shift_right v 16) in
   let bot2 = Int64.to_int v in
-  buf.[pos + offset ~len:8 ~byte_order 0] <- Char.unsafe_chr (0xFF land (top3 lsr 16));
-  buf.[pos + offset ~len:8 ~byte_order 1] <- Char.unsafe_chr (0xFF land (top3 lsr 8));
-  buf.[pos + offset ~len:8 ~byte_order 2] <- Char.unsafe_chr (0xFF land top3);
-  buf.[pos + offset ~len:8 ~byte_order 3] <- Char.unsafe_chr (0xFF land (mid3 lsr 16));
-  buf.[pos + offset ~len:8 ~byte_order 4] <- Char.unsafe_chr (0xFF land (mid3 lsr 8));
-  buf.[pos + offset ~len:8 ~byte_order 5] <- Char.unsafe_chr (0xFF land mid3);
-  buf.[pos + offset ~len:8 ~byte_order 6] <- Char.unsafe_chr (0xFF land (bot2 lsr 8));
-  buf.[pos + offset ~len:8 ~byte_order 7] <- Char.unsafe_chr (0xFF land bot2)
+  Bytes.set buf (pos + offset ~len:8 ~byte_order 0) (Char.unsafe_chr (0xFF land (top3 lsr 16)));
+  Bytes.set buf (pos + offset ~len:8 ~byte_order 1) (Char.unsafe_chr (0xFF land (top3 lsr 8)));
+  Bytes.set buf (pos + offset ~len:8 ~byte_order 2) (Char.unsafe_chr (0xFF land top3));
+  Bytes.set buf (pos + offset ~len:8 ~byte_order 3) (Char.unsafe_chr (0xFF land (mid3 lsr 16)));
+  Bytes.set buf (pos + offset ~len:8 ~byte_order 4) (Char.unsafe_chr (0xFF land (mid3 lsr 8)));
+  Bytes.set buf (pos + offset ~len:8 ~byte_order 5) (Char.unsafe_chr (0xFF land mid3));
+  Bytes.set buf (pos + offset ~len:8 ~byte_order 6) (Char.unsafe_chr (0xFF land (bot2 lsr 8)));
+  Bytes.set buf (pos + offset ~len:8 ~byte_order 7) (Char.unsafe_chr (0xFF land bot2))
 ;;
 
 let pack_signed_64_big_endian ~buf ~pos v =
   (* Safely set the first and last bytes, so that we verify the string bounds. *)
-  buf.[pos] <-
-    Char.unsafe_chr (Int64.to_int (Int64.logand 0xFFL (Int64.shift_right_logical v 56)));
-  buf.[pos + 7] <- Char.unsafe_chr (Int64.to_int (Int64.logand 0xFFL v));
+  Bytes.set buf pos (Char.unsafe_chr (Int64.to_int (Int64.logand 0xFFL (Int64.shift_right_logical v 56))));
+  Bytes.set buf (pos + 7) (Char.unsafe_chr (Int64.to_int (Int64.logand 0xFFL v)));
   (* Now we can use [unsafe_set] for the intermediate bytes. *)
   Caml.Bytes.unsafe_set buf (pos + 1)
     (Char.unsafe_chr (Int64.to_int (Int64.logand 0xFFL (Int64.shift_right_logical v 48))));
@@ -477,9 +473,8 @@ let pack_signed_64_big_endian ~buf ~pos v =
 
 let pack_signed_64_little_endian ~buf ~pos v =
   (* Safely set the first and last bytes, so that we verify the string bounds. *)
-  buf.[pos] <- Char.unsafe_chr (Int64.to_int (Int64.logand 0xFFL v));
-  buf.[pos + 7] <-
-    Char.unsafe_chr (Int64.to_int (Int64.logand 0xFFL (Int64.shift_right_logical v 56)));
+  Bytes.set buf pos (Char.unsafe_chr (Int64.to_int (Int64.logand 0xFFL v)));
+  Bytes.set buf (pos + 7) (Char.unsafe_chr (Int64.to_int (Int64.logand 0xFFL (Int64.shift_right_logical v 56))));
   (* Now we can use [unsafe_set] for the intermediate bytes. *)
   Caml.Bytes.unsafe_set buf (pos + 1)
     (Char.unsafe_chr (Int64.to_int (Int64.logand 0xFFL (Int64.shift_right_logical v 8))));
@@ -564,14 +559,14 @@ let unpack_signed_64_little_endian ~buf ~pos =
 
 let pack_signed_64_int ~byte_order ~buf ~pos n =
   assert (Sys.word_size = 64);
-  buf.[pos + offset ~len:8 ~byte_order 0] <- Char.unsafe_chr (0xFF land (n asr 56));
-  buf.[pos + offset ~len:8 ~byte_order 1] <- Char.unsafe_chr (0xFF land (n asr 48));
-  buf.[pos + offset ~len:8 ~byte_order 2] <- Char.unsafe_chr (0xFF land (n asr 40));
-  buf.[pos + offset ~len:8 ~byte_order 3] <- Char.unsafe_chr (0xFF land (n asr 32));
-  buf.[pos + offset ~len:8 ~byte_order 4] <- Char.unsafe_chr (0xFF land (n asr 24));
-  buf.[pos + offset ~len:8 ~byte_order 5] <- Char.unsafe_chr (0xFF land (n asr 16));
-  buf.[pos + offset ~len:8 ~byte_order 6] <- Char.unsafe_chr (0xFF land (n asr 8));
-  buf.[pos + offset ~len:8 ~byte_order 7] <- Char.unsafe_chr (0xFF land n)
+  Bytes.set buf (pos + offset ~len:8 ~byte_order 0) (Char.unsafe_chr (0xFF land (n asr 56)));
+  Bytes.set buf (pos + offset ~len:8 ~byte_order 1) (Char.unsafe_chr (0xFF land (n asr 48)));
+  Bytes.set buf (pos + offset ~len:8 ~byte_order 2) (Char.unsafe_chr (0xFF land (n asr 40)));
+  Bytes.set buf (pos + offset ~len:8 ~byte_order 3) (Char.unsafe_chr (0xFF land (n asr 32)));
+  Bytes.set buf (pos + offset ~len:8 ~byte_order 4) (Char.unsafe_chr (0xFF land (n asr 24)));
+  Bytes.set buf (pos + offset ~len:8 ~byte_order 5) (Char.unsafe_chr (0xFF land (n asr 16)));
+  Bytes.set buf (pos + offset ~len:8 ~byte_order 6) (Char.unsafe_chr (0xFF land (n asr 8)));
+  Bytes.set buf (pos + offset ~len:8 ~byte_order 7) (Char.unsafe_chr (0xFF land n))
 ;;
 
 (* It's important to use [asr] not [lsr] in [pack_signed_64_int_big_endian] and
@@ -582,8 +577,8 @@ let pack_signed_64_int ~byte_order ~buf ~pos n =
 
 let pack_signed_64_int_big_endian ~buf ~pos v =
   (* Safely set the first and last bytes, so that we verify the string bounds. *)
-  buf.[pos] <- Char.unsafe_chr (0xFF land (v asr 56));
-  buf.[pos + 7] <- Char.unsafe_chr (0xFF land v);
+  Bytes.set buf pos (Char.unsafe_chr (0xFF land (v asr 56)));
+  Bytes.set buf (pos + 7) (Char.unsafe_chr (0xFF land v));
   (* Now we can use [unsafe_set] for the intermediate bytes. *)
   Caml.Bytes.unsafe_set buf (pos + 1) (Char.unsafe_chr (0xFF land (v asr 48)));
   Caml.Bytes.unsafe_set buf (pos + 2) (Char.unsafe_chr (0xFF land (v asr 40)));
@@ -595,8 +590,8 @@ let pack_signed_64_int_big_endian ~buf ~pos v =
 
 let pack_signed_64_int_little_endian ~buf ~pos v =
   (* Safely set the first and last bytes, so that we verify the string bounds. *)
-  buf.[pos] <- Char.unsafe_chr (0xFF land v);
-  buf.[pos + 7] <- Char.unsafe_chr (0xFF land (v asr 56));
+  Bytes.set buf pos (Char.unsafe_chr (0xFF land v));
+  Bytes.set buf (pos + 7) (Char.unsafe_chr (0xFF land (v asr 56)));
   (* Now we can use [unsafe_set] for the intermediate bytes. *)
   Caml.Bytes.unsafe_set buf (pos + 1) (Char.unsafe_chr (0xFF land (v asr 8)));
   Caml.Bytes.unsafe_set buf (pos + 2) (Char.unsafe_chr (0xFF land (v asr 16)));
@@ -667,7 +662,7 @@ let unpack_signed_64_int_little_endian ~buf ~pos =
 ;;
 
 let%test_unit "63 bits overflow" [@tags "64-bits-only"]=
-  let buf = String.create 8 in
+  let buf = Bytes.create 8 in
   let pos = 0 in
   List.iter
     [pack_signed_64_little_endian, unpack_signed_64_int_little_endian;
@@ -763,10 +758,10 @@ let pack_tail_padded_fixed_string ?(padding='\x00') ~buf ~pos ~len s =
   if slen > len then
     raise (Pack_tail_padded_fixed_string_argument_too_long (`s s, `longer_than, `len len))
   else begin
-    String.blit ~src:s ~dst:buf ~src_pos:0 ~dst_pos:pos ~len:slen;
+    Bytes.blit ~src:s ~dst:buf ~src_pos:0 ~dst_pos:pos ~len:slen;
     if slen < len then begin
       let diff = len - slen in
-      String.fill buf ~pos:(pos + slen) ~len:diff padding
+      Bytes.fill buf ~pos:(pos + slen) ~len:diff padding
     end
   end
 ;;

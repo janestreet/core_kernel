@@ -60,8 +60,17 @@ module type Date0 = sig
 
   (** [add_months t n] returns date with max days for the month if the date would be
       invalid. e.g. adding 1 month to Jan 30 results in Feb 28 due to Feb 30 being
-      an invalid date, Feb 29 is returned in cases of leap year. **)
+      an invalid date, Feb 29 is returned in cases of leap year.
+
+      In particular, this means adding [x] months and then adding [y] months isn't the
+      same as adding [x + y] months, and in particular adding [x] months and then [-x]
+      months won't always get you back where you were. **)
   val add_months : t -> int -> t
+
+  (** [add_years t n] has the same semantics as [add_months] for adding years to Feb 29 of
+      a leap year, i.e., when the addition results in a date in a non-leap year, the
+      result will be Feb 28 of that year. *)
+  val add_years : t -> int -> t
 
   (** [diff t1 t2] returns date [t1] minus date [t2] in days. *)
   val diff : t -> t -> int

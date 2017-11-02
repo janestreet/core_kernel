@@ -26,12 +26,12 @@ let to_string { len; tree } =
   match tree with
   | Base s -> s
   | Append (s1, s2) ->
-    let buf = String.create len in
+    let buf = Bytes.create len in
     (* [todo] avoids stack overflow (some usage patterns result in highly unbalanced
        trees, so the naive recursive approach doesn't work) *)
     let rec go todo start = function
       | Base s ->
-        String.blit ~src:s ~src_pos:0 ~dst:buf ~dst_pos:start ~len:(String.length s);
+        Bytes.blit ~src:s ~src_pos:0 ~dst:buf ~dst_pos:start ~len:(String.length s);
         let start = start + String.length s in
         (match todo with
          | [] -> assert (start = len)

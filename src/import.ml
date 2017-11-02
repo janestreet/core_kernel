@@ -17,6 +17,7 @@ module Indexed_container         = Base.Indexed_container
 module Invariant                 = Base.Invariant
 module Intable                   = Base.Intable
 module Monad                     = Base.Monad
+module Obj_array                 = Base.Obj_array
 module Ordered_collection_common = Base.Ordered_collection_common
 module Poly                      = Base.Poly
 module Polymorphic_compare       = Base.Polymorphic_compare

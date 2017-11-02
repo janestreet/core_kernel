@@ -130,34 +130,43 @@ module Stable = struct
 
     let to_parts t = Span.to_parts (T.to_span_since_start_of_day t)
 
-    let to_string_gen ~drop_ms ~drop_us ~trim x =
+    let to_string_gen ~drop_ms ~drop_us ~trim t =
+      let (/)   = Int63.(/)        in
+      let (!)   = Int63.of_int     in
+      let (mod) = Int63.rem        in
+      let i     = Int63.to_int_exn in
       assert (if drop_ms then drop_us else true);
-      let module P = Span.Parts in
-      let parts = to_parts x in
-      let dont_print_us = drop_us || (trim && parts.P.us = 0) in
-      let dont_print_ms = drop_ms || (trim && parts.P.ms = 0 && dont_print_us) in
-      let dont_print_s  = trim && parts.P.sec = 0 && dont_print_ms in
+      let float_sec = Span.to_sec (T.to_span_since_start_of_day t) in
+      let us = Float.int63_round_nearest_exn (float_sec *. 1e6) in
+      let ms,  us  = us  / !1000, us  mod !1000 |> i in
+      let sec, ms  = ms  / !1000, ms  mod !1000 |> i in
+      let min, sec = sec /   !60, sec mod   !60 |> i in
+      let hr,  min = min /   !60, min mod   !60 |> i in
+      let hr = i hr in
+      let dont_print_us = drop_us || (trim && us = 0) in
+      let dont_print_ms = drop_ms || (trim && ms = 0 && dont_print_us) in
+      let dont_print_s  = trim && sec = 0 && dont_print_ms in
       let len =
         if dont_print_s then 5
         else if dont_print_ms then 8
         else if dont_print_us then 12
         else 15
       in
-      let buf = String.create len in
-      blit_string_of_int_2_digits buf ~pos:0 parts.P.hr;
-      buf.[2] <- ':';
-      blit_string_of_int_2_digits buf ~pos:3 parts.P.min;
+      let buf = Bytes.create len in
+      blit_string_of_int_2_digits buf ~pos:0 hr;
+      Bytes.set buf 2 ':';
+      blit_string_of_int_2_digits buf ~pos:3 min;
       if dont_print_s then ()
       else begin
-        buf.[5] <- ':';
-        blit_string_of_int_2_digits buf ~pos:6 parts.P.sec;
+        Bytes.set buf 5 ':';
+        blit_string_of_int_2_digits buf ~pos:6 sec;
         if dont_print_ms then ()
         else begin
-          buf.[8] <- '.';
-          blit_string_of_int_3_digits buf ~pos:9 parts.P.ms;
+          Bytes.set buf 8 '.';
+          blit_string_of_int_3_digits buf ~pos:9 ms;
           if dont_print_us then ()
           else
-            blit_string_of_int_3_digits buf ~pos:12 parts.P.us
+            blit_string_of_int_3_digits buf ~pos:12 us
         end
       end;
       buf
@@ -283,67 +292,26 @@ module Stable = struct
         let module_name = "Core_kernel.Time.Ofday"
       end)
 
-    (* lifted allowed meridiem suffixes out so that tests can reuse them *)
-    let plus_lowercase xs = xs @ List.map xs ~f:String.lowercase
-    let ante = lazy (plus_lowercase ["AM";"A";"A.M";"A.M."])
-    let post = lazy (plus_lowercase ["PM";"P";"P.M";"P.M."])
+    let create_from_parsed string ~hr ~min ~sec ~subsec_pos ~subsec_len =
+      let subsec =
+        if Int.equal subsec_len 0
+        then 0.
+        else Float.of_string (String.sub string ~pos:subsec_pos ~len:subsec_len)
+      in
+      Float.of_int ((hr * 3600) + (min * 60) + sec) +. subsec
+      |> Span.of_sec
+      |> T.of_span_since_start_of_day
+    ;;
 
     let of_string s =
-      try
-        let prefix, meridiem =
-          let chop_suffixes s ~suffixes:lst =
-            List.find_map lst ~f:(fun suffix -> String.chop_suffix s ~suffix)
-          in
-          match chop_suffixes s ~suffixes:(Lazy.force ante) with
-          | Some prefix -> String.rstrip prefix, Some `AM
-          | None ->
-            match chop_suffixes s ~suffixes:(Lazy.force post) with
-            | Some prefix -> String.rstrip prefix, Some `PM
-            | None -> s, None
-        in
-        let h, m, s =
-          match String.split prefix ~on:':' with
-          | [h; m; s] -> (h, m, Float.of_string s)
-          | [h; m]    -> (h, m, 0.)
-          | [hm]      ->
-            if Option.is_some meridiem
-            then (hm, "00", 0.)
-            else if Int.(=) (String.length hm) 4
-            then ((String.sub hm ~pos:0 ~len:2), (String.sub hm ~pos:2 ~len:2), 0.)
-            else failwith "No colon, expected string of length four"
-          | _ -> failwith "More than two colons"
-        in
-        let h =
-          let h = Int.of_string h in
-          match meridiem with
-          | None -> h
-          | Some am_or_pm ->
-            (if Int.(>) h 12
-             then failwith "hour must be <= 12 when AM/PM is specified");
-            (if Int.(=) h 0
-             then failwith "hour must be > 0 when AM/PM is specified");
-            match am_or_pm with
-            | `AM -> if Int.(=) h 12 then 0 else h
-            | `PM -> if Int.(=) h 12 then 12 else Int.(+) h 12
-        in
-        let m = Int.of_string m in
-        let is_end_of_day = Int.(h = 24 && m = 0) && Float.(s = 0.) in
-        if not (Int.(h <= 23 && h >= 0) || is_end_of_day) then
-          failwithf "hour out of valid range: %i" h ();
-        if not Int.(m <= 59 && m >= 0) then
-          failwithf "minutes out of valid range: %i" m ();
-        let s =
-          if Float.(0. <= s && s < 60.)
-          then s
-          else if Float.(s < 61.) (* allow a leap second *)
-          then 60.
-          else failwithf "seconds out of valid range: %g" s ();
-        in
-        (* create takes integer arguments for each field, and so we have to use add
-           to get float seconds onto the value. *)
-        Option.value_exn (add (create ~hr:h ~min:m ()) (Span.of_sec s))
-      with exn ->
-        invalid_argf "Ofday.of_string (%s): %s" s (Exn.to_string exn) ()
+      Ofday_parser.parse s ~f:create_from_parsed
+    ;;
+
+    let%test_unit "of_string does not naively dispatch to \
+                   [Int.of_string] and [Float.of_string]" =
+      assert (Exn.does_raise (fun () -> of_string "1:0:00"));
+      assert (Exn.does_raise (fun () -> of_string "1:-0:00"));
+      assert (Exn.does_raise (fun () -> of_string "0o10:0x28:3e1"));
     ;;
 
     let%bench "Time.Ofday.of_string" = of_string "12:00:00am"
@@ -361,14 +329,24 @@ module Stable = struct
       assert (create ~hr:7 ~min:21 ~sec:0 () = of_string "07:21:00")
     ;;
 
+    (* This because we're sharing the suffixes between the parser code and tests, so e.g.
+       typos would otherwise go undetected *)
+    let%expect_test "the permissible suffixes are reasonable" =
+      printf "%s\n" (String.concat ~sep:" " (Lazy.force Ofday_parser.am_suffixes));
+      printf "%s\n" (String.concat ~sep:" " (Lazy.force Ofday_parser.pm_suffixes));
+      [%expect {|
+        a A am AM a.m A.M a.m. A.M.
+        p P pm PM p.m P.M p.m. P.M.
+      |}]
+
     let%test_unit "of_string supports meridiem times" =
       let test_excluding_noon ~hr ~zeroes ~meridiem () =
         let hrs_to_add, suffixes =
           let plus_space xs = xs @ List.map xs ~f:(fun x -> " " ^ x) in
           match meridiem with
           | None     -> 0,  [""]
-          | Some `AM -> 0,  plus_space (Lazy.force ante)
-          | Some `PM -> 12, plus_space (Lazy.force post)
+          | Some `AM -> 0,  plus_space (Lazy.force Ofday_parser.am_suffixes)
+          | Some `PM -> 12, plus_space (Lazy.force Ofday_parser.pm_suffixes)
         in
         List.iter suffixes ~f:(fun suffix ->
           let t = create ~hr:(hr + hrs_to_add) () in
@@ -378,7 +356,7 @@ module Stable = struct
       let failure f = assert (Option.is_none (Option.try_with f)) in
       let success f =
         match Or_error.try_with f with
-        | Ok _ -> ()
+        | Ok    _ -> ()
         | Error e -> Error.raise (Error.tag e ~tag:"expected success")
       in
       (* Test everything but hour 12 and 0 *)

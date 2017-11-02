@@ -70,6 +70,8 @@ val change : ('key, 'a, 'c, 'e) t -> 'key -> f:('a -> 'a) -> ('key, 'a, 'c, 'e) 
 
 val data : (_, 'a, _, _) t -> 'a list
 
+val for_all : (_, 'a, _, _) t -> f:('a -> bool) -> bool
+
 (** Sequence a total map of computations in order of their keys resulting in computation
     of the total map of results. *)
 module Sequence (A : Applicative) : sig

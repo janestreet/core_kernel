@@ -74,6 +74,7 @@ module T : sig
     val nativeint : nativeint t
     val float     : float t
     val string    : string t
+    val bytes     : bytes t
     val array     : _ array t
     val ref_      : _ ref t
     val tuple2    : (_ * _) t
@@ -124,6 +125,7 @@ end = struct
 
     let float  = never typename_of_float
     let string = never typename_of_string
+    let bytes  = never typename_of_bytes
 
     let array = never_with_name "array"
     let ref_  = never_with_name "ref"

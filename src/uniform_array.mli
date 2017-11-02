@@ -4,11 +4,14 @@
     you use it with floats.
 
     It can often be faster than [Array] if you use it with non-floats.
+
+    Also see [Base.Obj_array] for the same implementation, but specialized to holding
+    [Obj.t] rather than being polymorphic.
 *)
 
 open! Import
 
-(** See [Core.Array] for comments. *)
+(** See [Core_kernel.Array] for comments. *)
 type 'a t [@@deriving bin_io, sexp]
 
 
@@ -29,10 +32,9 @@ val unsafe_set : 'a t -> int -> 'a -> unit
 val map : 'a t -> f:('a -> 'b) -> 'b t
 val iter : 'a t -> f:('a -> unit) -> unit
 
-val of_array : 'a array -> 'a t
-
-(** [to_array t] returns a fresh array with the same contents as [t], rather than
+(** [of_array] and [to_array] return fresh arrays with the same contents rather than
     returning a reference to the underlying array. *)
+val of_array : 'a array -> 'a t
 val to_array : 'a t -> 'a array
 
 val of_list : 'a list -> 'a t

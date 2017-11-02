@@ -56,7 +56,7 @@ include
       let get t i   = Bigstring.get t.bstr i
     end)
     (struct
-      include String
+      include Bytes
       let create ~len = create len
       let unsafe_blit ~src ~src_pos ~dst ~dst_pos ~len =
         Bigstring.To_string.unsafe_blit ~src:src.bstr ~src_pos ~dst ~dst_pos ~len
@@ -85,6 +85,15 @@ let add_substring buf src ~pos:src_pos ~len =
   buf.pos <- new_pos;
 ;;
 
+let add_subbytes buf src ~pos:src_pos ~len =
+  if src_pos < 0 || len < 0 || src_pos > Bytes.length src - len
+  then invalid_arg "Bigbuffer.add_subbytes";
+  let new_pos = buf.pos + len in
+  if new_pos > buf.len then resize buf len;
+  Bigstring.From_bytes.blit ~src ~src_pos ~len ~dst:buf.bstr ~dst_pos:buf.pos;
+  buf.pos <- new_pos;
+;;
+
 let add_bigstring buf src =
   let len = Bigstring.length src in
   let new_pos = buf.pos + len in
@@ -98,6 +107,14 @@ let add_string buf src =
   let new_pos = buf.pos + len in
   if new_pos > buf.len then resize buf len;
   Bigstring.From_string.blito ~src ~src_len:len ~dst:buf.bstr ~dst_pos:buf.pos ();
+  buf.pos <- new_pos;
+;;
+
+let add_bytes buf src =
+  let len = Bytes.length src in
+  let new_pos = buf.pos + len in
+  if new_pos > buf.len then resize buf len;
+  Bigstring.From_bytes.blito ~src ~src_len:len ~dst:buf.bstr ~dst_pos:buf.pos ();
   buf.pos <- new_pos;
 ;;
 

@@ -426,7 +426,7 @@ let%test_module "unpack-buffer" =
                  if len < value_size then
                    `Not_enough_data ((), 0)
                  else
-                   let string = String.create value_size in
+                   let string = Bytes.create value_size in
                    Bigstring.To_string.blito ~src:buf ~src_pos:pos ~src_len:value_size
                      ~dst:string ();
                    `Ok (string, value_size))

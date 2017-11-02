@@ -17,6 +17,7 @@ include
      type nonrec 'a option = 'a option [@@deriving sexp]
      type nonrec 'a ref    = 'a ref    [@@deriving sexp]
      type nonrec string    = string    [@@deriving sexp]
+     type nonrec bytes     = bytes     [@@deriving sexp]
      type nonrec unit      = unit      [@@deriving sexp]
    end
    with type 'a array  := 'a array
@@ -32,6 +33,7 @@ include
    with type 'a option := 'a option
    with type 'a ref    := 'a ref
    with type string    := string
+   with type bytes     := bytes
    with type unit      := unit)
 
 type 'a sexp_option = 'a Std_internal.sexp_option [@@deriving bin_io, compare, hash]

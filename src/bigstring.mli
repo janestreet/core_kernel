@@ -98,8 +98,12 @@ external is_mmapped : t -> bool = "bigstring_is_mmapped_stub" [@@noalloc]
     @raise Invalid_argument if the designated ranges are out of bounds. *)
 
 include Blit.S with type t := t
+
 module To_string   : Blit.S_distinct with type src := t      with type dst := string
 module From_string : Blit.S_distinct with type src := string with type dst := t
+
+module To_bytes   : Blit.S_distinct with type src := t     with type dst := bytes
+module From_bytes : Blit.S_distinct with type src := bytes with type dst := t
 
 (** {6 Reading/writing bin-prot} *)
 

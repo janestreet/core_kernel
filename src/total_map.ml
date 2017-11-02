@@ -5,8 +5,6 @@ type ('key, 'a, 'cmp, 'enum) t = ('key, 'a, 'cmp) Map.t
 
 let to_map t = t
 
-let data = Map.data
-
 let key_not_in_enumeration t key =
   failwiths
     "Key was not provided in the enumeration given to [Total_map.Make]"
@@ -51,12 +49,15 @@ end
 
 include struct
   open Map
+
+  let data      = data
+  let for_all   = for_all
+  let iter      = iter
+  let iter_keys = iter_keys
+  let iteri     = iteri
   let map       = map
   let mapi      = mapi
   let to_alist  = to_alist
-  let iter_keys = iter_keys
-  let iter      = iter
-  let iteri     = iteri
 end
 
 module type Key = sig

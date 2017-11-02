@@ -70,7 +70,7 @@ module Full_data = struct
         let bool_of_int i = i <> 0
 
         let input_long_as_int32 =
-          let long = String.create 4 in
+          let long = Bytes.create 4 in
           let int32_of_char chr = Int32.of_int_exn (int_of_char chr) in
           fun ic ->
             In_channel.really_input_exn ic ~buf:long ~pos:0 ~len:4;
@@ -86,12 +86,12 @@ module Full_data = struct
            to hold small numbers that are never interpreted as timestamps. *)
         let input_long_as_int ic = Int32.to_int_exn (input_long_as_int32 ic)
 
-        let input_long_as_int63 ic = Int63.of_int32_exn (input_long_as_int32 ic)
+        let input_long_as_int63 ic = Int63.of_int32 (input_long_as_int32 ic)
 
         let input_long_long_as_int63 ic =
           let int63_of_char chr = Int63.of_int_exn (int_of_char chr) in
           let shift c bits = Int63.shift_left (int63_of_char c) bits in
-          let long_long = String.create 8 in
+          let long_long = Bytes.create 8 in
           In_channel.really_input_exn ic ~buf:long_long ~pos:0 ~len:8;
           let result =                      shift long_long.[0] 56 in
           let result = Int63.bit_or result (shift long_long.[1] 48) in
@@ -243,7 +243,7 @@ module Full_data = struct
         ;;
 
         let read_header ic =
-          let buf = String.create 4 in
+          let buf = Bytes.create 4 in
           In_channel.really_input_exn ic ~buf ~pos:0 ~len:4;
           if not (String.equal buf "TZif") then
             raise (Invalid_file_format "magic characters TZif not present");
@@ -258,7 +258,7 @@ module Full_data = struct
               raise (Invalid_file_format (sprintf "version (%c) is invalid" bad_version))
           in
           (* space reserved for future use in the format *)
-          In_channel.really_input_exn ic ~buf:(String.create 15) ~pos:0 ~len:15;
+          In_channel.really_input_exn ic ~buf:(Bytes.create 15) ~pos:0 ~len:15;
           version
         ;;
 

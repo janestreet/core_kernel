@@ -108,6 +108,7 @@ include (struct
   type nativeint = Nativeint.   t [@@deriving bin_io, compare, hash, sexp, typerep]
   type 'a option = 'a Option.   t [@@deriving bin_io, compare, hash, sexp, typerep]
   type string    = String.      t [@@deriving bin_io, compare, hash, sexp, typerep]
+  type bytes     = Bytes.       t [@@deriving bin_io, compare,       sexp, typerep]
   type 'a ref    = 'a Ref.      t [@@deriving bin_io, compare,       sexp, typerep]
   type unit      = Unit.        t [@@deriving bin_io, compare, hash, sexp, typerep]
 
@@ -131,6 +132,7 @@ end : sig
            type nativeint [@@deriving bin_io, compare, hash, sexp, typerep]
            type 'a option [@@deriving bin_io, compare, hash, sexp, typerep]
            type string    [@@deriving bin_io, compare, hash, sexp, typerep]
+           type bytes     [@@deriving bin_io, compare,       sexp, typerep]
            type 'a ref    [@@deriving bin_io, compare,       sexp, typerep]
            type unit      [@@deriving bin_io, compare, hash, sexp, typerep]
 
@@ -147,6 +149,7 @@ with type 'a list     := 'a list
 with type nativeint   := nativeint
 with type 'a option   := 'a option
 with type string      := string
+with type bytes       := bytes
 with type 'a lazy_t   := 'a lazy_t
 with type 'a ref      := 'a ref
 with type unit        := unit

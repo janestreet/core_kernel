@@ -48,21 +48,36 @@ module Read_only : sig
   include Invariant.S1 with type 'a t := 'a t
 end
 
+module On_subscription_after_first_write : sig
+  type t =
+    | Allow
+    | Allow_and_send_last_value
+    | Raise
+  [@@deriving sexp_of]
+end
+
 val read_only : ('callback, _) t -> 'callback Read_only.t
 
-(** In [create [%here] ArityN ~allow_subscription_after_first_write ~on_callback_raise],
+(** In [create [%here] ArityN ~on_subscription_after_first_write ~on_callback_raise],
     [[%here]] is stored in the resulting bus, and contained in [%sexp_of: t], which can
-    help with debugging.  If [allow_subscription_after_first_write] is false, then
-    [subscribe_exn] will raise if it is called after [write] has been called the first
-    time.  If a callback raises, [on_callback_raise] is called with an error containing
-    the exception.  If [on_callback_raise] raises, then the exception is raised to
-    [write] and the bus is closed. *)
+    help with debugging.
+
+    If [on_subscription_after_first_write] is [Raise], then [subscribe_exn] will raise if
+    it is called after [write] has been called the first time.  If
+    [on_subscription_after_first_write] is [Allow_and_send_last_value], then the bus will
+    remember last value written and will send it to new subscribers.
+
+    If a callback raises, [on_callback_raise] is called with an error containing the
+    exception.
+
+    If [on_callback_raise] raises, then the exception is raised to [write] and the bus is
+    closed. *)
 val create
-  :  ?name                                : Info.t
+  :  ?name : Info.t
   -> Source_code_position.t
   -> 'callback Callback_arity.t
-  -> allow_subscription_after_first_write : bool
-  -> on_callback_raise                    : (Error.t -> unit)
+  -> on_subscription_after_first_write : On_subscription_after_first_write.t
+  -> on_callback_raise                 : (Error.t -> unit)
   -> 'callback Read_write.t
 
 val callback_arity : (('callback, _) t) -> 'callback Callback_arity.t

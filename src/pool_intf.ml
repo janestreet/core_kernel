@@ -249,9 +249,8 @@ module type Pool = sig
   include S with type 'a Pointer.t = private int
 
   (** An [Unsafe] pool is like an ordinary pool, except that the [create] function does
-      not require an initial element.  The pool stores [Obj.magic ()] as the dummy value
-      for each slot.  Such a pool is only safe if one never accesses a slot from a [free]d
-      tuple.
+      not require an initial element.  The pool stores a dummy value for each slot.
+      Such a pool is only safe if one never accesses a slot from a [free]d tuple.
 
       It makes sense to use [Unsafe] if one has a small constrained chunk of code where
       one can prove that one never accesses a [free]d tuple, and one needs a pool where

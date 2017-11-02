@@ -122,3 +122,18 @@ let%expect_test "robust_sign" =
 (* Make sure float comparison didn't accidentally get redefined using [compare]. *)
 let%test _ =
   not (Float.(<) Float.nan 0.)
+
+(* When we put a similar in base/test, it doesn't behave the same, and undesirable
+   versions of [Float.is_positive] that allocate when we put the test here don't allocate
+   when we put the test there.  So, we put the test here. *)
+let%expect_test _ [@tags "64-bits-only", "x-library-inlining-sensitive"] =
+  let a = [| 1. |] in (* a.(0) is unboxed *)
+  let one = 1. in (* [one] is boxed *)
+  ignore (require_no_allocation [%here] (fun () -> Float.(>) a.(0) 0.) : bool);
+  [%expect {| |}];
+  ignore (require_no_allocation [%here] (fun () -> Float.compare a.(0) 0. > 0) : bool);
+  [%expect {| |}];
+  ignore (require_no_allocation [%here] (fun () -> Float.is_positive a.(0)) : bool);
+  [%expect {| |}];
+  ignore (require_no_allocation [%here] (fun () -> Float.is_positive one) : bool);
+  [%expect {| |}]

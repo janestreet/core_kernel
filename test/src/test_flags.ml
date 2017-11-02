@@ -196,7 +196,7 @@ let%expect_test _ =
     -1 |}];
 ;;
 
-let%expect_test "[compare] is a total order consistent with [subset]" =
+let%expect_test "[compare] is a total order consistent with [is_subset]" =
   print_compare a b;
   [%expect {|
     -1 |}];
@@ -227,6 +227,6 @@ let%expect_test "[compare] is a total order consistent with [subset]" =
   Array.iteri ordered ~f:(fun i ai ->
     Array.iteri ordered ~f:(fun j aj ->
       require [%here] (Bool.equal (equal ai aj) (Int.equal (compare ai aj) 0));
-      if subset ai aj then require [%here] (Int.( <= ) (compare ai aj) 0);
+      if is_subset ai ~of_:aj then require [%here] (Int.( <= ) (compare ai aj) 0);
       require [%here] (Int.equal (compare ai aj) (Int.compare i j))));
 ;;

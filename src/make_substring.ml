@@ -22,7 +22,7 @@ end = struct
       Ordered_collection_common.get_pos_len_exn ?pos:src_pos ?len:src_len
         ~length:(String.length src)
     in
-    String.blit ~src ~src_pos ~len ~dst ~dst_pos;
+    Bytes.blit ~src ~src_pos ~len ~dst ~dst_pos;
   ;;
 
   let string_bigstring = Bigstring.From_string.blito
@@ -272,7 +272,7 @@ module F (Base : Base) : S with type base = Base.t = struct
     dst
   ;;
 
-  let to_string    = make String.create    Base.blit_to_string
+  let to_string    = make Bytes.create    Base.blit_to_string
   let to_bigstring = make Bigstring.create Base.blit_to_bigstring
 
   let concat_gen create_dst blit_dst ts =
@@ -286,6 +286,6 @@ module F (Base : Base) : S with type base = Base.t = struct
   ;;
 
   let concat           ts = of_base (concat_gen Base.create      blit_base         ts)
-  let concat_string    ts =          concat_gen String.create    blit_to_string    ts
+  let concat_string    ts =          concat_gen Bytes.create    blit_to_string    ts
   let concat_bigstring ts =          concat_gen Bigstring.create blit_to_bigstring ts
 end

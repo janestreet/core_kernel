@@ -24,6 +24,106 @@ module Callback_arity = struct
   [@@deriving sexp_of]
 end
 
+module On_subscription_after_first_write = struct
+  type t =
+    | Allow
+    | Allow_and_send_last_value
+    | Raise
+  [@@deriving sexp_of]
+
+  let allow_subscription_after_first_write = function
+    | Allow                     -> true
+    | Allow_and_send_last_value -> true
+    | Raise                     -> false
+  ;;
+end
+
+module Last_value : sig
+  type 'callback t
+
+  val create : 'callback Callback_arity.t -> 'callback t
+  val set1   : ('a -> unit) t -> 'a -> unit
+  val set2   : ('a -> 'b -> unit) t -> 'a -> 'b -> unit
+  val set3   : ('a -> 'b -> 'c -> unit) t -> 'a -> 'b -> 'c -> unit
+  val set4   : ('a -> 'b -> 'c -> 'd -> unit) t -> 'a -> 'b -> 'c -> 'd -> unit
+  val send   : 'callback t -> 'callback -> unit
+end = struct
+  type _ tuple =
+    | Tuple1
+      :  { mutable arg1 : 'a  }
+      -> ('a -> unit) tuple
+    | Tuple2
+      :  { mutable arg1 : 'a
+         ; mutable arg2 : 'b
+         }
+      -> ('a -> 'b -> unit) tuple
+    | Tuple3
+      :  { mutable arg1 : 'a
+         ; mutable arg2 : 'b
+         ; mutable arg3 : 'c
+         }
+      -> ('a -> 'b -> 'c -> unit) tuple
+    | Tuple4
+      :  { mutable arg1 : 'a
+         ; mutable arg2 : 'b
+         ; mutable arg3 : 'c
+         ; mutable arg4 : 'd
+         }
+      -> ('a -> 'b -> 'c -> 'd -> unit) tuple
+  ;;
+
+  type 'callback t = 'callback tuple option ref
+
+  let create (type callback) (_arity : callback Callback_arity.t) : callback t = ref None
+
+  let set1 t a =
+    match !t with
+    | None ->
+      t := Some (Tuple1 { arg1 = a })
+    | Some (Tuple1 args) ->
+      args.arg1 <- a
+  ;;
+
+  let set2 t a b =
+    match !t with
+    | None ->
+      t := Some (Tuple2 { arg1 = a; arg2 = b })
+    | Some (Tuple2 args) ->
+      args.arg1 <- a;
+      args.arg2 <- b;
+  ;;
+
+  let set3 t a b c =
+    match !t with
+    | None ->
+      t := Some (Tuple3 { arg1 = a; arg2 = b; arg3 = c })
+    | Some (Tuple3 args) ->
+      args.arg1 <- a;
+      args.arg2 <- b;
+      args.arg3 <- c;
+  ;;
+
+  let set4 t a b c d =
+    match !t with
+    | None ->
+      t := Some (Tuple4 { arg1 = a; arg2 = b; arg3 = c; arg4 = d })
+    | Some (Tuple4 args) ->
+      args.arg1 <- a;
+      args.arg2 <- b;
+      args.arg3 <- c;
+      args.arg4 <- d;
+  ;;
+
+  let send (type callback) (t : callback t) (callback : callback) : unit =
+    match !t with
+    | None                                     -> ()
+    | Some (Tuple1 { arg1 })                   -> callback arg1
+    | Some (Tuple2 { arg1; arg2 })             -> callback arg1 arg2
+    | Some (Tuple3 { arg1; arg2; arg3 })       -> callback arg1 arg2 arg3
+    | Some (Tuple4 { arg1; arg2; arg3; arg4 }) -> callback arg1 arg2 arg3 arg4
+  ;;
+end
+
 module Subscriber_id = Unique_id.Int63 ()
 
 module Subscriber = struct
@@ -66,26 +166,28 @@ module Subscriber = struct
 end
 
 type ('callback, 'phantom) t =
-  { name                                 : Info.t option
-  ; callback_arity                       : 'callback Callback_arity.t
-  ; created_from                         : Source_code_position.t
-  ; allow_subscription_after_first_write : bool
-  ; mutable state                        : State.t
-  ; mutable write_ever_called            : bool
-  ; mutable subscribers                  : 'callback Subscriber.t Subscriber_id.Map.t
-  ; mutable callbacks                    : 'callback array
-  ; mutable callback_raised              : int -> exn -> unit
-  ; on_callback_raise                    : Error.t -> unit }
+  { name                              : Info.t option
+  ; callback_arity                    : 'callback Callback_arity.t
+  ; created_from                      : Source_code_position.t
+  ; on_subscription_after_first_write : On_subscription_after_first_write.t
+  ; last_value                        : 'callback Last_value.t option
+  ; mutable state                     : State.t
+  ; mutable write_ever_called         : bool
+  ; mutable subscribers               : 'callback Subscriber.t Subscriber_id.Map.t
+  ; mutable callbacks                 : 'callback array
+  ; mutable callback_raised           : int -> exn -> unit
+  ; on_callback_raise                 : Error.t -> unit }
 [@@deriving fields]
 
 let sexp_of_t _ _
-      { allow_subscription_after_first_write
-      ; callback_arity
+      { callback_arity
       ; callbacks                            = _
       ; callback_raised                      = _
       ; created_from
+      ; last_value                           = _
       ; name
       ; on_callback_raise                    = _
+      ; on_subscription_after_first_write
       ; state
       ; subscribers
       ; write_ever_called } =
@@ -94,7 +196,7 @@ let sexp_of_t _ _
       (name                                 : Info.t sexp_option)
       (callback_arity                       : _ Callback_arity.t)
       (created_from                         : Source_code_position.t)
-      (allow_subscription_after_first_write : bool)
+      (on_subscription_after_first_write    : On_subscription_after_first_write.t)
       (state                                : State.t)
       (write_ever_called                    : bool)
       (subscribers                          : _ Subscriber.t Subscriber_id.Map.t)]
@@ -113,7 +215,8 @@ let invariant invariant_a _ t =
       ~callback_raised:ignore
       ~callback_arity:ignore
       ~created_from:ignore
-      ~allow_subscription_after_first_write:ignore
+      ~on_subscription_after_first_write:ignore
+      ~last_value:ignore
       ~state:ignore
       ~write_ever_called:ignore
       ~subscribers:(check (fun subscribers ->
@@ -284,6 +387,10 @@ let [@inline always] write t a1 =
       finish_write t
     end else begin
       (write_non_optimized [@inlined never]) t callbacks callback_raised a1
+    end;
+    begin match t.last_value with
+    | None            -> ()
+    | Some last_value -> Last_value.set1 last_value a1
     end
 ;;
 
@@ -304,6 +411,10 @@ let [@inline always] write2 t a1 a2 =
       finish_write t
     end else begin
       (write2_non_optimized [@inlined never]) t callbacks callback_raised a1 a2
+    end;
+    begin match t.last_value with
+    | None            -> ()
+    | Some last_value -> Last_value.set2 last_value a1 a2
     end
 ;;
 
@@ -324,6 +435,10 @@ let [@inline always] write3 t a1 a2 a3 =
       finish_write t
     end else begin
       (write3_non_optimized [@inlined never]) t callbacks callback_raised a1 a2 a3
+    end;
+    begin match t.last_value with
+    | None            -> ()
+    | Some last_value -> Last_value.set3 last_value a1 a2 a3
     end
 ;;
 
@@ -344,22 +459,39 @@ let [@inline always] write4 t a1 a2 a3 a4 =
       finish_write t
     end else begin
       (write4_non_optimized [@inlined never]) t callbacks callback_raised a1 a2 a3 a4
+    end;
+    begin match t.last_value with
+    | None            -> ()
+    | Some last_value -> Last_value.set4 last_value a1 a2 a3 a4
     end
+
+;;
+
+let allow_subscription_after_first_write t =
+  On_subscription_after_first_write.allow_subscription_after_first_write
+    t.on_subscription_after_first_write
 ;;
 
 let create
       ?name
       created_from
       callback_arity
-      ~allow_subscription_after_first_write
+      ~(on_subscription_after_first_write : On_subscription_after_first_write.t)
       ~on_callback_raise
   =
+  let last_value =
+    match on_subscription_after_first_write with
+    | Allow_and_send_last_value -> Some (Last_value.create callback_arity)
+    | Allow                     -> None
+    | Raise                     -> None
+  in
   let t =
     { name
     ; callback_arity
     ; created_from
     ; on_callback_raise
-    ; allow_subscription_after_first_write
+    ; on_subscription_after_first_write
+    ; last_value
     ; subscribers                          = Subscriber_id.Map.empty
     ; callbacks                            = [| |]
     ; callback_raised                      = (fun _ _ -> assert false)
@@ -370,7 +502,7 @@ let create
   t
 ;;
 
-let can_subscribe t = t.allow_subscription_after_first_write || not t.write_ever_called
+let can_subscribe t = allow_subscription_after_first_write t || not t.write_ever_called
 
 let subscribe_exn ?on_callback_raise t subscribed_from ~f =
   if not (can_subscribe t)
@@ -380,6 +512,10 @@ let subscribe_exn ?on_callback_raise t subscribed_from ~f =
   let subscriber = Subscriber.create subscribed_from ~callback:f ~on_callback_raise in
   t.subscribers <- Map.add t.subscribers ~key:subscriber.id ~data:subscriber;
   update_write t;
+  begin match t.last_value with
+  | None            -> ()
+  | Some last_value -> Last_value.send last_value f
+  end;
   subscriber
 ;;
 
@@ -440,9 +576,8 @@ let%test_module _ =
        [write] never allocates in any situation.  For example, if this test is moved to
        another library and run with X_LIBRARY_INLINING=false, it fails. *)
     let%test_unit "write doesn't allocate when inlined" =
-      let allow_subscription_after_first_write = false in
       let create created_from arity =
-        create created_from arity ~allow_subscription_after_first_write
+        create created_from arity ~on_subscription_after_first_write:Raise
           ~on_callback_raise:Error.raise
       in
       let bus1 = create [%here] Arity1 in

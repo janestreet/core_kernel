@@ -16,7 +16,6 @@ module Std = struct
   module Md5                             = Md5
   module Digest                          = Md5
   [@@ocaml.deprecated "[since 2017-05] Use Md5 instead."]
-  module Obj_array                       = Obj_array
   module Perms                           = Perms
   module Set_intf                        = Set_intf
   module Stack_intf                      = Stack_intf
