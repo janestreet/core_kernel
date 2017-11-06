@@ -1,6 +1,6 @@
 (library
  ((name core_kernel_test)
-  (libraries (core_kernel expect_test_helpers_kernel))
+  (libraries (core_kernel base_test expect_test_helpers_kernel))
   (preprocessor_deps (../../src/config.h))
   (preprocess (pps (ppx_jane ppx_driver.runner)))))
 

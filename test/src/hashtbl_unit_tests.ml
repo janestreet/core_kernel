@@ -717,9 +717,6 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
               (List.sort !keys ~cmp:Key.compare)
               ~expect:(List.sort (Map.keys map) ~cmp:Key.compare))
 
-        (* deprecated *)
-        let iter_vals = Hashtbl.iter
-
         let exists = Hashtbl.exists
 
         let%test_unit _ =
@@ -819,8 +816,6 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
                 ~expect:(Map.remove map key))
 
         let set     = Hashtbl.set
-        (* We don't test [replace] because it's deprecated in favor of [set] *)
-        let replace = Hashtbl.set
 
         let%test_unit _ =
           Qc.test (Gen.tuple3 constructor_gen Key.gen Data.gen)
@@ -947,8 +942,6 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
               ~expect:(Map.mapi map ~f:Key_and_data.to_data))
 
         let map_inplace = Hashtbl.map_inplace
-        (* [replace_all] is deprecated *)
-        let replace_all = Hashtbl.map_inplace
 
         let%test_unit _ =
           Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
@@ -959,8 +952,6 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
               ~expect:(Map.map map ~f:Data.succ))
 
         let mapi_inplace = Hashtbl.mapi_inplace
-        (* [replace_alli] is deprecated *)
-        let replace_alli = Hashtbl.mapi_inplace
 
         let%test_unit _ =
           Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
@@ -1036,8 +1027,6 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
               ~expect:(Map.filteri map ~f:Key_and_data.to_bool))
 
         let filter_map_inplace = Hashtbl.filter_map_inplace
-        (* [filter_replace_all] is deprecated *)
-        let filter_replace_all = Hashtbl.filter_map_inplace
 
         let%test_unit _ =
           Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
@@ -1048,8 +1037,6 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
               ~expect:(Map.filter_map map ~f:Data.to_option))
 
         let filter_mapi_inplace = Hashtbl.filter_mapi_inplace
-        (* [filter_replace_alli] is deprecated *)
-        let filter_replace_alli = Hashtbl.filter_mapi_inplace
 
         let%test_unit _ =
           Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
@@ -1309,6 +1296,10 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
                   Option.value opt ~default:0 - by)))
 
       end : Accessors_with_unit_tests)
+
+      include (Hashtbl : Base.Hashtbl_intf.Deprecated
+               with type ('a, 'b) t := ('a, 'b) Hashtbl.t
+               with type 'a key := 'a Hashtbl.key)
 
       (* miscellaneous functions that aren't in Accessors and aren't particularly
          interesting to test *)
@@ -1725,8 +1716,6 @@ module Make_mutation_in_callbacks(Hashtbl : Hashtbl_intf.Hashtbl) = struct
             Hashtbl.to_alist t))
 
       let map_inplace = Hashtbl.map_inplace
-      (* [replace_all] is deprecated *)
-      let replace_all = Hashtbl.map_inplace
 
       let%test_unit "map_inplace" =
         for_each "f result" [%sexp_of: int] sample_data (fun data ->
@@ -1739,8 +1728,6 @@ module Make_mutation_in_callbacks(Hashtbl : Hashtbl_intf.Hashtbl) = struct
             Hashtbl.to_alist t))
 
       let mapi_inplace = Hashtbl.mapi_inplace
-      (* [replace_alli] is deprecated *)
-      let replace_alli = Hashtbl.mapi_inplace
 
       let%test_unit "mapi_inplace" =
         for_each "f result" [%sexp_of: int] sample_data (fun data ->
@@ -1753,8 +1740,6 @@ module Make_mutation_in_callbacks(Hashtbl : Hashtbl_intf.Hashtbl) = struct
             Hashtbl.to_alist t))
 
       let filter_map_inplace = Hashtbl.filter_map_inplace
-      (* [filter_replace_all] is deprecated *)
-      let filter_replace_all = Hashtbl.filter_map_inplace
 
       let%test_unit "filter_map_inplace" =
         for_each "f result" [%sexp_of: int option] (option sample_data) (fun opt ->
@@ -1767,8 +1752,6 @@ module Make_mutation_in_callbacks(Hashtbl : Hashtbl_intf.Hashtbl) = struct
             Hashtbl.to_alist t))
 
       let filter_mapi_inplace = Hashtbl.filter_mapi_inplace
-      (* [filter_replace_alli] is deprecated *)
-      let filter_replace_alli = Hashtbl.filter_mapi_inplace
 
       let%test_unit "filter_mapi_inplace" =
         for_each "f result" [%sexp_of: int option] (option sample_data) (fun opt ->
@@ -1783,7 +1766,6 @@ module Make_mutation_in_callbacks(Hashtbl : Hashtbl_intf.Hashtbl) = struct
       (* functions that mutate *)
 
       let set     = Hashtbl.set
-      let replace = Hashtbl.set
 
       let%test_unit "set" =
         for_each "key" sexp_of_key sample_keys (fun key ->
@@ -1904,18 +1886,6 @@ module Make_mutation_in_callbacks(Hashtbl : Hashtbl_intf.Hashtbl) = struct
           Hashtbl.iteri t ~f:(fun ~key ~data ->
             Queue.enqueue queue (f (key, data)));
           queue)
-
-      (* deprecated *)
-      let iter_vals = Hashtbl.iter
-
-      (* let%test_unit "iter_vals" =
-       *   let callback (a, b) = (a, b) in
-       *   let test_result = [%test_result: (int * int) Queue.t] in
-       *   test_caller ~callback ~test_result (fun t f ->
-       *     let queue = Queue.create () in
-       *     Hashtbl.iter_vals t ~f:(fun ~key ~data ->
-       *       Queue.enqueue queue (f (key, data)));
-       *     queue) *)
 
       let map = Hashtbl.map
 
@@ -2130,6 +2100,10 @@ module Make_mutation_in_callbacks(Hashtbl : Hashtbl_intf.Hashtbl) = struct
             t;
           keys, data)
 
+      include (Hashtbl : Base.Hashtbl_intf.Deprecated
+               with type ('a, 'b) t := ('a, 'b) Hashtbl.t
+               with type 'a key := 'a Hashtbl.key)
+
       (* we do not test [validate], which should never raise externally, but which may go
          from pass to fail if the callback mutates, so it does not fit the normal
          criteria used by tests above *)
@@ -2186,14 +2160,6 @@ module Make_mutation_in_callbacks(Hashtbl : Hashtbl_intf.Hashtbl) = struct
 end
 
 module Make (Hashtbl : Hashtbl_intf.Hashtbl) = struct
-  include Make_basic(struct
-      include Hashtbl
-
-      let create_poly ?size () = Poly.create ?size ()
-
-      let of_alist_poly_exn l = Poly.of_alist_exn l
-      let of_alist_poly_or_error l = Poly.of_alist_or_error l
-    end)
   include Make_quickcheck_comparison_to_Map(Hashtbl)
   include Make_mutation_in_callbacks(Hashtbl)
 end

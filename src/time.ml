@@ -486,6 +486,7 @@ module Make (Time0 : Time0_intf.S) = struct
               sexp
       end
     end
+    module Ofday = Ofday.Stable
     module Span = Span.Stable
   end
 end

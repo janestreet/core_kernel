@@ -109,13 +109,13 @@ module Stable = struct
        them. That is, a clock might legitimately read 23:59:60 (or, with 60 seconds at
        times of day other than 23:59, depending on the time zone), but it doesn't seem
        reasonable for a clock to read "23:59:59 and 1000ms". *)
-    let create ?hr ?min ?sec ?ms ?us () =
-      let sec, ms, us =
+    let create ?hr ?min ?sec ?ms ?us ?ns () =
+      let ms, us, ns =
         match sec with
-        | Some 60 -> Some 60, Some 0, Some 0
-        | _       -> sec, ms, us
+        | Some 60 -> Some 0, Some 0, Some 0
+        | _       -> ms,     us,     ns
       in
-      T.of_span_since_start_of_day (Span.create ?hr ?min ?sec ?ms ?us ())
+      T.of_span_since_start_of_day (Span.create ?hr ?min ?sec ?ms ?us ?ns ())
     ;;
 
     let%test "create can handle a leap second" =

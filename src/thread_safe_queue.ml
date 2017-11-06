@@ -149,10 +149,13 @@ let return_unused_elt t (elt : _ Elt.t) =
   (* END ATOMIC SECTION *)
 ;;
 
+let [@inline never] raise_dequeue_empty t =
+  failwiths "Thread_safe_queue.dequeue_exn of empty queue" t [%sexp_of: _ t]
+;;
+
 let dequeue_exn t =
   (* BEGIN ATOMIC SECTION *)
-  if t.length = 0
-  then failwiths "Thread_safe_queue.dequeue_exn of empty queue" t [%sexp_of: _ t];
+  if t.length = 0 then raise_dequeue_empty t;
   let elt = t.front in
   let a = elt.value in
   t.front <- Uopt.unsafe_value elt.next;

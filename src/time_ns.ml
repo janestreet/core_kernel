@@ -361,9 +361,9 @@ end = struct
 #endif
 
 #ifdef JSC_POSIX_TIMERS
-  let gettime_failed () = failwith "clock_gettime(CLOCK_REALTIME) failed"
+  let [@inline never] gettime_failed () = failwith "clock_gettime(CLOCK_REALTIME) failed"
 #else
-  let gettime_failed () = failwith "gettimeofday failed"
+  let [@inline never] gettime_failed () = failwith "gettimeofday failed"
 #endif
 
   let since_unix_epoch () =
@@ -420,18 +420,19 @@ let of_int_ns_since_epoch =
   then fun i -> of_int63_ns_since_epoch (Int63.of_int i)
   else fun _ -> failwith "Time_ns.of_int_ns_since_epoch: unsupported on 32bit machines"
 
+let [@inline never] raise_next_multiple_got_nonpositive_interval interval =
+  failwiths "Time_ns.next_multiple got nonpositive interval" interval [%sexp_of: Span.t]
+;;
+
 let next_multiple ?(can_equal_after = false) ~base ~after ~interval () =
   if Span.(<=) interval Span.zero
-  then failwiths "Time.next_multiple got nonpositive interval" interval
-         [%sexp_of: Span.t];
+  then raise_next_multiple_got_nonpositive_interval interval;
   let base_to_after = diff after base in
   if Span.(<) base_to_after Span.zero
-  then base (* [after < base], choose [k = 0]. *)
+  then base  (* [after < base], choose [k = 0]. *)
   else begin
     let next =
-      add base
-        (Span.scale_int63 interval
-           (Span.div base_to_after interval))
+      add base (Span.scale_int63 interval (Span.div base_to_after interval))
     in
     if next > after || (can_equal_after && next = after)
     then next
@@ -440,7 +441,6 @@ let next_multiple ?(can_equal_after = false) ~base ~after ~interval () =
 ;;
 
 let random ?state () = Span.random ?state ()
-;;
 
 let%test_unit "random smoke" =
   let state = Random.State.make [| |] in

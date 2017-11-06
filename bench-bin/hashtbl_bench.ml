@@ -225,7 +225,6 @@ end = struct
         fold t ~init:() ~f))
 
     let iter = Table.iter
-    let iter_vals = Table.iter (* [iter] is deprecated *)
     let () = (!!) "iter" (fun size ->
       let t = Example.t size in stage (fun () ->
         iter t ~f:ignore))
@@ -381,7 +380,6 @@ end = struct
         else add_exn t ~key ~data:0))
 
     let set     = Table.set
-    let replace = Table.set (* [replace] is deprecated *)
     let () = (!!) "set or remove + mem + <rand key>" (fun size ->
       let r = Example.random size in let t = Example.t size in
       stage (fun () ->
@@ -586,28 +584,24 @@ end = struct
         filter_keys_inplace (copy t) ~f))
 
     let map_inplace = Table.map_inplace
-    let replace_all = Table.map_inplace (* [replace_all] is deprecated *)
     let () = (!!) "copy + map_inplace" (fun size ->
       let f data = data + 1 in
       let t = Example.t size in stage (fun () ->
         map_inplace (copy t) ~f))
 
     let mapi_inplace = Table.mapi_inplace
-    let replace_alli = Table.mapi_inplace (* [replace_alli] is deprecated *)
     let () = (!!) "copy + mapi_inplace" (fun size ->
       let f ~key:_ ~data = data + 1 in
       let t = Example.t size in stage (fun () ->
         mapi_inplace (copy t) ~f))
 
     let filter_map_inplace = Table.filter_map_inplace
-    let filter_replace_all = Table.filter_map_inplace (* [filter_replace_all] is deprecated *)
     let () = (!!) "copy + filter_map_inplace [halve]" (fun size ->
       let f data = if data % 2 = 0 then Some (data + 1) else None in
       let t = Example.t size in stage (fun () ->
         filter_map_inplace (copy t) ~f))
 
     let filter_mapi_inplace = Table.filter_mapi_inplace
-    let filter_replace_alli = Table.filter_mapi_inplace  (* [filter_replace_alli] is deprecated *)
     let () = (!!) "copy + filter_mapi_inplace [halve]" (fun size ->
       let f ~key:_ ~data = if data % 2 = 0 then Some (data + 1) else None in
       let t = Example.t size in stage (fun () ->

@@ -1,26 +1,35 @@
 open! Import
 open Std_internal
 
+(** Parts represents the individual parts of a Span as if it were written out (it is the
+    counterpart to [Span.create]). For example, 90 seconds is represented by:
+
+    {[
+      {sign = Pos; hr = 0; min = 1; sec = 30; ms = 0; ns = 0}
+    ]}
+
+    The fields will always be non-negative, and will never be large enough to form the
+    next larger unit (e.g., [min < 60]). *)
+module type Parts = sig
+  type t = private {
+    sign : Sign.t;
+    hr   : int;
+    min  : int;
+    sec  : int;
+    ms   : int;
+    us   : int;
+    ns   : int;
+  }
+  [@@deriving sexp]
+end
+
 module type Span = sig
   (** Span.t represents a span of time (e.g. 7 minutes, 3 hours, 12.8 days).  The span
       may be positive or negative. *)
   type underlying
   type t = private underlying [@@deriving bin_io, hash, sexp]
 
-  (** Parts represents the individual parts of a Span as if it were written out (it is the
-      counterpart to create).  For example, (sec 90.) is represented by {Parts.hr = 0;
-      min = 1; sec = 30; ms = 0}.  The fields will always be positive. *)
-  module Parts : sig
-    type t = private {
-      sign : Sign.t;
-      hr   : int;
-      min  : int;
-      sec  : int;
-      ms   : int;
-      us   : int;
-    }
-    [@@deriving sexp]
-  end
+  module Parts : Parts
 
   include Comparable_binable   with type t := t
   include Comparable.With_zero with type t := t
@@ -67,17 +76,18 @@ module type Span = sig
 
   val zero : t
 
-  (** [create ?sign ?day ?hr ?min ?sec ?ms ?us ()] Create a span from the given parts.  All
-      parts are assumed to be positive (no checking is done by the function) and the sign of
-      the final span is given by [sign] which is positive by default. *)
+  (** [create ?sign ?day ?hr ?min ?sec ?ms ?us ?ns ()] Create a span from the given parts.
+      All parts are assumed to be positive (no checking is done by the function) and the
+      sign of the final span is given by [sign] which is positive by default. *)
   val create
-    :  ?sign:Sign.t
-    -> ?day:int
-    -> ?hr:int
-    -> ?min:int
-    -> ?sec:int
-    -> ?ms:int
-    -> ?us:int
+    :  ?sign : Sign.t
+    -> ?day  : int
+    -> ?hr   : int
+    -> ?min  : int
+    -> ?sec  : int
+    -> ?ms   : int
+    -> ?us   : int
+    -> ?ns   : int
     -> unit
     -> t
 

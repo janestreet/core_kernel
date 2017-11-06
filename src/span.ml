@@ -12,6 +12,7 @@ module Stable = struct
         sec  : int;
         ms   : int;
         us   : int;
+        ns   : int;
       }
       [@@deriving sexp]
     end
@@ -90,49 +91,24 @@ module Stable = struct
       end
 
 
-      let to_parts_64 t =
-        let t = to_float t *. 1.E6 in
+      let to_parts t : Parts.t =
         let sign = Float.sign_exn t in
-        let t =
-          match sign with
-          | Neg -> Float.neg t
-          | Pos | Zero -> t
+        let t = abs t in
+        let integral = Float.round_down t in
+        let fractional = t -. integral in
+        let seconds = Float.iround_down_exn integral in
+        let nanoseconds = Float.iround_nearest_exn (fractional *. 1E9) in
+        let seconds, nanoseconds =
+          if Int.equal nanoseconds 1_000_000_000
+          then Int.succ seconds, 0
+          else          seconds, nanoseconds
         in
-        let t   = Float.iround_exn ~dir:`Nearest t in
-        let sec = t / 1_000_000 in
-        let min = sec / 60 in
-        let sec = sec mod 60 in
-        let hr  = min / 60 in
-        let min = min mod 60 in
-        let us  = t mod 1_000_000 in
-        let ms  = us / 1_000 in
-        let us  = us mod 1_000 in
-        { Parts.sign; hr; min; sec; ms; us }
-
-      let to_parts_32 t =
-        let t      = Float.round (to_float t *. 1E6) /. 1E6 in
-        let sign   = Float.sign_exn t in
-        let t =
-          match sign with
-          | Neg -> Float.neg t
-          | Pos | Zero -> t
-        in
-        let parts  = Float.modf t in
-        let intval = Float.iround_exn ~dir:`Down (Float.Parts.integral parts) in
-        let us     = Float.iround_exn ~dir:`Nearest (Float.Parts.fractional parts *. 1.E6) in
-        let ms     = us / 1_000 in
-        (* Rounding might have introduced a extra second *)
-        let extra_sec = ms / 1000 in
-        let ms        = ms % 1000 in
-        let us        = us mod 1_000 in
-        let intval    = Int.(+) extra_sec intval in
-        let min       = intval / 60 in
-        let sec       = intval mod 60 in
-        let hr        = min / 60 in
-        let min       = min mod 60 in
-        { Parts.sign; hr; min; sec; ms; us }
-
-      let to_parts = if Int.(=) Sys.word_size 64 then to_parts_64 else to_parts_32
+        let sec = seconds mod 60 in let minutes = seconds / 60 in
+        let min = minutes mod 60 in let hr      = minutes / 60 in
+        let ns = nanoseconds  mod 1000 in let microseconds  = nanoseconds  / 1000 in
+        let us = microseconds mod 1000 in let milliseconds  = microseconds / 1000 in
+        let ms = milliseconds in
+        { sign; hr; min; sec; ms; us; ns }
     end
 
     let format_decimal n tenths units =
@@ -200,13 +176,14 @@ module Stable = struct
     ;;
 
     let create
-          ?(sign=Sign.Pos)
-          ?(day = 0)
-          ?(hr = 0)
-          ?(min = 0)
-          ?(sec = 0)
-          ?(ms = 0)
-          ?(us = 0)
+          ?(sign = Sign.Pos)
+          ?(day  = 0)
+          ?(hr   = 0)
+          ?(min  = 0)
+          ?(sec  = 0)
+          ?(ms   = 0)
+          ?(us   = 0)
+          ?(ns   = 0)
           () =
       let (+) = T.(+) in
       let t =
@@ -216,6 +193,7 @@ module Stable = struct
         + of_sec (Float.of_int sec)
         + of_ms  (Float.of_int ms)
         + of_us  (Float.of_int us)
+        + of_ns  (Float.of_int ns)
       in
       match sign with
       | Neg -> T.(-) T.zero t

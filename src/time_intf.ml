@@ -215,7 +215,12 @@ module type S = sig
       module V2 : Stable_without_comparator
         with type t = t
     end
-
+    module Ofday : sig
+      module V1 : sig
+        type t = Ofday.Stable.V1.t [@@deriving hash]
+        include Stable_without_comparator with type t := t
+      end
+    end
     module Span : sig
       module V1 : sig
         type t = Span.Stable.V1.t [@@deriving hash]

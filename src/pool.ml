@@ -583,7 +583,7 @@ module Pool = struct
     Obj_array.truncate t ~len:1;
   ;;
 
-  let grow ?capacity t =
+  let [@inline never] grow ?capacity t =
     let { Metadata.
           slots_per_tuple
         ; capacity        = old_capacity
@@ -626,11 +626,14 @@ module Pool = struct
     t'
   ;;
 
+  let [@inline never] raise_malloc_full t =
+    failwiths "Pool.malloc of full pool" t [%sexp_of: _ t]
+  ;;
+
   let malloc (type slots) (t : slots t) : slots Pointer.t =
     let metadata = metadata t in
     let first_free = metadata.first_free in
-    if Header.is_null first_free
-    then failwiths "Pool.malloc of full pool" t [%sexp_of: _ t];
+    if Header.is_null first_free then raise_malloc_full t;
     let header_index = Header.next_free_header_index first_free in
     metadata.first_free <- unsafe_header t ~header_index;
     metadata.length <- metadata.length + 1;

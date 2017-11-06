@@ -37,7 +37,15 @@ module type Ofday = sig
       [to_string] only produces the 24h format. *)
   include Stringable with type t := t
 
-  val create : ?hr:int -> ?min:int -> ?sec:int -> ?ms:int -> ?us:int -> unit -> t
+  val create
+    :  ?hr  : int
+    -> ?min : int
+    -> ?sec : int
+    -> ?ms  : int
+    -> ?us  : int
+    -> ?ns  : int
+    -> unit
+    -> t
 
   val to_parts : t -> Span.Parts.t
 

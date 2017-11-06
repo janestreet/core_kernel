@@ -74,6 +74,9 @@ module Make_plain (Key : Key_plain) = struct
              include Hashtbl_intf.Accessors
                with type ('a, 'b) t := ('a, 'b) t__
                with type 'a key := 'a key_
+             include Hashtbl_intf.Deprecated
+               with type ('a, 'b) t := ('a, 'b) t__
+               with type 'a key := 'a key_
              include Invariant.S2 with type ('a, 'b) t := ('a, 'b) hashtbl
            end
           )

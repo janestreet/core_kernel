@@ -80,22 +80,10 @@ module type Span = sig
     -> unit
     -> t
 
-  (** Similar to {!Time.Span.Parts}, but adding [ns]. *)
-  module Parts : sig
-    type t =
-      { sign : Sign.t
-      ; hr   : int
-      ; min  : int
-      ; sec  : int
-      ; ms   : int
-      ; us   : int
-      ; ns   : int
-      }
-    [@@deriving sexp]
-  end
+  (** Similar to {!Time.Span.Parts}. *)
+  module Parts : Span_intf.Parts
 
   val to_parts : t -> Parts.t
-  val of_parts : Parts.t -> t  (** overflows silently *)
 
   val to_unit_of_time : t -> Unit_of_time.t
   val of_unit_of_time : Unit_of_time.t -> t

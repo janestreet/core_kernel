@@ -38,10 +38,12 @@ let span_examples =
     ; Time.Span.day
     ]
   in
+  let pos_and_neg_units =
+    units @ List.map units ~f:Time.Span.neg
+  in
   Time.Span.zero
-  :: units
-  @  List.map units ~f:Time.Span.neg
-  @  List.map units ~f:(fun span -> Time.Span.scale span Float.pi)
+  :: pos_and_neg_units
+  @  List.map pos_and_neg_units ~f:(fun span -> Time.Span.scale span Float.pi)
 
 let%expect_test "Time.Span.Stable.V1" =
   print_and_check_stable_type [%here] (module struct
@@ -106,7 +108,21 @@ let%expect_test "Time.Span.Stable.V1" =
     ((sexp   3.14159h)
      (bin_io "\162\235\015\229\221\022\198@"))
     ((sexp   3.14159d)
-     (bin_io "\186\240\203k&\145\016A")) |}];
+     (bin_io "\186\240\203k&\145\016A"))
+    ((sexp   -3.14159e-06ms)
+     (bin_io "\229;!po\252*\190"))
+    ((sexp   -0.00314159ms)
+     (bin_io "}t\128\211\132Z\202\190"))
+    ((sexp   -3.14159ms)
+     (bin_io "\195q\139\182e\188i\191"))
+    ((sexp   -3.14159s)
+     (bin_io "\024-DT\251!\t\192"))
+    ((sexp   -3.14159m)
+     (bin_io "F\234\255\158\219\143g\192"))
+    ((sexp   -3.14159h)
+     (bin_io "\162\235\015\229\221\022\198\192"))
+    ((sexp   -3.14159d)
+     (bin_io "\186\240\203k&\145\016\193")) |}];
 ;;
 
 let%expect_test "Time.Span.Stable.V2" =
@@ -163,5 +179,113 @@ let%expect_test "Time.Span.Stable.V2" =
     ((sexp   3.1415926535897931h)
      (bin_io "\162\235\015\229\221\022\198@"))
     ((sexp   3.1415926535897936d)
-     (bin_io "\186\240\203k&\145\016A")) |}];
+     (bin_io "\186\240\203k&\145\016A"))
+    ((sexp   -3.1415926535897931ns)
+     (bin_io "\229;!po\252*\190"))
+    ((sexp   -3.1415926535897931us)
+     (bin_io "}t\128\211\132Z\202\190"))
+    (* require-failed: lib/core_kernel/test/src/test_time.ml:LINE:COL. *)
+    ("sexp serialization failed to round-trip"
+      (original       -3.1415926535897931us)
+      (sexp           -3.1415926535897931us)
+      (sexp_roundtrip -3.1415926535897931us))
+    ((sexp   -3.1415926535897931ms)
+     (bin_io "\195q\139\182e\188i\191"))
+    ((sexp   -3.1415926535897931s)
+     (bin_io "\024-DT\251!\t\192"))
+    ((sexp   -3.1415926535897927m)
+     (bin_io "F\234\255\158\219\143g\192"))
+    ((sexp   -3.1415926535897931h)
+     (bin_io "\162\235\015\229\221\022\198\192"))
+    ((sexp   -3.1415926535897936d)
+     (bin_io "\186\240\203k&\145\016\193")) |}];
+;;
+
+let%expect_test "Span.to_parts + Span.create" =
+  List.iter span_examples ~f:(fun span ->
+    let parts = Time.Span.to_parts span in
+    Core_kernel.print_s [%sexp ((span, parts) : Time.Span.t * Time.Span.Parts.t)];
+    let { sign; hr; min; sec; ms; us; ns } : Time.Span.Parts.t = parts in
+    let round_trip = Time.Span.create ~sign ~hr ~min ~sec ~ms ~us ~ns () in
+    let abs_diff = Time.Span.abs (Time.Span.( - ) span round_trip) in
+    require [%here] (Time.Span.( < ) abs_diff Time.Span.nanosecond)
+      ~if_false_then_print_s:
+        (lazy [%message
+          "round-trip failed"
+            (span       : Time.Span.t)
+            (parts      : Time.Span.Parts.t)
+            (round_trip : Time.Span.t)
+            (abs_diff   : Time.Span.t)]));
+  [%expect {|
+    (0s ((sign Zero) (hr 0) (min 0) (sec 0) (ms 0) (us 0) (ns 0)))
+    (1e-06ms ((sign Pos) (hr 0) (min 0) (sec 0) (ms 0) (us 0) (ns 1)))
+    (0.001ms ((sign Pos) (hr 0) (min 0) (sec 0) (ms 0) (us 1) (ns 0)))
+    (1ms ((sign Pos) (hr 0) (min 0) (sec 0) (ms 1) (us 0) (ns 0)))
+    (1s ((sign Pos) (hr 0) (min 0) (sec 1) (ms 0) (us 0) (ns 0)))
+    (1m ((sign Pos) (hr 0) (min 1) (sec 0) (ms 0) (us 0) (ns 0)))
+    (1h ((sign Pos) (hr 1) (min 0) (sec 0) (ms 0) (us 0) (ns 0)))
+    (1d ((sign Pos) (hr 24) (min 0) (sec 0) (ms 0) (us 0) (ns 0)))
+    (-1e-06ms ((sign Neg) (hr 0) (min 0) (sec 0) (ms 0) (us 0) (ns 1)))
+    (-0.001ms ((sign Neg) (hr 0) (min 0) (sec 0) (ms 0) (us 1) (ns 0)))
+    (-1ms ((sign Neg) (hr 0) (min 0) (sec 0) (ms 1) (us 0) (ns 0)))
+    (-1s ((sign Neg) (hr 0) (min 0) (sec 1) (ms 0) (us 0) (ns 0)))
+    (-1m ((sign Neg) (hr 0) (min 1) (sec 0) (ms 0) (us 0) (ns 0)))
+    (-1h ((sign Neg) (hr 1) (min 0) (sec 0) (ms 0) (us 0) (ns 0)))
+    (-1d ((sign Neg) (hr 24) (min 0) (sec 0) (ms 0) (us 0) (ns 0)))
+    (3.14159e-06ms ((sign Pos) (hr 0) (min 0) (sec 0) (ms 0) (us 0) (ns 3)))
+    (0.00314159ms ((sign Pos) (hr 0) (min 0) (sec 0) (ms 0) (us 3) (ns 142)))
+    (3.14159ms ((sign Pos) (hr 0) (min 0) (sec 0) (ms 3) (us 141) (ns 593)))
+    (3.14159s ((sign Pos) (hr 0) (min 0) (sec 3) (ms 141) (us 592) (ns 654)))
+    (3.14159m ((sign Pos) (hr 0) (min 3) (sec 8) (ms 495) (us 559) (ns 215)))
+    (3.14159h ((sign Pos) (hr 3) (min 8) (sec 29) (ms 733) (us 552) (ns 923)))
+    (3.14159d ((sign Pos) (hr 75) (min 23) (sec 53) (ms 605) (us 270) (ns 158)))
+    (-3.14159e-06ms ((sign Neg) (hr 0) (min 0) (sec 0) (ms 0) (us 0) (ns 3)))
+    (-0.00314159ms ((sign Neg) (hr 0) (min 0) (sec 0) (ms 0) (us 3) (ns 142)))
+    (-3.14159ms ((sign Neg) (hr 0) (min 0) (sec 0) (ms 3) (us 141) (ns 593)))
+    (-3.14159s ((sign Neg) (hr 0) (min 0) (sec 3) (ms 141) (us 592) (ns 654)))
+    (-3.14159m ((sign Neg) (hr 0) (min 3) (sec 8) (ms 495) (us 559) (ns 215)))
+    (-3.14159h ((sign Neg) (hr 3) (min 8) (sec 29) (ms 733) (us 552) (ns 923)))
+    (-3.14159d ((sign Neg) (hr 75) (min 23) (sec 53) (ms 605) (us 270) (ns 158))) |}];
+;;
+
+let ofday_examples =
+  List.filter_map span_examples ~f:(fun span ->
+    if Time.Span.( >= ) span Time.Span.zero
+    && Time.Span.( <  ) span Time.Span.day
+    then Some (Time.Ofday.of_span_since_start_of_day span)
+    else None)
+
+let%expect_test "Ofday.to_parts + Ofday.create" =
+  List.iter ofday_examples ~f:(fun ofday ->
+    let parts = Time.Ofday.to_parts ofday in
+    Core_kernel.print_s [%sexp ((ofday, parts) : Time.Ofday.t * Time.Span.Parts.t)];
+    let { sign = _; hr; min; sec; ms; us; ns } : Time.Span.Parts.t = parts in
+    let round_trip = Time.Ofday.create ~hr ~min ~sec ~ms ~us ~ns () in
+    let abs_diff = Time.Span.abs (Time.Ofday.diff ofday round_trip) in
+    require [%here] (Time.Span.( < ) abs_diff Time.Span.nanosecond)
+      ~if_false_then_print_s:
+        (lazy [%message
+          "round-trip failed"
+            (ofday      : Time.Ofday.t)
+            (parts      : Time.Span.Parts.t)
+            (round_trip : Time.Ofday.t)
+            (abs_diff   : Time.Span.t)]));
+  [%expect {|
+    (00:00:00.000000 ((sign Zero) (hr 0) (min 0) (sec 0) (ms 0) (us 0) (ns 0)))
+    (00:00:00.000000 ((sign Pos) (hr 0) (min 0) (sec 0) (ms 0) (us 0) (ns 1)))
+    (00:00:00.000001 ((sign Pos) (hr 0) (min 0) (sec 0) (ms 0) (us 1) (ns 0)))
+    (00:00:00.001000 ((sign Pos) (hr 0) (min 0) (sec 0) (ms 1) (us 0) (ns 0)))
+    (00:00:01.000000 ((sign Pos) (hr 0) (min 0) (sec 1) (ms 0) (us 0) (ns 0)))
+    (00:01:00.000000 ((sign Pos) (hr 0) (min 1) (sec 0) (ms 0) (us 0) (ns 0)))
+    (01:00:00.000000 ((sign Pos) (hr 1) (min 0) (sec 0) (ms 0) (us 0) (ns 0)))
+    (00:00:00.000000 ((sign Pos) (hr 0) (min 0) (sec 0) (ms 0) (us 0) (ns 3)))
+    (00:00:00.000003 ((sign Pos) (hr 0) (min 0) (sec 0) (ms 0) (us 3) (ns 142)))
+    (00:00:00.003142
+     ((sign Pos) (hr 0) (min 0) (sec 0) (ms 3) (us 141) (ns 593)))
+    (00:00:03.141593
+     ((sign Pos) (hr 0) (min 0) (sec 3) (ms 141) (us 592) (ns 654)))
+    (00:03:08.495559
+     ((sign Pos) (hr 0) (min 3) (sec 8) (ms 495) (us 559) (ns 215)))
+    (03:08:29.733553
+     ((sign Pos) (hr 3) (min 8) (sec 29) (ms 733) (us 552) (ns 923))) |}];
 ;;
