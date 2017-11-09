@@ -4,12 +4,18 @@ open Std_internal
 module type Ofday = sig
   (** Time of day.
 
-      [t] represents a clock-face time of day.  Usually this is equivalent to a time-offset
-      from midnight, and each [t] occurs exactly once in each calendar day.  However, when
+      [t] represents a clock-face time of day. Usually this is equivalent to a time-offset
+      from midnight, and each [t] occurs exactly once in each calendar day. However, when
       daylight saving time begins or ends, some clock face times (and therefore [t]'s) can
       occur more than once per day or not at all, and e.g. 04:00 can occur three or five
-      hours after midnight, so knowing your current offset from midnight is *not* in general
-      equivalent to knowing the current [t].
+      hours after midnight, so knowing your current offset from midnight is *not* in
+      general equivalent to knowing the current [t].
+
+      There is one nonstandard representable value, [start_of_next_day], which can be
+      thought of as "24:00:00" in 24-hour time. It is essentially "00:00:00" on the next
+      day. By having this value, we allow comparisons against a strict upper bound on [t]
+      values. However, it has some odd properties; for example, [Time.of_date_ofday ~zone
+      date start_of_next_day |> Time.to_date ~zone] yields a different date.
 
       (See {!Zone} for tools to help you cope with DST.) *)
   type underlying
@@ -49,18 +55,31 @@ module type Ofday = sig
 
   val to_parts : t -> Span.Parts.t
 
-  (** Smallest valid ofday.  There is no exposed end_of_day value because the upper end of
-      the range is not closed. *)
+  (** Smallest valid ofday. *)
   val start_of_day : t
 
+  (** Largest representable ofday; see notes above on how [start_of_next_day] behaves
+      differently from other ofday values. *)
+  val start_of_next_day : t
+
+  (** A time very close to the end of a day. Not necessarily the largest representable
+      value before [start_of_next_day], but as close as possible such that using this
+      ofday with [Time.of_date_ofday] and [Time.to_date] should round-trip to the same
+      date. With floating-point representations of time, this may not be possible for
+      dates extremely far from epoch.
+
+      The clock-face time represented by [approximate_end_of_day] may vary with different
+      time and ofday representations, depending on their precision. *)
+  val approximate_end_of_day : t
+
   (** Note that these names are only really accurate on days without DST transitions. When
-      clocks move forward or back, [of_span_since_start_of_day s] will not necessarily occur
-      [s] after that day's midnight. *)
+      clocks move forward or back, [of_span_since_start_of_day s] will not necessarily
+      occur [s] after that day's midnight. *)
   val to_span_since_start_of_day : t -> Span.t
   val of_span_since_start_of_day : Span.t -> t
 
-  (** [add t s] shifts the time of day [t] by the span [s].  It returns [None] if the result
-      is not in the same 24-hour day. *)
+  (** [add t s] shifts the time of day [t] by the span [s].  It returns [None] if the
+      result is not in the same 24-hour day. *)
   val add : t -> Span.t -> t option
   val sub : t -> Span.t -> t option
 
@@ -70,8 +89,8 @@ module type Ofday = sig
   (** [prev t] return the previous [t] (prev t < t) or None if [t] = start of day. *)
   val prev : t -> t option
 
-  (** [diff t1 t2] returns the difference in time between two ofdays, as if they occurred on
-      the same 24-hour day. *)
+  (** [diff t1 t2] returns the difference in time between two ofdays, as if they occurred
+      on the same 24-hour day. *)
   val diff : t -> t -> Span.t
 
   (** Returns the time-span separating the two of-days, ignoring the hour information, and

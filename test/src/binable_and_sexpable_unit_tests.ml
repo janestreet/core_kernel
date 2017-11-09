@@ -6,6 +6,9 @@ module Binable = Binable.Stable
 let%test_module _ =
   (module struct
 
+    let old_style = !Sexp.of_int_style
+    let () = Sexp.of_int_style := `No_underscores
+
     let int_tests = [
       (~-1, "-1", "\002-1");
       (0, "0", "\0010");
@@ -137,5 +140,7 @@ let%test_module _ =
           [%test_eq: string] (to_string t) s;
         )
     end
+
+    let () = Sexp.of_int_style := old_style
 
   end)

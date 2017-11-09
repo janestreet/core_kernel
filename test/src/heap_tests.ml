@@ -1,7 +1,6 @@
 open! Core_kernel
 open  Expect_test_helpers_kernel
 
-
 let%expect_test "Heap.sexp_of_t" =
   let test list =
     let heap = Heap.of_list list ~cmp:Int.compare in
@@ -39,16 +38,16 @@ let%expect_test "Heap.sexp_of_t" =
     () |}];
 ;;
 
-let%expect_test "Heap.Removable.sexp_of_t" =
+let%expect_test "Heap.sexp_of_t with removes" =
   let test list =
-    let heap = Heap.Removable.create ~cmp:Int.compare () in
-    let elts = List.map list ~f:(Heap.Removable.add_removable heap) in
-    print_s [%sexp (heap : int Heap.Removable.t)];
+    let heap = Heap.create ~cmp:Int.compare () in
+    let elts = List.map list ~f:(Heap.add_removable heap) in
+    print_s [%sexp (heap : int Heap.t)];
     (* test for stability of element order in sexps, and make sure [sexp_of_t] does not
        accidentally mutate [t] *)
     List.iter elts ~f:(fun elt ->
-      Heap.Removable.remove heap elt;
-      print_s [%sexp (heap : int Heap.Removable.t)]);
+      Heap.remove heap elt;
+      print_s [%sexp (heap : int Heap.t)]);
   in
   test [];
   [%expect {|

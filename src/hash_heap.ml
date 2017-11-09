@@ -5,8 +5,6 @@
 
 open! Import
 
-module Heap = Heap.Removable
-
 module type Key = Hashtbl.Key
 
 module type S = sig

@@ -23,6 +23,7 @@ module Stable = struct
       val of_span_since_start_of_day : Span.t -> t
       val to_span_since_start_of_day : t -> Span.t
       val start_of_day               : t
+      val start_of_next_day          : t
     end = struct
       (* Number of seconds since midnight. *)
       type underlying = Float.t
@@ -73,6 +74,7 @@ module Stable = struct
       ;;
 
       let start_of_day = 0.
+      let start_of_next_day = of_span_since_start_of_day Span.day
 
       let add (t:t) (span:Span.t) =
         let t = t +. (Span.to_sec span) in
@@ -99,6 +101,10 @@ module Stable = struct
       let diff t1 t2 =
         Span.(-) (to_span_since_start_of_day t1) (to_span_since_start_of_day t2)
     end
+
+    let approximate_end_of_day =
+      Option.value_exn (T.sub T.start_of_next_day Span.microsecond)
+    ;;
 
     (* [create] chops off any subsecond part when [sec = 60] to handle leap seconds. In
        particular it's trying to be generous about reading in times on things like fix

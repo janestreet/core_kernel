@@ -6,9 +6,7 @@ let r = Ref.Permissioned.create 0
 let r' = (r : (int, foo) Ref.Permissioned.t)
 [%%expect{|
 Line _, characters 10-11:
-Error: This expression has type
-         (int, *) (glob)
-         Ref.Permissioned.t
+Error: This expression has type (int, *) Ref.Permissioned.t (glob)
        but an expression was expected of type (int, foo) Ref.Permissioned.t
        Type 'a = [< `Read | `Who_can_write of 'b ]
        is not compatible with type foo
@@ -24,7 +22,6 @@ Line _, characters 30-31:
 Error: This expression has type * (glob)
        but an expression was expected of type
          * (glob)
-         * (glob)
        Type Perms.nobody perms = [ `Read | `Who_can_write of Perms.nobody ]
        is not compatible with type 'a = [> `Who_can_write of Perms.me ]
        Types for tag `Who_can_write are incompatible
@@ -37,9 +34,6 @@ let r_immutable = (r : (int, immutable) Ref.Permissioned.t)
 [%%expect{|
 Line _, characters 19-20:
 Error: This expression has type
-         * (glob)
-         * (glob)
-         * (glob)
          * (glob)
        but an expression was expected of type
          (int, immutable) Ref.Permissioned.t
@@ -92,7 +86,7 @@ Error: In this `with' constraint, the new definition of t
          type ('a, 'b) t = ('a, 'b) t
            constraint 'b = \[< `Read | `Who_can_write of .* \] (regexp)
        is not included in
-         type ('a, -'b) t constraint 'b = [< 'c Core_kernel.perms ]
+         type ('a, -'b) t constraint 'b = [< 'c perms ]
        *: Expected declaration (glob)
        *: Actual declaration (glob)
        Their constraints differ.
