@@ -59,7 +59,7 @@ include
       include Bytes
       let create ~len = create len
       let unsafe_blit ~src ~src_pos ~dst ~dst_pos ~len =
-        Bigstring.To_string.unsafe_blit ~src:src.bstr ~src_pos ~dst ~dst_pos ~len
+        Bigstring.To_bytes.unsafe_blit ~src:src.bstr ~src_pos ~dst ~dst_pos ~len
       ;;
     end)
 ;;

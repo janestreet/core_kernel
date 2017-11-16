@@ -97,6 +97,7 @@ val is_empty : _ t -> bool Or_error.t
     returns an error if [t] has encountered an unpacking error. *)
 val feed        : ?pos:int -> ?len:int -> _ t -> Bigstring.t -> unit Or_error.t
 val feed_string : ?pos:int -> ?len:int -> _ t -> string      -> unit Or_error.t
+val feed_bytes  : ?pos:int -> ?len:int -> _ t -> Bytes.t     -> unit Or_error.t
 
 (** [unpack_into t q] unpacks all the values that it can from [t] and enqueues them in
     [q].  If there is an unpacking error, [unpack_into] returns an error, and subsequent

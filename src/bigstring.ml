@@ -69,14 +69,6 @@ module Bigstring_sequence = struct
   let length = length
 end
 
-module String_sequence = struct
-  type t = string [@@deriving sexp_of]
-  let create ~len = Bytes.create len
-  let get = String.get
-  let set = Bytes.set
-  let length = String.length
-end
-
 module Bytes_sequence = struct
   type t = bytes [@@deriving sexp_of]
   let create ~len = Bytes.create len
@@ -97,18 +89,6 @@ include Test_blit.Make_and_test
       let unsafe_blit = unsafe_blit
     end)
 
-module From_string =
-  Test_blit.Make_distinct_and_test
-    (Blit_elt)
-    (String_sequence)
-    (struct
-      external unsafe_blit
-        : src : string -> src_pos : int -> dst : t -> dst_pos : int -> len : int -> unit
-        = "bigstring_blit_string_bigstring_stub" [@@noalloc]
-      include Bigstring_sequence
-    end)
-;;
-
 module From_bytes =
   Test_blit.Make_distinct_and_test
     (Blit_elt)
@@ -116,20 +96,8 @@ module From_bytes =
     (struct
       external unsafe_blit
         : src : bytes -> src_pos : int -> dst : t -> dst_pos : int -> len : int -> unit
-        = "bigstring_blit_string_bigstring_stub" [@@noalloc]
+        = "bigstring_blit_bytes_bigstring_stub" [@@noalloc]
       include Bigstring_sequence
-    end)
-;;
-
-module To_string =
-  Test_blit.Make_distinct_and_test
-    (Blit_elt)
-    (Bigstring_sequence)
-    (struct
-      external unsafe_blit
-        : src : t -> src_pos : int -> dst : string -> dst_pos : int -> len : int -> unit
-        = "bigstring_blit_bigstring_string_stub" [@@noalloc]
-      include String_sequence
     end)
 ;;
 
@@ -140,14 +108,42 @@ module To_bytes =
     (struct
       external unsafe_blit
         : src : t -> src_pos : int -> dst : bytes -> dst_pos : int -> len : int -> unit
-        = "bigstring_blit_bigstring_string_stub" [@@noalloc]
+        = "bigstring_blit_bigstring_bytes_stub" [@@noalloc]
       include Bytes_sequence
     end)
 ;;
 
+(* We don't use [Test_blit.Make_distinct_and_test] for [From_string] because it expects
+   mutability of the source. *)
+module From_string =
+  Blit.Make_distinct
+    (struct
+      type t = string [@@deriving sexp_of]
+      let length = String.length
+    end)
+    (struct
+      external unsafe_blit
+        : src : string -> src_pos : int -> dst : t -> dst_pos : int -> len : int -> unit
+        = "bigstring_blit_string_bigstring_stub" [@@noalloc]
+      include Bigstring_sequence
+    end)
+;;
+
+module To_string = struct
+  include To_bytes
+  let sub src ~pos ~len =
+    Bytes.unsafe_to_string ~no_mutation_while_string_reachable:(sub src ~pos ~len)
+  let subo ?pos ?len src =
+    Bytes.unsafe_to_string ~no_mutation_while_string_reachable:(subo ?pos ?len src)
+end
+
 let of_string = From_string.subo
 
+let of_bytes = From_bytes.subo
+
 let to_string = To_string.subo
+
+let to_bytes = To_bytes.subo
 
 let concat =
   let append ~src ~dst ~dst_pos_ref =

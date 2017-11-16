@@ -100,7 +100,7 @@ val bytes : bytes -> t
 [@@ocaml.deprecated
   "[since 2017-07] use [Md5.digest_bytes]."]
 
-val subbytes : string -> int -> int -> t
+val subbytes : bytes -> int -> int -> t
 [@@ocaml.deprecated
   "[since 2017-07] use [Md5.digest_subbytes]."]
 

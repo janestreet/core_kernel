@@ -31,7 +31,7 @@ let to_string { len; tree } =
        trees, so the naive recursive approach doesn't work) *)
     let rec go todo start = function
       | Base s ->
-        Bytes.blit ~src:s ~src_pos:0 ~dst:buf ~dst_pos:start ~len:(String.length s);
+        Bytes.From_string.blit ~src:s ~src_pos:0 ~dst:buf ~dst_pos:start ~len:(String.length s);
         let start = start + String.length s in
         (match todo with
          | [] -> assert (start = len)
@@ -41,7 +41,7 @@ let to_string { len; tree } =
         go (s2 :: todo) start s1
     in
     go [s2] 0 s1;
-    buf
+    Bytes.unsafe_to_string ~no_mutation_while_string_reachable:buf
 ;;
 
 (* We could imagine loosening the [String.max_length] length restriction if we gave
@@ -93,7 +93,7 @@ let%test_unit _ =
   let r = (of_string "abc" ^ of_string "def") ^ (of_string "ghi" ^ of_string "jkl") in
   let buffer = Buffer.create 12 in
   add_to_buffer r buffer;
-  [%test_result: String.t] ~expect:"abcdefghijkl" (Buffer.to_bytes buffer)
+  [%test_result: String.t] ~expect:"abcdefghijkl" (Buffer.contents buffer)
 ;;
 
 let%test_unit "no stack overflow" =

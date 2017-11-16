@@ -38,6 +38,13 @@ val of_string : ?pos : int -> ?len : int -> string -> t
     @param pos default = 0
     @param len default = [String.length str - pos] *)
 
+val of_bytes : ?pos : int -> ?len : int -> bytes -> t
+(** [of_bytes ?pos ?len str] @return a new bigstring that is equivalent
+    to the subbytes of length [len] in [str] starting at position [pos].
+
+    @param pos default = 0
+    @param len default = [Bytes.length str - pos] *)
+
 val to_string : ?pos : int -> ?len : int -> t -> string
 (** [to_string ?pos ?len bstr] @return a new string that is equivalent
     to the substring of length [len] in [bstr] starting at position [pos].
@@ -46,6 +53,15 @@ val to_string : ?pos : int -> ?len : int -> t -> string
     @param len default = [length bstr - pos]
 
     @raise Invalid_argument if the string would exceed runtime limits. *)
+
+val to_bytes : ?pos : int -> ?len : int -> t -> bytes
+(** [to_bytes ?pos ?len bstr] @return a new byte sequence that is equivalent
+    to the substring of length [len] in [bstr] starting at position [pos].
+
+    @param pos default = 0
+    @param len default = [length bstr - pos]
+
+    @raise Invalid_argument if the bytes would exceed runtime limits. *)
 
 val concat : ?sep:t -> t list -> t
 (** [concat ?sep list] returns the concatenation of [list] with [sep] in between each. *)
@@ -99,7 +115,13 @@ external is_mmapped : t -> bool = "bigstring_is_mmapped_stub" [@@noalloc]
 
 include Blit.S with type t := t
 
-module To_string   : Blit.S_distinct with type src := t      with type dst := string
+module To_string : sig
+  val blit        : (t, bytes)  Blit.blit
+  val blito       : (t, bytes)  Blit.blito
+  val unsafe_blit : (t, bytes)  Blit.blit
+  val sub  : (t, string) Blit.sub
+  val subo : (t, string) Blit.subo
+end
 module From_string : Blit.S_distinct with type src := string with type dst := t
 
 module To_bytes   : Blit.S_distinct with type src := t     with type dst := bytes

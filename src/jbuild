@@ -24,6 +24,7 @@
     sexplib
     typerep
     variantslib))
+  (flags (:standard -safe-string))
   (c_flags (:standard -D_LARGEFILE64_SOURCE))
   (c_library_flags (:include rt-flags))
   (c_names

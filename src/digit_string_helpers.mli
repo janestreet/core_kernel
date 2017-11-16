@@ -8,15 +8,15 @@ val char_of_digit : int -> Char.t
 
 (** [blit_string_of_int_4_digits s ~pos i] blits the string representation of [i] into
     [s] at [pos].  Raises unless 0 <= [i] <= 9999 and there is sufficient room. *)
-val blit_string_of_int_4_digits : string -> pos:int -> int -> unit
+val blit_string_of_int_4_digits : bytes -> pos:int -> int -> unit
 
 (** [blit_string_of_int_3_digits s ~pos i] blits the string representation of [i] into
     [s] at [pos].  Raises unless 0 <= [i] <= 999 and there is sufficient room. *)
-val blit_string_of_int_3_digits : string -> pos:int -> int -> unit
+val blit_string_of_int_3_digits : bytes -> pos:int -> int -> unit
 
 (** [blit_string_of_int_2_digits s ~pos i] blits the string representation of [i] into
     [s] at [pos].  Raises unless 0 <= [i] <= 99 and there is sufficient room. *)
-val blit_string_of_int_2_digits : string -> pos:int -> int -> unit
+val blit_string_of_int_2_digits : bytes -> pos:int -> int -> unit
 
 (** [parse_one_digit s pos] parse one digit at [pos] in [s] into the corresponding
     int. *)

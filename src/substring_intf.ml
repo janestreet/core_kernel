@@ -37,7 +37,8 @@ module type S = sig
   (** {6 Blit functions} for copying characters from a substring to and from both strings
       and substrings. *)
 
-  val blit_to_string      : t -> dst:string      -> dst_pos:int            -> unit
+  val blit_to_string      : t -> dst:bytes       -> dst_pos:int            -> unit
+  val blit_to_bytes       : t -> dst:bytes       -> dst_pos:int            -> unit
   val blit_to_bigstring   : t -> dst:Bigstring.t -> dst_pos:int            -> unit
 
   val blit_from_string    : t -> src:string      -> src_pos:int -> len:int -> unit

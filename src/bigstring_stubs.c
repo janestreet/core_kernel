@@ -55,6 +55,11 @@
 #include "core_bigstring.h"
 #include "internalhash.h"
 
+/* Bytes_val is only available from 4.06 */
+#ifndef Bytes_val
+#define Bytes_val String_val
+#endif
+
 static inline char * get_bstr(value v_bstr, value v_pos)
 {
   return (char *) Caml_ba_data_val(v_bstr) + Long_val(v_pos);
@@ -101,11 +106,20 @@ CAMLprim value bigstring_blit_string_bigstring_stub(
   return Val_unit;
 }
 
-CAMLprim value bigstring_blit_bigstring_string_stub(
+CAMLprim value bigstring_blit_bytes_bigstring_stub(
+  value v_str, value v_src_pos, value v_bstr, value v_dst_pos, value v_len)
+{
+  char *str = Bytes_val(v_str) + Long_val(v_src_pos);
+  char *bstr = get_bstr(v_bstr, v_dst_pos);
+  memcpy(bstr, str, Long_val(v_len));
+  return Val_unit;
+}
+
+CAMLprim value bigstring_blit_bigstring_bytes_stub(
   value v_bstr, value v_src_pos, value v_str, value v_dst_pos, value v_len)
 {
   char *bstr = get_bstr(v_bstr, v_src_pos);
-  char *str = String_val(v_str) + Long_val(v_dst_pos);
+  char *str = Bytes_val(v_str) + Long_val(v_dst_pos);
   memcpy(str, bstr, Long_val(v_len));
   return Val_unit;
 }

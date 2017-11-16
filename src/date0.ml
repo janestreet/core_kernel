@@ -129,7 +129,7 @@ module Stable = struct
         blit_string_of_int_2_digits buf ~pos:5 (Month.to_int (month t));
         Bytes.set buf 7 '-';
         blit_string_of_int_2_digits buf ~pos:8 (day t);
-        buf
+        Bytes.unsafe_to_string ~no_mutation_while_string_reachable:buf
       ;;
 
       let to_string = to_string_iso8601_extended
@@ -140,7 +140,7 @@ module Stable = struct
         blit_string_of_int_4_digits buf ~pos:0 (year t);
         blit_string_of_int_2_digits buf ~pos:4 (Month.to_int (month t));
         blit_string_of_int_2_digits buf ~pos:6 (day t);
-        buf
+        Bytes.unsafe_to_string ~no_mutation_while_string_reachable:buf
       ;;
 
       (** MM/DD/YYYY *)
@@ -151,7 +151,7 @@ module Stable = struct
         blit_string_of_int_2_digits buf ~pos:3 (day t);
         Bytes.set buf 5 '/';
         blit_string_of_int_4_digits buf ~pos:6 (year t);
-        buf
+        Bytes.unsafe_to_string ~no_mutation_while_string_reachable:buf
       ;;
 
       let parse_year4 str pos = parse_four_digits str pos

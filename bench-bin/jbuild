@@ -4,6 +4,7 @@
     hashtbl_bench
     immediate_bench
     pooled_hashtbl))
+  (flags (:standard -safe-string))
   (libraries
    (core
     core_bench

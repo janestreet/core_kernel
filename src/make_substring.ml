@@ -10,26 +10,40 @@ type bigstring = Bigstring.t
 module Blit : sig
   type ('src, 'dst) t = ('src, 'dst) Blit.blito
 
-  val string_string       : (string   , string   ) t
-  val bigstring_string    : (bigstring, string   ) t
+  val string_string       : (string   , bytes   ) t
+  val bigstring_string    : (bigstring, bytes   ) t
+
+  val string_bytes        : (string   , bytes   ) t
+  val bytes_bytes         : (bytes    , bytes   ) t
+  val bigstring_bytes     : (bigstring, bytes   ) t
+
   val string_bigstring    : (string   , bigstring) t
+  val bytes_bigstring     : (bytes    , bigstring) t
   val bigstring_bigstring : (bigstring, bigstring) t
 end = struct
   type ('src, 'dst) t = ('src, 'dst) Blit.blito
 
-  let string_string ~src ?src_pos ?src_len ~dst ?(dst_pos = 0) () =
+  let string_bytes ~src ?src_pos ?src_len ~dst ?(dst_pos = 0) () =
     let (src_pos, len) =
       Ordered_collection_common.get_pos_len_exn ?pos:src_pos ?len:src_len
         ~length:(String.length src)
     in
-    Bytes.blit ~src ~src_pos ~len ~dst ~dst_pos;
+    Bytes.From_string.blit ~src ~src_pos ~len ~dst ~dst_pos;
   ;;
 
+  let string_string = string_bytes
+
+  let bytes_bytes = Bytes.blito
+
   let string_bigstring = Bigstring.From_string.blito
+
+  let bytes_bigstring = Bigstring.From_bytes.blito
 
   let bigstring_bigstring = Bigstring.blito
 
   let bigstring_string = Bigstring.To_string.blito
+
+  let bigstring_bytes = Bigstring.To_bytes.blito
 
 end
 
@@ -39,7 +53,8 @@ module type Base = sig
   val create : int -> t
   val length : t -> int
   val blit : (t, t) Blit.t
-  val blit_to_string      : (t        , string   ) Blit.t
+  val blit_to_string      : (t        , bytes    ) Blit.t
+  val blit_to_bytes       : (t        , bytes    ) Blit.t
   val blit_to_bigstring   : (t        , bigstring) Blit.t
   val blit_from_string    : (string   , t        ) Blit.t
   val blit_from_bigstring : (bigstring, t        ) Blit.t
@@ -246,7 +261,8 @@ module F (Base : Base) : S with type base = Base.t = struct
     fun t ~dst ~dst_pos ->
       blit ~src:t.base ~src_pos:t.pos ~src_len:t.len ~dst ~dst_pos ();
   ;;
-  let blit_to_string = blit_to Base.blit_to_string
+  let blit_to_string = blit_to Base.blit_to_bytes
+  let blit_to_bytes = blit_to Base.blit_to_bytes
   let blit_to_bigstring = blit_to Base.blit_to_bigstring
   let blit_base = blit_to Base.blit
 
@@ -272,7 +288,9 @@ module F (Base : Base) : S with type base = Base.t = struct
     dst
   ;;
 
-  let to_string    = make Bytes.create    Base.blit_to_string
+  let to_string x  =
+    Bytes.unsafe_to_string
+      ~no_mutation_while_string_reachable:(make Bytes.create Base.blit_to_bytes x)
   let to_bigstring = make Bigstring.create Base.blit_to_bigstring
 
   let concat_gen create_dst blit_dst ts =
@@ -285,7 +303,9 @@ module F (Base : Base) : S with type base = Base.t = struct
     dst
   ;;
 
-  let concat           ts = of_base (concat_gen Base.create      blit_base         ts)
-  let concat_string    ts =          concat_gen Bytes.create    blit_to_string    ts
-  let concat_bigstring ts =          concat_gen Bigstring.create blit_to_bigstring ts
+  let concat           ts = of_base (concat_gen Base.create blit_base ts)
+  let concat_string    ts =
+    Bytes.unsafe_to_string
+      ~no_mutation_while_string_reachable:(concat_gen Bytes.create blit_to_string ts)
+  let concat_bigstring ts = concat_gen Bigstring.create blit_to_bigstring ts
 end

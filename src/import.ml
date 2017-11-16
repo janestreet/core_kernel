@@ -65,10 +65,15 @@ module From_sexplib =
 include From_sexplib
 
 (* [sexp_opaque] indicates to [ppx_sexp_conv] that a value should be rendered as [_], i.e.
-   [Sexp.Atom "_"].  We define [sexp_opaque] here along with [@@deriving] so that other
-   ppx's treat [sexp_opaque] correctly, by ignoring it and processing the underlying
+   [Sexp.Atom "_"].  Here we expose the [@@deriving] aspects of [sexp_opaque] so that
+   other ppx's treat [sexp_opaque] correctly, by ignoring it and processing the underlying
    type. *)
-type 'a sexp_opaque = 'a [@@deriving bin_io, compare, hash, typerep]
+include
+  (struct
+    type 'a sexp_opaque = 'a [@@deriving bin_io, compare, hash, typerep]
+  end : sig
+     type 'a sexp_opaque [@@deriving bin_io, compare, hash, typerep]
+   end with type 'a sexp_opaque := 'a sexp_opaque)
 
 include
   (Typerep_lib.Std : (module type of struct include Typerep_lib.Std end

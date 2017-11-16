@@ -269,6 +269,10 @@ let feed_string ?pos ?len t buf =
   feed_gen    String.length Bigstring.From_string.blito ?pos ?len t buf
 ;;
 
+let feed_bytes ?pos ?len t buf =
+  feed_gen    Bytes.length Bigstring.From_bytes.blito ?pos ?len t buf
+;;
+
 let unpack_iter t ~f =
   if !debug then invariant ignore t;
   match t.state with
@@ -426,10 +430,13 @@ let%test_module "unpack-buffer" =
                  if len < value_size then
                    `Not_enough_data ((), 0)
                  else
-                   let string = Bytes.create value_size in
-                   Bigstring.To_string.blito ~src:buf ~src_pos:pos ~src_len:value_size
-                     ~dst:string ();
-                   `Ok (string, value_size))
+                   let bytes = Bytes.create value_size in
+                   Bigstring.To_bytes.blito ~src:buf ~src_pos:pos ~src_len:value_size
+                     ~dst:bytes ();
+                   `Ok (
+                     Bytes.unsafe_to_string ~no_mutation_while_string_reachable:bytes, 
+                     value_size
+                   ))
           include String
         end in
         let values =

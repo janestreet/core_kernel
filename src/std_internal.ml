@@ -19,7 +19,7 @@ include Result.Export
 
 type -'a return = 'a With_return.return = private {
   return : 'b. 'a -> 'b;
-}
+} [@@unboxed]
 
 exception Bug of string [@@deriving sexp]
 
@@ -161,23 +161,7 @@ let sexp_of_exn = Exn.sexp_of_t
 (* The below declarations define converters for the special types recognized by pa-sexp.
    E.g. this allows the following to work:
 
-   type t = { foo : int sexp_option } [@@deriving bin_io, compare, hash, sexp]
-
-   [sexp_array], [sexp_bool], [sexp_list], and [sexp_option] allow a record field to be
-   absent when converting from a sexp, and if absent, the field will take a default value
-   of the appropriate type:
-
-   {v
-     sexp_array   [||]
-     sexp_bool    false
-     sexp_list    []
-     sexp_option  None
-   v}
-
-   [sexp_opaque] causes the conversion to sexp to produce the atom {v <opaque> v}.
-
-   For more documentation, see sexplib/README.md.
-*)
+   type t = { foo : int sexp_option } [@@deriving bin_io, compare, hash, sexp] *)
 type 'a sexp_array  = 'a array  [@@deriving bin_io, compare,       typerep]
 type sexp_bool      = bool      [@@deriving bin_io, compare, hash, typerep]
 type 'a sexp_list   = 'a list   [@@deriving bin_io, compare, hash, typerep]

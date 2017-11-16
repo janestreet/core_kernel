@@ -175,7 +175,7 @@ module Stable = struct
             blit_string_of_int_3_digits buf ~pos:12 us
         end
       end;
-      buf
+      Bytes.unsafe_to_string ~no_mutation_while_string_reachable:buf
     ;;
 
     let to_string_trimmed t = to_string_gen ~drop_ms:false ~drop_us:false ~trim:true t

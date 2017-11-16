@@ -74,10 +74,10 @@ module Full_data = struct
           let int32_of_char chr = Int32.of_int_exn (int_of_char chr) in
           fun ic ->
             In_channel.really_input_exn ic ~buf:long ~pos:0 ~len:4;
-            let sb1 = Int32.shift_left (int32_of_char long.[0]) 24 in
-            let sb2 = Int32.shift_left (int32_of_char long.[1]) 16 in
-            let sb3 = Int32.shift_left (int32_of_char long.[2]) 8 in
-            let sb4 = int32_of_char long.[3] in
+            let sb1 = Int32.shift_left (int32_of_char (Bytes.get long 0)) 24 in
+            let sb2 = Int32.shift_left (int32_of_char (Bytes.get long 1)) 16 in
+            let sb3 = Int32.shift_left (int32_of_char (Bytes.get long 2)) 8 in
+            let sb4 = int32_of_char (Bytes.get long 3) in
             Int32.bit_or (Int32.bit_or sb1 sb2) (Int32.bit_or sb3 sb4)
         ;;
 
@@ -93,14 +93,14 @@ module Full_data = struct
           let shift c bits = Int63.shift_left (int63_of_char c) bits in
           let long_long = Bytes.create 8 in
           In_channel.really_input_exn ic ~buf:long_long ~pos:0 ~len:8;
-          let result =                      shift long_long.[0] 56 in
-          let result = Int63.bit_or result (shift long_long.[1] 48) in
-          let result = Int63.bit_or result (shift long_long.[2] 40) in
-          let result = Int63.bit_or result (shift long_long.[3] 32) in
-          let result = Int63.bit_or result (shift long_long.[4] 24) in
-          let result = Int63.bit_or result (shift long_long.[5] 16) in
-          let result = Int63.bit_or result (shift long_long.[6] 8) in
-          let result = Int63.bit_or result (int63_of_char long_long.[7]) in
+          let result =                      shift (Bytes.get long_long 0) 56 in
+          let result = Int63.bit_or result (shift (Bytes.get long_long 1) 48) in
+          let result = Int63.bit_or result (shift (Bytes.get long_long 2) 40) in
+          let result = Int63.bit_or result (shift (Bytes.get long_long 3) 32) in
+          let result = Int63.bit_or result (shift (Bytes.get long_long 4) 24) in
+          let result = Int63.bit_or result (shift (Bytes.get long_long 5) 16) in
+          let result = Int63.bit_or result (shift (Bytes.get long_long 6) 8) in
+          let result = Int63.bit_or result (int63_of_char (Bytes.get long_long 7)) in
           result
         ;;
 
@@ -243,9 +243,12 @@ module Full_data = struct
         ;;
 
         let read_header ic =
-          let buf = Bytes.create 4 in
-          In_channel.really_input_exn ic ~buf ~pos:0 ~len:4;
-          if not (String.equal buf "TZif") then
+          let magic =
+            let buf = Bytes.create 4 in
+            In_channel.really_input_exn ic ~buf ~pos:0 ~len:4;
+            Bytes.unsafe_to_string ~no_mutation_while_string_reachable:buf
+          in
+          if not (String.equal magic "TZif") then
             raise (Invalid_file_format "magic characters TZif not present");
           let version =
             match In_channel.input_char ic with

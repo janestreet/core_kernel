@@ -35,7 +35,7 @@ let pack_unsigned_8 ~buf ~pos n =
   else Bytes.set buf pos (Char.unsafe_chr n);
 ;;
 
-let unpack_unsigned_8 ~buf ~pos = Char.code buf.[pos]
+let unpack_unsigned_8 ~buf ~pos = Char.code (Bytes.get buf pos)
 
 exception Pack_signed_8_argument_out_of_range of int [@@deriving sexp]
 let pack_signed_8 ~buf ~pos n =
@@ -109,8 +109,8 @@ let pack_signed_16_little_endian ~buf ~pos n =
 ;;
 
 let unpack_unsigned_16 ~byte_order ~buf ~pos =
-  let b1 = Char.code buf.[pos + offset ~len:2 ~byte_order 0] lsl 8 in
-  let b2 = Char.code buf.[pos + offset ~len:2 ~byte_order 1] in
+  let b1 = Char.code (Bytes.get buf (pos + offset ~len:2 ~byte_order 0)) lsl 8 in
+  let b2 = Char.code (Bytes.get buf (pos + offset ~len:2 ~byte_order 1)) in
   b1 lor b2
 ;;
 
@@ -121,14 +121,14 @@ let unpack_signed_16 ~byte_order ~buf ~pos =
 ;;
 
 let unpack_unsigned_16_big_endian ~buf ~pos =
-  let b1 = Char.code buf.[pos    ] lsl 8 in
-  let b2 = Char.code buf.[pos + 1] in
+  let b1 = Char.code (Bytes.get buf (pos    )) lsl 8 in
+  let b2 = Char.code (Bytes.get buf (pos + 1)) in
   b1 lor b2
 ;;
 
 let unpack_unsigned_16_little_endian ~buf ~pos =
-  let b1 = Char.code buf.[pos + 1] lsl 8 in
-  let b2 = Char.code buf.[pos    ] in
+  let b1 = Char.code (Bytes.get buf (pos + 1)) lsl 8 in
+  let b2 = Char.code (Bytes.get buf (pos    )) in
   b1 lor b2
 ;;
 
@@ -149,12 +149,12 @@ module Make_inline_tests (A: sig
     val ns: t list
     val of_int64: int64 -> t
     val to_int64: t -> int64
-    val pack: byte_order:endian -> buf:string -> pos:int -> t -> unit
-    val unpack: byte_order:endian -> buf:string -> pos:int -> t
-    val pack_big_endian: buf:string -> pos:int -> t -> unit
-    val unpack_big_endian: buf:string -> pos:int -> t
-    val pack_little_endian: buf:string -> pos:int -> t -> unit
-    val unpack_little_endian: buf:string -> pos:int -> t
+    val pack: byte_order:endian -> buf:bytes -> pos:int -> t -> unit
+    val unpack: byte_order:endian -> buf:bytes -> pos:int -> t
+    val pack_big_endian: buf:bytes -> pos:int -> t -> unit
+    val unpack_big_endian: buf:bytes -> pos:int -> t
+    val pack_little_endian: buf:bytes -> pos:int -> t -> unit
+    val unpack_little_endian: buf:bytes -> pos:int -> t
   end) = struct
   include A
   let pos = 3
@@ -184,66 +184,66 @@ module Make_inline_tests (A: sig
   let test_rest_of_buf buf =
     for k = 0 to buf_size - 1 do
       if k < pos || k > pos + num_bytes then
-        assert (String.get buf k = padding)
+        assert (Bytes.get buf k = padding)
     done
   ;;
   let%test _ =
     ns = List.map ns ~f:(fun n ->
-      let buf = String.make buf_size padding in
+      let buf = Bytes.make buf_size padding in
       pack ~byte_order:`Little_endian ~buf ~pos n;
       test_rest_of_buf buf;
       unpack ~byte_order:`Little_endian ~buf ~pos)
   let%test _ =
     ns = List.map ns ~f:(fun n ->
-      let buf = String.make buf_size padding in
+      let buf = Bytes.make buf_size padding in
       pack ~byte_order:`Big_endian ~buf ~pos n;
       test_rest_of_buf buf;
       unpack ~byte_order:`Big_endian ~buf ~pos)
   let%test _ =
     ns = List.map ns ~f:(fun n ->
-      let buf = String.make buf_size padding in
+      let buf = Bytes.make buf_size padding in
       pack_little_endian ~buf ~pos n;
       test_rest_of_buf buf;
       unpack_little_endian ~buf ~pos)
   let%test _ =
     ns = List.map ns ~f:(fun n ->
-      let buf = String.make buf_size padding in
+      let buf = Bytes.make buf_size padding in
       pack_big_endian ~buf ~pos n;
       test_rest_of_buf buf;
       unpack_big_endian ~buf ~pos)
   let%test _ =
     ns_rev = List.map ns ~f:(fun n ->
-      let buf = String.make buf_size padding in
+      let buf = Bytes.make buf_size padding in
       pack_big_endian ~buf ~pos n;
       test_rest_of_buf buf;
       unpack_little_endian ~buf ~pos)
   let%test _ =
     ns_rev = List.map ns ~f:(fun n ->
-      let buf = String.make buf_size padding in
+      let buf = Bytes.make buf_size padding in
       pack_little_endian ~buf ~pos n;
       test_rest_of_buf buf;
       unpack_big_endian ~buf ~pos)
   let%test _ =
     ns = List.map ns ~f:(fun n ->
-      let buf = String.make buf_size padding in
+      let buf = Bytes.make buf_size padding in
       pack ~byte_order:`Big_endian ~buf ~pos n;
       test_rest_of_buf buf;
       unpack_big_endian ~buf ~pos)
   let%test _ =
     ns = List.map ns ~f:(fun n ->
-      let buf = String.make buf_size padding in
+      let buf = Bytes.make buf_size padding in
       pack ~byte_order:`Little_endian ~buf ~pos n;
       test_rest_of_buf buf;
       unpack_little_endian ~buf ~pos)
   let%test _ =
     ns = List.map ns ~f:(fun n ->
-      let buf = String.make buf_size padding in
+      let buf = Bytes.make buf_size padding in
       pack_big_endian ~buf ~pos n;
       test_rest_of_buf buf;
       unpack ~byte_order:`Big_endian ~buf ~pos)
   let%test _ =
     ns = List.map ns ~f:(fun n ->
-      let buf = String.make buf_size padding in
+      let buf = Bytes.make buf_size padding in
       pack_little_endian ~buf ~pos n;
       test_rest_of_buf buf;
       unpack ~byte_order:`Little_endian ~buf ~pos)
@@ -303,16 +303,16 @@ let pack_unsigned_32_int_big_endian ~buf ~pos n =
   check_unsigned_32_in_range n;
   Bytes.set buf pos (Char.unsafe_chr (0xFF land (n lsr 24))); (* MSB *)
   Bytes.set buf (pos + 3) (Char.unsafe_chr (0xFF land n)); (* LSB *)
-  Caml.Bytes.unsafe_set buf (pos + 1) (Char.unsafe_chr (0xFF land (n lsr 16)));
-  Caml.Bytes.unsafe_set buf (pos + 2) (Char.unsafe_chr (0xFF land (n lsr 8)));
+  Bytes.unsafe_set buf (pos + 1) (Char.unsafe_chr (0xFF land (n lsr 16)));
+  Bytes.unsafe_set buf (pos + 2) (Char.unsafe_chr (0xFF land (n lsr 8)));
 ;;
 
 let pack_unsigned_32_int_little_endian ~buf ~pos n =
   check_unsigned_32_in_range n;
   Bytes.set buf (pos + 3) (Char.unsafe_chr (0xFF land (n lsr 24))); (* MSB *)
   Bytes.set buf pos (Char.unsafe_chr (0xFF land n)); (* LSB *)
-  Caml.Bytes.unsafe_set buf (pos + 2) (Char.unsafe_chr (0xFF land (n lsr 16)));
-  Caml.Bytes.unsafe_set buf (pos + 1) (Char.unsafe_chr (0xFF land (n lsr 8)));
+  Bytes.unsafe_set buf (pos + 2) (Char.unsafe_chr (0xFF land (n lsr 16)));
+  Bytes.unsafe_set buf (pos + 1) (Char.unsafe_chr (0xFF land (n lsr 8)));
 ;;
 
 exception Pack_signed_32_argument_out_of_range of int [@@deriving sexp]
@@ -336,16 +336,16 @@ let pack_signed_32_int_big_endian ~buf ~pos n =
   check_signed_32_in_range n;
   Bytes.set buf pos (Char.unsafe_chr (0xFF land (n asr 24))); (* MSB *)
   Bytes.set buf (pos + 3) (Char.unsafe_chr (0xFF land n)); (* LSB *)
-  Caml.Bytes.unsafe_set buf (pos + 1) (Char.unsafe_chr (0xFF land (n asr 16)));
-  Caml.Bytes.unsafe_set buf (pos + 2) (Char.unsafe_chr (0xFF land (n asr 8)));
+  Bytes.unsafe_set buf (pos + 1) (Char.unsafe_chr (0xFF land (n asr 16)));
+  Bytes.unsafe_set buf (pos + 2) (Char.unsafe_chr (0xFF land (n asr 8)));
 ;;
 
 let pack_signed_32_int_little_endian ~buf ~pos n =
   check_signed_32_in_range n;
   Bytes.set buf (pos + 3) (Char.unsafe_chr (0xFF land (n asr 24))); (* MSB *)
   Bytes.set buf pos (Char.unsafe_chr (0xFF land n)); (* LSB *)
-  Caml.Bytes.unsafe_set buf (pos + 2) (Char.unsafe_chr (0xFF land (n asr 16)));
-  Caml.Bytes.unsafe_set buf (pos + 1) (Char.unsafe_chr (0xFF land (n asr 8)));
+  Bytes.unsafe_set buf (pos + 2) (Char.unsafe_chr (0xFF land (n asr 16)));
+  Bytes.unsafe_set buf (pos + 1) (Char.unsafe_chr (0xFF land (n asr 8)));
 ;;
 
 let pack_signed_32 ~byte_order ~buf ~pos n =
@@ -357,36 +357,36 @@ let pack_signed_32 ~byte_order ~buf ~pos n =
 
 let unpack_signed_32 ~byte_order ~buf ~pos =
   let b1 = (* MSB *)
-    Int32.shift_left (Int32.of_int (Char.code buf.[pos + offset ~len:4 ~byte_order 0])) 24
+    Int32.shift_left (Int32.of_int (Char.code (Bytes.get buf (pos + offset ~len:4 ~byte_order 0)))) 24
   in
-  let b2 = Char.code buf.[pos + offset ~len:4 ~byte_order 1] lsl 16 in
-  let b3 = Char.code buf.[pos + offset ~len:4 ~byte_order 2] lsl 8 in
-  let b4 = Char.code buf.[pos + offset ~len:4 ~byte_order 3] in (* LSB *)
+  let b2 = Char.code (Bytes.get buf (pos + offset ~len:4 ~byte_order 1)) lsl 16 in
+  let b3 = Char.code (Bytes.get buf (pos + offset ~len:4 ~byte_order 2)) lsl 8 in
+  let b4 = Char.code (Bytes.get buf (pos + offset ~len:4 ~byte_order 3)) in (* LSB *)
   Int32.logor b1 (Int32.of_int (b2 lor b3 lor b4))
 ;;
 
 let unpack_unsigned_32_int ~byte_order ~buf ~pos =
   assert (Sys.word_size = 64);
-  let b1 = Char.code buf.[pos + offset ~len:4 ~byte_order 0] lsl 24 in (* msb *)
-  let b2 = Char.code buf.[pos + offset ~len:4 ~byte_order 1] lsl 16 in
-  let b3 = Char.code buf.[pos + offset ~len:4 ~byte_order 2] lsl 8 in
-  let b4 = Char.code buf.[pos + offset ~len:4 ~byte_order 3] in (* lsb *)
+  let b1 = Char.code (Bytes.get buf (pos + offset ~len:4 ~byte_order 0)) lsl 24 in (* msb *)
+  let b2 = Char.code (Bytes.get buf (pos + offset ~len:4 ~byte_order 1)) lsl 16 in
+  let b3 = Char.code (Bytes.get buf (pos + offset ~len:4 ~byte_order 2)) lsl 8 in
+  let b4 = Char.code (Bytes.get buf (pos + offset ~len:4 ~byte_order 3)) in (* lsb *)
   b1 lor b2 lor b3 lor b4
 ;;
 
 let unpack_unsigned_32_int_big_endian ~buf ~pos =
-  let b1 = Char.code buf.[pos] lsl 24 in (* msb *)
-  let b4 = Char.code buf.[pos + 3] in (* lsb *)
-  let b2 = Char.code (Caml.Bytes.unsafe_get buf (pos + 1)) lsl 16 in
-  let b3 = Char.code (Caml.Bytes.unsafe_get buf (pos + 2)) lsl 8 in
+  let b1 = Char.code (Bytes.get buf pos) lsl 24 in (* msb *)
+  let b4 = Char.code (Bytes.get buf (pos + 3)) in (* lsb *)
+  let b2 = Char.code (Bytes.unsafe_get buf (pos + 1)) lsl 16 in
+  let b3 = Char.code (Bytes.unsafe_get buf (pos + 2)) lsl 8 in
   b1 lor b2 lor b3 lor b4
 ;;
 
 let unpack_unsigned_32_int_little_endian ~buf ~pos =
-  let b1 = Char.code buf.[pos + 3] lsl 24 in (* msb *)
-  let b4 = Char.code buf.[pos] in (* lsb *)
-  let b2 = Char.code (Caml.Bytes.unsafe_get buf (pos + 2)) lsl 16 in
-  let b3 = Char.code (Caml.Bytes.unsafe_get buf (pos + 1)) lsl 8 in
+  let b1 = Char.code (Bytes.get buf (pos + 3)) lsl 24 in (* msb *)
+  let b4 = Char.code (Bytes.get buf pos) in (* lsb *)
+  let b2 = Char.code (Bytes.unsafe_get buf (pos + 2)) lsl 16 in
+  let b3 = Char.code (Bytes.unsafe_get buf (pos + 1)) lsl 8 in
   b1 lor b2 lor b3 lor b4
 ;;
 
@@ -457,17 +457,17 @@ let pack_signed_64_big_endian ~buf ~pos v =
   Bytes.set buf pos (Char.unsafe_chr (Int64.to_int (Int64.logand 0xFFL (Int64.shift_right_logical v 56))));
   Bytes.set buf (pos + 7) (Char.unsafe_chr (Int64.to_int (Int64.logand 0xFFL v)));
   (* Now we can use [unsafe_set] for the intermediate bytes. *)
-  Caml.Bytes.unsafe_set buf (pos + 1)
+  Bytes.unsafe_set buf (pos + 1)
     (Char.unsafe_chr (Int64.to_int (Int64.logand 0xFFL (Int64.shift_right_logical v 48))));
-  Caml.Bytes.unsafe_set buf (pos + 2)
+  Bytes.unsafe_set buf (pos + 2)
     (Char.unsafe_chr (Int64.to_int (Int64.logand 0xFFL (Int64.shift_right_logical v 40))));
-  Caml.Bytes.unsafe_set buf (pos + 3)
+  Bytes.unsafe_set buf (pos + 3)
     (Char.unsafe_chr (Int64.to_int (Int64.logand 0xFFL (Int64.shift_right_logical v 32))));
-  Caml.Bytes.unsafe_set buf (pos + 4)
+  Bytes.unsafe_set buf (pos + 4)
     (Char.unsafe_chr (Int64.to_int (Int64.logand 0xFFL (Int64.shift_right_logical v 24))));
-  Caml.Bytes.unsafe_set buf (pos + 5)
+  Bytes.unsafe_set buf (pos + 5)
     (Char.unsafe_chr (Int64.to_int (Int64.logand 0xFFL (Int64.shift_right_logical v 16))));
-  Caml.Bytes.unsafe_set buf (pos + 6)
+  Bytes.unsafe_set buf (pos + 6)
     (Char.unsafe_chr (Int64.to_int (Int64.logand 0xFFL (Int64.shift_right_logical v 8))))
 ;;
 
@@ -476,17 +476,17 @@ let pack_signed_64_little_endian ~buf ~pos v =
   Bytes.set buf pos (Char.unsafe_chr (Int64.to_int (Int64.logand 0xFFL v)));
   Bytes.set buf (pos + 7) (Char.unsafe_chr (Int64.to_int (Int64.logand 0xFFL (Int64.shift_right_logical v 56))));
   (* Now we can use [unsafe_set] for the intermediate bytes. *)
-  Caml.Bytes.unsafe_set buf (pos + 1)
+  Bytes.unsafe_set buf (pos + 1)
     (Char.unsafe_chr (Int64.to_int (Int64.logand 0xFFL (Int64.shift_right_logical v 8))));
-  Caml.Bytes.unsafe_set buf (pos + 2)
+  Bytes.unsafe_set buf (pos + 2)
     (Char.unsafe_chr (Int64.to_int (Int64.logand 0xFFL (Int64.shift_right_logical v 16))));
-  Caml.Bytes.unsafe_set buf (pos + 3)
+  Bytes.unsafe_set buf (pos + 3)
     (Char.unsafe_chr (Int64.to_int (Int64.logand 0xFFL (Int64.shift_right_logical v 24))));
-  Caml.Bytes.unsafe_set buf (pos + 4)
+  Bytes.unsafe_set buf (pos + 4)
     (Char.unsafe_chr (Int64.to_int (Int64.logand 0xFFL (Int64.shift_right_logical v 32))));
-  Caml.Bytes.unsafe_set buf (pos + 5)
+  Bytes.unsafe_set buf (pos + 5)
     (Char.unsafe_chr (Int64.to_int (Int64.logand 0xFFL (Int64.shift_right_logical v 40))));
-  Caml.Bytes.unsafe_set buf (pos + 6)
+  Bytes.unsafe_set buf (pos + 6)
     (Char.unsafe_chr (Int64.to_int (Int64.logand 0xFFL (Int64.shift_right_logical v 48))))
 ;;
 
@@ -494,30 +494,30 @@ let unpack_signed_64 ~byte_order ~buf ~pos =
   Int64.logor
     (Int64.logor
        (Int64.shift_left
-          (Int64.of_int (Char.code buf.[pos + offset ~len:8 ~byte_order 0] lsl 16
-                         lor Char.code buf.[pos + offset ~len:8 ~byte_order 1] lsl 8
-                         lor Char.code buf.[pos + offset ~len:8 ~byte_order 2]))
+          (Int64.of_int (Char.code (Bytes.get buf (pos + offset ~len:8 ~byte_order 0)) lsl 16
+                         lor Char.code (Bytes.get buf (pos + offset ~len:8 ~byte_order 1)) lsl 8
+                         lor Char.code (Bytes.get buf (pos + offset ~len:8 ~byte_order 2))))
           40)
        (Int64.shift_left
-          (Int64.of_int (Char.code buf.[pos + offset ~len:8 ~byte_order 3] lsl 16
-                         lor Char.code buf.[pos + offset ~len:8 ~byte_order 4] lsl 8
-                         lor Char.code buf.[pos + offset ~len:8 ~byte_order 5]))
+          (Int64.of_int (Char.code (Bytes.get buf (pos + offset ~len:8 ~byte_order 3)) lsl 16
+                         lor Char.code (Bytes.get buf (pos + offset ~len:8 ~byte_order 4)) lsl 8
+                         lor Char.code (Bytes.get buf (pos + offset ~len:8 ~byte_order 5))))
           16))
-    (Int64.of_int (Char.code buf.[pos + offset ~len:8 ~byte_order 6] lsl 8
-                   lor Char.code buf.[pos + offset ~len:8 ~byte_order 7]))
+    (Int64.of_int (Char.code (Bytes.get buf (pos + offset ~len:8 ~byte_order 6)) lsl 8
+                   lor Char.code (Bytes.get buf (pos + offset ~len:8 ~byte_order 7))))
 ;;
 
 let unpack_signed_64_big_endian ~buf ~pos =
   (* Do bounds checking only on the first and last bytes *)
-  let b1 = Char.code buf.[pos]
-  and b8 = Char.code buf.[pos + 7] in
+  let b1 = Char.code (Bytes.get buf pos)
+  and b8 = Char.code (Bytes.get buf (pos + 7)) in
 
-  let b2 = Char.code (Caml.Bytes.unsafe_get buf (pos + 1))
-  and b3 = Char.code (Caml.Bytes.unsafe_get buf (pos + 2))
-  and b4 = Char.code (Caml.Bytes.unsafe_get buf (pos + 3))
-  and b5 = Char.code (Caml.Bytes.unsafe_get buf (pos + 4))
-  and b6 = Char.code (Caml.Bytes.unsafe_get buf (pos + 5))
-  and b7 = Char.code (Caml.Bytes.unsafe_get buf (pos + 6)) in
+  let b2 = Char.code (Bytes.unsafe_get buf (pos + 1))
+  and b3 = Char.code (Bytes.unsafe_get buf (pos + 2))
+  and b4 = Char.code (Bytes.unsafe_get buf (pos + 3))
+  and b5 = Char.code (Bytes.unsafe_get buf (pos + 4))
+  and b6 = Char.code (Bytes.unsafe_get buf (pos + 5))
+  and b7 = Char.code (Bytes.unsafe_get buf (pos + 6)) in
   if arch_sixtyfour then
     let i1 = Int64.of_int (                                b1)
     and i2 = Int64.of_int ((b2 lsl 48) lor (b3 lsl 40) lor
@@ -534,15 +534,15 @@ let unpack_signed_64_big_endian ~buf ~pos =
 
 let unpack_signed_64_little_endian ~buf ~pos =
   (* Do bounds checking only on the first and last bytes *)
-  let b1 = Char.code buf.[pos]
-  and b8 = Char.code buf.[pos + 7] in
+  let b1 = Char.code (Bytes.get buf pos)
+  and b8 = Char.code (Bytes.get buf (pos + 7)) in
 
-  let b2 = Char.code (Caml.Bytes.unsafe_get buf (pos + 1))
-  and b3 = Char.code (Caml.Bytes.unsafe_get buf (pos + 2))
-  and b4 = Char.code (Caml.Bytes.unsafe_get buf (pos + 3))
-  and b5 = Char.code (Caml.Bytes.unsafe_get buf (pos + 4))
-  and b6 = Char.code (Caml.Bytes.unsafe_get buf (pos + 5))
-  and b7 = Char.code (Caml.Bytes.unsafe_get buf (pos + 6)) in
+  let b2 = Char.code (Bytes.unsafe_get buf (pos + 1))
+  and b3 = Char.code (Bytes.unsafe_get buf (pos + 2))
+  and b4 = Char.code (Bytes.unsafe_get buf (pos + 3))
+  and b5 = Char.code (Bytes.unsafe_get buf (pos + 4))
+  and b6 = Char.code (Bytes.unsafe_get buf (pos + 5))
+  and b7 = Char.code (Bytes.unsafe_get buf (pos + 6)) in
   if arch_sixtyfour
   then
     let i1 = Int64.of_int (b1         lor (b2 lsl  8) lor
@@ -580,12 +580,12 @@ let pack_signed_64_int_big_endian ~buf ~pos v =
   Bytes.set buf pos (Char.unsafe_chr (0xFF land (v asr 56)));
   Bytes.set buf (pos + 7) (Char.unsafe_chr (0xFF land v));
   (* Now we can use [unsafe_set] for the intermediate bytes. *)
-  Caml.Bytes.unsafe_set buf (pos + 1) (Char.unsafe_chr (0xFF land (v asr 48)));
-  Caml.Bytes.unsafe_set buf (pos + 2) (Char.unsafe_chr (0xFF land (v asr 40)));
-  Caml.Bytes.unsafe_set buf (pos + 3) (Char.unsafe_chr (0xFF land (v asr 32)));
-  Caml.Bytes.unsafe_set buf (pos + 4) (Char.unsafe_chr (0xFF land (v asr 24)));
-  Caml.Bytes.unsafe_set buf (pos + 5) (Char.unsafe_chr (0xFF land (v asr 16)));
-  Caml.Bytes.unsafe_set buf (pos + 6) (Char.unsafe_chr (0xFF land (v asr 8)))
+  Bytes.unsafe_set buf (pos + 1) (Char.unsafe_chr (0xFF land (v asr 48)));
+  Bytes.unsafe_set buf (pos + 2) (Char.unsafe_chr (0xFF land (v asr 40)));
+  Bytes.unsafe_set buf (pos + 3) (Char.unsafe_chr (0xFF land (v asr 32)));
+  Bytes.unsafe_set buf (pos + 4) (Char.unsafe_chr (0xFF land (v asr 24)));
+  Bytes.unsafe_set buf (pos + 5) (Char.unsafe_chr (0xFF land (v asr 16)));
+  Bytes.unsafe_set buf (pos + 6) (Char.unsafe_chr (0xFF land (v asr 8)))
 ;;
 
 let pack_signed_64_int_little_endian ~buf ~pos v =
@@ -593,24 +593,24 @@ let pack_signed_64_int_little_endian ~buf ~pos v =
   Bytes.set buf pos (Char.unsafe_chr (0xFF land v));
   Bytes.set buf (pos + 7) (Char.unsafe_chr (0xFF land (v asr 56)));
   (* Now we can use [unsafe_set] for the intermediate bytes. *)
-  Caml.Bytes.unsafe_set buf (pos + 1) (Char.unsafe_chr (0xFF land (v asr 8)));
-  Caml.Bytes.unsafe_set buf (pos + 2) (Char.unsafe_chr (0xFF land (v asr 16)));
-  Caml.Bytes.unsafe_set buf (pos + 3) (Char.unsafe_chr (0xFF land (v asr 24)));
-  Caml.Bytes.unsafe_set buf (pos + 4) (Char.unsafe_chr (0xFF land (v asr 32)));
-  Caml.Bytes.unsafe_set buf (pos + 5) (Char.unsafe_chr (0xFF land (v asr 40)));
-  Caml.Bytes.unsafe_set buf (pos + 6) (Char.unsafe_chr (0xFF land (v asr 48)))
+  Bytes.unsafe_set buf (pos + 1) (Char.unsafe_chr (0xFF land (v asr 8)));
+  Bytes.unsafe_set buf (pos + 2) (Char.unsafe_chr (0xFF land (v asr 16)));
+  Bytes.unsafe_set buf (pos + 3) (Char.unsafe_chr (0xFF land (v asr 24)));
+  Bytes.unsafe_set buf (pos + 4) (Char.unsafe_chr (0xFF land (v asr 32)));
+  Bytes.unsafe_set buf (pos + 5) (Char.unsafe_chr (0xFF land (v asr 40)));
+  Bytes.unsafe_set buf (pos + 6) (Char.unsafe_chr (0xFF land (v asr 48)))
 ;;
 
 let unpack_signed_64_int ~byte_order ~buf ~pos =
   assert (Sys.word_size = 64);
-  (Char.code buf.[pos + offset ~len:8 ~byte_order 0] lsl 56)
-  lor (Char.code buf.[pos + offset ~len:8 ~byte_order 1] lsl 48)
-  lor (Char.code buf.[pos + offset ~len:8 ~byte_order 2] lsl 40)
-  lor (Char.code buf.[pos + offset ~len:8 ~byte_order 3] lsl 32)
-  lor (Char.code buf.[pos + offset ~len:8 ~byte_order 4] lsl 24)
-  lor (Char.code buf.[pos + offset ~len:8 ~byte_order 5] lsl 16)
-  lor (Char.code buf.[pos + offset ~len:8 ~byte_order 6] lsl 8)
-  lor (Char.code buf.[pos + offset ~len:8 ~byte_order 7])
+  (Char.code (Bytes.get buf (pos + offset ~len:8 ~byte_order 0)) lsl 56)
+  lor (Char.code (Bytes.get buf (pos + offset ~len:8 ~byte_order 1)) lsl 48)
+  lor (Char.code (Bytes.get buf (pos + offset ~len:8 ~byte_order 2)) lsl 40)
+  lor (Char.code (Bytes.get buf (pos + offset ~len:8 ~byte_order 3)) lsl 32)
+  lor (Char.code (Bytes.get buf (pos + offset ~len:8 ~byte_order 4)) lsl 24)
+  lor (Char.code (Bytes.get buf (pos + offset ~len:8 ~byte_order 5)) lsl 16)
+  lor (Char.code (Bytes.get buf (pos + offset ~len:8 ~byte_order 6)) lsl 8)
+  lor (Char.code (Bytes.get buf (pos + offset ~len:8 ~byte_order 7)))
 ;;
 
 exception Unpack_signed_64_int_most_significant_byte_too_large of int [@@deriving sexp]
@@ -622,15 +622,15 @@ let check_highest_order_byte_range byte =
 let unpack_signed_64_int_big_endian ~buf ~pos =
   assert (Sys.word_size = 64);
   (* Do bounds checking only on the first and last bytes *)
-  let b1 = Char.code buf.[pos]
-  and b8 = Char.code buf.[pos + 7] in
+  let b1 = Char.code (Bytes.get buf pos)
+  and b8 = Char.code (Bytes.get buf (pos + 7)) in
 
-  let b2 = Char.code (Caml.Bytes.unsafe_get buf (pos + 1))
-  and b3 = Char.code (Caml.Bytes.unsafe_get buf (pos + 2))
-  and b4 = Char.code (Caml.Bytes.unsafe_get buf (pos + 3))
-  and b5 = Char.code (Caml.Bytes.unsafe_get buf (pos + 4))
-  and b6 = Char.code (Caml.Bytes.unsafe_get buf (pos + 5))
-  and b7 = Char.code (Caml.Bytes.unsafe_get buf (pos + 6)) in
+  let b2 = Char.code (Bytes.unsafe_get buf (pos + 1))
+  and b3 = Char.code (Bytes.unsafe_get buf (pos + 2))
+  and b4 = Char.code (Bytes.unsafe_get buf (pos + 3))
+  and b5 = Char.code (Bytes.unsafe_get buf (pos + 4))
+  and b6 = Char.code (Bytes.unsafe_get buf (pos + 5))
+  and b7 = Char.code (Bytes.unsafe_get buf (pos + 6)) in
 
   check_highest_order_byte_range b1;
 
@@ -643,15 +643,15 @@ let unpack_signed_64_int_big_endian ~buf ~pos =
 let unpack_signed_64_int_little_endian ~buf ~pos =
   assert (Sys.word_size = 64);
   (* Do bounds checking only on the first and last bytes *)
-  let b1 = Char.code buf.[pos]
-  and b8 = Char.code buf.[pos + 7] in
+  let b1 = Char.code (Bytes.get buf pos)
+  and b8 = Char.code (Bytes.get buf (pos + 7)) in
 
-  let b2 = Char.code (Caml.Bytes.unsafe_get buf (pos + 1))
-  and b3 = Char.code (Caml.Bytes.unsafe_get buf (pos + 2))
-  and b4 = Char.code (Caml.Bytes.unsafe_get buf (pos + 3))
-  and b5 = Char.code (Caml.Bytes.unsafe_get buf (pos + 4))
-  and b6 = Char.code (Caml.Bytes.unsafe_get buf (pos + 5))
-  and b7 = Char.code (Caml.Bytes.unsafe_get buf (pos + 6)) in
+  let b2 = Char.code (Bytes.unsafe_get buf (pos + 1))
+  and b3 = Char.code (Bytes.unsafe_get buf (pos + 2))
+  and b4 = Char.code (Bytes.unsafe_get buf (pos + 3))
+  and b5 = Char.code (Bytes.unsafe_get buf (pos + 4))
+  and b6 = Char.code (Bytes.unsafe_get buf (pos + 5))
+  and b7 = Char.code (Bytes.unsafe_get buf (pos + 6)) in
 
   check_highest_order_byte_range b8;
 
@@ -736,7 +736,7 @@ let unpack_float ~byte_order ~buf ~pos =
 
 let rec last_nonmatch_plus_one ~buf ~min_pos ~pos ~char =
   let pos' = pos - 1 in
-  if pos' >= min_pos && Core_char.(=) (String.get buf pos') char then
+  if pos' >= min_pos && Core_char.(=) (Bytes.get buf pos') char then
     last_nonmatch_plus_one ~buf ~min_pos ~pos:pos' ~char
   else
     pos
@@ -746,7 +746,7 @@ let unpack_tail_padded_fixed_string ?(padding='\x00') ~buf ~pos ~len () =
   let data_end =
     last_nonmatch_plus_one ~buf ~min_pos:pos ~pos:(pos + len) ~char:padding
   in
-  String.sub buf ~pos ~len:(data_end - pos)
+  Bytes.sub buf ~pos ~len:(data_end - pos)
 ;;
 
 exception Pack_tail_padded_fixed_string_argument_too_long of
@@ -754,9 +754,9 @@ exception Pack_tail_padded_fixed_string_argument_too_long of
 ;;
 
 let pack_tail_padded_fixed_string ?(padding='\x00') ~buf ~pos ~len s =
-  let slen = String.length s in
+  let slen = Bytes.length s in
   if slen > len then
-    raise (Pack_tail_padded_fixed_string_argument_too_long (`s s, `longer_than, `len len))
+    raise (Pack_tail_padded_fixed_string_argument_too_long (`s (Bytes.to_string s), `longer_than, `len len))
   else begin
     Bytes.blit ~src:s ~dst:buf ~src_pos:0 ~dst_pos:pos ~len:slen;
     if slen < len then begin
@@ -768,53 +768,57 @@ let pack_tail_padded_fixed_string ?(padding='\x00') ~buf ~pos ~len s =
 
 let%test_module "inline_tail_padded_fixed_string" =
   (module struct
-    let%test _ = last_nonmatch_plus_one ~buf:"222121212" ~min_pos:3 ~pos:9 ~char:'2' = 8
-    let%test _ = last_nonmatch_plus_one ~buf:"111121212" ~min_pos:3 ~pos:9 ~char:'1' = 9
-    let%test _ = last_nonmatch_plus_one ~buf:"222121222" ~min_pos:3 ~pos:9 ~char:'2' = 6
-    let%test _ = last_nonmatch_plus_one ~buf:"222222222" ~min_pos:3 ~pos:9 ~char:'2' = 3
-    let%test _ = last_nonmatch_plus_one ~buf:"221222222" ~min_pos:3 ~pos:9 ~char:'2' = 3
-    let%test _ = last_nonmatch_plus_one ~buf:"222122222" ~min_pos:3 ~pos:9 ~char:'2' = 4
-    let%test _ = last_nonmatch_plus_one ~buf:"222122222" ~min_pos:3 ~pos:9 ~char:'1' = 9
-    let%test _ = last_nonmatch_plus_one ~buf:"222122222" ~min_pos:3 ~pos:8 ~char:'1' = 8
-    let%test _ = last_nonmatch_plus_one ~buf:"222122221" ~min_pos:3 ~pos:8 ~char:'1' = 8
-    let%test _ = last_nonmatch_plus_one ~buf:"222122221" ~min_pos:3 ~pos:8 ~char:'2' = 4
-    let%test _ = unpack_tail_padded_fixed_string ~padding:'.' ~buf:"ab..c." ~pos:1 ~len:5 () = "b..c"
-    let%test _ = unpack_tail_padded_fixed_string ~padding:'.' ~buf:"ab..c." ~pos:1 ~len:4 () = "b..c"
-    let%test _ = unpack_tail_padded_fixed_string ~padding:'.' ~buf:"ab..c." ~pos:1 ~len:3 () = "b"
-    let%test _ = unpack_tail_padded_fixed_string ~padding:'.' ~buf:"ab..c." ~pos:1 ~len:2 () = "b"
-    let%test _ = unpack_tail_padded_fixed_string ~padding:'.' ~buf:"ab..c." ~pos:1 ~len:1 () = "b"
-    let%test _ = unpack_tail_padded_fixed_string ~padding:'.' ~buf:"ab..c" ~pos:2 ~len:3 () = "..c"
-    let%test _ = unpack_tail_padded_fixed_string ~padding:'.' ~buf:"ab..c" ~pos:2 ~len:2 () = ""
-    let%test _ = unpack_tail_padded_fixed_string ~padding:'.' ~buf:"ab..cd" ~pos:2 ~len:3 () = "..c"
-    let%test _ = unpack_tail_padded_fixed_string ~padding:'.' ~buf:"ab..cd" ~pos:2 ~len:2 () = ""
-    let%test _ = unpack_tail_padded_fixed_string ~padding:'.' ~buf:"ab..c." ~pos:2 ~len:1 () = ""
-    let%test _ = unpack_tail_padded_fixed_string ~padding:'.' ~buf:".....x" ~pos:0 ~len:6 () = ".....x"
-    let%test _ = unpack_tail_padded_fixed_string ~padding:'.' ~buf:".....x" ~pos:0 ~len:5 () = ""
+    let test_last_nonmatch_plus_one ~buf ~min_pos ~pos ~char ~expect =
+      last_nonmatch_plus_one ~buf:(Bytes.of_string buf) ~min_pos ~pos ~char = expect
+    let%test _ = test_last_nonmatch_plus_one ~buf:"222121212" ~min_pos:3 ~pos:9 ~char:'2' ~expect:8
+    let%test _ = test_last_nonmatch_plus_one ~buf:"111121212" ~min_pos:3 ~pos:9 ~char:'1' ~expect:9
+    let%test _ = test_last_nonmatch_plus_one ~buf:"222121222" ~min_pos:3 ~pos:9 ~char:'2' ~expect:6
+    let%test _ = test_last_nonmatch_plus_one ~buf:"222222222" ~min_pos:3 ~pos:9 ~char:'2' ~expect:3
+    let%test _ = test_last_nonmatch_plus_one ~buf:"221222222" ~min_pos:3 ~pos:9 ~char:'2' ~expect:3
+    let%test _ = test_last_nonmatch_plus_one ~buf:"222122222" ~min_pos:3 ~pos:9 ~char:'2' ~expect:4
+    let%test _ = test_last_nonmatch_plus_one ~buf:"222122222" ~min_pos:3 ~pos:9 ~char:'1' ~expect:9
+    let%test _ = test_last_nonmatch_plus_one ~buf:"222122222" ~min_pos:3 ~pos:8 ~char:'1' ~expect:8
+    let%test _ = test_last_nonmatch_plus_one ~buf:"222122221" ~min_pos:3 ~pos:8 ~char:'1' ~expect:8
+    let%test _ = test_last_nonmatch_plus_one ~buf:"222122221" ~min_pos:3 ~pos:8 ~char:'2' ~expect:4
+
+    let test_unpack_tail_padded_fixed_string ~padding ~buf ~pos ~len ~expect =
+      let result =
+        unpack_tail_padded_fixed_string ~padding ~buf:(Bytes.of_string buf) ~pos ~len ()
+        |> Bytes.to_string
+      in
+      result = expect
+
+    let%test _ = test_unpack_tail_padded_fixed_string ~padding:'.' ~buf:"ab..c." ~pos:1 ~len:5 ~expect:"b..c"
+    let%test _ = test_unpack_tail_padded_fixed_string ~padding:'.' ~buf:"ab..c." ~pos:1 ~len:4 ~expect:"b..c"
+    let%test _ = test_unpack_tail_padded_fixed_string ~padding:'.' ~buf:"ab..c." ~pos:1 ~len:3 ~expect:"b"
+    let%test _ = test_unpack_tail_padded_fixed_string ~padding:'.' ~buf:"ab..c." ~pos:1 ~len:2 ~expect:"b"
+    let%test _ = test_unpack_tail_padded_fixed_string ~padding:'.' ~buf:"ab..c." ~pos:1 ~len:1 ~expect:"b"
+    let%test _ = test_unpack_tail_padded_fixed_string ~padding:'.' ~buf:"ab..c" ~pos:2 ~len:3 ~expect:"..c"
+    let%test _ = test_unpack_tail_padded_fixed_string ~padding:'.' ~buf:"ab..c" ~pos:2 ~len:2 ~expect:""
+    let%test _ = test_unpack_tail_padded_fixed_string ~padding:'.' ~buf:"ab..cd" ~pos:2 ~len:3 ~expect:"..c"
+    let%test _ = test_unpack_tail_padded_fixed_string ~padding:'.' ~buf:"ab..cd" ~pos:2 ~len:2 ~expect:""
+    let%test _ = test_unpack_tail_padded_fixed_string ~padding:'.' ~buf:"ab..c." ~pos:2 ~len:1 ~expect:""
+    let%test _ = test_unpack_tail_padded_fixed_string ~padding:'.' ~buf:".....x" ~pos:0 ~len:6 ~expect:".....x"
+    let%test _ = test_unpack_tail_padded_fixed_string ~padding:'.' ~buf:".....x" ~pos:0 ~len:5 ~expect:""
+
+    let test_pack_tail_padded_fixed_string ~padding ~pos ~len str ~expect =
+      let buf = Bytes.of_string "12345678" in
+      pack_tail_padded_fixed_string ~padding ~buf ~pos ~len (Bytes.of_string str);
+      Bytes.to_string buf = expect
+
     let%test _ =
-      "1abcd.78" = (
-        let buf = "12345678" in
-        pack_tail_padded_fixed_string ~padding:'.' ~buf ~pos:1 ~len:5 "abcd";
-        buf)
+      test_pack_tail_padded_fixed_string ~expect:"1abcd.78" ~padding:'.' ~pos:1 ~len:5 "abcd"
     let%test _ =
-      "1abcde78" = (
-        let buf = "12345678" in
-        pack_tail_padded_fixed_string ~padding:'.' ~buf ~pos:1 ~len:5 "abcde";
-        buf)
+      test_pack_tail_padded_fixed_string ~expect:"1abcde78" ~padding:'.' ~pos:1 ~len:5 "abcde"
     let%test _ =
-      "1.....78" = (
-        let buf = "12345678" in
-        pack_tail_padded_fixed_string ~padding:'.' ~buf ~pos:1 ~len:5 "";
-        buf)
+      test_pack_tail_padded_fixed_string ~expect:"1.....78" ~padding:'.' ~pos:1 ~len:5 ""
     let%test _ =
-      "1.....78" = (
-        let buf = "12345678" in
-        pack_tail_padded_fixed_string ~padding:'.' ~buf ~pos:1 ~len:5 "...";
-        buf)
+      test_pack_tail_padded_fixed_string ~expect:"1.....78" ~padding:'.' ~pos:1 ~len:5 "..."
   end)
 ;;
 
 let test byte_order =
-  let buf = String.make 8 'a' in
+  let buf = Bytes.make 8 'a' in
   let test name to_string p u ns =
     List.iter ns ~f:(fun n ->
       p ~byte_order ~buf ~pos:0 n;

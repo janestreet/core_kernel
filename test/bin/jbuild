@@ -15,6 +15,7 @@
 
 (executables
  ((names (float_test pool_caml_modify_check just_raise))
+  (flags (:standard -safe-string))
   (libraries (replace_caml_modify_for_testing
               core))
   (preprocess (pps (ppx_jane ppx_driver.runner)))))
