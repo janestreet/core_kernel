@@ -54,6 +54,9 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
         include Hashtbl_intf.Accessors
           with type ('a, 'b) t := ('a, 'b) Hashtbl.t
           with type 'a key := 'a Hashtbl.key
+        include Hashtbl_intf.Multi
+          with type ('a, 'b) t := ('a, 'b) Hashtbl.t
+          with type 'a key := 'a Hashtbl.key
         val invariant
           :  'a Invariant.t
           -> 'b Invariant.t

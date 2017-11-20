@@ -28,7 +28,10 @@ module Stable = struct
       (* Number of seconds since midnight. *)
       type underlying = Float.t
       include
-        (Float : sig
+        (struct
+          include Float
+          let sign = sign_exn
+        end : sig
            type t = underlying [@@deriving bin_io, hash]
            include Comparable.S_common  with type t := t
            include Comparable.With_zero with type t := t

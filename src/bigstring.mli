@@ -116,10 +116,13 @@ external is_mmapped : t -> bool = "bigstring_is_mmapped_stub" [@@noalloc]
 include Blit.S with type t := t
 
 module To_string : sig
-  val blit        : (t, bytes)  Blit.blit
-  val blito       : (t, bytes)  Blit.blito
-  val unsafe_blit : (t, bytes)  Blit.blit
-  val sub  : (t, string) Blit.sub
+  val blit : (t, bytes) Blit.blit
+  [@@deprecated "[since 2017-10] use [Bigstring.To_bytes.blit] instead"]
+  val blito : (t, bytes) Blit.blito
+  [@@deprecated "[since 2017-10] use [Bigstring.To_bytes.blito] instead"]
+  val unsafe_blit : (t, bytes) Blit.blit
+  [@@deprecated "[since 2017-10] use [Bigstring.To_bytes.unsafe_blit] instead"]
+  val sub : (t, string) Blit.sub
   val subo : (t, string) Blit.subo
 end
 module From_string : Blit.S_distinct with type src := string with type dst := t

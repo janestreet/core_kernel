@@ -157,7 +157,10 @@ let is_zero t = t = 0.
 let apply t f = t *. f
 let scale t f = t *. f
 
-include (Float : sig
+include (struct
+  include Float
+  let sign = sign_exn
+end : sig
            val zero : t
            val ( * ) : t -> t -> t
            val ( + ) : t -> t -> t

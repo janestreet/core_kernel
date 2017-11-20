@@ -54,4 +54,4 @@ val pop_exn : 'a t -> 'a * 'a t
 val pop_if : 'a t -> ('a -> bool) -> ('a * 'a t) option
 
 (** [to_sequence t] is a sequence of the elements of [t] in ascending order. *)
-val to_sequence: 'a t -> 'a Sequence.t
+val to_sequence: 'a t -> 'a Base.Sequence.t

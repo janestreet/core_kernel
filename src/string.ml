@@ -69,13 +69,14 @@ module For_quickcheck = struct
   open Generator.Let_syntax
 
   let default_length =
-    let%bind size = Generator.size in
     (* Generating the empty string for every size 0 case is far more tests of the empty
-       string than we need.  Instead, at size 0 we generate strings of length 0 and length
-       1.  At size N>0 we generate strings of length N+1. *)
-    if Int.equal size 0
-    then Generator.weighted_union [ 1., return 0; 10., return 1 ]
-    else return (size + 1)
+       string than we need. Instead, at any size we generate strings of length up to
+       size+1. *)
+    let%bind size          = Generator.size                         in
+    let      upper_bound   = size + 1                               in
+    let%bind weighted_low  = Int.gen_log_uniform_incl 0 upper_bound in
+    let      weighted_high = upper_bound - weighted_low             in
+    return weighted_high
 
   let gen_with_length len char_gen =
     let%bind chars = List.gen_with_length len char_gen in

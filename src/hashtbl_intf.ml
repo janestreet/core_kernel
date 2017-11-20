@@ -22,6 +22,7 @@ end
 
 module type Creators  = Hashtbl_intf.Creators
 module type Accessors = Hashtbl_intf.Accessors
+module type Multi     = Hashtbl_intf.Multi
 
 type ('key, 'data, 'z) create_options_without_hashable =
   ('key, 'data, 'z) Hashtbl_intf.create_options_without_hashable
@@ -46,6 +47,10 @@ module type S_plain = sig
     with type ('key, 'data, 'z) create_options := ('key, 'data, 'z) create_options_without_hashable
 
   include Accessors
+    with type ('a, 'b) t := ('a, 'b) t_
+    with type 'a key := 'a key_
+
+  include Multi
     with type ('a, 'b) t := ('a, 'b) t_
     with type 'a key := 'a key_
 

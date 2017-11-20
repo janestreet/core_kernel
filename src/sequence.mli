@@ -13,3 +13,12 @@ end
 
 include module type of struct include Base.Sequence end
   with module Merge_with_duplicates_element := Merge_with_duplicates_element
+
+(** Merges elements from sequences that are assumed to be sorted by [compare] to produce a
+    sequence also sorted by [compare]. If any of the inputs are not sorted, the order of
+    the output is not guaranteed to be sorted.
+
+    This includes duplicate elements in the output (whether they occur within
+    one input sequence, or across different input sequences).
+*)
+val merge_all : 'a t list -> compare:('a -> 'a -> int) -> 'a t

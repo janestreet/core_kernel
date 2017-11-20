@@ -66,7 +66,10 @@ module Stable = struct
       (* IF THIS REPRESENTATION EVER CHANGES, ENSURE THAT EITHER
          (1) all values serialize the same way in both representations, or
          (2) you add a new Time.Span version to stable.ml *)
-      include (Float : Like_a_float with type t := t)
+      include (struct
+        include Float
+        let sign = sign_exn
+      end : Like_a_float with type t := t)
 
       (* due to precision limitations in float we can't expect better than microsecond
          precision *)

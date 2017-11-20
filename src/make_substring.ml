@@ -11,7 +11,9 @@ module Blit : sig
   type ('src, 'dst) t = ('src, 'dst) Blit.blito
 
   val string_string       : (string   , bytes   ) t
+  [@@deprecated "[since 2017-10] use [string_bytes] instead"]
   val bigstring_string    : (bigstring, bytes   ) t
+  [@@deprecated "[since 2017-10] use [bigstring_bytes] instead"]
 
   val string_bytes        : (string   , bytes   ) t
   val bytes_bytes         : (bytes    , bytes   ) t
@@ -41,7 +43,7 @@ end = struct
 
   let bigstring_bigstring = Bigstring.blito
 
-  let bigstring_string = Bigstring.To_string.blito
+  let bigstring_string = Bigstring.To_bytes.blito
 
   let bigstring_bytes = Bigstring.To_bytes.blito
 
@@ -53,11 +55,13 @@ module type Base = sig
   val create : int -> t
   val length : t -> int
   val blit : (t, t) Blit.t
-  val blit_to_string      : (t        , bytes    ) Blit.t
   val blit_to_bytes       : (t        , bytes    ) Blit.t
   val blit_to_bigstring   : (t        , bigstring) Blit.t
   val blit_from_string    : (string   , t        ) Blit.t
   val blit_from_bigstring : (bigstring, t        ) Blit.t
+
+  val blit_to_string      : (t        , bytes    ) Blit.t
+  [@@deprecated "[since 2017-10] use [blit_to_bytes] instead"]
 
   val get : t -> int -> char
 

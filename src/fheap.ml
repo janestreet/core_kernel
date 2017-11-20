@@ -1,5 +1,13 @@
 open! Import
-open Std_internal
+
+module Array    = Base.Array
+module Int      = Base.Int
+module List     = Base.List
+module Option   = Base.Option
+module Sequence = Base.Sequence
+module Sexp     = Base.Sexp
+
+let failwithf = Base.Printf.failwithf
 
 module Node = struct
   type 'a t =
@@ -115,7 +123,7 @@ module C = Container.Make (struct
   end)
 
 let length t   = t.length
-let is_empty t = t.heap = None
+let is_empty t = Option.is_none t.heap
 
 let iter        = C.iter
 let mem         = C.mem
@@ -237,7 +245,7 @@ let%test_module _ =
       let defaults = create () in
       let res1, this_t = f res1 (fst defaults) in
       let res2, that_t = f res2 (snd defaults) in
-      if res1 <> res2 then
+      if Poly.( <> ) res1 res2 then
         failwithf "pop results differ (%s, %s)"
           (Option.value_map ~default:"None" ~f:Int.to_string res1)
           (Option.value_map ~default:"None" ~f:Int.to_string res2)
@@ -249,7 +257,7 @@ let%test_module _ =
     let top (this_t, that_t) =
       let res1 = This_heap.top this_t in
       let res2 = That_heap.top that_t in
-      if res1 <> res2 then
+      if Poly.( <> ) res1 res2 then
         failwithf "top results differ (%s, %s)"
           (Option.value_map ~default:"None" ~f:Int.to_string res1)
           (Option.value_map ~default:"None" ~f:Int.to_string res2) ()
@@ -281,8 +289,8 @@ let%test_module _ =
     ;;
 
     let check_sum (this_t, that_t) =
-      let this_sum = This_heap.sum (module Int) ~f:ident this_t in
-      let that_sum = That_heap.sum (module Int) ~f:ident that_t in
+      let this_sum = This_heap.sum (module Int) ~f:Fn.id this_t in
+      let that_sum = That_heap.sum (module Int) ~f:Fn.id that_t in
       [%test_eq: int] this_sum that_sum;
       this_sum
     ;;
@@ -329,7 +337,7 @@ let%test_unit _ =
   let h = of_list data ~cmp:Int.compare in
   let (top_value, t) = pop_exn h in
   [%test_result: int] ~expect:0 top_value;
-  let list_sum = List.sum (module Int) data ~f:ident in
+  let list_sum = List.sum (module Int) data ~f:Fn.id in
   let heap_fold_sum = fold t ~init:0 ~f:(fun sum v -> sum + v) in
   let heap_iter_sum =
     let r = ref 0 in
@@ -343,7 +351,7 @@ let%test_unit _ =
 let%test_unit _ =
   let data = [ 0; 1; 2; 3; 4; 5; 6; 7 ] in
   let t = of_list data ~cmp:Int.compare in
-  let s = sum (module Int) t ~f:ident in
+  let s = sum (module Int) t ~f:Fn.id in
   [%test_result: int] ~expect:28 s;
   let t = add t 8 in
   let top_value = top_exn t in
