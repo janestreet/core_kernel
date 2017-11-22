@@ -2,21 +2,38 @@
 
 open! Import
 
+module type S_common = sig
+  type t [@@deriving compare, hash, sexp_of]
+  include Stringable.S     with type t := t
+  include Pretty_printer.S with type t := t
+end
+
+module type S_plain = sig
+  include S_common
+  include Comparable.S_plain with type t := t
+  include Hashable.S_plain   with type t := t
+end
+
 module type S_not_binable = sig
   type t [@@deriving hash, sexp]
-  include Stringable.S     with type t := t
-  include Comparable.S     with type t := t
-  include Hashable.S       with type t := t
-  include Pretty_printer.S with type t := t
+  include S_common     with type t := t
+  include Comparable.S with type t := t
+  include Hashable.S   with type t := t
 end
 
 module type S = sig
   type t [@@deriving bin_io, hash, sexp]
-  include Stringable.S         with type t := t
+  include S_common             with type t := t
   include Comparable.S_binable with type t := t
   include Hashable.S_binable   with type t := t
-  include Pretty_printer.S     with type t := t
 end
+
+module Make_plain (M : sig
+    type t [@@deriving compare, hash, sexp_of]
+    include Stringable.S with type t := t
+    val module_name : string  (** for registering the pretty printer *)
+  end) : S_plain
+  with type t := M.t
 
 (** Used for making an Identifiable module.  Here's an example.
 

@@ -32,6 +32,7 @@ module Std = struct
     module Time_float0          = Time_float0
     module Kernel_time          = Time
     module Time_float           = Time_float
+    module Ofday_parser         = Ofday_parser
 
     module Bigbuffer_internal              = Bigbuffer_internal
     module Container_unit_tests            = Container_unit_tests

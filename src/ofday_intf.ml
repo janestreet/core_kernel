@@ -98,10 +98,12 @@ module type Ofday = sig
       This is useful for comparing two ofdays in unknown time-zones. *)
   val small_diff : t -> t -> Span.t
 
-  (** trailing seconds and subseconds are trimmed off if they are 0 *)
+  (** Trailing groups of zeroes are trimmed such that the output is printed in terms of
+      the smallest non-zero units among nanoseconds, microseconds, milliseconds, or
+      seconds; or minutes if all of the above are zero. *)
   val to_string_trimmed : t -> string
 
-  (** trailing milliseconds are trimmed *)
+  (** HH:MM:SS, without any subsecond components. Seconds appear even if they are zero. *)
   val to_sec_string : t -> string
 
   val of_string_iso8601_extended : ?pos:int -> ?len:int -> string -> t
