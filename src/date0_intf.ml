@@ -126,6 +126,9 @@ module type Date0 = sig
   (** [is_leap_year ~year] returns true if [year] is considered a leap year *)
   val is_leap_year : year:int -> bool
 
+  (** The starting date of the UNIX epoch: 1970-01-01 *)
+  val unix_epoch : t
+
   (** [gen] generates dates between 1900-01-01 and 2100-01-01. *)
   include Quickcheckable with type t := t
 
@@ -136,6 +139,25 @@ module type Date0 = sig
   (** [gen_uniform_incl d1 d2] generates dates chosen uniformly in the range between [d1]
       and [d2], inclusive.  Raises if [d1 > d2]. *)
   val gen_uniform_incl : t -> t -> t Quickcheck.Generator.t
+
+  (** [Days] provides a linear representation of dates that is optimized for arithmetic on
+      the number of days between dates, rather than for representing year/month/day
+      components. This module is intended for use only in performance-sensitive contexts
+      where dates are manipulated more often than they are constructed or deconstructed;
+      most clients should use the ordinary [t]. *)
+  module Days : sig
+    type date = t
+    type t
+
+    val of_date : date -> t
+    val to_date : t -> date
+
+    val diff     : t -> t -> int
+    val add_days : t -> int -> t
+
+    (** The starting date of the UNIX epoch: 1970-01-01 *)
+    val unix_epoch : t
+  end with type date := t
 
   module Stable : sig
     module V1 : sig

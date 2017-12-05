@@ -50,7 +50,7 @@ module Time_float_with_limited_parsing = struct
         | Some (date, ofday) ->
           let date = Date.t_of_sexp (sexp_of_string date) in
           let ofday = Time_float.Ofday.t_of_sexp (sexp_of_string ofday) in
-          Time_float.utc_mktime date ofday, sexp
+          Time_float.of_date_ofday date ofday ~zone:Time_float.Zone.utc, sexp
     with
     | Sexplib.Conv.Of_sexp_error (e, _) | e -> raise (Sexplib.Conv.Of_sexp_error (e, sexp))
 

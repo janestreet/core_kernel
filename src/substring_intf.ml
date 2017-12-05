@@ -45,20 +45,21 @@ module type S = sig
   val blit_from_bigstring : t -> src:Bigstring.t -> src_pos:int -> len:int -> unit
 
   (** {6 String concatenation} *)
+  (** These functions always copy. *)
 
-  (** These always copy. *)
   val concat           : t list -> t
   val concat_string    : t list -> string
   val concat_bigstring : t list -> Bigstring.t
 
-  (** {6 Conversion to substrings}.  These may share memory with the thing from which they
-      are copying. *)
-  val of_bigstring : Bigstring.t -> t
-  val of_string    : string      -> t
+  (** {6 Conversion to/from substrings} *)
 
-  (** these two functions perform a copy *)
-  val to_bigstring : t -> Bigstring.t
+  (** These functions always copy. *)
   val to_string    : t -> string
+  val to_bigstring : t -> Bigstring.t
+
+  (** These functions always copy. Use [create] if you want sharing. *)
+  val of_string    : string -> t [@deprecated "[since 2017-11] use [create] instead"]
+  val of_bigstring : Bigstring.t -> t [@deprecated "[since 2017-11] use [create] instead"]
 
   (** {6 Prefixes and suffixes} The result of these functions share data with their
       input, but don't mutate the underlying string. *)

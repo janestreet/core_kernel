@@ -24,6 +24,9 @@ module type Creators  = Hashtbl_intf.Creators
 module type Accessors = Hashtbl_intf.Accessors
 module type Multi     = Hashtbl_intf.Multi
 
+type ('key, 'data, 'z) create_options_with_first_class_module =
+  ('key, 'data, 'z) Hashtbl_intf.create_options_with_first_class_module
+
 type ('key, 'data, 'z) create_options_without_hashable =
   ('key, 'data, 'z) Hashtbl_intf.create_options_without_hashable
 
@@ -75,11 +78,12 @@ end
 module type Hashtbl = sig
   include Hashtbl_intf.S_without_submodules
 
-  (** Shadowing the previous accessors with ones that take [Hashable.t] *)
-  include Hashtbl_intf.S_using_hashable
-    with type ('a, 'b) t := ('a, 'b) t
-    with type 'a key := 'a key
-    with type 'a merge_into_action := 'a merge_into_action
+  module Using_hashable : sig
+    include Hashtbl_intf.Creators
+      with type ('a, 'b) t  := ('a, 'b) t
+      with type 'a key := 'a key
+      with type ('a, 'b, 'z) create_options := ('a, 'b, 'z) create_options_with_hashable
+  end
 
   module Poly : sig
     type nonrec ('a, 'b) t = ('a, 'b) t [@@deriving bin_io]

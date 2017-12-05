@@ -9,7 +9,7 @@ let%test_module _ =
       end)
 
     let%test_unit "growing test/copy test" =
-      let n = 1_000_000 in
+      let n = 100_000 in
       let tbl = Hashtbl.create ~size:16 () in
       for i = 0 to n - 1 do
         Hashtbl.set tbl ~key:i ~data:i;

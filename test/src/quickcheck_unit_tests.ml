@@ -52,10 +52,10 @@ module Test (S : sig val default_seed : Quickcheck.seed end) : sig end = struct
       let example = "some silly string that is unlikely to be generated randomly"
 
       let example_occurs ~examples =
-        with_return (fun r ->
-          test String.gen ~examples ~f:(fun str ->
-            if String.equal str example then r.return true);
-          false)
+        let occurs = ref false in
+        test String.gen ~examples ~f:(fun str ->
+          if String.equal str example then occurs := true);
+        !occurs
 
       let%test_unit _ = [%test_result: bool] (example_occurs ~examples:[])        ~expect:false
       let%test_unit _ = [%test_result: bool] (example_occurs ~examples:[example]) ~expect:true

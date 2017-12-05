@@ -1,0 +1,58 @@
+open Core_kernel
+
+let _ = Map.add
+
+[%%expect {|
+Line _, characters 8-15:
+Warning 3: deprecated: Core_kernel.Map.add
+[since 2017-11] Use [set] instead
+Line _:
+Error: Some fatal warnings were triggered (1 occurrences)
+|}];;
+
+let _ = String.Map.add
+
+[%%expect {|
+Line _, characters 8-22:
+Warning 3: deprecated: Core_kernel.String.Map.add
+[since 2017-11] Use [set] instead
+Line _:
+Error: Some fatal warnings were triggered (1 occurrences)
+|}];;
+
+module F (M : Map.S) = struct
+  let _ = M.add
+end
+
+[%%expect {|
+Line _, characters 10-15:
+Warning 3: deprecated: M.add
+[since 2017-11] Use [set] instead
+Line _:
+Error: Some fatal warnings were triggered (1 occurrences)
+|}];;
+
+module F (M : Core_kernel.Map.S_binable) = struct
+  let _ = M.add
+end
+
+[%%expect {|
+Line _, characters 10-15:
+Warning 3: deprecated: M.add
+[since 2017-11] Use [set] instead
+Line _:
+Error: Some fatal warnings were triggered (1 occurrences)
+|}];;
+
+module F (M : Core_kernel.Map.S_plain) = struct
+  let _ = M.add
+end
+
+[%%expect {|
+Line _, characters 10-15:
+Warning 3: deprecated: M.add
+[since 2017-11] Use [set] instead
+Line _:
+Error: Some fatal warnings were triggered (1 occurrences)
+|}];;
+

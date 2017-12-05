@@ -748,7 +748,7 @@ let merge =
       set t ~key ~data:v
   in
   fun t_left t_right ~f ->
-    if not (phys_equal t_left.hashable t_right.hashable)
+    if not (Hashable.equal t_left.hashable t_right.hashable)
     then invalid_arg "Pooled_hashtbl.merge: different 'hashable' values";
     let new_t =
       create ~growth_allowed:t_left.growth_allowed
@@ -1118,3 +1118,40 @@ module Make_binable (Key : sig
   include Make (Key)
   include Provide_bin_io (Key)
 end
+
+module Using_hashable = struct
+  type nonrec ('a, 'b) t = ('a, 'b) t [@@deriving sexp_of]
+  let create = create
+  let of_alist = of_alist
+  let of_alist_report_all_dups = of_alist_report_all_dups
+  let of_alist_or_error = of_alist_or_error
+  let of_alist_exn = of_alist_exn
+  let of_alist_multi = of_alist_multi
+  let create_mapped = create_mapped
+  let create_with_key = create_with_key
+  let create_with_key_or_error = create_with_key_or_error
+  let create_with_key_exn = create_with_key_exn
+  let group = group
+end
+let create m ?growth_allowed ?size () =
+  create ~hashable:(Hashable.of_key m) ?growth_allowed ?size ()
+let of_alist m ?growth_allowed ?size l =
+  of_alist ~hashable:(Hashable.of_key m) ?growth_allowed ?size l
+let of_alist_report_all_dups m ?growth_allowed ?size l =
+  of_alist_report_all_dups ~hashable:(Hashable.of_key m) ?growth_allowed ?size l
+let of_alist_or_error m ?growth_allowed ?size l =
+  of_alist_or_error ~hashable:(Hashable.of_key m) ?growth_allowed ?size l
+let of_alist_exn m ?growth_allowed ?size l =
+  of_alist_exn ~hashable:(Hashable.of_key m) ?growth_allowed ?size l
+let of_alist_multi m ?growth_allowed ?size l =
+  of_alist_multi ~hashable:(Hashable.of_key m) ?growth_allowed ?size l
+let create_mapped m ?growth_allowed ?size ~get_key ~get_data l =
+  create_mapped ~hashable:(Hashable.of_key m) ?growth_allowed ?size ~get_key ~get_data l
+let create_with_key m ?growth_allowed ?size ~get_key l =
+  create_with_key ~hashable:(Hashable.of_key m) ?growth_allowed ?size ~get_key l
+let create_with_key_or_error m ?growth_allowed ?size ~get_key l =
+  create_with_key_or_error ~hashable:(Hashable.of_key m) ?growth_allowed ?size ~get_key l
+let create_with_key_exn m ?growth_allowed ?size ~get_key l =
+  create_with_key_exn ~hashable:(Hashable.of_key m) ?growth_allowed ?size ~get_key l
+let group m ?growth_allowed ?size ~get_key ~get_data ~combine l =
+  group ~hashable:(Hashable.of_key m) ?growth_allowed ?size ~get_key ~get_data ~combine l

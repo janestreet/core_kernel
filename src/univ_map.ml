@@ -32,7 +32,7 @@ module Make1 (Data : sig type ('s, 'a) t [@@deriving sexp_of] end) = struct
       Map.iteri t ~f:(fun ~key ~data ->
         assert (Uid.equal key (Packed.type_id_uid data))))
 
-  let set t key data = Map.add t ~key:(Key.uid key) ~data:(Packed.T (key, data))
+  let set t key data = Map.set t ~key:(Key.uid key) ~data:(Packed.T (key, data))
 
   let mem_by_id t id = Map.mem t id
 

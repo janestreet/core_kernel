@@ -140,7 +140,7 @@ module Full_data = struct
                 | '\000' ->
                   let data = Buffer.contents buf in
                   let next_index = index + (String.length data) + 1 in
-                  let abbrvs = Map.add abbrvs ~key:index ~data in
+                  let abbrvs = Map.set abbrvs ~key:index ~data in
                   Buffer.clear buf;
                   (next_index,abbrvs)
                 | c -> Buffer.add_char buf c; (index,abbrvs))
@@ -390,6 +390,10 @@ module Make (Time0 : Time0_intf.S) = struct
        epoch. *)
     Time0.Span.to_int63_seconds_round_down_exn (Time0.to_span_since_epoch time)
 
+  let seconds_of_relative rel =
+    Time0.Span.to_int63_seconds_round_down_exn
+      (Time0.Relative_to_unspecified_zone.to_span_since_epoch rel)
+
   let clock_shift_at zone i =
     let previous_shift =
       if i = 0
@@ -425,35 +429,39 @@ module Make (Time0 : Time0_intf.S) = struct
       ~f:(fun i -> clock_shift_at zone i)
   ;;
 
-  let convert_transition (transition : Transition.t) transtype =
-    match transtype with
-    | `UTC   -> transition.start_time_in_seconds_since_epoch
-    | `Local ->
-      Int63.( + )
-        transition.start_time_in_seconds_since_epoch
-        transition.new_regime.utc_offset_in_seconds
+  (* In "absolute mode", a number of seconds is interpreted as an offset of that many
+     seconds from the UNIX epoch, ignoring leap seconds. In "relative mode", you interpret
+     the number of seconds as a number of days in combination with a number of seconds
+     since midnight, which gives you a calendar day and a clock face time. Then you take
+     the time that those represent in some relevant timezone. *)
+  module Mode = struct
+    type t = Absolute | Relative
+  end
+
+  let start_time (transition : Transition.t) ~(mode : Mode.t) =
+    match mode with
+    | Absolute -> transition.start_time_in_seconds_since_epoch
+    | Relative -> Int63.( + )
+                    transition.start_time_in_seconds_since_epoch
+                    transition.new_regime.utc_offset_in_seconds
   ;;
 
-  (* Determine if [time] is governed by the regime in [transitions.(index)]. *)
-  let in_transition transitions ~index seconds transtype =
-    let s = convert_transition transitions.(index) transtype in
+  (* Determine if the time specified by [seconds], interpreted according to [mode],
+     is governed by the regime in [transitions.(index)]. *)
+  let in_transition transitions ~index seconds ~mode =
+    let s = start_time transitions.(index) ~mode in
     Int63.( <= ) s seconds
     && ((index + 1 = Array.length transitions)
-        || (let e = convert_transition transitions.(index + 1) transtype in
+        || (let e = start_time transitions.(index + 1) ~mode in
             Int63.( < ) seconds e))
   ;;
 
   (* [find_local_regime zone `UTC time] finds the local time regime in force
-     in [zone] at [seconds], from 1970/01/01:00:00:00 UTC.
-
-     [find_local_regime zone `Local seconds] finds the local time regime in force in
-     [zone] at [seconds], from 1970/01/01:00:00:00 of [zone].
-  *)
-  let find_local_regime zone transtype time =
+     in [zone] at [seconds], as interpreted according to [mode]. *)
+  let find_local_regime zone ~mode seconds =
     let module T = Transition in
     let transitions     = zone.transitions in
     let num_transitions = Array.length transitions in
-    let seconds = seconds_of_time time in
     if num_transitions = 0 then
       zone.default_local_time_type
     else if Int63.( > )
@@ -462,11 +470,11 @@ module Make (Time0 : Time0_intf.S) = struct
     then
       zone.default_local_time_type
     else begin
-      if in_transition transitions ~index:zone.last_regime_index seconds transtype
+      if in_transition transitions ~index:zone.last_regime_index seconds ~mode
       then transitions.(zone.last_regime_index).new_regime
       else begin
         let segment_of (transition : Transition.t) =
-          let start_time = convert_transition transition transtype in
+          let start_time = start_time transition ~mode in
           if Int63.( >= ) seconds start_time
           then `Left
           else `Right
@@ -481,15 +489,21 @@ module Make (Time0 : Time0_intf.S) = struct
     end
   ;;
 
-  let shift_epoch_time zone repr_type epoch =
-    let r = find_local_regime zone repr_type epoch in
-    match repr_type with
-    | `Local -> Time0.sub epoch (Time0.Span.of_int63_seconds r.utc_offset_in_seconds)
-    | `UTC   -> Time0.add epoch (Time0.Span.of_int63_seconds r.utc_offset_in_seconds)
+  let absolute_time_of_relative_time zone relative =
+    let r = find_local_regime zone (seconds_of_relative relative) ~mode:Relative in
+    Time0.Relative_to_unspecified_zone.to_absolute relative
+      ~offset_from_utc:(Time0.Span.of_int63_seconds r.utc_offset_in_seconds)
+  ;;
+
+  let relative_time_of_absolute_time zone absolute =
+    let r = find_local_regime zone (seconds_of_time absolute) ~mode:Absolute in
+    Time0.Relative_to_unspecified_zone.of_absolute absolute
+      ~offset_from_utc:(Time0.Span.of_int63_seconds r.utc_offset_in_seconds)
   ;;
 
   let abbreviation zone time =
-    (find_local_regime zone `UTC time).Regime.abbrv
+    let regime = find_local_regime zone (seconds_of_time time) ~mode:Absolute in
+    regime.abbrv
   ;;
 
   let reset_transition_cache zone =

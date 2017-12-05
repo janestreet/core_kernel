@@ -17,6 +17,9 @@ open Set_intf
     that they be passed sets with the same element type and the same comparator type. *)
 type ('elt, 'cmp) t = ('elt, 'cmp) Base.Set.t [@@deriving compare]
 
+type ('k, 'cmp) comparator =
+  (module Comparator.S with type t = 'k and type comparator_witness = 'cmp)
+
 module Tree : sig
   (** A [Tree.t] contains just the tree data structure that a set is based on, without
       including the comparator.  Accordingly, any operation on a [Tree.t] must also take
@@ -29,17 +32,24 @@ module Tree : sig
     with type ('a, 'b) tree := ('a, 'b) t
 end
 
+module Using_comparator : sig
+  include Creators2_with_comparator
+    with type ('a, 'b) set  := ('a, 'b) t
+    with type ('a, 'b) t    := ('a, 'b) t
+    with type ('a, 'b) tree := ('a, 'b) Tree.t
+end
+
 (** Tests internal invariants of the set data structure.  Returns true on success. *)
 val invariants : (_, _) t -> bool
 
 val comparator : ('a, 'cmp) t -> ('a, 'cmp) Comparator.t
 
 (** Creates an empty set based on the provided comparator. *)
-val empty : comparator:('a, 'cmp) Comparator.t -> ('a, 'cmp) t
+val empty : ('a, 'cmp) comparator -> ('a, 'cmp) t
 
 (** Creates a set based on the provided comparator that contains only the provided
     element. *)
-val singleton : comparator:('a, 'cmp) Comparator.t -> 'a -> ('a, 'cmp) t
+val singleton : ('a, 'cmp) comparator -> 'a -> ('a, 'cmp) t
 
 (** Returns the cardinality of the set. [O(1)]. *)
 val length : (_, _) t -> int
@@ -61,11 +71,11 @@ val remove : ('a, 'cmp) t -> 'a -> ('a, 'cmp) t
 (** [union t1 t2] returns the union of the two sets.  [O(length t1 + length t2)]. *)
 val union : ('a, 'cmp) t -> ('a, 'cmp) t -> ('a, 'cmp) t
 
-(** [union ~comparator list] returns the union of all the sets in [list].  The
-    [comparator] argument is required for the case where [list] is empty.
-    [O(max(List.length list, n log n))], where [n] is the sum of sizes of the input sets.
+(** [union c list] returns the union of all the sets in [list]. The [c] argument is
+    required for the case where [list] is empty. [O(max(List.length list, n log n))],
+    where [n] is the sum of sizes of the input sets.
 *)
-val union_list : comparator:('a, 'cmp) Comparator.t -> ('a, 'cmp) t list -> ('a, 'cmp) t
+val union_list : ('a, 'cmp) comparator -> ('a, 'cmp) t list -> ('a, 'cmp) t
 
 (** [inter t1 t2] computes the intersection of sets [t1] and [t2].  [O(length t1 +
     length t2)]. *)
@@ -150,13 +160,13 @@ val subset : ('a, 'cmp) t -> ('a, 'cmp) t -> bool
 [@@deprecated "[since 2016-09] Replace [Set.subset t1 t2] with [Set.is_subset t1 ~of_:t2]"]
 
 (** The list or array given to [of_list] and [of_array] need not be sorted. *)
-val of_list  : comparator:('a, 'cmp) Comparator.t -> 'a list  -> ('a, 'cmp) t
-val of_array : comparator:('a, 'cmp) Comparator.t -> 'a array -> ('a, 'cmp) t
+val of_list  : ('a, 'cmp) comparator -> 'a list  -> ('a, 'cmp) t
+val of_array : ('a, 'cmp) comparator -> 'a array -> ('a, 'cmp) t
 
 val of_hash_set
-  : comparator:('a, 'cmp) Comparator.t ->  'a     Hash_set.t -> ('a, 'cmp) t
+  : ('a, 'cmp) comparator ->  'a     Hash_set.t -> ('a, 'cmp) t
 val of_hashtbl_keys
-  : comparator:('a, 'cmp) Comparator.t -> ('a, _) Hashtbl.t  -> ('a, 'cmp) t
+  : ('a, 'cmp) comparator -> ('a, _) Hashtbl.t  -> ('a, 'cmp) t
 
 (** [to_list] and [to_array] produce sequences sorted in ascending order according to the
     comparator. *)
@@ -164,29 +174,29 @@ val to_list  : ('a, _) t -> 'a list
 val to_array : ('a, _) t -> 'a array
 
 val to_tree : ('a, 'cmp) t -> ('a, 'cmp) Tree.t
-val of_tree : comparator:('a, 'cmp) Comparator.t -> ('a, 'cmp) Tree.t -> ('a, 'cmp) t
+val of_tree : ('a, 'cmp) comparator -> ('a, 'cmp) Tree.t -> ('a, 'cmp) t
 
 (** Create set from sorted array.  The input must be sorted (either in ascending or
     descending order as given by the comparator) and contain no duplicates, otherwise the
     result is an error.  The complexity of this function is [O(n)]. *)
 val of_sorted_array
-  :  comparator:('a, 'cmp) Comparator.t
+  :  ('a, 'cmp) comparator
   -> 'a array
   -> ('a, 'cmp) t Or_error.t
 
 (** Similar to [of_sorted_array], but without checking the input array. *)
 val of_sorted_array_unchecked
-  :  comparator:('a, 'cmp) Comparator.t
+  :  ('a, 'cmp) comparator
   -> 'a array
   -> ('a, 'cmp) t
 
-(** [of_increasing_iterator_unchecked ~comparator ~len ~f] behaves like
-    [of_sorted_array_unchecked ~comparator (Array.init len ~f)], with the additional
+(** [of_increasing_iterator_unchecked c ~len ~f] behaves like
+    [of_sorted_array_unchecked c (Array.init len ~f)], with the additional
     restriction that a decreasing order is not supported.  The advantage is not requiring
     you to allocate an intermediate array.  [f] will be called with 0, 1, ... [len - 1],
     in order. *)
 val of_increasing_iterator_unchecked
-  :  comparator:('a, 'cmp) Comparator.t
+  :  ('a, 'cmp) comparator
   -> len:int
   -> f:(int -> 'a)
   -> ('a, 'cmp) t
@@ -195,19 +205,19 @@ val of_increasing_iterator_unchecked
     implementation relies crucially on sets, and because doing so allows one to avoid uses
     of polymorphic comparison by instantiating the functor at a different implementation
     of [Comparator] and using the resulting [stable_dedup_list]. *)
-val stable_dedup_list : comparator:('a, _) Comparator.t -> 'a list -> 'a list
+val stable_dedup_list : ('a, _) comparator -> 'a list -> 'a list
 
-(** [map ~comparator t ~f] returns a new set created by applying [f] to every element in
-    [t].  The returned set is based on the provided [comparator].  [O(n log n)]. *)
+(** [map c t ~f] returns a new set created by applying [f] to every element in [t]. The
+    returned set is based on the provided [c]. [O(n log n)]. *)
 val map
-  :  comparator:('b, 'cmp) Comparator.t
+  :  ('b, 'cmp) comparator
   -> ('a, _) t
   -> f:('a -> 'b)
   -> ('b, 'cmp) t
 
 (** Like {!map}, except elements for which [f] returns [None] will be dropped.  *)
 val filter_map
-  :  comparator:('b, 'cmp) Comparator.t
+  :  ('b, 'cmp) comparator
   -> ('a, _) t
   -> f:('a -> 'b option)
   -> ('b, 'cmp) t
@@ -350,7 +360,7 @@ val to_map : ('key, 'cmp) t -> f:('key -> 'data) -> ('key, 'data, 'cmp) Map.t
 val of_map_keys : ('key, _, 'cmp) Map.t -> ('key, 'cmp) t
 
 val gen
-  :  comparator:('key, 'cmp) Comparator.t
+  :  ('key, 'cmp) comparator
   -> 'key Quickcheck.Generator.t
   -> ('key, 'cmp) t Quickcheck.Generator.t
 val obs : 'key Quickcheck.Observer.t -> ('key, 'cmp) t Quickcheck.Observer.t

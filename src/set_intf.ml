@@ -37,8 +37,9 @@ module type Elt_binable = sig
   type t [@@deriving bin_io, compare, sexp]
 end
 
-module Without_comparator = Set_intf.Without_comparator
-module With_comparator    = Set_intf.With_comparator
+module Without_comparator      = Set_intf.Without_comparator
+module With_comparator         = Set_intf.With_comparator
+module With_first_class_module = Set_intf.With_first_class_module
 
 module Continue_or_stop          = Container_intf.Continue_or_stop
 module Finished_or_stopped_early = Container_intf.Finished_or_stopped_early

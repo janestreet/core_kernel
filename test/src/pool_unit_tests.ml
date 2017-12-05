@@ -142,7 +142,7 @@ module Make (Pool : Pool.S) = struct
 
   (* [grow] on demand *)
   let%test_unit _ [@tags "no-js"] =
-    let total_length = 10_000 in
+    let total_length = 3_000 in
     let rec loop i p list =
       let i = i - 1 in
       if i < 0

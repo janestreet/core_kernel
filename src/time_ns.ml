@@ -453,83 +453,11 @@ module Utc : sig
   val to_date_and_span_since_start_of_day : t -> Date0.t * Span.t
   val of_date_and_span_since_start_of_day : Date0.t -> Span.t -> t
 end = struct
-  open Int.O
-
-  let rem = Int.rem
-
-  (* This function exists to help inlining of [days_per_month]. *)
-  let [@inline never] invalid_month month =
-    raise_s [%message
-      "invalid month passed to [days_per_month]"
-        (month : int)]
-  ;;
-
-  let [@inline always] days_per_month ~month ~is_leap_year =
-    match month with
-    | 1  -> 31
-    | 2  -> if is_leap_year then 29 else 28
-    | 3  -> 31
-    | 4  -> 30
-    | 5  -> 31
-    | 6  -> 30
-    | 7  -> 31
-    | 8  -> 31
-    | 9  -> 30
-    | 10 -> 31
-    | 11 -> 30
-    | 12 -> 31
-    | _  -> invalid_month month
-  ;;
-
-  let is_leap_year year =
-    (rem year 4 = 0)
-    && (rem year 100 <> 0 || rem year 400 = 0)
-  ;;
-
-  let year_size year =
-    if is_leap_year year
-    then 366
-    else 365
-  ;;
-
-  (* This is a faithless recreation of the algorithm used by gmtime in glibc
-     (see time/offtime.c in any recent version of glibc).  This accounts for the lack of
-     clarity of the algorithm when compared to a simpler looping approach through year
-     sized chunks of days.  Unfortunately, the more naive algorithm is meaningfully
-     slower. *)
-  let [@inline always] calculate_year_and_day_of_year ~days_from_epoch =
-    let div a b = a / b - (if Int.rem a b < 0 then 1 else 0) in
-    let num_leaps_thru_end_of year = div year 4 - div year 100 + div year 400 in
-    let days = ref days_from_epoch in
-    let year = ref 1970 in
-    while !days < 0 || !days >= year_size !year do
-      let year_guess = !year + div !days 365 in
-      days := !days - ((year_guess - !year) * 365
-                       + num_leaps_thru_end_of (year_guess - 1)
-                       - num_leaps_thru_end_of (!year - 1));
-      year := year_guess;
-    done;
-    !year, !days + 1
-  ;;
-
-  (* Written with refs and a loop for speed.  Comparision with a let rec loop version
-     showed that this was faster. *)
-  let [@inline always] calculate_month_and_day_of_month ~day_of_year ~year =
-    let month        = ref 1 in
-    let days_left    = ref day_of_year in
-    let is_leap_year = is_leap_year year in
-    while !days_left > days_per_month ~month:!month ~is_leap_year do
-      days_left := !days_left - days_per_month ~month:!month ~is_leap_year;
-      incr month;
-    done;
-    (!month, !days_left)
-  ;;
-
   (* a recreation of the system call gmtime specialized to the fields we need that also
      doesn't rely on Unix. *)
   let to_date_and_span_since_start_of_day t =
     let open Int63.O in
-    let (!<) i = of_int_exn i in
+    let (!<) i = Int63.of_int_exn i in
     let (!>) t = Int63.to_int_exn t in
     let ns_since_epoch  = to_int63_ns_since_epoch t   in
     let ns_per_day      = !<86_400 * !<1_000_000_000  in
@@ -540,24 +468,20 @@ end = struct
       else approx_days_from_epoch
     in
     let ns_since_start_of_day = ns_since_epoch - (ns_per_day * days_from_epoch) in
-    let year, day_of_year =
-      calculate_year_and_day_of_year ~days_from_epoch:(!>days_from_epoch)
-    in
-    let month, day_of_month = calculate_month_and_day_of_month ~day_of_year ~year in
     let date =
-      Date0.create_exn ~y:year ~m:(Month.of_int_exn month) ~d:day_of_month
+      Date0.Days.add_days Date0.Days.unix_epoch !>days_from_epoch
+      |> Date0.Days.to_date
     in
     let span_since_start_of_day = Span.of_int63_ns ns_since_start_of_day in
     date, span_since_start_of_day
   ;;
 
-  let epoch_date = Date0.create_exn ~y:1970 ~m:Jan ~d:1
-  ;;
-
   let of_date_and_span_since_start_of_day date span_since_start_of_day =
     assert (Span.( >= ) span_since_start_of_day Span.zero
             && Span.( < ) span_since_start_of_day Span.day);
-    let days_from_epoch = Date0.diff date epoch_date in
+    let days_from_epoch =
+      Date0.Days.diff (Date0.Days.of_date date) Date0.Days.unix_epoch
+    in
     let span_in_days_since_epoch = Span.scale_int Span.day days_from_epoch in
     let span_since_epoch = Span.( + ) span_in_days_since_epoch span_since_start_of_day in
     of_span_since_epoch span_since_epoch

@@ -93,33 +93,36 @@ end
 
 type ('key, +'value, 'cmp) t = ('key, 'value, 'cmp) Base.Map.t
 
+type ('k, 'cmp) comparator =
+  (module Comparator.S with type t = 'k and type comparator_witness = 'cmp)
+
 (** Test if invariants of internal AVL search tree hold. *)
 val invariants : (_, _, _) t -> bool
 
 val comparator : ('a, _, 'cmp) t -> ('a, 'cmp) Comparator.t
 
 (** the empty map *)
-val empty : comparator:('a, 'cmp) Comparator.t -> ('a, 'b, 'cmp) t
+val empty : ('a, 'cmp) comparator -> ('a, 'b, 'cmp) t
 
 (** map with one key, data pair *)
-val singleton : comparator:('a, 'cmp) Comparator.t -> 'a -> 'b -> ('a, 'b, 'cmp) t
+val singleton : ('a, 'cmp) comparator -> 'a -> 'b -> ('a, 'b, 'cmp) t
 
 (** creates map from association list with unique keys *)
 val of_alist
-  :  comparator:('a, 'cmp) Comparator.t
+  :  ('a, 'cmp) comparator
   -> ('a * 'b) list
   -> [ `Ok of ('a, 'b, 'cmp) t | `Duplicate_key of 'a ]
 
 (** creates map from association list with unique keys.  Returns an error if duplicate 'a
     keys are found. *)
 val of_alist_or_error
-  :  comparator:('a, 'cmp) Comparator.t
+  :  ('a, 'cmp) comparator
   -> ('a * 'b) list -> ('a, 'b, 'cmp) t Or_error.t
 
 (** creates map from association list with unique keys.  Raises an exception if duplicate
     'a keys are found. *)
 val of_alist_exn
-  :  comparator:('a, 'cmp) Comparator.t
+  :  ('a, 'cmp) comparator
   -> ('a * 'b) list -> ('a, 'b, 'cmp) t
 
 (** [of_hashtbl_exn] creates a map from bindings present in a hash table.
@@ -129,32 +132,32 @@ val of_alist_exn
     is the same, in which case [of_hashtbl_exn] does not raise, regardless of the keys
     present in the table. *)
 val of_hashtbl_exn
-  :  comparator:('a, 'cmp) Comparator.t
+  :  ('a, 'cmp) comparator
   -> ('a, 'b) Hashtbl.t -> ('a, 'b, 'cmp) t
 
 (** creates map from association list with possibly repeated keys. *)
 val of_alist_multi
-  :  comparator:('a, 'cmp) Comparator.t
+  :  ('a, 'cmp) comparator
   -> ('a * 'b) list -> ('a, 'b list, 'cmp) t
 
 (** combines an association list into a map, folding together bound values with common
     keys *)
 val of_alist_fold
-  :  comparator:('a, 'cmp) Comparator.t
+  :  ('a, 'cmp) comparator
   -> ('a * 'b) list -> init:'c -> f:('c -> 'b -> 'c) -> ('a, 'c, 'cmp) t
 
 (** combines an association list into a map, reducing together bound values with common
     keys *)
 val of_alist_reduce
-  :  comparator:('a, 'cmp) Comparator.t
+  :  ('a, 'cmp) comparator
   -> ('a * 'b) list -> f:('b -> 'b -> 'b) -> ('a, 'b, 'cmp) t
 
 (** [of_iteri ~iteri] behaves like [of_alist], except that instead of taking a concrete
     datastruture, it takes an iteration function. For instance, to convert a string table
-    into a map: [of_iteri ~comparator ~f:(Hashtbl.iteri table)].
+    into a map: [of_iteri (module String) ~f:(Hashtbl.iteri table)].
     It is faster than adding the elements one by one. *)
 val of_iteri
-  :  comparator:('a, 'cmp) Comparator.t
+  :  ('a, 'cmp) comparator
   -> iteri:(f:(key:'a -> data:'b -> unit) -> unit)
   -> [ `Ok of ('a, 'b, 'cmp) t | `Duplicate_key of 'a ]
 
@@ -163,29 +166,29 @@ val to_tree : ('k, 'v, 'cmp) t -> ('k, 'v, 'cmp) Tree.t
 (** Creates a [t] from a [Tree.t] and a [Comparator.t].  This is an O(n) operation as it
     must discover the length of the [Tree.t]. *)
 val of_tree
-  :  comparator:('k, 'cmp) Comparator.t -> ('k, 'v, 'cmp) Tree.t -> ('k, 'v, 'cmp) t
+  :  ('k, 'cmp) comparator -> ('k, 'v, 'cmp) Tree.t -> ('k, 'v, 'cmp) t
 
 (** creates map from sorted array of key-data pairs. The input array must be sorted, as
     given by the relevant comparator (either in ascending or descending order), and must
     not contain any duplicate keys.  If either of these conditions do not hold, an error
     is returned.  *)
 val of_sorted_array
-  :  comparator:('a, 'cmp) Comparator.t
+  :  ('a, 'cmp) comparator
   -> ('a * 'b) array -> ('a, 'b, 'cmp) t Or_error.t
 
 (** Like [of_sorted_array] except it returns a map with broken invariants when an [Error]
     would have been returned. *)
 val of_sorted_array_unchecked
-  :  comparator:('a, 'cmp) Comparator.t
+  :  ('a, 'cmp) comparator
   -> ('a * 'b) array -> ('a, 'b, 'cmp) t
 
-(** [if_increasing_iterator_unchecked ~comparator ~len ~f] behaves like
-    [of_sorted_array_unchecked ~comparator (Array.init len ~f)], with the additional
+(** [of_increasing_iterator_unchecked c ~len ~f] behaves like
+    [of_sorted_array_unchecked c (Array.init len ~f)], with the additional
     restriction that a decreasing order is not supported.  The advantage is not requiring
     you to allocate an intermediate array.  [f] will be called with 0, 1, ... [len - 1],
     in order. *)
 val of_increasing_iterator_unchecked
-  :  comparator:('a, 'cmp) Comparator.t
+  :  ('a, 'cmp) comparator
   -> len:int
   -> f:(int -> ('a * 'b))
   -> ('a, 'b, 'cmp) t
@@ -196,7 +199,7 @@ val of_increasing_iterator_unchecked
     The sequence will be folded over once, and the additional time complexity is /O(n)/.
 *)
 val of_increasing_sequence
-  :  comparator:('k, 'cmp) Comparator.t
+  :  ('k, 'cmp) comparator
   -> ('k * 'v) Sequence.t
   -> ('k, 'v, 'cmp) t Or_error.t
 
@@ -209,6 +212,9 @@ val length : (_, _, _) t -> int
 (** returns a new map with the specified new binding;
     if the key was already bound, its previous binding disappears. *)
 val add : ('k, 'v, 'cmp) t -> key:'k -> data:'v -> ('k, 'v, 'cmp) t
+[@@deprecated "[since 2017-11] Use [set] instead"]
+
+val set : ('k, 'v, 'cmp) t -> key:'k -> data:'v -> ('k, 'v, 'cmp) t
 
 (** if key is not present then add a singleton list, otherwise, cons data on the head of
     the existing list. *)
@@ -552,7 +558,7 @@ val to_sequence
   -> ('k * 'v) Sequence.t
 
 val gen
-  :  comparator:('k, 'cmp) Comparator.t
+  :  ('k, 'cmp) comparator
   -> 'k Quickcheck.Generator.t
   -> 'v Quickcheck.Generator.t
   -> ('k, 'v, 'cmp) t Quickcheck.Generator.t
@@ -569,6 +575,12 @@ val shrinker
   :  'k Quickcheck.Shrinker.t
   -> 'v Quickcheck.Shrinker.t
   -> ('k, 'v, 'cmp) t Quickcheck.Shrinker.t
+
+module Using_comparator : sig
+  include Creators3_with_comparator
+    with type ('a, 'b, 'c) t    := ('a, 'b, 'c) t
+    with type ('a, 'b, 'c) tree := ('a, 'b, 'c) Tree.t
+end
 
 module Poly : sig
   type ('a, +'b, 'c) map

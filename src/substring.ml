@@ -13,6 +13,4 @@ include Make_substring.F (struct
     let blit_to_bigstring = Blit.bytes_bigstring
     let blit_from_string = Blit.string_bytes
     let blit_from_bigstring = Blit.bigstring_bytes
-    let of_bigstring bs = Bigstring.to_bytes bs
-    let of_string s = Bytes.of_string s
   end)

@@ -59,14 +59,14 @@ let%test_module "gc" [@tags "no-js"] =
       done
 
     let%test_unit _ =
-      for _ = 1 to 1000 do
+      for _ = 1 to 250 do
         assert (stat_eq major_collections Stat.major_collections);
         major ();
         assert (stat_eq major_collections Stat.major_collections);
       done
 
     let%test_unit _ =
-      for _ = 1 to 1000 do
+      for _ = 1 to 250 do
         assert (stat_eq compactions Stat.compactions);
         compact ();
         assert (stat_eq compactions Stat.compactions);

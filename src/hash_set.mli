@@ -13,7 +13,7 @@ type 'a t = 'a Base.Hash_set.t [@@deriving sexp_of]
 include Creators
   with type 'a t := 'a t
   with type 'a elt = 'a
-  with type ('key, 'z) create_options := ('key, 'z) create_options_with_hashable_required
+  with type ('key, 'z) create_options := ('key, 'z) create_options_with_first_class_module
 
 include Accessors with type 'a t := 'a t with type 'a elt := 'a elt
 
@@ -25,6 +25,13 @@ module type Elt_binable = Hashtbl.Key_binable
 module type S_plain   = S_plain   with type 'a hash_set := 'a t
 module type S         = S         with type 'a hash_set := 'a t
 module type S_binable = S_binable with type 'a hash_set := 'a t
+
+module Using_hashable : sig
+  include Creators
+    with type 'a t := 'a t
+    with type 'a elt = 'a
+    with type ('key, 'z) create_options := ('key, 'z) create_options_with_hashable_required
+end
 
 (** A hash set that uses polymorphic comparison *)
 module Poly : sig

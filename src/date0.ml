@@ -297,6 +297,8 @@ include Pretty_printer.Register (struct
     let to_string = to_string
   end)
 
+let unix_epoch = create_exn ~y:1970 ~m:Jan ~d:1
+
 (* The Days module is used for calculations that involve adding or removing a known number
    of days from a date.  Internally the date is translated to a day number, the days are
    added, and the new date is returned.  Those interested in the math can read:
@@ -306,10 +308,20 @@ include Pretty_printer.Register (struct
    note: unit tests are in lib_test/time_test.ml
 *)
 module Days : sig
+  type date = t
+  type t
+
+  val of_date : date -> t
+  val to_date : t -> date
+
+  val diff     : t -> t -> int
   val add_days : t -> int -> t
-  val diff : t -> t -> int
-end = struct
+
+  val unix_epoch : t
+end with type date := t = struct
   open Int
+
+  type t = int
 
   let of_year y =
     365 * y + y / 4 - y / 100 + y / 400
@@ -343,12 +355,14 @@ end = struct
     create_exn ~y ~m:(Month.of_int_exn m) ~d
   ;;
 
-  let add_days t days = to_date (of_date t + days)
+  let unix_epoch = of_date unix_epoch
 
-  let diff t1 t2 = of_date t1 - of_date t2
+  let add_days t days = t + days
+
+  let diff t1 t2 = t1 - t2
 end
-let add_days = Days.add_days
-let diff = Days.diff
+let add_days t days = Days.to_date (Days.add_days (Days.of_date t) days)
+let diff t1 t2 = Days.diff (Days.of_date t1) (Days.of_date t2)
 
 let add_months t n =
   let total_months = (Month.to_int (month t)) + n in

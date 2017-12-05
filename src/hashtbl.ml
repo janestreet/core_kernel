@@ -9,12 +9,15 @@ module List = List0
 let failwiths = Error.failwiths
 
 module Creators = Hashtbl.Creators
-type 'a key = 'a Hashtbl.key
-let hashable = Hashtbl.hashable
-let hash = Hashtbl.hash
-let hash_param = Hashtbl.hash_param
-let invariant = Hashtbl.invariant
-include Hashtbl.Using_hashable
+include (Hashtbl : sig
+           type ('a, 'b) t = ('a, 'b) Hashtbl.t [@@deriving sexp_of]
+           include Base.Hashtbl_intf.S_without_submodules
+             with type ('a, 'b) t := ('a, 'b) t
+             with module Hashable := Hashable
+             with type 'b merge_into_action = 'b Hashtbl.merge_into_action
+         end)
+
+module Using_hashable = Hashtbl.Using_hashable
 
 module type S_plain   = S_plain  with type ('a, 'b) hashtbl = ('a, 'b) t
 module type S         = S         with type ('a, 'b) hashtbl = ('a, 'b) t

@@ -5,6 +5,11 @@ module List = List0
 
 module Symmetric_diff_element = Symmetric_diff_element
 
+type ('k, 'cmp) comparator =
+  (module Comparator.S with type t = 'k and type comparator_witness = 'cmp)
+
+let to_comparator (type k cmp) ((module M) : (k, cmp) Map.comparator) = M.comparator
+
 module For_quickcheck = struct
 
   module Generator = Quickcheck.Generator
@@ -50,12 +55,12 @@ module For_quickcheck = struct
     let shrink_keys =
       Sequence.interleave (Sequence.map seq ~f:(fun (k, v) ->
         Sequence.map (Shrinker.shrink k_shr k) ~f:(fun k' ->
-          Map.add (Map.remove t k) ~key:k' ~data:v)))
+          Map.set (Map.remove t k) ~key:k' ~data:v)))
     in
     let shrink_values =
       Sequence.interleave (Sequence.map seq ~f:(fun (k, v) ->
         Sequence.map (Shrinker.shrink v_shr v) ~f:(fun v' ->
-          Map.add t ~key:k ~data:v')))
+          Map.set t ~key:k ~data:v')))
     in
     [ drop_keys; shrink_keys; shrink_values ]
     |> Sequence.of_list
@@ -73,7 +78,7 @@ module For_quickcheck = struct
 
 end
 
-let gen = For_quickcheck.gen
+let gen m = For_quickcheck.gen ~comparator:(to_comparator m)
 let obs = For_quickcheck.obs
 let shrinker = For_quickcheck.shrinker
 
@@ -86,9 +91,49 @@ module Accessors = struct
   let shrinker k v = shrinker k v
 end
 
-include (Map.Using_comparator :
-           module type of struct include Map.Using_comparator end
-         with module Tree := Tree)
+module Using_comparator = struct
+  include (Map.Using_comparator :
+             module type of struct include Map.Using_comparator end
+           with module Tree := Tree)
+
+  include For_quickcheck
+
+  let of_hashtbl_exn ~comparator hashtbl =
+    match of_iteri ~comparator ~iteri:(Hashtbl.iteri hashtbl) with
+    | `Ok map -> map
+    | `Duplicate_key key ->
+      Error.failwiths "Map.of_hashtbl_exn: duplicate key" key comparator.sexp_of_t
+  ;;
+
+  let tree_of_hashtbl_exn ~comparator hashtbl =
+    to_tree (of_hashtbl_exn ~comparator hashtbl)
+end
+
+let hash_fold_direct = Using_comparator.hash_fold_direct
+let comparator = Using_comparator.comparator
+
+type 'k key = 'k
+
+include (struct
+  include Map
+
+  let of_tree m = Map.Using_comparator.of_tree ~comparator:(to_comparator m)
+  let to_tree = Map.Using_comparator.to_tree
+end: sig
+           type ('a, 'b, 'c) t = ('a, 'b, 'c) Map.t
+
+           include Map_intf.Creators_generic
+             with type ('a, 'b, 'c) options := ('a, 'b, 'c) Map_intf.With_first_class_module.t
+             with type ('a, 'b, 'c) t := ('a, 'b, 'c) t
+             with type ('a, 'b, 'c) tree := ('a, 'b, 'c) Tree.t
+             with type 'k key := 'k key
+
+           include Map_intf.Accessors3
+             with type ('a, 'b, 'c) t := ('a, 'b, 'c) t
+             with type ('a, 'b, 'c) tree := ('a, 'b, 'c) Tree.t
+         end)
+
+module Empty_without_value_restriction = Using_comparator.Empty_without_value_restriction
 
 let find_or_error t key =
   let comparator = comparator t in
@@ -102,15 +147,9 @@ let find_or_error t key =
 let merge_skewed = Map.merge_skewed
 ;;
 
-let of_hashtbl_exn ~comparator hashtbl =
-  match of_iteri ~comparator ~iteri:(Hashtbl.iteri hashtbl) with
-  | `Ok map -> map
-  | `Duplicate_key key ->
-    Error.failwiths "Map.of_hashtbl_exn: duplicate key" key comparator.sexp_of_t
+let of_hashtbl_exn m t =
+  Using_comparator.of_hashtbl_exn ~comparator:(to_comparator m) t
 ;;
-
-let tree_of_hashtbl_exn ~comparator hashtbl =
-  to_tree (of_hashtbl_exn ~comparator hashtbl)
 
 module Creators (Key : Comparator.S1) : sig
 
@@ -140,40 +179,40 @@ end = struct
   module M_empty = Empty_without_value_restriction(Key)
   let empty = M_empty.empty
 
-  let of_tree tree = of_tree ~comparator tree
+  let of_tree tree = Using_comparator.of_tree ~comparator tree
 
-  let singleton k v = singleton ~comparator k v
+  let singleton k v = Using_comparator.singleton ~comparator k v
 
-  let of_sorted_array_unchecked array = of_sorted_array_unchecked ~comparator array
+  let of_sorted_array_unchecked array = Using_comparator.of_sorted_array_unchecked ~comparator array
 
-  let of_sorted_array array = of_sorted_array ~comparator array
+  let of_sorted_array array = Using_comparator.of_sorted_array ~comparator array
 
   let of_increasing_iterator_unchecked ~len ~f =
-    of_increasing_iterator_unchecked ~comparator ~len ~f
+    Using_comparator.of_increasing_iterator_unchecked ~comparator ~len ~f
 
   let of_increasing_sequence seq =
-    of_increasing_sequence ~comparator seq
+    Using_comparator.of_increasing_sequence ~comparator seq
 
-  let of_alist alist = of_alist ~comparator alist
+  let of_alist alist = Using_comparator.of_alist ~comparator alist
 
-  let of_alist_or_error alist = of_alist_or_error ~comparator alist
+  let of_alist_or_error alist = Using_comparator.of_alist_or_error ~comparator alist
 
-  let of_alist_exn alist = of_alist_exn ~comparator alist
+  let of_alist_exn alist = Using_comparator.of_alist_exn ~comparator alist
 
-  let of_hashtbl_exn hashtbl = of_hashtbl_exn ~comparator hashtbl
+  let of_hashtbl_exn hashtbl = Using_comparator.of_hashtbl_exn ~comparator hashtbl
 
-  let of_alist_multi alist = of_alist_multi ~comparator alist
+  let of_alist_multi alist = Using_comparator.of_alist_multi ~comparator alist
 
-  let of_alist_fold alist ~init ~f = of_alist_fold ~comparator alist ~init ~f
+  let of_alist_fold alist ~init ~f = Using_comparator.of_alist_fold ~comparator alist ~init ~f
 
-  let of_alist_reduce alist ~f = of_alist_reduce ~comparator alist ~f
+  let of_alist_reduce alist ~f = Using_comparator.of_alist_reduce ~comparator alist ~f
 
-  let of_iteri ~iteri = of_iteri ~comparator ~iteri
+  let of_iteri ~iteri = Using_comparator.of_iteri ~comparator ~iteri
 
   let t_of_sexp k_of_sexp v_of_sexp sexp =
-    t_of_sexp_direct ~comparator k_of_sexp v_of_sexp sexp
+    Using_comparator.t_of_sexp_direct ~comparator k_of_sexp v_of_sexp sexp
 
-  let gen gen_k gen_v = gen ~comparator gen_k gen_v
+  let gen gen_k gen_v = Using_comparator.gen ~comparator gen_k gen_v
 
 end
 
@@ -194,7 +233,7 @@ module Make_tree (Key : Comparator.S1) = struct
   let of_alist a = of_alist a ~comparator
   let of_alist_or_error a = of_alist_or_error a ~comparator
   let of_alist_exn a = of_alist_exn a ~comparator
-  let of_hashtbl_exn a = tree_of_hashtbl_exn a ~comparator
+  let of_hashtbl_exn a = Using_comparator.tree_of_hashtbl_exn a ~comparator
   let of_alist_multi a = of_alist_multi a ~comparator
   let of_alist_fold a ~init ~f = of_alist_fold a ~init ~f ~comparator
   let of_alist_reduce a ~f = of_alist_reduce a ~f ~comparator
@@ -203,7 +242,8 @@ module Make_tree (Key : Comparator.S1) = struct
   let invariants a = invariants a ~comparator
   let is_empty a = is_empty a
   let length a = length a
-  let add a ~key ~data = add a ~key ~data ~comparator
+  let set a ~key ~data = set a ~key ~data ~comparator
+  let add = set [@@deprecated "[since 2017-11] Use [set] instead"]
   let add_multi a ~key ~data = add_multi a ~key ~data ~comparator
   let remove_multi a b = remove_multi a b ~comparator
   let find_multi a b = find_multi a b ~comparator
@@ -275,12 +315,12 @@ end
 
 (* Don't use [of_sorted_array] to avoid the allocation of an intermediate array *)
 let init_for_bin_prot ~len ~f ~comparator =
-  let map = of_increasing_iterator_unchecked ~len ~f ~comparator in
+  let map = Using_comparator.of_increasing_iterator_unchecked ~len ~f ~comparator in
   if invariants map
   then map
   else
     (* The invariants are broken, but we can still traverse the structure. *)
-    match of_iteri ~iteri:(iteri map) ~comparator with
+    match Using_comparator.of_iteri ~iteri:(iteri map) ~comparator with
     | `Ok map -> map
     | `Duplicate_key _key ->
       failwith "Map.bin_read_t: duplicate element in map"
@@ -296,7 +336,7 @@ module Poly = struct
 
   let compare _ cmpv t1 t2 = compare_direct cmpv t1 t2
 
-  let sexp_of_t sexp_of_k sexp_of_v t = sexp_of_t sexp_of_k sexp_of_v [%sexp_of: _] t
+  let sexp_of_t sexp_of_k sexp_of_v t = Using_comparator.sexp_of_t sexp_of_k sexp_of_v [%sexp_of: _] t
 
   include Bin_prot.Utils.Make_iterable_binable2 (struct
       type nonrec ('a, 'b) t = ('a, 'b) t
@@ -349,7 +389,7 @@ module Make_plain_using_comparator (Key : sig
 
   let compare cmpv t1 t2 = compare_direct cmpv t1 t2
 
-  let sexp_of_t sexp_of_v t = sexp_of_t Key.sexp_of_t sexp_of_v [%sexp_of: _] t
+  let sexp_of_t sexp_of_v t = Using_comparator.sexp_of_t Key.sexp_of_t sexp_of_v [%sexp_of: _] t
 
   module Provide_of_sexp (Key : sig type t [@@deriving of_sexp] end with type t := Key.t) =
   struct
@@ -358,7 +398,7 @@ module Make_plain_using_comparator (Key : sig
 
   module Provide_hash (Key' : Hasher.S with type t := Key.t) = struct
     let hash_fold_t (type a) hash_fold_data state (t : a t)  =
-      hash_fold_direct Key'.hash_fold_t hash_fold_data state t
+      Using_comparator.hash_fold_direct Key'.hash_fold_t hash_fold_data state t
   end
 
   module Provide_bin_io (Key' : sig type t [@@deriving bin_io] end with type t := Key.t) =
@@ -434,7 +474,7 @@ module Make_binable (Key : Key_binable) =
 
 module Tree = struct
   include Tree
-  let of_hashtbl_exn = tree_of_hashtbl_exn
+  let of_hashtbl_exn = Using_comparator.tree_of_hashtbl_exn
   let gen ~comparator k v =
     For_quickcheck.gen_tree ~comparator k v
   let obs k v =

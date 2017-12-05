@@ -64,9 +64,6 @@ module type Base = sig
   [@@deprecated "[since 2017-10] use [blit_to_bytes] instead"]
 
   val get : t -> int -> char
-
-  val of_bigstring : bigstring -> t
-  val of_string : string -> t
 end
 
 module type S = Substring_intf.S
@@ -93,6 +90,18 @@ module F (Base : Base) : S with type base = Base.t = struct
   let length t = t.len
   let is_empty t = Int.equal t.len 0
 
+  let base_of_string s =
+    let len = String.length s in
+    let buf = Base.create len in
+    Base.blit_from_string ~src:s ~dst:buf ();
+    buf
+
+  let base_of_bigstring s =
+    let len = Bigstring.length s in
+    let buf = Base.create len in
+    Base.blit_from_bigstring ~src:s ~dst:buf ();
+    buf
+
   let create ?pos ?len base =
     let (pos, len) =
       Ordered_collection_common.get_pos_len_exn ?pos ?len
@@ -108,7 +117,7 @@ module F (Base : Base) : S with type base = Base.t = struct
 
   let%test_module "get" =
     (module struct
-      let hello = Base.of_string "hello"
+      let hello = base_of_string "hello"
 
       let%test _ =
         let lo = create ~pos:3 ~len:2 hello in
@@ -128,7 +137,7 @@ module F (Base : Base) : S with type base = Base.t = struct
 
   let%test_module "sub" =
     (module struct
-      let base = Base.of_string "012345"
+      let base = base_of_string "012345"
       let t = create ~pos:1 ~len:4 base (* 1234 *)
 
       let%test_unit _ = ignore (sub ~pos:0 ~len:4 t : t)
@@ -178,7 +187,7 @@ module F (Base : Base) : S with type base = Base.t = struct
 
   let%test_module _ =
     (module struct
-      let ell = create ~pos:1 ~len:3 (Base.of_string "hello")
+      let ell = create ~pos:1 ~len:3 (base_of_string "hello")
 
       let%test _ = to_array ell = [|'e'; 'l'; 'l'|]
       let%test _ = to_list ell = ['e'; 'l'; 'l']
@@ -201,7 +210,7 @@ module F (Base : Base) : S with type base = Base.t = struct
 
   let%test_module _ =
     (module struct
-      let bcdefghi = create ~pos:1 ~len:8 (Base.of_string "abcdefghijklmno ")
+      let bcdefghi = create ~pos:1 ~len:8 (base_of_string "abcdefghijklmno ")
 
       let%test _ = find bcdefghi ~f:Char.is_lowercase = Some 'b'
       let%test _ = find bcdefghi ~f:Char.is_whitespace = None
@@ -282,9 +291,9 @@ module F (Base : Base) : S with type base = Base.t = struct
 
   let of_base base = { base = base; pos = 0; len = Base.length base }
 
-  let of_string x = of_base (Base.of_string x)
+  let of_string x = of_base (base_of_string x)
 
-  let of_bigstring x = of_base (Base.of_bigstring x)
+  let of_bigstring x = of_base (base_of_bigstring x)
 
   let make (type a) create (blit : (base, a) Blit.t) t =
     let dst = create t.len in

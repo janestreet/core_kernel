@@ -541,6 +541,22 @@ module type Quickcheck_configured = sig
     -> f:('a -> unit)
     -> unit
 
+  (** [test_or_error] is like [test], except failure is determined using [Or_error.t]. Any
+      exceptions raised by [f] are not caught. *)
+  val test_or_error
+    :  ?seed            : seed
+    -> ?sizes           : int Sequence.t
+    -> ?trials          : int
+    -> ?attempts        : int
+    -> ?filter          : ('a -> bool)
+    -> ?shrinker        : 'a shr
+    -> ?shrink_attempts : shrink_attempts
+    -> ?sexp_of         : ('a -> Base.Sexp.t)
+    -> ?examples        : 'a list
+    -> 'a gen
+    -> f:('a -> unit Or_error.t)
+    -> unit Or_error.t
+
   (** [test_can_generate ~seed ~trials ~attempts ~sexp_of gen ~f] is useful for testing
       [gen] values, to make sure they can generate useful examples.  It tests
       [gen] by generating up to [trials] values and passing them to [f].  Once a value

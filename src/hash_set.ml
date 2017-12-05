@@ -1,11 +1,7 @@
 open! Import
 open Hash_set_intf
 
-module Creators = Base.Hash_set.Creators
-module Poly = Base.Hash_set.Poly
-let sexp_of_t = Base.Hash_set.sexp_of_t
-let hashable = Base.Hash_set.hashable
-include Base.Hash_set.Using_hashable
+include Base.Hash_set
 
 module type S_plain   = S_plain   with type 'a hash_set := 'a t
 module type S         = S         with type 'a hash_set := 'a t

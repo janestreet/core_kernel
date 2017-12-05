@@ -1,16 +1,16 @@
 open! Import
 open Std_internal
 
-module type S = sig
-  type underlying
-  type t = private underlying [@@deriving bin_io, compare, hash, typerep]
+module type Basic = sig
+  module Span : Span_intf.Span
 
-  include Comparable.S_common with type t := t
-  include Robustly_comparable with type t := t
+  type t
 
-  module Span  : Span_intf.Span with type underlying = underlying
-  module Ofday : Ofday_intf.Ofday with type underlying := underlying
-                                   and module Span := Span
+  module Replace_polymorphic_compare
+    : Comparable_intf.Polymorphic_compare with type t := t
+
+  include Comparable_intf.Polymorphic_compare with type t := t
+  include Robustly_comparable                 with type t := t
 
   val add  : t -> Span.t -> t
   val sub  : t -> Span.t -> t
@@ -24,13 +24,54 @@ module type S = sig
 
   val to_span_since_epoch : t -> Span.t
   val of_span_since_epoch : Span.t -> t
+end
 
-  (** [Date0.t] is the same as [Date.t] *)
-  val utc_mktime : Date0.t -> Ofday.t -> t
+module type S = sig
+  type underlying
+  type t = private underlying [@@deriving bin_io, compare, hash, typerep]
 
-  (** returns the amount of time since the epoch in seconds / 86_400 (which is one day
-      in unix time terms) and the (non-negative) remainder as a Span *)
-  val to_days_since_epoch_and_remainder : t -> (int * Span.t)
+  module Span  : Span_intf.Span   with type underlying  = underlying
+  module Ofday : Ofday_intf.Ofday with type underlying := underlying
+                                   and module Span := Span
+
+  include Basic
+    with type t := t
+     and module Span := Span
+
+  include Comparable.S_common
+    with type t := t
+     and module Replace_polymorphic_compare := Replace_polymorphic_compare
+
+  (** Represents a timezone-relative time, rather than an absolute time.  This is
+      equivalent to a [Date.t] and an [Ofday.t] with no time zone. A
+      [Relative_to_unspecified_zone.t] does not correspond to a single, unambiguous point
+      in time. Intended as a low-level back-end for high-level timezone-based functions;
+      most clients should not use [Relative_to_unspecified_zone.t]. *)
+  module Relative_to_unspecified_zone : sig
+    type absolute = t
+    type t = private underlying
+
+    (** [to_span_since_epoch] and [of_span_since_epoch] don't precisely mean the UNIX
+        epoch as a moment in time, but rather the timezone-relative date-ofday pair
+        1970-01-01 00:00:00.
+
+        Likewise [add] and [sub] and [diff] all have slightly subtle meanings, where the
+        [Time.Span.t] values involved don't necessarily always translate exactly to an
+        elapsed period of time. (You can add 2h to a timezone-relative time and get one
+        that occurs only 1h later in real-time terms, or 3h later). *)
+    include Basic with type t := t and module Span := Span
+
+    (** [Date0.t] is the same as [Date.t] *)
+    val of_date_ofday : Date0.t -> Ofday.t -> t
+    val to_date_ofday : t -> Date0.t * Ofday.t
+    val to_date       : t -> Date0.t
+    val to_ofday      : t -> Ofday.t
+
+    (** Conversions between absolute and relative time, based on the offset from UTC at
+        the given time. Use the high-level [Time.Zone] wrappers of these conversions. *)
+    val of_absolute : absolute -> offset_from_utc:Span.t -> t
+    val to_absolute : t -> offset_from_utc:Span.t -> absolute
+  end with type absolute := t
 
   val now : unit -> t
 end

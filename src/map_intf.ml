@@ -20,8 +20,9 @@ module Binable = Binable0
 module Map_intf = Base.Map_intf
 module Map      = Base.Map
 
-module With_comparator    = Map_intf.With_comparator
-module Without_comparator = Map_intf.Without_comparator
+module With_comparator         = Map_intf.With_comparator
+module With_first_class_module = Map_intf.With_first_class_module
+module Without_comparator      = Map_intf.Without_comparator
 
 module Tree = Map.Using_comparator.Tree
 

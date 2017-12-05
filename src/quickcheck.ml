@@ -1095,7 +1095,7 @@ module Configure (Config : Quickcheck_config) = struct
     Sequence.map sizes ~f:(fun size ->
       Generator.generate gen ~size random)
 
-  let iter
+  let iter_or_error
         ?seed
         ?sizes
         ?(trials   = default_trial_count)
@@ -1108,33 +1108,40 @@ module Configure (Config : Quickcheck_config) = struct
       Sequence.fold_until (random_sequence ?seed ?sizes gen)
         ~init:(0, 0)
         ~f:(fun (successes, failures) value ->
-          let successes, failures =
+          match
             if filter value
             then begin
-              f value;
-              (successes + 1, failures)
+              match f value with
+              | Ok ()       -> Ok (successes + 1, failures)
+              | Error error -> Error error
             end else begin
-              (successes, failures + 1)
+              Ok (successes, failures + 1)
             end
-          in
-          if successes >= trials
-          then Stop ()
-          else if successes + failures >= attempts
-          then begin
-            Error.raise_s [%message
-              "Quickcheck.iter: too many failures"
-                (successes : int)
-                (failures  : int)]
-          end
-          else Continue (successes, failures))
+          with
+          | Error error -> Stop (Error error)
+          | Ok (successes, failures) ->
+            if successes >= trials
+            then Stop (Ok ())
+            else if successes + failures >= attempts
+            then begin
+              Stop (Or_error.error_s [%message
+                      "Quickcheck.iter: too many failures"
+                        (successes : int)
+                        (failures  : int)])
+            end
+            else Continue (successes, failures))
     in
     match finished_or_stopped_early with
     | Finished (successes, failures) ->
-      Error.raise_s [%message
+      Or_error.error_s [%message
         "Quickcheck.iter: ran out of values"
           (successes : int)
           (failures  : int)]
-    | Stopped_early () -> ()
+    | Stopped_early result -> result
+
+  let iter ?seed ?sizes ?trials ?attempts ?filter gen ~f =
+    iter_or_error ?seed ?sizes ?trials ?attempts ?filter gen ~f:(fun elt -> Ok (f elt))
+    |> Or_error.ok_exn
 
   let random_value ?(seed = default_seed) ?(size = 30) gen =
     let random = random_state_of_seed seed in
@@ -1143,8 +1150,7 @@ module Configure (Config : Quickcheck_config) = struct
   let shrink_iter
         ?sexp_of
         ~value
-        ~exn
-        ~(backtrace : Backtrace.t)
+        ~error
         ~shrinker
         ?(shrink_attempts = default_shrink_attempts)
         ~f =
@@ -1159,43 +1165,36 @@ module Configure (Config : Quickcheck_config) = struct
         | None                     -> result
         | Some (shr_value, seq_tl) ->
           match f shr_value with
-          | ()                -> shrink_loop seq_tl (attempts+1) result
-          | exception shr_exn ->
-            let backtrace = Backtrace.Exn.most_recent () in
+          | Ok ()           -> shrink_loop seq_tl (attempts+1) result
+          | Error shr_error ->
             let seq = Shrinker.shrink shrinker shr_value in
-            shrink_loop seq (attempts+1) (Some (shr_value, shr_exn, backtrace))
+            shrink_loop seq (attempts+1) (Some (shr_value, shr_error))
       else
         result
     in
     match shrink_loop (Shrinker.shrink shrinker value) 0 None with
-    | Some (shr_value, shr_exn, shr_bt) ->
+    | Some (shr_value, shr_error) ->
       let sexp_of_value =
         match sexp_of with
         | Some f -> f
         | None   -> [%sexp_of: _]
       in
-      Error.raise_s
-        [%message
-          "shrunk random input"
-            ~shrunk_value:      (shr_value     : value)
-            ~shrunk_error:      (shr_exn       : exn)
-            ~shrunk_backtrace:  (shr_bt        : Backtrace.t)
-            ~original_value:    (value         : value)
-            ~original_error:    (exn           : exn)
-            ~original_backtrace:(backtrace     : Backtrace.t)
-        ]
+      Error.create_s [%message
+        "shrunk random input"
+          ~shrunk_value:   (shr_value : value)
+          ~shrunk_error:   (shr_error : Error.t)
+          ~original_value: (value     : value)
+          ~original_error: (error     : Error.t)]
     | None ->
       match sexp_of with
-      | None               -> raise exn
+      | None               -> error
       | Some sexp_of_value ->
-        Error.raise_s
-          [%message
-            "random input"
-              ~value:    (value     : value)
-              ~error:    (exn       : exn)
-              ~backtrace:(backtrace : Backtrace.t)]
+        Error.create_s [%message
+          "random input"
+            ~value: (value : value)
+            ~error: (error : Error.t)]
 
-  let test
+  let test_or_error
         ?seed
         ?sizes
         ?trials
@@ -1212,25 +1211,60 @@ module Configure (Config : Quickcheck_config) = struct
       match shrinker with
       | Some shrinker ->
         (fun x ->
-           try f x with exn ->
-             let backtrace = Backtrace.Exn.most_recent () in
-             shrink_iter ~value:x ~exn ~backtrace ?sexp_of ~shrinker ?shrink_attempts ~f)
+           match f x with
+           | Ok ()       -> Ok ()
+           | Error error ->
+             Error (shrink_iter ~value:x ~error ?sexp_of ~shrinker ?shrink_attempts ~f))
       | None ->
         match sexp_of with
         | Some sexp_of_value ->
           (fun value ->
-             try f value with exn ->
-               let backtrace = Backtrace.Exn.most_recent () in
-               Error.raise_s
-                 [%message
-                   "random input"
-                     ~value:    (value     : value)
-                     ~error:    (exn       : exn)
-                     ~backtrace:(backtrace : Backtrace.t)])
+             match f value with
+             | Ok ()       -> Ok ()
+             | Error error ->
+               Or_error.error_s [%message
+                 "random input"
+                   ~value: (value : value)
+                   ~error: (error : Error.t)])
         | None -> f
     in
-    List.iter examples ~f;
-    iter ?seed ?sizes ?trials ?attempts ?filter gen ~f
+    let open Or_error.Monad_infix in
+    List.fold_result examples ~init:() ~f:(fun () x -> f x)
+    >>= fun () ->
+    iter_or_error ?seed ?sizes ?trials ?attempts ?filter gen ~f
+
+  let test
+        ?seed
+        ?sizes
+        ?trials
+        ?attempts
+        ?filter
+        ?shrinker
+        ?shrink_attempts
+        ?sexp_of
+        ?examples
+        gen
+        ~f
+    =
+    test_or_error
+      ?seed
+      ?sizes
+      ?trials
+      ?attempts
+      ?filter
+      ?shrinker
+      ?shrink_attempts
+      ?sexp_of
+      ?examples
+      gen
+      (* Why do we use [Or_error.try_with ~backtrace:true] here but not in [iter]? The
+         semantics we're mapping between are different. [iter] doesn't catch errors by
+         design, so it's okay to just bubble them up. [test] has _lots_ of logic about
+         what it does when it gets an error (it stops, it annotates with random value if
+         it has [sexp_of], it finds a minimal example if it has [shrinker]), so we have to
+         map errors into something that [test_or_error] will handle properly *)
+      ~f:(fun elt -> Or_error.try_with ~backtrace:true (fun () -> f elt))
+    |> Or_error.ok_exn
 
   let test_distinct_values
         (type key)

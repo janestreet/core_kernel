@@ -9,6 +9,7 @@ module Caml_map = Map
 open! Core_kernel
 
 module With_comparator    = Map_intf.With_comparator
+module With_first_class_module = Map_intf.With_first_class_module
 module Without_comparator = Map_intf.Without_comparator
 
 module Unit_tests
@@ -49,7 +50,8 @@ module Unit_tests
   : Map_intf.Creators_and_accessors_generic = struct
   module Map = struct
     include Map
-    let add                        x = simplify_accessor add x
+    let set                        x = simplify_accessor set x
+    let add = set [@@deprecated "[since 2017-11] Use [set] instead"]
     let add_multi                  x = simplify_accessor add_multi x
     let find_multi                 x = simplify_accessor find_multi x
     let remove_multi               x = simplify_accessor remove_multi x
@@ -182,6 +184,7 @@ module Unit_tests
     && alist_equal (Map.to_alist map) (caml_map_to_alist caml_map)
 
   let add       _      = assert false
+  let set       _      = assert false
   let remove    _      = assert false
   let find      _      = assert false
   let mem       _      = assert false
@@ -478,7 +481,7 @@ module Unit_tests
         ; sexp_of_t = Key.sexp_of_t
         }
       in
-      Hashtbl.of_alist_exn ~hashable:bogus_hashable
+      Hashtbl.Using_hashable.of_alist_exn ~hashable:bogus_hashable
         [Key.sample, 0; Key.sample, 1]
     in
     try ignore (Map.of_hashtbl_exn hashtbl_with_dup); false
@@ -909,7 +912,7 @@ module Unit_tests
         ; (4, 4)
         ; (5, 5) ]
         ~init:map1
-        ~f:(fun acc (key, data) -> Int.Map.add acc ~key ~data)
+        ~f:(fun acc (key, data) -> Int.Map.set acc ~key ~data)
     in
     let diff = Int.Map.symmetric_diff map1 map2 ~data_equal:Int.equal in
     Sequence.length diff = 3
@@ -928,7 +931,7 @@ module Unit_tests
         ; (4, 4)
         ; (5, 5) ]
         ~init:map2
-        ~f:(fun acc (key, data) -> Int.Map.add acc ~key ~data)
+        ~f:(fun acc (key, data) -> Int.Map.set acc ~key ~data)
     in
     let diff = Int.Map.symmetric_diff map1 map2 ~data_equal:Int.equal in
     Sequence.length diff = 3
@@ -1667,6 +1670,11 @@ module Create_options_without_comparator = struct
   let simplify_creator = Fn.id
 end
 
+module Create_options_with_first_class_module = struct
+  type ('a, 'b, 'c) create_options = ('a, 'b, 'c) With_first_class_module.t
+  let simplify_creator f = f (module Int : Comparator.S with type t = _ and type comparator_witness = _)
+end
+
 module Access_options_without_comparator = struct
   type ('a, 'b, 'c) access_options = ('a, 'b, 'c) Without_comparator.t
   let simplify_accessor = Fn.id
@@ -1681,7 +1689,7 @@ let%test_module "Map" = (module Unit_tests (Key_poly) (struct
     include Map
     type ('a, 'b, 'c) t_   = ('a, 'b, 'c) t
     type ('a, 'b, 'c) tree = ('a, 'b, 'c) Tree.t
-    include Create_options_with_comparator
+    include Create_options_with_first_class_module
     include Access_options_without_comparator
     let kind = `Map
   end))

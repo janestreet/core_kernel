@@ -56,13 +56,12 @@ module type S = sig
       turned back into a [t]. *)
   val abbreviation : t -> Time.t -> string
 
-  (** [shift_epoch_time zone [`Local | `UTC] time] Takes an epoch (aka "unix") time given
-      either in local or in UTC (as indicated in the arguments) and shifts it according to
-      the local time regime in force in zone.  That is, given a Local epoch time it will
-      return the corresponding UTC timestamp and vice versa.  This function is low level,
-      and is not intended to be called by most client code.  Use the high level functions
-      provided in Time instead. *)
-  val shift_epoch_time : t -> [`Local | `UTC] -> Time.t -> Time.t
+  (** [absolute_time_of_relative_time] and [relative_time_of_absolute_time] convert times
+      between absolute (time from epoch in UTC) and relative (shifted according to time
+      zone and daylight savings) forms. These are low level functions not intended for
+      most clients. *)
+  val absolute_time_of_relative_time : t -> Time.Relative_to_unspecified_zone.t -> Time.t
+  val relative_time_of_absolute_time : t -> Time.t -> Time.Relative_to_unspecified_zone.t
 
   (** Takes a [Time.t] and returns the next [Time.t] strictly after it, if any, that the
       time zone UTC offset changes, and by how much it does so. *)

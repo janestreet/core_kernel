@@ -14,7 +14,7 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
           with type ('a, 'b) t := ('a, 'b) Hashtbl.t
           with type 'a key := 'a Hashtbl.key
           with type ('a, 'b, 'c) create_options :=
-            ('a, 'b, 'c) Hashtbl_intf.create_options_with_hashable
+            ('a, 'b, 'c) Hashtbl_intf.create_options_with_first_class_module
 
         module For_tests : sig
 
@@ -36,14 +36,14 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
             -> ('key, 'data) multi_constructor Gen.t
 
           val map_and_table
-            :  hashable   : 'key Hashtbl.Hashable.t
-            -> comparator : ('key, 'cmp) Comparator.t
+            :  (module Hashtbl_intf.Hashtbl_intf.Key with type t = 'key)
+            -> (module Comparator.S with type t = 'key and type comparator_witness = 'cmp)
             -> ('key, 'data) constructor
             -> ('key, 'data, 'cmp) Map.t * ('key, 'data) Hashtbl.t
 
           val map_and_table_multi
-            :  hashable   : 'key Hashtbl.Hashable.t
-            -> comparator : ('key, 'cmp) Comparator.t
+            :  (module Hashtbl_intf.Hashtbl_intf.Key with type t = 'key)
+            -> (module Comparator.S with type t = 'key and type comparator_witness = 'cmp)
             -> ('key, 'data) multi_constructor
             -> ('key, 'data list, 'cmp) Map.t * ('key, 'data list) Hashtbl.t
 
@@ -54,6 +54,7 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
         include Hashtbl_intf.Accessors
           with type ('a, 'b) t := ('a, 'b) Hashtbl.t
           with type 'a key := 'a Hashtbl.key
+          with type 'a merge_into_action = 'a Hashtbl.merge_into_action
         include Hashtbl_intf.Multi
           with type ('a, 'b) t := ('a, 'b) Hashtbl.t
           with type 'a key := 'a Hashtbl.key
@@ -154,37 +155,37 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
               ; group_gen          key_gen data_gen
               ]
 
-          let map_and_table ~hashable ~comparator = function
+          let map_and_table m_hash m_map = function
             | `Create ->
-              Map.empty         ~comparator,
-              Hashtbl.create () ~hashable
+              Map.empty m_map,
+              Hashtbl.create m_hash ()
             | `Of_alist alist ->
-              Map.of_alist_exn     alist ~comparator,
-              Hashtbl.of_alist_exn alist ~hashable
+              Map.of_alist_exn m_map alist,
+              Hashtbl.of_alist_exn m_hash alist
             | `Create_with_key alist ->
-              Map.of_alist_exn            alist ~comparator,
-              Hashtbl.create_with_key_exn alist ~hashable ~get_key:fst
+              Map.of_alist_exn m_map alist,
+              Hashtbl.create_with_key_exn m_hash alist ~get_key:fst
               |> Hashtbl.map ~f:snd
             | `Create_mapped alist ->
-              Map.of_alist_exn       alist ~comparator,
-              (Hashtbl.create_mapped alist ~hashable ~get_key:fst ~get_data:snd
+              Map.of_alist_exn m_map alist,
+              (Hashtbl.create_mapped m_hash alist ~get_key:fst ~get_data:snd
                |> function
                | `Ok table         -> table
                | `Duplicate_keys _ -> assert false)
 
-          let map_and_table_multi ~hashable ~comparator = function
+          let map_and_table_multi m_hash m_map = function
             | `Of_alist_multi alist ->
-              Map.of_alist_multi     (List.rev alist) ~comparator,
-              Hashtbl.of_alist_multi           alist  ~hashable
+              Map.of_alist_multi     m_map  (List.rev alist),
+              Hashtbl.of_alist_multi m_hash alist
             | `Group alist ->
-              Map.of_alist_reduce ~comparator ~f:(@) (List.map alist ~f:(fun (key,data) ->
+              Map.of_alist_reduce m_map ~f:(@) (List.map alist ~f:(fun (key,data) ->
                 (key, [data]))),
-              Hashtbl.group alist ~hashable
+              Hashtbl.group m_hash alist
                 ~combine:(@)
                 ~get_key:fst
                 ~get_data:(Fn.compose List.return snd)
             | ((`Create | `Of_alist _ | `Create_with_key _ | `Create_mapped _) as c) ->
-              map_and_table ~hashable ~comparator c
+              map_and_table m_hash m_map c
 
         end
 
@@ -259,12 +260,12 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
           let constructor_gen       = constructor_gen       Key.gen Data.gen ~compare_keys
           let multi_constructor_gen = multi_constructor_gen Key.gen Data.gen ~compare_keys
 
-          let map_and_table       = map_and_table       ~hashable ~comparator
-          let map_and_table_multi = map_and_table_multi ~hashable ~comparator
+          let map_and_table       = map_and_table       (module Key) (module Key)
+          let map_and_table_multi = map_and_table_multi (module Key) (module Key)
 
           let to_map t =
             Hashtbl.to_alist t
-            |> Map.of_alist_exn ~comparator
+            |> Map.Using_comparator.of_alist_exn ~comparator
         end
 
         open For_tests
@@ -335,7 +336,7 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
             let map, t = map_and_table constructor in
             [%test_result: Data.t Key.Map.t]
               (Hashtbl.fold t ~init:Key.Map.empty ~f:(fun ~key ~data map ->
-                 Map.add map ~key ~data))
+                 Map.set map ~key ~data))
               ~expect:map)
 
         let iter  = Hashtbl.iter
@@ -356,7 +357,7 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
         let%test_unit _ =
           Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
             let map, t = map_and_table constructor in
-            let t_copy = Hashtbl.create ~hashable () in
+            let t_copy = Hashtbl.Using_hashable.create ~hashable () in
             Hashtbl.iteri t ~f:(fun ~key ~data ->
               Hashtbl.add_exn t_copy ~key ~data);
             [%test_result: Data.t Key.Map.t]
@@ -483,7 +484,7 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
               Hashtbl.set t ~key ~data;
               [%test_result: Data.t Key.Map.t]
                 (to_map t)
-                ~expect:(Map.add map ~key ~data))
+                ~expect:(Map.set map ~key ~data))
 
         let add          = Hashtbl.add
         let add_exn      = Hashtbl.add_exn
@@ -496,7 +497,7 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
                 let map, t = map_and_table constructor in
                 let expect =
                   match add t ~key ~data with
-                  | `Ok        -> Map.add map ~key ~data
+                  | `Ok        -> Map.set map ~key ~data
                   | `Duplicate -> map
                 in
                 [%test_result: Data.t Key.Map.t]
@@ -768,7 +769,7 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
                 (to_map t)
                 ~expect:(if Map.mem map key
                          then map
-                         else Map.add map ~key ~data))
+                         else Map.set map ~key ~data))
 
         let find     = Hashtbl.find
         let find_exn = Hashtbl.find_exn
@@ -979,11 +980,13 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
       module type Key         = Hashtbl.Key
       module type Key_plain   = Hashtbl.Key_plain
 
-      module Hashable     = Hashtbl.Hashable
-      module Poly         = Hashtbl.Poly
-      module Make_plain   = Hashtbl.Make_plain
-      module Make         = Hashtbl.Make
-      module Make_binable = Hashtbl.Make_binable
+      module Hashable       = Hashtbl.Hashable
+      module Poly           = Hashtbl.Poly
+      module Make_plain     = Hashtbl.Make_plain
+      module Make           = Hashtbl.Make
+      module Make_binable   = Hashtbl.Make_binable
+      module Using_hashable = Hashtbl.Using_hashable
+
     end : Hashtbl_intf.Hashtbl))
 end
 
@@ -1028,7 +1031,7 @@ module Make_mutation_in_callbacks(Hashtbl : Hashtbl_intf.Hashtbl) = struct
         let make_table ~key_of_index ~data_of_index =
           List.init size ~f:(fun i ->
             (key_of_index i, data_of_index i))
-          |> Hashtbl.of_alist_exn ~hashable:Int.hashable
+          |> Hashtbl.Using_hashable.of_alist_exn ~hashable:Int.hashable
 
         let makers =
           List.map key_funs ~f:(fun key_of_index ->
@@ -1808,11 +1811,12 @@ module Make_mutation_in_callbacks(Hashtbl : Hashtbl_intf.Hashtbl) = struct
       module type Key         = Hashtbl.Key
       module type Key_plain   = Hashtbl.Key_plain
 
-      module Hashable     = Hashtbl.Hashable
-      module Poly         = Hashtbl.Poly
-      module Make_plain   = Hashtbl.Make_plain
-      module Make         = Hashtbl.Make
-      module Make_binable = Hashtbl.Make_binable
+      module Hashable       = Hashtbl.Hashable
+      module Poly           = Hashtbl.Poly
+      module Make_plain     = Hashtbl.Make_plain
+      module Make           = Hashtbl.Make
+      module Make_binable   = Hashtbl.Make_binable
+      module Using_hashable = Hashtbl.Using_hashable
 
     end : Hashtbl_intf.Hashtbl))
 end

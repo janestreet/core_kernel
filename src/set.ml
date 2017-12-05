@@ -1,5 +1,4 @@
 open! Import
-
 module List = List0
 
 open Set_intf
@@ -9,6 +8,8 @@ module Merge_to_sequence_element = Merge_to_sequence_element
 module type Elt_plain   = Elt_plain
 module type Elt         = Elt
 module type Elt_binable = Elt_binable
+
+let to_comparator (type k cmp) ((module M) : (k, cmp) Set.comparator) = M.comparator
 
 module For_quickcheck = struct
 
@@ -65,7 +66,7 @@ module For_quickcheck = struct
 
 end
 
-let gen = For_quickcheck.gen
+let gen m elt_gen = For_quickcheck.gen ~comparator:(to_comparator m) elt_gen
 let obs = For_quickcheck.obs
 let shrinker = For_quickcheck.shrinker
 
@@ -73,7 +74,7 @@ module Tree = struct
   include Tree
 
   let to_map ~comparator t ~f =
-    Map.of_sorted_array_unchecked ~comparator
+    Map.Using_comparator.of_sorted_array_unchecked ~comparator
       (Array.map (to_array t) ~f:(fun key -> (key, f key)))
   ;;
 
@@ -107,16 +108,58 @@ module Accessors = struct
   let shrinker = shrinker
 end
 
-include (Set.Using_comparator :
-           module type of struct include Set.Using_comparator end
-         with module Tree := Tree)
+type 'a cmp = 'a
+type 'a elt = 'a
+
+
+include (struct
+  include Set
+
+  let of_tree m = Set.Using_comparator.of_tree ~comparator:(to_comparator m)
+  let to_tree = Set.Using_comparator.to_tree
+
+  let sexp_of_t = Set.Using_comparator.sexp_of_t
+
+  module Empty_without_value_restriction = Set.Using_comparator.Empty_without_value_restriction
+end : sig
+           type ('a, 'b) t = ('a, 'b) Set.t [@@deriving sexp_of]
+
+           include Set_intf.Creators_generic
+             with type ('a, 'b, 'c) options := ('a, 'b, 'c) Set_intf.With_first_class_module.t
+             with type ('a, 'b) t := ('a, 'b) t
+             with type ('a, 'b) set := ('a, 'b) t
+             with type ('a, 'b) tree := ('a, 'b) Tree.t
+             with type 'a cmp := 'a cmp
+             with type 'a elt := 'a elt
+
+           include Set_intf.Accessors2
+             with type ('a, 'b) t := ('a, 'b) t
+             with type ('a, 'b) tree := ('a, 'b) Tree.t
+         end)
+
+type ('k, 'cmp) comparator =
+  (module Comparator.S with type t = 'k and type comparator_witness = 'cmp)
 
 let compare _ _ t1 t2 = compare_direct t1 t2
 
+module Using_comparator = struct
+  include (Set.Using_comparator :
+             module type of struct include Set.Using_comparator end
+           with module Tree := Tree)
+  include For_quickcheck
+
+  let of_map_keys m = of_tree ~comparator:(Map.comparator m) (Tree.of_map_keys m)
+  let of_hash_set ~comparator hset = of_tree ~comparator (Tree.of_hash_set hset ~comparator)
+  let of_hashtbl_keys ~comparator hashtbl = of_tree ~comparator (Tree.of_hashtbl_keys hashtbl ~comparator)
+end
+
 let to_map = Accessors.to_map
-let of_map_keys m = of_tree ~comparator:(Map.comparator m) (Tree.of_map_keys m)
-let of_hash_set ~comparator hset = of_tree ~comparator (Tree.of_hash_set hset ~comparator)
-let of_hashtbl_keys ~comparator hashtbl = of_tree ~comparator (Tree.of_hashtbl_keys hashtbl ~comparator)
+let of_map_keys = Using_comparator.of_map_keys
+let hash_fold_direct = Using_comparator.hash_fold_direct
+let comparator = Using_comparator.comparator
+let of_hash_set m hset = Using_comparator.of_hash_set ~comparator:(to_comparator m) hset
+let of_hashtbl_keys m hashtbl =
+  Using_comparator.of_hashtbl_keys ~comparator:(to_comparator m) hashtbl
 
 module Creators (Elt : Comparator.S1) : sig
 
@@ -136,6 +179,8 @@ module Creators (Elt : Comparator.S1) : sig
     with type 'a cmp               := 'a cmp_
 
 end = struct
+
+  open Using_comparator
 
   type nonrec ('a, 'comparator) t_ = ('a Elt.t, Elt.comparator_witness) t
 
@@ -277,11 +322,11 @@ end
 
 (* Don't use [of_sorted_array] to avoid the allocation of an intermediate array *)
 let init_for_bin_prot ~len ~f ~comparator =
-  let set = of_increasing_iterator_unchecked ~comparator ~len ~f in
+  let set = Using_comparator.of_increasing_iterator_unchecked ~comparator ~len ~f in
   if invariants set
   then set
   else
-    of_tree ~comparator
+    Using_comparator.of_tree ~comparator
       (fold set ~init:(Tree.empty ~comparator) ~f:(fun acc elt ->
          if Tree.mem acc elt ~comparator
          then failwith "Set.bin_read_t: duplicate element in map"
@@ -366,7 +411,7 @@ module Make_plain_using_comparator (Elt : sig
 
   module Provide_hash (Elt : Hasher.S with type t := Elt.t) =
   struct
-    let hash_fold_t state t = hash_fold_direct Elt.hash_fold_t state t
+    let hash_fold_t state t = Using_comparator.hash_fold_direct Elt.hash_fold_t state t
     let hash t =
       Ppx_hash_lib.Std.Hash.get_hash_value
         (hash_fold_t (Ppx_hash_lib.Std.Hash.create ()) t)

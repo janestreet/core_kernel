@@ -36,15 +36,15 @@ let map2 t1 t2 ~f =
     let (v1, v2) = pair t1 t2 key v in
     Some (f v1 v2))
 
-let set t key data = Map.add t ~key ~data
+let set t key data = Map.set t ~key ~data
 
 module Sequence (A : Applicative) = struct
   let sequence t =
     List.fold (Map.to_alist t)
-      ~init:(A.return (Map.empty ~comparator:(Map.comparator t)))
+      ~init:(A.return (Map.Using_comparator.empty ~comparator:(Map.comparator t)))
       ~f:(fun acc (key, data) ->
         A.map2 acc data ~f:(fun acc data ->
-          Map.add acc ~key ~data))
+          Map.set acc ~key ~data))
 end
 
 include struct
@@ -128,7 +128,7 @@ module Make_using_comparator (Key : sig
 
   let create f =
     List.fold Key.all ~init:Key.Map.empty ~f:(fun t key ->
-      Map.add t ~key ~data:(f key))
+      Map.set t ~key ~data:(f key))
 
   include Applicative.Make (struct
       type nonrec 'a t = 'a t

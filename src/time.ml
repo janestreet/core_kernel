@@ -20,7 +20,7 @@ module Make (Time0 : Time0_intf.S) = struct
         ; ofday : Ofday.t }
     end
 
-    val gmtime : t -> Parts.t
+    val gmtime : Relative_to_unspecified_zone.t -> Parts.t
   end = struct
     module Parts = struct
       type t =
@@ -29,86 +29,17 @@ module Make (Time0 : Time0_intf.S) = struct
       [@@deriving compare, sexp_of]
     end
 
-    open Int.O
-
-    (* here to help the inliner with days_per_month *)
-    let [@inline never] invalid_month month =
-      raise_s [%message
-        "invalid month passed to [days_per_month]"
-          (month : int)]
-    ;;
-
-    let [@inline always] days_per_month ~month ~is_leap_year =
-      match month with
-      | 1  -> 31
-      | 2  -> if is_leap_year then 29 else 28
-      | 3  -> 31
-      | 4  -> 30
-      | 5  -> 31
-      | 6  -> 30
-      | 7  -> 31
-      | 8  -> 31
-      | 9  -> 30
-      | 10 -> 31
-      | 11 -> 30
-      | 12 -> 31
-      | _  -> invalid_month month
-    ;;
-
-    let is_leap_year ~year = Date0.is_leap_year ~year
-
-    let year_size year =
-      if is_leap_year ~year
-      then 366
-      else 365
-    ;;
-
-    (* This is a faithless recreation of the algorithm used by gmtime in glibc
-       (see time/offtime.c in any recent version of glibc).  This accounts for the lack of
-       clarity of the algorithm when compared to a simpler looping approach through year
-       sized chunks of days.  Unfortunately, the more naive algorithm is meaningfully
-       slower. *)
-    let [@inline always] calculate_year_and_day_of_year ~days_from_epoch =
-      let div a b = a / b - (if Int.rem a b < 0 then 1 else 0) in
-      let num_leaps_thru_end_of year = div year 4 - div year 100 + div year 400 in
-      let days = ref days_from_epoch in
-      let year = ref 1970 in
-      while !days < 0 || !days >= year_size !year do
-        let year_guess = !year + div !days 365 in
-        days := !days - ((year_guess - !year) * 365
-                         + num_leaps_thru_end_of (year_guess - 1)
-                         - num_leaps_thru_end_of (!year - 1));
-        year := year_guess;
-      done;
-      !year, !days + 1
-    ;;
-
-    (* Written with refs and a loop for speed.  Comparision with a let rec loop version
-       showed that this was faster. *)
-    let [@inline always] calculate_month_and_day_of_month ~day_of_year ~year =
-      let month        = ref 1 in
-      let days_left    = ref day_of_year in
-      let is_leap_year = is_leap_year ~year in
-      while !days_left > days_per_month ~month:!month ~is_leap_year do
-        days_left := !days_left - days_per_month ~month:!month ~is_leap_year;
-        incr month;
-      done;
-      (!month, !days_left)
-    ;;
-
     (* a recreation of the system call gmtime specialized to the fields we need that also
        doesn't rely on Unix. *)
     let gmtime t : Parts.t =
-      let days_from_epoch, ofday_span = to_days_since_epoch_and_remainder t in
-      let year, day_of_year   = calculate_year_and_day_of_year ~days_from_epoch in
-      let month, day_of_month = calculate_month_and_day_of_month ~day_of_year ~year in
-      let date  = Date0.create_exn ~y:year ~m:(Month.of_int_exn month) ~d:day_of_month in
-      let ofday = Ofday.of_span_since_start_of_day ofday_span in
+      let date, ofday = Relative_to_unspecified_zone.to_date_ofday t in
       { date; ofday }
     ;;
 
     let%test_unit "negative time" =
-      let t = of_span_since_epoch (Span.of_sec (-86_399.)) in
+      let t =
+        Relative_to_unspecified_zone.of_span_since_epoch (Span.of_sec (-86_399.))
+      in
       [%test_result: Parts.t]
         ~expect:{ date = Date0.of_string "1969-12-31"
                 ; ofday = Ofday.of_span_since_start_of_day Span.second
@@ -124,8 +55,8 @@ module Make (Time0 : Time0_intf.S) = struct
   let abs_diff t1 t2 = Span.abs (diff t1 t2)
 
   let of_date_ofday ~zone date ofday =
-    let epoch = utc_mktime date ofday in
-    Zone.shift_epoch_time zone `Local epoch
+    let relative = Relative_to_unspecified_zone.of_date_ofday date ofday in
+    Zone.absolute_time_of_relative_time zone relative
   ;;
 
   let of_date_ofday_precise date ofday ~zone =
@@ -155,21 +86,25 @@ module Make (Time0 : Time0_intf.S) = struct
   module Epoch_cache = struct
     type nonrec t = {
       zone      : Zone.t;
-      day_start : t;
-      day_end   : t;
+      day_start : Relative_to_unspecified_zone.t;
+      day_end   : Relative_to_unspecified_zone.t;
       date      : Date0.t
     }
   end
 
-  let date_ofday_of_epoch_internal zone (time : t) =
+  let date_ofday_of_epoch_internal zone (time : Relative_to_unspecified_zone.t) =
     let {Gmtime.Parts. date; ofday} = Gmtime.gmtime time in
-    let day_start = sub time (Ofday.to_span_since_start_of_day ofday) in
-    let day_end   = add day_start Span.day in
-    let cache     = {Epoch_cache. zone; day_start; day_end; date} in
+    let day_start =
+      Relative_to_unspecified_zone.sub time (Ofday.to_span_since_start_of_day ofday)
+    in
+    let day_end = Relative_to_unspecified_zone.add day_start Span.day in
+    let cache = {Epoch_cache. zone; day_start; day_end; date} in
     (cache, (date, ofday))
   ;;
 
-  let initial_gmtime_cache = fst (date_ofday_of_epoch_internal Zone.utc epoch)
+  let initial_gmtime_cache =
+    let relative_epoch = Relative_to_unspecified_zone.of_span_since_epoch Span.zero in
+    fst (date_ofday_of_epoch_internal Zone.utc relative_epoch)
 
   let gmtime_cache = ref initial_gmtime_cache
 
@@ -183,12 +118,16 @@ module Make (Time0 : Time0_intf.S) = struct
     (fun zone unshifted ->
        (* If at time T you are +H hours from UTC, then the correct local time at T is the
           time in UTC at T, plus an offset of H hours. But since UTC is nice and simple,
-          that's the same as what the time in UTC will be in H hours' time (if only it were
-          always that simple!) *)
-       let time = Zone.shift_epoch_time zone `UTC unshifted in
-       let {Epoch_cache.zone = z; day_start = s; day_end = e; date = date} = !gmtime_cache in
+          that's the same as what the time in UTC will be in H hours' time (if only it
+          were always that simple!) *)
+       let open Relative_to_unspecified_zone.Replace_polymorphic_compare in
+       let time = Zone.relative_time_of_absolute_time zone unshifted in
+       let {Epoch_cache.zone = z; day_start = s; day_end = e; date = date}
+         = !gmtime_cache
+       in
        if phys_equal zone z && time >= s && time < e then (
-         (date, Ofday.of_span_since_start_of_day (diff time s)))
+         (date,
+          Ofday.of_span_since_start_of_day (Relative_to_unspecified_zone.diff time s)))
        else begin
          let (new_cache, r) = date_ofday_of_epoch_internal zone time in
          gmtime_cache := new_cache;
@@ -268,8 +207,10 @@ module Make (Time0 : Time0_intf.S) = struct
   ;;
 
   let utc_offset t ~zone =
-    let utc_epoch = Zone.shift_epoch_time zone `UTC t in
-    diff utc_epoch t
+    let utc_epoch = Zone.relative_time_of_absolute_time zone t in
+    Span.( - )
+      (Relative_to_unspecified_zone.to_span_since_epoch utc_epoch)
+      (to_span_since_epoch t)
   ;;
 
   let offset_string time ~zone =

@@ -174,6 +174,7 @@ type 'a sexp_opaque = 'a        [@@deriving bin_io, compare, hash, typerep]
    and core_set_intf.ml. *)
 
 let () =
+  let module T = struct type 'a elt = 'a type 'a cmp = 'a end in
   let module M : sig
     open Set_intf
 
@@ -192,15 +193,20 @@ let () =
       with type ('a, 'b) t    := ('a, 'b) t
       with type ('a, 'b) tree := ('a, 'b) Tree.t
 
-    include Creators2_with_comparator
+    include Creators_generic
       with type ('a, 'b) set  := ('a, 'b) t
       with type ('a, 'b) t    := ('a, 'b) t
       with type ('a, 'b) tree := ('a, 'b) Tree.t
+      with type 'a elt := 'a T.elt
+      with type 'a cmp := 'a T.cmp
+      with type ('a, 'cmp, 'z) options := ('a, 'cmp, 'z) Set_intf.With_first_class_module.t
   end = Set
   in
   ()
 
+
 let () =
+  let module T = struct type 'k key = 'k end in
   let module M : sig
     open Map_intf
 
@@ -218,9 +224,11 @@ let () =
       with type ('a, 'b, 'c) t    := ('a, 'b, 'c) t
       with type ('a, 'b, 'c) tree := ('a, 'b, 'c) Tree.t
 
-    include Creators3_with_comparator
+    include Creators_generic
       with type ('a, 'b, 'c) t    := ('a, 'b, 'c) t
       with type ('a, 'b, 'c) tree := ('a, 'b, 'c) Tree.t
+      with type ('a, 'cmp, 'z) options := ('a, 'cmp, 'z) Map_intf.With_first_class_module.t
+      with type 'k key := 'k T.key
   end = Map
   in
   ()

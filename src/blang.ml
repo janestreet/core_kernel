@@ -508,7 +508,7 @@ let eval_set ~universe:all set_of_base =
   let rec aux (b : _ t) =
     match b with
     | True       -> force all
-    | False      -> Set.empty ~comparator:(Set.comparator (force all))
+    | False      -> Set.Using_comparator.empty ~comparator:(Set.comparator (force all))
     | And (a, b) -> Set.inter (aux a)     (aux b)
     | Or (a, b)  -> Set.union (aux a)     (aux b)
     | Not a      -> Set.diff  (force all) (aux a)

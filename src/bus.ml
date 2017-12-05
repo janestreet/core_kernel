@@ -510,7 +510,7 @@ let subscribe_exn ?on_callback_raise t subscribed_from ~f =
          [%sexp ~~(subscribed_from : Source_code_position.t), { bus = (t : (_, _) t) }]
          [%sexp_of: Sexp.t];
   let subscriber = Subscriber.create subscribed_from ~callback:f ~on_callback_raise in
-  t.subscribers <- Map.add t.subscribers ~key:subscriber.id ~data:subscriber;
+  t.subscribers <- Map.set t.subscribers ~key:subscriber.id ~data:subscriber;
   update_write t;
   begin match t.last_value with
   | None            -> ()

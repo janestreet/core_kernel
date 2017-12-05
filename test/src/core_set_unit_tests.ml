@@ -4,6 +4,7 @@ open! Core_kernel
 module Merge_to_sequence_element = Set_intf.Merge_to_sequence_element
 module With_comparator           = Set_intf.With_comparator
 module Without_comparator        = Set_intf.Without_comparator
+module With_first_class_module   = Set_intf.With_first_class_module
 
 module Unit_tests
     (Elt : sig
@@ -753,6 +754,11 @@ module Create_options_with_comparator = struct
   let simplify_creator f = f ~comparator:Int.comparator
 end
 
+module Create_options_with_first_class_module = struct
+  type ('a, 'b, 'c) create_options = ('a, 'b, 'c) With_first_class_module.t
+  let simplify_creator f = f (module Int : Comparator.S with type t = _ and type comparator_witness = _)
+end
+
 module Create_options_without_comparator = struct
   type ('a, 'b, 'c) create_options = ('a, 'b, 'c) Without_comparator.t
   let simplify_creator = Fn.id
@@ -774,7 +780,7 @@ let%test_module "Set" = (module Unit_tests (Elt_poly) (struct
     type ('a, 'b) set  = ('a, 'b) t
     type ('a, 'b) tree = ('a, 'b) Tree.t
     type 'a cmp        = 'a
-    include Create_options_with_comparator
+    include Create_options_with_first_class_module
     include Access_options_without_comparator
     let kind = `Set
   end))
