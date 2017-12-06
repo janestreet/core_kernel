@@ -1,17 +1,17 @@
-(** This module defines interfaces used in [Core.Map].  See the documentation in
-    core_map.mli for a description of the approach.
-
-    CRs and comments about [Map] functions do not belong in this file.  They belong next
-    to the appropriate function in core_map.mli.
+(** This module defines interfaces used in {!Map}. See those docs for a description of
+    the design.
 
     This module defines module types
-    [{Creators,Accessors}{1,2,3,_generic,_with_comparator}].  It uses check functors to
-    ensure that each module types is an instance of the corresponding [_generic] one.
+    [{Creators,Accessors}{1,2,3,_generic,_with_comparator}]. It uses check functors to
+    ensure that each module type is an instance of the corresponding [_generic] one.
 
     We must treat [Creators] and [Accessors] separately, because we sometimes need to
-    choose different instantiations of their [options].  In particular, [Map] itself
+    choose different instantiations of their [options]. In particular, [Map] itself
     matches [Creators3_with_comparator] but [Accessors3] (without comparator).
 *)
+
+(*_ JS-only: CRs and comments about [Map] functions do not belong in this file.
+  They belong next to the appropriate function in core_map.mli. *)
 
 open! Import
 open T

@@ -1,5 +1,3 @@
-(** See flags_intf.ml for documentation. *)
+(** See documentation in {!Flags_intf}. *)
 
-open! Import
-
-include Flags_intf.Flags
+include Flags_intf.Flags (** @open *)

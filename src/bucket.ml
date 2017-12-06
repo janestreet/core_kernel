@@ -1,3 +1,7 @@
+(** A bucket is a simple data structure for holding up to [size] elements of a given type.
+
+    Its actual signature is defined in {!Core_kernel.Bucket.S}. *)
+
 open! Import
 open Std_internal
 
@@ -14,25 +18,25 @@ module type S = sig
   type contents
   type t [@@deriving bin_io, sexp]
 
-  (* Fails if init_level is not within bounds [zero;size]. *)
+  (** Fails if init_level is not within bounds [zero;size]. *)
   val create : size:contents -> init_level:contents -> t
 
-  (* the size used upon creation *)
+  (** The size used upon creation. *)
   val size : t -> contents
 
-  (* the current bucket level *)
+  (** The current bucket level. *)
   val level : t -> contents
 
-  (* Take some exact amount out of the bucket and return `Taken. If there is not enough
-   * left in the bucket, return `Unable and do not take anything *)
+  (** Take some exact amount out of the bucket and return [`Taken]. If there is not enough
+      left in the bucket, return [`Unable] and do not take anything. *)
   val take : t -> contents -> [ `Taken | `Unable ]
 
-  (* Take some amount out of the bucket, possibly emptying it. The return value is the
-   * amount that was actually taken out. *)
+  (** Take some amount out of the bucket, possibly emptying it. The return value is the
+      amount that was actually taken out. *)
   val take_at_most : t -> contents -> contents
 
-  (* Add some amount into the bucket. Cap at maximum capacity if the increment provided
-     is too big *)
+  (** Add some amount into the bucket. Cap at maximum capacity if the increment provided
+      is too big. *)
   val fill : t -> contents -> unit
 end
 

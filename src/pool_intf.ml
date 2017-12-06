@@ -1,4 +1,7 @@
-(** A manual memory manager for a set of mutable tuples.
+(** A manual memory manager for a set of mutable tuples.  The point of [Pool] is to
+    allocate a single long-lived block of memory (the pool) that lives in the OCaml major
+    heap, and then to reuse the block, rather than continually allocating blocks on the
+    minor heap.
 
     A pool stores a bounded-size set of tuples, where client code is responsible for
     explicitly controlling when the pool allocates and frees tuples.  One [create]s a pool
@@ -7,10 +10,6 @@
     One then uses [get] and [set] along with the pointer to get and set slots of the
     tuple.  Finally, one [free]'s a pointer to the pool's memory for a tuple, making the
     memory available for subsequent reuse.
-
-    The point of [Pool] is to allocate a single long-lived block of memory (the pool) that
-    lives in the OCaml major heap, and then to reuse the block, rather than continually
-    allocating blocks on the minor heap.
 
     In typical usage, one wraps up a pool with an abstract interface, giving nice names to
     the tuple slots, and only exposing mutation where desired.
@@ -246,7 +245,7 @@ module type Pool = sig
   (** This uses an [Obj_array.t] to implement the pool.  We expose that [Pointer.t] is an
       [int] so that OCaml can avoid the write barrier, due to knowing that [Pointer.t]
       isn't an OCaml pointer. *)
-  include S with type 'a Pointer.t = private int
+  include S with type 'a Pointer.t = private int (** @inline *)
 
   (** An [Unsafe] pool is like an ordinary pool, except that the [create] function does
       not require an initial element.  The pool stores a dummy value for each slot.

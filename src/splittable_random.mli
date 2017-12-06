@@ -4,7 +4,7 @@
     pseudo-random number generator that sacrifices cryptographic-quality randomness in
     favor of performance.
 
-    The primary difference between [Splittable_random] and [Random] is the [State.split]
+    The primary difference between [Splittable_random] and {!Random} is the [State.split]
     operation for generating new pseudo-random states.  While it is easy to simulate
     [State.split] using [Random], the result has undesirable statistical properties; the
     new state does not behave independently of the original.  It is better to switch to
@@ -34,7 +34,7 @@ module State : sig
 
   (** [split t] produces a new state that behaves deterministically (i.e. only depending
       on the state of [t]), but pseudo-independently from [t]. This operation mutates
-      [t], i.e. [t] will return different values than if this hadn't been called. *)
+      [t], i.e., [t] will return different values than if this hadn't been called. *)
   val split : t -> t
 end
 

@@ -1,5 +1,5 @@
-(** Functional Heap implementation based on pairing-heap algorithm and immutable data
-    structures.  See more info at http://en.wikipedia.org/wiki/Pairing_heap. *)
+(** Functional heaps (implemented as
+    {{: http://en.wikipedia.org/wiki/Pairing_heap} Pairing heaps}) *)
 
 open! Import
 
@@ -11,9 +11,9 @@ type 'a t [@@deriving sexp_of]
     documented separately to make sure there is no confusion. *)
 include Container.S1 with type 'a t := 'a t
 
-(** The comparison function in [min_elt] and [max_elt] are independent of that used to
-    order the heap.  Since the provided [cmp] may be different from the one used to
-    create the heap, it is necessary for these functions to traverse the entire heap.  If
+(** The comparison functions in [min_elt] and [max_elt] are independent of the one
+    used to order the heap. Since the provided [cmp] may be different from the one used to
+    create the heap, it is necessary for these functions to traverse the entire heap. If
     you want to access the smallest element of the heap according to the heap's comparison
     function, you should use [top]. *)
 val min_elt : 'a t -> cmp:('a -> 'a -> int) -> 'a option
@@ -34,7 +34,7 @@ val of_list  : 'a list  -> cmp:('a -> 'a -> int) -> 'a t
 (** [add t v] returns the new heap after addition.  Complexity O(1). *)
 val add : 'a t -> 'a -> 'a t
 
-(** This returns the top (i.e. smallest) element of the heap.  Complexity O(1). *)
+(** This returns the top (i.e., smallest) element of the heap.  Complexity O(1). *)
 val top     : 'a t -> 'a option
 val top_exn : 'a t -> 'a
 
@@ -45,7 +45,7 @@ val top_exn : 'a t -> 'a
     n).  The complexity of the worst case is O(n). *)
 val remove_top : 'a t -> 'a t option
 
-(** This removes and returns the top (i.e. least) element and the modified heap. *)
+(** This removes and returns the top (i.e., least) element and the modified heap. *)
 val pop     : 'a t -> ('a * 'a t) option
 val pop_exn : 'a t -> 'a * 'a t
 

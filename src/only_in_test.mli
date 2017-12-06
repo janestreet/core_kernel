@@ -8,13 +8,14 @@
     want to keep the type definition opaque, but use the underlying
     representation in unit tests.  You could write in the ml:
 
-    {[let test_to_int t = Only_in_test.return t
-                            [let test_of_int n = Only_in_test.return n]}
+    {[
+      let test_to_int t = Only_in_test.return t
+      let test_of_int n = Only_in_test.return n]}
 
     You would then expose in the mli:
 
-    {[type t
-      ... functions for use in regular programming...
+    {[
+      type t
       val test_to_int : t -> int Only_in_test.t
       val test_of_int : int -> t Only_in_test.t]}
 

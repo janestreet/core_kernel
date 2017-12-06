@@ -1,5 +1,4 @@
-(** A queue implemented with an array.  See [Queue_intf] for documentation of standard
-    queue functions.
+(** A queue implemented with an array.
 
     The implementation will grow the array as necessary.  The array will never
     automatically be shrunk, but the size can be interrogated and set with [capacity] and
@@ -16,7 +15,7 @@ open! Import
 
 type 'a t [@@deriving compare]
 
-include Queue_intf.S with type 'a t := 'a t
+include Queue_intf.S with type 'a t := 'a t (** @inline *)
 
 include Binary_searchable.S1 with type 'a t := 'a t
 include Equal.            S1 with type 'a t := 'a t

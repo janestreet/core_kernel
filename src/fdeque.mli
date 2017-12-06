@@ -1,16 +1,16 @@
-(** A simple polymorphic functional double-ended queue.  Use this if you need a queue-like
-    data structure that provides enqueue and dequeue accessors on both ends.  For
+(** A simple polymorphic functional double-ended queue. Use this if you need a queue-like
+    data structure that provides enqueue and dequeue accessors on both ends. For
     strictly first-in, first-out access, see [Fqueue].
 
-    Amortized running times assume that enqueue/dequeue are used sequentially, threading
-    the changing deque through the calls. *)
+    Amortized running times assume that [enqueue]/[dequeue] are used sequentially,
+    threading the changing deque through the calls. *)
 
 open! Import
 
 type 'a t [@@deriving bin_io, compare, hash, sexp]
 
 (** [Container] operations traverse deque elements front-to-back, like [Front_to_back]
-    below.  If you need faster traversal and don't care about the order, use
+    below. If you need faster traversal and don't care about the order, use
     [Arbitrary_order] below.
 
     [is_empty] and [length] have worst-case complexity O(1). *)
@@ -23,14 +23,14 @@ module Arbitrary_order : sig
   include Container.S1 with type 'a t := 'a t
 end
 
-(** Traverse deque elements front-to-back.  Incurs up to O(n) additional time and space
+(** Traverse deque elements front-to-back. Incurs up to O(n) additional time and space
     cost over [Arbitrary_order]. *)
 module Front_to_back : sig
   val of_list : 'a list -> 'a t
   include Container.S1 with type 'a t := 'a t
 end
 
-(** Traverse deque elements back-to-front.  Incurs up to O(n) additional time and space
+(** Traverse deque elements back-to-front. Incurs up to O(n) additional time and space
     cost over [Arbitrary_order]. *)
 module Back_to_front : sig
   val of_list : 'a list -> 'a t
@@ -49,7 +49,7 @@ val of_list : 'a list -> 'a t
 
 (** [rev t] returns [t], reversed.
 
-    Complexity: worst-case O(1) *)
+    Complexity: worst-case O(1). *)
 val rev : 'a t -> 'a t
 
 (** [enqueue t side x] produces [t] updated with [x] added to its [side].

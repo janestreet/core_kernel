@@ -37,22 +37,22 @@ val eprintf : ('r, unit, string, unit) format4 -> 'r
     ]}
 *)
 module Make () : sig
-  (** Whether the invariants are called on each invocation *)
+  (** Whether the invariants are called on each invocation. *)
   val check_invariant : bool ref
 
-  (** If true, you get a message on stderr every time [debug] is called *)
+  (** If true, you get a message on stderr every time [debug] is called. *)
   val show_messages   : bool ref
 
-  (** We avoid labels so that the applications are more concise -- see example above *)
+  (** We avoid labels so that the applications are more concise -- see example above. *)
   val debug
     :  't Invariant.t
-    -> module_name : string         (** appears on messages *)
-    -> (string                      (** name of function [f], also appears on messages *)
-        -> 't list (** args of type [t], to have invariant checked iff [check_invariant]*)
-        -> 'args   (** arguments to function we're debugging *)
+    -> module_name : string (** module_name appears on messages *)
+    -> (string (** string name of function [f], also appears on messages *)
+        -> 't list (** args of type [t], to have invariant checked iff [check_invariant] *)
+        -> 'args (** arguments to the function we're debugging *)
         -> ('args -> Sexp.t)
         -> ('result -> Sexp.t)
-        -> (unit -> 'result)          (** should call [f] with ['args], exn's re-raised *)
+        -> (unit -> 'result) (** should call [f] with ['args], exn's re-raised *)
         -> 'result
        )
 end

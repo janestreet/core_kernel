@@ -23,7 +23,7 @@ module type S1_permissions = sig
 end
 
 module type Blit = sig
-  include Base.Blit_intf.Blit
+  include Base.Blit_intf.Blit (** @open *)
 
   module type S_permissions  = S_permissions
   module type S1_permissions = S1_permissions

@@ -1,3 +1,5 @@
+(** This module extends {!Base.Ref}. *)
+
 open! Import
 open Perms.Export
 
@@ -5,7 +7,7 @@ type 'a t = 'a Base.Ref.t = { mutable contents : 'a }
 [@@deriving bin_io, typerep]
 
 include module type of struct include Base.Ref end
-  with type 'a t := 'a t
+  with type 'a t := 'a t (** @open *)
 
 module Permissioned : sig
   type ('a, -'perms) t [@@deriving sexp, bin_io]

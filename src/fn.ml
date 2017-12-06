@@ -1,2 +1,4 @@
+(** Extends {!Base.Fn}. *)
+
 include Deprecate_pipe_bang
-include Base.Fn
+include Base.Fn (** @open *)

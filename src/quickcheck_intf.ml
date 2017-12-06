@@ -1,5 +1,6 @@
 open! Import
 
+(*_ JS-only: For an overview see: lib/core_kernel/doc/quickcheck.mkd *)
 (** For examples see: lib/core/example/quickcheck *)
 
 module type Generator = sig

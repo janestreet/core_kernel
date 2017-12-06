@@ -1,5 +1,7 @@
 open! Import
 
+
+(**/**)
 module Std = struct
   include Std_kernel (** @inline *)
 
@@ -7,7 +9,6 @@ module Std = struct
   module Bigstring                       = Bigstring
   module Bigstring_marshal               = Bigstring_marshal
   module Caml                            = Caml
-  module Comparisons                     = Comparisons
   module Container_intf                  = Container_intf
   module Core_kernel_stable              = Stable
   module Date                            = Date
@@ -16,6 +17,7 @@ module Std = struct
   module Md5                             = Md5
   module Digest                          = Md5
   [@@ocaml.deprecated "[since 2017-05] Use Md5 instead."]
+  module Optional_syntax_intf            = Optional_syntax_intf
   module Perms                           = Perms
   module Set_intf                        = Set_intf
   module Stack_intf                      = Stack_intf
@@ -46,5 +48,6 @@ module Std = struct
     module Time_ns_alternate_sexp          = Time_ns_alternate_sexp
   end
 end
+(**/**)
 
 include Std (** @inline *)

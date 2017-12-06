@@ -1,6 +1,5 @@
-(** Memory management control and statistics; finalized values.
-
-    This is a wrapper around INRIA's standard [Gc] module. *)
+(** This is a wrapper around INRIA's standard [Gc] module. Provides memory
+    management control and statistics, and finalized values. *)
 
 open! Import
 

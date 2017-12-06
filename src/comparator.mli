@@ -1,3 +1,6 @@
+(** Extends {!Base.Comparator}, providing a type-indexed value that allows you to compare
+    values of that type. *)
+
 open! Import
 
 type ('a, 'witness) t = ('a, 'witness) Base.Comparator.t =
@@ -7,7 +10,9 @@ type ('a, 'witness) t = ('a, 'witness) Base.Comparator.t =
   }
 
 include module type of Base.Comparator
-  with type ('a, 'witness) t := ('a, 'witness) t
+  with type ('a, 'witness) t := ('a, 'witness) t (** @open *)
+
+(** The following module types and functors may be used to define stable modules *)
 
 module Stable : sig
   module V1 : sig
@@ -18,8 +23,6 @@ module Stable : sig
       }
 
     type ('a, 'b) comparator = ('a, 'b) t
-
-    (** The following module types and functors may be used to define stable modules *)
 
     module type S = sig
       type t

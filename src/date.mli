@@ -1,1 +1,3 @@
-include Date_intf.Date
+(** Date module. *)
+
+include Date_intf.Date (** @inline *)

@@ -1,11 +1,11 @@
-(** This module extends the Base [Bytes] module *)
+(** This module extends {!Base.Bytes}. *)
 
 open! Import
 
 type t = bytes [@@deriving bin_io, typerep]
 
 include module type of struct include Base.Bytes end
-  with type t := t
+  with type t := t (** @open *)
 
 include Hexdump.S        with type t := t
 include Quickcheckable.S with type t := t

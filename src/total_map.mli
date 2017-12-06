@@ -1,8 +1,8 @@
-(** A [('key, 'value, cmp) Map.t] where every value of type ['key] is present.
+(** A map that includes an entry for every possible value of the key type.
 
     This is intended to be used on ['key] types where there is a full enumeration of the
-    type.  In the common use case, ['key] will be a simple variant type with [[@@deriving
-    compare, enumerate]].  For example:
+    type. In the common use case, ['key] will be a simple variant type with [[@@deriving
+    compare, enumerate]]. For example:
 
     {[
       module Arrow_key = struct
@@ -20,7 +20,7 @@
     ]}
 
     In such a case, a [t] is semantically equivalent to a pure function from ['key] to
-    ['value].  The differences are that it is serializable and that mapping or changing a
+    ['value]. The differences are that it is serializable and that mapping or changing a
     [t] will produce a [t] using the same amount of space as the original.
 
     However, in theory you could also modify the comparison function and enumeration, so

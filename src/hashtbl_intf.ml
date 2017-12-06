@@ -1,3 +1,5 @@
+(** See {!Core_kernel.Hashtbl} for documentation. *)
+
 open! Import
 
 module Binable = Binable0
@@ -76,7 +78,7 @@ module type S_binable = sig
 end
 
 module type Hashtbl = sig
-  include Hashtbl_intf.S_without_submodules
+  include Hashtbl_intf.S_without_submodules (** @inline *)
 
   module Using_hashable : sig
     include Hashtbl_intf.Creators

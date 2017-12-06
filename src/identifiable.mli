@@ -1,6 +1,7 @@
-(** a signature for identifier types. *)
+(** A signature for identifier types. *)
 
 open! Import
+
 
 module type S_common = sig
   type t [@@deriving compare, hash, sexp_of]
@@ -35,7 +36,7 @@ module Make_plain (M : sig
   end) : S_plain
   with type t := M.t
 
-(** Used for making an Identifiable module.  Here's an example.
+(** Used for making an Identifiable module. Here's an example:
 
     {[
       module Id = struct

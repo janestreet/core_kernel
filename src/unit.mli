@@ -1,11 +1,12 @@
-(** Module for the type [unit].  This is mostly useful for building functor arguments. *)
+(** Module for the type [unit], extended from {!Base.Unit}.  This is mostly useful for
+    building functor arguments. *)
 
 open! Import
 
 type t = unit [@@deriving typerep]
 
 include module type of struct include Base.Unit end
-  with type t := t
+  with type t := t (** @open *)
 
 include Identifiable.S
   with type t := t

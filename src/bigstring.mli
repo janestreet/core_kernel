@@ -1,11 +1,11 @@
-(** String type based on [Bigarray], for use in I/O and C-bindings *)
+(** String type based on [Bigarray], for use in I/O and C-bindings. *)
 
 open! Import
 
 
 open Bigarray
 
-(** {6 Types and exceptions} *)
+(** {2 Types and exceptions} *)
 
 
 (** Type of bigstrings *)
@@ -18,7 +18,7 @@ type t_frozen = t [@@deriving bin_io, compare, hash, sexp]
 include Equal.S   with type t := t
 include Hexdump.S with type t := t
 
-(** {6 Creation and string conversion} *)
+(** {2 Creation and string conversion} *)
 
 val create : ?max_mem_waiting_gc:Byte_units.t -> int -> t
 (** [create length]
@@ -66,7 +66,7 @@ val to_bytes : ?pos : int -> ?len : int -> t -> bytes
 val concat : ?sep:t -> t list -> t
 (** [concat ?sep list] returns the concatenation of [list] with [sep] in between each. *)
 
-(** {6 Checking} *)
+(** {2 Checking} *)
 
 val check_args : loc : string -> pos : int -> len : int -> t -> unit
 (** [check_args ~loc ~pos ~len bstr] checks the position and length
@@ -81,7 +81,7 @@ val get_opt_len : t -> pos : int -> int option -> int
     arguments.  Use {!check_args} for that purpose. *)
 
 
-(** {6 Accessors} *)
+(** {2 Accessors} *)
 
 val length : t -> int
 (** [length bstr] @return the length of bigstring [bstr]. *)
@@ -106,7 +106,7 @@ external is_mmapped : t -> bool = "bigstring_is_mmapped_stub" [@@noalloc]
 (** [is_mmapped bstr] @return whether the bigstring [bstr] is
     memory-mapped. *)
 
-(** {6 Blitting} *)
+(** {2 Blitting} *)
 
 (** [blit ~src ?src_pos ?src_len ~dst ?dst_pos ()] blits [src_len] characters
     from [src] starting at position [src_pos] to [dst] at position [dst_pos].
@@ -130,7 +130,7 @@ module From_string : Blit.S_distinct with type src := string with type dst := t
 module To_bytes   : Blit.S_distinct with type src := t     with type dst := bytes
 module From_bytes : Blit.S_distinct with type src := bytes with type dst := t
 
-(** {6 Reading/writing bin-prot} *)
+(** {2 Reading/writing bin-prot} *)
 
 (** These functions write the "size-prefixed" bin-prot format that is used by, e.g.,
     async's [Writer.write_bin_prot], [Reader.read_bin_prot] and
@@ -161,7 +161,7 @@ val read_bin_prot_verbose_errors
      | `Ok of ('a * int)
      ]
 
-(** {6 Search} *)
+(** {2 Search} *)
 
 (** [find ?pos ?len char t] returns [Some i] for the smallest [i >= pos] such that
     [t.{i} = char], or [None] if there is no such [i].
@@ -180,7 +180,7 @@ val find
 external unsafe_find : t -> char -> pos:int -> len:int -> int = "bigstring_find" [@@noalloc]
 
 
-(** {6 Destruction} *)
+(** {2 Destruction} *)
 
 (** [unsafe_destroy bstr] destroys the bigstring by deallocating its associated data or,
     if memory-mapped, unmapping the corresponding file, and setting all dimensions to
@@ -197,8 +197,9 @@ external unsafe_find : t -> char -> pos:int -> len:int -> int = "bigstring_find"
     to the same data. *)
 external unsafe_destroy : t -> unit = "bigstring_destroy_stub"
 
-(** Accessors for parsing binary values, analogous to binary_packing.  These are in
-    Bigstring rather than a separate module because:
+(** {2 Accessors for parsing binary values, analogous to binary_packing}
+
+    These are in Bigstring rather than a separate module because:
 
     1) Existing binary_packing requires copies and does not work with bigstrings
     2) The accessors rely on the implementation of bigstring, and hence should
@@ -218,6 +219,7 @@ external unsafe_destroy : t -> unit = "bigstring_destroy_stub"
     <endian>    ::= _le | _be | ''
 
     The "unsafe_" prefix indicates that these functions do no bounds checking. *)
+
 val get_int8                : t -> pos:int -> int
 val set_int8                : t -> pos:int -> int -> unit
 val get_uint8               : t -> pos:int -> int
@@ -228,7 +230,8 @@ val unsafe_set_int8         : t -> pos:int -> int -> unit
 val unsafe_get_uint8        : t -> pos:int -> int
 val unsafe_set_uint8        : t -> pos:int -> int -> unit
 
-(** {6 16-bit methods} *)
+(** {2 16-bit methods} *)
+
 val get_int16_le            : t -> pos:int -> int
 val get_int16_be            : t -> pos:int -> int
 val set_int16_le            : t -> pos:int -> int -> unit
@@ -249,7 +252,8 @@ val unsafe_get_uint16_be    : t -> pos:int -> int
 val unsafe_set_uint16_le    : t -> pos:int -> int -> unit
 val unsafe_set_uint16_be    : t -> pos:int -> int -> unit
 
-(** {6 32-bit methods} *)
+(** {2 32-bit methods} *)
+
 val get_int32_le     : t -> pos:int -> int
 val get_int32_be     : t -> pos:int -> int
 val set_int32_le     : t -> pos:int -> int -> unit
@@ -276,7 +280,8 @@ val unsafe_set_uint32_be    : t -> pos:int -> int -> unit
     64-bit precision (i.e. Less than Max_Long), then we can avoid allocation and use an
     immediate.  If the user is wrong, an exception will be thrown (for get). *)
 
-(** {6 64-bit signed values} *)
+(** {2 64-bit signed values} *)
+
 val get_int64_le_exn   : t -> pos:int -> int
 val get_int64_be_exn   : t -> pos:int -> int
 val get_int64_le_trunc : t -> pos:int -> int
@@ -291,7 +296,8 @@ val unsafe_get_int64_be_trunc : t -> pos:int -> int
 val unsafe_set_int64_le       : t -> pos:int -> int -> unit
 val unsafe_set_int64_be       : t -> pos:int -> int -> unit
 
-(** {6 64-bit unsigned values} *)
+(** {2 64-bit unsigned values} *)
+
 val get_uint64_be_exn : t -> pos:int -> int
 val get_uint64_le_exn : t -> pos:int -> int
 val set_uint64_le     : t -> pos:int -> int -> unit
@@ -302,7 +308,8 @@ val unsafe_get_uint64_le_exn : t -> pos:int -> int
 val unsafe_set_uint64_le     : t -> pos:int -> int -> unit
 val unsafe_set_uint64_be     : t -> pos:int -> int -> unit
 
-(** {6 32-bit methods w/ full precision} *)
+(** {2 32-bit methods with full precision} *)
+
 val get_int32_t_le : t -> pos:int -> Int32.t
 val get_int32_t_be : t -> pos:int -> Int32.t
 val set_int32_t_le : t -> pos:int -> Int32.t -> unit
@@ -313,7 +320,8 @@ val unsafe_get_int32_t_be : t -> pos:int -> Int32.t
 val unsafe_set_int32_t_le : t -> pos:int -> Int32.t -> unit
 val unsafe_set_int32_t_be : t -> pos:int -> Int32.t -> unit
 
-(** {6 64-bit methods w/ full precision} *)
+(** {2 64-bit methods with full precision} *)
+
 val get_int64_t_le : t -> pos:int -> Int64.t
 val get_int64_t_be : t -> pos:int -> Int64.t
 val set_int64_t_le : t -> pos:int -> Int64.t -> unit
@@ -324,7 +332,7 @@ val unsafe_get_int64_t_be : t -> pos:int -> Int64.t
 val unsafe_set_int64_t_le : t -> pos:int -> Int64.t -> unit
 val unsafe_set_int64_t_be : t -> pos:int -> Int64.t -> unit
 
-(** similar to [Binary_packing.unpack_tail_padded_fixed_string] and
+(** Similar to [Binary_packing.unpack_tail_padded_fixed_string] and
     [.pack_tail_padded_fixed_string]. *)
 val get_tail_padded_fixed_string : padding:char -> t -> pos:int -> len:int -> unit -> string
 val set_tail_padded_fixed_string : padding:char -> t -> pos:int -> len:int -> string -> unit

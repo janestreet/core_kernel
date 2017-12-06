@@ -1,11 +1,11 @@
-(** This module extends the Base [Or_error] module *)
+(** This module extends {!Base.Or_error} with bin_io. *)
 
 open! Import
 
 type 'a t = ('a, Error.t) Result.t [@@deriving bin_io]
 
 include module type of struct include Base.Or_error end
-  with type 'a t := 'a t
+  with type 'a t := 'a t (** @open *)
 
 module Stable : sig
   (** [Or_error.t] is wire compatible with [V2.t], but not [V1.t], like [Info.Stable]

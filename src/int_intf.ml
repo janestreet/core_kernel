@@ -1,4 +1,4 @@
-(** This module extends the Base [Int_intf] module *)
+(** This module extends {!Base.Int_intf}. *)
 
 module type Round = Base.Int_intf.Round
 

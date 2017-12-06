@@ -15,6 +15,7 @@ end
 
 module type Type_equal = sig
   include (module type of struct include Base.Type_equal end
-            with module Id := Base.Type_equal.Id)
+            with module Id := Base.Type_equal.Id) (** @open *)
+
   module Id : Id
 end

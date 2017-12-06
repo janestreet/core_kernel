@@ -318,6 +318,7 @@ module type Timing_wheel = sig
 
   (** One can think of a timing wheel as a set of alarms.  Here are various container
       functions along those lines. *)
+
   val is_empty : _ t -> bool
   val length : _ t -> int
   val iter : 'a t -> f:('a Alarm.t -> unit) -> unit

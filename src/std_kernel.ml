@@ -3,8 +3,6 @@
 
 open! Import
 
-include Std_internal
-
 module Applicative                          = Applicative
 module Arg                                  = Arg
 module Array                                = Array
@@ -30,6 +28,7 @@ module Char                                 = Char
 module Commutative_group                    = Commutative_group
 module Comparable                           = Comparable
 module Comparator                           = Comparator
+module Comparisons                          = Comparisons
 module Container                            = Container
 module Day_of_week                          = Day_of_week
 module Debug                                = Debug
@@ -63,9 +62,11 @@ module Hashtbl_intf                         = Hashtbl_intf
 module Heap                                 = Heap
 module Heap_block                           = Heap_block
 module Hexdump                              = Hexdump
+module Hexdump_intf                         = Hexdump_intf
 module Host_and_port                        = Host_and_port
 module Identifiable                         = Identifiable
 module Immediate_option                     = Immediate_option
+module Immediate_option_intf                = Immediate_option_intf
 module In_channel                           = In_channel
 module Info                                 = Info
 module Int                                  = Int
@@ -105,15 +106,17 @@ module Pid                                  = Pid
 module Poly                                 = Poly
 module Polymorphic_compare                  = Polymorphic_compare
 module Pool                                 = Pool
+module Pool_intf                            = Pool_intf
 module Pooled_hashtbl                       = Pooled_hashtbl
 module Pretty_printer                       = Pretty_printer
 module Printexc                             = Printexc
 module Printf                               = Printf
 module Queue                                = Queue
 module Quickcheck                           = Quickcheck
+module Quickcheck_intf                      = Quickcheck_intf
 module Quickcheckable                       = Quickcheckable
 module Robustly_comparable                  = Robustly_comparable
-module Random                               = Random
+module Random                               = Base.Random
 module Ref                                  = Ref
 module Result                               = Result
 module Rope                                 = Rope
@@ -138,6 +141,7 @@ module Thread_safe_queue                    = Thread_safe_queue
 module Timing_wheel_ns                      = Timing_wheel_ns
 module Total_map                            = Total_map
 module Tuple                                = Tuple
+module Tuple_type                           = Tuple_type
 module Tuple2                               = Tuple.T2
 module Tuple3                               = Tuple.T3
 module Type_equal                           = Type_equal
@@ -183,3 +187,5 @@ let () =
 let am_running_inline_test = Ppx_inline_test_lib.Runtime.am_running_inline_test
 
 let sec = Time_float.Span.of_sec
+
+include Std_internal

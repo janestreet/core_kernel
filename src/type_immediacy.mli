@@ -1,12 +1,12 @@
 (** Witnesses that express whether a type's values are always, sometimes, or never
     immediate.
 
-    A value is immediate when it is internally represented unboxed, using up one word of
-    memory, rather than a pointer to a heap-allocated block.
+    A value is immediate when it is internally represented unboxed, using one word of
+    memory rather than a pointer to a heap-allocated block.
 
     Some examples:
 
-    - All [int] values are by definition immediate, i.e. unboxed, and so [int]
+    - All [int] values are by definition immediate, i.e., unboxed, and so [int]
     is always immediate.
 
     - A ['a list] is either [[]], which is internally represented as 0 (immediate), or a
@@ -14,7 +14,7 @@
     contains the first element and the pointer to the rest of the list.  Therefore ['a
     list] is sometimes immediate.
 
-    - All values of type ['a ref] are represented as a pointer to a heap block, containing
+    - All values of type ['a ref] are represented as a pointer to a heap block containing
     the actual values ['a].  Therefore ['a ref] is never immediate.
 
     The witness values can be used to perform safe optimizations such as allowing a more
@@ -22,7 +22,7 @@
     also be used to perform safe conversions between immediate values of type ['a] and
     [int] instead of using [Obj.magic].
 
-    {1 Converting between values and ints}
+    {2 Converting between values and ints}
 
     Consider an arbitrary type ['a] for which you have built a type-immediacy witness
     using this interface. Let's call it [w : 'a t].
@@ -40,24 +40,24 @@
 
     Consider the following cases:
 
-    - let [v] be an immediate value.
+    {ul {- let [v] be an immediate value.
 
     Let [i] be the [int] that internally represents [v].  Then, [value_as_int v] returns
     [Some i].
 
     We can also recover [v] by using the conversions that go the other way.  In
-    particular, [int_as_value i] returns [Some v].
+    particular, [int_as_value i] returns [Some v].}}
 
-    - let [v] be a boxed value that cannot be converted to an [int].
+    {ul {- let [v] be a boxed value that cannot be converted to an [int].
 
     [value_as_int v] returns [None] because there does not exist an int s.t. [int_as_value
-    i] evaluates to [Some v].
+    i] evaluates to [Some v].}}
 
-    - let [i] be an int that does not represent any value of type ['a]
+    {ul {- let [i] be an int that does not represent any value of type ['a]
 
-    [int_as_value i] returns [None].
+    [int_as_value i] returns [None].}}
 
-    {1 Faster *_exn functions and functions with boolean results}
+    {2 Faster *_exn functions and functions with boolean results}
 
     [value_is_int v]     is a faster equivalent to [Option.is_some   (value_as_int v)].
     [value_as_int_exn v] is a faster equivalent to [Option.value_exn (value_as_int v)].
@@ -84,7 +84,7 @@
       else none
     ]}
 
-    {1 Example}
+    {2 Example}
 
     Consider the following type:
 
@@ -134,7 +134,7 @@
     [Always.int_as_value_exn w 1]      evaluates to [true]
     [Always.int_as_value_exn w (-1)]   raises
 
-    {1 N-ary types that are immediate independently of their type arguments}
+    {2 N-ary types that are immediate independently of their type arguments}
 
     We also provide [For_all_parameters_S*] functors.  Those are useful when one has a
     type with type parameters, but knows that values of that type will always be immediate

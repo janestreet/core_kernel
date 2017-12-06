@@ -1,3 +1,5 @@
+(** Functors and interfaces used to make modules hashable. *)
+
 open! Import
 
 module Binable = Binable0

@@ -1,3 +1,3 @@
-(** This module extends the Base [Blit] module *)
+(** This module extends {!Base.Blit}. *)
 
-include Blit_intf.Blit
+include Blit_intf.Blit (** @inline *)

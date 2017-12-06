@@ -1,4 +1,4 @@
-(** This module extends the Base [List] module with bin_io and quickcheck *)
+(** This module extends {!Base.List} with bin_io and quickcheck. *)
 
 open! Import
 
@@ -16,9 +16,13 @@ module Assoc : sig
             with type ('a, 'b) t := ('a, 'b) t)
 end
 
+(** {2 The interface from Base} *)
+
 include module type of struct include Base.List end
   with type 'a t := 'a t
-  with module Assoc := Assoc
+  with module Assoc := Assoc (** @open *)
+
+(** {2 Extensions} *)
 
 (** [stable_dedup] Same as [dedup] but maintains the order of the list and doesn't allow
     compare function to be specified (otherwise, the implementation in terms of Set.t

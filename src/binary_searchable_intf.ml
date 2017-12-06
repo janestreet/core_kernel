@@ -1,4 +1,4 @@
-(** This module extends the Base [Binary_searchable_intf] module *)
+(** This module extends {!Base.Binary_searchable_intf}. *)
 
 open Base.Binary_searchable_intf
 

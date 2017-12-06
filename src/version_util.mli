@@ -1,6 +1,7 @@
 (** This module gives access to the same version/build information returned by
     [Command]-based executables when called with the [-version] or [-build-info] flags
     by [$0 version (-build-info | -version)] or [$0 (-build-info | -version)].
+
     Here's how it works: we arrange for the build system to, at link time, include an
     object file that defines symbols that version_util.ml uses to get the strings that
     contain the information that this module provides.  When building with OMake, our

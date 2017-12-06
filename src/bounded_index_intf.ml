@@ -1,9 +1,11 @@
 (** [Bounded_index] creates unique index types with explicit bounds and human-readable
-    labels.  A 0-based index for the third element of five with label "thing" renders as
-    "(thing 2 of 0 to 4)", whereas a 1-based index for the second element of twelve with
-    label "item" renders as "(item 2 of 1 to 12)", even though both represent the index 2.
+    labels. "(thing 2 of 0 to 4)" refers to a 0-based index for the third element of five
+    with the label "thing", whereas a 1-based index for the second element of twelve with
+    the label "item" renders as "(item 2 of 1 to 12)", even though both represent the
+    index 2.
+
     Use [Bounded_index] to help distinguish between different index types when reading
-    rendered values, deserializing sexps, and typechecking.  Consider using
+    rendered values, deserializing sexps, and typechecking. Consider using
     [Bounded_index] to label fixed pools of resources such as cores in a cpu, worker
     processes in a parallel application, or machines in a cluster. *)
 

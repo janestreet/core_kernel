@@ -1,6 +1,6 @@
-(** This module implements [MD5] message-digest algorithm as described IETF RFC 1321.  [t]
-    is the result type and [val digest_string : string -> t] is the implementation of the
-    algorithm itself.
+(** This module implements the [MD5] message-digest algorithm as described IETF RFC 1321.
+    [t] is the result type and [val digest_string : string -> t] is the implementation of
+    the algorithm itself.
 
     This is currently a thin wrapper over the [Digest] module in INRIA's standard
     library. *)
@@ -14,7 +14,7 @@ module Stable : sig
   end
 end
 
-(** both bin_io and sexp serializations produce a binary 16-character string *)
+(** Both bin_io and sexp serializations produce a binary 16-character string. *)
 module As_binary_string : sig
   module Stable : sig
     module V1 : sig
@@ -85,8 +85,8 @@ val digest_file_blocking_without_releasing_runtime_lock : string -> t
     instead. *)
 val digest_channel_blocking_without_releasing_runtime_lock : in_channel -> len:int -> t
 
-(** Reads an Md5 digest from the given channel
-    (in a format written by [output_blocking]) *)
+(** Reads an Md5 digest from the given channel (in a format written by [output_blocking])
+*)
 val input_blocking : in_channel -> t
 
 (** Writes the Md5 digest to the given channel. *)

@@ -1,6 +1,8 @@
+(** This module extends {!Base.Printf}. *)
+
 open! Import
 
-include Base.Printf
+include Base.Printf (** @open *)
 
 let eprintf  = Stdio.Out_channel.eprintf
 let fprintf  = Stdio.Out_channel.fprintf

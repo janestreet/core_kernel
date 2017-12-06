@@ -1,24 +1,21 @@
-(** An abstract type of scale factors, not bounded between 0% and 100%, internally
-    represented as a float. *)
+(** A scale factor, not bounded between 0% and 100%, represented as a float. *)
 
 open! Import
 open Std_internal
 
 type t [@@deriving hash]
 
-(** of_string and t_of_sexp disallow nan, inf, etc. *)
+(** [of_string] and [t_of_sexp] disallow [nan], [inf], etc. *)
 include Stringable with type t := t
 
-(** sexps are of the form 5bp or 0.05% or 0.0005x *)
+(** Sexps are of the form 5bp or 0.05% or 0.0005x *)
 include Sexpable              with type t := t
 include Binable               with type t := t
 include Comparable            with type t := t
 include Comparable.With_zero  with type t := t
 include Robustly_comparable.S with type t := t
+include Commutative_group.S   with type t := t
 
-(** {6 Arithmetic} *)
-
-include Commutative_group.S with type t := t
 val ( * ) : t -> t -> t
 
 val neg : t -> t
@@ -29,10 +26,10 @@ val is_zero : t -> bool
 val is_nan : t -> bool
 val is_inf : t -> bool
 
-(** [apply t x] multiplies the percent [t] by [x], returning a float *)
+(** [apply t x] multiplies the percent [t] by [x], returning a float. *)
 val apply : t -> float -> float
 
-(** [scale t x] scales the percent [t] by [x], returning a new [t] *)
+(** [scale t x] scales the percent [t] by [x], returning a new [t]. *)
 val scale : t -> float -> t
 
 (** [of_mult 5.] is 5x = 500% = 50_000bp *)
@@ -53,9 +50,10 @@ val to_bp_int : t -> int  (** rounds down *)
 val t_of_sexp_allow_nan_and_inf : Sexp.t -> t
 val of_string_allow_nan_and_inf : string -> t
 
-(** A [Format.t] tells [Percent.format] how to render a floating-point value as a string.
-    Many of the [Format.t] values correspond to [printf] conversion specifications.  For
-    example:
+(** A [Format.t] tells [Percent.format] how to render a floating-point value as a string,
+    like a [printf] conversion specification.
+
+    For example:
 
     {[
       format (Format.exponent ~precision) = sprintf "%.e" precision
@@ -80,7 +78,8 @@ val of_string_allow_nan_and_inf : string -> t
 
     - h or H: convert a floating-point argument to hexadecimal notation, in the style
     0xh.hhhh e+-dd (hexadecimal mantissa, exponent in decimal and denotes a power of
-    2). *)
+    2).
+*)
 module Format : sig
   type t [@@deriving sexp_of]
 

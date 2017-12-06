@@ -1,11 +1,7 @@
-(** This module defines the [Set] module for [Core].  We use "core_set" as the file
-    name rather than "set" to avoid conflicts with OCaml's standard set module.
+(** This module defines the [Set] module for [Core]. Functions that construct a set take
+    as an argument the comparator for the element type.
 
-    This module uses the same organizational approach as [Core_map].  See the
-    documentation in core_map.mli for a description of the approach.
-
-    Functions that construct a set take as an argument the comparator for the element
-    type.
+    This module uses the same organizational approach as {!Map}.
 *)
 
 open! Import
@@ -270,7 +266,7 @@ val iter2
   -> f:([`Left of 'a | `Right of 'a | `Both of 'a * 'a] -> unit)
   -> unit
 
-(** if [a, b = partition_tf set ~f] then [a] is the elements on which [f] produced [true],
+(** If [a, b = partition_tf set ~f] then [a] is the elements on which [f] produced [true],
     and [b] is the elements on which [f] produces [false]. *)
 val partition_tf
   :  ('a, 'cmp) t
@@ -303,7 +299,7 @@ val choose_exn : ('a, _) t -> 'a
     to [x], and [t2] is the set of elements strictly larger than [x]. *)
 val split : ('a, 'cmp) t -> 'a -> ('a, 'cmp) t * 'a option * ('a, 'cmp) t
 
-(** if [equiv] is an equivalence predicate, then [group_by set ~equiv] produces a list
+(** If [equiv] is an equivalence predicate, then [group_by set ~equiv] produces a list
     of equivalence classes (i.e., a set-theoretic quotient).  E.g.,
 
     {[
@@ -366,7 +362,7 @@ val gen
 val obs : 'key Quickcheck.Observer.t -> ('key, 'cmp) t Quickcheck.Observer.t
 val shrinker : 'key Quickcheck.Shrinker.t -> ('key, 'cmp) t Quickcheck.Shrinker.t
 
-(** {1 Polymorphic sets}
+(** {2 Polymorphic sets}
 
     Module {!Poly} deals with sets that use OCaml's polymorphic comparison to compare
     elements.
@@ -395,7 +391,7 @@ module Poly : sig
 end
 with type ('a, 'b) set := ('a, 'b) t
 
-(** {1 Signatures and functors for building [Set] modules}  *)
+(** {2 Signatures and functors for building [Set] modules}  *)
 
 module type Elt_plain = Elt_plain
 
@@ -451,7 +447,7 @@ module Make_binable_using_comparator (Elt : sig
     with type Elt.t = Elt.t
     with type Elt.comparator_witness = Elt.comparator_witness
 
-(** The following types and functors may be used to define stable modules *)
+(** The following types and functors may be used to define stable modules. *)
 module Stable : sig
   module V1 : sig
     type nonrec ('a, 'b) t = ('a, 'b) t

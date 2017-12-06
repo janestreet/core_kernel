@@ -1,3 +1,5 @@
+(** Provides functors for making a module quickcheckable with {!Quickcheck}. *)
+
 open! Import
 
 module type S     = Quickcheck.S

@@ -1,13 +1,12 @@
-(** This module defines interfaces used in [Core.Set].  This module uses the same
-    organizational approach as [Map_intf].  See the documentation in core_map.mli for
-    a description of the approach.
+(** This module defines interfaces used in {!Core_kernel.Set}. See the {!Map} docs for a
+    description of the design.
 
     This module defines module types
-    [{Creators,Accessors}{0,1,2,_generic,_with_comparator}].  It uses check functors to
-    ensure that each module types is an instance of the corresponding [_generic] one.
+    [{Creators,Accessors}{0,1,2,_generic,_with_comparator}]. It uses check functors to
+    ensure that each module type is an instance of the corresponding [_generic] one.
 
     We must treat [Creators] and [Accessors] separately, because we sometimes need to
-    choose different instantiations of their [options].  In particular, [Set] itself
+    choose different instantiations of their [options]. In particular, [Set] itself
     matches [Creators2_with_comparator] but [Accessors2] (without comparator).
 *)
 (*
@@ -149,7 +148,7 @@ module type Creators_generic = sig
   val of_hash_set     : ('a, 'cmp,  'a elt     Hash_set.t     -> ('a, 'cmp) t) options
   val of_hashtbl_keys : ('a, 'cmp, ('a elt, _) Hashtbl.t -> ('a, 'cmp) t) options
 
-  (** never requires a comparator because it can get one from the input [Map.t] *)
+  (** Never requires a comparator because it can get one from the input [Map.t]. *)
   val of_map_keys : ('a elt, _, 'cmp cmp) Map.t -> ('a, 'cmp) t
 
   val gen

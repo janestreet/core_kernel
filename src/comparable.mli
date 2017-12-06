@@ -1,30 +1,6 @@
-open Comparable_intf
+(** Comparable extends {!Base.Comparable} and provides functions for comparing like types.
 
-module type Infix               = Infix
-module type Map_and_set_binable = Map_and_set_binable
-module type S_plain             = S_plain
-module type S                   = S
-module type S_binable           = S_binable
-module type S_common            = S_common
-module type Validate            = Validate
-module type With_zero           = With_zero
-
-(** [lexicographic cmps x y] compares [x] and [y] lexicographically using functions in the
-    list [cmps]. *)
-val lexicographic : ('a -> 'a -> int) list -> 'a -> 'a -> int
-
-(** [lift cmp ~f x y] compares [x] and [y] by comparing [f x] and [f y] via [cmp]. *)
-val lift : ('a -> 'a -> 'int_or_bool) -> f:('b -> 'a) -> ('b -> 'b -> 'int_or_bool)
-
-(** Inherit comparability from a component. *)
-module Inherit
-    (C : sig type t [@@deriving compare] end)
-    (T : sig
-       type t [@@deriving sexp]
-       val component : t -> C.t
-     end) : S with type t := T.t
-
-(** Usage example:
+    Usage example:
 
     {[
       module Foo = struct
@@ -36,7 +12,7 @@ module Inherit
       end
     ]}
 
-    Then include [Comparable.S] in the signature (see comparable_intf.mli for an
+    Then include [Comparable.S] in the signature (see {!Comparable_intf} for an
     example).
 
     To add an [Infix] submodule:
@@ -65,6 +41,44 @@ module Inherit
       let someday = .. in
       Date.O.(now > someday)
     ]}
+*)
+
+open Comparable_intf
+
+module type Infix               = Infix
+module type Map_and_set_binable = Map_and_set_binable
+module type S_plain             = S_plain
+module type S                   = S
+module type S_binable           = S_binable
+module type S_common            = S_common
+module type Validate            = Validate
+module type With_zero           = With_zero
+
+(** [lexicographic cmps x y] compares [x] and [y] lexicographically using functions in the
+    list [cmps]. *)
+val lexicographic : ('a -> 'a -> int) list -> 'a -> 'a -> int
+
+(** [lift cmp ~f x y] compares [x] and [y] by comparing [f x] and [f y] via [cmp]. *)
+val lift : ('a -> 'a -> 'int_or_bool) -> f:('b -> 'a) -> ('b -> 'b -> 'int_or_bool)
+
+(** Inherit comparability from a component. *)
+module Inherit
+    (C : sig type t [@@deriving compare] end)
+    (T : sig
+       type t [@@deriving sexp]
+       val component : t -> C.t
+     end) : S with type t := T.t
+
+(** {2 Make Functors}
+
+    The Comparable Make functor family allows users to choose among the following
+    attributes:
+
+    - [*_using_comparator] or not
+    - [*_binable] or not
+    - [*_plain] or not
+
+    Thus there are functors like [Make_plain] or [Make_binable_using_comparator], etc.
 *)
 
 module Make_plain (T : sig
@@ -145,7 +159,8 @@ module Validate_with_zero
     include With_zero with type t := T.t
   end
 
-(** The following module types and functors may be used to define stable modules *)
+(** The following module types and functors may be used to define stable modules: *)
+
 module Stable : sig
   module V1 : sig
     module type S = sig

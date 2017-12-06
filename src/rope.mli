@@ -8,11 +8,14 @@
     On the other hand, because [String.concat [ s1; s2; s3; ... ]] allocates a single
     string and copies the inputs into it, [Rope] is no improvement over that usage.
     [Rope] becomes useful when the construction of the sequence of strings is more
-    complex, e.g. appending on both sides, or recursion.
+    complex -- a good example is prettyprinting an expression language, where you need to
+    parenthise subexpressions (appending a short string at both ends) and handle infix
+    binary operators (appending two long strings both made up of many parts, with a short
+    string in between).
 
     Any operations that would produce a [Rope] longer than [String.max_length] raise
-    instead. They are not marked with _exn on their names since (at least on 64-bit) this
-    number is far in excess than the size of your memory, so isn't likely to come up in
+    instead. They are not marked with [_exn] on their names since (at least on 64-bit)
+    this number is far in excess of the size of your memory, so isn't likely to come up in
     practice.
 
     A more fully-featured Rope implementation is available in the zed library.

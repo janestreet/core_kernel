@@ -1,10 +1,9 @@
-(** A substring is a contiguous set of characters within a string. Creating a substring
-    does not copy. Therefore modifying the string also modifies the substring. *)
+(** Interface for {!Substring}. *)
 
 open! Import
 
 module type S = sig
-  (** the type of strings that type t is a substring of *)
+  (** The type of strings that type [t] is a substring of. *)
   type base
 
   type t
@@ -22,11 +21,11 @@ module type S = sig
   val get : t -> int -> char
 
   (** [create ?pos ?len base] creates a substring of the base sequence of
-      length [len] starting at position [pos], i.e.
+      length [len] starting at position [pos], i.e.,
 
       {[ base.[pos], base.[pos + 1], ... base.[pos + len - 1] ]}
 
-      An exception is raised if any of those indices into [base] are invalid.
+      An exception is raised if any of those indices into [base] is invalid.
 
       It does not copy the characters, so mutating [base] mutates [t] and vice versa.
   *)
@@ -34,8 +33,9 @@ module type S = sig
 
   val sub : ?pos:int -> ?len:int -> t -> t
 
-  (** {6 Blit functions} for copying characters from a substring to and from both strings
-      and substrings. *)
+  (** {2 Blit functions}
+
+      For copying characters from a substring to and from both strings and substrings. *)
 
   val blit_to_string      : t -> dst:bytes       -> dst_pos:int            -> unit
   val blit_to_bytes       : t -> dst:bytes       -> dst_pos:int            -> unit
@@ -44,25 +44,28 @@ module type S = sig
   val blit_from_string    : t -> src:string      -> src_pos:int -> len:int -> unit
   val blit_from_bigstring : t -> src:Bigstring.t -> src_pos:int -> len:int -> unit
 
-  (** {6 String concatenation} *)
+  (** {2 String concatenation} *)
   (** These functions always copy. *)
 
   val concat           : t list -> t
   val concat_string    : t list -> string
   val concat_bigstring : t list -> Bigstring.t
 
-  (** {6 Conversion to/from substrings} *)
-
+  (** {2 Conversion to/from substrings} *)
   (** These functions always copy. *)
+
   val to_string    : t -> string
   val to_bigstring : t -> Bigstring.t
 
   (** These functions always copy. Use [create] if you want sharing. *)
+
   val of_string    : string -> t [@deprecated "[since 2017-11] use [create] instead"]
   val of_bigstring : Bigstring.t -> t [@deprecated "[since 2017-11] use [create] instead"]
 
-  (** {6 Prefixes and suffixes} The result of these functions share data with their
-      input, but don't mutate the underlying string. *)
+  (** {2 Prefixes and suffixes}
+
+      The result of these functions share data with their input, but don't mutate the
+      underlying string. *)
 
   val drop_prefix : t -> int -> t
   val drop_suffix : t -> int -> t

@@ -108,7 +108,7 @@ val unpack_into : 'a t -> 'a Queue.t -> unit Or_error.t
 (** [unpack_iter t ~f] unpacks all the values that it can from [t], calling [f] on each
     value as it's unpacked.  If there is an unpacking error (including if [f] raises),
     [unpack_iter] returns an error, and subsequent [feed] and unpack operations on [t]
-    will return that same error -- i.e. no more data can be fed to or unpacked from [t].
+    will return that same error -- i.e., no more data can be fed to or unpacked from [t].
 
     Behavior is unspecified if [f] operates on [t]. *)
 val unpack_iter : 'a t -> f:('a -> unit) -> unit Or_error.t

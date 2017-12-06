@@ -1,3 +1,5 @@
+(** Various interface exports. *)
+
 open! Import
 
 module type Applicative               = Applicative.S

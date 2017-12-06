@@ -1,12 +1,12 @@
-(** A stack implemented with an array.  See {!Stack_intf} for documentation.
+(** A stack implemented with an array.
 
     The implementation will grow the array as necessary, and will never automatically
-    shrink the array.  One can use [set_capacity] to explicitly resize the array.
+    shrink the array. One can use [set_capacity] to explicitly resize the array.
 *)
 
 open! Import
 
-include Stack_intf.S
+include Stack_intf.S (** @open *)
 
 (** [capacity t] returns the length of the array backing [t]. *)
 val capacity : _ t -> int

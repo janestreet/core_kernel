@@ -18,6 +18,7 @@ module type S_without_immediate = sig
 
   (** Constructors analogous to [None] and [Some].  If [not (some_is_representable x)]
       then [some x] may raise or return [none]. *)
+
   val none : t
   val some : value -> t
 
@@ -70,10 +71,13 @@ module type S_int63 =
 
 module type Immediate_option = sig
 
-  module type S = S  (** always immediate *)
+  (** Always immediate. *)
+  module type S = S
 
-  module type S_int63 = S_int63  (** immediate only on 64-bit machines with portable_int63 = false *)
+  (** Immediate only on 64-bit machines with [portable_int63 = false]. *)
+  module type S_int63 = S_int63
 
-  module type S_without_immediate = S_without_immediate  (** never immediate *)
+  (** Never immediate. *)
+  module type S_without_immediate = S_without_immediate
 
 end

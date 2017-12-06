@@ -6,7 +6,7 @@
 
     All of the operations are effectively (amortized) constant time.
 
-    @see <en.wikipedia.org/wiki/Disjoint-set_data_structure> wikipedia.
+    See {{: https://en.wikipedia.org/wiki/Disjoint-set_data_structure} Wikipedia}.
 
     This implementation is not thread-safe.
 *)

@@ -1,12 +1,12 @@
-(** Utility functions for marshalling to and from bigstring.
+(** Utility functions for marshalling to and from {!Bigstring}.
 
     In all functions below, [pos] is the index into the bigstring to read from or write to
-    and an exception is raised if that index is invalid.  The default is 0.
+    and an exception is raised if that index is invalid. The default is 0.
 *)
 
 open! Import
 
-(** marshals value [_] to the bigstring at most [len] bytes. *)
+(** Marshals value [_] to the bigstring at most [len] bytes. *)
 val marshal_blit
   : ?flags : Marshal.extern_flags list  (** default = [] *)
   -> _
@@ -15,17 +15,20 @@ val marshal_blit
   -> Bigstring.t
   -> int
 
-(** marshals value [_] to a new bigstring.  This function may need two times more memory
-    than [marshal_blit]. *)
+(** Marshals value [_] to a new bigstring. This function may need two times more memory
+    than [marshal_blit].
+
+    @param flags default = [[]]
+*)
 val marshal
-  : ?flags : Marshal.extern_flags list  (** default = [] *)
+  : ?flags : Marshal.extern_flags list
   -> _
   -> Bigstring.t
 
-(** the length of marshalled data in the bigstring *)
+(** The length of marshalled data in the bigstring *)
 val marshal_data_size : ?pos : int -> Bigstring.t -> int
 
-(** unmarshals a value from the bigstring and/or returns the index of the byte in the
+(** Unmarshals a value from the bigstring and/or returns the index of the byte in the
     bigstring right after the unmarshalled value. *)
 val unmarshal      : ?pos : int -> Bigstring.t -> _
 val unmarshal_next : ?pos : int -> Bigstring.t -> _ * int

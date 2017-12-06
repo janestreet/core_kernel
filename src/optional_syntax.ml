@@ -1,3 +1,3 @@
 open! Import
 
-include Optional_syntax_intf
+include Optional_syntax_intf (** @inline *)

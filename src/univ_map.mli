@@ -1,9 +1,9 @@
-(** Universal/heterogeneous maps.
+(** Universal/heterogeneous maps, useful for storing values of arbitrary type in a single
+    map.
 
-    These maps are useful for storing values of arbitrary type in a single map.  In order
-    to recover a value, it must be looked up with exactly the [Key.t] it was stored in.
-    In other words, given different [Key.t]'s from the same [string], one will not be able
-    to recover the key stored in the other one.
+    In order to recover a value, it must be looked up with exactly the [Key.t] it was
+    stored in. In other words, given different [Key.t]s from the same [string], one will
+    not be able to recover the key stored in the other one.
 
     This is similar to [Univ] in spirit.
 *)

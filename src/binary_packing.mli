@@ -1,12 +1,12 @@
 (** Packs and unpacks various types of integers into and from strings.
 
-    Functions ending in _int should not be used on 32 bit programs because native ocaml
+    Functions ending in [_int] should not be used in 32-bit programs because native OCaml
     ints will not be big enough.
 
     [pos] arguments refer to the location in the buf string.
 
-    We support big and little endian ints.  Note that for an 8 bit (1 byte) integer, there
-    is no difference because endian-ness only changes the order of bytes, not bits.
+    We support big- and little-endian ints. Note that for an 8-bit (1-byte) integer, there
+    is no difference, because endian-ness only changes the order of bytes, not bits.
 *)
 
 open! Import
@@ -21,7 +21,7 @@ val unpack_unsigned_8    :                      buf:bytes -> pos:int -> int
 val   pack_unsigned_8    :                      buf:bytes -> pos:int -> int -> unit
 
 (** The functions ending with [_big_endian] or [_little_endian] are faster than the ones
-    with explicit [byte_order] argument:
+    with an explicit [byte_order] argument:
 
     {v
                                 Name | Run time | S. dev. | Warnings
@@ -88,19 +88,19 @@ val unpack_signed_64_little_endian : buf:bytes -> pos:int -> int64
 val   pack_signed_64_big_endian    : buf:bytes -> pos:int -> int64 -> unit
 val   pack_signed_64_little_endian : buf:bytes -> pos:int -> int64 -> unit
 
-(** As with integers, floats can be be packed big endian or little endian, depending on
-    the order in which the bytes of the float are layed out.  There is nothing interesting
-    going on computationally from a floating-point perspective; just laying out eight
+(** As with integers, floats can be be packed big-endian or little-endian, depending on
+    the order in which the bytes of the float are layed out. There is nothing interesting
+    going on computationally from a floating-point perspective, just laying out eight
     bytes in one order or the other. *)
 val unpack_float : byte_order:endian -> buf:bytes -> pos:int -> float
 val pack_float   : byte_order:endian -> buf:bytes -> pos:int -> float -> unit
 
-(** The following functions operate on "fixed length tail padded strings", by which is
+(** The following functions operate on "fixed-length tail-padded strings", by which is
     meant a string possibly followed by some padding, such that the length of the string
     plus the length of the padding equals the fixed length. *)
 
-(** Decode the fixed length tail padded string having length [len] from [buf] starting at
-    [pos].  Return a string containing only the non-padding characters.  The default
+(** Decode the fixed-length tail-padded string having length [len] from [buf] starting at
+    [pos]. Return a string containing only the non-padding characters. The default
     padding is '\x00'. *)
 val unpack_tail_padded_fixed_string
   : ?padding:char -> buf:bytes -> pos:int -> len:int -> unit -> bytes

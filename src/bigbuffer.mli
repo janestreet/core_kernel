@@ -4,8 +4,9 @@
     provides accumulative concatenation of strings in quasi-linear time (instead of
     quadratic time when strings are concatenated pairwise).
 
-    This implementation uses Bigstrings instead of strings.  This removes the 16MB limit on
-    buffer size, and improves I/O-performance when reading/writing from/to channels.
+    This implementation uses Bigstrings instead of strings. This removes the 16MB limit
+    on buffer size (on 32-bit machines), and improves I/O-performance when reading/writing
+    from/to channels.
 *)
 
 open! Import
@@ -39,8 +40,6 @@ val add_substitute : t -> (string -> string) -> string -> unit
     character; it then stands for a plain [$].
     Raise [Not_found] if the closing character of a parenthesized variable
     cannot be found. *)
-
-(** NOTE: additions *)
 
 module Format : sig
   open Format

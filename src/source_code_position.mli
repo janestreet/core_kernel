@@ -1,4 +1,6 @@
-include module type of struct include Base.Source_code_position end
+(** This module extends {!Base.source_code_position}. *)
+
+include module type of struct include Base.Source_code_position end (** @open *)
 
 include Comparable.S
   with type t := t

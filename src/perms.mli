@@ -1,7 +1,7 @@
 (** These types are intended to be used as phantom types encoding the permissions on a
     given type.
 
-    {1 Basic Usage}
+    {2 Basic Usage}
 
     Here's a hypothetical interface to an on-off switch which uses them:
 
@@ -61,7 +61,7 @@
     would be a mistake, since one library could annotate [Switch.global] as an
     [immutable Switch.t], while another library writes to it.
 
-    {1 More Usage Patterns}
+    {2 More Usage Patterns}
 
     The standard usage pattern is as above:
 

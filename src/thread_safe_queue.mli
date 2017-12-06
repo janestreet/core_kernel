@@ -1,7 +1,7 @@
 (** A thread-safe non-blocking queue of unbounded size.
 
     The implementation does not use mutexes, and so is safe to use in situations when one
-    doesn't want to block, e.g. a finalizer or an async job.
+    doesn't want to block, e.g., a finalizer or an async job.
 *)
 
 open! Import

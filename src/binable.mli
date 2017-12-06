@@ -10,8 +10,8 @@ open Bigarray
     bigstring.ml *)
 type bigstring = (char, int8_unsigned_elt, c_layout) Array1.t
 
-(** New code should use [@@deriving bin_io].  These module types (S, S1, and S2) are
-    exported only for backwards compatibility.**)
+(** New code should use [@@deriving bin_io].  These module types ([S], [S1], and [S2]) are
+    exported only for backwards compatibility. *)
 module type S  = S
 module type S_only_functions = S_only_functions
 module type S1 = S1
@@ -58,9 +58,11 @@ module Of_binable3
   : S3 with type ('a, 'b, 'c) t := ('a, 'b, 'c) M.t
 
 (** [Of_sexpable] serializes a value using the bin-io of the sexp serialization of the
-    value.  This is not as efficient as using [@@deriving bin_io].  However, it is useful
-    when performance isn't important and there are obstacles to using [@@deriving
-    bin_io]. *)
+    value.  This is not as efficient as using [@@deriving bin_io]. However, it is useful
+    when performance isn't important and there are obstacles to using [@@deriving bin_io],
+    e.g., some type missing [@@deriving bin_io]. [Of_sexpable] is also useful when one
+    wants to be forgiving about format changes, due to the sexp serialization being more
+    robust to changes like adding or removing a constructor. *)
 module Of_sexpable (M : Sexpable.S) : S with type t := M.t
 
 module Of_stringable (M : Stringable.S) : S with type t := M.t
@@ -83,9 +85,10 @@ val to_string : 'a m -> 'a -> string
     (de)serializations, they will produce stable types with stable (de)serializations.
 
     Note: In all cases, stability of the input (and therefore the output) depends on the
-    semantics of all conversion functions (e.g. to_string, to_sexpable) not changing in
-    the future.
+    semantics of all conversion functions (e.g. [to_string], [to_sexpable]) not changing
+    in the future.
 *)
+
 module Stable : sig
   module Of_binable    : sig module V1 : module type of Of_binable    end
   module Of_binable1   : sig module V1 : module type of Of_binable1   end

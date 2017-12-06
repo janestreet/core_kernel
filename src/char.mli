@@ -1,9 +1,16 @@
-(** This module extends the Base [Char] module *)
+(** This module extends {!Base.Char}, adding [Identifiable] for making char
+    identifiers and [Quickcheckable] to facilitate automated testing with pseudorandom
+    data.
+*)
 
 type t = char [@@deriving typerep]
 
+(** {2 The signature included from [Base.Char]} *)
+
 include module type of struct include Base.Char end
-  with type t := t
+  with type t := t (** @open *)
+
+(** {2 Extensions} *)
 
 include Identifiable.S
   with type t := t

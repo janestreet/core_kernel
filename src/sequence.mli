@@ -1,4 +1,4 @@
-(** This module extends the Base [Sequence] module with bin_io *)
+(** This module extends {!Base.Sequence} with bin_io. *)
 
 module Merge_with_duplicates_element : sig
   type ('a, 'b) t = ('a, 'b) Base.Sequence.Merge_with_duplicates_element.t =
@@ -12,7 +12,7 @@ module Merge_with_duplicates_element : sig
 end
 
 include module type of struct include Base.Sequence end
-  with module Merge_with_duplicates_element := Merge_with_duplicates_element
+  with module Merge_with_duplicates_element := Merge_with_duplicates_element (** @open *)
 
 (** Merges elements from sequences that are assumed to be sorted by [compare] to produce a
     sequence also sorted by [compare]. If any of the inputs are not sorted, the order of

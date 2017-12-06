@@ -1,4 +1,8 @@
-(** Conversions between units of measure based on bytes. *)
+(** Conversions between units of measure that are based on bytes (like kilobytes,
+    megabytes, gigabytes, and words).
+
+    [t]'s are created with [create measure value], as in
+    [Byte_units.create `Megabytes 100]. *)
 
 open! Import
 
@@ -18,7 +22,10 @@ include Stringable.S with type t := t
 
 (** [to_string_hum ?measure t] returns a string representation of [t].  If [measure] is
     not given then the largest measure (excluding [`Words]) is used that causes the
-    translated value to exceed 1. *)
+    translated value to exceed 1.
+
+    For example [Byte_units.to_string_hum (Byte_units.create `Bytes 1000.)] gives [1000b],
+    but [Byte_units.to_string_hum (Byte_units.create `Bytes 1500.)] gives [1.46484k]. *)
 val to_string_hum : ?measure:Measure.t -> t -> string
 
 val bytes     : t -> float

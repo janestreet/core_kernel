@@ -1,3 +1,5 @@
+(** Floating-point numbers. *)
+
 open! Import
 
 type t = float [@@deriving typerep]
@@ -41,12 +43,12 @@ include module type of struct include Base.Float end
 val to_string_12 : t -> string
 
 (** [to_string x] builds a string [s] representing the float [x] that guarantees the round
-    trip, that is such that [Float.equal x (Float.of_string s)].
+    trip, i.e., [Float.equal x (Float.of_string s)].
 
     It usually yields as few significant digits as possible.  That is, it won't print
     [3.14] as [3.1400000000000001243].  The only exception is that occasionally it will
     output 17 significant digits when the number can be represented with just 16 (but
-    not 15 or less) of them. *)
+    not 15 or fewer) of them. *)
 val to_string : t -> string
 
 val to_string_round_trippable : t -> string
@@ -60,7 +62,7 @@ val sign : t -> Sign.t
 [@@deprecated "[since 2016-01] Replace [sign] with [robust_sign] or [sign_exn]"]
 
 (** (Formerly [sign]) Uses robust comparison (so sufficiently small numbers are mapped
-    to [Zero]).  Also maps nan to [Zero].  Using this function is weakly discouraged. *)
+    to [Zero]).  Also maps NaN to [Zero]. Using this function is weakly discouraged. *)
 val robust_sign : t -> Sign.t
 
 (** [gen_uniform_excl lo hi] creates a Quickcheck generator producing finite [t] values

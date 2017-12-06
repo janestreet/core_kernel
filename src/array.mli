@@ -1,11 +1,23 @@
-(** This module extends the Base [Array] module *)
+(** This module extends {!Base.Array}. *)
 
+open Import
 open Perms.Export
+
+(** {2 The [Array] type} *)
 
 type 'a t = 'a Base.Array.t [@@deriving bin_io, typerep]
 
+(** {2 The signature included from [Base.Array]} *)
+
 include module type of struct include Base.Array end
-  with type 'a t := 'a t
+  with type 'a t := 'a t (** @open *)
+
+(** {2 Extensions}
+
+    We add extensions for [Int] and [Float] arrays to make them bin-able, comparable,
+    sexpable, and blit-able (via [Blit.S]). [Permissioned] provides fine-grained access
+    control for arrays.
+*)
 
 module Int : sig
   type nonrec t = int t [@@deriving bin_io, compare, sexp]

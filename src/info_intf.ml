@@ -14,11 +14,12 @@ end
 
 module type S = sig
   include Base.Info_intf.S
+
   include Extension with type t := t
 end
 
 module type Info = sig
-  include module type of struct include Base.Info end
+  include module type of struct include Base.Info end (** @open *)
 
   include Extension with type t := t
 

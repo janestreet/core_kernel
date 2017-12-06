@@ -1,4 +1,4 @@
-(** A mutable set of elements *)
+(** A mutable set of elements. *)
 
 open! Import
 open Hash_set_intf
@@ -33,7 +33,7 @@ module Using_hashable : sig
     with type ('key, 'z) create_options := ('key, 'z) create_options_with_hashable_required
 end
 
-(** A hash set that uses polymorphic comparison *)
+(** A hash set that uses polymorphic comparison. *)
 module Poly : sig
 
   type nonrec 'a t = 'a t [@@deriving sexp]

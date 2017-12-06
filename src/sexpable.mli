@@ -1,6 +1,8 @@
+(** This module extends {!Base.Sexpable}. *)
+
 open! Import
 
-include module type of struct include Base.Sexpable end
+include module type of struct include Base.Sexpable end (** @open *)
 
 module To_stringable (M : S) : Stringable.S with type t := M.t
 

@@ -1,41 +1,47 @@
-(* A hash-queue is a combination of a queue and a hashtable that
- * supports constant-time lookup and removal of queue elements in addition to
- * the usual queue operations (enqueue, dequeue).  The queue elements are
- * key-value pairs.  The hashtable has one entry for each element of the queue.
- *
- * Calls to functions that would modify a hash-queue (e.g. enqueue, dequeue,
- * remove, replace) detect if a client is in the middle of iterating over the
- * queue (e.g. iter, fold, for_all, exists) and if so, raise an exception.
+(** A hash-queue is a combination of a queue and a hashtable that
+    supports constant-time lookup and removal of queue elements in addition to
+    the usual queue operations (enqueue, dequeue). The queue elements are
+    key-value pairs. The hashtable has one entry for each element of the queue.
+
+    Calls to functions that would modify a hash-queue (e.g. [enqueue], [dequeue],
+    [remove], [replace]) detect if a client is in the middle of iterating over the
+    queue (e.g., [iter], [fold], [for_all], [exists]) and if so, raise an exception.
 *)
 
 open! Import
 
-(* The key is used for the hashtable of queue elements. *)
+(** The key is used for the hashtable of queue elements. *)
 module type Key = Hashtbl.Key_plain
 
 module type S = sig
   module Key : Key
 
-  (** a hash-queue, where the values are of type 'a *)
+  (** A hash-queue, where the values are of type ['a]. *)
   type 'a t [@@deriving sexp_of]
 
   include Container.S1 with type 'a t := 'a t
 
   (** [invariant t] checks the invariants of the queue. *)
+
   val invariant : 'a t -> unit
 
   (** [create ()] returns an empty queue.  The arguments [growth_allowed] and [size] are
-      referring to the underlying hashtable. *)
+      referring to the underlying hashtable.
+
+      @param growth_allowed defaults to true
+      @param size initial size -- default to 16
+  *)
   val create
-    :  ?growth_allowed:bool (** defaults to true *)
-    -> ?size:int (** initial size -- default 16 *)
+    :  ?growth_allowed:bool
+    -> ?size:int
     -> unit
     -> 'a t
 
-  (**  clear the queue *)
+  (** Clears the queue. *)
   val clear : 'a t -> unit
 
-  (* Finding elements. *)
+  (** {2 Finding elements} *)
+
   (** [mem q k] returns true iff there is some (k, v) in the queue. *)
   val mem : 'a t -> Key.t -> bool
 
@@ -45,11 +51,14 @@ module type S = sig
 
   val lookup_exn : 'a t -> Key.t -> 'a
 
-  (* Adding, removing, and replacing elements. Note that even the non-[*_exn] versions can
-     raise, but only if there is an ongoing iteration. *)
-  (** [enqueue t k v] adds the key-value pair (k, v) to the end of the queue,
-      returning `Ok if the pair was added, or `Key_already_present
-      if there is already a (k, v') in the queue.
+  (** {2 Adding, removing, and replacing elements}
+
+      Note that even the non-[*_exn] versions can raise, but only if there is an ongoing
+      iteration. *)
+
+  (** [enqueue t k v] adds the key-value pair (k, v) to the end of the queue, returning
+      [`Ok] if the pair was added, or [`Key_already_present] if there is already a (k, v')
+      in the queue.
   *)
   val enqueue : 'a t -> Key.t -> 'a -> [ `Ok | `Key_already_present ]
 
@@ -74,27 +83,28 @@ module type S = sig
 
   val dequeue_exn : 'a t -> 'a
 
-  (** [dequeue_with_key t] returns the front element of the queue and its key *)
+  (** [dequeue_with_key t] returns the front element of the queue and its key. *)
   val dequeue_with_key : 'a t -> (Key.t * 'a) option
 
   val dequeue_with_key_exn : 'a t -> (Key.t * 'a)
 
-  (** [dequeue_all t ~f] dequeues every element of the queue and applies f to each one. *)
+  (** [dequeue_all t ~f] dequeues every element of the queue and applies [f] to each one. *)
   val dequeue_all : 'a t -> f:('a -> unit) -> unit
 
-  (** [remove q k] removes the key-value pair with key k from the queue. *)
+  (** [remove q k] removes the key-value pair with key [k] from the queue. *)
   val remove : 'a t -> Key.t -> [ `Ok | `No_such_key ]
 
   val remove_exn : 'a t -> Key.t -> unit
 
 
-  (** [replace q k v] changes the value of key k in the queue to v. *)
+  (** [replace q k v] changes the value of key [k] in the queue to [v]. *)
   val replace : 'a t -> Key.t -> 'a -> [ `Ok | `No_such_key ]
 
   val replace_exn : 'a t -> Key.t -> 'a -> unit
 
-  (* Iterating over elements *)
-  (** [iter t ~f] applies f to each key and element of the queue. *)
+  (** {2 Iterating over elements} *)
+
+  (** [iter t ~f] applies [f] to each key and element of the queue. *)
   val iteri : 'a t -> f:(key:Key.t -> data:'a -> unit) -> unit
   val foldi : 'a t -> init:'b -> f:('b -> key:Key.t -> data:'a -> 'b) -> 'b
 end

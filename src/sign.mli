@@ -1,10 +1,10 @@
-(** This module extends the Base [Sign] module with bin_io *)
+(** This module extends {!Base.Sign} with bin_io. *)
 
 open! Import
 
 type t = Base.Sign.t = Neg | Zero | Pos [@@deriving typerep]
 
-include module type of Base.Sign with type t := t
+include module type of Base.Sign with type t := t (** @open *)
 
 (** This provides [to_string]/[of_string], sexp/bin_io conversion, Map, Hashtbl, etc. *)
 include Identifiable.S

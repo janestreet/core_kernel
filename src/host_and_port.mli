@@ -1,3 +1,5 @@
+(** Type for the commonly-used notion of host and port in networking. *)
+
 open Std_internal
 
 type t =

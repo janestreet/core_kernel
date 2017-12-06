@@ -1,4 +1,4 @@
-(** This module extends the Base [String] module *)
+(** This module extends {!Base.String}. *)
 
 type t = string [@@deriving bin_io, typerep]
 
@@ -14,7 +14,7 @@ end
 
 include module type of struct include Base.String end
   with type t := t
-  with module Caseless := Base.String.Caseless
+  with module Caseless := Base.String.Caseless (** @open *)
 
 (** [take_while s ~f] returns the longest prefix of [s] satisfying [for_all prefix ~f]
     (See [lstrip] to drop such a prefix) *)

@@ -1,6 +1,6 @@
-(** Implements a token bucket based throttling rate limiter.  This module is useful for
+(** Implements a token-bucket-based throttling rate limiter. This module is useful for
     limiting network clients to a sensible query rate, or in any case where you have jobs
-    that consume a scarce, but replenishable resource.
+    that consume a scarce but replenishable resource.
 
     In a standard token bucket there is an infinite incoming supply of tokens that fill a
     single bucket.
@@ -8,25 +8,26 @@
     This version implements a closed system where tokens move through three possible
     states:
 
-    - in hopper
-    - in bucket
-    - in flight
+    {ul
+    {- in hopper}
+    {- in bucket}
+    {- in flight}}
 
-    tokens "drop" from the hopper into the bucket at a set rate, and can be taken from
-    the bucket by clients and put into flight.  Once the client is finished with whatever
-    task required tokens they are responsible for moving them from "in flight" back into
-    the hopper.
+    Tokens "drop" from the hopper into the bucket at a set rate, and can be taken from
+    the bucket by clients and put into flight. Once the client is finished with whatever
+    tokens are required for its task, it is responsible for moving them from "in flight"
+    back into the hopper.
 
     Most use cases are covered by the [Token_bucket], [Throttle], and
     [Throttled_rate_limiter] modules, but the [Expert] module provides full access
     to the module internals.
 
     This interface is the simple, non-concurrent interface, and requires machinery on top
-    to implement a specific strategy.  See Async_extra for an async-friendly
+    to implement a specific strategy.  See [Async_extra] for an async-friendly
     implementation on top of this module.
 
-    Most functions in this interface take an explicit time as an argument.  [now] is
-    expected to be monotonically increasing.  [now]'s that are set in the past are
+    Most functions in this interface take an explicit time as an argument. [now] is
+    expected to be monotonically increasing. [now]'s that are set in the past are
     effectively moved up to the current time of the bucket.
 *)
 
@@ -62,16 +63,18 @@ module Tokens_may_be_available_result : sig
     | When_return_to_hopper_is_called
 end
 
-(** Implements a basic token bucket based rate limiter.  Users of the throttle
+(** Implements a basic token-bucket-based rate limiter. Users of the throttle
     must successfully call [try_take] before doing work. *)
 module Token_bucket : sig
   type t = private limiter
 
+  (**
+     @param initial_bucket_level defaults to zero *)
   val create_exn
     :  now:Time_ns.t
     -> burst_size:int
     -> sustained_rate_per_sec:float
-    -> ?initial_bucket_level:int      (** Defaults to zero *)
+    -> ?initial_bucket_level:int
     -> unit
     -> t
 
@@ -83,7 +86,7 @@ module Token_bucket : sig
 end
 
 (** Implements a basic throttle.  Users of the throttle must successfully call [start_job]
-    before beginning work and must call finish_job once, and only once, when a job is
+    before beginning work and must call [finish_job] once, and only once, when a job is
     completed. *)
 module Throttle : sig
   type t = private limiter
@@ -105,9 +108,9 @@ module Throttle : sig
 end
 
 (** A [Throttled_rate_limiter] combines a [Token_bucket] and a [Throttle].  Unlike a
-    [Token_bucket] jobs cannot consume variable numbers of tokens, but the number
-    of outstanding jobs is also limited to [max_concurrent_jobs].  Like a [Throttle]
-    [finish_job] must be called once, and only once when a job is completed. *)
+    [Token_bucket], jobs cannot consume variable numbers of tokens, but the number
+    of outstanding jobs is also limited to [max_concurrent_jobs].  Like a [Throttle],
+    [finish_job] must be called once, and only once, when a job is completed. *)
 module Throttled_rate_limiter : sig
   type t = private limiter
 
@@ -130,70 +133,71 @@ module Throttled_rate_limiter : sig
 end
 
 
-(** {5 common read-only operations} *)
+(** {2 Common read-only operations} *)
 
 val bucket_limit : t -> int
 
-(** tokens available to immediately take *)
+(** Tokens available to immediately take. *)
 val in_bucket   : t -> now:Time_ns.t -> int
 
-(** tokens waiting to drop at the [hopper_to_bucket_rate_per_sec] *)
+(** Tokens waiting to drop at the [hopper_to_bucket_rate_per_sec]. *)
 val in_hopper   : t -> now:Time_ns.t -> int Infinite_or_finite.t
 
-(** tokens that have been taken, but not yet returned *)
+(** Tokens that have been taken, but not yet returned. *)
 val in_flight   : t -> now:Time_ns.t -> int
 
-(** total number of tokens in the limiter [in_hopper + in_bucket] *)
+(** Total number of tokens in the limiter [in_hopper + in_bucket]. *)
 val in_limiter  : t -> now:Time_ns.t -> int Infinite_or_finite.t
 
-(** total number of tokens in the entire system [in_hopper + in_bucket + in_flight] *)
+(** Total number of tokens in the entire system [in_hopper + in_bucket + in_flight]. *)
 val in_system   : t -> now:Time_ns.t -> int Infinite_or_finite.t
 
-(** Note that this isn't guaranteed to be equal to the rate_per_sec that was passed in on
-    the constructor, due to floating point error. *)
+(** Note that this isn't guaranteed to be equal to the [rate_per_sec] that was passed in
+    to the constructor, due to floating point error. *)
 val hopper_to_bucket_rate_per_sec : t -> float Infinite_or_finite.t
 
 
-(** {5 expert operations} *)
+(** Expert operations. *)
 module Expert : sig
 
   (**
-     - [time] is the reference time that other time accepting functions will use when
-     they adjust [now].  It is almost always correct to set this to Time_ns.now.
+     @param time is the reference time that other time-accepting functions will use when
+     they adjust [now]. It is almost always correct to set this to [Time_ns.now].
 
-     - [hopper_to_bucket_rate_per_sec] bounds the maximum rate at which tokens fall from
-     the hopper into the bucket where they can be taken.
+     @param hopper_to_bucket_rate_per_sec bounds the maximum rate at which tokens fall
+     from the hopper into the bucket where they can be taken.
 
-     - [bucket_limit] bounds the number of tokens that the lower bucket can hold.  This
-     corresponds to the maximum burst in a standard token bucket setup.
+     @param bucket_limit bounds the number of tokens that the lower bucket can hold.
+     This corresponds to the maximum burst in a standard token bucket setup.
 
-     - [in_flight_limit] bounds the number of tokens that can be in flight.  This
+     @param in_flight_limit bounds the number of tokens that can be in flight. This
      corresponds to a running job limit/throttle.
 
-     - [initial_hopper_level] sets the number of tokens placed into the hopper when the
-     [Limiter] is created.
+     @param initial_hopper_level sets the number of tokens placed into the hopper when
+     the [Limiter] is created.
 
-     - [initial_bucket_level] sets the number of tokens placed into the bucket when the
-     [Limiter] is created.  If this amount exceeds the bucket size it will be silently
+     @param initial_bucket_level sets the number of tokens placed into the bucket when
+     the [Limiter] is created. If this amount exceeds the bucket size it will be silently
      limited to [bucket_limit].
 
      These tunables can be combined in several ways:
 
-     - to produce a simple rate limiter, where the hopper is given an infinite number of
-     tokens and clients simply take tokens as they are delivered to the bucket.
+     {ul
+     {- to produce a simple rate limiter, where the hopper is given an infinite number of
+     tokens and clients simply take tokens as they are delivered to the bucket.}
 
-     - to produce a rate_limiter that respects jobs that are more than instantaneous.
+     {- to produce a rate limiter that respects jobs that are more than instantaneous.
      In this case [initial_hopper_level + initial_bucket_level] should be bounded and
-     clients hold tokens for the duration of their work.
+     clients hold tokens for the duration of their work.}
 
-     - to produce a throttle that doesn't limit the rate of jobs at all, but always
-     keeps a max of n jobs running.  In this case [hopper_to_bucket_rate_per_sec] should
-     be infinite but [in_flight_limit] should be bounded to the upper job rate.
+     {- to produce a throttle that doesn't limit the rate of jobs at all, but always
+     keeps a max of n jobs running. In this case [hopper_to_bucket_rate_per_sec] should
+     be infinite but [in_flight_limit] should be bounded to the upper job rate.}}
 
-     In all cases above throttling and rate limiting combine nicely when the unit of
-     work for both is the same (e.g. one token per message).  If the unit of work is
-     different (e.g. rate limit base on a number of tokens equal to message size, but
-     throttle base on simple message count) then a single [t] probably cannot be used
+     In every case above, throttling and rate limiting combine nicely when the unit of
+     work for both is the same (e.g., one token per message). If the unit of work is
+     different (e.g., rate limit based on a number of tokens equal to message size, but
+     throttle based on simple message count) then a single [t] probably cannot be used
      to get the correct behavior, and two instances should be used with tokens taken
      from both. *)
   val create_exn
@@ -205,9 +209,9 @@ module Expert : sig
     -> initial_hopper_level:int Infinite_or_finite.t
     -> t
 
-  (** returns the earliest time when the requested number of tokens could possibly be
-      delivered.  There is no guarantee that the requested number of tokens will actually
-      be available at this time.  You must call [try_take] to actually attempt to take the
+  (** Returns the earliest time when the requested number of tokens could possibly be
+      delivered. There is no guarantee that the requested number of tokens will actually
+      be available at this time. You must call [try_take] to actually attempt to take the
       tokens. *)
   val tokens_may_be_available_when
     :  t
@@ -215,7 +219,7 @@ module Expert : sig
     -> int
     -> Tokens_may_be_available_result.t
 
-  (** attempts to take the given number of tokens from the bucket. [try_take t ~now n]
+  (** Attempts to take the given number of tokens from the bucket. [try_take t ~now n]
       succeeds iff [in_bucket t ~now >= n]. *)
   val try_take
     :  t
@@ -223,13 +227,13 @@ module Expert : sig
     -> int
     -> Try_take_result.t
 
-  (** return the given number of tokens to the hopper.  These tokens will fill the
-      tokens available to [try_take] at the [fill_rate].  Note that if [return] is
-      called on more tokens then have actually been removed it can cause the number
+  (** Returns the given number of tokens to the hopper. These tokens will fill the
+      tokens available to [try_take] at the [fill_rate]. Note that if [return] is
+      called on more tokens than have actually been removed, it can cause the number
       of concurrent jobs to exceed [max_concurrent_jobs]. *)
   val return_to_hopper : t -> now:Time_ns.t -> int -> unit
 
-  (** return the given number of tokens directly to the bucket.  If the amount
+  (** Returns the given number of tokens directly to the bucket. If the amount
       is negative, is more than is currently in flight, or if moving the amount would
       cause the bucket to surpass its [bucket_limit], [Unable] is returned. *)
   val try_return_to_bucket : t -> now:Time_ns.t -> int -> Try_return_to_bucket_result.t

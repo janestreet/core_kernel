@@ -1,4 +1,4 @@
-(** This module extends the Base [Container_intf] module *)
+(** This module extends {!Base.Container_intf}. *)
 
 open! Import
 open Perms.Export
@@ -11,7 +11,7 @@ module type S1_permissions = sig
   type ('a, -'permissions) t
 
   (** Checks whether the provided element is there, using polymorphic compare if [equal]
-      is not provided  *)
+      is not provided. *)
   val mem : ('a, [> read ]) t -> 'a -> equal:('a -> 'a -> bool) -> bool
 
   val length   : (_, [> read ]) t -> int
@@ -75,6 +75,7 @@ module type S1_permissions = sig
 end
 
 module type Container = sig
-  include Base.Container_intf.Container
+  include Base.Container_intf.Container (** @open *)
+
   module type S1_permissions = S1_permissions
 end

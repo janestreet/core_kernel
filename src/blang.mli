@@ -1,28 +1,66 @@
-(** A simple boolean domain-specific language *)
+(** Boolean expressions. *)
 
 open! Import
 
-(** Blang provides infrastructure for writing simple boolean DSLs.
-    All expressions in a Blang language evaluate to a bool.  The language
-    is parameterized over another language of base propositions.
+(** A blang is a boolean expression built up by applying the usual boolean operations to
+    properties that evaluate to true or false in some context.
 
-    The syntax is almost exactly the obvious s-expression syntax,
-    except that:
+    {2 Usage}
 
-    1. Base elements are not marked explicitly.  Thus, if your base
-    language has elements FOO, BAR, etc., then you could write
+    For example, imagine writing a config file for an application that filters a stream of
+    integers. Your goal is to keep only those integers that are multiples of either -3 or
+    5. Using [Blang] for this task, the code might look like:
+
+    {[
+      module Property = struct
+        type t =
+          | Multiple_of of int
+          | Positive
+          | Negative
+        [@@deriving sexp]
+
+        let eval t num =
+          match t with
+          | Multiple_of n -> num % n = 0
+          | Positive      -> num > 0
+          | Negative      -> num < 0
+      end
+
+      type config = {
+        keep : Property.t Blang.t;
+      } [@@deriving sexp]
+
+      let config = {
+        keep = Blang.of_string "(or (and negative (multiple_of 3)) \
+                               \    (and positive (multiple_of 5)))";
+      }
+
+      let keep config num : bool =
+        Blang.eval config.keep (fun p -> Property.eval p num)
+    ]}
+
+    Note how [positive] and [negative] and [multiple_of] become operators in a small,
+    newly-defined boolean expression language that allows you to write statements like
+    [(and negative (multiple_of 3))].
+
+    {2 Blang sexp syntax}
+
+    The blang sexp syntax is almost exactly the derived one, except that:
+
+    1. Base properties are not marked explicitly.  Thus, if your base
+    property type has elements FOO, BAR, etc., then you could write
     the following Blang s-expressions:
 
     {v
-          FOO
-          (and FOO BAR)
-          (if FOO BAR BAZ)
-       v}
+        FOO
+        (and FOO BAR)
+        (if FOO BAR BAZ)
+    v}
 
     and so on.  Note that this gets in the way of using the blang
     "keywords" in your value language.
 
-    2. And and Or take a variable number of arguments, so that one can
+    2. [And] and [Or] take a variable number of arguments, so that one can
     (and probably should) write
 
     {v (and FOO BAR BAZ QUX) v}
@@ -47,7 +85,7 @@ type 'a t = private
     fancy shortcuts.  Also, the sexps for ['a] must not look anything like blang sexps.
     Otherwise [t_of_sexp] will fail. *)
 
-(** {6 smart constructors that simplify away constants whenever possible} *)
+(** {2 Smart constructors that simplify away constants whenever possible} *)
 
 module type Constructors = sig
   val base     : 'a -> 'a t
@@ -82,24 +120,22 @@ end
 val constant_value : 'a t -> bool option
 
 (** The following two functions are useful when one wants to pretend
-    that ['a t] has constructors And and Or of type ['a t list -> 'a t].
+    that ['a t] has constructors [And] and [Or] of type ['a t list -> 'a t].
     The pattern of use is
 
     {[
       match t with
-      | ...
-        | And (_, _) as t -> let ts = gather_conjuncts t in ...
+      | And (_, _) as t -> let ts = gather_conjuncts t in ...
       | Or (_, _) as t -> let ts = gather_disjuncts t in ...
       | ...
     ]}
 
-    or, in case you also want to handle True (resp. False) as a special
+    or, in case you also want to handle [True] (resp. [False]) as a special
     case of conjunction (disjunction)
 
     {[
       match t with
-      | ...
-        | True | And (_, _) as t -> let ts = gather_conjuncts t in ...
+      | True | And (_, _) as t -> let ts = gather_conjuncts t in ...
       | False | Or (_, _) as t -> let ts = gather_disjuncts t in ...
       | ...
     ]}
@@ -145,12 +181,12 @@ val eval : 'a t -> ('a -> bool) -> bool
     [universe] that satisfy [eval expression (fun base -> Set.mem (set_of_base base) e)].
 
     [eval_set] assumes, but does not verify, that [set_of_base] always returns a subset of
-    [universe].  If this doesn't hold, then [eval_set]'s result may contain elements not
+    [universe]. If this doesn't hold, then [eval_set]'s result may contain elements not
     in [universe].
 
-    [And set1 set2] represents the elements that are both in set1 and set2, thus in the
-    intersection of set1 and set2.  Symmetrically, [Or set1 set2] represents the union of
-    set1 and set2. *)
+    [And set1 set2] represents the elements that are both in [set1] and [set2], thus in
+    the intersection of the two sets. Symmetrically, [Or set1 set2] represents the union
+    of [set1] and [set2]. *)
 val eval_set
   :  universe : ('elt, 'comparator) Set.t Lazy.t
   -> ('a -> ('elt, 'comparator) Set.t)

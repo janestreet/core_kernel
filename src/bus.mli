@@ -2,7 +2,7 @@
     bus has a mutable set of subscribers, which can be modified using [subscribe_exn] and
     [unsubscribe].
 
-    [create] returns a [Bus.Read_write.t], which you can use to [write] value to the bus.
+    [create] returns a [Bus.Read_write.t], which you can use to [write] values to the bus.
     [write] calls the callbacks of all current subscribers before returning.
 
     In a [('callback, 'phantom) Bus.t], ['phantom] is a read-write phantom type that
@@ -17,10 +17,11 @@
 open! Import
 open Std_internal
 
-(** [Callback_arity] states the type of callbacks stored in a bus.  Using [Callback_arity]
+(** [Callback_arity] states the type of callbacks stored in a bus. Using [Callback_arity]
     is an implementation technique that allows callbacks to be defined as ordinary n-ary
-    curried functions, instead of forcing n-ary-variadic callbacks to use tuples.  This
-    also avoids extra allocation.
+    curried functions (e.g., [a1 -> a2 -> a3 -> r]), instead of forcing n-ary-variadic
+    callbacks to use tuples (e.g., [a1 * a2 * a3 -> r]).  This also avoids extra
+    allocation.
 
     When reading the bus interface, keep in mind that each ['callback] is limited, through
     [create], to the types exposed by the variants in [Callback_arity]. *)
@@ -65,7 +66,7 @@ val read_only : ('callback, _) t -> 'callback Read_only.t
     If [on_subscription_after_first_write] is [Raise], then [subscribe_exn] will raise if
     it is called after [write] has been called the first time.  If
     [on_subscription_after_first_write] is [Allow_and_send_last_value], then the bus will
-    remember last value written and will send it to new subscribers.
+    remember the last value written and will send it to new subscribers.
 
     If a callback raises, [on_callback_raise] is called with an error containing the
     exception.
@@ -95,7 +96,8 @@ val close : 'callback Read_write.t -> unit
 (** [write] ... [write4] call all callbacks currently subscribed to the bus, with no
     guarantee on the order in which they will be called.  [write] is non-allocating,
     though the callbacks themselves may allocate.  Calling [writeN t] from within a
-    callback on [t] or if [is_closed t] will raise. *)
+    callback on [t] if [is_closed t] will raise. *)
+
 val write
   :  ('a -> unit) Read_write.t
   -> 'a
@@ -129,9 +131,10 @@ end
 (** [subscribe_exn t [%here] ~f] adds the callback [f] to the set of [t]'s subscribers,
     and returns a [Subscriber.t] that can later be used to [unsubscribe].  [[%here]] is
     stored in the [Subscriber.t], and contained in [%sexp_of: Subscriber.t], which can
-    help with debugging.  If [subscribe_exn t] is called by a callback in [t], i.e. during
-    [write t], the subscription takes effect for the next [write], but does not affect the
-    current [write].  [subscribe_exn] takes time proportional to the number of callbacks.
+    help with debugging.  If [subscribe_exn t] is called by a callback in [t], i.e.,
+    during [write t], the subscription takes effect for the next [write], but does not
+    affect the current [write].  [subscribe_exn] takes time proportional to the number of
+    callbacks.
 
     If [on_callback_raise] is supplied, then it will be called by [write] whenever [f]
     raises; only if that subsequently raises will [t]'s [on_callback_raise] be called.  If

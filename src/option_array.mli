@@ -32,6 +32,7 @@ val is_none : _ t -> int -> bool
 val is_some : _ t -> int -> bool
 
 (** These can cause arbitrary behavior when used for an out-of-bounds array access. *)
+
 val unsafe_get          : 'a t -> int -> 'a option
 val unsafe_get_some_exn : 'a t -> int -> 'a
 val unsafe_is_some      : _  t -> int -> bool
@@ -45,8 +46,9 @@ val set_none : _  t -> int ->              unit
 (** Replaces all the elements of the array with [None]. *)
 val clear : _ t -> unit
 
-(** Unsafe versions of [set*].  Can cause arbitrary behaviour when used for an
+(** Unsafe versions of [set*]. Can cause arbitrary behaviour when used for an
     out-of-bounds array access. *)
+
 val unsafe_set      : 'a t -> int -> 'a option -> unit
 val unsafe_set_some : 'a t -> int -> 'a ->        unit
 val unsafe_set_none : _  t -> int ->              unit
