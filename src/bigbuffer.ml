@@ -22,7 +22,8 @@ let create n =
     init = bstr;
   }
 
-let contents buf = Bigstring.to_string buf.bstr ~len:buf.pos
+let contents       buf = Bigstring.to_string buf.bstr ~len:buf.pos
+let contents_bytes buf = Bigstring.to_bytes  buf.bstr ~len:buf.pos
 
 let big_contents buf = subo ~len:buf.pos buf.bstr
 

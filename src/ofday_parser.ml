@@ -75,18 +75,18 @@ let parse string ~f =
   let pos, hr, expect_minutes_and_seconds =
     (* e.g. "1:00" or "1:00:00" *)
     if has_colon string (pos + 1) ~until
-    then pos + 2, parse_one_digit string pos, `Minutes_and_maybe_seconds
+    then pos + 2, read_1_digit_int string ~pos, `Minutes_and_maybe_seconds
     (* e.g. "12:00" or "12:00:00" *)
     else if has_colon string (pos + 2) ~until
-    then pos + 3, parse_two_digits string pos, `Minutes_and_maybe_seconds
+    then pos + 3, read_2_digit_int string ~pos, `Minutes_and_maybe_seconds
     (* e.g. "1am"; must have AM or PM (checked below) *)
     else if pos + 1 = until
-    then pos + 1, parse_one_digit string pos, `Neither_minutes_nor_seconds
+    then pos + 1, read_1_digit_int string ~pos, `Neither_minutes_nor_seconds
     (* e.g. "12am"; must have AM or PM (checked below) *)
     else if pos + 2 = until
-    then pos + 2, parse_two_digits string pos, `Neither_minutes_nor_seconds
+    then pos + 2, read_2_digit_int string ~pos, `Neither_minutes_nor_seconds
     (* e.g. "0930"; must not have seconds *)
-    else pos + 2, parse_two_digits string pos, `Minutes_but_not_seconds
+    else pos + 2, read_2_digit_int string ~pos, `Minutes_but_not_seconds
   in
   let pos, min, expect_seconds =
     match expect_minutes_and_seconds with
@@ -97,7 +97,7 @@ let parse string ~f =
       (* e.g. "12:00:00" *)
       if has_colon string (pos + 2) ~until
       then begin
-        pos + 3, parse_two_digits string pos,
+        pos + 3, read_2_digit_int string ~pos,
         (match maybe_seconds with
          | `Minutes_and_maybe_seconds -> true
          | `Minutes_but_not_seconds   ->
@@ -105,7 +105,7 @@ let parse string ~f =
       end
       (* e.g. "12:00" *)
       else if pos + 2 = until
-      then pos + 2, parse_two_digits string pos, false
+      then pos + 2, read_2_digit_int string ~pos, false
       else
         invalid_string string
           ~reason:"expected colon or am/pm suffix with optional space after minutes"
@@ -127,7 +127,7 @@ let parse string ~f =
         (* e.g. "12:00:0" *)
         invalid_string string ~reason:"expected two digits of seconds"
       else begin
-        let sec = parse_two_digits string pos in
+        let sec = read_2_digit_int string ~pos in
         let pos = pos + 2 in
         (* e.g. "12:00:00" *)
         if pos = until
@@ -142,7 +142,7 @@ let parse string ~f =
   in
   let hr =
     (* NB. We already know [hr] is non-negative, because it's the result of
-       [parse_two_digits]. *)
+       [read_2_digit_int]. *)
     match am_or_pm with
     | `hr_AM ->
       (* e.g. "12:00am" *)

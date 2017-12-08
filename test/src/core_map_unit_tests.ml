@@ -51,7 +51,6 @@ module Unit_tests
   module Map = struct
     include Map
     let set                        x = simplify_accessor set x
-    let add = set [@@deprecated "[since 2017-11] Use [set] instead"]
     let add_multi                  x = simplify_accessor add_multi x
     let find_multi                 x = simplify_accessor find_multi x
     let remove_multi               x = simplify_accessor remove_multi x
@@ -166,7 +165,7 @@ module Unit_tests
 
   let random_map keys =
     List.fold (random_alist keys) ~init:(Map.empty ())
-      ~f:(fun map (key, data) -> Map.add ~key ~data map)
+      ~f:(fun map (key, data) -> Map.set ~key ~data map)
 
   let caml_map_of_alist alist =
     List.fold alist ~init:Caml_map.empty
@@ -209,7 +208,7 @@ module Unit_tests
         let add key =
           let data = Random.int 1000 in
           Caml_map.add key data caml_map,
-          Map.add ~key ~data core_map
+          Map.set ~key ~data core_map
         in
         let caml_choose caml_map =
           try Some (Caml_map.choose caml_map)
@@ -594,7 +593,7 @@ module Unit_tests
   let remove_multi _ = assert false
 
   let%test _ =
-    let m1 = Map.add (Map.empty ()) ~key:Key.sample ~data:[1;2;3] in
+    let m1 = Map.set (Map.empty ()) ~key:Key.sample ~data:[1;2;3] in
     let m2 = Map.remove_multi m1 Key.sample in
     let m3 = Map.remove_multi m2 Key.sample in
     let m4 = Map.remove_multi m3 Key.sample in
@@ -629,7 +628,7 @@ module Unit_tests
   ;;
 
   let%test _ =
-    let m1 = Map.add (random_map Key.samples) ~key:Key.sample ~data:0 in
+    let m1 = Map.set (random_map Key.samples) ~key:Key.sample ~data:0 in
     let m2 = Map.change m1 Key.sample ~f:(function
       | Some _ -> None
       | None -> Some 0)
@@ -665,7 +664,7 @@ module Unit_tests
   let%test _ =
     let caml_map = Caml_map.add Key.sample (-1) Caml_map.empty in
     let core_map =
-      Map.filter (Map.add (random_map Key.samples) ~key:Key.sample ~data:(-1))
+      Map.filter (Map.set (random_map Key.samples) ~key:Key.sample ~data:(-1))
         ~f:(fun data -> data = (-1))
     in
     equal_maps ~caml_map core_map
@@ -676,7 +675,7 @@ module Unit_tests
   let%test _ =
     let caml_map = Caml_map.add Key.sample 0 Caml_map.empty in
     let core_map =
-      Map.filteri (Map.add (random_map Key.samples) ~key:Key.sample ~data:0)
+      Map.filteri (Map.set (random_map Key.samples) ~key:Key.sample ~data:0)
         ~f:(fun ~key ~data -> Key.equal key Key.sample && data = 0)
     in
     equal_maps ~caml_map core_map
@@ -687,7 +686,7 @@ module Unit_tests
   let%test _ =
     let caml_map = Caml_map.add Key.sample 0 Caml_map.empty in
     let core_map =
-      Map.filter_keys (Map.add (random_map Key.samples) ~key:Key.sample ~data:0)
+      Map.filter_keys (Map.set (random_map Key.samples) ~key:Key.sample ~data:0)
         ~f:(fun key -> Key.equal key Key.sample)
     in
     equal_maps ~caml_map core_map
@@ -697,7 +696,7 @@ module Unit_tests
 
   let%test _ =
     let alist = random_alist Key.samples in
-    let core_map = Map.add (Map.of_alist_exn alist) ~key:Key.sample ~data:(-1) in
+    let core_map = Map.set (Map.of_alist_exn alist) ~key:Key.sample ~data:(-1) in
     let core_map =
       Map.filter_map core_map ~f:(fun x -> if x >= 0 then Some (x + 1) else None)
     in
@@ -709,7 +708,7 @@ module Unit_tests
   let filter_mapi _ = assert false
 
   let%test _ =
-    let base_map = Map.add (random_map Key.samples) ~key:Key.sample ~data:0 in
+    let base_map = Map.set (random_map Key.samples) ~key:Key.sample ~data:0 in
     let m1 =
       Map.filter_mapi base_map ~f:(fun ~key ~data ->
         if Key.equal key Key.sample && data = 0 then None else Some (data + 1))
@@ -826,8 +825,8 @@ module Unit_tests
   let%test _ =
     let key = Key.of_int 7 in
     let m1 = Map.empty () in
-    let m1 = Map.add m1 ~key:(Key.of_int 1) ~data:1 in
-    let m2 = Map.add m1 ~key:key ~data:2_000 in
+    let m1 = Map.set m1 ~key:(Key.of_int 1) ~data:1 in
+    let m2 = Map.set m1 ~key:key ~data:2_000 in
     Sequence.to_list (Map.symmetric_diff m1 m2 ~data_equal:(=)) = [(key, `Right 2_000)]
   ;;
 
@@ -835,7 +834,7 @@ module Unit_tests
     let m1 = random_map Key.samples in
     let m2 =
       List.fold (Map.to_alist m1) ~init:(Map.empty ()) ~f:(fun m (k,d) ->
-        Map.add m ~key:k ~data:d)
+        Map.set m ~key:k ~data:d)
     in
     Sequence.to_list (Map.symmetric_diff m1 m2 ~data_equal:(=)) = []
   ;;
@@ -843,7 +842,7 @@ module Unit_tests
   let%test _ =
     let key = Key.of_int 20 in
     let m1 = random_map Key.samples in
-    let m2 = Map.add m1 ~key:key ~data:2_000 in
+    let m2 = Map.set m1 ~key:key ~data:2_000 in
     Sequence.to_list (Map.symmetric_diff m1 m2 ~data_equal:(=)) = [(key, `Right 2_000)]
   ;;
 
@@ -1111,7 +1110,7 @@ module Unit_tests
     let poskd ~key:_ ~data:x = x >= 0 in
     let negkd ~key:_ ~data:x = x <  0 in
     let base_map = random_map Key.samples in
-    let with_negative = Map.add base_map ~key:Key.sample ~data:(-1) in
+    let with_negative = Map.set base_map ~key:Key.sample ~data:(-1) in
     assert (Map.for_all base_map ~f:pos);
     assert (not (Map.for_all with_negative ~f:pos));
     assert (not (Map.exists base_map ~f:neg));
@@ -1214,7 +1213,7 @@ module Unit_tests
       let k4 = List.nth_exn (Map.keys sample_map) 3
 
       let%test "change" =
-        let m = Map.add ~key:Key.sample ~data:1 (Map.empty ()) in
+        let m = Map.set ~key:Key.sample ~data:1 (Map.empty ()) in
         assert (Map.length m = 1);
         let m = Map.change m Key.sample ~f:Fn.id in
         let caml_map = Caml_map.add Key.sample 1 Caml_map.empty in
@@ -1228,7 +1227,7 @@ module Unit_tests
       ;;
 
       let%test "update" =
-        let m = Map.add ~key:Key.sample ~data:1 (Map.empty ()) in
+        let m = Map.set ~key:Key.sample ~data:1 (Map.empty ()) in
         assert (Map.length m = 1);
         let m = Map.update (Map.empty ()) Key.sample ~f:(Fn.const 1) in
         assert (Map.length m = 1);
@@ -1400,7 +1399,7 @@ module Unit_tests
         try
           Map.fold map ~init:(Map.empty ()) ~f:(fun ~key ~data acc ->
             if Maybe_bound.interval_contains_exn key ~lower:lower_bound ~upper:upper_bound ~compare:(Key.compare)
-            then Map.add acc ~key ~data
+            then Map.set acc ~key ~data
             else acc
           )
         with _ -> Map.empty ()
@@ -1456,7 +1455,9 @@ module Unit_tests
     let lower_part, _, upper_part = Map.split map_without_mid Key.mid in
     check map_without_mid lower_part upper_part;
     check_fail upper_part lower_part;
-    check_fail (Map.add lower_part ~key:Key.mid ~data:mid_value) (Map.add upper_part ~key:Key.mid ~data:mid_value);
+    check_fail
+      (Map.set lower_part ~key:Key.mid ~data:mid_value)
+      (Map.set upper_part ~key:Key.mid ~data:mid_value);
     let check_via_alist lower_part upper_part =
       match Map.append ~lower_part ~upper_part with
       | `Ok whole_map ->

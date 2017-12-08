@@ -162,20 +162,20 @@ module Stable = struct
         else 15
       in
       let buf = Bytes.create len in
-      blit_string_of_int_2_digits buf ~pos:0 hr;
+      write_2_digit_int buf ~pos:0 hr;
       Bytes.set buf 2 ':';
-      blit_string_of_int_2_digits buf ~pos:3 min;
+      write_2_digit_int buf ~pos:3 min;
       if dont_print_s then ()
       else begin
         Bytes.set buf 5 ':';
-        blit_string_of_int_2_digits buf ~pos:6 sec;
+        write_2_digit_int buf ~pos:6 sec;
         if dont_print_ms then ()
         else begin
           Bytes.set buf 8 '.';
-          blit_string_of_int_3_digits buf ~pos:9 ms;
+          write_3_digit_int buf ~pos:9 ms;
           if dont_print_us then ()
           else
-            blit_string_of_int_3_digits buf ~pos:12 us
+            write_3_digit_int buf ~pos:12 us
         end
       end;
       Bytes.unsafe_to_string ~no_mutation_while_string_reachable:buf
@@ -199,7 +199,7 @@ module Stable = struct
         if len < 2 then failwith "len < 2"
         else begin
           let span =
-            let hour = parse_two_digits str pos in
+            let hour = read_2_digit_int str ~pos in
             if hour > 24 then failwith "hour > 24";
             let span = Span.of_hr (float hour) in
             if len = 2 then span
@@ -207,7 +207,7 @@ module Stable = struct
             else if not (Char.equal str.[pos + 2] ':')
             then failwith "first colon missing"
             else
-              let minute = parse_two_digits str (pos + 3) in
+              let minute = read_2_digit_int str ~pos:(pos + 3) in
               if minute >= 60 then failwith "minute > 60";
               let span = Span.(+) span (Span.of_min (float minute)) in
               if hour = 24 && minute <> 0 then
@@ -217,7 +217,7 @@ module Stable = struct
               else if not (Char.equal str.[pos + 5] ':')
               then failwith "second colon missing"
               else
-                let second = parse_two_digits str (pos + 6) in
+                let second = read_2_digit_int str ~pos:(pos + 6) in
                 (* second can be 60 in the case of a leap second. Unfortunately, what with
                    non-hour-multiple timezone offsets, we can't say anything about what
                    the hour or minute must be in that case *)
