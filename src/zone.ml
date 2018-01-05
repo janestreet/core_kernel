@@ -18,6 +18,32 @@ exception Invalid_file_format of string [@@deriving sexp]
 module Full_data = struct
   module Stable = struct
     module V1 = struct
+      module Index = struct
+        type t = int
+
+        let next = Int.succ
+        let prev = Int.pred
+
+        let before_first_transition = -1
+
+        (* Some existing clients expect [index >= 0], so we never serialize a negative
+           index. This conversion can be removed if new stable versions are minted. *)
+        let to_external t = max 0 t
+        let of_external t = t
+
+        include Binable.Of_binable (Int) (struct
+            type t = int
+            let to_binable = to_external
+            let of_binable = of_external
+          end)
+
+        include Sexpable.Of_sexpable (Int) (struct
+            type t = int
+            let to_sexpable = to_external
+            let of_sexpable = of_external
+          end)
+      end
+
       module Regime = struct
         type t = {
           utc_offset_in_seconds : Int63.Stable.V1.t;
@@ -52,7 +78,7 @@ module Full_data = struct
         digest                    : Md5.As_binary_string.t option;
         transitions               : Transition.t array;
         (* caches the index of the last transition we used to make lookups faster *)
-        mutable last_regime_index : int;
+        mutable last_regime_index : Index.t;
         default_local_time_type   : Regime.t;
         leap_seconds              : Leap_second.t list;
       }
@@ -226,7 +252,7 @@ module Full_data = struct
              ; original_filename       = Some original_filename
              ; digest                  = Some digest
              ; transitions             = transitions
-             ; last_regime_index       = 0
+             ; last_regime_index       = Index.before_first_transition
              ; default_local_time_type = default_local_time_type
              ; leap_seconds            = leap_seconds
              }
@@ -343,7 +369,7 @@ module Full_data = struct
           original_filename       = None;
           digest                  = None;
           transitions             = [||];
-          last_regime_index       = 0;
+          last_regime_index       = Index.before_first_transition;
           default_local_time_type = {Regime.
                                       utc_offset_in_seconds;
                                       is_dst = false;
@@ -356,157 +382,177 @@ module Full_data = struct
   end
 end
 
-module Common = struct
-  include Full_data.Stable.V1
+include Full_data.Stable.V1
 
-  let sexp_of_t t = Sexp.Atom t.name
+let sexp_of_t t = Sexp.Atom t.name
 
-  let likely_machine_zones = ref [
-    "America/New_York";
-    "Europe/London";
-    "Asia/Hong_Kong";
-    "America/Chicago"
-  ]
+let likely_machine_zones = ref [
+  "America/New_York";
+  "Europe/London";
+  "Asia/Hong_Kong";
+  "America/Chicago"
+]
 
-  let input_tz_file = Zone_file.input_tz_file
+let input_tz_file = Zone_file.input_tz_file
 
-  let utc = of_utc_offset ~hours:0
+let utc = of_utc_offset ~hours:0
 
-  let name zone = zone.name
+let name zone = zone.name
+
+let reset_transition_cache t =
+  t.last_regime_index <- Index.before_first_transition
+
+(* Raises if [index >= Array.length t.transitions] *)
+let get_regime_exn t index =
+  if index < 0
+  then t.default_local_time_type
+  else t.transitions.(index).new_regime
+
+(* In "absolute mode", a number of seconds is interpreted as an offset of that many
+   seconds from the UNIX epoch, ignoring leap seconds.
+
+   In "relative mode", you interpret the number of seconds as a number of days in
+   combination with a number of seconds since midnight, which gives you a calendar day and
+   a clock face time. Then you take the time that those represent in some relevant
+   timezone.
+
+   Of course, if the timezone in question has DST shifts, the date and ofday might
+   represent two or zero times. These times will be interpreted according to either the
+   previous UTC offset or the next one, in a way whose precise details you probably
+   shouldn't depend on.
+
+   (For the curious, what we do is: compute the "relative time" of the shift according to
+   the new regime, and assign relative times to the old regime or new regime depending on
+   which side of the shift time they occur. Since this amounts to using the old regime
+   when the clocks move forward and the new regime when the clocks move back, it's
+   equivalent to calculating the corresponding Time.t's relative to both the old and the
+   new regime and picking the one that occurs later. Yes, later. I had to draw a diagram
+   to persuade myself that it's that way round, but it is.)
+*)
+module Mode = struct
+  type t = Absolute | Relative
 end
 
-include Common
+let effective_start_time ~mode (x : Transition.t) =
+  let open Int63.O in
+  match (mode : Mode.t) with
+  | Absolute -> x.start_time_in_seconds_since_epoch
+  | Relative -> x.start_time_in_seconds_since_epoch + x.new_regime.utc_offset_in_seconds
 
-module Make (Time0 : Time0_intf.S) = struct
-  module Full_data = Full_data
+let index_lower_bound_contains_seconds_since_epoch t index ~mode seconds =
+  index < 0
+  || Int63.( >= ) seconds (effective_start_time ~mode t.transitions.(index))
 
-  include Common
+let index_upper_bound_contains_seconds_since_epoch t index ~mode seconds =
+  index + 1 >= Array.length t.transitions
+  || Int63.( < ) seconds (effective_start_time ~mode t.transitions.(index + 1))
 
-  let time_of_seconds seconds =
-    Time0.of_span_since_epoch (Time0.Span.of_int63_seconds seconds)
-
-  let seconds_of_time time =
-    (* This can raise, but only for times that are hundreds of billions of years away from
-       epoch. *)
-    Time0.Span.to_int63_seconds_round_down_exn (Time0.to_span_since_epoch time)
-
-  let seconds_of_relative rel =
-    Time0.Span.to_int63_seconds_round_down_exn
-      (Time0.Relative_to_unspecified_zone.to_span_since_epoch rel)
-
-  let clock_shift_at zone i =
-    let previous_shift =
-      if i = 0
-      then zone.default_local_time_type.utc_offset_in_seconds
-      else zone.transitions.(i - 1).new_regime.utc_offset_in_seconds
-    in
-    ( time_of_seconds zone.transitions.(i).start_time_in_seconds_since_epoch
-    , Time0.Span.of_int63_seconds
-        (Int63.( - )
-           zone.transitions.(i).new_regime.utc_offset_in_seconds
-           previous_shift)
-    )
-
-  let next_clock_shift zone ~after =
-    let after_in_seconds = seconds_of_time after in
-    let segment_of (transition : Transition.t) =
-      if Int63.(>) transition.start_time_in_seconds_since_epoch after_in_seconds
-      then `Right
-      else `Left
-    in
-    Option.map (Array.binary_search_segmented zone.transitions ~segment_of `First_on_right)
-      ~f:(fun i -> clock_shift_at zone i)
-  ;;
-
-  let prev_clock_shift zone ~before =
-    let before_in_seconds = seconds_of_time before in
-    let segment_of (transition : Transition.t) =
-      if Int63.(<) transition.start_time_in_seconds_since_epoch before_in_seconds
+let binary_search_index_of_seconds_since_epoch t ~mode seconds : Index.t =
+  Array.binary_search_segmented t.transitions `Last_on_left
+    ~segment_of:(fun transition ->
+      if Int63.(<=) (effective_start_time transition ~mode) seconds
       then `Left
-      else `Right
-    in
-    Option.map (Array.binary_search_segmented zone.transitions ~segment_of `Last_on_left)
-      ~f:(fun i -> clock_shift_at zone i)
-  ;;
+      else `Right)
+  |> Option.value ~default:Index.before_first_transition
 
-  (* In "absolute mode", a number of seconds is interpreted as an offset of that many
-     seconds from the UNIX epoch, ignoring leap seconds. In "relative mode", you interpret
-     the number of seconds as a number of days in combination with a number of seconds
-     since midnight, which gives you a calendar day and a clock face time. Then you take
-     the time that those represent in some relevant timezone. *)
-  module Mode = struct
-    type t = Absolute | Relative
+let index_of_seconds_since_epoch t ~mode seconds =
+  let index =
+    let index = t.last_regime_index in
+    if not (index_lower_bound_contains_seconds_since_epoch t index ~mode seconds)
+    (* time is before cached index; try previous index *)
+    then begin
+      let index = index - 1 in
+      if not (index_lower_bound_contains_seconds_since_epoch t index ~mode seconds)
+      (* time is before previous index; fall back on binary search *)
+      then binary_search_index_of_seconds_since_epoch t ~mode seconds
+      (* time is before cached index and not before previous, so within previous *)
+      else index
+    end
+    else if not (index_upper_bound_contains_seconds_since_epoch t index ~mode seconds)
+    (* time is after cached index; try next index *)
+    then begin
+      let index = index + 1 in
+      if not (index_upper_bound_contains_seconds_since_epoch t index ~mode seconds)
+      (* time is after next index; fall back on binary search *)
+      then binary_search_index_of_seconds_since_epoch t ~mode seconds
+      (* time is after cached index and not after next, so within next *)
+      else index
+    end
+    (* time is within cached index *)
+    else index
+  in
+  t.last_regime_index <- index;
+  index
+
+module Time_in_seconds : sig
+  include Zone_intf.Time_in_seconds
+end = struct
+  module Span = struct
+    type t = Int63.t
+
+    let of_int63_seconds                = ident
+    let to_int63_seconds_round_down_exn = ident
   end
 
-  let start_time (transition : Transition.t) ~(mode : Mode.t) =
-    match mode with
-    | Absolute -> transition.start_time_in_seconds_since_epoch
-    | Relative -> Int63.( + )
-                    transition.start_time_in_seconds_since_epoch
-                    transition.new_regime.utc_offset_in_seconds
-  ;;
+  module Absolute = struct
+    type t = Int63.t
 
-  (* Determine if the time specified by [seconds], interpreted according to [mode],
-     is governed by the regime in [transitions.(index)]. *)
-  let in_transition transitions ~index seconds ~mode =
-    let s = start_time transitions.(index) ~mode in
-    Int63.( <= ) s seconds
-    && ((index + 1 = Array.length transitions)
-        || (let e = start_time transitions.(index + 1) ~mode in
-            Int63.( < ) seconds e))
-  ;;
+    let of_span_since_epoch = ident
+    let to_span_since_epoch = ident
+  end
 
-  (* [find_local_regime zone `UTC time] finds the local time regime in force
-     in [zone] at [seconds], as interpreted according to [mode]. *)
-  let find_local_regime zone ~mode seconds =
-    let module T = Transition in
-    let transitions     = zone.transitions in
-    let num_transitions = Array.length transitions in
-    if num_transitions = 0 then
-      zone.default_local_time_type
-    else if Int63.( > )
-              transitions.(0).start_time_in_seconds_since_epoch
-              seconds
-    then
-      zone.default_local_time_type
-    else begin
-      if in_transition transitions ~index:zone.last_regime_index seconds ~mode
-      then transitions.(zone.last_regime_index).new_regime
-      else begin
-        let segment_of (transition : Transition.t) =
-          let start_time = start_time transition ~mode in
-          if Int63.( >= ) seconds start_time
-          then `Left
-          else `Right
-        in
-        let index =
-          Option.value_exn
-            (Array.binary_search_segmented transitions ~segment_of `Last_on_left)
-        in
-        zone.last_regime_index <- index;
-        transitions.(index).new_regime
-      end
-    end
-  ;;
+  module Relative_to_unspecified_zone = struct
+    include Absolute
+  end
 
-  let absolute_time_of_relative_time zone relative =
-    let r = find_local_regime zone (seconds_of_relative relative) ~mode:Relative in
-    Time0.Relative_to_unspecified_zone.to_absolute relative
-      ~offset_from_utc:(Time0.Span.of_int63_seconds r.utc_offset_in_seconds)
-  ;;
-
-  let relative_time_of_absolute_time zone absolute =
-    let r = find_local_regime zone (seconds_of_time absolute) ~mode:Absolute in
-    Time0.Relative_to_unspecified_zone.of_absolute absolute
-      ~offset_from_utc:(Time0.Span.of_int63_seconds r.utc_offset_in_seconds)
-  ;;
-
-  let abbreviation zone time =
-    let regime = find_local_regime zone (seconds_of_time time) ~mode:Absolute in
-    regime.abbrv
-  ;;
-
-  let reset_transition_cache zone =
-    zone.last_regime_index <- 0;
-  ;;
+  include Absolute
 end
+
+let index t time =
+  Time_in_seconds.to_span_since_epoch time
+  |> Time_in_seconds.Span.to_int63_seconds_round_down_exn
+  |> index_of_seconds_since_epoch t ~mode:Absolute
+
+let index_of_relative t time =
+  Time_in_seconds.Relative_to_unspecified_zone.to_span_since_epoch time
+  |> Time_in_seconds.Span.to_int63_seconds_round_down_exn
+  |> index_of_seconds_since_epoch t ~mode:Relative
+
+let index_has_prev_clock_shift t index =
+  index >= 0 && index < Array.length t.transitions
+
+let index_has_next_clock_shift t index =
+  index_has_prev_clock_shift t (index + 1)
+
+let index_prev_clock_shift_time_exn t index =
+  let transition = t.transitions.(index) in
+  transition.start_time_in_seconds_since_epoch
+  |> Time_in_seconds.Span.of_int63_seconds
+  |> Time_in_seconds.of_span_since_epoch
+
+let index_next_clock_shift_time_exn t index =
+  index_prev_clock_shift_time_exn t (index + 1)
+
+let index_prev_clock_shift_amount_exn t index =
+  let transition = t.transitions.(index) in
+  let after = transition.new_regime in
+  let before =
+    if index = 0
+    then t.default_local_time_type
+    else t.transitions.(index - 1).new_regime
+  in
+  Int63.( - )
+    after.utc_offset_in_seconds
+    before.utc_offset_in_seconds
+  |> Time_in_seconds.Span.of_int63_seconds
+
+let index_next_clock_shift_amount_exn t index =
+  index_prev_clock_shift_amount_exn t (index + 1)
+
+let index_abbreviation_exn t index =
+  let regime = get_regime_exn t index in
+  regime.abbrv
+
+let index_offset_from_utc_exn t index =
+  let regime = get_regime_exn t index in
+  Time_in_seconds.Span.of_int63_seconds regime.utc_offset_in_seconds

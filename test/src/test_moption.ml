@@ -56,3 +56,23 @@ let%expect_test "\
      (get ())
      (get_some_exn (Error Moption.get_some_exn))) |}];
 ;;
+
+let%expect_test "unsafe_get" =
+  let t = create () in
+  set_some t 42;
+  print_s [%message (unsafe_get t:int)];
+  [%expect {| ("unsafe_get t" 42) |}];
+;;
+
+let%test_unit "Optional syntax" =
+  let open Optional_syntax in
+  let t = create () in
+  assert(match%optional t with
+    | None   -> true
+    | Some _ -> false);
+  set_some t 13;
+  assert(match%optional t with
+    | None     -> false
+    | Some num -> num = 13);
+;;
+

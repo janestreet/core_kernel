@@ -61,7 +61,7 @@ module type S = sig
         that occurs only 1h later in real-time terms, or 3h later). *)
     include Basic with type t := t and module Span := Span
 
-    (** [Date0.t] is the same as [Date.t] *)
+    (** Conversions between relative times and date/ofday. *)
     val of_date_ofday : Date0.t -> Ofday.t -> t
     val to_date_ofday : t -> Date0.t * Ofday.t
     val to_date       : t -> Date0.t

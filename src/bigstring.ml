@@ -22,6 +22,8 @@ let create ?max_mem_waiting_gc size =
     | None -> ~-1
     | Some v -> Float.to_int (Byte_units.bytes v)
   in
+  (* This check is important because [aux_create ~size:(-1)] raises [Out_of_memory], which
+     could be confusing during debugging. *)
   if size < 0 then invalid_argf "create: size = %d < 0" size ();
   aux_create ~max_mem_waiting_gc ~size
 

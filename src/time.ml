@@ -11,46 +11,93 @@ module Make (Time0 : Time0_intf.S) = struct
 
   include Time0
 
-  let epoch = of_span_since_epoch (Span.of_sec 0.0)
-
-  module Gmtime : sig
-    module Parts : sig
-      type t =
-        { date  : Date0.t
-        ; ofday : Ofday.t }
-    end
-
-    val gmtime : Relative_to_unspecified_zone.t -> Parts.t
-  end = struct
-    module Parts = struct
-      type t =
-        { date  : Date0.t
-        ; ofday : Ofday.t }
-      [@@deriving compare, sexp_of]
-    end
-
-    (* a recreation of the system call gmtime specialized to the fields we need that also
-       doesn't rely on Unix. *)
-    let gmtime t : Parts.t =
-      let date, ofday = Relative_to_unspecified_zone.to_date_ofday t in
-      { date; ofday }
-    ;;
-
-    let%test_unit "negative time" =
-      let t =
-        Relative_to_unspecified_zone.of_span_since_epoch (Span.of_sec (-86_399.))
-      in
-      [%test_result: Parts.t]
-        ~expect:{ date = Date0.of_string "1969-12-31"
-                ; ofday = Ofday.of_span_since_start_of_day Span.second
-                }
-        (gmtime t)
-  end
+  let epoch = of_span_since_epoch Span.zero
 
   let is_earlier t1 ~than:t2 = t1 <. t2
   let is_later   t1 ~than:t2 = t1 >. t2
 
-  module Zone = Zone.Make (Time0)
+  module Zone : sig
+    include Time_intf.Zone with module Time := Time0
+  end = struct
+    include Zone
+
+    let of_span_in_seconds span_in_seconds =
+      (* NB. no actual rounding or exns can occur here *)
+      Time_in_seconds.Span.to_int63_seconds_round_down_exn span_in_seconds
+      |> Time0.Span.of_int63_seconds
+
+    let of_time_in_seconds time_in_seconds =
+      Time_in_seconds.to_span_since_epoch time_in_seconds
+      (* NB. no actual rounding or exns can occur here *)
+      |> Time_in_seconds.Span.to_int63_seconds_round_down_exn
+      |> Time0.Span.of_int63_seconds
+      |> Time0.of_span_since_epoch
+
+    let to_time_in_seconds_round_down_exn time =
+      Time0.to_span_since_epoch time
+      |> Time0.Span.to_int63_seconds_round_down_exn
+      |> Time_in_seconds.Span.of_int63_seconds
+      |> Time_in_seconds.of_span_since_epoch
+
+    let to_relative_time_in_seconds_round_down_exn relative =
+      Time0.Relative_to_unspecified_zone.to_span_since_epoch relative
+      |> Time0.Span.to_int63_seconds_round_down_exn
+      |> Time_in_seconds.Span.of_int63_seconds
+      |> Time_in_seconds.Relative_to_unspecified_zone.of_span_since_epoch
+
+    let index t time =
+      index t (to_time_in_seconds_round_down_exn time)
+
+    let index_of_relative t relative =
+      index_of_relative t (to_relative_time_in_seconds_round_down_exn relative)
+
+    let index_offset_from_utc_exn t index =
+      of_span_in_seconds (index_offset_from_utc_exn t index)
+
+    let index_prev_clock_shift_time_exn t index =
+      of_time_in_seconds (index_prev_clock_shift_time_exn t index)
+
+    let index_next_clock_shift_time_exn t index =
+      of_time_in_seconds (index_next_clock_shift_time_exn t index)
+
+    let index_prev_clock_shift_amount_exn t index =
+      of_span_in_seconds (index_prev_clock_shift_amount_exn t index)
+
+    let index_next_clock_shift_amount_exn t index =
+      of_span_in_seconds (index_next_clock_shift_amount_exn t index)
+
+    let abbreviation t time =
+      (* no exn because [index] always returns a valid index *)
+      index_abbreviation_exn t (index t time)
+
+    let index_prev_clock_shift t index =
+      match index_has_prev_clock_shift t index with
+      | false -> None
+      | true  ->
+        Some (index_prev_clock_shift_time_exn   t index,
+              index_prev_clock_shift_amount_exn t index)
+
+    let index_next_clock_shift t index =
+      index_prev_clock_shift t (Index.next index)
+
+    let prev_clock_shift t ~at_or_before:time =
+      index_prev_clock_shift t (index t time)
+
+    let next_clock_shift t ~strictly_after:time =
+      index_next_clock_shift t (index t time)
+
+    let relative_time_of_absolute_time t time =
+      let index = index t time in
+      (* no exn because [index] always returns a valid index *)
+      let offset_from_utc = index_offset_from_utc_exn t index in
+      Time0.Relative_to_unspecified_zone.of_absolute time ~offset_from_utc
+
+    let absolute_time_of_relative_time t relative =
+      let index = index_of_relative t relative in
+      (* no exn because [index_of_relative] always returns a valid index *)
+      let offset_from_utc = index_offset_from_utc_exn t index in
+      Time0.Relative_to_unspecified_zone.to_absolute relative ~offset_from_utc
+  end
 
   let abs_diff t1 t2 = Span.abs (diff t1 t2)
 
@@ -63,7 +110,7 @@ module Make (Time0 : Time0_intf.S) = struct
     (* We assume that there will be only one zone shift within a given local day.  *)
     let start_of_day = of_date_ofday ~zone date Ofday.start_of_day in
     let proposed_time = add start_of_day (Ofday.to_span_since_start_of_day ofday) in
-    match Zone.next_clock_shift zone ~after:start_of_day with
+    match Zone.next_clock_shift zone ~strictly_after:start_of_day with
     | None -> `Once proposed_time
     | Some (shift_start, shift_amount) ->
       let shift_backwards = Span.(shift_amount < zero) in
@@ -79,63 +126,92 @@ module Make (Time0 : Time0_intf.S) = struct
         if shift_backwards
         then `Twice (proposed_time, sub proposed_time shift_amount)
         else `Never shift_start
-      end else
-        `Once (sub proposed_time shift_amount)
+      end else `Once (sub proposed_time shift_amount)
   ;;
 
-  module Epoch_cache = struct
-    type nonrec t = {
-      zone      : Zone.t;
-      day_start : Relative_to_unspecified_zone.t;
-      day_end   : Relative_to_unspecified_zone.t;
-      date      : Date0.t
+  module Date_cache = struct
+    type t = {
+      mutable zone                : Zone.t;
+      mutable cache_start_incl    : Time0.t;
+      mutable cache_until_excl    : Time0.t;
+      mutable effective_day_start : Time0.t;
+      mutable date                : Date0.t;
     }
   end
 
-  let date_ofday_of_epoch_internal zone (time : Relative_to_unspecified_zone.t) =
-    let {Gmtime.Parts. date; ofday} = Gmtime.gmtime time in
-    let day_start =
-      Relative_to_unspecified_zone.sub time (Ofday.to_span_since_start_of_day ofday)
-    in
-    let day_end = Relative_to_unspecified_zone.add day_start Span.day in
-    let cache = {Epoch_cache. zone; day_start; day_end; date} in
-    (cache, (date, ofday))
+  let date_cache : Date_cache.t = {
+    zone                = Zone.utc;
+    cache_start_incl    = epoch;
+    cache_until_excl    = epoch;
+    effective_day_start = epoch;
+    date                = Date0.unix_epoch;
+  }
+
+  let reset_date_cache () =
+    date_cache.zone                <- Zone.utc;
+    date_cache.cache_start_incl    <- epoch;
+    date_cache.cache_until_excl    <- epoch;
+    date_cache.effective_day_start <- epoch;
+    date_cache.date                <- Date0.unix_epoch;
   ;;
 
-  let initial_gmtime_cache =
-    let relative_epoch = Relative_to_unspecified_zone.of_span_since_epoch Span.zero in
-    fst (date_ofday_of_epoch_internal Zone.utc relative_epoch)
+  let is_in_cache time ~zone =
+    phys_equal      zone date_cache.zone
+    && Time0.( >= ) time date_cache.cache_start_incl
+    && Time0.( <  ) time date_cache.cache_until_excl
 
-  let gmtime_cache = ref initial_gmtime_cache
+  let set_date_cache time ~zone =
+    match is_in_cache time ~zone with
+    | true  -> ()
+    | false ->
+      let index = Zone.index zone time in
+      (* no exn because [Zone.index] always returns a valid index *)
+      let offset_from_utc = Zone.index_offset_from_utc_exn zone index in
+      let rel = Relative_to_unspecified_zone.of_absolute time ~offset_from_utc in
+      let date = Relative_to_unspecified_zone.to_date rel in
+      let span =
+        Relative_to_unspecified_zone.to_ofday rel
+        |> Ofday.to_span_since_start_of_day
+      in
+      let rel_day_start = Relative_to_unspecified_zone.sub rel           span     in
+      let rel_day_until = Relative_to_unspecified_zone.add rel_day_start Span.day in
+      let effective_day_start =
+        Relative_to_unspecified_zone.to_absolute rel_day_start ~offset_from_utc
+      in
+      let effective_day_until =
+        Relative_to_unspecified_zone.to_absolute rel_day_until ~offset_from_utc
+      in
+      let cache_start_incl =
+        match Zone.index_has_prev_clock_shift zone index with
+        | false -> effective_day_start
+        | true  -> effective_day_start
+                   |> Time0.max (Zone.index_prev_clock_shift_time_exn zone index)
+      in
+      let cache_until_excl =
+        match Zone.index_has_next_clock_shift zone index with
+        | false -> effective_day_until
+        | true  -> effective_day_until
+                   |> Time0.min (Zone.index_next_clock_shift_time_exn zone index)
+      in
+      date_cache.zone                <- zone;
+      date_cache.cache_start_incl    <- cache_start_incl;
+      date_cache.cache_until_excl    <- cache_until_excl;
+      date_cache.effective_day_start <- effective_day_start;
+      date_cache.date                <- date
 
-  let reset_gmtime_cache () =
-    gmtime_cache := initial_gmtime_cache
-
-  (* A thin caching layer over the actual date_ofday_of_epoch
-     (date_ofday_of_epoch_internal just above) used only to gain some speed when we
-     translate the same time/date over and over again *)
-  let date_ofday_of_epoch =
-    (fun zone unshifted ->
-       (* If at time T you are +H hours from UTC, then the correct local time at T is the
-          time in UTC at T, plus an offset of H hours. But since UTC is nice and simple,
-          that's the same as what the time in UTC will be in H hours' time (if only it
-          were always that simple!) *)
-       let open Relative_to_unspecified_zone.Replace_polymorphic_compare in
-       let time = Zone.relative_time_of_absolute_time zone unshifted in
-       let {Epoch_cache.zone = z; day_start = s; day_end = e; date = date}
-         = !gmtime_cache
-       in
-       if phys_equal zone z && time >= s && time < e then (
-         (date,
-          Ofday.of_span_since_start_of_day (Relative_to_unspecified_zone.diff time s)))
-       else begin
-         let (new_cache, r) = date_ofday_of_epoch_internal zone time in
-         gmtime_cache := new_cache;
-         r
-       end)
+  let to_date time ~zone =
+    set_date_cache time ~zone;
+    date_cache.date
   ;;
 
-  let to_date_ofday time ~zone = date_ofday_of_epoch zone time
+  let to_ofday time ~zone =
+    set_date_cache time ~zone;
+    Time0.diff time date_cache.effective_day_start
+    |> Ofday.of_span_since_start_of_day
+  ;;
+
+  let to_date_ofday time ~zone =
+    to_date time ~zone, to_ofday time ~zone
   ;;
 
   (* The correctness of this algorithm (interface, even) depends on the fact that
@@ -143,16 +219,9 @@ module Make (Time0 : Time0_intf.S) = struct
      case that a timezone shift of X hours occurred less than X hours ago, *and*
      a timezone shift of Y hours will occur in less than Y hours' time) *)
   let to_date_ofday_precise time ~zone =
-    let date, ofday       = to_date_ofday time ~zone in
-    let clock_shift_after = Zone.next_clock_shift zone ~after:time in
-    let clock_shift_before_or_at =
-      let after_time_but_not_after_next =
-        match clock_shift_after with
-        | None                 -> add time Span.second
-        | Some (next_start, _) -> next_start
-      in
-      Zone.prev_clock_shift zone ~before:after_time_but_not_after_next
-    in
+    let date, ofday = to_date_ofday time ~zone in
+    let clock_shift_after        = Zone.next_clock_shift zone ~strictly_after:time in
+    let clock_shift_before_or_at = Zone.prev_clock_shift zone ~at_or_before:time   in
     let also_skipped_earlier amount =
       (* Using [date] and raising on [None] here is OK on the assumption that clock
          shifts can't cross date boundaries. This is true in all cases I've ever heard
@@ -198,12 +267,9 @@ module Make (Time0 : Time0_intf.S) = struct
     date, ofday, ambiguity
   ;;
 
-  let to_date t ~zone  = fst (to_date_ofday t ~zone)
-  let to_ofday t ~zone = snd (to_date_ofday t ~zone)
-
   let convert ~from_tz ~to_tz date ofday =
     let start_time = of_date_ofday ~zone:from_tz date ofday in
-    date_ofday_of_epoch to_tz start_time
+    to_date_ofday ~zone:to_tz start_time
   ;;
 
   let utc_offset t ~zone =

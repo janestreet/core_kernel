@@ -202,11 +202,13 @@ val is_empty : (_, _, _) t -> bool
 (** [length map] returns number of elements in [map]. O(1), but [Tree.length] is O(n). *)
 val length : (_, _, _) t -> int
 
-(** Returns a new map with the specified new binding; if the key was already bound, its
-    previous binding disappears. *)
-val add : ('k, 'v, 'cmp) t -> key:'k -> data:'v -> ('k, 'v, 'cmp) t
-[@@deprecated "[since 2017-11] Use [set] instead"]
+(** [add_exn t ~key ~data] returns [t] extended with [key] mapped to [data], raising if
+    [mem key t]. *)
+val add     : ('k, 'v, 'cmp) t -> key:'k -> data:'v -> ('k, 'v, 'cmp) t Or_duplicate.t
+val add_exn : ('k, 'v, 'cmp) t -> key:'k -> data:'v -> ('k, 'v, 'cmp) t
 
+(** Returns a new map with the specified new binding;
+    if the key was already bound, its previous binding disappears. *)
 val set : ('k, 'v, 'cmp) t -> key:'k -> data:'v -> ('k, 'v, 'cmp) t
 
 (** If [key] is not present then add a singleton list, otherwise, cons data onto the head

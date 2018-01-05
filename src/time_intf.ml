@@ -3,6 +3,37 @@ open! Std_internal
 
 module Date = Date0
 
+module type Zone = sig
+  module Time : Time0_intf.S
+
+  include Zone.S with type t = Zone.t and module Time_in_seconds := Time
+
+  (** [abbreviation t time] returns the abbreviation name (such as EDT, EST, JST) of given
+      zone [t] at [time]. This string conversion is one-way only, and cannot reliably be
+      turned back into a [t]. This function reads and writes the zone's cached index. *)
+  val abbreviation : t -> Time.t -> string
+
+  (** [absolute_time_of_relative_time] and [relative_time_of_absolute_time] convert times
+      between absolute (time from epoch in UTC) and relative (shifted according to time
+      zone and daylight savings) forms. These are low level functions not intended for
+      most clients. These functions read and write the zone's cached index. *)
+  val absolute_time_of_relative_time : t -> Time.Relative_to_unspecified_zone.t -> Time.t
+  val relative_time_of_absolute_time : t -> Time.t -> Time.Relative_to_unspecified_zone.t
+
+  (** Takes a [Time.t] and returns the next [Time.t] strictly after it, if any, that the
+      time zone UTC offset changes, and by how much it does so. *)
+  val next_clock_shift
+    :  t
+    -> strictly_after:Time.t
+    -> (Time.t * Time.Span.t) option
+
+  (** As [next_clock_shift], but *at or before* the given time. *)
+  val prev_clock_shift
+    :  t
+    -> at_or_before:Time.t
+    -> (Time.t * Time.Span.t) option
+end
+
 module type S = sig
   module Time : Time0_intf.S
 
@@ -12,7 +43,7 @@ module type S = sig
   (** [now ()] returns a [t] representing the current time *)
   val now : unit -> t
 
-  module Zone : Zone_intf.S with module Time := Time
+  module Zone : Zone with module Time := Time
 
   (** {6 Basic operations on times} *)
 
@@ -91,10 +122,10 @@ module type S = sig
   val to_date  : t -> zone:Zone.t -> Date.t
   val to_ofday : t -> zone:Zone.t -> Ofday.t
 
-  (** For performance testing only; [reset_gmtime_cache ()] resets an internal cache used
-      to speed up [to_date_ofday] and related functions when called repeatedly on times
-      that fall within the same day. *)
-  val reset_gmtime_cache : unit -> unit
+  (** For performance testing only; [reset_date_cache ()] resets an internal cache used to
+      speed up [to_date] and related functions when called repeatedly on times that fall
+      within the same day. *)
+  val reset_date_cache : unit -> unit
 
   (** Unlike [Time_ns], this module purposely omits [max_value] and [min_value]:
       1. They produce unintuitive corner cases because most people's mental models of time

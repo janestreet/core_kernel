@@ -34,7 +34,7 @@ module type S = sig
   module Pointer : sig
     (** A pointer to a tuple in a pool.  ['slots] will look like [('a1, ..., 'an)
         Slots.tn], and the tuples have type ['a1 * ... * 'an]. *)
-    type 'slots t [@@deriving sexp_of]
+    type 'slots t [@@deriving sexp_of, typerep]
 
     (** The [null] pointer is a distinct pointer that does not correspond to a tuple in
         the pool.  It is a function to prevent problems due to the value restriction. *)
@@ -239,6 +239,8 @@ module type S = sig
 end
 
 module type Pool = sig
+
+  module Tuple_type = Tuple_type
 
   module type S = S
 

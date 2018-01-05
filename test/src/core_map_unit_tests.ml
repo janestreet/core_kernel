@@ -183,6 +183,7 @@ module Unit_tests
     && alist_equal (Map.to_alist map) (caml_map_to_alist caml_map)
 
   let add       _      = assert false
+  let add_exn   _      = assert false
   let set       _      = assert false
   let remove    _      = assert false
   let find      _      = assert false

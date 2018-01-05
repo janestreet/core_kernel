@@ -100,6 +100,6 @@ let iter t ~f = Option.iter t.value ~f
 module Optional_syntax = struct
   module Optional_syntax = struct
     let is_none = is_none
-    let unchecked_value t = get_exn t [%here]
+    let unsafe_value t = get_exn t [%here]
   end
 end

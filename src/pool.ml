@@ -1,6 +1,8 @@
 open! Import
 open Pool_intf
 
+module Tuple_type = Tuple_type
+
 let failwiths = Error.failwiths
 let phys_equal = Caml.( == )
 let arch_sixtyfour = Sys.word_size = 64
@@ -173,7 +175,7 @@ module Pool = struct
        access, the [slot_index] function.  The encoding is designed so that [slot_index]
        produces a negative number for [Null], which will cause the subsequent array bounds
        check to fail. *)
-    type 'slots t = private int [@@deriving sexp_of]
+    type 'slots t = private int [@@deriving sexp_of, typerep]
 
     include Invariant.S1 with type 'a t := 'a t
 
@@ -204,7 +206,7 @@ module Pool = struct
   end = struct
     (* A pointer is either [null] or the (positive) index in the pool of the next-free
        field preceeding the tuple's slots. *)
-    type 'slots t = int
+    type 'slots t = int [@@deriving typerep]
 
     let sexp_of_t _ t = Sexp.Atom (sprintf "<Obj_array.Pointer.t: 0x%08x>" t)
 
@@ -910,7 +912,7 @@ module Debug (Pool : S) = struct
   module Pointer = struct
     open Pointer
 
-    type nonrec 'slots t = 'slots t [@@deriving sexp_of]
+    type nonrec 'slots t = 'slots t [@@deriving sexp_of, typerep]
 
     let phys_compare t1 t2 =
       debug "Pointer.phys_compare" [] (t1, t2) [%sexp_of: _ t * _ t] [%sexp_of: int]
@@ -1071,7 +1073,7 @@ module Error_check (Pool : S) = struct
       { mutable is_valid : bool
       ; pointer          : 'slots Pointer.t
       }
-    [@@deriving sexp_of]
+    [@@deriving sexp_of, typerep]
 
     let create pointer = { is_valid = true; pointer }
 

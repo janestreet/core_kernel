@@ -32,6 +32,7 @@ module Std = struct
     module Time0_intf           = Time0_intf
     module Time_intf            = Time_intf
     module Time_float0          = Time_float0
+    module Time_zone            = Zone
     module Kernel_time          = Time
     module Time_float           = Time_float
     module Ofday_parser         = Ofday_parser

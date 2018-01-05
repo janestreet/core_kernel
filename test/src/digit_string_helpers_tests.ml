@@ -45,6 +45,26 @@ let test_write_int write_int ~digits =
     write_int (Bytes.make digits '?') ~pos:0 (max + 1));
 ;;
 
+let%expect_test "write_1_digit_int" =
+  test_write_int write_1_digit_int ~digits:1;
+  [%expect {|
+    Expecting success:
+    0 -> "0"
+    9 -> "9"
+
+    Expecting failure:
+    (Invalid_argument
+     "Digit_string_helpers.write_1_digit_int: pos=0 out of range for string of length 0")
+    (Invalid_argument
+     "Digit_string_helpers.write_1_digit_int: pos=-1 out of range for string of length 1")
+    (Invalid_argument
+     "Digit_string_helpers.write_1_digit_int: pos=1 out of range for string of length 1")
+    (Invalid_argument
+     "Digit_string_helpers.write_1_digit_int: -1 out of range [0, 9]")
+    (Invalid_argument
+     "Digit_string_helpers.write_1_digit_int: 10 out of range [0, 9]") |}];
+;;
+
 let%expect_test "write_2_digit_int" =
   test_write_int write_2_digit_int ~digits:2;
   [%expect {|
@@ -53,14 +73,18 @@ let%expect_test "write_2_digit_int" =
     99 -> "99"
 
     Expecting failure:
-    (Invalid_argument "index out of bounds")
-    (Invalid_argument "index out of bounds")
-    (Invalid_argument "index out of bounds")
     (Invalid_argument
-     "Digit_string_helpers.write_2_digit_int: argument must be (0, 99) -1")
+     "Digit_string_helpers.write_2_digit_int: pos=0 out of range for string of length 0")
     (Invalid_argument
-     "Digit_string_helpers.write_2_digit_int: argument must be (0, 99) 100") |}];
+     "Digit_string_helpers.write_2_digit_int: pos=-1 out of range for string of length 2")
+    (Invalid_argument
+     "Digit_string_helpers.write_2_digit_int: 2 digits do not fit at pos 1 in string of length 2")
+    (Invalid_argument
+     "Digit_string_helpers.write_2_digit_int: -1 out of range [0, 99]")
+    (Invalid_argument
+     "Digit_string_helpers.write_2_digit_int: 100 out of range [0, 99]") |}];
 ;;
+
 
 let%expect_test "write_3_digit_int" =
   test_write_int write_3_digit_int ~digits:3;
@@ -70,14 +94,18 @@ let%expect_test "write_3_digit_int" =
     999 -> "999"
 
     Expecting failure:
-    (Invalid_argument "index out of bounds")
-    (Invalid_argument "index out of bounds")
-    (Invalid_argument "index out of bounds")
     (Invalid_argument
-     "Digit_string_helpers.write_3_digit_int: argument must be (0, 999) -1")
+     "Digit_string_helpers.write_3_digit_int: pos=0 out of range for string of length 0")
     (Invalid_argument
-     "Digit_string_helpers.write_3_digit_int: argument must be (0, 999) 1000") |}];
+     "Digit_string_helpers.write_3_digit_int: pos=-1 out of range for string of length 3")
+    (Invalid_argument
+     "Digit_string_helpers.write_3_digit_int: 3 digits do not fit at pos 1 in string of length 3")
+    (Invalid_argument
+     "Digit_string_helpers.write_3_digit_int: -1 out of range [0, 999]")
+    (Invalid_argument
+     "Digit_string_helpers.write_3_digit_int: 1000 out of range [0, 999]") |}];
 ;;
+
 
 let%expect_test "write_4_digit_int" =
   test_write_int write_4_digit_int ~digits:4;
@@ -87,13 +115,116 @@ let%expect_test "write_4_digit_int" =
     9999 -> "9999"
 
     Expecting failure:
-    (Invalid_argument "index out of bounds")
-    (Invalid_argument "index out of bounds")
-    (Invalid_argument "index out of bounds")
     (Invalid_argument
-     "Digit_string_helpers.write_4_digit_int: argument must be (0, 9999) -1")
+     "Digit_string_helpers.write_4_digit_int: pos=0 out of range for string of length 0")
     (Invalid_argument
-     "Digit_string_helpers.write_4_digit_int: argument must be (0, 9999) 10000") |}];
+     "Digit_string_helpers.write_4_digit_int: pos=-1 out of range for string of length 4")
+    (Invalid_argument
+     "Digit_string_helpers.write_4_digit_int: 4 digits do not fit at pos 1 in string of length 4")
+    (Invalid_argument
+     "Digit_string_helpers.write_4_digit_int: -1 out of range [0, 9999]")
+    (Invalid_argument
+     "Digit_string_helpers.write_4_digit_int: 10000 out of range [0, 9999]") |}];
+;;
+
+let%expect_test "write_5_digit_int" =
+  test_write_int write_5_digit_int ~digits:5;
+  [%expect {|
+    Expecting success:
+    0 -> "00000"
+    99999 -> "99999"
+
+    Expecting failure:
+    (Invalid_argument
+     "Digit_string_helpers.write_5_digit_int: pos=0 out of range for string of length 0")
+    (Invalid_argument
+     "Digit_string_helpers.write_5_digit_int: pos=-1 out of range for string of length 5")
+    (Invalid_argument
+     "Digit_string_helpers.write_5_digit_int: 5 digits do not fit at pos 1 in string of length 5")
+    (Invalid_argument
+     "Digit_string_helpers.write_5_digit_int: -1 out of range [0, 99999]")
+    (Invalid_argument
+     "Digit_string_helpers.write_5_digit_int: 100000 out of range [0, 99999]") |}];
+;;
+
+let%expect_test "write_6_digit_int" =
+  test_write_int write_6_digit_int ~digits:6;
+  [%expect {|
+    Expecting success:
+    0 -> "000000"
+    999999 -> "999999"
+
+    Expecting failure:
+    (Invalid_argument
+     "Digit_string_helpers.write_6_digit_int: pos=0 out of range for string of length 0")
+    (Invalid_argument
+     "Digit_string_helpers.write_6_digit_int: pos=-1 out of range for string of length 6")
+    (Invalid_argument
+     "Digit_string_helpers.write_6_digit_int: 6 digits do not fit at pos 1 in string of length 6")
+    (Invalid_argument
+     "Digit_string_helpers.write_6_digit_int: -1 out of range [0, 999999]")
+    (Invalid_argument
+     "Digit_string_helpers.write_6_digit_int: 1000000 out of range [0, 999999]") |}];
+;;
+
+let%expect_test "write_7_digit_int" =
+  test_write_int write_7_digit_int ~digits:7;
+  [%expect {|
+    Expecting success:
+    0 -> "0000000"
+    9999999 -> "9999999"
+
+    Expecting failure:
+    (Invalid_argument
+     "Digit_string_helpers.write_7_digit_int: pos=0 out of range for string of length 0")
+    (Invalid_argument
+     "Digit_string_helpers.write_7_digit_int: pos=-1 out of range for string of length 7")
+    (Invalid_argument
+     "Digit_string_helpers.write_7_digit_int: 7 digits do not fit at pos 1 in string of length 7")
+    (Invalid_argument
+     "Digit_string_helpers.write_7_digit_int: -1 out of range [0, 9999999]")
+    (Invalid_argument
+     "Digit_string_helpers.write_7_digit_int: 10000000 out of range [0, 9999999]") |}];
+;;
+
+let%expect_test "write_8_digit_int" =
+  test_write_int write_8_digit_int ~digits:8;
+  [%expect {|
+    Expecting success:
+    0 -> "00000000"
+    99999999 -> "99999999"
+
+    Expecting failure:
+    (Invalid_argument
+     "Digit_string_helpers.write_8_digit_int: pos=0 out of range for string of length 0")
+    (Invalid_argument
+     "Digit_string_helpers.write_8_digit_int: pos=-1 out of range for string of length 8")
+    (Invalid_argument
+     "Digit_string_helpers.write_8_digit_int: 8 digits do not fit at pos 1 in string of length 8")
+    (Invalid_argument
+     "Digit_string_helpers.write_8_digit_int: -1 out of range [0, 99999999]")
+    (Invalid_argument
+     "Digit_string_helpers.write_8_digit_int: 100000000 out of range [0, 99999999]") |}];
+;;
+
+let%expect_test "write_9_digit_int" =
+  test_write_int write_9_digit_int ~digits:9;
+  [%expect {|
+    Expecting success:
+    0 -> "000000000"
+    999999999 -> "999999999"
+
+    Expecting failure:
+    (Invalid_argument
+     "Digit_string_helpers.write_9_digit_int: pos=0 out of range for string of length 0")
+    (Invalid_argument
+     "Digit_string_helpers.write_9_digit_int: pos=-1 out of range for string of length 9")
+    (Invalid_argument
+     "Digit_string_helpers.write_9_digit_int: 9 digits do not fit at pos 1 in string of length 9")
+    (Invalid_argument
+     "Digit_string_helpers.write_9_digit_int: -1 out of range [0, 999999999]")
+    (Invalid_argument
+     "Digit_string_helpers.write_9_digit_int: 1000000000 out of range [0, 999999999]") |}];
 ;;
 
 let test_read_int read_int ~digits =
@@ -140,9 +271,12 @@ let%expect_test "read_1_digit_int" =
     "9" -> 9
 
     Expecting failure:
-    (Invalid_argument "index out of bounds")
-    (Invalid_argument "index out of bounds")
-    (Invalid_argument "index out of bounds")
+    (Invalid_argument
+     "Digit_string_helpers.read_1_digit_int: pos=0 out of range for string of length 0")
+    (Invalid_argument
+     "Digit_string_helpers.read_1_digit_int: pos=-1 out of range for string of length 1")
+    (Invalid_argument
+     "Digit_string_helpers.read_1_digit_int: pos=1 out of range for string of length 1")
     (Failure "Char.get_digit_exn '!': not a digit") |}];
 ;;
 
@@ -154,9 +288,29 @@ let%expect_test "read_2_digit_int" =
     "99" -> 99
 
     Expecting failure:
-    (Invalid_argument "index out of bounds")
-    (Invalid_argument "index out of bounds")
-    (Invalid_argument "index out of bounds")
+    (Invalid_argument
+     "Digit_string_helpers.read_2_digit_int: pos=0 out of range for string of length 0")
+    (Invalid_argument
+     "Digit_string_helpers.read_2_digit_int: pos=-1 out of range for string of length 2")
+    (Invalid_argument
+     "Digit_string_helpers.read_2_digit_int: 2 digits do not fit at pos 1 in string of length 2")
+    (Failure "Char.get_digit_exn '!': not a digit") |}];
+;;
+
+let%expect_test "read_3_digit_int" =
+  test_read_int read_3_digit_int ~digits:3;
+  [%expect {|
+    Expecting success:
+    "000" -> 0
+    "999" -> 999
+
+    Expecting failure:
+    (Invalid_argument
+     "Digit_string_helpers.read_3_digit_int: pos=0 out of range for string of length 0")
+    (Invalid_argument
+     "Digit_string_helpers.read_3_digit_int: pos=-1 out of range for string of length 3")
+    (Invalid_argument
+     "Digit_string_helpers.read_3_digit_int: 3 digits do not fit at pos 1 in string of length 3")
     (Failure "Char.get_digit_exn '!': not a digit") |}];
 ;;
 
@@ -168,8 +322,96 @@ let%expect_test "read_4_digit_int" =
     "9999" -> 9999
 
     Expecting failure:
-    (Invalid_argument "index out of bounds")
-    (Invalid_argument "index out of bounds")
-    (Invalid_argument "index out of bounds")
+    (Invalid_argument
+     "Digit_string_helpers.read_4_digit_int: pos=0 out of range for string of length 0")
+    (Invalid_argument
+     "Digit_string_helpers.read_4_digit_int: pos=-1 out of range for string of length 4")
+    (Invalid_argument
+     "Digit_string_helpers.read_4_digit_int: 4 digits do not fit at pos 1 in string of length 4")
+    (Failure "Char.get_digit_exn '!': not a digit") |}];
+;;
+
+let%expect_test "read_5_digit_int" =
+  test_read_int read_5_digit_int ~digits:5;
+  [%expect {|
+    Expecting success:
+    "00000" -> 0
+    "99999" -> 99999
+
+    Expecting failure:
+    (Invalid_argument
+     "Digit_string_helpers.read_5_digit_int: pos=0 out of range for string of length 0")
+    (Invalid_argument
+     "Digit_string_helpers.read_5_digit_int: pos=-1 out of range for string of length 5")
+    (Invalid_argument
+     "Digit_string_helpers.read_5_digit_int: 5 digits do not fit at pos 1 in string of length 5")
+    (Failure "Char.get_digit_exn '!': not a digit") |}];
+;;
+
+let%expect_test "read_6_digit_int" =
+  test_read_int read_6_digit_int ~digits:6;
+  [%expect {|
+    Expecting success:
+    "000000" -> 0
+    "999999" -> 999999
+
+    Expecting failure:
+    (Invalid_argument
+     "Digit_string_helpers.read_6_digit_int: pos=0 out of range for string of length 0")
+    (Invalid_argument
+     "Digit_string_helpers.read_6_digit_int: pos=-1 out of range for string of length 6")
+    (Invalid_argument
+     "Digit_string_helpers.read_6_digit_int: 6 digits do not fit at pos 1 in string of length 6")
+    (Failure "Char.get_digit_exn '!': not a digit") |}];
+;;
+
+let%expect_test "read_7_digit_int" =
+  test_read_int read_7_digit_int ~digits:7;
+  [%expect {|
+    Expecting success:
+    "0000000" -> 0
+    "9999999" -> 9999999
+
+    Expecting failure:
+    (Invalid_argument
+     "Digit_string_helpers.read_7_digit_int: pos=0 out of range for string of length 0")
+    (Invalid_argument
+     "Digit_string_helpers.read_7_digit_int: pos=-1 out of range for string of length 7")
+    (Invalid_argument
+     "Digit_string_helpers.read_7_digit_int: 7 digits do not fit at pos 1 in string of length 7")
+    (Failure "Char.get_digit_exn '!': not a digit") |}];
+;;
+
+let%expect_test "read_8_digit_int" =
+  test_read_int read_8_digit_int ~digits:8;
+  [%expect {|
+    Expecting success:
+    "00000000" -> 0
+    "99999999" -> 99999999
+
+    Expecting failure:
+    (Invalid_argument
+     "Digit_string_helpers.read_8_digit_int: pos=0 out of range for string of length 0")
+    (Invalid_argument
+     "Digit_string_helpers.read_8_digit_int: pos=-1 out of range for string of length 8")
+    (Invalid_argument
+     "Digit_string_helpers.read_8_digit_int: 8 digits do not fit at pos 1 in string of length 8")
+    (Failure "Char.get_digit_exn '!': not a digit") |}];
+;;
+
+let%expect_test "read_9_digit_int" =
+  test_read_int read_9_digit_int ~digits:9;
+  [%expect {|
+    Expecting success:
+    "000000000" -> 0
+    "999999999" -> 999999999
+
+    Expecting failure:
+    (Invalid_argument
+     "Digit_string_helpers.read_9_digit_int: pos=0 out of range for string of length 0")
+    (Invalid_argument
+     "Digit_string_helpers.read_9_digit_int: pos=-1 out of range for string of length 9")
+    (Invalid_argument
+     "Digit_string_helpers.read_9_digit_int: 9 digits do not fit at pos 1 in string of length 9")
     (Failure "Char.get_digit_exn '!': not a digit") |}];
 ;;

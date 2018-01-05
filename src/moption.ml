@@ -27,6 +27,8 @@ let get t =
   else Some !t
 ;;
 
+let unsafe_get t = !t
+
 let set_some t v = t := v
 let set_none t   = t := none
 
@@ -42,3 +44,10 @@ let invariant invariant_a t =
   Invariant.invariant [%here] t [%sexp_of: _ t] (fun () ->
     Option.iter (get t) ~f:invariant_a)
 ;;
+
+module Optional_syntax = struct
+  module Optional_syntax = struct
+    let is_none = is_none
+    let unsafe_value = unsafe_get
+  end
+end
