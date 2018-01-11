@@ -23,10 +23,9 @@ module Set = Base.Set
 
 module Tree = Set.Using_comparator.Tree
 
-module Container_intf = Base.Container_intf
-module Set_intf       = Base.Set_intf
+module Container = Base.Container
 
-module type Elt_plain = Set_intf.Elt_plain
+module type Elt_plain = Set.Elt_plain
 
 module type Elt = sig
   type t [@@deriving compare, sexp]
@@ -36,17 +35,17 @@ module type Elt_binable = sig
   type t [@@deriving bin_io, compare, sexp]
 end
 
-module Without_comparator      = Set_intf.Without_comparator
-module With_comparator         = Set_intf.With_comparator
-module With_first_class_module = Set_intf.With_first_class_module
+module Without_comparator      = Set.Without_comparator
+module With_comparator         = Set.With_comparator
+module With_first_class_module = Set.With_first_class_module
 
-module Continue_or_stop          = Container_intf.Continue_or_stop
-module Finished_or_stopped_early = Container_intf.Finished_or_stopped_early
+module Continue_or_stop          = Container.Continue_or_stop
+module Finished_or_stopped_early = Container.Finished_or_stopped_early
 
 module Merge_to_sequence_element = Sequence.Merge_with_duplicates_element
 
 module type Accessors_generic = sig
-  include Set_intf.Accessors_generic
+  include Set.Accessors_generic
 
   val to_map
     : ('a, 'cmp,
@@ -62,28 +61,28 @@ module type Accessors_generic = sig
 end
 
 module type Accessors0 = sig
-  include Set_intf.Accessors0
+  include Set.Accessors0
   val to_map : t -> f:(elt -> 'data) -> (elt, 'data, comparator_witness) Map.t
   val obs : elt Quickcheck.Observer.t -> t Quickcheck.Observer.t
   val shrinker : elt Quickcheck.Shrinker.t -> t Quickcheck.Shrinker.t
 end
 
 module type Accessors1 = sig
-  include Set_intf.Accessors1
+  include Set.Accessors1
   val to_map         : 'a t -> f:('a -> 'b) -> ('a, 'b, comparator_witness) Map.t
   val obs : 'a Quickcheck.Observer.t -> 'a t Quickcheck.Observer.t
   val shrinker : 'a Quickcheck.Shrinker.t -> 'a t Quickcheck.Shrinker.t
 end
 
 module type Accessors2 = sig
-  include Set_intf.Accessors2
+  include Set.Accessors2
   val to_map         : ('a, 'cmp) t -> f:('a -> 'b) -> ('a, 'b, 'cmp) Map.t
   val obs : 'a Quickcheck.Observer.t -> ('a, 'cmp) t Quickcheck.Observer.t
   val shrinker : 'a Quickcheck.Shrinker.t -> ('a, 'cmp) t Quickcheck.Shrinker.t
 end
 
 module type Accessors2_with_comparator = sig
-  include Set_intf.Accessors2_with_comparator
+  include Set.Accessors2_with_comparator
   val to_map
     :  comparator:('a, 'cmp) Comparator.t
     -> ('a, 'cmp) t
@@ -143,7 +142,7 @@ module Check_accessors2_with_comparator (M : Accessors2_with_comparator) =
     (M)
 
 module type Creators_generic = sig
-  include Set_intf.Creators_generic
+  include Set.Creators_generic
 
   val of_hash_set     : ('a, 'cmp,  'a elt     Hash_set.t     -> ('a, 'cmp) t) options
   val of_hashtbl_keys : ('a, 'cmp, ('a elt, _) Hashtbl.t -> ('a, 'cmp) t) options
@@ -159,7 +158,7 @@ module type Creators_generic = sig
 end
 
 module type Creators0 = sig
-  include Set_intf.Creators0
+  include Set.Creators0
   val of_hash_set               : elt Hash_set.t  -> t
   val of_hashtbl_keys           : (elt, _) Hashtbl.t -> t
   val of_map_keys               : (elt, _, comparator_witness) Map.t -> t
@@ -167,7 +166,7 @@ module type Creators0 = sig
 end
 
 module type Creators1 = sig
-  include Set_intf.Creators1
+  include Set.Creators1
   val of_hash_set               : 'a Hash_set.t  -> 'a t
   val of_hashtbl_keys           : ('a, _) Hashtbl.t -> 'a t
   val of_map_keys               : ('a, _, comparator_witness) Map.t -> 'a t
@@ -175,7 +174,7 @@ module type Creators1 = sig
 end
 
 module type Creators2 = sig
-  include Set_intf.Creators2
+  include Set.Creators2
   val of_hash_set               : 'a Hash_set.t  -> ('a, 'cmp) t
   val of_hashtbl_keys           : ('a, _) Hashtbl.t -> ('a, 'cmp) t
   val of_map_keys               : ('a, _, 'cmp) Map.t -> ('a, 'cmp) t
@@ -185,7 +184,7 @@ module type Creators2 = sig
 end
 
 module type Creators2_with_comparator = sig
-  include Set_intf.Creators2_with_comparator
+  include Set.Creators2_with_comparator
   val of_hash_set               : comparator:('a, 'cmp) Comparator.t -> 'a Hash_set.t
     -> ('a, 'cmp) t
   val of_hashtbl_keys           : comparator:('a, 'cmp) Comparator.t

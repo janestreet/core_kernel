@@ -17,7 +17,7 @@ include Creators
 
 include Accessors with type 'a t := 'a t with type 'a elt := 'a elt
 
-val hashable : 'key t -> 'key Hashtbl_intf.Hashable.t
+val hashable : 'key t -> 'key Hashtbl.Hashable.t
 
 module type Elt_plain   = Hashtbl.Key_plain
 module type Elt         = Hashtbl.Key

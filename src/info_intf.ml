@@ -13,7 +13,7 @@ module type Extension = sig
 end
 
 module type S = sig
-  include Base.Info_intf.S
+  include Base.Info.S
 
   include Extension with type t := t
 end
@@ -23,5 +23,5 @@ module type Info = sig
 
   include Extension with type t := t
 
-  module Extend (Info : Base.Info_intf.S) : Extension with type t := Info.t
+  module Extend (Info : Base.Info.S) : Extension with type t := Info.t
 end

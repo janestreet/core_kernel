@@ -3,6 +3,9 @@
    Please avoid adding new dependencies. *)
 
 open! Import
+open! Info_intf
+
+module type S = Base.Info.S
 
 module Source_code_position = Source_code_position0
 
@@ -35,7 +38,7 @@ module Binable_exn = struct
   end
 end
 
-module Extend (Info : Base.Info_intf.S) = struct
+module Extend (Info : Base.Info.S) = struct
   module Internal_repr = struct
     module Stable = struct
       module Binable_exn = Binable_exn.Stable

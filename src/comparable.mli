@@ -47,6 +47,7 @@ open Comparable_intf
 
 module type Infix               = Infix
 module type Map_and_set_binable = Map_and_set_binable
+module type Polymorphic_compare = Polymorphic_compare
 module type S_plain             = S_plain
 module type S                   = S
 module type S_binable           = S_binable

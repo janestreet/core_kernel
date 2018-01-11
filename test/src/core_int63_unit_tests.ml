@@ -1,5 +1,5 @@
 open Core_kernel
-module Make_tests(Int : Base.Int_intf.S) : sig end = struct
+module Make_tests(Int : Base.Int.S) : sig end = struct
   open Int
   let p1 = of_int64_exn (1L)
   let p2 = of_int64_exn (2L)

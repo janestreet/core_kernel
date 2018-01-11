@@ -99,7 +99,7 @@ module Tree = struct
 end
 
 module Accessors = struct
-  include (Set.Using_comparator : Set_intf.Accessors2
+  include (Set.Using_comparator : Set.Accessors2
            with type ('a, 'b) t    := ('a, 'b) Set.t
            with type ('a, 'b) tree := ('a, 'b) Tree.t)
 
@@ -124,15 +124,15 @@ include (struct
 end : sig
            type ('a, 'b) t = ('a, 'b) Set.t [@@deriving sexp_of]
 
-           include Set_intf.Creators_generic
-             with type ('a, 'b, 'c) options := ('a, 'b, 'c) Set_intf.With_first_class_module.t
+           include Set.Creators_generic
+             with type ('a, 'b, 'c) options := ('a, 'b, 'c) Set.With_first_class_module.t
              with type ('a, 'b) t := ('a, 'b) t
              with type ('a, 'b) set := ('a, 'b) t
              with type ('a, 'b) tree := ('a, 'b) Tree.t
              with type 'a cmp := 'a cmp
              with type 'a elt := 'a elt
 
-           include Set_intf.Accessors2
+           include Set.Accessors2
              with type ('a, 'b) t := ('a, 'b) t
              with type ('a, 'b) tree := ('a, 'b) Tree.t
          end)

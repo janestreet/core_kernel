@@ -2,7 +2,7 @@ open! Import
 
 module Binable = Binable0
 
-include Base.Hash_set_intf
+include Base.Hash_set
 
 module type S_plain = sig
   type elt

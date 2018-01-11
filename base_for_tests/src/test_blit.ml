@@ -4,7 +4,7 @@ open! Blit
 include Test_blit_intf
 
 module type S_gen = sig
-  open Blit_intf
+  open Blit
   type 'a src
   type 'a dst
   (*  val blit        : ('a src, 'a dst) blit*)

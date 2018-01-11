@@ -6,11 +6,10 @@ module type Basic = sig
 
   type t
 
-  module Replace_polymorphic_compare
-    : Comparable_intf.Polymorphic_compare with type t := t
+  module Replace_polymorphic_compare : Comparable.Polymorphic_compare with type t := t
 
-  include Comparable_intf.Polymorphic_compare with type t := t
-  include Robustly_comparable                 with type t := t
+  include Comparable.Polymorphic_compare with type t := t
+  include Robustly_comparable            with type t := t
 
   val add  : t -> Span.t -> t
   val sub  : t -> Span.t -> t

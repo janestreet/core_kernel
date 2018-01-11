@@ -1,6 +1,6 @@
-(** This module extends {!Base.Int_intf}. *)
+(** This module extends {!Base.Int}. *)
 
-module type Round = Base.Int_intf.Round
+module type Round = Base.Int.Round
 
 module type Stable = sig
   module V1 : sig
@@ -36,7 +36,7 @@ end
 
 module type S_unbounded = sig
   include Extension
-  include Base.Int_intf.S_unbounded
+  include Base.Int.S_unbounded
     with type t := t
     with type comparator_witness := comparator_witness
     with module Hex := Hex
@@ -44,7 +44,7 @@ end
 
 module type S = sig
   include Extension
-  include Base.Int_intf.S
+  include Base.Int.S
     with type t := t
     with type comparator_witness := comparator_witness
     with module Hex := Hex

@@ -83,7 +83,7 @@ let obs = For_quickcheck.obs
 let shrinker = For_quickcheck.shrinker
 
 module Accessors = struct
-  include (Map.Using_comparator : Map_intf.Accessors3
+  include (Map.Using_comparator : Map.Accessors3
            with type ('a, 'b, 'c) t    := ('a, 'b, 'c) Map.t
            with type ('a, 'b, 'c) tree := ('a, 'b, 'c) Tree .t)
 
@@ -122,13 +122,13 @@ include (struct
 end: sig
            type ('a, 'b, 'c) t = ('a, 'b, 'c) Map.t
 
-           include Map_intf.Creators_generic
-             with type ('a, 'b, 'c) options := ('a, 'b, 'c) Map_intf.With_first_class_module.t
+           include Map.Creators_generic
+             with type ('a, 'b, 'c) options := ('a, 'b, 'c) Map.With_first_class_module.t
              with type ('a, 'b, 'c) t := ('a, 'b, 'c) t
              with type ('a, 'b, 'c) tree := ('a, 'b, 'c) Tree.t
              with type 'k key := 'k key
 
-           include Map_intf.Accessors3
+           include Map.Accessors3
              with type ('a, 'b, 'c) t := ('a, 'b, 'c) t
              with type ('a, 'b, 'c) tree := ('a, 'b, 'c) Tree.t
          end)

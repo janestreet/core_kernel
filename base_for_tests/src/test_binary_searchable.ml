@@ -4,7 +4,7 @@ open! Binary_searchable
 include Test_binary_searchable_intf
 
 module type S_gen = sig
-  open Binary_searchable_intf
+  open Binary_searchable
 
   type 'a t
   type 'a elt

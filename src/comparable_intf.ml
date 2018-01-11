@@ -1,12 +1,12 @@
 open! Import
 
-module type Infix               = Base.Comparable_intf.Infix
-module type Polymorphic_compare = Base.Comparable_intf.Polymorphic_compare
-module type Validate            = Base.Comparable_intf.Validate
-module type With_zero           = Base.Comparable_intf.With_zero
+module type Infix               = Base.Comparable.Infix
+module type Polymorphic_compare = Base.Comparable.Polymorphic_compare
+module type Validate            = Base.Comparable.Validate
+module type With_zero           = Base.Comparable.With_zero
 
 module type S_common = sig
-  include Base.Comparable_intf.S
+  include Base.Comparable.S
 
   module Replace_polymorphic_compare : Polymorphic_compare with type t := t
 end

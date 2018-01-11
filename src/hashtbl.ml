@@ -11,7 +11,7 @@ let failwiths = Error.failwiths
 module Creators = Hashtbl.Creators
 include (Hashtbl : sig
            type ('a, 'b) t = ('a, 'b) Hashtbl.t [@@deriving sexp_of]
-           include Base.Hashtbl_intf.S_without_submodules
+           include Base.Hashtbl.S_without_submodules
              with type ('a, 'b) t := ('a, 'b) t
              with module Hashable := Hashable
              with type 'b merge_into_action = 'b Hashtbl.merge_into_action
@@ -74,13 +74,13 @@ module Make_plain (Key : Key_plain) = struct
     end)
 
   include (Hashtbl : sig
-             include Hashtbl_intf.Accessors
+             include Hashtbl.Accessors
                with type ('a, 'b) t := ('a, 'b) t__
                with type 'a key := 'a key_
-             include Hashtbl_intf.Multi
+             include Hashtbl.Multi
                with type ('a, 'b) t := ('a, 'b) t__
                with type 'a key := 'a key_
-             include Hashtbl_intf.Deprecated
+             include Hashtbl.Deprecated
                with type ('a, 'b) t := ('a, 'b) t__
                with type 'a key := 'a key_
              include Invariant.S2 with type ('a, 'b) t := ('a, 'b) hashtbl

@@ -183,7 +183,7 @@ CAMLprim value bigstring_find(value v_str, value v_needle,
                               value v_pos, value v_len)
 {
   char *start, *r;
-  long ret;
+  intnat ret;
 
   start = get_bstr(v_str, v_pos);
   r = (char*) memchr(start, Int_val(v_needle), Long_val(v_len));

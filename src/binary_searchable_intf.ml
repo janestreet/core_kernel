@@ -1,6 +1,6 @@
-(** This module extends {!Base.Binary_searchable_intf}. *)
+(** This module extends {!Base.Binary_searchable}. *)
 
-open Base.Binary_searchable_intf
+open Base.Binary_searchable
 
 module type S1_permissions = sig
   open Perms.Export
@@ -12,6 +12,6 @@ module type S1_permissions = sig
 end
 
 module type Binary_searchable = sig
-  include Binary_searchable
+  include module type of struct include Base.Binary_searchable end
   module type S1_permissions = S1_permissions
 end

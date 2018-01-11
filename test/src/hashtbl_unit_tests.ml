@@ -36,13 +36,13 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
             -> ('key, 'data) multi_constructor Gen.t
 
           val map_and_table
-            :  (module Hashtbl_intf.Hashtbl_intf.Key with type t = 'key)
+            :  (module Base.Hashtbl.Key with type t = 'key)
             -> (module Comparator.S with type t = 'key and type comparator_witness = 'cmp)
             -> ('key, 'data) constructor
             -> ('key, 'data, 'cmp) Map.t * ('key, 'data) Hashtbl.t
 
           val map_and_table_multi
-            :  (module Hashtbl_intf.Hashtbl_intf.Key with type t = 'key)
+            :  (module Base.Hashtbl.Key with type t = 'key)
             -> (module Comparator.S with type t = 'key and type comparator_witness = 'cmp)
             -> ('key, 'data) multi_constructor
             -> ('key, 'data list, 'cmp) Map.t * ('key, 'data list) Hashtbl.t
@@ -956,7 +956,7 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
 
       end : Accessors_with_unit_tests)
 
-      include (Hashtbl : Base.Hashtbl_intf.Deprecated
+      include (Hashtbl : Base.Hashtbl.Deprecated
                with type ('a, 'b) t := ('a, 'b) Hashtbl.t
                with type 'a key := 'a Hashtbl.key)
 
@@ -1761,7 +1761,7 @@ module Make_mutation_in_callbacks(Hashtbl : Hashtbl_intf.Hashtbl) = struct
             t;
           keys, data)
 
-      include (Hashtbl : Base.Hashtbl_intf.Deprecated
+      include (Hashtbl : Base.Hashtbl.Deprecated
                with type ('a, 'b) t := ('a, 'b) Hashtbl.t
                with type 'a key := 'a Hashtbl.key)
 

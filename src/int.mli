@@ -5,8 +5,9 @@
     [Int.Stable.Set] and [Int.Stable.Map], and provide interface uniformity with other
     stable types. *)
 
-include module type of struct include Base.Int end
-  with module Hex := Base.Int.Hex (** @open *)
+include Base.Int.Int_without_module_types
+  with module Hex := Base.Int.Hex
+(** @open *)
 
 include Int_intf.Extension_with_stable
   with type t := t

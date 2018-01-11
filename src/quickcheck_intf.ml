@@ -386,7 +386,7 @@ module type Shrinker = sig
 end
 
 module type Pre_int = sig
-  include Base.Int_intf.S
+  include Base.Int.S
 
   val splittable_random : Splittable_random.State.t -> lo:t -> hi:t -> t
 end

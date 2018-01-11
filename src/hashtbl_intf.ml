@@ -4,13 +4,12 @@ open! Import
 
 module Binable = Binable0
 
-module Hashtbl      = Base.Hashtbl
-module Hashtbl_intf = Base.Hashtbl_intf
+module Hashtbl = Base.Hashtbl
 
-module type Key_plain  = Hashtbl_intf.Key
+module type Key_plain  = Hashtbl.Key
 
-module      Hashable = Hashtbl_intf.Hashable
-module type Hashable = Hashtbl_intf.Hashable
+module      Hashable = Hashtbl.Hashable
+module type Hashable = Hashtbl.Hashable
 
 module type Key = sig
   type t [@@deriving sexp]
@@ -22,18 +21,18 @@ module type Key_binable = sig
   include Key with type t := t
 end
 
-module type Creators  = Hashtbl_intf.Creators
-module type Accessors = Hashtbl_intf.Accessors
-module type Multi     = Hashtbl_intf.Multi
+module type Creators  = Hashtbl.Creators
+module type Accessors = Hashtbl.Accessors
+module type Multi     = Hashtbl.Multi
 
 type ('key, 'data, 'z) create_options_with_first_class_module =
-  ('key, 'data, 'z) Hashtbl_intf.create_options_with_first_class_module
+  ('key, 'data, 'z) Hashtbl.create_options_with_first_class_module
 
 type ('key, 'data, 'z) create_options_without_hashable =
-  ('key, 'data, 'z) Hashtbl_intf.create_options_without_hashable
+  ('key, 'data, 'z) Hashtbl.create_options_without_hashable
 
 type ('key, 'data, 'z) create_options_with_hashable =
-  ('key, 'data, 'z) Hashtbl_intf.create_options_with_hashable
+  ('key, 'data, 'z) Hashtbl.create_options_with_hashable
 
 module type S_plain = sig
   type key
@@ -78,10 +77,10 @@ module type S_binable = sig
 end
 
 module type Hashtbl = sig
-  include Hashtbl_intf.S_without_submodules (** @inline *)
+  include Hashtbl.S_without_submodules (** @inline *)
 
   module Using_hashable : sig
-    include Hashtbl_intf.Creators
+    include Hashtbl.Creators
       with type ('a, 'b) t  := ('a, 'b) t
       with type 'a key := 'a key
       with type ('a, 'b, 'z) create_options := ('a, 'b, 'z) create_options_with_hashable
@@ -89,7 +88,7 @@ module type Hashtbl = sig
 
   module Poly : sig
     type nonrec ('a, 'b) t = ('a, 'b) t [@@deriving bin_io]
-    include Hashtbl_intf.S_poly with type ('a, 'b) t := ('a, 'b) t
+    include Hashtbl.S_poly with type ('a, 'b) t := ('a, 'b) t
   end
 
   module type Key_plain   = Key_plain

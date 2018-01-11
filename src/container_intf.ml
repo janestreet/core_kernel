@@ -1,8 +1,8 @@
-(** This module extends {!Base.Container_intf}. *)
+(** This module extends {!Base.Container}. *)
 
 open! Import
 open Perms.Export
-open Base.Container_intf
+open Base.Container
 
 module Continue_or_stop          = Continue_or_stop
 module Finished_or_stopped_early = Finished_or_stopped_early
@@ -75,7 +75,7 @@ module type S1_permissions = sig
 end
 
 module type Container = sig
-  include Base.Container_intf.Container (** @open *)
+  include module type of struct include Base.Container end (** @open *)
 
   module type S1_permissions = S1_permissions
 end

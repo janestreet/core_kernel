@@ -9,7 +9,6 @@ module Std = struct
   module Bigstring                       = Bigstring
   module Bigstring_marshal               = Bigstring_marshal
   module Caml                            = Caml
-  module Container_intf                  = Container_intf
   module Core_kernel_stable              = Stable
   module Date                            = Date
   module Int_replace_polymorphic_compare = Int_replace_polymorphic_compare

@@ -1,6 +1,6 @@
-(** This module extends the Base [Blit_intf] module *)
+(** This module extends the Base [Blit] module *)
 
-open Base.Blit_intf
+open Base.Blit
 
 module type S_permissions = sig
   open Perms.Export
@@ -23,7 +23,7 @@ module type S1_permissions = sig
 end
 
 module type Blit = sig
-  include Base.Blit_intf.Blit (** @open *)
+  include module type of struct include Base.Blit end (** @open *)
 
   module type S_permissions  = S_permissions
   module type S1_permissions = S1_permissions

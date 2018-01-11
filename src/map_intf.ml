@@ -17,14 +17,13 @@ open! Import
 open T
 module Binable = Binable0
 
-module Map_intf = Base.Map_intf
-module Map      = Base.Map
+module Map = Base.Map
 
-module Or_duplicate = Map_intf.Or_duplicate
+module Or_duplicate = Map.Or_duplicate
 
-module With_comparator         = Map_intf.With_comparator
-module With_first_class_module = Map_intf.With_first_class_module
-module Without_comparator      = Map_intf.Without_comparator
+module With_comparator         = Map.With_comparator
+module With_first_class_module = Map.With_first_class_module
+module Without_comparator      = Map.Without_comparator
 
 module Tree = Map.Using_comparator.Tree
 
@@ -54,7 +53,7 @@ module Symmetric_diff_element = struct
 end
 
 module type Accessors_generic = sig
-  include Map_intf.Accessors_generic
+  include Map.Accessors_generic
 
   val obs
     :  'k key Quickcheck.Observer.t
@@ -70,7 +69,7 @@ module type Accessors_generic = sig
 end
 
 module type Accessors1 = sig
-  include Map_intf.Accessors1
+  include Map.Accessors1
 
   val obs
     :  key Quickcheck.Observer.t
@@ -83,7 +82,7 @@ module type Accessors1 = sig
 end
 
 module type Accessors2 = sig
-  include Map_intf.Accessors2
+  include Map.Accessors2
 
   val obs
     :  'k Quickcheck.Observer.t
@@ -96,7 +95,7 @@ module type Accessors2 = sig
 end
 
 module type Accessors3 = sig
-  include Map_intf.Accessors3
+  include Map.Accessors3
 
   val obs
     :  'k Quickcheck.Observer.t
@@ -109,7 +108,7 @@ module type Accessors3 = sig
 end
 
 module type Accessors3_with_comparator = sig
-  include Map_intf.Accessors3_with_comparator
+  include Map.Accessors3_with_comparator
 
   val obs
     :  'k Quickcheck.Observer.t
@@ -164,7 +163,7 @@ module Check_accessors3_with_comparator (M : Accessors3_with_comparator) =
     (M)
 
 module type Creators_generic = sig
-  include Map_intf.Creators_generic
+  include Map.Creators_generic
 
   val of_hashtbl_exn : ('k, 'cmp, ('k key, 'v) Hashtbl.t -> ('k, 'v, 'cmp) t) options
 
@@ -177,7 +176,7 @@ module type Creators_generic = sig
 end
 
 module type Creators1 = sig
-  include Map_intf.Creators1
+  include Map.Creators1
 
   val of_hashtbl_exn  : (key, 'a) Hashtbl.t -> 'a t
 
@@ -188,7 +187,7 @@ module type Creators1 = sig
 end
 
 module type Creators2 = sig
-  include Map_intf.Creators2
+  include Map.Creators2
 
   val of_hashtbl_exn  : ('a, 'b) Hashtbl.t -> ('a, 'b) t
 
@@ -199,7 +198,7 @@ module type Creators2 = sig
 end
 
 module type Creators3_with_comparator = sig
-  include Map_intf.Creators3_with_comparator
+  include Map.Creators3_with_comparator
 
   val of_hashtbl_exn
     :  comparator:('a, 'cmp) Comparator.t
