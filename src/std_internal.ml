@@ -182,16 +182,18 @@ let () =
       type ('a, 'b) t
 
       include Creators_and_accessors2_with_comparator
-        with type ('a, 'b) set  := ('a, 'b) t
-        with type ('a, 'b) t    := ('a, 'b) t
-        with type ('a, 'b) tree := ('a, 'b) t
+        with type ('a, 'b) set   := ('a, 'b) t
+        with type ('a, 'b) t     := ('a, 'b) t
+        with type ('a, 'b) tree  := ('a, 'b) t
+        with type ('a, 'b) named := ('a, 'b) Tree.Named.t
     end
 
     type ('a, 'b) t
 
     include Accessors2
-      with type ('a, 'b) t    := ('a, 'b) t
-      with type ('a, 'b) tree := ('a, 'b) Tree.t
+      with type ('a, 'b) t     := ('a, 'b) t
+      with type ('a, 'b) tree  := ('a, 'b) Tree.t
+      with type ('a, 'b) named := ('a, 'b) Named.t
 
     include Creators_generic
       with type ('a, 'b) set  := ('a, 'b) t

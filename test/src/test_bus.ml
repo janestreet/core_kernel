@@ -241,6 +241,33 @@ include (struct
          (r2 1)) |}];
     ;;
 
+    let%expect_test "correct exception raised for [subscribe_exn ~extract_exn:true]" =
+      List.iter Bool.all ~f:(fun extract_exn ->
+        let bus =
+          create [%here] Arity1 ~on_subscription_after_first_write:Allow
+            ~on_callback_raise:ignore
+        in
+        let bus_r = read_only bus in
+        ignore (subscribe_exn bus_r [%here] ~extract_exn ~f:(fun () -> assert false)
+                  ~on_callback_raise:(fun error ->
+                    print_s ~hide_positions:true [%message
+                      (extract_exn : bool) (error : Error.t)])
+                : (unit -> _) Subscriber.t);
+        write bus ());
+      [%expect {|
+        ((extract_exn false)
+         (error (
+           "Bus subscriber raised"
+           (exn "Assert_failure test_bus.ml:LINE:COL")
+           (backtrace ("<backtrace elided in test>"))
+           (subscriber (
+             Bus.Subscriber.t (
+               (on_callback_raise <fun>)
+               (subscribed_from lib/core_kernel/test/src/test_bus.ml:LINE:COL)))))))
+        ((extract_exn true)
+         (error       "Assert_failure test_bus.ml:LINE:COL")) |}];
+    ;;
+
     let%expect_test "subscribe_exn ~on_callback_raise:raise" =
       let r = ref 0 in
       let print_r () = print_s [%message (r : int ref)] in

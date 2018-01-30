@@ -130,12 +130,14 @@ module Subscriber = struct
   type 'callback t =
     { id                : Subscriber_id.t
     ; callback          : 'callback
+    ; extract_exn       : bool
     ; on_callback_raise : (Error.t -> unit) option
     ; subscribed_from   : Source_code_position.t
     }
   [@@deriving fields]
 
-  let sexp_of_t _ { callback = _; id; on_callback_raise; subscribed_from } : Sexp.t =
+  let sexp_of_t _ { callback = _; id; extract_exn; on_callback_raise; subscribed_from }
+    : Sexp.t =
     List [ Atom "Bus.Subscriber.t"
          ; [%message
            ""
@@ -143,6 +145,7 @@ module Subscriber = struct
                   then None
                   else Some id : Subscriber_id.t sexp_option)
              (on_callback_raise : (Error.t -> unit) sexp_option)
+             ~extract_exn:(if extract_exn then Some true else None : bool sexp_option)
              (subscribed_from : Source_code_position.t)]]
   ;;
 
@@ -152,13 +155,15 @@ module Subscriber = struct
       Fields.iter
         ~id:ignore
         ~callback:(check invariant_a)
+        ~extract_exn:ignore
         ~on_callback_raise:ignore
         ~subscribed_from:ignore)
   ;;
 
-  let create subscribed_from ~callback ~on_callback_raise =
+  let create subscribed_from ~callback ~extract_exn ~on_callback_raise =
     { id                    = Subscriber_id.create ()
     ; callback
+    ; extract_exn
     ; on_callback_raise
     ; subscribed_from
     }
@@ -348,6 +353,11 @@ let update_write (type callback) (t : (callback, _) t) =
     match subscriber.on_callback_raise with
     | None -> call_on_callback_raise error
     | Some f ->
+      let error =
+        if subscriber.extract_exn
+        then Error.of_exn exn
+        else error
+      in
       try
         f error
       with exn ->
@@ -504,12 +514,14 @@ let create
 
 let can_subscribe t = allow_subscription_after_first_write t || not t.write_ever_called
 
-let subscribe_exn ?on_callback_raise t subscribed_from ~f =
+let subscribe_exn ?(extract_exn = false) ?on_callback_raise t subscribed_from ~f =
   if not (can_subscribe t)
   then failwiths "Bus.subscribe_exn called after first write"
          [%sexp ~~(subscribed_from : Source_code_position.t), { bus = (t : (_, _) t) }]
          [%sexp_of: Sexp.t];
-  let subscriber = Subscriber.create subscribed_from ~callback:f ~on_callback_raise in
+  let subscriber =
+    Subscriber.create subscribed_from ~callback:f ~extract_exn ~on_callback_raise
+  in
   t.subscribers <- Map.set t.subscribers ~key:subscriber.id ~data:subscriber;
   update_write t;
   begin match t.last_value with

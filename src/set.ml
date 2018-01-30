@@ -4,6 +4,7 @@ module List = List0
 open Set_intf
 
 module Merge_to_sequence_element = Merge_to_sequence_element
+module Named = Named
 
 module type Elt_plain   = Elt_plain
 module type Elt         = Elt
@@ -101,7 +102,8 @@ end
 module Accessors = struct
   include (Set.Using_comparator : Set.Accessors2
            with type ('a, 'b) t    := ('a, 'b) Set.t
-           with type ('a, 'b) tree := ('a, 'b) Tree.t)
+           with type ('a, 'b) tree := ('a, 'b) Tree.t
+           with type ('a, 'b) named := ('a, 'b) Set.Named.t)
 
   let to_map t ~f = Tree.to_map ~comparator:(Set.Using_comparator.comparator t) (to_tree t) ~f
   let obs = obs
@@ -135,6 +137,8 @@ end : sig
            include Set.Accessors2
              with type ('a, 'b) t := ('a, 'b) t
              with type ('a, 'b) tree := ('a, 'b) Tree.t
+             with type ('a, 'b) named := ('a, 'b) Set.Named.t
+             with module Named := Named
          end)
 
 type ('k, 'cmp) comparator =
@@ -315,6 +319,11 @@ module Make_tree (Elt : Comparator.S1) = struct
   let of_map_keys = Tree.of_map_keys
   let to_map t ~f = Tree.to_map t ~f ~comparator
 
+  module Named = struct
+    let is_subset t ~of_ = Tree.Named.is_subset t ~of_ ~comparator
+    let equal t1 t2 = Tree.Named.equal t1 t2 ~comparator
+  end
+
   let gen elt = For_quickcheck.gen_tree elt ~comparator
   let obs elt = For_quickcheck.obs_tree elt
   let shrinker elt = For_quickcheck.shr_tree elt ~comparator
@@ -340,6 +349,8 @@ module Poly = struct
 
   type nonrec 'a t = ('a, Elt.comparator_witness) t
 
+  type 'a named = ('a, Elt.comparator_witness) Named.t
+
   include Accessors
 
   let compare _ t1 t2 = compare_direct t1 t2
@@ -364,6 +375,8 @@ module Poly = struct
     include Make_tree (Comparator.Poly)
 
     type 'elt t = ('elt, Comparator.Poly.comparator_witness) tree
+
+    type 'a named = ('a, Elt.comparator_witness) Tree.Named.t
 
     let sexp_of_t sexp_of_elt t = Tree.sexp_of_t sexp_of_elt [%sexp_of: _] t
 
@@ -397,6 +410,7 @@ module Make_plain_using_comparator (Elt : sig
 
   type ('a, 'b) set = ('a, 'b) t
   type t = (Elt.t, Elt.comparator_witness) set
+  type named = (Elt.t, Elt.comparator_witness) Named.t
 
   include Accessors
 
@@ -437,6 +451,7 @@ module Make_plain_using_comparator (Elt : sig
     include Make_tree (Elt_S1)
 
     type t = (Elt.t, Elt.comparator_witness) tree
+    type named = (Elt.t, Elt.comparator_witness) Tree.Named.t
 
     let compare t1 t2 = compare_direct t1 t2
 

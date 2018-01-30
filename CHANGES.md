@@ -1,3 +1,168 @@
+## v0.10
+
+As Core\_kernel is built on top of [Base](https://github.com/janestreet/base),
+you might want to have a look at Base's
+[changelog](https://github.com/janestreet/base/blob/master/CHANGES.md).
+
+- Renamed `Float.to_string` as `to_string_12`, to reflect its 12-digit
+  precision. And introduce a new `Float.to_string` with the behavior of
+  `Float.to_string_round_trippable`.
+
+- Many changes to `Set_once`, including requiring `%here` at calls to `get_exn`,
+  `set`, and `set_exn`
+
+- Improved `Quickcheck`'s interface for giving explicit length values or ranges
+  for random lists and strings.
+
+- Removed `Stable_workaround` modules that are no longer necessary since we
+  upgraded to OCaml 4.04.
+
+- Exposed `Date.add_days_skipping`, a generalization of `add_business_days` and
+  `add_weekdays`
+
+- Added `Total_map.data`, that just calls `Map.data` on the underlying map
+
+- Deprecated `Array.empty`, which was already deprecated in Base.
+
+- Added function `Gc.add_finalizer_last`, which is like `add_finalizer`, except
+  that the function is only called when the value has become unreachable for the
+  last time.
+
+- Added to module `Maybe_bound`: `[@@deriving bin_io]` and module `Stable`.
+
+- Added module `Optional_syntax`, with interfaces `S`, `S1`, and `S2`, used by
+  modules that expose an `Optional_syntax` submodule for use with
+  `match%optional.`
+
+- Switched `Weak_hashtbl` to use `Gc.add_finalizer_last`, rather than
+  `Weak_pointer`'s emulation based on `Ephemeron.`
+
+- Re-implemented `Weak_pointer` directly in terms of OCaml's `Weak` module,
+  rather than using `Ephemeron.`
+
+- Moved `Bigstring.map_file` to `Core`, since it depends `on` `Unix.`
+
+- Optimized `Heap.merge_pairs` by removing a closure allocation.
+
+- Fixed `String_id`'s no-whitespace-on-edge check for `String_id.Set` etc.
+
+- Changed `Version_util` to store build_time as a `Time.t` rather than using a
+  `Date.t` and a Time.Ofday.t.
+
+- Added functor `String_id.Make_with_validate`, so that we can create
+  identifiers that perform custom validation on creation.
+
+- Added `Core_kernel.print_s`, for pretty printing a sexp to stdout.
+  (jane/Core.print_s)
+
+- Added to `Bigstring` a number of bounds-checked versions of functions dealing
+  with integers, corresponding to existing unsafe versions.
+
+- Added `String.take_while` and `rtake_while.`
+
+- Improved `Heap.sexp_of_t` and `Heap.Removable.sexp_of_t.`
+
+- Added `Md5` module, a wrapper around OCaml's `Digest` module.
+
+- Added stable serialization of `Time`, in `Time.Stable.With_utc_sexp.V2.`
+
+- In `Univ_map`, exposed `Type_equal.Id.t` for `Key.t` types.
+
+- Changed `Gc.Stat.sexp_of_t` so it no longer drops precision in the
+  `minor_words`, promoted_words, and `major_words` fields.
+
+- Added `Map.merge_skewed` function that only traverses one of its arguments,
+  unlike `Map.merge`, which traverses both.
+
+- Improved `Obj_array` inlining.
+
+- Optimized `Deque.clear` to only walk the queue, rather than the entire backing
+  array.
+
+- Optimized `Bus` by adding `writeN` functions that can be inlined.
+
+- Removed `Bus`'s variable arity write function, making write be for arity-1
+  buses only, with `write2`, `write3`, and `write4` for other arities.
+
+- Added `Core_kernel_stable.Time`, which includes stable types for `Time.Span.t`
+  and `Time.With_utc_sexp.t..`
+
+- In `Unique_id.Id`, changed `Hashable` to `Hashable.S_binable.`
+
+- Exposed `Core_kernel.ifprintf.`
+
+- Added module `Queue.Stable.`
+
+- Changed `Bus.create`'s `allow_subscription_after_first_write` argument to
+  `on_subscription_after_first_write` and added a choice that causes the bus to
+  remember the last value written to it and send it to new subscribers.
+
+- Renamed `Flags.subset` to `is_subset`, for `consistency.`
+
+- Made module `Core_kernel.Bytes` be an extension of `Base.Bytes.`
+
+- Add `bytes` functions to `Bigstring` and `Bigbuffer.`
+
+- Exposed type `Host_and_port.t` as a record type.
+
+- Added function `Total_map.for_all.`
+
+- Added function `Date.add_years`, which just calls `Date.add_months` d `12*n`.
+
+- Moved `Time.Ofday.of_string` parsing into a separate module so that it can
+  eventually be shared between `Time` and `Time_ns.` Made `of_string` reject
+  nonsense inputs (e.g 0:00:0 and 1:-0:3e1).
+
+- Reworked `Time.Ofday.to_string` to avoid using to_parts, improving its
+  performance.
+
+- Made `Time.Span.Parts` and `Time_ns.Span.Parts` the same by adding the ns
+  field to `Time.Span.Parts.` Updated create functions for `Span` and `Ofday` to
+  accept `?ns`. Fixed `Time_ns.Ofday.create` to be precise rather than
+  round-tripping through `Time.Ofday`.
+
+- Optimized `Pool`, `Thread_safe_queue`, `Time_ns`, and `Timing_wheel_ns` by
+  moving some error branches into `[@inline never]` functions.
+
+- Merged `Heap.Removable` into `Heap`.
+
+- Changed `Heap.remove`'s implementation to use the usual pairing-heap delete
+  algorithm, which has amortized `O(log(n))` complexity the same complexity as
+  removing the min value, without the memory problem of the current
+  implementation.
+
+- Added module `Heap.Unsafe`, with non-allocating alternatives to `Elt.t`.
+
+- Removed `Time`'s and `Time_ns`'s `Ofday.end_of_day` value, and added
+  `start_of_next_day` and `approximate_end_of_day` as replacements.
+
+- Deprecated `blit` functions that mutate strings.
+
+- Switched `Core_kernel` to `-safe-string`.
+
+- Fixed `String`'s quickcheck generator to use `size` as an upper bound.
+
+- Added function `Sequence.merge_all`, which uses `Fheap`.
+
+- Added module type `Identifiable.S_plain`, which is like `Identifiable.S` but
+  does not export `t_of_sexp`.
+
+- Deprecated `Bigsubstring`'s and `Substring`'s `of_string` and `of_bigstring`
+  functions. One should use create for sharing.
+
+- Added `Date.Days` module, a date representation optimized for linear
+  arithmetic (e.g. `add_days`) rather than for extracting year/month/day.
+
+- Changed `Hashtbl`, `Hash_set`, `Map`, and `Set` generic creation functions to
+  use a first-class module like `Bas`e rather than a `comparator` or `hashable`.
+
+- Added `Quickcheck.test_or_error`, an `Or_error`-based version of test.
+
+- Split `Time.Zone.shift_epoch_time` into `absolute_time_of_relative_time` and
+  `relative_time_of_absolute_time` to make its uses clearer.
+
+## v0.9
+
 ## 113.43.00
 
 - This feature implements `String.Caseless.is_prefix` and

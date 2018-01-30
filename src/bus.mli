@@ -139,9 +139,14 @@ end
     If [on_callback_raise] is supplied, then it will be called by [write] whenever [f]
     raises; only if that subsequently raises will [t]'s [on_callback_raise] be called.  If
     [on_callback_raise] is not supplied, then [t]'s [on_callback_raise] will be called
-    whenever [f] raises. *)
+    whenever [f] raises.
+
+    If [on_callback_raise] is supplied and [extract_exn] is set to true, then the error
+    passed to the [on_callback_raise] method will contain only the exception raised by [f]
+    without any additional information about the bus subscription or backtrace. *)
 val subscribe_exn
-  :  ?on_callback_raise : (Error.t -> unit)
+  :  ?extract_exn : bool  (** default is [false] *)
+  -> ?on_callback_raise : (Error.t -> unit)
   -> 'callback Read_only.t
   -> Source_code_position.t
   -> f : 'callback

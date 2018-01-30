@@ -23,6 +23,8 @@ module Set = Base.Set
 
 module Tree = Set.Using_comparator.Tree
 
+module Named = Set.Named
+
 module Container = Base.Container
 
 module type Elt_plain = Set.Elt_plain
@@ -96,13 +98,14 @@ module type Accessors2_with_comparator = sig
 end
 
 (** Consistency checks (same as in [Container]). *)
-module Check_accessors (T : T2) (Tree : T2) (Elt : T1) (Cmp : T1) (Options : T3)
+module Check_accessors (T : T2) (Tree : T2) (Elt : T1) (Named : T2) (Cmp : T1) (Options : T3)
     (M : Accessors_generic
      with type ('a, 'b, 'c) options := ('a, 'b, 'c) Options.t
      with type ('a, 'b) t           := ('a, 'b) T.t
      with type ('a, 'b) tree        := ('a, 'b) Tree.t
      with type 'a elt               := 'a Elt.t
-     with type 'cmp cmp             := 'cmp Cmp.t)
+     with type 'cmp cmp             := 'cmp Cmp.t
+     with type ('a, 'b) named       := ('a, 'b) Named.t)
 = struct end
 
 module Check_accessors0 (M : Accessors0) =
@@ -110,6 +113,7 @@ module Check_accessors0 (M : Accessors0) =
     (struct type ('a, 'b) t = M.t end)
     (struct type ('a, 'b) t = M.tree end)
     (struct type 'a t = M.elt end)
+    (struct type ('a, 'b) t = M.named end)
     (struct type 'a t = M.comparator_witness end)
     (Without_comparator)
     (M)
@@ -119,6 +123,7 @@ module Check_accessors1 (M : Accessors1) =
     (struct type ('a, 'b) t = 'a M.t end)
     (struct type ('a, 'b) t = 'a M.tree end)
     (struct type 'a t = 'a end)
+    (struct type ('a, 'b) t = 'a M.named end)
     (struct type 'a t = M.comparator_witness end)
     (Without_comparator)
     (M)
@@ -128,6 +133,7 @@ module Check_accessors2 (M : Accessors2) =
     (struct type ('a, 'b) t = ('a, 'b) M.t end)
     (struct type ('a, 'b) t = ('a, 'b) M.tree end)
     (struct type 'a t = 'a end)
+    (struct type ('a, 'b) t = ('a, 'b) M.named end)
     (struct type 'a t = 'a end)
     (Without_comparator)
     (M)
@@ -137,6 +143,7 @@ module Check_accessors2_with_comparator (M : Accessors2_with_comparator) =
     (struct type ('a, 'b) t = ('a, 'b) M.t end)
     (struct type ('a, 'b) t = ('a, 'b) M.tree end)
     (struct type 'a t = 'a end)
+    (struct type ('a, 'b) t = ('a, 'b) M.named end)
     (struct type 'a t = 'a end)
     (With_comparator)
     (M)
@@ -289,11 +296,13 @@ module Make_S_plain_tree (Elt : Comparator.S) = struct
     type t = (Elt.t, Elt.comparator_witness) Tree.t
     [@@deriving compare, sexp_of]
 
+    type named = (Elt.t, Elt.comparator_witness) Tree.Named.t
     include Creators_and_accessors0
       with type ('a, 'b) set := ('a, 'b) Tree.t
       with type t            := t
       with type tree         := t
       with type elt          := Elt.t
+      with type named        := named
       with type comparator_witness := Elt.comparator_witness
 
     module Provide_of_sexp (Elt : sig type t [@@deriving of_sexp] end with type t := Elt.t)
@@ -310,11 +319,13 @@ module type S_plain = sig
 
   type t = (Elt.t, Elt.comparator_witness) Base.Set.t [@@deriving compare, sexp_of]
 
+  type named = (Elt.t, Elt.comparator_witness) Named.t
   include Creators_and_accessors0
     with type ('a, 'b) set := ('a, 'b) Base.Set.t
     with type t            := t
     with type tree         := Tree.t
     with type elt          := Elt.t
+    with type named        := named
     with type comparator_witness := Elt.comparator_witness
 
   module Provide_of_sexp (Elt : sig type t [@@deriving of_sexp] end with type t := Elt.t)

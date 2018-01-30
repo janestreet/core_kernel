@@ -142,7 +142,13 @@ module Alarm_precision : Alarm_precision with module Time := Time_ns = struct
         let validate_binio_deserialization = true
       end)
 
-    let of_span = create_exn
+    let of_span span =
+      if Time.Span.( <= ) span Time.Span.zero
+      then raise_s [%message
+             "[Alarm_precision.of_span] got non-positive span"
+               (span : Time.Span.t)];
+      create_exn span
+
     let to_span = raw
   end
 
@@ -172,6 +178,10 @@ module Alarm_precision : Alarm_precision with module Time := Time_ns = struct
   let div t ~pow2 = mul t ~pow2:(- pow2)
 
   let of_span_floor_pow2_ns span =
+    if Time.Span.( <= ) span Time.Span.zero
+    then raise_s [%message
+           "[Alarm_precision.of_span_floor_pow2_ns] got non-positive span"
+             (span : Time.Span.t)];
     span
     |> Time_ns.Span.to_int63_ns
     |> Int63.to_int_exn
@@ -1321,23 +1331,29 @@ let interval_num_internal ~time ~alarm_precision =
     (Time_ns.Span.div (Time_ns.to_span_since_epoch time) alarm_precision)
 ;;
 
-let%test_unit _ =
-  List.iter
-    [ -4, -2
-    ; -3, -1
-    ; -2, -1
-    ; -1, -1
-    ;  0,  0
-    ;  1,  0
-    ;  2,  0
-    ;  3,  1
-    ]
-    ~f:(fun (time, expect) ->
-      [%test_result: int] ~expect
-        (Interval_num.to_int_exn
-           (interval_num_internal
-              ~alarm_precision:(Time_ns.Span.of_int63_ns (Int63.of_int 3))
-              ~time:(Time_ns.of_int63_ns_since_epoch (Int63.of_int time)))))
+let%expect_test "[interval_num_internal]" =
+  for time = -5 to 4 do
+    print_s [%message
+      ""
+        (time : int)
+        ~interval_num:(
+          Interval_num.to_int_exn
+            (interval_num_internal
+               ~alarm_precision:(Time_ns.Span.of_int63_ns (Int63.of_int 4))
+               ~time:(Time_ns.of_int63_ns_since_epoch (Int63.of_int time)))
+          : int)]
+  done;
+  [%expect {|
+    ((time -5) (interval_num -2))
+    ((time -4) (interval_num -1))
+    ((time -3) (interval_num -1))
+    ((time -2) (interval_num -1))
+    ((time -1) (interval_num -1))
+    ((time 0) (interval_num 0))
+    ((time 1) (interval_num 0))
+    ((time 2) (interval_num 0))
+    ((time 3) (interval_num 0))
+    ((time 4) (interval_num 1)) |}];
 ;;
 
 let interval_num_unchecked t time =

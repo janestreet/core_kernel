@@ -2,6 +2,7 @@ module Caml_set = Set
 open! Core_kernel
 
 module Merge_to_sequence_element = Set_intf.Merge_to_sequence_element
+module Named                     = Set_intf.Named
 module With_comparator           = Set_intf.With_comparator
 module Without_comparator        = Set_intf.Without_comparator
 module With_first_class_module   = Set_intf.With_first_class_module
@@ -17,6 +18,7 @@ module Unit_tests
        type ('a, 'b) t_
        type ('a, 'b) set
        type ('a, 'b) tree
+       type ('a, 'b) named
 
        type ('a, 'b, 'c) create_options
 
@@ -35,27 +37,36 @@ module Unit_tests
          with type ('a, 'b) t           := ('a, 'b) t_
          with type ('a, 'b) tree        := ('a, 'b) tree
          with type 'a elt               := 'a Elt.t
+         with type ('a, 'b) named       := ('a, 'b) named
          with type ('a, 'b, 'c) options := ('a, 'b, 'c) access_options
          with type 'cmp cmp             := 'cmp cmp
+
+       val create_named : ('a, 'b) t_ -> name:string -> ('a, 'b) named
 
        val simplify_accessor : (int, Int.comparator_witness, 'c) access_options -> 'c
 
        val kind : [ `Set | `Tree ]
+
+       val is_poly : bool
      end)
 
   : Set_intf.Creators_and_accessors_generic = struct
 
   module Set = struct
-    include Set
-    let add            = simplify_accessor add
-    let remove         = simplify_accessor remove
-    let mem            = simplify_accessor mem
-    (* let filter         = simplify_accessor filter *)
-    let compare_direct = simplify_accessor compare_direct
-    let equal          = simplify_accessor equal
-    let inter          = simplify_accessor inter
-    let union          = simplify_accessor union
-    let is_subset      = simplify_accessor is_subset
+    include (Set : module type of struct include Set end with module Named := Set.Named)
+    let add                = simplify_accessor add
+    let remove             = simplify_accessor remove
+    let mem                = simplify_accessor mem
+    (* let filter          = simplify_accessor filter *)
+    let compare_direct     = simplify_accessor compare_direct
+    let equal              = simplify_accessor equal
+    let inter              = simplify_accessor inter
+    let union              = simplify_accessor union
+    let is_subset          = simplify_accessor is_subset
+    module Named = struct
+      let is_subset = simplify_accessor Set.Named.is_subset
+      let equal     = simplify_accessor Set.Named.equal
+    end
     let subset _       = assert false (* deprecated *)
     let iter2          = simplify_accessor iter2
     let invariants     = simplify_accessor invariants
@@ -148,6 +159,7 @@ module Unit_tests
     Set.equal set_nonempty set'
   ;;
 
+  type ('a, 'cmp) named = int
   let inter _ = assert false
   let%test _ = Set.is_empty (Set.inter set_empty set_nonempty)
   let%test _ = Set.is_empty (Set.inter set_nonempty set_empty)
@@ -164,9 +176,68 @@ module Unit_tests
   let%test _ = Set.is_subset set_empty ~of_:set_empty
   let%test _ = not (Set.is_subset set_nonempty ~of_:(Set.singleton Elt.present))
 
+
   (* deprecated *)
   let subset _ = assert false
   let _ = Set.subset
+
+  module Named = struct
+    let is_subset _ ~of_:_ = assert false
+    let%expect_test "validate_subset" =
+      let map1 = Set.create_named ~name:"the empty set" set_empty in
+      let map2 =
+        Set.create_named ~name:"the set of integers from 1 to 10"
+          set_nonempty
+      in
+      print_s [%sexp (Set.Named.is_subset map2 ~of_:map1 : unit Or_error.t)];
+      begin
+        if Set.is_poly
+        then
+          [%expect {|
+          (Error
+           ("the set of integers from 1 to 10 is not a subset of the empty set"
+            (invalid_elements (_ _ _ _ _ _ _ _ _ _)))) |}]
+        else
+          [%expect {|
+          (Error
+           ("the set of integers from 1 to 10 is not a subset of the empty set"
+            (invalid_elements (1 2 3 4 5 6 7 8 9 10)))) |}]
+      end;
+      print_s [%sexp (Set.Named.is_subset map1 ~of_:map2 : unit Or_error.t)];
+      [%expect {|
+      (Ok ()) |}];
+    ;;
+
+    let equal _ _ = assert false
+    let%expect_test "validate_subset" =
+      let map1 =
+        Set.create_named ~name:"the set of integers from 1 to 10"
+          set_nonempty
+      in
+      let map2 =
+        Set.create_named ~name:"the set of integers from 10 to 19"
+          (Set.of_list (List.init 10 ~f:(fun i -> Elt.of_int (i + 10))))
+      in
+      print_s [%sexp (Set.Named.equal map1 map2 : unit Or_error.t)];
+      if Set.is_poly
+      then
+        [%expect {|
+      (Error
+       (("the set of integers from 1 to 10 is not a subset of the set of integers from 10 to 19"
+         (invalid_elements (_ _ _ _ _ _ _ _ _)))
+        ("the set of integers from 10 to 19 is not a subset of the set of integers from 1 to 10"
+         (invalid_elements (_ _ _ _ _ _ _ _ _))))) |}]
+      else
+        [%expect {|
+        (Error
+         (("the set of integers from 1 to 10 is not a subset of the set of integers from 10 to 19"
+           (invalid_elements (1 2 3 4 5 6 7 8 9)))
+          ("the set of integers from 10 to 19 is not a subset of the set of integers from 1 to 10"
+           (invalid_elements (11 12 13 14 15 16 17 18 19))))) |}]; ;
+      print_s [%sexp (Set.Named.equal map1 map1 : unit Or_error.t)];
+      [%expect {| (Ok ()) |}];
+    ;;
+  end
 
   let to_list _ = assert false
   let%test _ =
@@ -774,37 +845,49 @@ module Access_options_with_comparator = struct
   let simplify_accessor f = f ~comparator:Int.comparator
 end
 
+let create_named set ~name = { Set.Named.set; name; }
+let create_named_tree tree ~name = { Set.Tree.Named.tree; name; }
+
 let%test_module "Set" = (module Unit_tests (Elt_poly) (struct
     include Set
     type ('a, 'b) t_   = ('a, 'b) t
     type ('a, 'b) set  = ('a, 'b) t
     type ('a, 'b) tree = ('a, 'b) Tree.t
     type 'a cmp        = 'a
+    type ('a, 'b) named = ('a, 'b) Set.Named.t
     include Create_options_with_first_class_module
     include Access_options_without_comparator
+    let create_named = create_named
     let kind = `Set
+    let is_poly = false
   end))
 
 let%test_module "Set.Poly" = (module Unit_tests (Elt_poly) (struct
-    include Set.Poly
+    include (Set.Poly : module type of struct include Set.Poly end with type 'a named := 'a Set.Poly.named)
     type ('a, 'b) set  = ('a, 'b) Set.t
     type ('a, 'b) t_   = 'a t
     type ('a, 'b) tree = 'a Tree.t
     type 'a cmp        = Comparator.Poly.comparator_witness
+    type ('a, 'b) named = 'a Set.Poly.named
     include Create_options_without_comparator
     include Access_options_without_comparator
+    let create_named = create_named
     let kind = `Set
+    let is_poly = true
   end))
 
 let%test_module "Int.Set" = (module Unit_tests (Elt_int) (struct
-    include Int.Set
+    include (Int.Set : module type of struct include Int.Set end with type named := Int.Set.named)
     type ('a, 'b) set  = ('a, 'b) Set.t
     type ('a, 'b) t_   = t
     type ('a, 'b) tree = Tree.t
     type 'a cmp        = Int.comparator_witness
+    type ('a, 'b) named = Int.Set.named
     include Create_options_without_comparator
     include Access_options_without_comparator
+    let create_named = create_named
     let kind = `Set
+    let is_poly = false
   end))
 
 let%test_module "Set.Tree" = (module Unit_tests (Elt_poly) (struct
@@ -812,30 +895,39 @@ let%test_module "Set.Tree" = (module Unit_tests (Elt_poly) (struct
     type ('a, 'b) set  = ('a, 'b) Set.Tree.t
     type ('a, 'b) t_   = ('a, 'b) t
     type ('a, 'b) tree = ('a, 'b) t
+    type ('a, 'b) named = ('a, 'b) Set.Tree.Named.t
     type 'a cmp        = 'a
     include Create_options_with_comparator
     include Access_options_with_comparator
+    let create_named = create_named_tree
     let kind = `Tree
+    let is_poly = false
   end))
 
 let%test_module "Set.Poly.Tree" = (module Unit_tests (Elt_poly) (struct
-    include Set.Poly.Tree
+    include (Set.Poly.Tree : module type of struct include Set.Poly.Tree end with type 'a named := 'a Set.Poly.Tree.named)
     type ('a, 'b) set  = 'a Set.Poly.Tree.t
     type ('a, 'b) t_   = 'a t
     type ('a, 'b) tree = 'a t
+    type ('a, 'b) named = 'a Set.Poly.Tree.named
     type 'a cmp        = Comparator.Poly.comparator_witness
     include Create_options_without_comparator
     include Access_options_without_comparator
+    let create_named = create_named_tree
     let kind = `Tree
+    let is_poly = true
   end))
 
 let%test_module "Int.Set.Tree" = (module Unit_tests (Elt_int) (struct
-    include Int.Set.Tree
+    include (Int.Set.Tree : module type of struct include Int.Set.Tree end with type named := Int.Set.Tree.named)
     type ('a, 'b) set  = ('a, 'b) Set.Tree.t
     type ('a, 'b) t_   = t
     type ('a, 'b) tree = t
+    type ('a, 'b) named = Int.Set.Tree.named
     type 'a cmp        = Int.comparator_witness
     include Create_options_without_comparator
     include Access_options_without_comparator
+    let create_named = create_named_tree
     let kind = `Tree
+    let is_poly = false
   end))

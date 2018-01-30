@@ -22,10 +22,14 @@ module Tree : sig
       as an argument the corresponding comparator. *)
   type ('elt, 'cmp) t = ('elt, 'cmp) Tree.t [@@deriving sexp_of]
 
+  module Named = Tree.Named
+
   include Creators_and_accessors2_with_comparator
     with type ('a, 'b) set  := ('a, 'b) t
     with type ('a, 'b) t    := ('a, 'b) t
     with type ('a, 'b) tree := ('a, 'b) t
+    with type ('a, 'b) named := ('a, 'b) Named.t
+    with module Named        := Named
 end
 
 module Using_comparator : sig
@@ -154,6 +158,40 @@ val is_subset : ('a, 'cmp) t -> of_:('a, 'cmp) t -> bool
 (** [subset] is a synonym for [is_subset]. *)
 val subset : ('a, 'cmp) t -> ('a, 'cmp) t -> bool
 [@@deprecated "[since 2016-09] Replace [Set.subset t1 t2] with [Set.is_subset t1 ~of_:t2]"]
+
+(** [Named] allows the validation of subset and equality relationships between sets.  A
+    [Named.t] is a record of a set and a name, where the name is used in error messages,
+    and [Named.is_subset] and [Named.equal] validate subset and equality relationships
+    respectively.
+
+    The error message for, e.g.,
+    {[
+      Named.is_subset { set = set1; name = "set1" } ~of_:{set = set2; name = "set2" }
+    ]}
+
+    looks like
+    {v
+       ("set1 is not a subset of set2" (invalid_elements (...elements of set1 - set2...)))
+    v}
+
+    so [name] should be a noun phrase that doesn't sound awkward in the above error
+    message.  Even though it adds verbosity, choosing [name]s that start with the phrase
+    "the set of" often makes the error message sound more natural.
+*)
+module Named : sig
+  type nonrec ('a, 'cmp) t = ('a, 'cmp) Named.t = {
+    set : ('a, 'cmp) t;
+    name : string;
+  }
+
+  (** [is_subset t1 ~of_:t2] returns [Ok ()] if [t1] is a subset of [t2] and a
+      human-readable error otherwise.  *)
+  val is_subset : ('a, 'cmp) t -> of_:('a, 'cmp) t -> unit Or_error.t
+
+  (** [equal t1 t2] returns [Ok ()] if [t1] is equal to [t2] and a human-readable
+      error otherwise.  *)
+  val equal : ('a, 'cmp) t -> ('a, 'cmp) t -> unit Or_error.t
+end
 
 (** The list or array given to [of_list] and [of_array] need not be sorted. *)
 val of_list  : ('a, 'cmp) comparator -> 'a list  -> ('a, 'cmp) t
@@ -374,19 +412,24 @@ module Poly : sig
   module Tree : sig
     type 'elt t = ('elt, Comparator.Poly.comparator_witness) Tree.t [@@deriving sexp]
 
+    type 'a named = ('a, Comparator.Poly.comparator_witness) Tree.Named.t
     include Creators_and_accessors1
-      with type ('a, 'b) set := ('a, 'b) Tree.t
-      with type 'elt t       := 'elt t
-      with type 'elt tree    := 'elt t
+      with type ('a, 'b) set   := ('a, 'b) Tree.t
+      with type 'elt t         := 'elt t
+      with type 'elt tree      := 'elt t
+      with type 'a named       := 'a named
       with type comparator_witness := Comparator.Poly.comparator_witness
   end
 
   type 'elt t = ('elt, Comparator.Poly.comparator_witness) set [@@deriving bin_io, compare, sexp]
 
+  type 'a named = ('a, Comparator.Poly.comparator_witness) Named.t
+
   include Creators_and_accessors1
     with type ('a, 'b) set := ('a, 'b) set
     with type 'elt t       := 'elt t
     with type 'elt tree    := 'elt Tree.t
+    with type 'a named     := 'a named
     with type comparator_witness := Comparator.Poly.comparator_witness
 end
 with type ('a, 'b) set := ('a, 'b) t

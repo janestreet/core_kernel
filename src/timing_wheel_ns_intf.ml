@@ -103,6 +103,7 @@ module type Timing_wheel_time = sig
 
   val add : t -> Span.t -> t
   val sub : t -> Span.t -> t
+  val diff : t -> t -> Span.t
 end
 
 (** An [Interval_num.t] is an index of one of the intervals into which a timing-wheel
