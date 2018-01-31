@@ -1,17 +1,29 @@
 open! Import
 
-
 (**/**)
 module Std = struct
   include Std_kernel (** @inline *)
 
+  (** {1 Std}
+
+      [Std] defines modules exposed by [Core_kernel] that are overridden by [Core].  *)
+
+  (** {2 Modules imported from Base without modification} *)
+
+  module Caml                            = Caml
+
+  (** {2 Modules that extend Base} *)
+
+  module Container_intf                  = Container_intf
+  module Int_replace_polymorphic_compare = Int_replace_polymorphic_compare
+
+  (** {2 Modules added by Core_kernel} *)
+
   module Bigbuffer                       = Bigbuffer
   module Bigstring                       = Bigstring
   module Bigstring_marshal               = Bigstring_marshal
-  module Caml                            = Caml
   module Core_kernel_stable              = Stable
   module Date                            = Date
-  module Int_replace_polymorphic_compare = Int_replace_polymorphic_compare
   module Map_intf                        = Map_intf
   module Md5                             = Md5
   module Digest                          = Md5
@@ -25,7 +37,7 @@ module Std = struct
   module Timing_wheel_ns_intf            = Timing_wheel_ns_intf
   module Version_util                    = Version_util
 
-  (** To be used in implementing Core, but not by end users *)
+  (** To be used in implementing Core, but not by end users. *)
   module Core_kernel_private = struct
     module Digit_string_helpers = Digit_string_helpers
     module Time0_intf           = Time0_intf

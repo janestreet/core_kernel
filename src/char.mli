@@ -1,4 +1,4 @@
-(** This module extends {!Base.Char}, adding [Identifiable] for making char
+(** This module extends {{!Base.Char}[Base.Char]}, adding [Identifiable] for making char
     identifiers and [Quickcheckable] to facilitate automated testing with pseudorandom
     data.
 *)

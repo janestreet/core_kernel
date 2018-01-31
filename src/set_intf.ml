@@ -1,5 +1,5 @@
-(** This module defines interfaces used in {!Core_kernel.Set}. See the {!Map} docs for a
-    description of the design.
+(** This module defines interfaces used in {{!Core_kernel.Set}[Set]}. See the
+    {!Map} docs for a description of the design.
 
     This module defines module types
     [{Creators,Accessors}{0,1,2,_generic,_with_comparator}]. It uses check functors to

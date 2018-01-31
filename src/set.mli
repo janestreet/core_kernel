@@ -1,7 +1,7 @@
 (** This module defines the [Set] module for [Core]. Functions that construct a set take
     as an argument the comparator for the element type.
 
-    This module uses the same organizational approach as {!Map}.
+    This module uses the same organizational approach as {{!Map}[Map]}.
 *)
 
 open! Import

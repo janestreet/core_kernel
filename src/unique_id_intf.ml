@@ -1,4 +1,4 @@
-(** Signature for use by {! module : Unique_id }. *)
+(** Signature for use by {{!module:Core_kernel.Unique_id}[Unique_id]}. *)
 
 open! Import
 open Std_internal
@@ -7,8 +7,8 @@ module type Id = sig
   (** The sexps and strings look like integers. *)
   type t [@@deriving bin_io, hash, sexp, typerep]
 
-  (** CAVEAT: Values created with of_float, of_sexp, or of_string may be equal to
-      previously created values. *)
+  (** {b Caveat}: values created with [of_float], [of_sexp], or [of_string] may be equal
+      to previously created values. *)
   include Comparable.S_binable with type t := t
   include Hashable.S_binable with type t := t
 

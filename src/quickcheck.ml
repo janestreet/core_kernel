@@ -1020,18 +1020,9 @@ module Shrinker = struct
         [%test_result: var6 list ] ~expect:[`F 5] shrunk_f
     end)
 
-  let lazy_sequence thunk =
-    Sequence.unfold_step ~init:(`start thunk)
-      ~f:(function
-        | `start thunk -> Skip (`cont (thunk ()))
-        | `cont  seq   ->
-          match Sequence.next seq with
-          | None         -> Done
-          | Some (v, tl) -> Yield (v, `cont tl))
-
   let recursive f =
     let rec shrinker v =
-      lazy_sequence (fun () -> shrink (f (create shrinker)) v)
+      Sequence.of_lazy (lazy (shrink (f (create shrinker)) v))
     in
     create shrinker
 

@@ -1,4 +1,4 @@
-(** This module extends {!Base.Bool}. *)
+(** This module extends {{!Base.Bool}[Base.Bool]}. *)
 
 type t = bool [@@deriving bin_io, typerep]
 

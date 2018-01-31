@@ -1,6 +1,7 @@
 (** A simple polymorphic functional queue.  Use this data structure for strictly first-in,
     first-out access to a sequence of values.  For a similar data structure with enqueue
-    and dequeue accessors on both ends of a sequence, see {!Core_kernel.Fdeque}.
+    and dequeue accessors on both ends of a sequence, see
+    {{!Core_kernel.Fdeque}[Core_kernel.Fdeque]}.
 
     Amortized running times assume that [enqueue]/[dequeue] are used sequentially,
     threading the changing Fqueue through the calls. *)

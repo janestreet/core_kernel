@@ -1,4 +1,4 @@
-(** This module extends {!Base.Sequence} with bin_io. *)
+(** This module extends {{!Base.Sequence}[Base.Sequence]} with bin_io. *)
 
 module Merge_with_duplicates_element : sig
   type ('a, 'b) t = ('a, 'b) Base.Sequence.Merge_with_duplicates_element.t =

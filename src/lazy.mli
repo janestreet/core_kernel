@@ -1,4 +1,4 @@
-(** This module extends {!Base.Lazy}. *)
+(** This module extends {{!Base.Lazy}[Base.Lazy]}. *)
 
 open! Import
 

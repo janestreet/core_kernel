@@ -1,5 +1,5 @@
-(** [module Flags] implements Unix-style sets of flags that are represented as
-    an [int] with various bits set, one bit for each flag.  E.g. [Linux_ext.Epoll.Flag].
+(** [module Flags] implements Unix-style sets of flags that are represented as an [int]
+    with various bits set, one bit for each flag.  E.g. [Linux_ext.Epoll.Flag].
 
     [Flags] defines a module type [Flags.S], the interface for a flags, and a functor
     [Flags.Make] for creating a flags implementation. *)
@@ -74,6 +74,7 @@ module type Make_arg = sig
 end
 
 module type Flags = sig
+
   module type Make_arg = Make_arg
   module type S = S
 

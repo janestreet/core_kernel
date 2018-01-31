@@ -1,4 +1,4 @@
-(** This module extends {!Base.Array}. *)
+(** This module extends {{!Base.Array}[Base.Array]}. *)
 
 open Import
 open Perms.Export

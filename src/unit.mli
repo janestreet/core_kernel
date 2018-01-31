@@ -1,5 +1,5 @@
-(** Module for the type [unit], extended from {!Base.Unit}.  This is mostly useful for
-    building functor arguments. *)
+(** Module for the type [unit], extended from {{!Base.Unit}[Base.Unit]}.  This is mostly
+    useful for building functor arguments. *)
 
 open! Import
 

@@ -15,8 +15,7 @@
 
     One can call [Positive_int.create_exn n] to create a new positive int from an [n],
     which will of course raise if [n <= 0].  One can call [Positive_int.raw positive_int]
-    to get the [int] from a [Positive_int.t].
-*)
+    to get the [int] from a [Positive_int.t].  *)
 
 open! Import
 
@@ -74,6 +73,7 @@ module type S_bin_io_compare_hash_sexp = sig
 end
 
 module type Validated = sig
+
   type ('raw, 'witness) t = private 'raw
 
   val raw : ('raw, _) t -> 'raw

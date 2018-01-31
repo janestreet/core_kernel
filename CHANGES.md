@@ -1,8 +1,15 @@
-## v0.10
-
 As Core\_kernel is built on top of [Base](https://github.com/janestreet/base),
 you might want to have a look at Base's
 [changelog](https://github.com/janestreet/base/blob/master/CHANGES.md).
+
+## git version
+
+- Add `Bigstring.unsafe_resize` to allow reallocating in place.
+
+- Moved `Splittable_random` to its own library.
+  Available at http://github.com/janestreet/splittable_random
+
+## v0.10
 
 - Renamed `Float.to_string` as `to_string_12`, to reflect its 12-digit
   precision. And introduce a new `Float.to_string` with the behavior of

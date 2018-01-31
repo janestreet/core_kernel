@@ -12,6 +12,7 @@ end
 include Z
 
 external aux_create: max_mem_waiting_gc:int -> size:int -> t = "bigstring_alloc"
+external unsafe_destroy_and_resize: t -> len:int -> t = "bigstring_realloc"
 
 let arch_sixtyfour = Sys.word_size = 64
 let arch_big_endian = Sys.big_endian

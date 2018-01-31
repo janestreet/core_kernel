@@ -6,20 +6,20 @@ module type Date0 = sig
 
   include Hashable_binable with type t := t
 
-  (** converts a string to a date, in formats:
-   * m/d/y
-   * y-m-d (* valid iso8601_extended *)
-   * DD MMM YYYY
-   * DDMMMYYYY
-   * YYYYMMDD *)
+  (** converts a string to a date in the following formats:
+      - m/d/y
+      - y-m-d (valid iso8601_extended)
+      - DD MMM YYYY
+      - DDMMMYYYY
+      - YYYYMMDD *)
   include Stringable         with type t := t
   include Comparable_binable with type t := t
   include Pretty_printer.S   with type t := t
 
   (** [create_exn ~y ~m ~d] creates the date specified in the arguments.  Arguments are
-      validated, and are not normalized in any way.  So, days must be within the limits for
-      the month in question, numbers cannot be negative, years must be fully specified, etc.
-  *)
+      validated, and are not normalized in any way.  So, days must be within the limits
+      for the month in question, numbers cannot be negative, years must be fully
+      specified, etc.  *)
   val create_exn : y:int -> m:Month.t -> d:int -> t
 
   (** For details on this ISO format, see:

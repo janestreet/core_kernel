@@ -14,7 +14,7 @@ way to use it is to start your file with:
 
 In sum:
 
-- {b {!Base}}: minimal stdlib replacement. Portable and lightweight and
+- {b {!Base}}: Minimal stdlib replacement. Portable and lightweight and
   intended to be highly stable.
 - {b {!Core_kernel}}: Extension of Base. More fully featured, with more
   code and dependencies, and APIs that evolve more quickly. Portable,

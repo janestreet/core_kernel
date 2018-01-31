@@ -104,6 +104,15 @@ val format : t -> Format.t -> string
 
 val validate : t -> Validate.t
 
+(*_ Caution: If we remove this sig item, [sign] will still be present from
+  [Comparable.With_zero]. *)
+val sign : t -> Sign.t
+[@@deprecated "[since 2016-01] Replace [sign] with [sign_exn]"]
+
+(** The sign of a [Percent.t].  Both [-0.] and [0.] map to [Zero].  Raises on nan.  All
+    other values map to [Neg] or [Pos]. *)
+val sign_exn : t -> Sign.t
+
 module Stable : sig
   module V1 : sig
     type nonrec t = t [@@deriving sexp, bin_io, compare, hash]

@@ -132,50 +132,51 @@ module Level_bits = struct
   let default = create_exn [ 11; 10; 10; 10; 10; 10 ]
 end
 
-module Alarm_precision : Alarm_precision with module Time := Time_ns = struct
-  module Unstable = struct
-    include
-      Validated.Make_bin_io_compare_hash_sexp (struct
-        include Time_ns.Span
-        let here = [%here]
-        let validate = Time_ns.Span.validate_positive
-        let validate_binio_deserialization = true
-      end)
+module Alarm_precision
+  : sig
 
-    let of_span span =
-      if Time.Span.( <= ) span Time.Span.zero
-      then raise_s [%message
-             "[Alarm_precision.of_span] got non-positive span"
-               (span : Time.Span.t)];
-      create_exn span
+    include Alarm_precision with module Time := Time_ns
 
-    let to_span = raw
-  end
+    val interval_num : t -> Time.t -> Int63.t
 
-  include Unstable
+    val interval_num_start : t -> Int63.t -> Time.t
+
+  end = struct
+
+  (* [t] is represented as the log2 of a number of nanoseconds. *)
+  type t = int [@@deriving compare, hash]
 
   let equal = [%compare.equal: t]
 
-  let of_int63_ns i = i |> Time_ns.Span.of_int63_ns |> of_span
-  let to_int63_ns t = t |> to_span |> Time_ns.Span.to_int63_ns
-
-  let pow2_ns i = Int63.(shift_left one) i |> of_int63_ns
-
-  let one_nanosecond        =  0 |> pow2_ns
-  let about_one_microsecond = 10 |> pow2_ns
-  let about_one_millisecond = 20 |> pow2_ns
-  let about_one_second      = 30 |> pow2_ns
-  let about_one_day         = 46 |> pow2_ns
-
-  let mul t ~pow2 =
-    let ns = to_int63_ns t in
-    of_int63_ns (
-      if pow2 >= 0
-      then Int63.shift_left  ns pow2
-      else Int63.shift_right ns (- pow2))
+  let to_span t =
+    if t < 0
+    then raise_s [%message
+           "[Alarm_precision.to_span] of negative power of two nanoseconds" ~_:(t : int)];
+    Int63.(shift_left one) t
+    |> Time_ns.Span.of_int63_ns
   ;;
 
-  let div t ~pow2 = mul t ~pow2:(- pow2)
+  let sexp_of_t t = [%sexp ((t |> to_span) : Time_ns.Span.t)]
+
+  let one_nanosecond        =  0
+  let about_one_microsecond = 10
+  let about_one_millisecond = 20
+  let about_one_second      = 30
+  let about_one_day         = 46
+
+  let mul t ~pow2 = t + pow2
+  let div t ~pow2 = t - pow2
+
+  let interval_num t time =
+    Int63.shift_right
+      (time |> Time_ns.to_int63_ns_since_epoch)
+      t
+  ;;
+
+  let interval_num_start t interval_num =
+    Int63.shift_left interval_num t
+    |> Time_ns.of_int63_ns_since_epoch
+  ;;
 
   let of_span_floor_pow2_ns span =
     if Time.Span.( <= ) span Time.Span.zero
@@ -184,11 +185,24 @@ module Alarm_precision : Alarm_precision with module Time := Time_ns = struct
              (span : Time.Span.t)];
     span
     |> Time_ns.Span.to_int63_ns
-    |> Int63.to_int_exn
-    |> Int.floor_pow2
-    |> Int63.of_int
-    |> of_int63_ns
+    |> Int63.floor_log2
   ;;
+
+  let of_span = of_span_floor_pow2_ns
+
+  module Unstable = struct
+    module T = struct
+      type nonrec t = t [@@deriving compare]
+      let of_binable = of_span_floor_pow2_ns
+      let to_binable = to_span
+      let of_sexpable = of_span_floor_pow2_ns
+      let to_sexpable = to_span
+    end
+
+    include T
+    include Binable.Of_binable   (Time_ns.Span) (T)
+    include Sexpable.Of_sexpable (Time_ns.Span) (T)
+  end
 end
 
 module Config = struct
@@ -430,11 +444,13 @@ module Priority_queue = struct
 
     (* Iterators.  [iter p t ~init ~f] visits each element in the doubly-linked list
        containing [t], starting at [t], and following [next] pointers.  [length] counts by
-       visiting each element in the list.   [max_alarm_time] finds the max [at] in the
-       list, returning [Time_ns.epoch] if the list is empty. *)
+       visiting each element in the list. *)
     val iter           : 'a Pool.t -> 'a t -> f:('a t -> unit) -> unit
     val length         : 'a Pool.t -> 'a t -> int
-    val max_alarm_time : 'a Pool.t -> 'a t -> Time_ns.t
+
+    (* [max_alarm_time t elt ~with_key] finds the max [at] in [elt]'s list among the elts
+       whose key is [with_key], returning [Time_ns.epoch] if the list is empty. *)
+    val max_alarm_time : 'a Pool.t -> 'a t -> with_key:Key.t -> Time_ns.t
 
   end = struct
 
@@ -538,13 +554,14 @@ module Priority_queue = struct
       !r
     ;;
 
-    let max_alarm_time pool first =
+    let max_alarm_time pool first ~with_key =
       let max_alarm_time = ref Time_ns.epoch in
       let current = ref first in
       let continue = ref true in
       while !continue do
         let next = next pool !current in
-        max_alarm_time := Time_ns.max (at pool !current) !max_alarm_time;
+        if Key.equal (key pool !current) with_key
+        then (max_alarm_time := Time_ns.max (at pool !current) !max_alarm_time);
         if phys_equal next first then continue := false else current := next;
       done;
       !max_alarm_time
@@ -1327,8 +1344,7 @@ let length t = Priority_queue.length t.priority_queue
 let is_empty t = length t = 0
 
 let interval_num_internal ~time ~alarm_precision =
-  Interval_num.of_int63
-    (Time_ns.Span.div (Time_ns.to_span_since_epoch time) alarm_precision)
+  Interval_num.of_int63 (Alarm_precision.interval_num alarm_precision time)
 ;;
 
 let%expect_test "[interval_num_internal]" =
@@ -1339,7 +1355,8 @@ let%expect_test "[interval_num_internal]" =
         ~interval_num:(
           Interval_num.to_int_exn
             (interval_num_internal
-               ~alarm_precision:(Time_ns.Span.of_int63_ns (Int63.of_int 4))
+               ~alarm_precision:(Alarm_precision.of_span_floor_pow2_ns
+                                   (Time_ns.Span.of_int63_ns (Int63.of_int 4)))
                ~time:(Time_ns.of_int63_ns_since_epoch (Int63.of_int time)))
           : int)]
   done;
@@ -1357,7 +1374,7 @@ let%expect_test "[interval_num_internal]" =
 ;;
 
 let interval_num_unchecked t time =
-  interval_num_internal ~time ~alarm_precision:(alarm_precision t)
+  interval_num_internal ~time ~alarm_precision:t.config.alarm_precision
 ;;
 
 let interval_num t time =
@@ -1370,13 +1387,9 @@ let interval_num t time =
   interval_num_unchecked t time;
 ;;
 
-let interval_num_start_internal interval_num ~alarm_precision =
-  Time_ns.of_span_since_epoch
-    (Time_ns.Span.scale_int63 alarm_precision (Interval_num.to_int63 interval_num))
-;;
-
 let interval_num_start_unchecked t interval_num =
-  interval_num_start_internal interval_num ~alarm_precision:(alarm_precision t)
+  Alarm_precision.interval_num_start t.config.alarm_precision
+    (interval_num |> Interval_num.to_int63)
 ;;
 
 let [@inline never] raise_interval_num_start_got_too_small interval_num =
@@ -1398,28 +1411,6 @@ let interval_num_start t interval_num =
   then raise_interval_num_start_got_too_large t interval_num;
   interval_num_start_unchecked t interval_num
 ;;
-
-(* Here's a proof that [interval_num] is the inverse of [interval_num_start]:
-
-   {[
-     interval_num t (interval_num_start t n)
-     = interval_num t
-         (Time_ns.of_span_since_epoch
-            (Time_ns.Span.scale_int63 (alarm_precision t) (Interval_num.to_int63 n)))
-     = Interval_num.of_int63
-         (Time_ns.Span.div
-            (Time_ns.to_span_since_epoch
-               (Time_ns.of_span_since_epoch
-                  (Time_ns.Span.scale_int63 (alarm_precision t) (Interval_num.to_int63 n))))
-            (alarm_precision t))
-     = Interval_num.of_int63
-         (Time_ns.Span.div
-            (Time_ns.Span.scale_int63 (alarm_precision t) (Interval_num.to_int63 n))
-            (alarm_precision t))
-     = Interval_num.of_int63 (Interval_num.to_int63 n)
-     = n
-   ]}
-*)
 
 let compute_alarm_upper_bound t =
   interval_num_start_unchecked t
@@ -1492,7 +1483,7 @@ let create ~config ~start =
     { config
     ; start
     ; max_interval_num       = interval_num_internal ~time:Time_ns.max_value
-                                 ~alarm_precision:(Config.alarm_precision config)
+                                 ~alarm_precision:config.alarm_precision
     ; now                    = Time_ns.min_value (* set by [advance_clock] below *)
     ; now_interval_num_start = Time_ns.min_value (* set by [advance_clock] below *)
     ; alarm_upper_bound      = Time_ns.max_value (* set by [advance_clock] below *)
@@ -1571,7 +1562,10 @@ let min_alarm_interval_num_exn t =
   else Internal_elt.key t.priority_queue.pool elt
 ;;
 
-let max_alarm_time_in_list t elt = Internal_elt.max_alarm_time t.priority_queue.pool elt
+let max_alarm_time_in_list t elt =
+  let pool = t.priority_queue.pool in
+  Internal_elt.max_alarm_time pool elt ~with_key:(Internal_elt.key pool elt)
+;;
 
 let max_alarm_time_in_min_interval t =
   let elt = Priority_queue.min_elt_ t.priority_queue in

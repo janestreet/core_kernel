@@ -1,4 +1,4 @@
-(** This module extends {!Base.String}. *)
+(** This module extends {{!Base.String}[Base.String]}. *)
 
 type t = string [@@deriving bin_io, typerep]
 

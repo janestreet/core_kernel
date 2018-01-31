@@ -1,5 +1,5 @@
 (** Functional heaps (implemented as
-    {{: http://en.wikipedia.org/wiki/Pairing_heap} Pairing heaps}) *)
+    {{: http://en.wikipedia.org/wiki/Pairing_heap} pairing heaps}). *)
 
 open! Import
 

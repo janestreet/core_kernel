@@ -1,4 +1,5 @@
-(** Comparable extends {!Base.Comparable} and provides functions for comparing like types.
+(** Comparable extends {{!Base.Comparable}[Base.Comparable]} and provides functions for
+    comparing like types.
 
     Usage example:
 

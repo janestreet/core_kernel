@@ -1,4 +1,4 @@
-(** This module extends {!Base.Int}. *)
+(** This module extends {{!Base.Int}[Base.Int]}. *)
 
 (** Note that [int] is already stable by itself, since as a primitive type it is an
     integral part of the sexp / bin_io protocol.  [Int.Stable] exists only to introduce

@@ -86,6 +86,22 @@ val get_opt_len : t -> pos : int -> int option -> int
 val length : t -> int
 (** [length bstr] @return the length of bigstring [bstr]. *)
 
+external unsafe_destroy_and_resize : t -> len : int -> t = "bigstring_realloc"
+(** [unsafe_destroy_and_resize bstr ~len] reallocates the memory backing
+    [bstr] and returns a new bigstring that starts at position 0 and has
+    length [len]. If [len] is greater than [length bstr] then the newly
+    allocated memory will not be initialized.
+
+    Similar to [unsafe_destroy], this operation is safe unless you have passed
+    the bigstring to another thread that is performing operations on it at the
+    same time.  Access to [bstr] after this operation will yield array bounds
+    exceptions.
+
+    @raise Failure if the bigstring has already been deallocated (or deemed
+    "external", which is treated equivalently), if it is backed by a memory
+    map, or if it has proxies, i.e. other bigstrings referring to the same
+    data. *)
+
 val sub_shared : ?pos : int -> ?len : int -> t -> t
 (** [sub_shared ?pos ?len bstr] @return the sub-bigstring in [bstr]
     that starts at position [pos] and has length [len].  The sub-bigstring

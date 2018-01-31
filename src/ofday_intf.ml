@@ -11,13 +11,15 @@ module type Ofday = sig
       hours after midnight, so knowing your current offset from midnight is *not* in
       general equivalent to knowing the current [t].
 
+      (See {!Zone} for tools to help you cope with DST.)
+
       There is one nonstandard representable value, [start_of_next_day], which can be
       thought of as "24:00:00" in 24-hour time. It is essentially "00:00:00" on the next
       day. By having this value, we allow comparisons against a strict upper bound on [t]
       values. However, it has some odd properties; for example, [Time.of_date_ofday ~zone
       date start_of_next_day |> Time.to_date ~zone] yields a different date.
 
-      (See {!Zone} for tools to help you cope with DST.) *)
+      Any [ofday] will satisfy [start_of_day <= ofday <= start_of_next_day]. *)
   type underlying
   type t = private underlying [@@deriving bin_io, sexp]
 

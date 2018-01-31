@@ -1,4 +1,4 @@
-(** This module extends {!Base.Or_error} with bin_io. *)
+(** This module extends {{!Base.Or_error}[Base.Or_error]} with bin_io. *)
 
 open! Import
 

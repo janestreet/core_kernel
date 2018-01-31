@@ -1,4 +1,4 @@
-(** This module extends {!Base.List} with bin_io and quickcheck. *)
+(** This module extends {{!Base.List}[Base.List]} with bin_io and quickcheck. *)
 
 open! Import
 

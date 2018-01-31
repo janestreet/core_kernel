@@ -169,6 +169,7 @@ end : sig
            val neg : t -> t
            val is_nan : t -> bool
            val is_inf : t -> bool
+           val sign_exn : t -> Sign.t
            include Comparable.With_zero with type t := t
            include Robustly_comparable with type t := t
          end)

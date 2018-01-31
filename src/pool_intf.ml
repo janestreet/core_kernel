@@ -1,18 +1,18 @@
 (** A manual memory manager for a set of mutable tuples.  The point of [Pool] is to
-    allocate a single long-lived block of memory (the pool) that lives in the OCaml major
-    heap, and then to reuse the block, rather than continually allocating blocks on the
-    minor heap.
+    allocate a single long-lived block of memory (the pool) that lives in the OCaml
+    major heap, and then to reuse the block, rather than continually allocating blocks
+    on the minor heap.
 
     A pool stores a bounded-size set of tuples, where client code is responsible for
-    explicitly controlling when the pool allocates and frees tuples.  One [create]s a pool
-    of a certain capacity, which returns an empty pool that can hold that many tuples.
-    One then uses [new] to allocate a tuple, which returns a [Pointer.t] to the tuple.
-    One then uses [get] and [set] along with the pointer to get and set slots of the
-    tuple.  Finally, one [free]'s a pointer to the pool's memory for a tuple, making the
-    memory available for subsequent reuse.
+    explicitly controlling when the pool allocates and frees tuples.  One [create]s a
+    pool of a certain capacity, which returns an empty pool that can hold that many
+    tuples.  One then uses [new] to allocate a tuple, which returns a [Pointer.t] to the
+    tuple.  One then uses [get] and [set] along with the pointer to get and set slots of
+    the tuple.  Finally, one [free]'s a pointer to the pool's memory for a tuple, making
+    the memory available for subsequent reuse.
 
-    In typical usage, one wraps up a pool with an abstract interface, giving nice names to
-    the tuple slots, and only exposing mutation where desired.
+    In typical usage, one wraps up a pool with an abstract interface, giving nice names
+    to the tuple slots, and only exposing mutation where desired.
 
     All the usual problems with manual memory allocation are present with pools:
 
@@ -239,7 +239,6 @@ module type S = sig
 end
 
 module type Pool = sig
-
   module Tuple_type = Tuple_type
 
   module type S = S

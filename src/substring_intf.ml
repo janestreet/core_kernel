@@ -1,4 +1,4 @@
-(** Interface for {!Substring}. *)
+(** Interface for {{!Core_kernel.Substring}[Substring]}. *)
 
 open! Import
 

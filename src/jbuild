@@ -22,6 +22,7 @@
     ppx_hash.runtime-lib
     ppx_inline_test.runtime-lib
     sexplib
+    splittable_random
     typerep
     variantslib))
   (flags (:standard -safe-string))

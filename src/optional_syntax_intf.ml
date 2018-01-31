@@ -31,8 +31,7 @@ module type S2 = sig
 end
 
 module type Optional_syntax = sig
-  (** Interfaces for use with [match%optional].  Idiomatic usage is to have a module [M]
-      like:
+  (** Idiomatic usage is to have a module [M] like:
 
       {[
         module M : sig

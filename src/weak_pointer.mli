@@ -1,7 +1,8 @@
 (** A weak pointer is a pointer to a heap block that does not cause the heap block to
-    remain live during garbage collection.  If the block would otherwise remain live, then
-    then the weak pointer remains pointed to the block.  If the block is collected, then
-    the weak pointer is cleared. *)
+    remain live during garbage collection.
+
+    If the block would otherwise remain live, then then the weak pointer remains pointed
+    to the block.  If the block is collected, then the weak pointer is cleared. *)
 
 open! Import
 open! Std_internal

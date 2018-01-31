@@ -1,5 +1,5 @@
 (** This module is here to ensure that we don't use the functions in [Caml.Printexc]
-    inadvertently *)
+    inadvertently. *)
 
 open! Import
 

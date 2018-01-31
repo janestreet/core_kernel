@@ -1,4 +1,4 @@
-(** This module extends {!Base.Option} with bin_io and quickcheck. *)
+(** This module extends {{!Base.Option}[Base.Option]} with bin_io and quickcheck. *)
 
 type 'a t = 'a Base.Option.t [@@deriving bin_io, typerep]
 

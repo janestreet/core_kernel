@@ -41,8 +41,8 @@
     [Timing_wheel_float] is a wrapper around [Timing_wheel_ns] that converts between the
     two representations of time.
 
-    {1 Implementation}
-    ==================
+    {2 Implementation}
+
     A timing wheel is implemented using a specialized priority queue in which the
     half-open intervals from the epoch onwards are numbered 0, 1, 2, etc.  Each time is
     stored in the priority queue with the key of its interval number.  Thus all alarms
@@ -61,8 +61,8 @@
     With a sufficient number of alarms, this is more efficient than a log(N) heap
     implementation of a priority queue.
 
-    {1 Representable times}
-    =======================
+    {2 Representable times}
+
     A timing wheel [t] can only handle a (typically large) bounded range of times as
     determined by the current time, [now t], and the [level_bits] and [alarm_precision]
     arguments supplied to [create].  Various functions raise if they are supplied a time
@@ -171,6 +171,8 @@ module type Interval_num = sig
   val rem : t -> Span.t -> Span.t
 end
 
+(** An [Alarm_precision] is a time span that is a power of two number of nanoseconds,
+    used to specify the precision of a timing wheel. *)
 module type Alarm_precision = sig
   module Time : Timing_wheel_time
 
@@ -179,6 +181,7 @@ module type Alarm_precision = sig
   include Equal.S with type t := t
 
   val of_span : Time.Span.t -> t
+  [@@deprecated "[since 2018-01] Use [of_span_floor_pow2_ns]"]
 
   (** [of_span_floor_pow2_ns span] returns the largest alarm precision less than or equal
       to [span] that is a power of two number of nanoseconds. *)
@@ -203,6 +206,10 @@ module type Alarm_precision = sig
       for overflow or underflow. *)
   val div : t -> pow2:int -> t
 
+  (** The unstable bin and sexp format is that of [Time_ns.Span], with the caveat that
+      deserialization implicitly floors the time span to the nearest power of two
+      nanoseconds.  This ensures that the alarm precision that is used is at least as
+      precise than the alarm precision that is stated. *)
   module Unstable : sig
     type nonrec t = t [@@deriving bin_io, compare, sexp]
   end

@@ -1,6 +1,6 @@
-(** This module extends the {!Base.Queue} module with bin_io support.  As a reminder, the
-    [Base.Queue] module is a wrapper around OCaml's standard [Queue] module that follows
-    Base idioms and adds some functions.
+(** This module extends the {{!Base.Queue}[Base.Queue]} module with bin_io support.  As a
+    reminder, the [Base.Queue] module is a wrapper around OCaml's standard [Queue] module
+    that follows Base idioms and adds some functions.
 
     See also {!Core_kernel.Queue}, which has different performance characteristics. *)
 

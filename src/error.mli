@@ -1,4 +1,4 @@
-(** This module extends {!module:Base.Error} with [bin_io]. *)
+(** This module extends {{!module:Base.Error}[Base.Error]} with [bin_io]. *)
 
 open! Import
 

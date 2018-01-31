@@ -1,5 +1,5 @@
-(** This module defines interfaces used in {!Map}. See those docs for a description of
-    the design.
+(** This module defines interfaces used in {{!Map}[Map]}. See those docs for a description
+    of the design.
 
     This module defines module types
     [{Creators,Accessors}{1,2,3,_generic,_with_comparator}]. It uses check functors to

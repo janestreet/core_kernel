@@ -1,4 +1,4 @@
-(** This module extends {!Base.Int63}. *)
+(** This module extends {{!Base.Int63}[Base.Int63]}. *)
 
 (** {2 Interface from Base} *)
 

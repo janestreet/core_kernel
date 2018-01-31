@@ -1,3 +1,5 @@
+(** A non-allocating alternative to the standard Option type. *)
+
 open! Import
 
 module type S_without_immediate = sig

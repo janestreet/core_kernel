@@ -1,5 +1,5 @@
-(** Extends {!Base.Comparator}, providing a type-indexed value that allows you to compare
-    values of that type. *)
+(** Extends {{!Base.Comparator}[Base.Comparator]}, providing a type-indexed value that
+    allows you to compare values of that type. *)
 
 open! Import
 

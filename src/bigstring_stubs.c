@@ -68,7 +68,7 @@ static inline char * get_bstr(value v_bstr, value v_pos)
 CAMLexport value
 bigstring_alloc (value v_gc_max_unused, value v_size)
 {
-  intnat size = Long_val (v_size);
+  intnat size = Long_val(v_size);
   void * data = NULL;
   int flags = CORE_BIGSTRING_FLAGS | CAML_BA_MANAGED;
   intnat gc_max_unused = Long_val(v_gc_max_unused);
@@ -85,6 +85,42 @@ bigstring_alloc (value v_gc_max_unused, value v_size)
   }
 
   return caml_ba_alloc (flags, 1, data, dims);
+}
+
+CAMLprim value
+bigstring_realloc (value v_bstr, value v_size)
+{
+  CAMLparam2(v_bstr, v_size);
+  CAMLlocal1(v_bstr2);
+  struct caml_ba_array *ba = Caml_ba_array_val(v_bstr);
+  intnat size = Long_val(v_size);
+
+  struct caml_ba_array *ba2;
+  void *data;
+  switch (ba->flags & CAML_BA_MANAGED_MASK) {
+    case CAML_BA_EXTERNAL :
+      caml_failwith("bigstring_realloc: bigstring is external or deallocated");
+      break;
+    case CAML_BA_MANAGED :
+      if (ba->proxy != NULL) caml_failwith("bigstring_realloc: bigstring has proxy");
+      break;
+    case CAML_BA_MAPPED_FILE :
+      caml_failwith("bigstring_realloc: bigstring is backed by memory map");
+      break;
+  }
+
+  data = realloc(ba->data, sizeof(char) * size);
+  /* realloc is equivalent to free when size is equal to zero, and may return NULL. */
+  if (NULL == data && size != 0) caml_raise_out_of_memory ();
+
+  v_bstr2 = caml_ba_alloc(ba->flags, ba->num_dims, data, ba->dim);
+  ba2 = Caml_ba_array_val(v_bstr2);
+  ba2->dim[0] = size;
+
+  ba->data = NULL;
+  ba->flags = CAML_BA_EXTERNAL;
+
+  CAMLreturn(v_bstr2);
 }
 
 /* Checking memory-mapping */

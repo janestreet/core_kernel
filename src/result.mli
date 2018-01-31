@@ -1,4 +1,4 @@
-(** This module extends {!Base.Result}. *)
+(** This module extends {{!Base.Result}[Base.Result]}. *)
 
 open! Import
 
