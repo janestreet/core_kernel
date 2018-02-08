@@ -78,6 +78,15 @@ module Add_hash
   let hash t = Raw.hash (Validated.raw t)
 end
 
+module Add_typerep
+    (Raw : sig
+       type t [@@deriving typerep]
+       include Raw with type t := t
+     end)
+    (Validated : S with type raw := Raw.t) = struct
+  type t = Raw.t [@@deriving typerep]
+end
+
 module Make_binable (Raw : Raw_bin_io) = struct
   module T0 = Make (Raw)
 

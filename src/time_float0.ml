@@ -115,3 +115,8 @@ let now () =
   in
   of_span_since_epoch (Span.of_sec (float_ns *. 1E-9))
 ;;
+
+module Stable = struct
+  module Span  = Span.Stable
+  module Ofday = Ofday.Stable
+end

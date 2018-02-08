@@ -3,7 +3,7 @@ open! Import
 open  Validated
 
 module Raw = struct
-  type t = int [@@deriving bin_io, compare, hash, sexp]
+  type t = int [@@deriving bin_io, compare, hash, sexp, typerep]
 
   let here = [%here]
   let validate _ = Validate.pass
@@ -72,3 +72,11 @@ let%expect_test "[sexp]s match" =
   for_all [%sexp_of: Raw.t] [%sexp_of: V.t] (module Sexp);
   [%expect {| |}];
 ;;
+
+(* [Add_typerep] *)
+module V2 : sig
+  type t = V.t [@@deriving typerep]
+end = struct
+  type t = V.t
+  include Add_typerep (Raw) (V)
+end

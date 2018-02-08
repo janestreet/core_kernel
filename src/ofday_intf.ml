@@ -1,7 +1,7 @@
 open! Import
 open Std_internal
 
-module type Ofday = sig
+module type S = sig
   (** Time of day.
 
       [t] represents a clock-face time of day. Usually this is equivalent to a time-offset
@@ -29,7 +29,7 @@ module type Ofday = sig
   include Pretty_printer.S     with type t := t
   include Robustly_comparable  with type t := t
 
-  module Span : Span_intf.Span
+  module Span : Span_intf.S
 
   (** [of_string] supports and correctly interprets 12h strings with the following suffixes:
 
@@ -112,10 +112,18 @@ module type Ofday = sig
 
   (** with milliseconds *)
   val to_millisec_string : t -> string
+end
 
-  module Stable : sig
-    module V1 : sig
-      type nonrec t = t [@@deriving bin_io, compare, hash, sexp]
-    end
+module type S_stable = sig
+  type t
+
+  module V1 : sig
+    type nonrec t = t [@@deriving bin_io, compare, hash, sexp]
   end
+end
+
+module type Ofday = sig
+  include S
+
+  module Stable : S_stable with type t := t
 end

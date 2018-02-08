@@ -70,12 +70,6 @@ module type S = sig
   (** [digest t] return the MD5 digest of the file the t was created from (if any) *)
   val digest : t -> Md5.t option
 
-  module Full_data : sig
-    module Stable : sig
-      module V1 : Stable_module_types.S0_without_comparator with type t = t
-    end
-  end
-
   module Time_in_seconds : Time_in_seconds
 
   (** For performance testing only; [reset_transition_cache t] resets an internal cache in
@@ -121,8 +115,19 @@ module type S = sig
   val index_next_clock_shift_amount_exn : t -> Index.t -> Time_in_seconds.Span.t
 end
 
+module type S_stable = sig
+  type t
+
+  module Full_data : sig
+    module V1 : Stable_module_types.S0_without_comparator with type t = t
+  end
+end
+
 module type Zone = sig
-  module type S = S
+  module type S        = S
+  module type S_stable = S_stable
 
   include S
+
+  module Stable : S_stable with type t := t
 end

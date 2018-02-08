@@ -45,7 +45,7 @@ let span_examples =
   :: pos_and_neg_units
   @  List.map pos_and_neg_units ~f:(fun span -> Time.Span.scale span Float.pi)
 
-let%expect_test "Time.Span.Stable.V1" =
+let%expect_test "Time.Stable.Span.V1" =
   print_and_check_stable_type [%here] (module struct
     include Time.Stable.Span.V1
 
@@ -125,7 +125,7 @@ let%expect_test "Time.Span.Stable.V1" =
      (bin_io "\186\240\203k&\145\016\193")) |}];
 ;;
 
-let%expect_test "Time.Span.Stable.V2" =
+let%expect_test "Time.Stable.Span.V2" =
   print_and_check_stable_type [%here] (module Time.Stable.Span.V2)
     ~cr:Comment
     span_examples;

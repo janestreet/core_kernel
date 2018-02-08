@@ -23,7 +23,7 @@ module type Parts = sig
   [@@deriving sexp]
 end
 
-module type Span = sig
+module type S = sig
   (** Span.t represents a span of time (e.g. 7 minutes, 3 hours, 12.8 days).  The span
       may be positive or negative. *)
   type underlying
@@ -182,13 +182,21 @@ module type Span = sig
   (** [randomize t ~percent] returns a span +/- percent * original span.  Percent must be
       between 0% and 100% inclusive, and must be positive. *)
   val randomize : t -> percent:Percent.t -> t
+end
 
-  module Stable : sig
-    module V1 : sig
-      type nonrec t = t [@@deriving sexp, bin_io, compare, hash]
-    end
-    module V2 : sig
-      type nonrec t = t [@@deriving sexp, bin_io, compare, hash]
-    end
+module type S_stable = sig
+  type t
+
+  module V1 : sig
+    type nonrec t = t [@@deriving sexp, bin_io, compare, hash]
   end
+  module V2 : sig
+    type nonrec t = t [@@deriving sexp, bin_io, compare, hash]
+  end
+end
+
+module type Span = sig
+  include S
+
+  module Stable : S_stable with type t := t
 end

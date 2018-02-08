@@ -109,3 +109,6 @@ let digest_subbytes = Md5_lib.subbytes
 let string = digest_string
 let bytes = digest_bytes
 let subbytes s pos len = digest_subbytes s ~pos ~len
+
+let digest_bin_prot writer value =
+  digest_string (Core_bin_prot.Writer.to_string writer value)

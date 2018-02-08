@@ -1,8 +1,8 @@
 open! Core_kernel
 open! Import
 
-let%expect_test "Time.Zone.Full_data.Stable.V1" =
-  print_and_check_stable_type [%here] (module Time.Zone.Full_data.Stable.V1) [
+let%expect_test "Time.Stable.Zone.Full_data.V1" =
+  print_and_check_stable_type [%here] (module Time.Stable.Zone.Full_data.V1) [
     Time.Zone.utc;
     Time.Zone.input_tz_file
       ~zonename:"Sample Time Zone"

@@ -2,7 +2,7 @@ open! Import
 open Std_internal
 
 module type Basic = sig
-  module Span : Span_intf.Span
+  module Span : Span_intf.S
 
   type t
 
@@ -29,9 +29,8 @@ module type S = sig
   type underlying
   type t = private underlying [@@deriving bin_io, compare, hash, typerep]
 
-  module Span  : Span_intf.Span   with type underlying  = underlying
-  module Ofday : Ofday_intf.Ofday with type underlying := underlying
-                                   and module Span := Span
+  module Span  : Span_intf.S  with type underlying =  underlying
+  module Ofday : Ofday_intf.S with type underlying := underlying and module Span := Span
 
   include Basic
     with type t := t
@@ -73,4 +72,9 @@ module type S = sig
   end with type absolute := t
 
   val now : unit -> t
+
+  module Stable : sig
+    module Span  : Span_intf.S_stable  with type t := Span.t
+    module Ofday : Ofday_intf.S_stable with type t := Ofday.t
+  end
 end

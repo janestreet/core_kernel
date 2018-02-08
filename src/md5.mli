@@ -126,3 +126,9 @@ val input : in_channel -> t
 [@@ocaml.deprecated
   "[since 2017-07] blocking functions should be avoided. \
    Use [input_blocking] if you really want this."]
+
+(** [digest_bin_prot w x] digests the serialization of [x] by [w].
+    It is a cheap way (in dev time) to compute the digest of an ocaml value, for a
+    fixed and deterministic serialization function.
+    It is currently implemented inefficiently and allocates large strings. *)
+val digest_bin_prot : 'a Bin_prot.Type_class.writer -> 'a -> t

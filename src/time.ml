@@ -6,10 +6,13 @@ open! Int.Replace_polymorphic_compare
 
 include Time_intf
 
+module Zone0 = Zone
+
 module Make (Time0 : Time0_intf.S) = struct
   module Time0 = Time0
 
-  include Time0
+  include (Time0 : module type of struct include Time0 end
+           with module Stable := Time0.Stable)
 
   let epoch = of_span_since_epoch Span.zero
 
@@ -470,6 +473,8 @@ module Make (Time0 : Time0_intf.S) = struct
   ;;
 
   module Stable = struct
+    include Time0.Stable
+
     module With_utc_sexp = struct
       (* V2 is actually the first version of this in Core_kernel, but a V1 stable module
          with generous parsing, unix-dependent [t_of_sexp] already existed in Core *)
@@ -493,7 +498,7 @@ module Make (Time0 : Time0_intf.S) = struct
               sexp
       end
     end
-    module Ofday = Ofday.Stable
-    module Span = Span.Stable
+
+    module Zone = Zone0.Stable
   end
 end

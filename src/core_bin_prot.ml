@@ -13,6 +13,8 @@ module Writer = struct
     let buf = Bigstring.create len in
     let pos = t.write buf ~pos:0 v in
     assert (pos = Bigstring.length buf);
-    Bigstring.to_string buf
+    let str = Bigstring.to_string buf in
+    Bigstring.unsafe_destroy buf;
+    str
   ;;
 end

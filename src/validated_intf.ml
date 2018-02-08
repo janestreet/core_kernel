@@ -120,4 +120,14 @@ module type Validated = sig
     : sig
       type t [@@deriving hash]
     end with type t := Validated.t
+
+  module Add_typerep
+      (Raw : sig
+         type t [@@deriving typerep]
+         include Raw with type t := t
+       end)
+      (Validated : S with type raw := Raw.t)
+    : sig
+      type t [@@deriving typerep]
+    end with type t := Validated.t
 end

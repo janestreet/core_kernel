@@ -9,6 +9,14 @@ you might want to have a look at Base's
 - Moved `Splittable_random` to its own library.
   Available at http://github.com/janestreet/splittable_random
 
+- Remove `Time.*.Stable`, leaving `Time.Stable` as the only submodule
+  that exports stable conversions.
+  Clients of `Time` should refer to stable modules as `Time.Stable.X`
+  where they were previously using `Time.X.Stable`.
+
+- Added `Md5.digest_bin_prot`.
+  This gives an easy way to write [t -> Md5.t] for any Binable value.
+
 ## v0.10
 
 - Renamed `Float.to_string` as `to_string_12`, to reflect its 12-digit

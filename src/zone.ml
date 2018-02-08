@@ -15,8 +15,8 @@ open! Int.Replace_polymorphic_compare
 include Zone_intf
 exception Invalid_file_format of string [@@deriving sexp]
 
-module Full_data = struct
-  module Stable = struct
+module Stable = struct
+  module Full_data = struct
     module V1 = struct
       module Index = struct
         type t = int
@@ -382,7 +382,7 @@ module Full_data = struct
   end
 end
 
-include Full_data.Stable.V1
+include Stable.Full_data.V1
 
 let sexp_of_t t = Sexp.Atom t.name
 
