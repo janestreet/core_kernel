@@ -787,7 +787,7 @@ module Shrinker = struct
     let shrinker (v1, v2) =
       let v1_seq = Sequence.map (shrink t1 v1) ~f:(fun x -> (x,  v2)) in
       let v2_seq = Sequence.map (shrink t2 v2) ~f:(fun x -> (v1, x))  in
-      Sequence.interleave (Sequence.of_list [v1_seq; v2_seq])
+      Sequence.round_robin [v1_seq; v2_seq]
     in
     create shrinker
 
@@ -796,7 +796,7 @@ module Shrinker = struct
       let v1_seq = Sequence.map (shrink t1 v1) ~f:(fun x -> (x,  v2, v3)) in
       let v2_seq = Sequence.map (shrink t2 v2) ~f:(fun x -> (v1, x,  v3)) in
       let v3_seq = Sequence.map (shrink t3 v3) ~f:(fun x -> (v1, v2, x))  in
-      Sequence.interleave (Sequence.of_list [v1_seq; v2_seq; v3_seq])
+      Sequence.round_robin [v1_seq; v2_seq; v3_seq]
     in
     create shrinker
 
@@ -806,7 +806,7 @@ module Shrinker = struct
       let v2_seq = Sequence.map (shrink t2 v2) ~f:(fun x -> (v1, x,  v3, v4)) in
       let v3_seq = Sequence.map (shrink t3 v3) ~f:(fun x -> (v1, v2, x,  v4)) in
       let v4_seq = Sequence.map (shrink t4 v4) ~f:(fun x -> (v1, v2, v3, x))  in
-      Sequence.interleave (Sequence.of_list [v1_seq; v2_seq; v3_seq; v4_seq])
+      Sequence.round_robin [v1_seq; v2_seq; v3_seq; v4_seq]
     in
     create shrinker
 
@@ -817,7 +817,7 @@ module Shrinker = struct
       let v3_seq = Sequence.map (shrink t3 v3) ~f:(fun x -> (v1, v2, x,  v4, v5)) in
       let v4_seq = Sequence.map (shrink t4 v4) ~f:(fun x -> (v1, v2, v3, x,  v5)) in
       let v5_seq = Sequence.map (shrink t5 v5) ~f:(fun x -> (v1, v2, v3, v4, x))  in
-      Sequence.interleave (Sequence.of_list [v1_seq; v2_seq; v3_seq; v4_seq; v5_seq])
+      Sequence.round_robin [v1_seq; v2_seq; v3_seq; v4_seq; v5_seq]
     in
     create shrinker
 
@@ -829,7 +829,7 @@ module Shrinker = struct
       let v4_seq = Sequence.map (shrink t4 v4) ~f:(fun x -> (v1, v2, v3, x,  v5, v6)) in
       let v5_seq = Sequence.map (shrink t5 v5) ~f:(fun x -> (v1, v2, v3, v4, x,  v6)) in
       let v6_seq = Sequence.map (shrink t6 v6) ~f:(fun x -> (v1, v2, v3, v4, v5, x))  in
-      Sequence.interleave (Sequence.of_list [v1_seq; v2_seq; v3_seq; v4_seq; v5_seq; v6_seq])
+      Sequence.round_robin [v1_seq; v2_seq; v3_seq; v4_seq; v5_seq; v6_seq]
     in
     create shrinker
 

@@ -38,7 +38,7 @@ module type S = sig
   module Time : Time0_intf.S
 
   (*_ necessary to preserve type equality with the Time functor argument *)
-  include (module type of struct include Time end with module Stable := Time.Stable)
+  include (module type of struct include Time end)
 
   (** [now ()] returns a [t] representing the current time *)
   val now : unit -> t
@@ -240,17 +240,6 @@ module type S = sig
     -> interval:Span.t
     -> unit
     -> t
-
-  module Stable : sig
-    include module type of struct include Time.Stable end
-
-    module With_utc_sexp : sig
-      module V2 : Stable_without_comparator
-        with type t = t
-    end
-
-    module Zone : Zone_intf.S_stable with type t := Zone.t
-  end
 end
 
 module type Time = sig

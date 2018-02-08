@@ -189,7 +189,7 @@ module For_quickcheck = struct
             >>| fun l -> Sexp.List l
           in
           let shrink_tree = Sequence.of_list list in
-          Sequence.interleave (Sequence.of_list [ shrink_list; shrink_tree ])))
+          Sequence.round_robin [ shrink_list; shrink_tree ]))
 
 end
 

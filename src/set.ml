@@ -41,19 +41,17 @@ module For_quickcheck = struct
       ~f:Tree.to_list
 
   let shrink elt_shr t =
-    let seq = Set.to_sequence t in
+    let list = Set.to_list t in
     let drop_elts =
-      Sequence.map seq ~f:(fun elt ->
+      Sequence.map (Sequence.of_list list) ~f:(fun elt ->
         Set.remove t elt)
     in
     let shrink_elts =
-      Sequence.interleave (Sequence.map seq ~f:(fun elt ->
+      Sequence.round_robin (List.map list ~f:(fun elt ->
         Sequence.map (Shrinker.shrink elt_shr elt) ~f:(fun elt' ->
           Set.add (Set.remove t elt) elt')))
     in
-    [ drop_elts ; shrink_elts ]
-    |> Sequence.of_list
-    |> Sequence.interleave
+    Sequence.round_robin [ drop_elts ; shrink_elts ]
 
   let shrinker elt_shr =
     Shrinker.create (fun t ->

@@ -47,24 +47,22 @@ module For_quickcheck = struct
       ~f:Map.to_alist
 
   let shrink k_shr v_shr t =
-    let seq = Map.to_sequence t in
+    let list = Map.to_alist t in
     let drop_keys =
-      Sequence.map seq ~f:(fun (k, _) ->
+      Sequence.map (Sequence.of_list list) ~f:(fun (k, _) ->
         Map.remove t k)
     in
     let shrink_keys =
-      Sequence.interleave (Sequence.map seq ~f:(fun (k, v) ->
+      Sequence.round_robin (List.map list ~f:(fun (k, v) ->
         Sequence.map (Shrinker.shrink k_shr k) ~f:(fun k' ->
           Map.set (Map.remove t k) ~key:k' ~data:v)))
     in
     let shrink_values =
-      Sequence.interleave (Sequence.map seq ~f:(fun (k, v) ->
+      Sequence.round_robin (List.map list ~f:(fun (k, v) ->
         Sequence.map (Shrinker.shrink v_shr v) ~f:(fun v' ->
           Map.set t ~key:k ~data:v')))
     in
-    [ drop_keys; shrink_keys; shrink_values ]
-    |> Sequence.of_list
-    |> Sequence.interleave
+    Sequence.round_robin [ drop_keys; shrink_keys; shrink_values ]
 
   let shr_tree ~comparator k_shr v_shr =
     Shrinker.create (fun tree ->

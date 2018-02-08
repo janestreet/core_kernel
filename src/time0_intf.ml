@@ -72,9 +72,4 @@ module type S = sig
   end with type absolute := t
 
   val now : unit -> t
-
-  module Stable : sig
-    module Span  : Span_intf.S_stable  with type t := Span.t
-    module Ofday : Ofday_intf.S_stable with type t := Ofday.t
-  end
 end

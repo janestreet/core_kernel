@@ -79,8 +79,7 @@ module For_quickcheck = struct
           let dropped     = Sequence.singleton tl in
           let shrunk_head = Shrinker.shrink t_elt   h >>| fun shr_h  -> shr_h::tl in
           let shrunk_tail = Shrinker.shrink t_list tl >>| fun shr_tl -> h::shr_tl in
-          Sequence.interleave
-            (Sequence.of_list [dropped; shrunk_head; shrunk_tail])))
+          Sequence.round_robin [dropped; shrunk_head; shrunk_tail]))
 
   let%test_module "shrinker" =
     (module struct

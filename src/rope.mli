@@ -10,7 +10,7 @@
     string and copies the inputs into it, [Rope] is no improvement over that usage.
     [Rope] becomes useful when the construction of the sequence of strings is more
     complex -- a good example is prettyprinting an expression language, where you need to
-    parenthise subexpressions (appending a short string at both ends) and handle infix
+    parenthesize subexpressions (appending a short string at both ends) and handle infix
     binary operators (appending two long strings both made up of many parts, with a short
     string in between).
 

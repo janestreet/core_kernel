@@ -57,25 +57,9 @@ include (Base.Int63
              with type t := t
              with module Hex := Hex))
 
-let splittable_random_emulated random ~lo ~hi =
-  let open Base.Not_exposed_properly.Int63_emul.W in
-  wrap_exn (Splittable_random.int64 random ~lo:(unwrap lo) ~hi:(unwrap hi))
-
-let splittable_random_of_repr
-  :  type a b. (a, b) Base.Int63.Private.Repr.t
-    -> Splittable_random.State.t
-    -> lo:b
-  -> hi:b
-  -> b
-  = function
-    | Base.Int63.Private.Repr.Int   -> Splittable_random.int
-    | Base.Int63.Private.Repr.Int64 -> splittable_random_emulated
-
-let splittable_random = splittable_random_of_repr Base.Int63.Private.repr
-
 include Quickcheck.Make_int (struct
     include Base.Int63
-    let splittable_random = splittable_random
+    let splittable_random = Splittable_random.int63
   end)
 
 let%expect_test _ =

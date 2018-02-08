@@ -30,7 +30,6 @@
 open Core
 open Core_bench.Std
 
-module Re2 = Re2.Std.Re2
 
 module type Config = sig
   val sizes : int list
