@@ -10,7 +10,7 @@ module Stable = struct
 
   module Of_binable = struct
     module V1
-        (Binable : S)
+        (Binable : Minimal.S)
         (M : sig
            type t
            val to_binable : t -> Binable.t
@@ -25,7 +25,7 @@ module Stable = struct
 
   module Of_binable1 = struct
     module V1
-        (Binable : S1)
+        (Binable : Minimal.S1)
         (M : sig
            type 'a t
            val to_binable : 'a t -> 'a Binable.t
@@ -40,7 +40,7 @@ module Stable = struct
 
   module Of_binable2 = struct
     module V1
-        (Binable : S2)
+        (Binable : Minimal.S2)
         (M : sig
            type ('a, 'b) t
            val to_binable : ('a, 'b) t -> ('a, 'b) Binable.t
@@ -55,7 +55,7 @@ module Stable = struct
 
   module Of_binable3 = struct
     module V1
-        (Binable : S3)
+        (Binable : Minimal.S3)
         (M : sig
            type ('a, 'b, 'c) t
            val to_binable : ('a, 'b, 'c) t -> ('a, 'b, 'c) Binable.t

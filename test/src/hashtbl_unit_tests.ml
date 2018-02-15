@@ -755,7 +755,8 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
                to_map a, to_map b)
               ~expect:(Map.partitioni_tf map ~f:Key_and_data.to_bool))
 
-        let find_or_add = Hashtbl.find_or_add
+        let find_or_add  = Hashtbl.find_or_add
+        let findi_or_add = Hashtbl.findi_or_add
 
         let%test_unit _ =
           Qc.test (Gen.tuple3 constructor_gen Key.gen Data.gen)
@@ -795,7 +796,8 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
             ; "find_exn", find_exn
             ]
 
-        let find_and_call = Hashtbl.find_and_call
+        let find_and_call  = Hashtbl.find_and_call
+        let findi_and_call = Hashtbl.findi_and_call
 
         let%test_unit _ =
           Qc.test (Gen.tuple2 constructor_gen Key.gen)
@@ -1283,7 +1285,8 @@ module Make_mutation_in_callbacks(Hashtbl : Hashtbl_intf.Hashtbl) = struct
 
       (* functions that both mutate and accept callbacks *)
 
-      let find_or_add = Hashtbl.find_or_add
+      let find_or_add  = Hashtbl.find_or_add
+      let findi_or_add = Hashtbl.findi_or_add
 
       let%test_unit "find_or_add" =
         for_each "key" sexp_of_key sample_keys (fun key ->
@@ -1496,7 +1499,8 @@ module Make_mutation_in_callbacks(Hashtbl : Hashtbl_intf.Hashtbl) = struct
 
       (* functions that take callbacks *)
 
-      let find_and_call = Hashtbl.find_and_call
+      let find_and_call  = Hashtbl.find_and_call
+      let findi_and_call = Hashtbl.findi_and_call
 
       let%test_unit "find_and_call" =
         for_each "key" sexp_of_key sample_keys (fun key ->

@@ -507,6 +507,13 @@ end = struct
         ignore (find_or_add t (Example.random_key r `either) ~default : int);
         ignore (find_and_remove t (Example.random_key r `either) : int option)))
 
+    let findi_or_add = Table.findi_or_add
+    let () = (!!) "findi_or_add + <rand key> + find_and_remove + <rand key>" (fun size ->
+      let default _key = 0 in
+      let r = Example.random size in let t = Example.t size in stage (fun () ->
+        ignore (findi_or_add t (Example.random_key r `either) ~default : int);
+        ignore (find_and_remove t (Example.random_key r `either) : int option)))
+
     let find_exn = Table.find_exn
     let () = (!!) "find_exn + <rand key>" (fun size ->
       let r = Example.random size in let t = Example.t size in stage (fun () ->
@@ -522,13 +529,21 @@ end = struct
       let r = Example.random size in let t = Example.t_multi size in stage (fun () ->
         ignore (find_multi t (Example.random_key r `either) : int list)))
 
-    let find_and_call = Table.find_and_call
+    let find_and_call  = Table.find_and_call
     let () = (!!) "find_and_call + <rand key>" (fun size ->
       let if_not_found _ = 0 in
       let if_found data = data in
       let r = Example.random size in let t = Example.t size in stage (fun () ->
         let key = Example.random_key r `either in
         ignore (find_and_call t key ~if_found ~if_not_found : int)))
+
+    let findi_and_call = Table.findi_and_call
+    let () = (!!) "findi_and_call + <rand key>" (fun size ->
+      let if_not_found _ = 0 in
+      let if_found ~key:_ ~data = data in
+      let r = Example.random size in let t = Example.t size in stage (fun () ->
+        let key = Example.random_key r `either in
+        ignore (findi_and_call t key ~if_found ~if_not_found : int)))
 
     let merge = Table.merge
     let () =

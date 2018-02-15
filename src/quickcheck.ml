@@ -2,11 +2,12 @@ open! Import
 
 open Quickcheck_intf
 
-module Array = Base.Array
-module Bool  = Base.Bool
-module Char  = Base.Char
-module Int   = Base.Int
-module List  = Base.List
+module Array      = Base.Array
+module Bool       = Base.Bool
+module Char       = Base.Char
+module Int        = Base.Int
+module List       = Base.List
+module Type_equal = Base.Type_equal
 
 module Pre_float : Comparisons.S with type t = float = struct
   type t = float
@@ -1074,64 +1075,40 @@ module Configure (Config : Quickcheck_config) = struct
 
   type 'a shr = 'a Shrinker.t
 
-  let scale ~n ~f = Pervasives.int_of_float (f *. Pervasives.float_of_int n)
-
   let random_state_of_seed seed =
     match seed with
     | `Nondeterministic  -> Splittable_random.State.create ()
     | `Deterministic str -> Splittable_random.State.of_int ([%hash: string] str)
 
+  let ensure_infinite sequence ~if_finite_then_raise_s =
+    Sequence.unfold_with_and_finish sequence
+      (* These two arguments correspond to the ordinary [~init] and [~f] like in
+         [Sequence.unfold_step], and we just return values from [sequence] as usual. *)
+      ~init:()
+      ~running_step:(fun () x -> Yield (x, ()))
+      (* These two arguments correspond to a follow-up [~init] and [~f] once [sequence]
+         terminates. We raise instead of calculating the new state, and treat the new
+         state as having an impossible type equivalent to [Nothing.t], although we cannot
+         use [Nothing] directly due to cyclic dependencies. *)
+      ~inner_finished:(fun () -> raise_s (force if_finite_then_raise_s))
+      ~finishing_step:(function (_ : (unit, int) Type_equal.t) -> .)
+
   let random_sequence ?(seed = default_seed) ?(sizes = default_sizes) gen =
     let random = random_state_of_seed seed in
+    let sizes =
+      ensure_infinite sizes
+        ~if_finite_then_raise_s:
+          (lazy [%message "Quickcheck: [~sizes] argument ran out of values"])
+    in
     Sequence.map sizes ~f:(fun size ->
       Generator.generate gen ~size random)
 
-  let iter_or_error
-        ?seed
-        ?sizes
-        ?(trials   = default_trial_count)
-        ?(attempts = scale ~n:trials ~f:default_attempts_per_trial)
-        ?(filter   = (fun _ -> true))
-        gen
-        ~f
-    =
-    let finished_or_stopped_early =
-      Sequence.fold_until (random_sequence ?seed ?sizes gen)
-        ~init:(0, 0)
-        ~f:(fun (successes, failures) value ->
-          match
-            if filter value
-            then begin
-              match f value with
-              | Ok ()       -> Ok (successes + 1, failures)
-              | Error error -> Error error
-            end else begin
-              Ok (successes, failures + 1)
-            end
-          with
-          | Error error -> Stop (Error error)
-          | Ok (successes, failures) ->
-            if successes >= trials
-            then Stop (Ok ())
-            else if successes + failures >= attempts
-            then begin
-              Stop (Or_error.error_s [%message
-                      "Quickcheck.iter: too many failures"
-                        (successes : int)
-                        (failures  : int)])
-            end
-            else Continue (successes, failures))
-    in
-    match finished_or_stopped_early with
-    | Finished (successes, failures) ->
-      Or_error.error_s [%message
-        "Quickcheck.iter: ran out of values"
-          (successes : int)
-          (failures  : int)]
-    | Stopped_early result -> result
+  let iter_or_error ?seed ?sizes ?(trials = default_trial_count) gen ~f =
+    let seq = Sequence.take (random_sequence ?seed ?sizes gen) trials in
+    Sequence.fold_result seq ~init:() ~f:(fun () value -> f value)
 
-  let iter ?seed ?sizes ?trials ?attempts ?filter gen ~f =
-    iter_or_error ?seed ?sizes ?trials ?attempts ?filter gen ~f:(fun elt -> Ok (f elt))
+  let iter ?seed ?sizes ?trials gen ~f =
+    iter_or_error ?seed ?sizes ?trials gen ~f:(fun elt -> Ok (f elt))
     |> Or_error.ok_exn
 
   let random_value ?(seed = default_seed) ?(size = 30) gen =
@@ -1189,8 +1166,6 @@ module Configure (Config : Quickcheck_config) = struct
         ?seed
         ?sizes
         ?trials
-        ?attempts
-        ?filter
         ?shrinker
         ?shrink_attempts
         ?sexp_of
@@ -1222,14 +1197,12 @@ module Configure (Config : Quickcheck_config) = struct
     let open Or_error.Monad_infix in
     List.fold_result examples ~init:() ~f:(fun () x -> f x)
     >>= fun () ->
-    iter_or_error ?seed ?sizes ?trials ?attempts ?filter gen ~f
+    iter_or_error ?seed ?sizes ?trials gen ~f
 
   let test
         ?seed
         ?sizes
         ?trials
-        ?attempts
-        ?filter
         ?shrinker
         ?shrink_attempts
         ?sexp_of
@@ -1241,8 +1214,6 @@ module Configure (Config : Quickcheck_config) = struct
       ?seed
       ?sizes
       ?trials
-      ?attempts
-      ?filter
       ?shrinker
       ?shrink_attempts
       ?sexp_of
@@ -1261,8 +1232,6 @@ module Configure (Config : Quickcheck_config) = struct
         (type key)
         ?seed
         ?sizes
-        ?attempts
-        ?filter
         ?sexp_of
         gen
         ~trials
@@ -1287,7 +1256,7 @@ module Configure (Config : Quickcheck_config) = struct
     in
     with_return (fun r ->
       let set = ref S.empty in
-      iter ?seed ?sizes ~trials ?attempts ?filter gen ~f:(fun elt ->
+      iter ?seed ?sizes ~trials gen ~f:(fun elt ->
         set := S.add elt !set;
         if S.cardinal !set >= distinct_values then r.return ());
       fail !set)
@@ -1296,8 +1265,6 @@ module Configure (Config : Quickcheck_config) = struct
         ?seed
         ?sizes
         ?(trials = default_can_generate_trial_count)
-        ?attempts
-        ?filter
         ?sexp_of
         gen ~f =
     let r = ref [] in
@@ -1312,8 +1279,6 @@ module Configure (Config : Quickcheck_config) = struct
           ?seed
           ?sizes
           ~trials
-          ?attempts
-          ?filter
           gen
           ~f:(f_and_enqueue return.return);
         `Cannot_generate)
@@ -1337,8 +1302,7 @@ include Configure (struct
       | W64 -> 10_000
       | W32 ->  1_000
     let default_can_generate_trial_count = 10_000
-    let default_attempts_per_trial = 10.
-    let default_shrink_attempts    = `Limit 1000
+    let default_shrink_attempts = `Limit 1000
     let default_sizes =
       Sequence.cycle_list_exn (List.range 0 30 ~stop:`inclusive)
   end)

@@ -18,11 +18,18 @@ module type S1 = S1
 module type S2 = S2
 module type S3 = S3
 
+module Minimal : sig
+  module type S = Minimal.S
+  module type S1 = Minimal.S1
+  module type S2 = Minimal.S2
+  module type S3 = Minimal.S3
+end
+
 (** [Of_binable*] functors are for when you want the binary representation of one type to
     be the same as that for some other isomorphic type. *)
 
 module Of_binable
-    (Binable : S)
+    (Binable : Minimal.S)
     (M : sig
        type t
        val to_binable : t -> Binable.t
@@ -31,7 +38,7 @@ module Of_binable
   : S with type t := M.t
 
 module Of_binable1
-    (Binable : S1)
+    (Binable : Minimal.S1)
     (M : sig
        type 'a t
        val to_binable : 'a t -> 'a Binable.t
@@ -40,7 +47,7 @@ module Of_binable1
   : S1 with type 'a t := 'a M.t
 
 module Of_binable2
-    (Binable : S2)
+    (Binable : Minimal.S2)
     (M : sig
        type ('a, 'b) t
        val to_binable : ('a, 'b) t -> ('a, 'b) Binable.t
@@ -49,7 +56,7 @@ module Of_binable2
   : S2 with type ('a, 'b) t := ('a, 'b) M.t
 
 module Of_binable3
-    (Binable : S3)
+    (Binable : Minimal.S3)
     (M : sig
        type ('a, 'b, 'c) t
        val to_binable : ('a, 'b, 'c) t -> ('a, 'b, 'c) Binable.t

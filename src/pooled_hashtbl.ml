@@ -110,17 +110,17 @@ let ensure_mutation_allowed t =
     failwith "Hashtbl: mutation not allowed during iteration"
 ;;
 
-let without_mutating t f =
+let without_mutating t f v =
   if t.mutation_allowed
   then
     begin
       t.mutation_allowed <- false;
-      match f () with
+      match f v with
       | x             -> t.mutation_allowed <- true; x
       | exception exn -> t.mutation_allowed <- true; raise exn
     end
   else
-    f ()
+    f v
 ;;
 
 (* We match want to match Core's interface completely, so you can't change the load
@@ -316,7 +316,7 @@ let add_exn t ~key ~data =
     Error.raise error
 ;;
 
-let find_or_add t key ~default =
+let[@inline always] find_or_add_impl t key ~without_mutating_make_default ~default =
   ensure_mutation_allowed t;
   let index = slot t key in
   let it = table_get t.table index in
@@ -324,10 +324,21 @@ let find_or_add t key ~default =
   if not (Entry.is_null e) then Entry.data t.entries e
   else
     begin
-      let data = without_mutating t default in
+      let data = without_mutating_make_default t default key in
       insert_link t ~index ~key ~data ~it;
       data
     end
+;;
+
+let findi_or_add =
+  let without_mutating_make_default t default key = without_mutating t default key in
+  fun t key ~default ->
+    find_or_add_impl t key ~without_mutating_make_default ~default
+
+let find_or_add =
+  let without_mutating_make_default t default _key = without_mutating t default () in
+  fun t key ~default ->
+    find_or_add_impl t key ~without_mutating_make_default ~default
 ;;
 
 let find t key =
@@ -347,13 +358,24 @@ let find_exn t key =
   else raise Not_found
 ;;
 
-let find_and_call t key ~if_found ~if_not_found =
+let[@inline always] find_and_call_impl t key ~call_if_found ~if_found ~if_not_found =
   let index = slot t key in
   let it = table_get t.table index in
   let e = find_entry t ~key ~it in
   if not (Entry.is_null e)
-  then if_found (Entry.data t.entries e)
+  then call_if_found ~if_found ~key:(Entry.key t.entries e) ~data:(Entry.data t.entries e)
   else if_not_found key
+;;
+
+let find_and_call =
+  let call_if_found ~if_found ~key:_ ~data = if_found data in
+  fun t key ~if_found ~if_not_found ->
+    find_and_call_impl t key ~call_if_found ~if_found ~if_not_found
+
+let findi_and_call =
+  let call_if_found ~if_found ~key ~data = if_found ~key ~data in
+  fun t key ~if_found ~if_not_found ->
+    find_and_call_impl t key ~call_if_found ~if_found ~if_not_found
 ;;
 
 (* This is split in a rather odd way so as to make find_and_remove for a single entry
@@ -387,7 +409,7 @@ let find_and_remove t key =
 
 let change =
   let call t f x =
-    without_mutating t (fun () -> f x)
+    without_mutating t (fun () -> f x) ()
   in
   let rec change_key t key f index e prev =
     if Entry.is_null e then
@@ -768,7 +790,7 @@ let merge =
           | None ->
             maybe_set new_t ~key ~f (`Right right)
           | Some _ -> () (* already done above *)
-        )));
+        )) ()) ();
     new_t
 ;;
 
@@ -777,7 +799,7 @@ type 'a merge_into_action = Remove | Set_to of 'a
 let merge_into ~src ~dst ~f =
   iteri src ~f:(fun ~key ~data ->
     let dst_data = find dst key in
-    let action = without_mutating dst (fun () -> f ~key data dst_data) in
+    let action = without_mutating dst (fun () -> f ~key data dst_data) () in
     match action with
     | Remove   -> remove dst key
     | Set_to data ->
@@ -841,7 +863,7 @@ let equal t t' equal =
       match find t' key with
       | None       -> r.return false
       | Some data' ->
-        if not (without_mutating t' (fun () -> equal data data'))
+        if not (without_mutating t' (fun () -> equal data data') ())
         then r.return false);
     true)
 ;;
@@ -908,9 +930,11 @@ module Accessors = struct
   let partition_tf        = partition_tf
   let partitioni_tf       = partitioni_tf
   let find_or_add         = find_or_add
+  let findi_or_add        = findi_or_add
   let find                = find
   let find_exn            = find_exn
   let find_and_call       = find_and_call
+  let findi_and_call      = findi_and_call
   let find_and_remove     = find_and_remove
   let to_alist            = to_alist
   let validate            = validate

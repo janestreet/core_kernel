@@ -61,23 +61,6 @@ module Test (S : sig val default_seed : Quickcheck.seed end) : sig end = struct
       let%test_unit _ = [%test_result: bool] (example_occurs ~examples:[example]) ~expect:true
     end)
 
-  let%test_module "failure" =
-    (module struct
-      let%test_unit _ =
-        test_can_generate
-          (List.gen_with_length 100
-             G.(filter Int.gen ~f:(fun x -> (x mod 2) = 0)))
-          ~f:(fun _ -> true)
-
-      let%test_unit _ =
-        test Int.gen ~filter:(fun _ -> true) ~f:(fun _ -> ())
-      let%test_unit _ =
-        test Int.gen ~filter:(fun x -> (x mod 2) = 0) ~f:(fun x -> assert ((x mod 2) = 0))
-      let%test_unit _ =
-        assert (Exn.does_raise (fun () ->
-          test Int.gen ~filter:(fun _ -> false) ~f:(fun _ -> ())))
-    end)
-
   let%test_module "duplicates" =
     (module struct
       let gen = G.map Int.gen ~f:ignore
