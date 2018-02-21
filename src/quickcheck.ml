@@ -171,11 +171,11 @@ end = struct
       then min max_len upper_bound
       else max_len
     in
-    (* if there's no extra size to spend on elements, return an empty array, otherwise
-       return a non-empty array with the size distributed among the elements *)
-    if max_len = 0 then [||] else begin
-      (* pick a length, weighted low so that most of the size is spent on elements *)
-      let len = Int_random.log_uniform_incl random ~lo:(max min_len 1) ~hi:max_len in
+    (* pick a length, weighted low so that most of the size is spent on elements *)
+    let len = Int_random.log_uniform_incl random ~lo:min_len ~hi:max_len in
+    (* if there are no elements return an empty array, otherwise return a non-empty array
+       with the size distributed among the elements *)
+    if len = 0 then [||] else begin
       let sizes = Array.init len ~f:(fun _ -> 0) in
       let remaining = size - (len - min_len) in
       let max_index = len - 1 in

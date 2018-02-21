@@ -60,16 +60,15 @@ module type S = sig
   include S_without_immediate with type t := t
 end
 
-#import "config.h"
+[%%import "config.h"]
 
-module type S_int63 =
-#ifdef JSC_PORTABLE_INT63
-  S_without_immediate
-#elifdef JSC_ARCH_SIXTYFOUR
-  S
-#else
-  S_without_immediate
-#endif
+[%%if defined JSC_PORTABLE_INT63]
+module type S_int63 = S_without_immediate
+[%%elif defined JSC_ARCH_SIXTYFOUR]
+module type S_int63 = S
+[%%else]
+module type S_int63 = S_without_immediate
+[%%endif]
 
 module type Immediate_option = sig
 
