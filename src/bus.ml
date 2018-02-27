@@ -132,11 +132,19 @@ module Subscriber = struct
     ; callback          : 'callback
     ; extract_exn       : bool
     ; on_callback_raise : (Error.t -> unit) option
+    ; on_close          : (unit -> unit) option
     ; subscribed_from   : Source_code_position.t
     }
   [@@deriving fields]
 
-  let sexp_of_t _ { callback = _; id; extract_exn; on_callback_raise; subscribed_from }
+  let sexp_of_t _
+        { callback = _
+        ; id
+        ; extract_exn
+        ; on_callback_raise
+        ; on_close = _
+        ; subscribed_from
+        }
     : Sexp.t =
     List [ Atom "Bus.Subscriber.t"
          ; [%message
@@ -157,14 +165,16 @@ module Subscriber = struct
         ~callback:(check invariant_a)
         ~extract_exn:ignore
         ~on_callback_raise:ignore
+        ~on_close:ignore
         ~subscribed_from:ignore)
   ;;
 
-  let create subscribed_from ~callback ~extract_exn ~on_callback_raise =
+  let create subscribed_from ~callback ~extract_exn ~on_callback_raise ~on_close =
     { id                    = Subscriber_id.create ()
     ; callback
     ; extract_exn
     ; on_callback_raise
+    ; on_close
     ; subscribed_from
     }
   ;;
@@ -268,6 +278,8 @@ let close t =
   | Closed -> ()
   | Ok_to_write | Write_in_progress ->
     t.state       <- Closed;
+    Map.iter t.subscribers ~f:(fun subscriber ->
+      Option.iter subscriber.on_close ~f:(fun on_close -> on_close ()));
     t.subscribers <- Subscriber_id.Map.empty;
 ;;
 
@@ -514,13 +526,17 @@ let create
 
 let can_subscribe t = allow_subscription_after_first_write t || not t.write_ever_called
 
-let subscribe_exn ?(extract_exn = false) ?on_callback_raise t subscribed_from ~f =
+let subscribe_exn ?(extract_exn = false) ?on_callback_raise ?on_close t subscribed_from ~f =
   if not (can_subscribe t)
   then failwiths "Bus.subscribe_exn called after first write"
          [%sexp ~~(subscribed_from : Source_code_position.t), { bus = (t : (_, _) t) }]
          [%sexp_of: Sexp.t];
   let subscriber =
-    Subscriber.create subscribed_from ~callback:f ~extract_exn ~on_callback_raise
+    Subscriber.create subscribed_from
+      ~callback:f
+      ~extract_exn
+      ~on_callback_raise
+      ~on_close
   in
   t.subscribers <- Map.set t.subscribers ~key:subscriber.id ~data:subscriber;
   update_write t;

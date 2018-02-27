@@ -130,6 +130,8 @@ module Make_binable (Key : Key_binable) = struct
   include Provide_bin_io (Key)
 end
 
+module M = Hashtbl.M
+
 let%test_unit _ = (* [sexp_of_t] output is sorted by key *)
   let module Table =
     Make (struct

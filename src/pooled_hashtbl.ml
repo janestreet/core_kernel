@@ -164,11 +164,12 @@ let table_set (t : (('k, 'd) Entry.t) array) h (e : ('k, 'd) Entry.t) =
   Array.unsafe_set t h e
 ;;
 
-let hash_key t key = t.hashable.Hashable.hash key
+let hash_key t key = t.hashable.hash key
 
-let compare_key t k1 k2 = t.hashable.Hashable.compare k1 k2
+let compare_key t k1 k2 = t.hashable.compare k1 k2
 
 let hashable t = t.hashable
+let hashable_s t = Hashable.to_key t.hashable
 
 let slot t key = (hash_key t key) land (t.capacity - 1)
 
@@ -1141,6 +1142,10 @@ module Make_binable (Key : sig
   end) = struct
   include Make (Key)
   include Provide_bin_io (Key)
+end
+
+module M (K : T.T) = struct
+  type nonrec 'v t = (K.t, 'v) t
 end
 
 module Using_hashable = struct

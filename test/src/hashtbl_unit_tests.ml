@@ -966,6 +966,7 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
          interesting to test *)
 
       let hashable   = Hashtbl.hashable
+      let hashable_s = Hashtbl.hashable_s
       let sexp_of_t  = Hashtbl.sexp_of_t
       let hash_param = Hashtbl.hash_param
       let hash       = Hashtbl.hash
@@ -986,6 +987,7 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
       module Poly           = Hashtbl.Poly
       module Make_plain     = Hashtbl.Make_plain
       module Make           = Hashtbl.Make
+      module M              = Hashtbl.M
       module Make_binable   = Hashtbl.Make_binable
       module Using_hashable = Hashtbl.Using_hashable
 
@@ -1802,6 +1804,7 @@ module Make_mutation_in_callbacks(Hashtbl : Hashtbl_intf.Hashtbl) = struct
       let find_multi               = Hashtbl.find_multi
       let to_alist                 = Hashtbl.to_alist
       let hashable                 = Hashtbl.hashable
+      let hashable_s               = Hashtbl.hashable_s
 
       (* types, module types, and modules *)
 
@@ -1820,6 +1823,7 @@ module Make_mutation_in_callbacks(Hashtbl : Hashtbl_intf.Hashtbl) = struct
       module Make_plain     = Hashtbl.Make_plain
       module Make           = Hashtbl.Make
       module Make_binable   = Hashtbl.Make_binable
+      module M              = Hashtbl.M
       module Using_hashable = Hashtbl.Using_hashable
 
     end : Hashtbl_intf.Hashtbl))

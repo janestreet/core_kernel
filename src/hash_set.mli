@@ -50,3 +50,5 @@ end
 module Make_plain   (Elt : Elt_plain  ) : S_plain   with type elt = Elt.t
 module Make         (Elt : Elt        ) : S         with type elt = Elt.t
 module Make_binable (Elt : Elt_binable) : S_binable with type elt = Elt.t
+
+module M (Elt : T.T) : sig type nonrec t = Elt.t t end

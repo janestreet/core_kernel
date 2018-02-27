@@ -143,10 +143,13 @@ end
 
     If [on_callback_raise] is supplied and [extract_exn] is set to true, then the error
     passed to the [on_callback_raise] method will contain only the exception raised by [f]
-    without any additional information about the bus subscription or backtrace. *)
+    without any additional information about the bus subscription or backtrace.
+
+    [on_close] is called if you are still subscribed when [Bus.close] is called. *)
 val subscribe_exn
   :  ?extract_exn : bool  (** default is [false] *)
   -> ?on_callback_raise : (Error.t -> unit)
+  -> ?on_close : (unit -> unit)
   -> 'callback Read_only.t
   -> Source_code_position.t
   -> f : 'callback

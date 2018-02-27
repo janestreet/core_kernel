@@ -508,6 +508,8 @@ module Make_binable (Elt : Elt_binable) =
     include Comparator.Make (Elt)
   end)
 
+module M = Set.M
+
 module Stable = struct
   module V1 = struct
     type nonrec ('a, 'cmp) t = ('a, 'cmp) t

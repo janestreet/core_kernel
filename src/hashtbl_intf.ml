@@ -192,4 +192,7 @@ module type Hashtbl = sig
   module Make_plain   (Key : Key_plain)   : S_plain   with type key = Key.t
   module Make         (Key : Key        ) : S         with type key = Key.t
   module Make_binable (Key : Key_binable) : S_binable with type key = Key.t
+  module M (K : Base.T.T) : sig
+    type nonrec 'v t = (K.t, 'v) t
+  end
 end

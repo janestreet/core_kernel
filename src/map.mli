@@ -707,6 +707,10 @@ module Make_binable_using_comparator (Key : sig
     with type Key.t                  = Key.t
     with type Key.comparator_witness = Key.comparator_witness
 
+module M (K : sig type t type comparator_witness end) : sig
+  type nonrec 'v t = (K.t, 'v, K.comparator_witness) t
+end
+
 (** The following functors may be used to define stable modules *)
 module Stable : sig
   module V1 : sig

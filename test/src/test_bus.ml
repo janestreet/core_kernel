@@ -155,6 +155,27 @@ include (struct
         (call_count 1) |}];
     ;;
 
+    let%expect_test "on_close is called" =
+      let callback _ = () in
+      let bus = create1 [%here] ~on_subscription_after_first_write:Allow in
+      let bus_r = read_only bus in
+      let on_close () = print_string "Closed" in
+      ignore (subscribe_exn bus_r [%here] ~on_close ~f:callback : _ Subscriber.t);
+      Bus.close bus;
+      [%expect {|
+        Closed |}];
+    ;;
+
+    let%expect_test "on_close is not called if you unsubscribe" =
+      let callback _ = () in
+      let bus = create1 [%here] ~on_subscription_after_first_write:Allow in
+      let bus_r = read_only bus in
+      let on_close () = print_string "Closed" in
+      Bus.unsubscribe bus_r (subscribe_exn bus_r [%here] ~on_close ~f:callback);
+      Bus.close bus;
+      [%expect {| |}];
+    ;;
+
     let%expect_test "~on_subscription_after_first_write:Allow_and_send_last_value" =
       let bus =
         create [%here] ~on_subscription_after_first_write:Allow_and_send_last_value

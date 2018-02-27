@@ -471,6 +471,8 @@ module Make_binable (Key : Key_binable) =
     include Comparator.Make (Key)
   end)
 
+module M = Map.M
+
 module Tree = struct
   include Tree
   let of_hashtbl_exn = Using_comparator.tree_of_hashtbl_exn

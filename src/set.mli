@@ -490,6 +490,10 @@ module Make_binable_using_comparator (Elt : sig
     with type Elt.t = Elt.t
     with type Elt.comparator_witness = Elt.comparator_witness
 
+module M (Elt : sig type t type comparator_witness end) : sig
+  type nonrec t = (Elt.t, Elt.comparator_witness) t
+end
+
 (** The following types and functors may be used to define stable modules. *)
 module Stable : sig
   module V1 : sig
