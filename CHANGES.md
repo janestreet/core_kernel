@@ -15,7 +15,9 @@ you might want to have a look at Base's
   where they were previously using `Time.X.Stable`.
 
 - Added `Md5.digest_bin_prot`.
-  This gives an easy way to write [t -> Md5.t] for any Binable value.
+  This gives an easy way to write `t -> Md5.t` for any Binable value.
+
+- Added a `Stable_comparable.V1` module type.
 
 ## v0.10
 

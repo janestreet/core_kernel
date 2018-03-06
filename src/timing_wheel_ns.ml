@@ -430,9 +430,9 @@ module Priority_queue = struct
     val set_at          : 'a Pool.t -> 'a t -> Time_ns.t -> unit
     val set_level_index : 'a Pool.t -> 'a t -> int       -> unit
 
-    (* [link pool t ~after] links [t] into the circular doubly-linked list containing
-       [after], placing [t] after [after]. *)
-    val link : 'a Pool.t -> 'a t -> after:'a t -> unit
+    (* [insert_at_end pool t ~to_add] treats [t] as the head of the list and adds [to_add]
+       to the end of it. *)
+    val insert_at_end : 'a Pool.t -> 'a t -> to_add:'a t -> unit
 
     (* [link_to_self pool t] makes [t] be a singleton circular doubly-linked list. *)
     val link_to_self : 'a Pool.t -> 'a t -> unit
@@ -518,17 +518,19 @@ module Priority_queue = struct
       set_prev pool (next pool t) (prev pool t);
     ;;
 
-    let link_to_self pool t =
-      set_next pool t t;
-      set_prev pool t t;
+    let link pool prev next =
+      set_next pool prev next;
+      set_prev pool next prev;
     ;;
 
-    let link pool t ~after =
-      let n = next pool after in
-      set_prev pool t after;
-      set_next pool t n;
-      set_next pool after t;
-      set_prev pool n t;
+    let link_to_self pool t =
+      link pool t t;
+    ;;
+
+    let insert_at_end pool t ~to_add =
+      let prev = prev pool t in
+      link pool prev   to_add;
+      link pool to_add t;
     ;;
 
     let iter pool first ~f =
@@ -924,7 +926,7 @@ module Priority_queue = struct
     let slots = level.slots in
     let first = slots.( slot ) in
     if not (Internal_elt.is_null first)
-    then Internal_elt.link pool elt ~after:first
+    then Internal_elt.insert_at_end pool first ~to_add:elt
     else (
       slots.( slot ) <- elt;
       Internal_elt.link_to_self pool elt);

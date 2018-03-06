@@ -376,17 +376,23 @@ module Make (Time0 : Time0_intf.S) = struct
   ;;
 
   let ensure_colon_in_offset offset =
-    if Char.(=) offset.[1] ':'
-    || Char.(=) offset.[2] ':'
-    then offset
+    let offset_length = String.length offset in
+    if Int.(<=) offset_length 2
+    && Char.is_digit offset.[0]
+    && Char.is_digit offset.[offset_length-1]
+    then offset ^ ":00"
     else begin
-      let offset_length = String.length offset in
-      if Int.(<) offset_length 3 || Int.(>) offset_length 4
-      then failwithf "invalid offset %s" offset ()
-      else String.concat
-             [ String.slice offset 0 (offset_length - 2)
-             ; ":"
-             ; String.slice offset (offset_length - 2) offset_length ]
+      if Char.(=) offset.[1] ':'
+      || Char.(=) offset.[2] ':'
+      then offset
+      else begin
+        if Int.(<) offset_length 3 || Int.(>) offset_length 4
+        then failwithf "invalid offset %s" offset ()
+        else String.concat
+               [ String.slice offset 0 (offset_length - 2)
+               ; ":"
+               ; String.slice offset (offset_length - 2) offset_length ]
+      end
     end
   ;;
 

@@ -100,10 +100,12 @@ module Control : sig
     mutable minor_heap_size : int;
     (** The size (in words) of the minor heap.  Changing this parameter will
         trigger a minor collection.
+
         Default: 262144 words / 1MB (32bit) / 2MB (64bit). *)
 
     mutable major_heap_increment : int;
     (** The minimum number of words to add to the major heap when increasing it.
+
         Default: 126976 words / 0.5MB (32bit) / 1MB (64bit). *)
 
     mutable space_overhead : int;
@@ -113,6 +115,7 @@ module Control : sig
         percentage of the memory used for live data.
         The GC will work more (use more CPU time and collect
         blocks more eagerly) if [space_overhead] is smaller.
+
         Default: 80. *)
 
     mutable verbose : int;
@@ -129,6 +132,7 @@ module Control : sig
         - [0x080] Calling of finalisation functions.
         - [0x100] Bytecode executable search at start-up.
         - [0x200] Computation of compaction triggering condition.
+
         Default: 0. *)
 
     mutable max_overhead : int;
@@ -138,12 +142,14 @@ module Control : sig
         compaction is triggered at the end of each major GC cycle
         (this setting is intended for testing purposes only).
         If [max_overhead >= 1000000], compaction is never triggered.
+
         Default: 500. *)
 
     mutable stack_limit : int;
     (** The maximum size of the stack (in words).  This is only
         relevant to the byte-code runtime, as the native code runtime
         uses the operating system's stack.
+
         Default: 1048576 words / 4MB (32bit) / 8MB (64bit). *)
 
     mutable allocation_policy : int;
@@ -152,12 +158,14 @@ module Control : sig
         quite fast but can result in fragmentation.  1 is the
         first-fit policy, which can be slower in some cases but
         can be better for programs with fragmentation problems.
+
         Default: 0. *)
 
     window_size : int;
     (** The size of the window used by the major GC for smoothing
         out variations in its workload. This is an integer between
         1 and 50.
+
         Default: 1. @since 4.03.0 *)
   }
   [@@deriving bin_io, sexp, fields]

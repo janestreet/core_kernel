@@ -35,7 +35,8 @@ val add_substitute : t -> (string -> string) -> string -> unit
     [$] character and is one of the following:
     - a non empty sequence of alphanumeric or [_] characters,
     - an arbitrary sequence of characters enclosed by a pair of
-    matching parentheses or curly brackets.
+      matching parentheses or curly brackets.
+
     An escaped [$] character is a [$] that immediately follows a backslash
     character; it then stands for a plain [$].
     Raise [Not_found] if the closing character of a parenthesized variable
@@ -56,5 +57,3 @@ end
 
 (** For Core.Bigbuffer, not for users! *)
 val __internal : t -> Bigbuffer_internal.t
-
-

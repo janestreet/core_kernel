@@ -159,6 +159,7 @@ module Robustly_comparable                  = Robustly_comparable
 module Rope                                 = Rope
 module Set_once                             = Set_once
 module Splittable_random                    = Splittable_random
+module Stable_comparable                    = Stable_comparable
 module Stable_unit_test                     = Stable_unit_test
 module Stack                                = Stack
 module String_id                            = String_id

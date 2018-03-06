@@ -68,17 +68,17 @@ val of_string_allow_nan_and_inf : string -> t
     - f: convert a floating-point argument to decimal notation, in the style dddd.ddd.
 
     - F: convert a floating-point argument to OCaml syntax (dddd. or dddd.ddd or d.ddd
-    e+-dd).
+      e+-dd).
 
     - e or E: convert a floating-point argument to decimal notation, in the style d.ddd
-    e+-dd (mantissa and exponent).
+      e+-dd (mantissa and exponent).
 
     - g or G: convert a floating-point argument to decimal notation, in style f or e, E
-    (whichever is more compact).
+      (whichever is more compact).
 
     - h or H: convert a floating-point argument to hexadecimal notation, in the style
-    0xh.hhhh e+-dd (hexadecimal mantissa, exponent in decimal and denotes a power of
-    2).
+      0xh.hhhh e+-dd (hexadecimal mantissa, exponent in decimal and denotes a power of
+      2).
 *)
 module Format : sig
   type t [@@deriving sexp_of]

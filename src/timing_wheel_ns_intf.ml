@@ -46,9 +46,14 @@
     A timing wheel is implemented using a specialized priority queue in which the
     half-open intervals from the epoch onwards are numbered 0, 1, 2, etc.  Each time is
     stored in the priority queue with the key of its interval number.  Thus all alarms
-    with a time in the same interval get the same key, and hence fire at the same time.
-    More specifically, an alarm is fired when the clock reaches or passes the time at the
-    start of the next interval.
+    with a time in the same interval get the same key, and hence fire at the same
+    time. More specifically, an alarm is fired when the clock reaches or passes the time
+    at the start of the next interval.
+
+    Alarms that fire in the same interval will fire in the order in which they were added
+    to the timing wheel, rather than the time they were set to go off.  This is consistent
+    with the guarantees of timing wheel mentioned above, but may nontheless be surprising
+    to users.
 
     The priority queue is implemented with an array of levels of decreasing precision,
     with the lowest level having the most precision and storing the closest upcoming

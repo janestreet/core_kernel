@@ -103,10 +103,12 @@ module type Generator = sig
       [geometric ~p (init+1)].  Must satisfy [0. < p && p <= 1.]. *)
   val geometric : p:float -> int -> int t
 
-  (** [small_non_negative_int = geometric ~p:0.25 0] *)
+  (** [small_non_negative_int] produces a non-negative int of a tractable size, e.g.
+      allocating a value of this size should not run out of memory. *)
   val small_non_negative_int : int t
 
-  (** [small_positive_int = geometric ~p:0.25 1] *)
+  (** [small_positive_int] produces a positive int of a tractable size, e.g. allocating a
+      value of this size should not run out of memory. *)
   val small_positive_int : int t
 
   (** Generators for functions; take observers for inputs and a generator for outputs. *)

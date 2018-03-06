@@ -3,9 +3,9 @@ open! Import
 (* Invariants:
 
    - [Append (x, y)] must have both [x] and [y] non-empty (complexity analysis
-   of [to_string] relies on it).
+     of [to_string] relies on it).
    - Overall length is less than [String.max_length] (so [to_string] can work, at least in
-   principle). *)
+     principle). *)
 type tree =
   | Base of string
   | Append of tree * tree

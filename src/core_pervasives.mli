@@ -1065,14 +1065,14 @@ type ('a,'b) result = ('a, 'b) Pervasives.result = Ok of 'a | Error of 'b
 
     Format strings are made of three kinds of entities:
     - {e conversions specifications}, introduced by the special character ['%']
-    followed by one or more characters specifying what kind of argument to
-    read or print,
+      followed by one or more characters specifying what kind of argument to
+      read or print,
     - {e formatting indications}, introduced by the special character ['@']
-    followed by one or more characters specifying how to read or print the
-    argument,
+      followed by one or more characters specifying how to read or print the
+      argument,
     - {e plain characters} that are regular characters with usual lexical
-    conventions. Plain characters specify string literals to be read in the
-    input or printed in the output.
+      conventions. Plain characters specify string literals to be read in the
+      input or printed in the output.
 
     There is an additional lexical rule to escape the special characters ['%']
     and ['@'] in format strings: if a special character follows a ['%']
@@ -1093,36 +1093,36 @@ type ('a,'b) result = ('a, 'b) Pervasives.result = Ok of 'a | Error of 'b
     The meaning of format string type parameters is as follows:
 
     - ['a] is the type of the parameters of the format for formatted output
-    functions ([printf]-style functions);
-    ['a] is the type of the values read by the format for formatted input
-    functions ([scanf]-style functions).
+      functions ([printf]-style functions);
+      ['a] is the type of the values read by the format for formatted input
+      functions ([scanf]-style functions).
 
     - ['b] is the type of input source for formatted input functions and the
-    type of output target for formatted output functions.
-    For [printf]-style functions from module [Printf], ['b] is typically
-    [out_channel];
-    for [printf]-style functions from module [Format], ['b] is typically
-    [Format.formatter];
-    for [scanf]-style functions from module [Scanf], ['b] is typically
-    [Scanf.Scanning.in_channel].
+      type of output target for formatted output functions.
+      For [printf]-style functions from module [Printf], ['b] is typically
+      [out_channel];
+      for [printf]-style functions from module [Format], ['b] is typically
+      [Format.formatter];
+      for [scanf]-style functions from module [Scanf], ['b] is typically
+      [Scanf.Scanning.in_channel].
 
     Type argument ['b] is also the type of the first argument given to
     user's defined printing functions for [%a] and [%t] conversions,
     and user's defined reading functions for [%r] conversion.
 
     - ['c] is the type of the result of the [%a] and [%t] printing
-    functions, and also the type of the argument transmitted to the
-    first argument of [kprintf]-style functions or to the
-    [kscanf]-style functions.
+      functions, and also the type of the argument transmitted to the
+      first argument of [kprintf]-style functions or to the
+      [kscanf]-style functions.
 
     - ['d] is the type of parameters for the [scanf]-style functions.
 
     - ['e] is the type of the receiver function for the [scanf]-style functions.
 
     - ['f] is the final result type of a formatted input/output function
-    invocation: for the [printf]-style functions, it is typically [unit];
-    for the [scanf]-style functions, it is typically the result type of the
-    receiver function.
+      invocation: for the [printf]-style functions, it is typically [unit];
+      for the [scanf]-style functions, it is typically the result type of the
+      receiver function.
 *)
 
 type ('a, 'b, 'c, 'd, 'e, 'f) format6 =

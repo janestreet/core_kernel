@@ -86,7 +86,7 @@ let robust_sign t : Sign.t =
 
 (* There are two issues:
    - Float.sign used to use robust comparison, and users of [Core] might have come to
-   depend on this.
+     depend on this.
    - Robustness aside, what we get from Comparable.With_zero would map nan to Neg.
 *)
 let sign = robust_sign

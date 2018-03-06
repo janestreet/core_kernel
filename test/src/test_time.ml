@@ -289,3 +289,100 @@ let%expect_test "Ofday.to_parts + Ofday.create" =
     (03:08:29.733553
      ((sign Pos) (hr 3) (min 8) (sec 29) (ms 733) (us 552) (ns 923))) |}];
 ;;
+
+let%expect_test "time zone offset parsing" =
+  let test string =
+    print_endline (Time.to_string (Time.of_string string));
+  in
+  test "2000-01-01 12:34:56.789012-00:00";
+  test "2000-01-01 12:34:56.789012-0:00";
+  test "2000-01-01 12:34:56.789012-00";
+  test "2000-01-01 12:34:56.789012-0";
+  [%expect {|
+    2000-01-01 12:34:56.789012Z
+    2000-01-01 12:34:56.789012Z
+    2000-01-01 12:34:56.789012Z
+    2000-01-01 12:34:56.789012Z |}];
+  test "2000-01-01 12:34:56.789012-05:00";
+  test "2000-01-01 12:34:56.789012-5:00";
+  test "2000-01-01 12:34:56.789012-05";
+  test "2000-01-01 12:34:56.789012-5";
+  [%expect {|
+    2000-01-01 17:34:56.789012Z
+    2000-01-01 17:34:56.789012Z
+    2000-01-01 17:34:56.789012Z
+    2000-01-01 17:34:56.789012Z |}];
+  test "2000-01-01 12:34:56.789012-23:00";
+  test "2000-01-01 12:34:56.789012-23";
+  [%expect {|
+    2000-01-02 11:34:56.789012Z
+    2000-01-02 11:34:56.789012Z |}];
+  test "2000-01-01 12:34:56.789012-24:00";
+  test "2000-01-01 12:34:56.789012-24";
+  [%expect {|
+    2000-01-02 12:34:56.789012Z
+    2000-01-02 12:34:56.789012Z |}];
+
+;;
+let%expect_test "time zone invalid offset parsing" =
+  let test here string =
+    require_does_raise here (fun () ->
+      Time.of_string string)
+  in
+  test [%here] "2000-01-01 12:34:56.789012-0:";
+  test [%here] "2000-01-01 12:34:56.789012-00:";
+  test [%here] "2000-01-01 12:34:56.789012-0:0";
+  test [%here] "2000-01-01 12:34:56.789012-00:0";
+  test [%here] "2000-01-01 12:34:56.789012-:";
+  test [%here] "2000-01-01 12:34:56.789012-:00";
+  test [%here] "2000-01-01 12:34:56.789012-";
+  [%expect {|
+    (time.ml.Make.Time_of_string
+     "2000-01-01 12:34:56.789012-0:"
+     ("Time.Ofday: invalid string"
+      0:
+      "expected colon or am/pm suffix with optional space after minutes"))
+    (time.ml.Make.Time_of_string
+     "2000-01-01 12:34:56.789012-00:"
+     ("Time.Ofday: invalid string"
+      00:
+      "expected colon or am/pm suffix with optional space after minutes"))
+    (time.ml.Make.Time_of_string
+     "2000-01-01 12:34:56.789012-0:0"
+     ("Time.Ofday: invalid string"
+      0:0
+      "expected colon or am/pm suffix with optional space after minutes"))
+    (time.ml.Make.Time_of_string
+     "2000-01-01 12:34:56.789012-00:0"
+     ("Time.Ofday: invalid string"
+      00:0
+      "expected colon or am/pm suffix with optional space after minutes"))
+    (time.ml.Make.Time_of_string
+     "2000-01-01 12:34:56.789012-:"
+     (Invalid_argument "index out of bounds"))
+    (time.ml.Make.Time_of_string
+     "2000-01-01 12:34:56.789012-:00"
+     (Failure "Char.get_digit_exn ':': not a digit"))
+    (time.ml.Make.Time_of_string
+     "2000-01-01 12:34:56.789012-"
+     (Invalid_argument "index out of bounds")) |}];
+  test [%here] "2000-01-01 12:34:56.789012-25:00";
+  test [%here] "2000-01-01 12:34:56.789012-25";
+  [%expect {|
+    (time.ml.Make.Time_of_string
+     "2000-01-01 12:34:56.789012-25:00"
+     ("Time.Ofday: invalid string" 25:00 "hours out of bounds"))
+    (time.ml.Make.Time_of_string
+     "2000-01-01 12:34:56.789012-25"
+     ("Time.Ofday: invalid string" 25:00 "hours out of bounds")) |}];
+  test [%here] "2000-01-01 12:34:56.789012--1:00";
+  test [%here] "2000-01-01 12:34:56.789012--1";
+  [%expect {|
+    (time.ml.Make.Time_of_string
+     "2000-01-01 12:34:56.789012--1:00"
+     (Failure "Char.get_digit_exn '-': not a digit"))
+    (time.ml.Make.Time_of_string
+     "2000-01-01 12:34:56.789012--1"
+     (Invalid_argument "index out of bounds")) |}];
+
+;;

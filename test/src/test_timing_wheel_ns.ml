@@ -1388,3 +1388,21 @@ let%expect_test "[max_alarm_time_in_min_interval]" =
   [%expect {|
     ("1970-01-01 00:00:02.25485783Z") |}];
 ;;
+
+let%expect_test "multiple alarms at the same time are fired in insertion order" =
+  let t     = create_unit () in
+  let delta = Time_ns.Span.of_sec 1. in
+  let at    = Time_ns.(add epoch delta) in
+  for i = 0 to 5 do
+    ignore (add t ~at i);
+  done;
+  advance_clock t ~to_:(Time_ns.add at delta) ~handle_fired:(fun alarm ->
+    print_s [%sexp (Alarm.value t alarm : int)]);
+  [%expect {|
+    0
+    1
+    2
+    3
+    4
+    5 |}]
+;;

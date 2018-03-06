@@ -385,11 +385,11 @@ module Poly = struct
   end
 
   let%test_module _ = (module struct
-                        let (=) = Pervasives.(=)
-                        let%test _ = stable_dedup_list [] = []
-                        let%test _ = stable_dedup_list [5;5;5;5;5] = [5]
-                        let%test _ = stable_dedup_list [5;9;3;5;2;2] = [5;9;3;2]
-                      end)
+    let (=) = Pervasives.(=)
+    let%test _ = stable_dedup_list [] = []
+    let%test _ = stable_dedup_list [5;5;5;5;5] = [5]
+    let%test _ = stable_dedup_list [5;9;3;5;2;2] = [5;9;3;2]
+  end)
 end
 
 module type S_plain = S_plain

@@ -15,13 +15,13 @@ module Unpack_one : sig
       returns one the following:
 
       - [`Ok (value, n)] -- unpacking succeeded and consumed [n] bytes, where [0 <= n <=
-      len].  It is possible to have [n = 0], e.g. for sexp unpacking, which can only tell
-      it has reached the end of an atom when it encounters the following punctuation
-      character, which if it is left paren, is the start of the following sexp.
+        len].  It is possible to have [n = 0], e.g. for sexp unpacking, which can only tell
+        it has reached the end of an atom when it encounters the following punctuation
+        character, which if it is left paren, is the start of the following sexp.
 
       - [`Not_enough_data (p, n)] -- unpacking encountered a valid proper prefix of a
-      packed value, and consumed [n] bytes, where [0 <= n <= len].  [p] is a "partial
-      unpack" that can be supplied to a future call to [unpack_one] to continue unpacking.
+        packed value, and consumed [n] bytes, where [0 <= n <= len].  [p] is a "partial
+        unpack" that can be supplied to a future call to [unpack_one] to continue unpacking.
 
       - [`Invalid_data] -- unpacking encountered an invalidly packed value.
 

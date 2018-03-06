@@ -7,15 +7,15 @@
     Some examples:
 
     - All [int] values are by definition immediate, i.e., unboxed, and so [int]
-    is always immediate.
+      is always immediate.
 
     - A ['a list] is either [[]], which is internally represented as 0 (immediate), or a
-    non-empty list, which is represented as a pointer to a heap block (boxed), which
-    contains the first element and the pointer to the rest of the list.  Therefore ['a
-    list] is sometimes immediate.
+      non-empty list, which is represented as a pointer to a heap block (boxed), which
+      contains the first element and the pointer to the rest of the list.  Therefore ['a
+      list] is sometimes immediate.
 
     - All values of type ['a ref] are represented as a pointer to a heap block containing
-    the actual values ['a].  Therefore ['a ref] is never immediate.
+      the actual values ['a].  Therefore ['a ref] is never immediate.
 
     The witness values can be used to perform safe optimizations such as allowing a more
     efficient ['a array] blit operations if ['a] is always immediate.  These witnesses can

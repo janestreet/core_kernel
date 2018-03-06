@@ -290,54 +290,54 @@ end = struct
   ;;
 
   let%test_module _ = (module struct
-                        let ( * ) = Int63.( * )
-                        let of_int = Int63.of_int
+    let ( * ) = Int63.( * )
+    let of_int = Int63.of_int
 
-                        let round_trip t = [%test_result: t] (of_parts (to_parts t)) ~expect:t
-                        let eq t expect =
-                          [%test_result: t] t ~expect;
-                          [%test_result: Parts.t] (to_parts t) ~expect:(to_parts expect);
-                          round_trip t
+    let round_trip t = [%test_result: t] (of_parts (to_parts t)) ~expect:t
+    let eq t expect =
+      [%test_result: t] t ~expect;
+      [%test_result: Parts.t] (to_parts t) ~expect:(to_parts expect);
+      round_trip t
 
-                        let%test_unit _ = eq (create ~us:2            ()) (of_int 2    * microsecond)
-                        let%test_unit _ = eq (create ~min:3           ()) (of_int 3    * minute)
-                        let%test_unit _ = eq (create ~ms:4            ()) (of_int 4    * millisecond)
-                        let%test_unit _ = eq (create ~sec:5           ()) (of_int 5    * second)
-                        let%test_unit _ = eq (create ~hr:6            ()) (of_int 6    * hour)
-                        let%test_unit _ = eq (create ~day:7           ()) (of_int 7    * day)
-                        let%test_unit _ = eq (create ~us:8 ~sign:Neg  ()) (of_int (-8) * microsecond)
-                        let%test_unit _ = eq (create ~ms:9 ~sign:Zero ()) (of_int 9    * millisecond)
-                        let%test_unit _ =
-                          eq (create ~us:3 ~ns:242 () |> to_sec |> of_sec_with_microsecond_precision)
-                            (of_int 3 * microsecond)
-                        let%test_unit _ =
-                          for _ = 1 to 1_000_000 do
-                            let t =
-                              (Int63.of_int64_exn (Random.int64 (Int63.to_int64 max_value)))
-                              + if Random.bool () then zero else min_value
-                            in
-                            round_trip t
-                          done
+    let%test_unit _ = eq (create ~us:2            ()) (of_int 2    * microsecond)
+    let%test_unit _ = eq (create ~min:3           ()) (of_int 3    * minute)
+    let%test_unit _ = eq (create ~ms:4            ()) (of_int 4    * millisecond)
+    let%test_unit _ = eq (create ~sec:5           ()) (of_int 5    * second)
+    let%test_unit _ = eq (create ~hr:6            ()) (of_int 6    * hour)
+    let%test_unit _ = eq (create ~day:7           ()) (of_int 7    * day)
+    let%test_unit _ = eq (create ~us:8 ~sign:Neg  ()) (of_int (-8) * microsecond)
+    let%test_unit _ = eq (create ~ms:9 ~sign:Zero ()) (of_int 9    * millisecond)
+    let%test_unit _ =
+      eq (create ~us:3 ~ns:242 () |> to_sec |> of_sec_with_microsecond_precision)
+        (of_int 3 * microsecond)
+    let%test_unit _ =
+      for _ = 1 to 1_000_000 do
+        let t =
+          (Int63.of_int64_exn (Random.int64 (Int63.to_int64 max_value)))
+          + if Random.bool () then zero else min_value
+        in
+        round_trip t
+      done
 
-                        let round_trip parts =
-                          [%test_result: Parts.t] (to_parts (of_parts parts)) ~expect:parts
-                        let eq parts expect =
-                          [%test_result: Parts.t] parts ~expect;
-                          [%test_result: t] (of_parts parts) ~expect:(of_parts expect);
-                          round_trip parts
+    let round_trip parts =
+      [%test_result: Parts.t] (to_parts (of_parts parts)) ~expect:parts
+    let eq parts expect =
+      [%test_result: Parts.t] parts ~expect;
+      [%test_result: t] (of_parts parts) ~expect:(of_parts expect);
+      round_trip parts
 
-                        let%test_unit _ =
-                          eq (to_parts (create ~sign:Neg ~hr:2 ~min:3 ~sec:4 ~ms:5 ~us:6 ~ns:7 ()))
-                            { Parts. sign = Neg; hr = 2; min = 3; sec = 4; ms = 5; us = 6; ns = 7 }
-                        let%test_unit _ = round_trip (to_parts (create ~hr:25 ()))
-                        let%test_unit _ =
-                          let hr =
-                            match Word_size.word_size with
-                            | W32 -> Int.max_value
-                            | W64 -> Int64.to_int_exn 2217989799822798757L
-                          in
-                          round_trip (to_parts (create ~hr ()))
-                      end)
+    let%test_unit _ =
+      eq (to_parts (create ~sign:Neg ~hr:2 ~min:3 ~sec:4 ~ms:5 ~us:6 ~ns:7 ()))
+        { Parts. sign = Neg; hr = 2; min = 3; sec = 4; ms = 5; us = 6; ns = 7 }
+    let%test_unit _ = round_trip (to_parts (create ~hr:25 ()))
+    let%test_unit _ =
+      let hr =
+        match Word_size.word_size with
+        | W32 -> Int.max_value
+        | W64 -> Int64.to_int_exn 2217989799822798757L
+      in
+      round_trip (to_parts (create ~hr ()))
+  end)
 
   (* Functions required by [Robustly_comparable]: allows for [epsilon] granularity.
 

@@ -501,8 +501,13 @@ module Generator = struct
   let geometric ~p init =
     bounded_geometric ~p ~maximum:Pre_int.max_value init
 
-  let small_non_negative_int = geometric ~p:0.25 0
-  let small_positive_int     = geometric ~p:0.25 1
+  let small_non_negative_int =
+    create (fun ~size random ->
+      Splittable_random.int random ~lo:0 ~hi:size)
+
+  let small_positive_int =
+    create (fun ~size random ->
+      Splittable_random.int random ~lo:1 ~hi:(size + 1))
 
   module Make_int_generator (M : Pre_int) : sig
     val gen                  :               M.t t
@@ -1075,9 +1080,11 @@ module Configure (Config : Quickcheck_config) = struct
 
   type 'a shr = 'a Shrinker.t
 
+  let nondeterministic_state = lazy (Random.State.make_self_init ())
+
   let random_state_of_seed seed =
     match seed with
-    | `Nondeterministic  -> Splittable_random.State.create ()
+    | `Nondeterministic  -> Splittable_random.State.create (force nondeterministic_state)
     | `Deterministic str -> Splittable_random.State.of_int ([%hash: string] str)
 
   let ensure_infinite sequence ~if_finite_then_raise_s =

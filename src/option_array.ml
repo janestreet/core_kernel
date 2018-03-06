@@ -6,15 +6,15 @@ open! Std_internal
    There are several things that are unsafe about it:
 
    - [float t array] (or any array-backed container) is not memory-safe because float
-   array optimization is incompatible with unboxed option optimization. You have to use
-   [Uniform_array.t] instead of [array].
+     array optimization is incompatible with unboxed option optimization. You have to use
+     [Uniform_array.t] instead of [array].
 
    - Nested options (['a t t]) don't work. They are believed to be memory-safe, but not
-   parametric.
+     parametric.
 
    - A record with [float t]s in it should be safe, but it's only [t] being abstract
-   that gives you safety. If the compiler was smart enough to peek through the module
-   signature then it could decide to construct a float array instead.
+     that gives you safety. If the compiler was smart enough to peek through the module
+     signature then it could decide to construct a float array instead.
 
 *)
 module Cheap_option = struct

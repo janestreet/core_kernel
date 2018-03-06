@@ -3,16 +3,7 @@
 module type Round = Base.Int.Round
 
 module type Stable = sig
-  module V1 : sig
-    type t
-    type comparator_witness
-    include Stable_module_types.S0
-      with type t := t
-      with type comparator_witness := comparator_witness
-    include Comparable.Stable.V1.S
-      with type comparable := t
-      with type comparator_witness := comparator_witness
-  end
+  module V1 : Stable_comparable.V1
 end
 
 module type Hexable = sig
