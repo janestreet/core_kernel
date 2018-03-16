@@ -126,3 +126,15 @@ let%test_module "take_while" =
     let%test_unit _ = [%test_result: t] (rtake_while "123456"    ~f) ~expect:"123456"
   end)
 ;;
+
+(** See {!Array.normalize} for the following 4 functions. *)
+let normalize t i =
+  Ordered_collection_common.normalize ~length_fun:length t i
+
+let slice t start stop =
+  Ordered_collection_common.slice ~length_fun:length ~sub_fun:sub
+    t start stop
+
+let nget x i =
+  let module String = Base.String in
+  x.[normalize x i]

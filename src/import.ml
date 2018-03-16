@@ -18,8 +18,7 @@ module Indexed_container         = Base.Indexed_container
 module Invariant                 = Base.Invariant
 module Intable                   = Base.Intable
 module Monad                     = Base.Monad
-module Obj_array                 = Base.Obj_array
-module Ordered_collection_common = Base.Ordered_collection_common
+module Obj_array                 = Base.Not_exposed_properly.Obj_array
 module Poly                      = Base.Poly
 module Polymorphic_compare       = Base.Polymorphic_compare
 module Popcount                  = Base.Popcount
@@ -88,3 +87,15 @@ let with_return = With_return.with_return
 let am_running_inline_test = Ppx_inline_test_lib.Runtime.am_running_inline_test
 
 type 'a identity = 'a
+
+module Not_found = struct
+  exception Not_found = Not_found
+  [@@deprecated "\
+[since 2018-02] Instead of raising [Not_found], consider using [raise_s] with an
+informative error message.  If code needs to distinguish [Not_found] from other
+exceptions, please change it to handle both [Not_found] and [Not_found_s].  Then, instead
+of raising [Not_found], raise [Not_found_s] with an informative error message."]
+  exception Not_found_s = Base.Not_found_s
+end
+
+include Not_found

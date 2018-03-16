@@ -77,7 +77,7 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
             >>| fun data ->
             List.zip_exn keys data
 
-        let create = Hashtbl.create
+        let create ?growth_allowed ?size m () = Hashtbl.create ?growth_allowed ?size m
 
         let create_gen () = Gen.singleton `Create
 
@@ -158,7 +158,7 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
           let map_and_table m_hash m_map = function
             | `Create ->
               Map.empty m_map,
-              Hashtbl.create m_hash ()
+              Hashtbl.create m_hash
             | `Of_alist alist ->
               Map.of_alist_exn m_map alist,
               Hashtbl.of_alist_exn m_hash alist
@@ -190,6 +190,7 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
         end
 
       end : Creators_with_quickcheck_generators)
+      let create ?growth_allowed ?size m = create ?growth_allowed ?size m ()
 
       include (struct
 
@@ -348,8 +349,8 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
             Hashtbl.iter t ~f:(fun data ->
               datas := data :: !datas);
             [%test_result: Data.t list]
-              (List.sort !datas ~cmp:Data.compare)
-              ~expect:(List.sort (Map.data map) ~cmp:Data.compare))
+              (List.sort !datas ~compare:Data.compare)
+              ~expect:(List.sort (Map.data map) ~compare:Data.compare))
 
 
         let iteri = Hashtbl.iteri
@@ -373,8 +374,8 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
             Hashtbl.iter_keys t ~f:(fun key ->
               keys := key :: !keys);
             [%test_result: Key.t list]
-              (List.sort !keys ~cmp:Key.compare)
-              ~expect:(List.sort (Map.keys map) ~cmp:Key.compare))
+              (List.sort !keys ~compare:Key.compare)
+              ~expect:(List.sort (Map.keys map) ~compare:Key.compare))
 
         let exists = Hashtbl.exists
 
@@ -894,8 +895,8 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
           Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
             let map, t = map_and_table constructor in
             [%test_result: Key.t list]
-              (keys t |> List.sort ~cmp:Key.compare)
-              ~expect:(Map.keys map |> List.sort ~cmp:Key.compare))
+              (keys t |> List.sort ~compare:Key.compare)
+              ~expect:(Map.keys map |> List.sort ~compare:Key.compare))
 
         let data = Hashtbl.data
 
@@ -903,8 +904,8 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
           Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
             let map, t = map_and_table constructor in
             [%test_result: Data.t list]
-              (data t |> List.sort ~cmp:Data.compare)
-              ~expect:(Map.data map |> List.sort ~cmp:Data.compare))
+              (data t |> List.sort ~compare:Data.compare)
+              ~expect:(Map.data map |> List.sort ~compare:Data.compare))
 
         let to_alist = Hashtbl.to_alist
 
@@ -912,8 +913,8 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
           Qc.test constructor_gen ~sexp_of:[%sexp_of: constructor] ~f:(fun constructor ->
             let map, t = map_and_table constructor in
             [%test_result: (Key.t * Data.t) list]
-              (to_alist t |> List.sort ~cmp:[%compare: Key.t * Data.t])
-              ~expect:(Map.to_alist map |> List.sort ~cmp:[%compare: Key.t * Data.t]))
+              (to_alist t |> List.sort ~compare:[%compare: Key.t * Data.t])
+              ~expect:(Map.to_alist map |> List.sort ~compare:[%compare: Key.t * Data.t]))
 
         let validate = Hashtbl.validate
 
@@ -958,9 +959,12 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
 
       end : Accessors_with_unit_tests)
 
-      include (Hashtbl : Base.Hashtbl.Deprecated
-               with type ('a, 'b) t := ('a, 'b) Hashtbl.t
-               with type 'a key := 'a Hashtbl.key)
+      let iter_vals = iter
+      let replace = set
+      let replace_all = map_inplace
+      let replace_alli = mapi_inplace
+      let filter_replace_all = filter_map_inplace
+      let filter_replace_alli = filter_mapi_inplace
 
       (* miscellaneous functions that aren't in Accessors and aren't particularly
          interesting to test *)
@@ -1767,9 +1771,12 @@ module Make_mutation_in_callbacks(Hashtbl : Hashtbl_intf.Hashtbl) = struct
             t;
           keys, data)
 
-      include (Hashtbl : Base.Hashtbl.Deprecated
-               with type ('a, 'b) t := ('a, 'b) Hashtbl.t
-               with type 'a key := 'a Hashtbl.key)
+      let iter_vals = iter
+      let replace = set
+      let replace_all = map_inplace
+      let replace_alli = mapi_inplace
+      let filter_replace_all = filter_map_inplace
+      let filter_replace_alli = filter_mapi_inplace
 
       (* we do not test [validate], which should never raise externally, but which may go
          from pass to fail if the callback mutates, so it does not fit the normal

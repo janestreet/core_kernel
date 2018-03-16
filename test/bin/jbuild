@@ -18,7 +18,7 @@
   (flags (:standard -safe-string))
   (libraries (replace_caml_modify_for_testing
               core))
-  (preprocess (pps (ppx_jane ppx_driver.runner)))))
+  (preprocess (pps (ppx_jane ppxlib.runner)))))
 
 
 

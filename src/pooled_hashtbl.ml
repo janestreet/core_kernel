@@ -356,7 +356,7 @@ let find_exn t key =
   let it = table_get t.table index in
   let e = find_entry t ~key ~it in
   if not (Entry.is_null e) then Entry.data t.entries e
-  else raise Not_found
+  else raise Caml.Not_found
 ;;
 
 let[@inline always] find_and_call_impl t key ~call_if_found ~if_found ~if_not_found =
@@ -851,9 +851,9 @@ let mapi_inplace t ~f =
 let map_inplace t ~f =
   mapi_inplace t ~f:(fun ~key:_ ~data -> f data)
 
-let replace_all         = map_inplace
-let replace_alli        = mapi_inplace
-let filter_replace_all  = filter_map_inplace
+let replace_all = map_inplace
+let replace_alli = mapi_inplace
+let filter_replace_all = filter_map_inplace
 let filter_replace_alli = filter_mapi_inplace
 ;;
 
@@ -909,7 +909,6 @@ module Accessors = struct
   let iter_keys           = iter_keys
   let iter                = iter
   let iteri               = iteri
-  let iter_vals           = iter_vals
   let exists              = exists
   let existsi             = existsi
   let for_all             = for_all
@@ -950,10 +949,6 @@ module Accessors = struct
   let mapi_inplace        = mapi_inplace
   let filter_map_inplace  = filter_map_inplace
   let filter_mapi_inplace = filter_mapi_inplace
-  let replace_all         = replace_all
-  let replace_alli        = replace_alli
-  let filter_replace_all  = filter_replace_all
-  let filter_replace_alli = filter_replace_alli
   let equal               = equal
   let similar             = similar
   let incr                = incr
@@ -1162,25 +1157,25 @@ module Using_hashable = struct
   let create_with_key_exn = create_with_key_exn
   let group = group
 end
-let create m ?growth_allowed ?size () =
+let create ?growth_allowed ?size m =
   create ~hashable:(Hashable.of_key m) ?growth_allowed ?size ()
-let of_alist m ?growth_allowed ?size l =
+let of_alist ?growth_allowed ?size m l =
   of_alist ~hashable:(Hashable.of_key m) ?growth_allowed ?size l
-let of_alist_report_all_dups m ?growth_allowed ?size l =
+let of_alist_report_all_dups ?growth_allowed ?size m l =
   of_alist_report_all_dups ~hashable:(Hashable.of_key m) ?growth_allowed ?size l
-let of_alist_or_error m ?growth_allowed ?size l =
+let of_alist_or_error ?growth_allowed ?size m l =
   of_alist_or_error ~hashable:(Hashable.of_key m) ?growth_allowed ?size l
-let of_alist_exn m ?growth_allowed ?size l =
+let of_alist_exn ?growth_allowed ?size m l =
   of_alist_exn ~hashable:(Hashable.of_key m) ?growth_allowed ?size l
-let of_alist_multi m ?growth_allowed ?size l =
+let of_alist_multi ?growth_allowed ?size m l =
   of_alist_multi ~hashable:(Hashable.of_key m) ?growth_allowed ?size l
-let create_mapped m ?growth_allowed ?size ~get_key ~get_data l =
+let create_mapped ?growth_allowed ?size m ~get_key ~get_data l =
   create_mapped ~hashable:(Hashable.of_key m) ?growth_allowed ?size ~get_key ~get_data l
-let create_with_key m ?growth_allowed ?size ~get_key l =
+let create_with_key ?growth_allowed ?size m ~get_key l =
   create_with_key ~hashable:(Hashable.of_key m) ?growth_allowed ?size ~get_key l
-let create_with_key_or_error m ?growth_allowed ?size ~get_key l =
+let create_with_key_or_error ?growth_allowed ?size m ~get_key l =
   create_with_key_or_error ~hashable:(Hashable.of_key m) ?growth_allowed ?size ~get_key l
-let create_with_key_exn m ?growth_allowed ?size ~get_key l =
+let create_with_key_exn ?growth_allowed ?size m ~get_key l =
   create_with_key_exn ~hashable:(Hashable.of_key m) ?growth_allowed ?size ~get_key l
-let group m ?growth_allowed ?size ~get_key ~get_data ~combine l =
+let group ?growth_allowed ?size m ~get_key ~get_data ~combine l =
   group ~hashable:(Hashable.of_key m) ?growth_allowed ?size ~get_key ~get_data ~combine l

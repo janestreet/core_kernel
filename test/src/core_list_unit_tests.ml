@@ -197,8 +197,8 @@ let%test_module "random" =
              (G.compare_fn obs))
           ~f:(fun (list, cmp) ->
             [%test_eq: t option]
-              (List.min_elt list ~cmp)
-              (List.max_elt list ~cmp:(fun x y -> cmp y x)))
+              (List.min_elt list ~compare:cmp)
+              (List.max_elt list ~compare:(fun x y -> cmp y x)))
 
       let%test_unit "return" =
         Q.test ~sexp_of:[%sexp_of: t]
@@ -529,8 +529,8 @@ let%test_module "random" =
                indistinguishable. *)
             let compare = cmp in
             [%test_eq: t list]
-              (List.sort        list ~cmp)
-              (List.stable_sort list ~cmp))
+              (List.sort        list ~compare:cmp)
+              (List.stable_sort list ~compare:cmp))
 
       let%test_unit "stable_sort + merge vs append + stable_sort" =
         Q.test ~sexp_of:[%sexp_of: t list * t list * (t -> t -> int)]
@@ -540,10 +540,10 @@ let%test_module "random" =
              (G.compare_fn obs))
           ~f:(fun (list1, list2, cmp) ->
             [%test_eq: t list]
-              (List.merge ~cmp
-                 (List.stable_sort ~cmp list1)
-                 (List.stable_sort ~cmp list2))
-              (List.stable_sort ~cmp
+              (List.merge ~compare:cmp
+                 (List.stable_sort ~compare:cmp list1)
+                 (List.stable_sort ~compare:cmp list2))
+              (List.stable_sort ~compare:cmp
                  (List.append list1 list2)))
 
       let%test_unit "hd vs hd_exn" =

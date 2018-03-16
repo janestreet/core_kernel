@@ -13,8 +13,8 @@ let%test_module "[As_lower_bound.compare], [As_upper_bound.compare]" =
     type lower = Ord.t As_lower_bound.t [@@deriving compare]
     type upper = Ord.t As_upper_bound.t [@@deriving compare]
 
-    let sorted_lower = List.sort all ~cmp:[%compare: lower]
-    let sorted_upper = List.sort all ~cmp:[%compare: upper]
+    let sorted_lower = List.sort all ~compare:[%compare: lower]
+    let sorted_upper = List.sort all ~compare:[%compare: upper]
 
     let%expect_test _ =
       print_s [%sexp (sorted_lower : t list)];

@@ -343,9 +343,11 @@ module Observer = struct
     create (fun x ~size hash ->
       observe (f ()) x ~size hash)
 
-  let recursive f =
+  let fixed_point f =
     let rec self () = f (of_fun self) in
     of_fun self
+
+  let recursive = fixed_point
 
   let comparison ~compare ~eq ~lt ~gt =
     unmap (variant3 lt (singleton ()) gt) ~f:(fun x ->
@@ -565,11 +567,41 @@ module Generator = struct
 
   let union list = of_list list |> join
 
-  let recursive f =
+  let fixed_point f =
     let rec r ~size random =
-      generate (f (create r)) ~size random
+      generate (force lazy_t) ~size random
+    and lazy_t = lazy (f (create r))
     in
-    create r
+    force lazy_t
+
+  let recursive = fixed_point
+
+  (* The resulting generator will raise if used at size 0. *)
+  let with_decremented_size_exn t =
+    let%bind n = size in
+    with_size t ~size:(n - 1)
+
+  let weighted_recursive_union nonrec_list ~f =
+    fixed_point (fun self ->
+      let nonrec_gen = weighted_union nonrec_list in
+      let rec_gen =
+        let rec_list =
+          List.map (f self) ~f:(fun (w, t) ->
+            (* This generator is never used at size 0, so this use of
+               [with_decremented_size_exn] is safe. *)
+            (w, with_decremented_size_exn t))
+        in
+        weighted_union (nonrec_list @ rec_list)
+      in
+      match%bind size with
+      | 0 -> nonrec_gen
+      | _ -> rec_gen)
+
+  let recursive_union nonrec_list ~f =
+    let weighted list = List.map list ~f:(fun t -> (1., t)) in
+    weighted_recursive_union
+      (weighted nonrec_list)
+      ~f:(fun self -> weighted (f self))
 
   let variant2 a b =
     union [ map a ~f:(fun a -> `A a)
@@ -844,7 +876,7 @@ module Shrinker = struct
       open Test_data
 
       let%test_unit "tuple2 shrinker" =
-        let sort = List.sort ~cmp:[%compare: int * int ] in
+        let sort = List.sort ~compare:[%compare: int * int ] in
         let expect =
           [(0,5); (5,1)]
           |> sort
@@ -856,7 +888,7 @@ module Shrinker = struct
         [%test_result: (int * int) list ] ~expect results
 
       let%test_unit "tuple3 shrinker" =
-        let sort = List.sort ~cmp:[%compare: int * int * int ] in
+        let sort = List.sort ~compare:[%compare: int * int * int ] in
         let expect = [(0,5,5); (5,1,5); (5,5,2)] |> sort in
         let results =
           shrink (tuple3 t0 t1 t2) (5,5,5)
@@ -865,7 +897,7 @@ module Shrinker = struct
         [%test_result: (int*int*int) list ] results ~expect
 
       let%test_unit "tuple4 shrinker" =
-        let sort = List.sort ~cmp:[%compare: int * int * int * int ] in
+        let sort = List.sort ~compare:[%compare: int * int * int * int ] in
         let expect =
           [(0,5,5,5); (5,1,5,5); (5,5,2,5); (5,5,5,3)]
           |> sort
@@ -877,7 +909,7 @@ module Shrinker = struct
         [%test_result: (int*int*int*int) list ] results ~expect
 
       let%test_unit "tuple5 shrinker" =
-        let sort = List.sort ~cmp:[%compare: int * int * int * int * int ] in
+        let sort = List.sort ~compare:[%compare: int * int * int * int * int ] in
         let expect =
           [(0,5,5,5,5); (5,1,5,5,5); (5,5,2,5,5); (5,5,5,3,5); (5,5,5,5,4)]
           |> sort
@@ -889,7 +921,7 @@ module Shrinker = struct
         [%test_result: (int*int*int*int*int) list ] results ~expect
 
       let%test_unit "tuple6 shrinker" =
-        let sort = List.sort ~cmp:[%compare: int * int * int * int * int * int ] in
+        let sort = List.sort ~compare:[%compare: int * int * int * int * int * int ] in
         let expect =
           [ (0,9,9,9,9,9)
           ; (9,1,9,9,9,9)
@@ -1026,11 +1058,13 @@ module Shrinker = struct
         [%test_result: var6 list ] ~expect:[`F 5] shrunk_f
     end)
 
-  let recursive f =
+  let fixed_point f =
     let rec shrinker v =
       Sequence.of_lazy (lazy (shrink (f (create shrinker)) v))
     in
     create shrinker
+
+  let recursive = fixed_point
 
   module Make_int_shrinker (M : Pre_int) : sig
     val shrinker  : M.t t

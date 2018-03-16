@@ -59,7 +59,7 @@ module Std = struct
 
     module Time_ns_alternate_sexp          = Time_ns_alternate_sexp
   end
-end
+end [@@deprecated "[since 2018-03] Use Core_kernel directly instead"]
 (**/**)
 
-include Std (** @inline *)
+include Std [@@warning "-3"] (** @inline *)

@@ -17,6 +17,8 @@ include module type of struct include Base.Array end
     We add extensions for [Int] and [Float] arrays to make them bin-able, comparable,
     sexpable, and blit-able (via [Blit.S]). [Permissioned] provides fine-grained access
     control for arrays.
+
+    Operations supporting "normalized" indexes are also available.
 *)
 
 module Int : sig
@@ -38,6 +40,23 @@ module Float : sig
     : src:t -> src_pos:int -> dst:t -> dst_pos:int -> len:int -> unit
     = "core_array_unsafe_float_blit" [@@noalloc]
 end
+
+(** [normalize array index] returns a new index into the array such that if the index is
+    less than zero, the returned index will "wrap around" -- i.e., [array.(normalize array
+    (-1))] returns the last element of the array. *)
+val normalize : 'a t -> int -> int
+
+(** [slice t start stop] returns a new array including elements [t.(start)] through
+    [t.(stop-1)], normalized Python-style with the exception that [stop = 0] is treated as
+    [stop = length t]. *)
+val slice : 'a t -> int -> int -> 'a t
+
+(** Array access with [normalize]d index. *)
+val nget : 'a t -> int -> 'a
+
+(** Array modification with [normalize]d index. *)
+val nset : 'a t -> int -> 'a -> unit
+
 
 (** The [Permissioned] module gives the ability to restrict permissions on an array, so
     you can give a function read-only access to an array, create an immutable array, etc.
@@ -148,11 +167,11 @@ module Permissioned : sig
     :  ?pos:int
     -> ?len:int
     -> ('a, [> read_write]) t
-    -> cmp:('a -> 'a -> int)
+    -> compare:('a -> 'a -> int)
     -> unit
-  val stable_sort        : ('a, [> read_write]) t -> cmp:('a -> 'a -> int) -> unit
-  val is_sorted          : ('a, [> read]      ) t -> cmp:('a -> 'a -> int) -> bool
-  val is_sorted_strictly : ('a, [> read]      ) t -> cmp:('a -> 'a -> int) -> bool
+  val stable_sort        : ('a, [> read_write]) t -> compare:('a -> 'a -> int) -> unit
+  val is_sorted          : ('a, [> read]      ) t -> compare:('a -> 'a -> int) -> bool
+  val is_sorted_strictly : ('a, [> read]      ) t -> compare:('a -> 'a -> int) -> bool
   val concat_map
     :  ('a, [> read]) t
     -> f:('a -> ('b, [> read]) t)
@@ -214,7 +233,9 @@ module Permissioned : sig
   val of_list_map     : 'a list -> f:('a -> 'b) -> ('b, [< _ perms]) t
   val of_list_rev_map : 'a list -> f:('a -> 'b) -> ('b, [< _ perms]) t
   val replace     : ('a, [> read_write]) t -> int -> f:('a -> 'a) -> unit
-  val replace_all : ('a, [> read_write]) t        -> f:('a -> 'a) -> unit
+  val replace_all : ('a, [> read_write]) t -> f:('a -> 'a) -> unit
+  [@@deprecated "[since 2018-03] use [map_inplace] instead"]
+  val map_inplace  : ('a, [> read_write]) t -> f:('a -> 'a) -> unit
   val find_exn     : ('a, [> read]) t -> f:('a -> bool) -> 'a
   val find_map_exn : ('a, [> read]) t -> f:('a -> 'b option) -> 'b
   val findi     : ('a, [> read]) t -> f:(int -> 'a -> bool) -> (int * 'a) option
@@ -231,7 +252,7 @@ module Permissioned : sig
   val zip     : ('a, [> read]) t -> ('b, [> read]) t -> ('a * 'b, [< _ perms]) t option
   val zip_exn : ('a, [> read]) t -> ('b, [> read]) t -> ('a * 'b, [< _ perms]) t
   val unzip : ('a * 'b, [> read]) t -> ('a, [< _ perms]) t * ('b, [< _ perms]) t
-  val sorted_copy : ('a, [> read]) t -> cmp:('a -> 'a -> int) -> ('a, [< _ perms]) t
+  val sorted_copy : ('a, [> read]) t -> compare:('a -> 'a -> int) -> ('a, [< _ perms]) t
   val last : ('a, [> read]) t -> 'a
   val empty : unit -> ('a, [< _ perms]) t
   [@@deprecated "[since 2017-05] Use [ [||] ]"]

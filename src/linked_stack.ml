@@ -75,8 +75,8 @@ let fold_until  t ~init ~f = Container.fold_until  ~fold ~init ~f t
 
 let count t ~f = List.count t.elts ~f
 let sum m t ~f = List.sum m t.elts ~f
-let min_elt t ~cmp = List.min_elt t.elts ~cmp
-let max_elt t ~cmp = List.max_elt t.elts ~cmp
+let min_elt t ~compare = List.min_elt t.elts ~compare
+let max_elt t ~compare = List.max_elt t.elts ~compare
 
 let exists t ~f = List.exists t.elts ~f
 

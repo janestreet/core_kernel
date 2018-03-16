@@ -47,7 +47,7 @@ module Test_generic
     List.iter [ 0; 1; 2; 3; 4; 8; 1024 ] ~f:(fun n ->
       let list = List.init n ~f:Elt.of_int in
       let c = Container.of_list list in
-      let sort l = List.sort l ~cmp:compare in
+      let sort l = List.sort l ~compare in
       let sorts_are_equal l1 l2 = sort l1 = sort l2 in
       assert (n = Container.length c);
       assert ((n = 0) = Container.is_empty c);
@@ -76,12 +76,12 @@ module Test_generic
       let compare_elt a b = Int.compare (Elt.to_int a) (Elt.to_int b) in
       if n = 0 then begin
         assert (!r = 0);
-        assert (min_elt ~cmp:compare_elt c = None);
-        assert (max_elt ~cmp:compare_elt c = None);
+        assert (min_elt ~compare:compare_elt c = None);
+        assert (max_elt ~compare:compare_elt c = None);
       end else begin
         assert (!r = (n * (n-1) / 2));
-        assert (Option.map ~f:Elt.to_int (min_elt ~cmp:compare_elt c) = Some 0);
-        assert (Option.map ~f:Elt.to_int (max_elt ~cmp:compare_elt c) = Some (pred n));
+        assert (Option.map ~f:Elt.to_int (min_elt ~compare:compare_elt c) = Some 0);
+        assert (Option.map ~f:Elt.to_int (max_elt ~compare:compare_elt c) = Some (pred n));
       end;
       let mid = Container.length c / 2 in
       match

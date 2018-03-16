@@ -39,7 +39,7 @@
     gc_stubs
     time_ns_stubs
     version_util_fallback_stubs))
-  (preprocess (pps (ppx_jane -check-doc-comments ppx_driver.runner)))
+  (preprocess (pps (ppx_jane -check-doc-comments ppxlib.runner)))
   (preprocessor_deps (config.h))
   (js_of_ocaml (
     (javascript_files (strftime.js runtime.js))

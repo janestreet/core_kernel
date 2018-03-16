@@ -98,8 +98,8 @@ module Hashtbl = Base.Hashtbl
 
 module type Key_plain  = Hashtbl.Key
 
-module      Hashable = Hashtbl.Hashable
-module type Hashable = Hashtbl.Hashable
+module      Hashable = Base.Hashable
+module type Hashable = Base.Hashable.Hashable
 
 module type Key = sig
   type t [@@deriving sexp]
@@ -111,18 +111,21 @@ module type Key_binable = sig
   include Key with type t := t
 end
 
-module type Creators  = Hashtbl.Creators
+module type Creators  = Hashtbl.Private.Creators_generic
 module type Accessors = Hashtbl.Accessors
 module type Multi     = Hashtbl.Multi
 
 type ('key, 'data, 'z) create_options_with_first_class_module =
-  ('key, 'data, 'z) Hashtbl.create_options_with_first_class_module
+  ('key, 'data, 'z) Hashtbl.create_options
 
 type ('key, 'data, 'z) create_options_without_hashable =
-  ('key, 'data, 'z) Hashtbl.create_options_without_hashable
+  ('key, 'data, 'z) Hashtbl.Private.create_options_without_first_class_module
 
 type ('key, 'data, 'z) create_options_with_hashable =
-  ('key, 'data, 'z) Hashtbl.create_options_with_hashable
+  ?growth_allowed:bool (** defaults to [true] *)
+  -> ?size:int (** initial size -- default 128 *)
+  -> hashable:'key Hashable.t
+  -> 'z
 
 module type S_plain = sig
   type key
@@ -170,7 +173,7 @@ module type Hashtbl = sig
   include Hashtbl.S_without_submodules (** @inline *)
 
   module Using_hashable : sig
-    include Hashtbl.Creators
+    include Creators
       with type ('a, 'b) t  := ('a, 'b) t
       with type 'a key := 'a key
       with type ('a, 'b, 'z) create_options := ('a, 'b, 'z) create_options_with_hashable
@@ -195,4 +198,22 @@ module type Hashtbl = sig
   module M (K : Base.T.T) : sig
     type nonrec 'v t = (K.t, 'v) t
   end
+
+  module Hashable = Hashable
+  val hashable : ('key, _) t -> 'key Hashable.t
+
+  val iter_vals : (_, 'b) t -> f:('b -> unit) -> unit
+  [@@deprecated "[since 2016-04] Use iter instead"]
+
+  val replace : ('a, 'b) t -> key:'a key -> data:'b -> unit
+  [@@deprecated "[since 2015-10] Use set instead"]
+
+  val replace_all : (_, 'b) t -> f:('b -> 'b) -> unit
+  [@@deprecated "[since 2016-02] Use map_inplace instead"]
+  val replace_alli : ('a, 'b) t -> f:(key:'a key -> data:'b -> 'b) -> unit
+  [@@deprecated "[since 2016-02] Use mapi_inplace instead"]
+  val filter_replace_all : (_, 'b) t -> f:('b -> 'b option) -> unit
+  [@@deprecated "[since 2016-02] Use filter_map_inplace instead"]
+  val filter_replace_alli : ('a, 'b) t -> f:(key:'a key -> data:'b -> 'b option) -> unit
+  [@@deprecated "[since 2016-02] Use filter_mapi_inplace instead"]
 end

@@ -57,3 +57,19 @@ module Make_binable (Elt : Elt_binable) = struct
   include Make (Elt)
   include Provide_bin_io (Elt)
 end
+
+module Using_hashable = struct
+  type 'a elt = 'a
+
+  let create ?growth_allowed ?size ~hashable () =
+    create ?growth_allowed ?size (Base.Hashable.to_key hashable)
+  ;;
+
+  let of_list ?growth_allowed ?size ~hashable l =
+    of_list ?growth_allowed ?size (Base.Hashable.to_key hashable) l
+  ;;
+end
+
+let hashable = Private.hashable
+
+let create ?growth_allowed ?size m () = create ?growth_allowed ?size m

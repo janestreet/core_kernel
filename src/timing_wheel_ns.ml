@@ -1325,7 +1325,7 @@ let pretty ({ config; start; max_interval_num; now
             ; priority_queue = _ } as t) =
   let r = ref [] in
   iter t ~f:(fun a -> r := Pretty.Alarm.create t a :: !r);
-  let alarms = List.sort !r ~cmp:Pretty.Alarm.compare in
+  let alarms = List.sort !r ~compare:Pretty.Alarm.compare in
   { Pretty.
     config
   ; start

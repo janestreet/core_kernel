@@ -226,8 +226,8 @@ module F (Base : Base) : S with type base = Base.t = struct
       let%test _ =
         sum (module Int) bcdefghi ~f:(fun c -> Char.to_int c - Char.to_int 'a')
         = 1 + 2 + 3 + 4 + 5 + 6 + 7 + 8
-      let%test _ = min_elt bcdefghi ~cmp:Char.compare = Some 'b'
-      let%test _ = max_elt bcdefghi ~cmp:Char.compare = Some 'i'
+      let%test _ = min_elt bcdefghi ~compare:Char.compare = Some 'b'
+      let%test _ = max_elt bcdefghi ~compare:Char.compare = Some 'i'
     end)
 
   let drop_prefix t n =

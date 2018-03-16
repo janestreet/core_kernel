@@ -19,6 +19,11 @@ you might want to have a look at Base's
 
 - Added a `Stable_comparable.V1` module type.
 
+- Changed `fold_until`'s interface: instead of returning a
+  `Finished_or_stopped_early.t` it now takes a `finish` callback.
+
+- Deprecated the [Std] module.
+
 ## v0.10
 
 - Renamed `Float.to_string` as `to_string_12`, to reflect its 12-digit

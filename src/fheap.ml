@@ -179,7 +179,7 @@ let%test_module _ =
 
       let sexp_of_t sexp_of_v t = List.sexp_of_t sexp_of_v t.heap
       let create ~cmp = { cmp ; heap = [] }
-      let add t v = { cmp = t.cmp ; heap = List.sort ~cmp:t.cmp (v :: t.heap)}
+      let add t v = { cmp = t.cmp ; heap = List.sort ~compare:t.cmp (v :: t.heap)}
       let pop t =
         match t.heap with
         | [] -> None
@@ -192,7 +192,7 @@ let%test_module _ =
         match t.heap with
         | [] -> None
         | _ :: xs -> Some { cmp = t.cmp ; heap = xs }
-      let of_list l ~cmp = { cmp ; heap = List.sort ~cmp l}
+      let of_list l ~cmp = { cmp ; heap = List.sort ~compare:cmp l}
       let to_list t = t.heap
       let sum m t ~f = List.sum m (to_list t) ~f
     end
@@ -283,8 +283,8 @@ let%test_module _ =
     ;;
 
     let check (this_t, that_t) =
-      let this_list = List.sort ~cmp:Int.compare (This_heap.to_list this_t) in
-      let that_list = List.sort ~cmp:Int.compare (That_heap.to_list that_t) in
+      let this_list = List.sort ~compare:Int.compare (This_heap.to_list this_t) in
+      let that_list = List.sort ~compare:Int.compare (That_heap.to_list that_t) in
       [%test_eq: int list] this_list that_list
     ;;
 

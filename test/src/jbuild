@@ -3,7 +3,7 @@
   (libraries (core_kernel base_test expect_test_helpers_kernel))
   (flags (:standard -safe-string))
   (preprocessor_deps (../../src/config.h))
-  (preprocess (pps (ppx_jane ppx_driver.runner)))))
+  (preprocess (pps (ppx_jane ppxlib.runner)))))
 
 
 

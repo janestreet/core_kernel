@@ -51,7 +51,7 @@ module For_quickcheck = struct
           ~expect:[]
 
       let%test_unit _ =
-        let sort = List.sort ~cmp:[%compare: int option ] in
+        let sort = List.sort ~compare:[%compare: int option ] in
         let expect =
           [ None; Some 1]
           |> sort

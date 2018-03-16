@@ -516,7 +516,7 @@ let of_array arr ~cmp =
 
 let of_list l ~cmp = of_array (Array.of_list l) ~cmp
 
-let sexp_of_t f t = Array.sexp_of_t f (to_array t |> Array.sorted_copy ~cmp:t.cmp)
+let sexp_of_t f t = Array.sexp_of_t f (to_array t |> Array.sorted_copy ~compare:t.cmp)
 
 let%test_module _ =
   (module struct
@@ -646,7 +646,7 @@ let%test_module _ =
       let sexp_of_t sexp_of_v t = List.sexp_of_t sexp_of_v t.heap
 
       let create ~cmp = { cmp; heap = [] }
-      let add t v = t.heap <- List.sort ~cmp:t.cmp (v :: t.heap)
+      let add t v = t.heap <- List.sort ~compare:t.cmp (v :: t.heap)
 
       let pop t =
         match t.heap with
@@ -724,8 +724,8 @@ let%test_module _ =
     ;;
 
     let internal_check (this_t, that_t) =
-      let this_list = List.sort ~cmp:Int.compare (This_heap.to_list this_t) in
-      let that_list = List.sort ~cmp:Int.compare (That_heap.to_list that_t) in
+      let this_list = List.sort ~compare:Int.compare (This_heap.to_list this_t) in
+      let that_list = List.sort ~compare:Int.compare (That_heap.to_list that_t) in
       assert (this_list = that_list);
       This_heap.invariant this_t;
       That_heap.invariant that_t;

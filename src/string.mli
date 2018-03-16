@@ -16,6 +16,14 @@ include module type of struct include Base.String end
   with type t := t
   with module Caseless := Base.String.Caseless (** @open *)
 
+(** [slice t start stop] returns a new string including elements [t.(start)] through
+    [t.(stop-1)], normalized Python-style with the exception that [stop = 0] is treated as
+    [stop = length t]. *)
+val slice : t -> int -> int -> t
+
+(** [nget s i] gets the char at normalized position [i] in [s]. *)
+val nget : t -> int -> char
+
 (** [take_while s ~f] returns the longest prefix of [s] satisfying [for_all prefix ~f]
     (See [lstrip] to drop such a prefix) *)
 val take_while : t -> f:(char -> bool) -> t

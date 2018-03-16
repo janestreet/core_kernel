@@ -317,8 +317,8 @@ module Make (Key : Key) : S with module Key = Key = struct
 
   let count t ~f = Container.count ~fold t ~f
   let sum m t ~f = Container.sum m ~fold t ~f
-  let min_elt t ~cmp = Container.min_elt ~fold t ~cmp
-  let max_elt t ~cmp = Container.max_elt ~fold t ~cmp
+  let min_elt t ~compare = Container.min_elt ~fold t ~compare
+  let max_elt t ~compare = Container.max_elt ~fold t ~compare
   let fold_result t ~init ~f = Container.fold_result ~fold ~init ~f t
   let fold_until  t ~init ~f = Container.fold_until  ~fold ~init ~f t
 

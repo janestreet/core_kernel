@@ -63,7 +63,7 @@ let invariant invariant_key invariant_data t =
       | _ -> assert false);
     let get_entries array =
       let a = Array.filter_opt array in
-      Array.sort a ~cmp:(fun entry entry' ->
+      Array.sort a ~compare:(fun entry entry' ->
         Int.compare (t.key_to_int entry.Entry.key) (t.key_to_int entry'.key));
       a
     in
@@ -603,7 +603,7 @@ let%test_module _ =
           assert (exists t ~f:(fun data -> data = data')));
         assert (for_alli t ~f:(fun ~key ~data -> key = data));
         assert (for_all t ~f:(fun data -> 0 <= data && data < n));
-        let sort alist = List.sort alist ~cmp:(fun (i, _) (i', _) -> compare i i')  in
+        let sort alist = List.sort alist ~compare:(fun (i, _) (i', _) -> compare i i')  in
         let alist' = sort (to_alist t) in
         if alist <> alist'
         then failwiths "Bounded_int_table alist bug" (t, alist, alist')

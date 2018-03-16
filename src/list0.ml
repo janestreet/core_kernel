@@ -61,7 +61,7 @@ module For_quickcheck = struct
   ;;
 
   let obs elem_obs =
-    Observer.recursive (fun t_obs ->
+    Observer.fixed_point (fun t_obs ->
       Observer.unmap
         (Observer.variant2
            (Observer.singleton ())
@@ -71,7 +71,7 @@ module For_quickcheck = struct
           | x :: list -> `B (x, list)))
 
   let shrinker t_elt =
-    Shrinker.recursive (fun t_list ->
+    Shrinker.fixed_point (fun t_list ->
       Shrinker.create (function
         | []    -> Sequence.empty
         | h::tl ->
@@ -93,13 +93,13 @@ module For_quickcheck = struct
       let test_list = [1;2;3]
       let expect =
         [[2;3]; [0;2;3]; [1;3]; [1;0;3]; [1;2]; [1;2;0]]
-        |> List.sort ~cmp:[%compare: int list ]
+        |> List.sort ~compare:[%compare: int list ]
 
       let%test_unit "shrinker produces expected outputs" =
         let shrunk =
           Shrinker.shrink (shrinker t0) test_list
           |> Sequence.to_list
-          |> List.sort ~cmp:[%compare: int list ]
+          |> List.sort ~compare:[%compare: int list ]
         in
         [%test_result: int list list] ~expect shrunk
 

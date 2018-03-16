@@ -140,7 +140,7 @@ module Unit_tests
     let samples =
       List.init 10 ~f:(fun i -> of_int (i + 1))
       |> List.dedup_and_sort ~compare
-      |> List.sort ~cmp:compare
+      |> List.sort ~compare
     ;;
 
     let min = List.hd_exn samples
@@ -394,7 +394,7 @@ module Unit_tests
   (* test it gets same result as [Map.of_alist] *)
   let%test _ =
     let alist =
-      List.sort (random_alist Key.samples) ~cmp:(fun (k1, _) (k2, _) -> Key.compare k1 k2)
+      List.sort (random_alist Key.samples) ~compare:(fun (k1, _) (k2, _) -> Key.compare k1 k2)
     in
     let array = Array.of_list alist in
     let array_rev = Array.of_list (List.rev alist) in
@@ -537,7 +537,7 @@ module Unit_tests
   let%test "of_increasing_sequence: vs of_alist_or_error" =
     let alist = random_alist Key.samples in
     let increasing_alist =
-      List.sort alist ~cmp:(Comparable.lift ~f:fst Key.compare)
+      List.sort alist ~compare:(Comparable.lift ~f:fst Key.compare)
       |> List.remove_consecutive_duplicates ~equal:(Comparable.lift ~f:fst Key.equal)
     in
     let duplicates_alist = match increasing_alist with
@@ -643,7 +643,7 @@ module Unit_tests
 
   let%test _ =
     try ignore (Map.find_exn (Map.empty ()) Key.sample); false
-    with Not_found -> true
+    with Not_found_s _ | Caml.Not_found -> true
   ;;
 
   let%test _ =
@@ -796,7 +796,7 @@ module Unit_tests
   let%test _ =
     let map = Map.of_alist_exn (random_alist Key.samples) in
     let map_keys = Map.keys map in
-    let sorted_keys = List.sort map_keys ~cmp:Key.compare in
+    let sorted_keys = List.sort map_keys ~compare:Key.compare in
     List.equal map_keys sorted_keys ~equal:Key.equal
   ;;
 
@@ -804,7 +804,7 @@ module Unit_tests
     let base_alist = random_alist Key.samples in
     let map = Map.of_alist_exn base_alist in
     let map_keys = Map.keys map in
-    let all_keys = List.sort ~cmp:Key.compare Key.samples in
+    let all_keys = List.sort ~compare:Key.compare Key.samples in
     let map_data = Map.data map in
     let map_alist = Map.to_alist map in
     assert (List.equal map_keys all_keys ~equal:Key.equal);
@@ -1615,12 +1615,12 @@ module Unit_tests
       let shrinker = Map.shrinker key_shrinker String.shrinker
 
       let normalize_alist alist =
-        List.sort alist ~cmp:(fun (k1,_) (k2,_) ->
+        List.sort alist ~compare:(fun (k1,_) (k2,_) ->
           Int.compare k1 k2)
 
       let normalize_alists alists =
         List.map alists ~f:normalize_alist
-        |> List.sort ~cmp:[%compare: (int * string) list]
+        |> List.sort ~compare:[%compare: (int * string) list]
 
       let map_of_alist alist =
         List.map alist ~f:(fun (k, v) -> (Key.of_int k, v))

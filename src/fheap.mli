@@ -16,8 +16,8 @@ include Container.S1 with type 'a t := 'a t
     create the heap, it is necessary for these functions to traverse the entire heap. If
     you want to access the smallest element of the heap according to the heap's comparison
     function, you should use [top]. *)
-val min_elt : 'a t -> cmp:('a -> 'a -> int) -> 'a option
-val max_elt : 'a t -> cmp:('a -> 'a -> int) -> 'a option
+val min_elt : 'a t -> compare:('a -> 'a -> int) -> 'a option
+val max_elt : 'a t -> compare:('a -> 'a -> int) -> 'a option
 
 (** The elements of [to_list t] are not in any particular order.  You need to sort the
     list afterwards if you want to get a sorted list. *)

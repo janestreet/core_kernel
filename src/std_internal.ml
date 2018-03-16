@@ -34,7 +34,7 @@ let fst3 (x,_,_) = x
 let snd3 (_,y,_) = y
 let trd3 (_,_,z) = z
 
-let uw = function Some x -> x | None -> raise Not_found
+let uw = function Some x -> x | None -> raise Caml.Not_found
 
 (** [phys_same] is like [phys_equal], but with a more general type.  [phys_same] is useful
     when dealing with existential types, when one has a packed value and an unpacked value

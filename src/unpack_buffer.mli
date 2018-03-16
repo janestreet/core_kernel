@@ -29,19 +29,33 @@ module Unpack_one : sig
       quadratic behavior if a packed value's bytes are input using a linear number of
       calls to [feed]. *)
 
+  type ('a, 'partial_unpack) unpack_result =
+    [ `Ok              of 'a * int
+    | `Not_enough_data of 'partial_unpack * int
+    | `Invalid_data    of Error.t
+    ]
+
   type ('a, 'partial_unpack) unpacked =
     ?partial_unpack : 'partial_unpack
     -> ?pos         : int  (** default is [0] *)
     -> ?len         : int  (** default is [Bigstring.len bigstring - pos] *)
     -> Bigstring.t
-    -> [ `Ok              of 'a * int
-       | `Not_enough_data of 'partial_unpack * int
-       | `Invalid_data    of Error.t
-       ]
+    -> ('a, 'partial_unpack) unpack_result
 
   type 'a t = T : ('a, _) unpacked -> 'a t
 
   include Monad.S with type 'a t := 'a t
+
+  (** [create] converts an unpacking function that takes required [pos] and [len]
+      arguments and converts it to the [unpacked] form that takes an optional [pos] and
+      [len]. *)
+  val create
+    :  (?partial_unpack:'p
+        -> Bigstring.t
+        -> pos:int
+        -> len:int
+        -> ('a, 'p) unpack_result)
+    -> 'a t
 
   (** [create_bin_prot reader] returns an unpacker that reads the "size-prefixed" bin_prot
       encoding, in which a value is encoded by first writing the length of the bin_prot
@@ -49,6 +63,12 @@ module Unpack_one : sig
       trivial to know if enough data is available in the buffer, so there is no need to
       represent partially unpacked values, and hence ['partial_unpack = unit]. *)
   val create_bin_prot : 'a Bin_prot.Type_class.reader -> 'a t
+
+  (** Reads "size-prefixed" bin-blobs, much like [create_bin_prot _], but preserves the
+      size information and doesn't deserialize the blob.  This allows deserialization to
+      be deferred and the remainder of the sequence can be unpacked if an individual blob
+      can't be deserialized. *)
+  val bin_blob : Bin_prot.Blob.Opaque.Bigstring.t t
 
   (** Beware that when unpacking sexps, one cannot tell if one is at the end of an atom
       until one hits punctuation.  So, one should always feed a space (" ") to a sexp

@@ -10,10 +10,10 @@ type 'a t = 'a Base.Hash_set.t [@@deriving sexp_of]
     can use [Hash_set.Poly.t], which does have [[@@deriving sexp]], to use polymorphic
     comparison and hashing. *)
 
-include Creators
+include Creators_generic
   with type 'a t := 'a t
   with type 'a elt = 'a
-  with type ('key, 'z) create_options := ('key, 'z) create_options_with_first_class_module
+  with type ('key, 'z) create_options := ('key, 'z) create_options
 
 include Accessors with type 'a t := 'a t with type 'a elt := 'a elt
 
@@ -27,7 +27,7 @@ module type S         = S         with type 'a hash_set := 'a t
 module type S_binable = S_binable with type 'a hash_set := 'a t
 
 module Using_hashable : sig
-  include Creators
+  include Creators_generic
     with type 'a t := 'a t
     with type 'a elt = 'a
     with type ('key, 'z) create_options := ('key, 'z) create_options_with_hashable_required
@@ -38,10 +38,11 @@ module Poly : sig
 
   type nonrec 'a t = 'a t [@@deriving sexp]
 
-  include Creators
+  include Creators_generic
     with type 'a t := 'a t
     with type 'a elt = 'a
-    with type ('key, 'z) create_options := ('key, 'z) create_options_without_hashable
+    with type ('key, 'z) create_options :=
+      ('key, 'z) create_options_without_first_class_module
 
   include Accessors with type 'a t := 'a t with type 'a elt := 'a elt
 

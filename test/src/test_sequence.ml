@@ -135,7 +135,7 @@ let%expect_test "merge_all" =
     let str_gen = Quickcheck.Generator.map Int.gen ~f:No_poly_compare.create in
     let seq_gen =
       Quickcheck.Generator.map (List.gen str_gen) ~f:(fun list ->
-        Sequence.of_list (List.sort list ~cmp:compare))
+        Sequence.of_list (List.sort list ~compare))
     in
     List.gen seq_gen
   in
@@ -160,7 +160,7 @@ let%expect_test "merge_all" =
       let sorted =
         List.map seqs ~f:list_of_sequence
         |> List.concat
-        |> List.sort ~cmp:compare
+        |> List.sort ~compare
       in
       List.take sorted 20
     in

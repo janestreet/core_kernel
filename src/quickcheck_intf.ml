@@ -147,19 +147,44 @@ module type Generator = sig
   val filter_map : 'a t -> f:('a -> 'b option) -> 'b t
   val filter     : 'a t -> f:('a -> bool)      -> 'a t
 
+  (** Generator for recursive data type with multiple clauses. At size 0, chooses only
+      among the non-recursive cases; at sizes greater than 0, chooses among non-recursive
+      and recursive cases, calling the recursive cases with decremented size.
+
+      {[
+        type tree = Leaf | Node of tree * int * tree;;
+        recursive_union [return Leaf] ~f:(fun self ->
+          [let%map left = self
+           and int = Int.gen
+           and right = self
+           in Node (left, int, right)])
+      ]} *)
+  val recursive_union
+    :  'a t list
+    -> f:('a t -> 'a t list)
+    -> 'a t
+
+  (** Like [recursive_union], with the addition of non-uniform weights for each clause. *)
+  val weighted_recursive_union
+    :  (float * 'a t) list
+    -> f:('a t -> (float * 'a t) list)
+    -> 'a t
+
   (** Fixed-point generator. Use [size] to bound the size of the value and the depth of
       the recursion. There is no prescribed semantics for [size] except that it must be
       non-negative. For example, the following produces a naive generator for natural
       numbers:
 
       {[
-        recursive (fun self ->
+        fixed_point (fun self ->
           match%bind size with
           | 0 -> singleton 0
           | n -> with_size self ~size:(n-1) >>| Int.succ)
       ]}
   *)
-  val recursive : ('a t -> 'a t) -> 'a t
+  val fixed_point : ('a t -> 'a t) -> 'a t
+  val recursive   : ('a t -> 'a t) -> 'a t
+  [@@deprecated "[since 2018-03] use [recursive_union] or [fixed_point] instead"]
 
   (** [weighted_union alist] produces a generator that combines the distributions of each
       [t] in [alist] with the associated weights, which must be finite positive floating
@@ -228,19 +253,20 @@ module type Observer = sig
     -> equal:('a -> 'a -> bool)
     -> 'a t
 
-  (** Fixed point observer; use [recursive] to create observers for recursive types.  For
-      example:
+  (** Fixed point observer for recursive types. For example:
 
       {[
         let sexp_obs =
-          recursive (fun sexp_t ->
+          fixed_point (fun sexp_t ->
             unmap (variant2 string (list sexp_t))
               ~f:(function
                 | Sexp.Atom atom -> `A atom
                 | Sexp.List list -> `B list))
       ]}
   *)
-  val recursive : ('a t -> 'a t) -> 'a t
+  val fixed_point : ('a t -> 'a t) -> 'a t
+  val recursive   : ('a t -> 'a t) -> 'a t
+  [@@deprecated "[since 2018-03] use [fixed_point] instead"]
 
   val variant2
     :  'a t -> 'b t
@@ -378,10 +404,12 @@ module type Shrinker = sig
     -> 'f t
     -> [ `A of 'a | `B of 'b | `C of 'c | `D of 'd | `E of 'e | `F of 'f ] t
 
-  (** [recursive] assists with shrinking structures recursively. Its advantage
-      over directly using [rec] in the definition of the shrinker is that it
-      causes lazy evaluation where possible. *)
-  val recursive : ('a t -> 'a t) -> 'a t
+  (** [fixed_point] assists with shrinking structures recursively. Its advantage over
+      directly using [rec] in the definition of the shrinker is that it causes lazy
+      evaluation where possible. *)
+  val fixed_point : ('a t -> 'a t) -> 'a t
+  val recursive   : ('a t -> 'a t) -> 'a t
+  [@@deprecated "[since 2018-03] use [fixed_point] instead"]
 end
 
 module type Pre_int = sig

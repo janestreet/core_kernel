@@ -80,8 +80,8 @@ struct
             failwiths "expected list when serializing unordered container"
               t T.sexp_of_t
         in
-        let sorted_sexps = List.sort ~cmp:compare sexps in
-        let sorted_serialized = List.sort ~cmp:compare serialized_elements in
+        let sorted_sexps = List.sort ~compare sexps in
+        let sorted_serialized = List.sort ~compare serialized_elements in
         if not (List.equal ~equal:(=) sorted_sexps sorted_serialized) then
           failwiths "sexp serialization mismatch"
             (`Expected sexps, `But_got serialized_elements)

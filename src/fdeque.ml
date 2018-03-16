@@ -244,18 +244,18 @@ module Arbitrary_order = struct
     | some -> some
   ;;
 
-  let max_elt t ~cmp =
-    match List.max_elt t.front ~cmp, List.max_elt t.back ~cmp with
+  let max_elt t ~compare =
+    match List.max_elt t.front ~compare, List.max_elt t.back ~compare with
     | None, opt | opt, None -> opt
     | (Some x as some_x), (Some y as some_y) ->
-      if cmp x y >= 0 then some_x else some_y
+      if compare x y >= 0 then some_x else some_y
   ;;
 
-  let min_elt t ~cmp =
-    match List.min_elt t.front ~cmp, List.min_elt t.back ~cmp with
+  let min_elt t ~compare =
+    match List.min_elt t.front ~compare, List.min_elt t.back ~compare with
     | None, opt | opt, None -> opt
     | (Some x as some_x), (Some y as some_y) ->
-      if cmp x y <= 0 then some_x else some_y
+      if compare x y <= 0 then some_x else some_y
   ;;
 
 end
@@ -276,8 +276,8 @@ module Make_container(F : sig val to_list : 'a t -> 'a list end) = struct
   let find       t       ~f = List.find       (to_list t)       ~f
   let find_map   t       ~f = List.find_map   (to_list t)       ~f
   let to_array   t          = List.to_array   (to_list t)
-  let min_elt    t ~cmp     = List.min_elt    (to_list t) ~cmp
-  let max_elt    t ~cmp     = List.max_elt    (to_list t) ~cmp
+  let min_elt    t ~compare = List.min_elt    (to_list t) ~compare
+  let max_elt    t ~compare = List.max_elt    (to_list t) ~compare
   let fold_result t ~init ~f = Container.fold_result ~fold ~init ~f t
   let fold_until  t ~init ~f = Container.fold_until  ~fold ~init ~f t
 

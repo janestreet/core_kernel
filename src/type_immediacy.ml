@@ -200,7 +200,7 @@ module Computation_impl = struct
         if not (Variant.is_polymorphic variant)
         then Allowed_ints.From_zero_to (no_arg_count - 1)
         else
-          let hash_set = Hash_set.create (module Key) ~size:(no_arg_count * 2) () in
+          let hash_set = Hash_set.create (module Key) ~size:(no_arg_count * 2) in
           List.iter no_arg_list ~f:(function
             | Variant.Tag tag ->
               match Tag.create tag with

@@ -25,8 +25,8 @@ include Container.S1 with type 'a t := 'a t
     If you want to access the smallest element of the heap according to the heap's
     comparison function in constant time, you should use [top]. *)
 
-val min_elt : 'a t -> cmp:('a -> 'a -> int) -> 'a option
-val max_elt : 'a t -> cmp:('a -> 'a -> int) -> 'a option
+val min_elt : 'a t -> compare:('a -> 'a -> int) -> 'a option
+val max_elt : 'a t -> compare:('a -> 'a -> int) -> 'a option
 
 (** [create ?min_size ~cmp] returns a new min-heap that can store [min_size] elements
     without reallocations, using ordering function [cmp].

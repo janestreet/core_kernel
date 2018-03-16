@@ -389,9 +389,9 @@ module Unit_tests
           let expect =
             match order with
             | None | Some `Increasing ->
-              List.sort expect ~cmp:(fun a b -> Int.compare (value a) (value b))
+              List.sort expect ~compare:(fun a b -> Int.compare (value a) (value b))
             | Some `Decreasing ->
-              List.sort expect ~cmp:(fun a b -> Int.compare (value b) (value a))
+              List.sort expect ~compare:(fun a b -> Int.compare (value b) (value a))
           in
           [%test_result: (Elt.t, Elt.t) Merge_to_sequence_element.t list]
             (Sequence.to_list
@@ -735,11 +735,11 @@ module Unit_tests
       let shrinker = Set.shrinker elt_test_shrinker
 
       let normalize_list list =
-        List.sort list ~cmp:[%compare: int]
+        List.sort list ~compare:[%compare: int]
 
       let normalize_lists lists =
         List.map lists ~f:normalize_list
-        |> List.sort ~cmp:[%compare: int list]
+        |> List.sort ~compare:[%compare: int list]
 
       let set_of_list list =
         List.map list ~f:Elt.of_int

@@ -281,8 +281,9 @@ val fold_result
 val fold_until
   :  ('a, _) t
   -> init:'accum
-  -> f:('accum -> 'a -> ('accum, 'stop) Continue_or_stop.t)
-  -> ('accum, 'stop) Finished_or_stopped_early.t
+  -> f:('accum -> 'a -> ('accum, 'final) Continue_or_stop.t)
+  -> finish:('accum -> 'final)
+  -> 'final
 
 (** Like {!fold}, except that it goes from the largest to the smallest element. *)
 val fold_right

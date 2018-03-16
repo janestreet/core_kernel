@@ -670,7 +670,7 @@ module Priority_queue = struct
           List.iter keys_removed ~f:(fun key ->
             require [%here] (Key.( < ) key (min_allowed_key t)))
         done;
-        let keys_removed = List.sort !removed ~cmp:Key.compare in
+        let keys_removed = List.sort !removed ~compare:Key.compare in
         require [%here] (Poly.equal keys_removed keys);
       with exn ->
         failwiths "failure" (exn, t) [%sexp_of: exn * _ t]
@@ -772,7 +772,7 @@ module Priority_queue = struct
     let elts' = ref [] in
     iter t ~f:(fun elt -> elts' := elt :: !elts');
     let sort elts =
-      List.sort elts ~cmp:(fun elt1 elt2 ->
+      List.sort elts ~compare:(fun elt1 elt2 ->
         Key.compare (Elt.key t elt1) (Elt.key t elt2))
     in
     require [%here] (List.equal ~equal:phys_equal (sort !elts) (sort !elts'))

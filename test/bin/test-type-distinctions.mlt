@@ -10,7 +10,7 @@ let () =
   let x : (int, [ `A of string ]) Avltree.t = tree in
   ignore (Avltree.add tree ~key:0 ~data:(`B 0) ~compare
             ~added ~replace:true : (_, _) Avltree.t);
-  match Avltree.find x 0 ~compare:compare with
+  match Avltree.find x 0 ~compare with
   | None -> assert false
   | Some (`A str) -> print_string str (* BOOM! *)
 

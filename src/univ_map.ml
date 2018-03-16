@@ -24,7 +24,7 @@ module Make1 (Data : sig type ('s, 'a) t [@@deriving sexp_of] end) = struct
   let sexp_of_t sexp_of_a t =
     Map.data t
     |> List.map ~f:(fun u -> (Packed.type_id_name u, u))
-    |> List.sort ~cmp:(fun (a, _) (b, _) -> String.compare a b)
+    |> List.sort ~compare:(fun (a, _) (b, _) -> String.compare a b)
     |> [%sexp_of: (string * a Packed.t) list]
 
   let invariant (t : _ t) =

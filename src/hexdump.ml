@@ -67,26 +67,23 @@ module Of_indexable2 (T : Indexable2) = struct
         | Some max_lines -> max_lines
         | None           -> !default_max_lines
       in
-      (* always produce at least 4 lines: first line of hex, ellipsis, last line of hex,
-         final index *)
-      let max_lines = max max_lines 4 in
+      (* always produce at least 3 lines: first line of hex, ellipsis, last line of hex *)
+      let max_lines = max max_lines 3 in
       (* unabridged lines = lines of hex + line with final index *)
       let unabridged_lines =
-        Int.round_up len ~to_multiple_of:bytes_per_line / bytes_per_line + 1
+        Int.round_up len ~to_multiple_of:bytes_per_line / bytes_per_line
       in
       (* Figure out where we need to skip from and to if [max_lines < unabridged_lines].
-         Skip after half the actual hex lines (subtracting two lines for the ellipsis and
-         final index).  Skip to near the end, less the number of lines remaining to
-         produce, plus the ellipsis line. *)
-      let skip_from = (max_lines - 2) / 2 in
+         Skip after half the actual hex lines (subtracting one line for the ellipsis).
+         Skip to near the end, less the number of lines remaining to produce, plus the
+         ellipsis line. *)
+      let skip_from = (max_lines - 1) / 2 in
       let skip_to = unabridged_lines - (max_lines - skip_from) + 1 in
       Sequence.unfold_step ~init:0 ~f:(fun line_index ->
         if line_index >= unabridged_lines
         then Done
         else if line_index = skip_from && max_lines < unabridged_lines
         then Yield ("...", skip_to)
-        else if line_index = unabridged_lines - 1
-        then Yield (hex_of_pos (pos + len),       line_index + 1)
         else Yield (line t ~pos ~len ~line_index, line_index + 1))
 
     let to_string_hum ?max_lines ?pos ?len t =

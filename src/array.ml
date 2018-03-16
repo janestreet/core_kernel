@@ -14,6 +14,19 @@ module Private = Base.Array.Private
 module T = struct
   include Base.Array
 
+  let normalize t i =
+    Ordered_collection_common.normalize ~length_fun:length t i
+
+  let slice t start stop =
+    Ordered_collection_common.slice ~length_fun:length ~sub_fun:sub
+      t start stop
+
+  let nget t i =
+    t.(normalize t i)
+
+  let nset t i v =
+    t.(normalize t i) <- v
+
   module Sequence = struct
     open Base.Array
     let length = length
@@ -139,11 +152,11 @@ module type Permissioned = sig
     :  ?pos:int
     -> ?len:int
     -> ('a, [> read_write]) t
-    -> cmp:('a -> 'a -> int)
+    -> compare:('a -> 'a -> int)
     -> unit
-  val stable_sort : ('a, [> read_write]) t -> cmp:('a -> 'a -> int) -> unit
-  val is_sorted : ('a, [> read]) t -> cmp:('a -> 'a -> int) -> bool
-  val is_sorted_strictly : ('a, [> read]) t -> cmp:('a -> 'a -> int) -> bool
+  val stable_sort : ('a, [> read_write]) t -> compare:('a -> 'a -> int) -> unit
+  val is_sorted : ('a, [> read]) t -> compare:('a -> 'a -> int) -> bool
+  val is_sorted_strictly : ('a, [> read]) t -> compare:('a -> 'a -> int) -> bool
   val concat_map
     :  ('a, [> read]) t
     -> f:('a -> ('b, [> read]) t)
@@ -209,6 +222,8 @@ module type Permissioned = sig
   val of_list_rev_map : 'a list -> f:('a -> 'b) -> ('b, [< _ perms]) t
   val replace : ('a, [> read_write]) t -> int -> f:('a -> 'a) -> unit
   val replace_all : ('a, [> read_write]) t -> f:('a -> 'a) -> unit
+  [@@deprecated "[since 2018-03] use [map_inplace] instead"]
+  val map_inplace : ('a, [> read_write]) t -> f:('a -> 'a) -> unit
   val find_exn : ('a, [> read]) t -> f:('a -> bool) -> 'a
   val find_map_exn : ('a, [> read]) t -> f:('a -> 'b option) -> 'b
   val findi : ('a, [> read]) t -> f:(int -> 'a -> bool) -> (int * 'a) option
@@ -227,7 +242,7 @@ module type Permissioned = sig
   val zip     : ('a, [> read]) t -> ('b, [> read]) t -> ('a * 'b, [< _ perms]) t option
   val zip_exn : ('a, [> read]) t -> ('b, [> read]) t -> ('a * 'b, [< _ perms]) t
   val unzip : ('a * 'b, [> read]) t -> ('a, [< _ perms]) t * ('b, [< _ perms]) t
-  val sorted_copy : ('a, [> read]) t -> cmp:('a -> 'a -> int) -> ('a, [< _ perms]) t
+  val sorted_copy : ('a, [> read]) t -> compare:('a -> 'a -> int) -> ('a, [< _ perms]) t
   val last : ('a, [> read]) t -> 'a
   val empty : unit -> ('a, [< _ perms]) t
   [@@deprecated "[since 2017-05] Use [ [||] ]"]
@@ -321,10 +336,10 @@ module type S = sig
   val folding_mapi : 'a t -> init:'b -> f:(int -> 'b -> 'a -> 'b * 'c) -> 'c t
   val fold_mapi : 'a t -> init:'b -> f:(int -> 'b -> 'a -> 'b * 'c) -> 'b * 'c t
   val fold_right : 'a t -> f:('a -> 'b -> 'b) -> init:'b -> 'b
-  val sort : ?pos:int -> ?len:int -> 'a t -> cmp:('a -> 'a -> int) -> unit
-  val stable_sort : 'a t -> cmp:('a -> 'a -> int) -> unit
-  val is_sorted : 'a t -> cmp:('a -> 'a -> int) -> bool
-  val is_sorted_strictly : 'a t -> cmp:('a -> 'a -> int) -> bool
+  val sort : ?pos:int -> ?len:int -> 'a t -> compare:('a -> 'a -> int) -> unit
+  val stable_sort : 'a t -> compare:('a -> 'a -> int) -> unit
+  val is_sorted : 'a t -> compare:('a -> 'a -> int) -> bool
+  val is_sorted_strictly : 'a t -> compare:('a -> 'a -> int) -> bool
   val concat_map : 'a t -> f:('a -> 'b t) -> 'b t
   val concat_mapi : 'a t -> f:(int -> 'a -> 'b t) -> 'b t
   val partition_tf : 'a t -> f:('a -> bool) -> 'a t * 'a t
@@ -356,6 +371,8 @@ module type S = sig
   val of_list_rev_map : 'a list -> f:('a -> 'b) -> 'b t
   val replace : 'a t -> int -> f:('a -> 'a) -> unit
   val replace_all : 'a t -> f:('a -> 'a) -> unit
+  [@@deprecated "[since 2018-03] use [map_inplace] instead"]
+  val map_inplace : 'a t -> f:('a -> 'a) -> unit
   val find_exn : 'a t -> f:('a -> bool) -> 'a
   val find_map_exn : 'a t -> f:('a -> 'b option) -> 'b
   val findi : 'a t -> f:(int -> 'a -> bool) -> (int * 'a) option
@@ -371,7 +388,7 @@ module type S = sig
   val zip     : 'a t -> 'b t -> ('a * 'b) t option
   val zip_exn : 'a t -> 'b t -> ('a * 'b) t
   val unzip : ('a * 'b) t -> 'a t * 'b t
-  val sorted_copy : 'a t -> cmp:('a -> 'a -> int) -> 'a t
+  val sorted_copy : 'a t -> compare:('a -> 'a -> int) -> 'a t
   val last : 'a t -> 'a
   val empty : unit -> 'a t
   [@@deprecated "[since 2017-05] Use [ [||] ]"]

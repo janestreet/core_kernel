@@ -13,11 +13,34 @@ include (Hashtbl : sig
            type ('a, 'b) t = ('a, 'b) Hashtbl.t [@@deriving sexp_of]
            include Base.Hashtbl.S_without_submodules
              with type ('a, 'b) t := ('a, 'b) t
-             with module Hashable := Hashable
              with type 'b merge_into_action = 'b Hashtbl.merge_into_action
          end)
 
-module Using_hashable = Hashtbl.Using_hashable
+module Using_hashable = struct
+  type nonrec ('a, 'b) t = ('a, 'b) t [@@deriving sexp_of]
+  let create ?growth_allowed ?size ~hashable () =
+    create ?growth_allowed ?size (Base.Hashable.to_key hashable)
+  let of_alist ?growth_allowed ?size ~hashable l =
+    of_alist ?growth_allowed ?size (Base.Hashable.to_key hashable) l
+  let of_alist_report_all_dups ?growth_allowed ?size ~hashable l =
+    of_alist_report_all_dups ?growth_allowed ?size (Base.Hashable.to_key hashable) l
+  let of_alist_or_error ?growth_allowed ?size ~hashable l =
+    of_alist_or_error ?growth_allowed ?size (Base.Hashable.to_key hashable) l
+  let of_alist_exn ?growth_allowed ?size ~hashable l =
+    of_alist_exn ?growth_allowed ?size (Base.Hashable.to_key hashable) l
+  let of_alist_multi ?growth_allowed ?size ~hashable l =
+    of_alist_multi ?growth_allowed ?size (Base.Hashable.to_key hashable) l
+  let create_mapped ?growth_allowed ?size ~hashable ~get_key ~get_data l =
+    create_mapped ?growth_allowed ?size (Base.Hashable.to_key hashable) ~get_key ~get_data l
+  let create_with_key ?growth_allowed ?size ~hashable ~get_key l =
+    create_with_key ?growth_allowed ?size (Base.Hashable.to_key hashable) ~get_key l
+  let create_with_key_or_error ?growth_allowed ?size ~hashable ~get_key l =
+    create_with_key_or_error ?growth_allowed ?size (Base.Hashable.to_key hashable) ~get_key l
+  let create_with_key_exn ?growth_allowed ?size ~hashable ~get_key l =
+    create_with_key_exn ?growth_allowed ?size (Base.Hashable.to_key hashable) ~get_key l
+  let group ?growth_allowed ?size ~hashable ~get_key ~get_data ~combine l =
+    group ?growth_allowed ?size (Base.Hashable.to_key hashable) ~get_key ~get_data ~combine l
+end
 
 module type S_plain   = S_plain  with type ('a, 'b) hashtbl = ('a, 'b) t
 module type S         = S         with type ('a, 'b) hashtbl = ('a, 'b) t
@@ -80,9 +103,6 @@ module Make_plain (Key : Key_plain) = struct
              include Hashtbl.Multi
                with type ('a, 'b) t := ('a, 'b) t__
                with type 'a key := 'a key_
-             include Hashtbl.Deprecated
-               with type ('a, 'b) t := ('a, 'b) t__
-               with type 'a key := 'a key_
              include Invariant.S2 with type ('a, 'b) t := ('a, 'b) hashtbl
            end
           )
@@ -131,6 +151,15 @@ module Make_binable (Key : Key_binable) = struct
 end
 
 module M = Hashtbl.M
+
+let hashable = Hashtbl.Private.hashable
+
+let iter_vals = iter
+let replace = set
+let replace_all = map_inplace
+let replace_alli = mapi_inplace
+let filter_replace_all = filter_map_inplace
+let filter_replace_alli = filter_mapi_inplace
 
 let%test_unit _ = (* [sexp_of_t] output is sorted by key *)
   let module Table =

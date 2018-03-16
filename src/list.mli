@@ -33,6 +33,26 @@ val stable_dedup_staged
   :  compare:('a -> 'a -> int)
   -> ('a list -> 'a list) Staged.t
 
+(** Only raised in [exn_if_dup] below. *)
+exception Duplicate_found of (unit -> Base.Sexp.t) * string
+[@@deprecated "[since 2018-03] stop matching on Duplicate_found. [exn_if_dup] will \
+               eventually raise a different and unspecified exception"]
+
+(** [exn_if_dup ~compare ?context t ~to_sexp] raises if [t] contains a duplicate. It will
+    specifically raise a [Duplicate_found] exception and use [context] as its second
+    argument. O(n log n) time complexity. *)
+val exn_if_dup
+  :  compare:('a -> 'a -> int)
+  -> ?context:string
+  -> 'a t
+  -> to_sexp:('a -> Base.Sexp.t)
+  -> unit
+
+(** [slice t start stop] returns a new list including elements [t.(start)] through
+    [t.(stop-1)], normalized Python-style with the exception that [stop = 0] is treated as
+    [stop = length t]. *)
+val slice : 'a t -> int -> int -> 'a t
+
 include Comparator.Derived with type 'a t := 'a t
 include Quickcheckable.S1 with type 'a t := 'a t
 

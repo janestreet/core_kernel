@@ -4,8 +4,7 @@ open! Import
 open Perms.Export
 open Base.Container
 
-module Continue_or_stop          = Continue_or_stop
-module Finished_or_stopped_early = Finished_or_stopped_early
+module Continue_or_stop = Continue_or_stop
 
 module type S1_permissions = sig
   type ('a, -'permissions) t
@@ -31,14 +30,16 @@ module type S1_permissions = sig
     -> f:('accum -> 'a -> ('accum, 'e) Result.t)
     -> ('accum, 'e) Result.t
 
-  (** [fold_until t ~init ~f] is a short-circuiting version of [fold]. If [f]
+  (** [fold_until t ~init ~f ~finish] is a short-circuiting version of [fold]. If [f]
       returns [Stop _] the computation ceases and results in that value. If [f] returns
-      [Continue _], the fold will proceed. *)
+      [Continue _], the fold will proceed. If [f] never returns [Stop _], the final result
+      is computed by [finish]. *)
   val fold_until
     :  ('a, [> read]) t
     -> init:'accum
-    -> f:('accum -> 'a -> ('accum, 'stop) Continue_or_stop.t)
-    -> ('accum, 'stop) Finished_or_stopped_early.t
+    -> f:('accum -> 'a -> ('accum, 'final) Continue_or_stop.t)
+    -> finish:('accum -> 'final)
+    -> 'final
 
   (** Returns [true] if and only if there exists an element for which the provided
       function evaluates to [true].  This is a short-circuiting operation. *)
@@ -66,12 +67,12 @@ module type S1_permissions = sig
   val to_list  : ('a, [> read ]) t -> 'a list
   val to_array : ('a, [> read ]) t -> 'a array
 
-  (** Returns a min (resp max) element from the collection using the provided [cmp]
+  (** Returns a min (resp max) element from the collection using the provided [compare]
       function. In case of a tie, the first element encountered while traversing the
       collection is returned. The implementation uses [fold] so it has the same complexity
       as [fold]. Returns [None] iff the collection is empty. *)
-  val min_elt : ('a, [> read ]) t -> cmp:('a -> 'a -> int) -> 'a option
-  val max_elt : ('a, [> read ]) t -> cmp:('a -> 'a -> int) -> 'a option
+  val min_elt : ('a, [> read ]) t -> compare:('a -> 'a -> int) -> 'a option
+  val max_elt : ('a, [> read ]) t -> compare:('a -> 'a -> int) -> 'a option
 end
 
 module type Container = sig

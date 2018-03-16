@@ -41,8 +41,7 @@ module Without_comparator      = Set.Without_comparator
 module With_comparator         = Set.With_comparator
 module With_first_class_module = Set.With_first_class_module
 
-module Continue_or_stop          = Container.Continue_or_stop
-module Finished_or_stopped_early = Container.Finished_or_stopped_early
+module Continue_or_stop = Container.Continue_or_stop
 
 module Merge_to_sequence_element = Sequence.Merge_with_duplicates_element
 

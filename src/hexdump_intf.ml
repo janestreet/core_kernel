@@ -7,7 +7,7 @@
     {v
 00000000  42 61 63 6b 20 6f 66 66  2c 20 6d 61 6e 2c 20 49  |Back off, man, I|
 00000010  27 6d 20 61 20 73 63 69  65 6e 74 69 73 74 2e     |'m a scientist.|
-0000001f v}
+    v}
 
     [to_sequence] produces a sequence of strings representing lines in the hex dump.  It
     can be used to process a hex dump incrementally, for example with potentially infinite
@@ -26,7 +26,7 @@ module type S = sig
         number of lines of hex dump to produce.  If the full hex dump exceeds this number,
         lines in the middle are replaced by a single "..."; the beginning and end of the
         hex dump are left intact.  In order to produce at least some readable hex dump, at
-        least 4 lines are always produced. *)
+        least 3 lines are always produced. *)
     val to_string_hum
       :  ?max_lines : int (** default: [!default_max_lines] *)
       -> ?pos       : int

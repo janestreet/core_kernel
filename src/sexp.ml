@@ -110,7 +110,7 @@ module For_quickcheck = struct
   open Generator.Let_syntax
 
   let gen =
-    Generator.recursive (fun self ->
+    Generator.fixed_point (fun self ->
       let%bind size = Generator.size in
       (* choose a number weighted low so we have a decreasing, but not vanishing, chance
          to generate atoms as size grows *)
@@ -121,7 +121,7 @@ module For_quickcheck = struct
       | _ -> let%map list = List.gen self in List list)
 
   let obs =
-    Observer.recursive (fun t_obs ->
+    Observer.fixed_point (fun t_obs ->
       Observer.unmap
         (Observer.variant2
            String.obs
@@ -132,7 +132,7 @@ module For_quickcheck = struct
 
   let shrinker =
     let open Sequence.Monad_infix in
-    Shrinker.recursive (fun shrinker ->
+    Shrinker.fixed_point (fun shrinker ->
       Shrinker.create (function
         | Sexp.Atom _    -> Sequence.empty
         | Sexp.List list ->

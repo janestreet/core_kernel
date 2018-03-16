@@ -740,7 +740,7 @@ let benchmarks ~regex ~sizes =
   let module H = Bench_hashtbl (Config) in
   let module P = Bench_pooled  (Config) in
   H.benchmarks @ P.benchmarks
-  |> List.sort ~cmp:(fun test1 test2 ->
+  |> List.sort ~compare:(fun test1 test2 ->
     String.compare (Bench.Test.name test1) (Bench.Test.name test2))
 
 module Top_level = struct
