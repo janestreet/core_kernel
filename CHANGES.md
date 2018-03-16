@@ -2,7 +2,7 @@ As Core\_kernel is built on top of [Base](https://github.com/janestreet/base),
 you might want to have a look at Base's
 [changelog](https://github.com/janestreet/base/blob/master/CHANGES.md).
 
-## git version
+## v0.11
 
 - Add `Bigstring.unsafe_resize` to allow reallocating in place.
 
