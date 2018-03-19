@@ -1,4 +1,5 @@
 opam-version: "1.2"
+version: "v0.11.0"
 maintainer: "opensource@janestreet.com"
 authors: ["Jane Street Group, LLC <opensource@janestreet.com>"]
 homepage: "https://github.com/janestreet/core_kernel"
@@ -9,23 +10,23 @@ build: [
   ["jbuilder" "build" "-p" name "-j" jobs]
 ]
 depends: [
-  "base"
-  "bin_prot"
-  "configurator"
-  "fieldslib"
-  "jane-street-headers"
-  "ppx_assert"
-  "ppx_base"
-  "ppx_hash"
-  "ppx_inline_test"
-  "ppx_jane"
-  "ppx_sexp_conv"
-  "ppx_sexp_message"
-  "sexplib"
-  "splittable_random"
-  "stdio"
-  "typerep"
-  "variantslib"
+  "base"                    {>= "v0.11" & < "v0.12"}
+  "bin_prot"                {>= "v0.11" & < "v0.12"}
+  "configurator"            {>= "v0.11" & < "v0.12"}
+  "fieldslib"               {>= "v0.11" & < "v0.12"}
+  "jane-street-headers"     {>= "v0.11" & < "v0.12"}
+  "ppx_assert"              {>= "v0.11" & < "v0.12"}
+  "ppx_base"                {>= "v0.11" & < "v0.12"}
+  "ppx_hash"                {>= "v0.11" & < "v0.12"}
+  "ppx_inline_test"         {>= "v0.11" & < "v0.12"}
+  "ppx_jane"                {>= "v0.11" & < "v0.12"}
+  "ppx_sexp_conv"           {>= "v0.11" & < "v0.12"}
+  "ppx_sexp_message"        {>= "v0.11" & < "v0.12"}
+  "sexplib"                 {>= "v0.11" & < "v0.12"}
+  "splittable_random"       {>= "v0.11" & < "v0.12"}
+  "stdio"                   {>= "v0.11" & < "v0.12"}
+  "typerep"                 {>= "v0.11" & < "v0.12"}
+  "variantslib"             {>= "v0.11" & < "v0.12"}
   "jbuilder"                {build & >= "1.0+beta18.1"}
   "ocaml-migrate-parsetree" {>= "1.0"}
   "ppxlib"                  {>= "0.1.0"}
