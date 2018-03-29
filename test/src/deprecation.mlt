@@ -8,8 +8,6 @@ let _ = M.x
 
 [%%expect {|
 Line _, characters 8-11:
-Warning 3: deprecated: M.x
+Error (Warning 3): deprecated: M.x
 [since 2016-07]
-Line _:
-Error: Some fatal warnings were triggered (1 occurrences)
 |}]

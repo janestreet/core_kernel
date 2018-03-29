@@ -67,3 +67,14 @@ val gen_with_length : int -> 'a Quickcheck.Generator.t -> 'a t Quickcheck.Genera
 (** [gen_permutations t] generates all permutations of [list].  If [t] contains duplicate
     values, then [gen_permutations t] will produce duplicate lists. *)
 val gen_permutations : 'a t -> 'a t Quickcheck.Generator.t
+
+(** [zip_with_remainder xs ys] zips as many elements as possible of [xs] and [ys] together
+    and also returns the un-zipped remainder of the longer input, if the inputs have
+    different lengths.
+
+    If [xs] and [ys] have the same length, [zip_with_remainder xs ys] returns the same
+    thing as [(zip_exn xs ys, None)] *)
+val zip_with_remainder
+  :  'a list
+  -> 'b list
+  -> ('a * 'b) list * ('a list, 'b list) Either.t option

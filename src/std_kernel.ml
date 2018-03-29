@@ -195,10 +195,6 @@ type 'a _maybe_bound = 'a Maybe_bound.t =
 
 let does_raise = Exn.does_raise
 
-type bytes =
-  [ `This_type_does_not_equal_string_because_we_want_type_errors_to_say_string ]
-;;
-
 (** We perform these side effects here because we want them to run for any code that uses
     [Core_kernel].  If this were in another module in [Core_kernel] that was not used in
     some program, then the side effects might not be run in that program.  This will run

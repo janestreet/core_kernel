@@ -596,3 +596,261 @@ let%expect_test "read_int63" =
     read_int63 string ~pos:10 ~digits:30);
   [%expect {| (Invalid_argument "Digit_string_helpers.read_int63: overflow reading int63") |}];
 ;;
+
+let require_no_allocation_if_64_bit_and_if_does_not_raise here f =
+  match Base.Word_size.word_size with
+  | W32 -> f ()
+  | W64 ->
+    match f () with
+    | exception _ -> f ()
+    | _           -> require_no_allocation here f
+;;
+
+let%expect_test "read_int63_decimal" =
+  let read string ~pos ~decimals ~scale ~round_ties ~allow_underscore =
+    require_no_allocation_if_64_bit_and_if_does_not_raise [%here] (fun () ->
+      read_int63_decimal string ~pos ~decimals ~scale ~round_ties ~allow_underscore)
+  in
+  let test_read_at string ~pos ~decimals ~scale ~round_ties =
+    let permissive =
+      read string ~pos ~decimals ~scale ~round_ties ~allow_underscore:true
+    in
+    let restricted =
+      Or_error.try_with (fun () ->
+        read string ~pos ~decimals ~scale ~round_ties ~allow_underscore:false)
+    in
+    let has_underscore =
+      String.mem (String.sub string ~pos ~len:decimals) '_'
+    in
+    begin
+      match restricted with
+      | Ok restricted ->
+        if has_underscore
+        then print_cr [%here] [%message "ignored '_'" ~_:(restricted : Int63.t)]
+        else require_equal [%here] (module Int63) permissive restricted
+      | Error error ->
+        if has_underscore
+        then ()
+        else print_cr [%here] [%message "failed" ~_:(error : Error.t)]
+    end;
+    permissive
+  in
+  let test_read string ~decimals ~scale ~round_ties =
+    let pos_0 = test_read_at        string        ~pos:0 ~decimals ~scale ~round_ties in
+    let pos_1 = test_read_at ("!" ^ string ^ "!") ~pos:1 ~decimals ~scale ~round_ties in
+    require_equal [%here] (module Int63) pos_0 pos_1;
+    pos_0
+  in
+  let test63 string ~scale =
+    let decimals = String.length string in
+    let round_pos_inf =
+      test_read string ~decimals ~scale
+        ~round_ties:Toward_positive_infinity
+    in
+    let round_neg_inf =
+      test_read string ~decimals ~scale
+        ~round_ties:Toward_negative_infinity
+    in
+    if Int63.equal round_pos_inf round_neg_inf
+    then begin
+      print_s [%sexp (round_pos_inf : Int63.t)]
+    end
+    else begin
+      print_s [%message (round_pos_inf : Int63.t) (round_neg_inf : Int63.t)]
+    end;
+  in
+  let test string ~scale =
+    let scale = Int63.of_int scale in
+    test63 string ~scale
+  in
+
+  test ~scale:1 "";
+  test ~scale:1 "_";
+  test ~scale:1 "0";
+  [%expect {|
+    0
+    0
+    0 |}];
+
+  test ~scale:1 "5";
+  test ~scale:1 "500000";
+  [%expect {|
+    ((round_pos_inf 1)
+     (round_neg_inf 0))
+    ((round_pos_inf 1)
+     (round_neg_inf 0)) |}];
+  test ~scale:1 "500001";
+  [%expect {| 1 |}];
+  test ~scale:1 "499999";
+  [%expect {| 0 |}];
+
+  test ~scale:7 "07142857142857142857142857142857142857142857142857";
+  test ~scale:7 "071428571428571428571428571428571428571428571428572";
+  [%expect {|
+    0
+    1 |}];
+
+  test ~scale:60_000 "0";
+  [%expect {| 0 |}];
+  test ~scale:60_000 "5";
+  [%expect {| 30_000 |}];
+  test ~scale:60_000 "333_333_333_333";
+  test ~scale:60_000 "333333333333";
+  [%expect {|
+    20_000
+    20_000 |}];
+
+  test ~scale:60_000 "333_341_666";
+  test ~scale:60_000 "333_341_667";
+  [%expect {|
+    20_000
+    20_001 |}];
+
+  test ~scale:60_000 "666_674_999";
+  test ~scale:60_000 "666_675_000";
+  test ~scale:60_000 "666_675";
+  test ~scale:60_000 "666_675_001";
+  [%expect {|
+    40_000
+    ((round_pos_inf 40_001)
+     (round_neg_inf 40_000))
+    ((round_pos_inf 40_001)
+     (round_neg_inf 40_000))
+    40_001 |}];
+
+  test ~scale:60_000 "111_111_111_111";
+  test ~scale:60_000 "111_111_111";
+  test ~scale:60_000 "111_111";
+  test ~scale:60_000 "111";
+  [%expect {|
+    6_667
+    6_667
+    6_667
+    6_660 |}];
+
+  test ~scale:1_000 "5";
+  test ~scale:1_000 "05";
+  test ~scale:1_000 "005";
+  test ~scale:1_000 "000_5";
+  test ~scale:1_000 "000_05";
+  [%expect {|
+    500
+    50
+    5
+    ((round_pos_inf 1)
+     (round_neg_inf 0))
+    0 |}];
+  test ~scale:1_000 "5";
+  test ~scale:1_000 "95";
+  test ~scale:1_000 "995";
+  test ~scale:1_000 "999_5";
+  test ~scale:1_000 "999_95";
+  [%expect {|
+    500
+    950
+    995
+    ((round_pos_inf 1_000)
+     (round_neg_inf 999))
+    1_000 |}];
+
+  (* Tests values close to overflow:
+     100000000000000000 ~= Int63.max_value / 46 *)
+  let big_power_of_ten = Int63.of_string "100000000000000000" in
+  print_s [%sexp (Int63.( / ) Int63.max_value big_power_of_ten : Int63.t)];
+  [%expect {| 46 |}];
+  test63 ~scale:big_power_of_ten "1";
+  test63 ~scale:big_power_of_ten "2";
+  test63 ~scale:big_power_of_ten "3";
+  test63 ~scale:big_power_of_ten "4";
+  test63 ~scale:big_power_of_ten "5";
+  test63 ~scale:big_power_of_ten "6";
+  test63 ~scale:big_power_of_ten "7";
+  test63 ~scale:big_power_of_ten "8";
+  test63 ~scale:big_power_of_ten "9";
+  test63 ~scale:big_power_of_ten "987654321011122235";
+  [%expect {|
+    10_000_000_000_000_000
+    20_000_000_000_000_000
+    30_000_000_000_000_000
+    40_000_000_000_000_000
+    50_000_000_000_000_000
+    60_000_000_000_000_000
+    70_000_000_000_000_000
+    80_000_000_000_000_000
+    90_000_000_000_000_000
+    ((round_pos_inf 98_765_432_101_112_224)
+     (round_neg_inf 98_765_432_101_112_223)) |}];
+
+  (* Tests values close to overflow:
+     230584300921369395 = Int63.max_value / 20 *)
+  let maximum_scale = Int63.( / ) Int63.max_value (Int63.of_int 20) in
+  print_s [%sexp (maximum_scale : Int63.t)];
+  [%expect {| 230_584_300_921_369_395 |}];
+  test63 ~scale:maximum_scale "";
+  test63 ~scale:maximum_scale "5";
+  test63 ~scale:maximum_scale "9";
+  test63 ~scale:maximum_scale "99";
+  test63 ~scale:maximum_scale "999999999";
+  test63 ~scale:maximum_scale "99999999999999999";
+  test63 ~scale:maximum_scale "999999999999999999";
+  [%expect {|
+    0
+    ((round_pos_inf 115_292_150_460_684_698)
+     (round_neg_inf 115_292_150_460_684_697))
+    ((round_pos_inf 207_525_870_829_232_456)
+     (round_neg_inf 207_525_870_829_232_455))
+    228_278_457_912_155_701
+    230_584_300_690_785_094
+    230_584_300_921_369_393
+    230_584_300_921_369_395 |}];
+
+  let test_failure
+        ?(pos              = 0)
+        ?decimals
+        ?(scale            = Int63.of_int 60_000)
+        ?(round_ties       = Round.Toward_positive_infinity)
+        ?(allow_underscore = true)
+        string
+    =
+    let decimals = Option.value decimals ~default:(String.length string - pos) in
+    require_does_raise [%here] (fun () ->
+      (read_int63_decimal string ~pos ~decimals ~scale ~round_ties ~allow_underscore
+       : Int63.t))
+  in
+  test_failure "not a decimal string at all";
+  [%expect {|
+    (Invalid_argument
+     "Digit_string_helpers.read_int63_decimal: invalid decimal character") |}];
+  test_failure "000_000" ~allow_underscore:false;
+  [%expect {|
+    (Invalid_argument
+     "Digit_string_helpers.read_int63_decimal: invalid decimal character") |}];
+  test_failure "0" ~pos:(-1);
+  [%expect {|
+    (Invalid_argument
+     "Digit_string_helpers.read_int63_decimal: pos=-1 out of range for string of length 1") |}];
+  test_failure "0" ~pos:100 ~decimals:0;
+  [%expect {|
+    (Invalid_argument
+     "Digit_string_helpers.read_int63_decimal: pos=100 out of range for string of length 1") |}];
+  test_failure "0" ~decimals:(-1);
+  [%expect {|
+    (Invalid_argument
+     "Digit_string_helpers.read_int63_decimal: decimals=-1 is negative") |}];
+  test_failure "0" ~decimals:100;
+  [%expect {|
+    (Invalid_argument
+     "Digit_string_helpers.read_int63_decimal: 100 digits do not fit at pos 0 in string of length 1") |}];
+  test_failure "0" ~scale:Int63.zero;
+  [%expect {|
+    (Invalid_argument
+     "Digit_string_helpers.read_int63_decimal: scale=0 out of range [1, 230584300921369395]") |}];
+  test_failure "0" ~scale:(Int63.of_string "1000000000000000000");
+  [%expect {|
+    (Invalid_argument
+     "Digit_string_helpers.read_int63_decimal: scale=1000000000000000000 out of range [1, 230584300921369395]") |}];
+  test_failure "0" ~scale:Int63.max_value;
+  [%expect {|
+    (Invalid_argument
+     "Digit_string_helpers.read_int63_decimal: scale=4611686018427387903 out of range [1, 230584300921369395]") |}];
+;;

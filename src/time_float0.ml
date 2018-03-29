@@ -2,6 +2,9 @@ open! Import
 open Std_internal
 open! Int.Replace_polymorphic_compare
 
+module Span  = Span_float
+module Ofday = Ofday_float
+
 module Absolute = struct
   type underlying = Float.t
   include
@@ -10,11 +13,6 @@ module Absolute = struct
        include Comparable.S_common with type t := t
        include module type of struct include Float.O end
      end)
-
-  module Span  = Span
-  module Ofday = (Ofday : Ofday_intf.Ofday
-                  with type underlying = underlying
-                   and module Span := Span)
 
   (* due to precision limitations in float we can't expect better than microsecond
      precision *)

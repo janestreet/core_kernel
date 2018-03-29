@@ -2,6 +2,14 @@ As Core\_kernel is built on top of [Base](https://github.com/janestreet/base),
 you might want to have a look at Base's
 [changelog](https://github.com/janestreet/base/blob/master/CHANGES.md).
 
+## git version
+
+- Added `Digit_string_helpers.read_int63_decimal`.
+
+- Added `List.zip_with_remainder` which zips as many elements as possible and
+  then returns the unzipped remained of the longest input, if the input lists
+  have different lengths.
+
 ## v0.11
 
 - Add `Bigstring.unsafe_resize` to allow reallocating in place.

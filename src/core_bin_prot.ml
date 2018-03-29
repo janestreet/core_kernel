@@ -17,4 +17,14 @@ module Writer = struct
     Bigstring.unsafe_destroy buf;
     str
   ;;
+
+  let to_bytes t v =
+    let len = t.size v in
+    let buf = Bigstring.create len in
+    let pos = t.write buf ~pos:0 v in
+    assert (pos = Bigstring.length buf);
+    let str = Bigstring.to_bytes buf in
+    Bigstring.unsafe_destroy buf;
+    str
+  ;;
 end

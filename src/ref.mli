@@ -12,9 +12,6 @@ include module type of struct include Base.Ref end
 module Permissioned : sig
   type ('a, -'perms) t [@@deriving sexp, bin_io]
 
-  include Container.S1_permissions
-    with type ('a, 'perms) t := ('a, 'perms) t
-
   val create    : 'a -> ('a, [< _ perms]) t
   val read_only : ('a, [> read ]) t -> ('a, read) t
 

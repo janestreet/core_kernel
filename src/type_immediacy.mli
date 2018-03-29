@@ -240,6 +240,7 @@ module Never : sig
   val nativeint  :           nativeint t
   val float      :               float t
   val string     :              string t
+  val bytes      :               bytes t
   val array      :             _ array t
   val ref_       :               _ ref t
   val tuple2     :             (_ * _) t

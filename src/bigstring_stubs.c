@@ -145,7 +145,7 @@ CAMLprim value bigstring_blit_string_bigstring_stub(
 CAMLprim value bigstring_blit_bytes_bigstring_stub(
   value v_str, value v_src_pos, value v_bstr, value v_dst_pos, value v_len)
 {
-  char *str = Bytes_val(v_str) + Long_val(v_src_pos);
+  unsigned char *str = Bytes_val(v_str) + Long_val(v_src_pos);
   char *bstr = get_bstr(v_bstr, v_dst_pos);
   memcpy(bstr, str, Long_val(v_len));
   return Val_unit;
@@ -155,7 +155,7 @@ CAMLprim value bigstring_blit_bigstring_bytes_stub(
   value v_bstr, value v_src_pos, value v_str, value v_dst_pos, value v_len)
 {
   char *bstr = get_bstr(v_bstr, v_src_pos);
-  char *str = Bytes_val(v_str) + Long_val(v_dst_pos);
+  unsigned char *str = Bytes_val(v_str) + Long_val(v_dst_pos);
   memcpy(str, bstr, Long_val(v_len));
   return Val_unit;
 }

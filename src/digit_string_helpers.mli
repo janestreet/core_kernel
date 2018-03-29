@@ -43,3 +43,32 @@ val read_6_digit_int : string -> pos:int -> int
 val read_7_digit_int : string -> pos:int -> int
 val read_8_digit_int : string -> pos:int -> int
 val read_9_digit_int : string -> pos:int -> int
+
+module Round : sig
+  type t =
+    | Toward_positive_infinity
+    | Toward_negative_infinity
+  [@@deriving compare, sexp_of]
+end
+
+(** [read_int63_decimal string ~pos ~decimals ~scale ~round_ties ~allow_underscore] reads
+    [decimals] characters from [string] starting at [pos] as a decimal value as if
+    starting immediately after a decimal point, and returns that fraction times [scale].
+    The result is rounded to the nearest value, with ties broken by [round_ties].
+
+    This function is useful for reading the decimal parts of numbers annotated with units
+    that scale the result, such as when reading time units like "1.0ms" or "12.125s".
+
+    If [allow_underscore = true], then '_' characters in [string] are allowed and ignored.
+    Otherwise only digit characters are allowed.
+
+    Raises if [pos] is out of range for [string] and [decimals], or if [scale < 1] or
+    [scale > max_value / 20]. *)
+val read_int63_decimal
+  :  string
+  -> pos              : int
+  -> decimals         : int
+  -> scale            : Int63.t
+  -> round_ties       : Round.t
+  -> allow_underscore : bool
+  -> Int63.t

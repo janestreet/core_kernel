@@ -2,9 +2,18 @@ open! Import
 open Std_internal
 open Int.Replace_polymorphic_compare
 
+module Round = struct
+  type t =
+    | Toward_positive_infinity
+    | Toward_negative_infinity
+  [@@deriving compare, sexp_of]
+end
+
 let module_name = "Digit_string_helpers"
 
+let int63_two     = Int63.of_int             2
 let int63_ten     = Int63.of_int            10
+let int63_twenty  = Int63.of_int            20
 let int63_billion = Int63.of_int 1_000_000_000
 
 let max_billions = Int63.( / ) Int63.max_value int63_billion
@@ -163,11 +172,180 @@ module Unsafe = struct
       if Int63.( < ) sum Int63.zero
       then raise_int63_overflow "read_int63";
       sum
+
+  let divide_and_round_up ~numerator ~denominator =
+    let open Int63.O in
+    (numerator + denominator - Int63.one) /% denominator
+
+  let%expect_test "divide_and_round_up" =
+    let test numerator denominator =
+      let numerator   = Int63.of_int numerator   in
+      let denominator = Int63.of_int denominator in
+      let quotient = divide_and_round_up ~numerator ~denominator in
+      printf !"%{Int63#hum} / %{Int63#hum} = %{Int63#hum}\n"
+        numerator denominator quotient
+    in
+    for numerator = -10 to 10 do
+      test numerator 4;
+    done;
+    [%expect {|
+      -10 / 4 = -2
+      -9 / 4 = -2
+      -8 / 4 = -2
+      -7 / 4 = -1
+      -6 / 4 = -1
+      -5 / 4 = -1
+      -4 / 4 = -1
+      -3 / 4 = 0
+      -2 / 4 = 0
+      -1 / 4 = 0
+      0 / 4 = 0
+      1 / 4 = 1
+      2 / 4 = 1
+      3 / 4 = 1
+      4 / 4 = 1
+      5 / 4 = 2
+      6 / 4 = 2
+      7 / 4 = 2
+      8 / 4 = 2
+      9 / 4 = 3
+      10 / 4 = 3 |}];
+  ;;
+
+  let raise_invalid_decimal name =
+    invalid_argf "%s.%s: invalid decimal character"
+      module_name name ()
+
+  (* Reads the portion of string between [pos] and [pos+decimals-1], inclusive, and
+     interperets it as a positive decimal part of a number, which we call [x].
+
+     Let [i] and [r] be the integer part and remaining fractional part of
+     [x * scale / divisor].
+
+     If [r < round_at/divisor], returns [i].
+     If [r = round_at/divisor], returns [i] or [i+1] based on [round_exact].
+     If [r > round_at/divisor], returns [i+1].
+
+     Assumes without checking that [scale] and [divisor] are both positive and
+     less than [Int63.max_value / 10] (to avoid internal overflow during the algorithm
+     when multiplying by 10), and that [round_at >= 0] and [round_at < divisor]. *)
+  let read_int63_decimal_rounded
+        string
+        ~pos:start
+        ~decimals
+        ~scale
+        ~divisor
+        ~round_at
+        ~round_exact
+        ~allow_underscore
+    =
+    let open Int63.O in
+    let until = Int.( + ) start decimals in
+
+    (* The loop invariant is that each iteration, we strip off the next decimal digit and
+       update [sum], [round_at], and [divisor] such that the desired result is:
+
+       [ sum + round(remaining_digits_of_x_parsed_as_decimal * scale / divisor) ]
+       where "round" rounds based on the new value of [round_at].
+    *)
+    let divisor  = ref divisor    in
+    let round_at = ref round_at   in
+    let sum      = ref Int63.zero in
+    let pos      = ref start      in
+    (* Stop if we run out of characters, or if further digits cannot increase our sum. *)
+    while Int.( <> ) !pos until && !round_at < scale do
+      begin
+        match String.unsafe_get string !pos with
+        | '0' .. '9' as char ->
+          let digit = Int63.of_int (digit_of_char char) in
+          (* Every new decimal place implicitly scales our numerator by a factor of ten,
+             so must also effectively scale our denominator.
+
+             0.abcdef * scale/divisor        [round at round_at]
+             = a.bcdef * scale/(divisor*10)  [round at round_at*10]
+
+             Then redefine divisor := divisor*10 and round_at := round_at*10, so we have:
+             a.bcdef * scale/divisor [round at round_at] *)
+          divisor  := !divisor  * int63_ten;
+          round_at := !round_at * int63_ten;
+
+          (* Next we work out the part of the sum based on our current digit:
+
+             a.bcdef * scale/divisor [round at round_at]
+             = a.bcdef * scale/divisor - round_at / divisor  [round at 0]
+             = (a*scale-round_at) / divisor + 0.bcdef * scale/divisor  [round at 0]
+
+             Decompose the first term into integer and remainder parts.
+             Since we have already subtracted [round_at], we decompose based
+             on the ceiling rather than the floor of the division,
+             e.g. 5/3 would decompose as 2 + (-1)/3, rather than 1 + (2/3).
+
+             = increment + remainder/divisor + 0.bcdef * scale/divisor  [round at 0]
+             = increment + 0.bcdef * scale/divisor  [round at -remainder]
+          *)
+          let numerator = digit * scale - !round_at in
+          let denominator = !divisor in
+          let increment = divide_and_round_up ~numerator ~denominator in
+          let remainder = numerator - increment * denominator in
+
+          (* Now just accumulate the new increment and iterate on the remaining part:
+             0.bcdef * scale/divisor  [round at -remainder].
+
+             Since [remainder] is between [-(divisor-1)] and [0] inclusive, the new
+             [round_at] will be within [0] and [divisor-1] inclusive. *)
+          round_at    := -remainder;
+          sum         := !sum + increment;
+          (* This line prevents the divisor from growing without bound and overflowing. If
+             this line actually changes the divisor, then the divisor is larger than the
+             scale, so the sum will increase if and only if [parsed_remaining_digits *
+             scale (> or >=) round_at], which doesn't depend on how much larger the
+             divisor is. So this change is safe. *)
+          divisor := Int63.min denominator scale;
+        | '_' when allow_underscore -> ()
+        | _ -> raise_invalid_decimal "read_int63_decimal"
+      end;
+      pos := Int.succ !pos;
+    done;
+
+    if !round_at = zero
+    then begin
+      match round_exact with
+      | Round.Toward_negative_infinity -> ()
+      | Round.Toward_positive_infinity -> sum := !sum + Int63.one
+    end;
+
+    !sum
+
+  let read_int63_decimal string ~pos ~decimals ~scale ~round_ties ~allow_underscore =
+    read_int63_decimal_rounded
+      string
+      ~pos
+      ~decimals
+      ~scale:       (Int63.( * ) scale int63_two)
+      ~divisor:     int63_two
+      ~round_at:    Int63.one
+      ~round_exact: round_ties
+      ~allow_underscore
 end
+
+let min_scale = Int63.one
+let max_scale = Int63.( / ) Int63.max_value int63_twenty
+
+let raise_negative_decimals name ~decimals =
+  invalid_argf "%s.%s: decimals=%d is negative"
+    module_name name decimals ()
 
 let raise_non_positive_digits name ~digits =
   invalid_argf "%s.%s: digits=%d is not a positive number"
     module_name name digits ()
+
+let raise_scale_out_of_bounds name ~scale =
+  invalid_argf "%s.%s: scale=%Ld out of range [%Ld, %Ld]"
+    module_name name
+    (Int63.to_int64 scale)
+    (Int63.to_int64 min_scale)
+    (Int63.to_int64 max_scale)
+    ()
 
 let raise_pos_out_of_bounds name ~len ~pos ~digits =
   if pos < 0 || pos >= len
@@ -186,6 +364,10 @@ let raise_int63_out_of_bounds name ~max int63 =
   invalid_argf !"%s.%s: %{Int63} out of range [0, %{Int63}]"
     module_name name int63 max ()
 
+let check_decimals name ~decimals =
+  if decimals < 0
+  then raise_negative_decimals name ~decimals
+
 let check_digits name ~digits =
   if digits < 1
   then raise_non_positive_digits name ~digits
@@ -201,6 +383,11 @@ let check_int name ~max int =
 let check_int63 name ~max int63 =
   if Int63.( < ) int63 Int63.zero || Int63.( > ) int63 max
   then raise_int63_out_of_bounds name ~max int63
+
+let check_scale name ~scale =
+  if Int63.( < ) scale min_scale
+  || Int63.( > ) scale max_scale
+  then raise_scale_out_of_bounds name ~scale
 
 let check_write name ~bytes ~pos ~digits ~max int =
   let len = Bytes.length bytes in
@@ -267,6 +454,13 @@ let check_read63 name ~string ~pos ~digits =
   check_pos name ~digits ~len ~pos;
 ;;
 
+let check_read63_decimal name ~string ~pos ~decimals ~scale =
+  let len = String.length string in
+  check_decimals name ~decimals;
+  check_scale    name ~scale;
+  check_pos      name ~digits:decimals ~len ~pos;
+;;
+
 let read_1_digit_int string ~pos =
   check_read "read_1_digit_int" ~string ~pos ~digits:1;
   Unsafe.read_1_digit_int string ~pos
@@ -306,3 +500,7 @@ let read_9_digit_int string ~pos =
 let read_int63 string ~pos ~digits =
   check_read63 "read_int63" ~string ~pos ~digits;
   Unsafe.read_int63 string ~pos ~digits
+
+let read_int63_decimal string ~pos ~decimals ~scale ~round_ties ~allow_underscore =
+  check_read63_decimal "read_int63_decimal" ~string ~pos ~decimals ~scale;
+  Unsafe.read_int63_decimal string ~pos ~decimals ~scale ~round_ties ~allow_underscore

@@ -31,11 +31,11 @@ module type S = sig
 
   module Parts : Parts
 
-  include Comparable_binable   with type t := t
-  include Comparable.With_zero with type t := t
-  include Hashable_binable     with type t := t
-  include Pretty_printer.S     with type t := t
-  include Robustly_comparable  with type t := t
+  include Comparable_binable         with type t := t
+  include Comparable.With_zero       with type t := t
+  include Hashable_binable           with type t := t
+  include Pretty_printer.S           with type t := t
+  include Robustly_comparable        with type t := t
 
   (** String converters and sexp converters allow for specifying of time spans in various
       units after a leading float (e.g. 45s, 3h, or 1d):
@@ -182,21 +182,4 @@ module type S = sig
   (** [randomize t ~percent] returns a span +/- percent * original span.  Percent must be
       between 0% and 100% inclusive, and must be positive. *)
   val randomize : t -> percent:Percent.t -> t
-end
-
-module type S_stable = sig
-  type t
-
-  module V1 : sig
-    type nonrec t = t [@@deriving sexp, bin_io, compare, hash]
-  end
-  module V2 : sig
-    type nonrec t = t [@@deriving sexp, bin_io, compare, hash]
-  end
-end
-
-module type Span = sig
-  include S
-
-  module Stable : S_stable with type t := t
 end

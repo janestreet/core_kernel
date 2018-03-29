@@ -21,6 +21,18 @@ let stable_dedup_staged (type a) ~(compare : a -> a -> int)
   Base.Staged.stage Set.stable_dedup_list
 ;;
 
+let zip_with_remainder =
+  let rec zip_with_acc_and_remainder acc xs ys =
+    match xs, ys with
+    | [],    []    -> rev acc, None
+    | fst,   []    -> rev acc, Some (Either.First  fst)
+    | [],    snd   -> rev acc, Some (Either.Second snd)
+    | x::xs, y::ys -> zip_with_acc_and_remainder ((x,y)::acc) xs ys
+  in
+  fun xs ys ->
+    zip_with_acc_and_remainder [] xs ys
+;;
+
 type sexp_thunk = unit -> Base.Sexp.t
 let sexp_of_sexp_thunk x = x ()
 exception Duplicate_found of sexp_thunk * Base.String.t [@@deriving sexp]

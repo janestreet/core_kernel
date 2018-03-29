@@ -103,7 +103,7 @@ val pack_float   : byte_order:endian -> buf:bytes -> pos:int -> float -> unit
     [pos]. Return a string containing only the non-padding characters. The default
     padding is '\x00'. *)
 val unpack_tail_padded_fixed_string
-  : ?padding:char -> buf:bytes -> pos:int -> len:int -> unit -> bytes
+  : ?padding:char -> buf:Bytes.t -> pos:int -> len:int -> unit -> string
 
 (** Encode and pack the given string as a tail padded fixed length string having length
     [len]. Place it in [buf] starting at position [pos].  If the length of the string is
@@ -111,6 +111,6 @@ val unpack_tail_padded_fixed_string
     If the string is longer than [len] raise [Invalid_argument].  The default padding is
     '\x00'. *)
 val pack_tail_padded_fixed_string
-  : ?padding:char -> buf:bytes -> pos:int -> len:int -> bytes -> unit
+  : ?padding:char -> buf:Bytes.t -> pos:int -> len:int -> string -> unit
 
 val test : unit -> unit

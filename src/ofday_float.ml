@@ -3,6 +3,8 @@ open Std_internal
 open Digit_string_helpers
 open! Int.Replace_polymorphic_compare
 
+module Span = Span_float
+
 (* Create an abstract type for Ofday to prevent us from confusing it with
    other floats.
 *)
@@ -11,10 +13,10 @@ module Stable = struct
     module T : sig
       type underlying = float
       type t = private underlying [@@deriving bin_io, hash]
-      include Comparable.S_common  with type t := t
-      include Comparable.With_zero with type t := t
-      include Robustly_comparable  with type t := t
-      include Floatable            with type t := t
+      include Comparable.S_common        with type t := t
+      include Comparable.With_zero       with type t := t
+      include Robustly_comparable        with type t := t
+      include Floatable                  with type t := t
       val add                        : t -> Span.t -> t option
       val sub                        : t -> Span.t -> t option
       val next                       : t -> t option
@@ -33,10 +35,10 @@ module Stable = struct
           let sign = sign_exn
         end : sig
            type t = underlying [@@deriving bin_io, hash]
-           include Comparable.S_common  with type t := t
-           include Comparable.With_zero with type t := t
-           include Robustly_comparable  with type t := t
-           include Floatable            with type t := t
+           include Comparable.S_common        with type t := t
+           include Comparable.With_zero       with type t := t
+           include Robustly_comparable        with type t := t
+           include Floatable                  with type t := t
          end)
       (* IF THIS REPRESENTATION EVER CHANGES, ENSURE THAT EITHER
          (1) all values serialize the same way in both representations, or
@@ -288,9 +290,6 @@ module Stable = struct
          Span.of_sec d)
     ;;
 
-    (* There are a number of things that would be shadowed by this include because of the
-       scope of Constrained_float.  These need to be defined below.  It's a an unfortunate
-       situation because we would like to say include T, without shadowing. *)
     include T
 
     let to_string t = to_string_gen ~drop_ms:false ~drop_us:false ~trim:false t

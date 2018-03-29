@@ -23,11 +23,11 @@ module type S = sig
   type underlying
   type t = private underlying [@@deriving bin_io, sexp]
 
-  include Comparable_binable   with type t := t
-  include Comparable.With_zero with type t := t
-  include Hashable_binable     with type t := t
-  include Pretty_printer.S     with type t := t
-  include Robustly_comparable  with type t := t
+  include Comparable_binable         with type t := t
+  include Comparable.With_zero       with type t := t
+  include Hashable_binable           with type t := t
+  include Pretty_printer.S           with type t := t
+  include Robustly_comparable        with type t := t
 
   module Span : Span_intf.S
 
@@ -112,18 +112,4 @@ module type S = sig
 
   (** with milliseconds *)
   val to_millisec_string : t -> string
-end
-
-module type S_stable = sig
-  type t
-
-  module V1 : sig
-    type nonrec t = t [@@deriving bin_io, compare, hash, sexp]
-  end
-end
-
-module type Ofday = sig
-  include S
-
-  module Stable : S_stable with type t := t
 end

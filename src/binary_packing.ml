@@ -746,7 +746,7 @@ let unpack_tail_padded_fixed_string ?(padding='\x00') ~buf ~pos ~len () =
   let data_end =
     last_nonmatch_plus_one ~buf ~min_pos:pos ~pos:(pos + len) ~char:padding
   in
-  Bytes.sub buf ~pos ~len:(data_end - pos)
+  Bytes.To_string.sub buf ~pos ~len:(data_end - pos)
 ;;
 
 exception Pack_tail_padded_fixed_string_argument_too_long of
@@ -754,11 +754,11 @@ exception Pack_tail_padded_fixed_string_argument_too_long of
 ;;
 
 let pack_tail_padded_fixed_string ?(padding='\x00') ~buf ~pos ~len s =
-  let slen = Bytes.length s in
+  let slen = String.length s in
   if slen > len then
-    raise (Pack_tail_padded_fixed_string_argument_too_long (`s (Bytes.to_string s), `longer_than, `len len))
+    raise (Pack_tail_padded_fixed_string_argument_too_long (`s s, `longer_than, `len len))
   else begin
-    Bytes.blit ~src:s ~dst:buf ~src_pos:0 ~dst_pos:pos ~len:slen;
+    Bytes.From_string.blit ~src:s ~dst:buf ~src_pos:0 ~dst_pos:pos ~len:slen;
     if slen < len then begin
       let diff = len - slen in
       Bytes.fill buf ~pos:(pos + slen) ~len:diff padding
@@ -784,7 +784,6 @@ let%test_module "inline_tail_padded_fixed_string" =
     let test_unpack_tail_padded_fixed_string ~padding ~buf ~pos ~len ~expect =
       let result =
         unpack_tail_padded_fixed_string ~padding ~buf:(Bytes.of_string buf) ~pos ~len ()
-        |> Bytes.to_string
       in
       result = expect
 
@@ -803,7 +802,7 @@ let%test_module "inline_tail_padded_fixed_string" =
 
     let test_pack_tail_padded_fixed_string ~padding ~pos ~len str ~expect =
       let buf = Bytes.of_string "12345678" in
-      pack_tail_padded_fixed_string ~padding ~buf ~pos ~len (Bytes.of_string str);
+      pack_tail_padded_fixed_string ~padding ~buf ~pos ~len str;
       Bytes.to_string buf = expect
 
     let%test _ =
