@@ -147,7 +147,7 @@ let compare _ _ t1 t2 = compare_direct t1 t2
 module Using_comparator = struct
   include (Set.Using_comparator :
              module type of struct include Set.Using_comparator end
-           with module Tree := Tree)
+           with module Tree := Set.Using_comparator.Tree)
   include For_quickcheck
 
   let of_map_keys m = of_tree ~comparator:(Map.comparator m) (Tree.of_map_keys m)

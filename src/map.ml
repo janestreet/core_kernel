@@ -109,6 +109,7 @@ end
 
 let hash_fold_direct = Using_comparator.hash_fold_direct
 let comparator = Using_comparator.comparator
+let comparator_s = Base.Map.comparator_s
 
 type 'k key = 'k
 

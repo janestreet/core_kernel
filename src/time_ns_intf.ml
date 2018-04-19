@@ -2,47 +2,20 @@ open! Import
 open Std_internal
 
 module type Span = sig
-  (** [t] is immediate on 64bit boxes and so plays nicely with the GC write barrier.
-      Unfortunately, [private Int63.t] is necessary for the compiler to optimize uses. *)
-  type t = private Int63.t [@@deriving hash, typerep, bin_io]
+  (** [t] is immediate on 64bit boxes and so plays nicely with the GC write barrier. *)
+  type t = private Int63.t
 
-  include Comparisons.S        with type t := t
-  include Comparable.Validate  with type t := t
-  include Comparable.With_zero with type t := t
-
-  val nanosecond  : t
-  val microsecond : t
-  val millisecond : t
-  val second      : t
-  val minute      : t
-  val hour        : t
-  val day         : t
-
-  val of_ns  : float -> t
-  val of_us  : float -> t
-  val of_ms  : float -> t
-  val of_sec : float -> t
-  val of_min : float -> t
-  val of_hr  : float -> t
-  val of_day : float -> t
-  val to_ns  : t     -> float
-  val to_us  : t     -> float
-  val to_ms  : t     -> float
-  val to_sec : t     -> float
-  val to_min : t     -> float
-  val to_hr  : t     -> float
-  val to_day : t     -> float
+  include Span_intf.S
+    with type underlying = Int63.t
+     and type t := t
 
   val of_sec_with_microsecond_precision : float -> t
 
   val of_int_us  : int -> t
   val of_int_ms  : int -> t
-  val of_int_sec : int -> t
   val to_int_us  : t -> int
   val to_int_ms  : t -> int
   val to_int_sec : t -> int
-
-  val zero : t
 
   (** The limits of [t] are chosen to allow conversion to and from [float] spans with
       microsecond precision.  This property supports {!Core.Timing_wheel_float} in
@@ -50,45 +23,11 @@ module type Span = sig
   val min_value : t
   val max_value : t
 
-  val ( + ) : t -> t -> t (** overflows silently                *)
-
-  val ( - ) : t -> t -> t (** overflows silently                *)
-
-  val abs   : t -> t      (** overflows silently on [min_value] *)
-
-  val neg   : t -> t      (** overflows silently on [min_value] *)
-
-  val scale       : t -> float        -> t
-  val scale_int   : t -> int          -> t (** overflows silently *)
+  val scale_int   : t -> int   -> t (** overflows silently *)
 
   val scale_int63 : t -> Int63.t -> t (** overflows silently *)
 
   val div    : t -> t     -> Int63.t
-  val ( / )  : t -> float -> t
-  val ( // ) : t -> t     -> float
-
-  (** Overflows silently. *)
-  val create
-    :  ?sign : Sign.t
-    -> ?day : int
-    -> ?hr  : int
-    -> ?min : int
-    -> ?sec : int
-    -> ?ms  : int
-    -> ?us  : int
-    -> ?ns  : int
-    -> unit
-    -> t
-
-  (** Similar to {!Time.Span.Parts}. *)
-  module Parts : Span_intf.Parts
-
-  val to_parts : t -> Parts.t
-
-  val to_unit_of_time : t -> Unit_of_time.t
-  val of_unit_of_time : Unit_of_time.t -> t
-
-  include Robustly_comparable with type t := t
 
   (** Fast, implemented as the identity function. *)
   val to_int63_ns : t -> Int63.t
@@ -100,10 +39,6 @@ module type Span = sig
   val to_int_ns : t   -> int
   val of_int_ns : int -> t
 
-  (** The only condition [to_proportional_float] is supposed to satisfy is that for all
-      [t1, t2 : t]: [to_proportional_float t1 /. to_proportional_float t2 = t1 // t2]. *)
-  val to_proportional_float : t -> float
-
   val since_unix_epoch : unit -> t
 
   val random : ?state:Random.State.t -> unit -> t
@@ -112,6 +47,50 @@ module type Span = sig
   module Alternate_sexp : sig
     type nonrec t = t [@@deriving sexp]
   end
+  [@@deprecated "[since 2018-04] use [Span.sexp_of_t] and [Span.t_of_sexp] instead"]
+end
+
+module type Ofday = sig
+  type span
+
+  type t = private Int63.t [@@deriving typerep]
+
+  (** String and sexp output takes the form 'HH:MM:SS.sssssssss'; see
+      {!Core_kernel.Ofday_intf} for accepted input. If input includes more than 9 decimal
+      places in seconds, rounds to the nearest nanosecond, with the midpoint rounded up.
+      Allows 60[.sss...] seconds for leap seconds but treats it as exactly 60s regardless
+      of fractional part. *)
+  include Identifiable with type t := t
+
+  (** On some days, [add_exn t span] doesn't occur [span] from [t] in real time.  For
+      example, this happens on days when daylight saving time begins or ends.  See
+      {!Time.Ofday} for more detail. *)
+  val add_exn : t -> span -> t
+  val sub_exn : t -> span -> t
+
+  val diff : t -> t -> span
+
+  val to_millisecond_string : t -> string
+
+  val start_of_day : t
+  val start_of_next_day : t
+
+  (** The largest representable value below [start_of_next_day], i.e. one nanosecond
+      before midnight. *)
+  val approximate_end_of_day : t
+
+  val to_span_since_start_of_day : t -> span
+  val of_span_since_start_of_day_exn : span -> t
+
+  val create
+    :  ?hr  : int
+    -> ?min : int
+    -> ?sec : int
+    -> ?ms  : int
+    -> ?us  : int
+    -> ?ns  : int
+    -> unit
+    -> t
 end
 
 (** Time represented as an [Int63.t] number of nanoseconds since the epoch.
@@ -124,6 +103,7 @@ end
 module type Time_ns = sig
 
   module Span : Span
+  module Ofday : Ofday with type span := Span.t
 
   type t = private Int63.t [@@deriving hash, typerep, bin_io]
 
@@ -194,6 +174,15 @@ module type Time_ns = sig
   module Stable : sig
     module Alternate_sexp : sig
       module V1 : Stable_without_comparator with type t = Alternate_sexp.t
+    end
+
+    module Span : sig
+      (** [V1] is currently only implemented in [Core]. *)
+      module V2 : Stable_int63able with type t = Span.t
+    end
+
+    module Ofday : sig
+      module V1 : Stable_int63able with type t = Ofday.t
     end
   end
 

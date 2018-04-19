@@ -59,8 +59,8 @@ module type S = sig
 
   (** These functions always copy. Use [create] if you want sharing. *)
 
-  val of_string    : string -> t [@deprecated "[since 2017-11] use [create] instead"]
-  val of_bigstring : Bigstring.t -> t [@deprecated "[since 2017-11] use [create] instead"]
+  val of_string    : string -> t [@@deprecated "[since 2017-11] use [create] instead"]
+  val of_bigstring : Bigstring.t -> t [@@deprecated "[since 2017-11] use [create] instead"]
 
   (** {2 Prefixes and suffixes}
 

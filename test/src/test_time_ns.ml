@@ -5,10 +5,6 @@ type time_ns = Time_ns.t [@@deriving compare]
 let sexp_of_time_ns = Time_ns.Alternate_sexp.sexp_of_t
 ;;
 
-type time_span = Time_ns.Span.t [@@deriving compare]
-let sexp_of_time_span = Time_ns.Span.Alternate_sexp.sexp_of_t
-;;
-
 let gen =
   let open Quickcheck.Generator.Let_syntax in
   let%map ns_since_epoch =
@@ -137,7 +133,7 @@ let%test_module "Time_ns.Utc.to_date_and_span_since_start_of_day" =
             "span_since_start_of_day is out of bounds"
               (time_ns                 : time_ns)
               (date                    : Date.t)
-              (span_since_start_of_day : time_span)]
+              (span_since_start_of_day : Time_ns.Span.t)]
         end);
       [%expect {| |}];
     ;;

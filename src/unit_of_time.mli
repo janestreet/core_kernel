@@ -11,4 +11,4 @@ type t =
   | Minute
   | Hour
   | Day
-[@@deriving sexp, compare, hash]
+[@@deriving sexp, compare, enumerate, hash]

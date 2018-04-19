@@ -14,7 +14,7 @@ end
 
 include (Base.Sequence
          : module type of struct include Base.Sequence end
-         with module Merge_with_duplicates_element := Merge_with_duplicates_element)
+         with module Merge_with_duplicates_element := Base.Sequence.Merge_with_duplicates_element)
 
 module Merge_all_state = struct
   type 'a t = {

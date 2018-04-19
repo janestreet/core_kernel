@@ -756,7 +756,7 @@ module Top_level = struct
             ~doc:"REGEX Select tests matching given regex."
         and sizes =
           flag "-sizes"
-            (optional_with_default [1;32;1024] (Arg_type.comma_separated int))
+            (optional_with_default [1;32;1024] (Arg_type.comma_separated int ~allow_empty:true))
             ~doc:"INT,... Use hash tables of specified sizes."
         and list =
           flag "-list" no_arg ~doc:" List benchmark names; do not run benchmarks."

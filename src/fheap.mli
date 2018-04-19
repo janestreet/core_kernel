@@ -11,8 +11,8 @@ type 'a t [@@deriving sexp_of]
     documented separately to make sure there is no confusion. *)
 include Container.S1 with type 'a t := 'a t
 
-(** The comparison functions in [min_elt] and [max_elt] are independent of the one
-    used to order the heap. Since the provided [cmp] may be different from the one used to
+(** The comparison functions in [min_elt] and [max_elt] are independent of the one used to
+    order the heap. Since the provided [compare] may be different from the one used to
     create the heap, it is necessary for these functions to traverse the entire heap. If
     you want to access the smallest element of the heap according to the heap's comparison
     function, you should use [top]. *)

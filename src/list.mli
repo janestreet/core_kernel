@@ -20,7 +20,7 @@ end
 
 include module type of struct include Base.List end
   with type 'a t := 'a t
-  with module Assoc := Assoc (** @open *)
+  with module Assoc := Base.List.Assoc (** @open *)
 
 (** {2 Extensions} *)
 

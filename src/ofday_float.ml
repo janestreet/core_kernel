@@ -14,7 +14,6 @@ module Stable = struct
       type underlying = float
       type t = private underlying [@@deriving bin_io, hash]
       include Comparable.S_common        with type t := t
-      include Comparable.With_zero       with type t := t
       include Robustly_comparable        with type t := t
       include Floatable                  with type t := t
       val add                        : t -> Span.t -> t option
@@ -22,8 +21,8 @@ module Stable = struct
       val next                       : t -> t option
       val prev                       : t -> t option
       val diff                       : t -> t -> Span.t
-      val of_span_since_start_of_day : Span.t -> t
-      val to_span_since_start_of_day : t -> Span.t
+      val of_span_since_start_of_day_exn : Span.t -> t
+      val to_span_since_start_of_day     : t -> Span.t
       val start_of_day               : t
       val start_of_next_day          : t
     end = struct
@@ -65,21 +64,21 @@ module Stable = struct
         Span.(<=) Span.zero t && Span.(<=) t Span.day
       ;;
 
-      let of_span_since_start_of_day span =
+      let of_span_since_start_of_day_exn span =
         let module C = Float.Class in
         let s = Span.to_sec span in
         match Float.classify s with
-        | C.Infinite -> invalid_arg "Ofday.of_span_since_start_of_day: infinite value"
-        | C.Nan      -> invalid_arg "Ofday.of_span_since_start_of_day: NaN value"
+        | C.Infinite -> invalid_arg "Ofday.of_span_since_start_of_day_exn: infinite value"
+        | C.Nan      -> invalid_arg "Ofday.of_span_since_start_of_day_exn: NaN value"
         | C.Normal | C.Subnormal | C.Zero ->
           if not (is_valid s) then
-            invalid_argf "Ofday out of range: %f" s ()
+            invalid_argf !"Ofday out of range: %{Span}" span ()
           else
             s
       ;;
 
       let start_of_day = 0.
-      let start_of_next_day = of_span_since_start_of_day Span.day
+      let start_of_next_day = of_span_since_start_of_day_exn Span.day
 
       let add (t:t) (span:Span.t) =
         let t = t +. (Span.to_sec span) in
@@ -126,7 +125,7 @@ module Stable = struct
         | Some 60 -> Some 0, Some 0, Some 0
         | _       -> ms,     us,     ns
       in
-      T.of_span_since_start_of_day (Span.create ?hr ?min ?sec ?ms ?us ?ns ())
+      T.of_span_since_start_of_day_exn (Span.create ?hr ?min ?sec ?ms ?us ?ns ())
     ;;
 
     let%test "create can handle a leap second" =
@@ -187,94 +186,7 @@ module Stable = struct
 
     let to_sec_string t = to_string_gen ~drop_ms:true ~drop_us:true ~trim:false t
 
-    let to_millisec_string t = to_string_gen ~drop_ms:false ~drop_us:true ~trim:false t
-
-    let of_string_iso8601_extended ?pos ?len str =
-      let (pos, len) =
-        match
-          Ordered_collection_common.get_pos_len ?pos ?len ~length:(String.length str)
-        with
-        | Result.Ok z    -> z
-        | Result.Error s -> failwithf "Ofday.of_string_iso8601_extended: %s" s ()
-      in
-      try
-        if len < 2 then failwith "len < 2"
-        else begin
-          let span =
-            let hour = read_2_digit_int str ~pos in
-            if hour > 24 then failwith "hour > 24";
-            let span = Span.of_hr (float hour) in
-            if len = 2 then span
-            else if len < 5 then failwith "2 < len < 5"
-            else if not (Char.equal str.[pos + 2] ':')
-            then failwith "first colon missing"
-            else
-              let minute = read_2_digit_int str ~pos:(pos + 3) in
-              if minute >= 60 then failwith "minute > 60";
-              let span = Span.(+) span (Span.of_min (float minute)) in
-              if hour = 24 && minute <> 0 then
-                failwith "24 hours and non-zero minute";
-              if len = 5 then span
-              else if len < 8 then failwith "5 < len < 8"
-              else if not (Char.equal str.[pos + 5] ':')
-              then failwith "second colon missing"
-              else
-                let second = read_2_digit_int str ~pos:(pos + 6) in
-                (* second can be 60 in the case of a leap second. Unfortunately, what with
-                   non-hour-multiple timezone offsets, we can't say anything about what
-                   the hour or minute must be in that case *)
-                if second > 60
-                then failwithf "invalid second: %i" second ();
-                if hour = 24 && second <> 0 then
-                  failwith "24 hours and non-zero seconds";
-                let seconds = Span.of_sec (float second) in
-                if len = 8 then Span.(+) span seconds
-                else if len = 9 then failwith "length = 9"
-                else
-                  match str.[pos + 8] with
-                  | '.' | ',' ->
-                    let last = pos + len - 1 in
-                    let rec loop pos subs =
-                      let subs = subs * 10 + Char.get_digit_exn str.[pos] in
-                      if pos = last then subs else loop (pos + 1) subs
-                    in
-                    let subs = loop (pos + 9) 0 in
-                    if hour = 24 && subs <> 0 then
-                      failwith "24 hours and non-zero subseconds";
-                    let seconds =
-                      Span.(+)
-                        seconds
-                        (Span.of_sec (float subs /. (10. ** float (len - 9))))
-                    in
-                    (* above we test for a leap second, but we can't represent the leap
-                       second within an Ofday.t, so here we are forced to trim it back
-                       if we have more than 60 seconds. *)
-                    let seconds =
-                      if Span.(>) seconds (Span.of_sec 60.)
-                      then Span.of_sec 60.
-                      else seconds
-                    in
-                    Span.(+) span seconds
-                  | _ -> failwith "missing subsecond separator"
-          in
-          T.of_span_since_start_of_day span
-        end
-      with exn ->
-        invalid_argf "Ofday.of_string_iso8601_extended(%s): %s"
-          (String.sub str ~pos ~len) (Exn.to_string exn) ()
-    ;;
-
-    let%test "of_string_iso8601_extended supports leap seconds" =
-      let last_second = create ~hr:21 () in
-      List.for_all
-        ~f:(fun s -> T.equal (of_string_iso8601_extended s) last_second)
-        [ "20:59:60"
-        ; "20:59:60.500"
-        ; "20:59:60.000" ]
-    ;;
-
-    let%test "of_string_iso8601_extended doesn't support two leap seconds" =
-      Exn.does_raise (fun () -> of_string_iso8601_extended "23:59:61")
+    let to_millisecond_string t = to_string_gen ~drop_ms:false ~drop_us:true ~trim:false t
 
     let small_diff =
       let hour = 3600. in
@@ -308,11 +220,11 @@ module Stable = struct
       in
       Float.of_int ((hr * 3600) + (min * 60) + sec) +. subsec
       |> Span.of_sec
-      |> T.of_span_since_start_of_day
+      |> T.of_span_since_start_of_day_exn
     ;;
 
     let of_string s =
-      Ofday_parser.parse s ~f:create_from_parsed
+      Ofday_helpers.parse s ~f:create_from_parsed
     ;;
 
     let%test_unit "of_string does not naively dispatch to \
@@ -340,8 +252,8 @@ module Stable = struct
     (* This because we're sharing the suffixes between the parser code and tests, so e.g.
        typos would otherwise go undetected *)
     let%expect_test "the permissible suffixes are reasonable" =
-      printf "%s\n" (String.concat ~sep:" " (Lazy.force Ofday_parser.am_suffixes));
-      printf "%s\n" (String.concat ~sep:" " (Lazy.force Ofday_parser.pm_suffixes));
+      printf "%s\n" (String.concat ~sep:" " (Lazy.force Ofday_helpers.am_suffixes));
+      printf "%s\n" (String.concat ~sep:" " (Lazy.force Ofday_helpers.pm_suffixes));
       [%expect {|
         a A am AM a.m A.M a.m. A.M.
         p P pm PM p.m P.M p.m. P.M.
@@ -353,8 +265,8 @@ module Stable = struct
           let plus_space xs = xs @ List.map xs ~f:(fun x -> " " ^ x) in
           match meridiem with
           | None     -> 0,  [""]
-          | Some `AM -> 0,  plus_space (Lazy.force Ofday_parser.am_suffixes)
-          | Some `PM -> 12, plus_space (Lazy.force Ofday_parser.pm_suffixes)
+          | Some `AM -> 0,  plus_space (Lazy.force Ofday_helpers.am_suffixes)
+          | Some `PM -> 12, plus_space (Lazy.force Ofday_helpers.pm_suffixes)
         in
         List.iter suffixes ~f:(fun suffix ->
           let t = create ~hr:(hr + hrs_to_add) () in
@@ -418,6 +330,26 @@ module Stable = struct
     ;;
 
     let sexp_of_t span = Sexp.Atom (to_string span)
+
+    let of_string_iso8601_extended ?pos ?len str =
+      try
+        Ofday_helpers.parse_iso8601_extended ?pos ?len str ~f:create_from_parsed
+      with exn ->
+        invalid_argf "Ofday.of_string_iso8601_extended(%s): %s"
+          (String.subo str ?pos ?len) (Exn.to_string exn) ()
+    ;;
+
+    let%test "of_string_iso8601_extended supports leap seconds" =
+      let last_second = create ~hr:21 () in
+      List.for_all
+        ~f:(fun s -> T.equal (of_string_iso8601_extended s) last_second)
+        [ "20:59:60"
+        ; "20:59:60.500"
+        ; "20:59:60.000" ]
+    ;;
+
+    let%test "of_string_iso8601_extended doesn't support two leap seconds" =
+      Exn.does_raise (fun () -> of_string_iso8601_extended "23:59:61")
   end
 end
 
@@ -465,3 +397,6 @@ let%test _ =
   Set.equal (Set.of_list [start_of_day])
     (Set.t_of_sexp (Sexp.List [Float.sexp_of_t (to_float start_of_day)]))
 ;;
+
+let of_span_since_start_of_day = of_span_since_start_of_day_exn
+let to_millisec_string         = to_millisecond_string

@@ -1,8 +1,8 @@
-include (Base.Type_equal : module type of Base.Type_equal
+include (Base.Type_equal : module type of struct include Base.Type_equal end
          with module Id := Base.Type_equal.Id)
 
 module Id = struct
-  include (Base.Type_equal.Id : module type of Base.Type_equal.Id
+  include (Base.Type_equal.Id : module type of struct include Base.Type_equal.Id end
            with module Uid := Base.Type_equal.Id.Uid)
 
   module Uid = struct

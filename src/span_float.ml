@@ -18,7 +18,7 @@ module Stable = struct
     end
 
     module type Like_a_float = sig
-      type t [@@deriving bin_io, hash]
+      type t [@@deriving bin_io, hash, typerep]
 
       include Comparable.S_common  with type t := t
       include Comparable.With_zero with type t := t
@@ -114,29 +114,6 @@ module Stable = struct
         { sign; hr; min; sec; ms; us; ns }
     end
 
-    let format_decimal n tenths units =
-      assert (tenths >= 0 && tenths < 10);
-      if n < 10 && tenths <> 0
-      then sprintf "%d.%d%s" n tenths units
-      else sprintf "%d%s" n units
-
-    let to_short_string span =
-      let open Parts in
-      let parts = T.to_parts span in
-      let s =
-        if parts.hr > 24 then
-          format_decimal
-            (parts.hr / 24) (Int.of_float (Float.of_int (parts.hr % 24) /. 2.4)) "d"
-        else if parts.hr > 0 then format_decimal parts.hr (parts.min / 6) "h"
-        else if parts.min > 0 then format_decimal parts.min (parts.sec / 6) "m"
-        else if parts.sec > 0 then format_decimal parts.sec (parts.ms / 100) "s"
-        else if parts.ms  > 0 then format_decimal parts.ms  (parts.us / 100) "ms"
-        else sprintf "%ius" parts.us
-      in
-      match parts.sign with
-      | Neg        -> "-" ^ s
-      | Zero | Pos ->       s
-
     let (/) t f = T.of_float ((t : T.t :> float) /. f)
     let (//) (f:T.t) (t:T.t) = (f :> float) /. (t :> float)
 
@@ -168,15 +145,25 @@ module Stable = struct
     let of_hr x              = x ** T.Constant.hour
     let of_day x             = x ** T.Constant.day
 
-    let randomize (t:T.t) ~percent =
-      if Percent.( < ) percent (Percent.of_mult 0.)
-      || Percent.( > ) percent (Percent.of_mult 1.0) then
-        invalid_argf !"percent must be between 0%% and 100%%, %{Percent} given"
-          percent ();
-      let t = to_sec t in
-      let distance = Random.float (Percent.apply percent t) in
-      of_sec (if Random.bool () then t +. distance else t -. distance)
-    ;;
+    let divide_by_unit_of_time t unit_of_time =
+      match (unit_of_time : Unit_of_time.t) with
+      | Nanosecond  -> to_ns  t
+      | Microsecond -> to_us  t
+      | Millisecond -> to_ms  t
+      | Second      -> to_sec t
+      | Minute      -> to_min t
+      | Hour        -> to_hr  t
+      | Day         -> to_day t
+
+    let scale_by_unit_of_time float unit_of_time =
+      match (unit_of_time : Unit_of_time.t) with
+      | Nanosecond  -> of_ns  float
+      | Microsecond -> of_us  float
+      | Millisecond -> of_ms  float
+      | Second      -> of_sec float
+      | Minute      -> of_min float
+      | Hour        -> of_hr  float
+      | Day         -> of_day float
 
     let create
           ?(sign = Sign.Pos)
@@ -204,6 +191,13 @@ module Stable = struct
 
     include T
     include Constant
+
+    let randomize t ~percent =
+      Span_helpers.randomize t ~percent ~scale
+
+    let to_short_string t =
+      let { sign; hr; min; sec; ms; us; ns } : Parts.t = to_parts t in
+      Span_helpers.short_string ~sign ~hr ~min ~sec ~ms ~us ~ns
 
     (* WARNING: if you are going to change this function in any material way, make sure
        you update Stable appropriately. *)
@@ -292,19 +286,13 @@ module Stable = struct
 
     let t_of_sexp sexp = t_of_sexp_v1_v2 sexp ~is_v2:false
     let sexp_of_t t = sexp_of_t_v1_v2 t ~is_v2:false
-    let of_string s = of_string_v1_v2 s ~is_v2:false
-    let to_string t = to_string_v1_v2 t ~is_v2:false
   end
 
   module V2 = struct
-
     include V1
 
     let t_of_sexp sexp = t_of_sexp_v1_v2 sexp ~is_v2:true
     let sexp_of_t t = sexp_of_t_v1_v2 t ~is_v2:true
-    let of_string s = of_string_v1_v2 s ~is_v2:true
-    let to_string t = to_string_v1_v2 t ~is_v2:true
-
   end
 
   let%test_module "Span.V1" = (module Stable_unit_test.Make (struct
@@ -343,71 +331,431 @@ module Stable = struct
         ]
     end))
 
+  module V3 = struct
+    include V1
+
+    let to_unit_of_time t : Unit_of_time.t =
+      let open T in
+      let open Constant in
+      let abs_t = T.abs t in
+      if abs_t >= day         then Day         else
+      if abs_t >= hour        then Hour        else
+      if abs_t >= minute      then Minute      else
+      if abs_t >= second      then Second      else
+      if abs_t >= millisecond then Millisecond else
+      if abs_t >= microsecond then Microsecond else
+        Nanosecond
+
+    let of_unit_of_time : Unit_of_time.t -> T.t = let open T.Constant in function
+      | Nanosecond  -> nanosecond
+      | Microsecond -> microsecond
+      | Millisecond -> millisecond
+      | Second      -> second
+      | Minute      -> minute
+      | Hour        -> hour
+      | Day         -> day
+
+    let suffix_of_unit_of_time unit_of_time =
+      match (unit_of_time : Unit_of_time.t) with
+      | Nanosecond  -> "ns"
+      | Microsecond -> "us"
+      | Millisecond -> "ms"
+      | Second      -> "s"
+      | Minute      -> "m"
+      | Hour        -> "h"
+      | Day         -> "d"
+
+    module Of_string = struct
+      let invalid_string string ~reason =
+        let message = "Time.Span.of_string: " ^ reason in
+        raise_s [%message message string]
+
+      let rec find_unit_of_time_by_suffix string ~index unit_of_time_list =
+        match unit_of_time_list with
+        | []                   -> invalid_string string ~reason:"invalid span part suffix"
+        | unit_of_time :: rest ->
+          let suffix = suffix_of_unit_of_time unit_of_time in
+          if String.is_substring_at string ~pos:index ~substring:suffix
+          then unit_of_time
+          else find_unit_of_time_by_suffix string ~index rest
+
+      let parse_suffix string ~index =
+        (* We rely on the fact that "ms" comes before "m" in [Unit_of_time.all] to get a
+           correct match on millisecond timestamps. This assumption is demonstrated in the
+           expect test below. *)
+        find_unit_of_time_by_suffix string ~index Unit_of_time.all
+
+      let%expect_test "Unit_of_time.all order" =
+        print_s [%sexp (Unit_of_time.all : Unit_of_time.t list)];
+        [%expect {| (Nanosecond Microsecond Millisecond Second Minute Hour Day) |}];
+      ;;
+
+      let%test_unit "units of time all parse" =
+        List.iter Unit_of_time.all ~f:(fun unit_of_time ->
+          let s = sprintf "1%s2" (suffix_of_unit_of_time unit_of_time) in
+          [%test_result: Unit_of_time.t]
+            (parse_suffix s ~index:1)
+            ~expect:unit_of_time)
+      ;;
+
+      (* We validate magnitude strings so that we know where the unit-of-time suffix
+         begins, and so that only sensible strings are allowed. We do not want to be as
+         permissive as [Float.of_string]; for example, hexadecimal span magnitudes are not
+         allowed. After validation, we still use [Float.of_string] to produce the actual
+         value. *)
+      module Float_parser = struct
+        (* [In_decimal_have_digit] includes having a digit before the decimal point. *)
+        type state =
+          | In_integer_need_digit
+          | In_integer_have_digit
+          | In_decimal_need_digit
+          | In_decimal_have_digit
+          | In_exponent_need_digit_or_sign
+          | In_exponent_need_digit
+          | In_exponent_have_digit
+
+        type token =
+          | Digit
+          | Point
+          | Under
+          | Sign
+          | Expt
+
+        let state_is_final = function
+          | In_integer_have_digit
+          | In_decimal_have_digit
+          | In_exponent_have_digit
+            -> true
+          | In_integer_need_digit
+          | In_decimal_need_digit
+          | In_exponent_need_digit_or_sign
+          | In_exponent_need_digit
+            -> false
+
+        let token_of_char = function
+          | '0' .. '9' -> Some Digit
+          | '.'        -> Some Point
+          | '_'        -> Some Under
+          | '-' | '+'  -> Some Sign
+          | 'E' | 'e'  -> Some Expt
+          | _          -> None
+
+        let invalid_string string =
+          invalid_string string ~reason:"invalid span part magnitude"
+
+        let rec find_index_after_float_in_state string ~index ~len ~state =
+          let open Int.O in
+          if index = len
+          then begin
+            if state_is_final state
+            then index
+            else invalid_string string
+          end
+          else begin
+            match token_of_char string.[index] with
+            | None ->
+              if state_is_final state
+              then index
+              else invalid_string string
+            | Some token ->
+              let state =
+                match state, token with
+
+                | In_integer_need_digit, Digit -> In_integer_have_digit
+                | In_integer_need_digit, Point -> In_decimal_need_digit
+                | In_integer_need_digit, Under
+                | In_integer_need_digit, Sign
+                | In_integer_need_digit, Expt  -> invalid_string string
+
+                | In_integer_have_digit, Digit
+                | In_integer_have_digit, Under -> In_integer_have_digit
+                | In_integer_have_digit, Point -> In_decimal_have_digit
+                | In_integer_have_digit, Expt  -> In_exponent_need_digit_or_sign
+                | In_integer_have_digit, Sign  -> invalid_string string
+
+                | In_decimal_need_digit, Digit -> In_decimal_have_digit
+                | In_decimal_need_digit, Point
+                | In_decimal_need_digit, Under
+                | In_decimal_need_digit, Expt
+                | In_decimal_need_digit, Sign  -> invalid_string string
+
+                | In_decimal_have_digit, Digit
+                | In_decimal_have_digit, Under -> In_decimal_have_digit
+                | In_decimal_have_digit, Expt  -> In_exponent_need_digit_or_sign
+                | In_decimal_have_digit, Point
+                | In_decimal_have_digit, Sign  -> invalid_string string
+
+                | In_exponent_need_digit_or_sign, Digit -> In_exponent_have_digit
+                | In_exponent_need_digit_or_sign, Sign  -> In_exponent_need_digit
+                | In_exponent_need_digit_or_sign, Point
+                | In_exponent_need_digit_or_sign, Under
+                | In_exponent_need_digit_or_sign, Expt  -> invalid_string string
+
+                | In_exponent_need_digit, Digit -> In_exponent_have_digit
+                | In_exponent_need_digit, Point
+                | In_exponent_need_digit, Under
+                | In_exponent_need_digit, Expt
+                | In_exponent_need_digit, Sign  -> invalid_string string
+
+                | In_exponent_have_digit, Digit
+                | In_exponent_have_digit, Under -> In_exponent_have_digit
+                | In_exponent_have_digit, Point
+                | In_exponent_have_digit, Expt
+                | In_exponent_have_digit, Sign  -> invalid_string string
+
+              in
+              find_index_after_float_in_state string ~index:(index + 1) ~len ~state
+          end
+
+        let find_index_after_float string ~index ~len =
+          find_index_after_float_in_state string ~index ~len
+            ~state:In_integer_need_digit
+      end
+
+      let rec accumulate_magnitude string ~magnitude ~index ~len =
+        if Int.equal index len
+        then magnitude
+        else begin
+          let suffix_index =
+            Float_parser.find_index_after_float string ~index ~len
+          in
+          let unit_of_time = parse_suffix string ~index:suffix_index in
+          let until_index =
+            Int.( + ) suffix_index (String.length (suffix_of_unit_of_time unit_of_time))
+          in
+          let float_string =
+            String.sub string ~pos:index ~len:(Int.( - ) suffix_index index)
+          in
+          let float = Float.of_string float_string in
+          let magnitude = magnitude + scale_by_unit_of_time float unit_of_time in
+          accumulate_magnitude string ~magnitude ~index:until_index ~len
+        end
+
+      let parse_magnitude string ~index ~len =
+        accumulate_magnitude string ~magnitude:T.zero ~index ~len
+
+      let of_string string =
+        let open Int.O in
+        match string with
+        | "NANs"  -> of_sec Float.nan
+        | "-INFs" -> of_sec Float.neg_infinity
+        | "INFs"  -> of_sec Float.infinity
+        | _       ->
+          begin
+            let len = String.length string in
+            let negative = String.is_prefix string ~prefix:"-" in
+            let index = if negative then 1 else 0 in
+            if index >= len then invalid_string string ~reason:"empty input";
+            let magnitude = parse_magnitude string ~index ~len in
+            if negative
+            then T.neg magnitude
+            else magnitude
+          end
+    end
+
+    let of_string = Of_string.of_string
+
+    module To_string = struct
+
+      let string_of_float_without_trailing_decimal float =
+        let string = Float.to_string float in
+        let suffix = "." in
+        if   String.is_suffix       string ~suffix
+        then String.chop_suffix_exn string ~suffix
+        else string
+
+      (* As we build up a string, we keep a running sum of the value that will be read
+         back in, so that we can compute the remainder that needs to be generated. *)
+      let sum ~sum_t ~unit_of_time ~magnitude =
+        sum_t + scale_by_unit_of_time magnitude unit_of_time
+
+      (* For some units (very large numbers of days, or seconds and smaller) we just
+         render a float directly, with a fix for roundoff error. *)
+      let to_float_string ~abs_t ~unit_of_time ~fixup_unit_of_time =
+        let magnitude = divide_by_unit_of_time abs_t unit_of_time in
+        let sum_t = sum ~sum_t:zero ~unit_of_time ~magnitude in
+        if sum_t = abs_t
+        then
+          string_of_float_without_trailing_decimal magnitude
+          ^ suffix_of_unit_of_time unit_of_time
+        else begin
+          let magnitude =
+            if sum_t < abs_t
+            then magnitude
+            else divide_by_unit_of_time (prev abs_t) unit_of_time
+          in
+          let sum_t = sum ~sum_t:zero ~unit_of_time ~magnitude in
+          let rem_t = abs_t - sum_t in
+          let fixup_magnitude = divide_by_unit_of_time rem_t fixup_unit_of_time in
+          string_of_float_without_trailing_decimal magnitude
+          ^ suffix_of_unit_of_time unit_of_time
+          (* [rem_t] is at ULP size of [abs_t], it needs just one bit of precision *)
+          ^ sprintf "%.1g" fixup_magnitude
+          ^ suffix_of_unit_of_time fixup_unit_of_time
+        end
+
+      (* For non-decimal units (minutes and greater), we render an integer magnitude, and
+         return that with the running sum so the remainder can be rendered at a smaller
+         unit. *)
+      let to_int_string_and_sum unit_of_time ~abs_t ~sum_t =
+        let unit_span = of_unit_of_time unit_of_time in
+        let rem_t = abs_t - sum_t in
+        (* We calculate the approximate multiple of [unit_of_time] that needs to be
+           added to [sum_t]. Due to rounding, this can be off by one (we've never seen a
+           case off by two or more), so we re-compute the remainder and correct if
+           necessary. *)
+        let magnitude = Float.round_down (rem_t // unit_span) in
+        let new_sum_t = sum ~sum_t ~unit_of_time ~magnitude in
+        let new_rem_t = abs_t - new_sum_t in
+        let magnitude =
+          if new_rem_t = zero
+          then magnitude
+          else if new_rem_t < zero
+          then magnitude -. 1.
+          else begin
+            let next_magnitude = magnitude +. 1. in
+            let next_sum_t = sum ~sum_t ~unit_of_time ~magnitude:next_magnitude in
+            let next_rem_t = abs_t - next_sum_t in
+            if next_rem_t < zero
+            then magnitude
+            else next_magnitude
+          end
+        in
+        if Float.( <= ) magnitude 0.
+        then "", sum_t
+        else begin
+          let new_sum_t = sum ~sum_t ~unit_of_time ~magnitude in
+          let string =
+            Int63.to_string (Int63.of_float magnitude)
+            ^ suffix_of_unit_of_time unit_of_time
+          in
+          string, new_sum_t
+        end
+
+      let decimal_order_of_magnitude t = Float.log10 (to_sec t)
+
+      (* The final seconds-or-smaller unit needs to be printed with enough digits to
+         round-trip the whole span (which is minutes or greater); this can be
+         significantly fewer digits than would be needed for the seconds-or-smaller
+         remainder itself. *)
+      let to_float_string_after_int_strings ~sum_t ~abs_t =
+        if sum_t >= abs_t
+        then ""
+        else begin
+          let rem_t = abs_t - sum_t in
+          let unit_of_time = to_unit_of_time rem_t        in
+          let unit_span    = of_unit_of_time unit_of_time in
+          let magnitude = rem_t // unit_span in
+          let new_sum_t = sum ~sum_t ~unit_of_time ~magnitude in
+          let new_rem_t = abs_t - new_sum_t in
+          if abs rem_t <= abs new_rem_t
+          then ""
+          else begin
+            let order_of_magnitude_of_first_digit =
+              Float.iround_down_exn (decimal_order_of_magnitude rem_t)
+            in
+            let half_ulp = (abs_t - prev abs_t) / 2. in
+            let order_of_magnitude_of_final_digit =
+              (* This works out to rounding down, except in the case of exact integers,
+                 which are decremented. This makes sure we always stop at a digit with
+                 strictly more precision than half the ULP. *)
+              Int.pred (Float.iround_up_exn (decimal_order_of_magnitude half_ulp))
+            in
+            let number_of_digits =
+              let open Int.O in
+              1 + order_of_magnitude_of_first_digit - order_of_magnitude_of_final_digit
+            in
+            let suffix = suffix_of_unit_of_time unit_of_time in
+            sprintf "%.*g" number_of_digits magnitude ^ suffix
+          end
+        end
+
+      (* This helper avoids unnecessary allocation, because for our use below, it is
+         common to have either or both arguments be empty. Currently (2018-02), the
+         built-in [^] allocates even when appending to an empty string. *)
+      let (^?) x y =
+        if String.is_empty x then y else
+        if String.is_empty y then x else
+          (x ^ y)
+
+      let%expect_test "^? is useful" [@tags "64-bits-only"] =
+        let open Int.O in
+        let show_allocation f =
+          let minor1 = Gc.minor_words () in
+          let major1 = Gc.major_words () in
+          let result = (Sys.opaque_identity f) () in
+          let minor2 = Gc.minor_words () in
+          let major2 = Gc.major_words () in
+          begin
+            if minor2 > minor1 || major2 > major1
+            then print_endline "allocates"
+            else print_endline "does not allocate"
+          end;
+          Sys.opaque_identity result
+        in
+        let empty = Sys.opaque_identity ""      in
+        let hello = Sys.opaque_identity "hello" in
+        ignore (show_allocation (fun () -> empty ^ hello) : string);
+        [%expect {| allocates |}];
+        ignore (show_allocation (fun () -> hello ^ empty) : string);
+        [%expect {| allocates |}];
+      ;;
+
+      let to_string t =
+        let float = to_float t in
+        if not (Float.is_finite float)
+        then begin (* We print specific special strings for non-finite floats *)
+          if Float.is_nan float
+          then "NANs"
+          else if Float.is_negative float
+          then "-INFs"
+          else "INFs"
+        end else if t = zero
+        then "0s"
+        else begin
+          let unit_of_time = to_unit_of_time t in
+          let abs_t = abs t in
+          let sign = if t < zero then "-" else "" in
+          let magnitude_string =
+            match unit_of_time with
+            (* We can use normal float notation for seconds and sub-second units, they are
+               readable with a decimal point. *)
+            | Nanosecond | Microsecond | Millisecond | Second ->
+              to_float_string ~abs_t ~unit_of_time ~fixup_unit_of_time:Nanosecond
+            (* For large enough values that the ULP is a day or more, we can use float
+               notation because we are expressing a single, very large integer. *)
+            | Day when next abs_t - abs_t >= day ->
+              to_float_string ~abs_t ~unit_of_time ~fixup_unit_of_time:Day
+            (* For everything in between, we need to use integer units of days, hours,
+               and/or minutes, because those units are not readable as decimals, and we
+               tack on a decimal remainder of a seconds-or-smaller unit if necessary. *)
+            | Minute | Hour | Day ->
+              let sum_t = zero in
+              let day_string,    sum_t = to_int_string_and_sum ~abs_t ~sum_t Day    in
+              let hour_string,   sum_t = to_int_string_and_sum ~abs_t ~sum_t Hour   in
+              let minute_string, sum_t = to_int_string_and_sum ~abs_t ~sum_t Minute in
+              let float_string = to_float_string_after_int_strings ~abs_t ~sum_t in
+              day_string ^? hour_string ^? minute_string ^? float_string
+          in
+          sign ^? magnitude_string
+        end
+    end
+
+    let to_string = To_string.to_string
+
+    let sexp_of_t t = Sexp.Atom (to_string t)
+    let t_of_sexp s =
+      match s with
+      | Sexp.Atom x ->
+        (try of_string x
+         with exn -> of_sexp_error (Exn.to_string exn) s)
+      | Sexp.List _ ->
+        of_sexp_error "Time.Span.Stable.V3.t_of_sexp: sexp must be an Atom" s
+  end
 end
-include Stable.V2
-let sexp_of_t = Stable.V1.sexp_of_t
-let to_string = Stable.V1.to_string
-
-let%test_module "conversion compatibility" =
-  (module struct
-
-    let tests =
-      let span = of_sec in
-      [ span 99e-12
-      ; span 1.2e-9
-      ; span 0.000001
-      ; span 0.707
-      ; span 42.
-      ; span 1234.56
-      ; span 39_996.
-      ; span 80000006.4
-      ]
-
-    let%test_unit _ =
-      List.iter tests ~f:(fun t ->
-        begin
-          (* Output must match Stable.V1: *)
-          [%test_result: Sexp.t] (sexp_of_t t) ~expect:(Stable.V1.sexp_of_t t);
-          [%test_result: string] (to_string t) ~expect:(Stable.V1.to_string t);
-          (* Stable.V1 must accept output (slightly redundant): *)
-          [%test_result: t] (Stable.V1.t_of_sexp (sexp_of_t t)) ~expect:t;
-          [%test_result: t] (Stable.V1.of_string (to_string t)) ~expect:t;
-          (* Stable.V2 should accept output: *)
-          [%test_result: t] (Stable.V2.t_of_sexp (sexp_of_t t)) ~expect:t;
-          [%test_result: t] (Stable.V2.of_string (to_string t)) ~expect:t;
-          (* Should accept Stable.V1 output: *)
-          [%test_result: t] (t_of_sexp (Stable.V1.sexp_of_t t)) ~expect:t;
-          [%test_result: t] (of_string (Stable.V1.to_string t)) ~expect:t;
-          (* Should accept Stable.V2 output: *)
-          [%test_result: t] (t_of_sexp (Stable.V2.sexp_of_t t)) ~expect:t;
-          [%test_result: t] (of_string (Stable.V2.to_string t)) ~expect:t;
-          (* Must round-trip: *)
-          [%test_result: t] (t_of_sexp (sexp_of_t t)) ~expect:t;
-          [%test_result: t] (of_string (to_string t)) ~expect:t;
-        end)
-
-  end)
+include Stable.V3
 
 let to_proportional_float = to_float
-
-let to_unit_of_time t : Unit_of_time.t =
-  let abs_t = abs t in
-  if abs_t >= day         then Day         else
-  if abs_t >= hour        then Hour        else
-  if abs_t >= minute      then Minute      else
-  if abs_t >= second      then Second      else
-  if abs_t >= millisecond then Millisecond else
-  if abs_t >= microsecond then Microsecond else
-    Nanosecond
-
-let of_unit_of_time : Unit_of_time.t -> t = function
-  | Nanosecond  -> nanosecond
-  | Microsecond -> microsecond
-  | Millisecond -> millisecond
-  | Second      -> second
-  | Minute      -> minute
-  | Hour        -> hour
-  | Day         -> day
 
 let to_string_hum ?(delimiter='_') ?(decimals=3) ?(align_decimal=false) ?unit_of_time t =
   let float, suffix =

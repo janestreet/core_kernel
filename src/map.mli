@@ -62,6 +62,7 @@ type ('k, 'cmp) comparator =
 val invariants : (_, _, _) t -> bool
 
 val comparator : ('a, _, 'cmp) t -> ('a, 'cmp) Comparator.t
+val comparator_s : ('a, _, 'cmp) t -> ('a, 'cmp) comparator
 
 (** The empty map. *)
 val empty : ('a, 'cmp) comparator -> ('a, 'b, 'cmp) t

@@ -81,6 +81,10 @@ module Make1 (Data : sig type ('s, 'a) t [@@deriving sexp_of] end) = struct
   let update t key ~f = change t key ~f:(fun data -> Some (f data))
 
   let to_alist t = Map.data t
+
+  let of_alist_exn t =
+    Uid.Map.of_alist_exn (List.map t ~f:(fun p -> Packed.type_id_uid p, p))
+
 end
 
 module Make (Data : sig type 'a t [@@deriving sexp_of] end) = struct
@@ -113,7 +117,11 @@ module Make (Data : sig type 'a t [@@deriving sexp_of] end) = struct
   end
 
   let to_alist t =
-    List.map (M.to_alist t) ~f:(function M.Packed.T (key, data) -> Packed.T (key, data))
+    List.map (M.to_alist t) ~f:(function (M.Packed.T (key, data)) -> Packed.T (key, data))
+
+  let of_alist_exn t =
+    M.of_alist_exn
+      (List.map t ~f:(function (Packed.T (key, data)) -> M.Packed.T (key, data)))
 end
 
 include Make (struct type 'a t = 'a [@@deriving sexp_of] end)

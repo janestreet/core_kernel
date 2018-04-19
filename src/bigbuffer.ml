@@ -128,6 +128,23 @@ let add_buffer buf_dst buf_src =
   buf_dst.pos <- new_pos;
 ;;
 
+let add_bin_prot t (writer : _ Bin_prot.Type_class.writer) x =
+  let new_pos =
+    match writer.write t.bstr ~pos:t.pos x with
+    | pos -> pos
+    | exception _ ->
+      (* It's likeky that the exception is due to a buffer overflow, so resize the
+         internal buffer and try again. Technically we could match on
+         [Bin_prot.Common.Buffer_short] only, however we can't easily enforce that custom
+         bin_write_xxx functions do raise this particular exception and not
+         [Invalid_argument] or [Failure] for instance. *)
+      let size = writer.size x in
+      if t.pos + size > t.len then resize t size;
+      writer.write t.bstr ~pos:t.pos x
+  in
+  t.pos <- new_pos
+;;
+
 let closing = function
   | '(' -> ')'
   | '{' -> '}'

@@ -78,7 +78,7 @@ module Relative_to_unspecified_zone = struct
     let days_from_epoch_in_sec = Int63.to_float (days_from_epoch * sec_per_day) in
     let remainder = t -. days_from_epoch_in_sec in
     Span.of_sec remainder
-    |> Ofday.of_span_since_start_of_day
+    |> Ofday.of_span_since_start_of_day_exn
   ;;
 
   let date_of_days_from_epoch ~days_from_epoch =

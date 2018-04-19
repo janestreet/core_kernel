@@ -27,7 +27,7 @@ module type S = sig
   (** Span.t represents a span of time (e.g. 7 minutes, 3 hours, 12.8 days).  The span
       may be positive or negative. *)
   type underlying
-  type t = private underlying [@@deriving bin_io, hash, sexp]
+  type t = private underlying [@@deriving bin_io, hash, sexp, typerep]
 
   module Parts : Parts
 
@@ -37,25 +37,31 @@ module type S = sig
   include Pretty_printer.S           with type t := t
   include Robustly_comparable        with type t := t
 
-  (** String converters and sexp converters allow for specifying of time spans in various
-      units after a leading float (e.g. 45s, 3h, or 1d):
+  (** Time spans are denominated as a float suffixed by a unit of time; the valid suffixes
+      are listed below:
 
+      d  - days
+      h  - hours
+      m  - minutes
+      s  - seconds
       ms - milliseconds
-      s - seconds
-      m - minutes
-      h - hours
-      d - days
+      us - microseconds
+      ns - nanoseconds
 
-      The outgoing conversion functions use these units as well, choosing the largest
-      available type.  For instance, if it's a bit greater than or equal to 1 hour, the span
-      will be rendered in hours, (Time.to_string (Time.of_string "66m") = "1.1h").
+      [to_string] and [sexp_of_t] use a mixed-unit format, which breaks the input span
+      into parts and concatenates them in descending order of unit size. For example, pi
+      days is rendered as "3d3h23m53.60527015815s". If the span is negative, a single "-"
+      precedes the entire string. For extremely large (>10^15 days) or small (<1us) spans,
+      a unit may be repeated to ensure the string conversion round-trips.
 
-      As of [Stable.V2], [of_string] and [t_of_sexp] also accept "us"=microseconds and
-      "ns"=nanoseconds suffixes.  [Stable.V2] will produce these suffixes, but for
-      compatibility with [Stable.V1], ordinary [to_string] and [sexp_of_t] will not, for now.
-      Once use of the new [of_] family is more widespread, we will switch the [to_] family to
-      the more expressive format.  In the meantime, you can get [ns] and [us] suffixes by
-      using [to_string_hum].
+      [of_string] and [t_of_sexp] accept any combination of (nonnegative float
+      string)(unit of time suffix) in any order, without spaces, and sums up the durations
+      of each of the parts for the magnitude of the span. The input may be prefixed by "-"
+      for negative spans.
+
+      String and sexp conversions round-trip precisely, that is:
+
+      {[ Span.of_string (Span.to_string t) = t ]}
   *)
   val to_string : t -> string
   val of_string : string -> t
@@ -122,7 +128,12 @@ module type S = sig
       [t1, t2 : t]: [to_proportional_float t1 /. to_proportional_float t2 = t1 // t2]. *)
   val to_proportional_float : t -> float
 
-  (** {6 Basic operations on spans} *)
+  (** {6 Basic operations on spans}
+
+      The arithmetic operations rely on the behavior of the underlying representation of a
+      span. For example, if addition overflows with float-represented spans, the result is
+      an infinite span; with fixed-width integer-represented spans, the result silently
+      wraps around as in two's-complement arithmetic. *)
 
   val (+)   : t -> t -> t
   val (-)   : t -> t -> t
@@ -134,10 +145,12 @@ module type S = sig
   val (/)   : t -> float -> t
   val (//)  : t -> t -> float
 
-  (** [next t] return the next [t] (next t > t) *)
+  (** [next t] is the smallest representable span greater than [t] (and therefore
+      representation-dependent) *)
   val next : t -> t
 
-  (** [prev t] return the previous [t] (prev t < t) *)
+  (** [prev t] is the largest representable span less than [t] (and therefore
+      representation-dependent) *)
   val prev : t -> t
 
   (** [to_short_string t] pretty-prints approximate time span using no more than

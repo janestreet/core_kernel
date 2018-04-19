@@ -24,7 +24,6 @@ module type S = sig
   type t = private underlying [@@deriving bin_io, sexp]
 
   include Comparable_binable         with type t := t
-  include Comparable.With_zero       with type t := t
   include Hashable_binable           with type t := t
   include Pretty_printer.S           with type t := t
   include Robustly_comparable        with type t := t
@@ -75,10 +74,12 @@ module type S = sig
   val approximate_end_of_day : t
 
   (** Note that these names are only really accurate on days without DST transitions. When
-      clocks move forward or back, [of_span_since_start_of_day s] will not necessarily
+      clocks move forward or back, [of_span_since_start_of_day_exn s] will not necessarily
       occur [s] after that day's midnight. *)
-  val to_span_since_start_of_day : t -> Span.t
-  val of_span_since_start_of_day : Span.t -> t
+  val to_span_since_start_of_day     : t -> Span.t
+  val of_span_since_start_of_day_exn : Span.t -> t
+  val of_span_since_start_of_day     : Span.t -> t
+  [@@deprecated "[since 2018-04] use [of_span_since_start_of_day_exn] instead"]
 
   (** [add t s] shifts the time of day [t] by the span [s].  It returns [None] if the
       result is not in the same 24-hour day. *)
@@ -108,8 +109,11 @@ module type S = sig
   (** HH:MM:SS, without any subsecond components. Seconds appear even if they are zero. *)
   val to_sec_string : t -> string
 
+  (** 24-hour times according to the ISO 8601 standard. This function can raise. *)
   val of_string_iso8601_extended : ?pos:int -> ?len:int -> string -> t
 
   (** with milliseconds *)
-  val to_millisec_string : t -> string
+  val to_millisecond_string : t -> string
+  val to_millisec_string    : t -> string
+  [@@deprecated "[since 2018-04] use [to_millisecond_string] instead"]
 end

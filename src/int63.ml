@@ -41,10 +41,16 @@ let typerep_of_repr : type a b. (a, b) Base.Int63.Private.Repr.t -> a typerepabl
     | Base.Int63.Private.Repr.Int64 -> (module Int64)
 include (val (typerep_of_repr Base.Int63.Private.repr : Base.Int63.t typerepable))
 
-include Identifiable.Extend (Base.Int63) (struct
+module Replace_polymorphic_compare =
+  (Base.Int63 : Comparable.Polymorphic_compare with type t := t)
+
+module I = Identifiable.Extend (Base.Int63) (struct
     type nonrec t = t
     include Bin
   end)
+
+include (I : module type of struct include I end
+         with module Replace_polymorphic_compare := I.Replace_polymorphic_compare)
 
 module Hex = struct
   type nonrec t = t [@@deriving typerep, bin_io]
@@ -55,7 +61,7 @@ end
 include (Base.Int63
          : (module type of struct include Base.Int63 end
              with type t := t
-             with module Hex := Hex))
+             with module Hex := Base.Int63.Hex))
 
 include Quickcheck.Make_int (struct
     include Base.Int63

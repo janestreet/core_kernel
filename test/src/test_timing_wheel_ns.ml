@@ -28,7 +28,7 @@ module Alarm_precision = struct
   let%expect_test "constants" =
     print about_one_day;
     [%expect {|
-      (19.546873382684446h 70_368_744_177_664ns) |}];
+      (19h32m48.744177664s 70_368_744_177_664ns) |}];
     print about_one_second;
     [%expect {|
       (1.073741824s 1_073_741_824ns) |}];
@@ -93,7 +93,7 @@ module Alarm_precision = struct
         let span = Time_ns.Span.of_sec span in
         print_s [%message
           ""
-            (span : Time_ns.Span.Alternate_sexp.t)
+            (span : Time_ns.Span.t)
             ~alarm_precision:(span |> of_span_floor_pow2_ns : t)]);
     [%expect {|
       ((span 1s) (alarm_precision (536.870912ms 536_870_912ns)))
@@ -107,13 +107,13 @@ let%expect_test "[Config.microsecond_precision]" =
   [%expect {|
     ((alarm_precision 1.024us) (level_bits (10 10 6 6 5))) |}];
   print_s [%sexp (Config.durations (Config.microsecond_precision ())
-                  : Time_ns.Span.Alternate_sexp.t list)];
+                  : Time_ns.Span.t list)];
   [%expect {|
     (1.048576ms
      1.073741824s
-     1.1453246122666667m
-     1.2216795864177779h
-     1.6289061152237037d) |}];
+     1m8.719476736s
+     1h13m18.046511104s
+     1d15h5m37.488355328s) |}];
 ;;
 
 let%expect_test _ =
@@ -255,7 +255,7 @@ let%expect_test "[Config.create] with negative alarm precision" =
 let%expect_test "[Config.create] with zero alarm precision" =
   require_does_raise [%here] (fun () -> create_config ~alarm_precision:(gibi_nanos 0.) ());
   [%expect {|
-    ("[Alarm_precision.of_span_floor_pow2_ns] got non-positive span" (span 0ns)) |}];
+    ("[Alarm_precision.of_span_floor_pow2_ns] got non-positive span" (span 0s)) |}];
 ;;
 
 let%expect_test "[Config.create] with one second alarm precision" =
@@ -799,7 +799,7 @@ let%expect_test "invalid alarm precision" =
      (span -1.073741824s)) |}];
   test (gibi_nanos 0.);
   [%expect {|
-    ("[Alarm_precision.of_span_floor_pow2_ns] got non-positive span" (span 0ns)) |}];
+    ("[Alarm_precision.of_span_floor_pow2_ns] got non-positive span" (span 0s)) |}];
 ;;
 
 let%expect_test "[interval_num_start], [interval_start]" =

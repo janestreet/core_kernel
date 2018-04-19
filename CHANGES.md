@@ -10,6 +10,9 @@ you might want to have a look at Base's
   then returns the unzipped remained of the longest input, if the input lists
   have different lengths.
 
+- Added `Bigbuffer.add_bin_prot` to append the bin-protted representation of a
+  value at the end of the buffer.
+
 ## v0.11
 
 - Add `Bigstring.unsafe_resize` to allow reallocating in place.

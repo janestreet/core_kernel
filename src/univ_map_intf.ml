@@ -35,6 +35,7 @@ module type S = sig
   end
 
   val to_alist : t -> Packed.t list
+  val of_alist_exn : Packed.t list -> t
 end
 
 module type S1 = sig
@@ -71,4 +72,5 @@ module type S1 = sig
   end
 
   val to_alist : 's t -> 's Packed.t list
+  val of_alist_exn : 's Packed.t list -> 's t
 end

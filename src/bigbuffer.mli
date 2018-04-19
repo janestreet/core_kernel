@@ -25,6 +25,10 @@ val volatile_contents : t -> Bigstring.t
 val add_bigstring : t -> Bigstring.t -> unit
 (** [add_bigstring b s] appends the bigstring [s] at the end of the buffer [b]. *)
 
+val add_bin_prot : t -> 'a Bin_prot.Type_class.writer -> 'a -> unit
+(** [add_bin_prot b writer x] appends the bin-protted representation of [x] at the end of
+    the buffer [b]. *)
+
 val add_substitute : t -> (string -> string) -> string -> unit
 (** [add_substitute b f s] appends the string pattern [s] at the end
     of the buffer [b] with substitution.

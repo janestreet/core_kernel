@@ -209,7 +209,7 @@ module Make (Time0 : Time0_intf.S) = struct
   let to_ofday time ~zone =
     set_date_cache time ~zone;
     Time0.diff time date_cache.effective_day_start
-    |> Ofday.of_span_since_start_of_day
+    |> Ofday.of_span_since_start_of_day_exn
   ;;
 
   let to_date_ofday time ~zone =
@@ -290,7 +290,7 @@ module Make (Time0 : Time0_intf.S) = struct
       String.concat
         [ (if Span.(<) utc_offset Span.zero then "-" else "+");
           Ofday.to_string_trimmed
-            (Ofday.of_span_since_start_of_day (Span.abs utc_offset));
+            (Ofday.of_span_since_start_of_day_exn (Span.abs utc_offset));
         ]
   ;;
 

@@ -1,4 +1,5 @@
 open! Import
+open  Std_internal
 open  Digit_string_helpers
 
 let suffixes char =
@@ -42,7 +43,7 @@ let decrement_length_if_ends_in_space string len =
 let [@inline never] invalid_string string ~reason =
   raise_s [%message "Time.Ofday: invalid string" string reason]
 
-let check_digits_and_return_if_nonzero string pos ~until =
+let check_digits_with_underscore_and_return_if_nonzero string pos ~until =
   let nonzero = ref false in
   for pos = pos to until - 1 do
     match string.[pos] with
@@ -51,6 +52,16 @@ let check_digits_and_return_if_nonzero string pos ~until =
     | _          ->
       invalid_string string
         ~reason:"expected digits and/or underscores after decimal point"
+  done;
+  !nonzero
+
+let check_digits_without_underscore_and_return_if_nonzero string pos ~until =
+  let nonzero = ref false in
+  for pos = pos to until - 1 do
+    match string.[pos] with
+    | '0'        -> ()
+    | '1' .. '9' -> nonzero := true
+    | _          -> invalid_string string ~reason:"expected digits after decimal point"
   done;
   !nonzero
 
@@ -134,7 +145,8 @@ let parse string ~f =
         then sec, pos, 0, false
         (* e.g. "12:00:00.123" *)
         else if pos < until && char_is_decimal_point string pos
-        then sec, pos, until - pos, check_digits_and_return_if_nonzero string (pos + 1) ~until
+        then sec, pos, until - pos,
+             check_digits_with_underscore_and_return_if_nonzero string (pos + 1) ~until
         else
           invalid_string string
             ~reason:"expected decimal point or am/pm suffix after seconds"
@@ -178,4 +190,64 @@ let parse string ~f =
   in
   let subsec_len = if sec = 60 || not subsec_nonzero then 0 else subsec_len in
   f string ~hr ~min ~sec ~subsec_pos ~subsec_len
+;;
+
+let parse_iso8601_extended ?pos ?len str ~f =
+  let (pos, len) =
+    match
+      Ordered_collection_common.get_pos_len ?pos ?len ~length:(String.length str)
+    with
+    | Result.Ok z    -> z
+    | Result.Error s -> failwithf "Ofday.of_string_iso8601_extended: %s" s ()
+  in
+  if len < 2
+  then failwith "len < 2"
+  else begin
+    let hr = read_2_digit_int str ~pos in
+    if hr > 24 then failwith "hour > 24";
+    if len = 2
+    then f str ~hr ~min:0 ~sec:0 ~subsec_pos:(pos+len) ~subsec_len:0
+    else if len < 5
+    then failwith "2 < len < 5"
+    else if not (Char.equal str.[pos + 2] ':')
+    then failwith "first colon missing"
+    else
+      let min = read_2_digit_int str ~pos:(pos + 3) in
+      if min >= 60 then failwith "minute > 60";
+      if hr = 24 && min <> 0 then
+        failwith "24 hours and non-zero minute";
+      if len = 5
+      then f str ~hr ~min ~sec:0 ~subsec_pos:(pos+len) ~subsec_len:0
+      else if len < 8 then failwith "5 < len < 8"
+      else if not (Char.equal str.[pos + 5] ':')
+      then failwith "second colon missing"
+      else
+        let sec = read_2_digit_int str ~pos:(pos + 6) in
+        (* second can be 60 in the case of a leap second. Unfortunately, what with
+           non-hour-multiple timezone offsets, we can't say anything about what
+           the hour or minute must be in that case *)
+        if sec > 60
+        then failwithf "invalid second: %i" sec ();
+        if hr = 24 && sec <> 0 then
+          failwith "24 hours and non-zero seconds";
+        if len = 8
+        then f str ~hr ~min ~sec ~subsec_pos:(pos+len) ~subsec_len:0
+        else if len = 9
+        then failwith "length = 9"
+        else
+          match str.[pos + 8] with
+          | '.' | ',' ->
+            let subsec_pos = pos + 8 in
+            let subsec_len =
+              match
+                check_digits_without_underscore_and_return_if_nonzero str (subsec_pos + 1)
+                  ~until:(pos + len)
+              with
+              | true when sec = 60 -> 0
+              | true when hr  = 24 -> failwith "24 hours and non-zero subseconds"
+              | _                  -> len - 8
+            in
+            f str ~hr ~min ~sec ~subsec_pos ~subsec_len
+          | _ -> failwith "missing subsecond separator"
+  end
 ;;

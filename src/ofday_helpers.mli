@@ -21,6 +21,15 @@ val parse
   -> f:(string -> hr:int -> min:int -> sec:int -> subsec_pos:int -> subsec_len:int -> 'a)
   -> 'a
 
+(** As [parse], for strings in ISO 8601 extended format. Allows substring parsing via
+    [~pos] and [~len] arguments. *)
+val parse_iso8601_extended
+  :  ?pos:int
+  -> ?len:int
+  -> string
+  -> f:(string -> hr:int -> min:int -> sec:int -> subsec_pos:int -> subsec_len:int -> 'a)
+  -> 'a
+
 (** Raises ofday-parsing errors for the given string, annotated with the given reason.
     Useful inside the [~f] argument to [parse] in order to generate error messages that
     are consistent with what [parse] raises. *)
