@@ -18,7 +18,9 @@ module T2 = struct
 
   let map1 ~f (x,y) = (f x, y)
   let map2 ~f (x,y) = (x, f y)
-
+  
+  let mapn (x, y) = (f x, f y)
+  
   let map_fst (x, y) ~f = (f x,   y)
   let map_snd (x, y) ~f = (  x, f y)
 
