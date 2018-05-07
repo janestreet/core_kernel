@@ -20,4 +20,5 @@ include (Base.Nativeint
 include Quickcheck.Make_int (struct
     include Base.Nativeint
     let splittable_random = Splittable_random.nativeint
+    let splittable_random_log_uniform = Splittable_random.Log_uniform.nativeint
   end)

@@ -222,24 +222,6 @@ module type S = sig
     -> ofday:Ofday.t
     -> zone:Zone.t
     -> t
-
-  (** [next_multiple ~base ~after ~interval] returns the smallest [time] of the form:
-
-      {[
-        time = base + k * interval
-      ]}
-
-      where [k >= 0] and [time > after].  It is an error if [interval <= 0].
-
-      Supplying [~can_equal_after:true] allows the result to satisfy [time >= after].
-  *)
-  val next_multiple
-    :  ?can_equal_after:bool  (** default is [false] *)
-    -> base:t
-    -> after:t
-    -> interval:Span.t
-    -> unit
-    -> t
 end
 
 module type Time = sig

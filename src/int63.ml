@@ -66,6 +66,7 @@ include (Base.Int63
 include Quickcheck.Make_int (struct
     include Base.Int63
     let splittable_random = Splittable_random.int63
+    let splittable_random_log_uniform = Splittable_random.Log_uniform.int63
   end)
 
 let%expect_test _ =

@@ -12,7 +12,7 @@ module Stable = struct
   module V1 = struct
     module T : sig
       type underlying = float
-      type t = private underlying [@@deriving bin_io, hash]
+      type t = private underlying [@@deriving bin_io, hash, typerep]
       include Comparable.S_common        with type t := t
       include Robustly_comparable        with type t := t
       include Floatable                  with type t := t
@@ -33,7 +33,7 @@ module Stable = struct
           include Float
           let sign = sign_exn
         end : sig
-           type t = underlying [@@deriving bin_io, hash]
+           type t = underlying [@@deriving bin_io, hash, typerep]
            include Comparable.S_common        with type t := t
            include Comparable.With_zero       with type t := t
            include Robustly_comparable        with type t := t

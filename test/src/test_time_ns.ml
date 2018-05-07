@@ -207,3 +207,129 @@ let%expect_test "Stable.Alternate_sexp.V1" =
     ((sexp   "2104-11-29 00:00:00Z")
      (bin_io "\252\000\000\245\016].\021;")) |}];
 ;;
+
+let%expect_test "of_string_iso8601_extended" =
+  let success string =
+    require_does_not_raise [%here] (fun () ->
+      printf "%s <-- %s\n"
+        (Time_ns.Ofday.to_string (Time_ns.Ofday.of_string_iso8601_extended string))
+        string)
+  in
+  List.iter ~f:success [
+    (* normal times *)
+    "12";
+    "12:34";
+    "12:34:56";
+    "12:34:56.789";
+    "12:34:56.789123";
+    "12:34:56.789123456";
+    (* lower boundary case *)
+    "00";
+    "00:00";
+    "00:00:00";
+    "00:00:00.000";
+    "00:00:00.000000";
+    "00:00:00.000000000";
+    (* upper boundary case *)
+    "23";
+    "23:59";
+    "23:59:59";
+    "23:59:59.999";
+    "23:59:59.999999";
+    "23:59:59.999999999";
+    (* midnight tomorrow *)
+    "24";
+    "24:00";
+    "24:00:00";
+    "24:00:00.000";
+    "24:00:00.000000";
+    "24:00:00.000000000";
+    (* leap second *)
+    "12:59:60";
+    "12:59:60.789";
+    "12:59:60.789123";
+    "12:59:60.789123456";
+  ];
+  [%expect {|
+    12:00:00.000000000 <-- 12
+    12:34:00.000000000 <-- 12:34
+    12:34:56.000000000 <-- 12:34:56
+    12:34:56.789000000 <-- 12:34:56.789
+    12:34:56.789123000 <-- 12:34:56.789123
+    12:34:56.789123456 <-- 12:34:56.789123456
+    00:00:00.000000000 <-- 00
+    00:00:00.000000000 <-- 00:00
+    00:00:00.000000000 <-- 00:00:00
+    00:00:00.000000000 <-- 00:00:00.000
+    00:00:00.000000000 <-- 00:00:00.000000
+    00:00:00.000000000 <-- 00:00:00.000000000
+    23:00:00.000000000 <-- 23
+    23:59:00.000000000 <-- 23:59
+    23:59:59.000000000 <-- 23:59:59
+    23:59:59.999000000 <-- 23:59:59.999
+    23:59:59.999999000 <-- 23:59:59.999999
+    23:59:59.999999999 <-- 23:59:59.999999999
+    24:00:00.000000000 <-- 24
+    24:00:00.000000000 <-- 24:00
+    24:00:00.000000000 <-- 24:00:00
+    24:00:00.000000000 <-- 24:00:00.000
+    24:00:00.000000000 <-- 24:00:00.000000
+    24:00:00.000000000 <-- 24:00:00.000000000
+    13:00:00.000000000 <-- 12:59:60
+    13:00:00.000000000 <-- 12:59:60.789
+    13:00:00.000000000 <-- 12:59:60.789123
+    13:00:00.000000000 <-- 12:59:60.789123456 |}];
+  let failure string =
+    match Time_ns.Ofday.of_string_iso8601_extended string with
+    | exception exn -> print_endline (Exn.to_string exn)
+    | ofday ->
+      print_cr [%here] [%message
+        "did not raise"
+          (string : string)
+          (ofday  : Time_ns.Ofday.t)]
+  in
+  List.iter ~f:failure [
+    (* bad syntax *)
+    "";
+    "1";
+    "123";
+    ":";
+    "12:";
+    "1:23";
+    "12:3";
+    "12:345";
+    "12:34:";
+    "12:34:5";
+    (* numerical bounds *)
+    "25:00";
+    "00:60";
+    "00:59:61";
+  ];
+  [%expect {|
+    ("Time_ns.Ofday.of_string_iso8601_extended: cannot parse string" ""
+      (Failure "len < 2"))
+    ("Time_ns.Ofday.of_string_iso8601_extended: cannot parse string" 1
+      (Failure "len < 2"))
+    ("Time_ns.Ofday.of_string_iso8601_extended: cannot parse string" 123
+      (Failure "2 < len < 5"))
+    ("Time_ns.Ofday.of_string_iso8601_extended: cannot parse string" :
+      (Failure "len < 2"))
+    ("Time_ns.Ofday.of_string_iso8601_extended: cannot parse string" 12:
+      (Failure "2 < len < 5"))
+    ("Time_ns.Ofday.of_string_iso8601_extended: cannot parse string" 1:23
+      (Failure "Char.get_digit_exn ':': not a digit"))
+    ("Time_ns.Ofday.of_string_iso8601_extended: cannot parse string" 12:3
+      (Failure "2 < len < 5"))
+    ("Time_ns.Ofday.of_string_iso8601_extended: cannot parse string" 12:345
+      (Failure "5 < len < 8"))
+    ("Time_ns.Ofday.of_string_iso8601_extended: cannot parse string" 12:34:
+      (Failure "5 < len < 8"))
+    ("Time_ns.Ofday.of_string_iso8601_extended: cannot parse string" 12:34:5
+      (Failure "5 < len < 8"))
+    ("Time_ns.Ofday.of_string_iso8601_extended: cannot parse string" 25:00
+      (Failure "hour > 24"))
+    ("Time_ns.Ofday.of_string_iso8601_extended: cannot parse string" 00:60
+      (Failure "minute > 60"))
+    ("Time_ns.Ofday.of_string_iso8601_extended: cannot parse string" 00:59:61
+      (Failure "invalid second: 61")) |}];
+;;

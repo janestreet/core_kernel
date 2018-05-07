@@ -51,46 +51,34 @@ module type Span = sig
 end
 
 module type Ofday = sig
-  type span
+  module Span : Span
 
-  type t = private Int63.t [@@deriving typerep]
+  (** [t] is immediate on 64bit boxes and so plays nicely with the GC write barrier. *)
+  type t = private Int63.t
 
   (** String and sexp output takes the form 'HH:MM:SS.sssssssss'; see
       {!Core_kernel.Ofday_intf} for accepted input. If input includes more than 9 decimal
       places in seconds, rounds to the nearest nanosecond, with the midpoint rounded up.
       Allows 60[.sss...] seconds for leap seconds but treats it as exactly 60s regardless
       of fractional part. *)
-  include Identifiable with type t := t
-
-  (** On some days, [add_exn t span] doesn't occur [span] from [t] in real time.  For
-      example, this happens on days when daylight saving time begins or ends.  See
-      {!Time.Ofday} for more detail. *)
-  val add_exn : t -> span -> t
-  val sub_exn : t -> span -> t
-
-  val diff : t -> t -> span
-
-  val to_millisecond_string : t -> string
-
-  val start_of_day : t
-  val start_of_next_day : t
+  include Ofday_intf.S
+    with type underlying = Int63.t
+     and type t := t
+     and module Span := Span
 
   (** The largest representable value below [start_of_next_day], i.e. one nanosecond
       before midnight. *)
+  (*_ This is already exported from [Ofday_intf.S], but we re-declare it to add
+    documentation. *)
   val approximate_end_of_day : t
 
-  val to_span_since_start_of_day : t -> span
-  val of_span_since_start_of_day_exn : span -> t
+  (** [add_exn t span] shifts the time of day [t] by [span]. It raises if the result is
+      not in the same 24-hour day. Daylight savings shifts are not accounted for. *)
+  val add_exn : t -> Span.t -> t
 
-  val create
-    :  ?hr  : int
-    -> ?min : int
-    -> ?sec : int
-    -> ?ms  : int
-    -> ?us  : int
-    -> ?ns  : int
-    -> unit
-    -> t
+  (** [sub_exn t span] shifts the time of day [t] back by [span]. It raises if the result
+      is not in the same 24-hour day. Daylight savings shifts are not accounted for. *)
+  val sub_exn : t -> Span.t -> t
 end
 
 (** Time represented as an [Int63.t] number of nanoseconds since the epoch.
@@ -103,7 +91,7 @@ end
 module type Time_ns = sig
 
   module Span : Span
-  module Ofday : Ofday with type span := Span.t
+  module Ofday : Ofday with module Span := Span
 
   type t = private Int63.t [@@deriving hash, typerep, bin_io]
 

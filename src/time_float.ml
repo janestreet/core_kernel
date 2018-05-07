@@ -1,6 +1,9 @@
 open! Import
 open! Std_internal
 
+module type S_kernel_without_zone = Time0_intf.S
+module type S_kernel              = Time_intf.S
+
 module T = Time.Make (Time_float0)
 
 module Stable = struct
@@ -33,4 +36,18 @@ module Stable = struct
   module Zone = Zone.Stable
 end
 
-include T
+include (
+  T : module type of struct include T end
+  with type   underlying                   := T.underlying
+  with type   t                            := T.t
+  with type   comparator_witness           := T.comparator_witness
+  with module Span                         := T.Span
+  with module Ofday                        := T.Ofday
+  with module Relative_to_unspecified_zone := T.Relative_to_unspecified_zone
+  with module Replace_polymorphic_compare  := T.Replace_polymorphic_compare
+)
+
+include (
+  Time_float0 : module type of struct include Time_float0 end
+  with module Stable := Time_float0.Stable
+)

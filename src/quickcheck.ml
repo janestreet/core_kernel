@@ -29,7 +29,8 @@ end
 
 module Pre_int : Pre_int with type t = int = struct
   include Base.Int
-  let splittable_random = Splittable_random.int
+  let splittable_random             = Splittable_random.int
+  let splittable_random_log_uniform = Splittable_random.Log_uniform.int
 end
 
 let check_size str size =
@@ -41,99 +42,6 @@ let bounds_error name lower_bound upper_bound sexp_of_bound =
       "invalid bounds"
       (lower_bound : bound)
       (upper_bound : bound)]
-
-module Make_int_random (M : Pre_int) : sig
-  open M
-
-  val uniform_incl     : Splittable_random.State.t -> lo:t -> hi:t -> t
-  val log_uniform_incl : Splittable_random.State.t -> lo:t -> hi:t -> t
-
-  module For_testing : sig
-    val bits_to_represent         : t -> int
-    val min_represented_by_n_bits : int -> t
-    val max_represented_by_n_bits : int -> t
-  end
-end = struct
-  open M
-
-  module For_testing = struct
-    let bits_to_represent t =
-      assert (t >= zero);
-      let t = ref t in
-      let n = ref 0 in
-      while !t > zero do
-        t := shift_right !t 1;
-        Int.incr n;
-      done;
-      !n
-
-    let min_represented_by_n_bits n =
-      if Int.equal n 0
-      then zero
-      else shift_left one (Int.pred n)
-
-    let max_represented_by_n_bits n =
-      pred (shift_left one n)
-  end
-
-  include For_testing
-
-  let uniform_incl = splittable_random
-
-  let log_uniform_incl state ~lo ~hi =
-    let min_bits = bits_to_represent lo in
-    let max_bits = bits_to_represent hi in
-    let bits = Pre_int.splittable_random state ~lo:min_bits ~hi:max_bits in
-    uniform_incl state
-      ~lo:(min_represented_by_n_bits bits |> max lo)
-      ~hi:(max_represented_by_n_bits bits |> min hi)
-end
-
-module Int_random = Make_int_random (Pre_int)
-
-let%test_module "Make_int_random bitwise helpers" =
-  (module struct
-    open Int_random
-    open For_testing
-
-    let%test_unit "bits_to_represent" =
-      let test n expect = [%test_result: int] (bits_to_represent n) ~expect in
-      test 0 0;
-      test 1 1;
-      test 2 2;
-      test 3 2;
-      test 4 3;
-      test 5 3;
-      test 6 3;
-      test 7 3;
-      test 8 4;
-      test 100 7;
-      test Int.max_value (Int.pred Int.num_bits);
-    ;;
-
-    let%test_unit "min_represented_by_n_bits" =
-      let test n expect = [%test_result: int] (min_represented_by_n_bits n) ~expect in
-      test 0 0;
-      test 1 1;
-      test 2 2;
-      test 3 4;
-      test 4 8;
-      test 7 64;
-      test (Int.pred Int.num_bits) (Int.shift_right_logical Int.min_value 1);
-    ;;
-
-    let%test_unit "max_represented_by_n_bits" =
-      let test n expect = [%test_result: int] (max_represented_by_n_bits n) ~expect in
-      test 0 0;
-      test 1 1;
-      test 2 3;
-      test 3 7;
-      test 4 15;
-      test 7 127;
-      test (Int.pred Int.num_bits) Int.max_value;
-    ;;
-
-  end)
 
 module Raw_generator : sig
   type +'a t
@@ -172,7 +80,7 @@ end = struct
       else max_len
     in
     (* pick a length, weighted low so that most of the size is spent on elements *)
-    let len = Int_random.log_uniform_incl random ~lo:min_len ~hi:max_len in
+    let len = Splittable_random.Log_uniform.int random ~lo:min_len ~hi:max_len in
     (* if there are no elements return an empty array, otherwise return a non-empty array
        with the size distributed among the elements *)
     if len = 0 then [||] else begin
@@ -181,7 +89,7 @@ end = struct
       let max_index = len - 1 in
       for _ = 1 to remaining do
         (* pick an index, weighted low so that we see unbalanced distributions often *)
-        let index = Int_random.log_uniform_incl random ~lo:0 ~hi:max_index in
+        let index = Splittable_random.Log_uniform.int random ~lo:0 ~hi:max_index in
         sizes.(index) <- sizes.(index) + 1
       done;
       (* permute the array so that no index is favored over another *)
@@ -520,21 +428,19 @@ module Generator = struct
   end = struct
     open M
 
-    module Random = Make_int_random (M)
-
     let gen_uniform_incl lo hi =
       if lo > hi then begin
         bounds_error "Quickcheck.Make_int().gen_uniform_incl" lo hi [%sexp_of: t]
       end;
       create (fun ~size:_ random ->
-        Random.uniform_incl random ~lo ~hi)
+        M.splittable_random random ~lo ~hi)
 
     let gen_log_uniform_incl lo hi =
       if lo < zero || lo > hi then begin
         bounds_error "Quickcheck.Make_int().gen_log_uniform_incl" lo hi [%sexp_of: t]
       end;
       create (fun ~size:_ random ->
-        Random.log_uniform_incl random ~lo ~hi)
+        M.splittable_random_log_uniform random ~lo ~hi)
 
     let gen_incl lower_bound upper_bound =
       weighted_union

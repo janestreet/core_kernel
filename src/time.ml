@@ -457,23 +457,4 @@ module Make (Time0 : Time0_intf.S) = struct
     in
     of_string_gen ~default_zone ~find_zone s
   ;;
-
-  let next_multiple ?(can_equal_after = false) ~base ~after ~interval () =
-    if Span.(<=) interval Span.zero
-    then failwiths "Time.next_multiple got nonpositive interval" interval
-           [%sexp_of: Span.t];
-    let base_to_after = diff after base in
-    if Span.(<) base_to_after Span.zero
-    then base (* [after < base], choose [k = 0]. *)
-    else begin
-      let next =
-        add base
-          (Span.scale interval
-             (Float.round ~dir:`Down (Span.(//) base_to_after interval)))
-      in
-      if next > after || (can_equal_after && next = after)
-      then next
-      else add next interval
-    end
-  ;;
 end

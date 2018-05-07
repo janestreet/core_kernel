@@ -40,10 +40,6 @@ module Std = struct
   (** To be used in implementing Core, but not by end users. *)
   module Core_kernel_private = struct
     module Digit_string_helpers = Digit_string_helpers
-    module Time0_intf           = Time0_intf
-    module Time_intf            = Time_intf
-    module Time_float0          = Time_float0
-    module Time_float           = Time_float
     module Time_zone            = Zone
 
     module Bigbuffer_internal              = Bigbuffer_internal

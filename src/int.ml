@@ -39,4 +39,5 @@ include (Base.Int
 include Quickcheck.Make_int (struct
     include Base.Int
     let splittable_random = Splittable_random.int
+    let splittable_random_log_uniform = Splittable_random.Log_uniform.int
   end)

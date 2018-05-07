@@ -71,5 +71,23 @@ module type S = sig
     val to_absolute : t -> offset_from_utc:Span.t -> absolute
   end with type absolute := t
 
+  (** [next_multiple ~base ~after ~interval] returns the smallest [time] of the form:
+
+      {[
+        time = base + k * interval
+      ]}
+
+      where [k >= 0] and [time > after].  It is an error if [interval <= 0].
+
+      Supplying [~can_equal_after:true] allows the result to satisfy [time >= after].
+  *)
+  val next_multiple
+    :  ?can_equal_after:bool  (** default is [false] *)
+    -> base:t
+    -> after:t
+    -> interval:Span.t
+    -> unit
+    -> t
+
   val now : unit -> t
 end

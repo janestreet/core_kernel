@@ -1,6 +1,9 @@
 open! Import
 open! Std_internal
 
+module type S_kernel_without_zone = Time0_intf.S
+module type S_kernel              = Time_intf.S
+
 include Time_intf.S with module Time := Time_float0
 
 module Stable : sig
