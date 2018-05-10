@@ -1842,3 +1842,29 @@ module Make (Hashtbl : Hashtbl_intf.Hashtbl) = struct
 end
 
 let%test_module _ = (module Make(Hashtbl))
+
+open! Hashtbl
+
+let%test_unit _ = (* [sexp_of_t] output is sorted by key *)
+  let module Table =
+    Make (struct
+      type t = int [@@deriving bin_io, compare, sexp]
+      let hash (x : t) = if x >= 0 then x else ~-x
+    end)
+  in
+  let t = Table.create () in
+  for key = -10 to 10; do
+    Table.add_exn t ~key ~data:();
+  done;
+  List.iter
+    [ [%sexp_of: unit Table.t]
+    ; [%sexp_of: (int, unit) t]
+    ]
+    ~f:(fun sexp_of_t ->
+      let list =
+        t
+        |> [%sexp_of: t]
+        |> [%of_sexp: (int * unit) list]
+      in
+      assert (List.is_sorted list ~compare:(fun (i1, _) (i2, _) -> i1 - i2)))
+;;

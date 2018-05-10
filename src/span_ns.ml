@@ -133,8 +133,6 @@ let to_int_sec  t = Int63.(to_int_exn (t / second))
 
 let to_int63_seconds_round_down_exn t = t /% second
 
-let%test _ [@tags "64-bits-only"] = Int.(>) (to_int_sec Int63.max_value) 0 (* and doesn't raise *)
-
 let of_int_ns =
   if arch_sixtyfour
   then fun i -> of_int63_ns (Int63.of_int i)
@@ -157,39 +155,6 @@ let (/)         t f = round_nearest (float t /. f)
 let (//)            = Int63.(//)
 
 let to_proportional_float t = Int63.to_float t
-
-let%test_module "overflow silently" =
-  (module struct
-    let doesn't_raise = Fn.non Exn.does_raise
-
-    let%test "+ range up"   = doesn't_raise (fun () -> max_value +     nanosecond)
-    let%test "+ range down" = doesn't_raise (fun () -> min_value + neg nanosecond)
-    let%test "+ overflow"   = doesn't_raise (fun () -> max_value +     max_value)
-    let%test "+ underflow"  = doesn't_raise (fun () -> min_value +     min_value)
-    let%test "- range down" = doesn't_raise (fun () -> min_value -     nanosecond)
-    let%test "- range up"   = doesn't_raise (fun () -> max_value - neg nanosecond)
-    let%test "- underflow"  = doesn't_raise (fun () -> min_value -     max_value)
-    let%test "- overflow"   = doesn't_raise (fun () -> max_value -     min_value)
-
-    let%test_module "intermediate ( * )" =
-      (module struct
-        let wrap_days =
-          let margin_ns = Int63.(-) min_value Int63.min_value in
-          Int63.(max_value / day + one + margin_ns / day + one)
-        ;;
-        let%test_unit "wrap_days" =
-          [%test_pred: Int63.t]
-            (Int63.between ~low:min_value ~high:(Int63.neg nanosecond))
-            Int63.(wrap_days * day)
-        ;;
-        let wrap_days_int = Int63.to_int_exn wrap_days
-        let%test "scale_int63" = doesn't_raise (fun () -> scale_int63 day wrap_days)
-        let%test "scale_int"   = doesn't_raise (fun () -> scale_int   day wrap_days_int)
-        let%test "create"      = doesn't_raise (fun () -> create ()  ~day:wrap_days_int)
-      end)
-    ;;
-  end)
-;;
 
 let of_unit_of_time u =
   match (u : Unit_of_time.t) with
@@ -467,11 +432,6 @@ module Stable = struct
           end;
           add_without_underflow ~string (int63 * int63_10) (-digit)
 
-        let%test_unit "int63-negative-division-by-positive-truncates-towards-zero" =
-          let open Int63 in
-          assert (of_int (-7) / of_int 4 = of_int (-1))
-        ;;
-
         let min_factor_of span =
           Int63.( / ) Int63.min_value (to_int63_ns span)
 
@@ -538,6 +498,7 @@ module Stable = struct
           let is_negative =
             match String.unsafe_get string !pos with
             | '-' -> incr pos; true
+            | '+' -> incr pos; false
             | _   -> false
           in
           let round_ties_before_negating : Digit_string_helpers.Round.t =
@@ -664,56 +625,6 @@ include Comparable.Validate_with_zero(struct
     let zero = zero
   end)
 
-let%test_module _ = (module struct
-  let ( * ) = Int63.( * )
-  let of_int = Int63.of_int
-
-  let round_trip t = [%test_result: t] (of_parts (to_parts t)) ~expect:t
-  let eq t expect =
-    [%test_result: t] t ~expect;
-    [%test_result: Parts.t] (to_parts t) ~expect:(to_parts expect);
-    round_trip t
-
-  let%test_unit _ = eq (create ~us:2            ()) (of_int 2    * microsecond)
-  let%test_unit _ = eq (create ~min:3           ()) (of_int 3    * minute)
-  let%test_unit _ = eq (create ~ms:4            ()) (of_int 4    * millisecond)
-  let%test_unit _ = eq (create ~sec:5           ()) (of_int 5    * second)
-  let%test_unit _ = eq (create ~hr:6            ()) (of_int 6    * hour)
-  let%test_unit _ = eq (create ~day:7           ()) (of_int 7    * day)
-  let%test_unit _ = eq (create ~us:8 ~sign:Neg  ()) (of_int (-8) * microsecond)
-  let%test_unit _ = eq (create ~ms:9 ~sign:Zero ()) (of_int 9    * millisecond)
-  let%test_unit _ =
-    eq (create ~us:3 ~ns:242 () |> to_sec |> of_sec_with_microsecond_precision)
-      (of_int 3 * microsecond)
-  let%test_unit _ =
-    for _ = 1 to 1_000_000 do
-      let t =
-        (Int63.of_int64_exn (Random.int64 (Int63.to_int64 max_value)))
-        + if Random.bool () then zero else min_value
-      in
-      round_trip t
-    done
-
-  let round_trip parts =
-    [%test_result: Parts.t] (to_parts (of_parts parts)) ~expect:parts
-  let eq parts expect =
-    [%test_result: Parts.t] parts ~expect;
-    [%test_result: t] (of_parts parts) ~expect:(of_parts expect);
-    round_trip parts
-
-  let%test_unit _ =
-    eq (to_parts (create ~sign:Neg ~hr:2 ~min:3 ~sec:4 ~ms:5 ~us:6 ~ns:7 ()))
-      { Parts. sign = Neg; hr = 2; min = 3; sec = 4; ms = 5; us = 6; ns = 7 }
-  let%test_unit _ = round_trip (to_parts (create ~hr:25 ()))
-  let%test_unit _ =
-    let hr =
-      match Word_size.word_size with
-      | W32 -> Int.max_value
-      | W64 -> Int64.to_int_exn 2217989799822798757L
-    in
-    round_trip (to_parts (create ~hr ()))
-end)
-
 (* Functions required by [Robustly_comparable]: allows for [robust_comparison_tolerance]
    granularity.
 
@@ -784,13 +695,6 @@ let to_short_string t =
   let { sign; hr; min; sec; ms; us; ns } : Parts.t = to_parts t in
   Span_helpers.short_string ~sign ~hr ~min ~sec ~ms ~us ~ns
 
-let%test_unit "random smoke" =
-  let state = Random.State.make [| |] in
-  for _ = 1 to 1000 do
-    ignore (random ~state () : t)
-  done
-;;
-
 include Pretty_printer.Register (struct
     type nonrec t = t
     let to_string = to_string
@@ -810,3 +714,9 @@ include (C : module type of C
 
 (* re-include comparisons to shadow the un-inlineable ones from [Comparable] *)
 include Replace_polymorphic_compare
+
+module Private = struct
+  module Parts = Parts
+  let of_parts = of_parts
+  let to_parts = to_parts
+end

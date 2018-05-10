@@ -20,7 +20,7 @@ module type Parts = sig
     us   : int;
     ns   : int;
   }
-  [@@deriving sexp]
+  [@@deriving compare, sexp]
 end
 
 module type S = sig

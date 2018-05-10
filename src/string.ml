@@ -28,21 +28,6 @@ module Caseless = struct
   include Hashable.Make_binable(T)
 end
 
-let%test_module "Caseless Comparable" =
-  (module struct
-    let%test _ =
-      Int.equal (Core_map.find_exn (Caseless.Map.of_alist_exn [("a", 4); ("b", 5)]) "A") 4
-
-    let%test _ = Core_set.mem (Caseless.Set.of_list ["hello"; "world"]) "heLLO"
-    let%test _ = Int.equal (Core_set.length (Caseless.Set.of_list ["a"; "A"])) 1
-
-  end)
-
-let%test_module "Caseless Hash" =
-  (module struct
-    let%test _ = Int.equal (Caseless.hash "Hello") (Caseless.hash "HELLO")
-  end)
-
 type t = string [@@deriving typerep]
 
 include (Base.String
@@ -114,17 +99,6 @@ let rtake_while t ~f =
   match rfindi t ~f:(fun _ elt -> not (f elt)) with
   | None -> t
   | Some i -> sub t ~pos:(i + 1) ~len:(length t - i - 1)
-;;
-
-let%test_module "take_while" =
-  (module struct
-    let f = Char.is_digit
-
-    let%test_unit _ = [%test_result: t] ( take_while "123abc456" ~f) ~expect:"123"
-    let%test_unit _ = [%test_result: t] (rtake_while "123abc456" ~f) ~expect:"456"
-    let%test_unit _ = [%test_result: t] ( take_while "123456"    ~f) ~expect:"123456"
-    let%test_unit _ = [%test_result: t] (rtake_while "123456"    ~f) ~expect:"123456"
-  end)
 ;;
 
 (** See {!Array.normalize} for the following 4 functions. *)

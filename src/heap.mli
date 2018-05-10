@@ -17,6 +17,8 @@ type 'a t [@@deriving sexp_of]
     undefined. *)
 include Container.S1 with type 'a t := 'a t
 
+include Invariant.S1 with type 'a t := 'a t
+
 (** Even though these two functions [min_elt] and [max_elt] are part of Container.S1, they
     are documented separately to make sure there is no confusion. They are independent of
     the comparison function used to order the heap. Instead, a traversal of the entire

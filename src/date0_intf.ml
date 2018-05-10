@@ -172,4 +172,10 @@ module type Date0 = sig
   module O : sig
     include Comparable.Infix with type t := t
   end
+
+  module Private : sig
+    val leap_year_table : int array
+    val non_leap_year_table : int array
+    val ordinal_date : t -> int
+  end
 end

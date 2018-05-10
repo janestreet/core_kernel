@@ -9,6 +9,12 @@ let gibi = 2. **  30.
 
 let gibi_nanos float = float *. gibi |> Time_ns.Span.of_ns
 
+module Num_key_bits = struct
+  open! Private.Num_key_bits
+
+  let%test_unit _ = invariant zero
+end
+
 module Alarm_precision = struct
   include Alarm_precision
 
@@ -802,6 +808,42 @@ let%expect_test "invalid alarm precision" =
     ("[Alarm_precision.of_span_floor_pow2_ns] got non-positive span" (span 0s)) |}];
 ;;
 
+let%expect_test "[Private.interval_num_internal]" =
+  for time = -5 to 4 do
+    print_s [%message
+      ""
+        (time : int)
+        ~interval_num:(
+          Interval_num.to_int_exn
+            (Private.interval_num_internal
+               ~alarm_precision:(Alarm_precision.of_span_floor_pow2_ns
+                                   (Time_ns.Span.of_int63_ns (Int63.of_int 4)))
+               ~time:(Time_ns.of_int63_ns_since_epoch (Int63.of_int time)))
+          : int)]
+  done;
+  [%expect {|
+    ((time         -5)
+     (interval_num -2))
+    ((time         -4)
+     (interval_num -1))
+    ((time         -3)
+     (interval_num -1))
+    ((time         -2)
+     (interval_num -1))
+    ((time         -1)
+     (interval_num -1))
+    ((time         0)
+     (interval_num 0))
+    ((time         1)
+     (interval_num 0))
+    ((time         2)
+     (interval_num 0))
+    ((time         3)
+     (interval_num 0))
+    ((time         4)
+     (interval_num 1)) |}];
+;;
+
 let%expect_test "[interval_num_start], [interval_start]" =
   let t = create_unit () in
   require [%here] (not (mem t (Alarm.null ())));
@@ -1406,3 +1448,4 @@ let%expect_test "multiple alarms at the same time are fired in insertion order" 
     4
     5 |}]
 ;;
+

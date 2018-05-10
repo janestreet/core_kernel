@@ -42,8 +42,10 @@ module Std = struct
     module Digit_string_helpers = Digit_string_helpers
     module Time_zone            = Zone
 
+    module Ofday_helpers = Ofday_helpers
+    module Span_float = Span_float
+
     module Bigbuffer_internal              = Bigbuffer_internal
-    module Container_unit_tests            = Container_unit_tests
     module Stable_internal                 = Stable_internal
     module Std_internal                    = Std_internal
 

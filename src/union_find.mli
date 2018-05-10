@@ -17,6 +17,8 @@ open! Import
     equivalence class that is associated with a single value of type ['a]. *)
 type 'a t
 
+include Invariant.S1 with type 'a t := 'a t
+
 (** [create v] returns a new object in its own equivalence class that has value [v]. *)
 val create : 'a -> 'a t
 
@@ -35,3 +37,8 @@ val same_class : 'a t -> 'a t -> bool
     [t1] or [t2]; it is unspecified which.  After [union t1 t2], it will always be the
     case that [same_class t1 t2]. *)
 val union: 'a t -> 'a t -> unit
+
+module Private : sig
+  val is_compressed : _ t -> bool
+  val rank : _ t -> int
+end

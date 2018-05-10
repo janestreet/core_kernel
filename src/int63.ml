@@ -68,7 +68,3 @@ include Quickcheck.Make_int (struct
     let splittable_random = Splittable_random.int63
     let splittable_random_log_uniform = Splittable_random.Log_uniform.int63
   end)
-
-let%expect_test _ =
-  print_string [%bin_digest: t];
-  [%expect{| 2b528f4b22f08e28876ffe0239315ac2 |}]

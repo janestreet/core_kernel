@@ -230,3 +230,20 @@ let%expect_test "[compare] is a total order consistent with [is_subset]" =
       if is_subset ai ~of_:aj then require [%here] (Int.( <= ) (compare ai aj) 0);
       require [%here] (Int.equal (compare ai aj) (Int.compare i j))));
 ;;
+
+(* Check that conflicting flags leads to an error. *)
+let%test _ =
+  Result.is_error
+    (Result.try_with (fun () ->
+       let module M =
+         Make (struct
+           let allow_intersecting = false
+           let should_print_error = false
+           let known = [ Int63.of_int 0x1, "";
+                         Int63.of_int 0x1, "";
+                       ]
+           let remove_zero_flags = false
+         end)
+       in
+       ()))
+;;

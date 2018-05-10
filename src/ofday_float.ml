@@ -128,16 +128,6 @@ module Stable = struct
       T.of_span_since_start_of_day_exn (Span.create ?hr ?min ?sec ?ms ?us ?ns ())
     ;;
 
-    let%test "create can handle a leap second" =
-      let last_second = create ~hr:21 () in
-      List.for_all
-        ~f:(fun v -> T.equal v last_second)
-        [ create ~hr:20 ~min:59 ~sec:60 ()
-        ; create ~hr:20 ~min:59 ~sec:60 ~ms:500 ()
-        ; create ~hr:20 ~min:59 ~sec:60 ~ms:500 ~us:500 ()
-        ; create ~hr:20 ~min:59 ~sec:60 ~ms:0 ~us:500 () ]
-    ;;
-
     let to_parts t = Span.to_parts (T.to_span_since_start_of_day t)
 
     let to_string_gen ~drop_ms ~drop_us ~trim t =
@@ -227,96 +217,6 @@ module Stable = struct
       Ofday_helpers.parse s ~f:create_from_parsed
     ;;
 
-    let%test_unit "of_string does not naively dispatch to \
-                   [Int.of_string] and [Float.of_string]" =
-      assert (Exn.does_raise (fun () -> of_string "1:0:00"));
-      assert (Exn.does_raise (fun () -> of_string "1:-0:00"));
-      assert (Exn.does_raise (fun () -> of_string "0o10:0x28:3e1"));
-    ;;
-
-    let%bench "Time.Ofday.of_string" = of_string "12:00:00am"
-
-    let%test "of_string supports leap seconds" =
-      let last_second = create ~hr:21 () in
-      List.for_all
-        ~f:(fun s -> of_string s = last_second)
-        [ "20:59:60"
-        ; "20:59:60.500"
-        ; "20:59:60.000" ]
-    ;;
-
-    let%test_unit "of_string supports non-meridiem times" =
-      assert (create ~hr:7 ~min:21 ~sec:0 () = of_string "07:21:00")
-    ;;
-
-    (* This because we're sharing the suffixes between the parser code and tests, so e.g.
-       typos would otherwise go undetected *)
-    let%expect_test "the permissible suffixes are reasonable" =
-      printf "%s\n" (String.concat ~sep:" " (Lazy.force Ofday_helpers.am_suffixes));
-      printf "%s\n" (String.concat ~sep:" " (Lazy.force Ofday_helpers.pm_suffixes));
-      [%expect {|
-        a A am AM a.m A.M a.m. A.M.
-        p P pm PM p.m P.M p.m. P.M.
-      |}]
-
-    let%test_unit "of_string supports meridiem times" =
-      let test_excluding_noon ~hr ~zeroes ~meridiem () =
-        let hrs_to_add, suffixes =
-          let plus_space xs = xs @ List.map xs ~f:(fun x -> " " ^ x) in
-          match meridiem with
-          | None     -> 0,  [""]
-          | Some `AM -> 0,  plus_space (Lazy.force Ofday_helpers.am_suffixes)
-          | Some `PM -> 12, plus_space (Lazy.force Ofday_helpers.pm_suffixes)
-        in
-        List.iter suffixes ~f:(fun suffix ->
-          let t = create ~hr:(hr + hrs_to_add) () in
-          let str = sprintf "%d%s%s" hr zeroes suffix in
-          assert (t = (of_string str)));
-      in
-      let failure f = assert (Option.is_none (Option.try_with f)) in
-      let success f =
-        match Or_error.try_with f with
-        | Ok    _ -> ()
-        | Error e -> Error.raise (Error.tag e ~tag:"expected success")
-      in
-      (* Test everything but hour 12 and 0 *)
-      let first_half_of_day_except_0_and_12 = [1;2;3;4;5;6;7;8;9;10;11] in
-      let second_half_of_day = [13;14;15;16;17;18;19;21;21;22;23;24] in
-      (* 1 -> 11 are tested here, simplistically by adding 12 when
-         [meridiem is `PM]. We test ~hr:12 later *)
-      List.iter first_half_of_day_except_0_and_12 ~f:(fun hr ->
-        (* Test X:00:00am, X:00am. amd Xam *)
-        success (test_excluding_noon ~hr ~zeroes:":00:00" ~meridiem:(Some `AM));
-        success (test_excluding_noon ~hr ~zeroes:":00"    ~meridiem:(Some `AM));
-        success (test_excluding_noon ~hr ~zeroes:""       ~meridiem:(Some `AM));
-        success (test_excluding_noon ~hr ~zeroes:":00:00" ~meridiem:(Some `AM));
-        success (test_excluding_noon ~hr ~zeroes:":00"    ~meridiem:(Some `PM));
-        success (test_excluding_noon ~hr ~zeroes:""       ~meridiem:(Some `PM));
-        (* "11pm" is fine, but "11" is not a valid ofday *)
-        failure (test_excluding_noon ~hr ~zeroes:""       ~meridiem:None);
-      );
-      (* None of hour 13 -> 24 should support AM or PM *)
-      List.iter second_half_of_day ~f:(fun hr ->
-        failure (test_excluding_noon ~zeroes:":00:00" ~hr ~meridiem:(Some `AM));
-        failure (test_excluding_noon ~zeroes:":00"    ~hr ~meridiem:(Some `AM));
-        failure (test_excluding_noon ~zeroes:""       ~hr ~meridiem:(Some `AM));
-        failure (test_excluding_noon ~zeroes:":00:00" ~hr ~meridiem:(Some `PM));
-        failure (test_excluding_noon ~zeroes:":00"    ~hr ~meridiem:(Some `PM));
-        failure (test_excluding_noon ~zeroes:""       ~hr ~meridiem:(Some `PM));
-      );
-      List.iter ([0;12] @ first_half_of_day_except_0_and_12 @ second_half_of_day)
-        ~f:(fun hr ->
-          success (test_excluding_noon ~hr ~zeroes:":00:00" ~meridiem:None);
-          success (test_excluding_noon ~hr ~zeroes:":00"    ~meridiem:None);
-          failure (test_excluding_noon ~hr ~zeroes:""       ~meridiem:None);
-        );
-      (* Test hour 12 *)
-      assert ((create ~hr:12 ()) = (of_string "12:00:00 PM"));
-      assert ((create ~hr:0 ())  = (of_string "12:00:00 AM"));
-      (* Can't have a 0'th hour ofday with a meridiem suffix *)
-      failure (fun () -> (of_string "00:00:00 AM"));
-      failure (fun () -> (of_string "00:00:00 PM"));
-    ;;
 
     let t_of_sexp sexp =
       match sexp with
@@ -339,17 +239,6 @@ module Stable = struct
           (String.subo str ?pos ?len) (Exn.to_string exn) ()
     ;;
 
-    let%test "of_string_iso8601_extended supports leap seconds" =
-      let last_second = create ~hr:21 () in
-      List.for_all
-        ~f:(fun s -> T.equal (of_string_iso8601_extended s) last_second)
-        [ "20:59:60"
-        ; "20:59:60.500"
-        ; "20:59:60.000" ]
-    ;;
-
-    let%test "of_string_iso8601_extended doesn't support two leap seconds" =
-      Exn.does_raise (fun () -> of_string_iso8601_extended "23:59:61")
   end
 end
 
@@ -392,11 +281,6 @@ end
 
 module Map = Map.Make_binable_using_comparator (C)
 module Set = Set.Make_binable_using_comparator (C)
-
-let%test _ =
-  Set.equal (Set.of_list [start_of_day])
-    (Set.t_of_sexp (Sexp.List [Float.sexp_of_t (to_float start_of_day)]))
-;;
 
 let of_span_since_start_of_day = of_span_since_start_of_day_exn
 let to_millisec_string         = to_millisecond_string

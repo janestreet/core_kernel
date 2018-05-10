@@ -53,3 +53,13 @@ module Make         (Elt : Elt        ) : S         with type elt = Elt.t
 module Make_binable (Elt : Elt_binable) : S_binable with type elt = Elt.t
 
 module M (Elt : T.T) : sig type nonrec t = Elt.t t end
+
+module type Sexp_of_m = sig
+  type t [@@deriving sexp_of]
+end
+module type M_of_sexp = sig
+  type t [@@deriving of_sexp]
+  include Hashtbl_intf.Key with type t := t
+end
+val sexp_of_m__t : (module Sexp_of_m with type t = 'elt) -> 'elt t -> Base.Sexp.t
+val m__t_of_sexp : (module M_of_sexp with type t = 'elt) -> Base.Sexp.t -> 'elt t

@@ -18,8 +18,8 @@ module type Span = sig
   val to_int_sec : t -> int
 
   (** The limits of [t] are chosen to allow conversion to and from [float] spans with
-      microsecond precision.  This property supports {!Core.Timing_wheel_float} in
-      particular.  See also {!Core.Time}. *)
+      microsecond precision.  This property supports {!Timing_wheel_float} in particular.
+      See also {!Core.Time}. *)
   val min_value : t
   val max_value : t
 
@@ -48,6 +48,11 @@ module type Span = sig
     type nonrec t = t [@@deriving sexp]
   end
   [@@deprecated "[since 2018-04] use [Span.sexp_of_t] and [Span.t_of_sexp] instead"]
+
+  module Private : sig
+    val of_parts : Parts.t -> t
+    val to_parts : t -> Parts.t
+  end
 end
 
 module type Ofday = sig

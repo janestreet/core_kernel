@@ -14,7 +14,7 @@ module Stable = struct
         us   : int;
         ns   : int;
       }
-      [@@deriving sexp]
+      [@@deriving compare, sexp]
     end
 
     module type Like_a_float = sig
@@ -295,42 +295,6 @@ module Stable = struct
     let sexp_of_t t = sexp_of_t_v1_v2 t ~is_v2:true
   end
 
-  let%test_module "Span.V1" = (module Stable_unit_test.Make (struct
-      include V1
-
-      let equal t1 t2 = Int.(=) 0 (compare t1 t2)
-
-      let tests =
-        let span = of_sec in
-        [ span 99e-12,     "9.9e-08ms", "\018\006\211\115\129\054\219\061";
-          span 1.2e-9,     "1.2e-06ms", "\076\206\097\227\167\157\020\062";
-          span 0.000001,   "0.001ms",   "\141\237\181\160\247\198\176\062";
-          span 0.707,      "707ms",     "\057\180\200\118\190\159\230\063";
-          span 42.,        "42s",       "\000\000\000\000\000\000\069\064";
-          span 1234.56,    "20.576m",   "\010\215\163\112\061\074\147\064";
-          span 39_996.,    "11.11h",    "\000\000\000\000\128\135\227\064";
-          span 80000006.4, "925.926d",  "\154\153\153\025\208\018\147\065";
-        ]
-    end))
-
-  let%test_module "Span.V2" = (module Stable_unit_test.Make (struct
-      include V2
-
-      let equal t1 t2 = Int.(=) 0 (compare t1 t2)
-
-      let tests =
-        let span = of_sec in
-        [ span 99e-12,     "0.098999999999999991ns", "\018\006\211\115\129\054\219\061";
-          span 1.2e-9,     "1.2ns",                  "\076\206\097\227\167\157\020\062";
-          span 0.000001,   "1us",                    "\141\237\181\160\247\198\176\062";
-          span 0.707,      "707ms",                  "\057\180\200\118\190\159\230\063";
-          span 42.,        "42s",                    "\000\000\000\000\000\000\069\064";
-          span 1234.56,    "20.576m",                "\010\215\163\112\061\074\147\064";
-          span 39_996.,    "11.11h",                 "\000\000\000\000\128\135\227\064";
-          span 80000006.4, "925.926d",               "\154\153\153\025\208\018\147\065";
-        ]
-    end))
-
   module V3 = struct
     include V1
 
@@ -384,19 +348,6 @@ module Stable = struct
            correct match on millisecond timestamps. This assumption is demonstrated in the
            expect test below. *)
         find_unit_of_time_by_suffix string ~index Unit_of_time.all
-
-      let%expect_test "Unit_of_time.all order" =
-        print_s [%sexp (Unit_of_time.all : Unit_of_time.t list)];
-        [%expect {| (Nanosecond Microsecond Millisecond Second Minute Hour Day) |}];
-      ;;
-
-      let%test_unit "units of time all parse" =
-        List.iter Unit_of_time.all ~f:(fun unit_of_time ->
-          let s = sprintf "1%s2" (suffix_of_unit_of_time unit_of_time) in
-          [%test_result: Unit_of_time.t]
-            (parse_suffix s ~index:1)
-            ~expect:unit_of_time)
-      ;;
 
       (* We validate magnitude strings so that we know where the unit-of-time suffix
          begins, and so that only sensible strings are allowed. We do not want to be as
@@ -543,8 +494,13 @@ module Stable = struct
         | _       ->
           begin
             let len = String.length string in
-            let negative = String.is_prefix string ~prefix:"-" in
-            let index = if negative then 1 else 0 in
+            if len = 0 then invalid_string string ~reason:"empty input";
+            let negative, index =
+              match String.get string 0 with
+              | '-' -> true , 1
+              | '+' -> false, 1
+              | _   -> false, 0
+            in
             if index >= len then invalid_string string ~reason:"empty input";
             let magnitude = parse_magnitude string ~index ~len in
             if negative
@@ -678,29 +634,6 @@ module Stable = struct
         if String.is_empty y then x else
           (x ^ y)
 
-      let%expect_test "^? is useful" [@tags "64-bits-only"] =
-        let open Int.O in
-        let show_allocation f =
-          let minor1 = Gc.minor_words () in
-          let major1 = Gc.major_words () in
-          let result = (Sys.opaque_identity f) () in
-          let minor2 = Gc.minor_words () in
-          let major2 = Gc.major_words () in
-          begin
-            if minor2 > minor1 || major2 > major1
-            then print_endline "allocates"
-            else print_endline "does not allocate"
-          end;
-          Sys.opaque_identity result
-        in
-        let empty = Sys.opaque_identity ""      in
-        let hello = Sys.opaque_identity "hello" in
-        ignore (show_allocation (fun () -> empty ^ hello) : string);
-        [%expect {| allocates |}];
-        ignore (show_allocation (fun () -> hello ^ empty) : string);
-        [%expect {| allocates |}];
-      ;;
-
       let to_string t =
         let float = to_float t in
         if not (Float.is_finite float)
@@ -778,23 +711,6 @@ let to_string_hum ?(delimiter='_') ?(decimals=3) ?(align_decimal=false) ?unit_of
   in
   prefix ^ suffix
 
-let%test_unit "Span.to_string_hum" =
-  [%test_result: string] (to_string_hum nanosecond) ~expect:"1ns";
-  [%test_result: string] (to_string_hum day) ~expect:"1d";
-  [%test_result: string]
-    (to_string_hum ~decimals:6                      day)
-    ~expect:"1d";
-  [%test_result: string]
-    (to_string_hum ~decimals:6 ~align_decimal:false day)
-    ~expect:"1d";
-  [%test_result: string]
-    (to_string_hum ~decimals:6 ~align_decimal:true  day)
-    ~expect:"1.000000d ";
-  [%test_result: string]
-    (to_string_hum ~decimals:6 ~align_decimal:true ~unit_of_time:Day
-       (hour + minute))
-    ~expect:"0.042361d "
-
 include Pretty_printer.Register (struct
     type nonrec t = t
     let to_string = to_string
@@ -838,11 +754,7 @@ end
 module Map = Map.Make_binable_using_comparator (C)
 module Set = Set.Make_binable_using_comparator (C)
 
-let%test _ =
-  Set.equal (Set.of_list [hour])
-    (Set.t_of_sexp (Sexp.List [Float.sexp_of_t (to_float hour)]))
-;;
-
-(* We should be robustly equal within a microsecond *)
-let%test _ = (=.) zero microsecond
-let%test _ = not ((=.) zero (of_ns 1001.0))
+module Private = struct
+  let suffix_of_unit_of_time = suffix_of_unit_of_time
+  let parse_suffix = Stable.V3.Of_string.parse_suffix
+end

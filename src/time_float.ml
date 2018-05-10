@@ -22,7 +22,11 @@ module Stable = struct
         try
           match sexp with
           | Sexp.List [Sexp.Atom date; Sexp.Atom ofday_and_possibly_zone] ->
-            T.of_string (date ^ " " ^ ofday_and_possibly_zone)
+            T.of_string_gen
+              ~default_zone:(fun () -> Zone.utc)
+              ~find_zone:(fun _ ->
+                of_sexp_error "Time.Stable.With_utc.V2.t_of_sexp: unknown time zone" sexp)
+              (date ^ " " ^ ofday_and_possibly_zone)
           | _ -> of_sexp_error "Time.Stable.With_utc.V2.t_of_sexp" sexp
         with
         | Of_sexp_error _ as e -> raise e

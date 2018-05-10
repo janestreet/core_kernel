@@ -23,3 +23,8 @@ module Stable : sig
     type nonrec t = t [@@deriving sexp, bin_io, compare, hash]
   end
 end
+
+module Private : sig
+  val parse_suffix : string -> index:int -> Unit_of_time.t
+  val suffix_of_unit_of_time : Unit_of_time.t -> string
+end

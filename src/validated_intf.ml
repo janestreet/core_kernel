@@ -65,6 +65,13 @@ module type S = sig
   val raw : t -> raw
 end
 
+module type S_bin_io = sig
+  include S
+  include sig
+    type t = (raw, witness) validated [@@deriving bin_io]
+  end with type t := t
+end
+
 module type S_bin_io_compare_hash_sexp = sig
   include S
   include sig
@@ -82,10 +89,14 @@ module type Validated = sig
 
   module type S = S with type ('a, 'b) validated := ('a, 'b) t
 
+  module type S_bin_io = S_bin_io with type ('a, 'b) validated := ('a, 'b) t
+
   module type S_bin_io_compare_hash_sexp =
     S_bin_io_compare_hash_sexp with type ('a, 'b) validated := ('a, 'b) t
 
   module Make (Raw : Raw) : S with type raw := Raw.t
+
+  module Make_binable (Raw : Raw_bin_io) : S_bin_io with type raw := Raw.t
 
   (** [Make_bin_io_compare_hash_sexp] is useful for stable types. *)
   module Make_bin_io_compare_hash_sexp (Raw : Raw_bin_io_compare_hash_sexp)

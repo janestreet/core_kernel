@@ -129,17 +129,6 @@ module For_quickcheck = struct
   let min_nan_mantissa = Int63.succ inf_mantissa
   let max_nan_mantissa = max_normal_mantissa
 
-  let test_class gen expect =
-    Quickcheck.test gen ~f:(fun float ->
-      let actual = classify float in
-      if not (Int.equal (Class.compare actual expect) 0) then begin
-        raise_s [%message
-          "generator produced float in wrong class"
-            (float  : t)
-            (expect : Class.t)
-            (actual : Class.t)]
-      end)
-
   let num_mantissa_bits = 52
 
   (* We weight mantissas so that "integer-like" values, and values with only a few digits
@@ -174,16 +163,12 @@ module For_quickcheck = struct
     in
     create_ieee_exn ~negative ~exponent:zero_exponent ~mantissa:zero_mantissa
 
-  let%test_unit _ = test_class gen_zero Zero
-
   let gen_subnormal =
     let%map negative = Bool.gen
     and     exponent = return subnormal_exponent
     and     mantissa = Int63.gen_log_incl min_subnormal_mantissa max_subnormal_mantissa
     in
     create_ieee_exn ~negative ~exponent ~mantissa
-
-  let%test_unit _ = test_class gen_subnormal Subnormal
 
   let gen_normal =
     let%map negative = Bool.gen
@@ -192,14 +177,10 @@ module For_quickcheck = struct
     in
     create_ieee_exn ~negative ~exponent ~mantissa
 
-  let%test_unit _ = test_class gen_normal Normal
-
   let gen_infinite =
     let%map negative = Bool.gen
     in
     create_ieee_exn ~negative ~exponent:inf_exponent ~mantissa:inf_mantissa
-
-  let%test_unit _ = test_class gen_infinite Infinite
 
   let gen_nan =
     let%map negative = Bool.gen
@@ -207,8 +188,6 @@ module For_quickcheck = struct
     and     mantissa = Int63.gen_incl min_nan_mantissa max_nan_mantissa
     in
     create_ieee_exn ~negative ~exponent ~mantissa
-
-  let%test_unit _ = test_class gen_nan Nan
 
   let gen_by_class c =
     match (c : Class.t) with
@@ -299,19 +278,10 @@ let gen_negative     = For_quickcheck.gen_negative
 let obs              = For_quickcheck.obs
 let shrinker         = For_quickcheck.shrinker
 
-(* Additional tests of Base.Float requiring the Gc module *)
-
-let%test _ [@tags "64-bits-only"] =
-  let before = Gc.minor_words () in
-  assert (Int63.equal (int63_round_nearest_exn 0.8) (Int63.of_int_exn 1));
-  let after = Gc.minor_words () in
-  Int.equal before after
-
-let%test_unit "Float.validate_positive doesn't allocate on success" =
-  let initial_words = Gc.minor_words () in
-  let _ : Validate.t = validate_positive 1. in
-  let allocated = Int.(-) (Gc.minor_words ()) initial_words in
-  [%test_result: int] allocated ~expect:0
-;;
+let gen_infinite  = For_quickcheck.gen_infinite
+let gen_nan       = For_quickcheck.gen_nan
+let gen_normal    = For_quickcheck.gen_normal
+let gen_subnormal = For_quickcheck.gen_subnormal
+let gen_zero      = For_quickcheck.gen_zero
 
 let to_string_round_trippable = to_string

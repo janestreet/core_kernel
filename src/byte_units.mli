@@ -51,3 +51,7 @@ end
 module Stable : sig
   module V1 : Stable_module_types.S0_without_comparator with type t = t
 end
+
+module Private : sig
+  val bytes_per_word : float
+end

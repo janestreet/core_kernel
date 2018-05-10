@@ -1,6 +1,8 @@
 open! Import
 open Std_internal
 
+include Stable_unit_test_intf
+
 module Make_sexp_deserialization_test (T : Stable_unit_test_intf.Arg) = struct
   let%test_unit "sexp deserialization" =
     Or_error.combine_errors_unit
@@ -140,3 +142,4 @@ struct
       )
   ;;
 end
+

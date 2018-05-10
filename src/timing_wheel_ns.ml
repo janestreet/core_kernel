@@ -79,8 +79,6 @@ end = struct
     assert (t <= max_value);
   ;;
 
-  let%test_unit _ = invariant zero
-
   let of_int i = invariant i; i
 
   let ( + ) t1 t2 =
@@ -1349,32 +1347,6 @@ let interval_num_internal ~time ~alarm_precision =
   Interval_num.of_int63 (Alarm_precision.interval_num alarm_precision time)
 ;;
 
-let%expect_test "[interval_num_internal]" =
-  for time = -5 to 4 do
-    print_s [%message
-      ""
-        (time : int)
-        ~interval_num:(
-          Interval_num.to_int_exn
-            (interval_num_internal
-               ~alarm_precision:(Alarm_precision.of_span_floor_pow2_ns
-                                   (Time_ns.Span.of_int63_ns (Int63.of_int 4)))
-               ~time:(Time_ns.of_int63_ns_since_epoch (Int63.of_int time)))
-          : int)]
-  done;
-  [%expect {|
-    ((time -5) (interval_num -2))
-    ((time -4) (interval_num -1))
-    ((time -3) (interval_num -1))
-    ((time -2) (interval_num -1))
-    ((time -1) (interval_num -1))
-    ((time 0) (interval_num 0))
-    ((time 1) (interval_num 0))
-    ((time 2) (interval_num 0))
-    ((time 3) (interval_num 0))
-    ((time 4) (interval_num 1)) |}];
-;;
-
 let interval_num_unchecked t time =
   interval_num_internal ~time ~alarm_precision:t.config.alarm_precision
 ;;
@@ -1619,3 +1591,8 @@ let fire_past_alarms t ~handle_fired =
     ~key:(now_interval_num t)
     ~now:t.now;
 ;;
+
+module Private = struct
+  module Num_key_bits = Num_key_bits
+  let interval_num_internal = interval_num_internal
+end

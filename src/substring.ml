@@ -1,5 +1,7 @@
 open! Import
 
+module type S = Make_substring.S
+
 include Make_substring.F (struct
     type t = bytes
 

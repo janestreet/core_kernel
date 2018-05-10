@@ -158,48 +158,6 @@ let dequeue_exn t side =
 
 let rev t = { t with front = t.back ; back = t.front }
 
-let%bench_module "accessors" =
-  (module struct
-
-    module Make (M : sig val t : int t end) = struct
-
-      let%bench "rev" = rev M.t
-
-      let%bench "enqueue_front" = enqueue_front M.t 0
-      let%bench "enqueue_back"  = enqueue_back  M.t 0
-
-      let%bench "peek_front"     = peek_front     M.t
-      let%bench "peek_back"      = peek_back      M.t
-      let%bench "peek_front_exn" = peek_front_exn M.t
-      let%bench "peek_back_exn"  = peek_back_exn  M.t
-
-      let%bench "drop_front"     = drop_front     M.t
-      let%bench "drop_back"      = drop_back      M.t
-      let%bench "drop_front_exn" = drop_front_exn M.t
-      let%bench "drop_back_exn"  = drop_back_exn  M.t
-
-      let%bench "dequeue_front"     = dequeue_front     M.t
-      let%bench "dequeue_back"      = dequeue_back      M.t
-      let%bench "dequeue_front_exn" = dequeue_front_exn M.t
-      let%bench "dequeue_back_exn"  = dequeue_back_exn  M.t
-
-    end
-
-    let build front back =
-      let length = List.length front + List.length back in
-      let t = { length ; front ; back } in
-      invariant ignore t;
-      t
-    ;;
-
-    let list n = List.init n ~f:Int.succ
-
-    let%bench_module "balanced"    = (module Make (struct let t = build (list 50) (list 50) end))
-    let%bench_module "short back"  = (module Make (struct let t = build (list 99) (list  1) end))
-    let%bench_module "short front" = (module Make (struct let t = build (list  1) (list 99) end))
-
-  end)
-
 module Arbitrary_order = struct
 
   let is_empty = is_empty
@@ -288,11 +246,6 @@ module Front_to_back = struct
   let of_list list = make ~length:(List.length list) ~front:list ~back:[]
   let to_list t = t.front @ List.rev t.back
 
-  let%test_unit _ =
-    [%test_result: int list]
-      ~expect:[1;2;3]
-      (to_list (of_list [1;2;3]))
-
   include Make_container(struct let to_list = to_list end)
 
 end
@@ -301,11 +254,6 @@ module Back_to_front = struct
 
   let to_list t = t.back @ List.rev t.front
   let of_list list = make ~length:(List.length list) ~back:list ~front:[]
-
-  let%test_unit _ =
-    [%test_result: int list]
-      ~expect:[1;2;3]
-      (to_list (of_list [1;2;3]))
 
   include Make_container(struct let to_list = to_list end)
 
@@ -331,18 +279,6 @@ include Monad.Make (struct
       })
   end)
 
-let%test_unit _ =
-  [%test_result: int list]
-    ~expect:[1;2;3;4]
-    (bind (of_list [[1;2];[3;4]]) ~f:of_list
-     |> to_list)
-
-let%test_unit _ =
-  [%test_result: int list]
-    ~expect:[2;3;4;5]
-    (map (of_list [1;2;3;4]) ~f:succ
-     |> to_list)
-
 let compare cmp t1 t2 =
   List.compare cmp
     (to_list t1)
@@ -366,15 +302,6 @@ module Stable = struct
       of_list ([%of_sexp: elt list] sexp)
 
     let map = map
-
-    let%test_unit _ =
-      [%test_result: int list]
-        ~expect:[1;2;3]
-        (to_list
-           (t_of_sexp Int.t_of_sexp
-              (sexp_of_t Int.sexp_of_t
-                 (of_list [1;2;3]))))
-    ;;
 
     include Bin_prot.Utils.Make_iterable_binable1 (struct
         type nonrec 'a t = 'a t
@@ -402,3 +329,13 @@ module Stable = struct
 end
 
 include (Stable.V1 : module type of Stable.V1 with type 'a t := 'a t)
+
+module Private = struct
+  let build ~front ~back =
+    let length = List.length front + List.length back in
+    let t = { length ; front ; back } in
+    invariant ignore t;
+    t
+  ;;
+end
+

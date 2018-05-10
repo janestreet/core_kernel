@@ -44,11 +44,6 @@ let rec max_int63_with ~digits =
       Int63.pred (Int63.( * ) int63_billion billions)
     end
 
-let%test_unit "max_int63_with" =
-  [%test_result: Int63.t]
-    (max_int63_with ~digits:11 : Int63.t)
-    ~expect:(Int63.of_string (String.init 11 ~f:(fun _ -> '9')))
-
 module Unsafe = struct
   let unsafe_char_of_digit n = Char.unsafe_of_int (Char.to_int '0' + n)
 
@@ -176,41 +171,6 @@ module Unsafe = struct
   let divide_and_round_up ~numerator ~denominator =
     let open Int63.O in
     (numerator + denominator - Int63.one) /% denominator
-
-  let%expect_test "divide_and_round_up" =
-    let test numerator denominator =
-      let numerator   = Int63.of_int numerator   in
-      let denominator = Int63.of_int denominator in
-      let quotient = divide_and_round_up ~numerator ~denominator in
-      printf !"%{Int63#hum} / %{Int63#hum} = %{Int63#hum}\n"
-        numerator denominator quotient
-    in
-    for numerator = -10 to 10 do
-      test numerator 4;
-    done;
-    [%expect {|
-      -10 / 4 = -2
-      -9 / 4 = -2
-      -8 / 4 = -2
-      -7 / 4 = -1
-      -6 / 4 = -1
-      -5 / 4 = -1
-      -4 / 4 = -1
-      -3 / 4 = 0
-      -2 / 4 = 0
-      -1 / 4 = 0
-      0 / 4 = 0
-      1 / 4 = 1
-      2 / 4 = 1
-      3 / 4 = 1
-      4 / 4 = 1
-      5 / 4 = 2
-      6 / 4 = 2
-      7 / 4 = 2
-      8 / 4 = 2
-      9 / 4 = 3
-      10 / 4 = 3 |}];
-  ;;
 
   let raise_invalid_decimal name =
     invalid_argf "%s.%s: invalid decimal character"

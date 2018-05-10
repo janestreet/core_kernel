@@ -44,6 +44,8 @@ val create
 
 val num_keys : _ t -> int
 
+val is_empty : _ t -> bool
+
 (** {2 Standard hashtbl functions} *)
 
 val keys : ('key, _    ) t -> 'key  list

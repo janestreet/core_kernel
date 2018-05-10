@@ -92,23 +92,6 @@ module Stable = struct
     include Comparable.Stable.V1.Make (Unstable)
     include Stable_containers.Hashable.V1.Make   (Unstable)
   end
-
-  let%test_module "Day_of_week.V1" =
-    (module Stable_unit_test.Make (struct
-         include V1
-
-         let equal a b = (compare a b) = 0
-
-         let tests =
-           [ Sun, "SUN", "\000"
-           ; Mon, "MON", "\001"
-           ; Tue, "TUE", "\002"
-           ; Wed, "WED", "\003"
-           ; Thu, "THU", "\004"
-           ; Fri, "FRI", "\005"
-           ; Sat, "SAT", "\006"
-           ]
-       end))
 end
 
 include Stable.V1.Unstable
@@ -121,11 +104,6 @@ let weekends = [ Sat; Sun ]
    ordering should never change, so speed wins over something more complex that proves
    the order = the order in t at runtime *)
 let all = [ Sun; Mon; Tue; Wed; Thu; Fri; Sat ]
-
-let%test _ = List.is_sorted all ~compare
-
-let%test "to_string_long output parses with of_string" =
-  List.for_all all ~f:(fun d -> d = (to_string_long d |> of_string))
 
 let of_int i = try Some (of_int_exn i) with _ -> None
 
@@ -158,16 +136,6 @@ let shift t i = of_int_exn (Int.( % ) (to_int t + i) num_days_in_week)
 let num_days ~from ~to_ =
   let d = to_int to_ - to_int from in
   if Int.(d < 0) then d + num_days_in_week else d
-;;
-
-let%test _ = Int.(num_days ~from:Mon ~to_:Tue = 1);;
-let%test _ = Int.(num_days ~from:Tue ~to_:Mon = 6);;
-let%test "num_days is inverse to shift" =
-  let all_days = [Sun; Mon; Tue; Wed; Thu; Fri; Sat] in
-  List.for_all (List.cartesian_product all_days all_days)
-    ~f:(fun (from, to_) ->
-      let i = num_days ~from ~to_ in
-      Int.(0 <= i && i < num_days_in_week) && shift from i = to_)
 ;;
 
 let is_sun_or_sat t = t = Sun || t = Sat

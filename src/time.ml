@@ -451,7 +451,7 @@ module Make (Time0 : Time0_intf.S) = struct
   ;;
 
   let of_string s =
-    let default_zone () = Zone.utc in
+    let default_zone () = raise_s [%message "time has no time zone or UTC offset" s] in
     let find_zone zone_name =
       failwithf "unable to lookup Zone %s.  Try using Core.Time.of_string" zone_name ()
     in

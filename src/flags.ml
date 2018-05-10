@@ -115,20 +115,3 @@ module Make (M : Make_arg) = struct
   let (=)   = Int63.(=)
   let (<>)  = Int63.(<>)
 end
-
-(* Check that conflicting flags leads to an error. *)
-let%test _ =
-  Result.is_error
-    (Result.try_with (fun () ->
-       let module M =
-         Make (struct
-           let allow_intersecting = false
-           let should_print_error = false
-           let known = [ Int63.of_int 0x1, "";
-                         Int63.of_int 0x1, "";
-                       ]
-           let remove_zero_flags = false
-         end)
-       in
-       ()))
-;;

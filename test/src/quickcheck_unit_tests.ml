@@ -1,5 +1,6 @@
 open! Core_kernel
-open  Expect_test_helpers_kernel
+open! Expect_test_helpers_kernel
+open! Quickcheck
 
 let%expect_test "Quickcheck.Let_syntax" [@tags "64-bits-only"] =
   let open Quickcheck.Let_syntax in
@@ -491,3 +492,205 @@ let%test_module _ = (module Test (struct let default_seed = `Deterministic "bar"
  * let%test_module _ = (module Test (struct let default_seed = `Deterministic "quux" end))
  * let%test_module _ = (module Test (struct let default_seed = `Deterministic "zanzibar" end))
  * let%test_module _ = (module Test (struct let default_seed = `Deterministic "lorem ipsum" end)) *)
+
+module Shrinker = struct
+  open Shrinker
+
+  module Test_data = struct
+    let singleton equal min =
+      create (fun v ->
+        if equal min v
+        then Sequence.empty
+        else Sequence.singleton min)
+
+    let%test_module "singleton" =
+      (module struct
+        let t = singleton Pervasives.(=) 42
+
+        let%test_unit "singleton produces values" =
+          let shrunk = shrink t 2 |> Sequence.to_list in
+          let expect = [42] in
+          [%test_result: int list ] ~expect shrunk
+
+        let%test_unit "singleton doesn't produce the input" =
+          let shrunk = shrink t 42 |> Sequence.to_list in
+          let expect = [] in
+          [%test_result: int list ] ~expect shrunk
+      end)
+
+
+    let t0 = singleton Pervasives.(=) 0
+    let t1 = singleton Pervasives.(=) 1
+    let t2 = singleton Pervasives.(=) 2
+    let t3 = singleton Pervasives.(=) 3
+    let t4 = singleton Pervasives.(=) 4
+    let t5 = singleton Pervasives.(=) 5
+  end
+
+  let%test_module "tuple shrinkers" =
+    (module struct
+      open Test_data
+
+      let%test_unit "tuple2 shrinker" =
+        let sort = List.sort ~compare:[%compare: int * int ] in
+        let expect =
+          [(0,5); (5,1)]
+          |> sort
+        in
+        let results =
+          shrink (tuple2 t0 t1) (5,5)
+          |> Sequence.to_list |> sort
+        in
+        [%test_result: (int * int) list ] ~expect results
+
+      let%test_unit "tuple3 shrinker" =
+        let sort = List.sort ~compare:[%compare: int * int * int ] in
+        let expect = [(0,5,5); (5,1,5); (5,5,2)] |> sort in
+        let results =
+          shrink (tuple3 t0 t1 t2) (5,5,5)
+          |> Sequence.to_list |> sort
+        in
+        [%test_result: (int*int*int) list ] results ~expect
+
+      let%test_unit "tuple4 shrinker" =
+        let sort = List.sort ~compare:[%compare: int * int * int * int ] in
+        let expect =
+          [(0,5,5,5); (5,1,5,5); (5,5,2,5); (5,5,5,3)]
+          |> sort
+        in
+        let results =
+          shrink (tuple4 t0 t1 t2 t3) (5,5,5,5)
+          |> Sequence.to_list |> sort
+        in
+        [%test_result: (int*int*int*int) list ] results ~expect
+
+      let%test_unit "tuple5 shrinker" =
+        let sort = List.sort ~compare:[%compare: int * int * int * int * int ] in
+        let expect =
+          [(0,5,5,5,5); (5,1,5,5,5); (5,5,2,5,5); (5,5,5,3,5); (5,5,5,5,4)]
+          |> sort
+        in
+        let results =
+          shrink (tuple5 t0 t1 t2 t3 t4) (5,5,5,5,5)
+          |> Sequence.to_list |> sort
+        in
+        [%test_result: (int*int*int*int*int) list ] results ~expect
+
+      let%test_unit "tuple6 shrinker" =
+        let sort = List.sort ~compare:[%compare: int * int * int * int * int * int ] in
+        let expect =
+          [ (0,9,9,9,9,9)
+          ; (9,1,9,9,9,9)
+          ; (9,9,2,9,9,9)
+          ; (9,9,9,3,9,9)
+          ; (9,9,9,9,4,9)
+          ; (9,9,9,9,9,5)
+          ]
+          |> sort
+        in
+        let results =
+          shrink (tuple6 t0 t1 t2 t3 t4 t5) (9,9,9,9,9,9)
+          |> Sequence.to_list |> sort
+        in
+        [%test_result: (int*int*int*int*int*int) list ] results ~expect
+
+    end)
+
+  let%test_module "variant shrinkers" =
+    (module struct
+      open Test_data
+
+      type var2 = [ `A of int | `B of int ] [@@deriving sexp, compare]
+      type var3 = [ `A of int | `B of int | `C of int ] [@@deriving sexp, compare]
+      type var4 = [ `A of int | `B of int | `C of int | `D of int ] [@@deriving sexp, compare]
+      type var5 = [ `A of int | `B of int | `C of int | `D of int | `E of int ]
+      [@@deriving sexp, compare]
+      type var6 = [ `A of int | `B of int | `C of int | `D of int | `E of int | `F of int ]
+      [@@deriving sexp, compare]
+
+      let%test_unit "variant2 shrinker" =
+        let t = variant2 t0 t1 in
+        let shrunk_a = shrink t (`A 1) |> Sequence.to_list in
+        [%test_result: var2 list ] ~expect:[`A 0] shrunk_a;
+        let shrunk_b = shrink t (`B 0) |> Sequence.to_list in
+        [%test_result: var2 list ] ~expect:[`B 1] shrunk_b
+
+      let%test_unit "variant3 shrinker" =
+        let t = variant3 t0 t1 t2 in
+        let shrunk_a = shrink t (`A 1) |> Sequence.to_list in
+        [%test_result: var3 list ] ~expect:[`A 0] shrunk_a;
+        let shrunk_b = shrink t (`B 0) |> Sequence.to_list in
+        [%test_result: var3 list ] ~expect:[`B 1] shrunk_b;
+        let shrunk_c = shrink t (`C 1) |> Sequence.to_list in
+        [%test_result: var3 list ] ~expect:[`C 2] shrunk_c
+
+      let%test_unit "variant4 shrinker" =
+        let t = variant4 t0 t1 t2 t3 in
+        let shrunk_a = shrink t (`A 1) |> Sequence.to_list in
+        [%test_result: var4 list ] ~expect:[`A 0] shrunk_a;
+        let shrunk_b = shrink t (`B 0) |> Sequence.to_list in
+        [%test_result: var4 list ] ~expect:[`B 1] shrunk_b;
+        let shrunk_c = shrink t (`C 1) |> Sequence.to_list in
+        [%test_result: var4 list ] ~expect:[`C 2] shrunk_c;
+        let shrunk_d = shrink t (`D 1) |> Sequence.to_list in
+        [%test_result: var4 list ] ~expect:[`D 3] shrunk_d
+
+      let%test_unit "variant5 shrinker" =
+        let t = variant5 t0 t1 t2 t3 t4 in
+        let shrunk_a = shrink t (`A 1) |> Sequence.to_list in
+        [%test_result: var5 list ] ~expect:[`A 0] shrunk_a;
+        let shrunk_b = shrink t (`B 0) |> Sequence.to_list in
+        [%test_result: var5 list ] ~expect:[`B 1] shrunk_b;
+        let shrunk_c = shrink t (`C 1) |> Sequence.to_list in
+        [%test_result: var5 list ] ~expect:[`C 2] shrunk_c;
+        let shrunk_d = shrink t (`D 1) |> Sequence.to_list in
+        [%test_result: var5 list ] ~expect:[`D 3] shrunk_d;
+        let shrunk_e = shrink t (`E 1) |> Sequence.to_list in
+        [%test_result: var5 list ] ~expect:[`E 4] shrunk_e
+
+      let%test_unit "variant6 shrinker" =
+        let t = variant6 t0 t1 t2 t3 t4 t5 in
+        let shrunk_a = shrink t (`A 1) |> Sequence.to_list in
+        [%test_result: var6 list ] ~expect:[`A 0] shrunk_a;
+        let shrunk_b = shrink t (`B 0) |> Sequence.to_list in
+        [%test_result: var6 list ] ~expect:[`B 1] shrunk_b;
+        let shrunk_c = shrink t (`C 1) |> Sequence.to_list in
+        [%test_result: var6 list ] ~expect:[`C 2] shrunk_c;
+        let shrunk_d = shrink t (`D 1) |> Sequence.to_list in
+        [%test_result: var6 list ] ~expect:[`D 3] shrunk_d;
+        let shrunk_e = shrink t (`E 1) |> Sequence.to_list in
+        [%test_result: var6 list ] ~expect:[`E 4] shrunk_e;
+        let shrunk_f = shrink t (`F 1) |> Sequence.to_list in
+        [%test_result: var6 list ] ~expect:[`F 5] shrunk_f
+    end)
+
+  let%test_module "list shrinkers" =
+    (module struct
+
+      let t0 =
+        Shrinker.create (fun v ->
+          if Pervasives.(=) 0 v
+          then Sequence.empty
+          else Sequence.singleton 0)
+
+      let test_list = [1;2;3]
+      let expect =
+        [[2;3]; [0;2;3]; [1;3]; [1;0;3]; [1;2]; [1;2;0]]
+        |> List.sort ~compare:[%compare: int list ]
+
+      let%test_unit "shrinker produces expected outputs" =
+        let shrunk =
+          Shrinker.shrink (List.shrinker t0) test_list
+          |> Sequence.to_list
+          |> List.sort ~compare:[%compare: int list ]
+        in
+        [%test_result: int list list] ~expect shrunk
+
+      let rec recursive_list = 1::5::recursive_list
+
+      let%test_unit "shrinker on infinite lists produces values" =
+        let shrunk = Shrinker.shrink (List.shrinker t0) recursive_list in
+        let result_length = Sequence.take shrunk 5 |> Sequence.to_list |> List.length in
+        [%test_result: int] ~expect:5 result_length
+    end)
+end

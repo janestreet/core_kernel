@@ -32,6 +32,10 @@ val create
   -> unit
   -> _ t
 
+(** [of_array arr] creates a dequeue containing the elements of [arr].  The first element
+    of the array will be at the front of the dequeue. *)
+val of_array : 'a array -> 'a t
+
 (** [front_index t] return the index of the front item in [t]. *)
 val front_index : _ t -> int option
 

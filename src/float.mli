@@ -98,3 +98,18 @@ val gen_negative : t Quickcheck.Generator.t
 (** [gen_without_nan] produces all finite and infinite [t] values, excluding all NaN
     values. *)
 val gen_without_nan : t Quickcheck.Generator.t
+
+(** [gen_infinite] produces both infinite values *)
+val gen_infinite : t Quickcheck.Generator.t
+
+(** [gen_nan] produces all NaN values. *)
+val gen_nan : t Quickcheck.Generator.t
+
+(** [gen_normal] produces all normal values *)
+val gen_normal : t Quickcheck.Generator.t
+
+(** [gen_subnormal] produces all subnormal values *)
+val gen_subnormal : t Quickcheck.Generator.t
+
+(** [gen_zero] produces both zero values *)
+val gen_zero : t Quickcheck.Generator.t

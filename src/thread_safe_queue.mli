@@ -45,3 +45,14 @@ val dequeue_exn : 'a t -> 'a
     [clear_internal_pool] to clear the pool, so that all unused elements will be reclaimed
     by the garbage collector. *)
 val clear_internal_pool : _ t -> unit
+
+module Private : sig
+  module Uopt : sig
+    type 'a t [@@deriving sexp_of]
+
+    val none : _ t
+    val some : 'a -> 'a t
+    val is_none : _ t -> bool
+    val is_some : _ t -> bool
+  end
+end

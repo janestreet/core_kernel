@@ -113,4 +113,7 @@ val unpack_tail_padded_fixed_string
 val pack_tail_padded_fixed_string
   : ?padding:char -> buf:Bytes.t -> pos:int -> len:int -> string -> unit
 
-val test : unit -> unit
+module Private : sig
+  val last_nonmatch_plus_one : buf:bytes -> min_pos:int -> pos:int -> char:char -> int
+  exception Unpack_signed_64_int_most_significant_byte_too_large of int
+end

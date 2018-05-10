@@ -1,4 +1,5 @@
 open! Core_kernel
+open! Import
 
 module type S = Core_kernel.Stack_intf.S
 module Debug (Stack : S) : S with type 'a t = 'a Stack.t = struct
@@ -61,7 +62,7 @@ module Test (Stack : S)
 
   type nonrec 'a t = 'a t [@@deriving bin_io]
 
-  include Core_kernel.Core_kernel_private.Container_unit_tests.Test_S1 (Stack)
+  include Test_container.Test_S1 (Stack)
 
   let invariant = invariant
 

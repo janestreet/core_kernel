@@ -42,10 +42,6 @@ end = struct
 
   let some (type a) a = Obj.repr (a : a)
 
-  let%test _ = is_none none
-
-  let%test _ = is_some (some ())
-
   let unsafe_value (type a) t = (Obj.obj t : a)
 
   let value_exn t =
@@ -166,3 +162,7 @@ let dequeue_exn t =
 ;;
 
 let clear_internal_pool t = t.unused_elts <- Uopt.none
+
+module Private = struct
+  module Uopt = Uopt
+end

@@ -72,3 +72,17 @@ val read_int63_decimal
   -> round_ties       : Round.t
   -> allow_underscore : bool
   -> Int63.t
+
+(** [max_int63_with ~digits] returns the maximum [Int63.t] that fits in [digits] decimal
+    digits. *)
+val max_int63_with : digits : int -> Int63.t
+
+module Unsafe : sig
+
+  (** [divide_and_round_up ~numerator ~denominator] returns [ceil
+      (numerator/denominator)]. *)
+  val divide_and_round_up
+    :  numerator   : Int63.t
+    -> denominator : Int63.t
+    -> Int63.t
+end

@@ -2,6 +2,46 @@ open! Core_kernel
 open  Core_kernel_private.Digit_string_helpers
 open Import
 
+let%test_unit "max_int63_with" =
+  [%test_result: Int63.t]
+    (max_int63_with ~digits:11 : Int63.t)
+    ~expect:(Int63.of_string (String.init 11 ~f:(fun _ -> '9')))
+
+let%expect_test "divide_and_round_up" =
+  let test numerator denominator =
+    let numerator   = Int63.of_int numerator   in
+    let denominator = Int63.of_int denominator in
+    let quotient = Unsafe.divide_and_round_up ~numerator ~denominator in
+    printf !"%{Int63#hum} / %{Int63#hum} = %{Int63#hum}\n"
+      numerator denominator quotient
+  in
+  for numerator = -10 to 10 do
+    test numerator 4;
+  done;
+  [%expect {|
+      -10 / 4 = -2
+      -9 / 4 = -2
+      -8 / 4 = -2
+      -7 / 4 = -1
+      -6 / 4 = -1
+      -5 / 4 = -1
+      -4 / 4 = -1
+      -3 / 4 = 0
+      -2 / 4 = 0
+      -1 / 4 = 0
+      0 / 4 = 0
+      1 / 4 = 1
+      2 / 4 = 1
+      3 / 4 = 1
+      4 / 4 = 1
+      5 / 4 = 2
+      6 / 4 = 2
+      7 / 4 = 2
+      8 / 4 = 2
+      9 / 4 = 3
+      10 / 4 = 3 |}];
+;;
+
 let int63_ten = Int63.of_int 10
 
 let rec digits_of int63 =

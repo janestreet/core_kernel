@@ -357,3 +357,7 @@ val get_head_padded_fixed_string : padding:char -> t -> pos:int -> len:int -> un
 val set_head_padded_fixed_string : padding:char -> t -> pos:int -> len:int -> string -> unit
 
 
+
+module Private : sig
+  val sign_extend_16 : int -> int
+end

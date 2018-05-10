@@ -94,3 +94,7 @@ val dequeue_back_exn  : 'a t ->                       ('a * 'a t)
 module Stable : sig
   module V1 : Stable_module_types.S1 with type 'a t = 'a t
 end
+
+module Private : sig
+  val build : front:'a list -> back:'a list -> 'a t
+end

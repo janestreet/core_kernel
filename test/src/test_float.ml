@@ -262,3 +262,37 @@ let%test_module "round_decimal" =
       done
     ;;
   end)
+
+open! Float
+
+let test_class gen expect =
+  Quickcheck.test gen ~f:(fun float ->
+    let actual = classify float in
+    if not (Int.equal (Class.compare actual expect) 0) then begin
+      raise_s [%message
+        "generator produced float in wrong class"
+          (float  : t)
+          (expect : Class.t)
+          (actual : Class.t)]
+    end)
+
+let%test_unit _ = test_class gen_zero      Zero
+let%test_unit _ = test_class gen_subnormal Subnormal
+let%test_unit _ = test_class gen_normal    Normal
+let%test_unit _ = test_class gen_infinite  Infinite
+let%test_unit _ = test_class gen_nan       Nan
+
+(* Additional tests of Base.Float requiring the Gc module *)
+
+let%test _ [@tags "64-bits-only"] =
+  let before = Gc.minor_words () in
+  assert (Int63.equal (int63_round_nearest_exn 0.8) (Int63.of_int_exn 1));
+  let after = Gc.minor_words () in
+  Int.equal before after
+
+let%test_unit "Float.validate_positive doesn't allocate on success" =
+  let initial_words = Gc.minor_words () in
+  let _ : Validate.t = validate_positive 1. in
+  let allocated = Int.(-) (Gc.minor_words ()) initial_words in
+  [%test_result: int] allocated ~expect:0
+;;

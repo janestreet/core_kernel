@@ -80,37 +80,6 @@ module For_quickcheck = struct
           let shrunk_head = Shrinker.shrink t_elt   h >>| fun shr_h  -> shr_h::tl in
           let shrunk_tail = Shrinker.shrink t_list tl >>| fun shr_tl -> h::shr_tl in
           Sequence.round_robin [dropped; shrunk_head; shrunk_tail]))
-
-  let%test_module "shrinker" =
-    (module struct
-
-      let t0 =
-        Shrinker.create (fun v ->
-          if Pervasives.(=) 0 v
-          then Sequence.empty
-          else Sequence.singleton 0)
-
-      let test_list = [1;2;3]
-      let expect =
-        [[2;3]; [0;2;3]; [1;3]; [1;0;3]; [1;2]; [1;2;0]]
-        |> List.sort ~compare:[%compare: int list ]
-
-      let%test_unit "shrinker produces expected outputs" =
-        let shrunk =
-          Shrinker.shrink (shrinker t0) test_list
-          |> Sequence.to_list
-          |> List.sort ~compare:[%compare: int list ]
-        in
-        [%test_result: int list list] ~expect shrunk
-
-      let rec recursive_list = 1::5::recursive_list
-
-      let%test_unit "shrinker on infinite lists produces values" =
-        let shrunk = Shrinker.shrink (shrinker t0) recursive_list in
-        let result_length = Sequence.take shrunk 5 |> Sequence.to_list |> List.length in
-        [%test_result: int] ~expect:5 result_length
-    end)
-
 end
 
 let gen              = For_quickcheck.gen
