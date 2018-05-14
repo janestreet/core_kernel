@@ -24,6 +24,7 @@ module Avltree                   = Avltree
 module Backtrace                 = Backtrace
 module Bin_prot                  = Core_bin_prot
 module Binary_search             = Binary_search
+module Buffer                    = Base.Buffer
 module Commutative_group         = Commutative_group
 module Comparisons               = Comparisons
 module Equal                     = Equal

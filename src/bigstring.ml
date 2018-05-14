@@ -134,10 +134,7 @@ module From_string =
 
 module To_string = struct
   include To_bytes
-  let sub src ~pos ~len =
-    Bytes.unsafe_to_string ~no_mutation_while_string_reachable:(sub src ~pos ~len)
-  let subo ?pos ?len src =
-    Bytes.unsafe_to_string ~no_mutation_while_string_reachable:(subo ?pos ?len src)
+  include Blit.Make_to_string (Z) (To_bytes)
 end
 
 let of_string = From_string.subo

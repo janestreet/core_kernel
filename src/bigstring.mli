@@ -138,8 +138,7 @@ module To_string : sig
   [@@deprecated "[since 2017-10] use [Bigstring.To_bytes.blito] instead"]
   val unsafe_blit : (t, bytes) Blit.blit
   [@@deprecated "[since 2017-10] use [Bigstring.To_bytes.unsafe_blit] instead"]
-  val sub : (t, string) Blit.sub
-  val subo : (t, string) Blit.subo
+  include Blit.S_to_string with type t := t
 end
 module From_string : Blit.S_distinct with type src := string with type dst := t
 

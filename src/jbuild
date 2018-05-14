@@ -44,10 +44,4 @@
     (javascript_files (strftime.js runtime.js))
     ))))
 
-(alias
- ((name save_benchmarks)
-  (deps (inline_benchmarks_runner inline_benchmarks_runner.exe))
-  (action (bash "./inline_benchmarks_runner jenga-save-benchmarks"))))
-
-
 (jbuild_version 1)
