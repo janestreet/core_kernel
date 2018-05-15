@@ -13,6 +13,8 @@ you might want to have a look at Base's
 - Added `Bigbuffer.add_bin_prot` to append the bin-protted representation of a
   value at the end of the buffer.
 
+- Reexport `Base.Buffer`.
+
 ## v0.11
 
 - Add `Bigstring.unsafe_resize` to allow reallocating in place.
