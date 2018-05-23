@@ -46,8 +46,8 @@ let bounds_error name lower_bound upper_bound sexp_of_bound =
 module Raw_generator : sig
   type +'a t
 
-  val create   :         (size:int -> Splittable_random.State.t -> 'a) -> 'a t
-  val generate : 'a t -> (size:int -> Splittable_random.State.t -> 'a)
+  val create   :         (size:int -> random:Splittable_random.State.t -> 'a) -> 'a t
+  val generate : 'a t -> (size:int -> random:Splittable_random.State.t -> 'a)
 
   (* [sizes_for_elements] is a helper function for distributing [size] among an arbitrary
      number of elements.  Some of [size] is "spent" on extending the length of the
@@ -63,13 +63,13 @@ module Raw_generator : sig
     -> Splittable_random.State.t
     -> int array
 end = struct
-  type 'a t = size:int -> Splittable_random.State.t -> 'a
+  type 'a t = size:int -> random:Splittable_random.State.t -> 'a
 
   let create = Fn.id
 
-  let generate t ~size random =
+  let generate t ~size ~random =
     check_size "Quickcheck.Generator.generate" size;
-    t ~size random
+    t ~size ~random
 
   let sizes_for_elements ?(min_len = 0) ?(max_len = Pre_int.max_value) ~size random =
     assert (min_len <= max_len);
@@ -107,16 +107,16 @@ type 'a gen = 'a Raw_generator.t
 module Raw_observer : sig
   type -'a t
 
-  val create  :         ('a -> size:int -> Hash.state -> Hash.state) -> 'a t
-  val observe : 'a t -> ('a -> size:int -> Hash.state -> Hash.state)
+  val create  :         ('a -> size:int -> hash:Hash.state -> Hash.state) -> 'a t
+  val observe : 'a t -> ('a -> size:int -> hash:Hash.state -> Hash.state)
 end = struct
-  type 'a t = 'a -> size:int -> Hash.state -> Hash.state
+  type 'a t = 'a -> size:int -> hash:Hash.state -> Hash.state
 
   let create = Fn.id
 
-  let observe t x ~size hash =
+  let observe t x ~size ~hash =
     check_size "Quickcheck.Observer.observe" size;
-    t x ~size hash
+    t x ~size ~hash
 end
 
 type 'a obs = 'a Raw_observer.t
@@ -126,102 +126,104 @@ module Observer = struct
   include Raw_observer
 
   let of_hash (type a) (module M : Deriving_hash with type t = a) =
-    create (fun x ~size:_ hash ->
+    create (fun x ~size:_ ~hash ->
       [%hash_fold: M.t] hash x)
 
   let bool = of_hash (module Bool)
   let char = of_hash (module Char)
 
   let variant2 t1 t2 =
-    create (fun x ~size hash ->
+    create (fun x ~size ~hash ->
       match x with
-      | `A y -> observe t1 y ~size ([%hash_fold: int] hash 1)
-      | `B y -> observe t2 y ~size ([%hash_fold: int] hash 2))
+      | `A y -> observe t1 y ~size ~hash:([%hash_fold: int] hash 1)
+      | `B y -> observe t2 y ~size ~hash:([%hash_fold: int] hash 2))
 
   let variant3 t1 t2 t3 =
-    create (fun x ~size hash ->
+    create (fun x ~size ~hash ->
       match x with
-      | `A y -> observe t1 y ~size ([%hash_fold: int] hash 1)
-      | `B y -> observe t2 y ~size ([%hash_fold: int] hash 2)
-      | `C y -> observe t3 y ~size ([%hash_fold: int] hash 3))
+      | `A y -> observe t1 y ~size ~hash:([%hash_fold: int] hash 1)
+      | `B y -> observe t2 y ~size ~hash:([%hash_fold: int] hash 2)
+      | `C y -> observe t3 y ~size ~hash:([%hash_fold: int] hash 3))
 
   let variant4 t1 t2 t3 t4 =
-    create (fun x ~size hash ->
+    create (fun x ~size ~hash ->
       match x with
-      | `A y -> observe t1 y ~size ([%hash_fold: int] hash 1)
-      | `B y -> observe t2 y ~size ([%hash_fold: int] hash 2)
-      | `C y -> observe t3 y ~size ([%hash_fold: int] hash 3)
-      | `D y -> observe t4 y ~size ([%hash_fold: int] hash 4))
+      | `A y -> observe t1 y ~size ~hash:([%hash_fold: int] hash 1)
+      | `B y -> observe t2 y ~size ~hash:([%hash_fold: int] hash 2)
+      | `C y -> observe t3 y ~size ~hash:([%hash_fold: int] hash 3)
+      | `D y -> observe t4 y ~size ~hash:([%hash_fold: int] hash 4))
 
   let variant5 t1 t2 t3 t4 t5 =
-    create (fun x ~size hash ->
+    create (fun x ~size ~hash ->
       match x with
-      | `A y -> observe t1 y ~size ([%hash_fold: int] hash 1)
-      | `B y -> observe t2 y ~size ([%hash_fold: int] hash 2)
-      | `C y -> observe t3 y ~size ([%hash_fold: int] hash 3)
-      | `D y -> observe t4 y ~size ([%hash_fold: int] hash 4)
-      | `E y -> observe t5 y ~size ([%hash_fold: int] hash 5))
+      | `A y -> observe t1 y ~size ~hash:([%hash_fold: int] hash 1)
+      | `B y -> observe t2 y ~size ~hash:([%hash_fold: int] hash 2)
+      | `C y -> observe t3 y ~size ~hash:([%hash_fold: int] hash 3)
+      | `D y -> observe t4 y ~size ~hash:([%hash_fold: int] hash 4)
+      | `E y -> observe t5 y ~size ~hash:([%hash_fold: int] hash 5))
 
   let variant6 t1 t2 t3 t4 t5 t6 =
-    create (fun x ~size hash ->
+    create (fun x ~size ~hash ->
       match x with
-      | `A y -> observe t1 y ~size ([%hash_fold: int] hash 1)
-      | `B y -> observe t2 y ~size ([%hash_fold: int] hash 2)
-      | `C y -> observe t3 y ~size ([%hash_fold: int] hash 3)
-      | `D y -> observe t4 y ~size ([%hash_fold: int] hash 4)
-      | `E y -> observe t5 y ~size ([%hash_fold: int] hash 5)
-      | `F y -> observe t6 y ~size ([%hash_fold: int] hash 6))
+      | `A y -> observe t1 y ~size ~hash:([%hash_fold: int] hash 1)
+      | `B y -> observe t2 y ~size ~hash:([%hash_fold: int] hash 2)
+      | `C y -> observe t3 y ~size ~hash:([%hash_fold: int] hash 3)
+      | `D y -> observe t4 y ~size ~hash:([%hash_fold: int] hash 4)
+      | `E y -> observe t5 y ~size ~hash:([%hash_fold: int] hash 5)
+      | `F y -> observe t6 y ~size ~hash:([%hash_fold: int] hash 6))
+
+  let (|>!) hash f = f ~hash
 
   let tuple2 t1 t2 =
-    create (fun (x1,x2) ~size hash ->
+    create (fun (x1,x2) ~size ~hash ->
       hash
-      |> observe t1 x1 ~size
-      |> observe t2 x2 ~size)
+      |>! observe t1 x1 ~size
+      |>! observe t2 x2 ~size)
 
   let tuple3 t1 t2 t3 =
-    create (fun (x1,x2,x3) ~size hash ->
+    create (fun (x1,x2,x3) ~size ~hash ->
       hash
-      |> observe t1 x1 ~size
-      |> observe t2 x2 ~size
-      |> observe t3 x3 ~size)
+      |>! observe t1 x1 ~size
+      |>! observe t2 x2 ~size
+      |>! observe t3 x3 ~size)
 
   let tuple4 t1 t2 t3 t4 =
-    create (fun (x1,x2,x3,x4) ~size hash ->
+    create (fun (x1,x2,x3,x4) ~size ~hash ->
       hash
-      |> observe t1 x1 ~size
-      |> observe t2 x2 ~size
-      |> observe t3 x3 ~size
-      |> observe t4 x4 ~size)
+      |>! observe t1 x1 ~size
+      |>! observe t2 x2 ~size
+      |>! observe t3 x3 ~size
+      |>! observe t4 x4 ~size)
 
   let tuple5 t1 t2 t3 t4 t5 =
-    create (fun (x1,x2,x3,x4,x5) ~size hash ->
+    create (fun (x1,x2,x3,x4,x5) ~size ~hash ->
       hash
-      |> observe t1 x1 ~size
-      |> observe t2 x2 ~size
-      |> observe t3 x3 ~size
-      |> observe t4 x4 ~size
-      |> observe t5 x5 ~size)
+      |>! observe t1 x1 ~size
+      |>! observe t2 x2 ~size
+      |>! observe t3 x3 ~size
+      |>! observe t4 x4 ~size
+      |>! observe t5 x5 ~size)
 
   let tuple6 t1 t2 t3 t4 t5 t6 =
-    create (fun (x1,x2,x3,x4,x5,x6) ~size hash ->
+    create (fun (x1,x2,x3,x4,x5,x6) ~size ~hash ->
       hash
-      |> observe t1 x1 ~size
-      |> observe t2 x2 ~size
-      |> observe t3 x3 ~size
-      |> observe t4 x4 ~size
-      |> observe t5 x5 ~size
-      |> observe t6 x6 ~size)
+      |>! observe t1 x1 ~size
+      |>! observe t2 x2 ~size
+      |>! observe t3 x3 ~size
+      |>! observe t4 x4 ~size
+      |>! observe t5 x5 ~size
+      |>! observe t6 x6 ~size)
 
   let unmap t ~f =
-    create (fun x ~size hash ->
-      observe t (f x) ~size hash)
+    create (fun x ~size ~hash ->
+      observe t (f x) ~size ~hash)
 
   let of_predicate a b ~f =
     unmap (variant2 a b)
       ~f:(fun x -> if f x then `A x else `B x)
 
   let singleton () =
-    create (fun _ ~size:_ hash -> hash)
+    create (fun _ ~size:_ ~hash -> hash)
 
   let doubleton f =
     of_predicate (singleton ()) (singleton ()) ~f
@@ -230,7 +232,7 @@ module Observer = struct
     val obs : M.t t
   end = struct
     let obs =
-      create (fun x ~size:_ hash ->
+      create (fun x ~size:_ ~hash ->
         [%hash_fold: M.t] hash x)
   end
 
@@ -248,8 +250,8 @@ module Observer = struct
     enum (List.length list) ~f
 
   let of_fun f =
-    create (fun x ~size hash ->
-      observe (f ()) x ~size hash)
+    create (fun x ~size ~hash ->
+      observe (f ()) x ~size ~hash)
 
   let fixed_point f =
     let rec self () = f (of_fun self) in
@@ -265,12 +267,12 @@ module Observer = struct
         `B x)
 
   let fn dom rng =
-    create (fun f ~size hash ->
+    create (fun f ~size ~hash ->
       let random = Splittable_random.State.of_int (Hash.get_hash_value hash) in
       let sizes = Raw_generator.sizes_for_elements ~size random in
       Array.fold sizes ~init:hash ~f:(fun hash size ->
-        let x = Raw_generator.generate dom ~size random in
-        observe rng (f x) ~size hash))
+        let x = Raw_generator.generate dom ~size ~random in
+        observe rng (f x) ~size ~hash))
 end
 
 module Generator = struct
@@ -278,11 +280,11 @@ module Generator = struct
   include Raw_generator
 
   let return x =
-    create (fun ~size:_ _ -> x)
+    create (fun ~size:_ ~random:_ -> x)
 
   let custom_map t ~f =
-    create (fun ~size random ->
-      let x = generate t ~size random in
+    create (fun ~size ~random ->
+      let x = generate t ~size ~random in
       f x)
 
   include Monad.Make (struct
@@ -291,10 +293,10 @@ module Generator = struct
       let return = return
 
       let bind t1 ~f =
-        create (fun ~size random ->
-          let x = generate t1 ~size random in
+        create (fun ~size ~random ->
+          let x = generate t1 ~size ~random in
           let t2 = f x in
-          generate t2 ~size random)
+          generate t2 ~size ~random)
 
       let map = `Custom custom_map
     end)
@@ -305,9 +307,9 @@ module Generator = struct
       let return = return
 
       let apply t1 t2 =
-        create (fun ~size random ->
-          let f = generate t1 ~size random in
-          let x = generate t2 ~size random in
+        create (fun ~size ~random ->
+          let f = generate t1 ~size ~random in
+          let x = generate t2 ~size ~random in
           f x)
 
       let map = `Custom custom_map
@@ -315,20 +317,20 @@ module Generator = struct
 
   open Let_syntax
 
-  let size = create (fun ~size _ -> size)
+  let size = create (fun ~size ~random:_ -> size)
 
   let with_size t ~size =
-    create (fun ~size:_ random ->
-      generate t ~size random)
+    create (fun ~size:_ ~random ->
+      generate t ~size ~random)
 
   let singleton = return
 
   let filter_map t ~f =
-    let rec loop ~size random =
-      let x = generate t ~size random in
+    let rec loop ~size ~random =
+      let x = generate t ~size ~random in
       match f x with
       | Some y -> y
-      | None   -> loop ~size:(size + 1) random
+      | None   -> loop ~size:(size + 1) ~random
     in
     create loop
 
@@ -359,7 +361,7 @@ module Generator = struct
       in
       sum, array
     in
-    create (fun ~size:_ random ->
+    create (fun ~size:_ ~random ->
       let choice = Splittable_random.float random ~lo:0. ~hi:total_weight in
       match
         Binary_search_array.binary_search
@@ -376,7 +378,7 @@ module Generator = struct
     |> join
 
   let doubleton x y =
-    create (fun ~size:_ random ->
+    create (fun ~size:_ ~random ->
       if Splittable_random.bool random
       then x
       else y)
@@ -384,8 +386,8 @@ module Generator = struct
   let bool = doubleton true false
 
   let of_fun f =
-    create (fun ~size random ->
-      generate (f ()) ~size random)
+    create (fun ~size ~random ->
+      generate (f ()) ~size ~random)
 
   let of_sequence ~p seq =
     if Pervasives.( <= ) p 0. || Pervasives.( > ) p 1. then
@@ -412,11 +414,11 @@ module Generator = struct
     bounded_geometric ~p ~maximum:Pre_int.max_value init
 
   let small_non_negative_int =
-    create (fun ~size random ->
+    create (fun ~size ~random ->
       Splittable_random.int random ~lo:0 ~hi:size)
 
   let small_positive_int =
-    create (fun ~size random ->
+    create (fun ~size ~random ->
       Splittable_random.int random ~lo:1 ~hi:(size + 1))
 
   module Make_int_generator (M : Pre_int) : sig
@@ -432,14 +434,14 @@ module Generator = struct
       if lo > hi then begin
         bounds_error "Quickcheck.Make_int().gen_uniform_incl" lo hi [%sexp_of: t]
       end;
-      create (fun ~size:_ random ->
+      create (fun ~size:_ ~random ->
         M.splittable_random random ~lo ~hi)
 
     let gen_log_uniform_incl lo hi =
       if lo < zero || lo > hi then begin
         bounds_error "Quickcheck.Make_int().gen_log_uniform_incl" lo hi [%sexp_of: t]
       end;
-      create (fun ~size:_ random ->
+      create (fun ~size:_ ~random ->
         M.splittable_random_log_uniform random ~lo ~hi)
 
     let gen_incl lower_bound upper_bound =
@@ -474,8 +476,8 @@ module Generator = struct
   let union list = of_list list |> join
 
   let fixed_point f =
-    let rec r ~size random =
-      generate (force lazy_t) ~size random
+    let rec r ~size ~random =
+      generate (force lazy_t) ~size ~random
     and lazy_t = lazy (f (create r))
     in
     force lazy_t
@@ -580,10 +582,10 @@ module Generator = struct
     (x1, x2, x3, x4, x5, x6)
 
   let list_gen ?min_len ?max_len elem_gen =
-    create (fun ~size random ->
+    create (fun ~size ~random ->
       let sizes = sizes_for_elements ?min_len ?max_len ~size random in
       List.init (Array.length sizes) ~f:(fun i ->
-        generate elem_gen ~size:sizes.(i) random))
+        generate elem_gen ~size:sizes.(i) ~random))
 
   let list                 elem_gen = list_gen elem_gen
   let list_non_empty       elem_gen = list_gen elem_gen ~min_len:1
@@ -598,13 +600,13 @@ module Generator = struct
      inputs yield different outputs.  The PRNG state is then used to generate a random
      output. *)
   let fn dom rng =
-    create (fun ~size random ->
+    create (fun ~size ~random ->
       let random = Splittable_random.State.split random in
       (fun x ->
-         let hash = Observer.observe dom x ~size (Hash.alloc ()) in
+         let hash = Observer.observe dom x ~size ~hash:(Hash.alloc ()) in
          let random = Splittable_random.State.copy random in
          Splittable_random.State.perturb random (Hash.get_hash_value hash);
-         generate rng ~size random))
+         generate rng ~size ~random))
 
   let fn2 dom1 dom2 rng =
     fn (Observer.tuple2 dom1 dom2) rng
@@ -642,7 +644,7 @@ module Generator = struct
     (fun x y -> Pervasives.( = ) (cmp x y) 0)
 
   let char_range lo hi =
-    create (fun ~size:_ random ->
+    create (fun ~size:_ ~random ->
       Splittable_random.int random ~lo:(Char.to_int lo) ~hi:(Char.to_int hi)
       |> Char.unsafe_of_int)
 
@@ -880,7 +882,7 @@ module Configure (Config : Quickcheck_config) = struct
           (lazy [%message "Quickcheck: [~sizes] argument ran out of values"])
     in
     Sequence.map sizes ~f:(fun size ->
-      Generator.generate gen ~size random)
+      Generator.generate gen ~size ~random)
 
   let iter_or_error ?seed ?sizes ?(trials = default_trial_count) gen ~f =
     let seq = Sequence.take (random_sequence ?seed ?sizes gen) trials in
@@ -892,7 +894,7 @@ module Configure (Config : Quickcheck_config) = struct
 
   let random_value ?(seed = default_seed) ?(size = 30) gen =
     let random = random_state_of_seed seed in
-    Generator.generate gen ~size random
+    Generator.generate gen ~size ~random
 
   let shrink_iter
         ?sexp_of

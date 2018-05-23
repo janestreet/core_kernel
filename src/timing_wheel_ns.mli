@@ -9,6 +9,9 @@ include Timing_wheel
   with type Time.t = Time_ns.t
   with type Time.Span.t = Time_ns.Span.t (** @inline *)
 
+(*_ See the Jane Street Style Guide for an explanation of [Private] submodules:
+
+  https://opensource.janestreet.com/standards/#private-submodules *)
 module Private : sig
   val interval_num_internal
     : time:Time.t -> alarm_precision:Alarm_precision.t -> Interval_num.t

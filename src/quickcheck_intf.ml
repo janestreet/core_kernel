@@ -22,8 +22,8 @@ module type Generator = sig
   type +'a t
   type -'a obs
 
-  val create   :         (size:int -> Splittable_random.State.t -> 'a) -> 'a t
-  val generate : 'a t -> (size:int -> Splittable_random.State.t -> 'a)
+  val create   :         (size:int -> random:Splittable_random.State.t -> 'a) -> 'a t
+  val generate : 'a t -> (size:int -> random:Splittable_random.State.t -> 'a)
 
   (** Generators form a monad.  [t1 >>= fun x -> t2] replaces each value [x] in [t1] with
       the values in [t2]; each value's probability is the product of its probability in
@@ -229,8 +229,8 @@ module type Observer = sig
   type -'a t
   type +'a gen
 
-  val create  :         ('a -> size:int -> Hash.state -> Hash.state) -> 'a t
-  val observe : 'a t -> ('a -> size:int -> Hash.state -> Hash.state)
+  val create  :         ('a -> size:int -> hash:Hash.state -> Hash.state) -> 'a t
+  val observe : 'a t -> ('a -> size:int -> hash:Hash.state -> Hash.state)
 
   (** [of_hash] creates an observer for any hashable type. *)
   val of_hash : (module Deriving_hash with type t = 'a) -> 'a t

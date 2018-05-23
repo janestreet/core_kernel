@@ -52,6 +52,9 @@ module Stable : sig
   module V1 : Stable_module_types.S0_without_comparator with type t = t
 end
 
+(*_ See the Jane Street Style Guide for an explanation of [Private] submodules:
+
+  https://opensource.janestreet.com/standards/#private-submodules *)
 module Private : sig
   val bytes_per_word : float
 end

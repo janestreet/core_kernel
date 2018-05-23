@@ -95,6 +95,9 @@ module Stable : sig
   module V1 : Stable_module_types.S1 with type 'a t = 'a t
 end
 
+(*_ See the Jane Street Style Guide for an explanation of [Private] submodules:
+
+  https://opensource.janestreet.com/standards/#private-submodules *)
 module Private : sig
   val build : front:'a list -> back:'a list -> 'a t
 end

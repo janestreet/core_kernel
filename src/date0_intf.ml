@@ -173,6 +173,9 @@ module type Date0 = sig
     include Comparable.Infix with type t := t
   end
 
+  (*_ See the Jane Street Style Guide for an explanation of [Private] submodules:
+
+    https://opensource.janestreet.com/standards/#private-submodules *)
   module Private : sig
     val leap_year_table : int array
     val non_leap_year_table : int array

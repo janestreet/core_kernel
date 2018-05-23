@@ -4,7 +4,7 @@ authors: ["Jane Street Group, LLC <opensource@janestreet.com>"]
 homepage: "https://github.com/janestreet/core_kernel"
 bug-reports: "https://github.com/janestreet/core_kernel/issues"
 dev-repo: "git+https://github.com/janestreet/core_kernel.git"
-license: "Apache-2.0"
+license: "MIT"
 build: [
   ["jbuilder" "build" "-p" name "-j" jobs]
 ]

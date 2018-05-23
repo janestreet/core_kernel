@@ -15,6 +15,8 @@ you might want to have a look at Base's
 
 - Reexport `Base.Buffer`.
 
+- Added labels to function parameters in the `Quickcheck` module.
+
 ## v0.11
 
 - Add `Bigstring.unsafe_resize` to allow reallocating in place.

@@ -564,7 +564,7 @@ module For_quickcheck = struct
 
   let gen = gen_incl (of_string "1900-01-01") (of_string "2100-01-01")
 
-  let obs = Observer.create (fun t ~size:_ hash -> hash_fold_t hash t)
+  let obs = Observer.create (fun t ~size:_ ~hash -> hash_fold_t hash t)
 
   let shrinker = Shrinker.empty ()
 end

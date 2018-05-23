@@ -40,7 +40,7 @@ let randomly_round gen =
   Time_ns.of_span_since_epoch rounded_span_ns
 ;;
 
-let quickcheck here ?(gen = gen) f =
+let quickcheck here gen f =
   require_does_not_raise here (fun () ->
     Quickcheck.test gen ~f
       ~sexp_of:[%sexp_of: time_ns]
@@ -109,7 +109,7 @@ let%test_module "Time_ns.Alternate_sexp" =
     let%expect_test "round-trip" =
       (* randomly round spans to make sure we round-trip at various precisions, since it
          affects number of decimal places *)
-      quickcheck [%here] ~gen:(randomly_round gen) (fun time_ns ->
+      quickcheck [%here] (randomly_round gen) (fun time_ns ->
         [%test_result: time_ns]
           (Time_ns.Alternate_sexp.t_of_sexp
              (Time_ns.Alternate_sexp.sexp_of_t time_ns))
@@ -122,7 +122,7 @@ let%test_module "Time_ns.Utc.to_date_and_span_since_start_of_day" =
   (module struct
 
     let%expect_test "span is non-negative and less than 1 day" =
-      quickcheck [%here] (fun time_ns ->
+      quickcheck [%here] gen (fun time_ns ->
         let date, span_since_start_of_day =
           Core_kernel.Time_ns.Utc.to_date_and_span_since_start_of_day time_ns
         in
@@ -139,7 +139,7 @@ let%test_module "Time_ns.Utc.to_date_and_span_since_start_of_day" =
     ;;
 
     let%expect_test "round-trip" =
-      quickcheck [%here] (fun time_ns ->
+      quickcheck [%here] gen (fun time_ns ->
         let date, span_since_start_of_day =
           Core_kernel.Time_ns.Utc.to_date_and_span_since_start_of_day time_ns
         in

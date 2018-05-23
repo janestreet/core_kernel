@@ -38,6 +38,9 @@ val same_class : 'a t -> 'a t -> bool
     case that [same_class t1 t2]. *)
 val union: 'a t -> 'a t -> unit
 
+(*_ See the Jane Street Style Guide for an explanation of [Private] submodules:
+
+  https://opensource.janestreet.com/standards/#private-submodules *)
 module Private : sig
   val is_compressed : _ t -> bool
   val rank : _ t -> int

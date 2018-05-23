@@ -113,6 +113,9 @@ val unpack_tail_padded_fixed_string
 val pack_tail_padded_fixed_string
   : ?padding:char -> buf:Bytes.t -> pos:int -> len:int -> string -> unit
 
+(*_ See the Jane Street Style Guide for an explanation of [Private] submodules:
+
+  https://opensource.janestreet.com/standards/#private-submodules *)
 module Private : sig
   val last_nonmatch_plus_one : buf:bytes -> min_pos:int -> pos:int -> char:char -> int
   exception Unpack_signed_64_int_most_significant_byte_too_large of int

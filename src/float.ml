@@ -252,7 +252,7 @@ module For_quickcheck = struct
           (lower_bound : t)
           (upper_bound : t)]
     end;
-    Generator.create (fun ~size:_ random ->
+    Generator.create (fun ~size:_ ~random ->
       Splittable_random.float random ~lo:lower_incl ~hi:upper_incl)
 
   let gen_incl lower_bound upper_bound =

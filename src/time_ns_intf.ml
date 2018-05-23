@@ -49,6 +49,9 @@ module type Span = sig
   end
   [@@deprecated "[since 2018-04] use [Span.sexp_of_t] and [Span.t_of_sexp] instead"]
 
+  (*_ See the Jane Street Style Guide for an explanation of [Private] submodules:
+
+    https://opensource.janestreet.com/standards/#private-submodules *)
   module Private : sig
     val of_parts : Parts.t -> t
     val to_parts : t -> Parts.t
