@@ -1,5 +1,5 @@
 open! Core_kernel
-open! Import
+open! Expect_test_helpers_kernel
 open! Unpack_buffer
 
 let is_dead t = Result.is_error (is_empty t)
@@ -15,6 +15,23 @@ let unpack t =
        and then on the next call we will return the error (because [t.state = Dead]) *)
     assert (is_dead t);
     if Queue.is_empty q then err else Ok q
+;;
+
+let%expect_test "[unpack_one] bugs are checked" =
+  let buggy_unpack ~state:() ~buf:_ ~pos:_ ~len:_ =
+    (* Allowing this could cause infinite loops during unpacking. *)
+    `Ok ((), 0)
+  in
+  let t =
+    Unpack_buffer.Unpack_one.create ~initial_state:() ~unpack:buggy_unpack
+    |> Unpack_buffer.create
+  in
+  Unpack_buffer.feed_string t "x" |> ok_exn;
+  show_raise (fun () ->
+    Unpack_buffer.unpack_iter t ~f:(fun _ -> ()) |> ok_exn);
+  [%expect {|
+   (raised
+    "unpack returned a value but consumed 0 bytes without partially unpacked data") |}];
 ;;
 
 module type Value = sig
@@ -79,17 +96,18 @@ let%test_unit _ =
       let pack ts = String.concat ts
       let unpack_one =
         Unpack_one.create
-          (fun ?partial_unpack:_ buf ~pos ~len ->
-             if len < value_size then
-               `Not_enough_data ((), 0)
-             else
-               let bytes = Bytes.create value_size in
-               Bigstring.To_bytes.blito ~src:buf ~src_pos:pos ~src_len:value_size
-                 ~dst:bytes ();
-               `Ok (
-                 Bytes.unsafe_to_string ~no_mutation_while_string_reachable:bytes,
-                 value_size
-               ))
+          ~initial_state:()
+          ~unpack:(fun ~state:() ~buf ~pos ~len ->
+            if len < value_size then
+              `Not_enough_data ((), 0)
+            else
+              let bytes = Bytes.create value_size in
+              Bigstring.To_bytes.blito ~src:buf ~src_pos:pos ~src_len:value_size
+                ~dst:bytes ();
+              `Ok (
+                Bytes.unsafe_to_string ~no_mutation_while_string_reachable:bytes,
+                value_size
+              ))
       include String
     end in
     let values =
@@ -136,8 +154,8 @@ let%test_unit _ =
   debug := true;
   (* Error case. *)
   begin
-    let Unpack_one.T unpack_sexp = Unpack_one.sexp in
-    match unpack_sexp ~pos:0 ~len:1 (Bigstring.of_string ")") with
+    let Unpack_one.T { initial_state; unpack = unpack_sexp } = Unpack_one.sexp in
+    match unpack_sexp ~state:initial_state ~buf:(Bigstring.of_string ")") ~pos:0 ~len:1 with
     | `Invalid_data _ -> ()
     | `Ok _
     | `Not_enough_data _ -> assert false
@@ -146,8 +164,8 @@ let%test_unit _ =
      - starts in the middle of the buffer
      - doesn't consume the whole buffer *)
   begin
-    let Unpack_one.T unpack_sexp = Unpack_one.sexp in
-    match unpack_sexp ~pos:1 ~len:9 (Bigstring.of_string ")(foo)(x y") with
+    let Unpack_one.T { initial_state; unpack = unpack_sexp } = Unpack_one.sexp in
+    match unpack_sexp ~state:initial_state ~buf:(Bigstring.of_string ")(foo)(x y") ~pos:1 ~len:9 with
     | `Ok (Sexp.List [Sexp.Atom "foo"], 5) -> ()
     | `Ok result ->
       Error.raise
@@ -157,12 +175,12 @@ let%test_unit _ =
   end;
   (* Partial sexp case, requries two passes to parse the sexp. *)
   begin
-    let Unpack_one.T unpack_sexp = Unpack_one.sexp in
-    match unpack_sexp ~pos:6 ~len:4 (Bigstring.of_string ")(foo)(x y") with
+    let Unpack_one.T { initial_state; unpack = unpack_sexp } = Unpack_one.sexp in
+    match unpack_sexp ~state:initial_state ~buf:(Bigstring.of_string ")(foo)(x y") ~pos:6 ~len:4 with
     | `Not_enough_data (k, 4) ->
       begin
         match
-          unpack_sexp ~partial_unpack:k ~pos:0 ~len:3 (Bigstring.of_string " z)")
+          unpack_sexp ~state:k ~buf:(Bigstring.of_string " z)" ) ~pos:0 ~len:3
         with
         | `Ok (Sexp.List [Sexp.Atom "x"; Sexp.Atom "y"; Sexp.Atom "z"], 3) -> ()
         | `Ok _
@@ -189,15 +207,16 @@ let%test_unit _ =
     | `Ok _ | `Not_enough_data _ -> false
   in
   let open Unpack_one in
-  let T expect_a = expect_char 'a' in
+  let T { initial_state; unpack } = expect_char 'a' in
+  let expect_a = unpack ~state:initial_state in
   (* basic *)
-  assert (succeeded_correctly (expect_a ~pos:0 ~len:1 (Bigstring.of_string "a")));
-  assert (failed_correctly    (expect_a ~pos:0 ~len:1 (Bigstring.of_string "b")));
+  assert (succeeded_correctly (expect_a ~pos:0 ~len:1 ~buf:(Bigstring.of_string "a")));
+  assert (failed_correctly    (expect_a ~pos:0 ~len:1 ~buf:(Bigstring.of_string "b")));
   (* middle of buffer *)
-  assert (succeeded_correctly (expect_a ~pos:3 ~len:1 (Bigstring.of_string "bcda")));
-  assert (failed_correctly    (expect_a ~pos:3 ~len:1 (Bigstring.of_string "abcd")));
+  assert (succeeded_correctly (expect_a ~pos:3 ~len:1 ~buf:(Bigstring.of_string "bcda")));
+  assert (failed_correctly    (expect_a ~pos:3 ~len:1 ~buf:(Bigstring.of_string "abcd")));
   (* Need more data *)
-  match expect_a ~pos:0 ~len:0 (Bigstring.of_string "") with
+  match expect_a ~pos:0 ~len:0 ~buf:(Bigstring.of_string "") with
   | `Not_enough_data (_, 0) -> ()
   | `Not_enough_data _ | `Ok _ | `Invalid_data _ -> assert false
 ;;
@@ -283,11 +302,80 @@ let%test_unit _ =
 
 let%test_unit _ = (* [unpack_iter] when [f] raises *)
   let t =
-    create (Unpack_one.create (fun ?partial_unpack:_ _ ~pos:_ ~len ->
-      if len = 0
-      then assert false
-      else `Ok ((), 1)))
+    create (Unpack_one.create
+              ~initial_state:()
+              ~unpack:(fun ~state:() ~buf:_ ~pos:_ ~len ->
+                if len = 0
+                then assert false
+                else `Ok ((), 1)))
   in
   ok_exn (feed_string t "hello");
   assert (is_error (unpack_iter t ~f:(fun _ -> failwith "f raised")))
+;;
+
+module Example = struct
+  type t = {
+    x : int;
+    y : int;
+  } [@@deriving bin_io]
+
+  let t = { x = 0; y = 0; }
+
+  let pack ts =
+    List.map ts ~f:(fun t -> Bin_prot.Utils.bin_dump ~header:true bin_writer_t t)
+    |> Bigstring.concat
+  ;;
+
+  let object_size = 3
+
+  let%expect_test "bin reading allocation" [@tags "64-bits-only"] =
+    let buf = pack [ t; ] in
+    let pos_ref = ref 0 in
+    ignore (
+      require_allocation_does_not_exceed (Minor_words object_size) [%here] (fun () ->
+        let size = Bin_prot.Utils.bin_read_size_header buf ~pos_ref in
+        let t = bin_reader_t.read buf ~pos_ref in
+        size + t.x + t.y)
+      : int);
+    [%expect {||}];
+  ;;
+
+  let%expect_test "confirm object size" =
+    ignore (
+      require_allocation_does_not_exceed (Minor_words object_size) [%here] (fun () ->
+        let n = Sys.opaque_identity 0 in
+        { x = n; y = n; })
+      : t);
+    [%expect {| |}];
+  ;;
+end
+
+let%expect_test "[feed] and [unpack_iter] allocation" =
+  let unpack =
+    Example.bin_reader_t
+    |> Unpack_one.create_bin_prot
+    |> create
+  in
+  let num_unpacked = ref 0 in
+  let unpack_iter =
+    let f (_ : Example.t) = incr num_unpacked in
+    fun () ->
+      unpack_iter unpack ~f
+      |> Or_error.ok_exn;
+  in
+  let fixed_cost_of_feed = 20 in
+  let buf = Example.pack [] in
+  require_allocation_does_not_exceed (Minor_words fixed_cost_of_feed) [%here] (fun () ->
+    feed unpack buf |> Or_error.ok_exn);
+  require_no_allocation [%here] unpack_iter;
+  let num_objects = 4 in
+  let buf = Example.pack (List.init num_objects ~f:(const Example.t)) in
+  require_allocation_does_not_exceed (Minor_words fixed_cost_of_feed) [%here] (fun () ->
+    feed unpack buf |> Or_error.ok_exn);
+  let cost_per_unpack = 19 in
+  let expected_allocation = num_objects * (cost_per_unpack + Example.object_size) in
+  require_allocation_does_not_exceed (Minor_words expected_allocation) [%here]
+    unpack_iter;
+  [%test_result: int] ~expect:num_objects !num_unpacked;
+  [%expect {| |}]
 ;;

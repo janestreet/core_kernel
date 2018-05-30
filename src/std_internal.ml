@@ -48,12 +48,6 @@ let ( // ) = Int.( // )
 
 let (==>) a b = (not a) || b
 
-let print_s ?mach sexp =
-  print_endline
-    (match mach with
-     | Some () -> Sexp.to_string_mach sexp
-     | None    -> Sexp.to_string_hum  sexp)
-
 let bprintf            = Printf.bprintf
 let const              = Fn.const
 let eprintf            = Printf.eprintf
@@ -73,6 +67,7 @@ let ksprintf           = Printf.ksprintf
 let ok_exn             = Or_error.ok_exn
 let phys_equal         = Base.phys_equal
 let phys_same          = phys_same
+let print_s            = Stdio.print_s
 let printf             = Printf.printf
 let protect            = Exn.protect
 let protectx           = Exn.protectx

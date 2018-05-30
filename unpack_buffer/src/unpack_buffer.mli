@@ -6,22 +6,20 @@
 
 open! Import
 
-open Std_internal
-
 module Unpack_one : sig
-  (** If [unpack_one : ('a, 'partial_unpack) unpack_one], then [unpack_one buf ?pos
-      ?len ?partial_unpack] must unpack at most one value of type ['a] from [buf]
-      starting at [pos], and not using more than [len] characters.  [unpack_one] must
-      returns one the following:
+  (** If [unpack_one : ('a, 'state) unpack], then [unpack_one ~state ~buf ~pos ~len] must
+      unpack at most one value of type ['a] from [buf] starting at [pos], and not using
+      more than [len] characters.  [unpack_one] must return one the following:
 
       - [`Ok (value, n)] -- unpacking succeeded and consumed [n] bytes, where [0 <= n <=
-        len].  It is possible to have [n = 0], e.g. for sexp unpacking, which can only tell
-        it has reached the end of an atom when it encounters the following punctuation
-        character, which if it is left paren, is the start of the following sexp.
+        len].  It is possible to have [n = 0], e.g. for sexp unpacking, which can only
+        tell it has reached the end of an atom when it encounters the following
+        punctuation character, which if it is left paren, is the start of the following
+        sexp.
 
-      - [`Not_enough_data (p, n)] -- unpacking encountered a valid proper prefix of a
-        packed value, and consumed [n] bytes, where [0 <= n <= len].  [p] is a "partial
-        unpack" that can be supplied to a future call to [unpack_one] to continue unpacking.
+      - [`Not_enough_data (state, n)] -- unpacking encountered a valid proper prefix of a
+        packed value, and consumed [n] bytes, where [0 <= n <= len].  [state] can be
+        supplied to a future call to [unpack_one] to continue unpacking.
 
       - [`Invalid_data] -- unpacking encountered an invalidly packed value.
 
@@ -29,39 +27,30 @@ module Unpack_one : sig
       quadratic behavior if a packed value's bytes are input using a linear number of
       calls to [feed]. *)
 
-  type ('a, 'partial_unpack) unpack_result =
+  type ('a, 'state) unpack_result =
     [ `Ok              of 'a * int
-    | `Not_enough_data of 'partial_unpack * int
+    | `Not_enough_data of 'state * int
     | `Invalid_data    of Error.t
     ]
 
-  type ('a, 'partial_unpack) unpacked =
-    ?partial_unpack : 'partial_unpack
-    -> ?pos         : int  (** default is [0] *)
-    -> ?len         : int  (** default is [Bigstring.len bigstring - pos] *)
-    -> Bigstring.t
-    -> ('a, 'partial_unpack) unpack_result
+  type ('a, 'state) unpack
+    =  state : 'state
+    -> buf   : Bigstring.t
+    -> pos   : int
+    -> len   : int
+    -> ('a, 'state) unpack_result
 
-  type 'a t = T : ('a, _) unpacked -> 'a t
+  type 'a t = T : { initial_state : 'state
+                  ; unpack : ('a, 'state) unpack
+                  } -> 'a t
 
   include Monad.S with type 'a t := 'a t
 
-  (** [create] converts an unpacking function that takes required [pos] and [len]
-      arguments and converts it to the [unpacked] form that takes an optional [pos] and
-      [len]. *)
-  val create
-    :  (?partial_unpack:'p
-        -> Bigstring.t
-        -> pos:int
-        -> len:int
-        -> ('a, 'p) unpack_result)
-    -> 'a t
+  val create : initial_state:'state -> unpack:('a, 'state) unpack -> 'a t
 
   (** [create_bin_prot reader] returns an unpacker that reads the "size-prefixed" bin_prot
       encoding, in which a value is encoded by first writing the length of the bin_prot
-      data as a 64-bit int, and then writing the data itself.  This encoding makes it
-      trivial to know if enough data is available in the buffer, so there is no need to
-      represent partially unpacked values, and hence ['partial_unpack = unit]. *)
+      data as a 64-bit int, and then writing the data itself. *)
   val create_bin_prot : 'a Bin_prot.Type_class.reader -> 'a t
 
   (** Reads "size-prefixed" bin-blobs, much like [create_bin_prot _], but preserves the
@@ -99,18 +88,14 @@ include Invariant.S1 with type 'a t := 'a t
 
 val create : 'a Unpack_one.t -> 'a t
 
-val create_unpacked
-  :  ?partial_unpack : 'partial_unpack
-  -> ('a, 'partial_unpack) Unpack_one.unpacked
-  -> 'a t
-
 (** [create_bin_prot reader] returns an unpack buffer that unpacks the "size-prefixed"
     bin_prot encoding, in which a value is encoded by first writing the length of the
     bin_prot data as a 64-bit int, and then writing the bin_prot data itself. *)
 val create_bin_prot : 'a Bin_prot.Type_class.reader -> 'a t
 
-(** [is_empty t] returns [true] if [t] has no unconsumed bytes, and [false] if it does.
-    [is_empty] returns an error if [t] has encountered an unpacking error. *)
+(** [is_empty] returns [true] if all the data fed into [t] has been unpacked into values;
+    [false] if [t] has unconsumed bytes or partially unpacked data.  [is_empty] returns an
+    error if [t] has encountered an unpacking error. *)
 val is_empty : _ t -> bool Or_error.t
 
 (** [feed t buf ?pos ?len] adds the specified substring of [buf] to [t]'s buffer.  It

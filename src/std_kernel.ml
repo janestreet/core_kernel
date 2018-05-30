@@ -180,7 +180,6 @@ module Unique_id                            = Unique_id
 module Unit_of_time                         = Unit_of_time
 module Univ                                 = Univ
 module Univ_map                             = Univ_map
-module Unpack_buffer                        = Unpack_buffer
 module Validated                            = Validated
 module Weak                                 = Weak
 module Weak_pointer                         = Weak_pointer
