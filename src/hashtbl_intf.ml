@@ -127,6 +127,8 @@ type ('key, 'data, 'z) create_options_with_hashable =
   -> hashable:'key Hashable.t
   -> 'z
 
+module type For_deriving = Base.Hashtbl.For_deriving
+
 module type S_plain = sig
   type key
   type ('a, 'b) hashtbl
@@ -201,6 +203,9 @@ module type Hashtbl = sig
 
   module Hashable = Hashable
   val hashable : ('key, _) t -> 'key Hashable.t
+
+  module type For_deriving = For_deriving
+  include For_deriving with type ('a, 'b) t := ('a, 'b) t
 
   val iter_vals : (_, 'b) t -> f:('b -> unit) -> unit
   [@@deprecated "[since 2016-04] Use iter instead"]

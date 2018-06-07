@@ -181,7 +181,7 @@ let to_unit_of_time t : Unit_of_time.t =
 module Stable = struct
   module V2 = struct
     module T = struct
-      type nonrec t = t [@@deriving bin_io, compare]
+      type nonrec t = t [@@deriving bin_io, compare, hash]
 
       let of_int63_exn t = of_int63_ns t
       let to_int63     t = to_int63_ns t

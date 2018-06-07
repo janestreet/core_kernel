@@ -670,6 +670,9 @@ module Poly : sig
 end
 with type ('a, 'b, 'c) map = ('a, 'b, 'c) t
 
+module type For_deriving = For_deriving
+include For_deriving with type ('a, 'b, 'c) t := ('a, 'b, 'c) t
+
 module type Key_plain   = Key_plain
 module type Key         = Key
 module type Key_binable = Key_binable
@@ -711,6 +714,8 @@ module Make_binable_using_comparator (Key : sig
 module M (K : sig type t type comparator_witness end) : sig
   type nonrec 'v t = (K.t, 'v, K.comparator_witness) t
 end
+
+
 
 (** The following functors may be used to define stable modules *)
 module Stable : sig

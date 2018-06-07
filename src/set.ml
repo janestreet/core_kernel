@@ -502,6 +502,8 @@ module Make_binable (Elt : Elt_binable) =
   end)
 
 module M = Set.M
+module type For_deriving = Set.For_deriving
+include (Set : For_deriving with type ('a, 'b) t := ('a, 'b) t)
 
 module Stable = struct
   module V1 = struct

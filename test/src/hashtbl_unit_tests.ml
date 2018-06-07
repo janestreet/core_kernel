@@ -987,6 +987,9 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
       module type Key         = Hashtbl.Key
       module type Key_plain   = Hashtbl.Key_plain
 
+      module type For_deriving = Hashtbl.For_deriving
+      include (Hashtbl : For_deriving with type ('a, 'b) t := ('a, 'b) t)
+
       module Hashable       = Hashtbl.Hashable
       module Poly           = Hashtbl.Poly
       module Make_plain     = Hashtbl.Make_plain
@@ -1824,6 +1827,9 @@ module Make_mutation_in_callbacks(Hashtbl : Hashtbl_intf.Hashtbl) = struct
       module type Key_binable = Hashtbl.Key_binable
       module type Key         = Hashtbl.Key
       module type Key_plain   = Hashtbl.Key_plain
+
+      module type For_deriving = Hashtbl.For_deriving
+      include (Hashtbl : For_deriving with type ('a, 'b) t := ('a, 'b) t)
 
       module Hashable       = Hashtbl.Hashable
       module Poly           = Hashtbl.Poly

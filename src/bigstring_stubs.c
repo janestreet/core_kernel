@@ -136,7 +136,7 @@ CAMLprim value bigstring_is_mmapped_stub(value v_bstr)
 CAMLprim value bigstring_blit_string_bigstring_stub(
   value v_str, value v_src_pos, value v_bstr, value v_dst_pos, value v_len)
 {
-  char *str = String_val(v_str) + Long_val(v_src_pos);
+  const char *str = String_val(v_str) + Long_val(v_src_pos);
   char *bstr = get_bstr(v_bstr, v_dst_pos);
   memcpy(bstr, str, Long_val(v_len));
   return Val_unit;

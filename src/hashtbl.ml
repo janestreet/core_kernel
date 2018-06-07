@@ -151,6 +151,8 @@ module Make_binable (Key : Key_binable) = struct
 end
 
 module M = Hashtbl.M
+module type For_deriving = For_deriving
+include (Hashtbl : For_deriving with type ('a, 'b) t := ('a, 'b) t)
 
 let hashable = Hashtbl.Private.hashable
 

@@ -334,3 +334,5 @@ module type S_binable = sig
   include S with module Key := Key
   include Binable.S1 with type 'a t := 'a t
 end
+
+module type For_deriving = Map.For_deriving

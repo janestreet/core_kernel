@@ -3,7 +3,7 @@ open Std_internal
 
 module type Span = sig
   (** [t] is immediate on 64bit boxes and so plays nicely with the GC write barrier. *)
-  type t = private Int63.t
+  type t = private Int63.t [@@deriving hash]
 
   include Span_intf.S
     with type underlying = Int63.t
@@ -174,7 +174,10 @@ module type Time_ns = sig
 
     module Span : sig
       (** [V1] is currently only implemented in [Core]. *)
-      module V2 : Stable_int63able with type t = Span.t
+      module V2 : sig
+        type t = Span.t [@@deriving hash]
+        include Stable_int63able with type t := t
+      end
     end
 
     module Ofday : sig

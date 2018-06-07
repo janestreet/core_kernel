@@ -495,6 +495,8 @@ module M (Elt : sig type t type comparator_witness end) : sig
   type nonrec t = (Elt.t, Elt.comparator_witness) t
 end
 
+include Base.Set.For_deriving with type ('a, 'b) t := ('a, 'b) t
+
 (** The following types and functors may be used to define stable modules. *)
 module Stable : sig
   module V1 : sig

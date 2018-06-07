@@ -473,6 +473,8 @@ module Make_binable (Key : Key_binable) =
   end)
 
 module M = Map.M
+module type For_deriving = For_deriving
+include (Map : For_deriving with type ('a, 'b, 'c) t := ('a, 'b, 'c) t)
 
 module Tree = struct
   include Tree

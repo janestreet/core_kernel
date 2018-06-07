@@ -960,6 +960,8 @@ module type Key_plain   = Key_plain
 module type Key         = Key
 module type Key_binable = Key_binable
 
+module type For_deriving = For_deriving
+
 module Creators (Key : sig
     type 'a t
 
@@ -1142,6 +1144,22 @@ end
 module M (K : T.T) = struct
   type nonrec 'v t = (K.t, 'v) t
 end
+
+module type Sexp_of_m = sig type t [@@deriving sexp_of] end
+module type M_of_sexp = sig
+  type t [@@deriving of_sexp] include Key with type t := t
+end
+
+let t_of_sexp ~hashable k_of_sexp d_of_sexp sexp =
+  let alist = list_of_sexp (pair_of_sexp k_of_sexp d_of_sexp) sexp in
+  of_alist_exn ~hashable alist ~size:(List.length alist)
+;;
+
+let sexp_of_m__t (type k) (module K : Sexp_of_m with type t = k) sexp_of_v t =
+  sexp_of_t K.sexp_of_t sexp_of_v t
+
+let m__t_of_sexp (type k) (module K : M_of_sexp with type t = k) v_of_sexp s =
+  t_of_sexp ~hashable:(Hashable.of_key (module K)) K.t_of_sexp v_of_sexp s
 
 module Using_hashable = struct
   type nonrec ('a, 'b) t = ('a, 'b) t [@@deriving sexp_of]
