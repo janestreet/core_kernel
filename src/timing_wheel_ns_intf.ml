@@ -135,6 +135,8 @@ module type Interval_num = sig
 
     val pred : t -> t
     val succ : t -> t
+
+    val ( + ) : t -> t -> t
   end
 
   type t = private Int63.t [@@deriving sexp_of]
