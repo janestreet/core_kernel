@@ -231,7 +231,9 @@ module Permissioned : sig
   val rev_inplace : ('a, [> read_write]) t -> unit
   val of_list_rev     : 'a list -> ('a, [< _ perms]) t
   val of_list_map     : 'a list -> f:('a -> 'b) -> ('b, [< _ perms]) t
+  val of_list_mapi     : 'a list -> f:(int -> 'a -> 'b) -> ('b, [< _ perms]) t
   val of_list_rev_map : 'a list -> f:('a -> 'b) -> ('b, [< _ perms]) t
+  val of_list_rev_mapi : 'a list -> f:(int -> 'a -> 'b) -> ('b, [< _ perms]) t
   val replace     : ('a, [> read_write]) t -> int -> f:('a -> 'a) -> unit
   val replace_all : ('a, [> read_write]) t -> f:('a -> 'a) -> unit
   [@@deprecated "[since 2018-03] use [map_inplace] instead"]

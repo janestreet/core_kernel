@@ -53,14 +53,17 @@ module For_quickcheck = struct
 
   open Generator.Let_syntax
 
-  let default_length =
-    (* Generating the empty string for every size 0 case is far more tests of the empty
-       string than we need. Instead, at any size we generate strings of length up to
-       size+1. *)
-    let%bind size          = Generator.size                         in
-    let      upper_bound   = size + 1                               in
-    let%bind weighted_low  = Int.gen_log_uniform_incl 0 upper_bound in
-    let      weighted_high = upper_bound - weighted_low             in
+  let default_length ~allow_empty =
+    (* At any size we generate strings of length up to [size+1]. This is so that we have
+       sensible behaviour when size = 0:
+       1. when [allow_empty] is false, we need to be able to generate something valid;
+       2. when [allow_empty] is true, generating the empty string for every case is far
+       more tests of the empty string than we need. *)
+    let%bind size = Generator.size in
+    let lower_bound = if allow_empty then 0 else 1 in
+    let upper_bound = size + 1 in
+    let%bind weighted_low = Int.gen_log_uniform_incl 0 (upper_bound - lower_bound) in
+    let weighted_high = upper_bound - weighted_low in
     return weighted_high
 
   let gen_with_length len char_gen =
@@ -68,10 +71,15 @@ module For_quickcheck = struct
     return (of_char_list chars)
 
   let gen' char_gen =
-    let%bind len = default_length in
+    let%bind len = default_length ~allow_empty:true in
     gen_with_length len char_gen
 
-  let gen = gen' Char.gen
+  let gen_nonempty' char_gen =
+    let%bind len = default_length ~allow_empty:false in
+    gen_with_length len char_gen
+
+  let gen          = gen' Char.gen
+  let gen_nonempty = gen_nonempty' Char.gen
 
   let obs =
     Observer.unmap (List.obs Char.obs)
@@ -84,10 +92,11 @@ end
 
 let gen_with_length = For_quickcheck.gen_with_length
 let gen'            = For_quickcheck.gen'
+let gen_nonempty'   = For_quickcheck.gen_nonempty'
 let gen             = For_quickcheck.gen
+let gen_nonempty    = For_quickcheck.gen_nonempty
 let obs             = For_quickcheck.obs
 let shrinker        = For_quickcheck.shrinker
-;;
 
 let take_while t ~f =
   match lfindi t ~f:(fun _ elt -> not (f elt)) with
