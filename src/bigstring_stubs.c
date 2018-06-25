@@ -94,6 +94,7 @@ bigstring_realloc (value v_bstr, value v_size)
   CAMLlocal1(v_bstr2);
   struct caml_ba_array *ba = Caml_ba_array_val(v_bstr);
   intnat size = Long_val(v_size);
+  int i;
 
   struct caml_ba_array *ba2;
   void *data;
@@ -117,8 +118,12 @@ bigstring_realloc (value v_bstr, value v_size)
   ba2 = Caml_ba_array_val(v_bstr2);
   ba2->dim[0] = size;
 
+  /* ba is a pointer into the OCaml heap, hence may have been invalidated by the
+   * call to [caml_ba_alloc]. */
+  ba = Caml_ba_array_val(v_bstr);
   ba->data = NULL;
   ba->flags = CAML_BA_EXTERNAL;
+  for (i = 0; i < ba->num_dims; ++i) ba->dim[i] = 0;
 
   CAMLreturn(v_bstr2);
 }
