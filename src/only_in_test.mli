@@ -42,4 +42,3 @@ include Monad.S with type 'a t := 'a t
 val of_thunk : (unit -> 'a) -> 'a t
 
 val force : 'a t -> 'a
-

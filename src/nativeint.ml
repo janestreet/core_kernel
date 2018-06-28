@@ -17,8 +17,11 @@ include (Base.Nativeint
              with type t := t
              with module Hex := Base.Nativeint.Hex))
 
-include Quickcheck.Make_int (struct
-    include Base.Nativeint
-    let splittable_random = Splittable_random.nativeint
-    let splittable_random_log_uniform = Splittable_random.Log_uniform.nativeint
-  end)
+let gen = Base_quickcheck.Generator.nativeint
+let obs = Base_quickcheck.Observer.nativeint
+let shrinker = Base_quickcheck.Shrinker.nativeint
+
+let gen_incl = Base_quickcheck.Generator.nativeint_inclusive
+let gen_uniform_incl = Base_quickcheck.Generator.nativeint_uniform_inclusive
+let gen_log_incl = Base_quickcheck.Generator.nativeint_log_inclusive
+let gen_log_uniform_incl = Base_quickcheck.Generator.nativeint_log_uniform_inclusive

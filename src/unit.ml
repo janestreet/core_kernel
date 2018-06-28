@@ -9,9 +9,9 @@ include Identifiable.Extend(Base.Unit)(struct
 include (Base.Unit
          : module type of struct include Base.Unit end with type t := t)
 
-let gen      = Quickcheck.Generator.singleton ()
-let obs      = Quickcheck.Observer.singleton  ()
-let shrinker = Quickcheck.Shrinker.empty      ()
+let gen = Base_quickcheck.Generator.unit
+let obs = Base_quickcheck.Observer.unit
+let shrinker = Base_quickcheck.Shrinker.unit
 
 module type S = sig end
 

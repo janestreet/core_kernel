@@ -10,6 +10,7 @@ build: [
 ]
 depends: [
   "base"
+  "base_quickcheck"
   "bin_prot"
   "configurator"
   "fieldslib"

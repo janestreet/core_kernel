@@ -22,40 +22,6 @@ include Comparator.Derived2(struct
     type nonrec ('a, 'b) t = ('a, 'b) t [@@deriving sexp_of, compare]
   end)
 
-module For_quickcheck = struct
-
-  module Generator = Quickcheck.Generator
-  module Observer  = Quickcheck.Observer
-  module Shrinker  = Quickcheck.Shrinker
-
-  open Generator.Monad_infix
-
-  let to_poly = function
-    | First  a -> `A a
-    | Second b -> `B b
-
-  let of_poly = function
-    | `A a -> First a
-    | `B b -> Second b
-
-  let gen a b =
-    Generator.union
-      [ a >>| first
-      ; b >>| second
-      ]
-
-  let obs a b =
-    Observer.unmap (Observer.variant2 a b)
-      ~f:to_poly
-
-  let shrinker a b =
-    Shrinker.map
-      (Shrinker.variant2 a b)
-      ~f:of_poly
-      ~f_inverse:to_poly
-
-end
-
-let gen      = For_quickcheck.gen
-let obs      = For_quickcheck.obs
-let shrinker = For_quickcheck.shrinker
+let gen = Base_quickcheck.Generator.either
+let obs = Base_quickcheck.Observer.either
+let shrinker = Base_quickcheck.Shrinker.either

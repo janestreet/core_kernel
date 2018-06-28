@@ -181,15 +181,21 @@ let concat =
 (* Comparison *)
 
 external unsafe_memcmp
-  : t1 : t -> t1_pos : int -> t2 : t -> t2_pos : int -> len : int -> int
+  : t -> pos1 : int -> t -> pos2 : int -> len : int -> int
   = "bigstring_memcmp_stub" [@@noalloc]
+
+let memcmp t1 ~pos1 t2 ~pos2 ~len =
+  Ordered_collection_common.check_pos_len_exn ~pos:pos1 ~len ~length:(length t1);
+  Ordered_collection_common.check_pos_len_exn ~pos:pos2 ~len ~length:(length t2);
+  unsafe_memcmp t1 ~pos1 t2 ~pos2 ~len
+;;
 
 let compare t1 t2 =
   if phys_equal t1 t2 then 0 else
     let len1 = length t1 in
     let len2 = length t2 in
     let len = Int.min len1 len2 in
-    match unsafe_memcmp ~t1 ~t1_pos:0 ~t2 ~t2_pos:0 ~len with
+    match unsafe_memcmp t1 ~pos1:0 t2 ~pos2:0 ~len with
     | 0 ->
       if len1 < len2 then -1 else
       if len1 > len2 then  1 else
@@ -212,7 +218,7 @@ let equal t1 t2 =
     let len1 = length t1 in
     let len2 = length t2 in
     Int.equal len1 len2
-    && Int.equal (unsafe_memcmp ~t1 ~t1_pos:0 ~t2 ~t2_pos:0 ~len:len1) 0
+    && Int.equal (unsafe_memcmp t1 ~pos1:0 t2 ~pos2:0 ~len:len1) 0
 
 (* Reading / writing bin-prot *)
 

@@ -7,6 +7,6 @@ include (Base.Bool : module type of struct include Base.Bool end with type t := 
 include Hashable.Make (Base.Bool)
 include Comparable.Make_using_comparator (Base.Bool)
 
-let gen      = Quickcheck.Generator.bool
-let obs      = Quickcheck.Observer.bool
-let shrinker = Quickcheck.Shrinker.bool
+let gen = Base_quickcheck.Generator.bool
+let obs = Base_quickcheck.Observer.bool
+let shrinker = Base_quickcheck.Shrinker.bool

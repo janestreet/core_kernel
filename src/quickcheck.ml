@@ -1,12 +1,14 @@
 open! Import
 
 open Quickcheck_intf
+open Base_quickcheck
 
 module Array      = Base.Array
 module Bool       = Base.Bool
 module Char       = Base.Char
 module Int        = Base.Int
 module List       = Base.List
+module Option     = Base.Option
 module Type_equal = Base.Type_equal
 
 module Pre_float : Comparisons.S with type t = float = struct
@@ -33,104 +35,11 @@ module Pre_int : Pre_int with type t = int = struct
   let splittable_random_log_uniform = Splittable_random.Log_uniform.int
 end
 
-let check_size str size =
-  if size < 0 then Error.raise_s [%message str "size is negative" (size : int)]
-
-let bounds_error name lower_bound upper_bound sexp_of_bound =
-  raise_s [%message
-    name
-      "invalid bounds"
-      (lower_bound : bound)
-      (upper_bound : bound)]
-
-module Raw_generator : sig
-  type +'a t
-
-  val create   :         (size:int -> random:Splittable_random.State.t -> 'a) -> 'a t
-  val generate : 'a t -> (size:int -> random:Splittable_random.State.t -> 'a)
-
-  (* [sizes_for_elements] is a helper function for distributing [size] among an arbitrary
-     number of elements.  Some of [size] is "spent" on extending the length of the
-     collection (raising it from [min_len] to a maximum of [max_len]); the remainder is
-     "spent" on the size of individual elements.  The implementation is designed not to
-     bias the sizes toward any particular element.  The result is an array of the
-     appropriate length, where each array element is the size of one corresponding element
-     of the desired collection. *)
-  val sizes_for_elements
-    :  ?min_len : int
-    -> ?max_len : int
-    -> size     : int
-    -> Splittable_random.State.t
-    -> int array
-end = struct
-  type 'a t = size:int -> random:Splittable_random.State.t -> 'a
-
-  let create = Fn.id
-
-  let generate t ~size ~random =
-    check_size "Quickcheck.Generator.generate" size;
-    t ~size ~random
-
-  let sizes_for_elements ?(min_len = 0) ?(max_len = Pre_int.max_value) ~size random =
-    assert (min_len <= max_len);
-    let upper_bound = min_len + size in
-    let max_len =
-      if upper_bound >= min_len (* guard against overflow *)
-      then min max_len upper_bound
-      else max_len
-    in
-    (* pick a length, weighted low so that most of the size is spent on elements *)
-    let len = Splittable_random.Log_uniform.int random ~lo:min_len ~hi:max_len in
-    (* if there are no elements return an empty array, otherwise return a non-empty array
-       with the size distributed among the elements *)
-    if len = 0 then [||] else begin
-      let sizes = Array.init len ~f:(fun _ -> 0) in
-      let remaining = size - (len - min_len) in
-      let max_index = len - 1 in
-      for _ = 1 to remaining do
-        (* pick an index, weighted low so that we see unbalanced distributions often *)
-        let index = Splittable_random.Log_uniform.int random ~lo:0 ~hi:max_index in
-        sizes.(index) <- sizes.(index) + 1
-      done;
-      (* permute the array so that no index is favored over another *)
-      for i = 0 to max_index - 1 do
-        let j = Splittable_random.int random ~lo:i ~hi:max_index in
-        Array.swap sizes i j
-      done;
-      assert (Array.sum (module Int) sizes ~f:Fn.id + (len - min_len) = size);
-      sizes
-    end
-end
-
-type 'a gen = 'a Raw_generator.t
-
-module Raw_observer : sig
-  type -'a t
-
-  val create  :         ('a -> size:int -> hash:Hash.state -> Hash.state) -> 'a t
-  val observe : 'a t -> ('a -> size:int -> hash:Hash.state -> Hash.state)
-end = struct
-  type 'a t = 'a -> size:int -> hash:Hash.state -> Hash.state
-
-  let create = Fn.id
-
-  let observe t x ~size ~hash =
-    check_size "Quickcheck.Observer.observe" size;
-    t x ~size ~hash
-end
-
-type 'a obs = 'a Raw_observer.t
-
 module Observer = struct
-
-  include Raw_observer
+  include Observer
 
   let of_hash (type a) (module M : Deriving_hash with type t = a) =
-    create (fun x ~size:_ ~hash ->
-      [%hash_fold: M.t] hash x)
-
-  let bool = of_hash (module Bool)
-  let char = of_hash (module Char)
+    of_hash_fold M.hash_fold_t
 
   let variant2 t1 t2 =
     create (fun x ~size ~hash ->
@@ -214,32 +123,17 @@ module Observer = struct
       |>! observe t5 x5 ~size
       |>! observe t6 x6 ~size)
 
-  let unmap t ~f =
-    create (fun x ~size ~hash ->
-      observe t (f x) ~size ~hash)
-
   let of_predicate a b ~f =
     unmap (variant2 a b)
       ~f:(fun x -> if f x then `A x else `B x)
 
-  let singleton () =
-    create (fun _ ~size:_ ~hash -> hash)
+  let singleton () = opaque
 
   let doubleton f =
     of_predicate (singleton ()) (singleton ()) ~f
 
-  module Make_int_observer (M : Pre_int) : sig
-    val obs : M.t t
-  end = struct
-    let obs =
-      create (fun x ~size:_ ~hash ->
-        [%hash_fold: M.t] hash x)
-  end
-
-  module For_int = Make_int_observer (Pre_int)
-
   let enum _ ~f =
-    unmap For_int.obs ~f
+    unmap int ~f
 
   let of_list list ~equal =
     let f x =
@@ -253,10 +147,6 @@ module Observer = struct
     create (fun x ~size ~hash ->
       observe (f ()) x ~size ~hash)
 
-  let fixed_point f =
-    let rec self () = f (of_fun self) in
-    of_fun self
-
   let recursive = fixed_point
 
   let comparison ~compare ~eq ~lt ~gt =
@@ -265,125 +155,20 @@ module Observer = struct
       if c < 0 then `A x else
       if c > 0 then `C x else
         `B x)
-
-  let fn dom rng =
-    create (fun f ~size ~hash ->
-      let random = Splittable_random.State.of_int (Hash.get_hash_value hash) in
-      let sizes = Raw_generator.sizes_for_elements ~size random in
-      Array.fold sizes ~init:hash ~f:(fun hash size ->
-        let x = Raw_generator.generate dom ~size ~random in
-        observe rng (f x) ~size ~hash))
 end
 
 module Generator = struct
-
-  include Raw_generator
-
-  let return x =
-    create (fun ~size:_ ~random:_ -> x)
-
-  let custom_map t ~f =
-    create (fun ~size ~random ->
-      let x = generate t ~size ~random in
-      f x)
-
-  include Monad.Make (struct
-      type nonrec 'a t = 'a t
-
-      let return = return
-
-      let bind t1 ~f =
-        create (fun ~size ~random ->
-          let x = generate t1 ~size ~random in
-          let t2 = f x in
-          generate t2 ~size ~random)
-
-      let map = `Custom custom_map
-    end)
-
-  include Applicative.Make (struct
-      type nonrec 'a t = 'a t
-
-      let return = return
-
-      let apply t1 t2 =
-        create (fun ~size ~random ->
-          let f = generate t1 ~size ~random in
-          let x = generate t2 ~size ~random in
-          f x)
-
-      let map = `Custom custom_map
-    end)
+  include Generator
 
   open Let_syntax
 
-  let size = create (fun ~size ~random:_ -> size)
-
-  let with_size t ~size =
-    create (fun ~size:_ ~random ->
-      generate t ~size ~random)
-
   let singleton = return
-
-  let filter_map t ~f =
-    let rec loop ~size ~random =
-      let x = generate t ~size ~random in
-      match f x with
-      | Some y -> y
-      | None   -> loop ~size:(size + 1) ~random
-    in
-    create loop
-
-  let filter t ~f =
-    filter_map t ~f:(fun x ->
-      if f x
-      then Some x
-      else None)
-
-  module Binary_search_array = Binary_searchable.Make1 (struct
-      type 'a t = 'a array
-      let get    = Array.get
-      let length = Array.length
-    end)
-
-  let weighted_choice alist_by_weight =
-    if List.is_empty alist_by_weight then
-      Error.raise_s [%message "Quickcheck.Generator.weighted_union: empty list"];
-    let weights, values = List.unzip alist_by_weight in
-    let value_array = Array.of_list values in
-    let total_weight, cumulative_weight_array =
-      let array = Array.init (Array.length value_array) ~f:(fun _ -> 0.) in
-      let sum =
-        List.foldi weights ~init:0. ~f:(fun index acc weight ->
-          let cumulative = acc +. weight in
-          Array.set array index cumulative;
-          cumulative)
-      in
-      sum, array
-    in
-    create (fun ~size:_ ~random ->
-      let choice = Splittable_random.float random ~lo:0. ~hi:total_weight in
-      match
-        Binary_search_array.binary_search
-          cumulative_weight_array
-          ~compare:Pre_float.compare
-          `First_greater_than_or_equal_to
-          choice
-      with
-      | Some index -> Array.get value_array index
-      | None       -> assert false)
-
-  let weighted_union alist =
-    weighted_choice alist
-    |> join
 
   let doubleton x y =
     create (fun ~size:_ ~random ->
       if Splittable_random.bool random
       then x
       else y)
-
-  let bool = doubleton true false
 
   let of_fun f =
     create (fun ~size ~random ->
@@ -413,103 +198,11 @@ module Generator = struct
   let geometric ~p init =
     bounded_geometric ~p ~maximum:Pre_int.max_value init
 
-  let small_non_negative_int =
-    create (fun ~size ~random ->
-      Splittable_random.int random ~lo:0 ~hi:size)
+  let small_non_negative_int = small_positive_or_zero_int
 
-  let small_positive_int =
-    create (fun ~size ~random ->
-      Splittable_random.int random ~lo:1 ~hi:(size + 1))
-
-  module Make_int_generator (M : Pre_int) : sig
-    val gen                  :               M.t t
-    val gen_incl             : M.t -> M.t -> M.t t
-    val gen_uniform_incl     : M.t -> M.t -> M.t t
-    val gen_log_incl         : M.t -> M.t -> M.t t
-    val gen_log_uniform_incl : M.t -> M.t -> M.t t
-  end = struct
-    open M
-
-    let gen_uniform_incl lo hi =
-      if lo > hi then begin
-        bounds_error "Quickcheck.Make_int().gen_uniform_incl" lo hi [%sexp_of: t]
-      end;
-      create (fun ~size:_ ~random ->
-        M.splittable_random random ~lo ~hi)
-
-    let gen_log_uniform_incl lo hi =
-      if lo < zero || lo > hi then begin
-        bounds_error "Quickcheck.Make_int().gen_log_uniform_incl" lo hi [%sexp_of: t]
-      end;
-      create (fun ~size:_ ~random ->
-        M.splittable_random_log_uniform random ~lo ~hi)
-
-    let gen_incl lower_bound upper_bound =
-      weighted_union
-        [ 0.05, return lower_bound
-        ; 0.05, return upper_bound
-        ; 0.9,  gen_uniform_incl lower_bound upper_bound
-        ]
-
-    let gen_log_incl lower_bound upper_bound =
-      weighted_union
-        [ 0.05, return lower_bound
-        ; 0.05, return upper_bound
-        ; 0.9,  gen_log_uniform_incl lower_bound upper_bound
-        ]
-
-    let gen =
-      let%map sign = doubleton true false
-      and     bits = gen_log_incl zero max_value
-      in
-      if sign then bit_not bits else bits
-
-  end
-
-  module For_int = Make_int_generator (Pre_int)
-
-  let of_list list =
-    let array = Array.of_list list in
-    map (For_int.gen_uniform_incl 0 (Array.length array - 1)) ~f:(fun index ->
-      array.(index))
-
-  let union list = of_list list |> join
-
-  let fixed_point f =
-    let rec r ~size ~random =
-      generate (force lazy_t) ~size ~random
-    and lazy_t = lazy (f (create r))
-    in
-    force lazy_t
+  let small_positive_int = small_strictly_positive_int
 
   let recursive = fixed_point
-
-  (* The resulting generator will raise if used at size 0. *)
-  let with_decremented_size_exn t =
-    let%bind n = size in
-    with_size t ~size:(n - 1)
-
-  let weighted_recursive_union nonrec_list ~f =
-    fixed_point (fun self ->
-      let nonrec_gen = weighted_union nonrec_list in
-      let rec_gen =
-        let rec_list =
-          List.map (f self) ~f:(fun (w, t) ->
-            (* This generator is never used at size 0, so this use of
-               [with_decremented_size_exn] is safe. *)
-            (w, with_decremented_size_exn t))
-        in
-        weighted_union (nonrec_list @ rec_list)
-      in
-      match%bind size with
-      | 0 -> nonrec_gen
-      | _ -> rec_gen)
-
-  let recursive_union nonrec_list ~f =
-    let weighted list = List.map list ~f:(fun t -> (1., t)) in
-    weighted_recursive_union
-      (weighted nonrec_list)
-      ~f:(fun self -> weighted (f self))
 
   let variant2 a b =
     union [ map a ~f:(fun a -> `A a)
@@ -581,32 +274,7 @@ module Generator = struct
     t6 >>| fun x6 ->
     (x1, x2, x3, x4, x5, x6)
 
-  let list_gen ?min_len ?max_len elem_gen =
-    create (fun ~size ~random ->
-      let sizes = sizes_for_elements ?min_len ?max_len ~size random in
-      List.init (Array.length sizes) ~f:(fun i ->
-        generate elem_gen ~size:sizes.(i) ~random))
-
-  let list                 elem_gen = list_gen elem_gen
-  let list_non_empty       elem_gen = list_gen elem_gen ~min_len:1
-  let list_with_length len elem_gen = list_gen elem_gen ~min_len:len ~max_len:len
-
-  (* [fn] generates random functions that produce randomly assigned results for each
-     input, but which produce identical results for identical inputs.  Each random
-     function is assigned a fresh, independent PRNG state using [Splittable_random.split].
-     On each input, the PRNG state is copied so the original state is not modified and can
-     be reused.  The input is hashed using the given domain observer, and that hash is
-     used to seed the PRNG state using [Splittable_random.perturb] so that different
-     inputs yield different outputs.  The PRNG state is then used to generate a random
-     output. *)
-  let fn dom rng =
-    create (fun ~size ~random ->
-      let random = Splittable_random.State.split random in
-      (fun x ->
-         let hash = Observer.observe dom x ~size ~hash:(Hash.alloc ()) in
-         let random = Splittable_random.State.copy random in
-         Splittable_random.State.perturb random (Hash.get_hash_value hash);
-         generate rng ~size ~random))
+  let list_with_length length t = list_with_length t ~length
 
   let fn2 dom1 dom2 rng =
     fn (Observer.tuple2 dom1 dom2) rng
@@ -634,7 +302,7 @@ module Generator = struct
     (fun x1 x2 x3 x4 x5 x6 -> f (x1, x2, x3, x4, x5, x6))
 
   let compare_fn dom =
-    fn dom For_int.gen
+    fn dom int
     >>| fun get_index ->
     (fun x y -> [%compare: int] (get_index x) (get_index y))
 
@@ -642,61 +310,12 @@ module Generator = struct
     compare_fn dom
     >>| fun cmp ->
     (fun x y -> Pervasives.( = ) (cmp x y) 0)
-
-  let char_range lo hi =
-    create (fun ~size:_ ~random ->
-      Splittable_random.int random ~lo:(Char.to_int lo) ~hi:(Char.to_int hi)
-      |> Char.unsafe_of_int)
-
-  let char_uppercase     = char_range 'A' 'Z'
-  let char_lowercase     = char_range 'a' 'z'
-  let char_digit         = char_range '0' '9'
-  let char_print_uniform = char_range ' ' '~'
-
-  let char_uniform = char_range Char.min_value Char.max_value
-
-  let char_alpha    = union [ char_lowercase ; char_uppercase ]
-  let char_alphanum =
-    weighted_union
-      (* Most people probably expect this to be a uniform distribution, not weighted
-         toward digits like we would get with [union] (since there are fewer digits than
-         letters). *)
-      [ 52., char_alpha
-      ; 10., char_digit
-      ]
-
-  let char_whitespace = of_list (List.filter Char.all ~f:Char.is_whitespace)
-
-  let char_print =
-    weighted_union
-      [ 10., char_alphanum
-      ;  1., char_print_uniform
-      ]
-
-  let char =
-    weighted_union
-      [ 10., char_print
-      ;  1., char_uniform
-      ]
 end
 
 module Shrinker = struct
+  include Shrinker
 
-  type 'a t = ('a -> 'a Sequence.t) Staged.t
-
-  let shrink t = Staged.unstage t
-
-  let create t = Staged.stage t
-
-  let empty () = create (fun _ -> Sequence.empty)
-
-  let bool = empty ()
-  let char = empty ()
-
-  let map t ~f ~f_inverse =
-    create (fun b ->
-      shrink t (f_inverse b)
-      |> Sequence.map ~f)
+  let empty () = atomic
 
   let tuple2 t1 t2 =
     let shrinker (v1, v2) =
@@ -798,45 +417,7 @@ module Shrinker = struct
     in
     create shrinker
 
-  let fixed_point f =
-    let rec shrinker v =
-      Sequence.of_lazy (lazy (shrink (f (create shrinker)) v))
-    in
-    create shrinker
-
   let recursive = fixed_point
-
-  module Make_int_shrinker (M : Pre_int) : sig
-    val shrinker  : M.t t
-  end = struct
-    (* Having smaller numbers generally doesn't make a bug easier to
-       understand, it is usually much more useful to let other shrinkers have
-       more attempts to reduce the size of the datastructure. *)
-    let shrinker = empty ()
-  end
-
-  module For_int = Make_int_shrinker (Pre_int)
-
-end
-
-module Make_int (M : Pre_int)
-  : S_int
-    with type    t   :=    M.t
-    with type 'a gen := 'a gen
-    with type 'a obs := 'a obs
-    with type 'a shr := 'a Shrinker.t
-= struct
-
-  include Shrinker.Make_int_shrinker   (M)
-  include Generator.Make_int_generator (M)
-  include Observer.Make_int_observer   (M)
-
-end
-
-module For_int = struct
-  include Shrinker.For_int
-  include Generator.For_int
-  include Observer.For_int
 end
 
 module Let_syntax = struct
@@ -852,8 +433,6 @@ module Configure (Config : Quickcheck_config) = struct
 
   include Config
 
-  type 'a shr = 'a Shrinker.t
-
   let nondeterministic_state = lazy (Random.State.make_self_init ())
 
   let random_state_of_seed seed =
@@ -861,153 +440,62 @@ module Configure (Config : Quickcheck_config) = struct
     | `Nondeterministic  -> Splittable_random.State.create (force nondeterministic_state)
     | `Deterministic str -> Splittable_random.State.of_int ([%hash: string] str)
 
-  let ensure_infinite sequence ~if_finite_then_raise_s =
-    Sequence.unfold_with_and_finish sequence
-      (* These two arguments correspond to the ordinary [~init] and [~f] like in
-         [Sequence.unfold_step], and we just return values from [sequence] as usual. *)
-      ~init:()
-      ~running_step:(fun () x -> Yield (x, ()))
-      (* These two arguments correspond to a follow-up [~init] and [~f] once [sequence]
-         terminates. We raise instead of calculating the new state, and treat the new
-         state as having an impossible type equivalent to [Nothing.t], although we cannot
-         use [Nothing] directly due to cyclic dependencies. *)
-      ~inner_finished:(fun () -> raise_s (force if_finite_then_raise_s))
-      ~finishing_step:(function (_ : (unit, int) Type_equal.t) -> .)
+  let make_seed seed : Test.Config.Seed.t =
+    match seed with
+    | `Nondeterministic     -> Nondeterministic
+    | `Deterministic string -> Deterministic string
 
-  let random_sequence ?(seed = default_seed) ?(sizes = default_sizes) gen =
-    let random = random_state_of_seed seed in
-    let sizes =
-      ensure_infinite sizes
-        ~if_finite_then_raise_s:
-          (lazy [%message "Quickcheck: [~sizes] argument ran out of values"])
-    in
-    Sequence.map sizes ~f:(fun size ->
-      Generator.generate gen ~size ~random)
+  let make_shrink_count = function
+    | `Exhaustive -> Int.max_value
+    | `Limit n -> n
 
-  let iter_or_error ?seed ?sizes ?(trials = default_trial_count) gen ~f =
-    let seq = Sequence.take (random_sequence ?seed ?sizes gen) trials in
-    Sequence.fold_result seq ~init:() ~f:(fun () value -> f value)
+  let make_config ~seed ~sizes ~trials ~shrink_attempts : Test.Config.t =
+    {
+      seed = make_seed (Option.value seed ~default:default_seed);
+      sizes = Option.value sizes ~default:default_sizes;
+      test_count = Option.value trials ~default:default_trial_count;
+      shrink_count =
+        make_shrink_count
+          (Option.value shrink_attempts ~default:default_shrink_attempts);
+    }
 
-  let iter ?seed ?sizes ?trials gen ~f =
-    iter_or_error ?seed ?sizes ?trials gen ~f:(fun elt -> Ok (f elt))
-    |> Or_error.ok_exn
+  let make_test_m (type a) ~gen ~shrinker ~sexp_of : (module Test.S with type t = a) =
+    (module struct
+      type t = a
+      let quickcheck_generator = gen
+      let quickcheck_shrinker = Option.value shrinker ~default:Shrinker.atomic
+      let sexp_of_t = Option.value sexp_of ~default:[%sexp_of: _]
+    end)
 
   let random_value ?(seed = default_seed) ?(size = 30) gen =
     let random = random_state_of_seed seed in
     Generator.generate gen ~size ~random
 
-  let shrink_iter
-        ?sexp_of
-        ~value
-        ~error
-        ~shrinker
-        ?(shrink_attempts = default_shrink_attempts)
-        ~f =
-    let within_bounds attempts=
-      match shrink_attempts with
-      | `Exhaustive -> true
-      | `Limit n    -> attempts < n
+  let random_sequence ?seed ?sizes gen =
+    let config =
+      make_config ~seed ~sizes ~trials:(Some Int.max_value) ~shrink_attempts:None
     in
-    let rec shrink_loop seq attempts result =
-      if within_bounds attempts then
-        match Sequence.next seq with
-        | None                     -> result
-        | Some (shr_value, seq_tl) ->
-          match f shr_value with
-          | Ok ()           -> shrink_loop seq_tl (attempts+1) result
-          | Error shr_error ->
-            let seq = Shrinker.shrink shrinker shr_value in
-            shrink_loop seq (attempts+1) (Some (shr_value, shr_error))
-      else
-        result
-    in
-    match shrink_loop (Shrinker.shrink shrinker value) 0 None with
-    | Some (shr_value, shr_error) ->
-      let sexp_of_value =
-        match sexp_of with
-        | Some f -> f
-        | None   -> [%sexp_of: _]
-      in
-      Error.create_s [%message
-        "shrunk random input"
-          ~shrunk_value:   (shr_value : value)
-          ~shrunk_error:   (shr_error : Error.t)
-          ~original_value: (value     : value)
-          ~original_error: (error     : Error.t)]
-    | None ->
-      match sexp_of with
-      | None               -> error
-      | Some sexp_of_value ->
-        Error.create_s [%message
-          "random input"
-            ~value: (value : value)
-            ~error: (error : Error.t)]
+    let return = ref Sequence.empty in
+    Test.with_sample_exn ~config gen ~f:(fun sequence ->
+      return := sequence);
+    !return
+
+  let iter ?seed ?sizes ?trials gen ~f =
+    let config = make_config ~seed ~sizes ~trials ~shrink_attempts:None in
+    Test.with_sample_exn ~config gen ~f:(fun sequence ->
+      Sequence.iter sequence ~f)
+
+  let test ?seed ?sizes ?trials ?shrinker ?shrink_attempts ?sexp_of ?examples gen ~f =
+    let config = make_config ~seed ~sizes ~trials ~shrink_attempts in
+    let test_m = make_test_m ~gen ~shrinker ~sexp_of in
+    Test.run_exn ~config ?examples ~f test_m
 
   let test_or_error
-        ?seed
-        ?sizes
-        ?trials
-        ?shrinker
-        ?shrink_attempts
-        ?sexp_of
-        ?(examples = [])
-        gen
-        ~f
+        ?seed ?sizes ?trials ?shrinker ?shrink_attempts ?sexp_of ?examples gen ~f
     =
-    let f =
-      match shrinker with
-      | Some shrinker ->
-        (fun x ->
-           match f x with
-           | Ok ()       -> Ok ()
-           | Error error ->
-             Error (shrink_iter ~value:x ~error ?sexp_of ~shrinker ?shrink_attempts ~f))
-      | None ->
-        match sexp_of with
-        | Some sexp_of_value ->
-          (fun value ->
-             match f value with
-             | Ok ()       -> Ok ()
-             | Error error ->
-               Or_error.error_s [%message
-                 "random input"
-                   ~value: (value : value)
-                   ~error: (error : Error.t)])
-        | None -> f
-    in
-    let open Or_error.Monad_infix in
-    List.fold_result examples ~init:() ~f:(fun () x -> f x)
-    >>= fun () ->
-    iter_or_error ?seed ?sizes ?trials gen ~f
-
-  let test
-        ?seed
-        ?sizes
-        ?trials
-        ?shrinker
-        ?shrink_attempts
-        ?sexp_of
-        ?examples
-        gen
-        ~f
-    =
-    test_or_error
-      ?seed
-      ?sizes
-      ?trials
-      ?shrinker
-      ?shrink_attempts
-      ?sexp_of
-      ?examples
-      gen
-      (* Why do we use [Or_error.try_with ~backtrace:true] here but not in [iter]? The
-         semantics we're mapping between are different. [iter] doesn't catch errors by
-         design, so it's okay to just bubble them up. [test] has _lots_ of logic about
-         what it does when it gets an error (it stops, it annotates with random value if
-         it has [sexp_of], it finds a minimal example if it has [shrinker]), so we have to
-         map errors into something that [test_or_error] will handle properly *)
-      ~f:(fun elt -> Or_error.try_with ~backtrace:true (fun () -> f elt))
-    |> Or_error.ok_exn
+    let config = make_config ~seed ~sizes ~trials ~shrink_attempts in
+    let test_m = make_test_m ~gen ~shrinker ~sexp_of in
+    Test.run ~config ?examples ~f test_m
 
   let test_distinct_values
         (type key)
@@ -1073,7 +561,6 @@ module Configure (Config : Quickcheck_config) = struct
           [%message
             "cannot generate"
               ~attempts:(!r : value list)]
-
 end
 
 include Configure (struct
@@ -1088,31 +575,13 @@ include Configure (struct
       Sequence.cycle_list_exn (List.range 0 30 ~stop:`inclusive)
   end)
 
-module type S = S
-  with type 'a gen := 'a Generator.t
-  with type 'a obs := 'a Observer.t
-  with type 'a shr := 'a Shrinker.t
-
-module type S1 = S1
-  with type 'a gen := 'a Generator.t
-  with type 'a obs := 'a Observer.t
-  with type 'a shr := 'a Shrinker.t
-
-module type S2 = S2
-  with type 'a gen := 'a Generator.t
-  with type 'a obs := 'a Observer.t
-  with type 'a shr := 'a Shrinker.t
-
+module type S     = S
+module type S1    = S1
+module type S2    = S2
 module type S_int = S_int
-  with type 'a gen := 'a Generator.t
-  with type 'a obs := 'a Observer.t
-  with type 'a shr := 'a Shrinker.t
 
 type nonrec seed            = seed
 type nonrec shrink_attempts = shrink_attempts
 
-module type Quickcheck_config = Quickcheck_config
-
+module type Quickcheck_config     = Quickcheck_config
 module type Quickcheck_configured = Quickcheck_configured
-  with type 'a gen := 'a gen
-   and type 'a shr := 'a shr

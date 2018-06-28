@@ -101,50 +101,6 @@ let of_sexp_allow_extra_fields of_sexp sexp =
   Exn.protect ~finally:(fun () -> r := prev)
     ~f:(fun () -> r := false; of_sexp sexp)
 
-module For_quickcheck = struct
-
-  module Generator = Quickcheck.Generator
-  module Observer  = Quickcheck.Observer
-  module Shrinker  = Quickcheck.Shrinker
-
-  open Generator.Let_syntax
-
-  let gen =
-    Generator.fixed_point (fun self ->
-      let%bind size = Generator.size in
-      (* choose a number weighted low so we have a decreasing, but not vanishing, chance
-         to generate atoms as size grows *)
-      match%bind Int.gen_log_uniform_incl 0 (size + 1) with
-      (* generate a non-empty string based on the given size *)
-      | 0 -> let%map atom = String.gen    in Atom atom
-      (* relying on [List.gen] to distribute [size] over sub-sexps *)
-      | _ -> let%map list = List.gen self in List list)
-
-  let obs =
-    Observer.fixed_point (fun t_obs ->
-      Observer.unmap
-        (Observer.variant2
-           String.obs
-           (List.obs t_obs))
-        ~f:(function
-          | Sexp.Atom atom -> `A atom
-          | Sexp.List list -> `B list))
-
-  let shrinker =
-    let open Sequence.Monad_infix in
-    Shrinker.fixed_point (fun shrinker ->
-      Shrinker.create (function
-        | Sexp.Atom _    -> Sequence.empty
-        | Sexp.List list ->
-          let shrink_list =
-            Shrinker.shrink (List.shrinker shrinker) list
-            >>| fun l -> Sexp.List l
-          in
-          let shrink_tree = Sequence.of_list list in
-          Sequence.round_robin [ shrink_list; shrink_tree ]))
-
-end
-
-let gen      = For_quickcheck.gen
-let obs      = For_quickcheck.obs
-let shrinker = For_quickcheck.shrinker
+let gen = Base_quickcheck.Generator.sexp
+let obs = Base_quickcheck.Observer.sexp
+let shrinker = Base_quickcheck.Shrinker.sexp

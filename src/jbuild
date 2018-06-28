@@ -12,6 +12,7 @@
   (libraries
    (base
     base_for_tests
+    base_quickcheck
     base.caml
     stdio
     bin_prot

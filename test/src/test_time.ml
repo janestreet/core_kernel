@@ -740,8 +740,8 @@ let%test_module "Span.to_string/of_string" =
       [%expect {|
         (* require-failed: lib/core_kernel/test/src/test_time.ml:LINE:COL. *)
         (* require-failed: lib/core_kernel/test/src/test_time.ml:LINE:COL. *)
-        ("random input"
-          (value -2.1695734240829744e+44d3e+28d)
+        ("Base_quickcheck.Test.run: test failed"
+          (input -2.1695734240829744e+44d3e+28d)
           (error "printed 1 CRs for Quickcheck-generated input")) |}];
       test "h";
       [%expect {| |}];
@@ -760,8 +760,8 @@ let%test_module "Span.to_string/of_string" =
       [%expect {|
         (* require-failed: lib/core_kernel/test/src/test_time.ml:LINE:COL. *)
         (* require-failed: lib/core_kernel/test/src/test_time.ml:LINE:COL. *)
-        ("random input"
-          (value -3.70807784925899e-59ns4e-75ns)
+        ("Base_quickcheck.Test.run: test failed"
+          (input -3.70807784925899e-59ns4e-75ns)
           (error "printed 1 CRs for Quickcheck-generated input")) |}];
     ;;
   end)

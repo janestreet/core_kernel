@@ -36,8 +36,11 @@ include (Base.Int
              with type t := t
              with module Hex := Base.Int.Hex))
 
-include Quickcheck.Make_int (struct
-    include Base.Int
-    let splittable_random = Splittable_random.int
-    let splittable_random_log_uniform = Splittable_random.Log_uniform.int
-  end)
+let gen      = Base_quickcheck.Generator.int
+let obs      = Base_quickcheck.Observer.int
+let shrinker = Base_quickcheck.Shrinker.int
+
+let gen_incl = Base_quickcheck.Generator.int_inclusive
+let gen_uniform_incl = Base_quickcheck.Generator.int_uniform_inclusive
+let gen_log_incl = Base_quickcheck.Generator.int_log_inclusive
+let gen_log_uniform_incl = Base_quickcheck.Generator.int_log_uniform_inclusive

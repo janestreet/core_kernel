@@ -148,3 +148,41 @@ let%test_unit _ =
       assert (i >= 0);
       [%test_result: int] ~expect (Private.sign_extend_16 i)
     )
+
+let%test_module "memcmp" =
+  (module struct
+    let empty = Bigstring.create 0
+    let b1    = Bigstring.of_string "abcd"
+    let b2    = Bigstring.of_string "jkcd"
+
+    let%test_unit "out of bounds raises" =
+      assert
+        (try ignore (Bigstring.memcmp empty ~pos1:1 b1 ~pos2:1 ~len:0); false with _ -> true);
+      assert
+        (try ignore (Bigstring.memcmp empty ~pos1:1 b1 ~pos2:1 ~len:1); false with _ -> true);
+      assert
+        (try ignore (Bigstring.memcmp b1    ~pos1:0 b1 ~pos2:0 ~len:5); false with _ -> true);
+      assert
+        (try ignore (Bigstring.memcmp b1    ~pos1:0 b1 ~pos2:5 ~len:0); false with _ -> true);
+      assert
+        (try ignore (Bigstring.memcmp b1    ~pos1:0 b1 ~pos2:4 ~len:2); false with _ -> true);
+    ;;
+
+    let%test_unit "identical buffers are equal" =
+      assert (Bigstring.memcmp empty ~pos1:0 empty ~pos2:0 ~len:0 = 0);
+      assert (Bigstring.memcmp b1    ~pos1:0 b1    ~pos2:0 ~len:(Bigstring.length b1) = 0)
+    ;;
+
+    let%test_unit "prefix of identical buffers are equal" =
+      assert (Bigstring.memcmp b1    ~pos1:0 b1    ~pos2:0 ~len:(Bigstring.length b1 - 1) = 0)
+    ;;
+
+    let%test_unit "suffix of identical buffers are equal" =
+      assert (Bigstring.memcmp b1    ~pos1:1 b1    ~pos2:1 ~len:(Bigstring.length b1 - 1) = 0)
+    ;;
+
+    let%test_unit "memcmp agrees with compare" =
+      assert (Bigstring.memcmp b1 ~pos1:0 b2 ~pos2:0 ~len:(Bigstring.length b1) = Bigstring.compare b1 b2);
+      assert (Bigstring.memcmp b2 ~pos1:0 b1 ~pos2:0 ~len:(Bigstring.length b1) = Bigstring.compare b2 b1);
+    ;;
+  end)

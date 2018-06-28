@@ -12,57 +12,28 @@ module type Elt_binable = Elt_binable
 
 let to_comparator (type k cmp) ((module M) : (k, cmp) Set.comparator) = M.comparator
 
+let of_comparator (type k cmp) comparator : (k, cmp) Set.comparator =
+  (module struct
+    type t = k
+    type comparator_witness = cmp
+    let comparator = comparator
+  end)
+
 module For_quickcheck = struct
-
-  module Generator = Quickcheck.Generator
-  module Observer  = Quickcheck.Observer
-  module Shrinker = Quickcheck.Shrinker
-  module Set = Set.Using_comparator
-
-  open Generator.Monad_infix
-
-  let gen_list elt_gen =
-    List.gen elt_gen
-
   let gen ~comparator elt_gen =
-    gen_list elt_gen
-    >>| Set.of_list ~comparator
+    Base_quickcheck.Generator.set_t_m (of_comparator comparator) elt_gen
 
   let gen_tree ~comparator elt_gen =
-    gen_list elt_gen
-    >>| Tree.of_list ~comparator
+    Base_quickcheck.Generator.set_tree_using_comparator ~comparator elt_gen
 
-  let obs elt_obs =
-    Observer.unmap (List.obs elt_obs)
-      ~f:Set.to_list
+  let obs elt_obs = Base_quickcheck.Observer.set_t elt_obs
 
-  let obs_tree elt_obs =
-    Observer.unmap (List.obs elt_obs)
-      ~f:Tree.to_list
+  let obs_tree elt_obs = Base_quickcheck.Observer.set_tree elt_obs
 
-  let shrink elt_shr t =
-    let list = Set.to_list t in
-    let drop_elts =
-      Sequence.map (Sequence.of_list list) ~f:(fun elt ->
-        Set.remove t elt)
-    in
-    let shrink_elts =
-      Sequence.round_robin (List.map list ~f:(fun elt ->
-        Sequence.map (Shrinker.shrink elt_shr elt) ~f:(fun elt' ->
-          Set.add (Set.remove t elt) elt')))
-    in
-    Sequence.round_robin [ drop_elts ; shrink_elts ]
-
-  let shrinker elt_shr =
-    Shrinker.create (fun t ->
-      shrink elt_shr t)
+  let shrinker elt_shr = Base_quickcheck.Shrinker.set_t elt_shr
 
   let shr_tree ~comparator elt_shr =
-    Shrinker.create (fun tree ->
-      Set.of_tree ~comparator tree
-      |> shrink elt_shr
-      |> Sequence.map ~f:Set.to_tree)
-
+    Base_quickcheck.Shrinker.set_tree_using_comparator ~comparator elt_shr
 end
 
 let gen m elt_gen = For_quickcheck.gen ~comparator:(to_comparator m) elt_gen

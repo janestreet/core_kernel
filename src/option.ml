@@ -9,38 +9,6 @@ include Comparator.Derived(struct
     type nonrec 'a t = 'a t [@@deriving sexp_of, compare]
   end)
 
-module For_quickcheck = struct
-
-  module Generator = Quickcheck.Generator
-  module Observer  = Quickcheck.Observer
-  module Shrinker  = Quickcheck.Shrinker
-
-  open Generator.Monad_infix
-
-  let gen elt_gen =
-    Generator.union
-      [ Generator.singleton None
-      ; elt_gen >>| return
-      ]
-
-  let obs elt_obs =
-    Observer.unmap (Observer.variant2 (Observer.singleton ()) elt_obs)
-      ~f:(function
-        | None   -> `A ()
-        | Some x -> `B x)
-
-  let shrinker elt_shr =
-    let shrinker = function
-      | Some elt ->
-        Sequence.append
-          (Sequence.singleton None)
-          (Sequence.map (Shrinker.shrink elt_shr elt) ~f:(fun v -> Some v))
-      | None ->
-        Sequence.empty
-    in
-    Shrinker.create shrinker
-end
-
-let gen      = For_quickcheck.gen
-let obs      = For_quickcheck.obs
-let shrinker = For_quickcheck.shrinker
+let gen = Base_quickcheck.Generator.option
+let obs = Base_quickcheck.Observer.option
+let shrinker = Base_quickcheck.Shrinker.option

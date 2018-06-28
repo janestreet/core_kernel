@@ -145,6 +145,15 @@ module From_string : Blit.S_distinct with type src := string with type dst := t
 module To_bytes   : Blit.S_distinct with type src := t     with type dst := bytes
 module From_bytes : Blit.S_distinct with type src := bytes with type dst := t
 
+
+(** Memcmp *)
+
+(** [memcmp t1 ~pos1 t2 ~pos2 ~len] is like [compare t1 t2] except performs the comparison
+    on the subregions of [t1] and [t2] defined by [pos1], [pos2], and [len] *)
+val memcmp : t -> pos1:int -> t -> pos2:int -> len:int -> int
+
+
+
 (** {2 Reading/writing bin-prot} *)
 
 (** These functions write the "size-prefixed" bin-prot format that is used by, e.g.,

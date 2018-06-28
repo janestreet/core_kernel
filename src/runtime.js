@@ -8,19 +8,25 @@ var core_array_unsafe_int_blit = caml_array_blit
 var core_array_unsafe_float_blit = caml_array_blit
 
 //Provides: bigstring_realloc
-//Requires: caml_invalid_argument
-//Requires: caml_ba_create_from
-//Requires: caml_ba_views
+//Requires: caml_invalid_argument, caml_ba_create_from, bigstring_destroy_stub
 function bigstring_realloc(bigstring, size) {
-    if (bigstring.data2 != null) caml_invalid_argument("Bigstring.unsafe_destroy_and_resize: unsupported kind");
-    var data = new bigstring.data.__proto__.constructor(size);
-    data.set(bigstring.data.slice(0, size));
+    if (bigstring.data2 != null) {
+        caml_invalid_argument("Bigstring.unsafe_destroy_and_resize: unsupported kind");
+    }
 
-    // Mutating bigstring is futile; all its methods close over function-scoped
-    // variables. Shrug, we'll just have different semantics in JS. This version
-    // does not invalidate its input by setting the pointer to null.
+    if (bigstring.hasOwnProperty('__is_deallocated')) {
+        caml_invalid_argument("bigstring_realloc: bigstring is already deallocated");
+    }
 
-    return caml_ba_create_from(data, null, bigstring.data_type, bigstring.kind, bigstring.layout, [size])
+    var new_data = new bigstring.data.__proto__.constructor(size);
+    new_data.set(bigstring.data.slice(0, size));
+    var new_bigstring =
+        caml_ba_create_from(new_data, null, bigstring.data_type, bigstring.kind,
+                            bigstring.layout, [size]);
+
+    bigstring_destroy_stub(bigstring);
+
+    return new_bigstring;
 }
 
 //Provides: core_kernel_time_ns_gettime_or_zero

@@ -10,75 +10,30 @@ type ('k, 'cmp) comparator =
 
 let to_comparator (type k cmp) ((module M) : (k, cmp) Map.comparator) = M.comparator
 
+let of_comparator (type k cmp) comparator : (k, cmp) Map.comparator =
+  (module struct
+    type t = k
+    type comparator_witness = cmp
+    let comparator = comparator
+  end)
+
 module For_quickcheck = struct
-
-  module Generator = Quickcheck.Generator
-  module Observer  = Quickcheck.Observer
-  module Shrinker  = Quickcheck.Shrinker
-  module Map = Map.Using_comparator
-
-  open Generator.Monad_infix
-
-  let gen_alist k_gen v_gen ~comparator =
-    List.gen k_gen
-    >>= fun ks ->
-    let ks = List.dedup_and_sort ks ~compare:comparator.Comparator.compare in
-    List.gen_with_length (List.length ks) v_gen
-    >>| fun vs ->
-    List.zip_exn ks vs
-
   let gen_tree ~comparator k_gen v_gen =
-    gen_alist k_gen v_gen ~comparator
-    >>| Tree.of_alist_exn ~comparator
+    Base_quickcheck.Generator.map_tree_using_comparator ~comparator k_gen v_gen
 
   let gen ~comparator k_gen v_gen =
-    gen_alist k_gen v_gen ~comparator
-    >>| Map.of_alist_exn ~comparator
-
-  let obs_alist k_obs v_obs =
-    List.obs (Observer.tuple2 k_obs v_obs)
+    Base_quickcheck.Generator.map_t_m (of_comparator comparator) k_gen v_gen
 
   let obs_tree k_obs v_obs =
-    Observer.unmap (obs_alist k_obs v_obs)
-      ~f:Tree.to_alist
-
-  let obs k_obs v_obs =
-    Observer.unmap (obs_alist k_obs v_obs)
-      ~f:Map.to_alist
-
-  let shrink k_shr v_shr t =
-    let list = Map.to_alist t in
-    let drop_keys =
-      Sequence.map (Sequence.of_list list) ~f:(fun (k, _) ->
-        Map.remove t k)
-    in
-    let shrink_keys =
-      Sequence.round_robin (List.map list ~f:(fun (k, v) ->
-        Sequence.map (Shrinker.shrink k_shr k) ~f:(fun k' ->
-          Map.set (Map.remove t k) ~key:k' ~data:v)))
-    in
-    let shrink_values =
-      Sequence.round_robin (List.map list ~f:(fun (k, v) ->
-        Sequence.map (Shrinker.shrink v_shr v) ~f:(fun v' ->
-          Map.set t ~key:k ~data:v')))
-    in
-    Sequence.round_robin [ drop_keys; shrink_keys; shrink_values ]
+    Base_quickcheck.Observer.map_tree k_obs v_obs
 
   let shr_tree ~comparator k_shr v_shr =
-    Shrinker.create (fun tree ->
-      Map.of_tree ~comparator tree
-      |> shrink k_shr v_shr
-      |> Sequence.map ~f:Map.to_tree)
-
-  let shrinker k_shr v_shr =
-    Shrinker.create (fun t ->
-      shrink k_shr v_shr t)
-
+    Base_quickcheck.Shrinker.map_tree_using_comparator ~comparator k_shr v_shr
 end
 
-let gen m = For_quickcheck.gen ~comparator:(to_comparator m)
-let obs = For_quickcheck.obs
-let shrinker = For_quickcheck.shrinker
+let gen = Base_quickcheck.Generator.map_t_m
+let obs = Base_quickcheck.Observer.map_t
+let shrinker = Base_quickcheck.Shrinker.map_t
 
 module Accessors = struct
   include (Map.Using_comparator : Map.Accessors3

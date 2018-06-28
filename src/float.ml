@@ -95,193 +95,21 @@ let sign = robust_sign
    be a valid OCaml float lexem, not to look like an int. *)
 let to_string_12 x = valid_float_lexem (format_float "%.12g" x);;
 
-module For_quickcheck = struct
+let gen = Base_quickcheck.Generator.float
+let obs = Base_quickcheck.Observer.float
+let shrinker = Base_quickcheck.Shrinker.float
 
-  module Generator = Quickcheck.Generator
-  module Observer  = Quickcheck.Observer
-  module Shrinker  = Quickcheck.Shrinker
+let gen_uniform_excl = Base_quickcheck.Generator.float_uniform_exclusive
+let gen_incl = Base_quickcheck.Generator.float_inclusive
+let gen_without_nan = Base_quickcheck.Generator.float_without_nan
+let gen_finite = Base_quickcheck.Generator.float_finite
+let gen_positive = Base_quickcheck.Generator.float_strictly_positive
+let gen_negative = Base_quickcheck.Generator.float_strictly_negative
 
-  open Generator.Let_syntax
-
-  let zero_exponent = ieee_exponent zero
-  let zero_mantissa = ieee_mantissa zero
-
-  let max_positive_subnormal_value = one_ulp `Down min_positive_normal_value
-
-  let subnormal_exponent = ieee_exponent min_positive_subnormal_value
-
-  let min_subnormal_mantissa = ieee_mantissa min_positive_subnormal_value
-  let max_subnormal_mantissa = ieee_mantissa max_positive_subnormal_value
-
-  let max_positive_normal_value = max_finite_value
-
-  let min_normal_exponent = ieee_exponent min_positive_normal_value
-  let max_normal_exponent = ieee_exponent max_positive_normal_value
-
-  let _min_normal_mantissa = ieee_mantissa min_positive_normal_value
-  let max_normal_mantissa = ieee_mantissa max_positive_normal_value
-
-  let inf_exponent = ieee_exponent infinity
-  let inf_mantissa = ieee_mantissa infinity
-
-  let nan_exponent = ieee_exponent nan
-
-  let min_nan_mantissa = Int63.succ inf_mantissa
-  let max_nan_mantissa = max_normal_mantissa
-
-  let num_mantissa_bits = 52
-
-  (* We weight mantissas so that "integer-like" values, and values with only a few digits
-     past the decimal, are reasonably common. *)
-  let gen_normal_mantissa =
-    let%bind num_bits = Int.gen_uniform_incl 0 num_mantissa_bits in
-    let%map  bits =
-      Int63.gen_incl
-        Int63.zero
-        (Int63.pred (Int63.shift_left Int63.one num_bits))
-    in
-    Int63.shift_left bits (Int.( - ) num_mantissa_bits num_bits)
-
-  let gen_exponent_weighted_low lower_bound upper_bound =
-    let%map offset = Int.gen_log_incl 0 (Int.( - ) upper_bound lower_bound) in
-    Int.( + ) lower_bound offset
-
-  let gen_exponent_weighted_high lower_bound upper_bound =
-    let%map offset = Int.gen_log_incl 0 (Int.( - ) upper_bound lower_bound) in
-    Int.( - ) upper_bound offset
-
-  (* We weight exponents such that values near 1 are more likely. *)
-  let gen_exponent =
-    let midpoint = ieee_exponent 1. in
-    Generator.weighted_union
-      [ 0.5, gen_exponent_weighted_high min_normal_exponent midpoint
-      ; 0.5, gen_exponent_weighted_low  midpoint max_normal_exponent
-      ]
-
-  let gen_zero =
-    let%map negative = Bool.gen
-    in
-    create_ieee_exn ~negative ~exponent:zero_exponent ~mantissa:zero_mantissa
-
-  let gen_subnormal =
-    let%map negative = Bool.gen
-    and     exponent = return subnormal_exponent
-    and     mantissa = Int63.gen_log_incl min_subnormal_mantissa max_subnormal_mantissa
-    in
-    create_ieee_exn ~negative ~exponent ~mantissa
-
-  let gen_normal =
-    let%map negative = Bool.gen
-    and     exponent = gen_exponent
-    and     mantissa = gen_normal_mantissa
-    in
-    create_ieee_exn ~negative ~exponent ~mantissa
-
-  let gen_infinite =
-    let%map negative = Bool.gen
-    in
-    create_ieee_exn ~negative ~exponent:inf_exponent ~mantissa:inf_mantissa
-
-  let gen_nan =
-    let%map negative = Bool.gen
-    and     exponent = return nan_exponent
-    and     mantissa = Int63.gen_incl min_nan_mantissa max_nan_mantissa
-    in
-    create_ieee_exn ~negative ~exponent ~mantissa
-
-  let gen_by_class c =
-    match (c : Class.t) with
-    | Zero      -> gen_zero
-    | Subnormal -> gen_subnormal
-    | Normal    -> gen_normal
-    | Infinite  -> gen_infinite
-    | Nan       -> gen_nan
-
-  let weight_of_class c =
-    match (c : Class.t) with
-    | Zero      ->   1.
-    | Subnormal ->  10.
-    | Normal    -> 100.
-    | Infinite  ->   1.
-    | Nan       ->   1.
-
-  let gen_matching_classes filter =
-    List.filter_map Class.all ~f:(fun c ->
-      if filter c
-      then Some (weight_of_class c, gen_by_class c)
-      else None)
-    |> Generator.weighted_union
-
-  let gen_finite =
-    gen_matching_classes (function
-      | Zero | Subnormal | Normal -> true
-      | Infinite | Nan            -> false)
-
-  let gen_without_nan =
-    gen_matching_classes (function
-      | Zero | Subnormal | Normal | Infinite -> true
-      | Nan                                  -> false)
-
-  let gen = gen_matching_classes (fun _ -> true)
-
-  let gen_finite_non_zero =
-    gen_matching_classes (function
-      | Subnormal | Normal    -> true
-      | Zero | Infinite | Nan -> false)
-
-  let gen_positive =
-    let%map t = gen_finite_non_zero in
-    abs t
-
-  let gen_negative =
-    let%map t = gen_finite_non_zero in
-    ~-. (abs t)
-
-  let gen_uniform_excl lower_bound upper_bound =
-    if not (is_finite lower_bound) || not (is_finite upper_bound) then begin
-      raise_s [%message
-        "Float.gen_uniform_excl: bounds are not finite"
-          (lower_bound : t)
-          (upper_bound : t)]
-    end;
-    let lower_incl = one_ulp `Up   lower_bound in
-    let upper_incl = one_ulp `Down upper_bound in
-    if lower_incl > upper_incl then begin
-      raise_s [%message
-        "Float.gen_uniform_excl: requested range is empty"
-          (lower_bound : t)
-          (upper_bound : t)]
-    end;
-    Generator.create (fun ~size:_ ~random ->
-      Splittable_random.float random ~lo:lower_incl ~hi:upper_incl)
-
-  let gen_incl lower_bound upper_bound =
-    Generator.weighted_union
-      [ 0.05, Generator.return lower_bound
-      ; 0.05, Generator.return upper_bound
-      ; 0.9,  gen_uniform_excl lower_bound upper_bound
-      ]
-
-  let obs = Observer.unmap Int64.obs ~f:Int64.bits_of_float
-
-  let shrinker = Shrinker.empty ()
-
-end
-
-let gen              = For_quickcheck.gen
-let gen_uniform_excl = For_quickcheck.gen_uniform_excl
-let gen_incl         = For_quickcheck.gen_incl
-let gen_without_nan  = For_quickcheck.gen_without_nan
-let gen_finite       = For_quickcheck.gen_finite
-let gen_positive     = For_quickcheck.gen_positive
-let gen_negative     = For_quickcheck.gen_negative
-let obs              = For_quickcheck.obs
-let shrinker         = For_quickcheck.shrinker
-
-let gen_infinite  = For_quickcheck.gen_infinite
-let gen_nan       = For_quickcheck.gen_nan
-let gen_normal    = For_quickcheck.gen_normal
-let gen_subnormal = For_quickcheck.gen_subnormal
-let gen_zero      = For_quickcheck.gen_zero
+let gen_zero = Base_quickcheck.Generator.float_of_class Zero
+let gen_nan = Base_quickcheck.Generator.float_of_class Nan
+let gen_subnormal = Base_quickcheck.Generator.float_of_class Subnormal
+let gen_normal = Base_quickcheck.Generator.float_of_class Normal
+let gen_infinite = Base_quickcheck.Generator.float_of_class Infinite
 
 let to_string_round_trippable = to_string
