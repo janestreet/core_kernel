@@ -105,3 +105,8 @@ function generated_hg_version () {
     return caml_new_string("NO_VERSION_UTIL");
   }
 }
+
+//Provides: Core_kernel_heap_block_is_heap_block
+function Core_kernel_heap_block_is_heap_block(x){
+  return +(x instanceof Array);
+}

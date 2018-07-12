@@ -13,7 +13,6 @@ module Exn                       = Base.Exn
 module Floatable                 = Base.Floatable
 module Hash                      = Base.Hash
 module Hasher                    = Base.Hasher
-module Heap_block                = Base.Heap_block
 module Indexed_container         = Base.Indexed_container
 module Invariant                 = Base.Invariant
 module Intable                   = Base.Intable

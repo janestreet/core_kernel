@@ -38,7 +38,8 @@
     array_stubs
     gc_stubs
     time_ns_stubs
-    version_util_fallback_stubs))
+    version_util_fallback_stubs
+    heap_block_stubs))
   (preprocess (pps (ppx_jane -check-doc-comments ppxlib.runner)))
   (preprocessor_deps (config.h))
   (js_of_ocaml (
