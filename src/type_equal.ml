@@ -1,4 +1,4 @@
-include (Base.Type_equal : module type of Base.Type_equal
+include (Base.Type_equal : module type of struct include Base.Type_equal end
          with module Id := Base.Type_equal.Id)
 
 module Id = struct

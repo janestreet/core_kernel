@@ -147,7 +147,7 @@ let compare _ _ t1 t2 = compare_direct t1 t2
 module Using_comparator = struct
   include (Set.Using_comparator :
              module type of struct include Set.Using_comparator end
-           with module Tree := Tree)
+           with module Tree := Set.Using_comparator.Tree)
   include For_quickcheck
 
   let of_map_keys m = of_tree ~comparator:(Map.comparator m) (Tree.of_map_keys m)
@@ -478,7 +478,7 @@ module Make_using_comparator (Elt : sig
   module M1 = Make_plain_using_comparator(Elt)
   include (M1 : module type of M1
            with module Tree := M1.Tree
-           with module Elt := Elt)
+           with module Elt := M1.Elt)
   include Provide_of_sexp (Elt)
   module Tree = struct
     include M1.Tree
@@ -498,7 +498,7 @@ module Make_binable_using_comparator (Elt : sig
   end) = struct
   module Elt = Elt
   module M2 = Make_using_comparator (Elt)
-  include (M2 : module type of M2 with module Elt := Elt)
+  include (M2 : module type of M2 with module Elt := M2.Elt)
   include Provide_bin_io (Elt)
 end
 

@@ -20,7 +20,7 @@ end
 
 include (List : module type of struct include List end
          with type 'a t := 'a t
-         with module Assoc := Assoc)
+         with module Assoc := List.Assoc)
 
 let to_string ~f t =
   Sexplib.Sexp.to_string

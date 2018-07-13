@@ -15,7 +15,7 @@ end
 include (Base.Int32
          : (module type of struct include Base.Int32 end
              with type t := t
-             with module Hex := Hex))
+             with module Hex := Base.Int32.Hex))
 
 include Quickcheck.Make_int (struct
     include Base.Int32

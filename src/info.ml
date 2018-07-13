@@ -116,7 +116,7 @@ module Extend (Info : Base.Info.S) = struct
   type t = Stable.V2.t [@@deriving bin_io]
 
   include (Info : (module type of struct include Info end
-                    with module Internal_repr := Internal_repr
+                    with module Internal_repr := Info.Internal_repr
                     with type t := t))
 end
 
