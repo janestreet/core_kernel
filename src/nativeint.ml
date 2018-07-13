@@ -15,7 +15,7 @@ end
 include (Base.Nativeint
          : (module type of struct include Base.Nativeint end
              with type t := t
-             with module Hex := Hex))
+             with module Hex := Base.Nativeint.Hex))
 
 include Quickcheck.Make_int (struct
     include Base.Nativeint

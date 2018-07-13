@@ -19,7 +19,7 @@ module type S = sig
 end
 
 module type Info = sig
-  include module type of struct include Base.Info end (** @open *)
+  include module type of struct include Base.Info end [@ocaml.remove_aliases] (** @open *)
 
   include Extension with type t := t
 
