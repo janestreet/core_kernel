@@ -43,6 +43,20 @@ module type Span = sig
 
   val random : ?state:Random.State.t -> unit -> t
 
+  (** {!Time.t} is precise to approximately 0.24us in 2014.  If [to_span] converts to the
+      closest [Time.Span.t], we have stability problems: converting back yields a
+      different [t], sometimes different enough to have a different external
+      representation, because the conversion back and forth crosses a rounding boundary.
+
+      To stabilize conversion, we treat [Time.t] as having 1us precision: [to_span] and
+      [of_span] both round to the nearest 1us.
+
+      Around 135y magnitudes, [Time.Span.t] no longer has 1us resolution.  At that point,
+      [to_span] and [of_span] raise.
+  *)
+  val to_span : t -> Span_float.t
+  val of_span : Span_float.t -> t
+
   (** Note that we expose a sexp format that is not the one exposed in [Core]. *)
   module Alternate_sexp : sig
     type nonrec t = t [@@deriving sexp]
@@ -53,6 +67,7 @@ module type Span = sig
 
     https://opensource.janestreet.com/standards/#private-submodules *)
   module Private : sig
+    val check_range : t -> t
     val of_parts : Parts.t -> t
     val to_parts : t -> Parts.t
   end
@@ -156,6 +171,9 @@ module type Time_ns = sig
     -> t
 
   val random : ?state:Random.State.t -> unit -> t
+
+  val of_time : Time_float.t -> t
+  val to_time  : t -> Time_float.t
 
   module Utc : sig
     (** [to_date_and_span_since_start_of_day] computes the date and intraday-offset of a

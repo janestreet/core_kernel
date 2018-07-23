@@ -42,6 +42,21 @@ let of_int_ns_since_epoch =
   then fun i -> of_int63_ns_since_epoch (Int63.of_int i)
   else fun _ -> failwith "Time_ns.of_int_ns_since_epoch: unsupported on 32bit machines"
 
+let to_time t =
+  Time_float.add Time_float.epoch (Span.to_span (to_span_since_epoch t))
+;;
+
+let min_time_value = to_time min_value
+let max_time_value = to_time max_value
+
+let of_time time =
+  if Time_float.( < ) time min_time_value
+  || Time_float.( > ) time max_time_value
+  then failwiths "Time_ns does not support this time" time
+         [%sexp_of: Time_float.Stable.With_utc_sexp.V2.t];
+  of_span_since_epoch (Span.of_span (Time_float.diff time Time_float.epoch))
+;;
+
 let [@inline never] raise_next_multiple_got_nonpositive_interval interval =
   failwiths "Time_ns.next_multiple got nonpositive interval" interval
     [%sexp_of: Span.t]

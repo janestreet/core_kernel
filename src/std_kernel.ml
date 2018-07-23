@@ -92,6 +92,7 @@ module Set                  = Set
 module Sexp                 = Sexp
 module Sexpable             = Sexpable
 module Sign                 = Sign
+module Sign_or_nan          = Sign_or_nan
 module Source_code_position = Source_code_position
 module String               = String
 module Type_equal           = Type_equal

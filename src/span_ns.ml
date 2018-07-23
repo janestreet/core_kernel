@@ -1,4 +1,3 @@
-[%%import "config.h"]
 open! Import
 open  Std_internal
 open! Int63.O
@@ -664,23 +663,9 @@ let to_string_hum ?(delimiter='_') ?(decimals=3) ?(align_decimal=false) ?unit_of
   prefix ^ suffix
 ;;
 
-[%%ifdef JSC_ARCH_SIXTYFOUR]
-external since_unix_epoch_or_zero : unit -> t
-  = "core_kernel_time_ns_gettime_or_zero" [@@noalloc]
-[%%else]
-external since_unix_epoch_or_zero : unit -> t
-  = "core_kernel_time_ns_gettime_or_zero"
-[%%endif]
-
-[%%ifdef JSC_POSIX_TIMERS]
-let [@inline never] gettime_failed () = failwith "clock_gettime(CLOCK_REALTIME) failed"
-[%%else]
-let [@inline never] gettime_failed () = failwith "gettimeofday failed"
-[%%endif]
-
 let since_unix_epoch () =
-  let t = since_unix_epoch_or_zero () in
-  if t <> zero then t else gettime_failed ()
+  Time_now_helper.nanoseconds_since_epoch ()
+  |> of_int63_ns
 ;;
 
 let random ?state () =
@@ -715,8 +700,48 @@ include (C : module type of C
 (* re-include comparisons to shadow the un-inlineable ones from [Comparable] *)
 include Replace_polymorphic_compare
 
+let half_microsecond = Int63.of_int 500
+
+let nearest_microsecond t =
+  Int63.((to_int63_ns t + half_microsecond) /% of_int 1000)
+;;
+
+let [@inline never] invalid_range t =
+  raise_s [%message
+    "Span.t exceeds limits"
+      (t         : t)
+      (min_value : t)
+      (max_value : t)]
+;;
+
+let check_range t =
+  if t < min_value || t > max_value
+  then invalid_range t
+  else t
+;;
+
+let to_span t =
+  Span_float.of_us (Int63.to_float (nearest_microsecond (check_range t)))
+;;
+
+let min_span_float_value = to_span min_value
+let max_span_float_value = to_span max_value
+
+let of_span s =
+  if Span_float.( > ) s max_span_float_value
+  || Span_float.( < ) s min_span_float_value
+  then
+    failwiths "Time_ns.Span does not support this span" s [%sexp_of: Span_float.t];
+  (* Using [Time.Span.to_sec] (being the identity) so that
+     we make don't apply too many conversion
+     - Too many : `[Span.t] -> [a] -> [t]`
+     - Only One : `[Span.t]==[a] -> [t]`. *)
+  of_sec_with_microsecond_precision (Span_float.to_sec s)
+;;
+
 module Private = struct
   module Parts = Parts
+  let check_range = check_range
   let of_parts = of_parts
   let to_parts = to_parts
 end
