@@ -53,9 +53,9 @@ module type Accessors_generic = sig
        ('a, 'cmp) t -> f:('a elt -> 'b) -> ('a elt, 'b, 'cmp cmp) Map.t
       ) options
 
-  val obs : 'a elt Quickcheck.Observer.t -> ('a, 'cmp) t Quickcheck.Observer.t
+  val quickcheck_observer : 'a elt Quickcheck.Observer.t -> ('a, 'cmp) t Quickcheck.Observer.t
 
-  val shrinker
+  val quickcheck_shrinker
     : ('a, 'cmp,
        'a elt Quickcheck.Shrinker.t -> ('a, 'cmp) t Quickcheck.Shrinker.t
       ) options
@@ -64,22 +64,22 @@ end
 module type Accessors0 = sig
   include Set.Accessors0
   val to_map : t -> f:(elt -> 'data) -> (elt, 'data, comparator_witness) Map.t
-  val obs : elt Quickcheck.Observer.t -> t Quickcheck.Observer.t
-  val shrinker : elt Quickcheck.Shrinker.t -> t Quickcheck.Shrinker.t
+  val quickcheck_observer : elt Quickcheck.Observer.t -> t Quickcheck.Observer.t
+  val quickcheck_shrinker : elt Quickcheck.Shrinker.t -> t Quickcheck.Shrinker.t
 end
 
 module type Accessors1 = sig
   include Set.Accessors1
   val to_map         : 'a t -> f:('a -> 'b) -> ('a, 'b, comparator_witness) Map.t
-  val obs : 'a Quickcheck.Observer.t -> 'a t Quickcheck.Observer.t
-  val shrinker : 'a Quickcheck.Shrinker.t -> 'a t Quickcheck.Shrinker.t
+  val quickcheck_observer : 'a Quickcheck.Observer.t -> 'a t Quickcheck.Observer.t
+  val quickcheck_shrinker : 'a Quickcheck.Shrinker.t -> 'a t Quickcheck.Shrinker.t
 end
 
 module type Accessors2 = sig
   include Set.Accessors2
   val to_map         : ('a, 'cmp) t -> f:('a -> 'b) -> ('a, 'b, 'cmp) Map.t
-  val obs : 'a Quickcheck.Observer.t -> ('a, 'cmp) t Quickcheck.Observer.t
-  val shrinker : 'a Quickcheck.Shrinker.t -> ('a, 'cmp) t Quickcheck.Shrinker.t
+  val quickcheck_observer : 'a Quickcheck.Observer.t -> ('a, 'cmp) t Quickcheck.Observer.t
+  val quickcheck_shrinker : 'a Quickcheck.Shrinker.t -> ('a, 'cmp) t Quickcheck.Shrinker.t
 end
 
 module type Accessors2_with_comparator = sig
@@ -89,8 +89,8 @@ module type Accessors2_with_comparator = sig
     -> ('a, 'cmp) t
     -> f:('a -> 'b)
     -> ('a, 'b, 'cmp) Map.t
-  val obs : 'a Quickcheck.Observer.t -> ('a, 'cmp) t Quickcheck.Observer.t
-  val shrinker
+  val quickcheck_observer : 'a Quickcheck.Observer.t -> ('a, 'cmp) t Quickcheck.Observer.t
+  val quickcheck_shrinker
     :  comparator:('a, 'cmp) Comparator.t
     -> 'a Quickcheck.Shrinker.t
     -> ('a, 'cmp) t Quickcheck.Shrinker.t
@@ -156,7 +156,7 @@ module type Creators_generic = sig
   (** Never requires a comparator because it can get one from the input [Map.t]. *)
   val of_map_keys : ('a elt, _, 'cmp cmp) Map.t -> ('a, 'cmp) t
 
-  val gen
+  val quickcheck_generator
     : ('a, 'cmp,
        'a elt Quickcheck.Generator.t
        -> ('a, 'cmp) t Quickcheck.Generator.t
@@ -168,7 +168,7 @@ module type Creators0 = sig
   val of_hash_set               : elt Hash_set.t  -> t
   val of_hashtbl_keys           : (elt, _) Hashtbl.t -> t
   val of_map_keys               : (elt, _, comparator_witness) Map.t -> t
-  val gen                       : elt Quickcheck.Generator.t -> t Quickcheck.Generator.t
+  val quickcheck_generator      : elt Quickcheck.Generator.t -> t Quickcheck.Generator.t
 end
 
 module type Creators1 = sig
@@ -176,7 +176,7 @@ module type Creators1 = sig
   val of_hash_set               : 'a Hash_set.t  -> 'a t
   val of_hashtbl_keys           : ('a, _) Hashtbl.t -> 'a t
   val of_map_keys               : ('a, _, comparator_witness) Map.t -> 'a t
-  val gen                       : 'a Quickcheck.Generator.t -> 'a t Quickcheck.Generator.t
+  val quickcheck_generator      : 'a Quickcheck.Generator.t -> 'a t Quickcheck.Generator.t
 end
 
 module type Creators2 = sig
@@ -184,7 +184,7 @@ module type Creators2 = sig
   val of_hash_set               : 'a Hash_set.t  -> ('a, 'cmp) t
   val of_hashtbl_keys           : ('a, _) Hashtbl.t -> ('a, 'cmp) t
   val of_map_keys               : ('a, _, 'cmp) Map.t -> ('a, 'cmp) t
-  val gen
+  val quickcheck_generator
     :  'a Quickcheck.Generator.t
     -> ('a, 'cmp) t Quickcheck.Generator.t
 end
@@ -198,7 +198,7 @@ module type Creators2_with_comparator = sig
 
   val of_map_keys : ('a, _, 'cmp) Map.t -> ('a, 'cmp) t
 
-  val gen
+  val quickcheck_generator
     :  comparator:('a, 'cmp) Comparator.t
     -> 'a Quickcheck.Generator.t
     -> ('a, 'cmp) t Quickcheck.Generator.t

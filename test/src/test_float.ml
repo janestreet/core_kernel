@@ -265,8 +265,8 @@ let%test_module "round_decimal" =
 
 open! Float
 
-let test_class gen expect =
-  Quickcheck.test gen ~f:(fun float ->
+let test_class quickcheck_generator expect =
+  Quickcheck.test quickcheck_generator ~f:(fun float ->
     let actual = classify float in
     if not (Int.equal (Class.compare actual expect) 0) then begin
       raise_s [%message

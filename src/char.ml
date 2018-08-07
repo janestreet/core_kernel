@@ -18,9 +18,9 @@ include (Base.Char
 
 module Replace_polymorphic_compare = Base.Char
 
-let gen = Base_quickcheck.Generator.char
-let obs = Base_quickcheck.Observer.char
-let shrinker = Base_quickcheck.Shrinker.char
+let quickcheck_generator = Base_quickcheck.Generator.char
+let quickcheck_observer = Base_quickcheck.Observer.char
+let quickcheck_shrinker = Base_quickcheck.Shrinker.char
 
 let gen_digit = Base_quickcheck.Generator.char_digit
 let gen_lowercase = Base_quickcheck.Generator.char_lowercase

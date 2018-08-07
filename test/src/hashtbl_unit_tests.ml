@@ -68,9 +68,9 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
 
         let alist_gen key_gen data_gen ~unique_keys =
           match unique_keys with
-          | None         -> List.gen (Gen.tuple2 key_gen data_gen)
+          | None         -> List.quickcheck_generator (Gen.tuple2 key_gen data_gen)
           | Some compare ->
-            List.gen key_gen
+            List.quickcheck_generator key_gen
             >>= fun keys ->
             let keys = List.dedup_and_sort keys ~compare in
             List.gen_with_length (List.length keys) data_gen
@@ -150,7 +150,7 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
 
           let multi_constructor_gen key_gen data_gen ~compare_keys =
             Gen.union
-              [ constructor_gen    key_gen (List.gen data_gen) ~compare_keys
+              [ constructor_gen    key_gen (List.quickcheck_generator data_gen) ~compare_keys
               ; of_alist_multi_gen key_gen data_gen
               ; group_gen          key_gen data_gen
               ]
@@ -201,7 +201,7 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
 
           module Key = struct
             include String
-            let gen = Gen.small_non_negative_int >>| sprintf "s%d"
+            let quickcheck_generator = Gen.small_non_negative_int >>| sprintf "s%d"
             let to_bool t =
               is_empty t
               || is_even (Char.to_int (get t (length t - 1)))
@@ -209,7 +209,7 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
 
           module Data = struct
             include Int
-            let gen = Gen.small_non_negative_int
+            let quickcheck_generator = Gen.small_non_negative_int
             let to_bool = is_even
             (* Here, [succ] is useful for testing [filter_map] *)
             let to_option t = if is_even t then Some (succ t) else None
@@ -258,8 +258,8 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
 
           let empty_constructor = For_tests.empty_constructor
 
-          let constructor_gen       = constructor_gen       Key.gen Data.gen ~compare_keys
-          let multi_constructor_gen = multi_constructor_gen Key.gen Data.gen ~compare_keys
+          let constructor_gen       = constructor_gen       Key.quickcheck_generator Data.quickcheck_generator ~compare_keys
+          let multi_constructor_gen = multi_constructor_gen Key.quickcheck_generator Data.quickcheck_generator ~compare_keys
 
           let map_and_table       = map_and_table       (module Key) (module Key)
           let map_and_table_multi = map_and_table_multi (module Key) (module Key)
@@ -299,7 +299,7 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
         let sexp_of_key = Hashtbl.sexp_of_key
 
         let%test_unit _ =
-          Qc.test (Gen.tuple2 constructor_gen Key.gen)
+          Qc.test (Gen.tuple2 constructor_gen Key.quickcheck_generator)
             ~sexp_of:[%sexp_of: constructor * Key.t]
             ~f:(fun (constructor, key) ->
               let _, t = map_and_table constructor in
@@ -455,7 +455,7 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
         let mem = Hashtbl.mem
 
         let%test_unit _ =
-          Qc.test (Gen.tuple2 constructor_gen Key.gen)
+          Qc.test (Gen.tuple2 constructor_gen Key.quickcheck_generator)
             ~sexp_of:[%sexp_of: constructor * Key.t]
             ~f:(fun (constructor, key) ->
               let map, t = map_and_table constructor in
@@ -466,7 +466,7 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
         let remove = Hashtbl.remove
 
         let%test_unit _ =
-          Qc.test (Gen.tuple2 constructor_gen Key.gen)
+          Qc.test (Gen.tuple2 constructor_gen Key.quickcheck_generator)
             ~sexp_of:[%sexp_of: constructor * Key.t]
             ~f:(fun (constructor, key) ->
               let map, t = map_and_table constructor in
@@ -478,7 +478,7 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
         let set     = Hashtbl.set
 
         let%test_unit _ =
-          Qc.test (Gen.tuple3 constructor_gen Key.gen Data.gen)
+          Qc.test (Gen.tuple3 constructor_gen Key.quickcheck_generator Data.quickcheck_generator)
             ~sexp_of:[%sexp_of: constructor * Key.t * Data.t]
             ~f:(fun (constructor, key, data) ->
               let map, t = map_and_table constructor in
@@ -492,7 +492,7 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
 
         let%test_unit _ =
           let f (name, add) =
-            Qc.test (Gen.tuple3 constructor_gen Key.gen Data.gen)
+            Qc.test (Gen.tuple3 constructor_gen Key.quickcheck_generator Data.quickcheck_generator)
               ~sexp_of:[%sexp_of: constructor * Key.t * Data.t]
               ~f:(fun (constructor, key, data) ->
                 let map, t = map_and_table constructor in
@@ -519,7 +519,7 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
         let change = Hashtbl.change
 
         let%test_unit _ =
-          Qc.test (Gen.tuple3 constructor_gen Key.gen (Option.gen Data.gen))
+          Qc.test (Gen.tuple3 constructor_gen Key.quickcheck_generator (Option.quickcheck_generator Data.quickcheck_generator))
             ~sexp_of:[%sexp_of: constructor * Key.t * Data.t option]
             ~f:(fun (constructor, key, data_opt) ->
               let map, t = map_and_table constructor in
@@ -535,7 +535,7 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
         let update = Hashtbl.update
 
         let%test_unit _ =
-          Qc.test (Gen.tuple3 constructor_gen Key.gen Data.gen)
+          Qc.test (Gen.tuple3 constructor_gen Key.quickcheck_generator Data.quickcheck_generator)
             ~sexp_of:[%sexp_of: constructor * Key.t * Data.t]
             ~f:(fun (constructor, key, data) ->
               let map, t = map_and_table constructor in
@@ -551,7 +551,7 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
         let add_multi = Hashtbl.add_multi
 
         let%test_unit _ =
-          Qc.test (Gen.tuple3 multi_constructor_gen Key.gen Data.gen)
+          Qc.test (Gen.tuple3 multi_constructor_gen Key.quickcheck_generator Data.quickcheck_generator)
             ~sexp_of:[%sexp_of: multi_constructor * Key.t * Data.t]
             ~f:(fun (multi_constructor, key, data) ->
               let map, t = map_and_table_multi multi_constructor in
@@ -563,7 +563,7 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
         let remove_multi = Hashtbl.remove_multi
 
         let%test_unit _ =
-          Qc.test (Gen.tuple2 multi_constructor_gen Key.gen)
+          Qc.test (Gen.tuple2 multi_constructor_gen Key.quickcheck_generator)
             ~sexp_of:[%sexp_of: multi_constructor * Key.t]
             ~f:(fun (multi_constructor, key) ->
               let map, t = map_and_table_multi multi_constructor in
@@ -575,7 +575,7 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
         let find_multi = Hashtbl.find_multi
 
         let%test_unit _ =
-          Qc.test (Gen.tuple2 multi_constructor_gen Key.gen)
+          Qc.test (Gen.tuple2 multi_constructor_gen Key.quickcheck_generator)
             ~sexp_of:[%sexp_of: multi_constructor * Key.t]
             ~f:(fun (multi_constructor, key) ->
               let map, t = map_and_table_multi multi_constructor in
@@ -760,7 +760,7 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
         let findi_or_add = Hashtbl.findi_or_add
 
         let%test_unit _ =
-          Qc.test (Gen.tuple3 constructor_gen Key.gen Data.gen)
+          Qc.test (Gen.tuple3 constructor_gen Key.quickcheck_generator Data.quickcheck_generator)
             ~sexp_of:[%sexp_of: constructor * Key.t * Data.t]
             ~f:(fun (constructor, key, data) ->
               let map, t = map_and_table constructor in
@@ -778,7 +778,7 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
 
         let%test_unit _ =
           let f (name, find) =
-            Qc.test (Gen.tuple2 constructor_gen Key.gen)
+            Qc.test (Gen.tuple2 constructor_gen Key.quickcheck_generator)
               ~sexp_of:[%sexp_of: constructor * Key.t]
               ~f:(fun (constructor, key) ->
                 let map, t = map_and_table constructor in
@@ -801,7 +801,7 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
         let findi_and_call = Hashtbl.findi_and_call
 
         let%test_unit _ =
-          Qc.test (Gen.tuple2 constructor_gen Key.gen)
+          Qc.test (Gen.tuple2 constructor_gen Key.quickcheck_generator)
             ~sexp_of:[%sexp_of: constructor * Key.t]
             ~f:(fun (constructor, key) ->
               let map, t = map_and_table constructor in
@@ -816,7 +816,7 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
         let find_and_remove = Hashtbl.find_and_remove
 
         let%test_unit _ =
-          Qc.test (Gen.tuple2 constructor_gen Key.gen)
+          Qc.test (Gen.tuple2 constructor_gen Key.quickcheck_generator)
             ~sexp_of:[%sexp_of: constructor * Key.t]
             ~f:(fun (constructor, key) ->
               let map, t = map_and_table constructor in
@@ -934,7 +934,7 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
         let incr = Hashtbl.incr
 
         let%test_unit _ =
-          Qc.test (Gen.tuple3 constructor_gen Key.gen Data.gen)
+          Qc.test (Gen.tuple3 constructor_gen Key.quickcheck_generator Data.quickcheck_generator)
             ~sexp_of:[%sexp_of: constructor * Key.t * Data.t]
             ~f:(fun (constructor, key, by) ->
               let map, t = map_and_table constructor in
@@ -947,7 +947,7 @@ module Make_quickcheck_comparison_to_Map(Hashtbl : Hashtbl_intf.Hashtbl) = struc
         let decr = Hashtbl.decr
 
         let%test_unit _ =
-          Qc.test (Gen.tuple3 constructor_gen Key.gen Data.gen)
+          Qc.test (Gen.tuple3 constructor_gen Key.quickcheck_generator Data.quickcheck_generator)
             ~sexp_of:[%sexp_of: constructor * Key.t * Data.t]
             ~f:(fun (constructor, key, by) ->
               let map, t = map_and_table constructor in

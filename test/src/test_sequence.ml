@@ -131,19 +131,19 @@ let%expect_test "merge_all" =
     require here bool ?if_false_then_print_s;
     if not bool then raise_s [%message "failed on random input"]
   in
-  let gen =
-    let str_gen = Quickcheck.Generator.map Int.gen ~f:No_poly_compare.create in
+  let quickcheck_generator =
+    let str_gen = Quickcheck.Generator.map Int.quickcheck_generator ~f:No_poly_compare.create in
     let seq_gen =
-      Quickcheck.Generator.map (List.gen str_gen) ~f:(fun list ->
+      Quickcheck.Generator.map (List.quickcheck_generator str_gen) ~f:(fun list ->
         Sequence.of_list (List.sort list ~compare))
     in
-    List.gen seq_gen
+    List.quickcheck_generator seq_gen
   in
   let run test =
     Quickcheck.test
       ~sexp_of:[%sexp_of: sequence list]
       ~examples
-      gen
+      quickcheck_generator
       ~f:test
   in
   (* Test that output is sorted. *)

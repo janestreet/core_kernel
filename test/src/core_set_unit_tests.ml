@@ -78,7 +78,7 @@ module Unit_tests
     let iter2          = simplify_accessor iter2
     let invariants     = simplify_accessor invariants
     let to_map         = simplify_accessor to_map
-    let shrinker       = simplify_accessor shrinker
+    let quickcheck_shrinker       = simplify_accessor quickcheck_shrinker
     let to_list    = to_list
     let to_array   = to_array
     let to_sequence ?order ?greater_or_equal_to ?less_or_equal_to x =
@@ -94,7 +94,7 @@ module Unit_tests
     let of_sorted_array = simplify_creator of_sorted_array
     let of_sorted_array_unchecked = simplify_creator of_sorted_array_unchecked
     (* let of_tree        = simplify_creator of_tree *)
-    let gen            = simplify_creator gen
+    let quickcheck_generator            = simplify_creator quickcheck_generator
     let symmetric_diff = simplify_accessor symmetric_diff
     let split          = simplify_accessor split
     let diff           = simplify_accessor diff
@@ -118,12 +118,12 @@ module Unit_tests
     let of_int = of_int
     let to_int = to_int
 
-    let gen =
+    let quickcheck_generator =
       let open Quickcheck.Generator in
-      Int.gen >>| of_int
+      Int.quickcheck_generator >>| of_int
 
-    let obs =
-      Quickcheck.Observer.unmap Int.obs
+    let quickcheck_observer =
+      Quickcheck.Observer.unmap Int.quickcheck_observer
         ~f:to_int
 
     module T = struct
@@ -147,7 +147,7 @@ module Unit_tests
 
   let gen_set =
     let open Quickcheck.Generator in
-    List.gen Elt.gen >>| Set.of_list
+    List.quickcheck_generator Elt.quickcheck_generator >>| Set.of_list
 
   let add _     = assert false
   let of_list _ = assert false
@@ -350,19 +350,19 @@ module Unit_tests
           y : (int, Int.comparator_witness) Set.t_;
         }
 
-        let gen =
+        let quickcheck_generator =
           let open Generator.Monad_infix in
           let int_set_gen =
             Generator.small_non_negative_int
             >>= fun size ->
-            List.gen_with_length size Int.gen
+            List.gen_with_length size Int.quickcheck_generator
             >>| fun ints ->
             Set.of_list (List.map ints ~f:Elt.of_int)
           in
           Generator.tuple5
-            (Option.gen (Generator.of_list [ `Increasing; `Decreasing; ]))
-            (Option.gen (Int.gen >>| Elt.of_int))
-            (Option.gen (Int.gen >>| Elt.of_int))
+            (Option.quickcheck_generator (Generator.of_list [ `Increasing; `Decreasing; ]))
+            (Option.quickcheck_generator (Int.quickcheck_generator >>| Elt.of_int))
+            (Option.quickcheck_generator (Int.quickcheck_generator >>| Elt.of_int))
             int_set_gen
             int_set_gen
           >>| fun (order, greater_or_equal_to, less_or_equal_to, x, y) ->
@@ -371,7 +371,7 @@ module Unit_tests
       end
 
       let%test_unit "merge_to_sequence = symmetric diff + inter" =
-        Quickcheck.test Merge_to_sequence_args.gen ~f:(fun {
+        Quickcheck.test Merge_to_sequence_args.quickcheck_generator ~f:(fun {
           order; greater_or_equal_to; less_or_equal_to; x; y ;
         } ->
           let open Set_intf.Merge_to_sequence_element in
@@ -661,17 +661,17 @@ module Unit_tests
     for i = 0 to n - 1 do check i done
   ;;
 
-  let gen _ = assert false
+  let quickcheck_generator _ = assert false
 
   let%test_module _ =
     (module struct
       open Quickcheck
       let sexp_of = [%sexp_of: Set.t]
       let compare = [%compare: Set.t]
-      let gen = Set.gen Elt.gen
-      let can_generate f = test_can_generate gen ~sexp_of ~f
+      let quickcheck_generator = Set.quickcheck_generator Elt.quickcheck_generator
+      let can_generate f = test_can_generate quickcheck_generator ~sexp_of ~f
 
-      let%test_unit _ = test_distinct_values gen ~sexp_of ~compare
+      let%test_unit _ = test_distinct_values quickcheck_generator ~sexp_of ~compare
                           ~trials:1_000 ~distinct_values:500
       let%test_unit _ = can_generate (fun t -> Set.is_empty t)
       let%test_unit _ = can_generate (fun t -> Set.length t = 1)
@@ -683,7 +683,7 @@ module Unit_tests
         Elt.to_int elt <  0))
     end)
 
-  let obs _ = assert false
+  let quickcheck_observer _ = assert false
 
   let%test_module _ =
     (module struct
@@ -707,15 +707,15 @@ module Unit_tests
 
       let sexp_of = [%sexp_of: F.t]
       let compare = [%compare: F.t]
-      let gen =
+      let quickcheck_generator =
         (* memoizing these functions makes [test_no_duplicates] run much faster *)
         let hashable = Hashtbl_intf.Hashable.of_key (module Set') in
-        Generator.(fn (Set.obs Elt.obs) Int.gen
+        Generator.(fn (Set.quickcheck_observer Elt.quickcheck_observer) Int.quickcheck_generator
                    |> map ~f:(fun f -> Memo.general f ~hashable))
-      let can_generate f = test_can_generate gen ~sexp_of ~f
+      let can_generate f = test_can_generate quickcheck_generator ~sexp_of ~f
 
       let%test_unit _ [@tags "no-js"] =
-        test_distinct_values gen ~sexp_of ~compare
+        test_distinct_values quickcheck_generator ~sexp_of ~compare
           ~trials:1_000 ~distinct_values:500
 
       let%test_unit _ = can_generate (fun f ->
@@ -726,7 +726,7 @@ module Unit_tests
         f (Set.singleton (Elt.of_int 0)) <> f (Set.of_list [Elt.of_int 0; Elt.of_int 1]))
     end)
 
-  let shrinker _ = assert false
+  let quickcheck_shrinker _ = assert false
 
   let%test_module _ =
     (module struct
@@ -739,7 +739,7 @@ module Unit_tests
           then Sequence.empty
           else Sequence.singleton (Elt.of_int (n - 1)))
 
-      let shrinker = Set.shrinker elt_test_shrinker
+      let quickcheck_shrinker = Set.quickcheck_shrinker elt_test_shrinker
 
       let normalize_list list =
         List.sort list ~compare:[%compare: int]
@@ -759,7 +759,7 @@ module Unit_tests
       let test list shrunk_lists =
         [%test_result: int list list]
           (set_of_list list
-           |> Shrinker.shrink shrinker
+           |> Shrinker.shrink quickcheck_shrinker
            |> Sequence.to_list
            |> List.map ~f:list_of_set
            |> normalize_lists)
@@ -768,7 +768,7 @@ module Unit_tests
       let%test_unit _ = test [] []
       let%test_unit _ = test [0] [[]]
       let%test_unit _ = test [1] [[];[0]]
-      let%test_unit _ = test [0;1] [[0];[1];[0]]
+      let%test_unit _ = test [0;1] [[0];[1]]
     end)
 
 

@@ -35,93 +35,63 @@ module Pre_int : Pre_int with type t = int = struct
   let splittable_random_log_uniform = Splittable_random.Log_uniform.int
 end
 
+module Polymorphic_types = struct
+  type ('a, 'b) variant2 =
+    [`A of 'a | `B of 'b]
+  [@@deriving quickcheck]
+  type ('a, 'b, 'c) variant3 =
+    [`A of 'a | `B of 'b | `C of 'c]
+  [@@deriving quickcheck]
+  type ('a, 'b, 'c, 'd) variant4 =
+    [`A of 'a | `B of 'b | `C of 'c | `D of 'd]
+  [@@deriving quickcheck]
+  type ('a, 'b, 'c, 'd, 'e) variant5 =
+    [`A of 'a | `B of 'b | `C of 'c | `D of 'd | `E of 'e]
+  [@@deriving quickcheck]
+  type ('a, 'b, 'c, 'd, 'e, 'f) variant6 =
+    [`A of 'a | `B of 'b | `C of 'c | `D of 'd | `E of 'e | `F of 'f]
+  [@@deriving quickcheck]
+
+  type ('a, 'b) tuple2 = 'a * 'b
+  [@@deriving quickcheck]
+  type ('a, 'b, 'c) tuple3 = 'a * 'b * 'c
+  [@@deriving quickcheck]
+  type ('a, 'b, 'c, 'd) tuple4 = 'a * 'b * 'c * 'd
+  [@@deriving quickcheck]
+  type ('a, 'b, 'c, 'd, 'e) tuple5 = 'a * 'b * 'c * 'd * 'e
+  [@@deriving quickcheck]
+  type ('a, 'b, 'c, 'd, 'e, 'f) tuple6 = 'a * 'b * 'c * 'd * 'e * 'f
+  [@@deriving quickcheck]
+
+  type (-'a, -'b, 'r) fn2 = 'a -> 'b -> 'r
+  [@@deriving quickcheck]
+  type (-'a, -'b, -'c, 'r) fn3 = 'a -> 'b -> 'c -> 'r
+  [@@deriving quickcheck]
+  type (-'a, -'b, -'c, -'d, 'r) fn4 = 'a -> 'b -> 'c -> 'd -> 'r
+  [@@deriving quickcheck]
+  type (-'a, -'b, -'c, -'d, -'e, 'r) fn5 = 'a -> 'b -> 'c -> 'd -> 'e -> 'r
+  [@@deriving quickcheck]
+  type (-'a, -'b, -'c, -'d, -'e, -'f, 'r) fn6 = 'a -> 'b -> 'c -> 'd -> 'e -> 'f -> 'r
+  [@@deriving quickcheck]
+end
+
 module Observer = struct
   include Observer
 
   let of_hash (type a) (module M : Deriving_hash with type t = a) =
     of_hash_fold M.hash_fold_t
 
-  let variant2 t1 t2 =
-    create (fun x ~size ~hash ->
-      match x with
-      | `A y -> observe t1 y ~size ~hash:([%hash_fold: int] hash 1)
-      | `B y -> observe t2 y ~size ~hash:([%hash_fold: int] hash 2))
+  let variant2 = Polymorphic_types.quickcheck_observer_variant2
+  let variant3 = Polymorphic_types.quickcheck_observer_variant3
+  let variant4 = Polymorphic_types.quickcheck_observer_variant4
+  let variant5 = Polymorphic_types.quickcheck_observer_variant5
+  let variant6 = Polymorphic_types.quickcheck_observer_variant6
 
-  let variant3 t1 t2 t3 =
-    create (fun x ~size ~hash ->
-      match x with
-      | `A y -> observe t1 y ~size ~hash:([%hash_fold: int] hash 1)
-      | `B y -> observe t2 y ~size ~hash:([%hash_fold: int] hash 2)
-      | `C y -> observe t3 y ~size ~hash:([%hash_fold: int] hash 3))
-
-  let variant4 t1 t2 t3 t4 =
-    create (fun x ~size ~hash ->
-      match x with
-      | `A y -> observe t1 y ~size ~hash:([%hash_fold: int] hash 1)
-      | `B y -> observe t2 y ~size ~hash:([%hash_fold: int] hash 2)
-      | `C y -> observe t3 y ~size ~hash:([%hash_fold: int] hash 3)
-      | `D y -> observe t4 y ~size ~hash:([%hash_fold: int] hash 4))
-
-  let variant5 t1 t2 t3 t4 t5 =
-    create (fun x ~size ~hash ->
-      match x with
-      | `A y -> observe t1 y ~size ~hash:([%hash_fold: int] hash 1)
-      | `B y -> observe t2 y ~size ~hash:([%hash_fold: int] hash 2)
-      | `C y -> observe t3 y ~size ~hash:([%hash_fold: int] hash 3)
-      | `D y -> observe t4 y ~size ~hash:([%hash_fold: int] hash 4)
-      | `E y -> observe t5 y ~size ~hash:([%hash_fold: int] hash 5))
-
-  let variant6 t1 t2 t3 t4 t5 t6 =
-    create (fun x ~size ~hash ->
-      match x with
-      | `A y -> observe t1 y ~size ~hash:([%hash_fold: int] hash 1)
-      | `B y -> observe t2 y ~size ~hash:([%hash_fold: int] hash 2)
-      | `C y -> observe t3 y ~size ~hash:([%hash_fold: int] hash 3)
-      | `D y -> observe t4 y ~size ~hash:([%hash_fold: int] hash 4)
-      | `E y -> observe t5 y ~size ~hash:([%hash_fold: int] hash 5)
-      | `F y -> observe t6 y ~size ~hash:([%hash_fold: int] hash 6))
-
-  let (|>!) hash f = f ~hash
-
-  let tuple2 t1 t2 =
-    create (fun (x1,x2) ~size ~hash ->
-      hash
-      |>! observe t1 x1 ~size
-      |>! observe t2 x2 ~size)
-
-  let tuple3 t1 t2 t3 =
-    create (fun (x1,x2,x3) ~size ~hash ->
-      hash
-      |>! observe t1 x1 ~size
-      |>! observe t2 x2 ~size
-      |>! observe t3 x3 ~size)
-
-  let tuple4 t1 t2 t3 t4 =
-    create (fun (x1,x2,x3,x4) ~size ~hash ->
-      hash
-      |>! observe t1 x1 ~size
-      |>! observe t2 x2 ~size
-      |>! observe t3 x3 ~size
-      |>! observe t4 x4 ~size)
-
-  let tuple5 t1 t2 t3 t4 t5 =
-    create (fun (x1,x2,x3,x4,x5) ~size ~hash ->
-      hash
-      |>! observe t1 x1 ~size
-      |>! observe t2 x2 ~size
-      |>! observe t3 x3 ~size
-      |>! observe t4 x4 ~size
-      |>! observe t5 x5 ~size)
-
-  let tuple6 t1 t2 t3 t4 t5 t6 =
-    create (fun (x1,x2,x3,x4,x5,x6) ~size ~hash ->
-      hash
-      |>! observe t1 x1 ~size
-      |>! observe t2 x2 ~size
-      |>! observe t3 x3 ~size
-      |>! observe t4 x4 ~size
-      |>! observe t5 x5 ~size
-      |>! observe t6 x6 ~size)
+  let tuple2 = Polymorphic_types.quickcheck_observer_tuple2
+  let tuple3 = Polymorphic_types.quickcheck_observer_tuple3
+  let tuple4 = Polymorphic_types.quickcheck_observer_tuple4
+  let tuple5 = Polymorphic_types.quickcheck_observer_tuple5
+  let tuple6 = Polymorphic_types.quickcheck_observer_tuple6
 
   let of_predicate a b ~f =
     unmap (variant2 a b)
@@ -204,102 +174,25 @@ module Generator = struct
 
   let recursive = fixed_point
 
-  let variant2 a b =
-    union [ map a ~f:(fun a -> `A a)
-          ; map b ~f:(fun b -> `B b)
-          ]
-
-  let variant3 a b c =
-    union [ map a ~f:(fun a -> `A a)
-          ; map b ~f:(fun b -> `B b)
-          ; map c ~f:(fun c -> `C c)
-          ]
-
-  let variant4 a b c d =
-    union [ map a ~f:(fun a -> `A a)
-          ; map b ~f:(fun b -> `B b)
-          ; map c ~f:(fun c -> `C c)
-          ; map d ~f:(fun d -> `D d)
-          ]
-
-  let variant5 a b c d e =
-    union [ map a ~f:(fun a -> `A a)
-          ; map b ~f:(fun b -> `B b)
-          ; map c ~f:(fun c -> `C c)
-          ; map d ~f:(fun d -> `D d)
-          ; map e ~f:(fun e -> `E e)
-          ]
-
-  let variant6 a b c d e f =
-    union [ map a ~f:(fun a -> `A a)
-          ; map b ~f:(fun b -> `B b)
-          ; map c ~f:(fun c -> `C c)
-          ; map d ~f:(fun d -> `D d)
-          ; map e ~f:(fun e -> `E e)
-          ; map f ~f:(fun f -> `F f)
-          ]
-
-  let tuple2 t1 t2 =
-    t1 >>= fun x1 ->
-    t2 >>| fun x2 ->
-    (x1, x2)
-
-  let tuple3 t1 t2 t3 =
-    t1 >>= fun x1 ->
-    t2 >>= fun x2 ->
-    t3 >>| fun x3 ->
-    (x1, x2, x3)
-
-  let tuple4 t1 t2 t3 t4 =
-    t1 >>= fun x1 ->
-    t2 >>= fun x2 ->
-    t3 >>= fun x3 ->
-    t4 >>| fun x4 ->
-    (x1, x2, x3, x4)
-
-  let tuple5 t1 t2 t3 t4 t5 =
-    t1 >>= fun x1 ->
-    t2 >>= fun x2 ->
-    t3 >>= fun x3 ->
-    t4 >>= fun x4 ->
-    t5 >>| fun x5 ->
-    (x1, x2, x3, x4, x5)
-
-  let tuple6 t1 t2 t3 t4 t5 t6 =
-    t1 >>= fun x1 ->
-    t2 >>= fun x2 ->
-    t3 >>= fun x3 ->
-    t4 >>= fun x4 ->
-    t5 >>= fun x5 ->
-    t6 >>| fun x6 ->
-    (x1, x2, x3, x4, x5, x6)
-
   let list_with_length length t = list_with_length t ~length
 
-  let fn2 dom1 dom2 rng =
-    fn (Observer.tuple2 dom1 dom2) rng
-    >>| fun f ->
-    (fun x1 x2 -> f (x1, x2))
+  let variant2 = Polymorphic_types.quickcheck_generator_variant2
+  let variant3 = Polymorphic_types.quickcheck_generator_variant3
+  let variant4 = Polymorphic_types.quickcheck_generator_variant4
+  let variant5 = Polymorphic_types.quickcheck_generator_variant5
+  let variant6 = Polymorphic_types.quickcheck_generator_variant6
 
-  let fn3 dom1 dom2 dom3 rng =
-    fn (Observer.tuple3 dom1 dom2 dom3) rng
-    >>| fun f ->
-    (fun x1 x2 x3 -> f (x1, x2, x3))
+  let tuple2 = Polymorphic_types.quickcheck_generator_tuple2
+  let tuple3 = Polymorphic_types.quickcheck_generator_tuple3
+  let tuple4 = Polymorphic_types.quickcheck_generator_tuple4
+  let tuple5 = Polymorphic_types.quickcheck_generator_tuple5
+  let tuple6 = Polymorphic_types.quickcheck_generator_tuple6
 
-  let fn4 dom1 dom2 dom3 dom4 rng =
-    fn (Observer.tuple4 dom1 dom2 dom3 dom4) rng
-    >>| fun f ->
-    (fun x1 x2 x3 x4 -> f (x1, x2, x3, x4))
-
-  let fn5 dom1 dom2 dom3 dom4 dom5 rng =
-    fn (Observer.tuple5 dom1 dom2 dom3 dom4 dom5) rng
-    >>| fun f ->
-    (fun x1 x2 x3 x4 x5 -> f (x1, x2, x3, x4, x5))
-
-  let fn6 dom1 dom2 dom3 dom4 dom5 dom6 rng =
-    fn (Observer.tuple6 dom1 dom2 dom3 dom4 dom5 dom6) rng
-    >>| fun f ->
-    (fun x1 x2 x3 x4 x5 x6 -> f (x1, x2, x3, x4, x5, x6))
+  let fn2 = Polymorphic_types.quickcheck_generator_fn2
+  let fn3 = Polymorphic_types.quickcheck_generator_fn3
+  let fn4 = Polymorphic_types.quickcheck_generator_fn4
+  let fn5 = Polymorphic_types.quickcheck_generator_fn5
+  let fn6 = Polymorphic_types.quickcheck_generator_fn6
 
   let compare_fn dom =
     fn dom int
@@ -317,105 +210,17 @@ module Shrinker = struct
 
   let empty () = atomic
 
-  let tuple2 t1 t2 =
-    let shrinker (v1, v2) =
-      let v1_seq = Sequence.map (shrink t1 v1) ~f:(fun x -> (x,  v2)) in
-      let v2_seq = Sequence.map (shrink t2 v2) ~f:(fun x -> (v1, x))  in
-      Sequence.round_robin [v1_seq; v2_seq]
-    in
-    create shrinker
+  let variant2 = Polymorphic_types.quickcheck_shrinker_variant2
+  let variant3 = Polymorphic_types.quickcheck_shrinker_variant3
+  let variant4 = Polymorphic_types.quickcheck_shrinker_variant4
+  let variant5 = Polymorphic_types.quickcheck_shrinker_variant5
+  let variant6 = Polymorphic_types.quickcheck_shrinker_variant6
 
-  let tuple3 t1 t2 t3 =
-    let shrinker (v1, v2, v3) =
-      let v1_seq = Sequence.map (shrink t1 v1) ~f:(fun x -> (x,  v2, v3)) in
-      let v2_seq = Sequence.map (shrink t2 v2) ~f:(fun x -> (v1, x,  v3)) in
-      let v3_seq = Sequence.map (shrink t3 v3) ~f:(fun x -> (v1, v2, x))  in
-      Sequence.round_robin [v1_seq; v2_seq; v3_seq]
-    in
-    create shrinker
-
-  let tuple4 t1 t2 t3 t4 =
-    let shrinker (v1, v2, v3, v4) =
-      let v1_seq = Sequence.map (shrink t1 v1) ~f:(fun x -> (x,  v2, v3, v4)) in
-      let v2_seq = Sequence.map (shrink t2 v2) ~f:(fun x -> (v1, x,  v3, v4)) in
-      let v3_seq = Sequence.map (shrink t3 v3) ~f:(fun x -> (v1, v2, x,  v4)) in
-      let v4_seq = Sequence.map (shrink t4 v4) ~f:(fun x -> (v1, v2, v3, x))  in
-      Sequence.round_robin [v1_seq; v2_seq; v3_seq; v4_seq]
-    in
-    create shrinker
-
-  let tuple5 t1 t2 t3 t4 t5 =
-    let shrinker (v1, v2, v3, v4, v5) =
-      let v1_seq = Sequence.map (shrink t1 v1) ~f:(fun x -> (x,  v2, v3, v4, v5)) in
-      let v2_seq = Sequence.map (shrink t2 v2) ~f:(fun x -> (v1, x,  v3, v4, v5)) in
-      let v3_seq = Sequence.map (shrink t3 v3) ~f:(fun x -> (v1, v2, x,  v4, v5)) in
-      let v4_seq = Sequence.map (shrink t4 v4) ~f:(fun x -> (v1, v2, v3, x,  v5)) in
-      let v5_seq = Sequence.map (shrink t5 v5) ~f:(fun x -> (v1, v2, v3, v4, x))  in
-      Sequence.round_robin [v1_seq; v2_seq; v3_seq; v4_seq; v5_seq]
-    in
-    create shrinker
-
-  let tuple6 t1 t2 t3 t4 t5 t6 =
-    let shrinker (v1, v2, v3, v4, v5, v6) =
-      let v1_seq = Sequence.map (shrink t1 v1) ~f:(fun x -> (x,  v2, v3, v4, v5, v6)) in
-      let v2_seq = Sequence.map (shrink t2 v2) ~f:(fun x -> (v1, x,  v3, v4, v5, v6)) in
-      let v3_seq = Sequence.map (shrink t3 v3) ~f:(fun x -> (v1, v2, x,  v4, v5, v6)) in
-      let v4_seq = Sequence.map (shrink t4 v4) ~f:(fun x -> (v1, v2, v3, x,  v5, v6)) in
-      let v5_seq = Sequence.map (shrink t5 v5) ~f:(fun x -> (v1, v2, v3, v4, x,  v6)) in
-      let v6_seq = Sequence.map (shrink t6 v6) ~f:(fun x -> (v1, v2, v3, v4, v5, x))  in
-      Sequence.round_robin [v1_seq; v2_seq; v3_seq; v4_seq; v5_seq; v6_seq]
-    in
-    create shrinker
-
-  let variant2 t_a t_b : [ `A of 'a | `B of 'b ] t =
-    let shrinker var =
-      match var with
-      | `A a -> Sequence.map (shrink t_a a) ~f:(fun a -> (`A a))
-      | `B b -> Sequence.map (shrink t_b b) ~f:(fun b -> (`B b))
-    in
-    create shrinker
-
-  let variant3 t_a t_b t_c =
-    let shrinker var =
-      match var with
-      | `A v -> Sequence.map (shrink t_a v) ~f:(fun v -> (`A v))
-      | `B v -> Sequence.map (shrink t_b v) ~f:(fun v -> (`B v))
-      | `C v -> Sequence.map (shrink t_c v) ~f:(fun v -> (`C v))
-    in
-    create shrinker
-
-  let variant4 t_a t_b t_c t_d =
-    let shrinker var =
-      match var with
-      | `A v -> Sequence.map (shrink t_a v) ~f:(fun v -> (`A v))
-      | `B v -> Sequence.map (shrink t_b v) ~f:(fun v -> (`B v))
-      | `C v -> Sequence.map (shrink t_c v) ~f:(fun v -> (`C v))
-      | `D v -> Sequence.map (shrink t_d v) ~f:(fun v -> (`D v))
-    in
-    create shrinker
-
-  let variant5 t_a t_b t_c t_d t_e =
-    let shrinker var =
-      match var with
-      | `A v -> Sequence.map (shrink t_a v) ~f:(fun v -> (`A v))
-      | `B v -> Sequence.map (shrink t_b v) ~f:(fun v -> (`B v))
-      | `C v -> Sequence.map (shrink t_c v) ~f:(fun v -> (`C v))
-      | `D v -> Sequence.map (shrink t_d v) ~f:(fun v -> (`D v))
-      | `E v -> Sequence.map (shrink t_e v) ~f:(fun v -> (`E v))
-    in
-    create shrinker
-
-  let variant6 t_a t_b t_c t_d t_e t_f =
-    let shrinker var =
-      match var with
-      | `A v -> Sequence.map (shrink t_a v) ~f:(fun v -> (`A v))
-      | `B v -> Sequence.map (shrink t_b v) ~f:(fun v -> (`B v))
-      | `C v -> Sequence.map (shrink t_c v) ~f:(fun v -> (`C v))
-      | `D v -> Sequence.map (shrink t_d v) ~f:(fun v -> (`D v))
-      | `E v -> Sequence.map (shrink t_e v) ~f:(fun v -> (`E v))
-      | `F v -> Sequence.map (shrink t_f v) ~f:(fun v -> (`F v))
-    in
-    create shrinker
+  let tuple2 = Polymorphic_types.quickcheck_shrinker_tuple2
+  let tuple3 = Polymorphic_types.quickcheck_shrinker_tuple3
+  let tuple4 = Polymorphic_types.quickcheck_shrinker_tuple4
+  let tuple5 = Polymorphic_types.quickcheck_shrinker_tuple5
+  let tuple6 = Polymorphic_types.quickcheck_shrinker_tuple6
 
   let recursive = fixed_point
 end

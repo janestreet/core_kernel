@@ -450,7 +450,7 @@ let%test_module "Span.to_string/of_string" =
         | [char] -> return [char]
         | a :: b :: rest when Char.is_digit a && Char.is_digit b ->
           let%bind tail = with_underscores_gen (b :: rest) in
-          if%bind Bool.gen
+          if%bind Bool.quickcheck_generator
           then return (a :: '_' :: tail)
           else return (a ::        tail)
         | char :: rest ->
@@ -498,7 +498,7 @@ let%test_module "Span.to_string/of_string" =
         let mantissa = Int63.gen_incl min_mantissa max_mantissa
         (* [Int] is big enough even on 32-bit platforms. *)
         and exponent = Int.gen_incl   min_exponent max_exponent
-        and negative = Bool.gen
+        and negative = Bool.quickcheck_generator
         in
         Float.create_ieee_exn ~negative ~exponent ~mantissa
       ]
@@ -555,10 +555,10 @@ let%test_module "Span.to_string/of_string" =
         | Microsecond -> Some 1000.
         | Nanosecond  -> Some 1000.
       in
-      let gen = bounded_span_gen ~magnitude_low ~magnitude_high in
+      let quickcheck_generator = bounded_span_gen ~magnitude_low ~magnitude_high in
       let test_count     = ref 0 in
       let abnormal_count = ref 0 in
-      quickcheck [%here] gen ~sexp_of:Time.Span.sexp_of_t
+      quickcheck [%here] quickcheck_generator ~sexp_of:Time.Span.sexp_of_t
         ~f:(fun span ->
           let seconds = Time.Span.to_sec span in
           let ulp = Float.one_ulp `Up seconds -. seconds in

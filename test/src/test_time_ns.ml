@@ -5,7 +5,7 @@ type time_ns = Time_ns.t [@@deriving compare]
 let sexp_of_time_ns = Time_ns.Alternate_sexp.sexp_of_t
 ;;
 
-let gen =
+let quickcheck_generator =
   let open Quickcheck.Generator.Let_syntax in
   let%map ns_since_epoch =
     Int63.gen_incl
@@ -15,9 +15,9 @@ let gen =
   Time_ns.of_int63_ns_since_epoch ns_since_epoch
 ;;
 
-let randomly_round gen =
+let randomly_round quickcheck_generator =
   let open Quickcheck.Generator.Let_syntax in
-  let%bind time_ns = gen in
+  let%bind time_ns = quickcheck_generator in
   let%map  unit =
     Quickcheck.Generator.of_list
       [ Time_ns.Span.second
@@ -40,9 +40,9 @@ let randomly_round gen =
   Time_ns.of_span_since_epoch rounded_span_ns
 ;;
 
-let quickcheck here gen f =
+let quickcheck here quickcheck_generator f =
   require_does_not_raise here (fun () ->
-    Quickcheck.test gen ~f
+    Quickcheck.test quickcheck_generator ~f
       ~sexp_of:[%sexp_of: time_ns]
       ~examples:[ Time_ns.min_value; Time_ns.epoch; Time_ns.max_value ])
 ;;
@@ -109,7 +109,7 @@ let%test_module "Time_ns.Alternate_sexp" =
     let%expect_test "round-trip" =
       (* randomly round spans to make sure we round-trip at various precisions, since it
          affects number of decimal places *)
-      quickcheck [%here] (randomly_round gen) (fun time_ns ->
+      quickcheck [%here] (randomly_round quickcheck_generator) (fun time_ns ->
         [%test_result: time_ns]
           (Time_ns.Alternate_sexp.t_of_sexp
              (Time_ns.Alternate_sexp.sexp_of_t time_ns))
@@ -122,7 +122,7 @@ let%test_module "Time_ns.Utc.to_date_and_span_since_start_of_day" =
   (module struct
 
     let%expect_test "span is non-negative and less than 1 day" =
-      quickcheck [%here] gen (fun time_ns ->
+      quickcheck [%here] quickcheck_generator (fun time_ns ->
         let date, span_since_start_of_day =
           Core_kernel.Time_ns.Utc.to_date_and_span_since_start_of_day time_ns
         in
@@ -139,7 +139,7 @@ let%test_module "Time_ns.Utc.to_date_and_span_since_start_of_day" =
     ;;
 
     let%expect_test "round-trip" =
-      quickcheck [%here] gen (fun time_ns ->
+      quickcheck [%here] quickcheck_generator (fun time_ns ->
         let date, span_since_start_of_day =
           Core_kernel.Time_ns.Utc.to_date_and_span_since_start_of_day time_ns
         in

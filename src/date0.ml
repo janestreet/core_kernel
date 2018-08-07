@@ -562,18 +562,18 @@ module For_quickcheck = struct
       ; 18., gen_uniform_incl d1 d2
       ]
 
-  let gen = gen_incl (of_string "1900-01-01") (of_string "2100-01-01")
+  let quickcheck_generator = gen_incl (of_string "1900-01-01") (of_string "2100-01-01")
 
-  let obs = Observer.create (fun t ~size:_ ~hash -> hash_fold_t hash t)
+  let quickcheck_observer = Observer.create (fun t ~size:_ ~hash -> hash_fold_t hash t)
 
-  let shrinker = Shrinker.empty ()
+  let quickcheck_shrinker = Shrinker.empty ()
 end
 
-let gen              = For_quickcheck.gen
+let quickcheck_generator              = For_quickcheck.quickcheck_generator
 let gen_incl         = For_quickcheck.gen_incl
 let gen_uniform_incl = For_quickcheck.gen_uniform_incl
-let obs              = For_quickcheck.obs
-let shrinker         = For_quickcheck.shrinker
+let quickcheck_observer              = For_quickcheck.quickcheck_observer
+let quickcheck_shrinker         = For_quickcheck.quickcheck_shrinker
 
 module Private = struct
   let leap_year_table     = leap_year_table

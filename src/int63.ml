@@ -63,9 +63,9 @@ include (Base.Int63
              with type t := t
              with module Hex := Base.Int63.Hex))
 
-let gen = Base_quickcheck.Generator.int63
-let obs = Base_quickcheck.Observer.int63
-let shrinker = Base_quickcheck.Shrinker.int63
+let quickcheck_generator = Base_quickcheck.Generator.int63
+let quickcheck_observer = Base_quickcheck.Observer.int63
+let quickcheck_shrinker = Base_quickcheck.Shrinker.int63
 
 let gen_incl = Base_quickcheck.Generator.int63_inclusive
 let gen_uniform_incl = Base_quickcheck.Generator.int63_uniform_inclusive

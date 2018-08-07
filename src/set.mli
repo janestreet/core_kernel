@@ -394,12 +394,12 @@ val merge_to_sequence
 val to_map : ('key, 'cmp) t -> f:('key -> 'data) -> ('key, 'data, 'cmp) Map.t
 val of_map_keys : ('key, _, 'cmp) Map.t -> ('key, 'cmp) t
 
-val gen
+val quickcheck_generator
   :  ('key, 'cmp) comparator
   -> 'key Quickcheck.Generator.t
   -> ('key, 'cmp) t Quickcheck.Generator.t
-val obs : 'key Quickcheck.Observer.t -> ('key, 'cmp) t Quickcheck.Observer.t
-val shrinker : 'key Quickcheck.Shrinker.t -> ('key, 'cmp) t Quickcheck.Shrinker.t
+val quickcheck_observer : 'key Quickcheck.Observer.t -> ('key, 'cmp) t Quickcheck.Observer.t
+val quickcheck_shrinker : 'key Quickcheck.Shrinker.t -> ('key, 'cmp) t Quickcheck.Shrinker.t
 
 (** {2 Polymorphic sets}
 

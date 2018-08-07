@@ -95,9 +95,9 @@ let sign = robust_sign
    be a valid OCaml float lexem, not to look like an int. *)
 let to_string_12 x = valid_float_lexem (format_float "%.12g" x);;
 
-let gen = Base_quickcheck.Generator.float
-let obs = Base_quickcheck.Observer.float
-let shrinker = Base_quickcheck.Shrinker.float
+let quickcheck_generator = Base_quickcheck.Generator.float
+let quickcheck_observer = Base_quickcheck.Observer.float
+let quickcheck_shrinker = Base_quickcheck.Shrinker.float
 
 let gen_uniform_excl = Base_quickcheck.Generator.float_uniform_exclusive
 let gen_incl = Base_quickcheck.Generator.float_inclusive

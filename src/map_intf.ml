@@ -55,12 +55,12 @@ end
 module type Accessors_generic = sig
   include Map.Accessors_generic
 
-  val obs
+  val quickcheck_observer
     :  'k key Quickcheck.Observer.t
     -> 'v Quickcheck.Observer.t
     -> ('k, 'v, 'cmp) t Quickcheck.Observer.t
 
-  val shrinker
+  val quickcheck_shrinker
     :  ('k, 'cmp,
         'k key Quickcheck.Shrinker.t
         -> 'v Quickcheck.Shrinker.t
@@ -71,11 +71,11 @@ end
 module type Accessors1 = sig
   include Map.Accessors1
 
-  val obs
+  val quickcheck_observer
     :  key Quickcheck.Observer.t
     -> 'v Quickcheck.Observer.t
     -> 'v t Quickcheck.Observer.t
-  val shrinker
+  val quickcheck_shrinker
     :  key Quickcheck.Shrinker.t
     -> 'v Quickcheck.Shrinker.t
     -> 'v t Quickcheck.Shrinker.t
@@ -84,11 +84,11 @@ end
 module type Accessors2 = sig
   include Map.Accessors2
 
-  val obs
+  val quickcheck_observer
     :  'k Quickcheck.Observer.t
     -> 'v Quickcheck.Observer.t
     -> ('k, 'v) t Quickcheck.Observer.t
-  val shrinker
+  val quickcheck_shrinker
     :  'k Quickcheck.Shrinker.t
     -> 'v Quickcheck.Shrinker.t
     -> ('k, 'v) t Quickcheck.Shrinker.t
@@ -97,11 +97,11 @@ end
 module type Accessors3 = sig
   include Map.Accessors3
 
-  val obs
+  val quickcheck_observer
     :  'k Quickcheck.Observer.t
     -> 'v Quickcheck.Observer.t
     -> ('k, 'v, _) t Quickcheck.Observer.t
-  val shrinker
+  val quickcheck_shrinker
     :  'k Quickcheck.Shrinker.t
     -> 'v Quickcheck.Shrinker.t
     -> ('k, 'v, _) t Quickcheck.Shrinker.t
@@ -110,11 +110,11 @@ end
 module type Accessors3_with_comparator = sig
   include Map.Accessors3_with_comparator
 
-  val obs
+  val quickcheck_observer
     :  'k Quickcheck.Observer.t
     -> 'v Quickcheck.Observer.t
     -> ('k, 'v, 'cmp) t Quickcheck.Observer.t
-  val shrinker
+  val quickcheck_shrinker
     :  comparator:('k, 'cmp) Comparator.t
     -> 'k Quickcheck.Shrinker.t
     -> 'v Quickcheck.Shrinker.t
@@ -167,7 +167,7 @@ module type Creators_generic = sig
 
   val of_hashtbl_exn : ('k, 'cmp, ('k key, 'v) Hashtbl.t -> ('k, 'v, 'cmp) t) options
 
-  val gen
+  val quickcheck_generator
     :  ('k, 'cmp,
         'k key Quickcheck.Generator.t
         -> 'v Quickcheck.Generator.t
@@ -180,7 +180,7 @@ module type Creators1 = sig
 
   val of_hashtbl_exn  : (key, 'a) Hashtbl.t -> 'a t
 
-  val gen
+  val quickcheck_generator
     :  key Quickcheck.Generator.t
     -> 'a Quickcheck.Generator.t
     -> 'a t Quickcheck.Generator.t
@@ -191,7 +191,7 @@ module type Creators2 = sig
 
   val of_hashtbl_exn  : ('a, 'b) Hashtbl.t -> ('a, 'b) t
 
-  val gen
+  val quickcheck_generator
     :  'a Quickcheck.Generator.t
     -> 'b Quickcheck.Generator.t
     -> ('a, 'b) t Quickcheck.Generator.t
@@ -204,7 +204,7 @@ module type Creators3_with_comparator = sig
     :  comparator:('a, 'cmp) Comparator.t
     -> ('a, 'b) Hashtbl.t -> ('a, 'b, 'cmp) t
 
-  val gen
+  val quickcheck_generator
     :  comparator:('a, 'cmp) Comparator.t
     -> 'a Quickcheck.Generator.t
     -> 'b Quickcheck.Generator.t

@@ -21,7 +21,7 @@ module For_quickcheck = struct
   let gen_tree ~comparator k_gen v_gen =
     Base_quickcheck.Generator.map_tree_using_comparator ~comparator k_gen v_gen
 
-  let gen ~comparator k_gen v_gen =
+  let quickcheck_generator ~comparator k_gen v_gen =
     Base_quickcheck.Generator.map_t_m (of_comparator comparator) k_gen v_gen
 
   let obs_tree k_obs v_obs =
@@ -31,17 +31,17 @@ module For_quickcheck = struct
     Base_quickcheck.Shrinker.map_tree_using_comparator ~comparator k_shr v_shr
 end
 
-let gen = Base_quickcheck.Generator.map_t_m
-let obs = Base_quickcheck.Observer.map_t
-let shrinker = Base_quickcheck.Shrinker.map_t
+let quickcheck_generator = Base_quickcheck.Generator.map_t_m
+let quickcheck_observer = Base_quickcheck.Observer.map_t
+let quickcheck_shrinker = Base_quickcheck.Shrinker.map_t
 
 module Accessors = struct
   include (Map.Using_comparator : Map.Accessors3
            with type ('a, 'b, 'c) t    := ('a, 'b, 'c) Map.t
            with type ('a, 'b, 'c) tree := ('a, 'b, 'c) Tree .t)
 
-  let obs k v = obs k v
-  let shrinker k v = shrinker k v
+  let quickcheck_observer k v = quickcheck_observer k v
+  let quickcheck_shrinker k v = quickcheck_shrinker k v
 end
 
 module Using_comparator = struct
@@ -166,7 +166,7 @@ end = struct
   let t_of_sexp k_of_sexp v_of_sexp sexp =
     Using_comparator.t_of_sexp_direct ~comparator k_of_sexp v_of_sexp sexp
 
-  let gen gen_k gen_v = Using_comparator.gen ~comparator gen_k gen_v
+  let quickcheck_generator gen_k gen_v = Using_comparator.quickcheck_generator ~comparator gen_k gen_v
 
 end
 
@@ -258,13 +258,13 @@ module Make_tree (Key : Comparator.S1) = struct
     to_sequence ~comparator ?order ?keys_greater_or_equal_to
       ?keys_less_or_equal_to t
 
-  let gen k v =
+  let quickcheck_generator k v =
     For_quickcheck.gen_tree ~comparator k v
 
-  let obs k v =
+  let quickcheck_observer k v =
     For_quickcheck.obs_tree k v
 
-  let shrinker k v =
+  let quickcheck_shrinker k v =
     For_quickcheck.shr_tree ~comparator k v
 end
 
@@ -434,11 +434,11 @@ include (Map : For_deriving with type ('a, 'b, 'c) t := ('a, 'b, 'c) t)
 module Tree = struct
   include Tree
   let of_hashtbl_exn = Using_comparator.tree_of_hashtbl_exn
-  let gen ~comparator k v =
+  let quickcheck_generator ~comparator k v =
     For_quickcheck.gen_tree ~comparator k v
-  let obs k v =
+  let quickcheck_observer k v =
     For_quickcheck.obs_tree k v
-  let shrinker ~comparator k v =
+  let quickcheck_shrinker ~comparator k v =
     For_quickcheck.shr_tree ~comparator k v
 end
 

@@ -17,9 +17,9 @@ include (Base.Int64
              with type t := t
              with module Hex := Base.Int64.Hex))
 
-let gen = Base_quickcheck.Generator.int64
-let obs = Base_quickcheck.Observer.int64
-let shrinker = Base_quickcheck.Shrinker.int64
+let quickcheck_generator = Base_quickcheck.Generator.int64
+let quickcheck_observer = Base_quickcheck.Observer.int64
+let quickcheck_shrinker = Base_quickcheck.Shrinker.int64
 
 let gen_incl = Base_quickcheck.Generator.int64_inclusive
 let gen_uniform_incl = Base_quickcheck.Generator.int64_uniform_inclusive

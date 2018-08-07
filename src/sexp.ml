@@ -20,12 +20,6 @@ module Sexp_maybe = struct
 
   type sexp = t [@@deriving bin_io, compare, hash]             (* avoid recursive type *)
 
-  (* to satisfy pa_compare *)
-  module Error = struct
-    include Error
-    include Comparable.Poly (Error)
-  end
-
   type 'a t = ('a, sexp * Error.t) Result.t [@@deriving bin_io, compare, hash]
 
   let sexp_of_t sexp_of_a t =
@@ -101,6 +95,6 @@ let of_sexp_allow_extra_fields of_sexp sexp =
   Exn.protect ~finally:(fun () -> r := prev)
     ~f:(fun () -> r := false; of_sexp sexp)
 
-let gen = Base_quickcheck.Generator.sexp
-let obs = Base_quickcheck.Observer.sexp
-let shrinker = Base_quickcheck.Shrinker.sexp
+let quickcheck_generator = Base_quickcheck.Generator.sexp
+let quickcheck_observer = Base_quickcheck.Observer.sexp
+let quickcheck_shrinker = Base_quickcheck.Shrinker.sexp

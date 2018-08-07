@@ -11,7 +11,7 @@ let%test_module "shrinker" =
 
     let%test_unit _ =
       [%test_result: int option list]
-        (Sequence.to_list (Shrinker.shrink (shrinker t1) None))
+        (Sequence.to_list (Shrinker.shrink (quickcheck_shrinker t1) None))
         ~expect:[]
 
     let%test_unit _ =
@@ -21,7 +21,7 @@ let%test_module "shrinker" =
         |> sort
       in
       let results =
-        Shrinker.shrink (shrinker t1) (Some 5)
+        Shrinker.shrink (quickcheck_shrinker t1) (Some 5)
         |> Sequence.to_list
         |> sort
       in

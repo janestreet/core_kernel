@@ -31,12 +31,12 @@ include Comparator.Derived(struct
     type nonrec 'a t = 'a t [@@deriving sexp_of, compare]
   end)
 
-let gen = Base_quickcheck.Generator.list
+let quickcheck_generator = Base_quickcheck.Generator.list
 let gen_non_empty = Base_quickcheck.Generator.list_non_empty
 
-let gen_with_length length gen =
-  Base_quickcheck.Generator.list_with_length gen ~length
+let gen_with_length length quickcheck_generator =
+  Base_quickcheck.Generator.list_with_length quickcheck_generator ~length
 
 let gen_permutations = Base_quickcheck.Generator.list_permutations
-let obs = Base_quickcheck.Observer.list
-let shrinker = Base_quickcheck.Shrinker.list
+let quickcheck_observer = Base_quickcheck.Observer.list
+let quickcheck_shrinker = Base_quickcheck.Shrinker.list

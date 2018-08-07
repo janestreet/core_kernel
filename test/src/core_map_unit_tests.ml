@@ -84,7 +84,7 @@ module Unit_tests
     let nth                        x = simplify_accessor nth x
     let nth_exn                    x = simplify_accessor nth_exn x
     let rank                       x = simplify_accessor rank x
-    let shrinker                   x = simplify_accessor shrinker x
+    let quickcheck_shrinker                   x = simplify_accessor quickcheck_shrinker x
     let to_sequence ?order ?keys_greater_or_equal_to ?keys_less_or_equal_to x =
       simplify_accessor to_sequence ?order ?keys_greater_or_equal_to
         ?keys_less_or_equal_to x
@@ -108,7 +108,7 @@ module Unit_tests
     let of_alist_reduce           x = simplify_creator of_alist_reduce x
     let of_iteri             ~iteri = simplify_creator of_iteri ~iteri
     let of_tree                   x = simplify_creator of_tree x
-    let gen                       x = simplify_creator gen x
+    let quickcheck_generator                       x = simplify_creator quickcheck_generator x
 
     type ('a, 'b) t = ('a, 'b, Int.comparator_witness) t_
     let sexp_of_t sexp_of_a sexp_of_b t =
@@ -150,10 +150,10 @@ module Unit_tests
     let pred t = of_int (to_int t - 1)
     let succ t = of_int (to_int t + 1)
 
-    let gen = Quickcheck.Generator.map Int.gen ~f:of_int
+    let quickcheck_generator = Quickcheck.Generator.map Int.quickcheck_generator ~f:of_int
 
-    let obs =
-      Quickcheck.Observer.unmap Int.obs
+    let quickcheck_observer =
+      Quickcheck.Observer.unmap Int.quickcheck_observer
         ~f:to_int
 
   end
@@ -1528,17 +1528,17 @@ module Unit_tests
           assert (Result.is_error (Result.try_with (fun () -> Poly.equal t1 t2)))))
   ;;
 
-  let gen _ _ = assert false
+  let quickcheck_generator _ _ = assert false
 
   let%test_module _ =
     (module struct
       open Quickcheck
       let sexp_of = [%sexp_of: (int, char) Map.t]
       let compare = Map.compare_direct Char.compare
-      let gen = Map.gen Key.gen Char.gen
-      let can_generate f = test_can_generate gen ~sexp_of ~f
+      let quickcheck_generator = Map.quickcheck_generator Key.quickcheck_generator Char.quickcheck_generator
+      let can_generate f = test_can_generate quickcheck_generator ~sexp_of ~f
 
-      let%test_unit _ = test_distinct_values gen ~sexp_of ~compare
+      let%test_unit _ = test_distinct_values quickcheck_generator ~sexp_of ~compare
                           ~trials:1_000 ~distinct_values:500
       let%test_unit _ = can_generate (fun t -> Map.is_empty t)
       let%test_unit _ = can_generate (fun t -> Map.length t = 1)
@@ -1550,7 +1550,7 @@ module Unit_tests
         Key.to_int key <  0))
     end)
 
-  let obs _ _ = assert false
+  let quickcheck_observer _ _ = assert false
 
   let%test_module _ =
     (module struct
@@ -1580,15 +1580,15 @@ module Unit_tests
 
       let sexp_of = [%sexp_of: F.t]
       let compare = [%compare: F.t]
-      let gen =
+      let quickcheck_generator =
         (* memoizing these functions makes [test_no_duplicates] run much faster *)
         let hashable = Hashtbl_intf.Hashable.of_key (module Int_char_map) in
-        Generator.(fn (Map.obs Key.obs Char.obs) Int.gen
+        Generator.(fn (Map.quickcheck_observer Key.quickcheck_observer Char.quickcheck_observer) Int.quickcheck_generator
                    |> map ~f:(fun f -> Memo.general f ~hashable))
-      let can_generate ?trials f = test_can_generate gen ?trials ~sexp_of ~f
+      let can_generate ?trials f = test_can_generate quickcheck_generator ?trials ~sexp_of ~f
 
       let%test_unit _ [@tags "no-js"] =
-        test_distinct_values gen ~sexp_of ~compare
+        test_distinct_values quickcheck_generator ~sexp_of ~compare
           ~trials:1_000 ~distinct_values:500
 
       let%test_unit _ = can_generate (fun f ->
@@ -1599,7 +1599,7 @@ module Unit_tests
         f (Map.singleton (Key.of_int 0) 'a') <> f (Map.singleton (Key.of_int 0) 'b'))
     end)
 
-  let shrinker _ _ = assert false
+  let quickcheck_shrinker _ _ = assert false
 
   let%test_module _ =
     (module struct
@@ -1612,7 +1612,7 @@ module Unit_tests
           then Sequence.empty
           else Sequence.singleton (Key.of_int (Int.pred n)))
 
-      let shrinker = Map.shrinker key_shrinker String.shrinker
+      let quickcheck_shrinker = Map.quickcheck_shrinker key_shrinker String.quickcheck_shrinker
 
       let normalize_alist alist =
         List.sort alist ~compare:(fun (k1,_) (k2,_) ->
@@ -1633,7 +1633,7 @@ module Unit_tests
       let test alist shrunk_alists =
         [%test_result: (int * string) list list]
           (map_of_alist alist
-           |> Shrinker.shrink shrinker
+           |> Shrinker.shrink quickcheck_shrinker
            |> Sequence.to_list
            |> List.map ~f:alist_of_map
            |> normalize_alists)
@@ -1644,8 +1644,7 @@ module Unit_tests
       let%test_unit _ = test [1,""] [[];[0,""]]
       let%test_unit _ = test [0,"a"] [[];[0,""]]
       let%test_unit _ = test [1,"a"] [[];[0,"a"];[1,""]]
-      let%test_unit _ =
-        test [0,"a";1,"b"] [[0,"a"];[1,"b"];[0,"b"];[0,"";1,"b"];[0,"a";1,""]]
+      let%test_unit _ = test [0,"a";1,"b"] [[0,"a"];[1,"b"];[0,"";1,"b"];[0,"a";1,""]]
     end)
 
 end

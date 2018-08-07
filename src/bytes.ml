@@ -16,11 +16,11 @@ include Hexdump.Of_indexable (struct
     let get    = get
   end)
 
-let gen = String.gen |> Quickcheck.Generator.map ~f:of_string
-let obs = String.obs |> Quickcheck.Observer.unmap ~f:to_string
+let quickcheck_generator = String.quickcheck_generator |> Quickcheck.Generator.map ~f:of_string
+let quickcheck_observer = String.quickcheck_observer |> Quickcheck.Observer.unmap ~f:to_string
 
-let shrinker =
-  String.shrinker
+let quickcheck_shrinker =
+  String.quickcheck_shrinker
   |> Quickcheck.Shrinker.map ~f:of_string ~f_inverse:to_string
 
 let gen' char_gen =

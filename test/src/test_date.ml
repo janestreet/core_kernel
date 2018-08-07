@@ -313,19 +313,19 @@ let%test_module "first_strictly_after" =
   end)
 
 let%test_unit _ =
-  Quickcheck.test_can_generate gen ~sexp_of:sexp_of_t ~f:(fun t ->
+  Quickcheck.test_can_generate quickcheck_generator ~sexp_of:sexp_of_t ~f:(fun t ->
     t = of_string "1900-01-01")
 
 let%test_unit _ =
-  Quickcheck.test_can_generate gen ~sexp_of:sexp_of_t ~f:(fun t ->
+  Quickcheck.test_can_generate quickcheck_generator ~sexp_of:sexp_of_t ~f:(fun t ->
     t = of_string "2100-01-01")
 
 let%test_unit _ =
-  Quickcheck.test_can_generate gen ~sexp_of:sexp_of_t ~f:(fun t ->
+  Quickcheck.test_can_generate quickcheck_generator ~sexp_of:sexp_of_t ~f:(fun t ->
     of_string "1900-01-01" < t && t < of_string "2100-01-01")
 
 let%test_unit _ =
-  Quickcheck.test_distinct_values gen
+  Quickcheck.test_distinct_values quickcheck_generator
     ~sexp_of:sexp_of_t
     ~compare
     ~trials:1_000

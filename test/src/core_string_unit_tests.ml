@@ -33,27 +33,27 @@ let%test_unit "String.is_prefix doesn't allocate" =
 ;;
 
 let%test_unit "String.Caseless.compare is consistent with String.compare of lowercase" =
-  let gen = Quickcheck.Generator.tuple2 String.gen String.gen in
+  let quickcheck_generator = Quickcheck.Generator.tuple2 String.quickcheck_generator String.quickcheck_generator in
   let sexp_of = [%sexp_of: string * string] in
   (* make sure we can generate strings that are identical *)
-  Quickcheck.test_can_generate gen ~sexp_of ~f:(fun (x, y) ->
+  Quickcheck.test_can_generate quickcheck_generator ~sexp_of ~f:(fun (x, y) ->
     String.equal x y);
   (* make sure we can generate strings that are the only the same after case folding *)
-  Quickcheck.test_can_generate gen ~sexp_of ~f:(fun (x, y) ->
+  Quickcheck.test_can_generate quickcheck_generator ~sexp_of ~f:(fun (x, y) ->
     String.equal (String.lowercase x) (String.lowercase y)
     && not (String.equal x y));
   (* make sure we can generate a prefix of the other string, after case folding *)
-  Quickcheck.test_can_generate gen ~sexp_of ~f:(fun (x, y) ->
+  Quickcheck.test_can_generate quickcheck_generator ~sexp_of ~f:(fun (x, y) ->
     String.is_prefix (String.lowercase x) ~prefix:(String.lowercase y)
     && not (String.equal (String.lowercase x) (String.lowercase y))
     && not (String.is_prefix x ~prefix:y));
   (* ... and in the other direction *)
-  Quickcheck.test_can_generate gen ~sexp_of ~f:(fun (x, y) ->
+  Quickcheck.test_can_generate quickcheck_generator ~sexp_of ~f:(fun (x, y) ->
     String.is_prefix (String.lowercase y) ~prefix:(String.lowercase x)
     && not (String.equal (String.lowercase y) (String.lowercase x))
     && not (String.is_prefix y ~prefix:x));
   (* now make sure our comparisons work *)
-  Quickcheck.test gen ~sexp_of ~f:(fun (x, y) ->
+  Quickcheck.test quickcheck_generator ~sexp_of ~f:(fun (x, y) ->
     [%test_result: int]
       (String.Caseless.compare x y)
       ~expect:(String.compare (String.lowercase x) (String.lowercase y)))

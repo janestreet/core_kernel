@@ -1,7 +1,7 @@
 open Core_kernel
 
 let%test_unit "Fqueue round trip via list" =
-  Quickcheck.test (List.gen Int.gen)
+  Quickcheck.test (List.quickcheck_generator Int.quickcheck_generator)
     ~sexp_of:[%sexp_of: int list]
     ~f:(fun a ->
       let b = Fqueue.of_list a in

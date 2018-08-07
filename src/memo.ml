@@ -64,3 +64,18 @@ let general ?hashable ?cache_size_bound f =
   match cache_size_bound with
   | None -> unbounded ?hashable f
   | Some n -> lru ?hashable ~max_cache_size:n f
+
+let of_comparable (type index)
+      (module M : Comparable.S_plain with type t = index) f =
+  let m = ref M.Map.empty in
+  fun (x : M.t) ->
+    let v =
+      match Map.find !m x with
+      | Some v -> v
+      | None ->
+        let v = Result.capture f x in
+        m := Map.set !m ~key:x ~data:v;
+        v
+    in
+    Result.return v
+;;

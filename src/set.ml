@@ -20,25 +20,25 @@ let of_comparator (type k cmp) comparator : (k, cmp) Set.comparator =
   end)
 
 module For_quickcheck = struct
-  let gen ~comparator elt_gen =
+  let quickcheck_generator ~comparator elt_gen =
     Base_quickcheck.Generator.set_t_m (of_comparator comparator) elt_gen
 
   let gen_tree ~comparator elt_gen =
     Base_quickcheck.Generator.set_tree_using_comparator ~comparator elt_gen
 
-  let obs elt_obs = Base_quickcheck.Observer.set_t elt_obs
+  let quickcheck_observer elt_obs = Base_quickcheck.Observer.set_t elt_obs
 
   let obs_tree elt_obs = Base_quickcheck.Observer.set_tree elt_obs
 
-  let shrinker elt_shr = Base_quickcheck.Shrinker.set_t elt_shr
+  let quickcheck_shrinker elt_shr = Base_quickcheck.Shrinker.set_t elt_shr
 
   let shr_tree ~comparator elt_shr =
     Base_quickcheck.Shrinker.set_tree_using_comparator ~comparator elt_shr
 end
 
-let gen m elt_gen = For_quickcheck.gen ~comparator:(to_comparator m) elt_gen
-let obs = For_quickcheck.obs
-let shrinker = For_quickcheck.shrinker
+let quickcheck_generator m elt_gen = For_quickcheck.quickcheck_generator ~comparator:(to_comparator m) elt_gen
+let quickcheck_observer = For_quickcheck.quickcheck_observer
+let quickcheck_shrinker = For_quickcheck.quickcheck_shrinker
 
 module Tree = struct
   include Tree
@@ -63,9 +63,9 @@ module Tree = struct
       ~f:(fun ~key:x ~data:_ t -> add t x ~comparator)
   ;;
 
-  let gen = For_quickcheck.gen_tree
-  let obs = For_quickcheck.obs_tree
-  let shrinker = For_quickcheck.shr_tree
+  let quickcheck_generator = For_quickcheck.gen_tree
+  let quickcheck_observer = For_quickcheck.obs_tree
+  let quickcheck_shrinker = For_quickcheck.shr_tree
 end
 
 module Accessors = struct
@@ -75,8 +75,8 @@ module Accessors = struct
            with type ('a, 'b) named := ('a, 'b) Set.Named.t)
 
   let to_map t ~f = Tree.to_map ~comparator:(Set.Using_comparator.comparator t) (to_tree t) ~f
-  let obs = obs
-  let shrinker = shrinker
+  let quickcheck_observer = quickcheck_observer
+  let quickcheck_shrinker = quickcheck_shrinker
 end
 
 type 'a cmp = 'a
@@ -199,7 +199,7 @@ end = struct
 
   let of_map_keys = of_map_keys
 
-  let gen elt = gen ~comparator elt
+  let quickcheck_generator elt = quickcheck_generator ~comparator elt
 
 end
 
@@ -293,9 +293,9 @@ module Make_tree (Elt : Comparator.S1) = struct
     let equal t1 t2 = Tree.Named.equal t1 t2 ~comparator
   end
 
-  let gen elt = For_quickcheck.gen_tree elt ~comparator
-  let obs elt = For_quickcheck.obs_tree elt
-  let shrinker elt = For_quickcheck.shr_tree elt ~comparator
+  let quickcheck_generator elt = For_quickcheck.gen_tree elt ~comparator
+  let quickcheck_observer elt = For_quickcheck.obs_tree elt
+  let quickcheck_shrinker elt = For_quickcheck.shr_tree elt ~comparator
 end
 
 (* Don't use [of_sorted_array] to avoid the allocation of an intermediate array *)

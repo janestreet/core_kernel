@@ -562,13 +562,13 @@ val to_sequence
   -> ('k, 'v, 'cmp) t
   -> ('k * 'v) Sequence.t
 
-val gen
+val quickcheck_generator
   :  ('k, 'cmp) comparator
   -> 'k Quickcheck.Generator.t
   -> 'v Quickcheck.Generator.t
   -> ('k, 'v, 'cmp) t Quickcheck.Generator.t
 
-val obs
+val quickcheck_observer
   :  'k Quickcheck.Observer.t
   -> 'v Quickcheck.Observer.t
   -> ('k, 'v, 'cmp) t Quickcheck.Observer.t
@@ -576,7 +576,7 @@ val obs
 (** This shrinker and the other shrinkers for maps and trees produce a shrunk
     value by dropping a key-value pair, shrinking a key or shrinking a value.
     A shrunk key will override an existing key's value. *)
-val shrinker
+val quickcheck_shrinker
   :  'k Quickcheck.Shrinker.t
   -> 'v Quickcheck.Shrinker.t
   -> ('k, 'v, 'cmp) t Quickcheck.Shrinker.t

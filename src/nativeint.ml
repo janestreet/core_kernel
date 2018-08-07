@@ -17,9 +17,9 @@ include (Base.Nativeint
              with type t := t
              with module Hex := Base.Nativeint.Hex))
 
-let gen = Base_quickcheck.Generator.nativeint
-let obs = Base_quickcheck.Observer.nativeint
-let shrinker = Base_quickcheck.Shrinker.nativeint
+let quickcheck_generator = Base_quickcheck.Generator.nativeint
+let quickcheck_observer = Base_quickcheck.Observer.nativeint
+let quickcheck_shrinker = Base_quickcheck.Shrinker.nativeint
 
 let gen_incl = Base_quickcheck.Generator.nativeint_inclusive
 let gen_uniform_incl = Base_quickcheck.Generator.nativeint_uniform_inclusive

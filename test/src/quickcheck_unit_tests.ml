@@ -4,26 +4,46 @@ open! Quickcheck
 
 let%expect_test "Quickcheck.Let_syntax" [@tags "64-bits-only"] =
   let open Quickcheck.Let_syntax in
-  let gen =
+  let quickcheck_generator =
     [%map_open
-      let triple = tuple3 Bool.gen Char.gen Float.gen
-      and choice = variant2 String.gen Int.gen
+      let triple = tuple3 Bool.quickcheck_generator Char.quickcheck_generator Float.quickcheck_generator
+      and choice = variant2 String.quickcheck_generator Int.quickcheck_generator
       in
       [%sexp (triple : bool * char * float), (choice : [`A of string | `B of int])]
     ]
   in
-  Quickcheck.iter gen ~trials:10 ~f:print_s;
+  Quickcheck.iter quickcheck_generator ~trials:10 ~f:print_s;
   [%expect {|
-    ((false 5 -2.2257080078125) (A ""))
-    ((false 8 -7.0859960404923186) (B -420_712_773_498))
-    ((true I -1.3377742608693866E-196) (A p|))
-    ((false E 2.3040650252865916E-53) (B 953_614))
-    ((false s 4.3902458242168346E-10) (B -28_613_698))
-    ((true v -7.8228876151340563E-07) (B -33_044_463))
-    ((true "\213" 1.21046083231105E-321) (A LaXnTQ))
-    ((true 7 1.8868182322474982E-57) (A T/kCv4w))
-    ((false y -1.0135545669364448E-145) (A syq2))
-    ((false E -1.1235582092889474E+308) (B 4_595)) |}];
+    ((false r -3.950862943457765E-284) (B -225_617))
+    ((true R -3.3813765048980713) (B 15_568_213_580))
+    ((false C -624423578.84277344) (B 24_202_329_494_286))
+    ((false Y -1.0281888693571091) (B -1_065_025))
+    ((true "\206" 1.1222031873105373E-250) (A cnU))
+    ((false 8 -1.43279037293961E-322) (A vEOen))
+    ((true "\210" 3.5911798477172852E-06) (B -60_755_131_891_985_243))
+    ((true q -2.7384144222874056) (A "1s8gcTe\255"))
+    ((true R -1.0135545669364448E-145) (A ""))
+    ((true 9 7.3640447691138419E+149) (A "")) |}];
+;;
+
+let%expect_test "ppx_quickcheck" =
+  let module M = struct
+    (* include some top-level type names like [int] and some module-exported type names
+       like [Option.t] *)
+    type t =
+      | A
+      | B of int list * Unit.t Option.t
+      | C of { x : float }
+    [@@deriving compare, quickcheck, sexp_of]
+  end in
+  List.iter
+    ~f:(fun predicate -> Quickcheck.test_can_generate M.quickcheck_generator ~f:predicate)
+    [
+      (function M.A -> true | _ -> false);
+      (function M.B _ -> true | _ -> false);
+      (function M.C _ -> true | _ -> false);
+    ];
+  [%expect {| |}];
 ;;
 
 module Test (S : sig val default_seed : Quickcheck.seed end) : sig end = struct
@@ -46,7 +66,7 @@ module Test (S : sig val default_seed : Quickcheck.seed end) : sig end = struct
   let memo k =
     let hashable = Hashtbl_intf.Hashable.of_key k in
     let memoize f = Memo.general f ~hashable in
-    (fun gen -> G.map gen ~f:memoize)
+    (fun quickcheck_generator -> G.map quickcheck_generator ~f:memoize)
 
   let%test_module "examples" =
     (module struct
@@ -54,7 +74,7 @@ module Test (S : sig val default_seed : Quickcheck.seed end) : sig end = struct
 
       let example_occurs ~examples =
         let occurs = ref false in
-        test String.gen ~examples ~f:(fun str ->
+        test String.quickcheck_generator ~examples ~f:(fun str ->
           if String.equal str example then occurs := true);
         !occurs
 
@@ -64,23 +84,23 @@ module Test (S : sig val default_seed : Quickcheck.seed end) : sig end = struct
 
   let%test_module "duplicates" =
     (module struct
-      let gen = G.map Int.gen ~f:ignore
+      let quickcheck_generator = G.map Int.quickcheck_generator ~f:ignore
       let sexp_of = Unit.sexp_of_t
       let compare = Unit.compare
 
       let%test_unit _ =
         assert (Exn.does_raise (fun () ->
-          test_distinct_values gen ~sexp_of ~compare ~trials:1_000 ~distinct_values:2))
+          test_distinct_values quickcheck_generator ~sexp_of ~compare ~trials:1_000 ~distinct_values:2))
 
       let%test_unit _ =
-        test_distinct_values gen ~sexp_of ~compare ~trials:1_000 ~distinct_values:1
+        test_distinct_values quickcheck_generator ~sexp_of ~compare ~trials:1_000 ~distinct_values:1
     end)
 
   let%test_module "unit" =
     (module struct
       let sexp_of = Unit.sexp_of_t
-      let gen = Unit.gen
-      let can_generate f = test_can_generate gen ~sexp_of ~f
+      let quickcheck_generator = Unit.quickcheck_generator
+      let can_generate f = test_can_generate quickcheck_generator ~sexp_of ~f
 
       let%test_unit _ = can_generate (fun () -> true)
     end)
@@ -88,8 +108,8 @@ module Test (S : sig val default_seed : Quickcheck.seed end) : sig end = struct
   let%test_module "bool" =
     (module struct
       let sexp_of = Bool.sexp_of_t
-      let gen = Bool.gen
-      let can_generate f = test_can_generate gen ~sexp_of ~f
+      let quickcheck_generator = Bool.quickcheck_generator
+      let can_generate f = test_can_generate quickcheck_generator ~sexp_of ~f
 
       let%test_unit _ = can_generate (fun x -> x = true)
       let%test_unit _ = can_generate (fun x -> x = false)
@@ -99,10 +119,10 @@ module Test (S : sig val default_seed : Quickcheck.seed end) : sig end = struct
     (module struct
       let sexp_of = Int.Hex.sexp_of_t
       let compare = Int.compare
-      let gen = Int.gen
-      let can_generate f = test_can_generate gen ~sexp_of ~f
+      let quickcheck_generator = Int.quickcheck_generator
+      let can_generate f = test_can_generate quickcheck_generator ~sexp_of ~f
 
-      let%test_unit _ = test_distinct_values gen ~sexp_of ~compare
+      let%test_unit _ = test_distinct_values quickcheck_generator ~sexp_of ~compare
                           ~trials:1_000 ~distinct_values:500
       let%test_unit _ = can_generate (fun x -> Int.popcount x < Int.num_bits / 2)
       let%test_unit _ = can_generate (fun x -> Int.popcount x > Int.num_bits / 2)
@@ -122,8 +142,8 @@ module Test (S : sig val default_seed : Quickcheck.seed end) : sig end = struct
       let bits_equal x y = (bits_compare x y) = 0
       let sexp_of = Float.sexp_of_t
       let compare = bits_compare
-      let gen = Float.gen
-      let can_generate f = test_can_generate gen ~sexp_of ~f
+      let quickcheck_generator = Float.quickcheck_generator
+      let can_generate f = test_can_generate quickcheck_generator ~sexp_of ~f
 
       let has_class x c =
         match Float.classify x, (c : Float.Class.t) with
@@ -135,7 +155,7 @@ module Test (S : sig val default_seed : Quickcheck.seed end) : sig end = struct
           -> true
         | _ -> false
 
-      let%test_unit _ = test_distinct_values gen ~sexp_of ~compare
+      let%test_unit _ = test_distinct_values quickcheck_generator ~sexp_of ~compare
                           ~trials:1_000 ~distinct_values:500
       let%test_unit _ = can_generate (fun x -> has_class x Infinite)
       let%test_unit _ = can_generate (fun x -> has_class x Nan)
@@ -208,10 +228,10 @@ module Test (S : sig val default_seed : Quickcheck.seed end) : sig end = struct
     (module struct
       let sexp_of = String.sexp_of_t
       let compare = String.compare
-      let gen = String.gen
-      let can_generate f = test_can_generate gen ~sexp_of ~f
+      let quickcheck_generator = String.quickcheck_generator
+      let can_generate f = test_can_generate quickcheck_generator ~sexp_of ~f
 
-      let%test_unit _ = test_distinct_values gen ~sexp_of ~compare
+      let%test_unit _ = test_distinct_values quickcheck_generator ~sexp_of ~compare
                           ~trials:1_000 ~distinct_values:500
       let%test_unit _ = can_generate (fun x -> String.length x = 0)
       let%test_unit _ = can_generate (fun x -> String.length x = 1)
@@ -228,8 +248,8 @@ module Test (S : sig val default_seed : Quickcheck.seed end) : sig end = struct
   let%test_module "char" =
     (module struct
       let sexp_of = Char.sexp_of_t
-      let gen = Char.gen
-      let can_generate f = test_can_generate gen ~sexp_of ~f
+      let quickcheck_generator = Char.quickcheck_generator
+      let can_generate f = test_can_generate quickcheck_generator ~sexp_of ~f
 
       let%test_unit _ = can_generate Char.is_digit
       let%test_unit _ = can_generate Char.is_lowercase
@@ -243,7 +263,7 @@ module Test (S : sig val default_seed : Quickcheck.seed end) : sig end = struct
         && not (Char.is_print c)
         && not (Char.is_whitespace c))
 
-      let test_coverage gen ~f =
+      let test_coverage quickcheck_generator ~f =
         let all = Char.Set.of_list Char.all in
         (* repeat to make sure changing random seed doesn't affect the outcome *)
         for _ = 1 to 10 do
@@ -251,7 +271,7 @@ module Test (S : sig val default_seed : Quickcheck.seed end) : sig end = struct
           let actual =
             let set = ref Char.Set.empty in
             with_return (fun return ->
-              Sequence.iter (Quickcheck.random_sequence gen) ~f:(fun t ->
+              Sequence.iter (Quickcheck.random_sequence quickcheck_generator) ~f:(fun t ->
                 set := Set.add !set t;
                 if Set.equal !set expect then return.return ()));
             !set
@@ -260,7 +280,7 @@ module Test (S : sig val default_seed : Quickcheck.seed end) : sig end = struct
         done
 
       (* exported generators: *)
-      let%test_unit "default"    = test_coverage Char.gen            ~f:(fun _ -> true)
+      let%test_unit "default"    = test_coverage Char.quickcheck_generator            ~f:(fun _ -> true)
       let%test_unit "digit"      = test_coverage Char.gen_digit      ~f:Char.is_digit
       let%test_unit "lowercase"  = test_coverage Char.gen_lowercase  ~f:Char.is_lowercase
       let%test_unit "uppercase"  = test_coverage Char.gen_uppercase  ~f:Char.is_uppercase
@@ -274,10 +294,10 @@ module Test (S : sig val default_seed : Quickcheck.seed end) : sig end = struct
     (module struct
       let sexp_of = [%sexp_of: char * char]
       let compare = [%compare: char * char]
-      let gen = G.tuple2 Char.gen Char.gen
-      let can_generate ?trials f = test_can_generate gen ~sexp_of ~f ?trials
+      let quickcheck_generator = G.tuple2 Char.quickcheck_generator Char.quickcheck_generator
+      let can_generate ?trials f = test_can_generate quickcheck_generator ~sexp_of ~f ?trials
 
-      let%test_unit _ = test_distinct_values gen ~sexp_of ~compare
+      let%test_unit _ = test_distinct_values quickcheck_generator ~sexp_of ~compare
                           ~trials:1_000 ~distinct_values:500
       let%test_unit _ = can_generate (fun (x,y) -> Char.( = ) x y) ~trials:2_000
       let%test_unit _ = can_generate (fun (x,y) -> Char.( < ) x y)
@@ -288,11 +308,11 @@ module Test (S : sig val default_seed : Quickcheck.seed end) : sig end = struct
     (module struct
       let sexp_of = [%sexp_of: Int.Hex.t option]
       let compare = [%compare: int option]
-      let gen = Option.gen Int.gen
-      let can_generate f = test_can_generate gen ~sexp_of ~f
+      let quickcheck_generator = Option.quickcheck_generator Int.quickcheck_generator
+      let can_generate f = test_can_generate quickcheck_generator ~sexp_of ~f
 
       let%test_unit _ =
-        test_distinct_values (G.filter gen ~f:Option.is_some) ~sexp_of ~compare
+        test_distinct_values (G.filter quickcheck_generator ~f:Option.is_some) ~sexp_of ~compare
           ~trials:1_000 ~distinct_values:500
       let%test_unit _ = can_generate Option.is_none
       let%test_unit _ = can_generate Option.is_some
@@ -311,12 +331,12 @@ module Test (S : sig val default_seed : Quickcheck.seed end) : sig end = struct
         end)
       let sexp_of = [%sexp_of: F.t]
       let compare = [%compare: F.t]
-      let gen =
+      let quickcheck_generator =
         (* memoizing these functions makes [test_no_duplicates] run much faster *)
-        G.(fn Int.obs Int.gen) |> memo (module Int)
-      let can_generate f = test_can_generate gen ~sexp_of ~f
+        G.(fn Int.quickcheck_observer Int.quickcheck_generator) |> memo (module Int)
+      let can_generate f = test_can_generate quickcheck_generator ~sexp_of ~f
 
-      let%test_unit _ = test_distinct_values gen ~sexp_of ~compare
+      let%test_unit _ = test_distinct_values quickcheck_generator ~sexp_of ~compare
                           ~trials:1_000 ~distinct_values:500
 
       let%test_unit _ = can_generate (fun f -> f 0 < f (-1))
@@ -359,13 +379,13 @@ module Test (S : sig val default_seed : Quickcheck.seed end) : sig end = struct
 
       let sexp_of = [%sexp_of: Higher_order.t]
       let compare = [%compare: Higher_order.t]
-      let gen =
+      let quickcheck_generator =
         (* memoizing these functions makes [test_no_duplicates] run much faster *)
-        G.(fn O.(fn Int.gen Int.obs |> unmap ~f:First_order.apply) Int.gen)
+        G.(fn O.(fn Int.quickcheck_generator Int.quickcheck_observer |> unmap ~f:First_order.apply) Int.quickcheck_generator)
         |> memo (module First_order)
-      let can_generate f = test_can_generate gen ~f ~sexp_of
+      let can_generate f = test_can_generate quickcheck_generator ~f ~sexp_of
 
-      let%test_unit _ = test_distinct_values gen ~sexp_of ~compare
+      let%test_unit _ = test_distinct_values quickcheck_generator ~sexp_of ~compare
                           ~trials:1_000 ~distinct_values:500
 
       let%test_unit _ = can_generate (fun f -> f Succ = f Pred)
@@ -388,10 +408,10 @@ module Test (S : sig val default_seed : Quickcheck.seed end) : sig end = struct
     (module struct
       let sexp_of = [%sexp_of: char list]
       let compare = [%compare: char list]
-      let gen = List.gen Char.gen
-      let can_generate f = test_can_generate gen ~sexp_of ~f
+      let quickcheck_generator = List.quickcheck_generator Char.quickcheck_generator
+      let can_generate f = test_can_generate quickcheck_generator ~sexp_of ~f
 
-      let%test_unit _ = test_distinct_values gen ~sexp_of ~compare
+      let%test_unit _ = test_distinct_values quickcheck_generator ~sexp_of ~compare
                           ~trials:1_000 ~distinct_values:500
       let%test_unit _ = can_generate List.is_empty
       let%test_unit _ = can_generate (function [_]   -> true           | _ -> false)
@@ -409,10 +429,10 @@ module Test (S : sig val default_seed : Quickcheck.seed end) : sig end = struct
     (module struct
       let sexp_of = [%sexp_of: Sexp.t]
       let compare = [%compare: Sexp.t]
-      let gen = Sexp.gen
-      let can_generate f = test_can_generate gen ~sexp_of ~f
+      let quickcheck_generator = Sexp.quickcheck_generator
+      let can_generate f = test_can_generate quickcheck_generator ~sexp_of ~f
 
-      let%test_unit _ = test_distinct_values gen ~sexp_of ~compare
+      let%test_unit _ = test_distinct_values quickcheck_generator ~sexp_of ~compare
                           ~trials:1_000 ~distinct_values:500
       let%test_unit _ = can_generate (function Sexp.Atom _       -> true | _ -> false)
       let%test_unit _ = can_generate (function Sexp.List _       -> true | _ -> false)
@@ -455,12 +475,12 @@ module Test (S : sig val default_seed : Quickcheck.seed end) : sig end = struct
 
       let sexp_of = [%sexp_of: F.t]
       let compare = [%compare: F.t]
-      let gen =
+      let quickcheck_generator =
         (* memoizing these functions makes [test_no_duplicates] run much faster *)
-        G.(fn (List.obs Bool.obs) Char.gen) |> memo (module Bool_list)
-      let can_generate f = test_can_generate gen ~sexp_of ~f
+        G.(fn (List.quickcheck_observer Bool.quickcheck_observer) Char.quickcheck_generator) |> memo (module Bool_list)
+      let can_generate f = test_can_generate quickcheck_generator ~sexp_of ~f
 
-      let%test_unit _ = test_distinct_values gen ~sexp_of ~compare
+      let%test_unit _ = test_distinct_values quickcheck_generator ~sexp_of ~compare
                           ~trials:1_000 ~distinct_values:500
 
       let%test_unit _ = can_generate (fun f -> f []     <> f [true])
@@ -476,7 +496,7 @@ module Test (S : sig val default_seed : Quickcheck.seed end) : sig end = struct
     (module struct
 
       let test length =
-        test ~trials:1 (List.gen_with_length length Char.gen) ~f:(fun input ->
+        test ~trials:1 (List.gen_with_length length Char.quickcheck_generator) ~f:(fun input ->
           [%test_result: int] (List.length input) ~expect:length)
 
       let%test_unit "used to cause a stack overflow" = test 100_000
@@ -680,7 +700,7 @@ module Shrinker = struct
 
       let%test_unit "shrinker produces expected outputs" =
         let shrunk =
-          Shrinker.shrink (List.shrinker t0) test_list
+          Shrinker.shrink (List.quickcheck_shrinker t0) test_list
           |> Sequence.to_list
           |> List.sort ~compare:[%compare: int list ]
         in
@@ -689,7 +709,7 @@ module Shrinker = struct
       let rec recursive_list = 1::5::recursive_list
 
       let%test_unit "shrinker on infinite lists produces values" =
-        let shrunk = Shrinker.shrink (List.shrinker t0) recursive_list in
+        let shrunk = Shrinker.shrink (List.quickcheck_shrinker t0) recursive_list in
         let result_length = Sequence.take shrunk 5 |> Sequence.to_list |> List.length in
         [%test_result: int] ~expect:5 result_length
     end)

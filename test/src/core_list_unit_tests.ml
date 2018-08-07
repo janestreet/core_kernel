@@ -21,14 +21,14 @@ let%test_module "shrinker" =
 
     let%test_unit "shrinker produces expected outputs" =
       let shrunk =
-        Shrinker.shrink (shrinker t0) test_list
+        Shrinker.shrink (quickcheck_shrinker t0) test_list
         |> Sequence.to_list
         |> List.sort ~compare:[%compare: int list ]
       in
       [%test_result: int list list] ~expect shrunk
 
     let%test_unit "shrinker on infinite lists produces values" =
-      let shrunk = Shrinker.shrink (shrinker t0) recursive_list in
+      let shrunk = Shrinker.shrink (quickcheck_shrinker t0) recursive_list in
       let result_length = Sequence.take shrunk 5 |> Sequence.to_list |> List.length in
       [%test_result: int] ~expect:5 result_length
   end)
@@ -77,7 +77,7 @@ let%test_module "random" =
       ;;
 
       let%test_unit "duplicates" =
-        Q.test_distinct_values (List.gen gen)
+        Q.test_distinct_values (List.quickcheck_generator quickcheck_generator)
           ~trials:          1_000
           ~distinct_values:   500
           ~sexp_of:[%sexp_of: t list]
@@ -85,7 +85,7 @@ let%test_module "random" =
 
       let%test_unit "mem true" =
         Q.test ~sexp_of:[%sexp_of: t * t list]
-          (List.gen_non_empty gen
+          (List.gen_non_empty quickcheck_generator
            >>= fun list ->
            G.of_list list
            >>| fun elt_of_list ->
@@ -97,10 +97,10 @@ let%test_module "random" =
 
       let%test_unit "mem false" =
         Q.test ~sexp_of:[%sexp_of: t * t list]
-          (gen
+          (quickcheck_generator
            >>= fun x ->
-           let not_x_gen = G.filter gen ~f:(fun y -> y <> x) in
-           List.gen not_x_gen
+           let not_x_gen = G.filter quickcheck_generator ~f:(fun y -> y <> x) in
+           List.quickcheck_generator not_x_gen
            >>| fun list_of_not_x ->
            x, list_of_not_x)
           ~f:(fun (x, list_of_not_x) ->
@@ -112,7 +112,7 @@ let%test_module "random" =
         Q.test ~sexp_of:[%sexp_of: int * t list]
           (G.small_non_negative_int
            >>= fun len  ->
-           List.gen_with_length len gen
+           List.gen_with_length len quickcheck_generator
            >>| fun list ->
            len, list)
           ~f:(fun (len, list) ->
@@ -130,7 +130,7 @@ let%test_module "random" =
 
       let%test_unit "is_empty false" =
         Q.test ~sexp_of:[%sexp_of: t list]
-          (G.tuple2 gen (List.gen gen)
+          (G.tuple2 quickcheck_generator (List.quickcheck_generator quickcheck_generator)
            >>| fun (x,list) ->
            x::list)
           ~f:(fun non_empty ->
@@ -140,7 +140,7 @@ let%test_module "random" =
 
       let%test_unit "iter" =
         Q.test ~sexp_of:[%sexp_of: t list]
-          (List.gen gen)
+          (List.quickcheck_generator quickcheck_generator)
           ~f:(fun list ->
             let q = Queue.create () in
             List.iter list ~f:(Queue.enqueue q);
@@ -151,8 +151,8 @@ let%test_module "random" =
       let%test_unit "sum vs fold" =
         Q.test ~sexp_of:[%sexp_of: t list * (t -> Math.t)]
           (G.tuple2
-             (List.gen gen)
-             (G.fn obs Math.gen))
+             (List.quickcheck_generator quickcheck_generator)
+             (G.fn quickcheck_observer Math.quickcheck_generator))
           ~f:(fun (list, f) ->
             [%test_eq: Math.t]
               (List.fold list ~init:Math.zero ~f:(fun m x ->
@@ -162,8 +162,8 @@ let%test_module "random" =
       let%test_unit "for_all vs exists" =
         Q.test ~sexp_of:[%sexp_of: t list * (t -> bool)]
           (G.tuple2
-             (List.gen gen)
-             (G.fn obs Bool.gen))
+             (List.quickcheck_generator quickcheck_generator)
+             (G.fn quickcheck_observer Bool.quickcheck_generator))
           ~f:(fun (list, f) ->
             [%test_eq: bool]
               (List.for_all list ~f)
@@ -171,7 +171,7 @@ let%test_module "random" =
 
       let%test_unit "exists vs mem" =
         Q.test ~sexp_of:[%sexp_of: t * t list]
-          (G.tuple2 gen (List.gen gen))
+          (G.tuple2 quickcheck_generator (List.quickcheck_generator quickcheck_generator))
           ~f:(fun (x, list) ->
             [%test_eq: bool]
               (List.exists list ~f:(fun y -> equal x y))
@@ -180,8 +180,8 @@ let%test_module "random" =
       let%test_unit "exists vs find" =
         Q.test ~sexp_of:[%sexp_of: t list * (t -> bool)]
           (G.tuple2
-             (List.gen gen)
-             (G.fn obs Bool.gen))
+             (List.quickcheck_generator quickcheck_generator)
+             (G.fn quickcheck_observer Bool.quickcheck_generator))
           ~f:(fun (list, f) ->
             [%test_eq: bool]
               (List.exists list ~f)
@@ -190,8 +190,8 @@ let%test_module "random" =
       let%test_unit "count vs length/filter" =
         Q.test ~sexp_of:[%sexp_of: t list * (t -> bool)]
           (G.tuple2
-             (List.gen gen)
-             (G.fn obs Bool.gen))
+             (List.quickcheck_generator quickcheck_generator)
+             (G.fn quickcheck_observer Bool.quickcheck_generator))
           ~f:(fun (list, f) ->
             [%test_eq: int]
               (List.count list ~f)
@@ -200,8 +200,8 @@ let%test_module "random" =
       let%test_unit "find vs find_map" =
         Q.test ~sexp_of:[%sexp_of: t list * (t -> bool)]
           (G.tuple2
-             (List.gen gen)
-             (G.fn obs Bool.gen))
+             (List.quickcheck_generator quickcheck_generator)
+             (G.fn quickcheck_observer Bool.quickcheck_generator))
           ~f:(fun (list, f) ->
             [%test_eq: t option]
               (List.find     list ~f)
@@ -209,7 +209,7 @@ let%test_module "random" =
 
       let%test_unit "to_list" =
         Q.test ~sexp_of:[%sexp_of: t list]
-          (List.gen gen)
+          (List.quickcheck_generator quickcheck_generator)
           ~f:(fun list ->
             [%test_result: t list]
               (List.to_list list)
@@ -217,7 +217,7 @@ let%test_module "random" =
 
       let%test_unit "to_array + Array.to_list" =
         Q.test ~sexp_of:[%sexp_of: t list]
-          (List.gen gen)
+          (List.quickcheck_generator quickcheck_generator)
           ~f:(fun list ->
             [%test_result: t list]
               (Array.to_list (List.to_array list))
@@ -226,8 +226,8 @@ let%test_module "random" =
       let%test_unit "max_elt vs min_elt" =
         Q.test ~sexp_of:[%sexp_of: t list * (t -> t -> int)]
           (G.tuple2
-             (List.gen gen)
-             (G.compare_fn obs))
+             (List.quickcheck_generator quickcheck_generator)
+             (G.compare_fn quickcheck_observer))
           ~f:(fun (list, cmp) ->
             [%test_eq: t option]
               (List.min_elt list ~compare:cmp)
@@ -235,7 +235,7 @@ let%test_module "random" =
 
       let%test_unit "return" =
         Q.test ~sexp_of:[%sexp_of: t]
-          gen
+          quickcheck_generator
           ~f:(fun x ->
             [%test_result: t list]
               (List.return x)
@@ -244,8 +244,8 @@ let%test_module "random" =
       let%test_unit "map vs bind" =
         Q.test ~sexp_of:[%sexp_of: t list * (t -> t)]
           (G.tuple2
-             (List.gen gen)
-             (G.fn obs gen))
+             (List.quickcheck_generator quickcheck_generator)
+             (G.fn quickcheck_observer quickcheck_generator))
           ~f:(fun (list, f) ->
             [%test_eq: t list]
               (List.map list ~f)
@@ -253,7 +253,7 @@ let%test_module "random" =
 
       let%test_unit "monad left identity" =
         Q.test ~sexp_of:[%sexp_of: t * (t -> t list)]
-          (G.tuple2 gen (G.fn obs (List.gen gen)))
+          (G.tuple2 quickcheck_generator (G.fn quickcheck_observer (List.quickcheck_generator quickcheck_generator)))
           ~f:(fun (x, f) ->
             [%test_eq: t list]
               (List.bind (List.return x) ~f)
@@ -261,7 +261,7 @@ let%test_module "random" =
 
       let%test_unit "monad right identity" =
         Q.test ~sexp_of:[%sexp_of: t list]
-          (List.gen gen)
+          (List.quickcheck_generator quickcheck_generator)
           ~f:(fun list ->
             [%test_result: t list]
               (List.bind list ~f:List.return)
@@ -270,9 +270,9 @@ let%test_module "random" =
       let%test_unit "monad associativity" [@tags "no-js"] =
         Q.test ~sexp_of:[%sexp_of: t list * (t -> t list) * (t -> t list)]
           (G.tuple3
-             (List.gen gen)
-             (G.fn obs (List.gen gen))
-             (G.fn obs (List.gen gen)))
+             (List.quickcheck_generator quickcheck_generator)
+             (G.fn quickcheck_observer (List.quickcheck_generator quickcheck_generator))
+             (G.fn quickcheck_observer (List.quickcheck_generator quickcheck_generator)))
           ~f:(fun (list, f, g) ->
             [%test_eq: t list]
               (List.bind (List.bind list ~f) ~f:g)
@@ -280,7 +280,7 @@ let%test_module "random" =
 
       let%test_unit "join" =
         Q.test ~sexp_of:[%sexp_of: t list list]
-          (List.gen (List.gen gen))
+          (List.quickcheck_generator (List.quickcheck_generator quickcheck_generator))
           ~f:(fun list ->
             [%test_eq: t list]
               (List.join list)
@@ -288,7 +288,7 @@ let%test_module "random" =
 
       let%test_unit "ignore" =
         Q.test ~sexp_of:[%sexp_of: t list]
-          (List.gen gen)
+          (List.quickcheck_generator quickcheck_generator)
           ~f:(fun list ->
             [%test_eq: unit list]
               (List.ignore_m list)
@@ -296,7 +296,7 @@ let%test_module "random" =
 
       let%test_unit "of_list + to_list" =
         Q.test ~sexp_of:[%sexp_of: t list]
-          (List.gen gen)
+          (List.quickcheck_generator quickcheck_generator)
           ~f:(fun list ->
             [%test_result: t list]
               (List.of_list list)
@@ -304,7 +304,7 @@ let%test_module "random" =
 
       let%test_unit "nth vs nth_exn" =
         Q.test ~sexp_of:[%sexp_of: int * t list]
-          (G.tuple2 G.small_non_negative_int (List.gen gen))
+          (G.tuple2 G.small_non_negative_int (List.quickcheck_generator quickcheck_generator))
           ~f:(fun (i, list) ->
             [%test_eq: t option]
               (List.nth list i)
@@ -318,7 +318,7 @@ let%test_module "random" =
            G.tuple3
              (G.return size)
              (Int.gen_incl 0 (size - 1))
-             (G.fn Int.obs gen))
+             (G.fn Int.quickcheck_observer quickcheck_generator))
           ~f:(fun (size, i, f) ->
             [%test_result: t]
               (List.nth_exn (List.init size ~f) i)
@@ -326,7 +326,7 @@ let%test_module "random" =
 
       let%test_unit "rev^2" =
         Q.test ~sexp_of:[%sexp_of: t list]
-          (List.gen gen)
+          (List.quickcheck_generator quickcheck_generator)
           ~f:(fun list ->
             [%test_result: t list]
               (List.rev (List.rev list))
@@ -335,8 +335,8 @@ let%test_module "random" =
       let%test_unit "rev_append vs rev + append" =
         Q.test ~sexp_of:[%sexp_of: t list * t list]
           (G.tuple2
-             (List.gen gen)
-             (List.gen gen))
+             (List.quickcheck_generator quickcheck_generator)
+             (List.quickcheck_generator quickcheck_generator))
           ~f:(fun (list1, list2) ->
             [%test_eq: t list]
               (List.rev_append list1 list2)
@@ -345,9 +345,9 @@ let%test_module "random" =
       let%test_unit "unordered_append vs append" =
         Q.test ~sexp_of:[%sexp_of: t list * t list * t]
           (G.tuple3
-             (List.gen gen)
-             (List.gen gen)
-             gen)
+             (List.quickcheck_generator quickcheck_generator)
+             (List.quickcheck_generator quickcheck_generator)
+             quickcheck_generator)
           ~f:(fun (list1, list2, x) ->
             [%test_eq: bool]
               (List.mem (List.append list1 list2) x ~equal)
@@ -356,8 +356,8 @@ let%test_module "random" =
       let%test_unit "rev_map vs map + rev" =
         Q.test ~sexp_of:[%sexp_of: t list * (t -> t)]
           (G.tuple2
-             (List.gen gen)
-             (G.fn obs gen))
+             (List.quickcheck_generator quickcheck_generator)
+             (G.fn quickcheck_observer quickcheck_generator))
           ~f:(fun (list, f) ->
             [%test_eq: t list]
               (List.rev_map list ~f)
@@ -366,9 +366,9 @@ let%test_module "random" =
       let%test_unit "fold vs fold_left" =
         Q.test ~sexp_of:[%sexp_of: t list * t * (t -> t -> t)]
           (G.tuple3
-             (List.gen gen)
-             gen
-             (G.fn2 obs obs gen))
+             (List.quickcheck_generator quickcheck_generator)
+             quickcheck_generator
+             (G.fn2 quickcheck_observer quickcheck_observer quickcheck_generator))
           ~f:(fun (list, init, f) ->
             [%test_eq: t]
               (List.fold list ~init ~f)
@@ -377,8 +377,8 @@ let%test_module "random" =
       let%test_unit "unzip + iter2_exn vs iter" =
         Q.test ~sexp_of:[%sexp_of: (t * t) list * (t -> t -> t)]
           (G.tuple2
-             (List.gen (G.tuple2 gen gen))
-             (G.fn2 obs obs gen))
+             (List.quickcheck_generator (G.tuple2 quickcheck_generator quickcheck_generator))
+             (G.fn2 quickcheck_observer quickcheck_observer quickcheck_generator))
           ~f:(fun (pair_list, f) ->
             [%test_eq: t list]
               (let q = Queue.create () in
@@ -394,8 +394,8 @@ let%test_module "random" =
       let%test_unit "rev_map2_exn vs rev + map2_exn" =
         Q.test ~sexp_of:[%sexp_of: (t * t) list * (t -> t -> t)]
           (G.tuple2
-             (List.gen (G.tuple2 gen gen))
-             (G.fn2 obs obs gen))
+             (List.quickcheck_generator (G.tuple2 quickcheck_generator quickcheck_generator))
+             (G.fn2 quickcheck_observer quickcheck_observer quickcheck_generator))
           ~f:(fun (pair_list, f) ->
             let list1, list2 = List.unzip pair_list in
             [%test_eq: t list]
@@ -405,9 +405,9 @@ let%test_module "random" =
       let%test_unit "unzip + fold2_exn + fold" =
         Q.test ~sexp_of:[%sexp_of: (t * t) list * t * (t -> t -> t -> t)]
           (G.tuple3
-             (List.gen (G.tuple2 gen gen))
-             gen
-             (G.fn3 obs obs obs gen))
+             (List.quickcheck_generator (G.tuple2 quickcheck_generator quickcheck_generator))
+             quickcheck_generator
+             (G.fn3 quickcheck_observer quickcheck_observer quickcheck_observer quickcheck_generator))
           ~f:(fun (pair_list, init, f) ->
             let list1, list2 = List.unzip pair_list in
             [%test_eq: t]
@@ -418,9 +418,9 @@ let%test_module "random" =
       let%test_unit "unzip + for_all2_exn vs for_all" =
         Q.test ~sexp_of:[%sexp_of: (t * t) list * (t -> t -> bool)]
           (G.tuple2
-             (List.gen
-                (G.tuple2 gen gen))
-             (G.fn2 obs obs Bool.gen))
+             (List.quickcheck_generator
+                (G.tuple2 quickcheck_generator quickcheck_generator))
+             (G.fn2 quickcheck_observer quickcheck_observer Bool.quickcheck_generator))
           ~f:(fun (pair_list, f) ->
             [%test_eq: bool]
               (let list1, list2 = List.unzip pair_list in
@@ -430,9 +430,9 @@ let%test_module "random" =
       let%test_unit "unzip + exists2_exn vs exists" =
         Q.test ~sexp_of:[%sexp_of: (t * t) list * (t -> t -> bool)]
           (G.tuple2
-             (List.gen
-                (G.tuple2 gen gen))
-             (G.fn2 obs obs Bool.gen))
+             (List.quickcheck_generator
+                (G.tuple2 quickcheck_generator quickcheck_generator))
+             (G.fn2 quickcheck_observer quickcheck_observer Bool.quickcheck_generator))
           ~f:(fun (pair_list, f) ->
             [%test_eq: bool]
               (let list1, list2 = List.unzip pair_list in
@@ -442,8 +442,8 @@ let%test_module "random" =
       let%test_unit "filter vs for_all" =
         Q.test ~sexp_of:[%sexp_of: t list * (t -> bool)]
           (G.tuple2
-             (List.gen gen)
-             (G.fn obs Bool.gen))
+             (List.quickcheck_generator quickcheck_generator)
+             (G.fn quickcheck_observer Bool.quickcheck_generator))
           ~f:(fun (list, f) ->
             [%test_result: bool]
               (List.for_all ~f (List.filter ~f list))
@@ -451,7 +451,7 @@ let%test_module "random" =
 
       let%test_unit "filter true" =
         Q.test ~sexp_of:[%sexp_of: t list]
-          (List.gen gen)
+          (List.quickcheck_generator quickcheck_generator)
           ~f:(fun list ->
             [%test_result: t list]
               (List.filter list ~f:(const true))
@@ -460,8 +460,8 @@ let%test_module "random" =
       let%test_unit "filter vs rev_filter" =
         Q.test ~sexp_of:[%sexp_of: t list * (t -> bool)]
           (G.tuple2
-             (List.gen gen)
-             (G.fn obs Bool.gen))
+             (List.quickcheck_generator quickcheck_generator)
+             (G.fn quickcheck_observer Bool.quickcheck_generator))
           ~f:(fun (list, f) ->
             [%test_eq: t list]
               (List.rev (List.filter list ~f))
@@ -470,8 +470,8 @@ let%test_module "random" =
       let%test_unit "filteri vs filter" =
         Q.test ~sexp_of:[%sexp_of: t list * (t -> bool)]
           (G.tuple2
-             (List.gen gen)
-             (G.fn obs Bool.gen))
+             (List.quickcheck_generator quickcheck_generator)
+             (G.fn quickcheck_observer Bool.quickcheck_generator))
           ~f:(fun (list, f) ->
             [%test_eq: t list]
               (List.filter list ~f)
@@ -483,10 +483,10 @@ let%test_module "random" =
           | `B b -> `Snd b
         in
         Q.test ~sexp_of:[%sexp_of: t list * (t -> [ `Fst of t | `Snd of t ])]
-          (G.tuple2 (List.gen gen)
+          (G.tuple2 (List.quickcheck_generator quickcheck_generator)
              (G.fn
-                obs
-                (G.variant2 gen gen
+                quickcheck_observer
+                (G.variant2 quickcheck_generator quickcheck_generator
                  >>| partition_of_variant)))
           ~f:(fun (list, f) ->
             [%test_eq: t list * t list]
@@ -507,10 +507,10 @@ let%test_module "random" =
           | `C c -> `Trd c
         in
         Q.test ~sexp_of:[%sexp_of: t list * (t -> [ `Fst of t | `Snd of t | `Trd of t])]
-          (G.tuple2 (List.gen gen)
+          (G.tuple2 (List.quickcheck_generator quickcheck_generator)
              (G.fn
-                obs
-                (G.variant3 gen gen gen
+                quickcheck_observer
+                (G.variant3 quickcheck_generator quickcheck_generator quickcheck_generator
                  >>| partition_of_variant)))
           ~f:(fun (list, f) ->
             [%test_eq: t list * t list * t list]
@@ -534,8 +534,8 @@ let%test_module "random" =
       let%test_unit "partition_tf vs partition_map" =
         Q.test ~sexp_of:[%sexp_of: t list * (t -> bool)]
           (G.tuple2
-             (List.gen gen)
-             (G.fn obs Bool.gen))
+             (List.quickcheck_generator quickcheck_generator)
+             (G.fn quickcheck_observer Bool.quickcheck_generator))
           ~f:(fun (list, f) ->
             [%test_eq: t list * t list]
               (List.partition_tf list ~f)
@@ -545,8 +545,8 @@ let%test_module "random" =
       let%test_unit "append + split_n" =
         Q.test ~sexp_of:[%sexp_of: t list * t list]
           (G.tuple2
-             (List.gen gen)
-             (List.gen gen))
+             (List.quickcheck_generator quickcheck_generator)
+             (List.quickcheck_generator quickcheck_generator))
           ~f:(fun (list1, list2) ->
             [%test_result: t list * t list]
               (List.split_n (List.append list1 list2) (List.length list1))
@@ -555,8 +555,8 @@ let%test_module "random" =
       let%test_unit "sort vs stable_sort" =
         Q.test ~sexp_of:[%sexp_of: t list * (t -> t -> int)]
           (G.tuple2
-             (List.gen gen)
-             (G.compare_fn obs))
+             (List.quickcheck_generator quickcheck_generator)
+             (G.compare_fn quickcheck_observer))
           ~f:(fun (list, cmp) ->
             (* When comparing [t] using [cmp], [sort] and [stable_sort] should be
                indistinguishable. *)
@@ -568,9 +568,9 @@ let%test_module "random" =
       let%test_unit "stable_sort + merge vs append + stable_sort" =
         Q.test ~sexp_of:[%sexp_of: t list * t list * (t -> t -> int)]
           (G.tuple3
-             (List.gen gen)
-             (List.gen gen)
-             (G.compare_fn obs))
+             (List.quickcheck_generator quickcheck_generator)
+             (List.quickcheck_generator quickcheck_generator)
+             (G.compare_fn quickcheck_observer))
           ~f:(fun (list1, list2, cmp) ->
             [%test_eq: t list]
               (List.merge ~compare:cmp
@@ -581,7 +581,7 @@ let%test_module "random" =
 
       let%test_unit "hd vs hd_exn" =
         Q.test ~sexp_of:[%sexp_of: t list]
-          (List.gen gen)
+          (List.quickcheck_generator quickcheck_generator)
           ~f:(fun list ->
             [%test_eq: t option]
               (List.hd list)
@@ -589,7 +589,7 @@ let%test_module "random" =
 
       let%test_unit "tl vs tl_exn" =
         Q.test ~sexp_of:[%sexp_of: t list]
-          (List.gen gen)
+          (List.quickcheck_generator quickcheck_generator)
           ~f:(fun list ->
             [%test_eq: t list option]
               (List.tl list)
@@ -598,8 +598,8 @@ let%test_module "random" =
       let%test_unit "find vs find_exn" =
         Q.test ~sexp_of:[%sexp_of: t list * (t -> bool)]
           (G.tuple2
-             (List.gen gen)
-             (G.fn obs Bool.gen))
+             (List.quickcheck_generator quickcheck_generator)
+             (G.fn quickcheck_observer Bool.quickcheck_generator))
           ~f:(fun (list, f) ->
             [%test_eq: t option]
               (List.find list ~f)
@@ -608,8 +608,8 @@ let%test_module "random" =
       let%test_unit "find vs findi" =
         Q.test ~sexp_of:[%sexp_of: t list * (t -> bool)]
           (G.tuple2
-             (List.gen gen)
-             (G.fn obs Bool.gen))
+             (List.quickcheck_generator quickcheck_generator)
+             (G.fn quickcheck_observer Bool.quickcheck_generator))
           ~f:(fun (list, f) ->
             [%test_eq: t option]
               (List.find list ~f)
@@ -618,8 +618,8 @@ let%test_module "random" =
       let%test_unit "append + rev" =
         Q.test ~sexp_of:[%sexp_of: t list * t list]
           (G.tuple2
-             (List.gen gen)
-             (List.gen gen))
+             (List.quickcheck_generator quickcheck_generator)
+             (List.quickcheck_generator quickcheck_generator))
           ~f:(fun (list1, list2) ->
             [%test_eq: t list]
               (List.rev (List.append list1 list2))
@@ -628,9 +628,9 @@ let%test_module "random" =
       let%test_unit "append associativity" =
         Q.test ~sexp_of:[%sexp_of: t list * t list * t list]
           (G.tuple3
-             (List.gen gen)
-             (List.gen gen)
-             (List.gen gen))
+             (List.quickcheck_generator quickcheck_generator)
+             (List.quickcheck_generator quickcheck_generator)
+             (List.quickcheck_generator quickcheck_generator))
           ~f:(fun (list1, list2, list3) ->
             [%test_eq: t list]
               (List.append list1 (List.append list2 list3))
@@ -639,8 +639,8 @@ let%test_module "random" =
       let%test_unit "map + rev vs rev + map" =
         Q.test ~sexp_of:[%sexp_of: t list * (t -> t)]
           (G.tuple2
-             (List.gen gen)
-             (G.fn obs gen))
+             (List.quickcheck_generator quickcheck_generator)
+             (G.fn quickcheck_observer quickcheck_generator))
           ~f:(fun (list, f) ->
             [%test_eq: t list]
               (List.rev (List.map list ~f))
@@ -649,9 +649,9 @@ let%test_module "random" =
       let%test_unit "map + append vs append + map" =
         Q.test ~sexp_of:[%sexp_of: t list * t list * (t -> t)]
           (G.tuple3
-             (List.gen gen)
-             (List.gen gen)
-             (G.fn obs gen))
+             (List.quickcheck_generator quickcheck_generator)
+             (List.quickcheck_generator quickcheck_generator)
+             (G.fn quickcheck_observer quickcheck_generator))
           ~f:(fun (list1, list2, f) ->
             [%test_eq: t list]
               (List.append (List.map list1 ~f) (List.map list2 ~f))
@@ -660,8 +660,8 @@ let%test_module "random" =
       let%test_unit "map vs concat_map" =
         Q.test ~sexp_of:[%sexp_of: t list * (t -> t)]
           (G.tuple2
-             (List.gen gen)
-             (G.fn obs gen))
+             (List.quickcheck_generator quickcheck_generator)
+             (G.fn quickcheck_observer quickcheck_generator))
           ~f:(fun (list, f) ->
             [%test_eq: t list]
               (List.map list ~f)
@@ -670,8 +670,8 @@ let%test_module "random" =
       let%test_unit "concat_mapi vs concat_map" =
         Q.test ~sexp_of:[%sexp_of: t list * (t -> t list)]
           (G.tuple2
-             (List.gen gen)
-             (G.fn obs (List.gen gen)))
+             (List.quickcheck_generator quickcheck_generator)
+             (G.fn quickcheck_observer (List.quickcheck_generator quickcheck_generator)))
           ~f:(fun (list, f) ->
             [%test_eq: t list]
               (List.concat_map list ~f)
@@ -680,8 +680,8 @@ let%test_module "random" =
       let%test_unit "unzip + map2_exn vs map" =
         Q.test ~sexp_of:[%sexp_of: (t * t) list * (t -> t -> t)]
           (G.tuple2
-             (List.gen (G.tuple2 gen gen))
-             (G.fn2 obs obs gen))
+             (List.quickcheck_generator (G.tuple2 quickcheck_generator quickcheck_generator))
+             (G.fn2 quickcheck_observer quickcheck_observer quickcheck_generator))
           ~f:(fun (pair_list, f) ->
             [%test_eq: t list]
               (let list1, list2 = List.unzip pair_list in
@@ -691,8 +691,8 @@ let%test_module "random" =
       let%test_unit "unzip + map3_exn vs map" =
         Q.test ~sexp_of:[%sexp_of: (t * (t * t)) list * (t -> t -> t -> t)]
           (G.tuple2
-             (List.gen (G.tuple2 gen (G.tuple2 gen gen)))
-             (G.fn3 obs obs obs gen))
+             (List.quickcheck_generator (G.tuple2 quickcheck_generator (G.tuple2 quickcheck_generator quickcheck_generator)))
+             (G.fn3 quickcheck_observer quickcheck_observer quickcheck_observer quickcheck_generator))
           ~f:(fun (triple_list, f) ->
             [%test_eq: t list]
               (let list1, pair_list = List.unzip triple_list in
@@ -703,8 +703,8 @@ let%test_module "random" =
       let%test_unit "rev + map3_exn vs rev_map3_exn" =
         Q.test ~sexp_of:[%sexp_of: (t * (t * t)) list * (t -> t -> t -> t)]
           (G.tuple2
-             (List.gen (G.tuple2 gen (G.tuple2 gen gen)))
-             (G.fn3 obs obs obs gen))
+             (List.quickcheck_generator (G.tuple2 quickcheck_generator (G.tuple2 quickcheck_generator quickcheck_generator)))
+             (G.fn3 quickcheck_observer quickcheck_observer quickcheck_observer quickcheck_generator))
           ~f:(fun (triple_list, f) ->
             let list1, pair_list = List.unzip triple_list in
             let list2, list3     = List.unzip pair_list   in
