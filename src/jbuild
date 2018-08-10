@@ -33,8 +33,8 @@
    ;; be implemented under windows and in javascript? If not, perhaps this piece of code
    ;; should go in core instead, since core_kernel is supposed to be the portable subset
    ;; of core.
-   (bigstring_marshal_stubs
-    bigstring_stubs
+   (bigstring_stubs
+    md5_stubs
     array_stubs
     gc_stubs
     time_ns_stubs

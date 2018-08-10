@@ -368,24 +368,24 @@ let set_64 (t : t) (pos : int) (v : int64) : unit =
 
 let sign_extend_16 u = (u lsl (Int.num_bits - 16)) asr (Int.num_bits - 16)
 
-let check_valid_uint16 ~loc x =
+let check_valid_uint16 x ~loc =
   if x < 0 || x > 0xFFFF then
-    invalid_arg (sprintf "Bigstring.%s: %d is not a valid unsigned 16-bit integer" loc x)
+    invalid_arg (sprintf "%s: %d is not a valid unsigned 16-bit integer" loc x)
 ;;
 
-let check_valid_int16 ~loc x =
+let check_valid_int16 x ~loc =
   if x < -0x8000 || x > 0x7FFF then
-    invalid_arg (sprintf "Bigstring.%s: %d is not a valid 16-bit integer" loc x)
+    invalid_arg (sprintf "%s: %d is not a valid (signed) 16-bit integer" loc x)
 ;;
 
-let check_valid_uint8 ~loc x =
+let check_valid_uint8 x ~loc =
   if x < 0 || x > 0xFF then
-    invalid_arg (sprintf "Bigstring.%s: %d is not a valid unsigned 8-bit integer" loc x)
+    invalid_arg (sprintf "%s: %d is not a valid unsigned 8-bit integer" loc x)
 ;;
 
-let check_valid_int8 ~loc x =
+let check_valid_int8 x ~loc =
   if x < -0x80 || x > 0x7F then
-    invalid_arg (sprintf "Bigstring.%s: %d is not a valid 8-bit integer" loc x)
+    invalid_arg (sprintf "%s: %d is not a valid (signed) 8-bit integer" loc x)
 ;;
 
 let check_valid_int32 =
@@ -394,7 +394,7 @@ let check_valid_int32 =
   else fun x ~loc ->
     if x >= -1 lsl 31 && x < 1 lsl 31
     then ()
-    else invalid_arg (sprintf "Bigstring.%s: %d is not a valid 32-bit integer" loc x)
+    else invalid_arg (sprintf "%s: %d is not a valid (signed) 32-bit integer" loc x)
 ;;
 
 let check_valid_uint32 =
@@ -402,22 +402,17 @@ let check_valid_uint32 =
   then fun x ~loc ->
     if x >= 0
     then ()
-    else
-      invalid_arg
-        (sprintf "Bigstring.%s: %d is not a valid unsigned 32-bit integer" loc x)
+    else invalid_arg (sprintf "%s: %d is not a valid unsigned 32-bit integer" loc x)
   else fun x ~loc ->
     if x >= 0 && x < 1 lsl 32
     then ()
-    else
-      invalid_arg
-        (sprintf "Bigstring.%s: %d is not a valid unsigned 32-bit integer" loc x)
+    else invalid_arg (sprintf "%s: %d is not a valid unsigned 32-bit integer" loc x)
 ;;
 
 let check_valid_uint64 x ~loc =
   if x >= 0
   then ()
-  else
-    invalid_arg (sprintf "Bigstring.%s: %d is not a valid unsigned 64-bit integer" loc x)
+  else invalid_arg (sprintf "%s: %d is not a valid unsigned 64-bit integer" loc x)
 ;;
 
 let unsafe_read_int16 t ~pos          = sign_extend_16 (unsafe_get_16 t pos)
@@ -428,12 +423,12 @@ let unsafe_write_int16_swap t ~pos x  = unsafe_set_16 t pos (swap16 x)
 let read_int16 t ~pos          = sign_extend_16 (get_16 t pos)
 let read_int16_swap t ~pos     = sign_extend_16 (swap16 (get_16 t pos))
 let write_int16 t ~pos x       =
-  check_valid_int16 x ~loc:"write_int16";
+  check_valid_int16 x ~loc:"Bigstring.write_int16";
   set_16 t pos x
 ;;
 let write_int16_swap t ~pos x  =
   (* Omit "_swap" from the error message it's bi-endian. *)
-  check_valid_int16 x ~loc:"write_int16";
+  check_valid_int16 x ~loc:"Bigstring.write_int16";
   set_16 t pos (swap16 x)
 ;;
 
@@ -445,12 +440,12 @@ let unsafe_write_uint16_swap t ~pos x  = unsafe_set_16 t pos (swap16 x)
 let read_uint16 t ~pos          = get_16 t pos
 let read_uint16_swap t ~pos     = swap16 (get_16 t pos)
 let write_uint16 t ~pos x       =
-  check_valid_uint16 x ~loc:"write_uint16";
+  check_valid_uint16 x ~loc:"Bigstring.write_uint16";
   set_16 t pos x
 ;;
 let write_uint16_swap t ~pos x  =
   (* Omit "_swap" from the error message it's bi-endian. *)
-  check_valid_uint16 x ~loc:"write_uint16";
+  check_valid_uint16 x ~loc:"Bigstring.write_uint16";
   set_16 t pos (swap16 x)
 ;;
 
@@ -471,12 +466,12 @@ let write_int32 t ~pos x        = set_32 t pos x
 let write_int32_swap t ~pos x   = set_32 t pos (swap32 x)
 
 let write_int32_int t ~pos x =
-  check_valid_int32 x ~loc:"write_int32_int";
+  check_valid_int32 x ~loc:"Bigstring.write_int32_int";
   set_32 t pos (int32_of_int x)
 ;;
 let write_int32_int_swap t ~pos x =
   (* Omit "_swap" from the error message it's bi-endian. *)
-  check_valid_int32 x ~loc:"write_int32_int";
+  check_valid_int32 x ~loc:"Bigstring.write_int32_int";
   set_32 t pos (swap32 (int32_of_int x))
 ;;
 
@@ -754,12 +749,12 @@ let unsafe_set_uint64_be = unsafe_set_int64_be
 let unsafe_set_uint64_le = unsafe_set_int64_le
 
 let set_uint64_be t ~pos n =
-  check_valid_uint64 ~loc:"set_uint64_be" n;
+  check_valid_uint64 ~loc:"Bigstring.set_uint64_be" n;
   set_int64_be t ~pos n
 ;;
 
 let set_uint64_le t ~pos n =
-  check_valid_uint64 ~loc:"set_uint64_le" n;
+  check_valid_uint64 ~loc:"Bigstring.set_uint64_le" n;
   set_int64_le t ~pos n
 ;;
 
@@ -783,10 +778,10 @@ let unsafe_get_int8 (t : t) ~pos =
   if n >= 128 then n - 256 else n
 
 let set_uint8 (t : t) ~pos n =
-  check_valid_uint8 ~loc:"set_uint8" n;
+  check_valid_uint8 ~loc:"Bigstring.set_uint8" n;
   Array1.set t pos (Char.unsafe_of_int n)
 let set_int8 (t : t) ~pos n =
-  check_valid_int8 ~loc:"set_int8" n;
+  check_valid_int8 ~loc:"Bigstring.set_int8" n;
   let n = if n < 0 then n + 256 else n in
   Array1.set t pos (Char.unsafe_of_int n)
 let get_uint8 (t : t) ~pos =
@@ -810,11 +805,11 @@ let unsafe_get_uint32_be t ~pos =
   if not_on_32bit && n < 0 then n + 1 lsl 32 else n
 
 let set_uint32_le t ~pos n =
-  check_valid_uint32 ~loc:"set_uint32_le" n;
+  check_valid_uint32 ~loc:"Bigstring.set_uint32_le" n;
   let n = if not_on_32bit && n >= 1 lsl 31 then n - 1 lsl 32 else n in
   set_int32_le t ~pos n
 let set_uint32_be t ~pos n =
-  check_valid_uint32 ~loc:"set_uint32_be" n;
+  check_valid_uint32 ~loc:"Bigstring.set_uint32_be" n;
   let n = if not_on_32bit && n >= 1 lsl 31 then n - 1 lsl 32 else n in
   set_int32_be t ~pos n
 let get_uint32_le t ~pos =

@@ -17,3 +17,7 @@ include Quickcheckable.S with type t := t
 module type S = sig end
 
 type m = (module S)
+
+module Stable : sig
+  module V1 : Stable_module_types.S0 with type t = t
+end

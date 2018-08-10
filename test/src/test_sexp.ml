@@ -48,19 +48,13 @@ module With_text = struct
   let%expect_test _ =
     require_does_raise [%here] (fun () -> il_of_text "(1 2 bla)");
     [%expect {|
-      (Sexplib.Conv.Of_sexp_error
-        (Sexplib.Sexp.Annotated.Conv_exn :1:5 (
-          Failure "int_of_sexp: (Failure int_of_string)"))
-        bla) |}];
+      (Of_sexp_error :1:5 "int_of_sexp: (Failure int_of_string)" (invalid_sexp bla)) |}];
   ;;
 
   let%expect_test _ =
     require_does_raise [%here] (fun () ->
       t_of_sexp il_of_sexp (Sexp.of_string "\"(1 2 bla)\""));
     [%expect {|
-      (Sexplib.Conv.Of_sexp_error
-        (Sexplib.Sexp.Annotated.Conv_exn :1:5 (
-          Failure "int_of_sexp: (Failure int_of_string)"))
-        bla) |}];
+      (Of_sexp_error :1:5 "int_of_sexp: (Failure int_of_string)" (invalid_sexp bla)) |}];
   ;;
 end

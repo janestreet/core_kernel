@@ -38,7 +38,7 @@ module type S = sig
   module Time : Time0_intf.S
 
   (*_ necessary to preserve type equality with the Time functor argument *)
-  include (module type of struct include Time end)
+  include (module type of struct include Time end [@ocaml.remove_aliases])
 
   (** [now ()] returns a [t] representing the current time *)
   val now : unit -> t

@@ -32,10 +32,12 @@ let%expect_test "set_int8" =
   [%expect {| ok neg: -128 |}];
   set_and_print ~test_name:"too large" ~pos:1 128;
   [%expect {|
-    too large: (Invalid_argument "Bigstring.set_int8: 128 is not a valid 8-bit integer") |}];
+    too large: (Invalid_argument
+      "Bigstring.set_int8: 128 is not a valid (signed) 8-bit integer") |}];
   set_and_print ~test_name:"too small" ~pos:1 (-129);
   [%expect {|
-    too small: (Invalid_argument "Bigstring.set_int8: -129 is not a valid 8-bit integer") |}];
+    too small: (Invalid_argument
+      "Bigstring.set_int8: -129 is not a valid (signed) 8-bit integer") |}];
   set_and_print ~test_name:"out of bounds" ~pos:16 64;
   [%expect {| out of bounds: (Invalid_argument "index out of bounds") |}];
 ;;
@@ -98,11 +100,11 @@ let%expect_test "set_int16_le" =
   set_and_print ~test_name:"too large" ~pos 32768;
   [%expect {|
     too large: (Invalid_argument
-      "Bigstring.write_int16: 32768 is not a valid 16-bit integer") |}];
+      "Bigstring.write_int16: 32768 is not a valid (signed) 16-bit integer") |}];
   set_and_print ~test_name:"too small" ~pos (-32769);
   [%expect {|
     too small: (Invalid_argument
-      "Bigstring.write_int16: -32769 is not a valid 16-bit integer") |}];
+      "Bigstring.write_int16: -32769 is not a valid (signed) 16-bit integer") |}];
   set_and_print ~test_name:"out of bounds" ~pos:(pos + 1) 64;
   [%expect {|
     out of bounds: (Invalid_argument "Bigstring.set_16: length(bstr) < pos + len") |}];
@@ -127,11 +129,11 @@ let%expect_test "set_int16_be" =
   set_and_print ~test_name:"too large" ~pos 32768;
   [%expect {|
     too large: (Invalid_argument
-      "Bigstring.write_int16: 32768 is not a valid 16-bit integer") |}];
+      "Bigstring.write_int16: 32768 is not a valid (signed) 16-bit integer") |}];
   set_and_print ~test_name:"too small" ~pos (-32769);
   [%expect {|
     too small: (Invalid_argument
-      "Bigstring.write_int16: -32769 is not a valid 16-bit integer") |}];
+      "Bigstring.write_int16: -32769 is not a valid (signed) 16-bit integer") |}];
   set_and_print ~test_name:"out of bounds" ~pos:(pos + 1) 64;
   [%expect {|
     out of bounds: (Invalid_argument "Bigstring.set_16: length(bstr) < pos + len") |}];
@@ -267,11 +269,11 @@ let%expect_test "set_int32_le" [@tags "64-bits-only"] =
   set_and_print ~test_name:"too large" ~pos (1 lsl 31);
   [%expect {|
     too large: (Invalid_argument
-      "Bigstring.write_int32_int: 2147483648 is not a valid 32-bit integer") |}];
+      "Bigstring.write_int32_int: 2147483648 is not a valid (signed) 32-bit integer") |}];
   set_and_print ~test_name:"too small" ~pos (-1 lsl 31 - 1);
   [%expect {|
     too small: (Invalid_argument
-      "Bigstring.write_int32_int: -2147483649 is not a valid 32-bit integer") |}];
+      "Bigstring.write_int32_int: -2147483649 is not a valid (signed) 32-bit integer") |}];
   set_and_print ~test_name:"out of bounds" ~pos:(pos + 1) 64;
   [%expect {|
     out of bounds: (Invalid_argument "Bigstring.set_32: length(bstr) < pos + len") |}];
@@ -302,11 +304,11 @@ let%expect_test "set_int32_be" [@tags "64-bits-only"] =
   set_and_print ~test_name:"too large" ~pos (1 lsl 31);
   [%expect {|
     too large: (Invalid_argument
-      "Bigstring.write_int32_int: 2147483648 is not a valid 32-bit integer") |}];
+      "Bigstring.write_int32_int: 2147483648 is not a valid (signed) 32-bit integer") |}];
   set_and_print ~test_name:"too small" ~pos (-1 lsl 31 - 1);
   [%expect {|
     too small: (Invalid_argument
-      "Bigstring.write_int32_int: -2147483649 is not a valid 32-bit integer") |}];
+      "Bigstring.write_int32_int: -2147483649 is not a valid (signed) 32-bit integer") |}];
   set_and_print ~test_name:"out of bounds" ~pos:(pos + 1) 64;
   [%expect {|
     out of bounds: (Invalid_argument "Bigstring.set_32: length(bstr) < pos + len") |}];

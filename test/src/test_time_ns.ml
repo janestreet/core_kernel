@@ -642,13 +642,13 @@ let%expect_test "times with implicit zones" =
   require_does_raise [%here] (fun () ->
     Time_ns.Stable.Alternate_sexp.V1.t_of_sexp (Sexp.Atom "2013-10-07 09:30:00"));
   [%expect {|
-    (Sexplib.Conv.Of_sexp_error
+    (Of_sexp_error
       (Invalid_argument "String.chop_suffix_exn \"09:30:00\" \"Z\"")
-      "2013-10-07 09:30:00") |}];
+      (invalid_sexp "2013-10-07 09:30:00")) |}];
   require_does_raise [%here] (fun () ->
     Time_ns.Alternate_sexp.t_of_sexp (Sexp.Atom "2013-10-07 09:30:00"));
   [%expect {|
-    (Sexplib.Conv.Of_sexp_error
+    (Of_sexp_error
       (Invalid_argument "String.chop_suffix_exn \"09:30:00\" \"Z\"")
-      "2013-10-07 09:30:00") |}];
+      (invalid_sexp "2013-10-07 09:30:00")) |}];
 ;;

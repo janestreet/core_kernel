@@ -167,7 +167,7 @@ module Arbitrary_order = struct
 
   let to_array t = Array.of_list (to_list t)
 
-  let sum (type a) (module M : Commutative_group.S with type t = a) t ~f =
+  let sum (type a) (module M : Container.Summable with type t = a) t ~f =
     let open M in
     List.sum (module M) t.front ~f +
     List.sum (module M) t.back  ~f

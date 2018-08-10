@@ -47,6 +47,7 @@ module String                               = String                            
 module String_id                            = String_id                            .Stable
 module Time_ns                              = Time_ns                              .Stable
 module Time                                 = Time_float                           .Stable
+module Unit                                 = Unit                                 .Stable
 
 include Perms.Export
 

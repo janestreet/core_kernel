@@ -70,19 +70,14 @@ val digest_bytes : bytes -> t
     [len] starting at [pos]. *)
 val digest_subbytes : bytes -> pos:int -> len:int -> t
 
-(** [digest_file_blocking_without_releasing_runtime_lock filename] reads the contents of
-    file [filename] and computes its digest.
-
-    WARNING: This function does digest computation with OCaml global lock held, so it can
-    be slow and make the other threads starve. Use [Core.Md5.digest_file_blocking]
-    instead. *)
-val digest_file_blocking_without_releasing_runtime_lock : string -> t
+(** [digest_file_blocking filename] reads the contents of file [filename] and computes its
+    digest. *)
+val digest_file_blocking : string -> t
 
 (** Reads [len] bytes from the given channel and computes md5 digest of that.
 
     WARNING: This function does digest computation with OCaml global lock held, so it can
-    be slow and make the other threads starve. Use [Core.Md5.digest_fd_blocking]
-    instead. *)
+    be slow and make the other threads starve. See [digest_file_blocking]. *)
 val digest_channel_blocking_without_releasing_runtime_lock : in_channel -> len:int -> t
 
 (** Reads an Md5 digest from the given channel (in a format written by [output_blocking])
@@ -133,5 +128,8 @@ val input : in_channel -> t
     It is currently implemented inefficiently and allocates large strings.
 
     For a more efficient and resource-aware version, use [Bigbuffer.add_bin_prot]
-    and [Core.Bigbuffer.md5]. *)
+    and [Bigbuffer_blocking.md5]. *)
 val digest_bin_prot : 'a Bin_prot.Type_class.writer -> 'a -> t
+
+val digest_bigstring : Bigstring.t -> t
+val digest_subbigstring : Bigstring.t -> pos:int -> len:int -> t

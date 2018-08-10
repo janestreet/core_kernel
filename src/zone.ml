@@ -346,9 +346,7 @@ module Stable = struct
                 | `V1                  -> input_tz_file_v1 ic
                 | `V2 | `V3 as version -> input_tz_file_v2_or_v3 ~version ic
               in
-              let digest =
-                Md5.digest_file_blocking_without_releasing_runtime_lock filename
-              in
+              let digest = Md5.digest_file_blocking filename in
               let r = make_zone zonename ~original_filename:filename ~digest in
               r)
           with

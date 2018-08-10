@@ -1,6 +1,5 @@
 open Core
 
-
 let nobox name f =
   let message = "Float_test.nobox " ^ name in
   List.iter (List.range (-19) 19)
@@ -34,8 +33,7 @@ let nobox name f =
    compiler to inline each one separately around t.(0). *)
 let () =
   List.iter ~f:(fun (name, t) -> nobox name t)
-    [
-      "iround_down_exn"         , (fun t -> Float.iround_down_exn         t.(0))
+    [ "iround_down_exn"         , (fun t -> Float.iround_down_exn         t.(0))
     ; "iround_nearest_exn"      , (fun t -> Float.iround_nearest_exn      t.(0))
     ; "iround_up_exn"           , (fun t -> Float.iround_up_exn           t.(0))
     ; "iround_towards_zero_exn" , (fun t -> Float.iround_towards_zero_exn t.(0))

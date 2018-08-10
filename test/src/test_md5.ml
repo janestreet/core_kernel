@@ -39,3 +39,19 @@ let%test_module "Md5.V1" = (module Stable_unit_test.Make(struct
       , "\157\212\228a&\140\1284\245\200VN\021\\g\166"
       ]
   end))
+
+let%test_unit "Md5.digest_file_blocking" =
+  let cwd = Sys.getcwd () in
+  let file = Filename.concat cwd (Filename.basename [%here].pos_fname) in
+  let our_digest = digest_file_blocking file in
+  let actual_digest = Md5.of_binary_exn (Caml.Digest.file file) in
+  [%test_result: Md5.t] our_digest ~expect:actual_digest;
+  [%test_pred: Md5.t Or_error.t] Result.is_error (
+    Or_error.try_with (fun () -> digest_file_blocking cwd))
+
+let%test_unit "Md5.digest_subbigstring" =
+  let bigstr = Bigstring.of_string "abcd" in
+  let d1 = Md5.digest_subbigstring bigstr ~pos:1 ~len:2 in
+  let d2 = Md5.digest_string "bc" in
+  [%test_result: Md5.t] d1 ~expect:d2;
+;;

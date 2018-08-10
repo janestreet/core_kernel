@@ -112,18 +112,14 @@ let%expect_test _ =
       ignore (t_of_sexp (Sexp.of_string string) : t)));
   [%expect {|
     (input a)
-    (raised (Sexplib.Conv.Of_sexp_error (Failure "list_of_sexp: list needed") a))
+    (raised (Of_sexp_error "list_of_sexp: list needed" (invalid_sexp a)))
     (input "(())")
-    (raised (
-      Sexplib.Conv.Of_sexp_error (Failure "string_of_sexp: atom needed") ()))
+    (raised (Of_sexp_error "string_of_sexp: atom needed" (invalid_sexp ())))
     (input "(a ())")
-    (raised (
-      Sexplib.Conv.Of_sexp_error (Failure "string_of_sexp: atom needed") ()))
+    (raised (Of_sexp_error "string_of_sexp: atom needed" (invalid_sexp ())))
     (input "(d)")
     (raised (
-      Sexplib.Conv.Of_sexp_error
-      (Failure "Flags.t_of_sexp got unknown name: d")
-      (d))) |}];
+      Of_sexp_error "Flags.t_of_sexp got unknown name: d" (invalid_sexp (d)))) |}];
 ;;
 
 (* +, - *)

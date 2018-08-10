@@ -19,13 +19,10 @@ module Std = struct
 
   (** {2 Modules added by Core_kernel} *)
 
-  module Bigbuffer                       = Bigbuffer
   module Bigstring                       = Bigstring
-  module Bigstring_marshal               = Bigstring_marshal
   module Core_kernel_stable              = Stable
   module Date                            = Date
   module Map_intf                        = Map_intf
-  module Md5                             = Md5
   module Digest                          = Md5
   [@@ocaml.deprecated "[since 2017-05] Use Md5 instead."]
   module Optional_syntax_intf            = Optional_syntax_intf

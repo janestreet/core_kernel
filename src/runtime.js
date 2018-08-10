@@ -110,3 +110,24 @@ function generated_hg_version () {
 function Core_kernel_heap_block_is_heap_block(x){
   return +(x instanceof Array);
 }
+
+//Provides: core_md5_fd
+//Requires: caml_ml_open_descriptor_in, caml_md5_chan, caml_ml_close_channel
+function core_md5_fd(fd){
+    var ic = caml_ml_open_descriptor_in(fd);
+    try {
+        return caml_md5_chan(ic, -1);
+    } finally {
+        caml_ml_close_channel(ic);
+    }
+}
+
+// Provides: core_md5_digest_subbigstring
+// Requires: caml_md5_string, caml_blit_string, caml_create_bytes, caml_blit_bigstring_to_string
+function core_md5_digest_subbigstring(buf, ofs, len, res){
+    var bytes = caml_create_bytes(len);
+    caml_blit_bigstring_to_string(buf, ofs, bytes, 0, len);
+    var res2 = caml_md5_string(bytes, 0, len);
+    caml_blit_string(res2, 0, res, 0, 16);
+    return 0;
+}

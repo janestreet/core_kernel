@@ -14,9 +14,12 @@ include Binable               with type t := t
 include Comparable            with type t := t
 include Comparable.With_zero  with type t := t
 include Robustly_comparable.S with type t := t
-include Commutative_group.S   with type t := t
 
 val ( * ) : t -> t -> t
+val ( + ) : t -> t -> t
+val ( - ) : t -> t -> t
+
+val zero : t
 
 val neg : t -> t
 val abs : t -> t

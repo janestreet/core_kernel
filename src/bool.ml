@@ -2,10 +2,17 @@ open! Import
 
 type t = bool [@@deriving bin_io, typerep]
 
-include (Base.Bool : module type of struct include Base.Bool end with type t := t)
+module Z =
+  Identifiable.Extend (Base.Bool) (struct
+    type nonrec t = t [@@deriving bin_io]
+  end)
 
-include Hashable.Make (Base.Bool)
-include Comparable.Make_using_comparator (Base.Bool)
+include (Z : module type of struct include Z end
+         with module Replace_polymorphic_compare := Z.Replace_polymorphic_compare)
+
+module Replace_polymorphic_compare = Base.Bool
+
+include (Base.Bool : module type of struct include Base.Bool end with type t := t)
 
 let quickcheck_generator = Base_quickcheck.Generator.bool
 let quickcheck_observer = Base_quickcheck.Observer.bool

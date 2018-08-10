@@ -69,8 +69,18 @@ let to_binary = T.to_binary
 
 let digest_string = Stable.digest_string
 let digest_bytes = Md5_lib.bytes
-let digest_file_blocking_without_releasing_runtime_lock f = of_binary_exn (Caml.Digest.file f)
-let file = digest_file_blocking_without_releasing_runtime_lock
+
+external caml_sys_open : string -> Caml.open_flag list -> perm:int -> int = "caml_sys_open"
+external caml_sys_close : int -> unit = "caml_sys_close"
+external digest_fd_blocking : int -> string = "core_md5_fd"
+let digest_file_blocking path =
+  of_binary_exn
+    (Base.Exn.protectx
+       (caml_sys_open path [ Open_rdonly; Open_binary ] ~perm:0o000)
+       ~f:digest_fd_blocking
+       ~finally:caml_sys_close)
+
+let file = digest_file_blocking
 let digest_channel_blocking_without_releasing_runtime_lock channel ~len =
   of_binary_exn (Caml.Digest.channel channel len)
 let channel channel len =
@@ -86,3 +96,21 @@ let subbytes s pos len = digest_subbytes s ~pos ~len
 
 let digest_bin_prot writer value =
   digest_string (Core_bin_prot.Writer.to_string writer value)
+
+external c_digest_subbigstring : Bigstring.t -> pos:int -> len:int -> res:Bytes.t -> unit =
+  "core_md5_digest_subbigstring"
+
+let unsafe_digest_subbigstring buf ~pos ~len =
+  (* It's more efficient to allocate the result on the OCaml side and declare the C
+     function as noalloc than to let the C function allocate. *)
+  let res = Bytes.create 16 in
+  c_digest_subbigstring buf ~pos ~len ~res;
+  Md5_lib.unsafe_of_binary
+    (Bytes.unsafe_to_string ~no_mutation_while_string_reachable:res)
+
+let digest_subbigstring buf ~pos ~len =
+  Ordered_collection_common.check_pos_len_exn ~pos ~len ~length:(Bigstring.length buf);
+  unsafe_digest_subbigstring buf ~pos ~len
+
+let digest_bigstring buf =
+  unsafe_digest_subbigstring buf ~pos:0 ~len:(Bigstring.length buf)

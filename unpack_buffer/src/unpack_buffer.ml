@@ -184,15 +184,16 @@ module Unpack_one = struct
 end
 
 type ('a, 'state) alive =
-  { mutable state          : 'state option
-  ; initial_state          : 'state
-  ; unpack                 : ('a, 'state) Unpack_one.unpack sexp_opaque
+  { mutable state            : 'state
+  ; mutable state_is_initial : bool
+  ; initial_state            : 'state
+  ; unpack                   : ('a, 'state) Unpack_one.unpack sexp_opaque
   (* [buf] holds unconsumed chars*)
-  ; mutable buf            : Bigstring.t
+  ; mutable buf              : Bigstring.t
   (* [pos] is the start of unconsumed data in[buf] *)
-  ; mutable pos            : int
+  ; mutable pos              : int
   (* [len] is the length of unconsumed data in[buf] *)
-  ; mutable len            : int
+  ; mutable len              : int
   }
 [@@deriving sexp_of]
 
@@ -214,6 +215,7 @@ let invariant _ t =
       assert (alive.pos >= 0);
       assert (alive.len >= 0);
       if alive.len = 0 then assert (alive.pos = 0);
+      if alive.state_is_initial then assert (phys_equal alive.state alive.initial_state);
       assert (alive.pos + alive.len <= Bigstring.length alive.buf);
   with exn ->
     failwiths "invariant failed" (exn, t) [%sexp_of: exn * _ t]
@@ -221,7 +223,8 @@ let invariant _ t =
 
 let create (Unpack_one.T { initial_state; unpack }) =
   { alive_or_dead =
-      Alive { state = None
+      Alive { state = initial_state
+            ; state_is_initial = true
             ; initial_state
             ; unpack
             ; buf = Bigstring.create 1
@@ -238,7 +241,7 @@ let create_bin_prot bin_prot_reader =
 let is_empty t =
   match t.alive_or_dead with
   | Dead error -> Error error
-  | Alive alive -> Ok (is_none alive.state && alive.len = 0)
+  | Alive alive -> Ok (alive.state_is_initial && alive.len = 0)
 ;;
 
 let is_available t len =
@@ -303,8 +306,7 @@ let rec unpack_iter_loop t alive ~f =
     Ok ();
   end else begin
     match
-      alive.unpack ~buf:alive.buf ~pos:alive.pos ~len:alive.len
-        ~state:(Option.value alive.state ~default:alive.initial_state)
+      alive.unpack ~buf:alive.buf ~pos:alive.pos ~len:alive.len ~state:alive.state
     with
     | exception exn -> error t (Error.create "unpack error" exn [%sexp_of: Exn.t])
     | unpack_result ->
@@ -318,12 +320,13 @@ let rec unpack_iter_loop t alive ~f =
         if num_bytes < 0 || num_bytes > alive.len then
           error t (Error.create "unpack consumed invalid amount" num_bytes
                      [%sexp_of: int])
-        else if num_bytes = 0 && is_none alive.state then
+        else if num_bytes = 0 && alive.state_is_initial then
           error t (Error.of_string "\
                      unpack returned a value but consumed 0 bytes without partially unpacked data")
         else begin
           consume alive ~num_bytes;
-          alive.state <- None;
+          alive.state <- alive.initial_state;
+          alive.state_is_initial <- true;
           match f one with
           | exception exn ->
             error t (Error.create "~f supplied to Unpack_buffer.unpack_iter raised" exn
@@ -338,7 +341,8 @@ let rec unpack_iter_loop t alive ~f =
                      [%sexp_of: int])
         else begin
           consume alive ~num_bytes;
-          alive.state <- Some state;
+          alive.state <- state;
+          alive.state_is_initial <- false;
           (* Put unconsumed bytes at the front.  We assume that unpacking is
              deterministic, which ensures that every input byte is shifted at most once.
              Once a byte has been shifted, it will remain where it is until it is

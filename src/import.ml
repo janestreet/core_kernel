@@ -6,7 +6,6 @@ module Applicative               = Base.Applicative
 module Avltree                   = Base.Avltree
 module Backtrace                 = Base.Backtrace
 module Binary_search             = Base.Binary_search
-module Commutative_group         = Base.Commutative_group
 module Comparisons               = Base.Comparisons
 module Equal                     = Base.Equal
 module Exn                       = Base.Exn

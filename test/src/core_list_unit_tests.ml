@@ -55,7 +55,7 @@ let%test_module "random" =
       type t
 
       include T with type t := t
-      include Commutative_group.S with type t := t
+      include Container.Summable with type t := t
 
     end
 

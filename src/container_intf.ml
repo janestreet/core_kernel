@@ -54,7 +54,7 @@ module type S1_permissions = sig
 
   (** Returns the sum of [f i] for i in the container *)
   val sum
-    : (module Commutative_group.S with type t = 'sum)
+    : (module Summable with type t = 'sum)
     -> ('a, [> read ]) t -> f:('a -> 'sum) -> 'sum
 
   (** Returns as an [option] the first element for which [f] evaluates to true. *)

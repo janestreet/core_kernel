@@ -31,6 +31,7 @@
     effectively moved up to the current time of the bucket.
 *)
 
+open! Core_kernel
 open! Import
 
 type t [@@deriving sexp_of]

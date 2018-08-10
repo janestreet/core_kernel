@@ -6,7 +6,9 @@ let r = Ref.Permissioned.create 0
 let r' = (r : (int, foo) Ref.Permissioned.t)
 [%%expect{|
 Line _, characters 10-11:
-Error: This expression has type (int, *) Ref.Permissioned.t (glob)
+Error: This expression has type
+         (int, *) (glob)
+         Ref.Permissioned.t
        but an expression was expected of type (int, foo) Ref.Permissioned.t
        Type 'a = [< `Read | `Who_can_write of 'b ]
        is not compatible with type foo

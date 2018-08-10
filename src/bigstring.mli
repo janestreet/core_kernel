@@ -80,7 +80,6 @@ val get_opt_len : t -> pos : int -> int option -> int
     [opt_len].  This function does not check the validity of its
     arguments.  Use {!check_args} for that purpose. *)
 
-
 (** {2 Accessors} *)
 
 val length : t -> int

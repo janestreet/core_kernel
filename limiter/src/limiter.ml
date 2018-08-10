@@ -1,5 +1,5 @@
+open! Core_kernel
 open! Import
-open Std_internal
 
 module Infinite_or_finite = struct
   module T = struct

@@ -83,14 +83,14 @@ let%expect_test "of sexp failure" =
   Or_error.try_with (fun () -> Even_int_id.t_of_sexp (Sexp.of_string "15"))
   |> print_error;
   [%expect {|
-    (Sexplib.Conv.Of_sexp_error (Failure "(\"Not a valid Even_int_id\"15)") 15) |}]
+    (Of_sexp_error "(\"Not a valid Even_int_id\"15)" (invalid_sexp 15)) |}]
 ;;
 
 let%expect_test "set of sexp failure" =
   Or_error.try_with (fun () -> Even_int_id.Set.t_of_sexp (Sexp.of_string "(15)"))
   |> print_error;
   [%expect {|
-    (Sexplib.Conv.Of_sexp_error (Failure "(\"Not a valid Even_int_id\"15)") 15) |}]
+    (Of_sexp_error "(\"Not a valid Even_int_id\"15)" (invalid_sexp 15)) |}]
 ;;
 
 let%expect_test "of bin prot failure" =
@@ -178,20 +178,18 @@ let%expect_test "of sexp failure" =
   Or_error.try_with (fun () -> M.t_of_sexp (Sexp.of_string "\"FOOBAR \""))
   |> print_error;
   [%expect {|
-    (Sexplib.Conv.Of_sexp_error
-     (Failure
-      "'FOOBAR ' is not a valid test because it has whitespace on the edge")
-     "FOOBAR ") |}];
+    (Of_sexp_error
+     "'FOOBAR ' is not a valid test because it has whitespace on the edge"
+     (invalid_sexp "FOOBAR ")) |}];
 ;;
 
 let%expect_test "set of sexp failure" =
   Or_error.try_with (fun () -> M.Set.t_of_sexp (Sexp.of_string "(\"FOOBAR \")"))
   |> print_error;
   [%expect {|
-    (Sexplib.Conv.Of_sexp_error
-     (Failure
-      "'FOOBAR ' is not a valid test because it has whitespace on the edge")
-     "FOOBAR ") |}];
+    (Of_sexp_error
+     "'FOOBAR ' is not a valid test because it has whitespace on the edge"
+     (invalid_sexp "FOOBAR ")) |}];
 ;;
 
 let%expect_test "of bin prot failure" =

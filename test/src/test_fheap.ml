@@ -14,7 +14,7 @@ let%test_module _ =
       val remove_top : 'a t -> 'a t option
       val of_list    : 'a list -> cmp:('a -> 'a -> int) -> 'a t
       val to_list    : 'a t -> 'a list
-      val sum        : (module Commutative_group.S with type t = 'sum)
+      val sum        : (module Container.Summable with type t = 'sum)
         -> 'a t
         -> f:('a -> 'sum)
         -> 'sum
