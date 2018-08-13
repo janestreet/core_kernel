@@ -9,3 +9,9 @@ include Identifiable.S
    and type comparator_witness := Base.Bool.comparator_witness
 
 include Quickcheckable.S with type t := t
+
+module Stable : sig
+  module V1 : sig
+    type nonrec t = t [@@deriving sexp, bin_io]
+  end
+end

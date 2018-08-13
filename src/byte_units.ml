@@ -37,6 +37,14 @@ module Measure = struct
     | `Gigabytes -> gbyte
     | `Words -> bytes_per_word
   ;;
+
+  let to_char = function
+    | `Bytes     -> 'b'
+    | `Kilobytes -> 'k'
+    | `Megabytes -> 'm'
+    | `Gigabytes -> 'g'
+    | `Words     -> 'w'
+
 end
 
 module Stable = struct
@@ -137,14 +145,7 @@ module T = struct
   let words     t = bytes t /. bytes_per_word
 
   let to_string_with_measure measure t =
-    let ext =
-      match measure with
-      | `Bytes     -> 'b'
-      | `Kilobytes -> 'k'
-      | `Megabytes -> 'm'
-      | `Gigabytes -> 'g'
-      | `Words     -> 'w'
-    in
+    let ext = Measure.to_char measure in
     sprintf "%g%c" (number_of_measures t measure) ext
   ;;
 
@@ -158,6 +159,51 @@ module T = struct
   ;;
 
   let to_string t = to_string_hum t
+
+  (* This test documents the original to-string representation and fails under javascript
+     due to differences in the rounding. *)
+  let%expect_test _ [@tags "no-js"] =
+    printf !"%{}" (create `Bytes 1000.);
+    [%expect {| 1000b |}];
+    printf !"%{}" (create `Bytes 1500.);
+    [%expect {| 1.46484k |}];
+    printf !"%{}" (create `Bytes 10000.);
+    [%expect {| 9.76562k |}];
+    printf !"%{}" (create `Bytes 100000.);
+    [%expect {| 97.6562k |}];
+    printf !"%{}" (create `Bytes 1000000.);
+    [%expect {| 976.562k |}];
+    printf !"%{}" (create `Bytes 10000000.);
+    [%expect {| 9.53674m |}];
+  ;;
+
+  let to_string_short ?measure t =
+    let measure =
+      match measure with
+      | Some m -> m
+      | None   -> largest_measure t
+    in
+    let ext = Measure.to_char measure in
+    let f = number_of_measures t measure in
+    if f >=. 100. then
+      sprintf "%.0f%c" f ext
+    else if f >=. 10. then
+      sprintf "%.1f%c" f ext
+    else
+      sprintf "%.2f%c" f ext
+
+  let%expect_test _ =
+    printf !"%{#short}" (create `Bytes 1000.);
+    [%expect {| 1000b |}];
+    printf !"%{#short}" (create `Bytes 10000.);
+    [%expect {| 9.77k |}];
+    printf !"%{#short}" (create `Bytes 100000.);
+    [%expect {| 97.7k |}];
+    printf !"%{#short}" (create `Bytes 1000000.);
+    [%expect {| 977k |}];
+    printf !"%{#short}" (create `Bytes 10000000.);
+    [%expect {| 9.54m |}];
+  ;;
 end
 include T
 include Comparable.Make (T)

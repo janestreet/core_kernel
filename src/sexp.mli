@@ -94,3 +94,9 @@ end
 
     The implementation uses global state, so it is not thread safe. *)
 val of_sexp_allow_extra_fields : (Base.Sexp.t -> 'a) -> Base.Sexp.t -> 'a
+
+module Stable : sig
+  module V1 : sig
+    type nonrec t = t = Atom of string | List of t list [@@deriving sexp, bin_io, hash, compare]
+  end
+end

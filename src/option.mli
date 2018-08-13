@@ -7,3 +7,8 @@ include module type of struct include Base.Option end with type 'a t := 'a t (**
 include Comparator.Derived with type 'a t := 'a t
 include Quickcheckable.S1 with type 'a t := 'a t
 
+module Stable : sig
+  module V1 : sig
+    type nonrec 'a t = 'a t [@@deriving sexp, bin_io]
+  end
+end

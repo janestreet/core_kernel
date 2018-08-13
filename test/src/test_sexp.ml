@@ -58,3 +58,20 @@ module With_text = struct
       (Of_sexp_error :1:5 "int_of_sexp: (Failure int_of_string)" (invalid_sexp bla)) |}];
   ;;
 end
+
+let%test_module _ =
+  (module struct
+    type t1 = Sexp.t [@@deriving bin_io]
+    type t2 = Sexp.Stable.V1.t [@@deriving bin_io]
+    type t3 = Core_kernel_stable.Sexp.V1.t [@@deriving bin_io]
+
+    let%expect_test "Sexp.t, Sexp.Stable.V1.t and Core_kernel_stable.Sexp.V1.t bin_digests match" =
+      print_endline [%bin_digest: t1];
+      print_endline [%bin_digest: t2];
+      print_endline [%bin_digest: t3];
+      [%expect {|
+        832b40ae394f2851da8ba67b3339b429
+        832b40ae394f2851da8ba67b3339b429
+        832b40ae394f2851da8ba67b3339b429 |}]
+    ;;
+  end)

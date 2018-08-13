@@ -78,3 +78,9 @@ val zip_with_remainder
   :  'a list
   -> 'b list
   -> ('a * 'b) list * ('a list, 'b list) Either.t option
+
+module Stable : sig
+  module V1 : sig
+    type nonrec 'a t = 'a t [@@deriving sexp, bin_io, compare]
+  end
+end

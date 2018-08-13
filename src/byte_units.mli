@@ -28,6 +28,13 @@ include Stringable.S with type t := t
     but [Byte_units.to_string_hum (Byte_units.create `Bytes 1500.)] gives [1.46484k]. *)
 val to_string_hum : ?measure:Measure.t -> t -> string
 
+(** [to_string_short] is like [to_string_hum] but will attempt to only show 4 significant
+    digits.
+
+    For example [Byte_units.to_string_hum (Byte_units.create `Bytes 1000.)] gives [1000b],
+    but [Byte_units.to_string_hum (Byte_units.create `Bytes 1500.)] gives [1.46k]. *)
+val to_string_short : ?measure:Measure.t -> t -> string
+
 val bytes     : t -> float
 val kilobytes : t -> float
 val megabytes : t -> float

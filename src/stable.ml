@@ -15,6 +15,7 @@ include Stable_containers
 
 module Binable                              = Binable                              .Stable
 module Blang                                = Blang                                .Stable
+module Bool                                 = Bool                                 .Stable
 module Byte_units                           = Byte_units                           .Stable
 module Comparable                           = Comparable                           .Stable
 module Comparator                           = Comparator                           .Stable
@@ -31,9 +32,11 @@ module Info                                 = Info                              
 module Int                                  = Int                                  .Stable
 module Int63                                = Int63                                .Stable
 module Lazy                                 = Lazy                                 .Stable
+module List                                 = List                                 .Stable
 module Map                                  = Map                                  .Stable
 module Month                                = Month                                .Stable
 module Nothing                              = Nothing                              .Stable
+module Option                               = Option                               .Stable
 module Or_error                             = Or_error                             .Stable
 module Percent                              = Percent                              .Stable
 module Perms                                = Perms                                .Stable
@@ -41,6 +44,7 @@ module Pid                                  = Pid                               
 module Queue                                = Queue                                .Stable
 module Result                               = Result                               .Stable
 module Set                                  = Set                                  .Stable
+module Sexp                                 = Sexp                                 .Stable
 module Sexpable                             = Sexpable                             .Stable
 module Source_code_position                 = Source_code_position                 .Stable
 module String                               = String                               .Stable

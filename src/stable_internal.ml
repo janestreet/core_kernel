@@ -38,9 +38,3 @@ include
 
 type 'a sexp_option = 'a Std_internal.sexp_option [@@deriving bin_io, compare, hash]
 type 'a sexp_list   = 'a Std_internal.sexp_list   [@@deriving bin_io, compare, hash]
-
-(* Hack, because Sexp isn't Binable *)
-module Sexp = struct
-  type t = Sexp.t = Atom of string | List of t list [@@deriving bin_io, compare, hash]
-  include (Sexp : module type of Sexp with type t := t)
-end

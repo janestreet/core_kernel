@@ -46,3 +46,9 @@ let exn_if_dup ~compare ?(context="exn_if_dup") t ~to_sexp =
 let slice a start stop =
   Ordered_collection_common.slice ~length_fun:length ~sub_fun:sub
     a start stop
+
+module Stable = struct
+  module V1 = struct
+    type nonrec 'a t = 'a t [@@deriving sexp, bin_io, compare]
+  end
+end
