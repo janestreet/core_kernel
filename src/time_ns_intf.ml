@@ -17,9 +17,12 @@ module type Span = sig
   val to_int_ms  : t -> int
   val to_int_sec : t -> int
 
-  (** The limits of [t] are chosen to allow conversion to and from [float] spans with
-      microsecond precision.  This property supports {!Timing_wheel_float} in particular.
-      See also {!Core.Time}. *)
+  (** Contrary to the names, one can easily construct a [t] that is less than [min_value]
+      or greater than [max_value].
+
+      For [t]s that happen to be within these bounds, conversion to and from [Time.Span]
+      rounds to the nearest microsecond.  This property supports {!Timing_wheel_float} in
+      particular. *)
   val min_value : t
   val max_value : t
 
@@ -27,6 +30,7 @@ module type Span = sig
 
   val scale_int63 : t -> Int63.t -> t (** overflows silently *)
 
+  (** Rounds down, and raises unless denominator is positive. *)
   val div    : t -> t     -> Int63.t
 
   (** Fast, implemented as the identity function. *)
