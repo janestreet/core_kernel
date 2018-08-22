@@ -29,3 +29,4 @@ let gen_alpha = Base_quickcheck.Generator.char_alpha
 let gen_alphanum = Base_quickcheck.Generator.char_alphanum
 let gen_print = Base_quickcheck.Generator.char_print
 let gen_whitespace = Base_quickcheck.Generator.char_whitespace
+let gen_uniform_inclusive = Base_quickcheck.Generator.char_uniform_inclusive

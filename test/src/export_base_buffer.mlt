@@ -10,14 +10,6 @@ module Buffer_is_from_caml : module type of struct include Caml.Buffer end = Buf
 Line _, characters 77-83:
 Error: Signature mismatch:
        ...
-       The value `of_seq' is required but not provided
-       File "buffer.mli", line 177, characters 0-28: Expected declaration
-       The value `add_seq' is required but not provided
-       File "buffer.mli", line 173, characters 0-37: Expected declaration
-       The value `to_seqi' is required but not provided
-       File "buffer.mli", line 168, characters 0-37: Expected declaration
-       The value `to_seq' is required but not provided
-       File "buffer.mli", line 163, characters 0-28: Expected declaration
        The value `truncate' is required but not provided
        File "buffer.mli", line 155, characters 0-31: Expected declaration
        The value `output_buffer' is required but not provided
