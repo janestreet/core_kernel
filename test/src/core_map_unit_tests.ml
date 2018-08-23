@@ -172,7 +172,7 @@ module Unit_tests
       ~f:(fun map (key, data) -> Caml_map.add key data map)
 
   let alist_equal l1 l2 =
-    List.equal l1 l2 ~equal:(fun (k1, d1) (k2, d2) -> Key.equal k1 k2 && d1 = d2)
+    List.equal (fun (k1, d1) (k2, d2) -> Key.equal k1 k2 && d1 = d2) l1 l2 
 
   let caml_map_to_alist map =
     List.rev (Caml_map.fold (fun key data l -> (key, data) :: l) map [])
@@ -587,7 +587,7 @@ module Unit_tests
   let%test _ =
     let m1 = Map.add_multi (Map.empty ()) ~key:Key.sample ~data:0 in
     let m2 = Map.add_multi m1 ~key:Key.sample ~data:1 in
-    List.equal ~equal:Int.equal (Map.find_multi m2 Key.sample)
+    List.equal Int.equal  (Map.find_multi m2 Key.sample)
       (Caml_map.find Key.sample (Caml_map.add Key.sample [1; 0] Caml_map.empty));
   ;;
 
@@ -797,7 +797,7 @@ module Unit_tests
     let map = Map.of_alist_exn (random_alist Key.samples) in
     let map_keys = Map.keys map in
     let sorted_keys = List.sort map_keys ~compare:Key.compare in
-    List.equal map_keys sorted_keys ~equal:Key.equal
+    List.equal Key.equal map_keys sorted_keys 
   ;;
 
   let%test_unit _ =
@@ -807,7 +807,7 @@ module Unit_tests
     let all_keys = List.sort ~compare:Key.compare Key.samples in
     let map_data = Map.data map in
     let map_alist = Map.to_alist map in
-    assert (List.equal map_keys all_keys ~equal:Key.equal);
+    assert (List.equal Key.equal map_keys all_keys );
     assert (alist_equal map_alist base_alist);
     assert (alist_equal (List.zip_exn map_keys map_data) base_alist);
     let map_alist_increasing = Map.to_alist ~key_order:`Increasing map in

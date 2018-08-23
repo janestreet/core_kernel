@@ -248,7 +248,7 @@ module type Permissioned = sig
   val last : ('a, [> read]) t -> 'a
   val empty : unit -> ('a, [< _ perms]) t
   [@@deprecated "[since 2017-05] Use [ [||] ]"]
-  val equal : ('a, [> read]) t -> ('a, [> read]) t -> equal:('a -> 'a -> bool) -> bool
+  val equal : ('a -> 'a -> bool) -> ('a, [> read]) t -> ('a, [> read]) t -> bool
   val unsafe_truncate : (_, [> write]) t -> len:int -> unit
 
   val to_sequence : ('a, [> read]) t -> 'a Sequence.t
@@ -396,7 +396,7 @@ module type S = sig
   val last : 'a t -> 'a
   val empty : unit -> 'a t
   [@@deprecated "[since 2017-05] Use [ [||] ]"]
-  val equal : 'a t -> 'a t -> equal:('a -> 'a -> bool) -> bool
+  val equal : ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
   val unsafe_truncate : _ t -> len:int -> unit
 
   val to_sequence : 'a t -> 'a Core_sequence.t

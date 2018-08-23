@@ -781,7 +781,7 @@ module Priority_queue = struct
       List.sort elts ~compare:(fun elt1 elt2 ->
         Key.compare (Elt.key t elt1) (Elt.key t elt2))
     in
-    require [%here] (List.equal ~equal:phys_equal (sort !elts) (sort !elts'))
+    require [%here] (List.equal phys_equal  (sort !elts) (sort !elts'))
   ;;
 end
 

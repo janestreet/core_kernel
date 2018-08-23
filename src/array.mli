@@ -258,7 +258,7 @@ module Permissioned : sig
   val last : ('a, [> read]) t -> 'a
   val empty : unit -> ('a, [< _ perms]) t
   [@@deprecated "[since 2017-05] Use [ [||] ]"]
-  val equal : ('a, [> read]) t -> ('a, [> read]) t -> equal:('a -> 'a -> bool) -> bool
+  val equal : ('a -> 'a -> bool) -> ('a, [> read]) t -> ('a, [> read]) t -> bool
   val unsafe_truncate : (_, [> write]) t -> len:int -> unit
 
   val to_sequence         : ('a, [> read]) t -> 'a Sequence.t

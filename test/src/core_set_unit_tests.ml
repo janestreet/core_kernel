@@ -267,7 +267,7 @@ module Unit_tests
   let to_array _ = assert false
   let%test _ =
     let a = Set.to_array set_nonempty in
-    List.equal (Array.to_list a) (Set.to_list set_nonempty) ~equal:Elt.equal
+    List.equal Elt.equal (Array.to_list a) (Set.to_list set_nonempty) 
   ;;
 
   let to_sequence ?order:_ ?greater_or_equal_to:_ ?less_or_equal_to:_ _ : _ Sequence.t = assert false

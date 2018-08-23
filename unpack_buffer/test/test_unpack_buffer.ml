@@ -77,7 +77,7 @@ let test (type value) (module V : Value with type t = value) values =
       loop 0;
       assert (is_empty_exn t);
       let output = Queue.to_list output in
-      if not (List.equal ~equal:V.equal values output) then
+      if not (List.equal V.equal  values output) then
         failwiths "mismatch" (values, output) [%sexp_of: V.t list * V.t list];
     with exn ->
       failwiths "failure"

@@ -84,7 +84,7 @@ struct
         in
         let sorted_sexps = List.sort ~compare sexps in
         let sorted_serialized = List.sort ~compare serialized_elements in
-        if not (List.equal ~equal:(=) sorted_sexps sorted_serialized) then
+        if not (List.equal (=)  sorted_sexps sorted_serialized) then
           failwiths "sexp serialization mismatch"
             (`Expected sexps, `But_got serialized_elements)
             [%sexp_of: [ `Expected of Sexp.t list ] * [ `But_got of Sexp.t list ]];

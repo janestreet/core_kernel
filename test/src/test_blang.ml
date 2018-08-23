@@ -133,7 +133,7 @@ let%test_module "bind short-circuiting" =
         false_
       in
       match bind expr ~f with
-      | True -> List.equal ~equal:Int.equal expected_visits (List.rev !visited)
+      | True -> List.equal Int.equal  expected_visits (List.rev !visited)
       | _ -> false
 
     let%test _ = test [0] (or_ [not_ (base 0); base 1])

@@ -70,7 +70,7 @@ let invariant invariant_key invariant_data t =
     let entries = get_entries t.entries_by_key in
     let entries' = get_entries t.defined_entries in
     assert (t.length = Array.length entries);
-    assert (Array.equal entries entries' ~equal:phys_equal)
+    assert (Array.equal phys_equal entries entries' )
   with exn ->
     let sexp_of_key = sexp_of_key t in
     failwiths "invariant failed" (exn, t) [%sexp_of: exn * (key, _) t_detailed]
