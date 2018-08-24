@@ -22,6 +22,7 @@ module Std = struct
   module Bigstring                       = Bigstring
   module Core_kernel_stable              = Stable
   module Date                            = Date
+  module Filename                        = Filename
   module Map_intf                        = Map_intf
   module Digest                          = Md5
   [@@ocaml.deprecated "[since 2017-05] Use Md5 instead."]
