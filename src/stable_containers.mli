@@ -6,7 +6,6 @@
 
 open! Import
 
-
 module Hashable : sig
   module V1 : sig
     module type S = sig

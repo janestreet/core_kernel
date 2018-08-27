@@ -56,17 +56,43 @@ module type S = sig
       Note that even the non-[*_exn] versions can raise, but only if there is an ongoing
       iteration. *)
 
-  (** [enqueue t k v] adds the key-value pair (k, v) to the end of the queue, returning
-      [`Ok] if the pair was added, or [`Key_already_present] if there is already a (k, v')
-      in the queue.
+  (** [enqueue t back_or_front k v] adds the key-value pair (k, v) to the front or back of
+      the queue, returning [`Ok] if the pair was added, or [`Key_already_present] if there
+      is already a (k, v') in the queue.
   *)
-  val enqueue : 'a t -> Key.t -> 'a -> [ `Ok | `Key_already_present ]
+  val enqueue : 'a t -> [ `back | `front ] -> Key.t -> 'a -> [ `Ok | `Key_already_present ]
 
-  val enqueue_exn : 'a t -> Key.t -> 'a -> unit
+  (** Like {!enqueue}, but it raises in the [`Key_already_present] case *)
+  val enqueue_exn : 'a t -> [ `back | `front ] -> Key.t -> 'a -> unit
 
+  (** See {!enqueue}. [enqueue_back t k v] is the same as [enqueue t `back k v]  *)
+  val enqueue_back : 'a t -> Key.t -> 'a -> [ `Ok | `Key_already_present ]
+
+  (** See {!enqueue_exn}. [enqueue_back_exn t k v] is the same as [enqueue_exn t `back k v] *)
+  val enqueue_back_exn : 'a t -> Key.t -> 'a -> unit
+
+  (** See {!enqueue}. [enqueue_front t k v] is the same as [enqueue t `front k v]  *)
+  val enqueue_front : 'a t -> Key.t -> 'a -> [ `Ok | `Key_already_present ]
+
+  (** See {!enqueue_exn}. [enqueue_front_exn t k v] is the same as [enqueue_exn t `front k
+      v] *)
+  val enqueue_front_exn : 'a t -> Key.t -> 'a -> unit
+
+  (** [lookup_and_move_to_back] finds the key-value pair (k, v) and moves it to the
+      back of the queue if it exists, otherwise returning [None].
+
+      The [_exn] versions of these functions raise if key-value pair does not exist.
+  *)
   val lookup_and_move_to_back     : 'a t -> Key.t -> 'a option
 
+  (** Like {!lookup_and_move_to_back}, but raises instead of returning an option *)
   val lookup_and_move_to_back_exn : 'a t -> Key.t -> 'a
+
+  (** Like {!lookup_and_move_to_back}, but moves element to the front of the queue *)
+  val lookup_and_move_to_front     : 'a t -> Key.t -> 'a option
+
+  (** Like {!lookup_and_move_to_front}, but raises instead of returning an option *)
+  val lookup_and_move_to_front_exn : 'a t -> Key.t -> 'a
 
   (** [first t] returns the front element of the queue, without removing it. *)
   val first : 'a t -> 'a option
@@ -215,27 +241,36 @@ module Make (Key : Key) : S with module Key = Key = struct
         ~f:Key_value.value)
   ;;
 
-  let enqueue t key value =
+  let enqueue t back_or_front key value =
     ensure_can_modify t;
     if Hashtbl.mem t.table key then
       `Key_already_present
     else begin
-      let elt =
-        Doubly_linked.insert_last t.queue
-          { Key_value.key = key; value = value; }
+      let contents = { Key_value.key = key; value = value } in
+      let elt = match back_or_front with
+        | `back -> Doubly_linked.insert_last t.queue contents
+        | `front -> Doubly_linked.insert_first t.queue contents
       in
       Hashtbl.set t.table ~key ~data:elt;
       `Ok
     end
   ;;
 
+  let enqueue_back t = enqueue t `back
+
+  let enqueue_front t = enqueue t `front
+
   exception Enqueue_duplicate_key of Key.t [@@deriving sexp]
 
-  let enqueue_exn t key value =
-    match enqueue t key value with
+  let enqueue_exn t back_or_front key value =
+    match enqueue t back_or_front key value with
     | `Key_already_present -> raise (Enqueue_duplicate_key key)
     | `Ok -> ()
   ;;
+
+  let enqueue_back_exn t = enqueue_exn t `back
+
+  let enqueue_front_exn t = enqueue_exn t `front
 
   (* Performance hack: we implement this version separately to avoid allocation from the
      option. *)
@@ -251,6 +286,21 @@ module Make (Key : Key) : S with module Key = Key = struct
     ensure_can_modify t;
     let%map elt = Hashtbl.find t.table key in
     Doubly_linked.move_to_back t.queue elt;
+    Key_value.value (Elt.value elt)
+  ;;
+
+  let lookup_and_move_to_front_exn t key =
+    ensure_can_modify t;
+    let elt = Hashtbl.find_exn t.table key in
+    Doubly_linked.move_to_front t.queue elt;
+    Key_value.value (Elt.value elt)
+  ;;
+
+  let lookup_and_move_to_front t key =
+    let open Option.Let_syntax in
+    ensure_can_modify t;
+    let%map elt = Hashtbl.find t.table key in
+    Doubly_linked.move_to_front t.queue elt;
     Key_value.value (Elt.value elt)
   ;;
 

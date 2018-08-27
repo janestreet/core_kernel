@@ -82,9 +82,8 @@ module type S = sig
 
   val zero : t
 
-  (** [create ?sign ?day ?hr ?min ?sec ?ms ?us ?ns ()] Create a span from the given parts.
-      All parts are assumed to be positive (no checking is done by the function) and the
-      sign of the final span is given by [sign] which is positive by default. *)
+  (** [?sign] defaults to positive. Setting it to negative is equivalent to negating all
+      the integers. *)
   val create
     :  ?sign : Sign.t
     -> ?day  : int
