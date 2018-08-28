@@ -21,6 +21,10 @@ val create_exn
     of bounds. *)
 val set_exn : 'a t -> int -> 'a -> unit
 
+(** [get_exn t i] gets the value at index [i].  It raises if [i] is out of bounds, or
+    [set_exn t i] has never been called. *)
+val get_exn : 'a t -> int -> 'a
+
 (** [compute_exn t] computes the value of the fold.  It raises if any values of the array
     are [None]. *)
 val compute_exn : 'a t -> 'a

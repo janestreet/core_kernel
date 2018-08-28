@@ -97,16 +97,20 @@ let create_exn ?(sexp_of_a = [%sexp_of: _]) () ~len:num_leaves ~reduce =
   ; sexp_of_a }
 ;;
 
-let set_exn t i a =
+let validate_index t i =
   if i < 0
   then raise_s [%message
-         "attempt to set negative index in balanced reducer" ~index:(i : int)];
+         "attempt to access negative index in balanced reducer" ~index:(i : int)];
   let length = t.num_leaves in
   if i >= length
   then raise_s [%message
-         "attempt to set out of bounds index in balanced reducer"
+         "attempt to access out of bounds index in balanced reducer"
            ~index:(i : int)
            (length : int)];
+;;
+
+let set_exn t i a =
+  validate_index t i ;
   let data = t.data in
   let i = ref (leaf_index t i) in
   Option_array.set_some data !i a;
@@ -118,6 +122,11 @@ let set_exn t i a =
       Option_array.unsafe_set_none data parent;
       i := parent);
   done;
+;;
+
+let get_exn t i =
+  validate_index t i ;
+  Option_array.get_some_exn t.data (leaf_index t i)
 ;;
 
 let rec compute_exn t i =

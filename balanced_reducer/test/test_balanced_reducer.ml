@@ -41,13 +41,33 @@ let%expect_test "[set_exn] with invalid index" =
   let t = create_exn ~len:1 in
   show_raise (fun () -> set_exn t (-1) 13);
   [%expect {|
-    (raised ("attempt to set negative index in balanced reducer" (index -1))) |}];
+    (raised ("attempt to access negative index in balanced reducer" (index -1))) |}];
   show_raise (fun () -> set_exn t 1 13);
   [%expect {|
     (raised (
-      "attempt to set out of bounds index in balanced reducer"
+      "attempt to access out of bounds index in balanced reducer"
       (index  1)
       (length 1))) |}];
+;;
+
+let%expect_test "[get_exn]" =
+  let t = create_exn ~len:1 in
+  show_raise (fun () -> get_exn t 0);
+  [%expect {|
+    (raised "Option_array.get_some_exn: the element is [None]") |}];
+  set_exn t 0 5 ;
+  print_s [%message "" ~_:(get_exn t 0 : int list)] ;
+  [%expect {|
+    (5) |}] ;
+  show_raise (fun () -> get_exn t (-1)) ;
+  [%expect {|
+    (raised ("attempt to access negative index in balanced reducer" (index -1))) |}];
+  show_raise (fun () -> get_exn t 2) ;
+  [%expect {|
+    (raised (
+      "attempt to access out of bounds index in balanced reducer"
+      (index  2)
+      (length 1))) |}]
 ;;
 
 let%expect_test "[sexp_of_t]" =
