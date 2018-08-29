@@ -29,7 +29,6 @@ module Std = struct
   module Optional_syntax_intf            = Optional_syntax_intf
   module Perms                           = Perms
   module Set_intf                        = Set_intf
-  module Stack_intf                      = Stack_intf
   module Time                            = Time_float
   module Time_ns                         = Time_ns
   module Timing_wheel_ns_intf            = Timing_wheel_ns_intf
