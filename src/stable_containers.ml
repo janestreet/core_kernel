@@ -1,8 +1,6 @@
 open! Import
 
 (* avoid getting shadowed by the similarly named modules in this file *)
-module Core_map = Map
-module Core_set = Set
 module Core_hashtbl = Hashtbl
 module Core_hash_set = Hash_set
 

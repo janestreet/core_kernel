@@ -103,4 +103,5 @@ let%test_module _ =
     ;;
   end)
 
-let%test_module "unit tests from core" = (module Hashtbl_unit_tests.Make (Pooled_hashtbl))
+let%test_module "unit tests from core" =
+  (module Core_kernel_test.Hashtbl_unit_tests.Make (Pooled_hashtbl))

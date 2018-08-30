@@ -1,8 +1,7 @@
+open! Core_kernel
 open! Import
 open Hashtbl_intf
 open With_return
-
-module Binable = Binable0
 
 let failwiths = Error.failwiths
 
@@ -10,8 +9,6 @@ module Hashable = Hashtbl_intf.Hashable
 
 let hash_param = Hashable.hash_param
 let hash       = Hashable.hash
-
-let phys_equal = (==)
 
 module Entry : sig
   module Pool : sig
@@ -134,7 +131,7 @@ let calculate_table_size size =
   (* Ensure we can fit size elements in the table. *)
   let size = Int.min size Sys.max_array_length in
   let capacity = Int.ceil_pow2 size in
-  let n_entries = int_of_float (ceil (float capacity *. load_factor)) in
+  let n_entries = int_of_float (Float.round_up (float capacity *. load_factor)) in
   let n_entries = Int.max size n_entries in
   let n_entries = Int.min n_entries Entry.Pool.max_capacity in
   (capacity, n_entries)
@@ -1141,7 +1138,7 @@ module Make_binable (Key : sig
   include Provide_bin_io (Key)
 end
 
-module M (K : T.T) = struct
+module M (K : T) = struct
   type nonrec 'v t = (K.t, 'v) t
 end
 

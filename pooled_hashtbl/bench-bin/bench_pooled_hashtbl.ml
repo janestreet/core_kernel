@@ -1,4 +1,4 @@
-open Core
+open! Core_kernel
 
 let n = 1_000_000
 let times = 10

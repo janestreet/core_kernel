@@ -728,7 +728,7 @@ module Hash_impl : Impl = struct
 end
 
 module Pool_impl : Impl = struct
-  include Core.Pooled_hashtbl
+  include Pooled_hashtbl
   let module_name = "Pooled_hashtbl"
 end
 

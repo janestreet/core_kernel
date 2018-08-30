@@ -150,7 +150,6 @@ module Percent                              = Percent
 module Pid                                  = Pid
 module Pool                                 = Pool
 module Pool_intf                            = Pool_intf
-module Pooled_hashtbl                       = Pooled_hashtbl
 module Printexc                             = Printexc
 module Queue                                = Queue
 module Quickcheck                           = Quickcheck

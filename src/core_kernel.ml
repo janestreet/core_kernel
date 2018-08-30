@@ -20,6 +20,7 @@ module Std = struct
   (** {2 Modules added by Core_kernel} *)
 
   module Bigstring                       = Bigstring
+  module Command                         = Command
   module Core_kernel_stable              = Stable
   module Date                            = Date
   module Filename                        = Filename

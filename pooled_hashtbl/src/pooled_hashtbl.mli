@@ -8,6 +8,7 @@
     that garbage collection and the [caml_modify] write barrier are a significant part of
     your execution time. *)
 
+open! Core_kernel
 open! Import
 
 include Hashtbl_intf.Hashtbl

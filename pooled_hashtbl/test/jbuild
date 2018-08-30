@@ -1,0 +1,8 @@
+(library
+ ((name pooled_hashtbl_test)
+  (preprocess (pps (ppx_jane -dont-check-doc-comments-attachment ppxlib.runner)))
+  (libraries (core_kernel
+              core_kernel_test
+              pooled_hashtbl))))
+
+(jbuild_version 1)
