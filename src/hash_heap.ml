@@ -5,7 +5,7 @@
 
 open! Import
 
-module type Key = Hashtbl.Key
+module type Key = Hashtbl.Key_plain
 
 module type S = sig
   module Key : Key
@@ -51,7 +51,7 @@ end
 
 module Make (Key : Key) : S with module Key = Key = struct
   module Key = Key
-  module Table = Hashtbl.Make (Key)
+  module Table = Hashtbl.Make_plain (Key)
 
   type 'a t = {
     heap : (Key.t * 'a) Heap.t;

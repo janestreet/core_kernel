@@ -1432,14 +1432,14 @@ module Base = struct
             match init with
             | None -> Some (name, value)
             | Some (name', _) ->
-              die "Cannot have values for both %s and %s" name name' ()))
+              die "Cannot pass both %s and %s" name name' ()))
       |> map ~f:(function
         | Some (_, value) -> value
         | None ->
           match if_nothing_chosen with
           | `Default_to value -> value
           | `Raise ->
-            die "One of these must have a value: %s"
+            die "Must pass one of these: %s"
               (String.concat ~sep:", " (List.map ~f:fst ts)) ())
     ;;
   end
@@ -2654,8 +2654,8 @@ complete -F %s %s
           ~version ~build_info
       with
       | Failed_to_parse_command_line msg ->
-        if Cmdline.ends_in_complete args then
-          exit 0
+        if Cmdline.ends_in_complete args
+        then exit 0
         else begin
           prerr_endline msg;
           exit 1
