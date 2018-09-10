@@ -136,6 +136,27 @@ int main () {
 }
 |}
 
+let pthread_np = {|
+#define _GNU_SOURCE
+#include <pthread.h>
+#include <sys/types.h>
+
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__APPLE__)
+#include <pthread_np.h>
+#endif
+
+int main()
+{
+  pthread_t tid;
+  cpu_set_t cpuset;
+
+  tid = pthread_self();
+  pthread_getaffinity_np(tid, sizeof(cpu_set_t), &cpuset);
+
+  return 0;
+}
+|}
+
 let () =
   let portable_int63 = ref false in
   let args =
@@ -189,6 +210,7 @@ let () =
         ; "RECVMMSG"         , recvmmsg_code         , []
         ; "MUTEX_TIMED_LOCK" , mutex_timed_lock_code , ["-lpthread"]
         ; "THREAD_CPUTIME"   , thread_cputime_code   , ["-lpthread"]
+        ; "PTHREAD_NP"       , pthread_np            , ["-lpthread"]
         ; "MKOSTEMP"         , mkostemp_code         , []
         ]
     in
