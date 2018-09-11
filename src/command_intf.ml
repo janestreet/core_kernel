@@ -23,9 +23,9 @@
         |> Command.run
     ]}
 
-    {b Note}: {{!Core.Command.Param}[Command.Param]} has replaced
-    {{!Core.Command.Spec}[Command.Spec] (DEPRECATED)} and should be used in all new code.
-*)
+    {b Note}: {{!Core_kernel.Command.Param}[Command.Param]} has replaced
+    {{!Core_kernel.Command.Spec}[Command.Spec] (DEPRECATED)} and should be used in all new
+    code. *)
 
 open! Import
 open! Std_internal
@@ -294,8 +294,9 @@ module type Command = sig
 
   (** Command-line parameter specification.
 
-      This module replaces {{!Core.Command.Spec}[Command.Spec]}, and should be used in all
-      new code.  Its types and compositional rules are much easier to understand. *)
+      This module replaces {{!Core_kernel.Command.Spec}[Command.Spec]}, and should be used
+      in all new code.  Its types and compositional rules are much easier to
+      understand. *)
   module Param : sig
     module type S = sig
 
@@ -441,8 +442,8 @@ module type Command = sig
 
   (** The old interface for command-line specifications -- {b Do Not Use}.
 
-      This interface should not be used. See the {{!Core.Command.Param}[Param]} module for
-      the new way to do things. *)
+      This interface should not be used. See the {{!Core_kernel.Command.Param}[Param]}
+      module for the new way to do things. *)
   module Spec : sig
 
     (** {2 Command parameters} *)
