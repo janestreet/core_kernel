@@ -9,7 +9,7 @@ module type S_without_immediate = sig
       operations that depend on the value's validity for memory safety.  In particular,
       [unchecked_value] is not called [unsafe_value] as it would be if it could return a
       value that later resulted in a segmentation fault.  For pointer-like values, use
-      {!Zero.Ext.Nullable}, for example. *)
+      {!Ext.Nullable}, for example. *)
   type value
 
   (** Represents [value option] without allocating a [Some] tag. The interface does not

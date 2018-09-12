@@ -16,7 +16,7 @@ include Hashtbl_intf.Hashtbl
 (** [resize t size] ensures that [t] can hold at least [size] entries without resizing
     (again), provided that [t] has growth enabled.  This is useful for sizing global
     tables during application initialization, to avoid subsequent, expensive growth
-    online.  See {!Zero.Immediate.String.resize}, for example. *)
+    online.  See {!Immediate.String.resize}, for example. *)
 val resize : (_, _) t -> int -> unit
 
 (** [on_grow ~before ~after] allows you to connect higher level loggers to the point where

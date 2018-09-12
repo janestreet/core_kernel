@@ -361,7 +361,7 @@ module Priority_queue = struct
        (key1 (
          Error (
            "Timing_wheel.Priority_queue got invalid elt"
-           (elt "<Obj_array.Pointer.t: 0x00000001>"))))
+           (elt "<Pool.Pointer.t: 0x00000001>"))))
        (key2 (Ok 0))
        (mem1 false)
        (mem2 true)) |}];
@@ -373,14 +373,14 @@ module Priority_queue = struct
        (key1 (
          Error (
            "Timing_wheel.Priority_queue got invalid elt"
-           (elt "<Obj_array.Pointer.t: 0x00000001>"))))
+           (elt "<Pool.Pointer.t: 0x00000001>"))))
        (key2 (Ok 1))
        (mem1 false)
        (mem2 true)) |}];
     require_does_raise [%here] (fun () -> change_key t e1 ~key:(Key.of_int 1));
     [%expect {|
       ("Timing_wheel.Priority_queue got invalid elt"
-       (elt "<Obj_array.Pointer.t: 0x00000001>")) |}];
+       (elt "<Pool.Pointer.t: 0x00000001>")) |}];
     remove t e2;
     show ();
     [%expect {|
@@ -389,11 +389,11 @@ module Priority_queue = struct
        (key1 (
          Error (
            "Timing_wheel.Priority_queue got invalid elt"
-           (elt "<Obj_array.Pointer.t: 0x00000001>"))))
+           (elt "<Pool.Pointer.t: 0x00000001>"))))
        (key2 (
          Error (
            "Timing_wheel.Priority_queue got invalid elt"
-           (elt "<Obj_array.Pointer.t: 0x40000008>"))))
+           (elt "<Pool.Pointer.t: 0x40000008>"))))
        (mem1 false)
        (mem2 false)) |}];
   ;;
@@ -975,15 +975,15 @@ let%expect_test "access to a removed alarm doesn't segfault" =
   require_does_raise [%here] (fun _ -> Alarm.interval_num t alarm);
   [%expect {|
     ("Timing_wheel.Priority_queue got invalid elt"
-     (elt "<Obj_array.Pointer.t: 0x00000001>")) |}];
+     (elt "<Pool.Pointer.t: 0x00000001>")) |}];
   require_does_raise [%here] (fun _ -> Alarm.at t alarm);
   [%expect {|
     ("Timing_wheel.Priority_queue got invalid elt"
-     (elt "<Obj_array.Pointer.t: 0x00000001>")) |}];
+     (elt "<Pool.Pointer.t: 0x00000001>")) |}];
   require_does_raise [%here] (fun _ -> Alarm.value t alarm);
   [%expect {|
     ("Timing_wheel.Priority_queue got invalid elt"
-     (elt "<Obj_array.Pointer.t: 0x00000001>")) |}]
+     (elt "<Pool.Pointer.t: 0x00000001>")) |}]
 ;;
 
 (* Check that [reschedule] and [reschedule_at_interval_num] leave an alarm in the timing

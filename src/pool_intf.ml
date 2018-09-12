@@ -243,8 +243,8 @@ module type Pool = sig
 
   module type S = S
 
-  (** This uses an [Obj_array.t] to implement the pool.  We expose that [Pointer.t] is an
-      [int] so that OCaml can avoid the write barrier, due to knowing that [Pointer.t]
+  (** This uses a [Uniform_array.t] to implement the pool.  We expose that [Pointer.t] is
+      an [int] so that OCaml can avoid the write barrier, due to knowing that [Pointer.t]
       isn't an OCaml pointer. *)
   include S with type 'a Pointer.t = private int (** @inline *)
 
@@ -257,7 +257,7 @@ module type Pool = sig
       it is difficult to construct a dummy value.
 
       Some [Unsafe] functions are faster than the corresponding safe version because they
-      do not have to maintain values with the correct represention in the [Obj_array]
+      do not have to maintain values with the correct represention in the [Uniform_array]
       backing the pool: [free], [create], [grow].
   *)
   module Unsafe : sig

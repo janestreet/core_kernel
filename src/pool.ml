@@ -36,10 +36,10 @@ module Pool = struct
 
   let max_slot = 14
 
-  (* The pool is represented as a single [Obj_array.t], where index zero has the metadata
-     about the pool and the remaining indices are the tuples layed out one after the
-     other.  Each tuple takes [1 + slots_per_tuple] indices in the pool, where the first
-     index holds a header and the remaining indices hold the tuple's slots:
+  (* The pool is represented as a single [Uniform_array.t], where index zero has the
+     metadata about the pool and the remaining indices are the tuples layed out one after
+     the other.  Each tuple takes [1 + slots_per_tuple] indices in the pool, where the
+     first index holds a header and the remaining indices hold the tuple's slots:
 
      {v
      | header | s0 | s1 | ... | s<N-1> |
@@ -208,7 +208,7 @@ module Pool = struct
        field preceeding the tuple's slots. *)
     type 'slots t = int [@@deriving typerep]
 
-    let sexp_of_t _ t = Sexp.Atom (sprintf "<Obj_array.Pointer.t: 0x%08x>" t)
+    let sexp_of_t _ t = Sexp.Atom (sprintf "<Pool.Pointer.t: 0x%08x>" t)
 
     let phys_equal (t1 : _ t) t2 = phys_equal t1 t2
 
@@ -357,8 +357,13 @@ module Pool = struct
       ; mutable next_id    : Tuple_id.t
       ; mutable first_free : Header.t
       (* [dummy] is [None] in an unsafe pool.  In a safe pool, [dummy] is [Some a], with
-         [Obj_array.length a = slots_per_tuple]. *)
-      ; dummy              : Obj_array.t sexp_opaque option
+         [Uniform_array.length a = slots_per_tuple].  [dummy] is actually a tuple value
+         with the correct type (corresponding to ['slots]), but we make the type of
+         [dummy] be [Obj.t Uniform_array.t] because we can't write that type here.  Also,
+         the purpose of [dummy] is to initialize a pool element, making [dummy] an [Obj.t
+         Uniform_array.t] lets us initialize a pool element using [Uniform_array.blit]
+         from [dummy] to the pool, which is an [Obj.t Uniform_array.t]. *)
+      ; dummy              : Obj.t Uniform_array.t sexp_opaque option
       }
     [@@deriving fields, sexp_of]
 
@@ -383,10 +388,12 @@ module Pool = struct
 
   open Metadata
 
-  type 'slots t = Obj_array.t
+  (* We use type [Obj.t] because the array holds a mix of integers as well as OCaml values
+     of arbitrary type. *)
+  type 'slots t = Obj.t Uniform_array.t
 
   let metadata (type slots) (t : slots t) =
-    (Obj.obj (Obj_array.unsafe_get t metadata_index) : slots Metadata.t)
+    (Obj.obj (Uniform_array.unsafe_get t metadata_index) : slots Metadata.t)
   ;;
 
   let length t = (metadata t).length
@@ -396,16 +403,16 @@ module Pool = struct
   (* Because [unsafe_header] and [unsafe_set_header] do not do a bounds check, one must be
      sure that one has a valid [header_index] before calling them. *)
   let unsafe_header t ~header_index =
-    (Obj.obj (Obj_array.unsafe_get t header_index) : Header.t)
+    (Obj.obj (Uniform_array.unsafe_get t header_index) : Header.t)
   ;;
 
   let unsafe_set_header t ~header_index (header : Header.t) =
-    Obj_array.unsafe_set_int_assuming_currently_int t header_index (header :> int)
+    Uniform_array.unsafe_set_int_assuming_currently_int t header_index (header :> int)
   ;;
 
   let header_index_is_in_bounds t ~header_index =
     header_index >= start_of_tuples_index
-    && header_index < Obj_array.length t
+    && header_index < Uniform_array.length t
   ;;
 
   let unsafe_pointer_is_live t pointer =
@@ -457,7 +464,7 @@ module Pool = struct
         ~slots_per_tuple:(check (fun slots_per_tuple -> assert (slots_per_tuple > 0)))
         ~capacity:(check (fun capacity ->
           assert (capacity >= 0);
-          assert (Obj_array.length t = Metadata.array_length metadata)))
+          assert (Uniform_array.length t = Metadata.array_length metadata)))
         ~length:(check (fun length ->
           assert (length >= 0);
           assert (length <= metadata.capacity)))
@@ -477,7 +484,7 @@ module Pool = struct
             r := unsafe_header t ~header_index;
           done))
         ~dummy:(check (function
-          | Some dummy -> assert (Obj_array.length dummy = metadata.slots_per_tuple)
+          | Some dummy -> assert (Uniform_array.length dummy = metadata.slots_per_tuple)
           | None ->
             for tuple_num = 0 to metadata.capacity - 1 do
               let header_index = tuple_num_to_header_index metadata tuple_num in
@@ -486,7 +493,7 @@ module Pool = struct
               then
                 let first_slot = tuple_num_to_first_slot_index metadata tuple_num in
                 for slot = 0 to metadata.slots_per_tuple - 1 do
-                  assert (Obj.is_int (Obj_array.get t (first_slot + slot)));
+                  assert (Obj.is_int (Uniform_array.get t (first_slot + slot)));
                 done;
             done))
     with exn ->
@@ -503,12 +510,12 @@ module Pool = struct
   ;;
 
   let set_metadata (type slots) (t : slots t) metadata =
-    Obj_array.set t metadata_index (Obj.repr (metadata : slots Metadata.t));
+    Uniform_array.set t metadata_index (Obj.repr (metadata : slots Metadata.t));
   ;;
 
   let create_array (type slots) (metadata : slots Metadata.t) : slots t =
     let t =
-      Obj_array.create_zero ~len:(Metadata.array_length metadata)
+      Uniform_array.create_obj_array ~len:(Metadata.array_length metadata)
     in
     set_metadata t metadata;
     t
@@ -522,7 +529,7 @@ module Pool = struct
     | None -> ()
     | Some dummy ->
       for tuple_num = lo to hi - 1 do
-        Obj_array.blit
+        Uniform_array.blit
           ~src:dummy ~src_pos:0
           ~dst:t     ~dst_pos:(tuple_num_to_first_slot_index metadata tuple_num)
           ~len:metadata.slots_per_tuple
@@ -560,8 +567,8 @@ module Pool = struct
   let create (type tuple) (slots : (tuple, _) Slots.t) ~capacity ~dummy =
     let dummy =
       if Slots.slots_per_tuple slots = 1
-      then Obj_array.singleton (Obj.repr (dummy : tuple))
-      else (Obj.magic (dummy : tuple) : Obj_array.t)
+      then Uniform_array.singleton (Obj.repr (dummy : tuple))
+      else (Obj.magic (dummy : tuple) : Obj.t Uniform_array.t)
     in
     create_with_dummy slots ~capacity ~dummy:(Some dummy)
   ;;
@@ -582,7 +589,7 @@ module Pool = struct
     set_metadata t metadata;
     (* We truncate the pool so it holds just its metadata, but uses no space for
        tuples.  This causes all pointers to be invalid. *)
-    Obj_array.truncate t ~len:1;
+    Uniform_array.unsafe_truncate t ~len:1;
   ;;
 
   let [@inline never] grow ?capacity t =
@@ -613,7 +620,7 @@ module Pool = struct
       }
     in
     let t' = create_array metadata in
-    Obj_array.blit
+    Uniform_array.blit
       ~src:t  ~src_pos:start_of_tuples_index
       ~dst:t' ~dst_pos:start_of_tuples_index
       ~len:(old_capacity * Metadata.array_indices_per_tuple metadata);
@@ -653,10 +660,10 @@ module Pool = struct
     | None ->
       let pos = Pointer.first_slot_index pointer in
       for i = 0 to metadata.slots_per_tuple - 1 do
-        Obj_array.unsafe_clear_if_pointer t (pos + i);
+        Uniform_array.unsafe_clear_if_pointer t (pos + i);
       done;
     | Some dummy ->
-      Obj_array.unsafe_blit
+      Uniform_array.unsafe_blit
         ~src:dummy ~src_pos:0 ~len:metadata.slots_per_tuple
         ~dst:t     ~dst_pos:(Pointer.first_slot_index pointer)
     end;
@@ -676,197 +683,197 @@ module Pool = struct
   let new1 t a0 =
     let pointer = malloc t in
     let offset = Pointer.header_index pointer in
-    Obj_array.unsafe_set t (offset + 1) (Obj.repr a0);
+    Uniform_array.unsafe_set t (offset + 1) (Obj.repr a0);
     pointer;
   ;;
 
   let new2 t a0 a1 =
     let pointer = malloc t in
     let offset = Pointer.header_index pointer in
-    Obj_array.unsafe_set t (offset + 1) (Obj.repr a0);
-    Obj_array.unsafe_set t (offset + 2) (Obj.repr a1);
+    Uniform_array.unsafe_set t (offset + 1) (Obj.repr a0);
+    Uniform_array.unsafe_set t (offset + 2) (Obj.repr a1);
     pointer;
   ;;
 
   let new3 t a0 a1 a2 =
     let pointer = malloc t in
     let offset = Pointer.header_index pointer in
-    Obj_array.unsafe_set t (offset + 1) (Obj.repr a0);
-    Obj_array.unsafe_set t (offset + 2) (Obj.repr a1);
-    Obj_array.unsafe_set t (offset + 3) (Obj.repr a2);
+    Uniform_array.unsafe_set t (offset + 1) (Obj.repr a0);
+    Uniform_array.unsafe_set t (offset + 2) (Obj.repr a1);
+    Uniform_array.unsafe_set t (offset + 3) (Obj.repr a2);
     pointer;
   ;;
 
   let new4 t a0 a1 a2 a3 =
     let pointer = malloc t in
     let offset = Pointer.header_index pointer in
-    Obj_array.unsafe_set t (offset + 1) (Obj.repr a0);
-    Obj_array.unsafe_set t (offset + 2) (Obj.repr a1);
-    Obj_array.unsafe_set t (offset + 3) (Obj.repr a2);
-    Obj_array.unsafe_set t (offset + 4) (Obj.repr a3);
+    Uniform_array.unsafe_set t (offset + 1) (Obj.repr a0);
+    Uniform_array.unsafe_set t (offset + 2) (Obj.repr a1);
+    Uniform_array.unsafe_set t (offset + 3) (Obj.repr a2);
+    Uniform_array.unsafe_set t (offset + 4) (Obj.repr a3);
     pointer;
   ;;
 
   let new5 t a0 a1 a2 a3 a4 =
     let pointer = malloc t in
     let offset = Pointer.header_index pointer in
-    Obj_array.unsafe_set t (offset + 1) (Obj.repr a0);
-    Obj_array.unsafe_set t (offset + 2) (Obj.repr a1);
-    Obj_array.unsafe_set t (offset + 3) (Obj.repr a2);
-    Obj_array.unsafe_set t (offset + 4) (Obj.repr a3);
-    Obj_array.unsafe_set t (offset + 5) (Obj.repr a4);
+    Uniform_array.unsafe_set t (offset + 1) (Obj.repr a0);
+    Uniform_array.unsafe_set t (offset + 2) (Obj.repr a1);
+    Uniform_array.unsafe_set t (offset + 3) (Obj.repr a2);
+    Uniform_array.unsafe_set t (offset + 4) (Obj.repr a3);
+    Uniform_array.unsafe_set t (offset + 5) (Obj.repr a4);
     pointer;
   ;;
 
   let new6 t a0 a1 a2 a3 a4 a5 =
     let pointer = malloc t in
     let offset = Pointer.header_index pointer in
-    Obj_array.unsafe_set t (offset + 1) (Obj.repr a0);
-    Obj_array.unsafe_set t (offset + 2) (Obj.repr a1);
-    Obj_array.unsafe_set t (offset + 3) (Obj.repr a2);
-    Obj_array.unsafe_set t (offset + 4) (Obj.repr a3);
-    Obj_array.unsafe_set t (offset + 5) (Obj.repr a4);
-    Obj_array.unsafe_set t (offset + 6) (Obj.repr a5);
+    Uniform_array.unsafe_set t (offset + 1) (Obj.repr a0);
+    Uniform_array.unsafe_set t (offset + 2) (Obj.repr a1);
+    Uniform_array.unsafe_set t (offset + 3) (Obj.repr a2);
+    Uniform_array.unsafe_set t (offset + 4) (Obj.repr a3);
+    Uniform_array.unsafe_set t (offset + 5) (Obj.repr a4);
+    Uniform_array.unsafe_set t (offset + 6) (Obj.repr a5);
     pointer;
   ;;
 
   let new7 t a0 a1 a2 a3 a4 a5 a6 =
     let pointer = malloc t in
     let offset = Pointer.header_index pointer in
-    Obj_array.unsafe_set t (offset + 1) (Obj.repr a0);
-    Obj_array.unsafe_set t (offset + 2) (Obj.repr a1);
-    Obj_array.unsafe_set t (offset + 3) (Obj.repr a2);
-    Obj_array.unsafe_set t (offset + 4) (Obj.repr a3);
-    Obj_array.unsafe_set t (offset + 5) (Obj.repr a4);
-    Obj_array.unsafe_set t (offset + 6) (Obj.repr a5);
-    Obj_array.unsafe_set t (offset + 7) (Obj.repr a6);
+    Uniform_array.unsafe_set t (offset + 1) (Obj.repr a0);
+    Uniform_array.unsafe_set t (offset + 2) (Obj.repr a1);
+    Uniform_array.unsafe_set t (offset + 3) (Obj.repr a2);
+    Uniform_array.unsafe_set t (offset + 4) (Obj.repr a3);
+    Uniform_array.unsafe_set t (offset + 5) (Obj.repr a4);
+    Uniform_array.unsafe_set t (offset + 6) (Obj.repr a5);
+    Uniform_array.unsafe_set t (offset + 7) (Obj.repr a6);
     pointer;
   ;;
 
   let new8 t a0 a1 a2 a3 a4 a5 a6 a7 =
     let pointer = malloc t in
     let offset = Pointer.header_index pointer in
-    Obj_array.unsafe_set t (offset + 1) (Obj.repr a0);
-    Obj_array.unsafe_set t (offset + 2) (Obj.repr a1);
-    Obj_array.unsafe_set t (offset + 3) (Obj.repr a2);
-    Obj_array.unsafe_set t (offset + 4) (Obj.repr a3);
-    Obj_array.unsafe_set t (offset + 5) (Obj.repr a4);
-    Obj_array.unsafe_set t (offset + 6) (Obj.repr a5);
-    Obj_array.unsafe_set t (offset + 7) (Obj.repr a6);
-    Obj_array.unsafe_set t (offset + 8) (Obj.repr a7);
+    Uniform_array.unsafe_set t (offset + 1) (Obj.repr a0);
+    Uniform_array.unsafe_set t (offset + 2) (Obj.repr a1);
+    Uniform_array.unsafe_set t (offset + 3) (Obj.repr a2);
+    Uniform_array.unsafe_set t (offset + 4) (Obj.repr a3);
+    Uniform_array.unsafe_set t (offset + 5) (Obj.repr a4);
+    Uniform_array.unsafe_set t (offset + 6) (Obj.repr a5);
+    Uniform_array.unsafe_set t (offset + 7) (Obj.repr a6);
+    Uniform_array.unsafe_set t (offset + 8) (Obj.repr a7);
     pointer;
   ;;
 
   let new9 t a0 a1 a2 a3 a4 a5 a6 a7 a8 =
     let pointer = malloc t in
     let offset = Pointer.header_index pointer in
-    Obj_array.unsafe_set t (offset + 1) (Obj.repr a0);
-    Obj_array.unsafe_set t (offset + 2) (Obj.repr a1);
-    Obj_array.unsafe_set t (offset + 3) (Obj.repr a2);
-    Obj_array.unsafe_set t (offset + 4) (Obj.repr a3);
-    Obj_array.unsafe_set t (offset + 5) (Obj.repr a4);
-    Obj_array.unsafe_set t (offset + 6) (Obj.repr a5);
-    Obj_array.unsafe_set t (offset + 7) (Obj.repr a6);
-    Obj_array.unsafe_set t (offset + 8) (Obj.repr a7);
-    Obj_array.unsafe_set t (offset + 9) (Obj.repr a8);
+    Uniform_array.unsafe_set t (offset + 1) (Obj.repr a0);
+    Uniform_array.unsafe_set t (offset + 2) (Obj.repr a1);
+    Uniform_array.unsafe_set t (offset + 3) (Obj.repr a2);
+    Uniform_array.unsafe_set t (offset + 4) (Obj.repr a3);
+    Uniform_array.unsafe_set t (offset + 5) (Obj.repr a4);
+    Uniform_array.unsafe_set t (offset + 6) (Obj.repr a5);
+    Uniform_array.unsafe_set t (offset + 7) (Obj.repr a6);
+    Uniform_array.unsafe_set t (offset + 8) (Obj.repr a7);
+    Uniform_array.unsafe_set t (offset + 9) (Obj.repr a8);
     pointer;
   ;;
 
   let new10 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 =
     let pointer = malloc t in
     let offset = Pointer.header_index pointer in
-    Obj_array.unsafe_set t (offset + 1 ) (Obj.repr a0);
-    Obj_array.unsafe_set t (offset + 2 ) (Obj.repr a1);
-    Obj_array.unsafe_set t (offset + 3 ) (Obj.repr a2);
-    Obj_array.unsafe_set t (offset + 4 ) (Obj.repr a3);
-    Obj_array.unsafe_set t (offset + 5 ) (Obj.repr a4);
-    Obj_array.unsafe_set t (offset + 6 ) (Obj.repr a5);
-    Obj_array.unsafe_set t (offset + 7 ) (Obj.repr a6);
-    Obj_array.unsafe_set t (offset + 8 ) (Obj.repr a7);
-    Obj_array.unsafe_set t (offset + 9 ) (Obj.repr a8);
-    Obj_array.unsafe_set t (offset + 10) (Obj.repr a9);
+    Uniform_array.unsafe_set t (offset + 1 ) (Obj.repr a0);
+    Uniform_array.unsafe_set t (offset + 2 ) (Obj.repr a1);
+    Uniform_array.unsafe_set t (offset + 3 ) (Obj.repr a2);
+    Uniform_array.unsafe_set t (offset + 4 ) (Obj.repr a3);
+    Uniform_array.unsafe_set t (offset + 5 ) (Obj.repr a4);
+    Uniform_array.unsafe_set t (offset + 6 ) (Obj.repr a5);
+    Uniform_array.unsafe_set t (offset + 7 ) (Obj.repr a6);
+    Uniform_array.unsafe_set t (offset + 8 ) (Obj.repr a7);
+    Uniform_array.unsafe_set t (offset + 9 ) (Obj.repr a8);
+    Uniform_array.unsafe_set t (offset + 10) (Obj.repr a9);
     pointer;
   ;;
 
   let new11 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 =
     let pointer = malloc t in
     let offset = Pointer.header_index pointer in
-    Obj_array.unsafe_set t (offset + 1 ) (Obj.repr a0 );
-    Obj_array.unsafe_set t (offset + 2 ) (Obj.repr a1 );
-    Obj_array.unsafe_set t (offset + 3 ) (Obj.repr a2 );
-    Obj_array.unsafe_set t (offset + 4 ) (Obj.repr a3 );
-    Obj_array.unsafe_set t (offset + 5 ) (Obj.repr a4 );
-    Obj_array.unsafe_set t (offset + 6 ) (Obj.repr a5 );
-    Obj_array.unsafe_set t (offset + 7 ) (Obj.repr a6 );
-    Obj_array.unsafe_set t (offset + 8 ) (Obj.repr a7 );
-    Obj_array.unsafe_set t (offset + 9 ) (Obj.repr a8 );
-    Obj_array.unsafe_set t (offset + 10) (Obj.repr a9 );
-    Obj_array.unsafe_set t (offset + 11) (Obj.repr a10);
+    Uniform_array.unsafe_set t (offset + 1 ) (Obj.repr a0 );
+    Uniform_array.unsafe_set t (offset + 2 ) (Obj.repr a1 );
+    Uniform_array.unsafe_set t (offset + 3 ) (Obj.repr a2 );
+    Uniform_array.unsafe_set t (offset + 4 ) (Obj.repr a3 );
+    Uniform_array.unsafe_set t (offset + 5 ) (Obj.repr a4 );
+    Uniform_array.unsafe_set t (offset + 6 ) (Obj.repr a5 );
+    Uniform_array.unsafe_set t (offset + 7 ) (Obj.repr a6 );
+    Uniform_array.unsafe_set t (offset + 8 ) (Obj.repr a7 );
+    Uniform_array.unsafe_set t (offset + 9 ) (Obj.repr a8 );
+    Uniform_array.unsafe_set t (offset + 10) (Obj.repr a9 );
+    Uniform_array.unsafe_set t (offset + 11) (Obj.repr a10);
     pointer;
   ;;
 
   let new12 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 =
     let pointer = malloc t in
     let offset = Pointer.header_index pointer in
-    Obj_array.unsafe_set t (offset + 1 ) (Obj.repr a0 );
-    Obj_array.unsafe_set t (offset + 2 ) (Obj.repr a1 );
-    Obj_array.unsafe_set t (offset + 3 ) (Obj.repr a2 );
-    Obj_array.unsafe_set t (offset + 4 ) (Obj.repr a3 );
-    Obj_array.unsafe_set t (offset + 5 ) (Obj.repr a4 );
-    Obj_array.unsafe_set t (offset + 6 ) (Obj.repr a5 );
-    Obj_array.unsafe_set t (offset + 7 ) (Obj.repr a6 );
-    Obj_array.unsafe_set t (offset + 8 ) (Obj.repr a7 );
-    Obj_array.unsafe_set t (offset + 9 ) (Obj.repr a8 );
-    Obj_array.unsafe_set t (offset + 10) (Obj.repr a9 );
-    Obj_array.unsafe_set t (offset + 11) (Obj.repr a10);
-    Obj_array.unsafe_set t (offset + 12) (Obj.repr a11);
+    Uniform_array.unsafe_set t (offset + 1 ) (Obj.repr a0 );
+    Uniform_array.unsafe_set t (offset + 2 ) (Obj.repr a1 );
+    Uniform_array.unsafe_set t (offset + 3 ) (Obj.repr a2 );
+    Uniform_array.unsafe_set t (offset + 4 ) (Obj.repr a3 );
+    Uniform_array.unsafe_set t (offset + 5 ) (Obj.repr a4 );
+    Uniform_array.unsafe_set t (offset + 6 ) (Obj.repr a5 );
+    Uniform_array.unsafe_set t (offset + 7 ) (Obj.repr a6 );
+    Uniform_array.unsafe_set t (offset + 8 ) (Obj.repr a7 );
+    Uniform_array.unsafe_set t (offset + 9 ) (Obj.repr a8 );
+    Uniform_array.unsafe_set t (offset + 10) (Obj.repr a9 );
+    Uniform_array.unsafe_set t (offset + 11) (Obj.repr a10);
+    Uniform_array.unsafe_set t (offset + 12) (Obj.repr a11);
     pointer;
   ;;
 
   let new13 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 =
     let pointer = malloc t in
     let offset = Pointer.header_index pointer in
-    Obj_array.unsafe_set t (offset + 1 ) (Obj.repr a0 );
-    Obj_array.unsafe_set t (offset + 2 ) (Obj.repr a1 );
-    Obj_array.unsafe_set t (offset + 3 ) (Obj.repr a2 );
-    Obj_array.unsafe_set t (offset + 4 ) (Obj.repr a3 );
-    Obj_array.unsafe_set t (offset + 5 ) (Obj.repr a4 );
-    Obj_array.unsafe_set t (offset + 6 ) (Obj.repr a5 );
-    Obj_array.unsafe_set t (offset + 7 ) (Obj.repr a6 );
-    Obj_array.unsafe_set t (offset + 8 ) (Obj.repr a7 );
-    Obj_array.unsafe_set t (offset + 9 ) (Obj.repr a8 );
-    Obj_array.unsafe_set t (offset + 10) (Obj.repr a9 );
-    Obj_array.unsafe_set t (offset + 11) (Obj.repr a10);
-    Obj_array.unsafe_set t (offset + 12) (Obj.repr a11);
-    Obj_array.unsafe_set t (offset + 13) (Obj.repr a12);
+    Uniform_array.unsafe_set t (offset + 1 ) (Obj.repr a0 );
+    Uniform_array.unsafe_set t (offset + 2 ) (Obj.repr a1 );
+    Uniform_array.unsafe_set t (offset + 3 ) (Obj.repr a2 );
+    Uniform_array.unsafe_set t (offset + 4 ) (Obj.repr a3 );
+    Uniform_array.unsafe_set t (offset + 5 ) (Obj.repr a4 );
+    Uniform_array.unsafe_set t (offset + 6 ) (Obj.repr a5 );
+    Uniform_array.unsafe_set t (offset + 7 ) (Obj.repr a6 );
+    Uniform_array.unsafe_set t (offset + 8 ) (Obj.repr a7 );
+    Uniform_array.unsafe_set t (offset + 9 ) (Obj.repr a8 );
+    Uniform_array.unsafe_set t (offset + 10) (Obj.repr a9 );
+    Uniform_array.unsafe_set t (offset + 11) (Obj.repr a10);
+    Uniform_array.unsafe_set t (offset + 12) (Obj.repr a11);
+    Uniform_array.unsafe_set t (offset + 13) (Obj.repr a12);
     pointer;
   ;;
 
   let new14 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 =
     let pointer = malloc t in
     let offset = Pointer.header_index pointer in
-    Obj_array.unsafe_set t (offset + 1 ) (Obj.repr a0 );
-    Obj_array.unsafe_set t (offset + 2 ) (Obj.repr a1 );
-    Obj_array.unsafe_set t (offset + 3 ) (Obj.repr a2 );
-    Obj_array.unsafe_set t (offset + 4 ) (Obj.repr a3 );
-    Obj_array.unsafe_set t (offset + 5 ) (Obj.repr a4 );
-    Obj_array.unsafe_set t (offset + 6 ) (Obj.repr a5 );
-    Obj_array.unsafe_set t (offset + 7 ) (Obj.repr a6 );
-    Obj_array.unsafe_set t (offset + 8 ) (Obj.repr a7 );
-    Obj_array.unsafe_set t (offset + 9 ) (Obj.repr a8 );
-    Obj_array.unsafe_set t (offset + 10) (Obj.repr a9 );
-    Obj_array.unsafe_set t (offset + 11) (Obj.repr a10);
-    Obj_array.unsafe_set t (offset + 12) (Obj.repr a11);
-    Obj_array.unsafe_set t (offset + 13) (Obj.repr a12);
-    Obj_array.unsafe_set t (offset + 14) (Obj.repr a13);
+    Uniform_array.unsafe_set t (offset + 1 ) (Obj.repr a0 );
+    Uniform_array.unsafe_set t (offset + 2 ) (Obj.repr a1 );
+    Uniform_array.unsafe_set t (offset + 3 ) (Obj.repr a2 );
+    Uniform_array.unsafe_set t (offset + 4 ) (Obj.repr a3 );
+    Uniform_array.unsafe_set t (offset + 5 ) (Obj.repr a4 );
+    Uniform_array.unsafe_set t (offset + 6 ) (Obj.repr a5 );
+    Uniform_array.unsafe_set t (offset + 7 ) (Obj.repr a6 );
+    Uniform_array.unsafe_set t (offset + 8 ) (Obj.repr a7 );
+    Uniform_array.unsafe_set t (offset + 9 ) (Obj.repr a8 );
+    Uniform_array.unsafe_set t (offset + 10) (Obj.repr a9 );
+    Uniform_array.unsafe_set t (offset + 11) (Obj.repr a10);
+    Uniform_array.unsafe_set t (offset + 12) (Obj.repr a11);
+    Uniform_array.unsafe_set t (offset + 13) (Obj.repr a12);
+    Uniform_array.unsafe_set t (offset + 14) (Obj.repr a13);
     pointer;
   ;;
 
-  let get        t p slot = Obj.obj (Obj_array.get        t (Pointer.slot_index p slot))
-  let unsafe_get t p slot = Obj.obj (Obj_array.unsafe_get t (Pointer.slot_index p slot))
+  let get        t p slot = Obj.obj (Uniform_array.get        t (Pointer.slot_index p slot))
+  let unsafe_get t p slot = Obj.obj (Uniform_array.unsafe_get t (Pointer.slot_index p slot))
 
-  let set        t p slot x = Obj_array.set        t (Pointer.slot_index p slot) (Obj.repr x)
-  let unsafe_set t p slot x = Obj_array.unsafe_set t (Pointer.slot_index p slot) (Obj.repr x)
+  let set        t p slot x = Uniform_array.set        t (Pointer.slot_index p slot) (Obj.repr x)
+  let unsafe_set t p slot x = Uniform_array.unsafe_set t (Pointer.slot_index p slot) (Obj.repr x)
 
   let get_tuple (type tuple) (t : (tuple, _) Slots.t t) pointer =
     let metadata = metadata t in
@@ -874,7 +881,8 @@ module Pool = struct
     if len = 1
     then get t pointer Slot.t0
     else (Obj.magic
-            (Obj_array.sub t ~pos:(Pointer.first_slot_index pointer) ~len : Obj_array.t)
+            (Uniform_array.sub t ~pos:(Pointer.first_slot_index pointer) ~len
+             : Obj.t Uniform_array.t)
           : tuple)
   ;;
 end

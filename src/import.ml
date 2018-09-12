@@ -17,6 +17,7 @@ module Invariant                 = Base.Invariant
 module Intable                   = Base.Intable
 module Monad                     = Base.Monad
 module Obj_array                 = Base.Not_exposed_properly.Obj_array
+[@@deprecated "[since 2018-09] Replace [Obj_array.t] with [Obj.t Uniform_array.t]"]
 module Poly                      = Base.Poly
 module Polymorphic_compare       = Base.Polymorphic_compare
 module Popcount                  = Base.Popcount

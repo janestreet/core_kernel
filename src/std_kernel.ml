@@ -38,6 +38,7 @@ module Int_conversions           = Base.Not_exposed_properly.Int_conversions
 module Invariant                 = Invariant
 module Monad                     = Monad
 module Obj_array                 = Base.Not_exposed_properly.Obj_array
+[@@deprecated "[since 2018-09] Replace [Obj_array.t] with [Obj.t Uniform_array.t]"]
 module Ordered_collection_common = Ordered_collection_common
 module Out_channel               = Out_channel
 module Poly                      = Poly
