@@ -409,7 +409,7 @@ let get_regime_exn t index =
 (* In "absolute mode", a number of seconds is interpreted as an offset of that many
    seconds from the UNIX epoch, ignoring leap seconds.
 
-   In "relative mode", you interpret the number of seconds as a number of days in
+   In "date and ofday mode", you interpret the number of seconds as a number of days in
    combination with a number of seconds since midnight, which gives you a calendar day and
    a clock face time. Then you take the time that those represent in some relevant
    timezone.
@@ -428,14 +428,18 @@ let get_regime_exn t index =
    to persuade myself that it's that way round, but it is.)
 *)
 module Mode = struct
-  type t = Absolute | Relative
+  type t =
+    | Absolute
+    | Date_and_ofday
 end
 
 let effective_start_time ~mode (x : Transition.t) =
   let open Int63.O in
   match (mode : Mode.t) with
-  | Absolute -> x.start_time_in_seconds_since_epoch
-  | Relative -> x.start_time_in_seconds_since_epoch + x.new_regime.utc_offset_in_seconds
+  | Absolute ->
+    x.start_time_in_seconds_since_epoch
+  | Date_and_ofday ->
+    x.start_time_in_seconds_since_epoch + x.new_regime.utc_offset_in_seconds
 
 let index_lower_bound_contains_seconds_since_epoch t index ~mode seconds =
   index < 0
@@ -499,8 +503,11 @@ end = struct
     let to_span_since_epoch = ident
   end
 
-  module Relative_to_unspecified_zone = struct
-    include Absolute
+  module Date_and_ofday = struct
+    type t = Int63.t
+
+    let of_synthetic_span_since_epoch = ident
+    let to_synthetic_span_since_epoch = ident
   end
 
   include Absolute
@@ -511,10 +518,10 @@ let index t time =
   |> Time_in_seconds.Span.to_int63_seconds_round_down_exn
   |> index_of_seconds_since_epoch t ~mode:Absolute
 
-let index_of_relative t time =
-  Time_in_seconds.Relative_to_unspecified_zone.to_span_since_epoch time
+let index_of_date_and_ofday t time =
+  Time_in_seconds.Date_and_ofday.to_synthetic_span_since_epoch time
   |> Time_in_seconds.Span.to_int63_seconds_round_down_exn
-  |> index_of_seconds_since_epoch t ~mode:Relative
+  |> index_of_seconds_since_epoch t ~mode:Date_and_ofday
 
 let index_has_prev_clock_shift t index =
   index >= 0 && index < Array.length t.transitions

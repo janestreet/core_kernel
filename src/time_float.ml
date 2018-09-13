@@ -42,13 +42,13 @@ end
 
 include (
   T : module type of struct include T end
-  with type   underlying                   := T.underlying
-  with type   t                            := T.t
-  with type   comparator_witness           := T.comparator_witness
-  with module Span                         := T.Span
-  with module Ofday                        := T.Ofday
-  with module Relative_to_unspecified_zone := T.Relative_to_unspecified_zone
-  with module Replace_polymorphic_compare  := T.Replace_polymorphic_compare
+  with type   underlying                  := T.underlying
+  with type   t                           := T.t
+  with type   comparator_witness          := T.comparator_witness
+  with module Span                        := T.Span
+  with module Ofday                       := T.Ofday
+  with module Date_and_ofday              := T.Date_and_ofday
+  with module Replace_polymorphic_compare := T.Replace_polymorphic_compare
 )
 
 include (

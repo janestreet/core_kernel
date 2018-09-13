@@ -32,8 +32,11 @@ module Absolute = struct
 end
 include Absolute
 
-module Relative_to_unspecified_zone = struct
-  include (Absolute : Time0_intf.Basic with type t = t and module Span := Span)
+module Date_and_ofday = struct
+  type t = float
+
+  let of_synthetic_span_since_epoch span = Span.to_sec span
+  let to_synthetic_span_since_epoch t = Span.of_sec t
 
   let of_date_ofday date ofday =
     let days =

@@ -3,7 +3,7 @@
 open! Import
 
 (** The internal time representation of [Zone.t]. This is a tiny subset of [Time0_intf.S],
-    see that interface for details such as the meaning of [Span] and [Relative].
+    see that interface for details such as the meaning of [Span] and [Date_and_ofday].
 
     The name of the interface reflects the fact that the interface only gives you access
     to the seconds of the [t]. But you can use this interface with types that have higher
@@ -18,11 +18,11 @@ module type Time_in_seconds = sig
     val to_int63_seconds_round_down_exn : t -> Int63.t
   end
 
-  module Relative_to_unspecified_zone : sig
+  module Date_and_ofday : sig
     type t
 
-    val of_span_since_epoch : Span.t -> t
-    val to_span_since_epoch : t -> Span.t
+    val of_synthetic_span_since_epoch : Span.t -> t
+    val to_synthetic_span_since_epoch : t -> Span.t
   end
 
   type t
@@ -87,8 +87,8 @@ module type S = sig
   end
 
   (** Gets the index of a time. *)
-  val index             : t -> Time_in_seconds.t                              -> Index.t
-  val index_of_relative : t -> Time_in_seconds.Relative_to_unspecified_zone.t -> Index.t
+  val index                   : t -> Time_in_seconds.t                -> Index.t
+  val index_of_date_and_ofday : t -> Time_in_seconds.Date_and_ofday.t -> Index.t
 
   (** Gets the UTC offset of times in a specific range.
 

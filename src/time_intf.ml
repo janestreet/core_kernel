@@ -13,12 +13,12 @@ module type Zone = sig
       turned back into a [t]. This function reads and writes the zone's cached index. *)
   val abbreviation : t -> Time.t -> string
 
-  (** [absolute_time_of_relative_time] and [relative_time_of_absolute_time] convert times
-      between absolute (time from epoch in UTC) and relative (shifted according to time
-      zone and daylight savings) forms. These are low level functions not intended for
-      most clients. These functions read and write the zone's cached index. *)
-  val absolute_time_of_relative_time : t -> Time.Relative_to_unspecified_zone.t -> Time.t
-  val relative_time_of_absolute_time : t -> Time.t -> Time.Relative_to_unspecified_zone.t
+  (** [absolute_time_of_date_and_ofday] and [date_and_ofday_of_absolute_time] convert
+      between absolute times and date + ofday forms. These are low level functions not
+      intended for most clients. These functions read and write the zone's cached index.
+  *)
+  val absolute_time_of_date_and_ofday : t -> Time.Date_and_ofday.t -> Time.t
+  val date_and_ofday_of_absolute_time : t -> Time.t -> Time.Date_and_ofday.t
 
   (** Takes a [Time.t] and returns the next [Time.t] strictly after it, if any, that the
       time zone UTC offset changes, and by how much it does so. *)

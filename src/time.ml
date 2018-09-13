@@ -41,17 +41,17 @@ module Make (Time0 : Time0_intf.S) = struct
       |> Time_in_seconds.Span.of_int63_seconds
       |> Time_in_seconds.of_span_since_epoch
 
-    let to_relative_time_in_seconds_round_down_exn relative =
-      Time0.Relative_to_unspecified_zone.to_span_since_epoch relative
+    let to_date_and_ofday_in_seconds_round_down_exn relative =
+      Time0.Date_and_ofday.to_synthetic_span_since_epoch relative
       |> Time0.Span.to_int63_seconds_round_down_exn
       |> Time_in_seconds.Span.of_int63_seconds
-      |> Time_in_seconds.Relative_to_unspecified_zone.of_span_since_epoch
+      |> Time_in_seconds.Date_and_ofday.of_synthetic_span_since_epoch
 
     let index t time =
       index t (to_time_in_seconds_round_down_exn time)
 
-    let index_of_relative t relative =
-      index_of_relative t (to_relative_time_in_seconds_round_down_exn relative)
+    let index_of_date_and_ofday t relative =
+      index_of_date_and_ofday t (to_date_and_ofday_in_seconds_round_down_exn relative)
 
     let index_offset_from_utc_exn t index =
       of_span_in_seconds (index_offset_from_utc_exn t index)
@@ -88,24 +88,24 @@ module Make (Time0 : Time0_intf.S) = struct
     let next_clock_shift t ~strictly_after:time =
       index_next_clock_shift t (index t time)
 
-    let relative_time_of_absolute_time t time =
+    let date_and_ofday_of_absolute_time t time =
       let index = index t time in
       (* no exn because [index] always returns a valid index *)
       let offset_from_utc = index_offset_from_utc_exn t index in
-      Time0.Relative_to_unspecified_zone.of_absolute time ~offset_from_utc
+      Time0.Date_and_ofday.of_absolute time ~offset_from_utc
 
-    let absolute_time_of_relative_time t relative =
-      let index = index_of_relative t relative in
-      (* no exn because [index_of_relative] always returns a valid index *)
+    let absolute_time_of_date_and_ofday t relative =
+      let index = index_of_date_and_ofday t relative in
+      (* no exn because [index_of_date_and_ofday] always returns a valid index *)
       let offset_from_utc = index_offset_from_utc_exn t index in
-      Time0.Relative_to_unspecified_zone.to_absolute relative ~offset_from_utc
+      Time0.Date_and_ofday.to_absolute relative ~offset_from_utc
   end
 
   let abs_diff t1 t2 = Span.abs (diff t1 t2)
 
   let of_date_ofday ~zone date ofday =
-    let relative = Relative_to_unspecified_zone.of_date_ofday date ofday in
-    Zone.absolute_time_of_relative_time zone relative
+    let relative = Date_and_ofday.of_date_ofday date ofday in
+    Zone.absolute_time_of_date_and_ofday zone relative
   ;;
 
   let of_date_ofday_precise date ofday ~zone =
@@ -169,20 +169,16 @@ module Make (Time0 : Time0_intf.S) = struct
       let index = Zone.index zone time in
       (* no exn because [Zone.index] always returns a valid index *)
       let offset_from_utc = Zone.index_offset_from_utc_exn zone index in
-      let rel = Relative_to_unspecified_zone.of_absolute time ~offset_from_utc in
-      let date = Relative_to_unspecified_zone.to_date rel in
+      let rel = Date_and_ofday.of_absolute time ~offset_from_utc in
+      let date = Date_and_ofday.to_date rel in
       let span =
-        Relative_to_unspecified_zone.to_ofday rel
+        Date_and_ofday.to_ofday rel
         |> Ofday.to_span_since_start_of_day
       in
-      let rel_day_start = Relative_to_unspecified_zone.sub rel           span     in
-      let rel_day_until = Relative_to_unspecified_zone.add rel_day_start Span.day in
       let effective_day_start =
-        Relative_to_unspecified_zone.to_absolute rel_day_start ~offset_from_utc
+        Time0.sub (Date_and_ofday.to_absolute rel ~offset_from_utc) span
       in
-      let effective_day_until =
-        Relative_to_unspecified_zone.to_absolute rel_day_until ~offset_from_utc
-      in
+      let effective_day_until = Time0.add effective_day_start Span.day in
       let cache_start_incl =
         match Zone.index_has_prev_clock_shift zone index with
         | false -> effective_day_start
@@ -275,9 +271,9 @@ module Make (Time0 : Time0_intf.S) = struct
   ;;
 
   let utc_offset t ~zone =
-    let utc_epoch = Zone.relative_time_of_absolute_time zone t in
+    let utc_epoch = Zone.date_and_ofday_of_absolute_time zone t in
     Span.( - )
-      (Relative_to_unspecified_zone.to_span_since_epoch utc_epoch)
+      (Date_and_ofday.to_synthetic_span_since_epoch utc_epoch)
       (to_span_since_epoch t)
   ;;
 
