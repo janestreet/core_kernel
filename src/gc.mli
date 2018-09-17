@@ -101,12 +101,18 @@ module Control : sig
     (** The size (in words) of the minor heap.  Changing this parameter will
         trigger a minor collection.
 
-        Default: 262144 words / 1MB (32bit) / 2MB (64bit). *)
+        Default outside Jane Street: 262144 words / 1MB (32bit) / 2MB (64bit).
+        Default inside Jane Street: 1048576 words / 4MB (32bit) / 8MB (64bit). *)
 
     mutable major_heap_increment : int;
-    (** The minimum number of words to add to the major heap when increasing it.
+    (** How much to add to the major heap when increasing it. If this
+        number is less than or equal to 1000, it is a percentage of
+        the current heap size (i.e. setting it to 100 will double the heap
+        size at each increase). If it is more than 1000, it is a fixed
+        number of words that will be added to the heap.
 
-        Default: 126976 words / 0.5MB (32bit) / 1MB (64bit). *)
+        Default outside Jane Street: 15%.
+        Default inside Jane Street: 1048576 words / 4MB (32bit) / 8MB (64bit). *)
 
     mutable space_overhead : int;
     (** The major GC speed is computed from this parameter.
