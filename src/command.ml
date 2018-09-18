@@ -3,6 +3,32 @@ open! Std_internal
 
 include Command_intf
 
+(* Unlike [am_running_inline_test], [am_inline_test_runner_process] is false in children
+   of the test runner. *)
+let am_inline_test_runner_process = Ppx_inline_test_lib.Runtime.testing
+
+(* in order to define expect tests, we want to raise rather than exit if the code is
+   running in the test runner process *)
+let raise_instead_of_exit = am_inline_test_runner_process
+
+(* [raise_instead_of_exit]-respecting wrappers for [exit] and functions that call it *)
+include struct
+  let exit status =
+    if raise_instead_of_exit
+    then raise_s [%message "exit called" (status : int) ]
+    else exit status
+  ;;
+
+  module Exn = struct
+    let to_string = Exn.to_string
+
+    let handle_uncaught_and_exit f =
+      if raise_instead_of_exit
+      then (try f () with exn -> print_s [%sexp (exn : exn)])
+      else Exn.handle_uncaught_and_exit f
+  end
+end
+
 let unwords      xs = String.concat ~sep:" "    xs
 let unparagraphs xs = String.concat ~sep:"\n\n" xs
 
@@ -1101,7 +1127,7 @@ module Base = struct
   let args_key = Env.key_create "args"
   let help_key = Env.key_create "help"
 
-  let run t env ~path ~args =
+  let run t env ~path ~args ~verbose_on_parse_error =
     let help_text = lazy (help_text ~path t) in
     let env = Env.set env path_key path in
     let env = Env.set env args_key (Cmdline.to_list args) in
@@ -1172,7 +1198,9 @@ module Base = struct
       | Failed_to_parse_command_line _ when Cmdline.ends_in_complete args ->
         exit 0
       | _ ->
-        print_endline "Error parsing command line.  Run with -help for usage information.";
+        if Option.value verbose_on_parse_error ~default:true then
+          print_endline "Error parsing command line.  \
+                         Run with -help for usage information.";
         (match exn with
          | Failed_to_parse_command_line msg ->
            prerr_endline msg;
@@ -2531,7 +2559,8 @@ complete -F %s %s
       ~f:(fun f -> Cmdline.extend args ~extend:f ~path)
   ;;
 
-  let rec dispatch t env ~extend ~path ~args ~maybe_new_comp_cword ~version ~build_info =
+  let rec dispatch t env ~extend ~path ~args ~maybe_new_comp_cword ~version ~build_info
+            ~verbose_on_parse_error =
     let to_format_list (group : _ Group.t) : Format.V1.t list =
       let group = Group.to_sexpable ~subcommand_to_sexpable:to_sexpable group in
       List.map (Lazy.force group.subcommands) ~f:(fun (name, sexpable) ->
@@ -2542,9 +2571,10 @@ complete -F %s %s
     | Lazy thunk ->
       let t = Lazy.force thunk in
       dispatch t env ~extend ~path ~args ~maybe_new_comp_cword ~version ~build_info
+        ~verbose_on_parse_error
     | Base base ->
       let args = maybe_apply_extend args ~extend ~path in
-      Base.run base env ~path ~args
+      Base.run base env ~path ~args ~verbose_on_parse_error
     | Exec exec ->
       let args = Cmdline.to_list (maybe_apply_extend args ~extend ~path) in
       Exec.exec_with_args ~args exec ~maybe_new_comp_cword
@@ -2616,6 +2646,7 @@ complete -F %s %s
               ~maybe_new_comp_cword:(Option.map ~f:Int.pred maybe_new_comp_cword)
               ~version
               ~build_info
+              ~verbose_on_parse_error
         end
       | Complete part ->
         let subs =
@@ -2634,24 +2665,26 @@ complete -F %s %s
     lazy (Version_util.reprint_build_info Time.sexp_of_t)
 
   let run
+        ?verbose_on_parse_error
         ?(version = default_version)
         ?build_info
         ?(argv=Array.to_list Sys.argv)
         ?extend
-        t =
+        t
+    =
     let build_info =
       match build_info with
       | Some v -> lazy v
       | None -> default_build_info
     in
-    Exn.handle_uncaught ~exit:true (fun () ->
+    Exn.handle_uncaught_and_exit (fun () ->
       let t = Version_info.add t ~version ~build_info in
       let t = add_help_subcommands t in
       let (cmd, args) = handle_environment t ~argv in
       let (path, args, maybe_new_comp_cword) = process_args ~cmd ~args in
       try
-        dispatch t Env.empty ~extend ~path ~args ~maybe_new_comp_cword
-          ~version ~build_info
+        dispatch t Env.empty ~extend ~path ~args ~maybe_new_comp_cword ~version
+          ~build_info ~verbose_on_parse_error
       with
       | Failed_to_parse_command_line msg ->
         if Cmdline.ends_in_complete args
@@ -2675,7 +2708,7 @@ complete -F %s %s
     let args = Cmdline.of_list args in
     let t = add_help_subcommands t in
     dispatch t Env.empty ~path ~args ~extend:None ~maybe_new_comp_cword:None
-      ~version:default_version ~build_info:default_build_info
+      ~version:default_version ~build_info:default_build_info ~verbose_on_parse_error:None
 end
 
 (* NOTE: all that follows is simply namespace management boilerplate.  This will go away

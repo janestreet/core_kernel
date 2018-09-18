@@ -904,7 +904,8 @@ module type Command = sig
       val shape : t -> Shape.t
 
       val run
-        :  ?version    : string
+        :  ?verbose_on_parse_error : bool
+        -> ?version    : string
         -> ?build_info : string
         -> ?argv       : string list
         -> ?extend     : (string list -> string list)
