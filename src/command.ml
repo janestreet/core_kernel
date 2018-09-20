@@ -2211,10 +2211,14 @@ end
 module For_unix (M : For_unix) = struct
   open M
 
-  (* clear the setting of environment variable associated with command-line
-     completion and recursive help so that subprocesses don't see them. *)
+  (* Clear the setting of environment variable associated with command-line
+     completion and recursive help so that subprocesses don't see them.
+
+     Use [unsafe_getenv] so setuid-root programs can still read environment variables.
+     There is no security risk here because the values are only used as triggers to dump
+     out command information. *)
   let getenv_and_clear var =
-    let value = Sys.getenv var in
+    let value = Sys.unsafe_getenv var in
     if Option.is_some value then Unix.unsetenv var;
     value
   ;;

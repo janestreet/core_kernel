@@ -42,6 +42,7 @@ module type For_unix = sig
   module Sys : sig
     val argv : string array
     val getenv : string -> string option
+    val unsafe_getenv : string -> string option
   end
   module Thread : sig
     type t
