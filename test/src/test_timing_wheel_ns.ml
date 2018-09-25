@@ -1028,7 +1028,7 @@ let test_reschedule reschedule =
   show ();
   print_endline "Cannot reschedule arbitrarily far in the future.";
   require_does_raise [%here] (fun _ ->
-    reschedule t alarm2 ~at:(Time.add (alarm_upper_bound t) (gibi_nanos 1.)));
+    reschedule t alarm2 ~at:(Time.add (max_allowed_alarm_time t) (gibi_nanos 1.)));
   print_endline "Fire alarm2.";
   advance_clock t ~to_:(epoch_plus 11.) ~handle_fired:ignore;
   show ();
@@ -1077,8 +1077,8 @@ let%expect_test "[reschedule]" =
      (alarm2_at ("1970-01-01 00:00:10.73741824Z")))
     Cannot reschedule arbitrarily far in the future.
     ("Timing_wheel cannot schedule alarm that far in the future"
-     (at                "2104-11-29 00:00:00.789250048Z")
-     (alarm_upper_bound "2104-11-28 23:59:59.715508224Z"))
+     (at "2104-11-29 00:00:00.789250047Z")
+     (max_allowed_alarm_time "2104-11-28 23:59:59.715508223Z"))
     Fire alarm2.
     ((now "1970-01-01 00:00:11.811160064Z")
      (next_alarm_fires_at ())
@@ -1130,7 +1130,7 @@ let%expect_test "[reschedule_at_interval_num]" =
      (alarm2_at ("1970-01-01 00:00:10.73741824Z")))
     Cannot reschedule arbitrarily far in the future.
     ("Timing_wheel.interval_num got time too far in the future"
-     (time "2104-11-29 00:00:00.789250048Z"))
+     (time "2104-11-29 00:00:00.789250047Z"))
     Fire alarm2.
     ((now "1970-01-01 00:00:11.811160064Z")
      (next_alarm_fires_at ())
@@ -1190,7 +1190,9 @@ let%expect_test "[add] and [advance_clock]" =
      (at "1969-12-31 23:59:58.926258176Z")
      (now_interval_num_start "1970-01-01 00:00:00Z")) |}];
 
-  require_equal [%here] (module Time) (alarm_upper_bound t) (Time.add (now t) (gibi_nanos 1024.));
+  require_equal [%here] (module Time)
+    (Time.add (max_allowed_alarm_time t) Time_ns.Span.nanosecond)
+    (Time.add (now t) (gibi_nanos 1024.));
   show t;
   [%expect {|
     ((config ((alarm_precision 1.073741824s) (level_bits (10))))

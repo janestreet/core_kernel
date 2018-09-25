@@ -386,10 +386,16 @@ module type Timing_wheel = sig
       [add].  [alarm_upper_bound t] is not constant; its value increases as [now t]
       increases. *)
   val alarm_upper_bound : _ t -> Time.t
+  [@@deprecated "[since 2018-09] Use [max_allowed_alarm_time] instead"]
+
+  (** [max_allowed_alarm_time t] returns the greatest [at] that can be supplied to [add].
+      [max_allowed_alarm_time] is not constant; its value increases as [now t]
+      increases. *)
+  val max_allowed_alarm_time : _ t -> Time.t
 
   (** [add t ~at a] adds a new value [a] to [t] and returns an alarm that can later be
       supplied to [remove] the alarm from [t].  [add] raises if [interval_num t at <
-      now_interval_num t || at >= alarm_upper_bound t].
+      now_interval_num t || at > max_allowed_alarm_time t].
 
       [add_at_interval_num t ~at a] is equivalent to [add t ~at:(interval_num_start t at)
       a]. *)

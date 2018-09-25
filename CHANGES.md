@@ -17,6 +17,9 @@ you might want to have a look at Base's
 
 - Added labels to function parameters in the `Quickcheck` module.
 
+- Deprecate `Timing_wheel_ns.alarm_upper_bound` in favor of
+  `Timing_wheel_ns.max_allowed_alarm_time`.
+
 ## v0.11
 
 - Add `Bigstring.unsafe_resize` to allow reallocating in place.

@@ -1267,7 +1267,7 @@ type 'a t =
   ; max_interval_num               : Interval_num.t
   ; mutable now                    : Time_ns.t
   ; mutable now_interval_num_start : Time_ns.t
-  ; mutable alarm_upper_bound      : Time_ns.t
+  ; mutable max_allowed_alarm_time : Time_ns.t
   ; priority_queue                 : 'a Priority_queue.t
   }
 [@@deriving fields, sexp_of]
@@ -1279,6 +1279,8 @@ type 'a t_now = 'a t
 let sexp_of_t_now _ t = [%sexp (t.now : Time_ns.t)]
 
 let alarm_precision t = Config.alarm_precision t.config
+
+let alarm_upper_bound t = Time_ns.add t.max_allowed_alarm_time Time_ns.Span.nanosecond
 
 module Alarm = struct
   type 'a t = 'a Priority_queue.Elt.t [@@deriving sexp_of]
@@ -1319,7 +1321,7 @@ end
 
 let pretty ({ config; start; max_interval_num; now
             ; now_interval_num_start = _
-            ; alarm_upper_bound = _
+            ; max_allowed_alarm_time = _
             ; priority_queue = _ } as t) =
   let r = ref [] in
   iter t ~f:(fun a -> r := Pretty.Alarm.create t a :: !r);
@@ -1386,10 +1388,12 @@ let interval_num_start t interval_num =
   interval_num_start_unchecked t interval_num
 ;;
 
-let compute_alarm_upper_bound t =
-  interval_num_start_unchecked t
-    (Interval_num.min t.max_interval_num
-       (Interval_num.succ (Priority_queue.max_allowed_key t.priority_queue)));
+let compute_max_allowed_alarm_time t =
+  Time_ns.sub
+    (interval_num_start_unchecked t
+       (Interval_num.min t.max_interval_num
+          (Interval_num.succ (Priority_queue.max_allowed_key t.priority_queue))))
+    Time_ns.Span.nanosecond
 ;;
 
 let now_interval_num t = Priority_queue.min_allowed_key t.priority_queue
@@ -1416,8 +1420,10 @@ let invariant invariant_a t =
       ~now_interval_num_start:(check (fun now_interval_num_start ->
         [%test_result: Time_ns.t] now_interval_num_start
           ~expect:(interval_num_start t (now_interval_num t))))
-      ~alarm_upper_bound:(check (fun alarm_upper_bound ->
-        [%test_result: Time_ns.t] alarm_upper_bound ~expect:(compute_alarm_upper_bound t)))
+      ~max_allowed_alarm_time:(check (fun max_allowed_alarm_time ->
+        [%test_result: Time_ns.t]
+          max_allowed_alarm_time
+          ~expect:(compute_max_allowed_alarm_time t)))
       ~priority_queue:(check (Priority_queue.invariant invariant_a));
     iter t ~f:(fun alarm ->
       assert (Interval_num.equal (Alarm.interval_num t alarm)
@@ -1446,7 +1452,7 @@ let advance_clock t ~to_ ~handle_fired =
     t.now_interval_num_start <- interval_num_start_unchecked t key;
     Priority_queue.increase_min_allowed_key t.priority_queue ~key
       ~handle_removed:handle_fired;
-    t.alarm_upper_bound <- compute_alarm_upper_bound t);
+    t.max_allowed_alarm_time <- compute_max_allowed_alarm_time t);
 ;;
 
 let create ~config ~start =
@@ -1460,7 +1466,7 @@ let create ~config ~start =
                                  ~alarm_precision:config.alarm_precision
     ; now                    = Time_ns.min_value (* set by [advance_clock] below *)
     ; now_interval_num_start = Time_ns.min_value (* set by [advance_clock] below *)
-    ; alarm_upper_bound      = Time_ns.max_value (* set by [advance_clock] below *)
+    ; max_allowed_alarm_time = Time_ns.max_value (* set by [advance_clock] below *)
     ; priority_queue         = Priority_queue.create ~level_bits:config.level_bits ()
     }
   in
@@ -1477,7 +1483,7 @@ let add_at_interval_num t ~at value =
 let [@inline never] raise_that_far_in_the_future t at =
   raise_s [%message
     "Timing_wheel cannot schedule alarm that far in the future"
-      (at : Time_ns.t) ~alarm_upper_bound:(t.alarm_upper_bound : Time_ns.t)]
+      (at : Time_ns.t) ~max_allowed_alarm_time:(t.max_allowed_alarm_time : Time_ns.t)]
 ;;
 
 let [@inline never] raise_before_start_of_current_interval t at =
@@ -1487,7 +1493,7 @@ let [@inline never] raise_before_start_of_current_interval t at =
 ;;
 
 let ensure_can_schedule_alarm t ~at =
-  if Time_ns.( >= ) at t.alarm_upper_bound
+  if Time_ns.( > ) at t.max_allowed_alarm_time
   then raise_that_far_in_the_future t at;
   if Time_ns.( < ) at t.now_interval_num_start
   then raise_before_start_of_current_interval t at;

@@ -197,8 +197,10 @@ let parse_iso8601_extended ?pos ?len str ~f =
     match
       Ordered_collection_common.get_pos_len ?pos ?len ~length:(String.length str)
     with
-    | Result.Ok z    -> z
-    | Result.Error s -> failwithf "Ofday.of_string_iso8601_extended: %s" s ()
+    | Result.Ok z ->
+      z
+    | Result.Error s ->
+      failwithf "Ofday.of_string_iso8601_extended: %s" (Error.to_string_mach s) ()
   in
   if len < 2
   then failwith "len < 2"
