@@ -1077,8 +1077,8 @@ let%expect_test "[reschedule]" =
      (alarm2_at ("1970-01-01 00:00:10.73741824Z")))
     Cannot reschedule arbitrarily far in the future.
     ("Timing_wheel cannot schedule alarm that far in the future"
-     (at "2104-11-29 00:00:00.789250047Z")
-     (max_allowed_alarm_time "2104-11-28 23:59:59.715508223Z"))
+     (at "2104-11-29 00:00:01.073741824Z")
+     (max_allowed_alarm_time "2104-11-29 00:00:00Z"))
     Fire alarm2.
     ((now "1970-01-01 00:00:11.811160064Z")
      (next_alarm_fires_at ())
@@ -1130,7 +1130,7 @@ let%expect_test "[reschedule_at_interval_num]" =
      (alarm2_at ("1970-01-01 00:00:10.73741824Z")))
     Cannot reschedule arbitrarily far in the future.
     ("Timing_wheel.interval_num got time too far in the future"
-     (time "2104-11-29 00:00:00.789250047Z"))
+     (time "2104-11-29 00:00:01.073741824Z"))
     Fire alarm2.
     ((now "1970-01-01 00:00:11.811160064Z")
      (next_alarm_fires_at ())
@@ -1451,3 +1451,28 @@ let%expect_test "multiple alarms at the same time are fired in insertion order" 
     5 |}]
 ;;
 
+let%expect_test "max_alarm_time can not be exceeded by [add] or [add_at_interval_num]" =
+  let t = create_unit () in
+  let succ t =
+    let r = Time_ns.add t (Time_ns.Span.nanosecond) in
+    assert (Time_ns.(>) r t);
+    r
+  in
+  let bad_time = succ (max_allowed_alarm_time t) in
+  require_does_raise [%here] (fun () -> add t ~at:bad_time ());
+  [%expect {|
+    ("Timing_wheel cannot schedule alarm that far in the future"
+     (at "2104-11-29 00:00:00.000000001Z")
+     (max_allowed_alarm_time "2104-11-29 00:00:00Z")) |}];
+  require_does_raise [%here] (fun () -> interval_num t bad_time);
+  [%expect {|
+    ("Timing_wheel.interval_num got time too far in the future"
+     (time "2104-11-29 00:00:00.000000001Z")) |}];
+  require_does_raise [%here] (fun () ->
+    (add_at_interval_num t
+       ~at:(Interval_num.succ (interval_num t (max_allowed_alarm_time t))) ()));
+  [%expect {|
+    ("Timing_wheel.interval_num_start got too large interval_num"
+     (interval_num       3_964_975_477)
+     (t.max_interval_num 3_964_975_476)) |}];
+;;

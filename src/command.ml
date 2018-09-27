@@ -3,13 +3,13 @@ open! Std_internal
 
 include Command_intf
 
-(* Unlike [am_running_inline_test], [am_inline_test_runner_process] is false in children
-   of the test runner. *)
-let am_inline_test_runner_process = Ppx_inline_test_lib.Runtime.testing
-
 (* in order to define expect tests, we want to raise rather than exit if the code is
    running in the test runner process *)
-let raise_instead_of_exit = am_inline_test_runner_process
+let raise_instead_of_exit =
+  match Ppx_inline_test_lib.Runtime.testing with
+  | `Testing `Am_test_runner -> true
+  | `Testing `Am_child_of_test_runner | `Not_testing -> false
+;;
 
 (* [raise_instead_of_exit]-respecting wrappers for [exit] and functions that call it *)
 include struct

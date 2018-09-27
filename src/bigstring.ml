@@ -185,8 +185,8 @@ external unsafe_memcmp
   = "bigstring_memcmp_stub" [@@noalloc]
 
 let memcmp t1 ~pos1 t2 ~pos2 ~len =
-  Ordered_collection_common.check_pos_len_exn ~pos:pos1 ~len ~length:(length t1);
-  Ordered_collection_common.check_pos_len_exn ~pos:pos2 ~len ~length:(length t2);
+  Ordered_collection_common.check_pos_len_exn ~pos:pos1 ~len ~total_length:(length t1);
+  Ordered_collection_common.check_pos_len_exn ~pos:pos2 ~len ~total_length:(length t2);
   unsafe_memcmp t1 ~pos1 t2 ~pos2 ~len
 ;;
 

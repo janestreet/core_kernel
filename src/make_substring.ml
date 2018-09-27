@@ -27,8 +27,8 @@ end = struct
 
   let string_bytes ~src ?src_pos ?src_len ~dst ?(dst_pos = 0) () =
     let (src_pos, len) =
-      Ordered_collection_common.get_pos_len_exn ?pos:src_pos ?len:src_len
-        ~length:(String.length src)
+      Ordered_collection_common.get_pos_len_exn () ?pos:src_pos ?len:src_len
+        ~total_length:(String.length src)
     in
     Bytes.From_string.blit ~src ~src_pos ~len ~dst ~dst_pos;
   ;;
@@ -104,8 +104,8 @@ module F (Base : Base) : S with type base = Base.t = struct
 
   let create ?pos ?len base =
     let (pos, len) =
-      Ordered_collection_common.get_pos_len_exn ?pos ?len
-        ~length:(Base.length base)
+      Ordered_collection_common.get_pos_len_exn () ?pos ?len
+        ~total_length:(Base.length base)
     in
     { base = base; pos = pos; len = len; }
   ;;
@@ -117,8 +117,8 @@ module F (Base : Base) : S with type base = Base.t = struct
 
   let sub ?pos ?len t =
     let (pos, len) =
-      Ordered_collection_common.get_pos_len_exn ?pos ?len
-        ~length:(length t)
+      Ordered_collection_common.get_pos_len_exn () ?pos ?len
+        ~total_length:(length t)
     in
     { base = t.base; pos = t.pos + pos; len }
   ;;

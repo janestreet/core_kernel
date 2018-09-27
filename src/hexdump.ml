@@ -60,8 +60,9 @@ module Of_indexable2 (T : Indexable2) = struct
         (printable_string     t ~start ~until)
 
     let to_sequence ?max_lines ?pos ?len t =
-      let length = length t in
-      let pos, len = Ordered_collection_common.get_pos_len_exn ?pos ?len ~length in
+      let pos, len =
+        Ordered_collection_common.get_pos_len_exn () ?pos ?len ~total_length:(length t)
+      in
       let max_lines =
         match max_lines with
         | Some max_lines -> max_lines

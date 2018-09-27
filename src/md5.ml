@@ -109,7 +109,8 @@ let unsafe_digest_subbigstring buf ~pos ~len =
     (Bytes.unsafe_to_string ~no_mutation_while_string_reachable:res)
 
 let digest_subbigstring buf ~pos ~len =
-  Ordered_collection_common.check_pos_len_exn ~pos ~len ~length:(Bigstring.length buf);
+  Ordered_collection_common.check_pos_len_exn ~pos ~len
+    ~total_length:(Bigstring.length buf);
   unsafe_digest_subbigstring buf ~pos ~len
 
 let digest_bigstring buf =

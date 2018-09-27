@@ -1280,7 +1280,10 @@ let sexp_of_t_now _ t = [%sexp (t.now : Time_ns.t)]
 
 let alarm_precision t = Config.alarm_precision t.config
 
-let alarm_upper_bound t = Time_ns.add t.max_allowed_alarm_time Time_ns.Span.nanosecond
+let alarm_upper_bound t =
+  if Time_ns.(<) t.max_allowed_alarm_time Time_ns.max_value
+  then Time_ns.add t.max_allowed_alarm_time Time_ns.Span.nanosecond
+  else t.max_allowed_alarm_time
 
 module Alarm = struct
   type 'a t = 'a Priority_queue.Elt.t [@@deriving sexp_of]
@@ -1389,11 +1392,15 @@ let interval_num_start t interval_num =
 ;;
 
 let compute_max_allowed_alarm_time t =
-  Time_ns.sub
-    (interval_num_start_unchecked t
-       (Interval_num.min t.max_interval_num
-          (Interval_num.succ (Priority_queue.max_allowed_key t.priority_queue))))
-    Time_ns.Span.nanosecond
+  let max_allowed_key = Priority_queue.max_allowed_key t.priority_queue in
+  if Interval_num.(>=) max_allowed_key t.max_interval_num
+  then
+    Time_ns.max_value
+  else
+    Time_ns.sub
+      (interval_num_start_unchecked t
+         (Interval_num.succ max_allowed_key))
+      Time_ns.Span.nanosecond
 ;;
 
 let now_interval_num t = Priority_queue.min_allowed_key t.priority_queue

@@ -268,7 +268,8 @@ let feed_gen buf_length (blit_buf_to_bigstring : (_, _) Blit.blito)
   | Dead e -> Error e
   | Alive t ->
     let (src_pos, src_len) =
-      Ordered_collection_common.get_pos_len_exn ?pos ?len ~length:(buf_length buf)
+      Ordered_collection_common.get_pos_len_exn () ?pos ?len
+        ~total_length:(buf_length buf)
     in
     ensure_available t src_len;
     blit_buf_to_bigstring

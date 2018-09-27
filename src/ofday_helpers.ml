@@ -195,7 +195,8 @@ let parse string ~f =
 let parse_iso8601_extended ?pos ?len str ~f =
   let (pos, len) =
     match
-      Ordered_collection_common.get_pos_len ?pos ?len ~length:(String.length str)
+      Ordered_collection_common.get_pos_len () ?pos ?len
+        ~total_length:(String.length str)
     with
     | Result.Ok z ->
       z
