@@ -87,6 +87,17 @@ module type Comparable_sexpable = sig
   include Comparable.S with type t := t
 end
 
+module Comparable_plain (S1 : Comparable.S_plain) (S2 : Comparable.S_plain)
+  : sig
+    (*_ This type is introduced because older versions of OCaml do not support
+      destructive substitutions with `type t1 = 'a t2`. *)
+    type comparator_witness =
+      (S1.comparator_witness, S2.comparator_witness) T2.comparator_witness
+    include Comparable.S_plain
+      with type t := Make (S1) (S2).t
+      with type comparator_witness := comparator_witness
+  end
+
 module Comparable (S1 : Comparable_sexpable) (S2 : Comparable_sexpable)
   : Comparable_sexpable with type t := Make (S1) (S2).t
 

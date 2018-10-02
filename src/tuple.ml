@@ -97,6 +97,18 @@ module Binable (B1 : Binable.S) (B2 : Binable.S) = struct
   type t = B1.t * B2.t [@@deriving bin_io]
 end
 
+module Comparable_plain (S1 : Comparable.S_plain) (S2 : Comparable.S_plain) = struct
+  module T = struct
+    type t = S1.t * S2.t
+    type comparator_witness = (S1.comparator_witness, S2.comparator_witness) T2.comparator_witness
+    let comparator = T2.comparator S1.comparator S2.comparator
+    let sexp_of_t = comparator.sexp_of_t
+  end
+
+  include T
+  include Comparable.Make_plain_using_comparator (T)
+end
+
 module Comparable (S1 : Comparable_sexpable) (S2 : Comparable_sexpable) = struct
   module T = struct
     include Sexpable (S1) (S2)
