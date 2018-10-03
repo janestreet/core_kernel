@@ -288,7 +288,7 @@ let%expect_test "[Config.durations]" =
 
 module Priority_queue = struct
 
-  open Priority_queue
+  open Priority_queue [@@warning "-3"]
 
   let show t = print_s [%sexp (t : _ t)]
 

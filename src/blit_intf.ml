@@ -2,6 +2,9 @@
 
 open Base.Blit
 
+(*_ These are not implemented less-general-in-terms-of-more-general because odoc produces
+  unreadable documentation in that case, with or without [inline] on [include]. *)
+
 module type S_permissions = sig
   open Perms.Export
   type -'perms t

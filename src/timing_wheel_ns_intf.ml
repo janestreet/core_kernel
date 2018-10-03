@@ -579,4 +579,5 @@ module type Timing_wheel = sig
 
     val iter : 'a t -> f:('a Elt.t -> unit) -> unit
   end
+  [@@deprecated "[since 2018-09] No replacement"]
 end

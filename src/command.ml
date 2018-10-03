@@ -1468,7 +1468,7 @@ module Base = struct
           | `Default_to value -> value
           | `Raise ->
             die "Must pass one of these: %s"
-              (String.concat ~sep:", " (List.map ~f:fst ts)) ())
+              (String.concat ~sep:"; " (List.map ~f:fst ts)) ())
     ;;
   end
 end
