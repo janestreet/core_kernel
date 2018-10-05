@@ -44,6 +44,7 @@ val dynlinkable_code               : bool
 val compiled_for_speed             : bool
 val application_specific_fields    : Application_specific_fields.t option
 val ocaml_version                  : string
+val allowed_projections            : string list option
 
 val executable_path                : string (** Relative to OMakeroot dir *)
 

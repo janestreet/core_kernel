@@ -69,6 +69,7 @@ type t = {
   ocaml_version               : string;
   executable_path             : string;
   build_system                : string;
+  allowed_projections         : string list sexp_option;
   application_specific_fields : Application_specific_fields.t sexp_option;
 } [@@deriving sexp]
 
@@ -88,6 +89,7 @@ let { username;
       ocaml_version;
       executable_path;
       build_system;
+      allowed_projections;
       application_specific_fields;
     } = t
 ;;
