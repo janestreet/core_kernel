@@ -6,24 +6,13 @@ type 'a t = 'a
    [unsafe_value].  [Uopt] is used only internally in [Incremental_lib].  And we never
    have an [_ Uopt.t Uopt.t], so there is no chance of confusing [none] with [some
    none].  And we never build [float Uopt.t array]s. *)
-let none = (Obj.magic ("Uopt.none" : string) : _ t)
-
+let none = "Uopt.none" |> (Obj.magic : string -> _ t)
 let is_none t = phys_equal t none
-
 let is_some t = not (is_none t)
-
 let invariant invariant_a t = if is_some t then invariant_a t
-
-let sexp_of_t sexp_of_a t =
-  if is_none t
-  then [%sexp None]
-  else [%sexp Some (t : a)]
-;;
-
+let sexp_of_t sexp_of_a t = if is_none t then [%sexp None] else [%sexp Some (t : a)]
 let some a = a
-
 let value_exn t = if is_none t then failwith "Uopt.value_exn" else t
-
 let unsafe_value t = t
 
 let%test _ = is_none none

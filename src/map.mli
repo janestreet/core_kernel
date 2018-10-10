@@ -733,5 +733,8 @@ module Stable : sig
       with type key := Key.t
       with type comparator_witness := Key.comparator_witness
   end
+  module Symmetric_diff_element : sig
+    module V1 : Stable_module_types.S2 with type ('a, 'b) t = ('a, 'b) Symmetric_diff_element.t
+  end
 end
 

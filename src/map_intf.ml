@@ -47,11 +47,6 @@ module type Key_binable_hashable = sig
   type t [@@deriving bin_io, compare, hash, sexp]
 end
 
-module Symmetric_diff_element = struct
-  type ('k, 'v) t = 'k * [ `Left of 'v | `Right of 'v | `Unequal of 'v * 'v ]
-  [@@deriving bin_io, compare, sexp]
-end
-
 module type Accessors_generic = sig
   include Map.Accessors_generic
 

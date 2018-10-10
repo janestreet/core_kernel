@@ -2,7 +2,7 @@
     except that some things are deprecated in favor of Core equivalents.
 
     Functions here are in one of four states:
-    1. Deprecated using @@deprecated.
+    1. Deprecated using [@@deprecated].
     2. Accepted as part of Core for the forseeable future.
     3. We haven't yet decided whether to deprecate, as indicated by a CR.
     4. We plan to deprecate eventually, but haven't yet, as indicated by a CR.

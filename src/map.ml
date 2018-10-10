@@ -3,7 +3,34 @@ open Map_intf
 
 module List = List0
 
-module Symmetric_diff_element = Symmetric_diff_element
+module Symmetric_diff_element = struct
+  module Stable = struct
+    module V1 = struct
+      type ('k, 'v) t = 'k * [ `Left of 'v | `Right of 'v | `Unequal of 'v * 'v ]
+      [@@deriving bin_io, compare, sexp]
+
+      let%expect_test _ =
+        print_endline [%bin_digest: (int, string) t];
+        [%expect {| 00674be9fe8dfe9e9ad476067d7d8101 |}]
+      ;;
+
+      let map (k, diff) ~f1 ~f2 =
+        let k = f1 k in
+        let diff =
+          match diff with
+          | `Left v -> `Left (f2 v)
+          | `Right v -> `Right (f2 v)
+          | `Unequal (v1, v2) -> `Unequal (f2 v1, f2 v2)
+        in
+        (k, diff)
+      ;;
+
+    end
+  end
+
+  include Stable.V1
+end
+
 
 type ('k, 'cmp) comparator =
   (module Comparator.S with type t = 'k and type comparator_witness = 'cmp)
@@ -455,4 +482,6 @@ module Stable = struct
 
     module Make (Key : Stable_module_types.S0) = Make_binable_using_comparator (Key)
   end
+
+  module Symmetric_diff_element = Symmetric_diff_element.Stable
 end

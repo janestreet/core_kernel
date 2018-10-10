@@ -222,6 +222,9 @@ module type Command = sig
 
         A standard choice of flag name to use with [escape] is ["--"]. *)
     val escape : string list option t
+
+    (** [map_flag flag ~f] transforms the parsed result of [flag] by applying [f]. *)
+    val map_flag : 'a t -> f:('a -> 'b) -> 'b t
   end
 
   (** Anonymous command-line argument specification. *)
@@ -290,6 +293,9 @@ module type Command = sig
     val t3 : 'a t -> 'b t -> 'c t -> ('a * 'b * 'c) t
 
     val t4 : 'a t -> 'b t -> 'c t -> 'd t -> ('a * 'b * 'c * 'd) t
+
+    (** [map_anons anons ~f] transforms the parsed result of [anons] by applying [f]. *)
+    val map_anons : 'a t -> f:('a -> 'b) -> 'b t
   end
 
 
@@ -636,9 +642,6 @@ module type Command = sig
     type 'a flag = 'a Flag.t
     include module type of Flag with type 'a t := 'a flag
 
-    (** [map_flag flag ~f] transforms the parsed result of [flag] by applying [f]. *)
-    val map_flag : 'a flag -> f:('a -> 'b) -> 'b flag
-
     (** [flags_of_args_exn args] creates a spec from [Caml.Arg.t]s, for compatibility with
         OCaml's base libraries.  Fails if it encounters an arg that cannot be converted.
 
@@ -646,15 +649,13 @@ module type Command = sig
         [Command].  In the [Arg] module, flag handling functions embedded in [Caml.Arg.t]
         values will be run in the order that flags are passed on the command line.  In the
         [Command] module, using [flags_of_args_exn flags], they are evaluated in the order
-        that the [Caml.Arg.t] values appear in [flags].  *)
+        that the [Caml.Arg.t] values appear in [args].  *)
     val flags_of_args_exn : Arg.t list -> ('a, 'a) t
+    [@@deprecated "[since 2018-10] switch to Command.Param"]
 
     (** A specification of some number of anonymous arguments. *)
     type 'a anons = 'a Anons.t
     include module type of Anons with type 'a t := 'a anons
-
-    (** [map_anons anons ~f] transforms the parsed result of [anons] by applying [f]. *)
-    val map_anons : 'a anons -> f:('a -> 'b) -> 'b anons
 
     (** Conversions to and from new-style [Param] command line specifications. *)
 

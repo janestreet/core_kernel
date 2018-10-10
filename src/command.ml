@@ -2777,7 +2777,9 @@ module Param = struct
   include Arg_type.Export
   include struct
     open Flag
+    let escape                = escape
     let listed                = listed
+    let map_flag              = map_flag
     let no_arg                = no_arg
     let no_arg_abort          = no_arg_abort
     let no_arg_register       = no_arg_register
@@ -2785,15 +2787,15 @@ module Param = struct
     let optional              = optional
     let optional_with_default = optional_with_default
     let required              = required
-    let escape                = escape
   end
   include struct
     open Anons
     let (%:)                       = (%:)
+    let map_anons                  = map_anons
     let maybe                      = maybe
     let maybe_with_default         = maybe_with_default
-    let non_empty_sequence_as_pair = non_empty_sequence_as_pair
     let non_empty_sequence_as_list = non_empty_sequence_as_list
+    let non_empty_sequence_as_pair = non_empty_sequence_as_pair
     let sequence                   = sequence
     let t2                         = t2
     let t3                         = t3
