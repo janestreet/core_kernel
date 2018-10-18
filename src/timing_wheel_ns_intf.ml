@@ -302,7 +302,8 @@ module type Timing_wheel = sig
 
     (** [create] raises if [alarm_precision <= 0]. *)
     val create
-      :  ?level_bits     : Level_bits.t
+      :  ?capacity : int
+      -> ?level_bits     : Level_bits.t
       -> alarm_precision : Alarm_precision.t
       -> unit
       -> t
@@ -504,9 +505,14 @@ module type Timing_wheel = sig
 
     include Invariant.S1 with type 'a t := 'a t
 
-    (** [create ?level_bits ()] creates a new empty timing wheel, [t], with [length t = 0]
-        and [min_allowed_key t = 0]. *)
-    val create : ?level_bits:Level_bits.t -> unit -> 'a t
+    (** [create] creates a new empty timing wheel, [t], with [length t = 0] and
+        [min_allowed_key t = 0].  [create] allocates space to hold [capacity] number of
+        alarms; [add] will allocate additional space if needed. *)
+    val create
+      :  ?capacity:int (** default is [1] *)
+      -> ?level_bits:Level_bits.t
+      -> unit
+      -> 'a t
 
     (** [length t] returns the number of elements in the timing wheel. *)
     val length : _ t -> int

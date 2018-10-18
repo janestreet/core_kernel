@@ -209,6 +209,7 @@ module Config = struct
   type t =
     { alarm_precision : Alarm_precision.Unstable.t
     ; level_bits      : Level_bits.t [@default level_bits_default] [@sexp_drop_default]
+    ; capacity        : int sexp_option
     }
   [@@deriving fields, sexp]
 
@@ -219,16 +220,19 @@ module Config = struct
       let check f = Invariant.check_field t f in
       Fields.iter
         ~alarm_precision:ignore
+        ~capacity:ignore
         ~level_bits:(check Level_bits.invariant))
   ;;
 
   let create
+        ?capacity
         ?(level_bits = level_bits_default)
         ~alarm_precision
         ()
     =
     { alarm_precision
     ; level_bits
+    ; capacity
     }
   ;;
 
@@ -383,7 +387,7 @@ module Priority_queue = struct
 
       include Invariant.S1 with type 'a t := 'a t
 
-      val create : unit -> _ t
+      val create : ?capacity:int -> unit -> _ t
       val is_full : _ t -> bool
       val grow : ?capacity:int -> 'a t -> 'a t
     end
@@ -497,7 +501,9 @@ module Priority_queue = struct
 
       let invariant _invariant_a t = Pool.invariant ignore t
 
-      let create () = Pool.create Pool.Slots.t6 ~capacity:1
+      let create ?(capacity = 1) () =
+        Pool.create Pool.Slots.t6 ~capacity
+      ;;
 
       let grow    = Pool.grow
       let is_full = Pool.is_full
@@ -1086,7 +1092,7 @@ module Priority_queue = struct
         t.elt_key_lower_bound <- min_allowed_key t));
   ;;
 
-  let create ?level_bits () =
+  let create ?capacity ?level_bits () =
     let level_bits =
       match level_bits with
       | Some l -> l
@@ -1132,7 +1138,7 @@ module Priority_queue = struct
               level :: levels))
     in
     { length              = 0
-    ; pool                = Internal_elt.Pool.create ()
+    ; pool                = Internal_elt.Pool.create ?capacity ()
     ; min_elt             = Internal_elt.null ()
     ; elt_key_lower_bound = Key.zero
     ; levels              = Array.of_list_rev levels
@@ -1474,7 +1480,10 @@ let create ~config ~start =
     ; now                    = Time_ns.min_value (* set by [advance_clock] below *)
     ; now_interval_num_start = Time_ns.min_value (* set by [advance_clock] below *)
     ; max_allowed_alarm_time = Time_ns.max_value (* set by [advance_clock] below *)
-    ; priority_queue         = Priority_queue.create ~level_bits:config.level_bits ()
+    ; priority_queue         =
+        Priority_queue.create
+          ?capacity:config.capacity
+          ~level_bits:config.level_bits ()
     }
   in
   advance_clock t ~to_:start ~handle_fired:(fun _ -> assert false);

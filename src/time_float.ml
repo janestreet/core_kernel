@@ -13,7 +13,7 @@ module Stable = struct
     (* V2 is actually the first version of this in Core_kernel, but a V1 stable module
        with generous parsing, unix-dependent [t_of_sexp] already existed in Core *)
     module V2 = struct
-      type t = T.t [@@deriving bin_io, compare]
+      type t = T.t [@@deriving bin_io, compare, hash]
 
       let sexp_of_t t =
         [%sexp (T.to_string_abs_parts t ~zone:Zone.utc : string list)]

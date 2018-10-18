@@ -10,7 +10,10 @@ module Stable : sig
   include module type of struct include Time_float0.Stable end
 
   module With_utc_sexp : sig
-    module V2 : Stable_without_comparator with type t = Time_float0.t
+    module V2 : sig
+      type t = Time_float0.t [@@deriving hash]
+      include Stable_without_comparator with type t := t
+    end
   end
 
   module Zone : Zone_intf.S_stable with type t := Zone.t

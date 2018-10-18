@@ -73,6 +73,7 @@ module type For_unix = sig
     val unsetenv : string -> unit
     type env = [ `Replace of (string * string) list
                | `Extend of (string * string) list
+               | `Override of (string * string option) list
                | `Replace_raw of string list
                ]
     val exec
@@ -461,9 +462,11 @@ module type Command = sig
 
     (** Superceded by [return], preserved for backwards compatibility. *)
     val const : 'a -> 'a param
+    [@@deprecated "[since 2018-10] use [Command.Param.return] instead of [Command.Spec.const]"]
 
     (** Superceded by [both], preserved for backwards compatibility. *)
     val pair : 'a param -> 'b param -> ('a * 'b) param
+    [@@deprecated "[since 2018-10] use [Command.Param.both] instead of [Command.Spec.pair]"]
 
     (** {2 Command specifications} *)
 
