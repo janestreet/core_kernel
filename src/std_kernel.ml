@@ -204,7 +204,8 @@ let () =
   Exn.initialize_module ();
 ;;
 
-let am_running_inline_test = Ppx_inline_test_lib.Runtime.am_running_inline_test
+let am_running_inline_test = am_running_inline_test
+let am_running_test = am_running_test
 
 let sec = Time_float.Span.of_sec
 
