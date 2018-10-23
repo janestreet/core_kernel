@@ -74,7 +74,6 @@ module Unit_tests
       let is_subset = simplify_accessor Set.Named.is_subset
       let equal     = simplify_accessor Set.Named.equal
     end
-    let subset _       = assert false (* deprecated *)
     let iter2          = simplify_accessor iter2
     let invariants     = simplify_accessor invariants
     let to_map         = simplify_accessor to_map
@@ -184,10 +183,6 @@ module Unit_tests
   let%test _ = not (Set.is_subset set_nonempty ~of_:(Set.singleton Elt.present))
 
 
-  (* deprecated *)
-  let subset _ = assert false
-  let _ = Set.subset
-
   module Named = struct
     let is_subset _ ~of_:_ = assert false
     let%expect_test "validate_subset" =
@@ -267,7 +262,7 @@ module Unit_tests
   let to_array _ = assert false
   let%test _ =
     let a = Set.to_array set_nonempty in
-    List.equal Elt.equal (Array.to_list a) (Set.to_list set_nonempty) 
+    List.equal Elt.equal (Array.to_list a) (Set.to_list set_nonempty)
   ;;
 
   let to_sequence ?order:_ ?greater_or_equal_to:_ ?less_or_equal_to:_ _ : _ Sequence.t = assert false
@@ -775,7 +770,6 @@ module Unit_tests
   let to_tree _           = assert false
   let remove_index _      = assert false
   let nth _               = assert false
-  let find_index _        = assert false
   let find_exn _          = assert false
   let group_by _          = assert false
   let choose_exn _        = assert false

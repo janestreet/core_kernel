@@ -144,8 +144,6 @@ val find_exn : ('a, _) t -> f:('a -> bool) -> 'a
 (** [nth t i] returns the [i]th smallest element of [t], in [O(log n)] time.  The
     smallest element has [i = 0].  Returns [None] if [i < 0] or [i >= length t]. *)
 val nth        : ('a, _) t -> int -> 'a option
-val find_index : ('a, _) t -> int -> 'a option
-[@@deprecated "[since 2016-10] Use [nth]"]
 
 (** [remove_index t i] returns a version of [t] with the [i]th smallest element removed,
     in [O(log n)] time.  The smallest element has [i = 0].  Returns [t] if [i < 0] or
@@ -154,10 +152,6 @@ val remove_index : ('a, 'cmp) t -> int -> ('a, 'cmp) t
 
 (** [is_subset t1 ~of_:t2] returns true iff [t1] is a subset of [t2]. *)
 val is_subset : ('a, 'cmp) t -> of_:('a, 'cmp) t -> bool
-
-(** [subset] is a synonym for [is_subset]. *)
-val subset : ('a, 'cmp) t -> ('a, 'cmp) t -> bool
-[@@deprecated "[since 2016-09] Replace [Set.subset t1 t2] with [Set.is_subset t1 ~of_:t2]"]
 
 (** [Named] allows the validation of subset and equality relationships between sets.  A
     [Named.t] is a record of a set and a name, where the name is used in error messages,

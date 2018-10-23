@@ -22,6 +22,9 @@ you might want to have a look at Base's
 
 - Deprecated `Array.replace arr i ~f` in favor of using `arr.(i) <- (f (arr.(i)))`
 
+- Removed functions that were deprecated in 2016 and 2017 from the `Array` and
+  `Set` modules.
+
 ## v0.11
 
 - Add `Bigstring.unsafe_resize` to allow reallocating in place.

@@ -247,8 +247,6 @@ module type Permissioned = sig
   val unzip : ('a * 'b, [> read]) t -> ('a, [< _ perms]) t * ('b, [< _ perms]) t
   val sorted_copy : ('a, [> read]) t -> compare:('a -> 'a -> int) -> ('a, [< _ perms]) t
   val last : ('a, [> read]) t -> 'a
-  val empty : unit -> ('a, [< _ perms]) t
-  [@@deprecated "[since 2017-05] Use [ [||] ]"]
   val equal : ('a -> 'a -> bool) -> ('a, [> read]) t -> ('a, [> read]) t -> bool
   val unsafe_truncate : (_, [> write]) t -> len:int -> unit
 
@@ -396,8 +394,6 @@ module type S = sig
   val unzip : ('a * 'b) t -> 'a t * 'b t
   val sorted_copy : 'a t -> compare:('a -> 'a -> int) -> 'a t
   val last : 'a t -> 'a
-  val empty : unit -> 'a t
-  [@@deprecated "[since 2017-05] Use [ [||] ]"]
   val equal : ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
   val unsafe_truncate : _ t -> len:int -> unit
 
