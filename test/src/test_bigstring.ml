@@ -186,3 +186,32 @@ let%test_module "memcmp" =
       assert (Bigstring.memcmp b2 ~pos1:0 b1 ~pos2:0 ~len:(Bigstring.length b1) = Bigstring.compare b2 b1);
     ;;
   end)
+
+let%test_module "memset" =
+  (module struct
+    let empty = Bigstring.create 0
+
+    let%test_unit "out of bounds raises" =
+      let b1 = Bigstring.of_string "abcd" in
+      assert
+        (try ignore (Bigstring.memset empty ~pos:0 ~len:1 'a'); false with _ -> true);
+      assert
+        (try ignore (Bigstring.memset b1 ~pos:1 ~len:4 'a'); false with _ -> true);
+      assert
+        (try ignore (Bigstring.memset b1 ~pos:8 ~len:0 'a'); false with _ -> true);
+    ;;
+
+    let%test_unit "total memset works" =
+      let b1 = Bigstring.of_string "abcd" in
+      let b2 = Bigstring.of_string "AAAA" in
+      Bigstring.memset b1 ~pos:0 ~len:(Bigstring.length b1) 'A';
+      assert (Bigstring.memcmp b1 ~pos1:0 b2 ~pos2:0 ~len:4 = 0)
+    ;;
+
+    let%test_unit "partial memset works" =
+      let b1 = Bigstring.of_string "abcd" in
+      let b2 = Bigstring.of_string "aAAd" in
+      Bigstring.memset b1 ~pos:1 ~len:2 'A';
+      assert (Bigstring.memcmp b1 ~pos1:0 b2 ~pos2:0 ~len:4 = 0)
+    ;;
+  end)

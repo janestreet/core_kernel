@@ -56,8 +56,9 @@ let%expect_test "[set_exn] with invalid index" =
 let%expect_test "[get_exn]" =
   let t = create_exn ~len:1 in
   show_raise (fun () -> get_exn t 0);
-  [%expect {|
-    (raised "Option_array.get_some_exn: the element is [None]") |}];
+  [%expect
+    {|
+    (raised (Failure "Option_array.get_some_exn: the element is [None]")) |}];
   set_exn t 0 5;
   print_s [%message "" ~_:(get_exn t 0 : int list)];
   [%expect {|

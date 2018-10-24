@@ -144,6 +144,9 @@ module From_string : Blit.S_distinct with type src := string with type dst := t
 module To_bytes   : Blit.S_distinct with type src := t     with type dst := bytes
 module From_bytes : Blit.S_distinct with type src := bytes with type dst := t
 
+(** [memset t ~pos ~len c] fills [t] with [c] within the range [\[pos, pos + len)] *)
+val memset : t -> pos:int -> len:int -> char -> unit
+
 
 (** Memcmp *)
 

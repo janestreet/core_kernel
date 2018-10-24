@@ -178,6 +178,14 @@ let concat =
       assert (!dst_pos_ref = len);
       dst
 
+external unsafe_memset
+  : t -> pos:int -> len:int -> char -> unit
+  = "bigstring_memset_stub" [@@noalloc]
+
+let memset t ~pos ~len c =
+  Ordered_collection_common.check_pos_len_exn ~pos ~len ~total_length:(length t);
+  unsafe_memset t ~pos ~len c
+
 (* Comparison *)
 
 external unsafe_memcmp

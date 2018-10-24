@@ -185,6 +185,15 @@ CAMLprim value bigstring_blit_stub(
   return Val_unit;
 }
 
+CAMLprim value bigstring_memset_stub(value v_t, value v_pos, value v_len, value v_char)
+{
+  struct caml_ba_array *ba_t = Caml_ba_array_val(v_t);
+  char *buffer = ((char *) ba_t->data) + Long_val(v_pos);
+  memset(buffer, Int_val(v_char), Long_val(v_len));
+
+  return Val_unit;
+}
+
 /* Comparison */
 
 CAMLprim value bigstring_memcmp_stub(value v_s1, value v_s1_pos,

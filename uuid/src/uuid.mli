@@ -4,7 +4,7 @@
 
 open! Core_kernel
 
-(** When [am_running_inline_test], [sexp_of_t] shows all zeros (the nil UUID). *)
+(** When [am_running_test], [sexp_of_t] shows all zeros (the nil UUID). *)
 type t [@@deriving hash, sexp_of]
 
 include Identifiable.S with type t := t
@@ -16,7 +16,7 @@ val t_of_sexp : Sexp.t -> t
 val create : unit -> t
 [@@deprecated "[since 2018-10] Use [Uuid_unix.create]"]
 
-(** [to_string_hum t] is like [to_string], except when [am_running_inline_test], in
+(** [to_string_hum t] is like [to_string], except when [am_running_test], in
     which case it shows all zeros (the nil UUID). *)
 val to_string_hum : t -> string
 
