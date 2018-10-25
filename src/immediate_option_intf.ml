@@ -51,7 +51,7 @@ module type S_without_immediate = sig
   val of_option : value option -> t
 
   module Optional_syntax : Optional_syntax.S
-    with type t := t
+    with type t     := t
     with type value := value
 end
 

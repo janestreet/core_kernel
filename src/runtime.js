@@ -29,6 +29,14 @@ function bigstring_realloc(bigstring, size) {
     return new_bigstring;
 }
 
+//Provides: bigstring_memset_stub
+//Requires: caml_ba_set_1
+function bigstring_memset_stub(bigstring, v_pos, v_len, v_char) {
+  for (var i = 0; i < v_len; i++) {
+    caml_ba_set_1(bigstring, v_pos + i, v_char);
+  }
+}
+
 //Provides: core_kernel_time_ns_gettime_or_zero
 //Requires: caml_int64_mul, caml_int64_of_float, caml_int64_of_int32
 var ms_to_nano = caml_int64_of_int32(1000*1000);
