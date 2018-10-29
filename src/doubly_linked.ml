@@ -133,8 +133,19 @@ end = struct
 
 end
 
+type ('a, _) mk =
+  | Empty : ('a, [ `empty ]) mk
+  | Elt :
+      {
+        value : 'a;
+        mutable prev : 'a elt;
+        mutable next : 'a elt;
+        mutable header : Header.t;
+      } -> ('a, [ `elt ]) mk
+and 'a elt = ('a, [ `elt ]) mk
+
 module Elt : sig
-  type 'a t [@@deriving sexp_of]
+  type 'a t = 'a elt [@@deriving sexp_of]
   val header : 'a t -> Header.t
   val equal : 'a t -> 'a t -> bool
   val create : 'a -> 'a t
@@ -149,35 +160,25 @@ module Elt : sig
   val prev : 'a t -> 'a t
 end = struct
 
-  type 'a t = {
-    value : 'a;
-    mutable prev : 'a t;
-    mutable next : 'a t;
-    mutable header : Header.t;
-  }
+  type 'a t = 'a elt
 
   let equal = phys_equal
 
-  let next t = t.next
-  let prev t = t.prev
-  let header t = t.header
+  let next (Elt t) = t.next
+  let prev (Elt t) = t.prev
+  let header (Elt t) = t.header
 
   let create_aux v header =
-    let rec t = {
-      value = v;
-      prev = t;
-      next = t;
-      header = header;
-    } in
+    let rec t = Elt { value = v; prev = t; next = t; header = header; } in
     t
 
-  let is_singleton t = equal t t.prev
+  let is_singleton (Elt { prev } as t) = equal t prev
 
-  let sexp_of_t sexp_of_a t = sexp_of_a t.value
+  let sexp_of_t sexp_of_a (Elt t) = sexp_of_a t.value
 
   let create v = create_aux v (Header.create ())
 
-  let value t = t.value
+  let value (Elt t) = t.value
 
   (*
      [split_or_splice] is sufficient as the lone primitive for
@@ -198,25 +199,25 @@ end = struct
            -----+        +-----         -----+               +-----
      v} *)
 
-  let unsafe_split_or_splice ~prev1:a ~next1:b ~prev2:c ~next2:d =
-    a.next <- d; d.prev <- a;
-    c.next <- b; b.prev <- c
+  let unsafe_split_or_splice
+        ~prev1:(Elt a as elt_a)
+        ~next1:(Elt b as elt_b)
+        ~prev2:(Elt c as elt_c)
+        ~next2:(Elt d as elt_d) =
+    a.next <- elt_d; d.prev <- elt_a;
+    c.next <- elt_b; b.prev <- elt_c
 
-  let unsafe_split_or_splice_after t1 t2 =
-    unsafe_split_or_splice
-      ~next1:t1.next
-      ~prev1:t1.next.prev
-      ~next2:t2.next
-      ~prev2:t2.next.prev
+  let unsafe_split_or_splice_after (Elt t1) (Elt t2) =
+    let Elt { prev = prev1 } as next1 = t1.next in
+    let Elt { prev = prev2 } as next2 = t2.next in
+    unsafe_split_or_splice ~next1 ~prev1 ~next2 ~prev2
 
-  let unsafe_split_or_splice_before t1 t2 =
-    unsafe_split_or_splice
-      ~prev1:t1.prev
-      ~next1:t1.prev.next
-      ~prev2:t2.prev
-      ~next2:t2.prev.next
+  let unsafe_split_or_splice_before (Elt t1) (Elt t2) =
+    let Elt { next = next1 } as prev1 = t1.prev in
+    let Elt { next = next2 } as prev2 = t2.prev in
+    unsafe_split_or_splice ~next1 ~prev1 ~next2 ~prev2
 
-  let check_two_nodes_no_pending_iterations t1 t2 =
+  let check_two_nodes_no_pending_iterations (Elt t1) (Elt t2) =
     Header.check_no_pending_iterations t1.header;
     if not (Header.equal t1.header t2.header) then
       Header.check_no_pending_iterations t2.header
@@ -230,48 +231,49 @@ end = struct
     check_two_nodes_no_pending_iterations t1 t2;
     unsafe_split_or_splice_before t1 t2
 
-  let insert_before t v =
+  let insert_before (Elt t as elt) v =
     Header.incr_length t.header ~by:1;
     let node = create_aux v t.header in
-    unsafe_split_or_splice_before t node;
+    unsafe_split_or_splice_before elt node;
     node
 
-  let insert_after t v =
+  let insert_after (Elt t as elt) v =
     Header.incr_length t.header ~by:1;
     let node = create_aux v t.header in
-    unsafe_split_or_splice_after t node;
+    unsafe_split_or_splice_after elt node;
     node
 
   let dummy_header = Header.create ()
 
-  let unlink_before t =
-    let node = t.prev in
-    if is_singleton node then node else begin
+  let unlink_before (Elt t as elt) =
+    let Elt node as elt_node = t.prev in
+    if is_singleton elt_node then elt_node else begin
       Header.incr_length t.header ~by:(-1);
-      unsafe_split_or_splice_before t node;
+      unsafe_split_or_splice_before elt elt_node;
       node.header <- dummy_header;
-      node
+      elt_node
     end
 
-  let unlink_after t =
-    let node = t.next in
-    if is_singleton node then node else begin
+  let unlink_after (Elt t as elt) =
+    let Elt node as elt_node = t.next in
+    if is_singleton elt_node then elt_node else begin
       Header.incr_length t.header ~by:(-1);
-      unsafe_split_or_splice_after t node;
+      unsafe_split_or_splice_after elt elt_node;
       node.header <- dummy_header;
-      node
+      elt_node
     end
 
-  let unlink t = ignore (unlink_after t.prev)
+  let unlink (Elt t) = ignore (unlink_after t.prev)
 
 end
 
-type 'a t = 'a Elt.t option ref
+type 'a dl = DL : ('a, _) mk -> 'a dl  [@@unboxed]
+type 'a t = 'a dl ref
 
 let invariant invariant_a t =
   match !t with
-  | None -> ()
-  | Some head ->
+  | DL Empty -> ()
+  | DL (Elt _ as head) ->
     let header = Elt.header head in
     let rec loop n elt =
       let next_elt = Elt.next elt in
@@ -285,7 +287,7 @@ let invariant invariant_a t =
     let len = loop 1 head in
     assert (len = Header.length header)
 
-let create (type a) () : a t = ref None
+let create (type a) () : a t = ref (DL Empty)
 
 let equal (t : _ t) t' = phys_equal t t'
 
@@ -294,7 +296,7 @@ let of_list = function
   | x :: xs ->
     let first = Elt.create x in
     let _last = List.fold xs ~init:first ~f:Elt.insert_after in
-    ref (Some first)
+    ref (DL first)
 
 let of_array = function
   | [||] -> create ()
@@ -309,8 +311,8 @@ let of_array = function
 
 let fold_elt t ~init ~f =
   match !t with
-  | None -> init
-  | Some first ->
+  | DL Empty -> init
+  | DL (Elt _ as first) ->
     Header.with_iteration_3
       (Elt.header first)
       f init first
@@ -325,8 +327,8 @@ let fold_elt t ~init ~f =
 
 let fold_elt_1 t ~init ~f a =
   match !t with
-  | None -> init
-  | Some first ->
+  | DL Empty -> init
+  | DL (Elt _ as first) ->
     Header.with_iteration_4
       (Elt.header first)
       f a init first
@@ -358,8 +360,8 @@ let rec iter_loop first f elt =
 
 let iter t ~f =
   match !t with
-  | None -> ()
-  | Some first ->
+  | DL Empty -> ()
+  | DL (Elt _ as first) ->
     Header.with_iteration_2
       (Elt.header first)
       first f
@@ -388,23 +390,23 @@ let fold_until  = C.fold_until
 
 let unchecked_iter t ~f =
   match !t with
-  | None -> ()
-  | Some first ->
+  | DL Empty -> ()
+  | DL (Elt _ as first) ->
     let rec loop t f elt =
       f (Elt.value elt);
       let next = Elt.next elt in
       match !t with (* the first element of the bag may have been changed by [f] *)
-      | None -> ()
-      | Some first -> if not (phys_equal first next) then loop t f next
+      | DL Empty -> ()
+      | DL (Elt _ as first) -> if not (phys_equal first next) then loop t f next
     in
     loop t f first
 
-let is_empty t = Option.is_none !t (* more efficient than what Container.Make returns *)
+let is_empty t = !t = DL Empty (* more efficient than what Container.Make returns *)
 
 let fold_right t ~init ~f =
   match !t with
-  | None -> init
-  | Some first ->
+  | DL Empty -> init
+  | DL (Elt _ as first) ->
     Header.with_iteration_3
       (Elt.header first)
       f init first
@@ -423,28 +425,28 @@ let to_list t = fold_right t ~init:[] ~f:(fun x tl -> x :: tl)
 
 let length t =
   match !t with
-  | None -> 0
-  | Some first -> Header.length (Elt.header first)
+  | DL Empty -> 0
+  | DL (Elt _ as first) -> Header.length (Elt.header first)
 
 let sexp_of_t sexp_of_a t = List.sexp_of_t sexp_of_a (to_list t)
 let t_of_sexp a_of_sexp s = of_list (List.t_of_sexp a_of_sexp s)
 
 let copy t = of_list (to_list t)
 
-let clear t = (t := None)
+let clear t = (t := DL Empty)
 
 exception Transfer_src_and_dst_are_same_list
 
 let transfer ~src ~dst =
   if phys_equal src dst then raise Transfer_src_and_dst_are_same_list;
   match !src with
-  | None -> ()
-  | Some src_head ->
+  | DL Empty -> ()
+  | DL (Elt _ as src_head) ->
     match !dst with
-    | None ->
-      dst := Some src_head;
+    | DL Empty ->
+      dst := DL src_head;
       clear src
-    | Some dst_head ->
+    | DL (Elt _ as dst_head) ->
       match Header.merge (Elt.header src_head) (Elt.header dst_head) with
       | `Same_already ->
         raise Transfer_src_and_dst_are_same_list
@@ -461,27 +463,37 @@ let filter_inplace t ~f =
   List.iter to_remove ~f:(fun elt ->
     begin
       match !t with
-      | None -> ()
-      | Some head ->
+      | DL Empty -> ()
+      | DL (Elt _ as head) ->
         if Elt.equal head elt then begin
           let next_elt = Elt.next elt in
-          t := if Elt.equal head next_elt then None else Some next_elt
+          t := if Elt.equal head next_elt then DL Empty else DL next_elt
         end
     end;
     Elt.unlink elt)
 
 exception Elt_does_not_belong_to_list
 
-let first_elt t = !t
-let last_elt t = Option.map ~f:Elt.prev !t
+let first_elt t = match !t with
+  | DL Empty -> None
+  | DL (Elt _ as first) -> Some first
 
-let first t = Option.map ~f:Elt.value (first_elt t)
-let last  t = Option.map ~f:Elt.value (last_elt  t)
+let last_elt t = match !t with
+  | DL Empty -> None
+  | DL (Elt first_elt) -> Some first_elt.prev
+
+let first t = match !t with
+  | DL Empty -> None
+  | DL (Elt first_elt) -> Some first_elt.value
+
+let last t = match !t with
+  | DL Empty -> None
+  | DL (Elt { prev = Elt last_elt }) -> Some last_elt.value
 
 let is_first t elt =
   match !t with
-  | None -> raise Elt_does_not_belong_to_list
-  | Some first ->
+  | DL Empty -> raise Elt_does_not_belong_to_list
+  | DL (Elt _ as first) ->
     if Header.equal (Elt.header first) (Elt.header elt) then
       Elt.equal elt first
     else
@@ -489,8 +501,8 @@ let is_first t elt =
 
 let is_last t elt =
   match !t with
-  | None -> raise Elt_does_not_belong_to_list
-  | Some first ->
+  | DL Empty -> raise Elt_does_not_belong_to_list
+  | DL (Elt _ as first) ->
     if Header.equal (Elt.header first) (Elt.header elt) then begin
       let last = Elt.prev first in
       Elt.equal elt last
@@ -499,13 +511,13 @@ let is_last t elt =
 
 let mem_elt t elt =
   match !t with
-  | None -> false
-  | Some first -> Header.equal (Elt.header first) (Elt.header elt)
+  | DL Empty -> false
+  | DL (Elt _ as first) -> Header.equal (Elt.header first) (Elt.header elt)
 
 let prev t elt =
   match !t with
-  | None -> raise Elt_does_not_belong_to_list
-  | Some first ->
+  | DL Empty -> raise Elt_does_not_belong_to_list
+  | DL (Elt _ as first) ->
     if Elt.equal elt first then
       None
     else if Header.equal (Elt.header first) (Elt.header elt) then
@@ -515,8 +527,8 @@ let prev t elt =
 
 let next t elt =
   match !t with
-  | None -> raise Elt_does_not_belong_to_list
-  | Some first ->
+  | DL Empty -> raise Elt_does_not_belong_to_list
+  | DL (Elt _ as first) ->
     let last = Elt.prev first in
     if Elt.equal elt last then
       None
@@ -527,8 +539,8 @@ let next t elt =
 
 let insert_after t elt v =
   match !t with
-  | None -> raise Elt_does_not_belong_to_list
-  | Some first ->
+  | DL Empty -> raise Elt_does_not_belong_to_list
+  | DL (Elt _ as first) ->
     if Header.equal (Elt.header first) (Elt.header elt) then
       Elt.insert_after elt v
     else
@@ -536,11 +548,11 @@ let insert_after t elt v =
 
 let insert_before t elt v =
   match !t with
-  | None -> raise Elt_does_not_belong_to_list
-  | Some first ->
+  | DL Empty -> raise Elt_does_not_belong_to_list
+  | DL (Elt _ as first) ->
     if Elt.equal elt first then begin
       let new_elt = Elt.insert_before first v in
-      t := Some new_elt;
+      t := DL new_elt;
       new_elt
     end else if Header.equal (Elt.header first) (Elt.header elt) then
       Elt.insert_before elt v
@@ -549,43 +561,43 @@ let insert_before t elt v =
 
 let insert_empty t v =
   let new_elt = Elt.create v in
-  t := Some new_elt;
+  t := DL new_elt;
   new_elt
 
 let insert_last t v =
   match !t with
-  | None -> insert_empty t v
-  | Some first -> Elt.insert_before first v
+  | DL Empty -> insert_empty t v
+  | DL (Elt _ as first) -> Elt.insert_before first v
 
 let insert_first t v =
   match !t with
-  | None -> insert_empty t v
-  | Some first ->
+  | DL Empty -> insert_empty t v
+  | DL (Elt _ as first) ->
     let new_elt = Elt.insert_before first v in
-    t := Some new_elt;
+    t := DL new_elt;
     new_elt
 
 let remove_last t =
   match !t with
-  | None -> None
-  | Some first ->
+  | DL Empty -> None
+  | DL (Elt _ as first) ->
     let last = Elt.unlink_before first in
-    if Elt.equal first last then t := None;
+    if Elt.equal first last then t := DL Empty;
     Some (Elt.value last)
 
 let remove_first t =
   match !t with
-  | None -> None
-  | Some first ->
+  | DL Empty -> None
+  | DL (Elt _ as first) ->
     let second = Elt.next first in
     ignore (Elt.unlink first);
-    t := if Elt.equal first second then None else Some second;
+    t := if Elt.equal first second then DL Empty else DL second;
     Some (Elt.value first)
 
 let remove t elt =
   match !t with
-  | None -> raise Elt_does_not_belong_to_list
-  | Some first ->
+  | DL Empty -> raise Elt_does_not_belong_to_list
+  | DL (Elt _ as first) ->
     if Elt.equal elt first then
       ignore (remove_first t)
     else if Header.equal (Elt.header first) (Elt.header elt) then
@@ -600,22 +612,22 @@ let move_before t elt ~anchor =
     raise Invalid_move__elt_equals_anchor;
   if Header.equal (Elt.header anchor) (Elt.header elt) then
     match !t with
-    | None -> raise Elt_does_not_belong_to_list
-    | Some first ->
+    | DL Empty -> raise Elt_does_not_belong_to_list
+    | DL (Elt _ as first) ->
       if Header.equal (Elt.header first) (Elt.header elt) then begin
         (* unlink [elt] *)
         let after_elt = Elt.next elt in
         Elt.split_or_splice_before elt after_elt;
         let first =
           if Elt.equal first elt then begin
-            t := Some after_elt;
+            t := DL after_elt;
             after_elt
           end else
             first
         in
         (* splice [elt] in before [anchor] *)
         Elt.split_or_splice_before anchor elt;
-        if Elt.equal first anchor then t := Some elt;
+        if Elt.equal first anchor then t := DL elt;
       end else
         raise Elt_does_not_belong_to_list
   else
@@ -623,8 +635,8 @@ let move_before t elt ~anchor =
 
 let move_to_front t elt =
   match !t with
-  | None -> raise Elt_does_not_belong_to_list
-  | Some first ->
+  | DL Empty -> raise Elt_does_not_belong_to_list
+  | DL (Elt _ as first) ->
     if not (Elt.equal elt first) then move_before t elt ~anchor:first
 
 let move_after t elt ~anchor =
@@ -632,13 +644,13 @@ let move_after t elt ~anchor =
     raise Invalid_move__elt_equals_anchor;
   if Header.equal (Elt.header anchor) (Elt.header elt) then
     match !t with
-    | None -> raise Elt_does_not_belong_to_list
-    | Some first ->
+    | DL Empty -> raise Elt_does_not_belong_to_list
+    | DL (Elt _ as first) ->
       if Header.equal (Elt.header first) (Elt.header elt) then begin
         (* unlink [elt] *)
         let after_elt = Elt.next elt in
         Elt.split_or_splice_before elt after_elt;
-        if Elt.equal first elt then t := Some after_elt;
+        if Elt.equal first elt then t := DL after_elt;
         (* splice [elt] in after [anchor] *)
         Elt.split_or_splice_after anchor elt
       end else
@@ -648,8 +660,8 @@ let move_after t elt ~anchor =
 
 let move_to_back t elt =
   match !t with
-  | None -> raise Elt_does_not_belong_to_list
-  | Some first ->
+  | DL Empty -> raise Elt_does_not_belong_to_list
+  | DL (Elt _ as first) ->
     let last = Elt.prev first in
     if not (Elt.equal elt last) then move_after t elt ~anchor:last
 
