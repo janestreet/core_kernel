@@ -54,8 +54,7 @@ module Poly = struct
   include Hashtbl.Poly
 
   include Bin_prot.Utils.Make_iterable_binable2 (struct
-      type ('a, 'b) z = ('a, 'b) t
-      type ('a, 'b) t = ('a, 'b) z
+      type nonrec ('a, 'b) t = ('a, 'b) t
       type ('a, 'b) el = 'a * 'b [@@deriving bin_io]
 
       let caller_identity = Bin_prot.Shape.Uuid.of_string "8f3e445c-4992-11e6-a279-3703be311e7b"

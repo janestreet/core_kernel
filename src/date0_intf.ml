@@ -2,7 +2,7 @@ open! Import
 open Std_internal
 
 module type Date0 = sig
-  type t [@@deriving bin_io, hash, sexp]
+  type t [@@deriving bin_io, hash, sexp, typerep]
 
   include Hashable_binable with type t := t
 

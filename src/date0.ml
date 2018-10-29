@@ -15,7 +15,7 @@ module Stable = struct
   module V1 = struct
     module Without_comparable = struct
       module T : sig
-        type t [@@deriving bin_io, hash]
+        type t [@@deriving bin_io, hash, typerep]
 
         val create_exn : y:int -> m:Month.Stable.V1.t -> d:int -> t
 
@@ -36,7 +36,8 @@ module Stable = struct
            all packed into a single immediate int (so from 4 words down to 1).
         *)
         type t = int
-        [@@deriving hash, bin_shape ~basetype:"899ee3e0-490a-11e6-a10a-a3734f733566"]
+        [@@deriving hash, typerep,
+                    bin_shape ~basetype:"899ee3e0-490a-11e6-a10a-a3734f733566"]
 
         let create0 ~year ~month ~day =
           (* create_exn's validation make sure that each value fits *)
