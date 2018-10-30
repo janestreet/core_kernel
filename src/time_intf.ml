@@ -34,7 +34,7 @@ module type Zone = sig
     -> (Time.t * Time.Span.t) option
 end
 
-module type S = sig
+module type Basic = sig
   module Time : Time0_intf.S
 
   (*_ necessary to preserve type equality with the Time functor argument *)
@@ -71,6 +71,12 @@ module type S = sig
 
   val is_earlier : t -> than:t -> bool
   val is_later   : t -> than:t -> bool
+end
+
+module type Shared = sig
+  type t
+  module Span : sig type t end
+  module Ofday : sig type t end
 
   (** {6 Conversions} *)
 
@@ -222,6 +228,11 @@ module type S = sig
     -> ofday:Ofday.t
     -> zone:Zone.t
     -> t
+end
+
+module type S = sig
+  include Basic
+  include Shared with type t := t with module Span := Span with module Ofday := Ofday
 end
 
 module type Time = sig

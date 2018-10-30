@@ -286,155 +286,148 @@ let%expect_test "[Config.durations]" =
     (4.294967296s 8.589934592s) |}];
 ;;
 
-module Priority_queue = struct
+let create_unit ?level_bits ?(start = Time.epoch) ?(alarm_precision = gibi_nanos 1.) () =
+  create
+    ~config:(create_config ?level_bits () ~alarm_precision)
+    ~start
+;;
 
-  open Priority_queue [@@warning "-3"]
+let%expect_test "[min_allowed_alarm_interval_num], [max_allowed_alarm_interval_num]" =
+  let test level_bits =
+    let t = create_unit () ~level_bits in
+    require_equal [%here]
+      (module Interval_num)
+      (min_allowed_alarm_interval_num t)
+      Interval_num.zero;
+    print_s [%message
+      ""
+        ~min_allowed_alarm_interval_num:(min_allowed_alarm_interval_num t : Interval_num.t)
+        ~max_allowed_alarm_interval_num:(max_allowed_alarm_interval_num t : Interval_num.t)] in
+  test [ 1 ];
+  [%expect {|
+      ((min_allowed_alarm_interval_num 0)
+       (max_allowed_alarm_interval_num 1)) |}];
+  test [ 1; 1 ];
+  [%expect {|
+      ((min_allowed_alarm_interval_num 0)
+       (max_allowed_alarm_interval_num 5)) |}];
+  test [ 1; 1; 1 ];
+  [%expect {|
+      ((min_allowed_alarm_interval_num 0)
+       (max_allowed_alarm_interval_num 11)) |}];
+  test [ 2 ];
+  [%expect {|
+      ((min_allowed_alarm_interval_num 0)
+       (max_allowed_alarm_interval_num 3)) |}];
+  test [ 3 ];
+  [%expect {|
+      ((min_allowed_alarm_interval_num 0)
+       (max_allowed_alarm_interval_num 7)) |}];
+  test [ 3; 1 ];
+  [%expect {|
+      ((min_allowed_alarm_interval_num 0)
+       (max_allowed_alarm_interval_num 23)) |}];
+;;
 
-  let show t = print_s [%sexp (t : _ t)]
-
-  let create_unit ~level_bits =
-    create ~level_bits:(Level_bits.create_exn level_bits) ()
-  ;;
-
-  let%expect_test "[min_allowed_key], [max_allowed_key]" =
-    let test level_bits =
-      let t = create_unit ~level_bits in
-      require_equal [%here] (module Key) (min_allowed_key t) Key.zero;
-      print_s [%message
-        ""
-          ~min_allowed_key:(min_allowed_key t : Key.t)
-          ~max_allowed_key:(max_allowed_key t : Key.t)] in
-    test [ 1 ];
-    [%expect {|
-      ((min_allowed_key 0)
-       (max_allowed_key 1)) |}];
-    test [ 1; 1 ];
-    [%expect {|
-      ((min_allowed_key 0)
-       (max_allowed_key 5)) |}];
-    test [ 1; 1; 1 ];
-    [%expect {|
-      ((min_allowed_key 0)
-       (max_allowed_key 11)) |}];
-    test [ 2 ];
-    [%expect {|
-      ((min_allowed_key 0)
-       (max_allowed_key 3)) |}];
-    test [ 3 ];
-    [%expect {|
-      ((min_allowed_key 0)
-       (max_allowed_key 7)) |}];
-    test [ 3; 1 ];
-    [%expect {|
-      ((min_allowed_key 0)
-       (max_allowed_key 23)) |}];
-  ;;
-
-  let%expect_test "[is_empty], [key], [length], [mem]" [@tags "64-bits-only"] =
-    let t = create_unit ~level_bits:[ 1 ] in
-    require [%here] (is_empty t);
-    require [%here] (length t = 0);
-    let e1 = add t ~key:Key.zero () in
-    let e2 = add t ~key:Key.zero () in
-    let show () =
-      print_s [%message
-        ""
-          ~length:(length t : int)
-          ~is_empty:(is_empty t : bool)
-          ~key1:(Or_error.try_with (fun () -> Elt.key t e1) : Key.t Or_error.t)
-          ~key2:(Or_error.try_with (fun () -> Elt.key t e2) : Key.t Or_error.t)
-          ~mem1:(mem t e1 : bool)
-          ~mem2:(mem t e2 : bool)] in
-    show ();
-    [%expect {|
+let%expect_test "[is_empty], [interval_num], [length], [mem]" [@tags "64-bits-only"] =
+  let t = create_unit () ~level_bits:[ 1 ] in
+  require [%here] (is_empty t);
+  require [%here] (length t = 0);
+  let a1 = add_at_interval_num t ~at:Interval_num.zero () in
+  let a2 = add_at_interval_num t ~at:Interval_num.zero () in
+  let show () =
+    print_s [%message
+      ""
+        ~length:(length t : int)
+        ~is_empty:(is_empty t : bool)
+        ~interval_num1:(Or_error.try_with (fun () -> Alarm.interval_num t a1) : Interval_num.t Or_error.t)
+        ~interval_num2:(Or_error.try_with (fun () -> Alarm.interval_num t a2) : Interval_num.t Or_error.t)
+        ~mem1:(mem t a1 : bool)
+        ~mem2:(mem t a2 : bool)] in
+  show ();
+  [%expect {|
       ((length   2)
        (is_empty false)
-       (key1 (Ok 0))
-       (key2 (Ok 0))
+       (interval_num1 (Ok 0))
+       (interval_num2 (Ok 0))
        (mem1 true)
        (mem2 true)) |}];
-    remove t e1;
-    show ();
-    [%expect {|
+  remove t a1;
+  show ();
+  [%expect {|
       ((length   1)
        (is_empty false)
-       (key1 (
+       (interval_num1 (
          Error (
            "Timing_wheel.Priority_queue got invalid elt"
            (elt "<Pool.Pointer.t: 0x00000001>"))))
-       (key2 (Ok 0))
+       (interval_num2 (Ok 0))
        (mem1 false)
        (mem2 true)) |}];
-    change_key t e2 ~key:(Key.of_int 1);
-    show ();
-    [%expect {|
+  reschedule_at_interval_num t a2 ~at:(Interval_num.of_int 1);
+  show ();
+  [%expect {|
       ((length   1)
        (is_empty false)
-       (key1 (
+       (interval_num1 (
          Error (
            "Timing_wheel.Priority_queue got invalid elt"
            (elt "<Pool.Pointer.t: 0x00000001>"))))
-       (key2 (Ok 1))
+       (interval_num2 (Ok 1))
        (mem1 false)
        (mem2 true)) |}];
-    require_does_raise [%here] (fun () -> change_key t e1 ~key:(Key.of_int 1));
-    [%expect {|
-      ("Timing_wheel.Priority_queue got invalid elt"
-       (elt "<Pool.Pointer.t: 0x00000001>")) |}];
-    remove t e2;
-    show ();
-    [%expect {|
+  require_does_raise [%here] (fun () ->
+    reschedule_at_interval_num t a1 ~at:(Interval_num.of_int 1));
+  [%expect {|
+      (Failure "Timing_wheel_ns cannot reschedule alarm not in timing wheel") |}];
+  remove t a2;
+  show ();
+  [%expect {|
       ((length   0)
        (is_empty true)
-       (key1 (
+       (interval_num1 (
          Error (
            "Timing_wheel.Priority_queue got invalid elt"
            (elt "<Pool.Pointer.t: 0x00000001>"))))
-       (key2 (
+       (interval_num2 (
          Error (
            "Timing_wheel.Priority_queue got invalid elt"
            (elt "<Pool.Pointer.t: 0x40000008>"))))
        (mem1 false)
        (mem2 false)) |}];
-  ;;
+;;
 
-  let%expect_test "[add] failures" =
-    let t = create_unit ~level_bits:[ 1 ] in
-    let add ~key = ignore (add t ~key () : _ Elt.t) in
-    for key = Key.to_int_exn (min_allowed_key t)
-      to      Key.to_int_exn (max_allowed_key t)
-    do
-      add ~key:(Key.of_int key);
-    done;
-    let check_adds_fail () =
-      List.iter
-        [ Key.min_value
-        ; Key.pred (min_allowed_key t)
-        ; Key.succ (max_allowed_key t)
-        ; Key.succ Key.max_representable
-        ; Key.max_value
-        ]
-        ~f:(fun key ->
-          require_does_raise [%here] (fun () -> add ~key))
-    in
-    check_adds_fail ();
-    [%expect {|
-      ("Timing_wheel.Priority_queue got invalid key"
-       (key -4_611_686_018_427_387_904)
-       (timing_wheel (
-         (min_allowed_key 0)
-         (max_allowed_key 1)
-         (elts (
-           ((key 0) (value _))
-           ((key 1) (value _)))))))
-      ("Timing_wheel.Priority_queue got invalid key"
-       (key -1)
-       (timing_wheel (
-         (min_allowed_key 0)
-         (max_allowed_key 1)
-         (elts (
-           ((key 0) (value _))
-           ((key 1) (value _)))))))
+let advance_clock_to_interval_num t ~to_ ~handle_fired =
+  advance_clock t ~to_:(interval_num_start t to_) ~handle_fired
+;;
+
+let%expect_test "[add] failures" =
+  let t = create_unit () ~level_bits:[ 1 ] in
+  let add ~at = ignore (add_at_interval_num t ~at () : _ Alarm.t) in
+  for interval_num = Interval_num.to_int_exn (min_allowed_alarm_interval_num t)
+    to      Interval_num.to_int_exn (max_allowed_alarm_interval_num t)
+  do
+    add ~at:(Interval_num.of_int interval_num);
+  done;
+  let check_adds_fail () =
+    List.iter
+      [ Interval_num.min_value
+      ; Interval_num.pred (min_allowed_alarm_interval_num t)
+      ; Interval_num.succ (max_allowed_alarm_interval_num t)
+      ; Interval_num.succ Interval_num.max_representable
+      ; Interval_num.max_value
+      ]
+      ~f:(fun at ->
+        require_does_raise [%here] (fun () -> add ~at))
+  in
+  check_adds_fail ();
+  [%expect {|
+      ("Timing_wheel.interval_num_start got too small interval_num"
+       (interval_num     -4_611_686_018_427_387_904)
+       (min_interval_num 0))
+      ("Timing_wheel.interval_num_start got too small interval_num"
+       (interval_num     -1)
+       (min_interval_num 0))
       ("Timing_wheel.Priority_queue got invalid key"
        (key 2)
        (timing_wheel (
@@ -443,33 +436,18 @@ module Priority_queue = struct
          (elts (
            ((key 0) (value _))
            ((key 1) (value _)))))))
-      ("Timing_wheel.Priority_queue got invalid key"
-       (key 2_305_843_009_213_693_952)
-       (timing_wheel (
-         (min_allowed_key 0)
-         (max_allowed_key 1)
-         (elts (
-           ((key 0) (value _))
-           ((key 1) (value _)))))))
-      ("Timing_wheel.Priority_queue got invalid key"
-       (key 4_611_686_018_427_387_903)
-       (timing_wheel (
-         (min_allowed_key 0)
-         (max_allowed_key 1)
-         (elts (
-           ((key 0) (value _))
-           ((key 1) (value _))))))) |}];
-    increase_min_allowed_key t ~key:Key.one ~handle_removed:ignore;
-    check_adds_fail ();
-    [%expect {|
-      ("Timing_wheel.Priority_queue got invalid key"
-       (key -4_611_686_018_427_387_904)
-       (timing_wheel (
-         (min_allowed_key 1)
-         (max_allowed_key 2)
-         (elts ((
-           (key   1)
-           (value _)))))))
+      ("Timing_wheel.interval_num_start got too large interval_num"
+       (interval_num       2_305_843_009_213_693_952)
+       (t.max_interval_num 3_964_975_476))
+      ("Timing_wheel.interval_num_start got too large interval_num"
+       (interval_num       4_611_686_018_427_387_903)
+       (t.max_interval_num 3_964_975_476)) |}];
+  advance_clock_to_interval_num t ~to_:Interval_num.one ~handle_fired:ignore;
+  check_adds_fail ();
+  [%expect {|
+      ("Timing_wheel.interval_num_start got too small interval_num"
+       (interval_num     -4_611_686_018_427_387_904)
+       (min_interval_num 0))
       ("Timing_wheel.Priority_queue got invalid key"
        (key 0)
        (timing_wheel (
@@ -486,31 +464,18 @@ module Priority_queue = struct
          (elts ((
            (key   1)
            (value _)))))))
-      ("Timing_wheel.Priority_queue got invalid key"
-       (key 2_305_843_009_213_693_952)
-       (timing_wheel (
-         (min_allowed_key 1)
-         (max_allowed_key 2)
-         (elts ((
-           (key   1)
-           (value _)))))))
-      ("Timing_wheel.Priority_queue got invalid key"
-       (key 4_611_686_018_427_387_903)
-       (timing_wheel (
-         (min_allowed_key 1)
-         (max_allowed_key 2)
-         (elts ((
-           (key   1)
-           (value _))))))) |}];
-    increase_min_allowed_key t ~key:(max_allowed_key t) ~handle_removed:ignore;
-    check_adds_fail ();
-    [%expect {|
-      ("Timing_wheel.Priority_queue got invalid key"
-       (key -4_611_686_018_427_387_904)
-       (timing_wheel (
-         (min_allowed_key 2)
-         (max_allowed_key 3)
-         (elts ()))))
+      ("Timing_wheel.interval_num_start got too large interval_num"
+       (interval_num       2_305_843_009_213_693_952)
+       (t.max_interval_num 3_964_975_476))
+      ("Timing_wheel.interval_num_start got too large interval_num"
+       (interval_num       4_611_686_018_427_387_903)
+       (t.max_interval_num 3_964_975_476)) |}];
+  advance_clock_to_interval_num t ~to_:(max_allowed_alarm_interval_num t) ~handle_fired:ignore;
+  check_adds_fail ();
+  [%expect {|
+      ("Timing_wheel.interval_num_start got too small interval_num"
+       (interval_num     -4_611_686_018_427_387_904)
+       (min_interval_num 0))
       ("Timing_wheel.Priority_queue got invalid key"
        (key 1)
        (timing_wheel (
@@ -523,272 +488,291 @@ module Priority_queue = struct
          (min_allowed_key 2)
          (max_allowed_key 3)
          (elts ()))))
-      ("Timing_wheel.Priority_queue got invalid key"
-       (key 2_305_843_009_213_693_952)
-       (timing_wheel (
-         (min_allowed_key 2)
-         (max_allowed_key 3)
-         (elts ()))))
-      ("Timing_wheel.Priority_queue got invalid key"
-       (key 4_611_686_018_427_387_903)
-       (timing_wheel (
-         (min_allowed_key 2)
-         (max_allowed_key 3)
-         (elts ())))) |}];
-    increase_min_allowed_key t ~key:Key.max_representable ~handle_removed:ignore;
-    check_adds_fail ();
-    [%expect {|
-      ("Timing_wheel.Priority_queue got invalid key"
-       (key -4_611_686_018_427_387_904)
-       (timing_wheel (
-         (min_allowed_key 2_305_843_009_213_693_951)
-         (max_allowed_key 2_305_843_009_213_693_951)
-         (elts ()))))
-      ("Timing_wheel.Priority_queue got invalid key"
-       (key 2_305_843_009_213_693_950)
-       (timing_wheel (
-         (min_allowed_key 2_305_843_009_213_693_951)
-         (max_allowed_key 2_305_843_009_213_693_951)
-         (elts ()))))
-      ("Timing_wheel.Priority_queue got invalid key"
-       (key 2_305_843_009_213_693_952)
-       (timing_wheel (
-         (min_allowed_key 2_305_843_009_213_693_951)
-         (max_allowed_key 2_305_843_009_213_693_951)
-         (elts ()))))
-      ("Timing_wheel.Priority_queue got invalid key"
-       (key 2_305_843_009_213_693_952)
-       (timing_wheel (
-         (min_allowed_key 2_305_843_009_213_693_951)
-         (max_allowed_key 2_305_843_009_213_693_951)
-         (elts ()))))
-      ("Timing_wheel.Priority_queue got invalid key"
-       (key 4_611_686_018_427_387_903)
-       (timing_wheel (
-         (min_allowed_key 2_305_843_009_213_693_951)
-         (max_allowed_key 2_305_843_009_213_693_951)
-         (elts ())))) |}];
-  ;;
+      ("Timing_wheel.interval_num_start got too large interval_num"
+       (interval_num       2_305_843_009_213_693_952)
+       (t.max_interval_num 3_964_975_476))
+      ("Timing_wheel.interval_num_start got too large interval_num"
+       (interval_num       4_611_686_018_427_387_903)
+       (t.max_interval_num 3_964_975_476)) |}];
+  advance_clock t ~to_:Time_ns.max_value ~handle_fired:ignore;
+  check_adds_fail ();
+  [%expect{|
+    ("Timing_wheel.interval_num_start got too small interval_num"
+     (interval_num     -4_611_686_018_427_387_904)
+     (min_interval_num 0))
+    ("Timing_wheel.Priority_queue got invalid key"
+     (key 3_964_975_475)
+     (timing_wheel (
+       (min_allowed_key 3_964_975_476)
+       (max_allowed_key 3_964_975_477)
+       (elts ()))))
+    ("Timing_wheel.interval_num_start got too large interval_num"
+     (interval_num       3_964_975_477)
+     (t.max_interval_num 3_964_975_476))
+    ("Timing_wheel.interval_num_start got too large interval_num"
+     (interval_num       2_305_843_009_213_693_952)
+     (t.max_interval_num 3_964_975_476))
+    ("Timing_wheel.interval_num_start got too large interval_num"
+     (interval_num       4_611_686_018_427_387_903)
+     (t.max_interval_num 3_964_975_476)) |}];
+;;
 
-  let%expect_test "[clear]" =
-    let t = create_unit ~level_bits:[ 1; 1 ] in
-    clear t;
-    let _e1 = add t ~key:Key.zero       () in
-    let _e2 = add t ~key:(Key.of_int 2) () in
-    show t;
-    [%expect {|
-      ((min_allowed_key 0)
-       (max_allowed_key 5)
-       (elts (
-         ((key 0) (value _))
-         ((key 2) (value _))))) |}];
-    clear t;
-    show t;
-    [%expect {|
-      ((min_allowed_key 0)
-       (max_allowed_key 5)
-       (elts ())) |}];
-  ;;
+let%expect_test "[clear]" =
+  let t = create_unit () ~level_bits:[ 1; 1 ] in
+  clear t;
+  let _e1 = add_at_interval_num t ~at:Interval_num.zero       () in
+  let _e2 = add_at_interval_num t ~at:(Interval_num.of_int 2) () in
+  show t;
+  [%expect {|
+      ((config ((alarm_precision 1.073741824s) (level_bits (1 1))))
+       (start            "1970-01-01 00:00:00Z")
+       (max_interval_num 3_964_975_476)
+       (now              "1970-01-01 00:00:00Z")
+       (alarms (
+         ((at "1970-01-01 00:00:00Z")           (value _))
+         ((at "1970-01-01 00:00:02.147483648Z") (value _))))) |}];
+  clear t;
+  show t;
+  [%expect {|
+      ((config ((alarm_precision 1.073741824s) (level_bits (1 1))))
+       (start            "1970-01-01 00:00:00Z")
+       (max_interval_num 3_964_975_476)
+       (now              "1970-01-01 00:00:00Z")
+       (alarms ())) |}];
+;;
 
-  let increase_min_allowed_key_return_removed_keys t ~key =
-    let r = ref [] in
-    let handle_removed elt = r := Elt.key t elt :: !r in
-    increase_min_allowed_key t ~key ~handle_removed;
-    !r
-  ;;
+let advance_clock_to_interval_num_return_removed_interval_nums t ~to_ =
+  let r = ref [] in
+  let handle_fired alarm = r := Alarm.interval_num t alarm :: !r in
+  advance_clock_to_interval_num t ~to_ ~handle_fired;
+  !r
+;;
 
-  let%expect_test "[increase_min_allowed_key] and [Key.max_representable]" =
-    let t = create_unit ~level_bits:[ 1 ] in
-    let add ~key = ignore (add t ~key () : _ Elt.t) in
-    add ~key:Key.zero;
-    add ~key:Key.one;
-    require_does_raise [%here] (fun () ->
-      increase_min_allowed_key t ~key:Key.( succ max_representable )
-        ~handle_removed:ignore);
-    [%expect {|
-      ("Timing_wheel.increase_min_allowed_key got invalid key"
-       (key 2_305_843_009_213_693_952)
-       (timing_wheel (
-         (min_allowed_key 0)
-         (max_allowed_key 1)
-         (elts (
-           ((key 0) (value _))
-           ((key 1) (value _))))))) |}];
-    increase_min_allowed_key t ~key:Key.max_representable ~handle_removed:ignore;
-    show t;
-    [%expect {|
-      ((min_allowed_key 2_305_843_009_213_693_951)
-       (max_allowed_key 2_305_843_009_213_693_951)
-       (elts ())) |}];
-    add ~key:Key.max_representable;
-    show t;
-    [%expect {|
-      ((min_allowed_key 2_305_843_009_213_693_951)
-       (max_allowed_key 2_305_843_009_213_693_951)
-       (elts ((
-         (key   2_305_843_009_213_693_951)
-         (value _))))) |}];
-  ;;
+let%expect_test "[advance_clock] to max interval num" =
+  let t = create_unit () ~level_bits:[ 1 ] in
+  let add ~at = ignore (add_at_interval_num t ~at () : _ Alarm.t) in
+  add ~at:Interval_num.zero;
+  add ~at:Interval_num.one;
+  require_does_raise [%here] (fun () ->
+    advance_clock_to_interval_num t ~to_:Interval_num.( succ max_representable )
+      ~handle_fired:ignore);
+  [%expect {|
+      ("Timing_wheel.interval_num_start got too large interval_num"
+       (interval_num       2_305_843_009_213_693_952)
+       (t.max_interval_num 3_964_975_476)) |}];
+  let max_interval_num = interval_num t Time_ns.max_value in
+  advance_clock_to_interval_num
+    t
+    ~to_:max_interval_num
+    ~handle_fired:ignore;
+  show t;
+  [%expect{|
+    ((config ((alarm_precision 1.073741824s) (level_bits (1))))
+     (start            "1970-01-01 00:00:00Z")
+     (max_interval_num 3_964_975_476)
+     (now              "2104-11-28 23:59:59.715508224Z")
+     (alarms ())) |}];
+  add ~at:max_interval_num;
+  show t;
+  [%expect{|
+    ((config ((alarm_precision 1.073741824s) (level_bits (1))))
+     (start            "1970-01-01 00:00:00Z")
+     (max_interval_num 3_964_975_476)
+     (now              "2104-11-28 23:59:59.715508224Z")
+     (alarms ((
+       (at    "2104-11-28 23:59:59.715508224Z")
+       (value _))))) |}];
+;;
 
-  let%expect_test "[increase_min_allowed_key]" =
-    let num_tests = ref 0 in
-    (* [all_sums n] returns all combinations of nonnegative ints that sum to [n]. *)
-    let all_sums n =
-      let results = Array.create ~len:(n + 1) [] in
-      results.( 0 ) <- [[]];
-      for i = 1 to n do
-        results.( i ) <-
-          List.concat
-            (List.init i ~f:(fun j ->
-               let first = j + 1 in
-               List.map results.( i - first ) ~f:(fun rest -> first :: rest)));
-      done;
-      results.( n )
+let%expect_test "[advance_clock_to_interval_num]" =
+  let num_tests = ref 0 in
+  (* [all_sums n] returns all combinations of nonnegative ints that sum to [n]. *)
+  let all_sums n =
+    let results = Array.create ~len:(n + 1) [] in
+    results.( 0 ) <- [[]];
+    for i = 1 to n do
+      results.( i ) <-
+        List.concat
+          (List.init i ~f:(fun j ->
+             let first = j + 1 in
+             List.map results.( i - first ) ~f:(fun rest -> first :: rest)));
+    done;
+    results.( n )
+  in
+  let module Initial_min_allowed_interval_num = struct
+    type t =
+      | Zero
+      | Large
+    [@@deriving enumerate, sexp_of]
+  end in
+  let test
+        ~num_bits
+        ~level_bits
+        ~(initial_min_allowed_interval_num : Initial_min_allowed_interval_num.t)
+        ~step =
+    incr num_tests;
+    let t = create_unit () ~level_bits in
+    let max_interval_num = interval_num t Time_ns.max_value in
+    let initial_min_allowed_interval_num =
+      match initial_min_allowed_interval_num with
+      | Zero -> Interval_num.zero
+      | Large ->
+        Interval_num.sub max_interval_num
+          (Interval_num.Span.of_int63 (Int63.shift_left Int63.one num_bits))
     in
-    let test ~num_bits:_ ~level_bits ~initial_min_allowed_key ~step =
-      incr num_tests;
-      let t = create_unit ~level_bits in
-      try
-        increase_min_allowed_key t ~key:initial_min_allowed_key ~handle_removed:ignore;
-        require_equal [%here] (module Key) (min_allowed_key t) initial_min_allowed_key;
-        require [%here]
-          (Key.( >= ) (max_allowed_key t)
-             (Key.add (min_allowed_key t)
-                (Key.Span.of_int63 Int63.( shift_left one num_bits - one ))));
-        let keys =
-          List.init (Key.Span.to_int_exn
-                       (Key.diff (max_allowed_key t) (min_allowed_key t)))
-            ~f:(fun i -> Key.add (min_allowed_key t) (Key.Span.of_int i))
+    try
+      advance_clock_to_interval_num t ~to_:initial_min_allowed_interval_num ~handle_fired:ignore;
+      require_equal
+        [%here]
+        (module Interval_num)
+        (min_allowed_alarm_interval_num t)
+        initial_min_allowed_interval_num;
+      require [%here]
+        (Interval_num.( >= ) (max_allowed_alarm_interval_num t)
+           (Interval_num.add (min_allowed_alarm_interval_num t)
+              (Interval_num.Span.of_int63 Int63.( shift_left one num_bits - one ))));
+      let interval_nums =
+        List.init (Interval_num.Span.to_int_exn
+                     (Interval_num.diff (max_allowed_alarm_interval_num t) (min_allowed_alarm_interval_num t)))
+          ~f:(fun i -> Interval_num.add (min_allowed_alarm_interval_num t) (Interval_num.Span.of_int i))
+      in
+      let n = ref 0 in
+      List.iter interval_nums ~f:(fun at ->
+        ignore (add_at_interval_num t ~at () : _ Alarm.t);
+        incr n;
+        require [%here] (length t = !n));
+      let removed = ref [] in
+      while length t > 0 do
+        let interval_nums_removed =
+          advance_clock_to_interval_num_return_removed_interval_nums t
+            ~to_:(Interval_num.min max_interval_num
+                    (Interval_num.add (min_allowed_alarm_interval_num t) step))
         in
-        let n = ref 0 in
-        List.iter keys ~f:(fun key ->
-          ignore (add t ~key () : _ Elt.t);
-          incr n;
-          require [%here] (length t = !n));
-        let removed = ref [] in
-        while length t > 0 do
-          let keys_removed =
-            increase_min_allowed_key_return_removed_keys t
-              ~key:(Key.min Key.max_representable
-                      (Key.add (min_allowed_key t) step))
-          in
-          removed := keys_removed @ !removed;
-          List.iter keys_removed ~f:(fun key ->
-            require [%here] (Key.( < ) key (min_allowed_key t)))
-        done;
-        let keys_removed = List.sort !removed ~compare:Key.compare in
-        require [%here] (Poly.equal keys_removed keys);
-      with exn ->
-        failwiths "failure" (exn, t) [%sexp_of: exn * _ t]
-    in
-    let num_bits = 6 in
-    let all_sums = all_sums num_bits in
-    List.iter
-      [ Key.zero
-      ; Key.sub Key.max_representable
-          (Key.Span.of_int63 (Int63.shift_left Int63.one num_bits))]
-      ~f:(fun initial_min_allowed_key ->
-        for step = 1 to 1 lsl num_bits do
-          List.iter all_sums ~f:(fun level_bits ->
-            test ~num_bits ~level_bits ~initial_min_allowed_key
-              ~step:(Key.Span.of_int step))
-        done);
-    print_s [%message (num_tests : int ref)];
-    [%expect {|
-      (num_tests 4_096) |}];
-  ;;
+        removed := interval_nums_removed @ !removed;
+        List.iter interval_nums_removed ~f:(fun interval_num ->
+          require [%here] (Interval_num.( < ) interval_num (min_allowed_alarm_interval_num t)))
+      done;
+      let interval_nums_removed = List.sort !removed ~compare:Interval_num.compare in
+      require [%here] (Poly.equal interval_nums_removed interval_nums);
+    with exn ->
+      failwiths "failure" (exn, t) [%sexp_of: exn * _ t]
+  in
+  let num_bits = 6 in
+  let all_sums = all_sums num_bits in
+  List.iter Initial_min_allowed_interval_num.all
+    ~f:(fun initial_min_allowed_interval_num ->
+      for step = 1 to 1 lsl num_bits do
+        List.iter all_sums ~f:(fun level_bits ->
+          test ~num_bits ~level_bits ~initial_min_allowed_interval_num
+            ~step:(Interval_num.Span.of_int step))
+      done);
+  print_s [%message (num_tests : int ref)];
+  [%expect{| (num_tests 4_096) |}];
+;;
 
-  module Key_option = struct
-    type t = Key.t option [@@deriving compare, sexp_of]
-    let equal = [%compare.equal: t]
-  end
-
-  let%expect_test "[increase_min_allowed_key]" =
-    let t = create_unit ~level_bits:[ 1; 1; 1; 1 ] in
-    require [%here] (is_none (min_key t));
-    let _elt = add t ~key:Key.zero () in
-    require_equal [%here] (module Key_option) (min_key t) (Some Key.zero);
-    let max_key = 10 in
-    for key = 1 to max_key; do
-      let key = Key.of_int key in
-      require_does_not_raise [%here] (fun () -> ignore (add t ~key () : _ Elt.t));
-      require_equal [%here] (module Key_option) (min_key t) (Some Key.zero);
-    done;
-    for key = 1 to max_key + 1; do
-      let key = Key.of_int key in
-      begin match increase_min_allowed_key_return_removed_keys t ~key with
-      | [ key' ] -> require_equal [%here] (module Key) key' (Key.pred key)
-      | _ -> require [%here] false
-      end;
-      require_equal [%here] (module Key_option)
-        (min_key t)
-        (if Key.( <= ) key (Key.of_int max_key) then Some key else None);
-    done;
-  ;;
-
-  let%expect_test "[min_key]" =
-    let t = create_unit ~level_bits:[ 1; 1; 1; 1 ] in
-    let max_key = Key.of_int 10 in
-    let elts =
-      List.init (Key.to_int_exn max_key + 1)
-        ~f:(fun key -> add t ~key:(Key.of_int key) ())
-    in
-    List.iter elts ~f:(fun elt ->
-      let key = Elt.key t elt in
-      remove t elt;
-      require_equal [%here] (module Key_option)
-        (min_key t)
-        (if Key.( < ) key max_key then Some (Key.succ key) else None))
-  ;;
-
-  let%expect_test "[iter]" =
-    let t = create_unit ~level_bits:[ 1; 1; 1; 1 ] in
-    let count () =
-      let r = ref 0 in
-      iter t ~f:(fun _ -> incr r);
-      !r
-    in
-    let show_count () = print_s [%sexp (count () : int)] in
-    show_count ();
-    [%expect {|
-      0 |}];
-    let num_elts = 10 in
-    for key = 0 to num_elts - 1; do
-      ignore (add t ~key:(Key.of_int key) () : _ Elt.t);
-    done;
-    show_count ();
-    [%expect {|
-      10 |}];
-    increase_min_allowed_key t ~key:Key.one ~handle_removed:ignore;
-    show_count ();
-    [%expect {|
-      9 |}];
-    increase_min_allowed_key t ~key:(Key.of_int num_elts) ~handle_removed:ignore;
-    show_count ();
-    [%expect {|
-      0 |}];
-  ;;
-
-  let%expect_test "[iter]" =
-    let t = create_unit ~level_bits:[ 1; 1; 1; 1 ] in
-    let elts = ref [] in
-    for key = 0 to Key.to_int_exn (max_allowed_key t) do
-      elts := add t ~key:(Key.of_int key) () :: !elts
-    done;
-    let elts' = ref [] in
-    iter t ~f:(fun elt -> elts' := elt :: !elts');
-    let sort elts =
-      List.sort elts ~compare:(fun elt1 elt2 ->
-        Key.compare (Elt.key t elt1) (Elt.key t elt2))
-    in
-    require [%here] (List.equal phys_equal  (sort !elts) (sort !elts'))
-  ;;
+module Interval_num_option = struct
+  type t = Interval_num.t option [@@deriving compare, sexp_of]
+  let equal = [%compare.equal: t]
 end
 
-let create_unit ?level_bits ?(start = Time.epoch) ?(alarm_precision = gibi_nanos 1.) () =
-  create
-    ~config:(create_config ?level_bits () ~alarm_precision)
-    ~start
+let%expect_test "[advance_clock]" =
+  let t = create_unit () ~level_bits:[ 1; 1; 1; 1 ] in
+  require [%here] (is_none (min_alarm_interval_num t));
+  let _elt = add_at_interval_num t ~at:Interval_num.zero () in
+  require_equal
+    [%here]
+    (module Interval_num_option)
+    (min_alarm_interval_num t)
+    (Some Interval_num.zero);
+  let max_interval_num = 10 in
+  for interval_num = 1 to max_interval_num; do
+    let at = Interval_num.of_int interval_num in
+    require_does_not_raise
+      [%here]
+      (fun () -> ignore (add_at_interval_num t ~at () : _ Alarm.t));
+    require_equal
+      [%here]
+      (module Interval_num_option)
+      (min_alarm_interval_num t)
+      (Some Interval_num.zero);
+  done;
+  for interval_num = 1 to max_interval_num + 1; do
+    let interval_num = Interval_num.of_int interval_num in
+    begin match advance_clock_to_interval_num_return_removed_interval_nums t ~to_:interval_num with
+    | [ interval_num' ] ->
+      require_equal
+        [%here]
+        (module Interval_num)
+        interval_num'
+        (Interval_num.pred interval_num)
+    | _ -> require [%here] false
+    end;
+    require_equal [%here] (module Interval_num_option)
+      (min_alarm_interval_num t)
+      (if Interval_num.( <= ) interval_num (Interval_num.of_int max_interval_num)
+       then Some interval_num
+       else None);
+  done;
+;;
+
+let%expect_test "[min_alarm_interval_num]" =
+  let t = create_unit () ~level_bits:[ 1; 1; 1; 1 ] in
+  let max_interval_num = Interval_num.of_int 10 in
+  let elts =
+    List.init (Interval_num.to_int_exn max_interval_num + 1)
+      ~f:(fun interval_num -> add_at_interval_num t ~at:(Interval_num.of_int interval_num) ())
+  in
+  List.iter elts ~f:(fun elt ->
+    let interval_num = Alarm.interval_num t elt in
+    remove t elt;
+    require_equal [%here] (module Interval_num_option)
+      (min_alarm_interval_num t)
+      (if Interval_num.( < ) interval_num max_interval_num
+       then Some (Interval_num.succ interval_num)
+       else None))
+;;
+
+let%expect_test "[iter]" =
+  let t = create_unit () ~level_bits:[ 1; 1; 1; 1 ] in
+  let count () =
+    let r = ref 0 in
+    iter t ~f:(fun _ -> incr r);
+    !r
+  in
+  let show_count () = print_s [%sexp (count () : int)] in
+  show_count ();
+  [%expect {|
+      0 |}];
+  let num_elts = 10 in
+  for interval_num = 0 to num_elts - 1; do
+    ignore (add_at_interval_num t ~at:(Interval_num.of_int interval_num) () : _ Alarm.t);
+  done;
+  show_count ();
+  [%expect {|
+      10 |}];
+  advance_clock_to_interval_num t ~to_:Interval_num.one ~handle_fired:ignore;
+  show_count ();
+  [%expect {|
+      9 |}];
+  advance_clock_to_interval_num t ~to_:(Interval_num.of_int num_elts) ~handle_fired:ignore;
+  show_count ();
+  [%expect {|
+      0 |}];
+;;
+
+let%expect_test "[iter]" =
+  let t = create_unit () ~level_bits:[ 1; 1; 1; 1 ] in
+  let elts = ref [] in
+  for interval_num = 0 to Interval_num.to_int_exn (max_allowed_alarm_interval_num t) do
+    elts := add_at_interval_num t ~at:(Interval_num.of_int interval_num) () :: !elts
+  done;
+  let elts' = ref [] in
+  iter t ~f:(fun elt -> elts' := elt :: !elts');
+  let sort elts =
+    List.sort elts ~compare:(fun elt1 elt2 ->
+      Interval_num.compare (Alarm.interval_num t elt1) (Alarm.interval_num t elt2))
+  in
+  require [%here] (List.equal phys_equal  (sort !elts) (sort !elts'))
 ;;
 
 let%expect_test "start after epoch" =

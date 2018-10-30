@@ -281,7 +281,8 @@ let write_bin_prot t ?(pos = 0) writer v =
   if pos + total_len > length t then
     failwiths "Bigstring.write_bin_prot: not enough room"
       (`pos pos, `pos_after_writing (pos + total_len), `bigstring_length (length t))
-      [%sexp_of: [`pos of int] * [`pos_after_writing of int] * [`bigstring_length of int]];
+      [%sexp_of:
+        [`pos of int] * [`pos_after_writing of int] * [`bigstring_length of int]];
   let pos_after_size_header = Bin_prot.Utils.bin_write_size_header t ~pos data_len in
   let pos_after_data =
     writer.Bin_prot.Type_class.write t ~pos:pos_after_size_header v
@@ -302,7 +303,8 @@ let write_bin_prot t ?(pos = 0) writer v =
 
 (* Search *)
 
-external unsafe_find : t -> char -> pos:int -> len:int -> int = "bigstring_find" [@@noalloc]
+external unsafe_find : t -> char -> pos:int -> len:int -> int = "bigstring_find"
+[@@noalloc]
 
 let find ?(pos = 0) ?len chr bstr =
   let len = get_opt_len bstr ~pos len in
@@ -771,17 +773,15 @@ let set_uint64_le t ~pos n =
    because the type of the bigarray encodes the element kind and the layout of the
    bigarray. Without the annotation the compiler generates a C call to the generic access
    functions. *)
-let unsafe_set_uint8 (t : t) ~pos n =
-  Array1.unsafe_set t pos (Char.unsafe_of_int n)
-let unsafe_set_int8 (t : t) ~pos n =
+let unsafe_set_uint8 (t : t) ~pos n = Array1.unsafe_set t pos (Char.unsafe_of_int n)
+let unsafe_set_int8  (t : t) ~pos n =
   (* in all the set functions where there are these tests, it looks like the test could be
      removed, since they are only changing the values of the bytes that are not
      written. *)
   let n = if n < 0 then n + 256 else n in
   Array1.unsafe_set t pos (Char.unsafe_of_int n)
-let unsafe_get_uint8 (t : t) ~pos =
-  Char.to_int (Array1.unsafe_get t pos)
-let unsafe_get_int8 (t : t) ~pos =
+let unsafe_get_uint8 (t : t) ~pos = Char.to_int (Array1.unsafe_get t pos)
+let unsafe_get_int8  (t : t) ~pos =
   let n = Char.to_int (Array1.unsafe_get t pos) in
   if n >= 128 then n - 256 else n
 
@@ -792,9 +792,8 @@ let set_int8 (t : t) ~pos n =
   check_valid_int8 ~loc:"Bigstring.set_int8" n;
   let n = if n < 0 then n + 256 else n in
   Array1.set t pos (Char.unsafe_of_int n)
-let get_uint8 (t : t) ~pos =
-  Char.to_int (Array1.get t pos)
-let get_int8 (t : t) ~pos =
+let get_uint8 (t : t) ~pos = Char.to_int (Array1.get t pos)
+let get_int8  (t : t) ~pos =
   let n = Char.to_int (Array1.get t pos) in
   if n >= 128 then n - 256 else n
 
@@ -829,13 +828,14 @@ let get_uint32_be t ~pos =
 
 let rec last_nonmatch_plus_one ~buf ~min_pos ~pos ~char =
   let pos' = pos - 1 in
-  if pos' >= min_pos && Char.(=) (get buf pos') char then
-    last_nonmatch_plus_one ~buf ~min_pos ~pos:pos' ~char
-  else
-    pos
+  if pos' >= min_pos && Char.(=) (get buf pos') char
+  then last_nonmatch_plus_one ~buf ~min_pos ~pos:pos' ~char
+  else pos
 
 let get_tail_padded_fixed_string ~padding t ~pos ~len () =
-  let data_end = last_nonmatch_plus_one ~buf:t ~min_pos:pos ~pos:(pos + len) ~char:padding in
+  let data_end =
+    last_nonmatch_plus_one ~buf:t ~min_pos:pos ~pos:(pos + len) ~char:padding
+  in
   to_string t ~pos ~len:(data_end - pos)
 
 let set_tail_padded_fixed_string ~padding t ~pos ~len value =

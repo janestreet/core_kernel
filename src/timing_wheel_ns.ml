@@ -255,7 +255,136 @@ module Config = struct
   ;;
 end
 
-module Priority_queue = struct
+(** Timing wheel is implemented as a priority queue in which the keys are
+    non-negative integers corresponding to the intervals of time.  The priority queue is
+    unlike a typical priority queue in that rather than having a "delete min" operation,
+    it has a nondecreasing minimum allowed key, which corresponds to the current time,
+    and an [increase_min_allowed_key] operation, which implements [advance_clock].
+    [increase_min_allowed_key] as a side effect removes all elements from the timing
+    wheel whose key is smaller than the new minimum, which implements firing the alarms
+    whose time has expired.
+
+    Adding elements to and removing elements from a timing wheel takes constant time,
+    unlike a heap-based priority queue which takes log(N), where N is the number of
+    elements in the heap.  [increase_min_allowed_key] takes time proportional to the
+    amount of increase in the min-allowed key, as compared to log(N) for a heap.  It is
+    these performance differences that motivate the existence of timing wheels and make
+    them a good choice for maintaing a set of alarms.  With a timing wheel, one can
+    support any number of alarms paying constant overhead per alarm, while paying a
+    small constant overhead per unit of time passed.
+
+    As the minimum allowed key increases, the timing wheel does a lazy radix sort of the
+    element keys, with level 0 handling the least significant [b_0] bits in a key, and
+    each subsequent level [i] handling the next most significant [b_i] bits.  The levels
+    hold increasingly larger ranges of keys, where the union of all the levels can hold
+    any key from [min_allowed_key t] to [max_allowed_key t].  When a key is added to the
+    timing wheel, it is added at the lowest possible level that can store the key.  As
+    the minimum allowed key increases, timing-wheel elements move down levels until they
+    reach level 0, and then are eventually removed.  *)
+module Priority_queue  : sig
+
+  type 'a t [@@deriving sexp_of]
+
+  type 'a priority_queue = 'a t
+
+  module Key : Interval_num
+
+  module Elt : sig
+    (** An [Elt.t] represents an element that was added to a timing wheel. *)
+    type 'a t [@@deriving sexp_of]
+
+    val at    : 'a priority_queue -> 'a t -> Time_ns.t
+    val key   : 'a priority_queue -> 'a t -> Key.t
+    val value : 'a priority_queue -> 'a t -> 'a
+
+    val null : unit -> 'a t
+  end
+
+  module Internal_elt : sig
+    module Pool : sig
+      type 'a t
+    end
+    type 'a t
+
+    val key : 'a Pool.t -> 'a t -> Key.t
+    val max_alarm_time : 'a Pool.t -> 'a t -> with_key:Key.t -> Time_ns.t
+    val is_null : _ t -> bool
+    val to_external : 'a t -> 'a Elt.t
+  end
+
+  val pool : 'a t -> 'a Internal_elt.Pool.t
+
+  include Invariant.S1 with type 'a t := 'a t
+
+  (** [create ?level_bits ()] creates a new empty timing wheel, [t], with [length t = 0]
+      and [min_allowed_key t = 0]. *)
+  val create : ?capacity:int -> ?level_bits:Level_bits.t -> unit -> 'a t
+
+  (** [length t] returns the number of elements in the timing wheel. *)
+  val length : _ t -> int
+
+  (** [min_allowed_key t] is the minimum key that can be stored in [t].  This only
+      indicates the possibility; there need not be an element [elt] in [t] with [Elt.key
+      elt = min_allowed_key t].  This is not the same as the "min_key" operation in a
+      typical priority queue.
+
+      [min_allowed_key t] can increase over time, via calls to
+      [increase_min_allowed_key].  It is guaranteed that [min_allowed_key t <=
+      Key.max_representable]. *)
+  val min_allowed_key : _ t -> Key.t
+
+  (** [max_allowed_key t] is the maximum allowed key that can be stored in [t].  As
+      [min_allowed_key] increases, so does [max_allowed_key]; however it is not the case
+      that [max_allowed_key t - min_allowed_key t] is a constant.  It is guaranteed that
+      [max_allowed_key t >= min (Key.max_representable, min_allowed_key t + 2^B - 1],
+      where [B] is the sum of the b_i in [level_bits].  It is also guaranteed that
+      [max_allowed_key t <= Key.max_representable]. *)
+  val max_allowed_key : _ t -> Key.t
+
+  val min_elt_ : 'a t -> 'a Internal_elt.t
+
+  val internal_add : 'a t -> key:Key.t -> at:Time_ns.t -> 'a -> 'a Internal_elt.t
+
+  (** [remove t elt] removes [elt] from [t].  It is an error if [elt] is not currently
+      in [t], and this error may or may not be detected. *)
+  val remove : 'a t -> 'a Elt.t -> unit
+
+  val change : 'a t -> 'a Elt.t -> key:Key.t -> at:Time.t -> unit
+
+  (** [clear t] removes all elts from [t]. *)
+  val clear : _ t -> unit
+
+  val mem : 'a t -> 'a Elt.t -> bool
+
+  (** [increase_min_allowed_key t ~key ~handle_removed] increases the minimum allowed
+      key in [t] to [key], and removes all elements with keys less than [key], applying
+      [handle_removed] to each element that is removed.  If [key <= min_allowed_key t],
+      then [increase_min_allowed_key] does nothing.  Otherwise, if
+      [increase_min_allowed_key] returns successfully, [min_allowed_key t = key].
+
+      [increase_min_allowed_key] raises if [key > Key.max_representable].
+
+      [increase_min_allowed_key] takes time proportional to [key - min_allowed_key t],
+      although possibly less time.
+
+      Behavior is unspecified if [handle_removed] accesses [t] in any way other than
+      [Elt] functions. *)
+  val increase_min_allowed_key
+    :  'a t
+    -> key            : Key.t
+    -> handle_removed : ('a Elt.t -> unit)
+    -> unit
+
+  val iter : 'a t -> f:('a Elt.t -> unit) -> unit
+
+  val fire_past_alarms
+    :  'a t
+    -> handle_fired:('a Elt.t -> unit)
+    -> key:Key.t
+    -> now:Time_ns.t
+    -> unit
+end = struct
+
   (* Each slot in a level is a (possibly null) pointer to a circular doubly-linked list of
      elements.  We pool the elements so that we can reuse them after they are removed from
      the timing wheel (either via [remove] or [increase_min_allowed_key]).  In addition to
@@ -635,10 +764,6 @@ module Priority_queue = struct
   module Elt = struct
     type 'a t = 'a External_elt.t [@@deriving sexp_of]
 
-    let invariant p invariant_a t =
-      Internal_elt.invariant p.pool invariant_a (Internal_elt.of_external_exn p.pool t)
-    ;;
-
     let null = External_elt.null
 
     let at    p t = Internal_elt.at    p.pool (Internal_elt.of_external_exn p.pool t)
@@ -879,20 +1004,6 @@ module Priority_queue = struct
       t.min_elt);
   ;;
 
-  let min_elt t =
-    let elt = min_elt_ t in
-    if Internal_elt.is_null elt
-    then None
-    else Some (Internal_elt.to_external elt)
-  ;;
-
-  let min_key t =
-    let elt = min_elt_ t in
-    if Internal_elt.is_null elt
-    then None
-    else Some (Internal_elt.key t.pool elt)
-  ;;
-
   let [@inline never] raise_add_elt_key_out_of_bounds t key =
     raise_s [%message "Priority_queue.add_elt key out of bounds"
                         (key               : Key.t)
@@ -963,10 +1074,6 @@ module Priority_queue = struct
     let elt = Internal_elt.create t.pool ~key ~at ~value ~level_index:(-1) in
     internal_add_elt t elt;
     elt
-  ;;
-
-  let add t ~key value =
-    Internal_elt.to_external (internal_add t ~key ~at:Time_ns.epoch value)
   ;;
 
   (* [remove_or_re_add_elts] visits each element in the circular doubly-linked list
@@ -1214,8 +1321,6 @@ module Priority_queue = struct
     internal_add_elt t elt;
   ;;
 
-  let change_key t elt ~key = change t elt ~key ~at:(Elt.at t elt)
-
   let clear t =
     if not (is_empty t)
     then (
@@ -1411,6 +1516,10 @@ let compute_max_allowed_alarm_time t =
 
 let now_interval_num t = Priority_queue.min_allowed_key t.priority_queue
 
+let min_allowed_alarm_interval_num = now_interval_num
+
+let max_allowed_alarm_interval_num t = interval_num t (max_allowed_alarm_time t)
+
 let interval_start t time = interval_num_start_unchecked t (interval_num t time)
 
 let invariant invariant_a t =
@@ -1543,11 +1652,13 @@ let reschedule_at_interval_num t alarm ~at =
   reschedule_gen t alarm ~key:at ~at:(interval_num_start t at);
 ;;
 
+let pool t = Priority_queue.pool t.priority_queue
+
 let min_alarm_interval_num t =
   let elt = Priority_queue.min_elt_ t.priority_queue in
   if Internal_elt.is_null elt
   then None
-  else Some (Internal_elt.key t.priority_queue.pool elt)
+  else Some (Internal_elt.key (pool t) elt)
 ;;
 
 let min_alarm_interval_num_exn t =
@@ -1555,11 +1666,11 @@ let min_alarm_interval_num_exn t =
   if Internal_elt.is_null elt
   then raise_s [%message "Timing_wheel.min_alarm_interval_num_exn of empty timing_wheel"
                            ~timing_wheel:(t : _ t)]
-  else Internal_elt.key t.priority_queue.pool elt
+  else Internal_elt.key (pool t) elt
 ;;
 
 let max_alarm_time_in_list t elt =
-  let pool = t.priority_queue.pool in
+  let pool = (pool t) in
   Internal_elt.max_alarm_time pool elt ~with_key:(Internal_elt.key pool elt)
 ;;
 
@@ -1580,7 +1691,7 @@ Timing_wheel_ns.max_alarm_time_in_min_interval_exn of empty timing wheel"
 ;;
 
 let next_alarm_fires_at_internal t elt =
-  let key = Internal_elt.key t.priority_queue.pool elt in
+  let key = Internal_elt.key (pool t) elt in
   (* [interval_num_start t key] is the key corresponding to the start of the time interval
      holding the first alarm in [t].  Advancing to that would not be enough, since the
      alarms in that interval don't fire until the clock is advanced to the start of the

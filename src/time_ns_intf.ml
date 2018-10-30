@@ -129,6 +129,11 @@ module type Time_ns = sig
     type nonrec t = t [@@deriving sexp]
   end
 
+  include Time_intf.Shared
+    with type t := t
+    with module Span := Span
+    with module Ofday := Ofday
+
   val epoch : t (** Unix epoch (1970-01-01 00:00:00 UTC) *)
 
   val min_value : t
@@ -153,7 +158,6 @@ module type Time_ns = sig
   (** Will raise on 32-bit platforms.  Consider [to_int63_ns_since_epoch] instead. *)
   val to_int_ns_since_epoch : t -> int
   val of_int_ns_since_epoch : int -> t
-
 
   (** [next_multiple ~base ~after ~interval] returns the smallest [time] of the form:
 
@@ -206,5 +210,4 @@ module type Time_ns = sig
       module V1 : Stable_int63able with type t = Ofday.t
     end
   end
-
 end

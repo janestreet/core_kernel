@@ -208,49 +208,51 @@ let%expect_test "Stable.Alternate_sexp.V1" =
      (bin_io "\252\000\000\245\016].\021;")) |}];
 ;;
 
-let%expect_test "of_string_iso8601_extended" =
-  let success string =
-    require_does_not_raise [%here] (fun () ->
-      printf "%s <-- %s\n"
-        (Time_ns.Ofday.to_string (Time_ns.Ofday.of_string_iso8601_extended string))
-        string)
-  in
-  List.iter ~f:success [
-    (* normal times *)
-    "12";
-    "12:34";
-    "12:34:56";
-    "12:34:56.789";
-    "12:34:56.789123";
-    "12:34:56.789123456";
-    (* lower boundary case *)
-    "00";
-    "00:00";
-    "00:00:00";
-    "00:00:00.000";
-    "00:00:00.000000";
-    "00:00:00.000000000";
-    (* upper boundary case *)
-    "23";
-    "23:59";
-    "23:59:59";
-    "23:59:59.999";
-    "23:59:59.999999";
-    "23:59:59.999999999";
-    (* midnight tomorrow *)
-    "24";
-    "24:00";
-    "24:00:00";
-    "24:00:00.000";
-    "24:00:00.000000";
-    "24:00:00.000000000";
-    (* leap second *)
-    "12:59:60";
-    "12:59:60.789";
-    "12:59:60.789123";
-    "12:59:60.789123456";
-  ];
-  [%expect {|
+let%test_module "Ofday" =
+  (module struct
+    let%expect_test "of_string_iso8601_extended" =
+      let success string =
+        require_does_not_raise [%here] (fun () ->
+          printf "%s <-- %s\n"
+            (Time_ns.Ofday.to_string (Time_ns.Ofday.of_string_iso8601_extended string))
+            string)
+      in
+      List.iter ~f:success [
+        (* normal times *)
+        "12";
+        "12:34";
+        "12:34:56";
+        "12:34:56.789";
+        "12:34:56.789123";
+        "12:34:56.789123456";
+        (* lower boundary case *)
+        "00";
+        "00:00";
+        "00:00:00";
+        "00:00:00.000";
+        "00:00:00.000000";
+        "00:00:00.000000000";
+        (* upper boundary case *)
+        "23";
+        "23:59";
+        "23:59:59";
+        "23:59:59.999";
+        "23:59:59.999999";
+        "23:59:59.999999999";
+        (* midnight tomorrow *)
+        "24";
+        "24:00";
+        "24:00:00";
+        "24:00:00.000";
+        "24:00:00.000000";
+        "24:00:00.000000000";
+        (* leap second *)
+        "12:59:60";
+        "12:59:60.789";
+        "12:59:60.789123";
+        "12:59:60.789123456";
+      ];
+      [%expect {|
     12:00:00.000000000 <-- 12
     12:34:00.000000000 <-- 12:34
     12:34:56.000000000 <-- 12:34:56
@@ -279,33 +281,33 @@ let%expect_test "of_string_iso8601_extended" =
     13:00:00.000000000 <-- 12:59:60.789
     13:00:00.000000000 <-- 12:59:60.789123
     13:00:00.000000000 <-- 12:59:60.789123456 |}];
-  let failure string =
-    match Time_ns.Ofday.of_string_iso8601_extended string with
-    | exception exn -> print_endline (Exn.to_string exn)
-    | ofday ->
-      print_cr [%here] [%message
-        "did not raise"
-          (string : string)
-          (ofday  : Time_ns.Ofday.t)]
-  in
-  List.iter ~f:failure [
-    (* bad syntax *)
-    "";
-    "1";
-    "123";
-    ":";
-    "12:";
-    "1:23";
-    "12:3";
-    "12:345";
-    "12:34:";
-    "12:34:5";
-    (* numerical bounds *)
-    "25:00";
-    "00:60";
-    "00:59:61";
-  ];
-  [%expect {|
+      let failure string =
+        match Time_ns.Ofday.of_string_iso8601_extended string with
+        | exception exn -> print_endline (Exn.to_string exn)
+        | ofday ->
+          print_cr [%here] [%message
+            "did not raise"
+              (string : string)
+              (ofday  : Time_ns.Ofday.t)]
+      in
+      List.iter ~f:failure [
+        (* bad syntax *)
+        "";
+        "1";
+        "123";
+        ":";
+        "12:";
+        "1:23";
+        "12:3";
+        "12:345";
+        "12:34:";
+        "12:34:5";
+        (* numerical bounds *)
+        "25:00";
+        "00:60";
+        "00:59:61";
+      ];
+      [%expect {|
     ("Time_ns.Ofday.of_string_iso8601_extended: cannot parse string" ""
       (Failure "len < 2"))
     ("Time_ns.Ofday.of_string_iso8601_extended: cannot parse string" 1
@@ -332,6 +334,7 @@ let%expect_test "of_string_iso8601_extended" =
       (Failure "minute > 60"))
     ("Time_ns.Ofday.of_string_iso8601_extended: cannot parse string" 00:59:61
       (Failure "invalid second: 61")) |}];
+  end)
 ;;
 
 module Span = struct
@@ -651,4 +654,109 @@ let%expect_test "times with implicit zones" =
     (Of_sexp_error
       (Invalid_argument "String.chop_suffix_exn \"09:30:00\" \"Z\"")
       (invalid_sexp "2013-10-07 09:30:00")) |}];
+;;
+
+let%expect_test "to_string" =
+  print_endline
+    (Time_ns.to_string
+       (Time_ns.of_int63_ns_since_epoch (Int63.of_int64_exn 1_234_567_890_123_456_789L)));
+  [%expect {| 2009-02-13 23:31:30.123456789Z |}]
+;;
+
+let%expect_test "time zone offset parsing" =
+  let test string =
+    print_endline (Time_ns.to_string (Time_ns.of_string string));
+  in
+  test "2000-01-01 12:34:56.789012345-00:00";
+  test "2000-01-01 12:34:56.789012345-0:00";
+  test "2000-01-01 12:34:56.789012345-00";
+  test "2000-01-01 12:34:56.789012345-0";
+  [%expect {|
+    2000-01-01 12:34:56.789012345Z
+    2000-01-01 12:34:56.789012345Z
+    2000-01-01 12:34:56.789012345Z
+    2000-01-01 12:34:56.789012345Z |}];
+  test "2000-01-01 12:34:56.789012345-05:00";
+  test "2000-01-01 12:34:56.789012345-5:00";
+  test "2000-01-01 12:34:56.789012345-05";
+  test "2000-01-01 12:34:56.789012345-5";
+  [%expect {|
+    2000-01-01 17:34:56.789012345Z
+    2000-01-01 17:34:56.789012345Z
+    2000-01-01 17:34:56.789012345Z
+    2000-01-01 17:34:56.789012345Z |}];
+  test "2000-01-01 12:34:56.789012345-23:00";
+  test "2000-01-01 12:34:56.789012345-23";
+  [%expect {|
+    2000-01-02 11:34:56.789012345Z
+    2000-01-02 11:34:56.789012345Z |}];
+  test "2000-01-01 12:34:56.789012345-24:00";
+  test "2000-01-01 12:34:56.789012345-24";
+  [%expect {|
+    2000-01-02 12:34:56.789012345Z
+    2000-01-02 12:34:56.789012345Z |}];
+;;
+
+let%expect_test "time zone invalid offset parsing" =
+  let test here string =
+    require_does_raise here (fun () ->
+      Time_ns.of_string string)
+  in
+  test [%here] "2000-01-01 12:34:56.789012345-0:";
+  test [%here] "2000-01-01 12:34:56.789012345-00:";
+  test [%here] "2000-01-01 12:34:56.789012345-0:0";
+  test [%here] "2000-01-01 12:34:56.789012345-00:0";
+  test [%here] "2000-01-01 12:34:56.789012345-:";
+  test [%here] "2000-01-01 12:34:56.789012345-:00";
+  test [%here] "2000-01-01 12:34:56.789012345-";
+  (* yes this says Time.Ofday instead of Time_ns.Ofday, not fixing this (in
+     Ofday_helpers.ml) unless someone cares *)
+  [%expect {|
+    (time_ns.ml.To_and_of_string.Time_ns_of_string
+     "2000-01-01 12:34:56.789012345-0:"
+     ("Time.Ofday: invalid string"
+      0:
+      "expected colon or am/pm suffix with optional space after minutes"))
+    (time_ns.ml.To_and_of_string.Time_ns_of_string
+     "2000-01-01 12:34:56.789012345-00:"
+     ("Time.Ofday: invalid string"
+      00:
+      "expected colon or am/pm suffix with optional space after minutes"))
+    (time_ns.ml.To_and_of_string.Time_ns_of_string
+     "2000-01-01 12:34:56.789012345-0:0"
+     ("Time.Ofday: invalid string"
+      0:0
+      "expected colon or am/pm suffix with optional space after minutes"))
+    (time_ns.ml.To_and_of_string.Time_ns_of_string
+     "2000-01-01 12:34:56.789012345-00:0"
+     ("Time.Ofday: invalid string"
+      00:0
+      "expected colon or am/pm suffix with optional space after minutes"))
+    (time_ns.ml.To_and_of_string.Time_ns_of_string
+     "2000-01-01 12:34:56.789012345-:"
+     (Invalid_argument "index out of bounds"))
+    (time_ns.ml.To_and_of_string.Time_ns_of_string
+     "2000-01-01 12:34:56.789012345-:00"
+     (Failure "Char.get_digit_exn ':': not a digit"))
+    (time_ns.ml.To_and_of_string.Time_ns_of_string
+     "2000-01-01 12:34:56.789012345-"
+     (Invalid_argument "index out of bounds")) |}];
+  test [%here] "2000-01-01 12:34:56.789012-25:00";
+  test [%here] "2000-01-01 12:34:56.789012-25";
+  [%expect {|
+    (time_ns.ml.To_and_of_string.Time_ns_of_string
+     "2000-01-01 12:34:56.789012-25:00"
+     ("Time.Ofday: invalid string" 25:00 "hours out of bounds"))
+    (time_ns.ml.To_and_of_string.Time_ns_of_string
+     "2000-01-01 12:34:56.789012-25"
+     ("Time.Ofday: invalid string" 25:00 "hours out of bounds")) |}];
+  test [%here] "2000-01-01 12:34:56.789012--1:00";
+  test [%here] "2000-01-01 12:34:56.789012--1";
+  [%expect {|
+    (time_ns.ml.To_and_of_string.Time_ns_of_string
+     "2000-01-01 12:34:56.789012--1:00"
+     (Failure "Char.get_digit_exn '-': not a digit"))
+    (time_ns.ml.To_and_of_string.Time_ns_of_string
+     "2000-01-01 12:34:56.789012--1"
+     (Invalid_argument "index out of bounds")) |}];
 ;;
