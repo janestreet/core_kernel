@@ -170,8 +170,18 @@ module type Shared = sig
       time. *)
   val of_filename_string : string -> zone:Zone.t -> t
 
-  (** Same as [to_string_abs], but removes trailing seconds and milliseconds
-      if they are 0 *)
+  (** [to_string_abs ~zone t] is the same as [to_string t] except that it uses the given
+      time zone. *)
+  val to_string_abs         : t -> zone:Zone.t -> string
+
+  (** [to_string_abs_trimmed] is the same as [to_string_abs], but drops trailing seconds
+      and milliseconds if they are 0. *)
+  val to_string_abs_trimmed : t -> zone:Zone.t -> string
+
+  val to_string_abs_parts   : t -> zone:Zone.t -> string list
+
+  (** Same as [to_string_abs_trimmed], except it leaves off the timezone, so won't
+      reliably round trip. *)
   val to_string_trimmed : t -> zone:Zone.t -> string
 
   (** Same as [to_string_abs], but without milliseconds *)
@@ -188,25 +198,6 @@ module type Shared = sig
     -> find_zone:(string -> Zone.t)
     -> string
     -> t
-
-  (** [to_string_abs ~zone t] returns a string that represents an absolute time, rather
-      than a local time with an assumed time zone.  This string can be round-tripped, even
-      on a machine in a different time zone than the machine that wrote the string.
-
-      The string will display the date and of-day of [zone] together with [zone] as an
-      offset from UTC.
-
-      [to_string_abs_trimmed] is the same as [to_string_abs], but drops trailing seconds
-      and milliseconds if they are 0.
-
-      Note that the difference between [to_string] and [to_string_abs] is not that one
-      returns an absolute time and one doesn't, but that [to_string_abs] lets you specify
-      the time zone, while [to_string] takes it to be the local time zone.
-  *)
-  val to_string_abs         : t -> zone:Zone.t -> string
-  val to_string_abs_trimmed : t -> zone:Zone.t -> string
-
-  val to_string_abs_parts   : t -> zone:Zone.t -> string list
 
   (** [to_string_iso8601_basic] return a string representation of the following form:
       %Y-%m-%dT%H:%M:%S.%s%Z
