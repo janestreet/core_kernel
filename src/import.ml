@@ -21,6 +21,8 @@ module Obj_array                 = Base.Not_exposed_properly.Obj_array
 module Poly                      = Base.Poly
 module Polymorphic_compare       = Base.Polymorphic_compare
 module Popcount                  = Base.Popcount
+[@@warning "-3"]
+[@@deprecated "[since 2018-10] use [popcount] functions in individual int modules"]
 module Pretty_printer            = Base.Pretty_printer
 module Random                    = Base.Random
 module Staged                    = Base.Staged

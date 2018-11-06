@@ -63,11 +63,11 @@ let%test_module "comparable" =
       let { Env. should_raise; f} = Env.create () in
       should_raise := true;
       show_raise (fun () -> printf "%d" (f 5));
-      [%expect"
-        (\"Computing value\" (i 5))
-        (raised \"I should raise\")"];
+      [%expect {|
+        ("Computing value" (i 5))
+        (raised "I should raise") |}];
       should_raise := false;
       show_raise (fun () -> printf "%d" (f 5));
-      [%expect"(raised \"I should raise\")"];
+      [%expect {| (raised "I should raise") |}];
     ;;
   end)

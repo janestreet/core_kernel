@@ -75,7 +75,7 @@ val iter' : 'a t -> [ `front_to_back | `back_to_front ] -> f:('a -> unit) -> uni
     index. *)
 val iteri : 'a t -> f : (int -> 'a -> unit) -> unit
 
-(** [iteri' t ~f] is the same as [iter], but also passes in the index of the current
+(** [iteri' t ~f] is the same as [iter'], but also passes in the index of the current
     element. *)
 val iteri' : 'a t -> [ `front_to_back | `back_to_front ] -> f:(int -> 'a -> unit) -> unit
 
