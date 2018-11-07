@@ -30,10 +30,12 @@ let unbounded (type a) ?(hashable = Hashtbl.Hashable.poly) f =
     in
     A.Table.create () ~size:0
   in
+  (* Allocate this closure at the call to [unbounded], not at each call to the memoized
+     function. *)
+  let really_call_f arg = Result.capture f arg in
   (fun arg ->
      Result.return begin
-       Hashtbl.find_or_add cache arg
-         ~default:(fun () -> Result.capture f arg)
+       Hashtbl.findi_or_add cache arg ~default:really_call_f
      end)
 
 (* the same but with a bound on cache size *)

@@ -908,6 +908,14 @@ module type Command = sig
     module For_unix (M : For_unix) : sig
       val shape : t -> Shape.t
 
+      val help_for_shape
+        :  Shape.t
+        -> Path.t
+        -> expand_dots:bool
+        -> flags:bool
+        -> recursive:bool
+        -> string
+
       val run
         :  ?verbose_on_parse_error : bool
         -> ?version    : string

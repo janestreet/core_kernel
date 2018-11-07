@@ -20,9 +20,7 @@ end
 
 module Sexp_maybe = struct
 
-  type sexp = t [@@deriving bin_io, compare, hash]             (* avoid recursive type *)
-
-  type 'a t = ('a, sexp * Error.t) Result.t [@@deriving bin_io, compare, hash]
+  type nonrec 'a t = ('a, t * Error.t) Result.t [@@deriving bin_io, compare, hash]
 
   let sexp_of_t sexp_of_a t =
     match t with

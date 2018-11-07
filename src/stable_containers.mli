@@ -1,5 +1,5 @@
 (** The Stable version of [Hashable] is defined here rather than in [Hashable], but the
-    implementations is effectively the same. *)
+    implementation is effectively the same. *)
 
 open! Import
 

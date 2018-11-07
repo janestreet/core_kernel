@@ -557,7 +557,6 @@ module Anons = struct
     val many : t -> t
     val maybe : t -> t
     val concat : t list -> t
-    val usage : t -> string
     val ad_hoc : usage:string -> t
 
     include Invariant.S with type t := t
@@ -1056,16 +1055,6 @@ module Base = struct
     |> List.sort ~compare:(fun a b -> String.compare a.Format.V1.name b.name)
     |> Format.V1.sort
 
-  let help_text ~path t =
-    unparagraphs
-      (List.filter_opt [
-         Some t.summary;
-         Some ("  " ^ Path.to_string path ^ " " ^ Anons.Grammar.usage t.usage);
-         Option.map t.readme ~f:(fun readme -> readme ());
-         Some "=== flags ===";
-         Some (Format.V1.to_string (formatted_flags t));
-       ])
-
   module Sexpable = struct
 
     module V2 = struct
@@ -1127,8 +1116,7 @@ module Base = struct
   let args_key = Env.key_create "args"
   let help_key = Env.key_create "help"
 
-  let run t env ~path ~args ~verbose_on_parse_error =
-    let help_text = lazy (help_text ~path t) in
+  let run t env ~path ~args ~verbose_on_parse_error ~help_text =
     let env = Env.set env path_key path in
     let env = Env.set env args_key (Cmdline.to_list args) in
     let env = Env.set env help_key help_text in
@@ -1473,19 +1461,6 @@ module Base = struct
   end
 end
 
-let group_or_exec_help_text ~show_flags ~path ~summary ~readme ~format_list =
-  unparagraphs (List.filter_opt [
-    Some summary;
-    Some (String.concat ["  "; Path.to_string path; " SUBCOMMAND"]);
-    Option.map readme ~f:(fun readme -> readme ());
-    Some
-      (if show_flags
-       then "=== subcommands and flags ==="
-       else "=== subcommands ===");
-    Some (Format.V1.to_string format_list);
-  ])
-;;
-
 module Group = struct
   type 'a t = {
     summary     : string;
@@ -1493,15 +1468,6 @@ module Group = struct
     subcommands : (string * 'a) list Lazy.t;
     body        : (path:string list -> unit) option;
   }
-
-  let help_text ~show_flags ~to_format_list ~path t =
-    group_or_exec_help_text
-      ~show_flags
-      ~path
-      ~readme:t.readme
-      ~summary:t.summary
-      ~format_list:(to_format_list t)
-  ;;
 
   module Sexpable = struct
     module V2 = struct
@@ -1645,15 +1611,6 @@ module Exec = struct
       path_to_exe = t.path_to_exe;
       child_subcommand = t.child_subcommand;
     }
-
-  let help_text ~show_flags ~to_format_list ~path t =
-    group_or_exec_help_text
-      ~show_flags
-      ~path
-      ~readme:(t.readme)
-      ~summary:(t.summary)
-      ~format_list:(to_format_list t)
-  ;;
 end
 
 (* A proxy command is the structure of an Exec command obtained by running it in a
@@ -1694,13 +1651,6 @@ module Proxy = struct
 
   let get_readme t = get_readme_from_kind t.kind
 
-  let help_text ~show_flags ~to_format_list ~path t =
-    group_or_exec_help_text
-      ~show_flags
-      ~path
-      ~readme:(get_readme t |> Option.map ~f:const)
-      ~summary:(get_summary t)
-      ~format_list:(to_format_list t)
 end
 
 type t =
@@ -1812,12 +1762,6 @@ module Sexpable = struct
   include Latest
 
   let supported_versions = Int.Set.of_list (Queue.to_list supported_versions)
-
-  let rec get_summary = function
-    | Base  x -> x.summary
-    | Group x -> x.summary
-    | Exec  x -> x.summary
-    | Lazy  x -> get_summary (Lazy.force x)
 
   let extraction_var = "COMMAND_OUTPUT_HELP_SEXP"
 end
@@ -1962,7 +1906,6 @@ module Shape = struct
     } [@@deriving bin_io, compare, fields, sexp]
 
   end
-
   module Base_info = struct
 
     type grammar = Anons.Grammar.Sexpable.V1.t =
@@ -1985,6 +1928,10 @@ module Shape = struct
       anons   : anons;
       flags   : Flag_info.t list;
     } [@@deriving bin_io, compare, fields, sexp]
+
+    let get_usage t = match t.anons with
+      | Usage usage -> usage
+      | Grammar grammar -> Anons.Grammar.Sexpable.V1.usage grammar
 
   end
 
@@ -2039,6 +1986,12 @@ module Shape = struct
   end
 
   include T
+
+  let rec get_summary = function
+    | Basic b -> b.summary
+    | Group g -> g.summary
+    | Exec (e, _) -> e.summary
+    | Lazy thunk -> get_summary (Lazy.force thunk)
 
 end
 
@@ -2327,15 +2280,46 @@ module For_unix (M : For_unix) = struct
           | Some t -> find t ~path_to_subcommand:subs
   end
 
-  let gather_help ~recursive ~show_flags ~expand_dots sexpable =
-    let rec loop rpath acc sexpable =
+  let proxy_of_exe ~working_dir path_to_exe child_subcommand =
+    Sexpable.of_external ~working_dir ~path_to_exe ~child_subcommand
+    |> proxy_of_sexpable
+         ~working_dir
+         ~path_to_exe
+         ~child_subcommand
+         ~path_to_subcommand:[]
+  ;;
+
+  let rec shape_of_proxy proxy : Shape.t = shape_of_proxy_kind proxy.Proxy.kind
+  and shape_of_exe () ~child_subcommand ~path_to_exe ~working_dir =
+    shape_of_proxy (proxy_of_exe ~working_dir path_to_exe child_subcommand)
+  and shape_of_proxy_kind kind =
+    match kind with
+    | Base  b -> Basic b
+    | Lazy  l -> Lazy (Lazy.map ~f:shape_of_proxy_kind l)
+    | Group g ->
+      Group
+        { g with
+          subcommands = Lazy.map g.subcommands ~f:(List.Assoc.map ~f:shape_of_proxy) }
+    | Exec  ({Exec.Sexpable.child_subcommand; path_to_exe; working_dir; _} as e) ->
+      Exec (e, shape_of_exe ~child_subcommand ~path_to_exe ~working_dir)
+  ;;
+
+  let rec shape t : Shape.t =
+    match t with
+    | Base  b -> Basic (Base.to_sexpable b)
+    | Group g -> Group (Group.to_sexpable ~subcommand_to_sexpable:shape g)
+    | Proxy p -> shape_of_proxy p
+    | Exec  ({ Exec.child_subcommand; path_to_exe; working_dir; _} as e) ->
+      Exec (Exec.to_sexpable e, shape_of_exe ~child_subcommand ~path_to_exe ~working_dir)
+    | Lazy thunk -> shape (Lazy.force thunk)
+  ;;
+
+  let gather_help ~recursive ~flags ~expand_dots shape =
+    let rec loop rpath acc shape =
       let string_of_path =
         if expand_dots
         then Path.to_string
         else Path.to_string_dots
-      in
-      let gather_exec rpath acc {Exec.Sexpable.working_dir; path_to_exe; child_subcommand; _} =
-        loop rpath acc (Sexpable.of_external ~working_dir ~path_to_exe ~child_subcommand)
       in
       let gather_group rpath acc subs =
         let subs =
@@ -2346,23 +2330,25 @@ module For_unix (M : For_unix) = struct
         let alist =
           List.stable_sort subs ~compare:(fun a b -> help_screen_compare (fst a) (fst b))
         in
-        List.fold alist ~init:acc ~f:(fun acc (subcommand, t) ->
+        List.fold alist ~init:acc ~f:(fun acc (subcommand, shape) ->
           let rpath = Path.add rpath ~subcommand in
           let key = string_of_path rpath in
-          let doc = Sexpable.get_summary t in
+          let doc = Shape.get_summary shape in
           let acc = Fqueue.enqueue acc { Format.V1. name = key; doc; aliases = [] } in
           if recursive
-          then loop rpath acc t
+          then loop rpath acc shape
           else acc)
       in
-      match sexpable with
-      | Sexpable.Exec exec -> gather_exec rpath acc exec
-      | Sexpable.Lazy thunk -> loop rpath acc (Lazy.force thunk)
-      | Sexpable.Group group ->
-        gather_group rpath acc (Lazy.force group.Group.Sexpable.subcommands)
-      | Sexpable.Base base   ->
-        if show_flags then begin
-          base.Base.Sexpable.flags
+      match shape with
+      | Exec (_, shape) ->
+        (* If the executable being called doesn't use [Core.Command], then sexp extraction
+           will fail. *)
+        (try loop rpath acc (shape ()) with _ -> acc)
+      | Group g ->
+        gather_group rpath acc (Lazy.force g.subcommands)
+      | Basic b   ->
+        if flags then begin
+          b.flags
           |> List.filter ~f:(fun fmt -> fmt.Format.V1.name <> "[-help]")
           |> List.fold ~init:acc ~f:(fun acc fmt ->
             let rpath = Path.add rpath ~subcommand:fmt.Format.V1.name in
@@ -2370,8 +2356,54 @@ module For_unix (M : For_unix) = struct
             Fqueue.enqueue acc fmt)
         end else
           acc
+      | Lazy thunk ->
+        loop rpath acc (Lazy.force thunk)
     in
-    loop Path.empty Fqueue.empty sexpable
+    loop Path.empty Fqueue.empty shape |> Fqueue.to_list
+  ;;
+
+  let group_or_exec_help_text ~flags ~path ~summary ~readme ~format_list =
+    unparagraphs (List.filter_opt [
+      Some summary;
+      Some (String.concat ["  "; Path.to_string path; " SUBCOMMAND"]);
+      readme;
+      Some
+        (if flags
+         then "=== subcommands and flags ==="
+         else "=== subcommands ===");
+      Some (Format.V1.to_string format_list);
+    ])
+  ;;
+
+  let rec help_for_shape shape path ~expand_dots ~flags ~recursive =
+    let format_list = gather_help ~expand_dots ~flags ~recursive shape in
+    match shape with
+    | Basic b ->
+      let usage = Shape.Base_info.get_usage b in
+      unparagraphs
+        (List.filter_opt [
+           Some b.summary;
+           Some ("  " ^ (Path.to_string path) ^ " " ^ usage);
+           b.readme;
+           Some "=== flags ===";
+           Some (Format.V1.to_string b.flags);
+         ])
+    | Group g ->
+      group_or_exec_help_text
+        ~flags
+        ~path
+        ~readme:g.readme
+        ~summary:g.summary
+        ~format_list
+    | Exec (e, _) ->
+      group_or_exec_help_text
+        ~flags
+        ~path
+        ~readme:e.readme
+        ~summary:e.summary
+        ~format_list
+    | Lazy thunk ->
+      help_for_shape (Lazy.force thunk) path ~expand_dots ~flags ~recursive
   ;;
 
   let help_subcommand ~summary ~readme =
@@ -2385,7 +2417,7 @@ module For_unix (M : For_unix) = struct
         +> env
         +> anon (maybe ("SUBCOMMAND" %: string))
       )
-      (fun recursive show_flags expand_dots path (env : Env.t) cmd_opt () ->
+      (fun recursive flags expand_dots path (env : Env.t) cmd_opt () ->
          let subs =
            match Env.find env subs_key with
            | Some subs -> subs
@@ -2396,30 +2428,18 @@ module For_unix (M : For_unix) = struct
            Option.fold cmd_opt ~init:path
              ~f:(fun path subcommand -> Path.add path ~subcommand)
          in
-         let format_list t =
-           gather_help ~recursive ~show_flags ~expand_dots (to_sexpable t)
-           |> Fqueue.to_list
-         in
-         let group_help_text group ~path =
-           let to_format_list g = format_list (Group g) in
-           Group.help_text ~show_flags ~to_format_list ~path group
-         in
-         let exec_help_text exec ~path =
-           let to_format_list e = format_list (Exec e) in
-           Exec.help_text ~show_flags ~to_format_list ~path exec
-         in
-         let proxy_help_text proxy ~path =
-           let to_format_list p = format_list (Proxy p) in
-           Proxy.help_text ~show_flags ~to_format_list ~path proxy
-         in
-         let text =
+         let path, shape =
            match cmd_opt with
            | None ->
-             group_help_text ~path {
+             let subcommands =
+               List.Assoc.map subs ~f:shape
+               |> Lazy.from_val
+             in
+             let readme = Option.map readme ~f:(fun readme -> readme ()) in
+             path, Shape.Group {
                readme;
                summary;
-               subcommands = Lazy.from_val subs;
-               body = None;
+               subcommands;
              }
            | Some cmd ->
              match
@@ -2430,48 +2450,9 @@ module For_unix (M : For_unix) = struct
              | Ok (possibly_expanded_name, t) ->
                (* Fix the unexpanded value *)
                let path = Path.replace_first ~from:cmd ~to_:possibly_expanded_name path in
-               let rec help_text = function
-                 | Exec  exec  -> exec_help_text exec ~path
-                 | Group group -> group_help_text group ~path
-                 | Base  base  -> Base.help_text ~path base
-                 | Proxy proxy -> proxy_help_text proxy ~path
-                 | Lazy  thunk -> help_text (Lazy.force thunk)
-               in
-               help_text t
+               path, shape t
          in
-         print_endline text)
-
-  let proxy_of_exe ~working_dir path_to_exe child_subcommand =
-    let sexpable = Sexpable.of_external ~working_dir ~path_to_exe ~child_subcommand in
-    proxy_of_sexpable sexpable ~working_dir ~path_to_exe ~child_subcommand ~path_to_subcommand:[]
-
-  let rec shape_of_proxy proxy : Shape.t =
-    shape_of_proxy_kind proxy.Proxy.kind
-
-  and shape_of_proxy_kind kind =
-    match kind with
-    | Base  b -> Basic b
-    | Lazy  l -> Lazy (Lazy.map ~f:shape_of_proxy_kind l)
-    | Group g ->
-      Group { g with subcommands = Lazy.map g.subcommands ~f:(List.Assoc.map ~f:shape_of_proxy) }
-    | Exec  e ->
-      let f () =
-        shape_of_proxy (proxy_of_exe ~working_dir:e.working_dir e.path_to_exe e.child_subcommand)
-      in
-      Exec (e, f)
-  ;;
-
-  let rec shape t : Shape.t =
-    match t with
-    | Base  b -> Basic (Base.to_sexpable b)
-    | Group g -> Group (Group.to_sexpable ~subcommand_to_sexpable:shape g)
-    | Proxy p -> shape_of_proxy p
-    | Exec  e ->
-      let f () =
-        shape_of_proxy (proxy_of_exe ~working_dir:e.working_dir e.path_to_exe e.child_subcommand)
-      in
-      Exec (Exec.to_sexpable e, f)
-    | Lazy thunk -> shape (Lazy.force thunk)
+         print_endline (help_for_shape shape path ~recursive ~flags ~expand_dots))
   ;;
 
   (* This script works in both bash (via readarray) and zsh (via read -A).  If you change
@@ -2565,12 +2546,6 @@ complete -F %s %s
 
   let rec dispatch t env ~extend ~path ~args ~maybe_new_comp_cword ~version ~build_info
             ~verbose_on_parse_error =
-    let to_format_list (group : _ Group.t) : Format.V1.t list =
-      let group = Group.to_sexpable ~subcommand_to_sexpable:to_sexpable group in
-      List.map (Lazy.force group.subcommands) ~f:(fun (name, sexpable) ->
-        { Format.V1. name; aliases = []; doc = Sexpable.get_summary sexpable })
-      |> Format.V1.sort
-    in
     match t with
     | Lazy thunk ->
       let t = Lazy.force thunk in
@@ -2578,7 +2553,16 @@ complete -F %s %s
         ~verbose_on_parse_error
     | Base base ->
       let args = maybe_apply_extend args ~extend ~path in
-      Base.run base env ~path ~args ~verbose_on_parse_error
+      let help_text =
+        lazy
+          (help_for_shape
+             (shape t)
+             path
+             ~recursive:false
+             ~flags:true
+             ~expand_dots:false)
+      in
+      Base.run base env ~path ~args ~verbose_on_parse_error ~help_text
     | Exec exec ->
       let args = Cmdline.to_list (maybe_apply_extend args ~extend ~path) in
       Exec.exec_with_args ~args exec ~maybe_new_comp_cword
@@ -2602,8 +2586,12 @@ complete -F %s %s
       let die_showing_help msg =
         if not (Cmdline.ends_in_complete args) then begin
           eprintf "%s\n%!"
-            (Group.help_text ~to_format_list ~path ~show_flags:false
-               {summary; readme; subcommands = subs; body});
+            (help_for_shape
+               ~recursive:false
+               ~flags:false
+               ~expand_dots:false
+               (shape (Group {summary; readme; subcommands = subs; body}))
+               path);
           die "%s" msg ()
         end
       in
@@ -2628,8 +2616,12 @@ complete -F %s %s
           (* Recognized everywhere *)
           | ("-help", Nil) ->
             print_endline
-              (Group.help_text ~to_format_list ~path ~show_flags:false
-                 {group with subcommands = subs});
+              (help_for_shape
+                 ~recursive:false
+                 ~flags:false
+                 ~expand_dots:false
+                 (shape (Group {group with subcommands = subs}))
+                 path);
             exit 0
           | ("-help", Cmdline.Cons (sub, rest)) -> (sub, Cmdline.Cons ("-help", rest))
           | _ -> (sub, rest)

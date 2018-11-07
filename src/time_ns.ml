@@ -25,6 +25,8 @@ let diff         = Span.(-)
 let abs_diff t u = Span.abs (diff t u)
 let max          = Span.max
 let min          = Span.min
+let next         = Span.next
+let prev         = Span.prev
 
 let to_span_since_epoch t = t
 let of_span_since_epoch s = s
