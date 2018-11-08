@@ -887,11 +887,13 @@ module type Command = sig
 
     module Path : sig
       type t
-      val add : t -> subcommand:string -> t
-      val commands : t -> string list
       val empty : t
+      val create : path_to_exe:string -> t
+      val append : t -> subcommand:string -> t
+      val parts : t -> string list
       val replace_first : t -> from:string -> to_:string -> t
-      val root : string -> t
+      val to_string : t -> string
+      val to_string_dots : t -> string
     end
 
     module Cmdline : sig

@@ -507,10 +507,12 @@ end
 module Path : sig
   type t
   val empty : t
-  val root : string -> t
-  val add : t -> subcommand:string -> t
+  val create : path_to_exe:string -> t
+  val of_parts : string list -> t
+  val append : t -> subcommand:string -> t
   val replace_first : t -> from:string -> to_:string -> t
-  val commands : t -> string list
+  val parts : t -> string list
+  val parts_exe_basename : t -> string list
   val to_string : t -> string
   val to_string_dots : t -> string
   val pop_help : t -> t
@@ -518,33 +520,39 @@ module Path : sig
 end = struct
   type t = string list
   let empty = []
-  let root cmd = [Filename.basename cmd]
-  let add t ~subcommand = subcommand :: t
-  let commands t = List.rev t
-  let to_string t = unwords (commands t)
+  let create ~path_to_exe = [path_to_exe]
+  let of_parts parts = List.rev parts
+  let append t ~subcommand = subcommand :: t
+  let parts = List.rev
+
+  let parts_exe_basename t =
+    match List.rev t with
+    | [] -> []
+    | hd :: tl -> Filename.basename hd :: tl
+
+  let to_string t = unwords (parts_exe_basename t)
   let length = List.length
+
   let replace_first t ~from ~to_ =
-    let replaced : unit Set_once.t = Set_once.create () in
-    List.rev_map (List.rev t) ~f:(fun x ->
-      match Set_once.get replaced with
-      | Some () -> x
-      | None ->
-        if String.(<>) x from
-        then x
-        else begin
-          Set_once.set_exn replaced [%here] ();
-          to_
-        end)
+    let rec aux parts ~acc ~from ~to_ =
+      match parts with
+      | [] -> acc
+      | hd :: tl ->
+        if String.(=) hd from
+        then List.rev_append tl (to_ :: acc)
+        else aux tl ~acc:(hd :: acc) ~from ~to_
+    in
+    aux (parts t) ~acc:[] ~from ~to_
+
   let pop_help = function
     | "help" :: t -> t
     | _ -> assert false
+
   let to_string_dots t =
-    let t =
-      match t with
-      | [] -> []
-      | last :: init -> last :: List.map init ~f:(Fn.const ".")
-    in
-    to_string t
+    (match t with
+     | [] -> []
+     | last :: init -> last :: List.map init ~f:(Fn.const "."))
+    |> to_string
 end
 
 module Anons = struct
@@ -967,7 +975,7 @@ module Cmdline = struct
 
   let extend t ~extend ~path =
     if ends_in_complete t then t else begin
-      let path_list = Option.value ~default:[] (List.tl (Path.commands path)) in
+      let path_list = Option.value ~default:[] (List.tl (Path.parts path)) in
       of_list (to_list t @ extend path_list)
     end
 
@@ -2114,7 +2122,7 @@ let rec summary = function
 
 module Spec = struct
   include Base.Spec
-  let path = map ~f:Path.commands path
+  let path = map ~f:Path.parts_exe_basename path
 end
 
 module Deprecated = struct
@@ -2331,7 +2339,7 @@ module For_unix (M : For_unix) = struct
           List.stable_sort subs ~compare:(fun a b -> help_screen_compare (fst a) (fst b))
         in
         List.fold alist ~init:acc ~f:(fun acc (subcommand, shape) ->
-          let rpath = Path.add rpath ~subcommand in
+          let rpath = Path.append rpath ~subcommand in
           let key = string_of_path rpath in
           let doc = Shape.get_summary shape in
           let acc = Fqueue.enqueue acc { Format.V1. name = key; doc; aliases = [] } in
@@ -2351,7 +2359,7 @@ module For_unix (M : For_unix) = struct
           b.flags
           |> List.filter ~f:(fun fmt -> fmt.Format.V1.name <> "[-help]")
           |> List.fold ~init:acc ~f:(fun acc fmt ->
-            let rpath = Path.add rpath ~subcommand:fmt.Format.V1.name in
+            let rpath = Path.append rpath ~subcommand:fmt.Format.V1.name in
             let fmt = { fmt with Format.V1.name = string_of_path rpath } in
             Fqueue.enqueue acc fmt)
         end else
@@ -2426,7 +2434,7 @@ module For_unix (M : For_unix) = struct
          let path =
            let path = Path.pop_help path in
            Option.fold cmd_opt ~init:path
-             ~f:(fun path subcommand -> Path.add path ~subcommand)
+             ~f:(fun path subcommand -> Path.append path ~subcommand)
          in
          let path, shape =
            match cmd_opt with
@@ -2518,7 +2526,7 @@ complete -F %s %s
           | Cmdline.Nil -> Cmdline.Complete arg
           | _ -> Cmdline.Cons (arg, args))
     in
-    (Path.root cmd, args, maybe_comp_cword)
+    (Path.create ~path_to_exe:cmd, args, maybe_comp_cword)
   ;;
 
   let rec add_help_subcommands = function
@@ -2600,7 +2608,7 @@ complete -F %s %s
         begin
           match body with
           | None -> die_showing_help (sprintf "missing subcommand for command %s" (Path.to_string path))
-          | Some body -> body ~path:(Path.commands path)
+          | Some body -> body ~path:(Path.parts_exe_basename path)
         end
       | Cons (sub, rest) ->
         let (sub, rest) =
@@ -2637,7 +2645,7 @@ complete -F %s %s
           | Ok (sub, t) ->
             dispatch t env
               ~extend
-              ~path:(Path.add path ~subcommand:sub)
+              ~path:(Path.append path ~subcommand:sub)
               ~args:rest
               ~maybe_new_comp_cword:(Option.map ~f:Int.pred maybe_new_comp_cword)
               ~version
@@ -2693,10 +2701,7 @@ complete -F %s %s
 
   let deprecated_run t ~cmd ~args ~is_help ~is_help_rec ~is_help_rec_flags ~is_expand_dots =
     let path_strings = String.split cmd ~on: ' ' in
-    let path =
-      List.fold path_strings ~init:Path.empty ~f:(fun p subcommand ->
-        Path.add p ~subcommand)
-    in
+    let path = Path.of_parts path_strings in
     let args = if is_expand_dots    then "-expand-dots" :: args else args in
     let args = if is_help_rec_flags then "-flags"       :: args else args in
     let args = if is_help_rec       then "-r"           :: args else args in
