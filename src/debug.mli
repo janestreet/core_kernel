@@ -41,20 +41,19 @@ module Make () : sig
   val check_invariant : bool ref
 
   (** If true, you get a message on stderr every time [debug] is called. *)
-  val show_messages   : bool ref
+  val show_messages : bool ref
 
   (** We avoid labels so that the applications are more concise -- see example above. *)
   val debug
     :  't Invariant.t
-    -> module_name : string (** module_name appears on messages *)
-    -> (string (** string name of function [f], also appears on messages *)
-        -> 't list (** args of type [t], to have invariant checked iff [check_invariant] *)
-        -> 'args (** arguments to the function we're debugging *)
-        -> ('args -> Sexp.t)
-        -> ('result -> Sexp.t)
-        -> (unit -> 'result) (** should call [f] with ['args], exn's re-raised *)
-        -> 'result
-       )
+    -> module_name:string (** module_name appears on messages *)
+    -> string (** string name of function [f], also appears on messages *)
+    -> 't list (** args of type [t], to have invariant checked iff [check_invariant] *)
+    -> 'args (** arguments to the function we're debugging *)
+    -> ('args -> Sexp.t)
+    -> ('result -> Sexp.t)
+    -> (unit -> 'result) (** should call [f] with ['args], exn's re-raised *)
+    -> 'result
 end
 
 (** [am], [ams], and [amf] output a source code position and backtrace to stderr.  [amf]
@@ -75,10 +74,10 @@ end
     "FILE:LINE:COL", which means that one can use a tool like emacs grep-mode on a buffer
     containing debug messages to step through one's code by stepping through the
     messages. *)
-val am  : Source_code_position.t -> unit
+val am : Source_code_position.t -> unit
+
 val ams : Source_code_position.t -> string -> 'a -> ('a -> Sexp.t) -> unit
 val amf : Source_code_position.t -> ('r, unit, string, unit) format4 -> 'r
-
 
 (** [should_print_backtrace] governs whether the [am*] functions print a backtrace. *)
 val should_print_backtrace : bool ref

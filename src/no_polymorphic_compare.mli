@@ -4,17 +4,15 @@
 open! Import
 
 type compare =
-  [`no_polymorphic_compare]
-  -> [`no_polymorphic_compare]
-  -> [`no_polymorphic_compare]
+  [`no_polymorphic_compare] -> [`no_polymorphic_compare] -> [`no_polymorphic_compare]
 
 val compare : compare
-val (<)     : compare
-val (<=)    : compare
-val (>)     : compare
-val (>=)    : compare
-val (=)     : compare
-val (<>)    : compare
-val equal   : compare
-val min     : compare
-val max     : compare
+val ( < ) : compare
+val ( <= ) : compare
+val ( > ) : compare
+val ( >= ) : compare
+val ( = ) : compare
+val ( <> ) : compare
+val equal : compare
+val min : compare
+val max : compare

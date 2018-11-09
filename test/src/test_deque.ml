@@ -3,27 +3,30 @@ open! Import
 open! Deque
 
 let%test_unit _ = ignore (create ~initial_length:0 () : _ t)
-
 let%test _ = length (create ()) = 0
 
 let%test_module _ =
   (module struct
     let binary_search = binary_search ~compare:Int.compare
     let t = of_array [| 1; 2; 3; 4 |]
-    let%test _ = binary_search t        `First_equal_to 2 = Some 1
-    let%test _ = binary_search t        `First_equal_to 5 = None
-    let%test _ = binary_search t        `First_equal_to 0 = None
+
+    let%test _ = binary_search t `First_equal_to 2 = Some 1
+    let%test _ = binary_search t `First_equal_to 5 = None
+    let%test _ = binary_search t `First_equal_to 0 = None
     let%test _ = binary_search t ~pos:2 `First_equal_to 2 = None
     let%test _ = binary_search t ~pos:2 `First_equal_to 3 = Some 2
+
     let _ = dequeue_front t
     let _ = dequeue_front t
-    let%test _ = binary_search t        `First_equal_to 2 = None
-    let%test _ = binary_search t        `First_equal_to 3 = Some 2
-    let%test _ = binary_search t        `First_equal_to 5 = None
-    let%test _ = binary_search t        `First_equal_to 0 = None
+
+    let%test _ = binary_search t `First_equal_to 2 = None
+    let%test _ = binary_search t `First_equal_to 3 = Some 2
+    let%test _ = binary_search t `First_equal_to 5 = None
+    let%test _ = binary_search t `First_equal_to 0 = None
     let%test _ = binary_search t ~pos:2 `First_equal_to 2 = None
     let%test _ = binary_search t ~pos:2 `First_equal_to 3 = Some 2
   end)
+;;
 
 let%test_module _ =
   (module struct
@@ -31,24 +34,30 @@ let%test_module _ =
       let q = create () in
       let bin_alpha _ = assert false in
       let pos_ref = ref 0 in
-      assert (Int.(=) (length q) 0);
+      assert (Int.( = ) (length q) 0);
       let bigstring = Bigstring.create (bin_size_t bin_alpha q) in
       ignore (bin_write_t bin_alpha bigstring ~pos:0 q);
       let q' = bin_read_t bin_alpha bigstring ~pos_ref in
-      assert (Int.(=) (length q') 0)
+      assert (Int.( = ) (length q') 0)
+    ;;
 
     module type Deque_intf = sig
       type 'a t
 
-      val create   : unit -> 'a t
-      val enqueue  : 'a t -> [ `back | `front ] -> 'a -> unit
-      val dequeue  : 'a t -> [ `back | `front ] -> 'a option
+      val create : unit -> 'a t
+      val enqueue : 'a t -> [`back | `front] -> 'a -> unit
+      val dequeue : 'a t -> [`back | `front] -> 'a option
       val to_array : 'a t -> 'a array
-      val clear    : 'a t -> unit
-      val length   : 'a t -> int
-      val iter     : 'a t -> f:('a -> unit) -> unit
+      val clear : 'a t -> unit
+      val length : 'a t -> int
+      val iter : 'a t -> f:('a -> unit) -> unit
+
       val fold'
-        : 'a t -> [`front_to_back | `back_to_front] -> init:'b -> f:('b -> 'a -> 'b) -> 'b
+        :  'a t
+        -> [`front_to_back | `back_to_front]
+        -> init:'b
+        -> f:('b -> 'a -> 'b)
+        -> 'b
     end
 
     module That_dequeue : Deque_intf = struct
@@ -58,13 +67,13 @@ let%test_module _ =
 
       let enqueue t back_or_front v =
         match back_or_front with
-        | `back  -> ignore (Doubly_linked.insert_last t v)
+        | `back -> ignore (Doubly_linked.insert_last t v)
         | `front -> ignore (Doubly_linked.insert_first t v)
       ;;
 
       let dequeue t back_or_front =
         match back_or_front with
-        | `back  -> Doubly_linked.remove_last t
+        | `back -> Doubly_linked.remove_last t
         | `front -> Doubly_linked.remove_first t
       ;;
 
@@ -75,22 +84,22 @@ let%test_module _ =
       ;;
 
       let to_array = Doubly_linked.to_array
-      let clear    = Doubly_linked.clear
-      let iter     = Doubly_linked.iter
-      let length   = Doubly_linked.length
+      let clear = Doubly_linked.clear
+      let iter = Doubly_linked.iter
+      let length = Doubly_linked.length
     end
 
     module This_dequeue : Deque_intf = struct
       type nonrec 'a t = 'a t
 
       let create () = create ()
-      let enqueue   = enqueue
-      let dequeue   = dequeue
-      let to_array  = to_array
-      let clear     = clear
-      let length    = length
-      let iter      = iter
-      let fold'     = fold'
+      let enqueue = enqueue
+      let dequeue = dequeue
+      let to_array = to_array
+      let clear = clear
+      let length = length
+      let iter = iter
+      let fold' = fold'
     end
 
     let enqueue (t_a, t_b) back_or_front v =
@@ -100,8 +109,10 @@ let%test_module _ =
       That_dequeue.enqueue t_b back_or_front v;
       let end_a = This_dequeue.to_array t_a in
       let end_b = That_dequeue.to_array t_b in
-      if end_a <> end_b then
-        failwithf "enqueue transition failure of: %s -> %s vs. %s -> %s"
+      if end_a <> end_b
+      then
+        failwithf
+          "enqueue transition failure of: %s -> %s vs. %s -> %s"
           (Sexp.to_string (Array.sexp_of_t Int.sexp_of_t start_a))
           (Sexp.to_string (Array.sexp_of_t Int.sexp_of_t end_a))
           (Sexp.to_string (Array.sexp_of_t Int.sexp_of_t start_b))
@@ -112,13 +123,15 @@ let%test_module _ =
     let dequeue (t_a, t_b) back_or_front =
       let start_a = This_dequeue.to_array t_a in
       let start_b = That_dequeue.to_array t_b in
-      let a,b =
+      let a, b =
         This_dequeue.dequeue t_a back_or_front, That_dequeue.dequeue t_b back_or_front
       in
       let end_a = This_dequeue.to_array t_a in
       let end_b = That_dequeue.to_array t_b in
-      if a <> b || end_a <> end_b then
-        failwithf "error in dequeue: %s (%s -> %s) <> %s (%s -> %s)"
+      if a <> b || end_a <> end_b
+      then
+        failwithf
+          "error in dequeue: %s (%s -> %s) <> %s (%s -> %s)"
           (Option.value ~default:"None" (Option.map a ~f:Int.to_string))
           (Sexp.to_string (Array.sexp_of_t Int.sexp_of_t start_a))
           (Sexp.to_string (Array.sexp_of_t Int.sexp_of_t end_a))
@@ -136,7 +149,7 @@ let%test_module _ =
     let create () =
       let t_a = This_dequeue.create () in
       let t_b = That_dequeue.create () in
-      (t_a, t_b)
+      t_a, t_b
     ;;
 
     let this_to_string this_t =
@@ -148,13 +161,13 @@ let%test_module _ =
     ;;
 
     let fold_check (t_a, t_b) dir =
-      let make_list fold t =
-        fold t dir ~init:[] ~f:(fun acc x -> x :: acc)
-      in
+      let make_list fold t = fold t dir ~init:[] ~f:(fun acc x -> x :: acc) in
       let this_l = make_list This_dequeue.fold' t_a in
       let that_l = make_list That_dequeue.fold' t_b in
-      if this_l <> that_l then
-        failwithf "error in fold:  %s (from %s) <> %s (from %s)"
+      if this_l <> that_l
+      then
+        failwithf
+          "error in fold:  %s (from %s) <> %s (from %s)"
           (Sexp.to_string ([%sexp_of: int list] this_l))
           (this_to_string t_a)
           (Sexp.to_string ([%sexp_of: int list] that_l))
@@ -164,12 +177,16 @@ let%test_module _ =
 
     let iter_check (t_a, t_b) =
       let make_rev_list iter t =
-        let r = ref [] in iter t ~f:(fun x -> r := x :: !r); !r
+        let r = ref [] in
+        iter t ~f:(fun x -> r := x :: !r);
+        !r
       in
       let this_l = make_rev_list This_dequeue.iter t_a in
       let that_l = make_rev_list That_dequeue.iter t_b in
-      if this_l <> that_l then
-        failwithf "error in iter:  %s (from %s) <> %s (from %s)"
+      if this_l <> that_l
+      then
+        failwithf
+          "error in iter:  %s (from %s) <> %s (from %s)"
           (Sexp.to_string ([%sexp_of: int list] this_l))
           (this_to_string t_a)
           (Sexp.to_string ([%sexp_of: int list] that_l))
@@ -180,53 +197,56 @@ let%test_module _ =
     let length_check (t_a, t_b) =
       let this_len = This_dequeue.length t_a in
       let that_len = That_dequeue.length t_b in
-      if this_len <> that_len then
-        failwithf "error in length: %i (for %s) <> %i (for %s)"
-          this_len (this_to_string t_a)
-          that_len (that_to_string t_b)
+      if this_len <> that_len
+      then
+        failwithf
+          "error in length: %i (for %s) <> %i (for %s)"
+          this_len
+          (this_to_string t_a)
+          that_len
+          (that_to_string t_b)
           ()
     ;;
 
     let test () =
       let t = create () in
-
       let rec loop ops =
-        if ops = 0 then begin
-          let (t_a, t_b) = t in
+        if ops = 0
+        then (
+          let t_a, t_b = t in
           let arr_a = This_dequeue.to_array t_a in
           let arr_b = That_dequeue.to_array t_b in
-          if arr_a <> arr_b then
-            failwithf "dequeue final states not equal: %s vs. %s"
+          if arr_a <> arr_b
+          then
+            failwithf
+              "dequeue final states not equal: %s vs. %s"
               (Sexp.to_string (Array.sexp_of_t Int.sexp_of_t arr_a))
               (Sexp.to_string (Array.sexp_of_t Int.sexp_of_t arr_b))
-              ()
-        end else begin
+              ())
+        else (
           let r = Random.int 110 in
-          begin
-            if r < 20 then
-              enqueue t `front (Random.int 10_000)
-            else if r < 40 then
-              enqueue t `back (Random.int 10_000)
-            else if r < 50 then
-              dequeue t `front
-            else if r < 60 then
-              dequeue t `back
-            else if r < 70 then
-              clear t
-            else if r < 80 then
-              fold_check t `front_to_back
-            else if r < 90 then
-              fold_check t `back_to_front
-            else if r < 100 then
-              iter_check t
-            else
-              length_check t
-          end;
-          loop (ops - 1)
-        end
+          if r < 20
+          then enqueue t `front (Random.int 10_000)
+          else if r < 40
+          then enqueue t `back (Random.int 10_000)
+          else if r < 50
+          then dequeue t `front
+          else if r < 60
+          then dequeue t `back
+          else if r < 70
+          then clear t
+          else if r < 80
+          then fold_check t `front_to_back
+          else if r < 90
+          then fold_check t `back_to_front
+          else if r < 100
+          then iter_check t
+          else length_check t;
+          loop (ops - 1))
       in
       loop 1_000
     ;;
 
     let%test_unit _ = test ()
   end)
+;;

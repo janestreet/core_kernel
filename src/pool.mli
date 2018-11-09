@@ -1,1 +1,2 @@
-include Pool_intf.Pool (** @inline *)
+(** @inline *)
+include Pool_intf.Pool

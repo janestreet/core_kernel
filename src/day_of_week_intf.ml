@@ -14,7 +14,7 @@ module type Day_of_week = sig
   [@@deriving bin_io, compare, hash, sexp]
 
   include Comparable.S_binable with type t := t
-  include Hashable.  S_binable with type t := t
+  include Hashable.S_binable with type t := t
 
   (** [of_string s] accepts three-character abbreviations and full day names
       with any capitalization, and strings of the integers 0-6. *)
@@ -25,8 +25,9 @@ module type Day_of_week = sig
 
   (** These use the same mapping as [Unix.tm_wday]: 0 <-> Sun, ... 6 <-> Sat *)
   val of_int_exn : int -> t
-  val of_int     : int -> t option
-  val to_int     : t -> int
+
+  val of_int : int -> t option
+  val to_int : t -> int
 
   (** As per ISO 8601, Mon->1, Tue->2, ... Sun->7 *)
   val iso_8601_weekday_number : t -> int
@@ -41,22 +42,24 @@ module type Day_of_week = sig
   val num_days : from:t -> to_:t -> int
 
   val is_sun_or_sat : t -> bool
+  val all : t list
 
-  val all      : t list
-  val weekdays : t list (** [ Mon; Tue; Wed; Thu; Fri ] *)
+  (** [ Mon; Tue; Wed; Thu; Fri ] *)
+  val weekdays : t list
 
-  val weekends : t list (** [ Sat; Sun ] *)
+  (** [ Sat; Sun ] *)
+  val weekends : t list
 
   module Stable : sig
     module V1 : sig
       type nonrec t = t [@@deriving bin_io, sexp, compare, hash]
 
-      include Comparable.Stable.V1.S
+      include
+        Comparable.Stable.V1.S
         with type comparable := t
         with type comparator_witness := comparator_witness
 
-      include Stable_containers.Hashable.V1.S
-        with type key := t
+      include Stable_containers.Hashable.V1.S with type key := t
     end
   end
 end

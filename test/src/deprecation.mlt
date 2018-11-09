@@ -6,7 +6,8 @@ end
 
 let _ = M.x
 
-[%%expect {|
+[%%expect
+  {|
 Line _, characters 8-11:
 Error (Warning 3): deprecated: M.x
 [since 2016-07]

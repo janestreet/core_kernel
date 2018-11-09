@@ -1,9 +1,7 @@
 open! Import
-
 include Base.Queue
 
-include
-  Test_binary_searchable.Make1_and_test (struct
+include Test_binary_searchable.Make1_and_test (struct
     type nonrec 'a t = 'a t
 
     let get = get
@@ -16,13 +14,14 @@ include
            - that the queue has the same content as the array.
            - that it has, in most cases, an interesting internal structure*)
         for i = 0 to Array.length a - 1 do
-          enqueue r a.( i )
+          enqueue r a.(i)
         done;
         for i = 0 to Array.length a - 1 do
           ignore (dequeue_exn r : bool);
-          enqueue r a.( i )
+          enqueue r a.(i)
         done;
         r
+      ;;
     end
   end)
 
@@ -30,17 +29,18 @@ module Serialization_v1 = struct
   let sexp_of_t = sexp_of_t
   let t_of_sexp = t_of_sexp
 
-  include
-    Bin_prot.Utils.Make_iterable_binable1 (struct
+  include Bin_prot.Utils.Make_iterable_binable1 (struct
       type nonrec 'a t = 'a t
-      type 'a el       = 'a [@@deriving bin_io]
+      type 'a el = 'a [@@deriving bin_io]
 
-      let caller_identity = Bin_prot.Shape.Uuid.of_string "b4c84254-4992-11e6-9ba7-734e154027bd"
+      let caller_identity =
+        Bin_prot.Shape.Uuid.of_string "b4c84254-4992-11e6-9ba7-734e154027bd"
+      ;;
+
       let module_name = Some "Core_kernel.Queue"
-      let length      = length
-      let iter        = iter
-
-      let init ~len ~next = init len ~f:(fun _ -> next ());
+      let length = length
+      let iter = iter
+      let init ~len ~next = init len ~f:(fun _ -> next ())
     end)
 end
 

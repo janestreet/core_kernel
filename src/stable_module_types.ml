@@ -15,16 +15,19 @@ end
 
 module type S1 = sig
   type 'a t [@@deriving bin_io, compare, sexp]
+
   val map : 'a t -> f:('a -> 'b) -> 'b t
 end
 
 module type S2 = sig
   type ('a1, 'a2) t [@@deriving bin_io, compare, sexp]
+
   val map : ('a1, 'a2) t -> f1:('a1 -> 'b1) -> f2:('a2 -> 'b2) -> ('b1, 'b2) t
 end
 
 module type S3 = sig
   type ('a1, 'a2, 'a3) t [@@deriving bin_io, compare, sexp]
+
   val map
     :  ('a1, 'a2, 'a3) t
     -> f1:('a1 -> 'b1)
@@ -35,6 +38,7 @@ end
 
 module type S4 = sig
   type ('a1, 'a2, 'a3, 'a4) t [@@deriving bin_io, compare, sexp]
+
   val map
     :  ('a1, 'a2, 'a3, 'a4) t
     -> f1:('a1 -> 'b1)

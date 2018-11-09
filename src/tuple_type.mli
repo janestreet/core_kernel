@@ -5,8 +5,7 @@
 open! Import
 open Tuple_type_intf
 
-module type Slot  = Slot
+module type Slot = Slot
 module type Slots = Slots
 
 module Slots : Slots
-

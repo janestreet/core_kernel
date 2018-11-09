@@ -2,7 +2,6 @@ open! Import
 open Std_internal
 open Digit_string_helpers
 open! Int.Replace_polymorphic_compare
-
 module Span = Span_float
 
 (* Create an abstract type for Ofday to prevent us from confusing it with
@@ -13,40 +12,48 @@ module Stable = struct
     module T : sig
       type underlying = float
       type t = private underlying [@@deriving bin_io, hash, typerep]
-      include Comparable.S_common        with type t := t
-      include Robustly_comparable        with type t := t
-      include Floatable                  with type t := t
-      val add                        : t -> Span.t -> t option
-      val sub                        : t -> Span.t -> t option
-      val next                       : t -> t option
-      val prev                       : t -> t option
-      val diff                       : t -> t -> Span.t
+
+      include Comparable.S_common with type t := t
+      include Robustly_comparable with type t := t
+      include Floatable with type t := t
+
+      val add : t -> Span.t -> t option
+      val sub : t -> Span.t -> t option
+      val next : t -> t option
+      val prev : t -> t option
+      val diff : t -> t -> Span.t
       val of_span_since_start_of_day_exn : Span.t -> t
-      val to_span_since_start_of_day     : t -> Span.t
-      val start_of_day               : t
-      val start_of_next_day          : t
+      val to_span_since_start_of_day : t -> Span.t
+      val start_of_day : t
+      val start_of_next_day : t
     end = struct
       (* Number of seconds since midnight. *)
       type underlying = Float.t
-      include
-        (struct
-          include Float
-          let sign = sign_exn
-        end : sig
-           type t = underlying [@@deriving bin_io, hash, typerep]
-           include Comparable.S_common        with type t := t
-           include Comparable.With_zero       with type t := t
-           include Robustly_comparable        with type t := t
-           include Floatable                  with type t := t
-         end)
+
+      include (
+      struct
+        include Float
+
+        let sign = sign_exn
+      end :
+      sig
+        type t = underlying [@@deriving bin_io, hash, typerep]
+
+        include Comparable.S_common with type t := t
+        include Comparable.With_zero with type t := t
+        include Robustly_comparable with type t := t
+        include Floatable with type t := t
+      end)
+
       (* IF THIS REPRESENTATION EVER CHANGES, ENSURE THAT EITHER
          (1) all values serialize the same way in both representations, or
          (2) you add a new Time.Ofday version to stable.ml *)
 
       (* due to precision limitations in float we can't expect better than microsecond
          precision *)
-      include Float.Robust_compare.Make
-          (struct let robust_comparison_tolerance = 1E-6 end)
+      include Float.Robust_compare.Make (struct
+          let robust_comparison_tolerance = 1E-6
+        end)
 
       let to_span_since_start_of_day t = Span.of_sec t
 
@@ -59,51 +66,50 @@ module Stable = struct
          Note: [Schedule.t] requires that the end of day be representable, as it's the
          only way to write a schedule in terms of [Ofday.t]s that spans two weekdays. *)
       (* ofday must be >= 0 and <= 24h *)
-      let is_valid (t:t) =
+      let is_valid (t : t) =
         let t = to_span_since_start_of_day t in
-        Span.(<=) Span.zero t && Span.(<=) t Span.day
+        Span.( <= ) Span.zero t && Span.( <= ) t Span.day
       ;;
 
       let of_span_since_start_of_day_exn span =
         let module C = Float.Class in
         let s = Span.to_sec span in
         match Float.classify s with
-        | C.Infinite -> invalid_arg "Ofday.of_span_since_start_of_day_exn: infinite value"
-        | C.Nan      -> invalid_arg "Ofday.of_span_since_start_of_day_exn: NaN value"
+        | C.Infinite ->
+          invalid_arg "Ofday.of_span_since_start_of_day_exn: infinite value"
+        | C.Nan -> invalid_arg "Ofday.of_span_since_start_of_day_exn: NaN value"
         | C.Normal | C.Subnormal | C.Zero ->
-          if not (is_valid s) then
-            invalid_argf !"Ofday out of range: %{Span}" span ()
-          else
-            s
+          if not (is_valid s)
+          then invalid_argf !"Ofday out of range: %{Span}" span ()
+          else s
       ;;
 
       let start_of_day = 0.
       let start_of_next_day = of_span_since_start_of_day_exn Span.day
 
-      let add (t:t) (span:Span.t) =
-        let t = t +. (Span.to_sec span) in
+      let add (t : t) (span : Span.t) =
+        let t = t +. Span.to_sec span in
         if is_valid t then Some t else None
+      ;;
 
-      let sub (t:t) (span:Span.t) =
-        let t = t -. (Span.to_sec span) in
+      let sub (t : t) (span : Span.t) =
+        let t = t -. Span.to_sec span in
         if is_valid t then Some t else None
+      ;;
 
       let next t =
         let candidate = Float.one_ulp `Up t in
-        if is_valid candidate
-        then Some candidate
-        else None
+        if is_valid candidate then Some candidate else None
       ;;
 
       let prev t =
         let candidate = Float.one_ulp `Down t in
-        if is_valid candidate
-        then Some candidate
-        else None
+        if is_valid candidate then Some candidate else None
       ;;
 
       let diff t1 t2 =
-        Span.(-) (to_span_since_start_of_day t1) (to_span_since_start_of_day t2)
+        Span.( - ) (to_span_since_start_of_day t1) (to_span_since_start_of_day t2)
+      ;;
     end
 
     let approximate_end_of_day =
@@ -123,7 +129,7 @@ module Stable = struct
       let ms, us, ns =
         match sec with
         | Some 60 -> Some 0, Some 0, Some 0
-        | _       -> ms,     us,     ns
+        | _ -> ms, us, ns
       in
       T.of_span_since_start_of_day_exn (Span.create ?hr ?min ?sec ?ms ?us ?ns ())
     ;;
@@ -131,65 +137,67 @@ module Stable = struct
     let to_parts t = Span.to_parts (T.to_span_since_start_of_day t)
 
     let to_string_gen ~drop_ms ~drop_us ~trim t =
-      let (/)   = Int63.(/)        in
-      let (!)   = Int63.of_int     in
-      let (mod) = Int63.rem        in
-      let i     = Int63.to_int_exn in
+      let ( / ) = Int63.( / ) in
+      let ( ! ) = Int63.of_int in
+      let ( mod ) = Int63.rem in
+      let i = Int63.to_int_exn in
       assert (if drop_ms then drop_us else true);
       let float_sec = Span.to_sec (T.to_span_since_start_of_day t) in
       let us = Float.int63_round_nearest_exn (float_sec *. 1e6) in
-      let ms,  us  = us  / !1000, us  mod !1000 |> i in
-      let sec, ms  = ms  / !1000, ms  mod !1000 |> i in
-      let min, sec = sec /   !60, sec mod   !60 |> i in
-      let hr,  min = min /   !60, min mod   !60 |> i in
+      let ms, us = us / !1000, us mod !1000 |> i in
+      let sec, ms = ms / !1000, ms mod !1000 |> i in
+      let min, sec = sec / !60, sec mod !60 |> i in
+      let hr, min = min / !60, min mod !60 |> i in
       let hr = i hr in
       let dont_print_us = drop_us || (trim && us = 0) in
       let dont_print_ms = drop_ms || (trim && ms = 0 && dont_print_us) in
-      let dont_print_s  = trim && sec = 0 && dont_print_ms in
+      let dont_print_s = trim && sec = 0 && dont_print_ms in
       let len =
-        if dont_print_s then 5
-        else if dont_print_ms then 8
-        else if dont_print_us then 12
+        if dont_print_s
+        then 5
+        else if dont_print_ms
+        then 8
+        else if dont_print_us
+        then 12
         else 15
       in
       let buf = Bytes.create len in
       write_2_digit_int buf ~pos:0 hr;
       Bytes.set buf 2 ':';
       write_2_digit_int buf ~pos:3 min;
-      if dont_print_s then ()
-      else begin
+      if dont_print_s
+      then ()
+      else (
         Bytes.set buf 5 ':';
         write_2_digit_int buf ~pos:6 sec;
-        if dont_print_ms then ()
-        else begin
+        if dont_print_ms
+        then ()
+        else (
           Bytes.set buf 8 '.';
           write_3_digit_int buf ~pos:9 ms;
-          if dont_print_us then ()
-          else
-            write_3_digit_int buf ~pos:12 us
-        end
-      end;
+          if dont_print_us then () else write_3_digit_int buf ~pos:12 us));
       Bytes.unsafe_to_string ~no_mutation_while_string_reachable:buf
     ;;
 
     let to_string_trimmed t = to_string_gen ~drop_ms:false ~drop_us:false ~trim:true t
-
     let to_sec_string t = to_string_gen ~drop_ms:true ~drop_us:true ~trim:false t
 
-    let to_millisecond_string t = to_string_gen ~drop_ms:false ~drop_us:true ~trim:false t
+    let to_millisecond_string t =
+      to_string_gen ~drop_ms:false ~drop_us:true ~trim:false t
+    ;;
 
     let small_diff =
       let hour = 3600. in
-      (fun ofday1 ofday2 ->
-         let ofday1 = Span.to_sec (T.to_span_since_start_of_day ofday1) in
-         let ofday2 = Span.to_sec (T.to_span_since_start_of_day ofday2) in
-         let diff   = ofday1 -. ofday2 in
-         (*  d1 is in (-hour; hour) *)
-         let d1 = Float.mod_float diff hour in
-         (*  d2 is in (0;hour) *)
-         let d2 = Float.mod_float (d1 +. hour) hour in
-         let d = if Float.( > ) d2 (hour /. 2.) then d2 -. hour else d2 in
-         Span.of_sec d)
+      fun ofday1 ofday2 ->
+        let ofday1 = Span.to_sec (T.to_span_since_start_of_day ofday1) in
+        let ofday2 = Span.to_sec (T.to_span_since_start_of_day ofday2) in
+        let diff = ofday1 -. ofday2 in
+        (*  d1 is in (-hour; hour) *)
+        let d1 = Float.mod_float diff hour in
+        (*  d2 is in (0;hour) *)
+        let d2 = Float.mod_float (d1 +. hour) hour in
+        let d = if Float.( > ) d2 (hour /. 2.) then d2 -. hour else d2 in
+        Span.of_sec d
     ;;
 
     include T
@@ -198,6 +206,7 @@ module Stable = struct
 
     include Pretty_printer.Register (struct
         type nonrec t = t
+
         let to_string = to_string
         let module_name = "Core_kernel.Time.Ofday"
       end)
@@ -213,32 +222,27 @@ module Stable = struct
       |> T.of_span_since_start_of_day_exn
     ;;
 
-    let of_string s =
-      Ofday_helpers.parse s ~f:create_from_parsed
-    ;;
-
+    let of_string s = Ofday_helpers.parse s ~f:create_from_parsed
 
     let t_of_sexp sexp =
       match sexp with
       | Sexp.Atom s ->
-        begin try
-          of_string s
-        with
-        | Invalid_argument s -> of_sexp_error ("Ofday.t_of_sexp: " ^ s) sexp
-        end
+        (try of_string s with
+         | Invalid_argument s -> of_sexp_error ("Ofday.t_of_sexp: " ^ s) sexp)
       | _ -> of_sexp_error "Ofday.t_of_sexp" sexp
     ;;
 
     let sexp_of_t span = Sexp.Atom (to_string span)
 
     let of_string_iso8601_extended ?pos ?len str =
-      try
-        Ofday_helpers.parse_iso8601_extended ?pos ?len str ~f:create_from_parsed
-      with exn ->
-        invalid_argf "Ofday.of_string_iso8601_extended(%s): %s"
-          (String.subo str ?pos ?len) (Exn.to_string exn) ()
+      try Ofday_helpers.parse_iso8601_extended ?pos ?len str ~f:create_from_parsed with
+      | exn ->
+        invalid_argf
+          "Ofday.of_string_iso8601_extended(%s): %s"
+          (String.subo str ?pos ?len)
+          (Exn.to_string exn)
+          ()
     ;;
-
   end
 end
 
@@ -252,14 +256,13 @@ include Hashable.Make_binable (struct
        serialization. *)
     let t_of_sexp sexp =
       match Float.t_of_sexp sexp with
-      | float       -> of_float float
+      | float -> of_float float
       | exception _ -> t_of_sexp sexp
+    ;;
   end)
 
 module C = struct
-
   type t = T.t [@@deriving bin_io]
-
   type comparator_witness = T.comparator_witness
 
   let comparator = T.comparator
@@ -283,4 +286,4 @@ module Map = Map.Make_binable_using_comparator (C)
 module Set = Set.Make_binable_using_comparator (C)
 
 let of_span_since_start_of_day = of_span_since_start_of_day_exn
-let to_millisec_string         = to_millisecond_string
+let to_millisec_string = to_millisecond_string

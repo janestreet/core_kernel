@@ -17,6 +17,7 @@ include Container.S1 with type 'a t := 'a t
     you want to access the smallest element of the heap according to the heap's comparison
     function, you should use [top]. *)
 val min_elt : 'a t -> compare:('a -> 'a -> int) -> 'a option
+
 val max_elt : 'a t -> compare:('a -> 'a -> int) -> 'a option
 
 (** The elements of [to_list t] are not in any particular order.  You need to sort the
@@ -27,15 +28,17 @@ val to_list : 'a t -> 'a list
 
     The top of the heap is the smallest element as determined by the provided comparison
     function. *)
-val create   : cmp:('a -> 'a -> int) -> 'a t
+val create : cmp:('a -> 'a -> int) -> 'a t
+
 val of_array : 'a array -> cmp:('a -> 'a -> int) -> 'a t
-val of_list  : 'a list  -> cmp:('a -> 'a -> int) -> 'a t
+val of_list : 'a list -> cmp:('a -> 'a -> int) -> 'a t
 
 (** [add t v] returns the new heap after addition.  Complexity O(1). *)
 val add : 'a t -> 'a -> 'a t
 
 (** This returns the top (i.e., smallest) element of the heap.  Complexity O(1). *)
-val top     : 'a t -> 'a option
+val top : 'a t -> 'a option
+
 val top_exn : 'a t -> 'a
 
 (** [remove_top t] returns the new heap after a remove.  It does nothing if [t]
@@ -46,7 +49,8 @@ val top_exn : 'a t -> 'a
 val remove_top : 'a t -> 'a t option
 
 (** This removes and returns the top (i.e., least) element and the modified heap. *)
-val pop     : 'a t -> ('a * 'a t) option
+val pop : 'a t -> ('a * 'a t) option
+
 val pop_exn : 'a t -> 'a * 'a t
 
 (** [pop_if t cond] returns [Some (top_element, rest_of_heap)] if [t] is not empty and its
@@ -54,4 +58,4 @@ val pop_exn : 'a t -> 'a * 'a t
 val pop_if : 'a t -> ('a -> bool) -> ('a * 'a t) option
 
 (** [to_sequence t] is a sequence of the elements of [t] in ascending order. *)
-val to_sequence: 'a t -> 'a Base.Sequence.t
+val to_sequence : 'a t -> 'a Base.Sequence.t

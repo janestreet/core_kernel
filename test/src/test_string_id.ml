@@ -23,7 +23,8 @@ end
 (* Test [Make_with_validate_without_pretty_printer]. *)
 
 (* Even integers are the only valid identifiers *)
-module Even_int_id = Make_with_validate_without_pretty_printer (struct
+module Even_int_id =
+  Make_with_validate_without_pretty_printer (struct
     let module_name = "Even_int_id"
 
     let validate s =
@@ -31,7 +32,8 @@ module Even_int_id = Make_with_validate_without_pretty_printer (struct
       then Or_error.error_s [%message "Not a valid Even_int_id" ~_:(s : string)]
       else Ok ()
     ;;
-  end) ()
+  end)
+    ()
 
 let even_int_id_to_bin_str t =
   let bin_writer_t = Even_int_id.bin_writer_t in
@@ -41,24 +43,26 @@ let even_int_id_to_bin_str t =
 
 let even_int_id_of_bin_str str =
   Even_int_id.bin_reader_t.Bin_prot.Type_class.read
-    (Bigstring.of_string str) ~pos_ref:(ref 0)
+    (Bigstring.of_string str)
+    ~pos_ref:(ref 0)
 ;;
 
 let%test_unit "string roundtrip" =
-  [%test_result : string]
+  [%test_result: string]
     (Even_int_id.of_string "14" |> Even_int_id.to_string)
     ~expect:"14"
 ;;
 
 let%test_unit "sexp roundtrip" =
-  [%test_result : string]
+  [%test_result: string]
     (Even_int_id.t_of_sexp (Sexp.of_string "14")
-     |> Even_int_id.sexp_of_t |> Sexp.to_string)
+     |> Even_int_id.sexp_of_t
+     |> Sexp.to_string)
     ~expect:"14"
 ;;
 
 let%test_unit "bin_prot roundrip" =
-  [%test_result : string]
+  [%test_result: string]
     (Even_int_id.of_string "14"
      |> even_int_id_to_bin_str
      |> even_int_id_of_bin_str
@@ -68,13 +72,12 @@ let%test_unit "bin_prot roundrip" =
 
 let print_error or_error =
   match or_error with
-  | Ok _        -> printf "<OK>"
+  | Ok _ -> printf "<OK>"
   | Error error -> Error.to_string_hum error |> printf "%s"
 ;;
 
 let%expect_test "of string failure" =
-  Or_error.try_with (fun () -> Even_int_id.of_string "15")
-  |> print_error;
+  Or_error.try_with (fun () -> Even_int_id.of_string "15") |> print_error;
   [%expect {|
     (Invalid_argument "(\"Not a valid Even_int_id\"15)") |}]
 ;;
@@ -104,18 +107,16 @@ let%expect_test "of bin prot failure" =
 module M =
   Make_without_pretty_printer (struct
     let module_name = "test"
-  end) ()
+  end)
+    ()
 
 let%test_unit "string roundtrip" =
-  [%test_result : string]
-    (M.of_string "FOOBAR" |> M.to_string)
-    ~expect:"FOOBAR"
+  [%test_result: string] (M.of_string "FOOBAR" |> M.to_string) ~expect:"FOOBAR"
 ;;
 
 let%test_unit "sexp roundtrip" =
-  [%test_result : string]
-    (M.t_of_sexp (Sexp.of_string "FOOBAR")
-     |> M.sexp_of_t |> Sexp.to_string)
+  [%test_result: string]
+    (M.t_of_sexp (Sexp.of_string "FOOBAR") |> M.sexp_of_t |> Sexp.to_string)
     ~expect:"FOOBAR"
 ;;
 
@@ -126,84 +127,79 @@ let string_id_to_bin_str t =
 ;;
 
 let string_id_of_bin_str str =
-  M.bin_reader_t.Bin_prot.Type_class.read
-    (Bigstring.of_string str) ~pos_ref:(ref 0)
+  M.bin_reader_t.Bin_prot.Type_class.read (Bigstring.of_string str) ~pos_ref:(ref 0)
 ;;
 
 let%test_unit "bin_prot roundrip" =
-  [%test_result : string]
-    (M.of_string "FOOBAR"
-     |> string_id_to_bin_str
-     |> string_id_of_bin_str
-     |> M.to_string)
+  [%test_result: string]
+    (M.of_string "FOOBAR" |> string_id_to_bin_str |> string_id_of_bin_str |> M.to_string)
     ~expect:"FOOBAR"
 ;;
 
 let%test_unit "whitespace inside is OK" =
-  [%test_result : string]
-    (M.of_string "FOO  BAR" |> M.to_string)
-    ~expect:"FOO  BAR"
+  [%test_result: string] (M.of_string "FOO  BAR" |> M.to_string) ~expect:"FOO  BAR"
 ;;
 
 let print_error or_error =
   match or_error with
-  | Ok _        -> printf "<OK>"
+  | Ok _ -> printf "<OK>"
   | Error error -> Error.to_string_hum error |> printf "%s"
 ;;
 
 let%expect_test "of string failure - empty string" =
-  Or_error.try_with (fun () -> M.of_string "")
-  |> print_error;
+  Or_error.try_with (fun () -> M.of_string "") |> print_error;
   [%expect {|
         (Invalid_argument "'' is not a valid test because it is empty") |}]
 ;;
 
 let%expect_test "of string failure - whitespace after" =
-  Or_error.try_with (fun () -> M.of_string "FOOBAR ")
-  |> print_error;
-  [%expect {|
+  Or_error.try_with (fun () -> M.of_string "FOOBAR ") |> print_error;
+  [%expect
+    {|
     (Invalid_argument
-     "'FOOBAR ' is not a valid test because it has whitespace on the edge") |}];
+     "'FOOBAR ' is not a valid test because it has whitespace on the edge") |}]
 ;;
 
 let%expect_test "of string failure - whitespace before" =
-  Or_error.try_with (fun () -> M.of_string " FOOBAR")
-  |> print_error;
-  [%expect {|
+  Or_error.try_with (fun () -> M.of_string " FOOBAR") |> print_error;
+  [%expect
+    {|
     (Invalid_argument
-     "' FOOBAR' is not a valid test because it has whitespace on the edge") |}];
+     "' FOOBAR' is not a valid test because it has whitespace on the edge") |}]
 ;;
 
 let%expect_test "of sexp failure" =
-  Or_error.try_with (fun () -> M.t_of_sexp (Sexp.of_string "\"FOOBAR \""))
-  |> print_error;
-  [%expect {|
+  Or_error.try_with (fun () -> M.t_of_sexp (Sexp.of_string "\"FOOBAR \"")) |> print_error;
+  [%expect
+    {|
     (Of_sexp_error
      "'FOOBAR ' is not a valid test because it has whitespace on the edge"
-     (invalid_sexp "FOOBAR ")) |}];
+     (invalid_sexp "FOOBAR ")) |}]
 ;;
 
 let%expect_test "set of sexp failure" =
   Or_error.try_with (fun () -> M.Set.t_of_sexp (Sexp.of_string "(\"FOOBAR \")"))
   |> print_error;
-  [%expect {|
+  [%expect
+    {|
     (Of_sexp_error
      "'FOOBAR ' is not a valid test because it has whitespace on the edge"
-     (invalid_sexp "FOOBAR ")) |}];
+     (invalid_sexp "FOOBAR ")) |}]
 ;;
 
 let%expect_test "of bin prot failure" =
   Or_error.try_with (fun () ->
     string_id_of_bin_str (Unit_tests_util.string_to_bin_str "FOOBAR "))
   |> print_error;
-  [%expect {|
+  [%expect
+    {|
     (Invalid_argument
-     "'FOOBAR ' is not a valid test because it has whitespace on the edge") |}];
+     "'FOOBAR ' is not a valid test because it has whitespace on the edge") |}]
 ;;
 
 let%test_unit "String_id's of_string shouldn't allocate on success" =
   let initial_words = Gc.minor_words () in
   ignore (M.of_string "FOOBAR");
-  let allocated = (Gc.minor_words ()) - initial_words in
+  let allocated = Gc.minor_words () - initial_words in
   [%test_result: int] allocated ~expect:0
 ;;

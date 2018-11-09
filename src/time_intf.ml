@@ -1,11 +1,9 @@
 open! Import
 open! Std_internal
-
 module Date = Date0
 
 module type Zone = sig
   module Time : Time0_intf.S
-
   include Zone.S with type t = Zone.t and module Time_in_seconds := Time
 
   (** [abbreviation t time] returns the abbreviation name (such as EDT, EST, JST) of given
@@ -18,27 +16,25 @@ module type Zone = sig
       intended for most clients. These functions read and write the zone's cached index.
   *)
   val absolute_time_of_date_and_ofday : t -> Time.Date_and_ofday.t -> Time.t
+
   val date_and_ofday_of_absolute_time : t -> Time.t -> Time.Date_and_ofday.t
 
   (** Takes a [Time.t] and returns the next [Time.t] strictly after it, if any, that the
       time zone UTC offset changes, and by how much it does so. *)
-  val next_clock_shift
-    :  t
-    -> strictly_after:Time.t
-    -> (Time.t * Time.Span.t) option
+  val next_clock_shift : t -> strictly_after:Time.t -> (Time.t * Time.Span.t) option
 
   (** As [next_clock_shift], but *at or before* the given time. *)
-  val prev_clock_shift
-    :  t
-    -> at_or_before:Time.t
-    -> (Time.t * Time.Span.t) option
+  val prev_clock_shift : t -> at_or_before:Time.t -> (Time.t * Time.Span.t) option
 end
 
 module type Basic = sig
   module Time : Time0_intf.S
 
   (*_ necessary to preserve type equality with the Time functor argument *)
-  include (module type of struct include Time end [@ocaml.remove_aliases])
+
+  include module type of struct
+  include Time
+end [@ocaml.remove_aliases]
 
   (** [now ()] returns a [t] representing the current time *)
   val now : unit -> t
@@ -70,13 +66,19 @@ module type Basic = sig
   (** {6 Comparisons} *)
 
   val is_earlier : t -> than:t -> bool
-  val is_later   : t -> than:t -> bool
+  val is_later : t -> than:t -> bool
 end
 
 module type Shared = sig
   type t
-  module Span : sig type t end
-  module Ofday : sig type t end
+
+  module Span : sig
+    type t
+  end
+
+  module Ofday : sig
+    type t
+  end
 
   (** {6 Conversions} *)
 
@@ -98,7 +100,7 @@ module type Shared = sig
     :  Date.t
     -> Ofday.t
     -> zone:Zone.t
-    -> [ `Once of t | `Twice of t * t | `Never of t ]
+    -> [`Once of t | `Twice of t * t | `Never of t]
 
   val to_date_ofday : t -> zone:Zone.t -> Date.t * Ofday.t
 
@@ -119,13 +121,9 @@ module type Shared = sig
   val to_date_ofday_precise
     :  t
     -> zone:Zone.t
-    -> Date.t * Ofday.t
-       * [ `Only
-         | `Also_at of t
-         | `Also_skipped of Date.t * Ofday.t
-         ]
+    -> Date.t * Ofday.t * [`Only | `Also_at of t | `Also_skipped of Date.t * Ofday.t]
 
-  val to_date  : t -> zone:Zone.t -> Date.t
+  val to_date : t -> zone:Zone.t -> Date.t
   val to_ofday : t -> zone:Zone.t -> Ofday.t
 
   (** For performance testing only; [reset_date_cache ()] resets an internal cache used to
@@ -144,17 +142,9 @@ module type Shared = sig
 
   (** It's unspecified what happens if the given date/ofday/zone correspond to more than
       one date/ofday pair in the other zone. *)
-  val convert
-    :  from_tz:Zone.t
-    -> to_tz:Zone.t
-    -> Date.t
-    -> Ofday.t
-    -> (Date.t * Ofday.t)
+  val convert : from_tz:Zone.t -> to_tz:Zone.t -> Date.t -> Ofday.t -> Date.t * Ofday.t
 
-  val utc_offset
-    :  t
-    -> zone:Zone.t
-    -> Span.t
+  val utc_offset : t -> zone:Zone.t -> Span.t
 
   (** {6 Other string conversions}  *)
 
@@ -172,13 +162,13 @@ module type Shared = sig
 
   (** [to_string_abs ~zone t] is the same as [to_string t] except that it uses the given
       time zone. *)
-  val to_string_abs         : t -> zone:Zone.t -> string
+  val to_string_abs : t -> zone:Zone.t -> string
 
   (** [to_string_abs_trimmed] is the same as [to_string_abs], but drops trailing seconds
       and milliseconds if they are 0. *)
   val to_string_abs_trimmed : t -> zone:Zone.t -> string
 
-  val to_string_abs_parts   : t -> zone:Zone.t -> string list
+  val to_string_abs_parts : t -> zone:Zone.t -> string list
 
   (** Same as [to_string_abs_trimmed], except it leaves off the timezone, so won't
       reliably round trip. *)
@@ -214,7 +204,7 @@ module type Shared = sig
       ofday then the t returned will be equal to the t given.
   *)
   val occurrence
-    :  [ `First_after_or_at | `Last_before_or_at ]
+    :  [`First_after_or_at | `Last_before_or_at]
     -> t
     -> ofday:Ofday.t
     -> zone:Zone.t

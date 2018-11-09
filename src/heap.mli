@@ -41,23 +41,25 @@ val max_elt : 'a t -> compare:('a -> 'a -> int) -> 'a option
     memory use will at least be proportional to the largest number of elements that the
     heap has ever held.
 *)
-val create : ?min_size : int -> cmp:('a -> 'a -> int) -> unit -> 'a t
+val create : ?min_size:int -> cmp:('a -> 'a -> int) -> unit -> 'a t
 
 (** [min_size] (see [create]) will be set to the size of the input array or list. *)
 val of_array : 'a array -> cmp:('a -> 'a -> int) -> 'a t
-val of_list  : 'a list  -> cmp:('a -> 'a -> int) -> 'a t
+
+val of_list : 'a list -> cmp:('a -> 'a -> int) -> 'a t
 
 (** Returns the top (i.e., smallest) element of the heap. *)
-val top     : 'a t -> 'a option
-val top_exn : 'a t -> 'a
+val top : 'a t -> 'a option
 
+val top_exn : 'a t -> 'a
 val add : 'a t -> 'a -> unit
 
 (** [remove_top t] does nothing if [t] is empty. *)
 val remove_top : _ t -> unit
 
 (** [pop] removes and returns the top (i.e. least) element. *)
-val pop     : 'a t -> 'a option
+val pop : 'a t -> 'a option
+
 val pop_exn : 'a t -> 'a
 
 (** [pop_if t cond] returns [Some top_element] of [t] if it satisfies condition

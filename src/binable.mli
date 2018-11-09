@@ -2,7 +2,6 @@
     encoding. *)
 
 open! Import
-
 open Bin_prot.Binable
 open Bigarray
 
@@ -12,7 +11,8 @@ type bigstring = (char, int8_unsigned_elt, c_layout) Array1.t
 
 (** New code should use [@@deriving bin_io].  These module types ([S], [S1], and [S2]) are
     exported only for backwards compatibility. *)
-module type S  = S
+module type S = S
+
 module type S_only_functions = S_only_functions
 module type S1 = S1
 module type S2 = S2
@@ -29,40 +29,36 @@ end
     be the same as that for some other isomorphic type. *)
 
 module Of_binable
-    (Binable : Minimal.S)
-    (M : sig
-       type t
-       val to_binable : t -> Binable.t
-       val of_binable : Binable.t -> t
-     end)
-  : S with type t := M.t
+    (Binable : Minimal.S) (M : sig
+                             type t
+
+                             val to_binable : t -> Binable.t
+                             val of_binable : Binable.t -> t
+                           end) : S with type t := M.t
 
 module Of_binable1
-    (Binable : Minimal.S1)
-    (M : sig
-       type 'a t
-       val to_binable : 'a t -> 'a Binable.t
-       val of_binable : 'a Binable.t -> 'a t
-     end)
-  : S1 with type 'a t := 'a M.t
+    (Binable : Minimal.S1) (M : sig
+                              type 'a t
+
+                              val to_binable : 'a t -> 'a Binable.t
+                              val of_binable : 'a Binable.t -> 'a t
+                            end) : S1 with type 'a t := 'a M.t
 
 module Of_binable2
-    (Binable : Minimal.S2)
-    (M : sig
-       type ('a, 'b) t
-       val to_binable : ('a, 'b) t -> ('a, 'b) Binable.t
-       val of_binable : ('a, 'b) Binable.t -> ('a, 'b) t
-     end)
-  : S2 with type ('a, 'b) t := ('a, 'b) M.t
+    (Binable : Minimal.S2) (M : sig
+                              type ('a, 'b) t
+
+                              val to_binable : ('a, 'b) t -> ('a, 'b) Binable.t
+                              val of_binable : ('a, 'b) Binable.t -> ('a, 'b) t
+                            end) : S2 with type ('a, 'b) t := ('a, 'b) M.t
 
 module Of_binable3
-    (Binable : Minimal.S3)
-    (M : sig
-       type ('a, 'b, 'c) t
-       val to_binable : ('a, 'b, 'c) t -> ('a, 'b, 'c) Binable.t
-       val of_binable : ('a, 'b, 'c) Binable.t -> ('a, 'b, 'c) t
-     end)
-  : S3 with type ('a, 'b, 'c) t := ('a, 'b, 'c) M.t
+    (Binable : Minimal.S3) (M : sig
+                              type ('a, 'b, 'c) t
+
+                              val to_binable : ('a, 'b, 'c) t -> ('a, 'b, 'c) Binable.t
+                              val of_binable : ('a, 'b, 'c) Binable.t -> ('a, 'b, 'c) t
+                            end) : S3 with type ('a, 'b, 'c) t := ('a, 'b, 'c) M.t
 
 (** [Of_sexpable] serializes a value using the bin-io of the sexp serialization of the
     value.  This is not as efficient as using [@@deriving bin_io]. However, it is useful
@@ -87,7 +83,6 @@ val to_bigstring
 val of_string : 'a m -> string -> 'a
 val to_string : 'a m -> 'a -> string
 
-
 (** The following functors preserve stability: if applied to stable types with stable
     (de)serializations, they will produce stable types with stable (de)serializations.
 
@@ -97,10 +92,27 @@ val to_string : 'a m -> 'a -> string
 *)
 
 module Stable : sig
-  module Of_binable    : sig module V1 : module type of Of_binable    end
-  module Of_binable1   : sig module V1 : module type of Of_binable1   end
-  module Of_binable2   : sig module V1 : module type of Of_binable2   end
-  module Of_binable3   : sig module V1 : module type of Of_binable3   end
-  module Of_sexpable   : sig module V1 : module type of Of_sexpable   end
-  module Of_stringable : sig module V1 : module type of Of_stringable end
+  module Of_binable : sig
+    module V1 : module type of Of_binable
+  end
+
+  module Of_binable1 : sig
+    module V1 : module type of Of_binable1
+  end
+
+  module Of_binable2 : sig
+    module V1 : module type of Of_binable2
+  end
+
+  module Of_binable3 : sig
+    module V1 : module type of Of_binable3
+  end
+
+  module Of_sexpable : sig
+    module V1 : module type of Of_sexpable
+  end
+
+  module Of_stringable : sig
+    module V1 : module type of Of_stringable
+  end
 end

@@ -2,4 +2,5 @@
     functions for converting these days into other formats, like seconds since the epoch.
 *)
 
-include Day_of_week_intf.Day_of_week (** @inline *)
+(** @inline *)
+include Day_of_week_intf.Day_of_week

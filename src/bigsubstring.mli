@@ -2,4 +2,5 @@
 
 open! Import
 
-include Make_substring.S with type base = Bigstring.t (** @open *)
+(** @open *)
+include Make_substring.S with type base = Bigstring.t

@@ -23,7 +23,8 @@ type +'a t = private 'a [@@deriving sexp_of]
 
 (** [create v] returns [Some t] if [v] is a heap block, where [t] is physically equal
     to [v]. *)
-val create     : 'a -> 'a t option
+val create : 'a -> 'a t option
+
 val create_exn : 'a -> 'a t
 
 (** [value t] returns the value that is physically equal to [t]. *)
@@ -33,5 +34,3 @@ val value : 'a t -> 'a
     the header.  This is just the space for the single block, not anything it points
     to. *)
 val bytes : _ t -> int
-
-

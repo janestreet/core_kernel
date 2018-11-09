@@ -3,9 +3,12 @@ open! Stable_internal
 
 module Stable = struct
   module V1 = struct
-    module Make (M : sig val label : string end) = struct
+    module Make (M : sig
+        val label : string
+      end) =
+    struct
       type t =
-        { index     : int
+        { index : int
         ; min_index : int
         ; max_index : int
         }
@@ -14,31 +17,32 @@ module Stable = struct
       let create index ~min ~max =
         if index < min || index > max
         then
-          Error.raise_s [%message
-            "index out of bounds"
-              (index : int)
-              (min   : int)
-              (max   : int)]
-        else
-          { index ; min_index = min ; max_index = max }
+          Error.raise_s
+            [%message "index out of bounds" (index : int) (min : int) (max : int)]
+        else { index; min_index = min; max_index = max }
+      ;;
 
       module For_sexpable = struct
         type t = string * int * string * int * string * int [@@deriving sexp]
       end
 
-      include Sexpable.Stable.Of_sexpable.V1 (For_sexpable) (struct
-          type nonrec t = t
+      include Sexpable.Stable.Of_sexpable.V1
+          (For_sexpable)
+          (struct
+            type nonrec t = t
 
-          let to_sexpable t =
-            (M.label, t.index, "of", t.min_index, "to", t.max_index)
+            let to_sexpable t =
+              M.label, t.index, "of", t.min_index, "to", t.max_index
+            ;;
 
-          let of_sexpable (label, index, of_, min, to_, max) =
-            if String.equal label M.label
-            && String.equal of_ "of"
-            && String.equal to_ "to"
-            then create index ~min ~max
-            else Error.raise_s [%message "invalid sexp for index" ~label:M.label]
-        end)
+            let of_sexpable (label, index, of_, min, to_, max) =
+              if String.equal label M.label
+              && String.equal of_ "of"
+              && String.equal to_ "to"
+              then create index ~min ~max
+              else Error.raise_s [%message "invalid sexp for index" ~label:M.label]
+            ;;
+          end)
 
       include Comparator.Stable.V1.Make (struct
           type nonrec t = t [@@deriving sexp_of, compare]
@@ -47,6 +51,7 @@ module Stable = struct
       include Comparable.Stable.V1.Make (struct
           type nonrec t = t [@@deriving sexp, compare, bin_io]
           type nonrec comparator_witness = comparator_witness
+
           let comparator = comparator
         end)
     end
@@ -57,7 +62,11 @@ open! Std_internal
 
 module type S = Bounded_index_intf.S
 
-module Make (M : sig val label : string val module_name : string end) = struct
+module Make (M : sig
+    val label : string
+    val module_name : string
+  end) =
+struct
   module Stable = struct
     module V1 = Stable.V1.Make (M)
   end
@@ -75,8 +84,9 @@ module Make (M : sig val label : string val module_name : string end) = struct
       then None
       else Some (create index ~min ~max, index + 1))
     |> Sequence.to_list
+  ;;
 
-  let index     t = t.index
+  let index t = t.index
   let max_index t = t.max_index
   let min_index t = t.min_index
 
@@ -87,6 +97,7 @@ module Make (M : sig val label : string val module_name : string end) = struct
   include Identifiable.Make_using_comparator (struct
       type nonrec t = t [@@deriving bin_io, compare, hash, sexp]
       type nonrec comparator_witness = comparator_witness
+
       let comparator = comparator
       let of_string = of_string
       let to_string = to_string

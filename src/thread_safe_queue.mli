@@ -14,7 +14,6 @@ include Invariant.S1 with type 'a t := 'a t
 val create : unit -> 'a t
 
 val length : _ t -> int
-
 val enqueue : 'a t -> 'a -> unit
 
 (** [dequeue_exn t] raises if [length t = 0].  The idiom for dequeueing a single element

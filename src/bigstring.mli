@@ -7,45 +7,42 @@ open Bigarray
 
 (** {2 Types and exceptions} *)
 
-
 (** Type of bigstrings *)
-type t = (char, int8_unsigned_elt, c_layout) Array1.t
-[@@deriving bin_io, compare, sexp]
+type t = (char, int8_unsigned_elt, c_layout) Array1.t [@@deriving bin_io, compare, sexp]
 
 (** Type of bigstrings which support hashing. Note that mutation invalidates previous hashes. *)
 type t_frozen = t [@@deriving bin_io, compare, hash, sexp]
 
-include Equal.S   with type t := t
+include Equal.S with type t := t
 include Hexdump.S with type t := t
 
 (** {2 Creation and string conversion} *)
 
-val create : ?max_mem_waiting_gc:Byte_units.t -> int -> t
 (** [create length]
     @param max_mem_waiting_gc default = 256 M in OCaml <= 3.12, 1 G otherwise. As
     the total allocation of calls to [create] approach [max_mem_waiting_gc],
     the pressure in the garbage collector to be more agressive will increase.
     @return a new bigstring having [length].
     Content is undefined. *)
+val create : ?max_mem_waiting_gc:Byte_units.t -> int -> t
 
 (** [init n ~f] creates a bigstring [t] of length [n], with [t.{i} = f i] *)
 val init : int -> f:(int -> char) -> t
 
-val of_string : ?pos : int -> ?len : int -> string -> t
 (** [of_string ?pos ?len str] @return a new bigstring that is equivalent
     to the substring of length [len] in [str] starting at position [pos].
 
     @param pos default = 0
     @param len default = [String.length str - pos] *)
+val of_string : ?pos:int -> ?len:int -> string -> t
 
-val of_bytes : ?pos : int -> ?len : int -> bytes -> t
 (** [of_bytes ?pos ?len str] @return a new bigstring that is equivalent
     to the subbytes of length [len] in [str] starting at position [pos].
 
     @param pos default = 0
     @param len default = [Bytes.length str - pos] *)
+val of_bytes : ?pos:int -> ?len:int -> bytes -> t
 
-val to_string : ?pos : int -> ?len : int -> t -> string
 (** [to_string ?pos ?len bstr] @return a new string that is equivalent
     to the substring of length [len] in [bstr] starting at position [pos].
 
@@ -53,8 +50,8 @@ val to_string : ?pos : int -> ?len : int -> t -> string
     @param len default = [length bstr - pos]
 
     @raise Invalid_argument if the string would exceed runtime limits. *)
+val to_string : ?pos:int -> ?len:int -> t -> string
 
-val to_bytes : ?pos : int -> ?len : int -> t -> bytes
 (** [to_bytes ?pos ?len bstr] @return a new byte sequence that is equivalent
     to the substring of length [len] in [bstr] starting at position [pos].
 
@@ -62,30 +59,30 @@ val to_bytes : ?pos : int -> ?len : int -> t -> bytes
     @param len default = [length bstr - pos]
 
     @raise Invalid_argument if the bytes would exceed runtime limits. *)
+val to_bytes : ?pos:int -> ?len:int -> t -> bytes
 
-val concat : ?sep:t -> t list -> t
 (** [concat ?sep list] returns the concatenation of [list] with [sep] in between each. *)
+val concat : ?sep:t -> t list -> t
 
 (** {2 Checking} *)
 
-val check_args : loc : string -> pos : int -> len : int -> t -> unit
 (** [check_args ~loc ~pos ~len bstr] checks the position and length
     arguments [pos] and [len] for bigstrings [bstr].  @raise
     Invalid_argument if these arguments are illegal for the given
     bigstring using [loc] to indicate the calling context. *)
+val check_args : loc:string -> pos:int -> len:int -> t -> unit
 
-val get_opt_len : t -> pos : int -> int option -> int
 (** [get_opt_len bstr ~pos opt_len] @return the length of a subbigstring
     in [bstr] starting at position [pos] and given optional length
     [opt_len].  This function does not check the validity of its
     arguments.  Use {!check_args} for that purpose. *)
+val get_opt_len : t -> pos:int -> int option -> int
 
 (** {2 Accessors} *)
 
-val length : t -> int
 (** [length bstr] @return the length of bigstring [bstr]. *)
+val length : t -> int
 
-external unsafe_destroy_and_resize : t -> len : int -> t = "bigstring_realloc"
 (** [unsafe_destroy_and_resize bstr ~len] reallocates the memory backing
     [bstr] and returns a new bigstring that starts at position 0 and has
     length [len]. If [len] is greater than [length bstr] then the newly
@@ -100,8 +97,8 @@ external unsafe_destroy_and_resize : t -> len : int -> t = "bigstring_realloc"
     "external", which is treated equivalently), if it is backed by a memory
     map, or if it has proxies, i.e. other bigstrings referring to the same
     data. *)
+external unsafe_destroy_and_resize : t -> len:int -> t = "bigstring_realloc"
 
-val sub_shared : ?pos : int -> ?len : int -> t -> t
 (** [sub_shared ?pos ?len bstr] @return the sub-bigstring in [bstr]
     that starts at position [pos] and has length [len].  The sub-bigstring
     shares the same memory region, i.e. modifying it will modify the
@@ -110,6 +107,7 @@ val sub_shared : ?pos : int -> ?len : int -> t -> t
 
     @param pos default = 0
     @param len default = [Bigstring.length bstr - pos] *)
+val sub_shared : ?pos:int -> ?len:int -> t -> t
 
 (** [get t pos] returns the character at [pos] *)
 external get : t -> int -> char = "%caml_ba_ref_1"
@@ -117,9 +115,10 @@ external get : t -> int -> char = "%caml_ba_ref_1"
 (** [set t pos] sets the character at [pos] *)
 external set : t -> int -> char -> unit = "%caml_ba_set_1"
 
-external is_mmapped : t -> bool = "bigstring_is_mmapped_stub" [@@noalloc]
 (** [is_mmapped bstr] @return whether the bigstring [bstr] is
     memory-mapped. *)
+external is_mmapped : t -> bool = "bigstring_is_mmapped_stub"
+[@@noalloc]
 
 (** {2 Blitting} *)
 
@@ -133,27 +132,28 @@ include Blit.S with type t := t
 module To_string : sig
   val blit : (t, bytes) Blit.blit
   [@@deprecated "[since 2017-10] use [Bigstring.To_bytes.blit] instead"]
+
   val blito : (t, bytes) Blit.blito
   [@@deprecated "[since 2017-10] use [Bigstring.To_bytes.blito] instead"]
+
   val unsafe_blit : (t, bytes) Blit.blit
   [@@deprecated "[since 2017-10] use [Bigstring.To_bytes.unsafe_blit] instead"]
+
   include Blit.S_to_string with type t := t
 end
-module From_string : Blit.S_distinct with type src := string with type dst := t
 
-module To_bytes   : Blit.S_distinct with type src := t     with type dst := bytes
+module From_string : Blit.S_distinct with type src := string with type dst := t
+module To_bytes : Blit.S_distinct with type src := t with type dst := bytes
 module From_bytes : Blit.S_distinct with type src := bytes with type dst := t
 
 (** [memset t ~pos ~len c] fills [t] with [c] within the range [\[pos, pos + len)] *)
 val memset : t -> pos:int -> len:int -> char -> unit
-
 
 (** Memcmp *)
 
 (** [memcmp t1 ~pos1 t2 ~pos2 ~len] is like [compare t1 t2] except performs the comparison
     on the subregions of [t1] and [t2] defined by [pos1], [pos2], and [len] *)
 val memcmp : t -> pos1:int -> t -> pos2:int -> len:int -> int
-
 
 
 (** {2 Reading/writing bin-prot} *)
@@ -167,7 +167,7 @@ val memcmp : t -> pos1:int -> t -> pos2:int -> len:int -> int
     doesn't fit in [t]. *)
 val write_bin_prot
   :  t
-  -> ?pos:int  (** default is 0 *)
+  -> ?pos:int (** default is 0 *)
   -> 'a Bin_prot.Type_class.writer
   -> 'a
   -> int
@@ -176,16 +176,18 @@ val write_bin_prot
     [len].  They return the index in [t] immediately after the last byte read.  They raise
     if [pos] and [len] don't describe a region of [t]. *)
 val read_bin_prot
-  : t -> ?pos:int -> ?len:int -> 'a Bin_prot.Type_class.reader -> ('a * int) Or_error.t
-val read_bin_prot_verbose_errors
-  : t
+  :  t
   -> ?pos:int
   -> ?len:int
   -> 'a Bin_prot.Type_class.reader
-  -> [ `Invalid_data of Error.t
-     | `Not_enough_data
-     | `Ok of ('a * int)
-     ]
+  -> ('a * int) Or_error.t
+
+val read_bin_prot_verbose_errors
+  :  t
+  -> ?pos:int
+  -> ?len:int
+  -> 'a Bin_prot.Type_class.reader
+  -> [`Invalid_data of Error.t | `Not_enough_data | `Ok of 'a * int]
 
 (** {2 Search} *)
 
@@ -194,16 +196,12 @@ val read_bin_prot_verbose_errors
 
     @param pos default = 0
     @param len default = [length bstr - pos] *)
-val find
-  :  ?pos : int
-  -> ?len : int
-  -> char
-  -> t
-  -> int option
+val find : ?pos:int -> ?len:int -> char -> t -> int option
 
 (** Same as [find], but does no bounds checking, and returns a negative value instead of
     [None] if [char] is not found. *)
-external unsafe_find : t -> char -> pos:int -> len:int -> int = "bigstring_find" [@@noalloc]
+external unsafe_find : t -> char -> pos:int -> len:int -> int = "bigstring_find"
+[@@noalloc]
 
 
 (** {2 Destruction} *)
@@ -246,59 +244,52 @@ external unsafe_destroy : t -> unit = "bigstring_destroy_stub"
 
     The "unsafe_" prefix indicates that these functions do no bounds checking. *)
 
-val get_int8                : t -> pos:int -> int
-val set_int8                : t -> pos:int -> int -> unit
-val get_uint8               : t -> pos:int -> int
-val set_uint8               : t -> pos:int -> int -> unit
-
-val unsafe_get_int8         : t -> pos:int -> int
-val unsafe_set_int8         : t -> pos:int -> int -> unit
-val unsafe_get_uint8        : t -> pos:int -> int
-val unsafe_set_uint8        : t -> pos:int -> int -> unit
+val get_int8 : t -> pos:int -> int
+val set_int8 : t -> pos:int -> int -> unit
+val get_uint8 : t -> pos:int -> int
+val set_uint8 : t -> pos:int -> int -> unit
+val unsafe_get_int8 : t -> pos:int -> int
+val unsafe_set_int8 : t -> pos:int -> int -> unit
+val unsafe_get_uint8 : t -> pos:int -> int
+val unsafe_set_uint8 : t -> pos:int -> int -> unit
 
 (** {2 16-bit methods} *)
 
-val get_int16_le            : t -> pos:int -> int
-val get_int16_be            : t -> pos:int -> int
-val set_int16_le            : t -> pos:int -> int -> unit
-val set_int16_be            : t -> pos:int -> int -> unit
-
-val unsafe_get_int16_le     : t -> pos:int -> int
-val unsafe_get_int16_be     : t -> pos:int -> int
-val unsafe_set_int16_le     : t -> pos:int -> int -> unit
-val unsafe_set_int16_be     : t -> pos:int -> int -> unit
-
-val get_uint16_le    : t -> pos:int -> int
-val get_uint16_be    : t -> pos:int -> int
-val set_uint16_le    : t -> pos:int -> int -> unit
-val set_uint16_be    : t -> pos:int -> int -> unit
-
-val unsafe_get_uint16_le    : t -> pos:int -> int
-val unsafe_get_uint16_be    : t -> pos:int -> int
-val unsafe_set_uint16_le    : t -> pos:int -> int -> unit
-val unsafe_set_uint16_be    : t -> pos:int -> int -> unit
+val get_int16_le : t -> pos:int -> int
+val get_int16_be : t -> pos:int -> int
+val set_int16_le : t -> pos:int -> int -> unit
+val set_int16_be : t -> pos:int -> int -> unit
+val unsafe_get_int16_le : t -> pos:int -> int
+val unsafe_get_int16_be : t -> pos:int -> int
+val unsafe_set_int16_le : t -> pos:int -> int -> unit
+val unsafe_set_int16_be : t -> pos:int -> int -> unit
+val get_uint16_le : t -> pos:int -> int
+val get_uint16_be : t -> pos:int -> int
+val set_uint16_le : t -> pos:int -> int -> unit
+val set_uint16_be : t -> pos:int -> int -> unit
+val unsafe_get_uint16_le : t -> pos:int -> int
+val unsafe_get_uint16_be : t -> pos:int -> int
+val unsafe_set_uint16_le : t -> pos:int -> int -> unit
+val unsafe_set_uint16_be : t -> pos:int -> int -> unit
 
 (** {2 32-bit methods} *)
 
-val get_int32_le     : t -> pos:int -> int
-val get_int32_be     : t -> pos:int -> int
-val set_int32_le     : t -> pos:int -> int -> unit
-val set_int32_be     : t -> pos:int -> int -> unit
-
-val unsafe_get_int32_le     : t -> pos:int -> int
-val unsafe_get_int32_be     : t -> pos:int -> int
-val unsafe_set_int32_le     : t -> pos:int -> int -> unit
-val unsafe_set_int32_be     : t -> pos:int -> int -> unit
-
-val get_uint32_le    : t -> pos:int -> int
-val get_uint32_be    : t -> pos:int -> int
-val set_uint32_le    : t -> pos:int -> int -> unit
-val set_uint32_be    : t -> pos:int -> int -> unit
-
-val unsafe_get_uint32_le    : t -> pos:int -> int
-val unsafe_get_uint32_be    : t -> pos:int -> int
-val unsafe_set_uint32_le    : t -> pos:int -> int -> unit
-val unsafe_set_uint32_be    : t -> pos:int -> int -> unit
+val get_int32_le : t -> pos:int -> int
+val get_int32_be : t -> pos:int -> int
+val set_int32_le : t -> pos:int -> int -> unit
+val set_int32_be : t -> pos:int -> int -> unit
+val unsafe_get_int32_le : t -> pos:int -> int
+val unsafe_get_int32_be : t -> pos:int -> int
+val unsafe_set_int32_le : t -> pos:int -> int -> unit
+val unsafe_set_int32_be : t -> pos:int -> int -> unit
+val get_uint32_le : t -> pos:int -> int
+val get_uint32_be : t -> pos:int -> int
+val set_uint32_le : t -> pos:int -> int -> unit
+val set_uint32_be : t -> pos:int -> int -> unit
+val unsafe_get_uint32_le : t -> pos:int -> int
+val unsafe_get_uint32_be : t -> pos:int -> int
+val unsafe_set_uint32_le : t -> pos:int -> int -> unit
+val unsafe_set_uint32_be : t -> pos:int -> int -> unit
 
 (** Similar to the usage in binary_packing, the below methods are treating the value being
     read (or written), as an ocaml immediate integer, as such it is actually 63 bits. If
@@ -308,31 +299,29 @@ val unsafe_set_uint32_be    : t -> pos:int -> int -> unit
 
 (** {2 64-bit signed values} *)
 
-val get_int64_le_exn   : t -> pos:int -> int
-val get_int64_be_exn   : t -> pos:int -> int
+val get_int64_le_exn : t -> pos:int -> int
+val get_int64_be_exn : t -> pos:int -> int
 val get_int64_le_trunc : t -> pos:int -> int
 val get_int64_be_trunc : t -> pos:int -> int
-val set_int64_le       : t -> pos:int -> int -> unit
-val set_int64_be       : t -> pos:int -> int -> unit
-
-val unsafe_get_int64_le_exn   : t -> pos:int -> int
-val unsafe_get_int64_be_exn   : t -> pos:int -> int
+val set_int64_le : t -> pos:int -> int -> unit
+val set_int64_be : t -> pos:int -> int -> unit
+val unsafe_get_int64_le_exn : t -> pos:int -> int
+val unsafe_get_int64_be_exn : t -> pos:int -> int
 val unsafe_get_int64_le_trunc : t -> pos:int -> int
 val unsafe_get_int64_be_trunc : t -> pos:int -> int
-val unsafe_set_int64_le       : t -> pos:int -> int -> unit
-val unsafe_set_int64_be       : t -> pos:int -> int -> unit
+val unsafe_set_int64_le : t -> pos:int -> int -> unit
+val unsafe_set_int64_be : t -> pos:int -> int -> unit
 
 (** {2 64-bit unsigned values} *)
 
 val get_uint64_be_exn : t -> pos:int -> int
 val get_uint64_le_exn : t -> pos:int -> int
-val set_uint64_le     : t -> pos:int -> int -> unit
-val set_uint64_be     : t -> pos:int -> int -> unit
-
+val set_uint64_le : t -> pos:int -> int -> unit
+val set_uint64_be : t -> pos:int -> int -> unit
 val unsafe_get_uint64_be_exn : t -> pos:int -> int
 val unsafe_get_uint64_le_exn : t -> pos:int -> int
-val unsafe_set_uint64_le     : t -> pos:int -> int -> unit
-val unsafe_set_uint64_be     : t -> pos:int -> int -> unit
+val unsafe_set_uint64_le : t -> pos:int -> int -> unit
+val unsafe_set_uint64_be : t -> pos:int -> int -> unit
 
 (** {2 32-bit methods with full precision} *)
 
@@ -340,7 +329,6 @@ val get_int32_t_le : t -> pos:int -> Int32.t
 val get_int32_t_be : t -> pos:int -> Int32.t
 val set_int32_t_le : t -> pos:int -> Int32.t -> unit
 val set_int32_t_be : t -> pos:int -> Int32.t -> unit
-
 val unsafe_get_int32_t_le : t -> pos:int -> Int32.t
 val unsafe_get_int32_t_be : t -> pos:int -> Int32.t
 val unsafe_set_int32_t_le : t -> pos:int -> Int32.t -> unit
@@ -352,7 +340,6 @@ val get_int64_t_le : t -> pos:int -> Int64.t
 val get_int64_t_be : t -> pos:int -> Int64.t
 val set_int64_t_le : t -> pos:int -> Int64.t -> unit
 val set_int64_t_be : t -> pos:int -> Int64.t -> unit
-
 val unsafe_get_int64_t_le : t -> pos:int -> Int64.t
 val unsafe_get_int64_t_be : t -> pos:int -> Int64.t
 val unsafe_set_int64_t_le : t -> pos:int -> Int64.t -> unit
@@ -360,11 +347,37 @@ val unsafe_set_int64_t_be : t -> pos:int -> Int64.t -> unit
 
 (** Similar to [Binary_packing.unpack_tail_padded_fixed_string] and
     [.pack_tail_padded_fixed_string]. *)
-val get_tail_padded_fixed_string : padding:char -> t -> pos:int -> len:int -> unit -> string
-val set_tail_padded_fixed_string : padding:char -> t -> pos:int -> len:int -> string -> unit
+val get_tail_padded_fixed_string
+  :  padding:char
+  -> t
+  -> pos:int
+  -> len:int
+  -> unit
+  -> string
 
-val get_head_padded_fixed_string : padding:char -> t -> pos:int -> len:int -> unit -> string
-val set_head_padded_fixed_string : padding:char -> t -> pos:int -> len:int -> string -> unit
+val set_tail_padded_fixed_string
+  :  padding:char
+  -> t
+  -> pos:int
+  -> len:int
+  -> string
+  -> unit
+
+val get_head_padded_fixed_string
+  :  padding:char
+  -> t
+  -> pos:int
+  -> len:int
+  -> unit
+  -> string
+
+val set_head_padded_fixed_string
+  :  padding:char
+  -> t
+  -> pos:int
+  -> len:int
+  -> string
+  -> unit
 
 (*_ See the Jane Street Style Guide for an explanation of [Private] submodules:
 

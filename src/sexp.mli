@@ -2,23 +2,31 @@
 
 open! Import
 
-type t = Base.Sexp.t = Atom of string | List of t list
+type t = Base.Sexp.t =
+  | Atom of string
+  | List of t list
 [@@deriving bin_io, hash, sexp]
 
 module O : sig
-  type sexp = Base.Sexp.t = Atom of string | List of t list
+  type sexp = Base.Sexp.t =
+    | Atom of string
+    | List of t list
 end
 
-include Comparable.S     with type t := t
-include Stringable.S     with type t := t
+include Comparable.S with type t := t
+include Stringable.S with type t := t
 include Quickcheckable.S with type t := t
 
-include (module type of struct include Sexplib.Sexp end) with type t := t
+include
+module type of struct
+  include Sexplib.Sexp
+end
+  with type t := t
 
 exception Of_sexp_error of exn * t
 
-val of_float_style : [ `Underscores | `No_underscores ] ref
-val of_int_style   : [ `Underscores | `No_underscores ] ref
+val of_float_style : [`Underscores | `No_underscores] ref
+val of_int_style : [`Underscores | `No_underscores] ref
 
 (** [no_raise] is the identity, but by using ['a no_raise] in a sexpable type, the
     resulting use [sexp_of_no_raise] protects the conversion of ['a] to a sexp so that if
@@ -46,7 +54,8 @@ type 'a no_raise = 'a [@@deriving bin_io, sexp]
     If [Reason_to_stop.t_of_sexp] fails, you can still tell it was a [Stop] query.
 *)
 module Sexp_maybe : sig
-  type 'a t = ('a, Base.Sexp.t * Error.t) Result.t [@@deriving bin_io, compare, hash, sexp]
+  type 'a t = ('a, Base.Sexp.t * Error.t) Result.t
+  [@@deriving bin_io, compare, hash, sexp]
 end
 
 (** A [With_text.t] is a value paired with the full textual representation of its sexp.
@@ -65,15 +74,11 @@ end
 
     The invariants of a [x With_text.t] are broken if the [x] value is mutated. *)
 module With_text : sig
-
   type 'a t [@@deriving sexp, bin_io]
 
   (** Generates a [t] from the value by creating the text automatically using the provided
       s-expression converter. *)
-  val of_value
-    :  ('a -> Base.Sexp.t)
-    -> 'a
-    -> 'a t
+  val of_value : ('a -> Base.Sexp.t) -> 'a -> 'a t
 
   (** Creates a [t] from the text, by first converting the text to an s-expression, and
       then parsing the s-expression with the provided converter. *)
@@ -84,8 +89,7 @@ module With_text : sig
     -> 'a t Or_error.t
 
   val value : 'a t -> 'a
-
-  val text  : 'a t -> string
+  val text : 'a t -> string
 end
 
 (** [of_sexp_allow_extra_fields of_sexp sexp] uses [of_sexp] to convert [sexp] to a
@@ -97,6 +101,9 @@ val of_sexp_allow_extra_fields : (Base.Sexp.t -> 'a) -> Base.Sexp.t -> 'a
 
 module Stable : sig
   module V1 : sig
-    type nonrec t = t = Atom of string | List of t list [@@deriving sexp, bin_io, hash, compare]
+    type nonrec t = t =
+      | Atom of string
+      | List of t list
+    [@@deriving sexp, bin_io, hash, compare]
   end
 end

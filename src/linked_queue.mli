@@ -6,5 +6,9 @@
 
 type 'a t = 'a Base.Linked_queue.t [@@deriving bin_io]
 
-include module type of struct include Base.Linked_queue end
-  with type 'a t := 'a t (** @open *)
+(** @open *)
+include
+module type of struct
+  include Base.Linked_queue
+end
+  with type 'a t := 'a t

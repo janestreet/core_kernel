@@ -7,7 +7,6 @@ open! Identifiable
    times. *)
 let%test_module _ =
   (module struct
-
     module Counter = struct
       type t =
         | Compare
@@ -30,32 +29,65 @@ let%test_module _ =
       let expected = ref Map.empty
 
       let incr ?(by = 1) t counter =
-        t := Map.update !t counter ~f:(function None -> by | Some i -> i + by)
+        t :=
+          Map.update !t counter ~f:(function
+            | None -> by
+            | Some i -> i + by)
       ;;
 
       let check location =
-        if not (Map.equal (=) !actual !expected) then
-          failwiths "mismatch" (location, `actual actual, `expected expected)
-            [%sexp_of: Source_code_position.t * [ `actual of t ] * [ `expected of t ]]
+        if not (Map.equal ( = ) !actual !expected)
+        then
+          failwiths
+            "mismatch"
+            (location, `actual actual, `expected expected)
+            [%sexp_of: Source_code_position.t * [`actual of t] * [`expected of t]]
       ;;
     end
 
     module T = struct
-
       let module_name = "Core_kernel.Identifiable.T"
 
-      type t = A | B [@@deriving bin_io, compare, hash, sexp]
+      type t =
+        | A
+        | B
+      [@@deriving bin_io, compare, hash, sexp]
 
-      include Sexpable.To_stringable (struct type nonrec t = t [@@deriving sexp] end)
+      include Sexpable.To_stringable (struct
+          type nonrec t = t [@@deriving sexp]
+        end)
 
       let incr ?by counter = Counts.incr Counts.actual counter ?by
 
-      let compare t1 t2 = incr Compare; compare t1 t2
-      let hash t = incr Hash; hash t
-      let sexp_of_t t = incr Sexp_of_t; sexp_of_t t
-      let t_of_sexp t = incr T_of_sexp; t_of_sexp t
-      let of_string t = incr Of_string; of_string t
-      let to_string t = incr To_string; to_string t
+      let compare t1 t2 =
+        incr Compare;
+        compare t1 t2
+      ;;
+
+      let hash t =
+        incr Hash;
+        hash t
+      ;;
+
+      let sexp_of_t t =
+        incr Sexp_of_t;
+        sexp_of_t t
+      ;;
+
+      let t_of_sexp t =
+        incr T_of_sexp;
+        t_of_sexp t
+      ;;
+
+      let of_string t =
+        incr Of_string;
+        of_string t
+      ;;
+
+      let to_string t =
+        incr To_string;
+        to_string t
+      ;;
     end
 
     module Id = Make (T)
@@ -98,3 +130,4 @@ let%test_module _ =
       check [%here]
     ;;
   end)
+;;

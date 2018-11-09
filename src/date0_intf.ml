@@ -12,9 +12,10 @@ module type Date0 = sig
       - DD MMM YYYY
       - DDMMMYYYY
       - YYYYMMDD *)
-  include Stringable         with type t := t
+  include Stringable with type t := t
+
   include Comparable_binable with type t := t
-  include Pretty_printer.S   with type t := t
+  include Pretty_printer.S with type t := t
 
   (** [create_exn ~y ~m ~d] creates the date specified in the arguments.  Arguments are
       validated, and are not normalized in any way.  So, days must be within the limits
@@ -26,16 +27,17 @@ module type Date0 = sig
 
       http://www.wikipedia.org/wiki/iso8601
   *)
-  val of_string_iso8601_basic : string -> pos:int -> t (** YYYYMMDD *)
+  val of_string_iso8601_basic : string -> pos:int -> t
 
-  val to_string_iso8601_basic : t -> string            (** YYYYMMDD *)
+  (** YYYYMMDD *)
+  val to_string_iso8601_basic : t -> string
 
-  val to_string_american : t -> string              (** MM/DD/YYYY *)
+  (** MM/DD/YYYY *)
+  val to_string_american : t -> string
 
-  val day   : t -> int
+  val day : t -> int
   val month : t -> Month.t
-  val year  : t -> int
-
+  val year : t -> int
   val day_of_week : t -> Day_of_week.t
 
   (** Week of the year, from 1 to 53.  According to ISO 8601, weeks start on Monday, and the
@@ -112,11 +114,8 @@ module type Date0 = sig
   val dates_between : min:t -> max:t -> t list
 
   val business_dates_between : min:t -> max:t -> is_holiday:(t -> bool) -> t list
-
   val weekdays_between : min:t -> max:t -> t list
-
   val previous_weekday : t -> t
-
   val following_weekday : t -> t
 
   (** [first_strictly_after t ~on:day_of_week] returns the first occurrence of [day_of_week]
@@ -145,27 +144,29 @@ module type Date0 = sig
       components. This module is intended for use only in performance-sensitive contexts
       where dates are manipulated more often than they are constructed or deconstructed;
       most clients should use the ordinary [t]. *)
-  module Days : sig
+  module Days :
+  sig
     type date = t
     type t
 
     val of_date : date -> t
     val to_date : t -> date
-
-    val diff     : t -> t -> int
+    val diff : t -> t -> int
     val add_days : t -> int -> t
 
     (** The starting date of the UNIX epoch: 1970-01-01 *)
     val unix_epoch : t
-  end with type date := t
+  end
+  with type date := t
 
   module Stable : sig
     module V1 : sig
       type nonrec t = t [@@deriving hash]
 
-      include Stable_comparable.V1
-        with type t                  :=  t
-        with type comparator_witness =  comparator_witness
+      include
+        Stable_comparable.V1
+        with type t := t
+        with type comparator_witness = comparator_witness
     end
   end
 

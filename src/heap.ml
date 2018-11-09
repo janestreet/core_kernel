@@ -1,6 +1,5 @@
 open! Import
 open Std_internal
-
 module Pointer = Pool.Pointer
 
 (* This pool holds nodes that would be represented more traditionally as:
@@ -25,10 +24,12 @@ module Pointer = Pool.Pointer
 module Node : sig
   (* Exposing [private int] is a significant performance improvement, because it allows
      the compiler to skip the write barrier. *)
+
   type 'a t = private int
 
   module Id : sig
     type t
+
     val of_int : int -> t
     val equal : t -> t -> bool
   end
@@ -37,11 +38,11 @@ module Node : sig
     type 'a node = 'a t
     type 'a t
 
-    val create  : min_size:int -> 'a t
+    val create : min_size:int -> 'a t
     val is_full : 'a t -> bool
-    val length  : 'a t -> int
-    val grow    : 'a t -> 'a t
-    val copy    : 'a t -> 'a node -> ('a node * 'a t)
+    val length : 'a t -> int
+    val grow : 'a t -> 'a t
+    val copy : 'a t -> 'a node -> 'a node * 'a t
   end
 
   (** [allocate v ~pool] allocates a new node from the pool with no child or sibling *)
@@ -51,20 +52,20 @@ module Node : sig
   val free : 'a t -> pool:'a Pool.t -> unit
 
   (** a special [t] that represents the empty node *)
-  val empty    : unit -> 'a t
-  val is_empty : 'a t -> bool
+  val empty : unit -> 'a t
 
+  val is_empty : 'a t -> bool
   val equal : 'a t -> 'a t -> bool
 
   (** [value_exn t ~pool] return the value of [t], raise if [is_empty t] *)
   val value_exn : 'a t -> pool:'a Pool.t -> 'a
 
   val id : 'a t -> pool:'a Pool.t -> Id.t
-
-  val child   : 'a t -> pool:'a Pool.t -> 'a t
+  val child : 'a t -> pool:'a Pool.t -> 'a t
   val sibling : 'a t -> pool:'a Pool.t -> 'a t
-  val prev    : 'a t -> pool:'a Pool.t -> 'a t
+
   (** [prev t] is either the parent of [t] or the sibling immediately left of [t] *)
+  val prev : 'a t -> pool:'a Pool.t -> 'a t
 
   (** [add_child t ~child ~pool] Add a child to [t], preserving existing children as
       siblings of [child]. [t] and [child] should not be empty and [child] should have no
@@ -75,69 +76,59 @@ module Node : sig
   val disconnect_sibling : 'a t -> pool:'a Pool.t -> 'a t
 
   (** disconnect and return the child *)
-  val disconnect_child   : 'a t -> pool:'a Pool.t -> 'a t
+  val disconnect_child : 'a t -> pool:'a Pool.t -> 'a t
 
   (** [detach t ~pool] removes [t] from the tree, adjusting pointers around it. After
       [detach], [t] is the root of a standalone heap, which is detached from the original
       heap. *)
   val detach : 'a t -> pool:'a Pool.t -> unit
 end = struct
-
   module Id = Int
+
   let dummy_id : Id.t = -1
 
   type 'a node =
-    ( 'a
-    , 'a node Pointer.t
-    , 'a node Pointer.t
-    , 'a node Pointer.t
-    , Id.t
-    ) Pool.Slots.t5
+    ('a, 'a node Pointer.t, 'a node Pointer.t, 'a node Pointer.t, Id.t) Pool.Slots.t5
 
   type 'a t = 'a node Pointer.t
 
-  let empty    = Pointer.null
+  let empty = Pointer.null
   let is_empty = Pointer.is_null
-
   let equal = Pointer.phys_equal
-
-  let value   t ~pool = Pool.get pool t Pool.Slot.t0
-  let child   t ~pool = Pool.get pool t Pool.Slot.t1
+  let value t ~pool = Pool.get pool t Pool.Slot.t0
+  let child t ~pool = Pool.get pool t Pool.Slot.t1
   let sibling t ~pool = Pool.get pool t Pool.Slot.t2
-  let prev    t ~pool = Pool.get pool t Pool.Slot.t3
-  let id      t ~pool = Pool.get pool t Pool.Slot.t4
+  let prev t ~pool = Pool.get pool t Pool.Slot.t3
+  let id t ~pool = Pool.get pool t Pool.Slot.t4
 
   (* let set_value   t v ~pool = Pool.set pool t Pool.Slot.t0 v *)
-  let set_child   t v ~pool = Pool.set pool t Pool.Slot.t1 v
+  let set_child t v ~pool = Pool.set pool t Pool.Slot.t1 v
   let set_sibling t v ~pool = Pool.set pool t Pool.Slot.t2 v
-  let set_prev    t v ~pool = Pool.set pool t Pool.Slot.t3 v
+  let set_prev t v ~pool = Pool.set pool t Pool.Slot.t3 v
 
   let value_exn t ~pool =
     assert (not (is_empty t));
     value t ~pool
   ;;
 
-  let allocate value ~pool ~id =
-    Pool.new5 pool value (empty ()) (empty ()) (empty ()) id
-  ;;
-
+  let allocate value ~pool ~id = Pool.new5 pool value (empty ()) (empty ()) (empty ()) id
   let free t ~pool = Pool.unsafe_free pool t
 
   let disconnect_sibling t ~pool =
     let sibling = sibling t ~pool in
-    if not (is_empty sibling) then begin
+    if not (is_empty sibling)
+    then (
       set_sibling t (empty ()) ~pool;
-      set_prev sibling (empty ()) ~pool;
-    end;
+      set_prev sibling (empty ()) ~pool);
     sibling
   ;;
 
   let disconnect_child t ~pool =
     let child = child t ~pool in
-    if not (is_empty child) then begin
+    if not (is_empty child)
+    then (
       set_child t (empty ()) ~pool;
-      set_prev child (empty ()) ~pool;
-    end;
+      set_prev child (empty ()) ~pool);
     child
   ;;
 
@@ -152,25 +143,23 @@ end = struct
     (* add [new_child] to the list of [t]'s children (which may be empty) *)
     set_sibling new_child current_child ~pool;
     if not (is_empty current_child) then set_prev current_child new_child ~pool;
-
     set_child t new_child ~pool;
-    set_prev new_child t ~pool;
+    set_prev new_child t ~pool
   ;;
 
   let detach t ~pool =
-    if not (is_empty t) then begin
+    if not (is_empty t)
+    then (
       let prev = prev t ~pool in
-      if not (is_empty prev) then begin
+      if not (is_empty prev)
+      then (
         let relation_to_prev = if equal t (child prev ~pool) then `child else `sibling in
         set_prev t (empty ()) ~pool;
         let sibling = disconnect_sibling t ~pool in
-        begin match relation_to_prev with
-        | `child   -> set_child   prev sibling ~pool
-        | `sibling -> set_sibling prev sibling ~pool
-        end;
-        if not (is_empty sibling) then set_prev sibling prev ~pool;
-      end;
-    end
+        (match relation_to_prev with
+         | `child -> set_child prev sibling ~pool
+         | `sibling -> set_sibling prev sibling ~pool);
+        if not (is_empty sibling) then set_prev sibling prev ~pool))
   ;;
 
   module Pool = struct
@@ -178,77 +167,84 @@ end = struct
     type nonrec 'a node = 'a node Pointer.t
 
     let create (type a) ~min_size:capacity : a t =
-      Pool.create Pool.Slots.t5 ~capacity
-        ~dummy:((Obj.magic None : a), Pointer.null (), Pointer.null (), Pointer.null (), dummy_id)
+      Pool.create
+        Pool.Slots.t5
+        ~capacity
+        ~dummy:
+          ( (Obj.magic None : a)
+          , Pointer.null ()
+          , Pointer.null ()
+          , Pointer.null ()
+          , dummy_id )
     ;;
 
     let is_full t = Pool.is_full t
-    let length  t = Pool.length t
-    let grow    t = Pool.grow t
+    let length t = Pool.length t
+    let grow t = Pool.grow t
 
     let copy t start =
       let t' = create ~min_size:(Pool.capacity t) in
       let copy_node node to_visit =
         if is_empty node
-        then (empty (), to_visit)
-        else begin
+        then empty (), to_visit
+        else (
           (* we use the same id, but that's ok since ids should be unique per heap *)
-          let new_node = allocate (value_exn node ~pool:t) ~pool:t' ~id:(id node ~pool:t) in
-          let to_visit =
-            (new_node, `child,   child   node ~pool:t) ::
-            (new_node, `sibling, sibling node ~pool:t) ::
-            to_visit
+          let new_node =
+            allocate (value_exn node ~pool:t) ~pool:t' ~id:(id node ~pool:t)
           in
-          (new_node, to_visit)
-        end
+          let to_visit =
+            (new_node, `child, child node ~pool:t)
+            :: (new_node, `sibling, sibling node ~pool:t)
+            :: to_visit
+          in
+          new_node, to_visit)
       in
       let rec loop to_visit =
         match to_visit with
         | [] -> ()
         | (node_to_update, slot, node_to_copy) :: rest ->
           let new_node, to_visit = copy_node node_to_copy rest in
-          begin match slot with
-          | `child -> set_child node_to_update new_node ~pool:t';
-          | `sibling -> set_sibling node_to_update new_node ~pool:t';
-          end;
-          if not (is_empty new_node) then (set_prev new_node node_to_update ~pool:t');
+          (match slot with
+           | `child -> set_child node_to_update new_node ~pool:t'
+           | `sibling -> set_sibling node_to_update new_node ~pool:t');
+          if not (is_empty new_node) then set_prev new_node node_to_update ~pool:t';
           loop to_visit
       in
       let new_start, to_visit = copy_node start [] in
       loop to_visit;
-      (new_start, t')
+      new_start, t'
     ;;
   end
 end
 
-type 'a t = {
-  (* cmp is placed first to short-circuit polymorphic compare *)
-  cmp          : 'a -> 'a -> int;
-  mutable pool : 'a Node.Pool.t;
-  (* invariant:  [root] never has a sibling *)
-  mutable root : 'a Node.t;
-  mutable num_of_allocated_nodes : int;
-}
+type 'a t =
+  { (* cmp is placed first to short-circuit polymorphic compare *)
+    cmp : 'a -> 'a -> int
+  ; mutable pool : 'a Node.Pool.t
+  ; (* invariant:  [root] never has a sibling *)
+    mutable root : 'a Node.t
+  ; mutable num_of_allocated_nodes : int
+  }
 
 let invariant _ t =
   let rec loop to_visit =
     match to_visit with
     | [] -> ()
     | (node, expected_prev, maybe_parent_value) :: rest ->
-      if not (Node.is_empty node) then begin
+      if not (Node.is_empty node)
+      then (
         let this_value = Node.value_exn node ~pool:t.pool in
         assert (Node.equal (Node.prev node ~pool:t.pool) expected_prev);
         Option.iter maybe_parent_value ~f:(fun parent_value ->
-          assert (t.cmp parent_value this_value <= 0)
-        );
-        loop ((Node.child   node ~pool:t.pool, node, Some this_value) ::
-              (Node.sibling node ~pool:t.pool, node, maybe_parent_value) ::
-              rest)
-      end
+          assert (t.cmp parent_value this_value <= 0));
+        loop
+          ((Node.child node ~pool:t.pool, node, Some this_value)
+           :: (Node.sibling node ~pool:t.pool, node, maybe_parent_value)
+           :: rest))
       else loop rest
   in
   assert (Node.is_empty t.root || Node.is_empty (Node.sibling t.root ~pool:t.pool));
-  loop [(t.root, Node.empty (), None)]
+  loop [ t.root, Node.empty (), None ]
 ;;
 
 let create ?(min_size = 1) ~cmp () =
@@ -261,17 +257,11 @@ let create ?(min_size = 1) ~cmp () =
 
 let copy { cmp; pool; root; num_of_allocated_nodes } =
   let root, pool = Node.Pool.copy pool root in
-  { cmp
-  ; pool
-  ; root
-  ; num_of_allocated_nodes
-  }
+  { cmp; pool; root; num_of_allocated_nodes }
 ;;
 
 let allocate t v =
-  if Node.Pool.is_full t.pool then begin
-    t.pool <- Node.Pool.grow t.pool;
-  end;
+  if Node.Pool.is_full t.pool then t.pool <- Node.Pool.grow t.pool;
   t.num_of_allocated_nodes <- t.num_of_allocated_nodes + 1;
   Node.allocate v ~pool:t.pool ~id:(Node.Id.of_int t.num_of_allocated_nodes)
 ;;
@@ -289,11 +279,11 @@ let allocate t v =
    This function assumes neither root has a prev node (usually because the inputs come
    from [disconnect_*] or are the top of the heap or are the output of this function). *)
 let merge t root1 root2 =
-  if Node.is_empty root1 then
-    root2
-  else if Node.is_empty root2 then
-    root1
-  else
+  if Node.is_empty root1
+  then root2
+  else if Node.is_empty root2
+  then root1
+  else (
     let add_child t node ~child =
       Node.add_child node ~pool:t.pool ~child;
       node
@@ -302,7 +292,7 @@ let merge t root1 root2 =
     let v2 = Node.value_exn root2 ~pool:t.pool in
     if t.cmp v1 v2 < 0
     then add_child t root1 ~child:root2
-    else add_child t root2 ~child:root1
+    else add_child t root2 ~child:root1)
 ;;
 
 let top_exn t =
@@ -352,19 +342,19 @@ let add t v = ignore (add_node t v : _ Node.t)
 *)
 let allocating_merge_pairs t head =
   let rec loop acc head =
-    if Node.is_empty head then
-      acc
-    else
+    if Node.is_empty head
+    then acc
+    else (
       let next1 = Node.disconnect_sibling head ~pool:t.pool in
-      if Node.is_empty next1 then
-        head :: acc
-      else
+      if Node.is_empty next1
+      then head :: acc
+      else (
         let next2 = Node.disconnect_sibling next1 ~pool:t.pool in
-        loop (merge t head next1 :: acc) next2
+        loop (merge t head next1 :: acc) next2))
   in
   match loop [] head with
-  | []      -> Node.empty ()
-  | [h]     -> h
+  | [] -> Node.empty ()
+  | [ h ] -> h
   | x :: xs -> List.fold xs ~init:x ~f:(fun acc heap -> merge t acc heap)
 ;;
 
@@ -391,23 +381,17 @@ let merge_pairs =
   let rec loop t depth head =
     if depth >= max_stack_depth
     then allocating_merge_pairs t head
-    else begin
-      if Node.is_empty head
+    else if Node.is_empty head
+    then head
+    else (
+      let next1 = Node.disconnect_sibling head ~pool:t.pool in
+      if Node.is_empty next1
       then head
-      else begin
-        let next1 = Node.disconnect_sibling head ~pool:t.pool in
-        if Node.is_empty next1
-        then head
-        else begin
-          let next2 = Node.disconnect_sibling next1 ~pool:t.pool in
-          (* merge the first two nodes in our list, and then merge the result with the
-             result of recursively calling merge_pairs on the tail *)
-          merge t
-            (merge t head next1)
-            (loop t (depth + 1) next2);
-        end
-      end
-    end
+      else (
+        let next2 = Node.disconnect_sibling next1 ~pool:t.pool in
+        (* merge the first two nodes in our list, and then merge the result with the
+           result of recursively calling merge_pairs on the tail *)
+        merge t (merge t head next1) (loop t (depth + 1) next2)))
   in
   fun t head -> loop t 0 head
 ;;
@@ -417,13 +401,10 @@ let remove_non_empty t node =
   Node.detach node ~pool;
   let merged_children = merge_pairs t (Node.disconnect_child node ~pool) in
   let new_root =
-    if Node.equal t.root node then
-      merged_children
-    else
-      merge t t.root merged_children
+    if Node.equal t.root node then merged_children else merge t t.root merged_children
   in
   Node.free node ~pool;
-  t.root <- new_root;
+  t.root <- new_root
 ;;
 
 let remove_top t = if not (Node.is_empty t.root) then remove_non_empty t t.root
@@ -438,14 +419,13 @@ let pop t = if Node.is_empty t.root then None else Some (pop_exn t)
 
 let pop_if t f =
   match top t with
-  | None   -> None
+  | None -> None
   | Some v ->
     if f v
-    then begin
+    then (
       remove_top t;
-      Some v
-    end else
-      None
+      Some v)
+    else None
 ;;
 
 (* pairing heaps are not balanced trees, and therefore we can't rely on a balance
@@ -456,14 +436,13 @@ let fold t ~init ~f =
     match to_visit with
     | [] -> acc
     | node :: rest ->
-      if Node.is_empty node then
-        loop acc rest
-      else begin
-        let to_visit = (Node.sibling ~pool node) :: (Node.child ~pool node) :: rest in
-        loop (f acc (Node.value_exn ~pool node)) to_visit
-      end
+      if Node.is_empty node
+      then loop acc rest
+      else (
+        let to_visit = Node.sibling ~pool node :: Node.child ~pool node :: rest in
+        loop (f acc (Node.value_exn ~pool node)) to_visit)
   in
-  loop init [t.root]
+  loop init [ t.root ]
 ;;
 
 (* almost identical to fold, copied for speed purposes *)
@@ -473,19 +452,19 @@ let iter t ~f =
     match to_visit with
     | [] -> ()
     | node :: rest ->
-      if Node.is_empty node then
-        loop rest
-      else begin
+      if Node.is_empty node
+      then loop rest
+      else (
         f (Node.value_exn ~pool node);
-        let to_visit = (Node.sibling ~pool node) :: (Node.child ~pool node) :: rest in
-        loop to_visit
-      end
+        let to_visit = Node.sibling ~pool node :: Node.child ~pool node :: rest in
+        loop to_visit)
   in
-  loop [t.root]
+  loop [ t.root ]
 ;;
 
 module C = Container.Make (struct
     type nonrec 'a t = 'a t
+
     let fold = fold
     let iter = `Custom iter
   end)
@@ -493,20 +472,19 @@ module C = Container.Make (struct
 (* we can do better than the O(n) of [C.length] *)
 let length t = Node.Pool.length t.pool
 let is_empty t = Node.is_empty t.root
-
-let mem      = C.mem
-let exists   = C.exists
-let for_all  = C.for_all
-let count    = C.count
-let sum      = C.sum
-let find     = C.find
+let mem = C.mem
+let exists = C.exists
+let for_all = C.for_all
+let count = C.count
+let sum = C.sum
+let find = C.find
 let find_map = C.find_map
-let to_list  = C.to_list
+let to_list = C.to_list
 let to_array = C.to_array
-let min_elt  = C.min_elt
-let max_elt  = C.max_elt
+let min_elt = C.min_elt
+let max_elt = C.max_elt
 let fold_result = C.fold_result
-let fold_until  = C.fold_until
+let fold_until = C.fold_until
 
 let of_array arr ~cmp =
   let t = create ~min_size:(Array.length arr) ~cmp () in
@@ -515,11 +493,9 @@ let of_array arr ~cmp =
 ;;
 
 let of_list l ~cmp = of_array (Array.of_list l) ~cmp
-
 let sexp_of_t f t = Array.sexp_of_t f (to_array t |> Array.sorted_copy ~compare:t.cmp)
 
 module Elt = struct
-
   type nonrec 'a t =
     { mutable node : 'a Node.t
     ; node_id : Node.Id.t
@@ -528,34 +504,28 @@ module Elt = struct
 
   (* If ids are different, it means that the node has already been removed by some
      other means (and possibly reused). *)
-  let is_node_valid t =
-    Node.Id.equal (Node.id ~pool:t.heap.pool t.node) t.node_id
+  let is_node_valid t = Node.Id.equal (Node.id ~pool:t.heap.pool t.node) t.node_id
 
   let value t =
-    if is_node_valid t then
-      Some (Node.value_exn t.node ~pool:t.heap.pool)
-    else
-      None
+    if is_node_valid t then Some (Node.value_exn t.node ~pool:t.heap.pool) else None
   ;;
 
   let value_exn t =
-    if is_node_valid t then
-      Node.value_exn t.node ~pool:t.heap.pool
-    else
-      failwith "Heap.value_exn: node was removed from the heap"
+    if is_node_valid t
+    then Node.value_exn t.node ~pool:t.heap.pool
+    else failwith "Heap.value_exn: node was removed from the heap"
   ;;
 
-  let sexp_of_t sexp_of_a t = [%sexp (value t : a option) ]
+  let sexp_of_t sexp_of_a t = [%sexp (value t : a option)]
 end
 
 let remove t (token : _ Elt.t) =
-  if not (phys_equal t token.heap) then
-    failwith "cannot remove from a different heap"
+  if not (phys_equal t token.heap)
+  then failwith "cannot remove from a different heap"
   else if not (Node.is_empty token.node)
-  then begin
+  then (
     if Elt.is_node_valid token then remove_non_empty t token.node;
-    token.node <- Node.empty ();
-  end
+    token.node <- Node.empty ())
 ;;
 
 let add_removable t v =
@@ -573,23 +543,21 @@ let find_elt =
     match nodes with
     | [] -> None
     | node :: rest ->
-      if Node.is_empty node then
-        loop t f rest
-      else if f (Node.value_exn node ~pool:t.pool) then
-        Some { Elt.node; heap = t; node_id = Node.id ~pool:t.pool node }
+      if Node.is_empty node
+      then loop t f rest
+      else if f (Node.value_exn node ~pool:t.pool)
+      then Some { Elt.node; heap = t; node_id = Node.id ~pool:t.pool node }
       else
-        loop t f
-          ((Node.sibling node ~pool:t.pool) ::
-           (Node.child   node ~pool:t.pool) ::
-           rest)
+        loop t f (Node.sibling node ~pool:t.pool :: Node.child node ~pool:t.pool :: rest)
   in
-  fun t ~f -> loop t f [t.root]
+  fun t ~f -> loop t f [ t.root ]
 ;;
 
 module Unsafe = struct
   module Elt = struct
     type 'a heap = 'a t
     type 'a t = 'a Node.t
+
     let value t heap = Node.value_exn ~pool:heap.pool t
   end
 

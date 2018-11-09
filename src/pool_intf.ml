@@ -29,7 +29,7 @@ open! Import
 (** [S] is the module type for a pool. *)
 module type S = sig
   module Slots : Tuple_type.Slots
-  module Slot  : Tuple_type.Slot
+  module Slot : Tuple_type.Slot
 
   module Pointer : sig
     (** A pointer to a tuple in a pool.  ['slots] will look like [('a1, ..., 'an)
@@ -39,10 +39,10 @@ module type S = sig
     (** The [null] pointer is a distinct pointer that does not correspond to a tuple in
         the pool.  It is a function to prevent problems due to the value restriction. *)
     val null : unit -> _ t
-    val is_null : _ t -> bool
 
+    val is_null : _ t -> bool
     val phys_compare : 'a t -> 'a t -> int
-    val phys_equal   : 'a t -> 'a t -> bool
+    val phys_equal : 'a t -> 'a t -> bool
 
     module Id : sig
       type t [@@deriving bin_io, sexp]
@@ -80,8 +80,8 @@ module type S = sig
       [capacity < 0 || capacity > max_capacity ~slots_per_tuple]. *)
   val create
     :  (('tuple, _) Slots.t as 'slots)
-    -> capacity : int
-    -> dummy    : 'tuple
+    -> capacity:int
+    -> dummy:'tuple
     -> 'slots t
 
   (** [max_capacity] returns the maximum capacity allowed when creating a pool. *)
@@ -104,10 +104,7 @@ module type S = sig
       tuple in [t'].  It is an error to use [t] after calling [grow t].
 
       [grow] raises if the supplied capacity isn't larger than [capacity t]. *)
-  val grow
-    :  ?capacity:int  (** default is [2 * capacity t] *)
-    -> 'a t
-    -> 'a t
+  val grow : ?capacity:int (** default is [2 * capacity t] *) -> 'a t -> 'a t
 
   (** [is_full t] returns [true] if no more tuples can be allocated in [t]. *)
   val is_full : _ t -> bool
@@ -121,79 +118,179 @@ module type S = sig
 
   (** [new<N> t a0 ... a<N-1>] returns a new tuple from the pool, with the tuple's
       slots initialized to [a0] ... [a<N-1>].  [new] raises if [is_full t]. *)
-  val new1
-    :  ('a0 Slots.t1 as 'slots) t
-    -> 'a0
-    -> 'slots Pointer.t
+  val new1 : ('a0 Slots.t1 as 'slots) t -> 'a0 -> 'slots Pointer.t
 
-  val new2
-    :  (('a0, 'a1) Slots.t2 as 'slots) t
-    -> 'a0 -> 'a1
-    -> 'slots Pointer.t
+  val new2 : (('a0, 'a1) Slots.t2 as 'slots) t -> 'a0 -> 'a1 -> 'slots Pointer.t
 
   val new3
-    : (('a0, 'a1, 'a2) Slots.t3 as 'slots) t
-    -> 'a0 -> 'a1 -> 'a2
+    :  (('a0, 'a1, 'a2) Slots.t3 as 'slots) t
+    -> 'a0
+    -> 'a1
+    -> 'a2
     -> 'slots Pointer.t
 
   val new4
     :  (('a0, 'a1, 'a2, 'a3) Slots.t4 as 'slots) t
-    -> 'a0 -> 'a1 -> 'a2 -> 'a3
+    -> 'a0
+    -> 'a1
+    -> 'a2
+    -> 'a3
     -> 'slots Pointer.t
 
   val new5
     :  (('a0, 'a1, 'a2, 'a3, 'a4) Slots.t5 as 'slots) t
-    -> 'a0 -> 'a1 -> 'a2 -> 'a3 -> 'a4
+    -> 'a0
+    -> 'a1
+    -> 'a2
+    -> 'a3
+    -> 'a4
     -> 'slots Pointer.t
 
   val new6
     :  (('a0, 'a1, 'a2, 'a3, 'a4, 'a5) Slots.t6 as 'slots) t
-    -> 'a0 -> 'a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5
+    -> 'a0
+    -> 'a1
+    -> 'a2
+    -> 'a3
+    -> 'a4
+    -> 'a5
     -> 'slots Pointer.t
 
   val new7
     :  (('a0, 'a1, 'a2, 'a3, 'a4, 'a5, 'a6) Slots.t7 as 'slots) t
-    -> 'a0 -> 'a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'a6
+    -> 'a0
+    -> 'a1
+    -> 'a2
+    -> 'a3
+    -> 'a4
+    -> 'a5
+    -> 'a6
     -> 'slots Pointer.t
 
   val new8
     :  (('a0, 'a1, 'a2, 'a3, 'a4, 'a5, 'a6, 'a7) Slots.t8 as 'slots) t
-    -> 'a0 -> 'a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'a6 -> 'a7
+    -> 'a0
+    -> 'a1
+    -> 'a2
+    -> 'a3
+    -> 'a4
+    -> 'a5
+    -> 'a6
+    -> 'a7
     -> 'slots Pointer.t
 
   val new9
     :  (('a0, 'a1, 'a2, 'a3, 'a4, 'a5, 'a6, 'a7, 'a8) Slots.t9 as 'slots) t
-    -> 'a0 -> 'a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'a6 -> 'a7 -> 'a8
+    -> 'a0
+    -> 'a1
+    -> 'a2
+    -> 'a3
+    -> 'a4
+    -> 'a5
+    -> 'a6
+    -> 'a7
+    -> 'a8
     -> 'slots Pointer.t
 
   val new10
     :  (('a0, 'a1, 'a2, 'a3, 'a4, 'a5, 'a6, 'a7, 'a8, 'a9) Slots.t10 as 'slots) t
-    -> 'a0 -> 'a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'a6 -> 'a7 -> 'a8 -> 'a9
+    -> 'a0
+    -> 'a1
+    -> 'a2
+    -> 'a3
+    -> 'a4
+    -> 'a5
+    -> 'a6
+    -> 'a7
+    -> 'a8
+    -> 'a9
     -> 'slots Pointer.t
 
   val new11
     :  (('a0, 'a1, 'a2, 'a3, 'a4, 'a5, 'a6, 'a7, 'a8, 'a9, 'a10) Slots.t11 as 'slots) t
-    -> 'a0 -> 'a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'a6 -> 'a7 -> 'a8 -> 'a9 -> 'a10
+    -> 'a0
+    -> 'a1
+    -> 'a2
+    -> 'a3
+    -> 'a4
+    -> 'a5
+    -> 'a6
+    -> 'a7
+    -> 'a8
+    -> 'a9
+    -> 'a10
     -> 'slots Pointer.t
 
   val new12
-    :  (('a0, 'a1, 'a2, 'a3, 'a4, 'a5, 'a6, 'a7, 'a8, 'a9, 'a10, 'a11) Slots.t12
-        as 'slots) t
-    -> 'a0 -> 'a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'a6 -> 'a7 -> 'a8 -> 'a9 -> 'a10 -> 'a11
+    :  (('a0, 'a1, 'a2, 'a3, 'a4, 'a5, 'a6, 'a7, 'a8, 'a9, 'a10, 'a11) Slots.t12 as 'slots)
+         t
+    -> 'a0
+    -> 'a1
+    -> 'a2
+    -> 'a3
+    -> 'a4
+    -> 'a5
+    -> 'a6
+    -> 'a7
+    -> 'a8
+    -> 'a9
+    -> 'a10
+    -> 'a11
     -> 'slots Pointer.t
 
   val new13
     :  (('a0, 'a1, 'a2, 'a3, 'a4, 'a5, 'a6, 'a7, 'a8, 'a9, 'a10, 'a11, 'a12) Slots.t13
-        as 'slots) t
-    -> 'a0 -> 'a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'a6 -> 'a7 -> 'a8 -> 'a9 -> 'a10 -> 'a11
+        as
+        'slots)
+         t
+    -> 'a0
+    -> 'a1
+    -> 'a2
+    -> 'a3
+    -> 'a4
+    -> 'a5
+    -> 'a6
+    -> 'a7
+    -> 'a8
+    -> 'a9
+    -> 'a10
+    -> 'a11
     -> 'a12
     -> 'slots Pointer.t
 
   val new14
-    :  (('a0, 'a1, 'a2, 'a3, 'a4, 'a5, 'a6, 'a7, 'a8, 'a9, 'a10, 'a11, 'a12, 'a13) Slots.t14
-        as 'slots) t
-    -> 'a0 -> 'a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'a6 -> 'a7 -> 'a8 -> 'a9 -> 'a10 -> 'a11
-    -> 'a12 -> 'a13
+    :  (( 'a0
+        , 'a1
+        , 'a2
+        , 'a3
+        , 'a4
+        , 'a5
+        , 'a6
+        , 'a7
+        , 'a8
+        , 'a9
+        , 'a10
+        , 'a11
+        , 'a12
+        , 'a13 )
+          Slots.t14
+        as
+        'slots)
+         t
+    -> 'a0
+    -> 'a1
+    -> 'a2
+    -> 'a3
+    -> 'a4
+    -> 'a5
+    -> 'a6
+    -> 'a7
+    -> 'a8
+    -> 'a9
+    -> 'a10
+    -> 'a11
+    -> 'a12
+    -> 'a13
     -> 'slots Pointer.t
 
   (** [get_tuple t pointer] allocates an OCaml tuple isomorphic to the pool [t]'s tuple
@@ -216,20 +313,24 @@ module type S = sig
 
       [unsafe_get] and [unsafe_set] skip bounds checking, and can thus segfault. *)
   val get
-    :  ((_, 'variant) Slots.t as 'slots) t -> 'slots Pointer.t
+    :  ((_, 'variant) Slots.t as 'slots) t
+    -> 'slots Pointer.t
     -> ('variant, 'slot) Slot.t
     -> 'slot
+
   val unsafe_get
     :  ((_, 'variant) Slots.t as 'slots) t
     -> 'slots Pointer.t
     -> ('variant, 'slot) Slot.t
     -> 'slot
+
   val set
     :  ((_, 'variant) Slots.t as 'slots) t
     -> 'slots Pointer.t
     -> ('variant, 'slot) Slot.t
     -> 'slot
     -> unit
+
   val unsafe_set
     :  ((_, 'variant) Slots.t as 'slots) t
     -> 'slots Pointer.t
@@ -277,7 +378,8 @@ module type Pool = sig
       The performance of the pool resulting from [Debug] is much worse than that of the
       input [Pool], even with all the controls set to [false]. *)
   module Debug (Pool : S) : sig
-    include S
+    include
+      S
       with type 'a Pointer.t = 'a Pool.Pointer.t
       with type Pointer.Id.t = Pool.Pointer.Id.t
       with type 'a t = 'a Pool.t
@@ -298,5 +400,4 @@ module type Pool = sig
       ]}
   *)
   module Error_check (Pool : S) : S
-
 end

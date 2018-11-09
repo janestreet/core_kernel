@@ -39,43 +39,56 @@ module type For_unix = sig
   module Signal : sig
     type t
   end
+
   module Sys : sig
     val argv : string array
     val getenv : string -> string option
     val unsafe_getenv : string -> string option
   end
+
   module Thread : sig
     type t
+
     val create : ('a -> unit) -> 'a -> t
     val join : t -> unit
   end
+
   module Time : sig
     type t = Time_float.t [@@deriving sexp_of]
   end
+
   module Unix : sig
     module File_descr : sig
       type t
     end
+
     module Exit : sig
-      type error = [ `Exit_non_zero of int ]
+      type error = [`Exit_non_zero of int]
       type t = (unit, error) Result.t
     end
+
     module Exit_or_signal : sig
-      type error = [ Exit.error | `Signal of Signal.t ]
+      type error =
+        [ Exit.error
+        | `Signal of Signal.t ]
+
       type t = (unit, error) Result.t
     end
+
     val getpid : unit -> Pid.t
     val close : ?restart:bool -> File_descr.t -> unit
     val open_process_in : string -> In_channel.t
     val close_process_in : In_channel.t -> Exit_or_signal.t
     val in_channel_of_descr : File_descr.t -> In_channel.t
-    val putenv : key:string -> data: string -> unit
+    val putenv : key:string -> data:string -> unit
     val unsetenv : string -> unit
-    type env = [ `Replace of (string * string) list
-               | `Extend of (string * string) list
-               | `Override of (string * string option) list
-               | `Replace_raw of string list
-               ]
+
+    type env =
+      [ `Replace of (string * string) list
+      | `Extend of (string * string) list
+      | `Override of (string * string option) list
+      | `Replace_raw of string list ]
+
     val exec
       :  prog:string
       -> argv:string list
@@ -83,37 +96,40 @@ module type For_unix = sig
       -> ?env:env
       -> unit
       -> never_returns
+
     module Process_info : sig
       type t =
-        { pid: Pid.t;
-          stdin: File_descr.t;
-          stdout: File_descr.t;
-          stderr: File_descr.t
+        { pid : Pid.t
+        ; stdin : File_descr.t
+        ; stdout : File_descr.t
+        ; stderr : File_descr.t
         }
     end
+
     val create_process_env
-      :  ?working_dir : string
-      -> ?argv0 : string
-      -> prog : string
-      -> args : string list
-      -> env : env
+      :  ?working_dir:string
+      -> ?argv0:string
+      -> prog:string
+      -> args:string list
+      -> env:env
       -> unit
       -> Process_info.t
+
     type wait_on =
       [ `Any
       | `Group of Pid.t
       | `My_group
-      | `Pid of Pid.t
-      ]
+      | `Pid of Pid.t ]
+
     val wait : ?restart:bool -> wait_on -> Pid.t * Exit_or_signal.t
   end
 end
 
 module type Command = sig
-
   (** Argument types. *)
   module Arg_type : sig
-    type 'a t (** The type of a command line argument. *)
+    (** The type of a command line argument. *)
+    type 'a t
 
     (** An argument type includes information about how to parse values of that type from
         the command line, and (optionally) how to autocomplete partial arguments of that
@@ -152,17 +168,17 @@ module type Command = sig
         If [unique_values = true] no autocompletion will be offered for arguments already
         supplied in the fragment to complete. *)
     val comma_separated
-      :  ?allow_empty      : bool (** default: [false] *)
-      -> ?key              : 'a list Univ_map.Multi.Key.t
-      -> ?strip_whitespace : bool (** default: [false] *)
-      -> ?unique_values    : bool (** default: [false] *)
+      :  ?allow_empty:bool (** default: [false] *)
+      -> ?key:'a list Univ_map.Multi.Key.t
+      -> ?strip_whitespace:bool (** default: [false] *)
+      -> ?unique_values:bool (** default: [false] *)
       -> 'a t
       -> 'a list t
 
     (** Values to include in other namespaces. *)
     module Export : sig
 
-      val string             : string             t
+      val string : string t
 
       (** Beware that an anonymous argument of type [int] cannot be specified as negative,
           as it is ambiguous whether -1 is a negative number or a flag.  (The same applies
@@ -170,17 +186,16 @@ module type Command = sig
           force a string starting with a hyphen to be interpreted as an anonymous argument
           rather than as a flag, or you can just make it a parameter to a flag to avoid the
           issue. *)
-      val int                : int                t
-      val char               : char               t
-      val float              : float              t
-      val bool               : bool               t
-      val date               : Date.t             t
-      val percent            : Percent.t          t
+      val int : int t
 
-      val host_and_port      : Host_and_port.t    t
-      val sexp               : Sexp.t             t
-
-      val sexp_conv          : (Sexp.t -> 'a) -> 'a t
+      val char : char t
+      val float : float t
+      val bool : bool t
+      val date : Date.t t
+      val percent : Percent.t t
+      val host_and_port : Host_and_port.t t
+      val sexp : Sexp.t t
+      val sexp_conv : (Sexp.t -> 'a) -> 'a t
     end
   end
 
@@ -230,8 +245,8 @@ module type Command = sig
 
   (** Anonymous command-line argument specification. *)
   module Anons : sig
-
-    type +'a t (** A specification of some number of anonymous arguments. *)
+    (** A specification of some number of anonymous arguments. *)
+    type +'a t
 
     (** [(name %: typ)] specifies a required anonymous argument of type [typ].
 
@@ -257,7 +272,8 @@ module type Command = sig
         [sequence anons] except that an exception will be raised if there is not at least
         one anonymous argument given. *)
     val non_empty_sequence_as_pair : 'a t -> ('a * 'a list) t
-    val non_empty_sequence_as_list : 'a t ->       'a list  t
+
+    val non_empty_sequence_as_list : 'a t -> 'a list t
 
     (** [(maybe anons)] indicates that some anonymous arguments are optional. *)
     val maybe : 'a t -> 'a option t
@@ -290,15 +306,12 @@ module type Command = sig
     *)
 
     val t2 : 'a t -> 'b t -> ('a * 'b) t
-
     val t3 : 'a t -> 'b t -> 'c t -> ('a * 'b * 'c) t
-
     val t4 : 'a t -> 'b t -> 'c t -> 'd t -> ('a * 'b * 'c * 'd) t
 
     (** [map_anons anons ~f] transforms the parsed result of [anons] by applying [f]. *)
     val map_anons : 'a t -> f:('a -> 'b) -> 'b t
   end
-
 
   (** Command-line parameter specification.
 
@@ -307,7 +320,6 @@ module type Command = sig
       understand. *)
   module Param : sig
     module type S = sig
-
       type +'a t
 
       (** [Command.Param] is intended to be used with the [[%map_open]] syntax defined in
@@ -360,11 +372,14 @@ module type Command = sig
 
       (** {2 Various internal values} *)
 
-      val help : string Lazy.t t (** The help text for the command. *)
+      (** The help text for the command. *)
+      val help : string Lazy.t t
 
-      val path : string list   t (** The subcommand path of the command. *)
+      (** The subcommand path of the command. *)
+      val path : string list t
 
-      val args : string list   t (** The arguments passed to the command. *)
+      (** The arguments passed to the command. *)
+      val args : string list t
 
       (** [flag name spec ~doc] specifies a command that, among other things, takes a flag
           named [name] on its command line.  [doc] indicates the meaning of the flag.
@@ -386,11 +401,11 @@ module type Command = sig
           NOTE: "-" by itself is an invalid flag name and will be rejected.
       *)
       val flag
-        :  ?aliases            : string list
-        -> ?full_flag_required : unit
+        :  ?aliases:string list
+        -> ?full_flag_required:unit
         -> string
         -> 'a Flag.t
-        -> doc : string
+        -> doc:string
         -> 'a t
 
       (** [flag_optional_with_default_doc name arg_type sexp_of_default ~default ~doc] is a
@@ -399,13 +414,13 @@ module type Command = sig
           + The [doc] is passed through with an explanation of what the default value
           appended. *)
       val flag_optional_with_default_doc
-        :  ?aliases            : string list
-        -> ?full_flag_required : unit
+        :  ?aliases:string list
+        -> ?full_flag_required:unit
         -> string
         -> 'a Arg_type.t
         -> ('a -> Sexp.t)
         -> default:'a
-        -> doc : string
+        -> doc:string
         -> 'a t
 
       (** [anon spec] specifies a command that, among other things, takes the anonymous
@@ -417,56 +432,67 @@ module type Command = sig
           raises if none of [clauses] is [Some _]. *)
       val choose_one
         :  'a option t list
-        -> if_nothing_chosen:[ `Default_to of 'a | `Raise ]
+        -> if_nothing_chosen:[`Default_to of 'a | `Raise]
         -> 'a t
     end
 
-    include S (** @open *)
+    (** @open *)
+    include S
 
     (** Values included for convenience so you can specify all command line parameters
         inside a single local open of [Param]. *)
 
     module Arg_type : module type of Arg_type with type 'a t = 'a Arg_type.t
     include module type of Arg_type.Export
-    include module type of Flag  with type 'a t := 'a Flag.t
+    include module type of Flag with type 'a t := 'a Flag.t
     include module type of Anons with type 'a t := 'a Anons.t
   end
 
-  module Let_syntax : sig
-    type 'a t (** Substituted below. *)
+  module Let_syntax :
+  sig
+    (** Substituted below. *)
+    type 'a t
 
     val return : 'a -> 'a t
+
     include Applicative.Applicative_infix with type 'a t := 'a t
 
-    module Let_syntax : sig
-      type 'a t (** Substituted below. *)
+    module Let_syntax :
+    sig
+      (** Substituted below. *)
+      type 'a t
 
       val return : 'a -> 'a t
-      val map    : 'a t -> f:('a -> 'b) -> 'b t
-      val both   : 'a t -> 'b t -> ('a * 'b) t
+      val map : 'a t -> f:('a -> 'b) -> 'b t
+      val both : 'a t -> 'b t -> ('a * 'b) t
+
       module Open_on_rhs = Param
-    end with type 'a t := 'a Param.t
-  end with type 'a t := 'a Param.t
+    end
+    with type 'a t := 'a Param.t
+  end
+  with type 'a t := 'a Param.t
 
   (** The old interface for command-line specifications -- {b Do Not Use}.
 
       This interface should not be used. See the {{!Core_kernel.Command.Param}[Param]}
       module for the new way to do things. *)
   module Spec : sig
-
     (** {2 Command parameters} *)
 
     (** Specification of an individual parameter to the command's main function. *)
     type 'a param = 'a Param.t
+
     include Param.S with type 'a t := 'a param
 
     (** Superceded by [return], preserved for backwards compatibility. *)
     val const : 'a -> 'a param
-    [@@deprecated "[since 2018-10] use [Command.Param.return] instead of [Command.Spec.const]"]
+    [@@deprecated
+      "[since 2018-10] use [Command.Param.return] instead of [Command.Spec.const]"]
 
     (** Superceded by [both], preserved for backwards compatibility. *)
     val pair : 'a param -> 'b param -> ('a * 'b) param
-    [@@deprecated "[since 2018-10] use [Command.Param.both] instead of [Command.Spec.pair]"]
+    [@@deprecated
+      "[since 2018-10] use [Command.Param.both] instead of [Command.Spec.pair]"]
 
     (** {2 Command specifications} *)
 
@@ -564,17 +590,17 @@ module type Command = sig
     val empty : ('m, 'm) t
 
     (** Command-line spec composition. *)
-    val (++) : ('m1, 'm2) t -> ('m2, 'm3) t -> ('m1, 'm3) t
+    val ( ++ ) : ('m1, 'm2) t -> ('m2, 'm3) t -> ('m1, 'm3) t
 
     (** Adds a rightmost parameter onto the type of main. *)
-    val (+>) : ('m1, 'a -> 'm2) t -> 'a param -> ('m1, 'm2) t
+    val ( +> ) : ('m1, 'a -> 'm2) t -> 'a param -> ('m1, 'm2) t
 
     (** Adds a leftmost parameter onto the type of main.
 
         This function should only be used as a workaround in situations where the order of
         composition is at odds with the order of anonymous arguments because you're
         factoring out some common spec. *)
-    val (+<) : ('m1, 'm2) t -> 'a param -> ('a -> 'm1, 'm2) t
+    val ( +< ) : ('m1, 'm2) t -> 'a param -> ('a -> 'm1, 'm2) t
 
     (** Combinator for patching up how parameters are obtained or presented.
 
@@ -638,11 +664,12 @@ module type Command = sig
 
     module Arg_type : module type of Arg_type with type 'a t = 'a Arg_type.t
 
-    include module type of Arg_type.Export
 
+    include module type of Arg_type.Export
 
     (** A flag specification. *)
     type 'a flag = 'a Flag.t
+
     include module type of Flag with type 'a t := 'a flag
 
     (** [flags_of_args_exn args] creates a spec from [Caml.Arg.t]s, for compatibility with
@@ -658,6 +685,7 @@ module type Command = sig
 
     (** A specification of some number of anonymous arguments. *)
     type 'a anons = 'a Anons.t
+
     include module type of Anons with type 'a t := 'a anons
 
     (** Conversions to and from new-style [Param] command line specifications. *)
@@ -666,11 +694,12 @@ module type Command = sig
     val of_param : 'r Param.t -> ('r -> 'm, 'm) t
   end
 
-  type t (** Commands which can be combined into a hierarchy of subcommands. *)
+  (** Commands which can be combined into a hierarchy of subcommands. *)
+  type t
 
-  type ('main, 'result) basic_spec_command
-    =  summary : string
-    -> ?readme : (unit -> string)
+  type ('main, 'result) basic_spec_command =
+    summary:string
+    -> ?readme:(unit -> string)
     -> ('main, unit -> 'result) Spec.t
     -> 'main
     -> t
@@ -682,11 +711,8 @@ module type Command = sig
       screen. *)
   val basic_spec : ('main, unit) basic_spec_command
 
-  type 'result basic_command
-    =  summary : string
-    -> ?readme : (unit -> string)
-    -> (unit -> 'result) Param.t
-    -> t
+  type 'result basic_command =
+    summary:string -> ?readme:(unit -> string) -> (unit -> 'result) Param.t -> t
 
   (** Same general behavior as [basic_spec], but takes a command line specification built up
       using [Params] instead of [Spec]. *)
@@ -703,20 +729,20 @@ module type Command = sig
       subcommand is passed.  Its [path] argument is the subcommand path by which the group
       command was reached. *)
   val group
-    :  summary                    : string
-    -> ?readme                    : (unit -> string)
-    -> ?preserve_subcommand_order : unit
-    -> ?body                      : (path:string list -> unit)
+    :  summary:string
+    -> ?readme:(unit -> string)
+    -> ?preserve_subcommand_order:unit
+    -> ?body:(path:string list -> unit)
     -> (string * t) list
     -> t
 
   (** [lazy_group] is the same as [group], except that the list of subcommands may be
       generated lazily. *)
   val lazy_group
-    :  summary                    : string
-    -> ?readme                    : (unit -> string)
-    -> ?preserve_subcommand_order : unit
-    -> ?body                      : (path:string list -> unit)
+    :  summary:string
+    -> ?readme:(unit -> string)
+    -> ?preserve_subcommand_order:unit
+    -> ?body:(path:string list -> unit)
     -> (string * t) list Lazy.t
     -> t
 
@@ -745,14 +771,12 @@ module type Command = sig
       itself, [help -recursive] and autocompletion will hang forever (although actually
       running the subcommand will work). *)
   val exec
-    :  summary           : string
-    -> ?readme           : (unit -> string)
-    -> ?child_subcommand : string list
-    -> path_to_exe       :
-         [ `Absolute          of string
-         | `Relative_to_argv0 of string
-         | `Relative_to_me    of string
-         ]
+    :  summary:string
+    -> ?readme:(unit -> string)
+    -> ?child_subcommand:string list
+    -> path_to_exe:[ `Absolute of string
+                   | `Relative_to_argv0 of string
+                   | `Relative_to_me of string ]
     -> unit
     -> t
 
@@ -764,19 +788,16 @@ module type Command = sig
   val summary : t -> string
 
   module Shape : sig
-
     module Flag_info : sig
-
-      type t = {
-        name : string;
-        doc : string;
-        aliases : string list;
-      } [@@deriving bin_io, compare, fields, sexp]
-
+      type t =
+        { name : string
+        ; doc : string
+        ; aliases : string list
+        }
+      [@@deriving bin_io, compare, fields, sexp]
     end
 
     module Base_info : sig
-
       type grammar =
         | Zero
         | One of string
@@ -787,41 +808,40 @@ module type Command = sig
       [@@deriving bin_io, compare, sexp]
 
       type anons =
-        | Usage of string (** When exec'ing an older binary whose help sexp doesn't expose the grammar. *)
+        | Usage of string
+        (** When exec'ing an older binary whose help sexp doesn't expose the grammar. *)
         | Grammar of grammar
       [@@deriving bin_io, compare, sexp]
 
-      type t = {
-        summary : string;
-        readme  : string sexp_option;
-        anons   : anons;
-        flags   : Flag_info.t list;
-      } [@@deriving bin_io, compare, fields, sexp]
-
+      type t =
+        { summary : string
+        ; readme : string sexp_option
+        ; anons : anons
+        ; flags : Flag_info.t list
+        }
+      [@@deriving bin_io, compare, fields, sexp]
     end
 
     module Group_info : sig
-
-      type 'a t = {
-        summary     : string;
-        readme      : string sexp_option;
-        subcommands : (string, 'a) List.Assoc.t Lazy.t;
-      } [@@deriving bin_io, compare, fields, sexp]
+      type 'a t =
+        { summary : string
+        ; readme : string sexp_option
+        ; subcommands : (string, 'a) List.Assoc.t Lazy.t
+        }
+      [@@deriving bin_io, compare, fields, sexp]
 
       val map : 'a t -> f:('a -> 'b) -> 'b t
-
     end
 
     module Exec_info : sig
-
-      type t = {
-        summary          : string;
-        readme           : string sexp_option;
-        working_dir      : string;
-        path_to_exe      : string;
-        child_subcommand : string list;
-      } [@@deriving bin_io, compare, fields, sexp]
-
+      type t =
+        { summary : string
+        ; readme : string sexp_option
+        ; working_dir : string
+        ; path_to_exe : string
+        ; child_subcommand : string list
+        }
+      [@@deriving bin_io, compare, fields, sexp]
     end
 
     type t =
@@ -831,7 +851,8 @@ module type Command = sig
       | Lazy of t Lazy.t
 
     (** Fully forced shapes are comparable and serializable. *)
-    module Fully_forced : sig
+    module Fully_forced :
+    sig
       type shape = t
 
       type t =
@@ -841,9 +862,8 @@ module type Command = sig
       [@@deriving bin_io, compare, sexp]
 
       val create : shape -> t
-
-    end with type shape := t
-
+    end
+    with type shape := t
   end
 
   (** [Deprecated] should be used only by [Deprecated_command].  At some point
@@ -858,17 +878,18 @@ module type Command = sig
     val summary : t -> string
 
     val help_recursive
-      :  cmd         : string
-      -> with_flags  : bool
-      -> expand_dots : bool
+      :  cmd:string
+      -> with_flags:bool
+      -> expand_dots:bool
       -> t
       -> string
       -> (string * string) list
 
-    val get_flag_names : t ->  string list
+    val get_flag_names : t -> string list
   end
 
   (**/**)
+
   (*_ See the Jane Street Style Guide for an explanation of [Private] submodules:
 
     https://opensource.janestreet.com/standards/#private-submodules *)
@@ -887,6 +908,7 @@ module type Command = sig
 
     module Path : sig
       type t
+
       val empty : t
       val create : path_to_exe:string -> t
       val append : t -> subcommand:string -> t
@@ -898,6 +920,7 @@ module type Command = sig
 
     module Cmdline : sig
       type t
+
       val of_list : string list -> t
       val extend : t -> extend:(string sexp_list -> string sexp_list) -> path:Path.t -> t
     end
@@ -919,22 +942,22 @@ module type Command = sig
         -> string
 
       val run
-        :  ?verbose_on_parse_error : bool
-        -> ?version    : string
-        -> ?build_info : string
-        -> ?argv       : string list
-        -> ?extend     : (string list -> string list)
+        :  ?verbose_on_parse_error:bool
+        -> ?version:string
+        -> ?build_info:string
+        -> ?argv:string list
+        -> ?extend:(string list -> string list)
         -> t
         -> unit
 
       val deprecated_run
         :  t
-        -> cmd               : string
-        -> args              : string list
-        -> is_help           : bool
-        -> is_help_rec       : bool
-        -> is_help_rec_flags : bool
-        -> is_expand_dots    : bool
+        -> cmd:string
+        -> args:string list
+        -> is_help:bool
+        -> is_help_rec:bool
+        -> is_help_rec_flags:bool
+        -> is_expand_dots:bool
         -> unit
     end
   end

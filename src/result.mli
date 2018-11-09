@@ -7,14 +7,13 @@ type ('a, 'b) t = ('a, 'b) Base.Result.t =
   | Error of 'b
 [@@deriving bin_io, compare, hash, sexp]
 
-include module type of Base.Result
-  with type ('a, 'b) t := ('a, 'b) t (** @open *)
+(** @open *)
+include module type of Base.Result with type ('a, 'b) t := ('a, 'b) t
 
 module Stable : sig
   module V1 : sig
-    type nonrec ('ok, 'err) t
-      = ('ok, 'err) t
-      = Ok of 'ok
+    type nonrec ('ok, 'err) t = ('ok, 'err) t =
+      | Ok of 'ok
       | Error of 'err
 
     include Stable_module_types.S2 with type ('ok, 'err) t := ('ok, 'err) t

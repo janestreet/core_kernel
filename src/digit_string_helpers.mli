@@ -4,7 +4,6 @@
 
 open! Import
 
-
 (** {2 Write digit functions}
 
     [write_int63 bytes ~pos ~digits int63] writes the string representation of [int63],
@@ -16,6 +15,7 @@ val write_int63 : bytes -> pos:int -> digits:int -> Int63.t -> unit
 (** [write_*_digit_int] is like [write_int63] for a hard-coded number of digits and for
     [int] rather than [Int63.t]. *)
 val write_1_digit_int : bytes -> pos:int -> int -> unit
+
 val write_2_digit_int : bytes -> pos:int -> int -> unit
 val write_3_digit_int : bytes -> pos:int -> int -> unit
 val write_4_digit_int : bytes -> pos:int -> int -> unit
@@ -35,6 +35,7 @@ val read_int63 : string -> pos:int -> digits:int -> Int63.t
 (** [read_*_digit_int] is like [read_int63] for a hard-coded number of digits and for
     [int] rather than [Int63.t]. *)
 val read_1_digit_int : string -> pos:int -> int
+
 val read_2_digit_int : string -> pos:int -> int
 val read_3_digit_int : string -> pos:int -> int
 val read_4_digit_int : string -> pos:int -> int
@@ -66,23 +67,19 @@ end
     [scale > max_value / 20]. *)
 val read_int63_decimal
   :  string
-  -> pos              : int
-  -> decimals         : int
-  -> scale            : Int63.t
-  -> round_ties       : Round.t
-  -> allow_underscore : bool
+  -> pos:int
+  -> decimals:int
+  -> scale:Int63.t
+  -> round_ties:Round.t
+  -> allow_underscore:bool
   -> Int63.t
 
 (** [max_int63_with ~digits] returns the maximum [Int63.t] that fits in [digits] decimal
     digits. *)
-val max_int63_with : digits : int -> Int63.t
+val max_int63_with : digits:int -> Int63.t
 
 module Unsafe : sig
-
   (** [divide_and_round_up ~numerator ~denominator] returns [ceil
       (numerator/denominator)]. *)
-  val divide_and_round_up
-    :  numerator   : Int63.t
-    -> denominator : Int63.t
-    -> Int63.t
+  val divide_and_round_up : numerator:Int63.t -> denominator:Int63.t -> Int63.t
 end

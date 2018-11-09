@@ -21,13 +21,17 @@ module External = struct
     | `Kilobytes of float
     | `Megabytes of float
     | `Gigabytes of float
-    | `Words of float
-    ]
+    | `Words of float ]
   [@@deriving sexp]
 end
 
 module Measure = struct
-  type t = [ `Bytes | `Kilobytes | `Megabytes | `Gigabytes | `Words ]
+  type t =
+    [ `Bytes
+    | `Kilobytes
+    | `Megabytes
+    | `Gigabytes
+    | `Words ]
   [@@deriving sexp, bin_io]
 
   let bytes = function
@@ -39,12 +43,12 @@ module Measure = struct
   ;;
 
   let to_char = function
-    | `Bytes     -> 'b'
+    | `Bytes -> 'b'
     | `Kilobytes -> 'k'
     | `Megabytes -> 'm'
     | `Gigabytes -> 'g'
-    | `Words     -> 'w'
-
+    | `Words -> 'w'
+  ;;
 end
 
 module Stable = struct
@@ -55,56 +59,61 @@ module Stable = struct
 
     module Infix = struct
       open Float
-      let ( - )  = ( - )
-      let ( + )  = ( + )
-      let ( / )  = ( / )
+
+      let ( - ) = ( - )
+      let ( + ) = ( + )
+      let ( / ) = ( / )
       let ( // ) = ( / )
     end
 
     let largest_measure t =
       (* We never select words as the largest measure *)
-      if Float.( > ) t gbyte then `Gigabytes
-      else if Float.( > ) t mbyte then `Megabytes
-      else if Float.( > ) t kbyte then `Kilobytes
+      if Float.( > ) t gbyte
+      then `Gigabytes
+      else if Float.( > ) t mbyte
+      then `Megabytes
+      else if Float.( > ) t kbyte
+      then `Kilobytes
       else `Bytes
+    ;;
 
     let number_of_measures t measure = t /. Measure.bytes measure
-
     let create m n = n *. Measure.bytes m
 
     let externalize t =
       let used_measure = largest_measure t in
       let n = number_of_measures t used_measure in
       match used_measure with
-      | `Bytes      -> `Bytes n
-      | `Kilobytes  -> `Kilobytes n
-      | `Megabytes  -> `Megabytes n
-      | `Gigabytes  -> `Gigabytes n
-      | `Words      -> `Words n
+      | `Bytes -> `Bytes n
+      | `Kilobytes -> `Kilobytes n
+      | `Megabytes -> `Megabytes n
+      | `Gigabytes -> `Gigabytes n
+      | `Words -> `Words n
     ;;
 
     let internalize t =
       match t with
-      | `Bytes     n -> create `Bytes n
+      | `Bytes n -> create `Bytes n
       | `Kilobytes n -> create `Kilobytes n
       | `Megabytes n -> create `Megabytes n
       | `Gigabytes n -> create `Gigabytes n
-      | `Words     n -> create `Words n
+      | `Words n -> create `Words n
     ;;
 
     let of_string s =
       let length = String.length s in
-      if length < 2 then
-        invalid_argf "'%s' passed to Byte_units.of_string - too short" s ();
+      if length < 2
+      then invalid_argf "'%s' passed to Byte_units.of_string - too short" s ();
       let base_str = String.sub s ~pos:0 ~len:(length - 1) in
       let ext_char = Char.lowercase s.[length - 1] in
       let base =
-        try
-          Float.of_string base_str
-        with
+        try Float.of_string base_str with
         | _ ->
-          invalid_argf "'%s' passed to Byte_units.of_string - %s cannot be \
-                        converted to float " s base_str ()
+          invalid_argf
+            "'%s' passed to Byte_units.of_string - %s cannot be converted to float "
+            s
+            base_str
+            ()
       in
       let measure =
         match ext_char with
@@ -114,8 +123,11 @@ module Stable = struct
         | 'g' -> `Gigabytes
         | 'w' -> `Words
         | ext ->
-          invalid_argf "'%s' passed to Byte_units.of_string - illegal \
-                        extension %c" s ext ()
+          invalid_argf
+            "'%s' passed to Byte_units.of_string - illegal extension %c"
+            s
+            ext
+            ()
       in
       create measure base
     ;;
@@ -123,9 +135,9 @@ module Stable = struct
     let t_of_sexp sexp =
       match sexp with
       | Sexp.Atom s ->
-        (try of_string s with Invalid_argument msg -> of_sexp_error msg sexp)
-      | Sexp.List _ ->
-        internalize (External.t_of_sexp sexp)
+        (try of_string s with
+         | Invalid_argument msg -> of_sexp_error msg sexp)
+      | Sexp.List _ -> internalize (External.t_of_sexp sexp)
     ;;
 
     let sexp_of_t t = External.sexp_of_t (externalize t)
@@ -136,13 +148,11 @@ module T = struct
   include Stable.V1
 
   let hash = Float.hash
-
   let bytes t = t
-
   let kilobytes t = bytes t /. kbyte
   let megabytes t = bytes t /. mbyte
   let gigabytes t = bytes t /. gbyte
-  let words     t = bytes t /. bytes_per_word
+  let words t = bytes t /. bytes_per_word
 
   let to_string_with_measure measure t =
     let ext = Measure.to_char measure in
@@ -153,7 +163,7 @@ module T = struct
     let measure =
       match measure with
       | Some m -> m
-      | None   -> largest_measure t
+      | None -> largest_measure t
     in
     to_string_with_measure measure t
   ;;
@@ -162,7 +172,7 @@ module T = struct
 
   (* This test documents the original to-string representation and fails under javascript
      due to differences in the rounding. *)
-  let%expect_test _ [@tags "no-js"] =
+  let%expect_test (_[@tags "no-js"]) =
     printf !"%{}" (create `Bytes 1000.);
     [%expect {| 1000b |}];
     printf !"%{}" (create `Bytes 1500.);
@@ -174,23 +184,23 @@ module T = struct
     printf !"%{}" (create `Bytes 1000000.);
     [%expect {| 976.562k |}];
     printf !"%{}" (create `Bytes 10000000.);
-    [%expect {| 9.53674m |}];
+    [%expect {| 9.53674m |}]
   ;;
 
   let to_string_short ?measure t =
     let measure =
       match measure with
       | Some m -> m
-      | None   -> largest_measure t
+      | None -> largest_measure t
     in
     let ext = Measure.to_char measure in
     let f = number_of_measures t measure in
-    if f >=. 100. then
-      sprintf "%.0f%c" f ext
-    else if f >=. 10. then
-      sprintf "%.1f%c" f ext
-    else
-      sprintf "%.2f%c" f ext
+    if f >=. 100.
+    then sprintf "%.0f%c" f ext
+    else if f >=. 10.
+    then sprintf "%.1f%c" f ext
+    else sprintf "%.2f%c" f ext
+  ;;
 
   let%expect_test _ =
     printf !"%{#short}" (create `Bytes 1000.);
@@ -202,9 +212,10 @@ module T = struct
     printf !"%{#short}" (create `Bytes 1000000.);
     [%expect {| 977k |}];
     printf !"%{#short}" (create `Bytes 10000000.);
-    [%expect {| 9.54m |}];
+    [%expect {| 9.54m |}]
   ;;
 end
+
 include T
 include Comparable.Make (T)
 include Hashable.Make (T)

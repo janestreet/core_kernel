@@ -6,11 +6,14 @@
 
 module type S = sig
   type t
+
   val ( >=. ) : t -> t -> bool
   val ( <=. ) : t -> t -> bool
-  val (  =. ) : t -> t -> bool
-  val (  >. ) : t -> t -> bool
-  val (  <. ) : t -> t -> bool
+  val ( =. ) : t -> t -> bool
+  val ( >. ) : t -> t -> bool
+  val ( <. ) : t -> t -> bool
   val ( <>. ) : t -> t -> bool
+
+
   val robustly_compare : t -> t -> int
 end

@@ -10,7 +10,8 @@ let d = create ~bit:62
 let%expect_test _ =
   List.iter [ -1; 63 ] ~f:(fun bit ->
     show_raise ~hide_positions:true (fun () -> ignore (create ~bit : Int63.t)));
-  [%expect {|
+  [%expect
+    {|
     (raised (
       "Flags.create got invalid ~bit (must be between 0 and 62)"
       -1
@@ -18,11 +19,13 @@ let%expect_test _ =
     (raised (
       "Flags.create got invalid ~bit (must be between 0 and 62)"
       63
-      lib/core_kernel/src/flags.ml:LINE:COL)) |}];
+      lib/core_kernel/src/flags.ml:LINE:COL)) |}]
 ;;
 
 let%expect_test _ =
-  let print_hex bit = print_s [%sexp (create ~bit |> Int63.Hex.to_string_hum : string)] in
+  let print_hex bit =
+    print_s [%sexp (create ~bit |> Int63.Hex.to_string_hum : string)]
+  in
   print_hex 0;
   [%expect {|
     0x1 |}];
@@ -31,26 +34,22 @@ let%expect_test _ =
     0x2 |}];
   print_hex 62;
   [%expect {|
-    -0x4000_0000_0000_0000 |}];
+    -0x4000_0000_0000_0000 |}]
 ;;
 
 module M = Make (struct
     let allow_intersecting = false
     let should_print_error = true
-    let known =
-      [ a, "a";
-        b, "b";
-        c, "c";
-      ]
-    ;;
+    let known = [ a, "a"; b, "b"; c, "c" ]
     let remove_zero_flags = false
   end)
 
 include M
 
 let%expect_test _ =
-  print_and_check_comparable_sexps [%here] (module M) [a;b;c];
-  [%expect {|
+  print_and_check_comparable_sexps [%here] (module M) [ a; b; c ];
+  [%expect
+    {|
     (Set (
       (a)
       (b)
@@ -58,7 +57,7 @@ let%expect_test _ =
     (Map (
       ((a) 0)
       ((b) 1)
-      ((c) 2))) |}];
+      ((c) 2))) |}]
 ;;
 
 (* [sexp_of_t] *)
@@ -67,31 +66,31 @@ let print_sexp_of t = print_s [%sexp (t : t)]
 let%expect_test _ =
   print_sexp_of empty;
   [%expect {|
-    () |}];
+    () |}]
 ;;
 
 let%expect_test _ =
   print_sexp_of a;
   [%expect {|
-    (a) |}];
+    (a) |}]
 ;;
 
 let%expect_test _ =
   print_sexp_of c;
   [%expect {|
-    (c) |}];
+    (c) |}]
 ;;
 
 let%expect_test _ =
   print_sexp_of (a + b);
   [%expect {|
-    (a b) |}];
+    (a b) |}]
 ;;
 
 let%expect_test _ =
   print_sexp_of (Int63.of_int 0x10);
   [%expect {|
-    (() (unrecognized_bits 0x10)) |}];
+    (() (unrecognized_bits 0x10)) |}]
 ;;
 
 (* [t_of_sexp] *)
@@ -110,7 +109,8 @@ let%expect_test _ =
     show_raise (fun () ->
       print_s [%message "" ~input:string];
       ignore (t_of_sexp (Sexp.of_string string) : t)));
-  [%expect {|
+  [%expect
+    {|
     (input a)
     (raised (Of_sexp_error "list_of_sexp: list needed" (invalid_sexp a)))
     (input "(())")
@@ -119,14 +119,14 @@ let%expect_test _ =
     (raised (Of_sexp_error "string_of_sexp: atom needed" (invalid_sexp ())))
     (input "(d)")
     (raised (
-      Of_sexp_error "Flags.t_of_sexp got unknown name: d" (invalid_sexp (d)))) |}];
+      Of_sexp_error "Flags.t_of_sexp got unknown name: d" (invalid_sexp (d)))) |}]
 ;;
 
 (* +, - *)
 let%expect_test _ = require [%here] (equal (a + a) a)
 let%expect_test _ = require [%here] (equal (a + b) (b + a))
 let%expect_test _ = require [%here] (equal (a - a) empty)
-let%expect_test _ = require [%here] (equal ((a + b) - a) b)
+let%expect_test _ = require [%here] (equal (a + b - a) b)
 
 (* [intersect] *)
 let%expect_test _ = require [%here] (equal (intersect a a) a)
@@ -152,7 +152,7 @@ let%expect_test _ = require [%here] (not (are_disjoint (a + b) a))
 let%expect_test _ = require [%here] (are_disjoint (a + b) c)
 
 (* compare *)
-let%expect_test _ = require [%here] (Int.(=) (Int.compare 0 1) (-1))
+let%expect_test _ = require [%here] (Int.( = ) (Int.compare 0 1) (-1))
 
 let print_compare t1 t2 = print_s [%sexp (compare t1 t2 : int)]
 
@@ -189,7 +189,7 @@ let%expect_test _ =
     0 |}];
   print_compare b (b + c);
   [%expect {|
-    -1 |}];
+    -1 |}]
 ;;
 
 let%expect_test "[compare] is a total order consistent with [is_subset]" =
@@ -206,40 +206,38 @@ let%expect_test "[compare] is a total order consistent with [is_subset]" =
     [| empty
      ; a
      ; b
-     ; a+b
+     ; a + b
      ; c
-     ; a+c
-     ; b+c
-     ; a+b+c
+     ; a + c
+     ; b + c
+     ; a + b + c
      ; complement d
      ; d
-     ; a+d
-     ; b+d
+     ; a + d
+     ; b + d
      ; complement (a + b)
      ; complement b
      ; complement a
-     ; complement empty |]
+     ; complement empty
+    |]
   in
   Array.iteri ordered ~f:(fun i ai ->
     Array.iteri ordered ~f:(fun j aj ->
       require [%here] (Bool.equal (equal ai aj) (Int.equal (compare ai aj) 0));
       if is_subset ai ~of_:aj then require [%here] (Int.( <= ) (compare ai aj) 0);
-      require [%here] (Int.equal (compare ai aj) (Int.compare i j))));
+      require [%here] (Int.equal (compare ai aj) (Int.compare i j))))
 ;;
 
 (* Check that conflicting flags leads to an error. *)
 let%test _ =
   Result.is_error
     (Result.try_with (fun () ->
-       let module M =
-         Make (struct
-           let allow_intersecting = false
-           let should_print_error = false
-           let known = [ Int63.of_int 0x1, "";
-                         Int63.of_int 0x1, "";
-                       ]
-           let remove_zero_flags = false
-         end)
+       let module M = Make (struct
+                        let allow_intersecting = false
+                        let should_print_error = false
+                        let known = [ Int63.of_int 0x1, ""; Int63.of_int 0x1, "" ]
+                        let remove_zero_flags = false
+                      end)
        in
        ()))
 ;;

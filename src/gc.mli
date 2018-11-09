@@ -19,67 +19,43 @@ open! Import
 
   (* $Id: gc.mli,v 1.42 2005-10-25 18:34:07 doligez Exp $ *)
 *)
-
 module Stat : sig
-  type t = {
-    minor_words : float;
+  type t =
+    { minor_words : float
     (** Number of words allocated in the minor heap since
         the program was started.  This number is accurate in
         byte-code programs, but only an approximation in programs
         compiled to native code. *)
-
-    promoted_words : float;
+    ; promoted_words : float
     (** Number of words allocated in the minor heap that
         survived a minor collection and were moved to the major heap
         since the program was started. *)
-
-    major_words : float;
+    ; major_words : float
     (** Number of words allocated in the major heap, including
         the promoted words, since the program was started. *)
-
-    minor_collections : int;
+    ; minor_collections : int
     (** Number of minor collections since the program was started. *)
-
-    major_collections : int;
+    ; major_collections : int
     (** Number of major collection cycles completed since the program
         was started. *)
-
-    heap_words : int;
-    (** Total size of the major heap, in words. *)
-
-    heap_chunks : int;
+    ; heap_words : int  (** Total size of the major heap, in words. *)
+    ; heap_chunks : int
     (** Number of contiguous pieces of memory that make up the major heap. *)
-
-    live_words : int;
+    ; live_words : int
     (** Number of words of live data in the major heap, including the header
         words. *)
-
-    live_blocks : int;
-    (** Number of live blocks in the major heap. *)
-
-    free_words : int;
-    (** Number of words in the free list. *)
-
-    free_blocks : int;
-    (** Number of blocks in the free list. *)
-
-    largest_free : int;
-    (** Size (in words) of the largest block in the free list. *)
-
-    fragments : int;
+    ; live_blocks : int  (** Number of live blocks in the major heap. *)
+    ; free_words : int  (** Number of words in the free list. *)
+    ; free_blocks : int  (** Number of blocks in the free list. *)
+    ; largest_free : int  (** Size (in words) of the largest block in the free list. *)
+    ; fragments : int
     (** Number of wasted words due to fragmentation.  These are
         1-words free blocks placed between two live blocks.  They
         are not available for allocation. *)
-
-    compactions : int;
-    (** Number of heap compactions since the program was started. *)
-
-    top_heap_words : int;
-    (** Maximum size reached by the major heap, in words. *)
-
-    stack_size : int
-    (** Current size of the stack, in words. *)
-  }
+    ; compactions : int  (** Number of heap compactions since the program was started. *)
+    ; top_heap_words : int  (** Maximum size reached by the major heap, in words. *)
+    ; stack_size : int  (** Current size of the stack, in words. *)
+    }
   [@@deriving bin_io, sexp, fields]
 
   include Comparable.S with type t := t
@@ -96,15 +72,14 @@ type stat = Stat.t
 *)
 
 module Control : sig
-  type t = {
-    mutable minor_heap_size : int;
+  type t =
+    { mutable minor_heap_size : int
     (** The size (in words) of the minor heap.  Changing this parameter will
         trigger a minor collection.
 
         Default: 262144 words / 1MB (32bit) / 2MB (64bit).
     *)
-
-    mutable major_heap_increment : int;
+    ; mutable major_heap_increment : int
     (** How much to add to the major heap when increasing it. If this
         number is less than or equal to 1000, it is a percentage of
         the current heap size (i.e. setting it to 100 will double the heap
@@ -113,8 +88,7 @@ module Control : sig
 
         Default: 15%.
     *)
-
-    mutable space_overhead : int;
+    ; mutable space_overhead : int
     (** The major GC speed is computed from this parameter.
         This is the memory that will be "wasted" because the GC does not
         immediatly collect unreachable blocks.  It is expressed as a
@@ -123,8 +97,7 @@ module Control : sig
         blocks more eagerly) if [space_overhead] is smaller.
 
         Default: 80. *)
-
-    mutable verbose : int;
+    ; mutable verbose : int
     (** This value controls the GC messages on standard error output.
         It is a sum of some of the following flags, to print messages
         on the corresponding events:
@@ -140,8 +113,7 @@ module Control : sig
         - [0x200] Computation of compaction triggering condition.
 
         Default: 0. *)
-
-    mutable max_overhead : int;
+    ; mutable max_overhead : int
     (** Heap compaction is triggered when the estimated amount
         of "wasted" memory is more than [max_overhead] percent of the
         amount of live data.  If [max_overhead] is set to 0, heap
@@ -150,15 +122,13 @@ module Control : sig
         If [max_overhead >= 1000000], compaction is never triggered.
 
         Default: 500. *)
-
-    mutable stack_limit : int;
+    ; mutable stack_limit : int
     (** The maximum size of the stack (in words).  This is only
         relevant to the byte-code runtime, as the native code runtime
         uses the operating system's stack.
 
         Default: 1048576 words / 4MB (32bit) / 8MB (64bit). *)
-
-    mutable allocation_policy : int;
+    ; mutable allocation_policy : int
     (** The policy used for allocating in the heap.  Possible
         values are 0 and 1.  0 is the next-fit policy, which is
         quite fast but can result in fragmentation.  1 is the
@@ -166,14 +136,13 @@ module Control : sig
         can be better for programs with fragmentation problems.
 
         Default: 0. *)
-
-    window_size : int;
+    ; window_size : int
     (** The size of the window used by the major GC for smoothing
         out variations in its workload. This is an integer between
         1 and 50.
 
         Default: 1. @since 4.03.0 *)
-  }
+    }
   [@@deriving bin_io, sexp, fields]
 
   include Comparable.S with type t := t
@@ -186,20 +155,20 @@ type control = Control.t
     by setting the OCAMLRUNPARAM environment variable.
     See the documentation of ocamlrun. *)
 
-external stat : unit -> stat = "caml_gc_stat"
 (** Return the current values of the memory management counters in a
     [stat] record.  This function examines every heap block to get the
     statistics. *)
+external stat : unit -> stat = "caml_gc_stat"
 
-external quick_stat : unit -> stat = "caml_gc_quick_stat"
 (** Same as [stat] except that [live_words], [live_blocks], [free_words],
     [free_blocks], [largest_free], and [fragments] are set to 0.  This
     function is much faster than [stat] because it does not need to go
     through the heap. *)
+external quick_stat : unit -> stat = "caml_gc_quick_stat"
 
-external counters : unit -> float * float * float = "caml_gc_counters"
 (** Return [(minor_words, promoted_words, major_words)].  This function
     is as fast at [quick_stat]. *)
+external counters : unit -> float * float * float = "caml_gc_counters"
 
 (** The following functions return the same as [(Gc.quick_stat ()).Stat.f], avoiding any
     allocation (of the [stat] record or a float).  On 32-bit machines the [int] may
@@ -209,15 +178,17 @@ external counters : unit -> float * float * float = "caml_gc_counters"
     because we want the compiler to save the value of the allocation pointer register
     (%r15 on x86-64) to the global variable [caml_young_ptr] before the C stub tries to
     read its value. *)
-external minor_words       : unit -> int = "core_kernel_gc_minor_words"
-external major_words       : unit -> int = "core_kernel_gc_major_words"       [@@noalloc]
-external promoted_words    : unit -> int = "core_kernel_gc_promoted_words"    [@@noalloc]
+external minor_words : unit -> int = "core_kernel_gc_minor_words"
+
+
+external major_words : unit -> int = "core_kernel_gc_major_words" [@@noalloc]
+external promoted_words : unit -> int = "core_kernel_gc_promoted_words" [@@noalloc]
 external minor_collections : unit -> int = "core_kernel_gc_minor_collections" [@@noalloc]
 external major_collections : unit -> int = "core_kernel_gc_major_collections" [@@noalloc]
-external heap_words        : unit -> int = "core_kernel_gc_heap_words"        [@@noalloc]
-external heap_chunks       : unit -> int = "core_kernel_gc_heap_chunks"       [@@noalloc]
-external compactions       : unit -> int = "core_kernel_gc_compactions"       [@@noalloc]
-external top_heap_words    : unit -> int = "core_kernel_gc_top_heap_words"    [@@noalloc]
+external heap_words : unit -> int = "core_kernel_gc_heap_words" [@@noalloc]
+external heap_chunks : unit -> int = "core_kernel_gc_heap_chunks" [@@noalloc]
+external compactions : unit -> int = "core_kernel_gc_compactions" [@@noalloc]
+external top_heap_words : unit -> int = "core_kernel_gc_top_heap_words" [@@noalloc]
 
 (** This function returns [major_words () + minor_words ()].  It exists purely for speed
     (one call into C rather than two).  Like [major_words] and [minor_words],
@@ -229,42 +200,42 @@ external top_heap_words    : unit -> int = "core_kernel_gc_top_heap_words"    [@
 *)
 external major_plus_minor_words : unit -> int = "core_kernel_gc_major_plus_minor_words"
 
-external get : unit -> control = "caml_gc_get"
 (** Return the current values of the GC parameters in a [control] record. *)
+external get : unit -> control = "caml_gc_get"
 
-external set : control -> unit = "caml_gc_set"
 (** [set r] changes the GC parameters according to the [control] record [r].
     The normal usage is:
     [Gc.set { (Gc.get()) with Gc.Control.verbose = 0x00d }] *)
+external set : control -> unit = "caml_gc_set"
 
-external minor : unit -> unit = "caml_gc_minor"
 (** Trigger a minor collection. *)
+external minor : unit -> unit = "caml_gc_minor"
 
-external major_slice : int -> int = "caml_gc_major_slice"
 (** Do a minor collection and a slice of major collection.  The argument
     is the size of the slice, 0 to use the automatically-computed
     slice size.  In all cases, the result is the computed slice size. *)
+external major_slice : int -> int = "caml_gc_major_slice"
 
-external major : unit -> unit = "caml_gc_major"
 (** Do a minor collection and finish the current major collection cycle. *)
+external major : unit -> unit = "caml_gc_major"
 
-external full_major : unit -> unit = "caml_gc_full_major"
 (** Do a minor collection, finish the current major collection cycle,
     and perform a complete new cycle.  This will collect all currently
     unreachable blocks. *)
+external full_major : unit -> unit = "caml_gc_full_major"
 
-external compact : unit -> unit = "caml_gc_compaction"
 (** Perform a full major collection and compact the heap.  Note that heap
     compaction is a lengthy operation. *)
+external compact : unit -> unit = "caml_gc_compaction"
 
-val print_stat : out_channel -> unit
 (** Print the current values of the memory management counters (in
     human-readable form) into the channel argument. *)
+val print_stat : out_channel -> unit
 
-val allocated_bytes : unit -> float
 (** Return the total number of bytes allocated since the program was
     started.  It is returned as a [float] to avoid overflow problems
     with [int] on 32-bit machines. *)
+val allocated_bytes : unit -> float
 
 (** [keep_alive a] ensures that [a] is live at the point where [keep_alive a] is called.
     It is like [ignore a], except that the compiler won't be able to simplify it and
@@ -273,18 +244,17 @@ val keep_alive : _ -> unit
 
 (** Adjust the specified GC parameters. *)
 val tune
-  :  ?logger               : (string -> unit)
-  -> ?minor_heap_size      : int
-  -> ?major_heap_increment : int
-  -> ?space_overhead       : int
-  -> ?verbose              : int
-  -> ?max_overhead         : int
-  -> ?stack_limit          : int
-  -> ?allocation_policy    : int
-  -> ?window_size          : int
+  :  ?logger:(string -> unit)
+  -> ?minor_heap_size:int
+  -> ?major_heap_increment:int
+  -> ?space_overhead:int
+  -> ?verbose:int
+  -> ?max_overhead:int
+  -> ?stack_limit:int
+  -> ?allocation_policy:int
+  -> ?window_size:int
   -> unit
   -> unit
-
 
 (** The policy used for allocating in the heap.
 
@@ -301,11 +271,12 @@ module Allocation_policy : sig
     | First_fit
 end
 
+
 val disable_compaction
   :  ?logger:(string -> unit)
   (** The OCaml docs strongly suggest that the allocation policy be changed from
       Next Fit to First Fit if disabling compaction permanently. *)
-  -> allocation_policy:[ `Don't_change | `Set_to of Allocation_policy.t ]
+  -> allocation_policy:[`Don't_change | `Set_to of Allocation_policy.t]
   -> unit
   -> unit
 
@@ -323,7 +294,6 @@ val disable_compaction
     perform a simple idempotent action, like setting a ref.  The same rules as for
     signal handlers apply to finalizers.  *)
 module Expert : sig
-
   (** [add_finalizer b f] ensures that [f] runs after [b] becomes unreachable.  The OCaml
       runtime only supports finalizers on heap blocks, hence [add_finalizer] requires [b :
       _ Heap_block.t].  The runtime essentially maintains a set of finalizer pairs:
@@ -367,7 +337,8 @@ module Expert : sig
       [add_finalizer_exn b f] is like [add_finalizer], but will raise if [b] is not a heap
       block.
   *)
-  val add_finalizer     : 'a Heap_block.t -> ('a Heap_block.t -> unit) -> unit
+  val add_finalizer : 'a Heap_block.t -> ('a Heap_block.t -> unit) -> unit
+
   val add_finalizer_exn : 'a -> ('a -> unit) -> unit
 
   (** Same as {!add_finalizer} except that the function is not called until the value has
@@ -376,6 +347,7 @@ module Expert : sig
       contained this value as key or data is unset before running the finalization
       function. *)
   val add_finalizer_last : 'a Heap_block.t -> (unit -> unit) -> unit
+
   val add_finalizer_last_exn : 'a -> (unit -> unit) -> unit
 
   (** The runtime essentially maintains a bool ref:
@@ -394,7 +366,6 @@ module Expert : sig
 
   (** A GC alarm calls a user function at the end of each major GC cycle. *)
   module Alarm : sig
-
     type t [@@deriving sexp_of]
 
     (** [create f] arranges for [f] to be called at the end of each major GC cycle,
@@ -410,4 +381,3 @@ module Expert : sig
     val delete : t -> unit
   end
 end
-

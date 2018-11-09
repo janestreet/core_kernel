@@ -46,30 +46,31 @@
 
 open Comparable_intf
 
-module type Infix               = Infix
+module type Infix = Infix
 module type Map_and_set_binable = Map_and_set_binable
 module type Polymorphic_compare = Polymorphic_compare
-module type S_plain             = S_plain
-module type S                   = S
-module type S_binable           = S_binable
-module type S_common            = S_common
-module type Validate            = Validate
-module type With_zero           = With_zero
+module type S_plain = S_plain
+module type S = S
+module type S_binable = S_binable
+module type S_common = S_common
+module type Validate = Validate
+module type With_zero = With_zero
 
 (** [lexicographic cmps x y] compares [x] and [y] lexicographically using functions in the
     list [cmps]. *)
 val lexicographic : ('a -> 'a -> int) list -> 'a -> 'a -> int
 
 (** [lift cmp ~f x y] compares [x] and [y] by comparing [f x] and [f y] via [cmp]. *)
-val lift : ('a -> 'a -> 'int_or_bool) -> f:('b -> 'a) -> ('b -> 'b -> 'int_or_bool)
+val lift : ('a -> 'a -> 'int_or_bool) -> f:('b -> 'a) -> 'b -> 'b -> 'int_or_bool
 
 (** Inherit comparability from a component. *)
-module Inherit
-    (C : sig type t [@@deriving compare] end)
-    (T : sig
-       type t [@@deriving sexp]
-       val component : t -> C.t
-     end) : S with type t := T.t
+module Inherit (C : sig
+    type t [@@deriving compare]
+  end) (T : sig
+          type t [@@deriving sexp]
+
+          val component : t -> C.t
+        end) : S with type t := T.t
 
 (** {2 Make Functors}
 
@@ -93,17 +94,15 @@ module Make (T : sig
 
 module Make_plain_using_comparator (T : sig
     type t [@@deriving sexp_of]
+
     include Comparator.S with type t := t
-  end) : S_plain
-  with type t := T.t
-  with type comparator_witness := T.comparator_witness
+  end) : S_plain with type t := T.t with type comparator_witness := T.comparator_witness
 
 module Make_using_comparator (T : sig
     type t [@@deriving sexp]
+
     include Comparator.S with type t := t
-  end) : S
-  with type t := T.t
-  with type comparator_witness := T.comparator_witness
+  end) : S with type t := T.t with type comparator_witness := T.comparator_witness
 
 module Make_binable (T : sig
     type t [@@deriving bin_io, compare, sexp]
@@ -111,55 +110,58 @@ module Make_binable (T : sig
 
 module Make_binable_using_comparator (T : sig
     type t [@@deriving bin_io, sexp]
+
     include Comparator.S with type t := t
-  end) : S_binable
+  end) : S_binable with type t := T.t with type comparator_witness := T.comparator_witness
+
+module Extend
+    (M : Base.Comparable.S) (X : sig
+                               type t = M.t [@@deriving sexp]
+                             end) : S with type t := M.t with type comparator_witness := M.comparator_witness
+
+module Extend_binable
+    (M : Base.Comparable.S) (X : sig
+                               type t = M.t [@@deriving bin_io, sexp]
+                             end) :
+  S_binable with type t := M.t with type comparator_witness := M.comparator_witness
+
+module Map_and_set_binable (T : sig
+    type t [@@deriving bin_io, compare, sexp]
+  end) : Map_and_set_binable with type t := T.t
+
+module Map_and_set_binable_using_comparator (T : sig
+    type t [@@deriving bin_io, compare, sexp]
+
+    include Comparator.S with type t := t
+  end) :
+  Map_and_set_binable
   with type t := T.t
   with type comparator_witness := T.comparator_witness
 
-module Extend(M : Base.Comparable.S)
-    (X : sig type t = M.t [@@deriving sexp] end)
-  : S
-    with type t := M.t
-    with type comparator_witness := M.comparator_witness
+module Poly (T : sig
+    type t [@@deriving sexp]
+  end) : S with type t := T.t
 
-module Extend_binable(M : Base.Comparable.S)
-    (X : sig type t = M.t [@@deriving bin_io, sexp] end)
-  : S_binable
-    with type t := M.t
-    with type comparator_witness := M.comparator_witness
+module Validate (T : sig
+    type t [@@deriving compare, sexp]
+  end) : Validate with type t := T.t
 
-module Map_and_set_binable (T : sig type t [@@deriving bin_io, compare, sexp] end)
-  : Map_and_set_binable with type t := T.t
+module With_zero (T : sig
+    type t [@@deriving compare, sexp]
 
-module Map_and_set_binable_using_comparator
-    (T : sig
-       type t [@@deriving bin_io, compare, sexp]
-       include Comparator.S with type t := t
-     end)
-  : Map_and_set_binable
-    with type t := T.t
-    with type comparator_witness := T.comparator_witness
+    val zero : t
 
-module Poly (T : sig type t [@@deriving sexp] end) : S with type t := T.t
+    include Validate with type t := t
+  end) : With_zero with type t := T.t
 
-module Validate (T : sig type t [@@deriving compare, sexp] end) : Validate with type t := T.t
+module Validate_with_zero (T : sig
+    type t [@@deriving compare, sexp]
 
-module With_zero
-    (T : sig
-       type t [@@deriving compare, sexp]
-       val zero : t
-       include Validate with type t := t
-     end) : With_zero with type t := T.t
-
-module Validate_with_zero
-    (T : sig
-       type t [@@deriving compare, sexp]
-       val zero : t
-     end)
-  : sig
-    include Validate  with type t := T.t
-    include With_zero with type t := T.t
-  end
+    val zero : t
+  end) : sig
+  include Validate with type t := T.t
+  include With_zero with type t := T.t
+end
 
 (** The following module types and functors may be used to define stable modules: *)
 
@@ -169,17 +171,18 @@ module Stable : sig
       type comparable
       type comparator_witness
 
-      module Map : Map.Stable.V1.S
+      module Map :
+        Map.Stable.V1.S
         with type key := comparable
         with type comparator_witness := comparator_witness
 
-      module Set : Set.Stable.V1.S
+      module Set :
+        Set.Stable.V1.S
         with type elt := comparable
         with type elt_comparator_witness := comparator_witness
     end
 
-    module Make (X : Stable_module_types.S0) : S
-      with type comparable := X.t
-      with type comparator_witness := X.comparator_witness
+    module Make (X : Stable_module_types.S0) :
+      S with type comparable := X.t with type comparator_witness := X.comparator_witness
   end
 end

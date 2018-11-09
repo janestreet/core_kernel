@@ -1,1 +1,2 @@
-include Command_intf.Command (** @inline *)
+(** @inline *)
+include Command_intf.Command

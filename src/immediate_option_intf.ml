@@ -35,7 +35,7 @@ module type S_without_immediate = sig
   val is_some : t -> bool
 
   (** [value (some x) ~default = x] and [value none ~default = default]. *)
-  val value : t -> default : value -> value
+  val value : t -> default:value -> value
 
   (** [value_exn (some x) = x].  [value_exn none] raises.  Unlike [Option.value_exn],
       there is no [?message] argument, so that calls to [value_exn] that do not raise
@@ -50,28 +50,35 @@ module type S_without_immediate = sig
   val to_option : t -> value option
   val of_option : value option -> t
 
-  module Optional_syntax : Optional_syntax.S
-    with type t     := t
-    with type value := value
+  module Optional_syntax : Optional_syntax.S with type t := t with type value := value
 end
 
 module type S = sig
   type t [@@immediate]
+
   include S_without_immediate with type t := t
 end
 
-[%%import "config.h"]
+[%%import
+  "config.h"]
 
-[%%if defined JSC_PORTABLE_INT63]
+[%%if
+  defined JSC_PORTABLE_INT63]
+
 module type S_int63 = S_without_immediate
-[%%elif defined JSC_ARCH_SIXTYFOUR]
+
+[%%elif
+  defined JSC_ARCH_SIXTYFOUR]
+
 module type S_int63 = S
+
 [%%else]
+
 module type S_int63 = S_without_immediate
+
 [%%endif]
 
 module type Immediate_option = sig
-
   (** Always immediate. *)
   module type S = S
 
@@ -80,5 +87,4 @@ module type Immediate_option = sig
 
   (** Never immediate. *)
   module type S_without_immediate = S_without_immediate
-
 end

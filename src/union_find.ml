@@ -11,7 +11,7 @@
 open! Import
 
 include struct
-  let phys_equal = (==)
+  let phys_equal = ( == )
 end
 
 (*
@@ -43,15 +43,16 @@ end
    deepest node takes Theta(N) time.  With the balancing scheme of never
    increasing the rank of a node unnecessarily, it would take O(log N).
 *)
-type 'a root = {
-  mutable value: 'a;
-  mutable rank: int;
-}
+type 'a root =
+  { mutable value : 'a
+  ; mutable rank : int
+  }
 
-type 'a t = { mutable node : 'a node; }
+type 'a t = { mutable node : 'a node }
 
 and 'a node =
-  | Inner of 'a t (* [Inner x] is a node whose parent is [x]. *)
+  | Inner of 'a t
+  (* [Inner x] is a node whose parent is [x]. *)
   | Root of 'a root
 
 let invariant _ t =
@@ -61,8 +62,9 @@ let invariant _ t =
     | Root r -> assert (depth <= r.rank)
   in
   loop t 0
+;;
 
-let create v = { node = Root { value = v; rank = 0; }; }
+let create v = { node = Root { value = v; rank = 0 } }
 
 (* invariants:
    [inner.node] = [inner_node] = [Inner t].
@@ -74,48 +76,47 @@ let rec compress t ~inner_node ~inner ~descendants =
     (* t is the root of the tree.
        Re-point all descendants directly to it by setting them to [Inner t].
        Note: we don't re-point [inner] as it already points there. *)
-    List.iter descendants ~f:(fun t -> t.node <- inner_node); (t, r)
+    List.iter descendants ~f:(fun t -> t.node <- inner_node);
+    t, r
   | Inner t' as node ->
     compress t' ~inner_node:node ~inner:t ~descendants:(inner :: descendants)
+;;
 
 let representative t =
   match t.node with
-  | Root r -> (t, r)
+  | Root r -> t, r
   | Inner t' as node -> compress t' ~inner_node:node ~inner:t ~descendants:[]
+;;
 
 let root t = snd (representative t)
-
 let rank t = (root t).rank
-
 let get t = (root t).value
-
 let set t v = (root t).value <- v
-
 let same_class t1 t2 = phys_equal (root t1) (root t2)
 
 let union t1 t2 =
-  let (t1, r1) = representative t1 in
-  let (t2, r2) = representative t2 in
-  if phys_equal r1 r2 then
-    ()
-  else
+  let t1, r1 = representative t1 in
+  let t2, r2 = representative t2 in
+  if phys_equal r1 r2
+  then ()
+  else (
     let n1 = r1.rank in
     let n2 = r2.rank in
-    if n1 < n2 then
-      t1.node <- Inner t2
-    else begin
+    if n1 < n2
+    then t1.node <- Inner t2
+    else (
       t2.node <- Inner t1;
-      if n1 = n2 then r1.rank <- r1.rank + 1;
-    end
+      if n1 = n2 then r1.rank <- r1.rank + 1))
+;;
 
 let is_compressed t =
   invariant ignore t;
   match t.node with
   | Root _ -> true
   | Inner t ->
-    match t.node with
-    | Root _ -> true
-    | Inner _ -> false
+    (match t.node with
+     | Root _ -> true
+     | Inner _ -> false)
 ;;
 
 module Private = struct

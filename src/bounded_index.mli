@@ -1,1 +1,2 @@
-include Bounded_index_intf.Bounded_index (** @inline *)
+(** @inline *)
+include Bounded_index_intf.Bounded_index

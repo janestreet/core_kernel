@@ -92,20 +92,19 @@ module type Timing_wheel_time = sig
   module Span : sig
     type t [@@deriving compare, sexp_of]
 
-    include Comparable.Infix     with type t := t
-    include Comparable.Validate  with type t := t
+    include Comparable.Infix with type t := t
+    include Comparable.Validate with type t := t
     include Comparable.With_zero with type t := t
-    include Equal.S              with type t := t
+    include Equal.S with type t := t
 
     val of_sec : float -> t
     val scale : t -> float -> t
   end
 
   include Comparable.Infix with type t := t
-  include Equal.S          with type t := t
+  include Equal.S with type t := t
 
   val epoch : t
-
   val add : t -> Span.t -> t
   val sub : t -> Span.t -> t
   val diff : t -> t -> Span.t
@@ -114,41 +113,33 @@ end
 (** An [Interval_num.t] is an index of one of the intervals into which a timing-wheel
     partitions time. *)
 module type Interval_num = sig
-
   module Span : sig
     type t = private Int63.t [@@deriving sexp_of]
 
     include Comparable.S with type t := t
 
     val max : t -> t -> t
-
     val zero : t
-    val one  : t
-
+    val one : t
     val of_int63 : Int63.t -> t
     val to_int63 : t -> Int63.t
-
-    val of_int     : int -> t
+    val of_int : int -> t
     val to_int_exn : t -> int
-
     val scale_int : t -> int -> t
-
     val pred : t -> t
     val succ : t -> t
-
     val ( + ) : t -> t -> t
   end
 
   type t = private Int63.t [@@deriving sexp_of]
 
   include Comparable.S with type t := t
-  include Hashable.S   with type t := t
+  include Hashable.S with type t := t
 
   val max : t -> t -> t
   val min : t -> t -> t
-
-  val zero      : t
-  val one       : t
+  val zero : t
+  val one : t
   val min_value : t
   val max_value : t
 
@@ -157,29 +148,23 @@ module type Interval_num = sig
 
       {[
         max_representable = 1 lsl Level_bits.max_num_bits - 1
-      ]}
-  *)
+      ]} *)
   val max_representable : t
 
   val of_int63 : Int63.t -> t
   val to_int63 : t -> Int63.t
-
   val of_int : int -> t
   val to_int_exn : t -> int
-
   val add : t -> Span.t -> t
   val sub : t -> Span.t -> t
-
   val diff : t -> t -> Span.t
-
   val succ : t -> t
   val pred : t -> t
-
   val rem : t -> Span.t -> Span.t
 end
 
-(** An [Alarm_precision] is a time span that is a power of two number of nanoseconds,
-    used to specify the precision of a timing wheel. *)
+(** An [Alarm_precision] is a time span that is a power of two number of nanoseconds, used
+    to specify the precision of a timing wheel. *)
 module type Alarm_precision = sig
   module Time : Timing_wheel_time
 
@@ -195,15 +180,22 @@ module type Alarm_precision = sig
   val of_span_floor_pow2_ns : Time.Span.t -> t
 
   val to_span : t -> Time.Span.t
-
   val one_nanosecond : t
 
   (** Constants that are the closest power of two number of nanoseconds to the stated
       span. *)
-  val about_one_day         : t  (*_ ~19.5 h  *)
-  val about_one_microsecond : t  (*_  1024 us *)
-  val about_one_millisecond : t  (*_ ~1.05 ms *)
-  val about_one_second      : t  (*_ ~1.07 s  *)
+
+  (** ~19.5 h  *)
+  val about_one_day : t
+
+  (** 1024 us *)
+  val about_one_microsecond : t
+
+  (** ~1.05 ms *)
+  val about_one_millisecond : t
+
+  (** ~1.07 s  *)
+  val about_one_second : t
 
   (** [mul t ~pow2] is [t * 2^pow2].  [pow2] may be negative, but [mul] does not check for
       overflow or underflow. *)
@@ -224,11 +216,9 @@ end
 
 module type Timing_wheel = sig
   module Time : Timing_wheel_time
-
   module Alarm_precision : Alarm_precision with module Time := Time
 
   type 'a t [@@deriving sexp_of]
-
   type 'a timing_wheel = 'a t
 
   (** [<:sexp_of< _ t_now >>] displays only [now t], not all the alarms. *)
@@ -244,9 +234,10 @@ module type Timing_wheel = sig
     val null : unit -> _ t
 
     (** All [Alarm] functions will raise if [not (Timing_wheel.mem timing_wheel t)]. *)
-    val at           : 'a timing_wheel -> 'a t -> Time.t
+    val at : 'a timing_wheel -> 'a t -> Time.t
+
     val interval_num : 'a timing_wheel -> 'a t -> Interval_num.t
-    val value        : 'a timing_wheel -> 'a t -> 'a
+    val value : 'a timing_wheel -> 'a t -> 'a
   end
 
   include Invariant.S1 with type 'a t := 'a t
@@ -286,13 +277,12 @@ module type Timing_wheel = sig
           default = [11; 10; 10; 10; 10; 10]
         ]}
 
-        This default uses 61 bits, i.e. [max_num_bits], and less than 10k words of memory.
-    *)
+        This default uses 61 bits, i.e. [max_num_bits], and less than 10k words of
+        memory. *)
     val default : t
 
     (** [num_bits t] is the sum of the [b_i] in [t]. *)
     val num_bits : t -> int
-
   end
 
   module Config : sig
@@ -302,15 +292,16 @@ module type Timing_wheel = sig
 
     (** [create] raises if [alarm_precision <= 0]. *)
     val create
-      :  ?capacity : int (** default is [1] *)
-      -> ?level_bits     : Level_bits.t
-      -> alarm_precision : Alarm_precision.t
+      :  ?capacity:int (** default is [1] *)
+      -> ?level_bits:Level_bits.t
+      -> alarm_precision:Alarm_precision.t
       -> unit
       -> t
 
     (** accessors *)
     val alarm_precision : t -> Time.Span.t
-    val level_bits      : t -> Level_bits.t
+
+    val level_bits : t -> Level_bits.t
 
     (** [durations t] returns the durations of the levels in [t] *)
     val durations : t -> Time.Span.t list
@@ -318,7 +309,7 @@ module type Timing_wheel = sig
     (** [microsecond_precision ()] returns a reasonable configuration for a timing wheel
         with microsecond [alarm_precision], and level durations of 1ms, 1s, 1m, 1h, 1d.
         See the relevant expect test in [Core_kernel_test] library. *)
-    val microsecond_precision: unit -> t
+    val microsecond_precision : unit -> t
   end
 
   (** [create ~config ~start] creates a new timing wheel with current time [start].
@@ -329,8 +320,9 @@ module type Timing_wheel = sig
 
   (** Accessors *)
   val alarm_precision : _ t -> Time.Span.t
-  val now             : _ t -> Time.t
-  val start           : _ t -> Time.t
+
+  val now : _ t -> Time.t
+  val start : _ t -> Time.t
 
   (** One can think of a timing wheel as a set of alarms.  Here are various container
       functions along those lines. *)
@@ -344,8 +336,9 @@ module type Timing_wheel = sig
       ) time Time.epoch].
 
       [now_interval_num t] equals [interval_num t (now t)]. *)
-  val interval_num     : _ t -> Time.t -> Interval_num.t
-  val now_interval_num : _ t           -> Interval_num.t
+  val interval_num : _ t -> Time.t -> Interval_num.t
+
+  val now_interval_num : _ t -> Interval_num.t
 
   (** [interval_num_start t n] is the start of the [n]'th interval in [t], i.e.
       [n * alarm_precision t] after the epoch.
@@ -359,7 +352,8 @@ module type Timing_wheel = sig
 
       [interval_start] raises in the same cases that [interval_num] does. *)
   val interval_num_start : _ t -> Interval_num.t -> Time.t
-  val interval_start     : _ t -> Time.t  -> Time.t
+
+  val interval_start : _ t -> Time.t -> Time.t
 
   (** [advance_clock t ~to_ ~handle_fired] advances [t]'s clock to [to_].  It fires and
       removes all alarms [a] in [t] with [Time.(<) (Alarm.at t a) (interval_start t to_)],
@@ -406,9 +400,9 @@ module type Timing_wheel = sig
 
       [add_at_interval_num t ~at a] is equivalent to [add t ~at:(interval_num_start t at)
       a]. *)
-  val add                 : 'a t -> at:Time.t         -> 'a -> 'a Alarm.t
-  val add_at_interval_num : 'a t -> at:Interval_num.t -> 'a -> 'a Alarm.t
+  val add : 'a t -> at:Time.t -> 'a -> 'a Alarm.t
 
+  val add_at_interval_num : 'a t -> at:Interval_num.t -> 'a -> 'a Alarm.t
   val mem : 'a t -> 'a Alarm.t -> bool
 
   (** [remove t alarm] removes [alarm] from [t].  [remove] raises if [not (mem t
@@ -423,9 +417,9 @@ module type Timing_wheel = sig
 
       {[
         reschedule t alarm ~at:(interval_num_start t at)
-      ]}
-  *)
-  val reschedule                 : 'a t -> 'a Alarm.t -> at:Time.t         -> unit
+      ]} *)
+  val reschedule : 'a t -> 'a Alarm.t -> at:Time.t -> unit
+
   val reschedule_at_interval_num : 'a t -> 'a Alarm.t -> at:Interval_num.t -> unit
 
   (** [clear t] removes all alarms from [t]. *)
@@ -434,7 +428,8 @@ module type Timing_wheel = sig
   (** [min_alarm_interval_num t] is the minimum [Alarm.interval_num] of all alarms in
       [t]. [min_alarm_interval_num_exn t] is the same, except it raises if [is_empty
       t]. *)
-  val min_alarm_interval_num     : _ t -> Interval_num.t option
+  val min_alarm_interval_num : _ t -> Interval_num.t option
+
   val min_alarm_interval_num_exn : _ t -> Interval_num.t
 
   (** [max_alarm_time_in_min_interval t] returns the maximum [Alarm.at] over all alarms in
@@ -446,7 +441,8 @@ module type Timing_wheel = sig
       This function is useful for advancing to the [min_alarm_interval_num] of a timing
       wheel and then calling [fire_past_alarms] to fire the alarms in that interval.  That
       is useful when simulating time, to ensure that alarms are processed in order. *)
-  val max_alarm_time_in_min_interval     : 'a t -> Time.t option
+  val max_alarm_time_in_min_interval : 'a t -> Time.t option
+
   val max_alarm_time_in_min_interval_exn : 'a t -> Time.t
 
   (** [next_alarm_fires_at t] returns the minimum time to which the clock can be advanced
@@ -456,28 +452,35 @@ module type Timing_wheel = sig
 
       [next_alarm_fires_at_exn] is the same as [next_alarm_fires_at], except that it
       raises if [is_empty t]. *)
-  val next_alarm_fires_at     : _ t -> Time.t option
+  val next_alarm_fires_at : _ t -> Time.t option
+
   val next_alarm_fires_at_exn : _ t -> Time.t
 end
 
 (** A timing wheel can be thought of as a set of alarms. *)
 module type Timing_wheel_ns = sig
-  include Timing_wheel
+  (** @inline *)
+  include
+    Timing_wheel
     (*_ We would like to use [with module Time = Time_ns], but can't because that requires
       certain values to be present in [Time_ns] that aren't there. *)
     with type Time.t = Time_ns.t
-    with type Time.Span.t = Time_ns.Span.t (** @inline *)
+    with type Time.Span.t = Time_ns.Span.t
 
   (*_ See the Jane Street Style Guide for an explanation of [Private] submodules:
 
     https://opensource.janestreet.com/standards/#private-submodules *)
   module Private : sig
     val interval_num_internal
-      : time:Time.t -> alarm_precision:Alarm_precision.t -> Interval_num.t
+      :  time:Time.t
+      -> alarm_precision:Alarm_precision.t
+      -> Interval_num.t
 
     module Num_key_bits : sig
       type t
+
       include Invariant.S with type t := t
+
       val zero : t
     end
   end

@@ -1,1 +1,2 @@
-include Date0_intf.Date0 (** @inline *)
+(** @inline *)
+include Date0_intf.Date0

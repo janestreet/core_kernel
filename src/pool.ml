@@ -1,6 +1,5 @@
 open! Import
 open Pool_intf
-
 module Tuple_type = Tuple_type
 
 let failwiths = Error.failwiths
@@ -14,21 +13,21 @@ module Int = struct
 end
 
 let sprintf = Printf.sprintf
-
 let concat l = Base.String.concat ~sep:"" l
 
 module type S = S
 
 module Pool = struct
-
   let grow_capacity ~capacity ~old_capacity =
     match capacity with
     | None -> if old_capacity = 0 then 1 else old_capacity * 2
     | Some capacity ->
       if capacity <= old_capacity
-      then failwiths "Pool.grow got too small capacity"
-             (`capacity capacity, `old_capacity old_capacity)
-             [%sexp_of: [ `capacity of int ] * [ `old_capacity of int ]];
+      then
+        failwiths
+          "Pool.grow got too small capacity"
+          (`capacity capacity, `old_capacity old_capacity)
+          [%sexp_of: [`capacity of int] * [`old_capacity of int]];
       capacity
   ;;
 
@@ -68,7 +67,6 @@ module Pool = struct
     type ('slots, 'a) t = int [@@deriving sexp_of]
 
     let equal (t1 : (_, _) t) t2 = t1 = t2
-
     let t0 = 1
     let t1 = 2
     let t2 = 3
@@ -122,15 +120,11 @@ module Pool = struct
     include Invariant.S with type t := t
 
     val to_string : t -> string
-
     val equal : t -> t -> bool
-
     val init : t
     val next : t -> t
-
     val of_int : int -> t
     val to_int : t -> int
-
     val examples : t list
   end = struct
     type t = int [@@deriving sexp_of]
@@ -138,19 +132,10 @@ module Pool = struct
     (* We guarantee that tuple ids are nonnegative so that they can be encoded in
        headers. *)
     let invariant t = assert (t >= 0)
-
     let to_string = Int.to_string
-
     let equal (t1 : t) t2 = t1 = t2
-
     let init = 0
-
-    let next t =
-      if arch_sixtyfour
-      then t + 1
-      else if t = Int.max_value then 0 else t + 1
-    ;;
-
+    let next t = if arch_sixtyfour then t + 1 else if t = Int.max_value then 0 else t + 1
     let to_int t = t
 
     let of_int i =
@@ -175,22 +160,25 @@ module Pool = struct
        access, the [slot_index] function.  The encoding is designed so that [slot_index]
        produces a negative number for [Null], which will cause the subsequent array bounds
        check to fail. *)
+
     type 'slots t = private int [@@deriving sexp_of, typerep]
 
     include Invariant.S1 with type 'a t := 'a t
 
     val phys_compare : 'a t -> 'a t -> int
-    val phys_equal   : 'a t -> 'a t -> bool
+    val phys_equal : 'a t -> 'a t -> bool
 
     (* The null pointer.  [null] is a function due to issues with the value restriction. *)
+
     val null : unit -> _ t
     val is_null : _ t -> bool
 
     (* Normal pointers. *)
+
     val create : header_index:int -> Tuple_id.t -> _ t
-    val header_index     : _ t -> int
-    val masked_tuple_id  : _ t -> int
-    val slot_index       : _ t -> (  _, _) Slot.t -> int
+    val header_index : _ t -> int
+    val masked_tuple_id : _ t -> int
+    val slot_index : _ t -> (_, _) Slot.t -> int
     val first_slot_index : _ t -> int
 
     module Id : sig
@@ -200,22 +188,17 @@ module Pool = struct
       val of_int63 : Int63.t -> t
     end
 
-    val to_id     : _ t -> Id.t
+    val to_id : _ t -> Id.t
     val of_id_exn : Id.t -> _ t
-
   end = struct
     (* A pointer is either [null] or the (positive) index in the pool of the next-free
        field preceeding the tuple's slots. *)
     type 'slots t = int [@@deriving typerep]
 
     let sexp_of_t _ t = Sexp.Atom (sprintf "<Pool.Pointer.t: 0x%08x>" t)
-
     let phys_equal (t1 : _ t) t2 = phys_equal t1 t2
-
     let phys_compare = compare
-
     let null () = -max_slot - 1
-
     let is_null t = phys_equal t (null ())
 
     (* [null] must be such that [null + slot] is an invalid array index for all slots.
@@ -228,14 +211,9 @@ module Pool = struct
     ;;
 
     let header_index_mask = (1 lsl array_index_num_bits) - 1
-
     let masked_tuple_id t = t lsr array_index_num_bits
-
     let header_index t = t land header_index_mask
-
-    let invariant _ t =
-      if not (is_null t) then assert (header_index t > 0);
-    ;;
+    let invariant _ t = if not (is_null t) then assert (header_index t > 0)
 
     let%test_unit _ = invariant ignore (null ())
 
@@ -245,7 +223,6 @@ module Pool = struct
     ;;
 
     let slot_index t slot = header_index t + slot
-
     let first_slot_index t = slot_index t Slot.t0
 
     module Id = struct
@@ -262,14 +239,15 @@ module Pool = struct
         let t = Id.to_int_exn id in
         if is_null t
         then t
-        else
+        else (
           let should_equal =
             create ~header_index:(header_index t) (Tuple_id.of_int (masked_tuple_id t))
           in
           if phys_equal t should_equal
           then t
-          else failwiths "should equal" should_equal [%sexp_of: _ t]
-      with exn ->
+          else failwiths "should equal" should_equal [%sexp_of: _ t])
+      with
+      | exn ->
         failwiths "Pointer.of_id_exn got strange id" (id, exn) [%sexp_of: Id.t * exn]
     ;;
   end
@@ -286,20 +264,22 @@ module Pool = struct
        If a tuple is free, its header is set to either [Null] or [Free] with
        [next_free_header_index] indicating the header of the next tuple on the free list.
        If a tuple is in use, it header is set to [Used]. *)
+
     type t = private int [@@deriving sexp_of]
 
     val null : t
     val is_null : t -> bool
-
     val free : next_free_header_index:int -> t
     val is_free : t -> bool
-    val next_free_header_index : t -> int (* only valid if [is_free t] *)
+    val next_free_header_index : t -> int
+
+    (* only valid if [is_free t] *)
 
     val used : Tuple_id.t -> t
     val is_used : t -> bool
-    val tuple_id : t -> Tuple_id.t (* only valid if [is_used t] *)
+    val tuple_id : t -> Tuple_id.t
+    (* only valid if [is_used t] *)
   end = struct
-
     type t = int
 
     let null = 0
@@ -309,10 +289,9 @@ module Pool = struct
     let free ~next_free_header_index = next_free_header_index
     let is_free t = t > 0
     let next_free_header_index t = t
-
     let used (tuple_id : Tuple_id.t) = -1 - (tuple_id :> int)
     let is_used t = t < 0
-    let tuple_id t = Tuple_id.of_int (- (t + 1))
+    let tuple_id t = Tuple_id.of_int (-(t + 1))
 
     let%test_unit _ =
       List.iter Tuple_id.examples ~f:(fun id ->
@@ -325,14 +304,12 @@ module Pool = struct
       if is_null t
       then Sexp.Atom "null"
       else if is_free t
-      then Sexp.( List [ Atom "Free"; Atom (Int.to_string (next_free_header_index t)) ])
-      else Sexp.( List [ Atom "Used"; Atom (Tuple_id.to_string (tuple_id t)) ])
+      then Sexp.(List [ Atom "Free"; Atom (Int.to_string (next_free_header_index t)) ])
+      else Sexp.(List [ Atom "Used"; Atom (Tuple_id.to_string (tuple_id t)) ])
     ;;
-
   end
 
   let metadata_index = 0
-
   let start_of_tuples_index = 1
 
   let max_capacity ~slots_per_tuple =
@@ -341,9 +318,9 @@ module Pool = struct
 
   let%test_unit _ =
     for slots_per_tuple = 1 to max_slot do
-      assert ((start_of_tuples_index
-               + (1 + slots_per_tuple) * max_capacity ~slots_per_tuple)
-              <= max_array_length);
+      assert (
+        start_of_tuples_index + ((1 + slots_per_tuple) * max_capacity ~slots_per_tuple)
+        <= max_array_length)
     done
   ;;
 
@@ -351,11 +328,12 @@ module Pool = struct
     type 'slots t =
       { (* [slots_per_tuple] is number of slots in a tuple as seen by the user; i.e. not
            counting the next-free pointer. *)
-        slots_per_tuple    : int
-      ; capacity           : int
-      ; mutable length     : int
-      ; mutable next_id    : Tuple_id.t
-      ; mutable first_free : Header.t
+        slots_per_tuple : int
+      ; capacity : int
+      ; mutable length : int
+      ; mutable next_id : Tuple_id.t
+      ; mutable first_free :
+          Header.t
       (* [dummy] is [None] in an unsafe pool.  In a safe pool, [dummy] is [Some a], with
          [Uniform_array.length a = slots_per_tuple].  [dummy] is actually a tuple value
          with the correct type (corresponding to ['slots]), but we make the type of
@@ -363,20 +341,19 @@ module Pool = struct
          the purpose of [dummy] is to initialize a pool element, making [dummy] an [Obj.t
          Uniform_array.t] lets us initialize a pool element using [Uniform_array.blit]
          from [dummy] to the pool, which is an [Obj.t Uniform_array.t]. *)
-      ; dummy              : Obj.t Uniform_array.t sexp_opaque option
+      ; dummy : Obj.t Uniform_array.t sexp_opaque option
       }
     [@@deriving fields, sexp_of]
 
     let array_indices_per_tuple t = 1 + t.slots_per_tuple
-
-    let array_length t = start_of_tuples_index + t.capacity * array_indices_per_tuple t
+    let array_length t = start_of_tuples_index + (t.capacity * array_indices_per_tuple t)
 
     let header_index_to_tuple_num t ~header_index =
       (header_index - start_of_tuples_index) / array_indices_per_tuple t
     ;;
 
     let tuple_num_to_header_index t tuple_num =
-      start_of_tuples_index + tuple_num * array_indices_per_tuple t
+      start_of_tuples_index + (tuple_num * array_indices_per_tuple t)
     ;;
 
     let tuple_num_to_first_slot_index t tuple_num =
@@ -393,17 +370,16 @@ module Pool = struct
   type 'slots t = Obj.t Uniform_array.t
 
   let metadata (type slots) (t : slots t) =
-    (Obj.obj (Uniform_array.unsafe_get t metadata_index) : slots Metadata.t)
+    Uniform_array.unsafe_get t metadata_index |> (Obj.obj : _ -> slots Metadata.t)
   ;;
 
   let length t = (metadata t).length
-
   let sexp_of_t sexp_of_ty t = Metadata.sexp_of_t sexp_of_ty (metadata t)
 
   (* Because [unsafe_header] and [unsafe_set_header] do not do a bounds check, one must be
      sure that one has a valid [header_index] before calling them. *)
   let unsafe_header t ~header_index =
-    (Obj.obj (Uniform_array.unsafe_get t header_index) : Header.t)
+    Uniform_array.unsafe_get t header_index |> (Obj.obj : _ -> Header.t)
   ;;
 
   let unsafe_set_header t ~header_index (header : Header.t) =
@@ -411,15 +387,14 @@ module Pool = struct
   ;;
 
   let header_index_is_in_bounds t ~header_index =
-    header_index >= start_of_tuples_index
-    && header_index < Uniform_array.length t
+    header_index >= start_of_tuples_index && header_index < Uniform_array.length t
   ;;
 
   let unsafe_pointer_is_live t pointer =
     let header_index = Pointer.header_index pointer in
     let header = unsafe_header t ~header_index in
     Header.is_used header
-    && (Tuple_id.to_int (Header.tuple_id header)) land tuple_id_mask
+    && Tuple_id.to_int (Header.tuple_id header) land tuple_id_mask
        = Pointer.masked_tuple_id pointer
   ;;
 
@@ -436,23 +411,26 @@ module Pool = struct
   let is_valid_header_index t ~header_index =
     let metadata = metadata t in
     header_index_is_in_bounds t ~header_index
-    && 0 = (header_index - start_of_tuples_index)
-           mod (Metadata.array_indices_per_tuple metadata)
+    && 0
+       = (header_index - start_of_tuples_index)
+         mod Metadata.array_indices_per_tuple metadata
   ;;
 
   let pointer_of_id_exn t id =
     try
       let pointer = Pointer.of_id_exn id in
       if not (Pointer.is_null pointer)
-      then begin
+      then (
         let header_index = Pointer.header_index pointer in
         if not (is_valid_header_index t ~header_index)
         then failwiths "invalid header index" header_index [%sexp_of: int];
-        if not (unsafe_pointer_is_live t pointer) then failwith "pointer not live";
-      end;
+        if not (unsafe_pointer_is_live t pointer) then failwith "pointer not live");
       pointer
-    with exn ->
-      failwiths "Pool.pointer_of_id_exn got invalid id" (id, t, exn)
+    with
+    | exn ->
+      failwiths
+        "Pool.pointer_of_id_exn got invalid id"
+        (id, t, exn)
         [%sexp_of: Pointer.Id.t * _ t * exn]
   ;;
 
@@ -462,61 +440,63 @@ module Pool = struct
       let check f field = f (Field.get field metadata) in
       Metadata.Fields.iter
         ~slots_per_tuple:(check (fun slots_per_tuple -> assert (slots_per_tuple > 0)))
-        ~capacity:(check (fun capacity ->
-          assert (capacity >= 0);
-          assert (Uniform_array.length t = Metadata.array_length metadata)))
-        ~length:(check (fun length ->
-          assert (length >= 0);
-          assert (length <= metadata.capacity)))
+        ~capacity:
+          (check (fun capacity ->
+             assert (capacity >= 0);
+             assert (Uniform_array.length t = Metadata.array_length metadata)))
+        ~length:
+          (check (fun length ->
+             assert (length >= 0);
+             assert (length <= metadata.capacity)))
         ~next_id:(check Tuple_id.invariant)
-        ~first_free:(check (fun first_free ->
-          let free = Array.create ~len:metadata.capacity false in
-          let r = ref first_free in
-          while not (Header.is_null !r) do
-            let header = !r in
-            assert (Header.is_free header);
-            let header_index = Header.next_free_header_index header in
-            assert (is_valid_header_index t ~header_index);
-            let tuple_num = header_index_to_tuple_num metadata ~header_index in
-            if free.( tuple_num )
-            then failwiths "cycle in free list" tuple_num [%sexp_of: int];
-            free.( tuple_num ) <- true;
-            r := unsafe_header t ~header_index;
-          done))
-        ~dummy:(check (function
-          | Some dummy -> assert (Uniform_array.length dummy = metadata.slots_per_tuple)
-          | None ->
-            for tuple_num = 0 to metadata.capacity - 1 do
-              let header_index = tuple_num_to_header_index metadata tuple_num in
-              let header = unsafe_header t ~header_index in
-              if Header.is_free header
-              then
-                let first_slot = tuple_num_to_first_slot_index metadata tuple_num in
-                for slot = 0 to metadata.slots_per_tuple - 1 do
-                  assert (Obj.is_int (Uniform_array.get t (first_slot + slot)));
-                done;
-            done))
-    with exn ->
-      failwiths "Pool.invariant failed" (exn, t) ([%sexp_of: exn * _ t])
+        ~first_free:
+          (check (fun first_free ->
+             let free = Array.create ~len:metadata.capacity false in
+             let r = ref first_free in
+             while not (Header.is_null !r) do
+               let header = !r in
+               assert (Header.is_free header);
+               let header_index = Header.next_free_header_index header in
+               assert (is_valid_header_index t ~header_index);
+               let tuple_num = header_index_to_tuple_num metadata ~header_index in
+               if free.(tuple_num)
+               then failwiths "cycle in free list" tuple_num [%sexp_of: int];
+               free.(tuple_num) <- true;
+               r := unsafe_header t ~header_index
+             done))
+        ~dummy:
+          (check (function
+             | Some dummy ->
+               assert (Uniform_array.length dummy = metadata.slots_per_tuple)
+             | None ->
+               for tuple_num = 0 to metadata.capacity - 1 do
+                 let header_index = tuple_num_to_header_index metadata tuple_num in
+                 let header = unsafe_header t ~header_index in
+                 if Header.is_free header
+                 then (
+                   let first_slot = tuple_num_to_first_slot_index metadata tuple_num in
+                   for slot = 0 to metadata.slots_per_tuple - 1 do
+                     assert (Obj.is_int (Uniform_array.get t (first_slot + slot)))
+                   done)
+               done))
+    with
+    | exn -> failwiths "Pool.invariant failed" (exn, t) [%sexp_of: exn * _ t]
   ;;
 
   let capacity t = (metadata t).capacity
-
   let is_full t = Metadata.is_full (metadata t)
 
   let unsafe_add_to_free_list t metadata ~header_index =
     unsafe_set_header t ~header_index metadata.first_free;
-    metadata.first_free <- Header.free ~next_free_header_index:header_index;
+    metadata.first_free <- Header.free ~next_free_header_index:header_index
   ;;
 
   let set_metadata (type slots) (t : slots t) metadata =
-    Uniform_array.set t metadata_index (Obj.repr (metadata : slots Metadata.t));
+    Uniform_array.set t metadata_index (Obj.repr (metadata : slots Metadata.t))
   ;;
 
   let create_array (type slots) (metadata : slots Metadata.t) : slots t =
-    let t =
-      Uniform_array.create_obj_array ~len:(Metadata.array_length metadata)
-    in
+    let t = Uniform_array.create_obj_array ~len:(Metadata.array_length metadata) in
     set_metadata t metadata;
     t
   ;;
@@ -525,20 +505,23 @@ module Pool = struct
      tuple, this puts dummy values in the tuple's slots and adds the tuple to the free
      list. *)
   let unsafe_init_range t metadata ~lo ~hi =
-    begin match metadata.dummy with
-    | None -> ()
-    | Some dummy ->
-      for tuple_num = lo to hi - 1 do
-        Uniform_array.blit
-          ~src:dummy ~src_pos:0
-          ~dst:t     ~dst_pos:(tuple_num_to_first_slot_index metadata tuple_num)
-          ~len:metadata.slots_per_tuple
-      done
-    end;
+    (match metadata.dummy with
+     | None -> ()
+     | Some dummy ->
+       for tuple_num = lo to hi - 1 do
+         Uniform_array.blit
+           ~src:dummy
+           ~src_pos:0
+           ~dst:t
+           ~dst_pos:(tuple_num_to_first_slot_index metadata tuple_num)
+           ~len:metadata.slots_per_tuple
+       done);
     for tuple_num = hi - 1 downto lo do
-      unsafe_add_to_free_list t metadata
-        ~header_index:(tuple_num_to_header_index metadata tuple_num);
-    done;
+      unsafe_add_to_free_list
+        t
+        metadata
+        ~header_index:(tuple_num_to_header_index metadata tuple_num)
+    done
   ;;
 
   let create_with_dummy slots ~capacity ~dummy =
@@ -547,15 +530,17 @@ module Pool = struct
     let slots_per_tuple = Slots.slots_per_tuple slots in
     let max_capacity = max_capacity ~slots_per_tuple in
     if capacity > max_capacity
-    then failwiths "Pool.create got too large capacity" (capacity, `max max_capacity)
-           [%sexp_of: int * [ `max of int ]];
+    then
+      failwiths
+        "Pool.create got too large capacity"
+        (capacity, `max max_capacity)
+        [%sexp_of: int * [`max of int]];
     let metadata =
-      { Metadata.
-        slots_per_tuple
+      { Metadata.slots_per_tuple
       ; capacity
-      ; length          = 0
-      ; next_id         = Tuple_id.init
-      ; first_free      = Header.null
+      ; length = 0
+      ; next_id = Tuple_id.init
+      ; first_free = Header.null
       ; dummy
       }
     in
@@ -577,52 +562,55 @@ module Pool = struct
   let destroy t =
     let metadata = metadata t in
     let metadata =
-      { Metadata.
-        slots_per_tuple = metadata.slots_per_tuple
-      ; capacity        = 0
-      ; length          = 0
-      ; next_id         = metadata.next_id
-      ; first_free      = Header.null
-      ; dummy           = metadata.dummy
+      { Metadata.slots_per_tuple = metadata.slots_per_tuple
+      ; capacity = 0
+      ; length = 0
+      ; next_id = metadata.next_id
+      ; first_free = Header.null
+      ; dummy = metadata.dummy
       }
     in
     set_metadata t metadata;
     (* We truncate the pool so it holds just its metadata, but uses no space for
        tuples.  This causes all pointers to be invalid. *)
-    Uniform_array.unsafe_truncate t ~len:1;
+    Uniform_array.unsafe_truncate t ~len:1
   ;;
 
-  let [@inline never] grow ?capacity t =
-    let { Metadata.
-          slots_per_tuple
-        ; capacity        = old_capacity
+  let[@inline never] grow ?capacity t =
+    let { Metadata.slots_per_tuple
+        ; capacity = old_capacity
         ; length
         ; next_id
-        ; first_free      = _
+        ; first_free = _
         ; dummy
-        } =
+        }
+      =
       metadata t
     in
     let capacity =
       min (max_capacity ~slots_per_tuple) (grow_capacity ~capacity ~old_capacity)
     in
     if capacity = old_capacity
-    then failwiths "Pool.grow cannot grow pool; capacity already at maximum" capacity
-           [%sexp_of: int];
+    then
+      failwiths
+        "Pool.grow cannot grow pool; capacity already at maximum"
+        capacity
+        [%sexp_of: int];
     let metadata =
-      { Metadata.
-        slots_per_tuple
+      { Metadata.slots_per_tuple
       ; capacity
       ; length
       ; next_id
-      ; first_free      = Header.null
+      ; first_free = Header.null
       ; dummy
       }
     in
     let t' = create_array metadata in
     Uniform_array.blit
-      ~src:t  ~src_pos:start_of_tuples_index
-      ~dst:t' ~dst_pos:start_of_tuples_index
+      ~src:t
+      ~src_pos:start_of_tuples_index
+      ~dst:t'
+      ~dst_pos:start_of_tuples_index
       ~len:(old_capacity * Metadata.array_indices_per_tuple metadata);
     destroy t;
     unsafe_init_range t' metadata ~lo:old_capacity ~hi:capacity;
@@ -630,12 +618,12 @@ module Pool = struct
       let header_index = tuple_num_to_header_index metadata tuple_num in
       let header = unsafe_header t' ~header_index in
       if not (Header.is_used header)
-      then unsafe_add_to_free_list t' metadata ~header_index;
+      then unsafe_add_to_free_list t' metadata ~header_index
     done;
     t'
   ;;
 
-  let [@inline never] raise_malloc_full t =
+  let[@inline never] raise_malloc_full t =
     failwiths "Pool.malloc of full pool" t [%sexp_of: _ t]
   ;;
 
@@ -649,24 +637,26 @@ module Pool = struct
     let tuple_id = metadata.next_id in
     unsafe_set_header t ~header_index (Header.used tuple_id);
     metadata.next_id <- Tuple_id.next tuple_id;
-    Pointer.create ~header_index tuple_id;
+    Pointer.create ~header_index tuple_id
   ;;
 
   let unsafe_free (type slots) (t : slots t) (pointer : slots Pointer.t) =
     let metadata = metadata t in
     metadata.length <- metadata.length - 1;
     unsafe_add_to_free_list t metadata ~header_index:(Pointer.header_index pointer);
-    begin match metadata.dummy with
+    match metadata.dummy with
     | None ->
       let pos = Pointer.first_slot_index pointer in
       for i = 0 to metadata.slots_per_tuple - 1 do
-        Uniform_array.unsafe_clear_if_pointer t (pos + i);
-      done;
+        Uniform_array.unsafe_clear_if_pointer t (pos + i)
+      done
     | Some dummy ->
       Uniform_array.unsafe_blit
-        ~src:dummy ~src_pos:0 ~len:metadata.slots_per_tuple
-        ~dst:t     ~dst_pos:(Pointer.first_slot_index pointer)
-    end;
+        ~src:dummy
+        ~src_pos:0
+        ~len:metadata.slots_per_tuple
+        ~dst:t
+        ~dst_pos:(Pointer.first_slot_index pointer)
   ;;
 
   let free (type slots) (t : slots t) (pointer : slots Pointer.t) =
@@ -675,8 +665,8 @@ module Pool = struct
        - avoid freeing a free pointer (this would lead to a pool inconsistency)
        - be able to use unsafe functions after. *)
     if not (pointer_is_valid t pointer)
-    then failwiths "Pool.free of invalid pointer" (pointer, t)
-           [%sexp_of: _ Pointer.t * _ t];
+    then
+      failwiths "Pool.free of invalid pointer" (pointer, t) [%sexp_of: _ Pointer.t * _ t];
     unsafe_free t pointer
   ;;
 
@@ -684,7 +674,7 @@ module Pool = struct
     let pointer = malloc t in
     let offset = Pointer.header_index pointer in
     Uniform_array.unsafe_set t (offset + 1) (Obj.repr a0);
-    pointer;
+    pointer
   ;;
 
   let new2 t a0 a1 =
@@ -692,7 +682,7 @@ module Pool = struct
     let offset = Pointer.header_index pointer in
     Uniform_array.unsafe_set t (offset + 1) (Obj.repr a0);
     Uniform_array.unsafe_set t (offset + 2) (Obj.repr a1);
-    pointer;
+    pointer
   ;;
 
   let new3 t a0 a1 a2 =
@@ -701,7 +691,7 @@ module Pool = struct
     Uniform_array.unsafe_set t (offset + 1) (Obj.repr a0);
     Uniform_array.unsafe_set t (offset + 2) (Obj.repr a1);
     Uniform_array.unsafe_set t (offset + 3) (Obj.repr a2);
-    pointer;
+    pointer
   ;;
 
   let new4 t a0 a1 a2 a3 =
@@ -711,7 +701,7 @@ module Pool = struct
     Uniform_array.unsafe_set t (offset + 2) (Obj.repr a1);
     Uniform_array.unsafe_set t (offset + 3) (Obj.repr a2);
     Uniform_array.unsafe_set t (offset + 4) (Obj.repr a3);
-    pointer;
+    pointer
   ;;
 
   let new5 t a0 a1 a2 a3 a4 =
@@ -722,7 +712,7 @@ module Pool = struct
     Uniform_array.unsafe_set t (offset + 3) (Obj.repr a2);
     Uniform_array.unsafe_set t (offset + 4) (Obj.repr a3);
     Uniform_array.unsafe_set t (offset + 5) (Obj.repr a4);
-    pointer;
+    pointer
   ;;
 
   let new6 t a0 a1 a2 a3 a4 a5 =
@@ -734,7 +724,7 @@ module Pool = struct
     Uniform_array.unsafe_set t (offset + 4) (Obj.repr a3);
     Uniform_array.unsafe_set t (offset + 5) (Obj.repr a4);
     Uniform_array.unsafe_set t (offset + 6) (Obj.repr a5);
-    pointer;
+    pointer
   ;;
 
   let new7 t a0 a1 a2 a3 a4 a5 a6 =
@@ -747,7 +737,7 @@ module Pool = struct
     Uniform_array.unsafe_set t (offset + 5) (Obj.repr a4);
     Uniform_array.unsafe_set t (offset + 6) (Obj.repr a5);
     Uniform_array.unsafe_set t (offset + 7) (Obj.repr a6);
-    pointer;
+    pointer
   ;;
 
   let new8 t a0 a1 a2 a3 a4 a5 a6 a7 =
@@ -761,7 +751,7 @@ module Pool = struct
     Uniform_array.unsafe_set t (offset + 6) (Obj.repr a5);
     Uniform_array.unsafe_set t (offset + 7) (Obj.repr a6);
     Uniform_array.unsafe_set t (offset + 8) (Obj.repr a7);
-    pointer;
+    pointer
   ;;
 
   let new9 t a0 a1 a2 a3 a4 a5 a6 a7 a8 =
@@ -776,114 +766,121 @@ module Pool = struct
     Uniform_array.unsafe_set t (offset + 7) (Obj.repr a6);
     Uniform_array.unsafe_set t (offset + 8) (Obj.repr a7);
     Uniform_array.unsafe_set t (offset + 9) (Obj.repr a8);
-    pointer;
+    pointer
   ;;
 
   let new10 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 =
     let pointer = malloc t in
     let offset = Pointer.header_index pointer in
-    Uniform_array.unsafe_set t (offset + 1 ) (Obj.repr a0);
-    Uniform_array.unsafe_set t (offset + 2 ) (Obj.repr a1);
-    Uniform_array.unsafe_set t (offset + 3 ) (Obj.repr a2);
-    Uniform_array.unsafe_set t (offset + 4 ) (Obj.repr a3);
-    Uniform_array.unsafe_set t (offset + 5 ) (Obj.repr a4);
-    Uniform_array.unsafe_set t (offset + 6 ) (Obj.repr a5);
-    Uniform_array.unsafe_set t (offset + 7 ) (Obj.repr a6);
-    Uniform_array.unsafe_set t (offset + 8 ) (Obj.repr a7);
-    Uniform_array.unsafe_set t (offset + 9 ) (Obj.repr a8);
+    Uniform_array.unsafe_set t (offset + 1) (Obj.repr a0);
+    Uniform_array.unsafe_set t (offset + 2) (Obj.repr a1);
+    Uniform_array.unsafe_set t (offset + 3) (Obj.repr a2);
+    Uniform_array.unsafe_set t (offset + 4) (Obj.repr a3);
+    Uniform_array.unsafe_set t (offset + 5) (Obj.repr a4);
+    Uniform_array.unsafe_set t (offset + 6) (Obj.repr a5);
+    Uniform_array.unsafe_set t (offset + 7) (Obj.repr a6);
+    Uniform_array.unsafe_set t (offset + 8) (Obj.repr a7);
+    Uniform_array.unsafe_set t (offset + 9) (Obj.repr a8);
     Uniform_array.unsafe_set t (offset + 10) (Obj.repr a9);
-    pointer;
+    pointer
   ;;
 
   let new11 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 =
     let pointer = malloc t in
     let offset = Pointer.header_index pointer in
-    Uniform_array.unsafe_set t (offset + 1 ) (Obj.repr a0 );
-    Uniform_array.unsafe_set t (offset + 2 ) (Obj.repr a1 );
-    Uniform_array.unsafe_set t (offset + 3 ) (Obj.repr a2 );
-    Uniform_array.unsafe_set t (offset + 4 ) (Obj.repr a3 );
-    Uniform_array.unsafe_set t (offset + 5 ) (Obj.repr a4 );
-    Uniform_array.unsafe_set t (offset + 6 ) (Obj.repr a5 );
-    Uniform_array.unsafe_set t (offset + 7 ) (Obj.repr a6 );
-    Uniform_array.unsafe_set t (offset + 8 ) (Obj.repr a7 );
-    Uniform_array.unsafe_set t (offset + 9 ) (Obj.repr a8 );
-    Uniform_array.unsafe_set t (offset + 10) (Obj.repr a9 );
+    Uniform_array.unsafe_set t (offset + 1) (Obj.repr a0);
+    Uniform_array.unsafe_set t (offset + 2) (Obj.repr a1);
+    Uniform_array.unsafe_set t (offset + 3) (Obj.repr a2);
+    Uniform_array.unsafe_set t (offset + 4) (Obj.repr a3);
+    Uniform_array.unsafe_set t (offset + 5) (Obj.repr a4);
+    Uniform_array.unsafe_set t (offset + 6) (Obj.repr a5);
+    Uniform_array.unsafe_set t (offset + 7) (Obj.repr a6);
+    Uniform_array.unsafe_set t (offset + 8) (Obj.repr a7);
+    Uniform_array.unsafe_set t (offset + 9) (Obj.repr a8);
+    Uniform_array.unsafe_set t (offset + 10) (Obj.repr a9);
     Uniform_array.unsafe_set t (offset + 11) (Obj.repr a10);
-    pointer;
+    pointer
   ;;
 
   let new12 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 =
     let pointer = malloc t in
     let offset = Pointer.header_index pointer in
-    Uniform_array.unsafe_set t (offset + 1 ) (Obj.repr a0 );
-    Uniform_array.unsafe_set t (offset + 2 ) (Obj.repr a1 );
-    Uniform_array.unsafe_set t (offset + 3 ) (Obj.repr a2 );
-    Uniform_array.unsafe_set t (offset + 4 ) (Obj.repr a3 );
-    Uniform_array.unsafe_set t (offset + 5 ) (Obj.repr a4 );
-    Uniform_array.unsafe_set t (offset + 6 ) (Obj.repr a5 );
-    Uniform_array.unsafe_set t (offset + 7 ) (Obj.repr a6 );
-    Uniform_array.unsafe_set t (offset + 8 ) (Obj.repr a7 );
-    Uniform_array.unsafe_set t (offset + 9 ) (Obj.repr a8 );
-    Uniform_array.unsafe_set t (offset + 10) (Obj.repr a9 );
+    Uniform_array.unsafe_set t (offset + 1) (Obj.repr a0);
+    Uniform_array.unsafe_set t (offset + 2) (Obj.repr a1);
+    Uniform_array.unsafe_set t (offset + 3) (Obj.repr a2);
+    Uniform_array.unsafe_set t (offset + 4) (Obj.repr a3);
+    Uniform_array.unsafe_set t (offset + 5) (Obj.repr a4);
+    Uniform_array.unsafe_set t (offset + 6) (Obj.repr a5);
+    Uniform_array.unsafe_set t (offset + 7) (Obj.repr a6);
+    Uniform_array.unsafe_set t (offset + 8) (Obj.repr a7);
+    Uniform_array.unsafe_set t (offset + 9) (Obj.repr a8);
+    Uniform_array.unsafe_set t (offset + 10) (Obj.repr a9);
     Uniform_array.unsafe_set t (offset + 11) (Obj.repr a10);
     Uniform_array.unsafe_set t (offset + 12) (Obj.repr a11);
-    pointer;
+    pointer
   ;;
 
   let new13 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 =
     let pointer = malloc t in
     let offset = Pointer.header_index pointer in
-    Uniform_array.unsafe_set t (offset + 1 ) (Obj.repr a0 );
-    Uniform_array.unsafe_set t (offset + 2 ) (Obj.repr a1 );
-    Uniform_array.unsafe_set t (offset + 3 ) (Obj.repr a2 );
-    Uniform_array.unsafe_set t (offset + 4 ) (Obj.repr a3 );
-    Uniform_array.unsafe_set t (offset + 5 ) (Obj.repr a4 );
-    Uniform_array.unsafe_set t (offset + 6 ) (Obj.repr a5 );
-    Uniform_array.unsafe_set t (offset + 7 ) (Obj.repr a6 );
-    Uniform_array.unsafe_set t (offset + 8 ) (Obj.repr a7 );
-    Uniform_array.unsafe_set t (offset + 9 ) (Obj.repr a8 );
-    Uniform_array.unsafe_set t (offset + 10) (Obj.repr a9 );
+    Uniform_array.unsafe_set t (offset + 1) (Obj.repr a0);
+    Uniform_array.unsafe_set t (offset + 2) (Obj.repr a1);
+    Uniform_array.unsafe_set t (offset + 3) (Obj.repr a2);
+    Uniform_array.unsafe_set t (offset + 4) (Obj.repr a3);
+    Uniform_array.unsafe_set t (offset + 5) (Obj.repr a4);
+    Uniform_array.unsafe_set t (offset + 6) (Obj.repr a5);
+    Uniform_array.unsafe_set t (offset + 7) (Obj.repr a6);
+    Uniform_array.unsafe_set t (offset + 8) (Obj.repr a7);
+    Uniform_array.unsafe_set t (offset + 9) (Obj.repr a8);
+    Uniform_array.unsafe_set t (offset + 10) (Obj.repr a9);
     Uniform_array.unsafe_set t (offset + 11) (Obj.repr a10);
     Uniform_array.unsafe_set t (offset + 12) (Obj.repr a11);
     Uniform_array.unsafe_set t (offset + 13) (Obj.repr a12);
-    pointer;
+    pointer
   ;;
 
   let new14 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 =
     let pointer = malloc t in
     let offset = Pointer.header_index pointer in
-    Uniform_array.unsafe_set t (offset + 1 ) (Obj.repr a0 );
-    Uniform_array.unsafe_set t (offset + 2 ) (Obj.repr a1 );
-    Uniform_array.unsafe_set t (offset + 3 ) (Obj.repr a2 );
-    Uniform_array.unsafe_set t (offset + 4 ) (Obj.repr a3 );
-    Uniform_array.unsafe_set t (offset + 5 ) (Obj.repr a4 );
-    Uniform_array.unsafe_set t (offset + 6 ) (Obj.repr a5 );
-    Uniform_array.unsafe_set t (offset + 7 ) (Obj.repr a6 );
-    Uniform_array.unsafe_set t (offset + 8 ) (Obj.repr a7 );
-    Uniform_array.unsafe_set t (offset + 9 ) (Obj.repr a8 );
-    Uniform_array.unsafe_set t (offset + 10) (Obj.repr a9 );
+    Uniform_array.unsafe_set t (offset + 1) (Obj.repr a0);
+    Uniform_array.unsafe_set t (offset + 2) (Obj.repr a1);
+    Uniform_array.unsafe_set t (offset + 3) (Obj.repr a2);
+    Uniform_array.unsafe_set t (offset + 4) (Obj.repr a3);
+    Uniform_array.unsafe_set t (offset + 5) (Obj.repr a4);
+    Uniform_array.unsafe_set t (offset + 6) (Obj.repr a5);
+    Uniform_array.unsafe_set t (offset + 7) (Obj.repr a6);
+    Uniform_array.unsafe_set t (offset + 8) (Obj.repr a7);
+    Uniform_array.unsafe_set t (offset + 9) (Obj.repr a8);
+    Uniform_array.unsafe_set t (offset + 10) (Obj.repr a9);
     Uniform_array.unsafe_set t (offset + 11) (Obj.repr a10);
     Uniform_array.unsafe_set t (offset + 12) (Obj.repr a11);
     Uniform_array.unsafe_set t (offset + 13) (Obj.repr a12);
     Uniform_array.unsafe_set t (offset + 14) (Obj.repr a13);
-    pointer;
+    pointer
   ;;
 
-  let get        t p slot = Obj.obj (Uniform_array.get        t (Pointer.slot_index p slot))
-  let unsafe_get t p slot = Obj.obj (Uniform_array.unsafe_get t (Pointer.slot_index p slot))
+  let get t p slot = Obj.obj (Uniform_array.get t (Pointer.slot_index p slot))
 
-  let set        t p slot x = Uniform_array.set        t (Pointer.slot_index p slot) (Obj.repr x)
-  let unsafe_set t p slot x = Uniform_array.unsafe_set t (Pointer.slot_index p slot) (Obj.repr x)
+  let unsafe_get t p slot =
+    Obj.obj (Uniform_array.unsafe_get t (Pointer.slot_index p slot))
+  ;;
+
+  let set t p slot x = Uniform_array.set t (Pointer.slot_index p slot) (Obj.repr x)
+
+  let unsafe_set t p slot x =
+    Uniform_array.unsafe_set t (Pointer.slot_index p slot) (Obj.repr x)
+  ;;
 
   let get_tuple (type tuple) (t : (tuple, _) Slots.t t) pointer =
     let metadata = metadata t in
     let len = metadata.slots_per_tuple in
     if len = 1
     then get t pointer Slot.t0
-    else (Obj.magic
-            (Uniform_array.sub t ~pos:(Pointer.first_slot_index pointer) ~len
-             : Obj.t Uniform_array.t)
-          : tuple)
+    else
+      ( Obj.magic
+          ( Uniform_array.sub t ~pos:(Pointer.first_slot_index pointer) ~len
+            : Obj.t Uniform_array.t )
+        : tuple )
   ;;
 end
 
@@ -899,7 +896,6 @@ module Debug (Pool : S) = struct
   open Pool
 
   let check_invariant = ref true
-
   let show_messages = ref true
 
   let debug name ts arg sexp_of_arg sexp_of_result f =
@@ -908,13 +904,15 @@ module Debug (Pool : S) = struct
     if !show_messages then Debug.eprints (concat [ prefix; name ]) arg sexp_of_arg;
     let result_or_exn = Result.try_with f in
     if !show_messages
-    then Debug.eprints (concat [ prefix; name; " result" ]) result_or_exn
-           [%sexp_of: (result, exn) Result.t];
-    Result.ok_exn result_or_exn;
+    then
+      Debug.eprints
+        (concat [ prefix; name; " result" ])
+        result_or_exn
+        [%sexp_of: (result, exn) Result.t];
+    Result.ok_exn result_or_exn
   ;;
 
   module Slots = Slots
-
   module Slot = Slot
 
   module Pointer = struct
@@ -923,18 +921,27 @@ module Debug (Pool : S) = struct
     type nonrec 'slots t = 'slots t [@@deriving sexp_of, typerep]
 
     let phys_compare t1 t2 =
-      debug "Pointer.phys_compare" [] (t1, t2) [%sexp_of: _ t * _ t] [%sexp_of: int]
+      debug
+        "Pointer.phys_compare"
+        []
+        (t1, t2)
+        [%sexp_of: _ t * _ t]
+        [%sexp_of: int]
         (fun () -> phys_compare t1 t2)
     ;;
 
     let phys_equal t1 t2 =
-      debug "Pointer.phys_equal" [] (t1, t2) [%sexp_of: _ t * _ t] [%sexp_of: bool]
+      debug
+        "Pointer.phys_equal"
+        []
+        (t1, t2)
+        [%sexp_of: _ t * _ t]
+        [%sexp_of: bool]
         (fun () -> phys_equal t1 t2)
     ;;
 
     let is_null t =
-      debug "Pointer.is_null" [] t [%sexp_of: _ t] [%sexp_of: bool]
-        (fun () -> is_null t)
+      debug "Pointer.is_null" [] t [%sexp_of: _ t] [%sexp_of: bool] (fun () -> is_null t)
     ;;
 
     let null = null
@@ -945,17 +952,13 @@ module Debug (Pool : S) = struct
       type nonrec t = t [@@deriving bin_io, sexp]
 
       let of_int63 i =
-        debug "Pointer.Id.of_int63" [] i
-          [%sexp_of: Int63.t]
-          [%sexp_of: t]
-          (fun () -> of_int63 i)
+        debug "Pointer.Id.of_int63" [] i [%sexp_of: Int63.t] [%sexp_of: t] (fun () ->
+          of_int63 i)
       ;;
 
       let to_int63 t =
-        debug "Pointer.Id.to_int63" [] t
-          [%sexp_of: t]
-          [%sexp_of: Int63.t]
-          (fun () -> to_int63 t)
+        debug "Pointer.Id.to_int63" [] t [%sexp_of: t] [%sexp_of: Int63.t] (fun () ->
+          to_int63 t)
       ;;
     end
   end
@@ -963,154 +966,167 @@ module Debug (Pool : S) = struct
   type nonrec 'slots t = 'slots t [@@deriving sexp_of]
 
   let invariant = invariant
-
   let length = length
 
   let id_of_pointer t pointer =
-    debug "id_of_pointer" [t] pointer
-      [%sexp_of: _ Pointer.t] [%sexp_of: Pointer.Id.t]
+    debug
+      "id_of_pointer"
+      [ t ]
+      pointer
+      [%sexp_of: _ Pointer.t]
+      [%sexp_of: Pointer.Id.t]
       (fun () -> id_of_pointer t pointer)
   ;;
 
   let pointer_of_id_exn t id =
-    debug "pointer_of_id_exn" [t] id
-      [%sexp_of: Pointer.Id.t] [%sexp_of: _ Pointer.t]
+    debug
+      "pointer_of_id_exn"
+      [ t ]
+      id
+      [%sexp_of: Pointer.Id.t]
+      [%sexp_of: _ Pointer.t]
       (fun () -> pointer_of_id_exn t id)
   ;;
 
   let pointer_is_valid t pointer =
-    debug "pointer_is_valid" [t] pointer [%sexp_of: _ Pointer.t] [%sexp_of: bool]
+    debug
+      "pointer_is_valid"
+      [ t ]
+      pointer
+      [%sexp_of: _ Pointer.t]
+      [%sexp_of: bool]
       (fun () -> pointer_is_valid t pointer)
   ;;
 
   let create slots ~capacity ~dummy =
-    debug "create" [] capacity [%sexp_of: int] [%sexp_of: _ t]
-      (fun () -> create slots ~capacity ~dummy)
+    debug "create" [] capacity [%sexp_of: int] [%sexp_of: _ t] (fun () ->
+      create slots ~capacity ~dummy)
   ;;
 
   let max_capacity ~slots_per_tuple =
-    debug "max_capacity" [] slots_per_tuple [%sexp_of: int] [%sexp_of: int]
-      (fun () -> max_capacity ~slots_per_tuple)
+    debug "max_capacity" [] slots_per_tuple [%sexp_of: int] [%sexp_of: int] (fun () ->
+      max_capacity ~slots_per_tuple)
   ;;
 
   let capacity t =
-    debug "capacity" [t] t [%sexp_of: _ t] [%sexp_of: int]
-      (fun () -> capacity t)
+    debug "capacity" [ t ] t [%sexp_of: _ t] [%sexp_of: int] (fun () -> capacity t)
   ;;
 
   let grow ?capacity t =
-    debug "grow" [t] (`capacity capacity) ([%sexp_of: [ `capacity of int option ]])
-      ([%sexp_of: _ t]) (fun () -> grow ?capacity t)
+    debug
+      "grow"
+      [ t ]
+      (`capacity capacity)
+      [%sexp_of: [`capacity of int option]]
+      [%sexp_of: _ t]
+      (fun () -> grow ?capacity t)
   ;;
 
   let is_full t =
-    debug "is_full" [t] t [%sexp_of: _ t] [%sexp_of: bool]
-      (fun () -> is_full t)
+    debug "is_full" [ t ] t [%sexp_of: _ t] [%sexp_of: bool] (fun () -> is_full t)
   ;;
 
   let unsafe_free t p =
-    debug "unsafe_free" [t] p [%sexp_of: _ Pointer.t] [%sexp_of: unit]
-      (fun () -> unsafe_free t p)
+    debug "unsafe_free" [ t ] p [%sexp_of: _ Pointer.t] [%sexp_of: unit] (fun () ->
+      unsafe_free t p)
   ;;
 
   let free t p =
-    debug "free" [t] p [%sexp_of: _ Pointer.t] [%sexp_of: unit]
-      (fun () -> free t p)
+    debug "free" [ t ] p [%sexp_of: _ Pointer.t] [%sexp_of: unit] (fun () -> free t p)
   ;;
 
-  let debug_new t f =
-    debug "new" [t] () [%sexp_of: unit] [%sexp_of: _ Pointer.t] f
+  let debug_new t f = debug "new" [ t ] () [%sexp_of: unit] [%sexp_of: _ Pointer.t] f
+  let new1 t a0 = debug_new t (fun () -> new1 t a0)
+  let new2 t a0 a1 = debug_new t (fun () -> new2 t a0 a1)
+  let new3 t a0 a1 a2 = debug_new t (fun () -> new3 t a0 a1 a2)
+  let new4 t a0 a1 a2 a3 = debug_new t (fun () -> new4 t a0 a1 a2 a3)
+  let new5 t a0 a1 a2 a3 a4 = debug_new t (fun () -> new5 t a0 a1 a2 a3 a4)
+  let new6 t a0 a1 a2 a3 a4 a5 = debug_new t (fun () -> new6 t a0 a1 a2 a3 a4 a5)
+  let new7 t a0 a1 a2 a3 a4 a5 a6 = debug_new t (fun () -> new7 t a0 a1 a2 a3 a4 a5 a6)
+
+  let new8 t a0 a1 a2 a3 a4 a5 a6 a7 =
+    debug_new t (fun () -> new8 t a0 a1 a2 a3 a4 a5 a6 a7)
   ;;
 
-  let new1 t a0                         = debug_new t (fun () -> new1 t a0)
-  let new2 t a0 a1                      = debug_new t (fun () -> new2 t a0 a1)
-  let new3 t a0 a1 a2                   = debug_new t (fun () -> new3 t a0 a1 a2)
-  let new4 t a0 a1 a2 a3                = debug_new t (fun () -> new4 t a0 a1 a2 a3)
-  let new5 t a0 a1 a2 a3 a4             = debug_new t (fun () -> new5 t a0 a1 a2 a3 a4)
-  let new6 t a0 a1 a2 a3 a4 a5          = debug_new t (fun () -> new6 t a0 a1 a2 a3 a4 a5)
-  let new7 t a0 a1 a2 a3 a4 a5 a6
-    = debug_new t (fun () -> new7 t a0 a1 a2 a3 a4 a5 a6)
-  let new8 t a0 a1 a2 a3 a4 a5 a6 a7
-    = debug_new t (fun () -> new8 t a0 a1 a2 a3 a4 a5 a6 a7)
-  let new9 t a0 a1 a2 a3 a4 a5 a6 a7 a8
-    = debug_new t (fun () -> new9 t a0 a1 a2 a3 a4 a5 a6 a7 a8)
-  let new10 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9
-    = debug_new t (fun () -> new10 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9)
-  let new11 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10
-    = debug_new t (fun () -> new11 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10)
-  let new12 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11
-    = debug_new t (fun () -> new12 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11)
-  let new13 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12
-    = debug_new t (fun () -> new13 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12)
-  let new14 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13
-    = debug_new t (fun () -> new14 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13)
+  let new9 t a0 a1 a2 a3 a4 a5 a6 a7 a8 =
+    debug_new t (fun () -> new9 t a0 a1 a2 a3 a4 a5 a6 a7 a8)
+  ;;
+
+  let new10 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 =
+    debug_new t (fun () -> new10 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9)
+  ;;
+
+  let new11 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 =
+    debug_new t (fun () -> new11 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10)
+  ;;
+
+  let new12 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 =
+    debug_new t (fun () -> new12 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11)
+  ;;
+
+  let new13 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 =
+    debug_new t (fun () -> new13 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12)
+  ;;
+
+  let new14 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 =
+    debug_new t (fun () -> new14 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13)
+  ;;
 
   let get_tuple t pointer =
-    debug "get_tuple" [t] pointer [%sexp_of: _ Pointer.t] [%sexp_of: _]
-      (fun () -> get_tuple t pointer)
+    debug "get_tuple" [ t ] pointer [%sexp_of: _ Pointer.t] [%sexp_of: _] (fun () ->
+      get_tuple t pointer)
   ;;
 
   let debug_get name f t pointer =
-    debug name [t] pointer [%sexp_of: _ Pointer.t] [%sexp_of: _]
-      (fun () -> f t pointer)
+    debug name [ t ] pointer [%sexp_of: _ Pointer.t] [%sexp_of: _] (fun () -> f t pointer)
   ;;
 
-  let get        t pointer slot = debug_get "get"        get        t pointer slot
+  let get t pointer slot = debug_get "get" get t pointer slot
   let unsafe_get t pointer slot = debug_get "unsafe_get" unsafe_get t pointer slot
 
   let debug_set name f t pointer slot a =
-    debug name [t] pointer [%sexp_of: _ Pointer.t] [%sexp_of: unit]
-      (fun () -> f t pointer slot a)
+    debug name [ t ] pointer [%sexp_of: _ Pointer.t] [%sexp_of: unit] (fun () ->
+      f t pointer slot a)
   ;;
 
-  let set        t pointer slot a = debug_set "set"        set        t pointer slot a
+  let set t pointer slot a = debug_set "set" set t pointer slot a
   let unsafe_set t pointer slot a = debug_set "unsafe_set" unsafe_set t pointer slot a
-
 end
 
 module Error_check (Pool : S) = struct
   open Pool
-
   module Slots = Slots
-
   module Slot = Slot
 
   module Pointer = struct
-
     type 'slots t =
       { mutable is_valid : bool
-      ; pointer          : 'slots Pointer.t
+      ; pointer : 'slots Pointer.t
       }
     [@@deriving sexp_of, typerep]
 
     let create pointer = { is_valid = true; pointer }
-
     let null () = { is_valid = false; pointer = Pointer.null () }
-
     let phys_compare t1 t2 = Pointer.phys_compare t1.pointer t2.pointer
-    let phys_equal   t1 t2 = Pointer.phys_equal   t1.pointer t2.pointer
-
+    let phys_equal t1 t2 = Pointer.phys_equal t1.pointer t2.pointer
     let is_null t = Pointer.is_null t.pointer
 
     let follow t =
-      if not t.is_valid
-      then failwiths "attempt to use invalid pointer" t [%sexp_of: _ t];
-      t.pointer;
+      if not t.is_valid then failwiths "attempt to use invalid pointer" t [%sexp_of: _ t];
+      t.pointer
     ;;
 
     let invalidate t = t.is_valid <- false
 
     module Id = Pointer.Id
-
   end
 
   type 'slots t = 'slots Pool.t [@@deriving sexp_of]
 
   let invariant = invariant
-
   let length = length
 
-  let pointer_is_valid t { Pointer. is_valid; pointer } =
+  let pointer_is_valid t { Pointer.is_valid; pointer } =
     is_valid && pointer_is_valid t pointer
   ;;
 
@@ -1121,54 +1137,63 @@ module Error_check (Pool : S) = struct
   let pointer_of_id_exn t id =
     let pointer = pointer_of_id_exn t id in
     let is_valid = Pool.pointer_is_valid t pointer in
-    { Pointer. is_valid; pointer }
+    { Pointer.is_valid; pointer }
   ;;
 
   let create = create
-
   let capacity = capacity
   let max_capacity = max_capacity
   let grow = grow
   let is_full = is_full
-
   let get_tuple t p = get_tuple t (Pointer.follow p)
-
-  let get        t p = get        t (Pointer.follow p)
+  let get t p = get t (Pointer.follow p)
   let unsafe_get t p = unsafe_get t (Pointer.follow p)
-
-  let set        t p slot v = set        t (Pointer.follow p) slot v
+  let set t p slot v = set t (Pointer.follow p) slot v
   let unsafe_set t p slot v = unsafe_set t (Pointer.follow p) slot v
 
   let unsafe_free t p =
     unsafe_free t (Pointer.follow p);
-    Pointer.invalidate p;
+    Pointer.invalidate p
   ;;
 
   let free t p =
     free t (Pointer.follow p);
-    Pointer.invalidate p;
+    Pointer.invalidate p
   ;;
 
-  let new1 t a0                         = Pointer.create (Pool.new1 t a0)
-  let new2 t a0 a1                      = Pointer.create (Pool.new2 t a0 a1)
-  let new3 t a0 a1 a2                   = Pointer.create (Pool.new3 t a0 a1 a2)
-  let new4 t a0 a1 a2 a3                = Pointer.create (Pool.new4 t a0 a1 a2 a3)
-  let new5 t a0 a1 a2 a3 a4             = Pointer.create (Pool.new5 t a0 a1 a2 a3 a4)
-  let new6 t a0 a1 a2 a3 a4 a5          = Pointer.create (Pool.new6 t a0 a1 a2 a3 a4 a5)
-  let new7 t a0 a1 a2 a3 a4 a5 a6
-    = Pointer.create (Pool.new7 t a0 a1 a2 a3 a4 a5 a6)
-  let new8 t a0 a1 a2 a3 a4 a5 a6 a7
-    = Pointer.create (Pool.new8 t a0 a1 a2 a3 a4 a5 a6 a7)
-  let new9 t a0 a1 a2 a3 a4 a5 a6 a7 a8
-    = Pointer.create (Pool.new9 t a0 a1 a2 a3 a4 a5 a6 a7 a8)
-  let new10 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9
-    = Pointer.create (Pool.new10 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9)
-  let new11 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10
-    = Pointer.create (Pool.new11 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10)
-  let new12 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11
-    = Pointer.create (Pool.new12 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11)
-  let new13 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12
-    = Pointer.create (Pool.new13 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12)
-  let new14 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13
-    = Pointer.create (Pool.new14 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13)
+  let new1 t a0 = Pointer.create (Pool.new1 t a0)
+  let new2 t a0 a1 = Pointer.create (Pool.new2 t a0 a1)
+  let new3 t a0 a1 a2 = Pointer.create (Pool.new3 t a0 a1 a2)
+  let new4 t a0 a1 a2 a3 = Pointer.create (Pool.new4 t a0 a1 a2 a3)
+  let new5 t a0 a1 a2 a3 a4 = Pointer.create (Pool.new5 t a0 a1 a2 a3 a4)
+  let new6 t a0 a1 a2 a3 a4 a5 = Pointer.create (Pool.new6 t a0 a1 a2 a3 a4 a5)
+  let new7 t a0 a1 a2 a3 a4 a5 a6 = Pointer.create (Pool.new7 t a0 a1 a2 a3 a4 a5 a6)
+
+  let new8 t a0 a1 a2 a3 a4 a5 a6 a7 =
+    Pointer.create (Pool.new8 t a0 a1 a2 a3 a4 a5 a6 a7)
+  ;;
+
+  let new9 t a0 a1 a2 a3 a4 a5 a6 a7 a8 =
+    Pointer.create (Pool.new9 t a0 a1 a2 a3 a4 a5 a6 a7 a8)
+  ;;
+
+  let new10 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 =
+    Pointer.create (Pool.new10 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9)
+  ;;
+
+  let new11 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 =
+    Pointer.create (Pool.new11 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10)
+  ;;
+
+  let new12 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 =
+    Pointer.create (Pool.new12 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11)
+  ;;
+
+  let new13 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 =
+    Pointer.create (Pool.new13 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12)
+  ;;
+
+  let new14 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 =
+    Pointer.create (Pool.new14 t a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13)
+  ;;
 end

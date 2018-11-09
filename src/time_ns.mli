@@ -1,3 +1,4 @@
 (** Time module. *)
 
-include Time_ns_intf.Time_ns (** @inline *)
+(** @inline *)
+include Time_ns_intf.Time_ns

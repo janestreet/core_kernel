@@ -37,4 +37,5 @@ val invalid_string : string -> reason:string -> _
 
 (** Allowed AM/PM suffixes; useful for testing. *)
 val am_suffixes : string list Lazy.t
+
 val pm_suffixes : string list Lazy.t

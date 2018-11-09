@@ -5,10 +5,10 @@
     [Int.Stable.Set] and [Int.Stable.Map], and provide interface uniformity with other
     stable types. *)
 
-include Base.Int.Int_without_module_types
-  with module Hex := Base.Int.Hex
 (** @open *)
+include Base.Int.Int_without_module_types with module Hex := Base.Int.Hex
 
-include Int_intf.Extension_with_stable
+include
+  Int_intf.Extension_with_stable
   with type t := t
    and type comparator_witness := comparator_witness

@@ -3,7 +3,7 @@ module Stable = struct
 
   module T = struct
     type 'a t =
-      { mutable value  : 'a option
+      { mutable value : 'a option
       ; mutable set_at : Source_code_position.Stable.V1.t
       }
     [@@deriving fields]
@@ -17,34 +17,34 @@ module Stable = struct
     module T = struct
       type 'a t = 'a T.t
 
-      let of_format (v1 : 'a Format.t) : 'a t =
-        { value  = !v1
-        ; set_at = [%here] }
-      ;;
-
+      let of_format (v1 : 'a Format.t) : 'a t = { value = !v1; set_at = [%here] }
       let to_format (t : 'a t) : 'a Format.t = ref t.value
     end
 
     include T
 
-    include Binable.Of_binable1 (Format) (struct
-        include T
-        let of_binable = of_format
-        let to_binable = to_format
-      end)
+    include Binable.Of_binable1
+        (Format)
+        (struct
+          include T
 
-    include Sexpable.Of_sexpable1 (Format) (struct
-        include T
-        let of_sexpable = of_format
-        let to_sexpable = to_format
-      end)
+          let of_binable = of_format
+          let to_binable = to_format
+        end)
+
+    include Sexpable.Of_sexpable1
+        (Format)
+        (struct
+          include T
+
+          let of_sexpable = of_format
+          let to_sexpable = to_format
+        end)
   end
 end
 
 open! Import
-
 module Unstable = Stable.V1
-
 open Stable.T
 
 type 'a t = 'a Stable.T.t
@@ -53,10 +53,7 @@ let sexp_of_t sexp_of_a { value; set_at } =
   match value with
   | None -> [%message "unset"]
   | Some value ->
-    [%message
-      ""
-        (value : a)
-        ~set_at:(set_at |> Source_code_position.to_string)]
+    [%message "" (value : a) ~set_at:(set_at |> Source_code_position.to_string)]
 ;;
 
 let invariant invariant_a t =
@@ -69,20 +66,19 @@ let create () = { value = None; set_at = [%here] }
 
 let set (type a) (t : a t) here value =
   if Option.is_none t.value
-  then begin
-    t.value  <- Some value;
+  then (
+    t.value <- Some value;
     t.set_at <- here;
-    Ok ()
-  end else begin
-    Or_error.error_s [%message
-      "[Set_once.set_exn] already set"
-        ~setting_at:(here : Source_code_position.t)
-        ~previously_set_at:(t.set_at : Source_code_position.t)]
-  end
+    Ok ())
+  else
+    Or_error.error_s
+      [%message
+        "[Set_once.set_exn] already set"
+          ~setting_at:(here : Source_code_position.t)
+          ~previously_set_at:(t.set_at : Source_code_position.t)]
 ;;
 
 let set_exn t here value = Or_error.ok_exn (set t here value)
-
 let get t = t.value
 
 let get_exn (t : _ t) here =
@@ -94,7 +90,6 @@ let get_exn (t : _ t) here =
 
 let is_none t = Option.is_none t.value
 let is_some t = Option.is_some t.value
-
 let iter t ~f = Option.iter t.value ~f
 
 module Optional_syntax = struct

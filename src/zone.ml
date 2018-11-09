@@ -11,8 +11,8 @@
 open Import
 open Std_internal
 open! Int.Replace_polymorphic_compare
-
 include Zone_intf
+
 exception Invalid_file_format of string [@@deriving sexp]
 
 module Stable = struct
@@ -23,7 +23,6 @@ module Stable = struct
 
         let next = Int.succ
         let prev = Int.pred
-
         let before_first_transition = -1
 
         (* Some existing clients expect [index >= 0], so we never serialize a negative
@@ -31,25 +30,31 @@ module Stable = struct
         let to_external t = max 0 t
         let of_external t = t
 
-        include Binable.Of_binable (Int) (struct
-            type t = int
-            let to_binable = to_external
-            let of_binable = of_external
-          end)
+        include Binable.Of_binable
+            (Int)
+            (struct
+              type t = int
 
-        include Sexpable.Of_sexpable (Int) (struct
-            type t = int
-            let to_sexpable = to_external
-            let of_sexpable = of_external
-          end)
+              let to_binable = to_external
+              let of_binable = of_external
+            end)
+
+        include Sexpable.Of_sexpable
+            (Int)
+            (struct
+              type t = int
+
+              let to_sexpable = to_external
+              let of_sexpable = of_external
+            end)
       end
 
       module Regime = struct
-        type t = {
-          utc_offset_in_seconds : Int63.Stable.V1.t;
-          is_dst                : bool;
-          abbrv                 : string;
-        }
+        type t =
+          { utc_offset_in_seconds : Int63.Stable.V1.t
+          ; is_dst : bool
+          ; abbrv : string
+          }
         [@@deriving bin_io, sexp]
       end
 
@@ -57,36 +62,36 @@ module Stable = struct
          because we are translating based on a epoch system clock (see the Core_zone
          documentation). *)
       module Leap_second = struct
-        type t = {
-          time_in_seconds_since_epoch : Int63.Stable.V1.t;
-          seconds                     : int;
-        }
+        type t =
+          { time_in_seconds_since_epoch : Int63.Stable.V1.t
+          ; seconds : int
+          }
         [@@deriving bin_io, sexp]
       end
 
       module Transition = struct
-        type t = {
-          start_time_in_seconds_since_epoch : Int63.Stable.V1.t;
-          new_regime                        : Regime.t;
-        }
+        type t =
+          { start_time_in_seconds_since_epoch : Int63.Stable.V1.t
+          ; new_regime : Regime.t
+          }
         [@@deriving bin_io, sexp]
       end
 
-      type t = {
-        name                      : string;
-        original_filename         : string option;
-        digest                    : Md5.As_binary_string.t option;
-        transitions               : Transition.t array;
-        (* caches the index of the last transition we used to make lookups faster *)
-        mutable last_regime_index : Index.t;
-        default_local_time_type   : Regime.t;
-        leap_seconds              : Leap_second.t list;
-      }
+      type t =
+        { name : string
+        ; original_filename : string option
+        ;
+          digest : Md5.As_binary_string.t option
+        ; transitions : Transition.t array
+        ; (* caches the index of the last transition we used to make lookups faster *)
+          mutable last_regime_index : Index.t
+        ; default_local_time_type : Regime.t
+        ; leap_seconds : Leap_second.t list
+        }
       [@@deriving bin_io, sexp]
 
       (* this relies on zones with the same name having the same transitions *)
       let compare t1 t2 = String.compare t1.name t2.name
-
       let original_filename zone = zone.original_filename
       let digest zone = zone.digest
 
@@ -111,7 +116,6 @@ module Stable = struct
            int. UNIX timestamps won't, for example.  In our case this is only used
            to hold small numbers that are never interpreted as timestamps. *)
         let input_long_as_int ic = Int32.to_int_exn (input_long_as_int32 ic)
-
         let input_long_as_int63 ic = Int63.of_int32 (input_long_as_int32 ic)
 
         let input_long_long_as_int63 ic =
@@ -119,7 +123,7 @@ module Stable = struct
           let shift c bits = Int63.shift_left (int63_of_char c) bits in
           let long_long = Bytes.create 8 in
           In_channel.really_input_exn ic ~buf:long_long ~pos:0 ~len:8;
-          let result =                      shift (Bytes.get long_long 0) 56 in
+          let result = shift (Bytes.get long_long 0) 56 in
           let result = Int63.bit_or result (shift (Bytes.get long_long 1) 48) in
           let result = Int63.bit_or result (shift (Bytes.get long_long 2) 40) in
           let result = Int63.bit_or result (shift (Bytes.get long_long 3) 32) in
@@ -132,8 +136,7 @@ module Stable = struct
 
         let input_list ic ~len ~f =
           let rec loop c lst =
-            if c > 0 then loop (c - 1) ((f ic) :: lst)
-            else List.rev lst
+            if c > 0 then loop (c - 1) (f ic :: lst) else List.rev lst
           in
           loop len []
         ;;
@@ -144,14 +147,8 @@ module Stable = struct
           let utc_offset_in_seconds = input_long_as_int63 ic in
           let is_dst = bool_of_int (Option.value_exn (In_channel.input_byte ic)) in
           let abbrv_index = Option.value_exn (In_channel.input_byte ic) in
-          let lt abbrv =
-            { Regime.
-              utc_offset_in_seconds;
-              is_dst = is_dst;
-              abbrv  = abbrv;
-            }
-          in
-          (lt,abbrv_index)
+          let lt abbrv = { Regime.utc_offset_in_seconds; is_dst; abbrv } in
+          lt, abbrv_index
         ;;
 
         let input_abbreviations ic ~len =
@@ -159,39 +156,46 @@ module Stable = struct
             input_list ic ~len ~f:(fun ic -> Option.value_exn (In_channel.input_char ic))
           in
           let buf = Buffer.create len in
-          let _,indexed_abbrvs =
-            List.fold raw_abbrvs ~init:(0, Map.Poly.empty)
-              ~f:(fun (index,abbrvs) c ->
-                match c with
-                | '\000' ->
-                  let data = Buffer.contents buf in
-                  let next_index = index + (String.length data) + 1 in
-                  let abbrvs = Map.set abbrvs ~key:index ~data in
-                  Buffer.clear buf;
-                  (next_index,abbrvs)
-                | c -> Buffer.add_char buf c; (index,abbrvs))
+          let _, indexed_abbrvs =
+            List.fold raw_abbrvs ~init:(0, Map.Poly.empty) ~f:(fun (index, abbrvs) c ->
+              match c with
+              | '\000' ->
+                let data = Buffer.contents buf in
+                let next_index = index + String.length data + 1 in
+                let abbrvs = Map.set abbrvs ~key:index ~data in
+                Buffer.clear buf;
+                next_index, abbrvs
+              | c ->
+                Buffer.add_char buf c;
+                index, abbrvs)
           in
-          if Buffer.length buf <> 0 then
+          if Buffer.length buf <> 0
+          then
             raise
-              (Invalid_file_format "missing \000 terminating character in input_abbreviations");
+              (Invalid_file_format
+                 "missing \000 terminating character in input_abbreviations");
           indexed_abbrvs
         ;;
 
         let input_tz_file_gen ~input_transition ~input_leap_second ic =
-          let utc_local_count    = input_long_as_int ic in
-          let std_wall_count     = input_long_as_int ic in
-          let leap_count         = input_long_as_int ic in
-          let transition_count   = input_long_as_int ic in
-          let type_count         = input_long_as_int ic in
-          let abbrv_char_count   = input_long_as_int ic in
-          let transition_times   = input_list ic ~f:input_transition ~len:transition_count in
-          let transition_indices =
-            input_list ic ~f:(fun ic ->
-              Option.value_exn (In_channel.input_byte ic)) ~len:transition_count
+          let utc_local_count = input_long_as_int ic in
+          let std_wall_count = input_long_as_int ic in
+          let leap_count = input_long_as_int ic in
+          let transition_count = input_long_as_int ic in
+          let type_count = input_long_as_int ic in
+          let abbrv_char_count = input_long_as_int ic in
+          let transition_times =
+            input_list ic ~f:input_transition ~len:transition_count
           in
-          let regimes            = input_list ic ~f:input_regime ~len:type_count in
-          let abbreviations      = input_abbreviations ic ~len:abbrv_char_count in
-          let leap_seconds       = input_list ic ~f:input_leap_second ~len:leap_count in
+          let transition_indices =
+            input_list
+              ic
+              ~f:(fun ic -> Option.value_exn (In_channel.input_byte ic))
+              ~len:transition_count
+          in
+          let regimes = input_list ic ~f:input_regime ~len:type_count in
+          let abbreviations = input_abbreviations ic ~len:abbrv_char_count in
+          let leap_seconds = input_list ic ~f:input_leap_second ~len:leap_count in
           (* The following two arrays indicate two boolean values per regime that
              represent a three-value type that would translate to:
 
@@ -207,25 +211,23 @@ module Stable = struct
              completeness, and because it's possible that we will later discover a case where
              they are used. *)
           let _std_wall_indicators =
-            input_array ic ~len:std_wall_count
-              ~f:(fun ic -> bool_of_int (Option.value_exn (In_channel.input_byte ic)))
+            input_array ic ~len:std_wall_count ~f:(fun ic ->
+              bool_of_int (Option.value_exn (In_channel.input_byte ic)))
           in
           let _utc_local_indicators =
-            input_array ic ~len:utc_local_count
-              ~f:(fun ic -> bool_of_int (Option.value_exn (In_channel.input_byte ic)))
+            input_array ic ~len:utc_local_count ~f:(fun ic ->
+              bool_of_int (Option.value_exn (In_channel.input_byte ic)))
           in
           let regimes =
-            Array.of_list (List.map regimes
-                             ~f:(fun (lt,abbrv_index) ->
-                               let abbrv = Map.find_exn abbreviations abbrv_index in
-                               lt abbrv
-                             ))
+            Array.of_list
+              (List.map regimes ~f:(fun (lt, abbrv_index) ->
+                 let abbrv = Map.find_exn abbreviations abbrv_index in
+                 lt abbrv))
           in
           let raw_transitions =
-            List.map2_exn transition_times transition_indices
-              ~f:(fun time index ->
-                let regime = regimes.(index) in
-                (time, regime))
+            List.map2_exn transition_times transition_indices ~f:(fun time index ->
+              let regime = regimes.(index) in
+              time, regime)
           in
           let transitions =
             let rec make_transitions acc l =
@@ -233,39 +235,31 @@ module Stable = struct
               | [] -> Array.of_list (List.rev acc)
               | (start_time_in_seconds_since_epoch, new_regime) :: rest ->
                 make_transitions
-                  ({Transition.
-                     start_time_in_seconds_since_epoch;
-                     new_regime
-                   } :: acc) rest
+                  ({ Transition.start_time_in_seconds_since_epoch; new_regime } :: acc)
+                  rest
             in
             make_transitions [] raw_transitions
           in
           let default_local_time_type =
-            match
-              Array.find regimes ~f:(fun r -> not r.Regime.is_dst)
-            with
+            match Array.find regimes ~f:(fun r -> not r.Regime.is_dst) with
             | None -> regimes.(0)
             | Some ltt -> ltt
           in
-          (fun name ~original_filename ~digest ->
-             { name                    = name
-             ; original_filename       = Some original_filename
-             ; digest                  = Some digest
-             ; transitions             = transitions
-             ; last_regime_index       = Index.before_first_transition
-             ; default_local_time_type = default_local_time_type
-             ; leap_seconds            = leap_seconds
-             }
-          )
+          fun name ~original_filename ~digest ->
+            { name
+            ; original_filename = Some original_filename
+            ; digest = Some digest
+            ; transitions
+            ; last_regime_index = Index.before_first_transition
+            ; default_local_time_type
+            ; leap_seconds
+            }
         ;;
 
         let input_leap_second_gen ~input_leap_second ic =
           let time_in_seconds_since_epoch = input_leap_second ic in
-          let seconds                     = input_long_as_int ic in
-          { Leap_second.
-            time_in_seconds_since_epoch;
-            seconds;
-          }
+          let seconds = input_long_as_int ic in
+          { Leap_second.time_in_seconds_since_epoch; seconds }
         ;;
 
         let read_header ic =
@@ -274,15 +268,14 @@ module Stable = struct
             In_channel.really_input_exn ic ~buf ~pos:0 ~len:4;
             Bytes.unsafe_to_string ~no_mutation_while_string_reachable:buf
           in
-          if not (String.equal magic "TZif") then
-            raise (Invalid_file_format "magic characters TZif not present");
+          if not (String.equal magic "TZif")
+          then raise (Invalid_file_format "magic characters TZif not present");
           let version =
             match In_channel.input_char ic with
             | Some '\000' -> `V1
-            | Some '2'    -> `V2
-            | Some '3'    -> `V3
-            | None        ->
-              raise (Invalid_file_format "expected version, found nothing")
+            | Some '2' -> `V2
+            | Some '3' -> `V3
+            | None -> raise (Invalid_file_format "expected version, found nothing")
             | Some bad_version ->
               raise (Invalid_file_format (sprintf "version (%c) is invalid" bad_version))
           in
@@ -295,11 +288,10 @@ module Stable = struct
           let input_leap_second =
             input_leap_second_gen ~input_leap_second:input_long_as_int63
           in
-          input_tz_file_gen ~input_transition:input_long_as_int63
-            ~input_leap_second ic
+          input_tz_file_gen ~input_transition:input_long_as_int63 ~input_leap_second ic
         ;;
 
-      (*
+        (*
            version 2 timezone files have the format:
 
            part 1 - exactly the same as v1
@@ -334,8 +326,10 @@ module Stable = struct
           let input_leap_second =
             input_leap_second_gen ~input_leap_second:input_long_long_as_int63
           in
-          input_tz_file_gen ~input_transition:input_long_long_as_int63
-            ~input_leap_second ic
+          input_tz_file_gen
+            ~input_transition:input_long_long_as_int63
+            ~input_leap_second
+            ic
         ;;
 
         let input_tz_file ~zonename ~filename =
@@ -343,8 +337,8 @@ module Stable = struct
             protectx (In_channel.create filename) ~finally:In_channel.close ~f:(fun ic ->
               let make_zone =
                 match read_header ic with
-                | `V1                  -> input_tz_file_v1 ic
-                | `V2 | `V3 as version -> input_tz_file_v2_or_v3 ~version ic
+                | `V1 -> input_tz_file_v1 ic
+                | (`V2 | `V3) as version -> input_tz_file_v2_or_v3 ~version ic
               in
               let digest = Md5.digest_file_blocking filename in
               let r = make_zone zonename ~original_filename:filename ~digest in
@@ -358,22 +352,19 @@ module Stable = struct
       let of_utc_offset ~hours:offset =
         assert (offset >= -24 && offset <= 24);
         let name =
-          if offset = 0 then "UTC"
+          if offset = 0
+          then "UTC"
           else sprintf "UTC%s%d" (if offset < 0 then "-" else "+") (abs offset)
         in
         let utc_offset_in_seconds = Int63.of_int (offset * 60 * 60) in
-        {
-          name                    = name;
-          original_filename       = None;
-          digest                  = None;
-          transitions             = [||];
-          last_regime_index       = Index.before_first_transition;
-          default_local_time_type = {Regime.
-                                      utc_offset_in_seconds;
-                                      is_dst = false;
-                                      abbrv  = name;
-                                    };
-          leap_seconds = []
+        { name
+        ; original_filename = None
+        ; digest = None
+        ; transitions = [||]
+        ; last_regime_index = Index.before_first_transition
+        ; default_local_time_type =
+            { Regime.utc_offset_in_seconds; is_dst = false; abbrv = name }
+        ; leap_seconds = []
         }
       ;;
     end
@@ -384,27 +375,19 @@ include Stable.Full_data.V1
 
 let sexp_of_t t = Sexp.Atom t.name
 
-let likely_machine_zones = ref [
-  "America/New_York";
-  "Europe/London";
-  "Asia/Hong_Kong";
-  "America/Chicago"
-]
+let likely_machine_zones =
+  ref [ "America/New_York"; "Europe/London"; "Asia/Hong_Kong"; "America/Chicago" ]
+;;
 
 let input_tz_file = Zone_file.input_tz_file
-
 let utc = of_utc_offset ~hours:0
-
 let name zone = zone.name
-
-let reset_transition_cache t =
-  t.last_regime_index <- Index.before_first_transition
+let reset_transition_cache t = t.last_regime_index <- Index.before_first_transition
 
 (* Raises if [index >= Array.length t.transitions] *)
 let get_regime_exn t index =
-  if index < 0
-  then t.default_local_time_type
-  else t.transitions.(index).new_regime
+  if index < 0 then t.default_local_time_type else t.transitions.(index).new_regime
+;;
 
 (* In "absolute mode", a number of seconds is interpreted as an offset of that many
    seconds from the UNIX epoch, ignoring leap seconds.
@@ -436,55 +419,59 @@ end
 let effective_start_time ~mode (x : Transition.t) =
   let open Int63.O in
   match (mode : Mode.t) with
-  | Absolute ->
-    x.start_time_in_seconds_since_epoch
+  | Absolute -> x.start_time_in_seconds_since_epoch
   | Date_and_ofday ->
     x.start_time_in_seconds_since_epoch + x.new_regime.utc_offset_in_seconds
+;;
 
 let index_lower_bound_contains_seconds_since_epoch t index ~mode seconds =
-  index < 0
-  || Int63.( >= ) seconds (effective_start_time ~mode t.transitions.(index))
+  index < 0 || Int63.( >= ) seconds (effective_start_time ~mode t.transitions.(index))
+;;
 
 let index_upper_bound_contains_seconds_since_epoch t index ~mode seconds =
   index + 1 >= Array.length t.transitions
   || Int63.( < ) seconds (effective_start_time ~mode t.transitions.(index + 1))
+;;
 
 let binary_search_index_of_seconds_since_epoch t ~mode seconds : Index.t =
-  Array.binary_search_segmented t.transitions `Last_on_left
+  Array.binary_search_segmented
+    t.transitions
+    `Last_on_left
     ~segment_of:(fun transition ->
-      if Int63.(<=) (effective_start_time transition ~mode) seconds
+      if Int63.( <= ) (effective_start_time transition ~mode) seconds
       then `Left
       else `Right)
   |> Option.value ~default:Index.before_first_transition
+;;
 
 let index_of_seconds_since_epoch t ~mode seconds =
   let index =
     let index = t.last_regime_index in
     if not (index_lower_bound_contains_seconds_since_epoch t index ~mode seconds)
     (* time is before cached index; try previous index *)
-    then begin
+    then (
       let index = index - 1 in
       if not (index_lower_bound_contains_seconds_since_epoch t index ~mode seconds)
       (* time is before previous index; fall back on binary search *)
-      then binary_search_index_of_seconds_since_epoch t ~mode seconds
-      (* time is before cached index and not before previous, so within previous *)
-      else index
-    end
+      then
+        binary_search_index_of_seconds_since_epoch t ~mode seconds
+        (* time is before cached index and not before previous, so within previous *)
+      else index)
     else if not (index_upper_bound_contains_seconds_since_epoch t index ~mode seconds)
     (* time is after cached index; try next index *)
-    then begin
+    then (
       let index = index + 1 in
       if not (index_upper_bound_contains_seconds_since_epoch t index ~mode seconds)
       (* time is after next index; fall back on binary search *)
-      then binary_search_index_of_seconds_since_epoch t ~mode seconds
-      (* time is after cached index and not after next, so within next *)
-      else index
-    end
-    (* time is within cached index *)
+      then
+        binary_search_index_of_seconds_since_epoch t ~mode seconds
+        (* time is after cached index and not after next, so within next *)
+      else index (* time is within cached index *))
     else index
   in
   t.last_regime_index <- index;
   index
+;;
 
 module Time_in_seconds : sig
   include Zone_intf.Time_in_seconds
@@ -492,7 +479,7 @@ end = struct
   module Span = struct
     type t = Int63.t
 
-    let of_int63_seconds                = ident
+    let of_int63_seconds = ident
     let to_int63_seconds_round_down_exn = ident
   end
 
@@ -517,47 +504,48 @@ let index t time =
   Time_in_seconds.to_span_since_epoch time
   |> Time_in_seconds.Span.to_int63_seconds_round_down_exn
   |> index_of_seconds_since_epoch t ~mode:Absolute
+;;
 
 let index_of_date_and_ofday t time =
   Time_in_seconds.Date_and_ofday.to_synthetic_span_since_epoch time
   |> Time_in_seconds.Span.to_int63_seconds_round_down_exn
   |> index_of_seconds_since_epoch t ~mode:Date_and_ofday
+;;
 
-let index_has_prev_clock_shift t index =
-  index >= 0 && index < Array.length t.transitions
-
-let index_has_next_clock_shift t index =
-  index_has_prev_clock_shift t (index + 1)
+let index_has_prev_clock_shift t index = index >= 0 && index < Array.length t.transitions
+let index_has_next_clock_shift t index = index_has_prev_clock_shift t (index + 1)
 
 let index_prev_clock_shift_time_exn t index =
   let transition = t.transitions.(index) in
   transition.start_time_in_seconds_since_epoch
   |> Time_in_seconds.Span.of_int63_seconds
   |> Time_in_seconds.of_span_since_epoch
+;;
 
 let index_next_clock_shift_time_exn t index =
   index_prev_clock_shift_time_exn t (index + 1)
+;;
 
 let index_prev_clock_shift_amount_exn t index =
   let transition = t.transitions.(index) in
   let after = transition.new_regime in
   let before =
-    if index = 0
-    then t.default_local_time_type
-    else t.transitions.(index - 1).new_regime
+    if index = 0 then t.default_local_time_type else t.transitions.(index - 1).new_regime
   in
-  Int63.( - )
-    after.utc_offset_in_seconds
-    before.utc_offset_in_seconds
+  Int63.( - ) after.utc_offset_in_seconds before.utc_offset_in_seconds
   |> Time_in_seconds.Span.of_int63_seconds
+;;
 
 let index_next_clock_shift_amount_exn t index =
   index_prev_clock_shift_amount_exn t (index + 1)
+;;
 
 let index_abbreviation_exn t index =
   let regime = get_regime_exn t index in
   regime.abbrv
+;;
 
 let index_offset_from_utc_exn t index =
   let regime = get_regime_exn t index in
   Time_in_seconds.Span.of_int63_seconds regime.utc_offset_in_seconds
+;;

@@ -27,9 +27,9 @@ open Std_internal
     [create], to the types exposed by the variants in [Callback_arity]. *)
 module Callback_arity : sig
   type _ t =
-    | Arity1 : ('a ->                   unit) t
-    | Arity2 : ('a -> 'b ->             unit) t
-    | Arity3 : ('a -> 'b -> 'c ->       unit) t
+    | Arity1 : ('a -> unit) t
+    | Arity2 : ('a -> 'b -> unit) t
+    | Arity3 : ('a -> 'b -> 'c -> unit) t
     | Arity4 : ('a -> 'b -> 'c -> 'd -> unit) t
   [@@deriving sexp_of]
 end
@@ -74,17 +74,15 @@ val read_only : ('callback, _) t -> 'callback Read_only.t
     If [on_callback_raise] raises, then the exception is raised to [write] and the bus is
     closed. *)
 val create
-  :  ?name : Info.t
+  :  ?name:Info.t
   -> Source_code_position.t
   -> 'callback Callback_arity.t
-  -> on_subscription_after_first_write : On_subscription_after_first_write.t
-  -> on_callback_raise                 : (Error.t -> unit)
+  -> on_subscription_after_first_write:On_subscription_after_first_write.t
+  -> on_callback_raise:(Error.t -> unit)
   -> 'callback Read_write.t
 
-val callback_arity : (('callback, _) t) -> 'callback Callback_arity.t
-
+val callback_arity : ('callback, _) t -> 'callback Callback_arity.t
 val num_subscribers : (_, _) t -> int
-
 val is_closed : (_, _) t -> bool
 
 (** [close] disallows future [write]s -- once [close t] is called, all further calls to
@@ -98,31 +96,10 @@ val close : 'callback Read_write.t -> unit
     though the callbacks themselves may allocate.  Calling [writeN t] from within a
     callback on [t] if [is_closed t] will raise. *)
 
-val write
-  :  ('a -> unit) Read_write.t
-  -> 'a
-  -> unit
-
-val write2
-  :  ('a -> 'b -> unit) Read_write.t
-  -> 'a
-  -> 'b
-  -> unit
-
-val write3
-  :  ('a -> 'b -> 'c -> unit) Read_write.t
-  -> 'a
-  -> 'b
-  -> 'c
-  -> unit
-
-val write4
-  :  ('a -> 'b -> 'c -> 'd -> unit) Read_write.t
-  -> 'a
-  -> 'b
-  -> 'c
-  -> 'd
-  -> unit
+val write : ('a -> unit) Read_write.t -> 'a -> unit
+val write2 : ('a -> 'b -> unit) Read_write.t -> 'a -> 'b -> unit
+val write3 : ('a -> 'b -> 'c -> unit) Read_write.t -> 'a -> 'b -> 'c -> unit
+val write4 : ('a -> 'b -> 'c -> 'd -> unit) Read_write.t -> 'a -> 'b -> 'c -> 'd -> unit
 
 module Subscriber : sig
   type 'callback t [@@deriving sexp_of]
@@ -147,14 +124,13 @@ end
 
     [on_close] is called if you are still subscribed when [Bus.close] is called. *)
 val subscribe_exn
-  :  ?extract_exn : bool  (** default is [false] *)
-  -> ?on_callback_raise : (Error.t -> unit)
-  -> ?on_close : (unit -> unit)
+  :  ?extract_exn:bool (** default is [false] *)
+  -> ?on_callback_raise:(Error.t -> unit)
+  -> ?on_close:(unit -> unit)
   -> 'callback Read_only.t
   -> Source_code_position.t
-  -> f : 'callback
+  -> f:'callback
   -> 'callback Subscriber.t
-
 
 (** [iter_exn t [%here] ~f] is [ignore (subscribe_exn t [%here] ~callback:f)].  This
     captures the common usage in which one never wants to unsubscribe from a bus. *)
@@ -162,9 +138,9 @@ val iter_exn : 'callback Read_only.t -> Source_code_position.t -> f:'callback ->
 
 module Fold_arity : sig
   type (_, _, _) t =
-    | Arity1 : ('a ->                   unit, 's -> 'a ->                   's, 's) t
-    | Arity2 : ('a -> 'b ->             unit, 's -> 'a -> 'b ->             's, 's) t
-    | Arity3 : ('a -> 'b -> 'c ->       unit, 's -> 'a -> 'b -> 'c ->       's, 's) t
+    | Arity1 : ('a -> unit, 's -> 'a -> 's, 's) t
+    | Arity2 : ('a -> 'b -> unit, 's -> 'a -> 'b -> 's, 's) t
+    | Arity3 : ('a -> 'b -> 'c -> unit, 's -> 'a -> 'b -> 'c -> 's, 's) t
     | Arity4 : ('a -> 'b -> 'c -> 'd -> unit, 's -> 'a -> 'b -> 'c -> 'd -> 's, 's) t
   [@@deriving sexp_of]
 end

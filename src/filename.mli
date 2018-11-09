@@ -14,7 +14,6 @@ val root : string
 *)
 val is_posix_pathname_component : string -> bool
 
-
 (** The name of the temporary directory:
 
     Under Unix, the value of the [TMPDIR] environment variable, or "/tmp" if the variable
@@ -83,7 +82,7 @@ val chop_extension : string -> string
     split_extension "/foo/my_file.txt" = ("/foo/my_file", Some "txt")
     split_extension "/home/c.falls/my_file" = ("/home/c.falls/my_file", None)
 *)
-val split_extension : string -> (string * string option)
+val split_extension : string -> string * string option
 
 (** Respects the posix semantic.
 
@@ -125,4 +124,3 @@ val of_parts : string list -> string
     portable.
 *)
 val quote : string -> string
-

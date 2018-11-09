@@ -1,13 +1,20 @@
 open! Core_kernel
 
-module Buffer_is_from_base : module type of struct include Base.Buffer end = Buffer
+module Buffer_is_from_base : module type of struct
+  include Base.Buffer
+end =
+  Buffer
 
 [%%expect]
 
-module Buffer_is_from_caml : module type of struct include Caml.Buffer end = Buffer
+module Buffer_is_from_caml : module type of struct
+  include Caml.Buffer
+end =
+  Buffer
 
-[%%expect{|
-Line _, characters 77-83:
+[%%expect
+  {|
+Line _, characters 2-8:
 Error: Signature mismatch:
        ...
        The value `of_seq' is required but not provided

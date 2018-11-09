@@ -1,1 +1,2 @@
-include Flags_intf.Flags (** @open *)
+(** @open *)
+include Flags_intf.Flags

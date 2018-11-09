@@ -20,10 +20,11 @@ include Core_pervasives
 (* See core_pervasives.ml for details *)
 module Modified_INRIA_pervasives = struct
   include Pervasives
+
   external raise : exn -> 'a = "%reraise"
 end
 
 (* This is here just to assert that the interfaces match, so we'll notice when INRIA
    changes Pervasives. *)
-include ((Core_pervasives           : module type of Modified_INRIA_pervasives) : sig end)
-include ((Modified_INRIA_pervasives : module type of Core_pervasives)           : sig end)
+include ((Core_pervasives : module type of Modified_INRIA_pervasives) : sig end)
+include ((Modified_INRIA_pervasives : module type of Core_pervasives) : sig end)

@@ -39,18 +39,19 @@ val to_map : ('key, 'a, 'cmp, _) t -> ('key, 'a, 'cmp) Map.t
     (e.g., [find] does not return an option).  The fact that they won't raise exceptions
     relies on the enumeration passed to [Make] being complete. *)
 
-val map  : ('key, 'a, 'c, 'e) t -> f:(                 'a -> 'b) -> ('key, 'b, 'c, 'e) t
+val map : ('key, 'a, 'c, 'e) t -> f:('a -> 'b) -> ('key, 'b, 'c, 'e) t
 val mapi : ('key, 'a, 'c, 'e) t -> f:(key:'key -> data:'a -> 'b) -> ('key, 'b, 'c, 'e) t
+
 val map2
   :  ('key, 'a, 'cmp, 'enum) t
   -> ('key, 'b, 'cmp, 'enum) t
   -> f:('a -> 'b -> 'c)
   -> ('key, 'c, 'cmp, 'enum) t
 
+val iter_keys : ('key, _, _, _) t -> f:('key -> unit) -> unit
+val iter : (_, 'a, _, _) t -> f:('a -> unit) -> unit
+val iteri : ('key, 'a, _, _) t -> f:(key:'key -> data:'a -> unit) -> unit
 
-val iter_keys: ('key,  _, _, _) t -> f:(    'key            -> unit) -> unit
-val iter     : (   _, 'a, _, _) t -> f:(                 'a -> unit) -> unit
-val iteri    : ('key, 'a, _, _) t -> f:(key:'key -> data:'a -> unit) -> unit
 val iter2
   :  ('key, 'a, 'cmp, 'enum) t
   -> ('key, 'b, 'cmp, 'enum) t
@@ -60,16 +61,13 @@ val iter2
 val set : ('key, 'a, 'cmp, 'enum) t -> 'key -> 'a -> ('key, 'a, 'cmp, 'enum) t
 
 val to_alist
-  :  ?key_order:[ `Increasing | `Decreasing ]  (** default is [`Increasing] *)
+  :  ?key_order:[`Increasing | `Decreasing] (** default is [`Increasing] *)
   -> ('key, 'a, _, _) t
   -> ('key * 'a) list
 
 val find : ('key, 'a, _, _) t -> 'key -> 'a
-
 val change : ('key, 'a, 'c, 'e) t -> 'key -> f:('a -> 'a) -> ('key, 'a, 'c, 'e) t
-
 val data : (_, 'a, _, _) t -> 'a list
-
 val for_all : (_, 'a, _, _) t -> f:('a -> bool) -> bool
 
 (** Sequence a total map of computations in order of their keys resulting in computation
@@ -104,6 +102,4 @@ module Make (Key : Key) : S with module Key = Key
 module Make_using_comparator (Key : sig
     include Key
     include Comparator.S with type t := t
-  end) : S
-  with module Key = Key
-  with type comparator_witness = Key.comparator_witness
+  end) : S with module Key = Key with type comparator_witness = Key.comparator_witness

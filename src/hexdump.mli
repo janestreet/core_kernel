@@ -1,1 +1,2 @@
-include Hexdump_intf.Hexdump (** @inline *)
+(** @inline *)
+include Hexdump_intf.Hexdump

@@ -7,13 +7,15 @@ module Core_hash_set = Hash_set
 module Hashtbl = struct
   module V1 (Elt : Hashtbl.Key_binable) : sig
     type 'a t = (Elt.t, 'a) Hashtbl.t [@@deriving sexp, bin_io]
-  end = Hashtbl.Make_binable (Elt)
+  end =
+    Hashtbl.Make_binable (Elt)
 end
 
 module Hash_set = struct
   module V1 (Elt : Core_hash_set.Elt_binable) : sig
     type t = Elt.t Core_hash_set.t [@@deriving sexp, bin_io]
-  end = Hash_set.Make_binable (Elt)
+  end =
+    Hash_set.Make_binable (Elt)
 end
 
 module Hashable = struct

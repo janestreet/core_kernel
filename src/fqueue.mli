@@ -12,14 +12,13 @@ type 'a t [@@deriving bin_io, compare, hash, sexp]
 
 include Container.S1 with type 'a t := 'a t
 include Invariant.S1 with type 'a t := 'a t
-include Monad.S      with type 'a t := 'a t
+include Monad.S with type 'a t := 'a t
 
 (** The empty queue. *)
 val empty : 'a t
 
 (** [enqueue t x] returns a queue with adds [x] to the end of [t]. Complexity: O(1). *)
 val enqueue : 'a t -> 'a -> 'a t
-
 
 (** Enqueues a single element on the *top* of the queue.  Complexity: amortized O(1)
     [enqueue_top] is deprecated, use [Fdeque.t] instead. *)

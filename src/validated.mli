@@ -1,1 +1,2 @@
-include Validated_intf.Validated (** @inline *)
+(** @inline *)
+include Validated_intf.Validated

@@ -9,18 +9,26 @@ module Assoc : sig
 
   val compare : [%compare: 'a] -> [%compare: 'b] -> [%compare: ('a, 'b) t]
   [@@deprecated
-    "[since 2016-06] This does not respect the equivalence class promised by List.Assoc.\n\
+    "[since 2016-06] This does not respect the equivalence class promised by \
+     List.Assoc.\n\
      Use List.compare directly if that's what you want."]
 
-  include (module type of struct include Base.List.Assoc end
-            with type ('a, 'b) t := ('a, 'b) t)
+  include
+  module type of struct
+    include Base.List.Assoc
+  end
+    with type ('a, 'b) t := ('a, 'b) t
 end
 
 (** {2 The interface from Base} *)
 
-include module type of struct include Base.List end
+(** @open *)
+include
+module type of struct
+  include Base.List
+end
   with type 'a t := 'a t
-  with module Assoc := Base.List.Assoc (** @open *)
+  with module Assoc := Base.List.Assoc
 
 (** {2 Extensions} *)
 
@@ -29,14 +37,14 @@ include module type of struct include Base.List end
     would hide a heavyweight functor instantiation at each call). *)
 val stable_dedup : 'a t -> 'a t
 
-val stable_dedup_staged
-  :  compare:('a -> 'a -> int)
-  -> ('a list -> 'a list) Staged.t
+val stable_dedup_staged : compare:('a -> 'a -> int) -> ('a list -> 'a list) Staged.t
 
 (** Only raised in [exn_if_dup] below. *)
-exception Duplicate_found of (unit -> Base.Sexp.t) * string
-[@@deprecated "[since 2018-03] stop matching on Duplicate_found. [exn_if_dup] will \
-               eventually raise a different and unspecified exception"]
+exception
+  Duplicate_found of (unit -> Base.Sexp.t) * string
+                                               [@deprecated
+                                                 "[since 2018-03] stop matching on Duplicate_found. [exn_if_dup] will eventually \
+                                                  raise a different and unspecified exception"]
 
 (** [exn_if_dup ~compare ?context t ~to_sexp] raises if [t] contains a duplicate. It will
     specifically raise a [Duplicate_found] exception and use [context] as its second
@@ -55,6 +63,7 @@ val slice : 'a t -> int -> int -> 'a t
 
 include Comparator.Derived with type 'a t := 'a t
 include Quickcheckable.S1 with type 'a t := 'a t
+
 
 val to_string : f:('a -> string) -> 'a t -> string
 

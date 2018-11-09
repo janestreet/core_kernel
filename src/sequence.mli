@@ -9,8 +9,11 @@ module Step : sig
     | Yield of 'a * 's
   [@@deriving bin_io]
 
-  include module type of struct include Base.Sequence.Step end
-  with type ('a, 's) t := ('a, 's) t
+  include
+  module type of struct
+    include Base.Sequence.Step
+  end
+    with type ('a, 's) t := ('a, 's) t
 end
 
 module Merge_with_duplicates_element : sig
@@ -20,14 +23,22 @@ module Merge_with_duplicates_element : sig
     | Both of 'a * 'b
   [@@deriving bin_io]
 
-  include module type of struct include Base.Sequence.Merge_with_duplicates_element end
-  with type ('a, 'b) t := ('a, 'b) t
+  include
+  module type of struct
+    include Base.Sequence.Merge_with_duplicates_element
+  end
+    with type ('a, 'b) t := ('a, 'b) t
 end
 
-include module type of struct include Base.Sequence end
+(** @open *)
+include
+module type of struct
+  include Base.Sequence
+end
   with type 'a t := 'a Base.Sequence.t
    and module Step := Base.Sequence.Step
-   and module Merge_with_duplicates_element := Base.Sequence.Merge_with_duplicates_element (** @open *)
+   and module Merge_with_duplicates_element := Base.Sequence
+                                               .Merge_with_duplicates_element
 
 (** Merges elements from sequences that are assumed to be sorted by [compare] to produce a
     sequence also sorted by [compare]. If any of the inputs are not sorted, the order of

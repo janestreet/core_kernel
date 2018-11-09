@@ -36,7 +36,7 @@ val same_class : 'a t -> 'a t -> bool
     already equal, then nothing changes).  The value of the combined class is the value of
     [t1] or [t2]; it is unspecified which.  After [union t1 t2], it will always be the
     case that [same_class t1 t2]. *)
-val union: 'a t -> 'a t -> unit
+val union : 'a t -> 'a t -> unit
 
 (*_ See the Jane Street Style Guide for an explanation of [Private] submodules:
 

@@ -6,15 +6,19 @@ module Caseless : sig
   type nonrec t = t [@@deriving bin_io, hash, sexp]
 
   include Comparable.S_binable with type t := t
-  include Hashable.S_binable   with type t := t
+  include Hashable.S_binable with type t := t
 
   val is_suffix : t -> suffix:t -> bool
   val is_prefix : t -> prefix:t -> bool
 end
 
-include module type of struct include Base.String end
+(** @open *)
+include
+module type of struct
+  include Base.String
+end
   with type t := t
-  with module Caseless := Base.String.Caseless (** @open *)
+  with module Caseless := Base.String.Caseless
 
 (** [slice t start stop] returns a new string including elements [t.(start)] through
     [t.(stop-1)], normalized Python-style with the exception that [stop = 0] is treated as
@@ -32,8 +36,8 @@ val take_while : t -> f:(char -> bool) -> t
     (See [rstrip] to drop such a suffix) *)
 val rtake_while : t -> f:(char -> bool) -> t
 
-include Hexdump.S        with type t := t
-include Identifiable.S   with type t := t and type comparator_witness := comparator_witness
+include Hexdump.S with type t := t
+include Identifiable.S with type t := t and type comparator_witness := comparator_witness
 include Quickcheckable.S with type t := t
 
 (** Like [gen], but without empty strings. *)
@@ -55,9 +59,10 @@ val gen_with_length : int -> char Quickcheck.Generator.t -> t Quickcheck.Generat
 module Stable : sig
   module V1 : sig
     type nonrec t = t [@@deriving hash]
-    include Stable_comparable.V1
+
+    include
+      Stable_comparable.V1
       with type t := t
       with type comparator_witness = comparator_witness
   end
 end
-

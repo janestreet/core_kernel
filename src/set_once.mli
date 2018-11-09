@@ -6,24 +6,20 @@ open! Import
 
 type 'a t [@@deriving sexp_of]
 
-include Invariant.S1 with type 'a t := 'a t (** Passes when unset. *)
+(** Passes when unset. *)
+include Invariant.S1 with type 'a t := 'a t
 
 val create : unit -> _ t
-
-val set     : 'a t -> Source_code_position.t -> 'a -> unit Or_error.t
+val set : 'a t -> Source_code_position.t -> 'a -> unit Or_error.t
 val set_exn : 'a t -> Source_code_position.t -> 'a -> unit
-
-val get     : 'a t -> 'a option
+val get : 'a t -> 'a option
 val get_exn : 'a t -> Source_code_position.t -> 'a
-
 val is_none : _ t -> bool
 val is_some : _ t -> bool
-
 val iter : 'a t -> f:('a -> unit) -> unit
 
-module Optional_syntax : Optional_syntax.S1
-  with type 'a t := 'a t
-  with type 'a value := 'a identity
+module Optional_syntax :
+  Optional_syntax.S1 with type 'a t := 'a t with type 'a value := 'a identity
 
 module Unstable : sig
   type nonrec 'a t = 'a t [@@deriving bin_io, sexp]

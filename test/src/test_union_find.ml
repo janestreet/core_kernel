@@ -9,12 +9,13 @@ let create x =
   let t = create x in
   assert (is_compressed t);
   t
+;;
 
 let union t1 t2 =
   union t1 t2;
   invariant ignore t1;
   invariant ignore t2;
-  assert (is_compressed t1 || is_compressed t2);
+  assert (is_compressed t1 || is_compressed t2)
 ;;
 
 let get t =
@@ -25,7 +26,7 @@ let get t =
 
 let set t x =
   set t x;
-  assert (is_compressed t);
+  assert (is_compressed t)
 ;;
 
 let same_class t1 t2 =
@@ -82,7 +83,11 @@ let%test_unit "set/get" =
 let%test_unit "compressed" =
   let n = 1000 in
   let ts = List.init n ~f:create in
-  let t = List.reduce_exn ts ~f:(fun a b -> union a b; b) in
+  let t =
+    List.reduce_exn ts ~f:(fun a b ->
+      union a b;
+      b)
+  in
   let max_rank = List.fold ts ~init:0 ~f:(fun acc t -> max acc (rank t)) in
   assert (max_rank = 1);
   set t 42;
@@ -94,15 +99,17 @@ let%test_unit "balanced" =
   let n = 1000 in
   let ts = Array.init n ~f:create in
   let rec sub i j =
-    if i = j then ts.(i) else begin
+    if i = j
+    then ts.(i)
+    else (
       let k = (i + j) / 2 in
       let a = sub i k in
-      if k+1 > j then a else begin
-        let b = sub (k+1) j in
+      if k + 1 > j
+      then a
+      else (
+        let b = sub (k + 1) j in
         union a b;
-        a
-      end
-    end
+        a))
   in
   let t = sub 0 (pred n) in
   Array.iter ts ~f:(invariant ignore);
@@ -113,4 +120,3 @@ let%test_unit "balanced" =
   assert (Array.for_all ts ~f:(fun t' -> same_class t t' && get t' = 42));
   assert (Array.for_all ts ~f:is_compressed)
 ;;
-

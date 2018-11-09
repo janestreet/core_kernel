@@ -37,30 +37,33 @@ module type S = sig
 
       For copying characters from a substring to and from both strings and substrings. *)
 
-  val blit_to_string      : t -> dst:bytes       -> dst_pos:int            -> unit
-  val blit_to_bytes       : t -> dst:bytes       -> dst_pos:int            -> unit
-  val blit_to_bigstring   : t -> dst:Bigstring.t -> dst_pos:int            -> unit
-
-  val blit_from_string    : t -> src:string      -> src_pos:int -> len:int -> unit
+  val blit_to_string : t -> dst:bytes -> dst_pos:int -> unit
+  val blit_to_bytes : t -> dst:bytes -> dst_pos:int -> unit
+  val blit_to_bigstring : t -> dst:Bigstring.t -> dst_pos:int -> unit
+  val blit_from_string : t -> src:string -> src_pos:int -> len:int -> unit
   val blit_from_bigstring : t -> src:Bigstring.t -> src_pos:int -> len:int -> unit
 
   (** {2 String concatenation} *)
+
   (** These functions always copy. *)
 
-  val concat           : t list -> t
-  val concat_string    : t list -> string
+  val concat : t list -> t
+  val concat_string : t list -> string
   val concat_bigstring : t list -> Bigstring.t
 
   (** {2 Conversion to/from substrings} *)
+
   (** These functions always copy. *)
 
-  val to_string    : t -> string
+  val to_string : t -> string
   val to_bigstring : t -> Bigstring.t
 
   (** These functions always copy. Use [create] if you want sharing. *)
 
-  val of_string    : string -> t [@@deprecated "[since 2017-11] use [create] instead"]
-  val of_bigstring : Bigstring.t -> t [@@deprecated "[since 2017-11] use [create] instead"]
+  val of_string : string -> t [@@deprecated "[since 2017-11] use [create] instead"]
+
+  val of_bigstring : Bigstring.t -> t
+  [@@deprecated "[since 2017-11] use [create] instead"]
 
   (** {2 Prefixes and suffixes}
 
@@ -69,6 +72,6 @@ module type S = sig
 
   val drop_prefix : t -> int -> t
   val drop_suffix : t -> int -> t
-  val prefix      : t -> int -> t
-  val suffix      : t -> int -> t
+  val prefix : t -> int -> t
+  val suffix : t -> int -> t
 end

@@ -8,17 +8,22 @@ open! Info_intf
 module type S = Base.Info.S
 
 module Source_code_position = Source_code_position0
-
 module Binable = Binable0
 
 module Sexp = struct
   include Sexplib.Sexp
-  include (struct
-    type t = Base.Sexp.t = Atom of string | List of t list
+
+  include (
+  struct
+    type t = Base.Sexp.t =
+      | Atom of string
+      | List of t list
     [@@deriving bin_io, compare, hash]
-  end : sig
-             type t [@@deriving bin_io, compare, hash]
-           end with type t := t)
+  end :
+  sig
+    type t [@@deriving bin_io, compare, hash]
+  end
+  with type t := t)
 end
 
 module Binable_exn = struct
@@ -27,13 +32,17 @@ module Binable_exn = struct
       module T = struct
         type t = exn [@@deriving sexp_of]
       end
-      include T
-      include Binable.Stable.Of_binable.V1 (Sexp) (struct
-          include T
 
-          let to_binable t = t |> [%sexp_of: t]
-          let of_binable = Exn.create_s
-        end)
+      include T
+
+      include Binable.Stable.Of_binable.V1
+          (Sexp)
+          (struct
+            include T
+
+            let to_binable t = t |> [%sexp_of: t]
+            let of_binable = Exn.create_s
+          end)
     end
   end
 end
@@ -57,14 +66,15 @@ module Extend (Info : Base.Info.S) = struct
       module V2 = struct
         type t = Info.Internal_repr.t =
           | Could_not_construct of Sexp.t
-          | String              of string
-          | Exn                 of Binable_exn.V1.t
-          | Sexp                of Sexp.t
-          | Tag_sexp            of string * Sexp.t * Source_code_position.V1.t option
-          | Tag_t               of string * t
-          | Tag_arg             of string * Sexp.t * t
-          | Of_list             of int option * t list
-          | With_backtrace      of t * string (* backtrace *)
+          | String of string
+          | Exn of Binable_exn.V1.t
+          | Sexp of Sexp.t
+          | Tag_sexp of string * Sexp.t * Source_code_position.V1.t option
+          | Tag_t of string * t
+          | Tag_arg of string * Sexp.t * t
+          | Of_list of int option * t list
+          | With_backtrace of t * string
+          (* backtrace *)
         [@@deriving bin_io, sexp_of]
       end
     end
@@ -80,44 +90,59 @@ module Extend (Info : Base.Info.S) = struct
       module T = struct
         type t = Info.t [@@deriving sexp, compare, hash]
       end
+
       include T
       include Comparator.Stable.V1.Make (T)
 
-      include Binable.Stable.Of_binable.V1 (Internal_repr.Stable.V2) (struct
-          type nonrec t = t
-          let to_binable = Info.Internal_repr.of_info
-          let of_binable = Info.Internal_repr.to_info
-        end)
+      include Binable.Stable.Of_binable.V1
+          (Internal_repr.Stable.V2)
+          (struct
+            type nonrec t = t
+
+            let to_binable = Info.Internal_repr.of_info
+            let of_binable = Info.Internal_repr.to_info
+          end)
     end
 
     module V1 = struct
       module T = struct
         type t = Info.t [@@deriving compare]
 
-        include Sexpable.Stable.Of_sexpable.V1 (Sexp) (struct
-            type nonrec t = t
-            let to_sexpable = Info.sexp_of_t
-            let of_sexpable = Info.t_of_sexp
-          end)
+        include Sexpable.Stable.Of_sexpable.V1
+            (Sexp)
+            (struct
+              type nonrec t = t
+
+              let to_sexpable = Info.sexp_of_t
+              let of_sexpable = Info.t_of_sexp
+            end)
 
         let compare = compare
       end
+
       include T
       include Comparator.Stable.V1.Make (T)
 
-      include Binable.Stable.Of_binable.V1 (Sexp) (struct
-          type nonrec t = t
-          let to_binable = sexp_of_t
-          let of_binable = t_of_sexp
-        end)
+      include Binable.Stable.Of_binable.V1
+          (Sexp)
+          (struct
+            type nonrec t = t
+
+            let to_binable = sexp_of_t
+            let of_binable = t_of_sexp
+          end)
     end
   end
 
   type t = Stable.V2.t [@@deriving bin_io]
 
-  include (Info : (module type of struct include Info end
-                    with module Internal_repr := Internal_repr
-                    with type t := t))
+  include (
+    Info :
+      module type of struct
+      include Info
+    end
+    with module Internal_repr := Internal_repr
+    with type t := t)
 end
 
 include Extend (Base.Info)

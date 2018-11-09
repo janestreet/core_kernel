@@ -14,22 +14,26 @@ open! Import
 module type S = sig
   type t [@@deriving sexp, typerep]
 
-  include Comparable.S with type t := t (** consistent with subset *)
+  (** consistent with subset *)
+  include Comparable.S with type t := t
 
   val of_int : int -> t
   val to_int_exn : t -> int
-
   val empty : t
 
-  val (+) : t -> t -> t       (** set union, bitwise or *)
+  (** set union, bitwise or *)
+  val ( + ) : t -> t -> t
 
-  val (-) : t -> t -> t       (** set difference *)
+  (** set difference *)
+  val ( - ) : t -> t -> t
 
-  val intersect : t -> t -> t   (** bitwise and *)
+  (** bitwise and *)
+  val intersect : t -> t -> t
 
-  val complement : t -> t       (** bitwise not *)
+  (** bitwise not *)
+  val complement : t -> t
 
-  val is_empty     : t -> bool
+  val is_empty : t -> bool
   val do_intersect : t -> t -> bool
   val are_disjoint : t -> t -> bool
 
@@ -74,7 +78,6 @@ module type Make_arg = sig
 end
 
 module type Flags = sig
-
   module type Make_arg = Make_arg
   module type S = S
 

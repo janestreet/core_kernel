@@ -11,7 +11,6 @@ open! Import
 type t
 
 val empty : t
-
 val to_string : t -> string
 
 (** [add_range t i j] adds all the numbers between [i] and [j] (inclusive) to the set.
@@ -29,6 +28,4 @@ val mem : t -> int -> bool
 val ranges : t -> (int * int) list
 
 val max : t -> int option
-
 val min : t -> int option
-

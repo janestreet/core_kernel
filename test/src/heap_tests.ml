@@ -1,5 +1,5 @@
 open! Core_kernel
-open  Expect_test_helpers_kernel
+open Expect_test_helpers_kernel
 
 let%expect_test "Heap.sexp_of_t" =
   let test list =
@@ -9,23 +9,24 @@ let%expect_test "Heap.sexp_of_t" =
        accidentally mutate [t] *)
     while not (Heap.is_empty heap) do
       ignore (Heap.pop_exn heap : int);
-      print_s [%sexp (heap : int Heap.t)];
+      print_s [%sexp (heap : int Heap.t)]
     done
   in
   test [];
   [%expect {| () |}];
-  test [3];
+  test [ 3 ];
   [%expect {|
     (3)
     () |}];
-  test [3;1;4];
+  test [ 3; 1; 4 ];
   [%expect {|
     (1 3 4)
     (3 4)
     (4)
     () |}];
-  test [3;1;4;1;5;9;2;6;5];
-  [%expect {|
+  test [ 3; 1; 4; 1; 5; 9; 2; 6; 5 ];
+  [%expect
+    {|
     (1 1 2 3 4 5 5 6 9)
     (1 2 3 4 5 5 6 9)
     (2 3 4 5 5 6 9)
@@ -35,7 +36,7 @@ let%expect_test "Heap.sexp_of_t" =
     (5 6 9)
     (6 9)
     (9)
-    () |}];
+    () |}]
 ;;
 
 let%expect_test "Heap.sexp_of_t with removes" =
@@ -47,23 +48,24 @@ let%expect_test "Heap.sexp_of_t with removes" =
        accidentally mutate [t] *)
     List.iter elts ~f:(fun elt ->
       Heap.remove heap elt;
-      print_s [%sexp (heap : int Heap.t)]);
+      print_s [%sexp (heap : int Heap.t)])
   in
   test [];
   [%expect {|
     () |}];
-  test [3];
+  test [ 3 ];
   [%expect {|
     (3)
     () |}];
-  test [3;1;4];
+  test [ 3; 1; 4 ];
   [%expect {|
     (1 3 4)
     (1 4)
     (4)
     () |}];
-  test [3;1;4;1;5;9;2;6;5];
-  [%expect {|
+  test [ 3; 1; 4; 1; 5; 9; 2; 6; 5 ];
+  [%expect
+    {|
     (1 1 2 3 4 5 5 6 9)
     (1 1 2 4 5 5 6 9)
     (1 2 4 5 5 6 9)
@@ -73,7 +75,7 @@ let%expect_test "Heap.sexp_of_t with removes" =
     (2 5 6)
     (5 6)
     (5)
-    () |}];
+    () |}]
 ;;
 
 open! Heap
@@ -83,19 +85,24 @@ let%test_module _ =
     let data = [ 0; 1; 2; 3; 4; 5; 6; 7 ]
     let t = of_list data ~cmp:Int.compare
     let () = invariant Fn.ignore t
+
     (* pop the zero at the top to force some heap structuring.  This does not touch the
        sum. *)
-    let _ : int option = pop t
+    let (_ : int option) = pop t
     let () = invariant Fn.ignore t
-    let list_sum      = List.fold data ~init:0 ~f:(fun sum v -> sum + v)
+    let list_sum = List.fold data ~init:0 ~f:(fun sum v -> sum + v)
     let heap_fold_sum = fold t ~init:0 ~f:(fun sum v -> sum + v)
+
     let heap_iter_sum =
       let r = ref 0 in
       iter t ~f:(fun v -> r := !r + v);
       !r
-    let%test _ = Int.(=) list_sum heap_fold_sum
-    let%test _ = Int.(=) list_sum heap_iter_sum
+    ;;
+
+    let%test _ = Int.( = ) list_sum heap_fold_sum
+    let%test _ = Int.( = ) list_sum heap_iter_sum
   end)
+;;
 
 let%test_module _ =
   (module struct
@@ -104,23 +111,22 @@ let%test_module _ =
 
       include Invariant.S1 with type 'a t := 'a t
 
-      val create     : cmp:('a -> 'a -> int) -> 'a t
-      val add        : 'a t -> 'a -> unit
-      val pop        : 'a t -> 'a option
-      val length     : 'a t -> int
-      val top        : 'a t -> 'a option
+      val create : cmp:('a -> 'a -> int) -> 'a t
+      val add : 'a t -> 'a -> unit
+      val pop : 'a t -> 'a option
+      val length : 'a t -> int
+      val top : 'a t -> 'a option
       val remove_top : 'a t -> unit
-      val to_list    : 'a t -> 'a list
+      val to_list : 'a t -> 'a list
     end
 
     module That_heap : Heap_intf = struct
-      type 'a t = {
-        cmp          : 'a -> 'a -> int;
-        mutable heap : 'a list;
-      }
+      type 'a t =
+        { cmp : 'a -> 'a -> int
+        ; mutable heap : 'a list
+        }
 
       let sexp_of_t sexp_of_v t = List.sexp_of_t sexp_of_v t.heap
-
       let create ~cmp = { cmp; heap = [] }
       let add t v = t.heap <- List.sort ~compare:t.cmp (v :: t.heap)
 
@@ -132,24 +138,30 @@ let%test_module _ =
           Some x
       ;;
 
-      let length t     = List.length t.heap
-      let top t        = List.hd t.heap
-      let remove_top t = match t.heap with [] -> () | _ :: xs -> t.heap <- xs
-      let to_list t    = t.heap
-      let invariant _  = Fn.ignore
+      let length t = List.length t.heap
+      let top t = List.hd t.heap
+
+      let remove_top t =
+        match t.heap with
+        | [] -> ()
+        | _ :: xs -> t.heap <- xs
+      ;;
+
+      let to_list t = t.heap
+      let invariant _ = Fn.ignore
     end
 
     module This_heap : Heap_intf = struct
       type nonrec 'a t = 'a t [@@deriving sexp_of]
 
       let create ~cmp = create ~cmp ()
-      let add         = add
-      let pop         = pop
-      let length      = length
-      let top         = top
-      let remove_top  = remove_top
-      let to_list     = to_list
-      let invariant   = invariant
+      let add = add
+      let pop = pop
+      let length = length
+      let top = top
+      let remove_top = remove_top
+      let to_list = to_list
+      let invariant = invariant
     end
 
     let this_to_string this = Sexp.to_string (This_heap.sexp_of_t Int.sexp_of_t this)
@@ -158,15 +170,20 @@ let%test_module _ =
     let length_check (t_a, t_b) =
       let this_len = This_heap.length t_a in
       let that_len = That_heap.length t_b in
-      if this_len <> that_len then
-        failwithf "error in length: %i (for %s) <> %i (for %s)"
-          this_len (this_to_string t_a)
-          that_len (that_to_string t_b) ()
+      if this_len <> that_len
+      then
+        failwithf
+          "error in length: %i (for %s) <> %i (for %s)"
+          this_len
+          (this_to_string t_a)
+          that_len
+          (that_to_string t_b)
+          ()
     ;;
 
     let create () =
       let cmp = Int.compare in
-      (This_heap.create ~cmp, That_heap.create ~cmp)
+      This_heap.create ~cmp, That_heap.create ~cmp
     ;;
 
     let add (this_t, that_t) v =
@@ -178,19 +195,25 @@ let%test_module _ =
     let pop (this_t, that_t) =
       let res1 = This_heap.pop this_t in
       let res2 = That_heap.pop that_t in
-      if res1 <> res2 then
-        failwithf "pop results differ (%s, %s)"
+      if res1 <> res2
+      then
+        failwithf
+          "pop results differ (%s, %s)"
           (Option.value ~default:"None" (Option.map ~f:Int.to_string res1))
-          (Option.value ~default:"None" (Option.map ~f:Int.to_string res2)) ()
+          (Option.value ~default:"None" (Option.map ~f:Int.to_string res2))
+          ()
     ;;
 
     let top (this_t, that_t) =
       let res1 = This_heap.top this_t in
       let res2 = That_heap.top that_t in
-      if res1 <> res2 then
-        failwithf "top results differ (%s, %s)"
+      if res1 <> res2
+      then
+        failwithf
+          "top results differ (%s, %s)"
           (Option.value ~default:"None" (Option.map ~f:Int.to_string res1))
-          (Option.value ~default:"None" (Option.map ~f:Int.to_string res2)) ()
+          (Option.value ~default:"None" (Option.map ~f:Int.to_string res2))
+          ()
     ;;
 
     let remove_top (this_t, that_t) =
@@ -204,36 +227,33 @@ let%test_module _ =
       let that_list = List.sort ~compare:Int.compare (That_heap.to_list that_t) in
       assert (this_list = that_list);
       This_heap.invariant Fn.ignore this_t;
-      That_heap.invariant Fn.ignore that_t;
+      That_heap.invariant Fn.ignore that_t
     ;;
 
     let test_dual_ops () =
       let t = create () in
-
       let rec loop ops =
-        if ops = 0 then ()
-        else begin
+        if ops = 0
+        then ()
+        else (
           let r = Random.int 100 in
-          begin
-            if r < 40 then
-              add t (Random.int 100_000)
-            else if r < 70 then
-              pop t
-            else if r < 80 then
-              top t
-            else if r < 90 then
-              remove_top t
-            else
-              internal_check t
-          end;
-          loop (ops - 1)
-        end
+          if r < 40
+          then add t (Random.int 100_000)
+          else if r < 70
+          then pop t
+          else if r < 80
+          then top t
+          else if r < 90
+          then remove_top t
+          else internal_check t;
+          loop (ops - 1))
       in
       loop 1_000
     ;;
 
     let%test_unit _ = test_dual_ops ()
   end)
+;;
 
 let test_copy ~add_removable ~remove =
   let sum t = fold t ~init:0 ~f:(fun acc i -> acc + i) in
@@ -244,10 +264,9 @@ let test_copy ~add_removable ~remove =
     (* We need to pop from time to time to trigger the amortized tree reorganizations.  If
        we don't do this the resulting structure is just a linked list and the copy
        function is not flexed as completely as it should be. *)
-    then begin
+    then (
       ignore (pop t);
-      add t i
-    end
+      add t i)
   done;
   let token = add_removable t 100 in
   invariant Fn.ignore t;
@@ -256,8 +275,9 @@ let test_copy ~add_removable ~remove =
   assert (sum t = sum t');
   assert (to_list t = to_list t');
   remove t token;
-  assert (sum t = sum t' - 100);
+  assert (sum t = sum t' - 100)
 ;;
+
 let%test_unit _ = test_copy ~add_removable ~remove
 let%test_unit _ = test_copy ~add_removable:Unsafe.add_removable ~remove:Unsafe.remove
 
@@ -265,36 +285,41 @@ let test_removal ~add_removable ~remove ~elt_value_exn =
   let t = create ~cmp:Int.compare () in
   let tokens = ref [] in
   for i = 1 to 10_000 do
-    tokens := add_removable t i :: !tokens;
+    tokens := add_removable t i :: !tokens
   done;
   invariant Fn.ignore t;
   List.iter !tokens ~f:(fun token ->
-    if elt_value_exn token t % 2 <> 0
-    then remove t token);
+    if elt_value_exn token t % 2 <> 0 then remove t token);
   invariant Fn.ignore t;
   let rec loop count =
     if count % 1000 = 0 then invariant Fn.ignore t;
     match pop t with
-    | None   -> assert (count = 10_000 / 2);
+    | None -> assert (count = 10_000 / 2)
     | Some v ->
       assert ((1 + count) * 2 = v);
       loop (count + 1)
   in
   loop 0
 ;;
+
 let%test_unit _ =
   test_removal ~add_removable ~remove ~elt_value_exn:(fun token _ -> Elt.value_exn token)
+;;
+
 let%test_unit _ =
-  test_removal ~add_removable:Unsafe.add_removable ~remove:Unsafe.remove
+  test_removal
+    ~add_removable:Unsafe.add_removable
+    ~remove:Unsafe.remove
     ~elt_value_exn:Unsafe.Elt.value
+;;
 
 let test_ordering () =
   let t = create ~cmp:Int.compare () in
   for _ = 1 to 10_000 do
-    add t (Random.int 100_000);
+    add t (Random.int 100_000)
   done;
   let rec loop last count =
-    if (count % 1_000 = 0) then invariant Fn.ignore t;
+    if count % 1_000 = 0 then invariant Fn.ignore t;
     match pop t with
     | None -> ()
     | Some v ->
@@ -303,9 +328,9 @@ let test_ordering () =
   in
   loop (-1) 0
 ;;
-let%test_unit _ = test_ordering ()
 
-let%test_unit _ = ignore (of_array [| |] ~cmp:Int.compare)
+let%test_unit _ = test_ordering ()
+let%test_unit _ = ignore (of_array [||] ~cmp:Int.compare)
 
 let%test_unit "operations on removed elements" =
   let h = create ~cmp:Int.compare () in
@@ -313,5 +338,5 @@ let%test_unit "operations on removed elements" =
   [%test_eq: string] (Sexp.to_string (Elt.sexp_of_t sexp_of_int elt)) "(1)";
   ignore (pop_exn h : int);
   assert (Result.is_error (Result.try_with (fun () -> Elt.value_exn elt)));
-  [%test_eq: string] (Sexp.to_string (Elt.sexp_of_t sexp_of_int elt)) "()";
+  [%test_eq: string] (Sexp.to_string (Elt.sexp_of_t sexp_of_int elt)) "()"
 ;;

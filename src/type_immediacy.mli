@@ -154,29 +154,32 @@ module Always : sig
   type 'a t
 
   val of_typerep : 'a Typerep.t -> 'a t option
-
-  val int_as_value     : 'a t -> int -> 'a option
+  val int_as_value : 'a t -> int -> 'a option
   val int_as_value_exn : 'a t -> int -> 'a
-  val int_is_value     : 'a t -> int -> bool
-  val value_as_int     : 'a t -> 'a  -> int
+  val int_is_value : 'a t -> int -> bool
+  val value_as_int : 'a t -> 'a -> int
 
   module For_all_parameters_S1 (X : Typerepable.S1) : sig
     val witness : unit -> _ X.t t
   end
+
   module For_all_parameters_S2 (X : Typerepable.S2) : sig
-    val witness : unit -> (_,_) X.t t
-  end
-  module For_all_parameters_S3 (X : Typerepable.S3) : sig
-    val witness : unit -> (_,_,_) X.t t
-  end
-  module For_all_parameters_S4 (X : Typerepable.S4) : sig
-    val witness : unit -> (_,_,_,_) X.t t
-  end
-  module For_all_parameters_S5 (X : Typerepable.S5) : sig
-    val witness : unit -> (_,_,_,_,_) X.t t
+    val witness : unit -> (_, _) X.t t
   end
 
-  val int  : int t
+  module For_all_parameters_S3 (X : Typerepable.S3) : sig
+    val witness : unit -> (_, _, _) X.t t
+  end
+
+  module For_all_parameters_S4 (X : Typerepable.S4) : sig
+    val witness : unit -> (_, _, _, _) X.t t
+  end
+
+  module For_all_parameters_S5 (X : Typerepable.S5) : sig
+    val witness : unit -> (_, _, _, _, _) X.t t
+  end
+
+  val int : int t
   val char : char t
   val bool : bool t
   val unit : unit t
@@ -186,32 +189,35 @@ module Sometimes : sig
   type 'a t
 
   val of_typerep : 'a Typerep.t -> 'a t option
-
-  val int_as_value     : 'a t -> int -> 'a option
+  val int_as_value : 'a t -> int -> 'a option
   val int_as_value_exn : 'a t -> int -> 'a
-  val int_is_value     : 'a t -> int -> bool
-  val value_as_int     : 'a t -> 'a  -> int option
-  val value_as_int_exn : 'a t -> 'a  -> int
-  val value_is_int     : 'a t -> 'a  -> bool
+  val int_is_value : 'a t -> int -> bool
+  val value_as_int : 'a t -> 'a -> int option
+  val value_as_int_exn : 'a t -> 'a -> int
+  val value_is_int : 'a t -> 'a -> bool
 
   module For_all_parameters_S1 (X : Typerepable.S1) : sig
     val witness : unit -> _ X.t t
   end
+
   module For_all_parameters_S2 (X : Typerepable.S2) : sig
-    val witness : unit -> (_,_) X.t t
+    val witness : unit -> (_, _) X.t t
   end
+
   module For_all_parameters_S3 (X : Typerepable.S3) : sig
-    val witness : unit -> (_,_,_) X.t t
+    val witness : unit -> (_, _, _) X.t t
   end
+
   module For_all_parameters_S4 (X : Typerepable.S4) : sig
-    val witness : unit -> (_,_,_,_) X.t t
+    val witness : unit -> (_, _, _, _) X.t t
   end
+
   module For_all_parameters_S5 (X : Typerepable.S5) : sig
-    val witness : unit -> (_,_,_,_,_) X.t t
+    val witness : unit -> (_, _, _, _, _) X.t t
   end
 
   val option : _ option t
-  val list   : _ list   t
+  val list : _ list t
 end
 
 module Never : sig
@@ -222,31 +228,35 @@ module Never : sig
   module For_all_parameters_S1 (X : Typerepable.S1) : sig
     val witness : unit -> _ X.t t
   end
+
   module For_all_parameters_S2 (X : Typerepable.S2) : sig
-    val witness : unit -> (_,_) X.t t
-  end
-  module For_all_parameters_S3 (X : Typerepable.S3) : sig
-    val witness : unit -> (_,_,_) X.t t
-  end
-  module For_all_parameters_S4 (X : Typerepable.S4) : sig
-    val witness : unit -> (_,_,_,_) X.t t
-  end
-  module For_all_parameters_S5 (X : Typerepable.S5) : sig
-    val witness : unit -> (_,_,_,_,_) X.t t
+    val witness : unit -> (_, _) X.t t
   end
 
-  val int32      :               int32 t
-  val int64      :               int64 t
-  val nativeint  :           nativeint t
-  val float      :               float t
-  val string     :              string t
-  val bytes      :               bytes t
-  val array      :             _ array t
-  val ref_       :               _ ref t
-  val tuple2     :             (_ * _) t
-  val tuple3     :         (_ * _ * _) t
-  val tuple4     :     (_ * _ * _ * _) t
-  val tuple5     : (_ * _ * _ * _ * _) t
+  module For_all_parameters_S3 (X : Typerepable.S3) : sig
+    val witness : unit -> (_, _, _) X.t t
+  end
+
+  module For_all_parameters_S4 (X : Typerepable.S4) : sig
+    val witness : unit -> (_, _, _, _) X.t t
+  end
+
+  module For_all_parameters_S5 (X : Typerepable.S5) : sig
+    val witness : unit -> (_, _, _, _, _) X.t t
+  end
+
+  val int32 : int32 t
+  val int64 : int64 t
+  val nativeint : nativeint t
+  val float : float t
+  val string : string t
+  val bytes : bytes t
+  val array : _ array t
+  val ref_ : _ ref t
+  val tuple2 : (_ * _) t
+  val tuple3 : (_ * _ * _) t
+  val tuple4 : (_ * _ * _ * _) t
+  val tuple5 : (_ * _ * _ * _ * _) t
 end
 
 val of_typerep : 'a Typerep.t -> 'a t
@@ -257,10 +267,9 @@ type 'a dest =
   | Never of 'a Never.t
 
 val dest : 'a t -> 'a dest
-
-val int_as_value     : 'a t -> int -> 'a option
+val int_as_value : 'a t -> int -> 'a option
 val int_as_value_exn : 'a t -> int -> 'a
-val int_is_value     : 'a t -> int -> bool
-val value_as_int     : 'a t -> 'a  -> int option
-val value_as_int_exn : 'a t -> 'a  -> int
-val value_is_int     : 'a t -> 'a  -> bool
+val int_is_value : 'a t -> int -> bool
+val value_as_int : 'a t -> 'a -> int option
+val value_as_int_exn : 'a t -> 'a -> int
+val value_is_int : 'a t -> 'a -> bool

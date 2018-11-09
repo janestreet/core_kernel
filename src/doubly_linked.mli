@@ -30,7 +30,9 @@ module Elt : sig
   type 'a t
 
   val value : 'a t -> 'a
-  val equal : 'a t -> 'a t -> bool (** pointer equality *)
+
+  (** pointer equality *)
+  val equal : 'a t -> 'a t -> bool
 
   val sexp_of_t : ('a -> Base.Sexp.t) -> 'a t -> Base.Sexp.t
 end
@@ -48,15 +50,17 @@ val create : unit -> 'a t
     same order (i.e., the first element of [l] is the first element of [t]). It is always
     the case that [l = to_list (of_list l)]. *)
 val of_list : 'a list -> 'a t
+
 val of_array : 'a array -> 'a t
 
 (** {2 Predicates} *)
 
-val equal : 'a t -> 'a t -> bool (** pointer equality *)
+(** pointer equality *)
+val equal : 'a t -> 'a t -> bool
 
 val is_first : 'a t -> 'a Elt.t -> bool
-val is_last  : 'a t -> 'a Elt.t -> bool
-val mem_elt  : 'a t -> 'a Elt.t -> bool
+val is_last : 'a t -> 'a Elt.t -> bool
+val mem_elt : 'a t -> 'a Elt.t -> bool
 
 (** {2 Constant-time extraction of first and last elements} *)
 
@@ -82,9 +86,9 @@ val insert_last : 'a t -> 'a -> 'a Elt.t
     An exception is raised if [elt] is equal to [anchor]. *)
 
 val move_to_front : 'a t -> 'a Elt.t -> unit
-val move_to_back  : 'a t -> 'a Elt.t -> unit
-val move_after    : 'a t -> 'a Elt.t -> anchor:'a Elt.t -> unit
-val move_before   : 'a t -> 'a Elt.t -> anchor:'a Elt.t -> unit
+val move_to_back : 'a t -> 'a Elt.t -> unit
+val move_after : 'a t -> 'a Elt.t -> anchor:'a Elt.t -> unit
+val move_before : 'a t -> 'a Elt.t -> anchor:'a Elt.t -> unit
 
 (** {2 Constant-time removal of an element} *)
 
@@ -101,6 +105,7 @@ val remove_last : 'a t -> 'a option
 val fold_elt : 'a t -> init:'b -> f:('b -> 'a Elt.t -> 'b) -> 'b
 
 val iter_elt : 'a t -> f:('a Elt.t -> unit) -> unit
+
 
 val fold_right : 'a t -> init:'b -> f:('a -> 'b -> 'b) -> 'b
 

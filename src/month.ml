@@ -21,27 +21,27 @@ module Stable = struct
 
     let of_int_exn i : t =
       match i with
-      | 1  -> Jan
-      | 2  -> Feb
-      | 3  -> Mar
-      | 4  -> Apr
-      | 5  -> May
-      | 6  -> Jun
-      | 7  -> Jul
-      | 8  -> Aug
-      | 9  -> Sep
+      | 1 -> Jan
+      | 2 -> Feb
+      | 3 -> Mar
+      | 4 -> Apr
+      | 5 -> May
+      | 6 -> Jun
+      | 7 -> Jul
+      | 8 -> Aug
+      | 9 -> Sep
       | 10 -> Oct
       | 11 -> Nov
       | 12 -> Dec
-      | _  -> failwithf "Month.of_int_exn %d" i ()
+      | _ -> failwithf "Month.of_int_exn %d" i ()
+    ;;
 
     let of_int i =
-      try
-        Some (of_int_exn i)
-      with
+      try Some (of_int_exn i) with
       | _ -> None
+    ;;
 
-    let to_int (t:t) =
+    let to_int (t : t) =
       match t with
       | Jan -> 1
       | Feb -> 2
@@ -55,12 +55,16 @@ module Stable = struct
       | Oct -> 10
       | Nov -> 11
       | Dec -> 12
+    ;;
 
-    include Binable.Stable.Of_binable.V1 (Int) (struct
-        type nonrec t = t
-        let to_binable t = to_int t - 1
-        let of_binable i = of_int_exn (i + 1)
-      end)
+    include Binable.Stable.Of_binable.V1
+        (Int)
+        (struct
+          type nonrec t = t
+
+          let to_binable t = to_int t - 1
+          let of_binable i = of_int_exn (i + 1)
+        end)
   end
 end
 
@@ -69,27 +73,17 @@ let num_months = 12
 module T = struct
   include Stable.V1
 
-  let all = [
-    Jan
-  ; Feb
-  ; Mar
-  ; Apr
-  ; May
-  ; Jun
-  ; Jul
-  ; Aug
-  ; Sep
-  ; Oct
-  ; Nov
-  ; Dec ]
-
+  let all = [ Jan; Feb; Mar; Apr; May; Jun; Jul; Aug; Sep; Oct; Nov; Dec ]
   let hash = to_int
 end
+
 include T
 
-include (Hashable.Make_binable (struct
-           include T
-         end) : Hashable.S_binable with type t := t)
+include (
+  Hashable.Make_binable (struct
+    include T
+  end) :
+    Hashable.S_binable with type t := t)
 
 include Comparable.Make_binable (struct
     include T
@@ -111,37 +105,48 @@ include Comparable.Make_binable (struct
    symbolic converters. *)
 let sexp_of_t = T.sexp_of_t
 let t_of_sexp = T.t_of_sexp
+let shift t i = of_int_exn (1 + Int.( % ) (to_int t - 1 + i) num_months)
 
-let shift t i = of_int_exn (1 + (Int.( % ) (to_int t - 1 + i) num_months))
-
-let all_strings = lazy
-  (Array.of_list
-     (List.map all ~f:(fun variant ->
-        Sexp.to_string (sexp_of_t variant))))
+let all_strings =
+  lazy
+    (Array.of_list (List.map all ~f:(fun variant -> Sexp.to_string (sexp_of_t variant))))
 ;;
 
-let to_string (t:t) =
+let to_string (t : t) =
   let all_strings = Lazy.force all_strings in
   all_strings.(to_int t - 1)
 ;;
 
 let of_string =
-  let table = lazy (
-    let module T = String.Table in
-    let table = T.create ~size:num_months () in
-    Array.iteri (Lazy.force all_strings) ~f:(fun i s ->
-      let t = of_int_exn (i + 1) in
-      Hashtbl.set table ~key:s ~data:t;
-      Hashtbl.set table ~key:(String.lowercase s) ~data:t;
-      Hashtbl.set table ~key:(String.uppercase s) ~data:t);
-    table)
+  let table =
+    lazy
+      (let module T = String.Table in
+       let table = T.create ~size:num_months () in
+       Array.iteri (Lazy.force all_strings) ~f:(fun i s ->
+         let t = of_int_exn (i + 1) in
+         Hashtbl.set table ~key:s ~data:t;
+         Hashtbl.set table ~key:(String.lowercase s) ~data:t;
+         Hashtbl.set table ~key:(String.uppercase s) ~data:t);
+       table)
   in
   fun str ->
     match Hashtbl.find (Lazy.force table) str with
     | Some x -> x
-    | None   -> failwithf "Invalid month: %s" str ()
+    | None -> failwithf "Invalid month: %s" str ()
 ;;
 
 module Export = struct
-  type month = t = Jan | Feb | Mar | Apr | May | Jun | Jul | Aug | Sep | Oct | Nov | Dec
+  type month = t =
+    | Jan
+    | Feb
+    | Mar
+    | Apr
+    | May
+    | Jun
+    | Jul
+    | Aug
+    | Sep
+    | Oct
+    | Nov
+    | Dec
 end

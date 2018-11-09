@@ -31,11 +31,7 @@ module type S = sig
       @param growth_allowed defaults to true
       @param size initial size -- default to 16
   *)
-  val create
-    :  ?growth_allowed:bool
-    -> ?size:int
-    -> unit
-    -> 'a t
+  val create : ?growth_allowed:bool -> ?size:int -> unit -> 'a t
 
   (** Clears the queue. *)
   val clear : 'a t -> unit
@@ -60,19 +56,19 @@ module type S = sig
       the queue, returning [`Ok] if the pair was added, or [`Key_already_present] if there
       is already a (k, v') in the queue.
   *)
-  val enqueue : 'a t -> [ `back | `front ] -> Key.t -> 'a -> [ `Ok | `Key_already_present ]
+  val enqueue : 'a t -> [`back | `front] -> Key.t -> 'a -> [`Ok | `Key_already_present]
 
   (** Like {!enqueue}, but it raises in the [`Key_already_present] case *)
-  val enqueue_exn : 'a t -> [ `back | `front ] -> Key.t -> 'a -> unit
+  val enqueue_exn : 'a t -> [`back | `front] -> Key.t -> 'a -> unit
 
   (** See {!enqueue}. [enqueue_back t k v] is the same as [enqueue t `back k v]  *)
-  val enqueue_back : 'a t -> Key.t -> 'a -> [ `Ok | `Key_already_present ]
+  val enqueue_back : 'a t -> Key.t -> 'a -> [`Ok | `Key_already_present]
 
   (** See {!enqueue_exn}. [enqueue_back_exn t k v] is the same as [enqueue_exn t `back k v] *)
   val enqueue_back_exn : 'a t -> Key.t -> 'a -> unit
 
   (** See {!enqueue}. [enqueue_front t k v] is the same as [enqueue t `front k v]  *)
-  val enqueue_front : 'a t -> Key.t -> 'a -> [ `Ok | `Key_already_present ]
+  val enqueue_front : 'a t -> Key.t -> 'a -> [`Ok | `Key_already_present]
 
   (** See {!enqueue_exn}. [enqueue_front_exn t k v] is the same as [enqueue_exn t `front k
       v] *)
@@ -83,13 +79,13 @@ module type S = sig
 
       The [_exn] versions of these functions raise if key-value pair does not exist.
   *)
-  val lookup_and_move_to_back     : 'a t -> Key.t -> 'a option
+  val lookup_and_move_to_back : 'a t -> Key.t -> 'a option
 
   (** Like {!lookup_and_move_to_back}, but raises instead of returning an option *)
   val lookup_and_move_to_back_exn : 'a t -> Key.t -> 'a
 
   (** Like {!lookup_and_move_to_back}, but moves element to the front of the queue *)
-  val lookup_and_move_to_front     : 'a t -> Key.t -> 'a option
+  val lookup_and_move_to_front : 'a t -> Key.t -> 'a option
 
   (** Like {!lookup_and_move_to_front}, but raises instead of returning an option *)
   val lookup_and_move_to_front_exn : 'a t -> Key.t -> 'a
@@ -112,19 +108,18 @@ module type S = sig
   (** [dequeue_with_key t] returns the front element of the queue and its key. *)
   val dequeue_with_key : 'a t -> (Key.t * 'a) option
 
-  val dequeue_with_key_exn : 'a t -> (Key.t * 'a)
+  val dequeue_with_key_exn : 'a t -> Key.t * 'a
 
   (** [dequeue_all t ~f] dequeues every element of the queue and applies [f] to each one. *)
   val dequeue_all : 'a t -> f:('a -> unit) -> unit
 
   (** [remove q k] removes the key-value pair with key [k] from the queue. *)
-  val remove : 'a t -> Key.t -> [ `Ok | `No_such_key ]
+  val remove : 'a t -> Key.t -> [`Ok | `No_such_key]
 
   val remove_exn : 'a t -> Key.t -> unit
 
-
   (** [replace q k v] changes the value of key [k] in the queue to [v]. *)
-  val replace : 'a t -> Key.t -> 'a -> [ `Ok | `No_such_key ]
+  val replace : 'a t -> Key.t -> 'a -> [`Ok | `No_such_key]
 
   val replace_exn : 'a t -> Key.t -> 'a -> unit
 
@@ -132,6 +127,7 @@ module type S = sig
 
   (** [iter t ~f] applies [f] to each key and element of the queue. *)
   val iteri : 'a t -> f:(key:Key.t -> data:'a -> unit) -> unit
+
   val foldi : 'a t -> init:'b -> f:('b -> key:Key.t -> data:'a -> 'b) -> 'b
 end
 
@@ -141,28 +137,27 @@ module Make (Key : Key) : S with module Key = Key = struct
 
   module Key_value = struct
     module T = struct
-      type 'a t = {
-        key : Key.t;
-        mutable value : 'a;
-      }
+      type 'a t =
+        { key : Key.t
+        ; mutable value : 'a
+        }
     end
+
     include T
 
     let key t = t.key
     let value t = t.value
-
-    let sexp_of_t sexp_of_a {key; value} = [%sexp_of: Key.t * a] (key, value)
+    let sexp_of_t sexp_of_a { key; value } = [%sexp_of: Key.t * a] (key, value)
   end
 
   open Key_value.T
-
   module Elt = Doubly_linked.Elt
 
-  type 'a t = {
-    mutable num_readers : int;
-    queue : 'a Key_value.t Doubly_linked.t;
-    table : 'a Key_value.t Elt.t Table.t;
-  }
+  type 'a t =
+    { mutable num_readers : int
+    ; queue : 'a Key_value.t Doubly_linked.t
+    ; table : 'a Key_value.t Elt.t Table.t
+    }
 
   let sexp_of_t sexp_of_a t = [%sexp_of: a Key_value.t Doubly_linked.t] t.queue
 
@@ -179,14 +174,14 @@ module Make (Key : Key) : S with module Key = Key = struct
       | None -> assert false
       | Some _ ->
         assert (not (Hashtbl.mem keys key));
-        Hashtbl.set keys ~key ~data:());
+        Hashtbl.set keys ~key ~data:())
   ;;
 
-  let create ?(growth_allowed=true) ?(size=16) () = {
-    num_readers = 0;
-    queue = Doubly_linked.create ();
-    table = Table.create ~growth_allowed ~size ();
-  }
+  let create ?(growth_allowed = true) ?(size = 16) () =
+    { num_readers = 0
+    ; queue = Doubly_linked.create ()
+    ; table = Table.create ~growth_allowed ~size ()
+    }
   ;;
 
   let read t f =
@@ -195,18 +190,17 @@ module Make (Key : Key) : S with module Key = Key = struct
   ;;
 
   let ensure_can_modify t =
-    if t.num_readers > 0 then
-      failwith "It is an error to modify a Hash_queue.t while iterating over it.";
+    if t.num_readers > 0
+    then failwith "It is an error to modify a Hash_queue.t while iterating over it."
   ;;
 
   let clear t =
     ensure_can_modify t;
     Doubly_linked.clear t.queue;
-    Hashtbl.clear t.table;
+    Hashtbl.clear t.table
   ;;
 
   let length t = Hashtbl.length t.table
-
   let is_empty t = length t = 0
 
   let lookup t k =
@@ -216,12 +210,10 @@ module Make (Key : Key) : S with module Key = Key = struct
   ;;
 
   let lookup_exn t k = (Elt.value (Hashtbl.find_exn t.table k)).value
-
   let mem t k = Hashtbl.mem t.table k
 
   (* Note that this is the tail-recursive Core_list.map *)
   let to_list t = List.map (Doubly_linked.to_list t.queue) ~f:Key_value.value
-
   let to_array t = Array.map (Doubly_linked.to_array t.queue) ~f:Key_value.value
 
   let for_all t ~f =
@@ -230,6 +222,7 @@ module Make (Key : Key) : S with module Key = Key = struct
 
   let exists t ~f =
     read t (fun () -> Doubly_linked.exists t.queue ~f:(fun kv -> f kv.value))
+  ;;
 
   let find_map t ~f =
     read t (fun () -> Doubly_linked.find_map t.queue ~f:(fun kv -> f kv.value))
@@ -237,27 +230,27 @@ module Make (Key : Key) : S with module Key = Key = struct
 
   let find t ~f =
     read t (fun () ->
-      Option.map (Doubly_linked.find t.queue ~f:(fun kv -> f kv.value))
+      Option.map
+        (Doubly_linked.find t.queue ~f:(fun kv -> f kv.value))
         ~f:Key_value.value)
   ;;
 
   let enqueue t back_or_front key value =
     ensure_can_modify t;
-    if Hashtbl.mem t.table key then
-      `Key_already_present
-    else begin
-      let contents = { Key_value.key = key; value = value } in
-      let elt = match back_or_front with
+    if Hashtbl.mem t.table key
+    then `Key_already_present
+    else (
+      let contents = { Key_value.key; value } in
+      let elt =
+        match back_or_front with
         | `back -> Doubly_linked.insert_last t.queue contents
         | `front -> Doubly_linked.insert_first t.queue contents
       in
       Hashtbl.set t.table ~key ~data:elt;
-      `Ok
-    end
+      `Ok)
   ;;
 
   let enqueue_back t = enqueue t `back
-
   let enqueue_front t = enqueue t `front
 
   exception Enqueue_duplicate_key of Key.t [@@deriving sexp]
@@ -269,7 +262,6 @@ module Make (Key : Key) : S with module Key = Key = struct
   ;;
 
   let enqueue_back_exn t = enqueue_exn t `back
-
   let enqueue_front_exn t = enqueue_exn t `front
 
   (* Performance hack: we implement this version separately to avoid allocation from the
@@ -308,7 +300,9 @@ module Make (Key : Key) : S with module Key = Key = struct
     ensure_can_modify t;
     match Doubly_linked.remove_first t.queue with
     | None -> None
-    | Some kv -> Hashtbl.remove t.table kv.key; Some (kv.key, kv.value)
+    | Some kv ->
+      Hashtbl.remove t.table kv.key;
+      Some (kv.key, kv.value)
   ;;
 
   exception Deque_with_key_empty [@@deriving sexp]
@@ -316,7 +310,7 @@ module Make (Key : Key) : S with module Key = Key = struct
   let dequeue_with_key_exn t =
     match dequeue_with_key t with
     | None -> raise Deque_with_key_empty
-    | Some (k, v) -> (k, v)
+    | Some (k, v) -> k, v
   ;;
 
   let dequeue t =
@@ -328,7 +322,7 @@ module Make (Key : Key) : S with module Key = Key = struct
   let first_with_key t =
     match Doubly_linked.first t.queue with
     | None -> None
-    | Some { key; value; } -> Some (key, value)
+    | Some { key; value } -> Some (key, value)
   ;;
 
   let first t =
@@ -359,26 +353,27 @@ module Make (Key : Key) : S with module Key = Key = struct
 
   let foldi t ~init ~f =
     read t (fun () ->
-      Doubly_linked.fold t.queue ~init ~f:(fun ac kv ->
-        (f ac ~key:kv.key ~data:kv.value)))
+      Doubly_linked.fold t.queue ~init ~f:(fun ac kv -> f ac ~key:kv.key ~data:kv.value))
   ;;
 
   let fold t ~init ~f = foldi t ~init ~f:(fun ac ~key:_ ~data -> f ac data)
-
   let count t ~f = Container.count ~fold t ~f
   let sum m t ~f = Container.sum m ~fold t ~f
   let min_elt t ~compare = Container.min_elt ~fold t ~compare
   let max_elt t ~compare = Container.max_elt ~fold t ~compare
   let fold_result t ~init ~f = Container.fold_result ~fold ~init ~f t
-  let fold_until  t ~init ~f = Container.fold_until  ~fold ~init ~f t
+  let fold_until t ~init ~f = Container.fold_until ~fold ~init ~f t
 
   let dequeue_all t ~f =
     let rec loop () =
       match dequeue t with
       | None -> ()
-      | Some v -> f v; loop ()
+      | Some v ->
+        f v;
+        loop ()
     in
     loop ()
+  ;;
 
   let remove t k =
     ensure_can_modify t;
@@ -415,5 +410,5 @@ module Make (Key : Key) : S with module Key = Key = struct
     match replace t k v with
     | `No_such_key -> raise (Replace_unknown_key k)
     | `Ok -> ()
-
+  ;;
 end

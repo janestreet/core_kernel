@@ -1,11 +1,11 @@
 (** This module extends {{!Base.source_code_position}[Base.source_code_position]}. *)
 
-include module type of struct include Base.Source_code_position end (** @open *)
+(** @open *)
+include module type of struct
+  include Base.Source_code_position
+end
 
-include Comparable.S
-  with type t := t
-   and type comparator_witness := comparator_witness
-
+include Comparable.S with type t := t and type comparator_witness := comparator_witness
 include Hashable.S with type t := t
 
 module Stable : sig

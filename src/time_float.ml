@@ -2,7 +2,7 @@ open! Import
 open! Std_internal
 
 module type S_kernel_without_zone = Time0_intf.S
-module type S_kernel              = Time_intf.S
+module type S_kernel = Time_intf.S
 
 module T = Time.Make (Time_float0)
 
@@ -15,13 +15,12 @@ module Stable = struct
     module V2 = struct
       type t = T.t [@@deriving bin_io, compare, hash]
 
-      let sexp_of_t t =
-        [%sexp (T.to_string_abs_parts t ~zone:Zone.utc : string list)]
+      let sexp_of_t t = [%sexp (T.to_string_abs_parts t ~zone:Zone.utc : string list)]
 
       let t_of_sexp sexp =
         try
           match sexp with
-          | Sexp.List [Sexp.Atom date; Sexp.Atom ofday_and_possibly_zone] ->
+          | Sexp.List [ Sexp.Atom date; Sexp.Atom ofday_and_possibly_zone ] ->
             T.of_string_gen
               ~default_zone:(fun () -> Zone.utc)
               ~find_zone:(fun _ ->
@@ -34,6 +33,7 @@ module Stable = struct
           of_sexp_error
             (sprintf "Time.Stable.With_utc.V2.t_of_sexp: %s" (Exn.to_string e))
             sexp
+      ;;
     end
   end
 
@@ -41,17 +41,21 @@ module Stable = struct
 end
 
 include (
-  T : module type of struct include T end
-  with type   underlying                  := T.underlying
-  with type   t                           := T.t
-  with type   comparator_witness          := T.comparator_witness
-  with module Span                        := T.Span
-  with module Ofday                       := T.Ofday
-  with module Date_and_ofday              := T.Date_and_ofday
-  with module Replace_polymorphic_compare := T.Replace_polymorphic_compare
-)
+  T :
+    module type of struct
+    include T
+  end
+  with type underlying := T.underlying
+  with type t := T.t
+  with type comparator_witness := T.comparator_witness
+  with module Span := T.Span
+  with module Ofday := T.Ofday
+  with module Date_and_ofday := T.Date_and_ofday
+  with module Replace_polymorphic_compare := T.Replace_polymorphic_compare)
 
 include (
-  Time_float0 : module type of struct include Time_float0 end
-  with module Stable := Time_float0.Stable
-)
+  Time_float0 :
+    module type of struct
+    include Time_float0
+  end
+  with module Stable := Time_float0.Stable)

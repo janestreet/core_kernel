@@ -14,14 +14,16 @@ module type S = sig
   val create_all : min:int -> max:int -> t list
 
   (** Accessors. *)
-  val index     : t -> int
+  val index : t -> int
+
   val min_index : t -> int
   val max_index : t -> int
 
   module Stable : sig
-    module V1 : Stable_comparable.V1
-      with type t                  =  t
-      with type comparator_witness =  comparator_witness
+    module V1 :
+      Stable_comparable.V1
+      with type t = t
+      with type comparator_witness = comparator_witness
   end
 end
 
@@ -39,5 +41,8 @@ module type Bounded_index = sig
 
   module type S = S
 
-  module Make (M : sig val label : string val module_name : string end) : S
+  module Make (M : sig
+      val label : string
+      val module_name : string
+    end) : S
 end

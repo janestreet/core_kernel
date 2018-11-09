@@ -8,8 +8,7 @@ open! Import
 type t [@@deriving sexp_of]
 
 val type_id_name : t -> string
-val type_id_uid  : t -> Type_equal.Id.Uid.t
-
+val type_id_uid : t -> Type_equal.Id.Uid.t
 val create : 'a Type_equal.Id.t -> 'a -> t
 
 (** [does_match t id] returns [true] iff [t] was created by [create id v]. *)
@@ -20,7 +19,8 @@ val does_match : t -> _ Type_equal.Id.t -> bool
 
     [match_exn t id] returns [v] if [t] was created by [create id v], and raises
     otherwise. *)
-val match_    : t -> 'a Type_equal.Id.t -> 'a option
+val match_ : t -> 'a Type_equal.Id.t -> 'a option
+
 val match_exn : t -> 'a Type_equal.Id.t -> 'a
 
 module View : sig

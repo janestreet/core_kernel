@@ -8,4 +8,5 @@
     These signatures extend signatures exported by {!Base.Container_intf}.
 *)
 
-include Container_intf.Container (** @inline *)
+(** @inline *)
+include Container_intf.Container

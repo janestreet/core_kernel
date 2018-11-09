@@ -10,7 +10,7 @@ let%test _ =
 ;;
 
 let%test _ =
-  let a = (1, 2) in
+  let a = 1, 2 in
   phys_same a a
 ;;
 
@@ -19,6 +19,6 @@ type thing = Obscure : _ -> thing
 let same_thing (Obscure a) (Obscure b) = phys_same a b
 
 let%test _ =
-  let a = (1, 2) in
+  let a = 1, 2 in
   same_thing (Obscure a) (Obscure a)
 ;;

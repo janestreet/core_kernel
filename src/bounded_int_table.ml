@@ -4,26 +4,31 @@ open Std_internal
 module Entry = struct
   type ('key, 'data) t =
     { (* the int is fixed, but the 'key can change *)
-      mutable key                   : 'key
-    ; mutable data                  : 'data
+      mutable key : 'key
+    ; mutable data :
+        'data
     (* The index in [defined_entries] where this [Entry.t] is placed. *)
-    ; mutable defined_entries_index : int;
+    ; mutable defined_entries_index : int
     }
   [@@deriving fields, sexp_of]
 end
 
 type ('key, 'data) t_detailed =
-  { num_keys        : int
-  ; sexp_of_key     : ('key -> Sexp.t) option
-  ; key_to_int      : 'key -> int
+  { num_keys : int
+  ; sexp_of_key : ('key -> Sexp.t) option
+  ; key_to_int :
+      'key
+      -> int
   (* The number of entries in the table, not the length of the arrays below. *)
-  ; mutable length  : int
+  ; mutable length :
+      int
   (* [(key, data)] is in the table iff
      {[
        entries_by_key.( key_to_int key ) = Some { key; data; _ }
      ]}
   *)
-  ; entries_by_key  : ('key, 'data) Entry.t option array
+  ; entries_by_key :
+      ('key, 'data) Entry.t option array
   (* The first [length] elements of [defined_entries] hold the data in the table.  This is
      an optimization for fold, to keep us from wasting iterations when the array is
      sparse. *)
@@ -32,7 +37,6 @@ type ('key, 'data) t_detailed =
 [@@deriving fields, sexp_of]
 
 type ('a, 'b) t = ('a, 'b) t_detailed
-
 type ('a, 'b) table = ('a, 'b) t
 
 let sexp_of_key t =
@@ -53,9 +57,9 @@ let invariant invariant_key invariant_data t =
         invariant_key entry.Entry.key;
         invariant_data entry.data;
         assert (i = t.key_to_int entry.key);
-        match t.defined_entries.( entry.defined_entries_index ) with
-        | None -> assert false
-        | Some entry' -> assert (phys_equal entry entry'));
+        (match t.defined_entries.(entry.defined_entries_index) with
+         | None -> assert false
+         | Some entry' -> assert (phys_equal entry entry')));
     Array.iteri t.defined_entries ~f:(fun i entry_opt ->
       match i < t.length, entry_opt with
       | false, None -> ()
@@ -70,27 +74,25 @@ let invariant invariant_key invariant_data t =
     let entries = get_entries t.entries_by_key in
     let entries' = get_entries t.defined_entries in
     assert (t.length = Array.length entries);
-    assert (Array.equal phys_equal entries entries' )
-  with exn ->
+    assert (Array.equal phys_equal entries entries')
+  with
+  | exn ->
     let sexp_of_key = sexp_of_key t in
     failwiths "invariant failed" (exn, t) [%sexp_of: exn * (key, _) t_detailed]
 ;;
 
 let debug = ref false
-
 let check_invariant t = if !debug then invariant ignore ignore t
-
 let is_empty t = length t = 0
 
 let create ?sexp_of_key ~num_keys ~key_to_int () =
-  if num_keys < 0
-  then failwiths "num_keys must be nonnegative" num_keys [%sexp_of: int];
+  if num_keys < 0 then failwiths "num_keys must be nonnegative" num_keys [%sexp_of: int];
   let t =
     { num_keys
     ; sexp_of_key
     ; key_to_int
-    ; length          = 0
-    ; entries_by_key  = Array.create ~len:num_keys None
+    ; length = 0
+    ; entries_by_key = Array.create ~len:num_keys None
     ; defined_entries = Array.create ~len:num_keys None
     }
   in
@@ -102,10 +104,11 @@ let create_like
       { num_keys
       ; sexp_of_key
       ; key_to_int
-      ; length          = _
-      ; entries_by_key  = _
+      ; length = _
+      ; entries_by_key = _
       ; defined_entries = _
-      } =
+      }
+  =
   create ~num_keys ?sexp_of_key ~key_to_int ()
 ;;
 
@@ -113,71 +116,63 @@ let fold t ~init ~f =
   let rec loop i ac =
     if i = t.length
     then ac
-    else
-      match t.defined_entries.( i ) with
+    else (
+      match t.defined_entries.(i) with
       | None -> assert false
-      | Some entry -> loop (i + 1) (f ~key:entry.key ~data:entry.data ac)
+      | Some entry -> loop (i + 1) (f ~key:entry.key ~data:entry.data ac))
   in
   loop 0 init
 ;;
 
-let iteri     t ~f = fold  t ~init:() ~f:(fun ~key    ~data () -> f ~key ~data)
-let iter      t ~f = iteri t          ~f:(fun ~key: _ ~data    -> f data)
-let iter_keys t ~f = iteri t          ~f:(fun ~key    ~data:_  -> f key)
-
+let iteri t ~f = fold t ~init:() ~f:(fun ~key ~data () -> f ~key ~data)
+let iter t ~f = iteri t ~f:(fun ~key:_ ~data -> f data)
+let iter_keys t ~f = iteri t ~f:(fun ~key ~data:_ -> f key)
 let iter_vals = iter
-
 let map_entries t ~f = fold t ~init:[] ~f:(fun ~key ~data ac -> f ~key ~data :: ac)
-
-let to_alist t = map_entries t ~f:(fun ~key ~data -> (key, data))
+let to_alist t = map_entries t ~f:(fun ~key ~data -> key, data)
 
 let clear t =
   for i = 0 to t.length - 1 do
-    match t.defined_entries.( i ) with
+    match t.defined_entries.(i) with
     | None -> assert false
     | Some entry ->
-      t.defined_entries.( i ) <- None;
-      t.entries_by_key.( t.key_to_int entry.key ) <- None;
+      t.defined_entries.(i) <- None;
+      t.entries_by_key.(t.key_to_int entry.key) <- None
   done;
-  t.length <- 0;
+  t.length <- 0
 ;;
 
 module Serialized = struct
   type ('key, 'data) t =
     { num_keys : int
-    ; alist    : ('key * 'data) list
+    ; alist : ('key * 'data) list
     }
   [@@deriving bin_io, sexp]
 end
 
-let to_serialized t =
-  { Serialized.
-    num_keys = t.num_keys
-  ; alist    = to_alist t
-  }
-;;
+let to_serialized t = { Serialized.num_keys = t.num_keys; alist = to_alist t }
 
 let sexp_of_t sexp_of_key sexp_of_data t =
   Serialized.sexp_of_t sexp_of_key sexp_of_data (to_serialized t)
 ;;
 
 let keys t = map_entries t ~f:(fun ~key ~data:_ -> key)
-
 let data t = map_entries t ~f:(fun ~key:_ ~data -> data)
 
 let entry_opt t key =
   let index = t.key_to_int key in
-  try t.entries_by_key.( index )
-  with _ ->
+  try t.entries_by_key.(index) with
+  | _ ->
     let sexp_of_key = sexp_of_key t in
-    failwiths "key's index out of range"
+    failwiths
+      "key's index out of range"
       (key, index, `Should_be_between_0_and (t.num_keys - 1))
-      [%sexp_of: key * int * [ `Should_be_between_0_and of int ]]
+      [%sexp_of: key * int * [`Should_be_between_0_and of int]]
 ;;
 
 let find t key =
   match entry_opt t key with
-  | None   -> None
+  | None -> None
   | Some e -> Some (Entry.data e)
 ;;
 
@@ -186,7 +181,9 @@ let find_exn t key =
   | Some entry -> Entry.data entry
   | None ->
     let sexp_of_key = sexp_of_key t in
-    failwiths "Bounded_int_table.find_exn got unknown key" (key, t)
+    failwiths
+      "Bounded_int_table.find_exn got unknown key"
+      (key, t)
       [%sexp_of: key * (key, _) t]
 ;;
 
@@ -194,11 +191,11 @@ let mem t key = is_some (entry_opt t key)
 
 let add_assuming_not_there t ~key ~data =
   let defined_entries_index = t.length in
-  let entry_opt = Some { Entry. key; data; defined_entries_index } in
-  t.entries_by_key.( t.key_to_int key ) <- entry_opt;
-  t.defined_entries.( defined_entries_index ) <- entry_opt;
+  let entry_opt = Some { Entry.key; data; defined_entries_index } in
+  t.entries_by_key.(t.key_to_int key) <- entry_opt;
+  t.defined_entries.(defined_entries_index) <- entry_opt;
   t.length <- t.length + 1;
-  check_invariant t;
+  check_invariant t
 ;;
 
 let find_or_add t key ~default =
@@ -214,14 +211,17 @@ let set t ~key ~data =
   match entry_opt t key with
   | None -> add_assuming_not_there t ~key ~data
   | Some entry ->
-    entry.key <- key; (* we update the key because we want the latest key in the table *)
-    entry.data <- data;
+    entry.key <- key;
+    (* we update the key because we want the latest key in the table *)
+    entry.data <- data
 ;;
 
 let add t ~key ~data =
   match entry_opt t key with
   | Some entry -> `Duplicate entry.Entry.data
-  | None -> add_assuming_not_there t ~key ~data; `Ok
+  | None ->
+    add_assuming_not_there t ~key ~data;
+    `Ok
 ;;
 
 let add_exn t ~key ~data =
@@ -229,32 +229,34 @@ let add_exn t ~key ~data =
   | `Ok -> ()
   | `Duplicate _ ->
     let sexp_of_key = sexp_of_key t in
-    failwiths "Bounded_int_table.add_exn of key whose index is already present"
-      (key, t.key_to_int key) [%sexp_of: key * int]
+    failwiths
+      "Bounded_int_table.add_exn of key whose index is already present"
+      (key, t.key_to_int key)
+      [%sexp_of: key * int]
 ;;
 
 let remove t key =
-  begin match entry_opt t key with
-  | None -> ()
-  | Some entry ->
-    t.length <- t.length - 1;
-    t.entries_by_key.( t.key_to_int key ) <- None;
-    let hole = entry.defined_entries_index in
-    let last = t.length in
-    if hole < last
-    then begin
-      match t.defined_entries.( last ) with
-      | None ->
-        let sexp_of_key = sexp_of_key t in
-        failwiths "Bounded_int_table.remove bug" (key, last, t)
-          [%sexp_of: key * int * (key, _) t_detailed]
-      | Some entry_to_put_in_hole as entry_to_put_in_hole_opt ->
-        t.defined_entries.( hole ) <- entry_to_put_in_hole_opt;
-        entry_to_put_in_hole.defined_entries_index <- hole;
-    end;
-    t.defined_entries.( last ) <- None;
-  end;
-  check_invariant t;
+  (match entry_opt t key with
+   | None -> ()
+   | Some entry ->
+     t.length <- t.length - 1;
+     t.entries_by_key.(t.key_to_int key) <- None;
+     let hole = entry.defined_entries_index in
+     let last = t.length in
+     if hole < last
+     then (
+       match t.defined_entries.(last) with
+       | None ->
+         let sexp_of_key = sexp_of_key t in
+         failwiths
+           "Bounded_int_table.remove bug"
+           (key, last, t)
+           [%sexp_of: key * int * (key, _) t_detailed]
+       | Some entry_to_put_in_hole as entry_to_put_in_hole_opt ->
+         t.defined_entries.(hole) <- entry_to_put_in_hole_opt;
+         entry_to_put_in_hole.defined_entries_index <- hole);
+     t.defined_entries.(last) <- None);
+  check_invariant t
 ;;
 
 let existsi t ~f =
@@ -264,9 +266,7 @@ let existsi t ~f =
 ;;
 
 let exists t ~f = existsi t ~f:(fun ~key:_ ~data -> f data)
-
 let for_alli t ~f = not (existsi t ~f:(fun ~key ~data -> not (f ~key ~data)))
-
 let for_all t ~f = for_alli t ~f:(fun ~key:_ ~data -> f data)
 
 let equal key_equal data_equal t1 t2 =
@@ -275,15 +275,15 @@ let equal key_equal data_equal t1 t2 =
     match entry_opt t2 key with
     | None -> false
     | Some entry ->
-      key_equal key entry.Entry.key
-      && data_equal data entry.Entry.data)
+      key_equal key entry.Entry.key && data_equal data entry.Entry.data)
 ;;
 
 module With_key (Key : sig
     type t [@@deriving bin_io, sexp]
-    val to_int : t -> int
-  end) = struct
 
+    val to_int : t -> int
+  end) =
+struct
   type 'data t = (Key.t, 'data) table
   type 'data table = 'data t
 
@@ -301,10 +301,9 @@ module With_key (Key : sig
   ;;
 
   let of_alist alist = Or_error.try_with (fun () -> of_alist_exn alist)
-
   let sexp_of_t sexp_of_data = sexp_of_t Key.sexp_of_t sexp_of_data
 
-  let of_serialized { Serialized. num_keys; alist } =
+  let of_serialized { Serialized.num_keys; alist } =
     let t = create ~num_keys in
     List.iter alist ~f:(fun (key, data) -> add_exn t ~key ~data);
     t
@@ -314,15 +313,15 @@ module With_key (Key : sig
     of_serialized (Serialized.t_of_sexp Key.t_of_sexp data_of_sexp sexp)
   ;;
 
-  include Binable.Of_binable1
-      (struct type 'data t = (Key.t, 'data) Serialized.t [@@deriving bin_io] end)
+  include Binable.Of_binable1 (struct
+      type 'data t = (Key.t, 'data) Serialized.t [@@deriving bin_io]
+    end)
       (struct
         type 'data t = 'data table
 
         let to_binable = to_serialized
         let of_binable = of_serialized
       end)
-
 end
 
 let filter_mapi t ~f =
@@ -334,18 +333,15 @@ let filter_mapi t ~f =
   result
 ;;
 
-let ignore_key  f = fun ~key:_ ~data   -> f data
-let ignore_data f = fun ~key   ~data:_ -> f key
-
+let ignore_key f ~key:_ ~data = f data
+let ignore_data f ~key ~data:_ = f key
 let filter_map t ~f = filter_mapi t ~f:(ignore_key f)
 
 let filteri t ~f =
   filter_mapi t ~f:(fun ~key ~data -> if f ~key ~data then Some data else None)
 ;;
 
-let filter      t ~f = filteri t ~f:(ignore_key  f)
+let filter t ~f = filteri t ~f:(ignore_key f)
 let filter_keys t ~f = filteri t ~f:(ignore_data f)
-
 let mapi t ~f = filter_mapi t ~f:(fun ~key ~data -> Some (f ~key ~data))
-
 let map t ~f = mapi t ~f:(ignore_key f)

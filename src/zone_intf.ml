@@ -14,7 +14,7 @@ module type Time_in_seconds = sig
   module Span : sig
     type t
 
-    val of_int63_seconds                : Int63.t -> t
+    val of_int63_seconds : Int63.t -> t
     val to_int63_seconds_round_down_exn : t -> Int63.t
   end
 
@@ -87,7 +87,8 @@ module type S = sig
   end
 
   (** Gets the index of a time. *)
-  val index                   : t -> Time_in_seconds.t                -> Index.t
+  val index : t -> Time_in_seconds.t -> Index.t
+
   val index_of_date_and_ofday : t -> Time_in_seconds.Date_and_ofday.t -> Index.t
 
   (** Gets the UTC offset of times in a specific range.
@@ -107,11 +108,12 @@ module type S = sig
       back-end for commonly-used time conversion functions. See [Time.Zone] and
       [Time_ns.Zone] for higher-level accessors that return an optional tuple for clock
       shifts in either direction. *)
-  val index_has_prev_clock_shift        : t -> Index.t -> bool
-  val index_prev_clock_shift_time_exn   : t -> Index.t -> Time_in_seconds.t
+  val index_has_prev_clock_shift : t -> Index.t -> bool
+
+  val index_prev_clock_shift_time_exn : t -> Index.t -> Time_in_seconds.t
   val index_prev_clock_shift_amount_exn : t -> Index.t -> Time_in_seconds.Span.t
-  val index_has_next_clock_shift        : t -> Index.t -> bool
-  val index_next_clock_shift_time_exn   : t -> Index.t -> Time_in_seconds.t
+  val index_has_next_clock_shift : t -> Index.t -> bool
+  val index_next_clock_shift_time_exn : t -> Index.t -> Time_in_seconds.t
   val index_next_clock_shift_amount_exn : t -> Index.t -> Time_in_seconds.Span.t
 end
 
@@ -124,10 +126,9 @@ module type S_stable = sig
 end
 
 module type Zone = sig
-  module type S        = S
+  module type S = S
   module type S_stable = S_stable
 
   include S
-
   module Stable : S_stable with type t := t
 end

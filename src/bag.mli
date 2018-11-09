@@ -23,6 +23,7 @@ type 'a t [@@deriving sexp]
 
 (** Much of a bag's interface comes from the generic {!Base.Container} module. *)
 include Container.S1 with type 'a t := 'a t
+
 include Invariant.S1 with type 'a t := 'a t
 
 (** [create ()] returns an empty bag. *)
@@ -31,6 +32,7 @@ val create : unit -> 'a t
 (** [add t v] adds [v] to the bag [t], returning an element that can
     later be removed from the bag.  [add] runs in constant time. *)
 val add : 'a t -> 'a -> 'a Elt.t
+
 val add_unit : 'a t -> 'a -> unit
 
 (** [mem_elt t elt] returns whether or not [elt] is in [t].  It is like [mem] (included
