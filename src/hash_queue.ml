@@ -131,9 +131,10 @@ module type S = sig
   val foldi : 'a t -> init:'b -> f:('b -> key:Key.t -> data:'a -> 'b) -> 'b
 end
 
-module Make (Key : Key) : S with module Key = Key = struct
+module Make_with_table (Key : Key) (Table : Hashtbl_intf.S_plain with type key = Key.t) :
+  S with module Key = Key = struct
   module Key = Key
-  module Table = Hashtbl.Make_plain (Key)
+  module Table = Table
 
   module Key_value = struct
     module T = struct
@@ -162,19 +163,19 @@ module Make (Key : Key) : S with module Key = Key = struct
   let sexp_of_t sexp_of_a t = [%sexp_of: a Key_value.t Doubly_linked.t] t.queue
 
   let invariant t =
-    assert (Doubly_linked.length t.queue = Hashtbl.length t.table);
+    assert (Doubly_linked.length t.queue = Table.length t.table);
     (* Look at each element in the queue, checking:
      *   - every element in the queue is in the hash table
      *   - there are no duplicate keys
     *)
-    let keys = Table.create ~size:(Hashtbl.length t.table) () in
+    let keys = Table.create ~size:(Table.length t.table) () in
     Doubly_linked.iter t.queue ~f:(fun kv ->
       let key = kv.key in
-      match Hashtbl.find t.table key with
+      match Table.find t.table key with
       | None -> assert false
       | Some _ ->
-        assert (not (Hashtbl.mem keys key));
-        Hashtbl.set keys ~key ~data:())
+        assert (not (Table.mem keys key));
+        Table.set keys ~key ~data:())
   ;;
 
   let create ?(growth_allowed = true) ?(size = 16) () =
@@ -197,20 +198,20 @@ module Make (Key : Key) : S with module Key = Key = struct
   let clear t =
     ensure_can_modify t;
     Doubly_linked.clear t.queue;
-    Hashtbl.clear t.table
+    Table.clear t.table
   ;;
 
-  let length t = Hashtbl.length t.table
+  let length t = Table.length t.table
   let is_empty t = length t = 0
 
   let lookup t k =
-    match Hashtbl.find t.table k with
+    match Table.find t.table k with
     | None -> None
     | Some elt -> Some (Elt.value elt).value
   ;;
 
-  let lookup_exn t k = (Elt.value (Hashtbl.find_exn t.table k)).value
-  let mem t k = Hashtbl.mem t.table k
+  let lookup_exn t k = (Elt.value (Table.find_exn t.table k)).value
+  let mem t k = Table.mem t.table k
 
   (* Note that this is the tail-recursive Core_list.map *)
   let to_list t = List.map (Doubly_linked.to_list t.queue) ~f:Key_value.value
@@ -237,7 +238,7 @@ module Make (Key : Key) : S with module Key = Key = struct
 
   let enqueue t back_or_front key value =
     ensure_can_modify t;
-    if Hashtbl.mem t.table key
+    if Table.mem t.table key
     then `Key_already_present
     else (
       let contents = { Key_value.key; value } in
@@ -246,7 +247,7 @@ module Make (Key : Key) : S with module Key = Key = struct
         | `back -> Doubly_linked.insert_last t.queue contents
         | `front -> Doubly_linked.insert_first t.queue contents
       in
-      Hashtbl.set t.table ~key ~data:elt;
+      Table.set t.table ~key ~data:elt;
       `Ok)
   ;;
 
@@ -268,7 +269,7 @@ module Make (Key : Key) : S with module Key = Key = struct
      option. *)
   let lookup_and_move_to_back_exn t key =
     ensure_can_modify t;
-    let elt = Hashtbl.find_exn t.table key in
+    let elt = Table.find_exn t.table key in
     Doubly_linked.move_to_back t.queue elt;
     Key_value.value (Elt.value elt)
   ;;
@@ -276,14 +277,14 @@ module Make (Key : Key) : S with module Key = Key = struct
   let lookup_and_move_to_back t key =
     let open Option.Let_syntax in
     ensure_can_modify t;
-    let%map elt = Hashtbl.find t.table key in
+    let%map elt = Table.find t.table key in
     Doubly_linked.move_to_back t.queue elt;
     Key_value.value (Elt.value elt)
   ;;
 
   let lookup_and_move_to_front_exn t key =
     ensure_can_modify t;
-    let elt = Hashtbl.find_exn t.table key in
+    let elt = Table.find_exn t.table key in
     Doubly_linked.move_to_front t.queue elt;
     Key_value.value (Elt.value elt)
   ;;
@@ -291,7 +292,7 @@ module Make (Key : Key) : S with module Key = Key = struct
   let lookup_and_move_to_front t key =
     let open Option.Let_syntax in
     ensure_can_modify t;
-    let%map elt = Hashtbl.find t.table key in
+    let%map elt = Table.find t.table key in
     Doubly_linked.move_to_front t.queue elt;
     Key_value.value (Elt.value elt)
   ;;
@@ -301,7 +302,7 @@ module Make (Key : Key) : S with module Key = Key = struct
     match Doubly_linked.remove_first t.queue with
     | None -> None
     | Some kv ->
-      Hashtbl.remove t.table kv.key;
+      Table.remove t.table kv.key;
       Some (kv.key, kv.value)
   ;;
 
@@ -377,11 +378,11 @@ module Make (Key : Key) : S with module Key = Key = struct
 
   let remove t k =
     ensure_can_modify t;
-    match Hashtbl.find t.table k with
+    match Table.find t.table k with
     | None -> `No_such_key
     | Some elt ->
       Doubly_linked.remove t.queue elt;
-      Hashtbl.remove t.table (Elt.value elt).key;
+      Table.remove t.table (Elt.value elt).key;
       `Ok
   ;;
 
@@ -396,7 +397,7 @@ module Make (Key : Key) : S with module Key = Key = struct
 
   let replace t k v =
     ensure_can_modify t;
-    match Hashtbl.find t.table k with
+    match Table.find t.table k with
     | None -> `No_such_key
     | Some elt ->
       (Elt.value elt).value <- v;
@@ -412,3 +413,6 @@ module Make (Key : Key) : S with module Key = Key = struct
     | `Ok -> ()
   ;;
 end
+
+module Make (Key : Key) : S with module Key = Key =
+  Make_with_table (Key) (Hashtbl.Make_plain (Key))
