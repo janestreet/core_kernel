@@ -462,15 +462,16 @@ let iter t ~f =
   loop [ t.root ]
 ;;
 
+let length t = Node.Pool.length t.pool
+
 module C = Container.Make (struct
     type nonrec 'a t = 'a t
 
     let fold = fold
     let iter = `Custom iter
+    let length = `Custom length
   end)
 
-(* we can do better than the O(n) of [C.length] *)
-let length t = Node.Pool.length t.pool
 let is_empty t = Node.is_empty t.root
 let mem = C.mem
 let exists = C.exists

@@ -420,8 +420,11 @@ let last_week_of_year y =
 ;;
 
 (* See http://en.wikipedia.org/wiki/ISO_week_date or ISO 8601 for the details of this
-   algorithm. *)
-let week_number t =
+   algorithm.
+
+   Uses a [~f] argument to avoid allocating a tuple when called by [week_number].
+*)
+let call_with_week_and_year t ~f =
   let ordinal = ordinal_date t in
   let weekday = Day_of_week.iso_8601_weekday_number (day_of_week t) in
   (* [ordinal - weekday + 4] is the ordinal of this week's Thursday, then (n + 6) / 7 is
@@ -429,12 +432,14 @@ let week_number t =
   let week = (ordinal - weekday + 10) / 7 in
   let year = year t in
   if Int.( < ) week 1
-  then last_week_of_year (year - 1)
+  then f ~week:(last_week_of_year (year - 1)) ~year:(year - 1)
   else if Int.( > ) week (last_week_of_year year)
-  then 1
-  else week
+  then f ~week:1 ~year:(year + 1)
+  else f ~week ~year
 ;;
 
+let week_number_and_year t = call_with_week_and_year t ~f:(fun ~week ~year -> week, year)
+let week_number t = call_with_week_and_year t ~f:(fun ~week ~year:_ -> week)
 let is_weekend t = Day_of_week.is_sun_or_sat (day_of_week t)
 let is_weekday t = not (is_weekend t)
 let is_business_day t ~is_holiday = is_weekday t && not (is_holiday t)

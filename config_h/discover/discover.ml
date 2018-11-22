@@ -1,5 +1,5 @@
 open Base
-module C = Configurator
+module C = Configurator.V1
 
 let eventfd_code = {|
 #include <sys/eventfd.h>

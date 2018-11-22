@@ -140,6 +140,8 @@ module F (Base : Base) : S with type base = Base.t = struct
              f (get t i)
            done)
     ;;
+
+    let length = `Custom length
   end
 
   module C = Container.Make0 (Make_arg)
@@ -149,9 +151,9 @@ module F (Base : Base) : S with type base = Base.t = struct
   let fold_result = C.fold_result
   let fold_until = C.fold_until
 
-  (* O(1) length makes this better than the C. counterparts *)
-  let to_array t = Array.init (length t) ~f:(get t)
+  (* [C.to_list] has to construct then reverse the list *)
   let to_list t = List.init (length t) ~f:(get t)
+  let to_array = C.to_array
   let find_map = C.find_map
   let find = C.find
   let exists = C.exists

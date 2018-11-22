@@ -366,12 +366,18 @@ let iter t ~f =
       iter_loop first f first)
 ;;
 
+let length t =
+  match !t with
+  | None -> 0
+  | Some first -> Header.length (Elt.header first)
+;;
+
 module C = Container.Make (struct
-    type 'a t_ = 'a t
-    type 'a t = 'a t_
+    type nonrec 'a t = 'a t
 
     let fold t ~init ~f = fold_elt_1 t ~init f ~f:(fun f acc elt -> f acc (Elt.value elt))
     let iter = `Custom iter
+    let length = `Custom length
   end)
 
 let count = C.count
@@ -421,13 +427,6 @@ let fold_right t ~init ~f =
 ;;
 
 let to_list t = fold_right t ~init:[] ~f:(fun x tl -> x :: tl)
-
-let length t =
-  match !t with
-  | None -> 0
-  | Some first -> Header.length (Elt.header first)
-;;
-
 let sexp_of_t sexp_of_a t = List.sexp_of_t sexp_of_a (to_list t)
 let t_of_sexp a_of_sexp s = of_list (List.t_of_sexp a_of_sexp s)
 let copy t = of_list (to_list t)

@@ -40,14 +40,22 @@ module type Date0 = sig
   val year : t -> int
   val day_of_week : t -> Day_of_week.t
 
-  (** Week of the year, from 1 to 53.  According to ISO 8601, weeks start on Monday, and the
-      first week of a year is the week that contains the first Thursday of the year.  Notice
-      that this means that dates near the end of the year can have week number 1, and dates
-      near the beginning of the year can have week number 52 or 53.
+  (** Week of the year, from 1 to 53, along with the week-numbering year to which the week
+      belongs. The week-numbering year may not correspond to the calendar year in which
+      the provided date occurs.
 
-      Warning: the triple (year, week number, week day) does not identify a date -- e.g.
-      2012-01-02 and 2012-12-31 are both Mondays of week 1. (However, if instead of the
-      year, you use the year of the nearest Thursday, then it does work.) *)
+      According to ISO 8601, weeks start on Monday, and the first week of a year is the
+      week that contains the first Thursday of the year. This means that dates near the
+      end of the calendar year can have week number 1 and belong to the following
+      week-numbering year, and dates near the beginning of the calendar year can have week
+      number 52 or 53 and belong to the previous week-numbering year.
+
+      The triple (week-numbering year, week number, week day) uniquely identifies a
+      particular date, which is not true if the calendar year is used instead.
+  *)
+  val week_number_and_year : t -> int * int
+
+  (** See {!week_number_and_year} for the meaning of week number.  *)
   val week_number : t -> int
 
   val is_weekend : t -> bool

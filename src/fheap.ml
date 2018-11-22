@@ -109,14 +109,16 @@ let fold t ~init ~f =
   | Some node -> loop init [ node ]
 ;;
 
+let length t = t.length
+
 module C = Container.Make (struct
     type nonrec 'a t = 'a t
 
     let fold = fold
     let iter = `Define_using_fold
+    let length = `Custom length
   end)
 
-let length t = t.length
 let is_empty t = Option.is_none t.heap
 let iter = C.iter
 let mem = C.mem

@@ -177,7 +177,7 @@ let%expect_test "add_years" =
     1904-02-29 +  4 years = 1908-02-29 |}]
 ;;
 
-let%test_module "week_number" =
+let%test_module "week_number and week_number_and_year" =
   (module struct
     let%test_unit _ =
       [%test_result: int] (ordinal_date (create_exn ~y:2014 ~m:Jan ~d:1)) ~expect:1
@@ -191,17 +191,18 @@ let%test_module "week_number" =
       [%test_result: int] (ordinal_date (create_exn ~y:2014 ~m:Feb ~d:28)) ~expect:59
     ;;
 
-    let test_week_number y m d ~expect =
-      [%test_result: int] (week_number (create_exn ~y ~m ~d)) ~expect
+    let test_week_number_and_year y m d ~expect =
+      [%test_result: int] (week_number (create_exn ~y ~m ~d)) ~expect:(fst expect);
+      [%test_result: int * int] (week_number_and_year (create_exn ~y ~m ~d)) ~expect
     ;;
 
-    let%test_unit _ = test_week_number 2014 Jan 1 ~expect:1
-    let%test_unit _ = test_week_number 2014 Dec 31 ~expect:1
-    let%test_unit _ = test_week_number 2010 Jan 1 ~expect:53
-    let%test_unit _ = test_week_number 2017 Jan 1 ~expect:52
-    let%test_unit _ = test_week_number 2014 Jan 10 ~expect:2
-    let%test_unit _ = test_week_number 2012 Jan 1 ~expect:52
-    let%test_unit _ = test_week_number 2012 Dec 31 ~expect:1
+    let%test_unit _ = test_week_number_and_year 2014 Jan 1 ~expect:(1, 2014)
+    let%test_unit _ = test_week_number_and_year 2014 Dec 31 ~expect:(1, 2015)
+    let%test_unit _ = test_week_number_and_year 2010 Jan 1 ~expect:(53, 2009)
+    let%test_unit _ = test_week_number_and_year 2017 Jan 1 ~expect:(52, 2016)
+    let%test_unit _ = test_week_number_and_year 2014 Jan 10 ~expect:(2, 2014)
+    let%test_unit _ = test_week_number_and_year 2012 Jan 1 ~expect:(52, 2011)
+    let%test_unit _ = test_week_number_and_year 2012 Dec 31 ~expect:(1, 2013)
   end)
 ;;
 

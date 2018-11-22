@@ -20,6 +20,7 @@ module Stable = struct
 
     include T
     include Comparable.Stable.V1.Make (T)
+    include Stable_containers.Hashable.V1.Make (T)
   end
 end
 

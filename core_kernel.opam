@@ -12,7 +12,6 @@ depends: [
   "base"
   "base_quickcheck"
   "bin_prot"
-  "configurator"
   "fieldslib"
   "jane-street-headers"
   "ppx_assert"
@@ -27,6 +26,7 @@ depends: [
   "stdio"
   "typerep"
   "variantslib"
+  "dune"
   "jbuilder"                {build & >= "1.0+beta18.1"}
   "ocaml-migrate-parsetree" {>= "1.0"}
   "ppxlib"                  {>= "0.1.0"}

@@ -54,8 +54,8 @@ val gen_with_length : int -> char Quickcheck.Generator.t -> t Quickcheck.Generat
 
 (** Note that [string] is already stable by itself, since as a primitive type it is an
     integral part of the sexp / bin_io protocol. [String.Stable] exists only to introduce
-    [String.Stable.Set] and [String.Stable.Map], and provide interface uniformity with
-    other stable types. *)
+    [String.Stable.Set], [String.Stable.Map], [String.Stable.Table], and provide interface
+    uniformity with other stable types. *)
 module Stable : sig
   module V1 : sig
     type nonrec t = t [@@deriving hash]
@@ -64,5 +64,7 @@ module Stable : sig
       Stable_comparable.V1
       with type t := t
       with type comparator_witness = comparator_witness
+
+    include Stable_containers.Hashable.V1.S with type key := t
   end
 end

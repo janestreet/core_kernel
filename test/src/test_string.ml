@@ -45,3 +45,28 @@ let%test_module "take_while" =
     let%test_unit _ = [%test_result: t] (rtake_while "123456" ~f) ~expect:"123456"
   end)
 ;;
+
+let%test_module "Verify reading/writing stable table sexp" =
+  (module struct
+    let expected_sexp = Sexp.of_string "((alpha beta) (delta gamma))"
+
+    let table =
+      let s = String.Table.create () in
+      Hashtbl.add_exn s ~key:"delta" ~data:"gamma";
+      Hashtbl.add_exn s ~key:"alpha" ~data:"beta";
+      s
+    ;;
+
+    let%expect_test "sexp_of_t" =
+      print_s [%sexp (table : string String.Stable.V1.Table.t)];
+      [%expect {|
+        ((alpha beta)
+         (delta gamma)) |}]
+    ;;
+
+    let%test_unit "t_of_sexp" =
+      let loaded_table = [%of_sexp: string String.Stable.V1.Table.t] expected_sexp in
+      assert (Hashtbl.equal loaded_table table String.equal)
+    ;;
+  end)
+;;

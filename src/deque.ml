@@ -209,6 +209,7 @@ module C = Container.Make (struct
 
     let fold = fold
     let iter = `Custom iter
+    let length = `Custom length
   end)
 
 let count = C.count

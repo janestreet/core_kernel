@@ -314,6 +314,7 @@ module C = Container.Make (struct
     ;;
 
     let iter = `Define_using_fold
+    let length = `Define_using_fold
   end)
 
 let count = C.count
