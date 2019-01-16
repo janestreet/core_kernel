@@ -1,6 +1,8 @@
 open! Import
 open! Std_internal
 
+type t = string [@@deriving bin_io, compare, sexp]
+
 include struct
   open Caml.Filename
 

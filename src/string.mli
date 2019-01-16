@@ -65,6 +65,6 @@ module Stable : sig
       with type t := t
       with type comparator_witness = comparator_witness
 
-    include Stable_containers.Hashable.V1.S with type key := t
+    include Hashable.Stable.V1.S with type key := t
   end
 end

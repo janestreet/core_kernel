@@ -1,0 +1,1 @@
+(executables (names o) (libraries core_kernel) (preprocess (pps ppx_jane)))

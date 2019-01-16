@@ -34,7 +34,7 @@ let fst3 (x, _, _) = x
 let snd3 (_, y, _) = y
 let trd3 (_, _, z) = z
 
-let uw = function
+let[@deprecated "[since 2018-12] Use [Option.value_exn]"] uw = function
   | Some x -> x
   | None -> raise Caml.Not_found
 ;;
@@ -75,6 +75,7 @@ let protect = Exn.protect
 let protectx = Exn.protectx
 let raise_s = Error.raise_s
 let round = Float.round
+let ( **. ) = Base.( **. )
 
 let sprintf = Printf.sprintf
 let stage = Staged.stage
@@ -87,29 +88,32 @@ let with_return_option = With_return.with_return_option
 
 
 
-
-
 include Typerep_lib.Std_internal
 
 include (
 struct
-  (* [deriving hash] in missing for [array] and [ref] since these types are mutable.
-     (string is also mutable, but we pretend it isn't for hashing purposes) *)
-  type 'a array = 'a Array.t [@@deriving bin_io, compare, sexp, typerep]
-  type bool = Bool.t [@@deriving bin_io, compare, hash, sexp, typerep]
-  type char = Char.t [@@deriving bin_io, compare, hash, sexp, typerep]
-  type float = Float.t [@@deriving bin_io, compare, hash, sexp, typerep]
-  type int = Int.t [@@deriving bin_io, compare, hash, sexp, typerep]
-  type int32 = Int32.t [@@deriving bin_io, compare, hash, sexp, typerep]
-  type int64 = Int64.t [@@deriving bin_io, compare, hash, sexp, typerep]
+  (* [deriving hash] is missing for [array], [bytes], and [ref] since these types are
+     mutable. *)
+  type 'a array = 'a Array.t [@@deriving bin_io, compare, equal, sexp, typerep]
+  type bool = Bool.t [@@deriving bin_io, compare, hash, equal, sexp, typerep]
+  type char = Char.t [@@deriving bin_io, compare, hash, equal, sexp, typerep]
+  type float = Float.t [@@deriving bin_io, compare, hash, equal, sexp, typerep]
+  type int = Int.t [@@deriving bin_io, compare, hash, equal, sexp, typerep]
+  type int32 = Int32.t [@@deriving bin_io, compare, hash, equal, sexp, typerep]
+  type int64 = Int64.t [@@deriving bin_io, compare, hash, equal, sexp, typerep]
   type 'a lazy_t = 'a Lazy.t [@@deriving bin_io, compare, hash, sexp, typerep]
-  type 'a list = 'a List.t [@@deriving bin_io, compare, hash, sexp, typerep]
-  type nativeint = Nativeint.t [@@deriving bin_io, compare, hash, sexp, typerep]
-  type 'a option = 'a Option.t [@@deriving bin_io, compare, hash, sexp, typerep]
-  type string = String.t [@@deriving bin_io, compare, hash, sexp, typerep]
-  type bytes = Bytes.t [@@deriving bin_io, compare, sexp, typerep]
-  type 'a ref = 'a Ref.t [@@deriving bin_io, compare, sexp, typerep]
-  type unit = Unit.t [@@deriving bin_io, compare, hash, sexp, typerep]
+  type 'a list = 'a List.t [@@deriving bin_io, compare, hash, equal, sexp, typerep]
+
+  type nativeint = Nativeint.t
+  [@@deriving bin_io, compare, equal, hash, sexp, typerep]
+
+  type 'a option = 'a Option.t
+  [@@deriving bin_io, compare, equal, hash, sexp, typerep]
+
+  type string = String.t [@@deriving bin_io, compare, equal, hash, sexp, typerep]
+  type bytes = Bytes.t [@@deriving bin_io, compare, equal, sexp, typerep]
+  type 'a ref = 'a Ref.t [@@deriving bin_io, compare, equal, sexp, typerep]
+  type unit = Unit.t [@@deriving bin_io, compare, equal, hash, sexp, typerep]
 
   (* Bin_prot has optimized functions for float arrays *)
   type float_array = Bin_prot.Std.float_array [@@deriving bin_io]
@@ -124,21 +128,21 @@ struct
   with type float_array := float_array)
 end :
 sig
-  type 'a array [@@deriving bin_io, compare, sexp, typerep]
-  type bool [@@deriving bin_io, compare, hash, sexp, typerep]
-  type char [@@deriving bin_io, compare, hash, sexp, typerep]
-  type float [@@deriving bin_io, compare, hash, sexp, typerep]
-  type int [@@deriving bin_io, compare, hash, sexp, typerep]
-  type int32 [@@deriving bin_io, compare, hash, sexp, typerep]
-  type int64 [@@deriving bin_io, compare, hash, sexp, typerep]
+  type 'a array [@@deriving bin_io, compare, equal, sexp, typerep]
+  type bool [@@deriving bin_io, compare, equal, hash, sexp, typerep]
+  type char [@@deriving bin_io, compare, equal, hash, sexp, typerep]
+  type float [@@deriving bin_io, compare, equal, hash, sexp, typerep]
+  type int [@@deriving bin_io, compare, equal, hash, sexp, typerep]
+  type int32 [@@deriving bin_io, compare, equal, hash, sexp, typerep]
+  type int64 [@@deriving bin_io, compare, equal, hash, sexp, typerep]
   type 'a lazy_t [@@deriving bin_io, compare, hash, sexp, typerep]
-  type 'a list [@@deriving bin_io, compare, hash, sexp, typerep]
-  type nativeint [@@deriving bin_io, compare, hash, sexp, typerep]
-  type 'a option [@@deriving bin_io, compare, hash, sexp, typerep]
-  type string [@@deriving bin_io, compare, hash, sexp, typerep]
-  type bytes [@@deriving bin_io, compare, sexp, typerep]
-  type 'a ref [@@deriving bin_io, compare, sexp, typerep]
-  type unit [@@deriving bin_io, compare, hash, sexp, typerep]
+  type 'a list [@@deriving bin_io, compare, equal, hash, sexp, typerep]
+  type nativeint [@@deriving bin_io, compare, equal, hash, sexp, typerep]
+  type 'a option [@@deriving bin_io, compare, equal, hash, sexp, typerep]
+  type string [@@deriving bin_io, compare, equal, hash, sexp, typerep]
+  type bytes [@@deriving bin_io, compare, equal, sexp, typerep]
+  type 'a ref [@@deriving bin_io, compare, equal, sexp, typerep]
+  type unit [@@deriving bin_io, compare, equal, hash, sexp, typerep]
   type float_array = float array [@@deriving bin_io, compare, sexp, typerep]
 end
 with type 'a array := 'a array

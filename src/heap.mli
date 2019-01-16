@@ -1,10 +1,7 @@
 (** Heap implementation based on a pairing-heap.
 
     This heap implementations supports an arbitrary element type via a comparison
-    function. If you need a heap with elements ordered by integers, then it may be more
-    efficient to use a [Timing_wheel.Priority_queue], which is a heap implementation
-    specialized to integer keys, and with some other performance differences and usage
-    restrictions. *)
+    function. *)
 
 open! Import
 

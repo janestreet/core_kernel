@@ -17,17 +17,17 @@ let%test_unit _ =
   (* tests over empty queue *)
   inv ();
   assert (Hq.is_empty hq);
-  assert (Hq.dequeue hq = None);
+  assert (Hq.dequeue_front hq = None);
   assert (
     try
-      ignore (Hq.dequeue_exn hq);
+      ignore (Hq.dequeue_front_exn hq);
       false
     with
     | _ -> true);
-  assert (Hq.dequeue_with_key hq = None);
+  assert (Hq.dequeue_front_with_key hq = None);
   assert (
     try
-      ignore (Hq.dequeue_with_key_exn hq);
+      ignore (Hq.dequeue_front_with_key_exn hq);
       false
     with
     | _ -> true);
@@ -70,7 +70,7 @@ let%test_unit _ =
   Hq.iter hq ~f:(fun x -> sum := !sum + x);
   assert (!sum = n * (n + 1) / 2);
   assert (Hq.mem hq "1");
-  ignore (Hq.dequeue hq);
+  ignore (Hq.dequeue_front hq);
   inv ();
   assert (not (Hq.mem hq "1"));
   assert (Hq.length hq = n - 1);
@@ -104,7 +104,7 @@ let%test_unit _ =
   assert (Hq.replace hq "1" 42 = `Ok);
   assert (Hq.lookup hq "1" = Some 42);
   assert (Hq.lookup_exn hq "1" = 42);
-  assert (Hq.dequeue_with_key hq = Some ("1", 42));
+  assert (Hq.dequeue_front_with_key hq = Some ("1", 42));
   assert (Hq.replace hq "1" 42 = `No_such_key);
   assert (
     try
@@ -136,10 +136,10 @@ let%test_unit _ =
    with
    | _ -> ());
   [%test_result: int] (Hq.lookup_and_move_to_back_exn hq "2") ~expect:2;
-  [%test_result: string * int] (Hq.dequeue_with_key_exn hq) ~expect:("1", 1);
-  [%test_result: string * int] (Hq.dequeue_with_key_exn hq) ~expect:("3", 3);
-  [%test_result: string * int] (Hq.dequeue_with_key_exn hq) ~expect:("2", 2);
-  [%test_result: (string * int) option] (Hq.dequeue_with_key hq) ~expect:None
+  [%test_result: string * int] (Hq.dequeue_front_with_key_exn hq) ~expect:("1", 1);
+  [%test_result: string * int] (Hq.dequeue_front_with_key_exn hq) ~expect:("3", 3);
+  [%test_result: string * int] (Hq.dequeue_front_with_key_exn hq) ~expect:("2", 2);
+  [%test_result: (string * int) option] (Hq.dequeue_front_with_key hq) ~expect:None
 ;;
 
 let%expect_test "enqueue_front, enqueue_front_exn" =
@@ -218,4 +218,71 @@ let%expect_test "lookup_and_move_to_front_exn" =
   [%expect {| 5 |}];
   print_s [%sexp (Hq.to_list hq : int list)];
   [%expect {| (5 1 2 3 4 6 7 8 9 10) |}]
+;;
+
+let%expect_test "dequeue_back, dequeue_back_exn" =
+  let open Expect_test_helpers_kernel in
+  let make_hq () =
+    let hq = Hq.create () in
+    for i = 1 to 10 do
+      Hq.enqueue_front_exn hq (Int.to_string i) i
+    done;
+    hq
+  in
+  let hq = make_hq () in
+  for _ = 1 to 11 do
+    print_s [%sexp (Hq.dequeue_back hq : int option)]
+  done;
+  [%expect
+    {|
+    (1)
+    (2)
+    (3)
+    (4)
+    (5)
+    (6)
+    (7)
+    (8)
+    (9)
+    (10)
+    () |}];
+  let hq = make_hq () in
+  for _ = 1 to 10 do
+    print_s [%sexp (Hq.dequeue_back_exn hq : int)]
+  done;
+  [%expect {|
+    1
+    2
+    3
+    4
+    5
+    6
+    7
+    8
+    9
+    10 |}]
+;;
+
+let%expect_test "drop" =
+  let open Expect_test_helpers_kernel in
+  let make_hq () =
+    let hq = Hq.create () in
+    for i = 1 to 10 do
+      Hq.enqueue_back_exn hq (Int.to_string i) i
+    done;
+    hq
+  in
+  let hq = make_hq () in
+  Hq.drop_back ~n:3 hq;
+  print_s [%sexp (Hq.to_list hq : int list)];
+  [%expect {| (1 2 3 4 5 6 7) |}];
+  let hq = make_hq () in
+  Hq.drop_front ~n:4 hq;
+  print_s [%sexp (Hq.to_list hq : int list)];
+  [%expect {| (5 6 7 8 9 10) |}];
+  (* Check when n > length of list *)
+  let hq = make_hq () in
+  Hq.drop_back ~n:20 hq;
+  print_s [%sexp (Hq.to_list hq : int list)];
+  [%expect {| () |}]
 ;;

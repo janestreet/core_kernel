@@ -1,4 +1,4 @@
-(** This module extends {{!Base.source_code_position}[Base.source_code_position]}. *)
+(** This module extends {{!Base.Source_code_position}[Base.Source_code_position]}. *)
 
 (** @open *)
 include module type of struct

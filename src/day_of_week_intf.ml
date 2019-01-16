@@ -59,7 +59,7 @@ module type Day_of_week = sig
         with type comparable := t
         with type comparator_witness := comparator_witness
 
-      include Stable_containers.Hashable.V1.S with type key := t
+      include Hashable.Stable.V1.S with type key := t
     end
   end
 end

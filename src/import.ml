@@ -7,9 +7,11 @@ module Avltree = Base.Avltree
 module Backtrace = Base.Backtrace
 module Binary_search = Base.Binary_search
 module Comparisons = Base.Comparisons
+module Continue_or_stop = Base.Continue_or_stop
 module Equal = Base.Equal
 module Exn = Base.Exn
 module Floatable = Base.Floatable
+module Formatter = Base.Formatter
 module Hash = Base.Hash
 module Hasher = Base.Hasher
 module Indexed_container = Base.Indexed_container
@@ -21,7 +23,6 @@ module Obj_array = Base.Not_exposed_properly.Obj_array
 [@@deprecated "[since 2018-09] Replace [Obj_array.t] with [Obj.t Uniform_array.t]"]
 
 module Poly = Base.Poly
-module Polymorphic_compare = Base.Polymorphic_compare
 
 module Popcount = Base.Popcount
 [@@warning "-3"]
@@ -31,6 +32,7 @@ module Pretty_printer = Base.Pretty_printer
 module Random = Base.Random
 module Staged = Base.Staged
 module Stringable = Base.Stringable
+module Uchar = Base.Uchar
 module Validate = Base.Validate
 module With_return = Base.With_return
 module Word_size = Base.Word_size

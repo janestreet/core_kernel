@@ -54,21 +54,21 @@ module Robust_compare = struct
     (* We have test in the tree that rely on these functions not allocating, even without
        X_LIBRARY_INLING. The only way to ensure that these don't create temporary boxed
        floats without X_LIBRARY_INLING is for this code to see the float operations as
-       externals, as defined in [Pervasives]. That's why we open [Caml.Pervasives]
-       here. *)
-    open Caml.Pervasives
+       externals, as defined in [Pervasives]. That's why we use [Poly] and float
+       arithmetic from [Caml]. *)
+    open Poly
 
     let robust_comparison_tolerance = T.robust_comparison_tolerance
-    let ( >=. ) x y = x >= y -. robust_comparison_tolerance
+    let ( >=. ) x y = x >= Caml.( -. ) y robust_comparison_tolerance
     let ( <=. ) x y = y >=. x
     let ( =. ) x y = x >=. y && y >=. x
-    let ( >. ) x y = x > y +. robust_comparison_tolerance
+    let ( >. ) x y = x > Caml.( +. ) y robust_comparison_tolerance
     let ( <. ) x y = y >. x
     let ( <>. ) x y = not (x =. y)
 
     let robustly_compare x y =
-      let d = x -. y in
-      if d < ~-.robust_comparison_tolerance
+      let d = Caml.( -. ) x y in
+      if d < Caml.( ~-. ) robust_comparison_tolerance
       then -1
       else if d > robust_comparison_tolerance
       then 1

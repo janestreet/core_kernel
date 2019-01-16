@@ -6,7 +6,7 @@ let%test_module "shrinker" =
   (module struct
     let t0 =
       Shrinker.create (fun v ->
-        if Pervasives.( = ) 0 v then Sequence.empty else Sequence.singleton 0)
+        if Poly.( = ) 0 v then Sequence.empty else Sequence.singleton 0)
     ;;
 
     let test_list = [ 1; 2; 3 ]

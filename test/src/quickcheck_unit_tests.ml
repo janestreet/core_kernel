@@ -774,7 +774,7 @@ module Shrinker = struct
 
     let%test_module "singleton" =
       (module struct
-        let t = singleton Pervasives.( = ) 42
+        let t = singleton Poly.( = ) 42
 
         let%test_unit "singleton produces values" =
           let shrunk = shrink t 2 |> Sequence.to_list in
@@ -790,12 +790,12 @@ module Shrinker = struct
       end)
     ;;
 
-    let t0 = singleton Pervasives.( = ) 0
-    let t1 = singleton Pervasives.( = ) 1
-    let t2 = singleton Pervasives.( = ) 2
-    let t3 = singleton Pervasives.( = ) 3
-    let t4 = singleton Pervasives.( = ) 4
-    let t5 = singleton Pervasives.( = ) 5
+    let t0 = singleton Poly.( = ) 0
+    let t1 = singleton Poly.( = ) 1
+    let t2 = singleton Poly.( = ) 2
+    let t3 = singleton Poly.( = ) 3
+    let t4 = singleton Poly.( = ) 4
+    let t5 = singleton Poly.( = ) 5
   end
 
   let%test_module "tuple shrinkers" =
@@ -964,7 +964,7 @@ module Shrinker = struct
     (module struct
       let t0 =
         Shrinker.create (fun v ->
-          if Pervasives.( = ) 0 v then Sequence.empty else Sequence.singleton 0)
+          if Poly.( = ) 0 v then Sequence.empty else Sequence.singleton 0)
       ;;
 
       let test_list = [ 1; 2; 3 ]

@@ -64,11 +64,17 @@ let invariant invariant_a t =
 
 let create () = { value = None; set_at = [%here] }
 
-let set (type a) (t : a t) here value =
+let set_internal t here value =
+  t.value <- Some value;
+  t.set_at <- here
+;;
+
+let set_if_none t here value = if Option.is_none t.value then set_internal t here value
+
+let set t here value =
   if Option.is_none t.value
   then (
-    t.value <- Some value;
-    t.set_at <- here;
+    set_internal t here value;
     Ok ())
   else
     Or_error.error_s

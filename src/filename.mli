@@ -1,5 +1,7 @@
 open! Import
 
+type t = string [@@deriving bin_io, compare, sexp]
+
 (**  The path of the root.*)
 val root : string
 

@@ -2,7 +2,7 @@ open! Core_kernel
 open! Import
 
 let%expect_test "[Pervasives.float_of_string] supports underscores" =
-  print_endline (Pervasives.string_of_float (Pervasives.float_of_string "1_234.567_8"));
+  print_endline (Caml.string_of_float (Caml.float_of_string "1_234.567_8"));
   [%expect {|
     1234.5678 |}]
 ;;

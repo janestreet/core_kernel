@@ -154,7 +154,7 @@ let%test_module _ =
         include Sexpable.Of_stringable.V1 (Int)
         include Binable.Of_stringable.V1 (Int)
 
-        let equal = Pervasives.( = )
+        let equal = Poly.( = )
         let tests = int_tests
       end)
 

@@ -4,27 +4,11 @@ open Base_quickcheck
 module Array = Base.Array
 module Bool = Base.Bool
 module Char = Base.Char
+module Float = Base.Float
 module Int = Base.Int
 module List = Base.List
 module Option = Base.Option
 module Type_equal = Base.Type_equal
-
-module Pre_float : Comparisons.S with type t = float = struct
-  type t = float
-
-  open Pervasives
-
-  let compare (x : t) (y : t) = compare x y
-  let equal (x : t) (y : t) = compare x y = 0
-  let min (x : t) (y : t) = min x y
-  let max (x : t) (y : t) = max x y
-  let ( >= ) (x : t) (y : t) = x >= y
-  let ( <= ) (x : t) (y : t) = x <= y
-  let ( = ) (x : t) (y : t) = x = y
-  let ( > ) (x : t) (y : t) = x > y
-  let ( < ) (x : t) (y : t) = x < y
-  let ( <> ) (x : t) (y : t) = x <> y
-end
 
 module Pre_int : Pre_int with type t = int = struct
   include Base.Int
@@ -144,7 +128,7 @@ module Generator = struct
   let of_fun f = create (fun ~size ~random -> generate (f ()) ~size ~random)
 
   let of_sequence ~p seq =
-    if Pervasives.( <= ) p 0. || Pervasives.( > ) p 1.
+    if Float.( <= ) p 0. || Float.( > ) p 1.
     then
       failwith (Printf.sprintf "Generator.of_sequence: probability [%f] out of bounds" p);
     Sequence.delayed_fold
@@ -189,7 +173,7 @@ module Generator = struct
     fn dom int >>| fun get_index x y -> [%compare: int] (get_index x) (get_index y)
   ;;
 
-  let equal_fn dom = compare_fn dom >>| fun cmp x y -> Pervasives.( = ) (cmp x y) 0
+  let equal_fn dom = compare_fn dom >>| fun cmp x y -> Int.( = ) (cmp x y) 0
 end
 
 module Shrinker = struct

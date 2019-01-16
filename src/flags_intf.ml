@@ -39,6 +39,10 @@ module type S = sig
 
   (** [is_subset t ~of_] is [t = intersect t of_] *)
   val is_subset : t -> of_:t -> bool
+
+  module Unstable : sig
+    type t [@@deriving bin_io, compare, sexp]
+  end
 end
 
 module type Make_arg = sig

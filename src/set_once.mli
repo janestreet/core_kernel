@@ -12,6 +12,11 @@ include Invariant.S1 with type 'a t := 'a t
 val create : unit -> _ t
 val set : 'a t -> Source_code_position.t -> 'a -> unit Or_error.t
 val set_exn : 'a t -> Source_code_position.t -> 'a -> unit
+
+(** [set_if_none t here a] will do nothing if [is_some t], otherwise it will [set_exn t
+    here a]. *)
+val set_if_none : 'a t -> Source_code_position.t -> 'a -> unit
+
 val get : 'a t -> 'a option
 val get_exn : 'a t -> Source_code_position.t -> 'a
 val is_none : _ t -> bool

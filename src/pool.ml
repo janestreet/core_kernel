@@ -8,7 +8,7 @@ let arch_sixtyfour = Sys.word_size = 64
 
 module Int = struct
   let num_bits = Int.num_bits
-  let max_value = Pervasives.max_int
+  let max_value = Caml.max_int
   let to_string = string_of_int
 end
 

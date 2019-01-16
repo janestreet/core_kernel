@@ -537,6 +537,7 @@ module Path : sig
   val to_string_dots : t -> string
   val pop_help : t -> t
   val length : t -> int
+  val is_empty : t -> bool
 end = struct
   type t = string list
 
@@ -578,6 +579,8 @@ end = struct
      | last :: init -> last :: List.map init ~f:(Fn.const "."))
     |> to_string
   ;;
+
+  let is_empty = List.is_empty
 end
 
 module Anons = struct
@@ -971,6 +974,7 @@ module Cmdline = struct
     | Nil
     | Cons of string * t
     | Complete of string
+  [@@deriving compare]
 
   let of_list args = List.fold_right args ~init:Nil ~f:(fun arg args -> Cons (arg, args))
 
@@ -2434,42 +2438,42 @@ module For_unix (M : For_unix) = struct
   ;;
 
   let gather_help ~recursive ~flags ~expand_dots shape =
-    let rec loop rpath acc shape =
+    let rec loop path acc shape =
       let string_of_path = if expand_dots then Path.to_string else Path.to_string_dots in
-      let gather_group rpath acc subs =
-        let subs =
-          if recursive && rpath <> Path.empty
-          then List.Assoc.remove ~equal:String.( = ) subs "help"
-          else subs
+      let gather_group path acc subcommands =
+        let filtered_subcommands =
+          (* Only show the [help] subcommand at top-level. *)
+          if Path.is_empty path
+          then subcommands
+          else List.Assoc.remove ~equal:String.( = ) subcommands "help"
         in
-        let alist =
-          List.stable_sort subs ~compare:(fun a b -> help_screen_compare (fst a) (fst b))
-        in
-        List.fold alist ~init:acc ~f:(fun acc (subcommand, shape) ->
-          let rpath = Path.append rpath ~subcommand in
-          let key = string_of_path rpath in
+        filtered_subcommands
+        |> List.stable_sort ~compare:(fun a b -> help_screen_compare (fst a) (fst b))
+        |> List.fold ~init:acc ~f:(fun acc (subcommand, shape) ->
+          let path = Path.append path ~subcommand in
+          let name = string_of_path path in
           let doc = Shape.get_summary shape in
-          let acc = Fqueue.enqueue acc { Format.V1.name = key; doc; aliases = [] } in
-          if recursive then loop rpath acc shape else acc)
+          let acc = Fqueue.enqueue acc { Format.V1.name; doc; aliases = [] } in
+          if recursive then loop path acc shape else acc)
       in
       match shape with
       | Exec (_, shape) ->
         (* If the executable being called doesn't use [Core.Command], then sexp extraction
            will fail. *)
-        (try loop rpath acc (shape ()) with
+        (try loop path acc (shape ()) with
          | _ -> acc)
-      | Group g -> gather_group rpath acc (Lazy.force g.subcommands)
+      | Group g -> gather_group path acc (Lazy.force g.subcommands)
       | Basic b ->
         if flags
         then
           b.flags
           |> List.filter ~f:(fun fmt -> fmt.Format.V1.name <> "[-help]")
           |> List.fold ~init:acc ~f:(fun acc fmt ->
-            let rpath = Path.append rpath ~subcommand:fmt.Format.V1.name in
-            let fmt = { fmt with Format.V1.name = string_of_path rpath } in
+            let path = Path.append path ~subcommand:fmt.Format.V1.name in
+            let fmt = { fmt with Format.V1.name = string_of_path path } in
             Fqueue.enqueue acc fmt)
         else acc
-      | Lazy thunk -> loop rpath acc (Lazy.force thunk)
+      | Lazy thunk -> loop path acc (Lazy.force thunk)
     in
     loop Path.empty Fqueue.empty shape |> Fqueue.to_list
   ;;

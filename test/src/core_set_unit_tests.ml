@@ -8,7 +8,7 @@ module With_first_class_module = Set_intf.With_first_class_module
 
 let%test_module _ =
   (module struct
-    let ( = ) = Pervasives.( = )
+    let ( = ) = Poly.( = )
 
     let%test _ = Set.Poly.stable_dedup_list [] = []
     let%test _ = Set.Poly.stable_dedup_list [ 5; 5; 5; 5; 5 ] = [ 5 ]
@@ -143,7 +143,7 @@ module Unit_tests (Elt : sig
     module T = struct
       type t = int Elt.t [@@deriving sexp, hash]
 
-      let compare t t' = Pervasives.compare (to_int t) (to_int t')
+      let compare t t' = Poly.compare (to_int t) (to_int t')
       let equal t t' = compare t t' = 0
       let hash t = Hashtbl.hash (to_int t)
     end

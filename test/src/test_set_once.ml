@@ -105,6 +105,18 @@ let%expect_test "[set]" =
     (Ok ()) |}]
 ;;
 
+let%expect_test "[set_if_none]" =
+  let t = create () in
+  let set_if_none_and_print ~value =
+    set_if_none t [%here] value;
+    print_s ~hide_positions [%sexp (Set_once.get_exn t [%here] : string)]
+  in
+  set_if_none_and_print ~value:"first call to set_if_none";
+  [%expect {| "first call to set_if_none" |}];
+  set_if_none_and_print ~value:"second call to set_if_none";
+  [%expect {| "first call to set_if_none" |}]
+;;
+
 let%expect_test "[set] error" =
   let t = create () in
   set_exn t [%here] 13;

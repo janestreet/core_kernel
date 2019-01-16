@@ -92,3 +92,40 @@ module Make_binable_and_derive_hash_fold_t (T : Hashtbl.Key_binable) :
 
     let hash_fold_t state t = hash_fold_int state (hash t)
   end)
+
+module Stable : sig
+  module V1 : sig
+    module type S = sig
+      type key
+
+      module Table : sig
+        type 'a t = (key, 'a) Hashtbl.t [@@deriving sexp, bin_io]
+      end
+
+      module Hash_set : sig
+        type t = key Hash_set.t [@@deriving sexp, bin_io]
+      end
+    end
+
+    module Make (Key : Hashtbl.Key_binable) : S with type key := Key.t
+  end
+end = struct
+  module V1 = struct
+    module type S = sig
+      type key
+
+      module Table : sig
+        type 'a t = (key, 'a) Hashtbl.t [@@deriving sexp, bin_io]
+      end
+
+      module Hash_set : sig
+        type t = key Hash_set.t [@@deriving sexp, bin_io]
+      end
+    end
+
+    module Make (Key : Hashtbl.Key_binable) : S with type key := Key.t = struct
+      module Table = Hashtbl.Make_binable (Key)
+      module Hash_set = Hash_set.Make_binable (Key)
+    end
+  end
+end

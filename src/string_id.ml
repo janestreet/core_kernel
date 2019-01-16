@@ -67,7 +67,7 @@ struct
 
       include T_with_comparator
       include Comparable.Stable.V1.Make (T_with_comparator)
-      include Stable_containers.Hashable.V1.Make (T_with_comparator)
+      include Hashable.Stable.V1.Make (T_with_comparator)
     end
   end
 

@@ -1,7 +1,0 @@
-(library
- ((name limiter)
-  (public_name core_kernel.limiter)
-  (libraries (core_kernel))
-  (preprocess (pps (ppx_jane ppxlib.runner)))))
-
-(jbuild_version 1)

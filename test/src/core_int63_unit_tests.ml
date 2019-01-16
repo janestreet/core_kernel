@@ -166,7 +166,7 @@ module Make_tests_bin_io (B : sig
 
   let%test _ =
     let open Bin_prot.Shape in
-    Pervasives.( = )
+    Poly.( = )
       (eval_to_digest_string B.bin_shape_t)
       (eval_to_digest_string bin_shape_int63)
   ;;

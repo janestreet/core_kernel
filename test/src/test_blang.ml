@@ -9,7 +9,7 @@ let%test_module "Stable.V1" =
   (module Stable_unit_test.Make (struct
        type t = string Stable.V1.t [@@deriving sexp, bin_io]
 
-       let equal = Pervasives.( = )
+       let equal = Poly.( = )
 
        let test_blang =
          if_
@@ -37,7 +37,7 @@ let%test_module "auto-simplification" =
     let ( = ) a b =
       invariant a;
       invariant b;
-      Pervasives.( = ) a b
+      Poly.( = ) a b
     ;;
 
     let%test _ = not_ true_ = false_

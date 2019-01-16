@@ -7,36 +7,6 @@ var core_array_unsafe_int_blit = caml_array_blit
 //Requires: caml_array_blit
 var core_array_unsafe_float_blit = caml_array_blit
 
-//Provides: bigstring_realloc
-//Requires: caml_invalid_argument, caml_ba_create_from, bigstring_destroy_stub
-function bigstring_realloc(bigstring, size) {
-    if (bigstring.data2 != null) {
-        caml_invalid_argument("Bigstring.unsafe_destroy_and_resize: unsupported kind");
-    }
-
-    if (bigstring.hasOwnProperty('__is_deallocated')) {
-        caml_invalid_argument("bigstring_realloc: bigstring is already deallocated");
-    }
-
-    var new_data = new bigstring.data.__proto__.constructor(size);
-    new_data.set(bigstring.data.slice(0, size));
-    var new_bigstring =
-        caml_ba_create_from(new_data, null, bigstring.data_type, bigstring.kind,
-                            bigstring.layout, [size]);
-
-    bigstring_destroy_stub(bigstring);
-
-    return new_bigstring;
-}
-
-//Provides: bigstring_memset_stub
-//Requires: caml_ba_set_1
-function bigstring_memset_stub(bigstring, v_pos, v_len, v_char) {
-  for (var i = 0; i < v_len; i++) {
-    caml_ba_set_1(bigstring, v_pos + i, v_char);
-  }
-}
-
 //Provides: core_kernel_time_ns_gettime_or_zero
 //Requires: caml_int64_mul, caml_int64_of_float, caml_int64_of_int32
 var ms_to_nano = caml_int64_of_int32(1000*1000);
@@ -46,6 +16,7 @@ function core_kernel_time_ns_gettime_or_zero(){
   var ms_i63 = caml_int64_of_float(ms*2);
   return caml_int64_mul(ms_i63,ms_to_nano);
 }
+
 //Provides: core_kernel_time_ns_format
 //Requires: caml_to_js_string, caml_js_to_string
 function core_kernel_time_ns_format(time,format){
@@ -75,10 +46,6 @@ function core_kernel_gc_minor_words () { return 0 }
 function core_kernel_gc_promoted_words () { return 0 }
 //Provides: core_kernel_gc_top_heap_words
 function core_kernel_gc_top_heap_words () { return 0 }
-
-//Provides: internalhash_fold_bigstring
-//Requires: caml_hash_mix_bigstring
-var internalhash_fold_bigstring = caml_hash_mix_bigstring
 
 //Provides: generated_build_info
 //Requires: caml_read_file_content, caml_new_string
@@ -131,11 +98,58 @@ function core_md5_fd(fd){
 }
 
 // Provides: core_md5_digest_subbigstring
-// Requires: caml_md5_string, caml_blit_string, caml_create_bytes, caml_blit_bigstring_to_string
+// Requires: caml_md5_string, caml_blit_string, caml_create_bytes, bigstring_blit_bigstring_bytes_stub
 function core_md5_digest_subbigstring(buf, ofs, len, res){
     var bytes = caml_create_bytes(len);
-    caml_blit_bigstring_to_string(buf, ofs, bytes, 0, len);
+    bigstring_blit_bigstring_bytes_stub(buf, ofs, bytes, 0, len);
     var res2 = caml_md5_string(bytes, 0, len);
     caml_blit_string(res2, 0, res, 0, 16);
     return 0;
+}
+
+//Bigstring
+
+//Provides: bigstring_destroy_stub
+//Requires: caml_invalid_argument, caml_ba_create_from
+function bigstring_destroy_stub(v_bstr) {
+  if (v_bstr.data2 != null) {
+      caml_invalid_argument("bigstring_destroy: unsupported kind");
+  }
+
+  if (v_bstr.hasOwnProperty('__is_deallocated')) {
+    caml_invalid_argument("bigstring_destroy: bigstring is already deallocated");
+  }
+
+  var destroyed_data = new v_bstr.data.__proto__.constructor(0);
+  var destroyed_bigstring =
+      caml_ba_create_from(destroyed_data, null, v_bstr.data_type, v_bstr.kind,
+                          v_bstr.layout, [0]);
+  destroyed_bigstring.__is_deallocated = true;
+
+  // Mutate the original bigstring in-place, to simulate what the C version does
+  Object.assign(v_bstr, destroyed_bigstring);
+
+  return 0;
+}
+
+//Provides: bigstring_realloc
+//Requires: caml_invalid_argument, caml_ba_create_from, bigstring_destroy_stub
+function bigstring_realloc(bigstring, size) {
+    if (bigstring.data2 != null) {
+        caml_invalid_argument("Bigstring.unsafe_destroy_and_resize: unsupported kind");
+    }
+
+    if (bigstring.hasOwnProperty('__is_deallocated')) {
+        caml_invalid_argument("bigstring_realloc: bigstring is already deallocated");
+    }
+
+    var new_data = new bigstring.data.__proto__.constructor(size);
+    new_data.set(bigstring.data.slice(0, size));
+    var new_bigstring =
+        caml_ba_create_from(new_data, null, bigstring.data_type, bigstring.kind,
+                            bigstring.layout, [size]);
+
+    bigstring_destroy_stub(bigstring);
+
+    return new_bigstring;
 }

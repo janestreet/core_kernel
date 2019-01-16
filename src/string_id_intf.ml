@@ -17,6 +17,8 @@ module type S = sig
         Stable_comparable.V1
         with type t := t
         with type comparator_witness = comparator_witness
+
+      include Hashable.Stable.V1.S with type key := t
     end
   end
 end

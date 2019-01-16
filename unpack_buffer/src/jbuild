@@ -1,7 +1,0 @@
-(library
- ((name unpack_buffer)
-  (public_name core_kernel.unpack_buffer)
-  (preprocess (pps (ppx_jane -check-doc-comments ppxlib.runner)))
-  (libraries (core_kernel))))
-
-(jbuild_version 1)

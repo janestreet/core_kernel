@@ -95,6 +95,7 @@ module type S = sig
   include Applicative with type 'a t := 'a t
 
   val create : (Key.t -> 'a) -> 'a t
+  val create_const : 'a -> 'a t
 end
 
 module Make (Key : Key) : S with module Key = Key

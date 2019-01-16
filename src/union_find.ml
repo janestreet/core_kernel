@@ -10,10 +10,6 @@
 
 open! Import
 
-include struct
-  let phys_equal = ( == )
-end
-
 (*
    {v
            Root

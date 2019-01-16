@@ -1,8 +1,0 @@
-(library
- ((name weak_hashtbl)
-  (public_name core_kernel.weak_hashtbl)
-  (libraries (core_kernel))
-  (preprocess (pps (ppx_jane ppxlib.runner)))
-))
-
-(jbuild_version 1)

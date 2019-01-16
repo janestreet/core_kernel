@@ -10,7 +10,7 @@ module Stable = struct
     type t = float [@@deriving compare, hash]
 
     let verify t =
-      match Pervasives.classify_float t with
+      match Caml.classify_float t with
       | FP_normal | FP_subnormal | FP_zero -> ()
       | FP_infinite | FP_nan -> raise Nan_or_inf
     ;;

@@ -1,135 +1,8 @@
-(** A hash-queue is a combination of a queue and a hashtable that
-    supports constant-time lookup and removal of queue elements in addition to
-    the usual queue operations (enqueue, dequeue). The queue elements are
-    key-value pairs. The hashtable has one entry for each element of the queue.
-
-    Calls to functions that would modify a hash-queue (e.g. [enqueue], [dequeue],
-    [remove], [replace]) detect if a client is in the middle of iterating over the
-    queue (e.g., [iter], [fold], [for_all], [exists]) and if so, raise an exception.
-*)
-
 open! Import
+open Hash_queue_intf
 
-(** The key is used for the hashtable of queue elements. *)
-module type Key = Hashtbl.Key_plain
-
-module type S = sig
-  module Key : Key
-
-  (** A hash-queue, where the values are of type ['a]. *)
-  type 'a t [@@deriving sexp_of]
-
-  include Container.S1 with type 'a t := 'a t
-
-  (** [invariant t] checks the invariants of the queue. *)
-
-  val invariant : 'a t -> unit
-
-  (** [create ()] returns an empty queue.  The arguments [growth_allowed] and [size] are
-      referring to the underlying hashtable.
-
-      @param growth_allowed defaults to true
-      @param size initial size -- default to 16
-  *)
-  val create : ?growth_allowed:bool -> ?size:int -> unit -> 'a t
-
-  (** Clears the queue. *)
-  val clear : 'a t -> unit
-
-  (** {2 Finding elements} *)
-
-  (** [mem q k] returns true iff there is some (k, v) in the queue. *)
-  val mem : 'a t -> Key.t -> bool
-
-  (** [lookup t k] returns the value of the key-value pair in the queue with
-      key k, if there is one. *)
-  val lookup : 'a t -> Key.t -> 'a option
-
-  val lookup_exn : 'a t -> Key.t -> 'a
-
-  (** {2 Adding, removing, and replacing elements}
-
-      Note that even the non-[*_exn] versions can raise, but only if there is an ongoing
-      iteration. *)
-
-  (** [enqueue t back_or_front k v] adds the key-value pair (k, v) to the front or back of
-      the queue, returning [`Ok] if the pair was added, or [`Key_already_present] if there
-      is already a (k, v') in the queue.
-  *)
-  val enqueue : 'a t -> [`back | `front] -> Key.t -> 'a -> [`Ok | `Key_already_present]
-
-  (** Like {!enqueue}, but it raises in the [`Key_already_present] case *)
-  val enqueue_exn : 'a t -> [`back | `front] -> Key.t -> 'a -> unit
-
-  (** See {!enqueue}. [enqueue_back t k v] is the same as [enqueue t `back k v]  *)
-  val enqueue_back : 'a t -> Key.t -> 'a -> [`Ok | `Key_already_present]
-
-  (** See {!enqueue_exn}. [enqueue_back_exn t k v] is the same as [enqueue_exn t `back k v] *)
-  val enqueue_back_exn : 'a t -> Key.t -> 'a -> unit
-
-  (** See {!enqueue}. [enqueue_front t k v] is the same as [enqueue t `front k v]  *)
-  val enqueue_front : 'a t -> Key.t -> 'a -> [`Ok | `Key_already_present]
-
-  (** See {!enqueue_exn}. [enqueue_front_exn t k v] is the same as [enqueue_exn t `front k
-      v] *)
-  val enqueue_front_exn : 'a t -> Key.t -> 'a -> unit
-
-  (** [lookup_and_move_to_back] finds the key-value pair (k, v) and moves it to the
-      back of the queue if it exists, otherwise returning [None].
-
-      The [_exn] versions of these functions raise if key-value pair does not exist.
-  *)
-  val lookup_and_move_to_back : 'a t -> Key.t -> 'a option
-
-  (** Like {!lookup_and_move_to_back}, but raises instead of returning an option *)
-  val lookup_and_move_to_back_exn : 'a t -> Key.t -> 'a
-
-  (** Like {!lookup_and_move_to_back}, but moves element to the front of the queue *)
-  val lookup_and_move_to_front : 'a t -> Key.t -> 'a option
-
-  (** Like {!lookup_and_move_to_front}, but raises instead of returning an option *)
-  val lookup_and_move_to_front_exn : 'a t -> Key.t -> 'a
-
-  (** [first t] returns the front element of the queue, without removing it. *)
-  val first : 'a t -> 'a option
-
-  (** [first_with_key t] returns the front element of the queue and its key, without
-      removing it. *)
-  val first_with_key : 'a t -> (Key.t * 'a) option
-
-  (** [keys t] returns the keys in the order of the queue. *)
-  val keys : 'a t -> Key.t list
-
-  (** [dequeue t] returns the front element of the queue. *)
-  val dequeue : 'a t -> 'a option
-
-  val dequeue_exn : 'a t -> 'a
-
-  (** [dequeue_with_key t] returns the front element of the queue and its key. *)
-  val dequeue_with_key : 'a t -> (Key.t * 'a) option
-
-  val dequeue_with_key_exn : 'a t -> Key.t * 'a
-
-  (** [dequeue_all t ~f] dequeues every element of the queue and applies [f] to each one. *)
-  val dequeue_all : 'a t -> f:('a -> unit) -> unit
-
-  (** [remove q k] removes the key-value pair with key [k] from the queue. *)
-  val remove : 'a t -> Key.t -> [`Ok | `No_such_key]
-
-  val remove_exn : 'a t -> Key.t -> unit
-
-  (** [replace q k v] changes the value of key [k] in the queue to [v]. *)
-  val replace : 'a t -> Key.t -> 'a -> [`Ok | `No_such_key]
-
-  val replace_exn : 'a t -> Key.t -> 'a -> unit
-
-  (** {2 Iterating over elements} *)
-
-  (** [iter t ~f] applies [f] to each key and element of the queue. *)
-  val iteri : 'a t -> f:(key:Key.t -> data:'a -> unit) -> unit
-
-  val foldi : 'a t -> init:'b -> f:('b -> key:Key.t -> data:'a -> 'b) -> 'b
-end
+module type Key = Key
+module type S = S
 
 module Make_with_table (Key : Key) (Table : Hashtbl_intf.S_plain with type key = Key.t) :
   S with module Key = Key = struct
@@ -297,28 +170,41 @@ module Make_with_table (Key : Key) (Table : Hashtbl_intf.S_plain with type key =
     Key_value.value (Elt.value elt)
   ;;
 
-  let dequeue_with_key t =
+  let dequeue_with_key t back_or_front =
     ensure_can_modify t;
-    match Doubly_linked.remove_first t.queue with
+    let maybe_kv =
+      match back_or_front with
+      | `back -> Doubly_linked.remove_last t.queue
+      | `front -> Doubly_linked.remove_first t.queue
+    in
+    match maybe_kv with
     | None -> None
     | Some kv ->
       Table.remove t.table kv.key;
       Some (kv.key, kv.value)
   ;;
 
-  exception Deque_with_key_empty [@@deriving sexp]
+  exception Dequeue_with_key_empty [@@deriving sexp]
 
-  let dequeue_with_key_exn t =
-    match dequeue_with_key t with
-    | None -> raise Deque_with_key_empty
+  let dequeue_with_key_exn t back_or_front =
+    match dequeue_with_key t back_or_front with
+    | None -> raise Dequeue_with_key_empty
     | Some (k, v) -> k, v
   ;;
 
-  let dequeue t =
-    match dequeue_with_key t with
+  let dequeue_back_with_key t = dequeue_with_key t `back
+  let dequeue_back_with_key_exn t = dequeue_with_key_exn t `back
+  let dequeue_front_with_key t = dequeue_with_key t `front
+  let dequeue_front_with_key_exn t = dequeue_with_key_exn t `front
+
+  let dequeue t back_or_front =
+    match dequeue_with_key t back_or_front with
     | None -> None
     | Some (_, v) -> Some v
   ;;
+
+  let dequeue_back t = dequeue t `back
+  let dequeue_front t = dequeue t `front
 
   let first_with_key t =
     match Doubly_linked.first t.queue with
@@ -332,13 +218,16 @@ module Make_with_table (Key : Key) (Table : Hashtbl_intf.S_plain with type key =
     | Some kv -> Some kv.value
   ;;
 
-  exception Deque_empty [@@deriving sexp]
+  exception Dequeue_empty [@@deriving sexp]
 
-  let dequeue_exn t =
-    match dequeue t with
-    | None -> raise Deque_empty
+  let dequeue_exn t back_or_front =
+    match dequeue t back_or_front with
+    | None -> raise Dequeue_empty
     | Some v -> v
   ;;
+
+  let dequeue_back_exn t = dequeue_exn t `back
+  let dequeue_front_exn t = dequeue_exn t `front
 
   let keys t =
     (* Return the keys in the order of the queue. *)
@@ -367,7 +256,7 @@ module Make_with_table (Key : Key) (Table : Hashtbl_intf.S_plain with type key =
 
   let dequeue_all t ~f =
     let rec loop () =
-      match dequeue t with
+      match dequeue_front t with
       | None -> ()
       | Some v ->
         f v;
@@ -412,6 +301,18 @@ module Make_with_table (Key : Key) (Table : Hashtbl_intf.S_plain with type key =
     | `No_such_key -> raise (Replace_unknown_key k)
     | `Ok -> ()
   ;;
+
+  let drop ?(n = 1) t back_or_front =
+    if n >= length t
+    then clear t
+    else
+      for _ = 1 to n do
+        ignore (dequeue_with_key t back_or_front : _ option)
+      done
+  ;;
+
+  let drop_back ?n t = drop ?n t `back
+  let drop_front ?n t = drop ?n t `front
 end
 
 module Make (Key : Key) : S with module Key = Key =

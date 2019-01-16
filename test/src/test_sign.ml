@@ -2,8 +2,8 @@ open! Core_kernel
 open! Import
 open! Sign
 
-let ( < ) = Pervasives.( < )
-let ( = ) = Pervasives.( = )
+let ( < ) = Poly.( < )
+let ( = ) = Poly.( = )
 
 let%test _ = compare Neg Zero < 0 && compare Zero Pos < 0
 let%test _ = List.for_all all ~f:(fun t -> t = (t |> to_int |> of_int))

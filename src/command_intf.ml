@@ -919,7 +919,7 @@ module type Command = sig
     end
 
     module Cmdline : sig
-      type t
+      type t [@@deriving compare]
 
       val of_list : string list -> t
       val extend : t -> extend:(string sexp_list -> string sexp_list) -> path:Path.t -> t

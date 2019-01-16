@@ -1,6 +1,6 @@
 open! Import
 
-open! Polymorphic_compare
+open! Poly
 
 (* INVARIANT: This exception is raised if a list is mutated during a pending iteration.
 
@@ -140,6 +140,7 @@ module Elt : sig
   val equal : 'a t -> 'a t -> bool
   val create : 'a -> 'a t
   val value : 'a t -> 'a
+  val set : 'a t -> 'a -> unit
   val unlink : 'a t -> unit
   val split_or_splice_before : 'a t -> 'a t -> unit
   val split_or_splice_after : 'a t -> 'a t -> unit
@@ -150,7 +151,7 @@ module Elt : sig
   val prev : 'a t -> 'a t
 end = struct
   type 'a t =
-    { value : 'a
+    { mutable value : 'a
     ; mutable prev : 'a t
     ; mutable next : 'a t
     ; mutable header : Header.t
@@ -170,6 +171,7 @@ end = struct
   let sexp_of_t sexp_of_a t = sexp_of_a t.value
   let create v = create_aux v (Header.create ())
   let value t = t.value
+  let set t v = t.value <- v
 
   (*
      [split_or_splice] is sufficient as the lone primitive for
@@ -313,6 +315,50 @@ let of_array = function
     ref (Some first)
 ;;
 
+let map t ~f =
+  match !t with
+  | None -> create ()
+  | Some first ->
+    let new_first = Elt.create (f (Elt.value first)) in
+    Header.with_iteration_3
+      (Elt.header first)
+      f
+      new_first
+      first
+      (fun f new_first first ->
+         let rec loop f acc first elt =
+           let acc = Elt.insert_after acc (f (Elt.value elt)) in
+           let next = Elt.next elt in
+           if not (phys_equal next first) then loop f acc first next
+         in
+         (* unroll and skip first elt *)
+         let next = Elt.next first in
+         if not (phys_equal next first) then loop f new_first first next);
+    ref (Some new_first)
+;;
+
+let mapi t ~f =
+  match !t with
+  | None -> create ()
+  | Some first ->
+    let new_first = Elt.create (f 0 (Elt.value first)) in
+    Header.with_iteration_3
+      (Elt.header first)
+      f
+      new_first
+      first
+      (fun f new_first first ->
+         let rec loop f i acc first elt =
+           let acc = Elt.insert_after acc (f i (Elt.value elt)) in
+           let next = Elt.next elt in
+           if not (phys_equal next first) then loop f (i + 1) acc first next
+         in
+         (* unroll and skip first elt *)
+         let next = Elt.next first in
+         if not (phys_equal next first) then loop f 1 new_first first next);
+    ref (Some new_first)
+;;
+
 let fold_elt t ~init ~f =
   match !t with
   | None -> init
@@ -324,6 +370,19 @@ let fold_elt t ~init ~f =
         if phys_equal next first then acc else loop f acc first next
       in
       loop f init first first)
+;;
+
+let foldi_elt t ~init ~f =
+  match !t with
+  | None -> init
+  | Some first ->
+    Header.with_iteration_3 (Elt.header first) f init first (fun f init first ->
+      let rec loop f i acc first elt =
+        let acc = f i acc elt in
+        let next = Elt.next elt in
+        if phys_equal next first then acc else loop f (i + 1) acc first next
+      in
+      loop f 0 init first first)
 ;;
 
 let fold_elt_1 t ~init ~f a =
@@ -339,7 +398,21 @@ let fold_elt_1 t ~init ~f a =
       loop f a init first first)
 ;;
 
+let foldi_elt_1 t ~init ~f a =
+  match !t with
+  | None -> init
+  | Some first ->
+    Header.with_iteration_4 (Elt.header first) f a init first (fun f a init first ->
+      let rec loop f i a acc first elt =
+        let acc = f i a acc elt in
+        let next = Elt.next elt in
+        if phys_equal next first then acc else loop f (i + 1) a acc first next
+      in
+      loop f 0 a init first first)
+;;
+
 let iter_elt t ~f = fold_elt_1 t ~init:() ~f:(fun f () elt -> f elt) f
+let iteri_elt t ~f = foldi_elt t ~init:() ~f:(fun i () elt -> f i elt)
 
 open With_return
 
@@ -347,6 +420,13 @@ let find_elt t ~f =
   with_return (fun r ->
     fold_elt_1 t f ~init:() ~f:(fun f () elt ->
       if f (Elt.value elt) then r.return (Some elt));
+    None)
+;;
+
+let findi_elt t ~f =
+  with_return (fun r ->
+    foldi_elt_1 t f ~init:() ~f:(fun i f () elt ->
+      if f i (Elt.value elt) then r.return (Some (i, elt)));
     None)
 ;;
 
@@ -370,6 +450,24 @@ let length t =
   match !t with
   | None -> 0
   | Some first -> Header.length (Elt.header first)
+;;
+
+let rec iteri_loop first f i elt =
+  f i (Elt.value elt);
+  let next = Elt.next elt in
+  if not (phys_equal next first) then iteri_loop first f (i + 1) next
+;;
+
+let iteri t ~f =
+  match !t with
+  | None -> ()
+  | Some first ->
+    Header.with_iteration_2 (Elt.header first) first f (fun first f ->
+      iteri_loop first f 0 first)
+;;
+
+let foldi t ~init ~f =
+  foldi_elt_1 t ~init f ~f:(fun i f acc elt -> f i acc (Elt.value elt))
 ;;
 
 module C = Container.Make (struct
@@ -418,12 +516,25 @@ let fold_right t ~init ~f =
   | None -> init
   | Some first ->
     Header.with_iteration_3 (Elt.header first) f init first (fun f init first ->
-      let rec loop acc elt =
+      let rec loop f acc elt =
         let prev = Elt.prev elt in
         let acc = f (Elt.value prev) acc in
-        if phys_equal prev first then acc else loop acc prev
+        if phys_equal prev first then acc else loop f acc prev
       in
-      loop init first)
+      loop f init first)
+;;
+
+let fold_right_elt t ~init ~f =
+  match !t with
+  | None -> init
+  | Some first ->
+    Header.with_iteration_3 (Elt.header first) f init first (fun f init first ->
+      let rec loop f acc elt =
+        let prev = Elt.prev elt in
+        let acc = f prev acc in
+        if phys_equal prev first then acc else loop f acc prev
+      in
+      loop f init first)
 ;;
 
 let to_list t = fold_right t ~init:[] ~f:(fun x tl -> x :: tl)
@@ -431,6 +542,35 @@ let sexp_of_t sexp_of_a t = List.sexp_of_t sexp_of_a (to_list t)
 let t_of_sexp a_of_sexp s = of_list (List.t_of_sexp a_of_sexp s)
 let copy t = of_list (to_list t)
 let clear t = t := None
+
+let compare compare_elt t1 t2 =
+  match !t1, !t2 with
+  | None, None -> 0
+  | None, _ -> -1
+  | _, None -> 1
+  | Some f1, Some f2 ->
+    Header.with_iteration_3 (Elt.header f1) compare_elt f1 f2 (fun compare_elt f1 f2 ->
+      Header.with_iteration_3
+        (Elt.header f2)
+        compare_elt
+        f1
+        f2
+        (fun compare_elt f1 f2 ->
+           let rec loop compare_elt elt1 f1 elt2 f2 =
+             let compare_result = compare_elt (Elt.value elt1) (Elt.value elt2) in
+             if compare_result <> 0
+             then compare_result
+             else (
+               let next1 = Elt.next elt1 in
+               let next2 = Elt.next elt2 in
+               match phys_equal next1 f1, phys_equal next2 f2 with
+               | true, true -> 0
+               | true, false -> -1
+               | false, true -> 1
+               | false, false -> loop compare_elt next1 f1 next2 f2)
+           in
+           loop compare_elt f1 f1 f2 f2))
+;;
 
 exception Transfer_src_and_dst_are_same_list
 
@@ -451,12 +591,10 @@ let transfer ~src ~dst =
           clear src))
 ;;
 
-let filter_inplace t ~f =
-  let to_remove =
-    List.rev
-      (fold_elt t ~init:[] ~f:(fun elts elt ->
-         if f (Elt.value elt) then elts else elt :: elts))
-  in
+let map_inplace t ~f = iter_elt t ~f:(fun elt -> Elt.set elt (f (Elt.value elt)))
+let mapi_inplace t ~f = iteri_elt t ~f:(fun i elt -> Elt.set elt (f i (Elt.value elt)))
+
+let remove_list t to_remove =
   List.iter to_remove ~f:(fun elt ->
     (match !t with
      | None -> ()
@@ -466,6 +604,50 @@ let filter_inplace t ~f =
          let next_elt = Elt.next elt in
          t := if Elt.equal head next_elt then None else Some next_elt));
     Elt.unlink elt)
+;;
+
+let filter_inplace t ~f =
+  let to_remove =
+    List.rev
+      (fold_elt t ~init:[] ~f:(fun elts elt ->
+         if f (Elt.value elt) then elts else elt :: elts))
+  in
+  remove_list t to_remove
+;;
+
+let filteri_inplace t ~f =
+  let to_remove =
+    List.rev
+      (foldi_elt t ~init:[] ~f:(fun i elts elt ->
+         if f i (Elt.value elt) then elts else elt :: elts))
+  in
+  remove_list t to_remove
+;;
+
+let filter_map_inplace t ~f =
+  let to_remove =
+    List.rev
+      (fold_elt t ~init:[] ~f:(fun elts elt ->
+         match f (Elt.value elt) with
+         | None -> elt :: elts
+         | Some value ->
+           Elt.set elt value;
+           elts))
+  in
+  remove_list t to_remove
+;;
+
+let filter_mapi_inplace t ~f =
+  let to_remove =
+    List.rev
+      (foldi_elt t ~init:[] ~f:(fun i elts elt ->
+         match f i (Elt.value elt) with
+         | None -> elt :: elts
+         | Some value ->
+           Elt.set elt value;
+           elts))
+  in
+  remove_list t to_remove
 ;;
 
 exception Elt_does_not_belong_to_list
@@ -596,6 +778,138 @@ let remove t elt =
     else if Header.equal (Elt.header first) (Elt.header elt)
     then Elt.unlink elt
     else raise Elt_does_not_belong_to_list
+;;
+
+let filter t ~f =
+  let new_t = create () in
+  (match !t with
+   | None -> ()
+   | Some first ->
+     Header.with_iteration_3 (Elt.header first) f new_t first (fun f new_t first ->
+       let rec loop f new_t first elt =
+         if f (Elt.value elt) then insert_last new_t (Elt.value elt) |> ignore;
+         let next = Elt.next elt in
+         if not (phys_equal next first) then loop f new_t first next
+       in
+       loop f new_t first first));
+  new_t
+;;
+
+let filteri t ~f =
+  let new_t = create () in
+  (match !t with
+   | None -> ()
+   | Some first ->
+     Header.with_iteration_3 (Elt.header first) f new_t first (fun f new_t first ->
+       let rec loop f i new_t first elt =
+         if f i (Elt.value elt) then insert_last new_t (Elt.value elt) |> ignore;
+         let next = Elt.next elt in
+         if not (phys_equal next first) then loop f (i + 1) new_t first next
+       in
+       loop f 0 new_t first first));
+  new_t
+;;
+
+let filter_map t ~f =
+  let new_t = create () in
+  (match !t with
+   | None -> ()
+   | Some first ->
+     Header.with_iteration_3 (Elt.header first) f new_t first (fun f new_t first ->
+       let rec loop f new_t first elt =
+         (match f (Elt.value elt) with
+          | None -> ()
+          | Some value -> insert_last new_t value |> ignore);
+         let next = Elt.next elt in
+         if not (phys_equal next first) then loop f new_t first next
+       in
+       loop f new_t first first));
+  new_t
+;;
+
+let filter_mapi t ~f =
+  let new_t = create () in
+  (match !t with
+   | None -> ()
+   | Some first ->
+     Header.with_iteration_3 (Elt.header first) f new_t first (fun f new_t first ->
+       let rec loop f i new_t first elt =
+         (match f i (Elt.value elt) with
+          | None -> ()
+          | Some value -> insert_last new_t value |> ignore);
+         let next = Elt.next elt in
+         if not (phys_equal next first) then loop f (i + 1) new_t first next
+       in
+       loop f 0 new_t first first));
+  new_t
+;;
+
+let partition_tf t ~f =
+  let t1 = create () in
+  let t2 = create () in
+  (match !t with
+   | None -> ()
+   | Some first ->
+     Header.with_iteration_4 (Elt.header first) f t1 t2 first (fun f t1 t2 first ->
+       let rec loop f t1 t2 first elt =
+         insert_last (if f (Elt.value elt) then t1 else t2) (Elt.value elt) |> ignore;
+         let next = Elt.next elt in
+         if not (phys_equal next first) then loop f t1 t2 first next
+       in
+       loop f t1 t2 first first));
+  t1, t2
+;;
+
+let partitioni_tf t ~f =
+  let t1 = create () in
+  let t2 = create () in
+  (match !t with
+   | None -> ()
+   | Some first ->
+     Header.with_iteration_4 (Elt.header first) f t1 t2 first (fun f t1 t2 first ->
+       let rec loop f i t1 t2 first elt =
+         insert_last (if f i (Elt.value elt) then t1 else t2) (Elt.value elt) |> ignore;
+         let next = Elt.next elt in
+         if not (phys_equal next first) then loop f (i + 1) t1 t2 first next
+       in
+       loop f 0 t1 t2 first first));
+  t1, t2
+;;
+
+let partition_map t ~f =
+  let t1 = create () in
+  let t2 = create () in
+  (match !t with
+   | None -> ()
+   | Some first ->
+     Header.with_iteration_4 (Elt.header first) f t1 t2 first (fun f t1 t2 first ->
+       let rec loop f t1 t2 first elt =
+         (match (f (Elt.value elt) : (_, _) Either.t) with
+          | First value -> insert_last t1 value |> ignore
+          | Second value -> insert_last t2 value |> ignore);
+         let next = Elt.next elt in
+         if not (phys_equal next first) then loop f t1 t2 first next
+       in
+       loop f t1 t2 first first));
+  t1, t2
+;;
+
+let partition_mapi t ~f =
+  let t1 = create () in
+  let t2 = create () in
+  (match !t with
+   | None -> ()
+   | Some first ->
+     Header.with_iteration_4 (Elt.header first) f t1 t2 first (fun f t1 t2 first ->
+       let rec loop f i t1 t2 first elt =
+         (match (f i (Elt.value elt) : (_, _) Either.t) with
+          | First value -> insert_last t1 value |> ignore
+          | Second value -> insert_last t2 value |> ignore);
+         let next = Elt.next elt in
+         if not (phys_equal next first) then loop f (i + 1) t1 t2 first next
+       in
+       loop f 0 t1 t2 first first));
+  t1, t2
 ;;
 
 exception Invalid_move__elt_equals_anchor

@@ -138,7 +138,7 @@ struct
     module T = struct
       type t = int Key.t [@@deriving sexp, hash]
 
-      let compare t t' = Pervasives.compare (to_int t) (to_int t')
+      let compare t t' = Poly.compare (to_int t) (to_int t')
       let equal t t' = compare t t' = 0
       let ( < ) t t' = compare t t' < 0
       let ( > ) t t' = compare t t' > 0

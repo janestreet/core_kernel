@@ -143,7 +143,7 @@ module Test1
     (struct
       module Elt = struct
         type 'a t = 'a
-        let equal = Polymorphic_compare.equal
+        let equal = Poly.equal
         let of_bool = Fn.id
       end
       type 'a z = 'a Sequence.z

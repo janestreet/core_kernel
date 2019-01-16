@@ -38,6 +38,6 @@ let () =
     ; ("iround_nearest_exn", fun t -> Float.iround_nearest_exn t.(0))
     ; ("iround_up_exn", fun t -> Float.iround_up_exn t.(0))
     ; ("iround_towards_zero_exn", fun t -> Float.iround_towards_zero_exn t.(0))
-    ; ("Pervasives.int_of_float", fun t -> Pervasives.int_of_float t.(0))
+    ; ("Caml.int_of_float", fun t -> Caml.int_of_float t.(0))
     ]
 ;;

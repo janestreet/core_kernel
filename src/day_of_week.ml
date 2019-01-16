@@ -89,7 +89,7 @@ module Stable = struct
     end
 
     include Comparable.Stable.V1.Make (Unstable)
-    include Stable_containers.Hashable.V1.Make (Unstable)
+    include Hashable.Stable.V1.Make (Unstable)
   end
 end
 

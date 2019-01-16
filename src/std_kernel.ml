@@ -22,21 +22,23 @@ open! Import
 module Applicative = Applicative
 module Avltree = Avltree
 module Backtrace = Backtrace
-module Bin_prot = Core_bin_prot
 module Binary_search = Binary_search
 module Buffer = Base.Buffer
 module Comparisons = Comparisons
+module Continue_or_stop = Continue_or_stop
 module Equal = Equal
 module Exn = Base.Exn
 module Expect_test_config = Expect_test_config
 module Field = Field
 module Floatable = Floatable
+module Formatter = Formatter
 module Hash = Hash
 module Heap_block = Heap_block
 module In_channel = In_channel
 module Int_conversions = Base.Not_exposed_properly.Int_conversions
 module Invariant = Invariant
 module Monad = Monad
+module Variant = Variant
 
 module Obj_array = Base.Not_exposed_properly.Obj_array
 [@@deprecated "[since 2018-09] Replace [Obj_array.t] with [Obj.t Uniform_array.t]"]
@@ -44,12 +46,13 @@ module Obj_array = Base.Not_exposed_properly.Obj_array
 module Ordered_collection_common = Ordered_collection_common
 module Out_channel = Out_channel
 module Poly = Poly
-module Polymorphic_compare = Polymorphic_compare
+module Polymorphic_compare = Poly [@@deprecated "[since 2018-11] use [Poly] instead"]
 module Pretty_printer = Pretty_printer
 module Random = Base.Random
 module Sexp_maybe = Sexp.Sexp_maybe
 module Staged = Base.Staged
 module Stringable = Stringable
+module Uchar = Uchar
 module Validate = Validate
 module With_return = With_return
 module Word_size = Word_size
@@ -108,6 +111,7 @@ module Bigbuffer = Bigbuffer
 module Bigsubstring = Bigsubstring
 module Binable = Binable
 module Binary_packing = Binary_packing
+module Bin_prot = Core_bin_prot
 module Blang = Blang
 module Bounded_index = Bounded_index
 module Bounded_int_table = Bounded_int_table
@@ -150,9 +154,15 @@ module Only_in_test = Only_in_test
 module Option_array = Option_array
 module Optional_syntax = Optional_syntax
 module Percent = Percent
+module Perms = Perms
 module Pid = Pid
 module Pool = Pool
 module Pool_intf = Pool_intf
+
+module Popcount = Base.Popcount
+[@@warning "-3"]
+[@@deprecated "[since 2018-10] use [popcount] functions in individual int modules"]
+
 module Printexc = Printexc
 module Queue = Queue
 module Quickcheck = Quickcheck

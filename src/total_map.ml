@@ -83,6 +83,7 @@ module type S = sig
   include Applicative with type 'a t := 'a t
 
   val create : (Key.t -> 'a) -> 'a t
+  val create_const : 'a -> 'a t
 end
 
 module Make_using_comparator (Key : sig
@@ -147,10 +148,12 @@ struct
     List.fold Key.all ~init:Key.Map.empty ~f:(fun t key -> Map.set t ~key ~data:(f key))
   ;;
 
+  let create_const x = create (fun _ -> x)
+
   include Applicative.Make (struct
       type nonrec 'a t = 'a t
 
-      let return x = create (fun _ -> x)
+      let return = create_const
       let apply t1 t2 = map2 t1 t2 ~f:(fun f x -> f x)
       let map = `Custom map
     end)
