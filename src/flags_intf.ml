@@ -41,7 +41,7 @@ module type S = sig
   val is_subset : t -> of_:t -> bool
 
   module Unstable : sig
-    type t [@@deriving bin_io, compare, sexp]
+    type nonrec t = t [@@deriving bin_io, compare, sexp]
   end
 end
 

@@ -35,7 +35,7 @@ let%expect_test "[add_exn], [find], [mem], [replace], [remove]" =
     ("find t key" ()) |}];
 ;;
 
-let%expect_test "[key_is_using_space], [reclaim_space_for_keys_with_unused_data]" =
+let%expect_test "[key_is_using_space], [reclaim_space_for_keys_with_unused_data]" [@tags "no-js"] =
   let t = create () in
   let key = 13 in
   let print () =
@@ -65,7 +65,7 @@ let%expect_test "[key_is_using_space], [reclaim_space_for_keys_with_unused_data]
      (mem                false)) |}];
 ;;
 
-let%expect_test "[set_run_when_unused_data]" =
+let%expect_test "[set_run_when_unused_data]" [@tags "no-js"] =
   let t = create () in
   let key = 13 in
   let ran = ref false in
@@ -90,7 +90,7 @@ let%expect_test "[set_run_when_unused_data]" =
     (ran true) |}];
 ;;
 
-let%expect_test _ =
+let%expect_test _ [@tags "no-js"]=
   let module M = struct
     type t =
       (* [mutable foo] to force the compiler to allocate the record on the heap. *)
