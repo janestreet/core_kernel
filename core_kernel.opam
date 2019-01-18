@@ -15,6 +15,7 @@ depends: [
   "base_bigstring"
   "base_quickcheck"
   "bin_prot"
+  "config_h"
   "fieldslib"
   "jane-street-headers"
   "ppx_assert"
@@ -27,12 +28,10 @@ depends: [
   "sexplib"
   "splittable_random"
   "stdio"
+  "time_now"
   "typerep"
   "variantslib"
   "dune"                {build & >= "1.5.1"}
-]
-depopts: [
-  "base-native-int63"
 ]
 synopsis: "Industrial strength alternative to OCaml's standard library"
 description: "

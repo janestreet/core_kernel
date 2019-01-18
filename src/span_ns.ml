@@ -701,7 +701,7 @@ let to_string_hum
   prefix ^ suffix
 ;;
 
-let since_unix_epoch () = Time_now_helper.nanoseconds_since_epoch () |> of_int63_ns
+let since_unix_epoch () = Time_now.nanoseconds_since_unix_epoch () |> of_int63_ns
 
 let random ?state () =
   Int63.random ?state (max_value + Int63.one)

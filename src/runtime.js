@@ -7,16 +7,6 @@ var core_array_unsafe_int_blit = caml_array_blit
 //Requires: caml_array_blit
 var core_array_unsafe_float_blit = caml_array_blit
 
-//Provides: core_kernel_time_ns_gettime_or_zero
-//Requires: caml_int64_mul, caml_int64_of_float, caml_int64_of_int32
-var ms_to_nano = caml_int64_of_int32(1000*1000);
-function core_kernel_time_ns_gettime_or_zero(){
-  var ms = Date.now();
-  // multiple by two - int63 integers are shifted to the left
-  var ms_i63 = caml_int64_of_float(ms*2);
-  return caml_int64_mul(ms_i63,ms_to_nano);
-}
-
 //Provides: core_kernel_time_ns_format
 //Requires: caml_to_js_string, caml_js_to_string
 function core_kernel_time_ns_format(time,format){

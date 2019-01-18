@@ -129,7 +129,7 @@ let next_multiple ?(can_equal_after = false) ~base ~after ~interval () =
 ;;
 
 let now () =
-  let float_ns = Time_now_helper.nanoseconds_since_epoch () |> Int63.to_float in
+  let float_ns = Time_now.nanoseconds_since_unix_epoch () |> Int63.to_float in
   of_span_since_epoch (Span.of_sec (float_ns *. 1E-9))
 ;;
 
