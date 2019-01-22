@@ -288,3 +288,18 @@ let%test_module "memset" =
     ;;
   end)
 ;;
+
+let%test_module "stability" =
+  (module struct
+    let%expect_test "t" =
+      print_endline [%bin_digest: Bigstring.Stable.V1.t];
+      [%expect "e2d261c6c291b94bf6aa68ec2b08cb00"]
+    ;;
+
+    (* Should we assert these are the same?  *)
+    let%expect_test "t_frozen" =
+      print_endline [%bin_digest: Bigstring.Stable.V1.t_frozen];
+      [%expect "e2d261c6c291b94bf6aa68ec2b08cb00"]
+    ;;
+  end)
+;;

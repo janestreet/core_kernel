@@ -3,19 +3,27 @@ open Std_internal
 open Bigarray
 module Binable = Binable0
 
-module Z : sig
-  type t = (char, int8_unsigned_elt, c_layout) Array1.t [@@deriving bin_io]
-end = struct
-  type t = bigstring [@@deriving bin_io]
+module Stable = struct
+  module V1 = struct
+    module Z : sig
+      type t = (char, int8_unsigned_elt, c_layout) Array1.t [@@deriving bin_io]
+    end = struct
+      type t = bigstring [@@deriving bin_io]
+    end
+
+    include Z
+
+    type t_frozen = t [@@deriving bin_io]
+
+    include (
+      Base_bigstring :
+        module type of Base_bigstring with type t := t and type t_frozen := t_frozen)
+  end
 end
 
-include Z
-
-type t_frozen = t [@@deriving bin_io]
-
-include (
-  Base_bigstring :
-    module type of Base_bigstring with type t := t and type t_frozen := t_frozen)
+module T = Stable.V1
+include T
+module Unstable = T
 
 let create ?max_mem_waiting_gc size =
   let max_mem_waiting_gc_in_bytes =
