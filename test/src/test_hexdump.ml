@@ -320,3 +320,14 @@ let%expect_test _ =
     00000353  75 72 20 49 6e 64 65 70  65 6e 64 65 6e 63 65 20  |ur Independence |
     00000363  44 61 79 21                                       |Day!| |}]
 ;;
+
+let%expect_test "pretty" =
+  let test x = print_s ([%sexp_of: String.Hexdump.Pretty.t] x) in
+  test "The world is everything that is the case.";
+  [%expect {| "The world is everything that is the case." |}];
+  test "What\000are\255 these\001weird bytes?\xfe";
+  [%expect
+    {|
+    ("00000000  57 68 61 74 00 61 72 65  ff 20 74 68 65 73 65 01  |What.are. these.|"
+     "00000010  77 65 69 72 64 20 62 79  74 65 73 3f fe           |weird bytes?.|") |}]
+;;

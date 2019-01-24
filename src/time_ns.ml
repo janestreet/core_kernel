@@ -822,3 +822,68 @@ end = struct
 end
 
 include To_and_of_string
+
+module For_ppx_module_timer = struct
+  module Override = struct
+    type t =
+      | Interval of Span.t
+      | Replace of (Span.t * string) list
+
+    let of_string string =
+      match Sexp.of_string string with
+      | Atom _ as sexp -> Interval (Span.t_of_sexp sexp)
+      | List _ as sexp -> Replace ([%of_sexp: (Span.t * string) list] sexp)
+    ;;
+
+    let get () =
+      Option.try_with (fun () ->
+        of_string
+          (Sys.getenv Ppx_module_timer_runtime.am_recording_environment_variable))
+    ;;
+
+    let apply t alist =
+      match t with
+      | Replace alist -> alist
+      | Interval span ->
+        List.mapi alist ~f:(fun i (_, module_name) ->
+          Span.scale_int span (Int.succ i), module_name)
+    ;;
+  end
+
+  let print_recorded_startup_times startup_times =
+    let startup_times =
+      List.map
+        startup_times
+        ~f:(fun (startup_time : Ppx_module_timer_runtime.Startup_time.t) ->
+          ( Span.of_int63_ns startup_time.startup_time_in_nanoseconds
+          , startup_time.module_name ))
+    in
+    let startup_times =
+      match Override.get () with
+      | None -> startup_times
+      | Some override ->
+        print_endline "ppx_module_timer: overriding time measurements for testing";
+        Override.apply override startup_times
+    in
+    let unit_of_time =
+      List.map startup_times ~f:(fun (t, _) -> Span.to_unit_of_time t)
+      |> List.max_elt ~compare:Unit_of_time.compare
+      |> Option.value ~default:Nanosecond
+    in
+    let startup_times =
+      List.map startup_times ~f:(fun (t, module_name) ->
+        Span.to_string_hum ~unit_of_time ~align_decimal:true t, module_name)
+    in
+    let span_width =
+      List.map startup_times ~f:(fun (span_string, _) -> String.length span_string)
+      |> List.max_elt ~compare:Int.compare
+      |> Option.value ~default:0
+    in
+    List.iter startup_times ~f:(fun (span_string, module_name) ->
+      printf "%*s %s\n" span_width span_string module_name)
+  ;;
+
+  let () =
+    Ppx_module_timer_runtime.print_recorded_startup_times := print_recorded_startup_times
+  ;;
+end

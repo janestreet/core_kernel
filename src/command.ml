@@ -2795,6 +2795,18 @@ module For_unix (M : For_unix) = struct
       lazy (Version_util.reprint_build_info Time.sexp_of_t) )
   ;;
 
+  let should_abort_due_to_ppx_module_timer () =
+    (* We use [unsafe_getenv] here so that setuid-root programs can still abort when
+       PPX_MODULE_TIMER is set. There is no security risk here because the value is only
+       used to decide whether to abort.
+
+       It is important to abort because users expect that the command will not run when
+       PPX_MODULE_TIMER is set. It would be dangerous for setuid-root programs to run in
+       cases when users expect them not to run. *)
+    Sys.unsafe_getenv Ppx_module_timer_runtime.am_recording_environment_variable
+    |> Option.is_some
+  ;;
+
   let run
         ?verbose_on_parse_error
         ?(version = default_version)
@@ -2803,34 +2815,37 @@ module For_unix (M : For_unix) = struct
         ?extend
         t
     =
-    let build_info =
-      match build_info with
-      | Some v -> lazy v
-      | None -> default_build_info
-    in
-    Exn.handle_uncaught_and_exit (fun () ->
-      let t = Version_info.add t ~version ~build_info in
-      let t = add_help_subcommands t in
-      let cmd, args = handle_environment t ~argv in
-      let path, args, maybe_new_comp_cword = process_args ~cmd ~args in
-      try
-        dispatch
-          t
-          Env.empty
-          ~extend
-          ~path
-          ~args
-          ~maybe_new_comp_cword
-          ~version
-          ~build_info
-          ~verbose_on_parse_error
-      with
-      | Failed_to_parse_command_line msg ->
-        if Cmdline.ends_in_complete args
-        then exit 0
-        else (
-          prerr_endline msg;
-          exit 1))
+    if should_abort_due_to_ppx_module_timer ()
+    then ()
+    else (
+      let build_info =
+        match build_info with
+        | Some v -> lazy v
+        | None -> default_build_info
+      in
+      Exn.handle_uncaught_and_exit (fun () ->
+        let t = Version_info.add t ~version ~build_info in
+        let t = add_help_subcommands t in
+        let cmd, args = handle_environment t ~argv in
+        let path, args, maybe_new_comp_cword = process_args ~cmd ~args in
+        try
+          dispatch
+            t
+            Env.empty
+            ~extend
+            ~path
+            ~args
+            ~maybe_new_comp_cword
+            ~version
+            ~build_info
+            ~verbose_on_parse_error
+        with
+        | Failed_to_parse_command_line msg ->
+          if Cmdline.ends_in_complete args
+          then exit 0
+          else (
+            prerr_endline msg;
+            exit 1)))
   ;;
 
   let deprecated_run
@@ -2842,24 +2857,27 @@ module For_unix (M : For_unix) = struct
         ~is_help_rec_flags
         ~is_expand_dots
     =
-    let path_strings = String.split cmd ~on:' ' in
-    let path = Path.of_parts path_strings in
-    let args = if is_expand_dots then "-expand-dots" :: args else args in
-    let args = if is_help_rec_flags then "-flags" :: args else args in
-    let args = if is_help_rec then "-r" :: args else args in
-    let args = if is_help then "-help" :: args else args in
-    let args = Cmdline.of_list args in
-    let t = add_help_subcommands t in
-    dispatch
-      t
-      Env.empty
-      ~path
-      ~args
-      ~extend:None
-      ~maybe_new_comp_cword:None
-      ~version:default_version
-      ~build_info:default_build_info
-      ~verbose_on_parse_error:None
+    if should_abort_due_to_ppx_module_timer ()
+    then ()
+    else (
+      let path_strings = String.split cmd ~on:' ' in
+      let path = Path.of_parts path_strings in
+      let args = if is_expand_dots then "-expand-dots" :: args else args in
+      let args = if is_help_rec_flags then "-flags" :: args else args in
+      let args = if is_help_rec then "-r" :: args else args in
+      let args = if is_help then "-help" :: args else args in
+      let args = Cmdline.of_list args in
+      let t = add_help_subcommands t in
+      dispatch
+        t
+        Env.empty
+        ~path
+        ~args
+        ~extend:None
+        ~maybe_new_comp_cword:None
+        ~version:default_version
+        ~build_info:default_build_info
+        ~verbose_on_parse_error:None)
   ;;
 end
 

@@ -43,6 +43,15 @@ module type S = sig
       -> ?len:int
       -> t
       -> string Sequence.t
+
+    (** [[%sexp_of: Hexdump.Pretty.t]] is the same as [[%sexp_of: Hexdump.t]], unless the
+        underlying sequence of characters is entirely printable. In that case, it is
+        rendered directly as a string. This allows e.g. test output to be much more
+        compact in the common (printable) case while still being interpretable for any
+        byte sequence. *)
+    module Pretty : sig
+      type nonrec t = t [@@deriving sexp_of]
+    end
   end
 end
 
@@ -56,6 +65,10 @@ module type S1 = sig
 
 
     val to_sequence : ?max_lines:int -> ?pos:int -> ?len:int -> _ t -> string Sequence.t
+
+    module Pretty : sig
+      type nonrec 'a t = 'a t [@@deriving sexp_of]
+    end
   end
 end
 
@@ -73,6 +86,10 @@ module type S2 = sig
       -> ?len:int
       -> (_, _) t
       -> string Sequence.t
+
+    module Pretty : sig
+      type nonrec ('a, 'b) t = ('a, 'b) t [@@deriving sexp_of]
+    end
   end
 end
 

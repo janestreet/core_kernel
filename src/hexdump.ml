@@ -93,6 +93,24 @@ module Of_indexable2 (T : Indexable2) = struct
     ;;
 
     let sexp_of_t _ _ t = to_sequence t |> Sequence.to_list |> [%sexp_of: string list]
+
+    module Pretty = struct
+      include T
+
+      let printable =
+        let rec printable_from t ~pos ~length =
+          pos >= length
+          || (Char.is_print (get t pos) && printable_from t ~pos:(pos + 1) ~length)
+        in
+        fun t -> printable_from t ~pos:0 ~length:(length t)
+      ;;
+
+      let to_string t = String.init (length t) ~f:(fun pos -> get t pos)
+
+      let sexp_of_t sexp_of_a sexp_of_b t =
+        if printable t then [%sexp (to_string t : string)] else [%sexp (t : (a, b) t)]
+      ;;
+    end
   end
 end
 
@@ -107,9 +125,15 @@ module Of_indexable1 (T : Indexable1) = struct
   module Hexdump = struct
     include T
 
-    let sexp_of_t x t = M.Hexdump.sexp_of_t x () t
+    let sexp_of_t x t = M.Hexdump.sexp_of_t x [%sexp_of: _] t
     let to_sequence = M.Hexdump.to_sequence
     let to_string_hum = M.Hexdump.to_string_hum
+
+    module Pretty = struct
+      include T
+
+      let sexp_of_t sexp_of_a t = [%sexp (t : (a, _) M.Hexdump.Pretty.t)]
+    end
   end
 end
 
@@ -124,8 +148,14 @@ module Of_indexable (T : Indexable) = struct
   module Hexdump = struct
     include T
 
-    let sexp_of_t t = M.Hexdump.sexp_of_t () t
+    let sexp_of_t t = M.Hexdump.sexp_of_t [%sexp_of: _] t
     let to_sequence = M.Hexdump.to_sequence
     let to_string_hum = M.Hexdump.to_string_hum
+
+    module Pretty = struct
+      include T
+
+      let sexp_of_t t = [%sexp (t : _ M.Hexdump.Pretty.t)]
+    end
   end
 end
