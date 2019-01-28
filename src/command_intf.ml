@@ -108,6 +108,7 @@ module type For_unix = sig
 
     val create_process_env
       :  ?working_dir:string
+      -> ?prog_search_path:string list
       -> ?argv0:string
       -> prog:string
       -> args:string list

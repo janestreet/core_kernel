@@ -89,3 +89,53 @@ let%test_module _ =
     ;;
   end)
 ;;
+
+let%test_module "of_sexp_allow_extra_fields" =
+  (module struct
+    module V = struct
+      type v1 =
+        { a : string
+        ; b : int
+        ; suffix : string
+        }
+      [@@deriving sexp]
+
+      type v2 =
+        { a : string
+        ; b : int
+        }
+      [@@deriving sexp]
+
+      type t = v2 [@@deriving sexp_of]
+
+      let t_of_sexp sexp : t =
+        try v2_of_sexp sexp with
+        | e ->
+          (match v1_of_sexp sexp with
+           | { a; b; suffix } -> { a = a ^ suffix; b }
+           | exception _ -> raise e)
+      ;;
+    end
+
+    type t = { v : V.t } [@@deriving sexp]
+
+    let%expect_test "affect sexp converter globally" =
+      let sexp = Sexp.of_string {|((v ((a a)(b 0)(suffix "-suffix"))))|} in
+      let t = t_of_sexp sexp in
+      print_s (sexp_of_t t);
+      [%expect
+        {|
+        ((
+          v (
+            (a a-suffix)
+            (b 0)))) |}];
+      let t = Sexp.of_sexp_allow_extra_fields t_of_sexp sexp in
+      print_s (sexp_of_t t);
+      [%expect {|
+        ((
+          v (
+            (a a)
+            (b 0)))) |}]
+    ;;
+  end)
+;;
