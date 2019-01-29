@@ -1,6 +1,6 @@
 open! Core_kernel
 open! Expect_test_helpers_kernel
-open! Core_kernel.Weak_pointer
+open! Weak_pointer
 
 type contents = int ref [@@deriving sexp_of]
 

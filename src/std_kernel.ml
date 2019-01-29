@@ -194,7 +194,6 @@ module Univ = Univ
 module Univ_map = Univ_map
 module Validated = Validated
 module Weak = Weak
-module Weak_pointer = Weak_pointer
 
 module type Unique_id = Unique_id.Id
 

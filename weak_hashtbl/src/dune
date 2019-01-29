@@ -1,2 +1,2 @@
 (library (name weak_hashtbl) (public_name core_kernel.weak_hashtbl)
- (libraries core_kernel) (preprocess (pps ppx_jane)))
+ (libraries core_kernel weak_pointer) (preprocess (pps ppx_jane)))

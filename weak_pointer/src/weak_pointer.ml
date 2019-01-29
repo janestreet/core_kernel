@@ -1,7 +1,6 @@
 (* We implement a weak pointer using a [Weak.t]. *)
 
-open! Import
-open! Std_internal
+open! Core_kernel
 
 type 'a t = 'a Weak.t
 

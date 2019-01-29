@@ -841,12 +841,22 @@ module For_ppx_module_timer = struct
           (Sys.getenv Ppx_module_timer_runtime.am_recording_environment_variable))
     ;;
 
+    let fake_gc_events_for_index i : Ppx_module_timer_runtime.Startup_time.Gc_events.t =
+      let open Int.O in
+      { minor_collections = (if i % 2 = 1 then 1 else 0)
+      ; major_collections = (if i % 4 = 3 then 1 else 0)
+      ; compactions = (if i % 8 = 7 then 1 else 0)
+      }
+    ;;
+
     let apply t alist =
       match t with
-      | Replace alist -> alist
+      | Replace alist ->
+        List.mapi alist ~f:(fun i (span, module_name) ->
+          span, module_name, fake_gc_events_for_index i)
       | Interval span ->
-        List.mapi alist ~f:(fun i (_, module_name) ->
-          Span.scale_int span (Int.succ i), module_name)
+        List.mapi alist ~f:(fun i (_, module_name, gc_events) ->
+          Span.scale_int span (Int.succ i), module_name, gc_events)
     ;;
   end
 
@@ -854,9 +864,9 @@ module For_ppx_module_timer = struct
     let startup_times =
       List.map
         startup_times
-        ~f:(fun (startup_time : Ppx_module_timer_runtime.Startup_time.t) ->
-          ( Span.of_int63_ns startup_time.startup_time_in_nanoseconds
-          , startup_time.module_name ))
+        ~f:(fun ({ module_name; startup_time_in_nanoseconds; gc_events } :
+                   Ppx_module_timer_runtime.Startup_time.t)
+             -> Span.of_int63_ns startup_time_in_nanoseconds, module_name, gc_events)
     in
     let startup_times =
       match Override.get () with
@@ -866,21 +876,27 @@ module For_ppx_module_timer = struct
         Override.apply override startup_times
     in
     let unit_of_time =
-      List.map startup_times ~f:(fun (t, _) -> Span.to_unit_of_time t)
+      List.map startup_times ~f:(fun (t, _, _) -> Span.to_unit_of_time t)
       |> List.max_elt ~compare:Unit_of_time.compare
       |> Option.value ~default:Nanosecond
     in
     let startup_times =
-      List.map startup_times ~f:(fun (t, module_name) ->
-        Span.to_string_hum ~unit_of_time ~align_decimal:true t, module_name)
+      List.map
+        startup_times
+        ~f:(Tuple.T3.map_fst ~f:(Span.to_string_hum ~unit_of_time ~align_decimal:true))
     in
     let span_width =
-      List.map startup_times ~f:(fun (span_string, _) -> String.length span_string)
+      List.map startup_times ~f:(fun (span_string, _, _) -> String.length span_string)
       |> List.max_elt ~compare:Int.compare
       |> Option.value ~default:0
     in
-    List.iter startup_times ~f:(fun (span_string, module_name) ->
-      printf "%*s %s\n" span_width span_string module_name)
+    List.iter startup_times ~f:(fun (span_string, module_name, gc_events) ->
+      printf
+        "%*s %s%s\n"
+        span_width
+        span_string
+        module_name
+        (Ppx_module_timer_runtime.gc_events_suffix_string gc_events))
   ;;
 
   let () =
