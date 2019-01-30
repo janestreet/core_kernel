@@ -45,6 +45,16 @@ let%expect_test "No_poly_compare" =
 ;;
 
 let%expect_test "merge_all" =
+  let merge_all =
+    Sequence.merge_all
+      (module struct
+        type 'a t = 'a Fheap.t
+
+        let create ~compare = Fheap.create ~cmp:compare
+        let add = Fheap.add
+        let remove_min = Fheap.pop
+      end)
+  in
   let compare = No_poly_compare.compare Int.compare in
   (* We take up to 20 elements so we can test infinite sequences. *)
   let list_of_sequence sequence = Sequence.to_list (Sequence.take sequence 20) in
@@ -106,7 +116,7 @@ let%expect_test "merge_all" =
     ((0 2 4 6 8 10 12 14 16 18 20 22 24 26 28 30 32 34 36 38)
      (1 3 5 7 9 11 13 15 17 19 21 23 25 27 29 31 33 35 37 39)) |}];
   List.iter examples ~f:(fun example ->
-    print_s [%sexp (Sequence.merge_all example ~compare : sequence)]);
+    print_s [%sexp (merge_all example ~compare : sequence)]);
   [%expect
     {|
     ()
@@ -148,7 +158,7 @@ let%expect_test "merge_all" =
   in
   (* Test that output is sorted. *)
   run (fun seqs ->
-    let seq = Sequence.merge_all seqs ~compare in
+    let seq = merge_all seqs ~compare in
     let list = list_of_sequence seq in
     require_exn
       [%here]
@@ -157,7 +167,7 @@ let%expect_test "merge_all" =
   [%expect {||}];
   (* Test that output is consistent with concat+sort. *)
   run (fun seqs ->
-    let merge_all = list_of_sequence (Sequence.merge_all seqs ~compare) in
+    let merge_all = list_of_sequence (merge_all seqs ~compare) in
     let concat_and_sort =
       let sorted =
         List.map seqs ~f:list_of_sequence |> List.concat |> List.sort ~compare
@@ -176,7 +186,7 @@ let%expect_test "merge_all" =
   [%expect {||}];
   (* Test that sequence is replayable. *)
   run (fun seqs ->
-    let seq = Sequence.merge_all seqs ~compare in
+    let seq = merge_all seqs ~compare in
     let list1 = list_of_sequence seq in
     let list2 = list_of_sequence seq in
     require_exn

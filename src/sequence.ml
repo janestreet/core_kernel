@@ -50,21 +50,29 @@ include (
    and module Merge_with_duplicates_element := Base.Sequence
                                                .Merge_with_duplicates_element)
 
-module Merge_all_state = struct
-  type 'a t =
-    { heap : ('a * 'a Base.Sequence.t) Fheap.t
-    ; not_yet_in_heap : 'a Base.Sequence.t list
-    }
-  [@@deriving fields]
+module type Heap = sig
+  type 'a t
 
-  let create = Fields.create
+  val create : compare:('a -> 'a -> int) -> 'a t
+  val add : 'a t -> 'a -> 'a t
+  val remove_min : 'a t -> ('a * 'a t) option
 end
 
-let merge_all seqs ~compare =
+let merge_all (module Heap : Heap) seqs ~compare =
+  let module Merge_all_state = struct
+    type 'a t =
+      { heap : ('a * 'a Base.Sequence.t) Heap.t
+      ; not_yet_in_heap : 'a Base.Sequence.t list
+      }
+    [@@deriving fields]
+
+    let create = Fields.create
+  end
+  in
   unfold_step
     ~init:
       (Merge_all_state.create
-         ~heap:(Fheap.create ~cmp:(Base.Comparable.lift compare ~f:fst))
+         ~heap:(Heap.create ~compare:(Base.Comparable.lift compare ~f:fst))
          ~not_yet_in_heap:seqs)
     ~f:(fun { heap; not_yet_in_heap } ->
       match not_yet_in_heap with
@@ -72,9 +80,9 @@ let merge_all seqs ~compare =
         (match Expert.next_step seq with
          | Done -> Skip { not_yet_in_heap; heap }
          | Skip seq -> Skip { not_yet_in_heap = seq :: not_yet_in_heap; heap }
-         | Yield (elt, seq) -> Skip { not_yet_in_heap; heap = Fheap.add heap (elt, seq) })
+         | Yield (elt, seq) -> Skip { not_yet_in_heap; heap = Heap.add heap (elt, seq) })
       | [] ->
-        (match Fheap.pop heap with
+        (match Heap.remove_min heap with
          | None -> Done
          | Some ((elt, seq), heap) -> Yield (elt, { heap; not_yet_in_heap = [ seq ] })))
 ;;

@@ -40,6 +40,14 @@ end
    and module Merge_with_duplicates_element := Base.Sequence
                                                .Merge_with_duplicates_element
 
+module type Heap = sig
+  type 'a t
+
+  val create : compare:('a -> 'a -> int) -> 'a t
+  val add : 'a t -> 'a -> 'a t
+  val remove_min : 'a t -> ('a * 'a t) option
+end
+
 (** Merges elements from sequences that are assumed to be sorted by [compare] to produce a
     sequence also sorted by [compare]. If any of the inputs are not sorted, the order of
     the output is not guaranteed to be sorted.
@@ -47,4 +55,4 @@ end
     This includes duplicate elements in the output (whether they occur within
     one input sequence, or across different input sequences).
 *)
-val merge_all : 'a t list -> compare:('a -> 'a -> int) -> 'a t
+val merge_all : (module Heap) -> 'a t list -> compare:('a -> 'a -> int) -> 'a t
