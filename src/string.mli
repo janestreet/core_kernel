@@ -58,7 +58,7 @@ val gen_with_length : int -> char Quickcheck.Generator.t -> t Quickcheck.Generat
     uniformity with other stable types. *)
 module Stable : sig
   module V1 : sig
-    type nonrec t = t [@@deriving hash]
+    type nonrec t = t [@@deriving equal, hash]
 
     include
       Stable_comparable.V1

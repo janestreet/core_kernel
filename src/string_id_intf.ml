@@ -5,13 +5,13 @@ open! Import
 open Std_internal
 
 module type S = sig
-  type t = private string [@@deriving hash]
+  type t = private string [@@deriving equal, hash]
 
   include Identifiable with type t := t
 
   module Stable : sig
     module V1 : sig
-      type nonrec t = t [@@deriving hash]
+      type nonrec t = t [@@deriving equal, hash]
 
       include
         Stable_comparable.V1

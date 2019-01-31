@@ -1,5 +1,5 @@
-open! Import
-open Std_internal
+open! Core_kernel
+
 module Weak = Caml.Weak
 
 type 'a t = 'a Heap_block.t Weak.t

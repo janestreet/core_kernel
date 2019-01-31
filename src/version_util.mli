@@ -15,6 +15,16 @@ val version : string (** all hg repos and their versions *)
 
 val version_list : string list (** same as [version], but one string per line *)
 
+(** [Version] may be used to parse a single entry from [version_list]. *)
+module Version : sig
+  type t =
+    { repo : string
+    ; version : string
+    }
+
+  val parse : string -> t Or_error.t
+end
+
 val arg_spec : (string * Arg.spec * string) list
 
 (** [Application_specific_fields] is a single field in the build-info sexp that holds

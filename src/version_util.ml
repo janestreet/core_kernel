@@ -18,6 +18,25 @@ let hg_version = trim_trailing_newline (generated_hg_version ())
 let version = String.tr ~target:'\n' ~replacement:' ' hg_version
 let version_list = String.split ~on:'\n' hg_version
 
+module Version = struct
+  type t =
+    { repo : string
+    ; version : string
+    } [@@deriving sexp_of]
+
+  let parse version =
+    match String.rsplit2 version ~on:'_' with
+    | None -> error_s [%message "Could not parse version" version]
+    | Some (repo, version) -> Ok {repo; version}
+
+  let%expect_test "get version" =
+    printf
+      !"%{sexp:t Or_error.t}\n"
+      (parse "ssh://somerepo_04ce83e21002");
+    [%expect {| (Ok ((repo ssh://somerepo) (version 04ce83e21002))) |}]
+  ;;
+end
+
 let arg_spec = [
   ("-version",
    Arg.Unit
