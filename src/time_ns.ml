@@ -41,18 +41,38 @@ let of_int_ns_since_epoch =
   else fun _ -> failwith "Time_ns.of_int_ns_since_epoch: unsupported on 32bit machines"
 ;;
 
-let to_time t = Time_float.add Time_float.epoch (Span.to_span (to_span_since_epoch t))
-let min_time_value = to_time min_value
-let max_time_value = to_time max_value
+let to_time_float_round_nearest t =
+  Time_float.of_span_since_epoch
+    (Span.to_span_float_round_nearest (to_span_since_epoch t))
+;;
 
-let of_time time =
+let to_time_float_round_nearest_microsecond t =
+  Time_float.of_span_since_epoch
+    (Span.to_span_float_round_nearest_microsecond (to_span_since_epoch t))
+;;
+
+let min_time_value = to_time_float_round_nearest min_value
+let max_time_value = to_time_float_round_nearest max_value
+
+let check_before_conversion time =
   if Time_float.( < ) time min_time_value || Time_float.( > ) time max_time_value
   then
     failwiths
       "Time_ns does not support this time"
       time
-      [%sexp_of: Time_float.Stable.With_utc_sexp.V2.t];
-  of_span_since_epoch (Span.of_span (Time_float.diff time Time_float.epoch))
+      [%sexp_of: Time_float.Stable.With_utc_sexp.V2.t]
+;;
+
+let of_time_float_round_nearest time =
+  check_before_conversion time;
+  of_span_since_epoch
+    (Span.of_span_float_round_nearest (Time_float.to_span_since_epoch time))
+;;
+
+let of_time_float_round_nearest_microsecond time =
+  check_before_conversion time;
+  of_span_since_epoch
+    (Span.of_span_float_round_nearest_microsecond (Time_float.to_span_since_epoch time))
 ;;
 
 let[@inline never] raise_next_multiple_got_nonpositive_interval interval =
@@ -822,6 +842,10 @@ end = struct
 end
 
 include To_and_of_string
+
+(* Legacy conversions that round to the nearest microsecond. *)
+let to_time = to_time_float_round_nearest_microsecond
+let of_time = of_time_float_round_nearest_microsecond
 
 module For_ppx_module_timer = struct
   module Override = struct

@@ -46,20 +46,25 @@ module type Span = sig
   val since_unix_epoch : unit -> t
   val random : ?state:Random.State.t -> unit -> t
 
-  (** {!Time.t} is precise to approximately 0.24us in 2014.  If [to_span] converts to the
-      closest [Time.Span.t], we have stability problems: converting back yields a
-      different [t], sometimes different enough to have a different external
-      representation, because the conversion back and forth crosses a rounding boundary.
+  (** WARNING!!! [to_span] and [of_span] both round to the nearest 1us.
 
-      To stabilize conversion, we treat [Time.t] as having 1us precision: [to_span] and
-      [of_span] both round to the nearest 1us.
-
-      Around 135y magnitudes, [Time.Span.t] no longer has 1us resolution.  At that point,
-      [to_span] and [of_span] raise.
+      Around 135y magnitudes [to_span] and [of_span] raise.
   *)
   val to_span : t -> Span_float.t
+  [@@deprecated
+    "[since 2019-01] use [to_span_float_round_nearest] or \
+     [to_span_float_round_nearest_microsecond]"]
+
 
   val of_span : Span_float.t -> t
+  [@@deprecated
+    "[since 2019-01] use [of_span_float_round_nearest] or \
+     [of_span_float_round_nearest_microsecond]"]
+
+  val to_span_float_round_nearest : t -> Span_float.t
+  val to_span_float_round_nearest_microsecond : t -> Span_float.t
+  val of_span_float_round_nearest : Span_float.t -> t
+  val of_span_float_round_nearest_microsecond : Span_float.t -> t
 
   (** Note that we expose a sexp format that is not the one exposed in [Core]. *)
   module Alternate_sexp : sig
@@ -184,8 +189,21 @@ module type Time_ns = sig
     -> t
 
   val random : ?state:Random.State.t -> unit -> t
+
   val of_time : Time_float.t -> t
+  [@@deprecated
+    "[since 2019-01] use [of_time_float_round_nearest] or \
+     [of_time_float_round_nearest_microsecond]"]
+
   val to_time : t -> Time_float.t
+  [@@deprecated
+    "[since 2019-01] use [to_time_float_round_nearest] or \
+     [to_time_float_round_nearest_microsecond]"]
+
+  val to_time_float_round_nearest : t -> Time_float.t
+  val to_time_float_round_nearest_microsecond : t -> Time_float.t
+  val of_time_float_round_nearest : Time_float.t -> t
+  val of_time_float_round_nearest_microsecond : Time_float.t -> t
 
   module Utc : sig
     (** [to_date_and_span_since_start_of_day] computes the date and intraday-offset of a

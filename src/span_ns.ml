@@ -738,6 +738,8 @@ include (
 (* re-include comparisons to shadow the un-inlineable ones from [Comparable] *)
 include Replace_polymorphic_compare
 
+let to_span_float_round_nearest t = Span_float.of_sec (to_sec t)
+let of_span_float_round_nearest s = of_sec (Span_float.to_sec s)
 let half_microsecond = Int63.of_int 500
 let nearest_microsecond t = Int63.((to_int63_ns t + half_microsecond) /% of_int 1000)
 
@@ -746,11 +748,15 @@ let[@inline never] invalid_range t =
 ;;
 
 let check_range t = if t < min_value || t > max_value then invalid_range t else t
-let to_span t = Span_float.of_us (Int63.to_float (nearest_microsecond (check_range t)))
-let min_span_float_value = to_span min_value
-let max_span_float_value = to_span max_value
 
-let of_span s =
+let to_span_float_round_nearest_microsecond t =
+  Span_float.of_us (Int63.to_float (nearest_microsecond (check_range t)))
+;;
+
+let min_span_float_value = to_span_float_round_nearest min_value
+let max_span_float_value = to_span_float_round_nearest max_value
+
+let of_span_float_round_nearest_microsecond s =
   if Span_float.( > ) s max_span_float_value || Span_float.( < ) s min_span_float_value
   then failwiths "Time_ns.Span does not support this span" s [%sexp_of: Span_float.t];
   (* Using [Time.Span.to_sec] (being the identity) so that
@@ -767,3 +773,7 @@ module Private = struct
   let of_parts = of_parts
   let to_parts = to_parts
 end
+
+(* Legacy definitions that round to the nearest microsecond. *)
+let of_span = of_span_float_round_nearest_microsecond
+let to_span = to_span_float_round_nearest_microsecond

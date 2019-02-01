@@ -129,7 +129,6 @@ module Flags = Flags
 module Float_with_finite_only_serialization = Float_with_finite_only_serialization
 module Fqueue = Fqueue
 module Gc = Gc
-module Hash_heap = Hash_heap
 module Hash_queue = Hash_queue
 module Hashable = Hashable
 module Heap = Heap
