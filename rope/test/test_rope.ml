@@ -1,5 +1,5 @@
 open! Core_kernel
-open! Import
+open! Expect_test_helpers_kernel
 open! Rope
 
 let%test _ = is_empty empty

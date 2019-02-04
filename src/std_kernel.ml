@@ -167,7 +167,6 @@ module Quickcheck = Quickcheck
 module Quickcheck_intf = Quickcheck_intf
 module Quickcheckable = Quickcheckable
 module Robustly_comparable = Robustly_comparable
-module Rope = Rope
 module Set_once = Set_once
 module Splittable_random = Splittable_random
 module Stable_comparable = Stable_comparable
