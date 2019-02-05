@@ -49,6 +49,7 @@ let gen_with_length length quickcheck_generator =
   Base_quickcheck.Generator.list_with_length quickcheck_generator ~length
 ;;
 
+let gen_filtered = Base_quickcheck.Generator.list_filtered
 let gen_permutations = Base_quickcheck.Generator.list_permutations
 let quickcheck_observer = Base_quickcheck.Observer.list
 let quickcheck_shrinker = Base_quickcheck.Shrinker.list

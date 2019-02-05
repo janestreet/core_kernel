@@ -1,7 +1,7 @@
 
 
+open! Core_kernel
 open! Import
-open Std_internal
 
 module Range : sig
   (* A range represents a closed interval of integers *)

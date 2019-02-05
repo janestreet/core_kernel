@@ -73,6 +73,10 @@ val gen_non_empty : 'a Quickcheck.Generator.t -> 'a t Quickcheck.Generator.t
 (** Like [gen], but generates lists with the given length. *)
 val gen_with_length : int -> 'a Quickcheck.Generator.t -> 'a t Quickcheck.Generator.t
 
+(** Randomly drops elements from the input list. Length is chosen uniformly between 0 and
+    the length of the input, inclusive. *)
+val gen_filtered : 'a t -> 'a t Quickcheck.Generator.t
+
 (** [gen_permutations t] generates all permutations of [list].  If [t] contains duplicate
     values, then [gen_permutations t] will produce duplicate lists. *)
 val gen_permutations : 'a t -> 'a t Quickcheck.Generator.t

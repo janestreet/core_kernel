@@ -1,5 +1,5 @@
+open! Core_kernel
 open! Import
-open Std_internal
 
 type 'a t = 'a ref
 

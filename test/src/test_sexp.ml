@@ -90,7 +90,7 @@ let%test_module _ =
   end)
 ;;
 
-let%test_module "of_sexp_allow_extra_fields" =
+let%test_module "of_sexp_allow_extra_fields_recursively" =
   (module struct
     module V = struct
       type v1 =
@@ -129,7 +129,7 @@ let%test_module "of_sexp_allow_extra_fields" =
           v (
             (a a-suffix)
             (b 0)))) |}];
-      let t = Sexp.of_sexp_allow_extra_fields t_of_sexp sexp in
+      let t = Sexp.of_sexp_allow_extra_fields_recursively t_of_sexp sexp in
       print_s (sexp_of_t t);
       [%expect {|
         ((

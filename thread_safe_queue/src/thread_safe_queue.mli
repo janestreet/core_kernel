@@ -4,6 +4,7 @@
     doesn't want to block, e.g., a finalizer or an async job.
 *)
 
+open! Core_kernel
 open! Import
 
 type 'a t [@@deriving sexp_of]

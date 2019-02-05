@@ -101,7 +101,7 @@ let sexp_of_no_raise sexp_of_a a =
 
 include Comparable.Extend (Base.Sexp) (Base.Sexp)
 
-let of_sexp_allow_extra_fields of_sexp sexp =
+let of_sexp_allow_extra_fields_recursively of_sexp sexp =
   let r = Sexplib.Conv.record_check_extra_fields in
   let prev = !r in
   Exn.protect
