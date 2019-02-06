@@ -1,5 +1,5 @@
+open! Core_kernel
 open! Import
-open Std_internal
 module Core_char = Char
 module Char = Caml.Char
 module Int32 = Caml.Int32

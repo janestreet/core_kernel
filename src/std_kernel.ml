@@ -110,7 +110,6 @@ module Bag = Bag
 module Bigbuffer = Bigbuffer
 module Bigsubstring = Bigsubstring
 module Binable = Binable
-module Binary_packing = Binary_packing
 module Bin_prot = Core_bin_prot
 module Blang = Blang
 module Bounded_index = Bounded_index

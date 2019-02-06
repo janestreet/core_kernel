@@ -7,6 +7,7 @@ module Repr = Int63
 module T : sig
   type t [@@deriving compare, hash, sexp_of]
 
+  val to_string : t -> string
   val of_repr : Repr.t -> t
   val to_repr : t -> Repr.t
 end = struct
@@ -14,7 +15,23 @@ end = struct
 
   let of_repr = Fn.id
   let to_repr = Fn.id
-  let sexp_of_t t = [%sexp Bytes (t : Repr.t)]
+
+  let to_string n =
+    let open Repr in
+    let kib = of_int 1024 in
+    let mib = kib * kib in
+    let gib = kib * mib in
+    let n_abs = abs n in
+    if n_abs < kib
+    then sprintf "%db" (to_int_exn n)
+    else if n_abs < mib
+    then sprintf "%gk" (to_float n /. to_float kib)
+    else if n_abs < gib
+    then sprintf "%gm" (to_float n /. to_float mib)
+    else sprintf "%gg" (to_float n /. to_float gib)
+  ;;
+
+  let sexp_of_t n = Sexp.Atom (to_string n)
 end
 
 include T
@@ -94,23 +111,85 @@ let[@deprecated "[since 2019-01] Use [of_words_int] or [of_words_float_exn]"] of
   of_words_float_exn
 ;;
 
+let of_string s =
+  let length = String.length s in
+  if Int.( < ) length 2
+  then invalid_argf "'%s' passed to Byte_units.of_string - too short" s ();
+  let base_str = String.sub s ~pos:0 ~len:(length - 1) in
+  let ext_char = Char.lowercase s.[length - 1] in
+  let base =
+    try Float.of_string base_str with
+    | _ ->
+      invalid_argf
+        "'%s' passed to Byte_units.of_string - %s cannot be converted to float "
+        s
+        base_str
+        ()
+  in
+  match ext_char with
+  | 'b' -> of_bytes_float_exn base
+  | 'k' -> of_kilobytes base
+  | 'm' -> of_megabytes base
+  | 'g' -> of_gigabytes base
+  | 't' -> of_terabytes base
+  | 'p' -> of_petabytes base
+  | 'e' -> of_exabytes base
+  | 'w' -> of_words base
+  | ext ->
+    invalid_argf "'%s' passed to Byte_units.of_string - illegal extension %c" s ext ()
+;;
+
 let largest_measure t =
-  if t >= exabyte
+  let t_abs = of_repr (Repr.abs (to_repr t)) in
+  if t_abs >= exabyte
   then `Exabytes
-  else if t >= petabyte
+  else if t_abs >= petabyte
   then `Petabytes
-  else if t >= terabyte
+  else if t_abs >= terabyte
   then `Terabytes
-  else if t >= gigabyte
+  else if t_abs >= gigabyte
   then `Gigabytes
-  else if t >= megabyte
+  else if t_abs >= megabyte
   then `Megabytes
-  else if t >= kilobyte
+  else if t_abs >= kilobyte
   then `Kilobytes
   else `Bytes
 ;;
 
 module Stable = struct
+  (* Share the common [of_sexp] code for [V1] and [V2]. *)
+  module Of_sexp_v1_v2 : sig
+    val t_of_sexp : Sexp.t -> t
+  end = struct
+    let no_match () = failwith "Not a recognized [Byte_units.t] representation"
+
+    let of_value_sexp_and_unit_name val_sexp = function
+      | "Bytes" ->
+        (try of_bytes_int63 (Int63.t_of_sexp val_sexp) with
+         | _ -> of_bytes_float_exn (Float.t_of_sexp val_sexp))
+      | "Kilobytes" -> of_kilobytes (float_of_sexp val_sexp)
+      | "Megabytes" -> of_megabytes (float_of_sexp val_sexp)
+      | "Gigabytes" -> of_gigabytes (float_of_sexp val_sexp)
+      | "Terabytes" -> of_terabytes (float_of_sexp val_sexp)
+      | "Petabytes" -> of_petabytes (float_of_sexp val_sexp)
+      | "Exabytes" -> of_exabytes (float_of_sexp val_sexp)
+      | "Words" -> of_words_float_exn (float_of_sexp val_sexp)
+      | _ -> no_match ()
+    ;;
+
+    let t_of_sexp = function
+      | Sexp.Atom str -> of_string str
+      | Sexp.List [ Sexp.Atom unit_name; value ] ->
+        of_value_sexp_and_unit_name value unit_name
+      | _ -> no_match ()
+    ;;
+
+    let t_of_sexp sexp =
+      try t_of_sexp sexp with
+      | exn -> raise (Sexp.Of_sexp_error (exn, sexp))
+    ;;
+  end
+
   module V1 = struct
     type nonrec t = t [@@deriving compare, hash]
 
@@ -123,44 +202,20 @@ module Stable = struct
           let of_binable = of_bytes_float_exn
         end)
 
-    include Sexpable.Of_sexpable (struct
-        (* External.t - used just for custom sexp converters *)
-        type t =
-          [ `Bytes of float
-          | `Kilobytes of float
-          | `Megabytes of float
-          | `Gigabytes of float
-          | `Words of float ]
-        [@@deriving sexp]
-      end)
-        (struct
-          type nonrec t = t
+    include Of_sexp_v1_v2
 
-          let to_sexpable t =
-            match largest_measure t with
-            | `Bytes -> `Bytes (bytes_float t)
-            | `Kilobytes -> `Kilobytes (kilobytes t)
-            | `Megabytes -> `Megabytes (megabytes t)
-            | `Gigabytes | `Terabytes | `Petabytes | `Exabytes ->
-              `Gigabytes (gigabytes t)
-          ;;
-
-          let of_sexpable = function
-            | `Bytes n -> of_bytes_float_exn n
-            | `Kilobytes n -> of_kilobytes n
-            | `Megabytes n -> of_megabytes n
-            | `Gigabytes n -> of_gigabytes n
-            | `Words n -> of_words n
-          ;;
-        end)
-
-    let to_string t =
+    let sexp_of_t t =
+      (* V1 only goes up to gigabytes *)
       match largest_measure t with
-      | `Bytes -> sprintf !"%db" (bytes_int_exn t)
-      | `Kilobytes -> sprintf "%gk" (kilobytes t)
-      | `Megabytes -> sprintf "%gm" (megabytes t)
-      | `Gigabytes | `Terabytes | `Petabytes | `Exabytes -> sprintf "%gg" (gigabytes t)
+      | `Bytes -> [%sexp `Bytes (bytes_float t : float)]
+      | `Kilobytes -> [%sexp `Kilobytes (kilobytes t : float)]
+      | `Megabytes -> [%sexp `Megabytes (megabytes t : float)]
+      | `Gigabytes | `Terabytes | `Petabytes | `Exabytes ->
+        [%sexp `Gigabytes (gigabytes t : float)]
     ;;
+
+    let to_string = to_string
+    let of_string = of_string
 
     (* This test documents the original to-string representation and fails under javascript
        due to differences in the rounding. *)
@@ -185,38 +240,6 @@ module Stable = struct
       [%expect {| 9.53674m |}]
     ;;
 
-    let of_string s =
-      let length = String.length s in
-      if Int.( < ) length 2
-      then invalid_argf "'%s' passed to Byte_units.of_string - too short" s ();
-      let base_str = String.sub s ~pos:0 ~len:(length - 1) in
-      let ext_char = Char.lowercase s.[length - 1] in
-      let base =
-        try Float.of_string base_str with
-        | _ ->
-          invalid_argf
-            "'%s' passed to Byte_units.of_string - %s cannot be converted to float "
-            s
-            base_str
-            ()
-      in
-      match ext_char with
-      | 'b' -> of_bytes_float_exn base
-      | 'k' -> of_kilobytes base
-      | 'm' -> of_megabytes base
-      | 'g' -> of_gigabytes base
-      | 't' -> of_terabytes base
-      | 'p' -> of_petabytes base
-      | 'e' -> of_exabytes base
-      | 'w' -> of_words base
-      | ext ->
-        invalid_argf
-          "'%s' passed to Byte_units.of_string - illegal extension %c"
-          s
-          ext
-          ()
-    ;;
-
     let t_of_sexp sexp =
       match sexp with
       | Sexp.Atom s ->
@@ -238,39 +261,32 @@ module Stable = struct
           let of_binable = of_bytes_int63
         end)
 
-    include Sexpable.Of_sexpable (struct
-        (* External.t - used just for custom sexp converters *)
-        type t = [`Bytes of Int63.Stable.V1.t] [@@deriving sexp]
-      end)
-        (struct
-          type nonrec t = t
+    include Of_sexp_v1_v2
 
-          let to_sexpable t = `Bytes (bytes_int63 t)
-          let of_sexpable (`Bytes t) = of_bytes_int63 t
-        end)
+    let sexp_of_t t = [%sexp `Bytes (bytes_int63 t : Int63.t)]
   end
 end
 
 let to_string_hum = Stable.V1.to_string
-let to_string = Stable.V1.to_string
-let of_string = Stable.V1.of_string
 
 let to_string_short t =
-  let f, ext =
-    match largest_measure t with
-    | `Bytes -> bytes_float t, 'b'
-    | `Kilobytes -> kilobytes t, 'k'
-    | `Megabytes -> megabytes t, 'm'
-    | `Gigabytes -> gigabytes t, 'g'
-    | `Terabytes -> terabytes t, 't'
-    | `Petabytes -> petabytes t, 'p'
-    | `Exabytes -> exabytes t, 'e'
+  let to_units_str to_unit ext =
+    let f = to_unit t in
+    let f_abs = Float.abs f in
+    if f_abs >=. 100.
+    then sprintf "%.0f%c" f ext
+    else if f_abs >=. 10.
+    then sprintf "%.1f%c" f ext
+    else sprintf "%.2f%c" f ext
   in
-  if f >=. 100.
-  then sprintf "%.0f%c" f ext
-  else if f >=. 10.
-  then sprintf "%.1f%c" f ext
-  else sprintf "%.2f%c" f ext
+  match largest_measure t with
+  | `Bytes -> sprintf "%db" (bytes_int_exn t)
+  | `Kilobytes -> to_units_str kilobytes 'k'
+  | `Megabytes -> to_units_str megabytes 'm'
+  | `Gigabytes -> to_units_str gigabytes 'g'
+  | `Terabytes -> to_units_str terabytes 't'
+  | `Petabytes -> to_units_str petabytes 'p'
+  | `Exabytes -> to_units_str exabytes 'e'
 ;;
 
 let%expect_test _ =
