@@ -1,4 +1,4 @@
-open! Import
+open! Core_kernel
 module Array = Base.Array
 module Int = Base.Int
 module List = Base.List

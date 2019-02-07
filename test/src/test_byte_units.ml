@@ -68,7 +68,8 @@ let print_all_byte_units fmt =
     printf !"%{sexp:Byte_units.Stable.V2.t} -> %s\n" n (sprintf fmt n))
 ;;
 
-let%expect_test "Byte_units.to_string" =
+let%expect_test ("Byte_units.to_string"[@tags "no-js"]) =
+  (* disabling test in javascript as it has subtly different rounding breaking this test. *)
   print_all_byte_units !"%{Byte_units}";
   [%expect
     {|
@@ -138,7 +139,8 @@ let%expect_test "Byte_units.to_string_short" =
     (Bytes -10_000_000) -> -9.54m |}]
 ;;
 
-let%expect_test "byte_units.sexp_of_t" =
+let%expect_test ("Byte_units.sexp_of_t"[@tags "no-js"]) =
+  (* disabling test in javascript as it has subtly different rounding breaking this test. *)
   print_all_byte_units !"%{sexp:Byte_units.t}";
   [%expect
     {|

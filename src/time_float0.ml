@@ -110,7 +110,7 @@ module Date_and_ofday = struct
   ;;
 end
 
-let next_multiple ?(can_equal_after = false) ~base ~after ~interval () =
+let next_multiple_internal ~can_equal_after ~base ~after ~interval =
   if Span.( <= ) interval Span.zero
   then
     failwiths "Time.next_multiple got nonpositive interval" interval [%sexp_of: Span.t];
@@ -126,6 +126,18 @@ let next_multiple ?(can_equal_after = false) ~base ~after ~interval () =
            (Float.round ~dir:`Down (Span.( // ) base_to_after interval)))
     in
     if next > after || (can_equal_after && next = after) then next else add next interval)
+;;
+
+let next_multiple ?(can_equal_after = false) ~base ~after ~interval () =
+  next_multiple_internal ~can_equal_after ~base ~after ~interval
+;;
+
+let prev_multiple ?(can_equal_before = false) ~base ~before ~interval () =
+  next_multiple_internal
+    ~can_equal_after:(not can_equal_before)
+    ~base
+    ~after:(sub before interval)
+    ~interval
 ;;
 
 let now () =

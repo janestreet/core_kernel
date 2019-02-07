@@ -188,6 +188,24 @@ module type Time_ns = sig
     -> unit
     -> t
 
+  (** [prev_multiple ~base ~before ~interval] returns the largest [time] of the form:
+
+      {[
+        time = base + k * interval
+      ]}
+
+      where [k >= 0] and [time < before].  It is an error if [interval <= 0].
+
+      Supplying [~can_equal_before:true] allows the result to satisfy [time <= before].
+  *)
+  val prev_multiple
+    :  ?can_equal_before:bool (** default is [false] *)
+    -> base:t
+    -> before:t
+    -> interval:Span.t
+    -> unit
+    -> t
+
   val random : ?state:Random.State.t -> unit -> t
 
   val of_time : Time_float.t -> t

@@ -1,7 +1,7 @@
 (** Functional heaps (implemented as
     {{: http://en.wikipedia.org/wiki/Pairing_heap} pairing heaps}). *)
 
-open! Import
+open! Core_kernel
 
 (** [t_of_sexp] is not supported, because of the difficulty involved in recreating the
     comparison function. *)

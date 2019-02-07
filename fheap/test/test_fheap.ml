@@ -1,5 +1,4 @@
 open! Core_kernel
-open! Import
 open! Fheap
 
 let%test_module _ =

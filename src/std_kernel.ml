@@ -123,7 +123,6 @@ module Deriving_hash = Deriving_hash
 module Doubly_linked = Doubly_linked
 module Ephemeron = Ephemeron
 module Fdeque = Fdeque
-module Fheap = Fheap
 module Flags = Flags
 module Float_with_finite_only_serialization = Float_with_finite_only_serialization
 module Fqueue = Fqueue

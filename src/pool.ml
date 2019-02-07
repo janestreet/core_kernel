@@ -561,6 +561,26 @@ module Pool = struct
   (* Purge a pool and make it unusable. *)
   let destroy t =
     let metadata = metadata t in
+    (* We clear out all the pool's entries, which causes all pointers to be invalid.  This
+       also prevents the destroyed pool from unnecessarily keeping heap blocks alive.
+       This is similar to [free]ing all the entries with the difference that we make the
+       free list empty as well. *)
+    (match metadata.dummy with
+     | None ->
+       for i = start_of_tuples_index to Uniform_array.length t - 1 do
+         Uniform_array.unsafe_set t i (Obj.repr 0)
+       done
+     | Some dummy ->
+       for tuple_num = 0 to metadata.capacity - 1 do
+         let header_index = tuple_num_to_header_index metadata tuple_num in
+         unsafe_set_header t ~header_index Header.null;
+         Uniform_array.blit
+           ~src:dummy
+           ~src_pos:0
+           ~dst:t
+           ~dst_pos:(header_index + 1)
+           ~len:metadata.slots_per_tuple
+       done);
     let metadata =
       { Metadata.slots_per_tuple = metadata.slots_per_tuple
       ; capacity = 0
@@ -570,10 +590,7 @@ module Pool = struct
       ; dummy = metadata.dummy
       }
     in
-    set_metadata t metadata;
-    (* We truncate the pool so it holds just its metadata, but uses no space for
-       tuples.  This causes all pointers to be invalid. *)
-    Uniform_array.unsafe_truncate t ~len:1
+    set_metadata t metadata
   ;;
 
   let[@inline never] grow ?capacity t =

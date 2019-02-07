@@ -28,6 +28,16 @@ let to_span_since_epoch t = t
 let of_span_since_epoch s = s
 let to_int63_ns_since_epoch t : Int63.t = Span.to_int63_ns (to_span_since_epoch t)
 let of_int63_ns_since_epoch i = of_span_since_epoch (Span.of_int63_ns i)
+let[@inline never] overflow () = raise_s [%message "Time_ns: overflow"]
+
+let add_exn x y =
+  let z = add x y in
+  if (Span.( > ) y Span.zero && z < x) || (Span.( < ) y Span.zero && z > x)
+  then overflow ()
+  else z
+;;
+
+let sub_exn x y = add_exn x (Span.neg y)
 
 let to_int_ns_since_epoch =
   if arch_sixtyfour
@@ -79,7 +89,7 @@ let[@inline never] raise_next_multiple_got_nonpositive_interval interval =
   failwiths "Time_ns.next_multiple got nonpositive interval" interval [%sexp_of: Span.t]
 ;;
 
-let next_multiple ?(can_equal_after = false) ~base ~after ~interval () =
+let next_multiple_internal ~can_equal_after ~base ~after ~interval =
   if Span.( <= ) interval Span.zero
   then raise_next_multiple_got_nonpositive_interval interval;
   let base_to_after = diff after base in
@@ -88,6 +98,18 @@ let next_multiple ?(can_equal_after = false) ~base ~after ~interval () =
   else (
     let next = add base (Span.scale_int63 interval (Span.div base_to_after interval)) in
     if next > after || (can_equal_after && next = after) then next else add next interval)
+;;
+
+let next_multiple ?(can_equal_after = false) ~base ~after ~interval () =
+  next_multiple_internal ~can_equal_after ~base ~after ~interval
+;;
+
+let prev_multiple ?(can_equal_before = false) ~base ~before ~interval () =
+  next_multiple_internal
+    ~can_equal_after:(not can_equal_before)
+    ~base
+    ~after:(sub before interval)
+    ~interval
 ;;
 
 let random ?state () = Span.random ?state ()
@@ -338,11 +360,11 @@ end = struct
     ;;
 
     let to_absolute relative ~offset_from_utc =
-      sub (Span.of_int63_ns relative) offset_from_utc
+      sub_exn (Span.of_int63_ns relative) offset_from_utc
     ;;
 
     let of_absolute absolute ~offset_from_utc =
-      Span.to_int63_ns (add absolute offset_from_utc)
+      Span.to_int63_ns (add_exn absolute offset_from_utc)
     ;;
 
     let ns_per_day = Span.to_int63_ns Span.day
@@ -684,12 +706,19 @@ end = struct
         ]
   ;;
 
-  let to_string_abs_parts time ~zone =
-    let date, ofday = to_date_ofday time ~zone in
-    let offset_string = offset_string time ~zone in
-    [ Date0.to_string date
-    ; String.concat ~sep:"" [ Ofday.to_string ofday; offset_string ]
-    ]
+  let to_string_abs_parts =
+    let attempt time ~zone =
+      let date, ofday = to_date_ofday time ~zone in
+      let offset_string = offset_string time ~zone in
+      [ Date0.to_string date
+      ; String.concat ~sep:"" [ Ofday.to_string ofday; offset_string ]
+      ]
+    in
+    fun time ~zone ->
+      try attempt time ~zone with
+      | (_ : exn) ->
+        (* If we overflow applying the UTC offset, try again with UTC time. *)
+        attempt time ~zone:Zone.utc
   ;;
 
   let to_string_abs_trimmed time ~zone =

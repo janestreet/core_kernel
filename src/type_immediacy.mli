@@ -154,6 +154,7 @@ module Always : sig
   type 'a t
 
   val of_typerep : 'a Typerep.t -> 'a t option
+  val of_typerep_exn : Source_code_position.t -> 'a Typerep.t -> 'a t
   val int_as_value : 'a t -> int -> 'a option
   val int_as_value_exn : 'a t -> int -> 'a
   val int_is_value : 'a t -> int -> bool
@@ -189,6 +190,7 @@ module Sometimes : sig
   type 'a t
 
   val of_typerep : 'a Typerep.t -> 'a t option
+  val of_typerep_exn : Source_code_position.t -> 'a Typerep.t -> 'a t
   val int_as_value : 'a t -> int -> 'a option
   val int_as_value_exn : 'a t -> int -> 'a
   val int_is_value : 'a t -> int -> bool
@@ -224,6 +226,7 @@ module Never : sig
   type 'a t
 
   val of_typerep : 'a Typerep.t -> 'a t option
+  val of_typerep_exn : Source_code_position.t -> 'a Typerep.t -> 'a t
 
   module For_all_parameters_S1 (X : Typerepable.S1) : sig
     val witness : unit -> _ X.t t

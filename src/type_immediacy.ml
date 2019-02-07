@@ -350,6 +350,7 @@ module Always = struct
     | Never | Sometimes -> None
   ;;
 
+  let of_typerep_exn here typerep = Option.value_exn ~here (of_typerep typerep)
   let int_as_value = int_as_value
   let int_as_value_exn = int_as_value_exn
   let int_is_value = int_is_value
@@ -374,6 +375,7 @@ module Sometimes = struct
     | Always | Never -> None
   ;;
 
+  let of_typerep_exn here typerep = Option.value_exn ~here (of_typerep typerep)
   let int_as_value = int_as_value
   let int_as_value_exn = int_as_value_exn
   let int_is_value = int_is_value
@@ -397,6 +399,8 @@ module Never = struct
     | Never -> Some t
     | Always | Sometimes -> None
   ;;
+
+  let of_typerep_exn here typerep = Option.value_exn ~here (of_typerep typerep)
 
   include Never_values
 end

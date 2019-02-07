@@ -242,6 +242,23 @@ end
 
 let%test_module _ = (module Make (Pool))
 
+open! Pool
+
+let%expect_test "use a pool that has been [grow]n" =
+  let t = create Slots.t1 ~capacity:1 ~dummy:13 in
+  let pointer = new1 t 15 in
+  let show_pointer () =
+    print_s [%sexp (pointer_is_valid t pointer : bool), (get t pointer Slot.t0 : int)]
+  in
+  show_pointer ();
+  [%expect {|
+    (true 15) |}];
+  ignore (grow t);
+  show_pointer ();
+  [%expect {|
+    (false 13) |}]
+;;
+
 let%test_module _ =
   (module Make (struct
        include Pool.Unsafe
@@ -262,4 +279,40 @@ let%test_module "Debug without messages" =
      end))
 ;;
 
-let%test_module _ = (module Make (Pool.Error_check (Pool)))
+module Error_checked_pool = Pool.Error_check (Pool)
+
+let%test_module _ = (module Make (Error_checked_pool))
+
+open Error_checked_pool
+
+let%expect_test "use a pool that has been [grow]n" =
+  let t = create Slots.t1 ~capacity:1 ~dummy:13 in
+  let pointer = new1 t 15 in
+  let show_pointer () =
+    print_s [%sexp (pointer_is_valid t pointer : bool), (get t pointer Slot.t0 : int)]
+  in
+  show_pointer ();
+  [%expect {|
+    (true 15) |}];
+  ignore (grow t);
+  show_pointer ();
+  [%expect {|
+    (false 13) |}]
+;;
+
+open Unsafe
+
+let%expect_test "use a pool that has been [grow]n" =
+  let t = create Slots.t1 ~capacity:1 in
+  let pointer = new1 t 15 in
+  let show_pointer () =
+    print_s [%sexp (pointer_is_valid t pointer : bool), (get t pointer Slot.t0 : int)]
+  in
+  show_pointer ();
+  [%expect {|
+    (true 15) |}];
+  ignore (grow t);
+  show_pointer ();
+  [%expect {|
+    (false 0) |}]
+;;
