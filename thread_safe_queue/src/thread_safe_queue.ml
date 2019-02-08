@@ -14,40 +14,6 @@
 open! Core_kernel
 open! Import
 
-(* This [Uopt] type is not exposed to users, and is only used as an [Elt.value] field. *)
-module Uopt : sig
-  type 'a t [@@deriving sexp_of]
-
-  val none : _ t
-  val some : 'a -> 'a t
-  val is_none : _ t -> bool
-  val is_some : _ t -> bool
-  val value_exn : 'a t -> 'a
-
-  (* [unsafe_value t] is only safe if [is_some t]. *)
-
-  val unsafe_value : 'a t -> 'a
-end = struct
-  type 'a t = Obj.t
-
-  let none = Obj.repr "Thread_safe_queue.Uopt.none"
-  let is_none t = phys_equal t none
-  let is_some t = not (is_none t)
-  let some (type a) a = Obj.repr (a : a)
-  let unsafe_value (type a) t = t |> (Obj.obj : _ -> a)
-
-  let value_exn t =
-    if is_none t then failwith "Uopt.value_exn";
-    unsafe_value t
-  ;;
-
-  let sexp_of_t sexp_of_a t =
-    if is_none t
-    then "None" |> [%sexp_of: string]
-    else ("Some", unsafe_value t) |> [%sexp_of: string * a]
-  ;;
-end
-
 module Elt = struct
   type 'a t =
     { mutable value : 'a Uopt.t
