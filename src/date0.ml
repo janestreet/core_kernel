@@ -17,6 +17,7 @@ module Stable = struct
         val year : t -> int
         val month : t -> Month.Stable.V1.t
         val day : t -> int
+        val days_in_month : year:int -> month:Month.t -> int
       end = struct
         (* We used to store dates like this:
            type t = { y: int; m: Month.Stable.V1.t; d: int; }
@@ -43,14 +44,22 @@ module Stable = struct
         let month t = Month.of_int_exn ((t lsr 8) land 0xff)
         let day t = t land 0xff
 
+        (* Incorrect for September 1752, but so is pretty much all of Time *)
+        let days_in_month ~year ~month =
+          match (month : Month.t) with
+          | Jan | Mar | May | Jul | Aug | Oct | Dec -> 31
+          | Apr | Jun | Sep | Nov -> 30
+          | Feb -> if is_leap_year ~year then 29 else 28
+        ;;
+
         let create_exn ~y:year ~m:month ~d:day =
           (* year, month, and day need to be passed as parameters to avoid allocating
              a closure (see unit test below) *)
           let invalid ~year ~month ~day msg =
             invalid_argf
-              "Date.create_exn ~y:%d ~m:%s ~d:%d error: %s"
+              !"Date.create_exn ~y:%d ~m:%{Month} ~d:%d error: %s"
               year
-              (Month.to_string month)
+              month
               day
               msg
               ()
@@ -58,24 +67,9 @@ module Stable = struct
           if year < 0 || year > 9999
           then invalid ~year ~month ~day "year outside of [0..9999]";
           if day <= 0 then invalid ~year ~month ~day "day <= 0";
-          (match month with
-           | Month.Apr | Month.Jun | Month.Sep | Month.Nov ->
-             if day > 30 then invalid ~year ~month ~day "30 day month violation"
-           | Month.Feb ->
-             if is_leap_year ~year
-             then
-               if day > 29 then invalid ~year ~month ~day "29 day month violation" else ()
-             else if day > 28
-             then invalid ~year ~month ~day "28 day month violation"
-             else ()
-           | Month.Jan
-           | Month.Mar
-           | Month.May
-           | Month.Jul
-           | Month.Aug
-           | Month.Oct
-           | Month.Dec ->
-             if day > 31 then invalid ~year ~month ~day "31 day month violation");
+          let days_in_month = days_in_month ~year ~month in
+          if day > days_in_month
+          then invalid ~year ~month ~day (sprintf "%d day month violation" days_in_month);
           create0 ~year ~month ~day
         ;;
 

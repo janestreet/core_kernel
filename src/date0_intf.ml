@@ -130,6 +130,10 @@ module type Date0 = sig
       strictly after [t]. *)
   val first_strictly_after : t -> on:Day_of_week.t -> t
 
+  (** [days_in_month ~year ~month] returns the number of days in [month], using [year]
+      only if [month = Month.Feb] to check if there is a leap year. *)
+  val days_in_month : year:int -> month:Month.t -> int
+
   (** [is_leap_year ~year] returns true if [year] is considered a leap year *)
   val is_leap_year : year:int -> bool
 
