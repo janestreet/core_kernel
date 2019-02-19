@@ -1,5 +1,5 @@
 (rule (targets config.h rt-flags) (deps)
- (action (bash "cp %{lib:config_h:config.h} %{lib:config_h:rt-flags} .")))
+ (action (bash "cp %{lib:jst-config:config.h} %{lib:jst-config:rt-flags} .")))
 
 (library (name core_kernel) (public_name core_kernel)
  (install_c_headers time_ns_stubs)
