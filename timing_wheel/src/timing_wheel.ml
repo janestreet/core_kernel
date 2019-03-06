@@ -41,10 +41,10 @@
 
    However, the code is completely new. *)
 
+open! Core_kernel
 open! Import
-open! Std_internal
-open! Timing_wheel_ns_intf
-module Time_ns = Time_ns_alternate_sexp
+open! Timing_wheel_intf
+module Time_ns = Core_kernel_private.Time_ns_alternate_sexp
 
 (** for the .mli *)
 module Time = Time_ns
@@ -93,7 +93,7 @@ end = struct
 end
 
 module Level_bits = struct
-  type t = Num_key_bits.t list [@@deriving sexp]
+  type t = Num_key_bits.t list [@@deriving compare, sexp]
 
   let max_num_bits = (Num_key_bits.max_value :> int)
   let num_bits_internal t = List.fold t ~init:Num_key_bits.zero ~f:Num_key_bits.( + )
@@ -201,7 +201,8 @@ module Config = struct
 
   type t =
     { alarm_precision : Alarm_precision.Unstable.t
-    ; level_bits : Level_bits.t [@default level_bits_default] [@sexp_drop_default]
+    ; level_bits : Level_bits.t
+                     [@default level_bits_default] [@sexp_drop_default.compare]
     ; capacity : int sexp_option
     }
   [@@deriving fields, sexp]
@@ -392,7 +393,7 @@ end = struct
   module Key : sig
     (** [Interval_num] is the public API.  Everything following in the signature is
         for internal use. *)
-    include Timing_wheel_ns_intf.Interval_num
+    include Timing_wheel_intf.Interval_num
 
     (** [Slots_mask] is used to quickly determine a key's slot in a given level. *)
     module Slots_mask : sig
@@ -1368,7 +1369,7 @@ module Interval_num = Key
 
    to rule out invalid [Time_ns.t] values. *)
 
-let max_time = Time_ns.max_value
+let max_time = Time_ns.max_value_for_1us_rounding
 let min_time = Time_ns.epoch
 let min_interval_num = Interval_num.zero
 
@@ -1394,7 +1395,7 @@ let sexp_of_t_now _ t = [%sexp (t.now : Time_ns.t)]
 let alarm_precision t = Config.alarm_precision t.config
 
 let alarm_upper_bound t =
-  if Time_ns.( < ) t.max_allowed_alarm_time Time_ns.max_value
+  if Time_ns.( < ) t.max_allowed_alarm_time Time_ns.max_value_for_1us_rounding
   then Time_ns.add t.max_allowed_alarm_time Time_ns.Span.nanosecond
   else t.max_allowed_alarm_time
 ;;
@@ -1513,7 +1514,7 @@ let interval_num_start t interval_num =
 let compute_max_allowed_alarm_time t =
   let max_allowed_key = Priority_queue.max_allowed_key t.priority_queue in
   if Interval_num.( >= ) max_allowed_key t.max_interval_num
-  then Time_ns.max_value
+  then Time_ns.max_value_for_1us_rounding
   else
     Time_ns.sub
       (interval_num_start_unchecked t (Interval_num.succ max_allowed_key))
@@ -1601,17 +1602,19 @@ let create ~config ~start =
   if Time_ns.( < ) start Time_ns.epoch
   then
     raise_s
-      [%message "Timing_wheel_ns.create got start before the epoch" (start : Time_ns.t)];
+      [%message "Timing_wheel.create got start before the epoch" (start : Time_ns.t)];
   let t =
     { config
     ; start
     ; max_interval_num =
         interval_num_internal
-          ~time:Time_ns.max_value
+          ~time:Time_ns.max_value_for_1us_rounding
           ~alarm_precision:config.alarm_precision
-    ; now = Time_ns.min_value (* set by [advance_clock] below *)
-    ; now_interval_num_start = Time_ns.min_value (* set by [advance_clock] below *)
-    ; max_allowed_alarm_time = Time_ns.max_value (* set by [advance_clock] below *)
+    ; now = Time_ns.min_value_for_1us_rounding (* set by [advance_clock] below *)
+    ; now_interval_num_start =
+        Time_ns.min_value_for_1us_rounding (* set by [advance_clock] below *)
+    ; max_allowed_alarm_time =
+        Time_ns.max_value_for_1us_rounding (* set by [advance_clock] below *)
     ; priority_queue =
         Priority_queue.create ?capacity:config.capacity ~level_bits:config.level_bits ()
     }
@@ -1667,7 +1670,7 @@ let mem t alarm = Priority_queue.mem t.priority_queue alarm
 
 let reschedule_gen t alarm ~key ~at =
   if not (mem t alarm)
-  then failwith "Timing_wheel_ns cannot reschedule alarm not in timing wheel";
+  then failwith "Timing_wheel cannot reschedule alarm not in timing wheel";
   ensure_can_schedule_alarm t ~at;
   Priority_queue.change t.priority_queue alarm ~key ~at
 ;;
@@ -1714,7 +1717,7 @@ let max_alarm_time_in_min_interval_exn t =
   then
     raise_s
       [%message
-        "Timing_wheel_ns.max_alarm_time_in_min_interval_exn of empty timing wheel"
+        "Timing_wheel.max_alarm_time_in_min_interval_exn of empty timing wheel"
           ~timing_wheel:(t : _ t)];
   max_alarm_time_in_list t elt
 ;;

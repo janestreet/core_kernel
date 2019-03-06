@@ -1,5 +1,4 @@
-open! Import
-open Std_internal
+open! Core_kernel
 
 type 'a t =
   { mutable elts : 'a list

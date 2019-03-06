@@ -31,8 +31,11 @@ open! Import
       } [@@deriving sexp]
 
       let config = {
-        keep = Blang.of_string "(or (and negative (multiple_of 3)) \
-                               \    (and positive (multiple_of 5)))";
+        keep =
+          Blang.t_of_sexp
+            Property.t_of_sexp
+            (Sexp.of_string
+               "(or (and negative (multiple_of 3)) (and positive (multiple_of 5)))";
       }
 
       let keep config num : bool =

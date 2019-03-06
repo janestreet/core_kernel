@@ -1,5 +1,4 @@
-open! Import
-open Std_internal
+open! Core_kernel
 module Pointer = Pool.Pointer
 
 (* This pool holds nodes that would be represented more traditionally as:

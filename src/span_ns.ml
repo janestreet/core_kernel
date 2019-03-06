@@ -45,13 +45,14 @@ let minute = Int63.(of_int 60 * second)
 let hour = Int63.(of_int 60 * minute)
 let day = Int63.(of_int 24 * hour)
 
-(* Beyond [min_value..max_value], not every microsecond can be represented as a [float]
-   number of seconds.  (In fact, it is around 135y, but we leave a small margin.)
+(* Beyond [min_value_for_1us_rounding..max_value_for_1us_rounding], not every microsecond
+   can be represented as a [float] number of seconds. (In fact, it is around 135y, but we
+   leave a small margin.)
 
    In the presence of silently ignored overflow, note that [t] is not actually bound to
    stay between these limits. *)
-let max_value = Int63.(of_int 135 * of_int 365 * day)
-let min_value = Int63.neg max_value
+let max_value_for_1us_rounding = Int63.(of_int 135 * of_int 365 * day)
+let min_value_for_1us_rounding = Int63.neg max_value_for_1us_rounding
 
 let create
       ?sign:(sign_ = Sign.Pos (* rebind so not shadowed by [open Int63] below *))
@@ -704,8 +705,8 @@ let to_string_hum
 let since_unix_epoch () = Time_now.nanoseconds_since_unix_epoch () |> of_int63_ns
 
 let random ?state () =
-  Int63.random ?state (max_value + Int63.one)
-  - Int63.random ?state (neg min_value + Int63.one)
+  Int63.random ?state (max_value_for_1us_rounding + Int63.one)
+  - Int63.random ?state (neg min_value_for_1us_rounding + Int63.one)
 ;;
 
 let randomize t ~percent = Span_helpers.randomize t ~percent ~scale
@@ -743,21 +744,37 @@ let of_span_float_round_nearest s = of_sec (Span_float.to_sec s)
 let half_microsecond = Int63.of_int 500
 let nearest_microsecond t = Int63.((to_int63_ns t + half_microsecond) /% of_int 1000)
 
-let[@inline never] invalid_range t =
-  raise_s [%message "Span.t exceeds limits" (t : t) (min_value : t) (max_value : t)]
+let[@inline never] invalid_range_for_1us_rounding t =
+  raise_s
+    [%message
+      "Span.t exceeds limits"
+        (t : t)
+        (min_value_for_1us_rounding : t)
+        (max_value_for_1us_rounding : t)]
 ;;
 
-let check_range t = if t < min_value || t > max_value then invalid_range t else t
+let check_range_for_1us_rounding t =
+  if t < min_value_for_1us_rounding || t > max_value_for_1us_rounding
+  then invalid_range_for_1us_rounding t
+  else t
+;;
 
 let to_span_float_round_nearest_microsecond t =
-  Span_float.of_us (Int63.to_float (nearest_microsecond (check_range t)))
+  Span_float.of_us
+    (Int63.to_float (nearest_microsecond (check_range_for_1us_rounding t)))
 ;;
 
-let min_span_float_value = to_span_float_round_nearest min_value
-let max_span_float_value = to_span_float_round_nearest max_value
+let min_span_float_value_for_1us_rounding =
+  to_span_float_round_nearest min_value_for_1us_rounding
+;;
+
+let max_span_float_value_for_1us_rounding =
+  to_span_float_round_nearest max_value_for_1us_rounding
+;;
 
 let of_span_float_round_nearest_microsecond s =
-  if Span_float.( > ) s max_span_float_value || Span_float.( < ) s min_span_float_value
+  if Span_float.( > ) s max_span_float_value_for_1us_rounding
+  || Span_float.( < ) s min_span_float_value_for_1us_rounding
   then failwiths "Time_ns.Span does not support this span" s [%sexp_of: Span_float.t];
   (* Using [Time.Span.to_sec] (being the identity) so that
      we make don't apply too many conversion
@@ -766,14 +783,18 @@ let of_span_float_round_nearest_microsecond s =
   of_sec_with_microsecond_precision (Span_float.to_sec s)
 ;;
 
+let min_value_representable = of_int63_ns Int63.min_value
+let max_value_representable = of_int63_ns Int63.max_value
+
 module Private = struct
   module Parts = Parts
 
-  let check_range = check_range
   let of_parts = of_parts
   let to_parts = to_parts
 end
 
-(* Legacy definitions that round to the nearest microsecond. *)
+(* Legacy definitions based on rounding to the nearest microsecond. *)
+let min_value = min_value_for_1us_rounding
+let max_value = max_value_for_1us_rounding
 let of_span = of_span_float_round_nearest_microsecond
 let to_span = to_span_float_round_nearest_microsecond

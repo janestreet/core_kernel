@@ -369,17 +369,15 @@ include Monad.Make (struct
 
 (* semantics *)
 
-let eval t base_eval =
-  let rec eval = function
-    | True -> true
-    | False -> false
-    | And (t1, t2) -> eval t1 && eval t2
-    | Or (t1, t2) -> eval t1 || eval t2
-    | Not t -> not (eval t)
-    | If (t1, t2, t3) -> if eval t1 then eval t2 else eval t3
-    | Base x -> base_eval x
-  in
-  eval t
+let rec eval t base_eval =
+  match t with
+  | True -> true
+  | False -> false
+  | And (t1, t2) -> eval t1 base_eval && eval t2 base_eval
+  | Or (t1, t2) -> eval t1 base_eval || eval t2 base_eval
+  | Not t -> not (eval t base_eval)
+  | If (t1, t2, t3) -> if eval t1 base_eval then eval t2 base_eval else eval t3 base_eval
+  | Base x -> base_eval x
 ;;
 
 let specialize t f =

@@ -3,6 +3,7 @@
     Every type id ([Type_equal.Id.t]) corresponds to one branch of the variant type.
 *)
 
+open! Core_kernel
 open! Import
 
 type t [@@deriving sexp_of]

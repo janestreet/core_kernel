@@ -9,6 +9,7 @@ let () = print_s [%message (am_running_inline_test : bool)]
 
 let () = print_s [%message (am_running_test : bool)]
 
-[%%expect {|
+[%%expect
+  {|
 (am_running_test false)
 |}]

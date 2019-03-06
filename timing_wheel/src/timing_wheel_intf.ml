@@ -36,9 +36,9 @@
     called with a time at least [alarm_precision] greater than their scheduled time.
 
     There are two implementations of timing wheel, [Timing_wheel_float] and
-    [Timing_wheel_ns], which differ in the representation of time that they use, [Time] or
-    [Time_ns].  [Timing_wheel_ns] is the underlying implementation, whereas
-    [Timing_wheel_float] is a wrapper around [Timing_wheel_ns] that converts between the
+    [Timing_wheel], which differ in the representation of time that they use, [Time] or
+    [Time_ns].  [Timing_wheel] is the underlying implementation, whereas
+    [Timing_wheel_float] is a wrapper around [Timing_wheel] that converts between the
     two representations of time.
 
     {2 Implementation}
@@ -82,6 +82,7 @@
     v}
 *)
 
+open! Core_kernel
 open! Import
 
 (** [Timing_wheel_time] is used to parameterize the timing-wheel interface over both
@@ -214,8 +215,11 @@ module type Alarm_precision = sig
   end
 end
 
+(** A timing wheel can be thought of as a set of alarms. *)
 module type Timing_wheel = sig
-  module Time : Timing_wheel_time
+  module Time :
+    Timing_wheel_time with type t = Time_ns.t with type Span.t = Time_ns.Span.t
+
   module Alarm_precision : Alarm_precision with module Time := Time
 
   type 'a t [@@deriving sexp_of]
@@ -455,17 +459,6 @@ module type Timing_wheel = sig
   val next_alarm_fires_at : _ t -> Time.t option
 
   val next_alarm_fires_at_exn : _ t -> Time.t
-end
-
-(** A timing wheel can be thought of as a set of alarms. *)
-module type Timing_wheel_ns = sig
-  (** @inline *)
-  include
-    Timing_wheel
-    (*_ We would like to use [with module Time = Time_ns], but can't because that requires
-      certain values to be present in [Time_ns] that aren't there. *)
-    with type Time.t = Time_ns.t
-    with type Time.Span.t = Time_ns.Span.t
 
   (*_ See the Jane Street Style Guide for an explanation of [Private] submodules:
 

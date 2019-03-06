@@ -319,7 +319,10 @@ module Flag = struct
           | Rest _ | Arg _ ->
             (match String.lsplit2 doc ~on:' ' with
              | None
-             | Some ("", _) -> None
+             | Some ("", _) ->
+               (match action with
+                | Arg _ -> Some ("_", doc)
+                | Rest _ | No_arg _ -> None)
              | Some (arg, doc) -> Some (arg, doc))
         in
         match arg_doc with
@@ -1024,7 +1027,10 @@ let normalize key_type key =
   assert_no_underscores key_type key;
   match key_type with
   | Key_type.Flag ->
-    if String.equal key "-" then failwithf "invalid key name: %S" key ();
+    if String.equal key "-"
+    then failwithf !"invalid %{Key_type} name: %S" key_type key ();
+    if String.exists key ~f:Char.is_whitespace
+    then failwithf !"invalid %{Key_type} name (contains whitespace): %S" key_type key ();
     if String.is_prefix ~prefix:"-" key then key else "-" ^ key
   | Key_type.Subcommand -> String.lowercase key
 ;;

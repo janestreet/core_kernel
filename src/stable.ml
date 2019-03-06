@@ -11,6 +11,7 @@ module type Stable4 = Stable_module_types.S4
 module Make_stable = Make_stable
 include Stable_internal
 module Hashable = Hashable.Stable
+module Bigstring = Bigstring.Stable
 module Binable = Binable.Stable
 module Blang = Blang.Stable
 module Bool = Bool.Stable

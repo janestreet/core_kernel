@@ -325,3 +325,16 @@ let%test_module "laws" =
     ;;
   end)
 ;;
+
+let%expect_test "no-alloc-eval" =
+  let blang =
+    if_
+      (base "foo")
+      (not_ (or_ [ base "bara"; base "barb" ]))
+      (not_ (and_ [ base "baza"; base "bazb" ]))
+  in
+  require_no_allocation [%here] (fun () ->
+    let result = eval blang (fun _ -> false) in
+    ignore (result : bool));
+  [%expect {| |}]
+;;

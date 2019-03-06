@@ -32,7 +32,6 @@ module Std = struct
   module Sys = Sys
   module Time = Time_float
   module Time_ns = Time_ns
-  module Timing_wheel_ns_intf = Timing_wheel_ns_intf
   module Version_util = Version_util
 
   (** To be used in implementing Core, but not by end users. *)

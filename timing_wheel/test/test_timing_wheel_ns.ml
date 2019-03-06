@@ -1,6 +1,6 @@
 open! Core_kernel
 open! Import
-open! Timing_wheel_ns
+open! Timing_wheel
 
 let show t = print_s [%sexp (t : _ t)]
 
@@ -136,22 +136,22 @@ let%expect_test "invalid level bits" =
   [%expect
     {|
     (Failure "Level_bits.create_exn requires a nonempty list")
-    "Assert_failure timing_wheel_ns.ml:LINE:COL" |}];
+    "Assert_failure timing_wheel.ml:LINE:COL" |}];
   test [ 0 ];
   [%expect
     {|
     ("Level_bits.create_exn got nonpositive num bits" (0))
-    "Assert_failure timing_wheel_ns.ml:LINE:COL" |}];
+    "Assert_failure timing_wheel.ml:LINE:COL" |}];
   test [ -1 ];
   [%expect
     {|
     ("Level_bits.create_exn got nonpositive num bits" (-1))
-    "Assert_failure timing_wheel_ns.ml:LINE:COL" |}];
+    "Assert_failure timing_wheel.ml:LINE:COL" |}];
   test [ 2; 0; 1 ];
   [%expect
     {|
     ("Level_bits.create_exn got nonpositive num bits" (2 0 1))
-    "Assert_failure timing_wheel_ns.ml:LINE:COL" |}];
+    "Assert_failure timing_wheel.ml:LINE:COL" |}];
   test [ Level_bits.max_num_bits + 1 ];
   [%expect
     {|
@@ -159,7 +159,7 @@ let%expect_test "invalid level bits" =
       (62)
       (got          62)
       (max_num_bits 61))
-    "Assert_failure timing_wheel_ns.ml:LINE:COL" |}];
+    "Assert_failure timing_wheel.ml:LINE:COL" |}];
   test (List.init (Level_bits.max_num_bits + 1) ~f:Fn.id);
   [%expect
     {|
@@ -226,7 +226,7 @@ let%expect_test "invalid level bits" =
       59
       60
       61))
-    "Assert_failure timing_wheel_ns.ml:LINE:COL" |}]
+    "Assert_failure timing_wheel.ml:LINE:COL" |}]
 ;;
 
 let%expect_test _ = Level_bits.invariant Level_bits.default
@@ -409,7 +409,7 @@ let%expect_test ("[is_empty], [interval_num], [length], [mem]"[@tags "64-bits-on
     reschedule_at_interval_num t a1 ~at:(Interval_num.of_int 1));
   [%expect
     {|
-      (Failure "Timing_wheel_ns cannot reschedule alarm not in timing wheel") |}];
+      (Failure "Timing_wheel cannot reschedule alarm not in timing wheel") |}];
   remove t a2;
   show ();
   [%expect
@@ -531,7 +531,7 @@ let%expect_test "[add] failures" =
       ("Timing_wheel.interval_num_start got too large interval_num"
        (interval_num       4_611_686_018_427_387_903)
        (t.max_interval_num 3_964_975_476)) |}];
-  advance_clock t ~to_:Time_ns.max_value ~handle_fired:ignore;
+  advance_clock t ~to_:Time_ns.max_value_for_1us_rounding ~handle_fired:ignore;
   check_adds_fail ();
   [%expect
     {|
@@ -603,7 +603,7 @@ let%expect_test "[advance_clock] to max interval num" =
       ("Timing_wheel.interval_num_start got too large interval_num"
        (interval_num       2_305_843_009_213_693_952)
        (t.max_interval_num 3_964_975_476)) |}];
-  let max_interval_num = interval_num t Time_ns.max_value in
+  let max_interval_num = interval_num t Time_ns.max_value_for_1us_rounding in
   advance_clock_to_interval_num t ~to_:max_interval_num ~handle_fired:ignore;
   show t;
   [%expect
@@ -656,7 +656,7 @@ let%expect_test "[advance_clock_to_interval_num]" =
     =
     incr num_tests;
     let t = create_unit () ~level_bits in
-    let max_interval_num = interval_num t Time_ns.max_value in
+    let max_interval_num = interval_num t Time_ns.max_value_for_1us_rounding in
     let initial_min_allowed_interval_num =
       match initial_min_allowed_interval_num with
       | Zero -> Interval_num.zero
@@ -1140,7 +1140,7 @@ let%expect_test "[reschedule]" =
      (alarm1_at ())
      (alarm2_at ("1970-01-01 00:00:10.73741824Z")))
     Cannot reschedule the already-fired alarm1.
-    (Failure "Timing_wheel_ns cannot reschedule alarm not in timing wheel")
+    (Failure "Timing_wheel cannot reschedule alarm not in timing wheel")
     ((now "1970-01-01 00:00:09.663676416Z")
      (next_alarm_fires_at ("1970-01-01 00:00:11.811160064Z"))
      (alarm1_at ())
@@ -1194,7 +1194,7 @@ let%expect_test "[reschedule_at_interval_num]" =
      (alarm1_at ())
      (alarm2_at ("1970-01-01 00:00:10.73741824Z")))
     Cannot reschedule the already-fired alarm1.
-    (Failure "Timing_wheel_ns cannot reschedule alarm not in timing wheel")
+    (Failure "Timing_wheel cannot reschedule alarm not in timing wheel")
     ((now "1970-01-01 00:00:09.663676416Z")
      (next_alarm_fires_at ("1970-01-01 00:00:11.811160064Z"))
      (alarm1_at ())

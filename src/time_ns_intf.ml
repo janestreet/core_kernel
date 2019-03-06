@@ -14,15 +14,29 @@ module type Span = sig
   val to_int_ms : t -> int
   val to_int_sec : t -> int
 
-  (** Contrary to the names, one can easily construct a [t] that is less than [min_value]
-      or greater than [max_value].
+  (** The minimum representable time span. *)
+  val min_value_representable : t
 
-      For [t]s that happen to be within these bounds, conversion to and from [Time.Span]
-      rounds to the nearest microsecond.  This property supports {!Timing_wheel_float} in
-      particular. *)
+  (** The maximum representable time span. *)
+  val max_value_representable : t
+
+  (** The minimum span that rounds to a [Time.Span.t] with microsecond precision. *)
+  val min_value_for_1us_rounding : t
+
+  (** The maximum span that rounds to a [Time.Span.t] with microsecond precision. *)
+  val max_value_for_1us_rounding : t
+
+  (** An alias for [min_value_for_1us_rounding]. *)
   val min_value : t
+  [@@deprecated
+    "[since 2019-02] use [min_value_representable] or [min_value_for_1us_rounding] \
+     instead"]
 
+  (** An alias for [max_value_for_1us_rounding]. *)
   val max_value : t
+  [@@deprecated
+    "[since 2019-02] use [max_value_representable] or [max_value_for_1us_rounding] \
+     instead"]
 
   (** overflows silently *)
   val scale_int : t -> int -> t
@@ -76,7 +90,6 @@ module type Span = sig
 
     https://opensource.janestreet.com/standards/#private-submodules *)
   module Private : sig
-    val check_range : t -> t
     val of_parts : Parts.t -> t
     val to_parts : t -> Parts.t
   end
@@ -137,8 +150,31 @@ module type Time_ns = sig
   (** Unix epoch (1970-01-01 00:00:00 UTC) *)
   val epoch : t
 
+  (** The minimum representable time. *)
+  val min_value_representable : t
+
+  (** The maximum representable time. *)
+  val max_value_representable : t
+
+  (** The minimum time that rounds to a [Time.t] with microsecond precision. *)
+  val min_value_for_1us_rounding : t
+
+  (** The maximum time that rounds to a [Time.t] with microsecond precision. *)
+  val max_value_for_1us_rounding : t
+
+  (** An alias for [min_value_for_1us_rounding]. *)
   val min_value : t
+  [@@deprecated
+    "[since 2019-02] use [min_value_representable] or [min_value_for_1us_rounding] \
+     instead"]
+
+  (** An alias for [max_value_for_1us_rounding]. *)
   val max_value : t
+  [@@deprecated
+    "[since 2019-02] use [max_value_representable] or [max_value_for_1us_rounding] \
+     instead"]
+
+  (** The current time. *)
   val now : unit -> t
 
   (** overflows silently *)

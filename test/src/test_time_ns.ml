@@ -9,8 +9,8 @@ let quickcheck_generator =
   let open Quickcheck.Generator.Let_syntax in
   let%map ns_since_epoch =
     Int63.gen_incl
-      (Time_ns.to_int63_ns_since_epoch Time_ns.min_value)
-      (Time_ns.to_int63_ns_since_epoch Time_ns.max_value)
+      (Time_ns.to_int63_ns_since_epoch Time_ns.min_value_for_1us_rounding)
+      (Time_ns.to_int63_ns_since_epoch Time_ns.max_value_for_1us_rounding)
   in
   Time_ns.of_int63_ns_since_epoch ns_since_epoch
 ;;
@@ -43,7 +43,11 @@ let quickcheck here quickcheck_generator f =
       quickcheck_generator
       ~f
       ~sexp_of:[%sexp_of: time_ns]
-      ~examples:[ Time_ns.min_value; Time_ns.epoch; Time_ns.max_value ])
+      ~examples:
+        [ Time_ns.min_value_for_1us_rounding
+        ; Time_ns.epoch
+        ; Time_ns.max_value_for_1us_rounding
+        ])
 ;;
 
 let%test_module "Time_ns.Alternate_sexp" =
@@ -70,8 +74,8 @@ let%test_module "Time_ns.Alternate_sexp" =
 
     let%expect_test "sexp format" =
       let examples =
-        [ Time_ns.min_value
-        ; Time_ns.max_value
+        [ Time_ns.min_value_for_1us_rounding
+        ; Time_ns.max_value_for_1us_rounding
         ; Time_ns.epoch
         ; make "2001-01-01"
         ; make "2001-01-01" ~h:16 ~m:23 ~s:42
@@ -169,18 +173,18 @@ let%expect_test "Stable.Alternate_sexp.V1" =
   print_and_check_stable_type
     [%here]
     (module Time_ns.Stable.Alternate_sexp.V1)
-    [ Time_ns.min_value
-    ; Time_ns.min_value |> succ
-    ; Time_ns.min_value |> succ |> succ
+    [ Time_ns.min_value_for_1us_rounding
+    ; Time_ns.min_value_for_1us_rounding |> succ
+    ; Time_ns.min_value_for_1us_rounding |> succ |> succ
     ; Time_ns.epoch |> pred
     ; Time_ns.epoch
     ; Time_ns.epoch |> succ
     ; Time_ns.of_int63_ns_since_epoch (Int63.of_int64_exn 999_999_999_999_999_999L)
     ; Time_ns.of_int63_ns_since_epoch (Int63.of_int64_exn 1_000_000_000_000_000_000L)
     ; Time_ns.of_int63_ns_since_epoch (Int63.of_int64_exn 1_000_000_000_000_000_001L)
-    ; Time_ns.max_value |> pred |> pred
-    ; Time_ns.max_value |> pred
-    ; Time_ns.max_value
+    ; Time_ns.max_value_for_1us_rounding |> pred |> pred
+    ; Time_ns.max_value_for_1us_rounding |> pred
+    ; Time_ns.max_value_for_1us_rounding
     ];
   [%expect
     {|
@@ -358,19 +362,44 @@ module Span = struct
     (module struct
       let doesn't_raise = Fn.non Exn.does_raise
 
-      let%test "+ range up" = doesn't_raise (fun () -> max_value + nanosecond)
-      let%test "+ range down" = doesn't_raise (fun () -> min_value + neg nanosecond)
-      let%test "+ overflow" = doesn't_raise (fun () -> max_value + max_value)
-      let%test "+ underflow" = doesn't_raise (fun () -> min_value + min_value)
-      let%test "- range down" = doesn't_raise (fun () -> min_value - nanosecond)
-      let%test "- range up" = doesn't_raise (fun () -> max_value - neg nanosecond)
-      let%test "- underflow" = doesn't_raise (fun () -> min_value - max_value)
-      let%test "- overflow" = doesn't_raise (fun () -> max_value - min_value)
+      let%test "+ range up" =
+        doesn't_raise (fun () -> max_value_for_1us_rounding + nanosecond)
+      ;;
+
+      let%test "+ range down" =
+        doesn't_raise (fun () -> min_value_for_1us_rounding + neg nanosecond)
+      ;;
+
+      let%test "+ overflow" =
+        doesn't_raise (fun () -> max_value_for_1us_rounding + max_value_for_1us_rounding)
+      ;;
+
+      let%test "+ underflow" =
+        doesn't_raise (fun () -> min_value_for_1us_rounding + min_value_for_1us_rounding)
+      ;;
+
+      let%test "- range down" =
+        doesn't_raise (fun () -> min_value_for_1us_rounding - nanosecond)
+      ;;
+
+      let%test "- range up" =
+        doesn't_raise (fun () -> max_value_for_1us_rounding - neg nanosecond)
+      ;;
+
+      let%test "- underflow" =
+        doesn't_raise (fun () -> min_value_for_1us_rounding - max_value_for_1us_rounding)
+      ;;
+
+      let%test "- overflow" =
+        doesn't_raise (fun () -> max_value_for_1us_rounding - min_value_for_1us_rounding)
+      ;;
 
       let%test_module "intermediate ( * )" =
         (module struct
           let wrap_days =
-            let margin_ns = Int63.( - ) (to_int63_ns min_value) Int63.min_value in
+            let margin_ns =
+              Int63.( - ) (to_int63_ns min_value_for_1us_rounding) Int63.min_value
+            in
             Int63.(
               (max_value / to_int63_ns day) + one + (margin_ns / to_int63_ns day) + one)
           ;;
@@ -378,7 +407,7 @@ module Span = struct
           let%test_unit "wrap_days" =
             [%test_pred: Int63.t]
               (Int63.between
-                 ~low:(to_int63_ns min_value)
+                 ~low:(to_int63_ns min_value_for_1us_rounding)
                  ~high:(Int63.neg (to_int63_ns nanosecond)))
               Int63.(wrap_days * to_int63_ns day)
           ;;
@@ -434,7 +463,7 @@ module Span = struct
           let t =
             of_int63_ns
               (Int63.of_int64_exn (Random.int64 (Int63.to_int64 Int63.max_value)))
-            + if Random.bool () then zero else min_value
+            + if Random.bool () then zero else min_value_for_1us_rounding
           in
           round_trip t
         done

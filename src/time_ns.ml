@@ -13,8 +13,8 @@ include (Span : Comparable.Infix with type t := t)
 
 let now = Span.since_unix_epoch
 let equal = Span.equal
-let min_value = Span.min_value
-let max_value = Span.max_value
+let min_value_for_1us_rounding = Span.min_value_for_1us_rounding
+let max_value_for_1us_rounding = Span.max_value_for_1us_rounding
 let epoch = Span.zero
 let add = Span.( + )
 let sub = Span.( - )
@@ -61,11 +61,17 @@ let to_time_float_round_nearest_microsecond t =
     (Span.to_span_float_round_nearest_microsecond (to_span_since_epoch t))
 ;;
 
-let min_time_value = to_time_float_round_nearest min_value
-let max_time_value = to_time_float_round_nearest max_value
+let min_time_value_for_1us_rounding =
+  to_time_float_round_nearest min_value_for_1us_rounding
+;;
 
-let check_before_conversion time =
-  if Time_float.( < ) time min_time_value || Time_float.( > ) time max_time_value
+let max_time_value_for_1us_rounding =
+  to_time_float_round_nearest max_value_for_1us_rounding
+;;
+
+let check_before_conversion_for_1us_rounding time =
+  if Time_float.( < ) time min_time_value_for_1us_rounding
+  || Time_float.( > ) time max_time_value_for_1us_rounding
   then
     failwiths
       "Time_ns does not support this time"
@@ -74,13 +80,12 @@ let check_before_conversion time =
 ;;
 
 let of_time_float_round_nearest time =
-  check_before_conversion time;
   of_span_since_epoch
     (Span.of_span_float_round_nearest (Time_float.to_span_since_epoch time))
 ;;
 
 let of_time_float_round_nearest_microsecond time =
-  check_before_conversion time;
+  check_before_conversion_for_1us_rounding time;
   of_span_since_epoch
     (Span.of_span_float_round_nearest_microsecond (Time_float.to_span_since_epoch time))
 ;;
@@ -872,87 +877,34 @@ end
 
 include To_and_of_string
 
-(* Legacy conversions that round to the nearest microsecond. *)
+let min_value_representable = of_span_since_epoch Span.min_value_representable
+let max_value_representable = of_span_since_epoch Span.max_value_representable
+
+(* Legacy definitions based on rounding to the nearest microsecond. *)
+let min_value = min_value_for_1us_rounding
+let max_value = max_value_for_1us_rounding
 let to_time = to_time_float_round_nearest_microsecond
 let of_time = of_time_float_round_nearest_microsecond
 
 module For_ppx_module_timer = struct
-  module Override = struct
-    type t =
-      | Interval of Span.t
-      | Replace of (Span.t * string) list
-
-    let of_string string =
-      match Sexp.of_string string with
-      | Atom _ as sexp -> Interval (Span.t_of_sexp sexp)
-      | List _ as sexp -> Replace ([%of_sexp: (Span.t * string) list] sexp)
-    ;;
-
-    let get () =
-      Option.try_with (fun () ->
-        of_string
-          (Sys.getenv Ppx_module_timer_runtime.am_recording_environment_variable))
-    ;;
-
-    let fake_gc_events_for_index i : Ppx_module_timer_runtime.Startup_time.Gc_events.t =
-      let open Int.O in
-      { minor_collections = (if i % 2 = 1 then 1 else 0)
-      ; major_collections = (if i % 4 = 3 then 1 else 0)
-      ; compactions = (if i % 8 = 7 then 1 else 0)
-      }
-    ;;
-
-    let apply t alist =
-      match t with
-      | Replace alist ->
-        List.mapi alist ~f:(fun i (span, module_name) ->
-          span, module_name, fake_gc_events_for_index i)
-      | Interval span ->
-        List.mapi alist ~f:(fun i (_, module_name, gc_events) ->
-          Span.scale_int span (Int.succ i), module_name, gc_events)
-    ;;
-  end
-
-  let print_recorded_startup_times startup_times =
-    let startup_times =
-      List.map
-        startup_times
-        ~f:(fun ({ module_name; startup_time_in_nanoseconds; gc_events } :
-                   Ppx_module_timer_runtime.Startup_time.t)
-             -> Span.of_int63_ns startup_time_in_nanoseconds, module_name, gc_events)
-    in
-    let startup_times =
-      match Override.get () with
-      | None -> startup_times
-      | Some override ->
-        print_endline "ppx_module_timer: overriding time measurements for testing";
-        Override.apply override startup_times
-    in
-    let unit_of_time =
-      List.map startup_times ~f:(fun (t, _, _) -> Span.to_unit_of_time t)
-      |> List.max_elt ~compare:Unit_of_time.compare
-      |> Option.value ~default:Nanosecond
-    in
-    let startup_times =
-      List.map
-        startup_times
-        ~f:(Tuple.T3.map_fst ~f:(Span.to_string_hum ~unit_of_time ~align_decimal:true))
-    in
-    let span_width =
-      List.map startup_times ~f:(fun (span_string, _, _) -> String.length span_string)
-      |> List.max_elt ~compare:Int.compare
-      |> Option.value ~default:0
-    in
-    List.iter startup_times ~f:(fun (span_string, module_name, gc_events) ->
-      printf
-        "%*s %s%s\n"
-        span_width
-        span_string
-        module_name
-        (Ppx_module_timer_runtime.gc_events_suffix_string gc_events))
-  ;;
+  open Ppx_module_timer_runtime
 
   let () =
-    Ppx_module_timer_runtime.print_recorded_startup_times := print_recorded_startup_times
+    Duration.format :=
+      (module struct
+        let duration_of_span s = s |> Span.to_int63_ns |> Duration.of_nanoseconds
+        let span_of_duration d = d |> Duration.to_nanoseconds |> Span.of_int63_ns
+        let of_string string = string |> Span.of_string |> duration_of_span
+
+        let to_string_with_same_unit durations =
+          let spans = durations |> List.map ~f:span_of_duration in
+          let unit_of_time =
+            spans
+            |> List.max_elt ~compare:Span.compare
+            |> Option.value_map ~f:Span.to_unit_of_time ~default:Unit_of_time.Nanosecond
+          in
+          spans |> List.map ~f:(Span.to_string_hum ~unit_of_time ~align_decimal:true)
+        ;;
+      end)
   ;;
 end

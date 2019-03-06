@@ -1,5 +1,5 @@
+open! Core_kernel
 open! Import
-open Std_internal
 module Id = Type_equal.Id
 
 module View = struct

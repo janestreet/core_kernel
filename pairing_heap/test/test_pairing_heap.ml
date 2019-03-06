@@ -1,5 +1,6 @@
 open! Core_kernel
 open Expect_test_helpers_kernel
+module Heap = Pairing_heap
 
 let%expect_test "Heap.sexp_of_t" =
   let test list =
