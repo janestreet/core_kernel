@@ -137,7 +137,7 @@ module Make_tests (Int : Base.Int.S) : sig end = struct
   ;;
 end
 
-let%test_module "Int63_emul" = (module Make_tests (Base.Not_exposed_properly.Int63_emul))
+let%test_module "Int63_emul" = (module Make_tests (Base.Int63.Private.Emul))
 let%test_module "Int63_maybe_native" = (module Make_tests (Int63))
 
 module Make_tests_bin_io (B : sig

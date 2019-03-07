@@ -1,5 +1,4 @@
-open! Import
-open Std_internal
+open! Core_kernel
 include Flags_intf
 
 let create ~bit:n =

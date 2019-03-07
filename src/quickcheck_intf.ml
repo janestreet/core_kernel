@@ -217,9 +217,6 @@ module type Generator = sig
   *)
   val fixed_point : ('a t -> 'a t) -> 'a t
 
-  val recursive : ('a t -> 'a t) -> 'a t
-  [@@deprecated "[since 2018-03] use [recursive_union] or [fixed_point] instead"]
-
   (** [weighted_union alist] produces a generator that combines the distributions of each
       [t] in [alist] with the associated weights, which must be finite positive floating
       point values. *)
@@ -296,9 +293,6 @@ module type Observer = sig
       ]}
   *)
   val fixed_point : ('a t -> 'a t) -> 'a t
-
-  val recursive : ('a t -> 'a t) -> 'a t
-  [@@deprecated "[since 2018-03] use [fixed_point] instead"]
 
   val variant2 : 'a t -> 'b t -> [`A of 'a | `B of 'b] t
   val variant3 : 'a t -> 'b t -> 'c t -> [`A of 'a | `B of 'b | `C of 'c] t
@@ -443,9 +437,6 @@ module type Shrinker = sig
       directly using [rec] in the definition of the shrinker is that it causes lazy
       evaluation where possible. *)
   val fixed_point : ('a t -> 'a t) -> 'a t
-
-  val recursive : ('a t -> 'a t) -> 'a t
-  [@@deprecated "[since 2018-03] use [fixed_point] instead"]
 end
 
 module type Pre_int = sig

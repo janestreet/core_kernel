@@ -35,14 +35,10 @@ module Formatter = Formatter
 module Hash = Hash
 module Heap_block = Heap_block
 module In_channel = In_channel
-module Int_conversions = Base.Not_exposed_properly.Int_conversions
+module Int_conversions = Int_conversions
+module Int_math = Int_math
 module Invariant = Invariant
 module Monad = Monad
-module Variant = Variant
-
-module Obj_array = Base.Not_exposed_properly.Obj_array
-[@@deprecated "[since 2018-09] Replace [Obj_array.t] with [Obj.t Uniform_array.t]"]
-
 module Ordered_collection_common = Ordered_collection_common
 module Out_channel = Out_channel
 module Poly = Poly
@@ -54,6 +50,7 @@ module Staged = Base.Staged
 module Stringable = Stringable
 module Uchar = Uchar
 module Validate = Validate
+module Variant = Variant
 module With_return = With_return
 module Word_size = Word_size
 
@@ -123,7 +120,6 @@ module Deriving_hash = Deriving_hash
 module Doubly_linked = Doubly_linked
 module Ephemeron = Ephemeron
 module Fdeque = Fdeque
-module Flags = Flags
 module Float_with_finite_only_serialization = Float_with_finite_only_serialization
 module Fqueue = Fqueue
 module Gc = Gc
@@ -150,6 +146,7 @@ module Perms = Perms
 module Pid = Pid
 module Pool = Pool
 module Pool_intf = Pool_intf
+module Version_util = Version_util
 
 module Popcount = Base.Popcount
 [@@warning "-3"]

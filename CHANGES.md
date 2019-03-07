@@ -4,6 +4,10 @@ you might want to have a look at Base's
 
 ## git version
 
+- Removed `Obj_array` in favor of `Uniform_array`.
+
+## v0.12
+
 - Added `Digit_string_helpers.read_int63_decimal`.
 
 - Added `List.zip_with_remainder` which zips as many elements as possible and
@@ -24,6 +28,9 @@ you might want to have a look at Base's
 
 - Removed functions that were deprecated in 2016 and 2017 from the `Array` and
   `Set` modules.
+
+- Removed `Int_replace_polymorphic_compare` in favor of
+  `Int.Replace_polymorphic_compare`.
 
 ## v0.11
 

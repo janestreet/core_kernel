@@ -2,15 +2,15 @@ open! Import
 
 module Bin : Binable0.S with type t := Base.Int63.t = struct
   module Bin_emulated = struct
-    type t = Base.Not_exposed_properly.Int63_emul.t
+    type t = Base.Int63.Private.Emul.t
 
     include Binable0.Of_binable
         (Int64)
         (struct
           type nonrec t = t
 
-          let of_binable = Base.Not_exposed_properly.Int63_emul.W.wrap_exn
-          let to_binable = Base.Not_exposed_properly.Int63_emul.W.unwrap
+          let of_binable = Base.Int63.Private.Emul.W.wrap_exn
+          let to_binable = Base.Int63.Private.Emul.W.unwrap
         end)
   end
 

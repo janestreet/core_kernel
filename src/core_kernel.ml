@@ -16,7 +16,6 @@ module Std = struct
   (** {2 Modules that extend Base} *)
 
   module Container_intf = Container_intf
-  module Int_replace_polymorphic_compare = Int_replace_polymorphic_compare
 
   (** {2 Modules added by Core_kernel} *)
 
@@ -32,7 +31,6 @@ module Std = struct
   module Sys = Sys
   module Time = Time_float
   module Time_ns = Time_ns
-  module Version_util = Version_util
 
   (** To be used in implementing Core, but not by end users. *)
   module Core_kernel_private = struct

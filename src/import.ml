@@ -15,13 +15,11 @@ module Formatter = Base.Formatter
 module Hash = Base.Hash
 module Hasher = Base.Hasher
 module Indexed_container = Base.Indexed_container
-module Invariant = Base.Invariant
 module Intable = Base.Intable
+module Int_conversions = Base.Int_conversions
+module Int_math = Base.Int_math
+module Invariant = Base.Invariant
 module Monad = Base.Monad
-
-module Obj_array = Base.Not_exposed_properly.Obj_array
-[@@deprecated "[since 2018-09] Replace [Obj_array.t] with [Obj.t Uniform_array.t]"]
-
 module Poly = Base.Poly
 
 module Popcount = Base.Popcount

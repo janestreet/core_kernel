@@ -104,7 +104,6 @@ module Observer = struct
   ;;
 
   let of_fun f = create (fun x ~size ~hash -> observe (f ()) x ~size ~hash)
-  let recursive = fixed_point
 
   let comparison ~compare ~eq ~lt ~gt =
     unmap
@@ -151,7 +150,6 @@ module Generator = struct
   let geometric ~p init = bounded_geometric ~p ~maximum:Pre_int.max_value init
   let small_non_negative_int = small_positive_or_zero_int
   let small_positive_int = small_strictly_positive_int
-  let recursive = fixed_point
   let list_with_length length t = list_with_length t ~length
   let variant2 = Polymorphic_types.quickcheck_generator_variant2
   let variant3 = Polymorphic_types.quickcheck_generator_variant3
@@ -190,7 +188,6 @@ module Shrinker = struct
   let tuple4 = Polymorphic_types.quickcheck_shrinker_tuple4
   let tuple5 = Polymorphic_types.quickcheck_shrinker_tuple5
   let tuple6 = Polymorphic_types.quickcheck_shrinker_tuple6
-  let recursive = fixed_point
 end
 
 module Let_syntax = struct
