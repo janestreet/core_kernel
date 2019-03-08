@@ -2,7 +2,7 @@
 
 open! Import
 
-module type S_without_immediate = sig
+module type S_without_immediate_plain = sig
   (** The immediate value carried by the immediate option.
 
       Given the presence of {!unchecked_value}, the [value] type should not have
@@ -16,7 +16,7 @@ module type S_without_immediate = sig
       enforce that [t] is immediate because some types, like [Int63.t], are only immediate
       on 64-bit platforms. For representations whose type is immediate, use [S] below
       which adds the [[@@immediate]] annotation. *)
-  type t [@@deriving compare, hash, sexp_of, typerep]
+  type t
 
   (** Constructors analogous to [None] and [Some].  If [not (some_is_representable x)]
       then [some x] may raise or return [none]. *)
@@ -53,6 +53,18 @@ module type S_without_immediate = sig
   module Optional_syntax : Optional_syntax.S with type t := t with type value := value
 end
 
+module type S_without_immediate = sig
+  type t [@@deriving compare, hash, sexp_of, typerep]
+
+  include S_without_immediate_plain with type t := t
+end
+
+module type S_plain = sig
+  type t [@@immediate]
+
+  include S_without_immediate_plain with type t := t
+end
+
 module type S = sig
   type t [@@immediate]
 
@@ -66,15 +78,18 @@ end
   defined JSC_PORTABLE_INT63]
 
 module type S_int63 = S_without_immediate
+module type S_int63_plain = S_without_immediate_plain
 
 [%%elif
   defined JSC_ARCH_SIXTYFOUR]
 
 module type S_int63 = S
+module type S_int63_plain = S_plain
 
 [%%else]
 
 module type S_int63 = S_without_immediate
+module type S_int63_plain = S_without_immediate_plain
 
 [%%endif]
 
@@ -82,9 +97,15 @@ module type Immediate_option = sig
   (** Always immediate. *)
   module type S = S
 
+  module type S_plain = S_plain
+
   (** Immediate only on 64-bit machines with [portable_int63 = false]. *)
   module type S_int63 = S_int63
 
+  module type S_int63_plain = S_int63_plain
+
   (** Never immediate. *)
   module type S_without_immediate = S_without_immediate
+
+  module type S_without_immediate_plain = S_without_immediate_plain
 end
