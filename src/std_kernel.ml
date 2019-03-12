@@ -146,7 +146,6 @@ module Perms = Perms
 module Pid = Pid
 module Pool = Pool
 module Pool_intf = Pool_intf
-module Version_util = Version_util
 
 module Popcount = Base.Popcount
 [@@warning "-3"]

@@ -10,13 +10,6 @@ module List = Base.List
 module Option = Base.Option
 module Type_equal = Base.Type_equal
 
-module Pre_int : Pre_int with type t = int = struct
-  include Base.Int
-
-  let splittable_random = Splittable_random.int
-  let splittable_random_log_uniform = Splittable_random.Log_uniform.int
-end
-
 module Polymorphic_types = struct
   type ('a, 'b) variant2 =
     [ `A of 'a
@@ -147,7 +140,7 @@ module Generator = struct
         ]
   ;;
 
-  let geometric ~p init = bounded_geometric ~p ~maximum:Pre_int.max_value init
+  let geometric ~p init = bounded_geometric ~p ~maximum:Int.max_value init
   let small_non_negative_int = small_positive_or_zero_int
   let small_positive_int = small_strictly_positive_int
   let list_with_length length t = list_with_length t ~length

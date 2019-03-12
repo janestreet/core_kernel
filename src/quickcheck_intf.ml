@@ -439,13 +439,6 @@ module type Shrinker = sig
   val fixed_point : ('a t -> 'a t) -> 'a t
 end
 
-module type Pre_int = sig
-  include Base.Int.S
-
-  val splittable_random : Splittable_random.State.t -> lo:t -> hi:t -> t
-  val splittable_random_log_uniform : Splittable_random.State.t -> lo:t -> hi:t -> t
-end
-
 module type S = sig
   type t
 

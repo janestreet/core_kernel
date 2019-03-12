@@ -1,8 +1,8 @@
-/* This file is always linked into Core. This allows Core to be installed as a
-   standalone library, e.g. for use in a toplevel. Our jenga/root.ml, when
-   building an executable, generates primitives with real information in
-   *.build_info.c and *.hg_version.c. The latter ones have precedence as the
-   ones in this file are defined as weak. */
+/* This file is linked together with the ocaml code that needs the symbols. This allows
+   any library that depends on this one to be installed as a standalone library, e.g. for
+   use in a toplevel. Our jenga/root.ml, when building an executable, generates primitives
+   with real information in *.build_info.c and *.hg_version.c. The latter ones have
+   precedence as the ones in this file are defined as weak. */
 
 
 #include <caml/mlvalues.h>

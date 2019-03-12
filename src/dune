@@ -10,7 +10,7 @@
  (c_flags :standard -D_LARGEFILE64_SOURCE)
  (c_library_flags (:include rt-flags))
  (c_names bigstring_stubs md5_stubs array_stubs gc_stubs time_ns_stubs
-  version_util_fallback_stubs heap_block_stubs)
+  heap_block_stubs)
  (preprocess (pps ppx_jane -check-doc-comments)) (preprocessor_deps config.h)
  (js_of_ocaml (javascript_files strftime.js runtime.js)))
 

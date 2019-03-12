@@ -1,5 +1,5 @@
-open! Import
-open Std_internal
+open! Core_kernel
+
 (* The code here refers to c functions that are not part of the library.  Instead, at link
    time of exe, bc, and toplevels, we include an object file that implements the given
    functions.  That way, we can update the functions to include the latest version info
@@ -56,8 +56,8 @@ module Application_specific_fields = struct
   type t = Sexp.t String.Map.t [@@deriving sexp]
 end
 
-module Time_float_with_limited_parsing = struct
-  type t = Time_float.t * Sexp.t
+module Time_with_limited_parsing = struct
+  type t = Time.t * Sexp.t
   let t_of_sexp sexp =
     let str = string_of_sexp sexp in
     try
@@ -68,8 +68,8 @@ module Time_float_with_limited_parsing = struct
         | None -> failwith "time must contain one space between date and ofday"
         | Some (date, ofday) ->
           let date = Date.t_of_sexp (sexp_of_string date) in
-          let ofday = Time_float.Ofday.t_of_sexp (sexp_of_string ofday) in
-          Time_float.of_date_ofday date ofday ~zone:Time_float.Zone.utc, sexp
+          let ofday = Time.Ofday.t_of_sexp (sexp_of_string ofday) in
+          Time.of_date_ofday date ofday ~zone:Time.Zone.utc, sexp
     with
     | Sexplib.Conv.Of_sexp_error (e, _) | e -> raise (Sexplib.Conv.Of_sexp_error (e, sexp))
 
@@ -81,7 +81,7 @@ type t = {
   username                    : string sexp_option;
   hostname                    : string sexp_option;
   kernel                      : string sexp_option;
-  build_time                  : Time_float_with_limited_parsing.t sexp_option;
+  build_time                  : Time_with_limited_parsing.t sexp_option;
   x_library_inlining          : bool;
   portable_int63              : bool;
   dynlinkable_code            : bool;
@@ -120,7 +120,7 @@ let build_time =
 
 let reprint_build_info sexp_of_time =
   Ref.set_temporarily
-    Time_float_with_limited_parsing.sexp_of_t_ref
+    Time_with_limited_parsing.sexp_of_t_ref
     (fun (time, _) -> sexp_of_time time)
     ~f:(fun () -> Sexp.to_string (sexp_of_t t))
 

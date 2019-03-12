@@ -36,6 +36,11 @@ open! Std_internal
     [Core.Command].  We use a functor in this way so that [Command]'s internal data
     types can remain hidden. *)
 module type For_unix = sig
+  module Version_util : sig
+    val version : string
+    val reprint_build_info : (Time_float.t -> Sexp.t) -> string
+  end
+
   module Signal : sig
     type t
   end

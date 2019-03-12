@@ -24,7 +24,8 @@ module type S = sig
   (** set union, bitwise or *)
   val ( + ) : t -> t -> t
 
-  (** set difference *)
+  (** set difference.  Although we use operators [+] and [-], they do not satisfy the
+      usual arithmetic equations, e.g. [x - y = x + (empty - y)] does not hold. *)
   val ( - ) : t -> t -> t
 
   (** bitwise and *)

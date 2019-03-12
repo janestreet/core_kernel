@@ -8,5 +8,5 @@
  (action (bash ./uncaught_exception_test.sh)))
 
 (executables (names float_test pool_caml_modify_check just_raise)
- (libraries replace_caml_modify_for_testing core)
+ (libraries replace_caml_modify_for_testing core version_util)
  (preprocess (pps ppx_jane)))
