@@ -233,6 +233,10 @@ module type Command = sig
         the autocomplete environment. *)
     val no_arg_register : key:'a Univ_map.With_default.Key.t -> value:'a -> bool t
 
+    (** [no_arg_some value] is like [no_arg], but will return [Some value] if the flag is
+        passed on the command line, and return [None] otherwise. *)
+    val no_arg_some : 'a -> 'a option t
+
     (** [no_arg_abort ~exit] is like [no_arg], but aborts command-line parsing by calling
         [exit].  This flag type is useful for "help"-style flags that just print something
         and exit. *)

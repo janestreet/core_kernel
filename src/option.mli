@@ -7,7 +7,7 @@ include
 module type of struct
   include Base.Option
 end
-  with type 'a t := 'a t
+  with type 'a t := 'a option
 
 include Comparator.Derived with type 'a t := 'a t
 include Quickcheckable.S1 with type 'a t := 'a t

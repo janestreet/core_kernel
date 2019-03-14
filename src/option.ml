@@ -7,7 +7,7 @@ include (
     module type of struct
     include Base.Option
   end
-  with type 'a t := 'a t)
+  with type 'a t := 'a Base.Option.t)
 
 include Comparator.Derived (struct
     type nonrec 'a t = 'a t [@@deriving sexp_of, compare]

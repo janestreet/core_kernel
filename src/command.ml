@@ -471,6 +471,12 @@ module Flag = struct
     no_arg_general name ~key_value:(Some (key, value)) ~deprecated_hook:None
   ;;
 
+  let no_arg_some value =
+    map_flag no_arg ~f:(function
+      | true -> Some value
+      | false -> None)
+  ;;
+
   let listed arg_type name =
     let key = Env.With_default.Key.create ~default:[] ~name [%sexp_of: _ list] in
     let read env = List.rev (Env.With_default.find env key) in
@@ -1413,6 +1419,7 @@ module Base = struct
       let no_arg = no_arg
       let no_arg_register = no_arg_register
       let no_arg_abort = no_arg_abort
+      let no_arg_some = no_arg_some
       let optional = optional
       let optional_with_default = optional_with_default
       let required = required
@@ -2942,6 +2949,7 @@ module Param = struct
     let no_arg = no_arg
     let no_arg_abort = no_arg_abort
     let no_arg_register = no_arg_register
+    let no_arg_some = no_arg_some
     let one_or_more = one_or_more
     let optional = optional
     let optional_with_default = optional_with_default
