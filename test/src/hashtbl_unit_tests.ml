@@ -38,7 +38,7 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_intf.Hashtbl) = stru
              -> ('key, 'data) multi_constructor Gen.t
 
            val map_and_table
-             :  (module Base.Hashtbl.Key with type t = 'key)
+             :  'key Base.Hashtbl.Key.t
              -> (module
                   Comparator.S
                   with type t = 'key
@@ -47,7 +47,7 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_intf.Hashtbl) = stru
              -> ('key, 'data, 'cmp) Map.t * ('key, 'data) Hashtbl.t
 
            val map_and_table_multi
-             :  (module Base.Hashtbl.Key with type t = 'key)
+             :  'key Base.Hashtbl.Key.t
              -> (module
                   Comparator.S
                   with type t = 'key

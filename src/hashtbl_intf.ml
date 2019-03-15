@@ -94,7 +94,7 @@ open! Import
 module Binable = Binable0
 module Hashtbl = Base.Hashtbl
 
-module type Key_plain = Hashtbl.Key
+module type Key_plain = Hashtbl.Key.S
 
 module Hashable = Base.Hashable
 
