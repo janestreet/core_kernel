@@ -1245,13 +1245,23 @@ module Base = struct
        | Failed_to_parse_command_line _
          when Cmdline.ends_in_complete args -> exit 0
        | _ ->
-         if Option.value verbose_on_parse_error ~default:true
-         then
-           print_endline
-             "Error parsing command line.  Run with -help for usage information.";
-         (match exn with
-          | Failed_to_parse_command_line msg -> prerr_endline msg
-          | _ -> prerr_endline (Sexp.to_string_hum [%sexp (exn : exn)]));
+         let exn_str =
+           match exn with
+           | Failed_to_parse_command_line msg -> msg
+           | _ -> Sexp.to_string_hum [%sexp (exn : exn)]
+         in
+         let verbose = Option.value verbose_on_parse_error ~default:true in
+         let error_msg =
+           if verbose
+           then
+             String.concat
+               ~sep:"\n"
+               [ "Error parsing command line.  Run with -help for usage information."
+               ; exn_str
+               ]
+           else exn_str
+         in
+         prerr_endline error_msg;
          exit 1)
   ;;
 

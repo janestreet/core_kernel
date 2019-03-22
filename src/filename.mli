@@ -2,6 +2,9 @@ open! Import
 
 type t = string [@@deriving bin_io, compare, sexp]
 
+include
+  Comparable.S with type t := t with type comparator_witness = String.comparator_witness
+
 (**  The path of the root.*)
 val root : string
 

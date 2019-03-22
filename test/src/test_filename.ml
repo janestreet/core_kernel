@@ -1,6 +1,7 @@
 open! Core_kernel
 open! Import
 open! Filename
+open Poly
 
 let%test _ = split_extension "/foo/my_file" = ("/foo/my_file", None)
 let%test _ = split_extension "/foo/my_file.txt" = ("/foo/my_file", Some "txt")
@@ -45,3 +46,6 @@ let%test _ = parts "foo" = [ "."; "foo" ]
 let%test _ = parts "./foo/" = [ "."; "foo" ]
 let%test _ = parts "./foo/." = [ "."; "foo"; "." ]
 let%test _ = of_parts [ "."; "."; "." ] = "././."
+
+(* Assert type equality. *)
+let _f (x : int Filename.Map.t) : int String.Map.t = x

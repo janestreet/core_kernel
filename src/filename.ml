@@ -1,7 +1,16 @@
 open! Import
 open! Std_internal
 
-type t = string [@@deriving bin_io, compare, sexp]
+include (
+  String :
+  sig
+    type t = string [@@deriving bin_io, compare, sexp]
+
+    include
+      Comparable.S
+      with type t := t
+      with type comparator_witness = String.comparator_witness
+  end)
 
 include struct
   open Caml.Filename
@@ -49,13 +58,13 @@ let concat p1 p2 =
    in [s]. *)
 let string_rexists s ~f ~from:n =
   let rec loop n =
-    if n = 0 then None else if f s.[n - 1] then Some n else loop (n - 1)
+    if Int.(n = 0) then None else if f s.[n - 1] then Some n else loop (n - 1)
   in
   loop n
 ;;
 
 let skip_end_slashes s ~from =
-  match string_rexists s ~from ~f:(fun c -> c <> '/') with
+  match string_rexists s ~from ~f:Char.(( <> ) '/') with
   | Some v -> `Ends_at v
   | None -> `All_slashes
 ;;
@@ -69,7 +78,7 @@ let split = function
     (match skip_end_slashes s ~from:(String.length s) with
      | `All_slashes -> "/", "/"
      | `Ends_at basename_end ->
-       (match string_rexists s ~f:(fun c -> c = '/') ~from:basename_end with
+       (match string_rexists s ~f:Char.(( = ) '/') ~from:basename_end with
         | None -> ".", String.sub ~pos:0 ~len:basename_end s
         | Some basename_start ->
           let basename =
@@ -97,8 +106,8 @@ let is_posix_pathname_component s =
   let module S = String in
   s <> "."
   && s <> ".."
-  && 0 < S.length s
-  && S.length s <= max_pathname_component_size
+  && Int.(0 < S.length s)
+  && Int.(S.length s <= max_pathname_component_size)
   && not (S.contains s '/')
   && not (S.contains s '\000')
 ;;

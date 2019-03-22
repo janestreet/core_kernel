@@ -70,6 +70,7 @@ let ok_exn = Or_error.ok_exn
 let phys_equal = Base.phys_equal
 let phys_same = phys_same
 let print_s = Stdio.print_s
+let eprint_s = Stdio.eprint_s
 let printf = Printf.printf
 let protect = Exn.protect
 let protectx = Exn.protectx
