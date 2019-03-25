@@ -6,6 +6,8 @@ you might want to have a look at Base's
 
 - Removed `Obj_array` in favor of `Uniform_array`.
 
+- Remove deprecated `Std` module.
+
 ## v0.12
 
 - Added `Digit_string_helpers.read_int63_decimal`.
