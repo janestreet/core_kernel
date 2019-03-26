@@ -135,9 +135,10 @@ module Subscriber = struct
         ""
           ~id:
             ( if am_running_inline_test then None else Some id
-                                                       : Subscriber_id.t sexp_option )
-          (on_callback_raise : (Error.t -> unit) sexp_option)
-          ~extract_exn:(if extract_exn then Some true else None : bool sexp_option)
+                                                       : (Subscriber_id.t option[@sexp.option]) )
+          (on_callback_raise : ((Error.t -> unit) option[@sexp.option]))
+          ~extract_exn:
+            (if extract_exn then Some true else None : (bool option[@sexp.option]))
           (subscribed_from : Source_code_position.t)]
       ]
   ;;
@@ -198,7 +199,7 @@ let sexp_of_t
   =
   [%message
     ""
-      (name : Info.t sexp_option)
+      (name : (Info.t option[@sexp.option]))
       (callback_arity : _ Callback_arity.t)
       (created_from : Source_code_position.t)
       (on_subscription_after_first_write : On_subscription_after_first_write.t)

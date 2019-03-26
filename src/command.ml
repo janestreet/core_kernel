@@ -1124,7 +1124,7 @@ module Base = struct
 
       type t =
         { summary : string
-        ; readme : string sexp_option
+        ; readme : string option [@sexp.option]
         ; anons : anons
         ; flags : Format.V1.t list
         }
@@ -1134,7 +1134,7 @@ module Base = struct
     module V1 = struct
       type t =
         { summary : string
-        ; readme : string sexp_option
+        ; readme : string option [@sexp.option]
         ; usage : string
         ; flags : Format.V1.t list
         }
@@ -1170,6 +1170,12 @@ module Base = struct
   let path_key = Env.key_create "path"
   let args_key = Env.key_create "args"
   let help_key = Env.key_create "help"
+
+  let indent_by_2 str =
+    String.split ~on:'\n' str
+    |> List.map ~f:(fun line -> "  " ^ line)
+    |> String.concat ~sep:"\n"
+  ;;
 
   let run t env ~path ~args ~verbose_on_parse_error ~help_text =
     let env = Env.set env path_key path in
@@ -1255,9 +1261,11 @@ module Base = struct
            if verbose
            then
              String.concat
-               ~sep:"\n"
-               [ "Error parsing command line.  Run with -help for usage information."
-               ; exn_str
+               ~sep:"\n\n"
+               [ "Error parsing command line:"
+               ; indent_by_2 exn_str
+               ; "For usage information, run"
+               ; "  " ^ Path.to_string path ^ " -help\n"
                ]
            else exn_str
          in
@@ -1582,7 +1590,7 @@ module Group = struct
     module V2 = struct
       type 'a t =
         { summary : string
-        ; readme : string sexp_option
+        ; readme : string option [@sexp.option]
         ; subcommands : (string, 'a) List.Assoc.t Lazy.t
         }
       [@@deriving sexp]
@@ -1597,7 +1605,7 @@ module Group = struct
     module V1 = struct
       type 'a t =
         { summary : string
-        ; readme : string sexp_option
+        ; readme : string option [@sexp.option]
         ; subcommands : (string, 'a) List.Assoc.t
         }
       [@@deriving sexp]
@@ -1644,7 +1652,7 @@ module Exec = struct
     module V3 = struct
       type t =
         { summary : string
-        ; readme : string sexp_option
+        ; readme : string option [@sexp.option]
         ; working_dir : string
         ; path_to_exe : string
         ; child_subcommand : string list
@@ -1658,7 +1666,7 @@ module Exec = struct
     module V2 = struct
       type t =
         { summary : string
-        ; readme : string sexp_option
+        ; readme : string option [@sexp.option]
         ; working_dir : string
         ; path_to_exe : string
         }
@@ -1688,7 +1696,7 @@ module Exec = struct
     module V1 = struct
       type t =
         { summary : string
-        ; readme : string sexp_option
+        ; readme : string option [@sexp.option]
         ; (* [path_to_exe] must be absolute. *)
           path_to_exe : string
         }
@@ -2061,7 +2069,7 @@ module Shape = struct
 
     type t = Base.Sexpable.V2.t =
       { summary : string
-      ; readme : string sexp_option
+      ; readme : string option [@sexp.option]
       ; anons : anons
       ; flags : Flag_info.t list
       }
@@ -2077,7 +2085,7 @@ module Shape = struct
   module Group_info = struct
     type 'a t = 'a Group.Sexpable.V2.t =
       { summary : string
-      ; readme : string sexp_option
+      ; readme : string option [@sexp.option]
       ; subcommands : (string * 'a) List.t Lazy.t
       }
     [@@deriving bin_io, compare, fields, sexp]
@@ -2088,7 +2096,7 @@ module Shape = struct
   module Exec_info = struct
     type t = Exec.Sexpable.V3.t =
       { summary : string
-      ; readme : string sexp_option
+      ; readme : string option [@sexp.option]
       ; working_dir : string
       ; path_to_exe : string
       ; child_subcommand : string list

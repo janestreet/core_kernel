@@ -169,11 +169,29 @@ let sexp_of_exn = Exn.sexp_of_t
    E.g. this allows the following to work:
 
    type t = { foo : int sexp_option } [@@deriving bin_io, compare, hash, sexp] *)
-type 'a sexp_array = 'a array [@@deriving bin_io, compare, typerep]
-type sexp_bool = bool [@@deriving bin_io, compare, hash, typerep]
-type 'a sexp_list = 'a list [@@deriving bin_io, compare, hash, typerep]
-type 'a sexp_option = 'a option [@@deriving bin_io, compare, hash, typerep]
-type 'a sexp_opaque = 'a [@@deriving bin_io, compare, hash, typerep]
+include struct
+  [@@@ocaml.warning "-3"]
+
+  type 'a sexp_array = 'a array
+  [@@deriving bin_io, compare, typerep]
+  [@@deprecated "[since 2019-03] use [@sexp.array] instead"]
+
+  type sexp_bool = bool
+  [@@deriving bin_io, compare, hash, typerep]
+  [@@deprecated "[since 2019-03] use [@sexp.bool] instead"]
+
+  type 'a sexp_list = 'a list
+  [@@deriving bin_io, compare, hash, typerep]
+  [@@deprecated "[since 2019-03] use [@sexp.list] instead"]
+
+  type 'a sexp_option = 'a option
+  [@@deriving bin_io, compare, hash, typerep]
+  [@@deprecated "[since 2019-03] use [@sexp.option] instead"]
+
+  type 'a sexp_opaque = 'a
+  [@@deriving bin_io, compare, hash, typerep]
+  [@@deprecated "[since 2019-03] use [@sexp.opaque] instead"]
+end
 
 (* The code below checks that the signatures in core_map.mli and core_set.mli are
    consistent with the generic map and set signatures defined in map_intf.ml

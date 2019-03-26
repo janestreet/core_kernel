@@ -187,7 +187,7 @@ type ('a, 'state) alive =
   { mutable state            : 'state
   ; mutable state_is_initial : bool
   ; initial_state            : 'state
-  ; unpack                   : ('a, 'state) Unpack_one.unpack sexp_opaque
+  ; unpack                   : (('a, 'state) Unpack_one.unpack [@sexp.opaque])
   (* [buf] holds unconsumed chars*)
   ; mutable buf              : Bigstring.t
   (* [pos] is the start of unconsumed data in[buf] *)

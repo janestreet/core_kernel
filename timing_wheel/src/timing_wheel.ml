@@ -203,7 +203,7 @@ module Config = struct
     { alarm_precision : Alarm_precision.Unstable.t
     ; level_bits : Level_bits.t
                      [@default level_bits_default] [@sexp_drop_default.compare]
-    ; capacity : int sexp_option
+    ; capacity : int option [@sexp.option]
     }
   [@@deriving fields, sexp]
 
@@ -694,7 +694,7 @@ end = struct
       (** All elements at this level have their [key] satisfy [min_allowed_key <= key <=
           max_allowed_key].  Also, [min_allowed_key] is a multiple of [keys_per_slot]. *)
       ; mutable max_allowed_key : Key.t
-      ; slots : 'a Internal_elt.t array sexp_opaque
+      ; slots : ('a Internal_elt.t array[@sexp.opaque])
       (** [slots] holds the (possibly null) pointers to the circular doubly-linked lists
           of elts.  [Array.length slots = 1 lsl bits]. *)
       }

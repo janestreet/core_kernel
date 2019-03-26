@@ -308,7 +308,7 @@ module Configure (Config : Quickcheck_config) = struct
             (trials : int)
             (expect_count : int)
             (actual_count : int)
-            (values : Base.Sexp.t sexp_option)]
+            (values : (Base.Sexp.t option[@sexp.option]))]
     in
     with_return (fun r ->
       let set = ref S.empty in

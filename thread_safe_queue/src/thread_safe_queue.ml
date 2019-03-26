@@ -17,7 +17,7 @@ open! Import
 module Elt = struct
   type 'a t =
     { mutable value : 'a Uopt.t
-    ; mutable next : 'a t Uopt.t sexp_opaque
+    ; mutable next : ('a t Uopt.t[@sexp.opaque])
     }
   [@@deriving sexp_of]
 

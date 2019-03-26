@@ -37,5 +37,26 @@ include (
   with type bytes := bytes
   with type unit := unit)
 
-type 'a sexp_option = 'a Std_internal.sexp_option [@@deriving bin_io, compare, hash]
-type 'a sexp_list = 'a Std_internal.sexp_list [@@deriving bin_io, compare, hash]
+include (
+struct
+  type 'a sexp_option = ('a Std_internal.sexp_option[@ocaml.warning "-3"])
+  [@@deriving bin_io, compare, hash]
+
+  type 'a sexp_list = ('a Std_internal.sexp_list[@ocaml.warning "-3"])
+  [@@deriving bin_io, compare, hash]
+end :
+sig
+  type 'a sexp_option = ('a Std_internal.sexp_option[@ocaml.warning "-3"])
+  [@@deriving bin_io, compare, hash]
+
+  type 'a sexp_list = ('a Std_internal.sexp_list[@ocaml.warning "-3"])
+  [@@deriving bin_io, compare, hash]
+end
+with type 'a sexp_option := ('a Std_internal.sexp_option[@ocaml.warning "-3"])
+with type 'a sexp_list := ('a Std_internal.sexp_list[@ocaml.warning "-3"]))
+
+type 'a sexp_option = ('a Std_internal.sexp_option[@ocaml.warning "-3"])
+[@@deprecated "[since 2019-03] use [@sexp.option] instead"]
+
+type 'a sexp_list = ('a Std_internal.sexp_list[@ocaml.warning "-3"])
+[@@deprecated "[since 2019-03] use [@sexp.list] instead"]

@@ -78,18 +78,18 @@ module Time_with_limited_parsing = struct
 end
 
 type t = {
-  username                    : string sexp_option;
-  hostname                    : string sexp_option;
-  kernel                      : string sexp_option;
-  build_time                  : Time_with_limited_parsing.t sexp_option;
+  username                    : string option [@sexp.option];
+  hostname                    : string option [@sexp.option];
+  kernel                      : string option [@sexp.option];
+  build_time                  : Time_with_limited_parsing.t option [@sexp.option];
   x_library_inlining          : bool;
   portable_int63              : bool;
   dynlinkable_code            : bool;
   ocaml_version               : string;
   executable_path             : string;
   build_system                : string;
-  allowed_projections         : string list sexp_option;
-  application_specific_fields : Application_specific_fields.t sexp_option;
+  allowed_projections         : string list option [@sexp.option];
+  application_specific_fields : Application_specific_fields.t option [@sexp.option];
 } [@@deriving sexp]
 
 let build_info_as_sexp =

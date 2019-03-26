@@ -341,7 +341,7 @@ module Pool = struct
          the purpose of [dummy] is to initialize a pool element, making [dummy] an [Obj.t
          Uniform_array.t] lets us initialize a pool element using [Uniform_array.blit]
          from [dummy] to the pool, which is an [Obj.t Uniform_array.t]. *)
-      ; dummy : Obj.t Uniform_array.t sexp_opaque option
+      ; dummy : (Obj.t Uniform_array.t[@sexp.opaque]) option
       }
     [@@deriving fields, sexp_of]
 

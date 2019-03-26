@@ -825,7 +825,7 @@ module type Command = sig
 
       type t =
         { summary : string
-        ; readme : string sexp_option
+        ; readme : string option
         ; anons : anons
         ; flags : Flag_info.t list
         }
@@ -835,7 +835,7 @@ module type Command = sig
     module Group_info : sig
       type 'a t =
         { summary : string
-        ; readme : string sexp_option
+        ; readme : string option
         ; subcommands : (string, 'a) List.Assoc.t Lazy.t
         }
       [@@deriving bin_io, compare, fields, sexp]
@@ -846,7 +846,7 @@ module type Command = sig
     module Exec_info : sig
       type t =
         { summary : string
-        ; readme : string sexp_option
+        ; readme : string option
         ; working_dir : string
         ; path_to_exe : string
         ; child_subcommand : string list
@@ -932,11 +932,11 @@ module type Command = sig
       type t [@@deriving compare]
 
       val of_list : string list -> t
-      val extend : t -> extend:(string sexp_list -> string sexp_list) -> path:Path.t -> t
+      val extend : t -> extend:(string list -> string list) -> path:Path.t -> t
     end
 
     module Spec : sig
-      val flags_of_args_exn : (string * Arg.spec * string) sexp_list -> ('a, 'a) Spec.t
+      val flags_of_args_exn : (string * Arg.spec * string) list -> ('a, 'a) Spec.t
       val to_string_for_choose_one : _ Param.t -> string
     end
 

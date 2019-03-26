@@ -77,7 +77,7 @@ end :
 sig
   type 'a sexp_opaque [@@deriving bin_io, compare, hash, typerep]
 end
-with type 'a sexp_opaque := 'a sexp_opaque)
+with type 'a sexp_opaque := 'a)
 
 include (
   Typerep_lib.Std :
