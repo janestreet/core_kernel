@@ -23,6 +23,22 @@ module Symmetric_diff_element = struct
         in
         k, diff
       ;;
+
+      let map_data t ~f = map t ~f1:Fn.id ~f2:f
+
+      let left (_key, diff) =
+        match diff with
+        | `Left x
+        | `Unequal (x, _) -> Some x
+        | `Right _ -> None
+      ;;
+
+      let right (_key, diff) =
+        match diff with
+        | `Right x
+        | `Unequal (_, x) -> Some x
+        | `Left _ -> None
+      ;;
     end
   end
 

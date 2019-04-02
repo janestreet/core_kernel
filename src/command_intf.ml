@@ -491,16 +491,17 @@ module type Command = sig
 
     (** Specification of an individual parameter to the command's main function. *)
     type 'a param = 'a Param.t
+    [@@deprecated "[since 2019-03] use [Command.Param.t] instead"]
 
-    include Param.S with type 'a t := 'a param
+    include Param.S with type 'a t := 'a Param.t
 
     (** Superceded by [return], preserved for backwards compatibility. *)
-    val const : 'a -> 'a param
+    val const : 'a -> 'a Param.t
     [@@deprecated
       "[since 2018-10] use [Command.Param.return] instead of [Command.Spec.const]"]
 
     (** Superceded by [both], preserved for backwards compatibility. *)
-    val pair : 'a param -> 'b param -> ('a * 'b) param
+    val pair : 'a Param.t -> 'b Param.t -> ('a * 'b) Param.t
     [@@deprecated
       "[since 2018-10] use [Command.Param.both] instead of [Command.Spec.pair]"]
 
@@ -603,14 +604,14 @@ module type Command = sig
     val ( ++ ) : ('m1, 'm2) t -> ('m2, 'm3) t -> ('m1, 'm3) t
 
     (** Adds a rightmost parameter onto the type of main. *)
-    val ( +> ) : ('m1, 'a -> 'm2) t -> 'a param -> ('m1, 'm2) t
+    val ( +> ) : ('m1, 'a -> 'm2) t -> 'a Param.t -> ('m1, 'm2) t
 
     (** Adds a leftmost parameter onto the type of main.
 
         This function should only be used as a workaround in situations where the order of
         composition is at odds with the order of anonymous arguments because you're
         factoring out some common spec. *)
-    val ( +< ) : ('m1, 'm2) t -> 'a param -> ('a -> 'm1, 'm2) t
+    val ( +< ) : ('m1, 'm2) t -> 'a Param.t -> ('a -> 'm1, 'm2) t
 
     (** Combinator for patching up how parameters are obtained or presented.
 

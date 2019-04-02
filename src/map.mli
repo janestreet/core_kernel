@@ -392,6 +392,19 @@ val merge_skewed
 module Symmetric_diff_element : sig
   type ('k, 'v) t = 'k * [`Left of 'v | `Right of 'v | `Unequal of 'v * 'v]
   [@@deriving bin_io, compare, sexp]
+
+  val map_data : ('k, 'v1) t -> f:('v1 -> 'v2) -> ('k, 'v2) t
+
+  (** [left] is defined as:
+      {[ function
+        | (`Left x | `Unequal (x, _)) -> Some x
+        | `Right _ -> None
+      ]}
+      and [right] is similar.
+  *)
+
+  val left : (_, 'v) t -> 'v option
+  val right : (_, 'v) t -> 'v option
 end
 
 (** [symmetric_diff t1 t2 ~data_equal] returns a list of changes between [t1] and [t2].
