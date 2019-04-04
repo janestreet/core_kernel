@@ -48,21 +48,10 @@ module Stable = struct
   end
 end
 
-module type Typerepable = sig
-  type t [@@deriving typerep]
-end
+type t = Base.Int63.t
 
-type 'a typerepable = (module Typerepable with type t = 'a)
-
-let typerep_of_repr : type a b. (a, b) Base.Int63.Private.Repr.t -> a typerepable =
-  function
-  | Base.Int63.Private.Repr.Int -> (module Int)
-  | Base.Int63.Private.Repr.Int64 -> (module Int64)
-;;
-
-let typerepable : Base.Int63.t typerepable = typerep_of_repr Base.Int63.Private.repr
-
-include (val typerepable)
+let typerep_of_t = typerep_of_int63
+let typename_of_t = typename_of_int63
 
 module Replace_polymorphic_compare : Comparable.Polymorphic_compare with type t := t =
   Base.Int63
