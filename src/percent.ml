@@ -3,7 +3,7 @@ open Std_internal
 
 module Stable = struct
   module V1 = struct
-    type t = float [@@deriving hash]
+    type t = float [@@deriving compare, hash]
 
     let of_mult f = f
     let to_mult t = t
@@ -51,11 +51,11 @@ module Stable = struct
     let format x format =
       let x_abs = Float.abs x in
       let string float = Format.format_float format float in
-      if x_abs = 0.
+      if Float.( = ) x_abs 0.
       then "0x"
-      else if x_abs >= 1.
+      else if Float.( >= ) x_abs 1.
       then string (x *. 1.) ^ "x"
-      else if x_abs >= 0.01
+      else if Float.( >= ) x_abs 0.01
       then string (x *. 100.) ^ "%"
       else string (x *. 10_000.) ^ "bp"
     ;;
@@ -72,11 +72,11 @@ module Stable = struct
       let to_string x =
         let x_abs = Float.abs x in
         let string float = sprintf "%.6G" float in
-        if x_abs = 0.
+        if Float.( = ) x_abs 0.
         then "0x"
-        else if x_abs >= 1.
+        else if Float.( >= ) x_abs 1.
         then string (x *. 1.) ^ "x"
-        else if x_abs >= 0.01
+        else if Float.( >= ) x_abs 0.01
         then string (x *. 100.) ^ "%"
         else string (x *. 10_000.) ^ "bp"
       ;;

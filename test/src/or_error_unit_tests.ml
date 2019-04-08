@@ -1,4 +1,5 @@
 open! Core_kernel
+open Poly
 open Or_error
 
 let%test_unit "[error_s] produces a value with the expected [sexp_of_t]" =

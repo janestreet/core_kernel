@@ -1,4 +1,5 @@
 open! Core_kernel
+open Poly
 open! Import
 open! Univ
 module Id = Type_equal.Id

@@ -1020,7 +1020,7 @@ module Key_type = struct
 end
 
 let assert_no_underscores key_type flag_or_subcommand =
-  if String.exists flag_or_subcommand ~f:(fun c -> c = '_')
+  if String.exists flag_or_subcommand ~f:(fun c -> Char.( = ) c '_')
   then
     failwithf
       "%s %s contains an underscore. Use a dash instead."
@@ -1101,7 +1101,7 @@ module Base = struct
       let flags =
         if display_help_flags
         then flags
-        else List.filter flags ~f:(fun f -> f.name <> "-help")
+        else List.filter flags ~f:(fun f -> String.( <> ) f.name "-help")
       in
       List.concat_map ~f:Flag.Internal.Deprecated.help flags
     ;;
@@ -2498,7 +2498,7 @@ module For_unix (M : For_unix) = struct
         if flags
         then
           b.flags
-          |> List.filter ~f:(fun fmt -> fmt.Format.V1.name <> "[-help]")
+          |> List.filter ~f:(fun fmt -> String.( <> ) fmt.Format.V1.name "[-help]")
           |> List.fold ~init:acc ~f:(fun acc fmt ->
             let path = Path.append path ~subcommand:fmt.Format.V1.name in
             let fmt = { fmt with Format.V1.name = string_of_path path } in

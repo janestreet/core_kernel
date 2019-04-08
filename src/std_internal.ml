@@ -5,6 +5,7 @@ open! Import
 
 include Core_pervasives  (** [include]d first so that everything else shadows it *)
 
+include Int.Replace_polymorphic_compare
 include Base_quickcheck.Export
 include Deprecate_pipe_bang
 include Either.Export

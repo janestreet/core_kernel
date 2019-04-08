@@ -1,4 +1,5 @@
 open! Core_kernel
+open Poly
 include Flags_intf
 
 let create ~bit:n =

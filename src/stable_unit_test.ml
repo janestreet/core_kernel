@@ -35,7 +35,7 @@ module Make_sexp_serialization_test (T : Stable_unit_test_intf.Arg) = struct
          Or_error.try_with (fun () ->
            let sexp = Sexp.of_string sexp_as_string in
            let serialized_sexp = T.sexp_of_t t in
-           if serialized_sexp <> sexp
+           if Sexp.( <> ) serialized_sexp sexp
            then
              failwiths
                "sexp serialization mismatch"
@@ -51,7 +51,7 @@ module Make_bin_io_test (T : Stable_unit_test_intf.Arg) = struct
       let binable_m = (module T : Binable.S with type t = T.t) in
       let to_bin_string t = Binable.to_string binable_m t in
       let serialized_bin_io = to_bin_string t in
-      if serialized_bin_io <> expected_bin_io
+      if String.( <> ) serialized_bin_io expected_bin_io
       then
         failwiths
           "bin_io serialization mismatch"
@@ -86,9 +86,9 @@ struct
         | Sexp.Atom _ ->
           failwiths "expected list when serializing unordered container" t T.sexp_of_t
       in
-      let sorted_sexps = List.sort ~compare sexps in
-      let sorted_serialized = List.sort ~compare serialized_elements in
-      if not (List.equal ( = ) sorted_sexps sorted_serialized)
+      let sorted_sexps = List.sort ~compare:Sexp.compare sexps in
+      let sorted_serialized = List.sort ~compare:Sexp.compare serialized_elements in
+      if not (List.equal Sexp.( = ) sorted_sexps sorted_serialized)
       then
         failwiths
           "sexp serialization mismatch"

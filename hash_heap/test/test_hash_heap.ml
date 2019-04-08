@@ -1,4 +1,5 @@
 open! Core_kernel
+open Poly
 open! Expect_test_helpers_base
 module Hash_heap = Hash_heap.Make (Int)
 

@@ -49,6 +49,7 @@ module Stable = struct
 
     open! Import
     open! Std_internal
+    open! T
 
     let to_string { host; port } = sprintf "%s:%d" host port
 

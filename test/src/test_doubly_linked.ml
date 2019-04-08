@@ -1,4 +1,5 @@
 open! Core_kernel
+open Poly
 open! Import
 open! Doubly_linked
 include Test_container.Test_S1 (Doubly_linked)

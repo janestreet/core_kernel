@@ -7,6 +7,7 @@
 
 module Caml_map = Map
 open! Core_kernel
+open Poly
 module With_comparator = Map_intf.With_comparator
 module With_first_class_module = Map_intf.With_first_class_module
 module Without_comparator = Map_intf.Without_comparator

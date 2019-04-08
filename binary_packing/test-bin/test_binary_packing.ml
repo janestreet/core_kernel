@@ -1,4 +1,5 @@
 open Core
+open Poly
 open OUnit
 module B = Binary_packing
 

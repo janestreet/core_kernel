@@ -199,16 +199,16 @@ module Stable = struct
         else if String.contains s '-'
         then (
           (* yyyy-mm-dd *)
-          ensure (String.length s = 10 && s.[4] = '-' && s.[7] = '-');
+          ensure (String.length s = 10 && Char.( = ) s.[4] '-' && Char.( = ) s.[7] '-');
           month_num ~year:0 ~month:5 ~day:8)
         else if String.contains s ' '
         then
-          if String.length s = 11 && s.[2] = ' ' && s.[6] = ' '
+          if String.length s = 11 && Char.( = ) s.[2] ' ' && Char.( = ) s.[6] ' '
           then (* DD MMM YYYY *)
             month_abrv ~day:0 ~month:3 ~year:7
           else (
             (* YYYY MMM DD *)
-            ensure (String.length s = 11 && s.[4] = ' ' && s.[8] = ' ');
+            ensure (String.length s = 11 && Char.( = ) s.[4] ' ' && Char.( = ) s.[8] ' ');
             month_abrv ~day:9 ~month:5 ~year:0)
         else if String.length s = 9
         then (* DDMMMYYYY *)

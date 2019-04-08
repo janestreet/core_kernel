@@ -1,4 +1,5 @@
 open! Core_kernel
+open Poly
 open Expect_test_helpers_kernel
 module Heap = Pairing_heap
 

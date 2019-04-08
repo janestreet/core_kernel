@@ -1,5 +1,6 @@
 module Caml_set = Set
 open! Core_kernel
+open Poly
 module Merge_to_sequence_element = Set_intf.Merge_to_sequence_element
 module Named = Set_intf.Named
 module With_comparator = Set_intf.With_comparator

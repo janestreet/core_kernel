@@ -1,4 +1,5 @@
 open! Core_kernel
+open Poly
 open! Bigstring
 
 let buf = create 256
