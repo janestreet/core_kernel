@@ -1,5 +1,4 @@
 open! Core_kernel
-open Poly
 open Expect_test_helpers_kernel
 
 module No_poly_compare = struct
@@ -33,15 +32,15 @@ end
 let%expect_test "No_poly_compare" =
   let inc_x = No_poly_compare.Incomparable.create () in
   (* Unfortunately if we compare [x] with itself it will always work. *)
-  show_raise (fun () -> compare inc_x inc_x);
+  show_raise (fun () -> Poly.compare inc_x inc_x);
   [%expect {| "did not raise" |}];
   (* But otherwise we get an exception. *)
-  show_raise (fun () -> compare inc_x (No_poly_compare.Incomparable.create ()));
+  show_raise (fun () -> Poly.compare inc_x (No_poly_compare.Incomparable.create ()));
   [%expect {| (raised (Invalid_argument "compare: functional value")) |}];
   let no_x = No_poly_compare.create 0 in
-  show_raise (fun () -> compare no_x no_x);
+  show_raise (fun () -> Poly.compare no_x no_x);
   [%expect {| "did not raise" |}];
-  show_raise (fun () -> compare no_x (No_poly_compare.create 0));
+  show_raise (fun () -> Poly.compare no_x (No_poly_compare.create 0));
   [%expect {| (raised (Invalid_argument "compare: functional value")) |}]
 ;;
 

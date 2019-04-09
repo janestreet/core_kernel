@@ -38,9 +38,6 @@ module type S = sig
   val iter : 'a t -> f:('a -> unit) -> unit
   val iteri : 'a t -> f:(key:Key.t -> data:'a -> unit) -> unit
 
-  val iter_vals : 'a t -> f:('a -> unit) -> unit
-  [@@deprecated "[since 2016-04] Use iter instead"]
-
   (** Returns the list of all (key, value) pairs for given [Hash_heap]. *)
   val to_alist : 'a t -> (Key.t * 'a) list
 

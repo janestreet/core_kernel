@@ -1,5 +1,4 @@
 open! Core_kernel
-open Poly
 open! Import
 open! Doubly_linked
 include Test_container.Test_S1 (Doubly_linked)
@@ -253,7 +252,7 @@ let%test_unit "findi_elt" =
 
 let%test_unit "findi_elt" =
   let result = findi_elt (create_default ()) ~f:(fun i _ -> i > 10) in
-  assert (result = None)
+  assert ([%equal: _ option] result None)
 ;;
 
 let%expect_test "iteri" =
@@ -327,10 +326,10 @@ let%test _ = compare Int.compare (create ()) (create_default ()) < 0
 let%test _ = compare Int.compare (of_list [ 1; 2; 3 ]) (of_list [ 1; 2; 4 ]) < 0
 let%test _ = compare Int.compare (of_list [ 1; 3; 2 ]) (of_list [ 1; 2; 3 ]) > 0
 let%test _ = compare Int.compare (of_list [ 1; 2; 5 ]) (of_list [ 1; 2; 3; 4 ]) > 0
-let%test _ = to_list (of_list []) = []
-let%test _ = to_list (of_list [ 1; 2; 3 ]) = [ 1; 2; 3 ]
-let%test _ = to_array (of_array [||]) = [||]
-let%test _ = to_array (of_array [| 1; 2; 3 |]) = [| 1; 2; 3 |]
+let%test _ = [%equal: int list] (to_list (of_list [])) []
+let%test _ = [%equal: int list] (to_list (of_list [ 1; 2; 3 ])) [ 1; 2; 3 ]
+let%test _ = [%equal: int array] (to_array (of_array [||])) [||]
+let%test _ = [%equal: int array] (to_array (of_array [| 1; 2; 3 |])) [| 1; 2; 3 |]
 
 let%test_unit _ =
   invariant (fun (_ : int) -> ()) (of_list []);
@@ -396,28 +395,46 @@ let%test_module "unchecked_iter" =
       List.rev !r
     ;;
 
-    let%test _ = to_list (fun _ _ -> ()) = [ 0; 1; 2; 3; 4 ]
-    let%test _ = to_list (fun b x -> if x = 0 then remove b 1) = [ 0; 2; 3; 4 ]
-    let%test _ = to_list (fun b x -> if x = 1 then remove b 0) = [ 0; 1; 2; 3; 4 ]
-    let%test _ = to_list (fun b x -> if x = 2 then remove b 1) = [ 0; 1; 2; 3; 4 ]
+    let%test _ = [%equal: int list] (to_list (fun _ _ -> ())) [ 0; 1; 2; 3; 4 ]
 
     let%test _ =
-      to_list (fun b x ->
-        if x = 2
-        then (
-          remove b 4;
-          remove b 3))
-      = [ 0; 1; 2 ]
-    ;;
-
-    let%test _ = to_list (fun b x -> if x = 2 then insert_after b 1 5) = [ 0; 1; 2; 3; 4 ]
-
-    let%test _ =
-      to_list (fun b x -> if x = 2 then insert_after b 2 5) = [ 0; 1; 2; 5; 3; 4 ]
+      [%equal: int list] (to_list (fun b x -> if x = 0 then remove b 1)) [ 0; 2; 3; 4 ]
     ;;
 
     let%test _ =
-      to_list (fun b x -> if x = 2 then insert_after b 3 5) = [ 0; 1; 2; 3; 5; 4 ]
+      [%equal: int list] (to_list (fun b x -> if x = 1 then remove b 0)) [ 0; 1; 2; 3; 4 ]
+    ;;
+
+    let%test _ =
+      [%equal: int list] (to_list (fun b x -> if x = 2 then remove b 1)) [ 0; 1; 2; 3; 4 ]
+    ;;
+
+    let%test _ =
+      [%equal: int list]
+        (to_list (fun b x ->
+           if x = 2
+           then (
+             remove b 4;
+             remove b 3)))
+        [ 0; 1; 2 ]
+    ;;
+
+    let%test _ =
+      [%equal: int list]
+        (to_list (fun b x -> if x = 2 then insert_after b 1 5))
+        [ 0; 1; 2; 3; 4 ]
+    ;;
+
+    let%test _ =
+      [%equal: int list]
+        (to_list (fun b x -> if x = 2 then insert_after b 2 5))
+        [ 0; 1; 2; 5; 3; 4 ]
+    ;;
+
+    let%test _ =
+      [%equal: int list]
+        (to_list (fun b x -> if x = 2 then insert_after b 3 5))
+        [ 0; 1; 2; 3; 5; 4 ]
     ;;
   end)
 ;;

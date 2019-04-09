@@ -1,5 +1,4 @@
 open! Core_kernel
-open Poly
 open! Import
 open! Deque
 
@@ -11,21 +10,21 @@ let%test_module _ =
     let binary_search = binary_search ~compare:Int.compare
     let t = of_array [| 1; 2; 3; 4 |]
 
-    let%test _ = binary_search t `First_equal_to 2 = Some 1
-    let%test _ = binary_search t `First_equal_to 5 = None
-    let%test _ = binary_search t `First_equal_to 0 = None
-    let%test _ = binary_search t ~pos:2 `First_equal_to 2 = None
-    let%test _ = binary_search t ~pos:2 `First_equal_to 3 = Some 2
+    let%test _ = [%equal: int option] (binary_search t `First_equal_to 2) (Some 1)
+    let%test _ = [%equal: int option] (binary_search t `First_equal_to 5) None
+    let%test _ = [%equal: int option] (binary_search t `First_equal_to 0) None
+    let%test _ = [%equal: int option] (binary_search t ~pos:2 `First_equal_to 2) None
+    let%test _ = [%equal: int option] (binary_search t ~pos:2 `First_equal_to 3) (Some 2)
 
     let _ = dequeue_front t
     let _ = dequeue_front t
 
-    let%test _ = binary_search t `First_equal_to 2 = None
-    let%test _ = binary_search t `First_equal_to 3 = Some 2
-    let%test _ = binary_search t `First_equal_to 5 = None
-    let%test _ = binary_search t `First_equal_to 0 = None
-    let%test _ = binary_search t ~pos:2 `First_equal_to 2 = None
-    let%test _ = binary_search t ~pos:2 `First_equal_to 3 = Some 2
+    let%test _ = [%equal: int option] (binary_search t `First_equal_to 2) None
+    let%test _ = [%equal: int option] (binary_search t `First_equal_to 3) (Some 2)
+    let%test _ = [%equal: int option] (binary_search t `First_equal_to 5) None
+    let%test _ = [%equal: int option] (binary_search t `First_equal_to 0) None
+    let%test _ = [%equal: int option] (binary_search t ~pos:2 `First_equal_to 2) None
+    let%test _ = [%equal: int option] (binary_search t ~pos:2 `First_equal_to 3) (Some 2)
   end)
 ;;
 
@@ -110,7 +109,7 @@ let%test_module _ =
       That_dequeue.enqueue t_b back_or_front v;
       let end_a = This_dequeue.to_array t_a in
       let end_b = That_dequeue.to_array t_b in
-      if end_a <> end_b
+      if not ([%equal: int array] end_a end_b)
       then
         failwithf
           "enqueue transition failure of: %s -> %s vs. %s -> %s"
@@ -129,7 +128,7 @@ let%test_module _ =
       in
       let end_a = This_dequeue.to_array t_a in
       let end_b = That_dequeue.to_array t_b in
-      if a <> b || end_a <> end_b
+      if not ([%equal: int option] a b) || not ([%equal: int array] end_a end_b)
       then
         failwithf
           "error in dequeue: %s (%s -> %s) <> %s (%s -> %s)"
@@ -165,7 +164,7 @@ let%test_module _ =
       let make_list fold t = fold t dir ~init:[] ~f:(fun acc x -> x :: acc) in
       let this_l = make_list This_dequeue.fold' t_a in
       let that_l = make_list That_dequeue.fold' t_b in
-      if this_l <> that_l
+      if not ([%equal: int list] this_l that_l)
       then
         failwithf
           "error in fold:  %s (from %s) <> %s (from %s)"
@@ -184,7 +183,7 @@ let%test_module _ =
       in
       let this_l = make_rev_list This_dequeue.iter t_a in
       let that_l = make_rev_list That_dequeue.iter t_b in
-      if this_l <> that_l
+      if not ([%equal: int list] this_l that_l)
       then
         failwithf
           "error in iter:  %s (from %s) <> %s (from %s)"
@@ -217,7 +216,7 @@ let%test_module _ =
           let t_a, t_b = t in
           let arr_a = This_dequeue.to_array t_a in
           let arr_b = That_dequeue.to_array t_b in
-          if arr_a <> arr_b
+          if not ([%equal: int array] arr_a arr_b)
           then
             failwithf
               "dequeue final states not equal: %s vs. %s"

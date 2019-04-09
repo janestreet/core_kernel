@@ -127,7 +127,6 @@ let fold t ~init ~f =
 let iteri t ~f = fold t ~init:() ~f:(fun ~key ~data () -> f ~key ~data)
 let iter t ~f = iteri t ~f:(fun ~key:_ ~data -> f data)
 let iter_keys t ~f = iteri t ~f:(fun ~key ~data:_ -> f key)
-let iter_vals = iter
 let map_entries t ~f = fold t ~init:[] ~f:(fun ~key ~data ac -> f ~key ~data :: ac)
 let to_alist t = map_entries t ~f:(fun ~key ~data -> key, data)
 

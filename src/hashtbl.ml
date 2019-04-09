@@ -216,9 +216,3 @@ module type For_deriving = For_deriving
 include (Hashtbl : For_deriving with type ('a, 'b) t := ('a, 'b) t)
 
 let hashable = Hashtbl.Private.hashable
-let iter_vals = iter
-let replace = set
-let replace_all = map_inplace
-let replace_alli = mapi_inplace
-let filter_replace_all = filter_map_inplace
-let filter_replace_alli = filter_mapi_inplace

@@ -534,7 +534,6 @@ let iteri =
 ;;
 let iter      t ~f = iteri t ~f:(fun ~key:_ ~data -> f data) ;;
 let iter_keys t ~f = iteri t ~f:(fun ~key ~data:_ -> f key) ;;
-let iter_vals = iter ;;
 
 let fold =
   let rec fold_entries t e acc f =
@@ -847,11 +846,6 @@ let mapi_inplace t ~f =
 
 let map_inplace t ~f =
   mapi_inplace t ~f:(fun ~key:_ ~data -> f data)
-
-let replace_all = map_inplace
-let replace_alli = mapi_inplace
-let filter_replace_all = filter_map_inplace
-let filter_replace_alli = filter_mapi_inplace
 ;;
 
 let equal t t' equal =

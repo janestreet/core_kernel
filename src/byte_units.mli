@@ -2,7 +2,17 @@
     megabytes, gigabytes, and words).
 
     [t]'s are created with [of_bytes_float_exn], [of_words_float_exn], [of_kilobytes],
-    [of_megabytes], etc. *)
+    [of_megabytes], etc.
+
+    Note: in this module, kilobytes, Megabytes, etc. are defined as powers of 1024:
+
+    - 1 kilobyte: 2^10 = 1024   bytes
+    - 1 Megabyte: 2^20 = 1024^2 bytes
+    - 1 Gigabyte: 2^30 = 1024^3 bytes
+    - 1 Terabyte: 2^40 = 1024^4 bytes
+    - 1 Petabyte: 2^50 = 1024^5 bytes
+    - 1 Exabyte:  2^60 = 1024^6 bytes
+*)
 
 open! Import
 

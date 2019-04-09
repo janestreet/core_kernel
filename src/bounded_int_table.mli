@@ -15,8 +15,8 @@
     [length] of the table but rather only on [num_keys]. Operations that deal with a
     single element ([find], [mem], [add], [remove], [set]) take constant time, and perform
     one or two array operations. Operations that deal with all of the keys defined in the
-    table ([data], [fold], [iter], [iter_vals], [keys], [to_alist]) take time proportional
-    to the [length] of the table, not [num_keys].
+    table ([data], [fold], [iter], [keys], [to_alist]) take time proportional to the
+    [length] of the table, not [num_keys].
 *)
 
 open! Import
@@ -63,9 +63,6 @@ val fold
 val iter_keys : ('key, _) t -> f:('key -> unit) -> unit
 val iter : (_, 'data) t -> f:('data -> unit) -> unit
 val iteri : ('key, 'data) t -> f:(key:'key -> data:'data -> unit) -> unit
-
-val iter_vals : (_, 'data) t -> f:('data -> unit) -> unit
-[@@deprecated "[since 2016-04] Use iter instead"]
 
 val filter_mapi
   :  ('key, 'data1) t

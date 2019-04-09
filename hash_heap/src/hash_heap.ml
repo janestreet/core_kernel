@@ -147,7 +147,6 @@ module Make (Key : Key) : S with module Key = Key = struct
   let iteri t ~f = Heap.iter t.heap ~f:(fun (k, v) -> f ~key:k ~data:v)
   let iter t ~f = Heap.iter t.heap ~f:(fun (_k, v) -> f v)
   let iter_keys t ~f = Heap.iter t.heap ~f:(fun (k, _v) -> f k)
-  let iter_vals = iter
   let to_alist t = Heap.to_list t.heap
 
   let length t =

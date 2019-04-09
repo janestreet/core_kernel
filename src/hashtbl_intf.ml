@@ -227,22 +227,4 @@ module type Hashtbl = sig
   module type For_deriving = For_deriving
 
   include For_deriving with type ('a, 'b) t := ('a, 'b) t
-
-  val iter_vals : (_, 'b) t -> f:('b -> unit) -> unit
-  [@@deprecated "[since 2016-04] Use iter instead"]
-
-  val replace : ('a, 'b) t -> key:'a key -> data:'b -> unit
-  [@@deprecated "[since 2015-10] Use set instead"]
-
-  val replace_all : (_, 'b) t -> f:('b -> 'b) -> unit
-  [@@deprecated "[since 2016-02] Use map_inplace instead"]
-
-  val replace_alli : ('a, 'b) t -> f:(key:'a key -> data:'b -> 'b) -> unit
-  [@@deprecated "[since 2016-02] Use mapi_inplace instead"]
-
-  val filter_replace_all : (_, 'b) t -> f:('b -> 'b option) -> unit
-  [@@deprecated "[since 2016-02] Use filter_map_inplace instead"]
-
-  val filter_replace_alli : ('a, 'b) t -> f:(key:'a key -> data:'b -> 'b option) -> unit
-  [@@deprecated "[since 2016-02] Use filter_mapi_inplace instead"]
 end

@@ -1193,13 +1193,6 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_intf.Hashtbl) = stru
        end :
          Accessors_with_unit_tests)
 
-       let iter_vals = iter
-       let replace = set
-       let replace_all = map_inplace
-       let replace_alli = mapi_inplace
-       let filter_replace_all = filter_map_inplace
-       let filter_replace_alli = filter_mapi_inplace
-
        (* miscellaneous functions that aren't in Accessors and aren't particularly
           interesting to test *)
 
@@ -2108,13 +2101,6 @@ module Make_mutation_in_callbacks (Hashtbl : Hashtbl_intf.Hashtbl) = struct
              t;
            keys, data)
        ;;
-
-       let iter_vals = iter
-       let replace = set
-       let replace_all = map_inplace
-       let replace_alli = mapi_inplace
-       let filter_replace_all = filter_map_inplace
-       let filter_replace_alli = filter_mapi_inplace
 
        (* we do not test [validate], which should never raise externally, but which may go
           from pass to fail if the callback mutates, so it does not fit the normal

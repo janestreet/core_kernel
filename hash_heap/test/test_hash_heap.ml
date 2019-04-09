@@ -1,5 +1,4 @@
 open! Core_kernel
-open Poly
 open! Expect_test_helpers_base
 module Hash_heap = Hash_heap.Make (Int)
 
@@ -21,16 +20,16 @@ let%expect_test "create, and push" = ignore (make ())
 
 let%expect_test "find" =
   let t = make () in
-  List.iter s ~f:(fun i -> z i @? (Hash_heap.find t i = Some i))
+  List.iter s ~f:(fun i -> z i @? [%equal: int option] (Hash_heap.find t i) (Some i))
 ;;
 
 let%expect_test "pop and top" =
   let t = make () in
   List.iter s ~f:(fun i ->
-    ("top" ^ z i) @? (Hash_heap.top t = Some i);
-    ("pop" ^ z i) @? (Hash_heap.pop t = Some i);
-    ("topafter" ^ z i) @? (Hash_heap.top t <> Some i);
-    ("findable" ^ z i) @? (Hash_heap.find t i = None))
+    ("top" ^ z i) @? [%equal: int option] (Hash_heap.top t) (Some i);
+    ("pop" ^ z i) @? [%equal: int option] (Hash_heap.pop t) (Some i);
+    ("topafter" ^ z i) @? not ([%equal: int option] (Hash_heap.top t) (Some i));
+    ("findable" ^ z i) @? [%equal: int option] (Hash_heap.find t i) None)
 ;;
 
 let%expect_test "mem" =
@@ -41,16 +40,16 @@ let%expect_test "mem" =
 let%expect_test "find_pop" =
   let t = make () in
   List.iter s ~f:(fun i ->
-    ("lookup" ^ z i) @? (Hash_heap.find_pop t i = Some i);
+    ("lookup" ^ z i) @? [%equal: int option] (Hash_heap.find_pop t i) (Some i);
     ("remove" ^ z i) @? not (Hash_heap.mem t i))
 ;;
 
 let%expect_test "pop_if" =
   let t = make () in
-  "no" @? (Hash_heap.pop_if t (fun i -> i < 0) = None);
+  "no" @? [%equal: int option] (Hash_heap.pop_if t (fun i -> i < 0)) None;
   "still-there" @? List.for_all s ~f:(Hash_heap.mem t);
-  "yes" @? (Hash_heap.pop_if t (fun _ -> true) = Some 1);
-  "gone-top" @? (Hash_heap.top t <> Some 1);
+  "yes" @? [%equal: int option] (Hash_heap.pop_if t (fun _ -> true)) (Some 1);
+  "gone-top" @? not ([%equal: int option] (Hash_heap.top t) (Some 1));
   "gone-mem" @? not (Hash_heap.mem t 1)
 ;;
 
@@ -73,13 +72,13 @@ let%expect_test "remove" =
   Hash_heap.remove t 1;
   "1gone-mem" @? not (Hash_heap.mem t 1);
   "2gone-mem" @? not (Hash_heap.mem t 2);
-  "1gone-top" @? (Hash_heap.top t <> Some 1);
-  "2gone-top" @? (Hash_heap.top t <> Some 2)
+  "1gone-top" @? not ([%equal: int option] (Hash_heap.top t) (Some 1));
+  "2gone-top" @? not ([%equal: int option] (Hash_heap.top t) (Some 2))
 ;;
 
 let%expect_test "replace" =
   let t = make () in
   Hash_heap.replace t ~key:1 ~data:12;
-  "present" @? (Hash_heap.find t 1 = Some 12);
-  "top" @? (Hash_heap.top t = Some 2)
+  "present" @? [%equal: int option] (Hash_heap.find t 1) (Some 12);
+  "top" @? [%equal: int option] (Hash_heap.top t) (Some 2)
 ;;
