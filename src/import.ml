@@ -96,6 +96,7 @@ let am_running_test =
     ignore (Caml.Sys.getenv "TESTING_FRAMEWORK" : string);
     true
   with
+  (* [Caml.*] never raises [Not_found_s] *)
   | Caml.Not_found -> false
 ;;
 

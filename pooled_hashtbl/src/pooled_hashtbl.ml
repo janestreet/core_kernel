@@ -353,7 +353,7 @@ let find_exn t key =
   let it = table_get t.table index in
   let e = find_entry t ~key ~it in
   if not (Entry.is_null e) then Entry.data t.entries e
-  else raise Caml.Not_found
+  else  raise Caml.Not_found
 ;;
 
 let[@inline always] find_and_call_impl t key ~call_if_found ~if_found ~if_not_found =
