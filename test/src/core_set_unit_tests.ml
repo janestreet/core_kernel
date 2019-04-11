@@ -1040,3 +1040,20 @@ let%test_module "Int.Set.Tree" =
          let is_poly = false
        end))
 ;;
+
+let%expect_test _ =
+  let open Expect_test_helpers_kernel in
+  print_and_check_stable_type
+    [%here]
+    (module struct
+      type t = Set.M(Int).t [@@deriving bin_io, compare, sexp]
+    end)
+    (List.map ~f:(Set.of_list (module Int)) [ []; [ 1 ]; [ 1; 2 ]; [ 1; 2; 3 ] ]);
+  [%expect
+    {|
+    (bin_shape_digest 3564446b0bfa871d8c3ebf31ab342fe7)
+    ((sexp ()) (bin_io "\000"))
+    ((sexp (1)) (bin_io "\001\001"))
+    ((sexp (1 2)) (bin_io "\002\001\002"))
+    ((sexp (1 2 3)) (bin_io "\003\001\002\003")) |}]
+;;

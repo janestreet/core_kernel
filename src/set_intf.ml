@@ -33,6 +33,21 @@ module type Elt_binable = sig
   type t [@@deriving bin_io, compare, sexp]
 end
 
+module Elt_bin_io = struct
+  module type S = sig
+    type t [@@deriving bin_io]
+    type comparator_witness
+
+    val comparator : (t, comparator_witness) Comparator.t
+  end
+
+  type ('t, 'c) t =
+    (module
+      S
+      with type t = 't
+       and type comparator_witness = 'c)
+end
+
 module Without_comparator = Set.Without_comparator
 module With_comparator = Set.With_comparator
 module With_first_class_module = Set.With_first_class_module

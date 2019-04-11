@@ -37,7 +37,8 @@ let trd3 (_, _, z) = z
 
 let[@deprecated "[since 2018-12] Use [Option.value_exn]"] uw = function
   | Some x -> x
-  | None ->  raise Caml.Not_found
+  | None ->
+    raise Caml.Not_found
 ;;
 
 (** [phys_same] is like [phys_equal], but with a more general type.  [phys_same] is useful

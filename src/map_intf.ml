@@ -43,6 +43,21 @@ module type Key_binable_hashable = sig
   type t [@@deriving bin_io, compare, hash, sexp]
 end
 
+module Key_bin_io = struct
+  module type S = sig
+    type t [@@deriving bin_io]
+    type comparator_witness
+
+    val comparator : (t, comparator_witness) Comparator.t
+  end
+
+  type ('t, 'c) t =
+    (module
+      S
+      with type t = 't
+       and type comparator_witness = 'c)
+end
+
 module type Accessors_generic = sig
   include Map.Accessors_generic
 

@@ -239,7 +239,8 @@ val update : ('k, 'v, 'cmp) t -> 'k -> f:('v option -> 'v) -> ('k, 'v, 'cmp) t
 (** Returns the value bound to the given key if it exists, and [None] otherwise. *)
 val find : ('k, 'v, 'cmp) t -> 'k -> 'v option
 
-(** Returns the value bound to the given key, raising [Not_found] if none such exists. *)
+(** Returns the value bound to the given key, raising [Caml.Not_found] or [Not_found_s] if
+    none exists. *)
 val find_exn : ('k, 'v, 'cmp) t -> 'k -> 'v
 
 val find_or_error : ('k, 'v, 'cmp) t -> 'k -> 'v Or_error.t
@@ -701,6 +702,33 @@ module M (K : sig
   end) : sig
   type nonrec 'v t = (K.t, 'v, K.comparator_witness) t
 end
+
+(** The following [*bin*] functions support bin-io on base-style maps, e.g.:
+
+    {[ type t = int Map.M(String).t [@@deriving bin_io] ]} *)
+module Key_bin_io = Key_bin_io
+
+val bin_shape_m__t : ('a, 'c) Key_bin_io.t -> Bin_prot.Shape.t -> Bin_prot.Shape.t
+
+val bin_size_m__t
+  :  ('a, 'c) Key_bin_io.t
+  -> 'b Bin_prot.Size.sizer
+  -> ('a, 'b, 'c) t Bin_prot.Size.sizer
+
+val bin_write_m__t
+  :  ('a, 'c) Key_bin_io.t
+  -> 'b Bin_prot.Write.writer
+  -> ('a, 'b, 'c) t Bin_prot.Write.writer
+
+val bin_read_m__t
+  :  ('a, 'c) Key_bin_io.t
+  -> 'b Bin_prot.Read.reader
+  -> ('a, 'b, 'c) t Bin_prot.Read.reader
+
+val __bin_read_m__t__
+  :  ('a, 'c) Key_bin_io.t
+  -> 'b Bin_prot.Read.reader
+  -> (int -> ('a, 'b, 'c) t) Bin_prot.Read.reader
 
 (** The following functors may be used to define stable modules *)
 module Stable : sig

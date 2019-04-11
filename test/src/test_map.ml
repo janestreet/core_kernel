@@ -35,3 +35,29 @@ let%expect_test "Symmetric_diff_element.{left,right}" =
     (bar (Right 2)) => (2)
     (baz (Unequal (3 4))) => (4) |}]
 ;;
+
+let%expect_test _ =
+  let open Expect_test_helpers_kernel in
+  print_and_check_stable_type
+    [%here]
+    (module struct
+      type t = int Map.M(Int).t [@@deriving bin_io, compare, sexp]
+    end)
+    ([ []; [ 1 ]; [ 1; 2 ]; [ 1; 2; 3 ] ]
+     |> List.map ~f:(fun xs ->
+       Map.of_alist_exn (module Int) (xs |> List.map ~f:(fun x -> x, x + 1))));
+  [%expect
+    {|
+    (bin_shape_digest ed73a010af8ffc32cab7411d6be2d676)
+    ((sexp ()) (bin_io "\000"))
+    ((sexp ((1 2))) (bin_io "\001\001\002"))
+    ((sexp (
+       (1 2)
+       (2 3)))
+     (bin_io "\002\001\002\002\003"))
+    ((sexp (
+       (1 2)
+       (2 3)
+       (3 4)))
+     (bin_io "\003\001\002\002\003\003\004")) |}]
+;;

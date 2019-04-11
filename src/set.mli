@@ -487,6 +487,17 @@ end
 
 include Base.Set.For_deriving with type ('a, 'b) t := ('a, 'b) t
 
+(** The following [*bin*] functions support bin-io on base-style sets, e.g.:
+
+    {[ type t = Set.M(String).t [@@deriving bin_io] ]} *)
+module Elt_bin_io = Elt_bin_io
+
+val bin_shape_m__t : ('a, 'b) Elt_bin_io.t -> Bin_prot.Shape.t
+val bin_size_m__t : ('a, 'b) Elt_bin_io.t -> ('a, 'b) t Bin_prot.Size.sizer
+val bin_write_m__t : ('a, 'b) Elt_bin_io.t -> ('a, 'b) t Bin_prot.Write.writer
+val bin_read_m__t : ('a, 'b) Elt_bin_io.t -> ('a, 'b) t Bin_prot.Read.reader
+val __bin_read_m__t__ : ('a, 'b) Elt_bin_io.t -> (int -> ('a, 'b) t) Bin_prot.Read.reader
+
 (** The following types and functors may be used to define stable modules. *)
 module Stable : sig
   module V1 : sig

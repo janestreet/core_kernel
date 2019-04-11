@@ -393,6 +393,30 @@ module type S_plain = S_plain
 module type S = S
 module type S_binable = S_binable
 
+module Key_bin_io = Key_bin_io
+
+module Provide_bin_io (Key : Key_bin_io.S) =
+  Bin_prot.Utils.Make_iterable_binable1 (struct
+    module Key = Key
+
+    type nonrec 'v t = (Key.t, 'v, Key.comparator_witness) t
+    type 'v el = Key.t * 'v [@@deriving bin_io]
+
+    let _ = bin_el
+
+    let caller_identity =
+      Bin_prot.Shape.Uuid.of_string "dfb300f8-4992-11e6-9c15-73a2ac6b815c"
+    ;;
+
+    let module_name = Some "Core_kernel.Map"
+    let length = length
+    let iter t ~f = iteri t ~f:(fun ~key ~data -> f (key, data))
+
+    let init ~len ~next =
+      init_for_bin_prot ~len ~f:(fun _ -> next ()) ~comparator:Key.comparator
+    ;;
+  end)
+
 module Make_plain_using_comparator (Key : sig
     type t [@@deriving sexp_of]
 
@@ -435,28 +459,9 @@ struct
          type t [@@deriving bin_io]
        end
        with type t := Key.t) =
-    Bin_prot.Utils.Make_iterable_binable1 (struct
-      module Key = struct
-        include Key
-        include Key'
-      end
-
-      type nonrec 'v t = 'v t
-      type 'v el = Key.t * 'v [@@deriving bin_io]
-
-      let _ = bin_el
-
-      let caller_identity =
-        Bin_prot.Shape.Uuid.of_string "dfb300f8-4992-11e6-9c15-73a2ac6b815c"
-      ;;
-
-      let module_name = Some "Core_kernel.Map"
-      let length = length
-      let iter t ~f = iteri t ~f:(fun ~key ~data -> f (key, data))
-
-      let init ~len ~next =
-        init_for_bin_prot ~len ~f:(fun _ -> next ()) ~comparator:Key.comparator
-      ;;
+    Provide_bin_io (struct
+      include Key
+      include Key'
     end)
 
   module Tree = struct
@@ -522,6 +527,31 @@ module Make_binable (Key : Key_binable) = Make_binable_using_comparator (struct
   end)
 
 module M = Map.M
+
+let bin_shape_m__t (type t c) (m : (t, c) Key_bin_io.t) =
+  let module M = Provide_bin_io ((val m)) in
+  M.bin_shape_t
+;;
+
+let bin_size_m__t (type t c) (m : (t, c) Key_bin_io.t) =
+  let module M = Provide_bin_io ((val m)) in
+  M.bin_size_t
+;;
+
+let bin_write_m__t (type t c) (m : (t, c) Key_bin_io.t) =
+  let module M = Provide_bin_io ((val m)) in
+  M.bin_write_t
+;;
+
+let bin_read_m__t (type t c) (m : (t, c) Key_bin_io.t) =
+  let module M = Provide_bin_io ((val m)) in
+  M.bin_read_t
+;;
+
+let __bin_read_m__t__ (type t c) (m : (t, c) Key_bin_io.t) =
+  let module M = Provide_bin_io ((val m)) in
+  M.__bin_read_t__
+;;
 
 module type For_deriving = For_deriving
 
