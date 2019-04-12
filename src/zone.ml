@@ -320,7 +320,9 @@ module Stable = struct
            files as v2.
         *)
         let input_tz_file_v2_or_v3 ~version ic =
-          let _ = input_tz_file_v1 ic in
+          let (_ : string -> original_filename:string -> digest:Md5_lib.t -> t) =
+            input_tz_file_v1 ic
+          in
           (* the header is fully repeated *)
           assert ([%compare.equal: [`V1 | `V2 | `V3]] (read_header ic) version);
           let input_leap_second =

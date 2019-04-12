@@ -155,7 +155,15 @@ let closing = function
 let advance_to_closing opening closing k s start =
   let rec advance k i lim =
     if i >= lim
-    then  raise Caml.Not_found
+    then
+      raise
+        (Not_found_s
+           [%message
+             "Bigbuffer.add_substitute: cannot find closing delimiter"
+               (opening : char)
+               (closing : char)
+               (start : int)
+               s])
     else if Char.equal s.[i] opening
     then advance (k + 1) (i + 1) lim
     else if Char.equal s.[i] closing

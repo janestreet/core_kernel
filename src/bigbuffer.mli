@@ -41,8 +41,8 @@ val add_bin_prot : t -> 'a Bin_prot.Type_class.writer -> 'a -> unit
 
     An escaped [$] character is a [$] that immediately follows a backslash
     character; it then stands for a plain [$].
-    Raise [Not_found] if the closing character of a parenthesized variable
-    cannot be found. *)
+    Raise [Caml.Not_found] or [Not_found_s] if the closing character of a
+    parenthesized variable cannot be found. *)
 val add_substitute : t -> (string -> string) -> string -> unit
 
 

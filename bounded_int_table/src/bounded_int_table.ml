@@ -1,5 +1,4 @@
-open! Import
-open Std_internal
+open! Core_kernel
 
 module Entry = struct
   type ('key, 'data) t =

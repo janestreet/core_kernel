@@ -1,6 +1,5 @@
 open! Core_kernel
 open Poly
-open! Import
 open! Bounded_int_table
 
 (* test [exists{,i}], [for_all{,i}] *)

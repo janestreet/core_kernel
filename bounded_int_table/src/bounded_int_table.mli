@@ -19,8 +19,7 @@
     [length] of the table, not [num_keys].
 *)
 
-open! Import
-open Std_internal
+open! Core_kernel
 
 type ('key, 'data) t [@@deriving sexp_of]
 type ('a, 'b) table = ('a, 'b) t
