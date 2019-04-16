@@ -1,6 +1,5 @@
 module Caml_set = Set
 open! Core_kernel
-open Poly
 module Merge_to_sequence_element = Set_intf.Merge_to_sequence_element
 module Named = Set_intf.Named
 module With_comparator = Set_intf.With_comparator
@@ -145,11 +144,11 @@ module Unit_tests (Elt : sig
       type t = int Elt.t [@@deriving sexp, hash]
 
       let compare t t' = Poly.compare (to_int t) (to_int t')
-      let equal t t' = compare t t' = 0
       let hash t = Hashtbl.hash (to_int t)
     end
 
     include T
+    include Comparable.Make (T)
     include Hashable.Make (T)
 
     let samples =
@@ -310,9 +309,9 @@ module Unit_tests (Elt : sig
          between these two. Otherwise the tests aren't testing what we want. *)
       let%test _ =
         let l = Set.to_list m in
-        List.exists l ~f:(fun x -> x < Elt.of_int 4)
-        && List.exists l ~f:(fun x -> x >= Elt.of_int 4 && x <= Elt.of_int 8)
-        && List.exists l ~f:(fun x -> x > Elt.of_int 8)
+        List.exists l ~f:(fun x -> Elt.(x < of_int 4))
+        && List.exists l ~f:(fun x -> Elt.(x >= of_int 4) && Elt.(x <= of_int 8))
+        && List.exists l ~f:(fun x -> Elt.(x > of_int 8))
       ;;
 
       let%test_unit _ = Set.to_sequence ~order:`Increasing m <=> Set.to_list m
@@ -320,7 +319,7 @@ module Unit_tests (Elt : sig
 
       let%test_unit _ =
         Set.to_sequence ~order:`Increasing ~greater_or_equal_to:(Elt.of_int 4) m
-        <=> List.filter ~f:(fun x -> x >= Elt.of_int 4) (Set.to_list m)
+        <=> List.filter ~f:(fun x -> Elt.(x >= of_int 4)) (Set.to_list m)
       ;;
 
       let%test_unit _ =
@@ -330,13 +329,13 @@ module Unit_tests (Elt : sig
           ~greater_or_equal_to:(Elt.of_int 4)
           ~less_or_equal_to:(Elt.of_int 8)
         <=> List.filter
-              ~f:(fun x -> x >= Elt.of_int 4 && x <= Elt.of_int 8)
+              ~f:(fun x -> Elt.(x >= of_int 4) && Elt.(x <= of_int 8))
               (Set.to_list m)
       ;;
 
       let%test_unit _ =
         Set.to_sequence ~order:`Decreasing ~less_or_equal_to:(Elt.of_int 4) m
-        <=> List.filter ~f:(fun x -> x <= Elt.of_int 4) (List.rev (Set.to_list m))
+        <=> List.filter ~f:(fun x -> Elt.(x <= of_int 4)) (List.rev (Set.to_list m))
       ;;
 
       let%test_unit _ =
@@ -346,7 +345,7 @@ module Unit_tests (Elt : sig
           ~less_or_equal_to:(Elt.of_int 8)
           ~greater_or_equal_to:(Elt.of_int 4)
         <=> List.filter
-              ~f:(fun x -> x <= Elt.of_int 8 && x >= Elt.of_int 4)
+              ~f:(fun x -> Elt.(x <= of_int 8) && Elt.(x >= of_int 4))
               (List.rev (Set.to_list m))
       ;;
 
@@ -497,7 +496,10 @@ module Unit_tests (Elt : sig
           | `Right a -> `Right (Elt.to_int a)
           | `Both (a, b) -> `Both (Elt.to_int a, Elt.to_int b))
       in
-      assert (result = expected)
+      assert (
+        [%equal: [`Both of int * int | `Left of int | `Right of int] list]
+          result
+          expected)
     in
     test [] [] [];
     test [ 0 ] [] [ `Left 0 ];
@@ -528,7 +530,7 @@ module Unit_tests (Elt : sig
     let m = Set.to_map s ~f:Elt.to_int in
     assert (Set.length s = Map.length m);
     Map.iteri m ~f:(fun ~key ~data -> assert (Elt.to_int key = data));
-    assert (Set.to_list s = Map.keys m)
+    assert ([%equal: Elt.t list] (Set.to_list s) (Map.keys m))
   ;;
 
   let of_map_keys _ = assert false
@@ -565,7 +567,9 @@ module Unit_tests (Elt : sig
 
   let%test _ =
     let m1 = set_nonempty in
-    Sequence.to_list (Set.symmetric_diff m1 m1) = []
+    [%equal: (Elt.t, Elt.t) Either.t list]
+      (Sequence.to_list (Set.symmetric_diff m1 m1))
+      []
   ;;
 
   let%test _ =
@@ -573,7 +577,9 @@ module Unit_tests (Elt : sig
     let m1 = Set.empty () in
     let m1 = Set.add m1 (Elt.of_int 1) in
     let m2 = Set.add m1 elt in
-    Sequence.to_list (Set.symmetric_diff m1 m2) = [ Second elt ]
+    [%equal: (Elt.t, Elt.t) Either.t list]
+      (Sequence.to_list (Set.symmetric_diff m1 m2))
+      [ Second elt ]
   ;;
 
   let%test _ =
@@ -581,21 +587,27 @@ module Unit_tests (Elt : sig
     let m2 =
       List.fold (Set.to_list m1) ~init:(Set.empty ()) ~f:(fun m k -> Set.add m k)
     in
-    Sequence.to_list (Set.symmetric_diff m1 m2) = []
+    [%equal: (Elt.t, Elt.t) Either.t list]
+      (Sequence.to_list (Set.symmetric_diff m1 m2))
+      []
   ;;
 
   let%test _ =
     let elt = Elt.of_int 20 in
     let m1 = set_nonempty in
     let m2 = Set.add m1 elt in
-    Sequence.to_list (Set.symmetric_diff m1 m2) = [ Second elt ]
+    [%equal: (Elt.t, Elt.t) Either.t list]
+      (Sequence.to_list (Set.symmetric_diff m1 m2))
+      [ Second elt ]
   ;;
 
   let%test _ =
     let elt = Elt.of_int 5 in
     let m1 = set_nonempty in
     let m2 = Set.remove m1 elt in
-    Sequence.to_list (Set.symmetric_diff m1 m2) = [ First elt ]
+    [%equal: (Elt.t, Elt.t) Either.t list]
+      (Sequence.to_list (Set.symmetric_diff m1 m2))
+      [ First elt ]
   ;;
 
   let set_of_int_list l = Set.of_list (List.map ~f:Elt.of_int l)
