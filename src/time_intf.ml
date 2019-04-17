@@ -62,11 +62,6 @@ end [@ocaml.remove_aliases]
 
   (** [abs_diff t1 t2] returns the absolute span of time [t1] minus time [t2]. *)
   val abs_diff : t -> t -> Span.t
-
-  (** {6 Comparisons} *)
-
-  val is_earlier : t -> than:t -> bool
-  val is_later : t -> than:t -> bool
 end
 
 module type Shared = sig
@@ -79,6 +74,11 @@ module type Shared = sig
   module Ofday : sig
     type t
   end
+
+  (** {6 Comparisons} *)
+
+  val is_earlier : t -> than:t -> bool
+  val is_later : t -> than:t -> bool
 
   (** {6 Conversions} *)
 

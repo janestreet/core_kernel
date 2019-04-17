@@ -822,3 +822,40 @@ let%expect_test "time zone invalid offset parsing" =
      "2000-01-01 12:34:56.789012--1"
      (Invalid_argument "index out of bounds")) |}]
 ;;
+
+let%expect_test "test human comparisons" =
+  let test first_time last_time =
+    let first_time = Time_ns.of_string first_time
+    and last_time = Time_ns.of_string last_time in
+    print_s
+      [%sexp
+        { is_later = (Time_ns.is_later first_time ~than:last_time : bool)
+        ; is_earlier = (Time_ns.is_earlier first_time ~than:last_time : bool)
+        ; first_time : Time_ns.Alternate_sexp.t
+        ; last_time : Time_ns.Alternate_sexp.t
+        }]
+  in
+  test "2000-01-01T00:00:00.000Z" "2019-01-01T12:00:00.000Z";
+  test "2000-01-01T00:00:00.000Z" "2000-01-01T00:00:00.000Z";
+  test "2019-01-01T12:00:00.000Z" "2000-01-01T00:00:00.000Z";
+  (* cross the epoch *)
+  test "1969-07-20T20:17:40.000Z" "2000-01-01T00:00:00.000Z";
+  [%expect
+    {|
+    ((is_later   false)
+     (is_earlier true)
+     (first_time "2000-01-01 00:00:00Z")
+     (last_time  "2019-01-01 12:00:00Z"))
+    ((is_later   false)
+     (is_earlier false)
+     (first_time "2000-01-01 00:00:00Z")
+     (last_time  "2000-01-01 00:00:00Z"))
+    ((is_later   true)
+     (is_earlier false)
+     (first_time "2019-01-01 12:00:00Z")
+     (last_time  "2000-01-01 00:00:00Z"))
+    ((is_later   false)
+     (is_earlier true)
+     (first_time "1969-07-20 20:17:40Z")
+     (last_time  "2000-01-01 00:00:00Z")) |}]
+;;

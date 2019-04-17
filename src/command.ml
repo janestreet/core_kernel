@@ -2603,8 +2603,8 @@ module For_unix (M : For_unix) = struct
   ;;
 
   (* This script works in both bash (via readarray) and zsh (via read -A).  If you change
-     it, please test in both bash and zsh.  It does not work in ksh (unexpected null byte)
-     and tcsh (different function syntax). *)
+     it, please test in both bash and zsh.  It does not work tcsh (different function
+     syntax). *)
   let dump_autocomplete_function () =
     let fname = sprintf "_jsautocom_%s" (Pid.to_string (Unix.getpid ())) in
     printf
@@ -2614,7 +2614,7 @@ module For_unix (M : For_unix) = struct
       \  if type readarray > /dev/null\n\
       \  then readarray -t COMPREPLY < <(\"${COMP_WORDS[@]}\")\n\
       \  else IFS=\"\n\
-       \" read -d \"\x00\" -A COMPREPLY < <(\"${COMP_WORDS[@]}\")\n\
+       \" read -d \"\" -A COMPREPLY < <(\"${COMP_WORDS[@]}\")\n\
       \  fi\n\
        }\n\
        complete -F %s %s\n\

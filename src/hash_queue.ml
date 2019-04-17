@@ -127,11 +127,13 @@ module Make_with_table (Key : Key) (Table : Hashtbl_intf.S_plain with type key =
   let enqueue_back t = enqueue t `back
   let enqueue_front t = enqueue t `front
 
-  exception Enqueue_duplicate_key of Key.t [@@deriving sexp]
+  let raise_enqueue_duplicate_key key =
+    raise_s [%message "Hash_queue.enqueue_exn: duplicate key" ~_:(key : Key.t)]
+  ;;
 
   let enqueue_exn t back_or_front key value =
     match enqueue t back_or_front key value with
-    | `Key_already_present -> raise (Enqueue_duplicate_key key)
+    | `Key_already_present -> raise_enqueue_duplicate_key key
     | `Ok -> ()
   ;;
 
@@ -184,11 +186,13 @@ module Make_with_table (Key : Key) (Table : Hashtbl_intf.S_plain with type key =
       Some (kv.key, kv.value)
   ;;
 
-  exception Dequeue_with_key_empty [@@deriving sexp]
+  let raise_dequeue_with_key_empty () =
+    raise_s [%message "Hash_queue.dequeue_with_key: empty queue"]
+  ;;
 
   let dequeue_with_key_exn t back_or_front =
     match dequeue_with_key t back_or_front with
-    | None -> raise Dequeue_with_key_empty
+    | None -> raise_dequeue_with_key_empty ()
     | Some (k, v) -> k, v
   ;;
 
@@ -218,11 +222,11 @@ module Make_with_table (Key : Key) (Table : Hashtbl_intf.S_plain with type key =
     | Some kv -> Some kv.value
   ;;
 
-  exception Dequeue_empty [@@deriving sexp]
+  let raise_dequeue_empty () = raise_s [%message "Hash_queue.dequeue_exn: empty queue"]
 
   let dequeue_exn t back_or_front =
     match dequeue t back_or_front with
-    | None -> raise Dequeue_empty
+    | None -> raise_dequeue_empty ()
     | Some v -> v
   ;;
 
@@ -275,12 +279,14 @@ module Make_with_table (Key : Key) (Table : Hashtbl_intf.S_plain with type key =
       `Ok
   ;;
 
-  exception Remove_unknown_key of Key.t [@@deriving sexp]
+  let raise_remove_unknown_key key =
+    raise_s [%message "Hash_queue.remove_exn: unknown key" ~_:(key : Key.t)]
+  ;;
 
   let remove_exn t k =
     ensure_can_modify t;
     match remove t k with
-    | `No_such_key -> raise (Remove_unknown_key k)
+    | `No_such_key -> raise_remove_unknown_key k
     | `Ok -> ()
   ;;
 
@@ -293,12 +299,14 @@ module Make_with_table (Key : Key) (Table : Hashtbl_intf.S_plain with type key =
       `Ok
   ;;
 
-  exception Replace_unknown_key of Key.t [@@deriving sexp]
+  let raise_replace_unknown_key key =
+    raise_s [%message "Hash_queue.replace_exn: unknown key" ~_:(key : Key.t)]
+  ;;
 
   let replace_exn t k v =
     ensure_can_modify t;
     match replace t k v with
-    | `No_such_key -> raise (Replace_unknown_key k)
+    | `No_such_key -> raise_replace_unknown_key k
     | `Ok -> ()
   ;;
 

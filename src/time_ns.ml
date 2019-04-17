@@ -29,6 +29,8 @@ let of_span_since_epoch s = s
 let to_int63_ns_since_epoch t : Int63.t = Span.to_int63_ns (to_span_since_epoch t)
 let of_int63_ns_since_epoch i = of_span_since_epoch (Span.of_int63_ns i)
 let[@inline never] overflow () = raise_s [%message "Time_ns: overflow"]
+let is_earlier t1 ~than:t2 = t1 < t2
+let is_later t1 ~than:t2 = t1 > t2
 
 let add_exn x y =
   let z = add x y in
