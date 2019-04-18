@@ -13,14 +13,14 @@ module type S_plain = sig
   include Common
   module Table : Hashtbl.S_plain with type key = t
   module Hash_set : Hash_set.S_plain with type elt = t
-  module Hash_queue : Hash_queue.S with type Key.t = t
+  module Hash_queue : Hash_queue.S with type key = t
 end
 
 module type S = sig
   include Common
   module Table : Hashtbl.S with type key = t
   module Hash_set : Hash_set.S with type elt = t
-  module Hash_queue : Hash_queue.S with type Key.t = t
+  module Hash_queue : Hash_queue.S with type key = t
 end
 
 module Make_plain (T : sig
@@ -70,7 +70,7 @@ module type S_binable = sig
 
   module Table : Hashtbl.S_binable with type key = t
   module Hash_set : Hash_set.S_binable with type elt = t
-  module Hash_queue : Hash_queue.S with type Key.t = t
+  module Hash_queue : Hash_queue.S with type key = t
 end
 
 module Make_binable (T : sig
