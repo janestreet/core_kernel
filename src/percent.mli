@@ -53,6 +53,18 @@ val of_bp_int : int -> t
 (** rounds down *)
 val to_bp_int : t -> int
 
+(** 0.0123456% ~significant_digits:4 is 1.235bp *)
+val round_significant : t -> significant_digits:int -> t
+
+(** 0.0123456% ~decimal_digits:4 is 0.0001 = 1bp *)
+val round_decimal_mult : t -> decimal_digits:int -> t
+
+(** 0.0123456% ~decimal_digits:4 is 0.0123% = 1.23bp *)
+val round_decimal_percentage : t -> decimal_digits:int -> t
+
+(** 0.0123456% ~decimal_digits:4 is 1.2346bp *)
+val round_decimal_bp : t -> decimal_digits:int -> t
+
 val t_of_sexp_allow_nan_and_inf : Sexp.t -> t
 val of_string_allow_nan_and_inf : string -> t
 

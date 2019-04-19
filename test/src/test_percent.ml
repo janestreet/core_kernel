@@ -18,6 +18,19 @@ let%test_module "Percent.V1" =
      end))
 ;;
 
+let%expect_test "rounding" =
+  let p = Percent.of_string "0.0123456%" in
+  let tests =
+    [ Percent.round_significant p ~significant_digits:4
+    ; Percent.round_decimal_mult p ~decimal_digits:4
+    ; Percent.round_decimal_percentage p ~decimal_digits:4
+    ; Percent.round_decimal_bp p ~decimal_digits:4
+    ]
+  in
+  printf !"%{sexp:Percent.t list}" tests;
+  [%expect "(1.235bp 1bp 1.23bp 1.2346bp)"]
+;;
+
 let%test_unit {|
     BUG: The sexp functions don't roundtrip.
 

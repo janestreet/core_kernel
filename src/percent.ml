@@ -14,6 +14,20 @@ module Stable = struct
     let of_bp_int i = of_bp (Float.of_int i)
     let to_bp_int t = Float.to_int (to_bp t)
 
+    let round_significant p ~significant_digits =
+      Float.round_significant p ~significant_digits
+    ;;
+
+    let round_decimal_mult p ~decimal_digits = Float.round_decimal p ~decimal_digits
+
+    let round_decimal_percentage p ~decimal_digits =
+      Float.round_decimal (p *. 100.) ~decimal_digits /. 100.
+    ;;
+
+    let round_decimal_bp p ~decimal_digits =
+      Float.round_decimal (p *. 10000.) ~decimal_digits /. 10000.
+    ;;
+
     module Format = struct
       type t =
         | Exponent of int
