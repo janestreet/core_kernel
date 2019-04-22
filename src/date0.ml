@@ -11,7 +11,7 @@ module Stable = struct
   module V1 = struct
     module Without_comparable = struct
       module T : sig
-        type t [@@deriving bin_io, hash, typerep]
+        type t [@@immediate] [@@deriving bin_io, hash, typerep]
 
         val create_exn : y:int -> m:Month.Stable.V1.t -> d:int -> t
         val year : t -> int
@@ -44,7 +44,6 @@ module Stable = struct
         let month t = Month.of_int_exn ((t lsr 8) land 0xff)
         let day t = t land 0xff
 
-        (* Incorrect for September 1752, but so is pretty much all of Time *)
         let days_in_month ~year ~month =
           match (month : Month.t) with
           | Jan | Mar | May | Jul | Aug | Oct | Dec -> 31
@@ -308,7 +307,7 @@ let unix_epoch = create_exn ~y:1970 ~m:Jan ~d:1
 module Days :
 sig
   type date = t
-  type t
+  type t [@@immediate]
 
   val of_date : date -> t
   val to_date : t -> date

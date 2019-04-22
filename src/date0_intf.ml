@@ -2,7 +2,7 @@ open! Import
 open Std_internal
 
 module type Date0 = sig
-  type t [@@deriving bin_io, hash, sexp, typerep]
+  type t [@@immediate] [@@deriving bin_io, hash, sexp, typerep]
 
   include Hashable_binable with type t := t
 
@@ -38,6 +38,8 @@ module type Date0 = sig
   val day : t -> int
   val month : t -> Month.t
   val year : t -> int
+
+  (** Only accurate after 1752-09 *)
   val day_of_week : t -> Day_of_week.t
 
   (** Week of the year, from 1 to 53, along with the week-numbering year to which the week
@@ -65,7 +67,10 @@ module type Date0 = sig
   *)
   val is_business_day : t -> is_holiday:(t -> bool) -> bool
 
-  (** [add_days t n] adds n days to [t] and returns the resulting date. *)
+  (** [add_days t n] adds n days to [t] and returns the resulting date.
+
+      Inaccurate when crossing 1752-09.
+  *)
   val add_days : t -> int -> t
 
   (** [add_months t n] returns date with max days for the month if the date would be
@@ -131,7 +136,9 @@ module type Date0 = sig
   val first_strictly_after : t -> on:Day_of_week.t -> t
 
   (** [days_in_month ~year ~month] returns the number of days in [month], using [year]
-      only if [month = Month.Feb] to check if there is a leap year. *)
+      only if [month = Month.Feb] to check if there is a leap year.
+
+      Incorrect for September 1752. *)
   val days_in_month : year:int -> month:Month.t -> int
 
   (** [is_leap_year ~year] returns true if [year] is considered a leap year *)
@@ -159,7 +166,7 @@ module type Date0 = sig
   module Days :
   sig
     type date = t
-    type t
+    type t [@@immediate]
 
     val of_date : date -> t
     val to_date : t -> date
@@ -173,7 +180,7 @@ module type Date0 = sig
 
   module Stable : sig
     module V1 : sig
-      type nonrec t = t [@@deriving hash]
+      type nonrec t = t [@@immediate] [@@deriving hash]
 
       include
         Stable_comparable.V1
