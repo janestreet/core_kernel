@@ -67,9 +67,9 @@ val of_petabytes : float -> t
     N.B. This will raise if the value is outside of \[-4,4). *)
 val of_exabytes : float -> t
 
-(** Do not use, consider using [of_words_int] instead. Alias for [of_words_float]. *)
+(** Do not use, consider using [of_words_int] instead. Alias for [of_words_float_exn]. *)
 val of_words : float -> t
-[@@deprecated "[since 2019-01] Use [of_words_int] ot [of_words_float] instead."]
+[@@deprecated "[since 2019-01] Use [of_words_int] or [of_words_float_exn] instead."]
 
 (** create of [Byte_units] based on the number of machine words. *)
 val of_words_int : int -> t
