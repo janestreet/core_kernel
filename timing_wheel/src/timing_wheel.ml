@@ -202,7 +202,7 @@ module Config = struct
   type t =
     { alarm_precision : Alarm_precision.Unstable.t
     ; level_bits : Level_bits.t
-                     [@default level_bits_default] [@sexp_drop_default.compare]
+                   [@default level_bits_default] [@sexp_drop_default.compare]
     ; capacity : int option [@sexp.option]
     }
   [@@deriving fields, sexp]

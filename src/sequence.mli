@@ -10,9 +10,9 @@ module Step : sig
   [@@deriving bin_io]
 
   include
-  module type of struct
-    include Base.Sequence.Step
-  end
+    module type of struct
+      include Base.Sequence.Step
+    end
     with type ('a, 's) t := ('a, 's) t
 end
 
@@ -24,17 +24,17 @@ module Merge_with_duplicates_element : sig
   [@@deriving bin_io]
 
   include
-  module type of struct
-    include Base.Sequence.Merge_with_duplicates_element
-  end
+    module type of struct
+      include Base.Sequence.Merge_with_duplicates_element
+    end
     with type ('a, 'b) t := ('a, 'b) t
 end
 
 (** @open *)
 include
-module type of struct
-  include Base.Sequence
-end
+  module type of struct
+    include Base.Sequence
+  end
   with type 'a t := 'a Base.Sequence.t
    and module Step := Base.Sequence.Step
    and module Merge_with_duplicates_element := Base.Sequence

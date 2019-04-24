@@ -14,9 +14,9 @@ module Assoc : sig
      Use List.compare directly if that's what you want."]
 
   include
-  module type of struct
-    include Base.List.Assoc
-  end
+    module type of struct
+      include Base.List.Assoc
+    end
     with type ('a, 'b) t := ('a, 'b) t
 end
 
@@ -24,9 +24,9 @@ end
 
 (** @open *)
 include
-module type of struct
-  include Base.List
-end
+  module type of struct
+    include Base.List
+  end
   with type 'a t := 'a t
   with module Assoc := Base.List.Assoc
 
@@ -42,9 +42,9 @@ val stable_dedup_staged : compare:('a -> 'a -> int) -> ('a list -> 'a list) Stag
 (** Only raised in [exn_if_dup] below. *)
 exception
   Duplicate_found of (unit -> Base.Sexp.t) * string
-                                               [@deprecated
-                                                 "[since 2018-03] stop matching on Duplicate_found. [exn_if_dup] will eventually \
-                                                  raise a different and unspecified exception"]
+                     [@deprecated
+                       "[since 2018-03] stop matching on Duplicate_found. [exn_if_dup] will eventually \
+                        raise a different and unspecified exception"]
 
 (** [exn_if_dup ~compare ?context t ~to_sexp] raises if [t] contains a duplicate. It will
     specifically raise a [Duplicate_found] exception and use [context] as its second

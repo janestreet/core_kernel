@@ -15,8 +15,8 @@ module Absolute = struct
       include Comparable.S_common with type t := t
 
       include module type of struct
-      include Float.O
-    end
+        include Float.O
+      end
     end)
 
   (* due to precision limitations in float we can't expect better than microsecond

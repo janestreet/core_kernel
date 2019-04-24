@@ -69,8 +69,8 @@ let digest_bytes = Md5_lib.bytes
 
 external caml_sys_open
   :  string
-    -> Caml.open_flag list
-    -> perm:int
+  -> Caml.open_flag list
+  -> perm:int
   -> int
   = "caml_sys_open"
 
@@ -110,7 +110,7 @@ let digest_bin_prot writer value =
 
 external c_digest_subbigstring
   :  Bigstring.t
-    -> pos:int
+  -> pos:int
   -> len:int
   -> res:Bytes.t
   -> unit

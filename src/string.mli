@@ -14,9 +14,9 @@ end
 
 (** @open *)
 include
-module type of struct
-  include Base.String
-end
+  module type of struct
+    include Base.String
+  end
   with type t := t
   with module Caseless := Base.String.Caseless
 

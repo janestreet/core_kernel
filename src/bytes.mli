@@ -6,9 +6,9 @@ type t = bytes [@@deriving bin_io, typerep]
 
 (** @open *)
 include
-module type of struct
-  include Base.Bytes
-end
+  module type of struct
+    include Base.Bytes
+  end
   with type t := t
 
 include Hexdump.S with type t := t

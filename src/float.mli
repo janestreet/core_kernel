@@ -22,8 +22,8 @@ include Robust_compare.S
 
 module O : sig
   include module type of struct
-  include Base.Float.O
-end
+    include Base.Float.O
+  end
 
   include Robustly_comparable.S with type t := t
 end
@@ -32,9 +32,9 @@ module Terse : sig
   type nonrec t = t [@@deriving bin_io]
 
   include
-  module type of struct
-    include Base.Float.Terse
-  end
+    module type of struct
+      include Base.Float.Terse
+    end
     with type t := t
 end
 
@@ -44,9 +44,9 @@ include
    and type comparator_witness := Base.Float.comparator_witness
 
 include
-module type of struct
-  include Base.Float
-end
+  module type of struct
+    include Base.Float
+  end
   with type t := t
   with module O := Base.Float.O
   with module Terse := Base.Float.Terse

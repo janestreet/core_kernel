@@ -2,9 +2,9 @@
 
 (** @open *)
 include
-module type of struct
-  include Base.Nativeint
-end
+  module type of struct
+    include Base.Nativeint
+  end
   with module Hex := Base.Nativeint.Hex
 
 include

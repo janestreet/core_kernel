@@ -321,9 +321,9 @@ let%expect_test _ =
 
 let[@deprecated
   "[since 2019-01] Use [of_bytes], [of_kilobytes], [of_megabytes], etc as appropriate."]
-     create
-     units
-     value
+  create
+    units
+    value
   =
   match units with
   | `Bytes -> of_bytes_float_exn value

@@ -9,9 +9,9 @@ type t = char [@@deriving typerep]
 
 (** @open *)
 include
-module type of struct
-  include Base.Char
-end
+  module type of struct
+    include Base.Char
+  end
   with type t := t
 
 (** {2 Extensions} *)

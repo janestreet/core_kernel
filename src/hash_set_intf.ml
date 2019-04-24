@@ -41,10 +41,10 @@ module type S = sig
   include S_plain
 
   include
-  sig
-    type t [@@deriving of_sexp]
-  end
-  with type t := t
+    sig
+      type t [@@deriving of_sexp]
+    end
+    with type t := t
 end
 
 module type S_binable = sig

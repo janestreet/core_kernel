@@ -80,8 +80,8 @@ end
 module type Container = sig
   (** @open *)
   include module type of struct
-  include Base.Container
-end
+    include Base.Container
+  end
 
   module type S1_permissions = S1_permissions
 end

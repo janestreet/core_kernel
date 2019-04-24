@@ -105,8 +105,8 @@ type 'a identity = 'a
 module Not_found = struct
   exception
     Not_found = Not_found
-                  [@deprecated
-                    {|[since 2018-02] Instead of raising [Not_found], consider using [raise_s] with an
+                [@deprecated
+                  {|[since 2018-02] Instead of raising [Not_found], consider using [raise_s] with an
 informative error message.  If code needs to distinguish [Not_found] from other
 exceptions, please change it to handle both [Not_found] and [Not_found_s].  Then, instead
 of raising [Not_found], raise [Not_found_s] with an informative error message.|}]

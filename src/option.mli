@@ -4,9 +4,9 @@ type 'a t = 'a Base.Option.t [@@deriving bin_io, typerep]
 
 (** @open *)
 include
-module type of struct
-  include Base.Option
-end
+  module type of struct
+    include Base.Option
+  end
   with type 'a t := 'a option
 
 include Comparator.Derived with type 'a t := 'a t

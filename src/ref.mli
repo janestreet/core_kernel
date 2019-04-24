@@ -7,9 +7,9 @@ type 'a t = 'a Base.Ref.t = { mutable contents : 'a } [@@deriving bin_io, typere
 
 (** @open *)
 include
-module type of struct
-  include Base.Ref
-end
+  module type of struct
+    include Base.Ref
+  end
   with type 'a t := 'a t
 
 module Permissioned : sig

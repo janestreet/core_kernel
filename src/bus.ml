@@ -56,14 +56,14 @@ end = struct
         ; mutable arg2 : 'b
         ; mutable arg3 : 'c
         }
-      -> ('a -> 'b -> 'c -> unit) tuple
+        -> ('a -> 'b -> 'c -> unit) tuple
     | Tuple4 :
         { mutable arg1 : 'a
         ; mutable arg2 : 'b
         ; mutable arg3 : 'c
         ; mutable arg4 : 'd
         }
-      -> ('a -> 'b -> 'c -> 'd -> unit) tuple
+        -> ('a -> 'b -> 'c -> 'd -> unit) tuple
 
   type 'callback t = 'callback tuple option ref
 

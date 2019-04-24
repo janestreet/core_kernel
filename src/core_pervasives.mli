@@ -443,8 +443,8 @@ external frexp : float -> float * int = "caml_frexp_float"
 (** [ldexp x n] returns [x *. 2 ** n]. *)
 external ldexp
   :  (float[@unboxed])
-    -> (int[@untagged])
-    -> (float[@unboxed])
+  -> (int[@untagged])
+  -> (float[@unboxed])
   = "caml_ldexp_float" "caml_ldexp_float_unboxed"
 [@@noalloc] [@@deprecated "[since 2014-10] Use [Float.ldexp]"]
 
@@ -512,7 +512,7 @@ type fpclass = Caml.fpclass =
     normal, subnormal, zero, infinite, or not a number. *)
 external classify_float
   :  (float[@unboxed])
-    -> fpclass
+  -> fpclass
   = "caml_classify_float" "caml_classify_float_unboxed"
 [@@noalloc] [@@deprecated "[since 2014-10] Use [Float.classify]"]
 
@@ -1116,7 +1116,7 @@ val string_of_format : ('a, 'b, 'c, 'd, 'e, 'f) format6 -> string
 *)
 external format_of_string
   :  ('a, 'b, 'c, 'd, 'e, 'f) format6
-    -> ('a, 'b, 'c, 'd, 'e, 'f) format6
+  -> ('a, 'b, 'c, 'd, 'e, 'f) format6
   = "%identity"
 
 (** [f1 ^^ f2] catenates format strings [f1] and [f2]. The result is a

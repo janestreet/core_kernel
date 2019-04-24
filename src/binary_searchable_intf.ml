@@ -13,8 +13,8 @@ end
 
 module type Binary_searchable = sig
   include module type of struct
-  include Base.Binary_searchable
-end
+    include Base.Binary_searchable
+  end
 
   module type S1_permissions = S1_permissions
 end

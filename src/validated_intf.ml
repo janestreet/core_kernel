@@ -69,20 +69,20 @@ module type S_bin_io = sig
   include S
 
   include
-  sig
-    type t = (raw, witness) validated [@@deriving bin_io]
-  end
-  with type t := t
+    sig
+      type t = (raw, witness) validated [@@deriving bin_io]
+    end
+    with type t := t
 end
 
 module type S_bin_io_compare_hash_sexp = sig
   include S
 
   include
-  sig
-    type t = (raw, witness) validated [@@deriving bin_io, compare, hash]
-  end
-  with type t := t
+    sig
+      type t = (raw, witness) validated [@@deriving bin_io, compare, hash]
+    end
+    with type t := t
 end
 
 module type Validated = sig

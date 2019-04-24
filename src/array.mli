@@ -11,9 +11,9 @@ type 'a t = 'a Base.Array.t [@@deriving bin_io, typerep]
 
 (** @open *)
 include
-module type of struct
-  include Base.Array
-end
+  module type of struct
+    include Base.Array
+  end
   with type 'a t := 'a t
 
 (** {2 Extensions}

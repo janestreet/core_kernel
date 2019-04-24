@@ -7,9 +7,9 @@ type t = unit [@@deriving typerep]
 
 (** @open *)
 include
-module type of struct
-  include Base.Unit
-end
+  module type of struct
+    include Base.Unit
+  end
   with type t := t
 
 include Identifiable.S with type t := t and type comparator_witness := comparator_witness

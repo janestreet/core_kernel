@@ -4,13 +4,13 @@ module Span :
   module type of struct
   include Span_float
 end
-  with module Stable := Span_float.Stable
+with module Stable := Span_float.Stable
 
 module Ofday :
   module type of struct
   include Ofday_float
 end
-  with module Stable := Ofday_float.Stable
+with module Stable := Ofday_float.Stable
 
 include
   Time0_intf.S

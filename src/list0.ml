@@ -11,9 +11,9 @@ module Assoc = struct
   let[@deprecated
     "[since 2016-06] This does not respect the equivalence class promised by \
      List.Assoc. Use List.compare directly if that's what you want."] compare
-       (type a b)
-       compare_a
-       compare_b
+                                                                        (type a b)
+                                                                        compare_a
+                                                                        compare_b
     =
     [%compare: (a * b) list]
   ;;

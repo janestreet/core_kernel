@@ -176,10 +176,10 @@ module type S = sig
   include S_plain
 
   include
-  sig
-    type _ t [@@deriving of_sexp]
-  end
-  with type 'a t := 'a t
+    sig
+      type _ t [@@deriving of_sexp]
+    end
+    with type 'a t := 'a t
 end
 
 module type S_binable = sig

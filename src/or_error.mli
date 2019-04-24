@@ -6,9 +6,9 @@ type 'a t = ('a, Error.t) Result.t [@@deriving bin_io]
 
 (** @open *)
 include
-module type of struct
-  include Base.Or_error
-end
+  module type of struct
+    include Base.Or_error
+  end
   with type 'a t := 'a t
 
 module Stable : sig

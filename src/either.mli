@@ -7,9 +7,9 @@ type ('f, 's) t = ('f, 's) Base.Either.t =
 
 (** @open *)
 include
-module type of struct
-  include Base.Either
-end
+  module type of struct
+    include Base.Either
+  end
   with type ('f, 's) t := ('f, 's) t
 
 include Comparator.Derived2 with type ('a, 'b) t := ('a, 'b) t

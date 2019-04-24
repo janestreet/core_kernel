@@ -8,8 +8,8 @@ include Time_intf.S with module Time := Time_float0
 
 module Stable : sig
   include module type of struct
-  include Time_float0.Stable
-end
+    include Time_float0.Stable
+  end
 
   module With_utc_sexp : sig
     module V2 : sig
