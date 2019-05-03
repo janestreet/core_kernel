@@ -2,6 +2,12 @@ open! Core_kernel
 open! Import
 open! Timing_wheel
 
+module Time_ns = struct
+  include Time_ns
+
+  let sexp_of_t = Alternate_sexp.sexp_of_t
+end
+
 let show t = print_s [%sexp (t : _ t)]
 
 (* giga-nanosecond *)
@@ -279,7 +285,7 @@ let%expect_test "[Config.create] with zero alarm precision" =
 let%expect_test "[Config.create] with one second alarm precision" =
   print_s [%sexp (create_config ~alarm_precision:(gibi_nanos 1.) () : Config.t)];
   [%expect {|
-    ((alarm_precision 1.073741824s)) |}]
+    ((alarm_precision 1.073741824s) (level_bits (11 10 10 1))) |}]
 ;;
 
 let%expect_test "[Config.durations]" =
@@ -287,17 +293,128 @@ let%expect_test "[Config.durations]" =
     print_s
       [%sexp
         ( Config.durations (create_config ~alarm_precision:(gibi_nanos 1.) ~level_bits ())
-          : Time.Span.t list )]
+          : Time_ns.Span.t list )]
   in
   durations [ 1 ];
   [%expect {|
     (2.147483648s) |}];
   durations [ 2; 1 ];
   [%expect {|
-    (4.294967296s 8.589934592s) |}]
+    (4.294967296s 8.589934592s) |}];
+  durations (List.init 32 ~f:(const 1));
+  [%expect
+    {|
+    (2.147483648s
+     4.294967296s
+     8.589934592s
+     17.179869184s
+     34.359738368s
+     1m8.719476736s
+     2m17.438953472s
+     4m34.877906944s
+     9m9.755813888s
+     18m19.511627776s
+     36m39.023255552s
+     1h13m18.046511104s
+     2h26m36.093022208s
+     4h53m12.186044416s
+     9h46m24.372088832s
+     19h32m48.744177664s
+     1d15h5m37.488355328s
+     3d6h11m14.976710656s
+     6d12h22m29.953421312s
+     13d44m59.906842624s
+     26d1h29m59.813685248s
+     52d2h59m59.627370496s
+     104d5h59m59.254740992s
+     208d11h59m58.509481984s
+     416d23h59m57.018963968s
+     833d23h59m54.037927936s
+     1667d23h59m48.075855872s
+     3335d23h59m36.151711744s
+     6671d23h59m12.303423488s
+     13343d23h58m24.606846976s
+     26687d23h56m49.213693952s
+     -53375d23h53m38.427387904s) |}]
 ;;
 
-let create_unit ?level_bits ?(start = Time.epoch) ?(alarm_precision = gibi_nanos 1.) () =
+let%expect_test "[level_bits], [config], and [max_allowed_alarm_time]" =
+  List.iter
+    [ Level_bits.default; Level_bits.create_exn [ 1 ]; Level_bits.create_exn [ 10 ] ]
+    ~f:(fun level_bits ->
+      List.iter
+        Alarm_precision.
+          [ one_nanosecond
+          ; about_one_microsecond
+          ; about_one_millisecond
+          ; about_one_second
+          ; about_one_day
+          ]
+        ~f:(fun alarm_precision ->
+          let config = Config.create ~alarm_precision ~level_bits () in
+          print_s
+            [%message
+              ""
+                (level_bits : Level_bits.t)
+                (config : Config.t)
+                ~max_allowed_alarm_time:
+                  ( max_allowed_alarm_time (create ~config ~start:Time_ns.epoch)
+                    : Time_ns.t )]));
+  [%expect
+    {|
+    ((level_bits (11 10 10 10 10 10))
+     (config ((alarm_precision 1ns)))
+     (max_allowed_alarm_time "2043-01-25 23:56:49.213693951Z"))
+    ((level_bits (11 10 10 10 10 10))
+     (config ((alarm_precision 1.024us) (level_bits (11 10 10 10 10 1))))
+     (max_allowed_alarm_time "2104-11-29 00:00:00Z"))
+    ((level_bits (11 10 10 10 10 10))
+     (config ((alarm_precision 1.048576ms) (level_bits (11 10 10 10 1))))
+     (max_allowed_alarm_time "2104-11-29 00:00:00Z"))
+    ((level_bits (11 10 10 10 10 10))
+     (config ((alarm_precision 1.073741824s) (level_bits (11 10 10 1))))
+     (max_allowed_alarm_time "2104-11-29 00:00:00Z"))
+    ((level_bits (11 10 10 10 10 10))
+     (config ((alarm_precision 19h32m48.744177664s) (level_bits (11 5))))
+     (max_allowed_alarm_time "2104-11-29 00:00:00Z"))
+    ((level_bits (1))
+     (config ((alarm_precision 1ns) (level_bits (1))))
+     (max_allowed_alarm_time "1970-01-01 00:00:00.000000001Z"))
+    ((level_bits (1))
+     (config ((alarm_precision 1.024us) (level_bits (1))))
+     (max_allowed_alarm_time "1970-01-01 00:00:00.000002047Z"))
+    ((level_bits (1))
+     (config ((alarm_precision 1.048576ms) (level_bits (1))))
+     (max_allowed_alarm_time "1970-01-01 00:00:00.002097151Z"))
+    ((level_bits (1))
+     (config ((alarm_precision 1.073741824s) (level_bits (1))))
+     (max_allowed_alarm_time "1970-01-01 00:00:02.147483647Z"))
+    ((level_bits (1))
+     (config ((alarm_precision 19h32m48.744177664s) (level_bits (1))))
+     (max_allowed_alarm_time "1970-01-02 15:05:37.488355327Z"))
+    ((level_bits (10))
+     (config ((alarm_precision 1ns) (level_bits (10))))
+     (max_allowed_alarm_time "1970-01-01 00:00:00.000001023Z"))
+    ((level_bits (10))
+     (config ((alarm_precision 1.024us) (level_bits (10))))
+     (max_allowed_alarm_time "1970-01-01 00:00:00.001048575Z"))
+    ((level_bits (10))
+     (config ((alarm_precision 1.048576ms) (level_bits (10))))
+     (max_allowed_alarm_time "1970-01-01 00:00:01.073741823Z"))
+    ((level_bits (10))
+     (config ((alarm_precision 1.073741824s) (level_bits (10))))
+     (max_allowed_alarm_time "1970-01-01 00:18:19.511627775Z"))
+    ((level_bits (10))
+     (config ((alarm_precision 19h32m48.744177664s) (level_bits (10))))
+     (max_allowed_alarm_time "1972-04-13 23:59:54.037927935Z")) |}]
+;;
+
+let create_unit
+      ?level_bits
+      ?(start = Time_ns.epoch)
+      ?(alarm_precision = gibi_nanos 1.)
+      ()
+  =
   create ~config:(create_config ?level_bits () ~alarm_precision) ~start
 ;;
 
@@ -852,7 +969,7 @@ let%expect_test "[iter]" =
 ;;
 
 let%expect_test "start after epoch" =
-  let t = create_unit ~start:(Time.add Time.epoch (gibi_nanos 1.)) () in
+  let t = create_unit ~start:(Time_ns.add Time_ns.epoch (gibi_nanos 1.)) () in
   invariant ignore t
 ;;
 
@@ -915,7 +1032,7 @@ let%expect_test "[interval_num_start], [interval_start]" =
   require [%here] (not (mem t (Alarm.null ())));
   let start = start t in
   let test after =
-    let time = Time.add start (gibi_nanos after) in
+    let time = Time_ns.add start (gibi_nanos after) in
     let interval_num = interval_num t time in
     let interval_num_start = interval_num_start t interval_num in
     let interval_start = interval_start t time in
@@ -923,9 +1040,9 @@ let%expect_test "[interval_num_start], [interval_start]" =
       [%message
         ""
           (interval_num : Interval_num.t)
-          (interval_num_start : Time.t)
-          (interval_start : Time.t)];
-    require [%here] (Time.equal interval_num_start interval_start)
+          (interval_num_start : Time_ns.t)
+          (interval_start : Time_ns.t)];
+    require [%here] (Time_ns.equal interval_num_start interval_start)
   in
   test 0.;
   [%expect
@@ -976,17 +1093,17 @@ let%expect_test "[advance_clock]" =
   show t;
   [%expect
     {|
-    ((config ((alarm_precision 1.073741824s)))
+    ((config ((alarm_precision 1.073741824s) (level_bits (11 10 10 1))))
      (start            "1970-01-01 00:00:00Z")
      (max_interval_num 3_964_975_476)
      (now              "1970-01-01 00:00:00Z")
      (alarms ())) |}];
-  let to_ = Time.add (now t) (gibi_nanos 1.) in
+  let to_ = Time_ns.add (now t) (gibi_nanos 1.) in
   advance_clock t ~to_ ~handle_fired:ignore;
   show t;
   [%expect
     {|
-    ((config ((alarm_precision 1.073741824s)))
+    ((config ((alarm_precision 1.073741824s) (level_bits (11 10 10 1))))
      (start            "1970-01-01 00:00:00Z")
      (max_interval_num 3_964_975_476)
      (now              "1970-01-01 00:00:01.073741824Z")
@@ -1034,9 +1151,11 @@ let%expect_test "[iter]" =
 
 let%expect_test "access to a removed alarm doesn't segfault" =
   let t =
-    create ~config:(create_config ~alarm_precision:(gibi_nanos 1.) ()) ~start:Time.epoch
+    create
+      ~config:(create_config ~alarm_precision:(gibi_nanos 1.) ())
+      ~start:Time_ns.epoch
   in
-  let alarm = add t ~at:(Time.add (now t) (gibi_nanos 5.)) (ref 1) in
+  let alarm = add t ~at:(Time_ns.add (now t) (gibi_nanos 5.)) (ref 1) in
   let show_mem () = print_s [%sexp (mem t alarm : bool)] in
   show_mem ();
   [%expect {|
@@ -1065,7 +1184,7 @@ let%expect_test "access to a removed alarm doesn't segfault" =
 (* Check that [reschedule] and [reschedule_at_interval_num] leave an alarm in the timing
    wheel but reschedule its scheduled time. *)
 let test_reschedule reschedule =
-  let epoch_plus n_seconds = Time.add Time.epoch (gibi_nanos n_seconds) in
+  let epoch_plus n_seconds = Time_ns.add Time_ns.epoch (gibi_nanos n_seconds) in
   let t =
     create
       ~config:(create_config ~alarm_precision:(gibi_nanos 1.) ())
@@ -1079,10 +1198,10 @@ let test_reschedule reschedule =
     print_s
       [%message
         ""
-          ~now:(now t : Time.t)
-          ~next_alarm_fires_at:(next_alarm_fires_at t : Time.t option)
-          ~alarm1_at:(alarm_at alarm1 : Time.t option)
-          ~alarm2_at:(alarm_at alarm2 : Time.t option)]
+          ~now:(now t : Time_ns.t)
+          ~next_alarm_fires_at:(next_alarm_fires_at t : Time_ns.t option)
+          ~alarm1_at:(alarm_at alarm1 : Time_ns.t option)
+          ~alarm2_at:(alarm_at alarm2 : Time_ns.t option)]
   in
   show ();
   print_endline "Reschedule alarm1 after alarm2; alarm2 becomes next.";
@@ -1105,7 +1224,7 @@ let test_reschedule reschedule =
   show ();
   print_endline "Cannot reschedule arbitrarily far in the future.";
   require_does_raise [%here] (fun _ ->
-    reschedule t alarm2 ~at:(Time.add (max_allowed_alarm_time t) (gibi_nanos 1.)));
+    reschedule t alarm2 ~at:(Time_ns.add (max_allowed_alarm_time t) (gibi_nanos 1.)));
   print_endline "Fire alarm2.";
   advance_clock t ~to_:(epoch_plus 11.) ~handle_fired:ignore;
   show ()
@@ -1219,13 +1338,16 @@ let%expect_test "[reschedule_at_interval_num]" =
 
 let%expect_test "[advance_clock] fires alarms at the right time" =
   let test ~add ~num_alarms ~alarm_precision ~alarm_separation ~advance_by =
-    let t = create ~config:(create_config ~alarm_precision ()) ~start:Time.epoch in
+    let t = create ~config:(create_config ~alarm_precision ()) ~start:Time_ns.epoch in
     for i = 1 to num_alarms do
-      let at = Time.add (now t) (Time.Span.scale alarm_separation (Float.of_int i)) in
-      ignore (add t ~at (fun () -> require [%here] (Time.( <= ) at (now t))) : _ Alarm.t)
+      let at =
+        Time_ns.add (now t) (Time_ns.Span.scale alarm_separation (Float.of_int i))
+      in
+      ignore
+        (add t ~at (fun () -> require [%here] (Time_ns.( <= ) at (now t))) : _ Alarm.t)
     done;
     while not (is_empty t) do
-      let to_ = Time.add (now t) advance_by in
+      let to_ = Time_ns.add (now t) advance_by in
       advance_clock t ~to_ ~handle_fired:(fun alarm -> Alarm.value t alarm ());
       require_equal
         [%here]
@@ -1256,13 +1378,13 @@ let%expect_test "[add] and [advance_clock]" =
   let t =
     create
       ~config:(create_config ~alarm_precision:(gibi_nanos 1.) ~level_bits:[ 10 ] ())
-      ~start:Time.epoch
+      ~start:Time_ns.epoch
   in
-  let add ~after f = ignore (add t ~at:(Time.add (now t) after) f : _ Alarm.t) in
+  let add ~after f = ignore (add t ~at:(Time_ns.add (now t) after) f : _ Alarm.t) in
   let advance_clock by =
     advance_clock
       t
-      ~to_:(Time.add (now t) by)
+      ~to_:(Time_ns.add (now t) by)
       ~handle_fired:(fun alarm -> Alarm.value t alarm ())
   in
   require_does_raise [%here] (fun () -> add ~after:(gibi_nanos (-1.)) ignore);
@@ -1273,9 +1395,9 @@ let%expect_test "[add] and [advance_clock]" =
      (now_interval_num_start "1970-01-01 00:00:00Z")) |}];
   require_equal
     [%here]
-    (module Time)
-    (Time.add (max_allowed_alarm_time t) Time_ns.Span.nanosecond)
-    (Time.add (now t) (gibi_nanos 1024.));
+    (module Time_ns)
+    (Time_ns.add (max_allowed_alarm_time t) Time_ns.Span.nanosecond)
+    (Time_ns.add (now t) (gibi_nanos 1024.));
   show t;
   [%expect
     {|
@@ -1324,15 +1446,16 @@ let%expect_test "[next_alarm_fires_at]" =
       [%message
         ""
           ~next_alarm_fires_after:
-            ( Option.map (next_alarm_fires_at t) ~f:(fun time -> Time.diff time Time.epoch)
-              : Time.Span.t option )]
+            ( Option.map (next_alarm_fires_at t) ~f:(fun time ->
+                Time_ns.diff time Time_ns.epoch)
+              : Time_ns.Span.t option )]
   in
   let add_at at =
-    ignore (add t ~at:(Time.add Time.epoch at) () : _ Alarm.t);
+    ignore (add t ~at:(Time_ns.add Time_ns.epoch at) () : _ Alarm.t);
     next_alarm_fires_after ()
   in
   let advance_clock span =
-    advance_clock t ~to_:(Time.add Time.epoch span) ~handle_fired:ignore;
+    advance_clock t ~to_:(Time_ns.add Time_ns.epoch span) ~handle_fired:ignore;
     next_alarm_fires_after ()
   in
   add_at (gibi_nanos 2.);
@@ -1370,8 +1493,8 @@ let%expect_test "[next_alarm_fires_at]" =
 let%expect_test "[fire_past_alarms] - all possible subsets of alarms in the first \
                  bucket that fire"
   =
-  let start = Time.epoch in
-  let at sec = Time.add start (gibi_nanos sec) in
+  let start = Time_ns.epoch in
+  let at sec = Time_ns.add start (gibi_nanos sec) in
   let at1 = at 1. in
   let at2 = at 2. in
   let num_tests = ref 0 in
@@ -1396,14 +1519,14 @@ let%expect_test "[fire_past_alarms] - all possible subsets of alarms in the firs
             Interval_num.zero);
         advance_clock t ~to_:at1 ~handle_fired:(fun _ -> require [%here] false);
         fire_past_alarms t ~handle_fired:(fun alarm ->
-          if Time.equal (Alarm.at t alarm) at1
+          if Time_ns.equal (Alarm.at t alarm) at1
           then incr num_fired
           else require [%here] false);
         require_equal
           [%here]
           (module Int)
           !num_fired
-          (List.count ats ~f:(Time.equal at1)))
+          (List.count ats ~f:(Time_ns.equal at1)))
     in
     loop num_elts []
   done;
@@ -1413,7 +1536,7 @@ let%expect_test "[fire_past_alarms] - all possible subsets of alarms in the firs
 ;;
 
 let%expect_test "alarm buckets" =
-  let start = Time.epoch in
+  let start = Time_ns.epoch in
   let t : bool ref t =
     create ~config:(create_config ~alarm_precision:(gibi_nanos 1.) ()) ~start
   in
@@ -1423,13 +1546,13 @@ let%expect_test "alarm buckets" =
     r := true
   in
   let precision = alarm_precision t in
-  let precision_0_2 = Time.Span.scale precision 0.2 in
-  let _ = add t ~at:(Time.add start precision) (ref false) in
+  let precision_0_2 = Time_ns.Span.scale precision 0.2 in
+  let _ = add t ~at:(Time_ns.add start precision) (ref false) in
   let base = next_alarm_fires_at t |> Option.value_exn in
-  let step0 = Time.add base precision_0_2 in
-  let step1 = Time.add step0 precision_0_2 in
-  let step2 = Time.add step1 precision_0_2 in
-  let step3 = Time.add step2 precision in
+  let step0 = Time_ns.add base precision_0_2 in
+  let step1 = Time_ns.add step0 precision_0_2 in
+  let step2 = Time_ns.add step1 precision_0_2 in
+  let step3 = Time_ns.add step2 precision in
   (* Check all alarm will be in the same bucket but step3 *)
   let interval_num0 = interval_num t step0 in
   let interval_num1 = interval_num t step1 in
@@ -1507,12 +1630,12 @@ let%expect_test "alarm buckets" =
 let%expect_test "[max_alarm_time_in_min_interval]" =
   let t = create_unit () ~level_bits:[ 1; 1 ] in
   let max_alarm_time_in_min_interval () =
-    print_s [%sexp (max_alarm_time_in_min_interval t : Time.t option)]
+    print_s [%sexp (max_alarm_time_in_min_interval t : Time_ns.t option)]
   in
   max_alarm_time_in_min_interval ();
   [%expect {|
     () |}];
-  let add_after span = add t ~at:(Time.add (now t) span) ignore in
+  let add_after span = add t ~at:(Time_ns.add (now t) span) ignore in
   let a = add_after (gibi_nanos 0.5) in
   max_alarm_time_in_min_interval ();
   [%expect {|

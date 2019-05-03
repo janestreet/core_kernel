@@ -19,6 +19,6 @@
    - [unmap] if it is a memory-map
    - set its kind to [CAML_BA_EXTERNAL]
 */
-void core_bigstring_destroy(struct caml_ba_array *b, int flags);
+void core_bigstring_destroy(value v, int flags);
 
 #endif /* __CORE_BIGSTRING_H */

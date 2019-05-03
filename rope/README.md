@@ -1,4 +1,4 @@
-# `Rope`
+# Rope
 
 A rope is a standard data structure that represents a single string as
 a tree of strings, allowing concatenation to do no work up front.

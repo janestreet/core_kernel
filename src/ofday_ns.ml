@@ -253,6 +253,12 @@ let%expect_test "small_diff" =
     small_diff 24:00:00.000000000 00:00:00.000000000 = 0s |}]
 ;;
 
+let gen_incl = Span.gen_incl
+let gen_uniform_incl = Span.gen_uniform_incl
+let quickcheck_generator = gen_incl start_of_day start_of_next_day
+let quickcheck_observer = Span.quickcheck_observer
+let quickcheck_shrinker = Quickcheck.Shrinker.empty ()
+
 include Identifiable.Make (struct
     type nonrec t = t [@@deriving bin_io, compare, hash, sexp]
 

@@ -1,5 +1,6 @@
 open! Import
-include Doubly_linked
+include Bag_intf
+include (Doubly_linked : Doubly_linked.S)
 
 let add = insert_first
 let add_unit t v = add t v |> (ignore : _ Elt.t -> unit)

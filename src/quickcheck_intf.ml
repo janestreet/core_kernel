@@ -463,7 +463,7 @@ module type S2 = sig
   val quickcheck_shrinker : 'a Shrinker.t -> 'b Shrinker.t -> ('a, 'b) t Shrinker.t
 end
 
-module type S_int = sig
+module type S_range = sig
   include S
 
   (** [gen_incl lower_bound upper_bound] produces values between [lower_bound] and
@@ -476,6 +476,10 @@ module type S_int = sig
       distributed between [lower_bound] and [upper_bound], inclusive.  Raises if
       [lower_bound > upper_bound]. *)
   val gen_uniform_incl : t -> t -> t Generator.t
+end
+
+module type S_int = sig
+  include S_range
 
   (** [gen_log_uniform_incl lower_bound upper_bound] produces a generator for values
       between [lower_bound] and [upper_bound], inclusive, where the number of bits used to
@@ -625,6 +629,7 @@ module type Quickcheck = sig
   module type S1 = S1
   module type S2 = S2
   module type S_int = S_int
+  module type S_range = S_range
 
   module Let_syntax :
     module type of Generator.Let_syntax with module Let_syntax.Open_on_rhs = Generator

@@ -1,4 +1,4 @@
-(* Be sure and first read the implementation overview in timing_wheel_ns_intf.ml.
+(* Be sure and first read the implementation overview in timing_wheel_intf.ml.
 
    A timing wheel is represented as an array of "levels", where each level is an array of
    "slots".  Each slot represents a range of keys, and holds elements associated with
@@ -46,9 +46,6 @@ open! Import
 open! Timing_wheel_intf
 module Time_ns = Core_kernel_private.Time_ns_alternate_sexp
 
-(** for the .mli *)
-module Time = Time_ns
-
 let sexp_of_t_style : [`Pretty | `Internal] ref = ref `Pretty
 
 module Num_key_bits : sig
@@ -64,6 +61,7 @@ module Num_key_bits : sig
   val max_value : t
   val of_int : int -> t
   val ( + ) : t -> t -> t
+  val ( - ) : t -> t -> t
   val pow2 : t -> Int63.t
 end = struct
   include Int
@@ -85,6 +83,12 @@ end = struct
 
   let ( + ) t1 t2 =
     let t = t1 + t2 in
+    invariant t;
+    t
+  ;;
+
+  let ( - ) t1 t2 =
+    let t = t1 - t2 in
     invariant t;
     t
   ;;
@@ -132,18 +136,35 @@ module Level_bits = struct
   ;;
 
   let default = create_exn [ 11; 10; 10; 10; 10; 10 ]
+
+  let trim t ~max_num_bits =
+    if Num_key_bits.( <= ) (num_bits_internal t) max_num_bits
+    then t
+    else (
+      let rec loop t ~remaining =
+        match t with
+        | [] -> []
+        | b :: t ->
+          if Num_key_bits.( >= ) b remaining
+          then [ remaining ]
+          else b :: loop t ~remaining:(Num_key_bits.( - ) remaining b)
+      in
+      loop t ~remaining:max_num_bits)
+  ;;
 end
 
 module Alarm_precision : sig
-  include Alarm_precision with module Time := Time_ns
+  include Alarm_precision
 
-  val interval_num : t -> Time.t -> Int63.t
-  val interval_num_start : t -> Int63.t -> Time.t
+  val num_key_bits : t -> Num_key_bits.t
+  val interval_num : t -> Time_ns.t -> Int63.t
+  val interval_num_start : t -> Int63.t -> Time_ns.t
 end = struct
   (** [t] is represented as the log2 of a number of nanoseconds. *)
   type t = int [@@deriving compare, hash]
 
   let equal = [%compare.equal: t]
+  let num_key_bits t = t |> Num_key_bits.of_int
 
   let to_span t =
     if t < 0
@@ -169,12 +190,12 @@ end = struct
   ;;
 
   let of_span_floor_pow2_ns span =
-    if Time.Span.( <= ) span Time.Span.zero
+    if Time_ns.Span.( <= ) span Time_ns.Span.zero
     then
       raise_s
         [%message
           "[Alarm_precision.of_span_floor_pow2_ns] got non-positive span"
-            (span : Time.Span.t)];
+            (span : Time_ns.Span.t)];
     span |> Time_ns.Span.to_int63_ns |> Int63.floor_log2
   ;;
 
@@ -209,8 +230,27 @@ module Config = struct
 
   let alarm_precision t = Alarm_precision.to_span t.alarm_precision
 
+  (* [max_num_level_bits alarm_precision] returns the number of level bits needed for a
+     timing wheel with the specified [alarm_precision] to be able to represent all
+     possible times from [Time_ns.epoch] onward.  Since non-negative times have 62 bits,
+     we would like [A + L = 62], where [A] is the number of alarm bits and [L] is the
+     number of level bits.  But the timing-wheel code currently restricts [L <= 61], so if
+     [A = 0], then we choose [L = 61]. *)
+  let max_num_level_bits alarm_precision =
+    let alarm_precision_key_bits = Alarm_precision.num_key_bits alarm_precision in
+    let open Num_key_bits in
+    if (* A = 0 *) alarm_precision_key_bits = zero
+    then (* 61 *) max_value
+    else (* 62 - A *)
+      max_value - alarm_precision_key_bits + of_int 1
+  ;;
+
   let invariant t =
     Invariant.invariant [%here] t [%sexp_of: t] (fun () ->
+      assert (
+        Num_key_bits.( <= )
+          (Level_bits.num_bits_internal t.level_bits)
+          (max_num_level_bits t.alarm_precision));
       let check f = Invariant.check_field t f in
       Fields.iter
         ~alarm_precision:ignore
@@ -219,6 +259,9 @@ module Config = struct
   ;;
 
   let create ?capacity ?(level_bits = level_bits_default) ~alarm_precision () =
+    let level_bits =
+      Level_bits.trim level_bits ~max_num_bits:(max_num_level_bits alarm_precision)
+    in
     { alarm_precision; level_bits; capacity }
   ;;
 
@@ -336,7 +379,7 @@ module Priority_queue : sig
       in [t], and this error may or may not be detected. *)
   val remove : 'a t -> 'a Elt.t -> unit
 
-  val change : 'a t -> 'a Elt.t -> key:Key.t -> at:Time.t -> unit
+  val change : 'a t -> 'a Elt.t -> key:Key.t -> at:Time_ns.t -> unit
 
   (** [clear t] removes all elts from [t]. *)
   val clear : _ t -> unit

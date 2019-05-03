@@ -67,6 +67,8 @@ end
 module type Shared = sig
   type t
 
+  include Quickcheck.S_range with type t := t
+
   module Span : sig
     type t
   end

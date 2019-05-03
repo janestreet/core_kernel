@@ -450,4 +450,29 @@ module Make (Time0 : Time0_intf.S) = struct
     in
     of_string_gen ~default_zone ~find_zone s
   ;;
+
+  let quickcheck_shrinker =
+    Quickcheck.Shrinker.map
+      Span.quickcheck_shrinker
+      ~f:of_span_since_epoch
+      ~f_inverse:to_span_since_epoch
+  ;;
+
+  let quickcheck_observer =
+    Quickcheck.Observer.unmap Span.quickcheck_observer ~f:to_span_since_epoch
+  ;;
+
+  let quickcheck_generator =
+    Quickcheck.Generator.map Span.quickcheck_generator ~f:of_span_since_epoch
+  ;;
+
+  let gen_incl lo hi =
+    Span.gen_incl (to_span_since_epoch lo) (to_span_since_epoch hi)
+    |> Quickcheck.Generator.map ~f:of_span_since_epoch
+  ;;
+
+  let gen_uniform_incl lo hi =
+    Span.gen_uniform_incl (to_span_since_epoch lo) (to_span_since_epoch hi)
+    |> Quickcheck.Generator.map ~f:of_span_since_epoch
+  ;;
 end

@@ -1,4 +1,5 @@
 open! Import
+include Doubly_linked_intf
 
 open! Poly
 

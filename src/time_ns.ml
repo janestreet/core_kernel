@@ -10,6 +10,7 @@ type t = Span.t (* since the Unix epoch (1970-01-01 00:00:00 UTC) *)
 [@@deriving bin_io, compare, hash, typerep]
 
 include (Span : Comparable.Infix with type t := t)
+include (Span : Quickcheck.S_range with type t := t)
 
 let now = Span.since_unix_epoch
 let equal = Span.equal

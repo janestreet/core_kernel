@@ -1,4 +1,4 @@
-# `Thread_pool_cpu_affinity`
+# Thread_pool_cpu_affinity
 
 A very small library that defines a type for configuring how
 `Thread_pool` affinitizes worker threads to CPUs.  This is a separate

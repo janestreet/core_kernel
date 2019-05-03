@@ -29,6 +29,7 @@ module type S = sig
   include Hashable_binable with type t := t
   include Pretty_printer.S with type t := t
   include Robustly_comparable with type t := t
+  include Quickcheck.S_range with type t := t
   module Span : Span_intf.S
 
   (** [of_string] supports and correctly interprets 12h strings with the following suffixes:

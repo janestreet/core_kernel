@@ -363,6 +363,7 @@ module type S = S
 module type S1 = S1
 module type S2 = S2
 module type S_int = S_int
+module type S_range = S_range
 
 type nonrec seed = seed
 type nonrec shrink_attempts = shrink_attempts

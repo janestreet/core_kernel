@@ -12,7 +12,7 @@ let float x = Int63.to_float x
 
 (* [Span] is basically a [Int63].  It even silently ignores overflow. *)
 module T = struct
-  type t = Int63.t (* nanoseconds *) [@@deriving hash, bin_io, typerep]
+  type t = Int63.t (* nanoseconds *) [@@deriving hash, bin_io, quickcheck, typerep]
 
   module Replace_polymorphic_compare = Int63.Replace_polymorphic_compare
 
@@ -715,6 +715,9 @@ let to_short_string t =
   let ({ sign; hr; min; sec; ms; us; ns } : Parts.t) = to_parts t in
   Span_helpers.short_string ~sign ~hr ~min ~sec ~ms ~us ~ns
 ;;
+
+let gen_incl = Int63.gen_incl
+let gen_uniform_incl = Int63.gen_uniform_incl
 
 include Pretty_printer.Register (struct
     type nonrec t = t

@@ -51,6 +51,7 @@
 #include <caml/fail.h>
 #include <caml/signals.h>
 #include <caml/bigarray.h>
+#include <caml/custom.h>
 #include <core_params.h>
 #include "core_bigstring.h"
 #include "internalhash.h"
@@ -108,11 +109,11 @@ static void check_bigstring_proxy(struct caml_ba_array *b)
   if (b->proxy != NULL) caml_failwith("bigstring_destroy: bigstring has proxy");
 }
 
-extern void caml_ba_unmap_file(void *addr, uintnat len);
-
-void core_bigstring_destroy(struct caml_ba_array *b, int flags)
+void core_bigstring_destroy(value v, int flags)
 {
   int i;
+  struct caml_ba_array *b = Caml_ba_array_val(v);
+  struct custom_operations* ops = Custom_ops_val(v);
   switch (b->flags & CAML_BA_MANAGED_MASK) {
     case CAML_BA_EXTERNAL :
       if ((flags & CORE_BIGSTRING_DESTROY_ALLOW_EXTERNAL)
@@ -125,9 +126,15 @@ void core_bigstring_destroy(struct caml_ba_array *b, int flags)
       break;
     case CAML_BA_MAPPED_FILE :
       check_bigstring_proxy(b);
+      /* This call to finalize is actually a call to caml_ba_mapped_finalize
+         (the finalize function for *mapped* bigarrays), which will unmap the
+         array. (note: this is compatible with OCaml 4.06+) */
       if ((flags & CORE_BIGSTRING_DESTROY_DO_NOT_UNMAP)
-           != CORE_BIGSTRING_DESTROY_DO_NOT_UNMAP)
-        caml_ba_unmap_file(b->data, caml_ba_byte_size(b));
+          != CORE_BIGSTRING_DESTROY_DO_NOT_UNMAP) {
+        if (ops->finalize != NULL) {
+          ops->finalize(v);
+        }
+      }
       break;
   }
   b->data = NULL;
@@ -137,7 +144,6 @@ void core_bigstring_destroy(struct caml_ba_array *b, int flags)
 
 CAMLprim value bigstring_destroy_stub(value v_bstr)
 {
-  core_bigstring_destroy(Caml_ba_array_val(v_bstr), 0);
+  core_bigstring_destroy(v_bstr, 0);
   return Val_unit;
 }
-

@@ -267,13 +267,6 @@ module Permissioned : sig
   val of_list_mapi : 'a list -> f:(int -> 'a -> 'b) -> ('b, [< _ perms]) t
   val of_list_rev_map : 'a list -> f:('a -> 'b) -> ('b, [< _ perms]) t
   val of_list_rev_mapi : 'a list -> f:(int -> 'a -> 'b) -> ('b, [< _ perms]) t
-
-  val replace : ('a, [> read_write]) t -> int -> f:('a -> 'a) -> unit
-  [@@deprecated "[since 2018-09] use [t.(i) <- f (t.(i))] instead"]
-
-  val replace_all : ('a, [> read_write]) t -> f:('a -> 'a) -> unit
-  [@@deprecated "[since 2018-03] use [map_inplace] instead"]
-
   val map_inplace : ('a, [> read_write]) t -> f:('a -> 'a) -> unit
   val find_exn : ('a, [> read]) t -> f:('a -> bool) -> 'a
   val find_map_exn : ('a, [> read]) t -> f:('a -> 'b option) -> 'b

@@ -248,6 +248,24 @@ end
 
 include Stable.V1
 
+let gen_incl lo hi =
+  Span.gen_incl (to_span_since_start_of_day lo) (to_span_since_start_of_day hi)
+  |> Quickcheck.Generator.map ~f:of_span_since_start_of_day_exn
+;;
+
+let gen_uniform_incl lo hi =
+  Span.gen_uniform_incl (to_span_since_start_of_day lo) (to_span_since_start_of_day hi)
+  |> Quickcheck.Generator.map ~f:of_span_since_start_of_day_exn
+;;
+
+let quickcheck_generator = gen_incl start_of_day start_of_next_day
+
+let quickcheck_observer =
+  Quickcheck.Observer.unmap Span.quickcheck_observer ~f:to_span_since_start_of_day
+;;
+
+let quickcheck_shrinker = Quickcheck.Shrinker.empty ()
+
 include Hashable.Make_binable (struct
     type nonrec t = t [@@deriving bin_io, compare, hash, sexp_of]
 

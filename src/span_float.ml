@@ -18,7 +18,7 @@ module Stable = struct
     end
 
     module type Like_a_float = sig
-      type t [@@deriving bin_io, hash, typerep]
+      type t [@@deriving bin_io, hash, quickcheck, typerep]
 
       include Comparable.S_common with type t := t
       include Comparable.With_zero with type t := t
@@ -726,6 +726,16 @@ let to_string_hum
     if align_decimal && Int.( = ) (String.length suffix) 1 then suffix ^ " " else suffix
   in
   prefix ^ suffix
+;;
+
+let gen_incl lo hi =
+  Float.gen_incl (to_sec lo) (to_sec hi) |> Quickcheck.Generator.map ~f:of_sec
+;;
+
+let gen_uniform_incl lo hi =
+  (* Technically exclusive rather than inclusive, but otherwise satisfies the contract to
+     within 1ulp of the given bounds. *)
+  Float.gen_uniform_excl (to_sec lo) (to_sec hi) |> Quickcheck.Generator.map ~f:of_sec
 ;;
 
 include Pretty_printer.Register (struct

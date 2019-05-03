@@ -36,6 +36,7 @@ module type S = sig
   include Hashable_binable with type t := t
   include Pretty_printer.S with type t := t
   include Robustly_comparable with type t := t
+  include Quickcheck.S_range with type t := t
 
   (** Time spans are denominated as a float suffixed by a unit of time; the valid suffixes
       are listed below:
