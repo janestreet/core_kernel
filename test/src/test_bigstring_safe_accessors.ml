@@ -20,10 +20,10 @@ let generic_test_get ~to_string get buf ~pos =
 
 let test_get = generic_test_get ~to_string:Int.to_string
 
-let%expect_test "set_int8" =
+let%expect_test "set_int8_exn" =
   let buf = Bigstring.init 16 ~f:(fun _ -> ' ') in
   let set_and_print =
-    mk_set_and_print_for_test ~set:Bigstring.set_int8 ~get:Bigstring.get_int8 buf
+    mk_set_and_print_for_test ~set:Bigstring.set_int8_exn ~get:Bigstring.get_int8 buf
     |> Staged.unstage
   in
   set_and_print ~test_name:"ok pos" ~pos:1 127;
@@ -34,12 +34,12 @@ let%expect_test "set_int8" =
   [%expect
     {|
     too large: (Invalid_argument
-      "Bigstring.set_int8: 128 is not a valid (signed) 8-bit integer") |}];
+      "Bigstring.set_int8_exn: 128 is not a valid (signed) 8-bit integer") |}];
   set_and_print ~test_name:"too small" ~pos:1 (-129);
   [%expect
     {|
     too small: (Invalid_argument
-      "Bigstring.set_int8: -129 is not a valid (signed) 8-bit integer") |}];
+      "Bigstring.set_int8_exn: -129 is not a valid (signed) 8-bit integer") |}];
   set_and_print ~test_name:"out of bounds" ~pos:16 64;
   [%expect {| out of bounds: (Invalid_argument "index out of bounds") |}]
 ;;
@@ -50,11 +50,11 @@ let%expect_test "get_int8 oob" =
   [%expect {| (Invalid_argument "index out of bounds") |}]
 ;;
 
-let%expect_test "set_uint8" =
+let%expect_test "set_uint8_exn" =
   let buf = Bigstring.init 16 ~f:(fun _ -> ' ') in
   let pos = 15 in
   let set_and_print =
-    mk_set_and_print_for_test ~set:Bigstring.set_uint8 ~get:Bigstring.get_uint8 buf
+    mk_set_and_print_for_test ~set:Bigstring.set_uint8_exn ~get:Bigstring.get_uint8 buf
     |> Staged.unstage
   in
   set_and_print ~test_name:"ok" ~pos 0xFF;
@@ -63,12 +63,12 @@ let%expect_test "set_uint8" =
   [%expect
     {|
     too large: (Invalid_argument
-      "Bigstring.set_uint8: 256 is not a valid unsigned 8-bit integer") |}];
+      "Bigstring.set_uint8_exn: 256 is not a valid unsigned 8-bit integer") |}];
   set_and_print ~test_name:"too small" ~pos (-1);
   [%expect
     {|
     too small: (Invalid_argument
-      "Bigstring.set_uint8: -1 is not a valid unsigned 8-bit integer") |}];
+      "Bigstring.set_uint8_exn: -1 is not a valid unsigned 8-bit integer") |}];
   set_and_print ~test_name:"out of bounds" ~pos:(pos + 1) 64;
   [%expect {| out of bounds: (Invalid_argument "index out of bounds") |}]
 ;;
@@ -85,11 +85,14 @@ let%expect_test "get_int16_be oob" =
   [%expect {| (Invalid_argument "Bigstring.get_16: length(bstr) < pos + len") |}]
 ;;
 
-let%expect_test "set_int16_le" =
+let%expect_test "set_int16_le_exn" =
   let buf = Bigstring.init 16 ~f:(fun _ -> ' ') in
   let pos = 14 in
   let set_and_print =
-    mk_set_and_print_for_test ~set:Bigstring.set_int16_le ~get:Bigstring.get_int16_le buf
+    mk_set_and_print_for_test
+      ~set:Bigstring.set_int16_le_exn
+      ~get:Bigstring.get_int16_le
+      buf
     |> Staged.unstage
   in
   set_and_print ~test_name:"ok pos" ~pos 32767;
@@ -117,11 +120,14 @@ let%expect_test "set_int16_le" =
     out of bounds: (Invalid_argument "Bigstring.set_16: length(bstr) < pos + len") |}]
 ;;
 
-let%expect_test "set_int16_be" =
+let%expect_test "set_int16_be_exn" =
   let buf = Bigstring.init 16 ~f:(fun _ -> ' ') in
   let pos = 14 in
   let set_and_print =
-    mk_set_and_print_for_test ~set:Bigstring.set_int16_be ~get:Bigstring.get_int16_be buf
+    mk_set_and_print_for_test
+      ~set:Bigstring.set_int16_be_exn
+      ~get:Bigstring.get_int16_be
+      buf
     |> Staged.unstage
   in
   set_and_print ~test_name:"ok pos" ~pos 32767;
@@ -149,12 +155,12 @@ let%expect_test "set_int16_be" =
     out of bounds: (Invalid_argument "Bigstring.set_16: length(bstr) < pos + len") |}]
 ;;
 
-let%expect_test "set_uint16_le" =
+let%expect_test "set_uint16_le_exn" =
   let buf = Bigstring.init 16 ~f:(fun _ -> ' ') in
   let pos = 14 in
   let set_and_print =
     mk_set_and_print_for_test
-      ~set:Bigstring.set_uint16_le
+      ~set:Bigstring.set_uint16_le_exn
       ~get:Bigstring.get_uint16_le
       buf
     |> Staged.unstage
@@ -184,12 +190,12 @@ let%expect_test "set_uint16_le" =
     out of bounds: (Invalid_argument "Bigstring.set_16: length(bstr) < pos + len") |}]
 ;;
 
-let%expect_test "set_uint16_be" =
+let%expect_test "set_uint16_be_exn" =
   let buf = Bigstring.init 16 ~f:(fun _ -> ' ') in
   let pos = 14 in
   let set_and_print =
     mk_set_and_print_for_test
-      ~set:Bigstring.set_uint16_be
+      ~set:Bigstring.set_uint16_be_exn
       ~get:Bigstring.get_uint16_be
       buf
     |> Staged.unstage
@@ -232,11 +238,14 @@ let%expect_test "get_uint16_be oob" =
 ;;
 
 (* There's a slightly different code path here on 32-bit, so let's test it *)
-let%expect_test "set_int32_le_32bit" =
+let%expect_test "set_int32_le_exn 32-bit" =
   let buf = Bigstring.init 16 ~f:(fun _ -> ' ') in
   let pos = 12 in
   let set_and_print =
-    mk_set_and_print_for_test ~set:Bigstring.set_int32_le ~get:Bigstring.get_int32_le buf
+    mk_set_and_print_for_test
+      ~set:Bigstring.set_int32_le_exn
+      ~get:Bigstring.get_int32_le
+      buf
     |> Staged.unstage
   in
   set_and_print ~test_name:"ok pos" ~pos 1073741823;
@@ -249,11 +258,14 @@ let%expect_test "set_int32_le_32bit" =
     out of bounds: (Invalid_argument "Bigstring.set_32: length(bstr) < pos + len") |}]
 ;;
 
-let%expect_test "set_int32_be_32bit" =
+let%expect_test "set_int32_be_exn 32-bit" =
   let buf = Bigstring.init 16 ~f:(fun _ -> ' ') in
   let pos = 12 in
   let set_and_print =
-    mk_set_and_print_for_test ~set:Bigstring.set_int32_be ~get:Bigstring.get_int32_be buf
+    mk_set_and_print_for_test
+      ~set:Bigstring.set_int32_be_exn
+      ~get:Bigstring.get_int32_be
+      buf
     |> Staged.unstage
   in
   set_and_print ~test_name:"ok pos" ~pos 1073741823;
@@ -266,11 +278,14 @@ let%expect_test "set_int32_be_32bit" =
     out of bounds: (Invalid_argument "Bigstring.set_32: length(bstr) < pos + len") |}]
 ;;
 
-let%expect_test ("set_int32_le"[@tags "64-bits-only"]) =
+let%expect_test ("set_int32_le_exn"[@tags "64-bits-only"]) =
   let buf = Bigstring.init 16 ~f:(fun _ -> ' ') in
   let pos = 12 in
   let set_and_print =
-    mk_set_and_print_for_test ~set:Bigstring.set_int32_le ~get:Bigstring.get_int32_le buf
+    mk_set_and_print_for_test
+      ~set:Bigstring.set_int32_le_exn
+      ~get:Bigstring.get_int32_le
+      buf
     |> Staged.unstage
   in
   set_and_print ~test_name:"ok pos" ~pos ((1 lsl 31) - 1);
@@ -309,7 +324,10 @@ let%expect_test ("set_int32_be"[@tags "64-bits-only"]) =
   let buf = Bigstring.init 16 ~f:(fun _ -> ' ') in
   let pos = 12 in
   let set_and_print =
-    mk_set_and_print_for_test ~set:Bigstring.set_int32_be ~get:Bigstring.get_int32_be buf
+    mk_set_and_print_for_test
+      ~set:Bigstring.set_int32_be_exn
+      ~get:Bigstring.get_int32_be
+      buf
     |> Staged.unstage
   in
   set_and_print ~test_name:"ok pos" ~pos ((1 lsl 31) - 1);
@@ -344,12 +362,12 @@ let%expect_test ("set_int32_be"[@tags "64-bits-only"]) =
     out of bounds: (Invalid_argument "Bigstring.set_32: length(bstr) < pos + len") |}]
 ;;
 
-let%expect_test "set_uint32_le32_bit" =
+let%expect_test "set_uint32_le_exn 32-bit" =
   let buf = Bigstring.init 16 ~f:(fun _ -> ' ') in
   let pos = 12 in
   let set_and_print =
     mk_set_and_print_for_test
-      ~set:Bigstring.set_uint32_le
+      ~set:Bigstring.set_uint32_le_exn
       ~get:Bigstring.get_uint32_le
       buf
     |> Staged.unstage
@@ -360,7 +378,7 @@ let%expect_test "set_uint32_le32_bit" =
   [%expect
     {|
     too small: (Invalid_argument
-      "Bigstring.set_uint32_le: -1 is not a valid unsigned 32-bit integer") |}];
+      "Bigstring.set_uint32_le_exn: -1 is not a valid unsigned 32-bit integer") |}];
   set_and_print ~test_name:"out of bounds" ~pos:(pos + 1) 64;
   [%expect
     {|
@@ -379,12 +397,12 @@ let%expect_test "get_int32_be oob" =
   [%expect {| (Invalid_argument "Bigstring.get_32: length(bstr) < pos + len") |}]
 ;;
 
-let%expect_test "set_uint32_be32_bit" =
+let%expect_test "set_uint32_be_exn 32-bit" =
   let buf = Bigstring.init 16 ~f:(fun _ -> ' ') in
   let pos = 12 in
   let set_and_print =
     mk_set_and_print_for_test
-      ~set:Bigstring.set_uint32_be
+      ~set:Bigstring.set_uint32_be_exn
       ~get:Bigstring.get_uint32_be
       buf
     |> Staged.unstage
@@ -395,19 +413,19 @@ let%expect_test "set_uint32_be32_bit" =
   [%expect
     {|
     too small: (Invalid_argument
-      "Bigstring.set_uint32_be: -1 is not a valid unsigned 32-bit integer") |}];
+      "Bigstring.set_uint32_be_exn: -1 is not a valid unsigned 32-bit integer") |}];
   set_and_print ~test_name:"out of bounds" ~pos:(pos + 1) 64;
   [%expect
     {|
     out of bounds: (Invalid_argument "Bigstring.set_32: length(bstr) < pos + len") |}]
 ;;
 
-let%expect_test ("set_uint32_le"[@tags "64-bits-only"]) =
+let%expect_test ("set_uint32_le_exn"[@tags "64-bits-only"]) =
   let buf = Bigstring.init 16 ~f:(fun _ -> ' ') in
   let pos = 12 in
   let set_and_print =
     mk_set_and_print_for_test
-      ~set:Bigstring.set_uint32_le
+      ~set:Bigstring.set_uint32_le_exn
       ~get:Bigstring.get_uint32_le
       buf
     |> Staged.unstage
@@ -430,24 +448,24 @@ let%expect_test ("set_uint32_le"[@tags "64-bits-only"]) =
   [%expect
     {|
     too large: (Invalid_argument
-      "Bigstring.set_uint32_le: 4294967296 is not a valid unsigned 32-bit integer") |}];
+      "Bigstring.set_uint32_le_exn: 4294967296 is not a valid unsigned 32-bit integer") |}];
   set_and_print ~test_name:"too small" ~pos (-1);
   [%expect
     {|
     too small: (Invalid_argument
-      "Bigstring.set_uint32_le: -1 is not a valid unsigned 32-bit integer") |}];
+      "Bigstring.set_uint32_le_exn: -1 is not a valid unsigned 32-bit integer") |}];
   set_and_print ~test_name:"out of bounds" ~pos:(pos + 1) 64;
   [%expect
     {|
     out of bounds: (Invalid_argument "Bigstring.set_32: length(bstr) < pos + len") |}]
 ;;
 
-let%expect_test ("set_uint32_be"[@tags "64-bits-only"]) =
+let%expect_test ("set_uint32_be_exn"[@tags "64-bits-only"]) =
   let buf = Bigstring.init 16 ~f:(fun _ -> ' ') in
   let pos = 12 in
   let set_and_print =
     mk_set_and_print_for_test
-      ~set:Bigstring.set_uint32_be
+      ~set:Bigstring.set_uint32_be_exn
       ~get:Bigstring.get_uint32_be
       buf
     |> Staged.unstage
@@ -470,12 +488,12 @@ let%expect_test ("set_uint32_be"[@tags "64-bits-only"]) =
   [%expect
     {|
     too large: (Invalid_argument
-      "Bigstring.set_uint32_be: 4294967296 is not a valid unsigned 32-bit integer") |}];
+      "Bigstring.set_uint32_be_exn: 4294967296 is not a valid unsigned 32-bit integer") |}];
   set_and_print ~test_name:"too small" ~pos (-1);
   [%expect
     {|
     too small: (Invalid_argument
-      "Bigstring.set_uint32_be: -1 is not a valid unsigned 32-bit integer") |}];
+      "Bigstring.set_uint32_be_exn: -1 is not a valid unsigned 32-bit integer") |}];
   set_and_print ~test_name:"out of bounds" ~pos:(pos + 1) 64;
   [%expect
     {|
@@ -710,12 +728,12 @@ let%expect_test "get_int64_be_trunc truncates" =
   [%expect {| 0 |}]
 ;;
 
-let%expect_test ("set_uint64_le"[@tags "64-bits-only"]) =
+let%expect_test ("set_uint64_le_exn"[@tags "64-bits-only"]) =
   let buf = Bigstring.init 16 ~f:(fun _ -> ' ') in
   let pos = 8 in
   let set_and_print =
     mk_set_and_print_for_test
-      ~set:Bigstring.set_uint64_le
+      ~set:Bigstring.set_uint64_le_exn
       ~get:Bigstring.get_uint64_le_exn
       buf
     |> Staged.unstage
@@ -749,19 +767,19 @@ let%expect_test ("set_uint64_le"[@tags "64-bits-only"]) =
   [%expect
     {|
     too small: (Invalid_argument
-      "Bigstring.set_uint64_le: -1 is not a valid unsigned 64-bit integer") |}];
+      "Bigstring.set_uint64_le_exn: -1 is not a valid unsigned 64-bit integer") |}];
   set_and_print ~test_name:"out of bounds" ~pos:(pos + 1) 64;
   [%expect
     {|
     out of bounds: (Invalid_argument "Bigstring.set_64: length(bstr) < pos + len") |}]
 ;;
 
-let%expect_test ("set_uint64_be"[@tags "64-bits-only"]) =
+let%expect_test ("set_uint64_be_exn"[@tags "64-bits-only"]) =
   let buf = Bigstring.init 16 ~f:(fun _ -> ' ') in
   let pos = 8 in
   let set_and_print =
     mk_set_and_print_for_test
-      ~set:Bigstring.set_uint64_be
+      ~set:Bigstring.set_uint64_be_exn
       ~get:Bigstring.get_uint64_be_exn
       buf
     |> Staged.unstage
@@ -795,7 +813,7 @@ let%expect_test ("set_uint64_be"[@tags "64-bits-only"]) =
   [%expect
     {|
     too small: (Invalid_argument
-      "Bigstring.set_uint64_be: -1 is not a valid unsigned 64-bit integer") |}];
+      "Bigstring.set_uint64_be_exn: -1 is not a valid unsigned 64-bit integer") |}];
   set_and_print ~test_name:"out of bounds" ~pos:(pos + 1) 64;
   [%expect
     {|
