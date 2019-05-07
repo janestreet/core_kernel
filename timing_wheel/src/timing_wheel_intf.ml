@@ -65,16 +65,15 @@
     A timing wheel [t] can only handle a (typically large) bounded range of times as
     determined by the current time, [now t], and the [level_bits] and [alarm_precision]
     arguments supplied to [create].  Various functions raise if they are supplied a time
-    smaller than [now t] or [>= alarm_upper_bound t].  This situation likely indicates a
-    misconfiguration of the [level_bits] and/or [alarm_precision].  Here is the duration
-    of [alarm_upper_bound t - now t] using the default [level_bits].
+    smaller than [now t] or [> max_allowed_alarm_time t].  This situation likely indicates
+    a misconfiguration of the [level_bits] and/or [alarm_precision].  Here is the duration
+    of [max_allowed_alarm_time t - now t] using the default [level_bits].
 
     {v
       | # intervals | alarm_precision | duration |
       +-------------+-----------------+----------|
       |        2^61 | nanosecond      | 73 years |
-    v}
-*)
+    v} *)
 
 open! Core_kernel
 open! Import
@@ -234,8 +233,13 @@ module type Timing_wheel = sig
     val max_num_bits : int
 
     (** In [create_exn bits], it is an error if any of the [b_i] in [bits] has [b_i <= 0],
-        or if the sum of the [b_i] in [bits] is greater than [max_num_bits]. *)
-    val create_exn : int list -> t
+        or if the sum of the [b_i] in [bits] is greater than [max_num_bits].  With
+        [~extend_to_max_num_bits:true], the resulting [t] is extended with sufficient [b_i
+        = 1] so that [num_bits t = max_num_bits]. *)
+    val create_exn
+      :  ?extend_to_max_num_bits:bool (** default is [false] *)
+      -> int list
+      -> t
 
     (** [default] returns the default value of [level_bits] used by [Timing_wheel.create]
         and [Timing_wheel.Priority_queue.create].
@@ -299,8 +303,8 @@ module type Timing_wheel = sig
   val iter : 'a t -> f:('a Alarm.t -> unit) -> unit
 
   (** [interval_num t time] returns the number of the interval that [time] is in, where
-      [0] is the interval that starts at [Time_ns.epoch].  [interval_num] raises if [Time_ns.( <
-      ) time Time_ns.epoch].
+      [0] is the interval that starts at [Time_ns.epoch].  [interval_num] raises if
+      [Time_ns.( < ) time Time_ns.epoch].
 
       [now_interval_num t] equals [interval_num t (now t)]. *)
   val interval_num : _ t -> Time_ns.t -> Interval_num.t
@@ -343,12 +347,6 @@ module type Timing_wheel = sig
       Behavior is unspecified if [handle_fired] accesses [t] in any way other than
       [Alarm] functions. *)
   val fire_past_alarms : 'a t -> handle_fired:('a Alarm.t -> unit) -> unit
-
-  (** [alarm_upper_bound t] returns the upper bound on an [at] that can be supplied to
-      [add].  [alarm_upper_bound t] is not constant; its value increases as [now t]
-      increases. *)
-  val alarm_upper_bound : _ t -> Time_ns.t
-  [@@deprecated "[since 2018-09] Use [max_allowed_alarm_time] instead"]
 
   (** [max_allowed_alarm_time t] returns the greatest [at] that can be supplied to [add].
       [max_allowed_alarm_time] is not constant; its value increases as [now t]
@@ -427,6 +425,8 @@ module type Timing_wheel = sig
 
     https://opensource.janestreet.com/standards/#private-submodules *)
   module Private : sig
+    val max_time : Time_ns.t
+
     val interval_num_internal
       :  time:Time_ns.t
       -> alarm_precision:Alarm_precision.t

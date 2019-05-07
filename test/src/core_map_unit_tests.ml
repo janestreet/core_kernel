@@ -73,6 +73,7 @@ struct
     let iter2 x = simplify_accessor iter2 x
     let fold2 x = simplify_accessor fold2 x
     let symmetric_diff x = simplify_accessor symmetric_diff x
+    let fold_symmetric_diff x = simplify_accessor fold_symmetric_diff x
     let merge x = simplify_accessor merge x
     let split x = simplify_accessor split x
     let subrange x = simplify_accessor subrange x
@@ -881,12 +882,35 @@ struct
   ;;
 
   let symmetric_diff _ = assert false
+  let fold_symmetric_diff _ = assert false
+
+  type sym_diffs_t = (Key.t, int) Base.Map.Symmetric_diff_element.t list
+  [@@deriving compare, sexp_of]
+
+  let symmetric_diff_to_list m1 m2 =
+    Sequence.to_list (Map.symmetric_diff m1 m2 ~data_equal:( = ))
+  ;;
+
+  let fold_symmetric_diff_to_list m1 m2 =
+    Map.fold_symmetric_diff m1 m2 ~data_equal:( = ) ~init:[] ~f:(fun acc d -> d :: acc)
+    |> List.rev
+  ;;
+
+  let test_symmetric_diffs here m1 m2 expect =
+    [%test_result: sym_diffs_t]
+      (symmetric_diff_to_list m1 m2)
+      ~expect
+      ~here:[ [%here]; here ];
+    [%test_result: sym_diffs_t]
+      (fold_symmetric_diff_to_list m1 m2)
+      ~expect
+      ~here:[ [%here]; here ];
+    true
+  ;;
 
   let%test _ =
     let m1 = random_map Key.samples in
-    [%equal: (Key.t * [`Left of int | `Right of int | `Unequal of int * int]) list]
-      (Sequence.to_list (Map.symmetric_diff m1 m1 ~data_equal:( = )))
-      []
+    test_symmetric_diffs [%here] m1 m1 []
   ;;
 
   let%test _ =
@@ -894,9 +918,7 @@ struct
     let m1 = Map.empty () in
     let m1 = Map.set m1 ~key:(Key.of_int 1) ~data:1 in
     let m2 = Map.set m1 ~key ~data:2_000 in
-    [%equal: (Key.t * [`Left of int | `Right of int | `Unequal of int * int]) list]
-      (Sequence.to_list (Map.symmetric_diff m1 m2 ~data_equal:( = )))
-      [ key, `Right 2_000 ]
+    test_symmetric_diffs [%here] m1 m2 [ key, `Right 2_000 ]
   ;;
 
   let%test _ =
@@ -905,56 +927,72 @@ struct
       List.fold (Map.to_alist m1) ~init:(Map.empty ()) ~f:(fun m (k, d) ->
         Map.set m ~key:k ~data:d)
     in
-    [%equal: (Key.t * [`Left of int | `Right of int | `Unequal of int * int]) list]
-      (Sequence.to_list (Map.symmetric_diff m1 m2 ~data_equal:( = )))
-      []
+    test_symmetric_diffs [%here] m1 m2 []
   ;;
 
   let%test _ =
     let key = Key.of_int 20 in
     let m1 = random_map Key.samples in
     let m2 = Map.set m1 ~key ~data:2_000 in
-    [%equal: (Key.t * [`Left of int | `Right of int | `Unequal of int * int]) list]
-      (Sequence.to_list (Map.symmetric_diff m1 m2 ~data_equal:( = )))
-      [ key, `Right 2_000 ]
+    test_symmetric_diffs [%here] m1 m2 [ key, `Right 2_000 ]
   ;;
 
   let%test _ =
     let key = Key.of_int 5 in
     let m1 = random_map Key.samples in
     let m2 = Map.remove m1 key in
-    [%equal: (Key.t * [`Left of int | `Right of int | `Unequal of int * int]) list]
-      (Sequence.to_list (Map.symmetric_diff m1 m2 ~data_equal:( = )))
-      [ key, `Left (Map.find_exn m1 key) ]
+    test_symmetric_diffs [%here] m1 m2 [ key, `Left (Map.find_exn m1 key) ]
+  ;;
+
+  let assert_change map key to_ =
+    Map.update map key ~f:(function
+      | None -> assert false
+      | Some v ->
+        assert (v <> to_);
+        to_)
   ;;
 
   let%test _ =
     let key = Key.of_int 7 in
     let m1 = random_map Key.samples in
-    let m2 =
-      Map.change m1 key ~f:(function
-        | None -> assert false
-        | Some v ->
-          assert (v <> 2_000);
-          Some 2_000)
-    in
-    [%equal: (Key.t * [`Left of int | `Right of int | `Unequal of int * int]) list]
-      (Sequence.to_list (Map.symmetric_diff m1 m2 ~data_equal:( = )))
-      [ key, `Unequal (Map.find_exn m1 key, 2000) ]
+    let m2 = assert_change m1 key 2_000 in
+    test_symmetric_diffs [%here] m1 m2 [ key, `Unequal (Map.find_exn m1 key, 2000) ]
+  ;;
+
+  let%test _ =
+    let key = Key.of_int 3 in
+    let key' = Key.of_int 4 in
+    let m1 = random_map Key.samples in
+    let m2 = assert_change m1 key 1_000 in
+    let m2 = assert_change m2 key' 2_000 in
+    test_symmetric_diffs
+      [%here]
+      m1
+      m2
+      [ key, `Unequal (Map.find_exn m1 key, 1000)
+      ; key', `Unequal (Map.find_exn m1 key', 2000)
+      ]
+  ;;
+
+  let int_sym_diff_len m1 m2 =
+    Int.Map.symmetric_diff m1 m2 ~data_equal:Int.equal |> Sequence.length
+  ;;
+
+  let fold_sym_diff_len m1 m2 =
+    Int.Map.fold_symmetric_diff m1 m2 ~data_equal:Int.equal ~init:0 ~f:(fun acc _ ->
+      Int.succ acc)
   ;;
 
   let%test _ =
     let map1 = Int.Map.empty in
     let map2 = Int.Map.of_alist_exn [ 1, 1; 2, 2; 3, 3; 4, 4; 5, 5 ] in
-    let diff = Int.Map.symmetric_diff map1 map2 ~data_equal:Int.equal in
-    Sequence.length diff = 5
+    int_sym_diff_len map1 map2 = 5 && fold_sym_diff_len map1 map2 = 5
   ;;
 
   let%test _ =
     let map1 = Int.Map.of_alist_exn [ 1, 1; 2, 2; 3, 3; 4, 4; 5, 5 ] in
     let map2 = Int.Map.empty in
-    let diff = Int.Map.symmetric_diff map1 map2 ~data_equal:Int.equal in
-    Sequence.length diff = 5
+    int_sym_diff_len map1 map2 = 5 && fold_sym_diff_len map1 map2 = 5
   ;;
 
   let%test _ =
@@ -963,8 +1001,7 @@ struct
       List.fold [ 3, 3; 4, 4; 5, 5 ] ~init:map1 ~f:(fun acc (key, data) ->
         Int.Map.set acc ~key ~data)
     in
-    let diff = Int.Map.symmetric_diff map1 map2 ~data_equal:Int.equal in
-    Sequence.length diff = 3
+    int_sym_diff_len map1 map2 = 3 && fold_sym_diff_len map1 map2 = 3
   ;;
 
   let%test _ =
@@ -973,8 +1010,7 @@ struct
       List.fold [ 3, 3; 4, 4; 5, 5 ] ~init:map2 ~f:(fun acc (key, data) ->
         Int.Map.set acc ~key ~data)
     in
-    let diff = Int.Map.symmetric_diff map1 map2 ~data_equal:Int.equal in
-    Sequence.length diff = 3
+    int_sym_diff_len map1 map2 = 3 && fold_sym_diff_len map1 map2 = 3
   ;;
 
   let merge _ = assert false

@@ -48,6 +48,11 @@ module Time_ns = Core_kernel_private.Time_ns_alternate_sexp
 
 let sexp_of_t_style : [`Pretty | `Internal] ref = ref `Pretty
 
+(* [{max,min}_time] are bounds on the times supported by a timing wheel. *)
+
+let max_time = Time_ns.max_value_representable
+let min_time = Time_ns.epoch
+
 module Num_key_bits : sig
   type t = private int [@@deriving compare, sexp]
 
@@ -59,6 +64,7 @@ module Num_key_bits : sig
   (* val min_value : t *)
 
   val max_value : t
+  val to_int : t -> int
   val of_int : int -> t
   val ( + ) : t -> t -> t
   val ( - ) : t -> t -> t
@@ -117,7 +123,7 @@ module Level_bits = struct
     t
   ;;
 
-  let create_exn ints =
+  let create_exn ?(extend_to_max_num_bits = false) ints =
     if List.is_empty ints then failwith "Level_bits.create_exn requires a nonempty list";
     if List.exists ints ~f:(fun bits -> bits <= 0)
     then
@@ -132,6 +138,11 @@ module Level_bits = struct
             ~_:(ints : int list)
             ~got:(num_bits : int)
             (max_num_bits : int)];
+    let ints =
+      if extend_to_max_num_bits
+      then ints @ List.init (max_num_bits - num_bits) ~f:(const 1)
+      else ints
+    in
     List.map ints ~f:Num_key_bits.of_int
   ;;
 
@@ -273,17 +284,18 @@ module Config = struct
   ;;
 
   let durations t =
-    let _, durations =
-      List.fold
-        t.level_bits
-        ~init:(alarm_precision t, [])
-        ~f:(fun (interval_duration, durations) num_bits ->
-          let duration =
-            Time_ns.Span.scale_int63 interval_duration (Num_key_bits.pow2 num_bits)
-          in
-          duration, duration :: durations)
-    in
-    List.rev durations
+    List.folding_map
+      t.level_bits
+      ~init:(Alarm_precision.num_key_bits t.alarm_precision |> Num_key_bits.to_int)
+      ~f:(fun num_bits_accum level_num_bits ->
+        let num_bits_accum = num_bits_accum + (level_num_bits |> Num_key_bits.to_int) in
+        let duration =
+          Time_ns.Span.of_int63_ns
+            (if num_bits_accum = Int63.num_bits - 1
+             then Int63.max_value
+             else Int63.shift_left Int63.one num_bits_accum)
+        in
+        num_bits_accum, duration)
   ;;
 end
 
@@ -1099,9 +1111,10 @@ end = struct
   let[@inline never] raise_got_invalid_key t key =
     raise_s
       [%message
-        "Timing_wheel.Priority_queue got invalid key"
-          (key : Key.t)
-          ~timing_wheel:(t : _ t)]
+        "Timing_wheel.add_at_interval_num got invalid interval num"
+          ~interval_num:(key : Key.t)
+          ~min_allowed_alarm_interval_num:(min_allowed_key t : Key.t)
+          ~max_allowed_alarm_interval_num:(max_allowed_key t : Key.t)]
   ;;
 
   let ensure_valid_key t ~key =
@@ -1397,23 +1410,6 @@ module Internal_elt = Priority_queue.Internal_elt
 module Key = Priority_queue.Key
 module Interval_num = Key
 
-(* [{max,min}_time] and [min_interval_num] are bounds on the times and interval numbers
-   supported by a timing wheel.  Be aware that:
-
-   {[
-     Time_ns.max_value < Time_ns.of_int_ns_since_epoch Int.max_value
-   ]}
-
-   and hence it is meaningful to do comparisons of the form:
-
-   {[
-     Time_ns.( > ) time max_time
-   ]}
-
-   to rule out invalid [Time_ns.t] values. *)
-
-let max_time = Time_ns.max_value_for_1us_rounding
-let min_time = Time_ns.epoch
 let min_interval_num = Interval_num.zero
 
 (* All time from the epoch onwards is broken into half-open intervals of size
@@ -1436,12 +1432,6 @@ type 'a t_now = 'a t
 
 let sexp_of_t_now _ t = [%sexp (t.now : Time_ns.t)]
 let alarm_precision t = Config.alarm_precision t.config
-
-let alarm_upper_bound t =
-  if Time_ns.( < ) t.max_allowed_alarm_time Time_ns.max_value_for_1us_rounding
-  then Time_ns.add t.max_allowed_alarm_time Time_ns.Span.nanosecond
-  else t.max_allowed_alarm_time
-;;
 
 module Alarm = struct
   type 'a t = 'a Priority_queue.Elt.t [@@deriving sexp_of]
@@ -1516,11 +1506,6 @@ let interval_num t time =
     raise_s
       [%message
         "Timing_wheel.interval_num got time too far in the past" (time : Time_ns.t)];
-  if Time_ns.( > ) time max_time
-  then
-    raise_s
-      [%message
-        "Timing_wheel.interval_num got time too far in the future" (time : Time_ns.t)];
   interval_num_unchecked t time
 ;;
 
@@ -1557,7 +1542,7 @@ let interval_num_start t interval_num =
 let compute_max_allowed_alarm_time t =
   let max_allowed_key = Priority_queue.max_allowed_key t.priority_queue in
   if Interval_num.( >= ) max_allowed_key t.max_interval_num
-  then Time_ns.max_value_for_1us_rounding
+  then max_time
   else
     Time_ns.sub
       (interval_num_start_unchecked t (Interval_num.succ max_allowed_key))
@@ -1618,17 +1603,7 @@ let invariant invariant_a t =
         Time_ns.( > ) (Alarm.at t alarm) (Time_ns.sub (now t) (alarm_precision t)))))
 ;;
 
-let[@inline never] raise_advance_clock_got_time_too_far_in_the_future to_ =
-  raise_s
-    [%message
-      "Timing_wheel.advance_clock got time too far in the future"
-        (to_ : Time_ns.t)
-        (max_time : Time_ns.t)]
-;;
-
 let advance_clock t ~to_ ~handle_fired =
-  if Time_ns.( > ) to_ max_time
-  then raise_advance_clock_got_time_too_far_in_the_future to_;
   if Time_ns.( > ) to_ (now t)
   then (
     t.now <- to_;
@@ -1650,14 +1625,11 @@ let create ~config ~start =
     { config
     ; start
     ; max_interval_num =
-        interval_num_internal
-          ~time:Time_ns.max_value_for_1us_rounding
-          ~alarm_precision:config.alarm_precision
+        interval_num_internal ~time:max_time ~alarm_precision:config.alarm_precision
     ; now = Time_ns.min_value_for_1us_rounding (* set by [advance_clock] below *)
     ; now_interval_num_start =
         Time_ns.min_value_for_1us_rounding (* set by [advance_clock] below *)
-    ; max_allowed_alarm_time =
-        Time_ns.max_value_for_1us_rounding (* set by [advance_clock] below *)
+    ; max_allowed_alarm_time = max_time (* set by [advance_clock] below *)
     ; priority_queue =
         Priority_queue.create ?capacity:config.capacity ~level_bits:config.level_bits ()
     }
@@ -1804,4 +1776,5 @@ module Private = struct
   module Num_key_bits = Num_key_bits
 
   let interval_num_internal = interval_num_internal
+  let max_time = max_time
 end

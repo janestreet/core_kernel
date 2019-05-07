@@ -259,11 +259,12 @@ let%expect_test "[Level_bits.num_bits]" =
     6 |}]
 ;;
 
-let create_config ?level_bits ~alarm_precision () =
+let create_config ?extend_to_max_num_bits ?level_bits ~alarm_precision () =
   Config.create
     ()
     ~alarm_precision:(alarm_precision |> Alarm_precision.of_span_floor_pow2_ns)
-    ?level_bits:(Option.map level_bits ~f:Level_bits.create_exn)
+    ?level_bits:
+      (Option.map level_bits ~f:(Level_bits.create_exn ?extend_to_max_num_bits))
 ;;
 
 let%expect_test "[Config.create] with negative alarm precision" =
@@ -289,10 +290,15 @@ let%expect_test "[Config.create] with one second alarm precision" =
 ;;
 
 let%expect_test "[Config.durations]" =
-  let durations level_bits =
+  let durations ?extend_to_max_num_bits level_bits =
     print_s
       [%sexp
-        ( Config.durations (create_config ~alarm_precision:(gibi_nanos 1.) ~level_bits ())
+        ( Config.durations
+            (create_config
+               ?extend_to_max_num_bits
+               ~alarm_precision:(gibi_nanos 1.)
+               ~level_bits
+               ())
           : Time_ns.Span.t list )]
   in
   durations [ 1 ];
@@ -335,7 +341,15 @@ let%expect_test "[Config.durations]" =
      6671d23h59m12.303423488s
      13343d23h58m24.606846976s
      26687d23h56m49.213693952s
-     -53375d23h53m38.427387904s) |}]
+     53375d23h53m38.427387903s) |}];
+  durations [ 10; 10; 10 ] ~extend_to_max_num_bits:true;
+  [%expect
+    {|
+    (18m19.511627776s
+     13d44m59.906842624s
+     13343d23h58m24.606846976s
+     26687d23h56m49.213693952s
+     53375d23h53m38.427387903s) |}]
 ;;
 
 let%expect_test "[level_bits], [config], and [max_allowed_alarm_time]" =
@@ -367,16 +381,16 @@ let%expect_test "[level_bits], [config], and [max_allowed_alarm_time]" =
      (max_allowed_alarm_time "2043-01-25 23:56:49.213693951Z"))
     ((level_bits (11 10 10 10 10 10))
      (config ((alarm_precision 1.024us) (level_bits (11 10 10 10 10 1))))
-     (max_allowed_alarm_time "2104-11-29 00:00:00Z"))
+     (max_allowed_alarm_time "2116-02-20 23:53:38.427387903Z"))
     ((level_bits (11 10 10 10 10 10))
      (config ((alarm_precision 1.048576ms) (level_bits (11 10 10 10 1))))
-     (max_allowed_alarm_time "2104-11-29 00:00:00Z"))
+     (max_allowed_alarm_time "2116-02-20 23:53:38.427387903Z"))
     ((level_bits (11 10 10 10 10 10))
      (config ((alarm_precision 1.073741824s) (level_bits (11 10 10 1))))
-     (max_allowed_alarm_time "2104-11-29 00:00:00Z"))
+     (max_allowed_alarm_time "2116-02-20 23:53:38.427387903Z"))
     ((level_bits (11 10 10 10 10 10))
      (config ((alarm_precision 19h32m48.744177664s) (level_bits (11 5))))
-     (max_allowed_alarm_time "2104-11-29 00:00:00Z"))
+     (max_allowed_alarm_time "2116-02-20 23:53:38.427387903Z"))
     ((level_bits (1))
      (config ((alarm_precision 1ns) (level_bits (1))))
      (max_allowed_alarm_time "1970-01-01 00:00:00.000000001Z"))
@@ -407,6 +421,42 @@ let%expect_test "[level_bits], [config], and [max_allowed_alarm_time]" =
     ((level_bits (10))
      (config ((alarm_precision 19h32m48.744177664s) (level_bits (10))))
      (max_allowed_alarm_time "1972-04-13 23:59:54.037927935Z")) |}]
+;;
+
+let%expect_test "[level_bits] and [max_allowed_alarm_time] with \
+                 [~extend_to_max_num_bits:true]"
+  =
+  List.iter [ 1E-9; 1E-6; 1E-3; 1.; 10. ] ~f:(fun s ->
+    let alarm_precision = gibi_nanos s in
+    let config =
+      create_config ~alarm_precision ~extend_to_max_num_bits:true ~level_bits:[ 1 ] ()
+    in
+    let max_allowed_alarm_time =
+      max_allowed_alarm_time (create ~config ~start:Time_ns.epoch)
+    in
+    print_s
+      [%message
+        ""
+          ~alarm_precision:(Config.alarm_precision config : Time_ns.Span.t)
+          ~num_level_bits:(Level_bits.num_bits (Config.level_bits config) : int)
+          (max_allowed_alarm_time : Time_ns.t)]);
+  [%expect
+    {|
+    ((alarm_precision 1ns)
+     (num_level_bits  61)
+     (max_allowed_alarm_time "2043-01-25 23:56:49.213693951Z"))
+    ((alarm_precision 1.024us)
+     (num_level_bits  52)
+     (max_allowed_alarm_time "2116-02-20 23:53:38.427387903Z"))
+    ((alarm_precision 1.048576ms)
+     (num_level_bits  42)
+     (max_allowed_alarm_time "2116-02-20 23:53:38.427387903Z"))
+    ((alarm_precision 1.073741824s)
+     (num_level_bits  32)
+     (max_allowed_alarm_time "2116-02-20 23:53:38.427387903Z"))
+    ((alarm_precision 8.589934592s)
+     (num_level_bits  29)
+     (max_allowed_alarm_time "2116-02-20 23:53:38.427387903Z")) |}]
 ;;
 
 let create_unit
@@ -571,55 +621,43 @@ let%expect_test "[add] failures" =
   check_adds_fail ();
   [%expect
     {|
-      ("Timing_wheel.interval_num_start got too small interval_num"
-       (interval_num     -4_611_686_018_427_387_904)
-       (min_interval_num 0))
-      ("Timing_wheel.interval_num_start got too small interval_num"
-       (interval_num     -1)
-       (min_interval_num 0))
-      ("Timing_wheel.Priority_queue got invalid key"
-       (key 2)
-       (timing_wheel (
-         (min_allowed_key 0)
-         (max_allowed_key 1)
-         (elts (
-           ((key 0) (value _))
-           ((key 1) (value _)))))))
-      ("Timing_wheel.interval_num_start got too large interval_num"
-       (interval_num       2_305_843_009_213_693_952)
-       (t.max_interval_num 3_964_975_476))
-      ("Timing_wheel.interval_num_start got too large interval_num"
-       (interval_num       4_611_686_018_427_387_903)
-       (t.max_interval_num 3_964_975_476)) |}];
+    ("Timing_wheel.interval_num_start got too small interval_num"
+     (interval_num     -4_611_686_018_427_387_904)
+     (min_interval_num 0))
+    ("Timing_wheel.interval_num_start got too small interval_num"
+     (interval_num     -1)
+     (min_interval_num 0))
+    ("Timing_wheel.add_at_interval_num got invalid interval num"
+     (interval_num                   2)
+     (min_allowed_alarm_interval_num 0)
+     (max_allowed_alarm_interval_num 1))
+    ("Timing_wheel.interval_num_start got too large interval_num"
+     (interval_num       2_305_843_009_213_693_952)
+     (t.max_interval_num 4_294_967_295))
+    ("Timing_wheel.interval_num_start got too large interval_num"
+     (interval_num       4_611_686_018_427_387_903)
+     (t.max_interval_num 4_294_967_295)) |}];
   advance_clock_to_interval_num t ~to_:Interval_num.one ~handle_fired:ignore;
   check_adds_fail ();
   [%expect
     {|
-      ("Timing_wheel.interval_num_start got too small interval_num"
-       (interval_num     -4_611_686_018_427_387_904)
-       (min_interval_num 0))
-      ("Timing_wheel.Priority_queue got invalid key"
-       (key 0)
-       (timing_wheel (
-         (min_allowed_key 1)
-         (max_allowed_key 2)
-         (elts ((
-           (key   1)
-           (value _)))))))
-      ("Timing_wheel.Priority_queue got invalid key"
-       (key 3)
-       (timing_wheel (
-         (min_allowed_key 1)
-         (max_allowed_key 2)
-         (elts ((
-           (key   1)
-           (value _)))))))
-      ("Timing_wheel.interval_num_start got too large interval_num"
-       (interval_num       2_305_843_009_213_693_952)
-       (t.max_interval_num 3_964_975_476))
-      ("Timing_wheel.interval_num_start got too large interval_num"
-       (interval_num       4_611_686_018_427_387_903)
-       (t.max_interval_num 3_964_975_476)) |}];
+    ("Timing_wheel.interval_num_start got too small interval_num"
+     (interval_num     -4_611_686_018_427_387_904)
+     (min_interval_num 0))
+    ("Timing_wheel.add_at_interval_num got invalid interval num"
+     (interval_num                   0)
+     (min_allowed_alarm_interval_num 1)
+     (max_allowed_alarm_interval_num 2))
+    ("Timing_wheel.add_at_interval_num got invalid interval num"
+     (interval_num                   3)
+     (min_allowed_alarm_interval_num 1)
+     (max_allowed_alarm_interval_num 2))
+    ("Timing_wheel.interval_num_start got too large interval_num"
+     (interval_num       2_305_843_009_213_693_952)
+     (t.max_interval_num 4_294_967_295))
+    ("Timing_wheel.interval_num_start got too large interval_num"
+     (interval_num       4_611_686_018_427_387_903)
+     (t.max_interval_num 4_294_967_295)) |}];
   advance_clock_to_interval_num
     t
     ~to_:(max_allowed_alarm_interval_num t)
@@ -627,49 +665,43 @@ let%expect_test "[add] failures" =
   check_adds_fail ();
   [%expect
     {|
-      ("Timing_wheel.interval_num_start got too small interval_num"
-       (interval_num     -4_611_686_018_427_387_904)
-       (min_interval_num 0))
-      ("Timing_wheel.Priority_queue got invalid key"
-       (key 1)
-       (timing_wheel (
-         (min_allowed_key 2)
-         (max_allowed_key 3)
-         (elts ()))))
-      ("Timing_wheel.Priority_queue got invalid key"
-       (key 4)
-       (timing_wheel (
-         (min_allowed_key 2)
-         (max_allowed_key 3)
-         (elts ()))))
-      ("Timing_wheel.interval_num_start got too large interval_num"
-       (interval_num       2_305_843_009_213_693_952)
-       (t.max_interval_num 3_964_975_476))
-      ("Timing_wheel.interval_num_start got too large interval_num"
-       (interval_num       4_611_686_018_427_387_903)
-       (t.max_interval_num 3_964_975_476)) |}];
-  advance_clock t ~to_:Time_ns.max_value_for_1us_rounding ~handle_fired:ignore;
+    ("Timing_wheel.interval_num_start got too small interval_num"
+     (interval_num     -4_611_686_018_427_387_904)
+     (min_interval_num 0))
+    ("Timing_wheel.add_at_interval_num got invalid interval num"
+     (interval_num                   1)
+     (min_allowed_alarm_interval_num 2)
+     (max_allowed_alarm_interval_num 3))
+    ("Timing_wheel.add_at_interval_num got invalid interval num"
+     (interval_num                   4)
+     (min_allowed_alarm_interval_num 2)
+     (max_allowed_alarm_interval_num 3))
+    ("Timing_wheel.interval_num_start got too large interval_num"
+     (interval_num       2_305_843_009_213_693_952)
+     (t.max_interval_num 4_294_967_295))
+    ("Timing_wheel.interval_num_start got too large interval_num"
+     (interval_num       4_611_686_018_427_387_903)
+     (t.max_interval_num 4_294_967_295)) |}];
+  advance_clock t ~to_:Private.max_time ~handle_fired:ignore;
   check_adds_fail ();
   [%expect
     {|
     ("Timing_wheel.interval_num_start got too small interval_num"
      (interval_num     -4_611_686_018_427_387_904)
      (min_interval_num 0))
-    ("Timing_wheel.Priority_queue got invalid key"
-     (key 3_964_975_475)
-     (timing_wheel (
-       (min_allowed_key 3_964_975_476)
-       (max_allowed_key 3_964_975_477)
-       (elts ()))))
+    ("Timing_wheel.add_at_interval_num got invalid interval num"
+     (interval_num                   4_294_967_294)
+     (min_allowed_alarm_interval_num 4_294_967_295)
+     (max_allowed_alarm_interval_num 4_294_967_296))
     ("Timing_wheel.interval_num_start got too large interval_num"
-     (interval_num       3_964_975_477)
-     (t.max_interval_num 3_964_975_476))
+     (interval_num       4_294_967_296)
+     (t.max_interval_num 4_294_967_295))
     ("Timing_wheel.interval_num_start got too large interval_num"
      (interval_num       2_305_843_009_213_693_952)
-     (t.max_interval_num 3_964_975_476))
+     (t.max_interval_num 4_294_967_295))
     ("Timing_wheel.interval_num_start got too large interval_num"
      (interval_num       4_611_686_018_427_387_903)
-     (t.max_interval_num 3_964_975_476)) |}]
+     (t.max_interval_num 4_294_967_295)) |}]
 ;;
 
 let%expect_test "[clear]" =
@@ -682,7 +714,7 @@ let%expect_test "[clear]" =
     {|
       ((config ((alarm_precision 1.073741824s) (level_bits (1 1))))
        (start            "1970-01-01 00:00:00Z")
-       (max_interval_num 3_964_975_476)
+       (max_interval_num 4_294_967_295)
        (now              "1970-01-01 00:00:00Z")
        (alarms (
          ((at "1970-01-01 00:00:00Z")           (value _))
@@ -693,7 +725,7 @@ let%expect_test "[clear]" =
     {|
       ((config ((alarm_precision 1.073741824s) (level_bits (1 1))))
        (start            "1970-01-01 00:00:00Z")
-       (max_interval_num 3_964_975_476)
+       (max_interval_num 4_294_967_295)
        (now              "1970-01-01 00:00:00Z")
        (alarms ())) |}]
 ;;
@@ -719,16 +751,16 @@ let%expect_test "[advance_clock] to max interval num" =
     {|
       ("Timing_wheel.interval_num_start got too large interval_num"
        (interval_num       2_305_843_009_213_693_952)
-       (t.max_interval_num 3_964_975_476)) |}];
-  let max_interval_num = interval_num t Time_ns.max_value_for_1us_rounding in
+       (t.max_interval_num 4_294_967_295)) |}];
+  let max_interval_num = interval_num t Private.max_time in
   advance_clock_to_interval_num t ~to_:max_interval_num ~handle_fired:ignore;
   show t;
   [%expect
     {|
     ((config ((alarm_precision 1.073741824s) (level_bits (1))))
      (start            "1970-01-01 00:00:00Z")
-     (max_interval_num 3_964_975_476)
-     (now              "2104-11-28 23:59:59.715508224Z")
+     (max_interval_num 4_294_967_295)
+     (now              "2116-02-20 23:53:37.35364608Z")
      (alarms ())) |}];
   add ~at:max_interval_num;
   show t;
@@ -736,10 +768,10 @@ let%expect_test "[advance_clock] to max interval num" =
     {|
     ((config ((alarm_precision 1.073741824s) (level_bits (1))))
      (start            "1970-01-01 00:00:00Z")
-     (max_interval_num 3_964_975_476)
-     (now              "2104-11-28 23:59:59.715508224Z")
+     (max_interval_num 4_294_967_295)
+     (now              "2116-02-20 23:53:37.35364608Z")
      (alarms ((
-       (at    "2104-11-28 23:59:59.715508224Z")
+       (at    "2116-02-20 23:53:37.35364608Z")
        (value _))))) |}]
 ;;
 
@@ -773,7 +805,7 @@ let%expect_test "[advance_clock_to_interval_num]" =
     =
     incr num_tests;
     let t = create_unit () ~level_bits in
-    let max_interval_num = interval_num t Time_ns.max_value_for_1us_rounding in
+    let max_interval_num = interval_num t Private.max_time in
     let initial_min_allowed_interval_num =
       match initial_min_allowed_interval_num with
       | Zero -> Interval_num.zero
@@ -798,7 +830,8 @@ let%expect_test "[advance_clock_to_interval_num]" =
            (max_allowed_alarm_interval_num t)
            (Interval_num.add
               (min_allowed_alarm_interval_num t)
-              (Interval_num.Span.of_int63 Int63.(shift_left one num_bits - one))));
+              (Interval_num.Span.of_int63
+                 (Int63.( - ) (Int63.shift_left Int63.one num_bits) Int63.one))));
       let interval_nums =
         List.init
           (Interval_num.Span.to_int_exn
@@ -1095,7 +1128,7 @@ let%expect_test "[advance_clock]" =
     {|
     ((config ((alarm_precision 1.073741824s) (level_bits (11 10 10 1))))
      (start            "1970-01-01 00:00:00Z")
-     (max_interval_num 3_964_975_476)
+     (max_interval_num 4_294_967_295)
      (now              "1970-01-01 00:00:00Z")
      (alarms ())) |}];
   let to_ = Time_ns.add (now t) (gibi_nanos 1.) in
@@ -1105,7 +1138,7 @@ let%expect_test "[advance_clock]" =
     {|
     ((config ((alarm_precision 1.073741824s) (level_bits (11 10 10 1))))
      (start            "1970-01-01 00:00:00Z")
-     (max_interval_num 3_964_975_476)
+     (max_interval_num 4_294_967_295)
      (now              "1970-01-01 00:00:01.073741824Z")
      (alarms ())) |}]
 ;;
@@ -1187,7 +1220,7 @@ let test_reschedule reschedule =
   let epoch_plus n_seconds = Time_ns.add Time_ns.epoch (gibi_nanos n_seconds) in
   let t =
     create
-      ~config:(create_config ~alarm_precision:(gibi_nanos 1.) ())
+      ~config:(create_config ~alarm_precision:(gibi_nanos 1.) ~level_bits:[ 10 ] ())
       ~start:(epoch_plus 0.)
   in
   (* add alarm1 before alarm2, test initial conditions *)
@@ -1234,53 +1267,53 @@ let%expect_test "[reschedule]" =
   test_reschedule (fun t alarm ~at -> reschedule t alarm ~at);
   [%expect
     {|
-    ((now "1970-01-01 00:00:00Z")
-     (next_alarm_fires_at ("1970-01-01 00:00:06.442450944Z"))
-     (alarm1_at           ("1970-01-01 00:00:05.36870912Z"))
-     (alarm2_at           ("1970-01-01 00:00:10.73741824Z")))
-    Reschedule alarm1 after alarm2; alarm2 becomes next.
-    ((now "1970-01-01 00:00:00Z")
-     (next_alarm_fires_at ("1970-01-01 00:00:11.811160064Z"))
-     (alarm1_at           ("1970-01-01 00:00:16.10612736Z"))
-     (alarm2_at           ("1970-01-01 00:00:10.73741824Z")))
-    Advance time past alarm1's original time; nothing fires.
-    ((now "1970-01-01 00:00:07.516192768Z")
-     (next_alarm_fires_at ("1970-01-01 00:00:11.811160064Z"))
-     (alarm1_at           ("1970-01-01 00:00:16.10612736Z"))
-     (alarm2_at           ("1970-01-01 00:00:10.73741824Z")))
-    Reschedule alarm1 before alarm2 again; alarm1 becomes next.
-    ((now "1970-01-01 00:00:07.516192768Z")
-     (next_alarm_fires_at ("1970-01-01 00:00:09.663676416Z"))
-     (alarm1_at           ("1970-01-01 00:00:08.589934592Z"))
-     (alarm2_at           ("1970-01-01 00:00:10.73741824Z")))
-    Advance time past alarm1, alarm1 fires but alarm2 does not.
-    ((now "1970-01-01 00:00:09.663676416Z")
-     (next_alarm_fires_at ("1970-01-01 00:00:11.811160064Z"))
-     (alarm1_at ())
-     (alarm2_at ("1970-01-01 00:00:10.73741824Z")))
-    Cannot reschedule the already-fired alarm1.
-    (Failure "Timing_wheel cannot reschedule alarm not in timing wheel")
-    ((now "1970-01-01 00:00:09.663676416Z")
-     (next_alarm_fires_at ("1970-01-01 00:00:11.811160064Z"))
-     (alarm1_at ())
-     (alarm2_at ("1970-01-01 00:00:10.73741824Z")))
-    Cannot reschedule before current time.
-    ("Timing_wheel cannot schedule alarm before start of current interval"
-     (at "1970-01-01 00:00:08.589934592Z")
-     (now_interval_num_start "1970-01-01 00:00:09.663676416Z"))
-    ((now "1970-01-01 00:00:09.663676416Z")
-     (next_alarm_fires_at ("1970-01-01 00:00:11.811160064Z"))
-     (alarm1_at ())
-     (alarm2_at ("1970-01-01 00:00:10.73741824Z")))
-    Cannot reschedule arbitrarily far in the future.
-    ("Timing_wheel cannot schedule alarm that far in the future"
-     (at "2104-11-29 00:00:01.073741824Z")
-     (max_allowed_alarm_time "2104-11-29 00:00:00Z"))
-    Fire alarm2.
-    ((now "1970-01-01 00:00:11.811160064Z")
-     (next_alarm_fires_at ())
-     (alarm1_at           ())
-     (alarm2_at           ())) |}]
+((now "1970-01-01 00:00:00Z")
+ (next_alarm_fires_at ("1970-01-01 00:00:06.442450944Z"))
+ (alarm1_at           ("1970-01-01 00:00:05.36870912Z"))
+ (alarm2_at           ("1970-01-01 00:00:10.73741824Z")))
+Reschedule alarm1 after alarm2; alarm2 becomes next.
+((now "1970-01-01 00:00:00Z")
+ (next_alarm_fires_at ("1970-01-01 00:00:11.811160064Z"))
+ (alarm1_at           ("1970-01-01 00:00:16.10612736Z"))
+ (alarm2_at           ("1970-01-01 00:00:10.73741824Z")))
+Advance time past alarm1's original time; nothing fires.
+((now "1970-01-01 00:00:07.516192768Z")
+ (next_alarm_fires_at ("1970-01-01 00:00:11.811160064Z"))
+ (alarm1_at           ("1970-01-01 00:00:16.10612736Z"))
+ (alarm2_at           ("1970-01-01 00:00:10.73741824Z")))
+Reschedule alarm1 before alarm2 again; alarm1 becomes next.
+((now "1970-01-01 00:00:07.516192768Z")
+ (next_alarm_fires_at ("1970-01-01 00:00:09.663676416Z"))
+ (alarm1_at           ("1970-01-01 00:00:08.589934592Z"))
+ (alarm2_at           ("1970-01-01 00:00:10.73741824Z")))
+Advance time past alarm1, alarm1 fires but alarm2 does not.
+((now "1970-01-01 00:00:09.663676416Z")
+ (next_alarm_fires_at ("1970-01-01 00:00:11.811160064Z"))
+ (alarm1_at ())
+ (alarm2_at ("1970-01-01 00:00:10.73741824Z")))
+Cannot reschedule the already-fired alarm1.
+(Failure "Timing_wheel cannot reschedule alarm not in timing wheel")
+((now "1970-01-01 00:00:09.663676416Z")
+ (next_alarm_fires_at ("1970-01-01 00:00:11.811160064Z"))
+ (alarm1_at ())
+ (alarm2_at ("1970-01-01 00:00:10.73741824Z")))
+Cannot reschedule before current time.
+("Timing_wheel cannot schedule alarm before start of current interval"
+ (at "1970-01-01 00:00:08.589934592Z")
+ (now_interval_num_start "1970-01-01 00:00:09.663676416Z"))
+((now "1970-01-01 00:00:09.663676416Z")
+ (next_alarm_fires_at ("1970-01-01 00:00:11.811160064Z"))
+ (alarm1_at ())
+ (alarm2_at ("1970-01-01 00:00:10.73741824Z")))
+Cannot reschedule arbitrarily far in the future.
+("Timing_wheel cannot schedule alarm that far in the future"
+ (at "1970-01-01 00:18:30.249046015Z")
+ (max_allowed_alarm_time "1970-01-01 00:18:29.175304191Z"))
+Fire alarm2.
+((now "1970-01-01 00:00:11.811160064Z")
+ (next_alarm_fires_at ())
+ (alarm1_at           ())
+ (alarm2_at           ())) |}]
 ;;
 
 let%expect_test "[reschedule_at_interval_num]" =
@@ -1288,52 +1321,53 @@ let%expect_test "[reschedule_at_interval_num]" =
     reschedule_at_interval_num t alarm ~at:(interval_num t at));
   [%expect
     {|
-    ((now "1970-01-01 00:00:00Z")
-     (next_alarm_fires_at ("1970-01-01 00:00:06.442450944Z"))
-     (alarm1_at           ("1970-01-01 00:00:05.36870912Z"))
-     (alarm2_at           ("1970-01-01 00:00:10.73741824Z")))
-    Reschedule alarm1 after alarm2; alarm2 becomes next.
-    ((now "1970-01-01 00:00:00Z")
-     (next_alarm_fires_at ("1970-01-01 00:00:11.811160064Z"))
-     (alarm1_at           ("1970-01-01 00:00:16.10612736Z"))
-     (alarm2_at           ("1970-01-01 00:00:10.73741824Z")))
-    Advance time past alarm1's original time; nothing fires.
-    ((now "1970-01-01 00:00:07.516192768Z")
-     (next_alarm_fires_at ("1970-01-01 00:00:11.811160064Z"))
-     (alarm1_at           ("1970-01-01 00:00:16.10612736Z"))
-     (alarm2_at           ("1970-01-01 00:00:10.73741824Z")))
-    Reschedule alarm1 before alarm2 again; alarm1 becomes next.
-    ((now "1970-01-01 00:00:07.516192768Z")
-     (next_alarm_fires_at ("1970-01-01 00:00:09.663676416Z"))
-     (alarm1_at           ("1970-01-01 00:00:08.589934592Z"))
-     (alarm2_at           ("1970-01-01 00:00:10.73741824Z")))
-    Advance time past alarm1, alarm1 fires but alarm2 does not.
-    ((now "1970-01-01 00:00:09.663676416Z")
-     (next_alarm_fires_at ("1970-01-01 00:00:11.811160064Z"))
-     (alarm1_at ())
-     (alarm2_at ("1970-01-01 00:00:10.73741824Z")))
-    Cannot reschedule the already-fired alarm1.
-    (Failure "Timing_wheel cannot reschedule alarm not in timing wheel")
-    ((now "1970-01-01 00:00:09.663676416Z")
-     (next_alarm_fires_at ("1970-01-01 00:00:11.811160064Z"))
-     (alarm1_at ())
-     (alarm2_at ("1970-01-01 00:00:10.73741824Z")))
-    Cannot reschedule before current time.
-    ("Timing_wheel cannot schedule alarm before start of current interval"
-     (at "1970-01-01 00:00:08.589934592Z")
-     (now_interval_num_start "1970-01-01 00:00:09.663676416Z"))
-    ((now "1970-01-01 00:00:09.663676416Z")
-     (next_alarm_fires_at ("1970-01-01 00:00:11.811160064Z"))
-     (alarm1_at ())
-     (alarm2_at ("1970-01-01 00:00:10.73741824Z")))
-    Cannot reschedule arbitrarily far in the future.
-    ("Timing_wheel.interval_num got time too far in the future"
-     (time "2104-11-29 00:00:01.073741824Z"))
-    Fire alarm2.
-    ((now "1970-01-01 00:00:11.811160064Z")
-     (next_alarm_fires_at ())
-     (alarm1_at           ())
-     (alarm2_at           ())) |}]
+((now "1970-01-01 00:00:00Z")
+ (next_alarm_fires_at ("1970-01-01 00:00:06.442450944Z"))
+ (alarm1_at           ("1970-01-01 00:00:05.36870912Z"))
+ (alarm2_at           ("1970-01-01 00:00:10.73741824Z")))
+Reschedule alarm1 after alarm2; alarm2 becomes next.
+((now "1970-01-01 00:00:00Z")
+ (next_alarm_fires_at ("1970-01-01 00:00:11.811160064Z"))
+ (alarm1_at           ("1970-01-01 00:00:16.10612736Z"))
+ (alarm2_at           ("1970-01-01 00:00:10.73741824Z")))
+Advance time past alarm1's original time; nothing fires.
+((now "1970-01-01 00:00:07.516192768Z")
+ (next_alarm_fires_at ("1970-01-01 00:00:11.811160064Z"))
+ (alarm1_at           ("1970-01-01 00:00:16.10612736Z"))
+ (alarm2_at           ("1970-01-01 00:00:10.73741824Z")))
+Reschedule alarm1 before alarm2 again; alarm1 becomes next.
+((now "1970-01-01 00:00:07.516192768Z")
+ (next_alarm_fires_at ("1970-01-01 00:00:09.663676416Z"))
+ (alarm1_at           ("1970-01-01 00:00:08.589934592Z"))
+ (alarm2_at           ("1970-01-01 00:00:10.73741824Z")))
+Advance time past alarm1, alarm1 fires but alarm2 does not.
+((now "1970-01-01 00:00:09.663676416Z")
+ (next_alarm_fires_at ("1970-01-01 00:00:11.811160064Z"))
+ (alarm1_at ())
+ (alarm2_at ("1970-01-01 00:00:10.73741824Z")))
+Cannot reschedule the already-fired alarm1.
+(Failure "Timing_wheel cannot reschedule alarm not in timing wheel")
+((now "1970-01-01 00:00:09.663676416Z")
+ (next_alarm_fires_at ("1970-01-01 00:00:11.811160064Z"))
+ (alarm1_at ())
+ (alarm2_at ("1970-01-01 00:00:10.73741824Z")))
+Cannot reschedule before current time.
+("Timing_wheel cannot schedule alarm before start of current interval"
+ (at "1970-01-01 00:00:08.589934592Z")
+ (now_interval_num_start "1970-01-01 00:00:09.663676416Z"))
+((now "1970-01-01 00:00:09.663676416Z")
+ (next_alarm_fires_at ("1970-01-01 00:00:11.811160064Z"))
+ (alarm1_at ())
+ (alarm2_at ("1970-01-01 00:00:10.73741824Z")))
+Cannot reschedule arbitrarily far in the future.
+("Timing_wheel cannot schedule alarm that far in the future"
+ (at "1970-01-01 00:18:29.175304192Z")
+ (max_allowed_alarm_time "1970-01-01 00:18:29.175304191Z"))
+Fire alarm2.
+((now "1970-01-01 00:00:11.811160064Z")
+ (next_alarm_fires_at ())
+ (alarm1_at           ())
+ (alarm2_at           ())) |}]
 ;;
 
 let%expect_test "[advance_clock] fires alarms at the right time" =
@@ -1403,7 +1437,7 @@ let%expect_test "[add] and [advance_clock]" =
     {|
     ((config ((alarm_precision 1.073741824s) (level_bits (10))))
      (start            "1970-01-01 00:00:00Z")
-     (max_interval_num 3_964_975_476)
+     (max_interval_num 4_294_967_295)
      (now              "1970-01-01 00:00:00Z")
      (alarms ())) |}];
   add ~after:(gibi_nanos 30.) ignore;
@@ -1412,7 +1446,7 @@ let%expect_test "[add] and [advance_clock]" =
     {|
     ((config ((alarm_precision 1.073741824s) (level_bits (10))))
      (start            "1970-01-01 00:00:00Z")
-     (max_interval_num 3_964_975_476)
+     (max_interval_num 4_294_967_295)
      (now              "1970-01-01 00:00:00Z")
      (alarms ((
        (at    "1970-01-01 00:00:32.21225472Z")
@@ -1423,7 +1457,7 @@ let%expect_test "[add] and [advance_clock]" =
     {|
     ((config ((alarm_precision 1.073741824s) (level_bits (10))))
      (start            "1970-01-01 00:00:00Z")
-     (max_interval_num 3_964_975_476)
+     (max_interval_num 4_294_967_295)
      (now              "1970-01-01 00:00:32.21225472Z")
      (alarms ((
        (at    "1970-01-01 00:00:32.21225472Z")
@@ -1434,7 +1468,7 @@ let%expect_test "[add] and [advance_clock]" =
     {|
     ((config ((alarm_precision 1.073741824s) (level_bits (10))))
      (start            "1970-01-01 00:00:00Z")
-     (max_interval_num 3_964_975_476)
+     (max_interval_num 4_294_967_295)
      (now              "1970-01-01 00:00:33.285996544Z")
      (alarms ())) |}]
 ;;
@@ -1673,7 +1707,7 @@ let%expect_test "multiple alarms at the same time are fired in insertion order" 
 ;;
 
 let%expect_test "max_alarm_time can not be exceeded by [add] or [add_at_interval_num]" =
-  let t = create_unit () in
+  let t = create_unit ~level_bits:[ 10 ] () in
   let succ t =
     let r = Time_ns.add t Time_ns.Span.nanosecond in
     assert (Time_ns.( > ) r t);
@@ -1684,13 +1718,8 @@ let%expect_test "max_alarm_time can not be exceeded by [add] or [add_at_interval
   [%expect
     {|
     ("Timing_wheel cannot schedule alarm that far in the future"
-     (at "2104-11-29 00:00:00.000000001Z")
-     (max_allowed_alarm_time "2104-11-29 00:00:00Z")) |}];
-  require_does_raise [%here] (fun () -> interval_num t bad_time);
-  [%expect
-    {|
-    ("Timing_wheel.interval_num got time too far in the future"
-     (time "2104-11-29 00:00:00.000000001Z")) |}];
+     (at "1970-01-01 00:18:19.511627776Z")
+     (max_allowed_alarm_time "1970-01-01 00:18:19.511627775Z")) |}];
   require_does_raise [%here] (fun () ->
     add_at_interval_num
       t
@@ -1698,7 +1727,8 @@ let%expect_test "max_alarm_time can not be exceeded by [add] or [add_at_interval
       ());
   [%expect
     {|
-    ("Timing_wheel.interval_num_start got too large interval_num"
-     (interval_num       3_964_975_477)
-     (t.max_interval_num 3_964_975_476)) |}]
+    ("Timing_wheel.add_at_interval_num got invalid interval num"
+     (interval_num                   1_024)
+     (min_allowed_alarm_interval_num 0)
+     (max_allowed_alarm_interval_num 1_023)) |}]
 ;;

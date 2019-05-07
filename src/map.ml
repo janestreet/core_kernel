@@ -291,6 +291,11 @@ module Make_tree (Key : Comparator.S1) = struct
   let to_alist = to_alist
   let validate = validate
   let symmetric_diff a b ~data_equal = symmetric_diff a b ~data_equal ~comparator
+
+  let fold_symmetric_diff a b ~data_equal ~init ~f =
+    fold_symmetric_diff a b ~data_equal ~f ~init ~comparator
+  ;;
+
   let merge a b ~f = merge a b ~f ~comparator
   let min_elt = min_elt
   let min_elt_exn = min_elt_exn

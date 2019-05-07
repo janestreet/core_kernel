@@ -417,6 +417,17 @@ val symmetric_diff
   -> data_equal:('v -> 'v -> bool)
   -> ('k, 'v) Symmetric_diff_element.t Sequence.t
 
+(** [fold_symmetric_diff t1 t2 ~data_equal] folds across an implicit sequence of changes
+    between [t1] and [t2], in sorted order by keys. Equivalent to
+    [Sequence.fold (symmetric_diff t1 t2 ~data_equal)], and more efficient. *)
+val fold_symmetric_diff
+  :  ('k, 'v, 'cmp) t
+  -> ('k, 'v, 'cmp) t
+  -> data_equal:('v -> 'v -> bool)
+  -> init:'a
+  -> f:('a -> ('k, 'v) Symmetric_diff_element.t -> 'a)
+  -> 'a
+
 (** [min_elt map] returns [Some (key, data)] pair corresponding to the minimum key in
     [map], [None] if [map] is empty. *)
 val min_elt : ('k, 'v, _) t -> ('k * 'v) option
