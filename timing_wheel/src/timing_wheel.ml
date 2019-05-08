@@ -731,27 +731,28 @@ end = struct
 
         "Lower levels" is [bits_per_slot] bits wide.  "This level" is [bits] wide. *)
     type 'a t =
-      { index : int
-      (** The [index] in the timing wheel's array of levels where this level is. *)
-      ; bits : Num_key_bits.t  (** How many [bits] this level is responsible for. *)
-      ; slots_mask : Slots_mask.t
-      (** [slots_mask = Slots_mask.create ~level_bits:t.bits]. *)
-      ; bits_per_slot : Num_key_bits.t
-      (** [bits_per_slot] is how many bits each slot distinguishes, and is the sum of of
-          the [bits] of all the lower levels. *)
+      { (* The [index] in the timing wheel's array of levels where this level is. *)
+        index : int
+      ; (* How many [bits] this level is responsible for. *)
+        bits : Num_key_bits.t
+      ; (* [slots_mask = Slots_mask.create ~level_bits:t.bits]. *)
+        slots_mask : Slots_mask.t
+      ; (* [bits_per_slot] is how many bits each slot distinguishes, and is the sum of of
+           the [bits] of all the lower levels. *)
+        bits_per_slot : Num_key_bits.t
       ; keys_per_slot : Key.Span.t
       ; min_key_in_same_slot_mask : Min_key_in_same_slot_mask.t
-      ; num_allowed_keys : Key.Span.t
-      (** [num_allowed_keys = keys_per_slot * Array.length slots] *)
-      ; mutable length : int
-      (** [length] is the number of elts currently in this level. *)
-      ; mutable min_allowed_key : Key.t
-      (** All elements at this level have their [key] satisfy [min_allowed_key <= key <=
-          max_allowed_key].  Also, [min_allowed_key] is a multiple of [keys_per_slot]. *)
+      ; (* [num_allowed_keys = keys_per_slot * Array.length slots] *)
+        num_allowed_keys : Key.Span.t
+      ; (* [length] is the number of elts currently in this level. *)
+        mutable length : int
+      ; (* All elements at this level have their [key] satisfy [min_allowed_key <= key <=
+           max_allowed_key].  Also, [min_allowed_key] is a multiple of [keys_per_slot]. *)
+        mutable min_allowed_key : Key.t
       ; mutable max_allowed_key : Key.t
-      ; slots : ('a Internal_elt.t array[@sexp.opaque])
-      (** [slots] holds the (possibly null) pointers to the circular doubly-linked lists
-          of elts.  [Array.length slots = 1 lsl bits]. *)
+      ; (* [slots] holds the (possibly null) pointers to the circular doubly-linked lists
+           of elts.  [Array.length slots = 1 lsl bits]. *)
+        slots : ('a Internal_elt.t array[@sexp.opaque])
       }
     [@@deriving fields, sexp_of]
 
@@ -771,10 +772,10 @@ end = struct
   type 'a t =
     { mutable length : int
     ; mutable pool : 'a Internal_elt.Pool.t
-    ; mutable min_elt : 'a Internal_elt.t
-    (** [min_elt] is either null or an element whose key is [elt_key_lower_bound]. *)
-    ; mutable elt_key_lower_bound : Key.t
-    (** All elements in the priority queue have their key [>= elt_key_lower_bound]. *)
+    ; (* [min_elt] is either null or an element whose key is [elt_key_lower_bound]. *)
+      mutable min_elt : 'a Internal_elt.t
+    ; (* All elements in the priority queue have their key [>= elt_key_lower_bound]. *)
+      mutable elt_key_lower_bound : Key.t
     ; levels : 'a Level.t array
     }
   [@@deriving fields, sexp_of]
@@ -1418,8 +1419,8 @@ let min_interval_num = Interval_num.zero
 type 'a t =
   { config : Config.t
   ; start : Time_ns.t
-  ; max_interval_num : Interval_num.t
-  (** [max_interval_num] is the interval number of [max_time]. *)
+  ; (* [max_interval_num] is the interval number of [max_time]. *)
+    max_interval_num : Interval_num.t
   ; mutable now : Time_ns.t
   ; mutable now_interval_num_start : Time_ns.t
   ; mutable max_allowed_alarm_time : Time_ns.t

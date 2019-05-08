@@ -11,6 +11,8 @@ include
   end
   with type 'a t := 'a t
 
+module Expect_test_config : Expect_test_config.S with type 'a IO.t = 'a t
+
 module Stable : sig
   (** [Or_error.t] is wire compatible with [V2.t], but not [V1.t], like [Info.Stable]
       and [Error.Stable]. *)
