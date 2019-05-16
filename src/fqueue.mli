@@ -23,18 +23,21 @@ val enqueue : 'a t -> 'a -> 'a t
 (** Enqueues a single element on the *top* of the queue.  Complexity: amortized O(1)
     [enqueue_top] is deprecated, use [Fdeque.t] instead. *)
 val enqueue_top : 'a t -> 'a -> 'a t
+[@@deprecated "[since 2019-05] Use [Fdeque.t] instead."]
 
 (** Returns the bottom (most recently enqueued) element.  Raises [Empty] if no element is
     found.  Complexity: O(1).
 
     [bot_exn] is deprecated, use [Fdeque.t] instead. *)
 val bot_exn : 'a t -> 'a
+[@@deprecated "[since 2019-05] Use [Fdeque.t] instead."]
 
 (** Like [bot_exn], but returns its result optionally, without exception. Complexity:
     O(1).
 
     [bot] is deprecated, use [Fdeque.t] instead. *)
 val bot : 'a t -> 'a option
+[@@deprecated "[since 2019-05] Use [Fdeque.t] instead."]
 
 (** Like [bot_exn], except returns top (least recently enqueued) element. Complexity:
     O(1). *)

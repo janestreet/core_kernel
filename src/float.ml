@@ -125,4 +125,3 @@ let gen_nan = Base_quickcheck.Generator.float_of_class Nan
 let gen_subnormal = Base_quickcheck.Generator.float_of_class Subnormal
 let gen_normal = Base_quickcheck.Generator.float_of_class Normal
 let gen_infinite = Base_quickcheck.Generator.float_of_class Infinite
-let to_string_round_trippable = to_string

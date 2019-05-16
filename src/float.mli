@@ -65,9 +65,6 @@ val to_string_12 : t -> string
     not 15 or fewer) of them. *)
 val to_string : t -> string
 
-val to_string_round_trippable : t -> string
-[@@deprecated "[since 2017-04] Use [Float.to_string]"]
-
 include Quickcheckable.S with type t := t
 
 (*_ Caution: If we remove this sig item, [sign] will still be present from

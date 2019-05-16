@@ -85,7 +85,7 @@ let drop_back_exn t =
     (match t.front with
      | [] -> raise Empty
      | [ _ ] -> empty
-     | _ :: _ :: _ -> raise_front_invariant ())
+     | _ :: _ :: _ -> raise_back_invariant ())
 ;;
 
 let dequeue_front_exn t = peek_front_exn t, drop_front_exn t
