@@ -45,6 +45,9 @@ module Symmetric_diff_element = struct
   include Stable.V1
 end
 
+module Continue_or_stop = Base.Map.Continue_or_stop
+module Finished_or_unfinished = Base.Map.Finished_or_unfinished
+
 type ('k, 'cmp) comparator =
   (module
     Comparator.S
@@ -269,6 +272,7 @@ module Make_tree (Key : Comparator.S1) = struct
   let iter_keys = iter_keys
   let iter = iter
   let iteri = iteri
+  let iteri_until = iteri_until
   let iter2 a b ~f = iter2 a b ~f ~comparator
   let map = map
   let mapi = mapi

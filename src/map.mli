@@ -255,6 +255,33 @@ val iter_keys : ('k, _, _) t -> f:('k -> unit) -> unit
 val iter : (_, 'v, _) t -> f:('v -> unit) -> unit
 val iteri : ('k, 'v, _) t -> f:(key:'k -> data:'v -> unit) -> unit
 
+module Continue_or_stop : sig
+  type t = Base.Map.Continue_or_stop.t =
+    | Continue
+    | Stop
+  [@@deriving compare, enumerate, equal, sexp_of]
+end
+
+module Finished_or_unfinished : sig
+  type t = Base.Map.Finished_or_unfinished.t =
+    | Finished
+    | Unfinished
+  [@@deriving compare, enumerate, equal, sexp_of]
+
+  (** Maps [Continue] to [Finished] and [Stop] to [Unfinished]. *)
+  val of_continue_or_stop : Continue_or_stop.t -> t
+
+  (** Maps [Finished] to [Continue] and [Unfinished] to [Stop]. *)
+  val to_continue_or_stop : t -> Continue_or_stop.t
+end
+
+(** Iterates until [f] returns [Stop]. If [f] returns [Stop], the final result is
+    [Unfinished]. Otherwise, the final result is [Finished]. *)
+val iteri_until
+  :  ('k, 'v, _) t
+  -> f:(key:'k -> data:'v -> Continue_or_stop.t)
+  -> Finished_or_unfinished.t
+
 (** Iterates two maps side by side. The complexity of this function is O(M+N). If two
     inputs are [[(0, a); (1, a)]] and [[(1, b); (2, b)]], [f] will be called with
     [[(0, `Left a); (1, `Both (a, b)); (2, `Right b)]] *)
@@ -607,8 +634,8 @@ val quickcheck_shrinker
    type and comparison function, and supports arbitrary values.
 
    {[
-     type ('key, 'value) Map.Poly.t = ('key , 'value, Comparator.Poly.t) Map.t
-     type 'value Key.Map.t          = (Key.t, 'value, Key.comparator   ) Map.t
+     type ('key, 'value) Map.Poly.t = ('key , 'value, Comparator.Poly.t     ) Map.t
+     type 'value Key.Map.t          = (Key.t, 'value, Key.comparator_witness) Map.t
    ]}
 
    The same map operations exist in [Map], [Map.Poly], and [Key.Map], albeit with

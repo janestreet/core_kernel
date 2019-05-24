@@ -124,7 +124,7 @@ type ('key, 'data, 'z) create_options_without_hashable =
 
 type ('key, 'data, 'z) create_options_with_hashable =
   ?growth_allowed:bool (** defaults to [true] *)
-  -> ?size:int (** initial size -- default 128 *)
+  -> ?size:int (** initial size -- default 0 *)
   -> hashable:'key Hashable.t
   -> 'z
 

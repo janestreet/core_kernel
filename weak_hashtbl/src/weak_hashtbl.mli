@@ -37,14 +37,14 @@ type ('a, 'b) t [@@deriving sexp_of]
     [Hashtbl.create]. *)
 val create
   :  ?growth_allowed : bool  (** default is [true] *)
-  -> ?size           : int   (** default is [128] *)
+  -> ?size           : int   (** default is [0] *)
   -> (module Hashtbl.Key_plain with type t = 'a)
   -> ('a, 'b) t
 
 module Using_hashable : sig
   val create
     :  ?growth_allowed : bool  (** default is [true] *)
-    -> ?size           : int   (** default is [128] *)
+    -> ?size           : int   (** default is [0] *)
     -> 'a Hashtbl.Hashable.t
     -> ('a, 'b) t
 end

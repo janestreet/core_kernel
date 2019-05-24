@@ -71,27 +71,17 @@ module type S = sig
   include S_without_immediate with type t := t
 end
 
-[%%import
-  "config.h"]
+module type S_int63 = sig
+  type t [@@immediate64]
 
-[%%if
-  defined JSC_PORTABLE_INT63]
+  include S_without_immediate with type t := t
+end
 
-module type S_int63 = S_without_immediate
-module type S_int63_plain = S_without_immediate_plain
+module type S_int63_plain = sig
+  type t [@@immediate64]
 
-[%%elif
-  defined JSC_ARCH_SIXTYFOUR]
-
-module type S_int63 = S
-module type S_int63_plain = S_plain
-
-[%%else]
-
-module type S_int63 = S_without_immediate
-module type S_int63_plain = S_without_immediate_plain
-
-[%%endif]
+  include S_without_immediate_plain with type t := t
+end
 
 module type Immediate_option = sig
   (** Always immediate. *)
@@ -99,7 +89,7 @@ module type Immediate_option = sig
 
   module type S_plain = S_plain
 
-  (** Immediate only on 64-bit machines with [portable_int63 = false]. *)
+  (** Immediate only on 64-bit machines. *)
   module type S_int63 = S_int63
 
   module type S_int63_plain = S_int63_plain

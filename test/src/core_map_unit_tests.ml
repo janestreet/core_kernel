@@ -1220,6 +1220,40 @@ struct
     assert (Map.counti with_negative ~f:negkd = 1)
   ;;
 
+  let iteri_until _ = assert false
+
+  let%expect_test "iteri_until" =
+    let test list =
+      let map = list |> List.mapi ~f:(fun i n -> Key.of_int i, n) |> Map.of_alist_exn in
+      Map.iteri_until map ~f:(fun ~key ~data ->
+        let key = Key.to_int key in
+        print_s [%message (key : int) (data : int)];
+        if key > data then Stop else Continue)
+      |> [%sexp_of: Core_kernel.Map.Finished_or_unfinished.t]
+      |> print_s
+    in
+    test [ 3; 1; 4; 1; 5; 9; 2; 6; 5 ];
+    [%expect
+      {|
+      ((key 0) (data 3))
+      ((key 1) (data 1))
+      ((key 2) (data 4))
+      ((key 3) (data 1))
+      Unfinished |}];
+    test [ 1; 4; 9; 16; 25; 36; 49; 64 ];
+    [%expect
+      {|
+      ((key 0) (data 1))
+      ((key 1) (data 4))
+      ((key 2) (data 9))
+      ((key 3) (data 16))
+      ((key 4) (data 25))
+      ((key 5) (data 36))
+      ((key 6) (data 49))
+      ((key 7) (data 64))
+      Finished |}]
+  ;;
+
   let to_sequence ?order:_ ?keys_greater_or_equal_to:_ ?keys_less_or_equal_to:_ _ =
     assert false
   ;;

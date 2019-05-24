@@ -177,10 +177,10 @@ module type Generator = sig
       relation. *)
   val equal_fn : 'a Observer.t -> ('a -> 'a -> bool) t
 
-  (** [filter_map t ~f] produces [y] for every [x] in [t] such that [f x = Some y].
-      [filter t ~f] produces every [x] in [t] such that [f x = true]. *)
+  (** [filter_map t ~f] produces [y] for every [x] in [t] such that [f x = Some y]. *)
   val filter_map : 'a t -> f:('a -> 'b option) -> 'b t
 
+  (** [filter t ~f] produces every [x] in [t] such that [f x = true]. *)
   val filter : 'a t -> f:('a -> bool) -> 'a t
 
   (** Generator for recursive data type with multiple clauses. At size 0, chooses only

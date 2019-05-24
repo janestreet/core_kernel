@@ -1,17 +1,16 @@
 open! Import
 
-(* This uses [Typerep_lib....] to avoid a cyclic dependency... *)
-let unreachable_code : (unit, int) Typerep_lib.Std.Type_equal.t -> _ = function
-  | _ -> .
-;;
-
 module Stable = struct
   module V1 = struct
-    type t = (unit, int) Typerep_lib.Std.Type_equal.t
+    type t = |
 
     module Shape = struct
       type t [@@deriving bin_shape]
     end
+
+    let unreachable_code = function
+      | (_ : t) -> .
+    ;;
 
     let bin_shape_t = Shape.bin_shape_t
     let tp_loc = [%here].pos_fname ^ ".Stable.V1.t"
