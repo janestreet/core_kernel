@@ -30,6 +30,9 @@ end
 
 module Control = struct
   module T = struct
+    [%%if
+      ocaml_version < (4, 08, 0)]
+
     type t = Caml.Gc.control =
       { mutable minor_heap_size : int
       ; mutable major_heap_increment : int
@@ -41,11 +44,35 @@ module Control = struct
       ; window_size : int
       }
     [@@deriving compare, bin_io, sexp, fields]
+
+    [%%else]
+
+    [@@@ocaml.warning "-3"]
+
+    type t = Caml.Gc.control =
+      { mutable minor_heap_size : int
+      ; mutable major_heap_increment : int
+      ; mutable space_overhead : int
+      ; mutable verbose : int
+      ; mutable max_overhead : int
+      ; mutable stack_limit : int
+      ; mutable allocation_policy : int
+      ; window_size : int
+      ; custom_major_ratio : int
+      ; custom_minor_ratio : int
+      ; custom_minor_max_size : int
+      }
+    [@@deriving compare, bin_io, sexp, fields]
+
+    [%%endif]
   end
 
   include T
   include Comparable.Make (T)
 end
+
+[%%if
+  ocaml_version < (4, 08, 0)]
 
 let tune
       ?logger
@@ -87,6 +114,57 @@ let tune
   in
   set new_control_params
 ;;
+
+[%%else]
+
+let tune
+      ?logger
+      ?minor_heap_size
+      ?major_heap_increment
+      ?space_overhead
+      ?verbose
+      ?max_overhead
+      ?stack_limit
+      ?allocation_policy
+      ?window_size
+      ?custom_major_ratio
+      ?custom_minor_ratio
+      ?custom_minor_max_size
+      ()
+  =
+  let old_control_params = get () in
+  let f opt to_string field =
+    let old_value = Field.get field old_control_params in
+    match opt with
+    | None -> old_value
+    | Some new_value ->
+      Option.iter logger ~f:(fun f ->
+        Printf.ksprintf
+          f
+          "Gc.Control.%s: %s -> %s"
+          (Field.name field)
+          (to_string old_value)
+          (to_string new_value));
+      new_value
+  in
+  let new_control_params =
+    Control.Fields.map
+      ~minor_heap_size:(f minor_heap_size string_of_int)
+      ~major_heap_increment:(f major_heap_increment string_of_int)
+      ~space_overhead:(f space_overhead string_of_int)
+      ~verbose:(f verbose string_of_int)
+      ~max_overhead:(f max_overhead string_of_int)
+      ~stack_limit:(f stack_limit string_of_int)
+      ~allocation_policy:(f allocation_policy string_of_int)
+      ~window_size:(f window_size string_of_int)
+      ~custom_major_ratio:(f custom_major_ratio string_of_int)
+      ~custom_minor_ratio:(f custom_minor_ratio string_of_int)
+      ~custom_minor_max_size:(f custom_minor_max_size string_of_int)
+  in
+  set new_control_params
+;;
+
+[%%endif]
 
 module Allocation_policy = struct
   type t =
