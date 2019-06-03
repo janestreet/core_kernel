@@ -1,3 +1,4 @@
+open! Core_kernel
 open! Import
 include Tuple_type_intf
 

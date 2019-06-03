@@ -1,6 +1,8 @@
 open! Core_kernel
 open! Int.Replace_polymorphic_compare
 
+module Pool = Tuple_pool
+
 let _make_sure_pool_pointer_is_an_int x = (x : _ Pool.Pointer.t :> int)
 
 module Make (Pool : Pool.S) = struct

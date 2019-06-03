@@ -44,6 +44,7 @@
 open! Core_kernel
 open! Import
 open! Timing_wheel_intf
+module Pool = Tuple_pool
 module Time_ns = Core_kernel_private.Time_ns_alternate_sexp
 
 let sexp_of_t_style : [`Pretty | `Internal] ref = ref `Pretty

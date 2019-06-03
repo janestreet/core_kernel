@@ -10,7 +10,6 @@
 
 open! Core_kernel
 open! Import
-
 include Hashtbl_intf.Hashtbl
 
 (** [resize t size] ensures that [t] can hold at least [size] entries without resizing

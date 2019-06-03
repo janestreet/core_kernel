@@ -1,3 +1,4 @@
+open! Core_kernel
 open! Import
 
 module type Slots = sig

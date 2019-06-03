@@ -1,5 +1,6 @@
+open! Core_kernel
 open! Import
-open Pool_intf
+open Tuple_pool_intf
 module Tuple_type = Tuple_type
 
 let failwiths = Error.failwiths

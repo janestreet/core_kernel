@@ -1,7 +1,7 @@
-(** A manual memory manager for a set of mutable tuples.  The point of [Pool] is to
-    allocate a single long-lived block of memory (the pool) that lives in the OCaml
-    major heap, and then to reuse the block, rather than continually allocating blocks
-    on the minor heap.
+(** A manual memory manager for a set of mutable tuples.  The point of [Tuple_pool] is to
+    allocate a single long-lived block of memory (the pool) that lives in the OCaml major
+    heap, and then to reuse the block, rather than continually allocating blocks on the
+    minor heap.
 
     A pool stores a bounded-size set of tuples, where client code is responsible for
     explicitly controlling when the pool allocates and frees tuples.  One [create]s a
@@ -20,10 +20,10 @@
     - one can mistakenly free a pointer multiple times
     - one can forget to free a pointer
 
-    There is a debugging functor, [Pool.Error_check], that is useful for building pools
-    to help debug incorrect pointer usage.
-*)
+    There is a debugging functor, [Tuple_pool.Error_check], that is useful for building
+    pools to help debug incorrect pointer usage. *)
 
+open! Core_kernel
 open! Import
 
 (** [S] is the module type for a pool. *)
@@ -339,7 +339,7 @@ module type S = sig
     -> unit
 end
 
-module type Pool = sig
+module type Tuple_pool = sig
   module Tuple_type = Tuple_type
 
   module type S = S
@@ -376,13 +376,13 @@ module type Pool = sig
       [!check_invariant] and [!show_messages], which are initially both [true].
 
       The performance of the pool resulting from [Debug] is much worse than that of the
-      input [Pool], even with all the controls set to [false]. *)
-  module Debug (Pool : S) : sig
+      input [Tuple_pool], even with all the controls set to [false]. *)
+  module Debug (Tuple_pool : S) : sig
     include
       S
-      with type 'a Pointer.t = 'a Pool.Pointer.t
-      with type Pointer.Id.t = Pool.Pointer.Id.t
-      with type 'a t = 'a Pool.t
+      with type 'a Pointer.t = 'a Tuple_pool.Pointer.t
+      with type Pointer.Id.t = Tuple_pool.Pointer.Id.t
+      with type 'a t = 'a Tuple_pool.t
 
     val check_invariant : bool ref
     val show_messages : bool ref
@@ -396,8 +396,8 @@ module type Pool = sig
       One can compose [Debug] and [Error_check], e.g:
 
       {[
-        module M = Debug (Error_check (Pool))
+        module M = Debug (Error_check (Tuple_pool))
       ]}
   *)
-  module Error_check (Pool : S) : S
+  module Error_check (Tuple_pool : S) : S
 end

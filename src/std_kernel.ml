@@ -143,8 +143,6 @@ module Optional_syntax = Optional_syntax
 module Percent = Percent
 module Perms = Perms
 module Pid = Pid
-module Pool = Pool
-module Pool_intf = Pool_intf
 
 module Popcount = Base.Popcount
 [@@warning "-3"]
@@ -165,7 +163,6 @@ module String_id = String_id
 module Substring = Substring
 module Substring_intf = Substring_intf
 module Tuple = Tuple
-module Tuple_type = Tuple_type
 module Tuple2 = Tuple.T2
 module Tuple3 = Tuple.T3
 module Type_immediacy = Type_immediacy

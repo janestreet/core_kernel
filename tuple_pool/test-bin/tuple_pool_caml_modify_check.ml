@@ -28,7 +28,7 @@ let () =
 ;;
 
 let () =
-  let open Pool in
+  let open Tuple_pool in
   let p = create Slots.t3 ~capacity:3 ~dummy:(Pointer.null (), 0, "") in
   let e = new3 p (Pointer.null ()) 0 "" in
   let v = Int.to_string (Random.int 42) in

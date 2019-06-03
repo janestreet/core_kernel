@@ -1,4 +1,5 @@
 open! Core_kernel
+module Pool = Tuple_pool
 module Pointer = Pool.Pointer
 
 (* This pool holds nodes that would be represented more traditionally as:
