@@ -2,8 +2,21 @@ open! Core_kernel
 open! Import
 open! Timing_wheel
 
+let max_time = Private.max_time
+
 module Time_ns = struct
-  include Time_ns
+  include (
+    Time_ns :
+      module type of struct
+      include Time_ns
+    end
+    with module Span := Time_ns.Span)
+
+  module Span = struct
+    include Time_ns.Span
+
+    let of_int_ns i = i |> Int63.of_int |> of_int63_ns
+  end
 
   let sexp_of_t = Alternate_sexp.sexp_of_t
 end
@@ -130,7 +143,11 @@ let%expect_test "[Config.microsecond_precision]" =
      1d15h5m37.488355328s) |}]
 ;;
 
-let%expect_test _ = require [%here] (Level_bits.max_num_bits = Int64.num_bits - 3)
+let%expect_test _ =
+  print_s [%sexp (Level_bits.max_num_bits : int)];
+  [%expect {|
+    62 |}]
+;;
 
 let%expect_test "invalid level bits" =
   let test level_bits =
@@ -162,9 +179,9 @@ let%expect_test "invalid level bits" =
   [%expect
     {|
     ("Level_bits.create_exn got too many bits"
-      (62)
-      (got          62)
-      (max_num_bits 61))
+      (63)
+      (got          63)
+      (max_num_bits 62))
     "Assert_failure timing_wheel.ml:LINE:COL" |}];
   test (List.init (Level_bits.max_num_bits + 1) ~f:Fn.id);
   [%expect
@@ -231,7 +248,8 @@ let%expect_test "invalid level bits" =
       58
       59
       60
-      61))
+      61
+      62))
     "Assert_failure timing_wheel.ml:LINE:COL" |}]
 ;;
 
@@ -376,19 +394,19 @@ let%expect_test "[level_bits], [config], and [max_allowed_alarm_time]" =
                     : Time_ns.t )]));
   [%expect
     {|
-    ((level_bits (11 10 10 10 10 10))
-     (config ((alarm_precision 1ns)))
-     (max_allowed_alarm_time "2043-01-25 23:56:49.213693951Z"))
-    ((level_bits (11 10 10 10 10 10))
+    ((level_bits (11 10 10 10 10 10 1))
+     (config ((alarm_precision 1ns) (level_bits (11 10 10 10 10 10 1))))
+     (max_allowed_alarm_time "2116-02-20 23:53:38.427387903Z"))
+    ((level_bits (11 10 10 10 10 10 1))
      (config ((alarm_precision 1.024us) (level_bits (11 10 10 10 10 1))))
      (max_allowed_alarm_time "2116-02-20 23:53:38.427387903Z"))
-    ((level_bits (11 10 10 10 10 10))
+    ((level_bits (11 10 10 10 10 10 1))
      (config ((alarm_precision 1.048576ms) (level_bits (11 10 10 10 1))))
      (max_allowed_alarm_time "2116-02-20 23:53:38.427387903Z"))
-    ((level_bits (11 10 10 10 10 10))
+    ((level_bits (11 10 10 10 10 10 1))
      (config ((alarm_precision 1.073741824s) (level_bits (11 10 10 1))))
      (max_allowed_alarm_time "2116-02-20 23:53:38.427387903Z"))
-    ((level_bits (11 10 10 10 10 10))
+    ((level_bits (11 10 10 10 10 10 1))
      (config ((alarm_precision 19h32m48.744177664s) (level_bits (11 5))))
      (max_allowed_alarm_time "2116-02-20 23:53:38.427387903Z"))
     ((level_bits (1))
@@ -443,8 +461,8 @@ let%expect_test "[level_bits] and [max_allowed_alarm_time] with \
   [%expect
     {|
     ((alarm_precision 1ns)
-     (num_level_bits  61)
-     (max_allowed_alarm_time "2043-01-25 23:56:49.213693951Z"))
+     (num_level_bits  62)
+     (max_allowed_alarm_time "2116-02-20 23:53:38.427387903Z"))
     ((alarm_precision 1.024us)
      (num_level_bits  52)
      (max_allowed_alarm_time "2116-02-20 23:53:38.427387903Z"))
@@ -460,12 +478,15 @@ let%expect_test "[level_bits] and [max_allowed_alarm_time] with \
 ;;
 
 let create_unit
+      ?extend_to_max_num_bits
       ?level_bits
       ?(start = Time_ns.epoch)
       ?(alarm_precision = gibi_nanos 1.)
       ()
   =
-  create ~config:(create_config ?level_bits () ~alarm_precision) ~start
+  create
+    ~config:(create_config ?extend_to_max_num_bits ?level_bits () ~alarm_precision)
+    ~start
 ;;
 
 let%expect_test "[min_allowed_alarm_interval_num], [max_allowed_alarm_interval_num]" =
@@ -613,7 +634,6 @@ let%expect_test "[add] failures" =
       [ Interval_num.min_value
       ; Interval_num.pred (min_allowed_alarm_interval_num t)
       ; Interval_num.succ (max_allowed_alarm_interval_num t)
-      ; Interval_num.succ Interval_num.max_representable
       ; Interval_num.max_value
       ]
       ~f:(fun at -> require_does_raise [%here] (fun () -> add ~at))
@@ -632,9 +652,6 @@ let%expect_test "[add] failures" =
      (min_allowed_alarm_interval_num 0)
      (max_allowed_alarm_interval_num 1))
     ("Timing_wheel.interval_num_start got too large interval_num"
-     (interval_num       2_305_843_009_213_693_952)
-     (t.max_interval_num 4_294_967_295))
-    ("Timing_wheel.interval_num_start got too large interval_num"
      (interval_num       4_611_686_018_427_387_903)
      (t.max_interval_num 4_294_967_295)) |}];
   advance_clock_to_interval_num t ~to_:Interval_num.one ~handle_fired:ignore;
@@ -652,9 +669,6 @@ let%expect_test "[add] failures" =
      (interval_num                   3)
      (min_allowed_alarm_interval_num 1)
      (max_allowed_alarm_interval_num 2))
-    ("Timing_wheel.interval_num_start got too large interval_num"
-     (interval_num       2_305_843_009_213_693_952)
-     (t.max_interval_num 4_294_967_295))
     ("Timing_wheel.interval_num_start got too large interval_num"
      (interval_num       4_611_686_018_427_387_903)
      (t.max_interval_num 4_294_967_295)) |}];
@@ -677,9 +691,6 @@ let%expect_test "[add] failures" =
      (min_allowed_alarm_interval_num 2)
      (max_allowed_alarm_interval_num 3))
     ("Timing_wheel.interval_num_start got too large interval_num"
-     (interval_num       2_305_843_009_213_693_952)
-     (t.max_interval_num 4_294_967_295))
-    ("Timing_wheel.interval_num_start got too large interval_num"
      (interval_num       4_611_686_018_427_387_903)
      (t.max_interval_num 4_294_967_295)) |}];
   advance_clock t ~to_:Private.max_time ~handle_fired:ignore;
@@ -695,9 +706,6 @@ let%expect_test "[add] failures" =
      (max_allowed_alarm_interval_num 4_294_967_296))
     ("Timing_wheel.interval_num_start got too large interval_num"
      (interval_num       4_294_967_296)
-     (t.max_interval_num 4_294_967_295))
-    ("Timing_wheel.interval_num_start got too large interval_num"
-     (interval_num       2_305_843_009_213_693_952)
      (t.max_interval_num 4_294_967_295))
     ("Timing_wheel.interval_num_start got too large interval_num"
      (interval_num       4_611_686_018_427_387_903)
@@ -743,14 +751,11 @@ let%expect_test "[advance_clock] to max interval num" =
   add ~at:Interval_num.zero;
   add ~at:Interval_num.one;
   require_does_raise [%here] (fun () ->
-    advance_clock_to_interval_num
-      t
-      ~to_:Interval_num.(succ max_representable)
-      ~handle_fired:ignore);
+    advance_clock_to_interval_num t ~to_:Interval_num.max_value ~handle_fired:ignore);
   [%expect
     {|
       ("Timing_wheel.interval_num_start got too large interval_num"
-       (interval_num       2_305_843_009_213_693_952)
+       (interval_num       4_611_686_018_427_387_903)
        (t.max_interval_num 4_294_967_295)) |}];
   let max_interval_num = interval_num t Private.max_time in
   advance_clock_to_interval_num t ~to_:max_interval_num ~handle_fired:ignore;
@@ -1143,6 +1148,265 @@ let%expect_test "[advance_clock]" =
      (alarms ())) |}]
 ;;
 
+let%expect_test "min alarm at [max_time]" =
+  List.iter [ false; true ] ~f:(fun advance_to_max ->
+    List.iter [ 1; 2 ] ~f:(fun ns ->
+      let alarm_precision = Time_ns.Span.scale_int Time_ns.Span.nanosecond ns in
+      let t =
+        create_unit
+          ~alarm_precision
+          ~level_bits:[ 1 ]
+          ~extend_to_max_num_bits:true
+          ()
+      in
+      if advance_to_max then advance_clock t ~to_:max_time ~handle_fired:ignore;
+      ignore (add t ~at:max_time () : _ Alarm.t);
+      print_s [%message "" (advance_to_max : bool) (ns : int)];
+      require_equal
+        [%here]
+        (module Interval_num)
+        (min_alarm_interval_num_exn t)
+        (interval_num t max_time)));
+  [%expect
+    {|
+    ((advance_to_max false)
+     (ns             1))
+    ((advance_to_max false)
+     (ns             2))
+    ((advance_to_max true)
+     (ns             1))
+    ((advance_to_max true)
+     (ns             2)) |}]
+;;
+
+let%expect_test "[advance_clock ~to_:max_time]" =
+  List.iter [ 1; 2; 4 ] ~f:(fun ns ->
+    let alarm_precision = Time_ns.Span.scale_int Time_ns.Span.nanosecond ns in
+    for level0_bits = 1 to 3 do
+      require_does_not_raise [%here] ~cr:CR_soon (fun () ->
+        let t =
+          create_unit
+            ~alarm_precision
+            ~level_bits:[ level0_bits ]
+            ~extend_to_max_num_bits:true
+            ()
+        in
+        print_s [%message "" (alarm_precision : Time_ns.Span.t) (level0_bits : int)];
+        for i = 10 downto 0 do
+          ignore
+            ( add
+                t
+                ~at:(Time_ns.sub max_time (Time_ns.Span.of_int_ns i))
+                (fun () -> print_s [%message "alarm" (i : int)])
+              : _ Alarm.t )
+        done;
+        for i = 10 downto 0 do
+          print_s [%message "advance" (i : int)];
+          advance_clock
+            t
+            ~to_:(Time_ns.sub max_time (Time_ns.Span.of_int_ns i))
+            ~handle_fired:(fun a -> Alarm.value t a ())
+        done)
+    done);
+  [%expect
+    {|
+    ((alarm_precision 1ns)
+     (level0_bits     1))
+    (advance (i 10))
+    (advance (i 9))
+    (alarm (i 10))
+    (advance (i 8))
+    (alarm (i 9))
+    (advance (i 7))
+    (alarm (i 8))
+    (advance (i 6))
+    (alarm (i 7))
+    (advance (i 5))
+    (alarm (i 6))
+    (advance (i 4))
+    (alarm (i 5))
+    (advance (i 3))
+    (alarm (i 4))
+    (advance (i 2))
+    (alarm (i 3))
+    (advance (i 1))
+    (alarm (i 2))
+    (advance (i 0))
+    (alarm (i 1))
+    ((alarm_precision 1ns)
+     (level0_bits     2))
+    (advance (i 10))
+    (advance (i 9))
+    (alarm (i 10))
+    (advance (i 8))
+    (alarm (i 9))
+    (advance (i 7))
+    (alarm (i 8))
+    (advance (i 6))
+    (alarm (i 7))
+    (advance (i 5))
+    (alarm (i 6))
+    (advance (i 4))
+    (alarm (i 5))
+    (advance (i 3))
+    (alarm (i 4))
+    (advance (i 2))
+    (alarm (i 3))
+    (advance (i 1))
+    (alarm (i 2))
+    (advance (i 0))
+    (alarm (i 1))
+    ((alarm_precision 1ns)
+     (level0_bits     3))
+    (advance (i 10))
+    (advance (i 9))
+    (alarm (i 10))
+    (advance (i 8))
+    (alarm (i 9))
+    (advance (i 7))
+    (alarm (i 8))
+    (advance (i 6))
+    (alarm (i 7))
+    (advance (i 5))
+    (alarm (i 6))
+    (advance (i 4))
+    (alarm (i 5))
+    (advance (i 3))
+    (alarm (i 4))
+    (advance (i 2))
+    (alarm (i 3))
+    (advance (i 1))
+    (alarm (i 2))
+    (advance (i 0))
+    (alarm (i 1))
+    ((alarm_precision 2ns)
+     (level0_bits     1))
+    (advance (i 10))
+    (advance (i 9))
+    (alarm (i 10))
+    (advance (i 8))
+    (advance (i 7))
+    (alarm (i 9))
+    (alarm (i 8))
+    (advance (i 6))
+    (advance (i 5))
+    (alarm (i 7))
+    (alarm (i 6))
+    (advance (i 4))
+    (advance (i 3))
+    (alarm (i 5))
+    (alarm (i 4))
+    (advance (i 2))
+    (advance (i 1))
+    (alarm (i 3))
+    (alarm (i 2))
+    (advance (i 0))
+    ((alarm_precision 2ns)
+     (level0_bits     2))
+    (advance (i 10))
+    (advance (i 9))
+    (alarm (i 10))
+    (advance (i 8))
+    (advance (i 7))
+    (alarm (i 9))
+    (alarm (i 8))
+    (advance (i 6))
+    (advance (i 5))
+    (alarm (i 7))
+    (alarm (i 6))
+    (advance (i 4))
+    (advance (i 3))
+    (alarm (i 5))
+    (alarm (i 4))
+    (advance (i 2))
+    (advance (i 1))
+    (alarm (i 3))
+    (alarm (i 2))
+    (advance (i 0))
+    ((alarm_precision 2ns)
+     (level0_bits     3))
+    (advance (i 10))
+    (advance (i 9))
+    (alarm (i 10))
+    (advance (i 8))
+    (advance (i 7))
+    (alarm (i 9))
+    (alarm (i 8))
+    (advance (i 6))
+    (advance (i 5))
+    (alarm (i 7))
+    (alarm (i 6))
+    (advance (i 4))
+    (advance (i 3))
+    (alarm (i 5))
+    (alarm (i 4))
+    (advance (i 2))
+    (advance (i 1))
+    (alarm (i 3))
+    (alarm (i 2))
+    (advance (i 0))
+    ((alarm_precision 4ns)
+     (level0_bits     1))
+    (advance (i 10))
+    (advance (i 9))
+    (advance (i 8))
+    (advance (i 7))
+    (alarm (i 10))
+    (alarm (i 9))
+    (alarm (i 8))
+    (advance (i 6))
+    (advance (i 5))
+    (advance (i 4))
+    (advance (i 3))
+    (alarm (i 7))
+    (alarm (i 6))
+    (alarm (i 5))
+    (alarm (i 4))
+    (advance (i 2))
+    (advance (i 1))
+    (advance (i 0))
+    ((alarm_precision 4ns)
+     (level0_bits     2))
+    (advance (i 10))
+    (advance (i 9))
+    (advance (i 8))
+    (advance (i 7))
+    (alarm (i 10))
+    (alarm (i 9))
+    (alarm (i 8))
+    (advance (i 6))
+    (advance (i 5))
+    (advance (i 4))
+    (advance (i 3))
+    (alarm (i 7))
+    (alarm (i 6))
+    (alarm (i 5))
+    (alarm (i 4))
+    (advance (i 2))
+    (advance (i 1))
+    (advance (i 0))
+    ((alarm_precision 4ns)
+     (level0_bits     3))
+    (advance (i 10))
+    (advance (i 9))
+    (advance (i 8))
+    (advance (i 7))
+    (alarm (i 10))
+    (alarm (i 9))
+    (alarm (i 8))
+    (advance (i 6))
+    (advance (i 5))
+    (advance (i 4))
+    (advance (i 3))
+    (alarm (i 7))
+    (alarm (i 6))
+    (alarm (i 5))
+    (alarm (i 4))
+    (advance (i 2))
+    (advance (i 1))
+    (advance (i 0)) |}]
+;;
+
 let%expect_test "[is_empty], [length]" =
   let t = create_unit () in
   let show () =
@@ -1522,6 +1786,28 @@ let%expect_test "[next_alarm_fires_at]" =
   advance_clock (gibi_nanos 3.);
   [%expect {|
     (next_alarm_fires_after ()) |}]
+;;
+
+let%expect_test "[next_alarm_fires_at] with an alarm at [max_time]" =
+  let t = create_unit ~level_bits:[ 1 ] ~extend_to_max_num_bits:true () in
+  ignore (add t ~at:max_time () : _ Alarm.t);
+  print_s [%sexp (next_alarm_fires_at t : Time_ns.t option)];
+  [%expect {| () |}];
+  require_does_raise [%here] (fun () -> next_alarm_fires_at_exn t);
+  [%expect
+    {|
+    ("Timing_wheel.next_alarm_fires_at_exn with all alarms in max interval"
+     (timing_wheel (
+       (config (
+         (alarm_precision 1.073741824s)
+         (level_bits (
+           1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1))))
+       (start            "1970-01-01 00:00:00Z")
+       (max_interval_num 4_294_967_295)
+       (now              "1970-01-01 00:00:00Z")
+       (alarms ((
+         (at    "2116-02-20 23:53:38.427387903Z")
+         (value _))))))) |}]
 ;;
 
 let%expect_test "[fire_past_alarms] - all possible subsets of alarms in the first \

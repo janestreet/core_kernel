@@ -89,6 +89,7 @@ module type Interval_num = sig
     val max : t -> t -> t
     val zero : t
     val one : t
+    val max_value : t
     val of_int63 : Int63.t -> t
     val to_int63 : t -> Int63.t
     val of_int : int -> t
@@ -110,15 +111,6 @@ module type Interval_num = sig
   val one : t
   val min_value : t
   val max_value : t
-
-  (** To avoid issues with arithmetic overflow, the implementation restricts interval
-      numbers to be [<= max_representable], where:
-
-      {[
-        max_representable = 1 lsl Level_bits.max_num_bits - 1
-      ]} *)
-  val max_representable : t
-
   val of_int63 : Int63.t -> t
   val to_int63 : t -> Int63.t
   val of_int : int -> t
@@ -411,7 +403,8 @@ module type Timing_wheel = sig
   val max_alarm_time_in_min_interval_exn : 'a t -> Time_ns.t
 
   (** [next_alarm_fires_at t] returns the minimum time to which the clock can be advanced
-      such that an alarm will fire, or [None] if [t] has no alarms.  If
+      such that an alarm will fire, or [None] if [t] has no alarms (or all alarms
+      are in the max interval, and hence cannot fire).  If
       [next_alarm_fires_at t = Some next], then for the minimum alarm time [min] that
       occurs in [t], it is guaranteed that: [next - alarm_precision t <= min < next].
 
