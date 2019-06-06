@@ -95,7 +95,7 @@ module Alarm_precision = struct
       (8.589934592s 8_589_934_592ns) |}]
   ;;
 
-  let%expect_test ("[of_span_floor_pow2_ns]"[@tags "64-bits-only"]) =
+  let%expect_test "[of_span_floor_pow2_ns]" =
     List.iter
       [ about_one_day
       ; about_one_second
@@ -537,7 +537,7 @@ let%expect_test "[min_allowed_alarm_interval_num], [max_allowed_alarm_interval_n
        (max_allowed_alarm_interval_num 23)) |}]
 ;;
 
-let%expect_test ("[is_empty], [interval_num], [length], [mem]"[@tags "64-bits-only"]) =
+let%expect_test "[is_empty], [interval_num], [length], [mem]" =
   let t = create_unit () ~level_bits:[ 1 ] in
   require [%here] (is_empty t);
   require [%here] (length t = 0);
@@ -573,11 +573,8 @@ let%expect_test ("[is_empty], [interval_num], [length], [mem]"[@tags "64-bits-on
     {|
       ((length   1)
        (is_empty false)
-       (interval_num1 (
-         Error (
-           "Timing_wheel.Priority_queue got invalid elt"
-           (elt "<Pool.Pointer.t: 0x00000001>"))))
-       (interval_num2 (Ok 0))
+       (interval_num1 (Error "Timing_wheel got invalid alarm"))
+       (interval_num2 (Ok    0))
        (mem1 false)
        (mem2 true)) |}];
   reschedule_at_interval_num t a2 ~at:(Interval_num.of_int 1);
@@ -586,11 +583,8 @@ let%expect_test ("[is_empty], [interval_num], [length], [mem]"[@tags "64-bits-on
     {|
       ((length   1)
        (is_empty false)
-       (interval_num1 (
-         Error (
-           "Timing_wheel.Priority_queue got invalid elt"
-           (elt "<Pool.Pointer.t: 0x00000001>"))))
-       (interval_num2 (Ok 1))
+       (interval_num1 (Error "Timing_wheel got invalid alarm"))
+       (interval_num2 (Ok    1))
        (mem1 false)
        (mem2 true)) |}];
   require_does_raise [%here] (fun () ->
@@ -604,14 +598,8 @@ let%expect_test ("[is_empty], [interval_num], [length], [mem]"[@tags "64-bits-on
     {|
       ((length   0)
        (is_empty true)
-       (interval_num1 (
-         Error (
-           "Timing_wheel.Priority_queue got invalid elt"
-           (elt "<Pool.Pointer.t: 0x00000001>"))))
-       (interval_num2 (
-         Error (
-           "Timing_wheel.Priority_queue got invalid elt"
-           (elt "<Pool.Pointer.t: 0x40000008>"))))
+       (interval_num1 (Error "Timing_wheel got invalid alarm"))
+       (interval_num2 (Error "Timing_wheel got invalid alarm"))
        (mem1 false)
        (mem2 false)) |}]
 ;;
@@ -1462,20 +1450,14 @@ let%expect_test "access to a removed alarm doesn't segfault" =
   [%expect {|
     false |}];
   require_does_raise [%here] (fun _ -> Alarm.interval_num t alarm);
-  [%expect
-    {|
-    ("Timing_wheel.Priority_queue got invalid elt"
-     (elt "<Pool.Pointer.t: 0x00000001>")) |}];
+  [%expect {|
+    "Timing_wheel got invalid alarm" |}];
   require_does_raise [%here] (fun _ -> Alarm.at t alarm);
-  [%expect
-    {|
-    ("Timing_wheel.Priority_queue got invalid elt"
-     (elt "<Pool.Pointer.t: 0x00000001>")) |}];
+  [%expect {|
+    "Timing_wheel got invalid alarm" |}];
   require_does_raise [%here] (fun _ -> Alarm.value t alarm);
-  [%expect
-    {|
-    ("Timing_wheel.Priority_queue got invalid elt"
-     (elt "<Pool.Pointer.t: 0x00000001>")) |}]
+  [%expect {|
+    "Timing_wheel got invalid alarm" |}]
 ;;
 
 (* Check that [reschedule] and [reschedule_at_interval_num] leave an alarm in the timing

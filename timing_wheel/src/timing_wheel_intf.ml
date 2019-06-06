@@ -296,11 +296,10 @@ module type Timing_wheel = sig
 
   (** [interval_num t time] returns the number of the interval that [time] is in, where
       [0] is the interval that starts at [Time_ns.epoch].  [interval_num] raises if
-      [Time_ns.( < ) time Time_ns.epoch].
-
-      [now_interval_num t] equals [interval_num t (now t)]. *)
+      [Time_ns.( < ) time Time_ns.epoch]. *)
   val interval_num : _ t -> Time_ns.t -> Interval_num.t
 
+  (** [now_interval_num t = interval_num t (now t)]. *)
   val now_interval_num : _ t -> Interval_num.t
 
   (** [interval_num_start t n] is the start of the [n]'th interval in [t], i.e.
@@ -311,16 +310,15 @@ module type Timing_wheel = sig
 
       {[
         interval_num_start t (interval_num t time)
-      ]}
-
-      [interval_start] raises in the same cases that [interval_num] does. *)
+      ]} *)
   val interval_num_start : _ t -> Interval_num.t -> Time_ns.t
 
+  (** [interval_start] raises in the same cases that [interval_num] does. *)
   val interval_start : _ t -> Time_ns.t -> Time_ns.t
 
   (** [advance_clock t ~to_ ~handle_fired] advances [t]'s clock to [to_].  It fires and
-      removes all alarms [a] in [t] with [Time_ns.(<) (Alarm.at t a) (interval_start t to_)],
-      applying [handle_fired] to each such [a].
+      removes all alarms [a] in [t] with [Time_ns.(<) (Alarm.at t a) (interval_start t
+      to_)], applying [handle_fired] to each such [a].
 
       If [to_ <= now t], then [advance_clock] does nothing.
 
@@ -353,13 +351,13 @@ module type Timing_wheel = sig
 
   (** [add t ~at a] adds a new value [a] to [t] and returns an alarm that can later be
       supplied to [remove] the alarm from [t].  [add] raises if [interval_num t at <
-      now_interval_num t || at > max_allowed_alarm_time t].
-
-      [add_at_interval_num t ~at a] is equivalent to [add t ~at:(interval_num_start t at)
-      a]. *)
+      now_interval_num t || at > max_allowed_alarm_time t]. *)
   val add : 'a t -> at:Time_ns.t -> 'a -> 'a Alarm.t
 
+  (** [add_at_interval_num t ~at a] is equivalent to [add t ~at:(interval_num_start t at)
+      a]. *)
   val add_at_interval_num : 'a t -> at:Interval_num.t -> 'a -> 'a Alarm.t
+
   val mem : 'a t -> 'a Alarm.t -> bool
 
   (** [remove t alarm] removes [alarm] from [t].  [remove] raises if [not (mem t
@@ -368,50 +366,46 @@ module type Timing_wheel = sig
 
   (** [reschedule t alarm ~at] mutates [alarm] so that it will fire at [at], i.e. so that
       [Alarm.at t alarm = at].  [reschedule] raises if [not (mem t alarm)] or if [at] is
-      an invalid time for [t], in the same situations that [add] raises.
+      an invalid time for [t], in the same situations that [add] raises. *)
+  val reschedule : 'a t -> 'a Alarm.t -> at:Time_ns.t -> unit
 
-      [reschedule_at_interval_num t alarm ~at] is equivalent to:
-
+  (** [reschedule_at_interval_num t alarm ~at] is equivalent to:
       {[
         reschedule t alarm ~at:(interval_num_start t at)
       ]} *)
-  val reschedule : 'a t -> 'a Alarm.t -> at:Time_ns.t -> unit
-
   val reschedule_at_interval_num : 'a t -> 'a Alarm.t -> at:Interval_num.t -> unit
 
   (** [clear t] removes all alarms from [t]. *)
   val clear : _ t -> unit
 
   (** [min_alarm_interval_num t] is the minimum [Alarm.interval_num] of all alarms in
-      [t]. [min_alarm_interval_num_exn t] is the same, except it raises if [is_empty
-      t]. *)
+      [t]. *)
   val min_alarm_interval_num : _ t -> Interval_num.t option
 
+  (** [min_alarm_interval_num_exn t] is like [min_alarm_interval_num], except it raises if
+      [is_empty t]. *)
   val min_alarm_interval_num_exn : _ t -> Interval_num.t
 
   (** [max_alarm_time_in_min_interval t] returns the maximum [Alarm.at] over all alarms in
-      [t] whose [Alarm.interval_num] is [min_alarm_interval_num t].
-
-      [max_alarm_time_in_min_interval_exn t] is the same as
-      [max_alarm_time_in_min_interval], except that it raises if [is_empty t].
-
-      This function is useful for advancing to the [min_alarm_interval_num] of a timing
-      wheel and then calling [fire_past_alarms] to fire the alarms in that interval.  That
-      is useful when simulating time, to ensure that alarms are processed in order. *)
+      [t] whose [Alarm.interval_num] is [min_alarm_interval_num t].  This function is
+      useful for advancing to the [min_alarm_interval_num] of a timing wheel and then
+      calling [fire_past_alarms] to fire the alarms in that interval.  That is useful when
+      simulating time, to ensure that alarms are processed in order. *)
   val max_alarm_time_in_min_interval : 'a t -> Time_ns.t option
 
+  (** [max_alarm_time_in_min_interval_exn t] is like [max_alarm_time_in_min_interval],
+      except that it raises if [is_empty t]. *)
   val max_alarm_time_in_min_interval_exn : 'a t -> Time_ns.t
 
   (** [next_alarm_fires_at t] returns the minimum time to which the clock can be advanced
       such that an alarm will fire, or [None] if [t] has no alarms (or all alarms
       are in the max interval, and hence cannot fire).  If
       [next_alarm_fires_at t = Some next], then for the minimum alarm time [min] that
-      occurs in [t], it is guaranteed that: [next - alarm_precision t <= min < next].
-
-      [next_alarm_fires_at_exn] is the same as [next_alarm_fires_at], except that it
-      raises if [is_empty t]. *)
+      occurs in [t], it is guaranteed that: [next - alarm_precision t <= min < next]. *)
   val next_alarm_fires_at : _ t -> Time_ns.t option
 
+  (** [next_alarm_fires_at_exn] is like [next_alarm_fires_at], except that it raises if
+      [is_empty t]. *)
   val next_alarm_fires_at_exn : _ t -> Time_ns.t
 
   (*_ See the Jane Street Style Guide for an explanation of [Private] submodules:

@@ -129,12 +129,7 @@ let to_int_us t = Int63.(to_int_exn (t / microsecond))
 let to_int_ms t = Int63.(to_int_exn (t / millisecond))
 let to_int_sec t = Int63.(to_int_exn (t / second))
 let to_int63_seconds_round_down_exn t = t /% second
-
-let of_int_ns =
-  if arch_sixtyfour
-  then fun i -> of_int63_ns (Int63.of_int i)
-  else fun _ -> failwith "Time_ns.Span.of_int_ns: unsupported on 32bit machines"
-;;
+let of_int_ns i = of_int63_ns (Int63.of_int i)
 
 let to_int_ns =
   if arch_sixtyfour

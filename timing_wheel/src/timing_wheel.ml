@@ -656,10 +656,7 @@ end = struct
     let to_external t = t
 
     let of_external_exn pool t =
-      if is_valid pool t
-      then t
-      else
-        raise_s [%message "Timing_wheel.Priority_queue got invalid elt" ~elt:(t : _ t)]
+      if is_valid pool t then t else raise_s [%message "Timing_wheel got invalid alarm"]
     ;;
 
     let unlink pool t =

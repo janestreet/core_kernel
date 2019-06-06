@@ -4,5 +4,5 @@
 (alias (name DEFAULT) (deps main.exe)
  (action (bash "./main.exe > /dev/null")))
 
-(alias (name javascript) (deps main.bc.js)
+(alias (name javascript-runtest) (deps main.bc.js)
  (action (bash "%{NODE} main.bc.js > /dev/null")))

@@ -48,11 +48,7 @@ let to_int_ns_since_epoch =
   else fun _ -> failwith "Time_ns.to_int_ns_since_epoch: unsupported on 32bit machines"
 ;;
 
-let of_int_ns_since_epoch =
-  if arch_sixtyfour
-  then fun i -> of_int63_ns_since_epoch (Int63.of_int i)
-  else fun _ -> failwith "Time_ns.of_int_ns_since_epoch: unsupported on 32bit machines"
-;;
+let of_int_ns_since_epoch i = of_int63_ns_since_epoch (Int63.of_int i)
 
 let to_time_float_round_nearest t =
   Time_float.of_span_since_epoch
