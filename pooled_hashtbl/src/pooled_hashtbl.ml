@@ -514,6 +514,20 @@ let iteri =
 let iter t ~f = iteri t ~f:(fun ~key:_ ~data -> f data)
 let iter_keys t ~f = iteri t ~f:(fun ~key ~data:_ -> f key)
 
+let rec choose_nonempty t i =
+  let entry = table_get t.table i in
+  if Entry.is_null entry
+  then choose_nonempty t (i + 1)
+  else Entry.key t.entries entry, Entry.data t.entries entry
+;;
+
+let choose t = if t.length = 0 then None else Some (choose_nonempty t 0)
+
+let choose_exn t =
+  if t.length = 0 then raise_s [%message "[Pooled_hashtbl.choose_exn] of empty hashtbl"];
+  choose_nonempty t 0
+;;
+
 let fold =
   let rec fold_entries t e acc f =
     if Entry.is_null e
@@ -860,6 +874,8 @@ module Accessors = struct
     | Remove
     | Set_to of 'a
 
+  let choose = choose
+  let choose_exn = choose_exn
   let clear = clear
   let copy = copy
   let remove = remove

@@ -18,6 +18,14 @@ module Expect_test_config = struct
     include T
   end
 
+  module IO_run = IO
+
+  module IO_flush = struct
+    include IO
+
+    let to_run t = t
+  end
+
   open T
 
   let flush () = return ()

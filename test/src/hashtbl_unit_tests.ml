@@ -627,6 +627,23 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_intf.Hashtbl) = stru
                  ~expect:(Map.change map key ~f:(fun _ -> data_opt)))
          ;;
 
+         let choose = Hashtbl.choose
+         let choose_exn = Hashtbl.choose_exn
+
+         let%test_unit _ =
+           Qc.test
+             constructor_gen
+             ~sexp_of:[%sexp_of: constructor]
+             ~f:(fun constructor ->
+               let map, t = map_and_table constructor in
+               [%test_result: bool]
+                 (is_some (choose t))
+                 ~expect:(not (Map.is_empty map));
+               [%test_result: bool]
+                 (is_some (Option.try_with (fun () -> choose_exn t)))
+                 ~expect:(not (Map.is_empty map)))
+         ;;
+
          let update = Hashtbl.update
 
          let%test_unit _ =
@@ -2112,6 +2129,8 @@ module Make_mutation_in_callbacks (Hashtbl : Hashtbl_intf.Hashtbl) = struct
 
        let hash = Hashtbl.hash
        let hash_param = Hashtbl.hash_param
+       let choose = Hashtbl.choose
+       let choose_exn = Hashtbl.choose_exn
        let create = Hashtbl.create
        let create_mapped = Hashtbl.create_mapped
        let create_with_key = Hashtbl.create_with_key

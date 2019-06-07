@@ -89,4 +89,4 @@ module Using_hashable = struct
 end
 
 let hashable = Private.hashable
-let create ?growth_allowed ?size m () = create ?growth_allowed ?size m
+let create ?growth_allowed ?size m = create ?growth_allowed ?size m

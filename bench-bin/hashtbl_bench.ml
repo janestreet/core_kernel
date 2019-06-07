@@ -272,6 +272,8 @@ end = struct
         stage (fun () -> ignore (sexp_of_key t (Example.random_key r `present) : Sexp.t)))
     ;;
 
+    let choose = Table.choose
+    let choose_exn = Table.choose_exn
     let copy = Table.copy
 
     let () =

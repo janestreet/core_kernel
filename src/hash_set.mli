@@ -10,12 +10,7 @@ type 'a t = 'a Base.Hash_set.t [@@deriving sexp_of]
     can use [Hash_set.Poly.t], which does have [[@@deriving sexp]], to use polymorphic
     comparison and hashing. *)
 
-include
-  Creators_generic
-  with type 'a t := 'a t
-  with type 'a elt = 'a
-  with type ('key, 'z) create_options := ('key, 'z) create_options
-
+include Creators with type 'a t := 'a t
 include Accessors with type 'a t := 'a t with type 'a elt := 'a elt
 
 val hashable : 'key t -> 'key Hashtbl.Hashable.t
