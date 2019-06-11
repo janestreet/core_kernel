@@ -154,6 +154,10 @@ module Arbitrary_order = struct
   let to_list t = List.rev_append t.front t.back
   let to_array t = Array.of_list (to_list t)
 
+  let to_sequence t =
+    Sequence.append (Sequence.of_list t.front) (Sequence.of_list t.back)
+  ;;
+
   let sum (type a) (module M : Container.Summable with type t = a) t ~f =
     let open M in
     List.sum (module M) t.front ~f + List.sum (module M) t.back ~f
@@ -232,6 +236,18 @@ module Front_to_back = struct
   let of_list list = make ~length:(List.length list) ~front:list ~back:[]
   let to_list t = t.front @ List.rev t.back
 
+  let to_sequence t =
+    Sequence.append (Sequence.of_list t.front) (Sequence.of_list (List.rev t.back))
+  ;;
+
+  let of_sequence sequence =
+    let length, back =
+      Sequence.fold sequence ~init:(0, []) ~f:(fun (length, acc) a ->
+        length + 1, a :: acc)
+    in
+    make ~length ~front:[] ~back
+  ;;
+
   include Make_container (struct
       let to_list = to_list
     end)
@@ -240,6 +256,18 @@ end
 module Back_to_front = struct
   let to_list t = t.back @ List.rev t.front
   let of_list list = make ~length:(List.length list) ~back:list ~front:[]
+
+  let to_sequence t =
+    Sequence.append (Sequence.of_list t.back) (Sequence.of_list (List.rev t.front))
+  ;;
+
+  let of_sequence sequence =
+    let length, front =
+      Sequence.fold sequence ~init:(0, []) ~f:(fun (length, acc) a ->
+        length + 1, a :: acc)
+    in
+    make ~length ~front ~back:[]
+  ;;
 
   include Make_container (struct
       let to_list = to_list

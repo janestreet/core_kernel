@@ -65,6 +65,18 @@ val to_list : 'a t -> 'a list
 (** [of_list] is the inverse of [to_list]. Complexity: O(n). *)
 val of_list : 'a list -> 'a t
 
+(** [to_sequence] returns a [Sequence.t] of the elements in [t] in order from
+    from least-recently-added (at the head) to most-recently-added (at the
+    tail). Complexity (if the sequence is fully traversed): O(n).
+
+    {[to_list t = Sequence.to_list (to_sequence t)]}
+*)
+val to_sequence : 'a t -> 'a Sequence.t
+
+(** [of_sequence] is the inverse of [to_sequence]. Complexity (if the sequence
+    is fully traversed): O(n). *)
+val of_sequence : 'a Sequence.t -> 'a t
+
 (** Complexity: O(1). *)
 val length : 'a t -> int
 

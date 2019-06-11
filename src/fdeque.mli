@@ -22,6 +22,9 @@ include Monad.S with type 'a t := 'a t
 (** Traverse deque elements in arbitrary order. *)
 module Arbitrary_order : sig
   include Container.S1 with type 'a t := 'a t
+
+  (** This does not match the ordering of [to_list] *)
+  val to_sequence : 'a t -> 'a Sequence.t
 end
 
 (** Traverse deque elements front-to-back. Incurs up to O(n) additional time and space
@@ -30,6 +33,9 @@ module Front_to_back : sig
   val of_list : 'a list -> 'a t
 
   include Container.S1 with type 'a t := 'a t
+
+  val to_sequence : 'a t -> 'a Sequence.t
+  val of_sequence : 'a Sequence.t -> 'a t
 end
 
 (** Traverse deque elements back-to-front. Incurs up to O(n) additional time and space
@@ -38,6 +44,9 @@ module Back_to_front : sig
   val of_list : 'a list -> 'a t
 
   include Container.S1 with type 'a t := 'a t
+
+  val to_sequence : 'a t -> 'a Sequence.t
+  val of_sequence : 'a Sequence.t -> 'a t
 end
 
 (** The empty deque. *)

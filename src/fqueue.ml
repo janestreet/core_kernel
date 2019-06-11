@@ -10,3 +10,5 @@ let top = peek_front
 let dequeue_exn = dequeue_front_exn
 let dequeue = dequeue_front
 let discard_exn = drop_front_exn
+let to_sequence = Front_to_back.to_sequence
+let of_sequence = Front_to_back.of_sequence
