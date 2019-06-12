@@ -11,12 +11,12 @@ let raise_instead_of_exit =
   | `Not_testing -> false
 ;;
 
+exception Exit_called of { status : int } [@@deriving sexp_of]
+
 (* [raise_instead_of_exit]-respecting wrappers for [exit] and functions that call it *)
 include struct
   let exit status =
-    if raise_instead_of_exit
-    then raise_s [%message "exit called" (status : int)]
-    else exit status
+    if raise_instead_of_exit then raise (Exit_called { status }) else exit status
   ;;
 
   module Exn = struct
@@ -1250,6 +1250,7 @@ module Base = struct
       (match exn with
        | Failed_to_parse_command_line _
          when Cmdline.ends_in_complete args -> exit 0
+       | Exit_called { status } -> exit status
        | _ ->
          let exn_str =
            match exn with

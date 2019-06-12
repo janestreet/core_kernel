@@ -1026,7 +1026,7 @@ let%expect_test "[Private.interval_num_internal]" =
                    ~alarm_precision:
                      (Alarm_precision.of_span_floor_pow2_ns
                         (Time_ns.Span.of_int63_ns (Int63.of_int 4)))
-                   ~time:(Time_ns.of_int63_ns_since_epoch (Int63.of_int time)))
+                   ~time:(Time_ns.of_int_ns_since_epoch time))
               : int )]
   done;
   [%expect
