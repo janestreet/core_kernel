@@ -29,3 +29,6 @@ val value_exn : 'a t -> 'a
 
 (** It is safe to call [unsafe_value t] iff [is_some t]. *)
 val unsafe_value : 'a t -> 'a
+
+module Optional_syntax :
+  Optional_syntax.S1 with type 'a t := 'a t and type 'a value := 'a
