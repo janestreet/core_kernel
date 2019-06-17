@@ -1,4 +1,4 @@
-open Core
+open! Core
 open Core_bench.Std
 module Always = Type_immediacy.Always
 
