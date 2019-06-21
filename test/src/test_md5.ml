@@ -56,9 +56,7 @@ let%test_unit "Md5.digest_file_blocking" =
   let our_digest = digest_file_blocking file in
   let actual_digest = Md5.of_binary_exn (Caml.Digest.file file) in
   [%test_result: Md5.t] our_digest ~expect:actual_digest;
-  [%test_pred: Md5.t Or_error.t]
-    Result.is_error
-    (Or_error.try_with (fun () -> digest_file_blocking cwd))
+  assert (Exn.does_raise (fun () -> digest_file_blocking cwd))
 ;;
 
 let%test_unit "Md5.digest_subbigstring" =

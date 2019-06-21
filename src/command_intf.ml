@@ -437,13 +437,20 @@ module type Command = sig
           arguments specified by [spec]. *)
       val anon : 'a Anons.t -> 'a t
 
+      module If_nothing_chosen : sig
+        type (_, _) t =
+          | Default_to : 'a -> ('a, 'a) t
+          | Raise : ('a, 'a) t
+          | Return_none : ('a, 'a option) t
+      end
+
       (** [choose_one clauses ~if_nothing_chosen] expresses a sum type.  It raises if more
           than one of [clauses] is [Some _].  When [if_nothing_chosen = `Raise], it also
           raises if none of [clauses] is [Some _]. *)
       val choose_one
         :  'a option t list
-        -> if_nothing_chosen:[`Default_to of 'a | `Raise]
-        -> 'a t
+        -> if_nothing_chosen:('a, 'b) If_nothing_chosen.t
+        -> 'b t
     end
 
     (** @open *)

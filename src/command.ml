@@ -1548,7 +1548,18 @@ module Base = struct
       String.concat ~sep:"," names
     ;;
 
-    let choose_one ts ~if_nothing_chosen =
+    module If_nothing_chosen = struct
+      type (_, _) t =
+        | Default_to : 'a -> ('a, 'a) t
+        | Raise : ('a, 'a) t
+        | Return_none : ('a, 'a option) t
+    end
+
+    let choose_one
+          (type a b)
+          (ts : a option param list)
+          ~(if_nothing_chosen : (a, b) If_nothing_chosen.t)
+      =
       let ts = List.map ts ~f:(fun t -> to_string_for_choose_one t, t) in
       Option.iter
         (List.find_a_dup (List.map ~f:fst ts) ~compare:String.compare)
@@ -1566,11 +1577,16 @@ module Base = struct
              | None -> Some (name, value)
              | Some (name', _) -> die "Cannot pass both %s and %s" name name' ())))
       |> map ~f:(function
-        | Some (_, value) -> value
+        | Some (_, value) ->
+          (match if_nothing_chosen with
+           | Default_to (_ : a) -> (value : b)
+           | Raise -> value
+           | Return_none -> Some value)
         | None ->
           (match if_nothing_chosen with
-           | `Default_to value -> value
-           | `Raise ->
+           | Default_to value -> value
+           | Return_none -> None
+           | Raise ->
              die
                "Must pass one of these: %s"
                (String.concat ~sep:"; " (List.map ~f:fst ts))
@@ -2928,10 +2944,17 @@ module Param = struct
 
     val anon : 'a Anons.t -> 'a t
 
+    module If_nothing_chosen : sig
+      type (_, _) t =
+        | Default_to : 'a -> ('a, 'a) t
+        | Raise : ('a, 'a) t
+        | Return_none : ('a, 'a option) t
+    end
+
     val choose_one
       :  'a option t list
-      -> if_nothing_chosen:[`Default_to of 'a | `Raise]
-      -> 'a t
+      -> if_nothing_chosen:('a, 'b) If_nothing_chosen.t
+      -> 'b t
   end
 
   module A = struct
@@ -2957,6 +2980,7 @@ module Param = struct
   let flag_optional_with_default_doc = Spec.flag_optional_with_default_doc
 
   module Arg_type = Arg_type
+  module If_nothing_chosen = Spec.If_nothing_chosen
   include Arg_type.Export
 
   include struct

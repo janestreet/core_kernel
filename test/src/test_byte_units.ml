@@ -69,7 +69,9 @@ let print_all_byte_units fmt =
 ;;
 
 let%expect_test ("Byte_units.to_string"[@tags "no-js"]) =
-  (* disabling test in javascript as it has subtly different rounding breaking this test. *)
+  (* disabling test in javascript as it has subtly different rounding breaking this test.
+
+     See https://github.com/ocsigen/js_of_ocaml/issues/796. *)
   print_all_byte_units !"%{Byte_units}";
   [%expect
     {|
@@ -140,7 +142,9 @@ let%expect_test "Byte_units.to_string_short" =
 ;;
 
 let%expect_test ("Byte_units.sexp_of_t"[@tags "no-js"]) =
-  (* disabling test in javascript as it has subtly different rounding breaking this test. *)
+  (* disabling test in javascript as it has subtly different rounding breaking this test.
+
+     See https://github.com/ocsigen/js_of_ocaml/issues/796. *)
   print_all_byte_units !"%{sexp:Byte_units.t}";
   [%expect
     {|

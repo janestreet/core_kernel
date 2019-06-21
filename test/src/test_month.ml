@@ -45,7 +45,7 @@ let%test_unit _ =
 let%test _ = Set.equal (Set.of_list [ Jan ]) (Set.t_of_sexp Sexp.(List [ Atom "0" ]))
 let%test _ = Poly.( = ) (sexp_of_t Jan) (Sexp.Atom "Jan")
 let%test _ = Jan = t_of_sexp (Sexp.Atom "Jan")
-let%test _ = Option.is_none (Option.try_with (fun () -> t_of_sexp (Sexp.Atom "0")))
+let%test _ = Exn.does_raise (fun () -> t_of_sexp (Sexp.Atom "0"))
 let%test _ = shift Jan 12 = Jan
 let%test _ = shift Jan (-12) = Jan
 let%test _ = shift Jan 16 = May

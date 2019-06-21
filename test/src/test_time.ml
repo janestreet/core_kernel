@@ -1204,11 +1204,9 @@ module Ofday = struct
         let str = sprintf "%d%s%s" hr zeroes suffix in
         assert (t = of_string str))
     in
-    let failure f = assert (Option.is_none (Option.try_with f)) in
+    let failure f = assert (Exn.does_raise f) in
     let success f =
-      match Or_error.try_with f with
-      | Ok _ -> ()
-      | Error e -> Error.raise (Error.tag e ~tag:"expected success")
+      Or_error.try_with f |> Or_error.tag ~tag:"expected success" |> Or_error.ok_exn
     in
     (* Test everything but hour 12 and 0 *)
     let first_half_of_day_except_0_and_12 = [ 1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 11 ] in

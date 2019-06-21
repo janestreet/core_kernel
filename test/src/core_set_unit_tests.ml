@@ -517,8 +517,7 @@ module Unit_tests (Elt : sig
     | `Set ->
       let ts = [ Set.empty (); Set.of_list [ Elt.of_int 13 ] ] in
       List.iter ts ~f:(fun t1 ->
-        List.iter ts ~f:(fun t2 ->
-          assert (Result.is_error (Result.try_with (fun () -> Poly.equal t1 t2)))))
+        List.iter ts ~f:(fun t2 -> assert (Exn.does_raise (fun () -> Poly.equal t1 t2))))
   ;;
 
   let to_map _ = assert false

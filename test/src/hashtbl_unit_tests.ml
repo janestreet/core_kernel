@@ -640,8 +640,8 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_intf.Hashtbl) = stru
                  (is_some (choose t))
                  ~expect:(not (Map.is_empty map));
                [%test_result: bool]
-                 (is_some (Option.try_with (fun () -> choose_exn t)))
-                 ~expect:(not (Map.is_empty map)))
+                 (Exn.does_raise (fun () -> choose_exn t))
+                 ~expect:(Map.is_empty map))
          ;;
 
          let update = Hashtbl.update
