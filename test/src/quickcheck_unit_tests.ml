@@ -13,7 +13,7 @@ let%expect_test ("Quickcheck.Let_syntax"[@tags "64-bits-only"]) =
           Char.quickcheck_generator
           Float.quickcheck_generator
       and choice = variant2 String.quickcheck_generator Int.quickcheck_generator in
-      [%sexp (triple : bool * char * float), (choice : [`A of string | `B of int])]]
+      [%sexp (triple : bool * char * float), (choice : [ `A of string | `B of int ])]]
   in
   Quickcheck.iter quickcheck_generator ~trials:10 ~f:print_s;
   [%expect
@@ -42,7 +42,8 @@ let%expect_test "ppx_quickcheck" =
   end
   in
   List.iter
-    ~f:(fun predicate -> Quickcheck.test_can_generate M.quickcheck_generator ~f:predicate)
+    ~f:(fun predicate ->
+      Quickcheck.test_can_generate M.quickcheck_generator ~f:predicate)
     [ (function
         | M.A -> true
         | _ -> false)
@@ -247,7 +248,7 @@ module Test (S : sig
 
       let%test_unit _ =
         test_can_generate Float.gen_finite ~f:(fun f ->
-          not (Float.equal f 0.) && Float.equal (f +. 1.0) 1.0)
+          (not (Float.equal f 0.)) && Float.equal (f +. 1.0) 1.0)
       ;;
 
       let%test_unit _ =
@@ -339,10 +340,10 @@ module Test (S : sig
 
       let%test_unit _ =
         can_generate (fun c ->
-          not (Char.is_digit c)
-          && not (Char.is_lowercase c)
-          && not (Char.is_uppercase c)
-          && not (Char.is_print c)
+          (not (Char.is_digit c))
+          && (not (Char.is_lowercase c))
+          && (not (Char.is_uppercase c))
+          && (not (Char.is_print c))
           && not (Char.is_whitespace c))
       ;;
 
@@ -366,7 +367,10 @@ module Test (S : sig
       ;;
 
       (* exported generators: *)
-      let%test_unit "default" = test_coverage Char.quickcheck_generator ~f:(fun _ -> true)
+      let%test_unit "default" =
+        test_coverage Char.quickcheck_generator ~f:(fun _ -> true)
+      ;;
+
       let%test_unit "digit" = test_coverage Char.gen_digit ~f:Char.is_digit
       let%test_unit "lowercase" = test_coverage Char.gen_lowercase ~f:Char.is_lowercase
       let%test_unit "uppercase" = test_coverage Char.gen_uppercase ~f:Char.is_uppercase
@@ -866,20 +870,23 @@ module Shrinker = struct
 
       type var2 =
         [ `A of int
-        | `B of int ]
+        | `B of int
+        ]
       [@@deriving sexp, compare]
 
       type var3 =
         [ `A of int
         | `B of int
-        | `C of int ]
+        | `C of int
+        ]
       [@@deriving sexp, compare]
 
       type var4 =
         [ `A of int
         | `B of int
         | `C of int
-        | `D of int ]
+        | `D of int
+        ]
       [@@deriving sexp, compare]
 
       type var5 =
@@ -887,7 +894,8 @@ module Shrinker = struct
         | `B of int
         | `C of int
         | `D of int
-        | `E of int ]
+        | `E of int
+        ]
       [@@deriving sexp, compare]
 
       type var6 =
@@ -896,7 +904,8 @@ module Shrinker = struct
         | `C of int
         | `D of int
         | `E of int
-        | `F of int ]
+        | `F of int
+        ]
       [@@deriving sexp, compare]
 
       let%test_unit "variant2 shrinker" =

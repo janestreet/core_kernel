@@ -7,8 +7,7 @@ include Command_intf
 let raise_instead_of_exit =
   match Ppx_inline_test_lib.Runtime.testing with
   | `Testing `Am_test_runner -> true
-  | `Testing `Am_child_of_test_runner
-  | `Not_testing -> false
+  | `Testing `Am_child_of_test_runner | `Not_testing -> false
 ;;
 
 exception Exit_called of { status : int } [@@deriving sexp_of]
@@ -244,7 +243,7 @@ module Arg_type = struct
         let choices =
           match
             List.filter (complete_elt env ~part:suffix) ~f:(fun choice ->
-              not (String.mem choice ',') && is_allowed choice)
+              (not (String.mem choice ',')) && is_allowed choice)
           with
           (* If there is exactly one choice to auto-complete, add a second choice with
              a trailing comma so that auto-completion will go to the end but bash
@@ -296,8 +295,8 @@ module Flag = struct
       ; aliases : string list
       ; action : action
       ; doc : string
-      ; check_available : [`Optional | `Required of Env.t -> unit]
-      ; name_matching : [`Prefix | `Full_match_required]
+      ; check_available : [ `Optional | `Required of Env.t -> unit ]
+      ; name_matching : [ `Prefix | `Full_match_required ]
       }
 
     let wrap_if_optional t x =
@@ -318,8 +317,7 @@ module Flag = struct
           | No_arg _ -> None
           | Rest _ | Arg _ ->
             (match String.lsplit2 doc ~on:' ' with
-             | None
-             | Some ("", _) ->
+             | None | Some ("", _) ->
                (match action with
                 | Arg _ -> Some ("_", doc)
                 | Rest _ | No_arg _ -> None)
@@ -645,8 +643,8 @@ module Anons = struct
             | Many t -> invariant t
             | Maybe Zero -> failwith "Maybe Zero should be just Zero"
             | Maybe t -> invariant t
-            | Concat []
-            | Concat [ _ ] -> failwith "Flatten zero and one-element Concat"
+            | Concat [] | Concat [ _ ] ->
+              failwith "Flatten zero and one-element Concat"
             | Concat ts -> List.iter ts ~f:invariant
             | Ad_hoc _ -> ())
         ;;
@@ -734,8 +732,7 @@ module Anons = struct
         let car, cdr =
           List.fold cdr ~init:(car, []) ~f:(fun (t1, acc) t2 ->
             match t1, t2 with
-            | Zero, t
-            | t, Zero -> t, acc
+            | Zero, t | t, Zero -> t, acc
             | _, _ ->
               if is_fixed_arity t1
               then t2, t1 :: acc
@@ -875,8 +872,9 @@ module Anons = struct
         failwith "BUG: asked for final value when doing completion"
     ;;
 
-    let rec consume : type a.
-      a t -> string -> for_completion:bool -> (Env.t -> Env.t) * a t =
+    let rec consume
+      : type a. a t -> string -> for_completion:bool -> (Env.t -> Env.t) * a t
+      =
       fun t arg ~for_completion ->
         match t with
         | Done _ -> die "too many anonymous arguments" ()
@@ -1089,7 +1087,7 @@ module Base = struct
     ; readme : (unit -> string) option
     ; flags : Flag.Internal.t String.Map.t
     ;
-      anons : unit -> ([`Parse_args] -> [`Run_main] -> unit) Anons.Parser.t
+      anons : unit -> ([ `Parse_args ] -> [ `Run_main ] -> unit) Anons.Parser.t
     ; usage : Anons.Grammar.t
     }
 
@@ -1248,8 +1246,7 @@ module Base = struct
     | Ok thunk -> thunk `Run_main
     | Error exn ->
       (match exn with
-       | Failed_to_parse_command_line _
-         when Cmdline.ends_in_complete args -> exit 0
+       | Failed_to_parse_command_line _ when Cmdline.ends_in_complete args -> exit 0
        | Exit_called { status } -> exit status
        | _ ->
          let exn_str =
@@ -2048,8 +2045,7 @@ let exec ~summary ?readme ?(child_subcommand = []) ~path_to_exe () =
       if not (Filename.is_absolute p)
       then failwith "Path passed to `Absolute must be absolute"
       else p
-    | `Relative_to_me p
-    | `Relative_to_argv0 p ->
+    | `Relative_to_me p | `Relative_to_argv0 p ->
       if not (Filename.is_relative p)
       then failwith "Path passed to `Relative_to_me must be relative"
       else p
@@ -2160,7 +2156,8 @@ let rec proxy_of_sexpable
           ~path_to_exe
           ~child_subcommand
           ~path_to_subcommand
-  : Proxy.t =
+  : Proxy.t
+  =
   let kind =
     kind_of_sexpable
       sexpable
@@ -2325,8 +2322,10 @@ module Deprecated = struct
         (s ^ cmd, summary)
         :: (Lazy.force subcommands
             |> List.sort ~compare:Base.Deprecated.subcommand_cmp_fst
-            |> List.concat_map ~f:(fun (cmd', t) -> help_recursive_rec ~cmd:cmd' t new_s))
-      | Proxy _ | Exec _ -> (* Command.exec does not support deprecated commands *)
+            |> List.concat_map ~f:(fun (cmd', t) -> help_recursive_rec ~cmd:cmd' t new_s)
+           )
+      | Proxy _ | Exec _ ->
+        (* Command.exec does not support deprecated commands *)
         []
     in
     help_recursive_rec ~cmd t s
@@ -2787,12 +2786,10 @@ module For_unix (M : For_unix) = struct
            (* Match for flags recognized when subcommands are expected next *)
            match sub, rest with
            (* Recognized at the top level command only *)
-           | "-version", _
-             when Path.length path = 1 ->
+           | "-version", _ when Path.length path = 1 ->
              Version_info.print_version ~version;
              exit 0
-           | "-build-info", _
-             when Path.length path = 1 ->
+           | "-build-info", _ when Path.length path = 1 ->
              Version_info.print_build_info ~build_info;
              exit 0
            (* Recognized everywhere *)

@@ -68,21 +68,19 @@ end
 module type S_bin_io = sig
   include S
 
-  include
-    sig
-      type t = (raw, witness) validated [@@deriving bin_io]
-    end
-    with type t := t
+  include sig
+    type t = (raw, witness) validated [@@deriving bin_io]
+  end
+  with type t := t
 end
 
 module type S_bin_io_compare_hash_sexp = sig
   include S
 
-  include
-    sig
-      type t = (raw, witness) validated [@@deriving bin_io, compare, hash]
-    end
-    with type t := t
+  include sig
+    type t = (raw, witness) validated [@@deriving bin_io, compare, hash]
+  end
+  with type t := t
 end
 
 module type Validated = sig
@@ -109,8 +107,7 @@ module type Validated = sig
 
       include Raw_bin_io with type t := t
     end)
-      (Validated : S with type raw := Raw.t) :
-  sig
+      (Validated : S with type raw := Raw.t) : sig
     type t [@@deriving bin_io]
   end
   with type t := Validated.t
@@ -120,8 +117,7 @@ module type Validated = sig
 
       include Raw with type t := t
     end)
-      (Validated : S with type raw := Raw.t) :
-  sig
+      (Validated : S with type raw := Raw.t) : sig
     type t [@@deriving compare]
   end
   with type t := Validated.t
@@ -131,8 +127,7 @@ module type Validated = sig
 
       include Raw with type t := t
     end)
-      (Validated : S with type raw := Raw.t) :
-  sig
+      (Validated : S with type raw := Raw.t) : sig
     type t [@@deriving hash]
   end
   with type t := Validated.t
@@ -142,8 +137,7 @@ module type Validated = sig
 
       include Raw with type t := t
     end)
-      (Validated : S with type raw := Raw.t) :
-  sig
+      (Validated : S with type raw := Raw.t) : sig
     type t [@@deriving typerep]
   end
   with type t := Validated.t

@@ -95,9 +95,10 @@ end
 
 include Test (Bytes) (Substring)
 
-include Test (struct
-    include Bigstring
+include Test
+    (struct
+      include Bigstring
 
-    let of_string s = of_string s
-  end)
+      let of_string s = of_string s
+    end)
     (Bigsubstring)

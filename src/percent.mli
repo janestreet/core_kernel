@@ -6,7 +6,8 @@ open Std_internal
 type t [@@deriving hash]
 
 (** [of_string] and [t_of_sexp] disallow [nan], [inf], etc. *)
-include Stringable with type t := t
+include
+  Stringable with type t := t
 
 (** Sexps are of the form 5bp or 0.05% or 0.0005x *)
 include Sexpable with type t := t

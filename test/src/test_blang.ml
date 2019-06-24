@@ -238,12 +238,16 @@ let%test_module "laws" =
 
     let forall_t = law Gen.t [%sexp_of: base t]
     let forall_tf = law Gen.tf [%sexp_of: base t * bool base_fun]
-    let forall_tg = law Gen.tg [%sexp_of: base t * [`Known of bool | `Unknown] base_fun]
+
+    let forall_tg =
+      law Gen.tg [%sexp_of: base t * [ `Known of bool | `Unknown ] base_fun]
+    ;;
 
     let%test_unit _ = forall_t (fun t -> specialize t (fun _ -> `Unknown) = t)
 
     let%test_unit _ =
-      forall_tf (fun (t, f) -> specialize t (fun x -> `Known (f x)) = constant (eval t f))
+      forall_tf (fun (t, f) ->
+        specialize t (fun x -> `Known (f x)) = constant (eval t f))
     ;;
 
     let%test_unit _ =

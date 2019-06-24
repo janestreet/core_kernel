@@ -306,14 +306,14 @@ module To_and_of_string : sig
     :  Date.t
     -> Ofday.t
     -> zone:Zone.t
-    -> [`Once of t | `Twice of t * t | `Never of t]
+    -> [ `Once of t | `Twice of t * t | `Never of t ]
 
   val to_date_ofday : t -> zone:Zone.t -> Date.t * Ofday.t
 
   val to_date_ofday_precise
     :  t
     -> zone:Zone.t
-    -> Date.t * Ofday.t * [`Only | `Also_at of t | `Also_skipped of Date.t * Ofday.t]
+    -> Date.t * Ofday.t * [ `Only | `Also_at of t | `Also_skipped of Date.t * Ofday.t ]
 
   val to_date : t -> zone:Zone.t -> Date.t
   val to_ofday : t -> zone:Zone.t -> Ofday.t
@@ -341,7 +341,7 @@ module To_and_of_string : sig
   val to_string_iso8601_basic : t -> zone:Zone.t -> string
 
   val occurrence
-    :  [`First_after_or_at | `Last_before_or_at]
+    :  [ `First_after_or_at | `Last_before_or_at ]
     -> t
     -> ofday:Ofday.t
     -> zone:Zone.t
@@ -659,8 +659,7 @@ end = struct
          will move by an hour in an hours' time, there *is* ambiguity. Hence [>.] for
          the first case and [<=.] for the second. *)
       match clock_shift_before_or_at, clock_shift_after with
-      | Some (start, amount), _
-        when add start (Span.abs amount) > time ->
+      | Some (start, amount), _ when add start (Span.abs amount) > time ->
         (* clock shifted recently *)
         if Span.(amount > zero)
         then
@@ -670,8 +669,7 @@ end = struct
           (* clock shifted back recently: this date/ofday already happened *)
           assert (Span.(amount < zero));
           `Also_at (sub time (Span.abs amount)))
-      | _, Some (start, amount)
-        when sub start (Span.abs amount) <= time ->
+      | _, Some (start, amount) when sub start (Span.abs amount) <= time ->
         (* clock is about to shift *)
         if Span.(amount > zero)
         then (* clock about to shift forward: no effect *)
@@ -889,21 +887,23 @@ module For_ppx_module_timer = struct
   open Ppx_module_timer_runtime
 
   let () =
-    Duration.format :=
-      (module struct
-        let duration_of_span s = s |> Span.to_int63_ns |> Duration.of_nanoseconds
-        let span_of_duration d = d |> Duration.to_nanoseconds |> Span.of_int63_ns
-        let of_string string = string |> Span.of_string |> duration_of_span
+    Duration.format
+    := (module struct
+      let duration_of_span s = s |> Span.to_int63_ns |> Duration.of_nanoseconds
+      let span_of_duration d = d |> Duration.to_nanoseconds |> Span.of_int63_ns
+      let of_string string = string |> Span.of_string |> duration_of_span
 
-        let to_string_with_same_unit durations =
-          let spans = durations |> List.map ~f:span_of_duration in
-          let unit_of_time =
-            spans
-            |> List.max_elt ~compare:Span.compare
-            |> Option.value_map ~f:Span.to_unit_of_time ~default:Unit_of_time.Nanosecond
-          in
-          spans |> List.map ~f:(Span.to_string_hum ~unit_of_time ~align_decimal:true)
-        ;;
-      end)
+      let to_string_with_same_unit durations =
+        let spans = durations |> List.map ~f:span_of_duration in
+        let unit_of_time =
+          spans
+          |> List.max_elt ~compare:Span.compare
+          |> Option.value_map
+               ~f:Span.to_unit_of_time
+               ~default:Unit_of_time.Nanosecond
+        in
+        spans |> List.map ~f:(Span.to_string_hum ~unit_of_time ~align_decimal:true)
+      ;;
+    end)
   ;;
 end

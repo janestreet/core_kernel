@@ -20,8 +20,7 @@ module type S_plain = sig
       (X : sig
          type t [@@deriving of_sexp]
        end
-       with type t := elt) :
-  sig
+       with type t := elt) : sig
     type t [@@deriving of_sexp]
   end
   with type t := t
@@ -30,8 +29,7 @@ module type S_plain = sig
       (X : sig
          type t [@@deriving bin_io]
        end
-       with type t := elt) :
-  sig
+       with type t := elt) : sig
     type t [@@deriving bin_io]
   end
   with type t := t
@@ -40,11 +38,10 @@ end
 module type S = sig
   include S_plain
 
-  include
-    sig
-      type t [@@deriving of_sexp]
-    end
-    with type t := t
+  include sig
+    type t [@@deriving of_sexp]
+  end
+  with type t := t
 end
 
 module type S_binable = sig

@@ -1,2 +1,1 @@
-(** @inline *)
-include Hash_queue_intf.Hash_queue
+include Hash_queue_intf.Hash_queue (** @inline *)

@@ -13,12 +13,12 @@ module Caseless : sig
 end
 
 (** @open *)
-include
-  module type of struct
-    include Base.String
-  end
-  with type t := t
-  with module Caseless := Base.String.Caseless
+include module type of struct
+  include Base.String
+end
+with type t := t
+with module Caseless := Base.String.Caseless
+
 
 (** [slice t start stop] returns a new string including elements [t.(start)] through
     [t.(stop-1)], normalized Python-style with the exception that [stop = 0] is treated as
@@ -68,3 +68,4 @@ module Stable : sig
     include Hashable.Stable.V1.S with type key := t
   end
 end
+

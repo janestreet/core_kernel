@@ -8,11 +8,10 @@ type 'a t = 'a Base.Maybe_bound.t =
 [@@deriving bin_io]
 
 (** @open *)
-include
-  module type of struct
-    include Base.Maybe_bound
-  end
-  with type 'a t := 'a t
+include module type of struct
+  include Base.Maybe_bound
+end
+with type 'a t := 'a t
 
 (** Compares [t] values as lower bounds, where [Unbounded] is lowest, [Incl x < Excl x],
     and other cases of [Incl] and/or [Excl] are compared based on ['a].  If

@@ -25,13 +25,11 @@ module Elt = struct
 end
 
 type 'a t =
-  { mutable length :
-      int
+  { mutable length : int
   (* [front] to [back] has [length + 1] linked elements, where the first [length] hold the
      values in the queue, and the last is [back], holding no value. *)
   ; mutable front : 'a Elt.t
-  ; mutable back :
-      'a Elt.t
+  ; mutable back : 'a Elt.t
   (* [unused_elts] is singly linked via [next], and ends with [sentinel].  All elts in
      [unused_elts] have [Uopt.is_none elt.value]. *)
   ; mutable unused_elts : 'a Elt.t Uopt.t
@@ -84,8 +82,8 @@ let enqueue (type a) (t : a t) (a : a) =
   let new_back = get_unused_elt t in
   (* BEGIN ATOMIC SECTION *)
   t.length <- t.length + 1;
-  (t.back).value <- Uopt.some a;
-  (t.back).next <- Uopt.some new_back;
+  t.back.value <- Uopt.some a;
+  t.back.next <- Uopt.some new_back;
   t.back <- new_back
 ;;
 

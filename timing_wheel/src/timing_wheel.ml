@@ -47,7 +47,7 @@ open! Timing_wheel_intf
 module Pool = Tuple_pool
 module Time_ns = Core_kernel_private.Time_ns_alternate_sexp
 
-let sexp_of_t_style : [`Pretty | `Internal] ref = ref `Pretty
+let sexp_of_t_style : [ `Pretty | `Internal ] ref = ref `Pretty
 
 (* [{max,min}_time] are bounds on the times supported by a timing wheel. *)
 
@@ -440,7 +440,8 @@ end = struct
   module Key : sig
     (** [Interval_num] is the public API.  Everything following in the signature is
         for internal use. *)
-    include Timing_wheel_intf.Interval_num
+    include
+      Timing_wheel_intf.Interval_num
 
     (** [add_clamp_to_max] doesn't work at all with negative spans *)
     val add_clamp_to_max : t -> Span.t -> t
@@ -838,11 +839,11 @@ end = struct
     ; elts =
         (let r = ref [] in
          internal_iter t ~f:(fun elt ->
-           r :=
-             { Pretty.Elt.key = Internal_elt.key pool elt
-             ; value = Internal_elt.value pool elt
-             }
-             :: !r);
+           r
+           := { Pretty.Elt.key = Internal_elt.key pool elt
+              ; value = Internal_elt.value pool elt
+              }
+              :: !r);
          List.rev !r)
     }
   ;;
@@ -1064,7 +1065,9 @@ end = struct
   let[@inline never] raise_add_elt_key_out_of_level_bounds key level =
     raise_s
       [%message
-        "Priority_queue.add_elt key out of level bounds" (key : Key.t) (level : _ Level.t)]
+        "Priority_queue.add_elt key out of level bounds"
+          (key : Key.t)
+          (level : _ Level.t)]
   ;;
 
   let add_elt t elt =
@@ -1199,8 +1202,8 @@ end = struct
           slots.(!slot) <- Internal_elt.null ();
           remove_or_re_add_elts t level first ~t_min_allowed_key ~handle_removed);
         slot := Level.next_slot level !slot;
-        level_min_allowed_key :=
-          Key.add_clamp_to_max !level_min_allowed_key keys_per_slot)
+        level_min_allowed_key
+        := Key.add_clamp_to_max !level_min_allowed_key keys_per_slot)
     done;
     level.min_allowed_key <- desired_min_allowed_key;
     level.max_allowed_key
@@ -1743,7 +1746,8 @@ let next_alarm_fires_at t =
 let[@inline never] raise_next_alarm_fires_at_exn_of_empty_timing_wheel t =
   raise_s
     [%message
-      "Timing_wheel.next_alarm_fires_at_exn of empty timing wheel" ~timing_wheel:(t : _ t)]
+      "Timing_wheel.next_alarm_fires_at_exn of empty timing wheel"
+        ~timing_wheel:(t : _ t)]
 ;;
 
 let[@inline never] raise_next_alarm_fires_at_with_all_alarms_in_max_interval t =

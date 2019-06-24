@@ -27,11 +27,12 @@ let unit f =
 
 let unbounded (type a) ?(hashable = Hashtbl.Hashable.poly) f =
   let cache =
-    let module A = Hashable.Make_plain_and_derive_hash_fold_t (struct
-                     type t = a
+    let module A =
+      Hashable.Make_plain_and_derive_hash_fold_t (struct
+        type t = a
 
-                     let { Hashtbl.Hashable.hash; compare; sexp_of_t } = hashable
-                   end)
+        let { Hashtbl.Hashable.hash; compare; sexp_of_t } = hashable
+      end)
     in
     A.Table.create () ~size:0
   in
@@ -45,11 +46,12 @@ let unbounded (type a) ?(hashable = Hashtbl.Hashable.poly) f =
 let lru (type a) ?(hashable = Hashtbl.Hashable.poly) ~max_cache_size f =
   if max_cache_size <= 0
   then failwithf "Memo.lru: max_cache_size of %i <= 0" max_cache_size ();
-  let module Cache = Hash_queue.Make (struct
-                       type t = a
+  let module Cache =
+    Hash_queue.Make (struct
+      type t = a
 
-                       let { Hashtbl.Hashable.hash; compare; sexp_of_t } = hashable
-                     end)
+      let { Hashtbl.Hashable.hash; compare; sexp_of_t } = hashable
+    end)
   in
   let cache = Cache.create () in
   fun arg ->

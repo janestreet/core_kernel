@@ -5,7 +5,7 @@ include Tuple_type_intf
 module Slots = struct
   type u_ = { slots_per_tuple : int } [@@deriving sexp_of]
   type ('tuple, 'variant) u = u_ [@@deriving sexp_of]
-  type t_ = [`Slots of u_] [@@deriving sexp_of]
+  type t_ = [ `Slots of u_ ] [@@deriving sexp_of]
   type ('tuple, 'variant) t = t_ [@@deriving sexp_of]
 
   let slots_per_tuple (`Slots { slots_per_tuple = n }) = n

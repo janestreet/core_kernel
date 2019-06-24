@@ -120,7 +120,7 @@ let%test_unit _ =
       ignore (Hq.lookup_exn hq "1");
       false
     with
-    | ( Not_found_s _ | Caml.Not_found ) -> true
+    | Not_found_s _ | Caml.Not_found -> true
     | _ -> false);
   Hq.clear hq;
   assert (Hq.is_empty hq);
@@ -171,7 +171,7 @@ let%expect_test "enqueue_front, enqueue_front_exn" =
   require [%here] ([%compare.equal: int list] (Hq.to_list hq2) (Hq.to_list hq))
 ;;
 
-let test_enqueue_fn (back_or_front : [`back | `front]) enqueue_fn =
+let test_enqueue_fn (back_or_front : [ `back | `front ]) enqueue_fn =
   let hq, hq' = Hq.create (), Hq.create () in
   let n = 10 in
   for i = 1 to n do
@@ -180,10 +180,10 @@ let test_enqueue_fn (back_or_front : [`back | `front]) enqueue_fn =
   done;
   [%test_result: int list] (Hq.to_list hq) ~expect:(Hq.to_list hq');
   (* make sure they both return [`Key_already_present] *)
-  [%test_result: [`Key_already_present | `Ok]]
+  [%test_result: [ `Key_already_present | `Ok ]]
     (Hq.enqueue hq back_or_front (string_of_int 5) 5)
     ~expect:`Key_already_present;
-  [%test_result: [`Key_already_present | `Ok]]
+  [%test_result: [ `Key_already_present | `Ok ]]
     (enqueue_fn hq' (string_of_int 5) 5)
     ~expect:`Key_already_present
 ;;

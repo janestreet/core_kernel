@@ -267,7 +267,7 @@ let blit new_arr t =
 ;;
 
 let maybe_shrink_underlying t =
-  if not t.never_shrink && t.arr_length > 10 && t.arr_length / 3 > length t
+  if (not t.never_shrink) && t.arr_length > 10 && t.arr_length / 3 > length t
   then (
     let new_arr = Option_array.create ~len:(t.arr_length / 2) in
     blit new_arr t)

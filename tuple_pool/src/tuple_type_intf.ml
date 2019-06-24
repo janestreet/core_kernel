@@ -37,29 +37,29 @@ module type Slots = sig
       the tuples in the data structure containing them. *)
 
   type ('tuple, 'variant) u
-  type ('tuple, 'variant) t = [`Slots of ('tuple, 'variant) u] [@@deriving sexp_of]
+  type ('tuple, 'variant) t = [ `Slots of ('tuple, 'variant) u ] [@@deriving sexp_of]
 
   val slots_per_tuple : (_, _) t -> int
 
-  type 'a0 t1 = ('a0, [`S0 of 'a0]) t [@@deriving sexp_of]
-  type ('a0, 'a1) t2 = ('a0 * 'a1, [`S0 of 'a0 | `S1 of 'a1]) t [@@deriving sexp_of]
+  type 'a0 t1 = ('a0, [ `S0 of 'a0 ]) t [@@deriving sexp_of]
+  type ('a0, 'a1) t2 = ('a0 * 'a1, [ `S0 of 'a0 | `S1 of 'a1 ]) t [@@deriving sexp_of]
 
-  type ('a0, 'a1, 'a2) t3 = ('a0 * 'a1 * 'a2, [`S0 of 'a0 | `S1 of 'a1 | `S2 of 'a2]) t
+  type ('a0, 'a1, 'a2) t3 = ('a0 * 'a1 * 'a2, [ `S0 of 'a0 | `S1 of 'a1 | `S2 of 'a2 ]) t
   [@@deriving sexp_of]
 
   type ('a0, 'a1, 'a2, 'a3) t4 =
-    ('a0 * 'a1 * 'a2 * 'a3, [`S0 of 'a0 | `S1 of 'a1 | `S2 of 'a2 | `S3 of 'a3]) t
+    ('a0 * 'a1 * 'a2 * 'a3, [ `S0 of 'a0 | `S1 of 'a1 | `S2 of 'a2 | `S3 of 'a3 ]) t
   [@@deriving sexp_of]
 
   type ('a0, 'a1, 'a2, 'a3, 'a4) t5 =
     ( 'a0 * 'a1 * 'a2 * 'a3 * 'a4
-    , [`S0 of 'a0 | `S1 of 'a1 | `S2 of 'a2 | `S3 of 'a3 | `S4 of 'a4] )
+    , [ `S0 of 'a0 | `S1 of 'a1 | `S2 of 'a2 | `S3 of 'a3 | `S4 of 'a4 ] )
       t
   [@@deriving sexp_of]
 
   type ('a0, 'a1, 'a2, 'a3, 'a4, 'a5) t6 =
     ( 'a0 * 'a1 * 'a2 * 'a3 * 'a4 * 'a5
-    , [`S0 of 'a0 | `S1 of 'a1 | `S2 of 'a2 | `S3 of 'a3 | `S4 of 'a4 | `S5 of 'a5] )
+    , [ `S0 of 'a0 | `S1 of 'a1 | `S2 of 'a2 | `S3 of 'a3 | `S4 of 'a4 | `S5 of 'a5 ] )
       t
   [@@deriving sexp_of]
 
@@ -71,7 +71,8 @@ module type Slots = sig
       | `S3 of 'a3
       | `S4 of 'a4
       | `S5 of 'a5
-      | `S6 of 'a6 ] )
+      | `S6 of 'a6
+      ] )
       t
   [@@deriving sexp_of]
 
@@ -84,7 +85,8 @@ module type Slots = sig
       | `S4 of 'a4
       | `S5 of 'a5
       | `S6 of 'a6
-      | `S7 of 'a7 ] )
+      | `S7 of 'a7
+      ] )
       t
   [@@deriving sexp_of]
 
@@ -98,7 +100,8 @@ module type Slots = sig
       | `S5 of 'a5
       | `S6 of 'a6
       | `S7 of 'a7
-      | `S8 of 'a8 ] )
+      | `S8 of 'a8
+      ] )
       t
   [@@deriving sexp_of]
 
@@ -113,7 +116,8 @@ module type Slots = sig
       | `S6 of 'a6
       | `S7 of 'a7
       | `S8 of 'a8
-      | `S9 of 'a9 ] )
+      | `S9 of 'a9
+      ] )
       t
   [@@deriving sexp_of]
 
@@ -129,7 +133,8 @@ module type Slots = sig
       | `S7 of 'a7
       | `S8 of 'a8
       | `S9 of 'a9
-      | `S10 of 'a10 ] )
+      | `S10 of 'a10
+      ] )
       t
   [@@deriving sexp_of]
 
@@ -146,7 +151,8 @@ module type Slots = sig
       | `S8 of 'a8
       | `S9 of 'a9
       | `S10 of 'a10
-      | `S11 of 'a11 ] )
+      | `S11 of 'a11
+      ] )
       t
   [@@deriving sexp_of]
 
@@ -164,7 +170,8 @@ module type Slots = sig
       | `S9 of 'a9
       | `S10 of 'a10
       | `S11 of 'a11
-      | `S12 of 'a12 ] )
+      | `S12 of 'a12
+      ] )
       t
   [@@deriving sexp_of]
 
@@ -196,7 +203,8 @@ module type Slots = sig
       | `S10 of 'a10
       | `S11 of 'a11
       | `S12 of 'a12
-      | `S13 of 'a13 ] )
+      | `S13 of 'a13
+      ] )
       t
   [@@deriving sexp_of]
 
@@ -224,18 +232,18 @@ module type Slot = sig
 
   (** [ti] is the [i]'th slot. *)
 
-  val t0 : ([> `S0 of 'a], 'a) t
-  val t1 : ([> `S1 of 'a], 'a) t
-  val t2 : ([> `S2 of 'a], 'a) t
-  val t3 : ([> `S3 of 'a], 'a) t
-  val t4 : ([> `S4 of 'a], 'a) t
-  val t5 : ([> `S5 of 'a], 'a) t
-  val t6 : ([> `S6 of 'a], 'a) t
-  val t7 : ([> `S7 of 'a], 'a) t
-  val t8 : ([> `S8 of 'a], 'a) t
-  val t9 : ([> `S9 of 'a], 'a) t
-  val t10 : ([> `S10 of 'a], 'a) t
-  val t11 : ([> `S11 of 'a], 'a) t
-  val t12 : ([> `S12 of 'a], 'a) t
-  val t13 : ([> `S13 of 'a], 'a) t
+  val t0 : ([> `S0 of 'a ], 'a) t
+  val t1 : ([> `S1 of 'a ], 'a) t
+  val t2 : ([> `S2 of 'a ], 'a) t
+  val t3 : ([> `S3 of 'a ], 'a) t
+  val t4 : ([> `S4 of 'a ], 'a) t
+  val t5 : ([> `S5 of 'a ], 'a) t
+  val t6 : ([> `S6 of 'a ], 'a) t
+  val t7 : ([> `S7 of 'a ], 'a) t
+  val t8 : ([> `S8 of 'a ], 'a) t
+  val t9 : ([> `S9 of 'a ], 'a) t
+  val t10 : ([> `S10 of 'a ], 'a) t
+  val t11 : ([> `S11 of 'a ], 'a) t
+  val t12 : ([> `S12 of 'a ], 'a) t
+  val t13 : ([> `S13 of 'a ], 'a) t
 end

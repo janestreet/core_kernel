@@ -20,11 +20,10 @@ end
 
 module type Info = sig
   (** @open *)
-  include
-    module type of struct
-      include Base.Info
-    end
-    with module Internal_repr := Base.Info.Internal_repr
+  include module type of struct
+    include Base.Info
+  end
+  with module Internal_repr := Base.Info.Internal_repr
 
   module Internal_repr : module type of Base.Info.Internal_repr
   include Extension with type t := t

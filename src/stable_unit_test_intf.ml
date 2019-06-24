@@ -9,6 +9,7 @@ module type Arg = sig
 
   val equal : t -> t -> bool
 
+
   (** [tests] is a list of (value, sexp-representation, bin-io-representation) triples.
       The unit tests check that the type properly serializes and
       de-serializes according to the given representations. *)

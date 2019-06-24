@@ -8,11 +8,10 @@ type t = char [@@deriving typerep]
 (** {2 The signature included from [Base.Char]} *)
 
 (** @open *)
-include
-  module type of struct
-    include Base.Char
-  end
-  with type t := t
+include module type of struct
+  include Base.Char
+end
+with type t := t
 
 (** {2 Extensions} *)
 

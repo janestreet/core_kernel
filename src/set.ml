@@ -122,10 +122,7 @@ sig
 end)
 
 type ('k, 'cmp) comparator =
-  (module
-    Comparator.S
-    with type t = 'k
-     and type comparator_witness = 'cmp)
+  (module Comparator.S with type t = 'k and type comparator_witness = 'cmp)
 
 let compare _ _ t1 t2 = compare_direct t1 t2
 

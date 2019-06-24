@@ -61,7 +61,7 @@ val iter2
 val set : ('key, 'a, 'cmp, 'enum) t -> 'key -> 'a -> ('key, 'a, 'cmp, 'enum) t
 
 val to_alist
-  :  ?key_order:[`Increasing | `Decreasing] (** default is [`Increasing] *)
+  :  ?key_order:[ `Increasing | `Decreasing ] (** default is [`Increasing] *)
   -> ('key, 'a, _, _) t
   -> ('key * 'a) list
 

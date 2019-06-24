@@ -13,22 +13,20 @@ module Assoc : sig
      List.Assoc.\n\
      Use List.compare directly if that's what you want."]
 
-  include
-    module type of struct
-      include Base.List.Assoc
-    end
-    with type ('a, 'b) t := ('a, 'b) t
+  include module type of struct
+    include Base.List.Assoc
+  end
+  with type ('a, 'b) t := ('a, 'b) t
 end
 
 (** {2 The interface from Base} *)
 
 (** @open *)
-include
-  module type of struct
-    include Base.List
-  end
-  with type 'a t := 'a t
-  with module Assoc := Base.List.Assoc
+include module type of struct
+  include Base.List
+end
+with type 'a t := 'a t
+with module Assoc := Base.List.Assoc
 
 (** {2 Extensions} *)
 
@@ -56,6 +54,7 @@ val exn_if_dup
   -> to_sexp:('a -> Base.Sexp.t)
   -> unit
 
+
 (** [slice t start stop] returns a new list including elements [t.(start)] through
     [t.(stop-1)], normalized Python-style with the exception that [stop = 0] is treated as
     [stop = length t]. *)
@@ -80,6 +79,7 @@ val gen_filtered : 'a t -> 'a t Quickcheck.Generator.t
 (** [gen_permutations t] generates all permutations of [list].  If [t] contains duplicate
     values, then [gen_permutations t] will produce duplicate lists. *)
 val gen_permutations : 'a t -> 'a t Quickcheck.Generator.t
+
 
 (** [zip_with_remainder xs ys] zips as many elements as possible of [xs] and [ys] together
     and also returns the un-zipped remainder of the longer input, if the inputs have

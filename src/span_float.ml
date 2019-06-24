@@ -440,8 +440,8 @@ module Stable = struct
                 | In_integer_need_digit, Under
                 | In_integer_need_digit, Sign
                 | In_integer_need_digit, Expt -> invalid_string string
-                | In_integer_have_digit, Digit
-                | In_integer_have_digit, Under -> In_integer_have_digit
+                | In_integer_have_digit, Digit | In_integer_have_digit, Under ->
+                  In_integer_have_digit
                 | In_integer_have_digit, Point -> In_decimal_have_digit
                 | In_integer_have_digit, Expt -> In_exponent_need_digit_or_sign
                 | In_integer_have_digit, Sign -> invalid_string string
@@ -450,11 +450,11 @@ module Stable = struct
                 | In_decimal_need_digit, Under
                 | In_decimal_need_digit, Expt
                 | In_decimal_need_digit, Sign -> invalid_string string
-                | In_decimal_have_digit, Digit
-                | In_decimal_have_digit, Under -> In_decimal_have_digit
+                | In_decimal_have_digit, Digit | In_decimal_have_digit, Under ->
+                  In_decimal_have_digit
                 | In_decimal_have_digit, Expt -> In_exponent_need_digit_or_sign
-                | In_decimal_have_digit, Point
-                | In_decimal_have_digit, Sign -> invalid_string string
+                | In_decimal_have_digit, Point | In_decimal_have_digit, Sign ->
+                  invalid_string string
                 | In_exponent_need_digit_or_sign, Digit -> In_exponent_have_digit
                 | In_exponent_need_digit_or_sign, Sign -> In_exponent_need_digit
                 | In_exponent_need_digit_or_sign, Point
@@ -465,8 +465,8 @@ module Stable = struct
                 | In_exponent_need_digit, Under
                 | In_exponent_need_digit, Expt
                 | In_exponent_need_digit, Sign -> invalid_string string
-                | In_exponent_have_digit, Digit
-                | In_exponent_have_digit, Under -> In_exponent_have_digit
+                | In_exponent_have_digit, Digit | In_exponent_have_digit, Under ->
+                  In_exponent_have_digit
                 | In_exponent_have_digit, Point
                 | In_exponent_have_digit, Expt
                 | In_exponent_have_digit, Sign -> invalid_string string
@@ -666,8 +666,7 @@ module Stable = struct
               to_float_string ~abs_t ~unit_of_time ~fixup_unit_of_time:Nanosecond
             (* For large enough values that the ULP is a day or more, we can use float
                notation because we are expressing a single, very large integer. *)
-            | Day
-              when next abs_t - abs_t >= day ->
+            | Day when next abs_t - abs_t >= day ->
               to_float_string ~abs_t ~unit_of_time ~fixup_unit_of_time:Day
             (* For everything in between, we need to use integer units of days, hours,
                and/or minutes, because those units are not readable as decimals, and we

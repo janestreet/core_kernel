@@ -3,6 +3,7 @@ open! Import
 
 (** Non-re-entrant memoization. *)
 
+
 (** A type definition to indicate that the expected use outputs a function *)
 type ('a, 'b) fn = 'a -> 'b
 
@@ -25,6 +26,7 @@ val general
 
 (** efficient special case for argument type [unit] *)
 val unit : (unit -> 'a) -> (unit, 'a) fn
+
 
 (** Use a comparable instead of hashable type *)
 val of_comparable

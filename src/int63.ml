@@ -16,10 +16,10 @@ module Bin : Binable0.S with type t := Base.Int63.t = struct
 
   type 'a binable = (module Binable0.S with type t = 'a)
 
-  let binable_of_repr : type a b. (a, b) Base.Int63.Private.Repr.t -> b binable =
-    function
-    | Base.Int63.Private.Repr.Int -> (module Int)
-    | Base.Int63.Private.Repr.Int64 -> (module Bin_emulated)
+  let binable_of_repr : type a b. (a, b) Base.Int63.Private.Repr.t -> b binable
+    = function
+      | Base.Int63.Private.Repr.Int -> (module Int)
+      | Base.Int63.Private.Repr.Int64 -> (module Bin_emulated)
   ;;
 
   let binable : Base.Int63.t binable = binable_of_repr Base.Int63.Private.repr

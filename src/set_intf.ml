@@ -41,11 +41,7 @@ module Elt_bin_io = struct
     val comparator : (t, comparator_witness) Comparator.t
   end
 
-  type ('t, 'c) t =
-    (module
-      S
-      with type t = 't
-       and type comparator_witness = 'c)
+  type ('t, 'c) t = (module S with type t = 't and type comparator_witness = 'c)
 end
 
 module Without_comparator = Set.Without_comparator
@@ -57,18 +53,21 @@ module Merge_to_sequence_element = Sequence.Merge_with_duplicates_element
 module type Accessors_generic = sig
   include Set.Accessors_generic
 
-  val to_map :
-    ('a, 'cmp, ('a, 'cmp) t -> f:('a elt -> 'b) -> ('a elt, 'b, 'cmp cmp) Map.t) options
+  val to_map
+    : ( 'a
+      , 'cmp
+      , ('a, 'cmp) t -> f:('a elt -> 'b) -> ('a elt, 'b, 'cmp cmp) Map.t )
+        options
 
   val quickcheck_observer
     :  'a elt Quickcheck.Observer.t
     -> ('a, 'cmp) t Quickcheck.Observer.t
 
-  val quickcheck_shrinker :
-    ( 'a
-    , 'cmp
-    , 'a elt Quickcheck.Shrinker.t -> ('a, 'cmp) t Quickcheck.Shrinker.t )
-      options
+  val quickcheck_shrinker
+    : ( 'a
+      , 'cmp
+      , 'a elt Quickcheck.Shrinker.t -> ('a, 'cmp) t Quickcheck.Shrinker.t )
+        options
 end
 
 module type Accessors0 = sig
@@ -138,9 +137,10 @@ module Check_accessors
 struct end
 
 module Check_accessors0 (M : Accessors0) =
-  Check_accessors (struct
-    type ('a, 'b) t = M.t
-  end)
+  Check_accessors
+    (struct
+      type ('a, 'b) t = M.t
+    end)
     (struct
       type ('a, 'b) t = M.tree
     end)
@@ -157,9 +157,10 @@ module Check_accessors0 (M : Accessors0) =
     (M)
 
 module Check_accessors1 (M : Accessors1) =
-  Check_accessors (struct
-    type ('a, 'b) t = 'a M.t
-  end)
+  Check_accessors
+    (struct
+      type ('a, 'b) t = 'a M.t
+    end)
     (struct
       type ('a, 'b) t = 'a M.tree
     end)
@@ -176,9 +177,10 @@ module Check_accessors1 (M : Accessors1) =
     (M)
 
 module Check_accessors2 (M : Accessors2) =
-  Check_accessors (struct
-    type ('a, 'b) t = ('a, 'b) M.t
-  end)
+  Check_accessors
+    (struct
+      type ('a, 'b) t = ('a, 'b) M.t
+    end)
     (struct
       type ('a, 'b) t = ('a, 'b) M.tree
     end)
@@ -195,9 +197,10 @@ module Check_accessors2 (M : Accessors2) =
     (M)
 
 module Check_accessors2_with_comparator (M : Accessors2_with_comparator) =
-  Check_accessors (struct
-    type ('a, 'b) t = ('a, 'b) M.t
-  end)
+  Check_accessors
+    (struct
+      type ('a, 'b) t = ('a, 'b) M.t
+    end)
     (struct
       type ('a, 'b) t = ('a, 'b) M.tree
     end)
@@ -222,11 +225,11 @@ module type Creators_generic = sig
   (** Never requires a comparator because it can get one from the input [Map.t]. *)
   val of_map_keys : ('a elt, _, 'cmp cmp) Map.t -> ('a, 'cmp) t
 
-  val quickcheck_generator :
-    ( 'a
-    , 'cmp
-    , 'a elt Quickcheck.Generator.t -> ('a, 'cmp) t Quickcheck.Generator.t )
-      options
+  val quickcheck_generator
+    : ( 'a
+      , 'cmp
+      , 'a elt Quickcheck.Generator.t -> ('a, 'cmp) t Quickcheck.Generator.t )
+        options
 end
 
 module type Creators0 = sig
@@ -292,9 +295,10 @@ module Check_creators
 struct end
 
 module Check_creators0 (M : Creators0) =
-  Check_creators (struct
-    type ('a, 'b) t = M.t
-  end)
+  Check_creators
+    (struct
+      type ('a, 'b) t = M.t
+    end)
     (struct
       type ('a, 'b) t = M.tree
     end)
@@ -308,9 +312,10 @@ module Check_creators0 (M : Creators0) =
     (M)
 
 module Check_creators1 (M : Creators1) =
-  Check_creators (struct
-    type ('a, 'b) t = 'a M.t
-  end)
+  Check_creators
+    (struct
+      type ('a, 'b) t = 'a M.t
+    end)
     (struct
       type ('a, 'b) t = 'a M.tree
     end)
@@ -324,9 +329,10 @@ module Check_creators1 (M : Creators1) =
     (M)
 
 module Check_creators2 (M : Creators2) =
-  Check_creators (struct
-    type ('a, 'b) t = ('a, 'b) M.t
-  end)
+  Check_creators
+    (struct
+      type ('a, 'b) t = ('a, 'b) M.t
+    end)
     (struct
       type ('a, 'b) t = ('a, 'b) M.tree
     end)
@@ -340,9 +346,10 @@ module Check_creators2 (M : Creators2) =
     (M)
 
 module Check_creators2_with_comparator (M : Creators2_with_comparator) =
-  Check_creators (struct
-    type ('a, 'b) t = ('a, 'b) M.t
-  end)
+  Check_creators
+    (struct
+      type ('a, 'b) t = ('a, 'b) M.t
+    end)
     (struct
       type ('a, 'b) t = ('a, 'b) M.tree
     end)
@@ -422,8 +429,7 @@ module Make_S_plain_tree (Elt : Comparator.S) = struct
         (Elt : sig
            type t [@@deriving of_sexp]
          end
-         with type t := Elt.t) :
-    sig
+         with type t := Elt.t) : sig
       type t [@@deriving of_sexp]
     end
     with type t := t
@@ -455,8 +461,7 @@ module type S_plain = sig
       (Elt : sig
          type t [@@deriving of_sexp]
        end
-       with type t := Elt.t) :
-  sig
+       with type t := Elt.t) : sig
     type t [@@deriving of_sexp]
   end
   with type t := t
@@ -467,8 +472,7 @@ module type S_plain = sig
        end
        with type t := Elt.t) : Binable.S with type t := t
 
-  module Provide_hash (Elt : Hasher.S with type t := Elt.t) :
-  sig
+  module Provide_hash (Elt : Hasher.S with type t := Elt.t) : sig
     type t [@@deriving hash]
   end
   with type t := t

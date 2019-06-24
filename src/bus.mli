@@ -132,6 +132,7 @@ val subscribe_exn
   -> f:'callback
   -> 'callback Subscriber.t
 
+
 (** [iter_exn t [%here] ~f] is [ignore (subscribe_exn t [%here] ~callback:f)].  This
     captures the common usage in which one never wants to unsubscribe from a bus. *)
 val iter_exn : 'callback Read_only.t -> Source_code_position.t -> f:'callback -> unit

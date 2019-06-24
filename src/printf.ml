@@ -2,7 +2,7 @@
 
 open! Import
 
-include Base.Printf  (** @open *)
+include Base.Printf (** @open *)
 
 let eprintf = Stdio.Out_channel.eprintf
 let fprintf = Stdio.Out_channel.fprintf

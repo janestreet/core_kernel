@@ -424,7 +424,8 @@ let%test_module "random" =
             let list1, list2 = List.unzip pair_list in
             [%test_eq: t]
               (List.fold2_exn list1 list2 ~init ~f)
-              (List.fold (List.zip_exn list1 list2) ~init ~f:(fun acc (x, y) -> f acc x y)))
+              (List.fold (List.zip_exn list1 list2) ~init ~f:(fun acc (x, y) ->
+                 f acc x y)))
       ;;
 
       let%test_unit "unzip + for_all2_exn vs for_all" =
@@ -501,7 +502,7 @@ let%test_module "random" =
           | `B b -> `Snd b
         in
         Q.test
-          ~sexp_of:[%sexp_of: t list * (t -> [`Fst of t | `Snd of t])]
+          ~sexp_of:[%sexp_of: t list * (t -> [ `Fst of t | `Snd of t ])]
           (G.tuple2
              (List.quickcheck_generator quickcheck_generator)
              (G.fn
@@ -528,7 +529,7 @@ let%test_module "random" =
           | `C c -> `Trd c
         in
         Q.test
-          ~sexp_of:[%sexp_of: t list * (t -> [`Fst of t | `Snd of t | `Trd of t])]
+          ~sexp_of:[%sexp_of: t list * (t -> [ `Fst of t | `Snd of t | `Trd of t ])]
           (G.tuple2
              (List.quickcheck_generator quickcheck_generator)
              (G.fn

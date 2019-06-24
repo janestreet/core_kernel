@@ -31,7 +31,8 @@ struct
 
   let invariant (t : _ t) =
     Invariant.invariant [%here] t [%sexp_of: _ t] (fun () ->
-      Map.iteri t ~f:(fun ~key ~data -> assert (Uid.equal key (Packed.type_id_uid data))))
+      Map.iteri t ~f:(fun ~key ~data ->
+        assert (Uid.equal key (Packed.type_id_uid data))))
   ;;
 
   let set t key data = Map.set t ~key:(Key.uid key) ~data:(Packed.T (key, data))

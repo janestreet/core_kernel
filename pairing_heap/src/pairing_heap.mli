@@ -12,7 +12,8 @@ type 'a t [@@deriving sexp_of]
 (** Mutation of the heap during iteration is not supported, but there is no check to
     prevent it.  The behavior of a heap that is mutated during iteration is
     undefined. *)
-include Container.S1 with type 'a t := 'a t
+include
+  Container.S1 with type 'a t := 'a t
 
 include Invariant.S1 with type 'a t := 'a t
 
@@ -54,6 +55,7 @@ val add : 'a t -> 'a -> unit
 (** [remove_top t] does nothing if [t] is empty. *)
 val remove_top : _ t -> unit
 
+
 (** [pop] removes and returns the top (i.e. least) element. *)
 val pop : 'a t -> 'a option
 
@@ -88,6 +90,7 @@ val add_removable : 'a t -> 'a -> 'a Elt.t
     instance) is a no-op, but keeping [token] around after it has been removed may lead
     to memory leaks since it has a reference to the heap. *)
 val remove : 'a t -> 'a Elt.t -> unit
+
 
 (** [update t token v] is shorthand for [remove t token; add_removable t v]. *)
 val update : 'a t -> 'a Elt.t -> 'a -> 'a Elt.t

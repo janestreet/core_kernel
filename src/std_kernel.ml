@@ -176,7 +176,7 @@ module Weak = Weak
 
 module type Unique_id = Unique_id.Id
 
-include T  (** @open *)
+include T (** @open *)
 
 (** {2 Top-level values} *)
 

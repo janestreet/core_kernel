@@ -99,7 +99,7 @@ let write_bin_prot t ?(pos = 0) writer v =
       "Bigstring.write_bin_prot: not enough room"
       (`pos pos, `pos_after_writing (pos + total_len), `bigstring_length (length t))
       [%sexp_of:
-        [`pos of int] * [`pos_after_writing of int] * [`bigstring_length of int]];
+        [ `pos of int ] * [ `pos_after_writing of int ] * [ `bigstring_length of int ]];
   let pos_after_size_header = Bin_prot.Utils.bin_write_size_header t ~pos data_len in
   let pos_after_data = writer.Bin_prot.Type_class.write t ~pos:pos_after_size_header v in
   if pos_after_data - pos <> total_len
@@ -112,11 +112,11 @@ let write_bin_prot t ?(pos = 0) writer v =
       , `data_len data_len
       , `total_len total_len )
       [%sexp_of:
-        [`pos_after_data of int]
-        * [`start_pos of int]
-        * [`bin_prot_size_header_length of int]
-        * [`data_len of int]
-        * [`total_len of int]];
+        [ `pos_after_data of int ]
+        * [ `start_pos of int ]
+        * [ `bin_prot_size_header_length of int ]
+        * [ `data_len of int ]
+        * [ `total_len of int ]];
   pos_after_data
 ;;
 

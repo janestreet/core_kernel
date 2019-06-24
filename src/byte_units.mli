@@ -18,13 +18,14 @@ open! Import
 
 type t [@@deriving sexp_of]
 
-val create : [`Bytes | `Kilobytes | `Megabytes | `Gigabytes | `Words] -> float -> t
+val create : [ `Bytes | `Kilobytes | `Megabytes | `Gigabytes | `Words ] -> float -> t
 [@@deprecated
   "[since 2019-01] Use [of_bytes], [of_kilobytes], [of_megabytes], etc as appropriate."]
 
 include Comparable.S_plain with type t := t
 include Hashable.S_plain with type t := t
 include Stringable.S with type t := t
+
 
 (** This is a deprecated alias for [of_bytes_float_exn]. *)
 val of_bytes : float -> t

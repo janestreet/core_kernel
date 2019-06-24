@@ -128,14 +128,15 @@ module Subscriber = struct
   let sexp_of_t
         _
         { callback = _; id; extract_exn; on_callback_raise; on_close = _; subscribed_from }
-    : Sexp.t =
+    : Sexp.t
+    =
     List
       [ Atom "Bus.Subscriber.t"
       ; [%message
         ""
           ~id:
-            ( if am_running_inline_test then None else Some id
-                                                       : (Subscriber_id.t option[@sexp.option]) )
+            (if am_running_inline_test then None else Some id
+                                                      : (Subscriber_id.t option[@sexp.option]))
           (on_callback_raise : ((Error.t -> unit) option[@sexp.option]))
           ~extract_exn:
             (if extract_exn then Some true else None : (bool option[@sexp.option]))

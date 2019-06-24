@@ -9,11 +9,11 @@ type t = Base.Sign_or_nan.t =
   | Nan
 [@@deriving typerep]
 
-(** @open *)
-include module type of Base.Sign_or_nan with type t := t
+include module type of Base.Sign_or_nan with type t := t (** @open *)
 
 (** This provides [to_string]/[of_string], sexp/bin_io conversion, Map, Hashtbl, etc. *)
-include Identifiable.S with type t := t and type comparator_witness := comparator_witness
+include
+  Identifiable.S with type t := t and type comparator_witness := comparator_witness
 
 module Stable : sig
   module V1 : sig

@@ -1,2 +1,1 @@
-(** @open *)
-include Quickcheck_intf.Quickcheck
+include Quickcheck_intf.Quickcheck (** @open *)

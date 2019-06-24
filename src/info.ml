@@ -73,8 +73,7 @@ module Extend (Info : Base.Info.S) = struct
           | Tag_t of string * t
           | Tag_arg of string * Sexp.t * t
           | Of_list of int option * t list
-          | With_backtrace of t * string
-          (* backtrace *)
+          | With_backtrace of t * string (* backtrace *)
         [@@deriving bin_io, sexp_of]
       end
     end

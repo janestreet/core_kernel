@@ -2,8 +2,7 @@ open! Import
 
 type 'a t = ('a, Error.t) Result.t [@@deriving bin_io]
 
-module T :
-  module type of struct
+module T : module type of struct
   include Base.Or_error
 end
 with type 'a t := 'a t =

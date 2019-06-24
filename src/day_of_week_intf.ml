@@ -18,7 +18,8 @@ module type Day_of_week = sig
 
   (** [of_string s] accepts three-character abbreviations and full day names
       with any capitalization, and strings of the integers 0-6. *)
-  include Stringable.S with type t := t
+  include
+    Stringable.S with type t := t
 
   (** Capitalized full day names rather than all-caps 3-letter abbreviations. *)
   val to_string_long : t -> string

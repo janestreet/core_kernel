@@ -17,6 +17,7 @@ val length : t -> int
     size of the result. *)
 val to_string : t -> string
 
+
 (** [to_char_sequence] can often produce characters incrementally, but in the worst case
     it takes time and memory proportional to the total length of the string to produce
     even a single character. (In such cases, it should still only take O(length) time to

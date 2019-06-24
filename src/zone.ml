@@ -324,7 +324,7 @@ module Stable = struct
             input_tz_file_v1 ic
           in
           (* the header is fully repeated *)
-          assert ([%compare.equal: [`V1 | `V2 | `V3]] (read_header ic) version);
+          assert ([%compare.equal: [ `V1 | `V2 | `V3 ]] (read_header ic) version);
           let input_leap_second =
             input_leap_second_gen ~input_leap_second:input_long_long_as_int63
           in

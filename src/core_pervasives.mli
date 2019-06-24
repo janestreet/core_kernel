@@ -22,8 +22,10 @@ external raise : exn -> 'a = "%reraise"
 *)
 external raise_notrace : exn -> 'a = "%raise_notrace"
 
+
 (** Raise exception [Invalid_argument] with the given string. *)
 val invalid_arg : string -> 'a
+
 
 (** Raise exception [Failure] with the given string. *)
 val failwith : string -> 'a
@@ -84,15 +86,18 @@ external ( >= ) : 'a -> 'a -> bool = "%greaterequal"
     the {!List.sort} and {!Array.sort} functions. *)
 external compare : 'a -> 'a -> int = "%compare"
 
+
 (** Return the smaller of the two arguments.
     The result is unspecified if one of the arguments contains
     the float value [nan]. *)
 val min : 'a -> 'a -> 'a
 
+
 (** Return the greater of the two arguments.
     The result is unspecified if one of the arguments contains
     the float value [nan]. *)
 val max : 'a -> 'a -> 'a
+
 
 (** [e1 == e2] tests for physical equality of [e1] and [e2].
     On mutable types such as references, arrays, byte sequences, records with
@@ -204,11 +209,14 @@ external ( ~- ) : int -> int = "%negint"
 *)
 external ( ~+ ) : int -> int = "%identity"
 
+
 (** [succ x] is [x + 1]. *)
 external succ : int -> int = "%succint"
 
+
 (** [pred x] is [x - 1]. *)
 external pred : int -> int = "%predint"
+
 
 (** Integer addition. *)
 external ( + ) : int -> int -> int = "%addint"
@@ -236,9 +244,11 @@ external ( / ) : int -> int -> int = "%divint"
     Raise [Division_by_zero] if [y] is zero. *)
 external ( mod ) : int -> int -> int = "%modint"
 
+
 (** Return the absolute value of the argument.  Note that this may be
     negative if the argument is [min_int]. *)
 val abs : int -> int
+
 
 (** The greatest representable integer. *)
 val max_int : int
@@ -253,14 +263,18 @@ val min_int : int
 (** Bitwise logical and. *)
 external ( land ) : int -> int -> int = "%andint"
 
+
 (** Bitwise logical or. *)
 external ( lor ) : int -> int -> int = "%orint"
+
 
 (** Bitwise logical exclusive or. *)
 external ( lxor ) : int -> int -> int = "%xorint"
 
+
 (** Bitwise logical negation. *)
 val lnot : int -> int
+
 
 (** [n lsl m] shifts [n] to the left by [m] bits.
     The result is unspecified if [m < 0] or [m >= bitsize],
@@ -268,11 +282,13 @@ val lnot : int -> int
     [64] on a 64-bit platform. *)
 external ( lsl ) : int -> int -> int = "%lslint"
 
+
 (** [n lsr m] shifts [n] to the right by [m] bits.
     This is a logical shift: zeroes are inserted regardless of
     the sign of [n].
     The result is unspecified if [m < 0] or [m >= bitsize]. *)
 external ( lsr ) : int -> int -> int = "%lsrint"
+
 
 (** [n asr m] shifts [n] to the right by [m] bits.
     This is an arithmetic shift: the sign bit of [n] is replicated.
@@ -302,6 +318,7 @@ external ( ~-. ) : float -> float = "%negfloat"
 *)
 external ( ~+. ) : float -> float = "%identity"
 
+
 (** Floating-point addition *)
 external ( +. ) : float -> float -> float = "%addfloat"
 
@@ -318,17 +335,21 @@ external ( /. ) : float -> float -> float = "%divfloat"
 external ( ** ) : float -> float -> float = "caml_power_float" "pow"
 [@@unboxed] [@@noalloc]
 
+
 (** Square root. *)
 external sqrt : float -> float = "caml_sqrt_float" "sqrt"
 [@@unboxed] [@@noalloc]
+
 
 (** Exponential. *)
 external exp : float -> float = "caml_exp_float" "exp"
 [@@unboxed] [@@noalloc]
 
+
 (** Natural logarithm. *)
 external log : float -> float = "caml_log_float" "log"
 [@@unboxed] [@@noalloc]
+
 
 (** Base 10 logarithm. *)
 external log10 : float -> float = "caml_log10_float" "log10"
@@ -456,8 +477,10 @@ external modf : float -> float * float = "caml_modf_float"
 (** Same as {!Caml.float_of_int}. *)
 external float : int -> float = "%floatofint"
 
+
 (** Convert an integer to floating-point. *)
 external float_of_int : int -> float = "%floatofint"
+
 
 (** Same as {!Caml.int_of_float}. *)
 external truncate : float -> int = "%intoffloat"
@@ -467,6 +490,7 @@ external truncate : float -> int = "%intoffloat"
     The result is unspecified if the argument is [nan] or falls outside the
     range of representable integers. *)
 external int_of_float : float -> int = "%intoffloat"
+
 
 (** Positive infinity. *)
 val infinity : float
@@ -501,11 +525,11 @@ val epsilon_float : float
 (** The five classes of floating-point numbers, as determined by
     the {!Caml.classify_float} function. *)
 type fpclass = Caml.fpclass =
-  | FP_normal  (** Normal number, none of the below *)
-  | FP_subnormal  (** Number very close to 0.0, has reduced precision *)
-  | FP_zero  (** Number is 0.0 or -0.0 *)
-  | FP_infinite  (** Number is positive or negative infinity *)
-  | FP_nan  (** Not a number: result of an undefined operation *)
+  | FP_normal (** Normal number, none of the below *)
+  | FP_subnormal (** Number very close to 0.0, has reduced precision *)
+  | FP_zero (** Number is 0.0 or -0.0 *)
+  | FP_infinite (** Number is positive or negative infinity *)
+  | FP_nan (** Not a number: result of an undefined operation *)
 
 
 (** Return the class of the given floating-point number:
@@ -532,6 +556,7 @@ val ( ^ ) : string -> string -> string
 (** Return the ASCII code of the argument. *)
 external int_of_char : char -> int = "%identity"
 
+
 (** Return the character with the given ASCII code.
     Raise [Invalid_argument "char_of_int"] if the argument is
     outside the range 0--255. *)
@@ -555,13 +580,16 @@ external ignore : 'a -> unit = "%ignore"
 *)
 val string_of_bool : bool -> string
 
+
 (** Convert the given string to a boolean.
     Raise [Invalid_argument "bool_of_string"] if the string is not
     ["true"] or ["false"]. *)
 val bool_of_string : string -> bool
 
+
 (** Return the string representation of an integer, in decimal. *)
 val string_of_int : int -> string
+
 
 (** Convert the given string to an integer.
     The string is read in decimal (by default) or in hexadecimal (if it
@@ -572,8 +600,10 @@ val string_of_int : int -> string
     exceeds the range of integers representable in type [int]. *)
 external int_of_string : string -> int = "caml_int_of_string"
 
+
 (** Return the string representation of a floating-point number. *)
 val string_of_float : float -> string
+
 
 (** Convert the given string to a float.  Raise [Failure "float_of_string"]
     if the given string is not a valid representation of a float. *)
@@ -611,8 +641,10 @@ type out_channel = Caml.out_channel [@@deprecated "[since 2016-04] Use [Out_chan
 val stdin : Caml.in_channel
 [@@deprecated "[since 2016-04] Use [In_channel.stdin]"]
 
+
 (** The standard output for the process. *)
 val stdout : Caml.out_channel
+
 
 (** The standard error output for the process. *)
 val stderr : Caml.out_channel
@@ -641,6 +673,7 @@ val print_float : float -> unit
 (** Print a string, followed by a newline character, on
     standard output and flush standard output. *)
 val print_endline : string -> unit
+
 
 (** Print a newline character on standard output, and flush
     standard output. This can be used to simulate line
@@ -673,6 +706,7 @@ val prerr_float : float -> unit
 (** Print a string, followed by a newline character on standard
     error and flush standard error. *)
 val prerr_endline : string -> unit
+
 
 (** Print a newline character on standard error, and flush
     standard error. *)
@@ -711,15 +745,15 @@ val read_float : unit -> float
 (** Opening modes for {!Caml.open_out_gen} and
     {!Caml.open_in_gen}. *)
 type open_flag = Caml.open_flag =
-  | Open_rdonly  (** open for reading. *)
-  | Open_wronly  (** open for writing. *)
-  | Open_append  (** open for appending: always write at end of file. *)
-  | Open_creat  (** create the file if it does not exist. *)
-  | Open_trunc  (** empty the file if it already exists. *)
-  | Open_excl  (** fail if Open_creat and the file already exists. *)
-  | Open_binary  (** open in binary mode (no conversion). *)
-  | Open_text  (** open in text mode (may perform conversions). *)
-  | Open_nonblock  (** open in non-blocking mode. *)
+  | Open_rdonly (** open for reading. *)
+  | Open_wronly (** open for writing. *)
+  | Open_append (** open for appending: always write at end of file. *)
+  | Open_creat (** create the file if it does not exist. *)
+  | Open_trunc (** empty the file if it already exists. *)
+  | Open_excl (** fail if Open_creat and the file already exists. *)
+  | Open_binary (** open in binary mode (no conversion). *)
+  | Open_text (** open in text mode (may perform conversions). *)
+  | Open_nonblock (** open in non-blocking mode. *)
 [@@deprecated "[since 2016-04] Use [In_channel.create] and [Out_channel.create]"]
 
 (** Open the named file for writing, and return a new output channel
@@ -1105,8 +1139,10 @@ type ('a, 'b, 'c, 'd) format4 = ('a, 'b, 'c, 'c, 'c, 'd) format6
 
 type ('a, 'b, 'c) format = ('a, 'b, 'c, 'c) format4
 
+
 (** Converts a format string into a string. *)
 val string_of_format : ('a, 'b, 'c, 'd, 'e, 'f) format6 -> string
+
 
 (** [format_of_string s] returns a format string read from the string
     literal [s].
@@ -1118,6 +1154,7 @@ external format_of_string
   :  ('a, 'b, 'c, 'd, 'e, 'f) format6
   -> ('a, 'b, 'c, 'd, 'e, 'f) format6
   = "%identity"
+
 
 (** [f1 ^^ f2] catenates format strings [f1] and [f2]. The result is a
     format string that behaves as the concatenation of format strings [f1] and

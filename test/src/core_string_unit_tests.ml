@@ -46,12 +46,12 @@ let%test_unit "String.Caseless.compare is consistent with String.compare of lowe
   (* make sure we can generate a prefix of the other string, after case folding *)
   Quickcheck.test_can_generate quickcheck_generator ~sexp_of ~f:(fun (x, y) ->
     String.is_prefix (String.lowercase x) ~prefix:(String.lowercase y)
-    && not (String.equal (String.lowercase x) (String.lowercase y))
+    && (not (String.equal (String.lowercase x) (String.lowercase y)))
     && not (String.is_prefix x ~prefix:y));
   (* ... and in the other direction *)
   Quickcheck.test_can_generate quickcheck_generator ~sexp_of ~f:(fun (x, y) ->
     String.is_prefix (String.lowercase y) ~prefix:(String.lowercase x)
-    && not (String.equal (String.lowercase y) (String.lowercase x))
+    && (not (String.equal (String.lowercase y) (String.lowercase x)))
     && not (String.is_prefix y ~prefix:x));
   (* now make sure our comparisons work *)
   Quickcheck.test quickcheck_generator ~sexp_of ~f:(fun (x, y) ->

@@ -7,6 +7,7 @@ open Bigarray
 
 (** {2 Types and exceptions} *)
 
+
 (** Type of bigstrings *)
 type t = (char, int8_unsigned_elt, c_layout) Array1.t [@@deriving compare, sexp_of]
 
@@ -67,7 +68,7 @@ val read_bin_prot_verbose_errors
   -> ?pos:int
   -> ?len:int
   -> 'a Bin_prot.Type_class.reader
-  -> [`Invalid_data of Error.t | `Not_enough_data | `Ok of 'a * int]
+  -> [ `Invalid_data of Error.t | `Not_enough_data | `Ok of 'a * int ]
 
 (** {2 Destruction} *)
 

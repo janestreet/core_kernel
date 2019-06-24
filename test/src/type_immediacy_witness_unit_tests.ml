@@ -269,7 +269,8 @@ let%test_module _ =
       let module M = struct
         type t =
           [ `Foo
-          | `Bar of unit ]
+          | `Bar of unit
+          ]
         [@@deriving typerep]
       end
       in
@@ -281,7 +282,8 @@ let%test_module _ =
         type t =
           [ `Foo
           | `Bar
-          | `Baz ]
+          | `Baz
+          ]
         [@@deriving typerep]
       end
       in
@@ -293,7 +295,8 @@ let%test_module _ =
         type t =
           [ `Foo of unit
           | `Bar of unit
-          | `Baz of unit ]
+          | `Baz of unit
+          ]
         [@@deriving typerep]
       end
       in
@@ -302,7 +305,7 @@ let%test_module _ =
 
     let%test _ =
       let module M = struct
-        type t = [`Foo of unit] [@@deriving typerep]
+        type t = [ `Foo of unit ] [@@deriving typerep]
       end
       in
       check_n M.typerep_of_t [ `Foo () ]

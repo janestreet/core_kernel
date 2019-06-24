@@ -1,2 +1,1 @@
-(** @inline *)
-include Doubly_linked_intf.Doubly_linked
+include Doubly_linked_intf.Doubly_linked (** @inline *)

@@ -40,7 +40,7 @@ module Unit_tests (Key : sig
             with type ('a, 'b, 'c) options := ('a, 'b, 'c) access_options
 
           val simplify_accessor : (int, Int.comparator_witness, 'c) access_options -> 'c
-          val kind : [`Map | `Tree]
+          val kind : [ `Map | `Tree ]
         end) : Map_intf.Creators_and_accessors_generic =
 (* The result signature doesn't actually mean anything -- the values are required so
    that implementors are reminded to add a unit test for each one. *)
@@ -340,7 +340,7 @@ struct
         result := (key, data) :: !result);
       let result = List.rev_map !result ~f:(fun (k, v) -> Key.to_int k, v) in
       assert (
-        [%equal: (int * [`Both of int * int | `Left of int | `Right of int]) list]
+        [%equal: (int * [ `Both of int * int | `Left of int | `Right of int ]) list]
           result
           expected)
     in
@@ -373,7 +373,7 @@ struct
       in
       let result = List.rev_map result ~f:(fun (k, v) -> Key.to_int k, v) in
       assert (
-        [%equal: (int * [`Both of int * int | `Left of int | `Right of int]) list]
+        [%equal: (int * [ `Both of int * int | `Left of int | `Right of int ]) list]
           result
           expected)
     in
@@ -711,7 +711,7 @@ struct
       ignore (Map.find_exn (Map.empty ()) Key.sample);
       false
     with
-    | ( Not_found_s _ | Caml.Not_found ) -> true
+    | Not_found_s _ | Caml.Not_found -> true
   ;;
 
   let%test _ = [%equal: int list] (Map.find_multi (Map.empty ()) Key.sample) []
@@ -1018,7 +1018,8 @@ struct
   let%test _ =
     let map = random_map Key.samples in
     let added_to_self =
-      Map.merge map map ~f:(fun ~key:_ -> function
+      Map.merge map map ~f:(fun ~key:_ ->
+        function
         | `Left _ | `Right _ -> assert false
         | `Both (x1, x2) -> Some (x1 + x2))
     in
@@ -1075,7 +1076,7 @@ struct
       let result = Map.to_alist result in
       let result = List.map result ~f:(fun (k, v) -> Key.to_int k, v) in
       assert (
-        [%equal: (int * [`Both of int * int | `Left of int | `Right of int]) list]
+        [%equal: (int * [ `Both of int * int | `Left of int | `Right of int ]) list]
           result
           expected)
     in
@@ -1156,10 +1157,12 @@ struct
     let max_key_element = Map.find_exn map max_key in
     assert ([%equal: Key.t * int] (Map.max_elt_exn map) (max_key, max_key_element));
     assert (
-      [%equal: (Key.t * int) option] (Map.max_elt map) (Some (max_key, max_key_element)));
+      [%equal: (Key.t * int) option] (Map.max_elt map) (Some (max_key, max_key_element))
+    );
     assert ([%equal: Key.t * int] (Map.min_elt_exn map) (min_key, min_key_element));
     assert (
-      [%equal: (Key.t * int) option] (Map.min_elt map) (Some (min_key, min_key_element)))
+      [%equal: (Key.t * int) option] (Map.min_elt map) (Some (min_key, min_key_element))
+    )
   ;;
 
   let%test _ = [%equal: (Key.t * int) option] (Map.min_elt (Map.empty ())) None
@@ -1412,21 +1415,23 @@ struct
         let m1 = Map.of_alist_exn [ k1, 1 ] in
         let m2 = Map.of_alist_exn [ k2, 2 ] in
         let m' =
-          Map.merge m1 m2 ~f:(fun ~key:_ -> function
+          Map.merge m1 m2 ~f:(fun ~key:_ ->
+            function
             | `Both _ -> assert false
-            | `Left x
-            | `Right x -> Some x)
+            | `Left x | `Right x -> Some x)
         in
         assert (Map.length m' = 2);
         let m3 = Map.of_alist_exn [ k1, 2 ] in
         let m' =
-          Map.merge m1 m3 ~f:(fun ~key:_ -> function
+          Map.merge m1 m3 ~f:(fun ~key:_ ->
+            function
             | `Both (x, _) -> Some x
             | `Left _ | `Right _ -> assert false)
         in
         assert (Map.length m' = 1);
         let m' =
-          Map.merge m1 m3 ~f:(fun ~key:_ -> function
+          Map.merge m1 m3 ~f:(fun ~key:_ ->
+            function
             | `Both (_, _) -> None
             | `Left _ | `Right _ -> assert false)
         in
@@ -1434,10 +1439,10 @@ struct
         let m4 = Map.of_alist_exn [ k1, 1; k2, 2; k3, 3 ] in
         let m5 = Map.of_alist_exn [ k3, 99; k4, 4 ] in
         let m' =
-          Map.merge m4 m5 ~f:(fun ~key:_ -> function
+          Map.merge m4 m5 ~f:(fun ~key:_ ->
+            function
             | `Both (x, _) -> Some x
-            | `Left x
-            | `Right x -> Some x)
+            | `Left x | `Right x -> Some x)
         in
         Map.length m' = 4
       ;;
@@ -1498,7 +1503,8 @@ struct
     assert (
       optional_key_equal before_max (Map.closest_key map `Less_or_equal_to before_max));
     assert (
-      optional_key_equal before_max (Map.closest_key map `Greater_or_equal_to before_max));
+      optional_key_equal before_max (Map.closest_key map `Greater_or_equal_to before_max)
+    );
     (let map_with_hole_after_min = Map.remove map after_min in
      assert (optional_key_equal min_key (prev_key map_with_hole_after_min after_min));
      assert (
@@ -1727,7 +1733,8 @@ struct
     | `Map ->
       let ts = [ Map.empty (); Map.of_alist_exn [ Key.sample, 13 ] ] in
       List.iter ts ~f:(fun t1 ->
-        List.iter ts ~f:(fun t2 -> assert (Exn.does_raise (fun () -> Poly.equal t1 t2))))
+        List.iter ts ~f:(fun t2 ->
+          assert (Exn.does_raise (fun () -> Poly.equal t1 t2))))
   ;;
 
   let quickcheck_generator _ _ = assert false
@@ -1760,7 +1767,8 @@ struct
       let%test_unit _ = can_generate (fun t -> Map.length t >= 3)
 
       let%test_unit _ =
-        can_generate (fun t -> Map.existsi t ~f:(fun ~key ~data:_ -> Key.to_int key >= 0))
+        can_generate (fun t ->
+          Map.existsi t ~f:(fun ~key ~data:_ -> Key.to_int key >= 0))
       ;;
 
       let%test_unit _ =
@@ -1923,11 +1931,7 @@ module Create_options_with_first_class_module = struct
   type ('a, 'b, 'c) create_options = ('a, 'b, 'c) With_first_class_module.t
 
   let simplify_creator f =
-    f
-      (module Int
-        : Comparator.S
-          with type t = _
-           and type comparator_witness = _ )
+    f (module Int : Comparator.S with type t = _ and type comparator_witness = _)
   ;;
 end
 

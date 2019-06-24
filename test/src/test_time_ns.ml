@@ -476,8 +476,8 @@ module Span = struct
       let%expect_test _ =
         print_s
           [%sexp
-            ( to_parts (create ~sign:Neg ~hr:2 ~min:3 ~sec:4 ~ms:5 ~us:6 ~ns:7 ())
-              : Parts.t )];
+            (to_parts (create ~sign:Neg ~hr:2 ~min:3 ~sec:4 ~ms:5 ~us:6 ~ns:7 ())
+             : Parts.t)];
         [%expect
           {|
         ((sign Neg)

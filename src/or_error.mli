@@ -5,11 +5,10 @@ open! Import
 type 'a t = ('a, Error.t) Result.t [@@deriving bin_io]
 
 (** @open *)
-include
-  module type of struct
-    include Base.Or_error
-  end
-  with type 'a t := 'a t
+include module type of struct
+  include Base.Or_error
+end
+with type 'a t := 'a t
 
 module Expect_test_config :
   Expect_test_config.S with type 'a IO_flush.t = 'a t with type 'a IO_run.t = 'a t

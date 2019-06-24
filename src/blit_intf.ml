@@ -10,11 +10,11 @@ module type S_permissions = sig
 
   type -'perms t
 
-  val blit : ([> read] t, [> write] t) blit
-  val blito : ([> read] t, [> write] t) blito
-  val unsafe_blit : ([> read] t, [> write] t) blit
-  val sub : ([> read] t, [< _ perms] t) sub
-  val subo : ([> read] t, [< _ perms] t) subo
+  val blit : ([> read ] t, [> write ] t) blit
+  val blito : ([> read ] t, [> write ] t) blito
+  val unsafe_blit : ([> read ] t, [> write ] t) blit
+  val sub : ([> read ] t, [< _ perms ] t) sub
+  val subo : ([> read ] t, [< _ perms ] t) subo
 end
 
 module type S1_permissions = sig
@@ -22,11 +22,11 @@ module type S1_permissions = sig
 
   type ('a, -'perms) t
 
-  val blit : (('a, [> read]) t, ('a, [> write]) t) blit
-  val blito : (('a, [> read]) t, ('a, [> write]) t) blito
-  val unsafe_blit : (('a, [> read]) t, ('a, [> write]) t) blit
-  val sub : (('a, [> read]) t, ('a, [< _ perms]) t) sub
-  val subo : (('a, [> read]) t, ('a, [< _ perms]) t) subo
+  val blit : (('a, [> read ]) t, ('a, [> write ]) t) blit
+  val blito : (('a, [> read ]) t, ('a, [> write ]) t) blito
+  val unsafe_blit : (('a, [> read ]) t, ('a, [> write ]) t) blit
+  val sub : (('a, [> read ]) t, ('a, [< _ perms ]) t) sub
+  val subo : (('a, [> read ]) t, ('a, [< _ perms ]) t) subo
 end
 
 module type Blit = sig

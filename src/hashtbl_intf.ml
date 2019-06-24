@@ -155,8 +155,7 @@ module type S_plain = sig
       (Key : sig
          type t [@@deriving of_sexp]
        end
-       with type t := key) :
-  sig
+       with type t := key) : sig
     type _ t [@@deriving of_sexp]
   end
   with type 'a t := 'a t
@@ -165,8 +164,7 @@ module type S_plain = sig
       (Key : sig
          type t [@@deriving bin_io]
        end
-       with type t := key) :
-  sig
+       with type t := key) : sig
     type 'a t [@@deriving bin_io]
   end
   with type 'a t := 'a t
@@ -175,11 +173,10 @@ end
 module type S = sig
   include S_plain
 
-  include
-    sig
-      type _ t [@@deriving of_sexp]
-    end
-    with type 'a t := 'a t
+  include sig
+    type _ t [@@deriving of_sexp]
+  end
+  with type 'a t := 'a t
 end
 
 module type S_binable = sig
@@ -188,15 +185,15 @@ module type S_binable = sig
 end
 
 module type Hashtbl = sig
-  (** @inline *)
-  include Hashtbl.S_without_submodules
+  include Hashtbl.S_without_submodules (** @inline *)
 
   module Using_hashable : sig
     include
       Creators
       with type ('a, 'b) t := ('a, 'b) t
       with type 'a key := 'a key
-      with type ('a, 'b, 'z) create_options := ('a, 'b, 'z) create_options_with_hashable
+      with type ('a, 'b, 'z) create_options :=
+        ('a, 'b, 'z) create_options_with_hashable
   end
 
   module Poly : sig

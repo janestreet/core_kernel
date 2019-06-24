@@ -40,7 +40,6 @@ let%test _ = parts "//tmp//foo//bar" = [ "/"; "tmp"; "foo"; "bar" ]
 let%test _ = parts "" = [ "." ]
 let%test _ = parts "./" = [ "." ]
 let%test _ = parts "./." = [ "." ]
-
 let%test _ = parts "././." = [ "."; "." ]
 let%test _ = parts "foo" = [ "."; "foo" ]
 let%test _ = parts "./foo/" = [ "."; "foo" ]

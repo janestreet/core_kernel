@@ -18,7 +18,8 @@ module Robust_compare : sig
 end
 
 (** The results of robust comparisons on [nan] should be considered undefined. *)
-include Robust_compare.S
+include
+  Robust_compare.S
 
 module O : sig
   include module type of struct
@@ -31,11 +32,10 @@ end
 module Terse : sig
   type nonrec t = t [@@deriving bin_io]
 
-  include
-    module type of struct
-      include Base.Float.Terse
-    end
-    with type t := t
+  include module type of struct
+    include Base.Float.Terse
+  end
+  with type t := t
 end
 
 include
@@ -43,13 +43,12 @@ include
   with type t := t
    and type comparator_witness := Base.Float.comparator_witness
 
-include
-  module type of struct
-    include Base.Float
-  end
-  with type t := t
-  with module O := Base.Float.O
-  with module Terse := Base.Float.Terse
+include module type of struct
+  include Base.Float
+end
+with type t := t
+with module O := Base.Float.O
+with module Terse := Base.Float.Terse
 
 (** [to_string_12 x] builds a string representing [x] using up to 12 significant digits.
     It loses precision.  You can use ["%{Float#12}"] in formats, but consider ["%.12g"],
@@ -95,6 +94,7 @@ val gen_uniform_excl : t -> t -> t Quickcheck.Generator.t
     generating the endpoints [lo] and [hi].  Raises an exception if [lo] is not finite,
     [hi] is not finite, or the requested range is empty. *)
 val gen_incl : t -> t -> t Quickcheck.Generator.t
+
 
 (** [gen_finite] produces all finite [t] values, excluding infinities and all NaN
     values. *)

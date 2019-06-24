@@ -344,10 +344,13 @@ module type Tuple_pool = sig
 
   module type S = S
 
+
   (** This uses a [Uniform_array.t] to implement the pool.  We expose that [Pointer.t] is
       an [int] so that OCaml can avoid the write barrier, due to knowing that [Pointer.t]
       isn't an OCaml pointer. *)
-  include S with type 'a Pointer.t = private int (** @inline *)
+  include
+    S with type 'a Pointer.t = private int
+  (** @inline *)
 
   (** An [Unsafe] pool is like an ordinary pool, except that the [create] function does
       not require an initial element.  The pool stores a dummy value for each slot.

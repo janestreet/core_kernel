@@ -86,7 +86,7 @@ module Make (M : Make_arg) = struct
       if leftover = empty
       then [%sexp_of: sexp_format] flag_names
       else
-        [%sexp_of: string list * [`unrecognized_bits of string]]
+        [%sexp_of: string list * [ `unrecognized_bits of string ]]
           (flag_names, `unrecognized_bits (sprintf "0x%Lx" (Int63.to_int64 leftover)))
   ;;
 

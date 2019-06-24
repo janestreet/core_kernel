@@ -29,10 +29,10 @@ let%test_module _ =
       let expected = ref Map.empty
 
       let incr ?(by = 1) t counter =
-        t :=
-          Map.update !t counter ~f:(function
-            | None -> by
-            | Some i -> i + by)
+        t
+        := Map.update !t counter ~f:(function
+          | None -> by
+          | Some i -> i + by)
       ;;
 
       let check location =
@@ -41,7 +41,7 @@ let%test_module _ =
           failwiths
             "mismatch"
             (location, `actual actual, `expected expected)
-            [%sexp_of: Source_code_position.t * [`actual of t] * [`expected of t]]
+            [%sexp_of: Source_code_position.t * [ `actual of t ] * [ `expected of t ]]
       ;;
     end
 

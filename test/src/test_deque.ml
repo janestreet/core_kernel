@@ -45,8 +45,8 @@ let%test_module _ =
       type 'a t
 
       val create : unit -> 'a t
-      val enqueue : 'a t -> [`back | `front] -> 'a -> unit
-      val dequeue : 'a t -> [`back | `front] -> 'a option
+      val enqueue : 'a t -> [ `back | `front ] -> 'a -> unit
+      val dequeue : 'a t -> [ `back | `front ] -> 'a option
       val to_array : 'a t -> 'a array
       val clear : 'a t -> unit
       val length : 'a t -> int
@@ -54,7 +54,7 @@ let%test_module _ =
 
       val fold'
         :  'a t
-        -> [`front_to_back | `back_to_front]
+        -> [ `front_to_back | `back_to_front ]
         -> init:'b
         -> f:('b -> 'a -> 'b)
         -> 'b
@@ -128,7 +128,7 @@ let%test_module _ =
       in
       let end_a = This_dequeue.to_array t_a in
       let end_b = That_dequeue.to_array t_b in
-      if not ([%equal: int option] a b) || not ([%equal: int array] end_a end_b)
+      if (not ([%equal: int option] a b)) || not ([%equal: int array] end_a end_b)
       then
         failwithf
           "error in dequeue: %s (%s -> %s) <> %s (%s -> %s)"

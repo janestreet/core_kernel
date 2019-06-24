@@ -102,7 +102,8 @@ let parse string ~f =
   in
   let pos, min, expect_seconds =
     match expect_minutes_and_seconds with
-    | `Neither_minutes_nor_seconds -> (* e.g. "12am" *)
+    | `Neither_minutes_nor_seconds ->
+      (* e.g. "12am" *)
       pos, 0, false
     | (`Minutes_and_maybe_seconds | `Minutes_but_not_seconds) as maybe_seconds ->
       (* e.g. "12:00:00" *)
@@ -250,10 +251,8 @@ let parse_iso8601_extended ?pos ?len str ~f =
                   (subsec_pos + 1)
                   ~until:(pos + len)
               with
-              | true
-                when sec = 60 -> 0
-              | true
-                when hr = 24 -> failwith "24 hours and non-zero subseconds"
+              | true when sec = 60 -> 0
+              | true when hr = 24 -> failwith "24 hours and non-zero subseconds"
               | _ -> len - 8
             in
             f str ~hr ~min ~sec ~subsec_pos ~subsec_len

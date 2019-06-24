@@ -127,22 +127,18 @@ let%expect_test _ = require [%here] (equal (a + a) a)
 let%expect_test _ = require [%here] (equal (a + b) (b + a))
 let%expect_test _ = require [%here] (equal (a - a) empty)
 let%expect_test _ = require [%here] (equal (a + b - a) b)
-
 (* [intersect] *)
 let%expect_test _ = require [%here] (equal (intersect a a) a)
 let%expect_test _ = require [%here] (equal (intersect a b) empty)
 let%expect_test _ = require [%here] (equal (intersect (a + b) a) a)
-
 (* [complement] *)
 let%expect_test _ = require [%here] (equal (intersect (complement a) b) b)
-
 (* [do_intersect] *)
 let%expect_test _ = require [%here] (do_intersect a a)
 let%expect_test _ = require [%here] (not (do_intersect a b))
 let%expect_test _ = require [%here] (do_intersect (a + b) a)
 let%expect_test _ = require [%here] (do_intersect (a + b) b)
 let%expect_test _ = require [%here] (not (do_intersect (a + b) c))
-
 (* [are_disjoint] *)
 let%expect_test _ = require [%here] (are_disjoint a empty)
 let%expect_test _ = require [%here] (not (are_disjoint a a))
@@ -150,7 +146,6 @@ let%expect_test _ = require [%here] (are_disjoint a b)
 let%expect_test _ = require [%here] (are_disjoint b a)
 let%expect_test _ = require [%here] (not (are_disjoint (a + b) a))
 let%expect_test _ = require [%here] (are_disjoint (a + b) c)
-
 (* compare *)
 let%expect_test _ = require [%here] (Int.( = ) (Int.compare 0 1) (-1))
 
@@ -232,12 +227,13 @@ let%expect_test "[compare] is a total order consistent with [is_subset]" =
 let%test _ =
   Result.is_error
     (Result.try_with (fun () ->
-       let module M = Make (struct
-                        let allow_intersecting = false
-                        let should_print_error = false
-                        let known = [ Int63.of_int 0x1, ""; Int63.of_int 0x1, "" ]
-                        let remove_zero_flags = false
-                      end)
+       let module M =
+         Make (struct
+           let allow_intersecting = false
+           let should_print_error = false
+           let known = [ Int63.of_int 0x1, ""; Int63.of_int 0x1, "" ]
+           let remove_zero_flags = false
+         end)
        in
        ()))
 ;;

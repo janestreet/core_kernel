@@ -5,11 +5,12 @@ let times = 10
 
 (** Benchmark the core Hashtbl *)
 let test_core () =
-  let module Identity_table = Hashtbl.Make (struct
-                                include Int
+  let module Identity_table =
+    Hashtbl.Make (struct
+      include Int
 
-                                let hash x = x
-                              end)
+      let hash x = x
+    end)
   in
   let tbl = Identity_table.create ~size:(2 * n) () in
   for i = 0 to n - 1 do
@@ -36,11 +37,12 @@ let test_core () =
 
 (** Benchmark Pooled_hashtbl, a linked chain hashtbl backed by a Zero.Obj_array pool *)
 let test_zero () =
-  let module Identity_table = Pooled_hashtbl.Make (struct
-                                include Int
+  let module Identity_table =
+    Pooled_hashtbl.Make (struct
+      include Int
 
-                                let hash x = x
-                              end)
+      let hash x = x
+    end)
   in
   let tbl = Identity_table.create ~size:(2 * n) () in
   for i = 0 to n - 1 do

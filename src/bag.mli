@@ -1,2 +1,1 @@
-(** @inline *)
-include Bag_intf.Bag
+include Bag_intf.Bag (** @inline *)

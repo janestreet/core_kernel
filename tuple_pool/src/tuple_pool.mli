@@ -1,2 +1,1 @@
-(** @inline *)
-include Tuple_pool_intf.Tuple_pool
+include Tuple_pool_intf.Tuple_pool (** @inline *)

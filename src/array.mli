@@ -10,11 +10,10 @@ type 'a t = 'a Base.Array.t [@@deriving bin_io, typerep]
 (** {2 The signature included from [Base.Array]} *)
 
 (** @open *)
-include
-  module type of struct
-    include Base.Array
-  end
-  with type 'a t := 'a t
+include module type of struct
+  include Base.Array
+end
+with type 'a t := 'a t
 
 (** {2 Extensions}
 
@@ -91,9 +90,9 @@ module Permissioned : sig
     include Blit.S_permissions with type 'perms t := 'perms t
 
     external unsafe_blit
-      :  src:[> read] t
+      :  src:[> read ] t
       -> src_pos:int
-      -> dst:[> write] t
+      -> dst:[> write ] t
       -> dst_pos:int
       -> len:int
       -> unit
@@ -107,9 +106,9 @@ module Permissioned : sig
     include Blit.S_permissions with type 'perms t := 'perms t
 
     external unsafe_blit
-      :  src:[> read] t
+      :  src:[> read ] t
       -> src_pos:int
-      -> dst:[> write] t
+      -> dst:[> write ] t
       -> dst_pos:int
       -> len:int
       -> unit
@@ -139,13 +138,13 @@ module Permissioned : sig
       [('a, 'perms) Array.Permissioned.t] which is abstract, except that
       [('a, read_write) Array.Permissioned.t] is concrete, which is not possible.
   *)
-  val of_array_id : 'a array -> ('a, [< read_write]) t
+  val of_array_id : 'a array -> ('a, [< read_write ]) t
 
-  val to_array_id : ('a, [> read_write]) t -> 'a array
+  val to_array_id : ('a, [> read_write ]) t -> 'a array
 
   (** [to_sequence_immutable t] converts [t] to a sequence. Unlike [to_sequence],
       [to_sequence_immutable] does not need to copy [t] since it is immutable. *)
-  val to_sequence_immutable : ('a, [> immutable]) t -> 'a Sequence.t
+  val to_sequence_immutable : ('a, [> immutable ]) t -> 'a Sequence.t
 
   include Container.S1_permissions with type ('a, 'perms) t := ('a, 'perms) t
   include Blit.S1_permissions with type ('a, 'perms) t := ('a, 'perms) t
@@ -159,137 +158,161 @@ module Permissioned : sig
 
   (** counterparts of regular array functions above *)
 
-  external get : ('a, [> read]) t -> int -> 'a = "%array_safe_get"
-  external set : ('a, [> write]) t -> int -> 'a -> unit = "%array_safe_set"
-  external unsafe_get : ('a, [> read]) t -> int -> 'a = "%array_unsafe_get"
-  external unsafe_set : ('a, [> write]) t -> int -> 'a -> unit = "%array_unsafe_set"
-  val create : len:int -> 'a -> ('a, [< _ perms]) t
-  val init : int -> f:(int -> 'a) -> ('a, [< _ perms]) t
-  val make_matrix : dimx:int -> dimy:int -> 'a -> (('a, [< _ perms]) t, [< _ perms]) t
-  val append : ('a, [> read]) t -> ('a, [> read]) t -> ('a, [< _ perms]) t
-  val concat : ('a, [> read]) t list -> ('a, [< _ perms]) t
-  val copy : ('a, [> read]) t -> ('a, [< _ perms]) t
-  val fill : ('a, [> write]) t -> pos:int -> len:int -> 'a -> unit
-  val of_list : 'a list -> ('a, [< _ perms]) t
-  val map : ('a, [> read]) t -> f:('a -> 'b) -> ('b, [< _ perms]) t
-  val mapi : ('a, [> read]) t -> f:(int -> 'a -> 'b) -> ('b, [< _ perms]) t
+  external get : ('a, [> read ]) t -> int -> 'a = "%array_safe_get"
+  external set : ('a, [> write ]) t -> int -> 'a -> unit = "%array_safe_set"
+  external unsafe_get : ('a, [> read ]) t -> int -> 'a = "%array_unsafe_get"
+  external unsafe_set : ('a, [> write ]) t -> int -> 'a -> unit = "%array_unsafe_set"
+  val create : len:int -> 'a -> ('a, [< _ perms ]) t
+  val init : int -> f:(int -> 'a) -> ('a, [< _ perms ]) t
+  val make_matrix : dimx:int -> dimy:int -> 'a -> (('a, [< _ perms ]) t, [< _ perms ]) t
+  val append : ('a, [> read ]) t -> ('a, [> read ]) t -> ('a, [< _ perms ]) t
+  val concat : ('a, [> read ]) t list -> ('a, [< _ perms ]) t
+  val copy : ('a, [> read ]) t -> ('a, [< _ perms ]) t
+  val fill : ('a, [> write ]) t -> pos:int -> len:int -> 'a -> unit
+  val of_list : 'a list -> ('a, [< _ perms ]) t
+  val map : ('a, [> read ]) t -> f:('a -> 'b) -> ('b, [< _ perms ]) t
+  val mapi : ('a, [> read ]) t -> f:(int -> 'a -> 'b) -> ('b, [< _ perms ]) t
 
   val folding_map
-    :  ('a, [> read]) t
+    :  ('a, [> read ]) t
     -> init:'b
     -> f:('b -> 'a -> 'b * 'c)
-    -> ('c, [< _ perms]) t
+    -> ('c, [< _ perms ]) t
 
-  val iteri : ('a, [> read]) t -> f:(int -> 'a -> unit) -> unit
-  val foldi : ('a, [> read]) t -> init:'b -> f:(int -> 'b -> 'a -> 'b) -> 'b
+  val iteri : ('a, [> read ]) t -> f:(int -> 'a -> unit) -> unit
+  val foldi : ('a, [> read ]) t -> init:'b -> f:(int -> 'b -> 'a -> 'b) -> 'b
 
   val folding_mapi
-    :  ('a, [> read]) t
+    :  ('a, [> read ]) t
     -> init:'b
     -> f:(int -> 'b -> 'a -> 'b * 'c)
-    -> ('c, [< _ perms]) t
+    -> ('c, [< _ perms ]) t
 
-  val fold_right : ('a, [> read]) t -> f:('a -> 'b -> 'b) -> init:'b -> 'b
+  val fold_right : ('a, [> read ]) t -> f:('a -> 'b -> 'b) -> init:'b -> 'b
 
   val sort
     :  ?pos:int
     -> ?len:int
-    -> ('a, [> read_write]) t
+    -> ('a, [> read_write ]) t
     -> compare:('a -> 'a -> int)
     -> unit
 
-  val stable_sort : ('a, [> read_write]) t -> compare:('a -> 'a -> int) -> unit
-  val is_sorted : ('a, [> read]) t -> compare:('a -> 'a -> int) -> bool
-  val is_sorted_strictly : ('a, [> read]) t -> compare:('a -> 'a -> int) -> bool
-  val concat_map : ('a, [> read]) t -> f:('a -> ('b, [> read]) t) -> ('b, [< _ perms]) t
+  val stable_sort : ('a, [> read_write ]) t -> compare:('a -> 'a -> int) -> unit
+  val is_sorted : ('a, [> read ]) t -> compare:('a -> 'a -> int) -> bool
+  val is_sorted_strictly : ('a, [> read ]) t -> compare:('a -> 'a -> int) -> bool
+
+  val concat_map
+    :  ('a, [> read ]) t
+    -> f:('a -> ('b, [> read ]) t)
+    -> ('b, [< _ perms ]) t
 
   val concat_mapi
-    :  ('a, [> read]) t
-    -> f:(int -> 'a -> ('b, [> read]) t)
-    -> ('b, [< _ perms]) t
+    :  ('a, [> read ]) t
+    -> f:(int -> 'a -> ('b, [> read ]) t)
+    -> ('b, [< _ perms ]) t
 
   val partition_tf
-    :  ('a, [> read]) t
+    :  ('a, [> read ]) t
     -> f:('a -> bool)
-    -> ('a, [< _ perms]) t * ('a, [< _ perms]) t
+    -> ('a, [< _ perms ]) t * ('a, [< _ perms ]) t
 
   val partitioni_tf
-    :  ('a, [> read]) t
+    :  ('a, [> read ]) t
     -> f:(int -> 'a -> bool)
-    -> ('a, [< _ perms]) t * ('a, [< _ perms]) t
+    -> ('a, [< _ perms ]) t * ('a, [< _ perms ]) t
 
   val cartesian_product
-    :  ('a, [> read]) t
-    -> ('b, [> read]) t
-    -> ('a * 'b, [< _ perms]) t
+    :  ('a, [> read ]) t
+    -> ('b, [> read ]) t
+    -> ('a * 'b, [< _ perms ]) t
 
   val transpose
-    :  (('a, [> read]) t, [> read]) t
-    -> (('a, [< _ perms]) t, [< _ perms]) t option
+    :  (('a, [> read ]) t, [> read ]) t
+    -> (('a, [< _ perms ]) t, [< _ perms ]) t option
 
   val transpose_exn
-    :  (('a, [> read]) t, [> read]) t
-    -> (('a, [< _ perms]) t, [< _ perms]) t
+    :  (('a, [> read ]) t, [> read ]) t
+    -> (('a, [< _ perms ]) t, [< _ perms ]) t
 
   val normalize : (_, _) t -> int -> int
-  val slice : ('a, [> read]) t -> int -> int -> ('a, [< _ perms]) t
-  val nget : ('a, [> read]) t -> int -> 'a
-  val nset : ('a, [> write]) t -> int -> 'a -> unit
-  val filter_opt : ('a option, [> read]) t -> ('a, [< _ perms]) t
-  val filter_map : ('a, [> read]) t -> f:('a -> 'b option) -> ('b, [< _ perms]) t
-  val filter_mapi : ('a, [> read]) t -> f:(int -> 'a -> 'b option) -> ('b, [< _ perms]) t
-  val for_alli : ('a, [> read]) t -> f:(int -> 'a -> bool) -> bool
-  val existsi : ('a, [> read]) t -> f:(int -> 'a -> bool) -> bool
-  val counti : ('a, [> read]) t -> f:(int -> 'a -> bool) -> int
-  val iter2_exn : ('a, [> read]) t -> ('b, [> read]) t -> f:('a -> 'b -> unit) -> unit
+  val slice : ('a, [> read ]) t -> int -> int -> ('a, [< _ perms ]) t
+  val nget : ('a, [> read ]) t -> int -> 'a
+  val nset : ('a, [> write ]) t -> int -> 'a -> unit
+  val filter_opt : ('a option, [> read ]) t -> ('a, [< _ perms ]) t
+  val filter_map : ('a, [> read ]) t -> f:('a -> 'b option) -> ('b, [< _ perms ]) t
+
+  val filter_mapi
+    :  ('a, [> read ]) t
+    -> f:(int -> 'a -> 'b option)
+    -> ('b, [< _ perms ]) t
+
+  val for_alli : ('a, [> read ]) t -> f:(int -> 'a -> bool) -> bool
+  val existsi : ('a, [> read ]) t -> f:(int -> 'a -> bool) -> bool
+  val counti : ('a, [> read ]) t -> f:(int -> 'a -> bool) -> int
+  val iter2_exn : ('a, [> read ]) t -> ('b, [> read ]) t -> f:('a -> 'b -> unit) -> unit
 
   val map2_exn
-    :  ('a, [> read]) t
-    -> ('b, [> read]) t
+    :  ('a, [> read ]) t
+    -> ('b, [> read ]) t
     -> f:('a -> 'b -> 'c)
-    -> ('c, [< _ perms]) t
+    -> ('c, [< _ perms ]) t
 
   val fold2_exn
-    :  ('a, [> read]) t
-    -> ('b, [> read]) t
+    :  ('a, [> read ]) t
+    -> ('b, [> read ]) t
     -> init:'c
     -> f:('c -> 'a -> 'b -> 'c)
     -> 'c
 
-  val for_all2_exn : ('a, [> read]) t -> ('b, [> read]) t -> f:('a -> 'b -> bool) -> bool
-  val exists2_exn : ('a, [> read]) t -> ('b, [> read]) t -> f:('a -> 'b -> bool) -> bool
-  val filter : ('a, [> read]) t -> f:('a -> bool) -> ('a, [< _ perms]) t
-  val filteri : ('a, [> read]) t -> f:(int -> 'a -> bool) -> ('a, [< _ perms]) t
-  val swap : ('a, [> read_write]) t -> int -> int -> unit
-  val rev_inplace : ('a, [> read_write]) t -> unit
-  val of_list_rev : 'a list -> ('a, [< _ perms]) t
-  val of_list_map : 'a list -> f:('a -> 'b) -> ('b, [< _ perms]) t
-  val of_list_mapi : 'a list -> f:(int -> 'a -> 'b) -> ('b, [< _ perms]) t
-  val of_list_rev_map : 'a list -> f:('a -> 'b) -> ('b, [< _ perms]) t
-  val of_list_rev_mapi : 'a list -> f:(int -> 'a -> 'b) -> ('b, [< _ perms]) t
-  val map_inplace : ('a, [> read_write]) t -> f:('a -> 'a) -> unit
-  val find_exn : ('a, [> read]) t -> f:('a -> bool) -> 'a
-  val find_map_exn : ('a, [> read]) t -> f:('a -> 'b option) -> 'b
-  val findi : ('a, [> read]) t -> f:(int -> 'a -> bool) -> (int * 'a) option
-  val findi_exn : ('a, [> read]) t -> f:(int -> 'a -> bool) -> int * 'a
-  val find_mapi : ('a, [> read]) t -> f:(int -> 'a -> 'b option) -> 'b option
-  val find_mapi_exn : ('a, [> read]) t -> f:(int -> 'a -> 'b option) -> 'b
+  val for_all2_exn
+    :  ('a, [> read ]) t
+    -> ('b, [> read ]) t
+    -> f:('a -> 'b -> bool)
+    -> bool
+
+  val exists2_exn
+    :  ('a, [> read ]) t
+    -> ('b, [> read ]) t
+    -> f:('a -> 'b -> bool)
+    -> bool
+
+  val filter : ('a, [> read ]) t -> f:('a -> bool) -> ('a, [< _ perms ]) t
+  val filteri : ('a, [> read ]) t -> f:(int -> 'a -> bool) -> ('a, [< _ perms ]) t
+  val swap : ('a, [> read_write ]) t -> int -> int -> unit
+  val rev_inplace : ('a, [> read_write ]) t -> unit
+  val of_list_rev : 'a list -> ('a, [< _ perms ]) t
+  val of_list_map : 'a list -> f:('a -> 'b) -> ('b, [< _ perms ]) t
+  val of_list_mapi : 'a list -> f:(int -> 'a -> 'b) -> ('b, [< _ perms ]) t
+  val of_list_rev_map : 'a list -> f:('a -> 'b) -> ('b, [< _ perms ]) t
+  val of_list_rev_mapi : 'a list -> f:(int -> 'a -> 'b) -> ('b, [< _ perms ]) t
+  val map_inplace : ('a, [> read_write ]) t -> f:('a -> 'a) -> unit
+  val find_exn : ('a, [> read ]) t -> f:('a -> bool) -> 'a
+  val find_map_exn : ('a, [> read ]) t -> f:('a -> 'b option) -> 'b
+  val findi : ('a, [> read ]) t -> f:(int -> 'a -> bool) -> (int * 'a) option
+  val findi_exn : ('a, [> read ]) t -> f:(int -> 'a -> bool) -> int * 'a
+  val find_mapi : ('a, [> read ]) t -> f:(int -> 'a -> 'b option) -> 'b option
+  val find_mapi_exn : ('a, [> read ]) t -> f:(int -> 'a -> 'b option) -> 'b
 
   val find_consecutive_duplicate
-    :  ('a, [> read]) t
+    :  ('a, [> read ]) t
     -> equal:('a -> 'a -> bool)
     -> ('a * 'a) option
 
-  val reduce : ('a, [> read]) t -> f:('a -> 'a -> 'a) -> 'a option
-  val reduce_exn : ('a, [> read]) t -> f:('a -> 'a -> 'a) -> 'a
-  val permute : ?random_state:Random.State.t -> ('a, [> read_write]) t -> unit
-  val zip : ('a, [> read]) t -> ('b, [> read]) t -> ('a * 'b, [< _ perms]) t option
-  val zip_exn : ('a, [> read]) t -> ('b, [> read]) t -> ('a * 'b, [< _ perms]) t
-  val unzip : ('a * 'b, [> read]) t -> ('a, [< _ perms]) t * ('b, [< _ perms]) t
-  val sorted_copy : ('a, [> read]) t -> compare:('a -> 'a -> int) -> ('a, [< _ perms]) t
-  val last : ('a, [> read]) t -> 'a
-  val equal : ('a -> 'a -> bool) -> ('a, [> read]) t -> ('a, [> read]) t -> bool
-  val unsafe_truncate : (_, [> write]) t -> len:int -> unit
-  val to_sequence : ('a, [> read]) t -> 'a Sequence.t
-  val to_sequence_mutable : ('a, [> read]) t -> 'a Sequence.t
+  val reduce : ('a, [> read ]) t -> f:('a -> 'a -> 'a) -> 'a option
+  val reduce_exn : ('a, [> read ]) t -> f:('a -> 'a -> 'a) -> 'a
+  val permute : ?random_state:Random.State.t -> ('a, [> read_write ]) t -> unit
+  val zip : ('a, [> read ]) t -> ('b, [> read ]) t -> ('a * 'b, [< _ perms ]) t option
+  val zip_exn : ('a, [> read ]) t -> ('b, [> read ]) t -> ('a * 'b, [< _ perms ]) t
+  val unzip : ('a * 'b, [> read ]) t -> ('a, [< _ perms ]) t * ('b, [< _ perms ]) t
+
+  val sorted_copy
+    :  ('a, [> read ]) t
+    -> compare:('a -> 'a -> int)
+    -> ('a, [< _ perms ]) t
+
+  val last : ('a, [> read ]) t -> 'a
+  val equal : ('a -> 'a -> bool) -> ('a, [> read ]) t -> ('a, [> read ]) t -> bool
+  val unsafe_truncate : (_, [> write ]) t -> len:int -> unit
+  val to_sequence : ('a, [> read ]) t -> 'a Sequence.t
+  val to_sequence_mutable : ('a, [> read ]) t -> 'a Sequence.t
 end

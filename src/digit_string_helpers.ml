@@ -275,8 +275,7 @@ module Unsafe = struct
             scale (> or >=) round_at], which doesn't depend on how much larger the
             divisor is. So this change is safe. *)
          divisor := Int63.min denominator scale
-       | '_'
-         when allow_underscore -> ()
+       | '_' when allow_underscore -> ()
        | _ -> raise_invalid_decimal "read_int63_decimal");
       pos := Int.succ !pos
     done;

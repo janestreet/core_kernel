@@ -2,5 +2,4 @@
     debug messages.
 *)
 
-(** @inline *)
-include Info_intf.Info
+include Info_intf.Info (** @inline *)

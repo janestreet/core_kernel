@@ -105,8 +105,8 @@ let%test_module _ =
 
     let test_inconvertible_values (type a) (conv : a t) (test_cases : a list) : bool =
       List.for_all test_cases ~f:(fun v ->
-        not (is_immediate v)
-        && not (conv.value_is_int v)
+        (not (is_immediate v))
+        && (not (conv.value_is_int v))
         && (match conv.value_as_int v with
           | Some _ -> false
           | None -> true)
@@ -120,7 +120,7 @@ let%test_module _ =
 
     let test_inconvertible_ints (type a) (conv : a t) (test_cases : int list) : bool =
       List.for_all test_cases ~f:(fun i ->
-        not (conv.int_is_value i)
+        (not (conv.int_is_value i))
         && (match conv.int_as_value i with
           | Some _ -> false
           | None -> true)
@@ -454,7 +454,8 @@ let%test_module _ =
       let module M = struct
         type t =
           [ `Foo
-          | `Bar of unit ]
+          | `Bar of unit
+          ]
         [@@deriving typerep, enumerate]
       end
       in
@@ -483,7 +484,8 @@ let%test_module _ =
         type t =
           [ `Foo
           | `Bar
-          | `Baz ]
+          | `Baz
+          ]
         [@@deriving typerep, enumerate]
       end
       in
@@ -506,7 +508,8 @@ let%test_module _ =
         type t =
           [ `Foo of unit
           | `Bar of unit
-          | `Baz of unit ]
+          | `Baz of unit
+          ]
         [@@deriving typerep]
       end
       in

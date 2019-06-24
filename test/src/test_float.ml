@@ -89,7 +89,7 @@ let%test_unit "round_nearest_half_to_even quickcheck" =
     let is_tie = Int.( % ) i 10 = 5 in
     assert (
       (is_tie && Float.mod_float y 2. = 0. && Float.abs (y -. x) = 0.5)
-      || (not is_tie && y = f));
+      || ((not is_tie) && y = f));
     let x' = Float.one_ulp `Up x in
     let x'' = Float.one_ulp `Down x in
     assert (Float.round_nearest_half_to_even x' = Float.round_nearest x');
@@ -178,7 +178,8 @@ let%test_module "round_significant" =
         test
           Float.gen_without_nan
           ~trials:10_000
-          ~sexp_of:(fun float -> [%message "" (float : float) (significant_digits : int)])
+          ~sexp_of:(fun float ->
+            [%message "" (float : float) (significant_digits : int)])
           ~f:(fun x ->
             let s = sprintf "%.*g" significant_digits x |> Float.of_string in
             assert (

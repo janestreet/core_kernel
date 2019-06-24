@@ -4,8 +4,7 @@ module Entry = struct
   type ('key, 'data) t =
     { (* the int is fixed, but the 'key can change *)
       mutable key : 'key
-    ; mutable data :
-        'data
+    ; mutable data : 'data
     (* The index in [defined_entries] where this [Entry.t] is placed. *)
     ; mutable defined_entries_index : int
     }
@@ -15,19 +14,16 @@ end
 type ('key, 'data) t_detailed =
   { num_keys : int
   ; sexp_of_key : ('key -> Sexp.t) option
-  ; key_to_int :
-      'key
+  ; key_to_int : 'key
       -> int
   (* The number of entries in the table, not the length of the arrays below. *)
-  ; mutable length :
-      int
+  ; mutable length : int
   (* [(key, data)] is in the table iff
      {[
        entries_by_key.( key_to_int key ) = Some { key; data; _ }
      ]}
   *)
-  ; entries_by_key :
-      ('key, 'data) Entry.t option array
+  ; entries_by_key : ('key, 'data) Entry.t option array
   (* The first [length] elements of [defined_entries] hold the data in the table.  This is
      an optimization for fold, to keep us from wasting iterations when the array is
      sparse. *)
@@ -50,7 +46,8 @@ let invariant invariant_key invariant_data t =
     assert (num_keys = Array.length t.entries_by_key);
     assert (num_keys = Array.length t.defined_entries);
     assert (0 <= t.length && t.length <= num_keys);
-    Array.iteri t.entries_by_key ~f:(fun i -> function
+    Array.iteri t.entries_by_key ~f:(fun i ->
+      function
       | None -> ()
       | Some entry ->
         invariant_key entry.Entry.key;
@@ -165,7 +162,7 @@ let entry_opt t key =
     failwiths
       "key's index out of range"
       (key, index, `Should_be_between_0_and (t.num_keys - 1))
-      [%sexp_of: key * int * [`Should_be_between_0_and of int]]
+      [%sexp_of: key * int * [ `Should_be_between_0_and of int ]]
 ;;
 
 let find t key =
@@ -311,9 +308,10 @@ struct
     of_serialized (Serialized.t_of_sexp Key.t_of_sexp data_of_sexp sexp)
   ;;
 
-  include Binable.Of_binable1 (struct
-      type 'data t = (Key.t, 'data) Serialized.t [@@deriving bin_io]
-    end)
+  include Binable.Of_binable1
+      (struct
+        type 'data t = (Key.t, 'data) Serialized.t [@@deriving bin_io]
+      end)
       (struct
         type 'data t = 'data table
 

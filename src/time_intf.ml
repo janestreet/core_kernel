@@ -102,7 +102,7 @@ module type Shared = sig
     :  Date.t
     -> Ofday.t
     -> zone:Zone.t
-    -> [`Once of t | `Twice of t * t | `Never of t]
+    -> [ `Once of t | `Twice of t * t | `Never of t ]
 
   val to_date_ofday : t -> zone:Zone.t -> Date.t * Ofday.t
 
@@ -123,7 +123,7 @@ module type Shared = sig
   val to_date_ofday_precise
     :  t
     -> zone:Zone.t
-    -> Date.t * Ofday.t * [`Only | `Also_at of t | `Also_skipped of Date.t * Ofday.t]
+    -> Date.t * Ofday.t * [ `Only | `Also_at of t | `Also_skipped of Date.t * Ofday.t ]
 
   val to_date : t -> zone:Zone.t -> Date.t
   val to_ofday : t -> zone:Zone.t -> Ofday.t
@@ -152,7 +152,8 @@ module type Shared = sig
 
   (** The [{to,of}_string] functions in [Time] convert to UTC time, because a local time
       zone is not necessarily available.  They are generous in what they will read in. *)
-  include Stringable with type t := t
+  include
+    Stringable with type t := t
 
   (** [to_filename_string t ~zone] converts [t] to string with format
       YYYY-MM-DD_HH-MM-SS.mmm which is suitable for using in filenames. *)
@@ -206,7 +207,7 @@ module type Shared = sig
       ofday then the t returned will be equal to the t given.
   *)
   val occurrence
-    :  [`First_after_or_at | `Last_before_or_at]
+    :  [ `First_after_or_at | `Last_before_or_at ]
     -> t
     -> ofday:Ofday.t
     -> zone:Zone.t

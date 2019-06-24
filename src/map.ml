@@ -5,7 +5,7 @@ module List = List0
 module Symmetric_diff_element = struct
   module Stable = struct
     module V1 = struct
-      type ('k, 'v) t = 'k * [`Left of 'v | `Right of 'v | `Unequal of 'v * 'v]
+      type ('k, 'v) t = 'k * [ `Left of 'v | `Right of 'v | `Unequal of 'v * 'v ]
       [@@deriving bin_io, compare, sexp]
 
       let%expect_test _ =
@@ -28,15 +28,13 @@ module Symmetric_diff_element = struct
 
       let left (_key, diff) =
         match diff with
-        | `Left x
-        | `Unequal (x, _) -> Some x
+        | `Left x | `Unequal (x, _) -> Some x
         | `Right _ -> None
       ;;
 
       let right (_key, diff) =
         match diff with
-        | `Right x
-        | `Unequal (_, x) -> Some x
+        | `Right x | `Unequal (_, x) -> Some x
         | `Left _ -> None
       ;;
     end
@@ -49,10 +47,7 @@ module Continue_or_stop = Base.Map.Continue_or_stop
 module Finished_or_unfinished = Base.Map.Finished_or_unfinished
 
 type ('k, 'cmp) comparator =
-  (module
-    Comparator.S
-    with type t = 'k
-     and type comparator_witness = 'cmp)
+  (module Comparator.S with type t = 'k and type comparator_witness = 'cmp)
 
 let to_comparator (type k cmp) ((module M) : (k, cmp) Map.comparator) = M.comparator
 
@@ -343,10 +338,8 @@ let init_for_bin_prot ~len ~f ~comparator =
   if invariants map
   then map
   else (
-    match
-      (* The invariants are broken, but we can still traverse the structure. *)
-      Using_comparator.of_iteri ~iteri:(iteri map) ~comparator
-    with
+    (* The invariants are broken, but we can still traverse the structure. *)
+    match Using_comparator.of_iteri ~iteri:(iteri map) ~comparator with
     | `Ok map -> map
     | `Duplicate_key _key -> failwith "Map.bin_read_t: duplicate element in map")
 ;;

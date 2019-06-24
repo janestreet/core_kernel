@@ -15,7 +15,7 @@ module Make_sexp_deserialization_test (T : Stable_unit_test_intf.Arg) = struct
              error
              "could not deserialize sexp"
              (sexp_as_string, `Expected t)
-             [%sexp_of: string * [`Expected of T.t]]
+             [%sexp_of: string * [ `Expected of T.t ]]
          | Ok t' ->
            if T.equal t t'
            then Ok ()
@@ -23,7 +23,7 @@ module Make_sexp_deserialization_test (T : Stable_unit_test_intf.Arg) = struct
              Or_error.error
                "sexp deserialization mismatch"
                (`Expected t, `But_got t')
-               [%sexp_of: [`Expected of T.t] * [`But_got of T.t]]))
+               [%sexp_of: [ `Expected of T.t ] * [ `But_got of T.t ]]))
     |> ok_exn
   ;;
 end
@@ -40,7 +40,7 @@ module Make_sexp_serialization_test (T : Stable_unit_test_intf.Arg) = struct
              failwiths
                "sexp serialization mismatch"
                (`Expected sexp, `But_got serialized_sexp)
-               [%sexp_of: [`Expected of Sexp.t] * [`But_got of Sexp.t]])))
+               [%sexp_of: [ `Expected of Sexp.t ] * [ `But_got of Sexp.t ]])))
     |> ok_exn
   ;;
 end
@@ -56,14 +56,14 @@ module Make_bin_io_test (T : Stable_unit_test_intf.Arg) = struct
         failwiths
           "bin_io serialization mismatch"
           (t, `Expected expected_bin_io, `But_got serialized_bin_io)
-          [%sexp_of: T.t * [`Expected of string] * [`But_got of string]];
+          [%sexp_of: T.t * [ `Expected of string ] * [ `But_got of string ]];
       let t' = Binable.of_string binable_m serialized_bin_io in
       if not (T.equal t t')
       then
         failwiths
           "bin_io deserialization mismatch"
           (`Expected t, `But_got t')
-          [%sexp_of: [`Expected of T.t] * [`But_got of T.t]])
+          [%sexp_of: [ `Expected of T.t ] * [ `But_got of T.t ]])
   ;;
 end
 
@@ -93,7 +93,7 @@ struct
         failwiths
           "sexp serialization mismatch"
           (`Expected sexps, `But_got serialized_elements)
-          [%sexp_of: [`Expected of Sexp.t list] * [`But_got of Sexp.t list]];
+          [%sexp_of: [ `Expected of Sexp.t list ] * [ `But_got of Sexp.t list ]];
       let sexp_permutations = List.init 10 ~f:(fun _ -> List.permute sexps) in
       List.iter sexp_permutations ~f:(fun sexps ->
         let t' = T.t_of_sexp (Sexp.List sexps) in
@@ -102,7 +102,7 @@ struct
           failwiths
             "sexp deserialization msimatch"
             (`Expected t, `But_got t')
-            [%sexp_of: [`Expected of T.t] * [`But_got of T.t]]))
+            [%sexp_of: [ `Expected of T.t ] * [ `But_got of T.t ]]))
   ;;
 
   let rec is_concatenation string strings =
@@ -138,7 +138,7 @@ struct
         failwiths
           "serialization mismatch"
           (`Expected (bin_io_header, elements), `But_got serialized)
-          [%sexp_of: [`Expected of string * string list] * [`But_got of string]];
+          [%sexp_of: [ `Expected of string * string list ] * [ `But_got of string ]];
       let permutatations = List.init 10 ~f:(fun _ -> List.permute elements) in
       List.iter permutatations ~f:(fun elements ->
         let t' = Binable.of_string binable_m (bin_io_of_elements elements) in
@@ -147,7 +147,7 @@ struct
           failwiths
             "bin-io deserialization mismatch"
             (`Expected t, `But_got t')
-            [%sexp_of: [`Expected of T.t] * [`But_got of T.t]]))
+            [%sexp_of: [ `Expected of T.t ] * [ `But_got of T.t ]]))
   ;;
 end
 

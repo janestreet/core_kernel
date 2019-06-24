@@ -28,12 +28,13 @@ let add_char buf c =
 ;;
 
 module To_bytes =
-  Test_blit.Make_distinct_and_test (struct
-    type t = char
+  Test_blit.Make_distinct_and_test
+    (struct
+      type t = char
 
-    let equal = Char.equal
-    let of_bool b = if b then 'a' else 'b'
-  end)
+      let equal = Char.equal
+      let of_bool b = if b then 'a' else 'b'
+    end)
     (struct
       type nonrec t = t [@@deriving sexp_of]
 
@@ -238,16 +239,14 @@ let add_substitute buf f s =
     if i < lim
     then (
       match s.[i] with
-      | '$' as current
-        when Char.equal previous '\\' ->
+      | '$' as current when Char.equal previous '\\' ->
         add_char buf current;
         subst current (i + 1)
       | '$' ->
         let ident, next_i = find_ident s (i + 1) in
         add_string buf (f ident);
         subst ' ' next_i
-      | current
-        when Char.equal previous '\\' ->
+      | current when Char.equal previous '\\' ->
         add_char buf '\\';
         add_char buf current;
         subst current (i + 1)

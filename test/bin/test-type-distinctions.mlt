@@ -12,7 +12,7 @@ let () =
       ~added
       ~replace:true
   in
-  let x : (int, [`A of string]) Avltree.t = tree in
+  let x : (int, [ `A of string ]) Avltree.t = tree in
   let y = Avltree.add tree ~key:0 ~data:(`B 0) ~compare ~added ~replace:true in
   ignore (y : (_, _) Avltree.t);
   match Avltree.find x 0 ~compare with

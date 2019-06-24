@@ -96,8 +96,7 @@ end = struct
       let name = name str in
       let args = Config.sizes in
       match Config.regex with
-      | Some regex
-        when not (Re2.matches regex name) -> ()
+      | Some regex when not (Re2.matches regex name) -> ()
       | _ -> Queue.enqueue queue (Bench.Test.create_indexed ~name ~args f)
     ;;
   end
@@ -171,7 +170,7 @@ end = struct
       ( !! ) "of_alist [no dups]" (fun size ->
         let alist = Example.alist size in
         stage (fun () ->
-          ignore (of_alist alist : [`Ok of int t | `Duplicate_key of key])))
+          ignore (of_alist alist : [ `Ok of int t | `Duplicate_key of key ])))
     ;;
 
     let of_alist_exn = Table.of_alist_exn
@@ -197,8 +196,8 @@ end = struct
         let alist = Example.alist size in
         stage (fun () ->
           ignore
-            ( of_alist_report_all_dups alist
-              : [`Ok of int t | `Duplicate_keys of key list] )))
+            (of_alist_report_all_dups alist
+             : [ `Ok of int t | `Duplicate_keys of key list ])))
     ;;
 
     let of_alist_multi = Table.of_alist_multi
@@ -216,8 +215,8 @@ end = struct
         let alist = Example.alist size in
         stage (fun () ->
           ignore
-            ( create_mapped alist ~get_key:fst ~get_data:snd
-              : [`Ok of int t | `Duplicate_keys of key list] )))
+            (create_mapped alist ~get_key:fst ~get_data:snd
+             : [ `Ok of int t | `Duplicate_keys of key list ])))
     ;;
 
     let create_with_key = Table.create_with_key
@@ -228,8 +227,8 @@ end = struct
         let key_array = Example.key_array size in
         stage (fun () ->
           ignore
-            ( create_with_key data ~get_key:(Array.get key_array)
-              : [`Ok of int t | `Duplicate_keys of key list] )))
+            (create_with_key data ~get_key:(Array.get key_array)
+             : [ `Ok of int t | `Duplicate_keys of key list ])))
     ;;
 
     let create_with_key_exn = Table.create_with_key_exn
@@ -250,8 +249,8 @@ end = struct
         let key_array = Example.key_array size in
         stage (fun () ->
           ignore
-            ( create_with_key_or_error data ~get_key:(Array.get key_array)
-              : int t Or_error.t )))
+            (create_with_key_or_error data ~get_key:(Array.get key_array)
+             : int t Or_error.t)))
     ;;
 
     let group = Table.group
@@ -269,7 +268,8 @@ end = struct
       ( !! ) "sexp_of_key + <rand key>" (fun size ->
         let r = Example.random size in
         let t = Example.t size in
-        stage (fun () -> ignore (sexp_of_key t (Example.random_key r `present) : Sexp.t)))
+        stage (fun () ->
+          ignore (sexp_of_key t (Example.random_key r `present) : Sexp.t)))
     ;;
 
     let choose = Table.choose
@@ -578,7 +578,7 @@ end = struct
           let key = Example.random_key r `either in
           if mem t key
           then remove t key
-          else ignore (add t ~key ~data:0 : [`Ok | `Duplicate])))
+          else ignore (add t ~key ~data:0 : [ `Ok | `Duplicate ])))
     ;;
 
     let () =
@@ -587,7 +587,8 @@ end = struct
         let t = Example.t size in
         stage (fun () ->
           ignore
-            (add t ~key:(Example.random_key r `either) ~data:0 : [`Ok | `Duplicate]);
+            (add t ~key:(Example.random_key r `either) ~data:0
+             : [ `Ok | `Duplicate ]);
           remove t (Example.random_key r `either)))
     ;;
 
@@ -782,7 +783,8 @@ end = struct
       ( !! ) "find_multi + <rand key>" (fun size ->
         let r = Example.random size in
         let t = Example.t_multi size in
-        stage (fun () -> ignore (find_multi t (Example.random_key r `either) : int list)))
+        stage (fun () ->
+          ignore (find_multi t (Example.random_key r `either) : int list)))
     ;;
 
     let find_and_call = Table.find_and_call
@@ -823,9 +825,9 @@ end = struct
           stage (fun () -> ignore (merge t1 t2 ~f:merge_fun : int t)))
       in
       bench "drop" (fun ~key:_ _ -> None);
-      bench "keep" (fun ~key:_ -> function
-        | `Left data
-        | `Right data -> Some data
+      bench "keep" (fun ~key:_ ->
+        function
+        | `Left data | `Right data -> Some data
         | `Both (left, right) -> Some (left + right))
     ;;
 

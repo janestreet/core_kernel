@@ -53,22 +53,22 @@ module type S1 = sig
   *)
   val enqueue
     :  ('key, 'data) t
-    -> [`back | `front]
+    -> [ `back | `front ]
     -> 'key
     -> 'data
-    -> [`Ok | `Key_already_present]
+    -> [ `Ok | `Key_already_present ]
 
   (** Like {!enqueue}, but it raises in the [`Key_already_present] case *)
-  val enqueue_exn : ('key, 'data) t -> [`back | `front] -> 'key -> 'data -> unit
+  val enqueue_exn : ('key, 'data) t -> [ `back | `front ] -> 'key -> 'data -> unit
 
   (** See {!enqueue}. [enqueue_back t k v] is the same as [enqueue t `back k v]  *)
-  val enqueue_back : ('key, 'data) t -> 'key -> 'data -> [`Ok | `Key_already_present]
+  val enqueue_back : ('key, 'data) t -> 'key -> 'data -> [ `Ok | `Key_already_present ]
 
   (** See {!enqueue_exn}. [enqueue_back_exn t k v] is the same as [enqueue_exn t `back k v] *)
   val enqueue_back_exn : ('key, 'data) t -> 'key -> 'data -> unit
 
   (** See {!enqueue}. [enqueue_front t k v] is the same as [enqueue t `front k v]  *)
-  val enqueue_front : ('key, 'data) t -> 'key -> 'data -> [`Ok | `Key_already_present]
+  val enqueue_front : ('key, 'data) t -> 'key -> 'data -> [ `Ok | `Key_already_present ]
 
   (** See {!enqueue_exn}. [enqueue_front_exn t k v] is the same as [enqueue_exn t `front k
       v] *)
@@ -101,10 +101,10 @@ module type S1 = sig
   val keys : ('key, 'data) t -> 'key list
 
   (** [dequeue t front_or_back] returns the front or back element of the queue. *)
-  val dequeue : ('key, 'data) t -> [`back | `front] -> 'data option
+  val dequeue : ('key, 'data) t -> [ `back | `front ] -> 'data option
 
   (** Like {!dequeue}, but it raises if the queue is empty. *)
-  val dequeue_exn : ('key, 'data) t -> [`back | `front] -> 'data
+  val dequeue_exn : ('key, 'data) t -> [ `back | `front ] -> 'data
 
   (** [dequeue_back t] returns the back element of the queue. *)
   val dequeue_back : ('key, 'data) t -> 'data option
@@ -119,10 +119,10 @@ module type S1 = sig
   val dequeue_front_exn : ('key, 'data) t -> 'data
 
   (** [dequeue_with_key t] returns the front or back element of the queue and its key. *)
-  val dequeue_with_key : ('key, 'data) t -> [`back | `front] -> ('key * 'data) option
+  val dequeue_with_key : ('key, 'data) t -> [ `back | `front ] -> ('key * 'data) option
 
   (** Like {!dequeue_with_key}, but it raises if the queue is empty. *)
-  val dequeue_with_key_exn : ('key, 'data) t -> [`back | `front] -> 'key * 'data
+  val dequeue_with_key_exn : ('key, 'data) t -> [ `back | `front ] -> 'key * 'data
 
   (** [dequeue_back_with_key t] returns the back element of the queue and its key. *)
   val dequeue_back_with_key : ('key, 'data) t -> ('key * 'data) option
@@ -141,18 +141,18 @@ module type S1 = sig
   val dequeue_all : ('key, 'data) t -> f:('data -> unit) -> unit
 
   (** [remove q k] removes the key-value pair with key [k] from the queue. *)
-  val remove : ('key, 'data) t -> 'key -> [`Ok | `No_such_key]
+  val remove : ('key, 'data) t -> 'key -> [ `Ok | `No_such_key ]
 
   val remove_exn : ('key, 'data) t -> 'key -> unit
 
   (** [replace q k v] changes the value of key [k] in the queue to [v]. *)
-  val replace : ('key, 'data) t -> 'key -> 'data -> [`Ok | `No_such_key]
+  val replace : ('key, 'data) t -> 'key -> 'data -> [ `Ok | `No_such_key ]
 
   val replace_exn : ('key, 'data) t -> 'key -> 'data -> unit
 
   (** [drop ?n q back_or_front] drops [n] elements (default 1) from the back or front of
       the queue. If the queue has fewer than [n] elements then it is cleared. *)
-  val drop : ?n:int -> ('key, 'data) t -> [`back | `front] -> unit
+  val drop : ?n:int -> ('key, 'data) t -> [ `back | `front ] -> unit
 
   (** Equivalent to [drop ?n q `front]. *)
   val drop_front : ?n:int -> ('key, 'data) t -> unit

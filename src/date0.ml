@@ -304,8 +304,7 @@ let unix_epoch = create_exn ~y:1970 ~m:Jan ~d:1
 
    note: unit tests are in lib_test/time_test.ml
 *)
-module Days :
-sig
+module Days : sig
   type date = t
   type t [@@immediate]
 

@@ -81,7 +81,11 @@ module Make_tests (Int : Base.Int.S) : sig end = struct
   let%test_unit _ = [%test_eq: t] (of_string "-0x3fff_ffff_ffff_ffff") (min_value + one)
   let%test_unit _ = [%test_eq: t] (of_string "0o777777777777777777777") (neg one)
   let%test _ = assert_raise (fun () -> of_string "0xffff_ffff_ffff_ffff")
-  let%test _ = assert_raise (fun () -> of_string (Int64.to_string 0x7fff_ffff_ffff_ffffL))
+
+  let%test _ =
+    assert_raise (fun () -> of_string (Int64.to_string 0x7fff_ffff_ffff_ffffL))
+  ;;
+
   let%test _ = assert_raise (fun () -> of_string "0o1111111111111111111111")
   let%test_unit _ = [%test_result: int] (popcount zero) ~expect:0
   let%test_unit _ = [%test_result: int] (popcount one) ~expect:1

@@ -24,15 +24,16 @@ end
 
 (* Even integers are the only valid identifiers *)
 module Even_int_id =
-  Make_with_validate_without_pretty_printer (struct
-    let module_name = "Even_int_id"
+  Make_with_validate_without_pretty_printer
+    (struct
+      let module_name = "Even_int_id"
 
-    let validate s =
-      if Int.of_string s % 2 <> 0
-      then Or_error.error_s [%message "Not a valid Even_int_id" ~_:(s : string)]
-      else Ok ()
-    ;;
-  end)
+      let validate s =
+        if Int.of_string s % 2 <> 0
+        then Or_error.error_s [%message "Not a valid Even_int_id" ~_:(s : string)]
+        else Ok ()
+      ;;
+    end)
     ()
 
 let even_int_id_to_bin_str t =
@@ -105,9 +106,10 @@ let%expect_test "of bin prot failure" =
 ;;
 
 module M =
-  Make_without_pretty_printer (struct
-    let module_name = "test"
-  end)
+  Make_without_pretty_printer
+    (struct
+      let module_name = "test"
+    end)
     ()
 
 let%test_unit "string roundtrip" =

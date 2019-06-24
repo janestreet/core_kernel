@@ -18,13 +18,13 @@ module Types = struct
   end
 
   module Read = struct
-    type t = [`Read] [@@deriving bin_io, compare, hash, sexp]
+    type t = [ `Read ] [@@deriving bin_io, compare, hash, sexp]
 
     let name = "Read"
   end
 
   module Write = struct
-    type t = [`Who_can_write of Me.t] [@@deriving bin_io, compare, hash, sexp]
+    type t = [ `Who_can_write of Me.t ] [@@deriving bin_io, compare, hash, sexp]
 
     let name = "Write"
   end
@@ -32,7 +32,8 @@ module Types = struct
   module Immutable = struct
     type t =
       [ Read.t
-      | `Who_can_write of Nobody.t ]
+      | `Who_can_write of Nobody.t
+      ]
     [@@deriving bin_io, compare, hash, sexp]
 
     let name = "Immutable"
@@ -41,7 +42,8 @@ module Types = struct
   module Read_write = struct
     type t =
       [ Read.t
-      | Write.t ]
+      | Write.t
+      ]
     [@@deriving bin_io, compare, hash, sexp]
 
     let name = "Read_write"
@@ -50,7 +52,8 @@ module Types = struct
   module Upper_bound = struct
     type 'a t =
       [ Read.t
-      | `Who_can_write of 'a ]
+      | `Who_can_write of 'a
+      ]
     [@@deriving bin_io, compare, hash, sexp]
 
     let name = "Upper_bound"
@@ -76,9 +79,10 @@ module Only_used_as_phantom_type1 (Name : sig
   let compare _ _ _ = failwithf "Unexpectedly called [%s.compare]" Name.name ()
   let hash_fold_t _ _ _ = failwithf "Unexpectedly called [%s.hash_fold_t]" Name.name ()
 
-  include Binable.Of_binable1 (struct
-      type 'a t = 'a [@@deriving bin_io]
-    end)
+  include Binable.Of_binable1
+      (struct
+        type 'a t = 'a [@@deriving bin_io]
+      end)
       (struct
         type nonrec 'a t = 'a t
 

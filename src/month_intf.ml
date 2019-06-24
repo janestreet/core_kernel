@@ -21,7 +21,8 @@ module type Month = sig
 
   (** [of_string s] accepts three-character abbreviations with three capitalizations
       (e.g. Jan, JAN, and jan). *)
-  include Stringable.S with type t := t
+  include
+    Stringable.S with type t := t
 
   val all : t list
 

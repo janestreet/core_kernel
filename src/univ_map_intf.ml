@@ -24,7 +24,7 @@ module type S = sig
   val mem_by_id : t -> Key.Uid.t -> bool
   val find : t -> 'a Key.t -> 'a data option
   val find_exn : t -> 'a Key.t -> 'a data
-  val add : t -> 'a Key.t -> 'a data -> [`Ok of t | `Duplicate]
+  val add : t -> 'a Key.t -> 'a data -> [ `Ok of t | `Duplicate ]
   val add_exn : t -> 'a Key.t -> 'a data -> t
   val change : t -> 'a Key.t -> f:('a data option -> 'a data option) -> t
   val change_exn : t -> 'a Key.t -> f:('a data -> 'a data) -> t
@@ -54,7 +54,7 @@ module type S1 = sig
   val mem_by_id : _ t -> Key.Uid.t -> bool
   val find : 's t -> 'a Key.t -> ('s, 'a) data option
   val find_exn : 's t -> 'a Key.t -> ('s, 'a) data
-  val add : 's t -> 'a Key.t -> ('s, 'a) data -> [`Ok of 's t | `Duplicate]
+  val add : 's t -> 'a Key.t -> ('s, 'a) data -> [ `Ok of 's t | `Duplicate ]
   val add_exn : 's t -> 'a Key.t -> ('s, 'a) data -> 's t
 
   val change

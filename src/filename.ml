@@ -108,7 +108,7 @@ let is_posix_pathname_component s =
   && s <> ".."
   && Int.(0 < S.length s)
   && Int.(S.length s <= max_pathname_component_size)
-  && not (S.contains s '/')
+  && (not (S.contains s '/'))
   && not (S.contains s '\000')
 ;;
 

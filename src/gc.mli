@@ -38,23 +38,23 @@ module Stat : sig
     ; major_collections : int
     (** Number of major collection cycles completed since the program
         was started. *)
-    ; heap_words : int  (** Total size of the major heap, in words. *)
+    ; heap_words : int (** Total size of the major heap, in words. *)
     ; heap_chunks : int
     (** Number of contiguous pieces of memory that make up the major heap. *)
     ; live_words : int
     (** Number of words of live data in the major heap, including the header
         words. *)
-    ; live_blocks : int  (** Number of live blocks in the major heap. *)
-    ; free_words : int  (** Number of words in the free list. *)
-    ; free_blocks : int  (** Number of blocks in the free list. *)
-    ; largest_free : int  (** Size (in words) of the largest block in the free list. *)
+    ; live_blocks : int (** Number of live blocks in the major heap. *)
+    ; free_words : int (** Number of words in the free list. *)
+    ; free_blocks : int (** Number of blocks in the free list. *)
+    ; largest_free : int (** Size (in words) of the largest block in the free list. *)
     ; fragments : int
     (** Number of wasted words due to fragmentation.  These are
         1-words free blocks placed between two live blocks.  They
         are not available for allocation. *)
-    ; compactions : int  (** Number of heap compactions since the program was started. *)
-    ; top_heap_words : int  (** Maximum size reached by the major heap, in words. *)
-    ; stack_size : int  (** Current size of the stack, in words. *)
+    ; compactions : int (** Number of heap compactions since the program was started. *)
+    ; top_heap_words : int (** Maximum size reached by the major heap, in words. *)
+    ; stack_size : int (** Current size of the stack, in words. *)
     }
   [@@deriving bin_io, sexp, fields]
 
@@ -334,6 +334,7 @@ external major : unit -> unit = "caml_gc_major"
     unreachable blocks. *)
 external full_major : unit -> unit = "caml_gc_full_major"
 
+
 (** Perform a full major collection and compact the heap.  Note that heap
     compaction is a lengthy operation. *)
 external compact : unit -> unit = "caml_gc_compaction"
@@ -346,6 +347,7 @@ val print_stat : out_channel -> unit
     started.  It is returned as a [float] to avoid overflow problems
     with [int] on 32-bit machines. *)
 val allocated_bytes : unit -> float
+
 
 (** [keep_alive a] ensures that [a] is live at the point where [keep_alive a] is called.
     It is like [ignore a], except that the compiler won't be able to simplify it and
@@ -409,7 +411,7 @@ val disable_compaction
   :  ?logger:(string -> unit)
   (** The OCaml docs strongly suggest that the allocation policy be changed from
       Next Fit to First Fit if disabling compaction permanently. *)
-  -> allocation_policy:[`Don't_change | `Set_to of Allocation_policy.t]
+  -> allocation_policy:[ `Don't_change | `Set_to of Allocation_policy.t ]
   -> unit
   -> unit
 
@@ -514,3 +516,4 @@ module Expert : sig
     val delete : t -> unit
   end
 end
+

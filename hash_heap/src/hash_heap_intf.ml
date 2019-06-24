@@ -10,7 +10,7 @@ module type S = sig
 
   val create : ?min_size:int -> ('a -> 'a -> int) -> 'a t
   val copy : 'a t -> 'a t
-  val push : 'a t -> key:Key.t -> data:'a -> [`Ok | `Key_already_present]
+  val push : 'a t -> key:Key.t -> data:'a -> [ `Ok | `Key_already_present ]
   val push_exn : 'a t -> key:Key.t -> data:'a -> unit
   val replace : 'a t -> key:Key.t -> data:'a -> unit
   val remove : 'a t -> Key.t -> unit

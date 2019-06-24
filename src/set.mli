@@ -14,10 +14,7 @@ open Set_intf
 type ('elt, 'cmp) t = ('elt, 'cmp) Base.Set.t [@@deriving compare]
 
 type ('k, 'cmp) comparator =
-  (module
-    Comparator.S
-    with type t = 'k
-     and type comparator_witness = 'cmp)
+  (module Comparator.S with type t = 'k and type comparator_witness = 'cmp)
 
 module Tree : sig
   (** A [Tree.t] contains just the tree data structure that a set is based on, without
@@ -265,6 +262,7 @@ val fold_until
   -> finish:('accum -> 'final)
   -> 'final
 
+
 (** Like {!fold}, except that it goes from the largest to the smallest element. *)
 val fold_right : ('a, _) t -> init:'accum -> f:('a -> 'accum -> 'accum) -> 'accum
 
@@ -278,7 +276,7 @@ val iter : ('a, _) t -> f:('a -> unit) -> unit
 val iter2
   :  ('a, 'cmp) t
   -> ('a, 'cmp) t
-  -> f:([`Left of 'a | `Right of 'a | `Both of 'a * 'a] -> unit)
+  -> f:([ `Left of 'a | `Right of 'a | `Both of 'a * 'a ] -> unit)
   -> unit
 
 (** If [a, b = partition_tf set ~f] then [a] is the elements on which [f] produced [true],
@@ -335,7 +333,7 @@ val group_by : ('a, 'cmp) t -> equiv:('a -> 'a -> bool) -> ('a, 'cmp) t list
     [order].  If [greater_or_equal_to > less_or_equal_to] the sequence is empty.  Cost is
     O(log n) up front and amortized O(1) for each element produced. *)
 val to_sequence
-  :  ?order:[`Increasing  (** default *) | `Decreasing]
+  :  ?order:[ `Increasing (** default *) | `Decreasing ]
   -> ?greater_or_equal_to:'a
   -> ?less_or_equal_to:'a
   -> ('a, 'cmp) t
@@ -355,7 +353,7 @@ module Merge_to_sequence_element : sig
 end
 
 val merge_to_sequence
-  :  ?order:[`Increasing  (** default *) | `Decreasing]
+  :  ?order:[ `Increasing (** default *) | `Decreasing ]
   -> ?greater_or_equal_to:'a
   -> ?less_or_equal_to:'a
   -> ('a, 'cmp) t
@@ -388,8 +386,7 @@ val quickcheck_shrinker
     elements.
 *)
 
-module Poly :
-sig
+module Poly : sig
   type ('a, 'b) set
 
   module Tree : sig

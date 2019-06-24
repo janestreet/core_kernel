@@ -223,7 +223,8 @@ let%test_module "Time.Stable.Span.V3" =
         @ [ Float.max_finite_value; Float.infinity ]
       in
       let pos_and_neg_magnitudes =
-        List.concat_map magnitudes ~f:(fun magnitude -> [ magnitude; Float.neg magnitude ])
+        List.concat_map magnitudes ~f:(fun magnitude ->
+          [ magnitude; Float.neg magnitude ])
       in
       let magnitude_examples = List.map pos_and_neg_magnitudes ~f:Time.Span.of_sec in
       span_examples @ magnitude_examples
@@ -461,8 +462,7 @@ let%test_module "Span.to_string/of_string" =
       let rec with_underscores_gen = function
         | [] -> return []
         | [ char ] -> return [ char ]
-        | a :: b :: rest
-          when Char.is_digit a && Char.is_digit b ->
+        | a :: b :: rest when Char.is_digit a && Char.is_digit b ->
           let%bind tail = with_underscores_gen (b :: rest) in
           if%bind Bool.quickcheck_generator
           then return (a :: '_' :: tail)
@@ -507,8 +507,7 @@ let%test_module "Span.to_string/of_string" =
     ;;
 
     let is_float_char = function
-      | '0' .. '9'
-      | '.' | 'e' | '+' | '-' -> true
+      | '0' .. '9' | '.' | 'e' | '+' | '-' -> true
       | _ -> false
     ;;
 

@@ -293,7 +293,8 @@ module Make_backend (Table : Hashtbl_intf.Hashtbl) : S_backend = struct
     let raise_remove_unknown_key t key =
       raise_s
         [%message
-          "Hash_queue.remove_exn: unknown key" ~_:(Table.sexp_of_key t.table key : Sexp.t)]
+          "Hash_queue.remove_exn: unknown key"
+            ~_:(Table.sexp_of_key t.table key : Sexp.t)]
     ;;
 
     let remove_exn t k =

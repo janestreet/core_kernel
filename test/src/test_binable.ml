@@ -18,7 +18,7 @@ let%test_unit _ =
           Error.failwiths
             (Printf.sprintf "Binable.{of,to}_%s failure" name)
             (i, `Round_tripped_to i')
-            [%sexp_of: int * [`Round_tripped_to of int]]
+            [%sexp_of: int * [ `Round_tripped_to of int ]]
       in
       check "string" of_string to_string;
       check "bigstring" of_bigstring to_bigstring)

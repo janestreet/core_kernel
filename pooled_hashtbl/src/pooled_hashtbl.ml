@@ -209,13 +209,13 @@ let resize =
 
 let on_grow ~before ~after =
   let old_before = !on_grow in
-  on_grow :=
-    fun () ->
-      let old_after = Staged.unstage (old_before ()) in
-      let v = before () in
-      Staged.stage (fun ~old_capacity ~new_capacity ->
-        old_after ~old_capacity ~new_capacity;
-        after v ~old_capacity ~new_capacity)
+  on_grow
+  := fun () ->
+    let old_after = Staged.unstage (old_before ()) in
+    let v = before () in
+    Staged.stage (fun ~old_capacity ~new_capacity ->
+      old_after ~old_capacity ~new_capacity;
+      after v ~old_capacity ~new_capacity)
 ;;
 
 let rec find_entry t ~key ~it =
@@ -482,8 +482,7 @@ let find_multi t key =
 let remove_multi t key =
   match find t key with
   | None -> ()
-  | Some []
-  | Some [ _ ] -> remove t key
+  | Some [] | Some [ _ ] -> remove t key
   | Some (_ :: tl) -> replace t ~key ~data:tl
 ;;
 

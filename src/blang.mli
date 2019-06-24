@@ -176,7 +176,8 @@ include Container.S1 with type 'a t := 'a t
 
     Note: [bind t f] does short-circuiting, so [f] may not be called on every variable in
     [t]. *)
-include Monad with type 'a t := 'a t
+include
+  Monad with type 'a t := 'a t
 
 (** [values t] forms the list containing every [v]
     for which [Base v] is a subexpression of [t] *)
@@ -222,7 +223,7 @@ val eval_set
         eval t f = eval (specialize t g) f
     ]}
 *)
-val specialize : 'a t -> ('a -> [`Known of bool | `Unknown]) -> 'a t
+val specialize : 'a t -> ('a -> [ `Known of bool | `Unknown ]) -> 'a t
 
 val invariant : 'a t -> unit
 

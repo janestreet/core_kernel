@@ -125,9 +125,9 @@ struct
       let bus = create1 [%here] ~on_subscription_after_first_write:Raise in
       let bus_r = read_only bus in
       ignore
-        ( subscribe_exn bus_r [%here] ~f:(fun _ ->
-            raise_s [%message "subscriber raising"])
-          : _ Subscriber.t );
+        (subscribe_exn bus_r [%here] ~f:(fun _ ->
+           raise_s [%message "subscriber raising"])
+         : _ Subscriber.t);
       show_raise ~hide_positions:true (fun () -> write bus ());
       [%expect
         {|
@@ -298,16 +298,16 @@ struct
         in
         let bus_r = read_only bus in
         ignore
-          ( subscribe_exn
-              bus_r
-              [%here]
-              ~extract_exn
-              ~f:(fun () -> assert false)
-              ~on_callback_raise:(fun error ->
-                print_s
-                  ~hide_positions:true
-                  [%message (extract_exn : bool) (error : Error.t)])
-            : (unit -> _) Subscriber.t );
+          (subscribe_exn
+             bus_r
+             [%here]
+             ~extract_exn
+             ~f:(fun () -> assert false)
+             ~on_callback_raise:(fun error ->
+               print_s
+                 ~hide_positions:true
+                 [%message (extract_exn : bool) (error : Error.t)])
+           : (unit -> _) Subscriber.t);
         write bus ());
       [%expect
         {|

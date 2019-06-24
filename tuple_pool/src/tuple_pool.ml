@@ -28,7 +28,7 @@ module Pool = struct
         failwiths
           "Pool.grow got too small capacity"
           (`capacity capacity, `old_capacity old_capacity)
-          [%sexp_of: [`capacity of int] * [`old_capacity of int]];
+          [%sexp_of: [ `capacity of int ] * [ `old_capacity of int ]];
       capacity
   ;;
 
@@ -279,6 +279,7 @@ module Pool = struct
     val used : Tuple_id.t -> t
     val is_used : t -> bool
     val tuple_id : t -> Tuple_id.t
+
     (* only valid if [is_used t] *)
   end = struct
     type t = int
@@ -333,8 +334,7 @@ module Pool = struct
       ; capacity : int
       ; mutable length : int
       ; mutable next_id : Tuple_id.t
-      ; mutable first_free :
-          Header.t
+      ; mutable first_free : Header.t
       (* [dummy] is [None] in an unsafe pool.  In a safe pool, [dummy] is [Some a], with
          [Uniform_array.length a = slots_per_tuple].  [dummy] is actually a tuple value
          with the correct type (corresponding to ['slots]), but we make the type of
@@ -535,7 +535,7 @@ module Pool = struct
       failwiths
         "Pool.create got too large capacity"
         (capacity, `max max_capacity)
-        [%sexp_of: int * [`max of int]];
+        [%sexp_of: int * [ `max of int ]];
     let metadata =
       { Metadata.slots_per_tuple
       ; capacity
@@ -895,10 +895,10 @@ module Pool = struct
     if len = 1
     then get t pointer Slot.t0
     else
-      ( Obj.magic
-          ( Uniform_array.sub t ~pos:(Pointer.first_slot_index pointer) ~len
-            : Obj.t Uniform_array.t )
-        : tuple )
+      (Obj.magic
+         (Uniform_array.sub t ~pos:(Pointer.first_slot_index pointer) ~len
+          : Obj.t Uniform_array.t)
+       : tuple)
   ;;
 end
 
@@ -1035,7 +1035,7 @@ module Debug (Pool : S) = struct
       "grow"
       [ t ]
       (`capacity capacity)
-      [%sexp_of: [`capacity of int option]]
+      [%sexp_of: [ `capacity of int option ]]
       [%sexp_of: _ t]
       (fun () -> grow ?capacity t)
   ;;
@@ -1096,7 +1096,8 @@ module Debug (Pool : S) = struct
   ;;
 
   let debug_get name f t pointer =
-    debug name [ t ] pointer [%sexp_of: _ Pointer.t] [%sexp_of: _] (fun () -> f t pointer)
+    debug name [ t ] pointer [%sexp_of: _ Pointer.t] [%sexp_of: _] (fun () ->
+      f t pointer)
   ;;
 
   let get t pointer slot = debug_get "get" get t pointer slot

@@ -5,7 +5,6 @@ open! String
 (*TEST = slice "hey" 0 0 = ""*)
 (* This is what I would expect *)
 let%test _ = slice "hey" 0 0 = "hey"
-
 (* But this is what we get! *)
 
 let%test _ = slice "hey" 0 1 = "h"

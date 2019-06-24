@@ -14,7 +14,8 @@ type 'a t [@@deriving bin_io, compare, hash, sexp]
     [Arbitrary_order] below.
 
     [is_empty] and [length] have worst-case complexity O(1). *)
-include Container.S1 with type 'a t := 'a t
+include
+  Container.S1 with type 'a t := 'a t
 
 include Invariant.S1 with type 'a t := 'a t
 include Monad.S with type 'a t := 'a t
@@ -67,7 +68,7 @@ val rev : 'a t -> 'a t
 (** [enqueue t side x] produces [t] updated with [x] added to its [side].
 
     Complexity: worst-case O(1). *)
-val enqueue : 'a t -> [`back | `front] -> 'a -> 'a t
+val enqueue : 'a t -> [ `back | `front ] -> 'a -> 'a t
 
 val enqueue_front : 'a t -> 'a -> 'a t
 val enqueue_back : 'a t -> 'a -> 'a t
@@ -76,9 +77,9 @@ val enqueue_back : 'a t -> 'a -> 'a t
     empty.
 
     Complexity: worst-case O(1). *)
-val peek : 'a t -> [`back | `front] -> 'a option
+val peek : 'a t -> [ `back | `front ] -> 'a option
 
-val peek_exn : 'a t -> [`back | `front] -> 'a
+val peek_exn : 'a t -> [ `back | `front ] -> 'a
 val peek_front : 'a t -> 'a option
 val peek_front_exn : 'a t -> 'a
 val peek_back : 'a t -> 'a option
@@ -88,9 +89,9 @@ val peek_back_exn : 'a t -> 'a
     [None] if [t] is empty.
 
     Complexity: amortized O(1), worst-case O(length t). *)
-val drop : 'a t -> [`back | `front] -> 'a t option
+val drop : 'a t -> [ `back | `front ] -> 'a t option
 
-val drop_exn : 'a t -> [`back | `front] -> 'a t
+val drop_exn : 'a t -> [ `back | `front ] -> 'a t
 val drop_front : 'a t -> 'a t option
 val drop_front_exn : 'a t -> 'a t
 val drop_back : 'a t -> 'a t option
@@ -99,9 +100,9 @@ val drop_back_exn : 'a t -> 'a t
 (** [dequeue t side] produces [Option.both (peek t side) (drop t side)].
 
     Complexity: amortized O(1), worst-case O(length t). *)
-val dequeue : 'a t -> [`back | `front] -> ('a * 'a t) option
+val dequeue : 'a t -> [ `back | `front ] -> ('a * 'a t) option
 
-val dequeue_exn : 'a t -> [`back | `front] -> 'a * 'a t
+val dequeue_exn : 'a t -> [ `back | `front ] -> 'a * 'a t
 val dequeue_front : 'a t -> ('a * 'a t) option
 val dequeue_front_exn : 'a t -> 'a * 'a t
 val dequeue_back : 'a t -> ('a * 'a t) option

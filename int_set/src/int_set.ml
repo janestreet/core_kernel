@@ -10,6 +10,7 @@ module Range : sig
     { lo : int
     ; hi : int
     }
+
   (* Invariant: lo <= hi *)
 
   (** Create [t] from a range *)
@@ -18,7 +19,7 @@ module Range : sig
   val to_string : t -> string
 
   (** [merge s t] merges mergeable ranges *)
-  val merge : t -> t -> [`Ok of t | `Lt_and_not_adjacent | `Gt_and_not_adjacent]
+  val merge : t -> t -> [ `Ok of t | `Lt_and_not_adjacent | `Gt_and_not_adjacent ]
 
   val contains : int -> t -> bool
 end = struct

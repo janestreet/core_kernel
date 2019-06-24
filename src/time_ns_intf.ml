@@ -112,12 +112,14 @@ module type Ofday = sig
   (** The largest representable value below [start_of_next_day], i.e. one nanosecond
       before midnight. *)
   val approximate_end_of_day : t
+
   (*_ This is already exported from [Ofday_intf.S], but we re-declare it to add
     documentation. *)
 
   (** [add_exn t span] shifts the time of day [t] by [span]. It raises if the result is
       not in the same 24-hour day. Daylight savings shifts are not accounted for. *)
   val add_exn : t -> Span.t -> t
+
 
   (** [sub_exn t span] shifts the time of day [t] back by [span]. It raises if the result
       is not in the same 24-hour day. Daylight savings shifts are not accounted for. *)

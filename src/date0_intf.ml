@@ -12,7 +12,8 @@ module type Date0 = sig
       - DD MMM YYYY
       - DDMMMYYYY
       - YYYYMMDD *)
-  include Stringable with type t := t
+  include
+    Stringable with type t := t
 
   include Comparable_binable with type t := t
   include Pretty_printer.S with type t := t
@@ -148,7 +149,8 @@ module type Date0 = sig
   val unix_epoch : t
 
   (** [gen] generates dates between 1900-01-01 and 2100-01-01. *)
-  include Quickcheckable with type t := t
+  include
+    Quickcheckable with type t := t
 
   (** [gen_incl d1 d2] generates dates in the range between [d1] and [d2], inclusive, with
       the endpoints having higher weight than the rest.  Raises if [d1 > d2]. *)
@@ -158,13 +160,13 @@ module type Date0 = sig
       and [d2], inclusive.  Raises if [d1 > d2]. *)
   val gen_uniform_incl : t -> t -> t Quickcheck.Generator.t
 
+
   (** [Days] provides a linear representation of dates that is optimized for arithmetic on
       the number of days between dates, rather than for representing year/month/day
       components. This module is intended for use only in performance-sensitive contexts
       where dates are manipulated more often than they are constructed or deconstructed;
       most clients should use the ordinary [t]. *)
-  module Days :
-  sig
+  module Days : sig
     type date = t
     type t [@@immediate]
 

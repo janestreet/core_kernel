@@ -56,10 +56,7 @@ open Map_intf
 type ('key, +'value, 'cmp) t = ('key, 'value, 'cmp) Base.Map.t
 
 type ('k, 'cmp) comparator =
-  (module
-    Comparator.S
-    with type t = 'k
-     and type comparator_witness = 'cmp)
+  (module Comparator.S with type t = 'k and type comparator_witness = 'cmp)
 
 (** Test if invariants of internal AVL search tree hold. *)
 val invariants : (_, _, _) t -> bool
@@ -73,11 +70,12 @@ val empty : ('a, 'cmp) comparator -> ('a, 'b, 'cmp) t
 (** Map with one (key, data) pair. *)
 val singleton : ('a, 'cmp) comparator -> 'a -> 'b -> ('a, 'b, 'cmp) t
 
+
 (** Creates map from an association list with unique keys. *)
 val of_alist
   :  ('a, 'cmp) comparator
   -> ('a * 'b) list
-  -> [`Ok of ('a, 'b, 'cmp) t | `Duplicate_key of 'a]
+  -> [ `Ok of ('a, 'b, 'cmp) t | `Duplicate_key of 'a ]
 
 (** Creates map from an association list with unique keys. Returns an error if duplicate
     ['a] keys are found. *)
@@ -125,7 +123,7 @@ val of_alist_reduce
 val of_iteri
   :  ('a, 'cmp) comparator
   -> iteri:(f:(key:'a -> data:'b -> unit) -> unit)
-  -> [`Ok of ('a, 'b, 'cmp) t | `Duplicate_key of 'a]
+  -> [ `Ok of ('a, 'b, 'cmp) t | `Duplicate_key of 'a ]
 
 (**
    {2 Trees}
@@ -288,7 +286,7 @@ val iteri_until
 val iter2
   :  ('k, 'v1, 'cmp) t
   -> ('k, 'v2, 'cmp) t
-  -> f:(key:'k -> data:[`Left of 'v1 | `Right of 'v2 | `Both of 'v1 * 'v2] -> unit)
+  -> f:(key:'k -> data:[ `Left of 'v1 | `Right of 'v2 | `Both of 'v1 * 'v2 ] -> unit)
   -> unit
 
 (** Returns new map with bound values replaced by the result of [f] applied to them. *)
@@ -308,7 +306,7 @@ val fold2
   :  ('k, 'v1, 'cmp) t
   -> ('k, 'v2, 'cmp) t
   -> init:'a
-  -> f:(key:'k -> data:[`Left of 'v1 | `Right of 'v2 | `Both of 'v1 * 'v2] -> 'a -> 'a)
+  -> f:(key:'k -> data:[ `Left of 'v1 | `Right of 'v2 | `Both of 'v1 * 'v2 ] -> 'a -> 'a)
   -> 'a
 
 (** [filter], [filteri], [filter_keys], [filter_map], and [filter_mapi] run in O(n * lg n)
@@ -328,17 +326,18 @@ val filter_mapi
   -> f:(key:'k -> data:'v1 -> 'v2 option)
   -> ('k, 'v2, 'cmp) t
 
+
 (** [partition_mapi t ~f] returns two new [t]s, with each key in [t] appearing in exactly
     one of the result maps depending on its mapping in [f]. *)
 val partition_mapi
   :  ('k, 'v1, 'cmp) t
-  -> f:(key:'k -> data:'v1 -> [`Fst of 'v2 | `Snd of 'v3])
+  -> f:(key:'k -> data:'v1 -> [ `Fst of 'v2 | `Snd of 'v3 ])
   -> ('k, 'v2, 'cmp) t * ('k, 'v3, 'cmp) t
 
 (** [partition_map t ~f = partition_mapi t ~f:(fun ~key:_ ~data -> f data)] *)
 val partition_map
   :  ('k, 'v1, 'cmp) t
-  -> f:('v1 -> [`Fst of 'v2 | `Snd of 'v3])
+  -> f:('v1 -> [ `Fst of 'v2 | `Snd of 'v3 ])
   -> ('k, 'v2, 'cmp) t * ('k, 'v3, 'cmp) t
 
 (**
@@ -387,7 +386,10 @@ val data : (_, 'v, _) t -> 'v list
 
     @param key_order default is [`Increasing]
 *)
-val to_alist : ?key_order:[`Increasing | `Decreasing] -> ('k, 'v, _) t -> ('k * 'v) list
+val to_alist
+  :  ?key_order:[ `Increasing | `Decreasing ]
+  -> ('k, 'v, _) t
+  -> ('k * 'v) list
 
 val validate : name:('k -> string) -> 'v Validate.check -> ('k, 'v, _) t Validate.check
 
@@ -399,7 +401,7 @@ val validate : name:('k -> string) -> 'v Validate.check -> ('k, 'v, _) t Validat
 val merge
   :  ('k, 'v1, 'cmp) t
   -> ('k, 'v2, 'cmp) t
-  -> f:(key:'k -> [`Left of 'v1 | `Right of 'v2 | `Both of 'v1 * 'v2] -> 'v3 option)
+  -> f:(key:'k -> [ `Left of 'v1 | `Right of 'v2 | `Both of 'v1 * 'v2 ] -> 'v3 option)
   -> ('k, 'v3, 'cmp) t
 
 (** A special case of [merge], [merge_skewed t1 t2] is a map containing all the
@@ -418,7 +420,7 @@ val merge_skewed
   -> ('k, 'v, 'cmp) t
 
 module Symmetric_diff_element : sig
-  type ('k, 'v) t = 'k * [`Left of 'v | `Right of 'v | `Unequal of 'v * 'v]
+  type ('k, 'v) t = 'k * [ `Left of 'v | `Right of 'v | `Unequal of 'v * 'v ]
   [@@deriving bin_io, compare, sexp]
 
   val map_data : ('k, 'v1) t -> f:('v1 -> 'v2) -> ('k, 'v2) t
@@ -506,7 +508,7 @@ val split
 val append
   :  lower_part:('k, 'v, 'cmp) t
   -> upper_part:('k, 'v, 'cmp) t
-  -> [`Ok of ('k, 'v, 'cmp) t | `Overlapping_key_ranges]
+  -> [ `Ok of ('k, 'v, 'cmp) t | `Overlapping_key_ranges ]
 
 (** [subrange t ~lower_bound ~upper_bound] returns a map containing all the entries from
     [t] whose keys lie inside the interval indicated by [~lower_bound] and [~upper_bound].
@@ -549,7 +551,7 @@ val range_to_alist : ('k, 'v, 'cmp) t -> min:'k -> max:'k -> ('k * 'v) list
     at some value. *)
 val closest_key
   :  ('k, 'v, 'cmp) t
-  -> [`Greater_or_equal_to | `Greater_than | `Less_or_equal_to | `Less_than]
+  -> [ `Greater_or_equal_to | `Greater_than | `Less_or_equal_to | `Less_than ]
   -> 'k
   -> ('k * 'v) option
 
@@ -572,7 +574,7 @@ val rank : ('k, 'v, 'cmp) t -> 'k -> int option
     @param order [`Increasing_key] is the default
 *)
 val to_sequence
-  :  ?order:[`Increasing_key | `Decreasing_key]
+  :  ?order:[ `Increasing_key | `Decreasing_key ]
   -> ?keys_greater_or_equal_to:'k
   -> ?keys_less_or_equal_to:'k
   -> ('k, 'v, 'cmp) t
@@ -668,8 +670,7 @@ module Using_comparator : sig
     with type ('a, 'b, 'c) tree := ('a, 'b, 'c) Tree.t
 end
 
-module Poly :
-sig
+module Poly : sig
   type ('a, +'b, 'c) map
 
   module Tree : sig
@@ -790,3 +791,4 @@ module Stable : sig
       Stable_module_types.S2 with type ('a, 'b) t = ('a, 'b) Symmetric_diff_element.t
   end
 end
+

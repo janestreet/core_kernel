@@ -46,8 +46,7 @@ end = struct
     let subterms = function
       | True | False | Base _ -> []
       | Not t1 -> [ t1 ]
-      | And (t1, t2)
-      | Or (t1, t2) -> [ t1; t2 ]
+      | And (t1, t2) | Or (t1, t2) -> [ t1; t2 ]
       | If (t1, t2, t3) -> [ t1; t2; t3 ]
     in
     let rec contains_no_constants = function
@@ -70,19 +69,15 @@ end = struct
 
   let andalso t1 t2 =
     match t1, t2 with
-    | _, False
-    | False, _ -> False
-    | other, True
-    | True, other -> other
+    | _, False | False, _ -> False
+    | other, True | True, other -> other
     | _ -> And (t1, t2)
   ;;
 
   let orelse t1 t2 =
     match t1, t2 with
-    | _, True
-    | True, _ -> True
-    | other, False
-    | False, other -> other
+    | _, True | True, _ -> True
+    | other, False | False, other -> other
     | _ -> Or (t1, t2)
   ;;
 
@@ -270,7 +265,7 @@ module O = struct
   let constant = constant
   let ( && ) = andalso
   let ( || ) = orelse
-  let ( ==> ) a b = not a || b
+  let ( ==> ) a b = (not a) || b
 end
 
 let constant_value = function
@@ -303,8 +298,7 @@ module C = Container.Make (struct
         | Base a -> next (f acc a) pending
         | True | False -> next acc pending
         | Not t -> loop acc t pending
-        | And (t1, t2)
-        | Or (t1, t2) -> loop acc t1 (t2 :: pending)
+        | And (t1, t2) | Or (t1, t2) -> loop acc t1 (t2 :: pending)
         | If (t1, t2, t3) -> loop acc t1 (t2 :: t3 :: pending)
       and next acc = function
         | [] -> acc

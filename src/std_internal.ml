@@ -3,7 +3,8 @@
 
 open! Import
 
-include Core_pervasives  (** [include]d first so that everything else shadows it *)
+(** [include]d first so that everything else shadows it *)
+include Core_pervasives
 
 include Int.Replace_polymorphic_compare
 include Base_quickcheck.Export
@@ -50,7 +51,7 @@ let phys_same (type a b) (a : a) (b : b) = phys_equal a (Obj.magic b : a)
 let ( % ) = Int.( % )
 let ( /% ) = Int.( /% )
 let ( // ) = Int.( // )
-let ( ==> ) a b = not a || b
+let ( ==> ) a b = (not a) || b
 let bprintf = Printf.bprintf
 let const = Fn.const
 let eprintf = Printf.eprintf

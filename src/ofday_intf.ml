@@ -32,6 +32,7 @@ module type S = sig
   include Quickcheck.S_range with type t := t
   module Span : Span_intf.S
 
+
   (** [of_string] supports and correctly interprets 12h strings with the following suffixes:
 
       {v
@@ -44,7 +45,8 @@ module type S = sig
       [of_string] also fully supports 24h wall-clock times.
 
       [to_string] only produces the 24h format. *)
-  include Stringable with type t := t
+  include
+    Stringable with type t := t
 
   val create
     :  ?hr:int
@@ -74,6 +76,7 @@ module type S = sig
       The clock-face time represented by [approximate_end_of_day] may vary with different
       time and ofday representations, depending on their precision. *)
   val approximate_end_of_day : t
+
 
   (** Note that these names are only really accurate on days without DST transitions. When
       clocks move forward or back, [of_span_since_start_of_day_exn s] will not necessarily
@@ -105,6 +108,7 @@ module type S = sig
       assuming that the of-days represent times that are within a half-hour of each other.
       This is useful for comparing two ofdays in unknown time-zones. *)
   val small_diff : t -> t -> Span.t
+
 
   (** Trailing groups of zeroes are trimmed such that the output is printed in terms of
       the smallest non-zero units among nanoseconds, microseconds, milliseconds, or

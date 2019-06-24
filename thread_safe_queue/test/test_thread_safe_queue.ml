@@ -106,7 +106,9 @@ let%test_module "Thread_safe_queue" =
                let num_in_batch = ref 0 in
                while !num_enqueues < num_elts do
                  num_in_batch := 0;
-                 while !num_enqueues < num_elts && !num_in_batch < batch_size do
+                 while
+                   !num_enqueues < num_elts && !num_in_batch < batch_size
+                 do
                    incr num_in_batch;
                    incr num_enqueues;
                    enqueue_counts.(i) <- enqueue_counts.(i) + 1;
@@ -120,7 +122,9 @@ let%test_module "Thread_safe_queue" =
                let num_in_batch = ref 0 in
                while !num_dequeues < num_elts do
                  num_in_batch := 0;
-                 while !num_dequeues < num_elts && !num_in_batch < batch_size do
+                 while
+                   !num_dequeues < num_elts && !num_in_batch < batch_size
+                 do
                    if length t = 0
                    then quick_pause ()
                    else (

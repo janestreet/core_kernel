@@ -6,8 +6,7 @@ type 'a t = 'a Base.Queue.t [@@deriving sexp_of, bin_io]
 
 (** {2 The interface from Base} *)
 
-(** @inline *)
-include module type of Base.Queue with type 'a t := 'a t
+include module type of Base.Queue with type 'a t := 'a t (** @inline *)
 
 (** {2 Extensions} *)
 

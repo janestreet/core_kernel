@@ -20,6 +20,7 @@ val empty : 'a t
 (** [enqueue t x] returns a queue with adds [x] to the end of [t]. Complexity: O(1). *)
 val enqueue : 'a t -> 'a -> 'a t
 
+
 (** Enqueues a single element on the *top* of the queue.  Complexity: amortized O(1)
     [enqueue_top] is deprecated, use [Fdeque.t] instead. *)
 val enqueue_top : 'a t -> 'a -> 'a t

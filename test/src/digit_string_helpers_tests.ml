@@ -850,8 +850,8 @@ let%expect_test "read_int63_decimal" =
     =
     let decimals = Option.value decimals ~default:(String.length string - pos) in
     require_does_raise [%here] (fun () ->
-      ( read_int63_decimal string ~pos ~decimals ~scale ~round_ties ~allow_underscore
-        : Int63.t ))
+      (read_int63_decimal string ~pos ~decimals ~scale ~round_ties ~allow_underscore
+       : Int63.t))
   in
   test_failure "not a decimal string at all";
   [%expect

@@ -46,8 +46,7 @@ module Sexp_maybe = struct
 
   let t_of_sexp a_of_sexp sexp =
     match sexp with
-    | List [ Atom "sexp_parse_error"; sexp; _ ]
-    | sexp ->
+    | List [ Atom "sexp_parse_error"; sexp; _ ] | sexp ->
       (try Result.Ok (a_of_sexp sexp) with
        | exn -> Result.Error (sexp, Error.of_exn exn))
   ;;

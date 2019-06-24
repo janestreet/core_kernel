@@ -1,7 +1,7 @@
 open! Import
 
 
-include Std_kernel  (** @inline *)
+include Std_kernel (** @inline *)
 
 (** {2 Modules imported from Base without modification} *)
 

@@ -50,7 +50,7 @@ module Header : sig
   val with_iteration_2 : t -> 'a -> 'b -> ('a -> 'b -> 'c) -> 'c
   val with_iteration_3 : t -> 'a -> 'b -> 'c -> ('a -> 'b -> 'c -> 'd) -> 'd
   val with_iteration_4 : t -> 'a -> 'b -> 'c -> 'd -> ('a -> 'b -> 'c -> 'd -> 'e) -> 'e
-  val merge : t -> t -> [`Same_already | `Merged]
+  val merge : t -> t -> [ `Same_already | `Merged ]
 end = struct
   type s =
     { mutable length : int
@@ -306,7 +306,7 @@ let of_list = function
 ;;
 
 let of_array = function
-  | [|  |] -> create ()
+  | [||] -> create ()
   | arr ->
     let first = Elt.create arr.(0) in
     let rec loop arr elt i =

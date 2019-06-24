@@ -3,5 +3,4 @@
 
 module type S = Make_substring.S
 
-(** @inline *)
-include S with type base = bytes
+include S with type base = bytes (** @inline *)

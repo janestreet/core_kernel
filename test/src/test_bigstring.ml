@@ -101,7 +101,7 @@ let%test_module _ =
         | `Not_enough_data -> `Not_enough_data
         | `Invalid_data _ -> `Invalid_data
       in
-      [%test_result: [`Ok of a | `Not_enough_data | `Invalid_data]] result ~expect
+      [%test_result: [ `Ok of a | `Not_enough_data | `Invalid_data ]] result ~expect
     ;;
 
     let test_int ?pos ?len ~size input ~expect =

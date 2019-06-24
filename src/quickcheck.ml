@@ -13,20 +13,23 @@ module Type_equal = Base.Type_equal
 module Polymorphic_types = struct
   type ('a, 'b) variant2 =
     [ `A of 'a
-    | `B of 'b ]
+    | `B of 'b
+    ]
   [@@deriving quickcheck]
 
   type ('a, 'b, 'c) variant3 =
     [ `A of 'a
     | `B of 'b
-    | `C of 'c ]
+    | `C of 'c
+    ]
   [@@deriving quickcheck]
 
   type ('a, 'b, 'c, 'd) variant4 =
     [ `A of 'a
     | `B of 'b
     | `C of 'c
-    | `D of 'd ]
+    | `D of 'd
+    ]
   [@@deriving quickcheck]
 
   type ('a, 'b, 'c, 'd, 'e) variant5 =
@@ -34,7 +37,8 @@ module Polymorphic_types = struct
     | `B of 'b
     | `C of 'c
     | `D of 'd
-    | `E of 'e ]
+    | `E of 'e
+    ]
   [@@deriving quickcheck]
 
   type ('a, 'b, 'c, 'd, 'e, 'f) variant6 =
@@ -43,7 +47,8 @@ module Polymorphic_types = struct
     | `C of 'c
     | `D of 'd
     | `E of 'e
-    | `F of 'f ]
+    | `F of 'f
+    ]
   [@@deriving quickcheck]
 
   type ('a, 'b) tuple2 = 'a * 'b [@@deriving quickcheck]
@@ -288,11 +293,12 @@ module Configure (Config : Quickcheck_config) = struct
         ~distinct_values
         ~compare
     =
-    let module S = Caml.Set.Make (struct
-                     type t = key
+    let module S =
+      Caml.Set.Make (struct
+        type t = key
 
-                     let compare = compare
-                   end)
+        let compare = compare
+      end)
     in
     let fail set =
       let expect_count = distinct_values in

@@ -316,6 +316,7 @@ module type Timing_wheel = sig
   (** [interval_start] raises in the same cases that [interval_num] does. *)
   val interval_start : _ t -> Time_ns.t -> Time_ns.t
 
+
   (** [advance_clock t ~to_ ~handle_fired] advances [t]'s clock to [to_].  It fires and
       removes all alarms [a] in [t] with [Time_ns.(<) (Alarm.at t a) (interval_start t
       to_)], applying [handle_fired] to each such [a].

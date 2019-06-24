@@ -51,7 +51,7 @@ module Unit_tests (Elt : sig
 
           val create_named : ('a, 'b) t_ -> name:string -> ('a, 'b) named
           val simplify_accessor : (int, Int.comparator_witness, 'c) access_options -> 'c
-          val kind : [`Set | `Tree]
+          val kind : [ `Set | `Tree ]
           val is_poly : bool
         end) : Set_intf.Creators_and_accessors_generic = struct
   module Set = struct
@@ -279,8 +279,7 @@ module Unit_tests (Elt : sig
 
   let rec is_list_ordered_ascending xs =
     match xs with
-    | []
-    | [ _ ] -> true
+    | [] | [ _ ] -> true
     | a :: b :: xs' -> Elt.compare a b < 0 && is_list_ordered_ascending (b :: xs')
   ;;
 
@@ -363,7 +362,8 @@ module Unit_tests (Elt : sig
   ;;
 
   let merge_to_sequence ?order:_ ?greater_or_equal_to:_ ?less_or_equal_to:_ _ _
-    : _ Sequence.t =
+    : _ Sequence.t
+    =
     assert false
   ;;
 
@@ -373,7 +373,7 @@ module Unit_tests (Elt : sig
 
       module Merge_to_sequence_args = struct
         type t =
-          { order : [`Increasing | `Decreasing] option
+          { order : [ `Increasing | `Decreasing ] option
           ; greater_or_equal_to : Elt.t option
           ; less_or_equal_to : Elt.t option
           ; x : (int, Int.comparator_witness) Set.t_
@@ -405,9 +405,7 @@ module Unit_tests (Elt : sig
           ~f:(fun { order; greater_or_equal_to; less_or_equal_to; x; y } ->
             let open Set_intf.Merge_to_sequence_element in
             let value = function
-              | Left x
-              | Right x
-              | Both (x, _) -> Elt.to_int x
+              | Left x | Right x | Both (x, _) -> Elt.to_int x
             in
             let expect =
               List.concat
@@ -428,8 +426,7 @@ module Unit_tests (Elt : sig
             in
             let expect =
               match order with
-              | None
-              | Some `Increasing ->
+              | None | Some `Increasing ->
                 List.sort expect ~compare:(fun a b -> Int.compare (value a) (value b))
               | Some `Decreasing ->
                 List.sort expect ~compare:(fun a b -> Int.compare (value b) (value a))
@@ -479,7 +476,8 @@ module Unit_tests (Elt : sig
       assert (List.permute list |> Set.of_list |> Set.invariants);
       assert (Array.of_list list |> Set.of_sorted_array_unchecked |> Set.invariants);
       assert (
-        List.rev list |> Array.of_list |> Set.of_sorted_array_unchecked |> Set.invariants)
+        List.rev list |> Array.of_list |> Set.of_sorted_array_unchecked |> Set.invariants
+      )
     done
   ;;
 
@@ -497,7 +495,7 @@ module Unit_tests (Elt : sig
           | `Both (a, b) -> `Both (Elt.to_int a, Elt.to_int b))
       in
       assert (
-        [%equal: [`Both of int * int | `Left of int | `Right of int] list]
+        [%equal: [ `Both of int * int | `Left of int | `Right of int ] list]
           result
           expected)
     in
@@ -517,7 +515,8 @@ module Unit_tests (Elt : sig
     | `Set ->
       let ts = [ Set.empty (); Set.of_list [ Elt.of_int 13 ] ] in
       List.iter ts ~f:(fun t1 ->
-        List.iter ts ~f:(fun t2 -> assert (Exn.does_raise (fun () -> Poly.equal t1 t2))))
+        List.iter ts ~f:(fun t2 ->
+          assert (Exn.does_raise (fun () -> Poly.equal t1 t2))))
   ;;
 
   let to_map _ = assert false
@@ -877,11 +876,7 @@ module Create_options_with_first_class_module = struct
   type ('a, 'b, 'c) create_options = ('a, 'b, 'c) With_first_class_module.t
 
   let simplify_creator f =
-    f
-      (module Int
-        : Comparator.S
-          with type t = _
-           and type comparator_witness = _ )
+    f (module Int : Comparator.S with type t = _ and type comparator_witness = _)
   ;;
 end
 

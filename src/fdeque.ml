@@ -30,10 +30,7 @@ let invariant f t =
 
 let make ~length ~front ~back =
   match front, back with
-  | [], []
-  | [ _ ], []
-  | [], [ _ ]
-  | _ :: _, _ :: _ -> { front; back; length }
+  | [], [] | [ _ ], [] | [], [ _ ] | _ :: _, _ :: _ -> { front; back; length }
   | [], _ :: _ :: _ ->
     let back, rev_front = List.split_n back (length / 2) in
     { front = List.rev rev_front; back; length }
@@ -194,16 +191,14 @@ module Arbitrary_order = struct
 
   let max_elt t ~compare =
     match List.max_elt t.front ~compare, List.max_elt t.back ~compare with
-    | None, opt
-    | opt, None -> opt
+    | None, opt | opt, None -> opt
     | (Some x as some_x), (Some y as some_y) ->
       if compare x y >= 0 then some_x else some_y
   ;;
 
   let min_elt t ~compare =
     match List.min_elt t.front ~compare, List.min_elt t.back ~compare with
-    | None, opt
-    | opt, None -> opt
+    | None, opt | opt, None -> opt
     | (Some x as some_x), (Some y as some_y) ->
       if compare x y <= 0 then some_x else some_y
   ;;

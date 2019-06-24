@@ -14,7 +14,8 @@ open! Import
 
 type endian =
   [ `Big_endian
-  | `Little_endian ]
+  | `Little_endian
+  ]
 [@@deriving compare, hash, sexp]
 
 

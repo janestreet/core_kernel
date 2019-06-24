@@ -39,8 +39,7 @@ module type S = sig
 
   (** Equivalent to a [Date.t] and an [Ofday.t] with no time zone. A [Date_and_ofday.t]
       does not correspond to a single, unambiguous point in time. *)
-  module Date_and_ofday :
-  sig
+  module Date_and_ofday : sig
     type absolute = t
     type t = private underlying
 

@@ -82,10 +82,11 @@ module Make_without_pretty_printer (M : sig
   end)
     () =
 struct
-  include Make_with_validate_without_pretty_printer (struct
-      let module_name = M.module_name
-      let validate = Fn.const (Ok ())
-    end)
+  include Make_with_validate_without_pretty_printer
+      (struct
+        let module_name = M.module_name
+        let validate = Fn.const (Ok ())
+      end)
       ()
 end
 
@@ -120,7 +121,8 @@ struct
     end)
 end
 
-include Make (struct
-    let module_name = "Core_kernel.String_id"
-  end)
+include Make
+    (struct
+      let module_name = "Core_kernel.String_id"
+    end)
     ()

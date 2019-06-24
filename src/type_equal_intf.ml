@@ -10,22 +10,20 @@ module type Uid = sig
 end
 
 module type Id = sig
-  include
-    module type of struct
-      include Base.Type_equal.Id
-    end
-    with module Uid := Base.Type_equal.Id.Uid
+  include module type of struct
+    include Base.Type_equal.Id
+  end
+  with module Uid := Base.Type_equal.Id.Uid
 
   module Uid : Uid
 end
 
 module type Type_equal = sig
   (** @open *)
-  include
-    module type of struct
-      include Base.Type_equal
-    end
-    with module Id := Base.Type_equal.Id
+  include module type of struct
+    include Base.Type_equal
+  end
+  with module Id := Base.Type_equal.Id
 
   module Id : Id
 end

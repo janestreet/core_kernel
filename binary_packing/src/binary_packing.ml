@@ -11,7 +11,8 @@ let unsigned_max = Int64.to_int 0xffff_ffffL
 
 type endian =
   [ `Big_endian
-  | `Little_endian ]
+  | `Little_endian
+  ]
 [@@deriving compare, hash, sexp]
 
 (* Computes the offset based on the total number of bytes, the byte order, and the
@@ -654,7 +655,7 @@ let unpack_tail_padded_fixed_string ?(padding = '\x00') ~buf ~pos ~len () =
 
 exception
   Pack_tail_padded_fixed_string_argument_too_long of
-    [`s of string] * [`longer_than] * [`len of int]
+    [ `s of string ] * [ `longer_than ] * [ `len of int ]
 [@@deriving sexp]
 
 let pack_tail_padded_fixed_string ?(padding = '\x00') ~buf ~pos ~len s =

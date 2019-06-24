@@ -436,7 +436,9 @@ module Stable = struct
         let[@inline never] invalid_string string ~reason =
           raise_s
             [%message
-              "Time_ns.Span.of_string: invalid string" (string : string) (reason : string)]
+              "Time_ns.Span.of_string: invalid string"
+                (string : string)
+                (reason : string)]
         ;;
 
         (* Assumes x and y are both nonpositive *)

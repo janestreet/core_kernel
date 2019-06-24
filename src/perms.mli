@@ -116,31 +116,34 @@ type nobody [@@deriving bin_io, compare, hash, sexp]
 type me [@@deriving bin_io, compare, hash, sexp]
 
 module Read : sig
-  type t = [`Read] [@@deriving bin_io, compare, hash, sexp]
+  type t = [ `Read ] [@@deriving bin_io, compare, hash, sexp]
 end
 
 module Write : sig
-  type t = [`Who_can_write of me] [@@deriving bin_io, compare, hash, sexp]
+  type t = [ `Who_can_write of me ] [@@deriving bin_io, compare, hash, sexp]
 end
 
 module Immutable : sig
   type t =
     [ Read.t
-    | `Who_can_write of nobody ]
+    | `Who_can_write of nobody
+    ]
   [@@deriving bin_io, compare, hash, sexp]
 end
 
 module Read_write : sig
   type t =
     [ Read.t
-    | Write.t ]
+    | Write.t
+    ]
   [@@deriving bin_io, compare, hash, sexp]
 end
 
 module Upper_bound : sig
   type 'a t =
     [ Read.t
-    | `Who_can_write of 'a ]
+    | `Who_can_write of 'a
+    ]
   [@@deriving bin_io, compare, hash, sexp]
 end
 

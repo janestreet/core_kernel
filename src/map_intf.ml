@@ -51,11 +51,7 @@ module Key_bin_io = struct
     val comparator : (t, comparator_witness) Comparator.t
   end
 
-  type ('t, 'c) t =
-    (module
-      S
-      with type t = 't
-       and type comparator_witness = 'c)
+  type ('t, 'c) t = (module S with type t = 't and type comparator_witness = 'c)
 end
 
 module type Accessors_generic = sig
@@ -66,13 +62,13 @@ module type Accessors_generic = sig
     -> 'v Quickcheck.Observer.t
     -> ('k, 'v, 'cmp) t Quickcheck.Observer.t
 
-  val quickcheck_shrinker :
-    ( 'k
-    , 'cmp
-    , 'k key Quickcheck.Shrinker.t
-    -> 'v Quickcheck.Shrinker.t
-    -> ('k, 'v, 'cmp) t Quickcheck.Shrinker.t )
-      options
+  val quickcheck_shrinker
+    : ( 'k
+      , 'cmp
+      , 'k key Quickcheck.Shrinker.t
+      -> 'v Quickcheck.Shrinker.t
+      -> ('k, 'v, 'cmp) t Quickcheck.Shrinker.t )
+        options
 end
 
 module type Accessors1 = sig
@@ -146,9 +142,10 @@ module Check_accessors
 struct end
 
 module Check_accessors1 (M : Accessors1) =
-  Check_accessors (struct
-    type ('a, 'b, 'c) t = 'b M.t
-  end)
+  Check_accessors
+    (struct
+      type ('a, 'b, 'c) t = 'b M.t
+    end)
     (struct
       type ('a, 'b, 'c) t = 'b M.tree
     end)
@@ -159,9 +156,10 @@ module Check_accessors1 (M : Accessors1) =
     (M)
 
 module Check_accessors2 (M : Accessors2) =
-  Check_accessors (struct
-    type ('a, 'b, 'c) t = ('a, 'b) M.t
-  end)
+  Check_accessors
+    (struct
+      type ('a, 'b, 'c) t = ('a, 'b) M.t
+    end)
     (struct
       type ('a, 'b, 'c) t = ('a, 'b) M.tree
     end)
@@ -172,9 +170,10 @@ module Check_accessors2 (M : Accessors2) =
     (M)
 
 module Check_accessors3 (M : Accessors3) =
-  Check_accessors (struct
-    type ('a, 'b, 'c) t = ('a, 'b, 'c) M.t
-  end)
+  Check_accessors
+    (struct
+      type ('a, 'b, 'c) t = ('a, 'b, 'c) M.t
+    end)
     (struct
       type ('a, 'b, 'c) t = ('a, 'b, 'c) M.tree
     end)
@@ -185,9 +184,10 @@ module Check_accessors3 (M : Accessors3) =
     (M)
 
 module Check_accessors3_with_comparator (M : Accessors3_with_comparator) =
-  Check_accessors (struct
-    type ('a, 'b, 'c) t = ('a, 'b, 'c) M.t
-  end)
+  Check_accessors
+    (struct
+      type ('a, 'b, 'c) t = ('a, 'b, 'c) M.t
+    end)
     (struct
       type ('a, 'b, 'c) t = ('a, 'b, 'c) M.tree
     end)
@@ -202,13 +202,13 @@ module type Creators_generic = sig
 
   val of_hashtbl_exn : ('k, 'cmp, ('k key, 'v) Hashtbl.t -> ('k, 'v, 'cmp) t) options
 
-  val quickcheck_generator :
-    ( 'k
-    , 'cmp
-    , 'k key Quickcheck.Generator.t
-    -> 'v Quickcheck.Generator.t
-    -> ('k, 'v, 'cmp) t Quickcheck.Generator.t )
-      options
+  val quickcheck_generator
+    : ( 'k
+      , 'cmp
+      , 'k key Quickcheck.Generator.t
+      -> 'v Quickcheck.Generator.t
+      -> ('k, 'v, 'cmp) t Quickcheck.Generator.t )
+        options
 end
 
 module type Creators1 = sig
@@ -261,9 +261,10 @@ module Check_creators
 struct end
 
 module Check_creators1 (M : Creators1) =
-  Check_creators (struct
-    type ('a, 'b, 'c) t = 'b M.t
-  end)
+  Check_creators
+    (struct
+      type ('a, 'b, 'c) t = 'b M.t
+    end)
     (struct
       type ('a, 'b, 'c) t = 'b M.tree
     end)
@@ -274,9 +275,10 @@ module Check_creators1 (M : Creators1) =
     (M)
 
 module Check_creators2 (M : Creators2) =
-  Check_creators (struct
-    type ('a, 'b, 'c) t = ('a, 'b) M.t
-  end)
+  Check_creators
+    (struct
+      type ('a, 'b, 'c) t = ('a, 'b) M.t
+    end)
     (struct
       type ('a, 'b, 'c) t = ('a, 'b) M.tree
     end)
@@ -287,9 +289,10 @@ module Check_creators2 (M : Creators2) =
     (M)
 
 module Check_creators3_with_comparator (M : Creators3_with_comparator) =
-  Check_creators (struct
-    type ('a, 'b, 'c) t = ('a, 'b, 'c) M.t
-  end)
+  Check_creators
+    (struct
+      type ('a, 'b, 'c) t = ('a, 'b, 'c) M.t
+    end)
     (struct
       type ('a, 'b, 'c) t = ('a, 'b, 'c) M.tree
     end)
@@ -349,8 +352,7 @@ module Make_S_plain_tree (Key : Comparator.S) = struct
         (K : sig
            type t [@@deriving of_sexp]
          end
-         with type t := Key.t) :
-    sig
+         with type t := Key.t) : sig
       type _ t [@@deriving of_sexp]
     end
     with type 'a t := 'a t
@@ -378,8 +380,7 @@ module type S_plain = sig
       (Key : sig
          type t [@@deriving of_sexp]
        end
-       with type t := Key.t) :
-  sig
+       with type t := Key.t) : sig
     type _ t [@@deriving of_sexp]
   end
   with type 'a t := 'a t
@@ -390,8 +391,7 @@ module type S_plain = sig
        end
        with type t := Key.t) : Binable.S1 with type 'a t := 'a t
 
-  module Provide_hash (Key : Hasher.S with type t := Key.t) :
-  sig
+  module Provide_hash (Key : Hasher.S with type t := Key.t) : sig
     type 'a t [@@deriving hash]
   end
   with type 'a t := 'a t

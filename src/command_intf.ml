@@ -68,14 +68,15 @@ module type For_unix = sig
     end
 
     module Exit : sig
-      type error = [`Exit_non_zero of int]
+      type error = [ `Exit_non_zero of int ]
       type t = (unit, error) Result.t
     end
 
     module Exit_or_signal : sig
       type error =
         [ Exit.error
-        | `Signal of Signal.t ]
+        | `Signal of Signal.t
+        ]
 
       type t = (unit, error) Result.t
     end
@@ -92,7 +93,8 @@ module type For_unix = sig
       [ `Replace of (string * string) list
       | `Extend of (string * string) list
       | `Override of (string * string option) list
-      | `Replace_raw of string list ]
+      | `Replace_raw of string list
+      ]
 
     val exec
       :  prog:string
@@ -125,7 +127,8 @@ module type For_unix = sig
       [ `Any
       | `Group of Pid.t
       | `My_group
-      | `Pid of Pid.t ]
+      | `Pid of Pid.t
+      ]
 
     val wait : ?restart:bool -> wait_on -> Pid.t * Exit_or_signal.t
   end
@@ -161,6 +164,7 @@ module type Command = sig
 
     (** Convenience wrapper for [of_map]. Raises on duplicate keys. *)
     val of_alist_exn : ?key:'a Univ_map.Multi.Key.t -> (string * 'a) list -> 'a t
+
 
     (** [comma_separated t] accepts comma-separated lists of arguments parsed by [t].
 
@@ -278,6 +282,7 @@ module type Command = sig
     *)
     val sequence : 'a t -> 'a list t
 
+
     (** [non_empty_sequence_as_pair anons] and [non_empty_sequence_as_list anons] are like
         [sequence anons] except that an exception will be raised if there is not at least
         one anonymous argument given. *)
@@ -378,7 +383,8 @@ module type Command = sig
 
           See example/command/main.ml for more examples.
       *)
-      include Applicative.S with type 'a t := 'a t
+      include
+        Applicative.S with type 'a t := 'a t
 
       (** {2 Various internal values} *)
 
@@ -453,8 +459,7 @@ module type Command = sig
         -> 'b t
     end
 
-    (** @open *)
-    include S
+    include S (** @open *)
 
     (** Values included for convenience so you can specify all command line parameters
         inside a single local open of [Param]. *)
@@ -465,8 +470,7 @@ module type Command = sig
     include module type of Anons with type 'a t := 'a Anons.t
   end
 
-  module Let_syntax :
-  sig
+  module Let_syntax : sig
     (** Substituted below. *)
     type 'a t
 
@@ -474,8 +478,7 @@ module type Command = sig
 
     include Applicative.Applicative_infix with type 'a t := 'a t
 
-    module Let_syntax :
-    sig
+    module Let_syntax : sig
       (** Substituted below. *)
       type 'a t
 
@@ -685,6 +688,7 @@ module type Command = sig
 
     include module type of Arg_type.Export
 
+
     (** A flag specification. *)
     type 'a flag = 'a Flag.t
 
@@ -764,6 +768,7 @@ module type Command = sig
     -> (string * t) list Lazy.t
     -> t
 
+
   (** [exec ~summary ~path_to_exe] runs [exec] on the executable at [path_to_exe]. If
       [path_to_exe] is [`Absolute path] then [path] is executed without any further
       qualification.  If it is [`Relative_to_me path] then [Filename.dirname
@@ -794,7 +799,8 @@ module type Command = sig
     -> ?child_subcommand:string list
     -> path_to_exe:[ `Absolute of string
                    | `Relative_to_argv0 of string
-                   | `Relative_to_me of string ]
+                   | `Relative_to_me of string
+                   ]
     -> unit
     -> t
 
@@ -869,8 +875,7 @@ module type Command = sig
       | Lazy of t Lazy.t
 
     (** Fully forced shapes are comparable and serializable. *)
-    module Fully_forced :
-    sig
+    module Fully_forced : sig
       type shape = t
 
       type t =

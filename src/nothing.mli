@@ -51,7 +51,8 @@ val unreachable_code : t -> _
     prevented for lack of [Identifiable.S] here.
 
     Obviously, [of_string] and [t_of_sexp] will raise an exception. *)
-include Identifiable.S with type t := t
+include
+  Identifiable.S with type t := t
 
 module Stable : sig
   module V1 : sig

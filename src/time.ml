@@ -247,8 +247,7 @@ module Make (Time0 : Time0_intf.S) = struct
          will move by an hour in an hours' time, there *is* ambiguity. Hence [>.] for
          the first case and [<=.] for the second. *)
       match clock_shift_before_or_at, clock_shift_after with
-      | Some (start, amount), _
-        when add start (Span.abs amount) >. time ->
+      | Some (start, amount), _ when add start (Span.abs amount) >. time ->
         (* clock shifted recently *)
         if Span.(amount > zero)
         then
@@ -258,8 +257,7 @@ module Make (Time0 : Time0_intf.S) = struct
           (* clock shifted back recently: this date/ofday already happened *)
           assert (Span.(amount < zero));
           `Also_at (sub time (Span.abs amount)))
-      | _, Some (start, amount)
-        when sub start (Span.abs amount) <=. time ->
+      | _, Some (start, amount) when sub start (Span.abs amount) <=. time ->
         (* clock is about to shift *)
         if Span.(amount > zero)
         then (* clock about to shift forward: no effect *)

@@ -40,7 +40,8 @@ module type Generator = sig
         x, y
       ]}
   *)
-  include Monad.S with type 'a t := 'a t
+  include
+    Monad.S with type 'a t := 'a t
 
   include Applicative.S with type 'a t := 'a t
 
@@ -91,15 +92,15 @@ module type Generator = sig
     -> 'f t
     -> ('a * 'b * 'c * 'd * 'e * 'f) t
 
-  val variant2 : 'a t -> 'b t -> [`A of 'a | `B of 'b] t
-  val variant3 : 'a t -> 'b t -> 'c t -> [`A of 'a | `B of 'b | `C of 'c] t
+  val variant2 : 'a t -> 'b t -> [ `A of 'a | `B of 'b ] t
+  val variant3 : 'a t -> 'b t -> 'c t -> [ `A of 'a | `B of 'b | `C of 'c ] t
 
   val variant4
     :  'a t
     -> 'b t
     -> 'c t
     -> 'd t
-    -> [`A of 'a | `B of 'b | `C of 'c | `D of 'd] t
+    -> [ `A of 'a | `B of 'b | `C of 'c | `D of 'd ] t
 
   val variant5
     :  'a t
@@ -107,7 +108,7 @@ module type Generator = sig
     -> 'c t
     -> 'd t
     -> 'e t
-    -> [`A of 'a | `B of 'b | `C of 'c | `D of 'd | `E of 'e] t
+    -> [ `A of 'a | `B of 'b | `C of 'c | `D of 'd | `E of 'e ] t
 
   val variant6
     :  'a t
@@ -116,7 +117,7 @@ module type Generator = sig
     -> 'd t
     -> 'e t
     -> 'f t
-    -> [`A of 'a | `B of 'b | `C of 'c | `D of 'd | `E of 'e | `F of 'f] t
+    -> [ `A of 'a | `B of 'b | `C of 'c | `D of 'd | `E of 'e | `F of 'f ] t
 
   (** [geometric ~p init] produces a geometric distribution (think "radioactive decay")
       that produces [init] with probability [p], and otherwise recursively chooses from
@@ -273,6 +274,7 @@ module type Observer = sig
       depending on whether they satisfy [f]. *)
   val doubleton : ('a -> bool) -> 'a t
 
+
   (** [enum n ~f] maps values to [n] buckets, where [f] produces the index for a bucket
       from [0] to [n-1] for each value. *)
   val enum : int -> f:('a -> int) -> 'a t
@@ -294,15 +296,15 @@ module type Observer = sig
   *)
   val fixed_point : ('a t -> 'a t) -> 'a t
 
-  val variant2 : 'a t -> 'b t -> [`A of 'a | `B of 'b] t
-  val variant3 : 'a t -> 'b t -> 'c t -> [`A of 'a | `B of 'b | `C of 'c] t
+  val variant2 : 'a t -> 'b t -> [ `A of 'a | `B of 'b ] t
+  val variant3 : 'a t -> 'b t -> 'c t -> [ `A of 'a | `B of 'b | `C of 'c ] t
 
   val variant4
     :  'a t
     -> 'b t
     -> 'c t
     -> 'd t
-    -> [`A of 'a | `B of 'b | `C of 'c | `D of 'd] t
+    -> [ `A of 'a | `B of 'b | `C of 'c | `D of 'd ] t
 
   val variant5
     :  'a t
@@ -310,7 +312,7 @@ module type Observer = sig
     -> 'c t
     -> 'd t
     -> 'e t
-    -> [`A of 'a | `B of 'b | `C of 'c | `D of 'd | `E of 'e] t
+    -> [ `A of 'a | `B of 'b | `C of 'c | `D of 'd | `E of 'e ] t
 
   val variant6
     :  'a t
@@ -319,7 +321,7 @@ module type Observer = sig
     -> 'd t
     -> 'e t
     -> 'f t
-    -> [`A of 'a | `B of 'b | `C of 'c | `D of 'd | `E of 'e | `F of 'f] t
+    -> [ `A of 'a | `B of 'b | `C of 'c | `D of 'd | `E of 'e | `F of 'f ] t
 
   (** [of_predicate t1 t2 ~f] combines [t1] and [t2], where [t1] observes values that
       satisfy [f] and [t2] observes values that do not satisfy [f]. *)
@@ -406,15 +408,15 @@ module type Shrinker = sig
     -> 'f t
     -> ('a * 'b * 'c * 'd * 'e * 'f) t
 
-  val variant2 : 'a t -> 'b t -> [`A of 'a | `B of 'b] t
-  val variant3 : 'a t -> 'b t -> 'c t -> [`A of 'a | `B of 'b | `C of 'c] t
+  val variant2 : 'a t -> 'b t -> [ `A of 'a | `B of 'b ] t
+  val variant3 : 'a t -> 'b t -> 'c t -> [ `A of 'a | `B of 'b | `C of 'c ] t
 
   val variant4
     :  'a t
     -> 'b t
     -> 'c t
     -> 'd t
-    -> [`A of 'a | `B of 'b | `C of 'c | `D of 'd] t
+    -> [ `A of 'a | `B of 'b | `C of 'c | `D of 'd ] t
 
   val variant5
     :  'a t
@@ -422,7 +424,7 @@ module type Shrinker = sig
     -> 'c t
     -> 'd t
     -> 'e t
-    -> [`A of 'a | `B of 'b | `C of 'c | `D of 'd | `E of 'e] t
+    -> [ `A of 'a | `B of 'b | `C of 'c | `D of 'd | `E of 'e ] t
 
   val variant6
     :  'a t
@@ -431,7 +433,7 @@ module type Shrinker = sig
     -> 'd t
     -> 'e t
     -> 'f t
-    -> [`A of 'a | `B of 'b | `C of 'c | `D of 'd | `E of 'e | `F of 'f] t
+    -> [ `A of 'a | `B of 'b | `C of 'c | `D of 'd | `E of 'e | `F of 'f ] t
 
   (** [fixed_point] assists with shrinking structures recursively. Its advantage over
       directly using [rec] in the definition of the shrinker is that it causes lazy
@@ -500,11 +502,13 @@ end
     for each test. *)
 type seed =
   [ `Deterministic of string
-  | `Nondeterministic ]
+  | `Nondeterministic
+  ]
 
 type shrink_attempts =
   [ `Exhaustive
-  | `Limit of int ]
+  | `Limit of int
+  ]
 
 module type Quickcheck_config = sig
   (** [default_seed] is used initialize the pseudo-random generator that chooses random

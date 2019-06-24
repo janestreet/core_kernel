@@ -64,10 +64,10 @@ Error: This expression has type
 module type Container = sig
   type ('a, -'perm) t
 
-  val iter : ('a, [> read]) t -> f:('a -> unit) -> unit
+  val iter : ('a, [> read ]) t -> f:('a -> unit) -> unit
 end
 
-type ('a, -'perm) t constraint 'perm = [< _ perms]
+type ('a, -'perm) t constraint 'perm = [< _ perms ]
 
 module type Foo = Container with type ('a, 'perm) t := ('a, 'perm) t
 
@@ -88,12 +88,12 @@ Error: In this `with' constraint, the new definition of t
 
 (* Constraints don't work with included signatures, part 2 *)
 module type Container = sig
-  type ('a, -'perm) t constraint 'perm = [< _ perms]
+  type ('a, -'perm) t constraint 'perm = [< _ perms ]
 
-  val iter : ('a, [> read]) t -> f:('a -> unit) -> unit
+  val iter : ('a, [> read ]) t -> f:('a -> unit) -> unit
 end
 
-type ('a, -'perm) t constraint 'perm = [< _ perms]
+type ('a, -'perm) t constraint 'perm = [< _ perms ]
 
 module type Foo = Container with type ('a, 'perm) t := ('a, 'perm) t
 
@@ -113,7 +113,7 @@ Error: In this `with' constraint, the new definition of t
 |}]
 
 (* Constraints don't work with type aliases, part 1 *)
-type -'perm t constraint 'perm = [< _ perms]
+type -'perm t constraint 'perm = [< _ perms ]
 
 type 'perm alias = 'perm t
 
@@ -128,9 +128,9 @@ Error: Constraints are not satisfied in this type.
 |}]
 
 (* Constraints don't work with type aliases, part 2 *)
-type -'perm t constraint 'perm = [< _ perms]
+type -'perm t constraint 'perm = [< _ perms ]
 
-type 'perm alias = 'perm t constraint 'perm = [< _ perms]
+type 'perm alias = 'perm t constraint 'perm = [< _ perms ]
 
 [%%expect
   {|

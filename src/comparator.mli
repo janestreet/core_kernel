@@ -8,8 +8,9 @@ type ('a, 'witness) t = ('a, 'witness) Base.Comparator.t = private
   ; sexp_of_t : 'a -> Base.Sexp.t
   }
 
+include
+  module type of Base.Comparator with type ('a, 'witness) t := ('a, 'witness) t
 (** @open *)
-include module type of Base.Comparator with type ('a, 'witness) t := ('a, 'witness) t
 
 (** The following module types and functors may be used to define stable modules *)
 

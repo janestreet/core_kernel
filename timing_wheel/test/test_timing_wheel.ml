@@ -295,7 +295,8 @@ let%expect_test "[Config.create] with negative alarm precision" =
 ;;
 
 let%expect_test "[Config.create] with zero alarm precision" =
-  require_does_raise [%here] (fun () -> create_config ~alarm_precision:(gibi_nanos 0.) ());
+  require_does_raise [%here] (fun () ->
+    create_config ~alarm_precision:(gibi_nanos 0.) ());
   [%expect
     {|
     ("[Alarm_precision.of_span_floor_pow2_ns] got non-positive span" (span 0s)) |}]
@@ -311,13 +312,13 @@ let%expect_test "[Config.durations]" =
   let durations ?extend_to_max_num_bits level_bits =
     print_s
       [%sexp
-        ( Config.durations
-            (create_config
-               ?extend_to_max_num_bits
-               ~alarm_precision:(gibi_nanos 1.)
-               ~level_bits
-               ())
-          : Time_ns.Span.t list )]
+        (Config.durations
+           (create_config
+              ?extend_to_max_num_bits
+              ~alarm_precision:(gibi_nanos 1.)
+              ~level_bits
+              ())
+         : Time_ns.Span.t list)]
   in
   durations [ 1 ];
   [%expect {|
@@ -390,8 +391,8 @@ let%expect_test "[level_bits], [config], and [max_allowed_alarm_time]" =
                 (level_bits : Level_bits.t)
                 (config : Config.t)
                 ~max_allowed_alarm_time:
-                  ( max_allowed_alarm_time (create ~config ~start:Time_ns.epoch)
-                    : Time_ns.t )]));
+                  (max_allowed_alarm_time (create ~config ~start:Time_ns.epoch)
+                   : Time_ns.t)]));
   [%expect
     {|
     ((level_bits (11 10 10 10 10 10 1))
@@ -550,11 +551,11 @@ let%expect_test "[is_empty], [interval_num], [length], [mem]" =
           ~length:(length t : int)
           ~is_empty:(is_empty t : bool)
           ~interval_num1:
-            ( Or_error.try_with (fun () -> Alarm.interval_num t a1)
-              : Interval_num.t Or_error.t )
+            (Or_error.try_with (fun () -> Alarm.interval_num t a1)
+             : Interval_num.t Or_error.t)
           ~interval_num2:
-            ( Or_error.try_with (fun () -> Alarm.interval_num t a2)
-              : Interval_num.t Or_error.t )
+            (Or_error.try_with (fun () -> Alarm.interval_num t a2)
+             : Interval_num.t Or_error.t)
           ~mem1:(mem t a1 : bool)
           ~mem2:(mem t a2 : bool)]
   in
@@ -1021,13 +1022,13 @@ let%expect_test "[Private.interval_num_internal]" =
         ""
           (time : int)
           ~interval_num:
-            ( Interval_num.to_int_exn
-                (Private.interval_num_internal
-                   ~alarm_precision:
-                     (Alarm_precision.of_span_floor_pow2_ns
-                        (Time_ns.Span.of_int63_ns (Int63.of_int 4)))
-                   ~time:(Time_ns.of_int_ns_since_epoch time))
-              : int )]
+            (Interval_num.to_int_exn
+               (Private.interval_num_internal
+                  ~alarm_precision:
+                    (Alarm_precision.of_span_floor_pow2_ns
+                       (Time_ns.Span.of_int63_ns (Int63.of_int 4)))
+                  ~time:(Time_ns.of_int_ns_since_epoch time))
+             : int)]
   done;
   [%expect
     {|
@@ -1182,11 +1183,11 @@ let%expect_test "[advance_clock ~to_:max_time]" =
         print_s [%message "" (alarm_precision : Time_ns.Span.t) (level0_bits : int)];
         for i = 10 downto 0 do
           ignore
-            ( add
-                t
-                ~at:(Time_ns.sub max_time (Time_ns.Span.of_int_ns i))
-                (fun () -> print_s [%message "alarm" (i : int)])
-              : _ Alarm.t )
+            (add
+               t
+               ~at:(Time_ns.sub max_time (Time_ns.Span.of_int_ns i))
+               (fun () -> print_s [%message "alarm" (i : int)])
+             : _ Alarm.t)
         done;
         for i = 10 downto 0 do
           print_s [%message "advance" (i : int)];
@@ -1726,9 +1727,9 @@ let%expect_test "[next_alarm_fires_at]" =
       [%message
         ""
           ~next_alarm_fires_after:
-            ( Option.map (next_alarm_fires_at t) ~f:(fun time ->
-                Time_ns.diff time Time_ns.epoch)
-              : Time_ns.Span.t option )]
+            (Option.map (next_alarm_fires_at t) ~f:(fun time ->
+               Time_ns.diff time Time_ns.epoch)
+             : Time_ns.Span.t option)]
   in
   let add_at at =
     ignore (add t ~at:(Time_ns.add Time_ns.epoch at) () : _ Alarm.t);
