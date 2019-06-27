@@ -126,6 +126,7 @@ val words : t -> float
 val words_int_exn : t -> int
 
 val words_float : t -> float
+val zero : t
 
 (** [scale t mul] scale the measure [t] by [mul] *)
 val scale : t -> float -> t

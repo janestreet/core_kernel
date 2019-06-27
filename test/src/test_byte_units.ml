@@ -31,7 +31,7 @@ let%test_module "{of,to}_string" =
 ;;
 
 let examples =
-  [ Byte_units.of_bytes_int 0
+  [ Byte_units.zero
   ; Byte_units.of_bytes_int 1
   ; Byte_units.of_bytes_int 10
   ; Byte_units.of_bytes_int 100

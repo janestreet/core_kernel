@@ -47,6 +47,7 @@ module Infix = struct
   let ( * ) t s = of_repr (Repr.of_float (Repr.to_float (to_repr t) *. s))
 end
 
+let zero = of_repr Repr.zero
 let scale = Infix.( * )
 let iscale t s = of_repr (Repr.( * ) (to_repr t) (Repr.of_int s))
 let bytes_int_exn t = Repr.to_int_exn (to_repr t)
