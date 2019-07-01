@@ -327,6 +327,12 @@ module Make_tree (Key : Comparator.S1) = struct
     to_sequence ~comparator ?order ?keys_greater_or_equal_to ?keys_less_or_equal_to t
   ;;
 
+  let binary_search t ~compare how v = binary_search ~comparator t ~compare how v
+
+  let binary_search_segmented t ~segment_of how =
+    binary_search_segmented ~comparator t ~segment_of how
+  ;;
+
   let quickcheck_generator k v = For_quickcheck.gen_tree ~comparator k v
   let quickcheck_observer k v = For_quickcheck.obs_tree k v
   let quickcheck_shrinker k v = For_quickcheck.shr_tree ~comparator k v

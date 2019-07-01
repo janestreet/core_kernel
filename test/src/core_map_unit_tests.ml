@@ -94,6 +94,12 @@ struct
         x
     ;;
 
+    let binary_search t ~compare how v = simplify_accessor binary_search t ~compare how v
+
+    let binary_search_segmented t ~segment_of how =
+      simplify_accessor binary_search_segmented t ~segment_of how
+    ;;
+
     let append ~lower_part ~upper_part = simplify_accessor append ~lower_part ~upper_part
     let empty () = simplify_creator empty
     let singleton x = simplify_creator singleton x
@@ -1703,6 +1709,91 @@ struct
     [%equal: (Key.t * int) option]
       (Map.closest_key (Map.empty ()) `Less_than Key.sample)
       None
+  ;;
+
+  let binary_search _ = assert false
+  let binary_search_segmented _ = assert false
+
+  let%test_module "binary_search" =
+    (module struct
+      let small_map =
+        Map.of_alist_exn
+          (List.map ~f:(Tuple2.map_fst ~f:Key.of_int) [ 1, 1; 2, 2; 3, 3 ])
+      ;;
+
+      let compare_key ~key ~data:_ k = Int.compare (Key.to_int key) k
+
+      let%test _ =
+        [%equal: (Key.t * int) option]
+          (Map.binary_search (Map.empty ()) ~compare:compare_key `First_equal_to 1)
+          None
+      ;;
+
+      let%test _ =
+        [%equal: (Key.t * int) option]
+          (Map.binary_search small_map ~compare:compare_key `First_equal_to 2)
+          (Some (Key.of_int 2, 2))
+      ;;
+
+      let%test _ =
+        [%equal: (Key.t * int) option]
+          (Map.binary_search
+             small_map
+             ~compare:compare_key
+             `First_greater_than_or_equal_to
+             2)
+          (Some (Key.of_int 2, 2))
+      ;;
+
+      let%test _ =
+        [%equal: (Key.t * int) option]
+          (Map.binary_search
+             small_map
+             ~compare:compare_key
+             `First_strictly_greater_than
+             3)
+          None
+      ;;
+
+      let%test _ =
+        [%equal: (Key.t * int) option]
+          (Map.binary_search_segmented
+             (Map.empty ())
+             ~segment_of:(fun ~key:_ ~data:_ -> assert false)
+             `First_on_right)
+          None
+      ;;
+
+      let%test _ =
+        [%equal: (Key.t * int) option]
+          (Map.binary_search_segmented
+             small_map
+             ~segment_of:(fun ~key ~data:_ ->
+               if Key.to_int key < 3 then `Left else `Right)
+             `First_on_right)
+          (Some (Key.of_int 3, 3))
+      ;;
+
+      let%test _ =
+        [%equal: (Key.t * int) option]
+          (Map.binary_search_segmented
+             small_map
+             ~segment_of:(fun ~key ~data:_ ->
+               if Key.to_int key < 3 then `Left else `Right)
+             `Last_on_left)
+          (Some (Key.of_int 2, 2))
+      ;;
+
+      let%test _ =
+        [%equal: (Key.t * int) option]
+          (Map.binary_search_segmented
+             small_map
+             ~segment_of:(fun ~key ~data:_ ->
+               if Key.to_int key > 3 then `Right else `Left)
+             `First_on_right)
+          None
+      ;;
+    end)
   ;;
 
   let validate ~name:_ _ = assert false

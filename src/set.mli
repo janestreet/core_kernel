@@ -339,6 +339,56 @@ val to_sequence
   -> ('a, 'cmp) t
   -> 'a Sequence.t
 
+(** [binary_search t ~compare which elt] returns the element in [t] specified by
+    [compare] and [which], if one exists.
+
+    [t] must be sorted in increasing order according to [compare], where [compare] and
+    [elt] divide [t] into three (possibly empty) segments:
+
+    {v
+      |  < elt  |  = elt  |  > elt  |
+    v}
+
+    [binary_search] returns an element on the boundary of segments as specified by
+    [which].  See the diagram below next to the [which] variants.
+
+    [binary_search] does not check that [compare] orders [t], and behavior is
+    unspecified if [compare] doesn't order [t].  Behavior is also unspecified if
+    [compare] mutates [t]. *)
+val binary_search
+  :  ('a, 'cmp) t
+  -> compare:('a -> 'key -> int)
+  -> [ `Last_strictly_less_than (**        {v | < elt X |                       v} *)
+     | `Last_less_than_or_equal_to (**     {v |      <= elt       X |           v} *)
+     | `Last_equal_to (**                  {v           |   = elt X |           v} *)
+     | `First_equal_to (**                 {v           | X = elt   |           v} *)
+     | `First_greater_than_or_equal_to (** {v           | X       >= elt      | v} *)
+     | `First_strictly_greater_than (**    {v                       | X > elt | v} *)
+     ]
+  -> 'key
+  -> 'a option
+
+(** [binary_search_segmented t ~segment_of which] takes a [segment_of] function that
+    divides [t] into two (possibly empty) segments:
+
+    {v
+      | segment_of elt = `Left | segment_of elt = `Right |
+    v}
+
+    [binary_search_segmented] returns the element on the boundary of the segments as
+    specified by [which]: [`Last_on_left] yields the last element of the left segment,
+    while [`First_on_right] yields the first element of the right segment.  It returns
+    [None] if the segment is empty.
+
+    [binary_search_segmented] does not check that [segment_of] segments [t] as in the
+    diagram, and behavior is unspecified if [segment_of] doesn't segment [t].  Behavior
+    is also unspecified if [segment_of] mutates [t]. *)
+val binary_search_segmented
+  :  ('a, 'cmp) t
+  -> segment_of:('a -> [ `Left | `Right ])
+  -> [ `Last_on_left | `First_on_right ]
+  -> 'a option
+
 (** Produces the elements of the two sets between [greater_or_equal_to] and
     [less_or_equal_to] in [order], noting whether each element appears in the left set,
     the right set, or both.  In the both case, both elements are returned, in case the

@@ -89,6 +89,9 @@ module Unit_tests (Elt : sig
       simplify_accessor to_sequence ?order ?greater_or_equal_to ?less_or_equal_to x
     ;;
 
+    let binary_search = simplify_accessor binary_search
+    let binary_search_segmented = simplify_accessor binary_search_segmented
+
     let merge_to_sequence ?order ?greater_or_equal_to ?less_or_equal_to x y =
       simplify_accessor
         merge_to_sequence
@@ -357,6 +360,84 @@ module Unit_tests (Elt : sig
 
       let%test_unit _ =
         Set.to_sequence ~order:`Decreasing ~less_or_equal_to:(Elt.of_int ~-1) m <=> []
+      ;;
+    end)
+  ;;
+
+  let binary_search _ = assert false
+  let binary_search_segmented _ = assert false
+
+  let%test_module "binary_search" =
+    (module struct
+      let small_set = Set.of_list (List.map ~f:Elt.of_int [ 1; 2; 3 ])
+      let compare_elt elt v = Int.compare (Elt.to_int elt) v
+
+      let%test _ =
+        [%equal: Elt.t option]
+          (Set.binary_search (Set.empty ()) ~compare:compare_elt `First_equal_to 1)
+          None
+      ;;
+
+      let%test _ =
+        [%equal: Elt.t option]
+          (Set.binary_search small_set ~compare:compare_elt `First_equal_to 2)
+          (Some (Elt.of_int 2))
+      ;;
+
+      let%test _ =
+        [%equal: Elt.t option]
+          (Set.binary_search
+             small_set
+             ~compare:compare_elt
+             `First_greater_than_or_equal_to
+             2)
+          (Some (Elt.of_int 2))
+      ;;
+
+      let%test _ =
+        [%equal: Elt.t option]
+          (Set.binary_search
+             small_set
+             ~compare:compare_elt
+             `First_strictly_greater_than
+             3)
+          None
+      ;;
+
+      let%test _ =
+        [%equal: Elt.t option]
+          (Set.binary_search_segmented
+             (Set.empty ())
+             ~segment_of:(fun _ -> assert false)
+             `First_on_right)
+          None
+      ;;
+
+      let%test _ =
+        [%equal: Elt.t option]
+          (Set.binary_search_segmented
+             small_set
+             ~segment_of:(fun elt -> if Elt.to_int elt < 3 then `Left else `Right)
+             `First_on_right)
+          (Some (Elt.of_int 3))
+      ;;
+
+      let%test _ =
+        [%equal: Elt.t option]
+          (Set.binary_search_segmented
+             small_set
+             ~segment_of:(fun elt -> if Elt.to_int elt < 3 then `Left else `Right)
+             `Last_on_left)
+          (Some (Elt.of_int 2))
+      ;;
+
+      let%test _ =
+        [%equal: Elt.t option]
+          (Set.binary_search_segmented
+             small_set
+             ~segment_of:(fun elt -> if Elt.to_int elt > 3 then `Right else `Left)
+             `First_on_right)
+          None
       ;;
     end)
   ;;

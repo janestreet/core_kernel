@@ -282,6 +282,12 @@ module Make_tree (Elt : Comparator.S1) = struct
     Tree.to_sequence ~comparator ?order ?greater_or_equal_to ?less_or_equal_to t
   ;;
 
+  let binary_search t ~compare how v = Tree.binary_search ~comparator t ~compare how v
+
+  let binary_search_segmented t ~segment_of how =
+    Tree.binary_search_segmented ~comparator t ~segment_of how
+  ;;
+
   let merge_to_sequence ?order ?greater_or_equal_to ?less_or_equal_to t t' =
     Tree.merge_to_sequence ~comparator ?order ?greater_or_equal_to ?less_or_equal_to t t'
   ;;
