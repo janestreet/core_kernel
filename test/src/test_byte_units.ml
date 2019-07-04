@@ -7,9 +7,9 @@ let kbyte = 1024.
 
 let%expect_test ("Byte_units.to_string_hum"[@tags "64-bits-only"]) =
   print_string (Byte_units.to_string_hum (Byte_units.of_bytes_int 1000));
-  [%expect {| 1000b |}];
+  [%expect {| 1000B |}];
   print_string (Byte_units.to_string_hum (Byte_units.of_bytes_int 1500));
-  [%expect {| 1.46484k |}]
+  [%expect {| 1.46484K |}]
 ;;
 
 let%test_module "{of,to}_string" =
@@ -22,11 +22,11 @@ let%test_module "{of,to}_string" =
       result
     ;;
 
-    let%test _ = f "3b" "3b"
-    let%test _ = f "3w" (sprintf "%gb" (3.0 *. bytes_per_word))
-    let%test _ = f "3k" "3k"
-    let%test _ = f "3m" "3m"
-    let%test _ = f "3g" "3g"
+    let%test _ = f "3B" "3B"
+    let%test _ = f "3w" (sprintf "%gB" (3.0 *. bytes_per_word))
+    let%test _ = f "3K" "3K"
+    let%test _ = f "3M" "3M"
+    let%test _ = f "3G" "3G"
   end)
 ;;
 
@@ -75,70 +75,70 @@ let%expect_test ("Byte_units.to_string"[@tags "no-js"]) =
   print_all_byte_units !"%{Byte_units}";
   [%expect
     {|
-    (Bytes 0) -> 0b
-    (Bytes 1) -> 1b
-    (Bytes 10) -> 10b
-    (Bytes 100) -> 100b
-    (Bytes 1_000) -> 1000b
-    (Bytes 10_000) -> 9.76562k
-    (Bytes 100_000) -> 97.6562k
-    (Bytes 1_000_000) -> 976.562k
-    (Bytes 102) -> 102b
-    (Bytes 1_024) -> 1k
-    (Bytes 1_126) -> 1.09961k
-    (Bytes 10_240) -> 10k
-    (Bytes 102_400) -> 100k
-    (Bytes 1_048_576) -> 1m
-    (Bytes 10_485_760) -> 10m
-    (Bytes 104_857_600) -> 100m
-    (Bytes 1_073_741_824) -> 1g
-    (Bytes 10_737_418_240) -> 10g
-    (Bytes 107_374_182_400) -> 100g
-    (Bytes 1_099_511_627_776) -> 1024g
-    (Bytes 10_995_116_277_760) -> 10240g
-    (Bytes 109_951_162_777_600) -> 102400g
-    (Bytes 1_125_899_906_842_624) -> 1.04858e+06g
-    (Bytes 11_258_999_068_426_240) -> 1.04858e+07g
-    (Bytes 112_589_990_684_262_400) -> 1.04858e+08g
-    (Bytes 1_152_921_504_606_846_976) -> 1.07374e+09g
-    (Bytes -1) -> -1b
-    (Bytes -10_000) -> -9.76562k
-    (Bytes -10_000_000) -> -9.53674m |}]
+    (Bytes 0) -> 0B
+    (Bytes 1) -> 1B
+    (Bytes 10) -> 10B
+    (Bytes 100) -> 100B
+    (Bytes 1_000) -> 1000B
+    (Bytes 10_000) -> 9.76562K
+    (Bytes 100_000) -> 97.6562K
+    (Bytes 1_000_000) -> 976.562K
+    (Bytes 102) -> 102B
+    (Bytes 1_024) -> 1K
+    (Bytes 1_126) -> 1.09961K
+    (Bytes 10_240) -> 10K
+    (Bytes 102_400) -> 100K
+    (Bytes 1_048_576) -> 1M
+    (Bytes 10_485_760) -> 10M
+    (Bytes 104_857_600) -> 100M
+    (Bytes 1_073_741_824) -> 1G
+    (Bytes 10_737_418_240) -> 10G
+    (Bytes 107_374_182_400) -> 100G
+    (Bytes 1_099_511_627_776) -> 1024G
+    (Bytes 10_995_116_277_760) -> 10240G
+    (Bytes 109_951_162_777_600) -> 102400G
+    (Bytes 1_125_899_906_842_624) -> 1.04858e+06G
+    (Bytes 11_258_999_068_426_240) -> 1.04858e+07G
+    (Bytes 112_589_990_684_262_400) -> 1.04858e+08G
+    (Bytes 1_152_921_504_606_846_976) -> 1.07374e+09G
+    (Bytes -1) -> -1B
+    (Bytes -10_000) -> -9.76562K
+    (Bytes -10_000_000) -> -9.53674M |}]
 ;;
 
 let%expect_test "Byte_units.to_string_short" =
   print_all_byte_units !"%{Byte_units#short}";
   [%expect
     {|
-    (Bytes 0) -> 0b
-    (Bytes 1) -> 1b
-    (Bytes 10) -> 10b
-    (Bytes 100) -> 100b
-    (Bytes 1_000) -> 1000b
-    (Bytes 10_000) -> 9.77k
-    (Bytes 100_000) -> 97.7k
-    (Bytes 1_000_000) -> 977k
-    (Bytes 102) -> 102b
-    (Bytes 1_024) -> 1.00k
-    (Bytes 1_126) -> 1.10k
-    (Bytes 10_240) -> 10.0k
-    (Bytes 102_400) -> 100k
-    (Bytes 1_048_576) -> 1.00m
-    (Bytes 10_485_760) -> 10.0m
-    (Bytes 104_857_600) -> 100m
-    (Bytes 1_073_741_824) -> 1.00g
-    (Bytes 10_737_418_240) -> 10.0g
-    (Bytes 107_374_182_400) -> 100g
-    (Bytes 1_099_511_627_776) -> 1.00t
-    (Bytes 10_995_116_277_760) -> 10.0t
-    (Bytes 109_951_162_777_600) -> 100t
-    (Bytes 1_125_899_906_842_624) -> 1.00p
-    (Bytes 11_258_999_068_426_240) -> 10.0p
-    (Bytes 112_589_990_684_262_400) -> 100p
-    (Bytes 1_152_921_504_606_846_976) -> 1.00e
-    (Bytes -1) -> -1b
-    (Bytes -10_000) -> -9.77k
-    (Bytes -10_000_000) -> -9.54m |}]
+    (Bytes 0) -> 0B
+    (Bytes 1) -> 1B
+    (Bytes 10) -> 10B
+    (Bytes 100) -> 100B
+    (Bytes 1_000) -> 1000B
+    (Bytes 10_000) -> 9.77K
+    (Bytes 100_000) -> 97.7K
+    (Bytes 1_000_000) -> 977K
+    (Bytes 102) -> 102B
+    (Bytes 1_024) -> 1.00K
+    (Bytes 1_126) -> 1.10K
+    (Bytes 10_240) -> 10.0K
+    (Bytes 102_400) -> 100K
+    (Bytes 1_048_576) -> 1.00M
+    (Bytes 10_485_760) -> 10.0M
+    (Bytes 104_857_600) -> 100M
+    (Bytes 1_073_741_824) -> 1.00G
+    (Bytes 10_737_418_240) -> 10.0G
+    (Bytes 107_374_182_400) -> 100G
+    (Bytes 1_099_511_627_776) -> 1.00T
+    (Bytes 10_995_116_277_760) -> 10.0T
+    (Bytes 109_951_162_777_600) -> 100T
+    (Bytes 1_125_899_906_842_624) -> 1.00P
+    (Bytes 11_258_999_068_426_240) -> 10.0P
+    (Bytes 112_589_990_684_262_400) -> 100P
+    (Bytes 1_152_921_504_606_846_976) -> 1.00E
+    (Bytes -1) -> -1B
+    (Bytes -10_000) -> -9.77K
+    (Bytes -10_000_000) -> -9.54M |}]
 ;;
 
 let%expect_test ("Byte_units.sexp_of_t"[@tags "no-js"]) =
@@ -148,35 +148,35 @@ let%expect_test ("Byte_units.sexp_of_t"[@tags "no-js"]) =
   print_all_byte_units !"%{sexp:Byte_units.t}";
   [%expect
     {|
-    (Bytes 0) -> 0b
-    (Bytes 1) -> 1b
-    (Bytes 10) -> 10b
-    (Bytes 100) -> 100b
-    (Bytes 1_000) -> 1000b
-    (Bytes 10_000) -> 9.76562k
-    (Bytes 100_000) -> 97.6562k
-    (Bytes 1_000_000) -> 976.562k
-    (Bytes 102) -> 102b
-    (Bytes 1_024) -> 1k
-    (Bytes 1_126) -> 1.09961k
-    (Bytes 10_240) -> 10k
-    (Bytes 102_400) -> 100k
-    (Bytes 1_048_576) -> 1m
-    (Bytes 10_485_760) -> 10m
-    (Bytes 104_857_600) -> 100m
-    (Bytes 1_073_741_824) -> 1g
-    (Bytes 10_737_418_240) -> 10g
-    (Bytes 107_374_182_400) -> 100g
-    (Bytes 1_099_511_627_776) -> 1024g
-    (Bytes 10_995_116_277_760) -> 10240g
-    (Bytes 109_951_162_777_600) -> 102400g
-    (Bytes 1_125_899_906_842_624) -> 1.04858e+06g
-    (Bytes 11_258_999_068_426_240) -> 1.04858e+07g
-    (Bytes 112_589_990_684_262_400) -> 1.04858e+08g
-    (Bytes 1_152_921_504_606_846_976) -> 1.07374e+09g
-    (Bytes -1) -> -1b
-    (Bytes -10_000) -> -9.76562k
-    (Bytes -10_000_000) -> -9.53674m |}]
+    (Bytes 0) -> 0B
+    (Bytes 1) -> 1B
+    (Bytes 10) -> 10B
+    (Bytes 100) -> 100B
+    (Bytes 1_000) -> 1000B
+    (Bytes 10_000) -> 9.76562K
+    (Bytes 100_000) -> 97.6562K
+    (Bytes 1_000_000) -> 976.562K
+    (Bytes 102) -> 102B
+    (Bytes 1_024) -> 1K
+    (Bytes 1_126) -> 1.09961K
+    (Bytes 10_240) -> 10K
+    (Bytes 102_400) -> 100K
+    (Bytes 1_048_576) -> 1M
+    (Bytes 10_485_760) -> 10M
+    (Bytes 104_857_600) -> 100M
+    (Bytes 1_073_741_824) -> 1G
+    (Bytes 10_737_418_240) -> 10G
+    (Bytes 107_374_182_400) -> 100G
+    (Bytes 1_099_511_627_776) -> 1024G
+    (Bytes 10_995_116_277_760) -> 10240G
+    (Bytes 109_951_162_777_600) -> 102400G
+    (Bytes 1_125_899_906_842_624) -> 1.04858e+06G
+    (Bytes 11_258_999_068_426_240) -> 1.04858e+07G
+    (Bytes 112_589_990_684_262_400) -> 1.04858e+08G
+    (Bytes 1_152_921_504_606_846_976) -> 1.07374e+09G
+    (Bytes -1) -> -1B
+    (Bytes -10_000) -> -9.76562K
+    (Bytes -10_000_000) -> -9.53674M |}]
 ;;
 
 let%expect_test "Byte_units.Stable.V1.sexp_of_t" =

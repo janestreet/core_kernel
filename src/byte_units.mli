@@ -83,15 +83,15 @@ val of_words_float_exn : float -> t
 (** [to_string_hum t] returns a string representation of [t]. This will use the largest
     unit that will not make the translated value be below 1.
 
-    For example [Byte_units.to_string_hum (Byte_units.of_bytes_int 1000)] gives [1000b],
-    but [Byte_units.to_string_hum (Byte_units.of_bytes_int 1500)] gives [1.46484k]. *)
+    For example [Byte_units.to_string_hum (Byte_units.of_bytes_int 1000)] gives [1000B],
+    but [Byte_units.to_string_hum (Byte_units.of_bytes_int 1500)] gives [1.46484K]. *)
 val to_string_hum : t -> string
 
 (** [to_string_short] is like [to_string_hum] but will attempt to only show 4 significant
     digits.
 
-    For example [Byte_units.to_string_hum (Byte_units.of_bytes_int 1000)] gives [1000b],
-    but [Byte_units.to_string_hum (Byte_units.of_bytes_int 1500)] gives [1.46k]. *)
+    For example [Byte_units.to_string_hum (Byte_units.of_bytes_int 1000)] gives [1000B],
+    but [Byte_units.to_string_hum (Byte_units.of_bytes_int 1500)] gives [1.46K]. *)
 val to_string_short : t -> string
 
 (** This is a deprecated alias for [bytes_float]. *)

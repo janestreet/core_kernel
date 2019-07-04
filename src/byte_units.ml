@@ -23,12 +23,12 @@ end = struct
     let gib = kib * mib in
     let n_abs = abs n in
     if n_abs < kib
-    then sprintf "%db" (to_int_exn n)
+    then sprintf "%dB" (to_int_exn n)
     else if n_abs < mib
-    then sprintf "%gk" (to_float n /. to_float kib)
+    then sprintf "%gK" (to_float n /. to_float kib)
     else if n_abs < gib
-    then sprintf "%gm" (to_float n /. to_float mib)
-    else sprintf "%gg" (to_float n /. to_float gib)
+    then sprintf "%gM" (to_float n /. to_float mib)
+    else sprintf "%gG" (to_float n /. to_float gib)
   ;;
 
   let sexp_of_t n = Sexp.Atom (to_string n)
@@ -215,7 +215,7 @@ module Stable = struct
         [%sexp `Gigabytes (gigabytes t : float)]
     ;;
 
-    let to_string = to_string
+    let to_string t = String.lowercase (to_string t)
     let of_string = of_string
 
     (* This test documents the original to-string representation and fails under javascript
@@ -268,7 +268,7 @@ module Stable = struct
   end
 end
 
-let to_string_hum = Stable.V1.to_string
+let to_string_hum = T.to_string
 
 let to_string_short t =
   let to_units_str to_unit ext =
@@ -281,42 +281,42 @@ let to_string_short t =
     else sprintf "%.2f%c" f ext
   in
   match largest_measure t with
-  | `Bytes -> sprintf "%db" (bytes_int_exn t)
-  | `Kilobytes -> to_units_str kilobytes 'k'
-  | `Megabytes -> to_units_str megabytes 'm'
-  | `Gigabytes -> to_units_str gigabytes 'g'
-  | `Terabytes -> to_units_str terabytes 't'
-  | `Petabytes -> to_units_str petabytes 'p'
-  | `Exabytes -> to_units_str exabytes 'e'
+  | `Bytes -> sprintf "%dB" (bytes_int_exn t)
+  | `Kilobytes -> to_units_str kilobytes 'K'
+  | `Megabytes -> to_units_str megabytes 'M'
+  | `Gigabytes -> to_units_str gigabytes 'G'
+  | `Terabytes -> to_units_str terabytes 'T'
+  | `Petabytes -> to_units_str petabytes 'P'
+  | `Exabytes -> to_units_str exabytes 'E'
 ;;
 
 let%expect_test _ =
   printf !"%{#short}" (of_bytes_int 1000);
-  [%expect {| 1000b |}];
+  [%expect {| 1000B |}];
   printf !"%{#short}" (of_bytes_int 1023);
-  [%expect {| 1023b |}];
+  [%expect {| 1023B |}];
   printf !"%{#short}" (of_bytes_int 1024);
-  [%expect {| 1.00k |}];
+  [%expect {| 1.00K |}];
   printf !"%{#short}" (of_bytes_int 1025);
-  [%expect {| 1.00k |}];
+  [%expect {| 1.00K |}];
   printf !"%{#short}" (of_bytes_int 10000);
-  [%expect {| 9.77k |}];
+  [%expect {| 9.77K |}];
   printf !"%{#short}" (of_bytes_int 100000);
-  [%expect {| 97.7k |}];
+  [%expect {| 97.7K |}];
   printf !"%{#short}" (of_bytes_int 1000000);
-  [%expect {| 977k |}];
+  [%expect {| 977K |}];
   printf !"%{#short}" (of_bytes_int 10000000);
-  [%expect {| 9.54m |}];
+  [%expect {| 9.54M |}];
   printf !"%{#short}" (of_bytes 10000000000.);
-  [%expect {| 9.31g |}];
+  [%expect {| 9.31G |}];
   printf !"%{#short}" (of_bytes 1000000000000.);
-  [%expect {| 931g |}];
+  [%expect {| 931G |}];
   printf !"%{#short}" (of_bytes 100000000000000.);
-  [%expect {| 90.9t |}];
+  [%expect {| 90.9T |}];
   printf !"%{#short}" (of_bytes 100000000000000000.);
-  [%expect {| 88.8p |}];
+  [%expect {| 88.8P |}];
   printf !"%{#short}" (of_bytes 3000000000000000000.);
-  [%expect {| 2.60e |}];
+  [%expect {| 2.60E |}];
   ()
 ;;
 
