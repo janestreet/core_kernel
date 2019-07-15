@@ -14,8 +14,7 @@ end
 type ('key, 'data) t_detailed =
   { num_keys : int
   ; sexp_of_key : ('key -> Sexp.t) option
-  ; key_to_int : 'key
-      -> int
+  ; key_to_int : 'key -> int
   (* The number of entries in the table, not the length of the arrays below. *)
   ; mutable length : int
   (* [(key, data)] is in the table iff

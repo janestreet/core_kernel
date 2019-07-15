@@ -145,9 +145,7 @@ struct
       let bus = create1 [%here] ~on_subscription_after_first_write:Raise in
       let bus_r = read_only bus in
       write bus ();
-      require
-        [%here]
-        (does_raise (fun () -> subscribe_exn bus_r [%here] ~f:callback))
+      require [%here] (does_raise (fun () -> subscribe_exn bus_r [%here] ~f:callback))
     ;;
 
     let%expect_test "~on_subscription_after_first_write:Allow" =
@@ -418,9 +416,7 @@ struct
       let ro = read_only bus in
       let last1 = ref 0 in
       let last2 = ref "" in
-      let print_lasts () =
-        print_s [%message (last1 : int ref) (last2 : string ref)]
-      in
+      let print_lasts () = print_s [%message (last1 : int ref) (last2 : string ref)] in
       fold_exn ro [%here] Arity1 ~init:0 ~f:(fun acc () ->
         let this = acc + 1 in
         last1 := this;

@@ -413,9 +413,9 @@ val merge_to_sequence
 (** Convert a set to or from a map.  [to_map] takes a function to produce data for each
     key.  Both functions run in O(n) time (assuming the function passed to [to_map] runs
     in constant time). *)
-val to_map : ('key, 'cmp) t -> f:('key -> 'data) -> ('key, 'data, 'cmp) Map.t
+val to_map : ('key, 'cmp) t -> f:('key -> 'data) -> ('key, 'data, 'cmp) Base.Map.t
 
-val of_map_keys : ('key, _, 'cmp) Map.t -> ('key, 'cmp) t
+val of_map_keys : ('key, _, 'cmp) Base.Map.t -> ('key, 'cmp) t
 
 val quickcheck_generator
   :  ('key, 'cmp) comparator

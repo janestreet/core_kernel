@@ -138,3 +138,23 @@ module Private = struct
 end
 
 let create () = raise_s [%message "[Uuid.create] is deprecated"]
+
+let quickcheck_shrinker : t Quickcheck.Shrinker.t = Quickcheck.Shrinker.empty ()
+
+let quickcheck_observer : t Quickcheck.Observer.t =
+  Quickcheck.Observer.of_hash (module T)
+;;
+
+let quickcheck_generator : t Quickcheck.Generator.t =
+  let open Quickcheck.Generator.Let_syntax in
+  let gen_hex_digit : Char.t Quickcheck.Generator.t =
+    Quickcheck.Generator.weighted_union
+      [ 10.0, Char.gen_digit; 6.0, Char.gen_uniform_inclusive 'a' 'f' ]
+  in
+  let%map first  = String.gen_with_length  8 gen_hex_digit
+  and     second = String.gen_with_length  4 gen_hex_digit
+  and     third  = String.gen_with_length  4 gen_hex_digit
+  and     fourth = String.gen_with_length  4 gen_hex_digit
+  and     fifth  = String.gen_with_length 12 gen_hex_digit in
+  of_string (sprintf "%s-%s-%s-%s-%s" first second third fourth fifth)
+;;

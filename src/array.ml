@@ -348,7 +348,7 @@ end = struct
   let to_array_id = Fn.id
   let of_array_id = Fn.id
 
-  include (T : Permissioned with type ('a, 'b) t := ('a, 'b) t)
+  include (T : Permissioned with type ('a, 'b) t := ('a, 'b) t) [@ocaml.warning "-3"]
 
   let to_array = copy
   let to_sequence_immutable = to_sequence_mutable
@@ -443,7 +443,7 @@ module type S = sig
   val to_sequence_mutable : 'a t -> 'a Core_sequence.t
 end
 
-include (T : S with type 'a t := 'a array)
+include (T : S with type 'a t := 'a array) [@ocaml.warning "-3"]
 
 let invariant invariant_a t = iter t ~f:invariant_a
 let max_length = Sys.max_array_length

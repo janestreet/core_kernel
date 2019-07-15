@@ -80,17 +80,6 @@ let quickcheck_generator = Base_quickcheck.Generator.map_t_m
 let quickcheck_observer = Base_quickcheck.Observer.map_t
 let quickcheck_shrinker = Base_quickcheck.Shrinker.map_t
 
-module Accessors = struct
-  include (
-    Map.Using_comparator :
-      Map.Accessors3
-    with type ('a, 'b, 'c) t := ('a, 'b, 'c) Map.t
-    with type ('a, 'b, 'c) tree := ('a, 'b, 'c) Tree.t)
-
-  let quickcheck_observer k v = quickcheck_observer k v
-  let quickcheck_shrinker k v = quickcheck_shrinker k v
-end
-
 module Using_comparator = struct
   include (
     Map.Using_comparator :
@@ -111,13 +100,44 @@ module Using_comparator = struct
   let tree_of_hashtbl_exn ~comparator hashtbl =
     to_tree (of_hashtbl_exn ~comparator hashtbl)
   ;;
+
+  let key_set ~comparator t =
+    Base.Set.Using_comparator.of_sorted_array_unchecked
+      ~comparator
+      (List.to_array (keys t))
+  ;;
+
+  let key_set_of_tree ~comparator t = key_set ~comparator (of_tree ~comparator t)
+
+  let of_key_set key_set ~f =
+    of_sorted_array_unchecked
+      ~comparator:(Base.Set.comparator key_set)
+      (Array.map (Base.Set.to_array key_set) ~f:(fun key -> key, f key))
+  ;;
+
+  let tree_of_key_set key_set ~f = to_tree (of_key_set key_set ~f)
 end
 
+module Accessors = struct
+  include (
+    Map.Using_comparator :
+      Map.Accessors3
+    with type ('a, 'b, 'c) t := ('a, 'b, 'c) Map.t
+    with type ('a, 'b, 'c) tree := ('a, 'b, 'c) Tree.t)
+
+  let quickcheck_observer k v = quickcheck_observer k v
+  let quickcheck_shrinker k v = quickcheck_shrinker k v
+  let key_set t = Using_comparator.key_set t ~comparator:(Using_comparator.comparator t)
+end
+
+let key_set t = Using_comparator.key_set ~comparator:(Using_comparator.comparator t) t
+let of_key_set = Using_comparator.of_key_set
 let hash_fold_direct = Using_comparator.hash_fold_direct
 let comparator = Using_comparator.comparator
 let comparator_s = Base.Map.comparator_s
 
 type 'k key = 'k
+type 'c cmp = 'c
 
 include (
 struct
@@ -135,6 +155,7 @@ sig
     with type ('a, 'b, 'c) t := ('a, 'b, 'c) t
     with type ('a, 'b, 'c) tree := ('a, 'b, 'c) Tree.t
     with type 'k key := 'k key
+    with type 'c cmp := 'c cmp
 
   include
     Map.Accessors3
@@ -172,6 +193,7 @@ module Creators (Key : Comparator.S1) : sig
     with type ('a, 'b, 'c) t := ('a, 'b, 'c) t_
     with type ('a, 'b, 'c) tree := ('a, 'b, 'c) tree
     with type 'a key := 'a Key.t
+    with type 'a cmp := Key.comparator_witness
     with type ('a, 'b, 'c) options := ('a, 'b, 'c) options
 end = struct
   type ('a, 'b, 'c) options = ('a, 'b, 'c) Without_comparator.t
@@ -218,6 +240,8 @@ end = struct
     Using_comparator.t_of_sexp_direct ~comparator k_of_sexp v_of_sexp sexp
   ;;
 
+  let of_key_set key_set ~f = Using_comparator.of_key_set key_set ~f
+
   let quickcheck_generator gen_k gen_v =
     Using_comparator.quickcheck_generator ~comparator gen_k gen_v
   ;;
@@ -248,6 +272,7 @@ module Make_tree (Key : Comparator.S1) = struct
   let of_alist_fold a ~init ~f = of_alist_fold a ~init ~f ~comparator
   let of_alist_reduce a ~f = of_alist_reduce a ~f ~comparator
   let of_iteri ~iteri = of_iteri ~iteri ~comparator
+  let of_key_set = Using_comparator.tree_of_key_set
   let to_tree t = t
   let invariants a = invariants a ~comparator
   let is_empty a = is_empty a
@@ -333,6 +358,7 @@ module Make_tree (Key : Comparator.S1) = struct
     binary_search_segmented ~comparator t ~segment_of how
   ;;
 
+  let key_set t = Using_comparator.key_set_of_tree ~comparator t
   let quickcheck_generator k v = For_quickcheck.gen_tree ~comparator k v
   let quickcheck_observer k v = For_quickcheck.obs_tree k v
   let quickcheck_shrinker k v = For_quickcheck.shr_tree ~comparator k v
@@ -355,6 +381,7 @@ module Poly = struct
 
   type ('a, 'b, 'c) map = ('a, 'b, 'c) t
   type ('k, 'v) t = ('k, 'v, Comparator.Poly.comparator_witness) map
+  type comparator_witness = Comparator.Poly.comparator_witness
 
   include Accessors
 
@@ -387,6 +414,7 @@ module Poly = struct
     include Make_tree (Comparator.Poly)
 
     type ('k, +'v) t = ('k, 'v, Comparator.Poly.comparator_witness) tree
+    type comparator_witness = Comparator.Poly.comparator_witness
 
     let sexp_of_t sexp_of_k sexp_of_v t = sexp_of_t sexp_of_k sexp_of_v [%sexp_of: _] t
   end
@@ -569,6 +597,8 @@ module Tree = struct
   include Tree
 
   let of_hashtbl_exn = Using_comparator.tree_of_hashtbl_exn
+  let key_set = Using_comparator.key_set_of_tree
+  let of_key_set = Using_comparator.tree_of_key_set
   let quickcheck_generator ~comparator k v = For_quickcheck.gen_tree ~comparator k v
   let quickcheck_observer k v = For_quickcheck.obs_tree k v
   let quickcheck_shrinker ~comparator k v = For_quickcheck.shr_tree ~comparator k v

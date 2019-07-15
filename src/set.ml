@@ -47,15 +47,8 @@ let quickcheck_shrinker = For_quickcheck.quickcheck_shrinker
 module Tree = struct
   include Tree
 
-  let to_map ~comparator t ~f =
-    Map.Using_comparator.of_sorted_array_unchecked
-      ~comparator
-      (Array.map (to_array t) ~f:(fun key -> key, f key))
-  ;;
-
-  let of_map_keys m =
-    of_sorted_array_unchecked ~comparator:(Map.comparator m) (List.to_array (Map.keys m))
-  ;;
+  let to_map ~comparator t = Map.of_key_set (Set.Using_comparator.of_tree t ~comparator)
+  let of_map_keys m = Set.Using_comparator.to_tree (Map.key_set m)
 
   let of_hash_set ~comparator hset =
     Hash_set.fold hset ~init:(empty ~comparator) ~f:(fun t x -> add t x ~comparator)
@@ -79,10 +72,7 @@ module Accessors = struct
     with type ('a, 'b) tree := ('a, 'b) Tree.t
     with type ('a, 'b) named := ('a, 'b) Set.Named.t)
 
-  let to_map t ~f =
-    Tree.to_map ~comparator:(Set.Using_comparator.comparator t) (to_tree t) ~f
-  ;;
-
+  let to_map = Map.of_key_set
   let quickcheck_observer = quickcheck_observer
   let quickcheck_shrinker = quickcheck_shrinker
 end
@@ -136,7 +126,7 @@ module Using_comparator = struct
 
   include For_quickcheck
 
-  let of_map_keys m = of_tree ~comparator:(Map.comparator m) (Tree.of_map_keys m)
+  let of_map_keys = Map.key_set
 
   let of_hash_set ~comparator hset =
     of_tree ~comparator (Tree.of_hash_set hset ~comparator)
@@ -147,8 +137,8 @@ module Using_comparator = struct
   ;;
 end
 
-let to_map = Accessors.to_map
-let of_map_keys = Using_comparator.of_map_keys
+let to_map = Map.of_key_set
+let of_map_keys = Map.key_set
 let hash_fold_direct = Using_comparator.hash_fold_direct
 let comparator = Using_comparator.comparator
 let of_hash_set m hset = Using_comparator.of_hash_set ~comparator:(to_comparator m) hset
@@ -208,7 +198,7 @@ end = struct
     of_tree (Tree.t_of_sexp_direct a_of_sexp sexp ~comparator)
   ;;
 
-  let of_map_keys = of_map_keys
+  let of_map_keys = Map.key_set
   let quickcheck_generator elt = quickcheck_generator ~comparator elt
 end
 
@@ -293,7 +283,7 @@ module Make_tree (Elt : Comparator.S1) = struct
   ;;
 
   let of_map_keys = Tree.of_map_keys
-  let to_map t ~f = Tree.to_map t ~f ~comparator
+  let to_map t ~f = Tree.to_map ~comparator t ~f
 
   module Named = struct
     let is_subset t ~of_ = Tree.Named.is_subset t ~of_ ~comparator

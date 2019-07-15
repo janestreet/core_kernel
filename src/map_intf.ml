@@ -57,6 +57,8 @@ end
 module type Accessors_generic = sig
   include Map.Accessors_generic
 
+  val key_set : ('k, 'cmp, ('k, _, 'cmp) t -> ('k key, 'cmp cmp) Base.Set.t) options
+
   val quickcheck_observer
     :  'k key Quickcheck.Observer.t
     -> 'v Quickcheck.Observer.t
@@ -74,6 +76,8 @@ end
 module type Accessors1 = sig
   include Map.Accessors1
 
+  val key_set : _ t -> (key, comparator_witness) Base.Set.t
+
   val quickcheck_observer
     :  key Quickcheck.Observer.t
     -> 'v Quickcheck.Observer.t
@@ -87,6 +91,8 @@ end
 
 module type Accessors2 = sig
   include Map.Accessors2
+
+  val key_set : ('k, 'v) t -> ('k, comparator_witness) Base.Set.t
 
   val quickcheck_observer
     :  'k Quickcheck.Observer.t
@@ -102,6 +108,8 @@ end
 module type Accessors3 = sig
   include Map.Accessors3
 
+  val key_set : ('k, _, 'cmp) t -> ('k, 'cmp) Base.Set.t
+
   val quickcheck_observer
     :  'k Quickcheck.Observer.t
     -> 'v Quickcheck.Observer.t
@@ -115,6 +123,11 @@ end
 
 module type Accessors3_with_comparator = sig
   include Map.Accessors3_with_comparator
+
+  val key_set
+    :  comparator:('k, 'cmp) Comparator.t
+    -> ('k, _, 'cmp) t
+    -> ('k, 'cmp) Base.Set.t
 
   val quickcheck_observer
     :  'k Quickcheck.Observer.t
@@ -133,12 +146,14 @@ module Check_accessors
     (T : T3)
     (Tree : T3)
     (Key : T1)
+    (Cmp : T1)
     (Options : T3)
     (M : Accessors_generic
      with type ('a, 'b, 'c) options := ('a, 'b, 'c) Options.t
      with type ('a, 'b, 'c) t := ('a, 'b, 'c) T.t
      with type ('a, 'b, 'c) tree := ('a, 'b, 'c) Tree.t
-     with type 'a key := 'a Key.t) =
+     with type 'a key := 'a Key.t
+     with type 'a cmp := 'a Cmp.t) =
 struct end
 
 module Check_accessors1 (M : Accessors1) =
@@ -151,6 +166,9 @@ module Check_accessors1 (M : Accessors1) =
     end)
     (struct
       type 'a t = M.key
+    end)
+    (struct
+      type 'a t = M.comparator_witness
     end)
     (Without_comparator)
     (M)
@@ -166,6 +184,9 @@ module Check_accessors2 (M : Accessors2) =
     (struct
       type 'a t = 'a
     end)
+    (struct
+      type 'a t = M.comparator_witness
+    end)
     (Without_comparator)
     (M)
 
@@ -176,6 +197,9 @@ module Check_accessors3 (M : Accessors3) =
     end)
     (struct
       type ('a, 'b, 'c) t = ('a, 'b, 'c) M.tree
+    end)
+    (struct
+      type 'a t = 'a
     end)
     (struct
       type 'a t = 'a
@@ -194,6 +218,9 @@ module Check_accessors3_with_comparator (M : Accessors3_with_comparator) =
     (struct
       type 'a t = 'a
     end)
+    (struct
+      type 'a t = 'a
+    end)
     (With_comparator)
     (M)
 
@@ -201,6 +228,9 @@ module type Creators_generic = sig
   include Map.Creators_generic
 
   val of_hashtbl_exn : ('k, 'cmp, ('k key, 'v) Hashtbl.t -> ('k, 'v, 'cmp) t) options
+
+  (** Never requires a comparator because it can get one from the input [Set.t]. *)
+  val of_key_set : ('k key, 'cmp cmp) Base.Set.t -> f:('k key -> 'v) -> ('k, 'v, 'cmp) t
 
   val quickcheck_generator
     : ( 'k
@@ -215,6 +245,7 @@ module type Creators1 = sig
   include Map.Creators1
 
   val of_hashtbl_exn : (key, 'a) Hashtbl.t -> 'a t
+  val of_key_set : (key, comparator_witness) Base.Set.t -> f:(key -> 'v) -> 'v t
 
   val quickcheck_generator
     :  key Quickcheck.Generator.t
@@ -226,6 +257,7 @@ module type Creators2 = sig
   include Map.Creators2
 
   val of_hashtbl_exn : ('a, 'b) Hashtbl.t -> ('a, 'b) t
+  val of_key_set : ('a, comparator_witness) Base.Set.t -> f:('a -> 'b) -> ('a, 'b) t
 
   val quickcheck_generator
     :  'a Quickcheck.Generator.t
@@ -241,6 +273,8 @@ module type Creators3_with_comparator = sig
     -> ('a, 'b) Hashtbl.t
     -> ('a, 'b, 'cmp) t
 
+  val of_key_set : ('a, 'cmp) Base.Set.t -> f:('a -> 'b) -> ('a, 'b, 'cmp) t
+
   val quickcheck_generator
     :  comparator:('a, 'cmp) Comparator.t
     -> 'a Quickcheck.Generator.t
@@ -252,12 +286,14 @@ module Check_creators
     (T : T3)
     (Tree : T3)
     (Key : T1)
+    (Cmp : T1)
     (Options : T3)
     (M : Creators_generic
      with type ('a, 'b, 'c) options := ('a, 'b, 'c) Options.t
      with type ('a, 'b, 'c) t := ('a, 'b, 'c) T.t
      with type ('a, 'b, 'c) tree := ('a, 'b, 'c) Tree.t
-     with type 'a key := 'a Key.t) =
+     with type 'a key := 'a Key.t
+     with type 'a cmp := 'a Cmp.t) =
 struct end
 
 module Check_creators1 (M : Creators1) =
@@ -270,6 +306,9 @@ module Check_creators1 (M : Creators1) =
     end)
     (struct
       type 'a t = M.key
+    end)
+    (struct
+      type 'a t = M.comparator_witness
     end)
     (Without_comparator)
     (M)
@@ -285,6 +324,9 @@ module Check_creators2 (M : Creators2) =
     (struct
       type 'a t = 'a
     end)
+    (struct
+      type 'a t = M.comparator_witness
+    end)
     (Without_comparator)
     (M)
 
@@ -295,6 +337,9 @@ module Check_creators3_with_comparator (M : Creators3_with_comparator) =
     end)
     (struct
       type ('a, 'b, 'c) t = ('a, 'b, 'c) M.tree
+    end)
+    (struct
+      type 'a t = 'a
     end)
     (struct
       type 'a t = 'a
@@ -310,6 +355,7 @@ module type Creators_and_accessors_generic = sig
     with type ('a, 'b, 'c) t := ('a, 'b, 'c) t
     with type ('a, 'b, 'c) tree := ('a, 'b, 'c) tree
     with type 'a key := 'a key
+    with type 'a cmp := 'a cmp
     with type ('a, 'b, 'c) options := ('a, 'b, 'c) options
 end
 
@@ -317,7 +363,11 @@ module type Creators_and_accessors1 = sig
   include Creators1
 
   include
-    Accessors1 with type 'a t := 'a t with type 'a tree := 'a tree with type key := key
+    Accessors1
+    with type 'a t := 'a t
+    with type 'a tree := 'a tree
+    with type key := key
+    with type comparator_witness := comparator_witness
 end
 
 module type Creators_and_accessors2 = sig
@@ -327,6 +377,7 @@ module type Creators_and_accessors2 = sig
     Accessors2
     with type ('a, 'b) t := ('a, 'b) t
     with type ('a, 'b) tree := ('a, 'b) tree
+    with type comparator_witness := comparator_witness
 end
 
 module type Creators_and_accessors3_with_comparator = sig
@@ -347,6 +398,7 @@ module Make_S_plain_tree (Key : Comparator.S) = struct
       with type 'a t := 'a t
       with type 'a tree := 'a t
       with type key := Key.t
+      with type comparator_witness := Key.comparator_witness
 
     module Provide_of_sexp
         (K : sig
@@ -375,6 +427,7 @@ module type S_plain = sig
     with type 'a t := 'a t
     with type 'a tree := 'a Tree.t
     with type key := Key.t
+    with type comparator_witness := Key.comparator_witness
 
   module Provide_of_sexp
       (Key : sig

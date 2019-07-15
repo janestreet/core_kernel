@@ -106,13 +106,8 @@ struct
   type int64 = Int64.t [@@deriving bin_io, compare, hash, equal, sexp, typerep]
   type 'a lazy_t = 'a Lazy.t [@@deriving bin_io, compare, hash, sexp, typerep]
   type 'a list = 'a List.t [@@deriving bin_io, compare, hash, equal, sexp, typerep]
-
-  type nativeint = Nativeint.t
-  [@@deriving bin_io, compare, equal, hash, sexp, typerep]
-
-  type 'a option = 'a Option.t
-  [@@deriving bin_io, compare, equal, hash, sexp, typerep]
-
+  type nativeint = Nativeint.t [@@deriving bin_io, compare, equal, hash, sexp, typerep]
+  type 'a option = 'a Option.t [@@deriving bin_io, compare, equal, hash, sexp, typerep]
   type string = String.t [@@deriving bin_io, compare, equal, hash, sexp, typerep]
   type bytes = Bytes.t [@@deriving bin_io, compare, equal, sexp, typerep]
   type 'a ref = 'a Ref.t [@@deriving bin_io, compare, equal, sexp, typerep]
@@ -245,6 +240,7 @@ let () =
 let () =
   let module T = struct
     type 'k key = 'k
+    type 'c cmp = 'c
   end
   in
   let module M : sig
@@ -273,6 +269,7 @@ let () =
       with type ('a, 'cmp, 'z) options :=
         ('a, 'cmp, 'z) Map_intf.With_first_class_module.t
       with type 'k key := 'k T.key
+      with type 'c cmp := 'c T.cmp
   end =
     Map
   in

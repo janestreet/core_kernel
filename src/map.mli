@@ -630,6 +630,15 @@ val binary_search_segmented
   -> [ `Last_on_left | `First_on_right ]
   -> ('k * 'v) option
 
+
+(** Convert a set to a map. Runs in [O(length t)] time plus a call to [f] for each key to
+    compute the associated data. *)
+val of_key_set : ('key, 'cmp) Base.Set.t -> f:('key -> 'data) -> ('key, 'data, 'cmp) t
+
+(** Converts a map to a set of its keys. Runs in [O(length t)] time. *)
+val key_set : ('key, _, 'cmp) t -> ('key, 'cmp) Base.Set.t
+
+
 val quickcheck_generator
   :  ('k, 'cmp) comparator
   -> 'k Quickcheck.Generator.t

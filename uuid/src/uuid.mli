@@ -9,6 +9,7 @@ type t [@@deriving hash, sexp_of]
 
 include Identifiable.S with type t := t
 include Invariant.S    with type t := t
+include Quickcheckable.S with type t := t
 
 val t_of_sexp : Sexp.t -> t
 [@@deprecated "[since 2017-11] Use a [Stable] or [Unstable] [t_of_sexp]."]

@@ -34,7 +34,8 @@ module type Basic = sig
 
   include module type of struct
     include Time
-  end [@ocaml.remove_aliases]
+  end
+                         [@ocaml.remove_aliases]
 
   (** [now ()] returns a [t] representing the current time *)
   val now : unit -> t

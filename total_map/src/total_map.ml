@@ -103,7 +103,7 @@ struct
   let all_set = Key.Set.of_list Key.all
 
   let validate_map_from_serialization map =
-    let keys = Set.of_map_keys map in
+    let keys = Map.key_set map in
     let keys_minus_all = Set.diff keys all_set in
     let all_minus_keys = Set.diff all_set keys in
     Validate.maybe_raise

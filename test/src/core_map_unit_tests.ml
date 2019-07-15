@@ -37,6 +37,7 @@ module Unit_tests (Key : sig
             with type ('a, 'b, 'c) t := ('a, 'b, 'c) t_
             with type ('a, 'b, 'c) tree := ('a, 'b, 'c) tree
             with type 'a key := 'a Key.t
+            with type 'a cmp := 'a cmp
             with type ('a, 'b, 'c) options := ('a, 'b, 'c) access_options
 
           val simplify_accessor : (int, Int.comparator_witness, 'c) access_options -> 'c
@@ -84,6 +85,7 @@ struct
     let nth_exn x = simplify_accessor nth_exn x
     let rank x = simplify_accessor rank x
     let quickcheck_shrinker x = simplify_accessor quickcheck_shrinker x
+    let key_set x = simplify_accessor key_set x
 
     let to_sequence ?order ?keys_greater_or_equal_to ?keys_less_or_equal_to x =
       simplify_accessor
@@ -135,6 +137,7 @@ struct
   type ('a, 'b, 'c) tree = ('a, 'b, 'c) t
   type 'a key
   type ('a, 'b, 'c) options = ('a, 'b, 'c) Without_comparator.t
+  type 'cmp cmp
 
   module Key = struct
     open Key
@@ -1828,6 +1831,34 @@ struct
           assert (Exn.does_raise (fun () -> Poly.equal t1 t2))))
   ;;
 
+  let key_set _ = assert false
+
+  let%test_unit _ = assert (Set.is_empty (Map.key_set (Map.empty ())))
+
+  let%test_unit _ =
+    let m =
+      Map.of_alist_exn (List.map ~f:(Tuple2.map_fst ~f:Key.of_int) [ 1, 1; 2, 2; 3, 3 ])
+    in
+    let s = Map.key_set m in
+    assert (Set.length s = Map.length m);
+    Map.iteri m ~f:(fun ~key ~data -> assert (Key.to_int key = data));
+    assert ([%equal: Key.t list] (Set.to_list s) (Map.keys m))
+  ;;
+
+  let of_key_set _ = assert false
+
+  let%test_unit _ =
+    assert (Map.is_empty (Map.of_key_set (Map.key_set (Map.empty ())) ~f:Key.to_int))
+  ;;
+
+  let%test_unit _ =
+    let m =
+      Map.of_alist_exn (List.map ~f:(Tuple2.map_fst ~f:Key.of_int) [ 1, 1; 2, 2; 3, 3 ])
+    in
+    let key_set = Map.key_set m in
+    assert (Map.equal Int.equal (Map.of_key_set key_set ~f:Key.to_int) m)
+  ;;
+
   let quickcheck_generator _ _ = assert false
 
   let%test_module _ =
@@ -2046,6 +2077,7 @@ let%test_module "Map" =
 
          type ('a, 'b, 'c) t_ = ('a, 'b, 'c) t
          type ('a, 'b, 'c) tree = ('a, 'b, 'c) Tree.t
+         type 'cmp cmp = 'cmp
 
          include Create_options_with_first_class_module
          include Access_options_without_comparator
@@ -2062,6 +2094,7 @@ let%test_module "Map.Poly" =
 
          type ('a, 'b, 'c) t_ = ('a, 'b) t
          type ('a, 'b, 'c) tree = ('a, 'b) Tree.t
+         type 'cmp cmp = comparator_witness
 
          include Create_options_without_comparator
          include Access_options_without_comparator
@@ -2078,6 +2111,7 @@ let%test_module "Int.Map" =
 
          type ('a, 'b, 'c) t_ = 'b t
          type ('a, 'b, 'c) tree = 'b Tree.t
+         type 'cmp cmp = Int.comparator_witness
 
          include Create_options_without_comparator
          include Access_options_without_comparator
@@ -2094,6 +2128,7 @@ let%test_module "Map.Tree" =
 
          type ('a, 'b, 'c) t_ = ('a, 'b, 'c) t
          type ('a, 'b, 'c) tree = ('a, 'b, 'c) t
+         type 'cmp cmp = 'cmp
 
          include Create_options_with_comparator
          include Access_options_with_comparator
@@ -2110,6 +2145,7 @@ let%test_module "Map.Poly.Tree" =
 
          type ('a, 'b, 'c) t_ = ('a, 'b) t
          type ('a, 'b, 'c) tree = ('a, 'b) t
+         type 'cmp cmp = comparator_witness
 
          include Create_options_without_comparator
          include Access_options_without_comparator
@@ -2126,6 +2162,7 @@ let%test_module "Int.Map.Tree" =
 
          type ('a, 'b, 'c) t_ = 'b t
          type ('a, 'b, 'c) tree = 'b t
+         type 'cmp cmp = Int.comparator_witness
 
          include Create_options_without_comparator
          include Access_options_without_comparator

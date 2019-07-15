@@ -50,7 +50,11 @@ module Last_value : sig
 end = struct
   type _ tuple =
     | Tuple1 : { mutable arg1 : 'a } -> ('a -> unit) tuple
-    | Tuple2 : { mutable arg1 : 'a; mutable arg2 : 'b } -> ('a -> 'b -> unit) tuple
+    | Tuple2 :
+        { mutable arg1 : 'a
+        ; mutable arg2 : 'b
+        }
+        -> ('a -> 'b -> unit) tuple
     | Tuple3 :
         { mutable arg1 : 'a
         ; mutable arg2 : 'b
