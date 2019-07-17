@@ -1516,23 +1516,23 @@ let%expect_test "[reschedule]" =
     {|
 ((now "1970-01-01 00:00:00Z")
  (next_alarm_fires_at ("1970-01-01 00:00:06.442450944Z"))
- (alarm1_at           ("1970-01-01 00:00:05.36870912Z"))
- (alarm2_at           ("1970-01-01 00:00:10.73741824Z")))
+ (alarm1_at ("1970-01-01 00:00:05.36870912Z"))
+ (alarm2_at ("1970-01-01 00:00:10.73741824Z")))
 Reschedule alarm1 after alarm2; alarm2 becomes next.
 ((now "1970-01-01 00:00:00Z")
  (next_alarm_fires_at ("1970-01-01 00:00:11.811160064Z"))
- (alarm1_at           ("1970-01-01 00:00:16.10612736Z"))
- (alarm2_at           ("1970-01-01 00:00:10.73741824Z")))
+ (alarm1_at ("1970-01-01 00:00:16.10612736Z"))
+ (alarm2_at ("1970-01-01 00:00:10.73741824Z")))
 Advance time past alarm1's original time; nothing fires.
 ((now "1970-01-01 00:00:07.516192768Z")
  (next_alarm_fires_at ("1970-01-01 00:00:11.811160064Z"))
- (alarm1_at           ("1970-01-01 00:00:16.10612736Z"))
- (alarm2_at           ("1970-01-01 00:00:10.73741824Z")))
+ (alarm1_at ("1970-01-01 00:00:16.10612736Z"))
+ (alarm2_at ("1970-01-01 00:00:10.73741824Z")))
 Reschedule alarm1 before alarm2 again; alarm1 becomes next.
 ((now "1970-01-01 00:00:07.516192768Z")
  (next_alarm_fires_at ("1970-01-01 00:00:09.663676416Z"))
- (alarm1_at           ("1970-01-01 00:00:08.589934592Z"))
- (alarm2_at           ("1970-01-01 00:00:10.73741824Z")))
+ (alarm1_at ("1970-01-01 00:00:08.589934592Z"))
+ (alarm2_at ("1970-01-01 00:00:10.73741824Z")))
 Advance time past alarm1, alarm1 fires but alarm2 does not.
 ((now "1970-01-01 00:00:09.663676416Z")
  (next_alarm_fires_at ("1970-01-01 00:00:11.811160064Z"))
@@ -1570,23 +1570,23 @@ let%expect_test "[reschedule_at_interval_num]" =
     {|
 ((now "1970-01-01 00:00:00Z")
  (next_alarm_fires_at ("1970-01-01 00:00:06.442450944Z"))
- (alarm1_at           ("1970-01-01 00:00:05.36870912Z"))
- (alarm2_at           ("1970-01-01 00:00:10.73741824Z")))
+ (alarm1_at ("1970-01-01 00:00:05.36870912Z"))
+ (alarm2_at ("1970-01-01 00:00:10.73741824Z")))
 Reschedule alarm1 after alarm2; alarm2 becomes next.
 ((now "1970-01-01 00:00:00Z")
  (next_alarm_fires_at ("1970-01-01 00:00:11.811160064Z"))
- (alarm1_at           ("1970-01-01 00:00:16.10612736Z"))
- (alarm2_at           ("1970-01-01 00:00:10.73741824Z")))
+ (alarm1_at ("1970-01-01 00:00:16.10612736Z"))
+ (alarm2_at ("1970-01-01 00:00:10.73741824Z")))
 Advance time past alarm1's original time; nothing fires.
 ((now "1970-01-01 00:00:07.516192768Z")
  (next_alarm_fires_at ("1970-01-01 00:00:11.811160064Z"))
- (alarm1_at           ("1970-01-01 00:00:16.10612736Z"))
- (alarm2_at           ("1970-01-01 00:00:10.73741824Z")))
+ (alarm1_at ("1970-01-01 00:00:16.10612736Z"))
+ (alarm2_at ("1970-01-01 00:00:10.73741824Z")))
 Reschedule alarm1 before alarm2 again; alarm1 becomes next.
 ((now "1970-01-01 00:00:07.516192768Z")
  (next_alarm_fires_at ("1970-01-01 00:00:09.663676416Z"))
- (alarm1_at           ("1970-01-01 00:00:08.589934592Z"))
- (alarm2_at           ("1970-01-01 00:00:10.73741824Z")))
+ (alarm1_at ("1970-01-01 00:00:08.589934592Z"))
+ (alarm2_at ("1970-01-01 00:00:10.73741824Z")))
 Advance time past alarm1, alarm1 fires but alarm2 does not.
 ((now "1970-01-01 00:00:09.663676416Z")
  (next_alarm_fires_at ("1970-01-01 00:00:11.811160064Z"))

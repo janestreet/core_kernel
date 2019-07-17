@@ -28,7 +28,7 @@ let%expect_test "Time.Stable.Zone.Full_data.V1" =
     ((sexp (
        (name "Sample Time Zone")
        (original_filename (sample_time_zone_file))
-       (digest            ("\228\2028\0165\163Kz\133!\132\204\r\216\155\170"))
+       (digest ("\228\2028\0165\163Kz\133!\132\204\r\216\155\170"))
        (transitions (
          ((start_time_in_seconds_since_epoch -2_717_650_800)
           (new_regime (
