@@ -176,6 +176,7 @@ module Inherit (C : sig
 
 let lexicographic = Base.Comparable.lexicographic
 let lift = Base.Comparable.lift
+let reverse = Base.Comparable.reverse
 
 module Stable = struct
   module V1 = struct

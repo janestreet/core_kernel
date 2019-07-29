@@ -155,3 +155,12 @@ let%expect_test "accept float in set and map sexps" =
      (1%  "arbitrary value")
      (1x  "arbitrary value")) |}]
 ;;
+
+let%expect_test "generator" =
+  Quickcheck.test
+    ~sexp_of:sexp_of_t
+    ~shrinker:Percent.quickcheck_shrinker
+    Percent.quickcheck_generator
+    ~f:(fun t -> Validate.maybe_raise (Percent.validate t));
+  [%expect {| |}]
+;;

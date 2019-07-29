@@ -75,6 +75,14 @@ struct
   include Stable_latest.T_with_comparator
   include Comparable.Make_binable_using_comparator (Stable_latest.T_with_comparator)
   include Hashable.Make_binable (Stable_latest.T_with_comparator)
+
+  let quickcheck_shrinker = Quickcheck.Shrinker.empty ()
+  let quickcheck_observer = String.quickcheck_observer
+
+  let quickcheck_generator =
+    String.gen_nonempty' Char.gen_print
+    |> Quickcheck.Generator.filter ~f:(fun string -> check string |> Result.is_ok)
+  ;;
 end
 
 module Make_without_pretty_printer (M : sig

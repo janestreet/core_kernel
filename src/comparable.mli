@@ -63,6 +63,12 @@ val lexicographic : ('a -> 'a -> int) list -> 'a -> 'a -> int
 (** [lift cmp ~f x y] compares [x] and [y] by comparing [f x] and [f y] via [cmp]. *)
 val lift : ('a -> 'a -> 'int_or_bool) -> f:('b -> 'a) -> 'b -> 'b -> 'int_or_bool
 
+(** [reverse cmp x y = cmp y x]
+
+    Note: The [Comparable.S] interface exports both [ascending] and [descending]
+    comparisons, so in most cases, it's better to use those. *)
+val reverse : ('a -> 'a -> 'int_or_bool) -> 'a -> 'a -> 'int_or_bool
+
 (** Inherit comparability from a component. *)
 module Inherit (C : sig
     type t [@@deriving compare]

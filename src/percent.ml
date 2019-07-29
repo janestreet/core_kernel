@@ -3,7 +3,8 @@ open Std_internal
 
 module Stable = struct
   module V1 = struct
-    type t = float [@@deriving compare, hash]
+    type t = (float[@quickcheck.generator Float.gen_finite])
+    [@@deriving compare, hash, quickcheck]
 
     let of_mult f = f
     let to_mult t = t
