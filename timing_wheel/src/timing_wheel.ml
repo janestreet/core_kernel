@@ -1052,7 +1052,7 @@ end = struct
       t.min_elt)
   ;;
 
-  let[@inline never] raise_add_elt_key_out_of_bounds t key =
+  let[@cold] raise_add_elt_key_out_of_bounds t key =
     raise_s
       [%message
         "Priority_queue.add_elt key out of bounds"
@@ -1062,7 +1062,7 @@ end = struct
           ~priority_queue:(t : _ t)]
   ;;
 
-  let[@inline never] raise_add_elt_key_out_of_level_bounds key level =
+  let[@cold] raise_add_elt_key_out_of_level_bounds key level =
     raise_s
       [%message
         "Priority_queue.add_elt key out of level bounds"
@@ -1108,7 +1108,7 @@ end = struct
     t.length <- t.length + 1
   ;;
 
-  let[@inline never] raise_got_invalid_key t key =
+  let[@cold] raise_got_invalid_key t key =
     raise_s
       [%message
         "Timing_wheel.add_at_interval_num got invalid interval num"
@@ -1501,7 +1501,7 @@ let interval_num_start_unchecked t interval_num =
     (interval_num |> Interval_num.to_int63)
 ;;
 
-let[@inline never] raise_interval_num_start_got_too_small interval_num =
+let[@cold] raise_interval_num_start_got_too_small interval_num =
   raise_s
     [%message
       "Timing_wheel.interval_num_start got too small interval_num"
@@ -1509,7 +1509,7 @@ let[@inline never] raise_interval_num_start_got_too_small interval_num =
         (min_interval_num : Interval_num.t)]
 ;;
 
-let[@inline never] raise_interval_num_start_got_too_large t interval_num =
+let[@cold] raise_interval_num_start_got_too_large t interval_num =
   raise_s
     [%message
       "Timing_wheel.interval_num_start got too large interval_num"
@@ -1633,7 +1633,7 @@ let add_at_interval_num t ~at value =
        value)
 ;;
 
-let[@inline never] raise_that_far_in_the_future t at =
+let[@cold] raise_that_far_in_the_future t at =
   raise_s
     [%message
       "Timing_wheel cannot schedule alarm that far in the future"
@@ -1641,7 +1641,7 @@ let[@inline never] raise_that_far_in_the_future t at =
         ~max_allowed_alarm_time:(t.max_allowed_alarm_time : Time_ns.t)]
 ;;
 
-let[@inline never] raise_before_start_of_current_interval t at =
+let[@cold] raise_before_start_of_current_interval t at =
   raise_s
     [%message
       "Timing_wheel cannot schedule alarm before start of current interval"
@@ -1743,14 +1743,14 @@ let next_alarm_fires_at t =
     else Some (next_alarm_fires_at_internal t key))
 ;;
 
-let[@inline never] raise_next_alarm_fires_at_exn_of_empty_timing_wheel t =
+let[@cold] raise_next_alarm_fires_at_exn_of_empty_timing_wheel t =
   raise_s
     [%message
       "Timing_wheel.next_alarm_fires_at_exn of empty timing wheel"
         ~timing_wheel:(t : _ t)]
 ;;
 
-let[@inline never] raise_next_alarm_fires_at_with_all_alarms_in_max_interval t =
+let[@cold] raise_next_alarm_fires_at_with_all_alarms_in_max_interval t =
   raise_s
     [%message
       "Timing_wheel.next_alarm_fires_at_exn with all alarms in max interval"

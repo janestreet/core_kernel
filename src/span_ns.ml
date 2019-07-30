@@ -433,7 +433,7 @@ module Stable = struct
         let int63_10 = Int63.of_int 10
         let min_mult10_without_underflow = Int63.(min_value / int63_10)
 
-        let[@inline never] invalid_string string ~reason =
+        let[@cold] invalid_string string ~reason =
           raise_s
             [%message
               "Time_ns.Span.of_string: invalid string"
@@ -744,7 +744,7 @@ let of_span_float_round_nearest s = of_sec (Span_float.to_sec s)
 let half_microsecond = Int63.of_int 500
 let nearest_microsecond t = Int63.((to_int63_ns t + half_microsecond) /% of_int 1000)
 
-let[@inline never] invalid_range_for_1us_rounding t =
+let[@cold] invalid_range_for_1us_rounding t =
   raise_s
     [%message
       "Span.t exceeds limits"

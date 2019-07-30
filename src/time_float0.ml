@@ -53,7 +53,7 @@ module Date_and_ofday = struct
   let of_absolute absolute ~offset_from_utc = add absolute offset_from_utc
 
   (* Years out of range for [Date.create_exn]. *)
-  let[@inline never] assert_in_bounds ~sec_since_epoch =
+  let[@cold] assert_in_bounds ~sec_since_epoch =
     (* $ TZ=UTC date --date=@-62167219200
        Sat Jan  1 00:00:00 UTC 0000 *)
     let gmtime_lower_bound = -62_167_219_200. in

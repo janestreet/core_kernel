@@ -98,7 +98,7 @@ let return_unused_elt t (elt : _ Elt.t) =
   ()
 ;;
 
-let[@inline never] raise_dequeue_empty t =
+let[@cold] raise_dequeue_empty t =
   failwiths "Thread_safe_queue.dequeue_exn of empty queue" t [%sexp_of: _ t]
 ;;
 

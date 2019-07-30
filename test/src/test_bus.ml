@@ -37,6 +37,7 @@ struct
   let read_only = read_only
   let subscribe_exn = subscribe_exn
   let unsubscribe = unsubscribe
+  let unsubscribes = unsubscribes
   let write = write
   let write2 = write2
   let write3 = write3
@@ -254,6 +255,29 @@ struct
       [%expect {|
         ((call_count1 1)
          (call_count2 1)) |}]
+    ;;
+
+    let%expect_test "[unsubscribes]" =
+      let t = create1 [%here] ~on_subscription_after_first_write:Raise in
+      let t_r = read_only t in
+      unsubscribes t_r [];
+      let subscribers01, subscribers2 =
+        List.split_n
+          (List.init 3 ~f:(fun i ->
+             subscribe_exn t_r [%here] ~f:(fun () -> print_s [%sexp (i : int)])))
+          2
+      in
+      write t ();
+      [%expect {|
+        2
+        1
+        0 |}];
+      unsubscribes t_r subscribers01;
+      write t ();
+      [%expect {| 2 |}];
+      unsubscribes t_r subscribers2;
+      write t ();
+      [%expect {| |}]
     ;;
 
     let%expect_test "subscribe_exn ~on_callback_raise" =

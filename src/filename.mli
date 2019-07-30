@@ -1,9 +1,11 @@
 open! Import
 
-type t = string [@@deriving bin_io, compare, sexp]
+type t = string [@@deriving bin_io, compare, hash, sexp]
 
 include
   Comparable.S with type t := t with type comparator_witness = String.comparator_witness
+
+include Hashable.S with type t := t
 
 (**  The path of the root.*)
 val root : string
@@ -130,3 +132,16 @@ val of_parts : string list -> string
 *)
 val quote : string -> string
 
+
+module Stable : sig
+  module V1 : sig
+    type nonrec t = t
+
+    include
+      Stable_comparable.V1
+      with type t := t
+      with type comparator_witness = comparator_witness
+
+    include Hashable.Stable.V1.S with type key := t
+  end
+end

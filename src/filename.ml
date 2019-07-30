@@ -1,3 +1,22 @@
+module Stable = struct
+  module V1 = struct
+    include (
+      String :
+      sig
+        type t = string [@@deriving bin_io, compare, hash, sexp]
+
+        include
+          Comparable.Stable.V1.S
+          with type comparable := t
+          with type comparator_witness = String.Stable.V1.comparator_witness
+
+        val comparator : (t, comparator_witness) Comparator.t
+
+        include Hashable.Stable.V1.S with type key := t
+      end)
+  end
+end
+
 open! Import
 open! Std_internal
 
@@ -10,6 +29,10 @@ include (
       Comparable.S
       with type t := t
       with type comparator_witness = String.comparator_witness
+
+    val comparator : (t, comparator_witness) Comparator.t
+
+    include Hashable.S with type t := t
   end)
 
 include struct

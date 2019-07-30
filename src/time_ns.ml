@@ -29,7 +29,7 @@ let to_span_since_epoch t = t
 let of_span_since_epoch s = s
 let to_int63_ns_since_epoch t : Int63.t = Span.to_int63_ns (to_span_since_epoch t)
 let of_int63_ns_since_epoch i = of_span_since_epoch (Span.of_int63_ns i)
-let[@inline never] overflow () = raise_s [%message "Time_ns: overflow"]
+let[@cold] overflow () = raise_s [%message "Time_ns: overflow"]
 let is_earlier t1 ~than:t2 = t1 < t2
 let is_later t1 ~than:t2 = t1 > t2
 
@@ -89,7 +89,7 @@ let of_time_float_round_nearest_microsecond time =
     (Span.of_span_float_round_nearest_microsecond (Time_float.to_span_since_epoch time))
 ;;
 
-let[@inline never] raise_next_multiple_got_nonpositive_interval interval =
+let[@cold] raise_next_multiple_got_nonpositive_interval interval =
   failwiths "Time_ns.next_multiple got nonpositive interval" interval [%sexp_of: Span.t]
 ;;
 

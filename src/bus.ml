@@ -252,7 +252,7 @@ module Read_only = struct
   let invariant invariant_a t = invariant invariant_a ignore t
 end
 
-let[@inline never] start_write_failing t =
+let[@cold] start_write_failing t =
   match t.state with
   | Closed -> failwiths "[Bus.write] called on closed bus" t [%sexp_of: (_, _) t]
   | Write_in_progress ->
@@ -579,6 +579,14 @@ let fold_exn
 let unsubscribe t (subscription : _ Subscriber.t) =
   t.subscribers <- Map.remove t.subscribers subscription.id;
   update_write t
+;;
+
+let unsubscribes t (subscriptions : _ Subscriber.t list) =
+  if not (List.is_empty subscriptions)
+  then (
+    List.iter subscriptions ~f:(fun subscription ->
+      t.subscribers <- Map.remove t.subscribers subscription.id);
+    update_write t)
 ;;
 
 let%test_module _ =

@@ -16,7 +16,7 @@ let start_of_next_day : t = Span.day
 let approximate_end_of_day = Span.( - ) start_of_next_day Span.nanosecond
 let to_span_since_start_of_day t = t
 
-let[@inline never] input_out_of_bounds span =
+let[@cold] input_out_of_bounds span =
   raise_s
     [%message
       "Time_ns.Ofday.of_span_since_start_of_day_exn: input out of bounds"

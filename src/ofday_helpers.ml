@@ -33,7 +33,7 @@ let decrement_length_if_ends_in_space string len =
   if len > 0 && Char.equal ' ' string.[len - 1] then len - 1 else len
 ;;
 
-let[@inline never] invalid_string string ~reason =
+let[@cold] invalid_string string ~reason =
   raise_s [%message "Time.Ofday: invalid string" string reason]
 ;;
 

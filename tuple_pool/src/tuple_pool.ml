@@ -594,7 +594,7 @@ module Pool = struct
     set_metadata t metadata
   ;;
 
-  let[@inline never] grow ?capacity t =
+  let[@cold] grow ?capacity t =
     let { Metadata.slots_per_tuple
         ; capacity = old_capacity
         ; length
@@ -641,9 +641,7 @@ module Pool = struct
     t'
   ;;
 
-  let[@inline never] raise_malloc_full t =
-    failwiths "Pool.malloc of full pool" t [%sexp_of: _ t]
-  ;;
+  let[@cold] raise_malloc_full t = failwiths "Pool.malloc of full pool" t [%sexp_of: _ t]
 
   let malloc (type slots) (t : slots t) : slots Pointer.t =
     let metadata = metadata t in
