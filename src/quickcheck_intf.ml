@@ -621,6 +621,23 @@ module type Quickcheck_configured = sig
     -> 'a Sequence.t
 end
 
+(** Includes [Let_syntax] from [Monad.Syntax]. Sets [Open_on_rhs] to be all of
+    [Generator], except that it does not shadow [Let_syntax] itself. Both [Generator] and
+    [Open_on_rhs] are meant to be destructively assigned. *)
+module type Syntax = sig
+  module Generator : Generator
+
+  module Open_on_rhs :
+    Generator
+    with type 'a t := 'a Generator.t
+     and module Let_syntax := Generator.Let_syntax
+
+  include
+    Monad.Syntax
+    with type 'a t := 'a Generator.t
+     and module Let_syntax.Let_syntax.Open_on_rhs = Open_on_rhs
+end
+
 module type Quickcheck = sig
   type nonrec seed = seed
   type nonrec shrink_attempts = shrink_attempts
@@ -635,8 +652,7 @@ module type Quickcheck = sig
   module type S_int = S_int
   module type S_range = S_range
 
-  module Let_syntax :
-    module type of Generator.Let_syntax with module Let_syntax.Open_on_rhs = Generator
+  include Syntax with module Generator := Generator and module Open_on_rhs := Generator
 
   module type Quickcheck_config = Quickcheck_config
   module type Quickcheck_configured = Quickcheck_configured
