@@ -1,5 +1,5 @@
 open! Core
-open Core_bench.Std
+open Core_bench
 module Always = Type_immediacy.Always
 
 module M = struct

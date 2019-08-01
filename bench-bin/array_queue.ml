@@ -1,4 +1,4 @@
-open Core_bench.Std
+open Core_bench
 open Core
 
 let enqueue_tests =

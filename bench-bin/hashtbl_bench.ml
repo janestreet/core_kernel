@@ -28,7 +28,7 @@
    appreciable effect on the test results.
 *)
 open Core
-open Core_bench.Std
+open Core_bench
 
 module type Config = sig
   val sizes : int list

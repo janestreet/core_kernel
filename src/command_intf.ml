@@ -889,6 +889,11 @@ module type Command = sig
     with type shape := t
   end
 
+
+  (** call this instead of [Core.exit] if in command-related code that you want to run in
+      tests.  For example, in the body of [Command.Param.no_arg_abort] *)
+  val exit : int -> _
+
   (** [Deprecated] should be used only by [Deprecated_command].  At some point
       it will go away. *)
   module Deprecated : sig
