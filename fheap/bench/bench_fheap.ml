@@ -8,5 +8,5 @@ let%bench_fun ("pop_add_with_existing_heap"[@indexed
   let h1 = of_array ~cmp:Int.compare a in
   fun () ->
     let e, h = pop_exn h1 in
-    ignore (add h e)
+    ignore (add h e : int t)
 ;;

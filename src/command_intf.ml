@@ -46,7 +46,7 @@ module type For_unix = sig
   end
 
   module Sys : sig
-    val argv : string array
+    val get_argv : unit -> string array
     val getenv : string -> string option
     val unsafe_getenv : string -> string option
   end

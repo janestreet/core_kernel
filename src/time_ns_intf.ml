@@ -280,8 +280,17 @@ module type Time_ns = sig
       (** [V1] is currently only implemented in [Core]. *)
       module V2 : sig
         type t = Span.t [@@deriving hash]
+        type nonrec comparator_witness = Span.comparator_witness
 
-        include Stable_int63able with type t := t
+        include
+          Stable_int63able
+          with type t := t
+          with type comparator_witness := comparator_witness
+
+        include
+          Comparable.Stable.V1.S
+          with type comparable := t
+          with type comparator_witness := comparator_witness
       end
     end
 

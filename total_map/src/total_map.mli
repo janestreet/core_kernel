@@ -58,6 +58,26 @@ val iter2
   -> f:(key:'key -> 'a -> 'b -> unit)
   -> unit
 
+val fold
+  :  ('key, 'a, _, _) t
+  -> init:'acc
+  -> f:(key:'key -> data:'a -> 'acc -> 'acc)
+  -> 'acc
+
+val fold_right
+  :  ('key, 'a, _, _) t
+  -> init:'acc
+  -> f:(key:'key -> data:'a -> 'acc -> 'acc)
+  -> 'acc
+
+(** Folds over two maps side by side, like [iter2]. *)
+val fold2
+  :  ('key, 'a, 'cmp, 'enum) t
+  -> ('key, 'b, 'cmp, 'enum) t
+  -> init:'acc
+  -> f:(key:'key -> 'a -> 'b -> 'acc -> 'acc)
+  -> 'acc
+
 val set : ('key, 'a, 'cmp, 'enum) t -> 'key -> 'a -> ('key, 'a, 'cmp, 'enum) t
 
 val to_alist

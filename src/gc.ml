@@ -201,11 +201,11 @@ external compactions : unit -> int = "core_kernel_gc_compactions" [@@noalloc]
 external top_heap_words : unit -> int = "core_kernel_gc_top_heap_words" [@@noalloc]
 external major_plus_minor_words : unit -> int = "core_kernel_gc_major_plus_minor_words"
 
-let zero = int_of_string "0"
+let zero = Sys.opaque_identity (int_of_string "0")
 
 (* The compiler won't optimize int_of_string away so it won't
    perform constant folding below. *)
-let rec keep_alive o = if zero <> 0 then keep_alive o
+let rec keep_alive o = if zero <> 0 then keep_alive (Sys.opaque_identity o)
 
 module Expert = struct
   let add_finalizer x f =

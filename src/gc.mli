@@ -406,11 +406,8 @@ module Allocation_policy : sig
     | First_fit
 end
 
-
 val disable_compaction
   :  ?logger:(string -> unit)
-  (** The OCaml docs strongly suggest that the allocation policy be changed from
-      Next Fit to First Fit if disabling compaction permanently. *)
   -> allocation_policy:[ `Don't_change | `Set_to of Allocation_policy.t ]
   -> unit
   -> unit

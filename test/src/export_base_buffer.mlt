@@ -17,6 +17,34 @@ end =
 Line _, characters 2-8:
 Error: Signature mismatch:
        ...
+       The value `add_int64_le' is required but not provided
+       File "buffer.mli", line 279, characters 0-37: Expected declaration
+       The value `add_int64_be' is required but not provided
+       File "buffer.mli", line 273, characters 0-37: Expected declaration
+       The value `add_int64_ne' is required but not provided
+       File "buffer.mli", line 267, characters 0-38: Expected declaration
+       The value `add_int32_le' is required but not provided
+       File "buffer.mli", line 261, characters 0-37: Expected declaration
+       The value `add_int32_be' is required but not provided
+       File "buffer.mli", line 255, characters 0-37: Expected declaration
+       The value `add_int32_ne' is required but not provided
+       File "buffer.mli", line 249, characters 0-37: Expected declaration
+       The value `add_int16_le' is required but not provided
+       File "buffer.mli", line 243, characters 0-35: Expected declaration
+       The value `add_int16_be' is required but not provided
+       File "buffer.mli", line 237, characters 0-35: Expected declaration
+       The value `add_int16_ne' is required but not provided
+       File "buffer.mli", line 231, characters 0-35: Expected declaration
+       The value `add_uint16_le' is required but not provided
+       File "buffer.mli", line 225, characters 0-36: Expected declaration
+       The value `add_uint16_be' is required but not provided
+       File "buffer.mli", line 219, characters 0-36: Expected declaration
+       The value `add_uint16_ne' is required but not provided
+       File "buffer.mli", line 213, characters 0-36: Expected declaration
+       The value `add_int8' is required but not provided
+       File "buffer.mli", line 207, characters 0-31: Expected declaration
+       The value `add_uint8' is required but not provided
+       File "buffer.mli", line 201, characters 0-32: Expected declaration
        The value `of_seq' is required but not provided
        File "buffer.mli", line 177, characters 0-28: Expected declaration
        The value `add_seq' is required but not provided

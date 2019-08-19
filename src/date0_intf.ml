@@ -184,6 +184,12 @@ module type Date0 = sig
     module V1 : sig
       type nonrec t = t [@@immediate] [@@deriving hash]
 
+      (** [to_int] and [of_int_exn] convert to/from the underlying integer
+          representation. *)
+
+      val to_int : t -> int
+      val of_int_exn : int -> t
+
       include
         Stable_comparable.V1
         with type t := t

@@ -5,6 +5,10 @@ type foo
 
 let r = Ref.Permissioned.create 0
 
+(* This is to force the [Core_kernel]'s cmi to be loaded so that error messages below look
+   nicer with OCaml 4.08. *)
+module type M = module type of Core_kernel
+
 let r' : (int, foo) Ref.Permissioned.t = r
 
 [%%expect
@@ -77,13 +81,17 @@ Line _, characters 18-68:
 Error: In this `with' constraint, the new definition of t
        does not match its original definition in the constrained signature:
        Type declarations do not match:
-         type ('a, 'b) t = ('a, 'b) t
+         type ('a, 'b) t = ('a, 'b) t/2
            constraint 'b = \[< `Read | `Who_can_write of .* \] (regexp)
        is not included in
          type ('a, -'perm) t
        *: Expected declaration (glob)
        *: Actual declaration (glob)
        Their constraints differ.
+       File "_none_", line 1:
+         Definition of type t/1
+       *, characters 0-51: (glob)
+         Definition of type t/2
 |}]
 
 (* Constraints don't work with included signatures, part 2 *)
@@ -103,13 +111,18 @@ Line _, characters 18-68:
 Error: In this `with' constraint, the new definition of t
        does not match its original definition in the constrained signature:
        Type declarations do not match:
-         type ('a, 'b) t = ('a, 'b) t
+         type ('a, 'b) t = ('a, 'b) t/2
            constraint 'b = \[< `Read | `Who_can_write of .* \] (regexp)
        is not included in
          type ('a, -'b) t constraint 'b = [< 'c perms ]
-       *: Expected declaration (glob)
+       *: (glob)
+         Expected declaration
        *: Actual declaration (glob)
        Their constraints differ.
+       File "_none_", line 1:
+         Definition of type t/1
+       *, characters 0-51: (glob)
+         Definition of type t/2
 |}]
 
 (* Constraints don't work with type aliases, part 1 *)

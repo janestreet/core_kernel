@@ -36,6 +36,12 @@ let iter2 t1 t2 ~f =
     f ~key v1 v2)
 ;;
 
+let fold2 t1 t2 ~init ~f =
+  Map.fold2 t1 t2 ~init ~f:(fun ~key ~data acc ->
+    let v1, v2 = pair t1 t2 key data in
+    f ~key v1 v2 acc)
+;;
+
 let map2 t1 t2 ~f =
   Map.merge t1 t2 ~f:(fun ~key v ->
     let v1, v2 = pair t1 t2 key v in
@@ -64,6 +70,8 @@ include struct
   let iteri = iteri
   let map = map
   let mapi = mapi
+  let fold = fold
+  let fold_right = fold_right
   let to_alist = to_alist
 end
 

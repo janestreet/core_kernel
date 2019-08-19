@@ -38,10 +38,10 @@ let%expect_test "[get], [set]" =
     () |}];
   show_raise (fun () -> ignore (get t (-1) : _ option));
   [%expect {|
-    (raised (Invalid_argument Weak.get_key)) |}];
+    (raised (Invalid_argument Weak.get)) |}];
   show_raise (fun () -> ignore (get t 1 : _ option));
   [%expect {|
-    (raised (Invalid_argument Weak.get_key)) |}];
+    (raised (Invalid_argument Weak.get)) |}];
   let b = block 13 in
   set t 0 (Some b);
   print t;

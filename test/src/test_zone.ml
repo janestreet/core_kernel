@@ -1,6 +1,22 @@
 open! Core_kernel
 open! Import
 
+let%expect_test "UTC survives round trip" =
+  let test ?cr zone =
+    require_does_not_raise [%here] ?cr (fun () ->
+      print_s [%sexp (Time.utc_offset Time.epoch ~zone : Time.Span.t)])
+  in
+  test Time.Zone.utc;
+  [%expect {| 0s |}];
+  let zone =
+    Time.Zone.utc
+    |> Binable.to_string (module Time.Stable.Zone.Full_data.V1)
+    |> Binable.of_string (module Time.Stable.Zone.Full_data.V1)
+  in
+  test zone;
+  [%expect {| 0s |}]
+;;
+
 let%expect_test "Time.Stable.Zone.Full_data.V1" =
   print_and_check_stable_type
     [%here]

@@ -25,14 +25,14 @@ val add_memo_bad : (int, int -> int) Memo.fn = <fun>
 
 (* If we call add_memo_bad a couple of times, we'll see that no memoization occurs. *)
 
-let _ = add_memo_bad 1 2
+let _ = (add_memo_bad 1 2 : int)
 
 [%%expect {|
 - : int = 3
 Invoked add
 |}]
 
-let _ = add_memo_bad 1 2
+let _ = (add_memo_bad 1 2 : int)
 
 [%%expect {|
 - : int = 3
@@ -56,20 +56,20 @@ let add_memo x y = add_memo_tupled (x, y)
 val add_memo : int -> int -> int = <fun>
 |}]
 
-let _ = add_memo 3 4
+let _ = (add_memo 3 4 : int)
 
 [%%expect {|
 - : int = 7
 Invoked add
 |}]
 
-let _ = add_memo 3 4
+let _ = (add_memo 3 4 : int)
 
 [%%expect {|
 - : int = 7
 |}]
 
-let _ = add_memo 3 5
+let _ = (add_memo 3 5 : int)
 
 [%%expect {|
 - : int = 8
@@ -95,14 +95,14 @@ let add_memo_bad x y = add_memo_tupled_bad (x, y)
 val add_memo_bad : int -> int -> int = <fun>
 |}]
 
-let _ = add_memo_bad 1 2
+let _ = (add_memo_bad 1 2 : int)
 
 [%%expect {|
 - : int = 3
 Invoked add
 |}]
 
-let _ = add_memo_bad 1 2
+let _ = (add_memo_bad 1 2 : int)
 
 [%%expect {|
 - : int = 3

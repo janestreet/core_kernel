@@ -37,6 +37,7 @@ module Heap_block = Heap_block
 module In_channel = In_channel
 module Int_conversions = Int_conversions
 module Int_math = Int_math
+module Intable = Intable
 module Invariant = Invariant
 module Monad = Monad
 module Ordered_collection_common = Ordered_collection_common

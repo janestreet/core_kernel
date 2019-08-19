@@ -2623,6 +2623,7 @@ module For_unix (M : For_unix) = struct
      syntax). *)
   let dump_autocomplete_function () =
     let fname = sprintf "_jsautocom_%s" (Pid.to_string (Unix.getpid ())) in
+    let argv_0 = (Sys.get_argv ()).(0) in
     printf
       "function %s {\n\
       \  export COMP_CWORD\n\
@@ -2636,9 +2637,9 @@ module For_unix (M : For_unix) = struct
        complete -F %s %s\n\
        %!"
       fname
-      Sys.argv.(0)
+      argv_0
       fname
-      Sys.argv.(0)
+      argv_0
   ;;
 
   let dump_help_sexp ~supported_versions t ~path_to_subcommand =
@@ -2844,7 +2845,7 @@ module For_unix (M : For_unix) = struct
         ?verbose_on_parse_error
         ?(version = default_version)
         ?build_info
-        ?(argv = Array.to_list Sys.argv)
+        ?(argv = Array.to_list (Sys.get_argv ()))
         ?extend
         t
     =

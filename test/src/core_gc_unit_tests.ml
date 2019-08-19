@@ -103,5 +103,5 @@ let%test_unit _ =
     match Caml.Weak.get weak 0 with
     | None -> false
     | Some _ -> true);
-  keep_alive r
+  keep_alive (r, r)
 ;;

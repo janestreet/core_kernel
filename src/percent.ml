@@ -129,8 +129,8 @@ module Stable = struct
     include (Sexpable.Stable.Of_stringable.V1 (Stringable) : Sexpable.S with type t := t)
     include (Float : Binable with type t := t)
 
-    include Comparable.Make (struct
-        type nonrec t = t [@@deriving compare, sexp_of]
+    include Comparable.Make_binable (struct
+        type nonrec t = t [@@deriving compare, sexp_of, bin_io]
 
         (* Previous versions rendered comparable-based containers using float
            serialization rather than percent serialization, so when reading

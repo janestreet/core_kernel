@@ -26,13 +26,13 @@ let%expect_test _ =
 ;;
 
 let%expect_test "Date.V1" =
-  print_and_check_stable_type
-    [%here]
-    (module Date.Stable.V1)
+  let examples =
     [ Date.create_exn ~y:1066 ~m:Oct ~d:16
     ; Date.create_exn ~y:1955 ~m:Nov ~d:5
     ; Date.create_exn ~y:2012 ~m:Apr ~d:19
-    ];
+    ]
+  in
+  print_and_check_stable_type [%here] (module Date.Stable.V1) examples;
   [%expect
     {|
     (bin_shape_digest 47681bb034560d96024e1b2eca0d98ca)
@@ -41,7 +41,19 @@ let%expect_test "Date.V1" =
     ((sexp   1955-11-05)
      (bin_io "\254\163\007\n\005"))
     ((sexp   2012-04-19)
-     (bin_io "\254\220\007\003\019")) |}]
+     (bin_io "\254\220\007\003\019")) |}];
+  List.iter examples ~f:(fun date ->
+    let int = Date.Stable.V1.to_int date in
+    print_s [%sexp (date : Date.Stable.V1.t), (int : int)];
+    let round_trip = Date.Stable.V1.of_int_exn int in
+    require_compare_equal [%here] (module Date.Stable.V1) date round_trip);
+  [%expect
+    {|
+    (1066-10-16 69_863_952)
+    (1955-11-05 128_125_701)
+    (2012-04-19 131_859_475) |}];
+  require_does_raise [%here] (fun () -> Date.Stable.V1.of_int_exn 0);
+  [%expect {| (Failure "Month.of_int_exn 0") |}]
 ;;
 
 let%expect_test "Date.V1.Set" =

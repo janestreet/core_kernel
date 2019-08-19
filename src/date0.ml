@@ -18,6 +18,8 @@ module Stable = struct
         val month : t -> Month.Stable.V1.t
         val day : t -> int
         val days_in_month : year:int -> month:Month.t -> int
+        val to_int : t -> int
+        val of_int_exn : int -> t
       end = struct
         (* We used to store dates like this:
            type t = { y: int; m: Month.Stable.V1.t; d: int; }
@@ -111,6 +113,9 @@ module Stable = struct
           ; shape = bin_shape_t
           }
         ;;
+
+        let to_int t = t
+        let of_int_exn n = create_exn ~y:(year n) ~m:(month n) ~d:(day n)
       end
 
       include T

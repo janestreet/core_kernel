@@ -28,7 +28,16 @@ module Stable = struct
         (* Some existing clients expect [index >= 0], so we never serialize a negative
            index. This conversion can be removed if new stable versions are minted. *)
         let to_external t = max 0 t
-        let of_external t = t
+
+        (* When the index of a time zone with no transitions is converted via to_external,
+           its value becomes 0 even though its transition array is empty (and it should
+           have been -1). When the converted value is changed back to a Zone.t through
+           of_external, returning this value for its index could result in unsafe array
+           accesses to the transition array of the zone (since there is no transition at
+           index 0). Also, it does not make sense to keep the converted index because it
+           is intended to be a mutable value used for caching. So of_external always sets
+           the index to -1, which is a safe value. *)
+        let of_external (_ : t) = -1
 
         include Binable.Of_binable
             (Int)
