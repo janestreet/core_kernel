@@ -1530,11 +1530,15 @@ module Base = struct
       include Anons.Deprecated
     end
 
-    let to_string_for_choose_one param =
+    let arg_names param =
       let t = param.param in
       let flag_names = Map.keys (Flag.Internal.create (t.flags ())) in
       let anon_names = Anons.Grammar.names (t.usage ()) in
-      let names = List.concat [ flag_names; anon_names ] in
+      List.concat [ flag_names; anon_names ]
+    ;;
+
+    let to_string_for_choose_one param =
+      let names = arg_names param in
       let names_with_commas = List.filter names ~f:(fun s -> String.contains s ',') in
       if not (List.is_empty names_with_commas)
       then
@@ -1588,6 +1592,17 @@ module Base = struct
                "Must pass one of these: %s"
                (String.concat ~sep:"; " (List.map ~f:fst ts))
                ()))
+    ;;
+
+    let and_arg_names t = map t ~f:(fun value -> value, arg_names t)
+
+    let and_arg_name t =
+      match arg_names t with
+      | [ name ] -> map t ~f:(fun value -> value, name)
+      | names ->
+        raise_s
+          [%message
+            "[and_arg_name] expects exactly one name, got" ~_:(names : string list)]
     ;;
   end
 end
@@ -2953,6 +2968,9 @@ module Param = struct
       :  'a option t list
       -> if_nothing_chosen:('a, 'b) If_nothing_chosen.t
       -> 'b t
+
+    val and_arg_names : 'a t -> ('a * string list) t
+    val and_arg_name : 'a t -> ('a * string) t
   end
 
   module A = struct
@@ -2975,6 +2993,8 @@ module Param = struct
   let flag = Spec.flag
   let anon = Spec.anon
   let choose_one = Spec.choose_one
+  let and_arg_names = Spec.and_arg_names
+  let and_arg_name = Spec.and_arg_name
   let flag_optional_with_default_doc = Spec.flag_optional_with_default_doc
 
   module Arg_type = Arg_type

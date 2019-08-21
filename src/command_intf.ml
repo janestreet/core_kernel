@@ -457,6 +457,13 @@ module type Command = sig
         :  'a option t list
         -> if_nothing_chosen:('a, 'b) If_nothing_chosen.t
         -> 'b t
+
+      (** [and_arg_names t] returns both the value of [t] and the names of the arguments
+          that went into [t]. Useful for errors that reference multiple params. *)
+      val and_arg_names : 'a t -> ('a * string list) t
+
+      (** Like [and_arg_names], but asserts that there is exactly one name. *)
+      val and_arg_name : 'a t -> ('a * string) t
     end
 
     include S (** @open *)
