@@ -23,7 +23,9 @@ let enqueue_dequeue_mixed () =
       Queue.enqueue q i
     done;
     Array.iteri choices ~f:(fun i should_dequeue ->
-      if should_dequeue then ignore (Queue.dequeue q) else Queue.enqueue q i)
+      if should_dequeue
+      then ignore (Queue.dequeue q : int option)
+      else Queue.enqueue q i)
 ;;
 
 let queue_pipeline () =
@@ -38,7 +40,7 @@ let queue_pipeline () =
     Queue.blit_transfer ~src:q2 ~dst:q3 ();
     Queue.blit_transfer ~src:q3 ~dst:q4 ();
     Queue.blit_transfer ~src:q4 ~dst:q5 ();
-    ignore (Queue.dequeue_exn q5)
+    ignore (Queue.dequeue_exn q5 : int)
 ;;
 
 let blit_transfer_tests =
@@ -50,7 +52,7 @@ let blit_transfer_tests =
       Queue.enqueue src 0
     done;
     for _ = 1 to half_len do
-      ignore (Queue.dequeue_exn src)
+      ignore (Queue.dequeue_exn src : int)
     done;
     for _ = 1 to half_len do
       Queue.enqueue src 0

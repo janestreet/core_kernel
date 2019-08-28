@@ -47,7 +47,9 @@ let%expect_test ("[unsafe_destroy_and_resize], proxy failure"[@tags "no-js"]) =
   [%expect {| 10 |}];
   let _shared = Bigstring.sub_shared bigstring in
   (try
-     let _ = Bigstring.unsafe_destroy_and_resize bigstring ~len:5 in
+     let (_ : Bigstring.t_frozen) =
+       Bigstring.unsafe_destroy_and_resize bigstring ~len:5
+     in
      ()
    with
    | e -> printf !"%{Exn}\n" e);

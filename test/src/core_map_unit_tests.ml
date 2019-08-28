@@ -509,7 +509,7 @@ struct
 
   let%test _ =
     try
-      ignore (Map.of_alist_exn [ Key.sample, 0; Key.sample, 1 ]);
+      ignore (Map.of_alist_exn [ Key.sample, 0; Key.sample, 1 ] : _ Map.t_);
       false
     with
     | _ -> true
@@ -520,7 +520,8 @@ struct
       ignore
         (Map.of_hashtbl_exn
            (List.map Key.samples ~f:(fun key -> key, Key.to_int key)
-            |> Hashtbl.Poly.of_alist_exn));
+            |> Hashtbl.Poly.of_alist_exn)
+         : _ Map.t_);
       true
     with
     | _ -> false
@@ -543,7 +544,7 @@ struct
         [ Key.sample, 0; Key.sample, 1 ]
     in
     try
-      ignore (Map.of_hashtbl_exn hashtbl_with_dup);
+      ignore (Map.of_hashtbl_exn hashtbl_with_dup : _ Map.t_);
       false
     with
     | _ -> true
@@ -717,7 +718,7 @@ struct
 
   let%test _ =
     try
-      ignore (Map.find_exn (Map.empty ()) Key.sample);
+      ignore (Map.find_exn (Map.empty ()) Key.sample : int);
       false
     with
     | Not_found_s _ | Caml.Not_found -> true
@@ -1179,7 +1180,7 @@ struct
 
   let%test _ =
     try
-      ignore (Map.min_elt_exn (Map.empty ()));
+      ignore (Map.min_elt_exn (Map.empty ()) : _);
       false
     with
     | _ -> true
@@ -1187,7 +1188,7 @@ struct
 
   let%test _ =
     try
-      ignore (Map.max_elt_exn (Map.empty ()));
+      ignore (Map.max_elt_exn (Map.empty ()) : _);
       false
     with
     | _ -> true

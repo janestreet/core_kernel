@@ -16,11 +16,12 @@ let%test_module _ =
       assert (not (is_empty t));
       assert (mem t k);
       (* these do not raise *)
-      ignore (change_exn t k ~f:Fn.id);
+      ignore (change_exn t k ~f:Fn.id : t);
       ignore
         (change t k ~f:(function
            | None -> assert false
-           | o -> o));
+           | o -> o)
+         : t);
       match find t k with
       | None -> assert false
       | Some v' -> assert (phys_equal v v')

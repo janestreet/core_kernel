@@ -271,7 +271,7 @@ end = struct
       node)
   ;;
 
-  let unlink t = ignore (unlink_after t.prev)
+  let unlink t = ignore (unlink_after t.prev : _ t)
 end
 
 type 'a t = 'a Elt.t option ref
@@ -765,7 +765,7 @@ let remove_first t =
   | None -> None
   | Some first ->
     let second = Elt.next first in
-    ignore (Elt.unlink first);
+    Elt.unlink first;
     t := if Elt.equal first second then None else Some second;
     Some (Elt.value first)
 ;;
@@ -775,7 +775,7 @@ let remove t elt =
   | None -> raise Elt_does_not_belong_to_list
   | Some first ->
     if Elt.equal elt first
-    then ignore (remove_first t)
+    then ignore (remove_first t : _ option)
     else if Header.equal (Elt.header first) (Elt.header elt)
     then Elt.unlink elt
     else raise Elt_does_not_belong_to_list
@@ -788,7 +788,8 @@ let filter t ~f =
    | Some first ->
      Header.with_iteration_3 (Elt.header first) f new_t first (fun f new_t first ->
        let rec loop f new_t first elt =
-         if f (Elt.value elt) then insert_last new_t (Elt.value elt) |> ignore;
+         if f (Elt.value elt)
+         then insert_last new_t (Elt.value elt) |> (ignore : _ Elt.t -> unit);
          let next = Elt.next elt in
          if not (phys_equal next first) then loop f new_t first next
        in
@@ -803,7 +804,8 @@ let filteri t ~f =
    | Some first ->
      Header.with_iteration_3 (Elt.header first) f new_t first (fun f new_t first ->
        let rec loop f i new_t first elt =
-         if f i (Elt.value elt) then insert_last new_t (Elt.value elt) |> ignore;
+         if f i (Elt.value elt)
+         then insert_last new_t (Elt.value elt) |> (ignore : _ Elt.t -> unit);
          let next = Elt.next elt in
          if not (phys_equal next first) then loop f (i + 1) new_t first next
        in
@@ -820,7 +822,7 @@ let filter_map t ~f =
        let rec loop f new_t first elt =
          (match f (Elt.value elt) with
           | None -> ()
-          | Some value -> insert_last new_t value |> ignore);
+          | Some value -> insert_last new_t value |> (ignore : _ Elt.t -> unit));
          let next = Elt.next elt in
          if not (phys_equal next first) then loop f new_t first next
        in
@@ -837,7 +839,7 @@ let filter_mapi t ~f =
        let rec loop f i new_t first elt =
          (match f i (Elt.value elt) with
           | None -> ()
-          | Some value -> insert_last new_t value |> ignore);
+          | Some value -> insert_last new_t value |> (ignore : _ Elt.t -> unit));
          let next = Elt.next elt in
          if not (phys_equal next first) then loop f (i + 1) new_t first next
        in
@@ -853,7 +855,8 @@ let partition_tf t ~f =
    | Some first ->
      Header.with_iteration_4 (Elt.header first) f t1 t2 first (fun f t1 t2 first ->
        let rec loop f t1 t2 first elt =
-         insert_last (if f (Elt.value elt) then t1 else t2) (Elt.value elt) |> ignore;
+         insert_last (if f (Elt.value elt) then t1 else t2) (Elt.value elt)
+         |> (ignore : _ Elt.t -> unit);
          let next = Elt.next elt in
          if not (phys_equal next first) then loop f t1 t2 first next
        in
@@ -869,7 +872,8 @@ let partitioni_tf t ~f =
    | Some first ->
      Header.with_iteration_4 (Elt.header first) f t1 t2 first (fun f t1 t2 first ->
        let rec loop f i t1 t2 first elt =
-         insert_last (if f i (Elt.value elt) then t1 else t2) (Elt.value elt) |> ignore;
+         insert_last (if f i (Elt.value elt) then t1 else t2) (Elt.value elt)
+         |> (ignore : _ Elt.t -> unit);
          let next = Elt.next elt in
          if not (phys_equal next first) then loop f (i + 1) t1 t2 first next
        in
@@ -886,8 +890,8 @@ let partition_map t ~f =
      Header.with_iteration_4 (Elt.header first) f t1 t2 first (fun f t1 t2 first ->
        let rec loop f t1 t2 first elt =
          (match (f (Elt.value elt) : (_, _) Either.t) with
-          | First value -> insert_last t1 value |> ignore
-          | Second value -> insert_last t2 value |> ignore);
+          | First value -> insert_last t1 value |> (ignore : _ Elt.t -> unit)
+          | Second value -> insert_last t2 value |> (ignore : _ Elt.t -> unit));
          let next = Elt.next elt in
          if not (phys_equal next first) then loop f t1 t2 first next
        in
@@ -904,8 +908,8 @@ let partition_mapi t ~f =
      Header.with_iteration_4 (Elt.header first) f t1 t2 first (fun f t1 t2 first ->
        let rec loop f i t1 t2 first elt =
          (match (f i (Elt.value elt) : (_, _) Either.t) with
-          | First value -> insert_last t1 value |> ignore
-          | Second value -> insert_last t2 value |> ignore);
+          | First value -> insert_last t1 value |> (ignore : _ Elt.t -> unit)
+          | Second value -> insert_last t2 value |> (ignore : _ Elt.t -> unit));
          let next = Elt.next elt in
          if not (phys_equal next first) then loop f (i + 1) t1 t2 first next
        in

@@ -98,7 +98,7 @@ let%test_module "map functions" =
     let test (type a) (module M : Testable with type t = a) ~n k (expected : a list) =
       let t = create () in
       for i = 0 to n - 1 do
-        insert_last t (i * 10) |> ignore
+        insert_last t (i * 10) |> (ignore : int Elt.t -> unit)
       done;
       let new_t = k t in
       invariant ignore t;
@@ -151,7 +151,7 @@ let%test_module "inplace functions" =
     let test k expected =
       let t = create () in
       for i = 0 to n - 1 do
-        insert_last t (i * 10) |> ignore
+        insert_last t (i * 10) |> (ignore : int Elt.t -> unit)
       done;
       k t;
       invariant ignore t;
@@ -191,7 +191,7 @@ let%test_module "partition functions" =
       =
       let t = create () in
       for i = 0 to n - 1 do
-        insert_last t (i * 10) |> ignore
+        insert_last t (i * 10) |> (ignore : int Elt.t -> unit)
       done;
       let t1, t2 = k t in
       invariant ignore t;
@@ -238,7 +238,7 @@ let%test_module "partition functions" =
 let create_default () =
   let t = create () in
   for i = 0 to 4 do
-    insert_last t (i * 10) |> ignore
+    insert_last t (i * 10) |> (ignore : int Elt.t -> unit)
   done;
   t
 ;;
@@ -353,7 +353,7 @@ let%test _ =
   let t1 = create () in
   let t2 = create () in
   let elt = insert_first t1 14 in
-  let _ = insert_first t2 13 in
+  let (_ : int Elt.t) = insert_first t2 13 in
   try
     remove t2 elt;
     false
@@ -384,7 +384,10 @@ let%test_module "unchecked_iter" =
     let b = of_list [ 0; 1; 2; 3; 4 ]
     let element b n = Option.value_exn (find_elt b ~f:(fun value -> value = n))
     let remove b n = remove b (element b n)
-    let insert_after b n_find n_add = ignore (insert_after b (element b n_find) n_add)
+
+    let insert_after b n_find n_add =
+      ignore (insert_after b (element b n_find) n_add : int Elt.t)
+    ;;
 
     let to_list f =
       let r = ref [] in

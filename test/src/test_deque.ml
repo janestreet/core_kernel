@@ -16,8 +16,8 @@ let%test_module _ =
     let%test _ = [%equal: int option] (binary_search t ~pos:2 `First_equal_to 2) None
     let%test _ = [%equal: int option] (binary_search t ~pos:2 `First_equal_to 3) (Some 2)
 
-    let _ = dequeue_front t
-    let _ = dequeue_front t
+    let (_ : int option) = dequeue_front t
+    let (_ : int option) = dequeue_front t
 
     let%test _ = [%equal: int option] (binary_search t `First_equal_to 2) None
     let%test _ = [%equal: int option] (binary_search t `First_equal_to 3) (Some 2)
@@ -36,7 +36,7 @@ let%test_module _ =
       let pos_ref = ref 0 in
       assert (Int.( = ) (length q) 0);
       let bigstring = Bigstring.create (bin_size_t bin_alpha q) in
-      ignore (bin_write_t bin_alpha bigstring ~pos:0 q);
+      ignore (bin_write_t bin_alpha bigstring ~pos:0 q : int);
       let q' = bin_read_t bin_alpha bigstring ~pos_ref in
       assert (Int.( = ) (length q') 0)
     ;;
@@ -67,8 +67,8 @@ let%test_module _ =
 
       let enqueue t back_or_front v =
         match back_or_front with
-        | `back -> ignore (Doubly_linked.insert_last t v)
-        | `front -> ignore (Doubly_linked.insert_first t v)
+        | `back -> ignore (Doubly_linked.insert_last t v : _ Doubly_linked.Elt.t)
+        | `front -> ignore (Doubly_linked.insert_first t v : _ Doubly_linked.Elt.t)
       ;;
 
       let dequeue t back_or_front =

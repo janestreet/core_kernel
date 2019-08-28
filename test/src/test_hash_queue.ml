@@ -20,14 +20,14 @@ let%test_unit _ =
   assert (Option.is_none (Hq.dequeue_front hq));
   assert (
     try
-      ignore (Hq.dequeue_front_exn hq);
+      ignore (Hq.dequeue_front_exn hq : int);
       false
     with
     | _ -> true);
   assert (Option.is_none (Hq.dequeue_front_with_key hq));
   assert (
     try
-      ignore (Hq.dequeue_front_with_key_exn hq);
+      ignore (Hq.dequeue_front_with_key_exn hq : string * int);
       false
     with
     | _ -> true);
@@ -35,14 +35,14 @@ let%test_unit _ =
   assert (Poly.( = ) (Hq.remove hq "foobar") `No_such_key);
   assert (
     try
-      ignore (Hq.remove_exn hq "foobar");
+      Hq.remove_exn hq "foobar";
       false
     with
     | _ -> true);
   assert (Poly.( = ) (Hq.replace hq "foobar" 0) `No_such_key);
   assert (
     try
-      ignore (Hq.replace_exn hq "foobar" 0);
+      Hq.replace_exn hq "foobar" 0;
       false
     with
     | _ -> true);
@@ -72,7 +72,7 @@ let%test_unit _ =
   Hq.iter hq ~f:(fun x -> sum := !sum + x);
   assert (!sum = n * (n + 1) / 2);
   assert (Hq.mem hq "1");
-  ignore (Hq.dequeue_front hq);
+  ignore (Hq.dequeue_front hq : int option);
   inv ();
   assert (not (Hq.mem hq "1"));
   assert (Hq.length hq = n - 1);
@@ -117,7 +117,7 @@ let%test_unit _ =
   assert ([%equal: int option] (Hq.lookup hq "1") None);
   assert (
     try
-      ignore (Hq.lookup_exn hq "1");
+      ignore (Hq.lookup_exn hq "1" : int);
       false
     with
     | Not_found_s _ | Caml.Not_found -> true
@@ -133,7 +133,7 @@ let%test_unit _ =
    with
    | _ -> ());
   (try
-     Hq.iter hq ~f:(fun _ -> ignore (Hq.remove hq "foo"));
+     Hq.iter hq ~f:(fun _ -> ignore (Hq.remove hq "foo" : [ `No_such_key | `Ok ]));
      assert false
    with
    | _ -> ());

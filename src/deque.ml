@@ -435,7 +435,8 @@ let to_array t =
     ignore
       (fold t ~init:0 ~f:(fun i v ->
          arr.(i) <- v;
-         i + 1));
+         i + 1)
+       : int);
     arr
 ;;
 

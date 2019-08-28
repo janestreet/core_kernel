@@ -5,15 +5,10 @@ open! Timing_wheel
 let max_time = Private.max_time
 
 module Time_ns = struct
-  include (
-    Time_ns :
-      module type of struct
-      include Time_ns
-    end
-    with module Span := Time_ns.Span)
+  include Time_ns
 
   module Span = struct
-    include Time_ns.Span
+    include Span
 
     let of_int_ns i = i |> Int63.of_int |> of_int63_ns
   end

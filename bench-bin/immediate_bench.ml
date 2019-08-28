@@ -14,7 +14,7 @@ end
 
 let tests =
   [ Bench.Test.create ~name:"Always.value_as_int" (fun () ->
-      ignore (Always.value_as_int M.always M.A))
+      ignore (Always.value_as_int M.always M.A : int))
   ]
 ;;
 

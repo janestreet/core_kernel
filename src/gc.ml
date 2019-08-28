@@ -225,7 +225,7 @@ module Expert = struct
   let add_finalizer_exn x f =
     try Caml.Gc.finalise (fun x -> Exn.handle_uncaught_and_exit (fun () -> f x)) x with
     | Invalid_argument _ ->
-      ignore (Heap_block.create x);
+      ignore (Heap_block.create x : _ Heap_block.t option);
       (* If [Heap_block.create] succeeds then [x] is static data and so
          we can simply drop the finaliser. *)
       ()
@@ -244,7 +244,7 @@ module Expert = struct
   let add_finalizer_last_exn x f =
     try Caml.Gc.finalise_last (fun () -> Exn.handle_uncaught_and_exit f) x with
     | Invalid_argument _ ->
-      ignore (Heap_block.create x);
+      ignore (Heap_block.create x : _ Heap_block.t option);
       (* If [Heap_block.create] succeeds then [x] is static data and so
          we can simply drop the finaliser. *)
       ()

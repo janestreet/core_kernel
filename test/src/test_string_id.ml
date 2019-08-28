@@ -201,7 +201,7 @@ let%expect_test "of bin prot failure" =
 
 let%test_unit "String_id's of_string shouldn't allocate on success" =
   let initial_words = Gc.minor_words () in
-  ignore (M.of_string "FOOBAR");
+  ignore (M.of_string "FOOBAR" : M.t);
   let allocated = Gc.minor_words () - initial_words in
   [%test_result: int] allocated ~expect:0
 ;;

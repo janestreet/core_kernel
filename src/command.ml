@@ -1446,7 +1446,7 @@ module Base = struct
         let aliases = List.map ~f:normalize aliases in
         let { read; action; optional } = mode name in
         let check_available =
-          if optional then `Optional else `Required (fun env -> ignore (read env))
+          if optional then `Optional else `Required (fun env -> ignore (read env : _))
         in
         let name_matching =
           if Option.is_some full_flag_required then `Full_match_required else `Prefix
@@ -2431,7 +2431,7 @@ module For_unix (M : For_unix) = struct
       in
       Unix.close process_info.stdin;
       let stdout, stderr = read_stdout_and_stderr process_info in
-      ignore (Unix.wait (`Pid process_info.pid));
+      ignore (Unix.wait (`Pid process_info.pid) : Pid.t * Unix.Exit_or_signal.t);
       (* Now we've killed all the processes and threads we made. *)
       match stdout |> Sexp.of_string |> Internal.t_of_sexp |> Internal.to_latest with
       | exception exn ->

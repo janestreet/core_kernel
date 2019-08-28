@@ -198,7 +198,8 @@ struct
       let subscribe n =
         ignore
           (subscribe_exn bus_r [%here] ~f:(fun s ->
-             printf "Subscriber %d, value received: %s\n" n s))
+             printf "Subscriber %d, value received: %s\n" n s)
+           : _ Subscriber.t)
       in
       subscribe 1;
       [%expect {| |}];
@@ -297,7 +298,8 @@ struct
            bus_r
            [%here]
            ~f:(fun () -> failwith "")
-           ~on_callback_raise:(fun _ -> incr r2));
+           ~on_callback_raise:(fun _ -> incr r2)
+         : _ Subscriber.t);
       print_rs ();
       [%expect {|
         ((r1 0)
@@ -362,7 +364,8 @@ struct
            bus_r
            [%here]
            ~f:(fun () -> failwith "")
-           ~on_callback_raise:Error.raise);
+           ~on_callback_raise:Error.raise
+         : _ Subscriber.t);
       print_r ();
       [%expect {|
         (r 0) |}];
@@ -414,8 +417,8 @@ struct
         incr call_count;
         close bus
       in
-      let _ = subscribe_exn bus_r [%here] ~f:callback in
-      let _ = subscribe_exn bus_r [%here] ~f:callback in
+      let (_ : _ Subscriber.t) = subscribe_exn bus_r [%here] ~f:callback in
+      let (_ : _ Subscriber.t) = subscribe_exn bus_r [%here] ~f:callback in
       write bus ();
       print_s [%message (call_count : int ref)];
       [%expect {|
@@ -488,8 +491,8 @@ struct
       let bus_r = read_only bus in
       let callback1 _ _ = failwith "callback1" in
       let callback2 _ _ = failwith "callback2" in
-      ignore (subscribe_exn bus_r [%here] ~f:callback1);
-      ignore (subscribe_exn bus_r [%here] ~f:callback2);
+      ignore (subscribe_exn bus_r [%here] ~f:callback1 : _ Subscriber.t);
+      ignore (subscribe_exn bus_r [%here] ~f:callback2 : _ Subscriber.t);
       write bus () ();
       print_s [%message (call_count : int ref)];
       [%expect {|
@@ -504,9 +507,9 @@ struct
       let call_count1 = ref 0 in
       let callback1 _ _ =
         incr call_count1;
-        ignore (subscribe_exn bus_r [%here] ~f:callback2)
+        ignore (subscribe_exn bus_r [%here] ~f:callback2 : _ Subscriber.t)
       in
-      ignore (subscribe_exn bus_r [%here] ~f:callback1);
+      ignore (subscribe_exn bus_r [%here] ~f:callback1 : _ Subscriber.t);
       write bus () ();
       write bus () ();
       print_s [%message (call_count1 : int ref) (call_count2 : int ref)];

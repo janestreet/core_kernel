@@ -816,7 +816,7 @@ let%test_module "compare does not allocate" =
   (module struct
     let test_compare_alloc a b =
       let minor_words = Gc.minor_words () in
-      ignore (List.compare Int.compare a b);
+      ignore (List.compare Int.compare a b : int);
       Int.equal minor_words (Gc.minor_words ())
     ;;
 
@@ -833,7 +833,7 @@ let%test_module "equal does not allocate" =
   (module struct
     let test_equal_alloc a b =
       let minor_words = Gc.minor_words () in
-      ignore (List.equal Int.equal a b);
+      ignore (List.equal Int.equal a b : bool);
       Int.equal minor_words (Gc.minor_words ())
     ;;
 

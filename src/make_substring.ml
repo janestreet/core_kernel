@@ -234,7 +234,8 @@ module F (Base : Base) : S with type base = Base.t = struct
     ignore
       (List.fold ts ~init:0 ~f:(fun dst_pos t ->
          blit_dst t ~dst ~dst_pos;
-         dst_pos + length t));
+         dst_pos + length t)
+       : int);
     dst
   ;;
 

@@ -121,7 +121,7 @@ let%test_module _ =
       assert (int_equal (compare B A) 1);
       incr Compare;
       check [%here];
-      ignore (not (int_equal (hash A) (hash B)));
+      ignore (not (int_equal (hash A) (hash B)) : bool);
       incr Hash ~by:2;
       check [%here];
       let bigstring = Binable.to_bigstring (module T) A in

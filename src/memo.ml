@@ -63,7 +63,7 @@ let lru (type a) ?(hashable = Hashtbl.Hashable.poly) ~max_cache_size f =
          Cache.enqueue_back_exn cache arg result;
          (* eject least recently used cache entry *)
          if Cache.length cache > max_cache_size
-         then ignore (Cache.dequeue_front_exn cache);
+         then ignore (Cache.dequeue_front_exn cache : _ Result.t);
          result)
 ;;
 

@@ -194,31 +194,31 @@ let%test_module "memcmp" =
     let%test_unit "out of bounds raises" =
       assert (
         try
-          ignore (Bigstring.memcmp empty ~pos1:1 b1 ~pos2:1 ~len:0);
+          ignore (Bigstring.memcmp empty ~pos1:1 b1 ~pos2:1 ~len:0 : int);
           false
         with
         | _ -> true);
       assert (
         try
-          ignore (Bigstring.memcmp empty ~pos1:1 b1 ~pos2:1 ~len:1);
+          ignore (Bigstring.memcmp empty ~pos1:1 b1 ~pos2:1 ~len:1 : int);
           false
         with
         | _ -> true);
       assert (
         try
-          ignore (Bigstring.memcmp b1 ~pos1:0 b1 ~pos2:0 ~len:5);
+          ignore (Bigstring.memcmp b1 ~pos1:0 b1 ~pos2:0 ~len:5 : int);
           false
         with
         | _ -> true);
       assert (
         try
-          ignore (Bigstring.memcmp b1 ~pos1:0 b1 ~pos2:5 ~len:0);
+          ignore (Bigstring.memcmp b1 ~pos1:0 b1 ~pos2:5 ~len:0 : int);
           false
         with
         | _ -> true);
       assert (
         try
-          ignore (Bigstring.memcmp b1 ~pos1:0 b1 ~pos2:4 ~len:2);
+          ignore (Bigstring.memcmp b1 ~pos1:0 b1 ~pos2:4 ~len:2 : int);
           false
         with
         | _ -> true)
@@ -256,19 +256,19 @@ let%test_module "memset" =
       let b1 = Bigstring.of_string "abcd" in
       assert (
         try
-          ignore (Bigstring.memset empty ~pos:0 ~len:1 'a');
+          Bigstring.memset empty ~pos:0 ~len:1 'a';
           false
         with
         | _ -> true);
       assert (
         try
-          ignore (Bigstring.memset b1 ~pos:1 ~len:4 'a');
+          Bigstring.memset b1 ~pos:1 ~len:4 'a';
           false
         with
         | _ -> true);
       assert (
         try
-          ignore (Bigstring.memset b1 ~pos:8 ~len:0 'a');
+          Bigstring.memset b1 ~pos:8 ~len:0 'a';
           false
         with
         | _ -> true)

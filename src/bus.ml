@@ -593,7 +593,7 @@ let%test_module _ =
   (module struct
     let assert_no_allocation bus callback write =
       let bus_r = read_only bus in
-      ignore (subscribe_exn bus_r [%here] ~f:callback);
+      ignore (subscribe_exn bus_r [%here] ~f:callback : _ Subscriber.t);
       let starting_minor_words = Gc.minor_words () in
       let starting_major_words = Gc.major_words () in
       write ();
