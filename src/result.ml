@@ -27,4 +27,4 @@ module Stable = struct
 end
 
 include Stable.V1
-include (Result : module type of Result with type ('a, 'b) t := ('a, 'b) t)
+include Result

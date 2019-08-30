@@ -16,7 +16,7 @@ end
 include T
 
 module Permissioned = struct
-  include (T : module type of T with type 'a t := 'a t)
+  include T
 
   type ('a, -'perms) t = 'a T.t [@@deriving bin_io, sexp]
 

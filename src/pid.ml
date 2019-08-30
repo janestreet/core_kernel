@@ -38,14 +38,7 @@ end
 open! Import
 include Stable.Latest.Without_containers
 
-include (
-struct
-  type t = int [@@deriving hash]
-end :
-sig
-  type t = int [@@deriving hash]
-end
-with type t := int)
+type t = int [@@deriving hash]
 
 let of_int i = ensure i
 let to_int = Fn.id

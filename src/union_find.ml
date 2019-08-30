@@ -17,8 +17,8 @@ open! Import
            Inner
         / .. | .. \
      Inner Inner Inner
-     /|\   /|\   /|\
-     ...   ...   ...
+      /|\   /|\   /|\
+      ...   ...   ...
    v}
 
    We construct the `inverted' tree in the ML representation.
@@ -84,7 +84,14 @@ let representative t =
   | Inner t' as node -> compress t' ~inner_node:node ~inner:t ~descendants:[]
 ;;
 
-let root t = snd (representative t)
+let root t =
+  match t.node with
+  | Root r ->
+    (* avoid tuple allocation in the fast path *)
+    r
+  | _ -> snd (representative t)
+;;
+
 let rank t = (root t).rank
 let get t = (root t).value
 let set t v = (root t).value <- v

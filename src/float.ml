@@ -21,16 +21,9 @@ open! Import
 module List = Base.List
 
 module T = struct
-  type t = float [@@deriving bin_io, typerep]
+  include Base.Float
 
-  include (
-    Base.Float :
-      module type of struct
-      include Base.Float
-    end
-    with type t := t
-    with module O := Base.Float.O
-    with module Terse := Base.Float.Terse)
+  type t = float [@@deriving bin_io, typerep]
 end
 
 include T

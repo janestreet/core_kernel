@@ -5,6 +5,8 @@ module Binable = Binable0
 
 module Stable = struct
   module V1 = struct
+    include Base_bigstring
+
     module Z : sig
       type t = (char, int8_unsigned_elt, c_layout) Array1.t [@@deriving bin_io]
     end = struct
@@ -14,10 +16,6 @@ module Stable = struct
     include Z
 
     type t_frozen = t [@@deriving bin_io]
-
-    include (
-      Base_bigstring :
-        module type of Base_bigstring with type t := t and type t_frozen := t_frozen)
   end
 end
 

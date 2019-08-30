@@ -199,6 +199,74 @@ val of_increasing_sequence
   -> ('k * 'v) Sequence.t
   -> ('k, 'v, 'cmp) t Or_error.t
 
+(** Creates a map from an association sequence with unique keys.
+
+    [of_sequence c seq] behaves like [of_alist c (Sequence.to_list seq)] but
+    does not allocate the intermediate list.
+
+    If your sequence is increasing, use {!of_increasing_sequence} for better performance.
+*)
+val of_sequence
+  :  ('k, 'cmp) comparator
+  -> ('k * 'v) Sequence.t
+  -> [ `Ok of ('k, 'v, 'cmp) t | `Duplicate_key of 'k ]
+
+(** Creates a map from an association sequence with unique keys, returning an error if
+    duplicate ['a] keys are found.
+
+    [of_sequence_or_error c seq] behaves like [of_alist_or_error c (Sequence.to_list seq)]
+    but does not allocate the intermediate list.
+*)
+val of_sequence_or_error
+  :  ('a, 'cmp) comparator
+  -> ('a * 'b) Sequence.t
+  -> ('a, 'b, 'cmp) t Or_error.t
+
+(** Creates a map from an association sequence with unique keys, raising an exception if
+    duplicate ['a] keys are found.
+
+    [of_sequence_exn c seq] behaves like [of_alist_exn c (Sequence.to_list seq)] but
+    does not allocate the intermediate list.
+*)
+val of_sequence_exn : ('a, 'cmp) comparator -> ('a * 'b) Sequence.t -> ('a, 'b, 'cmp) t
+
+(** Creates a map from an association sequence with possibly repeated keys. The values in
+    the map for a given key appear in the same order as they did in the association
+    list.
+
+    [of_sequence_multi c seq] behaves like [of_alist_multi c (Sequence.to_list seq)] but
+    does not allocate the intermediate list.
+*)
+val of_sequence_multi
+  :  ('a, 'cmp) comparator
+  -> ('a * 'b) Sequence.t
+  -> ('a, 'b list, 'cmp) t
+
+(** Combines an association sequence into a map, folding together bound values with common
+    keys.
+
+    [of_sequence_fold c seq ~init ~f] behaves like [of_alist_fold c (Sequence.to_list seq) ~init ~f]
+    but does not allocate the intermediate list.
+*)
+val of_sequence_fold
+  :  ('a, 'cmp) comparator
+  -> ('a * 'b) Sequence.t
+  -> init:'c
+  -> f:('c -> 'b -> 'c)
+  -> ('a, 'c, 'cmp) t
+
+(** Combines an association sequence into a map, reducing together bound values with
+    common keys.
+
+    [of_sequence_reduce c seq ~f] behaves like [of_alist_reduce c (Sequence.to_list seq) ~f]
+    but does not allocate the intermediate list.
+*)
+val of_sequence_reduce
+  :  ('a, 'cmp) comparator
+  -> ('a * 'b) Sequence.t
+  -> f:('b -> 'b -> 'b)
+  -> ('a, 'b, 'cmp) t
+
 (** Tests whether a map is empty or not. *)
 val is_empty : (_, _, _) t -> bool
 

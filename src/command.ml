@@ -284,6 +284,40 @@ module Arg_type = struct
 end
 
 module Flag = struct
+  module Num_occurrences = struct
+    type t =
+      { at_least_once : bool
+      ; at_most_once : bool
+      }
+    [@@deriving compare, enumerate, fields, sexp_of]
+
+    let to_help_string t name =
+      let { at_least_once; at_most_once } = t in
+      let description = if at_least_once then name else sprintf "[%s]" name in
+      if at_most_once then description else sprintf "%s ..." description
+    ;;
+
+    let%expect_test "to_help_string" =
+      List.iter [%all: t] ~f:(fun t ->
+        print_s [%message "" ~_:(t : t) (to_help_string t "name")]);
+      [%expect
+        {|
+        (((at_least_once false) (at_most_once false)) "[name] ...")
+        (((at_least_once true) (at_most_once false)) "name ...")
+        (((at_least_once false) (at_most_once true)) [name])
+        (((at_least_once true) (at_most_once true)) name) |}]
+    ;;
+
+    let to_help_string_deprecated { at_least_once; at_most_once = _ } name =
+      to_help_string { at_least_once; at_most_once = true } name
+    ;;
+
+    let any = { at_least_once = false; at_most_once = false }
+    let at_least_once = { at_least_once = true; at_most_once = false }
+    let at_most_once = { at_least_once = false; at_most_once = true }
+    let exactly_once = { at_least_once = true; at_most_once = true }
+  end
+
   type action =
     | No_arg of (Env.t -> Env.t)
     | Arg of (Env.t -> string -> Env.t) * Completer.t
@@ -295,15 +329,12 @@ module Flag = struct
       ; aliases : string list
       ; action : action
       ; doc : string
-      ; check_available : [ `Optional | `Required of Env.t -> unit ]
+      ; num_occurrences : Num_occurrences.t
+      ; check_available : Env.t -> unit
       ; name_matching : [ `Prefix | `Full_match_required ]
       }
 
-    let wrap_if_optional t x =
-      match t.check_available with
-      | `Optional -> sprintf "[%s]" x
-      | `Required _ -> x
-    ;;
+    let wrap_if_optional t x = Num_occurrences.to_help_string t.num_occurrences x
 
     module Doc = struct
       type t =
@@ -336,9 +367,20 @@ module Flag = struct
     end
 
     module Deprecated = struct
+      let wrap_if_optional t x =
+        Num_occurrences.to_help_string_deprecated t.num_occurrences x
+      ;;
+
       (* flag help in the format of the old command. used for injection *)
       let help
-            ({ name; doc; aliases; action; check_available = _; name_matching = _ } as t)
+            ({ name
+             ; doc
+             ; aliases
+             ; action
+             ; num_occurrences = _
+             ; check_available = _
+             ; name_matching = _
+             } as t)
         =
         if String.is_prefix doc ~prefix:" "
         then
@@ -354,7 +396,14 @@ module Flag = struct
     end
 
     let align
-          ({ name; doc; aliases; action; check_available = _; name_matching = _ } as t)
+          ({ name
+           ; doc
+           ; aliases
+           ; action
+           ; num_occurrences = _
+           ; check_available = _
+           ; name_matching = _
+           } as t)
       =
       let { Doc.arg_doc; doc } = Doc.parse ~action ~doc in
       let name = wrap_if_optional t (Doc.concat ~name ~arg_doc) in
@@ -375,14 +424,14 @@ module Flag = struct
   type 'a state =
     { action : action
     ; read : Env.t -> 'a
-    ; optional : bool
+    ; num_occurrences : Num_occurrences.t
     }
 
   type 'a t = string -> 'a state
 
-  let arg_flag name arg_type read write ~optional =
+  let arg_flag name arg_type read write num_occurrences =
     { read
-    ; optional
+    ; num_occurrences
     ; action =
         (let update env arg =
            match arg_type.Arg_type.parse arg with
@@ -399,8 +448,8 @@ module Flag = struct
   ;;
 
   let map_flag t ~f input =
-    let { action; read; optional } = t input in
-    { action; read = (fun env -> f (read env)); optional }
+    let { action; read; num_occurrences } = t input in
+    { action; read = (fun env -> f (read env)); num_occurrences }
   ;;
 
   let write_option name key env arg =
@@ -409,7 +458,7 @@ module Flag = struct
       | Some _ -> die "flag %s passed more than once" name ())
   ;;
 
-  let required_value ?default arg_type name ~optional =
+  let required_value ?default arg_type name num_occurrences =
     let key = Env.Key.create ~name [%sexp_of: _] in
     let read env =
       match Env.find env key with
@@ -420,20 +469,20 @@ module Flag = struct
          | None -> die "missing required flag: %s" name ())
     in
     let write env arg = write_option name key env arg in
-    arg_flag name arg_type read write ~optional
+    arg_flag name arg_type read write num_occurrences
   ;;
 
-  let required arg_type name = required_value arg_type name ~optional:false
+  let required arg_type name = required_value arg_type name Num_occurrences.exactly_once
 
   let optional_with_default default arg_type name =
-    required_value ~default arg_type name ~optional:true
+    required_value ~default arg_type name Num_occurrences.at_most_once
   ;;
 
   let optional arg_type name =
     let key = Env.Key.create ~name [%sexp_of: _] in
     let read env = Env.find env key in
     let write env arg = write_option name key env arg in
-    arg_flag name arg_type read write ~optional:true
+    arg_flag name arg_type read write Num_occurrences.at_most_once
   ;;
 
   let no_arg_general ~key_value ~deprecated_hook name =
@@ -460,7 +509,7 @@ module Flag = struct
           f ();
           env
     in
-    { read; action = No_arg action; optional = true }
+    { read; action = No_arg action; num_occurrences = Num_occurrences.at_most_once }
   ;;
 
   let no_arg name = no_arg_general name ~key_value:None ~deprecated_hook:None
@@ -479,7 +528,7 @@ module Flag = struct
     let key = Env.With_default.Key.create ~default:[] ~name [%sexp_of: _ list] in
     let read env = List.rev (Env.With_default.find env key) in
     let write env arg = Env.With_default.change env key ~f:(fun list -> arg :: list) in
-    arg_flag name arg_type read write ~optional:true
+    arg_flag name arg_type read write Num_occurrences.any
   ;;
 
   let one_or_more arg_type name =
@@ -494,7 +543,7 @@ module Flag = struct
     let write env arg =
       Env.With_default.change env key ~f:(fun q -> Fqueue.enqueue q arg)
     in
-    arg_flag name arg_type read write ~optional:false
+    arg_flag name arg_type read write Num_occurrences.at_least_once
   ;;
 
   let escape_general ~deprecated_hook name =
@@ -509,12 +558,12 @@ module Flag = struct
           f x;
           action env x
     in
-    { action = Rest action; read; optional = true }
+    { action = Rest action; read; num_occurrences = Num_occurrences.at_most_once }
   ;;
 
   let no_arg_abort ~exit _name =
     { action = No_arg (fun _ -> never_returns (exit ()))
-    ; optional = true
+    ; num_occurrences = Num_occurrences.at_most_once
     ; read = (fun _ -> ())
     }
   ;;
@@ -1067,6 +1116,7 @@ let lookup_expand_with_aliases map prefix key_type =
           ; aliases
           ; action = _
           ; doc = _
+          ; num_occurrences = _
           ; check_available = _
           ; name_matching
           }
@@ -1181,10 +1231,7 @@ module Base = struct
     let env = Env.set env help_key help_text in
     let rec loop env anons = function
       | Cmdline.Nil ->
-        List.iter (String.Map.data t.flags) ~f:(fun flag ->
-          match flag.check_available with
-          | `Optional -> ()
-          | `Required check -> check env);
+        List.iter (String.Map.data t.flags) ~f:(fun flag -> flag.check_available env);
         Anons.Parser.final_value anons env
       | Cons ("-anon", Cons (arg, args)) ->
         (* the very special -anon flag is here as an escape hatch in case you have an
@@ -1200,6 +1247,7 @@ module Base = struct
                 ; name = _
                 ; aliases = _
                 ; doc = _
+                ; num_occurrences = _
                 ; check_available = _
                 ; name_matching = _
                 } )
@@ -1444,9 +1492,11 @@ module Base = struct
         let normalize flag = normalize Key_type.Flag flag in
         let name = normalize name in
         let aliases = List.map ~f:normalize aliases in
-        let { read; action; optional } = mode name in
+        let { read; action; num_occurrences } = mode name in
         let check_available =
-          if optional then `Optional else `Required (fun env -> ignore (read env : _))
+          match num_occurrences.at_least_once with
+          | false -> (ignore : Univ_map.t -> unit)
+          | true -> fun env -> ignore (read env : _)
         in
         let name_matching =
           if Option.is_some full_flag_required then `Full_match_required else `Prefix
@@ -1455,7 +1505,15 @@ module Base = struct
             { f = (fun () -> Anons.Parser.from_env (fun env m -> m (read env)))
             ; flags =
                 (fun () ->
-                   [ { name; aliases; doc; action; check_available; name_matching } ])
+                   [ { name
+                     ; aliases
+                     ; doc
+                     ; action
+                     ; num_occurrences
+                     ; check_available
+                     ; name_matching
+                     }
+                   ])
             ; usage = (fun () -> Anons.Grammar.zero)
             }
         }
@@ -1986,7 +2044,8 @@ module Bailout_dump_flag = struct
         ~key:name
         { name
         ; aliases
-        ; check_available = `Optional
+        ; num_occurrences = Flag.Num_occurrences.at_most_once
+        ; check_available = ignore
         ; action =
             No_arg
               (fun env ->
@@ -3047,6 +3106,7 @@ type 'result basic_command =
 
 let basic ~summary ?readme param =
   let spec = Spec.of_params @@ Param.map param ~f:(fun run () () -> run ()) in
+  let readme = Option.map readme ~f:(fun f () -> String.strip (f ())) in
   basic ~summary ?readme spec ()
 ;;
 

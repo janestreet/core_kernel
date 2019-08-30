@@ -48,6 +48,8 @@ module Binable_exn = struct
 end
 
 module Extend (Info : Base.Info.S) = struct
+  include Info
+
   module Internal_repr = struct
     module Stable = struct
       module Binable_exn = Binable_exn.Stable
@@ -134,14 +136,6 @@ module Extend (Info : Base.Info.S) = struct
   end
 
   type t = Stable.V2.t [@@deriving bin_io]
-
-  include (
-    Info :
-      module type of struct
-      include Info
-    end
-    with module Internal_repr := Internal_repr
-    with type t := t)
 end
 
 include Extend (Base.Info)

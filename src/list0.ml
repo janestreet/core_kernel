@@ -1,11 +1,13 @@
 open! Import
 open! Typerep_lib.Std
 module Array = Base.Array
-module List = Base.List
+include Base.List
 
 type 'a t = 'a list [@@deriving bin_io, typerep]
 
 module Assoc = struct
+  include Assoc
+
   type ('a, 'b) t = ('a * 'b) list [@@deriving bin_io]
 
   let[@deprecated
@@ -17,25 +19,10 @@ module Assoc = struct
     =
     [%compare: (a * b) list]
   ;;
-
-  include (
-    List.Assoc :
-      module type of struct
-      include List.Assoc
-    end
-    with type ('a, 'b) t := ('a, 'b) t)
 end
 
-include (
-  List :
-    module type of struct
-    include List
-  end
-  with type 'a t := 'a t
-  with module Assoc := List.Assoc)
-
 let to_string ~f t =
-  Sexplib.Sexp.to_string (sexp_of_t (fun x -> Sexplib.Sexp.Atom x) (List.map t ~f))
+  Sexplib.Sexp.to_string (sexp_of_t (fun x -> Sexplib.Sexp.Atom x) (map t ~f))
 ;;
 
 include Comparator.Derived (struct

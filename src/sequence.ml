@@ -1,4 +1,5 @@
 open! Import
+include Base.Sequence
 
 include Bin_prot.Utils.Make_binable1 (struct
     module Binable = struct
@@ -12,43 +13,24 @@ include Bin_prot.Utils.Make_binable1 (struct
   end)
 
 module Step = struct
-  type ('a, 's) t = ('a, 's) Base.Sequence.Step.t =
+  include Step
+
+  type ('a, 's) t = ('a, 's) Step.t =
     | Done
     | Skip of 's
     | Yield of 'a * 's
   [@@deriving bin_io]
-
-  include (
-    Base.Sequence.Step :
-      module type of struct
-      include Base.Sequence.Step
-    end
-    with type ('a, 's) t := ('a, 's) t)
 end
 
 module Merge_with_duplicates_element = struct
-  type ('a, 'b) t = ('a, 'b) Base.Sequence.Merge_with_duplicates_element.t =
+  include Merge_with_duplicates_element
+
+  type ('a, 'b) t = ('a, 'b) Merge_with_duplicates_element.t =
     | Left of 'a
     | Right of 'b
     | Both of 'a * 'b
   [@@deriving bin_io]
-
-  include (
-    Base.Sequence.Merge_with_duplicates_element :
-      module type of struct
-      include Base.Sequence.Merge_with_duplicates_element
-    end
-    with type ('a, 'b) t := ('a, 'b) t)
 end
-
-include (
-  Base.Sequence :
-    module type of struct
-    include Base.Sequence
-  end
-  with module Step := Base.Sequence.Step
-   and module Merge_with_duplicates_element := Base.Sequence
-                                               .Merge_with_duplicates_element)
 
 module type Heap = sig
   type 'a t

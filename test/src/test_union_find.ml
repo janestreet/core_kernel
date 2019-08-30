@@ -120,3 +120,8 @@ let%test_unit "balanced" =
   assert (Array.for_all ts ~f:(fun t' -> same_class t t' && get t' = 42));
   assert (Array.for_all ts ~f:is_compressed)
 ;;
+
+let%expect_test "[get] of a root does not allocate" =
+  let t = create () in
+  require_no_allocation [%here] (fun () -> get t)
+;;

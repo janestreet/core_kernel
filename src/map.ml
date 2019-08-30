@@ -81,13 +81,7 @@ let quickcheck_observer = Base_quickcheck.Observer.map_t
 let quickcheck_shrinker = Base_quickcheck.Shrinker.map_t
 
 module Using_comparator = struct
-  include (
-    Map.Using_comparator :
-      module type of struct
-      include Map.Using_comparator
-    end
-    with module Tree := Tree)
-
+  include Map.Using_comparator
   include For_quickcheck
 
   let of_hashtbl_exn ~comparator hashtbl =
@@ -223,6 +217,16 @@ end = struct
     Using_comparator.of_increasing_sequence ~comparator seq
   ;;
 
+  let of_sequence seq = Using_comparator.of_sequence ~comparator seq
+  let of_sequence_or_error seq = Using_comparator.of_sequence_or_error ~comparator seq
+  let of_sequence_exn seq = Using_comparator.of_sequence_exn ~comparator seq
+  let of_sequence_multi seq = Using_comparator.of_sequence_multi ~comparator seq
+
+  let of_sequence_fold seq ~init ~f =
+    Using_comparator.of_sequence_fold ~comparator seq ~init ~f
+  ;;
+
+  let of_sequence_reduce seq ~f = Using_comparator.of_sequence_reduce ~comparator seq ~f
   let of_alist alist = Using_comparator.of_alist ~comparator alist
   let of_alist_or_error alist = Using_comparator.of_alist_or_error ~comparator alist
   let of_alist_exn alist = Using_comparator.of_alist_exn ~comparator alist
@@ -264,6 +268,12 @@ module Make_tree (Key : Comparator.S1) = struct
   ;;
 
   let of_increasing_sequence seq = of_increasing_sequence ~comparator seq
+  let of_sequence s = of_sequence s ~comparator
+  let of_sequence_or_error s = of_sequence_or_error s ~comparator
+  let of_sequence_exn s = of_sequence_exn s ~comparator
+  let of_sequence_multi s = of_sequence_multi s ~comparator
+  let of_sequence_fold s ~init ~f = of_sequence_fold s ~init ~f ~comparator
+  let of_sequence_reduce s ~f = of_sequence_reduce s ~f ~comparator
   let of_alist a = of_alist a ~comparator
   let of_alist_or_error a = of_alist_or_error a ~comparator
   let of_alist_exn a = of_alist_exn a ~comparator
@@ -523,19 +533,18 @@ module Make_plain (Key : Key_plain) = Make_plain_using_comparator (struct
     include Comparator.Make (Key)
   end)
 
-module Make_using_comparator (Key : sig
+module Make_using_comparator (Key_sexp : sig
     type t [@@deriving sexp]
 
     include Comparator.S with type t := t
   end) =
 struct
-  module Key = Key
-  module M1 = Make_plain_using_comparator (Key)
-  include (M1 : module type of M1 with module Tree := M1.Tree with module Key := Key)
+  include Make_plain_using_comparator (Key_sexp)
+  module Key = Key_sexp
   include Provide_of_sexp (Key)
 
   module Tree = struct
-    include M1.Tree
+    include Tree
     include Provide_of_sexp (Key)
   end
 end
@@ -545,15 +554,14 @@ module Make (Key : Key) = Make_using_comparator (struct
     include Comparator.Make (Key)
   end)
 
-module Make_binable_using_comparator (Key : sig
+module Make_binable_using_comparator (Key_bin_sexp : sig
     type t [@@deriving bin_io, sexp]
 
     include Comparator.S with type t := t
   end) =
 struct
-  module Key = Key
-  module M2 = Make_using_comparator (Key)
-  include (M2 : module type of M2 with module Key := Key)
+  include Make_using_comparator (Key_bin_sexp)
+  module Key = Key_bin_sexp
   include Provide_bin_io (Key)
 end
 

@@ -734,19 +734,16 @@ include Hashable.Make_binable (struct
 
 type comparator_witness = Stable.V2.comparator_witness
 
-module C = Comparable.Make_binable_using_comparator (struct
+include Comparable.Make_binable_using_comparator (struct
     type nonrec t = t [@@deriving bin_io, compare, sexp]
     type nonrec comparator_witness = comparator_witness
 
     let comparator = Stable.V2.comparator
   end)
 
-include (
-  C :
-    module type of C
-  with module Replace_polymorphic_compare := Replace_polymorphic_compare)
-
-(* re-include comparisons to shadow the un-inlineable ones from [Comparable] *)
+(* re-include [Replace_polymorphic_compare] and its comparisons to shadow the
+   un-inlineable ones from [Comparable] *)
+module Replace_polymorphic_compare = T.Replace_polymorphic_compare
 include Replace_polymorphic_compare
 
 let to_span_float_round_nearest t = Span_float.of_sec (to_sec t)

@@ -18,13 +18,7 @@ module Stable = struct
 end
 
 include Stable.V1
-
-include (
-  Base.Maybe_bound :
-    module type of struct
-    include Base.Maybe_bound
-  end
-  with type 'a t := 'a t)
+include Base.Maybe_bound
 
 let compare_one_sided ~side compare_a t1 t2 =
   match t1, t2 with

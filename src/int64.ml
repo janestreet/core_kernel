@@ -1,31 +1,20 @@
 open! Import
 
-type t = int64 [@@deriving typerep]
-
 include Identifiable.Extend
     (Base.Int64)
     (struct
       type t = int64 [@@deriving bin_io]
     end)
 
+include Base.Int64
+
+type t = int64 [@@deriving typerep]
+
 module Hex = struct
+  include Hex
+
   type nonrec t = t [@@deriving typerep, bin_io]
-
-  include (
-    Base.Int64.Hex :
-      module type of struct
-      include Base.Int64.Hex
-    end
-    with type t := t)
 end
-
-include (
-  Base.Int64 :
-    module type of struct
-    include Base.Int64
-  end
-  with type t := t
-  with module Hex := Base.Int64.Hex)
 
 let quickcheck_generator = Base_quickcheck.Generator.int64
 let quickcheck_observer = Base_quickcheck.Observer.int64

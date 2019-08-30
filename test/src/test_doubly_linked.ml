@@ -255,6 +255,12 @@ let%test_unit "findi_elt" =
   assert ([%equal: _ option] result None)
 ;;
 
+let%expect_test "[iter] does not allocate" =
+  let t = create () in
+  ignore (insert_first t () : _ Elt.t);
+  require_no_allocation [%here] (fun () -> iter t ~f:ignore)
+;;
+
 let%expect_test "iteri" =
   iteri (create_default ()) ~f:(fun i v -> printf "f %d %d\n" i v);
   [%expect {|

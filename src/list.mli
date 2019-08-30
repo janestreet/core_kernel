@@ -2,6 +2,13 @@
 
 open! Import
 
+(** {2 The interface from Base} *)
+
+(** @open *)
+include module type of struct
+  include Base.List
+end
+
 type 'a t = 'a list [@@deriving bin_io, typerep]
 
 module Assoc : sig
@@ -18,15 +25,6 @@ module Assoc : sig
   end
   with type ('a, 'b) t := ('a, 'b) t
 end
-
-(** {2 The interface from Base} *)
-
-(** @open *)
-include module type of struct
-  include Base.List
-end
-with type 'a t := 'a t
-with module Assoc := Base.List.Assoc
 
 (** {2 Extensions} *)
 

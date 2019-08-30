@@ -27,23 +27,13 @@ module type Extension = sig
 end
 
 module type S_unbounded = sig
-  include Extension
-
-  include
-    Base.Int.S_unbounded
-    with type t := t
-    with type comparator_witness := comparator_witness
-    with module Hex := Hex
+  include Base.Int.S_unbounded
+  include Extension with type t := t with type comparator_witness := comparator_witness
 end
 
 module type S = sig
-  include Extension
-
-  include
-    Base.Int.S
-    with type t := t
-    with type comparator_witness := comparator_witness
-    with module Hex := Hex
+  include Base.Int.S
+  include Extension with type t := t with type comparator_witness := comparator_witness
 end
 
 module type Extension_with_stable = sig

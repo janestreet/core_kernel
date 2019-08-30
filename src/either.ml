@@ -14,13 +14,7 @@ module Stable = struct
 end
 
 include Stable.V1
-
-include (
-  Base.Either :
-    module type of struct
-    include Base.Either
-  end
-  with type ('f, 's) t := ('f, 's) t)
+include Base.Either
 
 include Comparator.Derived2 (struct
     type nonrec ('a, 'b) t = ('a, 'b) t [@@deriving sexp_of, compare]

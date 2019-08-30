@@ -1,5 +1,10 @@
 (** This module extends {{!Base.String}[Base.String]}. *)
 
+(** @open *)
+include module type of struct
+  include Base.String
+end
+
 type t = string [@@deriving bin_io, typerep]
 
 module Caseless : sig
@@ -11,13 +16,6 @@ module Caseless : sig
   val is_suffix : t -> suffix:t -> bool
   val is_prefix : t -> prefix:t -> bool
 end
-
-(** @open *)
-include module type of struct
-  include Base.String
-end
-with type t := t
-with module Caseless := Base.String.Caseless
 
 
 (** [slice t start stop] returns a new string including elements [t.(start)] through

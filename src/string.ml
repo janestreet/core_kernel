@@ -1,4 +1,5 @@
 open! Import
+include Base.String
 
 (* These two are needed because [include Identifiable.Extend] (present later in the file)
    binds new [Map] and [Set] modules. *)
@@ -8,14 +9,9 @@ module Core_set = Set
 module Stable = struct
   module V1 = struct
     module T = struct
-      type t = string [@@deriving bin_io]
+      include Base.String
 
-      include (
-        Base.String :
-          module type of struct
-          include Base.String
-        end
-        with type t := t)
+      type t = string [@@deriving bin_io]
     end
 
     include T
@@ -26,14 +22,9 @@ end
 
 module Caseless = struct
   module T = struct
-    type t = string [@@deriving bin_io]
+    include Caseless
 
-    include (
-      Base.String.Caseless :
-        module type of struct
-        include Base.String.Caseless
-      end
-      with type t := t)
+    type t = string [@@deriving bin_io]
   end
 
   include T
@@ -42,14 +33,6 @@ module Caseless = struct
 end
 
 type t = string [@@deriving typerep]
-
-include (
-  Base.String :
-    module type of struct
-    include Base.String
-  end
-  with type t := t
-  with module Caseless := Base.String.Caseless)
 
 include Identifiable.Extend
     (Base.String)

@@ -453,19 +453,18 @@ module Make_plain (Elt : Elt_plain) = Make_plain_using_comparator (struct
     include Comparator.Make (Elt)
   end)
 
-module Make_using_comparator (Elt : sig
+module Make_using_comparator (Elt_sexp : sig
     type t [@@deriving sexp]
 
     include Comparator.S with type t := t
   end) =
 struct
-  module Elt = Elt
-  module M1 = Make_plain_using_comparator (Elt)
-  include (M1 : module type of M1 with module Tree := M1.Tree with module Elt := Elt)
+  include Make_plain_using_comparator (Elt_sexp)
+  module Elt = Elt_sexp
   include Provide_of_sexp (Elt)
 
   module Tree = struct
-    include M1.Tree
+    include Tree
     include Provide_of_sexp (Elt)
   end
 end
@@ -475,15 +474,14 @@ module Make (Elt : Elt) = Make_using_comparator (struct
     include Comparator.Make (Elt)
   end)
 
-module Make_binable_using_comparator (Elt : sig
+module Make_binable_using_comparator (Elt_bin_sexp : sig
     type t [@@deriving bin_io, sexp]
 
     include Comparator.S with type t := t
   end) =
 struct
-  module Elt = Elt
-  module M2 = Make_using_comparator (Elt)
-  include (M2 : module type of M2 with module Elt := Elt)
+  include Make_using_comparator (Elt_bin_sexp)
+  module Elt = Elt_bin_sexp
   include Provide_bin_io (Elt)
 end
 

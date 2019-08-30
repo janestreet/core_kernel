@@ -1,22 +1,10 @@
 open! Import
+include Base.Or_error
 
 type 'a t = ('a, Error.t) Result.t [@@deriving bin_io]
 
-module T : module type of struct
-  include Base.Or_error
-end
-with type 'a t := 'a t =
-  Base.Or_error
-
-include T
-
 module Expect_test_config = struct
-  module IO = struct
-    type nonrec 'a t = 'a t
-
-    include T
-  end
-
+  module IO = Base.Or_error
   module IO_run = IO
 
   module IO_flush = struct
@@ -24,8 +12,6 @@ module Expect_test_config = struct
 
     let to_run t = t
   end
-
-  open T
 
   let flush () = return ()
   let run f = ok_exn (f ())

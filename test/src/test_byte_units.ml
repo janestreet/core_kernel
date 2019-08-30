@@ -414,6 +414,7 @@ let ensure_round_trippable
       ~tolerance
   =
   let equal a b =
+    let open Float.Robustly_comparable in
     match tolerance with
     | `Zero -> [%compare.equal: Byte_units.t] a b
     | `Epsilon ->

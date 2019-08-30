@@ -6,7 +6,6 @@
 include module type of struct
   include Base.Int63
 end
-with module Hex := Base.Int63.Hex
 
 (** {2 Extensions} *)
 

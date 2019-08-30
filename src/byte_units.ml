@@ -274,9 +274,9 @@ let to_string_short t =
   let to_units_str to_unit ext =
     let f = to_unit t in
     let f_abs = Float.abs f in
-    if f_abs >=. 100.
+    if Float.Robustly_comparable.( >=. ) f_abs 100.
     then sprintf "%.0f%c" f ext
-    else if f_abs >=. 10.
+    else if Float.Robustly_comparable.( >=. ) f_abs 10.
     then sprintf "%.1f%c" f ext
     else sprintf "%.2f%c" f ext
   in

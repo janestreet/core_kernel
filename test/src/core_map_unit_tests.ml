@@ -122,6 +122,12 @@ struct
     let of_alist_reduce x = simplify_creator of_alist_reduce x
     let of_iteri ~iteri = simplify_creator of_iteri ~iteri
     let of_tree x = simplify_creator of_tree x
+    let of_sequence x = simplify_creator of_sequence x
+    let of_sequence_or_error x = simplify_creator of_sequence_or_error x
+    let of_sequence_exn x = simplify_creator of_sequence_exn x
+    let of_sequence_multi x = simplify_creator of_sequence_multi x
+    let of_sequence_fold x = simplify_creator of_sequence_fold x
+    let of_sequence_reduce x = simplify_creator of_sequence_reduce x
     let quickcheck_generator x = simplify_creator quickcheck_generator x
 
     type ('a, 'b) t = ('a, 'b, Int.comparator_witness) t_
@@ -615,6 +621,69 @@ struct
     match Map.of_increasing_sequence (Sequence.of_list increasing_alist) with
     | Error _ -> failwith "of_increasing_sequence: expected to get a map back"
     | Ok map -> Map.equal Int.equal map (Map.of_alist_exn increasing_alist)
+  ;;
+
+  (* Sequence constructors check against the alist ones *)
+  let of_sequence_fold _ = assert false
+  let of_sequence_reduce _ = assert false
+
+  let%test_unit _ =
+    let filtered =
+      List.filter Key.samples ~f:(fun key -> not (Key.equal key Key.sample))
+    in
+    let alist =
+      [ Key.sample, 1; Key.sample, 2 ] @ random_alist filtered @ [ Key.sample, 3 ]
+    in
+    let alist_fold = Map.of_alist_fold ~init:0 ~f:( + ) alist in
+    let alist_reduce = Map.of_alist_reduce ~f:( + ) alist in
+    let sequence_fold = Map.of_sequence_fold ~init:0 ~f:( + ) (Sequence.of_list alist) in
+    let sequence_reduce = Map.of_sequence_reduce ~f:( + ) (Sequence.of_list alist) in
+    assert (Map.equal Int.equal alist_fold sequence_fold);
+    assert (Map.equal Int.equal alist_reduce sequence_reduce)
+  ;;
+
+  let of_sequence _ = assert false
+
+  let%test _ =
+    let input = random_alist Key.samples in
+    let alist = Map.of_alist input in
+    let sequence = Map.of_sequence (Sequence.of_list input) in
+    match alist, sequence with
+    | `Duplicate_key alist_key, `Duplicate_key sequence_key ->
+      Key.equal alist_key sequence_key
+    | `Ok alist_map, `Ok sequence_map -> Map.equal Int.equal alist_map sequence_map
+    | _, _ -> false
+  ;;
+
+  let of_sequence_or_error _ = assert false
+  let of_sequence_exn _ = assert false
+
+  let%test_unit _ =
+    let input = random_alist Key.samples in
+    let alist_exn = Option.try_with (fun () -> Map.of_alist_exn input) in
+    let alist_or_error = Result.ok (Map.of_alist_or_error input) in
+    let sequence_exn =
+      Option.try_with (fun () -> Map.of_sequence_exn (Sequence.of_list input))
+    in
+    let sequence_or_error =
+      Result.ok (Map.of_sequence_or_error (Sequence.of_list input))
+    in
+    assert (Option.equal (Map.equal Int.equal) alist_exn sequence_exn);
+    assert (Option.equal (Map.equal Int.equal) alist_or_error sequence_or_error)
+  ;;
+
+  let of_sequence_multi _ = assert false
+
+  let%test _ =
+    let filtered =
+      List.filter Key.samples ~f:(fun key -> not (Key.equal key Key.sample))
+    in
+    let input =
+      ((Key.sample, 1) :: (Key.sample, 2) :: random_alist filtered) @ [ Key.sample, 3 ]
+    in
+    let alist = Map.of_alist_multi input in
+    let sequence = Map.of_sequence_multi (Sequence.of_list input) in
+    Map.equal (List.equal Int.equal) alist sequence
   ;;
 
   let is_empty _ = assert false

@@ -2,19 +2,11 @@ open! Import
 
 type t = bool [@@deriving bin_io, typerep]
 
-module Z =
-  Identifiable.Extend
+include Identifiable.Extend
     (Base.Bool)
     (struct
       type nonrec t = t [@@deriving bin_io]
     end)
-
-include (
-  Z :
-    module type of struct
-    include Z
-  end
-  with module Replace_polymorphic_compare := Z.Replace_polymorphic_compare)
 
 module Replace_polymorphic_compare = Base.Bool
 

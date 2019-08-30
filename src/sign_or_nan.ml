@@ -13,12 +13,5 @@ module Stable = struct
 end
 
 include Stable.V1
-
-include (
-  Sign_or_nan :
-    module type of struct
-    include Sign_or_nan
-  end
-  with type t := t)
-
+include Sign_or_nan
 include Identifiable.Extend (Sign_or_nan) (Stable.V1)

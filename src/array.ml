@@ -3,14 +3,13 @@ open Perms.Export
 module Array = Base.Array
 module Core_sequence = Sequence
 
-type 'a t = 'a array [@@deriving bin_io, typerep]
-
 include (
   Base.Array :
   sig
     type 'a t = 'a array [@@deriving sexp, compare]
-  end
-  with type 'a t := 'a t)
+  end)
+
+type 'a t = 'a array [@@deriving bin_io, typerep]
 
 module Private = Base.Array.Private
 

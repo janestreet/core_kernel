@@ -2,14 +2,9 @@ open! Import
 
 module Stable = struct
   module V1 = struct
-    type t = bytes [@@deriving bin_io, typerep]
+    include Base.Bytes
 
-    include (
-      Base.Bytes :
-        module type of struct
-        include Base.Bytes
-      end
-      with type t := t)
+    type t = bytes [@@deriving bin_io, typerep]
   end
 end
 

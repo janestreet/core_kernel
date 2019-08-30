@@ -2,6 +2,10 @@
 
 open! Import
 
+include module type of struct
+  include Base.Float
+end
+
 type t = float [@@deriving typerep]
 
 module Robust_compare : sig
@@ -29,6 +33,8 @@ module O : sig
   include Robustly_comparable.S with type t := t
 end
 
+module Robustly_comparable : Robust_compare.S
+
 module Terse : sig
   type nonrec t = t [@@deriving bin_io]
 
@@ -42,13 +48,6 @@ include
   Identifiable.S
   with type t := t
    and type comparator_witness := Base.Float.comparator_witness
-
-include module type of struct
-  include Base.Float
-end
-with type t := t
-with module O := Base.Float.O
-with module Terse := Base.Float.Terse
 
 (** [to_string_12 x] builds a string representing [x] using up to 12 significant digits.
     It loses precision.  You can use ["%{Float#12}"] in formats, but consider ["%.12g"],

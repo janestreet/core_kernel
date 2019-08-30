@@ -48,16 +48,16 @@ module Stable = struct
   end
 end
 
-type t = Base.Int63.t
+(* This [include struct] is required because it lets us shadow [t] when we include
+   [Base.Int63] later on. *)
+include struct
+  type t = Base.Int63.t
+end
 
 let typerep_of_t = typerep_of_int63
 let typename_of_t = typename_of_int63
 
-module Replace_polymorphic_compare : Comparable.Polymorphic_compare with type t := t =
-  Base.Int63
-
-module I =
-  Identifiable.Extend
+include Identifiable.Extend
     (Base.Int63)
     (struct
       type nonrec t = t
@@ -65,31 +65,16 @@ module I =
       include Bin
     end)
 
-include (
-  I :
-    module type of struct
-    include I
-  end
-  with module Replace_polymorphic_compare := I.Replace_polymorphic_compare)
+module Replace_polymorphic_compare : Comparable.Polymorphic_compare with type t := t =
+  Base.Int63
+
+include Base.Int63
 
 module Hex = struct
+  include Hex
+
   type nonrec t = t [@@deriving typerep, bin_io]
-
-  include (
-    Base.Int63.Hex :
-      module type of struct
-      include Base.Int63.Hex
-    end
-    with type t := t)
 end
-
-include (
-  Base.Int63 :
-    module type of struct
-    include Base.Int63
-  end
-  with type t := t
-  with module Hex := Base.Int63.Hex)
 
 let quickcheck_generator = Base_quickcheck.Generator.int63
 let quickcheck_observer = Base_quickcheck.Observer.int63
