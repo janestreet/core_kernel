@@ -1,8 +1,6 @@
 open! Import
 include Doubly_linked_intf
 
-open! Poly
-
 (* INVARIANT: This exception is raised if a list is mutated during a pending iteration.
 
    This invariant is guaranteed by the Header and Elt modules in conjunction.  All
