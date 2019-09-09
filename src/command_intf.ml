@@ -260,6 +260,7 @@ module type Command = sig
   (** Anonymous command-line argument specification. *)
   module Anons : sig
     (** A specification of some number of anonymous arguments. *)
+
     type +'a t
 
     (** [(name %: typ)] specifies a required anonymous argument of type [typ].
