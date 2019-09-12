@@ -4,7 +4,7 @@
 
 open! Core_kernel
 
-type t
+type t [@@deriving equal, quickcheck, sexp]
 
 (** Takes O(1) time. The string isn't copied, so don't mutate it. *)
 val of_string : string -> t
@@ -38,3 +38,9 @@ val add_to_buffer : t -> Buffer.t -> unit
     However, the worst-case time complexity is still [O(length t)]
     instead of [O(min(length t, length prefix))] as one could expect. *)
 val is_prefix : t -> prefix:t -> bool
+
+module For_testing : sig
+  val sexp_of_t : t -> Sexp.t
+  val num_bases : t -> int
+  val to_string_tailcall : t -> string
+end

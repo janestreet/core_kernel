@@ -91,3 +91,22 @@ let%expect_test "is_prefix" =
   test (aba ^ ba ^ ba) (ab ^ ab ^ ba);
   [%expect {| |}]
 ;;
+
+let%expect_test "to_string and For_testing.to_string_tailcall produce identical results" =
+  Expect_test_helpers_kernel.require_does_not_raise [%here] (fun () ->
+    Quickcheck.test
+      ~shrinker:quickcheck_shrinker
+      ~sexp_of:For_testing.sexp_of_t
+      ~f:(fun t ->
+        let to_string = to_string t in
+        let to_string_simple = For_testing.to_string_tailcall t in
+        match String.equal to_string to_string_simple with
+        | true -> ()
+        | false ->
+          raise_s
+            [%sexp
+              "mismatch between to_string implementations"
+            , { to_string : string; to_string_simple : string }])
+      quickcheck_generator);
+  [%expect {| |}]
+;;
