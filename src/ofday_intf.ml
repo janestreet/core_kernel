@@ -88,6 +88,17 @@ module type S = sig
   val of_span_since_start_of_day : Span.t -> t
   [@@deprecated "[since 2018-04] use [of_span_since_start_of_day_exn] instead"]
 
+  (** Reports whether a span represents a valid time since the start of the day, i.e.
+      whether [of_span_since_start_of_day_exn span] would succeed. *)
+  val span_since_start_of_day_is_valid : Span.t -> bool
+
+  (** [of_span_since_start_of_day_unchecked] does not validate that the [Span] represents
+      a valid [Ofday].
+
+      Behavior of other [Ofday] accessors is unspecified, but still safe (e.g., won't
+      segfault), if the input does not satisfy [span_since_start_of_day_is_valid]. *)
+  val of_span_since_start_of_day_unchecked : Span.t -> t
+
   (** [add t s] shifts the time of day [t] by the span [s].  It returns [None] if the
       result is not in the same 24-hour day. *)
   val add : t -> Span.t -> t option

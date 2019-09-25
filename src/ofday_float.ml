@@ -23,6 +23,8 @@ module Stable = struct
       val prev : t -> t option
       val diff : t -> t -> Span.t
       val of_span_since_start_of_day_exn : Span.t -> t
+      val of_span_since_start_of_day_unchecked : Span.t -> t
+      val span_since_start_of_day_is_valid : Span.t -> bool
       val to_span_since_start_of_day : t -> Span.t
       val start_of_day : t
       val start_of_next_day : t
@@ -69,6 +71,12 @@ module Stable = struct
       let is_valid (t : t) =
         let t = to_span_since_start_of_day t in
         Span.( <= ) Span.zero t && Span.( <= ) t Span.day
+      ;;
+
+      let of_span_since_start_of_day_unchecked span = Span.to_sec span
+
+      let span_since_start_of_day_is_valid span =
+        is_valid (of_span_since_start_of_day_unchecked span)
       ;;
 
       let of_span_since_start_of_day_exn span =

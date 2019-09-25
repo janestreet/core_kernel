@@ -581,14 +581,6 @@ let unsubscribe t (subscription : _ Subscriber.t) =
   update_write t
 ;;
 
-let unsubscribes t (subscriptions : _ Subscriber.t list) =
-  if not (List.is_empty subscriptions)
-  then (
-    List.iter subscriptions ~f:(fun subscription ->
-      t.subscribers <- Map.remove t.subscribers subscription.id);
-    update_write t)
-;;
-
 let%test_module _ =
   (module struct
     let assert_no_allocation bus callback write =

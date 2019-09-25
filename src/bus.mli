@@ -162,8 +162,3 @@ val fold_exn
     Also like [subscribe_exn], [unsubscribe] takes time proportional to the number of
     callbacks. *)
 val unsubscribe : 'callback Read_only.t -> 'callback Subscriber.t -> unit
-
-(** [unsubscribes t subscribers] is like calling [unsubscribe] on each of [subscribers].
-    But it is more efficient, taking time proportional to the number of callbacks,
-    rather than number of callbacks times length of [subscribers]. *)
-val unsubscribes : 'callback Read_only.t -> 'callback Subscriber.t list -> unit

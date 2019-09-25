@@ -1,7 +1,7 @@
 open! Core_kernel
 
 (** ['a t] is a type that uses [Core_kernel.am_running_test] to determine if it should
-    use the ['a] sexp serializer, or serialize the type as '<HIDDEN IN TEST>'.
+    use the ['a] sexp serializer, or serialize the type as '<hidden_in_test>'.
     It can be thought of as a form of [@sexp.opaque] that is conditional upon if tests are
     running. *)
 type 'a t = 'a [@@deriving bin_io, compare, sexp_of]

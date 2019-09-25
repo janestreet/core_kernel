@@ -32,6 +32,9 @@ let[@inline always] is_invalid span =
   Span.( < ) span start_of_day || Span.( > ) span start_of_next_day
 ;;
 
+let span_since_start_of_day_is_valid span = not (is_invalid span)
+let of_span_since_start_of_day_unchecked span = span
+
 let of_span_since_start_of_day_exn span =
   if is_invalid span then input_out_of_bounds span else span
 ;;

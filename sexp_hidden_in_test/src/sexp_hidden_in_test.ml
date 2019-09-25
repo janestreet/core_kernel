@@ -7,7 +7,7 @@ struct
   type 'a t = 'a [@@deriving bin_io, compare, sexp]
 
   let sexp_of_t sexp_of_a a =
-    if M.am_running_test then Sexp.Atom "<HIDDEN IN TEST>" else sexp_of_a a
+    if M.am_running_test then Sexp.Atom "<hidden_in_test>" else sexp_of_a a
   ;;
 
   module With_non_roundtripping_in_test_of_sexp = struct
@@ -34,8 +34,8 @@ let%test_module _ =
     end
 
     let%expect_test "Turned on" =
-      print_s ([%sexp_of: Turned_on.t] 1024);
-      [%expect {| "<HIDDEN IN TEST>" |}]
+      print_s [%sexp (1024 : Turned_on.t)];
+      [%expect {| <hidden_in_test> |}]
     ;;
 
     let%expect_test "Turned off" =
