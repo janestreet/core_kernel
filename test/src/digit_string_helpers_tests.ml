@@ -65,7 +65,7 @@ let%expect_test "max_int63_digits" =
 let max_with ~digits = Int63.pred (Int63.pow int63_ten (Int63.of_int digits))
 
 let test_write_int63 ~digits ?(verbose = true) ?(align = digits) write_int63 =
-  let print_endline = if verbose then print_endline else ignore in
+  let print_endline = if verbose then print_endline ?hide_positions:None else ignore in
   let require_does_raise here f =
     (* uses above print_endline, so if verbose is false, prints nothing on exn *)
     match f () with
@@ -372,7 +372,7 @@ let%expect_test "write_int63" =
 ;;
 
 let test_read_int63 ?(verbose = true) read_int63 ~digits =
-  let print_endline = if verbose then print_endline else ignore in
+  let print_endline = if verbose then print_endline ?hide_positions:None else ignore in
   let require_does_raise here f =
     match f () with
     | _ -> require_does_raise here ignore

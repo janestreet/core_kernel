@@ -130,9 +130,9 @@ end
 
     See {!Core.Time_ns} for important user documentation.
 
-    Internally, arithmetic is not overflow-checked.  Instead, overflows are silently
-    ignored, as for [int] arithmetic.  Conversions may (or may not) raise if prior
-    arithmetic operations overflowed. *)
+    Internally, arithmetic is not overflow-checked. Instead, overflows are silently
+    ignored as for [int] arithmetic, unless specifically documented otherwise. Conversions
+    may (or may not) raise if prior arithmetic operations overflowed. *)
 module type Time_ns = sig
   module Span : Span
   module Ofday : Ofday with module Span := Span
@@ -181,6 +181,14 @@ module type Time_ns = sig
 
   (** overflows silently *)
   val add : t -> Span.t -> t
+
+  (** As [add]; rather than over/underflowing, clamps the result to the closed interval
+      between [min_value_representable] and [max_value_representable]. *)
+  val add_saturating : t -> Span.t -> t
+
+  (** As [sub]; rather than over/underflowing, clamps the result to the closed interval
+      between [min_value_representable] and [max_value_representable]. *)
+  val sub_saturating : t -> Span.t -> t
 
   (** overflows silently *)
   val sub : t -> Span.t -> t

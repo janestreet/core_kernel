@@ -167,6 +167,7 @@ val gather_conjuncts : 'a t -> 'a t list
 val gather_disjuncts : 'a t -> 'a t list
 
 include Container.S1 with type 'a t := 'a t
+include Quickcheckable.S1 with type 'a t := 'a t
 
 (** [Blang.t] sports a substitution monad:
     {ul {- [return v] is [Base v] (think of [v] as a variable) }

@@ -859,3 +859,97 @@ let%expect_test "test human comparisons" =
      (first_time "1969-07-20 20:17:40Z")
      (last_time  "2000-01-01 00:00:00Z")) |}]
 ;;
+
+let%expect_test "add_saturating" =
+  let test x y =
+    let sum = Time_ns.add x y in
+    let saturating_sum = Time_ns.add_saturating x y in
+    if Time_ns.equal sum saturating_sum
+    then print_s [%message "correct" (sum : Time_ns.Alternate_sexp.t)]
+    else (
+      let message =
+        if Time_ns.( < ) saturating_sum sum then "underflow" else "overflow"
+      in
+      print_s
+        [%message
+          message
+            (sum : Time_ns.Alternate_sexp.t)
+            (saturating_sum : Time_ns.Alternate_sexp.t)])
+  in
+  (* no overflow *)
+  test (Time_ns.of_string "2018-01-01 00:00:00Z") Time_ns.Span.minute;
+  [%expect {| (correct (sum "2018-01-01 00:01:00Z")) |}];
+  (* some positive overflows *)
+  test Time_ns.max_value_representable Time_ns.Span.minute;
+  [%expect
+    {|
+    (overflow
+      (sum            "1823-11-12 00:07:21.572612095Z")
+      (saturating_sum "2116-02-20 23:53:38.427387903Z")) |}];
+  test (Time_ns.of_string "2018-01-01 00:00:00Z") (Time_ns.Span.of_sec 4_000_000_000.);
+  [%expect
+    {|
+    (overflow
+      (sum            "1852-06-24 07:19:23.145224192Z")
+      (saturating_sum "2116-02-20 23:53:38.427387903Z")) |}];
+  (* and negative overflows *)
+  test Time_ns.min_value_representable Time_ns.Span.(neg minute);
+  [%expect
+    {|
+    (underflow
+      (sum            "2116-02-20 23:52:38.427387904Z")
+      (saturating_sum "1823-11-12 00:06:21.572612096Z")) |}];
+  test (Time_ns.of_string "1918-01-01 00:00:00Z") (Time_ns.Span.of_sec (-4_000_000_000.));
+  [%expect
+    {|
+    (underflow
+      (sum            "2083-07-09 16:40:36.854775808Z")
+      (saturating_sum "1823-11-12 00:06:21.572612096Z")) |}]
+;;
+
+let%expect_test "sub_saturating" =
+  let test x y =
+    let diff = Time_ns.sub x y in
+    let saturating_diff = Time_ns.sub_saturating x y in
+    if Time_ns.equal diff saturating_diff
+    then print_s [%message "correct" (diff : Time_ns.Alternate_sexp.t)]
+    else (
+      let message =
+        if Time_ns.( < ) saturating_diff diff then "underflow" else "overflow"
+      in
+      print_s
+        [%message
+          message
+            (diff : Time_ns.Alternate_sexp.t)
+            (saturating_diff : Time_ns.Alternate_sexp.t)])
+  in
+  (* no overflow *)
+  test (Time_ns.of_string "2018-01-01 00:00:00Z") Time_ns.Span.minute;
+  [%expect {| (correct (diff "2017-12-31 23:59:00Z")) |}];
+  (* some negative overflows *)
+  test Time_ns.min_value_representable Time_ns.Span.minute;
+  [%expect
+    {|
+    (underflow
+      (diff            "2116-02-20 23:52:38.427387904Z")
+      (saturating_diff "1823-11-12 00:06:21.572612096Z")) |}];
+  test (Time_ns.of_string "1918-01-01 00:00:00Z") (Time_ns.Span.of_sec 4_000_000_000.);
+  [%expect
+    {|
+    (underflow
+      (diff            "2083-07-09 16:40:36.854775808Z")
+      (saturating_diff "1823-11-12 00:06:21.572612096Z")) |}];
+  (* and positive overflows *)
+  test Time_ns.max_value_representable Time_ns.Span.(neg minute);
+  [%expect
+    {|
+    (overflow
+      (diff            "1823-11-12 00:07:21.572612095Z")
+      (saturating_diff "2116-02-20 23:53:38.427387903Z")) |}];
+  test (Time_ns.of_string "2018-01-01 00:00:00Z") (Time_ns.Span.of_sec (-4_000_000_000.));
+  [%expect
+    {|
+    (overflow
+      (diff            "1852-06-24 07:19:23.145224192Z")
+      (saturating_diff "2116-02-20 23:53:38.427387903Z")) |}]
+;;

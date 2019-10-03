@@ -33,14 +33,43 @@ let[@cold] overflow () = raise_s [%message "Time_ns: overflow"]
 let is_earlier t1 ~than:t2 = t1 < t2
 let is_later t1 ~than:t2 = t1 > t2
 
-let add_exn x y =
-  let z = add x y in
-  if (Span.( > ) y Span.zero && z < x) || (Span.( < ) y Span.zero && z > x)
-  then overflow ()
-  else z
+let add_overflowed x y ~sum =
+  if Span.( > ) y Span.zero then Span.( < ) sum x else Span.( > ) sum x
 ;;
 
-let sub_exn x y = add_exn x (Span.neg y)
+let sub_overflowed x y ~diff =
+  if Span.( > ) y Span.zero then Span.( > ) diff x else Span.( < ) diff x
+;;
+
+let add_exn x y =
+  let sum = add x y in
+  if add_overflowed x y ~sum then overflow () else sum
+;;
+
+let sub_exn x y =
+  let diff = sub x y in
+  if sub_overflowed x y ~diff then overflow () else diff
+;;
+
+let add_saturating x y =
+  let sum = add x y in
+  if add_overflowed x y ~sum
+  then
+    if Span.(y > zero)
+    then Span.max_value_representable
+    else Span.min_value_representable
+  else sum
+;;
+
+let sub_saturating x y =
+  let diff = sub x y in
+  if sub_overflowed x y ~diff
+  then
+    if Span.(y > zero)
+    then Span.min_value_representable
+    else Span.max_value_representable
+  else diff
+;;
 
 let to_int_ns_since_epoch =
   if arch_sixtyfour

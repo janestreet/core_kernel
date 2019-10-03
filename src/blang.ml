@@ -396,3 +396,63 @@ let eval_set ~universe:all set_of_base =
   in
   aux
 ;;
+
+(** We avoid deriving quickcheck to ensure that the invariants described in [T]'s comments
+    above are preserved. *)
+let quickcheck_generator a_generator =
+  Quickcheck.Generator.recursive_union
+    [ Quickcheck.Generator.map ~f:base a_generator
+    ; Quickcheck.Generator.singleton true_
+    ; Quickcheck.Generator.singleton false_
+    ]
+    ~f:(fun self ->
+      [ Quickcheck.Generator.map self ~f:not_
+      ; Quickcheck.Generator.map2 self self ~f:O.( || )
+      ; Quickcheck.Generator.map2 self self ~f:O.( && )
+      ; Quickcheck.Generator.map3 self self self ~f:if_
+      ])
+;;
+
+let quickcheck_shrinker (type a) (a_shrinker : a Quickcheck.Shrinker.t) =
+  Quickcheck.Shrinker.fixed_point (fun self ->
+    let binop operator left right =
+      Sequence.round_robin
+        [ Sequence.singleton left
+        ; Sequence.singleton right
+        ; Sequence.map (Quickcheck.Shrinker.shrink self left) ~f:(fun left ->
+            operator left right)
+        ; Sequence.map (Quickcheck.Shrinker.shrink self right) ~f:(fun right ->
+            operator left right)
+        ]
+    in
+    Quickcheck.Shrinker.create (fun t ->
+      match t with
+      | True | False -> Sequence.empty
+      | Base a -> Sequence.map ~f:base (Quickcheck.Shrinker.shrink a_shrinker a)
+      | Or (left, right) -> binop O.( || ) left right
+      | And (left, right) -> binop O.( && ) left right
+      | Not t ->
+        Sequence.append
+          (Sequence.singleton t)
+          (Sequence.map ~f:not_ (Quickcheck.Shrinker.shrink self t))
+      | If (if_, then_, else_) ->
+        Sequence.round_robin
+          [ Sequence.singleton if_
+          ; Sequence.singleton then_
+          ; Sequence.singleton else_
+          ; Sequence.map (Quickcheck.Shrinker.shrink self if_) ~f:(fun if_ ->
+              O.if_ if_ then_ else_)
+          ; Sequence.map (Quickcheck.Shrinker.shrink self then_) ~f:(fun then_ ->
+              O.if_ if_ then_ else_)
+          ; Sequence.map (Quickcheck.Shrinker.shrink self else_) ~f:(fun else_ ->
+              O.if_ if_ then_ else_)
+          ]))
+;;
+
+let quickcheck_observer (type a) (a_observer : a Quickcheck.Observer.t) =
+  Base_quickcheck.Observer.create (fun t ~size ~hash ->
+    hash_fold_t
+      (fun hash a -> Quickcheck.Observer.observe a_observer a ~size ~hash)
+      hash
+      t)
+;;

@@ -343,3 +343,12 @@ let%expect_test "no-alloc-eval" =
     ignore (result : bool));
   [%expect {| |}]
 ;;
+
+let%expect_test "quickcheck generator obeys invariants" =
+  Quickcheck.test
+    ~shrinker:[%quickcheck.shrinker: bool Blang.t]
+    ~sexp_of:[%sexp_of: bool Blang.t]
+    [%quickcheck.generator: bool Blang.t]
+    ~f:Blang.invariant;
+  [%expect {| |}]
+;;
