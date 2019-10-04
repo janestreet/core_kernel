@@ -68,8 +68,7 @@ struct
 
     let%expect_test "sexp_of_t" =
       let bus = create1 [%here] ~on_subscription_after_first_write:Raise in
-      let bus_r = read_only bus in
-      ignore (subscribe_exn bus_r [%here] ~f:ignore : _ Subscriber.t);
+      ignore (subscribe_exn bus [%here] ~f:ignore : _ Subscriber.t);
       ignore (bus |> [%sexp_of: (_, _) t] : Sexp.t)
     ;;
 
@@ -82,7 +81,6 @@ struct
       let call_count = ref 0 in
       let callback _v = incr call_count in
       let bus = create1 [%here] ~on_subscription_after_first_write:Allow in
-      let bus_r = read_only bus in
       let print_bus () =
         print_s
           [%message
@@ -97,7 +95,7 @@ struct
         ((num_subscribers 0)
          (is_closed       false)
          (call_count      0)) |}];
-      let subscription = subscribe_exn bus_r [%here] ~f:callback in
+      let subscription = subscribe_exn bus [%here] ~f:callback in
       print_bus ();
       [%expect
         {|
@@ -105,7 +103,7 @@ struct
          (is_closed       false)
          (call_count      0)) |}];
       write bus ();
-      unsubscribe bus_r subscription;
+      unsubscribe bus subscription;
       print_bus ();
       [%expect
         {|
@@ -123,9 +121,8 @@ struct
 
     let%expect_test "subscriber raise" =
       let bus = create1 [%here] ~on_subscription_after_first_write:Raise in
-      let bus_r = read_only bus in
       ignore
-        (subscribe_exn bus_r [%here] ~f:(fun _ ->
+        (subscribe_exn bus [%here] ~f:(fun _ ->
            raise_s [%message "subscriber raising"])
          : _ Subscriber.t);
       show_raise ~hide_positions:true (fun () -> write bus ());
@@ -143,18 +140,16 @@ struct
     let%expect_test "~on_subscription_after_first_write:Raise" =
       let callback _ = () in
       let bus = create1 [%here] ~on_subscription_after_first_write:Raise in
-      let bus_r = read_only bus in
       write bus ();
-      require [%here] (does_raise (fun () -> subscribe_exn bus_r [%here] ~f:callback))
+      require [%here] (does_raise (fun () -> subscribe_exn bus [%here] ~f:callback))
     ;;
 
     let%expect_test "~on_subscription_after_first_write:Allow" =
       let call_count = ref 0 in
       let callback _ = incr call_count in
       let bus = create1 [%here] ~on_subscription_after_first_write:Allow in
-      let bus_r = read_only bus in
       write bus ();
-      ignore (subscribe_exn bus_r [%here] ~f:callback : _ Subscriber.t);
+      ignore (subscribe_exn bus [%here] ~f:callback : _ Subscriber.t);
       print_s [%message (call_count : int ref)];
       [%expect {|
         (call_count 0) |}];
@@ -167,9 +162,8 @@ struct
     let%expect_test "on_close is called" =
       let callback _ = () in
       let bus = create1 [%here] ~on_subscription_after_first_write:Allow in
-      let bus_r = read_only bus in
       let on_close () = print_string "Closed" in
-      ignore (subscribe_exn bus_r [%here] ~on_close ~f:callback : _ Subscriber.t);
+      ignore (subscribe_exn bus [%here] ~on_close ~f:callback : _ Subscriber.t);
       Bus.close bus;
       [%expect {|
         Closed |}]
@@ -178,9 +172,8 @@ struct
     let%expect_test "on_close is not called if you unsubscribe" =
       let callback _ = () in
       let bus = create1 [%here] ~on_subscription_after_first_write:Allow in
-      let bus_r = read_only bus in
       let on_close () = print_string "Closed" in
-      Bus.unsubscribe bus_r (subscribe_exn bus_r [%here] ~on_close ~f:callback);
+      Bus.unsubscribe bus (subscribe_exn bus [%here] ~on_close ~f:callback);
       Bus.close bus;
       [%expect {| |}]
     ;;
@@ -193,10 +186,9 @@ struct
           Arity1
           ~on_callback_raise:Error.raise
       in
-      let bus_r = read_only bus in
       let subscribe n =
         ignore
-          (subscribe_exn bus_r [%here] ~f:(fun s ->
+          (subscribe_exn bus [%here] ~f:(fun s ->
              printf "Subscriber %d, value received: %s\n" n s)
            : _ Subscriber.t)
       in
@@ -220,31 +212,29 @@ struct
 
     let%expect_test "unsubscribe is idempotent" =
       let bus = create1 [%here] ~on_subscription_after_first_write:Raise in
-      let bus_r = read_only bus in
-      let subscriber = Bus.subscribe_exn bus_r [%here] ~f:ignore in
-      unsubscribe bus_r subscriber;
-      unsubscribe bus_r subscriber
+      let subscriber = Bus.subscribe_exn bus [%here] ~f:ignore in
+      unsubscribe bus subscriber;
+      unsubscribe bus subscriber
     ;;
 
     let%expect_test "mid-callback unsubscribe takes effect for the next write" =
       let bus = create1 [%here] ~on_subscription_after_first_write:Raise in
-      let bus_r = read_only bus in
       let subscriber2 = ref None in
       let call_count1 = ref 0 in
       let callback1 _ =
         incr call_count1;
-        unsubscribe bus_r (Option.value_exn !subscriber2)
+        unsubscribe bus (Option.value_exn !subscriber2)
       in
-      let subscriber1 = subscribe_exn bus_r [%here] ~f:callback1 in
+      let subscriber1 = subscribe_exn bus [%here] ~f:callback1 in
       let call_count2 = ref 0 in
       let callback2 _ =
         incr call_count2;
-        unsubscribe bus_r subscriber1
+        unsubscribe bus subscriber1
       in
       let print_call_counts () =
         print_s [%message (call_count1 : int ref) (call_count2 : int ref)]
       in
-      subscriber2 := Some (subscribe_exn bus_r [%here] ~f:callback2);
+      subscriber2 := Some (subscribe_exn bus [%here] ~f:callback2);
       write bus ();
       print_call_counts ();
       [%expect {|
@@ -268,10 +258,9 @@ struct
           ~on_subscription_after_first_write:Allow
           ~on_callback_raise:(fun _ -> incr r1)
       in
-      let bus_r = read_only bus in
       ignore
         (subscribe_exn
-           bus_r
+           bus
            [%here]
            ~f:(fun () -> failwith "")
            ~on_callback_raise:(fun _ -> incr r2)
@@ -296,10 +285,9 @@ struct
             ~on_subscription_after_first_write:Allow
             ~on_callback_raise:ignore
         in
-        let bus_r = read_only bus in
         ignore
           (subscribe_exn
-             bus_r
+             bus
              [%here]
              ~extract_exn
              ~f:(fun () -> assert false)
@@ -334,10 +322,9 @@ struct
           ~on_subscription_after_first_write:Allow
           ~on_callback_raise:(fun _ -> incr r)
       in
-      let bus_r = read_only bus in
       ignore
         (subscribe_exn
-           bus_r
+           bus
            [%here]
            ~f:(fun () -> failwith "")
            ~on_callback_raise:Error.raise
@@ -378,6 +365,119 @@ struct
           lib/core_kernel/src/bus.ml:LINE:COL)) |}]
     ;;
 
+    let%expect_test "[subscribe_exn] does not raise after [close], and [on_close] is \
+                     not called"
+      =
+      let bus = create1 [%here] ~on_subscription_after_first_write:Raise in
+      let bus_r = read_only bus in
+      close bus;
+      ignore
+        (subscribe_exn
+           bus_r
+           [%here]
+           ~on_close:(fun () -> raise_s [%message "[on_close] should not be called"])
+           ~f:ignore
+         : _ Subscriber.t)
+    ;;
+
+    let%expect_test "during a write, [subscribe_exn] does not raise after [close], \
+                     and [on_close] is not called"
+      =
+      let bus = create1 [%here] ~on_subscription_after_first_write:Allow in
+      let bus_r = read_only bus in
+      ignore
+        (subscribe_exn bus_r [%here] ~f:(fun () ->
+           close bus;
+           ignore
+             (subscribe_exn
+                bus_r
+                [%here]
+                ~on_close:(fun () ->
+                  raise_s [%message "[on_close] should not be called"])
+                ~f:ignore
+              : _ Subscriber.t))
+         : _ Subscriber.t);
+      write bus ()
+    ;;
+
+    let%expect_test "During write, if [close] and [subscribe_exn] are called, \
+                     [on_close] will be called only if the subscriptions happen \
+                     before [close]. This depends on the order of when the callbacks \
+                     were fired, which could change over time."
+      =
+      let bus = create1 [%here] ~on_subscription_after_first_write:Allow in
+      let bus_r = read_only bus in
+      let subscribe_with_on_close i () =
+        ignore
+          (subscribe_exn
+             bus_r
+             [%here]
+             ~on_close:(fun () -> printf "[on_close] #%d called\n" i)
+             ~f:ignore
+           : _ Subscriber.t)
+      in
+      let callbacks =
+        [ subscribe_with_on_close 0
+        ; (fun () ->
+             subscribe_with_on_close 1 ();
+             close bus;
+             subscribe_with_on_close 2 ())
+        ; subscribe_with_on_close 3
+        ]
+      in
+      List.iter callbacks ~f:(fun callback ->
+        ignore (subscribe_exn bus_r [%here] ~f:callback : _ Subscriber.t));
+      write bus ();
+      (* Since [close] is called after the [on_close] functions 0 and 1 are registered,
+         only those two are called. *)
+      [%expect {|
+        [on_close] #0 called
+        [on_close] #1 called |}]
+    ;;
+
+    let%expect_test "During write, if [unsubscribe] is called before [close], then \
+                     the corresponding [on_close] will not be called. But if [close] \
+                     is called before [unsubscribe], [on_close] will be called."
+      =
+      let bus = create1 [%here] ~on_subscription_after_first_write:Allow in
+      let bus_r = read_only bus in
+      let subscriber1 =
+        subscribe_exn
+          bus_r
+          [%here]
+          ~on_close:(fun () ->
+            require [%here] false;
+            print_s [%message "subscriber1 [on_close]"])
+          ~f:ignore
+      in
+      ignore
+        (subscribe_exn bus_r [%here] ~f:(fun () ->
+           print_s [%message "unsubscribing subscriber1"];
+           unsubscribe bus_r subscriber1;
+           print_s [%message "closing bus"];
+           close bus)
+         : _ Subscriber.t);
+      let subscriber2 =
+        subscribe_exn
+          bus_r
+          [%here]
+          ~on_close:(fun () -> print_s [%message "subcriber2 [on_close]"])
+          ~f:ignore
+      in
+      ignore
+        (subscribe_exn bus_r [%here] ~f:(fun () ->
+           print_s [%message "unsubscribing subscriber2"];
+           unsubscribe bus_r subscriber2)
+         : _ Subscriber.t);
+      write bus ();
+      [%expect
+        {|
+        "unsubscribing subscriber1"
+        "closing bus"
+        "subcriber2 [on_close]"
+        "unsubscribing subscriber2" |}]
+    ;;
+
     let%expect_test "after [close], [write t] without the value to be written" =
       let bus = create1 [%here] ~on_subscription_after_first_write:Raise in
       close bus;
@@ -387,14 +487,13 @@ struct
 
     let%expect_test "close takes effect after all writes" =
       let bus = create1 [%here] ~on_subscription_after_first_write:Raise in
-      let bus_r = read_only bus in
       let call_count = ref 0 in
       let callback () =
         incr call_count;
         close bus
       in
-      let (_ : _ Subscriber.t) = subscribe_exn bus_r [%here] ~f:callback in
-      let (_ : _ Subscriber.t) = subscribe_exn bus_r [%here] ~f:callback in
+      let (_ : _ Subscriber.t) = subscribe_exn bus [%here] ~f:callback in
+      let (_ : _ Subscriber.t) = subscribe_exn bus [%here] ~f:callback in
       write bus ();
       print_s [%message (call_count : int ref)];
       [%expect {|
@@ -409,22 +508,21 @@ struct
           ~on_subscription_after_first_write:Raise
           ~on_callback_raise:Error.raise
       in
-      iter_exn (read_only t) [%here] ~f:(fun _ -> failwith "");
+      iter_exn t [%here] ~f:(fun _ -> failwith "");
       require [%here] (does_raise (fun () -> write t ()));
       require [%here] (is_closed t)
     ;;
 
     let%expect_test "fold threads values through future calls" =
       let bus = create1 [%here] ~on_subscription_after_first_write:Raise in
-      let ro = read_only bus in
       let last1 = ref 0 in
       let last2 = ref "" in
       let print_lasts () = print_s [%message (last1 : int ref) (last2 : string ref)] in
-      fold_exn ro [%here] Arity1 ~init:0 ~f:(fun acc () ->
+      fold_exn bus [%here] Arity1 ~init:0 ~f:(fun acc () ->
         let this = acc + 1 in
         last1 := this;
         this);
-      fold_exn ro [%here] Arity1 ~init:"" ~f:(fun acc () ->
+      fold_exn bus [%here] Arity1 ~init:"" ~f:(fun acc () ->
         let this = acc ^ "." in
         last2 := this;
         this);
@@ -464,11 +562,10 @@ struct
           ~on_subscription_after_first_write:Allow
           ~on_callback_raise
       in
-      let bus_r = read_only bus in
       let callback1 _ _ = failwith "callback1" in
       let callback2 _ _ = failwith "callback2" in
-      ignore (subscribe_exn bus_r [%here] ~f:callback1 : _ Subscriber.t);
-      ignore (subscribe_exn bus_r [%here] ~f:callback2 : _ Subscriber.t);
+      ignore (subscribe_exn bus [%here] ~f:callback1 : _ Subscriber.t);
+      ignore (subscribe_exn bus [%here] ~f:callback2 : _ Subscriber.t);
       write bus () ();
       print_s [%message (call_count : int ref)];
       [%expect {|
@@ -477,15 +574,14 @@ struct
 
     let%expect_test "mid-callback subscribe_exn takes effect for the next write" =
       let bus = create2 [%here] ~on_subscription_after_first_write:Allow in
-      let bus_r = read_only bus in
       let call_count2 = ref 0 in
       let callback2 _ _ = incr call_count2 in
       let call_count1 = ref 0 in
       let callback1 _ _ =
         incr call_count1;
-        ignore (subscribe_exn bus_r [%here] ~f:callback2 : _ Subscriber.t)
+        ignore (subscribe_exn bus [%here] ~f:callback2 : _ Subscriber.t)
       in
-      ignore (subscribe_exn bus_r [%here] ~f:callback1 : _ Subscriber.t);
+      ignore (subscribe_exn bus [%here] ~f:callback1 : _ Subscriber.t);
       write bus () ();
       write bus () ();
       print_s [%message (call_count1 : int ref) (call_count2 : int ref)];

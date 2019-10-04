@@ -11,8 +11,7 @@
     are immediately available.  In particular, if one wants to subscribe to a
     [Bus.Read_write.t], one must call [read_only] on it in order to get a
     [Bus.Read_only.t] that can be passed to [subscribe_exn].  This is deliberate, and is
-    meant to avoid unintentional reads from code that should only be writing.
-*)
+    meant to avoid unintentional reads from code that should only be writing. *)
 
 open! Import
 open Std_internal
@@ -127,7 +126,7 @@ val subscribe_exn
   :  ?extract_exn:bool (** default is [false] *)
   -> ?on_callback_raise:(Error.t -> unit)
   -> ?on_close:(unit -> unit)
-  -> 'callback Read_only.t
+  -> ('callback, [> read ]) t
   -> Source_code_position.t
   -> f:'callback
   -> 'callback Subscriber.t
@@ -135,7 +134,7 @@ val subscribe_exn
 
 (** [iter_exn t [%here] ~f] is [ignore (subscribe_exn t [%here] ~callback:f)].  This
     captures the common usage in which one never wants to unsubscribe from a bus. *)
-val iter_exn : 'callback Read_only.t -> Source_code_position.t -> f:'callback -> unit
+val iter_exn : ('callback, [> read ]) t -> Source_code_position.t -> f:'callback -> unit
 
 module Fold_arity : sig
   type (_, _, _) t =
@@ -149,7 +148,7 @@ end
 (** [fold_exn t [%here] arity ~init ~f] folds over the bus events, threading a state value
     to every call.  It is otherwise similar to [iter_exn]. *)
 val fold_exn
-  :  'callback Read_only.t
+  :  ('callback, [> read ]) t
   -> Source_code_position.t
   -> ('callback, 'f, 's) Fold_arity.t
   -> init:'s
@@ -161,4 +160,4 @@ val fold_exn
     [unsubscribe t] during [write t] takes effect after the current [write] finishes.
     Also like [subscribe_exn], [unsubscribe] takes time proportional to the number of
     callbacks. *)
-val unsubscribe : 'callback Read_only.t -> 'callback Subscriber.t -> unit
+val unsubscribe : ('callback, [> read ]) t -> 'callback Subscriber.t -> unit
