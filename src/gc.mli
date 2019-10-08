@@ -132,10 +132,12 @@ module Control : sig
         Default: 1048576 words / 4MB (32bit) / 8MB (64bit). *)
     ; mutable allocation_policy : int
     (** The policy used for allocating in the heap.  Possible
-        values are 0 and 1.  0 is the next-fit policy, which is
+        values are 0, 1 and 2.  0 is the next-fit policy, which is
         quite fast but can result in fragmentation.  1 is the
         first-fit policy, which can be slower in some cases but
         can be better for programs with fragmentation problems.
+        2 is the best-fit policy, which is as fast as next-fit
+        and has even less fragmentation than first-fit.
 
         Default: 0. *)
     ; window_size : int
@@ -398,12 +400,15 @@ val tune
     The First_fit policy can be slower in some cases but can be better for programs with
     fragmentation problems.
 
+    The Best_fit policy is as fast as Next_fit and has less fragmentation than First_fit.
+
     The default is Next_fit.
 *)
 module Allocation_policy : sig
   type t =
     | Next_fit
     | First_fit
+    | Best_fit
 end
 
 val disable_compaction

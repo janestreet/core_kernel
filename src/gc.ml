@@ -170,10 +170,12 @@ module Allocation_policy = struct
   type t =
     | Next_fit
     | First_fit
+    | Best_fit
 
   let to_int = function
     | Next_fit -> 0
     | First_fit -> 1
+    | Best_fit -> 2
   ;;
 end
 
