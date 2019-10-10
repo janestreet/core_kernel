@@ -92,8 +92,8 @@ val close : 'callback Read_write.t -> unit
 
 (** [write] ... [write4] call all callbacks currently subscribed to the bus, with no
     guarantee on the order in which they will be called.  [write] is non-allocating,
-    though the callbacks themselves may allocate.  Calling [writeN t] from within a
-    callback on [t] if [is_closed t] will raise. *)
+    though the callbacks themselves may allocate.  Calling [writeN t] raises if called
+    from within a callback on [t] or when [is_closed t]. *)
 
 val write : ('a -> unit) Read_write.t -> 'a -> unit
 val write2 : ('a -> 'b -> unit) Read_write.t -> 'a -> 'b -> unit
@@ -109,8 +109,7 @@ end
     stored in the [Subscriber.t], and contained in [%sexp_of: Subscriber.t], which can
     help with debugging.  If [subscribe_exn t] is called by a callback in [t], i.e.,
     during [write t], the subscription takes effect for the next [write], but does not
-    affect the current [write].  [subscribe_exn] takes time proportional to the number of
-    callbacks.
+    affect the current [write].  [subscribe_exn] takes amortized constant time.
 
     If [on_callback_raise] is supplied, then it will be called by [write] whenever [f]
     raises; only if that subsequently raises will [t]'s [on_callback_raise] be called.  If
@@ -158,6 +157,5 @@ val fold_exn
 (** [unsubscribe t subscriber] removes the callback corresponding to [subscriber] from
     [t].  [unsubscribe] never raises and is idempotent.  As with [subscribe_exn],
     [unsubscribe t] during [write t] takes effect after the current [write] finishes.
-    Also like [subscribe_exn], [unsubscribe] takes time proportional to the number of
-    callbacks. *)
+    Also like [subscribe_exn], [unsubscribe] takes amortized constant time. *)
 val unsubscribe : ('callback, [> read ]) t -> 'callback Subscriber.t -> unit

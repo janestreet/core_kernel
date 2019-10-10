@@ -71,6 +71,20 @@ module Control = struct
   include Comparable.Make (T)
 end
 
+module Allocation_policy = struct
+  type t =
+    | Next_fit
+    | First_fit
+    | Best_fit
+  [@@deriving sexp]
+
+  let to_int = function
+    | Next_fit -> 0
+    | First_fit -> 1
+    | Best_fit -> 2
+  ;;
+end
+
 [%%if
   ocaml_version < (4, 08, 0)]
 
@@ -101,6 +115,7 @@ let tune
           (to_string new_value));
       new_value
   in
+  let allocation_policy = Option.map allocation_policy ~f:Allocation_policy.to_int in
   let new_control_params =
     Control.Fields.map
       ~minor_heap_size:(f minor_heap_size string_of_int)
@@ -147,6 +162,7 @@ let tune
           (to_string new_value));
       new_value
   in
+  let allocation_policy = Option.map allocation_policy ~f:Allocation_policy.to_int in
   let new_control_params =
     Control.Fields.map
       ~minor_heap_size:(f minor_heap_size string_of_int)
@@ -166,24 +182,11 @@ let tune
 
 [%%endif]
 
-module Allocation_policy = struct
-  type t =
-    | Next_fit
-    | First_fit
-    | Best_fit
-
-  let to_int = function
-    | Next_fit -> 0
-    | First_fit -> 1
-    | Best_fit -> 2
-  ;;
-end
-
 let disable_compaction ?logger ~allocation_policy () =
   let allocation_policy =
     match allocation_policy with
     | `Don't_change -> None
-    | `Set_to policy -> Some (Allocation_policy.to_int policy)
+    | `Set_to policy -> Some policy
   in
   (* The value 1_000_000, according to
      http://caml.inria.fr/pub/docs/manual-ocaml-4.02/libref/Gc.html

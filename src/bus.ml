@@ -116,31 +116,43 @@ end = struct
   ;;
 end
 
-module Subscriber_id = Unique_id.Int63 ()
+module Bus_id = Unique_id.Int63 ()
 
 module Subscriber = struct
   type 'callback t =
-    { id : Subscriber_id.t
+    { bus_id : Bus_id.t
     ; callback : 'callback
     ; extract_exn : bool
+    ; (* [subscribers_index] is the index of this subscriber in the bus's [subscribers]
+         array.  [-1] indicates that this subscriber is not subscribed. *)
+      mutable subscribers_index : int
     ; on_callback_raise : (Error.t -> unit) option
     ; on_close : (unit -> unit) option
     ; subscribed_from : Source_code_position.t
     }
   [@@deriving fields]
 
+  let is_subscribed t ~to_ = t.subscribers_index >= 0 && Bus_id.equal t.bus_id to_
+
   let sexp_of_t
         _
-        { callback = _; id; extract_exn; on_callback_raise; on_close = _; subscribed_from }
+        { callback = _
+        ; bus_id = _
+        ; extract_exn
+        ; subscribers_index
+        ; on_callback_raise
+        ; on_close = _
+        ; subscribed_from
+        }
     : Sexp.t
     =
     List
       [ Atom "Bus.Subscriber.t"
       ; [%message
         ""
-          ~id:
-            (if am_running_inline_test then None else Some id
-                                                      : (Subscriber_id.t option[@sexp.option]))
+          ~subscribers_index:
+            (if am_running_inline_test then None else Some subscribers_index
+                                                      : (int option[@sexp.option]))
           (on_callback_raise : ((Error.t -> unit) option[@sexp.option]))
           ~extract_exn:
             (if extract_exn then Some true else None : (bool option[@sexp.option]))
@@ -152,18 +164,28 @@ module Subscriber = struct
     Invariant.invariant [%here] t [%sexp_of: _ t] (fun () ->
       let check f = Invariant.check_field t f in
       Fields.iter
-        ~id:ignore
+        ~bus_id:ignore
         ~callback:(check invariant_a)
         ~extract_exn:ignore
+        ~subscribers_index:ignore
         ~on_callback_raise:ignore
         ~on_close:ignore
         ~subscribed_from:ignore)
   ;;
 
-  let create subscribed_from ~callback ~extract_exn ~on_callback_raise ~on_close =
-    { id = Subscriber_id.create ()
+  let create
+        subscribed_from
+        ~callback
+        ~bus_id
+        ~extract_exn
+        ~subscribers_index
+        ~on_callback_raise
+        ~on_close
+    =
+    { bus_id
     ; callback
     ; extract_exn
+    ; subscribers_index
     ; on_callback_raise
     ; on_close
     ; subscribed_from
@@ -172,36 +194,46 @@ module Subscriber = struct
 end
 
 type ('callback, 'phantom) t =
-  { name : Info.t option
+  { bus_id : Bus_id.t
+  ; name : Info.t option
   ; callback_arity : 'callback Callback_arity.t
   ; created_from : Source_code_position.t
   ; on_subscription_after_first_write : On_subscription_after_first_write.t
+  ; on_callback_raise : Error.t -> unit
   ; last_value : 'callback Last_value.t option
   ; mutable state : State.t
   ; mutable write_ever_called : bool
-  ; mutable subscribers : 'callback Subscriber.t Subscriber_id.Map.t
-  ; mutable callbacks : 'callback array
-  ; mutable callback_raised : int -> exn -> unit
-  ; on_callback_raise : Error.t -> unit
+  ; mutable num_subscribers : int
+  ; (* [subscribers] contains all subscribers to the bus, in a contiguous prefix from
+       index [0] to [num_subscribers - 1]. *)
+    mutable subscribers : 'callback Subscriber.t Option_array.t
+  ; (* [callbacks] holds the callbacks of the corresponding entries of [subscribers]. *)
+    mutable callbacks : 'callback Option_array.t
+  ; mutable unsubscribes_during_write : 'callback Subscriber.t list
   }
 [@@deriving fields]
 
 let sexp_of_t
       _
       _
-      { callback_arity
+      { bus_id = _
+      ; callback_arity
       ; callbacks = _
-      ; callback_raised = _
       ; created_from
       ; last_value = _
       ; name
-      ; on_callback_raise = _
+      ; num_subscribers
       ; on_subscription_after_first_write
+      ; on_callback_raise = _
       ; state
       ; subscribers
       ; write_ever_called
+      ; unsubscribes_during_write = _
       }
   =
+  let subscribers =
+    Array.init num_subscribers ~f:(fun i -> Option_array.get_some_exn subscribers i)
+  in
   [%message
     ""
       (name : (Info.t option[@sexp.option]))
@@ -210,7 +242,7 @@ let sexp_of_t
       (on_subscription_after_first_write : On_subscription_after_first_write.t)
       (state : State.t)
       (write_ever_called : bool)
-      (subscribers : _ Subscriber.t Subscriber_id.Map.t)]
+      (subscribers : _ Subscriber.t Array.t)]
 ;;
 
 type ('callback, 'phantom) bus = ('callback, 'phantom) t [@@deriving sexp_of]
@@ -221,24 +253,38 @@ let invariant invariant_a _ t =
   Invariant.invariant [%here] t [%sexp_of: (_, _) t] (fun () ->
     let check f = Invariant.check_field t f in
     Fields.iter
+      ~bus_id:ignore
       ~name:ignore
-      ~callbacks:ignore
-      ~callback_raised:ignore
+      ~callbacks:
+        (check (fun callbacks ->
+           assert (Option_array.length callbacks = Option_array.length t.subscribers);
+           for i = 0 to Option_array.length callbacks - 1 do
+             if i < t.num_subscribers
+             then invariant_a (Option_array.get_some_exn callbacks i)
+             else assert (Option_array.is_none callbacks i)
+           done))
       ~callback_arity:ignore
       ~created_from:ignore
+      ~num_subscribers:(check (fun num_subscribers -> assert (num_subscribers >= 0)))
       ~on_subscription_after_first_write:ignore
+      ~on_callback_raise:ignore
       ~last_value:ignore
       ~state:ignore
       ~write_ever_called:ignore
       ~subscribers:
         (check (fun subscribers ->
-           Map.iteri subscribers ~f:(fun ~key:_ ~data:callback ->
-             Subscriber.invariant invariant_a callback)))
-      ~on_callback_raise:ignore)
+           for i = 0 to Option_array.length subscribers - 1 do
+             if i < t.num_subscribers
+             then (
+               let subscriber = Option_array.get_some_exn subscribers i in
+               Subscriber.invariant invariant_a subscriber;
+               assert (i = subscriber.subscribers_index))
+             else assert (Option_array.is_none subscribers i)
+           done))
+      ~unsubscribes_during_write:ignore)
 ;;
 
 let is_closed t = State.is_closed t.state
-let num_subscribers t = Map.length t.subscribers
 
 module Read_write = struct
   type 'callback t = ('callback, read_write) bus [@@deriving sexp_of]
@@ -260,126 +306,202 @@ let[@cold] start_write_failing t =
   | Ok_to_write -> assert false
 ;;
 
+let capacity t = Option_array.length t.subscribers
+
+let maybe_shrink_capacity t =
+  if t.num_subscribers * 4 <= capacity t
+  then (
+    let desired_capacity = t.num_subscribers in
+    let copy_and_shrink array =
+      let new_array = Option_array.create ~len:desired_capacity in
+      Option_array.blit
+        ~src:array
+        ~src_pos:0
+        ~dst:new_array
+        ~dst_pos:0
+        ~len:t.num_subscribers;
+      new_array
+    in
+    t.subscribers <- copy_and_shrink t.subscribers;
+    t.callbacks <- copy_and_shrink t.callbacks)
+;;
+
+let add_subscriber t (subscriber : _ Subscriber.t) ~at_subscribers_index =
+  subscriber.subscribers_index <- at_subscribers_index;
+  Option_array.set_some t.subscribers at_subscribers_index subscriber;
+  Option_array.set_some t.callbacks at_subscribers_index subscriber.callback
+;;
+
+let remove_subscriber t (subscriber : _ Subscriber.t) =
+  let subscribers_index = subscriber.subscribers_index in
+  subscriber.subscribers_index <- -1;
+  Option_array.set_none t.subscribers subscribers_index;
+  Option_array.set_none t.callbacks subscribers_index
+;;
+
+let unsubscribe_assuming_valid_subscriber t (subscriber : _ Subscriber.t) =
+  let subscriber_index = subscriber.subscribers_index in
+  let last_subscriber_index = t.num_subscribers - 1 in
+  remove_subscriber t subscriber;
+  if subscriber_index < last_subscriber_index
+  then (
+    let last_subscriber =
+      Option_array.get_some_exn t.subscribers last_subscriber_index
+    in
+    remove_subscriber t last_subscriber;
+    add_subscriber t last_subscriber ~at_subscribers_index:subscriber_index);
+  t.num_subscribers <- t.num_subscribers - 1;
+  maybe_shrink_capacity t
+;;
+
+let unsubscribe t subscriber =
+  if Subscriber.is_subscribed subscriber ~to_:t.bus_id
+  then (
+    match t.state with
+    | Write_in_progress ->
+      t.unsubscribes_during_write <- subscriber :: t.unsubscribes_during_write
+    | Closed ->
+      (* This can happen if during [write], [unsubscribe] is called after [close].  We
+         don't do anything here because all subscribers will be unsubscribed after the
+         [write] finishes. *)
+      ()
+    | Ok_to_write -> unsubscribe_assuming_valid_subscriber t subscriber)
+;;
+
+let[@cold] unsubscribe_after_finish_write t =
+  List.iter t.unsubscribes_during_write ~f:(unsubscribe_assuming_valid_subscriber t);
+  t.unsubscribes_during_write <- []
+;;
+
+let[@cold] unsubscribe_all t =
+  assert (is_closed t);
+  for i = 0 to t.num_subscribers - 1 do
+    let subscriber = Option_array.get_some_exn t.subscribers i in
+    Option.iter subscriber.on_close ~f:(fun on_close -> on_close ());
+    remove_subscriber t subscriber
+  done;
+  t.num_subscribers <- 0;
+  maybe_shrink_capacity t
+;;
+
 let[@inline always] finish_write t =
+  if not (List.is_empty t.unsubscribes_during_write)
+  then unsubscribe_after_finish_write t;
   match t.state with
-  | Closed -> ()
+  | Closed -> unsubscribe_all t
   | Ok_to_write -> assert false
   | Write_in_progress -> t.state <- Ok_to_write
 ;;
 
-let close t =
+let[@cold] close t =
   match t.state with
   | Closed -> ()
-  | Ok_to_write | Write_in_progress ->
+  | Write_in_progress -> t.state <- Closed
+  | Ok_to_write ->
     t.state <- Closed;
-    Map.iter t.subscribers ~f:(fun subscriber ->
-      Option.iter subscriber.on_close ~f:(fun on_close -> on_close ()));
-    t.subscribers <- Subscriber_id.Map.empty
+    unsubscribe_all t
 ;;
 
-let write_non_optimized t callbacks callback_raised a1 =
-  let len = Array.length callbacks in
+let call_on_callback_raise t error =
+  try t.on_callback_raise error with
+  | exn ->
+    close t;
+    raise exn
+;;
+
+let callback_raised t i exn =
+  let backtrace = Backtrace.Exn.most_recent () in
+  (* [i] was incremented before the callback was called, so we have to subtract one
+     here.  We do this here, rather than at the call site, because there are multiple
+     call sites due to the optimizations needed to keep this zero-alloc. *)
+  let subscriber = Option_array.get_some_exn t.subscribers (i - 1) in
+  let error =
+    [%message
+      "Bus subscriber raised"
+        (exn : exn)
+        (backtrace : Backtrace.t)
+        (subscriber : _ Subscriber.t)]
+    |> [%of_sexp: Error.t]
+  in
+  match subscriber.on_callback_raise with
+  | None -> call_on_callback_raise t error
+  | Some f ->
+    let error = if subscriber.extract_exn then Error.of_exn exn else error in
+    (try f error with
+     | exn ->
+       let backtrace = Backtrace.Exn.most_recent () in
+       call_on_callback_raise
+         t
+         (let original_error = error in
+          [%message
+            "Bus subscriber's [on_callback_raise] raised"
+              (exn : exn)
+              (backtrace : Backtrace.t)
+              (original_error : Error.t)]
+          |> [%of_sexp: Error.t]))
+;;
+
+let[@inline always] unsafe_get_callback a i =
+  (* We considered using [Option_array.get_some_exn] and
+     [Option_array.unsafe_get_some_exn] here, but both are significantly slower.  Check
+     the write benchmarks in [bench_bus.ml] before changing this. *)
+  Option_array.unsafe_get_some_assuming_some a i
+;;
+
+let write_non_optimized t callbacks a1 =
+  let len = t.num_subscribers in
   let i = ref 0 in
   while !i < len do
     try
-      let callback = Array.unsafe_get callbacks !i in
+      let callback = unsafe_get_callback callbacks !i in
       incr i;
       callback a1
     with
-    | exn -> callback_raised !i exn
+    | exn -> callback_raised t !i exn
   done;
   finish_write t
 ;;
 
-let write2_non_optimized t callbacks callback_raised a1 a2 =
-  let len = Array.length callbacks in
+let write2_non_optimized t callbacks a1 a2 =
+  let len = t.num_subscribers in
   let i = ref 0 in
   while !i < len do
     try
-      let callback = Array.unsafe_get callbacks !i in
+      let callback = unsafe_get_callback callbacks !i in
       incr i;
       callback a1 a2
     with
-    | exn -> callback_raised !i exn
+    | exn -> callback_raised t !i exn
   done;
   finish_write t
 ;;
 
-let write3_non_optimized t callbacks callback_raised a1 a2 a3 =
-  let len = Array.length callbacks in
+let write3_non_optimized t callbacks a1 a2 a3 =
+  let len = t.num_subscribers in
   let i = ref 0 in
   while !i < len do
     try
-      let callback = Array.unsafe_get callbacks !i in
+      let callback = unsafe_get_callback callbacks !i in
       incr i;
       callback a1 a2 a3
     with
-    | exn -> callback_raised !i exn
+    | exn -> callback_raised t !i exn
   done;
   finish_write t
 ;;
 
-let write4_non_optimized t callbacks callback_raised a1 a2 a3 a4 =
-  let len = Array.length callbacks in
+let write4_non_optimized t callbacks a1 a2 a3 a4 =
+  let len = t.num_subscribers in
   let i = ref 0 in
   while !i < len do
     try
-      let callback = Array.unsafe_get callbacks !i in
+      let callback = unsafe_get_callback callbacks !i in
       incr i;
       callback a1 a2 a3 a4
     with
-    | exn -> callback_raised !i exn
+    | exn -> callback_raised t !i exn
   done;
   finish_write t
-;;
-
-let update_write (type callback) (t : (callback, _) t) =
-  (* Computing [callbacks] takes time proportional to the number of callbacks, which we
-     have decided is OK because we expect subscription/unsubscription to be rare, and the
-     number of callbacks to be few.  We could do constant-time update of the set of
-     subscribers using a using a custom bag-like thing with a pair of arrays, one of the
-     callbacks and one of the subscribers.  We've decided not to introduce that complexity
-     until the performance benefit warrants it. *)
-  let subscribers = t.subscribers |> Map.data |> Array.of_list in
-  let callbacks = subscribers |> Array.map ~f:Subscriber.callback in
-  let call_on_callback_raise error =
-    try t.on_callback_raise error with
-    | exn ->
-      close t;
-      raise exn
-  in
-  let callback_raised i exn =
-    let backtrace = Backtrace.Exn.most_recent () in
-    (* [i] was incremented before the callback was called, so we have to subtract one
-       here.  We do this here, rather than at the call site, because there are multiple
-       call sites due to the optimazations needed to keep this zero-alloc. *)
-    let subscriber = subscribers.(i - 1) in
-    let error =
-      [%message
-        "Bus subscriber raised"
-          (exn : exn)
-          (backtrace : Backtrace.t)
-          (subscriber : _ Subscriber.t)]
-      |> [%of_sexp: Error.t]
-    in
-    match subscriber.on_callback_raise with
-    | None -> call_on_callback_raise error
-    | Some f ->
-      let error = if subscriber.extract_exn then Error.of_exn exn else error in
-      (try f error with
-       | exn ->
-         let backtrace = Backtrace.Exn.most_recent () in
-         call_on_callback_raise
-           (let original_error = error in
-            [%message
-              "Bus subscriber's [on_callback_raise] raised"
-                (exn : exn)
-                (backtrace : Backtrace.t)
-                (original_error : Error.t)]
-            |> [%of_sexp: Error.t]))
-  in
-  t.callbacks <- callbacks;
-  t.callback_raised <- callback_raised
 ;;
 
 (* The [write_N] functions are written to minimise registers live across function calls
@@ -388,23 +510,18 @@ let update_write (type callback) (t : (callback, _) t) =
    direct call). *)
 
 let[@inline always] write t a1 =
-  (* Snapshot [callbacks] and [callback_raised] now just in case one of the callbacks
-     calls [update_write], above.  ([callbacks] is mutable but is never mutated; it is
-     replaced by a fresh array whenever it is changed.) *)
   let callbacks = t.callbacks in
-  let callback_raised = t.callback_raised in
-  let len = Array.length callbacks in
   t.write_ever_called <- true;
   match t.state with
   | Closed | Write_in_progress -> start_write_failing t
   | Ok_to_write ->
     t.state <- Write_in_progress;
-    if len = 1
+    if t.num_subscribers = 1
     then (
-      (try (Array.unsafe_get callbacks 0) a1 with
-       | exn -> callback_raised 1 exn);
+      (try (unsafe_get_callback callbacks 0) a1 with
+       | exn -> callback_raised t 1 exn);
       finish_write t)
-    else (write_non_optimized [@inlined never]) t callbacks callback_raised a1;
+    else (write_non_optimized [@inlined never]) t callbacks a1;
     (match t.last_value with
      | None -> ()
      | Some last_value -> Last_value.set1 last_value a1)
@@ -412,19 +529,17 @@ let[@inline always] write t a1 =
 
 let[@inline always] write2 t a1 a2 =
   let callbacks = t.callbacks in
-  let callback_raised = t.callback_raised in
-  let len = Array.length callbacks in
   t.write_ever_called <- true;
   match t.state with
   | Closed | Write_in_progress -> start_write_failing t
   | Ok_to_write ->
     t.state <- Write_in_progress;
-    if len = 1
+    if t.num_subscribers = 1
     then (
-      (try (Array.unsafe_get callbacks 0) a1 a2 with
-       | exn -> callback_raised 1 exn);
+      (try (unsafe_get_callback callbacks 0) a1 a2 with
+       | exn -> callback_raised t 1 exn);
       finish_write t)
-    else (write2_non_optimized [@inlined never]) t callbacks callback_raised a1 a2;
+    else (write2_non_optimized [@inlined never]) t callbacks a1 a2;
     (match t.last_value with
      | None -> ()
      | Some last_value -> Last_value.set2 last_value a1 a2)
@@ -432,19 +547,17 @@ let[@inline always] write2 t a1 a2 =
 
 let[@inline always] write3 t a1 a2 a3 =
   let callbacks = t.callbacks in
-  let callback_raised = t.callback_raised in
-  let len = Array.length callbacks in
   t.write_ever_called <- true;
   match t.state with
   | Closed | Write_in_progress -> start_write_failing t
   | Ok_to_write ->
     t.state <- Write_in_progress;
-    if len = 1
+    if t.num_subscribers = 1
     then (
-      (try (Array.unsafe_get callbacks 0) a1 a2 a3 with
-       | exn -> callback_raised 1 exn);
+      (try (unsafe_get_callback callbacks 0) a1 a2 a3 with
+       | exn -> callback_raised t 1 exn);
       finish_write t)
-    else (write3_non_optimized [@inlined never]) t callbacks callback_raised a1 a2 a3;
+    else (write3_non_optimized [@inlined never]) t callbacks a1 a2 a3;
     (match t.last_value with
      | None -> ()
      | Some last_value -> Last_value.set3 last_value a1 a2 a3)
@@ -452,19 +565,17 @@ let[@inline always] write3 t a1 a2 a3 =
 
 let[@inline always] write4 t a1 a2 a3 a4 =
   let callbacks = t.callbacks in
-  let callback_raised = t.callback_raised in
-  let len = Array.length callbacks in
   t.write_ever_called <- true;
   match t.state with
   | Closed | Write_in_progress -> start_write_failing t
   | Ok_to_write ->
     t.state <- Write_in_progress;
-    if len = 1
+    if t.num_subscribers = 1
     then (
-      (try (Array.unsafe_get callbacks 0) a1 a2 a3 a4 with
-       | exn -> callback_raised 1 exn);
+      (try (unsafe_get_callback callbacks 0) a1 a2 a3 a4 with
+       | exn -> callback_raised t 1 exn);
       finish_write t)
-    else (write4_non_optimized [@inlined never]) t callbacks callback_raised a1 a2 a3 a4;
+    else (write4_non_optimized [@inlined never]) t callbacks a1 a2 a3 a4;
     (match t.last_value with
      | None -> ()
      | Some last_value -> Last_value.set4 last_value a1 a2 a3 a4)
@@ -488,25 +599,35 @@ let create
     | Allow -> None
     | Raise -> None
   in
-  let t =
-    { name
-    ; callback_arity
-    ; created_from
-    ; on_callback_raise
-    ; on_subscription_after_first_write
-    ; last_value
-    ; subscribers = Subscriber_id.Map.empty
-    ; callbacks = [||]
-    ; callback_raised = (fun _ _ -> assert false)
-    ; state = Ok_to_write
-    ; write_ever_called = false
-    }
-  in
-  update_write t;
-  t
+  { bus_id = Bus_id.create ()
+  ; name
+  ; callback_arity
+  ; created_from
+  ; num_subscribers = 0
+  ; on_subscription_after_first_write
+  ; on_callback_raise
+  ; last_value
+  ; subscribers = Option_array.create ~len:0
+  ; callbacks = Option_array.create ~len:0
+  ; state = Ok_to_write
+  ; write_ever_called = false
+  ; unsubscribes_during_write = []
+  }
 ;;
 
 let can_subscribe t = allow_subscription_after_first_write t || not t.write_ever_called
+
+let enlarge_capacity t =
+  let capacity = capacity t in
+  let new_capacity = Int.max 1 (capacity * 2) in
+  let copy_and_double array =
+    let new_array = Option_array.create ~len:new_capacity in
+    Option_array.blit ~src:array ~src_pos:0 ~dst:new_array ~dst_pos:0 ~len:capacity;
+    new_array
+  in
+  t.subscribers <- copy_and_double t.subscribers;
+  t.callbacks <- copy_and_double t.callbacks
+;;
 
 let subscribe_exn
       ?(extract_exn = false)
@@ -514,7 +635,7 @@ let subscribe_exn
       ?on_close
       t
       subscribed_from
-      ~f
+      ~f:callback
   =
   if not (can_subscribe t)
   then
@@ -522,20 +643,41 @@ let subscribe_exn
       "Bus.subscribe_exn called after first write"
       [%sexp ~~(subscribed_from : Source_code_position.t), { bus = (t : (_, _) t) }]
       [%sexp_of: Sexp.t];
-  let subscriber =
+  match t.state with
+  | Closed ->
+    (* Anything that satisfies the return type will do.  Since the subscriber is never
+       stored in the arrays, the [on_close] callback will never be called. *)
     Subscriber.create
       subscribed_from
-      ~callback:f
+      ~bus_id:t.bus_id
+      ~callback
       ~extract_exn
+      ~subscribers_index:(-1)
       ~on_callback_raise
       ~on_close
-  in
-  t.subscribers <- Map.set t.subscribers ~key:subscriber.id ~data:subscriber;
-  update_write t;
-  (match t.last_value with
-   | None -> ()
-   | Some last_value -> Last_value.send last_value f);
-  subscriber
+  | Ok_to_write | Write_in_progress ->
+    (* The code below side effects [t], which potentially could interfere with a write in
+       progress.  However, the side effects don't change the prefix of [t.callbacks] that
+       write uses; they only change [t.callbacks] beyond that prefix.  And all writes
+       extract [t.num_subscribers] at the start, so that they will not see any subsequent
+       changes to it. *)
+    let subscriber =
+      Subscriber.create
+        subscribed_from
+        ~bus_id:t.bus_id
+        ~callback
+        ~extract_exn
+        ~subscribers_index:t.num_subscribers
+        ~on_callback_raise
+        ~on_close
+    in
+    if capacity t = t.num_subscribers then enlarge_capacity t;
+    add_subscriber t subscriber ~at_subscribers_index:t.num_subscribers;
+    t.num_subscribers <- t.num_subscribers + 1;
+    (match t.last_value with
+     | None -> ()
+     | Some last_value -> Last_value.send last_value callback);
+    subscriber
 ;;
 
 let iter_exn t subscribed_from ~f =
@@ -570,15 +712,10 @@ let fold_exn
     subscribed_from
     ~f:
       (match fold_arity with
-       | A.Arity1 -> fun a1 -> state := f !state a1
-       | A.Arity2 -> fun a1 a2 -> state := f !state a1 a2
-       | A.Arity3 -> fun a1 a2 a3 -> state := f !state a1 a2 a3
-       | A.Arity4 -> fun a1 a2 a3 a4 -> state := f !state a1 a2 a3 a4)
-;;
-
-let unsubscribe t (subscription : _ Subscriber.t) =
-  t.subscribers <- Map.remove t.subscribers subscription.id;
-  update_write t
+       | Arity1 -> fun a1 -> state := f !state a1
+       | Arity2 -> fun a1 a2 -> state := f !state a1 a2
+       | Arity3 -> fun a1 a2 a3 -> state := f !state a1 a2 a3
+       | Arity4 -> fun a1 a2 a3 a4 -> state := f !state a1 a2 a3 a4)
 ;;
 
 let%test_module _ =

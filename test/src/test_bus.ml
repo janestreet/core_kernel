@@ -474,8 +474,8 @@ struct
         {|
         "unsubscribing subscriber1"
         "closing bus"
-        "subcriber2 [on_close]"
-        "unsubscribing subscriber2" |}]
+        "unsubscribing subscriber2"
+        "subcriber2 [on_close]" |}]
     ;;
 
     let%expect_test "after [close], [write t] without the value to be written" =

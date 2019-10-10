@@ -356,43 +356,6 @@ val allocated_bytes : unit -> float
     potentially collect [a] too soon. *)
 val keep_alive : _ -> unit
 
-[%%if ocaml_version < (4, 08, 0)]
-
-(** Adjust the specified GC parameters. *)
-val tune
-  :  ?logger:(string -> unit)
-  -> ?minor_heap_size:int
-  -> ?major_heap_increment:int
-  -> ?space_overhead:int
-  -> ?verbose:int
-  -> ?max_overhead:int
-  -> ?stack_limit:int
-  -> ?allocation_policy:int
-  -> ?window_size:int
-  -> unit
-  -> unit
-
-[%%else]
-
-(** Adjust the specified GC parameters. *)
-val tune
-  :  ?logger:(string -> unit)
-  -> ?minor_heap_size:int
-  -> ?major_heap_increment:int
-  -> ?space_overhead:int
-  -> ?verbose:int
-  -> ?max_overhead:int
-  -> ?stack_limit:int
-  -> ?allocation_policy:int
-  -> ?window_size:int
-  -> ?custom_major_ratio:int
-  -> ?custom_minor_ratio:int
-  -> ?custom_minor_max_size:int
-  -> unit
-  -> unit
-
-[%%endif]
-
 (** The policy used for allocating in the heap.
 
     The Next_fit policy is quite fast but can result in fragmentation.
@@ -409,7 +372,45 @@ module Allocation_policy : sig
     | Next_fit
     | First_fit
     | Best_fit
+  [@@deriving sexp]
 end
+
+[%%if ocaml_version < (4, 08, 0)]
+
+(** Adjust the specified GC parameters. *)
+val tune
+  :  ?logger:(string -> unit)
+  -> ?minor_heap_size:int
+  -> ?major_heap_increment:int
+  -> ?space_overhead:int
+  -> ?verbose:int
+  -> ?max_overhead:int
+  -> ?stack_limit:int
+  -> ?allocation_policy:Allocation_policy.t
+  -> ?window_size:int
+  -> unit
+  -> unit
+
+[%%else]
+
+(** Adjust the specified GC parameters. *)
+val tune
+  :  ?logger:(string -> unit)
+  -> ?minor_heap_size:int
+  -> ?major_heap_increment:int
+  -> ?space_overhead:int
+  -> ?verbose:int
+  -> ?max_overhead:int
+  -> ?stack_limit:int
+  -> ?allocation_policy:Allocation_policy.t
+  -> ?window_size:int
+  -> ?custom_major_ratio:int
+  -> ?custom_minor_ratio:int
+  -> ?custom_minor_max_size:int
+  -> unit
+  -> unit
+
+[%%endif]
 
 val disable_compaction
   :  ?logger:(string -> unit)
