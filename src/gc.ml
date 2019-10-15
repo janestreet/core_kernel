@@ -1,4 +1,17 @@
 open! Import
+
+module Stable = struct
+  module Allocation_policy = struct
+    module V1 = struct
+      type t =
+        | Next_fit
+        | First_fit
+        | Best_fit
+      [@@deriving bin_io, compare, equal, hash, sexp]
+    end
+  end
+end
+
 include Caml.Gc
 
 module Stat = struct
@@ -72,11 +85,7 @@ module Control = struct
 end
 
 module Allocation_policy = struct
-  type t =
-    | Next_fit
-    | First_fit
-    | Best_fit
-  [@@deriving sexp]
+  include Stable.Allocation_policy.V1
 
   let to_int = function
     | Next_fit -> 0

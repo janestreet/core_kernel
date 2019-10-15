@@ -13,7 +13,7 @@ let r' : (int, foo) Ref.Permissioned.t = r
 
 [%%expect
   {|
-Line _, characters 41-42:
+Line _, characters _-_:
 Error: This expression has type (int, [< 'b perms ] as 'a) Ref.Permissioned.t
        but an expression was expected of type (int, foo) Ref.Permissioned.t
        Type 'a = [< `Read | `Who_can_write of 'b ]
@@ -30,7 +30,7 @@ let () = Ref.Permissioned.set r 1
 
 [%%expect
   {|
-Line _, characters 30-31:
+Line _, characters _-_:
 Error: This expression has type * (glob)
        but an expression was expected of type
          * (glob)
@@ -48,7 +48,7 @@ let r_immutable : (int, immutable) Ref.Permissioned.t = r
 
 [%%expect
   {|
-Line _, characters 56-57:
+Line _, characters _-_:
 Error: This expression has type
          * (glob)
        but an expression was expected of type
@@ -77,7 +77,7 @@ module type Foo = Container with type ('a, 'perm) t := ('a, 'perm) t
 
 [%%expect
   {|
-Line _, characters 18-68:
+Line _, characters _-_:
 Error: In this `with' constraint, the new definition of t
        does not match its original definition in the constrained signature:
        Type declarations do not match:
@@ -107,7 +107,7 @@ module type Foo = Container with type ('a, 'perm) t := ('a, 'perm) t
 
 [%%expect
   {|
-Line _, characters 18-68:
+Line _, characters _-_:
 Error: In this `with' constraint, the new definition of t
        does not match its original definition in the constrained signature:
        Type declarations do not match:
@@ -132,7 +132,7 @@ type 'perm alias = 'perm t
 
 [%%expect
   {|
-Line _, characters 19-26:
+Line _, characters _-_:
 Error: Constraints are not satisfied in this type.
        Type
        \[< `Read | `Who_can_write of .* \] t (regexp)
@@ -147,7 +147,7 @@ type 'perm alias = 'perm t constraint 'perm = [< _ perms ]
 
 [%%expect
   {|
-Line _, characters 19-26:
+Line _, characters _-_:
 Error: Constraints are not satisfied in this type.
        Type
        \[< `Read | `Who_can_write of .* \] t (regexp)

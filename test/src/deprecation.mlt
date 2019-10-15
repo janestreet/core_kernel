@@ -7,7 +7,7 @@ end
 let _ = M.x
 
 [%%expect {|
-Line _, characters 8-11:
+Line _, characters _-_:
 Error (alert deprecated): M.x
 [since 2016-07]
 |}]

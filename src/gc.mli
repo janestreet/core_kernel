@@ -372,7 +372,7 @@ module Allocation_policy : sig
     | Next_fit
     | First_fit
     | Best_fit
-  [@@deriving sexp]
+  [@@deriving compare, equal, hash, sexp]
 end
 
 [%%if ocaml_version < (4, 08, 0)]
@@ -517,6 +517,14 @@ module Expert : sig
     (** [delete t] will stop the calls to the function associated to [t].  Calling [delete
         t] again has no effect. *)
     val delete : t -> unit
+  end
+end
+
+module Stable : sig
+  module Allocation_policy : sig
+    module V1 : sig
+      type nonrec t = Allocation_policy.t [@@deriving bin_io, compare, equal, hash, sexp]
+    end
   end
 end
 

@@ -26,6 +26,7 @@ module Error = Error.Stable
 module Fdeque = Fdeque.Stable
 module Float_with_finite_only_serialization = Float_with_finite_only_serialization.Stable
 module Fqueue = Fqueue.Stable
+module Gc = Gc.Stable
 module Host_and_port = Host_and_port.Stable
 module Info = Info.Stable
 module Int = Int.Stable

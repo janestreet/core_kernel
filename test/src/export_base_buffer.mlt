@@ -14,7 +14,7 @@ end =
 
 [%%expect
   {|
-Line _, characters 2-8:
+Line _, characters _-_:
 Error: Signature mismatch:
        ...
        The value `add_int64_le' is required but not provided
