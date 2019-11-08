@@ -4,7 +4,7 @@ open Linked_queue
 let%test_module _ =
   (module struct
     let m =
-      let module M  = struct
+      let module M = struct
         type 'a u = 'a t [@@deriving bin_io]
         type t = int u [@@deriving bin_io]
       end
@@ -23,7 +23,5 @@ let%test_module _ =
     let%test _ = test [ 1 ]
     let%test _ = test [ 1; 2; 3 ]
     let%test _ = test (List.init 10_000 ~f:Fn.id)
-
   end)
-
-
+;;

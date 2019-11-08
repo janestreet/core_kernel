@@ -31,8 +31,11 @@ open! Import
       } [@@deriving sexp]
 
       let config = {
-        keep = Blang.of_string "(or (and negative (multiple_of 3)) \
-                               \    (and positive (multiple_of 5)))";
+        keep =
+          Blang.t_of_sexp
+            Property.t_of_sexp
+            (Sexp.of_string
+               "(or (and negative (multiple_of 3)) (and positive (multiple_of 5)))";
       }
 
       let keep config num : bool =
@@ -72,6 +75,9 @@ open! Import
 
 open Std_internal
 
+(** Note that the sexps are not directly inferred from the type below -- there are lots of
+    fancy shortcuts.  Also, the sexps for ['a] must not look anything like blang sexps.
+    Otherwise [t_of_sexp] will fail. *)
 type 'a t = private
   | True
   | False
@@ -81,24 +87,27 @@ type 'a t = private
   | If of 'a t * 'a t * 'a t
   | Base of 'a
 [@@deriving bin_io, compare, hash, sexp]
-(** Note that the sexps are not directly inferred from the type above -- there are lots of
-    fancy shortcuts.  Also, the sexps for ['a] must not look anything like blang sexps.
-    Otherwise [t_of_sexp] will fail. *)
 
 (** {2 Smart constructors that simplify away constants whenever possible} *)
 
 module type Constructors = sig
-  val base     : 'a -> 'a t
-  val true_    : _ t
-  val false_   : _ t
-  val constant : bool -> _ t (** [function true -> true_ | false -> false_] *)
+  val base : 'a -> 'a t
+  val true_ : _ t
+  val false_ : _ t
 
-  val not_     : 'a t -> 'a t
-  val and_     : 'a t list -> 'a t (** n-ary [And] *)
+  (** [function true -> true_ | false -> false_] *)
+  val constant : bool -> _ t
 
-  val or_      : 'a t list -> 'a t (** n-ary [Or] *)
+  val not_ : 'a t -> 'a t
 
-  val if_      : 'a t -> 'a t -> 'a t -> 'a t (** [if_ if then else] *)
+  (** n-ary [And] *)
+  val and_ : 'a t list -> 'a t
+
+  (** n-ary [Or] *)
+  val or_ : 'a t list -> 'a t
+
+  (** [if_ if then else] *)
+  val if_ : 'a t -> 'a t -> 'a t -> 'a t
 end
 
 include Constructors
@@ -106,12 +115,12 @@ include Constructors
 module O : sig
   include Constructors
 
-  val (&&)  : 'a t -> 'a t -> 'a t
-  val (||)  : 'a t -> 'a t -> 'a t
+  val ( && ) : 'a t -> 'a t -> 'a t
+  val ( || ) : 'a t -> 'a t -> 'a t
 
   (** [a ==> b] is "a implies b".  This is not [=>] to avoid making it look like a
       comparison operator. *)
-  val (==>) : 'a t -> 'a t -> 'a t
+  val ( ==> ) : 'a t -> 'a t -> 'a t
 
   val not : 'a t -> 'a t
 end
@@ -158,6 +167,7 @@ val gather_conjuncts : 'a t -> 'a t list
 val gather_disjuncts : 'a t -> 'a t list
 
 include Container.S1 with type 'a t := 'a t
+include Quickcheckable.S1 with type 'a t := 'a t
 
 (** [Blang.t] sports a substitution monad:
     {ul {- [return v] is [Base v] (think of [v] as a variable) }
@@ -167,7 +177,8 @@ include Container.S1 with type 'a t := 'a t
 
     Note: [bind t f] does short-circuiting, so [f] may not be called on every variable in
     [t]. *)
-include Monad with type 'a t := 'a t
+include
+  Monad with type 'a t := 'a t
 
 (** [values t] forms the list containing every [v]
     for which [Base v] is a subexpression of [t] *)
@@ -188,7 +199,7 @@ val eval : 'a t -> ('a -> bool) -> bool
     the intersection of the two sets. Symmetrically, [Or set1 set2] represents the union
     of [set1] and [set2]. *)
 val eval_set
-  :  universe : ('elt, 'comparator) Set.t Lazy.t
+  :  universe:('elt, 'comparator) Set.t Lazy.t
   -> ('a -> ('elt, 'comparator) Set.t)
   -> 'a t
   -> ('elt, 'comparator) Set.t
@@ -213,7 +224,7 @@ val eval_set
         eval t f = eval (specialize t g) f
     ]}
 *)
-val specialize : 'a t -> ('a -> [`Known of bool | `Unknown]) -> 'a t
+val specialize : 'a t -> ('a -> [ `Known of bool | `Unknown ]) -> 'a t
 
 val invariant : 'a t -> unit
 

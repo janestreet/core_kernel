@@ -4,6 +4,12 @@ you might want to have a look at Base's
 
 ## git version
 
+- Removed `Obj_array` in favor of `Uniform_array`.
+
+- Remove deprecated `Std` module.
+
+## v0.12
+
 - Added `Digit_string_helpers.read_int63_decimal`.
 
 - Added `List.zip_with_remainder` which zips as many elements as possible and
@@ -12,6 +18,21 @@ you might want to have a look at Base's
 
 - Added `Bigbuffer.add_bin_prot` to append the bin-protted representation of a
   value at the end of the buffer.
+
+- Reexport `Base.Buffer`.
+
+- Added labels to function parameters in the `Quickcheck` module.
+
+- Deprecate `Timing_wheel_ns.alarm_upper_bound` in favor of
+  `Timing_wheel_ns.max_allowed_alarm_time`.
+
+- Deprecated `Array.replace arr i ~f` in favor of using `arr.(i) <- (f (arr.(i)))`
+
+- Removed functions that were deprecated in 2016 and 2017 from the `Array` and
+  `Set` modules.
+
+- Removed `Int_replace_polymorphic_compare` in favor of
+  `Int.Replace_polymorphic_compare`.
 
 ## v0.11
 

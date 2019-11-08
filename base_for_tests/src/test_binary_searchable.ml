@@ -214,7 +214,8 @@ module Test_gen (M : Indexable_gen_and_for_test) = struct
                 (*try*)
                 let should_raise =
                   Exn.does_raise (fun () ->
-                    Ordered_collection_common.check_pos_len_exn ~pos ~len ~length)
+                    Ordered_collection_common.check_pos_len_exn ~pos ~len
+                      ~total_length:length)
                 in
                 let result =
                   Result.try_with (fun () ->

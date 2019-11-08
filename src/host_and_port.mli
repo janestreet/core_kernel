@@ -5,12 +5,13 @@ open Std_internal
 type t =
   { host : string
   ; port : int
-  } [@@deriving hash]
+  }
+[@@deriving hash]
 
 val create : host:string -> port:int -> t
-
 val host : t -> string
 val port : t -> int
+
 
 val tuple : t -> string * int
 

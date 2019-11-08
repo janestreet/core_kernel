@@ -33,7 +33,7 @@ bin\_io support or locks in an API with `Stable`. Some modules, like
 `Core_kernel.Map`, extend their Base equivalents to follow Core
 conventions for the use of comparators.
 
----
+------
 
 Please report bugs and feature requests on
 [GitHub](https://github.com/janestreet/core_kernel). For everything

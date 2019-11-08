@@ -11,31 +11,32 @@ open Std_internal
     The fields will always be non-negative, and will never be large enough to form the
     next larger unit (e.g., [min < 60]). *)
 module type Parts = sig
-  type t = private {
-    sign : Sign.t;
-    hr   : int;
-    min  : int;
-    sec  : int;
-    ms   : int;
-    us   : int;
-    ns   : int;
-  }
-  [@@deriving sexp]
+  type t = private
+    { sign : Sign.t
+    ; hr : int
+    ; min : int
+    ; sec : int
+    ; ms : int
+    ; us : int
+    ; ns : int
+    }
+  [@@deriving compare, sexp]
 end
 
 module type S = sig
   (** Span.t represents a span of time (e.g. 7 minutes, 3 hours, 12.8 days).  The span
       may be positive or negative. *)
   type underlying
+
   type t = private underlying [@@deriving bin_io, hash, sexp, typerep]
 
   module Parts : Parts
-
-  include Comparable_binable         with type t := t
-  include Comparable.With_zero       with type t := t
-  include Hashable_binable           with type t := t
-  include Pretty_printer.S           with type t := t
-  include Robustly_comparable        with type t := t
+  include Comparable_binable with type t := t
+  include Comparable.With_zero with type t := t
+  include Hashable_binable with type t := t
+  include Pretty_printer.S with type t := t
+  include Robustly_comparable with type t := t
+  include Quickcheck.S_range with type t := t
 
   (** Time spans are denominated as a float suffixed by a unit of time; the valid suffixes
       are listed below:
@@ -64,6 +65,7 @@ module type S = sig
       {[ Span.of_string (Span.to_string t) = t ]}
   *)
   val to_string : t -> string
+
   val of_string : string -> t
 
   (** {6 values} *)
@@ -82,18 +84,17 @@ module type S = sig
 
   val zero : t
 
-  (** [create ?sign ?day ?hr ?min ?sec ?ms ?us ?ns ()] Create a span from the given parts.
-      All parts are assumed to be positive (no checking is done by the function) and the
-      sign of the final span is given by [sign] which is positive by default. *)
+  (** [?sign] defaults to positive. Setting it to negative is equivalent to negating all
+      the integers. *)
   val create
-    :  ?sign : Sign.t
-    -> ?day  : int
-    -> ?hr   : int
-    -> ?min  : int
-    -> ?sec  : int
-    -> ?ms   : int
-    -> ?us   : int
-    -> ?ns   : int
+    :  ?sign:Sign.t
+    -> ?day:int
+    -> ?hr:int
+    -> ?min:int
+    -> ?sec:int
+    -> ?ms:int
+    -> ?us:int
+    -> ?ns:int
     -> unit
     -> t
 
@@ -101,24 +102,23 @@ module type S = sig
 
   (** {6 converters} *)
 
-  val of_ns            : float -> t
-  val of_us            : float -> t
-  val of_ms            : float -> t
-  val of_sec           : float -> t
-  val of_int_sec       : int   -> t
+  val of_ns : float -> t
+  val of_us : float -> t
+  val of_ms : float -> t
+  val of_sec : float -> t
+  val of_int_sec : int -> t
   val of_int32_seconds : Int32.t -> t
   val of_int63_seconds : Int63.t -> t
-  val of_min           : float -> t
-  val of_hr            : float -> t
-  val of_day           : float -> t
-
-  val to_ns            : t -> float
-  val to_us            : t -> float
-  val to_ms            : t -> float
-  val to_sec           : t -> float
-  val to_min           : t -> float
-  val to_hr            : t -> float
-  val to_day           : t -> float
+  val of_min : float -> t
+  val of_hr : float -> t
+  val of_day : float -> t
+  val to_ns : t -> float
+  val to_us : t -> float
+  val to_ms : t -> float
+  val to_sec : t -> float
+  val to_min : t -> float
+  val to_hr : t -> float
+  val to_day : t -> float
 
   (** [to_int63_seconds_round_down_exn t] returns the number of seconds represented by
       [t], rounded down, raising if the result is not representable as an [Int63.t]. *)
@@ -135,15 +135,18 @@ module type S = sig
       an infinite span; with fixed-width integer-represented spans, the result silently
       wraps around as in two's-complement arithmetic. *)
 
-  val (+)   : t -> t -> t
-  val (-)   : t -> t -> t
-  val abs   : t -> t (** absolute value *)
+  val ( + ) : t -> t -> t
+  val ( - ) : t -> t -> t
 
-  val neg   : t -> t (** negation *)
+  (** absolute value *)
+  val abs : t -> t
+
+  (** negation *)
+  val neg : t -> t
 
   val scale : t -> float -> t
-  val (/)   : t -> float -> t
-  val (//)  : t -> t -> float
+  val ( / ) : t -> float -> t
+  val ( // ) : t -> t -> float
 
   (** [next t] is the smallest representable span greater than [t] (and therefore
       representation-dependent) *)
@@ -185,9 +188,9 @@ module type S = sig
       space character.  In combination with not stripping zeroes, this means that the
       decimal point will occur a fixed number of characters from the end of the string. *)
   val to_string_hum
-    :  ?delimiter:char              (** defaults to ['_'] *)
-    -> ?decimals:int                (** defaults to 3 *)
-    -> ?align_decimal:bool          (** defaults to [false] *)
+    :  ?delimiter:char (** defaults to ['_'] *)
+    -> ?decimals:int (** defaults to 3 *)
+    -> ?align_decimal:bool (** defaults to [false] *)
     -> ?unit_of_time:Unit_of_time.t (** defaults to [to_unit_of_time t] *)
     -> t
     -> string

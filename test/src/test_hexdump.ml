@@ -1,66 +1,68 @@
 open! Core_kernel
-open  Expect_test_helpers_kernel
+open Expect_test_helpers_kernel
 
 let require_same here (name1, string1) (name2, string2) =
-  require here (String.equal string1 string2)
+  require
+    here
+    (String.equal string1 string2)
     ~if_false_then_print_s:
-      (lazy [%message
-        "output differs unexpectedly"
-          ~_:((name1, string1) : string * string)
-          ~_:((name2, string2) : string * string)])
+      (lazy
+        [%message
+          "output differs unexpectedly"
+            ~_:(name1, string1 : string * string)
+            ~_:(name2, string2 : string * string)])
+;;
 
 let test_m (type a) here (module T : Hexdump.S with type t = a) ?max_lines ?pos ?len t =
-  let to_string_hum =
-    T.Hexdump.to_string_hum ?max_lines ?pos ?len t
-  in
+  let to_string_hum = T.Hexdump.to_string_hum ?max_lines ?pos ?len t in
   let to_sequence =
     T.Hexdump.to_sequence ?max_lines ?pos ?len t
     |> Sequence.to_list
     |> String.concat ~sep:"\n"
   in
   require_same here ("to_string_hum", to_string_hum) ("to_sequence", to_sequence);
-  if List.for_all ~f:Option.is_none [max_lines; pos; len] then begin
+  if List.for_all ~f:Option.is_none [ max_lines; pos; len ]
+  then (
     let sexp_of_t =
-      [%sexp (t : T.Hexdump.t)]
-      |> [%of_sexp: string list]
-      |> String.concat ~sep:"\n"
+      [%sexp (t : T.Hexdump.t)] |> [%of_sexp: string list] |> String.concat ~sep:"\n"
     in
-    require_same here ("to_string_hum", to_string_hum) ("sexp_of_t", sexp_of_t);
-  end;
+    require_same here ("to_string_hum", to_string_hum) ("sexp_of_t", sexp_of_t));
   to_string_hum
+;;
 
 let test ?max_lines ?pos ?len string =
-  let of_string =
-    test_m [%here] (module String) ?max_lines ?pos ?len string
-  in
+  let of_string = test_m [%here] (module String) ?max_lines ?pos ?len string in
   print_endline of_string;
   let of_bigstring =
     test_m [%here] (module Bigstring) ?max_lines ?pos ?len (Bigstring.of_string string)
   in
-  require_same [%here]
-    ("String.Hexdump.to_string_hum"   , of_string)
+  require_same
+    [%here]
+    ("String.Hexdump.to_string_hum", of_string)
     ("Bigstring.Hexdump.to_string_hum", of_bigstring)
+;;
 
 let string =
-  "Good morning. In less than an hour, aircraft from here will join others \
-   from around the world. And you will be launching the largest aerial battle \
-   in the history of mankind. \"Mankind.\" That word should have new meaning \
-   for all of us today. We can't be consumed by our petty differences anymore. \
-   We will be united in our common interests. Perhaps it's fate that today is \
-   the Fourth of July, and you will once again be fighting for our freedom... \
-   not from tyranny, oppression, or persecution... but from annihilation. We \
-   are fighting for our right to live. To exist. And should we win the day, \
-   the Fourth of July will no longer be known as an American holiday, but as \
-   the day the world declared in one voice: We will not go quietly into the \
-   night! We will not vanish without a fight!  We're going to live on! We're \
-   going to survive! Today we celebrate our Independence Day!"
+  "Good morning. In less than an hour, aircraft from here will join others from around \
+   the world. And you will be launching the largest aerial battle in the history of \
+   mankind. \"Mankind.\" That word should have new meaning for all of us today. We \
+   can't be consumed by our petty differences anymore. We will be united in our common \
+   interests. Perhaps it's fate that today is the Fourth of July, and you will once \
+   again be fighting for our freedom... not from tyranny, oppression, or persecution... \
+   but from annihilation. We are fighting for our right to live. To exist. And should \
+   we win the day, the Fourth of July will no longer be known as an American holiday, \
+   but as the day the world declared in one voice: We will not go quietly into the \
+   night! We will not vanish without a fight!  We're going to live on! We're going to \
+   survive! Today we celebrate our Independence Day!"
+;;
 
 let%expect_test _ =
   for len = 0 to 32 do
     printf "%d:\n" len;
-    test (String.sub string ~pos:746 ~len);
+    test (String.sub string ~pos:746 ~len)
   done;
-  [%expect {|
+  [%expect
+    {|
     0:
 
     1:
@@ -144,7 +146,8 @@ let%expect_test _ =
     00000000  57 65 20 77 69 6c 6c 20  6e 6f 74 20 76 61 6e 69  |We will not vani|
     00000010  73 68 20 77 69 74 68 6f  75 74 20 61 20 66 69 67  |sh without a fig| |}];
   test string;
-  [%expect {|
+  [%expect
+    {|
     00000000  47 6f 6f 64 20 6d 6f 72  6e 69 6e 67 2e 20 49 6e  |Good morning. In|
     00000010  20 6c 65 73 73 20 74 68  61 6e 20 61 6e 20 68 6f  | less than an ho|
     00000020  75 72 2c 20 61 69 72 63  72 61 66 74 20 66 72 6f  |ur, aircraft fro|
@@ -202,9 +205,10 @@ let%expect_test _ =
     00000360  63 65 20 44 61 79 21                              |ce Day!| |}];
   for max_lines = 0 to 10 do
     printf "%d:\n" max_lines;
-    test string ~max_lines;
+    test string ~max_lines
   done;
-  [%expect {|
+  [%expect
+    {|
     0:
     00000000  47 6f 6f 64 20 6d 6f 72  6e 69 6e 67 2e 20 49 6e  |Good morning. In|
     ...
@@ -278,7 +282,8 @@ let%expect_test _ =
     00000350  65 20 6f 75 72 20 49 6e  64 65 70 65 6e 64 65 6e  |e our Independen|
     00000360  63 65 20 44 61 79 21                              |ce Day!| |}];
   test string ~pos:707 ~len:123;
-  [%expect {|
+  [%expect
+    {|
     000002c3  57 65 20 77 69 6c 6c 20  6e 6f 74 20 67 6f 20 71  |We will not go q|
     000002d3  75 69 65 74 6c 79 20 69  6e 74 6f 20 74 68 65 20  |uietly into the |
     000002e3  6e 69 67 68 74 21 20 57  65 20 77 69 6c 6c 20 6e  |night! We will n|
@@ -288,7 +293,8 @@ let%expect_test _ =
     00000323  6f 6e 21 20 57 65 27 72  65 20 67 6f 69 6e 67 20  |on! We're going |
     00000333  74 6f 20 73 75 72 76 69  76 65 21                 |to survive!| |}];
   test string ~pos:707 ~max_lines:10;
-  [%expect {|
+  [%expect
+    {|
     000002c3  57 65 20 77 69 6c 6c 20  6e 6f 74 20 67 6f 20 71  |We will not go q|
     000002d3  75 69 65 74 6c 79 20 69  6e 74 6f 20 74 68 65 20  |uietly into the |
     000002e3  6e 69 67 68 74 21 20 57  65 20 77 69 6c 6c 20 6e  |night! We will n|
@@ -300,7 +306,8 @@ let%expect_test _ =
     00000353  75 72 20 49 6e 64 65 70  65 6e 64 65 6e 63 65 20  |ur Independence |
     00000363  44 61 79 21                                       |Day!| |}];
   test string ~pos:707 ~max_lines:20;
-  [%expect {|
+  [%expect
+    {|
     000002c3  57 65 20 77 69 6c 6c 20  6e 6f 74 20 67 6f 20 71  |We will not go q|
     000002d3  75 69 65 74 6c 79 20 69  6e 74 6f 20 74 68 65 20  |uietly into the |
     000002e3  6e 69 67 68 74 21 20 57  65 20 77 69 6c 6c 20 6e  |night! We will n|
@@ -312,3 +319,15 @@ let%expect_test _ =
     00000343  79 20 77 65 20 63 65 6c  65 62 72 61 74 65 20 6f  |y we celebrate o|
     00000353  75 72 20 49 6e 64 65 70  65 6e 64 65 6e 63 65 20  |ur Independence |
     00000363  44 61 79 21                                       |Day!| |}]
+;;
+
+let%expect_test "pretty" =
+  let test x = print_s ([%sexp_of: String.Hexdump.Pretty.t] x) in
+  test "The world is everything that is the case.";
+  [%expect {| "The world is everything that is the case." |}];
+  test "What\000are\255 these\001weird bytes?\xfe";
+  [%expect
+    {|
+    ("00000000  57 68 61 74 00 61 72 65  ff 20 74 68 65 73 65 01  |What.are. these.|"
+     "00000010  77 65 69 72 64 20 62 79  74 65 73 3f fe           |weird bytes?.|") |}]
+;;

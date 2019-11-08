@@ -11,8 +11,7 @@
     are immediately available.  In particular, if one wants to subscribe to a
     [Bus.Read_write.t], one must call [read_only] on it in order to get a
     [Bus.Read_only.t] that can be passed to [subscribe_exn].  This is deliberate, and is
-    meant to avoid unintentional reads from code that should only be writing.
-*)
+    meant to avoid unintentional reads from code that should only be writing. *)
 
 open! Import
 open Std_internal
@@ -27,9 +26,9 @@ open Std_internal
     [create], to the types exposed by the variants in [Callback_arity]. *)
 module Callback_arity : sig
   type _ t =
-    | Arity1 : ('a ->                   unit) t
-    | Arity2 : ('a -> 'b ->             unit) t
-    | Arity3 : ('a -> 'b -> 'c ->       unit) t
+    | Arity1 : ('a -> unit) t
+    | Arity2 : ('a -> 'b -> unit) t
+    | Arity3 : ('a -> 'b -> 'c -> unit) t
     | Arity4 : ('a -> 'b -> 'c -> 'd -> unit) t
   [@@deriving sexp_of]
 end
@@ -74,17 +73,15 @@ val read_only : ('callback, _) t -> 'callback Read_only.t
     If [on_callback_raise] raises, then the exception is raised to [write] and the bus is
     closed. *)
 val create
-  :  ?name : Info.t
+  :  ?name:Info.t
   -> Source_code_position.t
   -> 'callback Callback_arity.t
-  -> on_subscription_after_first_write : On_subscription_after_first_write.t
-  -> on_callback_raise                 : (Error.t -> unit)
+  -> on_subscription_after_first_write:On_subscription_after_first_write.t
+  -> on_callback_raise:(Error.t -> unit)
   -> 'callback Read_write.t
 
-val callback_arity : (('callback, _) t) -> 'callback Callback_arity.t
-
+val callback_arity : ('callback, _) t -> 'callback Callback_arity.t
 val num_subscribers : (_, _) t -> int
-
 val is_closed : (_, _) t -> bool
 
 (** [close] disallows future [write]s -- once [close t] is called, all further calls to
@@ -95,34 +92,13 @@ val close : 'callback Read_write.t -> unit
 
 (** [write] ... [write4] call all callbacks currently subscribed to the bus, with no
     guarantee on the order in which they will be called.  [write] is non-allocating,
-    though the callbacks themselves may allocate.  Calling [writeN t] from within a
-    callback on [t] if [is_closed t] will raise. *)
+    though the callbacks themselves may allocate.  Calling [writeN t] raises if called
+    from within a callback on [t] or when [is_closed t]. *)
 
-val write
-  :  ('a -> unit) Read_write.t
-  -> 'a
-  -> unit
-
-val write2
-  :  ('a -> 'b -> unit) Read_write.t
-  -> 'a
-  -> 'b
-  -> unit
-
-val write3
-  :  ('a -> 'b -> 'c -> unit) Read_write.t
-  -> 'a
-  -> 'b
-  -> 'c
-  -> unit
-
-val write4
-  :  ('a -> 'b -> 'c -> 'd -> unit) Read_write.t
-  -> 'a
-  -> 'b
-  -> 'c
-  -> 'd
-  -> unit
+val write : ('a -> unit) Read_write.t -> 'a -> unit
+val write2 : ('a -> 'b -> unit) Read_write.t -> 'a -> 'b -> unit
+val write3 : ('a -> 'b -> 'c -> unit) Read_write.t -> 'a -> 'b -> 'c -> unit
+val write4 : ('a -> 'b -> 'c -> 'd -> unit) Read_write.t -> 'a -> 'b -> 'c -> 'd -> unit
 
 module Subscriber : sig
   type 'callback t [@@deriving sexp_of]
@@ -133,8 +109,7 @@ end
     stored in the [Subscriber.t], and contained in [%sexp_of: Subscriber.t], which can
     help with debugging.  If [subscribe_exn t] is called by a callback in [t], i.e.,
     during [write t], the subscription takes effect for the next [write], but does not
-    affect the current [write].  [subscribe_exn] takes time proportional to the number of
-    callbacks.
+    affect the current [write].  [subscribe_exn] takes amortized constant time.
 
     If [on_callback_raise] is supplied, then it will be called by [write] whenever [f]
     raises; only if that subsequently raises will [t]'s [on_callback_raise] be called.  If
@@ -147,24 +122,24 @@ end
 
     [on_close] is called if you are still subscribed when [Bus.close] is called. *)
 val subscribe_exn
-  :  ?extract_exn : bool  (** default is [false] *)
-  -> ?on_callback_raise : (Error.t -> unit)
-  -> ?on_close : (unit -> unit)
-  -> 'callback Read_only.t
+  :  ?extract_exn:bool (** default is [false] *)
+  -> ?on_callback_raise:(Error.t -> unit)
+  -> ?on_close:(unit -> unit)
+  -> ('callback, [> read ]) t
   -> Source_code_position.t
-  -> f : 'callback
+  -> f:'callback
   -> 'callback Subscriber.t
 
 
 (** [iter_exn t [%here] ~f] is [ignore (subscribe_exn t [%here] ~callback:f)].  This
     captures the common usage in which one never wants to unsubscribe from a bus. *)
-val iter_exn : 'callback Read_only.t -> Source_code_position.t -> f:'callback -> unit
+val iter_exn : ('callback, [> read ]) t -> Source_code_position.t -> f:'callback -> unit
 
 module Fold_arity : sig
   type (_, _, _) t =
-    | Arity1 : ('a ->                   unit, 's -> 'a ->                   's, 's) t
-    | Arity2 : ('a -> 'b ->             unit, 's -> 'a -> 'b ->             's, 's) t
-    | Arity3 : ('a -> 'b -> 'c ->       unit, 's -> 'a -> 'b -> 'c ->       's, 's) t
+    | Arity1 : ('a -> unit, 's -> 'a -> 's, 's) t
+    | Arity2 : ('a -> 'b -> unit, 's -> 'a -> 'b -> 's, 's) t
+    | Arity3 : ('a -> 'b -> 'c -> unit, 's -> 'a -> 'b -> 'c -> 's, 's) t
     | Arity4 : ('a -> 'b -> 'c -> 'd -> unit, 's -> 'a -> 'b -> 'c -> 'd -> 's, 's) t
   [@@deriving sexp_of]
 end
@@ -172,7 +147,7 @@ end
 (** [fold_exn t [%here] arity ~init ~f] folds over the bus events, threading a state value
     to every call.  It is otherwise similar to [iter_exn]. *)
 val fold_exn
-  :  'callback Read_only.t
+  :  ('callback, [> read ]) t
   -> Source_code_position.t
   -> ('callback, 'f, 's) Fold_arity.t
   -> init:'s
@@ -182,6 +157,5 @@ val fold_exn
 (** [unsubscribe t subscriber] removes the callback corresponding to [subscriber] from
     [t].  [unsubscribe] never raises and is idempotent.  As with [subscribe_exn],
     [unsubscribe t] during [write t] takes effect after the current [write] finishes.
-    Also like [subscribe_exn], [unsubscribe] takes time proportional to the number of
-    callbacks. *)
-val unsubscribe : 'callback Read_only.t -> 'callback Subscriber.t -> unit
+    Also like [subscribe_exn], [unsubscribe] takes amortized constant time. *)
+val unsubscribe : ('callback, [> read ]) t -> 'callback Subscriber.t -> unit

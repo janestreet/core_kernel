@@ -5,7 +5,7 @@ module type S = sig
   type value
 
   module Optional_syntax : sig
-    val is_none         : t -> bool
+    val is_none : t -> bool
     val unsafe_value : t -> value
   end
 end
@@ -15,7 +15,7 @@ module type S1 = sig
   type 'a value
 
   module Optional_syntax : sig
-    val is_none         : _  t -> bool
+    val is_none : _ t -> bool
     val unsafe_value : 'a t -> 'a value
   end
 end
@@ -25,7 +25,7 @@ module type S2 = sig
   type ('a, 'b) value
 
   module Optional_syntax : sig
-    val is_none         : _ t -> bool
+    val is_none : _ t -> bool
     val unsafe_value : ('a, 'b) t -> ('a, 'b) value
   end
 end
@@ -80,7 +80,7 @@ module type Optional_syntax = sig
       For more details on the syntax extension, see [ppx/ppx_optional/README.md].
   *)
 
-  module type S  = S
+  module type S = S
   module type S1 = S1
   module type S2 = S2
 end

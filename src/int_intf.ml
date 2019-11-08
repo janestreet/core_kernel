@@ -8,6 +8,7 @@ end
 
 module type Hexable = sig
   type t
+
   module Hex : sig
     type nonrec t = t [@@deriving bin_io, sexp, compare, hash, typerep]
 
@@ -20,30 +21,24 @@ end
 module type Extension = sig
   type t [@@deriving bin_io, typerep]
 
-  include Hexable              with type t := t
-  include Identifiable.S       with type t := t
+  include Hexable with type t := t
+  include Identifiable.S with type t := t
   include Quickcheckable.S_int with type t := t
 end
 
 module type S_unbounded = sig
-  include Extension
   include Base.Int.S_unbounded
-    with type t := t
-    with type comparator_witness := comparator_witness
-    with module Hex := Hex
+  include Extension with type t := t with type comparator_witness := comparator_witness
 end
 
 module type S = sig
-  include Extension
   include Base.Int.S
-    with type t := t
-    with type comparator_witness := comparator_witness
-    with module Hex := Hex
+  include Extension with type t := t with type comparator_witness := comparator_witness
 end
 
 module type Extension_with_stable = sig
   include Extension
-  module Stable : Stable
-    with type V1.t = t
-     and type V1.comparator_witness = comparator_witness
+
+  module Stable :
+    Stable with type V1.t = t and type V1.comparator_witness = comparator_witness
 end

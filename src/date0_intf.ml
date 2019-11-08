@@ -2,7 +2,7 @@ open! Import
 open Std_internal
 
 module type Date0 = sig
-  type t [@@deriving bin_io, hash, sexp]
+  type t [@@immediate] [@@deriving bin_io, hash, sexp, typerep]
 
   include Hashable_binable with type t := t
 
@@ -12,9 +12,11 @@ module type Date0 = sig
       - DD MMM YYYY
       - DDMMMYYYY
       - YYYYMMDD *)
-  include Stringable         with type t := t
+  include
+    Stringable with type t := t
+
   include Comparable_binable with type t := t
-  include Pretty_printer.S   with type t := t
+  include Pretty_printer.S with type t := t
 
   (** [create_exn ~y ~m ~d] creates the date specified in the arguments.  Arguments are
       validated, and are not normalized in any way.  So, days must be within the limits
@@ -26,26 +28,37 @@ module type Date0 = sig
 
       http://www.wikipedia.org/wiki/iso8601
   *)
-  val of_string_iso8601_basic : string -> pos:int -> t (** YYYYMMDD *)
+  val of_string_iso8601_basic : string -> pos:int -> t
 
-  val to_string_iso8601_basic : t -> string            (** YYYYMMDD *)
+  (** YYYYMMDD *)
+  val to_string_iso8601_basic : t -> string
 
-  val to_string_american : t -> string              (** MM/DD/YYYY *)
+  (** MM/DD/YYYY *)
+  val to_string_american : t -> string
 
-  val day   : t -> int
+  val day : t -> int
   val month : t -> Month.t
-  val year  : t -> int
+  val year : t -> int
 
+  (** Only accurate after 1752-09 *)
   val day_of_week : t -> Day_of_week.t
 
-  (** Week of the year, from 1 to 53.  According to ISO 8601, weeks start on Monday, and the
-      first week of a year is the week that contains the first Thursday of the year.  Notice
-      that this means that dates near the end of the year can have week number 1, and dates
-      near the beginning of the year can have week number 52 or 53.
+  (** Week of the year, from 1 to 53, along with the week-numbering year to which the week
+      belongs. The week-numbering year may not correspond to the calendar year in which
+      the provided date occurs.
 
-      Warning: the triple (year, week number, week day) does not identify a date -- e.g.
-      2012-01-02 and 2012-12-31 are both Mondays of week 1. (However, if instead of the
-      year, you use the year of the nearest Thursday, then it does work.) *)
+      According to ISO 8601, weeks start on Monday, and the first week of a year is the
+      week that contains the first Thursday of the year. This means that dates near the
+      end of the calendar year can have week number 1 and belong to the following
+      week-numbering year, and dates near the beginning of the calendar year can have week
+      number 52 or 53 and belong to the previous week-numbering year.
+
+      The triple (week-numbering year, week number, week day) uniquely identifies a
+      particular date, which is not true if the calendar year is used instead.
+  *)
+  val week_number_and_year : t -> int * int
+
+  (** See {!week_number_and_year} for the meaning of week number.  *)
   val week_number : t -> int
 
   val is_weekend : t -> bool
@@ -55,7 +68,10 @@ module type Date0 = sig
   *)
   val is_business_day : t -> is_holiday:(t -> bool) -> bool
 
-  (** [add_days t n] adds n days to [t] and returns the resulting date. *)
+  (** [add_days t n] adds n days to [t] and returns the resulting date.
+
+      Inaccurate when crossing 1752-09.
+  *)
   val add_days : t -> int -> t
 
   (** [add_months t n] returns date with max days for the month if the date would be
@@ -112,16 +128,19 @@ module type Date0 = sig
   val dates_between : min:t -> max:t -> t list
 
   val business_dates_between : min:t -> max:t -> is_holiday:(t -> bool) -> t list
-
   val weekdays_between : min:t -> max:t -> t list
-
   val previous_weekday : t -> t
-
   val following_weekday : t -> t
 
   (** [first_strictly_after t ~on:day_of_week] returns the first occurrence of [day_of_week]
       strictly after [t]. *)
   val first_strictly_after : t -> on:Day_of_week.t -> t
+
+  (** [days_in_month ~year ~month] returns the number of days in [month], using [year]
+      only if [month = Month.Feb] to check if there is a leap year.
+
+      Incorrect for September 1752. *)
+  val days_in_month : year:int -> month:Month.t -> int
 
   (** [is_leap_year ~year] returns true if [year] is considered a leap year *)
   val is_leap_year : year:int -> bool
@@ -130,7 +149,8 @@ module type Date0 = sig
   val unix_epoch : t
 
   (** [gen] generates dates between 1900-01-01 and 2100-01-01. *)
-  include Quickcheckable with type t := t
+  include
+    Quickcheckable with type t := t
 
   (** [gen_incl d1 d2] generates dates in the range between [d1] and [d2], inclusive, with
       the endpoints having higher weight than the rest.  Raises if [d1 > d2]. *)
@@ -140,6 +160,7 @@ module type Date0 = sig
       and [d2], inclusive.  Raises if [d1 > d2]. *)
   val gen_uniform_incl : t -> t -> t Quickcheck.Generator.t
 
+
   (** [Days] provides a linear representation of dates that is optimized for arithmetic on
       the number of days between dates, rather than for representing year/month/day
       components. This module is intended for use only in performance-sensitive contexts
@@ -147,29 +168,45 @@ module type Date0 = sig
       most clients should use the ordinary [t]. *)
   module Days : sig
     type date = t
-    type t
+    type t [@@immediate]
 
     val of_date : date -> t
     val to_date : t -> date
-
-    val diff     : t -> t -> int
+    val diff : t -> t -> int
     val add_days : t -> int -> t
 
     (** The starting date of the UNIX epoch: 1970-01-01 *)
     val unix_epoch : t
-  end with type date := t
+  end
+  with type date := t
 
   module Stable : sig
     module V1 : sig
-      type nonrec t = t [@@deriving hash]
+      type nonrec t = t [@@immediate] [@@deriving hash]
 
-      include Stable_comparable.V1
-        with type t                  :=  t
-        with type comparator_witness =  comparator_witness
+      (** [to_int] and [of_int_exn] convert to/from the underlying integer
+          representation. *)
+
+      val to_int : t -> int
+      val of_int_exn : int -> t
+
+      include
+        Stable_comparable.V1
+        with type t := t
+        with type comparator_witness = comparator_witness
     end
   end
 
   module O : sig
     include Comparable.Infix with type t := t
+  end
+
+  (*_ See the Jane Street Style Guide for an explanation of [Private] submodules:
+
+    https://opensource.janestreet.com/standards/#private-submodules *)
+  module Private : sig
+    val leap_year_table : int array
+    val non_leap_year_table : int array
+    val ordinal_date : t -> int
   end
 end

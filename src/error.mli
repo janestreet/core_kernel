@@ -2,10 +2,15 @@
 
 open! Import
 
-include module type of struct include Base.Error end (** @inline *)
+(** @inline *)
+include module type of struct
+  include Base.Error
+end
 
 (** This include is the source of the bin_io functions. *)
-include Info_intf.Extension with type t := t (** @open *)
+include
+  Info_intf.Extension with type t := t
+(** @open *)
 
 (** [Error.t] is {e not} wire-compatible with [Error.Stable.V1.t].  See info.mli for
     details. *)
@@ -30,15 +35,15 @@ include Info_intf.Extension with type t := t (** @open *)
    [failwithp here] is like [failwiths ~here], except that you can provide a source
    position yourself (which is only interesting if you don't provide [[%here]]). *)
 val failwiths
-  :  ?strict : unit
-  -> ?here   : Lexing.position
+  :  ?strict:unit
+  -> ?here:Lexing.position
   -> string
   -> 'a
   -> ('a -> Base.Sexp.t)
   -> _
 
 val failwithp
-  :  ?strict : unit
+  :  ?strict:unit
   -> Lexing.position
   -> string
   -> 'a

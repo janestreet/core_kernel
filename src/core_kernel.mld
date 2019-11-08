@@ -1,4 +1,4 @@
-{1 Core_kernel}
+{0 Core_kernel}
 
 {b {{!Core_kernel} The full API is browsable here}}.
 
@@ -10,7 +10,7 @@ way to use it is to start your file with:
 
   {[open Core_kernel]}
 
-{2 Relationship to Core and Base}
+{1 Relationship to Core and Base}
 
 In sum:
 

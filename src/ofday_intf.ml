@@ -2,6 +2,7 @@ open! Import
 open Std_internal
 
 module type S = sig
+
   (** Time of day.
 
       [t] represents a clock-face time of day. Usually this is equivalent to a time-offset
@@ -21,14 +22,16 @@ module type S = sig
 
       Any [ofday] will satisfy [start_of_day <= ofday <= start_of_next_day]. *)
   type underlying
-  type t = private underlying [@@deriving bin_io, sexp]
 
-  include Comparable_binable         with type t := t
-  include Hashable_binable           with type t := t
-  include Pretty_printer.S           with type t := t
-  include Robustly_comparable        with type t := t
+  type t = private underlying [@@deriving bin_io, sexp, typerep]
 
+  include Comparable_binable with type t := t
+  include Hashable_binable with type t := t
+  include Pretty_printer.S with type t := t
+  include Robustly_comparable with type t := t
+  include Quickcheck.S_range with type t := t
   module Span : Span_intf.S
+
 
   (** [of_string] supports and correctly interprets 12h strings with the following suffixes:
 
@@ -42,15 +45,16 @@ module type S = sig
       [of_string] also fully supports 24h wall-clock times.
 
       [to_string] only produces the 24h format. *)
-  include Stringable with type t := t
+  include
+    Stringable with type t := t
 
   val create
-    :  ?hr  : int
-    -> ?min : int
-    -> ?sec : int
-    -> ?ms  : int
-    -> ?us  : int
-    -> ?ns  : int
+    :  ?hr:int
+    -> ?min:int
+    -> ?sec:int
+    -> ?ms:int
+    -> ?us:int
+    -> ?ns:int
     -> unit
     -> t
 
@@ -73,17 +77,32 @@ module type S = sig
       time and ofday representations, depending on their precision. *)
   val approximate_end_of_day : t
 
+
   (** Note that these names are only really accurate on days without DST transitions. When
       clocks move forward or back, [of_span_since_start_of_day_exn s] will not necessarily
       occur [s] after that day's midnight. *)
-  val to_span_since_start_of_day     : t -> Span.t
+  val to_span_since_start_of_day : t -> Span.t
+
   val of_span_since_start_of_day_exn : Span.t -> t
-  val of_span_since_start_of_day     : Span.t -> t
+
+  val of_span_since_start_of_day : Span.t -> t
   [@@deprecated "[since 2018-04] use [of_span_since_start_of_day_exn] instead"]
+
+  (** Reports whether a span represents a valid time since the start of the day, i.e.
+      whether [of_span_since_start_of_day_exn span] would succeed. *)
+  val span_since_start_of_day_is_valid : Span.t -> bool
+
+  (** [of_span_since_start_of_day_unchecked] does not validate that the [Span] represents
+      a valid [Ofday].
+
+      Behavior of other [Ofday] accessors is unspecified, but still safe (e.g., won't
+      segfault), if the input does not satisfy [span_since_start_of_day_is_valid]. *)
+  val of_span_since_start_of_day_unchecked : Span.t -> t
 
   (** [add t s] shifts the time of day [t] by the span [s].  It returns [None] if the
       result is not in the same 24-hour day. *)
   val add : t -> Span.t -> t option
+
   val sub : t -> Span.t -> t option
 
   (** [next t] return the next [t] (next t > t) or None if [t] = end of day. *)
@@ -101,6 +120,7 @@ module type S = sig
       This is useful for comparing two ofdays in unknown time-zones. *)
   val small_diff : t -> t -> Span.t
 
+
   (** Trailing groups of zeroes are trimmed such that the output is printed in terms of
       the smallest non-zero units among nanoseconds, microseconds, milliseconds, or
       seconds; or minutes if all of the above are zero. *)
@@ -114,6 +134,7 @@ module type S = sig
 
   (** with milliseconds *)
   val to_millisecond_string : t -> string
-  val to_millisec_string    : t -> string
+
+  val to_millisec_string : t -> string
   [@@deprecated "[since 2018-04] use [to_millisecond_string] instead"]
 end

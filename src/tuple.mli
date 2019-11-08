@@ -9,24 +9,29 @@ module T2 : sig
   include Comparator.Derived2 with type ('a, 'b) t := ('a, 'b) t
 
   val create : 'a -> 'b -> ('a, 'b) t
-  val curry :  (('a, 'b) t -> 'c) -> 'a -> 'b -> 'c
+  val curry : (('a, 'b) t -> 'c) -> 'a -> 'b -> 'c
   val uncurry : ('a -> 'b -> 'c) -> ('a, 'b) t -> 'c
+
   val compare
     :  cmp1:('a -> 'a -> int)
     -> cmp2:('b -> 'b -> int)
     -> ('a, 'b) t
     -> ('a, 'b) t
     -> int
+
   val equal
     :  eq1:('a -> 'a -> bool)
     -> eq2:('b -> 'b -> bool)
-    -> ('a, 'b) t -> ('a, 'b) t -> bool
+    -> ('a, 'b) t
+    -> ('a, 'b) t
+    -> bool
 
   external get1 : ('a, _) t -> 'a = "%field0"
   external get2 : (_, 'a) t -> 'a = "%field1"
 
   val map1 : f:('a -> 'c) -> ('a, 'b) t -> ('c, 'b) t
   [@@deprecated "[since 2015-12] use map_fst"]
+
   val map2 : f:('b -> 'c) -> ('a, 'b) t -> ('a, 'c) t
   [@@deprecated "[since 2015-12] use map_snd"]
 
@@ -34,7 +39,6 @@ module T2 : sig
 
   val map_fst : ('a, 'b) t -> f:('a -> 'c) -> ('c, 'b) t
   val map_snd : ('a, 'b) t -> f:('b -> 'c) -> ('a, 'c) t
-
   val swap : ('a, 'b) t -> ('b, 'a) t
 end
 
@@ -43,26 +47,35 @@ module T3 : sig
   type ('a, 'b, 'c) t = 'a * 'b * 'c [@@deriving sexp, typerep]
 
   val create : 'a -> 'b -> 'c -> ('a, 'b, 'c) t
-  val curry :  (('a, 'b, 'c) t -> 'd) -> 'a -> 'b -> 'c -> 'd
+  val curry : (('a, 'b, 'c) t -> 'd) -> 'a -> 'b -> 'c -> 'd
   val uncurry : ('a -> 'b -> 'c -> 'd) -> ('a, 'b, 'c) t -> 'd
+
   val equal
     :  eq1:('a -> 'a -> bool)
     -> eq2:('b -> 'b -> bool)
     -> eq3:('c -> 'c -> bool)
-    -> ('a, 'b, 'c) t -> ('a, 'b, 'c) t -> bool
+    -> ('a, 'b, 'c) t
+    -> ('a, 'b, 'c) t
+    -> bool
+
   val compare
     :  cmp1:('a -> 'a -> int)
     -> cmp2:('b -> 'b -> int)
     -> cmp3:('c -> 'c -> int)
-    -> ('a, 'b, 'c) t -> ('a, 'b, 'c) t -> int
+    -> ('a, 'b, 'c) t
+    -> ('a, 'b, 'c) t
+    -> int
+
   external get1 : ('a, _, _) t -> 'a = "%field0"
   external get2 : (_, 'a, _) t -> 'a = "%field1"
   val get3 : (_, _, 'a) t -> 'a
 
   val map1 : f:('a -> 'd) -> ('a, 'b, 'c) t -> ('d, 'b, 'c) t
   [@@deprecated "[since 2015-12] use map_fst"]
+
   val map2 : f:('b -> 'd) -> ('a, 'b, 'c) t -> ('a, 'd, 'c) t
   [@@deprecated "[since 2015-12] use map_snd"]
+
   val map3 : f:('c -> 'd) -> ('a, 'b, 'c) t -> ('a, 'b, 'd) t
   [@@deprecated "[since 2015-12] use map_trd"]
 
@@ -84,18 +97,40 @@ end
     ]}
 *)
 
-module Make (T1 : sig type t end) (T2 : sig type t end) : sig type t = T1.t * T2.t end
+module Make (T1 : sig
+    type t
+  end) (T2 : sig
+          type t
+        end) : sig
+  type t = T1.t * T2.t
+end
 
 module type Comparable_sexpable = sig
   type t [@@deriving sexp]
+
+
   include Comparable.S with type t := t
 end
 
-module Comparable (S1 : Comparable_sexpable) (S2 : Comparable_sexpable)
-  : Comparable_sexpable with type t := Make (S1) (S2).t
+module Comparable_plain (S1 : Comparable.S_plain) (S2 : Comparable.S_plain) : sig
+  (*_ This type is introduced because older versions of OCaml do not support
+    destructive substitutions with `type t1 = 'a t2`. *)
+
+  type comparator_witness =
+    (S1.comparator_witness, S2.comparator_witness) T2.comparator_witness
+
+  include
+    Comparable.S_plain
+    with type t := Make(S1)(S2).t
+    with type comparator_witness := comparator_witness
+end
+
+module Comparable (S1 : Comparable_sexpable) (S2 : Comparable_sexpable) :
+  Comparable_sexpable with type t := Make(S1)(S2).t
 
 module type Hashable_sexpable = sig
   type t [@@deriving sexp]
+
   include Hashable.S with type t := t
 end
 
@@ -124,19 +159,20 @@ end
     Unfortunately, it is not possible to define just one functor that could be used in
     both cases.
 *)
-module Hashable (S1 : Hashable_sexpable) (S2 : Hashable_sexpable)
-  : Hashable_sexpable with type t := Make (S1) (S2).t
+module Hashable (S1 : Hashable_sexpable) (S2 : Hashable_sexpable) :
+  Hashable_sexpable with type t := Make(S1)(S2).t
 
-module Hashable_t (S1 : Hashable_sexpable) (S2 : Hashable_sexpable)
-  : Hashable_sexpable with type t = Make (S1) (S2).t
+module Hashable_t (S1 : Hashable_sexpable) (S2 : Hashable_sexpable) :
+  Hashable_sexpable with type t = Make(S1)(S2).t
 
-module Sexpable (S1 : Sexpable.S) (S2 : Sexpable.S)
-  : Sexpable.S with type t := Make (S1) (S2).t
+module Sexpable (S1 : Sexpable.S) (S2 : Sexpable.S) :
+  Sexpable.S with type t := Make(S1)(S2).t
 
-module Binable (B1 : Binable.S) (B2 : Binable.S)
-  : Binable.S with type t := Make (B1) (B2).t
+module Binable (B1 : Binable.S) (B2 : Binable.S) :
+  Binable.S with type t := Make(B1)(B2).t
 
-module Hasher
-    (H1 : sig type t [@@deriving compare, hash, sexp] end)
-    (H2 : sig type t [@@deriving compare, hash, sexp] end)
-  : Hashable_sexpable with type t := Make (H1) (H2).t
+module Hasher (H1 : sig
+    type t [@@deriving compare, hash, sexp]
+  end) (H2 : sig
+          type t [@@deriving compare, hash, sexp]
+        end) : Hashable_sexpable with type t := Make(H1)(H2).t

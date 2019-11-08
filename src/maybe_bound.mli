@@ -1,11 +1,17 @@
 (** This module extends {{!Base.Maybe_bound}[Base.Maybe_bound]} with bin_io and with compare functions in the
     form of [As_lower_bound] and [As_upper_bound] modules. *)
 
-type 'a t = 'a Base.Maybe_bound.t = Incl of 'a | Excl of 'a | Unbounded
+type 'a t = 'a Base.Maybe_bound.t =
+  | Incl of 'a
+  | Excl of 'a
+  | Unbounded
 [@@deriving bin_io]
 
-include module type of struct include Base.Maybe_bound end
-  with type 'a t := 'a t (** @open *)
+(** @open *)
+include module type of struct
+  include Base.Maybe_bound
+end
+with type 'a t := 'a t
 
 (** Compares [t] values as lower bounds, where [Unbounded] is lowest, [Incl x < Excl x],
     and other cases of [Incl] and/or [Excl] are compared based on ['a].  If

@@ -1,6 +1,8 @@
 (** This module extends {{!Base.Ordered_collection_common}[Base.Ordered_collection_common]}. *)
 
-include module type of struct include Base.Ordered_collection_common end
+include module type of struct
+  include Base.Ordered_collection_common
+end
 
 
 val normalize : length_fun:('a -> int) -> 'a -> int -> int

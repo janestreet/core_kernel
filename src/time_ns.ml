@@ -10,67 +10,142 @@ type t = Span.t (* since the Unix epoch (1970-01-01 00:00:00 UTC) *)
 [@@deriving bin_io, compare, hash, typerep]
 
 include (Span : Comparable.Infix with type t := t)
+include (Span : Quickcheck.S_range with type t := t)
 
 let now = Span.since_unix_epoch
-
 let equal = Span.equal
-
-let min_value = Span.min_value
-let max_value = Span.max_value
-
-let epoch        = Span.zero
-let add          = Span.(+)
-let sub          = Span.(-)
-let diff         = Span.(-)
+let min_value_for_1us_rounding = Span.min_value_for_1us_rounding
+let max_value_for_1us_rounding = Span.max_value_for_1us_rounding
+let epoch = Span.zero
+let add = Span.( + )
+let sub = Span.( - )
+let diff = Span.( - )
 let abs_diff t u = Span.abs (diff t u)
-let max          = Span.max
-let min          = Span.min
-
+let max = Span.max
+let min = Span.min
+let next = Span.next
+let prev = Span.prev
 let to_span_since_epoch t = t
 let of_span_since_epoch s = s
-
 let to_int63_ns_since_epoch t : Int63.t = Span.to_int63_ns (to_span_since_epoch t)
 let of_int63_ns_since_epoch i = of_span_since_epoch (Span.of_int63_ns i)
+let[@cold] overflow () = raise_s [%message "Time_ns: overflow"]
+let is_earlier t1 ~than:t2 = t1 < t2
+let is_later t1 ~than:t2 = t1 > t2
+
+let add_overflowed x y ~sum =
+  if Span.( > ) y Span.zero then Span.( < ) sum x else Span.( > ) sum x
+;;
+
+let sub_overflowed x y ~diff =
+  if Span.( > ) y Span.zero then Span.( > ) diff x else Span.( < ) diff x
+;;
+
+let add_exn x y =
+  let sum = add x y in
+  if add_overflowed x y ~sum then overflow () else sum
+;;
+
+let sub_exn x y =
+  let diff = sub x y in
+  if sub_overflowed x y ~diff then overflow () else diff
+;;
+
+let add_saturating x y =
+  let sum = add x y in
+  if add_overflowed x y ~sum
+  then
+    if Span.(y > zero)
+    then Span.max_value_representable
+    else Span.min_value_representable
+  else sum
+;;
+
+let sub_saturating x y =
+  let diff = sub x y in
+  if sub_overflowed x y ~diff
+  then
+    if Span.(y > zero)
+    then Span.min_value_representable
+    else Span.max_value_representable
+  else diff
+;;
 
 let to_int_ns_since_epoch =
   if arch_sixtyfour
   then fun t -> Int63.to_int_exn (to_int63_ns_since_epoch t)
   else fun _ -> failwith "Time_ns.to_int_ns_since_epoch: unsupported on 32bit machines"
+;;
 
-let of_int_ns_since_epoch =
-  if arch_sixtyfour
-  then fun i -> of_int63_ns_since_epoch (Int63.of_int i)
-  else fun _ -> failwith "Time_ns.of_int_ns_since_epoch: unsupported on 32bit machines"
+let of_int_ns_since_epoch i = of_int63_ns_since_epoch (Int63.of_int i)
 
-let [@inline never] raise_next_multiple_got_nonpositive_interval interval =
-  failwiths "Time_ns.next_multiple got nonpositive interval" interval
-    [%sexp_of: Span.t]
+let to_time_float_round_nearest t =
+  Time_float.of_span_since_epoch
+    (Span.to_span_float_round_nearest (to_span_since_epoch t))
+;;
+
+let to_time_float_round_nearest_microsecond t =
+  Time_float.of_span_since_epoch
+    (Span.to_span_float_round_nearest_microsecond (to_span_since_epoch t))
+;;
+
+let min_time_value_for_1us_rounding =
+  to_time_float_round_nearest min_value_for_1us_rounding
+;;
+
+let max_time_value_for_1us_rounding =
+  to_time_float_round_nearest max_value_for_1us_rounding
+;;
+
+let check_before_conversion_for_1us_rounding time =
+  if Time_float.( < ) time min_time_value_for_1us_rounding
+  || Time_float.( > ) time max_time_value_for_1us_rounding
+  then
+    failwiths
+      "Time_ns does not support this time"
+      time
+      [%sexp_of: Time_float.Stable.With_utc_sexp.V2.t]
+;;
+
+let of_time_float_round_nearest time =
+  of_span_since_epoch
+    (Span.of_span_float_round_nearest (Time_float.to_span_since_epoch time))
+;;
+
+let of_time_float_round_nearest_microsecond time =
+  check_before_conversion_for_1us_rounding time;
+  of_span_since_epoch
+    (Span.of_span_float_round_nearest_microsecond (Time_float.to_span_since_epoch time))
+;;
+
+let[@cold] raise_next_multiple_got_nonpositive_interval interval =
+  failwiths "Time_ns.next_multiple got nonpositive interval" interval [%sexp_of: Span.t]
+;;
+
+let next_multiple_internal ~can_equal_after ~base ~after ~interval =
+  if Span.( <= ) interval Span.zero
+  then raise_next_multiple_got_nonpositive_interval interval;
+  let base_to_after = diff after base in
+  if Span.( < ) base_to_after Span.zero
+  then base (* [after < base], choose [k = 0]. *)
+  else (
+    let next = add base (Span.scale_int63 interval (Span.div base_to_after interval)) in
+    if next > after || (can_equal_after && next = after) then next else add next interval)
 ;;
 
 let next_multiple ?(can_equal_after = false) ~base ~after ~interval () =
-  if Span.(<=) interval Span.zero
-  then raise_next_multiple_got_nonpositive_interval interval;
-  let base_to_after = diff after base in
-  if Span.(<) base_to_after Span.zero
-  then base  (* [after < base], choose [k = 0]. *)
-  else begin
-    let next =
-      add base (Span.scale_int63 interval (Span.div base_to_after interval))
-    in
-    if next > after || (can_equal_after && next = after)
-    then next
-    else add next interval
-  end
+  next_multiple_internal ~can_equal_after ~base ~after ~interval
+;;
+
+let prev_multiple ?(can_equal_before = false) ~base ~before ~interval () =
+  next_multiple_internal
+    ~can_equal_after:(not can_equal_before)
+    ~base
+    ~after:(sub before interval)
+    ~interval
 ;;
 
 let random ?state () = Span.random ?state ()
-
-let%test_unit "random smoke" =
-  let state = Random.State.make [| |] in
-  for _ = 1 to 1000 do
-    ignore (random ~state () : t)
-  done
-;;
 
 module Utc : sig
   val to_date_and_span_since_start_of_day : t -> Date0.t * Span.t
@@ -80,10 +155,10 @@ end = struct
      doesn't rely on Unix. *)
   let to_date_and_span_since_start_of_day t =
     let open Int63.O in
-    let (!<) i = Int63.of_int_exn i in
-    let (!>) t = Int63.to_int_exn t in
-    let ns_since_epoch  = to_int63_ns_since_epoch t   in
-    let ns_per_day      = !<86_400 * !<1_000_000_000  in
+    let ( !< ) i = Int63.of_int_exn i in
+    let ( !> ) t = Int63.to_int_exn t in
+    let ns_since_epoch = to_int63_ns_since_epoch t in
+    let ns_per_day = !<86_400 * !<1_000_000_000 in
     let approx_days_from_epoch = ns_since_epoch / ns_per_day in
     let days_from_epoch =
       if ns_since_epoch < !<0 && approx_days_from_epoch * ns_per_day <> ns_since_epoch
@@ -92,16 +167,16 @@ end = struct
     in
     let ns_since_start_of_day = ns_since_epoch - (ns_per_day * days_from_epoch) in
     let date =
-      Date0.Days.add_days Date0.Days.unix_epoch !>days_from_epoch
-      |> Date0.Days.to_date
+      Date0.Days.add_days Date0.Days.unix_epoch !>days_from_epoch |> Date0.Days.to_date
     in
     let span_since_start_of_day = Span.of_int63_ns ns_since_start_of_day in
     date, span_since_start_of_day
   ;;
 
   let of_date_and_span_since_start_of_day date span_since_start_of_day =
-    assert (Span.( >= ) span_since_start_of_day Span.zero
-            && Span.( < ) span_since_start_of_day Span.day);
+    assert (
+      Span.( >= ) span_since_start_of_day Span.zero
+      && Span.( < ) span_since_start_of_day Span.day);
     let days_from_epoch =
       Date0.Days.diff (Date0.Days.of_date date) Date0.Days.unix_epoch
     in
@@ -120,55 +195,64 @@ module Alternate_sexp = struct
     let seconds_to_string seconds_span =
       let seconds = Span.to_int_sec seconds_span in
       let h = seconds / 3600 in
-      let m = (seconds / 60) % 60 in
+      let m = seconds / 60 % 60 in
       let s = seconds % 60 in
       sprintf "%02d:%02d:%02d" h m s
+    ;;
 
     let two_digit_of_string string =
-      assert (String.length string = 2
-              && String.for_all string ~f:Char.is_digit);
+      assert (String.length string = 2 && String.for_all string ~f:Char.is_digit);
       Int.of_string string
+    ;;
 
     let seconds_of_string seconds_string =
       match String.split seconds_string ~on:':' with
-      | [ h_string ; m_string ; s_string ] ->
+      | [ h_string; m_string; s_string ] ->
         let h = two_digit_of_string h_string in
         let m = two_digit_of_string m_string in
         let s = two_digit_of_string s_string in
         Span.of_int_sec ((((h * 60) + m) * 60) + s)
       | _ -> assert false
+    ;;
 
     let ns_of_100_ms = 100_000_000
-    let ns_of_10_ms  =  10_000_000
-    let ns_of_1_ms   =   1_000_000
-    let ns_of_100_us =     100_000
-    let ns_of_10_us  =      10_000
-    let ns_of_1_us   =       1_000
-    let ns_of_100_ns =         100
-    let ns_of_10_ns  =          10
-    let ns_of_1_ns   =           1
+    let ns_of_10_ms = 10_000_000
+    let ns_of_1_ms = 1_000_000
+    let ns_of_100_us = 100_000
+    let ns_of_10_us = 10_000
+    let ns_of_1_us = 1_000
+    let ns_of_100_ns = 100
+    let ns_of_10_ns = 10
+    let ns_of_1_ns = 1
 
     let sub_second_to_string sub_second_span =
       let open Int.O in
       let ns = Span.to_int63_ns sub_second_span |> Int63.to_int_exn in
       if ns = 0
       then ""
-      else begin
-        if ns % ns_of_100_ms = 0 then sprintf ".%01d" (ns / ns_of_100_ms) else
-        if ns % ns_of_10_ms  = 0 then sprintf ".%02d" (ns / ns_of_10_ms)  else
-        if ns % ns_of_1_ms   = 0 then sprintf ".%03d" (ns / ns_of_1_ms)   else
-        if ns % ns_of_100_us = 0 then sprintf ".%04d" (ns / ns_of_100_us) else
-        if ns % ns_of_10_us  = 0 then sprintf ".%05d" (ns / ns_of_10_us)  else
-        if ns % ns_of_1_us   = 0 then sprintf ".%06d" (ns / ns_of_1_us)   else
-        if ns % ns_of_100_ns = 0 then sprintf ".%07d" (ns / ns_of_100_ns) else
-        if ns % ns_of_10_ns  = 0 then sprintf ".%08d" (ns / ns_of_10_ns)  else
-          sprintf ".%09d" ns
-      end
+      else if ns % ns_of_100_ms = 0
+      then sprintf ".%01d" (ns / ns_of_100_ms)
+      else if ns % ns_of_10_ms = 0
+      then sprintf ".%02d" (ns / ns_of_10_ms)
+      else if ns % ns_of_1_ms = 0
+      then sprintf ".%03d" (ns / ns_of_1_ms)
+      else if ns % ns_of_100_us = 0
+      then sprintf ".%04d" (ns / ns_of_100_us)
+      else if ns % ns_of_10_us = 0
+      then sprintf ".%05d" (ns / ns_of_10_us)
+      else if ns % ns_of_1_us = 0
+      then sprintf ".%06d" (ns / ns_of_1_us)
+      else if ns % ns_of_100_ns = 0
+      then sprintf ".%07d" (ns / ns_of_100_ns)
+      else if ns % ns_of_10_ns = 0
+      then sprintf ".%08d" (ns / ns_of_10_ns)
+      else sprintf ".%09d" ns
+    ;;
 
     let sub_second_of_string string =
       if String.is_empty string
       then Span.zero
-      else begin
+      else (
         let digits = String.chop_prefix_exn string ~prefix:"." in
         assert (String.for_all digits ~f:Char.is_digit);
         let multiplier =
@@ -184,45 +268,45 @@ module Alternate_sexp = struct
           | 9 -> ns_of_1_ns
           | _ -> assert false
         in
-        Span.of_int63_ns (Int63.of_int (Int.of_string digits * multiplier))
-      end
+        Span.of_int63_ns (Int63.of_int (Int.of_string digits * multiplier)))
+    ;;
 
     let to_string span =
       assert (Span.( >= ) span Span.zero && Span.( < ) span Span.day);
       let seconds_span = span |> Span.to_int_sec |> Span.of_int_sec in
       let sub_second_span = Span.( - ) span seconds_span in
       seconds_to_string seconds_span ^ sub_second_to_string sub_second_span
+    ;;
 
     let of_string string =
       let len = String.length string in
-      let prefix_len = 8 in (* "HH:MM:DD" *)
+      let prefix_len = 8 in
+      (* "HH:MM:DD" *)
       let suffix_len = len - prefix_len in
-      let seconds_string    = String.sub string ~pos:0          ~len:prefix_len in
+      let seconds_string = String.sub string ~pos:0 ~len:prefix_len in
       let sub_second_string = String.sub string ~pos:prefix_len ~len:suffix_len in
-      let seconds_span    = seconds_of_string    seconds_string    in
+      let seconds_span = seconds_of_string seconds_string in
       let sub_second_span = sub_second_of_string sub_second_string in
       Span.( + ) seconds_span sub_second_span
+    ;;
   end
+
   let to_string t =
     let date, span_since_start_of_day = Utc.to_date_and_span_since_start_of_day t in
-    Date0.to_string date
-    ^ " "
-    ^ Ofday_as_span.to_string span_since_start_of_day
-    ^ "Z"
+    Date0.to_string date ^ " " ^ Ofday_as_span.to_string span_since_start_of_day ^ "Z"
+  ;;
 
   let of_string string =
-    let date_string, ofday_string_with_zone =
-      String.lsplit2_exn string ~on:' '
-    in
-    let ofday_string =
-      String.chop_suffix_exn ofday_string_with_zone ~suffix:"Z"
-    in
+    let date_string, ofday_string_with_zone = String.lsplit2_exn string ~on:' ' in
+    let ofday_string = String.chop_suffix_exn ofday_string_with_zone ~suffix:"Z" in
     let date = Date0.of_string date_string in
     let ofday = Ofday_as_span.of_string ofday_string in
     Utc.of_date_and_span_since_start_of_day date ofday
+  ;;
 
   include Sexpable.Of_stringable (struct
       type nonrec t = t
+
       let to_string = to_string
       let of_string = of_string
     end)
@@ -236,189 +320,619 @@ module Alternate_sexp = struct
   end
 end
 
-let%test_module "next_multiple" =
-  (module struct
-
-    let test can_equal_after interval_ns after_ns =
-      let base = epoch in
-      let interval = Span.of_int63_ns (Int63.of_int interval_ns) in
-      let after = of_int63_ns_since_epoch (Int63.of_int64_exn after_ns) in
-      let result = next_multiple ~can_equal_after ~interval ~base ~after () in
-      let lower_bound, upper_bound =
-        let after_interval = add after interval in
-        if can_equal_after
-        then after, sub after_interval Span.nanosecond
-        else add after Span.nanosecond, after_interval
-      in
-      if result < lower_bound || result > upper_bound then
-        raise_s
-          [%message
-            "result out of bounds"
-              (can_equal_after : bool)
-              (interval        : Span.t)
-              (base            : Alternate_sexp.t)
-              (after           : Alternate_sexp.t)
-              (result          : Alternate_sexp.t)
-              (lower_bound     : Alternate_sexp.t)
-              (upper_bound     : Alternate_sexp.t)]
-
-    (* The below tests all failed in a previous implementation of [next_multiple], due to
-       the use of floating point division rather than integer division. *)
-    let%test_unit _ = test true         71 1666750235549516973L
-    let%test_unit _ = test true       4398 1232807081547132235L
-    let%test_unit _ = test false    702561 1233263206897519979L
-    let%test_unit _ = test true         65 1813146216102385742L
-    let%test_unit _ = test false      3376 1430224273339105389L
-    let%test_unit _ = test true         25 1289744875932860592L
-    let%test_unit _ = test true       2640 1289026286379471964L
-    let%test_unit _ = test true    7062861 1582734990009845838L
-    let%test_unit _ = test false  26123810 1509919129138733390L
-    let%test_unit _ = test false      1076 1514456253942665045L
-    let%test_unit _ = test false  47873597 1567592770350241609L
-    let%test_unit _ = test true        147 1794365064173405211L
-    let%test_unit _ = test true      37416 1703355717287748172L
-    let%test_unit _ = test false        11 1627963384978464309L
-    let%test_unit _ = test true     362857 1477941666514490237L
-    let%test_unit _ = test true         74 1835379421104268809L
-    let%test_unit _ = test false        95 1518869409078948499L
-    let%test_unit _ = test false       152 1774086601023993329L
-    let%test_unit _ = test true    2963474 1177784542849146405L
-    let%test_unit _ = test false        30 1322037015396216447L
-    let%test_unit _ = test true         25 1686952462277171285L
-    let%test_unit _ = test false  77747994 1232530693599997021L
-    let%test_unit _ = test true         39 1418422346766901525L
-    let%test_unit _ = test true         20 1164906391254697606L
-    let%test_unit _ = test false 492686918 1350478871564364650L
-    let%test_unit _ = test false   5626939 1254841457643911520L
-    let%test_unit _ = test true    1189147 1566503665916540724L
-    let%test_unit _ = test false  97968678 1202922821174442071L
-    let%test_unit _ = test false        20 1241457243504201837L
-    let%test_unit _ = test true         99 1063228554057138547L
-    let%test_unit _ = test true         73 1127965283765790199L
-    let%test_unit _ = test true      92513 1423525486630794877L
-    let%test_unit _ = test true  208946207 1512896538257529954L
-    let%test_unit _ = test true        558 1304902428047905868L
-    let%test_unit _ = test true         27 1454760325484042946L
-    let%test_unit _ = test true    9511417 1224625971869008380L
-    let%test_unit _ = test true    1112121 1486628785456556405L
-    let%test_unit _ = test true         36 1226843097592112449L
-    let%test_unit _ = test true         60 1299700152825201828L
-    let%test_unit _ = test true     114032 1507179377240642938L
-    let%test_unit _ = test true      27905 1379112115218849615L
-    let%test_unit _ = test true  368860702 1318925554630500136L
-    let%test_unit _ = test true       1636 1670399627434728314L
-    let%test_unit _ = test false        27 1735798120119522136L
-    let%test_unit _ = test true         14 1880325938102084694L
-    let%test_unit _ = test true        155 1488215974636830525L
-    let%test_unit _ = test true   14319914 1298824542911254370L
-    let%test_unit _ = test true         94 1961333441294309841L
-    let%test_unit _ = test true        321 1191344461619096942L
-    let%test_unit _ = test true     706626 1179098309603309142L
-    let%test_unit _ = test true          5 1180517413083401326L
-    let%test_unit _ = test false  30523434 1471069600394063742L
-    let%test_unit _ = test false 106875447 1789919428848820069L
-    let%test_unit _ = test true         28 1013606888178097611L
-    let%test_unit _ = test true       5178 1168893256723816286L
-    let%test_unit _ = test true  146907740 1402240657577530746L
-    let%test_unit _ = test true  127125596 1332881548503325287L
-    let%test_unit _ = test true      46691 1526532096462597222L
-    let%test_unit _ = test true       1603 1745157292595832416L
-    let%test_unit _ = test true  141650492 1779813912846436672L
-    let%test_unit _ = test false        20 1916060142837991511L
-    let%test_unit _ = test false        27 1366845916494697310L
-    let%test_unit _ = test true         61 1572832513125636690L
-    let%test_unit _ = test false     11254 1301465801253970270L
-    let%test_unit _ = test true    2817556 1220217790200673585L
-    let%test_unit _ = test true   46399240 1371834303096963699L
-    let%test_unit _ = test true   10280275 1199022106578060117L
-    let%test_unit _ = test true     163667 1277585249492511350L
-    let%test_unit _ = test true  441771131 1865810978398941565L
-    let%test_unit _ = test true   22561070 1535418639166874210L
-    let%test_unit _ = test true     677456 1356038574036607058L
-    let%test_unit _ = test true        109 1102385187927169659L
-    let%test_unit _ = test true        169 1592923082707947954L
-    let%test_unit _ = test false   2150725 1769663126416348286L
-    let%test_unit _ = test true        159 1051696934142612937L
-    let%test_unit _ = test true         29 1844613926625333568L
-    let%test_unit _ = test true         30 1361000119652263049L
-    let%test_unit _ = test false     21058 1323116357214603127L
-    let%test_unit _ = test true    1163794 1221604356987291502L
-    let%test_unit _ = test false        30 1040042732593079852L
-    let%test_unit _ = test false       106 1997585750801910583L
-    let%test_unit _ = test true         78 1292467707712256145L
-    let%test_unit _ = test false    882992 1557796972319309155L
-    let%test_unit _ = test false      1821 1973683565069601822L
-    let%test_unit _ = test false     34661 1737515124214074993L
-    let%test_unit _ = test true      91661 1525765679206225703L
-    let%test_unit _ = test false        55 1287656410542943084L
-    let%test_unit _ = test true         25 1144756873630117512L
-    let%test_unit _ = test true     121625 1374589039260879728L
-    let%test_unit _ = test false        55 1970197704905173942L
-    let%test_unit _ = test true         17 1013158341065700634L
-    let%test_unit _ = test true       5176 1352936504880492660L
-    let%test_unit _ = test true         12 1955810895023292883L
-    let%test_unit _ = test true   67034967 1556142079069258330L
-    let%test_unit _ = test true     690258 1241013338154557567L
-    let%test_unit _ = test false   5606142 1356689387566170970L
-    let%test_unit _ = test true        548 1613807159903275820L
-    let%test_unit _ = test true         13 1425941806049471918L
-    let%test_unit _ = test false 155572024 1398827221896378979L
-    let%test_unit _ = test true  938925403 1550277848520025471L
-    let%test_unit _ = test false  13058335 1306567871862304618L
-    let%test_unit _ = test true          2 1997152439817382933L
-    let%test_unit _ = test true  131456077 1809241097498435420L
-    let%test_unit _ = test true          5 1531223674910420761L
-    let%test_unit _ = test false      1125 1175905228832358761L
-    let%test_unit _ = test true        350 1573261556955534963L
-    let%test_unit _ = test false        21 1529314545697532312L
-    let%test_unit _ = test false     11816 1222083468556908088L
-    let%test_unit _ = test true      86085 1436391155125371248L
-    let%test_unit _ = test true   75063667 1395675403046737786L
-    let%test_unit _ = test false        67 1765632860861960357L
-    let%test_unit _ = test false    184086 1232986716459688821L
-    let%test_unit _ = test true         53 1643034916467763402L
-    let%test_unit _ = test true        164 1931973285029689763L
-    let%test_unit _ = test true         10 1317304422397637720L
-    let%test_unit _ = test true      12566 1421417764422298993L
-    let%test_unit _ = test true  122903121 1389456412090860886L
-    let%test_unit _ = test false   3831308 1617363073756443917L
-    let%test_unit _ = test true       2274 1256309428080267889L
-    let%test_unit _ = test true         69 1975893988922224788L
-    let%test_unit _ = test true  460408083 1956390486383825465L
-    let%test_unit _ = test true         20 1294502403828905377L
-    let%test_unit _ = test true      75279 1210517500455430679L
-    let%test_unit _ = test false       335 1184433858378833746L
-    let%test_unit _ = test false     94523 1420732229891051641L
-    let%test_unit _ = test false        16 1310464979299616987L
-    let%test_unit _ = test true       5886 1602668327390189086L
-    let%test_unit _ = test false      9584 1532134444641007990L
-    let%test_unit _ = test true         17 1362463965931411147L
-    let%test_unit _ = test false         2 1693027090042722358L
-    let%test_unit _ = test false 228135731 1462077890315132778L
-    let%test_unit _ = test false        11 1018644923234572949L
-    let%test_unit _ = test false    132723 1582399817588675962L
-    let%test_unit _ = test false      3667 1506604922540283994L
-    let%test_unit _ = test true  265541944 1695560402922008138L
-    let%test_unit _ = test true        310 1875190738574556027L
-    let%test_unit _ = test true    8570918 1184809728498232683L
-    let%test_unit _ = test false  16536379 1490415593503829866L
-    let%test_unit _ = test false  32222516 1519021258420540539L
-    let%test_unit _ = test true  152467451 1255624172539661165L
-    let%test_unit _ = test true         13 1803425272409148050L
-    let%test_unit _ = test true         26 1021777264383583552L
-    let%test_unit _ = test true         11 1400486869768403422L
-    let%test_unit _ = test true     229637 1410589173350489612L
-    let%test_unit _ = test true         32 1960302290555348647L
-    let%test_unit _ = test false 349881185 1831970413297175407L
-    let%test_unit _ = test false  35457345 1967569813691929674L
-    let%test_unit _ = test false        16 1556051447243676249L
-    let%test_unit _ = test false 302933078 1816140399596962652L
-    let%test_unit _ = test true    3609444 1802393395129668217L
-
-  end)
-
 module Stable = struct
   module Alternate_sexp = Alternate_sexp.Stable
   module Span = Span.Stable
   module Ofday = Ofday.Stable
+end
+
+(* this code is directly duplicated from Time.ml functor, converted enough to get Time_ns
+   to/of_string working *)
+module To_and_of_string : sig
+  val of_date_ofday : zone:Zone.t -> Date.t -> Ofday.t -> t
+
+  val of_date_ofday_precise
+    :  Date.t
+    -> Ofday.t
+    -> zone:Zone.t
+    -> [ `Once of t | `Twice of t * t | `Never of t ]
+
+  val to_date_ofday : t -> zone:Zone.t -> Date.t * Ofday.t
+
+  val to_date_ofday_precise
+    :  t
+    -> zone:Zone.t
+    -> Date.t * Ofday.t * [ `Only | `Also_at of t | `Also_skipped of Date.t * Ofday.t ]
+
+  val to_date : t -> zone:Zone.t -> Date.t
+  val to_ofday : t -> zone:Zone.t -> Ofday.t
+  val convert : from_tz:Zone.t -> to_tz:Zone.t -> Date.t -> Ofday.t -> Date.t * Ofday.t
+  val reset_date_cache : unit -> unit
+  val utc_offset : t -> zone:Zone.t -> Span.t
+
+  include Stringable with type t := t
+
+  val to_filename_string : t -> zone:Zone.t -> string
+  val of_filename_string : string -> zone:Zone.t -> t
+  val to_string_trimmed : t -> zone:Zone.t -> string
+  val to_sec_string : t -> zone:Zone.t -> string
+  val of_localized_string : zone:Zone.t -> string -> t
+
+  val of_string_gen
+    :  default_zone:(unit -> Zone.t)
+    -> find_zone:(string -> Zone.t)
+    -> string
+    -> t
+
+  val to_string_abs : t -> zone:Zone.t -> string
+  val to_string_abs_trimmed : t -> zone:Zone.t -> string
+  val to_string_abs_parts : t -> zone:Zone.t -> string list
+  val to_string_iso8601_basic : t -> zone:Zone.t -> string
+
+  val occurrence
+    :  [ `First_after_or_at | `Last_before_or_at ]
+    -> t
+    -> ofday:Ofday.t
+    -> zone:Zone.t
+    -> t
+end = struct
+  (* this code is directly duplicated from Time_float0.ml, converted enough to get
+     Time_ns to/of_string working *)
+  module Date_and_ofday = struct
+    type t = Int63.t
+
+    let to_synthetic_span_since_epoch t = Span.of_int63_ns t
+
+    let of_date_ofday date ofday =
+      let days =
+        Date0.Days.diff (Date0.Days.of_date date) Date0.Days.unix_epoch |> Int63.of_int
+      in
+      let open Int63.O in
+      (days * Span.to_int63_ns Span.day)
+      + Span.to_int63_ns (Ofday.to_span_since_start_of_day ofday)
+    ;;
+
+    let to_absolute relative ~offset_from_utc =
+      sub_exn (Span.of_int63_ns relative) offset_from_utc
+    ;;
+
+    let of_absolute absolute ~offset_from_utc =
+      Span.to_int63_ns (add_exn absolute offset_from_utc)
+    ;;
+
+    let ns_per_day = Span.to_int63_ns Span.day
+
+    let to_days_from_epoch t =
+      (* note Time_ns represents about 146 years, not enough for [Date.create_exn] to ever
+         raise *)
+      let open Int63.O in
+      let days_from_epoch_approx = t / ns_per_day in
+      (* when [t] is negative the integer division that calculated days_from_epoch_approx
+         will leave us one day short because it truncates (e.g. -100 / 86_400 = 0 and we
+         want -1) -- adjust for that here. *)
+      if t < days_from_epoch_approx * ns_per_day
+      then Int63.pred days_from_epoch_approx
+      else days_from_epoch_approx
+    ;;
+
+    let ofday_of_days_from_epoch t ~days_from_epoch =
+      let open Int63.O in
+      let days_from_epoch_in_ns = days_from_epoch * ns_per_day in
+      let remainder = t - days_from_epoch_in_ns in
+      Span.of_int63_ns remainder |> Ofday.of_span_since_start_of_day_exn
+    ;;
+
+    let date_of_days_from_epoch ~days_from_epoch =
+      Int63.to_int_exn days_from_epoch
+      |> Date0.Days.add_days Date0.Days.unix_epoch
+      |> Date0.Days.to_date
+    ;;
+
+    let to_date t =
+      let days_from_epoch = to_days_from_epoch t in
+      date_of_days_from_epoch ~days_from_epoch
+    ;;
+
+    let to_ofday t =
+      let days_from_epoch = to_days_from_epoch t in
+      ofday_of_days_from_epoch t ~days_from_epoch
+    ;;
+  end
+
+  module Zone0 = Zone
+
+  module Zone : sig
+    (* This interface is directly duplicated from Time_intf.Zone, converted enough to get
+       this to work.
+
+       The problem is has references to Time0_intf.S, which is the functor input interface
+       that Time_ns currently does not satisfy. *)
+
+    type time = t
+    type t = Zone.t [@@deriving sexp_of]
+
+    module Index = Zone.Index
+
+    (* copied functions reexported from Zone *)
+
+    val utc : t
+    val index_has_prev_clock_shift : t -> Index.t -> bool
+    val index_has_next_clock_shift : t -> Index.t -> bool
+
+    (* new functions defined below *)
+
+    val index : t -> time -> Index.t
+    val index_offset_from_utc_exn : t -> Index.t -> time
+    val index_prev_clock_shift_time_exn : t -> Index.t -> time
+    val index_next_clock_shift_time_exn : t -> Index.t -> time
+    val absolute_time_of_date_and_ofday : t -> Date_and_ofday.t -> time
+    val date_and_ofday_of_absolute_time : t -> time -> Date_and_ofday.t
+    val next_clock_shift : t -> strictly_after:time -> (time * Span.t) option
+    val prev_clock_shift : t -> at_or_before:time -> (time * Span.t) option
+  end = struct
+    type time = t
+
+    include Zone
+
+    let of_span_in_seconds span_in_seconds =
+      (* NB. no actual rounding or exns can occur here *)
+      Time_in_seconds.Span.to_int63_seconds_round_down_exn span_in_seconds
+      |> Span.of_int63_seconds
+    ;;
+
+    let of_time_in_seconds time_in_seconds =
+      Time_in_seconds.to_span_since_epoch time_in_seconds
+      (* NB. no actual rounding or exns can occur here *)
+      |> Time_in_seconds.Span.to_int63_seconds_round_down_exn
+      |> Span.of_int63_seconds
+      |> of_span_since_epoch
+    ;;
+
+    let to_time_in_seconds_round_down_exn time =
+      to_span_since_epoch time
+      |> Span.to_int63_seconds_round_down_exn
+      |> Time_in_seconds.Span.of_int63_seconds
+      |> Time_in_seconds.of_span_since_epoch
+    ;;
+
+    let to_date_and_ofday_in_seconds_round_down_exn relative =
+      Date_and_ofday.to_synthetic_span_since_epoch relative
+      |> Span.to_int63_seconds_round_down_exn
+      |> Time_in_seconds.Span.of_int63_seconds
+      |> Time_in_seconds.Date_and_ofday.of_synthetic_span_since_epoch
+    ;;
+
+    let index t time = index t (to_time_in_seconds_round_down_exn time)
+
+    let index_of_date_and_ofday t relative =
+      index_of_date_and_ofday t (to_date_and_ofday_in_seconds_round_down_exn relative)
+    ;;
+
+    let index_offset_from_utc_exn t index =
+      of_span_in_seconds (index_offset_from_utc_exn t index)
+    ;;
+
+    let index_prev_clock_shift_time_exn t index =
+      of_time_in_seconds (index_prev_clock_shift_time_exn t index)
+    ;;
+
+    let index_next_clock_shift_time_exn t index =
+      of_time_in_seconds (index_next_clock_shift_time_exn t index)
+    ;;
+
+    let index_prev_clock_shift_amount_exn t index =
+      of_span_in_seconds (index_prev_clock_shift_amount_exn t index)
+    ;;
+
+    let index_prev_clock_shift t index =
+      match index_has_prev_clock_shift t index with
+      | false -> None
+      | true ->
+        Some
+          ( index_prev_clock_shift_time_exn t index
+          , index_prev_clock_shift_amount_exn t index )
+    ;;
+
+    let index_next_clock_shift t index = index_prev_clock_shift t (Index.next index)
+    let prev_clock_shift t ~at_or_before:time = index_prev_clock_shift t (index t time)
+    let next_clock_shift t ~strictly_after:time = index_next_clock_shift t (index t time)
+
+    let date_and_ofday_of_absolute_time t time =
+      let index = index t time in
+      (* no exn because [index] always returns a valid index *)
+      let offset_from_utc = index_offset_from_utc_exn t index in
+      Date_and_ofday.of_absolute time ~offset_from_utc
+    ;;
+
+    let absolute_time_of_date_and_ofday t relative =
+      let index = index_of_date_and_ofday t relative in
+      (* no exn because [index_of_date_and_ofday] always returns a valid index *)
+      let offset_from_utc = index_offset_from_utc_exn t index in
+      Date_and_ofday.to_absolute relative ~offset_from_utc
+    ;;
+  end
+
+  let of_date_ofday ~zone date ofday =
+    let relative = Date_and_ofday.of_date_ofday date ofday in
+    Zone.absolute_time_of_date_and_ofday zone relative
+  ;;
+
+  let of_date_ofday_precise date ofday ~zone =
+    (* We assume that there will be only one zone shift within a given local day.  *)
+    let start_of_day = of_date_ofday ~zone date Ofday.start_of_day in
+    let proposed_time = add start_of_day (Ofday.to_span_since_start_of_day ofday) in
+    match Zone.next_clock_shift zone ~strictly_after:start_of_day with
+    | None -> `Once proposed_time
+    | Some (shift_start, shift_amount) ->
+      let shift_backwards = Span.(shift_amount < zero) in
+      (* start and end of the "problematic region" *)
+      let s, e =
+        if shift_backwards
+        then add shift_start shift_amount, shift_start
+        else shift_start, add shift_start shift_amount
+      in
+      if proposed_time < s
+      then `Once proposed_time
+      else if s <= proposed_time && proposed_time < e
+      then
+        if shift_backwards
+        then `Twice (proposed_time, sub proposed_time shift_amount)
+        else `Never shift_start
+      else `Once (sub proposed_time shift_amount)
+  ;;
+
+  module Date_cache = struct
+    type nonrec t =
+      { mutable zone : Zone.t
+      ; mutable cache_start_incl : t
+      ; mutable cache_until_excl : t
+      ; mutable effective_day_start : t
+      ; mutable date : Date0.t
+      }
+  end
+
+  let date_cache : Date_cache.t =
+    { zone = Zone.utc
+    ; cache_start_incl = epoch
+    ; cache_until_excl = epoch
+    ; effective_day_start = epoch
+    ; date = Date0.unix_epoch
+    }
+  ;;
+
+  let reset_date_cache () =
+    date_cache.zone <- Zone.utc;
+    date_cache.cache_start_incl <- epoch;
+    date_cache.cache_until_excl <- epoch;
+    date_cache.effective_day_start <- epoch;
+    date_cache.date <- Date0.unix_epoch
+  ;;
+
+  let is_in_cache time ~zone =
+    phys_equal zone date_cache.zone
+    && time >= date_cache.cache_start_incl
+    && time < date_cache.cache_until_excl
+  ;;
+
+  let set_date_cache time ~zone =
+    match is_in_cache time ~zone with
+    | true -> ()
+    | false ->
+      let index = Zone.index zone time in
+      (* no exn because [Zone.index] always returns a valid index *)
+      let offset_from_utc = Zone.index_offset_from_utc_exn zone index in
+      let rel = Date_and_ofday.of_absolute time ~offset_from_utc in
+      let date = Date_and_ofday.to_date rel in
+      let span = Date_and_ofday.to_ofday rel |> Ofday.to_span_since_start_of_day in
+      let effective_day_start =
+        sub (Date_and_ofday.to_absolute rel ~offset_from_utc) span
+      in
+      let effective_day_until = add effective_day_start Span.day in
+      let cache_start_incl =
+        match Zone.index_has_prev_clock_shift zone index with
+        | false -> effective_day_start
+        | true ->
+          effective_day_start |> max (Zone.index_prev_clock_shift_time_exn zone index)
+      in
+      let cache_until_excl =
+        match Zone.index_has_next_clock_shift zone index with
+        | false -> effective_day_until
+        | true ->
+          effective_day_until |> min (Zone.index_next_clock_shift_time_exn zone index)
+      in
+      date_cache.zone <- zone;
+      date_cache.cache_start_incl <- cache_start_incl;
+      date_cache.cache_until_excl <- cache_until_excl;
+      date_cache.effective_day_start <- effective_day_start;
+      date_cache.date <- date
+  ;;
+
+  let to_date time ~zone =
+    set_date_cache time ~zone;
+    date_cache.date
+  ;;
+
+  let to_ofday time ~zone =
+    set_date_cache time ~zone;
+    diff time date_cache.effective_day_start |> Ofday.of_span_since_start_of_day_exn
+  ;;
+
+  let to_date_ofday time ~zone = to_date time ~zone, to_ofday time ~zone
+
+  (* The correctness of this algorithm (interface, even) depends on the fact that
+     timezone shifts aren't too close together (as in, it can't simultaneously be the
+     case that a timezone shift of X hours occurred less than X hours ago, *and*
+     a timezone shift of Y hours will occur in less than Y hours' time) *)
+  let to_date_ofday_precise time ~zone =
+    let date, ofday = to_date_ofday time ~zone in
+    let clock_shift_after = Zone.next_clock_shift zone ~strictly_after:time in
+    let clock_shift_before_or_at = Zone.prev_clock_shift zone ~at_or_before:time in
+    let also_skipped_earlier amount =
+      (* Using [date] and raising on [None] here is OK on the assumption that clock
+         shifts can't cross date boundaries. This is true in all cases I've ever heard
+         of (and [of_date_ofday_precise] would need revisiting if it turned out to be
+         false) *)
+      match Ofday.sub ofday amount with
+      | Some ofday -> `Also_skipped (date, ofday)
+      | None ->
+        raise_s
+          [%message
+            "Time.to_date_ofday_precise"
+              ~span_since_epoch:(to_span_since_epoch time : Span.t)
+              (zone : Zone.t)]
+    in
+    let ambiguity =
+      (* Edge cases: the instant of transition belongs to the new zone regime. So if the
+         clock moved by an hour exactly one hour ago, there's no ambiguity, because the
+         hour-ago time belongs to the same regime as you, and conversely, if the clock
+         will move by an hour in an hours' time, there *is* ambiguity. Hence [>.] for
+         the first case and [<=.] for the second. *)
+      match clock_shift_before_or_at, clock_shift_after with
+      | Some (start, amount), _ when add start (Span.abs amount) > time ->
+        (* clock shifted recently *)
+        if Span.(amount > zero)
+        then
+          (* clock shifted forward recently: we skipped a time *)
+          also_skipped_earlier amount
+        else (
+          (* clock shifted back recently: this date/ofday already happened *)
+          assert (Span.(amount < zero));
+          `Also_at (sub time (Span.abs amount)))
+      | _, Some (start, amount) when sub start (Span.abs amount) <= time ->
+        (* clock is about to shift *)
+        if Span.(amount > zero)
+        then (* clock about to shift forward: no effect *)
+          `Only
+        else (
+          (* clock about to shift back: this date/ofday will be repeated *)
+          assert (Span.(amount < zero));
+          `Also_at (add time (Span.abs amount)))
+      | _ -> `Only
+    in
+    date, ofday, ambiguity
+  ;;
+
+  let convert ~from_tz ~to_tz date ofday =
+    let start_time = of_date_ofday ~zone:from_tz date ofday in
+    to_date_ofday ~zone:to_tz start_time
+  ;;
+
+  let utc_offset t ~zone =
+    let utc_epoch = Zone.date_and_ofday_of_absolute_time zone t in
+    Span.( - )
+      (Date_and_ofday.to_synthetic_span_since_epoch utc_epoch)
+      (to_span_since_epoch t)
+  ;;
+
+  let offset_string time ~zone =
+    let utc_offset = utc_offset time ~zone in
+    let is_utc = Span.( = ) utc_offset Span.zero in
+    if is_utc
+    then "Z"
+    else
+      String.concat
+        [ (if Span.( < ) utc_offset Span.zero then "-" else "+")
+        ; Ofday.to_string_trimmed
+            (Ofday.of_span_since_start_of_day_exn (Span.abs utc_offset))
+        ]
+  ;;
+
+  let to_string_abs_parts =
+    let attempt time ~zone =
+      let date, ofday = to_date_ofday time ~zone in
+      let offset_string = offset_string time ~zone in
+      [ Date0.to_string date
+      ; String.concat ~sep:"" [ Ofday.to_string ofday; offset_string ]
+      ]
+    in
+    fun time ~zone ->
+      try attempt time ~zone with
+      | (_ : exn) ->
+        (* If we overflow applying the UTC offset, try again with UTC time. *)
+        attempt time ~zone:Zone.utc
+  ;;
+
+  let to_string_abs_trimmed time ~zone =
+    let date, ofday = to_date_ofday time ~zone in
+    let offset_string = offset_string time ~zone in
+    String.concat
+      ~sep:" "
+      [ Date0.to_string date; Ofday.to_string_trimmed ofday ^ offset_string ]
+  ;;
+
+  let to_string_abs time ~zone = String.concat ~sep:" " (to_string_abs_parts ~zone time)
+  let to_string t = to_string_abs t ~zone:Zone.utc
+
+  let to_string_iso8601_basic time ~zone =
+    String.concat ~sep:"T" (to_string_abs_parts ~zone time)
+  ;;
+
+  let to_string_trimmed t ~zone =
+    let date, sec = to_date_ofday ~zone t in
+    Date0.to_string date ^ " " ^ Ofday.to_string_trimmed sec
+  ;;
+
+  let to_sec_string t ~zone =
+    let date, sec = to_date_ofday ~zone t in
+    Date0.to_string date ^ " " ^ Ofday.to_sec_string sec
+  ;;
+
+  let to_filename_string t ~zone =
+    let date, ofday = to_date_ofday ~zone t in
+    Date0.to_string date
+    ^ "_"
+    ^ String.tr
+        ~target:':'
+        ~replacement:'-'
+        (String.drop_suffix (Ofday.to_string ofday) 3)
+  ;;
+
+  let of_filename_string s ~zone =
+    try
+      match String.lsplit2 s ~on:'_' with
+      | None -> failwith "no space in filename string"
+      | Some (date, ofday) ->
+        let date = Date0.of_string date in
+        let ofday = String.tr ~target:'-' ~replacement:':' ofday in
+        let ofday = Ofday.of_string ofday in
+        of_date_ofday date ofday ~zone
+    with
+    | exn -> invalid_argf "Time.of_filename_string (%s): %s" s (Exn.to_string exn) ()
+  ;;
+
+  let of_localized_string ~zone str =
+    try
+      match String.lsplit2 str ~on:' ' with
+      | None -> invalid_arg (sprintf "no space in date_ofday string: %s" str)
+      | Some (date, time) ->
+        let date = Date0.of_string date in
+        let ofday = Ofday.of_string time in
+        of_date_ofday ~zone date ofday
+    with
+    | e -> Exn.reraise e "Time.of_localized_string"
+  ;;
+
+  let occurrence before_or_after t ~ofday ~zone =
+    let first_guess_date = to_date t ~zone in
+    let first_guess = of_date_ofday ~zone first_guess_date ofday in
+    let cmp, increment =
+      match before_or_after with
+      | `Last_before_or_at -> ( <= ), -1
+      | `First_after_or_at -> ( >= ), 1
+    in
+    if cmp first_guess t
+    then first_guess
+    else of_date_ofday ~zone (Date0.add_days first_guess_date increment) ofday
+  ;;
+
+  let ensure_colon_in_offset offset =
+    let offset_length = String.length offset in
+    if Int.( <= ) offset_length 2
+    && Char.is_digit offset.[0]
+    && Char.is_digit offset.[offset_length - 1]
+    then offset ^ ":00"
+    else if Char.( = ) offset.[1] ':' || Char.( = ) offset.[2] ':'
+    then offset
+    else if Int.( < ) offset_length 3 || Int.( > ) offset_length 4
+    then failwithf "invalid offset %s" offset ()
+    else
+      String.concat
+        [ String.slice offset 0 (offset_length - 2)
+        ; ":"
+        ; String.slice offset (offset_length - 2) offset_length
+        ]
+  ;;
+
+  exception Time_ns_of_string of string * Exn.t [@@deriving sexp]
+
+  let of_string_gen ~default_zone ~find_zone s =
+    try
+      let date, ofday, tz =
+        match String.split s ~on:' ' with
+        | [ day; month; year; ofday ] ->
+          String.concat [ day; " "; month; " "; year ], ofday, None
+        | [ date; ofday; tz ] -> date, ofday, Some tz
+        | [ date; ofday ] -> date, ofday, None
+        | [ s ] ->
+          (match String.rsplit2 ~on:'T' s with
+           | Some (date, ofday) -> date, ofday, None
+           | None -> failwith "no spaces or T found")
+        | _ -> failwith "too many spaces"
+      in
+      let ofday_to_sec od = Span.to_sec (Ofday.to_span_since_start_of_day od) in
+      let ofday, utc_offset =
+        match tz with
+        | Some _ -> ofday, None
+        | None ->
+          if Char.( = ) ofday.[String.length ofday - 1] 'Z'
+          then String.sub ofday ~pos:0 ~len:(String.length ofday - 1), Some 0.
+          else (
+            match String.lsplit2 ~on:'+' ofday with
+            | Some (l, r) ->
+              l, Some (ofday_to_sec (Ofday.of_string (ensure_colon_in_offset r)))
+            | None ->
+              (match String.lsplit2 ~on:'-' ofday with
+               | Some (l, r) ->
+                 l, Some (-1. *. ofday_to_sec (Ofday.of_string (ensure_colon_in_offset r)))
+               | None -> ofday, None))
+      in
+      let date = Date0.of_string date in
+      let ofday = Ofday.of_string ofday in
+      match tz with
+      | Some tz -> of_date_ofday ~zone:(find_zone tz) date ofday
+      | None ->
+        (match utc_offset with
+         | None ->
+           let zone = default_zone () in
+           of_date_ofday ~zone date ofday
+         | Some utc_offset ->
+           let utc_t = of_date_ofday ~zone:Zone.utc date ofday in
+           sub utc_t (Span.of_sec utc_offset))
+    with
+    | e -> raise (Time_ns_of_string (s, e))
+  ;;
+
+  let of_string s =
+    let default_zone () = raise_s [%message "time has no time zone or UTC offset" s] in
+    let find_zone zone_name =
+      failwithf "unable to lookup Zone %s.  Try using Core.Time.of_string" zone_name ()
+    in
+    of_string_gen ~default_zone ~find_zone s
+  ;;
+end
+
+include To_and_of_string
+
+let min_value_representable = of_span_since_epoch Span.min_value_representable
+let max_value_representable = of_span_since_epoch Span.max_value_representable
+
+(* Legacy definitions based on rounding to the nearest microsecond. *)
+let min_value = min_value_for_1us_rounding
+let max_value = max_value_for_1us_rounding
+let to_time = to_time_float_round_nearest_microsecond
+let of_time = of_time_float_round_nearest_microsecond
+
+module For_ppx_module_timer = struct
+  open Ppx_module_timer_runtime
+
+  let () =
+    Duration.format
+    := (module struct
+      let duration_of_span s = s |> Span.to_int63_ns |> Duration.of_nanoseconds
+      let span_of_duration d = d |> Duration.to_nanoseconds |> Span.of_int63_ns
+      let of_string string = string |> Span.of_string |> duration_of_span
+
+      let to_string_with_same_unit durations =
+        let spans = durations |> List.map ~f:span_of_duration in
+        let unit_of_time =
+          spans
+          |> List.max_elt ~compare:Span.compare
+          |> Option.value_map
+               ~f:Span.to_unit_of_time
+               ~default:Unit_of_time.Nanosecond
+        in
+        spans |> List.map ~f:(Span.to_string_hum ~unit_of_time ~align_decimal:true)
+      ;;
+    end)
+  ;;
 end

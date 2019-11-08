@@ -10,26 +10,24 @@
 *)
 
 open! Import
-
 include Base.Buffer.S
 
-val big_contents : t -> Bigstring.t
 (** Return a copy of the current contents of the buffer as a bigstring.
     The buffer itself is unchanged. *)
+val big_contents : t -> Bigstring.t
 
-val volatile_contents : t -> Bigstring.t
 (** Return the actual underlying bigstring used by this bigbuffer.
     No copying is involved.  To be safe, use and finish with the returned value
     before calling any other function in this module on the same [Bigbuffer.t]. *)
+val volatile_contents : t -> Bigstring.t
 
-val add_bigstring : t -> Bigstring.t -> unit
 (** [add_bigstring b s] appends the bigstring [s] at the end of the buffer [b]. *)
+val add_bigstring : t -> Bigstring.t -> unit
 
-val add_bin_prot : t -> 'a Bin_prot.Type_class.writer -> 'a -> unit
 (** [add_bin_prot b writer x] appends the bin-protted representation of [x] at the end of
     the buffer [b]. *)
+val add_bin_prot : t -> 'a Bin_prot.Type_class.writer -> 'a -> unit
 
-val add_substitute : t -> (string -> string) -> string -> unit
 (** [add_substitute b f s] appends the string pattern [s] at the end
     of the buffer [b] with substitution.
     The substitution process looks for variables into
@@ -43,8 +41,12 @@ val add_substitute : t -> (string -> string) -> string -> unit
 
     An escaped [$] character is a [$] that immediately follows a backslash
     character; it then stands for a plain [$].
-    Raise [Not_found] if the closing character of a parenthesized variable
-    cannot be found. *)
+    Raise [Caml.Not_found] or [Not_found_s] if the closing character of a
+    parenthesized variable cannot be found. *)
+val add_substitute : t -> (string -> string) -> string -> unit
+
+
+(** *)
 
 module Format : sig
   open Format

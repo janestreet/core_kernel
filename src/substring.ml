@@ -1,12 +1,16 @@
 open! Import
 
+module type S = Make_substring.S
+
 include Make_substring.F (struct
     type t = bytes
 
     let create = Bytes.create
     let length = Bytes.length
-    let get    = Bytes.get
+    let get = Bytes.get
+
     module Blit = Make_substring.Blit
+
     let blit = Blit.bytes_bytes
     let blit_to_string = Blit.bytes_bytes
     let blit_to_bytes = Blit.bytes_bytes

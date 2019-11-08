@@ -1,5 +1,5 @@
 open! Core_kernel
-open  Expect_test_helpers_kernel
+open Expect_test_helpers_kernel
 
 module No_poly_compare = struct
   module Incomparable : sig
@@ -8,9 +8,10 @@ module No_poly_compare = struct
     val create : unit -> t
   end = struct
     type t = unit -> unit
-    let compare _ _ = 0
 
+    let compare _ _ = 0
     let next = ref 0
+
     let create () =
       incr next;
       let x = !next in
@@ -18,79 +19,85 @@ module No_poly_compare = struct
     ;;
   end
 
-  type 'a t = {
-    incomparable : Incomparable.t;
-    value : 'a;
-  } [@@deriving compare]
+  type 'a t =
+    { incomparable : Incomparable.t
+    ; value : 'a
+    }
+  [@@deriving compare]
 
   let sexp_of_t sexp_of_a t = sexp_of_a t.value
-
-  let create value = { incomparable = Incomparable.create (); value; }
-
+  let create value = { incomparable = Incomparable.create (); value }
 end
 
 let%expect_test "No_poly_compare" =
   let inc_x = No_poly_compare.Incomparable.create () in
   (* Unfortunately if we compare [x] with itself it will always work. *)
-  show_raise (fun () -> compare inc_x inc_x);
+  show_raise (fun () -> Poly.compare inc_x inc_x);
   [%expect {| "did not raise" |}];
   (* But otherwise we get an exception. *)
-  show_raise (fun () -> compare inc_x (No_poly_compare.Incomparable.create ()));
+  show_raise (fun () -> Poly.compare inc_x (No_poly_compare.Incomparable.create ()));
   [%expect {| (raised (Invalid_argument "compare: functional value")) |}];
   let no_x = No_poly_compare.create 0 in
-  show_raise (fun () -> compare no_x no_x);
+  show_raise (fun () -> Poly.compare no_x no_x);
   [%expect {| "did not raise" |}];
-  show_raise (fun () -> compare no_x (No_poly_compare.create 0));
-  [%expect {| (raised (Invalid_argument "compare: functional value")) |}];
+  show_raise (fun () -> Poly.compare no_x (No_poly_compare.create 0));
+  [%expect {| (raised (Invalid_argument "compare: functional value")) |}]
 ;;
 
 let%expect_test "merge_all" =
+  let merge_all =
+    Sequence.merge_all
+      (module struct
+        type 'a t = 'a Fheap.t
+
+        let create ~compare = Fheap.create ~cmp:compare
+        let add = Fheap.add
+        let remove_min = Fheap.pop
+      end)
+  in
   let compare = No_poly_compare.compare Int.compare in
   (* We take up to 20 elements so we can test infinite sequences. *)
   let list_of_sequence sequence = Sequence.to_list (Sequence.take sequence 20) in
-  let sexp_of_sequence sequence = [%sexp (list_of_sequence sequence : int No_poly_compare.t list)] in
+  let sexp_of_sequence sequence =
+    [%sexp (list_of_sequence sequence : int No_poly_compare.t list)]
+  in
   (* Avoid unnecessary line wrapping of small sexps. *)
   let print_s sexp =
     let string = Sexp.to_string sexp in
-    if String.length string < 80
-    then print_endline string
-    else print_s sexp
+    if String.length string < 80 then print_endline string else print_s sexp
   in
   let examples =
     let finite_examples =
-      [
-        [];
-        [[]];
-        [[1]];
-        [[1; 2]];
-        [[1]; [2]];
-        [[2]; [1]];
-        [[1; 2; 3]];
-        [[1]; [2]; [3]];
-        [[3]; [2]; [1]];
-        [[1; 2]; [3; 4]];
-        [[2; 4]; [1; 3]];
-        [[1; 4]; [3]; []; [2]]
+      [ []
+      ; [ [] ]
+      ; [ [ 1 ] ]
+      ; [ [ 1; 2 ] ]
+      ; [ [ 1 ]; [ 2 ] ]
+      ; [ [ 2 ]; [ 1 ] ]
+      ; [ [ 1; 2; 3 ] ]
+      ; [ [ 1 ]; [ 2 ]; [ 3 ] ]
+      ; [ [ 3 ]; [ 2 ]; [ 1 ] ]
+      ; [ [ 1; 2 ]; [ 3; 4 ] ]
+      ; [ [ 2; 4 ]; [ 1; 3 ] ]
+      ; [ [ 1; 4 ]; [ 3 ]; []; [ 2 ] ]
       ]
       |> List.map ~f:(List.map ~f:Sequence.of_list)
     in
     let infinite_examples =
-      let naturals =
-        Sequence.unfold ~init:0 ~f:(fun i -> Some (i, i + 1))
-      in
-      [
-        [Sequence.cycle_list_exn [1]; Sequence.cycle_list_exn [2]];
-        [naturals];
-        [Sequence.filter naturals ~f:(fun i -> i % 2 = 0);
-         Sequence.filter naturals ~f:(fun i -> i % 2 = 1)];
+      let naturals = Sequence.unfold ~init:0 ~f:(fun i -> Some (i, i + 1)) in
+      [ [ Sequence.cycle_list_exn [ 1 ]; Sequence.cycle_list_exn [ 2 ] ]
+      ; [ naturals ]
+      ; [ Sequence.filter naturals ~f:(fun i -> i % 2 = 0)
+        ; Sequence.filter naturals ~f:(fun i -> i % 2 = 1)
+        ]
       ]
     in
     finite_examples @ infinite_examples
     |> List.map ~f:(List.map ~f:(Sequence.map ~f:No_poly_compare.create))
   in
-  List.iter examples ~f:(fun example ->
-    print_s [%sexp (example : sequence list)]);
-  [%expect {|
+  List.iter examples ~f:(fun example -> print_s [%sexp (example : sequence list)]);
+  [%expect
+    {|
     ()
     (())
     ((1))
@@ -109,8 +116,9 @@ let%expect_test "merge_all" =
     ((0 2 4 6 8 10 12 14 16 18 20 22 24 26 28 30 32 34 36 38)
      (1 3 5 7 9 11 13 15 17 19 21 23 25 27 29 31 33 35 37 39)) |}];
   List.iter examples ~f:(fun example ->
-    print_s [%sexp (Sequence.merge_all example ~compare : sequence)]);
-  [%expect {|
+    print_s [%sexp (merge_all example ~compare : sequence)]);
+  [%expect
+    {|
     ()
     ()
     (1)
@@ -131,56 +139,64 @@ let%expect_test "merge_all" =
     require here bool ?if_false_then_print_s;
     if not bool then raise_s [%message "failed on random input"]
   in
-  let gen =
-    let str_gen = Quickcheck.Generator.map Int.gen ~f:No_poly_compare.create in
+  let quickcheck_generator =
+    let str_gen =
+      Quickcheck.Generator.map Int.quickcheck_generator ~f:No_poly_compare.create
+    in
     let seq_gen =
-      Quickcheck.Generator.map (List.gen str_gen) ~f:(fun list ->
+      Quickcheck.Generator.map (List.quickcheck_generator str_gen) ~f:(fun list ->
         Sequence.of_list (List.sort list ~compare))
     in
-    List.gen seq_gen
+    List.quickcheck_generator seq_gen
   in
   let run test =
     Quickcheck.test
       ~sexp_of:[%sexp_of: sequence list]
       ~examples
-      gen
+      quickcheck_generator
       ~f:test
   in
   (* Test that output is sorted. *)
   run (fun seqs ->
-    let seq = Sequence.merge_all seqs ~compare in
+    let seq = merge_all seqs ~compare in
     let list = list_of_sequence seq in
-    require_exn [%here] (List.is_sorted list ~compare)
+    require_exn
+      [%here]
+      (List.is_sorted list ~compare)
       ~if_false_then_print_s:(lazy [%sexp (list : int No_poly_compare.t list)]));
   [%expect {||}];
   (* Test that output is consistent with concat+sort. *)
   run (fun seqs ->
-    let merge_all = list_of_sequence (Sequence.merge_all seqs ~compare) in
+    let merge_all = list_of_sequence (merge_all seqs ~compare) in
     let concat_and_sort =
       let sorted =
-        List.map seqs ~f:list_of_sequence
-        |> List.concat
-        |> List.sort ~compare
+        List.map seqs ~f:list_of_sequence |> List.concat |> List.sort ~compare
       in
       List.take sorted 20
     in
-    require_exn [%here] ([%compare.equal: int No_poly_compare.t list] merge_all concat_and_sort)
+    require_exn
+      [%here]
+      ([%compare.equal: int No_poly_compare.t list] merge_all concat_and_sort)
       ~if_false_then_print_s:
-        (lazy [%message
-          "inconsistent results"
-            (merge_all       : int No_poly_compare.t list)
-            (concat_and_sort : int No_poly_compare.t list)]));
+        (lazy
+          [%message
+            "inconsistent results"
+              (merge_all : int No_poly_compare.t list)
+              (concat_and_sort : int No_poly_compare.t list)]));
   [%expect {||}];
   (* Test that sequence is replayable. *)
   run (fun seqs ->
-    let seq = Sequence.merge_all seqs ~compare in
+    let seq = merge_all seqs ~compare in
     let list1 = list_of_sequence seq in
     let list2 = list_of_sequence seq in
-    require_exn [%here] ([%compare.equal: int No_poly_compare.t list] list1 list2)
+    require_exn
+      [%here]
+      ([%compare.equal: int No_poly_compare.t list] list1 list2)
       ~if_false_then_print_s:
-        (lazy [%message
-          "sequence is impure"
-            (list1 : int No_poly_compare.t list)
-            (list2 : int No_poly_compare.t list)]));
-  [%expect {||}];
+        (lazy
+          [%message
+            "sequence is impure"
+              (list1 : int No_poly_compare.t list)
+              (list2 : int No_poly_compare.t list)]));
+  [%expect {||}]
 ;;

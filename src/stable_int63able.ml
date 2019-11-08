@@ -7,6 +7,7 @@ module type S = sig
       intended to avoid allocation on 64-bit machines and should be implemented
       efficiently.  [of_int63_exn (to_int63 t) = t] for all [t]; [of_int63_exn] raises for
       inputs not produced by [to_int63]. *)
-  val to_int63     : t -> Int63.t
+  val to_int63 : t -> Int63.t
+
   val of_int63_exn : Int63.t -> t
 end

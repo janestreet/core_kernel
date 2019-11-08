@@ -22,27 +22,27 @@ open! Import
     another case where [[@deriving enumerate]] could be useful is when this type is part
     of some larger type.
 *)
-type t = (unit, int) Typerep_lib.Std.Type_equal.t [@@deriving hash, enumerate]
+type t = | [@@deriving hash, enumerate]
 
-(** Because there are no values of type [Nothing.t], a piece of code that has a value of
-    type [Nothing.t] must be unreachable.  In such an unreachable piece of code, one can
-    use [unreachable_code] to give the code whatever type one needs.  For example:
+  (** Because there are no values of type [Nothing.t], a piece of code that has a value of
+      type [Nothing.t] must be unreachable.  In such an unreachable piece of code, one can
+      use [unreachable_code] to give the code whatever type one needs.  For example:
 
-    {[
-      let f (r : (int, Nothing.t) Result.t) : int =
-        match r with
-        | Ok i -> i
-        | Error n -> Nothing.unreachable_code n
-      ;;
-    ]}
+      {[
+        let f (r : (int, Nothing.t) Result.t) : int =
+          match r with
+          | Ok i -> i
+          | Error n -> Nothing.unreachable_code n
+        ;;
+      ]}
 
-    Note that the compiler knows that [Nothing.t] is uninhabited, hence this will type
-    without warning:
+      Note that the compiler knows that [Nothing.t] is uninhabited, hence this will type
+      without warning:
 
-    {[
-      let f (Ok i : (int, Nothing.t) Result.t) = i
-    ]}
-*)
+      {[
+        let f (Ok i : (int, Nothing.t) Result.t) = i
+      ]}
+  *)
 val unreachable_code : t -> _
 
 (** It may seem weird that this is identifiable, but we're just trying to anticipate all
@@ -51,7 +51,8 @@ val unreachable_code : t -> _
     prevented for lack of [Identifiable.S] here.
 
     Obviously, [of_string] and [t_of_sexp] will raise an exception. *)
-include Identifiable.S with type t := t
+include
+  Identifiable.S with type t := t
 
 module Stable : sig
   module V1 : sig

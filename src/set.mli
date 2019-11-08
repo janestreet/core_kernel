@@ -24,18 +24,20 @@ module Tree : sig
 
   module Named = Tree.Named
 
-  include Creators_and_accessors2_with_comparator
-    with type ('a, 'b) set  := ('a, 'b) t
-    with type ('a, 'b) t    := ('a, 'b) t
+  include
+    Creators_and_accessors2_with_comparator
+    with type ('a, 'b) set := ('a, 'b) t
+    with type ('a, 'b) t := ('a, 'b) t
     with type ('a, 'b) tree := ('a, 'b) t
     with type ('a, 'b) named := ('a, 'b) Named.t
-    with module Named        := Named
+    with module Named := Named
 end
 
 module Using_comparator : sig
-  include Creators2_with_comparator
-    with type ('a, 'b) set  := ('a, 'b) t
-    with type ('a, 'b) t    := ('a, 'b) t
+  include
+    Creators2_with_comparator
+    with type ('a, 'b) set := ('a, 'b) t
+    with type ('a, 'b) t := ('a, 'b) t
     with type ('a, 'b) tree := ('a, 'b) Tree.t
 end
 
@@ -88,10 +90,7 @@ val diff : ('a, 'cmp) t -> ('a, 'cmp) t -> ('a, 'cmp) t
 (** [symmetric_diff t1 t2] returns a sequence of changes between [t1] and [t2]. It is
     intended to be efficient in the case where [t1] and [t2] share a large amount of
     structure. *)
-val symmetric_diff
-  :  ('a, 'cmp) t
-  -> ('a, 'cmp) t
-  -> ('a, 'a) Either.t Sequence.t
+val symmetric_diff : ('a, 'cmp) t -> ('a, 'cmp) t -> ('a, 'a) Either.t Sequence.t
 
 (** [compare_direct t1 t2] compares the sets [t1] and [t2].  It returns the same result
     as [compare], but unlike compare, doesn't require arguments to be passed in for the
@@ -102,9 +101,7 @@ val compare_direct : ('a, 'cmp) t -> ('a, 'cmp) t -> int
     them. [hash_fold_direct hash_fold_key] is compatible with [compare_direct] iff
     [hash_fold_key] is compatible with [(comparator s).compare] of the set [s] being
     hashed. *)
-val hash_fold_direct
-  :  'a Hash.folder
-  -> ('a, 'cmp) t Hash.folder
+val hash_fold_direct : 'a Hash.folder -> ('a, 'cmp) t Hash.folder
 
 (** [equal t1 t2] returns [true] iff the two sets have the same elements.  [O(length t1 +
     length t2)] *)
@@ -125,8 +122,10 @@ val count : ('a, _) t -> f:('a -> bool) -> int
 (** [sum t] returns the sum of [f t] for each [t] in the set.
     [O(n)]. *)
 val sum
-  : (module Commutative_group.S with type t = 'sum)
-  -> ('a, _) t -> f:('a -> 'sum) -> 'sum
+  :  (module Container.Summable with type t = 'sum)
+  -> ('a, _) t
+  -> f:('a -> 'sum)
+  -> 'sum
 
 (** [find t f] returns an element of [t] for which [f] returns true, with no guarantee as
     to which element is returned.  [O(n)], but returns as soon as a suitable element is
@@ -143,9 +142,7 @@ val find_exn : ('a, _) t -> f:('a -> bool) -> 'a
 
 (** [nth t i] returns the [i]th smallest element of [t], in [O(log n)] time.  The
     smallest element has [i = 0].  Returns [None] if [i < 0] or [i >= length t]. *)
-val nth        : ('a, _) t -> int -> 'a option
-val find_index : ('a, _) t -> int -> 'a option
-[@@deprecated "[since 2016-10] Use [nth]"]
+val nth : ('a, _) t -> int -> 'a option
 
 (** [remove_index t i] returns a version of [t] with the [i]th smallest element removed,
     in [O(log n)] time.  The smallest element has [i = 0].  Returns [t] if [i < 0] or
@@ -154,10 +151,6 @@ val remove_index : ('a, 'cmp) t -> int -> ('a, 'cmp) t
 
 (** [is_subset t1 ~of_:t2] returns true iff [t1] is a subset of [t2]. *)
 val is_subset : ('a, 'cmp) t -> of_:('a, 'cmp) t -> bool
-
-(** [subset] is a synonym for [is_subset]. *)
-val subset : ('a, 'cmp) t -> ('a, 'cmp) t -> bool
-[@@deprecated "[since 2016-09] Replace [Set.subset t1 t2] with [Set.is_subset t1 ~of_:t2]"]
 
 (** [Named] allows the validation of subset and equality relationships between sets.  A
     [Named.t] is a record of a set and a name, where the name is used in error messages,
@@ -179,10 +172,10 @@ val subset : ('a, 'cmp) t -> ('a, 'cmp) t -> bool
     "the set of" often makes the error message sound more natural.
 *)
 module Named : sig
-  type nonrec ('a, 'cmp) t = ('a, 'cmp) Named.t = {
-    set : ('a, 'cmp) t;
-    name : string;
-  }
+  type nonrec ('a, 'cmp) t = ('a, 'cmp) Named.t =
+    { set : ('a, 'cmp) t
+    ; name : string
+    }
 
   (** [is_subset t1 ~of_:t2] returns [Ok ()] if [t1] is a subset of [t2] and a
       human-readable error otherwise.  *)
@@ -194,35 +187,27 @@ module Named : sig
 end
 
 (** The list or array given to [of_list] and [of_array] need not be sorted. *)
-val of_list  : ('a, 'cmp) comparator -> 'a list  -> ('a, 'cmp) t
-val of_array : ('a, 'cmp) comparator -> 'a array -> ('a, 'cmp) t
+val of_list : ('a, 'cmp) comparator -> 'a list -> ('a, 'cmp) t
 
-val of_hash_set
-  : ('a, 'cmp) comparator ->  'a     Hash_set.t -> ('a, 'cmp) t
-val of_hashtbl_keys
-  : ('a, 'cmp) comparator -> ('a, _) Hashtbl.t  -> ('a, 'cmp) t
+val of_array : ('a, 'cmp) comparator -> 'a array -> ('a, 'cmp) t
+val of_hash_set : ('a, 'cmp) comparator -> 'a Hash_set.t -> ('a, 'cmp) t
+val of_hashtbl_keys : ('a, 'cmp) comparator -> ('a, _) Hashtbl.t -> ('a, 'cmp) t
 
 (** [to_list] and [to_array] produce sequences sorted in ascending order according to the
     comparator. *)
-val to_list  : ('a, _) t -> 'a list
-val to_array : ('a, _) t -> 'a array
+val to_list : ('a, _) t -> 'a list
 
+val to_array : ('a, _) t -> 'a array
 val to_tree : ('a, 'cmp) t -> ('a, 'cmp) Tree.t
 val of_tree : ('a, 'cmp) comparator -> ('a, 'cmp) Tree.t -> ('a, 'cmp) t
 
 (** Create set from sorted array.  The input must be sorted (either in ascending or
     descending order as given by the comparator) and contain no duplicates, otherwise the
     result is an error.  The complexity of this function is [O(n)]. *)
-val of_sorted_array
-  :  ('a, 'cmp) comparator
-  -> 'a array
-  -> ('a, 'cmp) t Or_error.t
+val of_sorted_array : ('a, 'cmp) comparator -> 'a array -> ('a, 'cmp) t Or_error.t
 
 (** Similar to [of_sorted_array], but without checking the input array. *)
-val of_sorted_array_unchecked
-  :  ('a, 'cmp) comparator
-  -> 'a array
-  -> ('a, 'cmp) t
+val of_sorted_array_unchecked : ('a, 'cmp) comparator -> 'a array -> ('a, 'cmp) t
 
 (** [of_increasing_iterator_unchecked c ~len ~f] behaves like
     [of_sorted_array_unchecked c (Array.init len ~f)], with the additional
@@ -243,11 +228,7 @@ val stable_dedup_list : ('a, _) comparator -> 'a list -> 'a list
 
 (** [map c t ~f] returns a new set created by applying [f] to every element in [t]. The
     returned set is based on the provided [c]. [O(n log n)]. *)
-val map
-  :  ('b, 'cmp) comparator
-  -> ('a, _) t
-  -> f:('a -> 'b)
-  -> ('b, 'cmp) t
+val map : ('b, 'cmp) comparator -> ('a, _) t -> f:('a -> 'b) -> ('b, 'cmp) t
 
 (** Like {!map}, except elements for which [f] returns [None] will be dropped.  *)
 val filter_map
@@ -258,14 +239,10 @@ val filter_map
 
 (** [filter t ~f] returns the subset of [t] for which [f] evaluates to true.  [O(n log
     n)]. *)
-val filter :  ('a, 'cmp) t -> f:('a -> bool) -> ('a, 'cmp) t
+val filter : ('a, 'cmp) t -> f:('a -> bool) -> ('a, 'cmp) t
 
 (** [fold t ~init ~f] folds over the elements of the set from smallest to largest. *)
-val fold
-  :  ('a, _) t
-  -> init:'accum
-  -> f:('accum -> 'a -> 'accum)
-  -> 'accum
+val fold : ('a, _) t -> init:'accum -> f:('accum -> 'a -> 'accum) -> 'accum
 
 (** [fold_result ~init ~f] folds over the elements of the set from smallest to
     largest, short circuiting the fold if [f accum x] is an [Error _] *)
@@ -285,12 +262,9 @@ val fold_until
   -> finish:('accum -> 'final)
   -> 'final
 
+
 (** Like {!fold}, except that it goes from the largest to the smallest element. *)
-val fold_right
-  :  ('a, _) t
-  -> init:'accum
-  -> f:('a -> 'accum -> 'accum)
-  -> 'accum
+val fold_right : ('a, _) t -> init:'accum -> f:('a -> 'accum -> 'accum) -> 'accum
 
 (** [iter t ~f] calls [f] on every element of [t], going in order from the smallest to
     largest.  *)
@@ -302,15 +276,12 @@ val iter : ('a, _) t -> f:('a -> unit) -> unit
 val iter2
   :  ('a, 'cmp) t
   -> ('a, 'cmp) t
-  -> f:([`Left of 'a | `Right of 'a | `Both of 'a * 'a] -> unit)
+  -> f:([ `Left of 'a | `Right of 'a | `Both of 'a * 'a ] -> unit)
   -> unit
 
 (** If [a, b = partition_tf set ~f] then [a] is the elements on which [f] produced [true],
     and [b] is the elements on which [f] produces [false]. *)
-val partition_tf
-  :  ('a, 'cmp) t
-  -> f:('a -> bool)
-  -> ('a, 'cmp) t * ('a, 'cmp) t
+val partition_tf : ('a, 'cmp) t -> f:('a -> bool) -> ('a, 'cmp) t * ('a, 'cmp) t
 
 (** Same as {!to_list}. *)
 val elements : ('a, _) t -> 'a list
@@ -355,18 +326,68 @@ val split : ('a, 'cmp) t -> 'a -> ('a, 'cmp) t * 'a option * ('a, 'cmp) t
 
     [group_by] runs in O(n^2) time, so if you have a comparison function, it's usually
     much faster to use [Set.of_list]. *)
-val group_by :  ('a, 'cmp) t -> equiv:('a -> 'a -> bool) -> ('a, 'cmp) t list
+val group_by : ('a, 'cmp) t -> equiv:('a -> 'a -> bool) -> ('a, 'cmp) t list
 
 (** [to_sequence t] converts the set [t] to a sequence of the elements between
     [greater_or_equal_to] and [less_or_equal_to] inclusive in the order indicated by
     [order].  If [greater_or_equal_to > less_or_equal_to] the sequence is empty.  Cost is
     O(log n) up front and amortized O(1) for each element produced. *)
 val to_sequence
-  :  ?order               : [ `Increasing (** default *) | `Decreasing ]
-  -> ?greater_or_equal_to : 'a
-  -> ?less_or_equal_to    : 'a
+  :  ?order:[ `Increasing (** default *) | `Decreasing ]
+  -> ?greater_or_equal_to:'a
+  -> ?less_or_equal_to:'a
   -> ('a, 'cmp) t
   -> 'a Sequence.t
+
+(** [binary_search t ~compare which elt] returns the element in [t] specified by
+    [compare] and [which], if one exists.
+
+    [t] must be sorted in increasing order according to [compare], where [compare] and
+    [elt] divide [t] into three (possibly empty) segments:
+
+    {v
+      |  < elt  |  = elt  |  > elt  |
+    v}
+
+    [binary_search] returns an element on the boundary of segments as specified by
+    [which].  See the diagram below next to the [which] variants.
+
+    [binary_search] does not check that [compare] orders [t], and behavior is
+    unspecified if [compare] doesn't order [t].  Behavior is also unspecified if
+    [compare] mutates [t]. *)
+val binary_search
+  :  ('a, 'cmp) t
+  -> compare:('a -> 'key -> int)
+  -> [ `Last_strictly_less_than (**        {v | < elt X |                       v} *)
+     | `Last_less_than_or_equal_to (**     {v |      <= elt       X |           v} *)
+     | `Last_equal_to (**                  {v           |   = elt X |           v} *)
+     | `First_equal_to (**                 {v           | X = elt   |           v} *)
+     | `First_greater_than_or_equal_to (** {v           | X       >= elt      | v} *)
+     | `First_strictly_greater_than (**    {v                       | X > elt | v} *)
+     ]
+  -> 'key
+  -> 'a option
+
+(** [binary_search_segmented t ~segment_of which] takes a [segment_of] function that
+    divides [t] into two (possibly empty) segments:
+
+    {v
+      | segment_of elt = `Left | segment_of elt = `Right |
+    v}
+
+    [binary_search_segmented] returns the element on the boundary of the segments as
+    specified by [which]: [`Last_on_left] yields the last element of the left segment,
+    while [`First_on_right] yields the first element of the right segment.  It returns
+    [None] if the segment is empty.
+
+    [binary_search_segmented] does not check that [segment_of] segments [t] as in the
+    diagram, and behavior is unspecified if [segment_of] doesn't segment [t].  Behavior
+    is also unspecified if [segment_of] mutates [t]. *)
+val binary_search_segmented
+  :  ('a, 'cmp) t
+  -> segment_of:('a -> [ `Left | `Right ])
+  -> [ `Last_on_left | `First_on_right ]
+  -> 'a option
 
 (** Produces the elements of the two sets between [greater_or_equal_to] and
     [less_or_equal_to] in [order], noting whether each element appears in the left set,
@@ -380,10 +401,11 @@ module Merge_to_sequence_element : sig
     | Both of 'a * 'b
   [@@deriving bin_io, compare, sexp]
 end
+
 val merge_to_sequence
-  :  ?order               : [ `Increasing (** default *) | `Decreasing ]
-  -> ?greater_or_equal_to : 'a
-  -> ?less_or_equal_to    : 'a
+  :  ?order:[ `Increasing (** default *) | `Decreasing ]
+  -> ?greater_or_equal_to:'a
+  -> ?less_or_equal_to:'a
   -> ('a, 'cmp) t
   -> ('a, 'cmp) t
   -> ('a, 'a) Merge_to_sequence_element.t Sequence.t
@@ -391,15 +413,22 @@ val merge_to_sequence
 (** Convert a set to or from a map.  [to_map] takes a function to produce data for each
     key.  Both functions run in O(n) time (assuming the function passed to [to_map] runs
     in constant time). *)
-val to_map : ('key, 'cmp) t -> f:('key -> 'data) -> ('key, 'data, 'cmp) Map.t
-val of_map_keys : ('key, _, 'cmp) Map.t -> ('key, 'cmp) t
+val to_map : ('key, 'cmp) t -> f:('key -> 'data) -> ('key, 'data, 'cmp) Base.Map.t
 
-val gen
+val of_map_keys : ('key, _, 'cmp) Base.Map.t -> ('key, 'cmp) t
+
+val quickcheck_generator
   :  ('key, 'cmp) comparator
   -> 'key Quickcheck.Generator.t
   -> ('key, 'cmp) t Quickcheck.Generator.t
-val obs : 'key Quickcheck.Observer.t -> ('key, 'cmp) t Quickcheck.Observer.t
-val shrinker : 'key Quickcheck.Shrinker.t -> ('key, 'cmp) t Quickcheck.Shrinker.t
+
+val quickcheck_observer
+  :  'key Quickcheck.Observer.t
+  -> ('key, 'cmp) t Quickcheck.Observer.t
+
+val quickcheck_shrinker
+  :  'key Quickcheck.Shrinker.t
+  -> ('key, 'cmp) t Quickcheck.Shrinker.t
 
 (** {2 Polymorphic sets}
 
@@ -412,25 +441,28 @@ module Poly : sig
 
   module Tree : sig
     type 'elt t = ('elt, Comparator.Poly.comparator_witness) Tree.t [@@deriving sexp]
-
     type 'a named = ('a, Comparator.Poly.comparator_witness) Tree.Named.t
-    include Creators_and_accessors1
-      with type ('a, 'b) set   := ('a, 'b) Tree.t
-      with type 'elt t         := 'elt t
-      with type 'elt tree      := 'elt t
-      with type 'a named       := 'a named
+
+    include
+      Creators_and_accessors1
+      with type ('a, 'b) set := ('a, 'b) Tree.t
+      with type 'elt t := 'elt t
+      with type 'elt tree := 'elt t
+      with type 'a named := 'a named
       with type comparator_witness := Comparator.Poly.comparator_witness
   end
 
-  type 'elt t = ('elt, Comparator.Poly.comparator_witness) set [@@deriving bin_io, compare, sexp]
+  type 'elt t = ('elt, Comparator.Poly.comparator_witness) set
+  [@@deriving bin_io, compare, sexp]
 
   type 'a named = ('a, Comparator.Poly.comparator_witness) Named.t
 
-  include Creators_and_accessors1
+  include
+    Creators_and_accessors1
     with type ('a, 'b) set := ('a, 'b) set
-    with type 'elt t       := 'elt t
-    with type 'elt tree    := 'elt Tree.t
-    with type 'a named     := 'a named
+    with type 'elt t := 'elt t
+    with type 'elt tree := 'elt Tree.t
+    with type 'a named := 'a named
     with type comparator_witness := Comparator.Poly.comparator_witness
 end
 with type ('a, 'b) set := ('a, 'b) t
@@ -459,17 +491,19 @@ module type S_binable = S_binable
     have a comparator.  This generates a new comparator.
 
     [Make_binable] is similar, except the element and set types support [bin_io]. *)
-module Make_plain   (Elt : Elt_plain)   : S_plain   with type Elt.t = Elt.t
-module Make         (Elt : Elt)         : S         with type Elt.t = Elt.t
+module Make_plain (Elt : Elt_plain) : S_plain with type Elt.t = Elt.t
+
+module Make (Elt : Elt) : S with type Elt.t = Elt.t
 module Make_binable (Elt : Elt_binable) : S_binable with type Elt.t = Elt.t
 
 module Make_plain_using_comparator (Elt : sig
     type t [@@deriving sexp_of]
+
     include Comparator.S with type t := t
-  end)
-  : S_plain
-    with type Elt.t = Elt.t
-    with type Elt.comparator_witness = Elt.comparator_witness
+  end) :
+  S_plain
+  with type Elt.t = Elt.t
+  with type Elt.comparator_witness = Elt.comparator_witness
 
 (** [Make_using_comparator] builds a set from an element type that has a comparator.
 
@@ -477,23 +511,39 @@ module Make_plain_using_comparator (Elt : sig
     [bin_io]. *)
 module Make_using_comparator (Elt : sig
     type t [@@deriving sexp]
+
     include Comparator.S with type t := t
-  end)
-  : S
-    with type Elt.t = Elt.t
-    with type Elt.comparator_witness = Elt.comparator_witness
+  end) :
+  S with type Elt.t = Elt.t with type Elt.comparator_witness = Elt.comparator_witness
 
 module Make_binable_using_comparator (Elt : sig
     type t [@@deriving bin_io, sexp]
-    include Comparator.S with type t := t
-  end)
-  : S_binable
-    with type Elt.t = Elt.t
-    with type Elt.comparator_witness = Elt.comparator_witness
 
-module M (Elt : sig type t type comparator_witness end) : sig
+    include Comparator.S with type t := t
+  end) :
+  S_binable
+  with type Elt.t = Elt.t
+  with type Elt.comparator_witness = Elt.comparator_witness
+
+module M (Elt : sig
+    type t
+    type comparator_witness
+  end) : sig
   type nonrec t = (Elt.t, Elt.comparator_witness) t
 end
+
+include Base.Set.For_deriving with type ('a, 'b) t := ('a, 'b) t
+
+(** The following [*bin*] functions support bin-io on base-style sets, e.g.:
+
+    {[ type t = Set.M(String).t [@@deriving bin_io] ]} *)
+module Elt_bin_io = Elt_bin_io
+
+val bin_shape_m__t : ('a, 'b) Elt_bin_io.t -> Bin_prot.Shape.t
+val bin_size_m__t : ('a, 'b) Elt_bin_io.t -> ('a, 'b) t Bin_prot.Size.sizer
+val bin_write_m__t : ('a, 'b) Elt_bin_io.t -> ('a, 'b) t Bin_prot.Write.writer
+val bin_read_m__t : ('a, 'b) Elt_bin_io.t -> ('a, 'b) t Bin_prot.Read.reader
+val __bin_read_m__t__ : ('a, 'b) Elt_bin_io.t -> (int -> ('a, 'b) t) Bin_prot.Read.reader
 
 (** The following types and functors may be used to define stable modules. *)
 module Stable : sig
@@ -504,11 +554,11 @@ module Stable : sig
       type elt
       type elt_comparator_witness
       type nonrec t = (elt, elt_comparator_witness) t
+
       include Stable_module_types.S0_without_comparator with type t := t
     end
 
-    module Make (Elt : Stable_module_types.S0) : S
-      with type elt := Elt.t
-      with type elt_comparator_witness := Elt.comparator_witness
+    module Make (Elt : Stable_module_types.S0) :
+      S with type elt := Elt.t with type elt_comparator_witness := Elt.comparator_witness
   end
 end

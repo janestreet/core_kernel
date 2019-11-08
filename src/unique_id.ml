@@ -1,6 +1,5 @@
 open! Import
 open Std_internal
-
 open Unique_id_intf
 
 module type Id = Id
@@ -15,8 +14,12 @@ module type Id = Id
 let rec race_free_create_loop cell make =
   let x = !cell in
   let new_x = make x in
-  if phys_equal !cell x then begin cell := new_x; x end
+  if phys_equal !cell x
+  then (
+    cell := new_x;
+    x)
   else race_free_create_loop cell make
+;;
 
 module Int () = struct
   include Int

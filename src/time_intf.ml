@@ -1,11 +1,9 @@
 open! Import
 open! Std_internal
-
 module Date = Date0
 
 module type Zone = sig
   module Time : Time0_intf.S
-
   include Zone.S with type t = Zone.t and module Time_in_seconds := Time
 
   (** [abbreviation t time] returns the abbreviation name (such as EDT, EST, JST) of given
@@ -13,32 +11,31 @@ module type Zone = sig
       turned back into a [t]. This function reads and writes the zone's cached index. *)
   val abbreviation : t -> Time.t -> string
 
-  (** [absolute_time_of_relative_time] and [relative_time_of_absolute_time] convert times
-      between absolute (time from epoch in UTC) and relative (shifted according to time
-      zone and daylight savings) forms. These are low level functions not intended for
-      most clients. These functions read and write the zone's cached index. *)
-  val absolute_time_of_relative_time : t -> Time.Relative_to_unspecified_zone.t -> Time.t
-  val relative_time_of_absolute_time : t -> Time.t -> Time.Relative_to_unspecified_zone.t
+  (** [absolute_time_of_date_and_ofday] and [date_and_ofday_of_absolute_time] convert
+      between absolute times and date + ofday forms. These are low level functions not
+      intended for most clients. These functions read and write the zone's cached index.
+  *)
+  val absolute_time_of_date_and_ofday : t -> Time.Date_and_ofday.t -> Time.t
+
+  val date_and_ofday_of_absolute_time : t -> Time.t -> Time.Date_and_ofday.t
 
   (** Takes a [Time.t] and returns the next [Time.t] strictly after it, if any, that the
       time zone UTC offset changes, and by how much it does so. *)
-  val next_clock_shift
-    :  t
-    -> strictly_after:Time.t
-    -> (Time.t * Time.Span.t) option
+  val next_clock_shift : t -> strictly_after:Time.t -> (Time.t * Time.Span.t) option
 
   (** As [next_clock_shift], but *at or before* the given time. *)
-  val prev_clock_shift
-    :  t
-    -> at_or_before:Time.t
-    -> (Time.t * Time.Span.t) option
+  val prev_clock_shift : t -> at_or_before:Time.t -> (Time.t * Time.Span.t) option
 end
 
-module type S = sig
+module type Basic = sig
   module Time : Time0_intf.S
 
   (*_ necessary to preserve type equality with the Time functor argument *)
-  include (module type of struct include Time end)
+
+  include module type of struct
+    include Time
+  end
+                         [@ocaml.remove_aliases]
 
   (** [now ()] returns a [t] representing the current time *)
   val now : unit -> t
@@ -66,11 +63,25 @@ module type S = sig
 
   (** [abs_diff t1 t2] returns the absolute span of time [t1] minus time [t2]. *)
   val abs_diff : t -> t -> Span.t
+end
+
+module type Shared = sig
+  type t
+
+  include Quickcheck.S_range with type t := t
+
+  module Span : sig
+    type t
+  end
+
+  module Ofday : sig
+    type t
+  end
 
   (** {6 Comparisons} *)
 
   val is_earlier : t -> than:t -> bool
-  val is_later   : t -> than:t -> bool
+  val is_later : t -> than:t -> bool
 
   (** {6 Conversions} *)
 
@@ -113,13 +124,9 @@ module type S = sig
   val to_date_ofday_precise
     :  t
     -> zone:Zone.t
-    -> Date.t * Ofday.t
-       * [ `Only
-         | `Also_at of t
-         | `Also_skipped of Date.t * Ofday.t
-         ]
+    -> Date.t * Ofday.t * [ `Only | `Also_at of t | `Also_skipped of Date.t * Ofday.t ]
 
-  val to_date  : t -> zone:Zone.t -> Date.t
+  val to_date : t -> zone:Zone.t -> Date.t
   val to_ofday : t -> zone:Zone.t -> Ofday.t
 
   (** For performance testing only; [reset_date_cache ()] resets an internal cache used to
@@ -138,23 +145,16 @@ module type S = sig
 
   (** It's unspecified what happens if the given date/ofday/zone correspond to more than
       one date/ofday pair in the other zone. *)
-  val convert
-    :  from_tz:Zone.t
-    -> to_tz:Zone.t
-    -> Date.t
-    -> Ofday.t
-    -> (Date.t * Ofday.t)
+  val convert : from_tz:Zone.t -> to_tz:Zone.t -> Date.t -> Ofday.t -> Date.t * Ofday.t
 
-  val utc_offset
-    :  t
-    -> zone:Zone.t
-    -> Span.t
+  val utc_offset : t -> zone:Zone.t -> Span.t
 
   (** {6 Other string conversions}  *)
 
   (** The [{to,of}_string] functions in [Time] convert to UTC time, because a local time
       zone is not necessarily available.  They are generous in what they will read in. *)
-  include Stringable with type t := t
+  include
+    Stringable with type t := t
 
   (** [to_filename_string t ~zone] converts [t] to string with format
       YYYY-MM-DD_HH-MM-SS.mmm which is suitable for using in filenames. *)
@@ -164,8 +164,18 @@ module type S = sig
       time. *)
   val of_filename_string : string -> zone:Zone.t -> t
 
-  (** Same as [to_string_abs], but removes trailing seconds and milliseconds
-      if they are 0 *)
+  (** [to_string_abs ~zone t] is the same as [to_string t] except that it uses the given
+      time zone. *)
+  val to_string_abs : t -> zone:Zone.t -> string
+
+  (** [to_string_abs_trimmed] is the same as [to_string_abs], but drops trailing seconds
+      and milliseconds if they are 0. *)
+  val to_string_abs_trimmed : t -> zone:Zone.t -> string
+
+  val to_string_abs_parts : t -> zone:Zone.t -> string list
+
+  (** Same as [to_string_abs_trimmed], except it leaves off the timezone, so won't
+      reliably round trip. *)
   val to_string_trimmed : t -> zone:Zone.t -> string
 
   (** Same as [to_string_abs], but without milliseconds *)
@@ -182,25 +192,6 @@ module type S = sig
     -> find_zone:(string -> Zone.t)
     -> string
     -> t
-
-  (** [to_string_abs ~zone t] returns a string that represents an absolute time, rather
-      than a local time with an assumed time zone.  This string can be round-tripped, even
-      on a machine in a different time zone than the machine that wrote the string.
-
-      The string will display the date and of-day of [zone] together with [zone] as an
-      offset from UTC.
-
-      [to_string_abs_trimmed] is the same as [to_string_abs], but drops trailing seconds
-      and milliseconds if they are 0.
-
-      Note that the difference between [to_string] and [to_string_abs] is not that one
-      returns an absolute time and one doesn't, but that [to_string_abs] lets you specify
-      the time zone, while [to_string] takes it to be the local time zone.
-  *)
-  val to_string_abs         : t -> zone:Zone.t -> string
-  val to_string_abs_trimmed : t -> zone:Zone.t -> string
-
-  val to_string_abs_parts   : t -> zone:Zone.t -> string list
 
   (** [to_string_iso8601_basic] return a string representation of the following form:
       %Y-%m-%dT%H:%M:%S.%s%Z
@@ -222,24 +213,11 @@ module type S = sig
     -> ofday:Ofday.t
     -> zone:Zone.t
     -> t
+end
 
-  (** [next_multiple ~base ~after ~interval] returns the smallest [time] of the form:
-
-      {[
-        time = base + k * interval
-      ]}
-
-      where [k >= 0] and [time > after].  It is an error if [interval <= 0].
-
-      Supplying [~can_equal_after:true] allows the result to satisfy [time >= after].
-  *)
-  val next_multiple
-    :  ?can_equal_after:bool  (** default is [false] *)
-    -> base:t
-    -> after:t
-    -> interval:Span.t
-    -> unit
-    -> t
+module type S = sig
+  include Basic
+  include Shared with type t := t with module Span := Span with module Ofday := Ofday
 end
 
 module type Time = sig

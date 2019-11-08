@@ -5,6 +5,7 @@
 *)
 
 open! Import
+open Base_quickcheck
 
 (*_ JS-only: For an overview see: lib/core_kernel/doc/quickcheck.mkd *)
 
@@ -19,11 +20,10 @@ module type Generator = sig
       Non-recursive generators are free to ignore it, and recursive generators need only
       make sure it decreases in recursive calls and that recursion bottoms out at 0. *)
 
-  type +'a t
-  type -'a obs
+  type +'a t = 'a Generator.t
 
-  val create   :         (size:int -> Splittable_random.State.t -> 'a) -> 'a t
-  val generate : 'a t -> (size:int -> Splittable_random.State.t -> 'a)
+  val create : (size:int -> random:Splittable_random.State.t -> 'a) -> 'a t
+  val generate : 'a t -> size:int -> random:Splittable_random.State.t -> 'a
 
   (** Generators form a monad.  [t1 >>= fun x -> t2] replaces each value [x] in [t1] with
       the values in [t2]; each value's probability is the product of its probability in
@@ -40,7 +40,9 @@ module type Generator = sig
         x, y
       ]}
   *)
-  include Monad.S       with type 'a t := 'a t
+  include
+    Monad.S with type 'a t := 'a t
+
   include Applicative.S with type 'a t := 'a t
 
   (** [size = create (fun ~size _ -> size)] *)
@@ -51,15 +53,13 @@ module type Generator = sig
 
   val bool : bool t
   val char : char t
-
-  val char_digit      : char t
-  val char_lowercase  : char t
-  val char_uppercase  : char t
-  val char_alpha      : char t
-  val char_alphanum   : char t
-  val char_print      : char t
+  val char_digit : char t
+  val char_lowercase : char t
+  val char_uppercase : char t
+  val char_alpha : char t
+  val char_alphanum : char t
+  val char_print : char t
   val char_whitespace : char t
-
   val singleton : 'a -> 'a t
   val doubleton : 'a -> 'a -> 'a t
 
@@ -82,20 +82,41 @@ module type Generator = sig
   val tuple3 : 'a t -> 'b t -> 'c t -> ('a * 'b * 'c) t
   val tuple4 : 'a t -> 'b t -> 'c t -> 'd t -> ('a * 'b * 'c * 'd) t
   val tuple5 : 'a t -> 'b t -> 'c t -> 'd t -> 'e t -> ('a * 'b * 'c * 'd * 'e) t
+
   val tuple6
-    :  'a t -> 'b t -> 'c t -> 'd t -> 'e t -> 'f t
+    :  'a t
+    -> 'b t
+    -> 'c t
+    -> 'd t
+    -> 'e t
+    -> 'f t
     -> ('a * 'b * 'c * 'd * 'e * 'f) t
 
   val variant2 : 'a t -> 'b t -> [ `A of 'a | `B of 'b ] t
   val variant3 : 'a t -> 'b t -> 'c t -> [ `A of 'a | `B of 'b | `C of 'c ] t
+
   val variant4
-    :  'a t -> 'b t -> 'c t -> 'd t
+    :  'a t
+    -> 'b t
+    -> 'c t
+    -> 'd t
     -> [ `A of 'a | `B of 'b | `C of 'c | `D of 'd ] t
+
   val variant5
-    :  'a t -> 'b t -> 'c t -> 'd t -> 'e t
+    :  'a t
+    -> 'b t
+    -> 'c t
+    -> 'd t
+    -> 'e t
     -> [ `A of 'a | `B of 'b | `C of 'c | `D of 'd | `E of 'e ] t
+
   val variant6
-    :  'a t -> 'b t -> 'c t -> 'd t -> 'e t -> 'f t
+    :  'a t
+    -> 'b t
+    -> 'c t
+    -> 'd t
+    -> 'e t
+    -> 'f t
     -> [ `A of 'a | `B of 'b | `C of 'c | `D of 'd | `E of 'e | `F of 'f ] t
 
   (** [geometric ~p init] produces a geometric distribution (think "radioactive decay")
@@ -112,40 +133,56 @@ module type Generator = sig
   val small_positive_int : int t
 
   (** Generators for functions; take observers for inputs and a generator for outputs. *)
-  val fn
-    :  'a obs -> 'b t
-    -> ('a -> 'b) t
-  val fn2
-    :  'a obs -> 'b obs -> 'c t
-    -> ('a -> 'b -> 'c) t
+  val fn : 'a Observer.t -> 'b t -> ('a -> 'b) t
+
+  val fn2 : 'a Observer.t -> 'b Observer.t -> 'c t -> ('a -> 'b -> 'c) t
+
   val fn3
-    :  'a obs -> 'b obs -> 'c obs -> 'd t
+    :  'a Observer.t
+    -> 'b Observer.t
+    -> 'c Observer.t
+    -> 'd t
     -> ('a -> 'b -> 'c -> 'd) t
+
   val fn4
-    :  'a obs -> 'b obs -> 'c obs -> 'd obs -> 'e t
+    :  'a Observer.t
+    -> 'b Observer.t
+    -> 'c Observer.t
+    -> 'd Observer.t
+    -> 'e t
     -> ('a -> 'b -> 'c -> 'd -> 'e) t
+
   val fn5
-    :  'a obs -> 'b obs -> 'c obs -> 'd obs -> 'e obs -> 'f t
+    :  'a Observer.t
+    -> 'b Observer.t
+    -> 'c Observer.t
+    -> 'd Observer.t
+    -> 'e Observer.t
+    -> 'f t
     -> ('a -> 'b -> 'c -> 'd -> 'e -> 'f) t
+
   val fn6
-    :  'a obs -> 'b obs -> 'c obs -> 'd obs -> 'e obs -> 'f obs -> 'g t
+    :  'a Observer.t
+    -> 'b Observer.t
+    -> 'c Observer.t
+    -> 'd Observer.t
+    -> 'e Observer.t
+    -> 'f Observer.t
+    -> 'g t
     -> ('a -> 'b -> 'c -> 'd -> 'e -> 'f -> 'g) t
 
   (** Generator for comparison functions; result is guaranteed to be a partial order. *)
-  val compare_fn
-    :  'a obs
-    -> ('a -> 'a -> int) t
+  val compare_fn : 'a Observer.t -> ('a -> 'a -> int) t
 
   (** Generator for equality functions; result is guaranteed to be an equivalence
       relation. *)
-  val equal_fn
-    :  'a obs
-    -> ('a -> 'a -> bool) t
+  val equal_fn : 'a Observer.t -> ('a -> 'a -> bool) t
 
-  (** [filter_map t ~f] produces [y] for every [x] in [t] such that [f x = Some y].
-      [filter t ~f] produces every [x] in [t] such that [f x = true]. *)
+  (** [filter_map t ~f] produces [y] for every [x] in [t] such that [f x = Some y]. *)
   val filter_map : 'a t -> f:('a -> 'b option) -> 'b t
-  val filter     : 'a t -> f:('a -> bool)      -> 'a t
+
+  (** [filter t ~f] produces every [x] in [t] such that [f x = true]. *)
+  val filter : 'a t -> f:('a -> bool) -> 'a t
 
   (** Generator for recursive data type with multiple clauses. At size 0, chooses only
       among the non-recursive cases; at sizes greater than 0, chooses among non-recursive
@@ -159,10 +196,7 @@ module type Generator = sig
            and right = self
            in Node (left, int, right)])
       ]} *)
-  val recursive_union
-    :  'a t list
-    -> f:('a t -> 'a t list)
-    -> 'a t
+  val recursive_union : 'a t list -> f:('a t -> 'a t list) -> 'a t
 
   (** Like [recursive_union], with the addition of non-uniform weights for each clause. *)
   val weighted_recursive_union
@@ -183,8 +217,6 @@ module type Generator = sig
       ]}
   *)
   val fixed_point : ('a t -> 'a t) -> 'a t
-  val recursive   : ('a t -> 'a t) -> 'a t
-  [@@deprecated "[since 2018-03] use [recursive_union] or [fixed_point] instead"]
 
   (** [weighted_union alist] produces a generator that combines the distributions of each
       [t] in [alist] with the associated weights, which must be finite positive floating
@@ -205,8 +237,9 @@ module type Generator = sig
       the sizes of each element. [list_non_empty] never generates the empty list.
       [list_with_length] generates lists of the given length, and distributes [size] among
       the sizes of the elements. *)
-  val list             :        'a t -> 'a list t
-  val list_non_empty   :        'a t -> 'a list t
+  val list : 'a t -> 'a list t
+
+  val list_non_empty : 'a t -> 'a list t
   val list_with_length : int -> 'a t -> 'a list t
 end
 
@@ -226,11 +259,10 @@ module type Observer = sig
       use the built-in observers and observer combinators below, or use [create] directly.
   *)
 
-  type -'a t
-  type +'a gen
+  type -'a t = 'a Observer.t
 
-  val create  :         ('a -> size:int -> Hash.state -> Hash.state) -> 'a t
-  val observe : 'a t -> ('a -> size:int -> Hash.state -> Hash.state)
+  val create : ('a -> size:int -> hash:Hash.state -> Hash.state) -> 'a t
+  val observe : 'a t -> 'a -> size:int -> hash:Hash.state -> Hash.state
 
   (** [of_hash] creates an observer for any hashable type. *)
   val of_hash : (module Deriving_hash with type t = 'a) -> 'a t
@@ -242,16 +274,14 @@ module type Observer = sig
       depending on whether they satisfy [f]. *)
   val doubleton : ('a -> bool) -> 'a t
 
+
   (** [enum n ~f] maps values to [n] buckets, where [f] produces the index for a bucket
       from [0] to [n-1] for each value. *)
   val enum : int -> f:('a -> int) -> 'a t
 
   (** [of_list list ~equal] maps values in [list] to separate buckets, and compares
       observed values to the elements of [list] using [equal]. *)
-  val of_list
-    :  'a list
-    -> equal:('a -> 'a -> bool)
-    -> 'a t
+  val of_list : 'a list -> equal:('a -> 'a -> bool) -> 'a t
 
   (** Fixed point observer for recursive types. For example:
 
@@ -265,42 +295,42 @@ module type Observer = sig
       ]}
   *)
   val fixed_point : ('a t -> 'a t) -> 'a t
-  val recursive   : ('a t -> 'a t) -> 'a t
-  [@@deprecated "[since 2018-03] use [fixed_point] instead"]
 
-  val variant2
-    :  'a t -> 'b t
-    -> [ `A of 'a | `B of 'b ] t
-  val variant3
-    :  'a t -> 'b t -> 'c t
-    -> [ `A of 'a | `B of 'b | `C of 'c ] t
+  val variant2 : 'a t -> 'b t -> [ `A of 'a | `B of 'b ] t
+  val variant3 : 'a t -> 'b t -> 'c t -> [ `A of 'a | `B of 'b | `C of 'c ] t
+
   val variant4
-    :  'a t -> 'b t -> 'c t -> 'd t
+    :  'a t
+    -> 'b t
+    -> 'c t
+    -> 'd t
     -> [ `A of 'a | `B of 'b | `C of 'c | `D of 'd ] t
+
   val variant5
-    :  'a t -> 'b t -> 'c t -> 'd t -> 'e t
+    :  'a t
+    -> 'b t
+    -> 'c t
+    -> 'd t
+    -> 'e t
     -> [ `A of 'a | `B of 'b | `C of 'c | `D of 'd | `E of 'e ] t
+
   val variant6
-    :  'a t -> 'b t -> 'c t -> 'd t -> 'e t -> 'f t
+    :  'a t
+    -> 'b t
+    -> 'c t
+    -> 'd t
+    -> 'e t
+    -> 'f t
     -> [ `A of 'a | `B of 'b | `C of 'c | `D of 'd | `E of 'e | `F of 'f ] t
 
   (** [of_predicate t1 t2 ~f] combines [t1] and [t2], where [t1] observes values that
       satisfy [f] and [t2] observes values that do not satisfy [f]. *)
-  val of_predicate
-    :  'a t
-    -> 'a t
-    -> f:('a -> bool)
-    -> 'a t
+  val of_predicate : 'a t -> 'a t -> f:('a -> bool) -> 'a t
 
   (** [comparison ~compare ~eq ~lt ~gt] combines observers [lt] and [gt], where [lt]
       observes values less than [eq] according to [compare], and [gt] observes values
       greater than [eq] according to [compare]. *)
-  val comparison
-    :  compare:('a -> 'a -> int)
-    -> eq:'a
-    -> lt:'a t
-    -> gt:'a t
-    -> 'a t
+  val comparison : compare:('a -> 'a -> int) -> eq:'a -> lt:'a t -> gt:'a t -> 'a t
 
   (** maps all values to a single bucket. *)
   val singleton : unit -> _ t
@@ -312,13 +342,19 @@ module type Observer = sig
   val tuple3 : 'a t -> 'b t -> 'c t -> ('a * 'b * 'c) t
   val tuple4 : 'a t -> 'b t -> 'c t -> 'd t -> ('a * 'b * 'c * 'd) t
   val tuple5 : 'a t -> 'b t -> 'c t -> 'd t -> 'e t -> ('a * 'b * 'c * 'd * 'e) t
+
   val tuple6
-    :  'a t -> 'b t -> 'c t -> 'd t -> 'e t -> 'f t
+    :  'a t
+    -> 'b t
+    -> 'c t
+    -> 'd t
+    -> 'e t
+    -> 'f t
     -> ('a * 'b * 'c * 'd * 'e * 'f) t
 
   (** Observer for function type.  [fn gen t] observes a function by generating random
       inputs from [gen], applying the function, and observing the output using [t]. *)
-  val fn : 'a gen -> 'b t -> ('a -> 'b) t
+  val fn : 'a Generator.t -> 'b t -> ('a -> 'b) t
 
   (** [of_fun f] produces an observer that lazily applies [f].
 
@@ -350,35 +386,30 @@ module type Shrinker = sig
       See lib/core/example/quickcheck/shrinker_example.ml for some example shrinkers.
   *)
 
-  type 'a t
+  type 'a t = 'a Shrinker.t
 
   val shrink : 'a t -> 'a -> 'a Sequence.t
-
   val create : ('a -> 'a Sequence.t) -> 'a t
-
   val empty : unit -> 'a t
-
   val bool : bool t
   val char : char t
-
   val map : 'a t -> f:('a -> 'b) -> f_inverse:('b -> 'a) -> 'b t
-
   val tuple2 : 'a t -> 'b t -> ('a * 'b) t
   val tuple3 : 'a t -> 'b t -> 'c t -> ('a * 'b * 'c) t
   val tuple4 : 'a t -> 'b t -> 'c t -> 'd t -> ('a * 'b * 'c * 'd) t
   val tuple5 : 'a t -> 'b t -> 'c t -> 'd t -> 'e t -> ('a * 'b * 'c * 'd * 'e) t
-  val tuple6 : 'a t -> 'b t -> 'c t -> 'd t -> 'e t -> 'f t -> ('a * 'b * 'c * 'd * 'e * 'f) t
 
-  val variant2
-    :  'a t
-    -> 'b t
-    -> [ `A of 'a | `B of 'b ] t
-
-  val variant3
+  val tuple6
     :  'a t
     -> 'b t
     -> 'c t
-    -> [ `A of 'a | `B of 'b | `C of 'c ] t
+    -> 'd t
+    -> 'e t
+    -> 'f t
+    -> ('a * 'b * 'c * 'd * 'e * 'f) t
+
+  val variant2 : 'a t -> 'b t -> [ `A of 'a | `B of 'b ] t
+  val variant3 : 'a t -> 'b t -> 'c t -> [ `A of 'a | `B of 'b | `C of 'c ] t
 
   val variant4
     :  'a t
@@ -408,70 +439,60 @@ module type Shrinker = sig
       directly using [rec] in the definition of the shrinker is that it causes lazy
       evaluation where possible. *)
   val fixed_point : ('a t -> 'a t) -> 'a t
-  val recursive   : ('a t -> 'a t) -> 'a t
-  [@@deprecated "[since 2018-03] use [fixed_point] instead"]
-end
-
-module type Pre_int = sig
-  include Base.Int.S
-
-  val splittable_random : Splittable_random.State.t -> lo:t -> hi:t -> t
 end
 
 module type S = sig
-  type 'a gen
-  type 'a obs
-  type 'a shr
   type t
-  val gen      : t gen
-  val obs      : t obs
-  val shrinker : t shr
+
+  val quickcheck_generator : t Generator.t
+  val quickcheck_observer : t Observer.t
+  val quickcheck_shrinker : t Shrinker.t
 end
 
 module type S1 = sig
-  type 'a gen
-  type 'a obs
-  type 'a shr
   type 'a t
-  val gen      : 'a gen -> 'a t gen
-  val obs      : 'a obs -> 'a t obs
-  val shrinker : 'a shr -> 'a t shr
+
+  val quickcheck_generator : 'a Generator.t -> 'a t Generator.t
+  val quickcheck_observer : 'a Observer.t -> 'a t Observer.t
+  val quickcheck_shrinker : 'a Shrinker.t -> 'a t Shrinker.t
 end
 
 module type S2 = sig
-  type 'a gen
-  type 'a obs
-  type 'a shr
   type ('a, 'b) t
-  val gen      : 'a gen -> 'b gen -> ('a, 'b) t gen
-  val obs      : 'a obs -> 'b obs -> ('a, 'b) t obs
-  val shrinker : 'a shr -> 'b shr -> ('a, 'b) t shr
+
+  val quickcheck_generator : 'a Generator.t -> 'b Generator.t -> ('a, 'b) t Generator.t
+  val quickcheck_observer : 'a Observer.t -> 'b Observer.t -> ('a, 'b) t Observer.t
+  val quickcheck_shrinker : 'a Shrinker.t -> 'b Shrinker.t -> ('a, 'b) t Shrinker.t
 end
 
-module type S_int = sig
+module type S_range = sig
   include S
 
   (** [gen_incl lower_bound upper_bound] produces values between [lower_bound] and
       [upper_bound], inclusive.  It uses an ad hoc distribution that stresses boundary
       conditions more often than a uniform distribution, while still able to produce any
       value in the range.  Raises if [lower_bound > upper_bound]. *)
-  val gen_incl : t -> t -> t gen
+  val gen_incl : t -> t -> t Generator.t
 
   (** [gen_uniform_incl lower_bound upper_bound] produces a generator for values uniformly
       distributed between [lower_bound] and [upper_bound], inclusive.  Raises if
       [lower_bound > upper_bound]. *)
-  val gen_uniform_incl : t -> t -> t gen
+  val gen_uniform_incl : t -> t -> t Generator.t
+end
+
+module type S_int = sig
+  include S_range
 
   (** [gen_log_uniform_incl lower_bound upper_bound] produces a generator for values
       between [lower_bound] and [upper_bound], inclusive, where the number of bits used to
       represent the value is uniformly distributed.  Raises if [(lower_bound < 0) ||
       (lower_bound > upper_bound)]. *)
-  val gen_log_uniform_incl : t -> t -> t gen
+  val gen_log_uniform_incl : t -> t -> t Generator.t
 
   (** [gen_log_incl lower_bound upper_bound] is like [gen_log_uniform_incl], but weighted
       slightly more in favor of generating [lower_bound] and [upper_bound]
       specifically. *)
-  val gen_log_incl : t -> t -> t gen
+  val gen_log_incl : t -> t -> t Generator.t
 end
 
 (** [seed] specifies how to initialize a pseudo-random number generator.  When multiple
@@ -515,24 +536,17 @@ end
 module type Quickcheck_configured = sig
   include Quickcheck_config
 
-  type 'a gen
-  type 'a shr
-
   (** [random_value gen] produces a single value chosen from [gen] using [seed]. *)
-  val random_value
-    :  ?seed : seed
-    -> ?size : int
-    -> 'a gen
-    -> 'a
+  val random_value : ?seed:seed -> ?size:int -> 'a Generator.t -> 'a
 
   (** [iter gen ~f] runs [f] on up to [trials] different values generated by [gen]. It
       stops successfully after [trials] successful trials or if [gen] runs out of values.
       It raises an exception if [f] raises an exception. *)
   val iter
-    :  ?seed   : seed
-    -> ?sizes  : int Sequence.t
-    -> ?trials : int
-    -> 'a gen
+    :  ?seed:seed
+    -> ?sizes:int Sequence.t
+    -> ?trials:int
+    -> 'a Generator.t
     -> f:('a -> unit)
     -> unit
 
@@ -544,28 +558,28 @@ module type Quickcheck_configured = sig
       that caused the exception with re-raising behaving the same as for unshrunk inputs.
   *)
   val test
-    :  ?seed            : seed
-    -> ?sizes           : int Sequence.t
-    -> ?trials          : int
-    -> ?shrinker        : 'a shr
-    -> ?shrink_attempts : shrink_attempts
-    -> ?sexp_of         : ('a -> Base.Sexp.t)
-    -> ?examples        : 'a list
-    -> 'a gen
+    :  ?seed:seed
+    -> ?sizes:int Sequence.t
+    -> ?trials:int
+    -> ?shrinker:'a Shrinker.t
+    -> ?shrink_attempts:shrink_attempts
+    -> ?sexp_of:('a -> Base.Sexp.t)
+    -> ?examples:'a list
+    -> 'a Generator.t
     -> f:('a -> unit)
     -> unit
 
   (** [test_or_error] is like [test], except failure is determined using [Or_error.t]. Any
-      exceptions raised by [f] are not caught. *)
+      exceptions raised by [f] are also treated as failures. *)
   val test_or_error
-    :  ?seed            : seed
-    -> ?sizes           : int Sequence.t
-    -> ?trials          : int
-    -> ?shrinker        : 'a shr
-    -> ?shrink_attempts : shrink_attempts
-    -> ?sexp_of         : ('a -> Base.Sexp.t)
-    -> ?examples        : 'a list
-    -> 'a gen
+    :  ?seed:seed
+    -> ?sizes:int Sequence.t
+    -> ?trials:int
+    -> ?shrinker:'a Shrinker.t
+    -> ?shrink_attempts:shrink_attempts
+    -> ?sexp_of:('a -> Base.Sexp.t)
+    -> ?examples:'a list
+    -> 'a Generator.t
     -> f:('a -> unit Or_error.t)
     -> unit Or_error.t
 
@@ -575,11 +589,11 @@ module type Quickcheck_configured = sig
       satisfy [f], [test_can_generate] raises an exception. If [sexp_of] is provided, the
       exception includes all of the generated values. *)
   val test_can_generate
-    :  ?seed    : seed
-    -> ?sizes   : int Sequence.t
-    -> ?trials  : int
-    -> ?sexp_of : ('a -> Base.Sexp.t)
-    -> 'a gen
+    :  ?seed:seed
+    -> ?sizes:int Sequence.t
+    -> ?trials:int
+    -> ?sexp_of:('a -> Base.Sexp.t)
+    -> 'a Generator.t
     -> f:('a -> bool)
     -> unit
 
@@ -590,64 +604,58 @@ module type Quickcheck_configured = sig
       [test_distinct_values] raises an exception. If [sexp_of] is provided, the exception
       includes the values generated. *)
   val test_distinct_values
-    :  ?seed           : seed
-    -> ?sizes          : int Sequence.t
-    -> ?sexp_of        : ('a -> Base.Sexp.t)
-    -> 'a gen
-    -> trials          : int
-    -> distinct_values : int
-    -> compare         : ('a -> 'a -> int)
+    :  ?seed:seed
+    -> ?sizes:int Sequence.t
+    -> ?sexp_of:('a -> Base.Sexp.t)
+    -> 'a Generator.t
+    -> trials:int
+    -> distinct_values:int
+    -> compare:('a -> 'a -> int)
     -> unit
 
   (** [random_sequence ~seed gen] produces a sequence of values chosen from [gen]. *)
   val random_sequence
-    :  ?seed  : seed
-    -> ?sizes : int Sequence.t
-    -> 'a gen
+    :  ?seed:seed
+    -> ?sizes:int Sequence.t
+    -> 'a Generator.t
     -> 'a Sequence.t
+end
+
+(** Includes [Let_syntax] from [Monad.Syntax]. Sets [Open_on_rhs] to be all of
+    [Generator], except that it does not shadow [Let_syntax] itself. Both [Generator] and
+    [Open_on_rhs] are meant to be destructively assigned. *)
+module type Syntax = sig
+  module Generator : Generator
+
+  module Open_on_rhs :
+    Generator
+    with type 'a t := 'a Generator.t
+     and module Let_syntax := Generator.Let_syntax
+
+  include
+    Monad.Syntax
+    with type 'a t := 'a Generator.t
+     and module Let_syntax.Let_syntax.Open_on_rhs = Open_on_rhs
 end
 
 module type Quickcheck = sig
   type nonrec seed = seed
   type nonrec shrink_attempts = shrink_attempts
 
-  module rec Generator : (Generator with type 'a obs := 'a Observer.t)
-  and        Observer  : (Observer  with type 'a gen := 'a Generator.t)
-
+  module Generator : Generator
+  module Observer : Observer
   module Shrinker : Shrinker
 
   module type S = S
-    with type 'a gen := 'a Generator.t
-    with type 'a obs := 'a Observer.t
-    with type 'a shr := 'a Shrinker.t
-
   module type S1 = S1
-    with type 'a gen := 'a Generator.t
-    with type 'a obs := 'a Observer.t
-    with type 'a shr := 'a Shrinker.t
-
   module type S2 = S2
-    with type 'a gen := 'a Generator.t
-    with type 'a obs := 'a Observer.t
-    with type 'a shr := 'a Shrinker.t
-
   module type S_int = S_int
-    with type 'a gen := 'a Generator.t
-    with type 'a obs := 'a Observer.t
-    with type 'a shr := 'a Shrinker.t
+  module type S_range = S_range
 
-  module Let_syntax : module type of Generator.Let_syntax
-    with module Let_syntax.Open_on_rhs = Generator
-
-  module Make_int (M : Pre_int) : S_int with type t := M.t
-
-  module For_int : S_int with type t := int
+  include Syntax with module Generator := Generator and module Open_on_rhs := Generator
 
   module type Quickcheck_config = Quickcheck_config
-
   module type Quickcheck_configured = Quickcheck_configured
-    with type 'a gen := 'a Generator.t
-    with type 'a shr := 'a Shrinker.t
 
   (** with a default config *)
   include Quickcheck_configured

@@ -1,12 +1,11 @@
 open! Import
-
-include Span_intf.S
-  with type underlying = float
+include Span_intf.S with type underlying = float
 
 module Stable : sig
   (** [V1]'s sexps use single-unit format and support units from [d] to [ms]; it does not
       support [us] or [ns]. [V1]'s sexp conversions do not round-trip precisely. *)
   module V1 : sig
+
     type nonrec t = t [@@deriving sexp, bin_io, compare, hash]
   end
 
@@ -22,4 +21,12 @@ module Stable : sig
   module V3 : sig
     type nonrec t = t [@@deriving sexp, bin_io, compare, hash]
   end
+end
+
+(*_ See the Jane Street Style Guide for an explanation of [Private] submodules:
+
+  https://opensource.janestreet.com/standards/#private-submodules *)
+module Private : sig
+  val parse_suffix : string -> index:int -> Unit_of_time.t
+  val suffix_of_unit_of_time : Unit_of_time.t -> string
 end

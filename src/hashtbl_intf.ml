@@ -91,29 +91,30 @@
 *)
 
 open! Import
-
 module Binable = Binable0
-
 module Hashtbl = Base.Hashtbl
 
-module type Key_plain  = Hashtbl.Key
+module type Key_plain = Hashtbl.Key.S
 
-module      Hashable = Base.Hashable
+module Hashable = Base.Hashable
+
 module type Hashable = Base.Hashable.Hashable
 
 module type Key = sig
   type t [@@deriving sexp]
+
   include Key_plain with type t := t
 end
 
 module type Key_binable = sig
   type t [@@deriving bin_io, sexp]
+
   include Key with type t := t
 end
 
-module type Creators  = Hashtbl.Private.Creators_generic
+module type Creators = Hashtbl.Private.Creators_generic
 module type Accessors = Hashtbl.Accessors
-module type Multi     = Hashtbl.Multi
+module type Multi = Hashtbl.Multi
 
 type ('key, 'data, 'z) create_options_with_first_class_module =
   ('key, 'data, 'z) Hashtbl.create_options
@@ -123,9 +124,11 @@ type ('key, 'data, 'z) create_options_without_hashable =
 
 type ('key, 'data, 'z) create_options_with_hashable =
   ?growth_allowed:bool (** defaults to [true] *)
-  -> ?size:int (** initial size -- default 128 *)
+  -> ?size:int (** initial size -- default 0 *)
   -> hashable:'key Hashable.t
   -> 'z
+
+module type For_deriving = Base.Hashtbl.For_deriving
 
 module type S_plain = sig
   type key
@@ -138,30 +141,42 @@ module type S_plain = sig
 
   include Invariant.S1 with type 'b t := 'b t
 
-  include Creators
+  include
+    Creators
     with type ('a, 'b) t := ('a, 'b) t_
     with type 'a key := 'a key_
-    with type ('key, 'data, 'z) create_options := ('key, 'data, 'z) create_options_without_hashable
+    with type ('key, 'data, 'z) create_options :=
+      ('key, 'data, 'z) create_options_without_hashable
 
-  include Accessors
-    with type ('a, 'b) t := ('a, 'b) t_
-    with type 'a key := 'a key_
+  include Accessors with type ('a, 'b) t := ('a, 'b) t_ with type 'a key := 'a key_
+  include Multi with type ('a, 'b) t := ('a, 'b) t_ with type 'a key := 'a key_
 
-  include Multi
-    with type ('a, 'b) t := ('a, 'b) t_
-    with type 'a key := 'a key_
+  module Provide_of_sexp
+      (Key : sig
+         type t [@@deriving of_sexp]
+       end
+       with type t := key) : sig
+    type _ t [@@deriving of_sexp]
+  end
+  with type 'a t := 'a t
 
-  module Provide_of_sexp (Key : sig type t [@@deriving of_sexp] end with type t := key)
-    : sig type _ t [@@deriving of_sexp] end with type 'a t := 'a t
-  module Provide_bin_io (Key : sig type t [@@deriving bin_io] end with type t := key)
-    : sig type 'a t [@@deriving bin_io] end with type 'a t := 'a t
+  module Provide_bin_io
+      (Key : sig
+         type t [@@deriving bin_io]
+       end
+       with type t := key) : sig
+    type 'a t [@@deriving bin_io]
+  end
+  with type 'a t := 'a t
 end
 
 module type S = sig
   include S_plain
+
   include sig
     type _ t [@@deriving of_sexp]
-  end with type 'a t := 'a t
+  end
+  with type 'a t := 'a t
 end
 
 module type S_binable = sig
@@ -173,47 +188,40 @@ module type Hashtbl = sig
   include Hashtbl.S_without_submodules (** @inline *)
 
   module Using_hashable : sig
-    include Creators
-      with type ('a, 'b) t  := ('a, 'b) t
+    include
+      Creators
+      with type ('a, 'b) t := ('a, 'b) t
       with type 'a key := 'a key
-      with type ('a, 'b, 'z) create_options := ('a, 'b, 'z) create_options_with_hashable
+      with type ('a, 'b, 'z) create_options :=
+        ('a, 'b, 'z) create_options_with_hashable
   end
 
   module Poly : sig
     type nonrec ('a, 'b) t = ('a, 'b) t [@@deriving bin_io]
+
     include Hashtbl.S_poly with type ('a, 'b) t := ('a, 'b) t
   end
 
-  module type Key_plain   = Key_plain
-  module type Key         = Key
+  module type Key_plain = Key_plain
+  module type Key = Key
   module type Key_binable = Key_binable
-
-  module type S_plain   = S_plain   with type ('a, 'b) hashtbl = ('a, 'b) t
-  module type S         = S         with type ('a, 'b) hashtbl = ('a, 'b) t
+  module type S_plain = S_plain with type ('a, 'b) hashtbl = ('a, 'b) t
+  module type S = S with type ('a, 'b) hashtbl = ('a, 'b) t
   module type S_binable = S_binable with type ('a, 'b) hashtbl = ('a, 'b) t
 
-  module Make_plain   (Key : Key_plain)   : S_plain   with type key = Key.t
-  module Make         (Key : Key        ) : S         with type key = Key.t
+  module Make_plain (Key : Key_plain) : S_plain with type key = Key.t
+  module Make (Key : Key) : S with type key = Key.t
   module Make_binable (Key : Key_binable) : S_binable with type key = Key.t
-  module M (K : Base.T.T) : sig
+
+  module M (K : T.T) : sig
     type nonrec 'v t = (K.t, 'v) t
   end
 
   module Hashable = Hashable
+
   val hashable : ('key, _) t -> 'key Hashable.t
 
-  val iter_vals : (_, 'b) t -> f:('b -> unit) -> unit
-  [@@deprecated "[since 2016-04] Use iter instead"]
+  module type For_deriving = For_deriving
 
-  val replace : ('a, 'b) t -> key:'a key -> data:'b -> unit
-  [@@deprecated "[since 2015-10] Use set instead"]
-
-  val replace_all : (_, 'b) t -> f:('b -> 'b) -> unit
-  [@@deprecated "[since 2016-02] Use map_inplace instead"]
-  val replace_alli : ('a, 'b) t -> f:(key:'a key -> data:'b -> 'b) -> unit
-  [@@deprecated "[since 2016-02] Use mapi_inplace instead"]
-  val filter_replace_all : (_, 'b) t -> f:('b -> 'b option) -> unit
-  [@@deprecated "[since 2016-02] Use filter_map_inplace instead"]
-  val filter_replace_alli : ('a, 'b) t -> f:(key:'a key -> data:'b -> 'b option) -> unit
-  [@@deprecated "[since 2016-02] Use filter_mapi_inplace instead"]
+  include For_deriving with type ('a, 'b) t := ('a, 'b) t
 end

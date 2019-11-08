@@ -5,18 +5,22 @@
     types. *)
 
 open! Import
+open! Stable_unit_test_intf
 
 (** We provide separate access to sexp serialization and deserialization tests because
     some stable types will have varying sexp serializations.  Notably, Time.sexp_of_t
     depends on the local timezone. For such types it is still important to check that all
     the sexps can be deserialized correctly. *)
-module Make_sexp_deserialization_test (T : Stable_unit_test_intf.Arg) : sig end
-module Make_sexp_serialization_test   (T : Stable_unit_test_intf.Arg) : sig end
-module Make_bin_io_test               (T : Stable_unit_test_intf.Arg) : sig end
+module Make_sexp_deserialization_test (T : Arg) : sig end
+
+module Make_sexp_serialization_test (T : Arg) : sig end
+module Make_bin_io_test (T : Arg) : sig end
 
 (** Include all of the above tests. *)
 module Make (T : Stable_unit_test_intf.Arg) : sig end
 
 (** See [stable_unit_test_intf.ml] for documentation. *)
-module Make_unordered_container (T : Stable_unit_test_intf.Unordered_container_arg)
-  : sig end
+module type Unordered_container_arg = Unordered_container_arg
+
+module Unordered_container_test = Unordered_container_test
+module Make_unordered_container (T : Unordered_container_arg) : sig end

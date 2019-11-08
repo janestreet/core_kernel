@@ -2,40 +2,52 @@
 
 open! Import
 
+include module type of struct
+  include Base.Float
+end
+
 type t = float [@@deriving typerep]
 
 module Robust_compare : sig
   module type S = sig
     (** intended to be a tolerance on human-entered floats *)
     val robust_comparison_tolerance : float
+
     include Robustly_comparable.S with type t := float
   end
 
-  module Make (T : sig val robust_comparison_tolerance : float end) : S
+  module Make (T : sig
+      val robust_comparison_tolerance : float
+    end) : S
 end
 
 (** The results of robust comparisons on [nan] should be considered undefined. *)
-include Robust_compare.S
+include
+  Robust_compare.S
 
 module O : sig
-  include module type of struct include Base.Float.O end
+  include module type of struct
+    include Base.Float.O
+  end
+
   include Robustly_comparable.S with type t := t
 end
 
+module Robustly_comparable : Robust_compare.S
+
 module Terse : sig
   type nonrec t = t [@@deriving bin_io]
-  include module type of struct include Base.Float.Terse end
+
+  include module type of struct
+    include Base.Float.Terse
+  end
   with type t := t
 end
 
-include Identifiable.S
+include
+  Identifiable.S
   with type t := t
    and type comparator_witness := Base.Float.comparator_witness
-
-include module type of struct include Base.Float end
-  with type t := t
-  with module O := Base.Float.O
-  with module Terse := Base.Float.Terse
 
 (** [to_string_12 x] builds a string representing [x] using up to 12 significant digits.
     It loses precision.  You can use ["%{Float#12}"] in formats, but consider ["%.12g"],
@@ -51,13 +63,11 @@ val to_string_12 : t -> string
     not 15 or fewer) of them. *)
 val to_string : t -> string
 
-val to_string_round_trippable : t -> string
-[@@deprecated "[since 2017-04] Use [Float.to_string]"]
-
 include Quickcheckable.S with type t := t
 
 (*_ Caution: If we remove this sig item, [sign] will still be present from
   [Comparable.With_zero]. *)
+
 val sign : t -> Sign.t
 [@@deprecated "[since 2016-01] Replace [sign] with [robust_sign] or [sign_exn]"]
 
@@ -98,3 +108,18 @@ val gen_negative : t Quickcheck.Generator.t
 (** [gen_without_nan] produces all finite and infinite [t] values, excluding all NaN
     values. *)
 val gen_without_nan : t Quickcheck.Generator.t
+
+(** [gen_infinite] produces both infinite values *)
+val gen_infinite : t Quickcheck.Generator.t
+
+(** [gen_nan] produces all NaN values. *)
+val gen_nan : t Quickcheck.Generator.t
+
+(** [gen_normal] produces all normal values *)
+val gen_normal : t Quickcheck.Generator.t
+
+(** [gen_subnormal] produces all subnormal values *)
+val gen_subnormal : t Quickcheck.Generator.t
+
+(** [gen_zero] produces both zero values *)
+val gen_zero : t Quickcheck.Generator.t

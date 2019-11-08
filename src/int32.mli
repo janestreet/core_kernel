@@ -2,11 +2,13 @@
 
 (** {2 Interface from Base} *)
 
-include module type of struct include Base.Int32 end
-  with module Hex := Base.Int32.Hex (** @open *)
+(** @open *)
+include module type of struct
+  include Base.Int32
+end
 
 (** {2 Extensions} *)
 
-include Int_intf.Extension
-  with type t := t
-   and type comparator_witness := comparator_witness (** @open *)
+(** @open *)
+include
+  Int_intf.Extension with type t := t and type comparator_witness := comparator_witness
