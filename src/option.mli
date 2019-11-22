@@ -1,4 +1,5 @@
-(** This module extends {{!Base.Option}[Base.Option]} with bin_io and quickcheck. *)
+(** This module extends {{!Base.Option}[Base.Option]} with bin_io, quickcheck, and support
+    for ppx_optional. *)
 
 type 'a t = 'a Base.Option.t [@@deriving bin_io, typerep]
 
@@ -16,3 +17,8 @@ module Stable : sig
     type nonrec 'a t = 'a t [@@deriving bin_io, compare, sexp]
   end
 end
+
+(** [Optional_syntax] allows [Option.t]s in the same matched expression as other types
+    using [Optional_syntax]. *)
+module Optional_syntax :
+  Optional_syntax.S1 with type 'a t := 'a t and type 'a value := 'a

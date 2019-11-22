@@ -43,7 +43,7 @@ module Hashtbl = struct
 
          type t = string Table.t [@@deriving sexp, bin_io]
 
-         let equal t1 t2 = Int.Table.equal t1 t2 String.equal
+         let equal t1 t2 = Int.Table.equal String.equal t1 t2
          let triple_table = Int.Table.of_alist_exn ~size:16 [ 1, "foo"; 2, "bar"; 3, "baz" ]
          let single_table = Int.Table.of_alist_exn [ 0, "foo" ]
 

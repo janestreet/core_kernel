@@ -327,6 +327,10 @@ module Flag = struct
     type t =
       { name : string
       ; aliases : string list
+      ; aliases_excluded_from_help : string list
+      (* [aliases_excluded_from_help] are aliases that don't show up in -help output.
+         Currently they're only used for double-dash built-in flags like --help and
+         --version. *)
       ; action : action
       ; doc : string
       ; num_occurrences : Num_occurrences.t
@@ -380,6 +384,7 @@ module Flag = struct
              ; num_occurrences = _
              ; check_available = _
              ; name_matching = _
+             ; aliases_excluded_from_help = _
              } as t)
         =
         if String.is_prefix doc ~prefix:" "
@@ -403,6 +408,7 @@ module Flag = struct
            ; num_occurrences = _
            ; check_available = _
            ; name_matching = _
+           ; aliases_excluded_from_help = _
            } as t)
       =
       let { Doc.arg_doc; doc } = Doc.parse ~action ~doc in
@@ -1114,6 +1120,7 @@ let lookup_expand_with_aliases map prefix key_type =
     List.concat_map (String.Map.data map) ~f:(fun flag ->
       let { Flag.Internal.name
           ; aliases
+          ; aliases_excluded_from_help
           ; action = _
           ; doc = _
           ; num_occurrences = _
@@ -1124,6 +1131,7 @@ let lookup_expand_with_aliases map prefix key_type =
         flag
       in
       let data = flag, name_matching in
+      let aliases = aliases_excluded_from_help @ aliases in
       (name, data) :: List.map aliases ~f:(fun alias -> alias, data))
   in
   match List.find_a_dup alist ~compare:(fun (s1, _) (s2, _) -> String.compare s1 s2) with
@@ -1246,6 +1254,7 @@ module Base = struct
               , { Flag.Internal.action
                 ; name = _
                 ; aliases = _
+                ; aliases_excluded_from_help = _
                 ; doc = _
                 ; num_occurrences = _
                 ; check_available = _
@@ -1488,7 +1497,14 @@ module Base = struct
       let optional_with_default = optional_with_default
       let required = required
 
-      let flag ?(aliases = []) ?full_flag_required name mode ~doc =
+      let flag_internal
+            ?(aliases = [])
+            ?full_flag_required
+            name
+            mode
+            ~doc
+            ~aliases_excluded_from_help
+        =
         let normalize flag = normalize Key_type.Flag flag in
         let name = normalize name in
         let aliases = List.map ~f:normalize aliases in
@@ -1507,6 +1523,7 @@ module Base = struct
                 (fun () ->
                    [ { name
                      ; aliases
+                     ; aliases_excluded_from_help
                      ; doc
                      ; action
                      ; num_occurrences
@@ -1518,6 +1535,8 @@ module Base = struct
             }
         }
       ;;
+
+      let flag = flag_internal ~aliases_excluded_from_help:[]
 
       let flag_optional_with_default_doc
             ?aliases
@@ -2035,7 +2054,7 @@ let extend_alist_exn alist key_type ~key data =
 ;;
 
 module Bailout_dump_flag = struct
-  let add base ~name ~aliases ~text ~text_summary =
+  let add base ~name ~aliases ~aliases_excluded_from_help ~text ~text_summary =
     let flags = base.Base.flags in
     let flags =
       extend_map_exn
@@ -2043,6 +2062,7 @@ module Bailout_dump_flag = struct
         Key_type.Flag
         ~key:name
         { name
+        ; aliases_excluded_from_help
         ; aliases
         ; num_occurrences = Flag.Num_occurrences.at_most_once
         ; check_available = ignore
@@ -2076,6 +2096,7 @@ let basic_spec ~summary ?readme { Base.Spec.usage; flags; f } main =
       base
       ~name:"-help"
       ~aliases:[ "-?" ]
+      ~aliases_excluded_from_help:[ "--help" ]
       ~text_summary:"this help text"
       ~text:(fun env -> Lazy.force (Env.find_exn env Base.help_key))
   in
@@ -2321,6 +2342,7 @@ module Version_info = struct
           base
           ~name:"-version"
           ~aliases:[]
+          ~aliases_excluded_from_help:[ "--version" ]
           ~text_summary:"the version of this build"
           ~text:(fun _ -> String.concat ~sep:"\n" (sanitize_version ~version))
       in
@@ -2329,6 +2351,7 @@ module Version_info = struct
           base
           ~name:"-build-info"
           ~aliases:[]
+          ~aliases_excluded_from_help:[ "--build-info" ]
           ~text_summary:"info about this build"
           ~text:(fun _ -> force build_info)
       in
@@ -2454,6 +2477,7 @@ module For_unix (M : For_unix) = struct
         let output = Set_once.create () in
         let thread =
           Thread.create
+            ~on_uncaught_exn:`Print_to_stderr
             (fun () ->
                Result.try_with (fun () ->
                  descr |> Unix.in_channel_of_descr |> In_channel.input_all)
@@ -2861,14 +2885,14 @@ module For_unix (M : For_unix) = struct
            (* Match for flags recognized when subcommands are expected next *)
            match sub, rest with
            (* Recognized at the top level command only *)
-           | "-version", _ when Path.length path = 1 ->
+           | ("-version" | "--version"), _ when Path.length path = 1 ->
              Version_info.print_version ~version;
              exit 0
-           | "-build-info", _ when Path.length path = 1 ->
+           | ("-build-info" | "--build-info"), _ when Path.length path = 1 ->
              Version_info.print_build_info ~build_info;
              exit 0
            (* Recognized everywhere *)
-           | "-help", Nil ->
+           | ("-help" | "--help"), Nil ->
              print_endline
                (help_for_shape
                   ~recursive:false
@@ -2877,7 +2901,8 @@ module For_unix (M : For_unix) = struct
                   (shape (Group { group with subcommands = subs }))
                   path);
              exit 0
-           | "-help", Cmdline.Cons (sub, rest) -> sub, Cmdline.Cons ("-help", rest)
+           | ("-help" | "--help"), Cmdline.Cons (sub, rest) ->
+             sub, Cmdline.Cons ("-help", rest)
            | _ -> sub, rest
          in
          (match

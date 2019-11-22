@@ -47,6 +47,8 @@ module Infix = struct
   let ( * ) t s = of_repr (Repr.of_float (Repr.to_float (to_repr t) *. s))
 end
 
+include Infix
+
 let zero = of_repr Repr.zero
 let scale = Infix.( * )
 let iscale t s = of_repr (Repr.( * ) (to_repr t) (Repr.of_int s))
@@ -116,8 +118,8 @@ let of_string s =
   let length = String.length s in
   if Int.( < ) length 2
   then invalid_argf "'%s' passed to Byte_units.of_string - too short" s ();
-  let base_str = String.sub s ~pos:0 ~len:(length - 1) in
-  let ext_char = Char.lowercase s.[length - 1] in
+  let base_str = String.sub s ~pos:0 ~len:(Int.( - ) length 1) in
+  let ext_char = Char.lowercase s.[Int.( - ) length 1] in
   let base =
     try Float.of_string base_str with
     | _ ->

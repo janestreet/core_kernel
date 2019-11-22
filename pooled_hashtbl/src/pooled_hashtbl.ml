@@ -6,6 +6,7 @@ open With_return
 let failwiths = Error.failwiths
 
 module Hashable = Hashtbl_intf.Hashable
+module Merge_into_action = Hashtbl_intf.Merge_into_action
 module Pool = Tuple_pool
 
 let hash_param = Hashable.hash_param
@@ -789,15 +790,11 @@ let merge =
     new_t
 ;;
 
-type 'a merge_into_action =
-  | Remove
-  | Set_to of 'a
-
 let merge_into ~src ~dst ~f =
   iteri src ~f:(fun ~key ~data ->
     let dst_data = find dst key in
     let action = without_mutating dst (fun () -> f ~key data dst_data) () in
-    match action with
+    match (action : _ Merge_into_action.t) with
     | Remove -> remove dst key
     | Set_to data ->
       (match dst_data with
@@ -836,7 +833,7 @@ let mapi_inplace t ~f =
 
 let map_inplace t ~f = mapi_inplace t ~f:(fun ~key:_ ~data -> f data)
 
-let equal t t' equal =
+let equal equal t t' =
   length t = length t'
   && with_return (fun r ->
     iteri t ~f:(fun ~key ~data ->
@@ -869,10 +866,6 @@ let copy t =
 ;;
 
 module Accessors = struct
-  type nonrec 'a merge_into_action = 'a merge_into_action =
-    | Remove
-    | Set_to of 'a
-
   let choose = choose
   let choose_exn = choose_exn
   let clear = clear

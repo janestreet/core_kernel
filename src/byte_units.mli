@@ -142,6 +142,8 @@ module Infix : sig
   val ( // ) : t -> t -> float
 end
 
+include module type of Infix
+
 module Stable : sig
   (*_ old float based [bin_io] repr. *)
   module V1 : Stable_module_types.S0_without_comparator with type t = t

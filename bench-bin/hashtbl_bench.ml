@@ -126,10 +126,6 @@ end = struct
     module Provide_of_sexp = Table.Provide_of_sexp
     module Provide_bin_io = Table.Provide_bin_io
 
-    type 'a merge_into_action = 'a Table.merge_into_action =
-      | Remove
-      | Set_to of 'a
-
     (* benchmarks begin here *)
 
     let sexp_of_t = Table.sexp_of_t
@@ -922,7 +918,7 @@ end = struct
       ( !! ) "equal [same]" (fun size ->
         let t1 = Example.t size in
         let t2 = copy t1 in
-        stage (fun () -> ignore (equal t1 t2 Int.equal : bool)))
+        stage (fun () -> ignore (equal Int.equal t1 t2 : bool)))
     ;;
 
     let similar = Table.similar
@@ -931,7 +927,7 @@ end = struct
       ( !! ) "similar [same]" (fun size ->
         let t1 = Example.t size in
         let t2 = copy t1 in
-        stage (fun () -> ignore (similar t1 t2 Int.equal : bool)))
+        stage (fun () -> ignore (similar Int.equal t1 t2 : bool)))
     ;;
 
     let to_alist = Table.to_alist

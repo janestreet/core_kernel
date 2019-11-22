@@ -3,6 +3,7 @@ open Hashtbl_intf
 module Avltree = Avltree
 module Binable = Binable0
 module Hashable = Hashtbl_intf.Hashable
+module Merge_into_action = Hashtbl_intf.Merge_into_action
 module List = List0
 
 let failwiths = Error.failwiths
@@ -14,10 +15,7 @@ include (
   sig
     type ('a, 'b) t = ('a, 'b) Hashtbl.t [@@deriving sexp_of]
 
-    include
-      Base.Hashtbl.S_without_submodules
-      with type ('a, 'b) t := ('a, 'b) t
-      with type 'b merge_into_action = 'b Hashtbl.merge_into_action
+    include Base.Hashtbl.S_without_submodules with type ('a, 'b) t := ('a, 'b) t
   end)
 
 module Using_hashable = struct

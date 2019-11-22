@@ -66,45 +66,28 @@ function core_md5_digest_subbigstring(buf, ofs, len, res){
 //Bigstring
 
 //Provides: bigstring_destroy_stub
-//Requires: caml_invalid_argument, caml_ba_create_from
+//Requires: caml_invalid_argument
 function bigstring_destroy_stub(v_bstr) {
-  if (v_bstr.data2 != null) {
-      caml_invalid_argument("bigstring_destroy: unsupported kind");
-  }
-
   if (v_bstr.hasOwnProperty('__is_deallocated')) {
     caml_invalid_argument("bigstring_destroy: bigstring is already deallocated");
   }
-
-  var destroyed_data = new v_bstr.data.__proto__.constructor(0);
-  var destroyed_bigstring =
-      caml_ba_create_from(destroyed_data, null, v_bstr.data_type, v_bstr.kind,
-                          v_bstr.layout, [0]);
-  destroyed_bigstring.__is_deallocated = true;
-
   // Mutate the original bigstring in-place, to simulate what the C version does
-  Object.assign(v_bstr, destroyed_bigstring);
-
+  v_bstr.__is_deallocated = true;
+  v_bstr.data = new v_bstr.data.__proto__.constructor(0);
+  v_bstr.dims = [ 0 ];
   return 0;
 }
 
 //Provides: bigstring_realloc
-//Requires: caml_invalid_argument, caml_ba_create_from, bigstring_destroy_stub
+//Requires: caml_invalid_argument, caml_ba_create_unsafe, bigstring_destroy_stub
 function bigstring_realloc(bigstring, size) {
-    if (bigstring.data2 != null) {
-        caml_invalid_argument("Bigstring.unsafe_destroy_and_resize: unsupported kind");
-    }
-
     if (bigstring.hasOwnProperty('__is_deallocated')) {
         caml_invalid_argument("bigstring_realloc: bigstring is already deallocated");
     }
 
     var new_data = new bigstring.data.__proto__.constructor(size);
     new_data.set(bigstring.data.slice(0, size));
-    var new_bigstring =
-        caml_ba_create_from(new_data, null, bigstring.data_type, bigstring.kind,
-                            bigstring.layout, [size]);
-
+    var new_bigstring = caml_ba_create_unsafe(bigstring.kind, bigstring.layout, [size], new_data);
     bigstring_destroy_stub(bigstring);
 
     return new_bigstring;

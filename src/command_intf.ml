@@ -54,7 +54,12 @@ module type For_unix = sig
   module Thread : sig
     type t
 
-    val create : ('a -> unit) -> 'a -> t
+    val create
+      :  on_uncaught_exn:[ `Kill_whole_process | `Print_to_stderr ]
+      -> ('a -> unit)
+      -> 'a
+      -> t
+
     val join : t -> unit
   end
 
