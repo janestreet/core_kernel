@@ -21,6 +21,7 @@ module Callback_arity = struct
     | Arity2 : ('a -> 'b -> unit) t
     | Arity3 : ('a -> 'b -> 'c -> unit) t
     | Arity4 : ('a -> 'b -> 'c -> 'd -> unit) t
+    | Arity5 : ('a -> 'b -> 'c -> 'd -> 'e -> unit) t
   [@@deriving sexp_of]
 end
 
@@ -46,6 +47,7 @@ module Last_value : sig
   val set2 : ('a -> 'b -> unit) t -> 'a -> 'b -> unit
   val set3 : ('a -> 'b -> 'c -> unit) t -> 'a -> 'b -> 'c -> unit
   val set4 : ('a -> 'b -> 'c -> 'd -> unit) t -> 'a -> 'b -> 'c -> 'd -> unit
+  val set5 : ('a -> 'b -> 'c -> 'd -> 'e -> unit) t -> 'a -> 'b -> 'c -> 'd -> 'e -> unit
   val send : 'callback t -> 'callback -> unit
 end = struct
   type _ tuple =
@@ -68,6 +70,14 @@ end = struct
         ; mutable arg4 : 'd
         }
         -> ('a -> 'b -> 'c -> 'd -> unit) tuple
+    | Tuple5 :
+        { mutable arg1 : 'a
+        ; mutable arg2 : 'b
+        ; mutable arg3 : 'c
+        ; mutable arg4 : 'd
+        ; mutable arg5 : 'e
+        }
+        -> ('a -> 'b -> 'c -> 'd -> 'e -> unit) tuple
 
   type 'callback t = 'callback tuple option ref
 
@@ -106,6 +116,17 @@ end = struct
       args.arg4 <- d
   ;;
 
+  let set5 t arg1 arg2 arg3 arg4 arg5 =
+    match !t with
+    | None -> t := Some (Tuple5 { arg1; arg2; arg3; arg4; arg5 })
+    | Some (Tuple5 args) ->
+      args.arg1 <- arg1;
+      args.arg2 <- arg2;
+      args.arg3 <- arg3;
+      args.arg4 <- arg4;
+      args.arg5 <- arg5
+  ;;
+
   let send (type callback) (t : callback t) (callback : callback) : unit =
     match !t with
     | None -> ()
@@ -113,6 +134,7 @@ end = struct
     | Some (Tuple2 { arg1; arg2 }) -> callback arg1 arg2
     | Some (Tuple3 { arg1; arg2; arg3 }) -> callback arg1 arg2 arg3
     | Some (Tuple4 { arg1; arg2; arg3; arg4 }) -> callback arg1 arg2 arg3 arg4
+    | Some (Tuple5 { arg1; arg2; arg3; arg4; arg5 }) -> callback arg1 arg2 arg3 arg4 arg5
   ;;
 end
 
@@ -504,6 +526,20 @@ let write4_non_optimized t callbacks a1 a2 a3 a4 =
   finish_write t
 ;;
 
+let write5_non_optimized t callbacks a1 a2 a3 a4 a5 =
+  let len = t.num_subscribers in
+  let i = ref 0 in
+  while !i < len do
+    try
+      let callback = unsafe_get_callback callbacks !i in
+      incr i;
+      callback a1 a2 a3 a4 a5
+    with
+    | exn -> callback_raised t !i exn
+  done;
+  finish_write t
+;;
+
 (* The [write_N] functions are written to minimise registers live across function calls
    (these have to be spilled).  They are also annotated for partial inlining (the
    one-callback case becomes inlined whereas the >1-callback-case requires a further
@@ -579,6 +615,24 @@ let[@inline always] write4 t a1 a2 a3 a4 =
     (match t.last_value with
      | None -> ()
      | Some last_value -> Last_value.set4 last_value a1 a2 a3 a4)
+;;
+
+let[@inline always] write5 t a1 a2 a3 a4 a5 =
+  let callbacks = t.callbacks in
+  t.write_ever_called <- true;
+  match t.state with
+  | Closed | Write_in_progress -> start_write_failing t
+  | Ok_to_write ->
+    t.state <- Write_in_progress;
+    if t.num_subscribers = 1
+    then (
+      (try (unsafe_get_callback callbacks 0) a1 a2 a3 a4 a5 with
+       | exn -> callback_raised t 1 exn);
+      finish_write t)
+    else (write5_non_optimized [@inlined never]) t callbacks a1 a2 a3 a4 a5;
+    (match t.last_value with
+     | None -> ()
+     | Some last_value -> Last_value.set5 last_value a1 a2 a3 a4 a5)
 ;;
 
 let allow_subscription_after_first_write t =
@@ -692,6 +746,11 @@ module Fold_arity = struct
     | Arity2 : ('a -> 'b -> unit, 's -> 'a -> 'b -> 's, 's) t
     | Arity3 : ('a -> 'b -> 'c -> unit, 's -> 'a -> 'b -> 'c -> 's, 's) t
     | Arity4 : ('a -> 'b -> 'c -> 'd -> unit, 's -> 'a -> 'b -> 'c -> 'd -> 's, 's) t
+    | Arity5
+      : ( 'a -> 'b -> 'c -> 'd -> 'e -> unit
+        , 's -> 'a -> 'b -> 'c -> 'd -> 'e -> 's
+        , 's )
+          t
   [@@deriving sexp_of]
 end
 
@@ -715,7 +774,8 @@ let fold_exn
        | Arity1 -> fun a1 -> state := f !state a1
        | Arity2 -> fun a1 a2 -> state := f !state a1 a2
        | Arity3 -> fun a1 a2 a3 -> state := f !state a1 a2 a3
-       | Arity4 -> fun a1 a2 a3 a4 -> state := f !state a1 a2 a3 a4)
+       | Arity4 -> fun a1 a2 a3 a4 -> state := f !state a1 a2 a3 a4
+       | Arity5 -> fun a1 a2 a3 a4 a5 -> state := f !state a1 a2 a3 a4 a5)
 ;;
 
 let%test_module _ =
@@ -747,13 +807,18 @@ let%test_module _ =
       let bus2 = create [%here] Arity2 in
       let bus3 = create [%here] Arity3 in
       let bus4 = create [%here] Arity4 in
+      let bus5 = create [%here] Arity5 in
       assert_no_allocation bus1 (fun () -> ()) (fun () -> write bus1 ());
       assert_no_allocation bus2 (fun () () -> ()) (fun () -> write2 bus2 () ());
       assert_no_allocation bus3 (fun () () () -> ()) (fun () -> write3 bus3 () () ());
       assert_no_allocation
         bus4
         (fun () () () () -> ())
-        (fun () -> write4 bus4 () () () ())
+        (fun () -> write4 bus4 () () () ());
+      assert_no_allocation
+        bus5
+        (fun () () () () () -> ())
+        (fun () -> write5 bus5 () () () () ())
     ;;
   end)
 ;;

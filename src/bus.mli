@@ -30,6 +30,7 @@ module Callback_arity : sig
     | Arity2 : ('a -> 'b -> unit) t
     | Arity3 : ('a -> 'b -> 'c -> unit) t
     | Arity4 : ('a -> 'b -> 'c -> 'd -> unit) t
+    | Arity5 : ('a -> 'b -> 'c -> 'd -> 'e -> unit) t
   [@@deriving sexp_of]
 end
 
@@ -90,7 +91,7 @@ val is_closed : (_, _) t -> bool
     have not yet seen it before the close takes effect. *)
 val close : 'callback Read_write.t -> unit
 
-(** [write] ... [write4] call all callbacks currently subscribed to the bus, with no
+(** [write] ... [write5] call all callbacks currently subscribed to the bus, with no
     guarantee on the order in which they will be called.  [write] is non-allocating,
     though the callbacks themselves may allocate.  Calling [writeN t] raises if called
     from within a callback on [t] or when [is_closed t]. *)
@@ -99,6 +100,15 @@ val write : ('a -> unit) Read_write.t -> 'a -> unit
 val write2 : ('a -> 'b -> unit) Read_write.t -> 'a -> 'b -> unit
 val write3 : ('a -> 'b -> 'c -> unit) Read_write.t -> 'a -> 'b -> 'c -> unit
 val write4 : ('a -> 'b -> 'c -> 'd -> unit) Read_write.t -> 'a -> 'b -> 'c -> 'd -> unit
+
+val write5
+  :  ('a -> 'b -> 'c -> 'd -> 'e -> unit) Read_write.t
+  -> 'a
+  -> 'b
+  -> 'c
+  -> 'd
+  -> 'e
+  -> unit
 
 module Subscriber : sig
   type 'callback t [@@deriving sexp_of]
@@ -141,6 +151,11 @@ module Fold_arity : sig
     | Arity2 : ('a -> 'b -> unit, 's -> 'a -> 'b -> 's, 's) t
     | Arity3 : ('a -> 'b -> 'c -> unit, 's -> 'a -> 'b -> 'c -> 's, 's) t
     | Arity4 : ('a -> 'b -> 'c -> 'd -> unit, 's -> 'a -> 'b -> 'c -> 'd -> 's, 's) t
+    | Arity5
+      : ( 'a -> 'b -> 'c -> 'd -> 'e -> unit
+        , 's -> 'a -> 'b -> 'c -> 'd -> 'e -> 's
+        , 's )
+          t
   [@@deriving sexp_of]
 end
 

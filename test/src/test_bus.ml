@@ -41,6 +41,7 @@ struct
   let write2 = write2
   let write3 = write3
   let write4 = write4
+  let write5 = write5
 
   let create1 created_from ~on_subscription_after_first_write =
     create

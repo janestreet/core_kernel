@@ -418,6 +418,36 @@ val disable_compaction
   -> unit
   -> unit
 
+module For_testing : sig
+  module Allocation_report : sig
+    type t =
+      { major_words_allocated : int
+      ; minor_words_allocated : int
+      }
+  end
+
+  (** [measure_allocation f] measures the words allocated by running [f ()] *)
+  val measure_allocation : (unit -> 'a) -> 'a * Allocation_report.t
+
+  (** [is_zero_alloc f] runs [f ()] and returns [true] if it does not allocate, or [false]
+      otherwise. [is_zero_alloc] does not allocate. *)
+  val is_zero_alloc : (unit -> _) -> bool
+
+  (** [prepare_heap_to_count_minor_allocation] sets up the heap so that one can
+      subsequently measure minor allocation via:
+
+      {[
+        let minor_words_before = Gc.minor_words () in
+        (* ... do stuff ... *)
+        let minor_words_after = Gc.minor_words () in
+        let minor_words_allocated = minor_words_after - minor_words_before in
+      ]}
+
+      Without calling [prepare_heap_to_count_minor_allocation], the resulting count may be
+      inaccurate. *)
+  val prepare_heap_to_count_minor_allocation : unit -> unit
+end
+
 (** The [Expert] module contains functions that novice users should not use, due to their
     complexity.
 

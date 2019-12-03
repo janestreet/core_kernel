@@ -55,12 +55,7 @@ module Unit_tests (Elt : sig
           val is_poly : bool
         end) : Set_intf.Creators_and_accessors_generic = struct
   module Set = struct
-    include (
-      Set :
-        module type of struct
-        include Set
-      end
-      with module Named := Set.Named)
+    include Set
 
     let add = simplify_accessor add
     let remove = simplify_accessor remove
@@ -1007,12 +1002,7 @@ let%test_module "Set.Poly" =
   (module Unit_tests
        (Elt_poly)
        (struct
-         include (
-           Set.Poly :
-             module type of struct
-             include Set.Poly
-           end
-           with type 'a named := 'a Set.Poly.named)
+         include Set.Poly
 
          type ('a, 'b) set = ('a, 'b) Set.t
          type ('a, 'b) t_ = 'a t
@@ -1033,12 +1023,7 @@ let%test_module "Int.Set" =
   (module Unit_tests
        (Elt_int)
        (struct
-         include (
-           Int.Set :
-             module type of struct
-             include Int.Set
-           end
-           with type named := Int.Set.named)
+         include Int.Set
 
          type ('a, 'b) set = ('a, 'b) Set.t
          type ('a, 'b) t_ = t
@@ -1080,12 +1065,7 @@ let%test_module "Set.Poly.Tree" =
   (module Unit_tests
        (Elt_poly)
        (struct
-         include (
-           Set.Poly.Tree :
-             module type of struct
-             include Set.Poly.Tree
-           end
-           with type 'a named := 'a Set.Poly.Tree.named)
+         include Set.Poly.Tree
 
          type ('a, 'b) set = 'a Set.Poly.Tree.t
          type ('a, 'b) t_ = 'a t
@@ -1106,12 +1086,7 @@ let%test_module "Int.Set.Tree" =
   (module Unit_tests
        (Elt_int)
        (struct
-         include (
-           Int.Set.Tree :
-             module type of struct
-             include Int.Set.Tree
-           end
-           with type named := Int.Set.Tree.named)
+         include Int.Set.Tree
 
          type ('a, 'b) set = ('a, 'b) Set.Tree.t
          type ('a, 'b) t_ = t

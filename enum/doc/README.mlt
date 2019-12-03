@@ -123,7 +123,7 @@ let () = Enum.assert_alphabetic_order_exn [%here] (module T)
   {|
 [Enum.doc] can also be used to create a more nicely-formatted documentation text.
 
-If [represent_choice_with] is not passed, the documentation will be:
+If [represent\_choice\_with] is not passed, the documentation will be:
 
     {v
        -flag (choice1|choice2|...) [doc]
@@ -131,7 +131,7 @@ If [represent_choice_with] is not passed, the documentation will be:
 
 If there are many choices, this can cause this and other flags to have the
 documentation aligned very far to the right. To avoid that, the
-[represent_choice_with] flag can be passed as a shorter reference to the possible
+[represent\_choice\_with] flag can be passed as a shorter reference to the possible
 choices. Example:
 
     {v
@@ -151,8 +151,9 @@ let () =
 
 [%%expect {| T doc with custom [represent_choice_with], T can be (a|a-also|b) |}]
 
-[%%org {|
-  [Enum.Make_stringable] converts [Enum.S] modules to [Stringable] modules.
+[%%org
+  {|
+  [Enum.Make\_stringable] converts [Enum.S] modules to [Stringable] modules.
 |}]
 
 module M = struct
