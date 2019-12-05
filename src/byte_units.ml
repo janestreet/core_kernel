@@ -196,7 +196,7 @@ module Stable = struct
   module V1 = struct
     type nonrec t = t [@@deriving compare, hash]
 
-    include Binable0.Of_binable
+    include Binable0.Of_binable_without_uuid [@alert "-legacy"]
         (Float)
         (struct
           type nonrec t = t
@@ -255,7 +255,7 @@ module Stable = struct
   module V2 = struct
     type nonrec t = t [@@deriving compare, hash]
 
-    include Binable0.Of_binable
+    include Binable0.Of_binable_without_uuid [@alert "-legacy"]
         (Int63)
         (struct
           type nonrec t = t

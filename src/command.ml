@@ -2132,7 +2132,7 @@ let exec ~summary ?readme ?(child_subcommand = []) ~path_to_exe () =
     @@
     match path_to_exe with
     | `Absolute _ | `Relative_to_me _ -> Sys.executable_name
-    | `Relative_to_argv0 _ -> Sys.argv.(0)
+    | `Relative_to_argv0 _ -> Caml.Sys.argv.(0)
   in
   let path_to_exe =
     match path_to_exe with
@@ -2439,7 +2439,7 @@ module For_unix (M : For_unix) = struct
      There is no security risk here because the values are only used as triggers to dump
      out command information. *)
   let getenv_and_clear var =
-    let value = Sys.unsafe_getenv var in
+    let value = Unix.unsafe_getenv var in
     if Option.is_some value then Unix.unsetenv var;
     value
   ;;
@@ -2721,7 +2721,7 @@ module For_unix (M : For_unix) = struct
      syntax). *)
   let dump_autocomplete_function () =
     let fname = sprintf "_jsautocom_%s" (Pid.to_string (Unix.getpid ())) in
-    let argv_0 = (Sys.get_argv ()).(0) in
+    let argv_0 = Caml.Sys.argv.(0) in
     printf
       "function %s {\n\
       \  export COMP_CWORD\n\
@@ -2944,7 +2944,7 @@ module For_unix (M : For_unix) = struct
         ?verbose_on_parse_error
         ?(version = default_version)
         ?build_info
-        ?(argv = Array.to_list (Sys.get_argv ()))
+        ?(argv = Array.to_list Caml.Sys.argv)
         ?extend
         t
     =

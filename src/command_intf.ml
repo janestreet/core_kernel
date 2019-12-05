@@ -45,12 +45,6 @@ module type For_unix = sig
     type t
   end
 
-  module Sys : sig
-    val get_argv : unit -> string array
-    val getenv : string -> string option
-    val unsafe_getenv : string -> string option
-  end
-
   module Thread : sig
     type t
 
@@ -93,6 +87,7 @@ module type For_unix = sig
     val in_channel_of_descr : File_descr.t -> In_channel.t
     val putenv : key:string -> data:string -> unit
     val unsetenv : string -> unit
+    val unsafe_getenv : string -> string option
 
     type env =
       [ `Replace of (string * string) list

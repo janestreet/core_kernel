@@ -28,7 +28,7 @@ let%test_unit "Of_sexpable" =
   let module M = struct
     type t = int
 
-    include Of_sexpable (struct
+    include Of_sexpable_without_uuid [@alert "-legacy"] (struct
         type t = int [@@deriving sexp]
       end)
   end

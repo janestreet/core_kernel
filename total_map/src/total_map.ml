@@ -139,7 +139,7 @@ struct
     t
   ;;
 
-  include Bin_prot.Utils.Make_binable1 (struct
+  include Bin_prot.Utils.Make_binable1_without_uuid [@alert "-legacy"] (struct
       type nonrec 'a t = 'a t
 
       module Binable = Key.Map

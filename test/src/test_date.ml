@@ -122,11 +122,11 @@ let%expect_test "Date.V1.Map" =
       "\003\254*\004\t\016\026not the Battle of Hastings\254\163\007\n\005\014flux capacitor\254\220\007\003\019\na Thursday")) |}]
 ;;
 
-let%test_unit "create_exn doesn't allocate" =
-  let allocation_before = Gc.major_plus_minor_words () in
-  ignore (Date.create_exn ~y:1999 ~m:Dec ~d:31 : Date.t);
-  let allocation_after = Gc.major_plus_minor_words () in
-  [%test_eq: int] allocation_before allocation_after
+let%expect_test "create_exn doesn't allocate" =
+  let y, m, d = Sys.opaque_identity (1999, Month.Dec, 31) in
+  require_no_allocation [%here] (fun () ->
+    ignore (Sys.opaque_identity (Date.create_exn ~y ~m ~d) : Date.t));
+  [%expect {| |}]
 ;;
 
 let%test_unit "creation and destruction" =

@@ -4,6 +4,12 @@ you might want to have a look at Base's
 
 ## git version
 
+- Renamed functions in `Fqueue` to make it consistent with `Queue` and
+  `Fdeque`.  `top`, `top_exn`, and `discard_exn` remain as deprecated
+  aliases to `peek`, `peek_exn`, and `drop_exn`.
+
+- Removed deprecated values `Fqueue.{enqueue_top, bot_exn, bot}`.
+
 - Removed `Obj_array` in favor of `Uniform_array`.
 
 - Remove deprecated `Std` module.
