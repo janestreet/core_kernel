@@ -242,7 +242,7 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_intf.Hashtbl) = stru
              let to_option t = if is_even t then Some (succ t) else None
 
              let to_partition t =
-               if is_even t then `Fst (succ t) else `Snd (pred t)
+               if is_even t then First (succ t) else Second (pred t)
              ;;
            end
 
@@ -260,7 +260,9 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_intf.Hashtbl) = stru
              ;;
 
              let to_data_partition ~key ~data =
-               if Key.to_bool key then `Fst (succ data) else `Snd (pred data)
+               if Key.to_bool key
+               then First (succ data)
+               else Second (pred data)
              ;;
 
              let merge ~key x =
@@ -1340,14 +1342,9 @@ module Make_mutation_in_callbacks (Hashtbl : Hashtbl_intf.Hashtbl) = struct
            None :: List.map values ~f:(fun value -> Some value)
          ;;
 
-         type 'a fst_or_snd =
-           [ `Fst of 'a
-           | `Snd of 'a
-           ]
-         [@@deriving sexp]
-
-         let fst_or_snd values =
-           List.concat_map values ~f:(fun value -> [ `Fst value; `Snd value ])
+         let first_or_second values =
+           List.concat_map values ~f:(fun value ->
+             [ First value; Second value ])
          ;;
 
          let default_mutate t = Hashtbl.clear t
@@ -2060,8 +2057,8 @@ module Make_mutation_in_callbacks (Hashtbl : Hashtbl_intf.Hashtbl) = struct
        let%test_unit "partition_map" =
          for_each
            "f result"
-           [%sexp_of: data fst_or_snd]
-           (fst_or_snd sample_data)
+           [%sexp_of: (data, data) Either.t]
+           (first_or_second sample_data)
            (fun x ->
               let callback _ = x in
               let test_result =
@@ -2077,8 +2074,8 @@ module Make_mutation_in_callbacks (Hashtbl : Hashtbl_intf.Hashtbl) = struct
        let%test_unit "partition_mapi" =
          for_each
            "f result"
-           [%sexp_of: data fst_or_snd]
-           (fst_or_snd sample_data)
+           [%sexp_of: (data, data) Either.t]
+           (first_or_second sample_data)
            (fun x ->
               let callback _ = x in
               let test_result =

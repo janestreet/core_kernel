@@ -714,7 +714,7 @@ end = struct
 
     let () =
       ( !! ) "partition_map [halve]" (fun size ->
-        let f data = if data % 2 = 0 then `Fst (data + 1) else `Snd (data - 1) in
+        let f data = if data % 2 = 0 then First (data + 1) else Second (data - 1) in
         let t = Example.t size in
         stage (fun () -> ignore (partition_map t ~f : int t * int t)))
     ;;
@@ -724,7 +724,7 @@ end = struct
     let () =
       ( !! ) "partition_mapi [halve]" (fun size ->
         let f ~key:_ ~data =
-          if data % 2 = 0 then `Fst (data + 1) else `Snd (data - 1)
+          if data % 2 = 0 then First (data + 1) else Second (data - 1)
         in
         let t = Example.t size in
         stage (fun () -> ignore (partition_mapi t ~f : int t * int t)))

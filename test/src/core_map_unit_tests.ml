@@ -881,8 +881,8 @@ struct
     let m1, m2 =
       Map.partition_mapi m0 ~f:(fun ~key ~data ->
         match Int.of_string data with
-        | n -> `Fst n
-        | exception _ -> `Snd (data ^ Int.to_string (Key.to_int key)))
+        | n -> First n
+        | exception _ -> Second (data ^ Int.to_string (Key.to_int key)))
     in
     Map.equal Int.equal m1 (Map.of_alist_exn [ k2, 2; k4, 5 ])
     && Map.equal String.equal m2 (Map.of_alist_exn [ k1, "a1"; k3, "d3" ])
@@ -896,8 +896,8 @@ struct
     let m1, m2 =
       Map.partition_map m0 ~f:(fun data ->
         match Int.of_string data with
-        | n -> `Fst n
-        | exception _ -> `Snd data)
+        | n -> First n
+        | exception _ -> Second data)
     in
     Map.equal Int.equal m1 (Map.of_alist_exn [ k2, 2; k4, 5 ])
     && Map.equal String.equal m2 (Map.of_alist_exn [ k1, "a"; k3, "d" ])

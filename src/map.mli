@@ -394,18 +394,17 @@ val filter_mapi
   -> f:(key:'k -> data:'v1 -> 'v2 option)
   -> ('k, 'v2, 'cmp) t
 
-
 (** [partition_mapi t ~f] returns two new [t]s, with each key in [t] appearing in exactly
     one of the result maps depending on its mapping in [f]. *)
 val partition_mapi
   :  ('k, 'v1, 'cmp) t
-  -> f:(key:'k -> data:'v1 -> [ `Fst of 'v2 | `Snd of 'v3 ])
+  -> f:(key:'k -> data:'v1 -> ('v2, 'v3) Either.t)
   -> ('k, 'v2, 'cmp) t * ('k, 'v3, 'cmp) t
 
 (** [partition_map t ~f = partition_mapi t ~f:(fun ~key:_ ~data -> f data)] *)
 val partition_map
   :  ('k, 'v1, 'cmp) t
-  -> f:('v1 -> [ `Fst of 'v2 | `Snd of 'v3 ])
+  -> f:('v1 -> ('v2, 'v3) Either.t)
   -> ('k, 'v2, 'cmp) t * ('k, 'v3, 'cmp) t
 
 (**
@@ -414,8 +413,8 @@ val partition_map
      =
      partition_mapi t ~f:(fun ~key ~data ->
        if f ~key ~data
-       then `Fst data
-       else `Snd data)
+       then First data
+       else Second data)
    ]}
 *)
 val partitioni_tf

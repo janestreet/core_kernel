@@ -176,7 +176,7 @@ module Make (Pool : Pool.S) = struct
           let r = ref true in
           List.partition_map live ~f:(fun a ->
             r := not !r;
-            if !r then `Fst a else `Snd a)
+            if !r then First a else Second a)
         in
         List.iter to_free ~f:(fun l -> free p l);
         loop p (num_iters_left - 1) (num_to_alloc_this_iter * 2) live)

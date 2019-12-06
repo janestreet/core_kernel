@@ -639,15 +639,16 @@ let partition_mapi t ~f =
   in
   iteri t ~f:(fun ~key ~data ->
     match f ~key ~data with
-    | `Fst new_data -> replace t0 ~key ~data:new_data
-    | `Snd new_data -> replace t1 ~key ~data:new_data);
+    | First new_data -> replace t0 ~key ~data:new_data
+    | Second new_data -> replace t1 ~key ~data:new_data);
   t0, t1
 ;;
 
 let partition_map t ~f = partition_mapi t ~f:(fun ~key:_ ~data -> f data)
 
 let partitioni_tf t ~f =
-  partition_mapi t ~f:(fun ~key ~data -> if f ~key ~data then `Fst data else `Snd data)
+  partition_mapi t ~f:(fun ~key ~data ->
+    if f ~key ~data then First data else Second data)
 ;;
 
 let partition_tf t ~f = partitioni_tf t ~f:(fun ~key:_ ~data -> f data)
