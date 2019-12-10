@@ -6,7 +6,7 @@ module Core_sequence = Sequence
 include (
   Base.Array :
   sig
-    type 'a t = 'a array [@@deriving sexp, compare]
+    type 'a t = 'a array [@@deriving sexp, compare, sexp_grammar]
   end)
 
 type 'a t = 'a array [@@deriving bin_io, typerep]
