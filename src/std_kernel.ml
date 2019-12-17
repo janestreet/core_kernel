@@ -111,7 +111,6 @@ module Binable = Binable
 module Bin_prot = Core_bin_prot
 module Blang = Blang
 module Bounded_index = Bounded_index
-module Bus = Bus
 module Byte_units = Byte_units
 module Day_of_week = Day_of_week
 module Debug = Debug
