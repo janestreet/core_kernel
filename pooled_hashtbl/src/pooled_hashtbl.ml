@@ -338,26 +338,118 @@ let find_exn t key =
   else  raise Caml.Not_found
 ;;
 
-let[@inline always] find_and_call_impl t key ~call_if_found ~if_found ~if_not_found =
+let[@inline always] find_and_call_impl
+                      t
+                      key
+                      ~call_if_found
+                      ~call_if_not_found
+                      ~if_found
+                      ~if_not_found
+                      arg1
+                      arg2
+  =
   let index = slot t key in
   let it = table_get t.table index in
   let e = find_entry t ~key ~it in
   if not (Entry.is_null e)
   then
-    call_if_found ~if_found ~key:(Entry.key t.entries e) ~data:(Entry.data t.entries e)
-  else if_not_found key
+    call_if_found
+      ~if_found
+      ~key:(Entry.key t.entries e)
+      ~data:(Entry.data t.entries e)
+      arg1
+      arg2
+  else call_if_not_found ~if_not_found key arg1 arg2
 ;;
 
 let find_and_call =
-  let call_if_found ~if_found ~key:_ ~data = if_found data in
+  let call_if_found ~if_found ~key:_ ~data () () = if_found data in
+  let call_if_not_found ~if_not_found key () () = if_not_found key in
   fun t key ~if_found ~if_not_found ->
-    find_and_call_impl t key ~call_if_found ~if_found ~if_not_found
+    find_and_call_impl
+      t
+      key
+      ()
+      ()
+      ~call_if_found
+      ~call_if_not_found
+      ~if_found
+      ~if_not_found
 ;;
 
 let findi_and_call =
-  let call_if_found ~if_found ~key ~data = if_found ~key ~data in
+  let call_if_found ~if_found ~key ~data () () = if_found ~key ~data in
+  let call_if_not_found ~if_not_found key () () = if_not_found key in
   fun t key ~if_found ~if_not_found ->
-    find_and_call_impl t key ~call_if_found ~if_found ~if_not_found
+    find_and_call_impl
+      t
+      key
+      ()
+      ()
+      ~call_if_found
+      ~call_if_not_found
+      ~if_found
+      ~if_not_found
+;;
+
+let find_and_call1 =
+  let call_if_found ~if_found ~key:_ ~data a () = if_found data a in
+  let call_if_not_found ~if_not_found key a () = if_not_found key a in
+  fun t key ~a ~if_found ~if_not_found ->
+    find_and_call_impl
+      t
+      key
+      ~call_if_found
+      ~call_if_not_found
+      ~if_found
+      ~if_not_found
+      a
+      ()
+;;
+
+let findi_and_call1 =
+  let call_if_found ~if_found ~key ~data a () = if_found ~key ~data a in
+  let call_if_not_found ~if_not_found key a () = if_not_found key a in
+  fun t key ~a ~if_found ~if_not_found ->
+    find_and_call_impl
+      t
+      key
+      ~call_if_found
+      ~call_if_not_found
+      ~if_found
+      ~if_not_found
+      a
+      ()
+;;
+
+let find_and_call2 =
+  let call_if_found ~if_found ~key:_ ~data a b = if_found data a b in
+  let call_if_not_found ~if_not_found key a b = if_not_found key a b in
+  fun t key ~a ~b ~if_found ~if_not_found ->
+    find_and_call_impl
+      t
+      key
+      ~call_if_found
+      ~call_if_not_found
+      ~if_found
+      ~if_not_found
+      a
+      b
+;;
+
+let findi_and_call2 =
+  let call_if_found ~if_found ~key ~data a b = if_found ~key ~data a b in
+  let call_if_not_found ~if_not_found key a b = if_not_found key a b in
+  fun t key ~a ~b ~if_found ~if_not_found ->
+    find_and_call_impl
+      t
+      key
+      ~call_if_found
+      ~call_if_not_found
+      ~if_found
+      ~if_not_found
+      a
+      b
 ;;
 
 (* This is split in a rather odd way so as to make find_and_remove for a single entry
@@ -911,6 +1003,10 @@ module Accessors = struct
   let find_exn = find_exn
   let find_and_call = find_and_call
   let findi_and_call = findi_and_call
+  let find_and_call1 = find_and_call1
+  let findi_and_call1 = findi_and_call1
+  let find_and_call2 = find_and_call2
+  let findi_and_call2 = findi_and_call2
   let find_and_remove = find_and_remove
   let to_alist = to_alist
   let validate = validate

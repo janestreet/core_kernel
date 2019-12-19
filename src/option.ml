@@ -13,7 +13,7 @@ let quickcheck_shrinker = Base_quickcheck.Shrinker.option
 
 module Stable = struct
   module V1 = struct
-    type nonrec 'a t = 'a t [@@deriving bin_io, compare, sexp]
+    type nonrec 'a t = 'a t [@@deriving bin_io, compare, equal, sexp]
   end
 end
 

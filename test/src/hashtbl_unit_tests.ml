@@ -1028,12 +1028,20 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_intf.Hashtbl) = stru
 
          let find_and_call = Hashtbl.find_and_call
          let findi_and_call = Hashtbl.findi_and_call
+         let find_and_call1 = Hashtbl.find_and_call1
+         let findi_and_call1 = Hashtbl.findi_and_call1
+         let find_and_call2 = Hashtbl.find_and_call2
+         let findi_and_call2 = Hashtbl.findi_and_call2
 
          let%test_unit _ =
            Qc.test
-             (Gen.tuple2 constructor_gen Key.quickcheck_generator)
-             ~sexp_of:[%sexp_of: constructor * Key.t]
-             ~f:(fun (constructor, key) ->
+             (Gen.tuple4
+                constructor_gen
+                Key.quickcheck_generator
+                Int.quickcheck_generator
+                String.quickcheck_generator)
+             ~sexp_of:[%sexp_of: constructor * Key.t * int * string]
+             ~f:(fun (constructor, key, a, b) ->
                let map, t = map_and_table constructor in
                [%test_result: (Data.t, Key.t) Either.t]
                  (Hashtbl.find_and_call
@@ -1044,7 +1052,66 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_intf.Hashtbl) = stru
                  ~expect:
                    (match Map.find map key with
                     | Some data -> First data
-                    | None -> Second key))
+                    | None -> Second key);
+               [%test_result: (Key.t * Data.t, Key.t) Either.t]
+                 (Hashtbl.findi_and_call
+                    t
+                    key
+                    ~if_found:(fun ~key ~data -> Either.first (key, data))
+                    ~if_not_found:Either.second)
+                 ~expect:
+                   (match Map.find map key with
+                    | Some data -> First (key, data)
+                    | None -> Second key);
+               [%test_result: (Data.t, Key.t) Either.t * int]
+                 (Hashtbl.find_and_call1
+                    t
+                    key
+                    ~a
+                    ~if_found:(fun data a -> Either.first data, a)
+                    ~if_not_found:(fun key a -> Either.second key, a))
+                 ~expect:
+                   (match Map.find map key with
+                    | Some data -> First data, a
+                    | None -> Second key, a);
+               [%test_result: (Key.t * Data.t, Key.t) Either.t * int]
+                 (Hashtbl.findi_and_call1
+                    t
+                    key
+                    ~a
+                    ~if_found:(fun ~key ~data a ->
+                      Either.first (key, data), a)
+                    ~if_not_found:(fun key a -> Either.second key, a))
+                 ~expect:
+                   (match Map.find map key with
+                    | Some data -> First (key, data), a
+                    | None -> Second key, a);
+               [%test_result: (Data.t, Key.t) Either.t * int * string]
+                 (Hashtbl.find_and_call2
+                    t
+                    key
+                    ~a
+                    ~b
+                    ~if_found:(fun data a b -> Either.first data, a, b)
+                    ~if_not_found:(fun key a b -> Either.second key, a, b))
+                 ~expect:
+                   (match Map.find map key with
+                    | Some data -> First data, a, b
+                    | None -> Second key, a, b);
+               [%test_result:
+                 (Key.t * Data.t, Key.t) Either.t * int * string]
+                 (Hashtbl.findi_and_call2
+                    t
+                    key
+                    ~a
+                    ~b
+                    ~if_found:(fun ~key ~data a b ->
+                      Either.first (key, data), a, b)
+                    ~if_not_found:(fun key a b -> Either.second key, a, b))
+                 ~expect:
+                   (match Map.find map key with
+                    | Some data -> First (key, data), a, b
+                    | None -> Second key, a, b))
          ;;
 
          let find_and_remove = Hashtbl.find_and_remove
@@ -1885,6 +1952,11 @@ module Make_mutation_in_callbacks (Hashtbl : Hashtbl_intf.Hashtbl) = struct
 
        let find_and_call = Hashtbl.find_and_call
        let findi_and_call = Hashtbl.findi_and_call
+       let find_and_call1 = Hashtbl.find_and_call1
+       let findi_and_call1 = Hashtbl.findi_and_call1
+       let find_and_call2 = Hashtbl.find_and_call2
+       let findi_and_call2 = Hashtbl.findi_and_call2
+
 
        let%test_unit "find_and_call" =
          for_each "key" sexp_of_key sample_keys (fun key ->

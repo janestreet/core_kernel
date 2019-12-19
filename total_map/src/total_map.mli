@@ -98,7 +98,7 @@ module Sequence (A : Applicative) : sig
 end
 
 (** The only reason that the Applicative interface isn't included here is that we don't
-    have an [Applicative.S3]. *)
+    have an [Applicative.S4]. *)
 
 module type Key = sig
   type t [@@deriving sexp, bin_io, compare, enumerate]
