@@ -69,6 +69,7 @@ struct
     let partition_map x = simplify_accessor partition_map x
     let partitioni_tf x = simplify_accessor partitioni_tf x
     let partition_tf x = simplify_accessor partition_tf x
+    let combine_errors x = simplify_accessor combine_errors x
     let compare_direct x = simplify_accessor compare_direct x
     let equal x = simplify_accessor equal x
     let iter2 x = simplify_accessor iter2 x
@@ -931,6 +932,24 @@ struct
     in
     Map.equal String.equal m1 (Map.of_alist_exn [ k2, "2"; k4, "5" ])
     && Map.equal String.equal m2 (Map.of_alist_exn [ k1, "a"; k3, "d" ])
+  ;;
+
+  let combine_errors _ = assert false
+
+  let%test _ =
+    let open Some_keys in
+    let m_ok = Map.of_alist_exn [ k1, Ok "a"; k2, Ok "2"; k3, Ok "d"; k4, Ok "5" ] in
+    let ok_m = Map.combine_errors m_ok in
+    let m_err =
+      Map.of_alist_exn
+        [ k1, Ok "a"; k2, error_s (Atom "2"); k3, Ok "d"; k4, error_s (Atom "5") ]
+    in
+    let err_m = Map.combine_errors m_err in
+    Or_error.equal
+      (Map.equal String.equal)
+      ok_m
+      (Ok (Map.of_alist_exn [ k1, "a"; k2, "2"; k3, "d"; k4, "5" ]))
+    && Or_error.is_error err_m
   ;;
 
   let keys _ = assert false

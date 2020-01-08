@@ -10,8 +10,6 @@
     matches [Creators3_with_comparator] but [Accessors3] (without comparator).
 *)
 
-(*_ JS-only: CRs and comments about [Map] functions do not belong in this file.
-  They belong next to the appropriate function in core_map.mli. *)
 
 open! Import
 open T

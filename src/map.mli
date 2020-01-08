@@ -428,6 +428,10 @@ val partition_tf
   -> f:('v -> bool)
   -> ('k, 'v, 'cmp) t * ('k, 'v, 'cmp) t
 
+(** Produces [Ok] of a map including all keys if all data is [Ok], or an [Error]
+    including all errors otherwise. *)
+val combine_errors : ('k, 'v Or_error.t, 'cmp) t -> ('k, 'v, 'cmp) t Or_error.t
+
 (** Total ordering between maps.  The first argument is a total ordering used to compare
     data associated with equal keys in the two maps. *)
 val compare_direct : ('v -> 'v -> int) -> ('k, 'v, 'cmp) t -> ('k, 'v, 'cmp) t -> int

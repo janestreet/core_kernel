@@ -7,7 +7,6 @@
 open! Import
 open Base_quickcheck
 
-(*_ JS-only: For an overview see: lib/core_kernel/doc/quickcheck.mkd *)
 
 module type Generator = sig
   (** An ['a t] a generates values of type ['a] with a specific probability distribution.

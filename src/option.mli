@@ -18,7 +18,11 @@ module Stable : sig
   end
 end
 
-(** [Optional_syntax] allows [Option.t]s in the same matched expression as other types
-    using [Optional_syntax]. *)
+(** You might think that it's pointless to have [Optional_syntax] on options because OCaml
+    already has nice syntax for matching on options.  The reason to have this here is that
+    you might have, for example, a tuple of an option and some other type that supports
+    [Optional_syntax].  Since [Optional_syntax] can only be opted into at the granularity
+    of the whole match expression, we need this [Optional_syntax] support for options in
+    order to use it for the other half of the tuple. *)
 module Optional_syntax :
   Optional_syntax.S1 with type 'a t := 'a t and type 'a value := 'a
