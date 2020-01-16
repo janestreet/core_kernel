@@ -471,10 +471,53 @@ let add_days_skipping t ~skip n =
   loop t (abs n)
 ;;
 
+let rec first_day_satisfying t ~step ~condition =
+  if condition t then t else first_day_satisfying (add_days t step) ~step ~condition
+;;
+
+let next_day_satisfying t ~step ~condition =
+  let next_day = add_days t step in
+  first_day_satisfying next_day ~step ~condition
+;;
+
+let following_weekday t = next_day_satisfying t ~step:1 ~condition:is_weekday
+let previous_weekday t = next_day_satisfying t ~step:(-1) ~condition:is_weekday
+let round_forward_to_weekday t = first_day_satisfying t ~step:1 ~condition:is_weekday
+let round_backward_to_weekday t = first_day_satisfying t ~step:(-1) ~condition:is_weekday
+
+let round_forward_to_business_day t ~is_holiday =
+  first_day_satisfying t ~step:1 ~condition:(is_business_day ~is_holiday)
+;;
+
+let round_backward_to_business_day t ~is_holiday =
+  first_day_satisfying t ~step:(-1) ~condition:(is_business_day ~is_holiday)
+;;
+
 let add_weekdays t n = add_days_skipping t ~skip:is_weekend n
+let add_weekdays_rounding_in_direction_of_step = add_weekdays
+
+let add_weekdays_rounding_forward t n =
+  add_days_skipping (round_forward_to_weekday t) ~skip:is_weekend n
+;;
+
+let add_weekdays_rounding_backward t n =
+  add_days_skipping (round_backward_to_weekday t) ~skip:is_weekend n
+;;
 
 let add_business_days t ~is_holiday n =
   add_days_skipping t n ~skip:(fun d -> is_weekend d || is_holiday d)
+;;
+
+let add_business_days_rounding_in_direction_of_step = add_business_days
+
+let add_business_days_rounding_forward t ~is_holiday n =
+  add_days_skipping (round_forward_to_business_day ~is_holiday t) n ~skip:(fun d ->
+    not (is_business_day ~is_holiday d))
+;;
+
+let add_business_days_rounding_backward t ~is_holiday n =
+  add_days_skipping (round_backward_to_business_day ~is_holiday t) n ~skip:(fun d ->
+    not (is_business_day ~is_holiday d))
 ;;
 
 let dates_between ~min:t1 ~max:t2 =
@@ -497,16 +540,6 @@ let weekdays_between ~min ~max =
 
 let business_dates_between ~min ~max ~is_holiday =
   weekdays_between ~min ~max |> List.filter ~f:(fun d -> not (is_holiday d))
-;;
-
-let rec previous_weekday t =
-  let previous_day = add_days t (-1) in
-  if is_weekday previous_day then previous_day else previous_weekday previous_day
-;;
-
-let rec following_weekday t =
-  let following_day = add_days t 1 in
-  if is_weekday following_day then following_day else following_weekday following_day
 ;;
 
 let first_strictly_after t ~on:dow =

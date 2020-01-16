@@ -53,12 +53,13 @@ function core_md5_fd(fd){
     }
 }
 
-// Provides: core_md5_digest_subbigstring
-// Requires: caml_md5_string, caml_blit_string, caml_create_bytes, bigstring_blit_bigstring_bytes_stub
+//Provides: core_md5_digest_subbigstring
+//Requires: caml_md5_string, caml_blit_string, caml_create_bytes
+//Requires: bigstring_blit_bigstring_bytes_stub, caml_string_of_bytes
 function core_md5_digest_subbigstring(buf, ofs, len, res){
     var bytes = caml_create_bytes(len);
     bigstring_blit_bigstring_bytes_stub(buf, ofs, bytes, 0, len);
-    var res2 = caml_md5_string(bytes, 0, len);
+    var res2 = caml_md5_string(caml_string_of_bytes(bytes), 0, len);
     caml_blit_string(res2, 0, res, 0, 16);
     return 0;
 }

@@ -270,6 +270,148 @@ let%test_module "diff_weekdays" =
   end)
 ;;
 
+let%test_module "adding weekdays and business days" =
+  (module struct
+    let test alist day_of_week date_string =
+      let date = Date.of_string date_string in
+      require_equal [%here] (module Day_of_week) day_of_week (Date.day_of_week date);
+      List.iter alist ~f:(fun (name, round_and_add) ->
+        let list =
+          List.map [ -2; -1; 0; 1; 2 ] ~f:(fun increment ->
+            let date = round_and_add date increment in
+            let day_of_week = Date.day_of_week date in
+            increment, day_of_week, date)
+        in
+        print_s [%sexp (name : string), (list : (int * Day_of_week.t * Date.t) list)])
+    ;;
+
+    let%expect_test "weekdays" =
+      let open Day_of_week in
+      let test =
+        test
+          [ "add_weekdays_rounding_backward", add_weekdays_rounding_backward
+          ; "add_weekdays_rounding_forward", add_weekdays_rounding_forward
+          ]
+      in
+      (* Friday *)
+      test Fri "2019-05-03";
+      [%expect
+        {|
+        (add_weekdays_rounding_backward (
+          (-2 WED 2019-05-01)
+          (-1 THU 2019-05-02)
+          (0  FRI 2019-05-03)
+          (1  MON 2019-05-06)
+          (2  TUE 2019-05-07)))
+        (add_weekdays_rounding_forward (
+          (-2 WED 2019-05-01)
+          (-1 THU 2019-05-02)
+          (0  FRI 2019-05-03)
+          (1  MON 2019-05-06)
+          (2  TUE 2019-05-07))) |}];
+      (* Saturday, Sunday: both round back to Friday or forward to Monday *)
+      List.iter
+        [ Sat, "2019-05-04"; Sun, "2019-05-05" ]
+        ~f:(fun (day_of_week, date_string) ->
+          test day_of_week date_string;
+          [%expect
+            {|
+            (add_weekdays_rounding_backward (
+              (-2 WED 2019-05-01)
+              (-1 THU 2019-05-02)
+              (0  FRI 2019-05-03)
+              (1  MON 2019-05-06)
+              (2  TUE 2019-05-07)))
+            (add_weekdays_rounding_forward (
+              (-2 THU 2019-05-02)
+              (-1 FRI 2019-05-03)
+              (0  MON 2019-05-06)
+              (1  TUE 2019-05-07)
+              (2  WED 2019-05-08))) |}]);
+      (* Monday *)
+      test Mon "2019-05-06";
+      [%expect
+        {|
+        (add_weekdays_rounding_backward (
+          (-2 THU 2019-05-02)
+          (-1 FRI 2019-05-03)
+          (0  MON 2019-05-06)
+          (1  TUE 2019-05-07)
+          (2  WED 2019-05-08)))
+        (add_weekdays_rounding_forward (
+          (-2 THU 2019-05-02)
+          (-1 FRI 2019-05-03)
+          (0  MON 2019-05-06)
+          (1  TUE 2019-05-07)
+          (2  WED 2019-05-08))) |}]
+    ;;
+
+    let%expect_test "business days" =
+      let open Day_of_week in
+      let test =
+        let is_holiday = Date.equal (Date.of_string "2019-05-06") in
+        test
+          [ ( "add_business_days_rounding_backward"
+            , add_business_days_rounding_backward ~is_holiday )
+          ; ( "add_business_days_rounding_forward"
+            , add_business_days_rounding_forward ~is_holiday )
+          ]
+      in
+      (* Friday *)
+      test Fri "2019-05-03";
+      [%expect
+        {|
+        (add_business_days_rounding_backward (
+          (-2 WED 2019-05-01)
+          (-1 THU 2019-05-02)
+          (0  FRI 2019-05-03)
+          (1  TUE 2019-05-07)
+          (2  WED 2019-05-08)))
+        (add_business_days_rounding_forward (
+          (-2 WED 2019-05-01)
+          (-1 THU 2019-05-02)
+          (0  FRI 2019-05-03)
+          (1  TUE 2019-05-07)
+          (2  WED 2019-05-08))) |}];
+      (* Saturday, Sunday, Monday: all round back to Friday or forward to Tuesday *)
+      List.iter
+        [ Sat, "2019-05-04"; Sun, "2019-05-05"; Mon, "2019-05-06" ]
+        ~f:(fun (day_of_week, date_string) ->
+          test day_of_week date_string;
+          [%expect
+            {|
+            (add_business_days_rounding_backward (
+              (-2 WED 2019-05-01)
+              (-1 THU 2019-05-02)
+              (0  FRI 2019-05-03)
+              (1  TUE 2019-05-07)
+              (2  WED 2019-05-08)))
+            (add_business_days_rounding_forward (
+              (-2 THU 2019-05-02)
+              (-1 FRI 2019-05-03)
+              (0  TUE 2019-05-07)
+              (1  WED 2019-05-08)
+              (2  THU 2019-05-09))) |}]);
+      (* Tuesday *)
+      test Tue "2019-05-07";
+      [%expect
+        {|
+        (add_business_days_rounding_backward (
+          (-2 THU 2019-05-02)
+          (-1 FRI 2019-05-03)
+          (0  TUE 2019-05-07)
+          (1  WED 2019-05-08)
+          (2  THU 2019-05-09)))
+        (add_business_days_rounding_forward (
+          (-2 THU 2019-05-02)
+          (-1 FRI 2019-05-03)
+          (0  TUE 2019-05-07)
+          (1  WED 2019-05-08)
+          (2  THU 2019-05-09))) |}]
+    ;;
+  end)
+;;
+
 let%test_module "ordinal_date" =
   (module struct
     (* check the ordinal date tables we found on wikipedia... *)
