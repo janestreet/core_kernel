@@ -15,7 +15,7 @@ module Stable = struct
       | Oct
       | Nov
       | Dec
-    [@@deriving sexp, compare, hash, variants]
+    [@@deriving sexp, compare, hash, variants, equal]
 
     let failwithf = Printf.failwithf
 
