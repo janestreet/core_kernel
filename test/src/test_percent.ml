@@ -164,3 +164,11 @@ let%expect_test "generator" =
     ~f:(fun t -> Validate.maybe_raise (Percent.validate t));
   [%expect {| |}]
 ;;
+
+let%expect_test ("to_mult and of_mult no boxing in arrays"[@tags "fast-flambda"]) =
+  let float_arr = Array.init 1 ~f:(fun i -> Float.of_int i) in
+  let percent_arr = Array.create ~len:1 Percent.zero in
+  require_no_allocation [%here] (fun () ->
+    percent_arr.(0) <- Percent.of_mult float_arr.(0);
+    float_arr.(0) <- Percent.to_mult percent_arr.(0))
+;;

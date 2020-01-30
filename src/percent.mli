@@ -3,7 +3,10 @@
 open! Import
 open Std_internal
 
-type t [@@deriving hash]
+(** Exposing that this is a float allows for more optimization. E.g. compiler can
+    optimize some local refs and not box them.
+*)
+type t = private float [@@deriving hash]
 
 (** [of_string] and [t_of_sexp] disallow [nan], [inf], etc. *)
 include
