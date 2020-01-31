@@ -25,7 +25,7 @@ include struct
       if raise_instead_of_exit
       then (
         try f () with
-        | exn -> print_s [%sexp (exn : exn)])
+        | Exit_called { status = 0 } as exn -> print_s [%sexp (exn : exn)])
       else Exn.handle_uncaught_and_exit f
     ;;
   end
