@@ -135,6 +135,14 @@ module type For_unix = sig
 end
 
 module type Command = sig
+  module Auto_complete : sig
+    (** In addition to the argument prefix, an auto-completion spec has access to any
+        previously parsed arguments in the form of a heterogeneous map into which those
+        arguments may register themselves by providing a [Univ_map.Key] using the [~key]
+        argument to [Arg_type.create]. *)
+    type t = Univ_map.t -> part:string -> string list
+  end
+
   (** Argument types. *)
   module Arg_type : sig
     (** The type of a command line argument. *)
@@ -142,16 +150,13 @@ module type Command = sig
 
     (** An argument type includes information about how to parse values of that type from
         the command line, and (optionally) how to autocomplete partial arguments of that
-        type via bash's programmable tab-completion. In addition to the argument prefix,
-        autocompletion also has access to any previously parsed arguments in the form of a
-        heterogeneous map into which previously parsed arguments may register themselves by
-        providing a [Univ_map.Key] using the [~key] argument to [create].
+        type via bash's programmable tab-completion.
 
         If the [of_string] function raises an exception, command line parsing will be
         aborted and the exception propagated up to top-level and printed along with
         command-line help. *)
     val create
-      :  ?complete:(Univ_map.t -> part:string -> string list)
+      :  ?complete:Auto_complete.t
       -> ?key:'a Univ_map.Multi.Key.t
       -> (string -> 'a)
       -> 'a t

@@ -158,8 +158,12 @@ module Env = struct
   let set_with_default = Univ_map.With_default.set
 end
 
+module Auto_complete = struct
+  type t = Env.t -> part:string -> string list
+end
+
 module Completer = struct
-  type t = (Env.t -> part:string -> string list) option
+  type t = Auto_complete.t option
 
   let run_and_exit t env ~part : never_returns =
     Option.iter t ~f:(fun completions ->
