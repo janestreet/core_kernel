@@ -122,6 +122,26 @@ let%expect_test "Date.V1.Map" =
       "\003\254*\004\t\016\026not the Battle of Hastings\254\163\007\n\005\014flux capacitor\254\220\007\003\019\na Thursday")) |}]
 ;;
 
+let%expect_test "Date.Option.V1" =
+  let date_examples =
+    [ Date.create_exn ~y:1066 ~m:Oct ~d:16
+    ; Date.create_exn ~y:1955 ~m:Nov ~d:5
+    ; Date.create_exn ~y:2012 ~m:Apr ~d:19
+    ]
+  in
+  let date_opt_examples =
+    Date.Option.none :: List.map date_examples ~f:Date.Option.some
+  in
+  print_and_check_stable_type [%here] (module Date.Stable.Option.V1) date_opt_examples;
+  [%expect
+    {|
+    (bin_shape_digest aff59493f3c14f005635a016cd36c44b)
+    ((sexp ()) (bin_io "\000"))
+    ((sexp (1066-10-16)) (bin_io "\253\016\n*\004"))
+    ((sexp (1955-11-05)) (bin_io "\253\005\011\163\007"))
+    ((sexp (2012-04-19)) (bin_io "\253\019\004\220\007")) |}]
+;;
+
 let%expect_test "create_exn doesn't allocate" =
   let y, m, d = Sys.opaque_identity (1999, Month.Dec, 31) in
   require_no_allocation [%here] (fun () ->

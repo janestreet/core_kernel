@@ -20,6 +20,7 @@ module Stable = struct
         val days_in_month : year:int -> month:Month.t -> int
         val to_int : t -> int
         val of_int_exn : int -> t
+        val invalid_value__for_internal_use_only : t
       end = struct
         (* We used to store dates like this:
            type t = { y: int; m: Month.Stable.V1.t; d: int; }
@@ -116,6 +117,12 @@ module Stable = struct
 
         let to_int t = t
         let of_int_exn n = create_exn ~y:(year n) ~m:(month n) ~d:(day n)
+        let invalid_value__for_internal_use_only = 0
+
+        let%test "invalid value" =
+          Exn.does_raise (fun () ->
+            (of_int_exn invalid_value__for_internal_use_only : t))
+        ;;
       end
 
       include T
@@ -270,6 +277,42 @@ module Stable = struct
 
     include Without_comparable
     include Comparable.Stable.V1.Make (Without_comparable)
+  end
+
+  module Option = struct
+    module V1 = struct
+      type t = int
+      [@@deriving
+        bin_io
+      , bin_shape ~basetype:"826a3e79-3321-451a-9707-ed6c03b84e2f"
+      , compare
+      , hash
+      , typerep]
+
+      let none = V1.(to_int invalid_value__for_internal_use_only)
+      let is_none t = t = none
+      let is_some t = not (is_none t)
+      let some_is_representable _ = true
+      let some t = V1.to_int t
+      let unchecked_value = V1.of_int_exn
+      let to_option t = if is_some t then Some (unchecked_value t) else None
+
+      let of_option opt =
+        match opt with
+        | None -> none
+        | Some v -> some v
+      ;;
+
+      let value_exn t =
+        if is_some t
+        then unchecked_value t
+        else raise_s [%message [%here] "Date.Option.value_exn none"]
+      ;;
+
+      let value t ~default = if is_some t then unchecked_value t else default
+      let sexp_of_t t = to_option t |> Option.sexp_of_t V1.sexp_of_t
+      let t_of_sexp sexp = (Option.t_of_sexp V1.t_of_sexp) sexp |> of_option
+    end
   end
 end
 
@@ -584,4 +627,16 @@ module Private = struct
   let leap_year_table = leap_year_table
   let non_leap_year_table = non_leap_year_table
   let ordinal_date = ordinal_date
+end
+
+module Option = struct
+  module Stable = Stable.Option
+  include Stable.V1
+
+  module Optional_syntax = struct
+    module Optional_syntax = struct
+      let is_none = is_none
+      let unsafe_value = unchecked_value
+    end
+  end
 end

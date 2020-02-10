@@ -223,6 +223,8 @@ module type Date0 = sig
   end
   with type date := t
 
+  module Option : Immediate_option_intf.S with type value := t
+
   module Stable : sig
     module V1 : sig
       type nonrec t = t [@@immediate] [@@deriving hash]
@@ -237,6 +239,12 @@ module type Date0 = sig
         Stable_comparable.V1
         with type t := t
         with type comparator_witness = comparator_witness
+    end
+
+    module Option : sig
+      module V1 : sig
+        type nonrec t = Option.t [@@immediate] [@@deriving bin_io, compare, sexp]
+      end
     end
   end
 
