@@ -172,3 +172,8 @@ let%expect_test ("to_mult and of_mult no boxing in arrays"[@tags "fast-flambda"]
     percent_arr.(0) <- Percent.of_mult float_arr.(0);
     float_arr.(0) <- Percent.to_mult percent_arr.(0))
 ;;
+
+let%test "Percent.Option cannot represent nan" =
+  let nan = Percent.of_mult Float.nan in
+  Percent.Option.((not (some_is_representable nan)) && is_none (some nan))
+;;

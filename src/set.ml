@@ -204,7 +204,6 @@ end
 
 module Make_tree (Elt : Comparator.S1) = struct
   let comparator = Elt.comparator
-  let compare_elt = comparator.Comparator.compare
   let empty = Tree.empty_without_value_restriction
   let singleton e = Tree.singleton ~comparator e
   let invariants t = Tree.invariants t ~comparator
@@ -246,7 +245,6 @@ module Make_tree (Elt : Comparator.S1) = struct
   let compare_direct t1 t2 = Tree.compare_direct ~comparator t1 t2
   let equal t1 t2 = Tree.equal t1 t2 ~comparator
   let is_subset t ~of_ = Tree.is_subset t ~of_ ~comparator
-  let subset t1 t2 = is_subset t1 ~of_:t2
   let of_list l = Tree.of_list l ~comparator
   let of_hash_set h = Tree.of_hash_set h ~comparator
   let of_hashtbl_keys h = Tree.of_hashtbl_keys h ~comparator
@@ -263,7 +261,6 @@ module Make_tree (Elt : Comparator.S1) = struct
   let group_by t ~equiv = Tree.group_by t ~equiv ~comparator
   let split t a = Tree.split t a ~comparator
   let nth t i = Tree.nth t i
-  let find_index = nth
   let remove_index t i = Tree.remove_index t i ~comparator
   let to_tree t = t
   let of_tree t = t

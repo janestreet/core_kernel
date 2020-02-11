@@ -21,6 +21,9 @@ include Comparable.With_zero with type t := t
 include Robustly_comparable.S with type t := t
 include Quickcheckable.S with type t := t
 
+(** The value [nan] cannot be represented as an [Option.t] *)
+module Option : Immediate_option.S_without_immediate with type value := t
+
 val ( * ) : t -> t -> t
 val ( + ) : t -> t -> t
 val ( - ) : t -> t -> t
@@ -148,5 +151,11 @@ val sign_exn : t -> Sign.t
 module Stable : sig
   module V1 : sig
     type nonrec t = t [@@deriving sexp, bin_io, compare, hash]
+  end
+
+  module Option : sig
+    module V1 : sig
+      type t = Option.t [@@deriving bin_io, compare, hash, sexp]
+    end
   end
 end
