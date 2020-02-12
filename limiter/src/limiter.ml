@@ -64,6 +64,7 @@ end = struct
     | Finite v -> finite v
   ;;
 end
+
 open Infinite_or_finite.T
 
 module Try_take_result = struct
@@ -238,11 +239,11 @@ let update_time_in_token_space (t : t) =
   end
 ;;
 
-(* advances [t]s notion of time, moving tokens from the hopper down into the bucket as
-   dictated by the passage of time and the hopper_to_bucket_rate_per_ns. *)
+(* Advances [t]s notion of time, moving tokens from the hopper down into the bucket as
+   dictated by the passage of time and the [hopper_to_bucket_rate_per_ns]. *)
 let advance_time =
   (* Just updates [t] to match the current value of [t.time]. We write it this way to make
-     it clear that now is not directly used in update_tokens. *)
+     it clear that now is not directly used in [update_tokens]. *)
   let update_tokens t =
     if Iofm.is_infinite t.time_in_token_space
     then begin
@@ -322,7 +323,6 @@ let try_return_to_bucket t ~now amount : Try_return_to_bucket_result.t =
     Returned_to_bucket
   end
 ;;
-
 
 let tokens_may_be_available_when t ~now amount : Tokens_may_be_available_result.t =
   if not (can_put_n_tokens_in_flight t ~n:amount) then
@@ -423,7 +423,6 @@ module Throttled_rate_limiter = struct
         ~max_concurrent_jobs
     =
     let bucket_limit         = burst_size in
-    let max_concurrent_jobs  = max_concurrent_jobs in
     let initial_bucket_level = Int.min bucket_limit max_concurrent_jobs in
     let initial_hopper_level =
       Finite (Int.max
@@ -484,13 +483,10 @@ module Throttle = struct
   ;;
 end
 
-
 module Expert = struct
-
   let create_exn                            = create_exn
   let try_take                              = try_take
   let return_to_hopper                      = return_to_hopper
   let try_return_to_bucket                  = try_return_to_bucket
   let tokens_may_be_available_when          = tokens_may_be_available_when
-
 end
