@@ -75,6 +75,10 @@ module type Span = sig
     "[since 2019-01] use [of_span_float_round_nearest] or \
      [of_span_float_round_nearest_microsecond]"]
 
+  (** [*_round_nearest] vs [*_round_nearest_microsecond]: If you don't know that you need
+      microsecond precision, use the [*_round_nearest] version.
+      [*_round_nearest_microsecond] is for historical purposes. *)
+
   val to_span_float_round_nearest : t -> Span_float.t
   val to_span_float_round_nearest_microsecond : t -> Span_float.t
   val of_span_float_round_nearest : Span_float.t -> t
@@ -263,6 +267,10 @@ module type Time_ns = sig
   [@@deprecated
     "[since 2019-01] use [to_time_float_round_nearest] or \
      [to_time_float_round_nearest_microsecond]"]
+
+  (** [*_round_nearest] vs [*_round_nearest_microsecond]: If you don't know that you need
+      microsecond precision, use the [*_round_nearest] version.
+      [*_round_nearest_microsecond] is for historical purposes. *)
 
   val to_time_float_round_nearest : t -> Time_float.t
   val to_time_float_round_nearest_microsecond : t -> Time_float.t
