@@ -22,7 +22,8 @@ include Robustly_comparable.S with type t := t
 include Quickcheckable.S with type t := t
 
 (** The value [nan] cannot be represented as an [Option.t] *)
-module Option : Immediate_option.S_without_immediate with type value := t
+module Option :
+  Immediate_option.S_without_immediate with type t = private float and type value := t
 
 val ( * ) : t -> t -> t
 val ( + ) : t -> t -> t
