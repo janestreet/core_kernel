@@ -1,20 +1,7 @@
+#define CAML_NAME_SPACE
+#define CAML_INTERNALS
 #include <caml/memory.h>
-
-extern double caml_stat_minor_words;
-extern double caml_stat_promoted_words;
-extern double caml_stat_major_words;
-
-extern char *caml_young_ptr;
-extern char *caml_young_end;
-
-extern uintnat caml_allocated_words;
-
-extern intnat caml_stat_minor_collections;
-extern intnat caml_stat_major_collections;
-extern intnat caml_stat_heap_wsz;
-extern intnat caml_stat_top_heap_wsz;
-extern intnat caml_stat_compactions;
-extern intnat caml_stat_heap_chunks;
+#include <caml/gc_ctrl.h>
 
 static intnat minor_words(void)
 {
