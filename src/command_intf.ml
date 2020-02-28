@@ -238,8 +238,8 @@ module type Command = sig
         flag is passed on the command line. *)
     val no_arg : bool t
 
-    (** [no_arg_register ~key ~value] is like [no_arg], but associates [value] with [key] in
-        the autocomplete environment. *)
+    (** [no_arg_register ~key ~value] is like [no_arg], but associates [value] with [key]
+        in the autocomplete environment. *)
     val no_arg_register : key:'a Univ_map.With_default.Key.t -> value:'a -> bool t
 
     (** [no_arg_some value] is like [no_arg], but will return [Some value] if the flag is
