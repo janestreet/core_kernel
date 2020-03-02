@@ -6,7 +6,7 @@ let%expect_test "t_of_sexp" =
   [%expect
     {|
     (Of_sexp_error
-     "lib/core_kernel/src/nothing.ml.Stable.V1.t_of_sexp: trying to convert an empty type"
+     "Base.Nothing.t_of_sexp: trying to convert an empty type"
      (invalid_sexp ())) |}]
 ;;
 
