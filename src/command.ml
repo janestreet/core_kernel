@@ -1618,17 +1618,33 @@ module Base = struct
       List.concat [ flag_names; anon_names ]
     ;;
 
-    let to_string_for_choose_one param =
-      let names = arg_names param in
-      let names_with_commas = List.filter names ~f:(fun s -> String.contains s ',') in
-      if not (List.is_empty names_with_commas)
-      then
-        failwiths
-          "For simplicity, [Command.Spec.choose_one] does not support names with commas."
-          names_with_commas
-          [%sexp_of: string list];
-      String.concat ~sep:"," names
-    ;;
+    module Choose_one_option_name : sig
+      type t [@@deriving compare, sexp_of]
+
+      val to_string : t -> string
+      val create_exn : 'a param -> t
+    end = struct
+      type t = string list [@@deriving compare, sexp_of]
+
+      let create_exn param =
+        let names = arg_names param in
+        let names_with_commas = List.filter names ~f:(fun s -> String.contains s ',') in
+        if not (List.is_empty names_with_commas)
+        then
+          failwiths
+            "For simplicity, [Command.Spec.choose_one] does not support names with \
+             commas."
+            names_with_commas
+            [%sexp_of: string list];
+        match names with
+        | [] ->
+          raise_s
+            [%message "[choose_one] expects choices to read command-line arguments."]
+        | _ :: _ as names -> names
+      ;;
+
+      let to_string names = String.concat ~sep:"," names
+    end
 
     module If_nothing_chosen = struct
       type (_, _) t =
@@ -1642,14 +1658,16 @@ module Base = struct
           (ts : a option param list)
           ~(if_nothing_chosen : (a, b) If_nothing_chosen.t)
       =
-      let ts = List.map ts ~f:(fun t -> to_string_for_choose_one t, t) in
+      let ts = List.map ts ~f:(fun t -> Choose_one_option_name.create_exn t, t) in
       Option.iter
-        (List.find_a_dup (List.map ~f:fst ts) ~compare:String.compare)
+        (List.find_a_dup
+           (List.map ~f:fst ts)
+           ~compare:[%compare: Choose_one_option_name.t])
         ~f:(fun name ->
           failwiths
             "Command.Spec.choose_one called with duplicate name"
             name
-            [%sexp_of: string]);
+            [%sexp_of: Choose_one_option_name.t]);
       List.fold ts ~init:(return None) ~f:(fun init (name, t) ->
         map2 init t ~f:(fun init value ->
           match value with
@@ -1657,7 +1675,13 @@ module Base = struct
           | Some value ->
             (match init with
              | None -> Some (name, value)
-             | Some (name', _) -> die "Cannot pass both %s and %s" name name' ())))
+             | Some (name', _) ->
+               die
+                 !"Cannot pass both %{Choose_one_option_name} and \
+                   %{Choose_one_option_name}"
+                 name
+                 name'
+                 ())))
       |> map ~f:(function
         | Some (_, value) ->
           (match if_nothing_chosen with
@@ -1671,7 +1695,11 @@ module Base = struct
            | Raise ->
              die
                "Must pass one of these: %s"
-               (String.concat ~sep:"; " (List.map ~f:fst ts))
+               (String.concat
+                  ~sep:"; "
+                  (List.map
+                     ~f:(fun (name, _) -> Choose_one_option_name.to_string name)
+                     ts))
                ()))
     ;;
 
@@ -3147,5 +3175,12 @@ module Private = struct
   module For_unix = For_unix
   module Format = Format
   module Path = Path
-  module Spec = Spec
+
+  module Spec = struct
+    include Spec
+
+    let to_string_for_choose_one param =
+      Choose_one_option_name.(create_exn param |> to_string)
+    ;;
+  end
 end
