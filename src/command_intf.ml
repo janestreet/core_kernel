@@ -988,6 +988,7 @@ module type Command = sig
         -> ?build_info:string
         -> ?argv:string list
         -> ?extend:(string list -> string list)
+        -> ?when_parsing_succeeds:(unit -> unit)
         -> t
         -> unit
 

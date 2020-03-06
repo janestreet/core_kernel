@@ -1237,7 +1237,7 @@ module Base = struct
     |> String.concat ~sep:"\n"
   ;;
 
-  let run t env ~path ~args ~verbose_on_parse_error ~help_text =
+  let run t env ~when_parsing_succeeds ~path ~args ~verbose_on_parse_error ~help_text =
     let env = Env.set env path_key path in
     let env = Env.set env args_key (Cmdline.to_list args) in
     let env = Env.set env help_key help_text in
@@ -1304,7 +1304,9 @@ module Base = struct
       loop env anons args
     in
     match Result.try_with (fun () -> loop env (t.anons ()) args `Parse_args) with
-    | Ok thunk -> thunk `Run_main
+    | Ok thunk ->
+      when_parsing_succeeds ();
+      thunk `Run_main
     | Error exn ->
       (match exn with
        | Failed_to_parse_command_line _ when Cmdline.ends_in_complete args -> exit 0
@@ -1618,91 +1620,98 @@ module Base = struct
       List.concat [ flag_names; anon_names ]
     ;;
 
-    module Choose_one_option_name : sig
-      type t [@@deriving compare, sexp_of]
+    module Choose_one = struct
+      module Choice_name : sig
+        type t [@@deriving compare, sexp_of]
 
-      val to_string : t -> string
-      val create_exn : 'a param -> t
-    end = struct
-      type t = string list [@@deriving compare, sexp_of]
+        include Comparator.S with type t := t
 
-      let create_exn param =
-        let names = arg_names param in
-        let names_with_commas = List.filter names ~f:(fun s -> String.contains s ',') in
-        if not (List.is_empty names_with_commas)
-        then
+        val to_string : t -> string
+        val list_to_string : t list -> string
+        val create_exn : 'a param -> t
+      end = struct
+        module T = struct
+          type t = string list [@@deriving compare, sexp_of]
+        end
+
+        include T
+        include Comparator.Make (T)
+
+        let create_exn param =
+          let names = arg_names param in
+          let names_with_commas =
+            List.filter names ~f:(fun s -> String.contains s ',')
+          in
+          if not (List.is_empty names_with_commas)
+          then
+            failwiths
+              "For simplicity, [Command.Spec.choose_one] does not support names with \
+               commas."
+              names_with_commas
+              [%sexp_of: string list];
+          match names with
+          | [] ->
+            raise_s
+              [%message "[choose_one] expects choices to read command-line arguments."]
+          | _ :: _ -> names
+        ;;
+
+        let to_string = String.concat ~sep:","
+        let list_to_string ts = List.map ts ~f:to_string |> String.concat ~sep:"\n  "
+      end
+
+      module If_nothing_chosen = struct
+        type (_, _) t =
+          | Default_to : 'a -> ('a, 'a) t
+          | Raise : ('a, 'a) t
+          | Return_none : ('a, 'a option) t
+      end
+
+      let choose_one
+            (type a b)
+            (ts : a option param list)
+            ~(if_nothing_chosen : (a, b) If_nothing_chosen.t)
+        =
+        match
+          List.map ts ~f:(fun t -> Choice_name.create_exn t, t)
+          |> Map.of_alist (module Choice_name)
+        with
+        | `Duplicate_key name ->
           failwiths
-            "For simplicity, [Command.Spec.choose_one] does not support names with \
-             commas."
-            names_with_commas
-            [%sexp_of: string list];
-        match names with
-        | [] ->
-          raise_s
-            [%message "[choose_one] expects choices to read command-line arguments."]
-        | _ :: _ as names -> names
-      ;;
-
-      let to_string names = String.concat ~sep:"," names
-    end
-
-    module If_nothing_chosen = struct
-      type (_, _) t =
-        | Default_to : 'a -> ('a, 'a) t
-        | Raise : ('a, 'a) t
-        | Return_none : ('a, 'a option) t
-    end
-
-    let choose_one
-          (type a b)
-          (ts : a option param list)
-          ~(if_nothing_chosen : (a, b) If_nothing_chosen.t)
-      =
-      let ts = List.map ts ~f:(fun t -> Choose_one_option_name.create_exn t, t) in
-      Option.iter
-        (List.find_a_dup
-           (List.map ~f:fst ts)
-           ~compare:[%compare: Choose_one_option_name.t])
-        ~f:(fun name ->
-          failwiths
-            "Command.Spec.choose_one called with duplicate name"
+            "[Command.Spec.choose_one] called with duplicate name"
             name
-            [%sexp_of: Choose_one_option_name.t]);
-      List.fold ts ~init:(return None) ~f:(fun init (name, t) ->
-        map2 init t ~f:(fun init value ->
-          match value with
-          | None -> init
-          | Some value ->
-            (match init with
-             | None -> Some (name, value)
-             | Some (name', _) ->
-               die
-                 !"Cannot pass both %{Choose_one_option_name} and \
-                   %{Choose_one_option_name}"
-                 name
-                 name'
-                 ())))
-      |> map ~f:(function
-        | Some (_, value) ->
-          (match if_nothing_chosen with
-           | Default_to (_ : a) -> (value : b)
-           | Raise -> value
-           | Return_none -> Some value)
-        | None ->
-          (match if_nothing_chosen with
-           | Default_to value -> value
-           | Return_none -> None
-           | Raise ->
-             die
-               "Must pass one of these: %s"
-               (String.concat
-                  ~sep:"; "
-                  (List.map
-                     ~f:(fun (name, _) -> Choose_one_option_name.to_string name)
-                     ts))
-               ()))
-    ;;
+            [%sexp_of: Choice_name.t]
+        | `Ok ts ->
+          Map.fold ts ~init:(return []) ~f:(fun ~key:name ~data:t init ->
+            map2 init t ~f:(fun init value ->
+              Option.fold value ~init ~f:(fun init value -> (name, value) :: init)))
+          |> map ~f:(function
+            | _ :: _ :: _ as passed ->
+              die
+                !"Cannot pass more than one of these: \n\
+                 \  %{Choice_name.list_to_string}"
+                (List.map passed ~f:fst)
+                ()
+            | [ (_, value) ] ->
+              (match if_nothing_chosen with
+               | Default_to (_ : a) -> (value : b)
+               | Raise -> value
+               | Return_none -> Some value)
+            | [] ->
+              (match if_nothing_chosen with
+               | Default_to value -> value
+               | Return_none -> None
+               | Raise ->
+                 die
+                   !"Must pass one of these:\n  %{Choice_name.list_to_string}"
+                   (Map.keys ts)
+                   ()))
+      ;;
+    end
 
+    module If_nothing_chosen = Choose_one.If_nothing_chosen
+
+    let choose_one = Choose_one.choose_one
     let and_arg_names t = map t ~f:(fun value -> value, arg_names t)
 
     let and_arg_name t =
@@ -2852,6 +2861,7 @@ module For_unix (M : For_unix) = struct
             ~version
             ~build_info
             ~verbose_on_parse_error
+            ~when_parsing_succeeds
     =
     match t with
     | Lazy thunk ->
@@ -2866,13 +2876,21 @@ module For_unix (M : For_unix) = struct
         ~version
         ~build_info
         ~verbose_on_parse_error
+        ~when_parsing_succeeds
     | Base base ->
       let args = maybe_apply_extend args ~extend ~path in
       let help_text =
         lazy
           (help_for_shape (shape t) path ~recursive:false ~flags:true ~expand_dots:false)
       in
-      Base.run base env ~path ~args ~verbose_on_parse_error ~help_text
+      Base.run
+        base
+        env
+        ~path
+        ~args
+        ~verbose_on_parse_error
+        ~help_text
+        ~when_parsing_succeeds
     | Exec exec ->
       let args = Cmdline.to_list (maybe_apply_extend args ~extend ~path) in
       Exec.exec_with_args ~args exec ~maybe_new_comp_cword
@@ -2948,6 +2966,7 @@ module For_unix (M : For_unix) = struct
             dispatch
               t
               env
+              ~when_parsing_succeeds
               ~extend
               ~path:(Path.append path ~subcommand:sub)
               ~args:rest
@@ -2978,6 +2997,7 @@ module For_unix (M : For_unix) = struct
         ?build_info
         ?(argv = Array.to_list Caml.Sys.argv)
         ?extend
+        ?(when_parsing_succeeds = Fn.id)
         t
     =
     let build_info =
@@ -3001,6 +3021,7 @@ module For_unix (M : For_unix) = struct
           ~version
           ~build_info
           ~verbose_on_parse_error
+          ~when_parsing_succeeds
       with
       | Failed_to_parse_command_line msg ->
         if Cmdline.ends_in_complete args
@@ -3037,6 +3058,7 @@ module For_unix (M : For_unix) = struct
       ~version:default_version
       ~build_info:default_build_info
       ~verbose_on_parse_error:None
+      ~when_parsing_succeeds:Fn.id
   ;;
 end
 
@@ -3180,7 +3202,7 @@ module Private = struct
     include Spec
 
     let to_string_for_choose_one param =
-      Choose_one_option_name.(create_exn param |> to_string)
+      Choose_one.Choice_name.(create_exn param |> to_string)
     ;;
   end
 end

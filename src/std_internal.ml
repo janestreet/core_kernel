@@ -20,7 +20,10 @@ include Result.Export
 
 type -'a return = 'a With_return.return = private { return : 'b. 'a -> 'b } [@@unboxed]
 
-exception Bug of string [@@deriving sexp]
+include struct
+  exception Bug of string [@deprecated "[since 2020-03] Don't use [Bug]"]
+  [@@deriving sexp]
+end [@@alert "-deprecated"]
 
 
 (** Raised if malloc in C bindings fail (errno * size). *)
