@@ -93,7 +93,7 @@ module Control : sig
     ; mutable space_overhead : int
     (** The major GC speed is computed from this parameter.
         This is the memory that will be "wasted" because the GC does not
-        immediatly collect unreachable blocks.  It is expressed as a
+        immediately collect unreachable blocks.  It is expressed as a
         percentage of the memory used for live data.
         The GC will work more (use more CPU time and collect
         blocks more eagerly) if [space_overhead] is smaller.
@@ -170,7 +170,7 @@ module Control : sig
     ; mutable space_overhead : int
     (** The major GC speed is computed from this parameter.
         This is the memory that will be "wasted" because the GC does not
-        immediatly collect unreachable blocks.  It is expressed as a
+        immediately collect unreachable blocks.  It is expressed as a
         percentage of the memory used for live data.
         The GC will work more (use more CPU time and collect
         blocks more eagerly) if [space_overhead] is smaller.
