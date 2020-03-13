@@ -43,3 +43,8 @@ module Core_kernel_private = struct
 
   module Time_ns_alternate_sexp = Time_ns_alternate_sexp
 end
+
+module Unix = struct end
+[@@deprecated
+  "[since 2020-03] Core_kernel shadows Unix. Use Core.Unix, which overrides some of \
+   Unix's behavior. If necessary, Unix is available and unshadowed as Caml_unix."]
