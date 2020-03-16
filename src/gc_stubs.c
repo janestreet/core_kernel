@@ -22,6 +22,11 @@ static intnat minor_words(void)
             (double) Wsize_bsize (caml_young_end - caml_young_ptr));
 }
 
+static intnat promoted_words(void)
+{
+  return ((intnat) caml_stat_promoted_words);
+}
+
 CAMLprim value core_kernel_gc_minor_words(value unit __attribute__((unused)))
 {
   return Val_long(minor_words());
@@ -39,7 +44,7 @@ CAMLprim value core_kernel_gc_major_words(value unit __attribute__((unused)))
 
 CAMLprim value core_kernel_gc_promoted_words(value unit __attribute__((unused)))
 {
-  return Val_long((intnat) caml_stat_promoted_words);
+  return Val_long(promoted_words());
 }
 
 CAMLprim value core_kernel_gc_minor_collections(value unit __attribute__((unused)))
@@ -75,4 +80,9 @@ CAMLprim value core_kernel_gc_top_heap_words(value unit __attribute__((unused)))
 CAMLprim value core_kernel_gc_major_plus_minor_words(value unit __attribute__((unused)))
 {
   return Val_long(minor_words() + major_words());
+}
+
+CAMLprim value core_kernel_gc_allocated_words(value unit __attribute__((unused)))
+{
+  return Val_long(minor_words() + major_words() - promoted_words());
 }

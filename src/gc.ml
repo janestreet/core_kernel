@@ -214,6 +214,7 @@ external heap_chunks : unit -> int = "core_kernel_gc_heap_chunks" [@@noalloc]
 external compactions : unit -> int = "core_kernel_gc_compactions" [@@noalloc]
 external top_heap_words : unit -> int = "core_kernel_gc_top_heap_words" [@@noalloc]
 external major_plus_minor_words : unit -> int = "core_kernel_gc_major_plus_minor_words"
+external allocated_words : unit -> int = "core_kernel_gc_allocated_words"
 
 let zero = Sys.opaque_identity (int_of_string "0")
 

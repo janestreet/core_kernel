@@ -312,6 +312,12 @@ external top_heap_words : unit -> int = "core_kernel_gc_top_heap_words" [@@noall
 *)
 external major_plus_minor_words : unit -> int = "core_kernel_gc_major_plus_minor_words"
 
+(** This function returns [major_words () - promoted_words () + minor_words ()], as fast
+    as possible. As [major_plus_minor_words], we avoid allocating but cannot be marked
+    [@@noalloc] yet. It may overflow in 32-bit mode.
+*)
+external allocated_words : unit -> int = "core_kernel_gc_allocated_words"
+
 (** Return the current values of the GC parameters in a [control] record. *)
 external get : unit -> control = "caml_gc_get"
 
