@@ -392,7 +392,7 @@ let hopper_to_bucket_rate_per_sec t =
 ;;
 
 module Token_bucket = struct
-  type t = limiter
+  type t = limiter [@@deriving sexp_of]
 
   let create_exn
         ~now
@@ -414,7 +414,7 @@ module Token_bucket = struct
 end
 
 module Throttled_rate_limiter = struct
-  type t = limiter
+  type t = limiter [@@deriving sexp_of]
 
   let create_exn
         ~now

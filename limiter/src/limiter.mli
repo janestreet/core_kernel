@@ -66,7 +66,7 @@ end
 (** Implements a basic token-bucket-based rate limiter. Users of the throttle
     must successfully call [try_take] before doing work. *)
 module Token_bucket : sig
-  type t = private limiter
+  type t = private limiter [@@deriving sexp_of]
 
   (** @param initial_bucket_level defaults to zero. *)
   val create_exn
@@ -88,7 +88,7 @@ end
     before beginning work and must call [finish_job] once, and only once, when a job is
     completed. *)
 module Throttle : sig
-  type t = private limiter
+  type t = private limiter [@@deriving sexp_of]
 
   val create_exn
     :  now:Time_ns.t
@@ -111,7 +111,7 @@ end
     outstanding jobs is also limited to [max_concurrent_jobs].  Like a [Throttle],
     [finish_job] must be called once, and only once, when a job is completed. *)
 module Throttled_rate_limiter : sig
-  type t = private limiter
+  type t = private limiter [@@deriving sexp_of]
 
   val create_exn
     :  now:Time_ns.t
