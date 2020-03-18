@@ -14,6 +14,8 @@ module type S = sig
     module V1 : sig
       type nonrec t = t [@@deriving equal, hash]
 
+      include Stringable.S with type t := t
+
       include
         Stable_comparable.V1
         with type t := t
