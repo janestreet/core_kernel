@@ -49,6 +49,7 @@ let to_map t = t
 
 let key_not_in_enumeration t key =
   failwiths
+    ~here:[%here]
     "Key was not provided in the enumeration given to [Total_map.Make]"
     key
     (Map.comparator t).sexp_of_t

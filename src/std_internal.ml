@@ -60,7 +60,12 @@ let eprintf = Printf.eprintf
 let error = Or_error.error
 let error_s = Or_error.error_s
 let failwithf = Base.Printf.failwithf
-let failwithp = Error.failwithp
+
+let failwithp =
+  (Error.failwithp [@alert "-deprecated"])
+[@@deprecated "[since 2020-03] Use [failwiths] instead."]
+;;
+
 let failwiths = Error.failwiths
 let force = Base.Lazy.force
 let fprintf = Printf.fprintf

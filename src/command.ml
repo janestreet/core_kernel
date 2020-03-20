@@ -1645,6 +1645,7 @@ module Base = struct
           if not (List.is_empty names_with_commas)
           then
             failwiths
+              ~here:[%here]
               "For simplicity, [Command.Spec.choose_one] does not support names with \
                commas."
               names_with_commas
@@ -1678,6 +1679,7 @@ module Base = struct
         with
         | `Duplicate_key name ->
           failwiths
+            ~here:[%here]
             "[Command.Spec.choose_one] called with duplicate name"
             name
             [%sexp_of: Choice_name.t]
@@ -2021,7 +2023,8 @@ module Sexpable = struct
       | 1 -> V1 (V1.of_latest latest)
       | 2 -> V2 (V2.of_latest latest)
       | 3 -> V3 (V3.of_latest latest)
-      | other -> failwiths "unsupported version_to_use" other [%sexp_of: int]
+      | other ->
+        failwiths ~here:[%here] "unsupported version_to_use" other [%sexp_of: int]
     ;;
   end
 
@@ -2787,6 +2790,7 @@ module For_unix (M : For_unix) = struct
     |> function
     | None ->
       failwiths
+        ~here:[%here]
         "Couldn't choose a supported help output version for Command.exec from the \
          given supported versions."
         Sexpable.supported_versions

@@ -4,6 +4,9 @@ you might want to have a look at Base's
 
 ## git version
 
+- Deprecated `failwithp` in favor of `failwiths`, and made
+  `failwiths`'s `~here` argument required.
+
 - Renamed functions in `Fqueue` to make it consistent with `Queue` and
   `Fdeque`.  `top`, `top_exn`, and `discard_exn` remain as deprecated
   aliases to `peek`, `peek_exn`, and `drop_exn`.

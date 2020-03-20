@@ -316,6 +316,7 @@ let%test_module "laws" =
           with
           | exn ->
             failwiths
+              ~here:[%here]
               "fail on expression"
               (expression, exn)
               [%sexp_of: base_set t * Exn.t]

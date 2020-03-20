@@ -321,9 +321,14 @@ end
 
 let[@cold] start_write_failing t =
   match t.state with
-  | Closed -> failwiths "[Bus.write] called on closed bus" t [%sexp_of: (_, _) t]
+  | Closed ->
+    failwiths ~here:[%here] "[Bus.write] called on closed bus" t [%sexp_of: (_, _) t]
   | Write_in_progress ->
-    failwiths "[Bus.write] called from callback on the same bus" t [%sexp_of: (_, _) t]
+    failwiths
+      ~here:[%here]
+      "[Bus.write] called from callback on the same bus"
+      t
+      [%sexp_of: (_, _) t]
   | Ok_to_write -> assert false
 ;;
 
@@ -693,6 +698,7 @@ let subscribe_exn
   if not (can_subscribe t)
   then
     failwiths
+      ~here:[%here]
       "Bus.subscribe_exn called after first write"
       [%sexp ~~(subscribed_from : Source_code_position.t), { bus = (t : (_, _) t) }]
       [%sexp_of: Sexp.t];
@@ -735,7 +741,12 @@ let subscribe_exn
 
 let iter_exn t subscribed_from ~f =
   if not (can_subscribe t)
-  then failwiths "Bus.iter_exn called after first write" t [%sexp_of: (_, _) t];
+  then
+    failwiths
+      ~here:[%here]
+      "Bus.iter_exn called after first write"
+      t
+      [%sexp_of: (_, _) t];
   ignore (subscribe_exn t subscribed_from ~f : _ Subscriber.t)
 ;;
 
@@ -763,7 +774,12 @@ let fold_exn
   =
   let state = ref init in
   if not (can_subscribe t)
-  then failwiths "Bus.fold_exn called after first write" t [%sexp_of: (_, _) t];
+  then
+    failwiths
+      ~here:[%here]
+      "Bus.fold_exn called after first write"
+      t
+      [%sexp_of: (_, _) t];
   let module A = Fold_arity in
   iter_exn
     t

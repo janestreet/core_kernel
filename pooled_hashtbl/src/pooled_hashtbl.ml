@@ -1201,7 +1201,11 @@ module Make_plain (Key : Key_plain) = struct
           match find t key with
           | None -> replace t ~key ~data
           | Some _ ->
-            failwiths "Pooled_hashtbl.bin_read_t: duplicate key" key [%sexp_of: Key.t]
+            failwiths
+              ~here:[%here]
+              "Pooled_hashtbl.bin_read_t: duplicate key"
+              key
+              [%sexp_of: Key.t]
         done;
         t
       ;;

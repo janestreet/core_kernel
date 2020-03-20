@@ -190,7 +190,12 @@ module Make_plain (Key : Key_plain) = struct
           let key, data = next () in
           match find t key with
           | None -> set t ~key ~data
-          | Some _ -> failwiths "Hashtbl.bin_read_t: duplicate key" key [%sexp_of: Key.t]
+          | Some _ ->
+            failwiths
+              ~here:[%here]
+              "Hashtbl.bin_read_t: duplicate key"
+              key
+              [%sexp_of: Key.t]
         done;
         t
       ;;

@@ -90,10 +90,13 @@ let read_bin_prot t ?pos ?len reader =
 let write_bin_prot t ?(pos = 0) writer v =
   let data_len = writer.Bin_prot.Type_class.size v in
   let total_len = data_len + Bin_prot.Utils.size_header_length in
-  if pos < 0 then failwiths "Bigstring.write_bin_prot: negative pos" pos [%sexp_of: int];
+  if pos < 0
+  then
+    failwiths ~here:[%here] "Bigstring.write_bin_prot: negative pos" pos [%sexp_of: int];
   if pos + total_len > length t
   then
     failwiths
+      ~here:[%here]
       "Bigstring.write_bin_prot: not enough room"
       (`pos pos, `pos_after_writing (pos + total_len), `bigstring_length (length t))
       [%sexp_of:
@@ -103,6 +106,7 @@ let write_bin_prot t ?(pos = 0) writer v =
   if pos_after_data - pos <> total_len
   then
     failwiths
+      ~here:[%here]
       "Bigstring.write_bin_prot bug!"
       ( `pos_after_data pos_after_data
       , `start_pos pos

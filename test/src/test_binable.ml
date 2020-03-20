@@ -16,6 +16,7 @@ let%test_unit _ =
         if i <> i'
         then
           Error.failwiths
+            ~here:[%here]
             (Printf.sprintf "Binable.{of,to}_%s failure" name)
             (i, `Round_tripped_to i')
             [%sexp_of: int * [ `Round_tripped_to of int ]]

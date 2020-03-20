@@ -88,7 +88,11 @@ module Using_comparator = struct
     match of_iteri ~comparator ~iteri:(Hashtbl.iteri hashtbl) with
     | `Ok map -> map
     | `Duplicate_key key ->
-      Error.failwiths "Map.of_hashtbl_exn: duplicate key" key comparator.sexp_of_t
+      Error.failwiths
+        ~here:[%here]
+        "Map.of_hashtbl_exn: duplicate key"
+        key
+        comparator.sexp_of_t
   ;;
 
   let tree_of_hashtbl_exn ~comparator hashtbl =
