@@ -1099,6 +1099,13 @@ let normalize key_type key =
 ;;
 
 let lookup_expand alist prefix key_type =
+  let is_dash = Char.equal '-' in
+  let alist =
+    (* no partial matches unless some non-dash char is present *)
+    if String.for_all prefix ~f:is_dash
+    then List.map alist ~f:(fun (key, (data, _)) -> key, (data, `Full_match_required))
+    else alist
+  in
   match
     List.filter alist ~f:(function
       | key, (_, `Full_match_required) -> String.( = ) key prefix
