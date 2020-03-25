@@ -371,7 +371,7 @@ val keep_alive : _ -> unit
 
     The Best_fit policy is as fast as Next_fit and has less fragmentation than First_fit.
 
-    The default is Next_fit.
+    The default is Best_fit.
 *)
 module Allocation_policy : sig
   type t =
