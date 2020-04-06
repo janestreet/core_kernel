@@ -245,6 +245,7 @@ module Make_tree (Elt : Comparator.S1) = struct
   let compare_direct t1 t2 = Tree.compare_direct ~comparator t1 t2
   let equal t1 t2 = Tree.equal t1 t2 ~comparator
   let is_subset t ~of_ = Tree.is_subset t ~of_ ~comparator
+  let are_disjoint t1 t2 = Tree.are_disjoint t1 t2 ~comparator
   let of_list l = Tree.of_list l ~comparator
   let of_hash_set h = Tree.of_hash_set h ~comparator
   let of_hashtbl_keys h = Tree.of_hashtbl_keys h ~comparator

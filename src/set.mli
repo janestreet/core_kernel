@@ -152,6 +152,10 @@ val remove_index : ('a, 'cmp) t -> int -> ('a, 'cmp) t
 (** [is_subset t1 ~of_:t2] returns true iff [t1] is a subset of [t2]. *)
 val is_subset : ('a, 'cmp) t -> of_:('a, 'cmp) t -> bool
 
+(** [are_disjoint t1 t2] returns [true] iff [is_empty (inter t1 t2)], but is more
+    efficient. *)
+val are_disjoint : ('a, 'cmp) t -> ('a, 'cmp) t -> bool
+
 (** [Named] allows the validation of subset and equality relationships between sets.  A
     [Named.t] is a record of a set and a name, where the name is used in error messages,
     and [Named.is_subset] and [Named.equal] validate subset and equality relationships
