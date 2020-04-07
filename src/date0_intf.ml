@@ -40,6 +40,7 @@ module type Date0 = sig
   val month : t -> Month.t
   val year : t -> int
 
+
   (** Only accurate after 1752-09 *)
   val day_of_week : t -> Day_of_week.t
 
