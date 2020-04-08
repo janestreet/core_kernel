@@ -288,3 +288,21 @@ let%expect_test "drop" =
   print_s [%sexp (Hq.to_list hq : int list)];
   [%expect {| () |}]
 ;;
+
+let%expect_test "lookup_and_remove" =
+  let hq = Hq.create () in
+  let n = 10 in
+  for i = 1 to n do
+    Hq.enqueue_back_exn hq (Int.to_string i) i
+  done;
+  print_s [%sexp (Hq.to_list hq : int list)];
+  [%expect {| (1 2 3 4 5 6 7 8 9 10) |}];
+  print_s [%sexp (Hq.lookup_and_remove hq "5" : int option)];
+  [%expect {| (5) |}];
+  print_s [%sexp (Hq.to_list hq : int list)];
+  [%expect {| (1 2 3 4 6 7 8 9 10) |}];
+  print_s [%sexp (Hq.lookup_and_remove hq "11" : int option)];
+  [%expect {| () |}];
+  print_s [%sexp (Hq.to_list hq : int list)];
+  [%expect {| (1 2 3 4 6 7 8 9 10) |}]
+;;
