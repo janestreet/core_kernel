@@ -200,6 +200,18 @@ module Unit_tests (Elt : sig
 
   let%test _ = Set.equal set_nonempty (Set.inter set_nonempty set_nonempty)
 
+  let%test_unit "inter = all members of s1 that are members of s2" =
+    Quickcheck.test
+      (Quickcheck.Generator.tuple2 gen_set gen_set)
+      ~sexp_of:[%sexp_of: Set.t * Set.t]
+      ~f:(fun (s1, s2) ->
+        [%test_result: Set.t]
+          (Set.inter s1 s2)
+          ~expect:
+            (Set.fold s1 ~init:(Set.empty ()) ~f:(fun inter elt ->
+               if Set.mem s2 elt then Set.add inter elt else inter)))
+  ;;
+
   let is_subset _ ~of_:_ = assert false
 
   let%test _ = Set.is_subset set_empty ~of_:set_nonempty
@@ -207,6 +219,16 @@ module Unit_tests (Elt : sig
   let%test _ = Set.is_subset set_nonempty ~of_:set_nonempty
   let%test _ = Set.is_subset set_empty ~of_:set_empty
   let%test _ = not (Set.is_subset set_nonempty ~of_:(Set.singleton Elt.present))
+
+  let%test_unit "is_subset = all members of subset are members of superset" =
+    Quickcheck.test
+      (Quickcheck.Generator.tuple2 gen_set gen_set)
+      ~sexp_of:[%sexp_of: Set.t * Set.t]
+      ~f:(fun (superset, subset) ->
+        [%test_result: bool]
+          (Set.is_subset subset ~of_:superset)
+          ~expect:(Set.for_all subset ~f:(Set.mem superset)))
+  ;;
 
   let are_disjoint _ _ = assert false
 
@@ -218,16 +240,6 @@ module Unit_tests (Elt : sig
         [%test_result: bool]
           (Set.are_disjoint s1 s2)
           ~expect:(Set.is_empty (Set.inter s1 s2)))
-  ;;
-
-  let%test_unit "are_disjoint = for_all (not mem)" =
-    Quickcheck.test
-      (Quickcheck.Generator.tuple2 gen_set gen_set)
-      ~sexp_of:[%sexp_of: Set.t * Set.t]
-      ~f:(fun (s1, s2) ->
-        [%test_result: bool]
-          (Set.are_disjoint s1 s2)
-          ~expect:(Set.for_all s1 ~f:(fun ele -> not (Set.mem s2 ele))))
   ;;
 
   module Named = struct
