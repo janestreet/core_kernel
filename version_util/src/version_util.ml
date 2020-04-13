@@ -89,6 +89,7 @@ type t = {
   executable_path             : string;
   build_system                : string;
   allowed_projections         : string list option [@sexp.option];
+  with_fdo                    : (string * Md5.t option) option [@sexp.option];
   application_specific_fields : Application_specific_fields.t option [@sexp.option];
 } [@@deriving sexp]
 
@@ -109,6 +110,7 @@ let { username;
       executable_path;
       build_system;
       allowed_projections;
+      with_fdo;
       application_specific_fields;
     } = t
 ;;

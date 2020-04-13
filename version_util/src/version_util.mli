@@ -59,3 +59,4 @@ val allowed_projections            : string list option
 val executable_path                : string (** Relative to OMakeroot dir *)
 
 val build_system                   : string
+val with_fdo                       : (string * Md5.t option) option
