@@ -44,6 +44,20 @@ module Elt_bin_io = struct
   type ('t, 'c) t = (module S with type t = 't and type comparator_witness = 'c)
 end
 
+module type For_deriving = sig
+  include Base.Set.For_deriving
+  module M = Base.Set.M
+
+  val bin_shape_m__t : ('a, 'b) Elt_bin_io.t -> Bin_prot.Shape.t
+  val bin_size_m__t : ('a, 'b) Elt_bin_io.t -> ('a, 'b) t Bin_prot.Size.sizer
+  val bin_write_m__t : ('a, 'b) Elt_bin_io.t -> ('a, 'b) t Bin_prot.Write.writer
+  val bin_read_m__t : ('a, 'b) Elt_bin_io.t -> ('a, 'b) t Bin_prot.Read.reader
+
+  val __bin_read_m__t__
+    :  ('a, 'b) Elt_bin_io.t
+    -> (int -> ('a, 'b) t) Bin_prot.Read.reader
+end
+
 module Without_comparator = Set.Without_comparator
 module With_comparator = Set.With_comparator
 module With_first_class_module = Set.With_first_class_module

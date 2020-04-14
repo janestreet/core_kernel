@@ -488,36 +488,40 @@ module Make_binable (Elt : Elt_binable) = Make_binable_using_comparator (struct
     include Comparator.Make (Elt)
   end)
 
-module M = Set.M
+module For_deriving = struct
+  module M = Set.M
 
-let bin_shape_m__t (type t c) (m : (t, c) Elt_bin_io.t) =
-  let module M = Provide_bin_io ((val m)) in
-  M.bin_shape_t
-;;
+  let bin_shape_m__t (type t c) (m : (t, c) Elt_bin_io.t) =
+    let module M = Provide_bin_io ((val m)) in
+    M.bin_shape_t
+  ;;
 
-let bin_size_m__t (type t c) (m : (t, c) Elt_bin_io.t) =
-  let module M = Provide_bin_io ((val m)) in
-  M.bin_size_t
-;;
+  let bin_size_m__t (type t c) (m : (t, c) Elt_bin_io.t) =
+    let module M = Provide_bin_io ((val m)) in
+    M.bin_size_t
+  ;;
 
-let bin_write_m__t (type t c) (m : (t, c) Elt_bin_io.t) =
-  let module M = Provide_bin_io ((val m)) in
-  M.bin_write_t
-;;
+  let bin_write_m__t (type t c) (m : (t, c) Elt_bin_io.t) =
+    let module M = Provide_bin_io ((val m)) in
+    M.bin_write_t
+  ;;
 
-let bin_read_m__t (type t c) (m : (t, c) Elt_bin_io.t) =
-  let module M = Provide_bin_io ((val m)) in
-  M.bin_read_t
-;;
+  let bin_read_m__t (type t c) (m : (t, c) Elt_bin_io.t) =
+    let module M = Provide_bin_io ((val m)) in
+    M.bin_read_t
+  ;;
 
-let __bin_read_m__t__ (type t c) (m : (t, c) Elt_bin_io.t) =
-  let module M = Provide_bin_io ((val m)) in
-  M.__bin_read_t__
-;;
+  let __bin_read_m__t__ (type t c) (m : (t, c) Elt_bin_io.t) =
+    let module M = Provide_bin_io ((val m)) in
+    M.__bin_read_t__
+  ;;
 
-module type For_deriving = Set.For_deriving
+  module type For_deriving = Set.For_deriving
 
-include (Set : For_deriving with type ('a, 'b) t := ('a, 'b) t)
+  include (Set : For_deriving with type ('a, 'b) t := ('a, 'b) t)
+end
+
+include For_deriving
 
 module Stable = struct
   module V1 = struct
@@ -531,6 +535,7 @@ module Stable = struct
       include Stable_module_types.S0_without_comparator with type t := t
     end
 
+    include For_deriving
     module Make (Elt : Stable_module_types.S0) = Make_binable_using_comparator (Elt)
   end
 end
