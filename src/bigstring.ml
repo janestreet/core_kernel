@@ -25,7 +25,7 @@ module Unstable = T
 
 let create ?max_mem_waiting_gc size =
   let max_mem_waiting_gc_in_bytes =
-    Option.map max_mem_waiting_gc ~f:Byte_units.bytes_int_exn
+    Option.map max_mem_waiting_gc ~f:Byte_units0.bytes_int_exn
   in
   create ?max_mem_waiting_gc_in_bytes size
 ;;

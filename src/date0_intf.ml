@@ -66,7 +66,7 @@ module type Date0 = sig
   val is_weekday : t -> bool
 
   (** Monday through Friday are business days, unless they're a holiday.
-  *)
+      *)
   val is_business_day : t -> is_holiday:(t -> bool) -> bool
 
   (** [add_days t n] adds n days to [t] and returns the resulting date.

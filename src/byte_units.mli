@@ -131,6 +131,8 @@ val zero : t
 (** [scale t mul] scale the measure [t] by [mul] *)
 val scale : t -> float -> t
 
+val arg_type : t Command.Arg_type.t
+
 module Infix : sig
   val ( - ) : t -> t -> t
   val ( + ) : t -> t -> t

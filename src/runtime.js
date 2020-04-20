@@ -8,12 +8,12 @@ var core_array_unsafe_int_blit = caml_array_blit
 var core_array_unsafe_float_blit = caml_array_blit
 
 //Provides: core_kernel_time_ns_format
-//Requires: caml_to_js_string, caml_js_to_string
+//Requires: caml_jsbytes_of_string, caml_string_of_jsbytes
 function core_kernel_time_ns_format(time,format){
   var d = new Date(time * 1000);
-  var formatjs = caml_to_js_string(format);
+  var formatjs = caml_jsbytes_of_string(format);
   var jstring = joo_global_object.strftime(formatjs, d);
-  return caml_js_to_string(jstring);
+  return caml_string_of_jsbytes(jstring);
 }
 
 //Provides: core_kernel_gc_compactions
