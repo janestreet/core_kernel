@@ -12,7 +12,9 @@ Suppose for example we had this simple variant type:
 
 open! Core
 
-open Expect_test_helpers
+open Expect_test_helpers_core
+
+open Expect_test_helpers_async
 
 module Mode = struct
   type t =

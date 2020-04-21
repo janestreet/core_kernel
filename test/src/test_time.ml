@@ -1,6 +1,6 @@
 open! Core_kernel
 open Poly
-open Expect_test_helpers_kernel
+open Expect_test_helpers_core
 
 let utc date_string ofday_string =
   Time.of_date_ofday

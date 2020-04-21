@@ -1,5 +1,5 @@
 open! Core_kernel
-include Expect_test_helpers_kernel
+include Expect_test_helpers_core
 module Test_container = Base_test_helpers.Test_container
 module Variant = Variantslib.Variant
 

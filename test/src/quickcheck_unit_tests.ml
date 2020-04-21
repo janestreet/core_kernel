@@ -1,6 +1,6 @@
 open! Core_kernel
 open Poly
-open! Expect_test_helpers_kernel
+open! Expect_test_helpers_core
 open! Quickcheck
 
 let%expect_test ("Quickcheck.Let_syntax"[@tags "64-bits-only"]) =

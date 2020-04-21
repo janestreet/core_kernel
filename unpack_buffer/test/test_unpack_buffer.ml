@@ -1,6 +1,6 @@
 open! Core_kernel
 open Poly
-open! Expect_test_helpers_kernel
+open! Expect_test_helpers_core
 open! Unpack_buffer
 
 let is_dead t = Result.is_error (is_empty t)

@@ -1,5 +1,5 @@
 open! Core_kernel
-open Expect_test_helpers_kernel
+open Expect_test_helpers_core
 
 type time_ns = Time_ns.t [@@deriving compare]
 

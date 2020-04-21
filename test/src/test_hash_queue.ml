@@ -145,7 +145,7 @@ let%test_unit _ =
 ;;
 
 let%expect_test "enqueue_front, enqueue_front_exn" =
-  let open Expect_test_helpers_kernel in
+  let open Expect_test_helpers_core in
   let hq = Hq.create () in
   let ok_exn = function
     | `Key_already_present -> raise_s [%message "Key already present"]
@@ -223,7 +223,7 @@ let%expect_test "lookup_and_move_to_front_exn" =
 ;;
 
 let%expect_test "dequeue_back, dequeue_back_exn" =
-  let open Expect_test_helpers_kernel in
+  let open Expect_test_helpers_core in
   let make_hq () =
     let hq = Hq.create () in
     for i = 1 to 10 do
@@ -266,7 +266,7 @@ let%expect_test "dequeue_back, dequeue_back_exn" =
 ;;
 
 let%expect_test "drop" =
-  let open Expect_test_helpers_kernel in
+  let open Expect_test_helpers_core in
   let make_hq () =
     let hq = Hq.create () in
     for i = 1 to 10 do
