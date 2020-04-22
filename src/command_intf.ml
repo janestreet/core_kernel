@@ -824,83 +824,11 @@ module type Command = sig
   (** Extracts the summary string for a command. *)
   val summary : t -> string
 
-  module Shape : sig
-    module Flag_info : sig
-      type t =
-        { name : string
-        ; doc : string
-        ; aliases : string list
-        }
-      [@@deriving bin_io, compare, fields, sexp]
-    end
-
-    module Base_info : sig
-      type grammar =
-        | Zero
-        | One of string
-        | Many of grammar
-        | Maybe of grammar
-        | Concat of grammar list
-        | Ad_hoc of string
-      [@@deriving bin_io, compare, sexp]
-
-      type anons =
-        | Usage of string
-        (** When exec'ing an older binary whose help sexp doesn't expose the grammar. *)
-        | Grammar of grammar
-      [@@deriving bin_io, compare, sexp]
-
-      type t =
-        { summary : string
-        ; readme : string option
-        ; anons : anons
-        ; flags : Flag_info.t list
-        }
-      [@@deriving bin_io, compare, fields, sexp]
-    end
-
-    module Group_info : sig
-      type 'a t =
-        { summary : string
-        ; readme : string option
-        ; subcommands : (string, 'a) List.Assoc.t Lazy.t
-        }
-      [@@deriving bin_io, compare, fields, sexp]
-
-      val map : 'a t -> f:('a -> 'b) -> 'b t
-    end
-
-    module Exec_info : sig
-      type t =
-        { summary : string
-        ; readme : string option
-        ; working_dir : string
-        ; path_to_exe : string
-        ; child_subcommand : string list
-        }
-      [@@deriving bin_io, compare, fields, sexp]
-    end
-
-    type t =
-      | Basic of Base_info.t
-      | Group of t Group_info.t
-      | Exec of Exec_info.t * (unit -> t)
-      | Lazy of t Lazy.t
-
-    (** Fully forced shapes are comparable and serializable. *)
-    module Fully_forced : sig
-      type shape = t
-
-      type t =
-        | Basic of Base_info.t
-        | Group of t Group_info.t
-        | Exec of Exec_info.t * t
-      [@@deriving bin_io, compare, sexp]
-
-      val create : shape -> t
-    end
-    with type shape := t
+  module Shape : module type of struct
+    include Command_shape
   end
+  with module Private := Command_shape.Private
+   and module Stable := Command_shape.Stable
 
 
   (** call this instead of [Core.exit] if in command-related code that you want to run in
@@ -936,15 +864,10 @@ module type Command = sig
     https://opensource.janestreet.com/standards/#private-submodules *)
   module Private : sig
     val abs_path : dir:string -> string -> string
+    val word_wrap : string -> int -> string list
 
     module Anons : sig
       val normalize : string -> string
-    end
-
-    module Format : sig
-      module V1 : sig
-        val word_wrap : string -> int -> string list
-      end
     end
 
     module Path : sig
@@ -1002,5 +925,9 @@ module type Command = sig
         -> is_expand_dots:bool
         -> unit
     end
+  end
+
+  module Stable : sig
+    module Shape = Command_shape.Stable
   end
 end

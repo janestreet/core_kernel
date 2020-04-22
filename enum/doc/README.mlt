@@ -65,8 +65,7 @@ let main =
 let () =
   print_s
     [%sexp
-      (Command.Shape.Fully_forced.create (Command.shape main)
-       : Command.Shape.Fully_forced.t)]
+      (Command.Shape.fully_forced (Command.shape main) : Command.Shape.Fully_forced.t)]
 ;;
 
 [%%expect
