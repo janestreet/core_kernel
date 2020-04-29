@@ -24,6 +24,7 @@ module Md5 = Md5.Stable
 module Either = Either.Stable
 module Error = Error.Stable
 module Fdeque = Fdeque.Stable
+module Filename = Filename.Stable
 module Float_with_finite_only_serialization = Float_with_finite_only_serialization.Stable
 module Fqueue = Fqueue.Stable
 module Gc = Gc.Stable

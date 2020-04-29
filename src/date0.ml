@@ -639,4 +639,28 @@ module Option = struct
       let unsafe_value = unchecked_value
     end
   end
+
+  let quickcheck_generator =
+    Quickcheck.Generator.map
+      (Option.quickcheck_generator quickcheck_generator)
+      ~f:of_option
+  ;;
+
+  let quickcheck_shrinker =
+    Quickcheck.Shrinker.map
+      (Option.quickcheck_shrinker quickcheck_shrinker)
+      ~f:of_option
+      ~f_inverse:to_option
+  ;;
+
+  let quickcheck_observer =
+    Quickcheck.Observer.of_hash
+      (module struct
+        type nonrec t = t [@@deriving hash]
+      end)
+  ;;
+
+  include Comparable.Make_plain (struct
+      type nonrec t = t [@@deriving compare, sexp_of]
+    end)
 end

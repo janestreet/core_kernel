@@ -224,7 +224,11 @@ module type Date0 = sig
   end
   with type date := t
 
-  module Option : Immediate_option_intf.S with type value := t
+  module Option : sig
+    include Immediate_option_intf.S with type value := t
+    include Comparable.S_plain with type t := t
+    include Quickcheckable.S with type t := t
+  end
 
   module Stable : sig
     module V1 : sig

@@ -549,3 +549,44 @@ let%test_unit _ =
     ~trials:1_000
     ~distinct_values:500
 ;;
+
+let%test_unit _ =
+  Quickcheck.test_can_generate
+    Date.Option.quickcheck_generator
+    ~sexp_of:Date.Option.sexp_of_t
+    ~f:(fun t -> Date.Option.equal t Date.Option.none)
+;;
+
+let%test_unit _ =
+  Quickcheck.test_can_generate
+    Date.Option.quickcheck_generator
+    ~sexp_of:Date.Option.sexp_of_t
+    ~f:(fun t -> Date.Option.equal t (Date.Option.some (Date.of_string "1900-01-01")))
+;;
+
+let%test_unit _ =
+  Quickcheck.test_can_generate
+    Date.Option.quickcheck_generator
+    ~sexp_of:Date.Option.sexp_of_t
+    ~f:(fun t -> Date.Option.equal t (Date.Option.some (Date.of_string "2100-01-01")))
+;;
+
+let%test_unit _ =
+  Quickcheck.test_can_generate
+    Date.Option.quickcheck_generator
+    ~sexp_of:Date.Option.sexp_of_t
+    ~f:(fun t ->
+      Date.Option.between
+        t
+        ~low:(Date.Option.some (Date.of_string "1900-01-01"))
+        ~high:(Date.Option.some (Date.of_string "2100-01-01")))
+;;
+
+let%test_unit _ =
+  Quickcheck.test_distinct_values
+    Date.Option.quickcheck_generator
+    ~sexp_of:Date.Option.sexp_of_t
+    ~compare:Date.Option.compare
+    ~trials:1_000
+    ~distinct_values:100
+;;
