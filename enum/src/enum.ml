@@ -119,8 +119,10 @@ module Make_stringable (M : S) = struct
   let of_string =
     let known_values =
       lazy
-        (List.map [%all: M.t] ~f:(fun t -> to_string t, t)
-         |> Map.of_alist_exn (module String))
+        (List.fold
+           [%all: M.t]
+           ~init:(Map.empty (module String))
+           ~f:(fun map t -> Map.set map ~key:(to_string t) ~data:t))
     in
     fun s ->
       match Map.find (force known_values) s with
