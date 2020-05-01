@@ -15,6 +15,11 @@ let value_exn t = if is_none t then failwith "Uopt.value_exn" else t
 let unsafe_value t = t
 let to_option t = if is_none t then None else Some t
 
+let of_option = function
+  | None -> none
+  | Some a -> some a
+;;
+
 module Optional_syntax = struct
   module Optional_syntax = struct
     let is_none = is_none

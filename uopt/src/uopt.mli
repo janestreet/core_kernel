@@ -31,6 +31,7 @@ val value_exn : 'a t -> 'a
 val unsafe_value : 'a t -> 'a
 
 val to_option : 'a t -> 'a option
+val of_option : 'a option -> 'a t
 
 module Optional_syntax :
   Optional_syntax.S1 with type 'a t := 'a t and type 'a value := 'a
