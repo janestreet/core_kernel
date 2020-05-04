@@ -128,6 +128,16 @@ module type Ofday = sig
   (** [sub_exn t span] shifts the time of day [t] back by [span]. It raises if the result
       is not in the same 24-hour day. Daylight savings shifts are not accounted for. *)
   val sub_exn : t -> Span.t -> t
+
+
+  (** [every span ~start ~stop] returns a sorted list of all [t]s that can be expressed as
+      [start + (i * span)] without overflow, and satisfying [t >= start && t <= stop].
+
+      If [span <= Span.zero || start > stop], returns an Error.
+
+      The result never crosses the midnight boundary. Constructing a list crossing
+      midnight, e.g. every hour from 10pm to 2am, requires multiple calls to [every]. *)
+  val every : Span.t -> start:t -> stop:t -> t list Or_error.t
 end
 
 (** Time represented as an [Int63.t] number of nanoseconds since the epoch.
