@@ -20,7 +20,7 @@ module Version : sig
   type t =
     { repo : string
     ; version : string
-    }
+    } [@@deriving sexp_of]
 
   val parse : string -> t Or_error.t
 end
@@ -60,3 +60,7 @@ val executable_path                : string (** Relative to OMakeroot dir *)
 
 val build_system                   : string
 val with_fdo                       : (string * Md5.t option) option
+
+module For_tests : sig
+  val parse_generated_hg_version : string -> string list
+end

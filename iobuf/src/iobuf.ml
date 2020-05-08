@@ -545,8 +545,6 @@ module Consume = struct
   module To_bigstring = To (Bigstring_dst)
 
   module To_string = struct
-    include To_bytes
-
     let sub src ~len =
       let dst = String_dst.sub src ~len ~pos:0 in
       unsafe_advance src len;
@@ -1007,7 +1005,7 @@ module Fill = struct
 end
 
 module Peek = struct
-  type src = (read, no_seek) t
+  type 'seek src = (read, 'seek) t
 
   module To_bytes =
     Base_for_tests.Test_blit.Make_distinct_and_test (Char_elt) (T_src) (Bytes_dst)
@@ -1015,10 +1013,7 @@ module Peek = struct
   module To_bigstring =
     Base_for_tests.Test_blit.Make_distinct_and_test (Char_elt) (T_src) (Bigstring_dst)
 
-  module To_string = struct
-    include To_bytes
-    include String_dst
-  end
+  module To_string = String_dst
 
   type nonrec ('a, 'd, 'w) t = ('d, 'w) t -> pos:int -> 'a constraint 'd = [> read ]
 
@@ -1323,8 +1318,6 @@ module Poke = struct
 end
 
 module Blit = struct
-  type 'rw t_no_seek = ('rw, no_seek) t
-
   module T_dst = struct
     include T_src
 
@@ -1836,7 +1829,7 @@ module Unsafe = struct
   end
 
   module Peek = struct
-    type src = Peek.src
+    type 'seek src = 'seek Peek.src
 
     module To_bytes = struct
       include Peek.To_bytes

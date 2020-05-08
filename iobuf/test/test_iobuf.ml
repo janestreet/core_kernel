@@ -1175,7 +1175,7 @@ struct
   ;;
 
   let test_peek_to
-        (blito : (Peek.src, _) Base.Blit.blito)
+        (blito : (_ Peek.src, _) Base.Blit.blito)
         create
         sub_string
         of_string
@@ -2244,4 +2244,15 @@ let%test_unit "SEGV bug repro" =
     let tmp2 = Iobuf.create ~len:5 in
     Iobuf.set_bounds_and_buffer ~src:tmp2 ~dst:tmp);
   ignore (Iobuf.Consume.To_bytes.subo (Iobuf.read_only tmp) : Bytes.t)
+;;
+
+let%expect_test "check seek-indifferent r/w interfaces work on both kinds" =
+  let t : (read_write, seek) Iobuf.t = Iobuf.create ~len:8 in
+  let c = Iobuf.Peek.char t ~pos:0 in
+  let c' = Iobuf.Peek.char (Iobuf.no_seek t) ~pos:0 in
+  require_equal [%here] (module Char) c c';
+  let src = Iobuf.create ~len:8 in
+  Iobuf.Blit.blito ~dst:t ~src ();
+  Iobuf.Blit.blito ~dst:(Iobuf.no_seek t) ~src ();
+  [%expect {| |}]
 ;;

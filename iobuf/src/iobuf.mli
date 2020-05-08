@@ -322,15 +322,6 @@ module Consume : sig
   module To_bigstring : Consuming_blit with type src := src with type dst := Bigstring.t
 
   module To_string : sig
-    val blito : (src, Bytes.t) consuming_blito
-    [@@deprecated "[since 2017-10] use [Consume.To_bytes.blito] instead"]
-
-    val blit : (src, Bytes.t) consuming_blit
-    [@@deprecated "[since 2017-10] use [Consume.To_bytes.blit] instead"]
-
-    val unsafe_blit : (src, Bytes.t) consuming_blit
-    [@@deprecated "[since 2017-10] use [Consume.To_bytes.unsafe_blit] instead"]
-
     (** [subo] defaults to using [Iobuf.length src]. *)
     val subo : ?len:int -> src -> string
 
@@ -370,23 +361,17 @@ end
     other framing to the [bin_prot] representation. *)
 module Peek : sig
   (** Similar to [Consume.To_*], but do not advance the buffer. *)
-  type src = (read, no_seek) t
+  type 'seek src = (read, 'seek) t
 
-  module To_bytes : Blit.S_distinct with type src := src with type dst := Bytes.t
-  module To_bigstring : Blit.S_distinct with type src := src with type dst := Bigstring.t
+  module To_bytes :
+    Blit.S1_distinct with type 'seek src := 'seek src with type _ dst := Bytes.t
+
+  module To_bigstring :
+    Blit.S1_distinct with type 'seek src := 'seek src with type _ dst := Bigstring.t
 
   module To_string : sig
-    val blit : (src, Bytes.t) Base.Blit.blit
-    [@@deprecated "[since 2017-10] use [Peek.To_bytes.blit] instead"]
-
-    val blito : (src, Bytes.t) Base.Blit.blito
-    [@@deprecated "[since 2017-10] use [Peek.To_bytes.blito] instead"]
-
-    val unsafe_blit : (src, Bytes.t) Base.Blit.blit
-    [@@deprecated "[since 2017-10] use [Peek.To_bytes.unsafe_blit] instead"]
-
-    val sub : (src, string) Base.Blit.sub
-    val subo : (src, string) Base.Blit.subo
+    val sub : (_ src, string) Base.Blit.sub
+    val subo : (_ src, string) Base.Blit.subo
   end
 
   val index : ([> read ], _) t -> ?pos:int -> ?len:int -> char -> int option
@@ -456,21 +441,22 @@ val consume_bin_prot
 
 (** [Blit] copies between iobufs and advances neither [src] nor [dst]. *)
 module Blit : sig
-  type 'rw t_no_seek = ('rw, no_seek) t
+  (** [Blit.S1_permissions] defines the type parameters in reverse order! *)
+  include
+    Blit.S1_permissions with type ('seek, 'rw) t := ('rw, 'seek) t
 
-  include Blit.S_permissions with type 'rw t := 'rw t_no_seek
+  (** Override types of [sub] and [subo] to allow return type to have [seek/no_seek] as
+      needed. *)
+  val sub : ([> read ], _) t -> pos:int -> len:int -> (_, _) t
 
-  (** Override types of [sub] and [subo] to allow return type to have [seek] as needed. *)
-  val sub : ([> read ], no_seek) t -> pos:int -> len:int -> (_, _) t
-
-  val subo : ?pos:int -> ?len:int -> ([> read ], no_seek) t -> (_, _) t
+  val subo : ?pos:int -> ?len:int -> ([> read ], _) t -> (_, _) t
 
   (** Copies as much as possible (returning the number of bytes copied) without running
       out of either buffer's window. *)
   val blit_maximal
-    :  src:[> read ] t_no_seek
+    :  src:([> read ], _) t
     -> ?src_pos:int
-    -> dst:[> write ] t_no_seek
+    -> dst:([> write ], _) t
     -> ?dst_pos:int
     -> unit
     -> int
@@ -480,7 +466,7 @@ end
 module Blit_consume : sig
   val blit
     :  src:([> read ], seek) t
-    -> dst:([> write ], no_seek) t
+    -> dst:([> write ], _) t
     -> dst_pos:int
     -> len:int
     -> unit
@@ -488,14 +474,14 @@ module Blit_consume : sig
   val blito
     :  src:([> read ], seek) t
     -> ?src_len:int
-    -> dst:([> write ], no_seek) t
+    -> dst:([> write ], _) t
     -> ?dst_pos:int
     -> unit
     -> unit
 
   val unsafe_blit
     :  src:([> read ], seek) t
-    -> dst:([> write ], no_seek) t
+    -> dst:([> write ], _) t
     -> dst_pos:int
     -> len:int
     -> unit
@@ -505,7 +491,7 @@ module Blit_consume : sig
 
   val blit_maximal
     :  src:([> read ], seek) t
-    -> dst:([> write ], no_seek) t
+    -> dst:([> write ], _) t
     -> ?dst_pos:int
     -> unit
     -> int
@@ -514,14 +500,14 @@ end
 (** [Blit_fill] copies between iobufs and advances [dst] but does not advance [src]. *)
 module Blit_fill : sig
   val blit
-    :  src:([> read ], no_seek) t
+    :  src:([> read ], _) t
     -> src_pos:int
     -> dst:([> write ], seek) t
     -> len:int
     -> unit
 
   val blito
-    :  src:([> read ], no_seek) t
+    :  src:([> read ], _) t
     -> ?src_pos:int
     -> ?src_len:int
     -> dst:([> write ], seek) t
@@ -529,14 +515,14 @@ module Blit_fill : sig
     -> unit
 
   val unsafe_blit
-    :  src:([> read ], no_seek) t
+    :  src:([> read ], _) t
     -> src_pos:int
     -> dst:([> write ], seek) t
     -> len:int
     -> unit
 
   val blit_maximal
-    :  src:([> read ], no_seek) t
+    :  src:([> read ], _) t
     -> ?src_pos:int
     -> dst:([> write ], seek) t
     -> unit

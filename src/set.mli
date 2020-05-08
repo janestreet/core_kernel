@@ -529,11 +529,7 @@ module Make_binable_using_comparator (Elt : sig
   with type Elt.t = Elt.t
   with type Elt.comparator_witness = Elt.comparator_witness
 
-(** The following [*bin*] functions support bin-io on base-style sets, e.g.:
-
-    {[ type t = Set.M(String).t [@@deriving bin_io] ]} *)
 module Elt_bin_io = Elt_bin_io
-
 include For_deriving with type ('a, 'b) t := ('a, 'b) t
 
 (** The following types and functors may be used to define stable modules. *)

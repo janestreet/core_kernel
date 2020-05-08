@@ -516,6 +516,51 @@ module For_deriving = struct
     M.__bin_read_t__
   ;;
 
+  module type Quickcheck_generator_m = sig
+    include Comparator.S
+
+    val quickcheck_generator : t Quickcheck.Generator.t
+  end
+
+  module type Quickcheck_observer_m = sig
+    include Comparator.S
+
+    val quickcheck_observer : t Quickcheck.Observer.t
+  end
+
+  module type Quickcheck_shrinker_m = sig
+    include Comparator.S
+
+    val quickcheck_shrinker : t Quickcheck.Shrinker.t
+  end
+
+  let quickcheck_generator_m__t
+        (type t cmp)
+        (module Elt : Quickcheck_generator_m
+          with type t = t
+           and type comparator_witness = cmp)
+    =
+    quickcheck_generator (module Elt) Elt.quickcheck_generator
+  ;;
+
+  let quickcheck_observer_m__t
+        (type t cmp)
+        (module Elt : Quickcheck_observer_m
+          with type t = t
+           and type comparator_witness = cmp)
+    =
+    quickcheck_observer Elt.quickcheck_observer
+  ;;
+
+  let quickcheck_shrinker_m__t
+        (type t cmp)
+        (module Elt : Quickcheck_shrinker_m
+          with type t = t
+           and type comparator_witness = cmp)
+    =
+    quickcheck_shrinker Elt.quickcheck_shrinker
+  ;;
+
   module type For_deriving = Set.For_deriving
 
   include (Set : For_deriving with type ('a, 'b) t := ('a, 'b) t)

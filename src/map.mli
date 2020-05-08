@@ -823,10 +823,6 @@ module Poly : sig
 end
 with type ('a, 'b, 'c) map = ('a, 'b, 'c) t
 
-module type For_deriving = For_deriving
-
-include For_deriving with type ('a, 'b, 'c) t := ('a, 'b, 'c) t
-
 module type Key_plain = Key_plain
 module type Key = Key
 module type Key_binable = Key_binable
@@ -865,39 +861,8 @@ module Make_binable_using_comparator (Key : sig
   with type Key.t = Key.t
   with type Key.comparator_witness = Key.comparator_witness
 
-module M (K : sig
-    type t
-    type comparator_witness
-  end) : sig
-  type nonrec 'v t = (K.t, 'v, K.comparator_witness) t
-end
-
-(** The following [*bin*] functions support bin-io on base-style maps, e.g.:
-
-    {[ type t = int Map.M(String).t [@@deriving bin_io] ]} *)
 module Key_bin_io = Key_bin_io
-
-val bin_shape_m__t : ('a, 'c) Key_bin_io.t -> Bin_prot.Shape.t -> Bin_prot.Shape.t
-
-val bin_size_m__t
-  :  ('a, 'c) Key_bin_io.t
-  -> 'b Bin_prot.Size.sizer
-  -> ('a, 'b, 'c) t Bin_prot.Size.sizer
-
-val bin_write_m__t
-  :  ('a, 'c) Key_bin_io.t
-  -> 'b Bin_prot.Write.writer
-  -> ('a, 'b, 'c) t Bin_prot.Write.writer
-
-val bin_read_m__t
-  :  ('a, 'c) Key_bin_io.t
-  -> 'b Bin_prot.Read.reader
-  -> ('a, 'b, 'c) t Bin_prot.Read.reader
-
-val __bin_read_m__t__
-  :  ('a, 'c) Key_bin_io.t
-  -> 'b Bin_prot.Read.reader
-  -> (int -> ('a, 'b, 'c) t) Bin_prot.Read.reader
+include For_deriving with type ('a, 'b, 'c) t := ('a, 'b, 'c) t
 
 (** The following functors may be used to define stable modules *)
 module Stable : sig
