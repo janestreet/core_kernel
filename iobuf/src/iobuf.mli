@@ -549,6 +549,9 @@ module Blit_consume_and_fill : sig
   val blit_maximal : src:([> read ], seek) t -> dst:([> write ], seek) t -> int
 end
 
+(** [memset t ~pos ~len c] fills [t] with [c] within the range [\[pos, pos + len)]. *)
+val memset : (read_write, _) t -> pos:int -> len:int -> char -> unit
+
 (** {2 Expert} *)
 
 (** The [Expert] module is for building efficient out-of-module [Iobuf] abstractions. *)

@@ -2246,6 +2246,29 @@ let%test_unit "SEGV bug repro" =
   ignore (Iobuf.Consume.To_bytes.subo (Iobuf.read_only tmp) : Bytes.t)
 ;;
 
+let%expect_test "memset" =
+  let t = Iobuf.create ~len:32 in
+  let pr () = print_s [%sexp (t : (_, _) Iobuf.Window.Hexdump.t)] in
+  Iobuf.memset t ~pos:0 ~len:32 'A';
+  pr ();
+  [%expect
+    {|
+      ("00000000  41 41 41 41 41 41 41 41  41 41 41 41 41 41 41 41  |AAAAAAAAAAAAAAAA|"
+       "00000010  41 41 41 41 41 41 41 41  41 41 41 41 41 41 41 41  |AAAAAAAAAAAAAAAA|") |}];
+  Iobuf.memset t ~pos:8 ~len:16 'B';
+  pr ();
+  [%expect
+    {|
+      ("00000000  41 41 41 41 41 41 41 41  42 42 42 42 42 42 42 42  |AAAAAAAABBBBBBBB|"
+       "00000010  42 42 42 42 42 42 42 42  41 41 41 41 41 41 41 41  |BBBBBBBBAAAAAAAA|") |}];
+  Iobuf.memset t ~pos:2 ~len:3 'C';
+  pr ();
+  [%expect
+    {|
+      ("00000000  41 41 43 43 43 41 41 41  42 42 42 42 42 42 42 42  |AACCCAAABBBBBBBB|"
+       "00000010  42 42 42 42 42 42 42 42  41 41 41 41 41 41 41 41  |BBBBBBBBAAAAAAAA|") |}]
+;;
+
 let%expect_test "check seek-indifferent r/w interfaces work on both kinds" =
   let t : (read_write, seek) Iobuf.t = Iobuf.create ~len:8 in
   let c = Iobuf.Peek.char t ~pos:0 in

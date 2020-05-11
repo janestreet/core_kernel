@@ -2244,3 +2244,5 @@ let memcmp a b =
   let c = Int.compare len (length b) in
   if c <> 0 then c else Bigstring.memcmp ~pos1:a.lo a.buf ~pos2:b.lo b.buf ~len
 ;;
+
+let memset t ~pos ~len c = Bigstring.memset ~pos:(buf_pos_exn t ~pos ~len) ~len t.buf c
