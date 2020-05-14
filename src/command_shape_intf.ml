@@ -28,13 +28,34 @@ module type Command_shape = sig
     [@@deriving bin_shape, compare, sexp_of]
   end
 
+  module Num_occurrences : sig
+    type t =
+      { at_least_once : bool
+      ; at_most_once : bool
+      }
+    [@@deriving compare, enumerate, fields, sexp_of]
+
+    val to_help_string : t -> flag_name:string -> string
+  end
+
   module Flag_info : sig
     type t =
-      { name : string
+      { name : string (** See [flag_name] below. *)
       ; doc : string
       ; aliases : string list
       }
     [@@deriving compare, fields, sexp_of]
+
+    (** [flag_name] infers the string which one would pass on the command line. It is not
+        the same as the raw [name] field, which additionally encodes [num_occurrences] and
+        [requires_arg] (sort of). *)
+    val flag_name : t -> string Or_error.t
+
+    val num_occurrences : t -> Num_occurrences.t Or_error.t
+
+    (** [requires_arg] gives undefined behavior on [escape] flags. This is a limitation of
+        the underlying shape representation. *)
+    val requires_arg : t -> bool Or_error.t
 
     include
       Binable.S with type t := t
@@ -56,6 +77,15 @@ module type Command_shape = sig
       }
     [@@deriving compare, fields, sexp_of]
 
+    (** [find_flag t prefix] looks up the flag, if any, to which [prefix] refers.
+
+        It raises if [prefix] does not begin with [-] as all flags should.
+
+        [find_flag] does not consider [aliases_excluded_from_help], and it assumes that
+        all flags can be passed by prefix. These are limitations in the underlying shape
+        representation. *)
+    val find_flag : t -> string -> Flag_info.t Or_error.t
+
     val get_usage : t -> string
 
     include
@@ -74,6 +104,7 @@ module type Command_shape = sig
       }
     [@@deriving compare, fields, sexp_of]
 
+    val find_subcommand : 'a t -> string -> 'a Or_error.t
     val map : 'a t -> f:('a -> 'b) -> 'b t
 
     include
@@ -177,8 +208,23 @@ module type Command_shape = sig
   end
 
   module Private : sig
+    module Key_type : sig
+      type t =
+        | Subcommand
+        | Flag
+
+      val to_string : t -> string
+    end
+
     val abs_path : dir:string -> string -> string
     val help_screen_compare : string -> string -> int
+
+    val lookup_expand
+      :  (string * ('a * [ `Full_match_required | `Prefix ])) list
+      -> string
+      -> Key_type.t
+      -> (string * 'a, string) result
+
     val word_wrap : string -> int -> string list
   end
 end

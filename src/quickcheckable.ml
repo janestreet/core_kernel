@@ -49,7 +49,7 @@ module Of_quickcheckable_filtered
   ;;
 
   let quickcheck_shrinker =
-    Base_quickcheck.Shrinker.filter_map
+    Quickcheck.Shrinker.filter_map
       Quickcheckable.quickcheck_shrinker
       ~f:Conv.of_quickcheckable
       ~f_inverse:Conv.to_quickcheckable

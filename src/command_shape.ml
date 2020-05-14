@@ -420,6 +420,61 @@ module Anons = struct
   [@@deriving bin_io, compare, sexp]
 end
 
+module Num_occurrences = struct
+  type t =
+    { at_least_once : bool
+    ; at_most_once : bool
+    }
+  [@@deriving compare, enumerate, fields, sexp_of]
+
+  let maybe_missing_prefix = "["
+  let maybe_missing_suffix = "]"
+  let maybe_more_suffix = " ..."
+
+  let to_help_string t ~flag_name =
+    let { at_least_once; at_most_once } = t in
+    let description =
+      if at_least_once
+      then flag_name
+      else String.concat [ maybe_missing_prefix; flag_name; maybe_missing_suffix ]
+    in
+    if at_most_once then description else String.concat [ description; maybe_more_suffix ]
+  ;;
+
+  let of_help_string name =
+    let at_most_once, name =
+      match String.chop_suffix name ~suffix:maybe_more_suffix with
+      | None -> true, name
+      | Some name -> false, name
+    in
+    let at_least_once, name =
+      match
+        String.chop_prefix name ~prefix:maybe_missing_prefix
+        |> Option.bind ~f:(String.chop_suffix ~suffix:maybe_missing_suffix)
+      with
+      | None -> true, name
+      | Some name -> false, name
+    in
+    { at_least_once; at_most_once }, name
+  ;;
+
+  let%expect_test "to_help_string" =
+    let flag_name = "name" in
+    List.iter [%all: t] ~f:(fun t ->
+      let s = to_help_string t ~flag_name in
+      print_s [%message "" ~_:(t : t) s];
+      let t', flag_name' = of_help_string s in
+      assert ([%compare.equal: t] t t');
+      assert ([%compare.equal: string] flag_name flag_name'));
+    [%expect
+      {|
+        (((at_least_once false) (at_most_once false)) "[name] ...")
+        (((at_least_once true) (at_most_once false)) "name ...")
+        (((at_least_once false) (at_most_once true)) [name])
+        (((at_least_once true) (at_most_once true)) name) |}]
+  ;;
+end
+
 module Flag_info = struct
   type t = Stable.Flag_info.Model.t =
     { name : string
@@ -427,6 +482,21 @@ module Flag_info = struct
     ; aliases : string list
     }
   [@@deriving bin_io, compare, fields, sexp]
+
+  let parse_name t =
+    let num_occurrences, flag_name = Num_occurrences.of_help_string t.name in
+    match String.split flag_name ~on:' ' with
+    | [ flag_name ] -> Ok (num_occurrences, false, flag_name)
+    | [ flag_name; _arg_doc ] -> Ok (num_occurrences, true, flag_name)
+    | _ -> error_s [%message "Unable to parse" flag_name]
+  ;;
+
+  (* Users are likely to call all three of these functions, in which case we will re-parse
+     the [name] several times. We don't expect users of these functions to care about the
+     inefficiency. *)
+  let flag_name t = parse_name t |> Or_error.map ~f:trd3
+  let num_occurrences t = parse_name t |> Or_error.map ~f:fst3
+  let requires_arg t = parse_name t |> Or_error.map ~f:snd3
 
   let help_screen_compare a b =
     match a, b with
@@ -503,6 +573,45 @@ module Flag_info = struct
   ;;
 end
 
+module Key_type = struct
+  type t =
+    | Subcommand
+    | Flag
+
+  let to_string = function
+    | Subcommand -> "subcommand"
+    | Flag -> "flag"
+  ;;
+end
+
+let lookup_expand alist prefix key_type =
+  let is_dash = Char.equal '-' in
+  let alist =
+    (* no partial matches unless some non-dash char is present *)
+    if String.for_all prefix ~f:is_dash
+    then List.map alist ~f:(fun (key, (data, _)) -> key, (data, `Full_match_required))
+    else alist
+  in
+  match
+    List.filter alist ~f:(function
+      | key, (_, `Full_match_required) -> String.( = ) key prefix
+      | key, (_, `Prefix) -> String.is_prefix key ~prefix)
+  with
+  | [ (key, (data, _name_matching)) ] -> Ok (key, data)
+  | [] -> Error (sprintf !"unknown %{Key_type} %s" key_type prefix)
+  | matches ->
+    (match List.find matches ~f:(fun (key, _) -> String.( = ) key prefix) with
+     | Some (key, (data, _name_matching)) -> Ok (key, data)
+     | None ->
+       let matching_keys = List.map ~f:fst matches in
+       Error
+         (sprintf
+            !"%{Key_type} %s is an ambiguous prefix: %s"
+            key_type
+            prefix
+            (String.concat ~sep:", " matching_keys)))
+;;
+
 module Base_info = struct
   type t = Stable.Base_info.Model.t =
     { summary : string
@@ -511,6 +620,23 @@ module Base_info = struct
     ; flags : Flag_info.t list
     }
   [@@deriving bin_io, compare, fields, sexp]
+
+  let find_flag t prefix =
+    match String.is_prefix prefix ~prefix:"-" with
+    | false -> error_s [%message "Flags must begin with '-'" prefix]
+    | true ->
+      let%bind.Or_error choices =
+        List.map t.flags ~f:(fun (flag_info : Flag_info.t) ->
+          let%bind.Or_error flag_name = Flag_info.flag_name flag_info in
+          Ok
+            (List.map (flag_name :: flag_info.aliases) ~f:(fun key ->
+               key, (flag_info, `Prefix))))
+        |> Or_error.combine_errors
+      in
+      lookup_expand (List.concat choices) prefix Flag
+      |> Result.map_error ~f:Error.of_string
+      |> Or_error.map ~f:snd
+  ;;
 
   let get_usage t =
     match t.anons with
@@ -526,6 +652,18 @@ module Group_info = struct
     ; subcommands : (string * 'a) List.t Lazy.t
     }
   [@@deriving bin_io, compare, fields, sexp]
+
+  let find_subcommand t prefix =
+    match String.is_prefix prefix ~prefix:"-" with
+    | true -> error_s [%message "Subcommands must not begin with '-'" prefix]
+    | false ->
+      let choices =
+        List.map (force t.subcommands) ~f:(fun (key, a) -> key, (a, `Prefix))
+      in
+      lookup_expand choices prefix Subcommand
+      |> Result.map_error ~f:Error.of_string
+      |> Or_error.map ~f:snd
+  ;;
 
   let map = Stable.Group_info.Model.map
 end
@@ -591,7 +729,10 @@ let rec get_summary = function
 ;;
 
 module Private = struct
+  module Key_type = Key_type
+
   let abs_path = Stable.Exec_info.abs_path
   let help_screen_compare = Flag_info.help_screen_compare
   let word_wrap = Flag_info.word_wrap
+  let lookup_expand = lookup_expand
 end

@@ -196,31 +196,16 @@ end
 
 module Flag = struct
   module Num_occurrences = struct
-    type t =
+    type t = Shape.Num_occurrences.t =
       { at_least_once : bool
       ; at_most_once : bool
       }
     [@@deriving compare, enumerate, fields, sexp_of]
 
-    let to_help_string t name =
-      let { at_least_once; at_most_once } = t in
-      let description = if at_least_once then name else sprintf "[%s]" name in
-      if at_most_once then description else sprintf "%s ..." description
-    ;;
+    let to_help_string = Shape.Num_occurrences.to_help_string
 
-    let%expect_test "to_help_string" =
-      List.iter [%all: t] ~f:(fun t ->
-        print_s [%message "" ~_:(t : t) (to_help_string t "name")]);
-      [%expect
-        {|
-        (((at_least_once false) (at_most_once false)) "[name] ...")
-        (((at_least_once true) (at_most_once false)) "name ...")
-        (((at_least_once false) (at_most_once true)) [name])
-        (((at_least_once true) (at_most_once true)) name) |}]
-    ;;
-
-    let to_help_string_deprecated { at_least_once; at_most_once = _ } name =
-      to_help_string { at_least_once; at_most_once = true } name
+    let to_help_string_deprecated { at_least_once; at_most_once = _ } flag_name =
+      to_help_string { at_least_once; at_most_once = true } ~flag_name
     ;;
 
     let any = { at_least_once = false; at_most_once = false }
@@ -249,7 +234,9 @@ module Flag = struct
       ; name_matching : [ `Prefix | `Full_match_required ]
       }
 
-    let wrap_if_optional t x = Num_occurrences.to_help_string t.num_occurrences x
+    let wrap_if_optional t flag_name =
+      Num_occurrences.to_help_string t.num_occurrences ~flag_name
+    ;;
 
     module Doc = struct
       type t =
@@ -906,16 +893,7 @@ module Cmdline = struct
   ;;
 end
 
-module Key_type = struct
-  type t =
-    | Subcommand
-    | Flag
-
-  let to_string = function
-    | Subcommand -> "subcommand"
-    | Flag -> "flag"
-  ;;
-end
+module Key_type = Shape.Private.Key_type
 
 let assert_no_underscores key_type flag_or_subcommand =
   if String.exists flag_or_subcommand ~f:(fun c -> Char.( = ) c '_')
@@ -939,33 +917,7 @@ let normalize key_type key =
   | Key_type.Subcommand -> String.lowercase key
 ;;
 
-let lookup_expand alist prefix key_type =
-  let is_dash = Char.equal '-' in
-  let alist =
-    (* no partial matches unless some non-dash char is present *)
-    if String.for_all prefix ~f:is_dash
-    then List.map alist ~f:(fun (key, (data, _)) -> key, (data, `Full_match_required))
-    else alist
-  in
-  match
-    List.filter alist ~f:(function
-      | key, (_, `Full_match_required) -> String.( = ) key prefix
-      | key, (_, `Prefix) -> String.is_prefix key ~prefix)
-  with
-  | [ (key, (data, _name_matching)) ] -> Ok (key, data)
-  | [] -> Error (sprintf !"unknown %{Key_type} %s" key_type prefix)
-  | matches ->
-    (match List.find matches ~f:(fun (key, _) -> String.( = ) key prefix) with
-     | Some (key, (data, _name_matching)) -> Ok (key, data)
-     | None ->
-       let matching_keys = List.map ~f:fst matches in
-       Error
-         (sprintf
-            !"%{Key_type} %s is an ambiguous prefix: %s"
-            key_type
-            prefix
-            (String.concat ~sep:", " matching_keys)))
-;;
+let lookup_expand = Shape.Private.lookup_expand
 
 let lookup_expand_with_aliases map prefix key_type =
   let alist =

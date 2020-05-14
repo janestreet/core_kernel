@@ -76,6 +76,18 @@ let concat p1 p2 =
   collapse_trailing p1 ^ "/" ^ collapse_leading p2
 ;;
 
+let to_absolute_exn p ~relative_to =
+  if is_relative relative_to
+  then
+    failwithf
+      "Filename.to_absolute_exn called with a [relative_to] that is a relative path: %s"
+      relative_to
+      ()
+  else if is_absolute p
+  then p
+  else concat relative_to p
+;;
+
 let split s = dirname s, basename s
 
 (* [max_pathname_component_size] comes from getconf _POSIX_NAME_MAX / *)
