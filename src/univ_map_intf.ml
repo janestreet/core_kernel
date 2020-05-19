@@ -101,6 +101,7 @@ module type Univ_map = sig
   module type S = S
   module type S1 = S1
   module type Key = Key
+  module type Data = Data
 
   module Type_id_key : Key with type 'a t = 'a Type_equal.Id.t
   include S with type 'a data = 'a and module Key := Type_id_key

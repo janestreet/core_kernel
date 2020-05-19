@@ -2,9 +2,10 @@
 
     NOTE: assorted content lifted from lib/console/src/console.ml *)
 
+module Color_256 = Color_256
+
 module Color : sig
-  (** Standard 8 colours. *)
-  type t =
+  type primary =
     [ `Black
     | `Red
     | `Green
@@ -14,9 +15,15 @@ module Color : sig
     | `Cyan
     | `White
     ]
+
+  (** Standard 8 colors and 256-color palette. *)
+  type t =
+    [ primary
+    | `Color_256 of Color_256.t
+    ]
   [@@deriving sexp_of, compare, hash, equal]
 
-  val to_int : [< t ] -> int
+  val to_int_list : [< t ] -> int list
 end
 
 module Attr : sig
@@ -33,7 +40,7 @@ module Attr : sig
     ]
   [@@deriving sexp_of, compare, hash, equal]
 
-  val to_int : [< t ] -> int
+  val to_int_list : [< t ] -> int list
   val list_to_string : [< t ] list -> string
 end
 
@@ -47,6 +54,6 @@ module With_all_attrs : sig
     ]
   [@@deriving sexp_of, compare, hash, equal]
 
-  val to_int : [< t ] -> int
+  val to_int_list : [< t ] -> int list
   val list_to_string : [< t ] list -> string
 end
