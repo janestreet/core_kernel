@@ -552,6 +552,11 @@ end
 (** [memset t ~pos ~len c] fills [t] with [c] within the range [\[pos, pos + len)]. *)
 val memset : (read_write, _) t -> pos:int -> len:int -> char -> unit
 
+(** [memset]s a buffer to zero. *)
+val zero
+  :  (read_write, _) t
+  -> unit
+
 (** {2 Expert} *)
 
 (** The [Expert] module is for building efficient out-of-module [Iobuf] abstractions. *)
