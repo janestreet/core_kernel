@@ -329,6 +329,7 @@ module Make_tree (Key : Comparator.S1) = struct
   let data = data
   let to_alist = to_alist
   let validate = validate
+  let validatei = validatei
   let symmetric_diff a b ~data_equal = symmetric_diff a b ~data_equal ~comparator
 
   let fold_symmetric_diff a b ~data_equal ~init ~f =

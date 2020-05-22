@@ -161,6 +161,7 @@ struct
     include T
     include Comparable.Make (T)
 
+    let to_string t = Sexp.to_string (sexp_of_t t)
     let sample = of_int 0
 
     let samples =
@@ -1895,7 +1896,7 @@ struct
       expect
         (Validate.result
            (Map.validate
-              ~name:(fun key -> Sexp.to_string ([%sexp_of: Key.t] key))
+              ~name:Key.to_string
               (Validate.of_error (fun i ->
                  if i mod 2 = 0 then Ok () else error "must be even" i [%sexp_of: int]))
               map))
@@ -1907,6 +1908,31 @@ struct
     assert (validate is_error (Map.of_alist_exn [ Key.of_int 0, 1 ]));
     assert (validate is_ok (Map.of_alist_exn [ Key.of_int 0, 0; Key.of_int 1, 0 ]));
     assert (validate is_error (Map.of_alist_exn [ Key.of_int 0, 0; Key.of_int 1, 1 ]))
+  ;;
+
+  let validatei ~name:_ _ = assert false
+
+  let%test_unit _ =
+    let checki (key, data) =
+      if Key.to_int key mod 2 = 0 && data mod 2 = 0
+      then Ok ()
+      else error_s [%message "key and data must be even" (key : Key.t) (data : int)]
+    in
+    let validatei expect map =
+      expect
+        (Validate.result
+           (Map.validatei ~name:Key.to_string (Validate.of_error checki) map))
+    in
+    let is_ok = Result.is_ok in
+    let is_error = Result.is_error in
+    assert (validatei is_ok (Map.empty ()));
+    assert (validatei is_ok (Map.of_alist_exn [ Key.of_int 0, 0 ]));
+    assert (validatei is_error (Map.of_alist_exn [ Key.of_int 0, 1 ]));
+    assert (validatei is_error (Map.of_alist_exn [ Key.of_int 1, 0 ]));
+    assert (validatei is_ok (Map.of_alist_exn [ Key.of_int 0, 0; Key.of_int 2, 0 ]));
+    assert (validatei is_error (Map.of_alist_exn [ Key.of_int 0, 0; Key.of_int 1, 1 ]));
+    assert (validatei is_error (Map.of_alist_exn [ Key.of_int 0, 0; Key.of_int 2, 1 ]));
+    assert (validatei is_error (Map.of_alist_exn [ Key.of_int 0, 0; Key.of_int 1, 2 ]))
   ;;
 
   (* Ensure polymorphic equality raises for maps. *)

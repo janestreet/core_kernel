@@ -464,6 +464,11 @@ val to_alist
 
 val validate : name:('k -> string) -> 'v Validate.check -> ('k, 'v, _) t Validate.check
 
+val validatei
+  :  name:('k -> string)
+  -> ('k * 'v) Validate.check
+  -> ('k, 'v, _) t Validate.check
+
 (** {2 Additional operations on maps} *)
 
 (** Merges two maps. The runtime is O(length(t1) + length(t2)). In particular,

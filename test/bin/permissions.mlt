@@ -85,9 +85,9 @@ Error: In this `with' constraint, the new definition of t
            constraint 'b = \[< `Read | `Who_can_write of .* \] (regexp)
        is not included in
          type ('a, -'perm) t
+       Their constraints differ.
        *: Expected declaration (glob)
        *: Actual declaration (glob)
-       Their constraints differ.
 |}]
 
 (* Constraints don't work with included signatures, part 2 *)
@@ -111,10 +111,10 @@ Error: In this `with' constraint, the new definition of t
            constraint 'b = \[< `Read | `Who_can_write of .* \] (regexp)
        is not included in
          type ('a, -'b) t constraint 'b = [< 'c perms ]
+       Their constraints differ.
        *: (glob)
          Expected declaration
        *: Actual declaration (glob)
-       Their constraints differ.
 |}]
 
 (* Constraints don't work with type aliases, part 1 *)
