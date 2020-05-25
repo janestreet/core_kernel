@@ -35,6 +35,7 @@ module Int63 = Int63.Stable
 module Lazy = Lazy.Stable
 module List = List.Stable
 module Map = Map.Stable
+module Maybe_bound = Maybe_bound.Stable
 module Month = Month.Stable
 module Nothing = Nothing.Stable
 module Option = Option.Stable
