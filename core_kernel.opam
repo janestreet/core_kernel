@@ -1,4 +1,5 @@
 opam-version: "2.0"
+version: "v0.14.0"
 maintainer: "opensource@janestreet.com"
 authors: ["Jane Street Group, LLC <opensource@janestreet.com>"]
 homepage: "https://github.com/janestreet/core_kernel"
@@ -10,27 +11,27 @@ build: [
   ["dune" "build" "-p" name "-j" jobs]
 ]
 depends: [
-  "ocaml" {>= "4.08.0"}
-  "base"
-  "base_bigstring"
-  "base_quickcheck"
-  "bin_prot"
-  "fieldslib"
-  "jane-street-headers"
-  "jst-config"
-  "ppx_assert"
-  "ppx_base"
-  "ppx_hash"
-  "ppx_inline_test"
-  "ppx_jane"
-  "ppx_sexp_conv"
-  "ppx_sexp_message"
-  "sexplib"
-  "splittable_random"
-  "stdio"
-  "time_now"
-  "typerep"
-  "variantslib"
+  "ocaml"               {>= "4.08.0"}
+  "base"                {>= "v0.14" & < "v0.15"}
+  "base_bigstring"      {>= "v0.14" & < "v0.15"}
+  "base_quickcheck"     {>= "v0.14" & < "v0.15"}
+  "bin_prot"            {>= "v0.14" & < "v0.15"}
+  "fieldslib"           {>= "v0.14" & < "v0.15"}
+  "jane-street-headers" {>= "v0.14" & < "v0.15"}
+  "jst-config"          {>= "v0.14" & < "v0.15"}
+  "ppx_assert"          {>= "v0.14" & < "v0.15"}
+  "ppx_base"            {>= "v0.14" & < "v0.15"}
+  "ppx_hash"            {>= "v0.14" & < "v0.15"}
+  "ppx_inline_test"     {>= "v0.14" & < "v0.15"}
+  "ppx_jane"            {>= "v0.14" & < "v0.15"}
+  "ppx_sexp_conv"       {>= "v0.14" & < "v0.15"}
+  "ppx_sexp_message"    {>= "v0.14" & < "v0.15"}
+  "sexplib"             {>= "v0.14" & < "v0.15"}
+  "splittable_random"   {>= "v0.14" & < "v0.15"}
+  "stdio"               {>= "v0.14" & < "v0.15"}
+  "time_now"            {>= "v0.14" & < "v0.15"}
+  "typerep"             {>= "v0.14" & < "v0.15"}
+  "variantslib"         {>= "v0.14" & < "v0.15"}
   "dune"                {>= "2.0.0"}
 ]
 synopsis: "Industrial strength alternative to OCaml's standard library"
