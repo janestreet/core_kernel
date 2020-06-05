@@ -11,9 +11,10 @@
 
 open! Core_kernel
 
-val version : string (** all hg repos and their versions *)
+val version_list : string list (** All hg repos and their revision. *)
 
-val version_list : string list (** same as [version], but one string per line *)
+(** Like [version_list] but space separated. Consider using [version_list] instead. *)
+val version : string
 
 (** [Version] may be used to parse a single entry from [version_list]. *)
 module Version : sig

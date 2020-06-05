@@ -13,30 +13,23 @@ let parse_generated_hg_version generated_hg_version =
   |> String.split ~on:'\n'
   |> List.map ~f:(fun line ->
     match String.rsplit2 line ~on:' ' with
-    | None ->
-      (* no version util, or compatibility until jenga produces the other branch *)
-      line
+    | None -> line (* no version util *)
     | Some (repo, rev_status) ->
-      if String.mem rev_status '_' (* the repo has a space in it *)
-      then line
-      else
-        (* For compability with downstream tools that might rely on this output format,
-           and with [Version.parse].*)
-        String.concat
-          [ repo
-          ; "_"
-          ; String.prefix rev_status 12
-          ; (* The revision can have a one-character '+' suffix. Keep it. *)
-            if String.length rev_status mod 2 = 1
-            then String.suffix rev_status 1
-            else ""
-          ])
+      (* For compability with downstream tools that might rely on this output format,
+         and with [Version.parse].*)
+      String.concat
+        [ repo
+        ; "_"
+        ; String.prefix rev_status 12
+        ; (* The revision can have a one-character '+' suffix. Keep it. *)
+          if String.length rev_status mod 2 = 1
+          then String.suffix rev_status 1
+          else ""
+        ])
 ;;
 
 let version_list = parse_generated_hg_version (generated_hg_version ())
-
 let version = String.concat version_list ~sep:" "
-let hg_version = String.concat version_list ~sep:"\n"
 
 let build_info = generated_build_info ()
 
@@ -56,7 +49,7 @@ let arg_spec = [
   ("-version",
    Arg.Unit
      (fun () ->
-        print_endline hg_version;
+        List.iter version_list ~f:print_endline;
         exit 0),
    " Print the hg revision of this build and exit");
   ("-build_info",

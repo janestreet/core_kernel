@@ -79,3 +79,104 @@ let%test_module "comparable" =
     ;;
   end)
 ;;
+
+let%expect_test "[general] on recursive functions" =
+  let rec fib n =
+    printf "fib %d\n" n;
+    if n < 2 then n else fib (n - 1) + fib (n - 2)
+  in
+  let fib : int -> int = Memo.general ~hashable:Int.hashable fib in
+  printf "%d\n" (fib 2);
+  printf "%d\n" (fib 5);
+  printf "%d\n" (fib 2);
+  printf "%d\n" (fib 5);
+  [%expect
+    {|
+        fib 2
+        fib 0
+        fib 1
+        1
+        fib 5
+        fib 3
+        fib 1
+        fib 2
+        fib 0
+        fib 1
+        fib 4
+        fib 2
+        fib 0
+        fib 1
+        fib 3
+        fib 1
+        fib 2
+        fib 0
+        fib 1
+        5
+        1
+        5 |}]
+;;
+
+let%expect_test "recursive" =
+  let fib fib n =
+    printf "fib %d\n" n;
+    if n < 2 then n else fib (n - 1) + fib (n - 2)
+  in
+  let fib : int -> int = Memo.recursive ~hashable:Int.hashable fib in
+  printf "%d\n" (fib 2);
+  printf "%d\n" (fib 5);
+  printf "%d\n" (fib 10);
+  [%expect
+    {|
+        fib 2
+        fib 0
+        fib 1
+        1
+        fib 5
+        fib 3
+        fib 4
+        5
+        fib 10
+        fib 8
+        fib 6
+        fib 7
+        fib 9
+        55 |}]
+;;
+
+let%expect_test "infinite loop" =
+  let call_count = ref 0 in
+  let f =
+    Memo.recursive ~hashable:Int.hashable (fun f x ->
+      incr call_count;
+      if !call_count > 100
+      then (
+        print_endline "infinite loop";
+        ())
+      else f x)
+  in
+  f 0;
+  [%expect {| infinite loop |}]
+;;
+
+let%expect_test "recursive memo initialization effects" =
+  let fib fib =
+    printf "initialization\n";
+    fun n ->
+      printf "fib %d\n" n;
+      if n < 2 then n else fib (n - 1) + fib (n - 2)
+  in
+  let fib : int -> int = Memo.recursive ~hashable:Int.hashable fib in
+  [%expect {| initialization |}];
+  printf "%d\n" (fib 2);
+  printf "%d\n" (fib 5);
+  [%expect
+    {|
+        fib 2
+        fib 0
+        fib 1
+        1
+        fib 5
+        fib 3
+        fib 4
+        5 |}]
+;;

@@ -63,9 +63,13 @@ module type Command_shape = sig
 
     val t_of_sexp : Sexp.t -> t
     [@@deprecated "[since 2020-04] Use [Command.Stable.Shape.Flag_info]."]
+  end
 
-    val sort : t list -> t list
-    val to_string : t list -> string
+  module Flag_help_display : sig
+    type t = Flag_info.t list
+
+    val sort : t -> t
+    val to_string : t -> string
   end
 
   module Base_info : sig

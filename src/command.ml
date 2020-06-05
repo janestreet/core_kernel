@@ -972,7 +972,7 @@ module Base = struct
     |> List.map ~f:Flag.Internal.align
     (* this sort puts optional flags after required ones *)
     |> List.sort ~compare:(fun a b -> String.compare a.name b.name)
-    |> Shape.Flag_info.sort
+    |> Shape.Flag_help_display.sort
   ;;
 
   let shape t : Shape.Base_info.t =
@@ -2108,7 +2108,7 @@ module For_unix (M : For_unix) = struct
          ; readme
          ; Some
              (if flags then "=== subcommands and flags ===" else "=== subcommands ===")
-         ; Some (Shape.Flag_info.to_string format_list)
+         ; Some (Shape.Flag_help_display.to_string format_list)
          ])
   ;;
 
@@ -2123,7 +2123,7 @@ module For_unix (M : For_unix) = struct
            ; Some ("  " ^ Path.to_string path ^ " " ^ usage)
            ; b.readme
            ; Some "=== flags ==="
-           ; Some (Shape.Flag_info.to_string b.flags)
+           ; Some (Shape.Flag_help_display.to_string b.flags)
            ])
     | Group g ->
       group_or_exec_help_text

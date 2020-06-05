@@ -28,7 +28,7 @@ end
 
 let display entries =
   List.mapi entries ~f:(fun idx entry -> Entry.to_flag_info entry ~idx)
-  |> Flag_info.to_string
+  |> Flag_help_display.to_string
   |> print_endline
 ;;
 

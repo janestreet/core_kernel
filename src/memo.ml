@@ -73,6 +73,35 @@ let general ?hashable ?cache_size_bound f =
   | Some n -> lru ?hashable ~max_cache_size:n f
 ;;
 
+(* We expect [f_onestep] to be a one-step unrolled recursive function; see the mli. Hence,
+   here we create the memoized function _and_ pass it to [f_onestep] to be used for
+   recursive calls.
+
+   Note that we immediately apply [f_onestep] to its first argument here so that any
+   precomputation is performed when the user calls [recursive].
+
+   As an example, if someone writes this non-memoized code:
+
+   [ let rec f = let data = compute_without_using_f () in fun x -> ... f ... ]
+
+   and converts to memoization by doing:
+
+   {[
+     let f =
+       let f_onestep f = let data = compute_without_using_f () in fun x -> ... f ... in
+       recursive f_onestep
+   ]}
+
+   we want to compute [data] immediately. If we had [fun x -> f_onestep (force memoized)
+   x] below, we'd recompute [data] each time the user calls [f] on an argument that hadn't
+   yet been memoized. *)
+let recursive ~hashable ?cache_size_bound f_onestep =
+  let rec memoized =
+    lazy (general ~hashable ?cache_size_bound (f_onestep (fun x -> (force memoized) x)))
+  in
+  force memoized
+;;
+
 let of_comparable (type index) (module M : Comparable.S_plain with type t = index) f =
   let m = ref M.Map.empty in
   fun (x : M.t) ->

@@ -512,12 +512,17 @@ module Flag_info = struct
     | "version", _ -> 1
     | _ -> 0
   ;;
+end
 
-  let sort ts =
-    List.stable_sort ts ~compare:(fun a b -> help_screen_compare a.name b.name)
+module Flag_help_display = struct
+  type t = Flag_info.t list
+
+  let sort t =
+    List.stable_sort t ~compare:(fun a b ->
+      Flag_info.help_screen_compare a.Flag_info.name b.Flag_info.name)
   ;;
 
-  let word_wrap text width =
+  let word_wrap_and_strip text width =
     let chunks = String.split text ~on:'\n' in
     List.concat_map chunks ~f:(fun text ->
       let words =
@@ -540,37 +545,56 @@ module Flag_info = struct
       | Some (lines, line) -> List.rev (line :: lines))
   ;;
 
-  let to_string ts =
-    let n = List.fold ts ~init:0 ~f:(fun acc t -> Int.max acc (String.length t.name)) in
-    let num_cols = 80 in
-    (* anything more dynamic is likely too brittle *)
-    let extend x =
-      let slack = n - String.length x in
-      x ^ String.make slack ' '
-    in
-    let lhs_width = n + 4 in
-    let lhs_pad = String.make lhs_width ' ' in
-    String.concat
-      (List.map ts ~f:(fun t ->
-         let rows k v =
-           let vs = word_wrap v (num_cols - lhs_width) in
-           match vs with
-           | [] -> [ "  "; k; "\n" ]
-           | v :: vs ->
-             let first_line = [ "  "; extend k; "  "; v; "\n" ] in
-             let rest_lines = List.map vs ~f:(fun v -> [ lhs_pad; v; "\n" ]) in
-             List.concat (first_line :: rest_lines)
-         in
-         String.concat
-           (List.concat
-              (rows t.name t.doc
-               ::
-               (match t.aliases with
-                | [] -> []
-                | [ x ] -> [ rows "" (sprintf "(alias: %s)" x) ]
-                | xs -> [ rows "" (sprintf "(aliases: %s)" (String.concat ~sep:", " xs)) ])
-              ))))
-  ;;
+  module Display : sig
+    val to_string : t -> string
+  end = struct
+    let longest_string strings =
+      List.fold strings ~init:0 ~f:(fun acc str -> Int.max acc (String.length str))
+    ;;
+
+    let num_cols = 80
+    let spaces_string width = String.make width ' '
+
+    let pad_spaces_to_suffix x ~width =
+      let slack = width - String.length x in
+      x ^ spaces_string slack
+    ;;
+
+    let to_string t =
+      let longest_flag_name = longest_string (List.map ~f:Flag_info.name t) in
+      (* anything more dynamic is likely too brittle *)
+      let lhs_width = longest_flag_name + 4 in
+      let lhs_pad = spaces_string lhs_width in
+      let lhs_pad_and_newline_terminate = List.map ~f:(fun v -> [ lhs_pad; v; "\n" ]) in
+      let rows k v =
+        let word_wrapped_documentation = word_wrap_and_strip v (num_cols - lhs_width) in
+        match word_wrapped_documentation with
+        | [] -> [ "  "; k; "\n" ]
+        | doc_wrapped_first_line :: doc_wrapped_rest_lines ->
+          let first_line =
+            [ "  "
+            ; pad_spaces_to_suffix ~width:longest_flag_name k
+            ; "  "
+            ; doc_wrapped_first_line
+            ; "\n"
+            ]
+          in
+          let rest_lines = lhs_pad_and_newline_terminate doc_wrapped_rest_lines in
+          List.concat (first_line :: rest_lines)
+      in
+      List.concat_map t ~f:(fun t ->
+        rows t.name t.doc
+        ::
+        (match t.aliases with
+         | [] -> []
+         | [ x ] -> [ rows "" (sprintf "(alias: %s)" x) ]
+         | xs -> [ rows "" (sprintf "(aliases: %s)" (String.concat ~sep:", " xs)) ])
+        |> List.concat)
+      |> String.concat
+    ;;
+  end
+
+  let to_string = Display.to_string
 end
 
 module Key_type = struct
@@ -733,6 +757,6 @@ module Private = struct
 
   let abs_path = Stable.Exec_info.abs_path
   let help_screen_compare = Flag_info.help_screen_compare
-  let word_wrap = Flag_info.word_wrap
+  let word_wrap = Flag_help_display.word_wrap_and_strip
   let lookup_expand = lookup_expand
 end

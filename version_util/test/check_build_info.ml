@@ -15,10 +15,7 @@ let%expect_test "backwards-compatible printing of rev40s" =
   let print s =
     print_s [%sexp (Version_util.For_tests.parse_generated_hg_version s : string list)]
   in
-  (* old jenga: rev12 with underscores *)
-  print "ssh://repo1_0123456789ab\nssh://repo2_04ce83e21002+\n";
-  [%expect {| (ssh://repo1_0123456789ab ssh://repo2_04ce83e21002+) |}];
-  (* new jenga: rev40 with spaces *)
+  (* current jenga *)
   print
     "ssh://repo1 a123456789b123456789c123456789d123456789+\n\
      ssh://repo2 a123456789b123456789c123456789d123456789\n";
