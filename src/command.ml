@@ -346,7 +346,7 @@ module Flag = struct
              let env = write env arg in
              (match arg_type.Arg_type.key with
               | None -> env
-              | Some key -> Env.multi_add env key arg)
+              | Some key -> Env.multi_add env ~key ~data:arg)
          in
          Arg (update, arg_type.Arg_type.complete))
     }
@@ -396,12 +396,12 @@ module Flag = struct
     let write env =
       if Env.mem env key
       then die "flag %s passed more than once" name ()
-      else Env.set env key ()
+      else Env.set env ~key ~data:()
     in
     let action env =
       let env =
         Option.fold key_value ~init:env ~f:(fun env (key, value) ->
-          Env.set_with_default env key value)
+          Env.set_with_default env ~key ~data:value)
       in
       write env
     in
@@ -453,7 +453,7 @@ module Flag = struct
 
   let escape_general ~deprecated_hook name =
     let key = Env.Key.create ~name [%sexp_of: string list] in
-    let action env cmd_line = Env.set env key cmd_line in
+    let action env cmd_line = Env.set env ~key ~data:cmd_line in
     let read env = Env.find env key in
     let action =
       match deprecated_hook with
@@ -724,7 +724,7 @@ module Anons = struct
           else die "failed to parse %s value %S\n%s" name anon (Exn.to_string exn) ()
         | Ok v ->
           let update env =
-            Option.fold key ~init:env ~f:(fun env key -> Env.multi_add env key v)
+            Option.fold key ~init:env ~f:(fun env key -> Env.multi_add env ~key ~data:v)
           in
           update, return v
       in
@@ -994,9 +994,9 @@ module Base = struct
   ;;
 
   let run t env ~when_parsing_succeeds ~path ~args ~verbose_on_parse_error ~help_text =
-    let env = Env.set env path_key path in
-    let env = Env.set env args_key (Cmdline.to_list args) in
-    let env = Env.set env help_key help_text in
+    let env = Env.set env ~key:path_key ~data:path in
+    let env = Env.set env ~key:args_key ~data:(Cmdline.to_list args) in
+    let env = Env.set env ~key:help_key ~data:help_text in
     let rec loop env anons = function
       | Cmdline.Nil ->
         List.iter (String.Map.data t.flags) ~f:(fun flag -> flag.check_available env);
@@ -2346,7 +2346,7 @@ module For_unix (M : For_unix) = struct
       in
       Exec.exec_with_args ~args exec ~maybe_new_comp_cword
     | Group ({ summary; readme; subcommands = subs; body } as group) ->
-      let env = Env.set env subs_key (Lazy.force subs) in
+      let env = Env.set env ~key:subs_key ~data:(Lazy.force subs) in
       let die_showing_help msg =
         if not (Cmdline.ends_in_complete args)
         then (

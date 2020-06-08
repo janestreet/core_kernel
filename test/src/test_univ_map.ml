@@ -12,26 +12,26 @@ let%test_module _ =
 
     let%test _ = is_empty empty
 
-    let test_contains t k v =
+    let test_contains t ~key ~data =
       assert (not (is_empty t));
-      assert (mem t k);
+      assert (mem t key);
       (* these do not raise *)
-      ignore (change_exn t k ~f:Fn.id : t);
+      ignore (change_exn t key ~f:Fn.id : t);
       ignore
-        (change t k ~f:(function
+        (change t key ~f:(function
            | None -> assert false
            | o -> o)
          : t);
-      match find t k with
+      match find t key with
       | None -> assert false
-      | Some v' -> assert (phys_equal v v')
+      | Some v' -> assert (phys_equal data v')
     ;;
 
-    let test_add t k v = test_contains (set t k v) k v
+    let test_add t ~key ~data = test_contains (set t ~key ~data) ~key ~data
 
-    let test_find t k =
-      let f1 = find t k in
-      let f2 = Option.try_with (fun () -> find_exn t k) in
+    let test_find t key =
+      let f1 = find t key in
+      let f2 = Option.try_with (fun () -> find_exn t key) in
       match f1, f2 with
       | None, None -> ()
       | Some v1, Some v2 -> assert (phys_equal v1 v2)
@@ -39,60 +39,60 @@ let%test_module _ =
       | None, Some _ -> assert false
     ;;
 
-    let test_change t k v =
-      let t_minus = change t k ~f:(fun _ -> None) in
-      assert (not (mem t_minus k));
-      let t_plus = change t k ~f:(fun _ -> Some v) in
-      test_contains t_plus k v;
+    let test_change t ~key ~data =
+      let t_minus = change t key ~f:(fun _ -> None) in
+      assert (not (mem t_minus key));
+      let t_plus = change t key ~f:(fun _ -> Some data) in
+      test_contains t_plus ~key ~data;
       ()
     ;;
 
-    let test_remove t k v =
-      let t_minus = remove t k in
-      assert (not (mem t_minus k));
-      let t_plus = set t k v in
-      test_contains t_plus k v;
-      let t_minus = remove t_plus k in
-      assert (not (mem t_minus k))
+    let test_remove t ~key ~data =
+      let t_minus = remove t key in
+      assert (not (mem t_minus key));
+      let t_plus = set t ~key ~data in
+      test_contains t_plus ~key ~data;
+      let t_minus = remove t_plus key in
+      assert (not (mem t_minus key))
     ;;
 
-    let test_remove_by_id t k v =
-      let t_minus = remove_by_id t (Key.uid k) in
-      assert (not (mem t_minus k));
-      let t_plus = set t k v in
-      test_contains t_plus k v;
-      let t_minus = remove_by_id t_plus (Key.uid k) in
-      assert (not (mem t_minus k))
+    let test_remove_by_id t ~key ~data =
+      let t_minus = remove_by_id t (Key.uid key) in
+      assert (not (mem t_minus key));
+      let t_plus = set t ~key ~data in
+      test_contains t_plus ~key ~data;
+      let t_minus = remove_by_id t_plus (Key.uid key) in
+      assert (not (mem t_minus key))
     ;;
 
     let test t =
       (* add *)
-      test_add t size 12;
-      test_add t name "hank";
-      test_add t kids [ t; empty ];
+      test_add t ~key:size ~data:12;
+      test_add t ~key:name ~data:"hank";
+      test_add t ~key:kids ~data:[ t; empty ];
       (* find *)
       test_find t size;
       test_find t name;
       test_find t kids;
       (* change *)
-      test_change t size 33;
-      test_change t name "frank";
-      test_change t kids [];
+      test_change t ~key:size ~data:33;
+      test_change t ~key:name ~data:"frank";
+      test_change t ~key:kids ~data:[];
       (* remove *)
-      test_remove t size 33;
-      test_remove t name "frank";
-      test_remove t kids [];
+      test_remove t ~key:size ~data:33;
+      test_remove t ~key:name ~data:"frank";
+      test_remove t ~key:kids ~data:[];
       (* remove_by_id *)
-      test_remove_by_id t size 33;
-      test_remove_by_id t name "frank";
-      test_remove_by_id t kids [];
+      test_remove_by_id t ~key:size ~data:33;
+      test_remove_by_id t ~key:name ~data:"frank";
+      test_remove_by_id t ~key:kids ~data:[];
       ()
     ;;
 
     let t0 = empty
-    let t1 = set t0 size 9
-    let t2 = set t1 foo 13.25
-    let t3 = set t2 size 15
+    let t1 = set t0 ~key:size ~data:9
+    let t2 = set t1 ~key:foo ~data:13.25
+    let t3 = set t2 ~key:size ~data:15
 
     let%test_unit _ = test t0
     let%test_unit _ = test t1
@@ -233,9 +233,9 @@ module With_default = struct
   let%test_unit _ =
     let key = Key.create ~default:0 ~name:"default 0" Int.sexp_of_t in
     assert (find empty key = 0);
-    let t = set empty key 1 in
+    let t = set empty ~key ~data:1 in
     assert (find t key = 1);
-    let t = set empty key 2 in
+    let t = set empty ~key ~data:2 in
     assert (find t key = 2);
     let t = change t key ~f:( ~- ) in
     assert (find t key = -2)
@@ -253,7 +253,7 @@ module With_fold = struct
   let%test_unit _ =
     let key = Key.create ~init:5 ~f:( + ) ~name:"init 5" Int.sexp_of_t in
     assert (find empty key = 5);
-    let t = add empty key 3 in
+    let t = add empty ~key ~data:3 in
     assert (find t key = 8);
     let t = change t key ~f:( ~- ) in
     assert (find t key = -8)
@@ -264,7 +264,7 @@ module With_fold = struct
       Key.create ~init:0 ~f:(fun _ -> assert false) ~name:"don't fold this" Int.sexp_of_t
     in
     assert (find empty key = 0);
-    let t = set empty key 1 in
+    let t = set empty ~key ~data:1 in
     assert (find t key = 1);
     let t = change t key ~f:( ~- ) in
     assert (find t key = -1)
@@ -277,9 +277,9 @@ module Multi = struct
   let%test_unit _ =
     let key = Key.create ~name:"int list" Int.sexp_of_t in
     assert (find empty key = []);
-    let t = add empty key 1 in
+    let t = add empty ~key ~data:1 in
     assert (find t key = [ 1 ]);
-    let t = set t key [ 2; 3 ] in
+    let t = set t ~key ~data:[ 2; 3 ] in
     assert (find t key = [ 2; 3 ]);
     let t = change t key ~f:(List.map ~f:( ~- )) in
     assert (find t key = [ -2; -3 ])

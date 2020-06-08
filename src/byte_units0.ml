@@ -3,7 +3,7 @@ open Std_internal
 module Repr = Int63
 
 module T : sig
-  type t [@@deriving compare, hash, sexp_of]
+  type t [@@deriving compare, hash, sexp_of] [@@immediate64]
 
   val to_string : t -> string
   val of_repr : Repr.t -> t

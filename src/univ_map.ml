@@ -78,7 +78,7 @@ struct
         assert (Uid.equal key (Packed.type_id_uid data))))
   ;;
 
-  let set t key data = Map.set t ~key:(uid_of_key key) ~data:(Packed.T (key, data))
+  let set t ~key ~data = Map.set t ~key:(uid_of_key key) ~data:(Packed.T (key, data))
   let mem_by_id t id = Map.mem t id
   let mem t key = mem_by_id t (uid_of_key key)
   let remove_by_id t id = Map.remove t id
@@ -103,17 +103,17 @@ struct
     | None -> failwithf "Univ_map.find_exn on unknown key %s" (name_of_key key) ()
   ;;
 
-  let add t key data = if mem t key then `Duplicate else `Ok (set t key data)
+  let add t ~key ~data = if mem t key then `Duplicate else `Ok (set t ~key ~data)
 
-  let add_exn t key data =
-    match add t key data with
+  let add_exn t ~key ~data =
+    match add t ~key ~data with
     | `Ok t -> t
     | `Duplicate -> failwithf "Univ_map.add_exn on existing key %s" (name_of_key key) ()
   ;;
 
   let change_exn t key ~f:update =
     match find t key with
-    | Some data -> set t key (update data)
+    | Some data -> set t ~key ~data:(update data)
     | None -> failwithf "Univ_map.change_exn on unknown key %s" (name_of_key key) ()
   ;;
 
@@ -121,7 +121,7 @@ struct
     let orig = find t key in
     let next = update orig in
     match next with
-    | Some data -> set t key data
+    | Some data -> set t ~key ~data
     | None -> if Option.is_none orig then t else remove t key
   ;;
 
@@ -253,8 +253,8 @@ module With_default = struct
   end
 
   let find t { Key.key; default } = Option.value ~default (find t key)
-  let set t { Key.key; default = _ } v = set t key v
-  let change t k ~f:update = set t k (update (find t k))
+  let set t ~key:{ Key.key; default = _ } ~data = set t ~key ~data
+  let change t key ~f:update = set t ~key ~data:(update (find t key))
 end
 
 module With_fold = struct
@@ -272,9 +272,12 @@ module With_fold = struct
   end
 
   let find t { Key.key; f = _ } = With_default.find t key
-  let set t { Key.key; f = _ } v = With_default.set t key v
+  let set t ~key:{ Key.key; f = _ } ~data = With_default.set t ~key ~data
   let change t { Key.key; f = _ } ~f:update = With_default.change t key ~f:update
-  let add t { Key.key; f } v = With_default.change t key ~f:(fun acc -> f acc v)
+
+  let add t ~key:{ Key.key; f } ~data =
+    With_default.change t key ~f:(fun acc -> f acc data)
+  ;;
 end
 
 module Multi = struct

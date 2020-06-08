@@ -197,12 +197,15 @@ struct
   include Float
 
   let sign = sign_exn
+  let ( // ) x y = of_mult x /. of_mult y
 end :
 sig
   val zero : t
   val ( * ) : t -> t -> t
   val ( + ) : t -> t -> t
   val ( - ) : t -> t -> t
+  val ( / ) : t -> t -> t
+  val ( // ) : t -> t -> float
   val abs : t -> t
   val neg : t -> t
   val is_nan : t -> bool

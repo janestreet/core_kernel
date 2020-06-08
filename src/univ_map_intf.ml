@@ -38,13 +38,13 @@ module type S = sig
 
   val empty : t
   val is_empty : t -> bool
-  val set : t -> 'a Key.t -> 'a data -> t
+  val set : t -> key:'a Key.t -> data:'a data -> t
   val mem : t -> 'a Key.t -> bool
   val mem_by_id : t -> Type_equal.Id.Uid.t -> bool
   val find : t -> 'a Key.t -> 'a data option
   val find_exn : t -> 'a Key.t -> 'a data
-  val add : t -> 'a Key.t -> 'a data -> [ `Ok of t | `Duplicate ]
-  val add_exn : t -> 'a Key.t -> 'a data -> t
+  val add : t -> key:'a Key.t -> data:'a data -> [ `Ok of t | `Duplicate ]
+  val add_exn : t -> key:'a Key.t -> data:'a data -> t
   val change : t -> 'a Key.t -> f:('a data option -> 'a data option) -> t
   val change_exn : t -> 'a Key.t -> f:('a data -> 'a data) -> t
   val update : t -> 'a Key.t -> f:('a data option -> 'a data) -> t
@@ -70,13 +70,13 @@ module type S1 = sig
   val invariant : _ t -> unit
   val empty : _ t
   val is_empty : _ t -> bool
-  val set : 's t -> 'a Key.t -> ('s, 'a) data -> 's t
+  val set : 's t -> key:'a Key.t -> data:('s, 'a) data -> 's t
   val mem : _ t -> _ Key.t -> bool
   val mem_by_id : _ t -> Type_equal.Id.Uid.t -> bool
   val find : 's t -> 'a Key.t -> ('s, 'a) data option
   val find_exn : 's t -> 'a Key.t -> ('s, 'a) data
-  val add : 's t -> 'a Key.t -> ('s, 'a) data -> [ `Ok of 's t | `Duplicate ]
-  val add_exn : 's t -> 'a Key.t -> ('s, 'a) data -> 's t
+  val add : 's t -> key:'a Key.t -> data:('s, 'a) data -> [ `Ok of 's t | `Duplicate ]
+  val add_exn : 's t -> key:'a Key.t -> data:('s, 'a) data -> 's t
 
   val change
     :  's t
@@ -148,7 +148,7 @@ module type Univ_map = sig
       val id : 'a t -> 'a Type_equal.Id.t
     end
 
-    val set : t -> 'a Key.t -> 'a -> t
+    val set : t -> key:'a Key.t -> data:'a -> t
     val find : t -> 'a Key.t -> 'a
     val change : t -> 'a Key.t -> f:('a -> 'a) -> t
   end
@@ -169,13 +169,13 @@ module type Univ_map = sig
     end
 
     (** reset the accumulator *)
-    val set : t -> ('a, 'b) Key.t -> 'b -> t
+    val set : t -> key:('a, 'b) Key.t -> data:'b -> t
 
     (** the current accumulator *)
     val find : t -> ('a, 'b) Key.t -> 'b
 
     (** fold value into accumulator *)
-    val add : t -> ('a, 'b) Key.t -> 'a -> t
+    val add : t -> key:('a, 'b) Key.t -> data:'a -> t
 
     (** accumulator update *)
     val change : t -> ('a, 'b) Key.t -> f:('b -> 'b) -> t
@@ -190,9 +190,9 @@ module type Univ_map = sig
       val id : 'a t -> 'a list Type_equal.Id.t
     end
 
-    val set : t -> 'a Key.t -> 'a list -> t
+    val set : t -> key:'a Key.t -> data:'a list -> t
     val find : t -> 'a Key.t -> 'a list
-    val add : t -> 'a Key.t -> 'a -> t
+    val add : t -> key:'a Key.t -> data:'a -> t
     val change : t -> 'a Key.t -> f:('a list -> 'a list) -> t
   end
 end

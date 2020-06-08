@@ -28,8 +28,8 @@ module Option :
 val ( * ) : t -> t -> t
 val ( + ) : t -> t -> t
 val ( - ) : t -> t -> t
-
-
+val ( / ) : t -> t -> t
+val ( // ) : t -> t -> float
 val zero : t
 val neg : t -> t
 val abs : t -> t
