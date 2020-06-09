@@ -8,9 +8,9 @@ open! Import
     least-recently-used one. The functions raise exceptions if [cache_size_bound] is
     negative or zero.
 
-    Note: the input function must take _only_ one argument; to memoize a function with
-    multiple arguments, pack them up in a tuple. See ../test/src/memo_argument.mlt for
-    some examples.
+    As you can tell from the type, the function that is memoized is the function of the
+    first argument. To memoize a function with multiple arguments, pack them up in a
+    tuple. See ../test/src/memo_argument.mlt for some examples.
 
     This module does not detect or prevent infinite loops (e.g., due to a recursive call
     that repeats an argument).
@@ -23,8 +23,8 @@ type ('a, 'b) fn = 'a -> 'b
 
 (** Returns a memoized version of a function with a single argument.
 
-    If the supplied function is recursive, only the outer calls are memoized; recursive
-    calls are not. For that, see [recursive] below.
+    Of course, if the supplied function is recursive, only the outer calls are memoized;
+    recursive calls are not. For that, see [recursive] below.
 *)
 val general
   :  ?hashable:'a Hashtbl.Hashable.t
@@ -32,8 +32,8 @@ val general
   -> ('a -> 'b)
   -> ('a, 'b) fn
 
-(** [recursive] can be used to memoize recursive functions in such a way that the
-    recursive calls are memoized as well.
+(** [recursive] is like [general] but can be used to memoize recursive functions in such a
+    way that the recursive calls are memoized as well.
 
     As a concrete example, consider the following definition of the Fibonacci function.
 
@@ -51,7 +51,6 @@ val general
     point.
 
     {[ let fib = Memo.recursive ~hashable:Int.hashable fib_nonrecursive ]}
-
     Note that calling [recursive ~hashable f_nonrecursive] does the partial application,
     [f_nonrecursive f], at the time it is called, so that any side-effects or expensive
     computations that happen at the partial application stage happen just once, not once
