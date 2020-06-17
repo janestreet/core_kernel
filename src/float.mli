@@ -49,6 +49,11 @@ include
   with type t := t
    and type comparator_witness := Base.Float.comparator_witness
 
+include Comparable.Validate_with_zero with type t := t
+
+(** [validate_ordinary] fails if class is [Nan] or [Infinite]. *)
+val validate_ordinary : t Validate.check
+
 (** [to_string_12 x] builds a string representing [x] using up to 12 significant digits.
     It loses precision.  You can use ["%{Float#12}"] in formats, but consider ["%.12g"],
     ["%{Float#hum}"], or ["%{Float}"] as alternatives.  *)

@@ -3,7 +3,22 @@ module List = Base.List
 include Comparable_intf
 module Infix = Base.Comparable.Infix
 module Polymorphic_compare = Base.Comparable.Polymorphic_compare
-module Validate = Base.Comparable.Validate
+
+module Validate (T : sig
+    type t [@@deriving compare, sexp_of]
+  end) : Validate with type t := T.t = struct
+  module V = Validate
+  open Maybe_bound
+
+  let to_string t = Base.Sexp.to_string (T.sexp_of_t t)
+
+  let validate_bound ~min ~max t =
+    V.bounded ~name:to_string ~lower:min ~upper:max ~compare:T.compare t
+  ;;
+
+  let validate_lbound ~min t = validate_bound ~min ~max:Unbounded t
+  let validate_ubound ~max t = validate_bound ~max ~min:Unbounded t
+end
 
 module With_zero (T : sig
     type t [@@deriving compare, sexp]
@@ -12,14 +27,38 @@ module With_zero (T : sig
 
     include Validate with type t := t
   end) =
-  Base.Comparable.With_zero (T)
+struct
+  include T
+
+  (* Preallocate the interesting bounds to minimize allocation in the implementations of
+     [validate_*]. *)
+  let excl_zero = Maybe_bound.Excl zero
+  let incl_zero = Maybe_bound.Incl zero
+  let validate_positive t = validate_lbound ~min:excl_zero t
+  let validate_non_negative t = validate_lbound ~min:incl_zero t
+  let validate_negative t = validate_ubound ~max:excl_zero t
+  let validate_non_positive t = validate_ubound ~max:incl_zero t
+  let is_positive t = compare t zero > 0
+  let is_non_negative t = compare t zero >= 0
+  let is_negative t = compare t zero < 0
+  let is_non_positive t = compare t zero <= 0
+  let sign t = Base.Sign.of_int (compare t zero)
+end
 
 module Validate_with_zero (T : sig
     type t [@@deriving compare, sexp]
 
     val zero : t
   end) =
-  Base.Comparable.Validate_with_zero (T)
+struct
+  module V = Validate (T)
+  include V
+
+  include With_zero (struct
+      include T
+      include V
+    end)
+end
 
 module Map_and_set_binable_using_comparator (T : sig
     type t [@@deriving bin_io, compare, sexp]
@@ -50,6 +89,7 @@ struct
   end
 
   include C
+  include Validate (C)
   module Replace_polymorphic_compare : Polymorphic_compare with type t := t = C
   module Map = Map.Make_using_comparator (C)
   module Set = Set.Make_using_comparator (C)
@@ -64,6 +104,12 @@ struct
   include T
   module M = Base.Comparable.Make_using_comparator (T)
   include M
+
+  include Validate (struct
+      include T
+      include M
+    end)
+
   module Replace_polymorphic_compare : Polymorphic_compare with type t := t = M
   module Map = Map.Make_plain_using_comparator (T)
   module Set = Set.Make_plain_using_comparator (T)
@@ -85,6 +131,12 @@ module Make_using_comparator (T : sig
   include T
   module M = Base.Comparable.Make_using_comparator (T)
   include M
+
+  include Validate (struct
+      include T
+      include M
+    end)
+
   module Replace_polymorphic_compare : Polymorphic_compare with type t := t = M
   module Map = Map.Make_using_comparator (T)
   module Set = Set.Make_using_comparator (T)
@@ -105,6 +157,13 @@ module Make_binable_using_comparator (T : sig
 struct
   include T
   module M = Base.Comparable.Make_using_comparator (T)
+
+  include Validate (struct
+      include T
+
+      let compare = T.comparator.compare
+    end)
+
   include M
   module Replace_polymorphic_compare : Polymorphic_compare with type t := t = M
   module Map = Map.Make_binable_using_comparator (T)
@@ -114,10 +173,12 @@ end
 module Make_binable (T : sig
     type t [@@deriving bin_io, compare, sexp]
   end) =
-  Make_binable_using_comparator (struct
-    include T
-    include Comparator.Make (T)
-  end)
+struct
+  include Make_binable_using_comparator (struct
+      include T
+      include Comparator.Make (T)
+    end)
+end
 
 module Extend
     (M : Base.Comparable.S) (X : sig
@@ -136,6 +197,7 @@ struct
   end
 
   include T
+  include Validate (T)
   module Replace_polymorphic_compare : Comparisons.S with type t := t = M
   module Map = Map.Make_using_comparator (T)
   module Set = Set.Make_using_comparator (T)
@@ -158,6 +220,7 @@ struct
   end
 
   include T
+  include Validate (T)
   module Replace_polymorphic_compare : Comparisons.S with type t := t = M
   module Map = Map.Make_binable_using_comparator (T)
   module Set = Set.Make_binable_using_comparator (T)

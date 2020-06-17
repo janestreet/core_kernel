@@ -114,7 +114,16 @@ module type Key_binable = sig
 end
 
 module type Creators = Hashtbl.Private.Creators_generic
-module type Accessors = Hashtbl.Accessors
+
+module type Accessors = sig
+  include Hashtbl.Accessors
+
+  val validate
+    :  name:('a key -> string)
+    -> 'b Validate.check
+    -> ('a, 'b) t Validate.check
+end
+
 module type Multi = Hashtbl.Multi
 
 type ('key, 'data, 'z) create_options_with_first_class_module =
@@ -188,6 +197,11 @@ end
 module type Hashtbl = sig
   include Hashtbl.S_without_submodules (** @inline *)
 
+  val validate
+    :  name:('a key -> string)
+    -> 'b Validate.check
+    -> ('a, 'b) t Validate.check
+
   module Using_hashable : sig
     include
       Creators
@@ -201,6 +215,11 @@ module type Hashtbl = sig
     type nonrec ('a, 'b) t = ('a, 'b) t [@@deriving bin_io]
 
     include Hashtbl.S_poly with type ('a, 'b) t := ('a, 'b) t
+
+    val validate
+      :  name:('a key -> string)
+      -> 'b Validate.check
+      -> ('a, 'b) t Validate.check
   end
 
   module type Key_plain = Key_plain

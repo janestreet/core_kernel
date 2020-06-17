@@ -31,7 +31,6 @@ module Random = Base.Random
 module Staged = Base.Staged
 module Stringable = Base.Stringable
 module Uchar = Base.Uchar
-module Validate = Base.Validate
 module With_return = Base.With_return
 module Word_size = Base.Word_size
 

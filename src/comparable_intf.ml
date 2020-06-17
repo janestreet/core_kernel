@@ -2,11 +2,35 @@ open! Import
 
 module type Infix = Base.Comparable.Infix
 module type Polymorphic_compare = Base.Comparable.Polymorphic_compare
-module type Validate = Base.Comparable.Validate
-module type With_zero = Base.Comparable.With_zero
+
+module type Validate = sig
+  type t
+
+  val validate_lbound : min:t Maybe_bound.t -> t Validate.check
+  val validate_ubound : max:t Maybe_bound.t -> t Validate.check
+  val validate_bound : min:t Maybe_bound.t -> max:t Maybe_bound.t -> t Validate.check
+end
+
+module type Validate_with_zero = sig
+  type t
+
+  val validate_positive : t Validate.check
+  val validate_non_negative : t Validate.check
+  val validate_negative : t Validate.check
+  val validate_non_positive : t Validate.check
+end
+
+module type With_zero = sig
+  type t
+
+  include Base.Comparable.With_zero with type t := t
+  include Validate with type t := t
+  include Validate_with_zero with type t := t
+end
 
 module type S_common = sig
   include Base.Comparable.S
+  include Validate with type t := t
   module Replace_polymorphic_compare : Polymorphic_compare with type t := t
 end
 

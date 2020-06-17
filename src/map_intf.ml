@@ -57,6 +57,16 @@ module type Accessors_generic = sig
 
   val key_set : ('k, 'cmp, ('k, _, 'cmp) t -> ('k key, 'cmp cmp) Base.Set.t) options
 
+  val validate
+    :  name:('k key -> string)
+    -> 'v Validate.check
+    -> ('k, 'v, _) t Validate.check
+
+  val validatei
+    :  name:('k key -> string)
+    -> ('k key * 'v) Validate.check
+    -> ('k, 'v, _) t Validate.check
+
   val quickcheck_observer
     :  'k key Quickcheck.Observer.t
     -> 'v Quickcheck.Observer.t
@@ -75,6 +85,12 @@ module type Accessors1 = sig
   include Map.Accessors1
 
   val key_set : _ t -> (key, comparator_witness) Base.Set.t
+  val validate : name:(key -> string) -> 'a Validate.check -> 'a t Validate.check
+
+  val validatei
+    :  name:(key -> string)
+    -> (key * 'a) Validate.check
+    -> 'a t Validate.check
 
   val quickcheck_observer
     :  key Quickcheck.Observer.t
@@ -91,6 +107,12 @@ module type Accessors2 = sig
   include Map.Accessors2
 
   val key_set : ('k, 'v) t -> ('k, comparator_witness) Base.Set.t
+  val validate : name:('a -> string) -> 'b Validate.check -> ('a, 'b) t Validate.check
+
+  val validatei
+    :  name:('a -> string)
+    -> ('a * 'b) Validate.check
+    -> ('a, 'b) t Validate.check
 
   val quickcheck_observer
     :  'k Quickcheck.Observer.t
@@ -107,6 +129,12 @@ module type Accessors3 = sig
   include Map.Accessors3
 
   val key_set : ('k, _, 'cmp) t -> ('k, 'cmp) Base.Set.t
+  val validate : name:('a -> string) -> 'b Validate.check -> ('a, 'b, _) t Validate.check
+
+  val validatei
+    :  name:('a -> string)
+    -> ('a * 'b) Validate.check
+    -> ('a, 'b, _) t Validate.check
 
   val quickcheck_observer
     :  'k Quickcheck.Observer.t
@@ -126,6 +154,13 @@ module type Accessors3_with_comparator = sig
     :  comparator:('k, 'cmp) Comparator.t
     -> ('k, _, 'cmp) t
     -> ('k, 'cmp) Base.Set.t
+
+  val validate : name:('a -> string) -> 'b Validate.check -> ('a, 'b, _) t Validate.check
+
+  val validatei
+    :  name:('k -> string)
+    -> ('k * 'v) Validate.check
+    -> ('k, 'v, _) t Validate.check
 
   val quickcheck_observer
     :  'k Quickcheck.Observer.t

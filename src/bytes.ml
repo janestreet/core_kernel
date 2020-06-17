@@ -9,6 +9,7 @@ module Stable = struct
 end
 
 include Stable.V1
+include Comparable.Validate (Base.Bytes)
 
 include Hexdump.Of_indexable (struct
     type t = bytes

@@ -21,6 +21,11 @@ include Identifiable.Extend
 
 module Replace_polymorphic_compare = Base.Int
 include Base.Int
+include Comparable.Validate_with_zero (Base.Int)
+
+(* This is already defined by Comparable.Validate_with_zero, but Sign.of_int is
+   more direct. *)
+let sign = Sign.of_int
 
 type t = int [@@deriving typerep]
 

@@ -7,6 +7,7 @@ include Identifiable.Extend
     end)
 
 include Base.Int64
+include Comparable.Validate_with_zero (Base.Int64)
 
 type t = int64 [@@deriving typerep]
 

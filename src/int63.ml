@@ -69,6 +69,7 @@ module Replace_polymorphic_compare : Comparable.Polymorphic_compare with type t 
   Base.Int63
 
 include Base.Int63
+include Comparable.Validate_with_zero (Base.Int63)
 
 module Hex = struct
   include Hex

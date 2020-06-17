@@ -44,6 +44,8 @@ include Identifiable.Extend
       type t = string [@@deriving bin_io]
     end)
 
+include Comparable.Validate (Base.String)
+
 include Hexdump.Of_indexable (struct
     type t = string
 

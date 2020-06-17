@@ -54,6 +54,7 @@ module type S = S
 module type S_binable = S_binable
 module type S_common = S_common
 module type Validate = Validate
+module type Validate_with_zero = Validate_with_zero
 module type With_zero = With_zero
 
 (** [lexicographic cmps x y] compares [x] and [y] lexicographically using functions in the

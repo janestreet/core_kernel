@@ -1,0 +1,2 @@
+(library (name validate) (public_name core_kernel.validate)
+ (preprocess (pps ppx_jane -check-doc-comments)) (libraries base))

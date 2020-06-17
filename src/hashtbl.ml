@@ -18,6 +18,8 @@ include (
     include Base.Hashtbl.S_without_submodules with type ('a, 'b) t := ('a, 'b) t
   end)
 
+let validate ~name f t = Validate.alist ~name f (to_alist t)
+
 module Using_hashable = struct
   type nonrec ('a, 'b) t = ('a, 'b) t [@@deriving sexp_of]
 
@@ -94,6 +96,8 @@ module type Key_binable = Key_binable
 module Poly = struct
   include Hashtbl.Poly
 
+  let validate = validate
+
   include Bin_prot.Utils.Make_iterable_binable2 (struct
       type nonrec ('a, 'b) t = ('a, 'b) t
       type ('a, 'b) el = 'a * 'b [@@deriving bin_io]
@@ -150,6 +154,7 @@ module Make_plain (Key : Key_plain) = struct
       include Invariant.S2 with type ('a, 'b) t := ('a, 'b) hashtbl
     end)
 
+  let validate = validate
   let invariant invariant_key t = invariant ignore invariant_key t
   let sexp_of_t sexp_of_v t = Poly.sexp_of_t Key.sexp_of_t sexp_of_v t
 

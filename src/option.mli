@@ -12,6 +12,8 @@ with type 'a t := 'a option
 include Comparator.Derived with type 'a t := 'a t
 include Quickcheckable.S1 with type 'a t := 'a t
 
+val validate : none:unit Validate.check -> some:'a Validate.check -> 'a t Validate.check
+
 module Stable : sig
   module V1 : sig
     type nonrec 'a t = 'a t [@@deriving bin_io, compare, equal, sexp]

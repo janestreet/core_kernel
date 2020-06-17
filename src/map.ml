@@ -123,6 +123,8 @@ module Accessors = struct
     with type ('a, 'b, 'c) t := ('a, 'b, 'c) Map.t
     with type ('a, 'b, 'c) tree := ('a, 'b, 'c) Tree.t)
 
+  let validate ~name f t = Validate.alist ~name f (to_alist t)
+  let validatei ~name f t = Validate.list ~name:(Fn.compose name fst) f (to_alist t)
   let quickcheck_observer k v = quickcheck_observer k v
   let quickcheck_shrinker k v = quickcheck_shrinker k v
   let key_set t = Using_comparator.key_set t ~comparator:(Using_comparator.comparator t)
@@ -141,6 +143,8 @@ include (
 struct
   include Map
 
+  let validate ~name f t = Validate.alist ~name f (to_alist t)
+  let validatei ~name f t = Validate.list ~name:(Fn.compose name fst) f (to_alist t)
   let of_tree m = Map.Using_comparator.of_tree ~comparator:(to_comparator m)
   let to_tree = Map.Using_comparator.to_tree
 end :
@@ -159,6 +163,16 @@ sig
     Map.Accessors3
     with type ('a, 'b, 'c) t := ('a, 'b, 'c) t
     with type ('a, 'b, 'c) tree := ('a, 'b, 'c) Tree.t
+
+  val validate
+    :  name:('k -> string)
+    -> 'v Validate.check
+    -> ('k, 'v, _) t Validate.check
+
+  val validatei
+    :  name:('k key -> string)
+    -> ('k key * 'v) Validate.check
+    -> ('k, 'v, _) t Validate.check
 end)
 
 module Empty_without_value_restriction = Using_comparator.Empty_without_value_restriction
@@ -328,8 +342,8 @@ module Make_tree (Key : Comparator.S1) = struct
   let keys = keys
   let data = data
   let to_alist = to_alist
-  let validate = validate
-  let validatei = validatei
+  let validate ~name f t = Validate.alist ~name f (to_alist t)
+  let validatei ~name f t = Validate.list ~name:(Fn.compose name fst) f (to_alist t)
   let symmetric_diff a b ~data_equal = symmetric_diff a b ~data_equal ~comparator
 
   let fold_symmetric_diff a b ~data_equal ~init ~f =
@@ -662,6 +676,8 @@ include For_deriving
 module Tree = struct
   include Tree
 
+  let validate ~name f t = Validate.alist ~name f (to_alist t)
+  let validatei ~name f t = Validate.list ~name:(Fn.compose name fst) f (to_alist t)
   let of_hashtbl_exn = Using_comparator.tree_of_hashtbl_exn
   let key_set = Using_comparator.key_set_of_tree
   let of_key_set = Using_comparator.tree_of_key_set

@@ -7,6 +7,7 @@ include Identifiable.Extend
     end)
 
 include Base.Nativeint
+include Comparable.Validate_with_zero (Base.Nativeint)
 
 type t = nativeint [@@deriving typerep]
 

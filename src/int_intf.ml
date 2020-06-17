@@ -23,6 +23,7 @@ module type Extension = sig
 
   include Hexable with type t := t
   include Identifiable.S with type t := t
+  include Comparable.Validate_with_zero with type t := t
   include Quickcheckable.S_int with type t := t
 end
 

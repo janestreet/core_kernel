@@ -310,3 +310,27 @@ let%test_unit "Float.validate_positive doesn't allocate on success" =
   let allocated = Int.( - ) (Gc.minor_words ()) initial_words in
   [%test_result: int] allocated ~expect:0
 ;;
+
+let%test_module _ =
+  (module struct
+    let check v expect =
+      match Validate.result v, expect with
+      | Ok (), `Ok | Error _, `Error -> ()
+      | r, expect ->
+        raise_s [%message "mismatch" (r : unit Or_error.t) (expect : [ `Ok | `Error ])]
+    ;;
+
+    let%test_unit _ = check (validate_lbound ~min:(Incl 0.) nan) `Error
+    let%test_unit _ = check (validate_lbound ~min:(Incl 0.) infinity) `Error
+    let%test_unit _ = check (validate_lbound ~min:(Incl 0.) neg_infinity) `Error
+    let%test_unit _ = check (validate_lbound ~min:(Incl 0.) (-1.)) `Error
+    let%test_unit _ = check (validate_lbound ~min:(Incl 0.) 0.) `Ok
+    let%test_unit _ = check (validate_lbound ~min:(Incl 0.) 1.) `Ok
+    let%test_unit _ = check (validate_ubound ~max:(Incl 0.) nan) `Error
+    let%test_unit _ = check (validate_ubound ~max:(Incl 0.) infinity) `Error
+    let%test_unit _ = check (validate_ubound ~max:(Incl 0.) neg_infinity) `Error
+    let%test_unit _ = check (validate_ubound ~max:(Incl 0.) (-1.)) `Ok
+    let%test_unit _ = check (validate_ubound ~max:(Incl 0.) 0.) `Ok
+    let%test_unit _ = check (validate_ubound ~max:(Incl 0.) 1.) `Error
+  end)
+;;
