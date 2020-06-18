@@ -882,6 +882,8 @@ module Stable : sig
       include Stable_module_types.S1 with type 'a t := 'a t
     end
 
+    include For_deriving with type ('a, 'b, 'c) t := ('a, 'b, 'c) t
+
     module Make (Key : Stable_module_types.S0) :
       S with type key := Key.t with type comparator_witness := Key.comparator_witness
   end

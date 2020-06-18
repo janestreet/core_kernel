@@ -98,37 +98,38 @@ let%test_module "Hash_set.V1" =
 ;;
 
 module Map = struct
-  module V1 (Key : sig
-      type t [@@deriving bin_io, sexp]
-
-      include Comparator.S with type t := t
-    end) : sig
+  module type F = functor (Key : Stable) -> sig
     type 'a t = (Key.t, 'a, Key.comparator_witness) Map.t
+    [@@deriving bin_io, compare, sexp]
+  end
 
-    include Stable1 with type 'a t := 'a t
-  end = Map.Stable.V1.Make (struct
-      include Key
+  module Test (F : F) = Stable_unit_test.Make (struct
+      include F (Int)
 
-      let compare = comparator.compare
+      type nonrec t = string t [@@deriving sexp, bin_io]
+
+      let equal = Int.Map.equal String.equal
+
+      let tests =
+        [ ( Int.Map.of_alist_exn [ 1, "foo"; 2, "bar"; 3, "baz" ]
+          , "((1 foo) (2 bar) (3 baz))"
+          , "\003\001\003foo\002\003bar\003\003baz" )
+        ; Int.Map.empty, "()", "\000"
+        ; Int.Map.singleton 0 "foo", "((0 foo))", "\001\000\003foo"
+        ]
+      ;;
     end)
 
-  let%test_module "Map.V1" =
-    (module Stable_unit_test.Make (struct
-         module Map = V1 (Int)
+  let%test_module "Map.V1" = (module Test (Map.Stable.V1.Make))
 
-         type t = string Map.t [@@deriving sexp, bin_io]
+  let%test_module "Map.V1.M" =
+    (module struct
+      module F (Key : Stable) = struct
+        type 'a t = 'a Map.Stable.V1.M(Key).t [@@deriving bin_io, compare, sexp]
+      end
 
-         let equal = Int.Map.equal String.equal
-
-         let tests =
-           [ ( Int.Map.of_alist_exn [ 1, "foo"; 2, "bar"; 3, "baz" ]
-             , "((1 foo) (2 bar) (3 baz))"
-             , "\003\001\003foo\002\003bar\003\003baz" )
-           ; Int.Map.empty, "()", "\000"
-           ; Int.Map.singleton 0 "foo", "((0 foo))", "\001\000\003foo"
-           ]
-         ;;
-       end))
+      include Test (F)
+    end)
   ;;
 end
 

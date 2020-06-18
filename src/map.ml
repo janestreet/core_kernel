@@ -698,6 +698,7 @@ module Stable = struct
       include Stable_module_types.S1 with type 'a t := 'a t
     end
 
+    include For_deriving
     module Make (Key : Stable_module_types.S0) = Make_binable_using_comparator (Key)
   end
 
