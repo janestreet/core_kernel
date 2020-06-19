@@ -112,7 +112,7 @@ let%expect_test ("Byte_units.to_string"[@tags "no-js"]) =
 ;;
 
 let%expect_test "Byte_units.to_string_short" =
-  print_all_byte_units !"%{Byte_units#short}";
+  print_all_byte_units !"%{Byte_units.Short}";
   [%expect
     {|
     (Bytes 0) -> 0B
@@ -453,7 +453,7 @@ let%test_unit "Byte_units.to_string_hum / Byte_units.of_string" =
 
 let%test_unit "Byte_units.to_string_short / Byte_units.of_string" =
   ensure_round_trippable
-    Byte_units.to_string_short
+    Byte_units.Short.to_string
     Byte_units.of_string
     ~tolerance:`Three_dp
 ;;
@@ -474,7 +474,7 @@ let%test_unit "Byte_units.to_string_hum / Byte_units.Stable.V1.t_of_sexp" =
 
 let%test_unit "Byte_units.to_string_short / Byte_units.Stable.V1.t_of_sexp" =
   ensure_round_trippable
-    Byte_units.to_string_short
+    Byte_units.Short.to_string
     (Fn.flip Sexp.of_string_conv_exn Byte_units.Stable.V1.t_of_sexp)
     ~tolerance:`Three_dp
 ;;
@@ -495,7 +495,7 @@ let%test_unit "Byte_units.to_string_hum / Byte_units.Stable.V2.t_of_sexp" =
 
 let%test_unit "Byte_units.to_string_short / Byte_units.Stable.V2.t_of_sexp" =
   ensure_round_trippable
-    Byte_units.to_string_short
+    Byte_units.Short.to_string
     (Fn.flip Sexp.of_string_conv_exn Byte_units.Stable.V2.t_of_sexp)
     ~tolerance:`Three_dp
 ;;

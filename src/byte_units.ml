@@ -244,55 +244,63 @@ end
 
 let to_string_hum = T.to_string
 
-let to_string_short t =
-  let to_units_str to_unit ext =
-    let f = to_unit t in
-    let f_abs = Float.abs f in
-    if Float.Robustly_comparable.( >=. ) f_abs 100.
-    then sprintf "%.0f%c" f ext
-    else if Float.Robustly_comparable.( >=. ) f_abs 10.
-    then sprintf "%.1f%c" f ext
-    else sprintf "%.2f%c" f ext
-  in
-  match largest_measure t with
-  | `Bytes -> sprintf "%dB" (bytes_int_exn t)
-  | `Kilobytes -> to_units_str kilobytes 'K'
-  | `Megabytes -> to_units_str megabytes 'M'
-  | `Gigabytes -> to_units_str gigabytes 'G'
-  | `Terabytes -> to_units_str terabytes 'T'
-  | `Petabytes -> to_units_str petabytes 'P'
-  | `Exabytes -> to_units_str exabytes 'E'
-;;
+module Short = struct
+  type nonrec t = t
 
-let%expect_test _ =
-  printf !"%{#short}" (of_bytes_int 1000);
-  [%expect {| 1000B |}];
-  printf !"%{#short}" (of_bytes_int 1023);
-  [%expect {| 1023B |}];
-  printf !"%{#short}" (of_bytes_int 1024);
-  [%expect {| 1.00K |}];
-  printf !"%{#short}" (of_bytes_int 1025);
-  [%expect {| 1.00K |}];
-  printf !"%{#short}" (of_bytes_int 10000);
-  [%expect {| 9.77K |}];
-  printf !"%{#short}" (of_bytes_int 100000);
-  [%expect {| 97.7K |}];
-  printf !"%{#short}" (of_bytes_int 1000000);
-  [%expect {| 977K |}];
-  printf !"%{#short}" (of_bytes_int 10000000);
-  [%expect {| 9.54M |}];
-  printf !"%{#short}" (of_bytes 10000000000.);
-  [%expect {| 9.31G |}];
-  printf !"%{#short}" (of_bytes 1000000000000.);
-  [%expect {| 931G |}];
-  printf !"%{#short}" (of_bytes 100000000000000.);
-  [%expect {| 90.9T |}];
-  printf !"%{#short}" (of_bytes 100000000000000000.);
-  [%expect {| 88.8P |}];
-  printf !"%{#short}" (of_bytes 3000000000000000000.);
-  [%expect {| 2.60E |}];
-  ()
-;;
+  let to_string t =
+    let to_units_str to_unit ext =
+      let f = to_unit t in
+      let f_abs = Float.abs f in
+      if Float.Robustly_comparable.( >=. ) f_abs 100.
+      then sprintf "%.0f%c" f ext
+      else if Float.Robustly_comparable.( >=. ) f_abs 10.
+      then sprintf "%.1f%c" f ext
+      else sprintf "%.2f%c" f ext
+    in
+    match largest_measure t with
+    | `Bytes -> sprintf "%dB" (bytes_int_exn t)
+    | `Kilobytes -> to_units_str kilobytes 'K'
+    | `Megabytes -> to_units_str megabytes 'M'
+    | `Gigabytes -> to_units_str gigabytes 'G'
+    | `Terabytes -> to_units_str terabytes 'T'
+    | `Petabytes -> to_units_str petabytes 'P'
+    | `Exabytes -> to_units_str exabytes 'E'
+  ;;
+
+  let sexp_of_t t = Sexp.Atom (to_string t)
+
+  let%expect_test _ =
+    printf !"%{}" (of_bytes_int 1000);
+    [%expect {| 1000B |}];
+    printf !"%{}" (of_bytes_int 1023);
+    [%expect {| 1023B |}];
+    printf !"%{}" (of_bytes_int 1024);
+    [%expect {| 1.00K |}];
+    printf !"%{}" (of_bytes_int 1025);
+    [%expect {| 1.00K |}];
+    printf !"%{}" (of_bytes_int 10000);
+    [%expect {| 9.77K |}];
+    printf !"%{}" (of_bytes_int 100000);
+    [%expect {| 97.7K |}];
+    printf !"%{}" (of_bytes_int 1000000);
+    [%expect {| 977K |}];
+    printf !"%{}" (of_bytes_int 10000000);
+    [%expect {| 9.54M |}];
+    printf !"%{}" (of_bytes 10000000000.);
+    [%expect {| 9.31G |}];
+    printf !"%{}" (of_bytes 1000000000000.);
+    [%expect {| 931G |}];
+    printf !"%{}" (of_bytes 100000000000000.);
+    [%expect {| 90.9T |}];
+    printf !"%{}" (of_bytes 100000000000000000.);
+    [%expect {| 88.8P |}];
+    printf !"%{}" (of_bytes 3000000000000000000.);
+    [%expect {| 2.60E |}];
+    ()
+  ;;
+end
+
+let to_string_short = Short.to_string
 
 let[@deprecated
   "[since 2019-01] Use [of_bytes], [of_kilobytes], [of_megabytes], etc as appropriate."] create

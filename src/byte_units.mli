@@ -87,12 +87,22 @@ val of_words_float_exn : float -> t
     but [Byte_units.to_string_hum (Byte_units.of_bytes_int 1500)] gives [1.46484K]. *)
 val to_string_hum : t -> string
 
-(** [to_string_short] is like [to_string_hum] but will attempt to only show 4 significant
-    digits.
-
-    For example [Byte_units.to_string_hum (Byte_units.of_bytes_int 1000)] gives [1000B],
-    but [Byte_units.to_string_hum (Byte_units.of_bytes_int 1500)] gives [1.46K]. *)
 val to_string_short : t -> string
+[@@deprecated "[since 2020-06] Use [Short.to_string] instead."]
+
+module Short : sig
+  type nonrec t = t [@@deriving sexp_of]
+
+  (** [Short.to_string] is like [to_string_hum] but will attempt to only show 4 significant
+      digits.
+
+      For example [Byte_units.to_string_hum (Byte_units.of_bytes_int 1000)] gives [1000B],
+      but [Byte_units.to_string_hum (Byte_units.of_bytes_int 1500)] gives [1.46K].
+
+      [Short.sexp_of_t] does the same.
+  *)
+  val to_string : t -> string
+end
 
 (** This is a deprecated alias for [bytes_float]. *)
 val bytes : t -> float

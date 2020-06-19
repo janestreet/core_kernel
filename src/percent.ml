@@ -219,3 +219,11 @@ end)
 let validate = Float.validate_ordinary
 let of_string_allow_nan_and_inf s = Stringable.of_string_allow_nan_and_inf s
 let t_of_sexp_allow_nan_and_inf sexp = of_string_allow_nan_and_inf (Sexp.to_string sexp)
+
+module Always_percentage = struct
+  type nonrec t = t
+
+  let format x format = Format.format_float format (x *. 100.) ^ "%"
+  let to_string x = sprintf "%.6G%%" (x * 100.)
+  let sexp_of_t t = Sexp.Atom (to_string t)
+end

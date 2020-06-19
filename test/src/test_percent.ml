@@ -177,3 +177,31 @@ let%test "Percent.Option cannot represent nan" =
   let nan = Percent.of_mult Float.nan in
   Percent.Option.((not (some_is_representable nan)) && is_none (some nan))
 ;;
+
+let%expect_test "always-percentage format" =
+  let f x =
+    let p = Percent.of_string x in
+    print_string [%string "%{p#Percent} -> %{p#Percent.Always_percentage}\n"]
+  in
+  let cases = [ "0x"; "3.2bp"; "5x"; "75%" ] in
+  List.iter ~f cases;
+  [%expect {|
+    0x -> 0%
+    3.2bp -> 0.032%
+    5x -> 500%
+    75% -> 75% |}];
+  let f x =
+    let p = Percent.of_string x in
+    printf
+      !"%{sexp: Percent.t} -> %s\n"
+      p
+      (Percent.Always_percentage.format p (Percent.Format.decimal ~precision:8))
+  in
+  List.iter cases ~f;
+  [%expect
+    {|
+    0x -> 0.00000000%
+    3.2bp -> 0.03200000%
+    5x -> 500.00000000%
+    75% -> 75.00000000% |}]
+;;

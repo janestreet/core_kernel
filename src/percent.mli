@@ -160,3 +160,12 @@ module Stable : sig
     end
   end
 end
+
+(** Does not format small values as "3bp" or large ones as "2x"; always uses percentages
+    ("0.0003%" or "200%"). The standard [of_sexp] can read these just fine. *)
+module Always_percentage : sig
+  type nonrec t = t [@@deriving sexp_of]
+
+  val to_string : t -> string
+  val format : t -> Format.t -> string
+end
