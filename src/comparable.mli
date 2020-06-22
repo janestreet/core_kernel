@@ -164,25 +164,20 @@ module Poly (T : sig
   end) : S with type t := T.t
 
 module Validate (T : sig
-    type t [@@deriving compare, sexp]
+    type t [@@deriving compare, sexp_of]
   end) : Validate with type t := T.t
 
-module With_zero (T : sig
-    type t [@@deriving compare, sexp]
-
-    val zero : t
-
-    include Validate with type t := t
-  end) : With_zero with type t := T.t
-
 module Validate_with_zero (T : sig
-    type t [@@deriving compare, sexp]
+    type t [@@deriving compare, sexp_of]
 
     val zero : t
-  end) : sig
-  include Validate with type t := T.t
-  include With_zero with type t := T.t
-end
+  end) : Validate_with_zero with type t := T.t
+
+module With_zero (T : sig
+    type t [@@deriving compare, sexp_of]
+
+    val zero : t
+  end) : With_zero with type t := T.t
 
 (** The following module types and functors may be used to define stable modules: *)
 

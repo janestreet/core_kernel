@@ -781,6 +781,12 @@ end
 module Map = Map.Make_binable_using_comparator (C)
 module Set = Set.Make_binable_using_comparator (C)
 
+include Comparable.With_zero (struct
+    type nonrec t = t [@@deriving compare, sexp_of]
+
+    let zero = zero
+  end)
+
 module Private = struct
   let suffix_of_unit_of_time = suffix_of_unit_of_time
   let parse_suffix = Stable.V3.Of_string.parse_suffix

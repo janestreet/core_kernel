@@ -292,6 +292,7 @@ module C = struct
   type comparator_witness = T.comparator_witness
 
   let comparator = T.comparator
+  let compare = T.comparator.compare
 
   (* In 108.06a and earlier, ofdays in sexps of Maps and Sets were raw floats.  From
      108.07 through 109.13, the output format remained raw as before, but both the raw and
@@ -310,6 +311,7 @@ end
 
 module Map = Map.Make_binable_using_comparator (C)
 module Set = Set.Make_binable_using_comparator (C)
+include Comparable.Validate (C)
 
 let of_span_since_start_of_day = of_span_since_start_of_day_exn
 let to_millisec_string = to_millisecond_string

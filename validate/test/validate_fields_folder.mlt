@@ -77,7 +77,7 @@ end = struct
   open M
 
   let validate t =
-    let w check acc field = Validate.field t field check :: acc in
+    let w check acc field = Validate.field check t field :: acc in
     Fields.fold ~init:[] ~a:(w (fun _ -> Validate.pass)) |> Validate.of_list
   ;;
 end
@@ -93,7 +93,7 @@ end = struct
   open M
 
   let validate t =
-    let w check acc field = Validate.field t field check :: acc in
+    let w check acc field = Validate.field check t field :: acc in
     Fields.fold ~init:[] ~a:(w (fun _ -> Validate.pass)) |> Validate.of_list
   ;;
 end

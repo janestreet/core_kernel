@@ -29,12 +29,11 @@
 
       let validate t =
         let module V = Validate in
-        let w check = V.field_folder t check in
-        V.of_list
-          (Fields.fold ~init:[]
-             ~foo:(w Int.validate_positive)
-             ~bar:(w Float.validate_non_negative)
-          )
+        let w check = V.field check t in
+        Fields.to_list
+          ~foo:(w Int.validate_positive)
+          ~bar:(w Float.validate_non_negative)
+        |> V.of_list
     ]}
 
 
@@ -116,10 +115,18 @@ val errors : t -> string list
 val maybe_raise : t -> unit
 
 (** Returns an error if validation fails. *)
-val valid_or_error : 'a -> 'a check -> 'a Or_error.t
+val valid_or_error : 'a check -> 'a -> 'a Or_error.t
 
-(** Used for validating an individual field. *)
-val field : 'record -> ([> `Read ], 'record, 'a) Field.t_with_perm -> 'a check -> t
+(** Used for validating an individual field. Should be used with [Fields.to_list]. *)
+val field : 'a check -> 'record -> ([> `Read ], 'record, 'a) Field.t_with_perm -> t
+
+(** Used for validating an individual field. Should be used with [Fields.Direct.to_list]. *)
+val field_direct
+  :  'a check
+  -> ([> `Read ], 'record, 'a) Field.t_with_perm
+  -> 'record
+  -> 'a
+  -> t
 
 (** Creates a function for use in a [Fields.fold]. *)
 val field_folder

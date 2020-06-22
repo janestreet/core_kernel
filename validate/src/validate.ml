@@ -67,24 +67,28 @@ let result_fail t =
 let result t = if List.is_empty t then Ok () else result_fail t
 
 let maybe_raise t = Or_error.ok_exn (result t)
-let valid_or_error x check = Or_error.map (result (protect check x)) ~f:(fun () -> x)
+let valid_or_error check x = Or_error.map (result (protect check x)) ~f:(fun () -> x)
 
-let field record fld f =
-  let v = Field.get fld record in
-  let result = protect f v in
+let field_direct check fld _record v =
+  let result = protect check v in
   name (Field.name fld) result
+;;
+
+let field check record fld =
+  let v = Field.get fld record in
+  field_direct check fld record v
 ;;
 
 let field_folder record check =
   ();
-  fun acc fld -> field record fld check :: acc
+  fun acc fld -> field check record fld :: acc
 ;;
 
 let field_direct_folder check =
-  Staged.stage (fun acc fld _record v ->
-    match protect check v with
-    | [] -> acc
-    | result -> name (Field.name fld) result :: acc)
+  Staged.stage (fun acc fld record v ->
+    match field_direct check fld record v with
+    | [] -> acc (* Avoid allocating a new list in the success case *)
+    | result -> result :: acc)
 ;;
 
 let all checks v =

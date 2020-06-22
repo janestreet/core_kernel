@@ -196,7 +196,6 @@ include (
 struct
   include Float
 
-  let sign = sign_exn
   let ( // ) x y = of_mult x /. of_mult y
 end :
 sig
@@ -212,9 +211,14 @@ sig
   val is_inf : t -> bool
   val sign_exn : t -> Sign.t
 
-  include Comparable.With_zero with type t := t
   include Robustly_comparable with type t := t
 end)
+
+include Comparable.With_zero (struct
+    include Stable.V1
+
+    let zero = zero
+  end)
 
 let validate = Float.validate_ordinary
 let of_string_allow_nan_and_inf s = Stringable.of_string_allow_nan_and_inf s

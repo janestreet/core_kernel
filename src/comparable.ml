@@ -20,33 +20,8 @@ module Validate (T : sig
   let validate_ubound ~max t = validate_bound ~max ~min:Unbounded t
 end
 
-module With_zero (T : sig
-    type t [@@deriving compare, sexp]
-
-    val zero : t
-
-    include Validate with type t := t
-  end) =
-struct
-  include T
-
-  (* Preallocate the interesting bounds to minimize allocation in the implementations of
-     [validate_*]. *)
-  let excl_zero = Maybe_bound.Excl zero
-  let incl_zero = Maybe_bound.Incl zero
-  let validate_positive t = validate_lbound ~min:excl_zero t
-  let validate_non_negative t = validate_lbound ~min:incl_zero t
-  let validate_negative t = validate_ubound ~max:excl_zero t
-  let validate_non_positive t = validate_ubound ~max:incl_zero t
-  let is_positive t = compare t zero > 0
-  let is_non_negative t = compare t zero >= 0
-  let is_negative t = compare t zero < 0
-  let is_non_positive t = compare t zero <= 0
-  let sign t = Base.Sign.of_int (compare t zero)
-end
-
 module Validate_with_zero (T : sig
-    type t [@@deriving compare, sexp]
+    type t [@@deriving compare, sexp_of]
 
     val zero : t
   end) =
@@ -54,10 +29,24 @@ struct
   module V = Validate (T)
   include V
 
-  include With_zero (struct
-      include T
-      include V
-    end)
+  (* Preallocate the interesting bounds to minimize allocation in the implementations of
+     [validate_*]. *)
+  let excl_zero = Maybe_bound.Excl T.zero
+  let incl_zero = Maybe_bound.Incl T.zero
+  let validate_positive t = validate_lbound ~min:excl_zero t
+  let validate_non_negative t = validate_lbound ~min:incl_zero t
+  let validate_negative t = validate_ubound ~max:excl_zero t
+  let validate_non_positive t = validate_ubound ~max:incl_zero t
+end
+
+module With_zero (T : sig
+    type t [@@deriving compare, sexp_of]
+
+    val zero : t
+  end) =
+struct
+  include Validate_with_zero (T)
+  include Base.Comparable.With_zero (T)
 end
 
 module Map_and_set_binable_using_comparator (T : sig

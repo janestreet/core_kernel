@@ -656,7 +656,7 @@ module Alternate_sexp = struct
   type nonrec t = t [@@deriving sexp]
 end
 
-include Comparable.Validate_with_zero (struct
+include Comparable.With_zero (struct
     type nonrec t = t [@@deriving compare, sexp]
 
     let zero = zero

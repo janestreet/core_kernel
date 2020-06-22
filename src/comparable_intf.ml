@@ -14,6 +14,8 @@ end
 module type Validate_with_zero = sig
   type t
 
+  include Validate with type t := t
+
   val validate_positive : t Validate.check
   val validate_non_negative : t Validate.check
   val validate_negative : t Validate.check
@@ -24,7 +26,6 @@ module type With_zero = sig
   type t
 
   include Base.Comparable.With_zero with type t := t
-  include Validate with type t := t
   include Validate_with_zero with type t := t
 end
 
