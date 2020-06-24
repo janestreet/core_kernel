@@ -149,7 +149,7 @@ let invariant t = ignore (of_string t : t)
 let nil = "00000000-0000-0000-0000-000000000000"
 
 module Unstable = struct
-  type nonrec t = t [@@deriving bin_io, compare, hash, sexp]
+  type nonrec t = t [@@deriving bin_io, compare, equal, hash, sexp]
 end
 
 let to_string_hum t = if am_running_test then nil else to_string t

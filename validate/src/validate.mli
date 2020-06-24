@@ -130,8 +130,8 @@ val field_direct
 
 (** Creates a function for use in a [Fields.fold]. *)
 val field_folder
-  :  'record
-  -> 'a check
+  :  'a check
+  -> 'record
   -> t list
   -> ([> `Read ], 'record, 'a) Field.t_with_perm
   -> t list

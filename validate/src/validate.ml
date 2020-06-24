@@ -79,7 +79,7 @@ let field check record fld =
   field_direct check fld record v
 ;;
 
-let field_folder record check =
+let field_folder check record =
   ();
   fun acc fld -> field check record fld :: acc
 ;;

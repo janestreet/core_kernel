@@ -16,6 +16,7 @@ module Binable = Binable.Stable
 module Blang = Blang.Stable
 module Bool = Bool.Stable
 module Byte_units = Byte_units.Stable
+module Bytes = Bytes.Stable
 module Comparable = Comparable.Stable
 module Comparator = Comparator.Stable
 module Date = Date.Stable

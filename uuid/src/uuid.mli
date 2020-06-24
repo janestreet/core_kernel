@@ -27,7 +27,7 @@ val arg_type : t Command.Arg_type.t
 
 module Unstable : sig
   (** Unlike [Stable] deserializers, [Unstable.t_of_sexp] validates the input. *)
-  type nonrec t = t [@@deriving bin_io, compare, hash, sexp]
+  type nonrec t = t [@@deriving bin_io, compare, equal, hash, sexp]
 end
 
 module Stable : sig

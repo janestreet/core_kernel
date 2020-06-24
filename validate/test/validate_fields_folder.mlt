@@ -13,7 +13,7 @@ end = struct
   open M
 
   let validate t =
-    let w f = Validate.field_folder t f in
+    let w f = Validate.field_folder f t in
     Fields.fold ~init:[] ~a:(w (fun _ -> Validate.pass)) |> Validate.of_list
   ;;
 end
@@ -29,7 +29,7 @@ end = struct
   open M
 
   let validate t =
-    let w f = Validate.field_folder t f in
+    let w f = Validate.field_folder f t in
     Fields.fold ~init:[] ~a:(w (fun _ -> Validate.pass)) |> Validate.of_list
   ;;
 end
