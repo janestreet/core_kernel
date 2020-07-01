@@ -6,7 +6,7 @@ open Std_internal
 (** Exposing that this is a float allows for more optimization. E.g. compiler can
     optimize some local refs and not box them.
 *)
-type t = private float [@@deriving hash]
+type t = private float [@@deriving hash, typerep]
 
 (** [of_string] and [t_of_sexp] disallow [nan], [inf], etc. *)
 include

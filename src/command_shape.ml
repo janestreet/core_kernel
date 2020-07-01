@@ -548,10 +548,6 @@ module Flag_help_display = struct
   module Display : sig
     val to_string : t -> string
   end = struct
-    let longest_string strings =
-      List.fold strings ~init:0 ~f:(fun acc str -> Int.max acc (String.length str))
-    ;;
-
     let num_cols = 80
     let spaces_string width = String.make width ' '
 
@@ -560,41 +556,73 @@ module Flag_help_display = struct
       x ^ spaces_string slack
     ;;
 
-    let to_string t =
-      let longest_flag_name = longest_string (List.map ~f:Flag_info.name t) in
-      (* anything more dynamic is likely too brittle *)
-      let lhs_width = longest_flag_name + 4 in
-      let lhs_pad = spaces_string lhs_width in
-      let lhs_pad_and_newline_terminate = List.map ~f:(fun v -> [ lhs_pad; v; "\n" ]) in
-      let rows k v =
-        let word_wrapped_documentation = word_wrap_and_strip v (num_cols - lhs_width) in
-        match word_wrapped_documentation with
-        | [] -> [ "  "; k; "\n" ]
-        | doc_wrapped_first_line :: doc_wrapped_rest_lines ->
-          let first_line =
-            [ "  "
-            ; pad_spaces_to_suffix ~width:longest_flag_name k
-            ; "  "
-            ; doc_wrapped_first_line
-            ; "\n"
+    let indentation = "  "
+    let indent_and_newline x = List.concat [ [ indentation ]; x; [ "\n" ] ]
+    let spacing_dot = ". "
+
+    let dot_indentation_offset =
+      27
+    ;;
+
+    let documentation_start_column = dot_indentation_offset + String.length indentation
+    let lhs_width = documentation_start_column
+    let lhs_pad_width = dot_indentation_offset + String.length indentation
+    let lhs_pad = spaces_string lhs_pad_width
+
+    let lhs_pad_and_newline_terminate =
+      List.map ~f:(fun v -> indent_and_newline [ lhs_pad; v ])
+    ;;
+
+    let rows flag_name_with_aliases documentation =
+      let flag_on_its_own_line =
+        let flag_width =
+          String.length indentation + String.length flag_name_with_aliases
+        in
+        if flag_width >= dot_indentation_offset + String.length spacing_dot
+        then indent_and_newline [ flag_name_with_aliases ]
+        else
+          indent_and_newline
+            [ pad_spaces_to_suffix ~width:dot_indentation_offset flag_name_with_aliases
+            ; spacing_dot
             ]
-          in
-          let rest_lines = lhs_pad_and_newline_terminate doc_wrapped_rest_lines in
-          List.concat (first_line :: rest_lines)
       in
+      let wrapped_documentation =
+        word_wrap_and_strip
+          documentation
+          (num_cols - lhs_width - String.length indentation)
+      in
+      match wrapped_documentation with
+      | [] -> [ flag_on_its_own_line ]
+      | doc_wrapped_first_line :: doc_wrapped_rest_lines ->
+        let wrapped_doc_lines = lhs_pad_and_newline_terminate doc_wrapped_rest_lines in
+        let prefix_doc_wrapped_first_line_with x =
+          indent_and_newline
+            [ pad_spaces_to_suffix ~width:dot_indentation_offset x
+            ; spacing_dot
+            ; doc_wrapped_first_line
+            ]
+        in
+        if String.length flag_name_with_aliases >= dot_indentation_offset
+        then
+          flag_on_its_own_line
+          :: prefix_doc_wrapped_first_line_with ""
+          :: wrapped_doc_lines
+        else
+          prefix_doc_wrapped_first_line_with flag_name_with_aliases :: wrapped_doc_lines
+    ;;
+
+    let to_string t =
       List.concat_map t ~f:(fun t ->
-        rows t.name t.doc
-        ::
-        (match t.aliases with
-         | [] -> []
-         | [ x ] -> [ rows "" (sprintf "(alias: %s)" x) ]
-         | xs -> [ rows "" (sprintf "(aliases: %s)" (String.concat ~sep:", " xs)) ])
-        |> List.concat)
+        let flag_name_with_aliases =
+          let flag = t.Flag_info.name in
+          String.concat ~sep:", " (flag :: t.aliases)
+        in
+        rows flag_name_with_aliases t.doc |> List.concat)
       |> String.concat
     ;;
   end
 
-  let to_string = Display.to_string
+  let to_string t = Display.to_string t
 end
 
 module Key_type = struct
