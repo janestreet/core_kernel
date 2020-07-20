@@ -1,5 +1,5 @@
 open! Import
-open Binable_intf
+include Binable_intf
 include Bin_prot.Binable
 module Shape = Bin_prot.Shape
 module List = Base.List
@@ -197,32 +197,25 @@ module Of_binable2_with_uuid = Stable.Of_binable2.V2
 module Of_binable3_with_uuid = Stable.Of_binable3.V2
 module Of_sexpable_with_uuid = Stable.Of_sexpable.V2
 module Of_stringable_with_uuid = Stable.Of_stringable.V2
-
 module Of_binable_without_uuid = Stable.Of_binable.V1
-[@@alert legacy "Use [Of_binable_with_uuid] if possible."]
-
 module Of_binable1_without_uuid = Stable.Of_binable1.V1
-[@@alert legacy "Use [Of_binable1_with_uuid] if possible."]
-
 module Of_binable2_without_uuid = Stable.Of_binable2.V1
-[@@alert legacy "Use [Of_binable2_with_uuid] if possible."]
-
 module Of_binable3_without_uuid = Stable.Of_binable3.V1
-[@@alert legacy "Use [Of_binable3_with_uuid] if possible."]
-
 module Of_sexpable_without_uuid = Stable.Of_sexpable.V1
-[@@alert legacy "Use [Of_sexpable_with_uuid] if possible."]
-
 module Of_stringable_without_uuid = Stable.Of_stringable.V1
-[@@alert legacy "Use [Of_stringable_with_uuid] if possible."]
 
-module type S_only_functions_and_shape = sig
-  include S_only_functions
+let%test_module _ =
+  (module struct
+    module type S_only_functions_and_shape = sig
+      include S_only_functions
 
-  val bin_shape_t : Shape.t
-end
+      val bin_shape_t : Shape.t
+    end
 
-(* check that only the functions & shape are sufficient for [@@deriving bin_io] *)
-module Of_only_functions_and_shape (X : S_only_functions_and_shape) : S = struct
-  type t = X.t [@@deriving bin_io]
-end
+    (* Check that only the functions & shape are sufficient for [@@deriving bin_io]. The
+       fact that this functor typechecks is, itself, the test. *)
+    module Of_only_functions_and_shape (X : S_only_functions_and_shape) : S = struct
+      type t = X.t [@@deriving bin_io]
+    end
+  end)
+;;

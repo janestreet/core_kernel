@@ -72,7 +72,7 @@ end
 
 (** Module types and utilities for dealing with types that support the bin-io binary
     encoding. *)
-module type Binable = sig
+module type Binable0 = sig
   (** We copy the definition of the bigstring type here, because we cannot depend on
       bigstring.ml *)
   type bigstring = (char, int8_unsigned_elt, c_layout) Array1.t
@@ -148,30 +148,6 @@ module type Binable = sig
     S3 with type ('a, 'b, 'c) t := ('a, 'b, 'c) M.t
     [@@alert legacy "Use [Of_binable3_with_uuid] if possible."]
 
-  module Of_binable = Of_binable_without_uuid
-  [@@alert "-legacy"]
-  [@@deprecated
-    "[since 2019-11] Use [Of_binable_with_uuid] if possible, otherwise use \
-     [Of_binable_without_uuid]."]
-
-  module Of_binable1 = Of_binable1_without_uuid
-  [@@alert "-legacy"]
-  [@@deprecated
-    "[since 2019-11] Use [Of_binable1_with_uuid] if possible, otherwise use \
-     [Of_binable1_without_uuid]."]
-
-  module Of_binable2 = Of_binable2_without_uuid
-  [@@alert "-legacy"]
-  [@@deprecated
-    "[since 2019-11] Use [Of_binable2_with_uuid] if possible, otherwise use \
-     [Of_binable2_without_uuid]."]
-
-  module Of_binable3 = Of_binable3_without_uuid
-  [@@alert "-legacy"]
-  [@@deprecated
-    "[since 2019-11] Use [Of_binable3_with_uuid] if possible, otherwise use \
-     [Of_binable3_without_uuid]."]
-
   (** [Of_sexpable_with_uuid] serializes a value using the bin-io of the sexp
       serialization of the value. This is not as efficient as using [@@deriving bin_io].
       However, it is useful when performance isn't important and there are obstacles to
@@ -189,18 +165,6 @@ module type Binable = sig
   module Of_stringable_without_uuid (M : Stringable.S) : S with type t := M.t
     [@@alert legacy "Use [Of_stringable_with_uuid] if possible."]
 
-  module Of_sexpable = Of_sexpable_without_uuid
-  [@@alert "-legacy"]
-  [@@deprecated
-    "[since 2019-11] Use [Of_sexpable_with_uuid] if possible, otherwise use \
-     [Of_sexpable_without_uuid]."]
-
-  module Of_stringable = Of_stringable_without_uuid
-  [@@alert "-legacy"]
-  [@@deprecated
-    "[since 2019-11] Use [Of_stringable_with_uuid] if possible, otherwise use \
-     [Of_stringable_without_uuid]."]
-
   type 'a m = (module S with type t = 'a)
 
   val of_bigstring : 'a m -> bigstring -> 'a
@@ -210,9 +174,6 @@ module type Binable = sig
     -> 'a m
     -> 'a
     -> bigstring
-
-  val of_string : 'a m -> string -> 'a
-  val to_string : 'a m -> 'a -> string
 
   (** The following functors preserve stability: if applied to stable types with stable
       (de)serializations, they will produce stable types with stable (de)serializations.
@@ -265,4 +226,47 @@ module type Binable = sig
       module V2 : module type of Of_stringable_with_uuid
     end
   end
+end
+
+module type Binable = sig
+  include Binable0
+
+  val of_string : 'a m -> string -> 'a
+  val to_string : 'a m -> 'a -> string
+
+  module Of_binable = Of_binable_without_uuid
+  [@@alert "-legacy"]
+  [@@deprecated
+    "[since 2019-11] Use [Of_binable_with_uuid] if possible, otherwise use \
+     [Of_binable_without_uuid]."]
+
+  module Of_binable1 = Of_binable1_without_uuid
+  [@@alert "-legacy"]
+  [@@deprecated
+    "[since 2019-11] Use [Of_binable1_with_uuid] if possible, otherwise use \
+     [Of_binable1_without_uuid]."]
+
+  module Of_binable2 = Of_binable2_without_uuid
+  [@@alert "-legacy"]
+  [@@deprecated
+    "[since 2019-11] Use [Of_binable2_with_uuid] if possible, otherwise use \
+     [Of_binable2_without_uuid]."]
+
+  module Of_binable3 = Of_binable3_without_uuid
+  [@@alert "-legacy"]
+  [@@deprecated
+    "[since 2019-11] Use [Of_binable3_with_uuid] if possible, otherwise use \
+     [Of_binable3_without_uuid]."]
+
+  module Of_sexpable = Of_sexpable_without_uuid
+  [@@alert "-legacy"]
+  [@@deprecated
+    "[since 2019-11] Use [Of_sexpable_with_uuid] if possible, otherwise use \
+     [Of_sexpable_without_uuid]."]
+
+  module Of_stringable = Of_stringable_without_uuid
+  [@@alert "-legacy"]
+  [@@deprecated
+    "[since 2019-11] Use [Of_stringable_with_uuid] if possible, otherwise use \
+     [Of_stringable_without_uuid]."]
 end

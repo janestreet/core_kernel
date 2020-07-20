@@ -1,27 +1,8 @@
 (** Functors and interfaces used to make modules hashable. *)
 
 open! Import
+include Hashable_intf
 module Binable = Binable0
-
-module type Common = sig
-  type t [@@deriving compare, hash]
-
-  val hashable : t Hashtbl.Hashable.t
-end
-
-module type S_plain = sig
-  include Common
-  module Table : Hashtbl.S_plain with type key = t
-  module Hash_set : Hash_set.S_plain with type elt = t
-  module Hash_queue : Hash_queue.S with type key = t
-end
-
-module type S = sig
-  include Common
-  module Table : Hashtbl.S with type key = t
-  module Hash_set : Hash_set.S with type elt = t
-  module Hash_queue : Hash_queue.S with type key = t
-end
 
 module Make_plain (T : sig
     type t [@@deriving hash]
@@ -63,16 +44,6 @@ module Make_and_derive_hash_fold_t (T : Hashtbl.Key) : S with type t := T.t =
     let hash_fold_t state t = hash_fold_int state (hash t)
   end)
 
-module type S_binable = sig
-  type t [@@deriving hash]
-
-  val hashable : t Hashtbl.Hashable.t
-
-  module Table : Hashtbl.S_binable with type key = t
-  module Hash_set : Hash_set.S_binable with type elt = t
-  module Hash_queue : Hash_queue.S with type key = t
-end
-
 module Make_binable (T : sig
     type t [@@deriving hash]
 
@@ -93,23 +64,7 @@ module Make_binable_and_derive_hash_fold_t (T : Hashtbl.Key_binable) :
     let hash_fold_t state t = hash_fold_int state (hash t)
   end)
 
-module Stable : sig
-  module V1 : sig
-    module type S = sig
-      type key
-
-      module Table : sig
-        type 'a t = (key, 'a) Hashtbl.t [@@deriving sexp, bin_io]
-      end
-
-      module Hash_set : sig
-        type t = key Hash_set.t [@@deriving sexp, bin_io]
-      end
-    end
-
-    module Make (Key : Hashtbl.Key_binable) : S with type key := Key.t
-  end
-end = struct
+module Stable = struct
   module V1 = struct
     module type S = sig
       type key

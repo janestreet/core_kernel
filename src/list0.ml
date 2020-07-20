@@ -10,15 +10,7 @@ module Assoc = struct
 
   type ('a, 'b) t = ('a * 'b) list [@@deriving bin_io]
 
-  let[@deprecated
-    "[since 2016-06] This does not respect the equivalence class promised by \
-     List.Assoc. Use List.compare directly if that's what you want."] compare
-                                                                        (type a b)
-                                                                        compare_a
-                                                                        compare_b
-    =
-    [%compare: (a * b) list]
-  ;;
+  let compare (type a b) compare_a compare_b = [%compare: (a * b) list]
 end
 
 let to_string ~f t =

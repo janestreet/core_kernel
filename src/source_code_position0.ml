@@ -10,7 +10,7 @@ module Stable = struct
       ; pos_bol : int
       ; pos_cnum : int
       }
-    [@@deriving bin_io, compare, hash, sexp]
+    [@@deriving bin_io, compare, fields, hash, sexp]
   end
 end
 
