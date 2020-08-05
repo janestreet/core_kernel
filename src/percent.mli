@@ -151,7 +151,7 @@ val sign_exn : t -> Sign.t
 
 module Stable : sig
   module V1 : sig
-    type nonrec t = t [@@deriving sexp, bin_io, compare, hash]
+    type nonrec t = t [@@deriving sexp, bin_io, compare, hash, equal]
   end
 
   module Option : sig

@@ -441,15 +441,11 @@ val consume_bin_prot
 
 (** [Blit] copies between iobufs and advances neither [src] nor [dst]. *)
 module Blit : sig
-  (** [Blit.S1_permissions] defines the type parameters in reverse order! *)
-  include
-    Blit.S1_permissions with type ('seek, 'rw) t := ('rw, 'seek) t
-
-  (** Override types of [sub] and [subo] to allow return type to have [seek/no_seek] as
-      needed. *)
-  val sub : ([> read ], _) t -> pos:int -> len:int -> (_, _) t
-
-  val subo : ?pos:int -> ?len:int -> ([> read ], _) t -> (_, _) t
+  val blit : (([> read ], _) t, ([> write ], _) t) Base.Blit.blit
+  val blito : (([> read ], _) t, ([> write ], _) t) Base.Blit.blito
+  val unsafe_blit : (([> read ], _) t, ([> write ], _) t) Base.Blit.blit
+  val sub : (([> read ], _) t, (_, _) t) Base.Blit.sub
+  val subo : (([> read ], _) t, (_, _) t) Base.Blit.subo
 
   (** Copies as much as possible (returning the number of bytes copied) without running
       out of either buffer's window. *)
