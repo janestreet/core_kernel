@@ -90,8 +90,7 @@ let%test_module "Hash_set.V1" =
          ; ( Int.Hash_set.create ()
            , { Test.sexps = []; bin_io_header = "\000"; bin_io_elements = [] } )
          ; ( single_set
-           , { Test.sexps = [ "0" ]; bin_io_header = "\001"; bin_io_elements = [ "\000" ] }
-           )
+           , { Test.sexps = [ "0" ]; bin_io_header = "\001"; bin_io_elements = [ "\000" ] } )
          ]
        ;;
      end))

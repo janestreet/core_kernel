@@ -45,8 +45,7 @@ let invariant invariant_key invariant_data t =
     assert (num_keys = Array.length t.entries_by_key);
     assert (num_keys = Array.length t.defined_entries);
     assert (0 <= t.length && t.length <= num_keys);
-    Array.iteri t.entries_by_key ~f:(fun i ->
-      function
+    Array.iteri t.entries_by_key ~f:(fun i -> function
       | None -> ()
       | Some entry ->
         invariant_key entry.Entry.key;
@@ -277,8 +276,7 @@ let equal key_equal data_equal t1 t2 =
   && for_alli t1 ~f:(fun ~key ~data ->
     match entry_opt t2 key with
     | None -> false
-    | Some entry ->
-      key_equal key entry.Entry.key && data_equal data entry.Entry.data)
+    | Some entry -> key_equal key entry.Entry.key && data_equal data entry.Entry.data)
 ;;
 
 module With_key (Key : sig

@@ -583,8 +583,7 @@ end = struct
         let t = Example.t size in
         stage (fun () ->
           ignore
-            (add t ~key:(Example.random_key r `either) ~data:0
-             : [ `Ok | `Duplicate ]);
+            (add t ~key:(Example.random_key r `either) ~data:0 : [ `Ok | `Duplicate ]);
           remove t (Example.random_key r `either)))
     ;;
 
@@ -873,8 +872,7 @@ end = struct
           stage (fun () -> ignore (merge t1 t2 ~f:merge_fun : int t)))
       in
       bench "drop" (fun ~key:_ _ -> None);
-      bench "keep" (fun ~key:_ ->
-        function
+      bench "keep" (fun ~key:_ -> function
         | `Left data | `Right data -> Some data
         | `Both (left, right) -> Some (left + right))
     ;;

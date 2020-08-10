@@ -55,9 +55,7 @@ let add_saturating x y =
   let sum = add x y in
   if add_overflowed x y ~sum
   then
-    if Span.(y > zero)
-    then Span.max_value_representable
-    else Span.min_value_representable
+    if Span.(y > zero) then Span.max_value_representable else Span.min_value_representable
   else sum
 ;;
 
@@ -65,9 +63,7 @@ let sub_saturating x y =
   let diff = sub x y in
   if sub_overflowed x y ~diff
   then
-    if Span.(y > zero)
-    then Span.min_value_representable
-    else Span.max_value_representable
+    if Span.(y > zero) then Span.min_value_representable else Span.max_value_representable
   else diff
 ;;
 

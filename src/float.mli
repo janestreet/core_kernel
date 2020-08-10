@@ -22,8 +22,7 @@ module Robust_compare : sig
 end
 
 (** The results of robust comparisons on [nan] should be considered undefined. *)
-include
-  Robust_compare.S
+include Robust_compare.S
 
 module O : sig
   include module type of struct

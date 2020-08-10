@@ -23,8 +23,7 @@ module type S = sig
   type 'a t [@@deriving sexp]
 
   (** Much of a bag's interface comes from the generic {!Base.Container} module. *)
-  include
-    Container.S1 with type 'a t := 'a t
+  include Container.S1 with type 'a t := 'a t
 
   include Invariant.S1 with type 'a t := 'a t
 

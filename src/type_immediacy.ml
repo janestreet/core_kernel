@@ -320,8 +320,7 @@ let int_as_value_exn (type a) (t : a t) int =
   if int_is_value t int
   then (Obj.magic (int : int) : a)
   else
-    failwith
-      (sprintf "Immediate.int_as_value_exn: typename:%S int:%d" (T.typename t) int)
+    failwith (sprintf "Immediate.int_as_value_exn: typename:%S int:%d" (T.typename t) int)
 ;;
 
 let value_as_int_exn (type a) (t : a t) a =

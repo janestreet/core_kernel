@@ -9,9 +9,7 @@ let generic_mk_set_and_print_for_test ~to_string ~set ~get buf =
     | e -> printf !"%s: %{Exn}\n" test_name e)
 ;;
 
-let mk_set_and_print_for_test =
-  generic_mk_set_and_print_for_test ~to_string:string_of_int
-;;
+let mk_set_and_print_for_test = generic_mk_set_and_print_for_test ~to_string:string_of_int
 
 let generic_test_get ~to_string get buf ~pos =
   try printf "%s\n" (to_string (get buf ~pos)) with

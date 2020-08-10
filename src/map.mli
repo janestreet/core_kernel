@@ -457,10 +457,7 @@ val data : (_, 'v, _) t -> 'v list
 
     @param key_order default is [`Increasing]
 *)
-val to_alist
-  :  ?key_order:[ `Increasing | `Decreasing ]
-  -> ('k, 'v, _) t
-  -> ('k * 'v) list
+val to_alist : ?key_order:[ `Increasing | `Decreasing ] -> ('k, 'v, _) t -> ('k * 'v) list
 
 val validate : name:('k -> string) -> 'v Validate.check -> ('k, 'v, _) t Validate.check
 
@@ -852,8 +849,7 @@ module Make_using_comparator (Key : sig
     type t [@@deriving sexp]
 
     include Comparator.S with type t := t
-  end) :
-  S with type Key.t = Key.t with type Key.comparator_witness = Key.comparator_witness
+  end) : S with type Key.t = Key.t with type Key.comparator_witness = Key.comparator_witness
 
 module Make_binable (Key : Key_binable) : S_binable with type Key.t = Key.t
 

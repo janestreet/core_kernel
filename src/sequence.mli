@@ -34,8 +34,7 @@ include module type of struct
 end
 with type 'a t := 'a Base.Sequence.t
  and module Step := Base.Sequence.Step
- and module Merge_with_duplicates_element := Base.Sequence
-                                             .Merge_with_duplicates_element
+ and module Merge_with_duplicates_element := Base.Sequence.Merge_with_duplicates_element
 
 module type Heap = sig
   type 'a t

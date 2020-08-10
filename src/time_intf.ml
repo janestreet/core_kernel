@@ -34,8 +34,7 @@ module type Basic = sig
 
   include module type of struct
     include Time
-  end
-                         [@ocaml.remove_aliases]
+  end [@ocaml.remove_aliases]
 
   (** [now ()] returns a [t] representing the current time *)
   val now : unit -> t
@@ -153,8 +152,7 @@ module type Shared = sig
 
   (** The [{to,of}_string] functions in [Time] convert to UTC time, because a local time
       zone is not necessarily available.  They are generous in what they will read in. *)
-  include
-    Stringable with type t := t
+  include Stringable with type t := t
 
   (** [to_filename_string t ~zone] converts [t] to string with format
       YYYY-MM-DD_HH-MM-SS.mmm which is suitable for using in filenames. *)

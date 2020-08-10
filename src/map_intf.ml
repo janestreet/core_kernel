@@ -86,11 +86,7 @@ module type Accessors1 = sig
 
   val key_set : _ t -> (key, comparator_witness) Base.Set.t
   val validate : name:(key -> string) -> 'a Validate.check -> 'a t Validate.check
-
-  val validatei
-    :  name:(key -> string)
-    -> (key * 'a) Validate.check
-    -> 'a t Validate.check
+  val validatei : name:(key -> string) -> (key * 'a) Validate.check -> 'a t Validate.check
 
   val quickcheck_observer
     :  key Quickcheck.Observer.t

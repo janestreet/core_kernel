@@ -102,8 +102,8 @@ val file : string -> t
 
 val channel : in_channel -> int -> t
 [@@ocaml.deprecated
-  "[since 2017-07] blocking functions should be avoided. Use [channel_blocking] if \
-   you really want this."]
+  "[since 2017-07] blocking functions should be avoided. Use [channel_blocking] if you \
+   really want this."]
 
 val output : out_channel -> t -> unit
 [@@ocaml.deprecated

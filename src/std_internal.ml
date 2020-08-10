@@ -153,8 +153,7 @@ struct
 
   include (
   struct
-    type float_array = Float.t array
-    [@@deriving compare, sexp, sexp_grammar, typerep]
+    type float_array = Float.t array [@@deriving compare, sexp, sexp_grammar, typerep]
   end :
   sig
     type float_array [@@deriving compare, sexp, sexp_grammar, typerep]

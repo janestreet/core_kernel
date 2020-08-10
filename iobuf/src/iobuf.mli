@@ -61,8 +61,7 @@ module Limits : Hexdump.S2 with type ('rw, 'seek) t := ('rw, 'seek) t
 
 (** Provides a [Hexdump] submodule that renders the contents of [t]'s window and limits
     using indices relative to the limits. *)
-include
-  Compound_hexdump with type ('rw, 'seek) t := ('rw, 'seek) t
+include Compound_hexdump with type ('rw, 'seek) t := ('rw, 'seek) t
 
 (** Provides a [Debug.Hexdump] submodule that renders the contents of [t]'s window,
     limits, and underlying bigstring using indices relative to the bigstring. *)
@@ -536,12 +535,7 @@ module Blit_consume_and_fill : sig
     -> unit
     -> unit
 
-  val unsafe_blit
-    :  src:([> read ], seek) t
-    -> dst:([> write ], seek) t
-    -> len:int
-    -> unit
-
+  val unsafe_blit : src:([> read ], seek) t -> dst:([> write ], seek) t -> len:int -> unit
   val blit_maximal : src:([> read ], seek) t -> dst:([> write ], seek) t -> int
 end
 

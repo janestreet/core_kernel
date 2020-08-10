@@ -178,8 +178,7 @@ let%test_module "round_significant" =
         test
           Float.gen_without_nan
           ~trials:10_000
-          ~sexp_of:(fun float ->
-            [%message "" (float : float) (significant_digits : int)])
+          ~sexp_of:(fun float -> [%message "" (float : float) (significant_digits : int)])
           ~f:(fun x ->
             let s = sprintf "%.*g" significant_digits x |> Float.of_string in
             assert (

@@ -767,8 +767,7 @@ let check_range_for_1us_rounding t =
 ;;
 
 let to_span_float_round_nearest_microsecond t =
-  Span_float.of_us
-    (Int63.to_float (nearest_microsecond (check_range_for_1us_rounding t)))
+  Span_float.of_us (Int63.to_float (nearest_microsecond (check_range_for_1us_rounding t)))
 ;;
 
 let min_span_float_value_for_1us_rounding =

@@ -175,11 +175,7 @@ struct
     let mid = List.nth_exn samples (List.length samples / 2)
     let pred t = of_int (to_int t - 1)
     let succ t = of_int (to_int t + 1)
-
-    let quickcheck_generator =
-      Quickcheck.Generator.map Int.quickcheck_generator ~f:of_int
-    ;;
-
+    let quickcheck_generator = Quickcheck.Generator.map Int.quickcheck_generator ~f:of_int
     let quickcheck_observer = Quickcheck.Observer.unmap Int.quickcheck_observer ~f:to_int
   end
 
@@ -466,10 +462,8 @@ struct
       assert (List.permute alist |> Map.of_alist_exn |> Map.invariants);
       assert (Array.of_list alist |> Map.of_sorted_array_unchecked |> Map.invariants);
       assert (
-        List.rev alist
-        |> Array.of_list
-        |> Map.of_sorted_array_unchecked
-        |> Map.invariants);
+        List.rev alist |> Array.of_list |> Map.of_sorted_array_unchecked |> Map.invariants
+      );
       assert (
         Sequence.of_list alist
         |> Map.of_increasing_sequence
@@ -1117,8 +1111,7 @@ struct
   let%test _ =
     let map = random_map Key.samples in
     let added_to_self =
-      Map.merge map map ~f:(fun ~key:_ ->
-        function
+      Map.merge map map ~f:(fun ~key:_ -> function
         | `Left _ | `Right _ -> assert false
         | `Both (x1, x2) -> Some (x1 + x2))
     in
@@ -1256,12 +1249,10 @@ struct
     let max_key_element = Map.find_exn map max_key in
     assert ([%equal: Key.t * int] (Map.max_elt_exn map) (max_key, max_key_element));
     assert (
-      [%equal: (Key.t * int) option] (Map.max_elt map) (Some (max_key, max_key_element))
-    );
+      [%equal: (Key.t * int) option] (Map.max_elt map) (Some (max_key, max_key_element)));
     assert ([%equal: Key.t * int] (Map.min_elt_exn map) (min_key, min_key_element));
     assert (
-      [%equal: (Key.t * int) option] (Map.min_elt map) (Some (min_key, min_key_element))
-    )
+      [%equal: (Key.t * int) option] (Map.min_elt map) (Some (min_key, min_key_element)))
   ;;
 
   let%test _ = [%equal: (Key.t * int) option] (Map.min_elt (Map.empty ())) None
@@ -1384,9 +1375,7 @@ struct
       ;;
 
       let%test_unit _ =
-        let keys_greater_or_equal_to, keys_less_or_equal_to =
-          Key.mid, Key.pred Key.max
-        in
+        let keys_greater_or_equal_to, keys_less_or_equal_to = Key.mid, Key.pred Key.max in
         Map.to_sequence
           m
           ~order:`Increasing_key
@@ -1406,9 +1395,7 @@ struct
       ;;
 
       let%test_unit _ =
-        let keys_greater_or_equal_to, keys_less_or_equal_to =
-          Key.succ Key.min, Key.mid
-        in
+        let keys_greater_or_equal_to, keys_less_or_equal_to = Key.succ Key.min, Key.mid in
         Map.to_sequence
           m
           ~order:`Decreasing_key
@@ -1437,10 +1424,7 @@ struct
       ;;
 
       let%test_unit _ =
-        Map.to_sequence
-          ~order:`Decreasing_key
-          ~keys_less_or_equal_to:(Key.pred Key.min)
-          m
+        Map.to_sequence ~order:`Decreasing_key ~keys_less_or_equal_to:(Key.pred Key.min) m
         <=> []
       ;;
 
@@ -1514,23 +1498,20 @@ struct
         let m1 = Map.of_alist_exn [ k1, 1 ] in
         let m2 = Map.of_alist_exn [ k2, 2 ] in
         let m' =
-          Map.merge m1 m2 ~f:(fun ~key:_ ->
-            function
+          Map.merge m1 m2 ~f:(fun ~key:_ -> function
             | `Both _ -> assert false
             | `Left x | `Right x -> Some x)
         in
         assert (Map.length m' = 2);
         let m3 = Map.of_alist_exn [ k1, 2 ] in
         let m' =
-          Map.merge m1 m3 ~f:(fun ~key:_ ->
-            function
+          Map.merge m1 m3 ~f:(fun ~key:_ -> function
             | `Both (x, _) -> Some x
             | `Left _ | `Right _ -> assert false)
         in
         assert (Map.length m' = 1);
         let m' =
-          Map.merge m1 m3 ~f:(fun ~key:_ ->
-            function
+          Map.merge m1 m3 ~f:(fun ~key:_ -> function
             | `Both (_, _) -> None
             | `Left _ | `Right _ -> assert false)
         in
@@ -1538,8 +1519,7 @@ struct
         let m4 = Map.of_alist_exn [ k1, 1; k2, 2; k3, 3 ] in
         let m5 = Map.of_alist_exn [ k3, 99; k4, 4 ] in
         let m' =
-          Map.merge m4 m5 ~f:(fun ~key:_ ->
-            function
+          Map.merge m4 m5 ~f:(fun ~key:_ -> function
             | `Both (x, _) -> Some x
             | `Left x | `Right x -> Some x)
         in
@@ -1595,8 +1575,7 @@ struct
     assert (optional_key_equal min_key (Map.closest_key map `Greater_or_equal_to min_key));
     assert (optional_key_equal max_key (Map.closest_key map `Less_or_equal_to max_key));
     assert (optional_key_equal max_key (Map.closest_key map `Greater_or_equal_to max_key));
-    assert (
-      optional_key_equal after_min (Map.closest_key map `Less_or_equal_to after_min));
+    assert (optional_key_equal after_min (Map.closest_key map `Less_or_equal_to after_min));
     assert (
       optional_key_equal after_min (Map.closest_key map `Greater_or_equal_to after_min));
     assert (
@@ -1810,8 +1789,7 @@ struct
   let%test_module "binary_search" =
     (module struct
       let small_map =
-        Map.of_alist_exn
-          (List.map ~f:(Tuple2.map_fst ~f:Key.of_int) [ 1, 1; 2, 2; 3, 3 ])
+        Map.of_alist_exn (List.map ~f:(Tuple2.map_fst ~f:Key.of_int) [ 1, 1; 2, 2; 3, 3 ])
       ;;
 
       let compare_key ~key ~data:_ k = Int.compare (Key.to_int key) k
@@ -1942,8 +1920,7 @@ struct
     | `Map ->
       let ts = [ Map.empty (); Map.of_alist_exn [ Key.sample, 13 ] ] in
       List.iter ts ~f:(fun t1 ->
-        List.iter ts ~f:(fun t2 ->
-          assert (Exn.does_raise (fun () -> Poly.equal t1 t2))))
+        List.iter ts ~f:(fun t2 -> assert (Exn.does_raise (fun () -> Poly.equal t1 t2))))
   ;;
 
   let key_set _ = assert false
@@ -2004,8 +1981,7 @@ struct
       let%test_unit _ = can_generate (fun t -> Map.length t >= 3)
 
       let%test_unit _ =
-        can_generate (fun t ->
-          Map.existsi t ~f:(fun ~key ~data:_ -> Key.to_int key >= 0))
+        can_generate (fun t -> Map.existsi t ~f:(fun ~key ~data:_ -> Key.to_int key >= 0))
       ;;
 
       let%test_unit _ =

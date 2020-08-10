@@ -404,8 +404,7 @@ module Stable = struct
           | Expt
 
         let state_is_final = function
-          | In_integer_have_digit | In_decimal_have_digit | In_exponent_have_digit ->
-            true
+          | In_integer_have_digit | In_decimal_have_digit | In_exponent_have_digit -> true
           | In_integer_need_digit
           | In_decimal_need_digit
           | In_exponent_need_digit_or_sign

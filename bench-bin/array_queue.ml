@@ -72,9 +72,7 @@ let tests =
   @ blit_transfer_tests
   @ enqueue_tests
   @
-  let args =
-    List.init 10 ~f:(fun i -> Float.iround_nearest_exn (2. ** Float.of_int i))
-  in
+  let args = List.init 10 ~f:(fun i -> Float.iround_nearest_exn (2. ** Float.of_int i)) in
   [ Bench.Test.create_indexed ~name:"Queue.enqueue + dequeue" ~args (fun num_elts ->
       let t = Queue.create () in
       for _ = 1 to num_elts do

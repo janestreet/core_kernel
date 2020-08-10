@@ -165,10 +165,7 @@ end
 
 let create () = raise_s [%message "[Uuid.create] is deprecated"]
 let quickcheck_shrinker : t Quickcheck.Shrinker.t = Quickcheck.Shrinker.empty ()
-
-let quickcheck_observer : t Quickcheck.Observer.t =
-  Quickcheck.Observer.of_hash (module T)
-;;
+let quickcheck_observer : t Quickcheck.Observer.t = Quickcheck.Observer.of_hash (module T)
 
 let quickcheck_generator : t Quickcheck.Generator.t =
   let open Quickcheck.Generator.Let_syntax in

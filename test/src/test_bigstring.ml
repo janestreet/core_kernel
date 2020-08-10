@@ -133,10 +133,7 @@ let%test_module _ =
       read_bin_prot_verbose_errors t ~pos:6 String.bin_reader_t = `Ok ("foo", 18)
     ;;
 
-    let%test_unit "negative size" =
-      test_string ~size:(-1) "\003foo" ~expect:`Invalid_data
-    ;;
-
+    let%test_unit "negative size" = test_string ~size:(-1) "\003foo" ~expect:`Invalid_data
     let%test_unit "wrong size" = test_string ~size:3 "\003foo" ~expect:`Invalid_data
     let%test_unit "bad bin-prot" = test_string ~size:4 "\007foo" ~expect:`Invalid_data
 

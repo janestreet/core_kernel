@@ -68,9 +68,7 @@ let%bench_fun "Bus.write5 to 300 subs" =
   fun () -> write5 t 1 2 3 4 5
 ;;
 
-let%bench_fun "Bus.subscribe_exn 300 times" =
-  fun () -> create Arity1 ~num_subscribers:300
-;;
+let%bench_fun "Bus.subscribe_exn 300 times" = fun () -> create Arity1 ~num_subscribers:300
 
 let%bench_fun "Bus.subscribe_exn + Bus.unsubscribe_exn 300 times" =
   fun () ->

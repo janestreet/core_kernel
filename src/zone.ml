@@ -445,13 +445,10 @@ let index_upper_bound_contains_seconds_since_epoch t index ~mode seconds =
 ;;
 
 let binary_search_index_of_seconds_since_epoch t ~mode seconds : Index.t =
-  Array.binary_search_segmented
-    t.transitions
-    `Last_on_left
-    ~segment_of:(fun transition ->
-      if Int63.( <= ) (effective_start_time transition ~mode) seconds
-      then `Left
-      else `Right)
+  Array.binary_search_segmented t.transitions `Last_on_left ~segment_of:(fun transition ->
+    if Int63.( <= ) (effective_start_time transition ~mode) seconds
+    then `Left
+    else `Right)
   |> Option.value ~default:Index.before_first_transition
 ;;
 
@@ -533,9 +530,7 @@ let index_prev_clock_shift_time_exn t index =
   |> Time_in_seconds.of_span_since_epoch
 ;;
 
-let index_next_clock_shift_time_exn t index =
-  index_prev_clock_shift_time_exn t (index + 1)
-;;
+let index_next_clock_shift_time_exn t index = index_prev_clock_shift_time_exn t (index + 1)
 
 let index_prev_clock_shift_amount_exn t index =
   let transition = t.transitions.(index) in

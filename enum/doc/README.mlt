@@ -11,9 +11,7 @@ Suppose for example we had this simple variant type:
 |}]
 
 open! Core
-
 open Expect_test_helpers_core
-
 open Expect_test_helpers_async
 
 module Mode = struct
@@ -152,8 +150,7 @@ let () =
 
 [%%expect {| T doc with custom [represent_choice_with], T can be (a|a-also|b) |}]
 
-[%%org
-  {|
+[%%org {|
   [Enum.Make\_stringable] converts [Enum.S] modules to [Stringable] modules.
 |}]
 

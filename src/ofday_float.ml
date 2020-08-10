@@ -83,8 +83,7 @@ module Stable = struct
         let module C = Float.Class in
         let s = Span.to_sec span in
         match Float.classify s with
-        | C.Infinite ->
-          invalid_arg "Ofday.of_span_since_start_of_day_exn: infinite value"
+        | C.Infinite -> invalid_arg "Ofday.of_span_since_start_of_day_exn: infinite value"
         | C.Nan -> invalid_arg "Ofday.of_span_since_start_of_day_exn: NaN value"
         | C.Normal | C.Subnormal | C.Zero ->
           if not (is_valid s)
@@ -189,10 +188,7 @@ module Stable = struct
 
     let to_string_trimmed t = to_string_gen ~drop_ms:false ~drop_us:false ~trim:true t
     let to_sec_string t = to_string_gen ~drop_ms:true ~drop_us:true ~trim:false t
-
-    let to_millisecond_string t =
-      to_string_gen ~drop_ms:false ~drop_us:true ~trim:false t
-    ;;
+    let to_millisecond_string t = to_string_gen ~drop_ms:false ~drop_us:true ~trim:false t
 
     let small_diff =
       let hour = 3600. in

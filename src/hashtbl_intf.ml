@@ -118,10 +118,7 @@ module type Creators = Hashtbl.Private.Creators_generic
 module type Accessors = sig
   include Hashtbl.Accessors
 
-  val validate
-    :  name:('a key -> string)
-    -> 'b Validate.check
-    -> ('a, 'b) t Validate.check
+  val validate : name:('a key -> string) -> 'b Validate.check -> ('a, 'b) t Validate.check
 end
 
 module type Multi = Hashtbl.Multi
@@ -197,18 +194,14 @@ end
 module type Hashtbl = sig
   include Hashtbl.S_without_submodules (** @inline *)
 
-  val validate
-    :  name:('a key -> string)
-    -> 'b Validate.check
-    -> ('a, 'b) t Validate.check
+  val validate : name:('a key -> string) -> 'b Validate.check -> ('a, 'b) t Validate.check
 
   module Using_hashable : sig
     include
       Creators
       with type ('a, 'b) t := ('a, 'b) t
       with type 'a key := 'a key
-      with type ('a, 'b, 'z) create_options :=
-        ('a, 'b, 'z) create_options_with_hashable
+      with type ('a, 'b, 'z) create_options := ('a, 'b, 'z) create_options_with_hashable
   end
 
   module Poly : sig

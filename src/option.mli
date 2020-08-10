@@ -26,5 +26,4 @@ end
     [Optional_syntax].  Since [Optional_syntax] can only be opted into at the granularity
     of the whole match expression, we need this [Optional_syntax] support for options in
     order to use it for the other half of the tuple. *)
-module Optional_syntax :
-  Optional_syntax.S1 with type 'a t := 'a t and type 'a value := 'a
+module Optional_syntax : Optional_syntax.S1 with type 'a t := 'a t and type 'a value := 'a

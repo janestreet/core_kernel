@@ -84,8 +84,7 @@ let%expect_test "of string failure" =
 ;;
 
 let%expect_test "of sexp failure" =
-  Or_error.try_with (fun () -> Even_int_id.t_of_sexp (Sexp.of_string "15"))
-  |> print_error;
+  Or_error.try_with (fun () -> Even_int_id.t_of_sexp (Sexp.of_string "15")) |> print_error;
   [%expect {|
     (Of_sexp_error "(\"Not a valid Even_int_id\"15)" (invalid_sexp 15)) |}]
 ;;

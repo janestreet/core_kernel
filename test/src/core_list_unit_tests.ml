@@ -156,9 +156,7 @@ let%test_module "random" =
              (List.quickcheck_generator quickcheck_generator)
              (G.fn quickcheck_observer Bool.quickcheck_generator))
           ~f:(fun (list, f) ->
-            [%test_eq: bool]
-              (List.for_all list ~f)
-              (not (List.exists list ~f:(Fn.non f))))
+            [%test_eq: bool] (List.for_all list ~f) (not (List.exists list ~f:(Fn.non f))))
       ;;
 
       let%test_unit "exists vs mem" =
@@ -424,8 +422,7 @@ let%test_module "random" =
             let list1, list2 = List.unzip pair_list in
             [%test_eq: t]
               (List.fold2_exn list1 list2 ~init ~f)
-              (List.fold (List.zip_exn list1 list2) ~init ~f:(fun acc (x, y) ->
-                 f acc x y)))
+              (List.fold (List.zip_exn list1 list2) ~init ~f:(fun acc (x, y) -> f acc x y)))
       ;;
 
       let%test_unit "unzip + for_all2_exn vs for_all" =
@@ -534,10 +531,7 @@ let%test_module "random" =
              (List.quickcheck_generator quickcheck_generator)
              (G.fn
                 quickcheck_observer
-                (G.variant3
-                   quickcheck_generator
-                   quickcheck_generator
-                   quickcheck_generator
+                (G.variant3 quickcheck_generator quickcheck_generator quickcheck_generator
                  >>| partition_of_variant)))
           ~f:(fun (list, f) ->
             [%test_eq: t list * t list * t list]
@@ -690,9 +684,7 @@ let%test_module "random" =
              (List.quickcheck_generator quickcheck_generator)
              (G.fn quickcheck_observer quickcheck_generator))
           ~f:(fun (list, f) ->
-            [%test_eq: t list]
-              (List.rev (List.map list ~f))
-              (List.map (List.rev list) ~f))
+            [%test_eq: t list] (List.rev (List.map list ~f)) (List.map (List.rev list) ~f))
       ;;
 
       let%test_unit "map + append vs append + map" =

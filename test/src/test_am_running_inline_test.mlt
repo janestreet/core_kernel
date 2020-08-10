@@ -2,14 +2,12 @@ open! Core_kernel
 
 let () = print_s [%message (am_running_inline_test : bool)]
 
-[%%expect
-  {|
+[%%expect {|
 (am_running_inline_test false)
 |}]
 
 let () = print_s [%message (am_running_test : bool)]
 
-[%%expect
-  {|
+[%%expect {|
 (am_running_test false)
 |}]

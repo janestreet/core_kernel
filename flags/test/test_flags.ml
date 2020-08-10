@@ -23,9 +23,7 @@ let%expect_test _ =
 ;;
 
 let%expect_test _ =
-  let print_hex bit =
-    print_s [%sexp (create ~bit |> Int63.Hex.to_string_hum : string)]
-  in
+  let print_hex bit = print_s [%sexp (create ~bit |> Int63.Hex.to_string_hum : string)] in
   print_hex 0;
   [%expect {|
     0x1 |}];

@@ -99,11 +99,7 @@ let return_unused_elt t (elt : _ Elt.t) =
 ;;
 
 let[@cold] raise_dequeue_empty t =
-  failwiths
-    ~here:[%here]
-    "Thread_safe_queue.dequeue_exn of empty queue"
-    t
-    [%sexp_of: _ t]
+  failwiths ~here:[%here] "Thread_safe_queue.dequeue_exn of empty queue" t [%sexp_of: _ t]
 ;;
 
 let dequeue_exn t =

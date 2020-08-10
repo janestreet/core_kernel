@@ -389,8 +389,7 @@ module type Command = sig
 
           See example/command/main.ml for more examples.
       *)
-      include
-        Applicative.S with type 'a t := 'a t
+      include Applicative.S with type 'a t := 'a t
 
       (** {2 Various internal values} *)
 
@@ -810,10 +809,11 @@ module type Command = sig
     :  summary:string
     -> ?readme:(unit -> string)
     -> ?child_subcommand:string list
-    -> path_to_exe:[ `Absolute of string
-                   | `Relative_to_argv0 of string
-                   | `Relative_to_me of string
-                   ]
+    -> path_to_exe:
+         [ `Absolute of string
+         | `Relative_to_argv0 of string
+         | `Relative_to_me of string
+         ]
     -> unit
     -> t
 

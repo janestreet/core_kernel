@@ -445,10 +445,7 @@ let%test_unit "Byte_units.to_string / Byte_units.of_string" =
 ;;
 
 let%test_unit "Byte_units.to_string_hum / Byte_units.of_string" =
-  ensure_round_trippable
-    Byte_units.to_string_hum
-    Byte_units.of_string
-    ~tolerance:`Epsilon
+  ensure_round_trippable Byte_units.to_string_hum Byte_units.of_string ~tolerance:`Epsilon
 ;;
 
 let%test_unit "Byte_units.to_string_short / Byte_units.of_string" =

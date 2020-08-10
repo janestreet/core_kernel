@@ -9,9 +9,7 @@ module Stable : sig
     type nonrec comparator_witness = comparator_witness
 
     include
-      Stable_int63able
-      with type t := t
-      with type comparator_witness := comparator_witness
+      Stable_int63able with type t := t with type comparator_witness := comparator_witness
 
     include
       Comparable.Stable.V1.S

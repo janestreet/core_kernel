@@ -50,9 +50,7 @@ let%test_module "[Peek]" =
     let%test_unit "bin_prot int" =
       let ints = [ 0; 1; -1; 12345; -67890; Int.min_value; Int.max_value; 666 ] in
       let buf = Bigstring.create 1000 in
-      let end_pos =
-        List.fold ints ~init:0 ~f:(fun pos i -> Int.bin_write_t buf ~pos i)
-      in
+      let end_pos = List.fold ints ~init:0 ~f:(fun pos i -> Int.bin_write_t buf ~pos i) in
       let t = of_bigstring buf in
       List.fold ints ~init:0 ~f:(fun pos i ->
         [%test_eq: int] i (bin_prot Int.bin_reader_t t ~pos);
@@ -607,8 +605,7 @@ struct
         assert (String.equal (to_string buf) "123abcDEF" && String.equal !sub "abc");
         sub := ""
     in
-    test_and_reset (fun () ->
-      Iobuf.protect_window_and_bounds buf ~f:(fun buf -> f buf 3));
+    test_and_reset (fun () -> Iobuf.protect_window_and_bounds buf ~f:(fun buf -> f buf 3));
     test_and_reset (fun () -> Iobuf.protect_window_and_bounds_1 buf 3 ~f)
   ;;
 
@@ -665,8 +662,7 @@ struct
           | Error _ -> assert (not is_valid)
           | Ok t ->
             assert is_valid;
-            assert (
-              String.equal (to_string t) (Bigstring.to_string bigstring ?pos ?len))))
+            assert (String.equal (to_string t) (Bigstring.to_string bigstring ?pos ?len))))
   ;;
 
   let advance = advance
@@ -831,13 +827,7 @@ struct
       string_pos_1 2 (stringo ~str_pos:1 ~len:2) ~skip:1 "\00023" "A23mEFGHIJ";
       bigstring_pos_1 2 (bigstringo ~str_pos:1 ~len:2) ~skip:1 "\000lm" "AlmmEFGHIJ";
       let int64_pos_1 f value with_value =
-        accessor_pos_1
-          ~without_value:buf
-          ~value_len:8
-          f
-          ~value
-          ~with_value
-          (module Int64)
+        accessor_pos_1 ~without_value:buf ~value_len:8 f ~value ~with_value (module Int64)
       in
       int64_pos_1 int64_t_be 1L "A\000\000\000\000\000\000\000\001J";
       int64_pos_1 int64_t_le 1L "A\001\000\000\000\000\000\000\000J";
@@ -1031,16 +1021,8 @@ struct
       int_pos_1 4 int32_le_trunc (-0x05060709) "A\247\248\249\250FGHIJ";
       if arch_sixtyfour
       then (
-        int_pos_1
-          4
-          uint32_be_trunc
-          (large_int 0 0 0xF6F5 0xF4F3)
-          "A\246\245\244\243FGHIJ";
-        int_pos_1
-          4
-          uint32_le_trunc
-          (large_int 0 0 0xFBFA 0xF9F8)
-          "A\248\249\250\251FGHIJ";
+        int_pos_1 4 uint32_be_trunc (large_int 0 0 0xF6F5 0xF4F3) "A\246\245\244\243FGHIJ";
+        int_pos_1 4 uint32_le_trunc (large_int 0 0 0xFBFA 0xF9F8) "A\248\249\250\251FGHIJ";
         int_pos_1
           8
           int64_be
@@ -1109,10 +1091,7 @@ struct
           then
             raise_s
               [%message
-                "Poke accessor_pos_1 failed"
-                  (str : string)
-                  (buf_str : string)
-                  (arg : Arg.t)]
+                "Poke accessor_pos_1 failed" (str : string) (buf_str : string) (arg : Arg.t)]
         ;;
 
         let bin_prot_char t ~pos a = bin_prot Char.bin_writer_t t ~pos a
@@ -1247,10 +1226,7 @@ struct
           then
             raise_s
               [%message
-                "Peek accessor_pos_1 failed"
-                  (res : Res.t)
-                  (expected : Res.t)
-                  (str : string)]
+                "Peek accessor_pos_1 failed" (res : Res.t) (expected : Res.t) (str : string)]
         ;;
 
         let bin_prot_char t ~pos = bin_prot Char.bin_reader_t t ~pos
@@ -1485,12 +1461,7 @@ struct
   ;;
 
   let test_consume_to_string blito =
-    test_consume_to
-      blito
-      Bytes.create
-      Bytes.To_string.sub
-      Bytes.of_string
-      Bytes.to_string
+    test_consume_to blito Bytes.create Bytes.To_string.sub Bytes.of_string Bytes.to_string
   ;;
 
   let test_consume_to_bigstring blito =

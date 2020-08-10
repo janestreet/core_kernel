@@ -37,8 +37,7 @@ module Make (T : sig
   let hashable = Table.hashable
 end
 
-module Make_and_derive_hash_fold_t (T : Hashtbl.Key) : S with type t := T.t =
-  Make (struct
+module Make_and_derive_hash_fold_t (T : Hashtbl.Key) : S with type t := T.t = Make (struct
     include T
 
     let hash_fold_t state t = hash_fold_int state (hash t)

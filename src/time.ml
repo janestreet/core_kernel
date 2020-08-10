@@ -212,8 +212,7 @@ module Make (Time0 : Time0_intf.S) = struct
 
   let to_ofday time ~zone =
     set_date_cache time ~zone;
-    Time0.diff time date_cache.effective_day_start
-    |> Ofday.of_span_since_start_of_day_exn
+    Time0.diff time date_cache.effective_day_start |> Ofday.of_span_since_start_of_day_exn
   ;;
 
   let to_date_ofday time ~zone = to_date time ~zone, to_ofday time ~zone

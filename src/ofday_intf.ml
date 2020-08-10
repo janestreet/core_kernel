@@ -45,8 +45,7 @@ module type S = sig
       [of_string] also fully supports 24h wall-clock times.
 
       [to_string] only produces the 24h format. *)
-  include
-    Stringable with type t := t
+  include Stringable with type t := t
 
   val create
     :  ?hr:int

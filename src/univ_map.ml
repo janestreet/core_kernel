@@ -181,11 +181,7 @@ struct
   ;;
 end
 
-module Merge
-    (Key : Key)
-    (Input1_data : Data1)
-    (Input2_data : Data1)
-    (Output_data : Data1) =
+module Merge (Key : Key) (Input1_data : Data1) (Input2_data : Data1) (Output_data : Data1) =
 struct
   type 's f =
     { f :
@@ -207,8 +203,7 @@ struct
     let f ~key merge_result =
       Option.map (f ~key merge_result) ~f:(fun data -> Output.Packed.T (key, data))
     in
-    Map.merge t1 t2 ~f:(fun ~key:_ ->
-      function
+    Map.merge t1 t2 ~f:(fun ~key:_ -> function
       | `Left (T (key, data)) -> f ~key (`Left data)
       | `Right (T (key, data)) -> f ~key (`Right data)
       | `Both (T (left_key, left_data), T (right_key, right_data)) ->

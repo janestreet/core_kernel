@@ -319,20 +319,15 @@ let map t ~f =
   | None -> create ()
   | Some first ->
     let new_first = Elt.create (f (Elt.value first)) in
-    Header.with_iteration_3
-      (Elt.header first)
-      f
-      new_first
-      first
-      (fun f new_first first ->
-         let rec loop f acc first elt =
-           let acc = Elt.insert_after acc (f (Elt.value elt)) in
-           let next = Elt.next elt in
-           if not (phys_equal next first) then loop f acc first next
-         in
-         (* unroll and skip first elt *)
-         let next = Elt.next first in
-         if not (phys_equal next first) then loop f new_first first next);
+    Header.with_iteration_3 (Elt.header first) f new_first first (fun f new_first first ->
+      let rec loop f acc first elt =
+        let acc = Elt.insert_after acc (f (Elt.value elt)) in
+        let next = Elt.next elt in
+        if not (phys_equal next first) then loop f acc first next
+      in
+      (* unroll and skip first elt *)
+      let next = Elt.next first in
+      if not (phys_equal next first) then loop f new_first first next);
     ref (Some new_first)
 ;;
 
@@ -341,20 +336,15 @@ let mapi t ~f =
   | None -> create ()
   | Some first ->
     let new_first = Elt.create (f 0 (Elt.value first)) in
-    Header.with_iteration_3
-      (Elt.header first)
-      f
-      new_first
-      first
-      (fun f new_first first ->
-         let rec loop f i acc first elt =
-           let acc = Elt.insert_after acc (f i (Elt.value elt)) in
-           let next = Elt.next elt in
-           if not (phys_equal next first) then loop f (i + 1) acc first next
-         in
-         (* unroll and skip first elt *)
-         let next = Elt.next first in
-         if not (phys_equal next first) then loop f 1 new_first first next);
+    Header.with_iteration_3 (Elt.header first) f new_first first (fun f new_first first ->
+      let rec loop f i acc first elt =
+        let acc = Elt.insert_after acc (f i (Elt.value elt)) in
+        let next = Elt.next elt in
+        if not (phys_equal next first) then loop f (i + 1) acc first next
+      in
+      (* unroll and skip first elt *)
+      let next = Elt.next first in
+      if not (phys_equal next first) then loop f 1 new_first first next);
     ref (Some new_first)
 ;;
 

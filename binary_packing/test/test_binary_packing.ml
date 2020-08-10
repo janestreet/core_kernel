@@ -40,9 +40,7 @@ struct
               if signed && num_bytes < 8
               then (
                 let max_val = Int64.shift_left 1L ((num_bytes * 8) - 1) in
-                if w >= max_val
-                then Int64.( - ) w (Int64.shift_left max_val 1)
-                else w)
+                if w >= max_val then Int64.( - ) w (Int64.shift_left max_val 1) else w)
               else w))))
   ;;
 

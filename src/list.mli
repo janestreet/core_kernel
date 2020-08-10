@@ -16,8 +16,7 @@ module Assoc : sig
 
   val compare : [%compare: 'a] -> [%compare: 'b] -> [%compare: ('a, 'b) t]
   [@@deprecated
-    "[since 2016-06] This does not respect the equivalence class promised by \
-     List.Assoc.\n\
+    "[since 2016-06] This does not respect the equivalence class promised by List.Assoc.\n\
      Use List.compare directly if that's what you want."]
 
   include module type of struct

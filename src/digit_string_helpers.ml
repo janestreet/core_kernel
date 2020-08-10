@@ -348,13 +348,7 @@ let raise_int_out_of_bounds name ~max int =
 ;;
 
 let raise_int63_out_of_bounds name ~max int63 =
-  invalid_argf
-    !"%s.%s: %{Int63} out of range [0, %{Int63}]"
-    module_name
-    name
-    int63
-    max
-    ()
+  invalid_argf !"%s.%s: %{Int63} out of range [0, %{Int63}]" module_name name int63 max ()
 ;;
 
 let check_decimals name ~decimals =

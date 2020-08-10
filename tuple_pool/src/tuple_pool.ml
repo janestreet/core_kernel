@@ -1112,8 +1112,7 @@ module Debug (Pool : S) = struct
   ;;
 
   let debug_get name f t pointer =
-    debug name [ t ] pointer [%sexp_of: _ Pointer.t] [%sexp_of: _] (fun () ->
-      f t pointer)
+    debug name [ t ] pointer [%sexp_of: _ Pointer.t] [%sexp_of: _] (fun () -> f t pointer)
   ;;
 
   let get t pointer slot = debug_get "get" get t pointer slot

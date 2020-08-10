@@ -143,14 +143,8 @@ module type Accessors2 = sig
   include Set.Accessors2
 
   val to_map : ('a, 'cmp) t -> f:('a -> 'b) -> ('a, 'b, 'cmp) Base.Map.t
-
-  val quickcheck_observer
-    :  'a Quickcheck.Observer.t
-    -> ('a, 'cmp) t Quickcheck.Observer.t
-
-  val quickcheck_shrinker
-    :  'a Quickcheck.Shrinker.t
-    -> ('a, 'cmp) t Quickcheck.Shrinker.t
+  val quickcheck_observer : 'a Quickcheck.Observer.t -> ('a, 'cmp) t Quickcheck.Observer.t
+  val quickcheck_shrinker : 'a Quickcheck.Shrinker.t -> ('a, 'cmp) t Quickcheck.Shrinker.t
 end
 
 module type Accessors2_with_comparator = sig
@@ -162,9 +156,7 @@ module type Accessors2_with_comparator = sig
     -> f:('a -> 'b)
     -> ('a, 'b, 'cmp) Base.Map.t
 
-  val quickcheck_observer
-    :  'a Quickcheck.Observer.t
-    -> ('a, 'cmp) t Quickcheck.Observer.t
+  val quickcheck_observer : 'a Quickcheck.Observer.t -> ('a, 'cmp) t Quickcheck.Observer.t
 
   val quickcheck_shrinker
     :  comparator:('a, 'cmp) Comparator.t

@@ -10,18 +10,14 @@ module type S_int = Quickcheck.S_int
 
 module Of_quickcheckable
     (Quickcheckable : S)
-    (Conv : Conv with type quickcheckable := Quickcheckable.t) :
-  S with type t := Conv.t = struct
+    (Conv : Conv with type quickcheckable := Quickcheckable.t) : S with type t := Conv.t =
+struct
   let quickcheck_generator =
-    Quickcheck.Generator.map
-      Quickcheckable.quickcheck_generator
-      ~f:Conv.of_quickcheckable
+    Quickcheck.Generator.map Quickcheckable.quickcheck_generator ~f:Conv.of_quickcheckable
   ;;
 
   let quickcheck_observer =
-    Quickcheck.Observer.unmap
-      Quickcheckable.quickcheck_observer
-      ~f:Conv.to_quickcheckable
+    Quickcheck.Observer.unmap Quickcheckable.quickcheck_observer ~f:Conv.to_quickcheckable
   ;;
 
   let quickcheck_shrinker =
@@ -43,9 +39,7 @@ module Of_quickcheckable_filtered
   ;;
 
   let quickcheck_observer =
-    Quickcheck.Observer.unmap
-      Quickcheckable.quickcheck_observer
-      ~f:Conv.to_quickcheckable
+    Quickcheck.Observer.unmap Quickcheckable.quickcheck_observer ~f:Conv.to_quickcheckable
   ;;
 
   let quickcheck_shrinker =

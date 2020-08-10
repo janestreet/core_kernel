@@ -142,7 +142,12 @@ val subscribe_exn
 
 (** [iter_exn t [%here] ~f] is [ignore (subscribe_exn t [%here] ~callback:f)].  This
     captures the common usage in which one never wants to unsubscribe from a bus. *)
-val iter_exn : ('callback, [> read ]) t -> Source_code_position.t -> f:'callback -> unit
+val iter_exn
+  :  ?extract_exn:bool (** passed along to [subscribe_exn] *)
+  -> ('callback, [> read ]) t
+  -> Source_code_position.t
+  -> f:'callback
+  -> unit
 
 module Fold_arity : sig
   type (_, _, _) t =
@@ -161,7 +166,8 @@ end
 (** [fold_exn t [%here] arity ~init ~f] folds over the bus events, threading a state value
     to every call.  It is otherwise similar to [iter_exn]. *)
 val fold_exn
-  :  ('callback, [> read ]) t
+  :  ?extract_exn:bool (** passed along to [subscribe_exn] *)
+  -> ('callback, [> read ]) t
   -> Source_code_position.t
   -> ('callback, 'f, 's) Fold_arity.t
   -> init:'s

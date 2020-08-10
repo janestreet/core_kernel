@@ -43,8 +43,7 @@ end
 
 module Control = struct
   module T = struct
-    [%%if
-      ocaml_version < (4, 08, 0)]
+    [%%if ocaml_version < (4, 08, 0)]
 
     type t = Caml.Gc.control =
       { mutable minor_heap_size : int
@@ -94,8 +93,7 @@ module Allocation_policy = struct
   ;;
 end
 
-[%%if
-  ocaml_version < (4, 08, 0)]
+[%%if ocaml_version < (4, 08, 0)]
 
 let tune
       ?logger

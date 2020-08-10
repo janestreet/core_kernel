@@ -14,8 +14,8 @@ module T = struct
   (* WHEN YOU CHANGE THIS, CHANGE iobuf_fields IN iobuf.h AS WELL!!! *)
   type t =
     { mutable buf :
-        (Bigstring.t[@sexp.opaque]
-        (* The data in [buf] is at indices [lo], [lo+1], ... [hi-1]. *))
+        (Bigstring.t
+         [@sexp.opaque] (* The data in [buf] is at indices [lo], [lo+1], ... [hi-1]. *))
     ; mutable lo_min : int
     ; mutable lo : int
     ; mutable hi : int
@@ -312,16 +312,15 @@ let of_string s = of_bigstring (Bigstring.of_string s)
 let of_bytes s = of_bigstring (Bigstring.of_bytes s)
 
 let to_stringlike ~(convert : ?pos:int -> ?len:int -> Bigstring.t -> 'a) =
-  stage (fun ?len t ->
-    (let len =
-       match len with
-       | Some len ->
-         check_range t ~pos:0 ~len;
-         len
-       | None -> length t
-     in
-     convert t.buf ~pos:t.lo ~len
-     : 'a))
+  stage (fun ?len t : 'a ->
+    let len =
+      match len with
+      | Some len ->
+        check_range t ~pos:0 ~len;
+        len
+      | None -> length t
+    in
+    convert t.buf ~pos:t.lo ~len)
 ;;
 
 let to_string = to_stringlike ~convert:Bigstring.to_string |> unstage
@@ -408,10 +407,7 @@ module T_src = struct
   let create = create
   let length = length
   let[@inline] get t pos = bigstring_unsafe_get t.buf ~pos:(buf_pos_exn t ~len:1 ~pos)
-
-  let[@inline] set t pos c =
-    bigstring_unsafe_set t.buf ~pos:(buf_pos_exn t ~len:1 ~pos) c
-  ;;
+  let[@inline] set t pos c = bigstring_unsafe_set t.buf ~pos:(buf_pos_exn t ~len:1 ~pos) c
 end
 
 module Bytes_dst = struct
@@ -645,14 +641,8 @@ module Consume = struct
   let[@inline always] uint8 t = uadv t len (unsafe_get_uint8 t.buf ~pos:(pos t len))
   let[@inline always] int8 t = uadv t len (unsafe_get_int8 t.buf ~pos:(pos t len))
   let len = 2
-
-  let[@inline always] int16_be t =
-    uadv t len (unsafe_get_int16_be t.buf ~pos:(pos t len))
-  ;;
-
-  let[@inline always] int16_le t =
-    uadv t len (unsafe_get_int16_le t.buf ~pos:(pos t len))
-  ;;
+  let[@inline always] int16_be t = uadv t len (unsafe_get_int16_be t.buf ~pos:(pos t len))
+  let[@inline always] int16_le t = uadv t len (unsafe_get_int16_le t.buf ~pos:(pos t len))
 
   let[@inline always] uint16_be t =
     uadv t len (unsafe_get_uint16_be t.buf ~pos:(pos t len))
@@ -663,14 +653,8 @@ module Consume = struct
   ;;
 
   let len = 4
-
-  let[@inline always] int32_be t =
-    uadv t len (unsafe_get_int32_be t.buf ~pos:(pos t len))
-  ;;
-
-  let[@inline always] int32_le t =
-    uadv t len (unsafe_get_int32_le t.buf ~pos:(pos t len))
-  ;;
+  let[@inline always] int32_be t = uadv t len (unsafe_get_int32_be t.buf ~pos:(pos t len))
+  let[@inline always] int32_le t = uadv t len (unsafe_get_int32_le t.buf ~pos:(pos t len))
 
   let[@inline always] uint32_be t =
     uadv t len (unsafe_get_uint32_be t.buf ~pos:(pos t len))
@@ -830,11 +814,7 @@ module Itoa = struct
       len)
     else (
       let len = num_digits (-int) in
-      unsafe_poke_negative_decimal_without_sign
-        t
-        ~pos:(unsafe_buf_pos t ~pos)
-        ~len
-        (-int);
+      unsafe_poke_negative_decimal_without_sign t ~pos:(unsafe_buf_pos t ~pos) ~len (-int);
       len)
   ;;
 end
@@ -1161,21 +1141,11 @@ module Poke = struct
   let spos = buf_pos_exn (* "safe position" *)
 
   let tail_padded_fixed_string ~padding ~len t ~pos src =
-    Bigstring.set_tail_padded_fixed_string
-      ~padding
-      ~len
-      t.buf
-      ~pos:(spos t ~len ~pos)
-      src
+    Bigstring.set_tail_padded_fixed_string ~padding ~len t.buf ~pos:(spos t ~len ~pos) src
   ;;
 
   let head_padded_fixed_string ~padding ~len t ~pos src =
-    Bigstring.set_head_padded_fixed_string
-      ~padding
-      ~len
-      t.buf
-      ~pos:(spos t ~len ~pos)
-      src
+    Bigstring.set_head_padded_fixed_string ~padding ~len t.buf ~pos:(spos t ~len ~pos) src
   ;;
 
   let bytes ~str_pos ~len t ~pos src =
@@ -1440,10 +1410,7 @@ let consume_bin_prot t bin_prot_reader =
   let result =
     if length t < bin_prot_length_prefix_bytes
     then
-      error
-        "Iobuf.consume_bin_prot not enough data to read length"
-        t
-        [%sexp_of: (_, _) t]
+      error "Iobuf.consume_bin_prot not enough data to read length" t [%sexp_of: (_, _) t]
     else (
       let mark = t.lo in
       let v_len = Consume.int32_be t in
@@ -1464,8 +1431,7 @@ let fill_bin_prot t writer v =
   let need = v_len + bin_prot_length_prefix_bytes in
   let result =
     if need > length t
-    then
-      error "Iobuf.fill_bin_prot not enough space" (need, t) [%sexp_of: int * (_, _) t]
+    then error "Iobuf.fill_bin_prot not enough space" (need, t) [%sexp_of: int * (_, _) t]
     else (
       Fill.int32_be_trunc t v_len;
       Fill.bin_prot writer t v;
@@ -1945,13 +1911,8 @@ module Unsafe = struct
       unsafe_get_uint64_le_exn t.buf ~pos:(upos t ~pos)
     ;;
 
-    let[@inline always] int64_t_be t ~pos =
-      unsafe_get_int64_t_be t.buf ~pos:(upos t ~pos)
-    ;;
-
-    let[@inline always] int64_t_le t ~pos =
-      unsafe_get_int64_t_le t.buf ~pos:(upos t ~pos)
-    ;;
+    let[@inline always] int64_t_be t ~pos = unsafe_get_int64_t_be t.buf ~pos:(upos t ~pos)
+    let[@inline always] int64_t_le t ~pos = unsafe_get_int64_t_le t.buf ~pos:(upos t ~pos)
 
     let[@inline always] int64_be_trunc t ~pos =
       unsafe_get_int64_be_trunc t.buf ~pos:(upos t ~pos)
@@ -2039,11 +2000,7 @@ module Unsafe = struct
     open Bigstring
 
     let[@inline always] char t ~pos c = bigstring_unsafe_set t.buf ~pos:(upos t ~pos) c
-
-    let[@inline always] uint8_trunc t ~pos i =
-      unsafe_set_uint8 t.buf ~pos:(upos t ~pos) i
-    ;;
-
+    let[@inline always] uint8_trunc t ~pos i = unsafe_set_uint8 t.buf ~pos:(upos t ~pos) i
     let[@inline always] int8_trunc t ~pos i = unsafe_set_int8 t.buf ~pos:(upos t ~pos) i
 
     let[@inline always] int16_be_trunc t ~pos i =
@@ -2078,13 +2035,8 @@ module Unsafe = struct
       unsafe_set_uint32_le t.buf ~pos:(upos t ~pos) i
     ;;
 
-    let[@inline always] int64_be t ~pos i =
-      unsafe_set_int64_be t.buf ~pos:(upos t ~pos) i
-    ;;
-
-    let[@inline always] int64_le t ~pos i =
-      unsafe_set_int64_le t.buf ~pos:(upos t ~pos) i
-    ;;
+    let[@inline always] int64_be t ~pos i = unsafe_set_int64_be t.buf ~pos:(upos t ~pos) i
+    let[@inline always] int64_le t ~pos i = unsafe_set_int64_le t.buf ~pos:(upos t ~pos) i
 
     let[@inline always] uint64_be_trunc t ~pos i =
       unsafe_set_uint64_be t.buf ~pos:(upos t ~pos) i

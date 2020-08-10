@@ -2,7 +2,6 @@
 #verbose true
 
 open! Core_kernel
-
 open! Quickcheck.Let_syntax
 
 let quickcheck_generator =

@@ -720,8 +720,7 @@ val prerr_newline : unit -> unit
     all characters read, without the newline character at the end. *)
 val read_line : unit -> string
 [@@deprecated
-  "[since 2016-04] Use\n\
-   [Out_channel.(flush stdout); In_channel.(input_line_exn stdin)]"]
+  "[since 2016-04] Use\n[Out_channel.(flush stdout); In_channel.(input_line_exn stdin)]"]
 
 (** Flush standard output, then read one line from standard input
     and convert it to an integer. Raise [Failure "int_of_string"]

@@ -231,10 +231,7 @@ end = struct
     Using_comparator.of_increasing_iterator_unchecked ~comparator ~len ~f
   ;;
 
-  let of_increasing_sequence seq =
-    Using_comparator.of_increasing_sequence ~comparator seq
-  ;;
-
+  let of_increasing_sequence seq = Using_comparator.of_increasing_sequence ~comparator seq
   let of_sequence seq = Using_comparator.of_sequence ~comparator seq
   let of_sequence_or_error seq = Using_comparator.of_sequence_or_error ~comparator seq
   let of_sequence_exn seq = Using_comparator.of_sequence_exn ~comparator seq
@@ -461,8 +458,7 @@ module type S_binable = S_binable
 
 module Key_bin_io = Key_bin_io
 
-module Provide_bin_io (Key : Key_bin_io.S) =
-  Bin_prot.Utils.Make_iterable_binable1 (struct
+module Provide_bin_io (Key : Key_bin_io.S) = Bin_prot.Utils.Make_iterable_binable1 (struct
     module Key = Key
 
     type nonrec 'v t = (Key.t, 'v, Key.comparator_witness) t

@@ -160,10 +160,7 @@ module Stable = struct
           if Int.equal subsec_len 0
           then 0
           else
-            parse_nanoseconds
-              string
-              ~pos:(subsec_pos + 1)
-              ~until:(subsec_pos + subsec_len)
+            parse_nanoseconds string ~pos:(subsec_pos + 1) ~until:(subsec_pos + subsec_len)
         in
         Span.of_int63_ns (Int63.of_int nanoseconds)
         |> Span.( + ) (Span.scale_int Span.second sec)

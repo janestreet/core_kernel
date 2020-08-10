@@ -44,8 +44,7 @@ let%expect_test "ppx_quickcheck" =
   end
   in
   List.iter
-    ~f:(fun predicate ->
-      Quickcheck.test_can_generate M.quickcheck_generator ~f:predicate)
+    ~f:(fun predicate -> Quickcheck.test_can_generate M.quickcheck_generator ~f:predicate)
     [ (function
         | M.A -> true
         | _ -> false)
@@ -192,10 +191,7 @@ module Test (S : sig
 
   let%test_module "float" =
     (module struct
-      let bits_compare x y =
-        Int64.compare (Int64.bits_of_float x) (Int64.bits_of_float y)
-      ;;
-
+      let bits_compare x y = Int64.compare (Int64.bits_of_float x) (Int64.bits_of_float y)
       let bits_equal x y = bits_compare x y = 0
       let sexp_of = Float.sexp_of_t
       let compare = bits_compare
@@ -375,20 +371,14 @@ module Test (S : sig
       ;;
 
       (* exported generators: *)
-      let%test_unit "default" =
-        test_coverage Char.quickcheck_generator ~f:(fun _ -> true)
-      ;;
-
+      let%test_unit "default" = test_coverage Char.quickcheck_generator ~f:(fun _ -> true)
       let%test_unit "digit" = test_coverage Char.gen_digit ~f:Char.is_digit
       let%test_unit "lowercase" = test_coverage Char.gen_lowercase ~f:Char.is_lowercase
       let%test_unit "uppercase" = test_coverage Char.gen_uppercase ~f:Char.is_uppercase
       let%test_unit "alpha" = test_coverage Char.gen_alpha ~f:Char.is_alpha
       let%test_unit "alphanum" = test_coverage Char.gen_alphanum ~f:Char.is_alphanum
       let%test_unit "print" = test_coverage Char.gen_print ~f:Char.is_print
-
-      let%test_unit "whitespace" =
-        test_coverage Char.gen_whitespace ~f:Char.is_whitespace
-      ;;
+      let%test_unit "whitespace" = test_coverage Char.gen_whitespace ~f:Char.is_whitespace
     end)
   ;;
 
@@ -716,9 +706,7 @@ module Test (S : sig
       let quickcheck_generator =
         (* memoizing these functions makes [test_no_duplicates] run much faster *)
         G.(
-          fn
-            (List.quickcheck_observer Bool.quickcheck_observer)
-            Char.quickcheck_generator)
+          fn (List.quickcheck_observer Bool.quickcheck_observer) Char.quickcheck_generator)
         |> memo (module Bool_list)
       ;;
 
@@ -863,9 +851,7 @@ module Shrinker = struct
           |> sort
         in
         let results =
-          shrink (tuple6 t0 t1 t2 t3 t4 t5) (9, 9, 9, 9, 9, 9)
-          |> Sequence.to_list
-          |> sort
+          shrink (tuple6 t0 t1 t2 t3 t4 t5) (9, 9, 9, 9, 9, 9) |> Sequence.to_list |> sort
         in
         [%test_result: (int * int * int * int * int * int) list] results ~expect
       ;;

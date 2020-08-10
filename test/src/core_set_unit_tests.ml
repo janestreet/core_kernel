@@ -150,10 +150,7 @@ module Unit_tests (Elt : sig
     include Comparable.Make (T)
     include Hashable.Make (T)
 
-    let samples =
-      List.dedup_and_sort ~compare (List.init 10 ~f:(fun i -> of_int (i + 1)))
-    ;;
-
+    let samples = List.dedup_and_sort ~compare (List.init 10 ~f:(fun i -> of_int (i + 1)))
     let absent = of_int 0
     let present = of_int 1
     let () = assert (List.mem ~equal samples present)
@@ -247,9 +244,7 @@ module Unit_tests (Elt : sig
 
     let%expect_test "validate_subset" =
       let map1 = Set.create_named ~name:"the empty set" set_empty in
-      let map2 =
-        Set.create_named ~name:"the set of integers from 1 to 10" set_nonempty
-      in
+      let map2 = Set.create_named ~name:"the set of integers from 1 to 10" set_nonempty in
       print_s [%sexp (Set.Named.is_subset map2 ~of_:map1 : unit Or_error.t)];
       if Set.is_poly
       then
@@ -272,9 +267,7 @@ module Unit_tests (Elt : sig
     let equal _ _ = assert false
 
     let%expect_test "validate_subset" =
-      let map1 =
-        Set.create_named ~name:"the set of integers from 1 to 10" set_nonempty
-      in
+      let map1 = Set.create_named ~name:"the set of integers from 1 to 10" set_nonempty in
       (let map2 =
          Set.create_named
            ~name:"the set of integers from 10 to 19"
@@ -626,8 +619,7 @@ module Unit_tests (Elt : sig
     | `Set ->
       let ts = [ Set.empty (); Set.of_list [ Elt.of_int 13 ] ] in
       List.iter ts ~f:(fun t1 ->
-        List.iter ts ~f:(fun t2 ->
-          assert (Exn.does_raise (fun () -> Poly.equal t1 t2))))
+        List.iter ts ~f:(fun t2 -> assert (Exn.does_raise (fun () -> Poly.equal t1 t2))))
   ;;
 
   let to_map _ = assert false

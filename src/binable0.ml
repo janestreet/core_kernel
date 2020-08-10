@@ -6,10 +6,8 @@ module List = Base.List
 
 module Stable = struct
   module Of_binable = struct
-    module V1
-        (Binable : Minimal.S)
-        (M : Conv_without_uuid with type binable := Binable.t) : S with type t := M.t =
-      Bin_prot.Utils.Make_binable_without_uuid (struct
+    module V1 (Binable : Minimal.S) (M : Conv_without_uuid with type binable := Binable.t) :
+      S with type t := M.t = Bin_prot.Utils.Make_binable_without_uuid (struct
         module Binable = Binable
         include M
       end)

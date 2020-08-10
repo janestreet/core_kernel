@@ -662,8 +662,7 @@ let pack_tail_padded_fixed_string ?(padding = '\x00') ~buf ~pos ~len s =
   let slen = String.length s in
   if slen > len
   then
-    raise
-      (Pack_tail_padded_fixed_string_argument_too_long (`s s, `longer_than, `len len))
+    raise (Pack_tail_padded_fixed_string_argument_too_long (`s s, `longer_than, `len len))
   else (
     Bytes.From_string.blit ~src:s ~dst:buf ~src_pos:0 ~dst_pos:pos ~len:slen;
     if slen < len

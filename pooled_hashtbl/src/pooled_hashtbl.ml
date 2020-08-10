@@ -91,8 +91,7 @@ module type S_binable = S_binable with type ('a, 'b) hashtbl = ('a, 'b) t
 let sexp_of_key t = t.hashable.Hashable.sexp_of_t
 
 let ensure_mutation_allowed t =
-  if not t.mutation_allowed
-  then failwith "Hashtbl: mutation not allowed during iteration"
+  if not t.mutation_allowed then failwith "Hashtbl: mutation not allowed during iteration"
 ;;
 
 let without_mutating t f v =
@@ -426,30 +425,14 @@ let find_and_call2 =
   let call_if_found ~if_found ~key:_ ~data a b = if_found data a b in
   let call_if_not_found ~if_not_found key a b = if_not_found key a b in
   fun t key ~a ~b ~if_found ~if_not_found ->
-    find_and_call_impl
-      t
-      key
-      ~call_if_found
-      ~call_if_not_found
-      ~if_found
-      ~if_not_found
-      a
-      b
+    find_and_call_impl t key ~call_if_found ~call_if_not_found ~if_found ~if_not_found a b
 ;;
 
 let findi_and_call2 =
   let call_if_found ~if_found ~key ~data a b = if_found ~key ~data a b in
   let call_if_not_found ~if_not_found key a b = if_not_found key a b in
   fun t key ~a ~b ~if_found ~if_not_found ->
-    find_and_call_impl
-      t
-      key
-      ~call_if_found
-      ~call_if_not_found
-      ~if_found
-      ~if_not_found
-      a
-      b
+    find_and_call_impl t key ~call_if_found ~call_if_not_found ~if_found ~if_not_found a b
 ;;
 
 (* This is split in a rather odd way so as to make find_and_remove for a single entry
@@ -739,8 +722,7 @@ let partition_mapi t ~f =
 let partition_map t ~f = partition_mapi t ~f:(fun ~key:_ ~data -> f data)
 
 let partitioni_tf t ~f =
-  partition_mapi t ~f:(fun ~key ~data ->
-    if f ~key ~data then First data else Second data)
+  partition_mapi t ~f:(fun ~key ~data -> if f ~key ~data then First data else Second data)
 ;;
 
 let partition_tf t ~f = partitioni_tf t ~f:(fun ~key:_ ~data -> f data)
@@ -843,8 +825,7 @@ let create_with_key_or_error ?growth_allowed ?size ~hashable ~get_key rows =
 ;;
 
 let create_with_key_exn ?growth_allowed ?size ~hashable ~get_key rows =
-  Or_error.ok_exn
-    (create_with_key_or_error ?growth_allowed ?size ~hashable ~get_key rows)
+  Or_error.ok_exn (create_with_key_or_error ?growth_allowed ?size ~hashable ~get_key rows)
 ;;
 
 let merge =
@@ -906,9 +887,7 @@ let filter_inplace t ~f = filteri_inplace t ~f:(fun ~key:_ ~data -> f data)
 let filter_keys_inplace t ~f = filteri_inplace t ~f:(fun ~key ~data:_ -> f key)
 
 let filter_mapi_inplace t ~f =
-  let map_results =
-    fold t ~init:[] ~f:(fun ~key ~data ac -> (key, f ~key ~data) :: ac)
-  in
+  let map_results = fold t ~init:[] ~f:(fun ~key ~data ac -> (key, f ~key ~data) :: ac) in
   List.iter map_results ~f:(fun (key, result) ->
     match result with
     | None -> remove t key
@@ -918,9 +897,7 @@ let filter_mapi_inplace t ~f =
 let filter_map_inplace t ~f = filter_mapi_inplace t ~f:(fun ~key:_ ~data -> f data)
 
 let mapi_inplace t ~f =
-  let map_results =
-    fold t ~init:[] ~f:(fun ~key ~data ac -> (key, f ~key ~data) :: ac)
-  in
+  let map_results = fold t ~init:[] ~f:(fun ~key ~data ac -> (key, f ~key ~data) :: ac) in
   List.iter map_results ~f:(fun (key, data) -> set t ~key ~data)
 ;;
 

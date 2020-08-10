@@ -235,11 +235,7 @@ val stable_dedup_list : ('a, _) comparator -> 'a list -> 'a list
 val map : ('b, 'cmp) comparator -> ('a, _) t -> f:('a -> 'b) -> ('b, 'cmp) t
 
 (** Like {!map}, except elements for which [f] returns [None] will be dropped.  *)
-val filter_map
-  :  ('b, 'cmp) comparator
-  -> ('a, _) t
-  -> f:('a -> 'b option)
-  -> ('b, 'cmp) t
+val filter_map : ('b, 'cmp) comparator -> ('a, _) t -> f:('a -> 'b option) -> ('b, 'cmp) t
 
 (** [filter t ~f] returns the subset of [t] for which [f] evaluates to true.  [O(n log
     n)]. *)
@@ -517,8 +513,7 @@ module Make_using_comparator (Elt : sig
     type t [@@deriving sexp]
 
     include Comparator.S with type t := t
-  end) :
-  S with type Elt.t = Elt.t with type Elt.comparator_witness = Elt.comparator_witness
+  end) : S with type Elt.t = Elt.t with type Elt.comparator_witness = Elt.comparator_witness
 
 module Make_binable_using_comparator (Elt : sig
     type t [@@deriving bin_io, sexp]

@@ -41,10 +41,7 @@ let unparagraphs xs = String.concat ~sep:"\n\n" xs
 
 exception Failed_to_parse_command_line of string
 
-let die fmt =
-  Printf.ksprintf (fun msg () -> raise (Failed_to_parse_command_line msg)) fmt
-;;
-
+let die fmt = Printf.ksprintf (fun msg () -> raise (Failed_to_parse_command_line msg)) fmt
 let help_screen_compare = Shape.Private.help_screen_compare
 
 (* universal maps are used to pass around values between different bits
@@ -706,8 +703,7 @@ module Anons = struct
           upd, tf' <*> tx
         in
         More { name; parse; complete }
-      | Only_for_completion packed ->
-        Only_for_completion (packed @ pack_for_completion tx)
+      | Only_for_completion packed -> Only_for_completion (packed @ pack_for_completion tx)
     ;;
 
     let ( >>| ) t f = return f <*> t
@@ -909,8 +905,7 @@ let normalize key_type key =
   assert_no_underscores key_type key;
   match key_type with
   | Key_type.Flag ->
-    if String.equal key "-"
-    then failwithf !"invalid %{Key_type} name: %S" key_type key ();
+    if String.equal key "-" then failwithf !"invalid %{Key_type} name: %S" key_type key ();
     if String.exists key ~f:Char.is_whitespace
     then failwithf !"invalid %{Key_type} name (contains whitespace): %S" key_type key ();
     if String.is_prefix ~prefix:"-" key then key else "-" ^ key
@@ -1395,9 +1390,7 @@ module Base = struct
 
         let create_exn param =
           let names = arg_names param in
-          let names_with_commas =
-            List.filter names ~f:(fun s -> String.contains s ',')
-          in
+          let names_with_commas = List.filter names ~f:(fun s -> String.contains s ',') in
           if not (List.is_empty names_with_commas)
           then
             failwiths
@@ -1894,8 +1887,7 @@ module Deprecated = struct
         (s ^ cmd, summary)
         :: (Lazy.force subcommands
             |> List.sort ~compare:Base.Deprecated.subcommand_cmp_fst
-            |> List.concat_map ~f:(fun (cmd', t) -> help_recursive_rec ~cmd:cmd' t new_s)
-           )
+            |> List.concat_map ~f:(fun (cmd', t) -> help_recursive_rec ~cmd:cmd' t new_s))
       | Proxy _ | Exec _ ->
         (* Command.exec does not support deprecated commands *)
         []
@@ -2106,8 +2098,7 @@ module For_unix (M : For_unix) = struct
          [ Some summary
          ; Some (String.concat [ "  "; Path.to_string path; " SUBCOMMAND" ])
          ; readme
-         ; Some
-             (if flags then "=== subcommands and flags ===" else "=== subcommands ===")
+         ; Some (if flags then "=== subcommands and flags ===" else "=== subcommands ===")
          ; Some (Shape.Flag_help_display.to_string format_list)
          ])
   ;;
@@ -2173,10 +2164,7 @@ module For_unix (M : For_unix) = struct
              path, Shape.Group { readme; summary; subcommands }
            | Some cmd ->
              (match
-                lookup_expand
-                  (List.Assoc.map subs ~f:(fun x -> x, `Prefix))
-                  cmd
-                  Subcommand
+                lookup_expand (List.Assoc.map subs ~f:(fun x -> x, `Prefix)) cmd Subcommand
               with
               | Error e ->
                 die
@@ -2224,8 +2212,8 @@ module For_unix (M : For_unix) = struct
     | None ->
       failwiths
         ~here:[%here]
-        "Couldn't choose a supported help output version for Command.exec from the \
-         given supported versions."
+        "Couldn't choose a supported help output version for Command.exec from the given \
+         supported versions."
         Sexpable.supported_versions
         Int.Set.sexp_of_t
     | Some version_to_use ->
@@ -2333,8 +2321,7 @@ module For_unix (M : For_unix) = struct
       Exec.exec_with_args ~args exec ~maybe_new_comp_cword
     | Proxy proxy ->
       let args =
-        proxy.path_to_subcommand
-        @ Cmdline.to_list (maybe_apply_extend args ~extend ~path)
+        proxy.path_to_subcommand @ Cmdline.to_list (maybe_apply_extend args ~extend ~path)
       in
       let exec =
         { Exec.working_dir = proxy.working_dir
@@ -2468,14 +2455,7 @@ module For_unix (M : For_unix) = struct
           exit 1))
   ;;
 
-  let deprecated_run
-        t
-        ~cmd
-        ~args
-        ~is_help
-        ~is_help_rec
-        ~is_help_rec_flags
-        ~is_expand_dots
+  let deprecated_run t ~cmd ~args ~is_help ~is_help_rec ~is_help_rec_flags ~is_expand_dots
     =
     let path_strings = String.split cmd ~on:' ' in
     let path = Path.of_parts path_strings in

@@ -39,8 +39,7 @@ module type Generator = sig
         x, y
       ]}
   *)
-  include
-    Monad.S with type 'a t := 'a t
+  include Monad.S with type 'a t := 'a t
 
   include Applicative.S with type 'a t := 'a t
 

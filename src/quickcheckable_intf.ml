@@ -27,8 +27,7 @@ module type Quickcheckable = sig
 
   module Of_quickcheckable
       (Quickcheckable : S)
-      (Conv : Conv with type quickcheckable := Quickcheckable.t) :
-    S with type t := Conv.t
+      (Conv : Conv with type quickcheckable := Quickcheckable.t) : S with type t := Conv.t
 
   module Of_quickcheckable_filtered
       (Quickcheckable : S)

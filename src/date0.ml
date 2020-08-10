@@ -120,8 +120,7 @@ module Stable = struct
         let invalid_value__for_internal_use_only = 0
 
         let%test "invalid value" =
-          Exn.does_raise (fun () ->
-            (of_int_exn invalid_value__for_internal_use_only : t))
+          Exn.does_raise (fun () : t -> of_int_exn invalid_value__for_internal_use_only)
         ;;
       end
 
@@ -181,10 +180,7 @@ module Stable = struct
         let invalid () = failwith ("invalid date: " ^ s) in
         let ensure b = if not b then invalid () in
         let month_num ~year ~month ~day =
-          create_exn
-            ~y:(parse_year4 s year)
-            ~m:(parse_month s month)
-            ~d:(parse_day s day)
+          create_exn ~y:(parse_year4 s year) ~m:(parse_month s month) ~d:(parse_day s day)
         in
         let month_abrv ~year ~month ~day =
           create_exn

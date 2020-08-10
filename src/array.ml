@@ -240,12 +240,7 @@ module type Permissioned = sig
     -> f:('a -> 'b -> bool)
     -> bool
 
-  val exists2_exn
-    :  ('a, [> read ]) t
-    -> ('b, [> read ]) t
-    -> f:('a -> 'b -> bool)
-    -> bool
-
+  val exists2_exn : ('a, [> read ]) t -> ('b, [> read ]) t -> f:('a -> 'b -> bool) -> bool
   val filter : ('a, [> read ]) t -> f:('a -> bool) -> ('a, [< _ perms ]) t
   val filteri : ('a, [> read ]) t -> f:(int -> 'a -> bool) -> ('a, [< _ perms ]) t
   val swap : ('a, [> read_write ]) t -> int -> int -> unit
@@ -270,18 +265,20 @@ module type Permissioned = sig
 
   val reduce : ('a, [> read ]) t -> f:('a -> 'a -> 'a) -> 'a option
   val reduce_exn : ('a, [> read ]) t -> f:('a -> 'a -> 'a) -> 'a
-  val permute : ?random_state:Random.State.t -> ('a, [> read_write ]) t -> unit
+
+  val permute
+    :  ?random_state:Random.State.t
+    -> ?pos:int
+    -> ?len:int
+    -> ('a, [> read_write ]) t
+    -> unit
+
   val random_element : ?random_state:Random.State.t -> ('a, [> read ]) t -> 'a option
   val random_element_exn : ?random_state:Random.State.t -> ('a, [> read ]) t -> 'a
   val zip : ('a, [> read ]) t -> ('b, [> read ]) t -> ('a * 'b, [< _ perms ]) t option
   val zip_exn : ('a, [> read ]) t -> ('b, [> read ]) t -> ('a * 'b, [< _ perms ]) t
   val unzip : ('a * 'b, [> read ]) t -> ('a, [< _ perms ]) t * ('b, [< _ perms ]) t
-
-  val sorted_copy
-    :  ('a, [> read ]) t
-    -> compare:('a -> 'a -> int)
-    -> ('a, [< _ perms ]) t
-
+  val sorted_copy : ('a, [> read ]) t -> compare:('a -> 'a -> int) -> ('a, [< _ perms ]) t
   val last : ('a, [> read ]) t -> 'a
   val equal : ('a -> 'a -> bool) -> ('a, [> read ]) t -> ('a, [> read ]) t -> bool
   val to_sequence : ('a, [> read ]) t -> 'a Sequence.t
@@ -427,7 +424,7 @@ module type S = sig
   val find_consecutive_duplicate : 'a t -> equal:('a -> 'a -> bool) -> ('a * 'a) option
   val reduce : 'a t -> f:('a -> 'a -> 'a) -> 'a option
   val reduce_exn : 'a t -> f:('a -> 'a -> 'a) -> 'a
-  val permute : ?random_state:Random.State.t -> 'a t -> unit
+  val permute : ?random_state:Random.State.t -> ?pos:int -> ?len:int -> 'a t -> unit
   val random_element : ?random_state:Random.State.t -> 'a t -> 'a option
   val random_element_exn : ?random_state:Random.State.t -> 'a t -> 'a
   val zip : 'a t -> 'b t -> ('a * 'b) t option

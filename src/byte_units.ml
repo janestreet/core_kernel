@@ -32,8 +32,8 @@ let of_bytes_int64_exn b = of_repr (Repr.of_int64_exn b)
 let of_bytes_float_exn b = of_repr (Repr.of_float b)
 
 let[@deprecated
-  "[since 2019-01] Use [bytes_int_exn], [bytes_int63], [bytes_int64] or \
-   [bytes_float] as appropriate."] bytes
+  "[since 2019-01] Use [bytes_int_exn], [bytes_int63], [bytes_int64] or [bytes_float] \
+   as appropriate."] bytes
   =
   bytes_float
 ;;

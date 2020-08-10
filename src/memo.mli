@@ -71,7 +71,8 @@ val general
 *)
 val recursive
   :  hashable:'a Hashtbl.Hashable.t
-  -> ?cache_size_bound:int
+  -> ?cache_size_bound:
+       int
   -> (('a -> 'b) -> 'a -> 'b)
   -> ('a, 'b) fn
 

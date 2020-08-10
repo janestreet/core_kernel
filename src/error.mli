@@ -8,8 +8,7 @@ include module type of struct
 end
 
 (** This include is the source of the bin_io functions. *)
-include
-  Info_intf.Extension with type t := t
+include Info_intf.Extension with type t := t
 (** @open *)
 
 (** [Error.t] is {e not} wire-compatible with [Error.Stable.V1.t].  See info.mli for

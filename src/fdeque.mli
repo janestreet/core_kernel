@@ -14,8 +14,7 @@ type 'a t [@@deriving bin_io, compare, hash, sexp]
     [Arbitrary_order] below.
 
     [is_empty] and [length] have worst-case complexity O(1). *)
-include
-  Container.S1 with type 'a t := 'a t
+include Container.S1 with type 'a t := 'a t
 
 include Invariant.S1 with type 'a t := 'a t
 include Monad.S with type 'a t := 'a t

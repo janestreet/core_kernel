@@ -46,10 +46,7 @@ let arg_type m = arg_type' (enum m)
 
 let doc' ?represent_choice_with enum ~doc =
   let choices =
-    enum
-    |> List.map ~f:fst
-    |> List.sort ~compare:String.compare
-    |> String.concat ~sep:"|"
+    enum |> List.map ~f:fst |> List.sort ~compare:String.compare |> String.concat ~sep:"|"
   in
   match represent_choice_with with
   | None -> sprintf "(%s) %s" choices doc

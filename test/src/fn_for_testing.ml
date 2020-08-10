@@ -10,8 +10,7 @@ module type Examples = sig
   val examples : t list
 end
 
-module Make (Input : S) (Output : S) (Examples : Examples with type t := Input.t) =
-struct
+module Make (Input : S) (Output : S) (Examples : Examples with type t := Input.t) = struct
   open Examples
 
   type t = Input.t -> Output.t

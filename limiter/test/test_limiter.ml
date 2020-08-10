@@ -280,8 +280,7 @@ module Step_test = struct
          would be perfect to accomodate token drip granularity. *)
       ; take 2.0 2 false (* but now there are too many concurrent jobs *)
       ; return_to_hopper 2.0 3 (* give some back *)
-      ; take 2.0 1 false
-      (* and it take            s time for them to get in the bucket *)
+      ; take 2.0 1 false (* and it take            s time for them to get in the bucket *)
       ; take 3.0 2 true (* and now we can do a burst of 2 *)
       ; take 10.0 1 true (* and one more *)
       ; take 10.0 1 false (* but now we're out of concurrent jobs *)

@@ -12,8 +12,7 @@ type 'a t [@@deriving sexp_of]
 (** Mutation of the heap during iteration is not supported, but there is no check to
     prevent it.  The behavior of a heap that is mutated during iteration is
     undefined. *)
-include
-  Container.S1 with type 'a t := 'a t
+include Container.S1 with type 'a t := 'a t
 
 include Invariant.S1 with type 'a t := 'a t
 

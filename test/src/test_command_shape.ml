@@ -8,9 +8,7 @@ module Entry = struct
     ; aliases : string list
     }
 
-  let create ?(aliases = []) name_length doc_length =
-    { name_length; doc_length; aliases }
-  ;;
+  let create ?(aliases = []) name_length doc_length = { name_length; doc_length; aliases }
 
   let generate_string ~spaces length =
     List.init length ~f:(fun x -> if x % 10 = 0 && spaces then ' ' else 'a')

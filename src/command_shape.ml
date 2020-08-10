@@ -28,8 +28,7 @@ module Stable = struct
             | Many t -> invariant t
             | Maybe Zero -> failwith "Maybe Zero should be just Zero"
             | Maybe t -> invariant t
-            | Concat [] | Concat [ _ ] ->
-              failwith "Flatten zero and one-element Concat"
+            | Concat [] | Concat [ _ ] -> failwith "Flatten zero and one-element Concat"
             | Concat ts -> Base.List.iter ts ~f:invariant
             | Ad_hoc _ -> ())
         ;;

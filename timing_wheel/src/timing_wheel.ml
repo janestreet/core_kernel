@@ -440,8 +440,7 @@ end = struct
   module Key : sig
     (** [Interval_num] is the public API.  Everything following in the signature is
         for internal use. *)
-    include
-      Timing_wheel_intf.Interval_num
+    include Timing_wheel_intf.Interval_num
 
     (** [add_clamp_to_max] doesn't work at all with negative spans *)
     val add_clamp_to_max : t -> Span.t -> t
@@ -749,10 +748,7 @@ end = struct
       }
     [@@deriving fields, sexp_of]
 
-    let slot t ~key =
-      Key.slot key ~bits_per_slot:t.bits_per_slot ~slots_mask:t.slots_mask
-    ;;
-
+    let slot t ~key = Key.slot key ~bits_per_slot:t.bits_per_slot ~slots_mask:t.slots_mask
     let next_slot t slot = Slots_mask.next_slot t.slots_mask slot
 
     let min_key_in_same_slot t ~key =
@@ -868,8 +864,7 @@ end = struct
         let check f = Invariant.check_field level f in
         Level.Fields.iter
           ~index:(check (fun index -> assert (index >= 0)))
-          ~bits:
-            (check (fun bits -> assert (Num_key_bits.( > ) bits Num_key_bits.zero)))
+          ~bits:(check (fun bits -> assert (Num_key_bits.( > ) bits Num_key_bits.zero)))
           ~slots_mask:
             (check
                ([%test_result: Slots_mask.t]
@@ -1065,9 +1060,7 @@ end = struct
   let[@cold] raise_add_elt_key_out_of_level_bounds key level =
     raise_s
       [%message
-        "Priority_queue.add_elt key out of level bounds"
-          (key : Key.t)
-          (level : _ Level.t)]
+        "Priority_queue.add_elt key out of level bounds" (key : Key.t) (level : _ Level.t)]
   ;;
 
   let add_elt t elt =
@@ -1134,12 +1127,7 @@ end = struct
       [first].  If the element's key is [>= t_min_allowed_key], then it adds the element
       back at a lower level.  If not, then it calls [handle_removed] and [free]s the
       element. *)
-  let remove_or_re_add_elts
-        t
-        (level : _ Level.t)
-        first
-        ~t_min_allowed_key
-        ~handle_removed
+  let remove_or_re_add_elts t (level : _ Level.t) first ~t_min_allowed_key ~handle_removed
     =
     let pool = t.pool in
     let current = ref first in
@@ -1202,8 +1190,7 @@ end = struct
           slots.(!slot) <- Internal_elt.null ();
           remove_or_re_add_elts t level first ~t_min_allowed_key ~handle_removed);
         slot := Level.next_slot level !slot;
-        level_min_allowed_key
-        := Key.add_clamp_to_max !level_min_allowed_key keys_per_slot)
+        level_min_allowed_key := Key.add_clamp_to_max !level_min_allowed_key keys_per_slot)
     done;
     level.min_allowed_key <- desired_min_allowed_key;
     level.max_allowed_key
@@ -1676,9 +1663,7 @@ let reschedule_gen t alarm ~key ~at =
   Priority_queue.change t.priority_queue alarm ~key ~at
 ;;
 
-let reschedule t alarm ~at =
-  reschedule_gen t alarm ~key:(interval_num_unchecked t at) ~at
-;;
+let reschedule t alarm ~at = reschedule_gen t alarm ~key:(interval_num_unchecked t at) ~at
 
 let reschedule_at_interval_num t alarm ~at =
   reschedule_gen t alarm ~key:at ~at:(interval_num_start t at)
@@ -1746,8 +1731,7 @@ let next_alarm_fires_at t =
 let[@cold] raise_next_alarm_fires_at_exn_of_empty_timing_wheel t =
   raise_s
     [%message
-      "Timing_wheel.next_alarm_fires_at_exn of empty timing wheel"
-        ~timing_wheel:(t : _ t)]
+      "Timing_wheel.next_alarm_fires_at_exn of empty timing wheel" ~timing_wheel:(t : _ t)]
 ;;
 
 let[@cold] raise_next_alarm_fires_at_with_all_alarms_in_max_interval t =

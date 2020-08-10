@@ -586,78 +586,74 @@ let%test_module "Span.to_string/of_string" =
       let quickcheck_generator = bounded_span_gen ~magnitude_low ~magnitude_high in
       let test_count = ref 0 in
       let abnormal_count = ref 0 in
-      quickcheck
-        [%here]
-        quickcheck_generator
-        ~sexp_of:Time.Span.sexp_of_t
-        ~f:(fun span ->
-          let seconds = Time.Span.to_sec span in
-          let ulp = Float.one_ulp `Up seconds -. seconds in
-          let string = Time.Span.to_string span in
-          require
-            [%here]
-            (Time.Span.of_string string = span)
-            ~if_false_then_print_s:
-              (lazy
-                [%message
-                  "span failed to round-trip string conversion"
-                    (string : string)
-                    (seconds : float)]);
-          let parts = parts_of_string string in
-          let is_abnormal =
-            (* Spans with a ULP over half a minute start to have abnormal parts like
-               "60s".  This is an artifact of our [to_string] algorithm and how it uses
-               smaller units of time to correct for rounding error in the larger ones;
-               once the rounding error is over half the size of the previous unit, the
-               results are no longer what we expect as humans.
+      quickcheck [%here] quickcheck_generator ~sexp_of:Time.Span.sexp_of_t ~f:(fun span ->
+        let seconds = Time.Span.to_sec span in
+        let ulp = Float.one_ulp `Up seconds -. seconds in
+        let string = Time.Span.to_string span in
+        require
+          [%here]
+          (Time.Span.of_string string = span)
+          ~if_false_then_print_s:
+            (lazy
+              [%message
+                "span failed to round-trip string conversion"
+                  (string : string)
+                  (seconds : float)]);
+        let parts = parts_of_string string in
+        let is_abnormal =
+          (* Spans with a ULP over half a minute start to have abnormal parts like
+             "60s".  This is an artifact of our [to_string] algorithm and how it uses
+             smaller units of time to correct for rounding error in the larger ones;
+             once the rounding error is over half the size of the previous unit, the
+             results are no longer what we expect as humans.
 
-               Since the output is still numerically correct and spans this large are
-               rarely used, we tolerate the abnormality, but only in the very last
-               part. Additionally, we very occasionally have remainders that are >900us,
-               but we print 1 decimal place and end up printing 1000us instead of 1ms *)
-            List.fold parts ~init:false ~f:(fun has_abnormal (magnitude, unit_of_time) ->
-              let open Float.O in
-              require
-                [%here]
-                (not has_abnormal)
-                ~if_false_then_print_s:
-                  (lazy [%message "abnormal span part not last" (string : string)]);
-              require
-                [%here]
-                (magnitude > 0.)
-                ~if_false_then_print_s:
-                  (lazy
-                    [%message
-                      "magnitude is negative"
-                        (string : string)
-                        (magnitude : float)
-                        (unit_of_time : Unit_of_time.t)]);
-              Option.value_map
-                ~default:false
-                (upper_bound unit_of_time)
-                ~f:(fun upper_bound ->
-                  (* we tolerate one abnormality where the very last part is exactly at
-                     the upper bound *)
-                  if magnitude = upper_bound
-                  then true
-                  else (
-                    require
-                      [%here]
-                      (magnitude < upper_bound)
-                      ~if_false_then_print_s:
-                        (lazy
-                          [%message
-                            "magnitude out of bounds"
-                              (string : string)
-                              (seconds : float)
-                              (ulp : float)
-                              (magnitude : float)
-                              (upper_bound : float)
-                              (unit_of_time : Unit_of_time.t)]);
-                    false)))
-          in
-          incr test_count;
-          if is_abnormal then incr abnormal_count);
+             Since the output is still numerically correct and spans this large are
+             rarely used, we tolerate the abnormality, but only in the very last
+             part. Additionally, we very occasionally have remainders that are >900us,
+             but we print 1 decimal place and end up printing 1000us instead of 1ms *)
+          List.fold parts ~init:false ~f:(fun has_abnormal (magnitude, unit_of_time) ->
+            let open Float.O in
+            require
+              [%here]
+              (not has_abnormal)
+              ~if_false_then_print_s:
+                (lazy [%message "abnormal span part not last" (string : string)]);
+            require
+              [%here]
+              (magnitude > 0.)
+              ~if_false_then_print_s:
+                (lazy
+                  [%message
+                    "magnitude is negative"
+                      (string : string)
+                      (magnitude : float)
+                      (unit_of_time : Unit_of_time.t)]);
+            Option.value_map
+              ~default:false
+              (upper_bound unit_of_time)
+              ~f:(fun upper_bound ->
+                (* we tolerate one abnormality where the very last part is exactly at
+                   the upper bound *)
+                if magnitude = upper_bound
+                then true
+                else (
+                  require
+                    [%here]
+                    (magnitude < upper_bound)
+                    ~if_false_then_print_s:
+                      (lazy
+                        [%message
+                          "magnitude out of bounds"
+                            (string : string)
+                            (seconds : float)
+                            (ulp : float)
+                            (magnitude : float)
+                            (upper_bound : float)
+                            (unit_of_time : Unit_of_time.t)]);
+                  false)))
+        in
+        incr test_count;
+        if is_abnormal then incr abnormal_count);
       let abnormal_frac = Float.of_int !abnormal_count /. Float.of_int !test_count in
       if Float.(abnormal_frac > allow_abnormal_frac)
       then
@@ -1095,9 +1091,7 @@ let%expect_test "of_string_iso8601_extended" =
       (* This is not necessarily an error, we may just need to update this test. *)
       print_cr [%here] [%message "unexpected exception" (exn : exn)]
     | ofday ->
-      print_cr
-        [%here]
-        [%message "did not raise" (string : string) (ofday : Time.Ofday.t)]
+      print_cr [%here] [%message "did not raise" (string : string) (ofday : Time.Ofday.t)]
   in
   List.iter
     ~f:failure
@@ -1254,8 +1248,7 @@ module Ofday = struct
       (Set.of_list [ start_of_day ])
       (Set.t_of_sexp
          (Sexp.List
-            [ Float.sexp_of_t
-                (Time.Span.to_sec (to_span_since_start_of_day start_of_day))
+            [ Float.sexp_of_t (Time.Span.to_sec (to_span_since_start_of_day start_of_day))
             ]))
   ;;
 end

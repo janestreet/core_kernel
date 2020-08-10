@@ -9,8 +9,7 @@ type 'a t [@@deriving sexp_of]
 
 (** Even though [min_elt], [max_elt], and [to_list] are in [Container.S1], they are
     documented separately to make sure there is no confusion. *)
-include
-  Container.S1 with type 'a t := 'a t
+include Container.S1 with type 'a t := 'a t
 
 (** The comparison functions in [min_elt] and [max_elt] are independent of the one used to
     order the heap. Since the provided [compare] may be different from the one used to

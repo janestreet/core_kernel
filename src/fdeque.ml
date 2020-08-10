@@ -156,10 +156,7 @@ module Arbitrary_order = struct
   let length = length
   let to_list t = List.rev_append t.front t.back
   let to_array t = Array.of_list (to_list t)
-
-  let to_sequence t =
-    Sequence.append (Sequence.of_list t.front) (Sequence.of_list t.back)
-  ;;
+  let to_sequence t = Sequence.append (Sequence.of_list t.front) (Sequence.of_list t.back)
 
   let sum (type a) (module M : Container.Summable with type t = a) t ~f =
     let open M in

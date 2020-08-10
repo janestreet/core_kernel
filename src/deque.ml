@@ -30,8 +30,7 @@ let create ?initial_length ?never_shrink () =
   in
   let initial_length = Option.value ~default:7 initial_length in
   if initial_length < 0
-  then
-    invalid_argf "passed negative initial_length to Deque.create: %i" initial_length ();
+  then invalid_argf "passed negative initial_length to Deque.create: %i" initial_length ();
   (* Make the initial array length be [initial_length + 1] so we can fit [initial_length]
      elements without growing.  We never quite use the whole array. *)
   let arr_length = initial_length + 1 in
@@ -126,9 +125,7 @@ let foldi' t dir ~init ~f =
             ~stop_pos:t.arr_length
             ~step:1
         in
-        let acc, _ =
-          loop acc ~apparent_i ~real_i:0 ~stop_pos:(actual_back + 1) ~step:1
-        in
+        let acc, _ = loop acc ~apparent_i ~real_i:0 ~stop_pos:(actual_back + 1) ~step:1 in
         acc)
     | `back_to_front ->
       if actual_front <= actual_back
