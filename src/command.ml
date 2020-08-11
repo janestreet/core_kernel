@@ -1304,12 +1304,17 @@ module Base = struct
             ~default
             ~doc
         =
+        let doc =
+          match sexp_of_default default with
+          | Sexp.Atom "_" -> doc
+          | default_sexp -> sprintf !"%s (default: %{Sexp})" doc default_sexp
+        in
         flag
           ?aliases
           ?full_flag_required
           name
           (optional_with_default default arg_type)
-          ~doc:(sprintf !"%s (default: %{Sexp})" doc (sexp_of_default default))
+          ~doc
       ;;
 
       include Applicative.Make (struct

@@ -152,9 +152,11 @@ module Unstable = struct
   type nonrec t = t [@@deriving bin_io, compare, equal, hash, sexp]
 end
 
-let to_string_hum t = if am_running_test then nil else to_string t
 let arg_type = Command.Arg_type.create of_string
-let sexp_of_t t = if am_running_test then sexp_of_t nil else sexp_of_t t
+
+let sexp_of_t t =
+  if am_running_test then [%sexp "<uuid-omitted-in-test>"] else [%sexp (t : t)]
+;;
 
 module Private = struct
   let create = create
@@ -163,7 +165,6 @@ module Private = struct
   let nil = nil
 end
 
-let create () = raise_s [%message "[Uuid.create] is deprecated"]
 let quickcheck_shrinker : t Quickcheck.Shrinker.t = Quickcheck.Shrinker.empty ()
 let quickcheck_observer : t Quickcheck.Observer.t = Quickcheck.Observer.of_hash (module T)
 

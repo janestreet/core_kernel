@@ -4,7 +4,9 @@
 
 open! Core_kernel
 
-(** When [am_running_test], [sexp_of_t] shows all zeros (the nil UUID). *)
+(** When [am_running_test], [sexp_of_t] masks the UUID, showing only
+    "<uuid-omitted-in-test>". You can use [Unstable.sexp_of_t] if you definitely want to
+    see it within your tests. *)
 type t [@@deriving hash, sexp_of]
 
 include Identifiable.S with type t := t
@@ -14,15 +16,7 @@ include Quickcheckable.S with type t := t
 val t_of_sexp : Sexp.t -> t
 [@@deprecated "[since 2017-11] Use a [Stable] or [Unstable] [t_of_sexp]."]
 
-val create : unit -> t
-[@@deprecated "[since 2018-10] Use [Uuid.create_random] or [Uuid_unix.create]"]
-
 val create_random : Random.State.t -> t
-
-(** [to_string_hum t] is like [to_string], except when [am_running_test], in
-    which case it shows all zeros (the nil UUID). *)
-val to_string_hum : t -> string
-
 val arg_type : t Command.Arg_type.t
 
 module Unstable : sig
