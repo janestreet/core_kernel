@@ -429,8 +429,8 @@ module type Command = sig
         -> doc:string
         -> 'a t
 
-      (** [flag_optional_with_default_doc name arg_type sexp_of_default ~default ~doc] is a
-          shortcut for [flag], where:
+      (** [flag_optional_with_default_doc name arg_type sexp_of_default ~default ~doc] is
+          a shortcut for [flag], where:
           + The [Flag.t] is [optional_with_default default arg_type]
           + The [doc] is passed through with an explanation of what the default value
           appended. *)
