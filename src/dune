@@ -7,7 +7,7 @@
   base.caml fieldslib jane-street-headers base.md5 ppx_assert.runtime-lib
   ppx_hash.runtime-lib ppx_inline_test.runtime-lib sexplib splittable_random
   stdio time_now typerep validate variantslib)
- (c_flags :standard -D_LARGEFILE64_SOURCE)
+ (ocamlopt_flags :standard) (c_flags :standard -D_LARGEFILE64_SOURCE)
  (c_library_flags (:include rt-flags))
  (c_names bigstring_stubs md5_stubs array_stubs gc_stubs time_ns_stubs
   heap_block_stubs)
