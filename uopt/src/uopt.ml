@@ -3,7 +3,7 @@ open Core_kernel
 type 'a t = 'a
 
 (* This [Obj.magic] is OK because we never allow user code access to [none] (except via
-   [unsafe_value].  We disallow [_ Uopt.t Uopt.t], so there is no chance of confusing
+   [unsafe_value]).  We disallow [_ Uopt.t Uopt.t], so there is no chance of confusing
    [none] with [some none].  And [float Uopt.t array] is similarly disallowed. *)
 let none = "Uopt.none" |> (Obj.magic : string -> _ t)
 let is_none t = phys_equal t none
