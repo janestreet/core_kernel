@@ -53,7 +53,7 @@ module On_subscription_after_first_write : sig
     | Allow
     | Allow_and_send_last_value
     | Raise
-  [@@deriving sexp_of]
+  [@@deriving enumerate, sexp_of]
 end
 
 val read_only : ('callback, _) t -> 'callback Read_only.t

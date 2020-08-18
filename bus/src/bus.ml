@@ -29,7 +29,7 @@ module On_subscription_after_first_write = struct
     | Allow
     | Allow_and_send_last_value
     | Raise
-  [@@deriving sexp_of]
+  [@@deriving enumerate, sexp_of]
 
   let allow_subscription_after_first_write = function
     | Allow -> true
