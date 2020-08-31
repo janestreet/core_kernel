@@ -41,7 +41,7 @@ let assert_alphabetic_order_exn here (type a) (m : a t) =
     as_strings
 ;;
 
-let arg_type' = Command.Arg_type.of_alist_exn
+let arg_type' l = Command.Arg_type.of_alist_exn l
 let arg_type m = arg_type' (enum m)
 
 let doc' ?represent_choice_with enum ~doc =
