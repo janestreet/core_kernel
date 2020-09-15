@@ -9,18 +9,23 @@ module type Elt_plain = Hashtbl.Key_plain
 module type Elt = Hashtbl.Key
 module type Elt_binable = Hashtbl.Key_binable
 
-module Make_plain (Elt : Elt_plain) = struct
-  type elt = Elt.t
+module Make_plain_with_hashable (T : sig
+    module Elt : Elt_plain
+
+    val hashable : Elt.t Hashtbl.Hashable.t
+  end) =
+struct
+  type elt = T.Elt.t
   type nonrec t = elt t
   type 'a elt_ = elt
 
   include Creators (struct
-      type 'a t = Elt.t
+      type 'a t = T.Elt.t
 
-      let hashable = Hashtbl.Hashable.of_key (module Elt)
+      let hashable = T.hashable
     end)
 
-  let sexp_of_t t = Poly.sexp_of_t Elt.sexp_of_t t
+  let sexp_of_t t = Poly.sexp_of_t T.Elt.sexp_of_t t
 
   module Provide_of_sexp
       (X : sig
@@ -38,7 +43,7 @@ module Make_plain (Elt : Elt_plain) = struct
        with type t := elt) =
     Bin_prot.Utils.Make_iterable_binable (struct
       module Elt = struct
-        include Elt
+        include T.Elt
         include X
       end
 
@@ -65,6 +70,32 @@ module Make_plain (Elt : Elt_plain) = struct
       ;;
     end)
 end
+
+module Make_with_hashable (T : sig
+    module Elt : Elt
+
+    val hashable : Elt.t Hashtbl.Hashable.t
+  end) =
+struct
+  include Make_plain_with_hashable (T)
+  include Provide_of_sexp (T.Elt)
+end
+
+module Make_binable_with_hashable (T : sig
+    module Elt : Elt_binable
+
+    val hashable : Elt.t Hashtbl.Hashable.t
+  end) =
+struct
+  include Make_with_hashable (T)
+  include Provide_bin_io (T.Elt)
+end
+
+module Make_plain (Elt : Elt_plain) = Make_plain_with_hashable (struct
+    module Elt = Elt
+
+    let hashable = Hashtbl.Hashable.of_key (module Elt)
+  end)
 
 module Make (Elt : Elt) = struct
   include Make_plain (Elt)

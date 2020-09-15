@@ -123,19 +123,22 @@ module Poly = struct
     end)
 end
 
-module Make_plain (Key : Key_plain) = struct
-  let hashable =
-    { Hashable.hash = Key.hash; compare = Key.compare; sexp_of_t = Key.sexp_of_t }
-  ;;
+module Make_plain_with_hashable (T : sig
+    module Key : Key_plain
 
-  type key = Key.t
+    val hashable : Key.t Hashable.t
+  end) =
+struct
+  let hashable = T.hashable
+
+  type key = T.Key.t
   type ('a, 'b) hashtbl = ('a, 'b) t
-  type 'a t = (Key.t, 'a) hashtbl
-  type ('a, 'b) t__ = (Key.t, 'b) hashtbl
-  type 'a key_ = Key.t
+  type 'a t = (T.Key.t, 'a) hashtbl
+  type ('a, 'b) t__ = (T.Key.t, 'b) hashtbl
+  type 'a key_ = T.Key.t
 
   include Creators (struct
-      type 'a t = Key.t
+      type 'a t = T.Key.t
 
       let hashable = hashable
     end)
@@ -156,7 +159,7 @@ module Make_plain (Key : Key_plain) = struct
 
   let validate = validate
   let invariant invariant_key t = invariant ignore invariant_key t
-  let sexp_of_t sexp_of_v t = Poly.sexp_of_t Key.sexp_of_t sexp_of_v t
+  let sexp_of_t sexp_of_v t = Poly.sexp_of_t T.Key.sexp_of_t sexp_of_v t
 
   module Provide_of_sexp
       (Key : sig
@@ -174,7 +177,7 @@ module Make_plain (Key : Key_plain) = struct
        with type t := key) =
     Bin_prot.Utils.Make_iterable_binable1 (struct
       module Key = struct
-        include Key
+        include T.Key
         include Key'
       end
 
@@ -206,6 +209,34 @@ module Make_plain (Key : Key_plain) = struct
       ;;
     end)
 end
+
+module Make_with_hashable (T : sig
+    module Key : Key
+
+    val hashable : Key.t Hashable.t
+  end) =
+struct
+  include Make_plain_with_hashable (T)
+  include Provide_of_sexp (T.Key)
+end
+
+module Make_binable_with_hashable (T : sig
+    module Key : Key_binable
+
+    val hashable : Key.t Hashable.t
+  end) =
+struct
+  include Make_with_hashable (T)
+  include Provide_bin_io (T.Key)
+end
+
+module Make_plain (Key : Key_plain) = Make_plain_with_hashable (struct
+    module Key = Key
+
+    let hashable =
+      { Hashable.hash = Key.hash; compare = Key.compare; sexp_of_t = Key.sexp_of_t }
+    ;;
+  end)
 
 module Make (Key : Key) = struct
   include Make_plain (Key)

@@ -4,8 +4,7 @@ include Doubly_linked_intf
 (* INVARIANT: This exception is raised if a list is mutated during a pending iteration.
 
    This invariant is guaranteed by the Header and Elt modules in conjunction.  All
-   downstream code in this module need not be concerned with this invariant.
-*)
+   downstream code in this module need not be concerned with this invariant. *)
 exception Attempt_to_mutate_list_during_iteration
 
 let phys_equal = ( == )
@@ -43,7 +42,7 @@ module Header : sig
      allocate at all.
 
      For the same reason we make sure not to call [Result.try_with (fun () -> ...)]
-     inside [with_iteration] and do an explicit match statement instead.  *)
+     inside [with_iteration] and do an explicit match statement instead. *)
 
   val with_iteration_2 : t -> 'a -> 'b -> ('a -> 'b -> 'c) -> 'c
   val with_iteration_3 : t -> 'a -> 'b -> 'c -> ('a -> 'b -> 'c -> 'd) -> 'd

@@ -226,6 +226,24 @@ module type Hashtbl = sig
   module Make (Key : Key) : S with type key = Key.t
   module Make_binable (Key : Key_binable) : S_binable with type key = Key.t
 
+  module Make_plain_with_hashable (T : sig
+      module Key : Key_plain
+
+      val hashable : Key.t Hashable.t
+    end) : S_plain with type key = T.Key.t
+
+  module Make_with_hashable (T : sig
+      module Key : Key
+
+      val hashable : Key.t Hashable.t
+    end) : S with type key = T.Key.t
+
+  module Make_binable_with_hashable (T : sig
+      module Key : Key_binable
+
+      val hashable : Key.t Hashable.t
+    end) : S_binable with type key = T.Key.t
+
   module M (K : T.T) : sig
     type nonrec 'v t = (K.t, 'v) t
   end

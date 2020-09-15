@@ -1318,9 +1318,12 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_intf.Hashtbl) = stru
        module Merge_into_action = Hashtbl.Merge_into_action
        module Poly = Hashtbl.Poly
        module Make_plain = Hashtbl.Make_plain
+       module Make_plain_with_hashable = Hashtbl.Make_plain_with_hashable
        module Make = Hashtbl.Make
+       module Make_with_hashable = Hashtbl.Make_with_hashable
        module M = Hashtbl.M
        module Make_binable = Hashtbl.Make_binable
+       module Make_binable_with_hashable = Hashtbl.Make_binable_with_hashable
        module Using_hashable = Hashtbl.Using_hashable
      end :
        Hashtbl_intf.Hashtbl))
@@ -2307,6 +2310,9 @@ module Make_mutation_in_callbacks (Hashtbl : Hashtbl_intf.Hashtbl) = struct
        module Hashable = Hashtbl.Hashable
        module Merge_into_action = Hashtbl.Merge_into_action
        module Poly = Hashtbl.Poly
+       module Make_binable_with_hashable = Hashtbl.Make_binable_with_hashable
+       module Make_plain_with_hashable = Hashtbl.Make_plain_with_hashable
+       module Make_with_hashable = Hashtbl.Make_with_hashable
        module Make_plain = Hashtbl.Make_plain
        module Make = Hashtbl.Make
        module Make_binable = Hashtbl.Make_binable

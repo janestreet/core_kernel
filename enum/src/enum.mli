@@ -29,6 +29,5 @@ type ('a, 'b) make_param =
 val make_param : f:('a Command.Arg_type.t -> 'b Command.Flag.t) -> ('a, 'b) make_param
 val make_param_optional_with_default_doc : default:'a -> ('a, 'a) make_param
 val arg_type : 'a t -> 'a Command.Arg_type.t
-val doc : ?represent_choice_with:string -> 'a t -> doc:string -> string
 
 module Make_stringable (M : S) : Stringable with type t := M.t

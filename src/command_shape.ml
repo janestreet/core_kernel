@@ -736,6 +736,18 @@ module Fully_forced = struct
     | Group of t Group_info.t
     | Exec of Exec_info.t * t
   [@@deriving bin_io, compare, sexp]
+
+  let expanded_subcommands t =
+    let rec expand = function
+      | Exec (_, t) -> expand t
+      | Basic _ -> [ [] ]
+      | Group { subcommands; _ } ->
+        List.concat_map (Lazy.force subcommands) ~f:(fun (name, t) ->
+          List.map ~f:(fun path -> name :: path) (expand t))
+    in
+    (* Reversing so that the commands show up in the same order as help is output *)
+    List.rev (expand t)
+  ;;
 end
 
 module Sexpable = struct

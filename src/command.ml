@@ -81,17 +81,20 @@ module Arg_type = struct
     { parse : string -> ('a, exn) Result.t
     ; complete : Completer.t
     ; key : 'a Univ_map.Multi.Key.t option
+    ; extra_doc : string option
     }
 
-  let create ?complete ?key of_string =
+  let create' ?complete ?key of_string ~extra_doc =
     let parse x = Result.try_with (fun () -> of_string x) in
-    { parse; key; complete }
+    { parse; key; complete; extra_doc }
   ;;
+
+  let create ?complete ?key of_string = create' ?complete ?key of_string ~extra_doc:None
 
   let map ?key t ~f =
     let parse str = Result.map (t.parse str) ~f in
     let complete = t.complete in
-    { parse; complete; key }
+    { parse; complete; key; extra_doc = None }
   ;;
 
   let string = create Fn.id
@@ -104,8 +107,14 @@ module Arg_type = struct
   let sexp = create Sexp.of_string
   let sexp_conv of_sexp = create (fun s -> of_sexp (Sexp.of_string s))
 
-  let of_map ?key map =
-    create
+  let of_map ?(list_values_in_help = true) ?key map =
+    create'
+      ~extra_doc:
+        (if list_values_in_help
+         then (
+           let values = String.concat ~sep:", " (Map.keys map) in
+           Some [%string "(can be: %{values})"])
+         else None)
       ?key
       ~complete:(fun _ ~part:prefix ->
         List.filter_map (Map.to_alist map) ~f:(fun (name, _) ->
@@ -117,14 +126,17 @@ module Arg_type = struct
            failwithf "valid arguments: {%s}" (String.concat ~sep:"," (Map.keys map)) ())
   ;;
 
-  let of_alist_exn ?key alist =
+  let of_alist_exn ?list_values_in_help ?key alist =
     match String.Map.of_alist alist with
-    | `Ok map -> of_map ?key map
+    | `Ok map -> of_map ?list_values_in_help ?key map
     | `Duplicate_key key ->
-      failwithf "Command.Spec.Arg_type.of_alist_exn: duplicate key %s" key ()
+      failwithf
+        "Command.Spec.Arg_type.of_alist_exn ~list_values_in_help:false: duplicate key %s"
+        key
+        ()
   ;;
 
-  let bool = of_alist_exn [ "true", true; "false", false ]
+  let bool = of_alist_exn ~list_values_in_help:false [ "true", true; "false", false ]
 
   let comma_separated
         ?(allow_empty = false)
@@ -327,6 +339,7 @@ module Flag = struct
     { action : action
     ; read : Env.t -> 'a
     ; num_occurrences : Num_occurrences.t
+    ; extra_doc : string option
     }
 
   type 'a t = string -> 'a state
@@ -346,12 +359,13 @@ module Flag = struct
               | Some key -> Env.multi_add env ~key ~data:arg)
          in
          Arg (update, arg_type.Arg_type.complete))
+    ; extra_doc = arg_type.extra_doc
     }
   ;;
 
   let map_flag t ~f input =
-    let { action; read; num_occurrences } = t input in
-    { action; read = (fun env -> f (read env)); num_occurrences }
+    let { action; read; num_occurrences; extra_doc } = t input in
+    { action; read = (fun env -> f (read env)); num_occurrences; extra_doc }
   ;;
 
   let write_option name key env arg =
@@ -411,7 +425,11 @@ module Flag = struct
           f ();
           env
     in
-    { read; action = No_arg action; num_occurrences = Num_occurrences.at_most_once }
+    { read
+    ; action = No_arg action
+    ; num_occurrences = Num_occurrences.at_most_once
+    ; extra_doc = None
+    }
   ;;
 
   let no_arg name = no_arg_general name ~key_value:None ~deprecated_hook:None
@@ -460,13 +478,18 @@ module Flag = struct
           f x;
           action env x
     in
-    { action = Rest action; read; num_occurrences = Num_occurrences.at_most_once }
+    { action = Rest action
+    ; read
+    ; num_occurrences = Num_occurrences.at_most_once
+    ; extra_doc = None
+    }
   ;;
 
   let no_arg_abort ~exit _name =
     { action = No_arg (fun _ -> never_returns (exit ()))
     ; num_occurrences = Num_occurrences.at_most_once
     ; read = (fun _ -> ())
+    ; extra_doc = None
     }
   ;;
 
@@ -708,7 +731,7 @@ module Anons = struct
 
     let ( >>| ) t f = return f <*> t
 
-    let one_more ~name { Arg_type.complete; parse = of_string; key } =
+    let one_more ~name { Arg_type.complete; parse = of_string; key; extra_doc = _ } =
       let parse anon ~for_completion =
         match of_string anon with
         | Error exn ->
@@ -1265,7 +1288,7 @@ module Base = struct
         let normalize flag = normalize Key_type.Flag flag in
         let name = normalize name in
         let aliases = List.map ~f:normalize aliases in
-        let { read; action; num_occurrences } = mode name in
+        let { read; action; num_occurrences; extra_doc } = mode name in
         let check_available =
           match num_occurrences.at_least_once with
           | false -> (ignore : Univ_map.t -> unit)
@@ -1281,7 +1304,10 @@ module Base = struct
                    [ { name
                      ; aliases
                      ; aliases_excluded_from_help
-                     ; doc
+                     ; doc =
+                         (match extra_doc with
+                          | Some extra_doc -> [%string "%{doc} %{extra_doc}"]
+                          | None -> doc)
                      ; action
                      ; num_occurrences
                      ; check_available
@@ -1354,7 +1380,9 @@ module Base = struct
         | Arg.Bool f -> call f bool
         | Arg.Symbol (syms, f) ->
           let arg_type =
-            Arg_type.of_alist_exn (List.map syms ~f:(fun sym -> sym, sym))
+            Arg_type.of_alist_exn
+              ~list_values_in_help:false
+              (List.map syms ~f:(fun sym -> sym, sym))
           in
           call f arg_type
         | Arg.Rest f -> gen (fun x -> Option.iter x ~f:(List.iter ~f)) escape
@@ -1508,6 +1536,7 @@ module Exec = struct
       working_dir : string
     ; path_to_exe : string
     ; child_subcommand : string list
+    ; env : env option
     }
 
   let shape t : Shape.Exec_info.t =
@@ -1538,58 +1567,17 @@ module Proxy = struct
     ; child_subcommand : string list
     ; kind : t Kind.t
     }
-
-  let rec get_summary_from_kind (kind : t Kind.t) =
-    match kind with
-    | Base b -> b.summary
-    | Group g -> g.summary
-    | Exec e -> e.summary
-    | Lazy l -> get_summary_from_kind (Lazy.force l)
-  ;;
-
-  let get_summary t = get_summary_from_kind t.kind
-
-  let rec get_readme_from_kind (kind : t Kind.t) =
-    match kind with
-    | Base b -> b.readme
-    | Group g -> g.readme
-    | Exec e -> e.readme
-    | Lazy l -> get_readme_from_kind (Lazy.force l)
-  ;;
-
-  let get_readme t = get_readme_from_kind t.kind
 end
 
 type t =
   | Base of Base.t
   | Group of t Group.t
   | Exec of Exec.t
-  | Proxy of Proxy.t
   | Lazy of t Lazy.t
-
-let rec sexpable_of_proxy_kind (kind : Proxy.t Proxy.Kind.t) : Shape.Sexpable.t =
-  match kind with
-  | Base base -> Base base
-  | Exec exec -> Exec exec
-  | Lazy thunk -> Lazy (Lazy.map ~f:sexpable_of_proxy_kind thunk)
-  | Group group ->
-    Group
-      { group with
-        subcommands =
-          Lazy.map
-            group.subcommands
-            ~f:
-              (List.map ~f:(fun (str, proxy) ->
-                 str, sexpable_of_proxy_kind proxy.Proxy.kind))
-      }
-;;
-
-let sexpable_of_proxy proxy = sexpable_of_proxy_kind proxy.Proxy.kind
 
 let rec sexpable_shape : t -> Shape.Sexpable.t = function
   | Base base -> Base (Base.shape base)
   | Exec exec -> Exec (Exec.shape exec)
-  | Proxy proxy -> sexpable_of_proxy proxy
   | Group group -> Group (Group.shape ~subcommand_to_shape:sexpable_shape group)
   | Lazy thunk -> Lazy (Lazy.map ~f:sexpable_shape thunk)
 ;;
@@ -1694,7 +1682,7 @@ let group ~summary ?readme ?preserve_subcommand_order ?body alist =
   lazy_group ~summary ?readme ?preserve_subcommand_order ?body (Lazy.from_val alist)
 ;;
 
-let exec ~summary ?readme ?(child_subcommand = []) ~path_to_exe () =
+let exec ~summary ?readme ?(child_subcommand = []) ?env ~path_to_exe () =
   let working_dir =
     Filename.dirname
     @@
@@ -1713,7 +1701,7 @@ let exec ~summary ?readme ?(child_subcommand = []) ~path_to_exe () =
       then failwith "Path passed to `Relative_to_me must be relative"
       else p
   in
-  Exec { summary; readme; working_dir; path_to_exe; child_subcommand }
+  Exec { summary; readme; working_dir; path_to_exe; child_subcommand; env }
 ;;
 
 let of_lazy thunk = Lazy thunk
@@ -1839,7 +1827,6 @@ module Version_info = struct
             (command ~version ~build_info))
       in
       Group { group with Group.subcommands }
-    | Proxy proxy -> Proxy proxy
     | Exec exec -> Exec exec
     | Lazy thunk -> Lazy (lazy (add ~version ~build_info (Lazy.force thunk)))
   ;;
@@ -1849,7 +1836,6 @@ let rec summary = function
   | Base x -> x.summary
   | Group x -> x.summary
   | Exec x -> x.summary
-  | Proxy x -> Proxy.get_summary x
   | Lazy thunk -> summary (Lazy.force thunk)
 ;;
 
@@ -1867,7 +1853,7 @@ module Deprecated = struct
   let rec get_flag_names = function
     | Base base -> base.Base.flags |> String.Map.keys
     | Lazy thunk -> get_flag_names (Lazy.force thunk)
-    | Group _ | Proxy _ | Exec _ -> assert false
+    | Group _ | Exec _ -> assert false
   ;;
 
   let help_recursive ~cmd ~with_flags ~expand_dots t s =
@@ -1893,7 +1879,7 @@ module Deprecated = struct
         :: (Lazy.force subcommands
             |> List.sort ~compare:Base.Deprecated.subcommand_cmp_fst
             |> List.concat_map ~f:(fun (cmd', t) -> help_recursive_rec ~cmd:cmd' t new_s))
-      | Proxy _ | Exec _ ->
+      | Exec _ ->
         (* Command.exec does not support deprecated commands *)
         []
     in
@@ -1929,12 +1915,13 @@ module For_unix (M : For_unix) = struct
     let exec_with_args t ~args ~maybe_new_comp_cword =
       let prog = abs_path ~dir:t.working_dir t.path_to_exe in
       let args = t.child_subcommand @ args in
+      let env = t.env in
       Option.iter maybe_new_comp_cword ~f:(fun n ->
         (* The logic for tracking [maybe_new_comp_cword] doesn't take into account whether
            this exec specifies a child subcommand. If it does, COMP_CWORD needs to be set
            higher to account for the arguments used to specify the child subcommand. *)
         set_comp_cword (n + List.length t.child_subcommand));
-      never_returns (Unix.exec ~prog ~argv:(prog :: args) ())
+      never_returns (Unix.exec ?env ~prog ~argv:(prog :: args) ())
     ;;
   end
 
@@ -2048,7 +2035,6 @@ module For_unix (M : For_unix) = struct
     match t with
     | Base b -> Basic (Base.shape b)
     | Group g -> Group (Group.shape ~subcommand_to_shape:shape g)
-    | Proxy p -> shape_of_proxy p
     | Exec ({ Exec.child_subcommand; path_to_exe; working_dir; _ } as e) ->
       Exec (Exec.shape e, shape_of_exe ~child_subcommand ~path_to_exe ~working_dir)
     | Lazy thunk -> shape (Lazy.force thunk)
@@ -2262,7 +2248,6 @@ module For_unix (M : For_unix) = struct
   let rec add_help_subcommands = function
     | Base _ as t -> t
     | Exec _ as t -> t
-    | Proxy _ as t -> t
     | Group { summary; readme; subcommands; body } ->
       let subcommands =
         Lazy.map subcommands ~f:(fun subcommands ->
@@ -2292,6 +2277,7 @@ module For_unix (M : For_unix) = struct
             ~build_info
             ~verbose_on_parse_error
             ~when_parsing_succeeds
+            ~complete_subcommands
     =
     match t with
     | Lazy thunk ->
@@ -2307,6 +2293,7 @@ module For_unix (M : For_unix) = struct
         ~build_info
         ~verbose_on_parse_error
         ~when_parsing_succeeds
+        ~complete_subcommands
     | Base base ->
       let args = maybe_apply_extend args ~extend ~path in
       let help_text =
@@ -2323,19 +2310,6 @@ module For_unix (M : For_unix) = struct
         ~when_parsing_succeeds
     | Exec exec ->
       let args = Cmdline.to_list (maybe_apply_extend args ~extend ~path) in
-      Exec.exec_with_args ~args exec ~maybe_new_comp_cword
-    | Proxy proxy ->
-      let args =
-        proxy.path_to_subcommand @ Cmdline.to_list (maybe_apply_extend args ~extend ~path)
-      in
-      let exec =
-        { Exec.working_dir = proxy.working_dir
-        ; path_to_exe = proxy.path_to_exe
-        ; child_subcommand = proxy.child_subcommand
-        ; summary = Proxy.get_summary proxy
-        ; readme = Proxy.get_readme proxy |> Option.map ~f:const
-        }
-      in
       Exec.exec_with_args ~args exec ~maybe_new_comp_cword
     | Group ({ summary; readme; subcommands = subs; body } as group) ->
       let env = Env.set env ~key:subs_key ~data:(Lazy.force subs) in
@@ -2402,7 +2376,8 @@ module For_unix (M : For_unix) = struct
               ~maybe_new_comp_cword:(Option.map ~f:Int.pred maybe_new_comp_cword)
               ~version
               ~build_info
-              ~verbose_on_parse_error)
+              ~verbose_on_parse_error
+              ~complete_subcommands)
        | Complete part ->
          let subs =
            Lazy.force subs
@@ -2410,8 +2385,19 @@ module For_unix (M : For_unix) = struct
            |> List.filter ~f:(fun name -> String.is_prefix name ~prefix:part)
            |> List.sort ~compare:String.compare
          in
-         List.iter subs ~f:print_endline;
-         exit 0)
+         (match complete_subcommands with
+          | Some f ->
+            let subcommands =
+              shape t |> Shape.fully_forced |> Shape.Fully_forced.expanded_subcommands
+            in
+            (match f subcommands with
+             | None -> exit 1
+             | Some to_output ->
+               print_endline (String.concat ~sep:" " to_output);
+               exit 0)
+          | None ->
+            List.iter subs ~f:print_endline;
+            exit 0))
   ;;
 
   let default_version, default_build_info =
@@ -2427,6 +2413,7 @@ module For_unix (M : For_unix) = struct
         ?(argv = Array.to_list Caml.Sys.argv)
         ?extend
         ?(when_parsing_succeeds = Fn.id)
+        ?complete_subcommands
         t
     =
     let build_info =
@@ -2451,6 +2438,7 @@ module For_unix (M : For_unix) = struct
           ~build_info
           ~verbose_on_parse_error
           ~when_parsing_succeeds
+          ~complete_subcommands
       with
       | Failed_to_parse_command_line msg ->
         if Cmdline.ends_in_complete args
@@ -2481,6 +2469,7 @@ module For_unix (M : For_unix) = struct
       ~build_info:default_build_info
       ~verbose_on_parse_error:None
       ~when_parsing_succeeds:Fn.id
+      ~complete_subcommands:None
   ;;
 end
 

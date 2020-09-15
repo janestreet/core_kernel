@@ -49,6 +49,24 @@ module Make_plain (Elt : Elt_plain) : S_plain with type elt = Elt.t
 module Make (Elt : Elt) : S with type elt = Elt.t
 module Make_binable (Elt : Elt_binable) : S_binable with type elt = Elt.t
 
+module Make_plain_with_hashable (T : sig
+    module Elt : Elt_plain
+
+    val hashable : Elt.t Hashtbl.Hashable.t
+  end) : S_plain with type elt = T.Elt.t
+
+module Make_with_hashable (T : sig
+    module Elt : Elt
+
+    val hashable : Elt.t Hashtbl.Hashable.t
+  end) : S with type elt = T.Elt.t
+
+module Make_binable_with_hashable (T : sig
+    module Elt : Elt_binable
+
+    val hashable : Elt.t Hashtbl.Hashable.t
+  end) : S_binable with type elt = T.Elt.t
+
 module M (Elt : T.T) : sig
   type nonrec t = Elt.t t
 end

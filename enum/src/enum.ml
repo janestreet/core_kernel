@@ -44,29 +44,6 @@ let assert_alphabetic_order_exn here (type a) (m : a t) =
 let arg_type' l = Command.Arg_type.of_alist_exn l
 let arg_type m = arg_type' (enum m)
 
-let doc' ?represent_choice_with enum ~doc =
-  let choices =
-    enum |> List.map ~f:fst |> List.sort ~compare:String.compare |> String.concat ~sep:"|"
-  in
-  match represent_choice_with with
-  | None -> sprintf "(%s) %s" choices doc
-  | Some represent_choice_with ->
-    let doc =
-      if String.is_empty doc
-      then ""
-      else (
-        let separator =
-          match doc.[String.length doc - 1] with
-          | ',' | '.' -> ""
-          | _ -> ","
-        in
-        sprintf " %s%s" doc separator)
-    in
-    sprintf "%s%s %s can be (%s)" represent_choice_with doc represent_choice_with choices
-;;
-
-let doc ?represent_choice_with m ~doc = doc' ?represent_choice_with (enum m) ~doc
-
 module Make_param = struct
   type 'a t =
     { arg_type : 'a Command.Arg_type.t
@@ -75,7 +52,12 @@ module Make_param = struct
 
   let create ?represent_choice_with ~doc m =
     let enum = enum m in
-    { arg_type = arg_type' enum; doc = doc' ?represent_choice_with enum ~doc }
+    let doc =
+      match represent_choice_with with
+      | None -> " " ^ doc
+      | Some represent_choice_with -> represent_choice_with ^ " " ^ doc
+    in
+    { arg_type = arg_type' enum; doc }
   ;;
 end
 

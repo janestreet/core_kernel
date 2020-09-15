@@ -193,6 +193,12 @@ module type S_backend = sig
   module type S = S0 with type ('key, 'data) hash_queue := ('key, 'data) t
 
   module Make (Key : Key) : S with type key = Key.t
+
+  module Make_with_hashable (T : sig
+      module Key : Key
+
+      val hashable : Key.t Hashtbl.Hashable.t
+    end) : S with type key = T.Key.t
 end
 
 (** A hash-queue is a combination of a queue and a hashtable that

@@ -72,8 +72,8 @@ let () =
   (summary "Run my server")
   (anons (Grammar Zero))
   (flags (
-    ((name "[-mode (dev|prod|something-else|unit-test)]")
-     (doc  "Running mode")
+    ((name "[-mode _]")
+     (doc "Running mode (can be: dev, prod, something-else, unit-test)")
      (aliases ()))
     ((name [-help])
      (doc  "print this help text and exit")
@@ -138,20 +138,8 @@ choices. Example:
     v}
 
 [Command] does a much better job of aligning this.
-|}]
 
-let () =
-  Enum.doc
-    (module T)
-    ~represent_choice_with:"T"
-    ~doc:"doc with custom [represent_choice_with]"
-  |> print_endline
-;;
-
-[%%expect {| T doc with custom [represent_choice_with], T can be (a|a-also|b) |}]
-
-[%%org {|
-  [Enum.Make\_stringable] converts [Enum.S] modules to [Stringable] modules.
+[Enum.Make\_stringable] converts [Enum.S] modules to [Stringable] modules.
 |}]
 
 module M = struct

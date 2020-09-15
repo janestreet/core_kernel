@@ -349,15 +349,25 @@ module Make_backend (Table : Hashtbl_intf.Hashtbl) : S_backend = struct
 
   module type S = S0 with type ('key, 'data) hash_queue := ('key, 'data) Backend.t
 
-  module Make (Key : Key) : S with type key = Key.t = struct
+  module Make_with_hashable (T : sig
+      module Key : Key
+
+      val hashable : Key.t Hashtbl.Hashable.t
+    end) : S with type key = T.Key.t = struct
     include (Backend : Backend with type ('k, 'd) t := ('k, 'd) Backend.t)
 
-    type key = Key.t
-    type 'data t = (Key.t, 'data) Backend.t [@@deriving sexp_of]
+    type key = T.Key.t
+    type 'data t = (T.Key.t, 'data) Backend.t [@@deriving sexp_of]
 
-    let hashable = Table.Hashable.of_key (module Key)
+    let hashable = T.hashable
     let create ?growth_allowed ?size () = create ?growth_allowed ?size hashable
   end
+
+  module Make (Key : Key) : S with type key = Key.t = Make_with_hashable (struct
+      module Key = Key
+
+      let hashable = Table.Hashable.of_key (module Key)
+    end)
 
   include Backend
 end

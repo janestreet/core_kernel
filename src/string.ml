@@ -39,7 +39,11 @@ end
 type t = string [@@deriving typerep]
 
 include Identifiable.Extend
-    (Base.String)
+    (struct
+      include Base.String
+
+      let hashable = Stable.V1.hashable
+    end)
     (struct
       type t = string [@@deriving bin_io]
     end)

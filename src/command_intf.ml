@@ -30,6 +30,13 @@
 open! Import
 open! Std_internal
 
+type env =
+  [ `Replace of (string * string) list
+  | `Extend of (string * string) list
+  | `Override of (string * string option) list
+  | `Replace_raw of string list
+  ]
+
 (** [For_unix] is the subset of Core's interface that [Command] needs, in particular to
     implement the [shape] and [run] functions.  [Core_kernel.Private.Command] is a functor
     taking a module matching [For_unix] and is applied in Core to construct
@@ -89,12 +96,7 @@ module type For_unix = sig
     val unsetenv : string -> unit
     val unsafe_getenv : string -> string option
 
-    type env =
-      [ `Replace of (string * string) list
-      | `Extend of (string * string) list
-      | `Override of (string * string option) list
-      | `Replace_raw of string list
-      ]
+    type nonrec env = env
 
     val exec
       :  prog:string
@@ -165,10 +167,20 @@ module type Command = sig
     val map : ?key:'b Univ_map.Multi.Key.t -> 'a t -> f:('a -> 'b) -> 'b t
 
     (** An auto-completing [Arg_type] over a finite set of values. *)
-    val of_map : ?key:'a Univ_map.Multi.Key.t -> 'a String.Map.t -> 'a t
+    val of_map
+      :  ?list_values_in_help:bool
+      (** Defaults to [true]. If you set it to false the accepted values won't be listed
+          in the command help. *)
+      -> ?key:'a Univ_map.Multi.Key.t
+      -> 'a String.Map.t
+      -> 'a t
 
     (** Convenience wrapper for [of_map]. Raises on duplicate keys. *)
-    val of_alist_exn : ?key:'a Univ_map.Multi.Key.t -> (string * 'a) list -> 'a t
+    val of_alist_exn
+      :  ?list_values_in_help:bool
+      -> ?key:'a Univ_map.Multi.Key.t
+      -> (string * 'a) list
+      -> 'a t
 
 
     (** [comma_separated t] accepts comma-separated lists of arguments parsed by [t].
@@ -809,6 +821,7 @@ module type Command = sig
     :  summary:string
     -> ?readme:(unit -> string)
     -> ?child_subcommand:string list
+    -> ?env:env
     -> path_to_exe:
          [ `Absolute of string
          | `Relative_to_argv0 of string
@@ -912,6 +925,7 @@ module type Command = sig
         -> ?argv:string list
         -> ?extend:(string list -> string list)
         -> ?when_parsing_succeeds:(unit -> unit)
+        -> ?complete_subcommands:(string list list -> string list option)
         -> t
         -> unit
 

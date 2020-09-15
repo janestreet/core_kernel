@@ -69,3 +69,15 @@ let%test_module "Verify reading/writing stable table sexp" =
     ;;
   end)
 ;;
+
+let%expect_test "Hashtbl.merge of String.Table and String.Stable.V1.Table" =
+  Expect_test_helpers_core.require_does_not_raise [%here] (fun () ->
+    let result =
+      Hashtbl.merge
+        (String.Table.t_of_sexp int_of_sexp [%sexp []])
+        (String.Stable.V1.Table.t_of_sexp int_of_sexp [%sexp []])
+        ~f:(fun ~key:_ x -> Some x)
+    in
+    require [%here] (Hashtbl.is_empty result));
+  [%expect {| |}]
+;;

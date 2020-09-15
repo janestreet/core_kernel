@@ -21,8 +21,7 @@
     makes this module unsuitable for maintaining the faces of a planar graph under edge
     insertion and deletion, for example.
 
-    5. Another property permitted by (3) and (4) is that [length] is O(1).
-*)
+    5. Another property permitted by (3) and (4) is that [length] is O(1). *)
 
 open! Import
 
@@ -48,9 +47,9 @@ module type S = sig
 
   val create : unit -> 'a t
 
-  (** [of_list l] returns a doubly-linked list [t] with the same elements as [l] and in the
-      same order (i.e., the first element of [l] is the first element of [t]). It is always
-      the case that [l = to_list (of_list l)]. *)
+  (** [of_list l] returns a doubly-linked list [t] with the same elements as [l] and in
+      the same order (i.e., the first element of [l] is the first element of [t]). It is
+      always the case that [l = to_list (of_list l)]. *)
   val of_list : 'a list -> 'a t
 
   val of_array : 'a array -> 'a t
@@ -100,8 +99,8 @@ module type S = sig
   val iteri : 'a t -> f:(int -> 'a -> unit) -> unit
   val foldi : 'a t -> init:'b -> f:(int -> 'b -> 'a -> 'b) -> 'b
 
-  (** [fold_elt t ~init ~f] is the same as fold, except [f] is called with the ['a Elt.t]'s
-      from the list instead of the contained ['a] values.
+  (** [fold_elt t ~init ~f] is the same as fold, except [f] is called with the ['a
+      Elt.t]'s from the list instead of the contained ['a] values.
 
       Note that like other iteration functions, it is an error to mutate [t] inside the
       fold. If you'd like to call [remove] on any of the ['a Elt.t]'s, use
@@ -116,8 +115,8 @@ module type S = sig
   val fold_right : 'a t -> init:'b -> f:('a -> 'b -> 'b) -> 'b
   val fold_right_elt : 'a t -> init:'b -> f:('a Elt.t -> 'b -> 'b) -> 'b
 
-  (** [find_elt t ~f] finds the first element in [t] that satisfies [f], by testing each of
-      element of [t] in turn until [f] succeeds. *)
+  (** [find_elt t ~f] finds the first element in [t] that satisfies [f], by testing each
+      of element of [t] in turn until [f] succeeds. *)
   val find_elt : 'a t -> f:('a -> bool) -> 'a Elt.t option
 
   val findi_elt : 'a t -> f:(int -> 'a -> bool) -> (int * 'a Elt.t) option
@@ -175,13 +174,13 @@ module type S = sig
       [t]. Adding or removing elements before the element currently being visited has no
       effect on the traversal. Elements added after the element currently being visited
       will be traversed. Elements deleted after the element currently being visited will
-      not be traversed. Deleting the element currently being visited is an error that is not
-      detected (presumably leading to an infinite loop). *)
+      not be traversed. Deleting the element currently being visited is an error that is
+      not detected (presumably leading to an infinite loop). *)
   val unchecked_iter : 'a t -> f:('a -> unit) -> unit
 
 
-  (** A sequence of values from the doubly-linked list. It makes an intermediate copy of the
-      list so that the returned sequence is immune to any subsequent mutation of the
+  (** A sequence of values from the doubly-linked list. It makes an intermediate copy of
+      the list so that the returned sequence is immune to any subsequent mutation of the
       original list. *)
   val to_sequence : 'a t -> 'a Sequence.t
 end

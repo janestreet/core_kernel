@@ -110,5 +110,10 @@ module Extend (M : Base.Identifiable.S) (B : Binable0.S with type t = M.t) = str
 
   include T
   include Comparable.Extend_binable (M) (T)
-  include Hashable.Make_binable (T)
+
+  include Hashable.Make_binable_with_hashable (struct
+      module Key = T
+
+      let hashable = M.hashable
+    end)
 end

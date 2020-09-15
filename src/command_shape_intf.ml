@@ -145,6 +145,8 @@ module type Command_shape = sig
       | Exec of Exec_info.t * t
     [@@deriving compare, sexp_of]
 
+    val expanded_subcommands : t -> string list list
+
     include
       Binable.S with type t := t
       [@@deprecated "[since 2020-04] Use [Command.Stable.Shape.Fully_forced]."]
