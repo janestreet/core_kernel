@@ -46,6 +46,7 @@ module Immediacy = struct
     | Always
     | Sometimes
     | Never
+    | Unknown
   [@@deriving compare]
 
   let equal = [%compare.equal: t]
@@ -54,6 +55,7 @@ module Immediacy = struct
     | Always -> "Always"
     | Sometimes -> "Sometimes"
     | Never -> "Never"
+    | Unknown -> "Unknown"
   ;;
 end
 
@@ -85,6 +87,7 @@ module T : sig
   end
 
   val never : 'a Typename.t -> 'a t
+  val unknown : 'a Typename.t -> 'a t
   val option : _ t
   val list : _ t
   val magic : _ t -> _ t
@@ -109,8 +112,9 @@ end = struct
   let allowed_ints t = t.allowed_ints
   let typename t = t.typename
   let magic t = t
-  let never_with_name name = create_with_name name Never Allowed_ints.None
-  let never typename = create typename Never Allowed_ints.None
+  let never_with_name name = create_with_name name Never None
+  let never typename = create typename Never None
+  let unknown typename = create typename Unknown None
 
   let option = create_with_name "option" Sometimes (Allowed_ints.From_zero_to 0)
   let list = create_with_name "list" Sometimes (Allowed_ints.From_zero_to 0)
@@ -171,45 +175,68 @@ module Computation_impl = struct
     let immediacy =
       match immediacy t with
       | Never -> Never
+      | Unknown -> Unknown
       | Sometimes | Always -> Sometimes
     in
     create_with_name "lazy_t" immediacy (allowed_ints t)
   ;;
 
-  let record r = never (Record.typename_of_t r)
+  let possibly_unboxed typename child_type =
+    match immediacy child_type with
+    | Never -> never typename
+    | Unknown | Always | Sometimes -> unknown typename
+  ;;
+
+  let record r =
+    if Record.length r > 1
+    then never (Record.typename_of_t r)
+    else (
+      let (Field the_only_field) = Record.field r 0 in
+      possibly_unboxed (Record.typename_of_t r) (Field.traverse the_only_field))
+  ;;
 
   (* Variants with all constructors having no arguments are always immediate; variants
      with all constructors having some arguments are never immediate; mixed variants are
-     sometimes immediate. *)
+     sometimes immediate.
 
+     If a variant has a single constructor, and the constructor has an argument, the
+     variant can be unboxed. If unboxed, either explicitly or by default (depending on
+     compiler settings), the representation is simply the argument. Otherwise, the rules
+     above apply normally. *)
   let variant variant =
-    let no_arg_list =
-      List.rev
-        (Variant.fold variant ~init:[] ~f:(fun list tag ->
-           match tag with
-           | Variant.Tag t -> if Tag.arity t = 0 then tag :: list else list))
+    let no_arg_list, one_arg_list, more_arg_list =
+      Variant.fold variant ~init:([], [], []) ~f:(fun (no, one, more) (Tag t as tag) ->
+        match Tag.arity t with
+        | 0 -> tag :: no, one, more
+        | 1 -> no, tag :: one, more
+        | _ -> no, one, tag :: more)
     in
-    let no_arg_count = List.length no_arg_list in
-    if no_arg_count = 0
-    then never (Variant.typename_of_t variant)
-    else (
+    match no_arg_list, one_arg_list, more_arg_list with
+    | [], [ Tag tag ], [] when not (Variant.is_polymorphic variant) ->
+      possibly_unboxed (Variant.typename_of_t variant) (Tag.traverse tag)
+    | [], [], [] ->
+      (* We don't have an explict way of saying a type is uninhabited. *)
+      unknown (Variant.typename_of_t variant)
+    | [], _ :: _, _ | [], _, _ :: _ -> never (Variant.typename_of_t variant)
+    | _ :: _, _, _ ->
+      let no_arg_count = List.length no_arg_list in
       let allowed_ints =
         if not (Variant.is_polymorphic variant)
         then Allowed_ints.From_zero_to (no_arg_count - 1)
         else (
           let hash_set = Hash_set.create (module Key) ~size:(no_arg_count * 2) in
-          List.iter no_arg_list ~f:(function Variant.Tag tag ->
-            (match Tag.create tag with
-             | Tag.Const _ -> Hash_set.add hash_set (Tag.ocaml_repr tag)
-             | Tag.Args _ -> assert false));
+          List.iter no_arg_list ~f:(fun (Tag tag) ->
+            match Tag.create tag with
+            | Tag.Const _ -> Hash_set.add hash_set (Tag.ocaml_repr tag)
+            | Tag.Args _ -> assert false);
           Allowed_ints.Hash_set hash_set)
       in
       let immediacy =
-        if Variant.length variant > no_arg_count
-        then Immediacy.Sometimes
-        else Immediacy.Always
+        if List.is_empty one_arg_list && List.is_empty more_arg_list
+        then Always
+        else Sometimes
       in
-      create (Variant.typename_of_t variant) immediacy allowed_ints)
+      create (Variant.typename_of_t variant) immediacy allowed_ints
   ;;
 
   let name = "is_immediate"
@@ -273,12 +300,11 @@ struct
     else t1
   ;;
 
+  (* always immediate *)
   let ra = Typerep.Int
 
-  (* always immediate *)
-  let rn = Typerep.String
-
   (* never immediate *)
+  let rn = Typerep.String
 
   (* Each of the [For_all_parameters_*] functors works by instantiating the n-ary type
      with all [Always] types, and then with all [Never] types.  If those produce the same
@@ -346,7 +372,7 @@ module Always = struct
     let t = of_typerep typerep in
     match immediacy t with
     | Always -> Some t
-    | Never | Sometimes -> None
+    | Unknown | Never | Sometimes -> None
   ;;
 
   let of_typerep_exn here typerep = Option.value_exn ~here (of_typerep typerep)
@@ -371,7 +397,7 @@ module Sometimes = struct
     let t = of_typerep typerep in
     match immediacy t with
     | Sometimes -> Some t
-    | Always | Never -> None
+    | Unknown | Always | Never -> None
   ;;
 
   let of_typerep_exn here typerep = Option.value_exn ~here (of_typerep typerep)
@@ -396,7 +422,7 @@ module Never = struct
     let t = of_typerep typerep in
     match immediacy t with
     | Never -> Some t
-    | Always | Sometimes -> None
+    | Unknown | Always | Sometimes -> None
   ;;
 
   let of_typerep_exn here typerep = Option.value_exn ~here (of_typerep typerep)
@@ -408,11 +434,12 @@ type 'a dest =
   | Always of 'a Always.t
   | Sometimes of 'a Sometimes.t
   | Never of 'a Never.t
+  | Unknown
 
 let dest t =
-  let module I = Immediacy in
   match immediacy t with
-  | I.Always -> Always t
-  | I.Sometimes -> Sometimes t
-  | I.Never -> Never t
+  | Always -> Always t
+  | Sometimes -> Sometimes t
+  | Never -> Never t
+  | Unknown -> Unknown
 ;;

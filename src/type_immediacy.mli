@@ -268,6 +268,7 @@ type 'a dest =
   | Always of 'a Always.t
   | Sometimes of 'a Sometimes.t
   | Never of 'a Never.t
+  | Unknown
 
 val dest : 'a t -> 'a dest
 val int_as_value : 'a t -> int -> 'a option

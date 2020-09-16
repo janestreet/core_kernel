@@ -367,6 +367,47 @@ let%test_module _ =
       is_never (module M) [ { M.foo = () } ]
     ;;
 
+    let%expect_test _ =
+      let module M = struct
+        type t = { foo : unit } [@@unboxed] [@@deriving typerep]
+      end
+      in
+      let conv = get_conv M.typerep_of_t in
+      Expect_test_helpers_core.require
+        [%here]
+        ~cr:CR_soon
+        (test_convertibles conv [ { M.foo = () }, 0 ])
+        ~if_false_then_print_s:(lazy [%message "zero should convert"]);
+      Expect_test_helpers_core.require
+        [%here]
+        ~cr:CR_soon
+        (test_inconvertible_ints conv no_int_but_zero_converts)
+        ~if_false_then_print_s:(lazy [%message "non-zero should not convert"]);
+      [%expect
+        {|
+        "zero should convert" |}]
+    ;;
+
+    let%test _ =
+      let module M = struct
+        type t =
+          { foo : unit
+          ; bar : unit
+          }
+        [@@deriving typerep]
+      end
+      in
+      is_never (module M) [ { M.foo = (); bar = () } ]
+    ;;
+
+    let%test _ =
+      let module M = struct
+        type t = { foo : string } [@@unboxed] [@@deriving typerep]
+      end
+      in
+      is_never (module M) [ { M.foo = "foo" } ]
+    ;;
+
     let%test _ =
       is_never
         (module struct
@@ -397,6 +438,27 @@ let%test_module _ =
           type t = unit * unit * unit * unit * unit [@@deriving typerep]
         end)
         [ (), (), (), (), () ]
+    ;;
+
+    let%expect_test _ =
+      let module M = struct
+        type t = Foo of unit [@@unboxed] [@@deriving typerep]
+      end
+      in
+      let conv = get_conv M.typerep_of_t in
+      Expect_test_helpers_core.require
+        [%here]
+        ~cr:CR_soon
+        (test_convertibles conv [ M.Foo (), 0 ])
+        ~if_false_then_print_s:(lazy [%message "zero should convert"]);
+      Expect_test_helpers_core.require
+        [%here]
+        ~cr:CR_soon
+        (test_inconvertible_ints conv no_int_but_zero_converts)
+        ~if_false_then_print_s:(lazy [%message "non-zero should not convert"]);
+      [%expect
+        {|
+        "zero should convert" |}]
     ;;
 
     let%test _ =

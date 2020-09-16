@@ -12,6 +12,7 @@ let%test_module _ =
       | Always
       | Sometimes
       | Never
+      | Unknown
 
     (* Where appropriate, unit is used as a representative of something that will always be
        immediate and int ref is used as a representative of something that will always be
@@ -36,6 +37,7 @@ let%test_module _ =
       | true, false, Always, (Type_immediacy.Always _, Some _, None, None) -> true
       | true, true, Sometimes, (Type_immediacy.Sometimes _, None, Some _, None) -> true
       | false, true, Never, (Type_immediacy.Never _, None, None, Some _) -> true
+      | _, _, Unknown, (Type_immediacy.Unknown, None, None, None) -> true
       | _, _, _, _ -> false
     ;;
 
@@ -43,13 +45,43 @@ let%test_module _ =
       val check_a : 'a Typerep.t -> 'a list -> bool
       val check_s : 'a Typerep.t -> 'a list -> bool
       val check_n : 'a Typerep.t -> 'a list -> bool
+      val check_u : 'a Typerep.t -> 'a list -> bool
     end = struct
       let check_a typerep list = check Always typerep list
       let check_s typerep list = check Sometimes typerep list
       let check_n typerep list = check Never typerep list
+      let check_u typerep list = check Unknown typerep list
     end
 
     include T
+
+    let sexp_of_dest dest =
+      match (dest : _ Type_immediacy.dest) with
+      | Always _ -> [%sexp "Always"]
+      | Never _ -> [%sexp "Never"]
+      | Sometimes _ -> [%sexp "Sometimes"]
+      | Unknown -> [%sexp "Unknown"]
+    ;;
+
+    let require_self_consistent ?cr typerep list =
+      let type_immediacy = Type_immediacy.dest (Type_immediacy.of_typerep typerep) in
+      let has_imm = List.exists ~f:is_imm list in
+      let has_boxed = List.exists ~f:(fun x -> not (is_imm x)) list in
+      match has_imm, has_boxed, type_immediacy with
+      | true, false, Always _ -> ()
+      | false, true, Never _ -> ()
+      | true, true, Sometimes _ -> ()
+      | _, _, Unknown -> ()
+      | _, _, _ ->
+        Expect_test_helpers_base.print_cr
+          ?cr
+          [%here]
+          [%message
+            "The immediacy of the values did not match the Type_immediacy"
+              (type_immediacy : dest)
+              (has_imm : bool)
+              (has_boxed : bool)]
+    ;;
 
     let%test _ =
       let module M = struct
@@ -182,12 +214,90 @@ let%test_module _ =
       && check_n (M.typerep_of_t typerep_of_float) [ lazy 0.0; lazy (1.0 +. -3.3) ]
     ;;
 
-    let%test _ =
+    let require_unboxed ?cr =
+      Expect_test_helpers_base.require
+        ?cr
+        ~if_false_then_print_s:
+          (lazy
+            [%message
+              "Unboxed container types should have the immediacy of their contained type"])
+        [%here]
+    ;;
+
+    let require_boxed ?cr =
+      Expect_test_helpers_base.require
+        ?cr
+        ~if_false_then_print_s:
+          (lazy [%message "Boxed container types should never be immediate"])
+        [%here]
+    ;;
+
+    let require_maybe_boxed ?cr =
+      Expect_test_helpers_base.require
+        ?cr
+        ~if_false_then_print_s:
+          (lazy
+            [%message
+              "Unboxing may be the default depending on compiler settings. Type \
+               immediacy for unboxable types that are not explicitly unboxed or boxed \
+               should be unknown."])
+        [%here]
+    ;;
+
+    let%expect_test _ =
       let module M = struct
         type t = { foo : unit } [@@deriving typerep]
       end
       in
-      check_n M.typerep_of_t [ { M.foo = () } ]
+      require_self_consistent M.typerep_of_t [ { M.foo = () } ];
+      check_u M.typerep_of_t [ { M.foo = () } ] |> require_maybe_boxed
+    ;;
+
+    let%expect_test _ =
+      let module M = struct
+        type t = { foo : unit } [@@boxed] [@@deriving typerep]
+      end
+      in
+      require_self_consistent M.typerep_of_t [ { M.foo = () } ];
+      check_n M.typerep_of_t [ { M.foo = () } ] |> require_boxed ~cr:CR_someday;
+      check_u M.typerep_of_t [ { M.foo = () } ] |> require_maybe_boxed;
+      [%expect
+        {|
+        "Boxed container types should never be immediate" |}]
+    ;;
+
+    let%expect_test _ =
+      let module M = struct
+        type t = { foo : unit } [@@unboxed] [@@deriving typerep]
+      end
+      in
+      require_self_consistent M.typerep_of_t [ { M.foo = () } ];
+      check_a M.typerep_of_t [ { M.foo = () } ] |> require_unboxed ~cr:CR_someday;
+      check_u M.typerep_of_t [ { M.foo = () } ] |> require_maybe_boxed;
+      [%expect
+        {|
+        "Unboxed container types should have the immediacy of their contained type" |}]
+    ;;
+
+    let%expect_test _ =
+      let module M = struct
+        type t = { foo : string } [@@unboxed] [@@deriving typerep]
+      end
+      in
+      require_self_consistent M.typerep_of_t [ { M.foo = "foo" } ];
+      check_n M.typerep_of_t [ { M.foo = "foo" } ] |> require_unboxed
+    ;;
+
+    let%test _ =
+      let module M = struct
+        type t =
+          { foo : unit
+          ; bar : unit
+          }
+        [@@deriving typerep]
+      end
+      in
+      check_n M.typerep_of_t [ { M.foo = (); bar = () } ]
     ;;
 
     let%test _ =
@@ -257,12 +367,48 @@ let%test_module _ =
       check_n M.typerep_of_t [ M.Foo (); M.Bar (); M.Baz () ]
     ;;
 
-    let%test _ =
+    let%expect_test _ =
       let module M = struct
         type t = Foo of unit [@@deriving typerep]
       end
       in
-      check_n M.typerep_of_t [ M.Foo () ]
+      require_self_consistent M.typerep_of_t [ M.Foo () ];
+      check_u M.typerep_of_t [ M.Foo () ] |> require_maybe_boxed
+    ;;
+
+    let%expect_test _ =
+      let module M = struct
+        type t = Foo of unit [@@boxed] [@@deriving typerep]
+      end
+      in
+      require_self_consistent M.typerep_of_t [ M.Foo () ];
+      check_n M.typerep_of_t [ M.Foo () ] |> require_boxed ~cr:CR_someday;
+      check_u M.typerep_of_t [ M.Foo () ] |> require_maybe_boxed;
+      [%expect
+        {|
+        "Boxed container types should never be immediate" |}]
+    ;;
+
+    let%expect_test _ =
+      let module M = struct
+        type t = Foo of unit [@@unboxed] [@@deriving typerep]
+      end
+      in
+      require_self_consistent M.typerep_of_t [ M.Foo () ];
+      check_a M.typerep_of_t [ M.Foo () ] |> require_unboxed ~cr:CR_someday;
+      check_u M.typerep_of_t [ M.Foo () ] |> require_maybe_boxed;
+      [%expect
+        {|
+        "Unboxed container types should have the immediacy of their contained type" |}]
+    ;;
+
+    let%expect_test _ =
+      let module M = struct
+        type t = Foo of string [@@unboxed] [@@deriving typerep]
+      end
+      in
+      require_self_consistent M.typerep_of_t [ M.Foo "foo" ];
+      check_n M.typerep_of_t [ M.Foo "foo" ] |> require_unboxed
     ;;
 
     let%test _ =
@@ -303,12 +449,13 @@ let%test_module _ =
       check_n M.typerep_of_t [ `Foo (); `Bar (); `Baz () ]
     ;;
 
-    let%test _ =
+    let%expect_test _ =
       let module M = struct
         type t = [ `Foo of unit ] [@@deriving typerep]
       end
       in
-      check_n M.typerep_of_t [ `Foo () ]
+      require_self_consistent M.typerep_of_t [ `Foo () ];
+      check_n M.typerep_of_t [ `Foo () ] |> require_boxed
     ;;
 
     let%test _ =
