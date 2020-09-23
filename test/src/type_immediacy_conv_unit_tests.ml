@@ -375,12 +375,11 @@ let%test_module _ =
       let conv = get_conv M.typerep_of_t in
       Expect_test_helpers_core.require
         [%here]
-        ~cr:CR_soon
+        ~cr:CR_someday
         (test_convertibles conv [ { M.foo = () }, 0 ])
         ~if_false_then_print_s:(lazy [%message "zero should convert"]);
       Expect_test_helpers_core.require
         [%here]
-        ~cr:CR_soon
         (test_inconvertible_ints conv no_int_but_zero_converts)
         ~if_false_then_print_s:(lazy [%message "non-zero should not convert"]);
       [%expect
@@ -448,12 +447,11 @@ let%test_module _ =
       let conv = get_conv M.typerep_of_t in
       Expect_test_helpers_core.require
         [%here]
-        ~cr:CR_soon
+        ~cr:CR_someday
         (test_convertibles conv [ M.Foo (), 0 ])
         ~if_false_then_print_s:(lazy [%message "zero should convert"]);
       Expect_test_helpers_core.require
         [%here]
-        ~cr:CR_soon
         (test_inconvertible_ints conv no_int_but_zero_converts)
         ~if_false_then_print_s:(lazy [%message "non-zero should not convert"]);
       [%expect
