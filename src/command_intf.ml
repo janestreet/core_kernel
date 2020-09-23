@@ -166,6 +166,9 @@ module type Command = sig
     (** Transforms the result of a [t] using [f]. *)
     val map : ?key:'b Univ_map.Multi.Key.t -> 'a t -> f:('a -> 'b) -> 'b t
 
+    (** Defers construction of the arg type until it is needed. *)
+    val of_lazy : ?key:'a Univ_map.Multi.Key.t -> 'a t Lazy.t -> 'a t
+
     (** An auto-completing [Arg_type] over a finite set of values. *)
     val of_map
       :  ?list_values_in_help:bool

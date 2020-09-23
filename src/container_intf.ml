@@ -14,6 +14,8 @@ module type S1_permissions = sig
 
   val length : (_, [> read ]) t -> int
   val is_empty : (_, [> read ]) t -> bool
+
+  (** [iter t ~f] calls [f] on each element of [t]. *)
   val iter : ('a, [> read ]) t -> f:('a -> unit) -> unit
 
   (** [fold t ~init ~f] returns [f (... f (f (f init e1) e2) e3 ...) en], where [e1..en]

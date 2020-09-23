@@ -61,3 +61,14 @@ let%expect_test _ =
        (3 4)))
      (bin_io "\003\001\002\002\003\003\004")) |}]
 ;;
+
+let%expect_test "remove does not allocate too much if there's nothing to do" =
+  let map1 = Map.of_alist_exn (module Int) [ 1, "one"; 3, "three" ] in
+  (* This is a regression test. Previously this no-op remove allocated 16 words.
+
+     Ideally, we wouldn't allocate the pair returned by [Tree0.remove] either. *)
+  Expect_test_helpers_core.require_allocation_does_not_exceed
+    (Minor_words 3)
+    [%here]
+    (fun () -> ignore (Sys.opaque_identity (Map.remove map1 2) : string Map.M(Int).t))
+;;

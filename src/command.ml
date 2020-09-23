@@ -81,20 +81,38 @@ module Arg_type = struct
     { parse : string -> ('a, exn) Result.t
     ; complete : Completer.t
     ; key : 'a Univ_map.Multi.Key.t option
-    ; extra_doc : string option
+    ; extra_doc : string option Lazy.t
     }
+  [@@deriving fields]
 
   let create' ?complete ?key of_string ~extra_doc =
     let parse x = Result.try_with (fun () -> of_string x) in
     { parse; key; complete; extra_doc }
   ;;
 
-  let create ?complete ?key of_string = create' ?complete ?key of_string ~extra_doc:None
+  let create ?complete ?key of_string =
+    create' ?complete ?key of_string ~extra_doc:(Lazy.from_val None)
+  ;;
 
   let map ?key t ~f =
     let parse str = Result.map (t.parse str) ~f in
     let complete = t.complete in
-    { parse; complete; key; extra_doc = None }
+    let extra_doc = t.extra_doc in
+    { parse; complete; key; extra_doc }
+  ;;
+
+  let of_lazy ?key t =
+    let parse str = (force t).parse str in
+    let complete env ~part =
+      match (force t).complete with
+      | None ->
+        (* See [run_and_exit] - no completions is equivalent to not having a
+           [Complete]. *)
+        []
+      | Some complete -> complete env ~part
+    in
+    let extra_doc = Lazy.bind t ~f:extra_doc in
+    { parse; complete = Some complete; key; extra_doc }
   ;;
 
   let string = create Fn.id
@@ -110,11 +128,12 @@ module Arg_type = struct
   let of_map ?(list_values_in_help = true) ?key map =
     create'
       ~extra_doc:
-        (if list_values_in_help
-         then (
-           let values = String.concat ~sep:", " (Map.keys map) in
-           Some [%string "(can be: %{values})"])
-         else None)
+        (lazy
+          (if list_values_in_help
+           then (
+             let values = String.concat ~sep:", " (Map.keys map) in
+             Some [%string "(can be: %{values})"])
+           else None))
       ?key
       ~complete:(fun _ ~part:prefix ->
         List.filter_map (Map.to_alist map) ~f:(fun (name, _) ->
@@ -339,7 +358,7 @@ module Flag = struct
     { action : action
     ; read : Env.t -> 'a
     ; num_occurrences : Num_occurrences.t
-    ; extra_doc : string option
+    ; extra_doc : string option Lazy.t
     }
 
   type 'a t = string -> 'a state
@@ -428,7 +447,7 @@ module Flag = struct
     { read
     ; action = No_arg action
     ; num_occurrences = Num_occurrences.at_most_once
-    ; extra_doc = None
+    ; extra_doc = Lazy.from_val None
     }
   ;;
 
@@ -481,7 +500,7 @@ module Flag = struct
     { action = Rest action
     ; read
     ; num_occurrences = Num_occurrences.at_most_once
-    ; extra_doc = None
+    ; extra_doc = Lazy.from_val None
     }
   ;;
 
@@ -489,7 +508,7 @@ module Flag = struct
     { action = No_arg (fun _ -> never_returns (exit ()))
     ; num_occurrences = Num_occurrences.at_most_once
     ; read = (fun _ -> ())
-    ; extra_doc = None
+    ; extra_doc = Lazy.from_val None
     }
   ;;
 
@@ -1305,7 +1324,7 @@ module Base = struct
                      ; aliases
                      ; aliases_excluded_from_help
                      ; doc =
-                         (match extra_doc with
+                         (match force extra_doc with
                           | Some extra_doc -> [%string "%{doc} %{extra_doc}"]
                           | None -> doc)
                      ; action

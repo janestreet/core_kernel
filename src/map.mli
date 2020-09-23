@@ -317,8 +317,16 @@ val remove : ('k, 'v, 'cmp) t -> 'k -> ('k, 'v, 'cmp) t
 (** [mem map key] tests whether [map] contains a binding for [key]. *)
 val mem : ('k, _, 'cmp) t -> 'k -> bool
 
+(** [iter_keys t ~f] calls [f] on every key in the map, going in order from the smallest
+    to the largest keys.  *)
 val iter_keys : ('k, _, _) t -> f:('k -> unit) -> unit
+
+(** [iter t ~f] calls [f] on every element in the map, going in order from the smallest
+    to the largest keys.  *)
 val iter : (_, 'v, _) t -> f:('v -> unit) -> unit
+
+(** [iteri t ~f] calls [f] on every key and element in the map, going in order from the
+    smallest to the largest keys.  *)
 val iteri : ('k, 'v, _) t -> f:(key:'k -> data:'v -> unit) -> unit
 
 module Continue_or_stop : sig
