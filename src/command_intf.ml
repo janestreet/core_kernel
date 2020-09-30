@@ -463,6 +463,15 @@ module type Command = sig
           arguments specified by [spec]. *)
       val anon : 'a Anons.t -> 'a t
 
+      (** [escape_anon ~final_anon] parses [anon] and then stops parsing. Remaining
+          command line arguments are collected in the [string list], even if they start
+          with dashes.
+
+          See [escape] for the flag version of this behavior.
+
+          The final anon is required to indicate when to stop parsing. *)
+      val escape_anon : final_anon:'a Anons.t -> ('a * string list) t
+
       module If_nothing_chosen : sig
         type (_, _) t =
           | Default_to : 'a -> ('a, 'a) t

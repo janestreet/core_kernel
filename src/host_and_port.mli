@@ -20,6 +20,11 @@ include Identifiable with type t := t
 module Stable : sig
   module V1 : sig
     type nonrec t = t [@@deriving sexp, bin_io, compare, hash]
+
+    include
+      Stable_comparable.V1
+      with type t := t
+       and type comparator_witness = comparator_witness
   end
 end
 

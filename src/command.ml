@@ -244,6 +244,7 @@ module Flag = struct
 
   type action =
     | No_arg of (Env.t -> Env.t)
+    | Print_info_and_quit of (Env.t -> string)
     | Arg of (Env.t -> string -> Env.t) * Completer.t
     | Rest of (Env.t -> string list -> Env.t)
 
@@ -273,20 +274,14 @@ module Flag = struct
         }
 
       let parse ~action ~doc =
-        let arg_doc =
-          match (action : action) with
-          | No_arg _ -> None
-          | Rest _ | Arg _ ->
-            (match String.lsplit2 doc ~on:' ' with
-             | None | Some ("", _) ->
-               (match action with
-                | Arg _ -> Some ("_", doc)
-                | Rest _ | No_arg _ -> None)
-             | Some (arg, doc) -> Some (arg, doc))
+        let arg_doc, doc =
+          match (action : action), String.lsplit2 doc ~on:' ' with
+          | (No_arg _ | Print_info_and_quit _), _ -> None, doc
+          | Arg _, (None | Some ("", _)) -> Some "_", doc
+          | Rest _, (None | Some ("", _)) -> None, doc
+          | (Arg _ | Rest _), Some (arg, doc) -> Some arg, doc
         in
-        match arg_doc with
-        | None -> { doc = String.strip doc; arg_doc = None }
-        | Some (arg_doc, doc) -> { doc = String.strip doc; arg_doc = Some arg_doc }
+        { doc = String.strip doc; arg_doc }
       ;;
 
       let concat ~name ~arg_doc =
@@ -688,8 +683,20 @@ module Anons = struct
     val one : name:string -> 'a Arg_type.t -> 'a t
     val maybe : 'a t -> 'a option t
     val sequence : 'a t -> 'a list t
+    val stop_parsing : 'a t -> 'a t
     val final_value : 'a t -> Env.t -> 'a
-    val consume : 'a t -> string -> for_completion:bool -> (Env.t -> Env.t) * 'a t
+
+    module Consume_result : sig
+      type nonrec 'a t =
+        { (* If emacs highlights [parser] as if it were a keyword, that's only because
+             [parser] was a keyword in camlp4. [parser] is a regular name in OCaml. *)
+          parser : 'a t
+        ; parse_flags : bool
+        ; update_env : Env.t -> Env.t
+        }
+    end
+
+    val consume : 'a t -> string -> for_completion:bool -> 'a Consume_result.t
     val complete : 'a t -> Env.t -> part:string -> never_returns
 
     module For_opening : sig
@@ -707,45 +714,54 @@ module Anons = struct
       (* If we're only completing, we can't pull values out, but we can still step through
          [t]s (which may have completion set up). *)
       | Only_for_completion of packed list
+      | Stop_parsing of 'a t
 
     and 'a more =
       { name : string
-      ; parse : string -> for_completion:bool -> (Env.t -> Env.t) * 'a t
+      ; parse : string -> for_completion:bool -> 'a parse_result
       ; complete : Completer.t
       }
 
     and packed = Packed : 'a t -> packed
 
+    and 'a parse_result =
+      { parser : 'a t
+      ; update_env : Env.t -> Env.t
+      }
+
     let return a = Done (fun _ -> a)
     let from_env f = Done f
+    let stop_parsing t = Stop_parsing t
 
     let pack_for_completion = function
       | Done _ -> [] (* won't complete or consume anything *)
-      | (More _ | Test _) as x -> [ Packed x ]
+      | (More _ | Test _ | Stop_parsing _) as x -> [ Packed x ]
       | Only_for_completion ps -> ps
     ;;
 
-    let rec ( <*> ) tf tx =
-      match tf with
-      | Done f ->
-        (match tx with
-         | Done x -> Done (fun env -> f env (x env))
-         | Test test -> Test (fun ~more -> tf <*> test ~more)
-         | More { name; parse; complete } ->
-           let parse arg ~for_completion =
-             let upd, tx' = parse arg ~for_completion in
-             upd, tf <*> tx'
-           in
-           More { name; parse; complete }
-         | Only_for_completion packed -> Only_for_completion packed)
-      | Test test -> Test (fun ~more -> test ~more <*> tx)
-      | More { name; parse; complete } ->
-        let parse arg ~for_completion =
-          let upd, tf' = parse arg ~for_completion in
-          upd, tf' <*> tx
-        in
-        More { name; parse; complete }
-      | Only_for_completion packed -> Only_for_completion (packed @ pack_for_completion tx)
+    let parse_more { name; parse; complete } ~f =
+      let parse arg ~for_completion =
+        let { parser; update_env } = parse arg ~for_completion in
+        { parser = f parser; update_env }
+      in
+      More { name; parse; complete }
+    ;;
+
+    let rec ( <*> ) t_left t_right =
+      match t_left, t_right with
+      (* [Done] *)
+      | Done f, Done x -> Done (fun env -> f env (x env))
+      (* next step [More] *)
+      | More more, _ -> parse_more more ~f:(fun tl -> tl <*> t_right)
+      | Done _, More more -> parse_more more ~f:(fun tr -> t_left <*> tr)
+      (* next step [Only_for_completion] *)
+      | Only_for_completion _, _ | Done _, Only_for_completion _ ->
+        Only_for_completion (pack_for_completion t_left @ pack_for_completion t_right)
+      (* next step [Stop_parsing] *)
+      | Stop_parsing tl, tr | (Done _ as tl), Stop_parsing tr -> Stop_parsing (tl <*> tr)
+      (* next step [Test] *)
+      | Test test, _ -> Test (fun ~more -> test ~more <*> t_right)
+      | Done _, Test test -> Test (fun ~more -> t_left <*> test ~more)
     ;;
 
     let ( >>| ) t f = return f <*> t
@@ -758,13 +774,15 @@ module Anons = struct
           then
             (* we don't *really* care about this value, so just put in a dummy value so
                completion can continue *)
-            Fn.id, Only_for_completion []
+            { parser = Only_for_completion []; update_env = Fn.id }
           else die "failed to parse %s value %S\n%s" name anon (Exn.to_string exn) ()
         | Ok v ->
-          let update env =
-            Option.fold key ~init:env ~f:(fun env key -> Env.multi_add env ~key ~data:v)
-          in
-          update, return v
+          { parser = return v
+          ; update_env =
+              (fun env ->
+                 Option.fold key ~init:env ~f:(fun env key ->
+                   Env.multi_add env ~key ~data:v))
+          }
       in
       More { name; parse; complete }
     ;;
@@ -791,26 +809,42 @@ module Anons = struct
     let rec final_value t env =
       match t with
       | Done a -> a env
+      | Stop_parsing t -> final_value t env
       | Test f -> final_value (f ~more:false) env
       | More { name; _ } -> die "missing anonymous argument: %s" name ()
       | Only_for_completion _ ->
         failwith "BUG: asked for final value when doing completion"
     ;;
 
-    let rec consume
-      : type a. a t -> string -> for_completion:bool -> (Env.t -> Env.t) * a t
-      =
+    module Consume_result = struct
+      type nonrec 'a t =
+        { parser : 'a t
+        ; parse_flags : bool
+        ; update_env : Env.t -> Env.t
+        }
+    end
+
+    let rec consume : type a. a t -> string -> for_completion:bool -> a Consume_result.t =
       fun t arg ~for_completion ->
-        match t with
-        | Done _ -> die "too many anonymous arguments" ()
-        | Test f -> consume (f ~more:true) arg ~for_completion
-        | More { parse; _ } -> parse arg ~for_completion
-        | Only_for_completion packed ->
-          (match packed with
-           | [] -> Fn.id, Only_for_completion []
-           | Packed t :: rest ->
-             let upd, t = consume t arg ~for_completion in
-             upd, Only_for_completion (pack_for_completion t @ rest))
+      match t with
+      | Done _ -> die "too many anonymous arguments" ()
+      | Test f -> consume (f ~more:true) arg ~for_completion
+      | More { parse; _ } ->
+        let { parser; update_env } = parse arg ~for_completion in
+        { parser; parse_flags = true; update_env }
+      | Stop_parsing t -> { (consume t arg ~for_completion) with parse_flags = false }
+      | Only_for_completion packed ->
+        (match packed with
+         | [] ->
+           { parser = Only_for_completion []; parse_flags = true; update_env = Fn.id }
+         | Packed t :: rest ->
+           let ({ update_env; parse_flags; parser } : _ Consume_result.t) =
+             consume t arg ~for_completion
+           in
+           { update_env
+           ; parse_flags
+           ; parser = Only_for_completion (pack_for_completion parser @ rest)
+           })
     ;;
 
     let rec complete : type a. a t -> Env.t -> part:string -> never_returns =
@@ -819,6 +853,7 @@ module Anons = struct
         | Done _ -> exit 0
         | Test f -> complete (f ~more:true) env ~part
         | More { complete; _ } -> Completer.run_and_exit complete env ~part
+        | Stop_parsing t -> complete t env ~part
         | Only_for_completion t ->
           (match t with
            | [] -> exit 0
@@ -891,6 +926,8 @@ module Anons = struct
     let t = non_empty_sequence_as_pair t in
     { t with p = (t.p >>| fun (x, xs) -> x :: xs) }
   ;;
+
+  let escape t = { p = Parser.stop_parsing t.p; grammar = t.grammar }
 
   module Deprecated = struct
     let ad_hoc ~usage_arg =
@@ -1030,101 +1067,132 @@ module Base = struct
     |> String.concat ~sep:"\n"
   ;;
 
-  let run t env ~when_parsing_succeeds ~path ~args ~verbose_on_parse_error ~help_text =
-    let env = Env.set env ~key:path_key ~data:path in
-    let env = Env.set env ~key:args_key ~data:(Cmdline.to_list args) in
-    let env = Env.set env ~key:help_key ~data:help_text in
-    let rec loop env anons = function
-      | Cmdline.Nil ->
-        List.iter (String.Map.data t.flags) ~f:(fun flag -> flag.check_available env);
-        Anons.Parser.final_value anons env
-      | Cons ("-anon", Cons (arg, args)) ->
-        (* the very special -anon flag is here as an escape hatch in case you have an
-           anonymous argument that starts with a hyphen. *)
-        anon env anons arg args
-      | Cons (arg, args) ->
-        if String.is_prefix arg ~prefix:"-" && not (String.equal arg "-")
-        (* support the convention where "-" means stdin *)
-        then (
-          let flag = arg in
-          let ( flag
-              , { Flag.Internal.action
-                ; name = _
-                ; aliases = _
-                ; aliases_excluded_from_help = _
-                ; doc = _
-                ; num_occurrences = _
-                ; check_available = _
-                ; name_matching = _
-                } )
-            =
-            match lookup_expand_with_aliases t.flags flag Key_type.Flag with
-            | Error msg -> die "%s" msg ()
-            | Ok x -> x
-          in
-          match action with
-          | No_arg f ->
-            let env = f env in
-            loop env anons args
-          | Arg (f, comp) ->
-            (match args with
-             | Nil -> die "missing argument for flag %s" flag ()
-             | Cons (arg, rest) ->
-               let env =
-                 try f env arg with
-                 | Failed_to_parse_command_line _ as e ->
-                   if Cmdline.ends_in_complete rest then env else raise e
-               in
-               loop env anons rest
-             | Complete part -> never_returns (Completer.run_and_exit comp env ~part))
-          | Rest f ->
-            if Cmdline.ends_in_complete args then exit 0;
-            let env = f env (Cmdline.to_list args) in
-            loop env anons Nil)
-        else anon env anons arg args
-      | Complete part ->
-        if String.is_prefix part ~prefix:"-"
-        then (
-          List.iter (String.Map.keys t.flags) ~f:(fun name ->
-            if String.is_prefix name ~prefix:part then print_endline name);
-          exit 0)
-        else never_returns (Anons.Parser.complete anons env ~part)
-    and anon env anons arg args =
-      let env_upd, anons =
-        Anons.Parser.consume anons arg ~for_completion:(Cmdline.ends_in_complete args)
+  let get_flag_and_action t arg =
+    match lookup_expand_with_aliases t.flags arg Flag with
+    | Error msg -> die "%s" msg ()
+    | Ok (flag_name, flag) -> flag_name, flag.action
+  ;;
+
+  let run_flag t env arg (args : Cmdline.t) =
+    let flag, action = get_flag_and_action t arg in
+    match action with
+    | Print_info_and_quit info ->
+      let completing = Cmdline.ends_in_complete args in
+      (* If we're doing completion, version/help info aren't useful completion
+         responses. *)
+      if completing
+      then env, args
+      else (
+        print_endline (info env);
+        exit 0)
+    | No_arg f -> f env, args
+    | Arg (f, comp) ->
+      (match args with
+       | Nil -> die "missing argument for flag %s" flag ()
+       | Cons (arg, rest) ->
+         let env =
+           try f env arg with
+           | Failed_to_parse_command_line _ as e ->
+             if Cmdline.ends_in_complete rest then env else raise e
+         in
+         env, rest
+       | Complete part -> never_returns (Completer.run_and_exit comp env ~part))
+    | Rest f ->
+      if Cmdline.ends_in_complete args then exit 0;
+      f env (Cmdline.to_list args), Nil
+  ;;
+
+  let rec run_cmdline t env parser (cmdline : Cmdline.t) ~for_completion ~parse_flags =
+    match cmdline with
+    | Nil ->
+      List.iter (String.Map.data t.flags) ~f:(fun flag -> flag.check_available env);
+      Anons.Parser.final_value parser env
+    | Complete part ->
+      if parse_flags && String.is_prefix part ~prefix:"-"
+      then (
+        List.iter (String.Map.keys t.flags) ~f:(fun name ->
+          if String.is_prefix name ~prefix:part then print_endline name);
+        exit 0)
+      else never_returns (Anons.Parser.complete parser env ~part)
+    | Cons (arg, args) ->
+      let arg, args, arg_is_flag =
+        match parse_flags with
+        | false -> arg, args, false
+        | true ->
+          (match arg, args with
+           (* the '-anon' flag is here as an escape hatch in case you have an
+              anonymous argument that starts with a hyphen. *)
+           | "-anon", Cons (arg, args) -> arg, args, false
+           (* support the common Unix convention where "-" means stdin *)
+           | "-", _ -> arg, args, false
+           | _, _ -> arg, args, String.is_prefix arg ~prefix:"-")
       in
-      let env = env_upd env in
-      loop env anons args
+      (match arg_is_flag with
+       | true ->
+         let env, args = run_flag t env arg args in
+         run_cmdline t env parser args ~parse_flags ~for_completion
+       | false ->
+         let parse_flags1 = parse_flags in
+         let ({ parser; parse_flags = parse_flags2; update_env }
+              : _ Anons.Parser.Consume_result.t)
+           =
+           Anons.Parser.consume parser arg ~for_completion
+         in
+         let env = update_env env in
+         let parse_flags = parse_flags1 && parse_flags2 in
+         run_cmdline t env parser ~parse_flags args ~for_completion)
+  ;;
+
+  let run_exn exn ~for_completion ~path ~verbose_on_parse_error =
+    match exn with
+    | Failed_to_parse_command_line _ when for_completion -> exit 0
+    | Exit_called { status } -> exit status
+    | _ ->
+      let exn_str =
+        match exn with
+        | Failed_to_parse_command_line msg -> msg
+        | _ -> Sexp.to_string_hum [%sexp (exn : exn)]
+      in
+      let verbose = Option.value verbose_on_parse_error ~default:true in
+      let error_msg =
+        if verbose
+        then
+          String.concat
+            ~sep:"\n\n"
+            [ "Error parsing command line:"
+            ; indent_by_2 exn_str
+            ; "For usage information, run"
+            ; "  " ^ Path.to_string path ^ " -help\n"
+            ]
+        else exn_str
+      in
+      prerr_endline error_msg;
+      exit 1
+  ;;
+
+  let run t env ~when_parsing_succeeds ~path ~args ~verbose_on_parse_error ~help_text =
+    let for_completion = Cmdline.ends_in_complete args in
+    let env =
+      env
+      |> Env.set ~key:path_key ~data:path
+      |> Env.set ~key:args_key ~data:(Cmdline.to_list args)
+      |> Env.set ~key:help_key ~data:help_text
     in
-    match Result.try_with (fun () -> loop env (t.anons ()) args `Parse_args) with
+    match
+      Result.try_with (fun () ->
+        run_cmdline
+          t
+          env
+          (t.anons ())
+          ~for_completion
+          ~parse_flags:true
+          args
+          `Parse_args)
+    with
     | Ok thunk ->
       when_parsing_succeeds ();
       thunk `Run_main
-    | Error exn ->
-      (match exn with
-       | Failed_to_parse_command_line _ when Cmdline.ends_in_complete args -> exit 0
-       | Exit_called { status } -> exit status
-       | _ ->
-         let exn_str =
-           match exn with
-           | Failed_to_parse_command_line msg -> msg
-           | _ -> Sexp.to_string_hum [%sexp (exn : exn)]
-         in
-         let verbose = Option.value verbose_on_parse_error ~default:true in
-         let error_msg =
-           if verbose
-           then
-             String.concat
-               ~sep:"\n\n"
-               [ "Error parsing command line:"
-               ; indent_by_2 exn_str
-               ; "For usage information, run"
-               ; "  " ^ Path.to_string path ^ " -help\n"
-               ]
-           else exn_str
-         in
-         prerr_endline error_msg;
-         exit 1)
+    | Error exn -> run_exn exn ~for_completion ~path ~verbose_on_parse_error
   ;;
 
   module Spec = struct
@@ -1278,6 +1346,10 @@ module Base = struct
         }
       ;;
     end
+
+    let escape_anon ~final_anon =
+      Anons.escape (t2 final_anon (sequence ("ARG" %: string))) |> anon
+    ;;
 
     include struct
       open Flag
@@ -1641,11 +1713,7 @@ module Bailout_dump_flag = struct
         ; aliases
         ; num_occurrences = Flag.Num_occurrences.at_most_once
         ; check_available = ignore
-        ; action =
-            No_arg
-              (fun env ->
-                 print_endline (text env);
-                 exit 0)
+        ; action = Print_info_and_quit (fun env -> text env)
         ; doc = sprintf " print %s and exit" text_summary
         ; name_matching = `Prefix
         }
@@ -2331,10 +2399,12 @@ module For_unix (M : For_unix) = struct
       let args = Cmdline.to_list (maybe_apply_extend args ~extend ~path) in
       Exec.exec_with_args ~args exec ~maybe_new_comp_cword
     | Group ({ summary; readme; subcommands = subs; body } as group) ->
+      let completing = Cmdline.ends_in_complete args in
       let env = Env.set env ~key:subs_key ~data:(Lazy.force subs) in
       let die_showing_help msg =
-        if not (Cmdline.ends_in_complete args)
-        then (
+        if completing
+        then exit 0
+        else (
           eprintf
             "%s\n%!"
             (help_for_shape
@@ -2345,44 +2415,12 @@ module For_unix (M : For_unix) = struct
                path);
           die "%s" msg ())
       in
-      (match args with
-       | Nil ->
-         (match body with
-          | None ->
-            die_showing_help
-              (sprintf "missing subcommand for command %s" (Path.to_string path))
-          | Some body -> body ~path:(Path.parts_exe_basename path))
-       | Cons (sub, rest) ->
-         let sub, rest =
-           (* Match for flags recognized when subcommands are expected next *)
-           match sub, rest with
-           (* Recognized at the top level command only *)
-           | ("-version" | "--version"), _ when Path.length path = 1 ->
-             Version_info.print_version ~version;
-             exit 0
-           | ("-build-info" | "--build-info"), _ when Path.length path = 1 ->
-             Version_info.print_build_info ~build_info;
-             exit 0
-           (* Recognized everywhere *)
-           | ("-help" | "--help"), Nil ->
-             print_endline
-               (help_for_shape
-                  ~recursive:false
-                  ~flags:false
-                  ~expand_dots:false
-                  (shape (Group { group with subcommands = subs }))
-                  path);
-             exit 0
-           | ("-help" | "--help"), Cmdline.Cons (sub, rest) ->
-             sub, Cmdline.Cons ("-help", rest)
-           | _ -> sub, rest
-         in
-         (match
-            lookup_expand
-              (List.Assoc.map (Lazy.force subs) ~f:(fun x -> x, `Prefix))
-              sub
-              Subcommand
-          with
+      let rec parse_group args ~maybe_new_comp_cword =
+        let maybe_new_comp_cword = Option.map ~f:Int.pred maybe_new_comp_cword in
+        let skip rest = parse_group rest ~maybe_new_comp_cword in
+        let resolve sub rest =
+          let subs = List.Assoc.map (Lazy.force subs) ~f:(fun x -> x, `Prefix) in
+          match lookup_expand subs sub Subcommand with
           | Error msg -> die_showing_help msg
           | Ok (sub, t) ->
             dispatch
@@ -2392,31 +2430,75 @@ module For_unix (M : For_unix) = struct
               ~extend
               ~path:(Path.append path ~subcommand:sub)
               ~args:rest
-              ~maybe_new_comp_cword:(Option.map ~f:Int.pred maybe_new_comp_cword)
+              ~maybe_new_comp_cword
               ~version
               ~build_info
               ~verbose_on_parse_error
-              ~complete_subcommands)
-       | Complete part ->
-         let subs =
-           Lazy.force subs
-           |> List.map ~f:fst
-           |> List.filter ~f:(fun name -> String.is_prefix name ~prefix:part)
-           |> List.sort ~compare:String.compare
-         in
-         (match complete_subcommands with
-          | Some f ->
-            let subcommands =
-              shape t |> Shape.fully_forced |> Shape.Fully_forced.expanded_subcommands
-            in
-            (match f subcommands with
-             | None -> exit 1
-             | Some to_output ->
-               print_endline (String.concat ~sep:" " to_output);
+              ~complete_subcommands
+        in
+        match (args : Cmdline.t) with
+        | Nil ->
+          (match body with
+           | None ->
+             die_showing_help
+               (sprintf "missing subcommand for command %s" (Path.to_string path))
+           | Some body -> body ~path:(Path.parts_exe_basename path))
+        | Cons (sub, rest) ->
+          (* Match for flags recognized when subcommands are expected next *)
+          (match sub with
+           (* Recognized at the top level command only *)
+           | ("-version" | "--version") when Path.length path = 1 ->
+             if completing
+             then skip rest
+             else (
+               Version_info.print_version ~version;
                exit 0)
-          | None ->
-            List.iter subs ~f:print_endline;
-            exit 0))
+           | ("-build-info" | "--build-info") when Path.length path = 1 ->
+             if completing
+             then skip rest
+             else (
+               Version_info.print_build_info ~build_info;
+               exit 0)
+           (* Recognized everywhere *)
+           | "-help" | "--help" ->
+             if completing
+             then skip rest
+             else (
+               match rest with
+               | Nil | Complete (_ : string) ->
+                 print_endline
+                   (help_for_shape
+                      ~recursive:false
+                      ~flags:false
+                      ~expand_dots:false
+                      (shape (Group { group with subcommands = subs }))
+                      path);
+                 exit 0
+               | Cmdline.Cons (first_of_rest, rest_of_rest) ->
+                 resolve first_of_rest (Cons (sub, rest_of_rest)))
+           | (_ : string) -> resolve sub rest)
+        | Complete part ->
+          let subs =
+            Lazy.force subs
+            |> List.map ~f:fst
+            |> List.filter ~f:(fun name -> String.is_prefix name ~prefix:part)
+            |> List.sort ~compare:String.compare
+          in
+          (match complete_subcommands with
+           | Some f ->
+             let subcommands =
+               shape t |> Shape.fully_forced |> Shape.Fully_forced.expanded_subcommands
+             in
+             (match f subcommands with
+              | None -> exit 1
+              | Some to_output ->
+                print_endline (String.concat ~sep:" " to_output);
+                exit 0)
+           | None ->
+             List.iter subs ~f:print_endline;
+             exit 0)
+      in
+      parse_group args ~maybe_new_comp_cword
   ;;
 
   let default_version, default_build_info =
@@ -2524,6 +2606,7 @@ module Param = struct
       -> 'a t
 
     val anon : 'a Anons.t -> 'a t
+    val escape_anon : final_anon:'a Anons.t -> ('a * string list) t
 
     module If_nothing_chosen : sig
       type (_, _) t =
@@ -2599,6 +2682,8 @@ module Param = struct
     let t3 = t3
     let t4 = t4
   end
+
+  let escape_anon = Spec.escape_anon
 end
 
 module Let_syntax = struct

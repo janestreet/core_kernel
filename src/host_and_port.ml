@@ -7,7 +7,7 @@ module Stable = struct
       type t = string * int [@@deriving sexp, bin_io]
     end
 
-    module T = struct
+    module T0 = struct
       type t =
         { host : string
         ; port : int
@@ -18,58 +18,65 @@ module Stable = struct
       let of_serializable (host, port) = { host; port }
     end
 
-    include T
+    module T1 = struct
+      include T0
 
-    include Binable.Stable.Of_binable.V1 [@alert "-legacy"]
-        (Serializable)
-        (struct
-          include T
+      include Binable.Stable.Of_binable.V1 [@alert "-legacy"]
+          (Serializable)
+          (struct
+            include T0
 
-          let to_binable = to_serializable
-          let of_binable = of_serializable
-        end)
+            let to_binable = to_serializable
+            let of_binable = of_serializable
+          end)
 
-    let%expect_test "stable" =
-      print_endline [%bin_digest: t];
-      print_endline [%bin_digest: Serializable.t];
-      [%expect
-        {|
+      let%expect_test "stable" =
+        print_endline [%bin_digest: t];
+        print_endline [%bin_digest: Serializable.t];
+        [%expect
+          {|
                   957990f0fc4161fb874e66872550fb40
                   957990f0fc4161fb874e66872550fb40 |}]
-    ;;
+      ;;
 
-    include Sexpable.Stable.Of_sexpable.V1
-        (Serializable)
-        (struct
-          include T
+      include Sexpable.Stable.Of_sexpable.V1
+          (Serializable)
+          (struct
+            include T0
 
-          let to_sexpable = to_serializable
-          let of_sexpable = of_serializable
-        end)
+            let to_sexpable = to_serializable
+            let of_sexpable = of_serializable
+          end)
 
-    open! Import
-    open! Std_internal
-    open! T
+      open! Import
+      open! Std_internal
+      open! T0
 
-    let to_string { host; port } = sprintf "%s:%d" host port
+      let to_string { host; port } = sprintf "%s:%d" host port
 
-    let of_string s =
-      match String.split s ~on:':' with
-      | [ host; port ] ->
-        let port =
-          try Int.of_string port with
-          | _exn -> failwithf "Host_and_port.of_string: bad port: %s" s ()
-        in
-        { host; port }
-      | _ -> failwithf "Host_and_port.of_string: %s" s ()
-    ;;
+      let of_string s =
+        match String.split s ~on:':' with
+        | [ host; port ] ->
+          let port =
+            try Int.of_string port with
+            | _exn -> failwithf "Host_and_port.of_string: bad port: %s" s ()
+          in
+          { host; port }
+        | _ -> failwithf "Host_and_port.of_string: %s" s ()
+      ;;
 
-    let t_of_sexp = function
-      | Sexp.Atom s as sexp ->
-        (try of_string s with
-         | Failure err -> of_sexp_error err sexp)
-      | sexp -> t_of_sexp sexp
-    ;;
+      let t_of_sexp = function
+        | Sexp.Atom s as sexp ->
+          (try of_string s with
+           | Failure err -> of_sexp_error err sexp)
+        | sexp -> t_of_sexp sexp
+      ;;
+
+      include (val Comparator.Stable.V1.make ~compare ~sexp_of_t)
+    end
+
+    include T1
+    include Comparable.Stable.V1.Make (T1)
 
     let%test_unit "t_of_sexp" =
       [%test_result: t]
@@ -113,6 +120,6 @@ include Pretty_printer.Register (struct
   end)
 
 include (Hashable.Make_binable (Latest) : Hashable.S_binable with type t := t)
-include Comparable.Make_binable (Latest)
+include Comparable.Make_binable_using_comparator (Latest)
 
 let type_id = Type_equal.Id.create ~name:"Host_and_port" sexp_of_t
