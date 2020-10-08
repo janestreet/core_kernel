@@ -219,3 +219,5 @@ module Core_kernel_private = struct
 
   module Time_ns_alternate_sexp = Time_ns_alternate_sexp
 end
+
+let ( ^/ ) = Filename.concat
