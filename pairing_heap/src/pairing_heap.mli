@@ -54,6 +54,10 @@ val add : 'a t -> 'a -> unit
 (** [remove_top t] does nothing if [t] is empty. *)
 val remove_top : _ t -> unit
 
+(** Removes all elements, leaving an empty heap. This operation is O(n) where n is the
+    size of the heap. *)
+val clear : _ t -> unit
+
 
 (** [pop] removes and returns the top (i.e. least) element. *)
 val pop : 'a t -> 'a option

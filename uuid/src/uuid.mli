@@ -20,8 +20,12 @@ val create_random : Random.State.t -> t
 val arg_type : t Command.Arg_type.t
 
 module Unstable : sig
-  (** Unlike [Stable] deserializers, [Unstable.t_of_sexp] validates the input. *)
+  (** Unlike the toplevel [sexp_of_t], [Unstable.sexp_of_t] shows the uuid even when
+      [am_running_test]. Unlike [Stable] deserializers, [Unstable.t_of_sexp] validates the
+      input. *)
   type nonrec t = t [@@deriving bin_io, compare, equal, hash, sexp]
+
+  include Comparator.S with type t := t with type comparator_witness = comparator_witness
 end
 
 module Stable : sig

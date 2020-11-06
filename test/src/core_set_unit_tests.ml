@@ -101,6 +101,7 @@ module Unit_tests (Elt : sig
     let empty () = simplify_creator empty
     let singleton = simplify_creator singleton
     let of_list = simplify_creator of_list
+    let of_sequence = simplify_creator of_sequence
     let of_hash_set = simplify_creator of_hash_set
     let of_hashtbl_keys = simplify_creator of_hashtbl_keys
     let of_sorted_array = simplify_creator of_sorted_array
@@ -167,6 +168,7 @@ module Unit_tests (Elt : sig
 
   let add _ = assert false
   let of_list _ = assert false
+  let of_sequence _ = assert false
   let of_hash_set _ = assert false
   let of_hashtbl_keys _ = assert false
   let mem _ = assert false
@@ -564,12 +566,14 @@ module Unit_tests (Elt : sig
     let hash_set = Elt.Hash_set.of_list list in
     let hashtbl = Elt.Table.of_alist_exn (List.map list ~f:(fun e -> e, e)) in
     let rev_array = Array.of_list (List.rev list) in
+    let sequence = Sequence.of_list list in
     let set = Set.of_list list in
     Set.length set = List.length list
     && Set.equal set (Set.of_sorted_array_unchecked array)
     && Set.equal set (Set.of_sorted_array_unchecked rev_array)
     && Set.equal set (Set.of_hash_set hash_set)
     && Set.equal set (Set.of_hashtbl_keys hashtbl)
+    && Set.equal set (Set.of_sequence sequence)
   ;;
 
   let invariants _ = assert false

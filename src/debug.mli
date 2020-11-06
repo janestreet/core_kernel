@@ -31,7 +31,7 @@ val eprintf : ('r, unit, string, unit) format4 -> 'r
         include Debug.Make ()
         let debug x = debug invariant ~module_name:"Foo" x
         let bar t x y =
-          debug "bar" [t] (t, x, y) <:sexp_of< t * X.t * Y.t >> <:sexp_of< Result.t >>
+          debug "bar" [t] (t, x, y) [%sexp_of: t * X.t * Y.t] [%sexp_of: Result.t]
             (fun () -> bar t x y)
       end
     ]}
@@ -67,7 +67,7 @@ end
       ...;
       Debug.amf [%here] "hello (%s, %s)" (X.to_string x) (Y.to_string y);
       ...;
-      Debug.ams [%here] "hello" (x, y) <:sexp_of< X.t * Y.t >>;
+      Debug.ams [%here] "hello" (x, y) [%sexp_of: X.t * Y.t];
       ...;
     ]}
 

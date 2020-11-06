@@ -285,6 +285,25 @@ val protect_window_and_bounds_1
   -> f:(('rw, seek) t -> 'a -> 'b)
   -> 'b
 
+(** [protect_window_and_bounds_2 t x y ~f] is a more efficient version of
+    [protect_window_and_bounds t ~f:(fun t -> f t x y)]. *)
+val protect_window_and_bounds_2
+  :  ('rw, no_seek) t
+  -> 'a
+  -> 'b
+  -> f:(('rw, seek) t -> 'a -> 'b -> 'c)
+  -> 'c
+
+(** [protect_window_and_bounds_3 t x y z ~f] is a more efficient version of
+    [protect_window_and_bounds t ~f:(fun t -> f t x y z)]. *)
+val protect_window_and_bounds_3
+  :  ('rw, no_seek) t
+  -> 'a
+  -> 'b
+  -> 'c
+  -> f:(('rw, seek) t -> 'a -> 'b -> 'c -> 'd)
+  -> 'd
+
 (** {2 Getting and setting data}
 
     "consume" and "fill" functions access data at the lower bound of the window and

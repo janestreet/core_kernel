@@ -1261,6 +1261,8 @@ let m__t_of_sexp (type k) (module K : M_of_sexp with type t = k) v_of_sexp s =
   t_of_sexp ~hashable:(Hashable.of_key (module K)) K.t_of_sexp v_of_sexp s
 ;;
 
+let m__t_sexp_grammar = Sexp.t_sexp_grammar
+
 module Using_hashable = struct
   type nonrec ('a, 'b) t = ('a, 'b) t [@@deriving sexp_of]
 
@@ -1319,4 +1321,34 @@ let create_with_key_exn ?growth_allowed ?size m ~get_key l =
 
 let group ?growth_allowed ?size m ~get_key ~get_data ~combine l =
   group ~hashable:(Hashable.of_key m) ?growth_allowed ?size ~get_key ~get_data ~combine l
+;;
+
+module type M_quickcheck = M_quickcheck
+
+let of_alist_option m alist = Result.ok (of_alist_or_error m alist)
+
+let quickcheck_generator_m__t
+      (type key)
+      (module Key : M_quickcheck with type t = key)
+      quickcheck_generator_data
+  =
+  [%quickcheck.generator: (Key.t * data) List.t]
+  |> Quickcheck.Generator.filter_map ~f:(of_alist_option (module Key))
+;;
+
+let quickcheck_observer_m__t
+      (type key)
+      (module Key : M_quickcheck with type t = key)
+      quickcheck_observer_data
+  =
+  [%quickcheck.observer: (Key.t * data) List.t] |> Quickcheck.Observer.unmap ~f:to_alist
+;;
+
+let quickcheck_shrinker_m__t
+      (type key)
+      (module Key : M_quickcheck with type t = key)
+      quickcheck_shrinker_data
+  =
+  [%quickcheck.shrinker: (Key.t * data) List.t]
+  |> Quickcheck.Shrinker.filter_map ~f:(of_alist_option (module Key)) ~f_inverse:to_alist
 ;;

@@ -39,6 +39,26 @@ module Stat = struct
 
   include T
   include Comparable.Make (T)
+
+  let diff after before =
+    { minor_words = after.minor_words -. before.minor_words
+    ; promoted_words = after.promoted_words -. before.promoted_words
+    ; major_words = after.major_words -. before.major_words
+    ; minor_collections = after.minor_collections - before.minor_collections
+    ; major_collections = after.major_collections - before.major_collections
+    ; heap_words = after.heap_words - before.heap_words
+    ; heap_chunks = after.heap_chunks - before.heap_chunks
+    ; live_words = after.live_words - before.live_words
+    ; live_blocks = after.live_blocks - before.live_blocks
+    ; free_words = after.free_words - before.free_words
+    ; free_blocks = after.free_blocks - before.free_blocks
+    ; largest_free = after.largest_free - before.largest_free
+    ; fragments = after.fragments - before.fragments
+    ; compactions = after.compactions - before.compactions
+    ; top_heap_words = after.top_heap_words - before.top_heap_words
+    ; stack_size = after.stack_size - before.stack_size
+    }
+  ;;
 end
 
 module Control = struct

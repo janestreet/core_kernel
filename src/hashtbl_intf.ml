@@ -135,7 +135,30 @@ type ('key, 'data, 'z) create_options_with_hashable =
   -> hashable:'key Hashable.t
   -> 'z
 
-module type For_deriving = Base.Hashtbl.For_deriving
+module type M_quickcheck = sig
+  type t [@@deriving compare, hash, quickcheck, sexp_of]
+end
+
+module type For_deriving = sig
+  include Base.Hashtbl.For_deriving
+
+  module type M_quickcheck = M_quickcheck
+
+  val quickcheck_generator_m__t
+    :  (module M_quickcheck with type t = 'k)
+    -> 'v Base_quickcheck.Generator.t
+    -> ('k, 'v) t Quickcheck.Generator.t
+
+  val quickcheck_observer_m__t
+    :  (module M_quickcheck with type t = 'k)
+    -> 'v Quickcheck.Observer.t
+    -> ('k, 'v) t Quickcheck.Observer.t
+
+  val quickcheck_shrinker_m__t
+    :  (module M_quickcheck with type t = 'k)
+    -> 'v Quickcheck.Shrinker.t
+    -> ('k, 'v) t Quickcheck.Shrinker.t
+end
 
 module type S_plain = sig
   type key

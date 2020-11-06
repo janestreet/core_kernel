@@ -16,14 +16,15 @@ type t = string [@@deriving bin_io, typerep]
     that for example [Caseless.is_suffix "OCaml" ~suffix:"AmL"] and [Caseless.is_prefix
     "OCaml" ~prefix:"oc"] are [true]. *)
 module Caseless : sig
+  include module type of struct
+    include Caseless
+  end
+
   type nonrec t = t [@@deriving bin_io, hash, sexp]
+
 
   include Comparable.S_binable with type t := t
   include Hashable.S_binable with type t := t
-
-  val is_suffix : t -> suffix:t -> bool
-  val is_prefix : t -> prefix:t -> bool
-  val is_substring : t -> substring:t -> bool
 end
 
 

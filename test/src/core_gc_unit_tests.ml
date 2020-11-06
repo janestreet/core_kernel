@@ -110,3 +110,20 @@ let%test_unit _ =
     | Some _ -> true);
   keep_alive (r, r)
 ;;
+
+let%expect_test "stat diff" =
+  let before = Gc.stat () in
+  let after =
+    { before with
+      minor_words = before.minor_words +. 100.
+    ; compactions = before.compactions + 7
+    }
+  in
+  print_s [%sexp (Gc.Stat.diff after before : Gc.Stat.t)];
+  [%expect
+    {|
+    ((minor_words 100) (promoted_words 0) (major_words 0) (minor_collections 0)
+     (major_collections 0) (heap_words 0) (heap_chunks 0) (live_words 0)
+     (live_blocks 0) (free_words 0) (free_blocks 0) (largest_free 0)
+     (fragments 0) (compactions 7) (top_heap_words 0) (stack_size 0)) |}]
+;;

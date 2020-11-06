@@ -28,16 +28,10 @@ module T2 : sig
 
   external get1 : ('a, _) t -> 'a = "%field0"
   external get2 : (_, 'a) t -> 'a = "%field1"
-
-  val map1 : f:('a -> 'c) -> ('a, 'b) t -> ('c, 'b) t
-  [@@deprecated "[since 2015-12] use map_fst"]
-
-  val map2 : f:('b -> 'c) -> ('a, 'b) t -> ('a, 'c) t
-  [@@deprecated "[since 2015-12] use map_snd"]
-
   val map : ('a, 'a) t -> f:('a -> 'b) -> ('b, 'b) t
   val map_fst : ('a, 'b) t -> f:('a -> 'c) -> ('c, 'b) t
   val map_snd : ('a, 'b) t -> f:('b -> 'c) -> ('a, 'c) t
+  val map2 : ('a, 'a) t -> ('b, 'b) t -> f:('a -> 'b -> 'c) -> ('c, 'c) t
   val swap : ('a, 'b) t -> ('b, 'a) t
 end
 
@@ -68,20 +62,11 @@ module T3 : sig
   external get1 : ('a, _, _) t -> 'a = "%field0"
   external get2 : (_, 'a, _) t -> 'a = "%field1"
   val get3 : (_, _, 'a) t -> 'a
-
-  val map1 : f:('a -> 'd) -> ('a, 'b, 'c) t -> ('d, 'b, 'c) t
-  [@@deprecated "[since 2015-12] use map_fst"]
-
-  val map2 : f:('b -> 'd) -> ('a, 'b, 'c) t -> ('a, 'd, 'c) t
-  [@@deprecated "[since 2015-12] use map_snd"]
-
-  val map3 : f:('c -> 'd) -> ('a, 'b, 'c) t -> ('a, 'b, 'd) t
-  [@@deprecated "[since 2015-12] use map_trd"]
-
   val map : ('a, 'a, 'a) t -> f:('a -> 'b) -> ('b, 'b, 'b) t
   val map_fst : ('a, 'b, 'c) t -> f:('a -> 'd) -> ('d, 'b, 'c) t
   val map_snd : ('a, 'b, 'c) t -> f:('b -> 'd) -> ('a, 'd, 'c) t
   val map_trd : ('a, 'b, 'c) t -> f:('c -> 'd) -> ('a, 'b, 'd) t
+  val map2 : ('a, 'a, 'a) t -> ('b, 'b, 'b) t -> f:('a -> 'b -> 'c) -> ('c, 'c, 'c) t
 end
 
 (** These functors allow users to write:

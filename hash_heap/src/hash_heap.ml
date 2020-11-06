@@ -158,4 +158,9 @@ module Make (Key : Key) : S with module Key = Key = struct
     iteri t ~f:(fun ~key ~data -> push_exn t' ~key ~data);
     t'
   ;;
+
+  let clear t =
+    Heap.clear t.heap;
+    Hashtbl.clear t.tbl
+  ;;
 end

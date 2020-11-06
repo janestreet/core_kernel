@@ -82,3 +82,13 @@ let%expect_test "replace" =
   "present" @? [%equal: int option] (Hash_heap.find t 1) (Some 12);
   "top" @? [%equal: int option] (Hash_heap.top t) (Some 2)
 ;;
+
+let%expect_test "clear" =
+  let t = make () in
+  Hash_heap.clear t;
+  List.iter s ~f:(fun i ->
+    let msg = sprintf "%dgone" i in
+    msg @? not (Hash_heap.mem t i));
+  "top" @? [%equal: int option] (Hash_heap.top t) None;
+  "len" @? (Hash_heap.length t = 0)
+;;

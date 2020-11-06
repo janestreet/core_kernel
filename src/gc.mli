@@ -59,6 +59,10 @@ module Stat : sig
   [@@deriving bin_io, sexp, fields]
 
   include Comparable.S with type t := t
+
+  (** [diff after before] computes [after-before] pointwise across each field; this helps
+      show the effect (on all stats) of some code block. *)
+  val diff : t -> t -> t
 end
 
 type stat = Stat.t

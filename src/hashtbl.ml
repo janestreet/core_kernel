@@ -252,6 +252,42 @@ module M = Hashtbl.M
 
 module type For_deriving = For_deriving
 
-include (Hashtbl : For_deriving with type ('a, 'b) t := ('a, 'b) t)
+module For_deriving : For_deriving with type ('a, 'b) t := ('a, 'b) t = struct
+  include (Hashtbl : Hashtbl.For_deriving with type ('a, 'b) t := ('a, 'b) t)
+
+  module type M_quickcheck = M_quickcheck
+
+  let of_alist_option m alist = Result.ok (of_alist_or_error m alist)
+
+  let quickcheck_generator_m__t
+        (type key)
+        (module Key : M_quickcheck with type t = key)
+        quickcheck_generator_data
+    =
+    [%quickcheck.generator: (Key.t * data) List.t]
+    |> Quickcheck.Generator.filter_map ~f:(of_alist_option (module Key))
+  ;;
+
+  let quickcheck_observer_m__t
+        (type key)
+        (module Key : M_quickcheck with type t = key)
+        quickcheck_observer_data
+    =
+    [%quickcheck.observer: (Key.t * data) List.t] |> Quickcheck.Observer.unmap ~f:to_alist
+  ;;
+
+  let quickcheck_shrinker_m__t
+        (type key)
+        (module Key : M_quickcheck with type t = key)
+        quickcheck_shrinker_data
+    =
+    [%quickcheck.shrinker: (Key.t * data) List.t]
+    |> Quickcheck.Shrinker.filter_map
+         ~f:(of_alist_option (module Key))
+         ~f_inverse:to_alist
+  ;;
+end
+
+include For_deriving
 
 let hashable = Hashtbl.Private.hashable

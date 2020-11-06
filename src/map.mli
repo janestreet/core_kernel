@@ -117,8 +117,8 @@ val of_alist_reduce
   -> ('a, 'b, 'cmp) t
 
 (** [of_iteri ~iteri] behaves like [of_alist], except that instead of taking a concrete
-    datastruture, it takes an iteration function. For instance, to convert a string table
-    into a map: [of_iteri (module String) ~f:(Hashtbl.iteri table)]. It is faster than
+    datastructure, it takes an iteration function. For instance, to convert a string table
+    into a map: [of_iteri (module String) ~iteri:(Hashtbl.iteri table)]. It is faster than
     adding the elements one by one. *)
 val of_iteri
   :  ('a, 'cmp) comparator
@@ -520,7 +520,9 @@ end
 
 (** [symmetric_diff t1 t2 ~data_equal] returns a list of changes between [t1] and [t2].
     It is intended to be efficient in the case where [t1] and [t2] share a large amount of
-    structure.  The keys in the output sequence will be in sorted order. *)
+    structure. In the case where [t2] (resp. [t1]) is obtained by applying k additions
+    and/or removals to [t1] (resp. [t2]), this runs in [min(O(k log n), O(n))], where [n]
+    is [length t1 + length t2]. The keys in the output sequence will be in sorted order. *)
 val symmetric_diff
   :  ('k, 'v, 'cmp) t
   -> ('k, 'v, 'cmp) t

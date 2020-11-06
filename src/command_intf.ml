@@ -193,7 +193,8 @@ module type Command = sig
 
         If [allow_empty = true] then the empty string (or just whitespace, if
         [strip_whitespace = true]) results in an empty list, and if [allow_empty = false]
-        then the empty string will fail to parse.
+        then the empty string will fail to parse. (Note that there is currently no way for
+        [comma_separated] to produce a list whose only element is the empty string.)
 
         If [unique_values = true] no autocompletion will be offered for arguments already
         supplied in the fragment to complete. *)
@@ -480,7 +481,7 @@ module type Command = sig
       end
 
       (** [choose_one clauses ~if_nothing_chosen] expresses a sum type.  It raises if more
-          than one of [clauses] is [Some _].  When [if_nothing_chosen = `Raise], it also
+          than one of [clauses] is [Some _].  When [if_nothing_chosen = Raise], it also
           raises if none of [clauses] is [Some _]. *)
       val choose_one
         :  'a option t list

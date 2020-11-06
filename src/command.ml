@@ -76,30 +76,72 @@ module Completer = struct
   ;;
 end
 
-module Arg_type = struct
+module Arg_type : sig
+  type 'a t
+
+  val extra_doc : 'a t -> string option lazy_t
+  val key : 'a t -> 'a Env.Multi.Key.t option
+  val complete : 'a t -> Completer.t
+  val parse : 'a t -> string -> ('a, exn) result
+
+  val create
+    :  ?complete:Auto_complete.t
+    -> ?key:'a Env.Multi.Key.t
+    -> (string -> 'a)
+    -> 'a t
+
+  val map : ?key:'a Env.Multi.Key.t -> 'b t -> f:('b -> 'a) -> 'a t
+  val of_lazy : ?key:'a Env.Multi.Key.t -> 'a t lazy_t -> 'a t
+
+  val of_map
+    :  ?list_values_in_help:bool
+    -> ?key:'a Env.Multi.Key.t
+    -> (string, 'a, 'b) Map.t
+    -> 'a t
+
+  val of_alist_exn
+    :  ?list_values_in_help:bool
+    -> ?key:'a Env.Multi.Key.t
+    -> (string * 'a) list
+    -> 'a t
+
+  val comma_separated
+    :  ?allow_empty:bool
+    -> ?key:'a list Env.Multi.Key.t
+    -> ?strip_whitespace:bool
+    -> ?unique_values:bool
+    -> 'a t
+    -> 'a list t
+
+  module Export : sig
+    val string : string t
+    val int : int t
+    val char : char t
+    val float : float t
+    val bool : bool t
+    val date : Date.t t
+    val percent : Percent.t t
+    val host_and_port : Host_and_port.t t
+    val sexp : Sexp.t t
+    val sexp_conv : (Sexp.t -> 'a) -> 'a t
+  end
+end = struct
   type 'a t =
-    { parse : string -> ('a, exn) Result.t
+    { parse : string -> 'a
     ; complete : Completer.t
     ; key : 'a Univ_map.Multi.Key.t option
     ; extra_doc : string option Lazy.t
     }
   [@@deriving fields]
 
-  let create' ?complete ?key of_string ~extra_doc =
-    let parse x = Result.try_with (fun () -> of_string x) in
-    { parse; key; complete; extra_doc }
-  ;;
+  let parse t s = Result.try_with (fun () -> t.parse s)
+  let create' ?complete ?key parse ~extra_doc = { parse; key; complete; extra_doc }
 
   let create ?complete ?key of_string =
     create' ?complete ?key of_string ~extra_doc:(Lazy.from_val None)
   ;;
 
-  let map ?key t ~f =
-    let parse str = Result.map (t.parse str) ~f in
-    let complete = t.complete in
-    let extra_doc = t.extra_doc in
-    { parse; complete; key; extra_doc }
-  ;;
+  let map ?key t ~f = { t with key; parse = (fun s -> f (t.parse s)) }
 
   let of_lazy ?key t =
     let parse str = (force t).parse str in
@@ -201,9 +243,7 @@ module Arg_type = struct
         if allow_empty
         then []
         else failwith "Command.Spec.Arg_type.comma_separated: empty list not allowed"
-      else
-        List.map (String.split string ~on:',') ~f:(fun str ->
-          Result.ok_exn (t.parse (strip str)))
+      else List.map (String.split string ~on:',') ~f:(fun str -> t.parse (strip str))
     in
     create ?key ?complete of_string
   ;;
@@ -363,17 +403,17 @@ module Flag = struct
     ; num_occurrences
     ; action =
         (let update env arg =
-           match arg_type.Arg_type.parse arg with
+           match Arg_type.parse arg_type arg with
            | Error exn ->
              die "failed to parse %s value %S.\n%s" name arg (Exn.to_string exn) ()
            | Ok arg ->
              let env = write env arg in
-             (match arg_type.Arg_type.key with
+             (match Arg_type.key arg_type with
               | None -> env
               | Some key -> Env.multi_add env ~key ~data:arg)
          in
-         Arg (update, arg_type.Arg_type.complete))
-    ; extra_doc = arg_type.extra_doc
+         Arg (update, Arg_type.complete arg_type))
+    ; extra_doc = Arg_type.extra_doc arg_type
     }
   ;;
 
@@ -766,9 +806,9 @@ module Anons = struct
 
     let ( >>| ) t f = return f <*> t
 
-    let one_more ~name { Arg_type.complete; parse = of_string; key; extra_doc = _ } =
+    let one_more ~name arg_type =
       let parse anon ~for_completion =
-        match of_string anon with
+        match Arg_type.parse arg_type anon with
         | Error exn ->
           if for_completion
           then
@@ -780,11 +820,11 @@ module Anons = struct
           { parser = return v
           ; update_env =
               (fun env ->
-                 Option.fold key ~init:env ~f:(fun env key ->
+                 Option.fold (Arg_type.key arg_type) ~init:env ~f:(fun env key ->
                    Env.multi_add env ~key ~data:v))
           }
       in
-      More { name; parse; complete }
+      More { name; parse; complete = Arg_type.complete arg_type }
     ;;
 
     let one ~name arg_type =
@@ -931,7 +971,9 @@ module Anons = struct
 
   module Deprecated = struct
     let ad_hoc ~usage_arg =
-      { p = Parser.sequence (Parser.one ~name:"WILL NEVER BE PRINTED" Arg_type.string)
+      { p =
+          Parser.sequence
+            (Parser.one ~name:"WILL NEVER BE PRINTED" Arg_type.Export.string)
       ; grammar = Grammar.ad_hoc ~usage:usage_arg
       }
     ;;

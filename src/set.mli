@@ -89,7 +89,9 @@ val diff : ('a, 'cmp) t -> ('a, 'cmp) t -> ('a, 'cmp) t
 
 (** [symmetric_diff t1 t2] returns a sequence of changes between [t1] and [t2]. It is
     intended to be efficient in the case where [t1] and [t2] share a large amount of
-    structure. *)
+    structure. In the case where [t2] (resp. [t1]) is obtained by applying k additions
+    and/or removals to [t1] (resp. [t2]), this runs in [min(O(k log n), O(n))], where [n]
+    is [length t1 + length t2]. *)
 val symmetric_diff : ('a, 'cmp) t -> ('a, 'cmp) t -> ('a, 'a) Either.t Sequence.t
 
 (** [compare_direct t1 t2] compares the sets [t1] and [t2].  It returns the same result
@@ -193,6 +195,7 @@ end
 (** The list or array given to [of_list] and [of_array] need not be sorted. *)
 val of_list : ('a, 'cmp) comparator -> 'a list -> ('a, 'cmp) t
 
+val of_sequence : ('a, 'cmp) comparator -> 'a Sequence.t -> ('a, 'cmp) t
 val of_array : ('a, 'cmp) comparator -> 'a array -> ('a, 'cmp) t
 val of_hash_set : ('a, 'cmp) comparator -> 'a Hash_set.t -> ('a, 'cmp) t
 val of_hashtbl_keys : ('a, 'cmp) comparator -> ('a, _) Hashtbl.t -> ('a, 'cmp) t

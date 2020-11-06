@@ -1,5 +1,5 @@
 open! Import
-open Hash_set_intf
+include Hash_set_intf
 include Base.Hash_set
 
 module type S_plain = S_plain with type 'a hash_set := 'a t
@@ -17,7 +17,6 @@ module Make_plain_with_hashable (T : sig
 struct
   type elt = T.Elt.t
   type nonrec t = elt t
-  type 'a elt_ = elt
 
   include Creators (struct
       type 'a t = T.Elt.t
@@ -121,3 +120,17 @@ end
 
 let hashable = Private.hashable
 let create ?growth_allowed ?size m = create ?growth_allowed ?size m
+
+let quickcheck_generator_m__t (type key) (module Key : M_quickcheck with type t = key) =
+  [%quickcheck.generator: Key.t List0.t]
+  |> Quickcheck.Generator.map ~f:(of_list (module Key))
+;;
+
+let quickcheck_observer_m__t (type key) (module Key : M_quickcheck with type t = key) =
+  [%quickcheck.observer: Key.t List0.t] |> Quickcheck.Observer.unmap ~f:to_list
+;;
+
+let quickcheck_shrinker_m__t (type key) (module Key : M_quickcheck with type t = key) =
+  [%quickcheck.shrinker: Key.t List0.t]
+  |> Quickcheck.Shrinker.map ~f:(of_list (module Key)) ~f_inverse:to_list
+;;

@@ -150,6 +150,9 @@ let nil = "00000000-0000-0000-0000-000000000000"
 
 module Unstable = struct
   type nonrec t = t [@@deriving bin_io, compare, equal, hash, sexp]
+  type nonrec comparator_witness = comparator_witness
+
+  let comparator = comparator
 end
 
 let arg_type = Command.Arg_type.create of_string
