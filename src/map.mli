@@ -19,8 +19,9 @@
       module Foo = struct
         module T = struct
           type t = int * int
-          let compare x y = Tuple2.compare Int.compare Int.compare
+          let compare = Tuple2.compare ~cmp1:Int.compare ~cmp2:Int.compare
           let sexp_of_t = Tuple2.sexp_of_t Int.sexp_of_t Int.sexp_of_t
+          let t_of_sexp = Tuple2.t_of_sexp Int.t_of_sexp Int.t_of_sexp
         end
         include T
         include Comparable.Make(T)
@@ -41,7 +42,7 @@
     {[
       module Foo = struct
         module T =
-        struct  type t = int * int [@@deriving sexp_of, compare]  end
+        struct  type t = int * int [@@deriving sexp, compare]  end
         include T
         include Comparable.Make(T)
       end
