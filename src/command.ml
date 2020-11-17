@@ -1361,7 +1361,9 @@ module Base = struct
         | Arg.Tuple _ ->
           failwith "Arg.Tuple is not supported by Command.Spec.flags_of_args_exn"
         | ((Arg.Expand _)[@if ocaml_version >= (4, 05, 0)]) ->
-          failwith "Arg.Expand is not supported by Command.Spec.flags_of_args_exn")
+          failwith "Arg.Expand is not supported by Command.Spec.flags_of_args_exn"
+        | ((Arg.Rest_all _)[@if ocaml_version >= (4, 12, 0)]) ->
+          failwith "Arg.Rest_all is not supported by Command.Spec.flags_of_args_exn")
     ;;
 
     module Deprecated = struct
@@ -1443,7 +1445,7 @@ module Base = struct
           Map.fold ts ~init:(return []) ~f:(fun ~key:name ~data:t init ->
             map2 init t ~f:(fun init value ->
               Option.fold value ~init ~f:(fun init value -> (name, value) :: init)))
-          |> map ~f:(function
+          |> map ~f:(fun value : b -> match value with
             | _ :: _ :: _ as passed ->
               die
                 !"Cannot pass more than one of these: \n\

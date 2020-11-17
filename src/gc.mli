@@ -20,6 +20,51 @@ open! Import
   (* $Id: gc.mli,v 1.42 2005-10-25 18:34:07 doligez Exp $ *)
 *)
 module Stat : sig
+  [%%if ocaml_version >= (4, 12, 0)]
+
+  type t =
+    { minor_words : float
+    (** Number of words allocated in the minor heap since
+        the program was started.  This number is accurate in
+        byte-code programs, but only an approximation in programs
+        compiled to native code. *)
+    ; promoted_words : float
+    (** Number of words allocated in the minor heap that
+        survived a minor collection and were moved to the major heap
+        since the program was started. *)
+    ; major_words : float
+    (** Number of words allocated in the major heap, including
+        the promoted words, since the program was started. *)
+    ; minor_collections : int
+    (** Number of minor collections since the program was started. *)
+    ; major_collections : int
+    (** Number of major collection cycles completed since the program
+        was started. *)
+    ; heap_words : int (** Total size of the major heap, in words. *)
+    ; heap_chunks : int
+    (** Number of contiguous pieces of memory that make up the major heap. *)
+    ; live_words : int
+    (** Number of words of live data in the major heap, including the header
+        words. *)
+    ; live_blocks : int (** Number of live blocks in the major heap. *)
+    ; free_words : int (** Number of words in the free list. *)
+    ; free_blocks : int (** Number of blocks in the free list. *)
+    ; largest_free : int (** Size (in words) of the largest block in the free list. *)
+    ; fragments : int
+    (** Number of wasted words due to fragmentation.  These are
+        1-words free blocks placed between two live blocks.  They
+        are not available for allocation. *)
+    ; compactions : int (** Number of heap compactions since the program was started. *)
+    ; top_heap_words : int (** Maximum size reached by the major heap, in words. *)
+    ; stack_size : int (** Current size of the stack, in words. *)
+    ; forced_major_collections : int
+    (** Number of forced full major collections completed since the program
+        was started. @since v0.14.1 *)
+    }
+  [@@deriving bin_io, sexp, fields]
+
+  [%%else]
+
   type t =
     { minor_words : float
     (** Number of words allocated in the minor heap since
@@ -57,6 +102,8 @@ module Stat : sig
     ; stack_size : int (** Current size of the stack, in words. *)
     }
   [@@deriving bin_io, sexp, fields]
+
+  [%%endif]
 
   include Comparable.S with type t := t
 end
