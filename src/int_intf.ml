@@ -10,12 +10,15 @@ module type Hexable = sig
   type t
 
   module Hex : sig
-    type nonrec t = t [@@deriving bin_io, sexp, compare, hash, typerep]
+    type nonrec t = t [@@deriving bin_io, sexp, sexp_grammar, compare, hash, typerep]
 
     include Base.Stringable.S with type t := t
 
     val to_string_hum : ?delimiter:char -> t -> string
   end
+
+  (*_ Ensure that this module is an extension of [Base.Int.Hexable]. *)
+  include Base.Int.Hexable with type t := t and module Hex := Hex
 end
 
 module type Extension = sig

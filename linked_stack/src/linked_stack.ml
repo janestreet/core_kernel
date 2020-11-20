@@ -95,6 +95,8 @@ let t_of_sexp a_of_sexp sexp =
   { elts; length = List.length elts }
 ;;
 
+let t_sexp_grammar = List.t_sexp_grammar
+
 let until_empty t f =
   let rec loop () =
     if t.length > 0

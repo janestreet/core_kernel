@@ -23,7 +23,7 @@ module type S = sig
       Any [ofday] will satisfy [start_of_day <= ofday <= start_of_next_day]. *)
   type underlying
 
-  type t = private underlying [@@deriving bin_io, sexp, typerep]
+  type t = private underlying [@@deriving bin_io, sexp, sexp_grammar, typerep]
 
   include Comparable_binable with type t := t
   include Hashable_binable with type t := t

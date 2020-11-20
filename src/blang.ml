@@ -134,7 +134,7 @@ module Stable = struct
       | Not of 'a t
       | If of 'a t * 'a t * 'a t
       | Base of 'a
-    [@@deriving bin_io, compare, equal, hash, sexp]
+    [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar]
 
     (* the remainder of this signature consists of functions used in the definitions
        of sexp conversions that are also useful more generally *)
@@ -249,6 +249,8 @@ module Stable = struct
       in
       aux sexp
     ;;
+
+    let t_sexp_grammar = Base.Sexp.t_sexp_grammar
   end
 end
 

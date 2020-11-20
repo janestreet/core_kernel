@@ -320,6 +320,7 @@ module Poly = struct
 
   let compare _ t1 t2 = compare_direct t1 t2
   let sexp_of_t sexp_of_k t = sexp_of_t sexp_of_k [%sexp_of: _] t
+  let t_sexp_grammar = List.t_sexp_grammar
 
   include Bin_prot.Utils.Make_iterable_binable1 (struct
       type nonrec 'a t = 'a t
@@ -351,6 +352,8 @@ module Poly = struct
     let t_of_sexp elt_of_sexp sexp =
       Tree.t_of_sexp_direct elt_of_sexp sexp ~comparator:Comparator.Poly.comparator
     ;;
+
+    let t_sexp_grammar = List.t_sexp_grammar
   end
 end
 

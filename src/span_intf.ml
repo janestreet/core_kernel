@@ -20,7 +20,7 @@ module type Parts = sig
     ; us : int
     ; ns : int
     }
-  [@@deriving compare, sexp]
+  [@@deriving compare, sexp, sexp_grammar]
 end
 
 module type S = sig
@@ -28,7 +28,7 @@ module type S = sig
       may be positive or negative. *)
   type underlying
 
-  type t = private underlying [@@deriving bin_io, hash, sexp, typerep]
+  type t = private underlying [@@deriving bin_io, hash, sexp, sexp_grammar, typerep]
 
   module Parts : Parts
   include Comparable_binable with type t := t

@@ -86,7 +86,7 @@ module type Span = sig
 
   (** Note that we expose a sexp format that is not the one exposed in [Core]. *)
   module Alternate_sexp : sig
-    type nonrec t = t [@@deriving sexp]
+    type nonrec t = t [@@deriving sexp, sexp_grammar]
   end
   [@@deprecated "[since 2018-04] use [Span.sexp_of_t] and [Span.t_of_sexp] instead"]
 
@@ -157,7 +157,7 @@ module type Time_ns = sig
 
   (** Note that we expose a sexp format that is not the one exposed in [Core]. *)
   module Alternate_sexp : sig
-    type nonrec t = t [@@deriving sexp]
+    type nonrec t = t [@@deriving sexp, sexp_grammar]
   end
 
   include

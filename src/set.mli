@@ -402,7 +402,7 @@ module Merge_to_sequence_element : sig
     | Left of 'a
     | Right of 'b
     | Both of 'a * 'b
-  [@@deriving bin_io, compare, sexp]
+  [@@deriving bin_io, compare, sexp, sexp_grammar]
 end
 
 val merge_to_sequence
@@ -443,7 +443,9 @@ module Poly : sig
   type ('a, 'b) set
 
   module Tree : sig
-    type 'elt t = ('elt, Comparator.Poly.comparator_witness) Tree.t [@@deriving sexp]
+    type 'elt t = ('elt, Comparator.Poly.comparator_witness) Tree.t
+    [@@deriving sexp, sexp_grammar]
+
     type 'a named = ('a, Comparator.Poly.comparator_witness) Tree.Named.t
 
     include
@@ -456,7 +458,7 @@ module Poly : sig
   end
 
   type 'elt t = ('elt, Comparator.Poly.comparator_witness) set
-  [@@deriving bin_io, compare, sexp]
+  [@@deriving bin_io, compare, sexp, sexp_grammar]
 
   type 'a named = ('a, Comparator.Poly.comparator_witness) Named.t
 

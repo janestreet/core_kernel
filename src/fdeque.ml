@@ -305,6 +305,7 @@ module Stable = struct
     let compare = compare
     let sexp_of_t sexp_of_elt t = [%sexp_of: elt list] (to_list t)
     let t_of_sexp elt_of_sexp sexp = of_list ([%of_sexp: elt list] sexp)
+    let t_sexp_grammar = List.t_sexp_grammar
     let map = map
 
     include Bin_prot.Utils.Make_iterable_binable1 (struct

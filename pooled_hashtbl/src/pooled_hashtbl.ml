@@ -1091,6 +1091,7 @@ module Poly = struct
   include Accessors
 
   let sexp_of_t = sexp_of_t
+  let t_sexp_grammar = List.Assoc.t_sexp_grammar
 
   include Bin_prot.Utils.Make_iterable_binable2 (struct
       type ('a, 'b) z = ('a, 'b) t

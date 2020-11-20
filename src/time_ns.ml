@@ -305,6 +305,8 @@ module Alternate_sexp = struct
     Utc.of_date_and_span_since_start_of_day date ofday
   ;;
 
+  let t_sexp_grammar = String.t_sexp_grammar
+
   include Sexpable.Of_stringable (struct
       type nonrec t = t
 

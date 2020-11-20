@@ -371,6 +371,13 @@ val map : ('k, 'v1, 'cmp) t -> f:('v1 -> 'v2) -> ('k, 'v2, 'cmp) t
 (** Like [map], but [f] takes both key and data as arguments. *)
 val mapi : ('k, 'v1, 'cmp) t -> f:(key:'k -> data:'v1 -> 'v2) -> ('k, 'v2, 'cmp) t
 
+(** Convert map with keys of type ['k2] to a map with keys of type ['k2] using [f]. *)
+val map_keys
+  :  ('k2, 'cmp2) Comparator.t
+  -> f:('k1 -> 'k2)
+  -> ('k1, 'v, 'cmp1) t
+  -> [ `Ok of ('k2, 'v, 'cmp2) t | `Duplicate_key of 'k2 ]
+
 (** Folds over keys and data in map in increasing order of key. *)
 val fold : ('k, 'v, _) t -> init:'a -> f:(key:'k -> data:'v -> 'a -> 'a) -> 'a
 
@@ -817,7 +824,7 @@ module Poly : sig
 
   module Tree : sig
     type ('k, +'v) t = ('k, 'v, Comparator.Poly.comparator_witness) Tree.t
-    [@@deriving sexp]
+    [@@deriving sexp, sexp_grammar]
 
     include
       Creators_and_accessors2
@@ -826,7 +833,7 @@ module Poly : sig
   end
 
   type ('a, +'b) t = ('a, 'b, Comparator.Poly.comparator_witness) map
-  [@@deriving bin_io, sexp, compare]
+  [@@deriving bin_io, sexp, sexp_grammar, compare]
 
   include
     Creators_and_accessors2

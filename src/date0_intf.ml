@@ -2,7 +2,7 @@ open! Import
 open Std_internal
 
 module type Date0 = sig
-  type t [@@immediate] [@@deriving bin_io, hash, sexp, typerep]
+  type t [@@immediate] [@@deriving bin_io, hash, sexp, sexp_grammar, typerep]
 
   include Hashable_binable with type t := t
 
@@ -223,14 +223,17 @@ module type Date0 = sig
   with type date := t
 
   module Option : sig
-    include Immediate_option_intf.S with type value := t
+    type value := t
+    type t [@@immediate] [@@deriving sexp_grammar]
+
+    include Immediate_option_intf.S with type value := value and type t := t
     include Comparable.S_plain with type t := t
     include Quickcheckable.S with type t := t
   end
 
   module Stable : sig
     module V1 : sig
-      type nonrec t = t [@@immediate] [@@deriving hash]
+      type nonrec t = t [@@immediate] [@@deriving hash, sexp_grammar]
 
       (** [to_int] and [of_int_exn] convert to/from the underlying integer
           representation. *)
@@ -246,7 +249,8 @@ module type Date0 = sig
 
     module Option : sig
       module V1 : sig
-        type nonrec t = Option.t [@@immediate] [@@deriving bin_io, compare, sexp]
+        type nonrec t = Option.t
+        [@@immediate] [@@deriving bin_io, compare, sexp, sexp_grammar]
       end
     end
   end

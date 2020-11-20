@@ -5,7 +5,7 @@ open! Import
 type t = Base.Sexp.t =
   | Atom of string
   | List of t list
-[@@deriving bin_io, hash, sexp]
+[@@deriving bin_io, hash, sexp, sexp_grammar]
 
 module O : sig
   type sexp = Base.Sexp.t =
@@ -54,7 +54,7 @@ type 'a no_raise = 'a [@@deriving bin_io, sexp]
 *)
 module Sexp_maybe : sig
   type 'a t = ('a, Base.Sexp.t * Error.t) Result.t
-  [@@deriving bin_io, compare, hash, sexp]
+  [@@deriving bin_io, compare, hash, sexp, sexp_grammar]
 end
 
 (** A [With_text.t] is a value paired with the full textual representation of its sexp.
@@ -73,7 +73,7 @@ end
 
     The invariants of a [x With_text.t] are broken if the [x] value is mutated. *)
 module With_text : sig
-  type 'a t [@@deriving sexp, bin_io]
+  type 'a t [@@deriving sexp, sexp_grammar, bin_io]
 
   (** Generates a [t] from the value by creating the text automatically using the provided
       s-expression converter. *)

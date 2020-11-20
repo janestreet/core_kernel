@@ -467,6 +467,7 @@ include Bin_prot.Utils.Make_iterable_binable1 (struct
 
 let t_of_sexp f sexp = of_array (Array.t_of_sexp f sexp)
 let sexp_of_t f t = Array.sexp_of_t f (to_array t)
+let t_sexp_grammar = Array.t_sexp_grammar
 
 (* re-expose these here under a different name to avoid internal confusion *)
 let back_index = apparent_back_index

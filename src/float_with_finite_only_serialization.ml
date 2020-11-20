@@ -41,6 +41,8 @@ module Stable = struct
         t
       | s -> Import.of_sexp_error "Decimal.t_of_sexp: Expected Atom, found List" s
     ;;
+
+    let t_sexp_grammar = Float.t_sexp_grammar
   end
 end
 

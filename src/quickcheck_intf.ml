@@ -1,12 +1,11 @@
 (** Quickcheck is a library that uses predicate-based tests and pseudo-random inputs to
     automate testing.
 
-    For examples see {e lib/core/example/quickcheck}.
+    For examples see {e lib/base_quickcheck/examples}.
 *)
 
 open! Import
 open Base_quickcheck
-
 
 module type Generator = sig
   (** An ['a t] a generates values of type ['a] with a specific probability distribution.

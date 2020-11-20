@@ -13,7 +13,7 @@ module Stable : sig
 
   module With_utc_sexp : sig
     module V2 : sig
-      type t = Time_float0.t [@@deriving hash]
+      type t = Time_float0.t [@@deriving hash, sexp_grammar]
 
       include Stable_without_comparator with type t := t
     end

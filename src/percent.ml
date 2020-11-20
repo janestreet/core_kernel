@@ -126,6 +126,8 @@ module Stable = struct
       end
       with type t := t)
 
+    let t_sexp_grammar = String.t_sexp_grammar
+
     include (Sexpable.Stable.Of_stringable.V1 (Stringable) : Sexpable.S with type t := t)
     include (Float : Binable with type t := t)
 
@@ -170,6 +172,7 @@ module Stable = struct
       let value t ~default = if is_some t then unchecked_value t else default
       let sexp_of_t t = to_option t |> Option.sexp_of_t V1.sexp_of_t
       let t_of_sexp sexp = (Option.t_of_sexp V1.t_of_sexp) sexp |> of_option
+      let t_sexp_grammar = [%sexp_grammar: V1.t Option.t]
     end
   end
 end

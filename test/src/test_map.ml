@@ -72,3 +72,16 @@ let%expect_test "remove does not allocate too much if there's nothing to do" =
     [%here]
     (fun () -> ignore (Sys.opaque_identity (Map.remove map1 2) : string Map.M(Int).t))
 ;;
+
+let%expect_test "[map_keys]" =
+  let test m c ~f =
+    print_s
+      [%sexp
+        (Map.map_keys c ~f m : [ `Duplicate_key of string | `Ok of string String.Map.t ])]
+  in
+  let map = Int.Map.of_alist_exn [ 1, "one"; 2, "two"; 3, "three" ] in
+  test map String.comparator ~f:Int.to_string;
+  [%expect {| (Ok ((1 one) (2 two) (3 three))) |}];
+  test map String.comparator ~f:(fun x -> Int.to_string (x / 2));
+  [%expect {| (Duplicate_key 1) |}]
+;;

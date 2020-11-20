@@ -20,6 +20,8 @@ end
 include Infix
 
 let zero = of_repr Repr.zero
+let min_value = of_repr Repr.min_value
+let max_value = of_repr Repr.max_value
 let scale = Infix.( * )
 let iscale t s = of_repr (Repr.( * ) (to_repr t) (Repr.of_int s))
 let bytes_int_exn = T.bytes_int_exn
@@ -314,3 +316,12 @@ let[@deprecated
   | `Gigabytes -> of_gigabytes value
   | `Words -> of_words_float_exn value
 ;;
+
+include Quickcheckable.Of_quickcheckable
+    (Repr)
+    (struct
+      type nonrec t = t
+
+      let of_quickcheckable = of_repr
+      let to_quickcheckable = to_repr
+    end)

@@ -255,6 +255,8 @@ module Stable = struct
         ;;
 
         let sexp_of_t t = Sexp.Atom (to_string t)
+
+        let t_sexp_grammar = Sexplib.Sexp.t_sexp_grammar
       end
 
       include Sexpable
@@ -308,6 +310,7 @@ module Stable = struct
       let value t ~default = if is_some t then unchecked_value t else default
       let sexp_of_t t = to_option t |> Option.sexp_of_t V1.sexp_of_t
       let t_of_sexp sexp = (Option.t_of_sexp V1.t_of_sexp) sexp |> of_option
+      let t_sexp_grammar = [%sexp_grammar: V1.t Option.t]
     end
   end
 end

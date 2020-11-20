@@ -9,10 +9,10 @@
 
 open! Import
 
-type t = float [@@deriving bin_io, sexp, compare, hash]
+type t = float [@@deriving bin_io, sexp, sexp_grammar, compare, hash]
 
 module Stable : sig
   module V1 : sig
-    type nonrec t = t [@@deriving bin_io, sexp, compare, hash]
+    type nonrec t = t [@@deriving bin_io, sexp, sexp_grammar, compare, hash]
   end
 end

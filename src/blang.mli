@@ -89,7 +89,7 @@ type 'a t = private
   | Not of 'a t
   | If of 'a t * 'a t * 'a t
   | Base of 'a
-[@@deriving bin_io, compare, equal, hash, sexp]
+[@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar]
 
 (** [Raw] provides the automatically derived [sexp_of_t], useful in debugging the actual
     structure of the blang. *)

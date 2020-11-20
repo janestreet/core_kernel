@@ -3,6 +3,7 @@ module T = struct
 
   let sexp_of_t t = t |> to_hex |> String.sexp_of_t
   let t_of_sexp s = s |> String.t_of_sexp |> of_hex_exn
+  let t_sexp_grammar = String.t_sexp_grammar
 end
 
 let hash_fold_t accum t = String.hash_fold_t accum (T.to_binary t)
@@ -17,6 +18,7 @@ module As_binary_string = struct
       let hash = hash
       let sexp_of_t x = String.sexp_of_t (T.to_binary x)
       let t_of_sexp x = T.of_binary_exn (String.t_of_sexp x)
+      let t_sexp_grammar = String.t_sexp_grammar
 
       include Bin_prot.Utils.Make_binable_without_uuid [@alert "-legacy"] (struct
           module Binable = String
@@ -36,7 +38,7 @@ end
 
 module Stable = struct
   module V1 = struct
-    type t = T.t [@@deriving compare, sexp]
+    type t = T.t [@@deriving compare, sexp, sexp_grammar]
 
     let hash_fold_t = hash_fold_t
     let hash = hash

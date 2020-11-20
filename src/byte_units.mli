@@ -137,6 +137,8 @@ val words_int_exn : t -> int
 
 val words_float : t -> float
 val zero : t
+val min_value : t
+val max_value : t
 
 (** [scale t mul] scale the measure [t] by [mul] *)
 val scale : t -> float -> t
@@ -155,6 +157,7 @@ module Infix : sig
 end
 
 include module type of Infix
+include Quickcheckable.S with type t := t
 
 module Stable : sig
   (*_ old float based [bin_io] repr. *)

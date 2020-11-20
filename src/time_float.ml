@@ -36,6 +36,8 @@ module Stable = struct
             (sprintf "Time.Stable.With_utc.V2.t_of_sexp: %s" (Exn.to_string e))
             sexp
       ;;
+
+      let t_sexp_grammar = Sexplib.Sexp.t_sexp_grammar
     end
   end
 

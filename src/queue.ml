@@ -28,6 +28,7 @@ include Test_binary_searchable.Make1_and_test (struct
 module Serialization_v1 = struct
   let sexp_of_t = sexp_of_t
   let t_of_sexp = t_of_sexp
+  let t_sexp_grammar = t_sexp_grammar
 
   include Bin_prot.Utils.Make_iterable_binable1 (struct
       type nonrec 'a t = 'a t

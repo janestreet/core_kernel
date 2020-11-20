@@ -32,7 +32,7 @@ module Parts = struct
     ; us : int
     ; ns : int
     }
-  [@@deriving compare, sexp]
+  [@@deriving compare, sexp, sexp_grammar]
 end
 
 let next t = Int63.succ t
@@ -636,6 +636,8 @@ module Stable = struct
           | Sexp.List _ ->
             of_sexp_error "Time_ns.Span.Stable.V2.t_of_sexp: sexp must be an Atom" sexp
         ;;
+
+        let t_sexp_grammar = String.t_sexp_grammar
       end
 
       include T0
@@ -651,9 +653,10 @@ let to_string = Stable.V2.to_string
 let of_string = Stable.V2.of_string
 let sexp_of_t = Stable.V2.sexp_of_t
 let t_of_sexp = Stable.V2.t_of_sexp
+let t_sexp_grammar = Stable.V2.t_sexp_grammar
 
 module Alternate_sexp = struct
-  type nonrec t = t [@@deriving sexp]
+  type nonrec t = t [@@deriving sexp, sexp_grammar]
 end
 
 include Comparable.With_zero (struct

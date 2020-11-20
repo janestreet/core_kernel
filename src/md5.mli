@@ -9,7 +9,7 @@ open Interfaces
 
 module Stable : sig
   module V1 : sig
-    type t = Md5_lib.t [@@deriving sexp, bin_io, compare, hash]
+    type t = Md5_lib.t [@@deriving sexp, sexp_grammar, bin_io, compare, hash]
   end
 end
 
@@ -17,11 +17,11 @@ end
 module As_binary_string : sig
   module Stable : sig
     module V1 : sig
-      type t = Md5_lib.t [@@deriving sexp, bin_io, compare, hash]
+      type t = Md5_lib.t [@@deriving sexp, sexp_grammar, bin_io, compare, hash]
     end
   end
 
-  type t = Stable.V1.t [@@deriving bin_io, sexp, hash]
+  type t = Stable.V1.t [@@deriving bin_io, sexp, sexp_grammar, hash]
 
   include Comparable with type t := t
   include Binable with type t := t
@@ -32,7 +32,7 @@ end
 
     Note that any 16-byte string can be converted to this type, so a value of type [t] is
     not an evidence of someone having found an input corresponding to this output. *)
-type t = Stable.V1.t [@@deriving bin_io, sexp, hash]
+type t = Stable.V1.t [@@deriving bin_io, sexp, sexp_grammar, hash]
 
 include Comparable with type t := t
 include Binable with type t := t

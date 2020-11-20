@@ -236,6 +236,7 @@ module Stable = struct
       | _ -> of_sexp_error "Ofday.t_of_sexp" sexp
     ;;
 
+    let t_sexp_grammar = String.t_sexp_grammar
     let sexp_of_t span = Sexp.Atom (to_string span)
 
     let of_string_iso8601_extended ?pos ?len str =

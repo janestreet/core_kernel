@@ -179,6 +179,7 @@ module Stable = struct
            | exn -> of_sexp_error_exn exn sexp)
       ;;
 
+      let t_sexp_grammar = String.t_sexp_grammar
       let to_string (t : t) = to_string_with_unit t ~unit:`Nanosecond
       let sexp_of_t (t : t) = Sexp.Atom (to_string t)
       let to_int63 t = Span_ns.Stable.V2.to_int63 t
@@ -195,6 +196,7 @@ end
 
 let sexp_of_t = Stable.V1.sexp_of_t
 let t_of_sexp = Stable.V1.t_of_sexp
+let t_sexp_grammar = Stable.V1.t_sexp_grammar
 let of_string = Stable.V1.of_string
 let to_string = Stable.V1.to_string
 let to_millisecond_string t = Stable.V1.to_string_with_unit t ~unit:`Millisecond

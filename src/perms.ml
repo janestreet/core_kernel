@@ -65,7 +65,7 @@ let failwithf = Printf.failwithf
 (* This is an explicit module type instead of just given inline as the return signature of
    [Only_used_as_phantom_type1] to avoid an unused value warning with bin_io values. *)
 module type Sexpable_binable_comparable = sig
-  type 'a t = 'a [@@deriving bin_io, compare, hash, sexp]
+  type 'a t = 'a [@@deriving bin_io, compare, hash, sexp, sexp_grammar]
 end
 
 (* Override all bin_io, sexp, compare functions to raise exceptions *)
@@ -78,6 +78,7 @@ module Only_used_as_phantom_type1 (Name : sig
   let t_of_sexp _ _ = failwithf "Unexpectedly called [%s.t_of_sexp]" Name.name ()
   let compare _ _ _ = failwithf "Unexpectedly called [%s.compare]" Name.name ()
   let hash_fold_t _ _ _ = failwithf "Unexpectedly called [%s.hash_fold_t]" Name.name ()
+  let t_sexp_grammar = Base.Nothing.t_sexp_grammar
 
   include Binable.Of_binable1_without_uuid [@alert "-legacy"]
       (struct
