@@ -157,7 +157,9 @@ module type Time_ns = sig
 
   (** Note that we expose a sexp format that is not the one exposed in [Core]. *)
   module Alternate_sexp : sig
-    type nonrec t = t [@@deriving sexp, sexp_grammar]
+    type nonrec t = t [@@deriving compare, equal, hash, sexp, sexp_grammar]
+
+    include Comparable.S with type t := t
   end
 
   include
@@ -299,7 +301,15 @@ module type Time_ns = sig
 
   module Stable : sig
     module Alternate_sexp : sig
-      module V1 : Stable_without_comparator with type t = Alternate_sexp.t
+      module V1 : sig
+        type t = Alternate_sexp.t [@@deriving bin_io, compare, hash, sexp]
+        type comparator_witness = Alternate_sexp.comparator_witness
+
+        include
+          Comparable.Stable.V1.S
+          with type comparable := t
+          with type comparator_witness := comparator_witness
+      end
     end
 
     module Span : sig

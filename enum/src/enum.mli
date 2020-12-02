@@ -27,6 +27,13 @@ type ('a, 'b) make_param =
   -> 'b Command.Param.t
 
 val make_param : f:('a Command.Arg_type.t -> 'b Command.Flag.t) -> ('a, 'b) make_param
+
+val make_param_one_of_flags
+  :  ?aliases:('a -> string list)
+  -> doc:('a -> string)
+  -> 'a t
+  -> 'a Command.Param.t
+
 val make_param_optional_with_default_doc : default:'a -> ('a, 'a) make_param
 val arg_type : 'a t -> 'a Command.Arg_type.t
 

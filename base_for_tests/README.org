@@ -1,3 +1,4 @@
+#+UUID: 83464887-7838-34b0-9b25-73b8f641c0b9
 * Base library for tests
 
 Base_for_tests provides helpers for generating tests for libraries

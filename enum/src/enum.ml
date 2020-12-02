@@ -92,6 +92,15 @@ let make_param_optional_with_default_doc
     ~doc
 ;;
 
+let make_param_one_of_flags ?aliases ~doc m =
+  Command.Param.choose_one
+    ~if_nothing_chosen:Raise
+    (List.map (enum m) ~f:(fun (name, enum) ->
+       let aliases = Option.map aliases ~f:(fun aliases -> aliases enum) in
+       let doc = doc enum in
+       Command.Param.flag ?aliases name (Command.Param.no_arg_some enum) ~doc))
+;;
+
 module Make_stringable (M : S) = struct
   let to_string = to_string_hum (module M)
 

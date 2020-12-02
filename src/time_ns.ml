@@ -188,137 +188,150 @@ end = struct
 end
 
 module Alternate_sexp = struct
-  type nonrec t = t
+  module T = struct
+    type nonrec t = t [@@deriving compare, hash]
 
-  module Ofday_as_span = struct
-    open Int.O
+    module Ofday_as_span = struct
+      open Int.O
 
-    let seconds_to_string seconds_span =
-      let seconds = Span.to_int_sec seconds_span in
-      let h = seconds / 3600 in
-      let m = seconds / 60 % 60 in
-      let s = seconds % 60 in
-      sprintf "%02d:%02d:%02d" h m s
-    ;;
+      let seconds_to_string seconds_span =
+        let seconds = Span.to_int_sec seconds_span in
+        let h = seconds / 3600 in
+        let m = seconds / 60 % 60 in
+        let s = seconds % 60 in
+        sprintf "%02d:%02d:%02d" h m s
+      ;;
 
-    let two_digit_of_string string =
-      assert (String.length string = 2 && String.for_all string ~f:Char.is_digit);
-      Int.of_string string
-    ;;
+      let two_digit_of_string string =
+        assert (String.length string = 2 && String.for_all string ~f:Char.is_digit);
+        Int.of_string string
+      ;;
 
-    let seconds_of_string seconds_string =
-      match String.split seconds_string ~on:':' with
-      | [ h_string; m_string; s_string ] ->
-        let h = two_digit_of_string h_string in
-        let m = two_digit_of_string m_string in
-        let s = two_digit_of_string s_string in
-        Span.of_int_sec ((((h * 60) + m) * 60) + s)
-      | _ -> assert false
-    ;;
+      let seconds_of_string seconds_string =
+        match String.split seconds_string ~on:':' with
+        | [ h_string; m_string; s_string ] ->
+          let h = two_digit_of_string h_string in
+          let m = two_digit_of_string m_string in
+          let s = two_digit_of_string s_string in
+          Span.of_int_sec ((((h * 60) + m) * 60) + s)
+        | _ -> assert false
+      ;;
 
-    let ns_of_100_ms = 100_000_000
-    let ns_of_10_ms = 10_000_000
-    let ns_of_1_ms = 1_000_000
-    let ns_of_100_us = 100_000
-    let ns_of_10_us = 10_000
-    let ns_of_1_us = 1_000
-    let ns_of_100_ns = 100
-    let ns_of_10_ns = 10
-    let ns_of_1_ns = 1
+      let ns_of_100_ms = 100_000_000
+      let ns_of_10_ms = 10_000_000
+      let ns_of_1_ms = 1_000_000
+      let ns_of_100_us = 100_000
+      let ns_of_10_us = 10_000
+      let ns_of_1_us = 1_000
+      let ns_of_100_ns = 100
+      let ns_of_10_ns = 10
+      let ns_of_1_ns = 1
 
-    let sub_second_to_string sub_second_span =
-      let open Int.O in
-      let ns = Span.to_int63_ns sub_second_span |> Int63.to_int_exn in
-      if ns = 0
-      then ""
-      else if ns % ns_of_100_ms = 0
-      then sprintf ".%01d" (ns / ns_of_100_ms)
-      else if ns % ns_of_10_ms = 0
-      then sprintf ".%02d" (ns / ns_of_10_ms)
-      else if ns % ns_of_1_ms = 0
-      then sprintf ".%03d" (ns / ns_of_1_ms)
-      else if ns % ns_of_100_us = 0
-      then sprintf ".%04d" (ns / ns_of_100_us)
-      else if ns % ns_of_10_us = 0
-      then sprintf ".%05d" (ns / ns_of_10_us)
-      else if ns % ns_of_1_us = 0
-      then sprintf ".%06d" (ns / ns_of_1_us)
-      else if ns % ns_of_100_ns = 0
-      then sprintf ".%07d" (ns / ns_of_100_ns)
-      else if ns % ns_of_10_ns = 0
-      then sprintf ".%08d" (ns / ns_of_10_ns)
-      else sprintf ".%09d" ns
-    ;;
+      let sub_second_to_string sub_second_span =
+        let open Int.O in
+        let ns = Span.to_int63_ns sub_second_span |> Int63.to_int_exn in
+        if ns = 0
+        then ""
+        else if ns % ns_of_100_ms = 0
+        then sprintf ".%01d" (ns / ns_of_100_ms)
+        else if ns % ns_of_10_ms = 0
+        then sprintf ".%02d" (ns / ns_of_10_ms)
+        else if ns % ns_of_1_ms = 0
+        then sprintf ".%03d" (ns / ns_of_1_ms)
+        else if ns % ns_of_100_us = 0
+        then sprintf ".%04d" (ns / ns_of_100_us)
+        else if ns % ns_of_10_us = 0
+        then sprintf ".%05d" (ns / ns_of_10_us)
+        else if ns % ns_of_1_us = 0
+        then sprintf ".%06d" (ns / ns_of_1_us)
+        else if ns % ns_of_100_ns = 0
+        then sprintf ".%07d" (ns / ns_of_100_ns)
+        else if ns % ns_of_10_ns = 0
+        then sprintf ".%08d" (ns / ns_of_10_ns)
+        else sprintf ".%09d" ns
+      ;;
 
-    let sub_second_of_string string =
-      if String.is_empty string
-      then Span.zero
-      else (
-        let digits = String.chop_prefix_exn string ~prefix:"." in
-        assert (String.for_all digits ~f:Char.is_digit);
-        let multiplier =
-          match String.length digits with
-          | 1 -> ns_of_100_ms
-          | 2 -> ns_of_10_ms
-          | 3 -> ns_of_1_ms
-          | 4 -> ns_of_100_us
-          | 5 -> ns_of_10_us
-          | 6 -> ns_of_1_us
-          | 7 -> ns_of_100_ns
-          | 8 -> ns_of_10_ns
-          | 9 -> ns_of_1_ns
-          | _ -> assert false
-        in
-        Span.of_int63_ns (Int63.of_int (Int.of_string digits * multiplier)))
-    ;;
+      let sub_second_of_string string =
+        if String.is_empty string
+        then Span.zero
+        else (
+          let digits = String.chop_prefix_exn string ~prefix:"." in
+          assert (String.for_all digits ~f:Char.is_digit);
+          let multiplier =
+            match String.length digits with
+            | 1 -> ns_of_100_ms
+            | 2 -> ns_of_10_ms
+            | 3 -> ns_of_1_ms
+            | 4 -> ns_of_100_us
+            | 5 -> ns_of_10_us
+            | 6 -> ns_of_1_us
+            | 7 -> ns_of_100_ns
+            | 8 -> ns_of_10_ns
+            | 9 -> ns_of_1_ns
+            | _ -> assert false
+          in
+          Span.of_int63_ns (Int63.of_int (Int.of_string digits * multiplier)))
+      ;;
 
-    let to_string span =
-      assert (Span.( >= ) span Span.zero && Span.( < ) span Span.day);
-      let seconds_span = span |> Span.to_int_sec |> Span.of_int_sec in
-      let sub_second_span = Span.( - ) span seconds_span in
-      seconds_to_string seconds_span ^ sub_second_to_string sub_second_span
+      let to_string span =
+        assert (Span.( >= ) span Span.zero && Span.( < ) span Span.day);
+        let seconds_span = span |> Span.to_int_sec |> Span.of_int_sec in
+        let sub_second_span = Span.( - ) span seconds_span in
+        seconds_to_string seconds_span ^ sub_second_to_string sub_second_span
+      ;;
+
+      let of_string string =
+        let len = String.length string in
+        let prefix_len = 8 in
+        (* "HH:MM:DD" *)
+        let suffix_len = len - prefix_len in
+        let seconds_string = String.sub string ~pos:0 ~len:prefix_len in
+        let sub_second_string = String.sub string ~pos:prefix_len ~len:suffix_len in
+        let seconds_span = seconds_of_string seconds_string in
+        let sub_second_span = sub_second_of_string sub_second_string in
+        Span.( + ) seconds_span sub_second_span
+      ;;
+    end
+
+    let to_string t =
+      let date, span_since_start_of_day = Utc.to_date_and_span_since_start_of_day t in
+      Date0.to_string date ^ " " ^ Ofday_as_span.to_string span_since_start_of_day ^ "Z"
     ;;
 
     let of_string string =
-      let len = String.length string in
-      let prefix_len = 8 in
-      (* "HH:MM:DD" *)
-      let suffix_len = len - prefix_len in
-      let seconds_string = String.sub string ~pos:0 ~len:prefix_len in
-      let sub_second_string = String.sub string ~pos:prefix_len ~len:suffix_len in
-      let seconds_span = seconds_of_string seconds_string in
-      let sub_second_span = sub_second_of_string sub_second_string in
-      Span.( + ) seconds_span sub_second_span
+      let date_string, ofday_string_with_zone = String.lsplit2_exn string ~on:' ' in
+      let ofday_string = String.chop_suffix_exn ofday_string_with_zone ~suffix:"Z" in
+      let date = Date0.of_string date_string in
+      let ofday = Ofday_as_span.of_string ofday_string in
+      Utc.of_date_and_span_since_start_of_day date ofday
     ;;
+
+    let t_sexp_grammar = String.t_sexp_grammar
+
+    include Sexpable.Of_stringable (struct
+        type nonrec t = t
+
+        let to_string = to_string
+        let of_string = of_string
+      end)
   end
 
-  let to_string t =
-    let date, span_since_start_of_day = Utc.to_date_and_span_since_start_of_day t in
-    Date0.to_string date ^ " " ^ Ofday_as_span.to_string span_since_start_of_day ^ "Z"
-  ;;
-
-  let of_string string =
-    let date_string, ofday_string_with_zone = String.lsplit2_exn string ~on:' ' in
-    let ofday_string = String.chop_suffix_exn ofday_string_with_zone ~suffix:"Z" in
-    let date = Date0.of_string date_string in
-    let ofday = Ofday_as_span.of_string ofday_string in
-    Utc.of_date_and_span_since_start_of_day date ofday
-  ;;
-
-  let t_sexp_grammar = String.t_sexp_grammar
-
-  include Sexpable.Of_stringable (struct
-      type nonrec t = t
-
-      let to_string = to_string
-      let of_string = of_string
-    end)
+  include T
+  include Comparable.Make (T)
 
   module Stable = struct
     module V1 = struct
-      (* see tests in lib/core_kernel/test/test_time_ns that ensure stability of this
-         representation *)
-      type nonrec t = t [@@deriving bin_io, compare, sexp]
+      module T = struct
+        (* see tests in lib/core_kernel/test/test_time_ns that ensure stability of this
+           representation *)
+        type nonrec t = t [@@deriving bin_io, compare, hash, sexp]
+        type nonrec comparator_witness = comparator_witness
+
+        let comparator = comparator
+      end
+
+      include T
+      include Comparable.Stable.V1.Make (T)
     end
   end
 end

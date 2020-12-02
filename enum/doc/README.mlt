@@ -1,6 +1,7 @@
 [%%org
   {|
 #+TITLE: Enum
+#+UUID: 0b1262bf-67df-30cc-ac65-1c85460062b2
 
 ~Enum~ is a single-module library intended to make it easier to work with
 variant types that are enumerable, i.e., that are sexpable and that implement an ~all~
@@ -214,3 +215,52 @@ let () =
 ;;
 
 [%%expect {| |}]
+
+[%%org
+  {|
+~Enum.make_param_one_of_flags~ can be used to build a Command.Param.t very similar to
+~Enum.make_flags~, except each enum becomes its own standalone flag, one of which must be passed. 
+|}]
+
+let main =
+  Command.basic
+    ~summary:"Run my server"
+    (let%map_open.Command mode =
+       Enum.make_param_one_of_flags
+         (module Mode)
+         ~aliases:(function
+           | Mode.Unit_test -> [ "test" ]
+           | _ -> [])
+         ~doc:(function
+           | Mode.Prod -> "run in prod"
+           | Dev -> "run for development, not in prod"
+           | Unit_test -> "run in testing"
+           | Something_else -> "something else")
+     in
+     fun () -> print_s [%message "Running in mode" (mode : Mode.t)])
+;;
+
+let () =
+  print_s
+    [%sexp
+      (Command.Shape.fully_forced (Command.shape main) : Command.Shape.Fully_forced.t)]
+;;
+
+[%%expect
+  {|
+(Basic (
+  (summary "Run my server")
+  (anons (Grammar Zero))
+  (flags (
+    ((name [-dev])
+     (doc  "run for development, not in prod")
+     (aliases ()))
+    ((name [-prod])           (doc "run in prod")    (aliases ()))
+    ((name [-something-else]) (doc "something else") (aliases ()))
+    ((name [-unit-test])
+     (doc  "run in testing")
+     (aliases (-test)))
+    ((name [-help])
+     (doc  "print this help text and exit")
+     (aliases (-?)))))))
+|}]
