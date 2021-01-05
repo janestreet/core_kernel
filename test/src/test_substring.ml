@@ -95,6 +95,83 @@ end
 
 include Test (Bytes) (Substring)
 
+let sexp_of_substring_for_test t =
+  [%sexp
+    { base = (Substring.base t : bytes)
+    ; pos = (Substring.pos t : int)
+    ; len = (Substring.length t : int)
+    }]
+;;
+
+let%test_module "quickcheck" =
+  (module struct
+    let%expect_test "can generate" =
+      Quickcheck.test_can_generate
+        ~sexp_of:sexp_of_substring_for_test
+        Substring.quickcheck_generator
+        ~f:(fun sub ->
+          let base_len = Bytes.length (Substring.base sub) in
+          (* whole substring of nontrivial string *)
+          base_len > 0 && Substring.length sub = base_len);
+      Quickcheck.test_can_generate
+        ~sexp_of:sexp_of_substring_for_test
+        Substring.quickcheck_generator
+        ~f:(fun sub ->
+          let pos = Substring.pos sub in
+          let len = Substring.length sub in
+          (* non-triviality: contains at least one character and excludes at least one
+             character from each end *)
+          pos > 0 && len > 0 && pos + len < Bytes.length (Substring.base sub));
+      [%expect ""]
+    ;;
+
+    let%expect_test "to_string" =
+      Quickcheck.test
+        ~sexp_of:sexp_of_substring_for_test
+        Substring.quickcheck_generator
+        ~f:(fun sub ->
+          [%test_result: bytes]
+            ~expect:
+              (Bytes.sub
+                 (Substring.base sub)
+                 ~pos:(Substring.pos sub)
+                 ~len:(Substring.length sub))
+            (Bytes.of_string (Substring.to_string sub)))
+    ;;
+
+    let%expect_test "prefixes and suffixes" =
+      let sub_and_n =
+        let open Quickcheck.Let_syntax in
+        let%bind sub = [%quickcheck.generator: Substring.t] in
+        let%map n =
+          (* include too-small and too-large indices *)
+          Int.gen_uniform_incl (-1) (Substring.length sub + 2)
+        in
+        sub, n
+      in
+      List.iter
+        [ String.drop_prefix, Substring.drop_prefix
+        ; String.drop_suffix, Substring.drop_suffix
+        ; String.prefix, Substring.prefix
+        ; String.suffix, Substring.suffix
+        ]
+        ~f:(fun (f_str, f_sub) ->
+          Quickcheck.test
+            ~sexp_of:[%sexp_of: substring_for_test * int]
+            sub_and_n
+            ~f:(fun (sub, n) ->
+              let str = Substring.to_string sub in
+              let via_str = Option.try_with (fun () -> f_str str n) in
+              let via_sub =
+                Option.try_with (fun () -> f_sub sub n)
+                |> Option.map ~f:Substring.to_string
+              in
+              if Option.is_some via_str && Option.is_some via_sub
+              then [%test_result: string option] ~expect:via_str via_sub))
+    ;;
+  end)
+;;
+
 include Test
     (struct
       include Bigstring

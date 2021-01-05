@@ -19,7 +19,7 @@ module Stable : sig
   (** [V3] uses mixed-unit format and supports units from [d] to [ns]. [V3] can read [V2]
       and [V1] sexps but not vice versa. [V3]'s sexp conversions round-trip precisely. *)
   module V3 : sig
-    type nonrec t = t [@@deriving sexp, sexp_grammar, bin_io, compare, hash]
+    type nonrec t = t [@@deriving sexp, sexp_grammar, bin_io, compare, hash, typerep]
   end
 end
 

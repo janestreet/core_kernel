@@ -201,6 +201,12 @@ module Permissioned : sig
   val is_sorted : ('a, [> read ]) t -> compare:('a -> 'a -> int) -> bool
   val is_sorted_strictly : ('a, [> read ]) t -> compare:('a -> 'a -> int) -> bool
 
+  val merge
+    :  ('a, [> read ]) t
+    -> ('a, [> read ]) t
+    -> compare:('a -> 'a -> int)
+    -> ('a, [< _ perms ]) t
+
   val concat_map
     :  ('a, [> read ]) t
     -> f:('a -> ('b, [> read ]) t)

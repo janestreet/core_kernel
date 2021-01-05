@@ -138,3 +138,31 @@ let of_parts = function
   | [] -> failwith "Filename.of_parts: empty parts list"
   | root :: rest -> List.fold rest ~init:root ~f:Caml.Filename.concat
 ;;
+
+let rec skip_common_prefix l1 l2 =
+  match l1, l2 with
+  | h1 :: t1, h2 :: t2 when String.equal h1 h2 -> skip_common_prefix t1 t2
+  | _ -> l1, l2
+;;
+
+let of_absolute_exn a ~relative_to:b =
+  if is_relative a
+  then
+    raise_s
+      [%message
+        "Filename.of_absolute_exn: first argument must be an absolute path"
+          ~first_arg:(a : string)];
+  if is_relative b
+  then
+    raise_s
+      [%message
+        "Filename.of_absolute_exn: [~relative_to] must be an absolute path"
+          ~relative_to:(b : string)];
+  let a_parts = parts a in
+  let b_parts = parts b in
+  let a_suffix, b_suffix = skip_common_prefix a_parts b_parts in
+  let go_up = List.map ~f:(fun _ -> parent_dir_name) b_suffix in
+  match go_up @ a_suffix with
+  | [] -> current_dir_name
+  | relpath -> of_parts relpath
+;;

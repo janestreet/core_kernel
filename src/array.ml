@@ -171,6 +171,12 @@ module type Permissioned = sig
   val is_sorted : ('a, [> read ]) t -> compare:('a -> 'a -> int) -> bool
   val is_sorted_strictly : ('a, [> read ]) t -> compare:('a -> 'a -> int) -> bool
 
+  val merge
+    :  ('a, [> read ]) t
+    -> ('a, [> read ]) t
+    -> compare:('a -> 'a -> int)
+    -> ('a, [< _ perms ]) t
+
   val concat_map
     :  ('a, [> read ]) t
     -> f:('a -> ('b, [> read ]) t)
@@ -383,6 +389,7 @@ module type S = sig
   val stable_sort : 'a t -> compare:('a -> 'a -> int) -> unit
   val is_sorted : 'a t -> compare:('a -> 'a -> int) -> bool
   val is_sorted_strictly : 'a t -> compare:('a -> 'a -> int) -> bool
+  val merge : 'a t -> 'a t -> compare:('a -> 'a -> int) -> 'a t
   val concat_map : 'a t -> f:('a -> 'b t) -> 'b t
   val concat_mapi : 'a t -> f:(int -> 'a -> 'b t) -> 'b t
   val partition_tf : 'a t -> f:('a -> bool) -> 'a t * 'a t

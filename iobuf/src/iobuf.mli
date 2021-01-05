@@ -73,6 +73,9 @@ module Debug : Compound_hexdump with type ('rw, 'seek) t := ('rw, 'seek) t
     with the limits and window set to the entire bigstring. *)
 val create : len:int -> (_, _) t
 
+(** [empty] is an immutable [t] of size 0. *)
+val empty : (read, no_seek) t
+
 
 (** [of_bigstring bigstring ~pos ~len] returns an iobuf backed by [bigstring], with the
     window and limits specified starting at [pos] and of length [len]. *)

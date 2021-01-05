@@ -1,7 +1,7 @@
 open! Import
 
 module type Base = sig
-  type t
+  type t [@@deriving quickcheck]
 
   val create : int -> t
   val length : t -> int

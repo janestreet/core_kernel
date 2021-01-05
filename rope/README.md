@@ -1,7 +1,4 @@
----
-title: "Rope"
-uuid: 80bb8842-ee64-325a-d8d5-bffc4cc38cd1
----
+# Rope
 
 A rope is a standard data structure that represents a single string as
 a tree of strings, allowing concatenation to do no work up front.

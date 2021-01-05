@@ -118,6 +118,12 @@ val dirname : string -> string
 *)
 val to_absolute_exn : string -> relative_to:string -> string
 
+(** Converts an absolute path to a relative one.
+
+    Raises if either argument is a relative path.
+*)
+val of_absolute_exn : string -> relative_to:string -> string
+
 (** [split filename] returns (dirname filename, basename filename) *)
 val split : string -> string * string
 

@@ -156,6 +156,9 @@ module Stable = struct
       let some = Fn.id
       let unchecked_value = Fn.id
       let to_option t = if is_some t then Some (unchecked_value t) else None
+      let apply_with_none_as_nan = ( *. )
+      let of_mult_with_nan_as_none = Fn.id
+      let to_mult_with_none_as_nan = Fn.id
 
       let of_option opt =
         match opt with

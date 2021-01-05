@@ -26,6 +26,18 @@ module Option : sig
   type t = private float [@@deriving sexp_grammar]
 
   include Immediate_option.S_without_immediate with type value := value and type t := t
+
+  (** [apply_with_none_as_nan (some x) y = apply x y], and
+      [apply_with_none_as_nan none y = apply (of_mult Float.nan) y] *)
+  val apply_with_none_as_nan : t -> float -> float
+
+  (** [of_mult_with_nan_as_none Float.nan = none], and
+      [of_mult_with_nan_as_none x = some (of_mult x)] otherwise *)
+  val of_mult_with_nan_as_none : float -> t
+
+  (** [to_mult_with_none_as_nan none = Float.nan], and
+      [to_mult_with_none_as_nan (some x) = to_mult x] *)
+  val to_mult_with_none_as_nan : t -> float
 end
 
 val ( * ) : t -> t -> t
@@ -154,7 +166,7 @@ val sign_exn : t -> Sign.t
 
 module Stable : sig
   module V1 : sig
-    type nonrec t = t [@@deriving sexp, bin_io, compare, hash, equal]
+    type nonrec t = t [@@deriving sexp, bin_io, compare, hash, equal, typerep]
   end
 
   module Option : sig

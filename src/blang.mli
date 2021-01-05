@@ -89,7 +89,7 @@ type 'a t = private
   | Not of 'a t
   | If of 'a t * 'a t * 'a t
   | Base of 'a
-[@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar]
+[@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar, typerep]
 
 (** [Raw] provides the automatically derived [sexp_of_t], useful in debugging the actual
     structure of the blang. *)
@@ -192,6 +192,7 @@ include Monad with type 'a t := 'a t
     for which [Base v] is a subexpression of [t] *)
 val values : 'a t -> 'a list
 
+
 (** [eval t f] evaluates the proposition [t] relative to an environment
     [f] that assigns truth values to base propositions. *)
 val eval : 'a t -> ('a -> bool) -> bool
@@ -233,6 +234,17 @@ val eval_set
     ]}
 *)
 val specialize : 'a t -> ('a -> [ `Known of bool | `Unknown ]) -> 'a t
+
+module type Monadic = sig
+  module M : Monad.S
+
+  val map : 'a t -> f:('a -> 'b M.t) -> 'b t M.t
+  val bind : 'a t -> f:('a -> 'b t M.t) -> 'b t M.t
+  val eval : 'a t -> f:('a -> bool M.t) -> bool M.t
+end
+
+(** Generalizes some of the blang operations above to work in a monad. *)
+module For_monad (M : Monad.S) : Monadic with module M := M
 
 val invariant : 'a t -> unit
 

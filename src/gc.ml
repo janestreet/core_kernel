@@ -299,6 +299,76 @@ module For_testing = struct
     measure_internal f ~on_result:(fun ~major_words_allocated ~minor_words_allocated x ->
       x, Allocation_report.create ~major_words_allocated ~minor_words_allocated)
   ;;
+
+  module Allocation_log = struct
+    type t =
+      { size_in_words : int
+      ; is_major : bool
+      ; backtrace : string
+      }
+  end
+
+  [%%if ocaml_version >= (4, 11, 0)]
+
+  let measure_and_log_allocation f =
+    let log : Allocation_log.t list ref = ref []
+    and major_allocs = ref 0
+    and minor_allocs = ref 0 in
+    let on_alloc ~is_major (info : Caml.Gc.Memprof.allocation) =
+      if is_major
+      then major_allocs := !major_allocs + info.n_samples
+      else minor_allocs := !minor_allocs + info.n_samples;
+      let backtrace = Caml.Printexc.raw_backtrace_to_string info.callstack in
+      (* Make backtraces easier to read by deleting everything below this function *)
+      let backtrace =
+        match String.substr_index backtrace ~pattern:"measure_and_log_allocation" with
+        | None ->
+          (* This case is possible: we may have logged allocations in another thread *)
+          backtrace
+        | Some p ->
+          String.sub ~pos:0 ~len:p backtrace
+          |> String.rstrip ~drop:(function
+            | '\n' -> false
+            | _ -> true)
+      in
+      let info : Allocation_log.t =
+        { size_in_words = info.n_samples; is_major; backtrace }
+      in
+      log := info :: !log;
+      None
+    in
+    let tracker =
+      { Caml.Gc.Memprof.null_tracker with
+        alloc_minor = on_alloc ~is_major:false
+      ; alloc_major = on_alloc ~is_major:true
+      }
+    in
+    Caml.Gc.Memprof.start ~sampling_rate:1.0 tracker;
+    (* Exn.protect, manually inlined to guarantee no allocations *)
+    let result =
+      match f () with
+      | x ->
+        Caml.Gc.Memprof.stop ();
+        x
+      | exception e ->
+        Caml.Gc.Memprof.stop ();
+        raise e
+    in
+    ( result
+    , Allocation_report.create
+        ~major_words_allocated:!major_allocs
+        ~minor_words_allocated:!minor_allocs
+    , List.rev !log )
+  ;;
+
+  [%%else]
+
+  let measure_and_log_allocation f =
+    let x, report = measure_allocation f in
+    x, report, []
+  ;;
+
+  [%%endif]
 end
 
 module Expert = struct

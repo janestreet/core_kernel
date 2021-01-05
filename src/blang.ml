@@ -27,7 +27,7 @@ module T : sig
     | Not of 'a t
     | If of 'a t * 'a t * 'a t
     | Base of 'a
-  [@@deriving bin_io, compare, equal, hash]
+  [@@deriving bin_io, compare, equal, hash, typerep]
 
   val invariant : 'a t -> unit
   val true_ : 'a t
@@ -46,7 +46,7 @@ end = struct
     | Not of 'a t
     | If of 'a t * 'a t * 'a t
     | Base of 'a
-  [@@deriving bin_io, compare, equal, hash]
+  [@@deriving bin_io, compare, equal, hash, typerep]
 
   let invariant =
     let subterms = function
@@ -409,6 +409,55 @@ let eval_set ~universe:all set_of_base =
   in
   aux
 ;;
+
+module type Monadic = sig
+  module M : Monad.S
+
+  val map : 'a t -> f:('a -> 'b M.t) -> 'b t M.t
+  val bind : 'a t -> f:('a -> 'b t M.t) -> 'b t M.t
+  val eval : 'a t -> f:('a -> bool M.t) -> bool M.t
+end
+
+module For_monad (M : Monad.S) : Monadic with module M := M = struct
+  open M.Monad_infix
+
+  let rec bind t ~f =
+    match t with
+    | Base x -> f x
+    | True -> M.return true_
+    | False -> M.return false_
+    | And (a, b) ->
+      bind a ~f
+      >>= (function
+        | False -> M.return false_
+        | True -> bind b ~f
+        | a -> bind b ~f >>| fun b -> andalso a b)
+    | Or (a, b) ->
+      bind a ~f
+      >>= (function
+        | True -> M.return true_
+        | False -> bind b ~f
+        | a -> bind b ~f >>| fun b -> orelse a b)
+    | Not a -> bind a ~f >>| not_
+    | If (a, b, c) ->
+      bind a ~f
+      >>= (function
+        | True -> bind b ~f
+        | False -> bind c ~f
+        | a -> bind b ~f >>= fun b -> bind c ~f >>| fun c -> if_ a b c)
+  ;;
+
+  let map t ~f = bind t ~f:(fun x -> f x >>| base)
+
+  let eval t ~f =
+    bind t ~f:(fun x ->
+      f x
+      >>| function
+      | true -> true_
+      | false -> false_)
+    >>| fun t -> eval t Nothing.unreachable_code
+  ;;
+end
 
 (** We avoid deriving quickcheck to ensure that the invariants described in [T]'s comments
     above are preserved. *)

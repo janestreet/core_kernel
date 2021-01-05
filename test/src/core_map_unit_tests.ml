@@ -103,6 +103,10 @@ struct
       simplify_accessor binary_search_segmented t ~segment_of how
     ;;
 
+    let binary_search_subrange t ~compare ~lower_bound ~upper_bound =
+      simplify_accessor binary_search_subrange t ~compare ~lower_bound ~upper_bound
+    ;;
+
     let append ~lower_part ~upper_part = simplify_accessor append ~lower_part ~upper_part
     let empty () = simplify_creator empty
     let singleton x = simplify_creator singleton x
@@ -1435,6 +1439,121 @@ struct
           ~keys_greater_or_equal_to:Key.max
           m
         <=> []
+      ;;
+    end)
+  ;;
+
+  let binary_search_subrange _ ~compare:_ ~lower_bound:_ ~upper_bound:_ = assert false
+
+  let%test_module "binary_search_subrange" =
+    (module struct
+      (* Strategy is to generate maps keyed by integer, and compare various prefixes of
+         the binary representation. *)
+
+      module Key_int = struct
+        type t = int [@@deriving quickcheck, sexp_of]
+
+        let length = 8 (* small but allows a few lengths of prefix *)
+
+        let quickcheck_generator = Int.gen_uniform_incl 0 ((1 lsl length) - 1)
+      end
+
+      module Prefix_length = struct
+        type t = int [@@deriving quickcheck, sexp]
+
+        let quickcheck_generator = Int.gen_uniform_incl 0 Key_int.length
+      end
+
+      module Key = struct
+        include Key
+
+        let quickcheck_generator =
+          Quickcheck.Generator.map Key_int.quickcheck_generator ~f:of_int
+        ;;
+
+        let quickcheck_observer =
+          Quickcheck.Observer.unmap Key_int.quickcheck_observer ~f:to_int
+        ;;
+
+        let quickcheck_shrinker =
+          Quickcheck.Shrinker.map Key_int.quickcheck_shrinker ~f:of_int ~f_inverse:to_int
+        ;;
+      end
+
+      module Int_map = struct
+        type t = (int, int) Map.t [@@deriving sexp_of]
+
+        let quickcheck_generator =
+          Map.quickcheck_generator Key.quickcheck_generator Int.quickcheck_generator
+        ;;
+
+        let quickcheck_observer =
+          Map.quickcheck_observer Key.quickcheck_observer Int.quickcheck_observer
+        ;;
+
+        let quickcheck_shrinker =
+          Map.quickcheck_shrinker Key.quickcheck_shrinker Int.quickcheck_shrinker
+        ;;
+      end
+
+      type t =
+        { map : Int_map.t
+        ; prefix_length : Prefix_length.t
+        ; lower_bound : Key_int.t Maybe_bound.t
+        ; upper_bound : Key_int.t Maybe_bound.t
+        }
+      [@@deriving quickcheck, sexp_of]
+
+      let suffix_length_of ~prefix_length = Key_int.length - prefix_length
+
+      let compare_prefix ~prefix_length ~key ~data:_ bound =
+        let prefix_of x = x asr suffix_length_of ~prefix_length in
+        Comparable.lift Int.compare ~f:prefix_of (Key.to_int key) bound
+      ;;
+
+      let f { map; prefix_length; lower_bound; upper_bound } =
+        Map.binary_search_subrange
+          map
+          ~compare:(compare_prefix ~prefix_length)
+          ~lower_bound
+          ~upper_bound
+        |> Map.to_alist
+      ;;
+
+      let reference_f { map; prefix_length; lower_bound; upper_bound } =
+        let satisfies_lower_bound (key, data) =
+          match lower_bound with
+          | Unbounded -> true
+          | Incl bound -> compare_prefix ~prefix_length ~key ~data bound >= 0
+          | Excl bound -> compare_prefix ~prefix_length ~key ~data bound > 0
+        in
+        let satisfies_upper_bound (key, data) =
+          match upper_bound with
+          | Unbounded -> true
+          | Incl bound -> compare_prefix ~prefix_length ~key ~data bound <= 0
+          | Excl bound -> compare_prefix ~prefix_length ~key ~data bound < 0
+        in
+        Map.to_sequence map
+        |> Sequence.filter ~f:satisfies_lower_bound
+        |> Sequence.filter ~f:satisfies_upper_bound
+        |> Sequence.to_list
+      ;;
+
+      let%expect_test _ =
+        Expect_test_helpers_base.quickcheck
+          [%here]
+          quickcheck_generator
+          ~f:(fun input ->
+            Expect_test_helpers_base.require_equal
+              [%here]
+              (module struct
+                type t = (Key.t * int) list [@@deriving equal, sexp_of]
+              end)
+              (f input)
+              (reference_f input))
+          ~sexp_of:sexp_of_t
+          ~shrinker:quickcheck_shrinker;
+        [%expect {| |}]
       ;;
     end)
   ;;

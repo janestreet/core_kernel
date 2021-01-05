@@ -2,6 +2,7 @@
 
 open! Import
 
+(** @open *)
 include module type of struct
   include Base.Float
 end
@@ -21,7 +22,11 @@ module Robust_compare : sig
     end) : S
 end
 
-(** The results of robust comparisons on [nan] should be considered undefined. *)
+(** So-called "robust" comparisons, which include a small tolerance, so that float that
+    differ by a small amount are considered equal.
+
+    Note that the results of robust comparisons on [nan] should be considered
+    undefined. *)
 include Robust_compare.S
 
 module O : sig

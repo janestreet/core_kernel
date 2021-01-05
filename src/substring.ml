@@ -3,7 +3,7 @@ open! Import
 module type S = Make_substring.S
 
 include Make_substring.F (struct
-    type t = bytes
+    type t = Bytes.t [@@deriving quickcheck]
 
     let create = Bytes.create
     let length = Bytes.length

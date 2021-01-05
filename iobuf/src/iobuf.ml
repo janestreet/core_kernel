@@ -375,6 +375,7 @@ let create ~len =
   of_bigstring (Bigstring.create len)
 ;;
 
+let empty = create ~len:0
 let of_string s = of_bigstring (Bigstring.of_string s)
 let of_bytes s = of_bigstring (Bigstring.of_bytes s)
 

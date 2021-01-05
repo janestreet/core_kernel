@@ -185,3 +185,7 @@ let get_head_padded_fixed_string ~padding t ~pos ~len () =
   let data_begin = first_nonmatch ~buf:t ~pos ~max_pos:(pos + len - 1) ~char:padding in
   to_string t ~pos:data_begin ~len:(len - (data_begin - pos))
 ;;
+
+let quickcheck_generator = Base_quickcheck.Generator.bigstring
+let quickcheck_observer = Base_quickcheck.Observer.bigstring
+let quickcheck_shrinker = Base_quickcheck.Shrinker.bigstring

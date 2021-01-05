@@ -17,8 +17,13 @@ module Stable = struct
   end
 end
 
-include Stable.V1
 include Base.Maybe_bound
+
+type 'a t = 'a Stable.V1.t =
+  | Incl of 'a
+  | Excl of 'a
+  | Unbounded
+[@@deriving bin_io, compare, quickcheck, sexp]
 
 let compare_one_sided ~side compare_a t1 t2 =
   match t1, t2 with

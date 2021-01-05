@@ -6,7 +6,7 @@ module type S = sig
   (** The type of strings that type [t] is a substring of. *)
   type base
 
-  type t
+  type t [@@deriving quickcheck]
 
   include Container.S0 with type t := t with type elt := char
 

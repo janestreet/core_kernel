@@ -250,6 +250,8 @@ module type Command = sig
     (** [one_or_more] flags must be passed one or more times. *)
     val one_or_more : 'a Arg_type.t -> ('a * 'a list) t
 
+    val one_or_more_as_list : 'a Arg_type.t -> 'a list t
+
     (** [no_arg] flags may be passed at most once.  The boolean returned is true iff the
         flag is passed on the command line. *)
     val no_arg : bool t
@@ -938,7 +940,27 @@ module type Command = sig
         -> ?argv:string list
         -> ?extend:(string list -> string list)
         -> ?when_parsing_succeeds:(unit -> unit)
-        -> ?complete_subcommands:(string list list -> string list option)
+        -> ?complete_subcommands:
+             (path:string list -> part:string -> string list list -> string list option)
+        (** [complete_subcommands ~path ~part options] allows users to provide a custom
+            tab completion handler to an invocation of [run]. By default, completion is
+            performed via standard bash completion.
+
+            One may use this to, e.g. use a fuzzy finder for completion.
+
+            Imagine a command whose structure is "subcommand1 subcommand2",
+
+            [path] represents the subcommand invocations interpreted thusfar in being
+            matched.
+
+            [part] is the portion of the auto-completion that is being matched upon.
+
+            If a user attempts to complete "exe subcommand1 s<TAB>", they will get
+            ["subcommand1"] in [path] and "s" in [part].
+
+            [options] are the valid subcommand invocations to present to the user.
+
+            [complete_subcommands] should return the selection made, if any. *)
         -> t
         -> unit
 

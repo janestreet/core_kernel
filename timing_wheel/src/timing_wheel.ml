@@ -1465,6 +1465,21 @@ let sexp_of_t sexp_of_a t =
 let length t = Priority_queue.length t.priority_queue
 let is_empty t = length t = 0
 
+let[@cold] raise_next_alarm_fires_at_exn_of_empty_timing_wheel t =
+  raise_s
+    [%message
+      "Timing_wheel.next_alarm_fires_at_exn of empty timing wheel" ~timing_wheel:(t : _ t)]
+;;
+
+let[@cold] raise_next_alarm_fires_at_with_all_alarms_in_max_interval t =
+  raise_s
+    [%message
+      "Timing_wheel.next_alarm_fires_at_exn with all alarms in max interval"
+        ~timing_wheel:(t : _ t)]
+;;
+
+let pool t = Priority_queue.pool t.priority_queue
+
 let interval_num_internal ~time ~alarm_precision =
   Interval_num.of_int63 (Alarm_precision.interval_num alarm_precision time)
 ;;
@@ -1510,6 +1525,35 @@ let interval_num_start t interval_num =
   if Interval_num.( > ) interval_num t.max_interval_num
   then raise_interval_num_start_got_too_large t interval_num;
   interval_num_start_unchecked t interval_num
+;;
+
+let next_alarm_fires_at_internal t key =
+  (* [interval_num_start t key] is the key corresponding to the start of the time interval
+     holding the first alarm in [t].  Advancing to that would not be enough, since the
+     alarms in that interval don't fire until the clock is advanced to the start of the
+     next interval.  So, we use [succ key] to advance to the start of the next
+     interval. *)
+  interval_num_start t (Key.succ key)
+;;
+
+let next_alarm_fires_at t =
+  let elt = Priority_queue.min_elt_ t.priority_queue in
+  if Internal_elt.is_null elt
+  then None
+  else (
+    let key = Internal_elt.key (pool t) elt in
+    if Interval_num.equal key t.max_interval_num
+    then None
+    else Some (next_alarm_fires_at_internal t key))
+;;
+
+let next_alarm_fires_at_exn t =
+  let elt = Priority_queue.min_elt_ t.priority_queue in
+  if Internal_elt.is_null elt then raise_next_alarm_fires_at_exn_of_empty_timing_wheel t;
+  let key = Internal_elt.key (pool t) elt in
+  if Interval_num.equal key t.max_interval_num
+  then raise_next_alarm_fires_at_with_all_alarms_in_max_interval t;
+  next_alarm_fires_at_internal t key
 ;;
 
 let compute_max_allowed_alarm_time t =
@@ -1669,8 +1713,6 @@ let reschedule_at_interval_num t alarm ~at =
   reschedule_gen t alarm ~key:at ~at:(interval_num_start t at)
 ;;
 
-let pool t = Priority_queue.pool t.priority_queue
-
 let min_alarm_interval_num t =
   let elt = Priority_queue.min_elt_ t.priority_queue in
   if Internal_elt.is_null elt then None else Some (Internal_elt.key (pool t) elt)
@@ -1706,48 +1748,6 @@ let max_alarm_time_in_min_interval_exn t =
         "Timing_wheel.max_alarm_time_in_min_interval_exn of empty timing wheel"
           ~timing_wheel:(t : _ t)];
   max_alarm_time_in_list t elt
-;;
-
-let next_alarm_fires_at_internal t key =
-  (* [interval_num_start t key] is the key corresponding to the start of the time interval
-     holding the first alarm in [t].  Advancing to that would not be enough, since the
-     alarms in that interval don't fire until the clock is advanced to the start of the
-     next interval.  So, we use [succ key] to advance to the start of the next
-     interval. *)
-  interval_num_start t (Key.succ key)
-;;
-
-let next_alarm_fires_at t =
-  let elt = Priority_queue.min_elt_ t.priority_queue in
-  if Internal_elt.is_null elt
-  then None
-  else (
-    let key = Internal_elt.key (pool t) elt in
-    if Interval_num.equal key t.max_interval_num
-    then None
-    else Some (next_alarm_fires_at_internal t key))
-;;
-
-let[@cold] raise_next_alarm_fires_at_exn_of_empty_timing_wheel t =
-  raise_s
-    [%message
-      "Timing_wheel.next_alarm_fires_at_exn of empty timing wheel" ~timing_wheel:(t : _ t)]
-;;
-
-let[@cold] raise_next_alarm_fires_at_with_all_alarms_in_max_interval t =
-  raise_s
-    [%message
-      "Timing_wheel.next_alarm_fires_at_exn with all alarms in max interval"
-        ~timing_wheel:(t : _ t)]
-;;
-
-let next_alarm_fires_at_exn t =
-  let elt = Priority_queue.min_elt_ t.priority_queue in
-  if Internal_elt.is_null elt then raise_next_alarm_fires_at_exn_of_empty_timing_wheel t;
-  let key = Internal_elt.key (pool t) elt in
-  if Interval_num.equal key t.max_interval_num
-  then raise_next_alarm_fires_at_with_all_alarms_in_max_interval t;
-  next_alarm_fires_at_internal t key
 ;;
 
 let fire_past_alarms t ~handle_fired =

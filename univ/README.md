@@ -1,6 +1,3 @@
----
-title: "Univ"
-uuid: df2a47d8-94ce-307f-e177-aafd77edd70e
----
+# Univ
 
 An extensible "universal" variant type.

@@ -9,7 +9,8 @@ open Bigarray
 
 
 (** Type of bigstrings *)
-type t = (char, int8_unsigned_elt, c_layout) Array1.t [@@deriving compare, sexp_of]
+type t = (char, int8_unsigned_elt, c_layout) Array1.t
+[@@deriving compare, quickcheck, sexp_of]
 
 (** Type of bigstrings which support hashing. Note that mutation invalidates previous hashes. *)
 type t_frozen = t [@@deriving compare, hash, sexp_of]

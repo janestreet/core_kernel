@@ -385,6 +385,10 @@ module Make_tree (Key : Comparator.S1) = struct
     binary_search_segmented ~comparator t ~segment_of how
   ;;
 
+  let binary_search_subrange t ~compare ~lower_bound ~upper_bound =
+    binary_search_subrange ~comparator t ~compare ~lower_bound ~upper_bound
+  ;;
+
   let key_set t = Using_comparator.key_set_of_tree ~comparator t
   let quickcheck_generator k v = For_quickcheck.gen_tree ~comparator k v
   let quickcheck_observer k v = For_quickcheck.obs_tree k v

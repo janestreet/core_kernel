@@ -439,6 +439,23 @@ module For_testing : sig
   (** [measure_allocation f] measures the words allocated by running [f ()] *)
   val measure_allocation : (unit -> 'a) -> 'a * Allocation_report.t
 
+  module Allocation_log : sig
+    type t =
+      { size_in_words : int
+      ; is_major : bool
+      ; backtrace : string
+      }
+  end
+
+  (** [measure_and_log_allocation f] logs each allocation that [f ()] performs, as well as
+      reporting the total. (This can be slow if [f] allocates heavily).
+
+      This function is only supported since OCaml 4.11. On prior versions, the function
+      always returns an empty log. *)
+  val measure_and_log_allocation
+    :  (unit -> 'a)
+    -> 'a * Allocation_report.t * Allocation_log.t list
+
   (** [is_zero_alloc f] runs [f ()] and returns [true] if it does not allocate, or [false]
       otherwise. [is_zero_alloc] does not allocate. *)
   val is_zero_alloc : (unit -> _) -> bool

@@ -520,6 +520,10 @@ module Flag = struct
     arg_flag name arg_type read write Num_occurrences.at_least_once
   ;;
 
+  let one_or_more_as_list arg_type =
+    one_or_more arg_type |> map_flag ~f:(fun (x, xs) -> x :: xs)
+  ;;
+
   let escape_general ~deprecated_hook name =
     let key = Env.Key.create ~name [%sexp_of: string list] in
     let action env cmd_line = Env.set env ~key ~data:cmd_line in
@@ -1402,6 +1406,7 @@ module Base = struct
       let escape = escape
       let listed = listed
       let one_or_more = one_or_more
+      let one_or_more_as_list = one_or_more_as_list
       let no_arg = no_arg
       let no_arg_register = no_arg_register
       let no_arg_abort = no_arg_abort
@@ -2531,7 +2536,7 @@ module For_unix (M : For_unix) = struct
              let subcommands =
                shape t |> Shape.fully_forced |> Shape.Fully_forced.expanded_subcommands
              in
-             (match f subcommands with
+             (match f ~path:(Path.parts path) ~part subcommands with
               | None -> exit 1
               | Some to_output ->
                 print_endline (String.concat ~sep:" " to_output);
@@ -2705,6 +2710,7 @@ module Param = struct
     let no_arg_register = no_arg_register
     let no_arg_some = no_arg_some
     let one_or_more = one_or_more
+    let one_or_more_as_list = one_or_more_as_list
     let optional = optional
     let optional_with_default = optional_with_default
     let required = required

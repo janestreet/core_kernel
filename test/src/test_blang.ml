@@ -528,6 +528,103 @@ module Or_structure = struct
   ;;
 end
 
+(* annotate with module type to enforce that we test all exports *)
+module Monadic : Monadic with module M := Monad.Ident = struct
+  open struct
+    (* define helpers without exporting them *)
+
+    module Monadic = For_monad (Monad.Ident)
+
+    module Small_int = struct
+      type t = (int[@quickcheck.generator Quickcheck.Generator.small_non_negative_int])
+      [@@deriving equal, quickcheck, sexp_of]
+    end
+
+    module Small_int_blang = struct
+      type t = Small_int.t Blang.t [@@deriving equal, quickcheck, sexp_of]
+    end
+
+    module Trace = struct
+      type 'a t =
+        { value : 'a
+        ; work : int list
+        }
+      [@@deriving equal, sexp_of]
+
+      (* record calls to [f] to test short-circuiting *)
+      let run op t ~f =
+        let history = Queue.create () in
+        let f x =
+          Queue.enqueue history x;
+          f x
+        in
+        let value = op t ~f in
+        let work =
+          (* order of calls can differ, so long as we do the same overall work *)
+          history |> Queue.to_list |> List.sort ~compare:Int.compare
+        in
+        { value; work }
+      ;;
+    end
+
+    let test (type a) m t op1 op2 ~f =
+      let (module Value : Expect_test_helpers_base.With_equal with type t = a) = m in
+      let module Value_with_trace = struct
+        type t = Value.t Trace.t [@@deriving equal, sexp_of]
+      end
+      in
+      require_equal
+        [%here]
+        (module Value_with_trace)
+        (Trace.run op1 t ~f)
+        (Trace.run op2 t ~f)
+    ;;
+  end
+
+  (* Test [For_monad (Ident)] functions against the same exports from [Blang]. *)
+
+  let map = Monadic.map
+
+  let%expect_test "map" =
+    quickcheck_m
+      [%here]
+      (module Small_int_blang)
+      ~f:(fun t -> test (module Small_int_blang) t Blang.map Monadic.map ~f:Int.succ);
+    [%expect {| |}]
+  ;;
+
+  let bind = Monadic.bind
+
+  let%expect_test "bind" =
+    quickcheck_m
+      [%here]
+      (module struct
+        type t = Small_int_blang.t * Small_int_blang.t list
+        [@@deriving quickcheck, sexp_of]
+      end)
+      ~f:(fun (t, list) ->
+        (* derive [f] from first-order input that can be shown in sexps *)
+        let f n = n |> List.nth list |> Option.value ~default:(Blang.base n) in
+        test (module Small_int_blang) t Blang.bind Monadic.bind ~f);
+    [%expect {| |}]
+  ;;
+
+  let eval = Monadic.eval
+
+  let%expect_test "eval" =
+    quickcheck_m
+      [%here]
+      (module struct
+        type t = Small_int_blang.t * Small_int.t [@@deriving quickcheck, sexp_of]
+      end)
+      ~f:(fun (t, x) ->
+        (* derive [f] from first-order input that can be shown in sexps *)
+        let f n = n > x in
+        test (module Bool) t (fun t ~f -> Blang.eval t f) Monadic.eval ~f);
+    [%expect {| |}]
+  ;;
+end
+
 type 'a eval_benchmark =
   { blang : 'a t
   ; f : 'a -> bool

@@ -77,7 +77,7 @@ let%expect_test "V1" =
 (* Assert type equality between stable and unstable map types *)
 let _f (x : int Filename.Map.t) : int Stable.V1.Map.t = x
 
-let%expect_test "to_absolute" =
+let%expect_test "to_absolute_exn" =
   let to_absolute = to_absolute_exn ~relative_to:"/a/b/c" in
   print_s
     [%message
@@ -98,4 +98,40 @@ let%expect_test "to_absolute" =
     (raised (
       Failure
       "Filename.to_absolute_exn called with a [relative_to] that is a relative path: ./a/relative/path")) |}]
+;;
+
+let require_should_raise thunk =
+  match thunk () with
+  | exception exn -> print_s [%sexp "raised:", (exn : Exn.t)]
+  | _ -> assert false
+;;
+
+let%expect_test "of_absolute_exn" =
+  let relative_to x = of_absolute_exn "/a/b/c" ~relative_to:x in
+  assert (relative_to "/" = "a/b/c");
+  assert (relative_to "/a" = "b/c");
+  assert (relative_to "/a/" = "b/c");
+  assert (relative_to "/a/b" = "c");
+  assert (relative_to "/a/b/" = "c");
+  assert (relative_to "/a/b/c" = ".");
+  assert (relative_to "/a/b/c/" = ".");
+  assert (relative_to "/a/b/d" = "../c");
+  assert (relative_to "/a/b/d/" = "../c");
+  assert (relative_to "/a/d" = "../b/c");
+  assert (relative_to "/a/d/" = "../b/c");
+  assert (relative_to "/a/d/e" = "../../b/c");
+  [%expect {| |}];
+  (* raises if either argument is a relative path *)
+  require_should_raise (fun () -> of_absolute_exn "/a/b/c" ~relative_to:"./d/e/f");
+  [%expect
+    {|
+    (raised: (
+      "Filename.of_absolute_exn: [~relative_to] must be an absolute path"
+      (relative_to ./d/e/f))) |}];
+  require_should_raise (fun () -> of_absolute_exn "./a/b/c" ~relative_to:"/d/e/f");
+  [%expect
+    {|
+    (raised: (
+      "Filename.of_absolute_exn: first argument must be an absolute path"
+      (first_arg ./a/b/c))) |}]
 ;;

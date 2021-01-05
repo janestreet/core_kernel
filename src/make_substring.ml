@@ -31,14 +31,20 @@ module Blit = struct
   let bigstring_bytes = Bigstring.To_bytes.blito
 end
 
-module F (Base : Base) : S with type base = Base.t = struct
-  type base = Base.t
+(* We can't call the base module [Base] because [@@deriving quickcheck] wants to access
+   the [Base] library directly, and we'd be shadowing it. *)
+module F (Underlying : Base) : S with type base = Underlying.t = struct
+  type base = Underlying.t
 
   type t =
-    { base : Base.t
+    { base : Underlying.t
     ; pos : int
     ; len : int
     }
+  [@@deriving quickcheck]
+
+  (* note we override the generated [quickcheck_generator] below, once we've defined
+     [create] *)
 
   (* {[
        let invariant t =
@@ -54,15 +60,15 @@ module F (Base : Base) : S with type base = Base.t = struct
 
   let base_of_string s =
     let len = String.length s in
-    let buf = Base.create len in
-    Base.blit_from_string ~src:s ~dst:buf ();
+    let buf = Underlying.create len in
+    Underlying.blit_from_string ~src:s ~dst:buf ();
     buf
   ;;
 
   let base_of_bigstring s =
     let len = Bigstring.length s in
-    let buf = Base.create len in
-    Base.blit_from_bigstring ~src:s ~dst:buf ();
+    let buf = Underlying.create len in
+    Underlying.blit_from_bigstring ~src:s ~dst:buf ();
     buf
   ;;
 
@@ -72,14 +78,23 @@ module F (Base : Base) : S with type base = Base.t = struct
         ()
         ?pos
         ?len
-        ~total_length:(Base.length base)
+        ~total_length:(Underlying.length base)
     in
     { base; pos; len }
   ;;
 
+  let quickcheck_generator =
+    let open Quickcheck.Let_syntax in
+    let%bind base = Underlying.quickcheck_generator in
+    let base_len = Underlying.length base in
+    let%bind len = Int.gen_uniform_incl 0 base_len in
+    let%bind pos = Int.gen_uniform_incl 0 (base_len - len) in
+    return (create ~pos ~len base)
+  ;;
+
   let get t i =
     if i >= 0 && i < length t
-    then Base.get (base t) (pos t + i)
+    then Underlying.get (base t) (pos t + i)
     else raise (Invalid_argument "index out of bounds")
   ;;
 
@@ -131,38 +146,46 @@ module F (Base : Base) : S with type base = Base.t = struct
   let min_elt = C.min_elt
   let max_elt = C.max_elt
 
+  let wrap_sub_n t n ~name ~pos ~len ~on_error =
+    if n < 0
+    then
+      invalid_arg (name ^ " expecting nonnegative argument")
+    else (
+      try sub t ~pos ~len with
+      | _ -> on_error)
+  ;;
+
   let drop_prefix t n =
-    if n > t.len
-    then failwith "Substring.drop_prefix"
-    else { base = t.base; pos = t.pos + n; len = t.len - n }
+    wrap_sub_n
+      ~name:"drop_prefix"
+      t
+      n
+      ~pos:n
+      ~len:(length t - n)
+      ~on_error:{ t with len = 0 }
   ;;
 
   let drop_suffix t n =
-    if n > t.len
-    then failwith "Substring.drop_suffix"
-    else { base = t.base; pos = t.pos; len = t.len - n }
+    wrap_sub_n
+      ~name:"drop_suffix"
+      t
+      n
+      ~pos:0
+      ~len:(length t - n)
+      ~on_error:{ t with len = 0 }
   ;;
 
-  let prefix t n =
-    if n > t.len
-    then failwith "Substring.prefix"
-    else { base = t.base; pos = t.pos; len = n }
-  ;;
+  let prefix t n = wrap_sub_n ~name:"prefix" t n ~pos:0 ~len:n ~on_error:t
+  let suffix t n = wrap_sub_n ~name:"suffix" t n ~pos:(length t - n) ~len:n ~on_error:t
 
-  let suffix t n =
-    if n > t.len
-    then failwith "Substring.suffix"
-    else { base = t.base; pos = t.pos + t.len - n; len = n }
-  ;;
-
-  let blit_to (type a) (blit : (Base.t, a) Blit.t) t ~dst ~dst_pos =
+  let blit_to (type a) (blit : (Underlying.t, a) Blit.t) t ~dst ~dst_pos =
     blit ~src:t.base ~src_pos:t.pos ~src_len:t.len ~dst ~dst_pos ()
   ;;
 
-  let blit_to_string = blit_to Base.blit_to_bytes
-  let blit_to_bytes = blit_to Base.blit_to_bytes
-  let blit_to_bigstring = blit_to Base.blit_to_bigstring
-  let blit_base = blit_to Base.blit
+  let blit_to_string = blit_to Underlying.blit_to_bytes
+  let blit_to_bytes = blit_to Underlying.blit_to_bytes
+  let blit_to_bigstring = blit_to Underlying.blit_to_bigstring
+  let blit_base = blit_to Underlying.blit
 
   let blit_from ~name (type a) (blit : (a, base) Blit.t) t ~src ~src_pos ~len =
     if len > t.len
@@ -176,9 +199,9 @@ module F (Base : Base) : S with type base = Base.t = struct
     blit ~src ~src_pos ~src_len:len ~dst:t.base ~dst_pos:t.pos ()
   ;;
 
-  let blit_from_string = blit_from ~name:"string" Base.blit_from_string
-  let blit_from_bigstring = blit_from ~name:"bigstring" Base.blit_from_bigstring
-  let of_base base = { base; pos = 0; len = Base.length base }
+  let blit_from_string = blit_from ~name:"string" Underlying.blit_from_string
+  let blit_from_bigstring = blit_from ~name:"bigstring" Underlying.blit_from_bigstring
+  let of_base base = { base; pos = 0; len = Underlying.length base }
   let of_string x = of_base (base_of_string x)
   let of_bigstring x = of_base (base_of_bigstring x)
 
@@ -190,10 +213,10 @@ module F (Base : Base) : S with type base = Base.t = struct
 
   let to_string x =
     Bytes.unsafe_to_string
-      ~no_mutation_while_string_reachable:(make Bytes.create Base.blit_to_bytes x)
+      ~no_mutation_while_string_reachable:(make Bytes.create Underlying.blit_to_bytes x)
   ;;
 
-  let to_bigstring = make Bigstring.create Base.blit_to_bigstring
+  let to_bigstring = make Bigstring.create Underlying.blit_to_bigstring
 
   let concat_gen create_dst blit_dst ts =
     let len = List.fold ts ~init:0 ~f:(fun len t -> len + length t) in
@@ -206,7 +229,7 @@ module F (Base : Base) : S with type base = Base.t = struct
     dst
   ;;
 
-  let concat ts = of_base (concat_gen Base.create blit_base ts)
+  let concat ts = of_base (concat_gen Underlying.create blit_base ts)
 
   let concat_string ts =
     Bytes.unsafe_to_string

@@ -462,10 +462,10 @@ val hash_fold_direct : 'k Hash.folder -> 'v Hash.folder -> ('k, 'v, 'cmp) t Hash
     to compare the data associated with the keys. *)
 val equal : ('v -> 'v -> bool) -> ('k, 'v, 'cmp) t -> ('k, 'v, 'cmp) t -> bool
 
-(** Returns list of keys in map. *)
+(** Returns list of keys in map in increasing order. *)
 val keys : ('k, _, _) t -> 'k list
 
-(** Returns list of data in map. *)
+(** Returns list of data in map in increasing order of key. *)
 val data : (_, 'v, _) t -> 'v list
 
 (** Creates association list from map.
@@ -719,6 +719,27 @@ val binary_search_segmented
   -> segment_of:(key:'k -> data:'v -> [ `Left | `Right ])
   -> [ `Last_on_left | `First_on_right ]
   -> ('k * 'v) option
+
+(** [binary_search_subrange] takes a [compare] function that divides [t] into three
+    (possibly empty) segments with respect to [lower_bound] and [upper_bound]:
+
+    {v
+      | Below_lower_bound | In_range | Above_upper_bound |
+    v}
+
+    and returns a map of the key-value pairs in [range].
+
+    Runtime is O(log n + m) where [n] is the length of the input map and [m] is the length
+    of the output. The linear term is to compute the length of the output.
+
+    Behavior is undefined if [compare] does not segment [t] as shown above, or is
+    [compare] mutates its inputs. *)
+val binary_search_subrange
+  :  ('k, 'v, 'cmp) t
+  -> compare:(key:'k -> data:'v -> 'bound -> int)
+  -> lower_bound:'bound Maybe_bound.t
+  -> upper_bound:'bound Maybe_bound.t
+  -> ('k, 'v, 'cmp) t
 
 
 (** Convert a set to a map. Runs in [O(length t)] time plus a call to [f] for each key to
