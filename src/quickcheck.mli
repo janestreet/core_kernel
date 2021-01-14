@@ -1,1 +1,1 @@
-include Quickcheck_intf.Quickcheck (** @open *)
+include Quickcheck_intf.Quickcheck (** @inline *)

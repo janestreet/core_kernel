@@ -3,9 +3,10 @@
 open! Import
 open Perms.Export
 
-type 'a t = 'a Base.Ref.t = { mutable contents : 'a } [@@deriving bin_io, typerep]
+type 'a t = 'a Base.Ref.t = { mutable contents : 'a }
+[@@deriving bin_io, quickcheck, typerep]
 
-(** @open *)
+(** @inline *)
 include module type of struct
   include Base.Ref
 end

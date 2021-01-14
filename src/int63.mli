@@ -2,14 +2,14 @@
 
 (** {2 Interface from Base} *)
 
-(** @open *)
+(** @inline *)
 include module type of struct
   include Base.Int63
 end
 
 (** {2 Extensions} *)
 
-(** @open *)
+(** @inline *)
 include
   Int_intf.Extension_with_stable
   with type t := t

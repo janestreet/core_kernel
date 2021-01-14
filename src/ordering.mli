@@ -10,4 +10,4 @@ type t = Base.Ordering.t =
   | Greater
 [@@deriving bin_io, compare, hash, sexp]
 
-include module type of Base.Ordering with type t := t (** @open *)
+include module type of Base.Ordering with type t := t (** @inline *)

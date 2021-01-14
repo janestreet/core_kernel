@@ -7,7 +7,7 @@ type t = char [@@deriving typerep]
 
 (** {2 The signature included from [Base.Char]} *)
 
-(** @open *)
+(** @inline *)
 include module type of struct
   include Base.Char
 end

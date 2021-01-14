@@ -18,7 +18,7 @@ module type Id = sig
 end
 
 module type Type_equal = sig
-  (** @open *)
+  (** @inline *)
   include module type of struct
     include Base.Type_equal
   end

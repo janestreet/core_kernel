@@ -4,7 +4,7 @@ open! Import
 
 (** {2 The interface from Base} *)
 
-(** @open *)
+(** @inline *)
 include module type of struct
   include Base.List
 end

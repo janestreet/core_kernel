@@ -28,7 +28,7 @@ module Merge_with_duplicates_element : sig
   with type ('a, 'b) t := ('a, 'b) t
 end
 
-(** @open *)
+(** @inline *)
 include module type of struct
   include Base.Sequence
 end

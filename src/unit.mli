@@ -5,7 +5,7 @@ open! Import
 
 type t = unit [@@deriving typerep]
 
-(** @open *)
+(** @inline *)
 include module type of struct
   include Base.Unit
 end

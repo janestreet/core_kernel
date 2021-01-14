@@ -1,10 +1,11 @@
 open! Import
+open Base_quickcheck.Export
 
 module Stable = struct
   module V1 = struct
     open Sexplib.Std
 
-    type 'a t = 'a lazy_t [@@deriving bin_io, sexp, typerep]
+    type 'a t = 'a lazy_t [@@deriving bin_io, quickcheck, sexp, typerep]
 
     let map = Base.Lazy.map
     let compare = Base.Lazy.compare

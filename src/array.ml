@@ -1,4 +1,5 @@
 open! Import
+open Base_quickcheck.Export
 open Perms.Export
 module Array = Base.Array
 module Core_sequence = Sequence
@@ -9,7 +10,7 @@ include (
     type 'a t = 'a array [@@deriving sexp, compare, sexp_grammar]
   end)
 
-type 'a t = 'a array [@@deriving bin_io, typerep]
+type 'a t = 'a array [@@deriving bin_io, quickcheck, typerep]
 
 module Private = Base.Array.Private
 

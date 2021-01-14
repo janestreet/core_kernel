@@ -8,7 +8,7 @@ type t = Base.Sign.t =
   | Pos
 [@@deriving typerep]
 
-include module type of Base.Sign with type t := t (** @open *)
+include module type of Base.Sign with type t := t (** @inline *)
 
 (** This provides [to_string]/[of_string], sexp/bin_io conversion, Map, Hashtbl, etc. *)
 include Identifiable.S with type t := t and type comparator_witness := comparator_witness

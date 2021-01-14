@@ -1,6 +1,57 @@
 open! Core_kernel
+include Hashtbl_unit_tests_intf
 
-module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_intf.Hashtbl) = struct
+(* Demonstrate that [Hashtbl_for_testing] contains all the parts of [Hashtbl_intf.Hashtbl]
+   that need to be tested. *)
+module Exhaustiveness_with_hashtbl_intf (Hashtbl : Hashtbl_intf.Hashtbl) = struct
+  let%test_module "tests are exhaustive" =
+    (module (
+     struct
+       (* Include [Hashtbl_for_testing]. *)
+       include (
+         Hashtbl : Hashtbl_for_testing with type ('a, 'b) t = ('a, 'b) Hashtbl.t)
+
+       (* Now add what remains from [Hashtbl_intf.Hashtbl]. *)
+
+       (* type definition *)
+       type 'a key = 'a
+
+       (* module type aliases *)
+       module type For_deriving = Hashtbl.For_deriving
+       module type Key = Hashtbl.Key
+       module type Key_binable = Hashtbl.Key_binable
+       module type Key_plain = Hashtbl.Key_plain
+       module type S = Hashtbl.S
+       module type S_binable = Hashtbl.S_binable
+       module type S_plain = Hashtbl.S_plain
+
+       (* module aliases *)
+       module Hashable = Hashtbl.Hashable
+       module M = Hashtbl.M
+       module Make = Hashtbl.Make
+       module Make_binable = Hashtbl.Make_binable
+       module Make_binable_with_hashable = Hashtbl.Make_binable_with_hashable
+       module Make_plain = Hashtbl.Make_plain
+       module Make_plain_with_hashable = Hashtbl.Make_plain_with_hashable
+       module Make_with_hashable = Hashtbl.Make_with_hashable
+       module Merge_into_action = Hashtbl.Merge_into_action
+       module Poly = Hashtbl.Poly
+       module Using_hashable = Hashtbl.Using_hashable
+
+       (* exports for deriving via [Hashtbl.M(_)] *)
+       include (Hashtbl : For_deriving with type ('a, 'b) t := ('a, 'b) t)
+
+       (* hash function accessors, not interesting to test *)
+       let hash = Hashtbl.hash
+       let hash_param = Hashtbl.hash_param
+       let hashable = Hashtbl.hashable
+       let hashable_s = Hashtbl.hashable_s
+     end :
+       Hashtbl_intf.Hashtbl))
+  ;;
+end
+
+module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_for_testing) = struct
   let%test_module "quickcheck comparison to Map" =
     (module (
      struct
@@ -12,7 +63,7 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_intf.Hashtbl) = stru
          include
            Hashtbl_intf.Creators
            with type ('a, 'b) t := ('a, 'b) Hashtbl.t
-           with type 'a key := 'a Hashtbl.key
+           with type 'a key := 'a
            with type ('a, 'b, 'c) create_options :=
              ( 'a
              , 'b
@@ -59,12 +110,12 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_intf.Hashtbl) = stru
          include
            Hashtbl_intf.Accessors
            with type ('a, 'b) t := ('a, 'b) Hashtbl.t
-           with type 'a key := 'a Hashtbl.key
+           with type 'a key := 'a
 
          include
            Hashtbl_intf.Multi
            with type ('a, 'b) t := ('a, 'b) Hashtbl.t
-           with type 'a key := 'a Hashtbl.key
+           with type 'a key := 'a
 
          val invariant
            :  'a Invariant.t
@@ -271,7 +322,6 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_intf.Hashtbl) = stru
              ;;
            end
 
-           let hashable = Key.hashable
            let comparator = Key.comparator
            let compare_keys = Key.compare
 
@@ -415,7 +465,7 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_intf.Hashtbl) = stru
              ~sexp_of:[%sexp_of: constructor]
              ~f:(fun constructor ->
                let map, t = map_and_table constructor in
-               let t_copy = Hashtbl.Using_hashable.create ~hashable () in
+               let t_copy = Hashtbl.create (module Key) in
                Hashtbl.iteri t ~f:(fun ~key ~data ->
                  Hashtbl.add_exn t_copy ~key ~data);
                [%test_result: Data.t Key.Map.t] (to_map t_copy) ~expect:map)
@@ -1140,7 +1190,8 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_intf.Hashtbl) = stru
              ~f:(fun (constructor1, constructor2) ->
                let map1, t1 = map_and_table constructor1 in
                let map2, t2 = map_and_table constructor2 in
-               let f ~key data2 data1_opt : _ Hashtbl.Merge_into_action.t =
+               let f ~key data2 data1_opt : _ Hashtbl_intf.Merge_into_action.t
+                 =
                  match
                    Key_and_data.merge
                      ~key
@@ -1291,46 +1342,14 @@ module Make_quickcheck_comparison_to_Map (Hashtbl : Hashtbl_intf.Hashtbl) = stru
        end :
          Accessors_with_unit_tests)
 
-       (* miscellaneous functions that aren't in Accessors and aren't particularly
-          interesting to test *)
-
-       let hashable = Hashtbl.hashable
-       let hashable_s = Hashtbl.hashable_s
+       (* not particularly interesting to test *)
        let sexp_of_t = Hashtbl.sexp_of_t
-       let hash_param = Hashtbl.hash_param
-       let hash = Hashtbl.hash
-
-       (* types, module types, and modules *)
-
-       type ('a, 'b) t = ('a, 'b) Hashtbl.t
-       type 'a key = 'a Hashtbl.key
-
-       module type S_binable = Hashtbl.S_binable
-       module type S = Hashtbl.S
-       module type S_plain = Hashtbl.S_plain
-       module type Key_binable = Hashtbl.Key_binable
-       module type Key = Hashtbl.Key
-       module type Key_plain = Hashtbl.Key_plain
-       module type For_deriving = Hashtbl.For_deriving
-
-       include (Hashtbl : For_deriving with type ('a, 'b) t := ('a, 'b) t)
-       module Hashable = Hashtbl.Hashable
-       module Merge_into_action = Hashtbl.Merge_into_action
-       module Poly = Hashtbl.Poly
-       module Make_plain = Hashtbl.Make_plain
-       module Make_plain_with_hashable = Hashtbl.Make_plain_with_hashable
-       module Make = Hashtbl.Make
-       module Make_with_hashable = Hashtbl.Make_with_hashable
-       module M = Hashtbl.M
-       module Make_binable = Hashtbl.Make_binable
-       module Make_binable_with_hashable = Hashtbl.Make_binable_with_hashable
-       module Using_hashable = Hashtbl.Using_hashable
      end :
-       Hashtbl_intf.Hashtbl))
+       Hashtbl_for_testing with type ('a, 'b) t := ('a, 'b) Hashtbl.t))
   ;;
 end
 
-module Make_mutation_in_callbacks (Hashtbl : Hashtbl_intf.Hashtbl) = struct
+module Make_mutation_in_callbacks (Hashtbl : Hashtbl_for_testing) = struct
   let%test_module "mutation in callbacks" =
     (module (
      struct
@@ -1369,7 +1388,7 @@ module Make_mutation_in_callbacks (Hashtbl : Hashtbl_intf.Hashtbl) = struct
 
          let make_table ~key_of_index ~data_of_index =
            List.init size ~f:(fun i -> key_of_index i, data_of_index i)
-           |> Hashtbl.Using_hashable.of_alist_exn ~hashable:Int.hashable
+           |> Hashtbl.of_alist_exn (module Int)
          ;;
 
          let makers =
@@ -1752,7 +1771,7 @@ module Make_mutation_in_callbacks (Hashtbl : Hashtbl_intf.Hashtbl) = struct
            [%sexp_of: data option]
            (option sample_data)
            (fun opt ->
-              let action : _ Hashtbl.Merge_into_action.t =
+              let action : _ Hashtbl_intf.Merge_into_action.t =
                 match opt with
                 | None -> Remove
                 | Some x -> Set_to x
@@ -2264,8 +2283,6 @@ module Make_mutation_in_callbacks (Hashtbl : Hashtbl_intf.Hashtbl) = struct
 
        (* non-functions, and functions that neither mutate nor have callbacks *)
 
-       let hash = Hashtbl.hash
-       let hash_param = Hashtbl.hash_param
        let choose = Hashtbl.choose
        let choose_exn = Hashtbl.choose_exn
        let create = Hashtbl.create
@@ -2290,40 +2307,12 @@ module Make_mutation_in_callbacks (Hashtbl : Hashtbl_intf.Hashtbl) = struct
        let find_exn = Hashtbl.find_exn
        let find_multi = Hashtbl.find_multi
        let to_alist = Hashtbl.to_alist
-       let hashable = Hashtbl.hashable
-       let hashable_s = Hashtbl.hashable_s
-
-       (* types, module types, and modules *)
-
-       type ('a, 'b) t = ('a, 'b) Hashtbl.t
-       type 'a key = 'a Hashtbl.key
-
-       module type S_binable = Hashtbl.S_binable
-       module type S = Hashtbl.S
-       module type S_plain = Hashtbl.S_plain
-       module type Key_binable = Hashtbl.Key_binable
-       module type Key = Hashtbl.Key
-       module type Key_plain = Hashtbl.Key_plain
-       module type For_deriving = Hashtbl.For_deriving
-
-       include (Hashtbl : For_deriving with type ('a, 'b) t := ('a, 'b) t)
-       module Hashable = Hashtbl.Hashable
-       module Merge_into_action = Hashtbl.Merge_into_action
-       module Poly = Hashtbl.Poly
-       module Make_binable_with_hashable = Hashtbl.Make_binable_with_hashable
-       module Make_plain_with_hashable = Hashtbl.Make_plain_with_hashable
-       module Make_with_hashable = Hashtbl.Make_with_hashable
-       module Make_plain = Hashtbl.Make_plain
-       module Make = Hashtbl.Make
-       module Make_binable = Hashtbl.Make_binable
-       module M = Hashtbl.M
-       module Using_hashable = Hashtbl.Using_hashable
      end :
-       Hashtbl_intf.Hashtbl))
+       Hashtbl_for_testing with type ('a, 'b) t := ('a, 'b) Hashtbl.t))
   ;;
 end
 
-module Make (Hashtbl : Hashtbl_intf.Hashtbl) = struct
+module Make (Hashtbl : Hashtbl_for_testing) = struct
   include Make_quickcheck_comparison_to_Map (Hashtbl)
   include Make_mutation_in_callbacks (Hashtbl)
 end

@@ -2,7 +2,7 @@
 
 open! Import
 
-(** @open *)
+(** @inline *)
 include module type of struct
   include Base.Nothing
 end

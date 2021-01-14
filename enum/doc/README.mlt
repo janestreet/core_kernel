@@ -44,6 +44,9 @@ something-else
 
 [%%org
   {|
+Note that single quote (') characters are stripped from the string to prevent them from
+needing to be escaped in the command line.
+
 ~Enum.make_param~ can then be used to build a command line parameter from our variant. It
 even generates documentation that shows all the options to the user:
 |}]
@@ -303,7 +306,7 @@ let complete _ ~part =
 let () = complete () ~part:"" |> List.iter ~f:print_endline
 
 [%%expect {|
-here's-an-int=
+heres-an-int=
 and-a-string=
 plus-a-bool=
 |}]
@@ -311,5 +314,5 @@ plus-a-bool=
 let () = complete () ~part:"h" |> List.iter ~f:print_endline
 
 [%%expect {|
-here's-an-int=
+heres-an-int=
 |}]

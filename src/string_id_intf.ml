@@ -4,11 +4,14 @@
 open! Import
 open Std_internal
 
+
 module type S = sig
   type t = private string [@@deriving equal, hash]
 
   include Identifiable with type t := t
   include Quickcheckable.S with type t := t
+
+  val arg_type : t Command.Arg_type.t
 
   module Stable : sig
     module V1 : sig
@@ -72,4 +75,6 @@ module type String_id = sig
       val validate : string -> unit Or_error.t
     end)
       () : S
+
+  module String_without_validation_without_pretty_printer : S with type t = string
 end

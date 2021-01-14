@@ -1,6 +1,6 @@
 (** This module extends {{!Base.Source_code_position}[Base.Source_code_position]}. *)
 
-(** @open *)
+(** @inline *)
 include module type of struct
   include Base.Source_code_position
 end

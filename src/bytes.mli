@@ -4,7 +4,7 @@ open! Import
 
 type t = bytes [@@deriving bin_io, typerep]
 
-(** @open *)
+(** @inline *)
 include module type of struct
   include Base.Bytes
 end

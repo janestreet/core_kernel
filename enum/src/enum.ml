@@ -8,7 +8,10 @@ module Single = struct
   type 'a t = (module S with type t = 'a)
 
   let command_friendly_name s =
-    s |> String.tr ~target:'_' ~replacement:'-' |> String.lowercase
+    s
+    |> String.tr ~target:'_' ~replacement:'-'
+    |> String.lowercase
+    |> String.filter ~f:(Char.( <> ) '\'')
   ;;
 
   let atom (type a) (m : a t) a =

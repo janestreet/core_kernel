@@ -7,7 +7,7 @@ type 'a t = 'a Base.Maybe_bound.t =
   | Unbounded
 [@@deriving bin_io, quickcheck]
 
-(** @open *)
+(** @inline *)
 include module type of struct
   include Base.Maybe_bound
 end

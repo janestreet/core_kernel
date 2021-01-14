@@ -5,7 +5,7 @@ type ('f, 's) t = ('f, 's) Base.Either.t =
   | Second of 's
 [@@deriving bin_io, typerep]
 
-(** @open *)
+(** @inline *)
 include module type of struct
   include Base.Either
 end

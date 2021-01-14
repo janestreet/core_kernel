@@ -94,13 +94,15 @@ module Arg_type : sig
   val of_lazy : ?key:'a Env.Multi.Key.t -> 'a t lazy_t -> 'a t
 
   val of_map
-    :  ?list_values_in_help:bool
+    :  ?case_sensitive:bool
+    -> ?list_values_in_help:bool
     -> ?key:'a Env.Multi.Key.t
-    -> (string, 'a, 'b) Map.t
+    -> 'a String.Map.t
     -> 'a t
 
   val of_alist_exn
-    :  ?list_values_in_help:bool
+    :  ?case_sensitive:bool
+    -> ?list_values_in_help:bool
     -> ?key:'a Env.Multi.Key.t
     -> (string * 'a) list
     -> 'a t
@@ -124,6 +126,11 @@ module Arg_type : sig
     val host_and_port : Host_and_port.t t
     val sexp : Sexp.t t
     val sexp_conv : (Sexp.t -> 'a) -> 'a t
+  end
+
+  module For_testing : sig
+    val complete : _ t -> Auto_complete.t
+    val parse : 'a t -> string -> 'a Or_error.t
   end
 end = struct
   type 'a t =
@@ -167,7 +174,45 @@ end = struct
   let sexp = create Sexp.of_string
   let sexp_conv of_sexp = create (fun s -> of_sexp (Sexp.of_string s))
 
-  let of_map ?(list_values_in_help = true) ?key map =
+  let associative ?(list_values_in_help = true) ?key ~case_sensitive alist =
+    let open struct
+      module type S = sig
+        include Comparator.S with type t = string
+
+        val is_prefix : string -> prefix:string -> bool
+      end
+
+      type 'a t =
+        | T :
+            { cmp : (module S with type comparator_witness = 'cmp)
+            ; map : (string, 'a, 'cmp) Map.t
+            }
+            -> 'a t
+    end in
+    let (T { cmp = (module S); map }) =
+      let make_map_raise_duplicate_key
+            (type cmp)
+            (module S : S with type comparator_witness = cmp)
+            alist
+        =
+        match Map.of_alist (module S) alist with
+        | `Ok map -> map
+        | `Duplicate_key (_ : S.t) ->
+          let duplicate_keys =
+            List.map alist ~f:(fun (k, (_ : 'a)) -> k, k)
+            |> Map.of_alist_multi (module S)
+            |> Map.filter ~f:(function
+              | [] | [ _ ] -> false
+              | _ :: _ :: _ -> true)
+            |> Map.data
+          in
+          raise_s
+            [%message
+              "Command.Spec.Arg_type.of_alist_exn" (duplicate_keys : string list list)]
+      in
+      let make cmp = T { cmp; map = make_map_raise_duplicate_key cmp alist } in
+      if case_sensitive then make (module String) else make (module String.Caseless)
+    in
     create'
       ~extra_doc:
         (lazy
@@ -179,22 +224,34 @@ end = struct
       ?key
       ~complete:(fun _ ~part:prefix ->
         List.filter_map (Map.to_alist map) ~f:(fun (name, _) ->
-          if String.is_prefix name ~prefix then Some name else None))
+          match S.is_prefix name ~prefix with
+          | false -> None
+          | true ->
+            (* Bash completion will not accept [Foo] as a completion for [f]. So we need
+               to match the capitalization given. *)
+            let suffix = String.subo name ~pos:(String.length prefix) in
+            let name = prefix ^ suffix in
+            Some name))
       (fun arg ->
          match Map.find map arg with
          | Some v -> v
          | None ->
-           failwithf "valid arguments: {%s}" (String.concat ~sep:"," (Map.keys map)) ())
+           let valid_arguments_extra =
+             if case_sensitive then "" else " (case insensitive)"
+           in
+           failwithf
+             "valid arguments%s: {%s}"
+             valid_arguments_extra
+             (String.concat ~sep:"," (Map.keys map))
+             ())
   ;;
 
-  let of_alist_exn ?list_values_in_help ?key alist =
-    match String.Map.of_alist alist with
-    | `Ok map -> of_map ?list_values_in_help ?key map
-    | `Duplicate_key key ->
-      failwithf
-        "Command.Spec.Arg_type.of_alist_exn ~list_values_in_help:false: duplicate key %s"
-        key
-        ()
+  let of_alist_exn ?(case_sensitive = true) ?list_values_in_help ?key alist =
+    associative ?list_values_in_help ?key ~case_sensitive alist
+  ;;
+
+  let of_map ?case_sensitive ?list_values_in_help ?key map =
+    of_alist_exn ?case_sensitive ?list_values_in_help ?key (Map.to_alist map)
   ;;
 
   let bool = of_alist_exn ~list_values_in_help:false [ "true", true; "false", false ]
@@ -259,6 +316,16 @@ end = struct
     let host_and_port = host_and_port
     let sexp = sexp
     let sexp_conv = sexp_conv
+  end
+
+  module For_testing = struct
+    let complete t =
+      match t.complete with
+      | Some f -> f
+      | None -> fun _ ~part:_ -> []
+    ;;
+
+    let parse t str = parse t str |> Or_error.of_exn_result
   end
 end
 

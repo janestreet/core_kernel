@@ -83,6 +83,8 @@ struct
     String.gen_nonempty' Char.gen_print
     |> Quickcheck.Generator.filter ~f:(fun string -> check string |> Result.is_ok)
   ;;
+
+  let arg_type = Command.Arg_type.create of_string
 end
 
 module Make_without_pretty_printer (M : sig
@@ -134,3 +136,9 @@ include Make
       let module_name = "Core_kernel.String_id"
     end)
     ()
+
+module String_without_validation_without_pretty_printer = struct
+  include String
+
+  let arg_type = Command.Arg_type.create Fn.id
+end

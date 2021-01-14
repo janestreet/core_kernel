@@ -30,7 +30,7 @@ module type S1_permissions = sig
 end
 
 module type Blit = sig
-  (** @open *)
+  (** @inline *)
   include module type of struct
     include Base.Blit
   end

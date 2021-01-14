@@ -23,7 +23,7 @@ module type S = sig
 end
 
 module type Info = sig
-  (** @open *)
+  (** @inline *)
   include module type of struct
     include Base.Info
   end

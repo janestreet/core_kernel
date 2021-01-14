@@ -4,7 +4,7 @@ open! Import
 
 type 'a t = ('a, Error.t) Result.t [@@deriving bin_io]
 
-(** @open *)
+(** @inline *)
 include module type of struct
   include Base.Or_error
 end

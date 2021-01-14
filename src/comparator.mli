@@ -9,7 +9,7 @@ type ('a, 'witness) t = ('a, 'witness) Base.Comparator.t = private
   }
 
 include module type of Base.Comparator with type ('a, 'witness) t := ('a, 'witness) t
-(** @open *)
+(** @inline *)
 
 (** The following module types and functors may be used to define stable modules *)
 

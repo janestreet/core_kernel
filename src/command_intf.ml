@@ -137,6 +137,7 @@ module type For_unix = sig
 end
 
 module type Command = sig
+  (** Specifications for command-line auto-completion. *)
   module Auto_complete : sig
     (** In addition to the argument prefix, an auto-completion spec has access to any
         previously parsed arguments in the form of a heterogeneous map into which those
@@ -171,7 +172,9 @@ module type Command = sig
 
     (** An auto-completing [Arg_type] over a finite set of values. *)
     val of_map
-      :  ?list_values_in_help:bool
+      :  ?case_sensitive:bool
+      (** Defaults to [true]. If [false], map keys must all be distinct when lowercased.*)
+      -> ?list_values_in_help:bool
       (** Defaults to [true]. If you set it to false the accepted values won't be listed
           in the command help. *)
       -> ?key:'a Univ_map.Multi.Key.t
@@ -180,7 +183,9 @@ module type Command = sig
 
     (** Convenience wrapper for [of_map]. Raises on duplicate keys. *)
     val of_alist_exn
-      :  ?list_values_in_help:bool
+      :  ?case_sensitive:bool
+      (** Defaults to [true]. If [false], map keys must all be distinct when lowercased.*)
+      -> ?list_values_in_help:bool
       -> ?key:'a Univ_map.Multi.Key.t
       -> (string * 'a) list
       -> 'a t
@@ -227,6 +232,11 @@ module type Command = sig
       val host_and_port : Host_and_port.t t
       val sexp : Sexp.t t
       val sexp_conv : (Sexp.t -> 'a) -> 'a t
+    end
+
+    module For_testing : sig
+      val complete : _ t -> Auto_complete.t
+      val parse : 'a t -> string -> 'a Or_error.t
     end
   end
 
@@ -498,7 +508,7 @@ module type Command = sig
       val and_arg_name : 'a t -> ('a * string) t
     end
 
-    include S (** @open *)
+    include S (** @inline *)
 
     (** Values included for convenience so you can specify all command line parameters
         inside a single local open of [Param]. *)

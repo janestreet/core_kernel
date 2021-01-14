@@ -1,15 +1,17 @@
-(** This module extends {{!Base.Array}[Base.Array]}. *)
+(** Fixed-length, mutable vector of elements with O(1) [get] and [set] operations.
+
+    This module extends {{!Base.Array}[Base.Array]}. *)
 
 open Import
 open Perms.Export
 
 (** {2 The [Array] type} *)
 
-type 'a t = 'a Base.Array.t [@@deriving bin_io, typerep]
+type 'a t = 'a Base.Array.t [@@deriving bin_io, quickcheck, typerep]
 
 (** {2 The signature included from [Base.Array]} *)
 
-(** @open *)
+(** @inline *)
 include module type of struct
   include Base.Array
 end

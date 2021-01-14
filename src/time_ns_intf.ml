@@ -303,7 +303,11 @@ module type Time_ns = sig
     module Alternate_sexp : sig
       module V1 : sig
         type t = Alternate_sexp.t [@@deriving bin_io, compare, hash, sexp]
-        type comparator_witness = Alternate_sexp.comparator_witness
+
+        include
+          Comparator.Stable.V1.S
+          with type t := t
+           and type comparator_witness = Alternate_sexp.comparator_witness
 
         include
           Comparable.Stable.V1.S

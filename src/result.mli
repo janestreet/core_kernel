@@ -7,7 +7,7 @@ type ('a, 'b) t = ('a, 'b) Base.Result.t =
   | Error of 'b
 [@@deriving bin_io, compare, equal, hash, sexp]
 
-include module type of Base.Result with type ('a, 'b) t := ('a, 'b) t (** @open *)
+include module type of Base.Result with type ('a, 'b) t := ('a, 'b) t (** @inline *)
 
 module Stable : sig
   module V1 : sig

@@ -4,7 +4,7 @@
 
 open! Import
 
-include module type of Caml.Arg (** @open *)
+include module type of Caml.Arg (** @inline *)
 
 type t = key * spec * doc
 

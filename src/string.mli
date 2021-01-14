@@ -1,6 +1,6 @@
 (** This module extends {{!Base.String}[Base.String]}. *)
 
-(** @open *)
+(** @inline *)
 include module type of struct
   include Base.String
 end
