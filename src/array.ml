@@ -36,7 +36,7 @@ module T = struct
 
   (* See OCaml perf notes for why these array blits are special cased -- in particular,
      the section entitled "Fast, Slow and Incorrect Array blits" of
-     https://janestreet.github.io/ocaml-perf-notes.html *)
+     https://web.archive.org/web/20130220000229/http://janestreet.github.com/ocaml-perf-notes.html *)
   module Int = struct
     type t_ = int array [@@deriving bin_io, compare, sexp]
 

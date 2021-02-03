@@ -11,5 +11,5 @@
  (c_library_flags (:include rt-flags))
  (c_names bigstring_stubs md5_stubs array_stubs gc_stubs time_ns_stubs
   heap_block_stubs)
- (preprocess (pps ppx_jane -check-doc-comments)) (preprocessor_deps config.h)
+ (preprocess (pps ppx_jane)) (preprocessor_deps config.h)
  (js_of_ocaml (javascript_files strftime.js runtime.js)))

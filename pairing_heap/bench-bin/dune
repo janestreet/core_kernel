@@ -1,3 +1,2 @@
 (executables (names bench_pairing_heap)
- (libraries core core_bench pairing_heap)
- (preprocess (pps ppx_jane -allow-unannotated-ignores)))
+ (libraries core core_bench pairing_heap) (preprocess (pps ppx_jane)))
