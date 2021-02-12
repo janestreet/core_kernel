@@ -38,7 +38,8 @@ end
 
 type t = string [@@deriving typerep]
 
-include Identifiable.Extend
+include
+  Identifiable.Extend
     (struct
       include Base.String
 

@@ -129,8 +129,9 @@ let%test_module "Time_ns.Utc.to_date_and_span_since_start_of_day" =
         let date, span_since_start_of_day =
           Core_kernel.Time_ns.Utc.to_date_and_span_since_start_of_day time_ns
         in
-        if Time_ns.Span.( < ) span_since_start_of_day Time_ns.Span.zero
-        || Time_ns.Span.( >= ) span_since_start_of_day Time_ns.Span.day
+        if
+          Time_ns.Span.( < ) span_since_start_of_day Time_ns.Span.zero
+          || Time_ns.Span.( >= ) span_since_start_of_day Time_ns.Span.day
         then
           raise_s
             [%message

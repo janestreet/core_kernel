@@ -170,7 +170,8 @@ module Stable = struct
   module V1 = struct
     type nonrec t = t [@@deriving compare, hash]
 
-    include Binable0.Of_binable_without_uuid [@alert "-legacy"]
+    include
+      Binable0.Of_binable_without_uuid [@alert "-legacy"]
         (Float)
         (struct
           type nonrec t = t
@@ -229,7 +230,8 @@ module Stable = struct
   module V2 = struct
     type nonrec t = t [@@deriving compare, hash]
 
-    include Binable0.Of_binable_without_uuid [@alert "-legacy"]
+    include
+      Binable0.Of_binable_without_uuid [@alert "-legacy"]
         (Int63)
         (struct
           type nonrec t = t
@@ -317,7 +319,8 @@ let[@deprecated
   | `Words -> of_words_float_exn value
 ;;
 
-include Quickcheckable.Of_quickcheckable
+include
+  Quickcheckable.Of_quickcheckable
     (Repr)
     (struct
       type nonrec t = t

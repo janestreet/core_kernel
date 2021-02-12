@@ -60,8 +60,9 @@ module Date_and_ofday = struct
     (* $ TZ=UTC date --date=@253402300799
        Fri Dec 31 23:59:59 UTC 9999 *)
     let gmtime_upper_bound = 253_402_300_799. in
-    if Float.( >= ) sec_since_epoch (gmtime_upper_bound +. 1.)
-    || Float.( < ) sec_since_epoch gmtime_lower_bound
+    if
+      Float.( >= ) sec_since_epoch (gmtime_upper_bound +. 1.)
+      || Float.( < ) sec_since_epoch gmtime_lower_bound
     then failwithf "Time.gmtime: out of range (%f)" sec_since_epoch ()
   ;;
 

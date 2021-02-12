@@ -25,7 +25,8 @@ let%test_module _ =
         module T = struct
           type t = int [@@deriving compare]
 
-          include Sexpable.Of_sexpable.V1
+          include
+            Sexpable.Of_sexpable.V1
               (String)
               (struct
                 type t = int
@@ -34,7 +35,8 @@ let%test_module _ =
                 let of_sexpable = int_of_string
               end)
 
-          include Binable.Of_binable.V1 [@alert "-legacy"]
+          include
+            Binable.Of_binable.V1 [@alert "-legacy"]
               (String)
               (struct
                 type t = int
@@ -54,7 +56,8 @@ let%test_module _ =
         module T = struct
           type 'a t = 'a option [@@deriving compare]
 
-          include Sexpable.Of_sexpable1.V1
+          include
+            Sexpable.Of_sexpable1.V1
               (List)
               (struct
                 type 'a t = 'a option
@@ -63,7 +66,8 @@ let%test_module _ =
                 let of_sexpable = List.hd
               end)
 
-          include Binable.Of_binable1.V1 [@alert "-legacy"]
+          include
+            Binable.Of_binable1.V1 [@alert "-legacy"]
               (List)
               (struct
                 type 'a t = 'a option
@@ -107,7 +111,8 @@ let%test_module _ =
             ;;
           end
 
-          include Sexpable.Of_sexpable2.V1
+          include
+            Sexpable.Of_sexpable2.V1
               (Format)
               (struct
                 type nonrec ('a, 'b) t = ('a, 'b) t
@@ -116,7 +121,8 @@ let%test_module _ =
                 let of_sexpable = Format.to_t
               end)
 
-          include Binable.Of_binable2.V1 [@alert "-legacy"]
+          include
+            Binable.Of_binable2.V1 [@alert "-legacy"]
               (Format)
               (struct
                 type nonrec ('a, 'b) t = ('a, 'b) t

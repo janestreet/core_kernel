@@ -569,6 +569,9 @@ val zero
   :  (read_write, _) t
   -> unit
 
+(** Create a new iobuf whose contents are the appended contents of the passed array. *)
+val concat : ([> read ], _) t array -> (_, _) t
+
 (** {2 Expert} *)
 
 (** The [Expert] module is for building efficient out-of-module [Iobuf] abstractions. *)

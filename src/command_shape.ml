@@ -604,8 +604,7 @@ module Flag_help_display = struct
         if String.length flag_name_with_aliases >= dot_indentation_offset
         then
           flag_on_its_own_line
-          :: prefix_doc_wrapped_first_line_with ""
-          :: wrapped_doc_lines
+          :: prefix_doc_wrapped_first_line_with "" :: wrapped_doc_lines
         else
           prefix_doc_wrapped_first_line_with flag_name_with_aliases :: wrapped_doc_lines
     ;;

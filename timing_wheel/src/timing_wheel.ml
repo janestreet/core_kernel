@@ -1243,7 +1243,8 @@ end = struct
       List.foldi
         level_bits
         ~init:(Num_key_bits.zero, Key.zero, [])
-        ~f:(fun index
+        ~f:(fun
+             index
              (bits_per_slot, max_level_min_allowed_key, levels)
              (level_bits : Num_key_bits.t)
              ->

@@ -13,7 +13,8 @@ module Stable = struct
   end
 end
 
-include Identifiable.Extend
+include
+  Identifiable.Extend
     (Base.Int)
     (struct
       type t = int [@@deriving bin_io]

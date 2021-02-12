@@ -261,10 +261,11 @@ let integers n =
   let t = create ~cmp:Int.compare () in
   for i = 1 to n do
     add t i;
-    if i % 10 = 0
-    (* We need to pop from time to time to trigger the amortized tree reorganizations.  If
-       we don't do this the resulting structure is just a linked list and the caller is
-       not flexed as completely as it should be. *)
+    if
+      i % 10 = 0
+      (* We need to pop from time to time to trigger the amortized tree reorganizations.  If
+         we don't do this the resulting structure is just a linked list and the caller is
+         not flexed as completely as it should be. *)
     then (
       ignore (pop t);
       add t i)

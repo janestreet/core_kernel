@@ -314,7 +314,8 @@ struct
     of_serialized (Serialized.t_of_sexp Key.t_of_sexp data_of_sexp sexp)
   ;;
 
-  include Binable.Of_binable1_without_uuid [@alert "-legacy"]
+  include
+    Binable.Of_binable1_without_uuid [@alert "-legacy"]
       (struct
         type 'data t = (Key.t, 'data) Serialized.t [@@deriving bin_io]
       end)

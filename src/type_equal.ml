@@ -7,7 +7,8 @@ module Id = struct
     module Upstream = Base.Type_equal.Id.Uid
     include Base.Type_equal.Id.Uid
 
-    include Comparable.Extend
+    include
+      Comparable.Extend
         (Upstream)
         (struct
           type t = Base.Type_equal.Id.Uid.t [@@deriving sexp]

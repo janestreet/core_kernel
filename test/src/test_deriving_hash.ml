@@ -8,7 +8,8 @@ module M1 = struct
 
   include T
 
-  include Deriving_hash.Of_deriving_hash
+  include
+    Deriving_hash.Of_deriving_hash
       (String)
       (struct
         include T

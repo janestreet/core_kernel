@@ -19,7 +19,8 @@ end
 
 open! Import
 
-include Identifiable.Extend
+include
+  Identifiable.Extend
     (Base.Unit)
     (struct
       type t = unit [@@deriving bin_io]

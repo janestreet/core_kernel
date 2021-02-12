@@ -422,7 +422,8 @@ module Flag = struct
         else (
           let { Doc.arg_doc; doc } = Doc.parse ~action ~doc in
           (wrap_if_optional t (Doc.concat ~name ~arg_doc), doc)
-          :: List.map aliases ~f:(fun x ->
+          ::
+          List.map aliases ~f:(fun x ->
             ( wrap_if_optional t (Doc.concat ~name:x ~arg_doc)
             , sprintf "same as \"%s\"" name )))
       ;;
@@ -2069,17 +2070,19 @@ module Deprecated = struct
         if with_flags
         then
           base_help
-          :: List.map
-               ~f:(fun (flag, h) -> new_s ^ flag, h)
-               (List.sort
-                  ~compare:Base.Deprecated.subcommand_cmp_fst
-                  (Base.Deprecated.flags_help ~display_help_flags:false base))
+          ::
+          List.map
+            ~f:(fun (flag, h) -> new_s ^ flag, h)
+            (List.sort
+               ~compare:Base.Deprecated.subcommand_cmp_fst
+               (Base.Deprecated.flags_help ~display_help_flags:false base))
         else [ base_help ]
       | Group { summary; subcommands; readme = _; body = _ } ->
         (s ^ cmd, summary)
-        :: (Lazy.force subcommands
-            |> List.sort ~compare:Base.Deprecated.subcommand_cmp_fst
-            |> List.concat_map ~f:(fun (cmd', t) -> help_recursive_rec ~cmd:cmd' t new_s))
+        ::
+        (Lazy.force subcommands
+         |> List.sort ~compare:Base.Deprecated.subcommand_cmp_fst
+         |> List.concat_map ~f:(fun (cmd', t) -> help_recursive_rec ~cmd:cmd' t new_s))
       | Exec _ ->
         (* Command.exec does not support deprecated commands *)
         []

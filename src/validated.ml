@@ -48,15 +48,14 @@ module Add_bin_io (Raw : sig
   end)
     (Validated : S with type raw := Raw.t) =
 struct
-  include Binable.Of_binable_without_uuid [@alert "-legacy"]
+  include
+    Binable.Of_binable_without_uuid [@alert "-legacy"]
       (Raw)
       (struct
         type t = Raw.t
 
         let of_binable raw =
-          if Raw.validate_binio_deserialization
-          then Validated.create_exn raw
-          else raw
+          if Raw.validate_binio_deserialization then Validated.create_exn raw else raw
         ;;
 
         let to_binable = Fn.id

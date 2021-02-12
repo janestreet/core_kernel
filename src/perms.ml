@@ -80,7 +80,8 @@ module Only_used_as_phantom_type1 (Name : sig
   let hash_fold_t _ _ _ = failwithf "Unexpectedly called [%s.hash_fold_t]" Name.name ()
   let t_sexp_grammar = Base.Nothing.t_sexp_grammar
 
-  include Binable.Of_binable1_without_uuid [@alert "-legacy"]
+  include
+    Binable.Of_binable1_without_uuid [@alert "-legacy"]
       (struct
         type 'a t = 'a [@@deriving bin_io]
       end)

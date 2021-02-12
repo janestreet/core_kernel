@@ -50,7 +50,8 @@ struct
           | Error err -> of_sexp_error err sexp
         ;;
 
-        include Binable.Of_binable_without_uuid [@alert "-legacy"]
+        include
+          Binable.Of_binable_without_uuid [@alert "-legacy"]
             (String)
             (struct
               type nonrec t = t
@@ -92,7 +93,8 @@ module Make_without_pretty_printer (M : sig
   end)
     () =
 struct
-  include Make_with_validate_without_pretty_printer
+  include
+    Make_with_validate_without_pretty_printer
       (struct
         let module_name = M.module_name
         let validate = Fn.const (Ok ())
@@ -131,7 +133,8 @@ struct
     end)
 end
 
-include Make
+include
+  Make
     (struct
       let module_name = "Core_kernel.String_id"
     end)

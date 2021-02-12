@@ -42,7 +42,7 @@ let span_examples =
     ]
   in
   let pos_and_neg_units = units @ List.map units ~f:Time.Span.neg in
-  (Time.Span.zero :: pos_and_neg_units)
+  Time.Span.zero :: pos_and_neg_units
   @ List.map pos_and_neg_units ~f:(fun span -> Time.Span.scale span Float.pi)
 ;;
 

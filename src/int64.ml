@@ -1,6 +1,7 @@
 open! Import
 
-include Identifiable.Extend
+include
+  Identifiable.Extend
     (Base.Int64)
     (struct
       type t = int64 [@@deriving bin_io]

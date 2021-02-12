@@ -2,7 +2,8 @@ open! Import
 
 type t = char [@@deriving typerep]
 
-include Identifiable.Extend
+include
+  Identifiable.Extend
     (Base.Char)
     (struct
       type t = char [@@deriving bin_io]

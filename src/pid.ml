@@ -7,7 +7,8 @@ module Stable = struct
 
       let ensure i = if i <= 0 then raise (Pid_must_be_positive i) else i
 
-      include Sexpable.Stable.Of_sexpable.V1
+      include
+        Sexpable.Stable.Of_sexpable.V1
           (Int.Stable.V1)
           (struct
             type t = Int.Stable.V1.t
@@ -16,7 +17,8 @@ module Stable = struct
             let of_sexpable = ensure
           end)
 
-      include Binable.Stable.Of_binable.V1 [@alert "-legacy"]
+      include
+        Binable.Stable.Of_binable.V1 [@alert "-legacy"]
           (Int.Stable.V1)
           (struct
             type t = Int.Stable.V1.t

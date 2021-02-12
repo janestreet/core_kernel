@@ -4,7 +4,8 @@ module Bin : Binable0.S with type t := Base.Int63.t = struct
   module Bin_emulated = struct
     type t = Base.Int63.Private.Emul.t
 
-    include Binable0.Of_binable_without_uuid [@alert "-legacy"]
+    include
+      Binable0.Of_binable_without_uuid [@alert "-legacy"]
         (Int64)
         (struct
           type nonrec t = t
@@ -56,7 +57,8 @@ end
 let typerep_of_t = typerep_of_int63
 let typename_of_t = typename_of_int63
 
-include Identifiable.Extend
+include
+  Identifiable.Extend
     (Base.Int63)
     (struct
       type nonrec t = t

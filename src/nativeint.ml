@@ -1,6 +1,7 @@
 open! Import
 
-include Identifiable.Extend
+include
+  Identifiable.Extend
     (Base.Nativeint)
     (struct
       type t = nativeint [@@deriving bin_io]

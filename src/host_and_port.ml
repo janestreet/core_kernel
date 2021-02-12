@@ -21,7 +21,8 @@ module Stable = struct
     module T1 = struct
       include T0
 
-      include Binable.Stable.Of_binable.V1 [@alert "-legacy"]
+      include
+        Binable.Stable.Of_binable.V1 [@alert "-legacy"]
           (Serializable)
           (struct
             include T0
@@ -39,7 +40,8 @@ module Stable = struct
                   957990f0fc4161fb874e66872550fb40 |}]
       ;;
 
-      include Sexpable.Stable.Of_sexpable.V1
+      include
+        Sexpable.Stable.Of_sexpable.V1
           (Serializable)
           (struct
             include T0

@@ -2366,3 +2366,21 @@ let memcmp a b =
 
 let memset t ~pos ~len c = Bigstring.memset ~pos:(buf_pos_exn t ~pos ~len) ~len t.buf c
 let zero t = memset t ~pos:0 ~len:(length t) '\000'
+
+let concat bufs =
+  let total_length = ref 0 in
+  let n = Array.length bufs in
+  for i = 0 to n - 1 do
+    (* This can overflow in 32 bit and javascript, so safe blits below. *)
+    total_length := !total_length + length (Array.unsafe_get bufs i)
+  done;
+  let t = create ~len:!total_length in
+  let pos = ref 0 in
+  for i = 0 to n - 1 do
+    let src = Array.unsafe_get bufs i in
+    let len = length src in
+    Blit.blit ~src ~dst:t ~src_pos:0 ~dst_pos:!pos ~len;
+    pos := !pos + len
+  done;
+  t
+;;

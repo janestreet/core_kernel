@@ -23,7 +23,8 @@ module Stable = struct
 
     include T
 
-    include Binable.Of_binable1_without_uuid [@alert "-legacy"]
+    include
+      Binable.Of_binable1_without_uuid [@alert "-legacy"]
         (Format)
         (struct
           include T
@@ -32,7 +33,8 @@ module Stable = struct
           let to_binable = to_format
         end)
 
-    include Sexpable.Of_sexpable1
+    include
+      Sexpable.Of_sexpable1
         (Format)
         (struct
           include T

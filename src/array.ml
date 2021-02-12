@@ -52,7 +52,8 @@ module T = struct
       [@@noalloc]
     end
 
-    include Test_blit.Make_and_test
+    include
+      Test_blit.Make_and_test
         (struct
           type t = int
 
@@ -87,7 +88,8 @@ module T = struct
       [@@noalloc]
     end
 
-    include Test_blit.Make_and_test
+    include
+      Test_blit.Make_and_test
         (struct
           type t = float
 

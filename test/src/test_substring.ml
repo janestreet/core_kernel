@@ -172,7 +172,8 @@ let%test_module "quickcheck" =
   end)
 ;;
 
-include Test
+include
+  Test
     (struct
       include Bigstring
 

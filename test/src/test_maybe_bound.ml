@@ -79,8 +79,9 @@ let%test_module "[As_lower_bound.compare], [As_upper_bound.compare]" =
         List.iter all ~f:(fun t2 ->
           List.iter Ord.all ~f:(fun a ->
             let compare = Ord.compare in
-            if As_lower_bound.compare compare t1 t2 <= 0
-            && is_lower_bound t2 ~of_:a ~compare
+            if
+              As_lower_bound.compare compare t1 t2 <= 0
+              && is_lower_bound t2 ~of_:a ~compare
             then require [%here] (is_lower_bound t1 ~of_:a ~compare))))
     ;;
 
@@ -89,8 +90,9 @@ let%test_module "[As_lower_bound.compare], [As_upper_bound.compare]" =
         List.iter all ~f:(fun t2 ->
           List.iter Ord.all ~f:(fun a ->
             let compare = Ord.compare in
-            if As_upper_bound.compare compare t1 t2 <= 0
-            && is_upper_bound t1 ~of_:a ~compare
+            if
+              As_upper_bound.compare compare t1 t2 <= 0
+              && is_upper_bound t1 ~of_:a ~compare
             then require [%here] (is_upper_bound t2 ~of_:a ~compare))))
     ;;
   end)

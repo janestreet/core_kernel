@@ -1,7 +1,8 @@
 open! Import
 include Base.Uniform_array
 
-include Binable.Of_binable1_without_uuid [@alert "-legacy"]
+include
+  Binable.Of_binable1_without_uuid [@alert "-legacy"]
     (Array)
     (struct
       type nonrec 'a t = 'a t

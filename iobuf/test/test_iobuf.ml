@@ -2250,3 +2250,16 @@ let%expect_test "check seek-indifferent r/w interfaces work on both kinds" =
   Iobuf.Blit.blito ~dst:(Iobuf.no_seek t) ~src ();
   [%expect {| |}]
 ;;
+
+let%expect_test "concat" =
+  let test arr = print_string (Iobuf.to_string (Iobuf.concat arr)) in
+  test [||];
+  [%expect {| |}];
+  test [| Iobuf.of_string "foo" |];
+  [%expect {| foo |}];
+  test [| Iobuf.of_string "foo"; Iobuf.of_string "bar" |];
+  [%expect {| foobar |}];
+  let long = Iobuf.of_string "PREFIXfooFILLERbarSUFFIX" in
+  test [| Iobuf.sub_shared ~pos:6 ~len:3 long; Iobuf.sub_shared ~pos:15 ~len:3 long |];
+  [%expect {| foobar |}]
+;;

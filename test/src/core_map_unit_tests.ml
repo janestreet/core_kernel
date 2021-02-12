@@ -566,7 +566,7 @@ struct
     in
     let alist = random_alist filtered in
     let caml_map = Caml_map.add Key.sample 6 (caml_map_of_alist alist) in
-    let alist' = ((Key.sample, 1) :: (Key.sample, 2) :: alist) @ [ Key.sample, 3 ] in
+    let alist' = (Key.sample, 1) :: (Key.sample, 2) :: alist @ [ Key.sample, 3 ] in
     let core_map_fold = Map.of_alist_fold ~init:0 ~f:( + ) alist' in
     let core_map_reduce = Map.of_alist_reduce ~f:( + ) alist' in
     assert (equal_maps ~data_equal:( = ) ~caml_map core_map_fold);
@@ -679,7 +679,7 @@ struct
       List.filter Key.samples ~f:(fun key -> not (Key.equal key Key.sample))
     in
     let input =
-      ((Key.sample, 1) :: (Key.sample, 2) :: random_alist filtered) @ [ Key.sample, 3 ]
+      (Key.sample, 1) :: (Key.sample, 2) :: random_alist filtered @ [ Key.sample, 3 ]
     in
     let alist = Map.of_alist_multi input in
     let sequence = Map.of_sequence_multi (Sequence.of_list input) in
@@ -1779,11 +1779,12 @@ struct
       let subrange_computed_naively =
         try
           Map.fold map ~init:(Map.empty ()) ~f:(fun ~key ~data acc ->
-            if Maybe_bound.interval_contains_exn
-                 key
-                 ~lower:lower_bound
-                 ~upper:upper_bound
-                 ~compare:Key.compare
+            if
+              Maybe_bound.interval_contains_exn
+                key
+                ~lower:lower_bound
+                ~upper:upper_bound
+                ~compare:Key.compare
             then Map.set acc ~key ~data
             else acc)
         with
@@ -2127,7 +2128,8 @@ struct
           (struct
             let examples =
               []
-              :: List.mapi Key.samples ~f:(fun i key -> key, Char.of_int_exn i)
+              ::
+              List.mapi Key.samples ~f:(fun i key -> key, Char.of_int_exn i)
               :: List.mapi Key.samples ~f:(fun i key -> [ key, Char.of_int_exn i ])
               |> List.map ~f:Map.of_alist_exn
             ;;
