@@ -45,16 +45,7 @@ let%expect_test "No_poly_compare" =
 ;;
 
 let%expect_test "merge_all" =
-  let merge_all =
-    Sequence.merge_all
-      (module struct
-        type 'a t = 'a Fheap.t
-
-        let create ~compare = Fheap.create ~cmp:compare
-        let add = Fheap.add
-        let remove_min = Fheap.pop
-      end)
-  in
+  let merge_all = Sequence.merge_all (module Fheap) in
   let compare = No_poly_compare.compare Int.compare in
   (* We take up to 20 elements so we can test infinite sequences. *)
   let list_of_sequence sequence = Sequence.to_list (Sequence.take sequence 20) in

@@ -41,7 +41,7 @@ module type Heap = sig
 
   val create : compare:('a -> 'a -> int) -> 'a t
   val add : 'a t -> 'a -> 'a t
-  val remove_min : 'a t -> ('a * 'a t) option
+  val pop_min : 'a t -> ('a * 'a t) option
 end
 
 (** Merges elements from sequences that are assumed to be sorted by [compare] to produce a

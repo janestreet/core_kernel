@@ -422,7 +422,9 @@ module Poly = struct
     Using_comparator.sexp_of_t sexp_of_k sexp_of_v [%sexp_of: _] t
   ;;
 
-  let t_sexp_grammar = List.Assoc.t_sexp_grammar
+  let t_sexp_grammar k_grammar v_grammar =
+    Sexplib0.Private.Raw_grammar.coerce (List.Assoc.t_sexp_grammar k_grammar v_grammar)
+  ;;
 
   include Bin_prot.Utils.Make_iterable_binable2 (struct
       type nonrec ('a, 'b) t = ('a, 'b) t
@@ -450,7 +452,10 @@ module Poly = struct
     type comparator_witness = Comparator.Poly.comparator_witness
 
     let sexp_of_t sexp_of_k sexp_of_v t = sexp_of_t sexp_of_k sexp_of_v [%sexp_of: _] t
-    let t_sexp_grammar = List.Assoc.t_sexp_grammar
+
+    let t_sexp_grammar k_grammar v_grammar =
+      Sexplib0.Private.Raw_grammar.coerce (List.Assoc.t_sexp_grammar k_grammar v_grammar)
+    ;;
   end
 end
 

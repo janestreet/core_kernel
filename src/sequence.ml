@@ -37,7 +37,7 @@ module type Heap = sig
 
   val create : compare:('a -> 'a -> int) -> 'a t
   val add : 'a t -> 'a -> 'a t
-  val remove_min : 'a t -> ('a * 'a t) option
+  val pop_min : 'a t -> ('a * 'a t) option
 end
 
 let merge_all (module Heap : Heap) seqs ~compare =
@@ -64,7 +64,7 @@ let merge_all (module Heap : Heap) seqs ~compare =
          | Skip seq -> Skip { not_yet_in_heap = seq :: not_yet_in_heap; heap }
          | Yield (elt, seq) -> Skip { not_yet_in_heap; heap = Heap.add heap (elt, seq) })
       | [] ->
-        (match Heap.remove_min heap with
+        (match Heap.pop_min heap with
          | None -> Done
          | Some ((elt, seq), heap) -> Yield (elt, { heap; not_yet_in_heap = [ seq ] })))
 ;;

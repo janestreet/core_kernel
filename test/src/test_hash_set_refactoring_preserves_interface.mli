@@ -218,7 +218,10 @@ module M = Core_kernel.Hash_set.M
 
 val sexp_of_m__t : (module Sexp_of_m with type t = 'elt) -> 'elt t -> Sexplib0.Sexp.t
 val m__t_of_sexp : (module M_of_sexp with type t = 'elt) -> Sexplib0.Sexp.t -> 'elt t
-val m__t_sexp_grammar : Sexplib0.Private.Raw_grammar.t
+
+val m__t_sexp_grammar
+  :  (module Base__.Hash_set_intf.M_sexp_grammar with type t = 'elt)
+  -> 'elt t Sexplib0.Private.Raw_grammar.t
 
 module type M_quickcheck = Core_kernel__.Hash_set_intf.M_quickcheck
 

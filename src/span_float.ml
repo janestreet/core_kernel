@@ -304,7 +304,7 @@ module Stable = struct
     let sexp_of_t_v1_v2 t ~is_v2 = Sexp.Atom (to_string_v1_v2 t ~is_v2)
     let t_of_sexp sexp = t_of_sexp_v1_v2 sexp ~is_v2:false
     let sexp_of_t t = sexp_of_t_v1_v2 t ~is_v2:false
-    let t_sexp_grammar = String.t_sexp_grammar
+    let t_sexp_grammar = Sexplib0.Private.Raw_grammar.coerce String.t_sexp_grammar
   end
 
   module V2 = struct
@@ -697,7 +697,7 @@ module Stable = struct
         of_sexp_error "Time.Span.Stable.V3.t_of_sexp: sexp must be an Atom" s
     ;;
 
-    let t_sexp_grammar = String.t_sexp_grammar
+    let t_sexp_grammar = Sexplib0.Private.Raw_grammar.coerce String.t_sexp_grammar
   end
 end
 

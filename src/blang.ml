@@ -250,7 +250,9 @@ module Stable = struct
       aux sexp
     ;;
 
-    let t_sexp_grammar = Base.Sexp.t_sexp_grammar
+    let t_sexp_grammar _ : _ t Sexplib0.Sexp.Private.Raw_grammar.t =
+      { untyped = Any "Blang.t" }
+    ;;
   end
 end
 

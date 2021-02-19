@@ -6,7 +6,7 @@ open Std_internal
 
 
 module type S = sig
-  type t = private string [@@deriving equal, hash]
+  type t = private string [@@deriving equal, hash, sexp_grammar]
 
   include Identifiable with type t := t
   include Quickcheckable.S with type t := t

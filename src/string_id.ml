@@ -11,7 +11,7 @@ struct
   module Stable = struct
     module V1 = struct
       module T = struct
-        type t = string [@@deriving sexp, compare, equal, hash]
+        type t = string [@@deriving compare, equal, hash, sexp, sexp_grammar]
 
         let check_for_whitespace =
           let invalid s reason =

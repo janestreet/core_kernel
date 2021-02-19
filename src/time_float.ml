@@ -37,7 +37,7 @@ module Stable = struct
             sexp
       ;;
 
-      let t_sexp_grammar = Sexplib.Sexp.t_sexp_grammar
+      let t_sexp_grammar = Sexplib0.Private.Raw_grammar.coerce Sexplib.Sexp.t_sexp_grammar
     end
   end
 

@@ -10,4 +10,3 @@ module type Slot = Slot
 module type Slots = Slots
 
 module Slots : Slots
-

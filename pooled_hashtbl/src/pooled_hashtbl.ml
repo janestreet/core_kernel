@@ -1091,7 +1091,10 @@ module Poly = struct
   include Accessors
 
   let sexp_of_t = sexp_of_t
-  let t_sexp_grammar = List.Assoc.t_sexp_grammar
+
+  let t_sexp_grammar k_grammar v_grammar =
+    Sexplib0.Private.Raw_grammar.coerce (List.Assoc.t_sexp_grammar k_grammar v_grammar)
+  ;;
 
   include Bin_prot.Utils.Make_iterable_binable2 (struct
       type ('a, 'b) z = ('a, 'b) t
@@ -1249,6 +1252,10 @@ module type M_of_sexp = sig
   include Key with type t := t
 end
 
+module type M_sexp_grammar = sig
+  type t [@@deriving sexp_grammar]
+end
+
 let t_of_sexp ~hashable k_of_sexp d_of_sexp sexp =
   let alist = list_of_sexp (pair_of_sexp k_of_sexp d_of_sexp) sexp in
   of_alist_exn ~hashable alist ~size:(List.length alist)
@@ -1262,7 +1269,10 @@ let m__t_of_sexp (type k) (module K : M_of_sexp with type t = k) v_of_sexp s =
   t_of_sexp ~hashable:(Hashable.of_key (module K)) K.t_of_sexp v_of_sexp s
 ;;
 
-let m__t_sexp_grammar = Sexp.t_sexp_grammar
+let m__t_sexp_grammar (type k) (module K : M_sexp_grammar with type t = k) v_grammar =
+  Sexplib0.Private.Raw_grammar.coerce
+    (List.Assoc.t_sexp_grammar K.t_sexp_grammar v_grammar)
+;;
 
 module Using_hashable = struct
   type nonrec ('a, 'b) t = ('a, 'b) t [@@deriving sexp_of]

@@ -637,7 +637,7 @@ module Stable = struct
             of_sexp_error "Time_ns.Span.Stable.V2.t_of_sexp: sexp must be an Atom" sexp
         ;;
 
-        let t_sexp_grammar = String.t_sexp_grammar
+        let t_sexp_grammar = Sexplib0.Private.Raw_grammar.coerce String.t_sexp_grammar
       end
 
       include T0
