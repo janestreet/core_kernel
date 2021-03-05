@@ -78,7 +78,7 @@ module Only_used_as_phantom_type1 (Name : sig
   let t_of_sexp _ _ = failwithf "Unexpectedly called [%s.t_of_sexp]" Name.name ()
   let compare _ _ _ = failwithf "Unexpectedly called [%s.compare]" Name.name ()
   let hash_fold_t _ _ _ = failwithf "Unexpectedly called [%s.hash_fold_t]" Name.name ()
-  let t_sexp_grammar _ = Sexplib0.Private.Raw_grammar.coerce Base.Nothing.t_sexp_grammar
+  let t_sexp_grammar _ = Sexplib.Sexp_grammar.coerce Base.Nothing.t_sexp_grammar
 
   include
     Binable.Of_binable1_without_uuid [@alert "-legacy"]

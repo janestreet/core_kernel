@@ -196,7 +196,7 @@ end
 
 let sexp_of_t = Stable.V1.sexp_of_t
 let t_of_sexp = Stable.V1.t_of_sexp
-let t_sexp_grammar = Sexplib0.Private.Raw_grammar.coerce Stable.V1.t_sexp_grammar
+let t_sexp_grammar = Sexplib.Sexp_grammar.coerce Stable.V1.t_sexp_grammar
 let of_string = Stable.V1.of_string
 let to_string = Stable.V1.to_string
 let to_millisecond_string t = Stable.V1.to_string_with_unit t ~unit:`Millisecond

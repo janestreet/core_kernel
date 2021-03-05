@@ -469,7 +469,7 @@ let t_of_sexp f sexp = of_array (Array.t_of_sexp f sexp)
 let sexp_of_t f t = Array.sexp_of_t f (to_array t)
 
 let t_sexp_grammar elt_grammar =
-  Sexplib0.Private.Raw_grammar.coerce (Array.t_sexp_grammar elt_grammar)
+  Sexplib.Sexp_grammar.coerce (Array.t_sexp_grammar elt_grammar)
 ;;
 
 (* re-expose these here under a different name to avoid internal confusion *)

@@ -221,7 +221,7 @@ val m__t_of_sexp : (module M_of_sexp with type t = 'elt) -> Sexplib0.Sexp.t -> '
 
 val m__t_sexp_grammar
   :  (module Base__.Hash_set_intf.M_sexp_grammar with type t = 'elt)
-  -> 'elt t Sexplib0.Private.Raw_grammar.t
+  -> 'elt t Sexplib.Pre_sexp.Sexplib.Sexp_grammar.t
 
 module type M_quickcheck = Core_kernel__.Hash_set_intf.M_quickcheck
 

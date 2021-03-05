@@ -1093,7 +1093,7 @@ module Poly = struct
   let sexp_of_t = sexp_of_t
 
   let t_sexp_grammar k_grammar v_grammar =
-    Sexplib0.Private.Raw_grammar.coerce (List.Assoc.t_sexp_grammar k_grammar v_grammar)
+    Sexplib.Sexp_grammar.coerce (List.Assoc.t_sexp_grammar k_grammar v_grammar)
   ;;
 
   include Bin_prot.Utils.Make_iterable_binable2 (struct
@@ -1270,8 +1270,7 @@ let m__t_of_sexp (type k) (module K : M_of_sexp with type t = k) v_of_sexp s =
 ;;
 
 let m__t_sexp_grammar (type k) (module K : M_sexp_grammar with type t = k) v_grammar =
-  Sexplib0.Private.Raw_grammar.coerce
-    (List.Assoc.t_sexp_grammar K.t_sexp_grammar v_grammar)
+  Sexplib.Sexp_grammar.coerce (List.Assoc.t_sexp_grammar K.t_sexp_grammar v_grammar)
 ;;
 
 module Using_hashable = struct

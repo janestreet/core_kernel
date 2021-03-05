@@ -95,9 +95,7 @@ let t_of_sexp a_of_sexp sexp =
   { elts; length = List.length elts }
 ;;
 
-let t_sexp_grammar grammar =
-  Sexplib0.Private.Raw_grammar.coerce (List.t_sexp_grammar grammar)
-;;
+let t_sexp_grammar grammar = Sexplib.Sexp_grammar.coerce (List.t_sexp_grammar grammar)
 
 let until_empty t f =
   let rec loop () =

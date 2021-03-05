@@ -51,9 +51,7 @@ module Sexp_maybe = struct
        | exn -> Result.Error (sexp, Error.of_exn exn))
   ;;
 
-  let t_sexp_grammar (grammar : _ Sexplib0.Private.Raw_grammar.t)
-    : _ t Sexplib0.Private.Raw_grammar.t
-    =
+  let t_sexp_grammar (grammar : _ Sexplib.Sexp_grammar.t) : _ t Sexplib.Sexp_grammar.t =
     { untyped = Union [ grammar.untyped; Base.Sexp.t_sexp_grammar.untyped ] }
   ;;
 end
@@ -86,7 +84,7 @@ module With_text = struct
     | Atom text -> of_text a_of_sexp text |> Or_error.ok_exn
   ;;
 
-  let t_sexp_grammar _ = Sexplib0.Private.Raw_grammar.coerce Base.String.t_sexp_grammar
+  let t_sexp_grammar _ = Sexplib.Sexp_grammar.coerce Base.String.t_sexp_grammar
   let text t = t.text
   let value t = t.value
 

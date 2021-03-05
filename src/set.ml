@@ -322,7 +322,7 @@ module Poly = struct
   let sexp_of_t sexp_of_k t = sexp_of_t sexp_of_k [%sexp_of: _] t
 
   let t_sexp_grammar elt_grammar =
-    Sexplib0.Private.Raw_grammar.coerce (List.t_sexp_grammar elt_grammar)
+    Sexplib.Sexp_grammar.coerce (List.t_sexp_grammar elt_grammar)
   ;;
 
   include Bin_prot.Utils.Make_iterable_binable1 (struct
@@ -356,9 +356,7 @@ module Poly = struct
       Tree.t_of_sexp_direct elt_of_sexp sexp ~comparator:Comparator.Poly.comparator
     ;;
 
-    let t_sexp_grammar grammar =
-      Sexplib0.Private.Raw_grammar.coerce (List.t_sexp_grammar grammar)
-    ;;
+    let t_sexp_grammar grammar = Sexplib.Sexp_grammar.coerce (List.t_sexp_grammar grammar)
   end
 end
 

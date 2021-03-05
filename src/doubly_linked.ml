@@ -530,7 +530,7 @@ let sexp_of_t sexp_of_a t = List.sexp_of_t sexp_of_a (to_list t)
 let t_of_sexp a_of_sexp s = of_list (List.t_of_sexp a_of_sexp s)
 
 let t_sexp_grammar elt_grammar =
-  Sexplib0.Private.Raw_grammar.coerce (Base.List.t_sexp_grammar elt_grammar)
+  Sexplib.Sexp_grammar.coerce (Base.List.t_sexp_grammar elt_grammar)
 ;;
 
 let copy t = of_list (to_list t)
