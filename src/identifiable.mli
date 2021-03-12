@@ -1,4 +1,4 @@
-(** A signature for identifier types. *)
+(** Includes modules often used with identifiers, or "names of things", in your code. *)
 
 open! Import
 
