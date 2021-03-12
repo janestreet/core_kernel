@@ -14,7 +14,7 @@ module type Month = sig
     | Oct
     | Nov
     | Dec
-  [@@deriving bin_io, hash, sexp, variants, equal]
+  [@@deriving bin_io, hash, equal, quickcheck, sexp, variants]
 
   include Comparable.S_binable with type t := t
   include Hashable.S_binable with type t := t

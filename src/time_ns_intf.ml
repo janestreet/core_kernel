@@ -319,7 +319,7 @@ module type Time_ns = sig
     module Span : sig
       (** [V1] is currently only implemented in [Core]. *)
       module V2 : sig
-        type t = Span.t [@@deriving hash]
+        type t = Span.t [@@deriving hash, equal]
         type nonrec comparator_witness = Span.comparator_witness
 
         include

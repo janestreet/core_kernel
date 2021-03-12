@@ -214,49 +214,72 @@ module Step_test = struct
         ~sustained_rate_per_sec:1.
         ~burst_size:60
     in
-    let increase_bucket_limit time new_limit expect =
+    let increase_bucket_limit time burst_size sustained_rate_per_sec expect =
       ( time
       , Generic
           { f =
               (fun () ->
-                 let old_limit = Limiter.bucket_limit (bucket :> Limiter.t) in
+                 let old_burst_size = Limiter.bucket_limit (bucket :> Limiter.t) in
+                 let old_sustained_rate_per_sec =
+                   Limiter.hopper_to_bucket_rate_per_sec (bucket :> Limiter.t)
+                 in
                  match
-                   Limiter.Token_bucket.Starts_full.try_increase_bucket_limit
+                   Limiter.Token_bucket.Starts_full.try_reconfigure
                      bucket
-                     ~new_limit
+                     ~burst_size
+                     ~sustained_rate_per_sec
                  with
-                 | Increased ->
+                 | Reconfigured ->
                    if not expect
                    then
                      raise_s
                        [%message
-                         "incorrectly able to increase bucket_limit"
-                           (new_limit : int)
-                           (old_limit : int)]
+                         "incorrectly able to reconfigure"
+                           (burst_size : int)
+                           (sustained_rate_per_sec : float)
+                           (old_burst_size : int)
+                           (old_sustained_rate_per_sec
+                            : float Limiter.Infinite_or_finite.t)]
                  | Unable ->
                    if expect
                    then
                      raise_s
                        [%message
-                         "incorrectly unable to increase bucket_limit"
-                           (new_limit : int)
-                           (old_limit : int)])
+                         "incorrectly unable to reconfigure"
+                           (burst_size : int)
+                           (sustained_rate_per_sec : float)
+                           (old_burst_size : int)
+                           (old_sustained_rate_per_sec
+                            : float Limiter.Infinite_or_finite.t)])
           ; debug_sexp =
               [%message
-                "Increase_bucket_limit" (time : float) (new_limit : int) (expect : bool)]
+                "Reconfigure"
+                  (time : float)
+                  (burst_size : int)
+                  (sustained_rate_per_sec : float)
+                  (expect : bool)]
           } )
     in
     run
       (bucket :> Limiter.t)
       [ take 1. 60 true
       ; take 1. 1 false
-      ; increase_bucket_limit 1. 70 true (* Now have enough bucket space to take *)
+      ; increase_bucket_limit 1. 70 1. true (* Now have enough bucket space to take *)
       ; take 1. 11 false (* should only be 10 in the bucket now *)
       ; take 1. 9 true
-      ; increase_bucket_limit 1. 60 false
+      ; increase_bucket_limit 1. 60 1. false
       (* This should fail, and we should still have enough bucket space to take *)
       ; take 1. 1 true
       ; take 1. 1 false (* But now we're fresh out *)
+      ; increase_bucket_limit 1. 80 2. true
+      ; take 1. 10 true
+      ; return_to_hopper 1. 80
+      ; take 20. 39 true
+      (* We expect to have 39 in the bucket since we're now returning
+         at a rate of 2 per sec. *)
+      ; increase_bucket_limit 1. 80 (-1.) false
+      (* Here, we should make sure that we don't accept a negative rate *)
+      ; increase_bucket_limit 1. 80 0. true (* but a rate of zero is fine *)
       ]
   ;;
 

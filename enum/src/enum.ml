@@ -49,7 +49,10 @@ let assert_alphabetic_order_exn here (type a) ((module M) : a t) =
     as_strings
 ;;
 
-let arg_type' l = Command.Arg_type.of_alist_exn l
+let arg_type' ?list_values_in_help l =
+  Command.Arg_type.of_alist_exn ?list_values_in_help l
+;;
+
 let arg_type m = arg_type' (enum m)
 
 module Make_param = struct
@@ -58,27 +61,30 @@ module Make_param = struct
     ; doc : string
     }
 
-  let create ?represent_choice_with ~doc m =
+  let create ?represent_choice_with ?list_values_in_help ~doc m =
     let enum = enum m in
     let doc =
       match represent_choice_with with
       | None -> " " ^ doc
       | Some represent_choice_with -> represent_choice_with ^ " " ^ doc
     in
-    { arg_type = arg_type' enum; doc }
+    { arg_type = arg_type' ?list_values_in_help enum; doc }
   ;;
 end
 
 type ('a, 'b) make_param =
   ?represent_choice_with:string
+  -> ?list_values_in_help:bool
   -> ?aliases:string list
   -> string
   -> doc:string
   -> 'a t
   -> 'b Command.Param.t
 
-let make_param ~f ?represent_choice_with ?aliases flag_name ~doc m =
-  let { Make_param.arg_type; doc } = Make_param.create ?represent_choice_with ~doc m in
+let make_param ~f ?represent_choice_with ?list_values_in_help ?aliases flag_name ~doc m =
+  let { Make_param.arg_type; doc } =
+    Make_param.create ?represent_choice_with ?list_values_in_help ~doc m
+  in
   Command.Param.flag ?aliases flag_name ~doc (f arg_type)
 ;;
 
@@ -86,12 +92,15 @@ let make_param_optional_with_default_doc
       (type a)
       ~default
       ?represent_choice_with
+      ?list_values_in_help
       ?aliases
       flag_name
       ~doc
       (m : a t)
   =
-  let { Make_param.arg_type; doc } = Make_param.create ?represent_choice_with ~doc m in
+  let { Make_param.arg_type; doc } =
+    Make_param.create ?represent_choice_with ?list_values_in_help ~doc m
+  in
   Command.Param.flag_optional_with_default_doc
     ?aliases
     flag_name

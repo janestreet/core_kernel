@@ -181,7 +181,7 @@ module Stable = struct
   module V2 = struct
     module T = struct
       module T0 = struct
-        type nonrec t = t [@@deriving bin_io, compare, hash]
+        type nonrec t = t [@@deriving bin_io, compare, hash, equal]
 
         let of_int63_exn t = of_int63_ns t
         let to_int63 t = to_int63_ns t

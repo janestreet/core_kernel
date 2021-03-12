@@ -362,13 +362,8 @@ module Stable = struct
         ;;
       end
 
-      let of_utc_offset ~hours:offset =
+      let of_utc_offset_explicit_name ~name ~hours:offset =
         assert (offset >= -24 && offset <= 24);
-        let name =
-          if offset = 0
-          then "UTC"
-          else sprintf "UTC%s%d" (if offset < 0 then "-" else "+") (abs offset)
-        in
         let utc_offset_in_seconds = Int63.of_int (offset * 60 * 60) in
         { name
         ; original_filename = None
@@ -379,6 +374,15 @@ module Stable = struct
             { Regime.utc_offset_in_seconds; is_dst = false; abbrv = name }
         ; leap_seconds = []
         }
+      ;;
+
+      let of_utc_offset ~hours:offset =
+        let name =
+          if offset = 0
+          then "UTC"
+          else sprintf "UTC%s%d" (if offset < 0 then "-" else "+") (abs offset)
+        in
+        of_utc_offset_explicit_name ~name ~hours:offset
       ;;
     end
   end

@@ -35,6 +35,7 @@ module type Enum = sig
 
   type ('a, 'b) make_param =
     ?represent_choice_with:string
+    -> ?list_values_in_help:bool
     -> ?aliases:string list
     -> string
     -> doc:string

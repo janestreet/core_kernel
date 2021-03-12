@@ -5,6 +5,7 @@ include String_id_intf
 module Make_with_validate_without_pretty_printer (M : sig
     val module_name : string
     val validate : string -> unit Or_error.t
+    val include_default_validation : bool
   end)
     () =
 struct
@@ -29,9 +30,12 @@ struct
         let validate s = Result.map_error (M.validate s) ~f:Error.to_string_mach
 
         let check s =
-          match check_for_whitespace s with
-          | Ok () -> validate s
-          | Error error -> Error error
+          if M.include_default_validation
+          then (
+            match check_for_whitespace s with
+            | Ok () -> validate s
+            | Error error -> Error error)
+          else validate s
         ;;
 
         let to_string = Fn.id
@@ -98,6 +102,7 @@ struct
       (struct
         let module_name = M.module_name
         let validate = Fn.const (Ok ())
+        let include_default_validation = true
       end)
       ()
 end
@@ -105,6 +110,7 @@ end
 module Make_with_validate (M : sig
     val module_name : string
     val validate : string -> unit Or_error.t
+    val include_default_validation : bool
   end)
     () =
 struct

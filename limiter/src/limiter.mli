@@ -63,9 +63,9 @@ module Tokens_may_be_available_result : sig
     | When_return_to_hopper_is_called
 end
 
-module Try_increase_bucket_limit_result : sig
+module Try_reconfigure_result : sig
   type t =
-    | Increased
+    | Reconfigured
     | Unable
   [@@deriving sexp_of]
 end
@@ -100,13 +100,14 @@ module Token_bucket : sig
     val create_exn : now:Time_ns.t -> burst_size:int -> sustained_rate_per_sec:float -> t
 
     (** Increases the [bucket_limit] and the current [bucket_level] by the difference
-        between the current and new bucket limits. Decreasing the bucket_limit may cause the
-        bucket_level to become negative, breaking an invariant. If the new limit is lower
-        than the current limit, [Unable] is returned. *)
-    val try_increase_bucket_limit
+        between the current and new bucket limits. Decreasing the bucket_limit may cause
+        the [bucket_level] to become negative, breaking an invariant. If the new limit is
+        lower than the current limit, [Unable] is returned. *)
+    val try_reconfigure
       :  t
-      -> new_limit:int
-      -> Try_increase_bucket_limit_result.t
+      -> burst_size:int
+      -> sustained_rate_per_sec:float
+      -> Try_reconfigure_result.t
   end
 end
 

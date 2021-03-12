@@ -59,6 +59,8 @@ module type S = sig
       hours). *)
   val of_utc_offset : hours:int -> t
 
+  val of_utc_offset_explicit_name : name:string -> hours:int -> t
+
   (** [utc] the UTC time zone.  Included for convenience *)
   val utc : t
 

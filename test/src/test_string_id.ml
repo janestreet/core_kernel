@@ -33,6 +33,8 @@ module Even_int_id =
         then Or_error.error_s [%message "Not a valid Even_int_id" ~_:(s : string)]
         else Ok ()
       ;;
+
+      let include_default_validation = true
     end)
     ()
 
@@ -228,4 +230,52 @@ let%test_module "Verify reading/writing stable table sexp" =
       assert (Hashtbl.equal String_id.equal loaded_table table)
     ;;
   end)
+;;
+
+let%expect_test "include_default_validation" =
+  let test ~include_default_validation =
+    let module M =
+      Make_with_validate
+        (struct
+          let module_name = "M"
+
+          let validate s =
+            if String.( = ) s "foo" then error_s [%message "no foo"] else Ok ()
+          ;;
+
+          let include_default_validation = include_default_validation
+        end)
+        ()
+    in
+    List.iter [ "foobar"; "foo"; "  bar  "; " bar"; "bar "; "" ] ~f:(fun s ->
+      print_s
+        [%message s ~_:(Or_error.try_with (fun () -> M.of_string s) : M.t Or_error.t)])
+  in
+  test ~include_default_validation:false;
+  [%expect
+    {|
+    (foobar (Ok foobar))
+    (foo (Error (Invalid_argument "\"no foo\"")))
+    ("  bar  " (Ok "  bar  "))
+    (" bar" (Ok " bar"))
+    ("bar " (Ok "bar "))
+    ("" (Ok "")) |}];
+  test ~include_default_validation:true;
+  [%expect
+    {|
+    (foobar (Ok foobar))
+    (foo (Error (Invalid_argument "\"no foo\"")))
+    ("  bar  " (
+      Error (
+        Invalid_argument
+        "'  bar  ' is not a valid M because it has whitespace on the edge")))
+    (" bar" (
+      Error (
+        Invalid_argument
+        "' bar' is not a valid M because it has whitespace on the edge")))
+    ("bar " (
+      Error (
+        Invalid_argument
+        "'bar ' is not a valid M because it has whitespace on the edge")))
+    ("" (Error (Invalid_argument "'' is not a valid M because it is empty"))) |}]
 ;;

@@ -58,6 +58,15 @@ module type String_id = sig
   module Make_with_validate (M : sig
       val module_name : string
       val validate : string -> unit Or_error.t
+
+      (** By default, String_id performs some validation of its own in addition to calling
+          [validate], namely:
+
+          - The string cannot be empty;
+          - The string may not have whitespace at the beginning or the end.
+
+          You can turn this validation off using this flag. *)
+      val include_default_validation : bool
     end)
       () : S
 
@@ -73,6 +82,7 @@ module type String_id = sig
   module Make_with_validate_without_pretty_printer (M : sig
       val module_name : string
       val validate : string -> unit Or_error.t
+      val include_default_validation : bool
     end)
       () : S
 
