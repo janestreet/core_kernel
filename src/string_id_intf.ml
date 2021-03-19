@@ -29,6 +29,15 @@ module type S = sig
   end
 end
 
+(** Some extra features we provide in [Make] and other functors here,
+    but don't want to require of any string ID like type.
+*)
+module type S_with_extras = sig
+  type t = private string [@@deriving typerep]
+
+  include S with type t := t
+end
+
 module type String_id = sig
   module type S = S
 
@@ -42,7 +51,7 @@ module type String_id = sig
   module Make (M : sig
       val module_name : string
     end)
-      () : S
+      () : S_with_extras
 
   (** [Make_with_validate] is like [Make], but modifies [of_string]/[of_sexp]/[bin_read_t]
       to raise if [validate] returns an error.  Before using this functor
@@ -68,7 +77,7 @@ module type String_id = sig
           You can turn this validation off using this flag. *)
       val include_default_validation : bool
     end)
-      () : S
+      () : S_with_extras
 
   (** This does what [Make] does without registering a pretty printer.  Use this when the
       module that is made is not exposed in mli.  Registering a pretty printer without
@@ -76,7 +85,7 @@ module type String_id = sig
   module Make_without_pretty_printer (M : sig
       val module_name : string
     end)
-      () : S
+      () : S_with_extras
 
   (** See [Make_with_validate] and [Make_without_pretty_printer] *)
   module Make_with_validate_without_pretty_printer (M : sig
@@ -84,7 +93,7 @@ module type String_id = sig
       val validate : string -> unit Or_error.t
       val include_default_validation : bool
     end)
-      () : S
+      () : S_with_extras
 
   module String_without_validation_without_pretty_printer : S with type t = string
 end

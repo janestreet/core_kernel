@@ -3,6 +3,21 @@ include Base.Or_error
 
 type 'a t = ('a, Error.t) Result.t [@@deriving bin_io]
 
+module Expect_test_config_with_unit_expect = struct
+  module IO_run = Base.Or_error
+
+  module IO_flush = struct
+    include Expect_test_config.IO_flush
+
+    let to_run t = Base.Or_error.return t
+  end
+
+  let flush () = ()
+  let run f = ok_exn (f ())
+  let flushed () = true
+  let upon_unreleasable_issue = Expect_test_config.upon_unreleasable_issue
+end
+
 module Expect_test_config = struct
   module IO = Base.Or_error
   module IO_run = IO

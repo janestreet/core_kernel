@@ -198,6 +198,7 @@ let am_running_inline_test = am_running_inline_test
 let am_running_test = am_running_test
 let does_raise = Exn.does_raise
 let sec = Time_float.Span.of_sec
+let ( ^/ ) = Filename.concat
 
 (** We perform these side effects here because we want them to run for any code that uses
     [Core_kernel].  If this were in another module in [Core_kernel] that was not used in
@@ -219,5 +220,3 @@ module Core_kernel_private = struct
 
   module Time_ns_alternate_sexp = Time_ns_alternate_sexp
 end
-
-let ( ^/ ) = Filename.concat

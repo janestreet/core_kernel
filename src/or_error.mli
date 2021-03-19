@@ -13,6 +13,9 @@ with type 'a t := 'a t
 module Expect_test_config :
   Expect_test_config_types.S with type 'a IO_flush.t = 'a t with type 'a IO_run.t = 'a t
 
+module Expect_test_config_with_unit_expect :
+  Expect_test_config_types.S with type 'a IO_flush.t = 'a with type 'a IO_run.t = 'a t
+
 module Stable : sig
   (** [Or_error.t] is wire compatible with [V2.t], but not [V1.t], like [Info.Stable]
       and [Error.Stable]. *)

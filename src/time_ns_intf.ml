@@ -129,7 +129,6 @@ module type Ofday = sig
       is not in the same 24-hour day. Daylight savings shifts are not accounted for. *)
   val sub_exn : t -> Span.t -> t
 
-
   (** [every span ~start ~stop] returns a sorted list of all [t]s that can be expressed as
       [start + (i * span)] without overflow, and satisfying [t >= start && t <= stop].
 
