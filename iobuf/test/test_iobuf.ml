@@ -1,9 +1,10 @@
 open! Core_kernel
 open Poly
+module IR = Int_repr
 open! Iobuf
 open Expect_test_helpers_core
 
-let arch_sixtyfour = Sys.word_size = 64
+let arch_sixtyfour = Sys.word_size_in_bits = 64
 let is_error = Result.is_error
 let is_ok = Result.is_ok
 let ok_exn = Or_error.ok_exn
@@ -223,6 +224,55 @@ let%test_module "lengths" =
     ;;
   end)
 ;;
+
+module IR_Int8 = struct
+  include IR.Int8
+
+  let to_string x = x |> to_base_int |> Int.to_string
+  let of_string s = s |> Int.of_string |> of_base_int_exn
+end
+
+module IR_Uint8 = struct
+  include IR.Uint8
+
+  let to_string x = x |> to_base_int |> Int.to_string
+  let of_string s = s |> Int.of_string |> of_base_int_exn
+end
+
+module IR_Int16 = struct
+  include IR.Int16
+
+  let to_string x = x |> to_base_int |> Int.to_string
+  let of_string s = s |> Int.of_string |> of_base_int_exn
+end
+
+module IR_Uint16 = struct
+  include IR.Uint16
+
+  let to_string x = x |> to_base_int |> Int.to_string
+  let of_string s = s |> Int.of_string |> of_base_int_exn
+end
+
+module IR_Int32 = struct
+  include IR.Int32
+
+  let to_string x = x |> to_base_int32 |> Int32.to_string
+  let of_string s = s |> Int32.of_string |> of_base_int32
+end
+
+module IR_Uint32 = struct
+  include IR.Uint32
+
+  let to_string x = x |> to_base_int32_trunc |> Int32.to_string
+  let of_string s = s |> Int32.of_string |> of_base_int32_trunc
+end
+
+module IR_Int64 = struct
+  include IR.Int64
+
+  let to_string = Int64.to_string
+  let of_string = Int64.of_string
+end
 
 module Accessors (Accessors : sig
     include module type of Unsafe
@@ -953,6 +1003,169 @@ struct
 
         type 'a bin_prot = 'a Bin_prot.Type_class.reader
       end)
+
+    module Int_repr = Intf.Int_repr
+
+    let%test_unit _ =
+      let buf = of_string "ABCDEFGHIJ" in
+      let int_pos_1 (type i) n a v (module I : Accessee with type t = i) s =
+        accessor_pos_1 ~without_value:buf ~value_len:n a ~value:v ~with_value:s (module I)
+      in
+      int_pos_1
+        1
+        Int_repr.int8
+        (IR_Int8.of_base_int_exn 127)
+        (module IR_Int8)
+        "A\127CDEFGHIJ";
+      int_pos_1
+        1
+        Int_repr.int8
+        (IR_Int8.of_base_int_exn (-1))
+        (module IR_Int8)
+        "A\255CDEFGHIJ";
+      int_pos_1
+        1
+        Int_repr.int8
+        (IR_Int8.of_base_int_exn (-128))
+        (module IR_Int8)
+        "A\128CDEFGHIJ";
+      int_pos_1
+        1
+        Int_repr.uint8
+        (IR_Uint8.of_base_int_exn 0)
+        (module IR_Uint8)
+        "A\000CDEFGHIJ";
+      int_pos_1
+        1
+        Int_repr.uint8
+        (IR_Uint8.of_base_int_exn 255)
+        (module IR_Uint8)
+        "A\255CDEFGHIJ";
+      int_pos_1
+        1
+        Int_repr.int8
+        (IR_Int8.of_base_int_exn (-1))
+        (module IR_Int8)
+        "A\255CDEFGHIJ";
+      int_pos_1
+        1
+        Int_repr.uint8
+        (IR_Uint8.of_base_int_exn 12)
+        (module IR_Uint8)
+        "A\012CDEFGHIJ";
+      int_pos_1
+        2
+        Int_repr.int16_be
+        (IR_Int16.of_base_int_exn 0x0102)
+        (module IR_Int16)
+        "A\001\002DEFGHIJ";
+      int_pos_1
+        2
+        Int_repr.int16_le
+        (IR_Int16.of_base_int_exn 0x0304)
+        (module IR_Int16)
+        "A\004\003DEFGHIJ";
+      int_pos_1
+        2
+        Int_repr.int16_be
+        (IR_Int16.of_base_int_exn (-2))
+        (module IR_Int16)
+        "A\255\254DEFGHIJ";
+      int_pos_1
+        2
+        Int_repr.int16_le
+        (IR_Int16.of_base_int_exn (-3))
+        (module IR_Int16)
+        "A\253\255DEFGHIJ";
+      int_pos_1
+        2
+        Int_repr.uint16_be
+        (IR_Uint16.of_base_int_exn 0xFFFE)
+        (module IR_Uint16)
+        "A\255\254DEFGHIJ";
+      int_pos_1
+        2
+        Int_repr.uint16_le
+        (IR_Uint16.of_base_int_exn 0xFDFC)
+        (module IR_Uint16)
+        "A\252\253DEFGHIJ";
+      int_pos_1
+        2
+        Int_repr.int16_be
+        (IR_Int16.of_base_int_exn 0x0506)
+        (module IR_Int16)
+        "A\005\006DEFGHIJ";
+      int_pos_1
+        2
+        Int_repr.int16_le
+        (IR_Int16.of_base_int_exn 0x0708)
+        (module IR_Int16)
+        "A\008\007DEFGHIJ";
+      int_pos_1
+        4
+        Int_repr.int32_be
+        (IR_Int32.of_base_int32 0x0A0B0C0Dl)
+        (module IR_Int32)
+        "A\010\011\012\013FGHIJ";
+      int_pos_1
+        4
+        Int_repr.int32_le
+        (IR_Int32.of_base_int32 0x01020304l)
+        (module IR_Int32)
+        "A\004\003\002\001FGHIJ";
+      int_pos_1
+        4
+        Int_repr.int32_be
+        (IR_Int32.of_base_int32 (-0x01020305l))
+        (module IR_Int32)
+        "A\254\253\252\251FGHIJ";
+      int_pos_1
+        4
+        Int_repr.int32_le
+        (IR_Int32.of_base_int32 (-0x05060709l))
+        (module IR_Int32)
+        "A\247\248\249\250FGHIJ";
+      if arch_sixtyfour
+      then (
+        int_pos_1
+          4
+          Int_repr.uint32_be
+          (IR_Uint32.of_base_int32_trunc
+             (Int32.of_int_trunc (large_int 0 0 0xF6F5 0xF4F3)))
+          (module IR_Uint32)
+          "A\246\245\244\243FGHIJ";
+        int_pos_1
+          4
+          Int_repr.uint32_le
+          (IR_Uint32.of_base_int32_trunc
+             (Int32.of_int_trunc (large_int 0 0 0xFBFA 0xF9F8)))
+          (module IR_Uint32)
+          "A\248\249\250\251FGHIJ";
+        int_pos_1
+          8
+          Int_repr.int64_be
+          (Int64.of_int (large_int 0x0102 0x0304 0x0506 0x0708))
+          (module IR_Int64)
+          "A\001\002\003\004\005\006\007\008J";
+        int_pos_1
+          8
+          Int_repr.int64_le
+          (Int64.of_int (large_int 0x090a 0x0b0c 0x0d0e 0x0f10))
+          (module IR_Int64)
+          "A\016\015\014\013\012\011\010\009J";
+        int_pos_1
+          8
+          Int_repr.int64_be
+          (Int64.of_int (-large_int 0x0102 0x0304 0x0506 0x0709))
+          (module IR_Int64)
+          "A\254\253\252\251\250\249\248\247J";
+        int_pos_1
+          8
+          Int_repr.int64_le
+          (Int64.of_int (-large_int 0x0102 0x0304 0x0506 0x0709))
+          (module IR_Int64)
+          "A\247\248\249\250\251\252\253\254J")
+    ;;
   end
 
   module Intf_write (Intf : sig
@@ -1050,6 +1263,167 @@ struct
 
         type 'a bin_prot = 'a Bin_prot.Type_class.writer
       end)
+
+    module Int_repr = Intf.Int_repr
+
+    let%test_unit _ =
+      let buf = of_string "ABCDEFGHIJ" in
+      let int_pos_1 (type i) n a v (module I : Accessee with type t = i) s =
+        accessor_pos_1 ~without_value:buf ~value_len:n a ~value:v ~with_value:s (module I)
+      in
+      int_pos_1
+        1
+        Int_repr.int8
+        (IR_Int8.of_base_int_exn 127)
+        (module IR_Int8)
+        "A\127CDEFGHIJ";
+      int_pos_1
+        1
+        Int_repr.int8
+        (IR_Int8.of_base_int_exn (-1))
+        (module IR_Int8)
+        "A\255CDEFGHIJ";
+      int_pos_1
+        1
+        Int_repr.int8
+        (IR_Int8.of_base_int_exn (-128))
+        (module IR_Int8)
+        "A\128CDEFGHIJ";
+      int_pos_1
+        1
+        Int_repr.uint8
+        (IR_Uint8.of_base_int_exn 0)
+        (module IR_Uint8)
+        "A\000CDEFGHIJ";
+      int_pos_1
+        1
+        Int_repr.uint8
+        (IR_Uint8.of_base_int_exn 255)
+        (module IR_Uint8)
+        "A\255CDEFGHIJ";
+      int_pos_1
+        1
+        Int_repr.int8
+        (IR_Int8.of_base_int_exn (-1))
+        (module IR_Int8)
+        "A\255CDEFGHIJ";
+      int_pos_1
+        1
+        Int_repr.uint8
+        (IR_Uint8.of_base_int_exn 12)
+        (module IR_Uint8)
+        "A\012CDEFGHIJ";
+      int_pos_1
+        2
+        Int_repr.int16_be
+        (IR_Int16.of_base_int_exn 0x0102)
+        (module IR_Int16)
+        "A\001\002DEFGHIJ";
+      int_pos_1
+        2
+        Int_repr.int16_le
+        (IR_Int16.of_base_int_exn 0x0304)
+        (module IR_Int16)
+        "A\004\003DEFGHIJ";
+      int_pos_1
+        2
+        Int_repr.int16_be
+        (IR_Int16.of_base_int_exn (-2))
+        (module IR_Int16)
+        "A\255\254DEFGHIJ";
+      int_pos_1
+        2
+        Int_repr.int16_le
+        (IR_Int16.of_base_int_exn (-3))
+        (module IR_Int16)
+        "A\253\255DEFGHIJ";
+      int_pos_1
+        2
+        Int_repr.uint16_be
+        (IR_Uint16.of_base_int_exn 0xFFFE)
+        (module IR_Uint16)
+        "A\255\254DEFGHIJ";
+      int_pos_1
+        2
+        Int_repr.uint16_le
+        (IR_Uint16.of_base_int_exn 0xFDFC)
+        (module IR_Uint16)
+        "A\252\253DEFGHIJ";
+      int_pos_1
+        2
+        Int_repr.int16_be
+        (IR_Int16.of_base_int_exn 0x0506)
+        (module IR_Int16)
+        "A\005\006DEFGHIJ";
+      int_pos_1
+        2
+        Int_repr.int16_le
+        (IR_Int16.of_base_int_exn 0x0708)
+        (module IR_Int16)
+        "A\008\007DEFGHIJ";
+      int_pos_1
+        4
+        Int_repr.int32_be
+        (IR_Int32.of_base_int32 0x0A0B0C0Dl)
+        (module IR_Int32)
+        "A\010\011\012\013FGHIJ";
+      int_pos_1
+        4
+        Int_repr.int32_le
+        (IR_Int32.of_base_int32 0x01020304l)
+        (module IR_Int32)
+        "A\004\003\002\001FGHIJ";
+      int_pos_1
+        4
+        Int_repr.int32_be
+        (IR_Int32.of_base_int32 (-0x01020305l))
+        (module IR_Int32)
+        "A\254\253\252\251FGHIJ";
+      int_pos_1
+        4
+        Int_repr.int32_le
+        (IR_Int32.of_base_int32 (-0x05060709l))
+        (module IR_Int32)
+        "A\247\248\249\250FGHIJ";
+      if arch_sixtyfour
+      then (
+        int_pos_1
+          4
+          Int_repr.uint32_be
+          (IR_Uint32.of_base_int32_trunc 0xF6F5F4F3l)
+          (module IR_Uint32)
+          "A\246\245\244\243FGHIJ";
+        int_pos_1
+          4
+          Int_repr.uint32_le
+          (IR_Uint32.of_base_int32_trunc 0xFBFAF9F8l)
+          (module IR_Uint32)
+          "A\248\249\250\251FGHIJ";
+        int_pos_1
+          8
+          Int_repr.int64_be
+          (Int64.of_int (large_int 0x0102 0x0304 0x0506 0x0708))
+          (module IR_Int64)
+          "A\001\002\003\004\005\006\007\008J";
+        int_pos_1
+          8
+          Int_repr.int64_le
+          (Int64.of_int (large_int 0x090a 0x0b0c 0x0d0e 0x0f10))
+          (module IR_Int64)
+          "A\016\015\014\013\012\011\010\009J";
+        int_pos_1
+          8
+          Int_repr.int64_be
+          (Int64.of_int (-large_int 0x0102 0x0304 0x0506 0x0709))
+          (module IR_Int64)
+          "A\254\253\252\251\250\249\248\247J";
+        int_pos_1
+          8
+          Int_repr.int64_le
+          (Int64.of_int (-large_int 0x0102 0x0304 0x0506 0x0709))
+          (module IR_Int64)
+          "A\247\248\249\250\251\252\253\254J")
+    ;;
   end
 
   let cases_for_testing_decimal =
@@ -2262,4 +2636,17 @@ let%expect_test "concat" =
   let long = Iobuf.of_string "PREFIXfooFILLERbarSUFFIX" in
   test [| Iobuf.sub_shared ~pos:6 ~len:3 long; Iobuf.sub_shared ~pos:15 ~len:3 long |];
   [%expect {| foobar |}]
+;;
+
+let%expect_test "transfer" =
+  let src = Iobuf.of_string "holy guacamole!" in
+  let dst = Iobuf.create ~len:20 in
+  Iobuf.transfer ~src ~dst;
+  let dump t = [%sexp (t : (_, _) Iobuf.Window.Hexdump.t)] in
+  let src, dst = dump src, dump dst in
+  require_equal [%here] (module Sexp) src dst;
+  print_s [%sexp (dst : Sexp.t)];
+  [%expect
+    {|
+    ("00000000  68 6f 6c 79 20 67 75 61  63 61 6d 6f 6c 65 21     |holy guacamole!|") |}]
 ;;

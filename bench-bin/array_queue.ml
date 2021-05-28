@@ -103,4 +103,4 @@ let tests =
   ]
 ;;
 
-let () = Command.run (Bench.make_command tests)
+let () = Command_unix.run (Bench.make_command tests)

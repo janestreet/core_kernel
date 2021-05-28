@@ -66,6 +66,8 @@ module Stable = struct
           let to_binable t = to_int t - 1
           let of_binable i = of_int_exn (i + 1)
         end)
+
+    include (val Comparator.Stable.V1.make ~compare ~sexp_of_t)
   end
 end
 
@@ -86,7 +88,7 @@ include (
   end) :
     Hashable.S_binable with type t := t)
 
-include Comparable.Make_binable (struct
+include Comparable.Make_binable_using_comparator (struct
     include T
 
     (* In 108.06a and earlier, months in sexps of Maps and Sets were raw ints.  From 108.07

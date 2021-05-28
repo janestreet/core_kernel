@@ -254,6 +254,7 @@ module type Permissioned = sig
   val filteri : ('a, [> read ]) t -> f:(int -> 'a -> bool) -> ('a, [< _ perms ]) t
   val swap : ('a, [> read_write ]) t -> int -> int -> unit
   val rev_inplace : ('a, [> read_write ]) t -> unit
+  val rev : ('a, [> read ]) t -> ('a, [< _ perms ]) t
   val of_list_rev : 'a list -> ('a, [< _ perms ]) t
   val of_list_map : 'a list -> f:('a -> 'b) -> ('b, [< _ perms ]) t
   val of_list_mapi : 'a list -> f:(int -> 'a -> 'b) -> ('b, [< _ perms ]) t
@@ -419,6 +420,7 @@ module type S = sig
   val filteri : 'a t -> f:(int -> 'a -> bool) -> 'a t
   val swap : 'a t -> int -> int -> unit
   val rev_inplace : 'a t -> unit
+  val rev : 'a t -> 'a t
   val of_list_rev : 'a list -> 'a t
   val of_list_map : 'a list -> f:('a -> 'b) -> 'b t
   val of_list_mapi : 'a list -> f:(int -> 'a -> 'b) -> 'b t

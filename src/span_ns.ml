@@ -6,7 +6,7 @@ let module_name = "Core_kernel.Time_ns.Span"
 
 type underlying = Int63.t
 
-let arch_sixtyfour = Int.equal Sys.word_size 64
+let arch_sixtyfour = Int.equal Sys.word_size_in_bits 64
 let round_nearest = Float.int63_round_nearest_exn
 let float x = Int63.to_float x
 

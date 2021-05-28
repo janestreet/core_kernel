@@ -1889,7 +1889,7 @@ let exec ~summary ?readme ?(child_subcommand = []) ?env ~path_to_exe () =
     Filename.dirname
     @@
     match path_to_exe with
-    | `Absolute _ | `Relative_to_me _ -> Sys.executable_name
+    | `Absolute _ | `Relative_to_me _ -> Caml.Sys.executable_name
     | `Relative_to_argv0 _ -> Caml.Sys.argv.(0)
   in
   let path_to_exe =

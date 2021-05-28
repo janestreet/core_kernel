@@ -67,7 +67,8 @@ let main =
 let () =
   print_s
     [%sexp
-      (Command.Shape.fully_forced (Command.shape main) : Command.Shape.Fully_forced.t)]
+      (Command.Shape.fully_forced (Command_unix.shape main)
+       : Command.Shape.Fully_forced.t)]
 ;;
 
 [%%expect
@@ -249,7 +250,8 @@ let main =
 let () =
   print_s
     [%sexp
-      (Command.Shape.fully_forced (Command.shape main) : Command.Shape.Fully_forced.t)]
+      (Command.Shape.fully_forced (Command_unix.shape main)
+       : Command.Shape.Fully_forced.t)]
 ;;
 
 [%%expect

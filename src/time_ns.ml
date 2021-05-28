@@ -1,7 +1,7 @@
 open! Import
 open Std_internal
 
-let arch_sixtyfour = Sys.word_size = 64
+let arch_sixtyfour = Sys.word_size_in_bits = 64
 
 module Span = Span_ns
 module Ofday = Ofday_ns

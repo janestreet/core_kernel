@@ -16,6 +16,7 @@ depends: [
   "base_quickcheck"
   "bin_prot"
   "fieldslib"
+  "int_repr"
   "jane-street-headers"
   "jst-config"
   "ppx_assert"

@@ -103,6 +103,12 @@ val copy : (_, _) t -> (_, _) t
     well. *)
 val clone : (_, _) t -> (_, _) t
 
+(** [transfer ~src ~dst] makes the window of [dst] into a copy of the window of [src].
+    Like [blito], [transfer] will raise if [Iobuf.length dst] < [Iobuf.length src].
+
+    It is a utility function defined as [reset dst; blito ~src ~dst; flip_lo dst]. *)
+val transfer : src:([> read ], _) t -> dst:([> write ], seek) t -> unit
+
 (** [set_bounds_and_buffer ~src ~dst] copies bounds metadata (i.e., limits and window) and
     shallowly copies the buffer (data pointer) from [src] to [dst].  It does not access
     data, but does allow access through [dst].  This makes [dst] an alias of [src].

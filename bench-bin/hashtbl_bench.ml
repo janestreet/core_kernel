@@ -1162,4 +1162,4 @@ module Top_level = struct
   ;;
 end
 
-let () = Command.run Top_level.command
+let () = Command_unix.run Top_level.command

@@ -5,7 +5,7 @@ module Tuple_type = Tuple_type
 
 let failwiths = Error.failwiths
 let phys_equal = Caml.( == )
-let arch_sixtyfour = Sys.word_size = 64
+let arch_sixtyfour = Sys.word_size_in_bits = 64
 
 module Int = struct
   let num_bits = Int.num_bits

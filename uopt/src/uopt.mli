@@ -6,14 +6,21 @@
     in a nested way, i.e. as ['a Uopt.t Uopt.t].  It must also not be used for [float
     Uopt.t array], since the representation of the array would vary depending on whether
     [none] or [some] is used to create the array.  It should also not be used in a record
-    that contains only [float]s and [float Uopt.t]s, because the compiler would treat that
-    as a float-only record and would unbox the record fields.
+    that contains only monomorphic [float]s and [float Uopt.t]s, because the compiler
+    would treat that as a float-only record and would unbox the record fields (as
+    described in the documentation for writing C bindings).
+
+    Note that there is currently a safety issue when using values of type [float Uopt.t],
+    [Int32.t Uopt.t] and other numeric types subject to unboxing, if the compiler actually
+    decides to unbox such values. This is not a problem with ['a Uopt.t] if the compiler
+    can't possibly do any unboxing.
 
     The type is exposed as [private 'a] so the compiler can infer that an ['a t] can't be
     a float in the right context, thus avoiding runtime checks in [_ Uopt.t array]s.
     Using [:>] is of course unsafe.  Because [Uopt.none] cannot be garbage collected,
     there is no problem if the compiler decides to skip write barriers (when ['a] is an
     immediate). *)
+
 
 open! Core_kernel
 

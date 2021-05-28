@@ -392,6 +392,12 @@ module Priority_queue : sig
 
   val mem : 'a t -> 'a Elt.t -> bool
 
+  module Increase_min_allowed_key_result : sig
+    type t =
+      | Max_allowed_key_did_not_change
+      | Max_allowed_key_maybe_changed
+  end
+
   (** [increase_min_allowed_key t ~key ~handle_removed] increases the minimum allowed
       key in [t] to [key], and removes all elements with keys less than [key], applying
       [handle_removed] to each element that is removed.  If [key <= min_allowed_key t],
@@ -407,7 +413,7 @@ module Priority_queue : sig
     :  'a t
     -> key:Key.t
     -> handle_removed:('a Elt.t -> unit)
-    -> unit
+    -> Increase_min_allowed_key_result.t
 
   val iter : 'a t -> f:('a Elt.t -> unit) -> unit
 
@@ -1197,13 +1203,21 @@ end = struct
     <- Key.add_clamp_to_max desired_min_allowed_key level.diff_max_min_allowed_key
   ;;
 
-  let increase_min_allowed_key t ~key ~handle_removed =
-    if Key.( > ) key (min_allowed_key t)
-    then (
+  module Increase_min_allowed_key_result = struct
+    type t =
+      | Max_allowed_key_did_not_change
+      | Max_allowed_key_maybe_changed
+  end
+
+  let increase_min_allowed_key t ~key ~handle_removed : Increase_min_allowed_key_result.t =
+    if Key.( <= ) key (min_allowed_key t)
+    then Max_allowed_key_did_not_change
+    else (
       (* We increase the [min_allowed_key] of levels in order to restore the invariant
          that they have as large as possible a [min_allowed_key], while leaving no gaps
          in keys. *)
       let level_index = ref 0 in
+      let result = ref Increase_min_allowed_key_result.Max_allowed_key_maybe_changed in
       let prev_level_max_allowed_key = ref (Key.pred key) in
       let levels = t.levels in
       let num_levels = num_levels t in
@@ -1217,9 +1231,10 @@ end = struct
           ~t_min_allowed_key:key
           ~handle_removed;
         if Key.equal (Level.min_allowed_key level) min_allowed_key_before
-        then
+        then (
           (* This level did not shift.  Don't shift any higher levels. *)
-          level_index := num_levels
+          level_index := num_levels;
+          result := Max_allowed_key_did_not_change)
         else (
           (* Level [level_index] shifted.  Consider shifting higher levels. *)
           level_index := !level_index + 1;
@@ -1230,7 +1245,8 @@ end = struct
         (* We have removed [t.min_elt] or it was already null, so just set it to
            null. *)
         t.min_elt <- Internal_elt.null ();
-        t.elt_key_lower_bound <- min_allowed_key t))
+        t.elt_key_lower_bound <- min_allowed_key t);
+      !result)
   ;;
 
   let create ?capacity ?level_bits () =
@@ -1621,17 +1637,26 @@ let invariant invariant_a t =
         Time_ns.( > ) (Alarm.at t alarm) (Time_ns.sub (now t) (alarm_precision t)))))
 ;;
 
+let debug = false
+
 let advance_clock t ~to_ ~handle_fired =
   if Time_ns.( > ) to_ (now t)
   then (
     t.now <- to_;
     let key = interval_num_unchecked t to_ in
     t.now_interval_num_start <- interval_num_start_unchecked t key;
-    Priority_queue.increase_min_allowed_key
-      t.priority_queue
-      ~key
-      ~handle_removed:handle_fired;
-    t.max_allowed_alarm_time <- compute_max_allowed_alarm_time t)
+    match
+      Priority_queue.increase_min_allowed_key
+        t.priority_queue
+        ~key
+        ~handle_removed:handle_fired
+    with
+    | Max_allowed_key_did_not_change ->
+      if debug
+      then
+        assert (Time_ns.( = ) t.max_allowed_alarm_time (compute_max_allowed_alarm_time t))
+    | Max_allowed_key_maybe_changed ->
+      t.max_allowed_alarm_time <- compute_max_allowed_alarm_time t)
 ;;
 
 let create ~config ~start =
@@ -1652,6 +1677,7 @@ let create ~config ~start =
         Priority_queue.create ?capacity:config.capacity ~level_bits:config.level_bits ()
     }
   in
+  t.max_allowed_alarm_time <- compute_max_allowed_alarm_time t;
   advance_clock t ~to_:start ~handle_fired:(fun _ -> assert false);
   t
 ;;

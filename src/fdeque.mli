@@ -7,7 +7,7 @@
 
 open! Import
 
-type 'a t [@@deriving bin_io, compare, hash, sexp]
+type 'a t [@@deriving bin_io, compare, equal, hash, sexp]
 
 (** [Container] operations traverse deque elements front-to-back, like [Front_to_back]
     below. If you need faster traversal and don't care about the order, use

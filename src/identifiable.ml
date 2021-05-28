@@ -30,6 +30,12 @@ module type S = sig
   include Hashable.S_binable with type t := t
 end
 
+module type S_sexp_grammar = sig
+  type t [@@deriving sexp_grammar]
+
+  include S with type t := t
+end
+
 module Make_plain (T : sig
     type t [@@deriving compare, hash, sexp_of]
 
@@ -56,6 +62,18 @@ struct
   include Comparable.Make_binable (T)
   include Hashable.Make_binable (T)
   include Pretty_printer.Register (T)
+end
+
+module Make_with_sexp_grammar (T : sig
+    type t [@@deriving bin_io, compare, hash, sexp, sexp_grammar]
+
+    include Stringable.S with type t := t
+
+    val module_name : string
+  end) =
+struct
+  include T
+  include Make (T)
 end
 
 module Make_and_derive_hash_fold_t (T : sig

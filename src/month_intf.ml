@@ -72,6 +72,11 @@ module type Month = sig
         | Nov
         | Dec
       [@@deriving sexp, bin_io, compare, hash, equal]
+
+      include
+        Stable_module_types.S0
+        with type comparator_witness = comparator_witness
+         and type t := t
     end
   end
 end

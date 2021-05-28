@@ -62,6 +62,23 @@ module type Accessors_read = sig
   val uint32_le : (int, 'd, 'w) t
   val uint64_be_exn : (int, 'd, 'w) t
   val uint64_le_exn : (int, 'd, 'w) t
+
+  module Int_repr : sig
+    val int8 : (Int_repr.Int8.t, 'd, 'w) t
+    val int16_be : (Int_repr.Int16.t, 'd, 'w) t
+    val int16_le : (Int_repr.Int16.t, 'd, 'w) t
+    val int32_be : (Int_repr.Int32.t, 'd, 'w) t
+    val int32_le : (Int_repr.Int32.t, 'd, 'w) t
+    val int64_be : (Int_repr.Int64.t, 'd, 'w) t
+    val int64_le : (Int_repr.Int64.t, 'd, 'w) t
+    val uint8 : (Int_repr.Uint8.t, 'd, 'w) t
+    val uint16_be : (Int_repr.Uint16.t, 'd, 'w) t
+    val uint16_le : (Int_repr.Uint16.t, 'd, 'w) t
+    val uint32_be : (Int_repr.Uint32.t, 'd, 'w) t
+    val uint32_le : (Int_repr.Uint32.t, 'd, 'w) t
+    val uint64_be : (Int_repr.Uint64.t, 'd, 'w) t
+    val uint64_le : (Int_repr.Uint64.t, 'd, 'w) t
+  end
 end
 
 module type Accessors_write = sig
@@ -81,6 +98,23 @@ module type Accessors_write = sig
   val uint32_le_trunc : (int, 'd, 'w) t
   val uint64_be_trunc : (int, 'd, 'w) t
   val uint64_le_trunc : (int, 'd, 'w) t
+
+  module Int_repr : sig
+    val int8 : (Int_repr.Int8.t, 'd, 'w) t
+    val int16_be : (Int_repr.Int16.t, 'd, 'w) t
+    val int16_le : (Int_repr.Int16.t, 'd, 'w) t
+    val int32_be : (Int_repr.Int32.t, 'd, 'w) t
+    val int32_le : (Int_repr.Int32.t, 'd, 'w) t
+    val int64_be : (Int_repr.Int64.t, 'd, 'w) t
+    val int64_le : (Int_repr.Int64.t, 'd, 'w) t
+    val uint8 : (Int_repr.Uint8.t, 'd, 'w) t
+    val uint16_be : (Int_repr.Uint16.t, 'd, 'w) t
+    val uint16_le : (Int_repr.Uint16.t, 'd, 'w) t
+    val uint32_be : (Int_repr.Uint32.t, 'd, 'w) t
+    val uint32_le : (Int_repr.Uint32.t, 'd, 'w) t
+    val uint64_be : (Int_repr.Uint64.t, 'd, 'w) t
+    val uint64_le : (Int_repr.Uint64.t, 'd, 'w) t
+  end
 end
 
 (** An iobuf window bound, either upper or lower.  You can't see its int value, but you

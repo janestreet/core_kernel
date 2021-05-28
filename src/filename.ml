@@ -41,6 +41,7 @@ include struct
   let check_suffix = check_suffix
   let chop_extension = chop_extension
   let chop_suffix = chop_suffix
+  let chop_suffix_opt = chop_suffix_opt
   let current_dir_name = current_dir_name
   let is_implicit = is_implicit
   let is_relative = is_relative

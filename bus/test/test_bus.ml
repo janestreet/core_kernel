@@ -2,6 +2,7 @@ open! Core_kernel
 open! Expect_test_helpers_core
 open! Bus
 
+let () = Backtrace.elide := true
 let does_raise = Exn.does_raise
 
 include (

@@ -1,4 +1,4 @@
-(** A signature for identifier types. *)
+(** Signatures and functors for making types that are used as identifiers. *)
 
 open! Import
 
@@ -29,6 +29,12 @@ module type S = sig
   include S_common with type t := t
   include Comparable.S_binable with type t := t
   include Hashable.S_binable with type t := t
+end
+
+module type S_sexp_grammar = sig
+  type t [@@deriving sexp_grammar]
+
+  include S with type t := t
 end
 
 module Make_plain (M : sig
@@ -62,6 +68,15 @@ module Make (M : sig
     (** for registering the pretty printer *)
     val module_name : string
   end) : S with type t := M.t
+
+module Make_with_sexp_grammar (M : sig
+    type t [@@deriving bin_io, compare, hash, sexp, sexp_grammar]
+
+    include Stringable.S with type t := t
+
+    (** for registering the pretty printer *)
+    val module_name : string
+  end) : S_sexp_grammar with type t := M.t
 
 module Make_and_derive_hash_fold_t (M : sig
     type t [@@deriving bin_io, compare, sexp]

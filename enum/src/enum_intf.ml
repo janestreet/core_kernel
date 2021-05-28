@@ -37,6 +37,7 @@ module type Enum = sig
     ?represent_choice_with:string
     -> ?list_values_in_help:bool
     -> ?aliases:string list
+    -> ?key:'a Univ_map.Multi.Key.t
     -> string
     -> doc:string
     -> 'a t
@@ -45,7 +46,8 @@ module type Enum = sig
   val make_param : f:('a Command.Arg_type.t -> 'b Command.Flag.t) -> ('a, 'b) make_param
 
   val make_param_one_of_flags
-    :  ?aliases:('a -> string list)
+    :  ?if_nothing_chosen:('a, 'a) Command.Param.If_nothing_chosen.t (** Default: Raise *)
+    -> ?aliases:('a -> string list)
     -> doc:('a -> string)
     -> 'a t
     -> 'a Command.Param.t

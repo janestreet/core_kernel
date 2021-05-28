@@ -10,7 +10,7 @@ let%test_module _ =
     let int_tests =
       [ ~-1, "-1", "\002-1"; 0, "0", "\0010"; 1, "1", "\0011" ]
       @
-      if Sys.word_size = 64
+      if Sys.word_size_in_bits = 64
       then
         [ Int.min_value, "-4611686018427387904", "\020-4611686018427387904"
         ; Int.min_value / 2, "-2305843009213693952", "\020-2305843009213693952"
@@ -143,7 +143,7 @@ let%test_module _ =
           ; Second "second", "(Right second)", "\001\006second"
           ]
           @
-          if Sys.word_size = 64
+          if Sys.word_size_in_bits = 64
           then
             [ ( First Int.min_value
               , "(Left -4611686018427387904)"

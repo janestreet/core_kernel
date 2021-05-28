@@ -15,7 +15,7 @@ module Result = struct
 
   let capture f x =
     try Rval (f x) with
-    | Sys.Break as e -> raise e
+    | Caml.Sys.Break as e -> raise e
     | e -> Expt e
   ;;
 end

@@ -371,7 +371,7 @@ val map : ('k, 'v1, 'cmp) t -> f:('v1 -> 'v2) -> ('k, 'v2, 'cmp) t
 (** Like [map], but [f] takes both key and data as arguments. *)
 val mapi : ('k, 'v1, 'cmp) t -> f:(key:'k -> data:'v1 -> 'v2) -> ('k, 'v2, 'cmp) t
 
-(** Convert map with keys of type ['k2] to a map with keys of type ['k2] using [f]. *)
+(** Convert map with keys of type ['k1] to a map with keys of type ['k2] using [f]. *)
 val map_keys
   :  ('k2, 'cmp2) Comparator.t
   -> f:('k1 -> 'k2)

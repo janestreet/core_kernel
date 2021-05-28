@@ -4,6 +4,7 @@
 type 'a t =
   | []
   | ( :: ) of 'a * 'a t
+[@@deriving sexp_of]
 
 val rev : 'a t -> 'a list
 val rev_append : 'a t -> 'a list -> 'a list

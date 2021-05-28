@@ -71,8 +71,15 @@ val check_suffix : string -> string -> bool
 
 (** [chop_suffix name suff] removes the suffix [suff] from
     the filename [name]. The behavior is undefined if [name] does not
-    end with the suffix [suff]. *)
+    end with the suffix [suff]. [chop_suffix_opt] is thus recommended
+    instead.*)
 val chop_suffix : string -> string -> string
+
+(** [chop_suffix_opt ~suffix filename] removes the suffix from
+    the [filename] if possible, or returns [None] if the
+    filename does not end with the suffix.
+*)
+val chop_suffix_opt : suffix:string -> string -> string option
 
 (** Return the given file name without its extension. The extension
     is the shortest suffix starting with a period and not including
@@ -110,7 +117,7 @@ val dirname : string -> string
 (** Returns the absolute path by prepending [relative_to] if the path is not already
     absolute.
 
-    Using the result of [Core.Unix.getcwd] as [relative_to] is often a reasonable choice.
+    Using the result of [Core_unix.getcwd] as [relative_to] is often a reasonable choice.
 
     Note that [to_absolute_exn] may return a non-canonical path (e.g. /foo/bar/../baz).
 

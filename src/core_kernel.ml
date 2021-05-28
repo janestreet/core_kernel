@@ -140,6 +140,7 @@ module Sexp_maybe = Sexp.Sexp_maybe
 module Sexp = Sexp
 module Sexpable = Sexpable
 module Sign = Sign
+module Signal = Signal
 module Sign_or_nan = Sign_or_nan
 module Source_code_position = Source_code_position
 module Splittable_random = Splittable_random
@@ -170,7 +171,7 @@ module Univ_map = Univ_map
 
 module Unix = struct end
 [@@deprecated
-  "[since 2020-03] Core_kernel shadows Unix. Use Core.Unix, which overrides some of \
+  "[since 2020-03] Core_kernel shadows Unix. Use Core_unix, which overrides some of \
    Unix's behavior. If necessary, Unix is available and unshadowed as Caml_unix."]
 
 module Validate = Validate

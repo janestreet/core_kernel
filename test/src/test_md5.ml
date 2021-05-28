@@ -51,7 +51,7 @@ let%test_module "Md5.V1" =
 ;;
 
 let%test_unit "Md5.digest_file_blocking" =
-  let cwd = Sys.getcwd () in
+  let cwd = Caml.Sys.getcwd () in
   let file = Filename.concat cwd (Filename.basename [%here].pos_fname) in
   let our_digest = digest_file_blocking file in
   let actual_digest = Md5.of_binary_exn (Caml.Digest.file file) in

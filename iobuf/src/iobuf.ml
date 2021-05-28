@@ -1,4 +1,5 @@
 open! Core_kernel
+module IR = Int_repr
 open! Iobuf_intf
 
 [%%import "include.mlh"]
@@ -19,7 +20,7 @@ module type Consuming_blit = Consuming_blit
 
 type nonrec ('src, 'dst) consuming_blito = ('src, 'dst) consuming_blito
 
-let arch_sixtyfour = Sys.word_size = 64
+let arch_sixtyfour = Sys.word_size_in_bits = 64
 
 module T = struct
   (* WHEN YOU CHANGE THIS, CHANGE iobuf_fields IN iobuf.h AS WELL!!! *)
@@ -720,7 +721,16 @@ module Consume = struct
 
   let len = 4
   let[@inline always] int32_be t = uadv t len (unsafe_get_int32_be t.buf ~pos:(pos t len))
+
+  let[@inline always] int32_t_be t =
+    uadv t len (unsafe_get_int32_t_be t.buf ~pos:(pos t len))
+  ;;
+
   let[@inline always] int32_le t = uadv t len (unsafe_get_int32_le t.buf ~pos:(pos t len))
+
+  let[@inline always] int32_t_le t =
+    uadv t len (unsafe_get_int32_t_le t.buf ~pos:(pos t len))
+  ;;
 
   let[@inline always] uint32_be t =
     uadv t len (unsafe_get_uint32_be t.buf ~pos:(pos t len))
@@ -763,6 +773,23 @@ module Consume = struct
   let[@inline always] int64_le_trunc t =
     uadv t len (unsafe_get_int64_le_trunc t.buf ~pos:(pos t len))
   ;;
+
+  module Int_repr = struct
+    let[@inline always] uint8 t = IR.Uint8.of_base_int_trunc (uint8 t)
+    let[@inline always] uint16_be t = IR.Uint16.of_base_int_trunc (uint16_be t)
+    let[@inline always] uint16_le t = IR.Uint16.of_base_int_trunc (uint16_le t)
+    let[@inline always] uint32_be t = IR.Uint32.of_base_int32_trunc (int32_t_be t)
+    let[@inline always] uint32_le t = IR.Uint32.of_base_int32_trunc (int32_t_le t)
+    let[@inline always] uint64_be t = IR.Uint64.of_base_int64_trunc (int64_t_be t)
+    let[@inline always] uint64_le t = IR.Uint64.of_base_int64_trunc (int64_t_le t)
+    let[@inline always] int8 t = IR.Int8.of_base_int_trunc (int8 t)
+    let[@inline always] int16_be t = IR.Int16.of_base_int_trunc (int16_be t)
+    let[@inline always] int16_le t = IR.Int16.of_base_int_trunc (int16_le t)
+    let[@inline always] int32_be t = IR.Int32.of_base_int32 (int32_t_be t)
+    let[@inline always] int32_le t = IR.Int32.of_base_int32 (int32_t_le t)
+    let[@inline always] int64_be t = int64_t_be t
+    let[@inline always] int64_le t = int64_t_le t
+  end
 end
 
 let write_bin_prot writer t ~pos a =
@@ -1004,8 +1031,18 @@ module Fill = struct
     uadv t len
   ;;
 
+  let[@inline always] int32_t_be t i =
+    unsafe_set_int32_t_be t.buf i ~pos:(pos t len);
+    uadv t len
+  ;;
+
   let[@inline always] int32_le_trunc t i =
     unsafe_set_int32_le t.buf i ~pos:(pos t len);
+    uadv t len
+  ;;
+
+  let[@inline always] int32_t_le t i =
+    unsafe_set_int32_t_le t.buf i ~pos:(pos t len);
     uadv t len
   ;;
 
@@ -1052,6 +1089,23 @@ module Fill = struct
   ;;
 
   let decimal t i = uadv t (Itoa.poke_decimal t ~pos:0 i)
+
+  module Int_repr = struct
+    let[@inline always] uint8 t i = uint8_trunc t (IR.Uint8.to_base_int i)
+    let[@inline always] uint16_be t i = uint16_be_trunc t (IR.Uint16.to_base_int i)
+    let[@inline always] uint16_le t i = uint16_le_trunc t (IR.Uint16.to_base_int i)
+    let[@inline always] uint32_be t i = int32_t_be t (IR.Uint32.to_base_int32_trunc i)
+    let[@inline always] uint32_le t i = int32_t_le t (IR.Uint32.to_base_int32_trunc i)
+    let[@inline always] uint64_be t i = int64_t_be t (IR.Uint64.to_base_int64_trunc i)
+    let[@inline always] uint64_le t i = int64_t_le t (IR.Uint64.to_base_int64_trunc i)
+    let[@inline always] int8 t i = int8_trunc t (IR.Int8.to_base_int i)
+    let[@inline always] int16_be t i = int16_be_trunc t (IR.Int16.to_base_int i)
+    let[@inline always] int16_le t i = int16_le_trunc t (IR.Int16.to_base_int i)
+    let[@inline always] int32_be t i = int32_t_be t (IR.Int32.to_base_int32 i)
+    let[@inline always] int32_le t i = int32_t_le t (IR.Int32.to_base_int32 i)
+    let[@inline always] int64_be t i = int64_t_be t i
+    let[@inline always] int64_le t i = int64_t_le t i
+  end
 end
 
 module Peek = struct
@@ -1159,7 +1213,16 @@ module Peek = struct
 
   let len = 4
   let[@inline always] int32_be t ~pos = unsafe_get_int32_be t.buf ~pos:(spos t ~len ~pos)
+
+  let[@inline always] int32_t_be t ~pos =
+    unsafe_get_int32_t_be t.buf ~pos:(spos t ~len ~pos)
+  ;;
+
   let[@inline always] int32_le t ~pos = unsafe_get_int32_le t.buf ~pos:(spos t ~len ~pos)
+
+  let[@inline always] int32_t_le t ~pos =
+    unsafe_get_int32_t_le t.buf ~pos:(spos t ~len ~pos)
+  ;;
 
   let[@inline always] uint32_be t ~pos =
     unsafe_get_uint32_be t.buf ~pos:(spos t ~len ~pos)
@@ -1202,6 +1265,36 @@ module Peek = struct
   let[@inline always] int64_le_trunc t ~pos =
     unsafe_get_int64_le_trunc t.buf ~pos:(spos t ~len ~pos)
   ;;
+
+  module Int_repr = struct
+    let[@inline always] uint8 t ~pos = IR.Uint8.of_base_int_trunc (uint8 t ~pos)
+    let[@inline always] uint16_be t ~pos = IR.Uint16.of_base_int_trunc (uint16_be t ~pos)
+    let[@inline always] uint16_le t ~pos = IR.Uint16.of_base_int_trunc (uint16_le t ~pos)
+
+    let[@inline always] uint32_be t ~pos =
+      IR.Uint32.of_base_int32_trunc (int32_t_be t ~pos)
+    ;;
+
+    let[@inline always] uint32_le t ~pos =
+      IR.Uint32.of_base_int32_trunc (int32_t_le t ~pos)
+    ;;
+
+    let[@inline always] uint64_be t ~pos =
+      IR.Uint64.of_base_int64_trunc (int64_t_be t ~pos)
+    ;;
+
+    let[@inline always] uint64_le t ~pos =
+      IR.Uint64.of_base_int64_trunc (int64_t_le t ~pos)
+    ;;
+
+    let[@inline always] int8 t ~pos = IR.Int8.of_base_int_trunc (int8 t ~pos)
+    let[@inline always] int16_be t ~pos = IR.Int16.of_base_int_trunc (int16_be t ~pos)
+    let[@inline always] int16_le t ~pos = IR.Int16.of_base_int_trunc (int16_le t ~pos)
+    let[@inline always] int32_be t ~pos = IR.Int32.of_base_int32 (int32_t_be t ~pos)
+    let[@inline always] int32_le t ~pos = IR.Int32.of_base_int32 (int32_t_le t ~pos)
+    let[@inline always] int64_be t ~pos = int64_t_be t ~pos
+    let[@inline always] int64_le t ~pos = int64_t_le t ~pos
+  end
 end
 
 module Poke = struct
@@ -1316,8 +1409,16 @@ module Poke = struct
     unsafe_set_int32_be t.buf ~pos:(spos t ~len ~pos) i
   ;;
 
+  let[@inline always] int32_t_be t ~pos i =
+    unsafe_set_int32_t_be t.buf ~pos:(spos t ~len ~pos) i
+  ;;
+
   let[@inline always] int32_le_trunc t ~pos i =
     unsafe_set_int32_le t.buf ~pos:(spos t ~len ~pos) i
+  ;;
+
+  let[@inline always] int32_t_le t ~pos i =
+    unsafe_set_int32_t_le t.buf ~pos:(spos t ~len ~pos) i
   ;;
 
   let[@inline always] uint32_be_trunc t ~pos i =
@@ -1355,6 +1456,42 @@ module Poke = struct
   ;;
 
   let decimal = Itoa.poke_decimal
+
+  module Int_repr = struct
+    let[@inline always] uint8 t ~pos i = uint8_trunc t ~pos (IR.Uint8.to_base_int i)
+
+    let[@inline always] uint16_be t ~pos i =
+      uint16_be_trunc t ~pos (IR.Uint16.to_base_int i)
+    ;;
+
+    let[@inline always] uint16_le t ~pos i =
+      uint16_le_trunc t ~pos (IR.Uint16.to_base_int i)
+    ;;
+
+    let[@inline always] uint32_be t ~pos i =
+      int32_t_be t ~pos (IR.Uint32.to_base_int32_trunc i)
+    ;;
+
+    let[@inline always] uint32_le t ~pos i =
+      int32_t_le t ~pos (IR.Uint32.to_base_int32_trunc i)
+    ;;
+
+    let[@inline always] uint64_be t ~pos i =
+      int64_t_be t ~pos (IR.Uint64.to_base_int64_trunc i)
+    ;;
+
+    let[@inline always] uint64_le t ~pos i =
+      int64_t_le t ~pos (IR.Uint64.to_base_int64_trunc i)
+    ;;
+
+    let[@inline always] int8 t ~pos i = int8_trunc t ~pos (IR.Int8.to_base_int i)
+    let[@inline always] int16_be t ~pos i = int16_be_trunc t ~pos (IR.Int16.to_base_int i)
+    let[@inline always] int16_le t ~pos i = int16_le_trunc t ~pos (IR.Int16.to_base_int i)
+    let[@inline always] int32_be t ~pos i = int32_t_be t ~pos (IR.Int32.to_base_int32 i)
+    let[@inline always] int32_le t ~pos i = int32_t_le t ~pos (IR.Int32.to_base_int32 i)
+    let[@inline always] int64_be t ~pos i = int64_t_be t ~pos i
+    let[@inline always] int64_le t ~pos i = int64_t_le t ~pos i
+  end
 end
 
 module Blit = struct
@@ -1476,6 +1613,12 @@ module Blit_consume_and_fill = struct
     len
   ;;
 end
+
+let transfer ~src ~dst =
+  reset dst;
+  Blit_fill.blito ~src ~dst ();
+  flip_lo dst
+;;
 
 let bin_prot_length_prefix_bytes = 4
 
@@ -1663,8 +1806,16 @@ module Unsafe = struct
       uadv t len (unsafe_get_int32_be t.buf ~pos:(upos t len))
     ;;
 
+    let[@inline always] int32_t_be t =
+      uadv t len (unsafe_get_int32_t_be t.buf ~pos:(upos t len))
+    ;;
+
     let[@inline always] int32_le t =
       uadv t len (unsafe_get_int32_le t.buf ~pos:(upos t len))
+    ;;
+
+    let[@inline always] int32_t_le t =
+      uadv t len (unsafe_get_int32_t_le t.buf ~pos:(upos t len))
     ;;
 
     let[@inline always] uint32_be t =
@@ -1708,6 +1859,23 @@ module Unsafe = struct
     let[@inline always] int64_le_trunc t =
       uadv t len (unsafe_get_int64_le_trunc t.buf ~pos:(upos t len))
     ;;
+
+    module Int_repr = struct
+      let[@inline always] uint8 t = IR.Uint8.of_base_int_trunc (uint8 t)
+      let[@inline always] uint16_be t = IR.Uint16.of_base_int_trunc (uint16_be t)
+      let[@inline always] uint16_le t = IR.Uint16.of_base_int_trunc (uint16_le t)
+      let[@inline always] uint32_be t = IR.Uint32.of_base_int32_trunc (int32_t_be t)
+      let[@inline always] uint32_le t = IR.Uint32.of_base_int32_trunc (int32_t_le t)
+      let[@inline always] uint64_be t = IR.Uint64.of_base_int64_trunc (int64_t_be t)
+      let[@inline always] uint64_le t = IR.Uint64.of_base_int64_trunc (int64_t_le t)
+      let[@inline always] int8 t = IR.Int8.of_base_int_trunc (int8 t)
+      let[@inline always] int16_be t = IR.Int16.of_base_int_trunc (int16_be t)
+      let[@inline always] int16_le t = IR.Int16.of_base_int_trunc (int16_le t)
+      let[@inline always] int32_be t = IR.Int32.of_base_int32 (int32_t_be t)
+      let[@inline always] int32_le t = IR.Int32.of_base_int32 (int32_t_le t)
+      let[@inline always] int64_be t = int64_t_be t
+      let[@inline always] int64_le t = int64_t_le t
+    end
   end
 
   module Fill = struct
@@ -1826,8 +1994,18 @@ module Unsafe = struct
       uadv t len
     ;;
 
+    let[@inline always] int32_t_be t i =
+      unsafe_set_int32_t_be t.buf i ~pos:(upos t len);
+      uadv t len
+    ;;
+
     let[@inline always] int32_le_trunc t i =
       unsafe_set_int32_le t.buf i ~pos:(upos t len);
+      uadv t len
+    ;;
+
+    let[@inline always] int32_t_le t i =
+      unsafe_set_int32_t_le t.buf i ~pos:(upos t len);
       uadv t len
     ;;
 
@@ -1877,6 +2055,23 @@ module Unsafe = struct
     let[@inline always] uint8_trunc t i = char t (Char.unsafe_of_int i)
     let[@inline always] int8_trunc t i = char t (Char.unsafe_of_int i)
     let decimal t i = uadv t (Itoa.unsafe_poke_decimal t ~pos:0 i)
+
+    module Int_repr = struct
+      let[@inline always] uint8 t i = char t (Char.unsafe_of_int (IR.Uint8.to_base_int i))
+      let[@inline always] uint16_be t i = uint16_be_trunc t (IR.Uint16.to_base_int i)
+      let[@inline always] uint16_le t i = uint16_le_trunc t (IR.Uint16.to_base_int i)
+      let[@inline always] uint32_be t i = int32_t_be t (IR.Uint32.to_base_int32_trunc i)
+      let[@inline always] uint32_le t i = int32_t_le t (IR.Uint32.to_base_int32_trunc i)
+      let[@inline always] uint64_be t i = int64_t_be t (IR.Uint64.to_base_int64_trunc i)
+      let[@inline always] uint64_le t i = int64_t_le t (IR.Uint64.to_base_int64_trunc i)
+      let[@inline always] int8 t i = char t (Char.unsafe_of_int (IR.Int8.to_base_int i))
+      let[@inline always] int16_be t i = int16_be_trunc t (IR.Int16.to_base_int i)
+      let[@inline always] int16_le t i = int16_le_trunc t (IR.Int16.to_base_int i)
+      let[@inline always] int32_be t i = int32_t_be t (IR.Int32.to_base_int32 i)
+      let[@inline always] int32_le t i = int32_t_le t (IR.Int32.to_base_int32 i)
+      let[@inline always] int64_be t i = int64_t_be t i
+      let[@inline always] int64_le t i = int64_t_le t i
+    end
   end
 
   module Peek = struct
@@ -2011,8 +2206,16 @@ module Unsafe = struct
       unsafe_get_int32_be t.buf ~pos:(upos t ~len ~pos)
     ;;
 
+    let[@inline always] int32_t_be t ~pos =
+      unsafe_get_int32_t_be t.buf ~pos:(upos t ~len ~pos)
+    ;;
+
     let[@inline always] int32_le t ~pos =
       unsafe_get_int32_le t.buf ~pos:(upos t ~len ~pos)
+    ;;
+
+    let[@inline always] int32_t_le t ~pos =
+      unsafe_get_int32_t_le t.buf ~pos:(upos t ~len ~pos)
     ;;
 
     let[@inline always] uint32_be t ~pos =
@@ -2056,6 +2259,42 @@ module Unsafe = struct
     let[@inline always] int64_le_trunc t ~pos =
       unsafe_get_int64_le_trunc t.buf ~pos:(upos t ~len ~pos)
     ;;
+
+    module Int_repr = struct
+      let[@inline always] uint8 t ~pos = IR.Uint8.of_base_int_trunc (uint8 t ~pos)
+
+      let[@inline always] uint16_be t ~pos =
+        IR.Uint16.of_base_int_trunc (uint16_be t ~pos)
+      ;;
+
+      let[@inline always] uint16_le t ~pos =
+        IR.Uint16.of_base_int_trunc (uint16_le t ~pos)
+      ;;
+
+      let[@inline always] uint32_be t ~pos =
+        IR.Uint32.of_base_int32_trunc (int32_t_be t ~pos)
+      ;;
+
+      let[@inline always] uint32_le t ~pos =
+        IR.Uint32.of_base_int32_trunc (int32_t_le t ~pos)
+      ;;
+
+      let[@inline always] uint64_be t ~pos =
+        IR.Uint64.of_base_int64_trunc (int64_t_be t ~pos)
+      ;;
+
+      let[@inline always] uint64_le t ~pos =
+        IR.Uint64.of_base_int64_trunc (int64_t_le t ~pos)
+      ;;
+
+      let[@inline always] int8 t ~pos = IR.Int8.of_base_int_trunc (int8 t ~pos)
+      let[@inline always] int16_be t ~pos = IR.Int16.of_base_int_trunc (int16_be t ~pos)
+      let[@inline always] int16_le t ~pos = IR.Int16.of_base_int_trunc (int16_le t ~pos)
+      let[@inline always] int32_be t ~pos = IR.Int32.of_base_int32 (int32_t_be t ~pos)
+      let[@inline always] int32_le t ~pos = IR.Int32.of_base_int32 (int32_t_le t ~pos)
+      let[@inline always] int64_be t ~pos = int64_t_be t ~pos
+      let[@inline always] int64_le t ~pos = int64_t_le t ~pos
+    end
   end
 
   module Poke = struct
@@ -2183,8 +2422,16 @@ module Unsafe = struct
       unsafe_set_int32_be t.buf ~pos:(upos t ~len ~pos) i
     ;;
 
+    let[@inline always] int32_t_be t ~pos i =
+      unsafe_set_int32_t_be t.buf ~pos:(upos t ~len ~pos) i
+    ;;
+
     let[@inline always] int32_le_trunc t ~pos i =
       unsafe_set_int32_le t.buf ~pos:(upos t ~len ~pos) i
+    ;;
+
+    let[@inline always] int32_t_le t ~pos i =
+      unsafe_set_int32_t_le t.buf ~pos:(upos t ~len ~pos) i
     ;;
 
     let[@inline always] uint32_be_trunc t ~pos i =
@@ -2222,6 +2469,49 @@ module Unsafe = struct
     ;;
 
     let decimal = Itoa.unsafe_poke_decimal
+
+    module Int_repr = struct
+      let[@inline always] uint8 t ~pos i = uint8_trunc t ~pos (IR.Uint8.to_base_int i)
+
+      let[@inline always] uint16_be t ~pos i =
+        int16_be_trunc t ~pos (IR.Uint16.to_base_int i)
+      ;;
+
+      let[@inline always] uint16_le t ~pos i =
+        int16_le_trunc t ~pos (IR.Uint16.to_base_int i)
+      ;;
+
+      let[@inline always] uint32_be t ~pos i =
+        int32_t_be t ~pos (IR.Uint32.to_base_int32_trunc i)
+      ;;
+
+      let[@inline always] uint32_le t ~pos i =
+        int32_t_le t ~pos (IR.Uint32.to_base_int32_trunc i)
+      ;;
+
+      let[@inline always] uint64_be t ~pos i =
+        int64_t_be t ~pos (IR.Uint64.to_base_int64_trunc i)
+      ;;
+
+      let[@inline always] uint64_le t ~pos i =
+        int64_t_le t ~pos (IR.Uint64.to_base_int64_trunc i)
+      ;;
+
+      let[@inline always] int8 t ~pos i = int8_trunc t ~pos (IR.Int8.to_base_int i)
+
+      let[@inline always] int16_be t ~pos i =
+        int16_be_trunc t ~pos (IR.Int16.to_base_int i)
+      ;;
+
+      let[@inline always] int16_le t ~pos i =
+        int16_le_trunc t ~pos (IR.Int16.to_base_int i)
+      ;;
+
+      let[@inline always] int32_be t ~pos i = int32_t_be t ~pos (IR.Int32.to_base_int32 i)
+      let[@inline always] int32_le t ~pos i = int32_t_le t ~pos (IR.Int32.to_base_int32 i)
+      let[@inline always] int64_be t ~pos i = int64_t_be t ~pos i
+      let[@inline always] int64_le t ~pos i = int64_t_le t ~pos i
+    end
   end
 end
 

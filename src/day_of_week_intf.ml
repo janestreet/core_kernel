@@ -32,7 +32,7 @@ module type Day_of_week = sig
   (** As per ISO 8601, Mon->1, Tue->2, ... Sun->7 *)
   val iso_8601_weekday_number : t -> int
 
-  (** [shift] goes forward (or backward) the specified number of weekdays. *)
+  (** [shift] goes forward (or backward) the specified number of days. *)
   val shift : t -> int -> t
 
   (** [num_days ~from ~to_] gives the number of days that must elapse from a [from] to get
