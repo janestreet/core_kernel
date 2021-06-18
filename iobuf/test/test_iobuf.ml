@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open Poly
 module IR = Int_repr
 open! Iobuf

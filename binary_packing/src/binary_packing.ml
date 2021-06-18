@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Import
 module Core_char = Char
 module Char = Caml.Char

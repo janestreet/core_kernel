@@ -1,4 +1,4 @@
-open Core_kernel
+open Core
 open Bus
 
 let create_with_subscribers (type a) (arity : a Callback_arity.t) ~num_subscribers =

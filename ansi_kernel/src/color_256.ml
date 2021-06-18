@@ -1,4 +1,4 @@
-open Core_kernel
+open Core
 
 type t = int [@@deriving sexp_of, compare, hash, equal]
 

@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 module Array = Base.Array
 module Int = Base.Int
 module List = Base.List

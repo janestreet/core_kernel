@@ -1,0 +1,14 @@
+(alias (name runtest) (deps float_test.exe) (action (bash ./float_test.exe)))
+
+(alias (name runtest) (deps test_runner.exe)
+ (action (bash ./test_runner.exe)))
+
+(alias (name runtest)
+ (deps just_raise.exe just_raise.expected-output uncaught_exception_test.sh)
+ (action (bash ./uncaught_exception_test.sh)))
+
+(executables (names float_test just_raise test_runner)
+ (libraries bin_prot caml_threads core.command_unix core oUnit
+  ppx_inline_test.runtime-lib quickcheck_deprecated sexplib core.time_unix
+  variantslib version_util)
+ (preprocess (pps ppx_jane)))

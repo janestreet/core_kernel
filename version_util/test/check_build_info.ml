@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 
 (* build_info is not available when building tests.
    This test makes sure that one can parse the default value of build_info *)

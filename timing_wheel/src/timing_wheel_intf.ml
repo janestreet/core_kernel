@@ -75,7 +75,7 @@
       |        2^61 | nanosecond      | 73 years |
     v} *)
 
-open! Core_kernel
+open! Core
 open! Import
 
 (** An [Interval_num.t] is an index of one of the intervals into which a timing-wheel
@@ -271,7 +271,7 @@ module type Timing_wheel = sig
 
     (** [microsecond_precision ()] returns a reasonable configuration for a timing wheel
         with microsecond [alarm_precision], and level durations of 1ms, 1s, 1m, 1h, 1d.
-        See the relevant expect test in [Core_kernel_test] library. *)
+        See the relevant expect test in [Core_test] library. *)
     val microsecond_precision : unit -> t
   end
 

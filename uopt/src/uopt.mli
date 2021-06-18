@@ -5,26 +5,21 @@
     ['a Uopt.t] is like ['a option], but doesn't box [some] values.  It must not be used
     in a nested way, i.e. as ['a Uopt.t Uopt.t].  It must also not be used for [float
     Uopt.t array], since the representation of the array would vary depending on whether
-    [none] or [some] is used to create the array.  It should also not be used in a record
-    that contains only monomorphic [float]s and [float Uopt.t]s, because the compiler
-    would treat that as a float-only record and would unbox the record fields (as
-    described in the documentation for writing C bindings).
+    [none] or [some] is used to create the array, but [float Uopt.t Uniform_array.t] is
+    fine.  It should also not be used in a record that contains only monomorphic [float]s
+    and [float Uopt.t]s, because the compiler would treat that as a float-only record and
+    would unbox the record fields (as described in the documentation for writing C
+    bindings).
 
-    Note that there is currently a safety issue when using values of type [float Uopt.t],
-    [Int32.t Uopt.t] and other numeric types subject to unboxing, if the compiler actually
-    decides to unbox such values. This is not a problem with ['a Uopt.t] if the compiler
-    can't possibly do any unboxing.
-
-    The type is exposed as [private 'a] so the compiler can infer that an ['a t] can't be
-    a float in the right context, thus avoiding runtime checks in [_ Uopt.t array]s.
-    Using [:>] is of course unsafe.  Because [Uopt.none] cannot be garbage collected,
-    there is no problem if the compiler decides to skip write barriers (when ['a] is an
-    immediate). *)
+    Since ['a Uopt.t] is abtract, manipulation of an ['a Uopt.t array] does runtime checks
+    to see if this is a float array. This can be mostly avoided with [Uniform_array.t],
+    although array creation will still do such checks, and you may want to use the
+    [set_with_caml_modify] kind of function to skip the immediacy checks. *)
 
 
-open! Core_kernel
+open! Core
 
-type 'a t = private 'a [@@deriving sexp_of]
+type +'a t [@@deriving sexp_of]
 
 include Invariant.S1 with type 'a t := 'a t
 

@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 
 (* The code here refers to c functions that are not part of the library.  Instead, at link
    time of exe, bc, and toplevels, we include an object file that implements the given
@@ -139,3 +139,5 @@ let compiled_for_speed = x_library_inlining && not dynlinkable_code
 module For_tests = struct
   let parse_generated_hg_version = parse_generated_hg_version
 end
+
+let build_system_supports_version_util = not (String.(=) ocaml_version "")

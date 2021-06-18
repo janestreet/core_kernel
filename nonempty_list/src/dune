@@ -1,2 +1,2 @@
 (library (name nonempty_list) (public_name core_kernel.nonempty_list)
- (libraries core_kernel reversed_list) (preprocess (pps ppx_jane)))
+ (libraries core reversed_list) (preprocess (pps ppx_jane)))

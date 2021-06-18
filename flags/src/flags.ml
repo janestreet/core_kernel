@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open Poly
 include Flags_intf
 

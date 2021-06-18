@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Fheap
 
 let%test_module _ =

@@ -21,7 +21,7 @@
     Functions operate on the window unless the documentation or naming indicates
     otherwise. *)
 
-open! Core_kernel
+open! Core
 open Iobuf_intf
 
 type nonrec seek = seek [@@deriving sexp_of]

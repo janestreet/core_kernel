@@ -3,7 +3,7 @@
     This heap implementations supports an arbitrary element type via a comparison
     function. *)
 
-open! Core_kernel
+open! Core
 
 (** of_sexp and bin_io functions aren't supplied for heaps due to the difficulties in
     reconstructing the correct comparison function when de-serializing. *)

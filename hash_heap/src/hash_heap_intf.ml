@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Import
 
 module type Key = Hashtbl.Key_plain

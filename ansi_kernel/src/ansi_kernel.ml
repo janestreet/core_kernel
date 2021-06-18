@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 module Color_256 = Color_256
 
 (* NOTE: assorted content lifted from lib/console/src/console.ml *)

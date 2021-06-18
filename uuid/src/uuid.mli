@@ -2,7 +2,7 @@
     specification.  Identifier generation is thread safe, and fast.
 *)
 
-open! Core_kernel
+open! Core
 
 (** When [am_running_test], [sexp_of_t] masks the UUID, showing only
     "<uuid-omitted-in-test>". You can use [Unstable.sexp_of_t] if you definitely want to

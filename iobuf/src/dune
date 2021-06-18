@@ -1,6 +1,6 @@
 (library (name iobuf) (public_name core_kernel.iobuf)
- (libraries base_for_tests core_kernel int_repr)
- (preprocessor_deps include.mlh) (preprocess (pps ppx_jane)))
+ (libraries base_for_tests core int_repr) (preprocessor_deps include.mlh)
+ (preprocess (pps ppx_jane)))
 
 (rule (targets include.mlh) (deps)
  (action

@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 module Pool = Tuple_pool
 module Pointer = Pool.Pointer
 

@@ -4,7 +4,7 @@
    This can be very easily broken, and as such we're adding these tests to detect when
    this may have happened. *)
 
-open Core_kernel
+open Core
 module Caml_modify = Replace_caml_modify_for_testing
 
 (* Big enough length so an array goes directly into the major heap. *)

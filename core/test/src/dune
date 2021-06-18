@@ -1,0 +1,4 @@
+(library (name core_test)
+ (libraries base_test_helpers core expect_test_helpers_core fheap
+  version_util)
+ (preprocessor_deps ../../src/config.h) (preprocess (pps ppx_jane)))

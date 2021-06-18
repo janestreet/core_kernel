@@ -1,7 +1,7 @@
-open! Core_kernel
+open! Core
 open! Timing_wheel
 
-let start = Time_ns.of_string "2020-12-25 12:10Z"
+let start = Time_ns.of_string_with_utc_offset "2020-12-25 12:10Z"
 let alarm_precision = Alarm_precision.about_one_millisecond
 let create () = create ~config:(Config.create () ~alarm_precision) ~start
 

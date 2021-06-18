@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Fheap
 
 let%bench_fun ("pop_add_with_existing_heap"[@indexed

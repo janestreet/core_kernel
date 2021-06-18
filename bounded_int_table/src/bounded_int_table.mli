@@ -19,7 +19,7 @@
     [length] of the table, not [num_keys].
 *)
 
-open! Core_kernel
+open! Core
 
 type ('key, 'data) t [@@deriving sexp_of]
 type ('a, 'b) table = ('a, 'b) t

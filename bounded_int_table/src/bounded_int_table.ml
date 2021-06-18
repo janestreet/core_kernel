@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 
 module Entry = struct
   type ('key, 'data) t =

@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Import
 open Hashtbl_intf
 open With_return
@@ -514,6 +514,12 @@ let incr ?(by = 1) ?(remove_if_zero = false) t key = incr_by ~remove_if_zero t k
 let decr ?(by = 1) ?(remove_if_zero = false) t key = incr_by ~remove_if_zero t key (-by)
 let update t key ~f = change t key ~f:(fun data -> Some (f data))
 
+(* This could be optimized if desired. *)
+let update_and_return t key ~f =
+  update t key ~f;
+  find_exn t key
+;;
+
 (* Split similar to find and removed. Code duplicated to avoid allocation and
    unroll/inline the single entry case *)
 let rec remove_key_r t index key e prev =
@@ -947,6 +953,7 @@ module Accessors = struct
   let add_exn = add_exn
   let change = change
   let update = update
+  let update_and_return = update_and_return
   let add_multi = add_multi
   let remove_multi = remove_multi
   let find_multi = find_multi

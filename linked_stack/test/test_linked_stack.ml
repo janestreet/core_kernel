@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Linked_stack
 
 let%test_module _ = (module Base_test_helpers.Test_container.Test_S1 (Linked_stack))

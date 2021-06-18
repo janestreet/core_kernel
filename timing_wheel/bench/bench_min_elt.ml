@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Timing_wheel
 
 let start = Time_ns.epoch

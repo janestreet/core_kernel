@@ -1,4 +1,4 @@
-open Core_kernel.Core_kernel_stable
+open Core.Core_stable
 
 module Stable = struct
   module V3 = struct
@@ -8,7 +8,7 @@ module Stable = struct
       let to_list (hd :: tl) : _ list = hd :: tl
 
       let of_list_exn : _ list -> _ t = function
-        | [] -> Core_kernel.raise_s [%message "Nonempty_list.of_list_exn: empty list"]
+        | [] -> Core.raise_s [%message "Nonempty_list.of_list_exn: empty list"]
         | hd :: tl -> hd :: tl
       ;;
     end
@@ -42,6 +42,12 @@ module Stable = struct
           let to_sexpable = to_list
           let of_sexpable = of_list_exn
         end)
+
+    let t_sexp_grammar (type a) ({ untyped = element } : [%sexp_grammar: a])
+      : [%sexp_grammar: a t]
+      =
+      { untyped = List (Cons (element, Many element)) }
+    ;;
 
     let%expect_test _ =
       print_endline [%bin_digest: int t];
@@ -121,7 +127,7 @@ module Stable = struct
   end
 end
 
-open Core_kernel
+open Core
 module Unstable = Stable.V3
 
 module T' = struct
@@ -130,6 +136,7 @@ module T' = struct
 
   let sexp_of_t = Stable.V3.sexp_of_t
   let t_of_sexp = Stable.V3.t_of_sexp
+  let t_sexp_grammar = Stable.V3.t_sexp_grammar
   let to_list = Stable.V3.to_list
   let of_list_exn = Stable.V3.of_list_exn
   let hd (hd :: _) = hd
@@ -141,7 +148,7 @@ module T' = struct
   ;;
 
   let of_list_error = function
-    | [] -> Core_kernel.error_s [%message "empty list"]
+    | [] -> Core.error_s [%message "empty list"]
     | hd :: tl -> Ok (hd :: tl)
   ;;
 
@@ -315,3 +322,8 @@ module Reversed = struct
   let rev_map t ~f = rev_mapi t ~f:(fun _ x -> f x)
   let cons x t = x :: to_rev_list t
 end
+
+let flag arg_type =
+  Command.Param.map_flag (Command.Param.one_or_more arg_type) ~f:(fun (one, more) ->
+    one :: more)
+;;

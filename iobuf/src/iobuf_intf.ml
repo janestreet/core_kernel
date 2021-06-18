@@ -1,6 +1,6 @@
 (** See {{!Iobuf}[Iobuf]} for documentation. *)
 
-open! Core_kernel
+open! Core
 
 (** [no_seek] and [seek] are phantom types used in a similar manner to [read] and
     [read_write]. *)
@@ -131,7 +131,7 @@ module type Bound = sig
 
 end
 
-(** The [src_pos] argument of {!Core_kernel.Blit.blit} doesn't make sense here. *)
+(** The [src_pos] argument of {!Core.Blit.blit} doesn't make sense here. *)
 
 type ('src, 'dst) consuming_blit = src:'src -> dst:'dst -> dst_pos:int -> len:int -> unit
 

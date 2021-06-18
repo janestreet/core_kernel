@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 
 type 'a t =
   { mutable elts : 'a list

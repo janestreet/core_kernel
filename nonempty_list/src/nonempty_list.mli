@@ -1,11 +1,11 @@
-open Core_kernel
+open Core
 
 (** A ['a t] represents a non-empty list, as evidenced by the fact that there is no [[]]
     variant. The sexp representation is as a regular list (i.e., the same as the
     [Stable.V3] module below).
 *)
 type 'a t = ( :: ) of 'a * 'a list
-[@@deriving compare, equal, sexp, hash, quickcheck, typerep]
+[@@deriving compare, equal, sexp, sexp_grammar, hash, quickcheck, typerep]
 
 include Container.S1 with type 'a t := 'a t
 include Monad.S with type 'a t := 'a t
@@ -70,6 +70,8 @@ val validate_indexed : 'a Validate.check -> 'a t Validate.check
 (** validates a list, naming each element using a user-defined function for computing the
     name. *)
 val validate : name:('a -> string) -> 'a Validate.check -> 'a t Validate.check
+
+val flag : 'a Command.Param.Arg_type.t -> 'a t Command.Flag.t
 
 type 'a nonempty_list := 'a t
 

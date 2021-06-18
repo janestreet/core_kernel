@@ -1,4 +1,4 @@
-open Core_kernel
+open Core
 open Composition_infix
 open Nonempty_list
 

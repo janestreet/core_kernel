@@ -23,7 +23,7 @@
     There is a debugging functor, [Tuple_pool.Error_check], that is useful for building
     pools to help debug incorrect pointer usage. *)
 
-open! Core_kernel
+open! Core
 open! Import
 
 (** [S] is the module type for a pool. *)

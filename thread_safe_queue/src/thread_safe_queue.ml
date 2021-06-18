@@ -11,7 +11,7 @@
    do not violate the above assumptions.  It is prudent to disassemble the .o file (using
    [objdump -dr]) and examine it. *)
 
-open! Core_kernel
+open! Core
 open! Import
 
 module Elt = struct

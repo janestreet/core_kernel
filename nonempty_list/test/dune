@@ -1,4 +1,4 @@
 (library (name nonempty_list_tests)
- (libraries accessor_base base_test_helpers composition_infix core_kernel
+ (libraries accessor_base base_test_helpers composition_infix core
   nonempty_list nonempty_list_accessor)
  (preprocess (pps ppx_jane)))

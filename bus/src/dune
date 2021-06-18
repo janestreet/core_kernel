@@ -1,2 +1,2 @@
-(library (name bus) (public_name core_kernel.bus) (libraries core_kernel)
+(library (name bus) (public_name core_kernel.bus) (libraries core)
  (preprocess (pps ppx_jane)))

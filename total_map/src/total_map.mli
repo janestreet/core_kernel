@@ -28,7 +28,7 @@
     determined by the comparison function.
 *)
 
-open! Core_kernel
+open! Core
 open! Import
 module Enumeration = Enumeration
 

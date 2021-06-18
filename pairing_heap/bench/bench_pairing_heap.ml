@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Pairing_heap
 
 let%bench_fun ("pop_insert_with_existing_heap"[@indexed

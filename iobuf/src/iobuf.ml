@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 module IR = Int_repr
 open! Iobuf_intf
 

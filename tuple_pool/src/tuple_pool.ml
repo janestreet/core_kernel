@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Import
 open Tuple_pool_intf
 module Tuple_type = Tuple_type

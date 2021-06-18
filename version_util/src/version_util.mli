@@ -9,7 +9,7 @@
     linked in.
 *)
 
-open! Core_kernel
+open! Core
 
 val version_list : string list (** All hg repos and their revision. *)
 
@@ -65,3 +65,8 @@ val with_fdo                       : (string * Md5.t option) option
 module For_tests : sig
   val parse_generated_hg_version : string -> string list
 end
+
+(** If [false], all the variables above are filled in with bogus values.
+    The value is [false] in tests at the moment. *)
+val build_system_supports_version_util : bool
+

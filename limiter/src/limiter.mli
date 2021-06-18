@@ -30,7 +30,7 @@
     expected to be monotonically increasing. [now]'s that are set in the past are
     effectively moved up to the current time of the bucket. *)
 
-open! Core_kernel
+open! Core
 open! Import
 
 type t [@@deriving sexp_of]

@@ -13,7 +13,7 @@
     [Bus.Read_only.t] that can be passed to [subscribe_exn].  This is deliberate, and is
     meant to avoid unintentional reads from code that should only be writing. *)
 
-open! Core_kernel
+open! Core
 
 (** [Callback_arity] states the type of callbacks stored in a bus. Using [Callback_arity]
     is an implementation technique that allows callbacks to be defined as ordinary n-ary
