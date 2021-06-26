@@ -402,6 +402,7 @@ module Peek : sig
   end
 
   val index : ([> read ], _) t -> ?pos:int -> ?len:int -> char -> int option
+  val unsafe_index : ([> read ], _) t -> ?pos:int -> ?len:int -> char -> int
 
   include
     Accessors_read

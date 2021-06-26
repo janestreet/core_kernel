@@ -1193,6 +1193,12 @@ module Peek = struct
     Option.map (Bigstring.find ~pos ~len c t.buf) ~f:(fun x -> x - t.lo)
   ;;
 
+  let unsafe_index t ?(pos = 0) ?(len = length t - pos) c =
+    let pos = spos t ~len ~pos in
+    let idx = Bigstring.unsafe_find ~pos ~len t.buf c in
+    if idx < 0 then -1 else idx - t.lo
+  ;;
+
   open Bigstring
 
   let[@inline always] char t ~pos = T_src.get t pos
@@ -2175,6 +2181,7 @@ module Unsafe = struct
 
     let bin_prot = Peek.bin_prot
     let index = Peek.index
+    let unsafe_index = Peek.unsafe_index
 
     open Bigstring
 
