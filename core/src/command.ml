@@ -107,6 +107,20 @@ module Arg_type : sig
     -> (string * 'a) list
     -> 'a t
 
+  val enumerated
+    :  ?case_sensitive:bool
+    -> ?list_values_in_help:bool
+    -> ?key:'a Env.Multi.Key.t
+    -> (module Enumerable_stringable with type t = 'a)
+    -> 'a t
+
+  val enumerated_sexpable
+    :  ?case_sensitive:bool
+    -> ?list_values_in_help:bool
+    -> ?key:'a Env.Multi.Key.t
+    -> (module Enumerable_sexpable with type t = 'a)
+    -> 'a t
+
   val comma_separated
     :  ?allow_empty:bool
     -> ?key:'a list Env.Multi.Key.t
@@ -254,7 +268,40 @@ end = struct
     of_alist_exn ?case_sensitive ?list_values_in_help ?key (Map.to_alist map)
   ;;
 
-  let bool = of_alist_exn ~list_values_in_help:false [ "true", true; "false", false ]
+  let enumerated
+        (type t)
+        ?case_sensitive
+        ?list_values_in_help
+        ?key
+        (module E : Enumerable_stringable with type t = t)
+    =
+    of_alist_exn
+      ?case_sensitive
+      ?list_values_in_help
+      ?key
+      (let%map.List t = E.all in
+       E.to_string t, t)
+  ;;
+
+  let enumerated_sexpable
+        (type t)
+        ?case_sensitive
+        ?list_values_in_help
+        ?key
+        (module E : Enumerable_sexpable with type t = t)
+    =
+    enumerated
+      ?case_sensitive
+      ?list_values_in_help
+      ?key
+      (module struct
+        include E
+
+        let to_string t = Sexp.to_string [%sexp (t : E.t)]
+      end)
+  ;;
+
+  let bool = enumerated ~list_values_in_help:false (module Bool)
 
   let comma_separated
         ?(allow_empty = false)
@@ -1881,6 +1928,7 @@ let lazy_group ~summary ?readme ?preserve_subcommand_order ?body alist =
 ;;
 
 let group ~summary ?readme ?preserve_subcommand_order ?body alist =
+  let readme = Option.map readme ~f:(fun f () -> String.strip (f ())) in
   lazy_group ~summary ?readme ?preserve_subcommand_order ?body (Lazy.from_val alist)
 ;;
 
@@ -2739,6 +2787,7 @@ module Param = struct
 
     val and_arg_names : 'a t -> ('a * string list) t
     val and_arg_name : 'a t -> ('a * string) t
+    val arg_names : 'a t -> string list
   end
 
   module A = struct
@@ -2761,6 +2810,7 @@ module Param = struct
   let flag = Spec.flag
   let anon = Spec.anon
   let choose_one = Spec.choose_one
+  let arg_names = Spec.arg_names
   let and_arg_names = Spec.and_arg_names
   let and_arg_name = Spec.and_arg_name
   let flag_optional_with_default_doc = Spec.flag_optional_with_default_doc

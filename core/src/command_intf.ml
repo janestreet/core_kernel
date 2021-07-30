@@ -136,7 +136,20 @@ module type For_unix = sig
   end
 end
 
+module type Enumerable_sexpable = sig
+  type t [@@deriving enumerate, sexp_of]
+end
+
+module type Enumerable_stringable = sig
+  type t [@@deriving enumerate]
+
+  val to_string : t -> string
+end
+
 module type Command = sig
+  module type Enumerable_sexpable = Enumerable_sexpable
+  module type Enumerable_stringable = Enumerable_stringable
+
   (** Specifications for command-line auto-completion. *)
   module Auto_complete : sig
     (** In addition to the argument prefix, an auto-completion spec has access to any
@@ -185,9 +198,30 @@ module type Command = sig
     val of_alist_exn
       :  ?case_sensitive:bool
       (** Defaults to [true]. If [false], map keys must all be distinct when lowercased.*)
-      -> ?list_values_in_help:bool
+      -> ?list_values_in_help:bool (** default: true *)
       -> ?key:'a Univ_map.Multi.Key.t
       -> (string * 'a) list
+      -> 'a t
+
+    (** Convenience wrapper for [of_alist_exn] to use with [ppx_enumerate] using
+        [to_string]. Raises on duplicate [to_string]ed values. *)
+    val enumerated
+      :  ?case_sensitive:bool
+      (** Defaults to [true]. If [false], map keys must all be distinct when lowercased.*)
+      -> ?list_values_in_help:bool (** default: true *)
+      -> ?key:'a Univ_map.Multi.Key.t
+      -> (module Enumerable_stringable with type t = 'a)
+      -> 'a t
+
+    (** Convenience wrapper for [of_alist_exn] to use with [ppx_enumerate] using
+        [sexp_of_t] to turn the value into a string. Raises on duplicate [to_string]ed
+        values. *)
+    val enumerated_sexpable
+      :  ?case_sensitive:bool
+      (** Defaults to [true]. If [false], map keys must all be distinct when lowercased.*)
+      -> ?list_values_in_help:bool (** default: true *)
+      -> ?key:'a Univ_map.Multi.Key.t
+      -> (module Enumerable_sexpable with type t = 'a)
       -> 'a t
 
 
@@ -506,6 +540,8 @@ module type Command = sig
 
       (** Like [and_arg_names], but asserts that there is exactly one name. *)
       val and_arg_name : 'a t -> ('a * string) t
+
+      val arg_names : 'a t -> string list
     end
 
     include S (** @inline *)

@@ -1263,6 +1263,8 @@ module type M_sexp_grammar = sig
   type t [@@deriving sexp_grammar]
 end
 
+module type Equal_m = sig end
+
 let t_of_sexp ~hashable k_of_sexp d_of_sexp sexp =
   let alist = list_of_sexp (pair_of_sexp k_of_sexp d_of_sexp) sexp in
   of_alist_exn ~hashable alist ~size:(List.length alist)
@@ -1279,6 +1281,8 @@ let m__t_of_sexp (type k) (module K : M_of_sexp with type t = k) v_of_sexp s =
 let m__t_sexp_grammar (type k) (module K : M_sexp_grammar with type t = k) v_grammar =
   Sexplib.Sexp_grammar.coerce (List.Assoc.t_sexp_grammar K.t_sexp_grammar v_grammar)
 ;;
+
+let equal_m__t (module K : Equal_m) equal_v t1 t2 = equal equal_v t1 t2
 
 module Using_hashable = struct
   type nonrec ('a, 'b) t = ('a, 'b) t [@@deriving sexp_of]

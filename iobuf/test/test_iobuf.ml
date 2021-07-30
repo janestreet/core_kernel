@@ -275,7 +275,10 @@ module IR_Int64 = struct
 end
 
 module Accessors (Accessors : sig
-    include module type of Unsafe
+    module Consume : module type of Consume
+    module Fill : module type of Fill
+    module Peek : module type of Peek
+    module Poke : module type of Poke
 
     val is_safe : bool
   end) =
@@ -1614,6 +1617,8 @@ struct
         let%test _ = char_a_pos_0 (of_string "a" : (read_write, _) Iobuf.t)
       end)
 
+    let index = Peek.index
+
     module To_bytes = struct
       open Peek.To_bytes
 
@@ -1645,6 +1650,51 @@ struct
       assert (is_error (try_with (fun () -> Poke.char t ~pos:(-1) 'z')));
       assert (is_error (try_with (fun () -> Peek.char t ~pos:(String.length s))));
       assert (is_error (try_with (fun () -> Poke.char t ~pos:(String.length s) 'z'))))
+  ;;
+
+  let%expect_test "index" =
+    let s = "hello" in
+    let t = of_string s in
+    let test ?pos ?len char =
+      let index = Peek.index t ?pos ?len char in
+      print_s
+        [%message
+          (pos : (int option[@sexp.option]))
+            (len : (int option[@sexp.option]))
+            (char : char)
+            (index : int option)];
+      match index with
+      | None -> require [%here] (not (String.mem (String.subo ?pos ?len s) char))
+      | Some pos -> require_equal [%here] (module Char) (Peek.char t ~pos) char
+    in
+    let require_error here f =
+      (* Do this instead of [require_does_raise] because the latter prints out the exn.
+         We need to have the same output in the safe and unsafe variants. *)
+      require_error here [%sexp_of: unit] (try_with f)
+    in
+    test 'h';
+    test 'l';
+    test 'l' ~pos:3;
+    test 'o';
+    test 'o' ~len:3;
+    test 'z';
+    [%expect
+      {|
+      ((char h) (index (0)))
+      ((char l) (index (2)))
+      ((pos  3)
+       (char l)
+       (index (3)))
+      ((char o) (index (4)))
+      ((len  3)
+       (char o)
+       (index ()))
+      ((char z) (index ())) |}];
+    if is_safe
+    then (
+      require_error [%here] (fun () -> test 'z' ~pos:(-1));
+      require_error [%here] (fun () -> test 'z' ~pos:0 ~len:10);
+      require_error [%here] (fun () -> test 'z' ~pos:4 ~len:(-1)))
   ;;
 
   let%test_unit _ =
@@ -2538,6 +2588,16 @@ include Accessors (struct
 
 module Unsafe = Accessors (struct
     include Unsafe
+
+    module Peek = struct
+      include Peek
+
+      let index t ?(pos = 0) ?(len = length t - pos) char =
+        match index_or_neg t ~pos ~len char with
+        | index when index < 0 -> None
+        | index -> Some index
+      ;;
+    end
 
     let is_safe = false
   end)

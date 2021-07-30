@@ -111,14 +111,19 @@ module Binable (B1 : Binable.S) (B2 : Binable.S) = struct
   type t = B1.t * B2.t [@@deriving bin_io]
 end
 
+module Comparator (S1 : Comparator.S) (S2 : Comparator.S) = struct
+  include Make (S1) (S2)
+
+  type comparator_witness =
+    (S1.comparator_witness, S2.comparator_witness) T2.comparator_witness
+
+  let comparator = T2.comparator S1.comparator S2.comparator
+end
+
 module Comparable_plain (S1 : Comparable.S_plain) (S2 : Comparable.S_plain) = struct
   module T = struct
-    type t = S1.t * S2.t
+    include Comparator (S1) (S2)
 
-    type comparator_witness =
-      (S1.comparator_witness, S2.comparator_witness) T2.comparator_witness
-
-    let comparator = T2.comparator S1.comparator S2.comparator
     let sexp_of_t = comparator.sexp_of_t
   end
 

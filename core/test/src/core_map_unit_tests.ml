@@ -1349,6 +1349,44 @@ struct
       Finished |}]
   ;;
 
+  let fold_until _ = assert false
+
+  let%expect_test "fold_until" =
+    let test list =
+      let map = List.mapi list ~f:(fun i n -> Key.of_int i, n) |> Map.of_alist_exn in
+      Map.fold_until
+        map
+        ~init:0
+        ~f:(fun ~key ~data acc ->
+          let key = Key.to_int key in
+          print_s [%message (key : int) (data : int)];
+          if key > data then Stop acc else Continue (acc + key))
+        ~finish:Fn.id
+      |> [%sexp_of: int]
+      |> print_s
+    in
+    test [ 3; 1; 4; 1; 5; 9; 2; 6; 5 ];
+    [%expect
+      {|
+      ((key 0) (data 3))
+      ((key 1) (data 1))
+      ((key 2) (data 4))
+      ((key 3) (data 1))
+      3 |}];
+    test [ 1; 4; 9; 16; 25; 36; 49; 64 ];
+    [%expect
+      {|
+      ((key 0) (data 1))
+      ((key 1) (data 4))
+      ((key 2) (data 9))
+      ((key 3) (data 16))
+      ((key 4) (data 25))
+      ((key 5) (data 36))
+      ((key 6) (data 49))
+      ((key 7) (data 64))
+      28 |}]
+  ;;
+
   let to_sequence ?order:_ ?keys_greater_or_equal_to:_ ?keys_less_or_equal_to:_ _ =
     assert false
   ;;

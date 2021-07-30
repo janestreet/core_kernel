@@ -29,7 +29,7 @@ end
 module type S_plain = sig
   type elt
   type 'a hash_set
-  type t = elt hash_set [@@deriving sexp_of]
+  type t = elt hash_set [@@deriving equal, sexp_of]
 
   include
     Creators_generic

@@ -37,6 +37,7 @@ module type S = sig
   include Invariant.S with type t := t
 
   val empty : t
+  val singleton : 'a Key.t -> 'a data -> t
   val is_empty : t -> bool
   val set : t -> key:'a Key.t -> data:'a data -> t
   val mem : t -> 'a Key.t -> bool
@@ -69,6 +70,7 @@ module type S1 = sig
 
   val invariant : _ t -> unit
   val empty : _ t
+  val singleton : 'a Key.t -> ('s, 'a) data -> 's t
   val is_empty : _ t -> bool
   val set : 's t -> key:'a Key.t -> data:('s, 'a) data -> 's t
   val mem : _ t -> _ Key.t -> bool
@@ -117,7 +119,25 @@ module type Univ_map = sig
   module Make1 (Key : Key) (Data : Data1) :
     S1 with type ('s, 'a) data = ('s, 'a) Data.t and module Key = Key
 
-  module Merge
+  module Merge (Key : Key) (Input1_data : Data) (Input2_data : Data) (Output_data : Data) : sig
+    type f =
+      { f :
+          'a. key:'a Key.t
+          -> [ `Left of 'a Input1_data.t
+             | `Right of 'a Input2_data.t
+             | `Both of 'a Input1_data.t * 'a Input2_data.t
+             ] -> 'a Output_data.t option
+      }
+
+    (** The analogue of the normal [Map.merge] function.  *)
+    val merge
+      :  Make(Key)(Input1_data).t
+      -> Make(Key)(Input2_data).t
+      -> f:f
+      -> Make(Key)(Output_data).t
+  end
+
+  module Merge1
       (Key : Key)
       (Input1_data : Data1)
       (Input2_data : Data1)

@@ -388,6 +388,17 @@ val map_keys_exn
 (** Folds over keys and data in map in increasing order of key. *)
 val fold : ('k, 'v, _) t -> init:'a -> f:(key:'k -> data:'v -> 'a -> 'a) -> 'a
 
+(** Folds over keys and data in the map in increasing order of [key], until the first
+    time that [f] returns [Stop _]. If [f] returns [Stop final], this function returns
+    immediately with the value [final]. If [f] never returns [Stop _], and the final
+    call to [f] returns [Continue last], this function returns [finish last]. *)
+val fold_until
+  :  ('k, 'v, _) t
+  -> init:'acc
+  -> f:(key:'k -> data:'v -> 'acc -> ('acc, 'final) Container.Continue_or_stop.t)
+  -> finish:('acc -> 'final)
+  -> 'final
+
 (** Folds over keys and data in map in decreasing order of key. *)
 val fold_right : ('k, 'v, _) t -> init:'a -> f:(key:'k -> data:'v -> 'a -> 'a) -> 'a
 

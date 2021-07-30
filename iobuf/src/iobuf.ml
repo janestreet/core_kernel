@@ -2174,7 +2174,12 @@ module Unsafe = struct
     ;;
 
     let bin_prot = Peek.bin_prot
-    let index = Peek.index
+
+    let index_or_neg t ~pos ~len c =
+      let pos = unsafe_buf_pos t ~pos ~len in
+      let idx = Bigstring.unsafe_find ~pos ~len t.buf c in
+      if idx < 0 then -1 else idx - t.lo
+    ;;
 
     open Bigstring
 

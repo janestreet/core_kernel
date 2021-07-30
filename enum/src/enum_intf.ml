@@ -17,11 +17,7 @@ module type Single = sig
   val check_field_name : 'a t -> 'a -> (_, _, _) Field.t_with_perm -> unit
 end
 
-module type S = sig
-  include Sexp_of
-
-  val all : t list
-end
+module type S = Command.Enumerable_sexpable
 
 module type Enum = sig
   module type S = S
@@ -53,7 +49,13 @@ module type Enum = sig
     -> 'a Command.Param.t
 
   val make_param_optional_with_default_doc : default:'a -> ('a, 'a) make_param
-  val arg_type : 'a t -> 'a Command.Arg_type.t
+
+  val arg_type
+    :  ?case_sensitive:bool
+    -> ?key:'a Univ_map.Multi.Key.t
+    -> ?list_values_in_help:bool
+    -> 'a t
+    -> 'a Command.Arg_type.t
 
   module Make_stringable (M : S) : Stringable with type t := M.t
 

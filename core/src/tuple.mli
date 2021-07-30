@@ -73,6 +73,7 @@ end
     {[
       module Foo = struct
         include Tuple.Make       (String) (Int)
+        include Tuple.Comparator (String) (Int)
         include Tuple.Comparable (String) (Int)
         include Tuple.Hashable   (String) (Int)
         include Tuple.Binable    (String) (Int)
@@ -87,6 +88,9 @@ module Make (T1 : sig
         end) : sig
   type t = T1.t * T2.t
 end
+
+module Comparator (S1 : Comparator.S) (S2 : Comparator.S) :
+  Comparator.S with type t = Make(S1)(S2).t
 
 module type Comparable_sexpable = sig
   type t [@@deriving sexp]

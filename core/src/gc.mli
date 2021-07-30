@@ -143,7 +143,7 @@ module Control : sig
         2 is the best-fit policy, which is as fast as next-fit
         and has even less fragmentation than first-fit.
 
-        Default: 0. *)
+        Default: 2. *)
     ; window_size : int
     (** The size of the window used by the major GC for smoothing
         out variations in its workload. This is an integer between

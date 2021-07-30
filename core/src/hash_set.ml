@@ -18,6 +18,8 @@ struct
   type elt = T.Elt.t
   type nonrec t = elt t
 
+  let equal = equal
+
   include Creators (struct
       type 'a t = T.Elt.t
 

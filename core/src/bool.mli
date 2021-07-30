@@ -9,6 +9,16 @@ include
   with type t := t
    and type comparator_witness := Base.Bool.comparator_witness
 
+(**
+   Human readable parsing. Accepted inputs are (case insensitive):
+   - true/false
+   - yes/no
+   - 1/0
+   - t/f
+   - y/n
+*)
+val of_string_hum : string -> t
+
 include Quickcheckable.S with type t := t
 
 module Stable : sig

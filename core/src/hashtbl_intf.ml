@@ -163,7 +163,7 @@ end
 module type S_plain = sig
   type key
   type ('a, 'b) hashtbl
-  type 'b t = (key, 'b) hashtbl [@@deriving sexp_of]
+  type 'b t = (key, 'b) hashtbl [@@deriving equal, sexp_of]
   type ('a, 'b) t_ = 'b t
   type 'a key_ = key
 

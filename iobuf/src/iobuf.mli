@@ -45,6 +45,8 @@ type t_repr
     as desired. *)
 type (-'data_perm_read_write, +'seek_permission) t = private t_repr
 
+type ('rw, 'seek) iobuf := ('rw, 'seek) t
+
 (** [t_with_shallow_sexp] has a [sexp_of] that shows the windows and limits of
     the underlying bigstring, but no data. We do this rather than deriving sexp_of
     on [t] because it is much more likely to be noise than useful information, and
@@ -387,26 +389,14 @@ end
     long.  [Peek.], [Poke.], [Consume.], and [Fill.bin_prot] do not add any size prefix or
     other framing to the [bin_prot] representation. *)
 module Peek : sig
-  (** Similar to [Consume.To_*], but do not advance the buffer. *)
-  type 'seek src = (read, 'seek) t
+  include Peek with type ('rw, 'seek) iobuf := ('rw, 'seek) t (** @open *)
 
-  module To_bytes :
-    Blit.S1_distinct with type 'seek src := 'seek src with type _ dst := Bytes.t
+  (** [index ?pos ?len t c] returns [Some i] for the smallest [i >= pos] such that [char t
+      i = c], or [None] if there is no such [i].
 
-  module To_bigstring :
-    Blit.S1_distinct with type 'seek src := 'seek src with type _ dst := Bigstring.t
-
-  module To_string : sig
-    val sub : (_ src, string) Base.Blit.sub
-    val subo : (_ src, string) Base.Blit.subo
-  end
-
-  val index : ([> read ], _) t -> ?pos:int -> ?len:int -> char -> int option
-
-  include
-    Accessors_read
-    with type ('a, 'd, 'w) t = ('d, 'w) t -> pos:int -> 'a
-    with type 'a bin_prot := 'a Bin_prot.Type_class.reader
+      @param pos default = 0
+      @param len default = [length t - pos] *)
+  val index : ([> read ], _) iobuf -> ?pos:int -> ?len:int -> char -> int option
 end
 
 
@@ -437,7 +427,15 @@ end
 module Unsafe : sig
   module Consume : module type of Consume
   module Fill : module type of Fill
-  module Peek : module type of Peek
+
+  module Peek : sig
+    include Peek with type ('rw, 'seek) iobuf := ('rw, 'seek) t (** @open *)
+
+    (** Like [Peek.index] but with no bounds checks, and returns a negative number rather
+        than [None] when the character is not found. *)
+    val index_or_neg : ([> read ], _) iobuf -> pos:int -> len:int -> char -> int
+  end
+
   module Poke : module type of Poke
 end
 

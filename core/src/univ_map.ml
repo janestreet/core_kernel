@@ -84,6 +84,7 @@ struct
   let remove_by_id t id = Map.remove t id
   let remove t key = remove_by_id t (uid_of_key key)
   let empty = Uid.Map.empty
+  let singleton key data = Uid.Map.singleton (uid_of_key key) (Packed.T (key, data))
   let is_empty = Map.is_empty
 
   let find (type b) t (key : b Key.t) =
@@ -153,6 +154,7 @@ struct
 
   let invariant = M.invariant
   let empty = M.empty
+  let singleton = M.singleton
   let is_empty = M.is_empty
   let set = M.set
   let mem = M.mem
@@ -181,7 +183,44 @@ struct
   ;;
 end
 
-module Merge (Key : Key) (Input1_data : Data1) (Input2_data : Data1) (Output_data : Data1) =
+module Merge (Key : Key) (Input1_data : Data) (Input2_data : Data) (Output_data : Data) =
+struct
+  type f =
+    { f :
+        'a. key:'a Key.t
+        -> [ `Left of 'a Input1_data.t
+           | `Right of 'a Input2_data.t
+           | `Both of 'a Input1_data.t * 'a Input2_data.t
+           ] -> 'a Output_data.t option
+    }
+
+  module Output = Make (Key) (Output_data)
+
+  let merge (t1 : Make(Key)(Input1_data).t) (t2 : Make(Key)(Input2_data).t) ~f:{ f }
+    : Make(Key)(Output_data).t
+    =
+    let f ~key merge_result =
+      Option.map (f ~key merge_result) ~f:(fun data -> Output.M.Packed.T (key, data))
+    in
+    Map.merge t1 t2 ~f:(fun ~key:_ -> function
+      | `Left (T (key, data)) -> f ~key (`Left data)
+      | `Right (T (key, data)) -> f ~key (`Right data)
+      | `Both (T (left_key, left_data), T (right_key, right_data)) ->
+        (* Can't raise due to the invariant *)
+        let Type_equal.T =
+          Type_equal.Id.same_witness_exn
+            (Key.to_type_id left_key)
+            (Key.to_type_id right_key)
+        in
+        f ~key:left_key (`Both (left_data, right_data)))
+  ;;
+end
+
+module Merge1
+    (Key : Key)
+    (Input1_data : Data1)
+    (Input2_data : Data1)
+    (Output_data : Data1) =
 struct
   type 's f =
     { f :

@@ -322,6 +322,7 @@ module Make_tree (Key : Comparator.S1) = struct
   let map = map
   let mapi = mapi
   let fold = fold
+  let fold_until = fold_until
   let fold_right = fold_right
   let fold2 a b ~init ~f = fold2 a b ~init ~f ~comparator
   let filter_keys a ~f = filter_keys a ~f ~comparator

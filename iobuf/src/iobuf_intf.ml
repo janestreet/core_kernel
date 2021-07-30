@@ -167,3 +167,26 @@ module type Compound_hexdump = sig
     val to_sequence : ?max_lines:int -> (_, _) t -> string Sequence.t
   end
 end
+
+module type Peek = sig
+  type ('rw, 'seek) iobuf
+  type 'seek src = (read, 'seek) iobuf
+
+  (** Similar to [Consume.To_*], but do not advance the buffer. *)
+
+  module To_bytes :
+    Blit.S1_distinct with type 'seek src := 'seek src with type _ dst := Bytes.t
+
+  module To_bigstring :
+    Blit.S1_distinct with type 'seek src := 'seek src with type _ dst := Bigstring.t
+
+  module To_string : sig
+    val sub : (_ src, string) Base.Blit.sub
+    val subo : (_ src, string) Base.Blit.subo
+  end
+
+  include
+    Accessors_read
+    with type ('a, 'd, 'w) t = ('d, 'w) iobuf -> pos:int -> 'a
+    with type 'a bin_prot := 'a Bin_prot.Type_class.reader
+end

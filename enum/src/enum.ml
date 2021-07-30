@@ -49,11 +49,25 @@ let assert_alphabetic_order_exn here (type a) ((module M) : a t) =
     as_strings
 ;;
 
-let arg_type' ?key ?list_values_in_help l =
-  Command.Arg_type.of_alist_exn ?key ?list_values_in_help l
-;;
+module Rewrite_sexp_of (S : S) : S with type t = S.t = struct
+  include S
 
-let arg_type m = arg_type' (enum m)
+  let sexp_of_t t = to_string_hum (module S) t |> Sexp.of_string
+end
+
+let arg_type
+      (type t)
+      ?case_sensitive
+      ?key
+      ?list_values_in_help
+      (module S : S with type t = t)
+  =
+  Command.Arg_type.enumerated_sexpable
+    ?key
+    ?list_values_in_help
+    ?case_sensitive
+    (module Rewrite_sexp_of (S))
+;;
 
 module Make_param = struct
   type 'a t =
@@ -62,13 +76,12 @@ module Make_param = struct
     }
 
   let create ?key ?represent_choice_with ?list_values_in_help ~doc m =
-    let enum = enum m in
     let doc =
       match represent_choice_with with
       | None -> " " ^ doc
       | Some represent_choice_with -> represent_choice_with ^ " " ^ doc
     in
-    { arg_type = arg_type' ?key ?list_values_in_help enum; doc }
+    { arg_type = arg_type ?key ?list_values_in_help m; doc }
   ;;
 end
 
