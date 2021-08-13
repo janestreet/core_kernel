@@ -228,9 +228,7 @@ module Inherit (C : sig
     let compare t t' = C.compare (T.component t) (T.component t')
   end)
 
-let lexicographic = Base.Comparable.lexicographic
-let lift = Base.Comparable.lift
-let reverse = Base.Comparable.reverse
+include (Base.Comparable : With_compare)
 
 module Stable = struct
   module V1 = struct

@@ -81,7 +81,7 @@ open Std_internal
     fancy shortcuts.  Also, the sexps for ['a] must not look anything like blang sexps.
     Otherwise [t_of_sexp] will fail.  The directly inferred sexps are available via
     [Raw.sexp_of_t]. *)
-type 'a t = private
+type +'a t = private
   | True
   | False
   | And of 'a t * 'a t

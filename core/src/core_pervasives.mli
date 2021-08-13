@@ -161,6 +161,18 @@ external __MODULE__ : string = "%loc_MODULE"
     the line and [enum] the last character position in the line. *)
 external __POS__ : string * int * int * int = "%loc_POS"
 
+[%%if ocaml_version >= (4, 12, 0)]
+
+(** [__FUNCTION__] returns the name of the current function or method, including
+    any enclosing modules or classes. *)
+external __FUNCTION__ : string = "%loc_FUNCTION"
+
+[%%else]
+
+val __FUNCTION__ : string
+
+[%%endif]
+
 (** [__LOC_OF__ expr] returns a pair [(loc, expr)] where [loc] is the
     location of [expr] in the file currently being parsed by the
     compiler, with the standard error format of OCaml: "File %S, line
@@ -612,11 +624,23 @@ external float_of_string : string -> float = "caml_float_of_string"
 
 (** {6 Pair operations} *)
 
+[%%if flambda_backend]
+
+(** Return the first component of a pair. *)
+external fst : 'a * 'b -> 'a = "%field0_immut"
+
+(** Return the second component of a pair. *)
+external snd : 'a * 'b -> 'b = "%field1_immut"
+
+[%%else]
+
 (** Return the first component of a pair. *)
 external fst : 'a * 'b -> 'a = "%field0"
 
 (** Return the second component of a pair. *)
 external snd : 'a * 'b -> 'b = "%field1"
+
+[%%endif]
 
 (** {6 List operations}
 

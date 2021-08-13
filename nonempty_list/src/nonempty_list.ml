@@ -324,6 +324,7 @@ module Reversed = struct
 end
 
 let flag arg_type =
-  Command.Param.map_flag (Command.Param.one_or_more arg_type) ~f:(fun (one, more) ->
-    one :: more)
+  Command.Param.map_flag
+    (Command.Param.one_or_more_as_pair arg_type)
+    ~f:(fun (one, more) -> one :: more)
 ;;

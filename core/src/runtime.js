@@ -36,6 +36,8 @@ function core_gc_minor_words () { return 0 }
 function core_gc_promoted_words () { return 0 }
 //Provides: core_gc_top_heap_words
 function core_gc_top_heap_words () { return 0 }
+//Provides: core_gc_run_memprof_callbacks
+function core_gc_run_memprof_callbacks () { return 0 }
 
 //Provides: core_heap_block_is_heap_block
 function core_heap_block_is_heap_block(x){

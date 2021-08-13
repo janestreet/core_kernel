@@ -125,5 +125,6 @@ let%expect_test "stat diff" =
     ((minor_words 100) (promoted_words 0) (major_words 0) (minor_collections 0)
      (major_collections 0) (heap_words 0) (heap_chunks 0) (live_words 0)
      (live_blocks 0) (free_words 0) (free_blocks 0) (largest_free 0)
-     (fragments 0) (compactions 7) (top_heap_words 0) (stack_size 0)) |}]
+     (fragments 0) (compactions 7) (top_heap_words 0) (stack_size 0)
+     (forced_major_collections 0)) |}]
 ;;

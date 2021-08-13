@@ -620,7 +620,7 @@ module Flag = struct
     arg_flag name arg_type read write Num_occurrences.any
   ;;
 
-  let one_or_more arg_type name =
+  let one_or_more_as_pair arg_type name =
     let key =
       Env.With_default.Key.create ~default:Fqueue.empty ~name [%sexp_of: _ Fqueue.t]
     in
@@ -635,8 +635,13 @@ module Flag = struct
     arg_flag name arg_type read write Num_occurrences.at_least_once
   ;;
 
+  let[@deprecated "[since 2021-07] Use [one_or_more_as_pair] or [one_or_more_as_list]"] one_or_more
+    =
+    one_or_more_as_pair
+  ;;
+
   let one_or_more_as_list arg_type =
-    one_or_more arg_type |> map_flag ~f:(fun (x, xs) -> x :: xs)
+    one_or_more_as_pair arg_type |> map_flag ~f:(fun (x, xs) -> x :: xs)
   ;;
 
   let escape_general ~deprecated_hook name =
@@ -1521,6 +1526,7 @@ module Base = struct
       let escape = escape
       let listed = listed
       let one_or_more = one_or_more
+      let one_or_more_as_pair = one_or_more_as_pair
       let one_or_more_as_list = one_or_more_as_list
       let no_arg = no_arg
       let no_arg_register = no_arg_register
@@ -1642,7 +1648,9 @@ module Base = struct
         | Arg.Tuple _ ->
           failwith "Arg.Tuple is not supported by Command.Spec.flags_of_args_exn"
         | ((Arg.Expand _)[@if ocaml_version >= (4, 05, 0)]) ->
-          failwith "Arg.Expand is not supported by Command.Spec.flags_of_args_exn")
+          failwith "Arg.Expand is not supported by Command.Spec.flags_of_args_exn"
+        | ((Arg.Rest_all _)[@if ocaml_version >= (4, 12, 0)]) ->
+          failwith "Arg.Rest_all is not supported by Command.Spec.flags_of_args_exn")
     ;;
 
     module Deprecated = struct
@@ -2830,6 +2838,7 @@ module Param = struct
     let no_arg_register = no_arg_register
     let no_arg_some = no_arg_some
     let one_or_more = one_or_more
+    let one_or_more_as_pair = one_or_more_as_pair
     let one_or_more_as_list = one_or_more_as_list
     let optional = optional
     let optional_with_default = optional_with_default

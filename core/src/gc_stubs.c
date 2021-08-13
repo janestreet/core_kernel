@@ -1,6 +1,8 @@
 #define CAML_INTERNALS
 #include <caml/memory.h>
 #include <caml/gc_ctrl.h>
+#include <caml/memprof.h>
+#include <caml/fail.h>
 
 static intnat minor_words(void)
 {
@@ -71,4 +73,11 @@ CAMLprim value core_gc_major_plus_minor_words(value unit __attribute__((unused))
 CAMLprim value core_gc_allocated_words(value unit __attribute__((unused)))
 {
   return Val_long(minor_words() + major_words() - promoted_words());
+}
+
+CAMLprim value core_gc_run_memprof_callbacks(value unit __attribute__((unused)))
+{
+  value exn = caml_memprof_handle_postponed_exn();
+  caml_raise_if_exception(exn);
+  return Val_unit;
 }

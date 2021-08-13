@@ -23,8 +23,17 @@ module T2 = struct
     fun (a, b) -> f a b
   ;;
 
+  [%%if flambda_backend]
+
+  external get1 : ('a, _) t -> 'a = "%field0_immut"
+  external get2 : (_, 'a) t -> 'a = "%field1_immut"
+
+  [%%else]
+
   external get1 : ('a, _) t -> 'a = "%field0"
   external get2 : (_, 'a) t -> 'a = "%field1"
+
+  [%%endif]
 
   let map (x, y) ~f = f x, f y
   let map_fst (x, y) ~f = f x, y
@@ -68,8 +77,17 @@ module T3 = struct
   let map_trd (x, y, z) ~f = x, y, f z
   let map2 (x1, y1, z1) (x2, y2, z2) ~f = f x1 x2, f y1 y2, f z1 z2
 
+  [%%if flambda_backend]
+
+  external get1 : ('a, _, _) t -> 'a = "%field0_immut"
+  external get2 : (_, 'a, _) t -> 'a = "%field1_immut"
+
+  [%%else]
+
   external get1 : ('a, _, _) t -> 'a = "%field0"
   external get2 : (_, 'a, _) t -> 'a = "%field1"
+
+  [%%endif]
 
   (* There's no %field2....*)
   let get3 (_, _, a) = a

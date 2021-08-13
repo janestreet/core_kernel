@@ -20,6 +20,8 @@ open! Import
   (* $Id: gc.mli,v 1.42 2005-10-25 18:34:07 doligez Exp $ *)
 *)
 module Stat : sig
+  [%%if ocaml_version < (4, 12, 0)]
+
   type t =
     { minor_words : float
     (** Number of words allocated in the minor heap since
@@ -58,7 +60,52 @@ module Stat : sig
     }
   [@@deriving bin_io, sexp, fields]
 
-  include Comparable.S with type t := t
+  [%%else]
+
+  type t =
+    { minor_words : float
+    (** Number of words allocated in the minor heap since
+        the program was started.  This number is accurate in
+        byte-code programs, but only an approximation in programs
+        compiled to native code. *)
+    ; promoted_words : float
+    (** Number of words allocated in the minor heap that
+        survived a minor collection and were moved to the major heap
+        since the program was started. *)
+    ; major_words : float
+    (** Number of words allocated in the major heap, including
+        the promoted words, since the program was started. *)
+    ; minor_collections : int
+    (** Number of minor collections since the program was started. *)
+    ; major_collections : int
+    (** Number of major collection cycles completed since the program
+        was started. *)
+    ; heap_words : int (** Total size of the major heap, in words. *)
+    ; heap_chunks : int
+    (** Number of contiguous pieces of memory that make up the major heap. *)
+    ; live_words : int
+    (** Number of words of live data in the major heap, including the header
+        words. *)
+    ; live_blocks : int (** Number of live blocks in the major heap. *)
+    ; free_words : int (** Number of words in the free list. *)
+    ; free_blocks : int (** Number of blocks in the free list. *)
+    ; largest_free : int (** Size (in words) of the largest block in the free list. *)
+    ; fragments : int
+    (** Number of wasted words due to fragmentation.  These are
+        1-words free blocks placed between two live blocks.  They
+        are not available for allocation. *)
+    ; compactions : int (** Number of heap compactions since the program was started. *)
+    ; top_heap_words : int (** Maximum size reached by the major heap, in words. *)
+    ; stack_size : int (** Current size of the stack, in words. *)
+    ; forced_major_collections : int
+    (** Number of forced full major collection cycles completed since the program
+        was started. *)
+    }
+  [@@deriving sexp_of, fields]
+
+  [%%endif]
+
+  include Comparable.S_plain with type t := t
 
   (** [diff after before] computes [after-before] pointwise across each field; this helps
       show the effect (on all stats) of some code block. *)
@@ -76,85 +123,6 @@ type stat = Stat.t
 *)
 
 module Control : sig
-  [%%if ocaml_version < (4, 08, 0)]
-
-  type t =
-    { mutable minor_heap_size : int
-    (** The size (in words) of the minor heap.  Changing this parameter will
-        trigger a minor collection.
-
-        Default: 262144 words / 1MB (32bit) / 2MB (64bit).
-    *)
-    ; mutable major_heap_increment : int
-    (** How much to add to the major heap when increasing it. If this
-        number is less than or equal to 1000, it is a percentage of
-        the current heap size (i.e. setting it to 100 will double the heap
-        size at each increase). If it is more than 1000, it is a fixed
-        number of words that will be added to the heap.
-
-        Default: 15%.
-    *)
-    ; mutable space_overhead : int
-    (** The major GC speed is computed from this parameter.
-        This is the memory that will be "wasted" because the GC does not
-        immediately collect unreachable blocks.  It is expressed as a
-        percentage of the memory used for live data.
-        The GC will work more (use more CPU time and collect
-        blocks more eagerly) if [space_overhead] is smaller.
-
-        Default: 80. *)
-    ; mutable verbose : int
-    (** This value controls the GC messages on standard error output.
-        It is a sum of some of the following flags, to print messages
-        on the corresponding events:
-        - [0x001] Start of major GC cycle.
-        - [0x002] Minor collection and major GC slice.
-        - [0x004] Growing and shrinking of the heap.
-        - [0x008] Resizing of stacks and memory manager tables.
-        - [0x010] Heap compaction.
-        - [0x020] Change of GC parameters.
-        - [0x040] Computation of major GC slice size.
-        - [0x080] Calling of finalisation functions.
-        - [0x100] Bytecode executable search at start-up.
-        - [0x200] Computation of compaction triggering condition.
-
-        Default: 0. *)
-    ; mutable max_overhead : int
-    (** Heap compaction is triggered when the estimated amount
-        of "wasted" memory is more than [max_overhead] percent of the
-        amount of live data.  If [max_overhead] is set to 0, heap
-        compaction is triggered at the end of each major GC cycle
-        (this setting is intended for testing purposes only).
-        If [max_overhead >= 1000000], compaction is never triggered.
-
-        Default: 500. *)
-    ; mutable stack_limit : int
-    (** The maximum size of the stack (in words).  This is only
-        relevant to the byte-code runtime, as the native code runtime
-        uses the operating system's stack.
-
-        Default: 1048576 words / 4MB (32bit) / 8MB (64bit). *)
-    ; mutable allocation_policy : int
-    (** The policy used for allocating in the heap.  Possible
-        values are 0, 1 and 2.  0 is the next-fit policy, which is
-        quite fast but can result in fragmentation.  1 is the
-        first-fit policy, which can be slower in some cases but
-        can be better for programs with fragmentation problems.
-        2 is the best-fit policy, which is as fast as next-fit
-        and has even less fragmentation than first-fit.
-
-        Default: 2. *)
-    ; window_size : int
-    (** The size of the window used by the major GC for smoothing
-        out variations in its workload. This is an integer between
-        1 and 50.
-
-        Default: 1. @since 4.03.0 *)
-    }
-  [@@deriving bin_io, sexp, fields]
-
-  [%%else]
-
   type t =
     { mutable minor_heap_size : int
     (** The size (in words) of the minor heap.  Changing this parameter will
@@ -257,11 +225,9 @@ module Control : sig
         Default: 8192 bytes.
         @since 4.08.0 *)
     }
-  [@@deriving bin_io, sexp, fields]
+  [@@deriving sexp_of, fields]
 
-  [%%endif]
-
-  include Comparable.S with type t := t
+  include Comparable.S_plain with type t := t
 end
 
 type control = Control.t
@@ -382,26 +348,8 @@ module Allocation_policy : sig
     | Next_fit
     | First_fit
     | Best_fit
-  [@@deriving compare, equal, hash, sexp]
+  [@@deriving compare, equal, hash, sexp_of]
 end
-
-[%%if ocaml_version < (4, 08, 0)]
-
-(** Adjust the specified GC parameters. *)
-val tune
-  :  ?logger:(string -> unit)
-  -> ?minor_heap_size:int
-  -> ?major_heap_increment:int
-  -> ?space_overhead:int
-  -> ?verbose:int
-  -> ?max_overhead:int
-  -> ?stack_limit:int
-  -> ?allocation_policy:Allocation_policy.t
-  -> ?window_size:int
-  -> unit
-  -> unit
-
-[%%else]
 
 (** Adjust the specified GC parameters. *)
 val tune
@@ -419,8 +367,6 @@ val tune
   -> ?custom_minor_max_size:int
   -> unit
   -> unit
-
-[%%endif]
 
 val disable_compaction
   :  ?logger:(string -> unit)
@@ -578,9 +524,39 @@ module Expert : sig
 end
 
 module Stable : sig
+  module Stat : sig
+    [%%if ocaml_version < (4, 12, 0)]
+
+    module V1 : sig
+      type nonrec t = Stat.t [@@deriving bin_io, compare, equal, hash, sexp]
+    end
+
+    module V2 : sig
+      type nonrec t [@@deriving bin_io, compare, equal, hash, sexp]
+    end
+
+    [%%else]
+
+    module V1 : sig
+      type nonrec t [@@deriving bin_io, compare, equal, hash, sexp]
+    end
+
+    module V2 : sig
+      type nonrec t = Stat.t [@@deriving bin_io, compare, equal, hash, sexp]
+    end
+
+    [%%endif]
+  end
+
   module Allocation_policy : sig
     module V1 : sig
       type nonrec t = Allocation_policy.t [@@deriving bin_io, compare, equal, hash, sexp]
+    end
+  end
+
+  module Control : sig
+    module V1 : sig
+      type nonrec t = Control.t [@@deriving bin_io, compare, equal, sexp]
     end
   end
 end

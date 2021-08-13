@@ -12,3 +12,9 @@ include Caml
    [[1] http://caml.inria.fr/mantis/view.php?id=6556
 *)
 external raise : exn -> 'a = "%reraise"
+
+[%%if ocaml_version < (4, 12, 0)]
+
+let __FUNCTION__ = "<__FUNCTION__ not supported before OCaml 4.12>"
+
+[%%endif]

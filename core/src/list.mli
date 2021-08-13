@@ -29,9 +29,21 @@ end
 
 (** [stable_dedup] Same as [dedup] but maintains the order of the list and doesn't allow
     compare function to be specified (otherwise, the implementation in terms of Set.t
-    would hide a heavyweight functor instantiation at each call). *)
-val stable_dedup : 'a t -> 'a t
+    would hide a heavyweight functor instantiation at each call).
 
+    This function is deprecated because it uses polymorphic comparison under the hood
+    without being obvious to the caller. *)
+val stable_dedup : 'a t -> 'a t
+[@@deprecated
+  "[since 2021-08] Use [Set.stable_dedup_list] or [stable_dedup_staged] instead."]
+
+(** [stable_dedup_staged] is the same as [dedup_and_sort] but maintains the order of the
+    list.  This function is staged because it instantiates a functor when [compare] is
+    passed.
+
+    See also [Set.stable_dedup_list], which is the underlying implementation of this
+    function and lets you avoid the functor instantiation when you already have such a
+    module on hand. *)
 val stable_dedup_staged : compare:('a -> 'a -> int) -> ('a list -> 'a list) Staged.t
 
 (** Only raised in [exn_if_dup] below. *)

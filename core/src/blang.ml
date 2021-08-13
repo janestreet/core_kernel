@@ -19,7 +19,7 @@ open Std_internal
    immediately define its Stable interface.
 *)
 module T : sig
-  type 'a t = private
+  type +'a t = private
     | True
     | False
     | And of 'a t * 'a t
@@ -38,7 +38,7 @@ module T : sig
   val if_ : 'a t -> 'a t -> 'a t -> 'a t
   val base : 'a -> 'a t
 end = struct
-  type 'a t =
+  type +'a t =
     | True
     | False
     | And of 'a t * 'a t

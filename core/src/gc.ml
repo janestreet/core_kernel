@@ -10,12 +10,133 @@ module Stable = struct
       [@@deriving bin_io, compare, equal, hash, sexp]
     end
   end
+
+  module Stat = struct
+    [%%if ocaml_version < (4, 12, 0)]
+
+    module V1 = struct
+      type t = Caml.Gc.stat =
+        { minor_words : float
+        ; promoted_words : float
+        ; major_words : float
+        ; minor_collections : int
+        ; major_collections : int
+        ; heap_words : int
+        ; heap_chunks : int
+        ; live_words : int
+        ; live_blocks : int
+        ; free_words : int
+        ; free_blocks : int
+        ; largest_free : int
+        ; fragments : int
+        ; compactions : int
+        ; top_heap_words : int
+        ; stack_size : int
+        }
+      [@@deriving bin_io, compare, equal, hash, sexp]
+    end
+
+    module V2 = struct
+      type t =
+        { minor_words : float
+        ; promoted_words : float
+        ; major_words : float
+        ; minor_collections : int
+        ; major_collections : int
+        ; heap_words : int
+        ; heap_chunks : int
+        ; live_words : int
+        ; live_blocks : int
+        ; free_words : int
+        ; free_blocks : int
+        ; largest_free : int
+        ; fragments : int
+        ; compactions : int
+        ; top_heap_words : int
+        ; stack_size : int
+        ; forced_major_collections : int
+        }
+      [@@deriving bin_io, compare, equal, hash, sexp]
+    end
+
+    [%%else]
+
+    module V1 = struct
+      type t =
+        { minor_words : float
+        ; promoted_words : float
+        ; major_words : float
+        ; minor_collections : int
+        ; major_collections : int
+        ; heap_words : int
+        ; heap_chunks : int
+        ; live_words : int
+        ; live_blocks : int
+        ; free_words : int
+        ; free_blocks : int
+        ; largest_free : int
+        ; fragments : int
+        ; compactions : int
+        ; top_heap_words : int
+        ; stack_size : int
+        }
+      [@@deriving bin_io, compare, equal, hash, sexp]
+    end
+
+    module V2 = struct
+      type t = Caml.Gc.stat =
+        { minor_words : float
+        ; promoted_words : float
+        ; major_words : float
+        ; minor_collections : int
+        ; major_collections : int
+        ; heap_words : int
+        ; heap_chunks : int
+        ; live_words : int
+        ; live_blocks : int
+        ; free_words : int
+        ; free_blocks : int
+        ; largest_free : int
+        ; fragments : int
+        ; compactions : int
+        ; top_heap_words : int
+        ; stack_size : int
+        ; forced_major_collections : int
+        }
+      [@@deriving bin_io, compare, equal, hash, sexp]
+    end
+
+    [%%endif]
+  end
+
+  module Control = struct
+    module V1 = struct
+      [@@@ocaml.warning "-3"]
+
+      type t = Caml.Gc.control =
+        { mutable minor_heap_size : int
+        ; mutable major_heap_increment : int
+        ; mutable space_overhead : int
+        ; mutable verbose : int
+        ; mutable max_overhead : int
+        ; mutable stack_limit : int
+        ; mutable allocation_policy : int
+        ; window_size : int
+        ; custom_major_ratio : int
+        ; custom_minor_ratio : int
+        ; custom_minor_max_size : int
+        }
+      [@@deriving bin_io, compare, equal, sexp]
+    end
+  end
 end
 
 include Caml.Gc
 
 module Stat = struct
   module T = struct
+    [%%if ocaml_version < (4, 12, 0)]
+
     type t = Caml.Gc.stat =
       { minor_words : float
       ; promoted_words : float
@@ -35,10 +156,37 @@ module Stat = struct
       ; stack_size : int
       }
     [@@deriving compare, hash, bin_io, sexp, fields]
+
+    [%%else]
+
+    type t = Caml.Gc.stat =
+      { minor_words : float
+      ; promoted_words : float
+      ; major_words : float
+      ; minor_collections : int
+      ; major_collections : int
+      ; heap_words : int
+      ; heap_chunks : int
+      ; live_words : int
+      ; live_blocks : int
+      ; free_words : int
+      ; free_blocks : int
+      ; largest_free : int
+      ; fragments : int
+      ; compactions : int
+      ; top_heap_words : int
+      ; stack_size : int
+      ; forced_major_collections : int
+      }
+    [@@deriving compare, hash, sexp_of, fields]
+
+    [%%endif]
   end
 
   include T
-  include Comparable.Make (T)
+  include Comparable.Make_plain (T)
+
+  [%%if ocaml_version < (4, 12, 0)]
 
   let diff after before =
     { minor_words = after.minor_words -. before.minor_words
@@ -59,26 +207,36 @@ module Stat = struct
     ; stack_size = after.stack_size - before.stack_size
     }
   ;;
+
+  [%%else]
+
+  let diff after before =
+    { minor_words = after.minor_words -. before.minor_words
+    ; promoted_words = after.promoted_words -. before.promoted_words
+    ; major_words = after.major_words -. before.major_words
+    ; minor_collections = after.minor_collections - before.minor_collections
+    ; major_collections = after.major_collections - before.major_collections
+    ; heap_words = after.heap_words - before.heap_words
+    ; heap_chunks = after.heap_chunks - before.heap_chunks
+    ; live_words = after.live_words - before.live_words
+    ; live_blocks = after.live_blocks - before.live_blocks
+    ; free_words = after.free_words - before.free_words
+    ; free_blocks = after.free_blocks - before.free_blocks
+    ; largest_free = after.largest_free - before.largest_free
+    ; fragments = after.fragments - before.fragments
+    ; compactions = after.compactions - before.compactions
+    ; top_heap_words = after.top_heap_words - before.top_heap_words
+    ; stack_size = after.stack_size - before.stack_size
+    ; forced_major_collections =
+        after.forced_major_collections - before.forced_major_collections
+    }
+  ;;
+
+  [%%endif]
 end
 
 module Control = struct
   module T = struct
-    [%%if ocaml_version < (4, 08, 0)]
-
-    type t = Caml.Gc.control =
-      { mutable minor_heap_size : int
-      ; mutable major_heap_increment : int
-      ; mutable space_overhead : int
-      ; mutable verbose : int
-      ; mutable max_overhead : int
-      ; mutable stack_limit : int
-      ; mutable allocation_policy : int
-      ; window_size : int
-      }
-    [@@deriving compare, bin_io, sexp, fields]
-
-    [%%else]
-
     [@@@ocaml.warning "-3"]
 
     type t = Caml.Gc.control =
@@ -94,17 +252,19 @@ module Control = struct
       ; custom_minor_ratio : int
       ; custom_minor_max_size : int
       }
-    [@@deriving compare, bin_io, sexp, fields]
-
-    [%%endif]
+    [@@deriving compare, sexp_of, fields]
   end
 
   include T
-  include Comparable.Make (T)
+  include Comparable.Make_plain (T)
 end
 
 module Allocation_policy = struct
-  include Stable.Allocation_policy.V1
+  type t = Stable.Allocation_policy.V1.t =
+    | Next_fit
+    | First_fit
+    | Best_fit
+  [@@deriving compare, equal, hash, sexp_of]
 
   let to_int = function
     | Next_fit -> 0
@@ -112,52 +272,6 @@ module Allocation_policy = struct
     | Best_fit -> 2
   ;;
 end
-
-[%%if ocaml_version < (4, 08, 0)]
-
-let tune
-      ?logger
-      ?minor_heap_size
-      ?major_heap_increment
-      ?space_overhead
-      ?verbose
-      ?max_overhead
-      ?stack_limit
-      ?allocation_policy
-      ?window_size
-      ()
-  =
-  let old_control_params = get () in
-  let f opt to_string field =
-    let old_value = Field.get field old_control_params in
-    match opt with
-    | None -> old_value
-    | Some new_value ->
-      Option.iter logger ~f:(fun f ->
-        Printf.ksprintf
-          f
-          "Gc.Control.%s: %s -> %s"
-          (Field.name field)
-          (to_string old_value)
-          (to_string new_value));
-      new_value
-  in
-  let allocation_policy = Option.map allocation_policy ~f:Allocation_policy.to_int in
-  let new_control_params =
-    Control.Fields.map
-      ~minor_heap_size:(f minor_heap_size string_of_int)
-      ~major_heap_increment:(f major_heap_increment string_of_int)
-      ~space_overhead:(f space_overhead string_of_int)
-      ~verbose:(f verbose string_of_int)
-      ~max_overhead:(f max_overhead string_of_int)
-      ~stack_limit:(f stack_limit string_of_int)
-      ~allocation_policy:(f allocation_policy string_of_int)
-      ~window_size:(f window_size string_of_int)
-  in
-  set new_control_params
-;;
-
-[%%else]
 
 let tune
       ?logger
@@ -207,8 +321,6 @@ let tune
   set new_control_params
 ;;
 
-[%%endif]
-
 let disable_compaction ?logger ~allocation_policy () =
   let allocation_policy =
     match allocation_policy with
@@ -233,6 +345,7 @@ external compactions : unit -> int = "core_gc_compactions" [@@noalloc]
 external top_heap_words : unit -> int = "core_gc_top_heap_words" [@@noalloc]
 external major_plus_minor_words : unit -> int = "core_gc_major_plus_minor_words"
 external allocated_words : unit -> int = "core_gc_allocated_words"
+external run_memprof_callbacks : unit -> unit = "core_gc_run_memprof_callbacks"
 
 let zero = Sys.opaque_identity (int_of_string "0")
 
@@ -348,9 +461,14 @@ module For_testing = struct
     let result =
       match f () with
       | x ->
+        (* Memprof.stop does not guarantee that all memprof callbacks are run (some may be
+           delayed if they happened during C code and there has been no allocation since),
+           so we explictly flush them *)
+        run_memprof_callbacks ();
         Caml.Gc.Memprof.stop ();
         x
       | exception e ->
+        run_memprof_callbacks ();
         Caml.Gc.Memprof.stop ();
         raise e
     in
