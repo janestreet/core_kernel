@@ -91,7 +91,7 @@ let%test_module _ =
       check_a M.typerep_of_t [ 0; 1 ]
     ;;
 
-    let%test (_[@tags "no-js"]) =
+    let%test (_ [@tags "no-js"]) =
       let module M = struct
         type t = int32 [@@deriving typerep]
       end
@@ -109,7 +109,7 @@ let%test_module _ =
       check_n M.typerep_of_t [ Int64.zero ]
     ;;
 
-    let%test (_[@tags "no-js"]) =
+    let%test (_ [@tags "no-js"]) =
       let module M = struct
         type t = nativeint [@@deriving typerep]
       end
@@ -125,7 +125,7 @@ let%test_module _ =
       check_a M.typerep_of_t [ 'a' ]
     ;;
 
-    let%test (_[@tags "no-js"]) =
+    let%test (_ [@tags "no-js"]) =
       let module M = struct
         type t = float [@@deriving typerep]
       end

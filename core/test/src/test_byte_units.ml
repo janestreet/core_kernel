@@ -5,7 +5,7 @@ open! Byte_units
 let bytes_per_word = Float.of_int (Int.( / ) (Word_size.num_bits Word_size.word_size) 8)
 let kbyte = 1024.
 
-let%expect_test ("Byte_units.to_string_hum"[@tags "64-bits-only"]) =
+let%expect_test ("Byte_units.to_string_hum" [@tags "64-bits-only"]) =
   print_string (Byte_units.to_string_hum (Byte_units.of_bytes_int 1000));
   [%expect {| 1000B |}];
   print_string (Byte_units.to_string_hum (Byte_units.of_bytes_int 1500));
@@ -73,7 +73,7 @@ let print_all_byte_units fmt =
     printf !"%{sexp:Byte_units.Stable.V2.t} -> %s\n" n (sprintf fmt n))
 ;;
 
-let%expect_test ("Byte_units.to_string"[@tags "no-js"]) =
+let%expect_test ("Byte_units.to_string" [@tags "no-js"]) =
   (* disabling test in javascript as it has subtly different rounding breaking this test.
 
      See https://github.com/ocsigen/js_of_ocaml/issues/796. *)
@@ -146,7 +146,7 @@ let%expect_test "Byte_units.to_string_short" =
     (Bytes -10_000_000) -> -9.54M |}]
 ;;
 
-let%expect_test ("Byte_units.sexp_of_t"[@tags "no-js"]) =
+let%expect_test ("Byte_units.sexp_of_t" [@tags "no-js"]) =
   (* disabling test in javascript as it has subtly different rounding breaking this test.
 
      See https://github.com/ocsigen/js_of_ocaml/issues/796. *)

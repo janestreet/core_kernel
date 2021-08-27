@@ -1,6 +1,5 @@
-open Core
+open Core;;
 
-;;
 Not_found
 
 [%%expect

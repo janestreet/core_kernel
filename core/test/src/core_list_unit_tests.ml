@@ -260,7 +260,7 @@ let%test_module "random" =
             [%test_result: t list] (List.bind list ~f:List.return) ~expect:list)
       ;;
 
-      let%test_unit ("monad associativity"[@tags "no-js"]) =
+      let%test_unit ("monad associativity" [@tags "no-js"]) =
         Q.test
           ~sexp_of:[%sexp_of: t list * (t -> t list) * (t -> t list)]
           (G.tuple3

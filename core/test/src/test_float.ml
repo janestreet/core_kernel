@@ -123,7 +123,7 @@ let%test _ = not (Float.( < ) Float.nan 0.)
 (* When we put a similar in base/test, it doesn't behave the same, and undesirable
    versions of [Float.is_positive] that allocate when we put the test here don't allocate
    when we put the test there.  So, we put the test here. *)
-let%expect_test (_[@tags "64-bits-only", "x-library-inlining-sensitive"]) =
+let%expect_test (_ [@tags "64-bits-only", "x-library-inlining-sensitive"]) =
   let a = [| 1. |] in
   (* a.(0) is unboxed *)
   let one = 1. in
@@ -172,7 +172,7 @@ let%test_module "round_significant" =
         ~expect:4.3608320883
     ;;
 
-    let%test_unit ("round_significant vs sprintf quickcheck 1"[@tags "64-bits-only"]) =
+    let%test_unit ("round_significant vs sprintf quickcheck 1" [@tags "64-bits-only"]) =
       for significant_digits = 1 to 16 do
         let open Quickcheck in
         test
@@ -188,7 +188,7 @@ let%test_module "round_significant" =
       done
     ;;
 
-    let%test_unit ("round_significant vs sprintf quickcheck 2"[@tags "64-bits-only"]) =
+    let%test_unit ("round_significant vs sprintf quickcheck 2" [@tags "64-bits-only"]) =
       (* this test is much more likely to exercise cases when we're off by an ulp *)
       let num_digits_gen = Int.gen_incl 1 18 in
       let digits_gen num_digits =
@@ -255,7 +255,7 @@ let%test_module "round_decimal" =
         ~expect:4.3608320883
     ;;
 
-    let%test_unit ("round_decimal vs sprintf quickcheck 1"[@tags "64-bits-only"]) =
+    let%test_unit ("round_decimal vs sprintf quickcheck 1" [@tags "64-bits-only"]) =
       for decimal_digits = 1 to 16 do
         let open Quickcheck in
         test
@@ -296,7 +296,7 @@ let%test_unit _ = test_class gen_nan Nan
 
 (* Additional tests of Base.Float requiring the Gc module *)
 
-let%test (_[@tags "64-bits-only"]) =
+let%test (_ [@tags "64-bits-only"]) =
   let before = Gc.minor_words () in
   assert (Int63.equal (int63_round_nearest_exn 0.8) (Int63.of_int_exn 1));
   let after = Gc.minor_words () in

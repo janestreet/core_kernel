@@ -263,10 +263,9 @@ module Stable = struct
     ;;
 
     let string ~is_v2 suffix float =
-      if
-        is_v2
-        (* This is the same float-to-string conversion used in [Float.sexp_of_t].  It's like
-           [Float.to_string], but may leave off trailing period. *)
+      if is_v2
+      (* This is the same float-to-string conversion used in [Float.sexp_of_t].  It's like
+         [Float.to_string], but may leave off trailing period. *)
       then !Sexplib.Conv.default_string_of_float float ^ suffix
       else sprintf "%g%s" float suffix
     ;;
@@ -647,8 +646,7 @@ module Stable = struct
         let float = to_float t in
         if not (Float.is_finite float)
         then
-          if
-            (* We print specific special strings for non-finite floats *)
+          if (* We print specific special strings for non-finite floats *)
             Float.is_nan float
           then "NANs"
           else if Float.is_negative float

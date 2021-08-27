@@ -96,9 +96,8 @@ let max_time_value_for_1us_rounding =
 ;;
 
 let check_before_conversion_for_1us_rounding time =
-  if
-    Time_float.( < ) time min_time_value_for_1us_rounding
-    || Time_float.( > ) time max_time_value_for_1us_rounding
+  if Time_float.( < ) time min_time_value_for_1us_rounding
+  || Time_float.( > ) time max_time_value_for_1us_rounding
   then
     failwiths
       ~here:[%here]
@@ -857,10 +856,9 @@ end = struct
 
   let ensure_colon_in_offset offset =
     let offset_length = String.length offset in
-    if
-      Int.( <= ) offset_length 2
-      && Char.is_digit offset.[0]
-      && Char.is_digit offset.[offset_length - 1]
+    if Int.( <= ) offset_length 2
+    && Char.is_digit offset.[0]
+    && Char.is_digit offset.[offset_length - 1]
     then offset ^ ":00"
     else if Char.( = ) offset.[1] ':' || Char.( = ) offset.[2] ':'
     then offset

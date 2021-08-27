@@ -25,9 +25,13 @@ module Version : sig
     }
   [@@deriving sexp_of]
 
-  (** Parse a single line of version-util. Note that this function behaves weirdly when
-      applied to NO_VERSION_UTIL (it returns {repo="NO_VERSION"; version="UTIL"}). It's
-      better to use one of the functions below. *)
+  (** Parse a single line of version-util. It's almost always better to use one of the
+      functions below, because applying this to [Version_util.version] results in the
+      following weird behaviors:
+
+      - NO_VERSION_UTIL gets parsed { repo = "NO_VERSION"; version="UTIL" }
+      - "repo1_rev1 repo2_rev2" gets parsed as { repo = "repo1_rev1 repo2"; version = "rev2" }
+  *)
   val parse1 : string -> t Or_error.t
 
   (** In the following functions [Error _] means the format is unparsable, [Ok None] means
@@ -69,7 +73,6 @@ val hostname : string option
 val kernel : string option
 val build_time : Time.t option
 val x_library_inlining : bool
-val portable_int63 : bool
 val dynlinkable_code : bool
 val compiled_for_speed : bool
 val application_specific_fields : Application_specific_fields.t option

@@ -22,7 +22,7 @@ module M2 = struct
   type t = M1.t [@@deriving hash]
 end
 
-let%expect_test (_[@tags "64-bits-only"]) =
+let%expect_test (_ [@tags "64-bits-only"]) =
   let s = "foo" in
   print_s [%sexp (String.hash s = M2.hash (T s) : bool)];
   [%expect {|

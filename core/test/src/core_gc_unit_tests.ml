@@ -1,7 +1,7 @@
 open! Core
 open! Gc
 
-let%test_module ("gc"[@tags "no-js"]) =
+let%test_module ("gc" [@tags "no-js"]) =
   (module struct
     (* The idea underlying this test is that minor_words does not allocate any memory. Hence
        the subsequent call to quick_stat should report exactly the same number. Also:

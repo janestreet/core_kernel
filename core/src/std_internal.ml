@@ -38,11 +38,17 @@ let fst3 (x, _, _) = x
 let snd3 (_, y, _) = y
 let trd3 (_, _, z) = z
 
-let[@deprecated "[since 2018-12] Use [Option.value_exn]"] uw = function
-  | Some x -> x
-  | None ->
-    raise Caml.Not_found
-;;
+include (
+struct
+  let uw = function
+    | Some x -> x
+    | None ->
+      raise Caml.Not_found
+  ;;
+end :
+sig
+  val uw : 'a option -> 'a [@@deprecated "[since 2018-12] Use [Option.value_exn]"]
+end)
 
 (** [phys_same] is like [phys_equal], but with a more general type.  [phys_same] is useful
     when dealing with existential types, when one has a packed value and an unpacked value
@@ -61,10 +67,20 @@ let error = Or_error.error
 let error_s = Or_error.error_s
 let failwithf = Base.Printf.failwithf
 
-let failwithp =
-  (Error.failwithp [@alert "-deprecated"])
-[@@deprecated "[since 2020-03] Use [failwiths] instead."]
-;;
+include (
+struct
+  let failwithp = (Error.failwithp [@alert "-deprecated"])
+end :
+sig
+  val failwithp
+    :  ?strict:unit
+    -> Source_code_position.t
+    -> string
+    -> 'a
+    -> ('a -> Sexp.t)
+    -> _
+  [@@deprecated "[since 2020-03] Use [failwiths] instead."]
+end)
 
 let failwiths = Error.failwiths
 let force = Base.Lazy.force

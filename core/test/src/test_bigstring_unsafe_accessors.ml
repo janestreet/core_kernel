@@ -49,7 +49,7 @@ let%test _ =
 ;;
 
 
-let%test (_[@tags "64-bits-only"]) =
+let%test (_ [@tags "64-bits-only"]) =
   test_accessor
     ~buf
     Int.to_string
@@ -58,7 +58,7 @@ let%test (_[@tags "64-bits-only"]) =
     [ Int64.to_int_exn (-2147483648L); -1; 0; 1; Int64.to_int_exn 2147483647L ]
 ;;
 
-let%test (_[@tags "64-bits-only"]) =
+let%test (_ [@tags "64-bits-only"]) =
   test_accessor
     ~buf
     Int.to_string
@@ -67,7 +67,7 @@ let%test (_[@tags "64-bits-only"]) =
     [ Int64.to_int_exn (-2147483648L); -1; 0; 1; Int64.to_int_exn 2147483647L ]
 ;;
 
-let%test (_[@tags "64-bits-only"]) =
+let%test (_ [@tags "64-bits-only"]) =
   test_accessor
     ~buf
     Int.to_string
@@ -76,7 +76,7 @@ let%test (_[@tags "64-bits-only"]) =
     [ Int64.to_int_exn (-2147483648L); -1; 0; 1; Int64.to_int_exn 2147483647L ]
 ;;
 
-let%test (_[@tags "64-bits-only"]) =
+let%test (_ [@tags "64-bits-only"]) =
   test_accessor
     ~buf
     Int.to_string
@@ -92,7 +92,7 @@ let%test (_[@tags "64-bits-only"]) =
     ]
 ;;
 
-let%test (_[@tags "64-bits-only"]) =
+let%test (_ [@tags "64-bits-only"]) =
   List.for_all
     [ unsafe_get_uint64_be_exn, unsafe_set_uint64_be
     ; unsafe_get_uint64_le_exn, unsafe_set_uint64_le

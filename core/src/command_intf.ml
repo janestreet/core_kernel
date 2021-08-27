@@ -37,16 +37,18 @@ type env =
   | `Replace_raw of string list
   ]
 
+module type Version_util = sig
+  val version_list : string list
+  val reprint_build_info : (Time_float.t -> Sexp.t) -> string
+end
+
 (** [For_unix] is the subset of Core's interface that [Command] needs, in particular to
     implement the [shape] and [run] functions.  [Core.Private.Command] is a functor
     taking a module matching [For_unix] and is applied in Core to construct
     [Core.Command].  We use a functor in this way so that [Command]'s internal data
     types can remain hidden. *)
 module type For_unix = sig
-  module Version_util : sig
-    val version : string
-    val reprint_build_info : (Time_float.t -> Sexp.t) -> string
-  end
+  module Version_util : Version_util
 
   module Signal : sig
     type t
@@ -190,6 +192,9 @@ module type Command = sig
       -> ?list_values_in_help:bool
       (** Defaults to [true]. If you set it to false the accepted values won't be listed
           in the command help. *)
+      -> ?auto_complete:Auto_complete.t
+      (** Defaults to bash completion on the string prefix. This allows users to specify
+          arbitrary auto-completion for [t]. *)
       -> ?key:'a Univ_map.Multi.Key.t
       -> 'a String.Map.t
       -> 'a t
@@ -199,6 +204,7 @@ module type Command = sig
       :  ?case_sensitive:bool
       (** Defaults to [true]. If [false], map keys must all be distinct when lowercased.*)
       -> ?list_values_in_help:bool (** default: true *)
+      -> ?auto_complete:Auto_complete.t
       -> ?key:'a Univ_map.Multi.Key.t
       -> (string * 'a) list
       -> 'a t
@@ -209,6 +215,7 @@ module type Command = sig
       :  ?case_sensitive:bool
       (** Defaults to [true]. If [false], map keys must all be distinct when lowercased.*)
       -> ?list_values_in_help:bool (** default: true *)
+      -> ?auto_complete:Auto_complete.t
       -> ?key:'a Univ_map.Multi.Key.t
       -> (module Enumerable_stringable with type t = 'a)
       -> 'a t
@@ -220,6 +227,7 @@ module type Command = sig
       :  ?case_sensitive:bool
       (** Defaults to [true]. If [false], map keys must all be distinct when lowercased.*)
       -> ?list_values_in_help:bool (** default: true *)
+      -> ?auto_complete:Auto_complete.t
       -> ?key:'a Univ_map.Multi.Key.t
       -> (module Enumerable_sexpable with type t = 'a)
       -> 'a t

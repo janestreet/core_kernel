@@ -348,6 +348,51 @@ let%expect_test "quickcheck generator obeys invariants" =
   [%expect {| |}]
 ;;
 
+let%expect_test "validate sexp grammar" =
+  require_ok
+    [%here]
+    (Sexp_grammar_validation.validate_grammar
+       (module struct
+         type t = unit Blang.t [@@deriving quickcheck, sexp, sexp_grammar]
+       end));
+  [%expect
+    {|
+    (Recursive
+     (Tycon blang ((List Empty)))
+     ((
+      (tycon blang)
+      (tyvars (a))
+      (grammar
+       (Union
+        ((Tyvar a)
+         (Variant
+          ((case_sensitivity Case_insensitive)
+           (clauses
+            ((No_tag ((name true) (clause_kind Atom_clause)))
+             (No_tag ((name false) (clause_kind Atom_clause)))
+             (No_tag
+              ((name if)
+               (clause_kind
+                (List_clause
+                 (args
+                  (Cons
+                   (Tycon blang ((Tyvar a)))
+                   (Cons
+                    (Tycon blang ((Tyvar a)))
+                    (Cons (Tycon blang ((Tyvar a))) Empty))))))))
+             (No_tag
+              ((name and)
+               (clause_kind (List_clause (args (Many (Tycon blang ((Tyvar a)))))))))
+             (No_tag
+              ((name or)
+               (clause_kind (List_clause (args (Many (Tycon blang ((Tyvar a)))))))))
+             (No_tag
+              ((name not)
+               (clause_kind
+                (List_clause (args (Cons (Tycon blang ((Tyvar a))) Empty)))))))))))))))) |}]
+;;
+
+
 module And_structure = struct
   let a, b, c, d = base "a", base "b", base "c", base "d"
 

@@ -3,7 +3,7 @@ open Poly
 open! Expect_test_helpers_core
 open! Quickcheck
 
-let%expect_test ("Quickcheck.Let_syntax"[@tags "64-bits-only"]) =
+let%expect_test ("Quickcheck.Let_syntax" [@tags "64-bits-only"]) =
   let open Quickcheck.Let_syntax in
   let quickcheck_generator =
     [%map_open

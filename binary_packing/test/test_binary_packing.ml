@@ -184,7 +184,7 @@ let%test_module "inline_signed_16" =
 let signed_max = Int32.to_int_trunc Int32.max_value
 let unsigned_max = Int64.to_int_trunc 0xffff_ffffL
 
-let%test_module ("inline_unsigned_32_int"[@tags "64-bits-only"]) =
+let%test_module ("inline_unsigned_32_int" [@tags "64-bits-only"]) =
   (module Make_inline_tests (struct
        let ns =
          [ 0x3f20_3040
@@ -212,7 +212,7 @@ let%test_module ("inline_unsigned_32_int"[@tags "64-bits-only"]) =
      end))
 ;;
 
-let%test_module ("inline_signed_32_int"[@tags "64-bits-only"]) =
+let%test_module ("inline_signed_32_int" [@tags "64-bits-only"]) =
   (module Make_inline_tests (struct
        let ns =
          [ 0x3f20_3040
@@ -240,7 +240,7 @@ let%test_module ("inline_signed_32_int"[@tags "64-bits-only"]) =
      end))
 ;;
 
-let%test_unit ("63 bits overflow"[@tags "64-bits-only"]) =
+let%test_unit ("63 bits overflow" [@tags "64-bits-only"]) =
   let buf = Bytes.create 8 in
   let pos = 0 in
   List.iter
@@ -294,7 +294,7 @@ let%test_module "inline_signed_64" =
      end))
 ;;
 
-let%test_module ("inline_signed_64_int"[@tags "64-bits-only"]) =
+let%test_module ("inline_signed_64_int" [@tags "64-bits-only"]) =
   (module Make_inline_tests (struct
        (* These numbers are written with one endianness and read with the opposite endianness,
           so the smallest byte becomes the biggest byte. Because of this, the range restriction

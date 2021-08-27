@@ -96,6 +96,7 @@ module Arg_type : sig
   val of_map
     :  ?case_sensitive:bool
     -> ?list_values_in_help:bool
+    -> ?auto_complete:Auto_complete.t
     -> ?key:'a Env.Multi.Key.t
     -> 'a String.Map.t
     -> 'a t
@@ -103,6 +104,7 @@ module Arg_type : sig
   val of_alist_exn
     :  ?case_sensitive:bool
     -> ?list_values_in_help:bool
+    -> ?auto_complete:Auto_complete.t
     -> ?key:'a Env.Multi.Key.t
     -> (string * 'a) list
     -> 'a t
@@ -110,6 +112,7 @@ module Arg_type : sig
   val enumerated
     :  ?case_sensitive:bool
     -> ?list_values_in_help:bool
+    -> ?auto_complete:Auto_complete.t
     -> ?key:'a Env.Multi.Key.t
     -> (module Enumerable_stringable with type t = 'a)
     -> 'a t
@@ -117,6 +120,7 @@ module Arg_type : sig
   val enumerated_sexpable
     :  ?case_sensitive:bool
     -> ?list_values_in_help:bool
+    -> ?auto_complete:Auto_complete.t
     -> ?key:'a Env.Multi.Key.t
     -> (module Enumerable_sexpable with type t = 'a)
     -> 'a t
@@ -188,7 +192,7 @@ end = struct
   let sexp = create Sexp.of_string
   let sexp_conv ?complete of_sexp = create ?complete (fun s -> of_sexp (Sexp.of_string s))
 
-  let associative ?(list_values_in_help = true) ?key ~case_sensitive alist =
+  let associative ?(list_values_in_help = true) ?auto_complete ?key ~case_sensitive alist =
     let open struct
       module type S = sig
         include Comparator.S with type t = string
@@ -227,6 +231,20 @@ end = struct
       let make cmp = T { cmp; map = make_map_raise_duplicate_key cmp alist } in
       if case_sensitive then make (module String) else make (module String.Caseless)
     in
+    let complete univ_map ~part:prefix =
+      match auto_complete with
+      | Some complete -> complete univ_map ~part:prefix
+      | None ->
+        List.filter_map (Map.to_alist map) ~f:(fun (name, _) ->
+          match S.is_prefix name ~prefix with
+          | false -> None
+          | true ->
+            (* Bash completion will not accept [Foo] as a completion for [f]. So we need
+               to match the capitalization given. *)
+            let suffix = String.subo name ~pos:(String.length prefix) in
+            let name = prefix ^ suffix in
+            Some name)
+    in
     create'
       ~extra_doc:
         (lazy
@@ -236,16 +254,7 @@ end = struct
              Some [%string "(can be: %{values})"])
            else None))
       ?key
-      ~complete:(fun _ ~part:prefix ->
-        List.filter_map (Map.to_alist map) ~f:(fun (name, _) ->
-          match S.is_prefix name ~prefix with
-          | false -> None
-          | true ->
-            (* Bash completion will not accept [Foo] as a completion for [f]. So we need
-               to match the capitalization given. *)
-            let suffix = String.subo name ~pos:(String.length prefix) in
-            let name = prefix ^ suffix in
-            Some name))
+      ~complete
       (fun arg ->
          match Map.find map arg with
          | Some v -> v
@@ -260,24 +269,32 @@ end = struct
              ())
   ;;
 
-  let of_alist_exn ?(case_sensitive = true) ?list_values_in_help ?key alist =
-    associative ?list_values_in_help ?key ~case_sensitive alist
+  let of_alist_exn ?(case_sensitive = true) ?list_values_in_help ?auto_complete ?key alist
+    =
+    associative ?list_values_in_help ?auto_complete ?key ~case_sensitive alist
   ;;
 
-  let of_map ?case_sensitive ?list_values_in_help ?key map =
-    of_alist_exn ?case_sensitive ?list_values_in_help ?key (Map.to_alist map)
+  let of_map ?case_sensitive ?list_values_in_help ?auto_complete ?key map =
+    of_alist_exn
+      ?case_sensitive
+      ?list_values_in_help
+      ?auto_complete
+      ?key
+      (Map.to_alist map)
   ;;
 
   let enumerated
         (type t)
         ?case_sensitive
         ?list_values_in_help
+        ?auto_complete
         ?key
         (module E : Enumerable_stringable with type t = t)
     =
     of_alist_exn
       ?case_sensitive
       ?list_values_in_help
+      ?auto_complete
       ?key
       (let%map.List t = E.all in
        E.to_string t, t)
@@ -287,12 +304,14 @@ end = struct
         (type t)
         ?case_sensitive
         ?list_values_in_help
+        ?auto_complete
         ?key
         (module E : Enumerable_sexpable with type t = t)
     =
     enumerated
       ?case_sensitive
       ?list_values_in_help
+      ?auto_complete
       ?key
       (module struct
         include E
@@ -469,8 +488,7 @@ module Flag = struct
         else (
           let { Doc.arg_doc; doc } = Doc.parse ~action ~doc in
           (wrap_if_optional t (Doc.concat ~name ~arg_doc), doc)
-          ::
-          List.map aliases ~f:(fun x ->
+          :: List.map aliases ~f:(fun x ->
             ( wrap_if_optional t (Doc.concat ~name:x ~arg_doc)
             , sprintf "same as \"%s\"" name )))
       ;;
@@ -1647,9 +1665,9 @@ module Base = struct
         | Arg.Rest f -> gen (fun x -> Option.iter x ~f:(List.iter ~f)) escape
         | Arg.Tuple _ ->
           failwith "Arg.Tuple is not supported by Command.Spec.flags_of_args_exn"
-        | ((Arg.Expand _)[@if ocaml_version >= (4, 05, 0)]) ->
+        | ((Arg.Expand _) [@if ocaml_version >= (4, 05, 0)]) ->
           failwith "Arg.Expand is not supported by Command.Spec.flags_of_args_exn"
-        | ((Arg.Rest_all _)[@if ocaml_version >= (4, 12, 0)]) ->
+        | ((Arg.Rest_all _) [@if ocaml_version >= (4, 12, 0)]) ->
           failwith "Arg.Rest_all is not supported by Command.Spec.flags_of_args_exn")
     ;;
 
@@ -2022,17 +2040,18 @@ and kind_of_sexpable
       }
 ;;
 
-module Version_info = struct
-  let sanitize_version ~version =
-    (* [version] was space delimited at some point and newline delimited
-       at another.  We always print one (repo, revision) pair per line
-       and ensure sorted order *)
-    String.split version ~on:' '
-    |> List.concat_map ~f:(String.split ~on:'\n')
-    |> List.sort ~compare:String.compare
-  ;;
+module type For_version_info = sig
+  module Version_util : Version_util
 
-  let print_version ~version = List.iter (sanitize_version ~version) ~f:print_endline
+  module Time : sig
+    type t = Time_float.t [@@deriving sexp_of]
+  end
+end
+
+module Version_info (M : For_version_info) = struct
+  open M
+
+  let print_version ~version = print_endline (force version)
   let print_build_info ~build_info = print_endline (force build_info)
 
   let command ~version ~build_info =
@@ -2063,7 +2082,7 @@ module Version_info = struct
           ~aliases:[]
           ~aliases_excluded_from_help:[ "--version" ]
           ~text_summary:"the version of this build"
-          ~text:(fun _ -> String.concat ~sep:"\n" (sanitize_version ~version))
+          ~text:(fun _ -> force version)
       in
       let base =
         Bailout_dump_flag.add
@@ -2088,7 +2107,48 @@ module Version_info = struct
     | Exec exec -> Exec exec
     | Lazy thunk -> Lazy (lazy (add ~version ~build_info (Lazy.force thunk)))
   ;;
+
+  let normalize_version_lines lines =
+    String.concat ~sep:"\n" (List.sort lines ~compare:String.compare)
+  ;;
+
+  let default_version = lazy (normalize_version_lines Version_util.version_list)
+
+  let default_build_info =
+    lazy
+      (* lazy to avoid loading all the time zone stuff at toplevel *)
+      (Version_util.reprint_build_info Time.sexp_of_t)
+  ;;
 end
+
+let%test_module "Version_info" =
+  (module struct
+    module Version_info = Version_info (struct
+        module Version_util = struct
+          let version_list = [ "hg://some/path_0xdeadbeef"; "ssh://a/path_8badf00d" ]
+          let reprint_build_info to_sexp = Sexp.to_string (to_sexp Time_float.epoch)
+        end
+
+        module Time = struct
+          type t = Time_float.t
+
+          let sexp_of_t t = Time_float.to_string_utc t |> Sexp.of_string
+        end
+      end)
+
+    let%expect_test "print version where multiple repos are used" =
+      Version_info.print_version ~version:Version_info.default_version;
+      [%expect {|
+        hg://some/path_0xdeadbeef
+        ssh://a/path_8badf00d |}]
+    ;;
+
+    let%expect_test "print build info" =
+      Version_info.print_build_info ~build_info:(lazy "some build info");
+      [%expect {| some build info |}]
+    ;;
+  end)
+;;
 
 let rec summary = function
   | Base x -> x.summary
@@ -2126,19 +2186,17 @@ module Deprecated = struct
         if with_flags
         then
           base_help
-          ::
-          List.map
-            ~f:(fun (flag, h) -> new_s ^ flag, h)
-            (List.sort
-               ~compare:Base.Deprecated.subcommand_cmp_fst
-               (Base.Deprecated.flags_help ~display_help_flags:false base))
+          :: List.map
+               ~f:(fun (flag, h) -> new_s ^ flag, h)
+               (List.sort
+                  ~compare:Base.Deprecated.subcommand_cmp_fst
+                  (Base.Deprecated.flags_help ~display_help_flags:false base))
         else [ base_help ]
       | Group { summary; subcommands; readme = _; body = _ } ->
         (s ^ cmd, summary)
-        ::
-        (Lazy.force subcommands
-         |> List.sort ~compare:Base.Deprecated.subcommand_cmp_fst
-         |> List.concat_map ~f:(fun (cmd', t) -> help_recursive_rec ~cmd:cmd' t new_s))
+        :: (Lazy.force subcommands
+            |> List.sort ~compare:Base.Deprecated.subcommand_cmp_fst
+            |> List.concat_map ~f:(fun (cmd', t) -> help_recursive_rec ~cmd:cmd' t new_s))
       | Exec _ ->
         (* Command.exec does not support deprecated commands *)
         []
@@ -2149,6 +2207,7 @@ end
 
 module For_unix (M : For_unix) = struct
   open M
+  module Version_info = Version_info (M)
 
   (* Clear the setting of environment variable associated with command-line
      completion and recursive help so that subprocesses don't see them.
@@ -2674,15 +2733,9 @@ module For_unix (M : For_unix) = struct
       parse_group args ~maybe_new_comp_cword
   ;;
 
-  let default_version, default_build_info =
-    ( Version_util.version
-      , (* lazy to avoid loading all the time zone stuff at toplevel *)
-      lazy (Version_util.reprint_build_info Time.sexp_of_t) )
-  ;;
-
   let run
         ?verbose_on_parse_error
-        ?(version = default_version)
+        ?version
         ?build_info
         ?(argv = Array.to_list Caml.Sys.argv)
         ?extend
@@ -2693,7 +2746,18 @@ module For_unix (M : For_unix) = struct
     let build_info =
       match build_info with
       | Some v -> lazy v
-      | None -> default_build_info
+      | None -> Version_info.default_build_info
+    in
+    let version =
+      match version with
+      | None -> Version_info.default_version
+      | Some v ->
+        (* [version] was space delimited at some point and newline delimited
+           at another.  We always print one (repo, revision) pair per line
+           and ensure sorted order *)
+        lazy
+          (Version_info.normalize_version_lines
+             (String.split v ~on:' ' |> List.concat_map ~f:(String.split ~on:'\n')))
     in
     Exn.handle_uncaught_and_exit (fun () ->
       let t = Version_info.add t ~version ~build_info in
@@ -2739,8 +2803,8 @@ module For_unix (M : For_unix) = struct
       ~args
       ~extend:None
       ~maybe_new_comp_cword:None
-      ~version:default_version
-      ~build_info:default_build_info
+      ~version:Version_info.default_version
+      ~build_info:Version_info.default_build_info
       ~verbose_on_parse_error:None
       ~when_parsing_succeeds:Fn.id
       ~complete_subcommands:None

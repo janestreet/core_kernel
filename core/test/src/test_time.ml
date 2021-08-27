@@ -42,7 +42,7 @@ let span_examples =
     ]
   in
   let pos_and_neg_units = units @ List.map units ~f:Time.Span.neg in
-  Time.Span.zero :: pos_and_neg_units
+  (Time.Span.zero :: pos_and_neg_units)
   @ List.map pos_and_neg_units ~f:(fun span -> Time.Span.scale span Float.pi)
 ;;
 
@@ -343,7 +343,7 @@ let%test_module "Time.Stable.Span.V3" =
          (bin_io "\000\000\000\000\000\000\240\255")) |}]
     ;;
 
-    let%expect_test ("serialization tests for NaNs"[@tags "64-bits-only"]) =
+    let%expect_test ("serialization tests for NaNs" [@tags "64-bits-only"]) =
       print_and_check_stable_type
         [%here]
         (module Time.Stable.Span.V3)
@@ -1322,7 +1322,7 @@ module Span = struct
     ;;
   end
 
-  let%expect_test ("^? is useful"[@tags "64-bits-only"]) =
+  let%expect_test ("^? is useful" [@tags "64-bits-only"]) =
     let open Int.O in
     let show_allocation f =
       let minor1 = Gc.minor_words () in

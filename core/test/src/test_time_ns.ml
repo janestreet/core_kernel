@@ -129,9 +129,8 @@ let%test_module "Time_ns.Utc.to_date_and_span_since_start_of_day" =
         let date, span_since_start_of_day =
           Core.Time_ns.Utc.to_date_and_span_since_start_of_day time_ns
         in
-        if
-          Time_ns.Span.( < ) span_since_start_of_day Time_ns.Span.zero
-          || Time_ns.Span.( >= ) span_since_start_of_day Time_ns.Span.day
+        if Time_ns.Span.( < ) span_since_start_of_day Time_ns.Span.zero
+        || Time_ns.Span.( >= ) span_since_start_of_day Time_ns.Span.day
         then
           raise_s
             [%message
@@ -462,7 +461,7 @@ let%test_module "Ofday" =
 module Span = struct
   open! Time_ns.Span
 
-  let%test (_[@tags "64-bits-only"]) =
+  let%test (_ [@tags "64-bits-only"]) =
     Int.( > ) (to_int_sec (of_int63_ns Int63.max_value)) 0
   ;;
 

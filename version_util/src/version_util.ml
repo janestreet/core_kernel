@@ -94,9 +94,8 @@ module Expert = struct
 
   let replace_version_util ~contents_of_exe version_util =
     if String.mem version_util '\000' then failwith "version_util can't contain nul bytes";
-    if
-      String.length version_util > 4000
-      (* using 4000 is easier than figuring the exact max length we support. *)
+    if String.length version_util > 4000
+    (* using 4000 is easier than figuring the exact max length we support. *)
     then failwith "version_util must be shorter than 4000 bytes";
     (* There can be two places to rewrite, because apparently in the presence
        of weakdefs, both defs end up in the exe. *)
@@ -136,9 +135,8 @@ module Expert = struct
         if not (String.mem repo '/')
         then failwith [%string "%{repo} doesn't look like a repo url"];
         (let version' = String.chop_suffix_if_exists version ~suffix:"+" in
-         if
-           (String.length version' = 40 || String.length version' = 64)
-           && String.for_all version' ~f:Char.is_hex_digit_lower
+         if (String.length version' = 40 || String.length version' = 64)
+         && String.for_all version' ~f:Char.is_hex_digit_lower
          then ()
          else failwith [%string "%{version} doesn't look like a full hg version"]);
         repo ^ " " ^ version ^ "\n")
@@ -242,7 +240,7 @@ let { username
     ; kernel
     ; build_time = build_time_and_sexp
     ; x_library_inlining
-    ; portable_int63
+    ; portable_int63 = _
     ; dynlinkable_code
     ; ocaml_version
     ; executable_path

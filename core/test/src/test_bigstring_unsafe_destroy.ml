@@ -38,7 +38,7 @@ let%expect_test "[unsafe_destroy_and_resize]" =
   [%expect {| (Invalid_argument "index out of bounds") |}]
 ;;
 
-let%expect_test ("[unsafe_destroy_and_resize], proxy failure"[@tags "no-js"]) =
+let%expect_test ("[unsafe_destroy_and_resize], proxy failure" [@tags "no-js"]) =
   let bigstring = Bigstring.create 5 in
   printf "%d" (Bigstring.length bigstring);
   [%expect {| 5 |}];

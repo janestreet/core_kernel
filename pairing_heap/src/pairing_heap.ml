@@ -194,7 +194,8 @@ end = struct
           in
           let to_visit =
             (new_node, `child, child node ~pool:t)
-            :: (new_node, `sibling, sibling node ~pool:t) :: to_visit
+            :: (new_node, `sibling, sibling node ~pool:t)
+            :: to_visit
           in
           new_node, to_visit)
       in
@@ -238,7 +239,8 @@ let invariant _ t =
           assert (t.cmp parent_value this_value <= 0));
         loop
           ((Node.child node ~pool:t.pool, node, Some this_value)
-           :: (Node.sibling node ~pool:t.pool, node, maybe_parent_value) :: rest))
+           :: (Node.sibling node ~pool:t.pool, node, maybe_parent_value)
+           :: rest))
       else loop rest
   in
   assert (Node.is_empty t.root || Node.is_empty (Node.sibling t.root ~pool:t.pool));

@@ -146,7 +146,7 @@ let%test_module _ =
       && test_inconvertible_ints conv no_int_converts
     ;;
 
-    let%test (_[@tags "no-js"]) =
+    let%test (_ [@tags "no-js"]) =
       is_never
         (module struct
           type t = int32 [@@deriving typerep]
@@ -168,7 +168,7 @@ let%test_module _ =
         [ Int64.zero; Int64.one; Int64.minus_one; Int64.max_value; Int64.min_value ]
     ;;
 
-    let%test (_[@tags "no-js"]) =
+    let%test (_ [@tags "no-js"]) =
       is_never
         (module struct
           type t = nativeint [@@deriving typerep]
@@ -201,7 +201,7 @@ let%test_module _ =
       && test_inconvertible_ints conv [ 256; -1; 500; Int.max_value; Int.min_value ]
     ;;
 
-    let%test (_[@tags "no-js"]) =
+    let%test (_ [@tags "no-js"]) =
       is_never
         (module struct
           type t = float [@@deriving typerep]

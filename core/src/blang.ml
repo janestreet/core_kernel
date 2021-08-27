@@ -250,7 +250,47 @@ module Stable = struct
       aux sexp
     ;;
 
-    let t_sexp_grammar _ : _ t Sexplib.Sexp_grammar.t = { untyped = Any "Blang.t" }
+    let t_sexp_grammar : 'a. 'a Sexplib.Sexp_grammar.t -> 'a t Sexplib.Sexp_grammar.t =
+      let defns : Sexplib.Sexp_grammar.defn list =
+        let blang : Sexplib.Sexp_grammar.grammar = Tycon ("blang", [ Tyvar "a" ]) in
+        [ { tycon = "blang"
+          ; tyvars = [ "a" ]
+          ; grammar =
+              Union
+                [ Tyvar "a"
+                ; Variant
+                    { case_sensitivity = Case_insensitive
+                    ; clauses =
+                        [ No_tag { name = "true"; clause_kind = Atom_clause }
+                        ; No_tag { name = "false"; clause_kind = Atom_clause }
+                        ; No_tag
+                            { name = "if"
+                            ; clause_kind =
+                                List_clause
+                                  { args = Cons (blang, Cons (blang, Cons (blang, Empty)))
+                                  }
+                            }
+                        ; No_tag
+                            { name = "and"
+                            ; clause_kind = List_clause { args = Many blang }
+                            }
+                        ; No_tag
+                            { name = "or"
+                            ; clause_kind = List_clause { args = Many blang }
+                            }
+                        ; No_tag
+                            { name = "not"
+                            ; clause_kind = List_clause { args = Cons (blang, Empty) }
+                            }
+                        ]
+                    }
+                ]
+          }
+        ]
+      in
+      fun base_grammar ->
+        { untyped = Recursive (Tycon ("blang", [ base_grammar.untyped ]), defns) }
+    ;;
   end
 end
 

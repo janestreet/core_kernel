@@ -584,8 +584,7 @@ module Unit_tests (Elt : sig
       assert (List.permute list |> Set.of_list |> Set.invariants);
       assert (Array.of_list list |> Set.of_sorted_array_unchecked |> Set.invariants);
       assert (
-        List.rev list |> Array.of_list |> Set.of_sorted_array_unchecked |> Set.invariants
-      )
+        List.rev list |> Array.of_list |> Set.of_sorted_array_unchecked |> Set.invariants)
     done
   ;;
 
@@ -852,7 +851,7 @@ module Unit_tests (Elt : sig
 
       let can_generate f = test_can_generate quickcheck_generator ~sexp_of ~f
 
-      let%test_unit (_[@tags "no-js"]) =
+      let%test_unit (_ [@tags "no-js"]) =
         test_distinct_values
           quickcheck_generator
           ~sexp_of

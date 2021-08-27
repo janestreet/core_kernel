@@ -165,7 +165,7 @@ let%expect_test "generator" =
   [%expect {| |}]
 ;;
 
-let%expect_test ("to_mult and of_mult no boxing in arrays"[@tags "fast-flambda"]) =
+let%expect_test ("to_mult and of_mult no boxing in arrays" [@tags "fast-flambda"]) =
   let float_arr = Array.init 1 ~f:(fun i -> Float.of_int i) in
   let percent_arr = Array.create ~len:1 Percent.zero in
   require_no_allocation [%here] (fun () ->

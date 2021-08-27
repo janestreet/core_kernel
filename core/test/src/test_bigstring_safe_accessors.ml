@@ -276,7 +276,7 @@ let%expect_test "set_int32_be_exn 32-bit" =
     out of bounds: (Invalid_argument "Bigstring.set_32: length(bstr) < pos + len") |}]
 ;;
 
-let%expect_test ("set_int32_le_exn"[@tags "64-bits-only"]) =
+let%expect_test ("set_int32_le_exn" [@tags "64-bits-only"]) =
   let buf = Bigstring.init 16 ~f:(fun _ -> ' ') in
   let pos = 12 in
   let set_and_print =
@@ -318,7 +318,7 @@ let%expect_test ("set_int32_le_exn"[@tags "64-bits-only"]) =
     out of bounds: (Invalid_argument "Bigstring.set_32: length(bstr) < pos + len") |}]
 ;;
 
-let%expect_test ("set_int32_be"[@tags "64-bits-only"]) =
+let%expect_test ("set_int32_be" [@tags "64-bits-only"]) =
   let buf = Bigstring.init 16 ~f:(fun _ -> ' ') in
   let pos = 12 in
   let set_and_print =
@@ -418,7 +418,7 @@ let%expect_test "set_uint32_be_exn 32-bit" =
     out of bounds: (Invalid_argument "Bigstring.set_32: length(bstr) < pos + len") |}]
 ;;
 
-let%expect_test ("set_uint32_le_exn"[@tags "64-bits-only"]) =
+let%expect_test ("set_uint32_le_exn" [@tags "64-bits-only"]) =
   let buf = Bigstring.init 16 ~f:(fun _ -> ' ') in
   let pos = 12 in
   let set_and_print =
@@ -458,7 +458,7 @@ let%expect_test ("set_uint32_le_exn"[@tags "64-bits-only"]) =
     out of bounds: (Invalid_argument "Bigstring.set_32: length(bstr) < pos + len") |}]
 ;;
 
-let%expect_test ("set_uint32_be_exn"[@tags "64-bits-only"]) =
+let%expect_test ("set_uint32_be_exn" [@tags "64-bits-only"]) =
   let buf = Bigstring.init 16 ~f:(fun _ -> ' ') in
   let pos = 12 in
   let set_and_print =
@@ -588,7 +588,7 @@ let%expect_test "get_uint32_be oob" =
   [%expect {| (Invalid_argument "Bigstring.get_32: length(bstr) < pos + len") |}]
 ;;
 
-let%expect_test ("set_int64_le"[@tags "64-bits-only"]) =
+let%expect_test ("set_int64_le" [@tags "64-bits-only"]) =
   let buf = Bigstring.init 16 ~f:(fun _ -> ' ') in
   let pos = 8 in
   let set_and_print =
@@ -631,7 +631,7 @@ let%expect_test ("set_int64_le"[@tags "64-bits-only"]) =
     out of bounds: (Invalid_argument "Bigstring.set_64: length(bstr) < pos + len") |}]
 ;;
 
-let%expect_test ("set_int64_be"[@tags "64-bits-only"]) =
+let%expect_test ("set_int64_be" [@tags "64-bits-only"]) =
   let buf = Bigstring.init 16 ~f:(fun _ -> ' ') in
   let pos = 8 in
   let set_and_print =
@@ -726,7 +726,7 @@ let%expect_test "get_int64_be_trunc truncates" =
   [%expect {| 0 |}]
 ;;
 
-let%expect_test ("set_uint64_le_exn"[@tags "64-bits-only"]) =
+let%expect_test ("set_uint64_le_exn" [@tags "64-bits-only"]) =
   let buf = Bigstring.init 16 ~f:(fun _ -> ' ') in
   let pos = 8 in
   let set_and_print =
@@ -772,7 +772,7 @@ let%expect_test ("set_uint64_le_exn"[@tags "64-bits-only"]) =
     out of bounds: (Invalid_argument "Bigstring.set_64: length(bstr) < pos + len") |}]
 ;;
 
-let%expect_test ("set_uint64_be_exn"[@tags "64-bits-only"]) =
+let%expect_test ("set_uint64_be_exn" [@tags "64-bits-only"]) =
   let buf = Bigstring.init 16 ~f:(fun _ -> ' ') in
   let pos = 8 in
   let set_and_print =

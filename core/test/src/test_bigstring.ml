@@ -24,7 +24,7 @@ let%test_module "concat" =
   end)
 ;;
 
-let%test_unit (_[@tags "64-bits-only"]) =
+let%test_unit (_ [@tags "64-bits-only"]) =
   let check s = [%test_eq: int] ([%hash: t_frozen] (of_string s)) ([%hash: string] s) in
   List.iter
     ~f:check

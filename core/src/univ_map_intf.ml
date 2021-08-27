@@ -122,11 +122,13 @@ module type Univ_map = sig
   module Merge (Key : Key) (Input1_data : Data) (Input2_data : Data) (Output_data : Data) : sig
     type f =
       { f :
-          'a. key:'a Key.t
+          'a.
+            key:'a Key.t
           -> [ `Left of 'a Input1_data.t
              | `Right of 'a Input2_data.t
              | `Both of 'a Input1_data.t * 'a Input2_data.t
-             ] -> 'a Output_data.t option
+             ]
+          -> 'a Output_data.t option
       }
 
     (** The analogue of the normal [Map.merge] function.  *)
@@ -144,11 +146,13 @@ module type Univ_map = sig
       (Output_data : Data1) : sig
     type 's f =
       { f :
-          'a. key:'a Key.t
+          'a.
+            key:'a Key.t
           -> [ `Left of ('s, 'a) Input1_data.t
              | `Right of ('s, 'a) Input2_data.t
              | `Both of ('s, 'a) Input1_data.t * ('s, 'a) Input2_data.t
-             ] -> ('s, 'a) Output_data.t option
+             ]
+          -> ('s, 'a) Output_data.t option
       }
 
     (** The analogue of the normal [Map.merge] function.  *)
