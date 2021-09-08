@@ -26,6 +26,7 @@ depends: [
   "ppx_jane"            {>= "v0.14" & < "v0.15"}
   "ppx_sexp_conv"       {>= "v0.14" & < "v0.15"}
   "ppx_sexp_message"    {>= "v0.14" & < "v0.15"}
+  "ppx_optcomp"         {>= "v0.14.3" & < "v0.15"}
   "sexplib"             {>= "v0.14" & < "v0.15"}
   "splittable_random"   {>= "v0.14" & < "v0.15"}
   "stdio"               {>= "v0.14" & < "v0.15"}
