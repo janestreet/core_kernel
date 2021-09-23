@@ -7,13 +7,12 @@ type heap_block = int ref Heap_block.t [@@deriving sexp_of]
 let heap_block i = ref i |> Heap_block.create_exn
 
 let print t =
-  print_s [%message
-    ""
-      ~key:(get_key t : heap_block option)
-      ~data:(get_data t : heap_block option)]
+  print_s
+    [%message
+      "" ~key:(get_key t : heap_block option) ~data:(get_data t : heap_block option)]
 ;;
 
-let%expect_test "data isn't nulled by [set_key None]" [@tags "no-js"] =
+let%expect_test ("data isn't nulled by [set_key None]" [@tags "no-js"]) =
   let t = create () in
   let data = heap_block 14 in
   set_data t (Some data);
@@ -24,12 +23,12 @@ let%expect_test "data isn't nulled by [set_key None]" [@tags "no-js"] =
     ((key ()) (data (14))) |}];
   print_s [%message (data : heap_block)];
   [%expect {|
-    (data 14) |}];
+    (data 14) |}]
 ;;
 
-let%expect_test "\
-data is nulled when the key becomes unreachable, even if the data is reachable"
-                  [@tags "no-js"] =
+let%expect_test ("data is nulled when the key becomes unreachable, even if the data is \
+                  reachable" [@tags "no-js"])
+  =
   let t = create () in
   let data = heap_block 14 in
   set_data t (Some data);
@@ -45,10 +44,10 @@ data is nulled when the key becomes unreachable, even if the data is reachable"
      (data ())) |}];
   print_s [%message (data : heap_block)];
   [%expect {|
-    (data 14) |}];
+    (data 14) |}]
 ;;
 
-let%expect_test "data is kept alive by the key" [@tags "no-js"] =
+let%expect_test ("data is kept alive by the key" [@tags "no-js"]) =
   let t = create () in
   print t;
   [%expect {|
@@ -88,16 +87,16 @@ let%expect_test "data is kept alive by the key" [@tags "no-js"] =
   print t;
   [%expect {|
     ((key  ())
-     (data ())) |}];
+     (data ())) |}]
 ;;
 
-let%expect_test "finalizers and clearing" [@tags "no-js"] =
+let%expect_test ("finalizers and clearing" [@tags "no-js"]) =
   let t = create () in
   let key = heap_block 14 in
   let data = heap_block 13 in
   set_key t (Some key);
   set_data t (Some data);
-  Gc.Expert.add_finalizer key  (fun _ -> print_s [%message "finalized key" ]);
+  Gc.Expert.add_finalizer key (fun _ -> print_s [%message "finalized key"]);
   Gc.Expert.add_finalizer data (fun _ -> print_s [%message "finalized data"]);
   Gc.compact ();
   [%expect {|
@@ -111,5 +110,5 @@ let%expect_test "finalizers and clearing" [@tags "no-js"] =
   print t;
   [%expect {|
     ((key  ())
-     (data ())) |}];
+     (data ())) |}]
 ;;

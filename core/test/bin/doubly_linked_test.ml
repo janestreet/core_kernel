@@ -464,23 +464,23 @@ module Make_test (X : S) = struct
          ; ("of_list"
             >:: fun () ->
               for i = 0 to 5 do
-                let l = List.init i ~f:ident in
+                let l = List.init i ~f:Fn.id in
                 let t = of_list l in
                 assert (l = to_list t)
               done)
          ; ("clear"
             >:: fun () ->
               for i = 0 to 5 do
-                let t = of_list (List.init i ~f:ident) in
+                let t = of_list (List.init i ~f:Fn.id) in
                 clear t;
                 assert (is_empty t)
               done)
          ; ("transfer"
             >:: fun () ->
               for i1 = 0 to 3 do
-                let l1 = List.init i1 ~f:ident in
+                let l1 = List.init i1 ~f:Fn.id in
                 for i2 = 0 to 3 do
-                  let l2 = List.init i2 ~f:ident in
+                  let l2 = List.init i2 ~f:Fn.id in
                   let t1 = of_list l1 in
                   let t2 = of_list l2 in
                   transfer ~src:t1 ~dst:t2;

@@ -443,3 +443,32 @@ let%expect_test "Reversed.rev_mapi" =
   test [ 5 ];
   [%expect {| (5/0) |}]
 ;;
+
+(* Since the behavior of [Option] functions differs fundamentally between empty and
+   non-empty lists, explicitly ensure that we test both cases in addition to whatever
+   tests quickcheck generates (even though it's extremely likely that the quickcheck tests
+   do contain empty lists. *)
+let run_on_empty_and_nonempty_lists f =
+  Quickcheck.test [%quickcheck.generator: int list] ~examples:[ []; [ 1 ] ] ~f
+;;
+
+let%expect_test "Option" =
+  run_on_empty_and_nonempty_lists (fun l ->
+    match%optional.Nonempty_list.Option l with
+    | None -> assert (List.is_empty l)
+    | Some nonempty ->
+      assert ([%equal: int Nonempty_list.t] nonempty (Nonempty_list.of_list_exn l)))
+;;
+
+let%expect_test "Option does not allocate" =
+  run_on_empty_and_nonempty_lists (fun l ->
+    let round_tripped =
+      Expect_test_helpers_core.require_no_allocation [%here] (fun () ->
+        match%optional.Nonempty_list.Option l with
+        | None -> Sys.opaque_identity Nonempty_list.Option.none
+        | Some nonempty ->
+          Sys.opaque_identity
+            (Nonempty_list.Option.some (Sys.opaque_identity nonempty)))
+    in
+    assert (phys_equal l round_tripped))
+;;

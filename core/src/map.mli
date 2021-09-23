@@ -356,13 +356,26 @@ val iteri_until
   -> f:(key:'k -> data:'v -> Continue_or_stop.t)
   -> Finished_or_unfinished.t
 
+module Merge_element : sig
+  type ('left, 'right) t =
+    [ `Both of 'left * 'right
+    | `Left of 'left
+    | `Right of 'right
+    ]
+
+  val left : ('left, 'a) t -> 'left option
+  val right : ('a, 'right) t -> 'right option
+  val left_value : ('left, 'a) t -> default:'left -> 'left
+  val right_value : ('a, 'right) t -> default:'right -> 'right
+end
+
 (** Iterates two maps side by side. The complexity of this function is O(M+N). If two
     inputs are [[(0, a); (1, a)]] and [[(1, b); (2, b)]], [f] will be called with
     [[(0, `Left a); (1, `Both (a, b)); (2, `Right b)]] *)
 val iter2
   :  ('k, 'v1, 'cmp) t
   -> ('k, 'v2, 'cmp) t
-  -> f:(key:'k -> data:[ `Left of 'v1 | `Right of 'v2 | `Both of 'v1 * 'v2 ] -> unit)
+  -> f:(key:'k -> data:('v1, 'v2) Merge_element.t -> unit)
   -> unit
 
 (** Returns new map with bound values replaced by the result of [f] applied to them. *)
@@ -407,7 +420,7 @@ val fold2
   :  ('k, 'v1, 'cmp) t
   -> ('k, 'v2, 'cmp) t
   -> init:'a
-  -> f:(key:'k -> data:[ `Left of 'v1 | `Right of 'v2 | `Both of 'v1 * 'v2 ] -> 'a -> 'a)
+  -> f:(key:'k -> data:('v1, 'v2) Merge_element.t -> 'a -> 'a)
   -> 'a
 
 (** [filter], [filteri], [filter_keys], [filter_map], and [filter_mapi] run in O(n * lg n)
@@ -507,7 +520,7 @@ val validatei
 val merge
   :  ('k, 'v1, 'cmp) t
   -> ('k, 'v2, 'cmp) t
-  -> f:(key:'k -> [ `Left of 'v1 | `Right of 'v2 | `Both of 'v1 * 'v2 ] -> 'v3 option)
+  -> f:(key:'k -> ('v1, 'v2) Merge_element.t -> 'v3 option)
   -> ('k, 'v3, 'cmp) t
 
 (** A special case of [merge], [merge_skewed t1 t2] is a map containing all the

@@ -101,7 +101,7 @@ let test =
     ( Array.init size ~f:(fun _ -> Random.State.int s 10000)
     , Array.init size ~f:(fun _ -> Random.State.int s 10000) )
   in
-  let sorted_data = Array.init size ~f:ident in
+  let sorted_data = Array.init size ~f:Fn.id in
   let reverse_sorted_data =
     let x = Array.copy sorted_data in
     Array.rev_inplace x;

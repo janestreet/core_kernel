@@ -493,22 +493,22 @@ end = struct
   module Span = struct
     type t = Int63.t
 
-    let of_int63_seconds = ident
-    let to_int63_seconds_round_down_exn = ident
+    let of_int63_seconds = Fn.id
+    let to_int63_seconds_round_down_exn = Fn.id
   end
 
   module Absolute = struct
     type t = Int63.t
 
-    let of_span_since_epoch = ident
-    let to_span_since_epoch = ident
+    let of_span_since_epoch = Fn.id
+    let to_span_since_epoch = Fn.id
   end
 
   module Date_and_ofday = struct
     type t = Int63.t
 
-    let of_synthetic_span_since_epoch = ident
-    let to_synthetic_span_since_epoch = ident
+    let of_synthetic_span_since_epoch = Fn.id
+    let to_synthetic_span_since_epoch = Fn.id
   end
 
   include Absolute

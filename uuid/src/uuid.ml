@@ -49,7 +49,7 @@ module T = struct
   ;;
 
   let set_version bytes ~version = Bytes.set bytes 14 version
-  let to_string = ident
+  let to_string = Fn.id
 
   (*{v
      xxxxxxxx-xxxx-3xxx-xxxx-xxxxxxxxxxxx

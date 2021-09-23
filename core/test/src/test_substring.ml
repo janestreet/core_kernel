@@ -59,9 +59,19 @@ module Test (Base : sig
       let%test _ = fold ell ~init:[] ~f:(fun acc x -> x :: acc) = [ 'l'; 'l'; 'e' ]
 
       let%test _ =
+        foldi ell ~init:[] ~f:(fun i acc x -> (i, x) :: acc) = [ 2, 'l'; 1, 'l'; 0, 'e' ]
+      ;;
+
+      let%test _ =
         let stuff = ref [] in
         iter ell ~f:(fun c -> stuff := c :: !stuff);
         !stuff = [ 'l'; 'l'; 'e' ]
+      ;;
+
+      let%test _ =
+        let stuff = ref [] in
+        iteri ell ~f:(fun i c -> stuff := (i, c) :: !stuff);
+        !stuff = [ 2, 'l'; 1, 'l'; 0, 'e' ]
       ;;
     end)
   ;;
@@ -89,6 +99,27 @@ module Test (Base : sig
 
       let%test _ = min_elt bcdefghi ~compare:Char.compare = Some 'b'
       let%test _ = max_elt bcdefghi ~compare:Char.compare = Some 'i'
+      let%test _ = existsi bcdefghi ~f:(fun i c -> i = 6 && Char.equal c 'h')
+      let%test _ = not (existsi bcdefghi ~f:(fun i c -> i = 8 || Char.equal c 'z'))
+      let%test _ = for_alli bcdefghi ~f:(fun i c -> i <= 7 && Char.is_alpha c)
+      let%test _ = not (for_alli bcdefghi ~f:(fun i c -> i <= 7 && Char.equal c 'h'))
+
+      let%test _ =
+        counti bcdefghi ~f:(fun i c -> (not (String.mem "bcde" c)) && i % 2 = 0) = 2
+      ;;
+
+      let%test _ = findi bcdefghi ~f:(fun (_ : int) c -> Char.equal c 'f') = Some (4, 'f')
+      let%test _ = findi bcdefghi ~f:(fun (_ : int) c -> Char.equal c 'z') = None
+
+      let%test _ =
+        find_mapi bcdefghi ~f:(fun (_ : int) c -> Option.some_if (Char.equal c 'e') 42)
+        = Some 42
+      ;;
+
+      let%test _ =
+        find_mapi bcdefghi ~f:(fun (_ : int) c -> Option.some_if (Char.equal c 'z') 42)
+        = None
+      ;;
     end)
   ;;
 end

@@ -57,7 +57,7 @@ let fail t message a sexp_of_a =
     (Error.create
        message
        (a, [%sexp_of: (_, _) t] t)
-       (Tuple.T2.sexp_of_t sexp_of_a ident))
+       (Tuple.T2.sexp_of_t sexp_of_a Fn.id))
 ;;
 
 module Lo_bound = struct

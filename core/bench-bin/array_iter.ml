@@ -2,7 +2,7 @@ open Core
 module Bench = Core_bench.Bench
 
 let () =
-  let a = Array.init 1000 ~f:ident in
+  let a = Array.init 1000 ~f:Fn.id in
   let test_array_iter =
     Bench.Test.create ~name:"array_iter" (fun () ->
       Array.iter a ~f:(fun i -> if i > 2000 then assert false))

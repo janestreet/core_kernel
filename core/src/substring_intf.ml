@@ -8,7 +8,7 @@ module type S = sig
 
   type t [@@deriving quickcheck]
 
-  include Container.S0 with type t := t with type elt := char
+  include Indexed_container.S0 with type t := t with type elt := char
 
   val base : t -> base
 

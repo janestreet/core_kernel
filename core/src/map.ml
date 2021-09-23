@@ -43,6 +43,7 @@ module Symmetric_diff_element = struct
   include Stable.V1
 end
 
+module Merge_element = Base.Map.Merge_element
 module Continue_or_stop = Base.Map.Continue_or_stop
 module Finished_or_unfinished = Base.Map.Finished_or_unfinished
 

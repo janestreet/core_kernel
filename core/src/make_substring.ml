@@ -92,9 +92,11 @@ module F (Underlying : Base) : S with type base = Underlying.t = struct
     return (create ~pos ~len base)
   ;;
 
+  let get_no_bounds_check t i = Underlying.get (base t) (pos t + i)
+
   let get t i =
     if i >= 0 && i < length t
-    then Underlying.get (base t) (pos t + i)
+    then get_no_bounds_check t i
     else raise (Invalid_argument "index out of bounds")
   ;;
 
@@ -123,10 +125,27 @@ module F (Underlying : Base) : S with type base = Underlying.t = struct
            done)
     ;;
 
+    let foldi =
+      `Custom
+        (fun t ~init ~f ->
+           let rec go acc i =
+             if i >= length t then acc else go (f i acc (get_no_bounds_check t i)) (i + 1)
+           in
+           go init 0)
+    ;;
+
+    let iteri =
+      `Custom
+        (fun t ~f ->
+           for i = 0 to length t - 1 do
+             f i (get_no_bounds_check t i)
+           done)
+    ;;
+
     let length = `Custom length
   end
 
-  module C = Container.Make0 (Make_arg)
+  module C = Indexed_container.Make0 (Make_arg)
 
   let fold = C.fold
   let iter = C.iter
@@ -145,6 +164,13 @@ module F (Underlying : Base) : S with type base = Underlying.t = struct
   let sum = C.sum
   let min_elt = C.min_elt
   let max_elt = C.max_elt
+  let foldi = C.foldi
+  let iteri = C.iteri
+  let existsi = C.existsi
+  let for_alli = C.for_alli
+  let counti = C.counti
+  let findi = C.findi
+  let find_mapi = C.find_mapi
 
   let wrap_sub_n t n ~name ~pos ~len ~on_error =
     if n < 0

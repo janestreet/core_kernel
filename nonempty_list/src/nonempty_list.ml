@@ -328,3 +328,43 @@ let flag arg_type =
     (Command.Param.one_or_more_as_pair arg_type)
     ~f:(fun (one, more) -> one :: more)
 ;;
+
+type 'a nonempty_list = 'a t
+
+(** This relies on the fact that the representation of [List.( :: )] constructor is
+    identical to that of [Nonempty_list.( :: )], and that they are each the first
+    non-constant constructor in their respective types. *)
+module Option = struct
+  type 'a t = 'a list
+  [@@deriving compare, equal, sexp, sexp_grammar, hash, quickcheck, typerep]
+
+  let none = []
+  let some (_ :: _ as value : 'a nonempty_list) : 'a t = Obj.magic value
+  let unchecked_value (t : 'a t) : 'a nonempty_list = Obj.magic t
+  let is_none t = phys_equal t none
+  let is_some t = not (is_none t)
+  let to_option = of_list
+
+  let of_option = function
+    | None -> none
+    | Some value -> some value
+  ;;
+
+  let value_exn = function
+    | [] -> raise_s [%sexp "Nonempty_list.Option.value_exn: empty list"]
+    | _ :: _ as l -> unchecked_value l
+  ;;
+
+  let value t ~default =
+    match t with
+    | [] -> default
+    | _ :: _ as l -> unchecked_value l
+  ;;
+
+  module Optional_syntax = struct
+    module Optional_syntax = struct
+      let is_none = is_none
+      let unsafe_value = unchecked_value
+    end
+  end
+end

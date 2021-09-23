@@ -95,6 +95,7 @@ module Identifiable = Identifiable
 module Immediate_option = Immediate_option
 module Immediate_option_intf = Immediate_option_intf
 module In_channel = In_channel
+module Indexed_container = Indexed_container
 module Info = Info
 module Int = Int
 module Int32 = Int32

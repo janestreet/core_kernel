@@ -8,7 +8,9 @@
 #include <core_params.h>
 
 #define CAML_INTERNALS
+#if __GNUC__ < 8
 #pragma GCC diagnostic ignored "-pedantic"
+#endif
 #include <caml/md5.h>
 #include <caml/sys.h>
 #undef CAML_INTERNALS

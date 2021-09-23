@@ -75,6 +75,40 @@ val flag : 'a Command.Param.Arg_type.t -> 'a t Command.Flag.t
 
 type 'a nonempty_list := 'a t
 
+
+(** This module provides 0-alloc versions of [to_list] and [of_list], via [some] and
+    allowing you to [match%optional] on a list, respectively. *)
+module Option : sig
+  type 'a t = 'a list
+  [@@deriving compare, equal, sexp, sexp_grammar, hash, quickcheck, typerep]
+
+  (** Constructors analogous to [None] and [Some]. *)
+
+  val none : _ t
+  val some : 'a nonempty_list -> 'a t
+  val is_none : _ t -> bool
+  val is_some : _ t -> bool
+
+  (** [value (some x) ~default = x] and [value none ~default = default]. *)
+  val value : 'a t -> default:'a nonempty_list -> 'a nonempty_list
+
+  (** [value_exn (some x) = x].  [value_exn none] raises.  Unlike [Option.value_exn],
+      there is no [?message] argument, so that calls to [value_exn] that do not raise
+      also do not have to allocate. *)
+  val value_exn : 'a t -> 'a nonempty_list
+
+  (** [unchecked_value (some x) = x].  [unchecked_value none] returns an unspecified
+      value.  [unchecked_value t] is intended as an optimization of [value_exn t] when
+      [is_some t] is known to be true. *)
+  val unchecked_value : 'a t -> 'a nonempty_list
+
+  val to_option : 'a t -> 'a nonempty_list option
+  val of_option : 'a nonempty_list option -> 'a t
+
+  module Optional_syntax :
+    Optional_syntax.S1 with type 'a t := 'a t and type 'a value := 'a nonempty_list
+end
+
 module Reversed : sig
   type 'a t = ( :: ) of 'a * 'a Reversed_list.t [@@deriving sexp_of]
 

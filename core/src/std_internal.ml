@@ -85,7 +85,14 @@ end)
 let failwiths = Error.failwiths
 let force = Base.Lazy.force
 let fprintf = Printf.fprintf
-let ident = Fn.id
+
+include (
+struct
+  let ident = Fn.id
+end :
+sig
+  val ident : 'a -> 'a [@@deprecated "[since 2021-08] Use [Fn.id] instead."]
+end)
 
 let invalid_argf = Base.Printf.invalid_argf
 let ifprintf = Printf.ifprintf
@@ -103,6 +110,7 @@ let protectx = Exn.protectx
 let raise_s = Error.raise_s
 let round = Float.round
 let ( **. ) = Base.( **. )
+let ( %. ) = Base.( %. )
 
 let sprintf = Printf.sprintf
 let stage = Staged.stage
@@ -165,7 +173,9 @@ struct
   [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar, typerep]
 
   (* Bin_prot has optimized functions for float arrays *)
-  type float_array = Bin_prot.Std.float_array [@@deriving bin_io]
+  include struct
+    type float_array = float array [@@deriving bin_io]
+  end [@alert "-deprecated"]
 
   include (
   struct
@@ -198,8 +208,12 @@ sig
   type 'a ref [@@deriving bin_io, compare, equal, sexp, sexp_grammar, typerep]
   type unit [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar, typerep]
 
-  type float_array = float array
-  [@@deriving bin_io, compare, sexp, sexp_grammar, typerep]
+  include sig
+    type float_array = float array
+    [@@deriving bin_io, compare, sexp, sexp_grammar, typerep]
+    [@@deprecated "[since 2021-09] use [float array] or [floatarray] instead"]
+  end
+          [@alert "-deprecated"]
 end
 with type 'a array := 'a array
 with type bool := bool

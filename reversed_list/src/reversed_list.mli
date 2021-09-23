@@ -8,5 +8,6 @@ type 'a t =
 
 val rev : 'a t -> 'a list
 val rev_append : 'a t -> 'a list -> 'a list
+val rev_map : 'a t -> f:('a -> 'b) -> 'b list
 val rev_filter_map : 'a t -> f:('a -> 'b option) -> 'b list
 val is_empty : 'a t -> bool

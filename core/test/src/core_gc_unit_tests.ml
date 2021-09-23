@@ -89,6 +89,8 @@ let%test_module ("gc" [@tags "no-js"]) =
         check ();
         r := Bytes.create 128 :: !r
       done;
+      (* Don't let flambda2 drop r, producing an infinite loop *)
+      let _ = (Sys.opaque_identity !r : bytes list) in
       check ()
     ;;
 

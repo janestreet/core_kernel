@@ -8,7 +8,7 @@ module Test_S1 (M : sig
   end) : sig
   val test : unit -> unit
 end = struct
-  let lists = List.init 10 ~f:(fun i -> List.init i ~f:ident)
+  let lists = List.init 10 ~f:(fun i -> List.init i ~f:Fn.id)
 
   let test () =
     List.iter lists ~f:(fun l ->
