@@ -18,12 +18,10 @@
     {[
       module Foo = struct
         module T = struct
-          type t = int * int
-          let compare x y = Tuple2.compare Int.compare Int.compare
-          let sexp_of_t = Tuple2.sexp_of_t Int.sexp_of_t Int.sexp_of_t
+          type t = int * int [@@deriving compare, sexp_of]
         end
         include T
-        include Comparable.Make(T)
+        include Comparable.Make_plain(T)
       end
     ]}
 
@@ -35,17 +33,7 @@
 
     lets you create a map keyed by [Foo]. The reason you need to write a sexp-converter
     and a comparison function for this to work is that maps both need comparison and the
-    ability to serialize the key for generating useful errors. It's yet nicer to do this
-    with the appropriate PPXs:
-
-    {[
-      module Foo = struct
-        module T =
-        struct  type t = int * int [@@deriving sexp_of, compare]  end
-        include T
-        include Comparable.Make(T)
-      end
-    ]}
+    ability to serialize the key for generating useful errors.
 
     {2 The interface}
 *)
@@ -933,6 +921,21 @@ module Make_binable_using_comparator (Key : sig
 
 module Key_bin_io = Key_bin_io
 include For_deriving with type ('a, 'b, 'c) t := ('a, 'b, 'c) t
+
+module Make_tree_plain (Key : sig
+    type t [@@deriving sexp_of]
+
+    include Comparator.S with type t := t
+  end) : Make_S_plain_tree(Key).S
+
+module Make_tree (Key : sig
+    type t [@@deriving sexp]
+
+    include Comparator.S with type t := t
+  end) : sig
+  include Make_S_plain_tree(Key).S
+  include Sexpable.S1 with type 'a t := 'a t
+end
 
 (** The following functors may be used to define stable modules *)
 module Stable : sig

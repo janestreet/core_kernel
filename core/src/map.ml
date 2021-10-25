@@ -267,7 +267,7 @@ end = struct
   ;;
 end
 
-module Make_tree (Key : Comparator.S1) = struct
+module Make_tree_S1 (Key : Comparator.S1) = struct
   open Tree
 
   let comparator = Key.comparator
@@ -397,6 +397,39 @@ module Make_tree (Key : Comparator.S1) = struct
   let quickcheck_shrinker k v = For_quickcheck.shr_tree ~comparator k v
 end
 
+module Make_tree_plain (Key : sig
+    type t [@@deriving sexp_of]
+
+    include Comparator.S with type t := t
+  end) =
+struct
+  module Key_S1 = Comparator.S_to_S1 (Key)
+  include Make_tree_S1 (Key_S1)
+
+  type +'v t = (Key.t, 'v, Key.comparator_witness) Tree.t
+
+  let sexp_of_t sexp_of_v t = sexp_of_t Key.sexp_of_t sexp_of_v [%sexp_of: _] t
+
+  module Provide_of_sexp
+      (X : sig
+         type t [@@deriving of_sexp]
+       end
+       with type t := Key.t) =
+  struct
+    let t_of_sexp v_of_sexp sexp = t_of_sexp X.t_of_sexp v_of_sexp sexp
+  end
+end
+
+module Make_tree (Key : sig
+    type t [@@deriving sexp]
+
+    include Comparator.S with type t := t
+  end) =
+struct
+  include Make_tree_plain (Key)
+  include Provide_of_sexp (Key)
+end
+
 (* Don't use [of_sorted_array] to avoid the allocation of an intermediate array *)
 let init_for_bin_prot ~len ~f ~comparator =
   let map = Using_comparator.of_increasing_iterator_unchecked ~len ~f ~comparator in
@@ -448,7 +481,7 @@ module Poly = struct
     end)
 
   module Tree = struct
-    include Make_tree (Comparator.Poly)
+    include Make_tree_S1 (Comparator.Poly)
 
     type ('k, +'v) t = ('k, 'v, Comparator.Poly.comparator_witness) tree
     type comparator_witness = Comparator.Poly.comparator_witness
@@ -539,23 +572,6 @@ struct
       include Key
       include Key'
     end)
-
-  module Tree = struct
-    include Make_tree (Key_S1)
-
-    type +'v t = (Key.t, 'v, Key.comparator_witness) tree
-
-    let sexp_of_t sexp_of_v t = sexp_of_t Key.sexp_of_t sexp_of_v [%sexp_of: _] t
-
-    module Provide_of_sexp
-        (X : sig
-           type t [@@deriving of_sexp]
-         end
-         with type t := Key.t) =
-    struct
-      let t_of_sexp v_of_sexp sexp = t_of_sexp X.t_of_sexp v_of_sexp sexp
-    end
-  end
 end
 
 module Make_plain (Key : Key_plain) = Make_plain_using_comparator (struct

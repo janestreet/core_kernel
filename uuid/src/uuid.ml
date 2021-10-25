@@ -12,7 +12,7 @@ module Stable = struct
 
   module V1 = struct
     module T = struct
-      type t = string [@@deriving bin_io, compare, hash, sexp]
+      type t = string [@@deriving bin_io, compare, equal, hash, sexp]
 
       include (val Comparator.V1.make ~compare ~sexp_of_t)
     end

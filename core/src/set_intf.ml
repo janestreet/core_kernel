@@ -488,8 +488,6 @@ module type S_plain = sig
     include Comparator.S with type t := t
   end
 
-  module Tree : Make_S_plain_tree(Elt).S
-
   type t = (Elt.t, Elt.comparator_witness) Base.Set.t [@@deriving compare, sexp_of]
   type named = (Elt.t, Elt.comparator_witness) Named.t
 
@@ -497,7 +495,7 @@ module type S_plain = sig
     Creators_and_accessors0
     with type ('a, 'b) set := ('a, 'b) Base.Set.t
     with type t := t
-    with type tree := Tree.t
+    with type tree := (Elt.t, Elt.comparator_witness) Tree.t
     with type elt := Elt.t
     with type named := named
     with type comparator_witness := Elt.comparator_witness
@@ -530,12 +528,7 @@ module type S = sig
     include Comparator.S with type t := t
   end
 
-  module Tree : sig
-    include Make_S_plain_tree(Elt).S
-    include Sexpable.S with type t := t
-  end
-
-  include S_plain with module Elt := Elt and module Tree := Tree
+  include S_plain with module Elt := Elt
   include Sexpable.S with type t := t
 end
 

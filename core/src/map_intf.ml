@@ -447,14 +447,12 @@ module type S_plain = sig
     include Comparator.S with type t := t
   end
 
-  module Tree : Make_S_plain_tree(Key).S
-
   type +'a t = (Key.t, 'a, Key.comparator_witness) Map.t [@@deriving compare, sexp_of]
 
   include
     Creators_and_accessors1
     with type 'a t := 'a t
-    with type 'a tree := 'a Tree.t
+    with type 'a tree := (Key.t, 'a, Key.comparator_witness) Tree.t
     with type key := Key.t
     with type comparator_witness := Key.comparator_witness
 
@@ -486,12 +484,7 @@ module type S = sig
     include Comparator.S with type t := t
   end
 
-  module Tree : sig
-    include Make_S_plain_tree(Key).S
-    include Sexpable.S1 with type 'a t := 'a t
-  end
-
-  include S_plain with module Key := Key and module Tree := Tree
+  include S_plain with module Key := Key
   include Sexpable.S1 with type 'a t := 'a t
 end
 

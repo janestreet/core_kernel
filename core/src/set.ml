@@ -203,7 +203,7 @@ end = struct
   let quickcheck_generator elt = quickcheck_generator ~comparator elt
 end
 
-module Make_tree (Elt : Comparator.S1) = struct
+module Make_tree_S1 (Elt : Comparator.S1) = struct
   let comparator = Elt.comparator
   let empty = Tree.empty_without_value_restriction
   let singleton e = Tree.singleton ~comparator e
@@ -295,6 +295,43 @@ module Make_tree (Elt : Comparator.S1) = struct
   let quickcheck_shrinker elt = For_quickcheck.shr_tree elt ~comparator
 end
 
+module Make_tree_plain (Elt : sig
+    type t [@@deriving sexp_of]
+
+    include Comparator.S with type t := t
+  end) =
+struct
+  module Elt_S1 = Comparator.S_to_S1 (Elt)
+  include Make_tree_S1 (Elt_S1)
+
+  type t = (Elt.t, Elt.comparator_witness) Tree.t
+  type named = (Elt.t, Elt.comparator_witness) Tree.Named.t
+
+  let compare t1 t2 = compare_direct t1 t2
+  let sexp_of_t t = Tree.sexp_of_t Elt.sexp_of_t [%sexp_of: _] t
+
+  module Provide_of_sexp
+      (X : sig
+         type t [@@deriving of_sexp]
+       end
+       with type t := Elt.t) =
+  struct
+    let t_of_sexp sexp =
+      Tree.t_of_sexp_direct X.t_of_sexp sexp ~comparator:Elt_S1.comparator
+    ;;
+  end
+end
+
+module Make_tree (Elt : sig
+    type t [@@deriving sexp]
+
+    include Comparator.S with type t := t
+  end) =
+struct
+  include Make_tree_plain (Elt)
+  include Provide_of_sexp (Elt)
+end
+
 (* Don't use [of_sorted_array] to avoid the allocation of an intermediate array *)
 let init_for_bin_prot ~len ~f ~comparator =
   let set = Using_comparator.of_increasing_iterator_unchecked ~comparator ~len ~f in
@@ -345,7 +382,7 @@ module Poly = struct
     end)
 
   module Tree = struct
-    include Make_tree (Comparator.Poly)
+    include Make_tree_S1 (Comparator.Poly)
 
     type 'elt t = ('elt, Comparator.Poly.comparator_witness) tree
     type 'a named = ('a, Elt.comparator_witness) Tree.Named.t
@@ -431,27 +468,6 @@ struct
       include Elt
       include Elt'
     end)
-
-  module Tree = struct
-    include Make_tree (Elt_S1)
-
-    type t = (Elt.t, Elt.comparator_witness) tree
-    type named = (Elt.t, Elt.comparator_witness) Tree.Named.t
-
-    let compare t1 t2 = compare_direct t1 t2
-    let sexp_of_t t = Tree.sexp_of_t Elt.sexp_of_t [%sexp_of: _] t
-
-    module Provide_of_sexp
-        (X : sig
-           type t [@@deriving of_sexp]
-         end
-         with type t := Elt.t) =
-    struct
-      let t_of_sexp sexp =
-        Tree.t_of_sexp_direct X.t_of_sexp sexp ~comparator:Elt_S1.comparator
-      ;;
-    end
-  end
 end
 
 module Make_plain (Elt : Elt_plain) = Make_plain_using_comparator (struct
@@ -468,11 +484,6 @@ struct
   include Make_plain_using_comparator (Elt_sexp)
   module Elt = Elt_sexp
   include Provide_of_sexp (Elt)
-
-  module Tree = struct
-    include Tree
-    include Provide_of_sexp (Elt)
-  end
 end
 
 module Make (Elt : Elt) = Make_using_comparator (struct

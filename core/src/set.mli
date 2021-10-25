@@ -532,6 +532,21 @@ module Make_binable_using_comparator (Elt : sig
 module Elt_bin_io = Elt_bin_io
 include For_deriving with type ('a, 'b) t := ('a, 'b) t
 
+module Make_tree_plain (Elt : sig
+    type t [@@deriving sexp_of]
+
+    include Comparator.S with type t := t
+  end) : Make_S_plain_tree(Elt).S
+
+module Make_tree (Elt : sig
+    type t [@@deriving sexp]
+
+    include Comparator.S with type t := t
+  end) : sig
+  include Make_S_plain_tree(Elt).S
+  include Sexpable.S with type t := t
+end
+
 (** The following types and functors may be used to define stable modules. *)
 module Stable : sig
   module V1 : sig

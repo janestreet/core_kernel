@@ -117,7 +117,7 @@ module type Permissioned = sig
   include Blit.S1_permissions with type ('a, 'perms) t := ('a, 'perms) t
   include Binary_searchable.S1_permissions with type ('a, 'perms) t := ('a, 'perms) t
 
-  val length : (_, _) t -> int
+  external length : ('a, _) t -> int = "%array_length"
   val is_empty : (_, _) t -> bool
   external get : ('a, [> read ]) t -> int -> 'a = "%array_safe_get"
   external set : ('a, [> write ]) t -> int -> 'a -> unit = "%array_safe_set"
@@ -126,6 +126,11 @@ module type Permissioned = sig
   val create : len:int -> 'a -> ('a, [< _ perms ]) t
   val init : int -> f:(int -> 'a) -> ('a, [< _ perms ]) t
   val make_matrix : dimx:int -> dimy:int -> 'a -> (('a, [< _ perms ]) t, [< _ perms ]) t
+
+  val copy_matrix
+    :  (('a, [> read ]) t, [> read ]) t
+    -> (('a, [< _ perms ]) t, [< _ perms ]) t
+
   val append : ('a, [> read ]) t -> ('a, [> read ]) t -> ('a, [< _ perms ]) t
   val concat : ('a, [> read ]) t list -> ('a, [< _ perms ]) t
   val copy : ('a, [> read ]) t -> ('a, [< _ perms ]) t
@@ -365,6 +370,7 @@ module type S = sig
   include Binary_searchable.S1 with type 'a t := 'a t
   include Container.S1 with type 'a t := 'a t
 
+  external length : 'a t -> int = "%array_length"
   external get : 'a t -> int -> 'a = "%array_safe_get"
   external set : 'a t -> int -> 'a -> unit = "%array_safe_set"
   external unsafe_get : 'a t -> int -> 'a = "%array_unsafe_get"
@@ -372,6 +378,7 @@ module type S = sig
   val create : len:int -> 'a -> 'a t
   val init : int -> f:(int -> 'a) -> 'a t
   val make_matrix : dimx:int -> dimy:int -> 'a -> 'a t t
+  val copy_matrix : 'a t t -> 'a t t
   val append : 'a t -> 'a t -> 'a t
   val concat : 'a t list -> 'a t
   val copy : 'a t -> 'a t

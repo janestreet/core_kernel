@@ -67,7 +67,7 @@ val gen_with_length : int -> char Quickcheck.Generator.t -> t Quickcheck.Generat
     uniformity with other stable types. *)
 module Stable : sig
   module V1 : sig
-    type nonrec t = t [@@deriving equal, hash]
+    type nonrec t = t [@@deriving equal, hash, sexp_grammar]
 
     include Base.Stringable.S with type t := t
 

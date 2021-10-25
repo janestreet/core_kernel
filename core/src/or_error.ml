@@ -12,7 +12,6 @@ module Expect_test_config_with_unit_expect = struct
     let to_run t = Base.Or_error.return t
   end
 
-  let flush () = ()
   let run f = ok_exn (f ())
   let sanitize s = s
   let flushed () = true
@@ -29,7 +28,6 @@ module Expect_test_config = struct
     let to_run t = t
   end
 
-  let flush () = return ()
   let run f = ok_exn (f ())
   let flushed () = true
   let upon_unreleasable_issue = Expect_test_config.upon_unreleasable_issue

@@ -2352,6 +2352,7 @@ let%test_module "Int.Map" =
        (Key_int)
        (struct
          include Int.Map
+         module Tree = Map.Make_tree (Int.Map.Key)
 
          type ('a, 'b, 'c) t_ = 'b t
          type ('a, 'b, 'c) tree = 'b Tree.t
@@ -2402,7 +2403,7 @@ let%test_module "Int.Map.Tree" =
   (module Unit_tests
        (Key_int)
        (struct
-         include Int.Map.Tree
+         include Map.Make_tree (Int.Map.Key)
 
          type ('a, 'b, 'c) t_ = 'b t
          type ('a, 'b, 'c) tree = 'b t

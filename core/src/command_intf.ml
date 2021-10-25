@@ -187,7 +187,10 @@ module type Command = sig
 
     (** An auto-completing [Arg_type] over a finite set of values. *)
     val of_map
-      :  ?case_sensitive:bool
+      :  ?accept_unique_prefixes:bool
+      (** Defaults to [true]. Automatically parses a prefix of a valid key if it's
+          unambiguous. *)
+      -> ?case_sensitive:bool
       (** Defaults to [true]. If [false], map keys must all be distinct when lowercased.*)
       -> ?list_values_in_help:bool
       (** Defaults to [true]. If you set it to false the accepted values won't be listed
@@ -201,7 +204,8 @@ module type Command = sig
 
     (** Convenience wrapper for [of_map]. Raises on duplicate keys. *)
     val of_alist_exn
-      :  ?case_sensitive:bool
+      :  ?accept_unique_prefixes:bool
+      -> ?case_sensitive:bool
       (** Defaults to [true]. If [false], map keys must all be distinct when lowercased.*)
       -> ?list_values_in_help:bool (** default: true *)
       -> ?auto_complete:Auto_complete.t
@@ -212,7 +216,8 @@ module type Command = sig
     (** Convenience wrapper for [of_alist_exn] to use with [ppx_enumerate] using
         [to_string]. Raises on duplicate [to_string]ed values. *)
     val enumerated
-      :  ?case_sensitive:bool
+      :  ?accept_unique_prefixes:bool
+      -> ?case_sensitive:bool
       (** Defaults to [true]. If [false], map keys must all be distinct when lowercased.*)
       -> ?list_values_in_help:bool (** default: true *)
       -> ?auto_complete:Auto_complete.t
@@ -224,7 +229,8 @@ module type Command = sig
         [sexp_of_t] to turn the value into a string. Raises on duplicate [to_string]ed
         values. *)
     val enumerated_sexpable
-      :  ?case_sensitive:bool
+      :  ?accept_unique_prefixes:bool
+      -> ?case_sensitive:bool
       (** Defaults to [true]. If [false], map keys must all be distinct when lowercased.*)
       -> ?list_values_in_help:bool (** default: true *)
       -> ?auto_complete:Auto_complete.t

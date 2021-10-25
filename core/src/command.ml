@@ -94,7 +94,8 @@ module Arg_type : sig
   val of_lazy : ?key:'a Env.Multi.Key.t -> 'a t lazy_t -> 'a t
 
   val of_map
-    :  ?case_sensitive:bool
+    :  ?accept_unique_prefixes:bool
+    -> ?case_sensitive:bool
     -> ?list_values_in_help:bool
     -> ?auto_complete:Auto_complete.t
     -> ?key:'a Env.Multi.Key.t
@@ -102,7 +103,8 @@ module Arg_type : sig
     -> 'a t
 
   val of_alist_exn
-    :  ?case_sensitive:bool
+    :  ?accept_unique_prefixes:bool
+    -> ?case_sensitive:bool
     -> ?list_values_in_help:bool
     -> ?auto_complete:Auto_complete.t
     -> ?key:'a Env.Multi.Key.t
@@ -110,7 +112,8 @@ module Arg_type : sig
     -> 'a t
 
   val enumerated
-    :  ?case_sensitive:bool
+    :  ?accept_unique_prefixes:bool
+    -> ?case_sensitive:bool
     -> ?list_values_in_help:bool
     -> ?auto_complete:Auto_complete.t
     -> ?key:'a Env.Multi.Key.t
@@ -118,7 +121,8 @@ module Arg_type : sig
     -> 'a t
 
   val enumerated_sexpable
-    :  ?case_sensitive:bool
+    :  ?accept_unique_prefixes:bool
+    -> ?case_sensitive:bool
     -> ?list_values_in_help:bool
     -> ?auto_complete:Auto_complete.t
     -> ?key:'a Env.Multi.Key.t
@@ -192,7 +196,14 @@ end = struct
   let sexp = create Sexp.of_string
   let sexp_conv ?complete of_sexp = create ?complete (fun s -> of_sexp (Sexp.of_string s))
 
-  let associative ?(list_values_in_help = true) ?auto_complete ?key ~case_sensitive alist =
+  let associative
+        ?(accept_unique_prefixes = true)
+        ?(list_values_in_help = true)
+        ?auto_complete
+        ?key
+        ~case_sensitive
+        alist
+    =
     let open struct
       module type S = sig
         include Comparator.S with type t = string
@@ -245,6 +256,23 @@ end = struct
             let name = prefix ^ suffix in
             Some name)
     in
+    let find arg =
+      match Map.find map arg with
+      | Some _ as s -> s
+      | None ->
+        (match accept_unique_prefixes with
+         | false -> None
+         | true ->
+           (match
+              Map.to_alist map
+              |> List.filter ~f:(fun (name, _) -> S.is_prefix name ~prefix:arg)
+            with
+            | [ (_singleton_key, v) ] -> Some v
+            | [] | _ :: _ :: _ ->
+              (* In the two-or-more case we could provide filtered help text, but it's
+                 more generally useful to list all the options, which we do below. *)
+              None))
+    in
     create'
       ~extra_doc:
         (lazy
@@ -256,7 +284,7 @@ end = struct
       ?key
       ~complete
       (fun arg ->
-         match Map.find map arg with
+         match find arg with
          | Some v -> v
          | None ->
            let valid_arguments_extra =
@@ -269,13 +297,33 @@ end = struct
              ())
   ;;
 
-  let of_alist_exn ?(case_sensitive = true) ?list_values_in_help ?auto_complete ?key alist
+  let of_alist_exn
+        ?accept_unique_prefixes
+        ?(case_sensitive = true)
+        ?list_values_in_help
+        ?auto_complete
+        ?key
+        alist
     =
-    associative ?list_values_in_help ?auto_complete ?key ~case_sensitive alist
+    associative
+      ?accept_unique_prefixes
+      ?list_values_in_help
+      ?auto_complete
+      ?key
+      ~case_sensitive
+      alist
   ;;
 
-  let of_map ?case_sensitive ?list_values_in_help ?auto_complete ?key map =
+  let of_map
+        ?accept_unique_prefixes
+        ?case_sensitive
+        ?list_values_in_help
+        ?auto_complete
+        ?key
+        map
+    =
     of_alist_exn
+      ?accept_unique_prefixes
       ?case_sensitive
       ?list_values_in_help
       ?auto_complete
@@ -285,6 +333,7 @@ end = struct
 
   let enumerated
         (type t)
+        ?accept_unique_prefixes
         ?case_sensitive
         ?list_values_in_help
         ?auto_complete
@@ -292,6 +341,7 @@ end = struct
         (module E : Enumerable_stringable with type t = t)
     =
     of_alist_exn
+      ?accept_unique_prefixes
       ?case_sensitive
       ?list_values_in_help
       ?auto_complete
@@ -302,6 +352,7 @@ end = struct
 
   let enumerated_sexpable
         (type t)
+        ?accept_unique_prefixes
         ?case_sensitive
         ?list_values_in_help
         ?auto_complete
@@ -309,6 +360,7 @@ end = struct
         (module E : Enumerable_sexpable with type t = t)
     =
     enumerated
+      ?accept_unique_prefixes
       ?case_sensitive
       ?list_values_in_help
       ?auto_complete

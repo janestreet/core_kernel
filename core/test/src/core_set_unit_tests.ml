@@ -1054,6 +1054,7 @@ let%test_module "Int.Set" =
        (Elt_int)
        (struct
          include Int.Set
+         module Tree = Set.Make_tree (Int.Set.Elt)
 
          type ('a, 'b) set = ('a, 'b) Set.t
          type ('a, 'b) t_ = t
@@ -1116,12 +1117,12 @@ let%test_module "Int.Set.Tree" =
   (module Unit_tests
        (Elt_int)
        (struct
-         include Int.Set.Tree
+         include Set.Make_tree (Int.Set.Elt)
 
          type ('a, 'b) set = ('a, 'b) Set.Tree.t
          type ('a, 'b) t_ = t
          type ('a, 'b) tree = t
-         type ('a, 'b) named = Int.Set.Tree.named
+         type nonrec ('a, 'b) named = named
          type 'a cmp = Int.comparator_witness
 
          include Create_options_without_comparator

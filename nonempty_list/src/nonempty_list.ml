@@ -192,6 +192,7 @@ include struct
   let max_elt = max_elt
 end
 
+let invariant f t = iter t ~f
 let create hd tl = hd :: tl
 let singleton hd = [ hd ]
 let cons x (hd :: tl) = x :: hd :: tl

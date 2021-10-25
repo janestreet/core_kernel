@@ -17,5 +17,7 @@ module Stable : sig
       Comparable.Stable.V1.S
       with type comparable := t
       with type comparator_witness := comparator_witness
+
+    include Stringable.S with type t := t
   end
 end

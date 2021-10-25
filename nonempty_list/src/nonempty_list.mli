@@ -8,6 +8,7 @@ type 'a t = ( :: ) of 'a * 'a list
 [@@deriving compare, equal, sexp, sexp_grammar, hash, quickcheck, typerep]
 
 include Container.S1 with type 'a t := 'a t
+include Invariant.S1 with type 'a t := 'a t
 include Monad.S with type 'a t := 'a t
 
 val create : 'a -> 'a list -> 'a t

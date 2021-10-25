@@ -167,6 +167,11 @@ module Permissioned : sig
   val create : len:int -> 'a -> ('a, [< _ perms ]) t
   val init : int -> f:(int -> 'a) -> ('a, [< _ perms ]) t
   val make_matrix : dimx:int -> dimy:int -> 'a -> (('a, [< _ perms ]) t, [< _ perms ]) t
+
+  val copy_matrix
+    :  (('a, [> read ]) t, [> read ]) t
+    -> (('a, [< _ perms ]) t, [< _ perms ]) t
+
   val append : ('a, [> read ]) t -> ('a, [> read ]) t -> ('a, [< _ perms ]) t
   val concat : ('a, [> read ]) t list -> ('a, [< _ perms ]) t
   val copy : ('a, [> read ]) t -> ('a, [< _ perms ]) t
