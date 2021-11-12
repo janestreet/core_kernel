@@ -96,7 +96,7 @@ module Stable = struct
           let m = m mod sixty |> i in
           let unit =
             match unit with
-            | (`Nanosecond | `Millisecond | `Second) as unit -> unit
+            | (`Nanosecond | `Microsecond | `Millisecond | `Second) as unit -> unit
             | `Minute_or_less ->
               if ns <> 0
               then `Nanosecond
@@ -218,6 +218,7 @@ include Identifiable.Make_using_comparator (struct
   end)
 
 let t_sexp_grammar = Sexplib.Sexp_grammar.coerce Stable.V1.t_sexp_grammar
+let to_microsecond_string t = Stable.V1.to_string_with_unit t ~unit:`Microsecond
 let to_millisecond_string t = Stable.V1.to_string_with_unit t ~unit:`Millisecond
 let to_sec_string t = Stable.V1.to_string_with_unit t ~unit:`Second
 let to_string_trimmed t = Stable.V1.to_string_with_unit t ~unit:`Minute_or_less

@@ -1,7 +1,5 @@
-module Caml_set = Set
 open! Core
 module Merge_to_sequence_element = Set_intf.Merge_to_sequence_element
-module Named = Set_intf.Named
 module With_comparator = Set_intf.With_comparator
 module Without_comparator = Set_intf.Without_comparator
 module With_first_class_module = Set_intf.With_first_class_module

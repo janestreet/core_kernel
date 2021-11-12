@@ -503,7 +503,7 @@ let%test_module _ =
         [@@deriving typerep]
       end
       in
-      let module X = Type_immediacy.Always.For_all_parameters_S1 (M) in
+      let module _ = Type_immediacy.Always.For_all_parameters_S1 (M) in
       true
     ;;
 
@@ -512,7 +512,7 @@ let%test_module _ =
         type 'a t = 'a option lazy_t [@@deriving typerep]
       end
       in
-      let module X = Type_immediacy.Sometimes.For_all_parameters_S1 (M) in
+      let module _ = Type_immediacy.Sometimes.For_all_parameters_S1 (M) in
       true
     ;;
 
@@ -521,7 +521,7 @@ let%test_module _ =
         type 'a t = 'a array lazy_t [@@deriving typerep]
       end
       in
-      let module X = Type_immediacy.Never.For_all_parameters_S1 (M) in
+      let module _ = Type_immediacy.Never.For_all_parameters_S1 (M) in
       true
     ;;
 
@@ -531,17 +531,17 @@ let%test_module _ =
       end
       in
       try
-        let module X = Type_immediacy.Sometimes.For_all_parameters_S1 (M) in
+        let module _ = Type_immediacy.Sometimes.For_all_parameters_S1 (M) in
         false
       with
       | _ ->
         (try
-           let module X = Type_immediacy.Never.For_all_parameters_S1 (M) in
+           let module _ = Type_immediacy.Never.For_all_parameters_S1 (M) in
            false
          with
          | _ ->
            (try
-              let module X = Type_immediacy.Always.For_all_parameters_S1 (M) in
+              let module _ = Type_immediacy.Always.For_all_parameters_S1 (M) in
               false
             with
             | _ -> true))

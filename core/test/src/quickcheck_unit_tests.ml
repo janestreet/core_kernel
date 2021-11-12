@@ -765,7 +765,7 @@ let%test_module _ =
  * let%test_module _ = (module Test (struct let default_seed = `Deterministic "zanzibar" end))
  * let%test_module _ = (module Test (struct let default_seed = `Deterministic "lorem ipsum" end)) *)
 
-module Shrinker = struct
+module _ = struct
   open Shrinker
 
   module Test_data = struct

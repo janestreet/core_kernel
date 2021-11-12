@@ -261,6 +261,8 @@ end = struct
   ;;
 
   let of_key_set key_set ~f = Using_comparator.of_key_set key_set ~f
+  let map_keys t ~f = Using_comparator.map_keys ~comparator t ~f
+  let map_keys_exn t ~f = Using_comparator.map_keys_exn ~comparator t ~f
 
   let quickcheck_generator gen_k gen_v =
     Using_comparator.quickcheck_generator ~comparator gen_k gen_v
@@ -350,6 +352,7 @@ module Make_tree_S1 (Key : Comparator.S1) = struct
   ;;
 
   let merge a b ~f = merge a b ~f ~comparator
+  let merge_skewed a b ~combine = merge_skewed a b ~combine ~comparator
   let min_elt = min_elt
   let min_elt_exn = min_elt_exn
   let max_elt = max_elt
@@ -392,6 +395,8 @@ module Make_tree_S1 (Key : Comparator.S1) = struct
   ;;
 
   let key_set t = Using_comparator.key_set_of_tree ~comparator t
+  let map_keys t ~f = map_keys t ~f ~comparator
+  let map_keys_exn t ~f = map_keys_exn t ~f ~comparator
   let quickcheck_generator k v = For_quickcheck.gen_tree ~comparator k v
   let quickcheck_observer k v = For_quickcheck.obs_tree k v
   let quickcheck_shrinker k v = For_quickcheck.shr_tree ~comparator k v
@@ -589,7 +594,7 @@ struct
   module Key = Key_sexp
   include Provide_of_sexp (Key)
 
-  module Tree = struct
+  module _ = struct
     include Tree
     include Provide_of_sexp (Key)
   end

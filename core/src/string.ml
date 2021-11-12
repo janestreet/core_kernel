@@ -3,8 +3,6 @@ include Base.String
 
 (* These two are needed because [include Identifiable.Extend] (present later in the file)
    binds new [Map] and [Set] modules. *)
-module Core_map = Map
-module Core_set = Set
 
 module Stable = struct
   module V1 = struct

@@ -1,6 +1,6 @@
 open! Core
 
-module Step_test = struct
+module _ = struct
   let offset off = Time_ns.add Time_ns.epoch (Time_ns.Span.of_sec off)
 
   type step =

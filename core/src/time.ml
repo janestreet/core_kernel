@@ -4,7 +4,6 @@ open! Import
 open Std_internal
 open! Int.Replace_polymorphic_compare
 include Time_intf
-module Zone0 = Zone
 
 module Make (Time0 : Time0_intf.S) = struct
   module Time0 = Time0

@@ -758,7 +758,7 @@ module Sexpable = struct
     | Lazy of t Lazy.t
   [@@deriving sexp_of]
 
-  let extraction_var = "COMMAND_OUTPUT_HELP_SEXP"
+  let extraction_var = Command_env_var.to_string COMMAND_OUTPUT_HELP_SEXP
 
   module Versioned = Stable.Sexpable.Versioned
 

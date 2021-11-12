@@ -77,6 +77,7 @@ struct
     let symmetric_diff x = simplify_accessor symmetric_diff x
     let fold_symmetric_diff x = simplify_accessor fold_symmetric_diff x
     let merge x = simplify_accessor merge x
+    let merge_skewed x = simplify_accessor merge_skewed x
     let split x = simplify_accessor split x
     let subrange x = simplify_accessor subrange x
     let fold_range_inclusive x = simplify_accessor fold_range_inclusive x
@@ -133,6 +134,7 @@ struct
     let of_sequence_multi x = simplify_creator of_sequence_multi x
     let of_sequence_fold x = simplify_creator of_sequence_fold x
     let of_sequence_reduce x = simplify_creator of_sequence_reduce x
+    let map_keys_exn x = simplify_creator map_keys_exn x
     let quickcheck_generator x = simplify_creator quickcheck_generator x
 
     type ('a, 'b) t = ('a, 'b, Int.comparator_witness) t_
@@ -1195,41 +1197,52 @@ struct
       [ 1, `Right 11; 3, `Both (13, 13); 6, `Left 16 ]
   ;;
 
-  let%test_unit _ =
-    let test l1 l2 expect =
-      let map_of_alist l = Int.Map.of_alist_exn l in
-      let result =
-        Core.Map.merge_skewed (map_of_alist l1) (map_of_alist l2) ~combine:(fun ~key:_ ->
-          Int.max)
-        |> Int.Map.to_alist ~key_order:`Increasing
-      in
-      [%test_result: (int * int) list] result ~expect
-    in
-    test [] [] [];
-    test [ 0, 10 ] [] [ 0, 10 ];
-    test [] [ 0, 10 ] [ 0, 10 ];
-    test [ 0, 10 ] [ 0, 11 ] [ 0, 11 ];
-    test [ 0, 11 ] [ 0, 10 ] [ 0, 11 ];
-    test
-      [ 0, 10; 3, 13; 4, 14; 6, 16 ]
-      [ 1, 11; 3, 13; 4, 14; 5, 15 ]
-      [ 0, 10; 1, 11; 3, 13; 4, 14; 5, 15; 6, 16 ]
-  ;;
+  let merge_skewed _ = assert false
 
-  let%test_unit _ =
-    let test l1 l2 expect =
-      let map_of_alist l = Int.Map.of_alist_exn l in
-      let result =
-        Core.Map.merge_skewed
-          (map_of_alist l1)
-          (map_of_alist l2)
-          ~combine:(fun ~key:_ n1 n2 -> n1 - n2)
-        |> Int.Map.to_alist ~key_order:`Increasing
-      in
-      [%test_result: (int * int) list] result ~expect
-    in
-    test [ 1, 2 ] [ 1, 1 ] [ 1, 1 ];
-    test [ 1, 1 ] [ 1, 2 ] [ 1, -1 ]
+  let%test_module _ =
+    (module struct
+      let make_alist = List.map ~f:(fun (k, v) -> Key.of_int k, v)
+
+      let%test_unit _ =
+        let test l1 l2 expect =
+          let map_of_alist l = Map.of_alist_exn (make_alist l) in
+          let result =
+            Map.merge_skewed (map_of_alist l1) (map_of_alist l2) ~combine:(fun ~key:_ ->
+              Int.max)
+            |> Map.to_alist ~key_order:`Increasing
+          in
+          [%test_result: (Key.t * int) list] result ~expect:(make_alist expect)
+        in
+        test [] [] [];
+        test [ 0, 10 ] [] [ 0, 10 ];
+        test [] [ 0, 10 ] [ 0, 10 ];
+        test [ 0, 10 ] [ 0, 11 ] [ 0, 11 ];
+        test [ 0, 11 ] [ 0, 10 ] [ 0, 11 ];
+        test
+          [ 0, 10; 3, 13; 4, 14; 6, 16 ]
+          [ 1, 11; 3, 13; 4, 14; 5, 15 ]
+          [ 0, 10; 1, 11; 3, 13; 4, 14; 5, 15; 6, 16 ]
+      ;;
+
+      let%test_unit _ =
+        let test l1 l2 expect =
+          let map_of_alist l = Map.of_alist_exn (make_alist l) in
+          let result =
+            Map.merge_skewed
+              (map_of_alist l1)
+              (map_of_alist l2)
+              ~combine:(fun ~key:_ n1 n2 -> n1 - n2)
+            |> Map.to_alist ~key_order:`Increasing
+          in
+          [%test_result: (Key.t * int) list] result ~expect:(make_alist expect)
+        in
+        test [ 1, 2 ] [ 1, 1 ] [ 1, 1 ];
+        test [ 1, 1 ] [ 1, 2 ] [ 1, -1 ];
+        (* test arguments that differ in length *)
+        test [ 1, 1; 2, 2 ] [ 1, 0 ] [ 1, 1; 2, 2 ];
+        test [ 1, 0 ] [ 1, 1; 2, 2 ] [ 1, -1; 2, 2 ]
+      ;;
+    end)
   ;;
 
   let min_and_max_keys ~init keys =
@@ -1475,6 +1488,29 @@ struct
           m
         <=> []
       ;;
+    end)
+  ;;
+
+  let map_keys _ = assert false
+  let map_keys_exn _ = assert false
+
+  let%test_module "map_keys" =
+    (module struct
+      let to_alist map = List.map (Map.to_alist map) ~f:(fun (x, y) -> Key.to_int x, y)
+
+      let of_alist alist =
+        Map.of_alist_exn (List.map alist ~f:(fun (x, y) -> Key.of_int x, y))
+      ;;
+
+      let map012 = of_alist [ 0, "one"; 1, "two"; 2, "three" ]
+      let map123 = of_alist [ 1, "one"; 2, "two"; 3, "three" ]
+
+      let ( <=> ) actual expect =
+        [%test_result: (int * string) list] (to_alist actual) ~expect:(to_alist expect)
+      ;;
+
+      let%test_unit _ = Map.map_keys_exn map012 ~f:Key.succ <=> map123
+      let%test _ = does_raise (fun () -> Map.map_keys_exn map123 ~f:(fun _ -> Key.sample))
     end)
   ;;
 

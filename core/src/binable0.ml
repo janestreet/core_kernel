@@ -2,7 +2,6 @@ open! Import
 include Binable_intf
 include Bin_prot.Binable
 module Shape = Bin_prot.Shape
-module List = Base.List
 
 module Stable = struct
   module Of_binable = struct
@@ -220,7 +219,7 @@ let%test_module _ =
 
     (* Check that only the functions & shape are sufficient for [@@deriving bin_io]. The
        fact that this functor typechecks is, itself, the test. *)
-    module Of_only_functions_and_shape (X : S_only_functions_and_shape) : S = struct
+    module _ (X : S_only_functions_and_shape) : S = struct
       type t = X.t [@@deriving bin_io]
     end
   end)

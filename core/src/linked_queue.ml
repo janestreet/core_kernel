@@ -1,6 +1,4 @@
 open! Import
-module Binable = Binable0
-module List = Base.List
 module Queue = Base.Linked_queue
 include Queue
 

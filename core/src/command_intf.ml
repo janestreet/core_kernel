@@ -48,6 +48,8 @@ end
     [Core.Command].  We use a functor in this way so that [Command]'s internal data
     types can remain hidden. *)
 module type For_unix = sig
+  type env_var
+
   module Version_util : Version_util
 
   module Signal : sig
@@ -94,11 +96,16 @@ module type For_unix = sig
     val open_process_in : string -> In_channel.t
     val close_process_in : In_channel.t -> Exit_or_signal.t
     val in_channel_of_descr : File_descr.t -> In_channel.t
-    val putenv : key:string -> data:string -> unit
-    val unsetenv : string -> unit
-    val unsafe_getenv : string -> string option
+    val putenv : key:env_var -> data:string -> unit
+    val unsetenv : env_var -> unit
+    val unsafe_getenv : env_var -> string option
 
-    type nonrec env = env
+    type env =
+      [ `Replace of (env_var * string) list
+      | `Extend of (env_var * string) list
+      | `Override of (env_var * string option) list
+      | `Replace_raw of string list
+      ]
 
     val exec
       :  prog:string
@@ -994,7 +1001,7 @@ module type Command = sig
       val to_string_for_choose_one : _ Param.t -> string
     end
 
-    module For_unix (M : For_unix) : sig
+    module For_unix (M : For_unix with type env_var := string) : sig
       val shape : t -> Shape.t
 
       val help_for_shape

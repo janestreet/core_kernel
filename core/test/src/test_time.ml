@@ -1132,7 +1132,7 @@ let%expect_test "of_string_iso8601_extended" =
     Ofday.of_string_iso8601_extended(00:59:61): (Failure "invalid second: 61") |}]
 ;;
 
-module Ofday = struct
+module _ = struct
   open Time.Ofday
 
   let%test "create can handle a leap second" =
@@ -1257,10 +1257,10 @@ module Ofday = struct
   ;;
 end
 
-module Span = struct
+module _ = struct
   open! Time.Span
 
-  module Stable = struct
+  module _ = struct
     open! Time.Stable.Span
 
     let%test_module "Span.V1" =
@@ -1306,7 +1306,7 @@ module Span = struct
     ;;
   end
 
-  module Unit_of_time = struct
+  module _ = struct
     let%expect_test "Unit_of_time.all order" =
       print_s [%sexp (Unit_of_time.all : Unit_of_time.t list)];
       [%expect {| (Nanosecond Microsecond Millisecond Second Minute Hour Day) |}]

@@ -575,7 +575,7 @@ struct
     ;;
   end
 
-  module A1_1 = Arity_1 (struct
+  module _ = Arity_1 (struct
       let write = write
     end)
 
@@ -624,7 +624,7 @@ struct
     ;;
   end
 
-  module A2_2 = Arity_2 (struct
+  module _ = Arity_2 (struct
       let write = write2
     end)
 end

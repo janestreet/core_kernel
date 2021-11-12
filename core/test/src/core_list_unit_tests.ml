@@ -38,7 +38,6 @@ let%test_module "shrinker" =
 let%test_module "random" =
   (module struct
     module G = Quickcheck.Generator
-    module O = Quickcheck.Observer
 
     module type T = sig
       type t [@@deriving sexp_of]

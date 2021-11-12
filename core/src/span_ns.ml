@@ -804,8 +804,6 @@ let min_value_representable = of_int63_ns Int63.min_value
 let max_value_representable = of_int63_ns Int63.max_value
 
 module Private = struct
-  module Parts = Parts
-
   let of_parts = of_parts
   let to_parts = to_parts
 end

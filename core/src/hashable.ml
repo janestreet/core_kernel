@@ -2,7 +2,6 @@
 
 open! Import
 include Hashable_intf
-module Binable = Binable0
 
 module Make_plain (T : sig
     type t [@@deriving hash]

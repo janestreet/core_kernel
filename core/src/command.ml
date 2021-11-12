@@ -1857,7 +1857,7 @@ module Group = struct
 end
 
 let abs_path = Shape.Private.abs_path
-let comp_cword = "COMP_CWORD"
+let comp_cword = Command_env_var.COMP_CWORD
 
 module Exec = struct
   type t =
@@ -2257,9 +2257,60 @@ module Deprecated = struct
   ;;
 end
 
-module For_unix (M : For_unix) = struct
-  open M
-  module Version_info = Version_info (M)
+module For_unix (For_unix_with_string_env_var : For_unix with type env_var := string) =
+struct
+  module Version_info = Version_info (For_unix_with_string_env_var)
+
+  module For_unix_with_command_env_var : For_unix with type env_var := Command_env_var.t =
+  struct
+    (* We force access to env vars to go through [Command_env_var] so that we can keep an
+       accurate enumeration of the variables we use. *)
+
+    include For_unix_with_string_env_var
+
+    module Unix = struct
+      include Unix
+
+      let putenv ~key ~data = putenv ~key:(Command_env_var.to_string key) ~data
+      let unsetenv key = unsetenv (Command_env_var.to_string key)
+      let unsafe_getenv key = unsafe_getenv (Command_env_var.to_string key)
+
+      type env =
+        [ `Replace of (Command_env_var.t * string) list
+        | `Extend of (Command_env_var.t * string) list
+        | `Override of (Command_env_var.t * string option) list
+        | `Replace_raw of string list
+        ]
+
+      let convert_env env =
+        let convert_command_env_var_to_string list =
+          List.map list ~f:(fun (env_var, str) -> Command_env_var.to_string env_var, str)
+        in
+        match env with
+        | `Replace list -> `Replace (convert_command_env_var_to_string list)
+        | `Extend list -> `Extend (convert_command_env_var_to_string list)
+        | `Override list -> `Override (convert_command_env_var_to_string list)
+        | `Replace_raw _ as replace -> replace
+      ;;
+
+      let exec ~prog ~argv ?use_path ?env () =
+        exec ~prog ~argv ?use_path ?env:(Option.map env ~f:convert_env) ()
+      ;;
+
+      let create_process_env ?working_dir ?prog_search_path ?argv0 ~prog ~args ~env () =
+        create_process_env
+          ?working_dir
+          ?prog_search_path
+          ?argv0
+          ~prog
+          ~args
+          ~env:(convert_env env)
+          ()
+      ;;
+    end
+  end
+
+  open For_unix_with_command_env_var
 
   (* Clear the setting of environment variable associated with command-line
      completion and recursive help so that subprocesses don't see them.
@@ -2292,7 +2343,8 @@ module For_unix (M : For_unix) = struct
            this exec specifies a child subcommand. If it does, COMP_CWORD needs to be set
            higher to account for the arguments used to specify the child subcommand. *)
         set_comp_cword (n + List.length t.child_subcommand));
-      never_returns (Unix.exec ?env ~prog ~argv:(prog :: args) ())
+      never_returns
+        (For_unix_with_string_env_var.Unix.exec ?env ~prog ~argv:(prog :: args) ())
     ;;
   end
 
@@ -2338,9 +2390,8 @@ module For_unix (M : For_unix) = struct
           ~prog:(abs_path ~dir:working_dir path_to_exe)
           ~args:child_subcommand
           ~env:
-            (`Extend
-               [ extraction_var, supported_versions |> Int.Set.sexp_of_t |> Sexp.to_string
-               ])
+            (let help_sexp = supported_versions |> Int.Set.sexp_of_t |> Sexp.to_string in
+             `Extend [ COMMAND_OUTPUT_HELP_SEXP, help_sexp ])
       in
       Unix.close process_info.stdin;
       let stdout, stderr = read_stdout_and_stderr process_info in
@@ -2591,11 +2642,11 @@ module For_unix (M : For_unix) = struct
     match argv with
     | [] -> failwith "missing executable name"
     | cmd :: args ->
-      Option.iter (getenv_and_clear Sexpable.extraction_var) ~f:(fun version ->
+      Option.iter (getenv_and_clear COMMAND_OUTPUT_HELP_SEXP) ~f:(fun version ->
         let supported_versions = Sexp.of_string version |> Int.Set.t_of_sexp in
         dump_help_sexp ~supported_versions t ~path_to_subcommand:args;
         exit 0);
-      Option.iter (getenv_and_clear "COMMAND_OUTPUT_INSTALLATION_BASH") ~f:(fun _ ->
+      Option.iter (getenv_and_clear COMMAND_OUTPUT_INSTALLATION_BASH) ~f:(fun _ ->
         dump_autocomplete_function ();
         exit 0);
       cmd, args

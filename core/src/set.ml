@@ -87,9 +87,6 @@ struct
   let of_tree m = Set.Using_comparator.of_tree ~comparator:(to_comparator m)
   let to_tree = Set.Using_comparator.to_tree
   let sexp_of_t = Set.Using_comparator.sexp_of_t
-
-  module Empty_without_value_restriction =
-    Set.Using_comparator.Empty_without_value_restriction
 end :
 sig
   type ('a, 'b) t = ('a, 'b) Set.t [@@deriving sexp_of]

@@ -1282,7 +1282,7 @@ let m__t_sexp_grammar (type k) (module K : M_sexp_grammar with type t = k) v_gra
   Sexplib.Sexp_grammar.coerce (List.Assoc.t_sexp_grammar K.t_sexp_grammar v_grammar)
 ;;
 
-let equal_m__t (module K : Equal_m) equal_v t1 t2 = equal equal_v t1 t2
+let equal_m__t (module _ : Equal_m) equal_v t1 t2 = equal equal_v t1 t2
 
 module Using_hashable = struct
   type nonrec ('a, 'b) t = ('a, 'b) t [@@deriving sexp_of]

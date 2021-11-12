@@ -55,15 +55,17 @@ module type Optional_syntax = sig
       Then, uses look like:
 
       {[
-        let open M.Optional_syntax in
-        match%optional m with
+        match%optional.M m with
         | None   -> ?
         | Some v -> ?
       ]}
 
-      The reason for the double [module Optional_syntax] is so that [open M.Optional_syntax]
-      puts in scope only [module Optional_syntax]; [match%optional] then expands to
-      references to [Optional_syntax.is_none] and [Optional_syntax.unsafe_value].
+      [match%optional] then expands to references to [M.Optional_syntax]'s [is_none] and
+      [unsafe_value] functions.
+
+      The reason for the double [module Optional_syntax] is historical.  The idiom used to
+      use [open M.Optional_syntax], and we wanted that to bring into scope as little as
+      possible, so we made it put in scope only [module Optional_syntax].
 
       [unsafe_value] does not have to be memory-safe if not guarded by [is_none].
 
@@ -77,8 +79,7 @@ module type Optional_syntax = sig
       the presence of side-effects by the time it makes an [unsafe_value] call the result
       of the corresponding [is_none] can go stale.
 
-      For more details on the syntax extension, see [ppx/ppx_optional/README.md].
-  *)
+      For more details on the syntax extension, see [ppx/ppx_optional/README.md]. *)
 
   module type S = S
   module type S1 = S1

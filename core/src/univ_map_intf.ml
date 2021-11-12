@@ -56,7 +56,9 @@ module type S = sig
     type t = T : 'a Key.t * 'a data -> t
   end
 
+  (** [to_alist t] returns all values in [t], in increasing order of key type-id name. *)
   val to_alist : t -> Packed.t list
+
   val of_alist_exn : Packed.t list -> t
 end
 
@@ -144,23 +146,23 @@ module type Univ_map = sig
       (Input1_data : Data1)
       (Input2_data : Data1)
       (Output_data : Data1) : sig
-    type 's f =
+    type ('s1, 's2, 's3) f =
       { f :
           'a.
             key:'a Key.t
-          -> [ `Left of ('s, 'a) Input1_data.t
-             | `Right of ('s, 'a) Input2_data.t
-             | `Both of ('s, 'a) Input1_data.t * ('s, 'a) Input2_data.t
+          -> [ `Left of ('s1, 'a) Input1_data.t
+             | `Right of ('s2, 'a) Input2_data.t
+             | `Both of ('s1, 'a) Input1_data.t * ('s2, 'a) Input2_data.t
              ]
-          -> ('s, 'a) Output_data.t option
+          -> ('s3, 'a) Output_data.t option
       }
 
     (** The analogue of the normal [Map.merge] function.  *)
     val merge
-      :  's Make1(Key)(Input1_data).t
-      -> 's Make1(Key)(Input2_data).t
-      -> f:'s f
-      -> 's Make1(Key)(Output_data).t
+      :  's1 Make1(Key)(Input1_data).t
+      -> 's2 Make1(Key)(Input2_data).t
+      -> f:('s1, 's2, 's3) f
+      -> 's3 Make1(Key)(Output_data).t
   end
 
   (** keys with associated default values, so that [find] is no longer partial *)

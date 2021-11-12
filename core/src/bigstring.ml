@@ -1,7 +1,6 @@
 open! Import
 open Std_internal
 open Bigarray
-module Binable = Binable0
 
 module Stable = struct
   module V1 = struct

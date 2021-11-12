@@ -165,6 +165,7 @@ module Permissioned : sig
   external unsafe_get : ('a, [> read ]) t -> int -> 'a = "%array_unsafe_get"
   external unsafe_set : ('a, [> write ]) t -> int -> 'a -> unit = "%array_unsafe_set"
   val create : len:int -> 'a -> ('a, [< _ perms ]) t
+  val create_float_uninitialized : len:int -> (float, [< _ perms ]) t
   val init : int -> f:(int -> 'a) -> ('a, [< _ perms ]) t
   val make_matrix : dimx:int -> dimy:int -> 'a -> (('a, [< _ perms ]) t, [< _ perms ]) t
 

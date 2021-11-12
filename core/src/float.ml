@@ -18,7 +18,6 @@ let valid_float_lexem s =
 ;;
 
 open! Import
-module List = Base.List
 
 module T = struct
   include Base.Float

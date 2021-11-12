@@ -98,10 +98,6 @@ type nonrec no_seek = no_seek [@@deriving sexp_of]
 module type Bound = Bound
 
 (* see iobuf_view_tests.ml for expect-tests of these *)
-module Window = Window
-module Limits = Limits
-module Debug = Debug
-module Hexdump = Hexdump
 
 let read_only = read_only
 let no_seek = no_seek
@@ -1619,7 +1615,7 @@ struct
 
     let index = Peek.index
 
-    module To_bytes = struct
+    module _ = struct
       open Peek.To_bytes
 
       let blito = blito
@@ -1627,7 +1623,7 @@ struct
       let%test_unit _ = test_peek_to_string blito
     end
 
-    module To_bigstring = struct
+    module _ = struct
       open Peek.To_bigstring
 
       let blito = blito
@@ -1944,7 +1940,7 @@ struct
 
     open Consume
 
-    module To_bytes = struct
+    module _ = struct
       open To_bytes
 
       let blito = blito
@@ -1952,7 +1948,7 @@ struct
       let%test_unit _ = test_consume_to_string blito
     end
 
-    module To_bigstring = struct
+    module _ = struct
       open To_bigstring
 
       let blito = blito
@@ -2121,7 +2117,7 @@ struct
       assert (is_error (try_write ~str_pos:0 ~len:(len + 1) ())))
   ;;
 
-  module Blit_consume_and_fill = struct
+  module _ = struct
     open Blit_consume_and_fill
 
     let blit = blit
@@ -2169,7 +2165,7 @@ struct
     ;;
   end
 
-  module Blit_fill = struct
+  module _ = struct
     open Blit_fill
 
     let blit = blit
@@ -2224,7 +2220,7 @@ struct
     ;;
   end
 
-  module Blit_consume = struct
+  module _ = struct
     open Blit_consume
 
     let blit = blit
@@ -2315,7 +2311,7 @@ struct
     ;;
   end
 
-  module Blit = struct
+  module _ = struct
     open Blit
 
     let blit = blit
@@ -2412,10 +2408,12 @@ struct
     ;;
   end
 
-  module Expert = struct
+  module _ = struct
     let buf = Expert.buf
     let reinitialize_of_bigstring = Expert.reinitialize_of_bigstring
     let protect_window = Expert.protect_window
+    let protect_window_1 = Expert.protect_window_1
+    let protect_window_2 = Expert.protect_window_2
 
     let%test_unit "reinitialize_of_bigstring" =
       let iobuf = Iobuf.of_string "1234" in
@@ -2447,6 +2445,20 @@ struct
       [%expect {| "in-long-window in-short-window in-long-window" |}];
       let buf = no_seek buf in
       protect_window buf ~f:(fun buf ->
+        Iobuf.advance buf 15;
+        Iobuf.resize buf ~len:(Iobuf.length buf - 15);
+        print_s [%sexp (buf : (_, _) Iobuf.Window.Hexdump.Pretty.t)];
+        [%expect {| in-short-window |}]);
+      print_s [%sexp (buf : (_, _) Iobuf.Window.Hexdump.Pretty.t)];
+      [%expect {| "in-long-window in-short-window in-long-window" |}];
+      protect_window_1 buf () ~f:(fun buf () ->
+        Iobuf.advance buf 15;
+        Iobuf.resize buf ~len:(Iobuf.length buf - 15);
+        print_s [%sexp (buf : (_, _) Iobuf.Window.Hexdump.Pretty.t)];
+        [%expect {| in-short-window |}]);
+      print_s [%sexp (buf : (_, _) Iobuf.Window.Hexdump.Pretty.t)];
+      [%expect {| "in-long-window in-short-window in-long-window" |}];
+      protect_window_2 buf () () ~f:(fun buf () () ->
         Iobuf.advance buf 15;
         Iobuf.resize buf ~len:(Iobuf.length buf - 15);
         print_s [%sexp (buf : (_, _) Iobuf.Window.Hexdump.Pretty.t)];
@@ -2586,7 +2598,7 @@ include Accessors (struct
     let is_safe = true
   end)
 
-module Unsafe = Accessors (struct
+module _ = Accessors (struct
     include Unsafe
 
     module Peek = struct

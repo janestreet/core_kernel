@@ -458,7 +458,7 @@ let%test_module "Ofday" =
   end)
 ;;
 
-module Span = struct
+module _ = struct
   open! Time_ns.Span
 
   let%test (_ [@tags "64-bits-only"]) =
@@ -832,6 +832,36 @@ let%expect_test "to_string" =
     (Time_ns.to_string_utc
        (Time_ns.of_int63_ns_since_epoch (Int63.of_int64_exn 1_234_567_890_123_456_789L)));
   [%expect {| 2009-02-13 23:31:30.123456789Z |}]
+;;
+
+let%expect_test "Ofday.to_microsecond_string" =
+  let round ofday =
+    ofday
+    |> Time_ns.Ofday.to_span_since_start_of_day
+    |> Time_ns.Span.to_int63_ns
+    |> Int63.round_down ~to_multiple_of:(Int63.of_int 1000)
+    |> Time_ns.Span.of_int63_ns
+    |> Time_ns.Ofday.of_span_since_start_of_day_exn
+  in
+  [ Time_ns.Ofday.start_of_day
+  ; Time_ns.Ofday.start_of_day |> Time_ns.Ofday.next |> Core.Option.value_exn
+  ; Time_ns.Ofday.approximate_end_of_day
+  ; Time_ns.Ofday.start_of_next_day
+  ]
+  |> List.iter ~f:(fun ofday ->
+    let string = Time_ns.Ofday.to_microsecond_string ofday in
+    print_endline string;
+    require_equal
+      [%here]
+      (module Time_ns.Ofday)
+      (Time_ns.Ofday.of_string string)
+      (round ofday));
+  [%expect
+    {|
+    00:00:00.000000
+    00:00:00.000000
+    23:59:59.999999
+    24:00:00.000000 |}]
 ;;
 
 let%expect_test "to_sec_string[_with_zone]" =

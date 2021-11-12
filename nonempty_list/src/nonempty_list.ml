@@ -165,6 +165,7 @@ module T' = struct
 end
 
 include T'
+include Comparator.Derived (T')
 
 include struct
   let is_empty _ = false

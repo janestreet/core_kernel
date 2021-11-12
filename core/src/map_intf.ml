@@ -177,7 +177,7 @@ module Check_accessors
     (Key : T1)
     (Cmp : T1)
     (Options : T3)
-    (M : Accessors_generic
+    (_ : Accessors_generic
      with type ('a, 'b, 'c) options := ('a, 'b, 'c) Options.t
      with type ('a, 'b, 'c) t := ('a, 'b, 'c) T.t
      with type ('a, 'b, 'c) tree := ('a, 'b, 'c) Tree.t
@@ -317,7 +317,7 @@ module Check_creators
     (Key : T1)
     (Cmp : T1)
     (Options : T3)
-    (M : Creators_generic
+    (_ : Creators_generic
      with type ('a, 'b, 'c) options := ('a, 'b, 'c) Options.t
      with type ('a, 'b, 'c) t := ('a, 'b, 'c) T.t
      with type ('a, 'b, 'c) tree := ('a, 'b, 'c) Tree.t

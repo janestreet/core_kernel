@@ -33,9 +33,7 @@ let%expect_test "older [int_of_sexp] supports both [sexp_of_int_style]s" =
   r := old
 ;;
 
-module Comparator = Base.Comparator
-
-module Hashtbl = struct
+module _ = struct
   let%test_module "Hashtbl.V1" =
     (module Stable_unit_test.Make_unordered_container (struct
          module Hashable = Core_stable.Hashable.V1.Make (Int)
@@ -96,7 +94,7 @@ let%test_module "Hash_set.V1" =
      end))
 ;;
 
-module Map = struct
+module _ = struct
   module type F = functor (Key : Stable) -> sig
     type 'a t = (Key.t, 'a, Key.comparator_witness) Map.t
     [@@deriving bin_io, compare, sexp]
@@ -132,7 +130,7 @@ module Map = struct
   ;;
 end
 
-module Set = struct
+module _ = struct
   module type F = functor (Elt : Stable) -> sig
     type t = (Elt.t, Elt.comparator_witness) Set.t [@@deriving sexp, bin_io, compare]
   end

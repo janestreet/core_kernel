@@ -612,6 +612,17 @@ module Expert : sig
       and the window and limits specified starting at [pos] and of length [len]. *)
   val reinitialize_of_bigstring : (_, _) t -> pos:int -> len:int -> Bigstring.t -> unit
 
+  (** As [reinitialize_of_bigstring] but without checking, and requires explicit
+      specification of bounds. *)
+  val unsafe_reinitialize
+    :  _ t
+    -> lo_min:int
+    -> lo:int
+    -> hi:int
+    -> hi_max:int
+    -> Bigstring.t
+    -> unit
+
   (** These versions of [set_bounds_and_buffer] allow [~src] to be read-only.  [~dst] will
       be writable through [~src] aliases even though the type does not reflect this! *)
   val set_bounds_and_buffer : src:('data, _) t -> dst:('data, seek) t -> unit
@@ -627,6 +638,15 @@ module Expert : sig
       bounds. Mixing this with functions like [set_bounds_and_buffer] or [narrow] is
       unsafe; you should not modify anyything but the window inside [f]. *)
   val protect_window : ('rw, _) t -> f:(('rw, seek) t -> 'a) -> 'a
+
+  val protect_window_1 : ('rw, _) t -> 'a -> f:(('rw, seek) t -> 'a -> 'b) -> 'b
+
+  val protect_window_2
+    :  ('rw, _) t
+    -> 'a
+    -> 'b
+    -> f:(('rw, seek) t -> 'a -> 'b -> 'c)
+    -> 'c
 end
 
 module type Accessors_common = Accessors_common

@@ -1,14 +1,10 @@
 open! Import
 open Quickcheck_intf
 open Base_quickcheck
-module Array = Base.Array
-module Bool = Base.Bool
-module Char = Base.Char
 module Float = Base.Float
 module Int = Base.Int
 module List = Base.List
 module Option = Base.Option
-module Type_equal = Base.Type_equal
 
 module Polymorphic_types = struct
   type ('a, 'b) variant2 =

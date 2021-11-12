@@ -80,7 +80,7 @@ let%expect_test "[sexp]s match" =
 ;;
 
 (* [Add_typerep] *)
-module V2 : sig
+module _ : sig
   type t = V.t [@@deriving typerep]
 end = struct
   type t = V.t

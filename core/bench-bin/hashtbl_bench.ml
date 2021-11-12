@@ -116,7 +116,7 @@ end = struct
       stage (fun () -> ignore (Example.random_data r `either : int)))
   ;;
 
-  module M : Hashtbl_intf.S = struct
+  module _ : Hashtbl_intf.S = struct
     type key = Table.key
     type ('k, 'v) hashtbl = ('k, 'v) Table.hashtbl
     type 'v t = 'v Table.t

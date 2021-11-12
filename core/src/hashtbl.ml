@@ -1,7 +1,5 @@
 open! Import
 open Hashtbl_intf
-module Avltree = Avltree
-module Binable = Binable0
 module Hashable = Hashtbl_intf.Hashable
 module Merge_into_action = Hashtbl_intf.Merge_into_action
 module List = List0

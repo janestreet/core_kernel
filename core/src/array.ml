@@ -123,6 +123,7 @@ module type Permissioned = sig
   external set : ('a, [> write ]) t -> int -> 'a -> unit = "%array_safe_set"
   external unsafe_get : ('a, [> read ]) t -> int -> 'a = "%array_unsafe_get"
   external unsafe_set : ('a, [> write ]) t -> int -> 'a -> unit = "%array_unsafe_set"
+  val create_float_uninitialized : len:int -> (float, [< _ perms ]) t
   val create : len:int -> 'a -> ('a, [< _ perms ]) t
   val init : int -> f:(int -> 'a) -> ('a, [< _ perms ]) t
   val make_matrix : dimx:int -> dimy:int -> 'a -> (('a, [< _ perms ]) t, [< _ perms ]) t
@@ -376,6 +377,7 @@ module type S = sig
   external unsafe_get : 'a t -> int -> 'a = "%array_unsafe_get"
   external unsafe_set : 'a t -> int -> 'a -> unit = "%array_unsafe_set"
   val create : len:int -> 'a -> 'a t
+  val create_float_uninitialized : len:int -> float t
   val init : int -> f:(int -> 'a) -> 'a t
   val make_matrix : dimx:int -> dimy:int -> 'a -> 'a t t
   val copy_matrix : 'a t t -> 'a t t
@@ -473,7 +475,7 @@ module Float = struct
   type t = t_ [@@deriving bin_io, compare, sexp]
 end
 
-module Check1 (M : S) : sig
+module _ (M : S) : sig
   type ('a, -'perm) t_
 
   include Permissioned with type ('a, 'perm) t := ('a, 'perm) t_
@@ -483,7 +485,7 @@ end = struct
   type ('a, -'perm) t_ = 'a t
 end
 
-module Check2 (M : Permissioned) : sig
+module _ (M : Permissioned) : sig
   type 'a t_
 
   include S with type 'a t := 'a t_

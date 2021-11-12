@@ -21,7 +21,7 @@ let%test_module _ =
     ;;
 
     (* S0 *)
-    module Test = Stable_unit_test.Make (struct
+    module _ = Stable_unit_test.Make (struct
         module T = struct
           type t = int [@@deriving compare]
 
@@ -52,7 +52,7 @@ let%test_module _ =
         let tests = int_tests
       end)
 
-    module Test1 = Stable_unit_test.Make (struct
+    module _ = Stable_unit_test.Make (struct
         module T = struct
           type 'a t = 'a option [@@deriving compare]
 
@@ -90,7 +90,7 @@ let%test_module _ =
         ;;
       end)
 
-    module Test2 = Stable_unit_test.Make (struct
+    module _ = Stable_unit_test.Make (struct
         module T = struct
           type ('a, 'b) t = ('a, 'b) Either.Stable.V1.t [@@deriving compare]
 
@@ -154,7 +154,7 @@ let%test_module _ =
       end)
 
     (* Of_stringable *)
-    module Test_of_stringable = Stable_unit_test.Make (struct
+    module _ = Stable_unit_test.Make (struct
         type t = int
 
         include Sexpable.Of_stringable.V1 (Int)
@@ -164,7 +164,7 @@ let%test_module _ =
         let tests = int_tests
       end)
 
-    module Test_to_stringable = struct
+    module _ = struct
       module T = struct
         type t = int [@@deriving bin_io, sexp]
       end

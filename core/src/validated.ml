@@ -67,7 +67,7 @@ module Add_compare (Raw : sig
 
     include Raw with type t := t
   end)
-    (Validated : S with type raw := Raw.t) =
+    (_ : S with type raw := Raw.t) =
 struct
   let compare t1 t2 = [%compare: Raw.t] (raw t1) (raw t2)
 end
@@ -88,7 +88,7 @@ module Add_typerep (Raw : sig
 
     include Raw with type t := t
   end)
-    (Validated : S with type raw := Raw.t) =
+    (_ : S with type raw := Raw.t) =
 struct
   type t = Raw.t [@@deriving typerep]
 end

@@ -7,6 +7,7 @@ open Core
 type 'a t = ( :: ) of 'a * 'a list
 [@@deriving compare, equal, sexp, sexp_grammar, hash, quickcheck, typerep]
 
+include Comparator.Derived with type 'a t := 'a t
 include Container.S1 with type 'a t := 'a t
 include Invariant.S1 with type 'a t := 'a t
 include Monad.S with type 'a t := 'a t

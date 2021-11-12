@@ -61,14 +61,20 @@ struct
 
     let type_id_name (T (key, _)) = name_of_key key
     let type_id_uid (T (key, _)) = uid_of_key key
+
+    let compare t1 t2 =
+      let c = String.compare (type_id_name t1) (type_id_name t2) in
+      if c <> 0 then c else Uid.compare (type_id_uid t1) (type_id_uid t2)
+    ;;
   end
 
   type 's t = 's Packed.t Uid.Map.t
 
+  let to_alist t = Map.data t |> List.sort ~compare:Packed.compare
+
   let sexp_of_t sexp_of_a t =
-    Map.data t
-    |> List.map ~f:(fun u -> Packed.type_id_name u, u)
-    |> List.sort ~compare:(fun (a, _) (b, _) -> String.compare a b)
+    to_alist t
+    |> List.map ~f:(fun packed -> Packed.type_id_name packed, packed)
     |> [%sexp_of: (string * a Packed.t) list]
   ;;
 
@@ -127,7 +133,6 @@ struct
   ;;
 
   let update t key ~f = change t key ~f:(fun data -> Some (f data))
-  let to_alist t = Map.data t
 
   let of_alist_exn t =
     Uid.Map.of_alist_exn (List.map t ~f:(fun p -> Packed.type_id_uid p, p))
@@ -224,23 +229,23 @@ module Merge1
     (Input2_data : Data1)
     (Output_data : Data1) =
 struct
-  type 's f =
+  type ('s1, 's2, 's3) f =
     { f :
         'a.
           key:'a Key.t
-        -> [ `Left of ('s, 'a) Input1_data.t
-           | `Right of ('s, 'a) Input2_data.t
-           | `Both of ('s, 'a) Input1_data.t * ('s, 'a) Input2_data.t
+        -> [ `Left of ('s1, 'a) Input1_data.t
+           | `Right of ('s2, 'a) Input2_data.t
+           | `Both of ('s1, 'a) Input1_data.t * ('s2, 'a) Input2_data.t
            ]
-        -> ('s, 'a) Output_data.t option
+        -> ('s3, 'a) Output_data.t option
     }
 
   module Output = Make1 (Key) (Output_data)
 
   let merge
-        (type s)
-        (t1 : s Make1(Key)(Input1_data).t)
-        (t2 : s Make1(Key)(Input2_data).t)
+        (type s1 s2)
+        (t1 : s1 Make1(Key)(Input1_data).t)
+        (t2 : s2 Make1(Key)(Input2_data).t)
         ~f:{ f }
     =
     let f ~key merge_result =

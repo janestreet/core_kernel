@@ -244,7 +244,7 @@ let () =
     type 'a cmp = 'a
   end
   in
-  let module M : sig
+  let module _ : sig
     open Set_intf
 
     module Tree : sig
@@ -287,7 +287,7 @@ let () =
     type 'c cmp = 'c
   end
   in
-  let module M : sig
+  let module _ : sig
     open Map_intf
 
     module Tree : sig

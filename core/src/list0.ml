@@ -1,6 +1,5 @@
 open! Import
 open! Typerep_lib.Std
-module Array = Base.Array
 include Base.List
 
 type 'a t = 'a list [@@deriving bin_io, typerep]

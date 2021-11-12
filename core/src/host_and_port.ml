@@ -1,6 +1,5 @@
 module Stable = struct
   open Stable_internal
-  open Ppx_compare_lib.Builtin
 
   module V1 = struct
     module Serializable = struct
@@ -9,10 +8,10 @@ module Stable = struct
 
     module T0 = struct
       type t =
-        { host : string
-        ; port : int
+        { host : String.t
+        ; port : Int.t
         }
-      [@@deriving compare, hash]
+      [@@deriving compare, equal, hash, quickcheck]
 
       let to_serializable { host; port } = host, port
       let of_serializable (host, port) = { host; port }
@@ -74,6 +73,18 @@ module Stable = struct
         | sexp -> t_of_sexp sexp
       ;;
 
+      let t_sexp_grammar =
+        Sexplib.Sexp_grammar.
+          { untyped =
+              Union
+                [ (* handles the host:port string case *)
+                  String
+                  ; (* handles the list (host port) case  *)
+                  List (Cons (String, Cons (Integer, Empty)))
+                ]
+          }
+      ;;
+
       include (val Comparator.Stable.V1.make ~compare ~sexp_of_t)
     end
 
@@ -90,12 +101,8 @@ module Stable = struct
     ;;
 
     let%test_unit "sexp roundtrip" =
-      let open Quickcheck.Let_syntax in
-      Quickcheck.test
-        (let%map host = String.quickcheck_generator
-         and port = Int.quickcheck_generator in
-         { host; port })
-        ~f:(fun t -> [%test_result: t] (t_of_sexp (sexp_of_t t)) ~expect:t)
+      Quickcheck.test [%quickcheck.generator: t] ~f:(fun t ->
+        [%test_result: t] (t_of_sexp (sexp_of_t t)) ~expect:t)
     ;;
   end
 end

@@ -1,10 +1,8 @@
 open! Core
 module Array = Base.Array
-module Int = Base.Int
 module List = Base.List
 module Option = Base.Option
 module Sequence = Base.Sequence
-module Sexp = Base.Sexp
 
 module Node = struct
   type 'a t =

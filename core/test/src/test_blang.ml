@@ -393,7 +393,7 @@ let%expect_test "validate sexp grammar" =
 ;;
 
 
-module And_structure = struct
+module _ = struct
   let a, b, c, d = base "a", base "b", base "c", base "d"
 
   let print l =
@@ -483,7 +483,7 @@ module And_structure = struct
   ;;
 end
 
-module Or_structure = struct
+module _ = struct
   let a, b, c, d = base "a", base "b", base "c", base "d"
 
   let print l =
@@ -574,7 +574,7 @@ module Or_structure = struct
 end
 
 (* annotate with module type to enforce that we test all exports *)
-module Monadic : Monadic with module M := Monad.Ident = struct
+module _ : Monadic with module M := Monad.Ident = struct
   open struct
     (* define helpers without exporting them *)
 
@@ -675,7 +675,7 @@ type 'a eval_benchmark =
   ; f : 'a -> bool
   }
 
-module And_bench = struct
+module _ = struct
   let bench ~less_than:upper_bound_exclusive ~len =
     let blang = and_ (List.init len ~f:(fun i -> base i)) in
     let gt i = Int.( < ) i upper_bound_exclusive in
@@ -703,7 +703,7 @@ module And_bench = struct
   ;;
 end
 
-module Or_bench = struct
+module _ = struct
   let bench ~equal ~len =
     let blang = or_ (List.init len ~f:(fun i -> base i)) in
     let eq i = Int.equal equal i in

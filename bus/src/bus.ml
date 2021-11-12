@@ -775,7 +775,6 @@ let fold_exn
   if not (can_subscribe t)
   then
     failwiths ~here:[%here] "Bus.fold_exn called after first write" t [%sexp_of: (_, _) t];
-  let module A = Fold_arity in
   iter_exn
     ?extract_exn
     t

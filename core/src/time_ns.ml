@@ -327,7 +327,7 @@ module Alternate_sexp = struct
       module T = struct
         (* see tests in lib/core/test/src/test_time_ns that ensure stability of this
            representation *)
-        type nonrec t = t [@@deriving bin_io, compare, hash, sexp]
+        type nonrec t = t [@@deriving bin_io, compare, hash, sexp, sexp_grammar]
         type nonrec comparator_witness = comparator_witness
 
         let comparator = comparator
@@ -464,8 +464,6 @@ end = struct
       ofday_of_days_from_epoch t ~days_from_epoch
     ;;
   end
-
-  module Zone0 = Zone
 
   module Zone : sig
     (* This interface is directly duplicated from Time_intf.Zone, converted enough to get
@@ -943,7 +941,7 @@ let max_value = max_value_for_1us_rounding
 let to_time = to_time_float_round_nearest_microsecond
 let of_time = of_time_float_round_nearest_microsecond
 
-module For_ppx_module_timer = struct
+module _ = struct
   open Ppx_module_timer_runtime
 
   let () =

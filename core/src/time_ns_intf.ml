@@ -143,6 +143,7 @@ module type Ofday = sig
       midnight, e.g. every hour from 10pm to 2am, requires multiple calls to [every]. *)
   val every : Span.t -> start:t -> stop:t -> t list Or_error.t
 
+  val to_microsecond_string : t -> string
   val arg_type : [ `Use_Time_ns_unix ] [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
   val now : [ `Use_Time_ns_unix ] [@@deprecated "[since 2021-03] Use [Time_ns_unix]"]
 
@@ -343,7 +344,7 @@ module type Time_ns = sig
 
     module Alternate_sexp : sig
       module V1 : sig
-        type t = Alternate_sexp.t [@@deriving bin_io, compare, hash, sexp]
+        type t = Alternate_sexp.t [@@deriving bin_io, compare, hash, sexp, sexp_grammar]
 
         include
           Comparator.Stable.V1.S

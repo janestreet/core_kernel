@@ -374,16 +374,16 @@ val mapi : ('k, 'v1, 'cmp) t -> f:(key:'k -> data:'v1 -> 'v2) -> ('k, 'v2, 'cmp)
 
 (** Convert map with keys of type ['k1] to a map with keys of type ['k2] using [f]. *)
 val map_keys
-  :  ('k2, 'cmp2) Comparator.t
-  -> f:('k1 -> 'k2)
+  :  ('k2, 'cmp2) comparator
   -> ('k1, 'v, 'cmp1) t
+  -> f:('k1 -> 'k2)
   -> [ `Ok of ('k2, 'v, 'cmp2) t | `Duplicate_key of 'k2 ]
 
 (** Like [map_keys], but raises on duplicate key. *)
 val map_keys_exn
-  :  ('k2, 'cmp2) Comparator.t
-  -> f:('k1 -> 'k2)
+  :  ('k2, 'cmp2) comparator
   -> ('k1, 'v, 'cmp1) t
+  -> f:('k1 -> 'k2)
   -> ('k2, 'v, 'cmp2) t
 
 (** Folds over keys and data in map in increasing order of key. *)

@@ -2,7 +2,7 @@ open! Core
 open! Import
 open! Sexp
 
-module With_text = struct
+module _ = struct
   open! With_text
 
   let sexp_of_il = sexp_of_list sexp_of_int

@@ -99,6 +99,39 @@ let%test_module _ =
     let%test_unit _ = test t2
     let%test_unit _ = test t3
     let%test _ = sexp_of_t t3 = Sexp.of_string "((foo 13.25)(size 15))"
+
+    let%expect_test "[to_alist]" =
+      let test ints =
+        let sexps =
+          ints
+          |> List.rev
+          |> List.map ~f:(fun int ->
+            Packed.T
+              ( Type_equal.Id.create ~name:("key" ^ Int.to_string int) [%sexp_of: int]
+              , int ))
+          |> of_alist_exn
+          |> to_alist
+          |> List.map ~f:(fun (Packed.T (type_id, a)) ->
+            let type_id_name = Type_equal.Id.name type_id in
+            let sexp_of_a = Type_equal.Id.to_sexp type_id in
+            [%sexp (type_id_name : string), (a : a)])
+        in
+        print_s [%sexp (sexps : Sexp.t list)]
+      in
+      test [];
+      [%expect {| () |}];
+      test [ 1 ];
+      [%expect {| ((key1 1)) |}];
+      test [ 1; 2 ];
+      [%expect {|
+        ((key1 1)
+         (key2 2)) |}];
+      test [ 1; 2; 3 ];
+      [%expect {|
+        ((key1 1)
+         (key2 2)
+         (key3 3)) |}]
+    ;;
   end)
 ;;
 
@@ -274,7 +307,7 @@ let%expect_test "merge1" =
      (foo ((key Foo) (merge_result (Both ((3) (4 5 6))))))) |}]
 ;;
 
-module With_default = struct
+module _ = struct
   open! With_default
 
   let%test_unit _ =
@@ -294,7 +327,7 @@ module With_default = struct
   ;;
 end
 
-module With_fold = struct
+module _ = struct
   open! With_fold
 
   let%test_unit _ =
@@ -318,7 +351,7 @@ module With_fold = struct
   ;;
 end
 
-module Multi = struct
+module _ = struct
   open! Multi
 
   let%test_unit _ =

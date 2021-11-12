@@ -22,7 +22,7 @@ let show t = print_s [%sexp (t : _ t)]
 let gibi = 2. ** 30.
 let gibi_nanos float = float *. gibi |> Time_ns.Span.of_ns
 
-module Num_key_bits = struct
+module _ = struct
   open! Private.Num_key_bits
 
   let%test_unit _ = invariant zero

@@ -19,7 +19,8 @@ include Identifiable with type t := t
 
 module Stable : sig
   module V1 : sig
-    type nonrec t = t [@@deriving sexp, bin_io, compare, hash]
+    type nonrec t = t
+    [@@deriving sexp, sexp_grammar, bin_io, compare, equal, hash, quickcheck]
 
     include Base.Stringable.S with type t := t
 

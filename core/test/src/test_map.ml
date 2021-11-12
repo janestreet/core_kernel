@@ -80,8 +80,8 @@ let%expect_test "[map_keys]" =
         (Map.map_keys c ~f m : [ `Duplicate_key of string | `Ok of string String.Map.t ])]
   in
   let map = Int.Map.of_alist_exn [ 1, "one"; 2, "two"; 3, "three" ] in
-  test map String.comparator ~f:Int.to_string;
+  test map (module String) ~f:Int.to_string;
   [%expect {| (Ok ((1 one) (2 two) (3 three))) |}];
-  test map String.comparator ~f:(fun x -> Int.to_string (x / 2));
+  test map (module String) ~f:(fun x -> Int.to_string (x / 2));
   [%expect {| (Duplicate_key 1) |}]
 ;;

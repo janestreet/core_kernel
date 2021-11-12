@@ -3,7 +3,7 @@ include Hashtbl_unit_tests_intf
 
 (* Demonstrate that [Hashtbl_for_testing] contains all the parts of [Hashtbl_intf.Hashtbl]
    that need to be tested. *)
-module Exhaustiveness_with_hashtbl_intf (Hashtbl : Hashtbl_intf.Hashtbl) = struct
+module _ (Hashtbl : Hashtbl_intf.Hashtbl) = struct
   let%test_module "tests are exhaustive" =
     (module (
      struct

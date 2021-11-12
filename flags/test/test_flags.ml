@@ -225,7 +225,7 @@ let%expect_test "[compare] is a total order consistent with [is_subset]" =
 let%test _ =
   Result.is_error
     (Result.try_with (fun () ->
-       let module M =
+       let module _ =
          Make (struct
            let allow_intersecting = false
            let should_print_error = false
