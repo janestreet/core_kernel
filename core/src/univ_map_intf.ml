@@ -13,10 +13,9 @@ open! Import
 module type Key = sig
   type 'a t [@@deriving sexp_of]
 
-  (** For correct behavior of the map, [to_type_id] must return the same
-      [Type_equal.Id] on different calls on the same input.
-  *)
-  val to_type_id : 'a t -> 'a Type_equal.Id.t
+  (** For correct behavior of the map, [type_id] must return the same [Type_equal.Id] on
+      different calls on the same input. *)
+  val type_id : 'a t -> 'a Type_equal.Id.t
 end
 
 module type Data = sig

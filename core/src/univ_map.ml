@@ -8,15 +8,14 @@ module Make1
                    type ('s, 'a) t [@@deriving sexp_of]
                  end) =
 struct
-  (* A wrapper for the [Key] module that adds a dynamic check to [Key.to_type_id].
+  (* A wrapper for the [Key] module that adds a dynamic check to [Key.type_id].
 
-     It's a bug if the user-provided [Key.to_type_id] gives different type ids on
-     different calls.  Because this check should be fairly cheap, we do it dynamically to
-     avoid subtler problems later.
+     It's a bug if the user-provided [Key.type_id] gives different type ids on different
+     calls.  Because this check should be fairly cheap, we do it dynamically to avoid
+     subtler problems later.
 
      Of course, we're not checking truly pathological things like the provided
-     [Key.to_type_id] only changes the value it returns on every third call...
-  *)
+     [Key.type_id] only changes the value it returns on every third call... *)
   module Key = struct
     type 'a t = 'a Key.t [@@deriving sexp_of]
 
@@ -31,16 +30,16 @@ struct
         }]
     ;;
 
-    let to_type_id key =
-      let type_id1 = Key.to_type_id key in
-      let type_id2 = Key.to_type_id key in
+    let type_id key =
+      let type_id1 = Key.type_id key in
+      let type_id2 = Key.type_id key in
       if Type_equal.Id.same type_id1 type_id2
       then type_id1
       else
         raise_s
           [%message
-            "[Key.to_type_id] must not provide different type ids when called on the \
-             same input"
+            "[Key.type_id] must not provide different type ids when called on the same \
+             input"
               (key : _ Key.t)
               (type_id1 : type_id)
               (type_id2 : type_id)]
@@ -49,14 +48,14 @@ struct
 
   type ('s, 'a) data = ('s, 'a) Data.t
 
-  let name_of_key key = Type_equal.Id.name (Key.to_type_id key)
-  let uid_of_key key = Type_equal.Id.uid (Key.to_type_id key)
+  let name_of_key key = Type_equal.Id.name (Key.type_id key)
+  let uid_of_key key = Type_equal.Id.uid (Key.type_id key)
 
   module Packed = struct
     type 's t = T : 'a Key.t * ('s, 'a) Data.t -> 's t
 
     let sexp_of_t sexp_of_a (T (key, data)) =
-      Data.sexp_of_t sexp_of_a (Type_equal.Id.to_sexp (Key.to_type_id key)) data
+      Data.sexp_of_t sexp_of_a (Type_equal.Id.to_sexp (Key.type_id key)) data
     ;;
 
     let type_id_name (T (key, _)) = name_of_key key
@@ -99,7 +98,7 @@ struct
     | Some (Packed.T (key', value)) ->
       (* cannot raise -- see [invariant] *)
       let Type_equal.T =
-        Type_equal.Id.same_witness_exn (Key.to_type_id key) (Key.to_type_id key')
+        Type_equal.Id.same_witness_exn (Key.type_id key) (Key.type_id key')
       in
       Some (value : (_, b) Data.t)
   ;;
@@ -215,9 +214,7 @@ struct
       | `Both (T (left_key, left_data), T (right_key, right_data)) ->
         (* Can't raise due to the invariant *)
         let Type_equal.T =
-          Type_equal.Id.same_witness_exn
-            (Key.to_type_id left_key)
-            (Key.to_type_id right_key)
+          Type_equal.Id.same_witness_exn (Key.type_id left_key) (Key.type_id right_key)
         in
         f ~key:left_key (`Both (left_data, right_data)))
   ;;
@@ -257,9 +254,7 @@ struct
       | `Both (T (left_key, left_data), T (right_key, right_data)) ->
         (* Can't raise due to the invariant *)
         let Type_equal.T =
-          Type_equal.Id.same_witness_exn
-            (Key.to_type_id left_key)
-            (Key.to_type_id right_key)
+          Type_equal.Id.same_witness_exn (Key.type_id left_key) (Key.type_id right_key)
         in
         f ~key:left_key (`Both (left_data, right_data)))
   ;;
@@ -268,7 +263,7 @@ end
 module Type_id_key = struct
   type 'a t = 'a Type_equal.Id.t [@@deriving sexp_of]
 
-  let to_type_id = Fn.id
+  let type_id = Fn.id
 end
 
 include (

@@ -261,10 +261,12 @@ val is_empty : (_, _, _) t -> bool
 (** [length map] returns number of elements in [map]. O(1), but [Tree.length] is O(n). *)
 val length : (_, _, _) t -> int
 
-(** [add_exn t ~key ~data] returns [t] extended with [key] mapped to [data], raising if
-    [mem key t]. *)
+(** [add t ~key ~data] adds a new entry to [t] mapping [key] to [data] and returns [`Ok]
+    with the new map, or if [key] is already present in [t], returns [`Duplicate]. *)
 val add : ('k, 'v, 'cmp) t -> key:'k -> data:'v -> ('k, 'v, 'cmp) t Or_duplicate.t
 
+(** [add_exn t ~key ~data] adds a new entry to [t] mapping [key] to [data] and returns the
+    new map, or if [key] is already present in [t], raises. *)
 val add_exn : ('k, 'v, 'cmp) t -> key:'k -> data:'v -> ('k, 'v, 'cmp) t
 
 (** Returns a new map with the specified new binding;

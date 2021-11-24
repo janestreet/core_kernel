@@ -143,7 +143,7 @@ let%expect_test "specified key module" =
       | Bar : string t
     [@@deriving sexp_of]
 
-    let to_type_id (type a) (t : a t) : a Type_equal.Id.t =
+    let type_id (type a) (t : a t) : a Type_equal.Id.t =
       match t with
       | Foo -> Type_equal.Id.create ~name:"foo" [%sexp_of: int]
       | Bar -> Type_equal.Id.create ~name:"bar" [%sexp_of: string]
@@ -167,7 +167,7 @@ let%expect_test "specified key module" =
   [%expect
     {|
     (Error (
-      "[Key.to_type_id] must not provide different type ids when called on the same input"
+      "[Key.type_id] must not provide different type ids when called on the same input"
       (key Foo)
       (type_id1 ((name foo) (uid <uid>)))
       (type_id2 ((name foo) (uid <uid>))))) |}];
@@ -181,7 +181,7 @@ let%expect_test "specified key module" =
     let foo_id = Type_equal.Id.create ~name:"foo" [%sexp_of: int]
     let bar_id = Type_equal.Id.create ~name:"bar" [%sexp_of: string]
 
-    let to_type_id (type a) (t : a t) : a Type_equal.Id.t =
+    let type_id (type a) (t : a t) : a Type_equal.Id.t =
       match t with
       | Foo -> foo_id
       | Bar -> bar_id
@@ -214,7 +214,7 @@ let%expect_test "merge" =
     let bar_id = Type_equal.Id.create ~name:"bar" [%sexp_of: string]
     let baz_id = Type_equal.Id.create ~name:"baz" [%sexp_of: char]
 
-    let to_type_id (type a) (t : a t) : a Type_equal.Id.t =
+    let type_id (type a) (t : a t) : a Type_equal.Id.t =
       match t with
       | Foo -> foo_id
       | Bar -> bar_id
@@ -261,7 +261,7 @@ let%expect_test "merge1" =
     let bar_id = Type_equal.Id.create ~name:"bar" [%sexp_of: string]
     let baz_id = Type_equal.Id.create ~name:"baz" [%sexp_of: char]
 
-    let to_type_id (type a) (t : a t) : a Type_equal.Id.t =
+    let type_id (type a) (t : a t) : a Type_equal.Id.t =
       match t with
       | Foo -> foo_id
       | Bar -> bar_id
