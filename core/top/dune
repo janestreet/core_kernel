@@ -1,2 +1,0 @@
-(library (name core_top) (public_name core_kernel.top) (modes byte)
- (libraries compiler-libs.toplevel core) (preprocess no_preprocessing))
