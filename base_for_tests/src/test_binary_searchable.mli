@@ -1,1 +1,0 @@
-include Test_binary_searchable_intf.Test_binary_searchable
