@@ -1,4 +1,5 @@
 open! Core
+
 module Weak = Caml.Weak
 
 type 'a t = 'a Heap_block.t Weak.t
@@ -6,7 +7,9 @@ type 'a t = 'a Heap_block.t Weak.t
 let create ~len = Weak.create len
 let length t = Weak.length t
 let set = Weak.set
+
 let set_exn t i x = set t i (Option.map x ~f:Heap_block.create_exn)
+
 let get = Weak.get
 let is_some t i = Weak.check t i
 let is_none t i = not (is_some t i)
@@ -19,7 +22,6 @@ let iter t ~f =
     | None -> ()
     | Some v -> f (Heap_block.value v)
   done
-;;
 
 let iteri t ~f =
   for i = 0 to length t - 1 do
@@ -27,6 +29,6 @@ let iteri t ~f =
     | None -> ()
     | Some v -> f i (Heap_block.value v)
   done
-;;
 
-let blit ~src ~src_pos ~dst ~dst_pos ~len = Weak.blit src src_pos dst dst_pos len
+let blit ~src ~src_pos ~dst ~dst_pos ~len =
+  Weak.blit src src_pos dst dst_pos len

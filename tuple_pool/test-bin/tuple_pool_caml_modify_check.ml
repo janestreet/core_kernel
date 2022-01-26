@@ -21,7 +21,8 @@ let () =
   let array_obj = Array.init big ~f:(fun i -> ref i) in
   let v = ref (Random.int 42) in
   let array_imm_set (a : int array) i (x : int) = a.(i) <- x in
-  let array_obj_set a i x = a.(i) <- x in
+  (* If it inlines, flambda2 will optimize the [caml_modify] away *)
+  let [@inline never] array_obj_set a i x = a.(i) <- x in
   assert (check ~expected:0 ~f:(fun () -> array_imm_set array_imm 0 0));
   assert (check ~expected:1 ~f:(fun () -> array_obj_set array_imm 0 0));
   assert (check ~expected:1 ~f:(fun () -> array_obj_set array_obj 0 v))

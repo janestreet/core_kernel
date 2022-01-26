@@ -90,7 +90,8 @@ let () =
 
 * More detail
 
-To be more precise, a type is "enumerable" if it exposes the following interface:
+To be more precise, a type is "enumerable" if it exposes the following interface and
+ sexp_of is an sexp atom:
 |}]
 
 module type S = sig

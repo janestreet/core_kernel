@@ -347,6 +347,7 @@ module Priority_queue : sig
 
     val key : 'a Pool.t -> 'a t -> Key.t
     val max_alarm_time : 'a Pool.t -> 'a t -> with_key:Key.t -> Time_ns.t
+    val min_alarm_time : 'a Pool.t -> 'a t -> with_key:Key.t -> Time_ns.t
     val is_null : _ t -> bool
     val to_external : 'a t -> 'a Elt.t
   end
@@ -613,6 +614,8 @@ end = struct
     (** [max_alarm_time t elt ~with_key] finds the max [at] in [elt]'s list among the elts
         whose key is [with_key], returning [Time_ns.epoch] if the list is empty. *)
     val max_alarm_time : 'a Pool.t -> 'a t -> with_key:Key.t -> Time_ns.t
+
+    val min_alarm_time : 'a Pool.t -> 'a t -> with_key:Key.t -> Time_ns.t
   end = struct
     type 'a pool_slots = 'a External_elt.pool_slots [@@deriving sexp_of]
     type 'a t = 'a External_elt.t [@@deriving sexp_of]
@@ -717,6 +720,29 @@ end = struct
         if phys_equal next first then continue := false else current := next
       done;
       !max_alarm_time
+    ;;
+
+    let min_alarm_time pool first ~with_key =
+      let min_alarm_time = ref Time_ns.max_value_representable in
+      let current = ref first in
+      let continue = ref true in
+      while !continue do
+        let next = next pool !current in
+        (* The [key] comparison is necessary for [max_alarm_time_in_min_interval] because
+           max time per interval is not the same as max time globally.
+
+           This is not so for [min_alarm_time_in_min_interval], so this can potentially
+           be simplified.
+
+           Probably a better change would be to simply transfer the events to the
+           "fired" collection (and rename it to "about to fire"), which is sorted by time,
+           so getting the first element from that collection is efficient.
+        *)
+        if Key.equal (key pool !current) with_key
+        then min_alarm_time := Time_ns.min (at pool !current) !min_alarm_time;
+        if phys_equal next first then continue := false else current := next
+      done;
+      !min_alarm_time
     ;;
   end
 
@@ -1761,9 +1787,19 @@ let max_alarm_time_in_list t elt =
   Internal_elt.max_alarm_time pool elt ~with_key:(Internal_elt.key pool elt)
 ;;
 
+let min_alarm_time_in_list t elt =
+  let pool = pool t in
+  Internal_elt.min_alarm_time pool elt ~with_key:(Internal_elt.key pool elt)
+;;
+
 let max_alarm_time_in_min_interval t =
   let elt = Priority_queue.min_elt_ t.priority_queue in
   if Internal_elt.is_null elt then None else Some (max_alarm_time_in_list t elt)
+;;
+
+let min_alarm_time_in_min_interval t =
+  let elt = Priority_queue.min_elt_ t.priority_queue in
+  if Internal_elt.is_null elt then None else Some (min_alarm_time_in_list t elt)
 ;;
 
 let max_alarm_time_in_min_interval_exn t =
@@ -1775,6 +1811,17 @@ let max_alarm_time_in_min_interval_exn t =
         "Timing_wheel.max_alarm_time_in_min_interval_exn of empty timing wheel"
           ~timing_wheel:(t : _ t)];
   max_alarm_time_in_list t elt
+;;
+
+let min_alarm_time_in_min_interval_exn t =
+  let elt = Priority_queue.min_elt_ t.priority_queue in
+  if Internal_elt.is_null elt
+  then
+    raise_s
+      [%message
+        "Timing_wheel.max_alarm_time_in_min_interval_exn of empty timing wheel"
+          ~timing_wheel:(t : _ t)];
+  min_alarm_time_in_list t elt
 ;;
 
 let fire_past_alarms t ~handle_fired =

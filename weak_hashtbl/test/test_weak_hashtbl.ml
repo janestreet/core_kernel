@@ -3,13 +3,14 @@ open! Expect_test_helpers_core
 open! Weak_hashtbl
 
 let create () = create (module Int)
+
 let data int = ref int |> Heap_block.create_exn
 
 type data = int ref Heap_block.t [@@deriving sexp_of]
 
 let%expect_test "[add_exn], [find], [mem], [replace], [remove]" =
   let t = create () in
-  let print_mem i = print_s [%message (i : int) ~mem:(mem t i : bool)] in
+  let print_mem i = print_s [%message (i : int ) ~mem:(mem t i : bool)] in
   let key = 13 in
   print_mem key;
   [%expect {|
@@ -31,18 +32,17 @@ let%expect_test "[add_exn], [find], [mem], [replace], [remove]" =
   remove t key;
   print_find ();
   [%expect {|
-    ("find t key" ()) |}]
+    ("find t key" ()) |}];
 ;;
 
-let%expect_test ("[key_is_using_space], [reclaim_space_for_keys_with_unused_data]" [@tags
-                   "no-js"])
-  =
+let%expect_test "[key_is_using_space], [reclaim_space_for_keys_with_unused_data]" [@tags "no-js"] =
   let t = create () in
   let key = 13 in
   let print () =
-    print_s
-      [%message
-        "" ~key_is_using_space:(key_is_using_space t key : bool) ~mem:(mem t key : bool)]
+    print_s [%message
+      ""
+        ~key_is_using_space:(key_is_using_space t key : bool)
+        ~mem:(mem t key : bool)]
   in
   print ();
   [%expect {|
@@ -62,10 +62,10 @@ let%expect_test ("[key_is_using_space], [reclaim_space_for_keys_with_unused_data
   print ();
   [%expect {|
     ((key_is_using_space false)
-     (mem                false)) |}]
+     (mem                false)) |}];
 ;;
 
-let%expect_test ("[set_run_when_unused_data]" [@tags "no-js"]) =
+let%expect_test "[set_run_when_unused_data]" [@tags "no-js"] =
   let t = create () in
   let key = 13 in
   let ran = ref false in
@@ -87,16 +87,16 @@ let%expect_test ("[set_run_when_unused_data]" [@tags "no-js"]) =
   Gc.compact ();
   print ();
   [%expect {|
-    (ran true) |}]
+    (ran true) |}];
 ;;
 
-let%expect_test (_ [@tags "no-js"]) =
+let%expect_test _ [@tags "no-js"]=
   let module M = struct
     type t =
-      { (* [mutable foo] to force the compiler to allocate the record on the heap. *)
-        mutable foo : int
-      ; bar : int
-      ; baz : string
+      (* [mutable foo] to force the compiler to allocate the record on the heap. *)
+      { mutable foo : int
+      ; bar         : int
+      ; baz         : string
       }
   end
   in
@@ -105,7 +105,7 @@ let%expect_test (_ [@tags "no-js"]) =
   let tbl = create () in
   let stabilize () =
     Gc.full_major ();
-    reclaim_space_for_keys_with_unused_data tbl
+    reclaim_space_for_keys_with_unused_data tbl;
   in
   let add k b = ignore (find_or_add tbl k ~default:(fun () -> !b)) in
   (* We put the blocks in refs and manually blackhole them, so that the unit test will
@@ -149,5 +149,5 @@ let%expect_test (_ [@tags "no-js"]) =
   require [%here] (is_block k3 !b4);
   blackhole b4;
   stabilize ();
-  require [%here] (is_absent k3)
+  require [%here] (is_absent k3);
 ;;

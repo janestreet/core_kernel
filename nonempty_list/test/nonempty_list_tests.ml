@@ -111,6 +111,17 @@ let%expect_test "last" =
     3 |}]
 ;;
 
+let%expect_test "drop_last" =
+  let test list = print_s [%sexp (drop_last list : int list)] in
+  test [ 1 ];
+  test [ 1; 2 ];
+  test [ 1; 2; 3 ];
+  [%expect {|
+    ()
+    (1)
+    (1 2) |}]
+;;
+
 let%expect_test "to_sequence" =
   let test t = print_s [%sexp (to_sequence t : int Sequence.t)] in
   test [ 1 ];

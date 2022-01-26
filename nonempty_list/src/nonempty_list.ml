@@ -247,6 +247,12 @@ let zip t1 t2 : _ List.Or_unequal_lengths.t =
 let zip_exn t1 t2 = List.zip_exn (to_list t1) (to_list t2) |> of_list_exn
 let last (hd :: tl) = List.fold tl ~init:hd ~f:(fun _ elt -> elt)
 
+let drop_last (hd :: tl) =
+  match List.drop_last tl with
+  | None -> []
+  | Some l -> hd :: l
+;;
+
 let to_sequence t =
   (* [to_list] just performs one [::], so this sequence is created with only constant
      up-front work *)

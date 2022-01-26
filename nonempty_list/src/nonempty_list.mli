@@ -30,6 +30,7 @@ val mapi : 'a t -> f:(int -> 'a -> 'b) -> 'b t
 val concat : 'a t t -> 'a t
 val concat_map : 'a t -> f:('a -> 'b t) -> 'b t
 val last : 'a t -> 'a
+val drop_last : 'a t -> 'a list
 val to_sequence : 'a t -> 'a Sequence.t
 val sort : 'a t -> compare:('a -> 'a -> int) -> 'a t
 val stable_sort : 'a t -> compare:('a -> 'a -> int) -> 'a t

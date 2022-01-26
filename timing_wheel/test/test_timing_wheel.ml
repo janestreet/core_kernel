@@ -1938,6 +1938,30 @@ let%expect_test "[max_alarm_time_in_min_interval]" =
     ("1970-01-01 00:00:02.25485783Z") |}]
 ;;
 
+let%expect_test "[min_alarm_time_in_min_interval]" =
+  let t = create_unit () ~level_bits:[ 1; 1 ] in
+  let min_alarm_time_in_min_interval () =
+    print_s [%sexp (min_alarm_time_in_min_interval t : Time_ns.t option)]
+  in
+  min_alarm_time_in_min_interval ();
+  [%expect {|
+    () |}];
+  let add_after span = add t ~at:(Time_ns.add (now t) span) ignore in
+  let a = add_after (gibi_nanos 0.5) in
+  min_alarm_time_in_min_interval ();
+  [%expect {|
+    ("1970-01-01 00:00:00.536870912Z") |}];
+  remove t a;
+  min_alarm_time_in_min_interval ();
+  [%expect {|
+    () |}];
+  let _ = add_after (gibi_nanos 2.1) in
+  let _ = add_after (gibi_nanos 3.9) in
+  min_alarm_time_in_min_interval ();
+  [%expect {|
+    ("1970-01-01 00:00:02.25485783Z") |}]
+;;
+
 let%expect_test "multiple alarms at the same time are fired in insertion order" =
   let t = create_unit () in
   let delta = Time_ns.Span.of_sec 1. in

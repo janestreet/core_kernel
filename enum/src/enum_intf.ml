@@ -57,6 +57,7 @@ module type Enum = sig
     -> 'a t
     -> 'a Command.Arg_type.t
 
+  (** the sexp representation of M.t must be an sexp atom *)
   module Make_stringable (M : S) : Stringable with type t := M.t
 
   module Single : sig

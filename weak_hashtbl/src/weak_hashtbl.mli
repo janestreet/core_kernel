@@ -36,25 +36,26 @@ type ('a, 'b) t [@@deriving sexp_of]
 (** [growth_allowed] and [size] are both optionally passed on to the underlying call to
     [Hashtbl.create]. *)
 val create
-  :  ?growth_allowed:bool (** default is [true] *)
-  -> ?size:int (** default is [0] *)
+  :  ?growth_allowed : bool  (** default is [true] *)
+  -> ?size           : int   (** default is [0] *)
   -> (module Hashtbl.Key_plain with type t = 'a)
   -> ('a, 'b) t
 
 module Using_hashable : sig
   val create
-    :  ?growth_allowed:bool (** default is [true] *)
-    -> ?size:int (** default is [0] *)
+    :  ?growth_allowed : bool  (** default is [true] *)
+    -> ?size           : int   (** default is [0] *)
     -> 'a Hashtbl.Hashable.t
     -> ('a, 'b) t
 end
 
 val mem : ('a, _) t -> 'a -> bool
-val find : ('a, 'b) t -> 'a -> 'b Heap_block.t option
+
+val find        : ('a, 'b) t -> 'a -> 'b Heap_block.t option
 val find_or_add : ('a, 'b) t -> 'a -> default:(unit -> 'b Heap_block.t) -> 'b Heap_block.t
-val remove : ('a, 'b) t -> 'a -> unit
-val add_exn : ('a, 'b) t -> key:'a -> data:'b Heap_block.t -> unit
-val replace : ('a, 'b) t -> key:'a -> data:'b Heap_block.t -> unit
+val remove      : ('a, 'b) t -> 'a -> unit
+val add_exn     : ('a, 'b) t -> key:'a -> data:'b Heap_block.t -> unit
+val replace     : ('a, 'b) t -> key:'a -> data:'b Heap_block.t -> unit
 
 (** [key_is_using_space t key] returns [true] if [key] is using some space in [t].  [mem t
     key] implies [key_is_using_space t key], but it is also possible that that

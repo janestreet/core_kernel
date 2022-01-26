@@ -28,20 +28,21 @@ module Unpack_one : sig
       calls to [feed]. *)
 
   type ('a, 'state) unpack_result =
-    [ `Ok of 'a * int
+    [ `Ok              of 'a * int
     | `Not_enough_data of 'state * int
-    | `Invalid_data of Error.t
+    | `Invalid_data    of Error.t
     ]
 
-  type ('a, 'state) unpack =
-    state:'state -> buf:Bigstring.t -> pos:int -> len:int -> ('a, 'state) unpack_result
+  type ('a, 'state) unpack
+    =  state : 'state
+    -> buf   : Bigstring.t
+    -> pos   : int
+    -> len   : int
+    -> ('a, 'state) unpack_result
 
-  type 'a t =
-    | T :
-        { initial_state : 'state
-        ; unpack : ('a, 'state) unpack
-        }
-        -> 'a t
+  type 'a t = T : { initial_state : 'state
+                  ; unpack : ('a, 'state) unpack
+                  } -> 'a t
 
   include Monad.S with type 'a t := 'a t
 
@@ -68,7 +69,6 @@ module Unpack_one : sig
 
   module type Equal = sig
     type t [@@deriving sexp_of]
-
     val equal : t -> t -> bool
   end
 
@@ -100,10 +100,9 @@ val is_empty : _ t -> bool Or_error.t
 
 (** [feed t buf ?pos ?len] adds the specified substring of [buf] to [t]'s buffer.  It
     returns an error if [t] has encountered an unpacking error. *)
-val feed : ?pos:int -> ?len:int -> _ t -> Bigstring.t -> unit Or_error.t
-
-val feed_string : ?pos:int -> ?len:int -> _ t -> string -> unit Or_error.t
-val feed_bytes : ?pos:int -> ?len:int -> _ t -> Bytes.t -> unit Or_error.t
+val feed        : ?pos:int -> ?len:int -> _ t -> Bigstring.t -> unit Or_error.t
+val feed_string : ?pos:int -> ?len:int -> _ t -> string      -> unit Or_error.t
+val feed_bytes  : ?pos:int -> ?len:int -> _ t -> Bytes.t     -> unit Or_error.t
 
 (** [unpack_into t q] unpacks all the values that it can from [t] and enqueues them in
     [q].  If there is an unpacking error, [unpack_into] returns an error, and subsequent
