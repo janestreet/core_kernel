@@ -49,7 +49,7 @@ module type Bound = Iobuf_intf.Bound with type ('d, 'w) iobuf := ('d, 'w) t
 let read_only t = t
 let no_seek t = t
 
-let fail t message a sexp_of_a =
+let[@cold] fail t message a sexp_of_a =
   (* Immediately convert the iobuf to sexp.  Otherwise, the iobuf could be modified before
      conversion and printing.  Since we plan to use iobufs for pooled network buffers in
      practice, this could be very confusing when debugging production systems. *)
@@ -61,7 +61,7 @@ let fail t message a sexp_of_a =
 ;;
 
 module Lo_bound = struct
-  let stale t iobuf =
+  let[@cold] stale t iobuf =
     fail iobuf "Iobuf.Lo_bound.restore got stale snapshot" t [%sexp_of: int]
   ;;
 
@@ -78,7 +78,7 @@ module Lo_bound = struct
 end
 
 module Hi_bound = struct
-  let stale t iobuf =
+  let[@cold] stale t iobuf =
     fail iobuf "Iobuf.Hi_bound.restore got stale snapshot" t [%sexp_of: int]
   ;;
 
@@ -110,7 +110,7 @@ let flip_lo t =
   t.lo <- t.lo_min
 ;;
 
-let bounded_flip_lo_stale t lo_min =
+let[@cold] bounded_flip_lo_stale t lo_min =
   fail t "Iobuf.bounded_flip_lo got stale snapshot" lo_min [%sexp_of: Lo_bound.t]
 ;;
 
@@ -127,7 +127,7 @@ let flip_hi t =
   t.hi <- t.hi_max
 ;;
 
-let bounded_flip_hi_stale t hi_max =
+let[@cold] bounded_flip_hi_stale t hi_max =
   fail t "Iobuf.bounded_flip_hi got stale snapshot" hi_max [%sexp_of: Hi_bound.t]
 ;;
 
@@ -164,13 +164,12 @@ let invariant _ _ t =
 
 
 (* We want [check_range] inlined, so we don't want a string constant in there. *)
-let bad_range ~pos ~len t =
+let[@cold] bad_range ~pos ~len t =
   fail
     t
     "Iobuf got invalid range"
     (`pos pos, `len len)
     [%sexp_of: [ `pos of int ] * [ `len of int ]]
-[@@cold]
 ;;
 
 let check_range t ~pos ~len =
@@ -432,7 +431,7 @@ let advance t len = with_advance t ~len ignore_range
 
 let[@inline always] unsafe_buf_pos t ~pos ~len:_ = t.lo + pos
 
-let buf_pos_exn t ~pos ~len =
+let[@inline] buf_pos_exn t ~pos ~len =
   check_range t ~pos ~len;
   unsafe_buf_pos t ~pos ~len
 ;;
@@ -528,7 +527,7 @@ let compact t =
   t.hi <- t.hi_max
 ;;
 
-let bounded_compact_stale t lo_min hi_max =
+let[@cold] bounded_compact_stale t lo_min hi_max =
   fail
     t
     "Iobuf.bounded_compact got stale snapshot"
@@ -920,7 +919,7 @@ module Fill = struct
   type nonrec ('a, 'd, 'w) t = (read_write, seek) t -> 'a -> unit
     constraint 'd = [> read ]
 
-  let pos t len = buf_pos_exn t ~pos:0 ~len
+  let[@inline] pos t len = buf_pos_exn t ~pos:0 ~len
   let uadv = unsafe_advance
 
   let tail_padded_fixed_string ~padding ~len t src =

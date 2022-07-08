@@ -4,7 +4,7 @@
 type 'a t =
   | []
   | ( :: ) of 'a * 'a t
-[@@deriving sexp_of]
+[@@deriving equal, sexp_of]
 
 (** [of_list_rev] reverses the input list. *)
 val of_list_rev : 'a list -> 'a t

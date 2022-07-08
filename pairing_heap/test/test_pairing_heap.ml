@@ -3,6 +3,25 @@ open Poly
 open Expect_test_helpers_core
 module Heap = Pairing_heap
 
+(* Container tests.  Heap has no t_of_sexp because there is no way to deserialize a
+   comparison function, so we simulate it. *)
+include Base_test_helpers.Test_container.Test_S0 (struct
+    include Heap
+
+    module Elt = struct
+      type t = int [@@deriving sexp]
+
+      let of_int = Fn.id
+      let to_int = Fn.id
+    end
+
+    type nonrec t = int t [@@deriving sexp_of]
+
+    let mem t int = mem t int ~equal:Int.equal
+    let of_list ints = of_list ints ~cmp:Int.compare
+    let t_of_sexp sexp = sexp |> [%of_sexp: int list] |> of_list
+  end)
+
 let%expect_test "Heap.sexp_of_t" =
   let test list =
     let heap = Heap.of_list list ~cmp:Int.compare in
@@ -266,13 +285,13 @@ let integers n =
        we don't do this the resulting structure is just a linked list and the caller is
        not flexed as completely as it should be. *)
     then (
-      ignore (pop t);
+      ignore (pop t : int option);
       add t i)
   done;
   t
 ;;
 
-let%test_unit _ =
+let%test_unit "clear" =
   let t = integers 99 in
   clear t;
   if length t <> 0
@@ -316,11 +335,11 @@ let test_removal ~add_removable ~remove ~elt_value_exn =
   loop 0
 ;;
 
-let%test_unit _ =
+let%test_unit "remove" =
   test_removal ~add_removable ~remove ~elt_value_exn:(fun token _ -> Elt.value_exn token)
 ;;
 
-let%test_unit _ =
+let%test_unit "remove" =
   test_removal
     ~add_removable:Unsafe.add_removable
     ~remove:Unsafe.remove
@@ -344,13 +363,35 @@ let test_ordering () =
 ;;
 
 let%test_unit _ = test_ordering ()
-let%test_unit _ = ignore (of_array [||] ~cmp:Int.compare)
+let%test_unit _ = ignore (of_array [||] ~cmp:Int.compare : int t)
 
-let%test_unit "operations on removed elements" =
+let%expect_test "operations on removed elements" =
   let h = create ~cmp:Int.compare () in
   let elt = add_removable h 1 in
-  [%test_eq: string] (Sexp.to_string (Elt.sexp_of_t sexp_of_int elt)) "(1)";
+  print_s [%sexp (elt : int Elt.t)];
+  [%expect {| (1) |}];
   ignore (pop_exn h : int);
-  assert (Result.is_error (Result.try_with (fun () -> Elt.value_exn elt)));
-  [%test_eq: string] (Sexp.to_string (Elt.sexp_of_t sexp_of_int elt)) "()"
+  require_does_raise [%here] (fun () -> Elt.value_exn elt);
+  [%expect {| (Failure "Heap.value_exn: node was removed from the heap") |}];
+  print_s [%sexp (elt : int Elt.t)];
+  [%expect {| () |}]
+;;
+
+let%expect_test "pop_if" =
+  let heap = Heap.of_list [ -1; 1; 2; 3 ] ~cmp:Int.compare in
+  let show () = print_s [%sexp (heap : int Heap.t)] in
+  show ();
+  [%expect {| (-1 1 2 3) |}];
+  require_some ~print_some:[%sexp_of: int] [%here] (Heap.pop_if heap (fun i -> i < 0));
+  [%expect {| -1 |}];
+  show ();
+  [%expect {| (1 2 3) |}];
+  require_none [%here] [%sexp_of: int] (Heap.pop_if heap (fun i -> i < 0));
+  show ();
+  [%expect {| (1 2 3) |}]
+;;
+
+let%expect_test "pop_if on empty heap" =
+  let empty = Heap.create ~cmp:Int.compare () in
+  require_none [%here] [%sexp_of: int] (Heap.pop_if empty (fun _ -> true))
 ;;

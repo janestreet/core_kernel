@@ -16,7 +16,7 @@ let test_core () =
   for i = 0 to n - 1 do
     Identity_table.set tbl ~key:i ~data:i
   done;
-  let start = Time.now () in
+  let start = Time_float.now () in
   let first_n = ref 0 in
   for _ = 0 to times - 1 do
     let loop_end = !first_n + n - 1 in
@@ -27,8 +27,8 @@ let test_core () =
     done;
     first_n := !first_n + n
   done;
-  let elapsed = Time.diff (Time.now ()) start in
-  printf "Core hashtbl took %6f\n" (Time.Span.to_sec elapsed /. Float.of_int times);
+  let elapsed = Time_float.diff (Time_float.now ()) start in
+  printf "Core hashtbl took %6f\n" (Time_float.Span.to_sec elapsed /. Float.of_int times);
   printf "Size: %d\n%!" (Identity_table.length tbl);
   for i = !first_n to !first_n + n - 1 do
     assert (Identity_table.find_exn tbl i = i)
@@ -48,7 +48,7 @@ let test_zero () =
   for i = 0 to n - 1 do
     Identity_table.set tbl ~key:i ~data:i
   done;
-  let start = Time.now () in
+  let start = Time_float.now () in
   let first_n = ref 0 in
   for _ = 0 to times - 1 do
     let loop_end = !first_n + n - 1 in
@@ -59,8 +59,10 @@ let test_zero () =
     done;
     first_n := !first_n + n
   done;
-  let elapsed = Time.diff (Time.now ()) start in
-  printf "Zero pooled hashtbl took %6f\n" (Time.Span.to_sec elapsed /. Float.of_int times);
+  let elapsed = Time_float.diff (Time_float.now ()) start in
+  printf
+    "Zero pooled hashtbl took %6f\n"
+    (Time_float.Span.to_sec elapsed /. Float.of_int times);
   printf "Size: %d\n%!" (Identity_table.length tbl);
   for i = !first_n to !first_n + n - 1 do
     assert (Identity_table.find_exn tbl i = i)

@@ -1,7 +1,7 @@
 type 'a t = 'a list =
   | []
   | ( :: ) of 'a * 'a t
-[@@deriving sexp_of]
+[@@deriving equal, sexp_of]
 
 let of_list_rev = List.rev
 let rev = List.rev

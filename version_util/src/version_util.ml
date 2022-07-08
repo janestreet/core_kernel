@@ -165,7 +165,7 @@ module Application_specific_fields = struct
 end
 
 module Time_with_limited_parsing = struct
-  type t = Time.t * Sexp.t
+  type t = Time_float.t * Sexp.t
 
   let t_of_sexp sexp =
     let str = string_of_sexp sexp in
@@ -177,8 +177,8 @@ module Time_with_limited_parsing = struct
          | None -> failwith "time must contain one space between date and ofday"
          | Some (date, ofday) ->
            let date = Date.t_of_sexp (sexp_of_string date) in
-           let ofday = Time.Ofday.t_of_sexp (sexp_of_string ofday) in
-           Time.of_date_ofday date ofday ~zone:Time.Zone.utc, sexp)
+           let ofday = Time_float.Ofday.t_of_sexp (sexp_of_string ofday) in
+           Time_float.of_date_ofday date ofday ~zone:Time_float.Zone.utc, sexp)
     with
     | Sexplib.Conv.Of_sexp_error (e, _) | e ->
       raise (Sexplib.Conv.Of_sexp_error (e, sexp))

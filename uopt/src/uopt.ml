@@ -6,7 +6,13 @@ type +'a t
    [unsafe_value]).  We disallow [_ Uopt.t Uopt.t], so there is no chance of confusing
    [none] with [some none].  And [float Uopt.t array] is similarly disallowed. *)
 let none : 'a t = Obj.magic "Uopt.none"
-let some (x : 'a) : 'a t = Obj.magic x
+
+let[@inline] some (x : 'a) =
+  let r : 'a t = Obj.magic x in
+  if phys_equal r none then failwith "Uopt.some Uopt.none";
+  r
+;;
+
 let unsafe_value (x : 'a t) : 'a = Obj.magic x
 let is_none t = phys_equal t none
 let is_some t = not (is_none t)
@@ -30,3 +36,13 @@ module Optional_syntax = struct
     let unsafe_value = unsafe_value
   end
 end
+
+let%test_module _ =
+  (module struct
+    let%expect_test ("using the same sentinel value" [@tags "no-js"]) =
+      match some "Uopt.none" with
+      | (_ : string t) -> failwith "should not have gotten to this point"
+      | exception _ -> ()
+    ;;
+  end)
+;;

@@ -148,6 +148,36 @@ let make_param_one_of_flags
        Command.Param.flag ?aliases name (Command.Param.no_arg_some enum) ~doc))
 ;;
 
+let make_param_optional_comma_separated
+      ?allow_empty
+      ?unique_values
+      ?represent_choice_with
+      ?list_values_in_help
+      ?aliases
+      ?key
+      flag_name
+      ~doc
+      m
+  =
+  let open Command.Param in
+  let options =
+    enum m
+    |> List.map ~f:fst
+    |> List.sort ~compare:[%compare: string]
+    |> String.concat ~sep:", "
+  in
+  make_param
+    ?represent_choice_with
+    ?list_values_in_help
+    ?aliases
+    ?key
+    flag_name
+    m
+    ~f:
+      (Fn.compose optional (Command.Arg_type.comma_separated ?allow_empty ?unique_values))
+    ~doc:[%string {|%{doc} (can be comma-separated values: %{options})|}]
+;;
+
 module Make_stringable (M : S) = struct
   let to_string = to_string_hum (module M)
 

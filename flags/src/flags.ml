@@ -2,14 +2,18 @@ open! Core
 open Poly
 include Flags_intf
 
+(* To allow [create] to be eagerly inlined, move this exception with macro expansion to
+   its own function and mark it [@cold] so that it isn't inlined. *)
+let[@cold] raise_invalid_bit n =
+  failwiths
+    ~here:[%here]
+    "Flags.create got invalid ~bit (must be between 0 and 62)"
+    n
+    [%sexp_of: int]
+;;
+
 let create ~bit:n =
-  if n < 0 || n > 62
-  then
-    failwiths
-      ~here:[%here]
-      "Flags.create got invalid ~bit (must be between 0 and 62)"
-      n
-      [%sexp_of: int];
+  if n < 0 || n > 62 then raise_invalid_bit n;
   Int63.shift_left Int63.one n
 ;;
 
@@ -23,7 +27,8 @@ module Make (M : Make_arg) = struct
   let ( + ) a b = Int63.bit_or a b
   let ( - ) a b = Int63.bit_and a (Int63.bit_not b)
   let intersect = Int63.bit_and
-  let complement = Int63.bit_not
+  let all = List.fold M.known ~init:empty ~f:(fun acc (flag, _) -> acc + flag)
+  let complement a = all - a
   let is_subset t ~of_ = Int63.( = ) t (intersect t of_)
   let do_intersect t1 t2 = Int63.( <> ) (Int63.bit_and t1 t2) Int63.zero
   let are_disjoint t1 t2 = Int63.( = ) (Int63.bit_and t1 t2) Int63.zero
@@ -69,22 +74,24 @@ module Make (M : Make_arg) = struct
 
   type sexp_format = string list [@@deriving sexp]
 
-  let sexp_of_t =
+  let to_flag_list =
     (* We reverse [known] so that the fold below accumulates from right to left, giving a
        final list with elements in the same order as [known]. *)
     let known = List.rev known in
     fun t ->
-      let leftover, flag_names =
-        List.fold known ~init:(t, []) ~f:(fun (t, flag_names) (flag, flag_name) ->
-          if Int63.bit_and t flag = flag
-          then t - flag, flag_name :: flag_names
-          else t, flag_names)
-      in
-      if leftover = empty
-      then [%sexp_of: sexp_format] flag_names
-      else
-        [%sexp_of: string list * [ `unrecognized_bits of string ]]
-          (flag_names, `unrecognized_bits (sprintf "0x%Lx" (Int63.to_int64 leftover)))
+      List.fold known ~init:(t, []) ~f:(fun (t, flag_names) (flag, flag_name) ->
+        if Int63.bit_and t flag = flag
+        then t - flag, flag_name :: flag_names
+        else t, flag_names)
+  ;;
+
+  let sexp_of_t t =
+    let leftover, flag_names = to_flag_list t in
+    if leftover = empty
+    then [%sexp_of: sexp_format] flag_names
+    else
+      [%sexp_of: string list * [ `unrecognized_bits of string ]]
+        (flag_names, `unrecognized_bits (sprintf "0x%Lx" (Int63.to_int64 leftover)))
   ;;
 
   let known_by_name =

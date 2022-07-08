@@ -35,13 +35,14 @@ let%expect_test _ =
     -0x4000_0000_0000_0000 |}]
 ;;
 
-module M = Make (struct
-    let allow_intersecting = false
-    let should_print_error = true
-    let known = [ a, "a"; b, "b"; c, "c" ]
-    let remove_zero_flags = false
-  end)
+module Flags = struct
+  let allow_intersecting = false
+  let should_print_error = true
+  let known = [ a, "a"; b, "b"; c, "c" ]
+  let remove_zero_flags = false
+end
 
+module M = Make (Flags)
 include M
 
 let%expect_test _ =
@@ -63,20 +64,17 @@ let print_sexp_of t = print_s [%sexp (t : t)]
 
 let%expect_test _ =
   print_sexp_of empty;
-  [%expect {|
-    () |}]
-;;
-
-let%expect_test _ =
   print_sexp_of a;
-  [%expect {|
-    (a) |}]
-;;
-
-let%expect_test _ =
+  print_sexp_of b;
   print_sexp_of c;
-  [%expect {|
-    (c) |}]
+  print_sexp_of d;
+  [%expect
+    {|
+    ()
+    (a)
+    (b)
+    (c)
+    (() (unrecognized_bits 0xc000000000000000)) |}]
 ;;
 
 let%expect_test _ =
@@ -185,6 +183,20 @@ let%expect_test _ =
     -1 |}]
 ;;
 
+(* Create all combinations of the given flags. The output is ordered if the input is also
+   ordered. *)
+let combinations flags =
+  let rec combinations prefix flags =
+    match flags with
+    | [] -> [ prefix ]
+    | h :: t ->
+      let x = combinations prefix t in
+      let y = combinations (h :: prefix) t in
+      List.concat [ x; y ]
+  in
+  combinations [] (List.rev flags) |> List.map ~f:(List.fold ~init:M.empty ~f:M.( + ))
+;;
+
 let%expect_test "[compare] is a total order consistent with [is_subset]" =
   print_compare a b;
   [%expect {|
@@ -195,30 +207,47 @@ let%expect_test "[compare] is a total order consistent with [is_subset]" =
   print_compare a (b + d);
   [%expect {|
     -1 |}];
-  let ordered =
-    [| empty
-     ; a
-     ; b
-     ; a + b
-     ; c
-     ; a + c
-     ; b + c
-     ; a + b + c
-     ; complement d
-     ; d
-     ; a + d
-     ; b + d
-     ; complement (a + b)
-     ; complement b
-     ; complement a
-     ; complement empty
-    |]
+  let test_ordering ordered =
+    List.is_sorted_strictly ordered ~compare:(fun f1 f2 ->
+      require [%here] (not (M.is_subset f2 ~of_:f1));
+      M.compare f1 f2)
   in
-  Array.iteri ordered ~f:(fun i ai ->
-    Array.iteri ordered ~f:(fun j aj ->
-      require [%here] (Bool.equal (equal ai aj) (Int.equal (compare ai aj) 0));
-      if is_subset ai ~of_:aj then require [%here] (Int.( <= ) (compare ai aj) 0);
-      require [%here] (Int.equal (compare ai aj) (Int.compare i j))))
+  let known = List.map Flags.known ~f:fst in
+  (* known flags *)
+  let ordered = combinations known in
+  (* show the computed ordering *)
+  print_s [%message (ordered : M.t list)];
+  [%expect
+    {|
+    (ordered (
+      ()
+      (a)
+      (b)
+      (a b)
+      (c)
+      (a c)
+      (b c)
+      (a b c))) |}];
+  require [%here] (test_ordering ordered);
+  let complements = List.map ordered ~f:M.complement in
+  print_s [%message (complements : M.t list)];
+  [%expect
+    {|
+    (complements (
+      (a b c)
+      (b c)
+      (a c)
+      (c)
+      (a b)
+      (b)
+      (a)
+      ())) |}];
+  (* complemented flags (forms a reversed ordering) *)
+  let ordered = complements |> List.rev in
+  require [%here] (test_ordering ordered);
+  (* With "unknown" flag [d] *)
+  let ordered = combinations (known @ [ d ]) in
+  require [%here] (test_ordering ordered)
 ;;
 
 (* Check that conflicting flags leads to an error. *)
@@ -234,4 +263,11 @@ let%test _ =
          end)
        in
        ()))
+;;
+
+let%expect_test "complement" =
+  let flags = M.(a + c) in
+  let complement = M.complement flags in
+  print_s [%message (flags : M.t) (complement : M.t)];
+  [%expect {| ((flags (a c)) (complement (b))) |}]
 ;;

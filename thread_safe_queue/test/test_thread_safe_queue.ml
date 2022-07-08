@@ -1,6 +1,6 @@
 open! Core
 module Thread = Core_thread
-module Time = Time_unix
+module Time = Time_float_unix
 
 let%test_module "Thread_safe_queue" =
   (module (

@@ -1,30 +1,13 @@
+include Total_map_intf
+
 module Stable = struct
   open Core.Core_stable
 
   module V1 = struct
     type ('key, 'a, 'cmp, 'enum) t = ('key, 'a, 'cmp) Map.V1.t
 
-    module type Key = sig
-      type t [@@deriving sexp, bin_io, compare, enumerate]
-    end
-
-    module type Key_with_witnesses = sig
-      include Key
-      include Comparator.V1.S with type t := t
-      include Enumeration.S with type t := t
-    end
-
-    module type S = sig
-      module Key : sig
-        type t [@@deriving sexp, bin_io, compare, enumerate]
-      end
-
-      type comparator_witness
-      type enumeration_witness
-
-      type nonrec 'a t = (Key.t, 'a, comparator_witness, enumeration_witness) t
-      [@@deriving bin_io, sexp, compare]
-    end
+    module type S =
+      Stable_V1_S with type ('key, 'a, 'cmp, 'enum) total_map := ('key, 'a, 'cmp, 'enum) t
 
     module Make_with_witnesses (Key : Key_with_witnesses) = struct
       module Key = struct
@@ -45,6 +28,11 @@ module Enumeration = Enumeration
 
 type ('key, 'a, 'cmp, 'enum) t = ('key, 'a, 'cmp, 'enum) Stable.V1.t
 
+module type S_plain =
+  S_plain with type ('key, 'a, 'cmp, 'enum) total_map := ('key, 'a, 'cmp, 'enum) t
+
+module type S = S with type ('key, 'a, 'cmp, 'enum) total_map := ('key, 'a, 'cmp, 'enum) t
+
 let to_map t = t
 
 let key_not_in_enumeration t key =
@@ -62,9 +50,8 @@ let change t k ~f =
 ;;
 
 let find t k =
-  match Map.find t k with
-  | Some x -> x
-  | None -> key_not_in_enumeration t k
+  try Map.find_exn t k with
+  | _ -> key_not_in_enumeration t k
 ;;
 
 let pair t1 t2 key = function
@@ -118,45 +105,45 @@ include struct
   let to_alist = to_alist
 end
 
-module type Key = sig
-  type t [@@deriving sexp, bin_io, compare, enumerate]
-end
-
-module type Key_with_witnesses = sig
-  include Key
-  include Comparator.S with type t := t
-  include Enumeration.S with type t := t
-end
-
-module type S = sig
-  module Key : Key
-
-  type comparator_witness
-  type enumeration_witness
-
-  type nonrec 'a t = (Key.t, 'a, comparator_witness, enumeration_witness) t
-  [@@deriving sexp, bin_io, compare, equal]
-
-  include Applicative with type 'a t := 'a t
-
-  val create : (Key.t -> 'a) -> 'a t
-  val create_const : 'a -> 'a t
-end
-
-module Make_with_witnesses (Key : sig
+module Make_plain_with_witnesses (Key : Key_plain_with_witnesses) = struct
+  module Key = struct
     include Key
-    include Comparator.S with type t := t
-    include Enumeration.S with type t := t
-  end) =
-struct
+    include Comparable.Make_plain_using_comparator (Key)
+  end
+
+  type comparator_witness = Key.comparator_witness
+  type enumeration_witness = Key.enumeration_witness
+  type 'a t = 'a Key.Map.t [@@deriving sexp_of, compare, equal]
+
+  let create f =
+    List.fold Key.all ~init:Key.Map.empty ~f:(fun t key -> Map.set t ~key ~data:(f key))
+  ;;
+
+  let create_const x = create (fun _ -> x)
+
+  include Applicative.Make (struct
+      type nonrec 'a t = 'a t
+
+      let return = create_const
+      let apply t1 t2 = map2 t1 t2 ~f:(fun f x -> f x)
+      let map = `Custom map
+    end)
+end
+
+module Make_with_witnesses (Key : Key_with_witnesses) = struct
   module Key = struct
     include Key
     include Comparable.Make_binable_using_comparator (Key)
   end
 
-  type comparator_witness = Key.comparator_witness
-  type enumeration_witness = Key.enumeration_witness
-  type 'a t = 'a Key.Map.t [@@deriving sexp, compare, equal]
+  type 'a t = 'a Key.Map.t [@@deriving sexp, bin_io, compare, equal]
+
+  include (
+    Make_plain_with_witnesses
+      (Key) :
+      module type of Make_plain_with_witnesses (Key)
+    with module Key := Key
+    with type 'a t := 'a t)
 
   let all_set = Key.Set.of_list Key.all
 
@@ -201,21 +188,13 @@ struct
         x
       ;;
     end)
-
-  let create f =
-    List.fold Key.all ~init:Key.Map.empty ~f:(fun t key -> Map.set t ~key ~data:(f key))
-  ;;
-
-  let create_const x = create (fun _ -> x)
-
-  include Applicative.Make (struct
-      type nonrec 'a t = 'a t
-
-      let return = create_const
-      let apply t1 t2 = map2 t1 t2 ~f:(fun f x -> f x)
-      let map = `Custom map
-    end)
 end
+
+module Make_plain (Key : Key_plain) = Make_plain_with_witnesses (struct
+    include Key
+    include Comparable.Make_plain (Key)
+    include Enumeration.Make (Key)
+  end)
 
 module Make (Key : Key) = Make_with_witnesses (struct
     include Key

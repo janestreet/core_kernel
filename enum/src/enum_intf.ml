@@ -50,6 +50,11 @@ module type Enum = sig
 
   val make_param_optional_with_default_doc : default:'a -> ('a, 'a) make_param
 
+  val make_param_optional_comma_separated
+    :  ?allow_empty:bool
+    -> ?unique_values:bool
+    -> ('a, 'a list option) make_param
+
   val arg_type
     :  ?case_sensitive:bool
     -> ?key:'a Univ_map.Multi.Key.t

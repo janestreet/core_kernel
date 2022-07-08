@@ -16,7 +16,7 @@ module Stable = struct
     include T
 
     module Format = struct
-      type 'a t = 'a list [@@deriving bin_io, sexp]
+      type 'a t = 'a list [@@deriving bin_io, sexp, stable_witness]
     end
 
     include
@@ -49,6 +49,12 @@ module Stable = struct
       { untyped = List (Cons (element, Many element)) }
     ;;
 
+    let stable_witness (type a) : a Stable_witness.t -> a t Stable_witness.t =
+      fun witness ->
+        let module Stable_witness = Stable_witness.Of_serializable1 (Format) (T) in
+        Stable_witness.of_serializable Format.stable_witness of_list_exn to_list witness
+    ;;
+
     let%expect_test _ =
       print_endline [%bin_digest: int t];
       [%expect {| eaa5c1535ea5c1691291b3bdbbd7b014 |}]
@@ -71,7 +77,7 @@ module Stable = struct
         { hd : 'a
         ; tl : 'a list
         }
-      [@@deriving bin_io, compare]
+      [@@deriving bin_io, compare, stable_witness]
 
       let of_nonempty_list (hd :: tl) = { hd; tl }
       let to_nonempty_list { hd; tl } = hd :: tl
@@ -86,6 +92,16 @@ module Stable = struct
           let to_binable = Record_format.of_nonempty_list
           let of_binable = Record_format.to_nonempty_list
         end)
+
+    let stable_witness (type a) : a Stable_witness.t -> a t Stable_witness.t =
+      fun witness ->
+      let module Stable_witness = Stable_witness.Of_serializable1 (Record_format) (T) in
+      Stable_witness.of_serializable
+        Record_format.stable_witness
+        Record_format.to_nonempty_list
+        Record_format.of_nonempty_list
+        witness
+    ;;
 
     let%expect_test _ =
       print_endline [%bin_digest: int t];
@@ -104,7 +120,7 @@ module Stable = struct
     include T
 
     module Pair_format = struct
-      type 'a t = 'a * 'a list [@@deriving bin_io, compare]
+      type 'a t = 'a * 'a list [@@deriving bin_io, compare, stable_witness]
 
       let of_nonempty_list (hd :: tl) = hd, tl
       let to_nonempty_list (hd, tl) = hd :: tl
@@ -119,6 +135,16 @@ module Stable = struct
           let to_binable = Pair_format.of_nonempty_list
           let of_binable = Pair_format.to_nonempty_list
         end)
+
+    let stable_witness (type a) : a Stable_witness.t -> a t Stable_witness.t =
+      fun witness ->
+      let module Stable_witness = Stable_witness.Of_serializable1 (Pair_format) (T) in
+      Stable_witness.of_serializable
+        Pair_format.stable_witness
+        Pair_format.to_nonempty_list
+        Pair_format.of_nonempty_list
+        witness
+    ;;
 
     let%expect_test _ =
       print_endline [%bin_digest: int t];
@@ -197,6 +223,19 @@ let invariant f t = iter t ~f
 let create hd tl = hd :: tl
 let singleton hd = [ hd ]
 let cons x (hd :: tl) = x :: hd :: tl
+
+let nth (hd :: tl) n =
+  match n with
+  | 0 -> Some hd
+  | n -> List.nth tl (n - 1)
+;;
+
+let nth_exn t n =
+  match nth t n with
+  | None ->
+    invalid_argf "Nonempty_list.nth_exn %d called on list of length %d" n (length t) ()
+  | Some a -> a
+;;
 
 let mapi (hd :: tl) ~f =
   (* Being overly cautious about evaluation order *)

@@ -20,6 +20,8 @@ val singleton : 'a -> 'a t
 val cons : 'a -> 'a t -> 'a t
 val hd : 'a t -> 'a
 val tl : 'a t -> 'a list
+val nth : 'a t -> int -> 'a option
+val nth_exn : 'a t -> int -> 'a
 val reduce : 'a t -> f:('a -> 'a -> 'a) -> 'a
 val reverse : 'a t -> 'a t
 val append : 'a t -> 'a list -> 'a t
@@ -133,18 +135,20 @@ module Stable : sig
   (** Represents a [t] as an ordinary list for sexp and bin_io conversions, e.g. [1::2]
       is represented as [(1 2)]. *)
   module V3 : sig
-    type nonrec 'a t = 'a t [@@deriving bin_io, compare, equal, sexp, hash]
+    type nonrec 'a t = 'a t
+    [@@deriving bin_io, compare, equal, sexp, hash, stable_witness]
   end
 
   (** Represents a [t] as an ordinary list for sexp conversions, but uses a record [{hd :
       'a; tl ; 'a list}] for bin_io conversions. *)
   module V2 : sig
-    type nonrec 'a t = 'a t [@@deriving bin_io, compare, equal, sexp, hash]
+    type nonrec 'a t = 'a t
+    [@@deriving bin_io, compare, equal, sexp, hash, stable_witness]
   end
 
   (** Represents a [t] as an ordinary list for sexps, but as a pair for bin_io conversions
       (i.e., a ['a t] is represented as the type ['a * 'a list]). *)
   module V1 : sig
-    type nonrec 'a t = 'a t [@@deriving bin_io, compare, equal, sexp]
+    type nonrec 'a t = 'a t [@@deriving bin_io, compare, equal, sexp, stable_witness]
   end
 end

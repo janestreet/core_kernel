@@ -803,7 +803,6 @@ struct
       include Bigstring
 
       let to_string t = to_string t (* drop optional args *)
-
       let of_string s = of_string s (* drop optional args *)
     end
 

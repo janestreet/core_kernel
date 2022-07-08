@@ -67,3 +67,8 @@ let%expect_test "ensure no miscompilation due to unboxing of the float" =
     100.
     none |}]
 ;;
+
+let%expect_test "Some None" =
+  require_does_raise [%here] (fun () -> Uopt.some Uopt.none);
+  [%expect {|(Failure "Uopt.some Uopt.none")|}]
+;;

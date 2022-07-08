@@ -87,6 +87,7 @@ type 'a key = 'a
 module type S_plain = S_plain with type ('a, 'b) hashtbl = ('a, 'b) t
 module type S = S with type ('a, 'b) hashtbl = ('a, 'b) t
 module type S_binable = S_binable with type ('a, 'b) hashtbl = ('a, 'b) t
+module type S_stable = S_stable with type ('a, 'b) hashtbl = ('a, 'b) t
 
 let sexp_of_key t = t.hashable.Hashable.sexp_of_t
 
@@ -598,7 +599,7 @@ let iter_keys t ~f = iteri t ~f:(fun ~key ~data:_ -> f key)
 let rec choose_nonempty t i =
   let entry = table_get t.table i in
   if Entry.is_null entry
-  then choose_nonempty t (i + 1)
+  then choose_nonempty t ((i + 1) land (t.capacity - 1))
   else Entry.key t.entries entry, Entry.data t.entries entry
 ;;
 
@@ -607,6 +608,21 @@ let choose t = if t.length = 0 then None else Some (choose_nonempty t 0)
 let choose_exn t =
   if t.length = 0 then raise_s [%message "[Pooled_hashtbl.choose_exn] of empty hashtbl"];
   choose_nonempty t 0
+;;
+
+let choose_randomly_nonempty ~random_state t =
+  let start_idx = Random.State.int random_state t.capacity in
+  choose_nonempty t start_idx
+;;
+
+let choose_randomly ?(random_state = Random.State.default) t =
+  if t.length = 0 then None else Some (choose_randomly_nonempty ~random_state t)
+;;
+
+let choose_randomly_exn ?(random_state = Random.State.default) t =
+  if t.length = 0
+  then raise_s [%message "[Pooled_hashtbl.choose_randomly_exn] of empty hashtbl"];
+  choose_randomly_nonempty ~random_state t
 ;;
 
 let fold =
@@ -944,6 +960,8 @@ let copy t =
 module Accessors = struct
   let choose = choose
   let choose_exn = choose_exn
+  let choose_randomly = choose_randomly
+  let choose_randomly_exn = choose_randomly_exn
   let clear = clear
   let copy = copy
   let remove = remove
@@ -1015,6 +1033,7 @@ end
 module type Key_plain = Key_plain
 module type Key = Key
 module type Key_binable = Key_binable
+module type Key_stable = Key_stable
 module type For_deriving = For_deriving
 
 module Creators (Key : sig
@@ -1201,6 +1220,30 @@ struct
         t
       ;;
     end)
+
+  module Provide_stable_witness
+      (Key' : sig
+         type t [@@deriving stable_witness]
+       end
+       with type t := key) =
+  struct
+    (* I'm not sure whether it makes sense for pooled hashtbl to be used as a stable type,
+       since pooling seems like an in-process thing, but in order to satisfy the entire
+       [Hashtbl_intf.Hashtbl] module type, we need to provide a stable witness.
+
+       The implementation and comment from hashtbl.ml is copied below.
+    *)
+    (* The binary representation of hashtbl is relied on by stable modules
+       (e.g. Hashtable.Stable) and is therefore assumed to be stable.  So, if the key and
+       data can provide a stable witnesses, then we can safely say the hashtbl is also
+       stable. *)
+    let stable_witness (type data) (_data_stable_witness : data Stable_witness.t)
+      : data t Stable_witness.t
+      =
+      let (_ : key Stable_witness.t) = Key'.stable_witness in
+      Stable_witness.assert_stable
+    ;;
+  end
 end
 
 module Make_with_hashable (T : sig
@@ -1223,6 +1266,16 @@ struct
   include Provide_bin_io (T.Key)
 end
 
+module Make_stable_with_hashable (T : sig
+    module Key : Key_stable
+
+    val hashable : Key.t Hashable.t
+  end) =
+struct
+  include Make_binable_with_hashable (T)
+  include Provide_stable_witness (T.Key)
+end
+
 module Make_plain (Key : Key_plain) = Make_plain_with_hashable (struct
     module Key = Key
 
@@ -1243,6 +1296,11 @@ module Make_binable (Key : sig
 struct
   include Make (Key)
   include Provide_bin_io (Key)
+end
+
+module Make_stable (Key : Key_stable) = struct
+  include Make_binable (Key)
+  include Provide_stable_witness (Key)
 end
 
 module M (K : T) = struct

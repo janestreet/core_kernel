@@ -114,7 +114,6 @@ let%bench_module "Blit" =
 let%bench_module "Poke" =
   (module struct
     let iobuf = of_string (String.make 72 '\000') (* cache line + word size *)
-
     let pos = Sys.opaque_identity 0
 
     let%bench "char" = Poke.char iobuf ~pos (Sys.opaque_identity 'a')
@@ -182,7 +181,6 @@ let%bench_module "Poke" =
 let%bench_module "Peek" =
   (module struct
     let iobuf = of_string (String.make 72 '\000') (* cache line + word size *)
-
     let pos = Sys.opaque_identity 0
 
     let%bench "char" = Peek.char iobuf ~pos

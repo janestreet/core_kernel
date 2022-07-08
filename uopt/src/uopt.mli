@@ -6,10 +6,7 @@
     in a nested way, i.e. as ['a Uopt.t Uopt.t].  It must also not be used for [float
     Uopt.t array], since the representation of the array would vary depending on whether
     [none] or [some] is used to create the array, but [float Uopt.t Uniform_array.t] is
-    fine.  It should also not be used in a record that contains only monomorphic [float]s
-    and [float Uopt.t]s, because the compiler would treat that as a float-only record and
-    would unbox the record fields (as described in the documentation for writing C
-    bindings).
+    fine.
 
     Since ['a Uopt.t] is abtract, manipulation of an ['a Uopt.t array] does runtime checks
     to see if this is a float array. This can be mostly avoided with [Uniform_array.t],

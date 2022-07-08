@@ -67,11 +67,11 @@ end
 val build_info : string
 
 val build_info_as_sexp : Sexp.t
-val reprint_build_info : (Time.t -> Sexp.t) -> string
+val reprint_build_info : (Time_float.t -> Sexp.t) -> string
 val username : string option
 val hostname : string option
 val kernel : string option
-val build_time : Time.t option
+val build_time : Time_float.t option
 val x_library_inlining : bool
 val dynlinkable_code : bool
 val compiled_for_speed : bool

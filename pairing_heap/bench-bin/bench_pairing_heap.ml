@@ -44,7 +44,7 @@ let add_remove_from_existing_heap data initial_size =
     ~name:(sprintf "add/remove from heap of size %i (%s)" initial_size (Data.name data))
     (fun () ->
        Heap.add h (Data.next data);
-       ignore (Heap.pop_exn h))
+       ignore (Heap.pop_exn h : int))
 ;;
 
 let heap_sort data size =
@@ -57,7 +57,7 @@ let heap_sort data size =
          Heap.add h (Data.next data)
        done;
        for _ = 1 to size do
-         ignore (Heap.pop_exn h)
+         ignore (Heap.pop_exn h : int)
        done;
        assert (Heap.is_empty h))
 ;;

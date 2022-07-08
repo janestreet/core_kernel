@@ -12,13 +12,13 @@ module Stable = struct
 
   module V1 = struct
     module T = struct
-      type t = string [@@deriving bin_io, compare, equal, hash, sexp]
+      type t = string [@@deriving bin_io, compare, equal, hash, sexp, stable_witness]
 
       include (val Comparator.V1.make ~compare ~sexp_of_t)
     end
 
     include T
-    include Comparable.V1.Make (T)
+    include Comparable.V1.With_stable_witness.Make (T)
 
     let for_testing = "5a863fc1-67b7-3a0a-dc90-aca2995afbf9"
   end
@@ -111,14 +111,15 @@ module T = struct
 
   let create ~hostname ~pid =
     let digest =
-      let time = Time.now () in
+      let time = Time_float.now () in
       let counter = next_counter () in
       let base =
         String.concat
           ~sep:"-"
           [ hostname
           ; Int.to_string pid
-          ; Float.to_string_12 (Time.Span.to_sec (Time.to_span_since_epoch time))
+          ; Float.to_string_12
+              (Time_float.Span.to_sec (Time_float.to_span_since_epoch time))
           ; Int.to_string counter
           ]
       in

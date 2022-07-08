@@ -100,6 +100,37 @@ let%expect_test "concat" =
     (1 2 3 4 5 6) |}]
 ;;
 
+let%expect_test "nth" =
+  let test n list = print_s [%sexp (nth list n : int option)] in
+  test (-1) [ 1 ];
+  test 0 [ 1; 2; 3 ];
+  test 2 [ 1; 2; 3 ];
+  test 3 [ 1; 2; 3 ];
+  [%expect {|
+    ()
+    (1)
+    (3)
+    () |}]
+;;
+
+let%expect_test "nth_exn" =
+  let test n list =
+    print_s [%sexp (Or_error.try_with (fun () -> nth_exn list n) : int Or_error.t)]
+  in
+  test (-1) [ 1 ];
+  test 0 [ 1; 2; 3 ];
+  test 2 [ 1; 2; 3 ];
+  test 3 [ 1; 2; 3 ];
+  [%expect
+    {|
+    (Error
+     (Invalid_argument "Nonempty_list.nth_exn -1 called on list of length 1"))
+    (Ok 1)
+    (Ok 3)
+    (Error
+     (Invalid_argument "Nonempty_list.nth_exn 3 called on list of length 3")) |}]
+;;
+
 let%expect_test "last" =
   let test list = print_s [%sexp (last list : int)] in
   test [ 1 ];
