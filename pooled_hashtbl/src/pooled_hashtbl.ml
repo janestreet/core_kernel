@@ -593,8 +593,8 @@ let iteri =
         raise exn)
 ;;
 
-let iter t ~f = iteri t ~f:(fun ~key:_ ~data -> f data)
-let iter_keys t ~f = iteri t ~f:(fun ~key ~data:_ -> f key)
+let iter t ~f = iteri t ~f:(fun ~key:_ ~data -> f data) [@nontail]
+let iter_keys t ~f = iteri t ~f:(fun ~key ~data:_ -> f key) [@nontail]
 
 let rec choose_nonempty t i =
   let entry = table_get t.table i in
@@ -682,10 +682,10 @@ let sexp_of_t sexp_of_k sexp_of_d t =
 let existsi t ~f =
   with_return (fun r ->
     iteri t ~f:(fun ~key ~data -> if f ~key ~data then r.return true);
-    false)
+    false) [@nontail]
 ;;
 
-let exists t ~f = existsi t ~f:(fun ~key:_ ~data -> f data)
+let exists t ~f = existsi t ~f:(fun ~key:_ ~data -> f data) [@nontail]
 let for_alli t ~f = not (existsi t ~f:(fun ~key ~data -> not (f ~key ~data)))
 let for_all t ~f = not (existsi t ~f:(fun ~key:_ ~data -> not (f data)))
 

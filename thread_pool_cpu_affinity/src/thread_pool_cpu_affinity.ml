@@ -9,8 +9,8 @@ module Cpuset = struct
 
       let validate t =
         Validate.first_failure
-          (Int.validate_lbound ~min:(Incl 1) (Int.Set.length t))
-          (Int.Set.to_list t
+          (Int.validate_lbound ~min:(Incl 1) (Set.length t))
+          (Set.to_list t
            |> List.map ~f:Int.validate_non_negative
            |> Validate.name_list "Thread_pool_cpuset")
       ;;

@@ -87,6 +87,68 @@ let%expect_test "zip_exn" =
     (Error (Invalid_argument "length mismatch in zip_exn: 2 <> 1")) |}]
 ;;
 
+let%expect_test "filter" =
+  let test a ~f = print_s [%sexp (filter a ~f : int list)] in
+  let is_even x = x % 2 = 0 in
+  test [ 1 ] ~f:is_even;
+  test [ 2 ] ~f:is_even;
+  test [ 1; 2 ] ~f:is_even;
+  test [ 2; 2; 3; 4 ] ~f:is_even;
+  [%expect {|
+    ()
+    (2)
+    (2)
+    (2 2 4) |}]
+;;
+
+let%expect_test "filteri" =
+  let test a ~f = print_s [%sexp (filteri a ~f : int list)] in
+  let index_plus_value_is_even i x = (i + x) % 2 = 0 in
+  test [ 1 ] ~f:index_plus_value_is_even;
+  test [ 2 ] ~f:index_plus_value_is_even;
+  test [ 1; 2 ] ~f:index_plus_value_is_even;
+  test [ 2; 2; 3; 4 ] ~f:index_plus_value_is_even;
+  test [ 2; 2; 4; 3 ] ~f:index_plus_value_is_even;
+  [%expect {|
+    ()
+    (2)
+    ()
+    (2)
+    (2 4 3) |}]
+;;
+
+let%expect_test "filter_map" =
+  let test a ~f = print_s [%sexp (filter_map a ~f : int list)] in
+  let double_if_even x = if x % 2 = 0 then Some (x * 2) else None in
+  test [ 1 ] ~f:double_if_even;
+  test [ 2 ] ~f:double_if_even;
+  test [ 1; 2 ] ~f:double_if_even;
+  test [ 2; 2; 3; 4 ] ~f:double_if_even;
+  [%expect {|
+    ()
+    (4)
+    (4)
+    (4 4 8) |}]
+;;
+
+let%expect_test "filter_mapi" =
+  let test a ~f = print_s [%sexp (filter_mapi a ~f : int list)] in
+  let double_if_index_plus_value_is_even i x =
+    if (i + x) % 2 = 0 then Some (x * 2) else None
+  in
+  test [ 1 ] ~f:double_if_index_plus_value_is_even;
+  test [ 2 ] ~f:double_if_index_plus_value_is_even;
+  test [ 1; 2 ] ~f:double_if_index_plus_value_is_even;
+  test [ 2; 2; 3; 4 ] ~f:double_if_index_plus_value_is_even;
+  test [ 2; 2; 4; 3 ] ~f:double_if_index_plus_value_is_even;
+  [%expect {|
+    ()
+    (4)
+    ()
+    (4)
+    (4 8 6) |}]
+;;
+
 let%expect_test "concat" =
   let test lists = print_s [%sexp (concat lists : int t)] in
   test [ [ 1 ] ];
@@ -204,6 +266,14 @@ let%expect_test "min_elt' max_elt'" =
   [%expect {| 1 |}];
   print_s [%sexp (max_elt' ~compare l : int)];
   [%expect {| 4 |}]
+;;
+
+let%expect_test "map_add_multi" =
+  let map = map_of_alist_multi [ 0, 0; 0, 1; 1, 1 ] ~comparator:(module Int) in
+  print_s [%sexp (map : int t Int.Map.t)];
+  [%expect {| ((0 (1 0)) (1 (1))) |}];
+  print_s [%sexp (map_add_multi map ~key:1 ~data:0 : int t Int.Map.t)];
+  [%expect {| ((0 (1 0)) (1 (0 1))) |}]
 ;;
 
 let%expect_test "map_of_alist_multi" =
@@ -484,6 +554,122 @@ let%expect_test "Reversed.rev_mapi" =
   [%expect {| (6/1 5/0) |}];
   test [ 5 ];
   [%expect {| (5/0) |}]
+;;
+
+let%expect_test "init" =
+  let test n =
+    Nonempty_list.init n ~f:Int.to_string |> [%sexp_of: string Nonempty_list.t] |> print_s
+  in
+  test 4;
+  [%expect {| (0 1 2 3) |}];
+  test 3;
+  [%expect {| (0 1 2) |}];
+  test 2;
+  [%expect {| (0 1) |}];
+  test 1;
+  [%expect {| (0) |}];
+  Expect_test_helpers_core.require_does_raise [%here] (fun () -> test 0);
+  [%expect {| (Invalid_argument "Nonempty_list.init 0") |}];
+  Expect_test_helpers_core.require_does_raise [%here] (fun () -> test (-1));
+  [%expect {| (Invalid_argument "Nonempty_list.init -1") |}];
+  ()
+;;
+
+let%expect_test "iteri" =
+  let test xs = Nonempty_list.iteri xs ~f:(fun i n -> printf "%d/%d " n i) in
+  test [ 5; 6; 7; 8 ];
+  [%expect {| 5/0 6/1 7/2 8/3 |}];
+  test [ 5; 6; 7 ];
+  [%expect {| 5/0 6/1 7/2 |}];
+  test [ 5; 6 ];
+  [%expect {| 5/0 6/1 |}];
+  test [ 5 ];
+  [%expect {| 5/0 |}]
+;;
+
+let%expect_test "findi" =
+  let test k v =
+    Nonempty_list.init 3 ~f:(fun x -> x * x)
+    |> findi ~f:(fun i x -> i = k && x = v)
+    |> printf !"%{sexp: (int * int) option}"
+  in
+  test 0 0;
+  [%expect {| ((0 0)) |}];
+  test 0 1;
+  [%expect {| () |}];
+  test 1 1;
+  [%expect {| ((1 1)) |}];
+  test 1 2;
+  [%expect {| () |}];
+  test 2 4;
+  [%expect {| ((2 4)) |}];
+  test 2 5;
+  [%expect {| () |}];
+  ()
+;;
+
+let%expect_test "find_mapi" =
+  let test n =
+    Nonempty_list.init 5 ~f:(fun x -> x * x)
+    |> find_mapi ~f:(fun i x -> if i = n then Some x else None)
+    |> printf !"%{sexp: int option}"
+  in
+  test 0;
+  [%expect {| (0) |}];
+  test 2;
+  [%expect {| (4) |}];
+  test 4;
+  [%expect {| (16) |}];
+  test 6;
+  [%expect {| () |}];
+  ()
+;;
+
+let%expect_test "counti" =
+  let test l = l |> counti ~f:(fun i x -> i = x) |> printf !"%d" in
+  test [ 0; 1; 2 ];
+  [%expect {| 3 |}];
+  test [ 9; 1; 2 ];
+  [%expect {| 2 |}];
+  test [ 9; 1; 9 ];
+  [%expect {| 1 |}];
+  test [ 9; 9; 9 ];
+  [%expect {| 0 |}];
+  ()
+;;
+
+let%expect_test "for_alli" =
+  let test l = l |> for_alli ~f:(fun i x -> i = x) |> printf !"%b" in
+  test [ 0; 1; 2 ];
+  [%expect {| true |}];
+  test [ 9; 1; 2 ];
+  [%expect {| false |}];
+  test [ 9; 1; 9 ];
+  [%expect {| false |}];
+  test [ 9; 9; 9 ];
+  [%expect {| false |}];
+  ()
+;;
+
+let%expect_test "existsi" =
+  let test l = l |> existsi ~f:(fun i x -> i = x) |> printf !"%b" in
+  test [ 0; 1; 2 ];
+  [%expect {| true |}];
+  test [ 9; 1; 2 ];
+  [%expect {| true |}];
+  test [ 9; 1; 9 ];
+  [%expect {| true |}];
+  test [ 9; 9; 9 ];
+  [%expect {| false |}];
+  ()
+;;
+
+let%expect_test "foldi" =
+  Nonempty_list.init 5 ~f:(fun x -> x * x)
+  |> foldi ~init:[] ~f:(fun i acc x -> (i, x) :: acc)
+  |> List.rev
+  |> printf !"%{sexp: (int * int) list}";
+  [%expect {| ((0 0) (1 1) (2 4) (3 9) (4 16)) |}]
 ;;
 
 (* Since the behavior of [Option] functions differs fundamentally between empty and

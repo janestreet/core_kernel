@@ -178,8 +178,8 @@ let make_param_optional_comma_separated
     ~doc:[%string {|%{doc} (can be comma-separated values: %{options})|}]
 ;;
 
-module Make_stringable (M : S) = struct
-  let to_string = to_string_hum (module M)
+module Make_of_string (M : S_to_string) = struct
+  let to_string = M.to_string
 
   let of_string =
     let known_values =
@@ -196,4 +196,12 @@ module Make_stringable (M : S) = struct
         raise_s [%message "Unknown value." s (known_values : string list)]
       | Some t -> t
   ;;
+end
+
+module Make_stringable (M : S) = struct
+  include Make_of_string (struct
+      include M
+
+      let to_string = to_string_hum (module M)
+    end)
 end

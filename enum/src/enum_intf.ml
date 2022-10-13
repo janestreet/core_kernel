@@ -18,6 +18,7 @@ module type Single = sig
 end
 
 module type S = Command.Enumerable_sexpable
+module type S_to_string = Command.Enumerable_stringable
 
 module type Enum = sig
   module type S = S
@@ -62,8 +63,13 @@ module type Enum = sig
     -> 'a t
     -> 'a Command.Arg_type.t
 
-  (** the sexp representation of M.t must be an sexp atom *)
+  (** Defines [to_string] and [of_string] functions for [M], based on [M.sexp_of_t] and
+      [M.all]. The sexp representation of [M.t] must be a sexp atom. *)
   module Make_stringable (M : S) : Stringable with type t := M.t
+
+  (** Defines an [of_string] function for [M], using [M.all] and [M.to_string]. Does not
+      require [M] to be sexpable. *)
+  module Make_of_string (M : S_to_string) : Stringable with type t := M.t
 
   module Single : sig
     module type S = Sexp_of

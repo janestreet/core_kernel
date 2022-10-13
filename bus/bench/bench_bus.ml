@@ -3,7 +3,7 @@ open Bus
 
 let create_with_subscribers (type a) (arity : a Callback_arity.t) ~num_subscribers =
   let t =
-    create
+    create_exn
       [%here]
       arity
       ~on_subscription_after_first_write:Allow
@@ -20,6 +20,7 @@ let create_with_subscribers (type a) (arity : a Callback_arity.t) ~num_subscribe
           ~f:
             (match arity with
              | Arity1 -> fun _ -> ()
+             | Arity1_local -> fun _ -> ()
              | Arity2 -> fun _ _ -> ()
              | Arity3 -> fun _ _ _ -> ()
              | Arity4 -> fun _ _ _ _ -> ()
@@ -30,11 +31,11 @@ let create_with_subscribers (type a) (arity : a Callback_arity.t) ~num_subscribe
 
 let create arity ~num_subscribers = fst (create_with_subscribers arity ~num_subscribers)
 
-let%bench_fun "Bus.create (Arity 1)" =
+let%bench_fun "Bus.create_exn (Arity 1)" =
   fun () -> ignore (create Arity1 ~num_subscribers:0 : _ Read_write.t)
 ;;
 
-let%bench_fun "Bus.create (Arity 4)" =
+let%bench_fun "Bus.create_exn (Arity 4)" =
   fun () -> ignore (create Arity4 ~num_subscribers:0 : _ Read_write.t)
 ;;
 

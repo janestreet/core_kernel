@@ -633,9 +633,9 @@ struct
           assert (String.equal (to_string buf) "123abcDEF" && String.equal !sub "abc");
           sub := ""
         in
-        Iobuf.protect_window_and_bounds buf ~f:(fun buf -> f buf 3);
+        Iobuf.protect_window_bounds_and_buffer buf ~f:(fun buf -> f buf 3);
         check_result_and_reset ();
-        Iobuf.protect_window_and_bounds_1 buf 3 ~f;
+        Iobuf.protect_window_bounds_and_buffer_1 buf 3 ~f;
         check_result_and_reset ())
   ;;
 
@@ -654,8 +654,9 @@ struct
         assert (String.equal (to_string buf) "123abcDEF" && String.equal !sub "abc");
         sub := ""
     in
-    test_and_reset (fun () -> Iobuf.protect_window_and_bounds buf ~f:(fun buf -> f buf 3));
-    test_and_reset (fun () -> Iobuf.protect_window_and_bounds_1 buf 3 ~f)
+    test_and_reset (fun () ->
+      Iobuf.protect_window_bounds_and_buffer buf ~f:(fun buf -> f buf 3));
+    test_and_reset (fun () -> Iobuf.protect_window_bounds_and_buffer_1 buf 3 ~f)
   ;;
 
   let%test_unit _ =
@@ -2656,7 +2657,7 @@ let%test_module "allocation" =
 let%test_unit "SEGV bug repro" =
   let tmp = Iobuf.create ~len:10000000 in
   Iobuf.advance tmp (Iobuf.length tmp - 5);
-  Iobuf.protect_window_and_bounds tmp ~f:(fun tmp ->
+  Iobuf.protect_window_bounds_and_buffer tmp ~f:(fun tmp ->
     let tmp2 = Iobuf.create ~len:5 in
     Iobuf.set_bounds_and_buffer ~src:tmp2 ~dst:tmp);
   ignore (Iobuf.Consume.To_bytes.subo (Iobuf.read_only tmp) : Bytes.t)

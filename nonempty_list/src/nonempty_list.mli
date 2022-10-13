@@ -5,14 +5,16 @@ open Core
     [Stable.V3] module below).
 *)
 type 'a t = ( :: ) of 'a * 'a list
-[@@deriving compare, equal, sexp, sexp_grammar, hash, quickcheck, typerep]
+[@@deriving compare, equal, sexp, sexp_grammar, hash, quickcheck, typerep, bin_io]
 
 include Comparator.Derived with type 'a t := 'a t
 include Container.S1 with type 'a t := 'a t
 include Invariant.S1 with type 'a t := 'a t
 include Monad.S with type 'a t := 'a t
+include Indexed_container.S1 with type 'a t := 'a t
 
 val create : 'a -> 'a list -> 'a t
+val init : int -> f:(int -> 'a) -> 'a t
 val of_list : 'a list -> 'a t option
 val of_list_error : 'a list -> 'a t Or_error.t
 val of_list_exn : 'a list -> 'a t
@@ -29,6 +31,10 @@ val unzip : ('a * 'b) t -> 'a t * 'b t
 val zip : 'a t -> 'b t -> ('a * 'b) t List.Or_unequal_lengths.t
 val zip_exn : 'a t -> 'b t -> ('a * 'b) t
 val mapi : 'a t -> f:(int -> 'a -> 'b) -> 'b t
+val filter : 'a t -> f:('a -> bool) -> 'a list
+val filteri : 'a t -> f:(int -> 'a -> bool) -> 'a list
+val filter_map : 'a t -> f:('a -> 'b option) -> 'b list
+val filter_mapi : 'a t -> f:(int -> 'a -> 'b option) -> 'b list
 val concat : 'a t t -> 'a t
 val concat_map : 'a t -> f:('a -> 'b t) -> 'b t
 val last : 'a t -> 'a
@@ -37,6 +43,7 @@ val to_sequence : 'a t -> 'a Sequence.t
 val sort : 'a t -> compare:('a -> 'a -> int) -> 'a t
 val stable_sort : 'a t -> compare:('a -> 'a -> int) -> 'a t
 val dedup_and_sort : compare:('a -> 'a -> int) -> 'a t -> 'a t
+val iteri : 'a t -> f:(int -> 'a -> unit) -> unit
 val fold_right : 'a t -> init:'b -> f:('a -> 'b -> 'b) -> 'b
 val folding_map : 'a t -> init:'b -> f:('b -> 'a -> 'b * 'c) -> 'c t
 
@@ -46,12 +53,17 @@ val min_elt' : 'a t -> compare:('a -> 'a -> int) -> 'a
 
 val max_elt' : 'a t -> compare:('a -> 'a -> int) -> 'a
 
+(** Like [Map.add_multi], but comes with a guarantee that the range of the returned map is
+    all nonempty lists.
+*)
+val map_add_multi : ('k, 'v t, 'cmp) Map.t -> key:'k -> data:'v -> ('k, 'v t, 'cmp) Map.t
+
 (** Like [Map.of_alist_multi], but comes with a guarantee that the range of the returned
     map is all nonempty lists.
 *)
 val map_of_alist_multi
   :  ('k * 'v) list
-  -> comparator:('k, 'cmp) Map.comparator
+  -> comparator:('k, 'cmp) Comparator.Module.t
   -> ('k, 'v t, 'cmp) Map.t
 
 (** Like [Map.of_sequence_multi], but comes with a guarantee that the range of the
@@ -59,7 +71,7 @@ val map_of_alist_multi
 *)
 val map_of_sequence_multi
   :  ('k * 'v) Sequence.t
-  -> comparator:('k, 'cmp) Map.comparator
+  -> comparator:('k, 'cmp) Comparator.Module.t
   -> ('k, 'v t, 'cmp) Map.t
 
 (** Like [Result.combine_errors] but for non-empty lists *)

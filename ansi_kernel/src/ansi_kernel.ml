@@ -1,25 +1,54 @@
+module Stable = struct
+  open! Core.Core_stable
+
+  module Color_256 = struct
+    module V1 = Color_256.Stable.V1
+  end
+
+  module Color = struct
+    module V1 = struct
+      type primary =
+        [ `Black
+        | `Red
+        | `Green
+        | `Yellow
+        | `Blue
+        | `Magenta
+        | `Cyan
+        | `White
+        ]
+      [@@deriving sexp, compare, hash, equal]
+
+      type t =
+        [ primary
+        | `Color_256 of Color_256.V1.t
+        ]
+      [@@deriving sexp, compare, hash, equal]
+    end
+  end
+
+  module Attr = struct
+    module V1 = struct
+      type t =
+        [ `Bright
+        | `Dim
+        | `Underscore
+        | `Reverse
+        | Color.V1.t
+        | `Bg of Color.V1.t
+        ]
+      [@@deriving sexp, compare, hash, equal]
+    end
+  end
+end
+
 open! Core
 module Color_256 = Color_256
 
 (* NOTE: assorted content lifted from lib/console/src/console.ml *)
 module Color = struct
-  type primary =
-    [ `Black
-    | `Red
-    | `Green
-    | `Yellow
-    | `Blue
-    | `Magenta
-    | `Cyan
-    | `White
-    ]
-  [@@deriving sexp_of, compare, hash, equal]
-
-  type t =
-    [ primary
-    | `Color_256 of Color_256.t
-    ]
-  [@@deriving sexp_of, compare, hash, equal]
+  type primary = Stable.Color.V1.primary [@@deriving sexp_of, compare, hash, equal]
+  type t = Stable.Color.V1.t [@@deriving sexp_of, compare, hash, equal]
 
   let to_int_list = function
     | `Black -> [ 30 ]
@@ -35,15 +64,7 @@ module Color = struct
 end
 
 module Attr = struct
-  type t =
-    [ `Bright
-    | `Dim
-    | `Underscore
-    | `Reverse
-    | Color.t
-    | `Bg of Color.t
-    ]
-  [@@deriving sexp_of, compare, hash, equal]
+  type t = Stable.Attr.V1.t [@@deriving sexp_of, compare, hash, equal]
 
   let to_int_list = function
     | `Bright -> [ 1 ]

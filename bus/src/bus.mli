@@ -3,9 +3,7 @@
     [unsubscribe].
 
     [create] returns a [Bus.Read_write.t], which you can use to [write] values to the bus.
-    [write] calls the callbacks of all current subscribers before returning.
-
-    In a [('callback, 'phantom) Bus.t], ['phantom] is a read-write phantom type that
+    [write] calls the callbacks of all current subscribers before returning. In a [('callback, 'phantom) Bus.t], ['phantom] is a read-write phantom type that
     controls whether one can read values from or write values to the bus.  The phantom
     type states the capabilities one could ever have access to, not the capabilities that
     are immediately available.  In particular, if one wants to subscribe to a
@@ -22,10 +20,15 @@ open! Core
     allocation.
 
     When reading the bus interface, keep in mind that each ['callback] is limited, through
-    [create], to the types exposed by the variants in [Callback_arity]. *)
+    [create], to the types exposed by the variants in [Callback_arity].
+
+    Currently, only a 1-arity callback is provided with [@local] annotations in order to
+    avoid an explosion due to the permutations of [@local] args.  It is also relatively
+    cheap to make the one local arg a record with multiple fields. *)
 module Callback_arity : sig
   type _ t =
     | Arity1 : ('a -> unit) t
+    | Arity1_local : (('a[@local]) -> unit) t
     | Arity2 : ('a -> 'b -> unit) t
     | Arity3 : ('a -> 'b -> 'c -> unit) t
     | Arity4 : ('a -> 'b -> 'c -> 'd -> unit) t
@@ -58,7 +61,7 @@ end
 
 val read_only : ('callback, _) t -> 'callback Read_only.t
 
-(** In [create [%here] ArityN ~on_subscription_after_first_write ~on_callback_raise],
+(** In [create_exn [%here] ArityN ~on_subscription_after_first_write ~on_callback_raise],
     [[%here]] is stored in the resulting bus, and contained in [%sexp_of: t], which can
     help with debugging.
 
@@ -71,8 +74,11 @@ val read_only : ('callback, _) t -> 'callback Read_only.t
     exception.
 
     If [on_callback_raise] raises, then the exception is raised to [write] and the bus is
-    closed. *)
-val create
+    closed.
+
+    [create_exn] will raise when using [Allow_and_send_last_value] with any
+    [Callback_arity] that uses [@local] args, because those args cannot be stored. *)
+val create_exn
   :  ?name:Info.t
   -> Source_code_position.t
   -> 'callback Callback_arity.t
@@ -96,6 +102,7 @@ val close : 'callback Read_write.t -> unit
     from within a callback on [t] or when [is_closed t]. *)
 
 val write : ('a -> unit) Read_write.t -> 'a -> unit
+val write_local : (('a[@local]) -> unit) Read_write.t -> ('a[@local]) -> unit
 val write2 : ('a -> 'b -> unit) Read_write.t -> 'a -> 'b -> unit
 val write3 : ('a -> 'b -> 'c -> unit) Read_write.t -> 'a -> 'b -> 'c -> unit
 val write4 : ('a -> 'b -> 'c -> 'd -> unit) Read_write.t -> 'a -> 'b -> 'c -> 'd -> unit

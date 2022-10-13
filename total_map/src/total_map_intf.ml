@@ -155,6 +155,18 @@ module type Total_map = sig
     val sequence : ('key, 'a A.t, 'cmp, 'enum) t -> ('key, 'a, 'cmp, 'enum) t A.t
   end
 
+  module Sequence2 (A : Applicative.S2) : sig
+    val sequence
+      :  ('key, ('a, 'b) A.t, 'cmp, 'enum) t
+      -> (('key, 'a, 'cmp, 'enum) t, 'b) A.t
+  end
+
+  module Sequence3 (A : Applicative.S3) : sig
+    val sequence
+      :  ('key, ('a, 'b, 'c) A.t, 'cmp, 'enum) t
+      -> (('key, 'a, 'cmp, 'enum) t, 'b, 'c) A.t
+  end
+
   (** The only reason that the Applicative interface isn't included here is that we don't
       have an [Applicative.S4]. *)
 

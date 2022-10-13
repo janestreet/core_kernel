@@ -154,6 +154,7 @@ module Unstable = struct
   type nonrec comparator_witness = comparator_witness
 
   let comparator = comparator
+  let t_sexp_grammar = string_sexp_grammar
 end
 
 let arg_type = Command.Arg_type.create of_string

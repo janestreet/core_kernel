@@ -1,6 +1,14 @@
+module Stable = struct
+  open! Core.Core_stable
+
+  module V1 = struct
+    type t = int [@@deriving sexp, compare, hash, equal]
+  end
+end
+
 open Core
 
-type t = int [@@deriving sexp_of, compare, hash, equal]
+type t = Stable.V1.t [@@deriving sexp_of, compare, hash, equal]
 
 (* Internal type for turning palette values into RGB levels -- typically
    we want to convert these into 24-bit values (8-bits per channel) or into

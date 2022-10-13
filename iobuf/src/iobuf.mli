@@ -284,30 +284,30 @@ val flip_hi : (_, seek) t -> unit
 
 val bounded_flip_hi : (_, seek) t -> Hi_bound.t -> unit
 
-(** [protect_window_and_bounds t ~f] calls [f t] with [t]'s bounds set to its current
+(** [protect_window_bounds_and_buffer t ~f] calls [f t] with [t]'s bounds set to its current
     window, and restores [t]'s window, bounds, and buffer afterward. *)
-val protect_window_and_bounds : ('rw, no_seek) t -> f:(('rw, seek) t -> 'a) -> 'a
+val protect_window_bounds_and_buffer : ('rw, no_seek) t -> f:(('rw, seek) t -> 'a) -> 'a
 
-(** [protect_window_and_bounds_1 t x ~f] is a more efficient version of
-    [protect_window_and_bounds t ~f:(fun t -> f t x)]. *)
-val protect_window_and_bounds_1
+(** [protect_window_bounds_and_buffer_1 t x ~f] is a more efficient version of
+    [protect_window_bounds_and_buffer t ~f:(fun t -> f t x)]. *)
+val protect_window_bounds_and_buffer_1
   :  ('rw, no_seek) t
   -> 'a
   -> f:(('rw, seek) t -> 'a -> 'b)
   -> 'b
 
-(** [protect_window_and_bounds_2 t x y ~f] is a more efficient version of
-    [protect_window_and_bounds t ~f:(fun t -> f t x y)]. *)
-val protect_window_and_bounds_2
+(** [protect_window_bounds_and_buffer_2 t x y ~f] is a more efficient version of
+    [protect_window_bounds_and_buffer t ~f:(fun t -> f t x y)]. *)
+val protect_window_bounds_and_buffer_2
   :  ('rw, no_seek) t
   -> 'a
   -> 'b
   -> f:(('rw, seek) t -> 'a -> 'b -> 'c)
   -> 'c
 
-(** [protect_window_and_bounds_3 t x y z ~f] is a more efficient version of
-    [protect_window_and_bounds t ~f:(fun t -> f t x y z)]. *)
-val protect_window_and_bounds_3
+(** [protect_window_bounds_and_buffer_3 t x y z ~f] is a more efficient version of
+    [protect_window_bounds_and_buffer t ~f:(fun t -> f t x y z)]. *)
+val protect_window_bounds_and_buffer_3
   :  ('rw, no_seek) t
   -> 'a
   -> 'b
@@ -634,7 +634,7 @@ module Expert : sig
     -> dst:('data, seek) t
     -> unit
 
-  (** Similar to [protect_window_and_bounds], but does not save/restore the buffer or
+  (** Similar to [protect_window_bounds_and_buffer], but does not save/restore the buffer or
       bounds. Mixing this with functions like [set_bounds_and_buffer] or [narrow] is
       unsafe; you should not modify anyything but the window inside [f]. *)
   val protect_window : ('rw, _) t -> f:(('rw, seek) t -> 'a) -> 'a

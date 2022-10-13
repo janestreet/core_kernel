@@ -107,7 +107,7 @@ let fold t ~init ~f =
   in
   match t.heap with
   | None -> init
-  | Some node -> loop init [ node ]
+  | Some node -> loop init [ node ] [@nontail]
 ;;
 
 let length t = t.length
@@ -138,7 +138,10 @@ let fold_until = C.fold_until
 (* We could avoid the intermediate list here, but it doesn't seem like a big deal. *)
 let to_array = C.to_array
 
-let of_fold c ~compare fold =
+type ('a, 'at, 'accum) folder =
+  'at -> init:'accum -> f:(('accum -> 'a -> 'accum)[@ocaml.local]) -> 'accum
+
+let of_fold c ~compare (fold : _ folder) =
   let h = create ~compare in
   fold c ~init:h ~f:add
 ;;

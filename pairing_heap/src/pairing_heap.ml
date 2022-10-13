@@ -465,7 +465,7 @@ let fold t ~init ~f =
         let to_visit = Node.sibling ~pool node :: Node.child ~pool node :: rest in
         loop (f acc (Node.value_exn ~pool node)) to_visit)
   in
-  loop init [ t.root ]
+  loop init [ t.root ] [@nontail]
 ;;
 
 (* almost identical to fold, copied for speed purposes *)
@@ -482,7 +482,7 @@ let iter t ~f =
         let to_visit = Node.sibling ~pool node :: Node.child ~pool node :: rest in
         loop to_visit)
   in
-  loop [ t.root ]
+  loop [ t.root ] [@nontail]
 ;;
 
 let length t = Node.Pool.length t.pool

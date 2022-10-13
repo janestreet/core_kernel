@@ -10,7 +10,7 @@ module ISet = struct
       assert (lo <= hi);
       let st = ref st in
       for i = lo to hi do
-        st := add !st i
+        st := Set.add !st i
       done;
       !st)
   ;;
@@ -23,12 +23,12 @@ let test_random_0_99 () =
     let int_set = ref Int_set.empty in
     for _ = 0 to 99 do
       let n = Random.int 100 in
-      set := ISet.add !set n;
+      set := Set.add !set n;
       int_set := Int_set.add !int_set n
     done;
     assert (ISet.equal !set (ISet.of_int_set !int_set));
     (* mem *)
-    ISet.iter !set ~f:(fun n -> assert (Int_set.mem !int_set n));
+    Set.iter !set ~f:(fun n -> assert (Int_set.mem !int_set n));
     (* ranges returns normalized *)
     let ranges = Int_set.ranges !int_set in
     let discrete (x1, x2) (y1, y2) = x2 + 1 < y1 || y2 + 1 < x1 in
@@ -40,8 +40,8 @@ let test_random_0_99 () =
     in
     f ranges;
     (* max and min *)
-    assert (Int_set.max !int_set = ISet.max_elt !set);
-    assert (Int_set.min !int_set = ISet.min_elt !set)
+    assert (Int_set.max !int_set = Set.max_elt !set);
+    assert (Int_set.min !int_set = Set.min_elt !set)
   in
   for _ = 0 to 999 do
     f ()

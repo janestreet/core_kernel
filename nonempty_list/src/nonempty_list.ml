@@ -158,7 +158,7 @@ module Unstable = Stable.V3
 
 module T' = struct
   type 'a t = 'a Stable.V3.t = ( :: ) of 'a * 'a list
-  [@@deriving compare, equal, hash, quickcheck, typerep]
+  [@@deriving compare, equal, hash, quickcheck, typerep, bin_io]
 
   let sexp_of_t = Stable.V3.sexp_of_t
   let t_of_sexp = Stable.V3.t_of_sexp
@@ -179,6 +179,7 @@ module T' = struct
   ;;
 
   let fold (hd :: tl) ~init ~f = List.fold tl ~init:(f init hd) ~f
+  let foldi = `Define_using_fold
 
   let iter =
     `Custom
@@ -187,6 +188,7 @@ module T' = struct
          List.iter tl ~f)
   ;;
 
+  let iteri = `Define_using_fold
   let length = `Custom (fun (_ :: tl) -> 1 + List.length tl)
 end
 
@@ -199,8 +201,8 @@ include struct
   (* [Container.Make] would fold through the tail and re-cons every elt. *)
   let to_list = to_list
 
-  module From_container_make = Container.Make (T')
-  open From_container_make
+  module From_indexed_container_make = Indexed_container.Make (T')
+  open From_indexed_container_make
 
   let mem = mem
   let length = length
@@ -217,6 +219,13 @@ include struct
   let to_array = to_array
   let min_elt = min_elt
   let max_elt = max_elt
+  let iteri = iteri
+  let find_mapi = find_mapi
+  let findi = findi
+  let counti = counti
+  let for_alli = for_alli
+  let existsi = existsi
+  let foldi = foldi
 end
 
 let invariant f t = iter t ~f
@@ -241,6 +250,34 @@ let mapi (hd :: tl) ~f =
   (* Being overly cautious about evaluation order *)
   let hd = f 0 hd in
   hd :: List.mapi tl ~f:(fun i x -> f (i + 1) x)
+;;
+
+let filter_map (hd :: tl) ~f : _ list =
+  match f hd with
+  | None -> List.filter_map tl ~f
+  | Some hd -> hd :: List.filter_map tl ~f
+;;
+
+let filter_mapi (hd :: tl) ~f : _ list =
+  let hd = f 0 hd in
+  let[@inline always] f i x = f (i + 1) x in
+  match hd with
+  | None -> List.filter_mapi tl ~f
+  | Some hd -> hd :: List.filter_mapi tl ~f
+;;
+
+let filter (hd :: tl) ~f : _ list =
+  match f hd with
+  | false -> List.filter tl ~f
+  | true -> hd :: List.filter tl ~f
+;;
+
+let filteri (hd :: tl) ~f : _ list =
+  let include_hd = f 0 hd in
+  let[@inline always] f i x = f (i + 1) x in
+  match include_hd with
+  | false -> List.filteri tl ~f
+  | true -> hd :: List.filteri tl ~f
 ;;
 
 let map t ~f = mapi t ~f:(fun (_ : int) x -> f x)
@@ -308,14 +345,15 @@ let min_elt' (hd :: tl) ~compare =
 
 let max_elt' t ~compare = min_elt' t ~compare:(fun x y -> compare y x)
 
+let map_add_multi map ~key ~data =
+  Map.update map key ~f:(function
+    | None -> singleton data
+    | Some t -> cons data t)
+;;
+
 let map_of_container_multi fold container ~comparator =
-  fold container ~init:(Map.empty comparator) ~f:(fun acc (key, value) ->
-    let t =
-      match Map.find acc key with
-      | None -> singleton value
-      | Some t -> create value (to_list t)
-    in
-    Map.set acc ~key ~data:t)
+  fold container ~init:(Map.empty comparator) ~f:(fun acc (key, data) ->
+    map_add_multi acc ~key ~data)
 ;;
 
 let map_of_alist_multi alist = map_of_container_multi List.fold alist
@@ -350,6 +388,15 @@ let rec rev_append xs acc =
   match (xs : _ Reversed_list.t) with
   | [] -> acc
   | hd :: tl -> rev_append tl (cons hd acc)
+;;
+
+let init n ~f =
+  if n < 1 then invalid_argf "Nonempty_list.init %d" n ();
+  (* [List.init] calls [f] on the highest index first and works its way down.
+     We do the same here. *)
+  let tl = List.init (n - 1) ~f:(fun i -> f (i + 1)) in
+  let hd = f 0 in
+  hd :: tl
 ;;
 
 module Reversed = struct

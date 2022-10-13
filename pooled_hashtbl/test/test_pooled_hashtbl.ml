@@ -3,11 +3,15 @@ open! Int.Replace_polymorphic_compare
 
 let%test_module _ =
   (module struct
-    module Hashtbl = Pooled_hashtbl.Make (struct
-        include Int
+    module Hashtbl = struct
+      include Pooled_hashtbl
 
-        let hash x = x
-      end)
+      include Pooled_hashtbl.Make (struct
+          include Int
+
+          let hash x = x
+        end)
+    end
 
     let%test_unit "growing test/copy test" =
       let n = 100_000 in

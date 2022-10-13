@@ -90,3 +90,9 @@ val to_rgb_int1k : t -> int * int * int
     un-does [of_rgb6_exn].  For others, it will return the closest matching
     value in the color-cube. *)
 val to_rgb6 : t -> int * int * int
+
+module Stable : sig
+  module V1 : sig
+    type nonrec t = t [@@deriving sexp, compare, hash, equal]
+  end
+end

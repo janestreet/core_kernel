@@ -279,3 +279,8 @@ let%bench_module "decimal" =
        let%bench_fun "with-gc" =
          (fun () -> sub_shared src)
      end) ]} *)
+
+let%bench_fun "protect_window_bounds_and_buffer" =
+  let iobuf = Iobuf.create ~len:1 in
+  fun () -> Iobuf.protect_window_bounds_and_buffer iobuf ~f:(fun _ -> ())
+;;

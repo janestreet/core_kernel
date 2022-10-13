@@ -80,7 +80,7 @@ let map2 t1 t2 ~f =
 
 let set t key data = Map.set t ~key ~data
 
-module Sequence (A : Applicative) = struct
+module Sequence3 (A : Applicative.S3) = struct
   let sequence t =
     List.fold
       (Map.to_alist t)
@@ -89,6 +89,9 @@ module Sequence (A : Applicative) = struct
         A.map2 acc data ~f:(fun acc data -> Map.set acc ~key ~data))
   ;;
 end
+
+module Sequence2 (A : Applicative.S2) = Sequence3 (Applicative.S2_to_S3 (A))
+module Sequence (A : Applicative) = Sequence2 (Applicative.S_to_S2 (A))
 
 include struct
   open Map

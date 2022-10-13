@@ -262,7 +262,7 @@ let resize t ~len =
 
 let unsafe_resize = if unsafe_is_safe then resize else unsafe_resize
 
-let protect_window_and_bounds t ~f =
+let protect_window_bounds_and_buffer t ~f =
   let lo = t.lo in
   let hi = t.hi in
   let lo_min = t.lo_min in
@@ -277,7 +277,7 @@ let protect_window_and_bounds t ~f =
     t.hi <- hi;
     t.lo_min <- lo_min;
     t.hi_max <- hi_max;
-    t.buf <- buf;
+    if not (phys_equal buf t.buf) then t.buf <- buf;
     result
   with
   | exn ->
@@ -285,11 +285,11 @@ let protect_window_and_bounds t ~f =
     t.hi <- hi;
     t.lo_min <- lo_min;
     t.hi_max <- hi_max;
-    t.buf <- buf;
+    if not (phys_equal buf t.buf) then t.buf <- buf;
     raise exn
 ;;
 
-let protect_window_and_bounds_1 t x ~f =
+let protect_window_bounds_and_buffer_1 t x ~f =
   let lo = t.lo in
   let hi = t.hi in
   let lo_min = t.lo_min in
@@ -304,7 +304,7 @@ let protect_window_and_bounds_1 t x ~f =
     t.hi <- hi;
     t.lo_min <- lo_min;
     t.hi_max <- hi_max;
-    t.buf <- buf;
+    if not (phys_equal buf t.buf) then t.buf <- buf;
     result
   with
   | exn ->
@@ -312,11 +312,11 @@ let protect_window_and_bounds_1 t x ~f =
     t.hi <- hi;
     t.lo_min <- lo_min;
     t.hi_max <- hi_max;
-    t.buf <- buf;
+    if not (phys_equal buf t.buf) then t.buf <- buf;
     raise exn
 ;;
 
-let protect_window_and_bounds_2 t x y ~f =
+let protect_window_bounds_and_buffer_2 t x y ~f =
   let lo = t.lo in
   let hi = t.hi in
   let lo_min = t.lo_min in
@@ -331,7 +331,7 @@ let protect_window_and_bounds_2 t x y ~f =
     t.hi <- hi;
     t.lo_min <- lo_min;
     t.hi_max <- hi_max;
-    t.buf <- buf;
+    if not (phys_equal buf t.buf) then t.buf <- buf;
     result
   with
   | exn ->
@@ -339,11 +339,11 @@ let protect_window_and_bounds_2 t x y ~f =
     t.hi <- hi;
     t.lo_min <- lo_min;
     t.hi_max <- hi_max;
-    t.buf <- buf;
+    if not (phys_equal buf t.buf) then t.buf <- buf;
     raise exn
 ;;
 
-let protect_window_and_bounds_3 t x y z ~f =
+let protect_window_bounds_and_buffer_3 t x y z ~f =
   let lo = t.lo in
   let hi = t.hi in
   let lo_min = t.lo_min in
@@ -358,7 +358,7 @@ let protect_window_and_bounds_3 t x y z ~f =
     t.hi <- hi;
     t.lo_min <- lo_min;
     t.hi_max <- hi_max;
-    t.buf <- buf;
+    if not (phys_equal buf t.buf) then t.buf <- buf;
     result
   with
   | exn ->
@@ -366,7 +366,7 @@ let protect_window_and_bounds_3 t x y z ~f =
     t.hi <- hi;
     t.lo_min <- lo_min;
     t.hi_max <- hi_max;
-    t.buf <- buf;
+    if not (phys_equal buf t.buf) then t.buf <- buf;
     raise exn
 ;;
 
@@ -447,22 +447,6 @@ let advance t len =
 
 let unsafe_advance = if unsafe_is_safe then advance else unsafe_advance
 
-external bigstring_unsafe_get : Bigstring.t -> pos:int -> char = "%caml_ba_unsafe_ref_1"
-
-external bigstring_unsafe_set
-  :  Bigstring.t
-  -> pos:int
-  -> char
-  -> unit
-  = "%caml_ba_unsafe_set_1"
-
-(* Note that we can get [buf.{pos}] inlined by ensuring that it's monomorphically typed,
-   but we can't always get the containing function inlined. *)
-(* Similarly, we need the following intermediate functions for the primitives to be
-   inlined into.  (Not intuitive, but apparently necessary.) *)
-let bigstring_unsafe_get b ~pos = bigstring_unsafe_get b ~pos
-let bigstring_unsafe_set b ~pos c = bigstring_unsafe_set b ~pos c
-
 module Char_elt = struct
   include Char
 
@@ -477,8 +461,8 @@ module T_src = struct
 
   let create = create
   let length = length
-  let[@inline] get t pos = bigstring_unsafe_get t.buf ~pos:(buf_pos_exn t ~len:1 ~pos)
-  let[@inline] set t pos c = bigstring_unsafe_set t.buf ~pos:(buf_pos_exn t ~len:1 ~pos) c
+  let[@inline] get t pos = Bigstring.unsafe_get t.buf (buf_pos_exn t ~len:1 ~pos)
+  let[@inline] set t pos c = Bigstring.unsafe_set t.buf (buf_pos_exn t ~len:1 ~pos) c
 end
 
 module Bytes_dst = struct
@@ -703,7 +687,7 @@ module Consume = struct
   open Bigstring
 
   let len = 1
-  let[@inline always] char t = uadv t len (bigstring_unsafe_get t.buf ~pos:(pos t len))
+  let[@inline always] char t = uadv t len (Bigstring.unsafe_get t.buf (pos t len))
   let[@inline always] uint8 t = uadv t len (unsafe_get_uint8 t.buf ~pos:(pos t len))
   let[@inline always] int8 t = uadv t len (unsafe_get_int8 t.buf ~pos:(pos t len))
   let len = 2
@@ -872,12 +856,12 @@ module Itoa = struct
     for pos = pos + len - 1 downto pos do
       let x = !int in
       int := !int / 10;
-      bigstring_unsafe_set t.buf ~pos (Char.unsafe_of_int (48 + (-x + (!int * 10))))
+      Bigstring.unsafe_set t.buf pos (Char.unsafe_of_int (48 + (-x + (!int * 10))))
     done
   ;;
 
   let unsafe_poke_negative_decimal t ~pos ~len int =
-    bigstring_unsafe_set t.buf ~pos '-';
+    Bigstring.unsafe_set t.buf pos '-';
     (* +1 and -1 to account for '-' *)
     unsafe_poke_negative_decimal_without_sign t ~pos:(pos + 1) ~len:(len - 1) int
   ;;
@@ -987,7 +971,7 @@ module Fill = struct
   let len = 1
 
   let[@inline always] char t c =
-    bigstring_unsafe_set t.buf c ~pos:(pos t len);
+    Bigstring.unsafe_set t.buf (pos t len) c;
     uadv t len
   ;;
 
@@ -1833,7 +1817,7 @@ module Unsafe = struct
     open Bigstring
 
     let len = 1
-    let[@inline always] char t = uadv t len (bigstring_unsafe_get t.buf ~pos:(upos t len))
+    let[@inline always] char t = uadv t len (Bigstring.unsafe_get t.buf (upos t len))
     let[@inline always] uint8 t = uadv t len (unsafe_get_uint8 t.buf ~pos:(upos t len))
     let[@inline always] int8 t = uadv t len (unsafe_get_int8 t.buf ~pos:(upos t len))
     let len = 2
@@ -2015,7 +1999,7 @@ module Unsafe = struct
     let len = 1
 
     let[@inline always] char t c =
-      bigstring_unsafe_set t.buf c ~pos:(upos t len);
+      Bigstring.unsafe_set t.buf (upos t len) c;
       uadv t len
     ;;
 
@@ -2238,7 +2222,7 @@ module Unsafe = struct
     open Bigstring
 
     let len = 1
-    let[@inline always] char t ~pos = bigstring_unsafe_get t.buf ~pos:(upos t ~len ~pos)
+    let[@inline always] char t ~pos = Bigstring.unsafe_get t.buf (upos t ~len ~pos)
     let[@inline always] uint8 t ~pos = unsafe_get_uint8 t.buf ~pos:(upos t ~len ~pos)
     let[@inline always] int8 t ~pos = unsafe_get_int8 t.buf ~pos:(upos t ~len ~pos)
     let len = 2
@@ -2444,10 +2428,7 @@ module Unsafe = struct
     open Bigstring
 
     let len = 1
-
-    let[@inline always] char t ~pos c =
-      bigstring_unsafe_set t.buf ~pos:(upos t ~len ~pos) c
-    ;;
+    let[@inline always] char t ~pos c = Bigstring.unsafe_set t.buf (upos t ~len ~pos) c
 
     let[@inline always] uint8_trunc t ~pos i =
       unsafe_set_uint8 t.buf ~pos:(upos t ~len ~pos) i

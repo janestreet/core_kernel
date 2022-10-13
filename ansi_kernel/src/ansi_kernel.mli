@@ -57,3 +57,18 @@ module With_all_attrs : sig
   val to_int_list : [< t ] -> int list
   val list_to_string : [< t ] list -> string
 end
+
+module Stable : sig
+  module Color : sig
+    module V1 : sig
+      type primary = Color.primary
+      type t = Color.t [@@deriving sexp, compare, hash, equal]
+    end
+  end
+
+  module Attr : sig
+    module V1 : sig
+      type t = Attr.t [@@deriving sexp, compare, hash, equal]
+    end
+  end
+end
