@@ -279,6 +279,14 @@ module With_integer_index = struct
     !result
   ;;
 
+  let to_alist t =
+    let result = ref [] in
+    for i = max_index t downto 0 do
+      result := (i, unsafe_get t i) :: !result
+    done;
+    !result
+  ;;
+
   let of_list xs =
     let t = create ~initial_capacity:(List.length xs) () in
     List.iter xs ~f:(push_back t);
@@ -485,15 +493,13 @@ module With_integer_index = struct
     let len1 = length t1 in
     let len2 = length t2 in
     let min_len = Int.min len1 len2 in
-    let rec go i =
-      if i < min_len
-      then (
-        match cmp (unsafe_get t1 i) (unsafe_get t2 i) with
-        | 0 -> go (i + 1)
-        | c -> c)
-      else Int.compare len1 len2
-    in
-    go 0
+    let result = ref 0 in
+    let i = ref 0 in
+    while !i < min_len && !result = 0 do
+      result := cmp (unsafe_get t1 !i) (unsafe_get t2 !i);
+      i := !i + 1
+    done;
+    if !result = 0 then Int.compare len1 len2 else !result
   ;;
 
   let unsafe_swap t i j =
@@ -550,6 +556,23 @@ module Make (M : Intable.S) = struct
   let next_free_index t = next_free_index t |> M.of_int_exn
   let iteri t ~f = iteri t ~f:(fun [@inline] int x -> f (M.of_int_exn int) x)
   let push_back_index t element = push_back_index t element |> M.of_int_exn
+
+  let to_alist t =
+    (* We could do:
+       {[
+         to_alist t |> List.map ~f:(fun (i, x) -> M.of_int_exn i, x)
+       ]}
+
+       at the expense of an extra allocation. This is a bit more copy-pasty,
+       but avoids that.
+    *)
+    let result = ref [] in
+    for i = max_index t downto 0 do
+      let m = M.of_int_exn i in
+      result := (m, unsafe_get t m) :: !result
+    done;
+    !result
+  ;;
 
   module Inplace = struct
     include Inplace

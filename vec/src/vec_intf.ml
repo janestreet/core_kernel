@@ -51,6 +51,7 @@ module type S = sig
   val peek_back_exn : 'a t -> 'a
   val iteri : 'a t -> f:(index -> 'a -> unit) -> unit
   val to_list : 'a t -> 'a list
+  val to_alist : 'a t -> (index * 'a) list
   val of_list : 'a list -> 'a t
   val of_array : 'a array -> 'a t
 

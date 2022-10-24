@@ -9,6 +9,10 @@ module Stable = struct
     module type S =
       Stable_V1_S with type ('key, 'a, 'cmp, 'enum) total_map := ('key, 'a, 'cmp, 'enum) t
 
+    module type For_include_functor =
+      Stable_V1_For_include_functor
+      with type ('key, 'a, 'cmp, 'enum) Total_map.total_map := ('key, 'a, 'cmp, 'enum) t
+
     module Make_with_witnesses (Key : Key_with_witnesses) = struct
       module Key = struct
         include Key
@@ -18,6 +22,10 @@ module Stable = struct
       type comparator_witness = Key.comparator_witness
       type enumeration_witness = Key.enumeration_witness
       type nonrec 'a t = 'a Key.Map.t [@@deriving bin_io, sexp, compare]
+    end
+
+    module Make_for_include_functor_with_witnesses (Key : Key_with_witnesses) = struct
+      module Total_map = Make_with_witnesses (Key)
     end
   end
 end
@@ -31,7 +39,15 @@ type ('key, 'a, 'cmp, 'enum) t = ('key, 'a, 'cmp, 'enum) Stable.V1.t
 module type S_plain =
   S_plain with type ('key, 'a, 'cmp, 'enum) total_map := ('key, 'a, 'cmp, 'enum) t
 
+module type For_include_functor_plain =
+  For_include_functor_plain
+  with type ('key, 'a, 'cmp, 'enum) Total_map.total_map := ('key, 'a, 'cmp, 'enum) t
+
 module type S = S with type ('key, 'a, 'cmp, 'enum) total_map := ('key, 'a, 'cmp, 'enum) t
+
+module type For_include_functor =
+  For_include_functor
+  with type ('key, 'a, 'cmp, 'enum) Total_map.total_map := ('key, 'a, 'cmp, 'enum) t
 
 let to_map t = t
 
@@ -133,6 +149,11 @@ module Make_plain_with_witnesses (Key : Key_plain_with_witnesses) = struct
     end)
 end
 
+module Make_for_include_functor_plain_with_witnesses (Key : Key_plain_with_witnesses) =
+struct
+  module Total_map = Make_plain_with_witnesses (Key)
+end
+
 module Make_with_witnesses (Key : Key_with_witnesses) = struct
   module Key = struct
     include Key
@@ -193,14 +214,26 @@ module Make_with_witnesses (Key : Key_with_witnesses) = struct
     end)
 end
 
+module Make_for_include_functor_with_witnesses (Key : Key_with_witnesses) = struct
+  module Total_map = Make_with_witnesses (Key)
+end
+
 module Make_plain (Key : Key_plain) = Make_plain_with_witnesses (struct
     include Key
     include Comparable.Make_plain (Key)
     include Enumeration.Make (Key)
   end)
 
+module Make_for_include_functor_plain (Key : Key_plain) = struct
+  module Total_map = Make_plain (Key)
+end
+
 module Make (Key : Key) = Make_with_witnesses (struct
     include Key
     include Comparable.Make_binable (Key)
     include Enumeration.Make (Key)
   end)
+
+module Make_for_include_functor (Key : Key) = struct
+  module Total_map = Make (Key)
+end
