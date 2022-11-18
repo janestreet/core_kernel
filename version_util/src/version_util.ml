@@ -92,6 +92,16 @@ end
 module Expert = struct
   let pad str n = str ^ String.make (n - String.length str) '\000'
 
+  let get_version_util ~contents_of_exe =
+    let%map.Option i =
+      String.substr_index contents_of_exe ~pattern:version_util_start_marker
+    in
+    String.slice contents_of_exe (i + String.length version_util_start_marker) (i + 4096)
+    |> String.take_while ~f:(Char.( <> ) '\000')
+    |> parse_generated_hg_version
+    |> String.concat ~sep:" "
+  ;;
+
   let replace_version_util ~contents_of_exe version_util =
     if String.mem version_util '\000' then failwith "version_util can't contain nul bytes";
     if String.length version_util > 4000

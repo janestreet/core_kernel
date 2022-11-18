@@ -93,15 +93,21 @@ end
     The value is [false] in tests at the moment. *)
 val build_system_supports_version_util : bool
 
+(** When you read the words "version util" below, try adding the word "info" to
+    them: "version util info" makes a little more sense. *)
 module Expert : sig
+  (* Gets the version util if it exists.
+
+     Note: There is currently no versioning, so this function is not guaranteed
+     to work if we change the internal format of the version util in the future. *)
+  val get_version_util : contents_of_exe:string -> string option
+
   (** Inserts the given version util into the executable text given. Returns None if this
       could not happen (maybe this is an executable that doesn't link in the current
-      library, maybe it already has version util). *)
+      library). *)
   val insert_version_util : contents_of_exe:string -> Version.t list -> string option
 
-  (** Undoes the operation above. Note that as currently implemented, this only removes
-      version util added by [insert_version_util]. It does not remove version added when
-      building with [VERSION_UTIL_SUPPORT=true]. The point of this operation is to make it
+  (** Removes the version util from a file. The point of this operation is to make it
       possible to compare executables up to version util. *)
   val remove_version_util : contents_of_exe:string -> string option
 

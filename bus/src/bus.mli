@@ -3,10 +3,11 @@
     [unsubscribe].
 
     [create] returns a [Bus.Read_write.t], which you can use to [write] values to the bus.
-    [write] calls the callbacks of all current subscribers before returning. In a [('callback, 'phantom) Bus.t], ['phantom] is a read-write phantom type that
-    controls whether one can read values from or write values to the bus.  The phantom
-    type states the capabilities one could ever have access to, not the capabilities that
-    are immediately available.  In particular, if one wants to subscribe to a
+    [write] calls the callbacks of all current subscribers before returning. In a
+    [('callback, 'phantom) Bus.t], ['phantom] is a read-write phantom type that controls
+    whether one can read values from or write values to the bus.  The phantom type states
+    the capabilities one could ever have access to, not the capabilities that are
+    immediately available.  In particular, if one wants to subscribe to a
     [Bus.Read_write.t], one must call [read_only] on it in order to get a
     [Bus.Read_only.t] that can be passed to [subscribe_exn].  This is deliberate, and is
     meant to avoid unintentional reads from code that should only be writing. *)
