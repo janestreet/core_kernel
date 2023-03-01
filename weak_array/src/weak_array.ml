@@ -1,6 +1,6 @@
-open! Core
+open! Base
 
-module Weak = Caml.Weak
+module Weak = Stdlib.Weak
 
 type 'a t = 'a Heap_block.t Weak.t
 

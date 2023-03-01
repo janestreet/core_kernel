@@ -381,6 +381,13 @@ let combine_errors_unit t =
   | Error errors -> Error (of_list_exn errors)
 ;;
 
+let combine_or_errors t =
+  match Or_error.combine_errors (to_list t) with
+  | Ok oks -> Ok (of_list_exn oks)
+  | Error _ as e -> e
+;;
+
+let combine_or_errors_unit t = to_list t |> Or_error.combine_errors_unit
 let validate ~name check t = Validate.list ~name check (to_list t)
 let validate_indexed check t = Validate.list_indexed check (to_list t)
 
@@ -400,7 +407,7 @@ let init n ~f =
 ;;
 
 module Reversed = struct
-  type 'a t = ( :: ) of 'a * 'a Reversed_list.t [@@deriving sexp_of]
+  type 'a t = ( :: ) of 'a * 'a Reversed_list.t
 
   let to_rev_list (hd :: tl) : _ Reversed_list.t = hd :: tl
   let rev_append (hd :: tl : _ t) xs = rev_append tl (hd :: xs)
@@ -415,12 +422,41 @@ module Reversed = struct
   let rev_mapi (hd :: tl : _ t) ~f = rev_map_aux 1 tl ~f ([ f 0 hd ] : _ T'.t)
   let rev_map t ~f = rev_mapi t ~f:(fun _ x -> f x)
   let cons x t = x :: to_rev_list t
+
+  module With_sexp_of = struct
+    type nonrec 'a t = 'a t
+
+    let sexp_of_t sexp_of_a t =
+      Reversed_list.With_sexp_of.sexp_of_t sexp_of_a (to_rev_list t)
+    ;;
+  end
+
+  module With_rev_sexp_of = struct
+    type nonrec 'a t = 'a t
+
+    let sexp_of_t sexp_of_a t =
+      Reversed_list.With_rev_sexp_of.sexp_of_t sexp_of_a (to_rev_list t)
+    ;;
+  end
 end
+
+let rev' (hd :: tl) =
+  List.fold tl ~init:([ hd ] : _ Reversed.t) ~f:(Fn.flip Reversed.cons)
+;;
 
 let flag arg_type =
   Command.Param.map_flag
     (Command.Param.one_or_more_as_pair arg_type)
     ~f:(fun (one, more) -> one :: more)
+;;
+
+let comma_separated_argtype ?key ?strip_whitespace ?unique_values arg_type =
+  arg_type
+  |> Command.Param.Arg_type.comma_separated
+       ~allow_empty:false
+       ?strip_whitespace
+       ?unique_values
+  |> Command.Param.Arg_type.map ?key ~f:of_list_exn
 ;;
 
 type 'a nonempty_list = 'a t
@@ -449,11 +485,7 @@ module Option = struct
     | _ :: _ as l -> unchecked_value l
   ;;
 
-  let value t ~default =
-    match t with
-    | [] -> default
-    | _ :: _ as l -> unchecked_value l
-  ;;
+  let value t ~default = Bool.select (is_none t) default (unchecked_value t)
 
   module Optional_syntax = struct
     module Optional_syntax = struct

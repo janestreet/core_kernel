@@ -16,10 +16,14 @@ module Color : sig
     | `White
     ]
 
-  (** Standard 8 colors and 256-color palette. *)
+  (** Standard 8 colors and 256-color palette. The [`Default_color]s depend on the
+      terminal but are likely to be the same as [`White] and [`Black] (and which one is
+      foreground vs background will depend on whether the terminal is white-on-black or
+      black-on-white) *)
   type t =
     [ primary
     | `Color_256 of Color_256.t
+    | `Default_color
     ]
   [@@deriving sexp_of, compare, hash, equal]
 
@@ -61,14 +65,31 @@ end
 module Stable : sig
   module Color : sig
     module V1 : sig
+      type primary
+      type t [@@deriving sexp, compare, hash, equal]
+    end
+
+    module V2 : sig
       type primary = Color.primary
       type t = Color.t [@@deriving sexp, compare, hash, equal]
+
+      val of_v1 : V1.t -> t
+      val to_v1 : t -> foreground:bool -> V1.t
+      val primary_of_v1 : V1.primary -> primary
+      val primary_to_v1 : primary -> V1.primary
     end
   end
 
   module Attr : sig
     module V1 : sig
+      type t [@@deriving sexp, compare, hash, equal]
+    end
+
+    module V2 : sig
       type t = Attr.t [@@deriving sexp, compare, hash, equal]
+
+      val of_v1 : V1.t -> t
+      val to_v1 : t -> V1.t
     end
   end
 end

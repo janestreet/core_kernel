@@ -96,10 +96,21 @@ val build_system_supports_version_util : bool
 (** When you read the words "version util" below, try adding the word "info" to
     them: "version util info" makes a little more sense. *)
 module Expert : sig
-  (* Gets the version util if it exists.
+  (** Gets the version util if it exists.
 
-     Note: There is currently no versioning, so this function is not guaranteed
-     to work if we change the internal format of the version util in the future. *)
+      Since 2022-11, this function is guaranteed to be bidirectionally compatible
+      if we ever change the version util format. We guarantee that:
+
+      - New versions of this function will always be able to parse the version
+        util out of all binaries built after 2022-11.
+
+      - Versions of this function which are less than one month old will always
+        be able to parse the version util out of new binaries. Older versions of 
+        this function may not be able to parse the version util out of new binaries.
+
+      If you care about performance, consider using lib/fast_get_version_util_from_file.
+      It is around 10-20x faster than this function, which can take a small number of
+      seconds for several hundred megabyte binaries. *)
   val get_version_util : contents_of_exe:string -> string option
 
   (** Inserts the given version util into the executable text given. Returns None if this
@@ -114,4 +125,9 @@ module Expert : sig
   module For_tests : sig
     val count_pattern_occurrences : contents_of_exe:string -> int
   end
+end
+
+module Private__For_fast_get_version_util_from_file : sig
+  val version_util_start_marker : string
+  val parse_generated_hg_version : string -> string list
 end

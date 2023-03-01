@@ -224,6 +224,7 @@ let%test_module "lengths" =
 module IR_Int8 = struct
   include IR.Int8
 
+  let globalize _ = failwith "not supported"
   let to_string x = x |> to_base_int |> Int.to_string
   let of_string s = s |> Int.of_string |> of_base_int_exn
 end
@@ -231,6 +232,7 @@ end
 module IR_Uint8 = struct
   include IR.Uint8
 
+  let globalize _ = failwith "not supported"
   let to_string x = x |> to_base_int |> Int.to_string
   let of_string s = s |> Int.of_string |> of_base_int_exn
 end
@@ -238,6 +240,7 @@ end
 module IR_Int16 = struct
   include IR.Int16
 
+  let globalize _ = failwith "not supported"
   let to_string x = x |> to_base_int |> Int.to_string
   let of_string s = s |> Int.of_string |> of_base_int_exn
 end
@@ -245,6 +248,7 @@ end
 module IR_Uint16 = struct
   include IR.Uint16
 
+  let globalize _ = failwith "not supported"
   let to_string x = x |> to_base_int |> Int.to_string
   let of_string s = s |> Int.of_string |> of_base_int_exn
 end
@@ -252,6 +256,7 @@ end
 module IR_Int32 = struct
   include IR.Int32
 
+  let globalize _ = failwith "not supported"
   let to_string x = x |> to_base_int32 |> Int32.to_string
   let of_string s = s |> Int32.of_string |> of_base_int32
 end
@@ -259,6 +264,7 @@ end
 module IR_Uint32 = struct
   include IR.Uint32
 
+  let globalize _ = failwith "not supported"
   let to_string x = x |> to_base_int32_trunc |> Int32.to_string
   let of_string s = s |> Int32.of_string |> of_base_int32_trunc
 end
@@ -266,6 +272,7 @@ end
 module IR_Int64 = struct
   include IR.Int64
 
+  let globalize = globalize_int64
   let to_string = Int64.to_string
   let of_string = Int64.of_string
 end
@@ -646,11 +653,11 @@ struct
       advance buf x;
       resize buf ~len:x;
       sub := to_string buf;
-      raise Caml.Not_found
+      raise Stdlib.Not_found
     in
     let test_and_reset f =
       try Nothing.unreachable_code (f ()) with
-      | Not_found_s _ | Caml.Not_found ->
+      | Not_found_s _ | Stdlib.Not_found ->
         assert (String.equal (to_string buf) "123abcDEF" && String.equal !sub "abc");
         sub := ""
     in
@@ -752,7 +759,7 @@ struct
   ;;
 
   module type Accessee = sig
-    type t [@@deriving sexp_of]
+    type t [@@deriving sexp_of, globalize]
 
     include Stringable with type t := t
 
@@ -765,7 +772,7 @@ struct
       val accessor_pos_1
         :  without_value:(read_write, seek) Iobuf.t
         -> value_len:int
-        -> ('a, read_write, seek) t
+        -> (('a, read_write, seek) t[@local])
         -> value:'a
         -> with_value:string
         -> (module Accessee with type t = 'a)
@@ -775,37 +782,16 @@ struct
     end) :
     Iobuf.Accessors_common
     with type ('a, 'b, 'c) t = ('a, 'b, 'c) Intf.t
+    with type ('a, 'b, 'c) t_local = ('a, 'b, 'c) Intf.t_local
      and type 'a bin_prot = 'a Intf.bin_prot = struct
     open Intf
 
     type nonrec ('a, 'd, 'w) t = ('a, 'd, 'w) Intf.t
+    type nonrec ('a, 'd, 'w) t_local = ('a, 'd, 'w) Intf.t_local
     type nonrec 'a bin_prot = 'a Intf.bin_prot
 
     let char = char
-    let int64_t_be = int64_t_be
-    let int64_t_le = int64_t_le
-    let tail_padded_fixed_string = tail_padded_fixed_string
-    let head_padded_fixed_string = head_padded_fixed_string
-    let bytes = bytes
-    let string = string
-    let bigstring = bigstring
-    let byteso = byteso
-    let stringo = stringo
-    let bigstringo = bigstringo
     let bin_prot = bin_prot
-
-    module type String_accessee = sig
-      include Accessee
-
-      val subo : (t, t) Base.Blit.subo
-    end
-
-    module Bigstringable : String_accessee with type t = bigstring = struct
-      include Bigstring
-
-      let to_string t = to_string t (* drop optional args *)
-      let of_string s = of_string s (* drop optional args *)
-    end
 
     let%test_unit _ =
       let buf = of_string "ABCDEFGHIJ" in
@@ -816,72 +802,15 @@ struct
           a
           ~value:v
           ~with_value:s
-          (module Char)
+          (module struct
+            include Char
+
+            let globalize = globalize_char
+          end)
       in
       char_pos_1 char 'K' "AKCDEFGHIJ";
       char_pos_1 char '\254' "A\254CDEFGHIJ";
-      char_pos_1 bin_prot_char 'x' "AxCDEFGHIJ";
-      let metastring_pos_1
-            (type v)
-            (module Value : String_accessee with type t = v)
-            value_len
-            accessor
-            ~skip
-            value
-            with_value
-        =
-        accessor_pos_1
-          ~without_value:buf
-          ~value_len
-          accessor
-          ~value:(Value.of_string value)
-          ~with_value
-          (module struct
-            include Value
-
-            (* The prefix is garbage if [str_pos <> 0]. *)
-            let equal t u = equal (subo ~pos:skip t) (subo ~pos:skip u)
-          end)
-      in
-      let string_pos_1 = metastring_pos_1 (module String) in
-      let bigstring_pos_1 = metastring_pos_1 (module Bigstringable) in
-      let padded_string_pos_1 ~len str ~head ~tail =
-        accessor_pos_1
-          ~without_value:buf
-          ~value_len:len
-          (tail_padded_fixed_string ~padding:'p' ~len)
-          ~value:str
-          ~with_value:tail
-          (module String);
-        accessor_pos_1
-          ~without_value:buf
-          ~value_len:len
-          (head_padded_fixed_string ~padding:'p' ~len)
-          ~value:str
-          ~with_value:head
-          (module String)
-      in
-      padded_string_pos_1 ~len:3 "x" ~head:"AppxEFGHIJ" ~tail:"AxppEFGHIJ";
-      padded_string_pos_1 ~len:3 "xxx" ~head:"AxxxEFGHIJ" ~tail:"AxxxEFGHIJ";
-      padded_string_pos_1 ~len:3 "xpx" ~head:"AxpxEFGHIJ" ~tail:"AxpxEFGHIJ";
-      padded_string_pos_1 ~len:3 "" ~head:"ApppEFGHIJ" ~tail:"ApppEFGHIJ";
-      string_pos_1 3 (string ~str_pos:0 ~len:3) ~skip:0 "123" "A123EFGHIJ";
-      bigstring_pos_1 3 (bigstring ~str_pos:0 ~len:3) ~skip:0 "klm" "AklmEFGHIJ";
-      string_pos_1 2 (string ~str_pos:1 ~len:2) ~skip:1 "\00023" "A23mEFGHIJ";
-      bigstring_pos_1 2 (bigstring ~str_pos:1 ~len:2) ~skip:1 "\000lm" "AlmmEFGHIJ";
-      string_pos_1 3 (stringo ?str_pos:None ~len:3) ~skip:0 "123" "A123EFGHIJ";
-      bigstring_pos_1 3 (bigstringo ?str_pos:None ~len:3) ~skip:0 "klm" "AklmEFGHIJ";
-      string_pos_1 3 (stringo ~str_pos:0 ~len:3) ~skip:0 "123" "A123EFGHIJ";
-      bigstring_pos_1 3 (bigstringo ~str_pos:0 ~len:3) ~skip:0 "klm" "AklmEFGHIJ";
-      string_pos_1 2 (stringo ~str_pos:1 ~len:2) ~skip:1 "\00023" "A23mEFGHIJ";
-      bigstring_pos_1 2 (bigstringo ~str_pos:1 ~len:2) ~skip:1 "\000lm" "AlmmEFGHIJ";
-      let int64_pos_1 f value with_value =
-        accessor_pos_1 ~without_value:buf ~value_len:8 f ~value ~with_value (module Int64)
-      in
-      int64_pos_1 int64_t_be 1L "A\000\000\000\000\000\000\000\001J";
-      int64_pos_1 int64_t_le 1L "A\001\000\000\000\000\000\000\000J";
-      int64_pos_1 int64_t_be 0x8000000000000000L "A\128\000\000\000\000\000\000\000J";
-      int64_pos_1 int64_t_le 0x8000000000000000L "A\000\000\000\000\000\000\000\128J"
+      char_pos_1 bin_prot_char 'x' "AxCDEFGHIJ"
     ;;
   end
 
@@ -891,7 +820,7 @@ struct
       val accessor_pos_1
         :  without_value:(read_write, seek) Iobuf.t
         -> value_len:int
-        -> ('a, read_write, seek) t
+        -> (('a, read_write, seek) t[@local])
         -> value:'a
         -> with_value:string
         -> (module Accessee with type t = 'a)
@@ -901,6 +830,7 @@ struct
     end) :
     Iobuf.Accessors_read
     with type ('a, 'b, 'c) t = ('a, 'b, 'c) Intf.t
+     and type ('a, 'b, 'c) t_local = ('a, 'b, 'c) Intf.t_local
      and type 'a bin_prot := 'a Bin_prot.Type_class.reader = struct
     open Intf
 
@@ -920,6 +850,29 @@ struct
     let int64_le_trunc = int64_le_trunc
     let uint64_be_exn = uint64_be_exn
     let uint64_le_exn = uint64_le_exn
+    let int64_t_be = int64_t_be
+    let int64_t_le = int64_t_le
+    let tail_padded_fixed_string = tail_padded_fixed_string
+    let head_padded_fixed_string = head_padded_fixed_string
+    let bytes = bytes
+    let string = string
+    let bigstring = bigstring
+    let byteso = byteso
+    let stringo = stringo
+    let bigstringo = bigstringo
+
+    module Local = struct
+      open Local
+
+      let int64_t_be = int64_t_be
+      let int64_t_le = int64_t_le
+      let tail_padded_fixed_string = tail_padded_fixed_string
+      let head_padded_fixed_string = head_padded_fixed_string
+      let bytes = bytes
+      let string = string
+      let byteso = byteso
+      let stringo = stringo
+    end
 
     let%test_unit _ =
       let buf = of_string "ABCDEFGHIJ" in
@@ -930,7 +883,11 @@ struct
           a
           ~value:v
           ~with_value:s
-          (module Int)
+          (module struct
+            include Int
+
+            let globalize = globalize_int
+          end)
       in
       int_pos_1 1 int8 127 "A\127CDEFGHIJ";
       int_pos_1 1 int8 (-1) "A\255CDEFGHIJ";
@@ -995,6 +952,93 @@ struct
           int64_le_trunc
           (-large_int 0x0102 0x0304 0x0506 0x0709)
           "A\247\248\249\250\251\252\253\254J")
+    ;;
+
+    module type String_accessee = sig
+      include Accessee
+
+      val subo : (t, t) Base.Blit.subo
+    end
+
+    module Bigstringable : String_accessee with type t = bigstring = struct
+      include Bigstring
+
+      let globalize _ = failwith "globalize is not supported on bigstrings"
+      let to_string t = to_string t (* drop optional args *)
+      let of_string s = of_string s (* drop optional args *)
+    end
+
+    let%test_unit _ =
+      let buf = of_string "ABCDEFGHIJ" in
+      let metastring_pos_1
+            (type v)
+            (module Value : String_accessee with type t = v)
+            value_len
+            (accessor [@local])
+            ~skip
+            value
+            with_value
+        =
+        accessor_pos_1
+          ~without_value:buf
+          ~value_len
+          accessor
+          ~value:(Value.of_string value)
+          ~with_value
+          (module struct
+            include Value
+
+            (* The prefix is garbage if [str_pos <> 0]. *)
+            let equal t u = equal (subo ~pos:skip t) (subo ~pos:skip u)
+          end)
+      in
+      let string_pos_1 =
+        metastring_pos_1
+          (module struct
+            include String
+
+            let globalize = globalize_string
+          end)
+      in
+      let bigstring_pos_1 = metastring_pos_1 (module Bigstringable) in
+      let padded_string_pos_1 ~len str ~head ~tail =
+        accessor_pos_1
+          ~without_value:buf
+          ~value_len:len
+          (tail_padded_fixed_string ~padding:'p' ~len)
+          ~value:str
+          ~with_value:tail
+          (module struct
+            include String
+
+            let globalize = globalize_string
+          end);
+        accessor_pos_1
+          ~without_value:buf
+          ~value_len:len
+          (head_padded_fixed_string ~padding:'p' ~len)
+          ~value:str
+          ~with_value:head
+          (module struct
+            include String
+
+            let globalize = globalize_string
+          end)
+      in
+      padded_string_pos_1 ~len:3 "x" ~head:"AppxEFGHIJ" ~tail:"AxppEFGHIJ";
+      padded_string_pos_1 ~len:3 "xxx" ~head:"AxxxEFGHIJ" ~tail:"AxxxEFGHIJ";
+      padded_string_pos_1 ~len:3 "xpx" ~head:"AxpxEFGHIJ" ~tail:"AxpxEFGHIJ";
+      padded_string_pos_1 ~len:3 "" ~head:"ApppEFGHIJ" ~tail:"ApppEFGHIJ";
+      string_pos_1 3 (string ~str_pos:0 ~len:3) ~skip:0 "123" "A123EFGHIJ";
+      bigstring_pos_1 3 (bigstring ~str_pos:0 ~len:3) ~skip:0 "klm" "AklmEFGHIJ";
+      string_pos_1 2 (string ~str_pos:1 ~len:2) ~skip:1 "\00023" "A23mEFGHIJ";
+      bigstring_pos_1 2 (bigstring ~str_pos:1 ~len:2) ~skip:1 "\000lm" "AlmmEFGHIJ";
+      string_pos_1 3 (stringo ?str_pos:None ~len:3) ~skip:0 "123" "A123EFGHIJ";
+      bigstring_pos_1 3 (bigstringo ?str_pos:None ~len:3) ~skip:0 "klm" "AklmEFGHIJ";
+      string_pos_1 3 (stringo ~str_pos:0 ~len:3) ~skip:0 "123" "A123EFGHIJ";
+      bigstring_pos_1 3 (bigstringo ~str_pos:0 ~len:3) ~skip:0 "klm" "AklmEFGHIJ";
+      string_pos_1 2 (stringo ~str_pos:1 ~len:2) ~skip:1 "\00023" "A23mEFGHIJ";
+      bigstring_pos_1 2 (bigstringo ~str_pos:1 ~len:2) ~skip:1 "\000lm" "AlmmEFGHIJ"
     ;;
 
     include Intf_common (struct
@@ -1173,16 +1217,18 @@ struct
       val accessor_pos_1
         :  without_value:(read_write, seek) Iobuf.t
         -> value_len:int
-        -> ('a, read_write, seek) t
+        -> (('a, read_write, seek) t[@local])
         -> value:'a
         -> with_value:string
         -> (module Accessee with type t = 'a)
         -> unit
 
       val bin_prot_char : (char, 'd, 'w) t
+      val ignore_locality : (('a, 'd, 'w) t_local[@local]) -> (('a, 'd, 'w) t[@local])
     end) :
     Iobuf.Accessors_write
     with type ('a, 'b, 'c) t = ('a, 'b, 'c) Intf.t
+     and type ('a, 'b, 'c) t_local = ('a, 'b, 'c) Intf.t_local
      and type 'a bin_prot := 'a Bin_prot.Type_class.writer = struct
     open Intf
 
@@ -1200,6 +1246,16 @@ struct
     let int64_le = int64_le
     let uint64_be_trunc = uint64_be_trunc
     let uint64_le_trunc = uint64_le_trunc
+    let int64_t_be = int64_t_be
+    let int64_t_le = int64_t_le
+    let tail_padded_fixed_string = tail_padded_fixed_string
+    let head_padded_fixed_string = head_padded_fixed_string
+    let bytes = bytes
+    let string = string
+    let bigstring = bigstring
+    let byteso = byteso
+    let stringo = stringo
+    let bigstringo = bigstringo
 
     let%test_unit _ =
       let buf = of_string "ABCDEFGHIJ" in
@@ -1210,7 +1266,11 @@ struct
           a
           ~value:v
           ~with_value:s
-          (module Int)
+          (module struct
+            include Int
+
+            let globalize = globalize_int
+          end)
       in
       int_pos_1 1 int8_trunc 127 "A\127CDEFGHIJ";
       int_pos_1 1 int8_trunc (-1) "A\255CDEFGHIJ";
@@ -1255,6 +1315,93 @@ struct
           int64_le
           (-large_int 0x0102 0x0304 0x0506 0x0709)
           "A\247\248\249\250\251\252\253\254J")
+    ;;
+
+    module type String_accessee = sig
+      include Accessee
+
+      val subo : (t, t) Base.Blit.subo
+    end
+
+    module Bigstringable : String_accessee with type t = bigstring = struct
+      include Bigstring
+
+      let globalize _ = failwith "globalize is not supported on bigstrings"
+      let to_string t = to_string t (* drop optional args *)
+      let of_string s = of_string s (* drop optional args *)
+    end
+
+    let%test_unit _ =
+      let buf = of_string "ABCDEFGHIJ" in
+      let metastring_pos_1
+            (type v)
+            (module Value : String_accessee with type t = v)
+            value_len
+            accessor
+            ~skip
+            value
+            with_value
+        =
+        accessor_pos_1
+          ~without_value:buf
+          ~value_len
+          (ignore_locality accessor)
+          ~value:(Value.of_string value)
+          ~with_value
+          (module struct
+            include Value
+
+            (* The prefix is garbage if [str_pos <> 0]. *)
+            let equal t u = equal (subo ~pos:skip t) (subo ~pos:skip u)
+          end) [@nontail]
+      in
+      let string_pos_1 =
+        metastring_pos_1
+          (module struct
+            include String
+
+            let globalize = globalize_string
+          end)
+      in
+      let bigstring_pos_1 = metastring_pos_1 (module Bigstringable) in
+      let padded_string_pos_1 ~len str ~head ~tail =
+        accessor_pos_1
+          ~without_value:buf
+          ~value_len:len
+          (ignore_locality (tail_padded_fixed_string ~padding:'p' ~len))
+          ~value:str
+          ~with_value:tail
+          (module struct
+            include String
+
+            let globalize = globalize_string
+          end);
+        accessor_pos_1
+          ~without_value:buf
+          ~value_len:len
+          (ignore_locality (head_padded_fixed_string ~padding:'p' ~len))
+          ~value:str
+          ~with_value:head
+          (module struct
+            include String
+
+            let globalize = globalize_string
+          end) [@nontail]
+      in
+      padded_string_pos_1 ~len:3 "x" ~head:"AppxEFGHIJ" ~tail:"AxppEFGHIJ";
+      padded_string_pos_1 ~len:3 "xxx" ~head:"AxxxEFGHIJ" ~tail:"AxxxEFGHIJ";
+      padded_string_pos_1 ~len:3 "xpx" ~head:"AxpxEFGHIJ" ~tail:"AxpxEFGHIJ";
+      padded_string_pos_1 ~len:3 "" ~head:"ApppEFGHIJ" ~tail:"ApppEFGHIJ";
+      string_pos_1 3 (string ~str_pos:0 ~len:3) ~skip:0 "123" "A123EFGHIJ";
+      bigstring_pos_1 3 (bigstring ~str_pos:0 ~len:3) ~skip:0 "klm" "AklmEFGHIJ";
+      string_pos_1 2 (string ~str_pos:1 ~len:2) ~skip:1 "\00023" "A23mEFGHIJ";
+      bigstring_pos_1 2 (bigstring ~str_pos:1 ~len:2) ~skip:1 "\000lm" "AlmmEFGHIJ";
+      string_pos_1 3 (stringo ?str_pos:None ~len:3) ~skip:0 "123" "A123EFGHIJ";
+      bigstring_pos_1 3 (bigstringo ?str_pos:None ~len:3) ~skip:0 "klm" "AklmEFGHIJ";
+      string_pos_1 3 (stringo ~str_pos:0 ~len:3) ~skip:0 "123" "A123EFGHIJ";
+      bigstring_pos_1 3 (bigstringo ~str_pos:0 ~len:3) ~skip:0 "klm" "AklmEFGHIJ";
+      string_pos_1 2 (stringo ~str_pos:1 ~len:2) ~skip:1 "\00023" "A23mEFGHIJ";
+      bigstring_pos_1 2 (bigstringo ~str_pos:1 ~len:2) ~skip:1 "\000lm" "AlmmEFGHIJ"
     ;;
 
     include Intf_common (struct
@@ -1468,6 +1615,7 @@ struct
         ;;
 
         let bin_prot_char t ~pos a = bin_prot Char.bin_writer_t t ~pos a
+        let ignore_locality (f : ('a, 'd, 'w) t_local) = (f :> ('a, 'd, 'w) t)
 
         (* Static permission tests for the cases that do compile.  Since the functions
            all use essentially the same type definitions, we don't need to test all of
@@ -1756,6 +1904,7 @@ struct
         ;;
 
         let bin_prot_char t a = bin_prot Char.bin_writer_t t a
+        let ignore_locality (f : ('a, 'd, 'w) t_local) = (f :> ('a, 'd, 'w) t)
 
         let%test_unit _ =
           let t = of_string "abc" in
@@ -2651,6 +2800,438 @@ let%test_module "allocation" =
       require_no_allocation [%here] (fun () -> Iobuf.Fill.string dst str ~str_pos ~len);
       [%expect {| |}]
     ;;
+
+    let%expect_test "of_bigstring_local" =
+      let bigstring = Bigstring.of_string "abcdefghijklmnopqrstuvwxyz" in
+      require_no_allocation [%here] (fun () ->
+        let buf = Iobuf.of_bigstring_local bigstring in
+        ignore (Sys.opaque_identity buf : _ Iobuf.t));
+      require_no_allocation [%here] (fun () ->
+        let buf = Iobuf.of_bigstring_local ~pos:1 ~len:10 bigstring in
+        ignore (Sys.opaque_identity buf : _ Iobuf.t));
+      [%expect {| |}]
+    ;;
+
+    let%expect_test "sub_shared_local" =
+      let buf = Iobuf.of_string "abcdefghijklmnopqrstuvwxyz" in
+      require_no_allocation [%here] (fun () ->
+        let buf' = Iobuf.sub_shared_local buf in
+        ignore (Sys.opaque_identity buf' : _ Iobuf.t));
+      require_no_allocation [%here] (fun () ->
+        let buf' = Iobuf.sub_shared_local ~pos:1 ~len:5 buf in
+        ignore (Sys.opaque_identity buf' : _ Iobuf.t));
+      [%expect {| |}]
+    ;;
+
+    module Test_read_accessors
+        (I : Accessors_read with type 'a bin_prot := 'a Bin_prot.Type_class.reader)
+        (Apply : sig
+           type w
+
+           val apply : ('a, read, w) I.t -> (read, Iobuf.seek) Iobuf.t -> 'a
+
+           val apply_local
+             :  (('a, read, w) I.t_local[@local])
+             -> (read, Iobuf.seek) Iobuf.t
+             -> ('a[@local])
+         end) : Accessors_read with type 'a bin_prot := 'a Bin_prot.Type_class.reader =
+    struct
+      open I
+
+      type nonrec ('a, 'd, 'w) t = ('a, 'd, 'w) t
+      type nonrec ('a, 'd, 'w) t_local = ('a, 'd, 'w) t_local
+
+      let test ?(allocation_limit = 0) (f : ('a, 'd, 'w) t) len =
+        let buf = Iobuf.of_bigstring (Bigstring.init len ~f:(const '\000')) in
+        require_allocation_does_not_exceed
+          (Minor_words allocation_limit)
+          [%here]
+          (fun () -> ignore (Apply.apply f buf : _))
+      ;;
+
+      let test_local (f : ('a, 'd, 'w) t_local) len =
+        let buf = Iobuf.of_bigstring (Bigstring.init len ~f:(const '\000')) in
+        require_no_allocation [%here] (fun () -> ignore (Apply.apply_local f buf : _))
+      ;;
+
+      let test_padded_string (f : padding:char -> len:int -> ('a, 'd, 'w) t_local) =
+        let pad_amt = 5 in
+        let full_len = 20 in
+        let padding = ' ' in
+        let buf =
+          Iobuf.of_bigstring
+            (Bigstring.init full_len ~f:(fun i ->
+               if pad_amt <= i && i < full_len - pad_amt then 'x' else padding))
+        in
+        let f = f ~padding ~len:full_len in
+        require_no_allocation [%here] (fun () -> ignore (Apply.apply_local f buf : _))
+      ;;
+
+      let test_string (f : str_pos:int -> len:int -> ('a, 'd, 'w) t_local) =
+        let len = 10 in
+        test_local (f ~str_pos:0 ~len) len
+      ;;
+
+      let test_stringo
+            (f :
+               ?str_pos:(int[@local]) -> ?len:(int[@local]) -> (('a, 'd, 'w) t_local[@local]))
+        =
+        let len = 10 in
+        let buf = Iobuf.of_bigstring (Bigstring.init len ~f:(const ' ')) in
+        require_no_allocation [%here] (fun () ->
+          ignore (Apply.apply_local (f ~str_pos:0 ~len) buf : _))
+      ;;
+
+      let char = char
+
+      let%expect_test "char" =
+        test char 1;
+        [%expect]
+      ;;
+
+      (* We don't bother testing the allocation of bin_prot. If there is a
+         locally-allocating version of bin_prot in the future, we can test that
+         instead. *)
+      let bin_prot = bin_prot
+      let int8 = int8
+
+      let%expect_test "int8" =
+        test int8 1;
+        [%expect]
+      ;;
+
+      let int16_be = int16_be
+
+      let%expect_test "int16_be" =
+        test int16_be 2;
+        [%expect]
+      ;;
+
+      let int16_le = int16_le
+
+      let%expect_test "int16_le" =
+        test int16_le 2;
+        [%expect]
+      ;;
+
+      let int32_be = int32_be
+
+      let%expect_test "int32_be" =
+        test int32_be 4;
+        [%expect]
+      ;;
+
+      let int32_le = int32_le
+
+      let%expect_test "int32_le" =
+        test int32_le 4;
+        [%expect]
+      ;;
+
+      let int64_be_exn = int64_be_exn
+
+      let%expect_test "int64_be_exn" =
+        test int64_be_exn 8;
+        [%expect]
+      ;;
+
+      let int64_le_exn = int64_le_exn
+
+      let%expect_test "int64_le_exn" =
+        test int64_le_exn 8;
+        [%expect]
+      ;;
+
+      let int64_be_trunc = int64_be_trunc
+
+      let%expect_test "int64_be_trunc" =
+        test int64_be_trunc 8;
+        [%expect]
+      ;;
+
+      let int64_le_trunc = int64_le_trunc
+
+      let%expect_test "int64_le_trunc" =
+        test int64_le_trunc 8;
+        [%expect]
+      ;;
+
+      let uint8 = uint8
+
+      let%expect_test "uint8" =
+        test uint8 1;
+        [%expect]
+      ;;
+
+      let uint16_be = uint16_be
+
+      let%expect_test "uint16_be" =
+        test uint16_be 2;
+        [%expect]
+      ;;
+
+      let uint16_le = uint16_le
+
+      let%expect_test "uint16_le" =
+        test uint16_le 2;
+        [%expect]
+      ;;
+
+      let uint32_be = uint32_be
+
+      let%expect_test "uint32_be" =
+        test uint32_be 4;
+        [%expect]
+      ;;
+
+      let uint32_le = uint32_le
+
+      let%expect_test "uint32_le" =
+        test uint32_le 4;
+        [%expect]
+      ;;
+
+      let uint64_be_exn = uint64_be_exn
+
+      let%expect_test "uint64_be_exn" =
+        test uint64_be_exn 8;
+        [%expect]
+      ;;
+
+      let uint64_le_exn = uint64_le_exn
+
+      let%expect_test "uint64_le_exn" =
+        test uint64_le_exn 8;
+        [%expect]
+      ;;
+
+      let int64_t_be = int64_t_be
+
+      let%expect_test "int64_t_be" =
+        test ~allocation_limit:3 int64_t_be 8;
+        [%expect]
+      ;;
+
+      let int64_t_le = int64_t_le
+
+      let%expect_test "int64_t_le" =
+        test ~allocation_limit:3 int64_t_le 8;
+        [%expect]
+      ;;
+
+      (* We don't bother testing the allocation of string-like accessors that
+         heap-allocate their result. We do test the local equivalents below. *)
+      let head_padded_fixed_string = head_padded_fixed_string
+      let tail_padded_fixed_string = tail_padded_fixed_string
+      let string = string
+      let bytes = bytes
+      let bigstring = bigstring
+      let stringo = stringo
+      let byteso = byteso
+      let bigstringo = bigstringo
+
+      module Local = struct
+        open Local
+
+        let int64_t_be = int64_t_be
+
+        let%expect_test "int64_t_be" =
+          test_local int64_t_be 8;
+          [%expect]
+        ;;
+
+        let int64_t_le = int64_t_le
+
+        let%expect_test "int64_t_le" =
+          test_local int64_t_le 8;
+          [%expect]
+        ;;
+
+        let head_padded_fixed_string = head_padded_fixed_string
+
+        let%expect_test "head_padded_fixed_string" =
+          test_padded_string head_padded_fixed_string;
+          [%expect]
+        ;;
+
+        let tail_padded_fixed_string = tail_padded_fixed_string
+
+        let%expect_test "tail_padded_fixed_string" =
+          test_padded_string tail_padded_fixed_string;
+          [%expect]
+        ;;
+
+        let string = string
+
+        let%expect_test "string" =
+          test_string string;
+          [%expect]
+        ;;
+
+        let bytes = bytes
+
+        let%expect_test "bytes" =
+          test_string bytes;
+          [%expect]
+        ;;
+
+        let stringo = stringo
+
+        let%expect_test "stringo" =
+          test_stringo stringo;
+          [%expect]
+        ;;
+
+        let byteso = byteso
+
+        let%expect_test "byteso" =
+          test_stringo byteso;
+          [%expect]
+        ;;
+      end
+
+      module Int_repr = struct
+        open Int_repr
+
+        let int8 = int8
+
+        let%expect_test "int8" =
+          test int8 1;
+          [%expect]
+        ;;
+
+        let int16_be = int16_be
+
+        let%expect_test "int16_be" =
+          test int16_be 2;
+          [%expect]
+        ;;
+
+        let int16_le = int16_le
+
+        let%expect_test "int16_le" =
+          test int16_le 2;
+          [%expect]
+        ;;
+
+        let int32_be = int32_be
+
+        let%expect_test "int32_be" =
+          test ~allocation_limit:3 int32_be 4;
+          [%expect]
+        ;;
+
+        let int32_le = int32_le
+
+        let%expect_test "int32_le" =
+          test ~allocation_limit:3 int32_le 4;
+          [%expect]
+        ;;
+
+        let int64_be = int64_be
+
+        let%expect_test "int64_be" =
+          test ~allocation_limit:3 int64_be 8;
+          [%expect]
+        ;;
+
+        let int64_le = int64_le
+
+        let%expect_test "int64_le" =
+          test ~allocation_limit:3 int64_le 8;
+          [%expect]
+        ;;
+
+        let uint8 = uint8
+
+        let%expect_test "uint8" =
+          test uint8 1;
+          [%expect]
+        ;;
+
+        let uint16_be = uint16_be
+
+        let%expect_test "uint16_be" =
+          test uint16_be 2;
+          [%expect]
+        ;;
+
+        let uint16_le = uint16_le
+
+        let%expect_test "uint16_le" =
+          test uint16_le 2;
+          [%expect]
+        ;;
+
+        let uint32_be = uint32_be
+
+        let%expect_test "uint32_be" =
+          test ~allocation_limit:3 uint32_be 4;
+          [%expect]
+        ;;
+
+        let uint32_le = uint32_le
+
+        let%expect_test "uint32_le" =
+          test ~allocation_limit:3 uint32_le 4;
+          [%expect]
+        ;;
+
+        let uint64_be = uint64_be
+
+        let%expect_test "uint64_be" =
+          test ~allocation_limit:3 uint64_be 8;
+          [%expect]
+        ;;
+
+        let uint64_le = uint64_le
+
+        let%expect_test "uint64_le" =
+          test ~allocation_limit:3 uint64_le 8;
+          [%expect]
+        ;;
+      end
+    end
+
+    module _ =
+      Test_read_accessors
+        (Iobuf.Peek)
+        (struct
+          type w = Iobuf.no_seek
+
+          let apply f buf = f (Iobuf.no_seek buf) ~pos:0
+          let apply_local f buf =  (f (Iobuf.no_seek buf) ~pos:0)
+        end)
+
+    module _ =
+      Test_read_accessors
+        (Iobuf.Consume)
+        (struct
+          type w = Iobuf.seek
+
+          let apply f buf = f buf
+          let apply_local f buf =  (f buf)
+        end)
+
+    module _ =
+      Test_read_accessors
+        (Iobuf.Unsafe.Peek)
+        (struct
+          type w = Iobuf.no_seek
+
+          let apply f buf = f (Iobuf.no_seek buf) ~pos:0
+          let apply_local f buf =  (f (Iobuf.no_seek buf) ~pos:0)
+        end)
+
+    module _ =
+      Test_read_accessors
+        (Iobuf.Unsafe.Consume)
+        (struct
+          type w = Iobuf.seek
+
+          let apply f buf = f buf
+          let apply_local f buf =  (f buf)
+        end)
   end)
 ;;
 

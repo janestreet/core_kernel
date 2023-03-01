@@ -29,7 +29,7 @@
     At this point, the data associated with [key] is unreachable (since all we did with it
     was project out field [bar]), so it may disappear from the table at any time. *)
 
-open! Import
+open! Base
 
 type ('a, 'b) t [@@deriving sexp_of]
 
@@ -38,14 +38,14 @@ type ('a, 'b) t [@@deriving sexp_of]
 val create
   :  ?growth_allowed : bool  (** default is [true] *)
   -> ?size           : int   (** default is [0] *)
-  -> (module Hashtbl.Key_plain with type t = 'a)
+  -> (module Hashtbl.Key.S with type t = 'a)
   -> ('a, 'b) t
 
 module Using_hashable : sig
   val create
     :  ?growth_allowed : bool  (** default is [true] *)
     -> ?size           : int   (** default is [0] *)
-    -> 'a Hashtbl.Hashable.t
+    -> 'a Hashable.t
     -> ('a, 'b) t
 end
 

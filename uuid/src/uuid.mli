@@ -1,5 +1,7 @@
-(** Implements universally unique identifiers based on version 3 of the UUID
-    specification.  Identifier generation is thread safe, and fast.
+(** Thread-safe generation of random identifiers in the UUID format.
+
+    This library is not RFC 4122 compliant: the version is set in the output, but the
+    variant is not.
 *)
 
 open! Core
@@ -36,6 +38,8 @@ module Stable : sig
       Stable_comparable.With_stable_witness.V1
       with type t := t
       with type comparator_witness = comparator_witness
+
+    include Stringable.S with type t := t
 
     val for_testing : t
   end

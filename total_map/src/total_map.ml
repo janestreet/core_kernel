@@ -114,6 +114,7 @@ include struct
 
   let data = data
   let for_all = for_all
+  let for_alli = for_alli
   let iter = iter
   let iter_keys = iter_keys
   let iteri = iteri

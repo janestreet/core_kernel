@@ -239,7 +239,8 @@ let%expect_test "stable_sort" =
   let test t =
     print_s
       [%sexp
-        (stable_sort ~compare:(Comparable.lift ~f:fst Int.compare) t : (int * string) t)]
+        (stable_sort ~compare:(fun a b -> Comparable.lift ~f:fst Int.compare a b) t
+         : (int * string) t)]
   in
   test [ 1, "_" ];
   test [ 2, "_"; 4, "a"; 1, "_"; 4, "b" ];
@@ -333,6 +334,44 @@ let%expect_test "combine_errors_unit" =
   [%expect {| (Error (1 2 3 4)) |}];
   test [ Ok (); Error 2; Error 3; Error 4 ];
   [%expect {| (Error (2 3 4)) |}]
+;;
+
+let%expect_test "combine_or_errors" =
+  let e s = Or_error.error_string s in
+  let test oes = print_s [%sexp (combine_or_errors oes : int t Or_error.t)] in
+  test [ Ok 1 ];
+  [%expect {| (Ok (1)) |}];
+  test [ e "A" ];
+  [%expect {| (Error A) |}];
+  test [ Ok 1; e "B" ];
+  [%expect {| (Error B) |}];
+  test [ e "A"; Ok 2 ];
+  [%expect {| (Error A) |}];
+  test [ Ok 1; Ok 2; Ok 3; Ok 4 ];
+  [%expect {| (Ok (1 2 3 4)) |}];
+  test [ e "A"; e "B"; e "C"; e "D" ];
+  [%expect {| (Error (A B C D)) |}];
+  test [ Ok 1; e "B"; e "C"; e "D" ];
+  [%expect {| (Error (B C D)) |}]
+;;
+
+let%expect_test "combine_or_errors_unit" =
+  let e s = Or_error.error_string s in
+  let test oes = print_s [%sexp (combine_or_errors_unit oes : unit Or_error.t)] in
+  test [ Ok () ];
+  [%expect {| (Ok ()) |}];
+  test [ e "A" ];
+  [%expect {| (Error A) |}];
+  test [ Ok (); e "B" ];
+  [%expect {| (Error B) |}];
+  test [ e "A"; Ok () ];
+  [%expect {| (Error A) |}];
+  test [ Ok (); Ok (); Ok (); Ok () ];
+  [%expect {| (Ok ()) |}];
+  test [ e "A"; e "B"; e "C"; e "D" ];
+  [%expect {| (Error (A B C D)) |}];
+  test [ Ok (); e "B"; e "C"; e "D" ];
+  [%expect {| (Error (B C D)) |}]
 ;;
 
 let%expect_test "basic accessor" =
@@ -500,6 +539,20 @@ let%expect_test "rev_append" =
   [%expect {| (1 2 3 4) |}]
 ;;
 
+let%expect_test "rev'" =
+  let test xs =
+    rev' xs |> [%sexp_of: int Nonempty_list.Reversed.With_sexp_of.t] |> print_s
+  in
+  test [ 1; 2; 3; 4 ];
+  [%expect {| (4 3 2 1) |}];
+  test [ 1; 2; 3 ];
+  [%expect {| (3 2 1) |}];
+  test [ 1; 2 ];
+  [%expect {| (2 1) |}];
+  test [ 1 ];
+  [%expect {| (1) |}]
+;;
+
 let%expect_test "Reversed.rev" =
   let test xs = Reversed.rev xs |> [%sexp_of: int Nonempty_list.t] |> print_s in
   test [ 1; 2; 3; 4 ];
@@ -554,6 +607,25 @@ let%expect_test "Reversed.rev_mapi" =
   [%expect {| (6/1 5/0) |}];
   test [ 5 ];
   [%expect {| (5/0) |}]
+;;
+
+let%expect_test "Reversed.With_sexp_of" =
+  print_s [%sexp ([ 1 ] : int Reversed.With_sexp_of.t)];
+  [%expect {| (1) |}];
+  print_s [%sexp ([ 1; 2 ] : int Reversed.With_sexp_of.t)];
+  [%expect {| (1 2) |}];
+  print_s [%sexp ([ 1; 2; 3 ] : int Reversed.With_sexp_of.t)];
+  [%expect {| (1 2 3) |}];
+  [%expect]
+;;
+
+let%expect_test "Reversed.With_rev_sexp_of" =
+  print_s [%sexp ([ 1 ] : int Reversed.With_rev_sexp_of.t)];
+  [%expect {| (1) |}];
+  print_s [%sexp ([ 1; 2 ] : int Reversed.With_rev_sexp_of.t)];
+  [%expect {| (2 1) |}];
+  print_s [%sexp ([ 1; 2; 3 ] : int Reversed.With_rev_sexp_of.t)];
+  [%expect {| (3 2 1) |}]
 ;;
 
 let%expect_test "init" =

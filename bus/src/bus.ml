@@ -196,8 +196,8 @@ module Subscriber = struct
       ; [%message
         ""
           ~subscribers_index:
-            (if am_running_inline_test then None else Some subscribers_index
-                                                      : (int option[@sexp.option]))
+            (if Ppx_inline_test_lib.am_running then None else Some subscribers_index
+                                                              : (int option[@sexp.option]))
           (on_callback_raise : ((Error.t -> unit) option[@sexp.option]))
           ~extract_exn:
             (if extract_exn then Some true else None : (bool option[@sexp.option]))

@@ -1,9 +1,9 @@
 open! Core
 open! Import
 module Core_char = Char
-module Char = Caml.Char
-module Int32 = Caml.Int32
-module Int64 = Caml.Int64
+module Char = Stdlib.Char
+module Int32 = Stdlib.Int32
+module Int64 = Stdlib.Int64
 
 let arch_sixtyfour = Sys.word_size_in_bits = 64
 let signed_max = Int32.to_int Int32.max_int

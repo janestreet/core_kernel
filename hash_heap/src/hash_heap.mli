@@ -2,7 +2,4 @@
     constant time lookup, and log(n) time removal and replacement of
     elements in addition to the normal heap operations. *)
 
-open! Core
-open! Import
-open Hash_heap_intf
-module Make (Key : Key) : S with module Key = Key
+include Hash_heap_intf.Hash_heap

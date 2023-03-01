@@ -1,5 +1,4 @@
-open! Core
-open! Import
+open! Base
 include Enum_intf
 
 module Single = struct
@@ -52,7 +51,7 @@ let assert_alphabetic_order_exn here (type a) ((module M) : a t) =
 module Rewrite_sexp_of (S : S) : S with type t = S.t = struct
   include S
 
-  let sexp_of_t t = to_string_hum (module S) t |> Sexp.of_string
+  let sexp_of_t t = to_string_hum (module S) t |> Parsexp.Single.parse_string_exn
 end
 
 let arg_type
@@ -75,18 +74,19 @@ module Make_param = struct
     ; doc : string
     }
 
-  let create ?key ?represent_choice_with ?list_values_in_help ~doc m =
+  let create ?case_sensitive ?key ?represent_choice_with ?list_values_in_help ~doc m =
     let doc =
       match represent_choice_with with
       | None -> " " ^ doc
       | Some represent_choice_with -> represent_choice_with ^ " " ^ doc
     in
-    { arg_type = arg_type ?key ?list_values_in_help m; doc }
+    { arg_type = arg_type ?case_sensitive ?key ?list_values_in_help m; doc }
   ;;
 end
 
 type ('a, 'b) make_param =
-  ?represent_choice_with:string
+  ?case_sensitive:bool
+  -> ?represent_choice_with:string
   -> ?list_values_in_help:bool
   -> ?aliases:string list
   -> ?key:'a Univ_map.Multi.Key.t
@@ -97,6 +97,7 @@ type ('a, 'b) make_param =
 
 let make_param
       ~f
+      ?case_sensitive
       ?represent_choice_with
       ?list_values_in_help
       ?aliases
@@ -106,7 +107,13 @@ let make_param
       m
   =
   let { Make_param.arg_type; doc } =
-    Make_param.create ?key ?represent_choice_with ?list_values_in_help ~doc m
+    Make_param.create
+      ?case_sensitive
+      ?key
+      ?represent_choice_with
+      ?list_values_in_help
+      ~doc
+      m
   in
   Command.Param.flag ?aliases flag_name ~doc (f arg_type)
 ;;
@@ -114,6 +121,7 @@ let make_param
 let make_param_optional_with_default_doc
       (type a)
       ~default
+      ?case_sensitive
       ?represent_choice_with
       ?list_values_in_help
       ?aliases
@@ -123,7 +131,13 @@ let make_param_optional_with_default_doc
       (m : a t)
   =
   let { Make_param.arg_type; doc } =
-    Make_param.create ?key ?represent_choice_with ?list_values_in_help ~doc m
+    Make_param.create
+      ?case_sensitive
+      ?key
+      ?represent_choice_with
+      ?list_values_in_help
+      ~doc
+      m
   in
   Command.Param.flag_optional_with_default_doc
     ?aliases
@@ -151,6 +165,7 @@ let make_param_one_of_flags
 let make_param_optional_comma_separated
       ?allow_empty
       ?unique_values
+      ?case_sensitive
       ?represent_choice_with
       ?list_values_in_help
       ?aliases
@@ -167,6 +182,7 @@ let make_param_optional_comma_separated
     |> String.concat ~sep:", "
   in
   make_param
+    ?case_sensitive
     ?represent_choice_with
     ?list_values_in_help
     ?aliases

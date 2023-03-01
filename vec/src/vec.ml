@@ -5,18 +5,18 @@ module With_integer_index = struct
   module Kernel : sig
     type 'a t
 
-    val length : _ t -> int
+    val length : (_ t[@local]) -> int
     val capacity : _ t -> int
     val create : ?initial_capacity:int -> unit -> _ t
     val unsafe_create_uninitialized : len:int -> 'a t
-    val init : int -> f:(int -> 'a) -> 'a t
+    val init : int -> f:((int -> 'a)[@local]) -> 'a t
     val unsafe_get : 'a t -> int -> 'a
     val unsafe_set : 'a t -> int -> 'a -> unit
 
     val unsafe_blit
-      :  src:'a t
+      :  src:('a t[@local])
       -> src_pos:int
-      -> dst:'a t
+      -> dst:('a t[@local])
       -> dst_pos:int
       -> len:int
       -> unit
@@ -42,6 +42,8 @@ module With_integer_index = struct
           We maintain it here to eliminate an indirection when accessing long arrays. *)
       }
     [@@deriving fields]
+
+    let length t = t.length
 
     let check_capacity capacity =
       if capacity < 0 then invalid_argf "Vec: negative capacity %d" capacity ()
@@ -170,6 +172,19 @@ module With_integer_index = struct
 
   include Kernel
 
+  let is_sorted t ~compare =
+    (* This is a copy-paste from [Array.is_sorted]. *)
+    let i = ref (length t - 1) in
+    let result = ref true in
+    while !i > 0 && !result do
+      let elt_i = unsafe_get t !i in
+      let elt_i_minus_1 = unsafe_get t (!i - 1) in
+      if compare elt_i_minus_1 elt_i > 0 then result := false;
+      decr i
+    done;
+    !result
+  ;;
+
   let next_free_index = length
 
   let[@cold] raise__bad_index t i ~op =
@@ -213,6 +228,17 @@ module With_integer_index = struct
   let[@inline always] push_back t element =
     let (_ : int) = push_back_index t element in
     ()
+  ;;
+
+  let remove_exn t i =
+    if i < 0 || i >= length t then raise__bad_index t i ~op:"remove_exn";
+    let new_length = length t - 1 in
+    (* As per the ocaml stdlib documentation, blitting with src and dst
+       overlapping is safe.
+       https://github.com/ocaml-flambda/flambda-backend/blob/main/ocaml/stdlib/array.mli#L143
+    *)
+    unsafe_blit ~src:t ~src_pos:(i + 1) ~dst:t ~dst_pos:i ~len:(length t - i - 1);
+    set_length t new_length
   ;;
 
   let[@inline always] unsafe_peek_back_exn t = unsafe_get t (max_index t)
@@ -317,9 +343,11 @@ module With_integer_index = struct
     end)
 
   (** Returns the length of the longest prefix for which [f] is true. *)
-  let take_while_len t ~f =
-    let rec loop i = if i >= length t || not (f (get t i)) then i else loop (i + 1) in
-    loop 0
+  let take_while_len t ~f:(f [@local]) =
+    let rec loop i =
+      if i >= length t || not (f (get t i)) then i else (loop [@tailcall]) (i + 1)
+    in
+    loop 0 [@nontail]
   ;;
 
   let take_while t ~f =
@@ -412,8 +440,9 @@ module With_integer_index = struct
   let count t ~f = Container.count ~fold t ~f
   let sum module_ t ~f = Container.sum ~fold module_ t ~f
 
-  (* The code would be simpler (wouldn't involve threading through [max_index]) if we
-     iterated backward, but we iterate forward to be consistent with other containers. *)
+  (* The code for [find] and [find_exn] would be simpler (wouldn't involve threading
+     through [max_index]) if we iterated backward, but we iterate forward to be consistent
+     with other containers. *)
 
   let rec find' t ~f ~max_index i =
     if i > max_index
@@ -423,7 +452,38 @@ module With_integer_index = struct
       if f x then Some x else find' t ~f ~max_index (i + 1))
   ;;
 
+  let[@cold] raise__not_found () =
+    raise (Base.Not_found_s [%message "Vec.find_exn: not found"])
+  ;;
+
+  let rec find_exn' t ~f ~max_index i =
+    if i > max_index
+    then raise__not_found ()
+    else (
+      let x = unsafe_get t i in
+      if f x then x else find_exn' t ~f ~max_index (i + 1))
+  ;;
+
   let find t ~f = find' t ~f ~max_index:(max_index t) 0
+  let find_exn t ~f = find_exn' t ~f ~max_index:(max_index t) 0
+
+  let rec findi' t ~f ~max_index i =
+    if i > max_index
+    then None
+    else (
+      let x = unsafe_get t i in
+      if f x then Some (i, x) else findi' t ~f ~max_index (i + 1))
+  ;;
+
+  let findi t ~f = findi' t ~f ~max_index:(max_index t) 0
+
+  let find_and_remove t ~f =
+    match findi t ~f with
+    | None -> None
+    | Some (i, found) ->
+      remove_exn t i;
+      Some found
+  ;;
 
   let rec find_map' t ~f ~max_index i =
     if i > max_index
@@ -554,7 +614,7 @@ module Make (M : Intable.S) = struct
   let[@inline always] unsafe_set t index = unsafe_set t (M.to_int_exn index)
   let set t index = set t (M.to_int_exn index)
   let next_free_index t = next_free_index t |> M.of_int_exn
-  let iteri t ~f = iteri t ~f:(fun [@inline] int x -> f (M.of_int_exn int) x)
+  let iteri t ~f = iteri t ~f:(fun [@inline] int x -> f (M.of_int_exn int) x) [@nontail]
   let push_back_index t element = push_back_index t element |> M.of_int_exn
 
   let to_alist t =
@@ -578,7 +638,7 @@ module Make (M : Intable.S) = struct
     include Inplace
 
     let sub t ~pos ~len = sub t ~pos:(M.to_int_exn pos) ~len
-    let mapi t ~f = mapi t ~f:(fun [@inline] int x -> f (M.of_int_exn int) x)
+    let mapi t ~f = mapi t ~f:(fun [@inline] int x -> f (M.of_int_exn int) x) [@nontail]
   end
 
   let swap t index1 index2 = swap t (M.to_int_exn index1) (M.to_int_exn index2)

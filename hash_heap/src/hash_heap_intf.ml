@@ -42,7 +42,14 @@ module type S = sig
   val to_alist : 'a t -> (Key.t * 'a) list
 
   val length : 'a t -> int
+  val is_empty : 'a t -> bool
 
   (** Removes all values, leaving the hash heap empty. **)
   val clear : 'a t -> unit
+end
+
+module type Hash_heap = sig
+  module type S = S
+
+  module Make (Key : Key) : S with module Key = Key
 end

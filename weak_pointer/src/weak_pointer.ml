@@ -1,6 +1,6 @@
 (* We implement a weak pointer using a [Weak_array.t]. *)
 
-open! Core
+open! Base
 
 type 'a t = 'a Weak_array.t
 

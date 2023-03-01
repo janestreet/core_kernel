@@ -4,12 +4,12 @@ open Tuple_pool_intf
 module Tuple_type = Tuple_type
 
 let failwiths = Error.failwiths
-let phys_equal = Caml.( == )
+let phys_equal = Stdlib.( == )
 let arch_sixtyfour = Sys.word_size_in_bits = 64
 
 module Int = struct
   let num_bits = Int.num_bits
-  let max_value = Caml.max_int
+  let max_value = Stdlib.max_int
   let to_string = string_of_int
 end
 

@@ -2,6 +2,8 @@ open! Core
 open! Import
 open Hash_heap_intf
 
+module type S = S
+
 module Make (Key : Key) : S with module Key = Key = struct
   module Key = Key
   module Table = Hashtbl.Make_plain (Key)
@@ -152,6 +154,8 @@ module Make (Key : Key) : S with module Key = Key = struct
     assert (Hashtbl.length t.tbl = Heap.length t.heap);
     Hashtbl.length t.tbl
   ;;
+
+  let is_empty t = length t = 0
 
   let copy t =
     let t' = create t.cmp in

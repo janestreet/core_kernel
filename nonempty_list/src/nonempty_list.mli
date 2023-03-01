@@ -80,6 +80,12 @@ val combine_errors : ('ok, 'err) Result.t t -> ('ok t, 'err t) Result.t
 (** Like [Result.combine_errors_unit] but for non-empty lists *)
 val combine_errors_unit : (unit, 'err) Result.t t -> (unit, 'err t) Result.t
 
+(** Like [Or_error.combine_errors] but for non-empty lists *)
+val combine_or_errors : 'a Or_error.t t -> 'a t Or_error.t
+
+(** Like [Or_error.combine_errors_unit] but for non-empty lists *)
+val combine_or_errors_unit : unit Or_error.t t -> unit Or_error.t
+
 (** validates a list, naming each element by its position in the list (where the first
     position is 1, not 0). *)
 val validate_indexed : 'a Validate.check -> 'a t Validate.check
@@ -88,7 +94,18 @@ val validate_indexed : 'a Validate.check -> 'a t Validate.check
     name. *)
 val validate : name:('a -> string) -> 'a Validate.check -> 'a t Validate.check
 
+(** Returns a flag that must be passed one or more times.
+    See [Command.Param.one_or_more_as_pair]. *)
 val flag : 'a Command.Param.Arg_type.t -> 'a t Command.Flag.t
+
+(** Accepts comma-separated lists of arguments parsed by [t].
+    See [Command.Param.Arg_type.comma_separated]. *)
+val comma_separated_argtype
+  :  ?key:'a t Univ_map.Multi.Key.t
+  -> ?strip_whitespace:bool
+  -> ?unique_values:bool
+  -> 'a Command.Param.Arg_type.t
+  -> 'a t Command.Param.Arg_type.t
 
 type 'a nonempty_list := 'a t
 
@@ -126,8 +143,9 @@ module Option : sig
     Optional_syntax.S1 with type 'a t := 'a t and type 'a value := 'a nonempty_list
 end
 
+(** a non-empty version of Reversed_list.t *)
 module Reversed : sig
-  type 'a t = ( :: ) of 'a * 'a Reversed_list.t [@@deriving sexp_of]
+  type 'a t = ( :: ) of 'a * 'a Reversed_list.t
 
   val cons : 'a -> 'a t -> 'a t
   val to_rev_list : 'a t -> 'a Reversed_list.t
@@ -135,12 +153,23 @@ module Reversed : sig
   val rev_append : 'a t -> 'a list -> 'a nonempty_list
   val rev_map : 'a t -> f:('a -> 'b) -> 'b nonempty_list
   val rev_mapi : 'a t -> f:(int -> 'a -> 'b) -> 'b nonempty_list
+
+  (** Renders sexps without reversing the list. E.g. [1::2] is represented as [(1 2)]. *)
+  module With_sexp_of : sig
+    type nonrec 'a t = 'a t [@@deriving sexp_of]
+  end
+
+  (** Renders sexps after reversing the list. E.g. [1::2] is represented as [(2 1)]. *)
+  module With_rev_sexp_of : sig
+    type nonrec 'a t = 'a t [@@deriving sexp_of]
+  end
 end
 
+val rev' : 'a t -> 'a Reversed.t
 val rev_append : 'a Reversed_list.t -> 'a t -> 'a t
 
 module Unstable : sig
-  type nonrec 'a t = 'a t [@@deriving bin_io, compare, equal, hash, sexp]
+  type nonrec 'a t = 'a t [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar]
 end
 
 module Stable : sig
@@ -148,7 +177,7 @@ module Stable : sig
       is represented as [(1 2)]. *)
   module V3 : sig
     type nonrec 'a t = 'a t
-    [@@deriving bin_io, compare, equal, sexp, hash, stable_witness]
+    [@@deriving bin_io, compare, equal, sexp, sexp_grammar, hash, stable_witness]
   end
 
   (** Represents a [t] as an ordinary list for sexp conversions, but uses a record [{hd :
