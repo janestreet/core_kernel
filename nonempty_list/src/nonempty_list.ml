@@ -153,6 +153,7 @@ module Stable = struct
   end
 end
 
+
 open Core
 module Unstable = Stable.V3
 
@@ -367,6 +368,12 @@ let fold_right (hd :: tl) ~init:acc ~f =
 let folding_map (hd :: tl) ~init ~f =
   let acc, hd = f init hd in
   hd :: List.folding_map tl ~init:acc ~f
+;;
+
+let fold_map (hd :: tl) ~init:acc ~f =
+  let acc, hd = f acc hd in
+  let acc, tl = List.fold_map tl ~init:acc ~f in
+  acc, hd :: tl
 ;;
 
 let combine_errors t =

@@ -15,7 +15,6 @@ let make () =
 ;;
 
 let z = string_of_int
-
 let%expect_test "create, and push" = ignore (make () : int Hash_heap.t)
 
 let%expect_test "find" =

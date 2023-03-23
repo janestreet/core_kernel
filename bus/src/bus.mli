@@ -7,10 +7,7 @@
     [('callback, 'phantom) Bus.t], ['phantom] is a read-write phantom type that controls
     whether one can read values from or write values to the bus.  The phantom type states
     the capabilities one could ever have access to, not the capabilities that are
-    immediately available.  In particular, if one wants to subscribe to a
-    [Bus.Read_write.t], one must call [read_only] on it in order to get a
-    [Bus.Read_only.t] that can be passed to [subscribe_exn].  This is deliberate, and is
-    meant to avoid unintentional reads from code that should only be writing. *)
+    immediately available. *)
 
 open! Core
 
@@ -37,8 +34,8 @@ module Callback_arity : sig
   [@@deriving sexp_of]
 end
 
-type ('callback, 'phantom) t [@@deriving sexp_of]
-type ('callback, 'phantom) bus = ('callback, 'phantom) t
+type ('callback, -'phantom) t [@@deriving sexp_of]
+type ('callback, -'phantom) bus = ('callback, 'phantom) t
 
 module Read_write : sig
   type 'callback t = ('callback, read_write) bus [@@deriving sexp_of]

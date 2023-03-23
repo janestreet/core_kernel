@@ -74,6 +74,9 @@ module Make (M : Make_arg) = struct
 
   type sexp_format = string list [@@deriving sexp]
 
+  type sexp_format_with_unrecognized_bits = string list * [ `unrecognized_bits of string ]
+  [@@deriving sexp]
+
   let to_flag_list =
     (* We reverse [known] so that the fold below accumulates from right to left, giving a
        final list with elements in the same order as [known]. *)
@@ -86,26 +89,45 @@ module Make (M : Make_arg) = struct
   ;;
 
   let sexp_of_t t =
+    let to_unsigned_hex_string x =
+      Int64.(max_value land Int63.to_int64 x) |> Int64.Hex.to_string
+    in
     let leftover, flag_names = to_flag_list t in
     if leftover = empty
     then [%sexp_of: sexp_format] flag_names
     else
-      [%sexp_of: string list * [ `unrecognized_bits of string ]]
-        (flag_names, `unrecognized_bits (sprintf "0x%Lx" (Int63.to_int64 leftover)))
+      [%sexp_of: sexp_format_with_unrecognized_bits]
+        (flag_names, `unrecognized_bits (to_unsigned_hex_string leftover))
   ;;
 
   let known_by_name =
     String.Table.of_alist_exn (List.map known ~f:(fun (mask, name) -> name, mask))
   ;;
 
-  let t_of_sexp sexp =
-    List.fold
-      (sexp |> [%of_sexp: sexp_format])
-      ~init:empty
-      ~f:(fun t name ->
-        match Hashtbl.find known_by_name name with
-        | Some mask -> t + mask
-        | None -> of_sexp_error (sprintf "Flags.t_of_sexp got unknown name: %s" name) sexp)
+  let t_of_sexp (sexp : Sexp.t) =
+    let of_unsigned_hex_string s = Int64.Hex.of_string s |> Int63.of_int64_trunc in
+    let restore_int_of_flags_sexp flags =
+      List.fold
+        (flags |> [%of_sexp: sexp_format])
+        ~init:empty
+        ~f:(fun t name ->
+          match Hashtbl.find known_by_name name with
+          | Some mask -> t + mask
+          | None ->
+            of_sexp_error (sprintf "Flags.t_of_sexp got unknown name: %s" name) sexp)
+    in
+    match sexp with
+    | Sexp.List [ Sexp.List flags; Sexp.List unrecognized ] ->
+      (match unrecognized with
+       | [ Sexp.Atom "unrecognized_bits"; Sexp.Atom num ] ->
+         restore_int_of_flags_sexp (Sexp.List flags) + of_unsigned_hex_string num
+       | _ ->
+         raise_s
+           [%message
+             "Of_sexp_error: sexp format does not match any recognized format"
+               (sexp : Sexp.t)])
+    | Sexp.List flags -> restore_int_of_flags_sexp (Sexp.List flags)
+    | Sexp.Atom _ -> raise_s [%message "Of_sexp_error: list needed" (sexp : Sexp.t)]
   ;;
 
   (* total order such that [subset a b] implies [a <= b] *)

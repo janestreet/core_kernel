@@ -25,7 +25,8 @@ let arch_sixtyfour = Sys.word_size_in_bits = 64
 module T = struct
   (* WHEN YOU CHANGE THIS, CHANGE iobuf_fields IN iobuf.h AS WELL!!! *)
   type t =
-    { mutable buf :
+    { mutable
+      buf :
         (Bigstring.t
          [@sexp.opaque] (* The data in [buf] is at indices [lo], [lo+1], ... [hi-1]. *))
     ; mutable lo_min : int
@@ -1919,8 +1920,7 @@ module Expert = struct
   let unsafe_reinitialize = if unsafe_is_safe then reinitialize else unsafe_reinitialize
 
   let _remember_to_update_unsafe_reinitialize
-    :  (_, _) t -> buf:Bigstring.t -> lo_min:int -> lo:int -> hi:int -> hi_max:int
-      -> unit
+    : (_, _) t -> buf:Bigstring.t -> lo_min:int -> lo:int -> hi:int -> hi_max:int -> unit
     =
     Fields.Direct.set_all_mutable_fields
   ;;

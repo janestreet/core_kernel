@@ -74,7 +74,7 @@ let%expect_test _ =
     (a)
     (b)
     (c)
-    (() (unrecognized_bits 0xc000000000000000)) |}]
+    (() (unrecognized_bits 0x4000000000000000)) |}]
 ;;
 
 let%expect_test _ =
@@ -108,7 +108,7 @@ let%expect_test _ =
   [%expect
     {|
     (input a)
-    (raised (Of_sexp_error "list_of_sexp: list needed" (invalid_sexp a)))
+    (raised ("Of_sexp_error: list needed" (sexp a)))
     (input "(())")
     (raised (Of_sexp_error "string_of_sexp: atom needed" (invalid_sexp ())))
     (input "(a ())")
@@ -123,18 +123,22 @@ let%expect_test _ = require [%here] (equal (a + a) a)
 let%expect_test _ = require [%here] (equal (a + b) (b + a))
 let%expect_test _ = require [%here] (equal (a - a) empty)
 let%expect_test _ = require [%here] (equal (a + b - a) b)
+
 (* [intersect] *)
 let%expect_test _ = require [%here] (equal (intersect a a) a)
 let%expect_test _ = require [%here] (equal (intersect a b) empty)
 let%expect_test _ = require [%here] (equal (intersect (a + b) a) a)
+
 (* [complement] *)
 let%expect_test _ = require [%here] (equal (intersect (complement a) b) b)
+
 (* [do_intersect] *)
 let%expect_test _ = require [%here] (do_intersect a a)
 let%expect_test _ = require [%here] (not (do_intersect a b))
 let%expect_test _ = require [%here] (do_intersect (a + b) a)
 let%expect_test _ = require [%here] (do_intersect (a + b) b)
 let%expect_test _ = require [%here] (not (do_intersect (a + b) c))
+
 (* [are_disjoint] *)
 let%expect_test _ = require [%here] (are_disjoint a empty)
 let%expect_test _ = require [%here] (not (are_disjoint a a))
@@ -142,9 +146,9 @@ let%expect_test _ = require [%here] (are_disjoint a b)
 let%expect_test _ = require [%here] (are_disjoint b a)
 let%expect_test _ = require [%here] (not (are_disjoint (a + b) a))
 let%expect_test _ = require [%here] (are_disjoint (a + b) c)
+
 (* compare *)
 let%expect_test _ = require [%here] (Int.( = ) (Int.compare 0 1) (-1))
-
 let print_compare t1 t2 = print_s [%sexp (compare t1 t2 : int)]
 
 let%expect_test _ =
@@ -270,4 +274,96 @@ let%expect_test "complement" =
   let complement = M.complement flags in
   print_s [%message (flags : M.t) (complement : M.t)];
   [%expect {| ((flags (a c)) (complement (b))) |}]
+;;
+
+let%expect_test "ensure sexp representation of flags having only recognized bits \
+                 round-trips"
+  =
+  let t_list = [ M.empty; a; M.(a + b) ] in
+  List.iter t_list ~f:(fun t ->
+    let sexp = [%sexp (t : t)] in
+    let t_recovered = t_of_sexp sexp in
+    Expect_test_helpers_core.require_equal [%here] (module M) t t_recovered);
+  [%expect {| |}]
+;;
+
+let%expect_test "ensure sexp representation of flag with unrecognized bits round-trips" =
+  let t = Int63.max_value in
+  let sexp = [%sexp (t : t)] in
+  print_s sexp;
+  [%expect {| ((a b c) (unrecognized_bits 0x3ffffffffffffff0)) |}];
+  let t_recovered = t_of_sexp sexp in
+  Expect_test_helpers_core.require_equal [%here] (module M) t t_recovered;
+  print_s [%message (t : t) (t_recovered : t) (sexp : Sexp.t)];
+  [%expect
+    {|
+    ((t           ((a b c) (unrecognized_bits 0x3ffffffffffffff0)))
+     (t_recovered ((a b c) (unrecognized_bits 0x3ffffffffffffff0)))
+     (sexp        ((a b c) (unrecognized_bits 0x3ffffffffffffff0)))) |}]
+;;
+
+let gen_int63 = Int63.gen_incl Int63.min_value Int63.max_value
+
+let gen_flag_and_name =
+  Quickcheck.Generator.tuple2 gen_int63 (String.gen_with_length 10 Char.gen_alpha)
+;;
+
+let gen_scenario =
+  let%bind.Quickcheck len = Int.gen_incl 0 63 in
+  let%map.Quickcheck known = List.gen_with_length len gen_flag_and_name in
+  let known =
+    List.dedup_and_sort known ~compare:(fun (_, name) (_, name1) ->
+      String.compare name name1)
+  in
+  let module M =
+    Make (struct
+      let allow_intersecting = true
+      let should_print_error = true
+      let known = known
+      let remove_zero_flags = true
+    end)
+  in
+  (module M : S)
+;;
+
+let gen_sexp_round_trip_scenario =
+  Quickcheck.Generator.tuple2 gen_scenario (Int.gen_incl 0 Int.max_value)
+;;
+
+let%expect_test "quickcheck test: ensure sexps round-trip for general scenarios" =
+  Quickcheck.test ~trials:1000 gen_sexp_round_trip_scenario ~f:(fun ((module M : S), i) ->
+    let t = M.of_int i in
+    let sexp = [%sexp (t : M.t)] in
+    let t_recovered = M.t_of_sexp sexp in
+    Expect_test_helpers_core.require_equal [%here] (module M) t t_recovered);
+  [%expect {| |}]
+;;
+
+let%expect_test "quickcheck_test: existing hex representations can still be converted \
+                 back."
+  =
+  let to_unsigned_hex_string_old num = sprintf "0x%Lx" (Int63.to_int64 num) in
+  let of_unsigned_hex_string s = Int64.Hex.of_string s |> Int63.of_int64_trunc in
+  Quickcheck.test ~trials:1000 gen_int63 ~f:(fun int63 ->
+    let old_format_hex_num = to_unsigned_hex_string_old int63 in
+    let int63_recovered = of_unsigned_hex_string old_format_hex_num in
+    Expect_test_helpers_core.require_equal [%here] (module Int63) int63 int63_recovered);
+  [%expect {| |}]
+;;
+
+let%expect_test "old hex repr of 2^62 still deserializes correctly" =
+  let num = 1 lsl 62 |> Int63.of_int in
+  let to_unsigned_hex_string_old num = sprintf "0x%Lx" (Int63.to_int64 num) in
+  let to_unsigned_hex_string_new num =
+    Int64.(max_value land Int63.to_int64 num) |> Int64.Hex.to_string
+  in
+  let of_unsigned_hex_string s = Int64.Hex.of_string s |> Int63.of_int64_trunc in
+  let old_hex_str = to_unsigned_hex_string_old num in
+  let new_hex_str = to_unsigned_hex_string_new num in
+  Expect_test_helpers_core.require_equal
+    [%here]
+    (module Int63)
+    (of_unsigned_hex_string old_hex_str)
+    (of_unsigned_hex_string new_hex_str);
+  [%expect {| |}]
 ;;

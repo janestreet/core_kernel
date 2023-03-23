@@ -10,7 +10,6 @@ let%test_module _ =
     let c2 = Id.create ~name:"c2" Int.sexp_of_t
     let t1 = create c1 13
     let t2 = create c2 13
-
     let%test_unit _ = ignore ([%sexp_of: _ Id.t] c1 : Sexp.t)
     let%test_unit _ = ignore ([%sexp_of: t] t1 : Sexp.t)
     let%test _ = type_id_name t1 = Id.name c1

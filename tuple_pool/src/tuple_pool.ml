@@ -83,7 +83,6 @@ module Pool = struct
     let t11 = 12
     let t12 = 13
     let t13 = 14
-
     let%test _ = t13 = max_slot
   end
 
@@ -109,11 +108,9 @@ module Pool = struct
   ;;
 
   let masked_tuple_id_num_bits = Int.num_bits - array_index_num_bits
-
   let%test _ = array_index_num_bits > 0
   let%test _ = masked_tuple_id_num_bits > 0
   let%test _ = array_index_num_bits + masked_tuple_id_num_bits <= Int.num_bits
-
   let max_array_length = 1 lsl array_index_num_bits
 
   module Tuple_id : sig
@@ -217,7 +214,6 @@ module Pool = struct
     let masked_tuple_id t = t lsr array_index_num_bits
     let header_index t = t land header_index_mask
     let invariant _ t = if not (is_null t) then assert (header_index t > 0)
-
     let%test_unit _ = invariant ignore (null ())
 
     let%test_unit _ =
@@ -468,15 +464,13 @@ module Pool = struct
                assert (is_valid_header_index t ~header_index);
                let tuple_num = header_index_to_tuple_num metadata ~header_index in
                if free.(tuple_num)
-               then
-                 failwiths ~here:[%here] "cycle in free list" tuple_num [%sexp_of: int];
+               then failwiths ~here:[%here] "cycle in free list" tuple_num [%sexp_of: int];
                free.(tuple_num) <- true;
                r := unsafe_header t ~header_index
              done))
         ~dummy:
           (check (function
-             | Some dummy ->
-               assert (Uniform_array.length dummy = metadata.slots_per_tuple)
+             | Some dummy -> assert (Uniform_array.length dummy = metadata.slots_per_tuple)
              | None ->
                for tuple_num = 0 to metadata.capacity - 1 do
                  let header_index = tuple_num_to_header_index metadata tuple_num in

@@ -112,9 +112,7 @@ module Alarm_precision = struct
       let span = Time_ns.Span.of_sec span in
       print_s
         [%message
-          ""
-            (span : Time_ns.Span.t)
-            ~alarm_precision:(span |> of_span_floor_pow2_ns : t)]);
+          "" (span : Time_ns.Span.t) ~alarm_precision:(span |> of_span_floor_pow2_ns : t)]);
     [%expect
       {|
       ((span 1s) (alarm_precision (536.870912ms 536_870_912ns)))

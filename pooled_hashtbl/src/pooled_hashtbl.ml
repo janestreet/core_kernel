@@ -897,8 +897,8 @@ let merge_into ~src ~dst ~f =
     | Set_to data ->
       (match dst_data with
        | None -> replace dst ~key ~data
-       | Some dst_data -> if not (phys_equal dst_data data) then replace dst ~key ~data)) 
-  [@nontail]
+       | Some dst_data -> if not (phys_equal dst_data data) then replace dst ~key ~data)) [@nontail
+  ]
 ;;
 
 let filteri_inplace t ~f =

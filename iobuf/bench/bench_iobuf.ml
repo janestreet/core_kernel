@@ -115,7 +115,6 @@ let%bench_module "Poke" =
   (module struct
     let iobuf = of_string (String.make 72 '\000') (* cache line + word size *)
     let pos = Sys.opaque_identity 0
-
     let%bench "char" = Poke.char iobuf ~pos (Sys.opaque_identity 'a')
     let%bench "uint8_trunc" = Poke.uint8_trunc iobuf ~pos (Sys.opaque_identity pos)
     let%bench "int8_trunc" = Poke.int8_trunc iobuf ~pos (Sys.opaque_identity pos)
@@ -182,7 +181,6 @@ let%bench_module "Peek" =
   (module struct
     let iobuf = of_string (String.make 72 '\000') (* cache line + word size *)
     let pos = Sys.opaque_identity 0
-
     let%bench "char" = Peek.char iobuf ~pos
     let%bench "uint8" = Peek.uint8 iobuf ~pos
     let%bench "int8" = Peek.int8 iobuf ~pos

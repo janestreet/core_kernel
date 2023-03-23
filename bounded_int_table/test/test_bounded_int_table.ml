@@ -38,7 +38,6 @@ let%test_module _ =
     ;;
 
     let equal_of_list l1 l2 = equal Int.equal Int.equal (of_list l1) (of_list l2)
-
     let%test _ = equal_of_list [] [] = true
     let%test _ = equal_of_list [] [ 1 ] = false
     let%test _ = equal_of_list [ 1 ] [] = false

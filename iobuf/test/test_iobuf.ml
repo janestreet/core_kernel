@@ -156,9 +156,7 @@ let iter_slices n ~f =
 ;;
 
 let invariant = invariant
-
 let%test_unit _ = invariant ignore ignore (create ~len:(Random.int 100_000 + 1))
-
 let create = create
 let capacity = capacity
 let length = length
@@ -712,14 +710,12 @@ struct
   let%test_unit _ =
     List.iter strings ~f:(fun string ->
       let bigstring = Bigstring.of_string string in
-      iter_slices
-        (String.length string)
-        ~f:(fun ?pos ?len ~pos':_ ~len':_ ~is_valid () ->
-          match try_with (fun () -> of_bigstring bigstring ?pos ?len) with
-          | Error _ -> assert (not is_valid)
-          | Ok t ->
-            assert is_valid;
-            assert (String.equal (to_string t) (Bigstring.to_string bigstring ?pos ?len))))
+      iter_slices (String.length string) ~f:(fun ?pos ?len ~pos':_ ~len':_ ~is_valid () ->
+        match try_with (fun () -> of_bigstring bigstring ?pos ?len) with
+        | Error _ -> assert (not is_valid)
+        | Ok t ->
+          assert is_valid;
+          assert (String.equal (to_string t) (Bigstring.to_string bigstring ?pos ?len))))
   ;;
 
   let advance = advance
@@ -1693,8 +1689,7 @@ struct
         let consume_result =
           Or_error.try_with (fun () ->
             sub_shared (read_only (no_seek t)) ~pos
-            |> fun t ->
-            blito ~src:t ~src_pos:0 ~src_len:len' ~dst:str ?dst_pos:str_pos ())
+            |> fun t -> blito ~src:t ~src_pos:0 ~src_len:len' ~dst:str ?dst_pos:str_pos ())
         in
         match consume_result, is_valid with
         | Error _, false -> ()
@@ -1754,7 +1749,6 @@ struct
 
         (* static permission tests; see above *)
         let char_a_pos_0 iobuf = Char.( = ) 'a' (char iobuf ~pos:0)
-
         let%test _ = char_a_pos_0 (of_string "a" : (_, no_seek) Iobuf.t)
         let%test _ = char_a_pos_0 (of_string "a" : (_, seek) Iobuf.t)
         let%test _ = char_a_pos_0 (of_string "a" : (read, _) Iobuf.t)
@@ -1767,7 +1761,6 @@ struct
       open Peek.To_bytes
 
       let blito = blito
-
       let%test_unit _ = test_peek_to_string blito
     end
 
@@ -1775,7 +1768,6 @@ struct
       open Peek.To_bigstring
 
       let blito = blito
-
       let%test_unit _ = test_peek_to_bigstring blito
     end
   end
@@ -2093,7 +2085,6 @@ struct
       open To_bytes
 
       let blito = blito
-
       let%test_unit _ = test_consume_to_string blito
     end
 
@@ -2101,7 +2092,6 @@ struct
       open To_bigstring
 
       let blito = blito
-
       let%test_unit _ = test_consume_to_bigstring blito
     end
   end
@@ -2764,7 +2754,6 @@ module _ = Accessors (struct
   end)
 
 let memcmp = memcmp
-
 let%test_unit _ = assert (memcmp (Iobuf.create ~len:0) (Iobuf.create ~len:0) = 0)
 let%test_unit _ = assert (memcmp (Iobuf.create ~len:0) (Iobuf.create ~len:1) = -1)
 let%test_unit _ = assert (memcmp (Iobuf.create ~len:1) (Iobuf.create ~len:0) = 1)

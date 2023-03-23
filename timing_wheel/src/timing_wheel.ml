@@ -914,8 +914,7 @@ end = struct
                assert (
                  Min_key_in_same_slot_mask.equal
                    min_key_in_same_slot_mask
-                   (Min_key_in_same_slot_mask.create
-                      ~bits_per_slot:level.bits_per_slot))))
+                   (Min_key_in_same_slot_mask.create ~bits_per_slot:level.bits_per_slot))))
           ~diff_max_min_allowed_key:
             (check
                ([%test_result: Key.Span.t]
@@ -954,18 +953,9 @@ end = struct
                  then (
                    Internal_elt.invariant pool invariant_a elt;
                    Internal_elt.iter pool elt ~f:(fun elt ->
-                     assert (
-                       Key.( >= )
-                         (Internal_elt.key pool elt)
-                         level.min_allowed_key);
-                     assert (
-                       Key.( <= )
-                         (Internal_elt.key pool elt)
-                         level.max_allowed_key);
-                     assert (
-                       Key.( >= )
-                         (Internal_elt.key pool elt)
-                         t.elt_key_lower_bound);
+                     assert (Key.( >= ) (Internal_elt.key pool elt) level.min_allowed_key);
+                     assert (Key.( <= ) (Internal_elt.key pool elt) level.max_allowed_key);
+                     assert (Key.( >= ) (Internal_elt.key pool elt) t.elt_key_lower_bound);
                      assert (Internal_elt.level_index pool elt = level.index);
                      invariant_a (Internal_elt.value pool elt)))))))
     in
@@ -988,8 +978,7 @@ end = struct
              assert (Key.( <= ) elt_key_lower_bound (max_allowed_key t));
              if not (Internal_elt.is_null t.min_elt)
              then
-               assert (
-                 Key.equal elt_key_lower_bound (Internal_elt.key t.pool t.min_elt))))
+               assert (Key.equal elt_key_lower_bound (Internal_elt.key t.pool t.min_elt))))
         ~levels:
           (check (fun levels ->
              assert (num_levels t > 0);
@@ -1285,44 +1274,43 @@ end = struct
       List.foldi
         level_bits
         ~init:(Num_key_bits.zero, Key.zero, [])
-        ~f:(fun
-             index
-             (bits_per_slot, max_level_min_allowed_key, levels)
-             (level_bits : Num_key_bits.t)
-             ->
-               let keys_per_slot = Key.num_keys bits_per_slot in
-               let diff_max_min_allowed_key =
-                 compute_diff_max_min_allowed_key ~level_bits ~bits_per_slot
-               in
-               let min_key_in_same_slot_mask =
-                 Min_key_in_same_slot_mask.create ~bits_per_slot
-               in
-               let min_allowed_key =
-                 Key.min_key_in_same_slot max_level_min_allowed_key min_key_in_same_slot_mask
-               in
-               let max_allowed_key =
-                 Key.add_clamp_to_max min_allowed_key diff_max_min_allowed_key
-               in
-               let level =
-                 { Level.index
-                 ; bits = level_bits
-                 ; slots_mask = Slots_mask.create ~level_bits
-                 ; bits_per_slot
-                 ; keys_per_slot
-                 ; min_key_in_same_slot_mask
-                 ; diff_max_min_allowed_key
-                 ; length = 0
-                 ; min_allowed_key
-                 ; max_allowed_key
-                 ; slots =
-                     Array.create
-                       ~len:(Int63.to_int_exn (Num_key_bits.pow2 level_bits))
-                       (Internal_elt.null ())
-                 }
-               in
-               ( Num_key_bits.( + ) level_bits bits_per_slot
-               , Key.succ_clamp_to_max max_allowed_key
-               , level :: levels ))
+        ~f:
+          (fun
+            index
+            (bits_per_slot, max_level_min_allowed_key, levels)
+            (level_bits : Num_key_bits.t)
+            ->
+              let keys_per_slot = Key.num_keys bits_per_slot in
+              let diff_max_min_allowed_key =
+                compute_diff_max_min_allowed_key ~level_bits ~bits_per_slot
+              in
+              let min_key_in_same_slot_mask = Min_key_in_same_slot_mask.create ~bits_per_slot in
+              let min_allowed_key =
+                Key.min_key_in_same_slot max_level_min_allowed_key min_key_in_same_slot_mask
+              in
+              let max_allowed_key =
+                Key.add_clamp_to_max min_allowed_key diff_max_min_allowed_key
+              in
+              let level =
+                { Level.index
+                ; bits = level_bits
+                ; slots_mask = Slots_mask.create ~level_bits
+                ; bits_per_slot
+                ; keys_per_slot
+                ; min_key_in_same_slot_mask
+                ; diff_max_min_allowed_key
+                ; length = 0
+                ; min_allowed_key
+                ; max_allowed_key
+                ; slots =
+                    Array.create
+                      ~len:(Int63.to_int_exn (Num_key_bits.pow2 level_bits))
+                      (Internal_elt.null ())
+                }
+              in
+              ( Num_key_bits.( + ) level_bits bits_per_slot
+              , Key.succ_clamp_to_max max_allowed_key
+              , level :: levels ))
     in
     { length = 0
     ; pool = Internal_elt.Pool.create ?capacity ()
@@ -1656,11 +1644,8 @@ let invariant invariant_a t =
           (Alarm.interval_num t alarm)
           (interval_num t (Alarm.at t alarm)));
       assert (
-        Time_ns.( >= )
-          (interval_start t (Alarm.at t alarm))
-          (interval_start t (now t)));
-      assert (
-        Time_ns.( > ) (Alarm.at t alarm) (Time_ns.sub (now t) (alarm_precision t)))))
+        Time_ns.( >= ) (interval_start t (Alarm.at t alarm)) (interval_start t (now t)));
+      assert (Time_ns.( > ) (Alarm.at t alarm) (Time_ns.sub (now t) (alarm_precision t)))))
 ;;
 
 let debug = false

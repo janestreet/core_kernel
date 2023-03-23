@@ -522,6 +522,13 @@ let%expect_test "folding_map" =
   [%expect {| (0 1 3 6 10 15) |}]
 ;;
 
+let%expect_test "fold_map" =
+  print_s
+    [%sexp
+      (fold_map [ 1; 2; 3; 4; 5; 6 ] ~init:0 ~f:(fun acc x -> acc + x, acc) : int * int t)];
+  [%expect {| (21 (0 1 3 6 10 15)) |}]
+;;
+
 let%expect_test "mapi" =
   print_s [%sexp (mapi [ "a"; "b"; "c"; "d" ] ~f:(fun i x -> i, x) : (int * string) t)];
   [%expect {| ((0 a) (1 b) (2 c) (3 d)) |}]
@@ -767,8 +774,7 @@ let%expect_test "Option does not allocate" =
         match%optional.Nonempty_list.Option l with
         | None -> Sys.opaque_identity Nonempty_list.Option.none
         | Some nonempty ->
-          Sys.opaque_identity
-            (Nonempty_list.Option.some (Sys.opaque_identity nonempty)))
+          Sys.opaque_identity (Nonempty_list.Option.some (Sys.opaque_identity nonempty)))
     in
     assert (phys_equal l round_tripped))
 ;;
