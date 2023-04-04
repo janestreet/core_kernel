@@ -112,6 +112,7 @@ module Sequence (A : Applicative) = Sequence2 (Applicative.S_to_S2 (A))
 include struct
   open Map
 
+  let combine_errors = combine_errors
   let data = data
   let for_all = for_all
   let for_alli = for_alli

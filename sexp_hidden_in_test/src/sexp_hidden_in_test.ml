@@ -4,14 +4,14 @@ module Make (M : sig
     val am_running_test : bool
   end) =
 struct
-  type 'a t = 'a [@@deriving bin_io, compare, sexp]
+  type 'a t = 'a [@@deriving bin_io, compare, equal, sexp]
 
   let sexp_of_t sexp_of_a a =
     if M.am_running_test then Sexp.Atom "<hidden_in_test>" else sexp_of_a a
   ;;
 
   module With_non_roundtripping_in_test_of_sexp = struct
-    type nonrec 'a t = 'a t [@@deriving bin_io, compare, sexp]
+    type nonrec 'a t = 'a t [@@deriving bin_io, compare, equal, sexp]
   end
 end
 

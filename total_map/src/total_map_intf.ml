@@ -162,6 +162,7 @@ module type Total_map = sig
 
   val find : ('key, 'a, _, _) t -> 'key -> 'a
   val change : ('key, 'a, 'c, 'e) t -> 'key -> f:('a -> 'a) -> ('key, 'a, 'c, 'e) t
+  val combine_errors : ('key, 'a Or_error.t, 'c, 'e) t -> ('key, 'a, 'c, 'e) t Or_error.t
   val data : (_, 'a, _, _) t -> 'a list
   val for_all : (_, 'a, _, _) t -> f:('a -> bool) -> bool
   val for_alli : ('key, 'a, _, _) t -> f:(key:'key -> data:'a -> bool) -> bool

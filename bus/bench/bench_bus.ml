@@ -39,6 +39,11 @@ let%bench_fun "Bus.create_exn (Arity 4)" =
   fun () -> ignore (create Arity4 ~num_subscribers:0 : _ Read_write.t)
 ;;
 
+let%bench_fun "Bus.write [int] to 0 subs" =
+  let t = create Arity1 ~num_subscribers:0 in
+  fun () -> write t 1
+;;
+
 let%bench_fun "Bus.write [int] to 1 sub" =
   let t = create Arity1 ~num_subscribers:1 in
   fun () -> write t 1
@@ -67,6 +72,21 @@ let%bench_fun "Bus.write4 to 300 subs" =
 let%bench_fun "Bus.write5 to 300 subs" =
   let t = create Arity5 ~num_subscribers:300 in
   fun () -> write5 t 1 2 3 4 5
+;;
+
+let%bench_fun "Bus.write_local [int * int] to 0 subs" =
+  let t = create Arity1_local ~num_subscribers:0 in
+  fun () -> write_local t (1, 2)
+;;
+
+let%bench_fun "Bus.write_local [int * int] to 1 sub" =
+  let t = create Arity1_local ~num_subscribers:1 in
+  fun () -> write_local t (1, 2)
+;;
+
+let%bench_fun "Bus.write_local [int * int] to 300 subs" =
+  let t = create Arity1_local ~num_subscribers:300 in
+  fun () -> write_local t (1, 2)
 ;;
 
 let%bench_fun "Bus.subscribe_exn 300 times" = fun () -> create Arity1 ~num_subscribers:300

@@ -573,6 +573,61 @@ struct
         ((last1 5)
          (last2 .....)) |}]
       ;;
+
+      let test_free which_unsubscribes =
+        let weak_references = Weak.create 2 in
+        let subscribed_index, unsubscribed_index =
+          match which_unsubscribes with
+          | `First -> 1, 0
+          | `Last -> 0, 1
+        in
+        let bus = create1 [%here] ~on_subscription_after_first_write:Raise in
+        let bus_r = read_only bus in
+        (* Keep two subscribers.  One stays subscribed and the other won't.  The one that
+           stays subscribed is proof that we can still access the subscribers.  The
+           unsubscribed one should be freed. *)
+        Weak.set
+          weak_references
+          subscribed_index
+          (subscribe_exn bus_r [%here] ~f:ignore |> Some);
+        let unsubscriber = ref None in
+        unsubscriber
+        := Some
+             (subscribe_exn bus_r [%here] ~f:(fun () ->
+                print_s [%message "unsubscribing" (unsubscribed_index : int)];
+                unsubscribe bus_r (Option.value_exn !unsubscriber)));
+        Weak.set weak_references unsubscribed_index !unsubscriber;
+        (* Now write to the bus, triggering unsubscription. *)
+        write bus ();
+        (* Invoke a [Gc.full_major] in order to collect the unused subscriber. *)
+        Gc.full_major ();
+        require
+          [%here]
+          (Option.is_some (Weak.get weak_references subscribed_index))
+          ~if_false_then_print_s:(lazy [%message "Missing remaining subscriber"]);
+        require
+          [%here]
+          (Option.is_none (Weak.get weak_references unsubscribed_index))
+          ~if_false_then_print_s:(lazy [%message "Unsubscribed subscriber remains"]);
+        (* Use [bus] again here, otherwise it would be gc'd along with the subscribers
+           above. *)
+        write bus ()
+      ;;
+
+      (* There are two 'free' tests because [Bus] does some logic under the hood when
+         unsubscription occurs, and we should test multiple cases.  Also, there are no
+         weak pointers in javascript, so exclude javascript testing. *)
+      let%expect_test ("free first subscriber" [@tags "no-js"]) =
+        test_free `First;
+        [%expect {|
+          (unsubscribing (unsubscribed_index 0)) |}]
+      ;;
+
+      let%expect_test ("free last subscriber" [@tags "no-js"]) =
+        test_free `Last;
+        [%expect {|
+          (unsubscribing (unsubscribed_index 1)) |}]
+      ;;
     end)
   ;;
 
