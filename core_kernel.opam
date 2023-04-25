@@ -1,4 +1,5 @@
 opam-version: "2.0"
+version: "v0.16.0"
 maintainer: "Jane Street developers"
 authors: ["Jane Street Group, LLC"]
 homepage: "https://github.com/janestreet/core_kernel"
@@ -10,12 +11,12 @@ build: [
   ["dune" "build" "-p" name "-j" jobs]
 ]
 depends: [
-  "ocaml" {>= "4.14.0"}
-  "base"
-  "core"
-  "int_repr"
-  "ppx_jane"
-  "ppx_optcomp"
+  "ocaml"        {>= "4.14.0"}
+  "base"         {>= "v0.16" & < "v0.17"}
+  "core"         {>= "v0.16" & < "v0.17"}
+  "int_repr"     {>= "v0.16" & < "v0.17"}
+  "ppx_jane"     {>= "v0.16" & < "v0.17"}
+  "ppx_optcomp"  {>= "v0.16" & < "v0.17"}
   "base-threads"
   "dune"         {>= "2.0.0"}
 ]
