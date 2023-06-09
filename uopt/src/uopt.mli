@@ -31,7 +31,7 @@
 
 open! Base
 
-type +'a t [@@deriving sexp_of]
+type +'a t [@@deriving sexp_of, globalize]
 
 include Invariant.S1 with type 'a t := 'a t
 

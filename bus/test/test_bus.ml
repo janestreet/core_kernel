@@ -574,6 +574,171 @@ struct
          (last2 .....)) |}]
       ;;
 
+      let%expect_test "subscribing during a write with \
+                       [~on_subscription_after_first_write=Allow_and_send_last_value]"
+        =
+        let bus =
+          create1 [%here] ~on_subscription_after_first_write:Allow_and_send_last_value
+        in
+        (* Create a new subscription during each write. *)
+        iter_exn bus [%here] ~f:(fun x ->
+          print_endline [%string "toplevel iter: x = %{x#Int}"];
+          iter_exn bus [%here] ~f:(fun y ->
+            print_endline [%string "nested iter:   x = %{x#Int}, y = %{y#Int}"]));
+        (* When a value is written, the new subscription immediately sees it. *)
+        write bus 1;
+        [%expect
+          {|
+          toplevel iter: x = 1
+          nested iter:   x = 1, y = 1 |}];
+        (* Old subscriptions properly see new writes. *)
+        write bus 2;
+        [%expect
+          {|
+          toplevel iter: x = 2
+          nested iter:   x = 2, y = 2
+          nested iter:   x = 1, y = 2 |}];
+        write bus 3;
+        [%expect
+          {|
+          toplevel iter: x = 3
+          nested iter:   x = 3, y = 3
+          nested iter:   x = 1, y = 3
+          nested iter:   x = 2, y = 3 |}]
+      ;;
+
+      let%expect_test "unsubscribe second listener on first listeners callback" =
+        let bus =
+          create1 [%here] ~on_subscription_after_first_write:Allow_and_send_last_value
+        in
+        let sub2 = ref None in
+        let _sub1 =
+          subscribe_exn bus [%here] ~f:(fun x ->
+            print_endline [%string "permanent sub1: x = %{x#Int}"];
+            Option.iter !sub2 ~f:(fun sub2 -> unsubscribe bus sub2))
+        in
+        sub2
+        := subscribe_exn bus [%here] ~f:(fun x ->
+          print_endline [%string "temporary sub2: x = %{x#Int}"])
+           |> Some;
+        write bus 1;
+        [%expect {|
+          permanent sub1: x = 1
+          temporary sub2: x = 1 |}];
+        write bus 2;
+        [%expect {|
+          permanent sub1: x = 2 |}];
+        write bus 3;
+        [%expect {|
+          permanent sub1: x = 3 |}]
+      ;;
+
+      let%expect_test "subscribe and unsubscribe during a single write with \
+                       [~on_subscription_after_first_write=Allow_and_send_last_value]"
+        =
+        let bus =
+          create1 [%here] ~on_subscription_after_first_write:Allow_and_send_last_value
+        in
+        (* Create a new subscription and cancel it during each write.  While this behavior
+           is a bit strange, one write (of the current value) makes it to the subscriber.
+           In other words, the callgraph for this test is:
+
+           {v
+            iter_exn ~f:f1
+            write x
+              |- f1 x
+                 |- subscribe_exn ~f:f2 ==> s
+                    |- f2 x
+                 |- unsubscribe s
+            v}
+
+           It may seem weird, but I claim this is no different than when other
+           subscribes happen during writes with [Allow_and_send_last_value]. *)
+        iter_exn bus [%here] ~f:(fun x ->
+          print_endline [%string "toplevel iter: x = %{x#Int}"];
+          let subscriber =
+            subscribe_exn bus [%here] ~f:(fun y ->
+              print_endline [%string "nested iter:   x = %{x#Int}, y = %{y#Int}"])
+          in
+          unsubscribe bus subscriber);
+        write bus 1;
+        [%expect
+          {|
+          toplevel iter: x = 1
+          nested iter:   x = 1, y = 1 |}];
+        write bus 2;
+        [%expect
+          {|
+          toplevel iter: x = 2
+          nested iter:   x = 2, y = 2 |}];
+        write bus 3;
+        [%expect
+          {|
+          toplevel iter: x = 3
+          nested iter:   x = 3, y = 3 |}]
+      ;;
+
+      let%expect_test "creating many new subscribers during a write with \
+                       [~on_subscription_after_first_write=Allow_and_send_last_value]"
+        =
+        let bus =
+          create_exn
+            [%here]
+            ~on_subscription_after_first_write:Allow_and_send_last_value
+            Arity1
+            ~on_callback_raise:Error.raise
+        in
+        let subscribe n =
+          ignore
+            (subscribe_exn bus [%here] ~f:(fun s ->
+               printf "Subscriber %d, value received: %s\n" n s)
+             : _ Subscriber.t)
+        in
+        ignore
+          (subscribe_exn bus [%here] ~f:(fun _ ->
+             subscribe 1;
+             subscribe 2)
+           : _ Subscriber.t);
+        write bus "hello";
+        [%expect
+          {|
+          Subscriber 1, value received: hello
+          Subscriber 2, value received: hello |}];
+        write bus "again";
+        [%expect
+          {|
+          Subscriber 1, value received: again
+          Subscriber 2, value received: again
+          Subscriber 1, value received: again
+          Subscriber 2, value received: again |}]
+      ;;
+
+      let%expect_test "subscribing during a write with \
+                       [~on_subscription_after_first_write=Raise]"
+        =
+        let bus = create1 [%here] ~on_subscription_after_first_write:Raise in
+        (* Create a new subscription during each write *)
+        iter_exn bus [%here] ~f:(fun _ -> iter_exn bus [%here] ~f:ignore);
+        show_raise ~hide_positions:true (fun () -> write bus 1);
+        [%expect
+          {|
+          (raised (
+            "Bus subscriber raised"
+            (exn (
+              "Bus.iter_exn called after first write"
+              ((callback_arity Arity1)
+               (created_from   lib/bus/test/test_bus.ml:LINE:COL)
+               (on_subscription_after_first_write Raise)
+               (state                             Write_in_progress)
+               (write_ever_called                 true)
+               (subscribers ((
+                 Bus.Subscriber.t (subscribed_from lib/bus/test/test_bus.ml:LINE:COL)))))
+              lib/bus/src/bus.ml:LINE:COL))
+            (backtrace ("<backtrace elided in test>"))
+            (subscriber (
+              Bus.Subscriber.t (subscribed_from lib/bus/test/test_bus.ml:LINE:COL))))) |}]
+      ;;
+
       let test_free which_unsubscribes =
         let weak_references = Weak.create 2 in
         let subscribed_index, unsubscribed_index =

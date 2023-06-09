@@ -91,12 +91,21 @@ val of_bigstring
 (** forbid [immutable] to prevent aliasing *)
 
 (** [of_bigstring_local] is like [of_bigstring], but it allocates the iobuf record
-    locally. *)
+    locally.*)
 val of_bigstring_local
   :  ?pos:(int[@local])
   -> ?len:(int[@local])
   -> Bigstring.t
   -> (([< read_write ], _) t[@local])
+
+(** More efficient than the above (optional arguments are costly). *)
+val unsafe_bigstring_view
+  :  pos:int
+  -> len:int
+  -> Bigstring.t
+  -> (([< read_write ], _) t[@local])
+
+val bigstring_view : pos:int -> len:int -> Bigstring.t -> (([< read_write ], _) t[@local])
 
 (** [of_string s] returns a new iobuf whose contents are [s]. *)
 val of_string : string -> (_, _) t
@@ -367,6 +376,12 @@ val to_bytes : ?len:int -> ((_, _) t[@local]) -> Bytes.t
 
 (** [of_bytes b] returns a new iobuf whose contents is [b]. *)
 val of_bytes : Bytes.t -> (_, _) t
+
+module Itoa : sig
+  (** [num_digits x] returns the number of digits in [x].
+      ([num_digits 0] is defined as 1).*)
+  val num_digits : int -> int
+end
 
 
 (** [Consume.string t ~len] reads [len] characters (all, by default) from [t] into a new
@@ -698,16 +713,50 @@ module Expert : sig
   (** Similar to [protect_window_bounds_and_buffer], but does not save/restore the buffer or
       bounds. Mixing this with functions like [set_bounds_and_buffer] or [narrow] is
       unsafe; you should not modify anyything but the window inside [f]. *)
-  val protect_window : ('rw, _) t -> f:((('rw, seek) t -> 'a)[@local]) -> 'a
+  val protect_window
+    :  (('rw, _) t[@local])
+    -> f:(((('rw, seek) t[@local]) -> 'a)[@local])
+    -> 'a
 
-  val protect_window_1 : ('rw, _) t -> 'a -> f:((('rw, seek) t -> 'a -> 'b)[@local]) -> 'b
+  (** As [protect_window] but does not enforce that the closure should not let the buffer
+      escape. Letting the buffer escape is dangerous and almost certainly not what you
+      wanted. *)
+  val protect_window_global_deprecated
+    :  ('rw, _) t
+    -> f:((('rw, seek) t -> 'a)[@local])
+    -> 'a
+
+  val protect_window_1
+    :  (('rw, _) t[@local])
+    -> 'a
+    -> f:(((('rw, seek) t[@local]) -> 'a -> 'b)[@local])
+    -> 'b
+
+  val protect_window_1_global_deprecated
+    :  ('rw, _) t
+    -> 'a
+    -> f:((('rw, seek) t -> 'a -> 'b)[@local])
+    -> 'b
 
   val protect_window_2
+    :  (('rw, _) t[@local])
+    -> 'a
+    -> 'b
+    -> f:(((('rw, seek) t[@local]) -> 'a -> 'b -> 'c)[@local])
+    -> 'c
+
+  val protect_window_2_global_deprecated
     :  ('rw, _) t
     -> 'a
     -> 'b
     -> f:((('rw, seek) t -> 'a -> 'b -> 'c)[@local])
     -> 'c
+
+  (** Similar to [protect_window] but returns a local value. *)
+  val protect_window_local
+    :  (('rw, _) t[@local])
+    -> f:(((('rw, seek) t[@local]) -> ('a[@local]))[@local])
+    -> ('a[@local])
 
   (** Computes the position within [buf] for [pos] relative to our window. Checks [len]
       bytes are available. *)

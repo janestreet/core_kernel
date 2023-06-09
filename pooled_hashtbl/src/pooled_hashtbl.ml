@@ -238,7 +238,7 @@ let mem t key =
 
 (* we assume here that [Entry.create] will succeed *)
 let insert_link_pool_not_full t ~index ~key ~data ~it =
-  (* New entry adds to the begining of the list, which is t.table.(index) or `it`. *)
+  (* New entry adds to the beginning of the list, which is t.table.(index) or `it`. *)
   let e = Entry.create t.entries ~next:it ~key ~data in
   table_set t.table index e;
   t.length <- t.length + 1
@@ -489,7 +489,7 @@ let change =
     match change_key t key f index it (Entry.null ()) with
     | `Changed -> ()
     | `Not_found ->
-      (* New entry is inserted in the begining of the list (it) *)
+      (* New entry is inserted in the beginning of the list (it) *)
       (match call t f None with
        | None -> ()
        | Some data -> insert_link t ~index ~key ~data ~it)

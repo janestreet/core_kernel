@@ -176,9 +176,37 @@ let[@cold] bad_range ~pos ~len t =
     [%sexp_of: [ `pos of int ] * [ `len of int ]]
 ;;
 
+let[@cold] bad_range_bstr ~pos ~len ~str_len =
+  raise_s
+    [%message "bad range relative to bigstring" (str_len : int) (pos : int) (len : int)]
+;;
+
 let check_range t ~pos ~len =
   if pos < 0 || len < 0 || len > length t - pos then bad_range ~pos ~len t
 [@@inline always]
+;;
+
+let[@inline always] unsafe_bigstring_view ~pos ~len buf =
+  
+    (let lo = pos in
+     let hi = pos + len in
+     { buf; lo_min = lo; lo; hi; hi_max = hi })
+;;
+
+let[@inline always] check_bigstring ~bstr ~pos ~len =
+  let str_len = Bigstring.length bstr in
+  if pos < 0
+  || pos > str_len
+  ||
+  let max_len = str_len - pos in
+  len < 0 || len > max_len
+  then bad_range_bstr ~str_len ~pos ~len
+;;
+
+let bigstring_view ~pos ~len bstr =
+  
+    (check_bigstring ~bstr ~pos ~len;
+     unsafe_bigstring_view ~pos ~len bstr)
 ;;
 
 let of_bigstring_local ?pos ?len buf =
@@ -205,9 +233,11 @@ let of_bigstring_local ?pos ?len buf =
              [%sexp "Iobuf.of_bigstring got invalid pos", (len : int), ~~(max_len : int)];
          len
      in
-     let lo = pos in
-     let hi = pos + len in
-     { buf; lo_min = lo; lo; hi; hi_max = hi })
+     unsafe_bigstring_view ~pos ~len buf)
+;;
+
+let unsafe_bigstring_view =
+  if unsafe_is_safe then bigstring_view else unsafe_bigstring_view
 ;;
 
 let of_bigstring ?pos ?len buf =
@@ -930,12 +960,12 @@ let write_bin_prot writer t ~pos a =
    attempt to utilize a positive decimal loop by writing the sign and calling [Int.abs x]
    fails. The converse, with [- Int.max_value] works for both cases. *)
 module Itoa = struct
-  (* [num_digits x] returns the number of digits in [x] for non-positive integers
-     ([num_digits 0] is defined as 1).
+  (* [num_digits_neg x] returns the number of digits in [x] for non-positive integers
+     ([num_digits_neg 0] is defined as 1).
 
      The below tends to perform better than a binary search or [/= 10 while <> 0], likely
      due to decimal values for our applications skewing towards smaller numbers. *)
-  let num_digits x =
+  let num_digits_neg x =
     if x > -10
     then 1
     else if x > -100
@@ -978,6 +1008,7 @@ module Itoa = struct
     else 10
   ;;
 
+  let num_digits x = if x < 0 then num_digits_neg x else num_digits_neg (-x)
   let () = assert (String.length (Int.to_string Int.min_value) <= 19 + 1)
 
   (* Despite the div/mod by a constant optimizations, it's a slight savings to avoid a
@@ -999,13 +1030,13 @@ module Itoa = struct
   ;;
 
   let poke_decimal t ~pos int =
+    let len = num_digits int in
     if int < 0
     then (
-      let len = 1 + num_digits int in
+      let len = 1 + len in
       unsafe_poke_negative_decimal t ~pos:(buf_pos_exn t ~pos ~len) ~len int;
       len)
     else (
-      let len = num_digits (-int) in
       unsafe_poke_negative_decimal_without_sign
         t
         ~pos:(buf_pos_exn t ~pos ~len)
@@ -1015,13 +1046,13 @@ module Itoa = struct
   ;;
 
   let unsafe_poke_decimal t ~pos int =
+    let len = num_digits int in
     if int < 0
     then (
-      let len = 1 + num_digits int in
+      let len = 1 + len in
       unsafe_poke_negative_decimal t ~pos:(unsafe_buf_pos t ~pos ~len) ~len int;
       len)
     else (
-      let len = num_digits (-int) in
       unsafe_poke_negative_decimal_without_sign
         t
         ~pos:(unsafe_buf_pos t ~pos ~len)
@@ -1961,6 +1992,21 @@ module Expert = struct
       raise exn
   ;;
 
+  let protect_window_global_deprecated t ~f =
+    let lo = t.lo in
+    let hi = t.hi in
+    try
+      let result = f t in
+      t.lo <- lo;
+      t.hi <- hi;
+      result
+    with
+    | exn ->
+      t.lo <- lo;
+      t.hi <- hi;
+      raise exn
+  ;;
+
   let protect_window_1 t x ~f =
     let lo = t.lo in
     let hi = t.hi in
@@ -1989,6 +2035,52 @@ module Expert = struct
       t.lo <- lo;
       t.hi <- hi;
       raise exn
+  ;;
+
+  let protect_window_1_global_deprecated t x ~f =
+    let lo = t.lo in
+    let hi = t.hi in
+    try
+      let result = f t x in
+      t.lo <- lo;
+      t.hi <- hi;
+      result
+    with
+    | exn ->
+      t.lo <- lo;
+      t.hi <- hi;
+      raise exn
+  ;;
+
+  let protect_window_2_global_deprecated t x y ~f =
+    let lo = t.lo in
+    let hi = t.hi in
+    try
+      let result = f t x y in
+      t.lo <- lo;
+      t.hi <- hi;
+      result
+    with
+    | exn ->
+      t.lo <- lo;
+      t.hi <- hi;
+      raise exn
+  ;;
+
+  let protect_window_local t ~f =
+    
+      (let lo = t.lo in
+       let hi = t.hi in
+       try
+         let result = f t in
+         t.lo <- lo;
+         t.hi <- hi;
+         result
+       with
+       | exn ->
+         t.lo <- lo;
+         t.hi <- hi;
+         raise exn)
   ;;
 end
 

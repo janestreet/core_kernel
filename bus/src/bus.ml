@@ -595,6 +595,9 @@ let[@inline always] write t a1 =
   match t.state with
   | Closed | Write_in_progress -> start_write_failing t
   | Ok_to_write ->
+    (match t.last_value with
+     | None -> ()
+     | Some last_value -> Last_value.set1 last_value a1);
     if t.num_subscribers > 0
     then (
       t.state <- Write_in_progress;
@@ -603,10 +606,7 @@ let[@inline always] write t a1 =
         (try (unsafe_get_callback callbacks 0) a1 with
          | exn -> callback_raised t 1 exn);
         finish_write t)
-      else (write_non_optimized [@inlined never]) t callbacks a1);
-    (match t.last_value with
-     | None -> ()
-     | Some last_value -> Last_value.set1 last_value a1)
+      else (write_non_optimized [@inlined never]) t callbacks a1)
 ;;
 
 let[@inline always] write_local t (a1 [@local]) =
@@ -632,6 +632,9 @@ let[@inline always] write2 t a1 a2 =
   match t.state with
   | Closed | Write_in_progress -> start_write_failing t
   | Ok_to_write ->
+    (match t.last_value with
+     | None -> ()
+     | Some last_value -> Last_value.set2 last_value a1 a2);
     if t.num_subscribers > 0
     then (
       t.state <- Write_in_progress;
@@ -640,10 +643,7 @@ let[@inline always] write2 t a1 a2 =
         (try (unsafe_get_callback callbacks 0) a1 a2 with
          | exn -> callback_raised t 1 exn);
         finish_write t)
-      else (write2_non_optimized [@inlined never]) t callbacks a1 a2);
-    (match t.last_value with
-     | None -> ()
-     | Some last_value -> Last_value.set2 last_value a1 a2)
+      else (write2_non_optimized [@inlined never]) t callbacks a1 a2)
 ;;
 
 let[@inline always] write3 t a1 a2 a3 =
@@ -652,6 +652,9 @@ let[@inline always] write3 t a1 a2 a3 =
   match t.state with
   | Closed | Write_in_progress -> start_write_failing t
   | Ok_to_write ->
+    (match t.last_value with
+     | None -> ()
+     | Some last_value -> Last_value.set3 last_value a1 a2 a3);
     if t.num_subscribers > 0
     then (
       t.state <- Write_in_progress;
@@ -660,10 +663,7 @@ let[@inline always] write3 t a1 a2 a3 =
         (try (unsafe_get_callback callbacks 0) a1 a2 a3 with
          | exn -> callback_raised t 1 exn);
         finish_write t)
-      else (write3_non_optimized [@inlined never]) t callbacks a1 a2 a3);
-    (match t.last_value with
-     | None -> ()
-     | Some last_value -> Last_value.set3 last_value a1 a2 a3)
+      else (write3_non_optimized [@inlined never]) t callbacks a1 a2 a3)
 ;;
 
 let[@inline always] write4 t a1 a2 a3 a4 =
@@ -672,6 +672,9 @@ let[@inline always] write4 t a1 a2 a3 a4 =
   match t.state with
   | Closed | Write_in_progress -> start_write_failing t
   | Ok_to_write ->
+    (match t.last_value with
+     | None -> ()
+     | Some last_value -> Last_value.set4 last_value a1 a2 a3 a4);
     if t.num_subscribers > 0
     then (
       t.state <- Write_in_progress;
@@ -680,10 +683,7 @@ let[@inline always] write4 t a1 a2 a3 a4 =
         (try (unsafe_get_callback callbacks 0) a1 a2 a3 a4 with
          | exn -> callback_raised t 1 exn);
         finish_write t)
-      else (write4_non_optimized [@inlined never]) t callbacks a1 a2 a3 a4);
-    (match t.last_value with
-     | None -> ()
-     | Some last_value -> Last_value.set4 last_value a1 a2 a3 a4)
+      else (write4_non_optimized [@inlined never]) t callbacks a1 a2 a3 a4)
 ;;
 
 let[@inline always] write5 t a1 a2 a3 a4 a5 =
@@ -692,6 +692,9 @@ let[@inline always] write5 t a1 a2 a3 a4 a5 =
   match t.state with
   | Closed | Write_in_progress -> start_write_failing t
   | Ok_to_write ->
+    (match t.last_value with
+     | None -> ()
+     | Some last_value -> Last_value.set5 last_value a1 a2 a3 a4 a5);
     if t.num_subscribers > 0
     then (
       t.state <- Write_in_progress;
@@ -700,10 +703,7 @@ let[@inline always] write5 t a1 a2 a3 a4 a5 =
         (try (unsafe_get_callback callbacks 0) a1 a2 a3 a4 a5 with
          | exn -> callback_raised t 1 exn);
         finish_write t)
-      else (write5_non_optimized [@inlined never]) t callbacks a1 a2 a3 a4 a5);
-    (match t.last_value with
-     | None -> ()
-     | Some last_value -> Last_value.set5 last_value a1 a2 a3 a4 a5)
+      else (write5_non_optimized [@inlined never]) t callbacks a1 a2 a3 a4 a5)
 ;;
 
 let allow_subscription_after_first_write t =

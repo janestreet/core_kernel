@@ -50,6 +50,12 @@ module Local = struct
   end
 end
 
+let globalize globalize_a t =
+  match%optional.Local t with
+  | None -> none
+  | Some x -> some (globalize_a x)
+;;
+
 let%test_module _ =
   (module struct
     let%expect_test ("using the same sentinel value" [@tags "no-js"]) =

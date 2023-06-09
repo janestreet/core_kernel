@@ -228,14 +228,14 @@ let%bench_module "decimal" =
 
     let%bench_fun ("Unsafe.Fill" [@indexed x = values]) =
       fun () ->
-        reset iobuf;
-        Unsafe.Fill.decimal iobuf x
+      reset iobuf;
+      Unsafe.Fill.decimal iobuf x
     ;;
 
     let%bench_fun ("Fill.stringo" [@indexed x = values]) =
       fun () ->
-        reset iobuf;
-        Fill.stringo iobuf (Int.to_string x)
+      reset iobuf;
+      Fill.stringo iobuf (Int.to_string x)
     ;;
   end)
 ;;

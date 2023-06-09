@@ -84,3 +84,31 @@ let%test_unit "Optional syntax" =
     | None -> false
     | Some num -> num = 13)
 ;;
+
+let%test_unit "[bin_size_t], [bin_write_t], [bin_read_t]" =
+  let open struct
+    module type S = sig
+      type t [@@deriving bin_io, quickcheck]
+    end
+  end in
+  let run_test (type a) (module M : S with type t = a) =
+    Quickcheck.iter [%quickcheck.generator: M.t option] ~f:(fun option ->
+      let buf = Bin_prot.Utils.bin_dump ~header:false [%bin_writer: M.t option] option in
+      let pos_ref = ref 0 in
+      let t = bin_read_t M.bin_read_t buf ~pos_ref in
+      [%test_result: int] !pos_ref ~expect:(Bigstring.length buf);
+      [%test_result: Bigstring.t]
+        (Bin_prot.Utils.bin_dump ~header:false [%bin_writer: M.t t] t)
+        ~expect:buf)
+  in
+  run_test (module Bool);
+  run_test (module String);
+  run_test
+    (module struct
+      type t =
+        [ `Bool of bool
+        | `String of string
+        ]
+      [@@deriving bin_io, quickcheck]
+    end)
+;;

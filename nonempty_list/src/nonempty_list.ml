@@ -51,8 +51,8 @@ module Stable = struct
 
     let stable_witness (type a) : a Stable_witness.t -> a t Stable_witness.t =
       fun witness ->
-        let module Stable_witness = Stable_witness.Of_serializable1 (Format) (T) in
-        Stable_witness.of_serializable Format.stable_witness of_list_exn to_list witness
+      let module Stable_witness = Stable_witness.Of_serializable1 (Format) (T) in
+      Stable_witness.of_serializable Format.stable_witness of_list_exn to_list witness
     ;;
 
     let%expect_test _ =

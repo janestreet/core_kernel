@@ -4,7 +4,7 @@
 open! Core
 open! Import
 
-type 'a t [@@deriving sexp_of]
+type 'a t [@@deriving bin_io, sexp]
 
 include Invariant.S1 with type 'a t := 'a t
 
@@ -24,3 +24,9 @@ val set : 'a t -> 'a option -> unit
 val set_none : _ t -> unit
 val set_some : 'a t -> 'a -> unit
 
+
+module Stable : sig
+  module V1 : sig
+    type nonrec 'a t = 'a t [@@deriving bin_io, sexp, stable_witness]
+  end
+end

@@ -2553,6 +2553,7 @@ struct
     let protect_window = Expert.protect_window
     let protect_window_1 = Expert.protect_window_1
     let protect_window_2 = Expert.protect_window_2
+    let protect_window_local = Expert.protect_window_local
 
     let%test_unit "reinitialize_of_bigstring" =
       let iobuf = Iobuf.of_string "1234" in
@@ -2586,21 +2587,28 @@ struct
       protect_window buf ~f:(fun buf ->
         Iobuf.advance buf 15;
         Iobuf.resize buf ~len:(Iobuf.length buf - 15);
-        print_s [%sexp (buf : (_, _) Iobuf.Window.Hexdump.Pretty.t)];
+        print_s [%sexp (Iobuf.sub_shared buf : (_, _) Iobuf.Window.Hexdump.Pretty.t)];
         [%expect {| in-short-window |}]);
       print_s [%sexp (buf : (_, _) Iobuf.Window.Hexdump.Pretty.t)];
       [%expect {| "in-long-window in-short-window in-long-window" |}];
       protect_window_1 buf () ~f:(fun buf () ->
         Iobuf.advance buf 15;
         Iobuf.resize buf ~len:(Iobuf.length buf - 15);
-        print_s [%sexp (buf : (_, _) Iobuf.Window.Hexdump.Pretty.t)];
+        print_s [%sexp (Iobuf.sub_shared buf : (_, _) Iobuf.Window.Hexdump.Pretty.t)];
         [%expect {| in-short-window |}]);
       print_s [%sexp (buf : (_, _) Iobuf.Window.Hexdump.Pretty.t)];
       [%expect {| "in-long-window in-short-window in-long-window" |}];
       protect_window_2 buf () () ~f:(fun buf () () ->
         Iobuf.advance buf 15;
         Iobuf.resize buf ~len:(Iobuf.length buf - 15);
-        print_s [%sexp (buf : (_, _) Iobuf.Window.Hexdump.Pretty.t)];
+        print_s [%sexp (Iobuf.sub_shared buf : (_, _) Iobuf.Window.Hexdump.Pretty.t)];
+        [%expect {| in-short-window |}]);
+      print_s [%sexp (buf : (_, _) Iobuf.Window.Hexdump.Pretty.t)];
+      [%expect {| "in-long-window in-short-window in-long-window" |}];
+      protect_window_local buf ~f:(fun buf ->
+        Iobuf.advance buf 15;
+        Iobuf.resize buf ~len:(Iobuf.length buf - 15);
+        print_s [%sexp (Iobuf.globalize () () buf : (_, _) Iobuf.Window.Hexdump.Pretty.t)];
         [%expect {| in-short-window |}]);
       print_s [%sexp (buf : (_, _) Iobuf.Window.Hexdump.Pretty.t)];
       [%expect {| "in-long-window in-short-window in-long-window" |}]
@@ -3291,4 +3299,93 @@ let%expect_test "transfer" =
   [%expect
     {|
     ("00000000  68 6f 6c 79 20 67 75 61  63 61 6d 6f 6c 65 21     |holy guacamole!|") |}]
+;;
+
+let%bench_fun ("blit x100" [@indexed blit_size = [ 1; 32; 100; 1600 ]]) =
+  let src = Iobuf.create ~len:blit_size in
+  let dst = Iobuf.create ~len:blit_size in
+  fun () ->
+    Iobuf.reset dst;
+    for _ = 1 to 100 do
+      Iobuf.Blit.blit ~src ~src_pos:0 ~dst ~len:blit_size ~dst_pos:0
+    done
+;;
+
+let%bench_fun ("unsafe_blit x100" [@indexed blit_size = [ 1; 32; 100; 1600 ]]) =
+  let src = Iobuf.create ~len:blit_size in
+  let dst = Iobuf.create ~len:blit_size in
+  fun () ->
+    Iobuf.reset dst;
+    for _ = 1 to 100 do
+      Iobuf.Blit.unsafe_blit ~src ~src_pos:0 ~dst ~len:blit_size ~dst_pos:0
+    done
+;;
+
+let%bench_fun ("blit fill x100" [@indexed blit_size = [ 1; 32; 100; 1600 ]]) =
+  let total = blit_size * 100 in
+  let src = Iobuf.create ~len:blit_size in
+  let dst = Iobuf.create ~len:total in
+  fun () ->
+    Iobuf.reset dst;
+    for _ = 1 to 100 do
+      Iobuf.Blit_fill.blit ~src ~src_pos:0 ~dst ~len:blit_size
+    done
+;;
+
+let%bench_fun ("unsafe_blit fill x100" [@indexed blit_size = [ 1; 32; 100; 1600 ]]) =
+  let total = blit_size * 100 in
+  let src = Iobuf.create ~len:blit_size in
+  let dst = Iobuf.create ~len:total in
+  fun () ->
+    Iobuf.reset dst;
+    for _ = 1 to 100 do
+      Iobuf.Blit_fill.unsafe_blit ~src ~src_pos:0 ~dst ~len:blit_size
+    done
+;;
+
+let%bench_fun ("blit consume x100" [@indexed blit_size = [ 1; 32; 100; 1600 ]]) =
+  let total = blit_size * 100 in
+  let src = Iobuf.create ~len:total in
+  let dst = Iobuf.create ~len:blit_size in
+  fun () ->
+    Iobuf.reset src;
+    for _ = 1 to 100 do
+      Iobuf.Blit_consume.blit ~src ~dst ~len:blit_size ~dst_pos:0
+    done
+;;
+
+let%bench_fun ("unsafe_blit consume x100" [@indexed blit_size = [ 1; 32; 100; 1600 ]]) =
+  let total = blit_size * 100 in
+  let src = Iobuf.create ~len:total in
+  let dst = Iobuf.create ~len:blit_size in
+  fun () ->
+    Iobuf.reset src;
+    for _ = 1 to 100 do
+      Iobuf.Blit_consume.unsafe_blit ~src ~dst ~len:blit_size ~dst_pos:0
+    done
+;;
+
+let%bench_fun ("blit consume+fill x100" [@indexed blit_size = [ 1; 32; 100; 1600 ]]) =
+  let total = blit_size * 100 in
+  let src = Iobuf.create ~len:total in
+  let dst = Iobuf.create ~len:total in
+  fun () ->
+    Iobuf.reset src;
+    Iobuf.reset dst;
+    for _ = 1 to 100 do
+      Iobuf.Blit_consume_and_fill.blit ~src ~dst ~len:blit_size
+    done
+;;
+
+let%bench_fun ("unsafe_blit consume+fill x100" [@indexed blit_size = [ 1; 32; 100; 1600 ]])
+  =
+  let total = blit_size * 100 in
+  let src = Iobuf.create ~len:total in
+  let dst = Iobuf.create ~len:total in
+  fun () ->
+    Iobuf.reset src;
+    Iobuf.reset dst;
+    for _ = 1 to 100 do
+      Iobuf.Blit_consume_and_fill.unsafe_blit ~src ~dst ~len:blit_size
+    done
 ;;

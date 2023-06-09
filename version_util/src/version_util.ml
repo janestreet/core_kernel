@@ -216,6 +216,7 @@ type t =
   ; x_library_inlining : bool
   ; portable_int63 : bool
   ; dynlinkable_code : bool
+  ; risk_system : bool [@sexp.default false]
   ; ocaml_version : string
   ; executable_path : string
   ; build_system : string
@@ -238,6 +239,7 @@ let build_info, build_info_as_sexp, t, build_system_supports_version_util =
         ; x_library_inlining = false
         ; portable_int63 = true
         ; dynlinkable_code = false
+        ; risk_system = false
         ; ocaml_version = ""
         ; executable_path = ""
         ; build_system = ""
@@ -262,6 +264,7 @@ let { username
     ; x_library_inlining
     ; portable_int63 = _
     ; dynlinkable_code
+    ; risk_system = _
     ; ocaml_version
     ; executable_path
     ; build_system
