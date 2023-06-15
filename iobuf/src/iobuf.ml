@@ -1009,56 +1009,121 @@ module Itoa = struct
   ;;
 
   let num_digits x = if x < 0 then num_digits_neg x else num_digits_neg (-x)
+  let min_len x = Bool.to_int (x < 0) + num_digits x
   let () = assert (String.length (Int.to_string Int.min_value) <= 19 + 1)
 
   (* Despite the div/mod by a constant optimizations, it's a slight savings to avoid a
      second div/mod. Note also that passing in an [int ref], rather than creating the ref
      locally here, results in allocation on the benchmarks. *)
-  let unsafe_poke_negative_decimal_without_sign t ~pos ~len int =
+  let unsafe_poke_negative_decimal_without_sign buf ~pos ~len int =
     let int = ref int in
     for pos = pos + len - 1 downto pos do
       let x = !int in
       int := !int / 10;
-      Bigstring.unsafe_set t.buf pos (Char.unsafe_of_int (48 + (-x + (!int * 10))))
+      Bigstring.unsafe_set buf pos (Char.unsafe_of_int (48 + (-x + (!int * 10))))
     done
   ;;
 
-  let unsafe_poke_negative_decimal t ~pos ~len int =
-    Bigstring.unsafe_set t.buf pos '-';
+  let unsafe_poke_negative_decimal buf ~pos ~len int =
+    Bigstring.unsafe_set buf pos '-';
     (* +1 and -1 to account for '-' *)
-    unsafe_poke_negative_decimal_without_sign t ~pos:(pos + 1) ~len:(len - 1) int
+    unsafe_poke_negative_decimal_without_sign buf ~pos:(pos + 1) ~len:(len - 1) int
+  ;;
+
+  (* This function pokes a "trunc"ated decimal of length exactly [len]. If [int] is
+     positive, then this will be the (at most) [len] least-significant digits, left-padded
+     with '0', whereas if [int] is negative, it will be the (at most) [len - 1]
+     least-significant digits, left-padded with '0', prefixed by the sign ('-').
+
+     E.g. for [len = 3]:
+     -    5 -> "005"
+     -   -5 -> "-05"
+     -   50 -> "050"
+     -  -50 -> "-50"
+     -  500 -> "500"
+     - -500 -> "-00"
+
+     The publicly-exposed functions compute the necessary [len] to prevent any digits
+     from being truncated, but this function is used internally in cases where we are
+     already confident the decimal will fit and can thus skip the extra work. *)
+  let[@inline] gen_poke_padded_decimal_trunc ~buf_pos t ~pos ~len int =
+    let pos = (buf_pos [@inlined hint]) t ~pos ~len in
+    if int < 0
+    then unsafe_poke_negative_decimal t.buf ~pos ~len int
+    else unsafe_poke_negative_decimal_without_sign t.buf ~pos ~len (-int)
+  ;;
+
+  (* See [gen_poke_padded_decimal_trunc] re: truncation. *)
+  let poke_padded_decimal_trunc t ~pos ~len int =
+    (gen_poke_padded_decimal_trunc [@inlined hint]) ~buf_pos:buf_pos_exn t ~pos ~len int
+  ;;
+
+  (* See [gen_poke_padded_decimal_trunc] re: truncation. *)
+  let unsafe_poke_padded_decimal_trunc t ~pos ~len int =
+    (gen_poke_padded_decimal_trunc [@inlined hint])
+      ~buf_pos:unsafe_buf_pos
+      t
+      ~pos
+      ~len
+      int
+  ;;
+
+  let[@inline] gen_poke_padded_decimal ~poke_padded_decimal_trunc t ~pos ~len int =
+    let len = max len (min_len int) in
+    (poke_padded_decimal_trunc [@inlined hint]) t ~pos ~len int;
+    len
+  ;;
+
+  let poke_padded_decimal t ~pos ~len int =
+    (gen_poke_padded_decimal [@inlined hint]) ~poke_padded_decimal_trunc t ~pos ~len int
+  ;;
+
+  let unsafe_poke_padded_decimal t ~pos ~len int =
+    (gen_poke_padded_decimal [@inlined hint])
+      ~poke_padded_decimal_trunc:unsafe_poke_padded_decimal_trunc
+      t
+      ~pos
+      ~len
+      int
+  ;;
+
+  let[@inline] gen_poke_decimal ~poke_padded_decimal_trunc t ~pos int =
+    let len = min_len int in
+    (poke_padded_decimal_trunc [@inlined hint]) t ~pos ~len int;
+    len
   ;;
 
   let poke_decimal t ~pos int =
-    let len = num_digits int in
-    if int < 0
-    then (
-      let len = 1 + len in
-      unsafe_poke_negative_decimal t ~pos:(buf_pos_exn t ~pos ~len) ~len int;
-      len)
-    else (
-      unsafe_poke_negative_decimal_without_sign
-        t
-        ~pos:(buf_pos_exn t ~pos ~len)
-        ~len
-        (-int);
-      len)
+    (gen_poke_decimal [@inlined hint]) ~poke_padded_decimal_trunc t ~pos int
   ;;
 
   let unsafe_poke_decimal t ~pos int =
-    let len = num_digits int in
-    if int < 0
-    then (
-      let len = 1 + len in
-      unsafe_poke_negative_decimal t ~pos:(unsafe_buf_pos t ~pos ~len) ~len int;
-      len)
-    else (
-      unsafe_poke_negative_decimal_without_sign
-        t
-        ~pos:(unsafe_buf_pos t ~pos ~len)
-        ~len
-        (-int);
-      len)
+    (gen_poke_decimal [@inlined hint])
+      ~poke_padded_decimal_trunc:unsafe_poke_padded_decimal_trunc
+      t
+      ~pos
+      int
+  ;;
+end
+
+module Date_string = struct
+  let len_iso8601_extended = 10
+
+  let[@inline] gen_poke_iso8601_extended ~buf_pos t ~pos date =
+    let pos = (buf_pos [@inlined hint]) t ~pos ~len:len_iso8601_extended in
+    Itoa.unsafe_poke_negative_decimal_without_sign t.buf ~pos ~len:4 (-Date.year date);
+    let pos = pos + 4 in
+    Itoa.unsafe_poke_negative_decimal t.buf ~pos ~len:3 (-Month.to_int (Date.month date));
+    let pos = pos + 3 in
+    Itoa.unsafe_poke_negative_decimal t.buf ~pos ~len:3 (-Date.day date)
+  ;;
+
+  let poke_iso8601_extended t ~pos date =
+    (gen_poke_iso8601_extended [@inlined hint]) ~buf_pos:buf_pos_exn t ~pos date
+  ;;
+
+  let unsafe_poke_iso8601_extended t ~pos date =
+    (gen_poke_iso8601_extended [@inlined hint]) ~buf_pos:unsafe_buf_pos t ~pos date
   ;;
 end
 
@@ -1239,6 +1304,12 @@ module Fill = struct
   ;;
 
   let decimal t i = uadv t (Itoa.poke_decimal t ~pos:0 i)
+  let padded_decimal ~len t i = uadv t (Itoa.poke_padded_decimal t ~pos:0 ~len i)
+
+  let date_string_iso8601_extended t date =
+    Date_string.poke_iso8601_extended t ~pos:0 date;
+    uadv t Date_string.len_iso8601_extended
+  ;;
 
   module Int_repr = struct
     let[@inline always] uint8 t i = uint8_trunc t (IR.Uint8.to_base_int i)
@@ -1692,6 +1763,8 @@ module Poke = struct
   ;;
 
   let decimal = Itoa.poke_decimal
+  let padded_decimal = Itoa.poke_padded_decimal
+  let date_string_iso8601_extended = Date_string.poke_iso8601_extended
 
   module Int_repr = struct
     let[@inline always] uint8 t ~pos i = uint8_trunc t ~pos (IR.Uint8.to_base_int i)
@@ -2476,6 +2549,12 @@ module Unsafe = struct
     let[@inline always] uint8_trunc t i = char t (Char.unsafe_of_int i)
     let[@inline always] int8_trunc t i = char t (Char.unsafe_of_int i)
     let decimal t i = uadv t (Itoa.unsafe_poke_decimal t ~pos:0 i)
+    let padded_decimal ~len t i = uadv t (Itoa.unsafe_poke_padded_decimal t ~pos:0 ~len i)
+
+    let date_string_iso8601_extended t date =
+      Date_string.unsafe_poke_iso8601_extended t ~pos:0 date;
+      uadv t Date_string.len_iso8601_extended
+    ;;
 
     module Int_repr = struct
       let[@inline always] uint8 t i = char t (Char.unsafe_of_int (IR.Uint8.to_base_int i))
@@ -2972,6 +3051,8 @@ module Unsafe = struct
     ;;
 
     let decimal = Itoa.unsafe_poke_decimal
+    let padded_decimal = Itoa.unsafe_poke_padded_decimal
+    let date_string_iso8601_extended = Date_string.unsafe_poke_iso8601_extended
 
     module Int_repr = struct
       let[@inline always] uint8 t ~pos i = uint8_trunc t ~pos (IR.Uint8.to_base_int i)

@@ -14,12 +14,13 @@ let () =
       let new_exe_contents =
         Option.value
           ~default:initial_contents_of_exe
-          (Version_util.Expert.insert_version_util
+          (Version_util.Expert.replace_version_util
              ~contents_of_exe:initial_contents_of_exe
-             [ { repo = "ssh://machine//path/to/repo"
-               ; version = "0123456789abcdef0123456789abcdef01234567"
-               }
-             ])
+             (Some
+                [ { repo = "ssh://machine//path/to/repo"
+                  ; version = "0123456789abcdef0123456789abcdef01234567"
+                  }
+                ]))
       in
       [%test_result: string]
         (Version_util.Expert.get_version_util ~contents_of_exe:new_exe_contents
@@ -30,7 +31,7 @@ let () =
       Core_unix.chmod tmp_file ~perm:(perm lor 0o100);
       Sys_unix.command_exn (Sys.concat_quoted [ tmp_file; "version-util-must-be-set" ]);
       let exe_contents_after_removal =
-        Version_util.Expert.remove_version_util ~contents_of_exe:new_exe_contents
+        Version_util.Expert.replace_version_util ~contents_of_exe:new_exe_contents None
         |> Option.value_exn
       in
       [%test_result: string]

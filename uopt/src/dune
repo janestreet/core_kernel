@@ -1,2 +1,2 @@
-(library (name uopt) (public_name core_kernel.uopt) (libraries base)
- (preprocess (pps ppx_jane)))
+(library (name uopt_core) (public_name core_kernel.uopt)
+ (libraries core uopt) (preprocess (pps ppx_jane)))

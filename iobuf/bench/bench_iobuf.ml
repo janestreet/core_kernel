@@ -240,6 +240,88 @@ let%bench_module "decimal" =
   end)
 ;;
 
+let%bench_module "padded decimal" =
+  (module struct
+    (* Quantify the gain from our version of [Fill.decimal] over [sprintf "%0*d"]. *)
+    let values =
+      [ Int.min_value
+      ; Int.min_value + 1
+      ; -10_000
+      ; 0
+      ; 35
+      ; 1_000
+      ; 1_000_000
+      ; Int.max_value
+      ]
+    ;;
+
+    let lengths = [ 0; 1; 5; 30 ]
+
+    let cases =
+      let%map.List x = values
+      and len = lengths in
+      sprintf "%0*d" len x, (x, len)
+    ;;
+
+    let iobuf = create ~len:32
+
+    let%bench_fun ("Fill" [@params case = cases]) =
+      let x, len = case in
+      fun () ->
+        reset iobuf;
+        Fill.padded_decimal ~len iobuf x
+    ;;
+
+    let%bench_fun ("Unsafe.Fill" [@params case = cases]) =
+      let x, len = case in
+      fun () ->
+        reset iobuf;
+        Unsafe.Fill.padded_decimal ~len iobuf x
+    ;;
+
+    let%bench_fun ("Fill.stringo" [@params case = cases]) =
+      let x, len = case in
+      fun () ->
+        reset iobuf;
+        Fill.stringo iobuf (sprintf "%0*d" len x)
+    ;;
+  end)
+;;
+
+let%bench_module "date string" =
+  (module struct
+    (* Quantify the gain from our version of [Fill.date_string_iso8601_extended] over 
+       [Date.to_string]. *)
+    let dates =
+      let%map.List y = [ 0000; 0009; 0099; 0999; 9999 ]
+      and m = Month.[ Jan; Dec ]
+      and d = [ 01; 31 ] in
+      let date = Date.create_exn ~y ~m ~d in
+      Date.to_string date, date
+    ;;
+
+    let iobuf = create ~len:10
+
+    let%bench_fun ("Fill" [@params date = dates]) =
+      fun () ->
+      reset iobuf;
+      Fill.date_string_iso8601_extended iobuf date
+    ;;
+
+    let%bench_fun ("Unsafe.Fill" [@params date = dates]) =
+      fun () ->
+      reset iobuf;
+      Unsafe.Fill.date_string_iso8601_extended iobuf date
+    ;;
+
+    let%bench_fun ("Fill.stringo" [@params date = dates]) =
+      fun () ->
+      reset iobuf;
+      Fill.stringo iobuf (Date.to_string date)
+    ;;
+  end)
+;;
+
 (* In an attempt to verify how much a phys_equal check could optimize
    [set_bounds_and_buffer], in the soon-to-be-common protogen use case, here is the result
    with cross-module inlining:

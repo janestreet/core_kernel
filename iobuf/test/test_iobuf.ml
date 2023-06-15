@@ -1588,6 +1588,8 @@ struct
     @ List.init 1_000 ~f:(fun _ -> Random.int (1 lsl 29) lsl Random.int 35)
   ;;
 
+  let lengths_for_testing_padded_decimal = [ 0; 1; 5; 30 ]
+
   module Poke = struct
     include Intf_write (struct
         include Poke
@@ -1634,6 +1636,35 @@ struct
         [%test_eq: string]
           (Int.to_string x)
           (Iobuf.to_string (Iobuf.sub_shared ~pos t) ~len))
+    ;;
+
+    let padded_decimal = Poke.padded_decimal
+
+    let%test_unit "Poke.padded_decimal" =
+      let pos = 1 in
+      let t = create ~len:(30 + pos) in
+      List.iter cases_for_testing_decimal ~f:(fun x ->
+        List.iter lengths_for_testing_padded_decimal ~f:(fun len ->
+          Iobuf.reset t;
+          let len = padded_decimal t ~pos ~len x in
+          [%test_eq: string]
+            (sprintf "%0*d" len x)
+            (Iobuf.to_string (Iobuf.sub_shared ~pos t) ~len)))
+    ;;
+
+    let date_string_iso8601_extended = Poke.date_string_iso8601_extended
+
+    let%test_unit "Poke.date_string_iso8601_extended" =
+      let pos = 1 in
+      let t = create ~len:(Date_string.len_iso8601_extended + pos) in
+      Quickcheck.iter [%quickcheck.generator: Date.t] ~f:(fun date ->
+        Iobuf.reset t;
+        date_string_iso8601_extended t ~pos date;
+        [%test_eq: string]
+          (Date.to_string date)
+          (Iobuf.to_string
+             (Iobuf.sub_shared ~pos t)
+             ~len:Date_string.len_iso8601_extended))
     ;;
 
     let bin_prot_size = Poke.bin_prot_size
@@ -1935,6 +1966,29 @@ struct
         decimal t x;
         Iobuf.flip_lo t;
         [%test_eq: string] (Int.to_string x) (Iobuf.to_string t))
+    ;;
+
+    let padded_decimal = Fill.padded_decimal
+
+    let%test_unit "Fill.padded_decimal" =
+      let t = create ~len:30 in
+      List.iter cases_for_testing_decimal ~f:(fun x ->
+        List.iter lengths_for_testing_padded_decimal ~f:(fun len ->
+          Iobuf.reset t;
+          padded_decimal ~len t x;
+          Iobuf.flip_lo t;
+          [%test_eq: string] (sprintf "%0*d" len x) (Iobuf.to_string t)))
+    ;;
+
+    let date_string_iso8601_extended = Fill.date_string_iso8601_extended
+
+    let%test_unit "Fill.date_string_iso8601_extended" =
+      let t = create ~len:Date_string.len_iso8601_extended in
+      Quickcheck.iter [%quickcheck.generator: Date.t] ~f:(fun date ->
+        Iobuf.reset t;
+        date_string_iso8601_extended t date;
+        Iobuf.flip_lo t;
+        [%test_eq: string] (Date.to_string date) (Iobuf.to_string t))
     ;;
   end
 

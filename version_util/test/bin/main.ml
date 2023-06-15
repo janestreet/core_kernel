@@ -34,7 +34,7 @@ let () =
   (* This makes sure that the code for [insert_version_util] is linked in, so that the
      [count_pattern_occurrences] check in [test_rewrite.ml] is effective at making sure
      we don't rewrite our own code. *)
-  match Version_util.Expert.insert_version_util ~contents_of_exe:"" [] with
+  match Version_util.Expert.replace_version_util ~contents_of_exe:"" (Some []) with
   | exception _ -> ()
   | _ -> ()
 ;;

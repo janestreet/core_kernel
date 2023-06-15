@@ -153,6 +153,7 @@ let hashable t = t.hashable
 let hashable_s t = Hashable.to_key t.hashable
 let slot t key = hash_key t key land (t.capacity - 1)
 let length t = t.length
+let capacity t = t.capacity
 let is_empty t = t.length = 0
 
 let clear =
@@ -992,6 +993,7 @@ module Accessors = struct
   let counti = counti
   let fold = fold
   let length = length
+  let capacity = capacity
   let is_empty = is_empty
   let map = map
   let mapi = mapi

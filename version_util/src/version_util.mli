@@ -105,7 +105,7 @@ module Expert : sig
         util out of all binaries built after 2022-11.
 
       - Versions of this function which are less than one month old will always
-        be able to parse the version util out of new binaries. Older versions of 
+        be able to parse the version util out of new binaries. Older versions of
         this function may not be able to parse the version util out of new binaries.
 
       If you care about performance, consider using lib/fast_get_version_util_from_file.
@@ -115,19 +115,22 @@ module Expert : sig
 
   (** Inserts the given version util into the executable text given. Returns None if this
       could not happen (maybe this is an executable that doesn't link in the current
-      library). *)
-  val insert_version_util : contents_of_exe:string -> Version.t list -> string option
+      library).
 
-  (** Removes the version util from a file. The point of this operation is to make it
-      possible to compare executables up to version util. *)
-  val remove_version_util : contents_of_exe:string -> string option
+      [None] means to remove the version util. The purpose is to make it possible to
+      compare executables up to version util. *)
+  val replace_version_util
+    :  contents_of_exe:string
+    -> Version.t list option
+    -> string option
 
   module For_tests : sig
     val count_pattern_occurrences : contents_of_exe:string -> int
   end
 end
 
-module Private__For_fast_get_version_util_from_file : sig
+module Private__For_version_util_async : sig
   val version_util_start_marker : string
   val parse_generated_hg_version : string -> string list
+  val raw_text : Version.t list option -> string
 end

@@ -16,6 +16,7 @@ depends: [
   "int_repr"
   "ppx_jane"
   "ppx_optcomp"
+  "uopt"
   "base-threads"
   "dune"         {>= "2.0.0"}
 ]

@@ -383,6 +383,12 @@ module Itoa : sig
   val num_digits : int -> int
 end
 
+module Date_string : sig
+  (** [len_iso8601_extended] is the length (in bytes) of a date in YYYY-MM-DD format,
+      i.e. 10. *)
+  val len_iso8601_extended : int
+end
+
 
 (** [Consume.string t ~len] reads [len] characters (all, by default) from [t] into a new
     string and advances the lower bound of the window accordingly.
@@ -432,6 +438,17 @@ module Fill : sig
       advanced by the number of characters written and no terminator is added.  If
       sufficient space is not available, [decimal] will raise. *)
   val decimal : (int, _, _) t
+
+  (** Same as [decimal t int], but padding to [len] with prefix '0's. *)
+  val padded_decimal : len:int -> (int, _, _) t
+
+  (** [date_string_iso8601_extended t date] is equivalent to [Iobuf.Fill.string t
+      (Date.to_string date)], but with improved efficiency and no intermediate allocation.
+
+      In other words: It fills the ISO 8601 extended representation (YYYY-MM-DD) of [date]
+      to [t]. [t] is advanced by 10 characters and no terminator is added. If sufficient
+      space is not available, [date] will raise. *)
+  val date_string_iso8601_extended : (Date.t, _, _) t
 end
 
 (** [Peek] and [Poke] functions access a value at [pos] from the lower bound of the window
@@ -462,6 +479,9 @@ module Poke : sig
   (** [decimal t ~pos i] returns the number of bytes written at [pos]. *)
   val decimal : ((read_write, 'w) t[@local]) -> pos:int -> int -> int
 
+  (** Same as [decimal t int], but padding to [len] with prefix '0's. *)
+  val padded_decimal : ((read_write, 'w) t[@local]) -> pos:int -> len:int -> int -> int
+
   (** As [bin_prot] but returns the number of bytes written. *)
   val bin_prot_size
     :  'a Bin_prot.Type_class.writer
@@ -476,6 +496,9 @@ module Poke : sig
     with type ('a, 'd, 'w) t_local =
            ((read_write, 'w) t[@local]) -> pos:int -> ('a[@local]) -> unit
     with type 'a bin_prot := 'a Bin_prot.Type_class.writer
+
+  (** Same as [Fill.date_string_iso8601_extended t date], but does not advance [t]. *)
+  val date_string_iso8601_extended : (Date.t, _, _) t
 end
 
 (** [Unsafe] has submodules that are like their corresponding module, except with no range

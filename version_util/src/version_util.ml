@@ -112,11 +112,7 @@ module Expert = struct
     |> String.concat ~sep:" "
   ;;
 
-  let replace_version_util ~contents_of_exe version_util =
-    if String.mem version_util '\000' then failwith "version_util can't contain nul bytes";
-    if String.length version_util > 4000
-    (* using 4000 is easier than figuring the exact max length we support. *)
-    then failwith "version_util must be shorter than 4000 bytes";
+  let raw_replace ~contents_of_exe raw_text =
     (* There can be two places to rewrite, because apparently in the presence
        of weakdefs, both defs end up in the exe. *)
     match
@@ -130,43 +126,52 @@ module Expert = struct
       let b = Bytes.of_string contents_of_exe in
       List.iter l ~f:(fun i ->
         let start = i + String.length version_util_start_marker in
-        let len = 4096 - String.length version_util_start_marker in
-        assert (len > String.length version_util) (* this ensures we add a nul byte *);
         Stdlib.StdLabels.Bytes.blit_string
-          ~src:(pad version_util len)
+          ~src:raw_text
           ~src_pos:0
           ~dst:b
           ~dst_pos:start
-          ~len);
+          ~len:(String.length raw_text));
       Some (Bytes.unsafe_to_string ~no_mutation_while_string_reachable:b)
   ;;
 
-  (* Expert because we don't really want people to casually use this, so its contents can
-     be trusted. *)
-  let insert_version_util ~contents_of_exe (versions : Version.t list) =
-    if List.is_empty versions
-    then failwith "version_util must include at least one repository";
-    if List.contains_dup ~compare:String.compare (List.map versions ~f:(fun v -> v.repo))
-    then failwith "version_util must not contain duplicate repositories";
+  let raw_text (versions_opt : Version.t list option) =
     let version_util =
-      versions
-      |> List.sort ~compare:Version.compare
-      |> List.map ~f:(fun { repo; version } ->
-        if not (String.mem repo '/')
-        then failwith [%string "%{repo} doesn't look like a repo url"];
-        (let version' = String.chop_suffix_if_exists version ~suffix:"+" in
-         if (String.length version' = 40 || String.length version' = 64)
-         && String.for_all version' ~f:Char.is_hex_digit_lower
-         then ()
-         else failwith [%string "%{version} doesn't look like a full hg version"]);
-        repo ^ " " ^ version ^ "\n")
-      |> String.concat
+      match versions_opt with
+      | None -> "NO_VERSION_UTIL"
+      | Some versions ->
+        if List.is_empty versions
+        then failwith "version_util must include at least one repository";
+        if List.contains_dup
+             ~compare:String.compare
+             (List.map versions ~f:(fun v -> v.repo))
+        then failwith "version_util must not contain duplicate repositories";
+        versions
+        |> List.sort ~compare:Version.compare
+        |> List.map ~f:(fun { repo; version } ->
+          if not (String.mem repo '/')
+          then failwith [%string "%{repo} doesn't look like a repo url"];
+          (let version' = String.chop_suffix_if_exists version ~suffix:"+" in
+           if (String.length version' = 40 || String.length version' = 64)
+           && String.for_all version' ~f:Char.is_hex_digit_lower
+           then ()
+           else failwith [%string "%{version} doesn't look like a full hg version"]);
+          repo ^ " " ^ version ^ "\n")
+        |> String.concat
     in
-    replace_version_util ~contents_of_exe version_util
+    if String.mem version_util '\000' then failwith "version_util can't contain nul bytes";
+    if String.length version_util > 4000
+    (* using 4000 is easier than figuring the exact max length we support. *)
+    then failwith "version_util must be shorter than 4000 bytes";
+    let len = 4096 - String.length version_util_start_marker in
+    assert (len > String.length version_util) (* this ensures we add a nul byte *);
+    pad version_util len
   ;;
 
-  let remove_version_util ~contents_of_exe =
-    replace_version_util ~contents_of_exe "NO_VERSION_UTIL"
+  let replace_version_util ~contents_of_exe versions_opt =
+    (* Expert because we don't really want people to casually use this, so its contents can
+       be trusted. *)
+    raw_replace ~contents_of_exe (raw_text versions_opt)
   ;;
 
   module For_tests = struct
@@ -311,7 +316,8 @@ let arg_spec =
   ]
 ;;
 
-module Private__For_fast_get_version_util_from_file = struct
+module Private__For_version_util_async = struct
   let version_util_start_marker = version_util_start_marker
   let parse_generated_hg_version = parse_generated_hg_version
+  let raw_text = Expert.raw_text
 end
