@@ -143,7 +143,7 @@ let make_param_optional_with_default_doc
     ?aliases
     flag_name
     arg_type
-    (fun default -> Sexp.Atom (to_string_hum (module (val m)) default))
+    (fun default -> Sexp.Atom (to_string_hum m default))
     ~default
     ~doc
 ;;
@@ -162,8 +162,19 @@ let make_param_one_of_flags
        Command.Param.flag ?aliases name (Command.Param.no_arg_some enum) ~doc))
 ;;
 
+let comma_separated_extra_doc m =
+  let options =
+    enum m
+    |> List.map ~f:fst
+    |> List.sort ~compare:[%compare: string]
+    |> String.concat ~sep:", "
+  in
+  [%string "(can be comma-separated values: %{options})"]
+;;
+
 let make_param_optional_comma_separated
       ?allow_empty
+      ?strip_whitespace
       ?unique_values
       ?case_sensitive
       ?represent_choice_with
@@ -174,13 +185,6 @@ let make_param_optional_comma_separated
       ~doc
       m
   =
-  let open Command.Param in
-  let options =
-    enum m
-    |> List.map ~f:fst
-    |> List.sort ~compare:[%compare: string]
-    |> String.concat ~sep:", "
-  in
   make_param
     ?case_sensitive
     ?represent_choice_with
@@ -190,8 +194,48 @@ let make_param_optional_comma_separated
     flag_name
     m
     ~f:
-      (Fn.compose optional (Command.Arg_type.comma_separated ?allow_empty ?unique_values))
-    ~doc:[%string {|%{doc} (can be comma-separated values: %{options})|}]
+      (Fn.compose
+         Command.Param.optional
+         (Command.Arg_type.comma_separated ?allow_empty ?strip_whitespace ?unique_values))
+    ~doc:[%string {|%{doc} %{comma_separated_extra_doc m}|}]
+;;
+
+let make_param_optional_comma_separated_with_default_doc
+      ?allow_empty
+      ?strip_whitespace
+      ?unique_values
+      (type a)
+      ~default
+      ?case_sensitive
+      ?represent_choice_with
+      ?list_values_in_help
+      ?aliases
+      ?key
+      flag_name
+      ~doc
+      (m : a t)
+  =
+  let { Make_param.arg_type; doc } =
+    Make_param.create
+      ?case_sensitive
+      ?represent_choice_with
+      ?list_values_in_help
+      ?key
+      ~doc:[%string {|%{doc} %{comma_separated_extra_doc m}|}]
+      m
+  in
+  Command.Param.flag_optional_with_default_doc
+    ?aliases
+    flag_name
+    (Command.Arg_type.comma_separated
+       ?allow_empty
+       ?strip_whitespace
+       ?unique_values
+       arg_type)
+    (fun default ->
+       Sexp.Atom (List.map ~f:(to_string_hum m) default |> String.concat ~sep:","))
+    ~default
+    ~doc
 ;;
 
 module Make_of_string (M : S_to_string) = struct

@@ -63,6 +63,13 @@ module type S = sig
   val pop_back_unit_exn : 'a t -> unit
   val peek_back : 'a t -> 'a option
   val peek_back_exn : 'a t -> 'a
+
+  val foldi
+    :  'a t
+    -> init:'accum
+    -> f:((index -> 'accum -> 'a -> 'accum)[@local])
+    -> 'accum
+
   val iteri : 'a t -> f:((index -> 'a -> unit)[@local]) -> unit
   val to_list : 'a t -> 'a list
   val to_alist : 'a t -> (index * 'a) list

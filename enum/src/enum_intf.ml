@@ -32,6 +32,23 @@ module type Enum = sig
   type ('a, 'b) make_param =
     ?case_sensitive:bool
     -> ?represent_choice_with:string
+    (** If [represent_choice_with] is not passed, the documentation will be:
+
+        {v
+          -flag (choice1|choice2|...)     [doc]
+        v}
+
+        If there are many choices, this can cause this and other flags to have the
+        documentation aligned very far to the right. To avoid that, the
+        [represent_choice_with] flag can be passed as a shorter reference to the possible
+        choices. Example:
+
+        {v
+          -flag CHOICE     [doc], CHOICE can be (choice1|choice2|...)
+        v}
+
+        [Command] does a much better job of aligning this.
+    *)
     -> ?list_values_in_help:bool
     -> ?aliases:string list
     -> ?key:'a Univ_map.Multi.Key.t
@@ -53,8 +70,16 @@ module type Enum = sig
 
   val make_param_optional_comma_separated
     :  ?allow_empty:bool
+    -> ?strip_whitespace:bool
     -> ?unique_values:bool
     -> ('a, 'a list option) make_param
+
+  val make_param_optional_comma_separated_with_default_doc
+    :  ?allow_empty:bool
+    -> ?strip_whitespace:bool
+    -> ?unique_values:bool
+    -> default:'a list
+    -> ('a, 'a list) make_param
 
   val arg_type
     :  ?case_sensitive:bool

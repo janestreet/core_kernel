@@ -321,6 +321,14 @@ module With_integer_index = struct
 
   let of_array arr = init (Array.length arr) ~f:(fun i -> Array.get arr i)
 
+  let foldi t ~init ~f =
+    let r = ref init in
+    for i = 0 to max_index t do
+      r := f i !r (unsafe_get t i)
+    done;
+    !r
+  ;;
+
   let fold t ~init ~f =
     let r = ref init in
     for i = 0 to max_index t do
@@ -614,7 +622,16 @@ module Make (M : Intable.S) = struct
   let[@inline always] unsafe_set t index = unsafe_set t (M.to_int_exn index)
   let set t index = set t (M.to_int_exn index)
   let next_free_index t = next_free_index t |> M.of_int_exn
-  let iteri t ~f = iteri t ~f:(fun [@inline] int x -> f (M.of_int_exn int) x) [@nontail]
+
+  let foldi t ~init ~f =
+    (foldi [@inlined hint]) t ~init ~f:(fun [@inline] int accum x ->
+      f (M.of_int_exn int) accum x) [@nontail]
+  ;;
+
+  let iteri t ~f =
+    (iteri [@inlined hint]) t ~f:(fun [@inline] int x -> f (M.of_int_exn int) x) [@nontail]
+  ;;
+
   let push_back_index t element = push_back_index t element |> M.of_int_exn
 
   let to_alist t =

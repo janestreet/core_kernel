@@ -1,7 +1,7 @@
 open! Core
 
 (** @@inline *)
-include module type of Uopt
+include module type of Uopt with type 'a t = 'a Uopt.t
 
 include Binable.S1 with type 'a t := 'a t
 

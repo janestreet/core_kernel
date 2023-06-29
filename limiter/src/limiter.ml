@@ -297,7 +297,7 @@ let advance_time =
   in
   fun t ~now ->
     if Time_ns.( > ) now t.time then t.time <- now;
-    (* this has to be run even if time doesn't move foward to handle the case of an
+    (* this has to be run even if time doesn't move forward to handle the case of an
        Infinite hopper to bucket drop rate.  In that case tokens in the hopper may
        instantaneously move into the bucket. *)
     update_tokens t
