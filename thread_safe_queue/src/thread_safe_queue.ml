@@ -68,7 +68,10 @@ let create () =
   { front = elt; back = elt; length = 0; unused_elts = Uopt.none }
 ;;
 
-let get_unused_elt t =
+(* This doesn't actually need the attributes to ensure atomic semantics,
+   but if it were used in more places (or exposed in the .mli) it could
+   well do, so we put the attribute on now. *)
+let[@inline never] [@specialise never] [@local never] get_unused_elt t =
   (* BEGIN ATOMIC SECTION *)
   if Uopt.is_some t.unused_elts
   then (
@@ -78,7 +81,9 @@ let get_unused_elt t =
   else Elt.create ()
 ;;
 
-let enqueue (type a) (t : a t) (a : a) =
+(* Marked with attributes so any allocation at the call site cannot be sunk down into the
+   atomic section (there exists no barrier in OCaml right now to prevent this) *)
+let[@inline never] [@specialise never] [@local never] enqueue (type a) (t : a t) (a : a) =
   let new_back = get_unused_elt t in
   (* BEGIN ATOMIC SECTION *)
   t.length <- t.length + 1;
@@ -89,7 +94,8 @@ let enqueue (type a) (t : a t) (a : a) =
 
 (* END ATOMIC SECTION *)
 
-let return_unused_elt t (elt : _ Elt.t) =
+(* Same comment about [@inline never][@specialise never][@local never] as for [get_unused_elt], above. *)
+let[@inline never] [@specialise never] [@local never] return_unused_elt t (elt : _ Elt.t) =
   (* BEGIN ATOMIC SECTION *)
   elt.value <- Uopt.none;
   elt.next <- t.unused_elts;
@@ -98,11 +104,11 @@ let return_unused_elt t (elt : _ Elt.t) =
   ()
 ;;
 
-let[@cold] raise_dequeue_empty t =
+let[@inline never] [@specialise never] [@local never] raise_dequeue_empty t =
   failwiths ~here:[%here] "Thread_safe_queue.dequeue_exn of empty queue" t [%sexp_of: _ t]
 ;;
 
-let dequeue_exn t =
+let[@inline never] [@specialise never] [@local never] dequeue_exn t =
   (* BEGIN ATOMIC SECTION *)
   if t.length = 0 then raise_dequeue_empty t;
   let elt = t.front in
