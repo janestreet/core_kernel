@@ -30,6 +30,10 @@ module With_integer_index = struct
     val copy : 'a t -> 'a t
     val sort : ?pos:int -> ?len:int -> 'a t -> compare:('a -> 'a -> int) -> unit
 
+    module Expert : sig
+      val unsafe_inner : 'a t -> Obj.t Uniform_array.t
+    end
+
     module With_structure_details : sig
       type nonrec 'a t = 'a t [@@deriving sexp_of]
     end
@@ -168,6 +172,10 @@ module With_integer_index = struct
       in
       Uniform_array.sort ~pos ~len t.arr ~compare
     ;;
+
+    module Expert = struct
+      let[@inline always] unsafe_inner t = t.arr
+    end
   end
 
   include Kernel
@@ -283,6 +291,13 @@ module With_integer_index = struct
         unsafe_clear_pointer_at t i
       done;
       set_length t len)
+  ;;
+
+  let shrink_to_imm (t : 'a t) (_ : 'a Type_immediacy.Always.t) ~len =
+    if len < 0
+    then raise__bad_index t len ~op:"shrink_to_imm"
+    else if len < length t
+    then set_length t len
   ;;
 
   let iteri t ~f =
@@ -416,6 +431,10 @@ module With_integer_index = struct
   ;;
 
   let clear t = if length t > 0 then shrink_to t ~len:0
+
+  let clear_imm (t : 'a t) (proof : 'a Type_immediacy.Always.t) =
+    if length t > 0 then shrink_to_imm t proof ~len:0
+  ;;
 
   let sexp_of_t (type a) (sexp_of_a : a -> Sexp.t) t =
     let t = to_list t in

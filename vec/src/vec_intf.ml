@@ -104,6 +104,9 @@ module type S = sig
   (** [clear t] discards all elements from [t] in O(length) time. *)
   val clear : _ t -> unit
 
+  (** [clear_imm t] discards all elements from ['a t] in O(1) time if ['a] is immediate. *)
+  val clear_imm : 'a t -> 'a Type_immediacy.Always.t -> unit
+
   (** [copy t] returns a copy of [t], that is, a fresh vec containing the same elements as
       [t]. *)
   val copy : 'a t -> 'a t
@@ -126,6 +129,10 @@ module type S = sig
 
   val unsafe_get : 'a t -> index -> 'a
   val unsafe_set : 'a t -> index -> 'a -> unit
+
+  module Expert : sig
+    val unsafe_inner : 'a t -> Obj.t Uniform_array.t
+  end
 
   module Stable : sig
     module V1 : sig
