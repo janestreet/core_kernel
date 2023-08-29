@@ -237,7 +237,7 @@ module Config = struct
     ; level_bits : Level_bits.t [@default level_bits_default]
     ; capacity : int option [@sexp.option]
     }
-  [@@deriving fields, sexp]
+  [@@deriving fields ~getters ~iterators:iter, sexp]
 
   let alarm_precision t = Alarm_precision.to_span t.alarm_precision
 
@@ -778,7 +778,7 @@ end = struct
            of elts.  [Array.length slots = 1 lsl bits]. *)
         slots : ('a Internal_elt.t array[@sexp.opaque])
       }
-    [@@deriving fields, sexp_of]
+    [@@deriving fields ~getters ~iterators:iter, sexp_of]
 
     let slot t ~key = Key.slot key ~bits_per_slot:t.bits_per_slot ~slots_mask:t.slots_mask
     let next_slot t slot = Slots_mask.next_slot t.slots_mask slot
@@ -805,7 +805,7 @@ end = struct
       mutable elt_key_lower_bound : Key.t
     ; levels : 'a Level.t array
     }
-  [@@deriving fields, sexp_of]
+  [@@deriving fields ~getters ~iterators:iter, sexp_of]
 
   type 'a priority_queue = 'a t
 
@@ -1429,7 +1429,7 @@ type 'a t =
   ; mutable max_allowed_alarm_time : Time_ns.t
   ; priority_queue : 'a Priority_queue.t
   }
-[@@deriving fields, sexp_of]
+[@@deriving fields ~getters ~iterators:iter, sexp_of]
 
 type 'a timing_wheel = 'a t
 type 'a t_now = 'a t
@@ -1455,7 +1455,7 @@ module Pretty = struct
       { at : Time_ns.t
       ; value : 'a
       }
-    [@@deriving fields, sexp_of]
+    [@@deriving fields ~getters, sexp_of]
 
     let create t alarm = { at = Alarm.at t alarm; value = Alarm.value t alarm }
     let compare t1 t2 = Time_ns.compare (at t1) (at t2)
@@ -1668,6 +1668,23 @@ let advance_clock t ~to_ ~handle_fired =
         assert (Time_ns.( = ) t.max_allowed_alarm_time (compute_max_allowed_alarm_time t))
     | Max_allowed_key_maybe_changed ->
       t.max_allowed_alarm_time <- compute_max_allowed_alarm_time t)
+;;
+
+let advance_clock_stop_at_next_alarm t ~to_ ~handle_fired =
+  let min_elt = Priority_queue.min_elt_ t.priority_queue in
+  if Internal_elt.is_null min_elt
+  then advance_clock t ~to_ ~handle_fired:(fun _ -> assert false)
+  else (
+    let key = Internal_elt.key (pool t) min_elt in
+    (* as an optimization, compare against [interval_num_start] to avoid the potentially
+       costly computation of [Internal_elt.min_alarm_time] *)
+    if Time_ns.( < ) to_ (interval_num_start t key)
+    then advance_clock t ~to_ ~handle_fired:(fun _ -> assert false)
+    else (
+      let to_ =
+        Time_ns.min to_ (Internal_elt.min_alarm_time (pool t) min_elt ~with_key:key)
+      in
+      advance_clock t ~to_ ~handle_fired))
 ;;
 
 let create ~config ~start =

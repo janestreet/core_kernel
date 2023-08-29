@@ -45,7 +45,7 @@ module With_integer_index = struct
       (** Invariant: [capacity = Uniform_array.length arr].
           We maintain it here to eliminate an indirection when accessing long arrays. *)
       }
-    [@@deriving fields]
+    [@@deriving fields ~getters ~setters]
 
     let length t = t.length
 

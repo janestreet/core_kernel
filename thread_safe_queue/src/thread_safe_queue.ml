@@ -34,7 +34,7 @@ type 'a t =
      [unused_elts] have [Uopt.is_none elt.value]. *)
   ; mutable unused_elts : 'a Elt.t Uopt.t
   }
-[@@deriving fields, sexp_of]
+[@@deriving fields ~getters ~iterators:iter, sexp_of]
 
 let invariant _invariant_a t =
   Invariant.invariant [%here] t [%sexp_of: _ t] (fun () ->

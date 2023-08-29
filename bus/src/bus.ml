@@ -175,7 +175,7 @@ module Subscriber = struct
     ; on_close : (unit -> unit) option
     ; subscribed_from : Source_code_position.t
     }
-  [@@deriving fields]
+  [@@deriving fields ~iterators:iter]
 
   let is_subscribed t ~to_ = t.subscribers_index >= 0 && Bus_id.equal t.bus_id to_
 
@@ -256,7 +256,7 @@ type ('callback, 'phantom) t =
     mutable callbacks : 'callback Option_array.t
   ; mutable unsubscribes_during_write : 'callback Subscriber.t list
   }
-[@@deriving fields]
+[@@deriving fields ~getters ~iterators:iter]
 
 let sexp_of_t
       _

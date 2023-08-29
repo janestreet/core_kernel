@@ -43,8 +43,15 @@ module type S = sig
   val is_subset : t -> of_:t -> bool
 
   module Unstable : sig
-    type nonrec t = t [@@deriving bin_io, compare, sexp]
+    type nonrec t = t [@@deriving bin_io, compare, equal, sexp]
   end
+end
+
+(** Same as [module type S], but [type t] is binable. *)
+module type S_binable = sig
+  type t [@@deriving bin_io]
+
+  include S with type t := t
 end
 
 module type Make_arg = sig
@@ -86,6 +93,7 @@ end
 module type Flags = sig
   module type Make_arg = Make_arg
   module type S = S
+  module type S_binable = S_binable
 
   (** [create ~bit:n] creates a flag with the [n]th bit set.  [n] must be between 0 and
       62.
@@ -102,4 +110,7 @@ module type Flags = sig
       flag constants as values of the flag type without having to coerce them.  It is
       typical to hide the [t = int] in another signature [S]. *)
   module Make (M : Make_arg) : S with type t = Int63.t
+
+  (** Similar to [Flags.Make], but the resulting [type t] is binable. *)
+  module Make_binable (M : Make_arg) : S_binable with type t = Int63.t
 end

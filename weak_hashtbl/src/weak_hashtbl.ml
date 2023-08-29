@@ -86,7 +86,7 @@ let find t key =
   | Some entry -> Weak_pointer.get entry
 ;;
 
-let find_or_add t key ~default =
+let find_or_add t key ~default:(default [@local]) =
   let entry = get_entry t key in
   match Weak_pointer.get entry with
   | Some v -> v

@@ -8,7 +8,7 @@ module Entry = struct
     (* The index in [defined_entries] where this [Entry.t] is placed. *)
     ; mutable defined_entries_index : int
     }
-  [@@deriving fields, sexp_of]
+  [@@deriving fields ~getters, sexp_of]
 end
 
 type ('key, 'data) t_detailed =
@@ -28,7 +28,7 @@ type ('key, 'data) t_detailed =
      sparse. *)
   ; defined_entries : ('key, 'data) Entry.t option array
   }
-[@@deriving fields, sexp_of]
+[@@deriving fields ~getters, sexp_of]
 
 type ('a, 'b) t = ('a, 'b) t_detailed
 type ('a, 'b) table = ('a, 'b) t

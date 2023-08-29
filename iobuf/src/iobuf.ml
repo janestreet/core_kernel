@@ -34,7 +34,8 @@ module T = struct
     ; mutable hi : int
     ; mutable hi_max : int
     }
-  [@@deriving fields, globalize, sexp_of]
+  [@@deriving
+    fields ~getters ~direct_iterators:(iter, set_all_mutable_fields), globalize, sexp_of]
 end
 
 open T

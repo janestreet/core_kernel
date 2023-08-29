@@ -124,6 +124,10 @@ module Expert : sig
     -> Version.t list option
     -> string option
 
+  (** Turns raw hg version info into the standard string list format that [version_list]
+      returns. *)
+  val parse_generated_hg_version : string -> string list
+
   module For_tests : sig
     val count_pattern_occurrences : contents_of_exe:string -> int
   end

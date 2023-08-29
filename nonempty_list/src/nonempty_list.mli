@@ -44,6 +44,7 @@ val sort : 'a t -> compare:('a -> 'a -> int) -> 'a t
 val stable_sort : 'a t -> compare:('a -> 'a -> int) -> 'a t
 val dedup_and_sort : compare:('a -> 'a -> int) -> 'a t -> 'a t
 val iteri : 'a t -> f:(int -> 'a -> unit) -> unit
+val cartesian_product : 'a t -> 'b t -> ('a * 'b) t
 
 val fold_right : 'a t -> init:'b -> f:('a -> 'b -> 'b) -> 'b
 val folding_map : 'a t -> init:'b -> f:('b -> 'a -> 'b * 'c) -> 'c t

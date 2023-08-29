@@ -12,6 +12,9 @@ type 'a t [@@deriving sexp_of]
     something. *)
 val create : unit -> _ t
 
+(** [create_full] is similar to [create], but [set]s the pointer at creation time. *)
+val create_full : 'a Heap_block.t -> 'a t
+
 val get : 'a t -> 'a Heap_block.t option
 
 (** [is_some t = Option.is_some (get t)]. *)

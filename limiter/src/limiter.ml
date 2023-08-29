@@ -157,7 +157,7 @@ type t =
   (** rate at which tokens "fall" from the hopper into the bucket *)
   ; mutable hopper_to_bucket_rate_per_ns : Tokens_per_ns.t Iofm.t
   }
-[@@deriving sexp_of, fields]
+[@@deriving sexp_of]
 
 let fill_rate_is_positive_or_zero fill_rate =
   Iofm.is_infinite fill_rate

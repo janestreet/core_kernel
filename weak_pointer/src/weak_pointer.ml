@@ -17,3 +17,8 @@ let is_none t = Weak_array.is_none t index
 let is_some t = Weak_array.is_some t index
 
 let set t block = Weak_array.set t index (Some block)
+
+let create_full block =
+  let t = create () in
+  set t block;
+  t

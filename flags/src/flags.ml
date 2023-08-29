@@ -45,20 +45,30 @@ module Make (M : Make_arg) = struct
     else M.known
   ;;
 
+  let any_intersecting flags =
+    let rec loop l acc =
+      match l with
+      | [] -> false
+      | (flag, _) :: l -> if do_intersect flag acc then true else loop l (acc + flag)
+    in
+    loop flags empty
+  ;;
+
   let () =
     if not M.allow_intersecting
-    then (
-      let rec check l ac =
-        match l with
-        | [] -> ac
-        | (flag, name) :: l ->
-          let bad = List.filter l ~f:(fun (flag', _) -> do_intersect flag flag') in
-          let ac = if List.is_empty bad then ac else (flag, name, bad) :: ac in
-          check l ac
-      in
-      let bad = check known [] in
-      if not (List.is_empty bad)
-      then
+    then
+      if any_intersecting known
+      then (
+        let rec check l ac =
+          match l with
+          | [] -> ac
+          | (flag, name) :: l ->
+            let bad = List.filter l ~f:(fun (flag', _) -> do_intersect flag flag') in
+            let ac = if List.is_empty bad then ac else (flag, name, bad) :: ac in
+            check l ac
+        in
+        let bad = check known [] in
+        assert (not (List.is_empty bad));
         error
           "Flags.Make got intersecting flags"
           bad
@@ -148,6 +158,8 @@ module Make (M : Make_arg) = struct
   let ( <> ) = Int63.( <> )
 
   module Unstable = struct
-    type nonrec t = t [@@deriving bin_io, compare, sexp]
+    type nonrec t = t [@@deriving bin_io, compare, equal, sexp]
   end
 end
+
+module Make_binable = Make

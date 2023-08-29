@@ -413,6 +413,10 @@ let init n ~f =
   hd :: tl
 ;;
 
+let cartesian_product t t' =
+  List.cartesian_product (to_list t) (to_list t') |> of_list_exn
+;;
+
 module Reversed = struct
   type 'a t = ( :: ) of 'a * 'a Reversed_list.t
 

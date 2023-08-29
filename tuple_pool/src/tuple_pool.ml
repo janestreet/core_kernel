@@ -346,7 +346,7 @@ module Pool = struct
          from [dummy] to the pool, which is an [Obj.t Uniform_array.t]. *)
       ; dummy : (Obj.t Uniform_array.t[@sexp.opaque]) option
       }
-    [@@deriving fields, sexp_of]
+    [@@deriving fields ~iterators:iter, sexp_of]
 
     let array_indices_per_tuple t = 1 + t.slots_per_tuple
     let array_length t = start_of_tuples_index + (t.capacity * array_indices_per_tuple t)

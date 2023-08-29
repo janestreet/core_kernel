@@ -329,6 +329,19 @@ module type Timing_wheel = sig
       [Alarm] functions. *)
   val advance_clock : 'a t -> to_:Time_ns.t -> handle_fired:('a Alarm.t -> unit) -> unit
 
+  (** Advance to the time [to_] or the time of the next alarm, whichever is earlier.
+      This function should be functionally equivalent to
+      [advance_clock t ~to_:(Time.min to_ (min_alarm_time_in_min_interval t))],
+      with potentially better performance.
+
+      [handle_fired] may still fire multiple times, if there are multiple alarms scheduled
+      at the same time. *)
+  val advance_clock_stop_at_next_alarm
+    :  'a t
+    -> to_:Time_ns.t
+    -> handle_fired:('a Alarm.t -> unit)
+    -> unit
+
   (** [fire_past_alarms t ~handle_fired] fires and removes all alarms [a] in [t] with
       [Time_ns.( <= ) (Alarm.at t a) (now t)], applying [handle_fired] to each such [a].
 

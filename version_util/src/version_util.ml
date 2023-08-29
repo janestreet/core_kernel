@@ -174,6 +174,8 @@ module Expert = struct
     raw_replace ~contents_of_exe (raw_text versions_opt)
   ;;
 
+  let parse_generated_hg_version = parse_generated_hg_version
+
   module For_tests = struct
     let count_pattern_occurrences ~contents_of_exe =
       List.length

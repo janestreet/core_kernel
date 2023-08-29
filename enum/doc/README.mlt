@@ -309,7 +309,7 @@ type t =
   ; and_a_string : string
   ; plus_a_bool : bool
   }
-[@@deriving fields]
+[@@deriving fields ~iterators:to_list]
 
 let complete _ ~part =
   (* We might as well suggest the = that goes between a field and its value. *)
