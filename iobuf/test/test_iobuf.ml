@@ -3251,7 +3251,7 @@ let%test_module "allocation" =
           type w = Iobuf.no_seek
 
           let apply f buf = f (Iobuf.no_seek buf) ~pos:0
-          let apply_local f buf =  (f (Iobuf.no_seek buf) ~pos:0)
+          let apply_local f buf = [%ocaml.local] (f (Iobuf.no_seek buf) ~pos:0)
         end)
 
     module _ =
@@ -3261,7 +3261,7 @@ let%test_module "allocation" =
           type w = Iobuf.seek
 
           let apply f buf = f buf
-          let apply_local f buf =  (f buf)
+          let apply_local f buf = [%ocaml.local] (f buf)
         end)
 
     module _ =
@@ -3271,7 +3271,7 @@ let%test_module "allocation" =
           type w = Iobuf.no_seek
 
           let apply f buf = f (Iobuf.no_seek buf) ~pos:0
-          let apply_local f buf =  (f (Iobuf.no_seek buf) ~pos:0)
+          let apply_local f buf = [%ocaml.local] (f (Iobuf.no_seek buf) ~pos:0)
         end)
 
     module _ =
@@ -3281,7 +3281,7 @@ let%test_module "allocation" =
           type w = Iobuf.seek
 
           let apply f buf = f buf
-          let apply_local f buf =  (f buf)
+          let apply_local f buf = [%ocaml.local] (f buf)
         end)
   end)
 ;;

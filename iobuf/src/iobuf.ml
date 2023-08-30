@@ -187,7 +187,7 @@ let check_range t ~pos ~len =
 ;;
 
 let[@inline always] unsafe_bigstring_view ~pos ~len buf =
-  
+  [%ocaml.local]
     (let lo = pos in
      let hi = pos + len in
      { buf; lo_min = lo; lo; hi; hi_max = hi })
@@ -204,13 +204,13 @@ let[@inline always] check_bigstring ~bstr ~pos ~len =
 ;;
 
 let bigstring_view ~pos ~len bstr =
-  
+  [%ocaml.local]
     (check_bigstring ~bstr ~pos ~len;
      unsafe_bigstring_view ~pos ~len bstr)
 ;;
 
 let of_bigstring_local ?pos ?len buf =
-  
+  [%ocaml.local]
     (let str_len = Bigstring.length buf in
      let pos =
        match pos with
@@ -245,7 +245,7 @@ let of_bigstring ?pos ?len buf =
 ;;
 
 let sub_shared_local ?(pos = 0) ?len t =
-  
+  [%ocaml.local]
     (let len =
        match len with
        | None -> length t - pos
@@ -335,7 +335,7 @@ let protect_window_bounds_and_buffer t ~f =
 ;;
 
 let protect_window_bounds_and_buffer_local t ~f =
-  
+  [%ocaml.local]
     (let lo = t.lo in
      let hi = t.hi in
      let lo_min = t.lo_min in
@@ -771,7 +771,7 @@ module Consume = struct
 
   module Local = struct
     let tail_padded_fixed_string ~padding ~len t =
-      
+      [%ocaml.local]
         (uadv_local
            t
            len
@@ -784,7 +784,7 @@ module Consume = struct
     ;;
 
     let head_padded_fixed_string ~padding ~len t =
-      
+      [%ocaml.local]
         (uadv_local
            t
            len
@@ -797,20 +797,20 @@ module Consume = struct
     ;;
 
     let bytes ~str_pos ~len t =
-      
+      [%ocaml.local]
         (let dst = Bytes.create_local (len + str_pos) in
          To_bytes.blit ~src:t ~dst ~len ~dst_pos:str_pos;
          dst)
     ;;
 
     let string ~str_pos ~len t =
-      
+      [%ocaml.local]
         (Bytes.unsafe_to_string
            ~no_mutation_while_string_reachable:(bytes ~str_pos ~len t))
     ;;
 
     let byteso ?(str_pos = 0) ?len t =
-      
+      [%ocaml.local]
         (bytes
            t
            ~str_pos
@@ -821,7 +821,7 @@ module Consume = struct
     ;;
 
     let stringo ?(str_pos = 0) ?len t =
-      
+      [%ocaml.local]
         (string
            t
            ~str_pos
@@ -836,12 +836,12 @@ module Consume = struct
     let len = 8
 
     let[@inline always] int64_t_be t =
-      
+      [%ocaml.local]
         (uadv_local t len (Local.unsafe_get_int64_t_be t.buf ~pos:(pos t len)) [@nontail])
     ;;
 
     let[@inline always] int64_t_le t =
-      
+      [%ocaml.local]
         (uadv_local t len (Local.unsafe_get_int64_t_le t.buf ~pos:(pos t len)) [@nontail])
     ;;
   end
@@ -1420,7 +1420,7 @@ module Peek = struct
 
   module Local = struct
     let tail_padded_fixed_string ~padding ~len t ~pos =
-      
+      [%ocaml.local]
         (Bigstring.get_tail_padded_fixed_string_local
            t.buf
            ~padding
@@ -1430,7 +1430,7 @@ module Peek = struct
     ;;
 
     let head_padded_fixed_string ~padding ~len t ~pos =
-      
+      [%ocaml.local]
         (Bigstring.get_head_padded_fixed_string_local
            t.buf
            ~padding
@@ -1440,7 +1440,7 @@ module Peek = struct
     ;;
 
     let bytes ~str_pos ~len t ~pos =
-      
+      [%ocaml.local]
         (let dst = Bytes.create_local (len + str_pos) in
          Bigstring.To_bytes.blit
            ~src:t.buf
@@ -1452,13 +1452,13 @@ module Peek = struct
     ;;
 
     let string ~str_pos ~len t ~pos =
-      
+      [%ocaml.local]
         (Bytes.unsafe_to_string
            ~no_mutation_while_string_reachable:(bytes ~str_pos ~len t ~pos))
     ;;
 
     let byteso ?(str_pos = 0) ?len t ~pos =
-      
+      [%ocaml.local]
         (bytes
            t
            ~pos
@@ -1470,7 +1470,7 @@ module Peek = struct
     ;;
 
     let stringo ?(str_pos = 0) ?len t ~pos =
-      
+      [%ocaml.local]
         (string
            t
            ~pos
@@ -1486,12 +1486,12 @@ module Peek = struct
     let len = 8
 
     let[@inline always] int64_t_be t ~pos =
-      
+      [%ocaml.local]
         (Local.unsafe_get_int64_t_be t.buf ~pos:(spos t ~len ~pos) [@nontail])
     ;;
 
     let[@inline always] int64_t_le t ~pos =
-      
+      [%ocaml.local]
         (Local.unsafe_get_int64_t_le t.buf ~pos:(spos t ~len ~pos) [@nontail])
     ;;
   end
@@ -2141,7 +2141,7 @@ module Expert = struct
   ;;
 
   let protect_window_local t ~f =
-    
+    [%ocaml.local]
       (let lo = t.lo in
        let hi = t.hi in
        try
@@ -2218,7 +2218,7 @@ module Unsafe = struct
 
     module Local = struct
       let tail_padded_fixed_string ~padding ~len t =
-        
+        [%ocaml.local]
           (uadv_local
              t
              len
@@ -2231,7 +2231,7 @@ module Unsafe = struct
       ;;
 
       let head_padded_fixed_string ~padding ~len t =
-        
+        [%ocaml.local]
           (uadv_local
              t
              len
@@ -2253,7 +2253,7 @@ module Unsafe = struct
       let len = 8
 
       let[@inline always] int64_t_be t =
-        
+        [%ocaml.local]
           (uadv_local
              t
              len
@@ -2261,7 +2261,7 @@ module Unsafe = struct
       ;;
 
       let[@inline always] int64_t_le t =
-        
+        [%ocaml.local]
           (uadv_local
              t
              len
@@ -2684,7 +2684,7 @@ module Unsafe = struct
 
     module Local = struct
       let tail_padded_fixed_string ~padding ~len t ~pos =
-        
+        [%ocaml.local]
           (Bigstring.get_tail_padded_fixed_string_local
              t.buf
              ~padding
@@ -2694,7 +2694,7 @@ module Unsafe = struct
       ;;
 
       let head_padded_fixed_string ~padding ~len t ~pos =
-        
+        [%ocaml.local]
           (Bigstring.get_head_padded_fixed_string_local
              t.buf
              ~padding
@@ -2704,7 +2704,7 @@ module Unsafe = struct
       ;;
 
       let bytes ~str_pos ~len t ~pos =
-        
+        [%ocaml.local]
           (let dst = Bytes.create_local (len + str_pos) in
            Bigstring.To_bytes.unsafe_blit
              ~src:t.buf
@@ -2716,13 +2716,13 @@ module Unsafe = struct
       ;;
 
       let string ~str_pos ~len t ~pos =
-        
+        [%ocaml.local]
           (Bytes.unsafe_to_string
              ~no_mutation_while_string_reachable:(bytes ~str_pos ~len t ~pos))
       ;;
 
       let byteso ?(str_pos = 0) ?len t ~pos =
-        
+        [%ocaml.local]
           (bytes
              t
              ~pos
@@ -2734,7 +2734,7 @@ module Unsafe = struct
       ;;
 
       let stringo ?(str_pos = 0) ?len t ~pos =
-        
+        [%ocaml.local]
           (string
              t
              ~pos
@@ -2750,12 +2750,12 @@ module Unsafe = struct
       let len = 8
 
       let[@inline always] int64_t_be t ~pos =
-        
+        [%ocaml.local]
           (Local.unsafe_get_int64_t_be t.buf ~pos:(upos t ~len ~pos) [@nontail])
       ;;
 
       let[@inline always] int64_t_le t ~pos =
-        
+        [%ocaml.local]
           (Local.unsafe_get_int64_t_le t.buf ~pos:(upos t ~len ~pos) [@nontail])
       ;;
     end
