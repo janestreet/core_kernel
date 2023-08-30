@@ -26,9 +26,9 @@ module T = struct
   (* WHEN YOU CHANGE THIS, CHANGE iobuf_fields IN iobuf.h AS WELL!!! *)
   type t =
     { mutable
-      buf :
+        buf :
         (Bigstring.t
-         [@sexp.opaque] (* The data in [buf] is at indices [lo], [lo+1], ... [hi-1]. *))
+        [@sexp.opaque] (* The data in [buf] is at indices [lo], [lo+1], ... [hi-1]. *))
     ; mutable lo_min : int
     ; mutable lo : int
     ; mutable hi : int
@@ -167,7 +167,6 @@ let invariant _ _ t =
   | e -> fail t "Iobuf.invariant failed" e [%sexp_of: exn]
 ;;
 
-
 (* We want [check_range] inlined, so we don't want a string constant in there. *)
 let[@cold] bad_range ~pos ~len t =
   fail
@@ -184,7 +183,7 @@ let[@cold] bad_range_bstr ~pos ~len ~str_len =
 
 let check_range t ~pos ~len =
   if pos < 0 || len < 0 || len > length t - pos then bad_range ~pos ~len t
-[@@inline always]
+  [@@inline always]
 ;;
 
 let[@inline always] unsafe_bigstring_view ~pos ~len buf =
@@ -197,10 +196,10 @@ let[@inline always] unsafe_bigstring_view ~pos ~len buf =
 let[@inline always] check_bigstring ~bstr ~pos ~len =
   let str_len = Bigstring.length bstr in
   if pos < 0
-  || pos > str_len
-  ||
-  let max_len = str_len - pos in
-  len < 0 || len > max_len
+     || pos > str_len
+     ||
+     let max_len = str_len - pos in
+     len < 0 || len > max_len
   then bad_range_bstr ~str_len ~pos ~len
 ;;
 
@@ -277,7 +276,7 @@ let set_bounds_and_buffer_sub ~pos ~len ~src ~dst =
   dst.hi <- hi;
   dst.hi_max <- hi;
   if not (phys_equal dst.buf src.buf) then dst.buf <- src.buf
-[@@inline]
+  [@@inline]
 ;;
 
 let set_bounds_and_buffer ~src ~dst =
@@ -303,7 +302,7 @@ let resize t ~len =
   let hi = t.lo + len in
   if hi > t.hi_max then bad_range t ~len ~pos:0;
   t.hi <- hi
-[@@inline always]
+  [@@inline always]
 ;;
 
 let unsafe_resize = if unsafe_is_safe then resize else unsafe_resize
@@ -516,7 +515,7 @@ let unsafe_advance t n = t.lo <- t.lo + n
 let advance t len =
   check_range t ~len ~pos:0;
   unsafe_advance t len
-[@@inline always]
+  [@@inline always]
 ;;
 
 let unsafe_advance = if unsafe_is_safe then advance else unsafe_advance
@@ -619,14 +618,14 @@ module Consume = struct
   type src = (read, seek) t
 
   module To (Dst : sig
-      type t [@@deriving sexp_of]
+    type t [@@deriving sexp_of]
 
-      val create : len:int -> t
-      val length : (t[@local]) -> int
-      val get : t -> int -> char
-      val set : t -> int -> char -> unit
-      val unsafe_blit : (T.t, t) Blit.blit
-    end) =
+    val create : len:int -> t
+    val length : (t[@local]) -> int
+    val get : t -> int -> char
+    val set : t -> int -> char -> unit
+    val unsafe_blit : (T.t, t) Blit.blit
+  end) =
   struct
     include Base_for_tests.Test_blit.Make_distinct_and_test (Char_elt) (T_src) (Dst)
 
@@ -694,13 +693,13 @@ module Consume = struct
   let uadv t n x =
     unsafe_advance t n;
     x
-  [@@inline always]
+    [@@inline always]
   ;;
 
   let uadv_local t n x =
     unsafe_advance t n;
     x
-  [@@inline always]
+    [@@inline always]
   ;;
 
   let pos t len = buf_pos_exn t ~pos:0 ~len
@@ -2184,13 +2183,13 @@ module Unsafe = struct
     let uadv t n x =
       unsafe_advance t n;
       x
-    [@@inline always]
+      [@@inline always]
     ;;
 
     let uadv_local t n (x [@local]) =
       unsafe_advance t n;
       x
-    [@@inline always]
+      [@@inline always]
     ;;
 
     let upos t len = unsafe_buf_pos t ~pos:0 ~len
@@ -3206,25 +3205,25 @@ module For_hexdump = struct
   end
 
   module Window_and_limits = Make_compound_hexdump (struct
-      include Limits
+    include Limits
 
-      let parts =
-        [ (module Window_within_limits : Relative_indexable)
-        ; (module Limits_within_limits : Relative_indexable)
-        ]
-      ;;
-    end)
+    let parts =
+      [ (module Window_within_limits : Relative_indexable)
+      ; (module Limits_within_limits : Relative_indexable)
+      ]
+    ;;
+  end)
 
   module Window_and_limits_and_buffer = Make_compound_hexdump (struct
-      include Buffer
+    include Buffer
 
-      let parts =
-        [ (module Window_within_buffer : Relative_indexable)
-        ; (module Limits_within_buffer : Relative_indexable)
-        ; (module Buffer_within_buffer : Relative_indexable)
-        ]
-      ;;
-    end)
+    let parts =
+      [ (module Window_within_buffer : Relative_indexable)
+      ; (module Limits_within_buffer : Relative_indexable)
+      ; (module Buffer_within_buffer : Relative_indexable)
+      ]
+    ;;
+  end)
 end
 
 module Window = For_hexdump.Window

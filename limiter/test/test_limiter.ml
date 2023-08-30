@@ -220,37 +220,37 @@ let%test_module "Step_test" =
         , Generic
             { f =
                 (fun () ->
-                   let old_burst_size = Limiter.bucket_limit (bucket :> Limiter.t) in
-                   let old_sustained_rate_per_sec =
-                     Limiter.hopper_to_bucket_rate_per_sec (bucket :> Limiter.t)
-                   in
-                   match
-                     Limiter.Token_bucket.Starts_full.try_reconfigure
-                       bucket
-                       ~burst_size
-                       ~sustained_rate_per_sec
-                   with
-                   | Reconfigured ->
-                     if not expect
-                     then
-                       raise_s
-                         [%message
-                           "incorrectly able to reconfigure"
-                             (burst_size : int)
-                             (sustained_rate_per_sec : float)
-                             (old_burst_size : int)
-                             (old_sustained_rate_per_sec
+                  let old_burst_size = Limiter.bucket_limit (bucket :> Limiter.t) in
+                  let old_sustained_rate_per_sec =
+                    Limiter.hopper_to_bucket_rate_per_sec (bucket :> Limiter.t)
+                  in
+                  match
+                    Limiter.Token_bucket.Starts_full.try_reconfigure
+                      bucket
+                      ~burst_size
+                      ~sustained_rate_per_sec
+                  with
+                  | Reconfigured ->
+                    if not expect
+                    then
+                      raise_s
+                        [%message
+                          "incorrectly able to reconfigure"
+                            (burst_size : int)
+                            (sustained_rate_per_sec : float)
+                            (old_burst_size : int)
+                            (old_sustained_rate_per_sec
                               : float Limiter.Infinite_or_finite.t)]
-                   | Unable ->
-                     if expect
-                     then
-                       raise_s
-                         [%message
-                           "incorrectly unable to reconfigure"
-                             (burst_size : int)
-                             (sustained_rate_per_sec : float)
-                             (old_burst_size : int)
-                             (old_sustained_rate_per_sec
+                  | Unable ->
+                    if expect
+                    then
+                      raise_s
+                        [%message
+                          "incorrectly unable to reconfigure"
+                            (burst_size : int)
+                            (sustained_rate_per_sec : float)
+                            (old_burst_size : int)
+                            (old_sustained_rate_per_sec
                               : float Limiter.Infinite_or_finite.t)])
             ; debug_sexp =
                 [%message
@@ -269,17 +269,17 @@ let%test_module "Step_test" =
         ; take 1. 11 false (* should only be 10 in the bucket now *)
         ; take 1. 9 true
         ; increase_bucket_limit 1. 60 1. false
-        (* This should fail, and we should still have enough bucket space to take *)
+          (* This should fail, and we should still have enough bucket space to take *)
         ; take 1. 1 true
         ; take 1. 1 false (* But now we're fresh out *)
         ; increase_bucket_limit 1. 80 2. true
         ; take 1. 10 true
         ; return_to_hopper 1. 80
         ; take 20. 39 true
-        (* We expect to have 39 in the bucket since we're now returning
+          (* We expect to have 39 in the bucket since we're now returning
            at a rate of 2 per sec. *)
         ; increase_bucket_limit 1. 80 (-1.) false
-        (* Here, we should make sure that we don't accept a negative rate *)
+          (* Here, we should make sure that we don't accept a negative rate *)
         ; increase_bucket_limit 1. 80 0. true (* but a rate of zero is fine *)
         ]
     ;;
@@ -300,12 +300,12 @@ let%test_module "Step_test" =
         ; take 0.3 1 false (* and now that's done *)
         ; take 0.5 1 true (* but after 1/2 second, we have another *)
         ; take 1.0 1 true
-        (* and now one more.  We need to wait a bit longer than
+          (* and now one more.  We need to wait a bit longer than
            would be perfect to accomodate token drip granularity. *)
         ; take 2.0 2 false (* but now there are too many concurrent jobs *)
         ; return_to_hopper 2.0 3 (* give some back *)
         ; take 2.0 1 false
-        (* and it take            s time for them to get in the bucket *)
+          (* and it take            s time for them to get in the bucket *)
         ; take 3.0 2 true (* and now we can do a burst of 2 *)
         ; take 10.0 1 true (* and one more *)
         ; take 10.0 1 false (* but now we're out of concurrent jobs *)

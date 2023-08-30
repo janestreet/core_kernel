@@ -54,13 +54,13 @@ module type Slots = sig
   type ('a0, 'a1, 'a2, 'a3, 'a4) t5 =
     ( 'a0 * 'a1 * 'a2 * 'a3 * 'a4
     , [ `S0 of 'a0 | `S1 of 'a1 | `S2 of 'a2 | `S3 of 'a3 | `S4 of 'a4 ] )
-      t
+    t
   [@@deriving sexp_of]
 
   type ('a0, 'a1, 'a2, 'a3, 'a4, 'a5) t6 =
     ( 'a0 * 'a1 * 'a2 * 'a3 * 'a4 * 'a5
     , [ `S0 of 'a0 | `S1 of 'a1 | `S2 of 'a2 | `S3 of 'a3 | `S4 of 'a4 | `S5 of 'a5 ] )
-      t
+    t
   [@@deriving sexp_of]
 
   type ('a0, 'a1, 'a2, 'a3, 'a4, 'a5, 'a6) t7 =
@@ -73,7 +73,7 @@ module type Slots = sig
       | `S5 of 'a5
       | `S6 of 'a6
       ] )
-      t
+    t
   [@@deriving sexp_of]
 
   type ('a0, 'a1, 'a2, 'a3, 'a4, 'a5, 'a6, 'a7) t8 =
@@ -87,7 +87,7 @@ module type Slots = sig
       | `S6 of 'a6
       | `S7 of 'a7
       ] )
-      t
+    t
   [@@deriving sexp_of]
 
   type ('a0, 'a1, 'a2, 'a3, 'a4, 'a5, 'a6, 'a7, 'a8) t9 =
@@ -102,7 +102,7 @@ module type Slots = sig
       | `S7 of 'a7
       | `S8 of 'a8
       ] )
-      t
+    t
   [@@deriving sexp_of]
 
   type ('a0, 'a1, 'a2, 'a3, 'a4, 'a5, 'a6, 'a7, 'a8, 'a9) t10 =
@@ -118,7 +118,7 @@ module type Slots = sig
       | `S8 of 'a8
       | `S9 of 'a9
       ] )
-      t
+    t
   [@@deriving sexp_of]
 
   type ('a0, 'a1, 'a2, 'a3, 'a4, 'a5, 'a6, 'a7, 'a8, 'a9, 'a10) t11 =
@@ -135,7 +135,7 @@ module type Slots = sig
       | `S9 of 'a9
       | `S10 of 'a10
       ] )
-      t
+    t
   [@@deriving sexp_of]
 
   type ('a0, 'a1, 'a2, 'a3, 'a4, 'a5, 'a6, 'a7, 'a8, 'a9, 'a10, 'a11) t12 =
@@ -153,7 +153,7 @@ module type Slots = sig
       | `S10 of 'a10
       | `S11 of 'a11
       ] )
-      t
+    t
   [@@deriving sexp_of]
 
   type ('a0, 'a1, 'a2, 'a3, 'a4, 'a5, 'a6, 'a7, 'a8, 'a9, 'a10, 'a11, 'a12) t13 =
@@ -172,7 +172,7 @@ module type Slots = sig
       | `S11 of 'a11
       | `S12 of 'a12
       ] )
-      t
+    t
   [@@deriving sexp_of]
 
   type ('a0, 'a1, 'a2, 'a3, 'a4, 'a5, 'a6, 'a7, 'a8, 'a9, 'a10, 'a11, 'a12, 'a13) t14 =
@@ -192,7 +192,7 @@ module type Slots = sig
       | `S12 of 'a12
       | `S13 of 'a13
       ] )
-      t
+    t
   [@@deriving sexp_of]
 
   val t1 : _ t1

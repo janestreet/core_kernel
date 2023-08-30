@@ -144,7 +144,6 @@ val subscribe_exn
   -> f:'callback
   -> 'callback Subscriber.t
 
-
 (** [iter_exn t [%here] ~f] is [ignore (subscribe_exn t [%here] ~callback:f)].  This
     captures the common usage in which one never wants to unsubscribe from a bus. *)
 val iter_exn
@@ -161,9 +160,9 @@ module Fold_arity : sig
     | Arity3 : ('a -> 'b -> 'c -> unit, 's -> 'a -> 'b -> 'c -> 's, 's) t
     | Arity4 : ('a -> 'b -> 'c -> 'd -> unit, 's -> 'a -> 'b -> 'c -> 'd -> 's, 's) t
     | Arity5
-      : ( 'a -> 'b -> 'c -> 'd -> 'e -> unit
-        , 's -> 'a -> 'b -> 'c -> 'd -> 'e -> 's
-        , 's )
+        : ( 'a -> 'b -> 'c -> 'd -> 'e -> unit
+          , 's -> 'a -> 'b -> 'c -> 'd -> 'e -> 's
+          , 's )
           t
   [@@deriving sexp_of]
 end

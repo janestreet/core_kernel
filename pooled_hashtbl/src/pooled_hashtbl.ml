@@ -212,12 +212,12 @@ let resize =
 let on_grow ~before ~after =
   let old_before = !on_grow in
   on_grow
-  := fun () ->
-    let old_after = Staged.unstage (old_before ()) in
-    let v = before () in
-    Staged.stage (fun ~old_capacity ~new_capacity ->
-      old_after ~old_capacity ~new_capacity;
-      after v ~old_capacity ~new_capacity)
+    := fun () ->
+         let old_after = Staged.unstage (old_before ()) in
+         let v = before () in
+         Staged.stage (fun ~old_capacity ~new_capacity ->
+           old_after ~old_capacity ~new_capacity;
+           after v ~old_capacity ~new_capacity)
 ;;
 
 let rec find_entry t ~key ~it =
@@ -334,20 +334,18 @@ let find_exn t key =
   let index = slot t key in
   let it = table_get t.table index in
   let e = find_entry t ~key ~it in
-  if not (Entry.is_null e)
-  then Entry.data t.entries e
-  else  raise Stdlib.Not_found
+  if not (Entry.is_null e) then Entry.data t.entries e else raise Stdlib.Not_found
 ;;
 
 let[@inline always] find_and_call_impl
-                      t
-                      key
-                      ~call_if_found
-                      ~call_if_not_found
-                      ~if_found
-                      ~if_not_found
-                      arg1
-                      arg2
+  t
+  key
+  ~call_if_found
+  ~call_if_not_found
+  ~if_found
+  ~if_not_found
+  arg1
+  arg2
   =
   let index = slot t key in
   let it = table_get t.table index in
@@ -692,7 +690,7 @@ let for_all t ~f = not (existsi t ~f:(fun ~key:_ ~data -> not (f data)))
 
 let counti t ~f =
   fold t ~init:0 ~f:(fun ~key ~data acc -> if f ~key ~data then acc + 1 else acc) [@nontail
-  ]
+                                                                                    ]
 ;;
 
 let count t ~f =
@@ -872,19 +870,19 @@ let merge =
     without_mutating
       t_left
       (fun () ->
-         without_mutating
-           t_right
-           (fun () ->
-              iteri t_left ~f:(fun ~key ~data:left ->
-                match find t_right key with
-                | None -> maybe_set new_t ~key ~f (`Left left)
-                | Some right -> maybe_set new_t ~key ~f (`Both (left, right)));
-              iteri t_right ~f:(fun ~key ~data:right ->
-                match find t_left key with
-                | None -> maybe_set new_t ~key ~f (`Right right)
-                | Some _ -> ()
-                (* already done above *)) [@nontail])
-           () [@nontail])
+        without_mutating
+          t_right
+          (fun () ->
+            iteri t_left ~f:(fun ~key ~data:left ->
+              match find t_right key with
+              | None -> maybe_set new_t ~key ~f (`Left left)
+              | Some right -> maybe_set new_t ~key ~f (`Both (left, right)));
+            iteri t_right ~f:(fun ~key ~data:right ->
+              match find t_left key with
+              | None -> maybe_set new_t ~key ~f (`Right right)
+              | Some _ -> ()
+              (* already done above *)) [@nontail])
+          () [@nontail])
       ();
     new_t
 ;;
@@ -899,7 +897,7 @@ let merge_into ~src ~dst ~f =
       (match dst_data with
        | None -> replace dst ~key ~data
        | Some dst_data -> if not (phys_equal dst_data data) then replace dst ~key ~data)) [@nontail
-  ]
+                                                                                          ]
 ;;
 
 let filteri_inplace t ~f =
@@ -934,13 +932,13 @@ let map_inplace t ~f = mapi_inplace t ~f:(fun ~key:_ ~data -> f data) [@nontail]
 let equal equal t t' =
   length t = length t'
   && with_return (fun r ->
-    iteri t ~f:(fun ~key ~data ->
-      match find t' key with
-      | None -> r.return false
-      | Some data' ->
-        if not (without_mutating t' (fun () -> equal data data') ())
-        then r.return false);
-    true)
+       iteri t ~f:(fun ~key ~data ->
+         match find t' key with
+         | None -> r.return false
+         | Some data' ->
+           if not (without_mutating t' (fun () -> equal data data') ())
+           then r.return false);
+       true)
 ;;
 
 let similar = equal
@@ -1044,20 +1042,20 @@ module type Key_stable = Key_stable
 module type For_deriving = For_deriving
 
 module Creators (Key : sig
-    type 'a t
+  type 'a t
 
-    val hashable : 'a t Hashable.t
-  end) : sig
+  val hashable : 'a t Hashable.t
+end) : sig
   type ('a, 'b) t_ = ('a Key.t, 'b) t
 
   val t_of_sexp : (Sexp.t -> 'a Key.t) -> (Sexp.t -> 'b) -> Sexp.t -> ('a, 'b) t_
 
   include
     Creators
-    with type ('a, 'b) t := ('a, 'b) t_
-    with type 'a key := 'a Key.t
-    with type ('key, 'data, 'a) create_options :=
-      ('key, 'data, 'a) create_options_without_hashable
+      with type ('a, 'b) t := ('a, 'b) t_
+      with type 'a key := 'a Key.t
+      with type ('key, 'data, 'a) create_options :=
+        ('key, 'data, 'a) create_options_without_hashable
 end = struct
   let hashable = Key.hashable
 
@@ -1116,10 +1114,10 @@ module Poly = struct
   let invariant = invariant
 
   include Creators (struct
-      type 'a t = 'a
+    type 'a t = 'a
 
-      let hashable = hashable
-    end)
+    let hashable = hashable
+  end)
 
   include Accessors
 
@@ -1130,36 +1128,36 @@ module Poly = struct
   ;;
 
   include Bin_prot.Utils.Make_iterable_binable2 (struct
-      type ('a, 'b) z = ('a, 'b) t
-      type ('a, 'b) t = ('a, 'b) z
-      type ('a, 'b) el = 'a * 'b [@@deriving bin_io]
+    type ('a, 'b) z = ('a, 'b) t
+    type ('a, 'b) t = ('a, 'b) z
+    type ('a, 'b) el = 'a * 'b [@@deriving bin_io]
 
-      let caller_identity =
-        Bin_prot.Shape.Uuid.of_string "a9b0d5e8-4992-11e6-a717-dfe192342aee"
-      ;;
+    let caller_identity =
+      Bin_prot.Shape.Uuid.of_string "a9b0d5e8-4992-11e6-a717-dfe192342aee"
+    ;;
 
-      let module_name = Some "Pooled_hashtbl"
-      let length = length
-      let iter t ~f = iteri t ~f:(fun ~key ~data -> f (key, data))
+    let module_name = Some "Pooled_hashtbl"
+    let length = length
+    let iter t ~f = iteri t ~f:(fun ~key ~data -> f (key, data))
 
-      let init ~len ~next =
-        let t = create ~size:len () in
-        for _i = 0 to len - 1 do
-          let key, data = next () in
-          match find t key with
-          | None -> replace t ~key ~data
-          | Some _ -> failwith "Pooled_hashtbl.bin_read_t_: duplicate key"
-        done;
-        t
-      ;;
-    end)
+    let init ~len ~next =
+      let t = create ~size:len () in
+      for _i = 0 to len - 1 do
+        let key, data = next () in
+        match find t key with
+        | None -> replace t ~key ~data
+        | Some _ -> failwith "Pooled_hashtbl.bin_read_t_: duplicate key"
+      done;
+      t
+    ;;
+  end)
 end
 
 module Make_plain_with_hashable (T : sig
-    module Key : Key_plain
+  module Key : Key_plain
 
-    val hashable : Key.t Hashable.t
-  end) =
+  val hashable : Key.t Hashable.t
+end) =
 struct
   let hashable = T.hashable
 
@@ -1171,68 +1169,68 @@ struct
   let invariant invariant_data t = invariant ignore invariant_data t
 
   include Creators (struct
-      type 'a t = T.Key.t
+    type 'a t = T.Key.t
 
-      let hashable = hashable
-    end)
+    let hashable = hashable
+  end)
 
   include Accessors
 
   let sexp_of_t sexp_of_v t = Poly.sexp_of_t T.Key.sexp_of_t sexp_of_v t
 
   module Provide_of_sexp
-      (X : sig
-         type t [@@deriving of_sexp]
-       end
-       with type t := key) =
+    (X : sig
+      type t [@@deriving of_sexp]
+    end
+    with type t := key) =
   struct
     let t_of_sexp v_of_sexp sexp = t_of_sexp X.t_of_sexp v_of_sexp sexp
   end
 
   module Provide_bin_io
-      (X : sig
-         type t [@@deriving bin_io]
-       end
-       with type t := key) =
-    Bin_prot.Utils.Make_iterable_binable1 (struct
-      module Key = struct
-        include T.Key
-        include X
-      end
+    (X : sig
+      type t [@@deriving bin_io]
+    end
+    with type t := key) =
+  Bin_prot.Utils.Make_iterable_binable1 (struct
+    module Key = struct
+      include T.Key
+      include X
+    end
 
-      type nonrec 'a t = 'a t
-      type 'a el = Key.t * 'a [@@deriving bin_io]
+    type nonrec 'a t = 'a t
+    type 'a el = Key.t * 'a [@@deriving bin_io]
 
-      let caller_identity =
-        Bin_prot.Shape.Uuid.of_string "aa942e1a-4992-11e6-8f73-876922b0953c"
-      ;;
+    let caller_identity =
+      Bin_prot.Shape.Uuid.of_string "aa942e1a-4992-11e6-8f73-876922b0953c"
+    ;;
 
-      let module_name = Some "Pooled_hashtbl"
-      let length = length
-      let iter t ~f = iteri t ~f:(fun ~key ~data -> f (key, data))
+    let module_name = Some "Pooled_hashtbl"
+    let length = length
+    let iter t ~f = iteri t ~f:(fun ~key ~data -> f (key, data))
 
-      let init ~len ~next =
-        let t = create ~size:len () in
-        for _i = 0 to len - 1 do
-          let key, data = next () in
-          match find t key with
-          | None -> replace t ~key ~data
-          | Some _ ->
-            failwiths
-              ~here:[%here]
-              "Pooled_hashtbl.bin_read_t: duplicate key"
-              key
-              [%sexp_of: Key.t]
-        done;
-        t
-      ;;
-    end)
+    let init ~len ~next =
+      let t = create ~size:len () in
+      for _i = 0 to len - 1 do
+        let key, data = next () in
+        match find t key with
+        | None -> replace t ~key ~data
+        | Some _ ->
+          failwiths
+            ~here:[%here]
+            "Pooled_hashtbl.bin_read_t: duplicate key"
+            key
+            [%sexp_of: Key.t]
+      done;
+      t
+    ;;
+  end)
 
   module Provide_stable_witness
-      (Key' : sig
-         type t [@@deriving stable_witness]
-       end
-       with type t := key) =
+    (Key' : sig
+      type t [@@deriving stable_witness]
+    end
+    with type t := key) =
   struct
     (* I'm not sure whether it makes sense for pooled hashtbl to be used as a stable type,
        since pooling seems like an in-process thing, but in order to satisfy the entire
@@ -1254,42 +1252,42 @@ struct
 end
 
 module Make_with_hashable (T : sig
-    module Key : Key
+  module Key : Key
 
-    val hashable : Key.t Hashable.t
-  end) =
+  val hashable : Key.t Hashable.t
+end) =
 struct
   include Make_plain_with_hashable (T)
   include Provide_of_sexp (T.Key)
 end
 
 module Make_binable_with_hashable (T : sig
-    module Key : Key_binable
+  module Key : Key_binable
 
-    val hashable : Key.t Hashable.t
-  end) =
+  val hashable : Key.t Hashable.t
+end) =
 struct
   include Make_with_hashable (T)
   include Provide_bin_io (T.Key)
 end
 
 module Make_stable_with_hashable (T : sig
-    module Key : Key_stable
+  module Key : Key_stable
 
-    val hashable : Key.t Hashable.t
-  end) =
+  val hashable : Key.t Hashable.t
+end) =
 struct
   include Make_binable_with_hashable (T)
   include Provide_stable_witness (T.Key)
 end
 
 module Make_plain (Key : Key_plain) = Make_plain_with_hashable (struct
-    module Key = Key
+  module Key = Key
 
-    let hashable =
-      { Hashable.hash = Key.hash; compare = Key.compare; sexp_of_t = Key.sexp_of_t }
-    ;;
-  end)
+  let hashable =
+    { Hashable.hash = Key.hash; compare = Key.compare; sexp_of_t = Key.sexp_of_t }
+  ;;
+end)
 
 module Make (Key : Key) = struct
   include Make_plain (Key)
@@ -1297,9 +1295,9 @@ module Make (Key : Key) = struct
 end
 
 module Make_binable (Key : sig
-    include Key
-    include Binable.S with type t := t
-  end) =
+  include Key
+  include Binable.S with type t := t
+end) =
 struct
   include Make (Key)
   include Provide_bin_io (Key)
@@ -1414,26 +1412,26 @@ module type M_quickcheck = M_quickcheck
 let of_alist_option m alist = Result.ok (of_alist_or_error m alist)
 
 let quickcheck_generator_m__t
-      (type key)
-      (module Key : M_quickcheck with type t = key)
-      quickcheck_generator_data
+  (type key)
+  (module Key : M_quickcheck with type t = key)
+  quickcheck_generator_data
   =
   [%quickcheck.generator: (Key.t * data) List.t]
   |> Quickcheck.Generator.filter_map ~f:(of_alist_option (module Key))
 ;;
 
 let quickcheck_observer_m__t
-      (type key)
-      (module Key : M_quickcheck with type t = key)
-      quickcheck_observer_data
+  (type key)
+  (module Key : M_quickcheck with type t = key)
+  quickcheck_observer_data
   =
   [%quickcheck.observer: (Key.t * data) List.t] |> Quickcheck.Observer.unmap ~f:to_alist
 ;;
 
 let quickcheck_shrinker_m__t
-      (type key)
-      (module Key : M_quickcheck with type t = key)
-      quickcheck_shrinker_data
+  (type key)
+  (module Key : M_quickcheck with type t = key)
+  quickcheck_shrinker_data
   =
   [%quickcheck.shrinker: (Key.t * data) List.t]
   |> Quickcheck.Shrinker.filter_map ~f:(of_alist_option (module Key)) ~f_inverse:to_alist

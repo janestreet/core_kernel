@@ -1,4 +1,3 @@
-
 (** Implements a token-bucket-based throttling rate limiter. This module is useful for
     limiting network clients to a sensible query rate, or in any case where you have jobs
     that consume a scarce but replenishable resource.
@@ -135,7 +134,7 @@ module Throttled_rate_limiter : sig
     -> burst_size:int
     -> sustained_rate_per_sec:float
     -> max_concurrent_jobs:int
-    (** Limits concurrency per time quantum.  Any job started during a time quantum
+         (** Limits concurrency per time quantum.  Any job started during a time quantum
         ([try_start_job ~now]) or earlier and not stopped in an earlier quantum counts
         toward the concurrency limit.
 

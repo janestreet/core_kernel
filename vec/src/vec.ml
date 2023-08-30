@@ -42,7 +42,7 @@ module With_integer_index = struct
       { mutable arr : Obj.t Uniform_array.t
       ; mutable length : int
       ; mutable capacity : int
-      (** Invariant: [capacity = Uniform_array.length arr].
+          (** Invariant: [capacity = Uniform_array.length arr].
           We maintain it here to eliminate an indirection when accessing long arrays. *)
       }
     [@@deriving fields ~getters ~setters]
@@ -353,17 +353,17 @@ module With_integer_index = struct
   ;;
 
   include Blit.Make1 (struct
-      type nonrec 'a t = 'a t
+    type nonrec 'a t = 'a t
 
-      let create_like ~len _t =
-        (* Note that even though we [unsafe_create_uninitialized], every time this function
+    let create_like ~len _t =
+      (* Note that even though we [unsafe_create_uninitialized], every time this function
            is called, the [Vec] is immediately blitted with valid values. *)
-        Kernel.unsafe_create_uninitialized ~len
-      ;;
+      Kernel.unsafe_create_uninitialized ~len
+    ;;
 
-      let length = length
-      let unsafe_blit = unsafe_blit
-    end)
+    let length = length
+    let unsafe_blit = unsafe_blit
+  end)
 
   (** Returns the length of the longest prefix for which [f] is true. *)
   let take_while_len t ~f:(f [@local]) =
@@ -612,18 +612,18 @@ module With_integer_index = struct
       type nonrec 'a t = 'a t [@@deriving compare, sexp]
 
       include Bin_prot.Utils.Make_iterable_binable1 (struct
-          type nonrec 'a t = 'a t
-          type 'a el = 'a [@@deriving bin_io]
+        type nonrec 'a t = 'a t
+        type 'a el = 'a [@@deriving bin_io]
 
-          let caller_identity =
-            Bin_prot.Shape.Uuid.of_string "2ec1d047-7cf8-49bc-991b-0badd17d8359"
-          ;;
+        let caller_identity =
+          Bin_prot.Shape.Uuid.of_string "2ec1d047-7cf8-49bc-991b-0badd17d8359"
+        ;;
 
-          let module_name = Some "Vec"
-          let init ~len ~next = init len ~f:(fun _ -> next ())
-          let iter = iter
-          let length = length
-        end)
+        let module_name = Some "Vec"
+        let init ~len ~next = init len ~f:(fun _ -> next ())
+        let iter = iter
+        let length = length
+      end)
     end
   end
 end

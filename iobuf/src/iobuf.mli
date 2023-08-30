@@ -80,7 +80,6 @@ val create : len:int -> (_, _) t
 (** [empty] is an immutable [t] of size 0. *)
 val empty : (read, no_seek) t
 
-
 (** [of_bigstring bigstring ~pos ~len] returns an iobuf backed by [bigstring], with the
     window and limits specified starting at [pos] and of length [len]. *)
 val of_bigstring
@@ -259,7 +258,6 @@ module type Bound = Bound with type ('d, 'w) iobuf := ('d, 'w) t
 module Lo_bound : Bound
 module Hi_bound : Bound
 
-
 (** [advance t amount] advances the lower bound of the window by [amount].  It is an error
     to advance past the upper bound of the window or the lower limit. *)
 val advance : ((_, seek) t[@local]) -> int -> unit
@@ -267,7 +265,6 @@ val advance : ((_, seek) t[@local]) -> int -> unit
 (** [unsafe_advance] is like [advance] but with no bounds checking, so incorrect usage can
     easily cause segfaults. *)
 val unsafe_advance : ((_, seek) t[@local]) -> int -> unit
-
 
 (** [resize t] sets the length of [t]'s window, provided it does not exceed limits. *)
 val resize : ((_, seek) t[@local]) -> len:int -> unit
@@ -389,7 +386,6 @@ module Date_string : sig
   val len_iso8601_extended : int
 end
 
-
 (** [Consume.string t ~len] reads [len] characters (all, by default) from [t] into a new
     string and advances the lower bound of the window accordingly.
 
@@ -415,10 +411,10 @@ module Consume : sig
 
   include
     Accessors_read
-    with type ('a, 'r, 's) t = ((([> read ] as 'r), seek) t[@local]) -> 'a
-    with type ('a, 'r, 's) t_local =
-           ((([> read ] as 'r), seek) t[@local]) -> ('a[@local])
-    with type 'a bin_prot := 'a Bin_prot.Type_class.reader
+      with type ('a, 'r, 's) t = ((([> read ] as 'r), seek) t[@local]) -> 'a
+      with type ('a, 'r, 's) t_local =
+        ((([> read ] as 'r), seek) t[@local]) -> ('a[@local])
+      with type 'a bin_prot := 'a Bin_prot.Type_class.reader
 end
 
 (** [Fill.bin_prot X.bin_write_t t x] writes [x] to [t] in bin-prot form, advancing past
@@ -426,10 +422,10 @@ end
 module Fill : sig
   include
     Accessors_write
-    with type ('a, 'd, 'w) t = ((read_write, seek) t[@local]) -> 'a -> unit
-    with type ('a, 'd, 'w) t_local =
-           ((read_write, seek) t[@local]) -> ('a[@local]) -> unit
-    with type 'a bin_prot := 'a Bin_prot.Type_class.writer
+      with type ('a, 'd, 'w) t = ((read_write, seek) t[@local]) -> 'a -> unit
+      with type ('a, 'd, 'w) t_local =
+        ((read_write, seek) t[@local]) -> ('a[@local]) -> unit
+      with type 'a bin_prot := 'a Bin_prot.Type_class.writer
 
   (** [decimal t int] is equivalent to [Iobuf.Fill.string t (Int.to_string int)], but with
       improved efficiency and no intermediate allocation.
@@ -470,7 +466,6 @@ module Peek : sig
   val index : (([> read ], _) iobuf[@local]) -> ?pos:int -> ?len:int -> char -> int option
 end
 
-
 (** [Poke.bin_prot X.bin_write_t t x] writes [x] to the beginning of [t] in binary form
     without advancing.  You can use [X.bin_size_t] to tell how long it was.
     [X.bin_write_t] is only allowed to write that portion of the buffer you have access
@@ -492,10 +487,10 @@ module Poke : sig
 
   include
     Accessors_write
-    with type ('a, 'd, 'w) t = ((read_write, 'w) t[@local]) -> pos:int -> 'a -> unit
-    with type ('a, 'd, 'w) t_local =
-           ((read_write, 'w) t[@local]) -> pos:int -> ('a[@local]) -> unit
-    with type 'a bin_prot := 'a Bin_prot.Type_class.writer
+      with type ('a, 'd, 'w) t = ((read_write, 'w) t[@local]) -> pos:int -> 'a -> unit
+      with type ('a, 'd, 'w) t_local =
+        ((read_write, 'w) t[@local]) -> pos:int -> ('a[@local]) -> unit
+      with type 'a bin_prot := 'a Bin_prot.Type_class.writer
 
   (** Same as [Fill.date_string_iso8601_extended t date], but does not advance [t]. *)
   val date_string_iso8601_extended : (Date.t, _, _) t
@@ -660,9 +655,7 @@ end
 val memset : ((read_write, _) t[@local]) -> pos:int -> len:int -> char -> unit
 
 (** [memset]s a buffer to zero. *)
-val zero
-  :  ((read_write, _) t[@local])
-  -> unit
+val zero : ((read_write, _) t[@local]) -> unit
 
 (** Create a new iobuf whose contents are the appended contents of the passed array. *)
 val concat : ([> read ], _) t array -> (_, _) t

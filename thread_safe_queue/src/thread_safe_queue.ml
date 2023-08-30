@@ -26,11 +26,11 @@ end
 
 type 'a t =
   { mutable length : int
-  (* [front] to [back] has [length + 1] linked elements, where the first [length] hold the
+      (* [front] to [back] has [length + 1] linked elements, where the first [length] hold the
      values in the queue, and the last is [back], holding no value. *)
   ; mutable front : 'a Elt.t
   ; mutable back : 'a Elt.t
-  (* [unused_elts] is singly linked via [next], and ends with [sentinel].  All elts in
+      (* [unused_elts] is singly linked via [next], and ends with [sentinel].  All elts in
      [unused_elts] have [Uopt.is_none elt.value]. *)
   ; mutable unused_elts : 'a Elt.t Uopt.t
   }

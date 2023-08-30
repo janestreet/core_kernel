@@ -44,20 +44,20 @@ let parse_generated_hg_version = function
     |> String.chop_prefix_if_exists ~prefix:version_util_start_marker
     |> String.split ~on:'\n'
     |> List.map ~f:(fun line ->
-      match String.rsplit2 line ~on:' ' with
-      | None -> line (* no version util *)
-      | Some (repo, rev_status) ->
-        (* For compability with downstream tools that might rely on this output format,
+         match String.rsplit2 line ~on:' ' with
+         | None -> line (* no version util *)
+         | Some (repo, rev_status) ->
+           (* For compability with downstream tools that might rely on this output format,
            and with [Version.parse].*)
-        String.concat
-          [ repo
-          ; "_"
-          ; String.prefix rev_status 12
-          ; (* The revision can have a one-character '+' suffix. Keep it. *)
-            (if String.length rev_status mod 2 = 1
-             then String.suffix rev_status 1
-             else "")
-          ])
+           String.concat
+             [ repo
+             ; "_"
+             ; String.prefix rev_status 12
+             ; (* The revision can have a one-character '+' suffix. Keep it. *)
+               (if String.length rev_status mod 2 = 1
+                then String.suffix rev_status 1
+                else "")
+             ])
 ;;
 
 let version_list = parse_generated_hg_version (generated_hg_version ())
@@ -149,19 +149,19 @@ module Expert = struct
         versions
         |> List.sort ~compare:Version.compare
         |> List.map ~f:(fun { repo; version } ->
-          if not (String.mem repo '/')
-          then failwith [%string "%{repo} doesn't look like a repo url"];
-          (let version' = String.chop_suffix_if_exists version ~suffix:"+" in
-           if (String.length version' = 40 || String.length version' = 64)
-           && String.for_all version' ~f:Char.is_hex_digit_lower
-           then ()
-           else failwith [%string "%{version} doesn't look like a full hg version"]);
-          repo ^ " " ^ version ^ "\n")
+             if not (String.mem repo '/')
+             then failwith [%string "%{repo} doesn't look like a repo url"];
+             (let version' = String.chop_suffix_if_exists version ~suffix:"+" in
+              if (String.length version' = 40 || String.length version' = 64)
+                 && String.for_all version' ~f:Char.is_hex_digit_lower
+              then ()
+              else failwith [%string "%{version} doesn't look like a full hg version"]);
+             repo ^ " " ^ version ^ "\n")
         |> String.concat
     in
     if String.mem version_util '\000' then failwith "version_util can't contain nul bytes";
     if String.length version_util > 4000
-    (* using 4000 is easier than figuring the exact max length we support. *)
+       (* using 4000 is easier than figuring the exact max length we support. *)
     then failwith "version_util must be shorter than 4000 bytes";
     let len = 4096 - String.length version_util_start_marker in
     assert (len > String.length version_util) (* this ensures we add a nul byte *);
@@ -306,14 +306,14 @@ let arg_spec =
   [ ( "-version"
     , Arg.Unit
         (fun () ->
-           List.iter version_list ~f:print_endline;
-           exit 0)
+          List.iter version_list ~f:print_endline;
+          exit 0)
     , " Print the hg revision of this build and exit" )
   ; ( "-build_info"
     , Arg.Unit
         (fun () ->
-           print_endline build_info;
-           exit 0)
+          print_endline build_info;
+          exit 0)
     , " Print build info as sexp and exit" )
   ]
 ;;

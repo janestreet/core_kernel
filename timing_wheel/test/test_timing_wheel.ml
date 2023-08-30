@@ -99,15 +99,15 @@ module Alarm_precision = struct
       ; one_nanosecond
       ]
       ~f:(fun t ->
-        require [%here] (equal t (t |> to_span |> of_span_floor_pow2_ns));
-        if Time_ns.Span.( > ) (t |> to_span) Time_ns.Span.nanosecond
-        then
-          require
-            [%here]
-            (equal
-               t
-               (Time_ns.Span.( + ) (t |> to_span) Time_ns.Span.nanosecond
-                |> of_span_floor_pow2_ns)));
+      require [%here] (equal t (t |> to_span |> of_span_floor_pow2_ns));
+      if Time_ns.Span.( > ) (t |> to_span) Time_ns.Span.nanosecond
+      then
+        require
+          [%here]
+          (equal
+             t
+             (Time_ns.Span.( + ) (t |> to_span) Time_ns.Span.nanosecond
+              |> of_span_floor_pow2_ns)));
     List.iter [ 1.; 1E-3; 1E-6 ] ~f:(fun span ->
       let span = Time_ns.Span.of_sec span in
       print_s
@@ -309,7 +309,7 @@ let%expect_test "[Config.durations]" =
               ~alarm_precision:(gibi_nanos 1.)
               ~level_bits
               ())
-         : Time_ns.Span.t list)]
+          : Time_ns.Span.t list)]
   in
   durations [ 1 ];
   [%expect {|
@@ -383,7 +383,7 @@ let%expect_test "[level_bits], [config], and [max_allowed_alarm_time]" =
                 (config : Config.t)
                 ~max_allowed_alarm_time:
                   (max_allowed_alarm_time (create ~config ~start:Time_ns.epoch)
-                   : Time_ns.t)]));
+                    : Time_ns.t)]));
   [%expect
     {|
     ((level_bits (11 10 10 10 10 10 1))
@@ -470,11 +470,11 @@ let%expect_test "[level_bits] and [max_allowed_alarm_time] with \
 ;;
 
 let create_unit
-      ?extend_to_max_num_bits
-      ?level_bits
-      ?(start = Time_ns.epoch)
-      ?(alarm_precision = gibi_nanos 1.)
-      ()
+  ?extend_to_max_num_bits
+  ?level_bits
+  ?(start = Time_ns.epoch)
+  ?(alarm_precision = gibi_nanos 1.)
+  ()
   =
   create
     ~config:(create_config ?extend_to_max_num_bits ?level_bits () ~alarm_precision)
@@ -543,10 +543,10 @@ let%expect_test "[is_empty], [interval_num], [length], [mem]" =
           ~is_empty:(is_empty t : bool)
           ~interval_num1:
             (Or_error.try_with (fun () -> Alarm.interval_num t a1)
-             : Interval_num.t Or_error.t)
+              : Interval_num.t Or_error.t)
           ~interval_num2:
             (Or_error.try_with (fun () -> Alarm.interval_num t a2)
-             : Interval_num.t Or_error.t)
+              : Interval_num.t Or_error.t)
           ~mem1:(mem t a1 : bool)
           ~mem2:(mem t a2 : bool)]
   in
@@ -768,10 +768,10 @@ let%expect_test "[advance_clock_to_interval_num]" =
     results.(0) <- [ [] ];
     for i = 1 to n do
       results.(i)
-      <- List.concat
-           (List.init i ~f:(fun j ->
-              let first = j + 1 in
-              List.map results.(i - first) ~f:(fun rest -> first :: rest)))
+        <- List.concat
+             (List.init i ~f:(fun j ->
+                let first = j + 1 in
+                List.map results.(i - first) ~f:(fun rest -> first :: rest)))
     done;
     results.(n)
   in
@@ -783,10 +783,10 @@ let%expect_test "[advance_clock_to_interval_num]" =
   end
   in
   let test
-        ~num_bits
-        ~level_bits
-        ~(initial_min_allowed_interval_num : Initial_min_allowed_interval_num.t)
-        ~step
+    ~num_bits
+    ~level_bits
+    ~(initial_min_allowed_interval_num : Initial_min_allowed_interval_num.t)
+    ~step
     =
     incr num_tests;
     let t = create_unit () ~level_bits in
@@ -859,14 +859,14 @@ let%expect_test "[advance_clock_to_interval_num]" =
   List.iter
     Initial_min_allowed_interval_num.all
     ~f:(fun initial_min_allowed_interval_num ->
-      for step = 1 to 1 lsl num_bits do
-        List.iter all_sums ~f:(fun level_bits ->
-          test
-            ~num_bits
-            ~level_bits
-            ~initial_min_allowed_interval_num
-            ~step:(Interval_num.Span.of_int step))
-      done);
+    for step = 1 to 1 lsl num_bits do
+      List.iter all_sums ~f:(fun level_bits ->
+        test
+          ~num_bits
+          ~level_bits
+          ~initial_min_allowed_interval_num
+          ~step:(Interval_num.Span.of_int step))
+    done);
   print_s [%message (num_tests : int ref)];
   [%expect {| (num_tests 4_096) |}]
 ;;
@@ -1016,7 +1016,7 @@ let%expect_test "[Private.interval_num_internal]" =
                     (Alarm_precision.of_span_floor_pow2_ns
                        (Time_ns.Span.of_int63_ns (Int63.of_int 4)))
                   ~time:(Time_ns.of_int_ns_since_epoch time))
-             : int)]
+              : int)]
   done;
   [%expect
     {|
@@ -1171,7 +1171,7 @@ let%expect_test "[advance_clock ~to_:max_time]" =
                t
                ~at:(Time_ns.sub max_time (Time_ns.Span.of_int_ns i))
                (fun () -> print_s [%message "alarm" (i : int)])
-             : _ Alarm.t)
+              : _ Alarm.t)
         done;
         for i = 10 downto 0 do
           print_s [%message "advance" (i : int)];
@@ -1708,7 +1708,7 @@ let%expect_test "[next_alarm_fires_at]" =
           ~next_alarm_fires_after:
             (Option.map (next_alarm_fires_at t) ~f:(fun time ->
                Time_ns.diff time Time_ns.epoch)
-             : Time_ns.Span.t option)]
+              : Time_ns.Span.t option)]
   in
   let add_at at =
     ignore (add t ~at:(Time_ns.add Time_ns.epoch at) () : _ Alarm.t);

@@ -1,8 +1,8 @@
 open! Core
 
 module Make (M : sig
-    val am_running_test : bool
-  end) =
+  val am_running_test : bool
+end) =
 struct
   type 'a t = 'a [@@deriving bin_io, compare, equal, sexp]
 
@@ -19,16 +19,16 @@ let%test_module _ =
   (module struct
     module Turned_off = struct
       module Sexp_hidden_in_test_turned_off = Make (struct
-          let am_running_test = false
-        end)
+        let am_running_test = false
+      end)
 
       type nonrec t = int Sexp_hidden_in_test_turned_off.t [@@deriving sexp_of]
     end
 
     module Turned_on = struct
       module Sexp_hidden_in_test_turned_on = Make (struct
-          let am_running_test = true
-        end)
+        let am_running_test = true
+      end)
 
       type nonrec t = int Sexp_hidden_in_test_turned_on.t [@@deriving sexp_of]
     end
@@ -46,5 +46,5 @@ let%test_module _ =
 ;;
 
 include Make (struct
-    let am_running_test = am_running_test
-  end)
+  let am_running_test = am_running_test
+end)

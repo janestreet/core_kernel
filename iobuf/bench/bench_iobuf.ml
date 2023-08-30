@@ -84,7 +84,6 @@ let%bench_module "Blit" =
   end)
 ;;
 
-
 (* 8b4516d0ab0a *"jane/int-repr/iobuf-bench/update-columns"
    Estimated testing time 20s (20 benchmarks x 1s). Change using '-quota'.
    ┌───────────────────────────────────────┬────────────────┬──────────┐

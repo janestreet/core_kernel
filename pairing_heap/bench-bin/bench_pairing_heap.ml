@@ -43,23 +43,23 @@ let add_remove_from_existing_heap data initial_size =
   Bench.Test.create
     ~name:(sprintf "add/remove from heap of size %i (%s)" initial_size (Data.name data))
     (fun () ->
-       Heap.add h (Data.next data);
-       ignore (Heap.pop_exn h : int))
+      Heap.add h (Data.next data);
+      ignore (Heap.pop_exn h : int))
 ;;
 
 let heap_sort data size =
   Bench.Test.create
     ~name:(sprintf "sort list of length %i (%s)" size (Data.name data))
     (fun () ->
-       Data.reset data;
-       let h = Heap.create ~cmp:Int.compare () in
-       for _ = 1 to size do
-         Heap.add h (Data.next data)
-       done;
-       for _ = 1 to size do
-         ignore (Heap.pop_exn h : int)
-       done;
-       assert (Heap.is_empty h))
+      Data.reset data;
+      let h = Heap.create ~cmp:Int.compare () in
+      for _ = 1 to size do
+        Heap.add h (Data.next data)
+      done;
+      for _ = 1 to size do
+        ignore (Heap.pop_exn h : int)
+      done;
+      assert (Heap.is_empty h))
 ;;
 
 let () =

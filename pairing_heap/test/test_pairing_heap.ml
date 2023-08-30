@@ -6,21 +6,21 @@ module Heap = Pairing_heap
 (* Container tests.  Heap has no t_of_sexp because there is no way to deserialize a
    comparison function, so we simulate it. *)
 include Base_test_helpers.Test_container.Test_S0 (struct
-    include Heap
+  include Heap
 
-    module Elt = struct
-      type t = int [@@deriving sexp]
+  module Elt = struct
+    type t = int [@@deriving sexp]
 
-      let of_int = Fn.id
-      let to_int = Fn.id
-    end
+    let of_int = Fn.id
+    let to_int = Fn.id
+  end
 
-    type nonrec t = int t [@@deriving sexp_of]
+  type nonrec t = int t [@@deriving sexp_of]
 
-    let mem t int = mem t int ~equal:Int.equal
-    let of_list ints = of_list ints ~cmp:Int.compare
-    let t_of_sexp sexp = sexp |> [%of_sexp: int list] |> of_list
-  end)
+  let mem t int = mem t int ~equal:Int.equal
+  let of_list ints = of_list ints ~cmp:Int.compare
+  let t_of_sexp sexp = sexp |> [%of_sexp: int list] |> of_list
+end)
 
 let%expect_test "Heap.sexp_of_t" =
   let test list =
@@ -281,7 +281,7 @@ let integers n =
   for i = 1 to n do
     add t i;
     if i % 10 = 0
-    (* We need to pop from time to time to trigger the amortized tree reorganizations.  If
+       (* We need to pop from time to time to trigger the amortized tree reorganizations.  If
        we don't do this the resulting structure is just a linked list and the caller is
        not flexed as completely as it should be. *)
     then (

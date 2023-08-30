@@ -180,28 +180,28 @@ module Subscriber = struct
   let is_subscribed t ~to_ = t.subscribers_index >= 0 && Bus_id.equal t.bus_id to_
 
   let sexp_of_t
-        _
-        { callback = _
-        ; bus_id = _
-        ; extract_exn
-        ; subscribers_index
-        ; on_callback_raise
-        ; on_close = _
-        ; subscribed_from
-        }
+    _
+    { callback = _
+    ; bus_id = _
+    ; extract_exn
+    ; subscribers_index
+    ; on_callback_raise
+    ; on_close = _
+    ; subscribed_from
+    }
     : Sexp.t
     =
     List
       [ Atom "Bus.Subscriber.t"
       ; [%message
-        ""
-          ~subscribers_index:
-            (if Ppx_inline_test_lib.am_running then None else Some subscribers_index
-                                                              : (int option[@sexp.option]))
-          (on_callback_raise : ((Error.t -> unit) option[@sexp.option]))
-          ~extract_exn:
-            (if extract_exn then Some true else None : (bool option[@sexp.option]))
-          (subscribed_from : Source_code_position.t)]
+          ""
+            ~subscribers_index:
+              (if Ppx_inline_test_lib.am_running then None else Some subscribers_index
+                : (int option[@sexp.option]))
+            (on_callback_raise : ((Error.t -> unit) option[@sexp.option]))
+            ~extract_exn:
+              (if extract_exn then Some true else None : (bool option[@sexp.option]))
+            (subscribed_from : Source_code_position.t)]
       ]
   ;;
 
@@ -219,13 +219,13 @@ module Subscriber = struct
   ;;
 
   let create
-        subscribed_from
-        ~callback
-        ~bus_id
-        ~extract_exn
-        ~subscribers_index
-        ~on_callback_raise
-        ~on_close
+    subscribed_from
+    ~callback
+    ~bus_id
+    ~extract_exn
+    ~subscribers_index
+    ~on_callback_raise
+    ~on_close
     =
     { bus_id
     ; callback
@@ -259,22 +259,22 @@ type ('callback, 'phantom) t =
 [@@deriving fields ~getters ~iterators:iter]
 
 let sexp_of_t
-      _
-      _
-      { bus_id = _
-      ; callback_arity
-      ; callbacks = _
-      ; created_from
-      ; last_value = _
-      ; name
-      ; num_subscribers
-      ; on_subscription_after_first_write
-      ; on_callback_raise = _
-      ; state
-      ; subscribers
-      ; write_ever_called
-      ; unsubscribes_during_write = _
-      }
+  _
+  _
+  { bus_id = _
+  ; callback_arity
+  ; callbacks = _
+  ; created_from
+  ; last_value = _
+  ; name
+  ; num_subscribers
+  ; on_subscription_after_first_write
+  ; on_callback_raise = _
+  ; state
+  ; subscribers
+  ; write_ever_called
+  ; unsubscribes_during_write = _
+  }
   =
   let subscribers =
     Array.init num_subscribers ~f:(fun i -> Option_array.get_some_exn subscribers i)
@@ -712,11 +712,11 @@ let allow_subscription_after_first_write t =
 ;;
 
 let create_exn
-      ?name
-      created_from
-      callback_arity
-      ~(on_subscription_after_first_write : On_subscription_after_first_write.t)
-      ~on_callback_raise
+  ?name
+  created_from
+  callback_arity
+  ~(on_subscription_after_first_write : On_subscription_after_first_write.t)
+  ~on_callback_raise
   =
   let last_value =
     On_subscription_after_first_write.save_last_value_exn
@@ -754,12 +754,12 @@ let enlarge_capacity t =
 ;;
 
 let subscribe_exn
-      ?(extract_exn = false)
-      ?on_callback_raise
-      ?on_close
-      t
-      subscribed_from
-      ~f:callback
+  ?(extract_exn = false)
+  ?on_callback_raise
+  ?on_close
+  t
+  subscribed_from
+  ~f:callback
   =
   if not (can_subscribe t)
   then
@@ -819,21 +819,21 @@ module Fold_arity = struct
     | Arity3 : ('a -> 'b -> 'c -> unit, 's -> 'a -> 'b -> 'c -> 's, 's) t
     | Arity4 : ('a -> 'b -> 'c -> 'd -> unit, 's -> 'a -> 'b -> 'c -> 'd -> 's, 's) t
     | Arity5
-      : ( 'a -> 'b -> 'c -> 'd -> 'e -> unit
-        , 's -> 'a -> 'b -> 'c -> 'd -> 'e -> 's
-        , 's )
+        : ( 'a -> 'b -> 'c -> 'd -> 'e -> unit
+          , 's -> 'a -> 'b -> 'c -> 'd -> 'e -> 's
+          , 's )
           t
   [@@deriving sexp_of]
 end
 
 let fold_exn
-      ?extract_exn
-      (type c f s)
-      (t : (c, _) t)
-      subscribed_from
-      (fold_arity : (c, f, s) Fold_arity.t)
-      ~(init : s)
-      ~(f : f)
+  ?extract_exn
+  (type c f s)
+  (t : (c, _) t)
+  subscribed_from
+  (fold_arity : (c, f, s) Fold_arity.t)
+  ~(init : s)
+  ~(f : f)
   =
   let state = ref init in
   if not (can_subscribe t)

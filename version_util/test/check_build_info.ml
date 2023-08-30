@@ -30,7 +30,7 @@ let%expect_test "Version.parse*" =
   print_s
     [%sexp
       (Version.parse_lines (line1 ^ "\n" ^ line2 ^ "\n")
-       : Version.t list option Or_error.t)];
+        : Version.t list option Or_error.t)];
   [%expect
     {|
     (Ok

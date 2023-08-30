@@ -1,20 +1,16 @@
 open! Base
 
-
 type ('a, 'b) t =
-  { entry_by_key                             : ('a, 'b Weak_pointer.t) Hashtbl.t
-  ; keys_with_unused_data                    : 'a Thread_safe_queue.t
+  { entry_by_key : ('a, 'b Weak_pointer.t) Hashtbl.t
+  ; keys_with_unused_data : 'a Thread_safe_queue.t
   ; mutable thread_safe_run_when_unused_data : unit -> unit
   }
 [@@deriving sexp_of]
 
 module Using_hashable = struct
   let create ?growth_allowed ?size hashable =
-    { entry_by_key                     =
-        Hashtbl.create ?growth_allowed ?size
-          (Base.Hashable.to_key hashable)
-
-    ; keys_with_unused_data            = Thread_safe_queue.create ()
+    { entry_by_key = Hashtbl.create ?growth_allowed ?size (Base.Hashable.to_key hashable)
+    ; keys_with_unused_data = Thread_safe_queue.create ()
     ; thread_safe_run_when_unused_data = ignore
     }
   ;;
@@ -25,7 +21,7 @@ let create ?growth_allowed ?size m =
 ;;
 
 let set_run_when_unused_data t ~thread_safe_f =
-  t.thread_safe_run_when_unused_data <- thread_safe_f;
+  t.thread_safe_run_when_unused_data <- thread_safe_f
 ;;
 
 let remove t key = Hashtbl.remove t.entry_by_key key
@@ -39,12 +35,11 @@ let reclaim_space_for_keys_with_unused_data t =
     match Hashtbl.find t.entry_by_key key with
     | None -> ()
     | Some entry -> if Weak_pointer.is_none entry then remove t key
-  done;
+  done
 ;;
 
 let get_entry t key =
-  Hashtbl.find_or_add t.entry_by_key key
-    ~default:(fun () -> Weak_pointer.create ());
+  Hashtbl.find_or_add t.entry_by_key key ~default:(fun () -> Weak_pointer.create ())
 ;;
 
 let mem t key =
@@ -66,7 +61,6 @@ let set_data t key entry (data : _ Heap_block.t) =
   (* In this case, [x] is known to be static data, which will
      never be collected by the GC anyway, so it's safe to drop *)
   | Invalid_argument _ -> ()
-
 ;;
 
 let replace t ~key ~data = set_data t key (get_entry t key) data
@@ -77,7 +71,7 @@ let add_exn t ~key ~data =
   then
     Error.raise_s
       [%message "Weak_hashtbl.add_exn of key in use" ~_:(t : (_, _) t) [%here]];
-  set_data t key entry data;
+  set_data t key entry data
 ;;
 
 let find t key =

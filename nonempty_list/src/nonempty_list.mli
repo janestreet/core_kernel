@@ -45,7 +45,6 @@ val stable_sort : 'a t -> compare:('a -> 'a -> int) -> 'a t
 val dedup_and_sort : compare:('a -> 'a -> int) -> 'a t -> 'a t
 val iteri : 'a t -> f:(int -> 'a -> unit) -> unit
 val cartesian_product : 'a t -> 'b t -> ('a * 'b) t
-
 val fold_right : 'a t -> init:'b -> f:('a -> 'b -> 'b) -> 'b
 val folding_map : 'a t -> init:'b -> f:('b -> 'a -> 'b * 'c) -> 'c t
 val fold_map : 'a t -> init:'acc -> f:('acc -> 'a -> 'acc * 'b) -> 'acc * 'b t
@@ -111,7 +110,6 @@ val comma_separated_argtype
   -> 'a t Command.Param.Arg_type.t
 
 type 'a nonempty_list := 'a t
-
 
 (** This module provides 0-alloc versions of [to_list] and [of_list], via [some] and
     allowing you to [match%optional] on a list, respectively. *)

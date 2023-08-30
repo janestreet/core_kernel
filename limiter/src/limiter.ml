@@ -143,18 +143,18 @@ end
 
 type t =
   { start_time : Time_ns.t
-  (** The current time of the rate limiter.  Note that when this is moved forward,
+      (** The current time of the rate limiter.  Note that when this is moved forward,
       [in_hopper] must be updated accordingly. *)
   ; mutable time : Time_ns.t
-  (** the amount of time that has passed expressed in token terms, since start_time. *)
+      (** the amount of time that has passed expressed in token terms, since start_time. *)
   ; time_in_token_space : int Iofm.t (** number of tokens in the bucket *)
   ; mutable in_bucket : int (** number of tokens in the hopper.  May be [inf] *)
   ; in_hopper : int Iofm.t
-  (** Everything that has been taken from bucket but not returned to hopper *)
+      (** Everything that has been taken from bucket but not returned to hopper *)
   ; mutable in_flight : int (** maximum size allowable in the bucket *)
   ; mutable bucket_limit : int (** maximum size allowable in flight *)
   ; in_flight_limit : int Iofm.t
-  (** rate at which tokens "fall" from the hopper into the bucket *)
+      (** rate at which tokens "fall" from the hopper into the bucket *)
   ; mutable hopper_to_bucket_rate_per_ns : Tokens_per_ns.t Iofm.t
   }
 [@@deriving sexp_of]
@@ -208,12 +208,12 @@ let invariant t =
 type limiter = t [@@deriving sexp_of]
 
 let create_exn
-      ~now
-      ~hopper_to_bucket_rate_per_sec
-      ~bucket_limit
-      ~in_flight_limit
-      ~initial_bucket_level
-      ~initial_hopper_level
+  ~now
+  ~hopper_to_bucket_rate_per_sec
+  ~bucket_limit
+  ~in_flight_limit
+  ~initial_bucket_level
+  ~initial_hopper_level
   =
   let in_hopper = Iofm.of_ordinary initial_hopper_level in
   let time_in_token_space =
@@ -414,18 +414,18 @@ let hopper_to_bucket_rate_per_sec t =
     Finite
       (Tokens_per_ns.to_tokens_per_sec
          (Iofm.get_finite_exn t.hopper_to_bucket_rate_per_ns)
-       :> float)
+        :> float)
 ;;
 
 module Token_bucket = struct
   type t = limiter [@@deriving sexp_of]
 
   let create_exn
-        ~now
-        ~burst_size:bucket_limit
-        ~sustained_rate_per_sec:fill_rate
-        ?(initial_bucket_level = 0)
-        ()
+    ~now
+    ~burst_size:bucket_limit
+    ~sustained_rate_per_sec:fill_rate
+    ?(initial_bucket_level = 0)
+    ()
     =
     create_exn
       ~now
@@ -446,9 +446,9 @@ module Token_bucket = struct
     ;;
 
     let try_reconfigure
-          t
-          ~burst_size:new_bucket_limit
-          ~sustained_rate_per_sec:new_sustained_rate_per_sec
+      t
+      ~burst_size:new_bucket_limit
+      ~sustained_rate_per_sec:new_sustained_rate_per_sec
       : Try_reconfigure_result.t
       =
       if new_bucket_limit < t.bucket_limit

@@ -21,7 +21,6 @@ type seek = private no_seek [@@deriving sexp_of]
     [_trunc] functions silently truncate values that don't fit.  For example,
     [Iobuf.Unsafe.Poke.int8 128] effectively writes -128. *)
 module type Accessors_common = sig
-
   (** [('d, 'w) Iobuf.t] accessor function manipulating ['a], either writing it to the
       iobuf or reading it from the iobuf. *)
 
@@ -30,7 +29,6 @@ module type Accessors_common = sig
   type 'a bin_prot
 
   val char : (char, 'd, 'w) t
-
   val bin_prot : 'a bin_prot -> ('a, 'd, 'w) t
 end
 
@@ -182,7 +180,6 @@ module type Bound = sig
   val window : ((_, _) iobuf[@local]) -> t
   val limit : ((_, _) iobuf[@local]) -> t
   val restore : t -> ((_, seek) iobuf[@local]) -> unit
-
 end
 
 (** The [src_pos] argument of {!Core.Blit.blit} doesn't make sense here. *)
@@ -242,7 +239,7 @@ module type Peek = sig
 
   include
     Accessors_read
-    with type ('a, 'd, 'w) t = (('d, 'w) iobuf[@local]) -> pos:int -> 'a
-    with type ('a, 'd, 'w) t_local = (('d, 'w) iobuf[@local]) -> pos:int -> ('a[@local])
-    with type 'a bin_prot := 'a Bin_prot.Type_class.reader
+      with type ('a, 'd, 'w) t = (('d, 'w) iobuf[@local]) -> pos:int -> 'a
+      with type ('a, 'd, 'w) t_local = (('d, 'w) iobuf[@local]) -> pos:int -> ('a[@local])
+      with type 'a bin_prot := 'a Bin_prot.Type_class.reader
 end

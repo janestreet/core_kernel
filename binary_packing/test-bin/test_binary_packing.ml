@@ -26,18 +26,18 @@ let test byte_order =
   in
   [ ("Binary_packing.test"
      >:: fun () ->
-       let test () =
-         try
-           Binary_packing_test.Test_binary_packing.test ();
-           true
-         with
-         | _ -> false
-       in
-       Quickcheck_deprecated.laws_exn
-         "\"Runs without raising\""
-         1
-         (Quickcheck_deprecated.always ())
-         test)
+     let test () =
+       try
+         Binary_packing_test.Test_binary_packing.test ();
+         true
+       with
+       | _ -> false
+     in
+     Quickcheck_deprecated.laws_exn
+       "\"Runs without raising\""
+       1
+       (Quickcheck_deprecated.always ())
+       test)
   ; "[pack|unpack]_signed_8"
     >:: inverses
           ( + )
@@ -111,17 +111,17 @@ let test byte_order =
        ])
   ; ("[pack|unpack]_float"
      >:: fun () ->
-       let test_float i =
-         let buf = Bytes.create 100 in
-         B.pack_float ~byte_order ~buf ~pos:0 i;
-         let i' = B.unpack_float ~byte_order ~buf ~pos:0 in
-         i' = i
-       in
-       Quickcheck_deprecated.laws_exn
-         "unpack_float (pack_float x) = x"
-         100
-         Quickcheck_deprecated.fg
-         test_float)
+     let test_float i =
+       let buf = Bytes.create 100 in
+       B.pack_float ~byte_order ~buf ~pos:0 i;
+       let i' = B.unpack_float ~byte_order ~buf ~pos:0 in
+       i' = i
+     in
+     Quickcheck_deprecated.laws_exn
+       "unpack_float (pack_float x) = x"
+       100
+       Quickcheck_deprecated.fg
+       test_float)
   ]
 ;;
 

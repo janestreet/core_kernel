@@ -55,11 +55,11 @@ module Rewrite_sexp_of (S : S) : S with type t = S.t = struct
 end
 
 let arg_type
-      (type t)
-      ?case_sensitive
-      ?key
-      ?list_values_in_help
-      (module S : S with type t = t)
+  (type t)
+  ?case_sensitive
+  ?key
+  ?list_values_in_help
+  (module S : S with type t = t)
   =
   Command.Arg_type.enumerated_sexpable
     ?key
@@ -96,15 +96,15 @@ type ('a, 'b) make_param =
   -> 'b Command.Param.t
 
 let make_param
-      ~f
-      ?case_sensitive
-      ?represent_choice_with
-      ?list_values_in_help
-      ?aliases
-      ?key
-      flag_name
-      ~doc
-      m
+  ~f
+  ?case_sensitive
+  ?represent_choice_with
+  ?list_values_in_help
+  ?aliases
+  ?key
+  flag_name
+  ~doc
+  m
   =
   let { Make_param.arg_type; doc } =
     Make_param.create
@@ -119,16 +119,16 @@ let make_param
 ;;
 
 let make_param_optional_with_default_doc
-      (type a)
-      ~default
-      ?case_sensitive
-      ?represent_choice_with
-      ?list_values_in_help
-      ?aliases
-      ?key
-      flag_name
-      ~doc
-      (m : a t)
+  (type a)
+  ~default
+  ?case_sensitive
+  ?represent_choice_with
+  ?list_values_in_help
+  ?aliases
+  ?key
+  flag_name
+  ~doc
+  (m : a t)
   =
   let { Make_param.arg_type; doc } =
     Make_param.create
@@ -149,10 +149,10 @@ let make_param_optional_with_default_doc
 ;;
 
 let make_param_one_of_flags
-      ?(if_nothing_chosen = Command.Param.If_nothing_chosen.Raise)
-      ?aliases
-      ~doc
-      m
+  ?(if_nothing_chosen = Command.Param.If_nothing_chosen.Raise)
+  ?aliases
+  ~doc
+  m
   =
   Command.Param.choose_one
     ~if_nothing_chosen
@@ -173,17 +173,17 @@ let comma_separated_extra_doc m =
 ;;
 
 let make_param_optional_comma_separated
-      ?allow_empty
-      ?strip_whitespace
-      ?unique_values
-      ?case_sensitive
-      ?represent_choice_with
-      ?list_values_in_help
-      ?aliases
-      ?key
-      flag_name
-      ~doc
-      m
+  ?allow_empty
+  ?strip_whitespace
+  ?unique_values
+  ?case_sensitive
+  ?represent_choice_with
+  ?list_values_in_help
+  ?aliases
+  ?key
+  flag_name
+  ~doc
+  m
   =
   make_param
     ?case_sensitive
@@ -201,19 +201,19 @@ let make_param_optional_comma_separated
 ;;
 
 let make_param_optional_comma_separated_with_default_doc
-      ?allow_empty
-      ?strip_whitespace
-      ?unique_values
-      (type a)
-      ~default
-      ?case_sensitive
-      ?represent_choice_with
-      ?list_values_in_help
-      ?aliases
-      ?key
-      flag_name
-      ~doc
-      (m : a t)
+  ?allow_empty
+  ?strip_whitespace
+  ?unique_values
+  (type a)
+  ~default
+  ?case_sensitive
+  ?represent_choice_with
+  ?list_values_in_help
+  ?aliases
+  ?key
+  flag_name
+  ~doc
+  (m : a t)
   =
   let { Make_param.arg_type; doc } =
     Make_param.create
@@ -233,7 +233,7 @@ let make_param_optional_comma_separated_with_default_doc
        ?unique_values
        arg_type)
     (fun default ->
-       Sexp.Atom (List.map ~f:(to_string_hum m) default |> String.concat ~sep:","))
+      Sexp.Atom (List.map ~f:(to_string_hum m) default |> String.concat ~sep:","))
     ~default
     ~doc
 ;;
@@ -260,8 +260,8 @@ end
 
 module Make_stringable (M : S) = struct
   include Make_of_string (struct
-      include M
+    include M
 
-      let to_string = to_string_hum (module M)
-    end)
+    let to_string = to_string_hum (module M)
+  end)
 end

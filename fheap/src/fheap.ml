@@ -22,9 +22,9 @@ type 'a t =
 let create ~compare = { compare; length = 0; heap = None }
 
 let merge
-      ~compare
-      ({ value = e1; children = nl1 } as n1)
-      ({ value = e2; children = nl2 } as n2)
+  ~compare
+  ({ value = e1; children = nl1 } as n1)
+  ({ value = e2; children = nl2 } as n2)
   =
   if compare e1 e2 < 0
   then { value = e1; children = n2 :: nl1 }
@@ -113,12 +113,12 @@ let fold t ~init ~f =
 let length t = t.length
 
 module C = Container.Make (struct
-    type nonrec 'a t = 'a t
+  type nonrec 'a t = 'a t
 
-    let fold = fold
-    let iter = `Define_using_fold
-    let length = `Custom length
-  end)
+  let fold = fold
+  let iter = `Define_using_fold
+  let length = `Custom length
+end)
 
 let is_empty t = Option.is_none t.heap
 let iter = C.iter

@@ -8,7 +8,7 @@ include (
 
     let of_list l = if List.is_empty l then `Skip_test else `Ok (of_list_exn l)
   end) :
-  sig end)
+    sig end)
 
 (* Note that at least one expect test must be included for the above functor's tests to
    run.
@@ -240,7 +240,7 @@ let%expect_test "stable_sort" =
     print_s
       [%sexp
         (stable_sort ~compare:(fun a b -> Comparable.lift ~f:fst Int.compare a b) t
-         : (int * string) t)]
+          : (int * string) t)]
   in
   test [ 1, "_" ];
   test [ 2, "_"; 4, "a"; 1, "_"; 4, "b" ];

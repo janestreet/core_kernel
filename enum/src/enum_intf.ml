@@ -32,7 +32,7 @@ module type Enum = sig
   type ('a, 'b) make_param =
     ?case_sensitive:bool
     -> ?represent_choice_with:string
-    (** If [represent_choice_with] is not passed, the documentation will be:
+         (** If [represent_choice_with] is not passed, the documentation will be:
 
         {v
           -flag (choice1|choice2|...)     [doc]

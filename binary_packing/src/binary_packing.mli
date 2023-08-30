@@ -18,7 +18,6 @@ type endian =
   ]
 [@@deriving compare, hash, sexp]
 
-
 val unpack_signed_8 : buf:bytes -> pos:int -> int
 val pack_signed_8 : buf:bytes -> pos:int -> int -> unit
 val unpack_unsigned_8 : buf:bytes -> pos:int -> int

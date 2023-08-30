@@ -121,8 +121,8 @@ let iter_examples ~f =
             raise_s
               [%sexp
                 "iter_examples"
-              , { string : string; len : int; capacity : int; pos : int }
-              , (e : exn)])
+                , { string : string; len : int; capacity : int; pos : int }
+                , (e : exn)])
       done
     done)
 ;;
@@ -150,9 +150,9 @@ let iter_slices n ~f =
         raise_s
           [%sexp
             "iter_slices"
-          , ({ pos; len; pos'; len'; is_valid } : iter_slices_state)
-          , (e : exn)
-          , (Backtrace.Exn.most_recent () : Backtrace.t)]))
+            , ({ pos; len; pos'; len'; is_valid } : iter_slices_state)
+            , (e : exn)
+            , (Backtrace.Exn.most_recent () : Backtrace.t)]))
 ;;
 
 let invariant = invariant
@@ -276,13 +276,13 @@ module IR_Int64 = struct
 end
 
 module Accessors (Accessors : sig
-    module Consume : module type of Consume
-    module Fill : module type of Fill
-    module Peek : module type of Peek
-    module Poke : module type of Poke
+  module Consume : module type of Consume
+  module Fill : module type of Fill
+  module Peek : module type of Peek
+  module Poke : module type of Poke
 
-    val is_safe : bool
-  end) =
+  val is_safe : bool
+end) =
 struct
   open Accessors
 
@@ -763,23 +763,23 @@ struct
   end
 
   module Intf_common (Intf : sig
-      include Iobuf.Accessors_common
+    include Iobuf.Accessors_common
 
-      val accessor_pos_1
-        :  without_value:(read_write, seek) Iobuf.t
-        -> value_len:int
-        -> (('a, read_write, seek) t[@local])
-        -> value:'a
-        -> with_value:string
-        -> (module Accessee with type t = 'a)
-        -> unit
+    val accessor_pos_1
+      :  without_value:(read_write, seek) Iobuf.t
+      -> value_len:int
+      -> (('a, read_write, seek) t[@local])
+      -> value:'a
+      -> with_value:string
+      -> (module Accessee with type t = 'a)
+      -> unit
 
-      val bin_prot_char : (char, 'd, 'w) t
-    end) :
+    val bin_prot_char : (char, 'd, 'w) t
+  end) :
     Iobuf.Accessors_common
-    with type ('a, 'b, 'c) t = ('a, 'b, 'c) Intf.t
-    with type ('a, 'b, 'c) t_local = ('a, 'b, 'c) Intf.t_local
-     and type 'a bin_prot = 'a Intf.bin_prot = struct
+      with type ('a, 'b, 'c) t = ('a, 'b, 'c) Intf.t
+      with type ('a, 'b, 'c) t_local = ('a, 'b, 'c) Intf.t_local
+       and type 'a bin_prot = 'a Intf.bin_prot = struct
     open Intf
 
     type nonrec ('a, 'd, 'w) t = ('a, 'd, 'w) Intf.t
@@ -811,23 +811,23 @@ struct
   end
 
   module Intf_read (Intf : sig
-      include Iobuf.Accessors_read with type 'a bin_prot := 'a Bin_prot.Type_class.reader
+    include Iobuf.Accessors_read with type 'a bin_prot := 'a Bin_prot.Type_class.reader
 
-      val accessor_pos_1
-        :  without_value:(read_write, seek) Iobuf.t
-        -> value_len:int
-        -> (('a, read_write, seek) t[@local])
-        -> value:'a
-        -> with_value:string
-        -> (module Accessee with type t = 'a)
-        -> unit
+    val accessor_pos_1
+      :  without_value:(read_write, seek) Iobuf.t
+      -> value_len:int
+      -> (('a, read_write, seek) t[@local])
+      -> value:'a
+      -> with_value:string
+      -> (module Accessee with type t = 'a)
+      -> unit
 
-      val bin_prot_char : (char, 'd, 'w) t
-    end) :
+    val bin_prot_char : (char, 'd, 'w) t
+  end) :
     Iobuf.Accessors_read
-    with type ('a, 'b, 'c) t = ('a, 'b, 'c) Intf.t
-     and type ('a, 'b, 'c) t_local = ('a, 'b, 'c) Intf.t_local
-     and type 'a bin_prot := 'a Bin_prot.Type_class.reader = struct
+      with type ('a, 'b, 'c) t = ('a, 'b, 'c) Intf.t
+       and type ('a, 'b, 'c) t_local = ('a, 'b, 'c) Intf.t_local
+       and type 'a bin_prot := 'a Bin_prot.Type_class.reader = struct
     open Intf
 
     let int8 = int8
@@ -967,13 +967,13 @@ struct
     let%test_unit _ =
       let buf = of_string "ABCDEFGHIJ" in
       let metastring_pos_1
-            (type v)
-            (module Value : String_accessee with type t = v)
-            value_len
-            (accessor [@local])
-            ~skip
-            value
-            with_value
+        (type v)
+        (module Value : String_accessee with type t = v)
+        value_len
+        (accessor [@local])
+        ~skip
+        value
+        with_value
         =
         accessor_pos_1
           ~without_value:buf
@@ -1038,10 +1038,10 @@ struct
     ;;
 
     include Intf_common (struct
-        include Intf
+      include Intf
 
-        type 'a bin_prot = 'a Bin_prot.Type_class.reader
-      end)
+      type 'a bin_prot = 'a Bin_prot.Type_class.reader
+    end)
 
     module Int_repr = Intf.Int_repr
 
@@ -1208,24 +1208,24 @@ struct
   end
 
   module Intf_write (Intf : sig
-      include Iobuf.Accessors_write with type 'a bin_prot := 'a Bin_prot.Type_class.writer
+    include Iobuf.Accessors_write with type 'a bin_prot := 'a Bin_prot.Type_class.writer
 
-      val accessor_pos_1
-        :  without_value:(read_write, seek) Iobuf.t
-        -> value_len:int
-        -> (('a, read_write, seek) t[@local])
-        -> value:'a
-        -> with_value:string
-        -> (module Accessee with type t = 'a)
-        -> unit
+    val accessor_pos_1
+      :  without_value:(read_write, seek) Iobuf.t
+      -> value_len:int
+      -> (('a, read_write, seek) t[@local])
+      -> value:'a
+      -> with_value:string
+      -> (module Accessee with type t = 'a)
+      -> unit
 
-      val bin_prot_char : (char, 'd, 'w) t
-      val ignore_locality : (('a, 'd, 'w) t_local[@local]) -> (('a, 'd, 'w) t[@local])
-    end) :
+    val bin_prot_char : (char, 'd, 'w) t
+    val ignore_locality : (('a, 'd, 'w) t_local[@local]) -> (('a, 'd, 'w) t[@local])
+  end) :
     Iobuf.Accessors_write
-    with type ('a, 'b, 'c) t = ('a, 'b, 'c) Intf.t
-     and type ('a, 'b, 'c) t_local = ('a, 'b, 'c) Intf.t_local
-     and type 'a bin_prot := 'a Bin_prot.Type_class.writer = struct
+      with type ('a, 'b, 'c) t = ('a, 'b, 'c) Intf.t
+       and type ('a, 'b, 'c) t_local = ('a, 'b, 'c) Intf.t_local
+       and type 'a bin_prot := 'a Bin_prot.Type_class.writer = struct
     open Intf
 
     let int8_trunc = int8_trunc
@@ -1330,13 +1330,13 @@ struct
     let%test_unit _ =
       let buf = of_string "ABCDEFGHIJ" in
       let metastring_pos_1
-            (type v)
-            (module Value : String_accessee with type t = v)
-            value_len
-            accessor
-            ~skip
-            value
-            with_value
+        (type v)
+        (module Value : String_accessee with type t = v)
+        value_len
+        accessor
+        ~skip
+        value
+        with_value
         =
         accessor_pos_1
           ~without_value:buf
@@ -1401,10 +1401,10 @@ struct
     ;;
 
     include Intf_common (struct
-        include Intf
+      include Intf
 
-        type 'a bin_prot = 'a Bin_prot.Type_class.writer
-      end)
+      type 'a bin_prot = 'a Bin_prot.Type_class.writer
+    end)
 
     module Int_repr = Intf.Int_repr
 
@@ -1592,38 +1592,38 @@ struct
 
   module Poke = struct
     include Intf_write (struct
-        include Poke
+      include Poke
 
-        let accessor_pos_1
-              (type a)
-              ~without_value:buf
-              ~value_len:_
-              f
-              ~value:arg
-              ~with_value:str
-              (module Arg : Accessee with type t = a)
-          =
-          f buf ~pos:1 arg;
-          let buf_str = to_string buf in
-          if String.( <> ) str buf_str
-          then
-            raise_s
-              [%message
-                "Poke accessor_pos_1 failed" (str : string) (buf_str : string) (arg : Arg.t)]
-        ;;
+      let accessor_pos_1
+        (type a)
+        ~without_value:buf
+        ~value_len:_
+        f
+        ~value:arg
+        ~with_value:str
+        (module Arg : Accessee with type t = a)
+        =
+        f buf ~pos:1 arg;
+        let buf_str = to_string buf in
+        if String.( <> ) str buf_str
+        then
+          raise_s
+            [%message
+              "Poke accessor_pos_1 failed" (str : string) (buf_str : string) (arg : Arg.t)]
+      ;;
 
-        let bin_prot_char t ~pos a = bin_prot Char.bin_writer_t t ~pos a
-        let ignore_locality (f : ('a, 'd, 'w) t_local) = (f :> ('a, 'd, 'w) t)
+      let bin_prot_char t ~pos a = bin_prot Char.bin_writer_t t ~pos a
+      let ignore_locality (f : ('a, 'd, 'w) t_local) = (f :> ('a, 'd, 'w) t)
 
-        (* Static permission tests for the cases that do compile.  Since the functions
+      (* Static permission tests for the cases that do compile.  Since the functions
            all use essentially the same type definitions, we don't need to test all of
            them.  We've already tested them on a (read_write, seek) Iobuf.t above. *)
-        let%test_unit _ =
-          char (of_string "a" : (_, no_seek) Iobuf.t) ~pos:0 'b';
-          char (of_string "a" : (_, seek) Iobuf.t) ~pos:0 'b';
-          char (of_string "a" : (read_write, _) Iobuf.t) ~pos:0 'b'
-        ;;
-      end)
+      let%test_unit _ =
+        char (of_string "a" : (_, no_seek) Iobuf.t) ~pos:0 'b';
+        char (of_string "a" : (_, seek) Iobuf.t) ~pos:0 'b';
+        char (of_string "a" : (read_write, _) Iobuf.t) ~pos:0 'b'
+      ;;
+    end)
 
     let decimal = Poke.decimal
 
@@ -1702,11 +1702,11 @@ struct
   ;;
 
   let test_peek_to
-        (blito : (_ Peek.src, _) Base.Blit.blito)
-        create
-        sub_string
-        of_string
-        to_string
+    (blito : (_ Peek.src, _) Base.Blit.blito)
+    create
+    sub_string
+    of_string
+    to_string
     =
     iter_examples ~f:(fun t string ~pos ->
       let n = String.length string in
@@ -1732,9 +1732,9 @@ struct
           raise_s
             [%sexp
               "test_peek_to"
-            , (consume_result : unit Or_error.t)
-            , ~~(is_valid : bool)
-            , (Backtrace.Exn.most_recent () : Backtrace.t)]));
+              , (consume_result : unit Or_error.t)
+              , ~~(is_valid : bool)
+              , (Backtrace.Exn.most_recent () : Backtrace.t)]));
     let t = Iobuf.of_string "012345678" in
     let dst = of_string "abcdefhij" in
     blito ~src:t ~src_len:3 ~dst ~dst_pos:3 ();
@@ -1757,34 +1757,34 @@ struct
 
   module Peek = struct
     include Intf_read (struct
-        include Peek
+      include Peek
 
-        let accessor_pos_1
-              (type a)
-              ~without_value:_
-              ~value_len:_
-              f
-              ~value:expected
-              ~with_value:str
-              (module Res : Accessee with type t = a)
-          =
-          let res = f (of_string str) ~pos:1 in
-          if not (Res.equal res expected)
-          then
-            raise_s
-              [%message
-                "Peek accessor_pos_1 failed" (res : Res.t) (expected : Res.t) (str : string)]
-        ;;
+      let accessor_pos_1
+        (type a)
+        ~without_value:_
+        ~value_len:_
+        f
+        ~value:expected
+        ~with_value:str
+        (module Res : Accessee with type t = a)
+        =
+        let res = f (of_string str) ~pos:1 in
+        if not (Res.equal res expected)
+        then
+          raise_s
+            [%message
+              "Peek accessor_pos_1 failed" (res : Res.t) (expected : Res.t) (str : string)]
+      ;;
 
-        let bin_prot_char t ~pos = bin_prot Char.bin_reader_t t ~pos
+      let bin_prot_char t ~pos = bin_prot Char.bin_reader_t t ~pos
 
-        (* static permission tests; see above *)
-        let char_a_pos_0 iobuf = Char.( = ) 'a' (char iobuf ~pos:0)
-        let%test _ = char_a_pos_0 (of_string "a" : (_, no_seek) Iobuf.t)
-        let%test _ = char_a_pos_0 (of_string "a" : (_, seek) Iobuf.t)
-        let%test _ = char_a_pos_0 (of_string "a" : (read, _) Iobuf.t)
-        let%test _ = char_a_pos_0 (of_string "a" : (read_write, _) Iobuf.t)
-      end)
+      (* static permission tests; see above *)
+      let char_a_pos_0 iobuf = Char.( = ) 'a' (char iobuf ~pos:0)
+      let%test _ = char_a_pos_0 (of_string "a" : (_, no_seek) Iobuf.t)
+      let%test _ = char_a_pos_0 (of_string "a" : (_, seek) Iobuf.t)
+      let%test _ = char_a_pos_0 (of_string "a" : (read, _) Iobuf.t)
+      let%test _ = char_a_pos_0 (of_string "a" : (read_write, _) Iobuf.t)
+    end)
 
     let index = Peek.index
 
@@ -1890,72 +1890,72 @@ struct
 
   module Fill = struct
     include Intf_write (struct
-        include Fill
+      include Fill
 
-        let accessor_pos_1
-              (type a)
-              ~without_value:buf
-              ~value_len:n
-              f
-              ~value:arg
-              ~with_value:str
-              (module Arg : Accessee with type t = a)
-          =
-          rewind buf;
-          advance buf 1;
-          f buf arg;
-          if Iobuf.length buf <> String.length str - 1 - n
-          then
-            raise_s
-              [%message
-                "Fill accessor_pos_1 post length check failed"
-                  (buf : (_, _) Iobuf.Hexdump.t)
-                  (str : string)
-                  (n : int)
-                  (arg : Arg.t)];
-          rewind buf;
-          let buf_str = to_string buf in
-          if String.( <> ) buf_str str
-          then
-            raise_s
-              [%message
-                "Fill accessor_pos_1 post rewind check failed"
-                  (buf_str : string)
-                  (str : string)
-                  (n : int)
-                  (arg : Arg.t)]
-        ;;
+      let accessor_pos_1
+        (type a)
+        ~without_value:buf
+        ~value_len:n
+        f
+        ~value:arg
+        ~with_value:str
+        (module Arg : Accessee with type t = a)
+        =
+        rewind buf;
+        advance buf 1;
+        f buf arg;
+        if Iobuf.length buf <> String.length str - 1 - n
+        then
+          raise_s
+            [%message
+              "Fill accessor_pos_1 post length check failed"
+                (buf : (_, _) Iobuf.Hexdump.t)
+                (str : string)
+                (n : int)
+                (arg : Arg.t)];
+        rewind buf;
+        let buf_str = to_string buf in
+        if String.( <> ) buf_str str
+        then
+          raise_s
+            [%message
+              "Fill accessor_pos_1 post rewind check failed"
+                (buf_str : string)
+                (str : string)
+                (n : int)
+                (arg : Arg.t)]
+      ;;
 
-        let bin_prot_char t a = bin_prot Char.bin_writer_t t a
-        let ignore_locality (f : ('a, 'd, 'w) t_local) = (f :> ('a, 'd, 'w) t)
+      let bin_prot_char t a = bin_prot Char.bin_writer_t t a
+      let ignore_locality (f : ('a, 'd, 'w) t_local) = (f :> ('a, 'd, 'w) t)
 
-        let%test_unit _ =
-          let t = of_string "abc" in
-          bin_prot Char.bin_writer_t t 'd';
-          bin_prot Char.bin_writer_t t 'e';
-          [%test_eq: string] "c" (to_string t);
-          flip_lo t;
-          assert (
-            try
-              bin_prot String.bin_writer_t t "fgh";
-              false
-            with
-            | _ -> true);
-          [%test_eq: string] "de" (to_string t);
-          reset t;
-          [%test_eq: string] "dec" (to_string t);
-          bin_prot Char.bin_writer_t t 'i';
-          bin_prot Char.bin_writer_t t 'j';
-          bin_prot Char.bin_writer_t t 'k';
-          assert (is_empty t);
-          flip_lo t;
-          [%test_eq: string] "ijk" (to_string t)
-        ;;
+      let%test_unit _ =
+        let t = of_string "abc" in
+        bin_prot Char.bin_writer_t t 'd';
+        bin_prot Char.bin_writer_t t 'e';
+        [%test_eq: string] "c" (to_string t);
+        flip_lo t;
+        assert (
+          try
+            bin_prot String.bin_writer_t t "fgh";
+            false
+          with
+          | _ -> true);
+        [%test_eq: string] "de" (to_string t);
+        reset t;
+        [%test_eq: string] "dec" (to_string t);
+        bin_prot Char.bin_writer_t t 'i';
+        bin_prot Char.bin_writer_t t 'j';
+        bin_prot Char.bin_writer_t t 'k';
+        assert (is_empty t);
+        flip_lo t;
+        [%test_eq: string] "ijk" (to_string t)
+      ;;
 
-        (* static permission tests; see above *)
-        let%test_unit _ = char (of_string "a" : (_, seek) Iobuf.t) 'b'
-        let%test_unit _ = char (of_string "a" : (read_write, _) Iobuf.t) 'b'
-      end)
+      (* static permission tests; see above *)
+      let%test_unit _ = char (of_string "a" : (_, seek) Iobuf.t) 'b'
+      let%test_unit _ = char (of_string "a" : (read_write, _) Iobuf.t) 'b'
+    end)
 
     let decimal = Fill.decimal
 
@@ -2035,11 +2035,11 @@ struct
   ;;
 
   let test_consume_to
-        (blito : (Consume.src, _) Iobuf.consuming_blito)
-        create
-        sub_string
-        of_string
-        to_string
+    (blito : (Consume.src, _) Iobuf.consuming_blito)
+    create
+    sub_string
+    of_string
+    to_string
     =
     iter_examples ~f:(fun t string ~pos ->
       let n = String.length string in
@@ -2065,9 +2065,9 @@ struct
           raise_s
             [%sexp
               "test_consume_to"
-            , (consume_result : unit Or_error.t)
-            , ~~(is_valid : bool)
-            , (Backtrace.Exn.most_recent () : Backtrace.t)]));
+              , (consume_result : unit Or_error.t)
+              , ~~(is_valid : bool)
+              , (Backtrace.Exn.most_recent () : Backtrace.t)]));
     let t = Iobuf.of_string "012345678" in
     let dst = of_string "abcdefhij" in
     blito ~src:t ~src_len:3 ~dst ~dst_pos:3 ();
@@ -2090,48 +2090,48 @@ struct
 
   module Consume = struct
     include Intf_read (struct
-        include Consume
+      include Consume
 
-        let accessor_pos_1
-              (type r)
-              ~without_value:_
-              ~value_len:n
-              f
-              ~value:expected
-              ~with_value:str
-              (module Res : Accessee with type t = r)
-          =
-          let buf = of_string str in
-          advance buf 1;
-          let res = f buf in
-          if Iobuf.length buf <> String.length str - 1 - n
-          then
-            raise_s
-              [%message
-                "Consume accessor_pos_1 post length check failed"
-                  (buf : (_, _) Iobuf.Hexdump.t)
-                  (str : string)
-                  (n : int)
-                  (res : Res.t)];
-          rewind buf;
-          if not (Res.equal res expected)
-          then
-            raise_s
-              [%message
-                "Consume accessor_pos_1 post rewind check failed"
-                  (res : Res.t)
-                  (expected : Res.t)
-                  (str : string)
-                  (n : int)]
-        ;;
+      let accessor_pos_1
+        (type r)
+        ~without_value:_
+        ~value_len:n
+        f
+        ~value:expected
+        ~with_value:str
+        (module Res : Accessee with type t = r)
+        =
+        let buf = of_string str in
+        advance buf 1;
+        let res = f buf in
+        if Iobuf.length buf <> String.length str - 1 - n
+        then
+          raise_s
+            [%message
+              "Consume accessor_pos_1 post length check failed"
+                (buf : (_, _) Iobuf.Hexdump.t)
+                (str : string)
+                (n : int)
+                (res : Res.t)];
+        rewind buf;
+        if not (Res.equal res expected)
+        then
+          raise_s
+            [%message
+              "Consume accessor_pos_1 post rewind check failed"
+                (res : Res.t)
+                (expected : Res.t)
+                (str : string)
+                (n : int)]
+      ;;
 
-        let bin_prot_char t = bin_prot Char.bin_reader_t t
+      let bin_prot_char t = bin_prot Char.bin_reader_t t
 
-        (* static permission tests; see above *)
-        let%test _ = Char.( = ) 'a' (char (of_string "a" : (_, seek) Iobuf.t))
-        let%test _ = Char.( = ) 'a' (char (of_string "a" : (read, _) Iobuf.t))
-        let%test _ = Char.( = ) 'a' (char (of_string "a" : (read_write, _) Iobuf.t))
-      end)
+      (* static permission tests; see above *)
+      let%test _ = Char.( = ) 'a' (char (of_string "a" : (_, seek) Iobuf.t))
+      let%test _ = Char.( = ) 'a' (char (of_string "a" : (read, _) Iobuf.t))
+      let%test _ = Char.( = ) 'a' (char (of_string "a" : (read_write, _) Iobuf.t))
+    end)
 
     open Consume
 
@@ -2791,29 +2791,29 @@ let%test_unit _ =
 ;;
 
 include Accessors (struct
-    module Consume = Consume
-    module Fill = Fill
-    module Peek = Peek
-    module Poke = Poke
+  module Consume = Consume
+  module Fill = Fill
+  module Peek = Peek
+  module Poke = Poke
 
-    let is_safe = true
-  end)
+  let is_safe = true
+end)
 
 module _ = Accessors (struct
-    include Unsafe
+  include Unsafe
 
-    module Peek = struct
-      include Peek
+  module Peek = struct
+    include Peek
 
-      let index t ?(pos = 0) ?(len = length t - pos) char =
-        match index_or_neg t ~pos ~len char with
-        | index when index < 0 -> None
-        | index -> Some index
-      ;;
-    end
+    let index t ?(pos = 0) ?(len = length t - pos) char =
+      match index_or_neg t ~pos ~len char with
+      | index when index < 0 -> None
+      | index -> Some index
+    ;;
+  end
 
-    let is_safe = false
-  end)
+  let is_safe = false
+end)
 
 let memcmp = memcmp
 let%test_unit _ = assert (memcmp (Iobuf.create ~len:0) (Iobuf.create ~len:0) = 0)
@@ -2875,17 +2875,17 @@ let%test_module "allocation" =
     ;;
 
     module Test_read_accessors
-        (I : Accessors_read with type 'a bin_prot := 'a Bin_prot.Type_class.reader)
-        (Apply : sig
-           type w
+      (I : Accessors_read with type 'a bin_prot := 'a Bin_prot.Type_class.reader)
+      (Apply : sig
+        type w
 
-           val apply : ('a, read, w) I.t -> (read, Iobuf.seek) Iobuf.t -> 'a
+        val apply : ('a, read, w) I.t -> (read, Iobuf.seek) Iobuf.t -> 'a
 
-           val apply_local
-             :  (('a, read, w) I.t_local[@local])
-             -> (read, Iobuf.seek) Iobuf.t
-             -> ('a[@local])
-         end) : Accessors_read with type 'a bin_prot := 'a Bin_prot.Type_class.reader =
+        val apply_local
+          :  (('a, read, w) I.t_local[@local])
+          -> (read, Iobuf.seek) Iobuf.t
+          -> ('a[@local])
+      end) : Accessors_read with type 'a bin_prot := 'a Bin_prot.Type_class.reader =
     struct
       open I
 
@@ -2924,8 +2924,8 @@ let%test_module "allocation" =
       ;;
 
       let test_stringo
-            (f :
-               ?str_pos:(int[@local]) -> ?len:(int[@local]) -> (('a, 'd, 'w) t_local[@local]))
+        (f :
+          ?str_pos:(int[@local]) -> ?len:(int[@local]) -> (('a, 'd, 'w) t_local[@local]))
         =
         let len = 10 in
         let buf = Iobuf.of_bigstring (Bigstring.init len ~f:(const ' ')) in

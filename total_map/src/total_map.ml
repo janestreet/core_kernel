@@ -11,7 +11,7 @@ module Stable = struct
 
     module type For_include_functor =
       Stable_V1_For_include_functor
-      with type ('key, 'a, 'cmp, 'enum) Total_map.total_map := ('key, 'a, 'cmp, 'enum) t
+        with type ('key, 'a, 'cmp, 'enum) Total_map.total_map := ('key, 'a, 'cmp, 'enum) t
 
     module Make_with_witnesses (Key : Key_with_witnesses) = struct
       module Key = struct
@@ -41,13 +41,13 @@ module type S_plain =
 
 module type For_include_functor_plain =
   For_include_functor_plain
-  with type ('key, 'a, 'cmp, 'enum) Total_map.total_map := ('key, 'a, 'cmp, 'enum) t
+    with type ('key, 'a, 'cmp, 'enum) Total_map.total_map := ('key, 'a, 'cmp, 'enum) t
 
 module type S = S with type ('key, 'a, 'cmp, 'enum) total_map := ('key, 'a, 'cmp, 'enum) t
 
 module type For_include_functor =
   For_include_functor
-  with type ('key, 'a, 'cmp, 'enum) Total_map.total_map := ('key, 'a, 'cmp, 'enum) t
+    with type ('key, 'a, 'cmp, 'enum) Total_map.total_map := ('key, 'a, 'cmp, 'enum) t
 
 let to_map t = t
 
@@ -143,12 +143,12 @@ module Make_plain_with_witnesses (Key : Key_plain_with_witnesses) = struct
   let create_const x = create (fun _ -> x)
 
   include Applicative.Make (struct
-      type nonrec 'a t = 'a t
+    type nonrec 'a t = 'a t
 
-      let return = create_const
-      let apply t1 t2 = map2 t1 t2 ~f:(fun f x -> f x)
-      let map = `Custom map
-    end)
+    let return = create_const
+    let apply t1 t2 = map2 t1 t2 ~f:(fun f x -> f x)
+    let map = `Custom map
+  end)
 end
 
 module Make_for_include_functor_plain_with_witnesses (Key : Key_plain_with_witnesses) =
@@ -167,9 +167,9 @@ module Make_with_witnesses (Key : Key_with_witnesses) = struct
   include (
     Make_plain_with_witnesses
       (Key) :
-      module type of Make_plain_with_witnesses (Key)
-    with module Key := Key
-    with type 'a t := 'a t)
+        module type of Make_plain_with_witnesses (Key)
+        with module Key := Key
+        with type 'a t := 'a t)
 
   let all_set = Key.Set.of_list Key.all
 
@@ -203,38 +203,38 @@ module Make_with_witnesses (Key : Key_with_witnesses) = struct
   ;;
 
   include Bin_prot.Utils.Make_binable1_without_uuid [@alert "-legacy"] (struct
-      type nonrec 'a t = 'a t
+    type nonrec 'a t = 'a t
 
-      module Binable = Key.Map
+    module Binable = Key.Map
 
-      let to_binable x = x
+    let to_binable x = x
 
-      let of_binable x =
-        validate_map_from_serialization x;
-        x
-      ;;
-    end)
-end
+    let of_binable x =
+      validate_map_from_serialization x;
+      x
+    ;;
+  end)
+  end
 
 module Make_for_include_functor_with_witnesses (Key : Key_with_witnesses) = struct
   module Total_map = Make_with_witnesses (Key)
 end
 
 module Make_plain (Key : Key_plain) = Make_plain_with_witnesses (struct
-    include Key
-    include Comparable.Make_plain (Key)
-    include Enumeration.Make (Key)
-  end)
+  include Key
+  include Comparable.Make_plain (Key)
+  include Enumeration.Make (Key)
+end)
 
 module Make_for_include_functor_plain (Key : Key_plain) = struct
   module Total_map = Make_plain (Key)
 end
 
 module Make (Key : Key) = Make_with_witnesses (struct
-    include Key
-    include Comparable.Make_binable (Key)
-    include Enumeration.Make (Key)
-  end)
+  include Key
+  include Comparable.Make_binable (Key)
+  include Enumeration.Make (Key)
+end)
 
 module Make_for_include_functor (Key : Key) = struct
   module Total_map = Make (Key)

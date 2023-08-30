@@ -7,10 +7,10 @@ let%test_module _ =
       include Pooled_hashtbl
 
       include Pooled_hashtbl.Make (struct
-          include Int
+        include Int
 
-          let hash x = x
-        end)
+        let hash x = x
+      end)
     end
 
     let%test_unit "growing test/copy test" =

@@ -41,10 +41,10 @@ module Stable = struct
       ;;
 
       let __bin_read_t__
-            (_ : _ Bin_prot.Read.reader)
-            (_ : Bigstring.V1.t)
-            ~pos_ref
-            (_ : int)
+        (_ : _ Bin_prot.Read.reader)
+        (_ : Bigstring.V1.t)
+        ~pos_ref
+        (_ : int)
         =
         Bin_prot.Common.raise_variant_wrong_type "Uopt" !pos_ref
       ;;

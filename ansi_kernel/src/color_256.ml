@@ -207,10 +207,10 @@ let to_rgb_hex24 c =
 ;;
 
 let tuple3_fold_two
-      (t1 : ('a, 'a, 'a) Tuple3.t)
-      (t2 : ('b, 'b, 'b) Tuple3.t)
-      ~(init : 'c)
-      ~(f : 'a -> 'b -> 'c -> 'c)
+  (t1 : ('a, 'a, 'a) Tuple3.t)
+  (t2 : ('b, 'b, 'b) Tuple3.t)
+  ~(init : 'c)
+  ~(f : 'a -> 'b -> 'c -> 'c)
   : 'c
   =
   f (fst3 t1) (fst3 t2) init |> f (snd3 t1) (snd3 t2) |> f (trd3 t1) (trd3 t2)

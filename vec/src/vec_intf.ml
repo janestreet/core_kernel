@@ -40,7 +40,6 @@ module type S = sig
   val push_back : 'a t -> 'a -> unit
   val push_back_index : 'a t -> 'a -> index
 
-
   (** Grows the vec to the specified length if it is currently shorter. Sets all new
       indices to [default]. *)
   val grow_to : 'a t -> len:int -> default:'a -> unit

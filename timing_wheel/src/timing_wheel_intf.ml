@@ -131,7 +131,7 @@ module type Alarm_precision = sig
   include Equal.S with type t := t
 
   val of_span : Time_ns.Span.t -> t
-  [@@deprecated "[since 2018-01] Use [of_span_floor_pow2_ns]"]
+    [@@deprecated "[since 2018-01] Use [of_span_floor_pow2_ns]"]
 
   (** [of_span_floor_pow2_ns span] returns the largest alarm precision less than or equal
       to [span] that is a power of two number of nanoseconds. *)
@@ -316,7 +316,6 @@ module type Timing_wheel = sig
   (** [interval_start] raises in the same cases that [interval_num] does. *)
   val interval_start : _ t -> Time_ns.t -> Time_ns.t
 
-
   (** [advance_clock t ~to_ ~handle_fired] advances [t]'s clock to [to_].  It fires and
       removes all alarms [a] in [t] with [Time_ns.(<) (Alarm.at t a) (interval_start t
       to_)], applying [handle_fired] to each such [a].
@@ -406,7 +405,6 @@ module type Timing_wheel = sig
       calling [fire_past_alarms] to fire the alarms in that interval.  That is useful when
       simulating time, to ensure that alarms are processed in order. *)
   val max_alarm_time_in_min_interval : 'a t -> Time_ns.t option
-
 
   (** [min_alarm_time_in_min_interval t] returns the minimum [Alarm.at] over all alarms in
       [t].  This function is useful for advancing to the exact time when the next alarm

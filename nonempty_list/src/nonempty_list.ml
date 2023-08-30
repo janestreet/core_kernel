@@ -153,7 +153,6 @@ module Stable = struct
   end
 end
 
-
 open Core
 module Unstable = Stable.V3
 
@@ -185,8 +184,8 @@ module T' = struct
   let iter =
     `Custom
       (fun (hd :: tl) ~f ->
-         f hd;
-         List.iter tl ~f)
+        f hd;
+        List.iter tl ~f)
   ;;
 
   let iteri = `Define_using_fold
@@ -296,16 +295,16 @@ let reverse (hd :: tl) =
 let append (hd :: tl) l = hd :: List.append tl l
 
 include Monad.Make (struct
-    type nonrec 'a t = 'a t
+  type nonrec 'a t = 'a t
 
-    let return hd = [ hd ]
-    let map = `Custom map
+  let return hd = [ hd ]
+  let map = `Custom map
 
-    let bind (hd :: tl) ~f =
-      let f_hd = f hd in
-      append f_hd (List.concat_map tl ~f:(fun x -> to_list (f x)))
-    ;;
-  end)
+  let bind (hd :: tl) ~f =
+    let f_hd = f hd in
+    append f_hd (List.concat_map tl ~f:(fun x -> to_list (f x)))
+  ;;
+end)
 
 let unzip ((hd1, hd2) :: tl) =
   let tl1, tl2 = List.unzip tl in

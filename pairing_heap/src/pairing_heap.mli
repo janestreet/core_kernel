@@ -58,7 +58,6 @@ val remove_top : _ t -> unit
     size of the heap. *)
 val clear : _ t -> unit
 
-
 (** [pop] removes and returns the top (i.e. least) element. *)
 val pop : 'a t -> 'a option
 
@@ -93,7 +92,6 @@ val add_removable : 'a t -> 'a -> 'a Elt.t
     instance) is a no-op, but keeping [token] around after it has been removed may lead
     to memory leaks since it has a reference to the heap. *)
 val remove : 'a t -> 'a Elt.t -> unit
-
 
 (** [update t token v] is shorthand for [remove t token; add_removable t v]. *)
 val update : 'a t -> 'a Elt.t -> 'a -> 'a Elt.t

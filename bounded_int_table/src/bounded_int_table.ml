@@ -5,7 +5,7 @@ module Entry = struct
     { (* the int is fixed, but the 'key can change *)
       mutable key : 'key
     ; mutable data : 'data
-    (* The index in [defined_entries] where this [Entry.t] is placed. *)
+        (* The index in [defined_entries] where this [Entry.t] is placed. *)
     ; mutable defined_entries_index : int
     }
   [@@deriving fields ~getters, sexp_of]
@@ -15,15 +15,15 @@ type ('key, 'data) t_detailed =
   { num_keys : int
   ; sexp_of_key : ('key -> Sexp.t) option
   ; key_to_int : 'key -> int
-  (* The number of entries in the table, not the length of the arrays below. *)
+      (* The number of entries in the table, not the length of the arrays below. *)
   ; mutable length : int
-  (* [(key, data)] is in the table iff
+      (* [(key, data)] is in the table iff
      {[
        entries_by_key.( key_to_int key ) = Some { key; data; _ }
      ]}
   *)
   ; entries_by_key : ('key, 'data) Entry.t option array
-  (* The first [length] elements of [defined_entries] hold the data in the table.  This is
+      (* The first [length] elements of [defined_entries] hold the data in the table.  This is
      an optimization for fold, to keep us from wasting iterations when the array is
      sparse. *)
   ; defined_entries : ('key, 'data) Entry.t option array
@@ -100,13 +100,13 @@ let create ?sexp_of_key ~num_keys ~key_to_int () =
 ;;
 
 let create_like
-      { num_keys
-      ; sexp_of_key
-      ; key_to_int
-      ; length = _
-      ; entries_by_key = _
-      ; defined_entries = _
-      }
+  { num_keys
+  ; sexp_of_key
+  ; key_to_int
+  ; length = _
+  ; entries_by_key = _
+  ; defined_entries = _
+  }
   =
   create ~num_keys ?sexp_of_key ~key_to_int ()
 ;;
@@ -274,16 +274,16 @@ let for_all t ~f = for_alli t ~f:(fun ~key:_ ~data -> f data)
 let equal key_equal data_equal t1 t2 =
   length t1 = length t2
   && for_alli t1 ~f:(fun ~key ~data ->
-    match entry_opt t2 key with
-    | None -> false
-    | Some entry -> key_equal key entry.Entry.key && data_equal data entry.Entry.data)
+       match entry_opt t2 key with
+       | None -> false
+       | Some entry -> key_equal key entry.Entry.key && data_equal data entry.Entry.data)
 ;;
 
 module With_key (Key : sig
-    type t [@@deriving bin_io, sexp]
+  type t [@@deriving bin_io, sexp]
 
-    val to_int : t -> int
-  end) =
+  val to_int : t -> int
+end) =
 struct
   type 'data t = (Key.t, 'data) table
   type 'data table = 'data t

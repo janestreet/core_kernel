@@ -295,7 +295,6 @@ module Config = struct
   ;;
 end
 
-
 (** Timing wheel is implemented as a priority queue in which the keys are
     non-negative integers corresponding to the intervals of time.  The priority queue is
     unlike a typical priority queue in that rather than having a "delete min" operation,
@@ -522,7 +521,6 @@ end = struct
   module Slots_mask = Key.Slots_mask
 
   module External_elt = struct
-
     (** The [pool_slots] here has nothing to do with the slots in a level array.  This is
         for the slots in the pool tuple representing a level element. *)
     type 'a pool_slots =
@@ -532,7 +530,7 @@ end = struct
       , int
       , 'a pool_slots Pointer.t
       , 'a pool_slots Pointer.t )
-        Pool.Slots.t6
+      Pool.Slots.t6
     [@@deriving sexp_of]
 
     type 'a t = 'a pool_slots Pointer.t [@@deriving sexp_of]
@@ -569,7 +567,7 @@ end = struct
     val create
       :  'a Pool.t
       -> key:Key.t
-      (** [at] is used when the priority queue is used to implement a timing wheel.  If
+           (** [at] is used when the priority queue is used to implement a timing wheel.  If
           unused, it will be [Time_ns.epoch]. *)
       -> at:Time_ns.t
       -> value:'a
@@ -868,10 +866,10 @@ end = struct
         (let r = ref [] in
          internal_iter t ~f:(fun elt ->
            r
-           := { Pretty.Elt.key = Internal_elt.key pool elt
-              ; value = Internal_elt.value pool elt
-              }
-              :: !r);
+             := { Pretty.Elt.key = Internal_elt.key pool elt
+                ; value = Internal_elt.value pool elt
+                }
+                :: !r);
          List.rev !r)
     }
   ;;
@@ -927,9 +925,9 @@ end = struct
                assert (
                  length
                  = Array.fold level.slots ~init:0 ~f:(fun n elt ->
-                   if Internal_elt.is_null elt
-                   then n
-                   else n + Internal_elt.length pool elt))))
+                     if Internal_elt.is_null elt
+                     then n
+                     else n + Internal_elt.length pool elt))))
           ~min_allowed_key:
             (check (fun min_allowed_key ->
                assert (Key.( >= ) min_allowed_key Key.zero);
@@ -1174,11 +1172,11 @@ end = struct
       elements are encountered, they are removed from the timing wheel if their key is
       smaller than [t_min_allowed_key], or added at a lower level if not. *)
   let increase_level_min_allowed_key
-        t
-        (level : _ Level.t)
-        ~prev_level_max_allowed_key
-        ~t_min_allowed_key
-        ~handle_removed
+    t
+    (level : _ Level.t)
+    ~prev_level_max_allowed_key
+    ~t_min_allowed_key
+    ~handle_removed
     =
     let desired_min_allowed_key =
       Level.compute_min_allowed_key level ~prev_level_max_allowed_key
@@ -1215,7 +1213,7 @@ end = struct
     done;
     level.min_allowed_key <- desired_min_allowed_key;
     level.max_allowed_key
-    <- Key.add_clamp_to_max desired_min_allowed_key level.diff_max_min_allowed_key
+      <- Key.add_clamp_to_max desired_min_allowed_key level.diff_max_min_allowed_key
   ;;
 
   module Increase_min_allowed_key_result = struct
@@ -1280,37 +1278,37 @@ end = struct
             (bits_per_slot, max_level_min_allowed_key, levels)
             (level_bits : Num_key_bits.t)
             ->
-              let keys_per_slot = Key.num_keys bits_per_slot in
-              let diff_max_min_allowed_key =
-                compute_diff_max_min_allowed_key ~level_bits ~bits_per_slot
-              in
-              let min_key_in_same_slot_mask = Min_key_in_same_slot_mask.create ~bits_per_slot in
-              let min_allowed_key =
-                Key.min_key_in_same_slot max_level_min_allowed_key min_key_in_same_slot_mask
-              in
-              let max_allowed_key =
-                Key.add_clamp_to_max min_allowed_key diff_max_min_allowed_key
-              in
-              let level =
-                { Level.index
-                ; bits = level_bits
-                ; slots_mask = Slots_mask.create ~level_bits
-                ; bits_per_slot
-                ; keys_per_slot
-                ; min_key_in_same_slot_mask
-                ; diff_max_min_allowed_key
-                ; length = 0
-                ; min_allowed_key
-                ; max_allowed_key
-                ; slots =
-                    Array.create
-                      ~len:(Int63.to_int_exn (Num_key_bits.pow2 level_bits))
-                      (Internal_elt.null ())
-                }
-              in
-              ( Num_key_bits.( + ) level_bits bits_per_slot
-              , Key.succ_clamp_to_max max_allowed_key
-              , level :: levels ))
+        let keys_per_slot = Key.num_keys bits_per_slot in
+        let diff_max_min_allowed_key =
+          compute_diff_max_min_allowed_key ~level_bits ~bits_per_slot
+        in
+        let min_key_in_same_slot_mask = Min_key_in_same_slot_mask.create ~bits_per_slot in
+        let min_allowed_key =
+          Key.min_key_in_same_slot max_level_min_allowed_key min_key_in_same_slot_mask
+        in
+        let max_allowed_key =
+          Key.add_clamp_to_max min_allowed_key diff_max_min_allowed_key
+        in
+        let level =
+          { Level.index
+          ; bits = level_bits
+          ; slots_mask = Slots_mask.create ~level_bits
+          ; bits_per_slot
+          ; keys_per_slot
+          ; min_key_in_same_slot_mask
+          ; diff_max_min_allowed_key
+          ; length = 0
+          ; min_allowed_key
+          ; max_allowed_key
+          ; slots =
+              Array.create
+                ~len:(Int63.to_int_exn (Num_key_bits.pow2 level_bits))
+                (Internal_elt.null ())
+          }
+        in
+        ( Num_key_bits.( + ) level_bits bits_per_slot
+        , Key.succ_clamp_to_max max_allowed_key
+        , level :: levels ))
     in
     { length = 0
     ; pool = Internal_elt.Pool.create ?capacity ()
@@ -1327,7 +1325,7 @@ end = struct
     if Internal_elt.equal elt t.min_elt
     then
       t.min_elt <- Internal_elt.null ()
-    (* We keep [t.elt_lower_bound] since it is valid even though [t.min_elt] is being
+      (* We keep [t.elt_lower_bound] since it is valid even though [t.min_elt] is being
        removed. *);
     t.length <- t.length - 1;
     let level = t.levels.(Internal_elt.level_index pool elt) in
@@ -1472,14 +1470,14 @@ module Pretty = struct
 end
 
 let pretty
-      ({ config
-       ; start
-       ; max_interval_num
-       ; now
-       ; now_interval_num_start = _
-       ; max_allowed_alarm_time = _
-       ; priority_queue = _
-       } as t)
+  ({ config
+   ; start
+   ; max_interval_num
+   ; now
+   ; now_interval_num_start = _
+   ; max_allowed_alarm_time = _
+   ; priority_queue = _
+   } as t)
   =
   let r = ref [] in
   iter t ~f:(fun a -> r := Pretty.Alarm.create t a :: !r);

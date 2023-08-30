@@ -337,7 +337,7 @@ module Pool = struct
       ; mutable length : int
       ; mutable next_id : Tuple_id.t
       ; mutable first_free : Header.t
-      (* [dummy] is [None] in an unsafe pool.  In a safe pool, [dummy] is [Some a], with
+          (* [dummy] is [None] in an unsafe pool.  In a safe pool, [dummy] is [Some a], with
          [Uniform_array.length a = slots_per_tuple].  [dummy] is actually a tuple value
          with the correct type (corresponding to ['slots]), but we make the type of
          [dummy] be [Obj.t Uniform_array.t] because we can't write that type here.  Also,
@@ -470,18 +470,18 @@ module Pool = struct
              done))
         ~dummy:
           (check (function
-             | Some dummy -> assert (Uniform_array.length dummy = metadata.slots_per_tuple)
-             | None ->
-               for tuple_num = 0 to metadata.capacity - 1 do
-                 let header_index = tuple_num_to_header_index metadata tuple_num in
-                 let header = unsafe_header t ~header_index in
-                 if Header.is_free header
-                 then (
-                   let first_slot = tuple_num_to_first_slot_index metadata tuple_num in
-                   for slot = 0 to metadata.slots_per_tuple - 1 do
-                     assert (Obj.is_int (Uniform_array.get t (first_slot + slot)))
-                   done)
-               done))
+            | Some dummy -> assert (Uniform_array.length dummy = metadata.slots_per_tuple)
+            | None ->
+              for tuple_num = 0 to metadata.capacity - 1 do
+                let header_index = tuple_num_to_header_index metadata tuple_num in
+                let header = unsafe_header t ~header_index in
+                if Header.is_free header
+                then (
+                  let first_slot = tuple_num_to_first_slot_index metadata tuple_num in
+                  for slot = 0 to metadata.slots_per_tuple - 1 do
+                    assert (Obj.is_int (Uniform_array.get t (first_slot + slot)))
+                  done)
+              done))
     with
     | exn ->
       failwiths ~here:[%here] "Pool.invariant failed" (exn, t) [%sexp_of: exn * _ t]
@@ -907,8 +907,8 @@ module Pool = struct
     else
       (Obj.magic
          (Uniform_array.sub t ~pos:(Pointer.first_slot_index pointer) ~len
-          : Obj.t Uniform_array.t)
-       : tuple)
+           : Obj.t Uniform_array.t)
+        : tuple)
   ;;
 end
 
