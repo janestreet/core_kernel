@@ -44,6 +44,16 @@ module type S = sig
       indices to [default]. *)
   val grow_to : 'a t -> len:int -> default:'a -> unit
 
+  (** Equivalent to [grow_to t (index + 1) ~default]. *)
+  val grow_to_include : 'a t -> index -> default:'a -> unit
+
+  (** Grows the vec to the specified length if it is currently shorter. Sets all new
+      indices to [default idx]. *)
+  val grow_to' : 'a t -> len:int -> default:(index -> 'a) -> unit
+
+  (** Equivalent to [grow_to' t (index + 1) ~default]. *)
+  val grow_to_include' : 'a t -> index -> default:(index -> 'a) -> unit
+
   (** Shortens the vec to the specified length if it is currently longer. Raises if [len <
       0]. *)
   val shrink_to : 'a t -> len:int -> unit

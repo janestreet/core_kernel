@@ -282,6 +282,20 @@ module With_integer_index = struct
       set_length t len)
   ;;
 
+  let grow_to_include t idx ~default = grow_to t ~len:(idx + 1) ~default
+
+  let grow_to' t ~len ~default =
+    if len > length t
+    then (
+      grow_capacity_to_at_least t ~capacity:len;
+      for i = length t to len - 1 do
+        unsafe_set t i (default i)
+      done;
+      set_length t len)
+  ;;
+
+  let grow_to_include' t idx ~default = grow_to' t ~len:(idx + 1) ~default
+
   let shrink_to t ~len =
     if len < 0
     then raise__bad_index t len ~op:"shrink_to"
@@ -668,6 +682,17 @@ module Make (M : Intable.S) = struct
       result := (m, unsafe_get t m) :: !result
     done;
     !result
+  ;;
+
+  let grow_to_include t idx ~default = grow_to_include t (M.to_int_exn idx) ~default
+
+  let grow_to' t ~len ~default =
+    grow_to' t ~len ~default:(fun [@inline] idx -> default (M.of_int_exn idx))
+  ;;
+
+  let grow_to_include' t idx ~default =
+    grow_to_include' t (M.to_int_exn idx) ~default:(fun [@inline] idx ->
+      default (M.of_int_exn idx))
   ;;
 
   module Inplace = struct
