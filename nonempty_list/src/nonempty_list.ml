@@ -358,6 +358,7 @@ let map_of_container_multi fold container ~comparator =
 
 let map_of_alist_multi alist = map_of_container_multi List.fold alist
 let map_of_sequence_multi sequence = map_of_container_multi Sequence.fold sequence
+let fold_nonempty (hd :: tl) ~init ~f = List.fold tl ~init:(init hd) ~f
 
 let fold_right (hd :: tl) ~init:acc ~f =
   let acc = List.fold_right tl ~init:acc ~f in

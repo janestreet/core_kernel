@@ -458,23 +458,30 @@ let%expect_test "folds" =
     let leaves = Nonempty_list.map nums ~f:M.leaf in
     let reduced = Nonempty_list.reduce leaves ~f:M.f in
     let folded = Nonempty_list.fold leaves ~init:M.init ~f:M.f in
+    let folded_nonempty =
+      Nonempty_list.fold_nonempty leaves ~init:(fun hd -> M.f M.init hd) ~f:M.f
+    in
     let folded_right = Nonempty_list.fold_right leaves ~init:M.init ~f:M.f in
     let nums = Nonempty_list.to_list nums in
     assert ([%equal: int list] nums (M.flatten reduced));
     assert ([%equal: int list] nums (M.flatten folded));
+    assert ([%equal: int list] nums (M.flatten folded_nonempty));
     assert ([%equal: int list] nums (M.flatten folded_right));
-    print_s [%message (reduced : M.t) (folded : M.t) (folded_right : M.t)]
+    print_s
+      [%message
+        (reduced : M.t) (folded : M.t) (folded_nonempty : M.t) (folded_right : M.t)]
   in
   test [ 1 ];
   [%expect
     {|
     ((reduced (Leaf 1)) (folded (F Init (Leaf 1)))
-     (folded_right (F (Leaf 1) Init)))
+     (folded_nonempty (F Init (Leaf 1))) (folded_right (F (Leaf 1) Init)))
   |}];
   test [ 1; 2 ];
   [%expect
     {|
     ((reduced (F (Leaf 1) (Leaf 2))) (folded (F (F Init (Leaf 1)) (Leaf 2)))
+     (folded_nonempty (F (F Init (Leaf 1)) (Leaf 2)))
      (folded_right (F (Leaf 1) (F (Leaf 2) Init))))
   |}];
   test [ 1; 2; 3 ];
@@ -482,6 +489,7 @@ let%expect_test "folds" =
     {|
     ((reduced (F (F (Leaf 1) (Leaf 2)) (Leaf 3)))
      (folded (F (F (F Init (Leaf 1)) (Leaf 2)) (Leaf 3)))
+     (folded_nonempty (F (F (F Init (Leaf 1)) (Leaf 2)) (Leaf 3)))
      (folded_right (F (Leaf 1) (F (Leaf 2) (F (Leaf 3) Init)))))
   |}];
   test [ 1; 2; 3; 4; 5; 6; 7; 8; 9 ];
@@ -497,6 +505,15 @@ let%expect_test "folds" =
         (Leaf 8))
        (Leaf 9)))
      (folded
+      (F
+       (F
+        (F
+         (F (F (F (F (F (F Init (Leaf 1)) (Leaf 2)) (Leaf 3)) (Leaf 4)) (Leaf 5))
+          (Leaf 6))
+         (Leaf 7))
+        (Leaf 8))
+       (Leaf 9)))
+     (folded_nonempty
       (F
        (F
         (F
