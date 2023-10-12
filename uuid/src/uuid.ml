@@ -120,15 +120,14 @@ module T = struct
 
   let create ~hostname ~pid =
     let digest =
-      let time = Time_float.now () in
+      let time = Time_ns.now () in
       let counter = next_counter () in
       let base =
         String.concat
           ~sep:"-"
           [ hostname
           ; Int.to_string pid
-          ; Float.to_string_12
-              (Time_float.Span.to_sec (Time_float.to_span_since_epoch time))
+          ; Int.to_string (Time_ns.to_int_ns_since_epoch time)
           ; Int.to_string counter
           ]
       in
