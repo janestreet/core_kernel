@@ -1,26 +1,26 @@
 open! Base
 include Enum_intf
 
+let command_friendly_name s =
+  String.filter_map s ~f:(function
+    | '\'' -> None
+    | '_' -> Some '-'
+    | c -> Some (Char.lowercase c))
+;;
+
+let atom_of_sexp_exn : Sexp.t -> string = function
+  | Atom s -> s
+  | List _ as sexp -> raise_s [%sexp "Enum.t expects atomic sexps.", (sexp : Sexp.t)]
+;;
+
 module Single = struct
   module type S = Sexp_of
 
   type 'a t = (module S with type t = 'a)
 
-  let command_friendly_name s =
-    s
-    |> String.tr ~target:'_' ~replacement:'-'
-    |> String.lowercase
-    |> String.filter ~f:(Char.( <> ) '\'')
-  ;;
-
-  let atom (type a) (m : a t) a =
-    let module M = (val m) in
-    match [%sexp_of: M.t] a with
-    | Atom s -> s
-    | List _ as sexp -> raise_s [%sexp "Enum.t expects atomic sexps.", (sexp : Sexp.t)]
-  ;;
-
-  let to_string_hum m a = command_friendly_name (atom m a)
+  let sexp_of (type a) ((module M) : a t) (a : a) = M.sexp_of_t a
+  let atom_exn m a = atom_of_sexp_exn (sexp_of m a)
+  let to_string_hum m a = command_friendly_name (atom_exn m a)
 
   let check_field_name t a field =
     [%test_eq: string] (to_string_hum t a) (command_friendly_name (Field.name field))
@@ -40,7 +40,7 @@ let enum (type a) ((module M) : a t) =
 ;;
 
 let assert_alphabetic_order_exn here (type a) ((module M) : a t) =
-  let as_strings = List.map M.all ~f:(Single.atom (module M)) in
+  let as_strings = List.map M.all ~f:(Single.atom_exn (module M)) in
   [%test_result: string list]
     ~here:[ here ]
     ~message:"This enumerable type is intended to be defined in alphabetic order"
@@ -238,30 +238,39 @@ let make_param_optional_comma_separated_with_default_doc
     ~doc
 ;;
 
-module Make_of_string (M : S_to_string) = struct
-  let to_string = M.to_string
+module Make_to_string (M : Sexp_of) : sig
+  val to_string : M.t -> string
+end = struct
+  let to_string t = command_friendly_name (atom_of_sexp_exn [%sexp (t : M.t)])
+end
 
-  let of_string =
-    let known_values =
-      lazy
-        (List.fold
-           [%all: M.t]
-           ~init:(Map.empty (module String))
-           ~f:(fun map t -> Map.set map ~key:(to_string t) ~data:t))
-    in
-    fun s ->
-      match Map.find (force known_values) s with
-      | None ->
-        let known_values = Map.keys (force known_values) in
-        raise_s [%message "Unknown value." s (known_values : string list)]
-      | Some t -> t
+module Make_of_string (M : S_to_string) : sig
+  val of_string : String.t -> M.t
+end = struct
+  let known_values =
+    lazy
+      (List.fold
+         [%all: M.t]
+         ~init:(Map.empty (module String))
+         ~f:(fun map t -> Map.set map ~key:(M.to_string t) ~data:t))
+  ;;
+
+  let of_string s =
+    match Map.find (force known_values) s with
+    | None ->
+      let known_values = Map.keys (force known_values) in
+      raise_s [%message "Unknown value." s (known_values : string list)]
+    | Some t -> t
   ;;
 end
 
-module Make_stringable (M : S) = struct
-  include Make_of_string (struct
-    include M
+module Make_stringable (M : S) : Stringable.S with type t := M.t = struct
+  include Make_to_string (M)
 
-    let to_string = to_string_hum (module M)
+  include Make_of_string (struct
+    type t = M.t
+
+    let all = M.all
+    let to_string = to_string
   end)
 end

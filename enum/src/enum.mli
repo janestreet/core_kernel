@@ -1,1 +1,1 @@
-include Enum_intf.Enum
+include Enum_intf.Enum (** @inline *)

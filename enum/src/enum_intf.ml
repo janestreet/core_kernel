@@ -94,7 +94,15 @@ module type Enum = sig
 
   (** Defines an [of_string] function for [M], using [M.all] and [M.to_string]. Does not
       require [M] to be sexpable. *)
-  module Make_of_string (M : S_to_string) : Stringable.S with type t := M.t
+  module Make_of_string (M : S_to_string) : sig
+    val of_string : String.t -> M.t
+  end
+
+  (** Defines [to_string] for [M], based on [M.sexp_of_t]. The sexp representation of
+      [M.t] must be a sexp atom. *)
+  module Make_to_string (M : Sexp_of) : sig
+    val to_string : M.t -> String.t
+  end
 
   module Single : sig
     module type S = Sexp_of
