@@ -272,14 +272,16 @@ module With_integer_index = struct
     e
   ;;
 
-  let grow_to t ~len ~default =
-    if len > length t
-    then (
-      grow_capacity_to_at_least t ~capacity:len;
-      for i = length t to len - 1 do
-        unsafe_set t i default
-      done;
-      set_length t len)
+  let[@inline never] grow_to_unchecked t ~len ~default =
+    grow_capacity_to_at_least t ~capacity:len;
+    for i = length t to len - 1 do
+      unsafe_set t i default
+    done;
+    set_length t len
+  ;;
+
+  let[@inline always] grow_to t ~len ~default =
+    if len > length t then grow_to_unchecked t ~len ~default
   ;;
 
   let grow_to_include t idx ~default = grow_to t ~len:(idx + 1) ~default
