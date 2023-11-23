@@ -331,3 +331,22 @@ let () = complete () ~part:"h" |> List.iter ~f:print_endline
 [%%expect {|
 heres-an-int=
 |}]
+
+[%%org
+  {|
+
+* =Enum.command_friendly_name=
+
+Most =Enum= operations rely on transforming the generated representation to a
+string that can be used everywhere. This transformation is called the
+=command_friendly_name=.
+
+See the enum_intf.ml interface file for documentation about the semantics of
+this function.
+|}]
+
+let () = Enum.command_friendly_name "Capitals_And_Underscores" |> print_endline
+
+[%%expect {|
+capitals-and-underscores
+|}]

@@ -158,7 +158,7 @@ module Unstable = Stable.V3
 
 module T' = struct
   type 'a t = 'a Stable.V3.t = ( :: ) of 'a * 'a list
-  [@@deriving compare, equal, hash, quickcheck, typerep, bin_io]
+  [@@deriving compare, equal, hash, quickcheck, typerep, bin_io, globalize]
 
   let sexp_of_t = Stable.V3.sexp_of_t
   let t_of_sexp = Stable.V3.t_of_sexp
@@ -262,7 +262,7 @@ let filter_mapi (hd :: tl) ~f : _ list =
   let hd = f 0 hd in
   let[@inline always] f i x = f (i + 1) x in
   match hd with
-  | None -> List.filter_mapi tl ~f
+  | None -> List.filter_mapi tl ~f [@nontail]
   | Some hd -> hd :: List.filter_mapi tl ~f
 ;;
 
@@ -276,11 +276,19 @@ let filteri (hd :: tl) ~f : _ list =
   let include_hd = f 0 hd in
   let[@inline always] f i x = f (i + 1) x in
   match include_hd with
-  | false -> List.filteri tl ~f
+  | false -> List.filteri tl ~f [@nontail]
   | true -> hd :: List.filteri tl ~f
 ;;
 
-let map t ~f = mapi t ~f:(fun (_ : int) x -> f x)
+let map t ~f = mapi t ~f:(fun (_ : int) x -> f x) [@nontail]
+
+let map2 t1 t2 ~f : _ List.Or_unequal_lengths.t =
+  match List.map2 (to_list t1) (to_list t2) ~f with
+  | Ok x -> Ok (of_list_exn x)
+  | Unequal_lengths -> Unequal_lengths
+;;
+
+let map2_exn t1 t2 ~f = List.map2_exn (to_list t1) (to_list t2) ~f |> of_list_exn
 let reduce (hd :: tl) ~f = List.fold ~init:hd tl ~f
 
 let reverse (hd :: tl) =
@@ -294,7 +302,7 @@ let reverse (hd :: tl) =
 
 let append (hd :: tl) l = hd :: List.append tl l
 
-include Monad.Make (struct
+include Monad.Make_local (struct
   type nonrec 'a t = 'a t
 
   let return hd = [ hd ]
@@ -337,13 +345,14 @@ let to_sequence t =
 
 let sort t ~compare = List.sort (to_list t) ~compare |> of_list_exn
 let stable_sort t ~compare = List.stable_sort (to_list t) ~compare |> of_list_exn
-let dedup_and_sort ~compare t = List.dedup_and_sort ~compare (to_list t) |> of_list_exn
+let dedup_and_sort t ~compare = List.dedup_and_sort ~compare (to_list t) |> of_list_exn
 
 let min_elt' (hd :: tl) ~compare =
-  List.fold tl ~init:hd ~f:(fun min elt -> if compare min elt > 0 then elt else min)
+  List.fold tl ~init:hd ~f:(fun min elt -> if compare min elt > 0 then elt else min) [@nontail
+                                                                                       ]
 ;;
 
-let max_elt' t ~compare = min_elt' t ~compare:(fun x y -> compare y x)
+let max_elt' t ~compare = min_elt' t ~compare:(fun x y -> compare y x) [@nontail]
 
 let map_add_multi map ~key ~data =
   Map.update map key ~f:(function
@@ -431,7 +440,7 @@ module Reversed = struct
   ;;
 
   let rev_mapi (hd :: tl : _ t) ~f = rev_map_aux 1 tl ~f ([ f 0 hd ] : _ T'.t)
-  let rev_map t ~f = rev_mapi t ~f:(fun _ x -> f x)
+  let rev_map t ~f = rev_mapi t ~f:(fun _ x -> f x) [@nontail]
   let cons x t = x :: to_rev_list t
 
   module With_sexp_of = struct

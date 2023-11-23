@@ -57,6 +57,36 @@ let%expect_test "bind" =
   [%expect {| (0 0 1 0 1 2) |}]
 ;;
 
+let%expect_test "map2" =
+  let test a b = print_s [%sexp (map2 a b ~f:( * ) : int t List.Or_unequal_lengths.t)] in
+  test [ 1 ] [ 2 ];
+  test [ 1; 2 ] [ 3; 4 ];
+  test [ 1 ] [ 2; 3 ];
+  test [ 1; 2 ] [ 3 ];
+  [%expect {|
+    (Ok (2))
+    (Ok (3 8))
+    Unequal_lengths
+    Unequal_lengths |}]
+;;
+
+let%expect_test "map2_exn" =
+  let test a b =
+    print_s
+      [%sexp (Or_error.try_with (fun () -> map2_exn a b ~f:( * )) : int t Or_error.t)]
+  in
+  test [ 1 ] [ 2 ];
+  test [ 1; 2 ] [ 3; 4 ];
+  test [ 1 ] [ 2; 3 ];
+  test [ 1; 2 ] [ 3 ];
+  [%expect
+    {|
+    (Ok (2))
+    (Ok (3 8))
+    (Error (Invalid_argument "length mismatch in map2_exn: 1 <> 2"))
+    (Error (Invalid_argument "length mismatch in map2_exn: 2 <> 1")) |}]
+;;
+
 let%expect_test "zip" =
   let test a b = print_s [%sexp (zip a b : (int * int) t List.Or_unequal_lengths.t)] in
   test [ 1 ] [ 2 ];

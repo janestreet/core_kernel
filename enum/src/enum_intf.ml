@@ -88,6 +88,23 @@ module type Enum = sig
     -> 'a t
     -> 'a Command.Arg_type.t
 
+  (** Transform a string to be accepted by [Command]. This is the transformation that is
+      applied throughout this module.
+
+      The transformations are:
+      + Single quotes get removed (since it's annoying to have to quote them when running
+      commands manually)
+      + Underscores get turned into dashes (just to hopefully have a uniform convention
+      between the two)
+      + Other characters get lowercased
+
+      Note that this is *not* actually a complete list of transformations needed to make
+      an arbitrary string "command-friendly": for example, double quotes are left
+      alone. This is because the expectation is that the string came from something like a
+      [[@@deriving sexp]] on a variant type, and while single quotes can appear in ocaml
+      variants, double quotes cannot. *)
+  val command_friendly_name : string -> string
+
   (** Defines [to_string] and [of_string] functions for [M], based on [M.sexp_of_t] and
       [M.all]. The sexp representation of [M.t] must be a sexp atom. *)
   module Make_stringable (M : S) : Stringable.S with type t := M.t

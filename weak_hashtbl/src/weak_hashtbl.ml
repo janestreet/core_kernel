@@ -25,6 +25,7 @@ let set_run_when_unused_data t ~thread_safe_f =
 ;;
 
 let remove t key = Hashtbl.remove t.entry_by_key key
+let clear t = Hashtbl.clear t.entry_by_key
 
 (* In order for a call to [reclaim_space_for_keys_with_unused_data] to reclaim a key that
    was previously finalized, the weak pointer must have been cleared.  This relies on the

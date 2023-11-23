@@ -3,14 +3,17 @@ open Core
 (** A ['a t] represents a non-empty list, as evidenced by the fact that there is no [[]]
     variant. The sexp representation is as a regular list (i.e., the same as the
     [Stable.V3] module below).
+
+    For operations on a locally allocated ['a t], see [Local_nonempty_list].
 *)
 type 'a t = ( :: ) of 'a * 'a list
-[@@deriving compare, equal, sexp, sexp_grammar, hash, quickcheck, typerep, bin_io]
+[@@deriving
+  compare, equal, sexp, sexp_grammar, hash, quickcheck, typerep, bin_io, globalize]
 
 include Comparator.Derived with type 'a t := 'a t
 include Container.S1 with type 'a t := 'a t
 include Invariant.S1 with type 'a t := 'a t
-include Monad.S with type 'a t := 'a t
+include Monad.S_local with type 'a t := 'a t
 include Indexed_container.S1 with type 'a t := 'a t
 
 val create : 'a -> 'a list -> 'a t
@@ -31,6 +34,8 @@ val unzip : ('a * 'b) t -> 'a t * 'b t
 val zip : 'a t -> 'b t -> ('a * 'b) t List.Or_unequal_lengths.t
 val zip_exn : 'a t -> 'b t -> ('a * 'b) t
 val mapi : 'a t -> f:(int -> 'a -> 'b) -> 'b t
+val map2 : 'a t -> 'b t -> f:('a -> 'b -> 'c) -> 'c t List.Or_unequal_lengths.t
+val map2_exn : 'a t -> 'b t -> f:('a -> 'b -> 'c) -> 'c t
 val filter : 'a t -> f:('a -> bool) -> 'a list
 val filteri : 'a t -> f:(int -> 'a -> bool) -> 'a list
 val filter_map : 'a t -> f:('a -> 'b option) -> 'b list
@@ -42,7 +47,7 @@ val drop_last : 'a t -> 'a list
 val to_sequence : 'a t -> 'a Sequence.t
 val sort : 'a t -> compare:('a -> 'a -> int) -> 'a t
 val stable_sort : 'a t -> compare:('a -> 'a -> int) -> 'a t
-val dedup_and_sort : compare:('a -> 'a -> int) -> 'a t -> 'a t
+val dedup_and_sort : 'a t -> compare:('a -> 'a -> int) -> 'a t
 val iteri : 'a t -> f:(int -> 'a -> unit) -> unit
 val cartesian_product : 'a t -> 'b t -> ('a * 'b) t
 val fold_nonempty : 'a t -> init:('a -> 'acc) -> f:('acc -> 'a -> 'acc) -> 'acc

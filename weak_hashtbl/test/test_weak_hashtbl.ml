@@ -7,7 +7,7 @@ let data int = ref int |> Heap_block.create_exn
 
 type data = int ref Heap_block.t [@@deriving sexp_of]
 
-let%expect_test "[add_exn], [find], [mem], [replace], [remove]" =
+let%expect_test "[add_exn], [find], [mem], [replace], [remove], [clear]" =
   let t = create () in
   let print_mem i = print_s [%message (i : int) ~mem:(mem t i : bool)] in
   let key = 13 in
@@ -29,6 +29,13 @@ let%expect_test "[add_exn], [find], [mem], [replace], [remove]" =
   [%expect {|
     ("find t key" (14)) |}];
   remove t key;
+  print_find ();
+  [%expect {|
+    ("find t key" ()) |}];
+  add_exn t ~key ~data:(data key);
+  print_find ();
+  [%expect {| ("find t key" (13)) |}];
+  clear t;
   print_find ();
   [%expect {|
     ("find t key" ()) |}]
