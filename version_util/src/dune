@@ -1,4 +1,11 @@
-(library (name version_util) (public_name core_kernel.version_util)
- (js_of_ocaml (javascript_files version_util.js))
- (c_names version_util_fallback_stubs) (libraries core)
- (preprocess (pps ppx_jane)))
+(library
+ (foreign_stubs
+  (language c)
+  (names version_util_fallback_stubs))
+ (name version_util)
+ (public_name core_kernel.version_util)
+ (js_of_ocaml
+  (javascript_files version_util.js))
+ (libraries core)
+ (preprocess
+  (pps ppx_jane)))

@@ -1,2 +1,6 @@
-(library (name composition_infix) (public_name core_kernel.composition_infix)
- (libraries) (preprocess (pps ppx_jane)))
+(library
+ (name composition_infix)
+ (public_name core_kernel.composition_infix)
+ (libraries)
+ (preprocess
+  (pps ppx_jane)))

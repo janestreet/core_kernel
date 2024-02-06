@@ -1,2 +1,6 @@
-(library (name hash_heap) (public_name core_kernel.hash_heap)
- (libraries core pairing_heap) (preprocess (pps ppx_jane)))
+(library
+ (name hash_heap)
+ (public_name core_kernel.hash_heap)
+ (libraries core pairing_heap)
+ (preprocess
+  (pps ppx_jane)))

@@ -1,7 +1,14 @@
-(alias (name runtest) (deps (:first_dep test_binary_packing.exe))
- (action (bash ./%{first_dep})))
+(rule
+ (alias runtest)
+ (deps
+  (:first_dep test_binary_packing.exe))
+ (action
+  (bash ./%{first_dep})))
 
-(executables (names test_binary_packing)
+(executables
+ (modes byte exe)
+ (names test_binary_packing)
  (libraries binary_packing binary_packing_test core oUnit
-  quickcheck_deprecated)
- (preprocess (pps ppx_jane)))
+   quickcheck_deprecated)
+ (preprocess
+  (pps ppx_jane)))

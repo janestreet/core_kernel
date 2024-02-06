@@ -1,4 +1,5 @@
-[%%org {|
+[%%org
+  {|
 #+TITLE: Enum
 
 #+BEGIN_comment
@@ -65,7 +66,8 @@ let () =
     print_endline (Enum.to_string_hum (module Mode) mode))
 ;;
 
-[%%expect {|
+[%%expect
+  {|
 prod
 dev
 unit-test
@@ -140,7 +142,8 @@ end
 
 let () = Enum.assert_alphabetic_order_exn [%here] (module T)
 
-[%%org {|
+[%%org
+  {|
 [Enum.Make\_stringable] converts [Enum.S] modules to [Stringable] modules.
 |}]
 
@@ -155,7 +158,8 @@ let () =
     print_endline (M.to_string m))
 ;;
 
-[%%expect {|
+[%%expect
+  {|
 a
 a-also
 b
@@ -163,7 +167,8 @@ b
 
 let () = show_raise (fun () -> M.of_string "foo")
 
-[%%expect {|
+[%%expect
+  {|
 (raised ("Unknown value." foo (known_values (a a-also b))))
 |}]
 
@@ -320,7 +325,8 @@ let complete _ ~part =
 
 let () = complete () ~part:"" |> List.iter ~f:print_endline
 
-[%%expect {|
+[%%expect
+  {|
 heres-an-int=
 and-a-string=
 plus-a-bool=
@@ -328,7 +334,8 @@ plus-a-bool=
 
 let () = complete () ~part:"h" |> List.iter ~f:print_endline
 
-[%%expect {|
+[%%expect
+  {|
 heres-an-int=
 |}]
 
@@ -347,6 +354,7 @@ this function.
 
 let () = Enum.command_friendly_name "Capitals_And_Underscores" |> print_endline
 
-[%%expect {|
+[%%expect
+  {|
 capitals-and-underscores
 |}]

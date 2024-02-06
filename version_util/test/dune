@@ -1,2 +1,5 @@
-(library (name build_info_test) (libraries core version_util)
- (preprocess (pps ppx_jane)))
+(library
+ (name build_info_test)
+ (libraries core version_util)
+ (preprocess
+  (pps ppx_jane)))

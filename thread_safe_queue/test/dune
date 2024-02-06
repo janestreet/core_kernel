@@ -1,4 +1,6 @@
-(library (name thread_safe_queue_test)
+(library
+ (name thread_safe_queue_test)
  (libraries core core_unix.core_thread thread_safe_queue
-  core_unix.time_float_unix)
- (preprocess (pps ppx_jane)))
+   core_unix.time_float_unix)
+ (preprocess
+  (pps ppx_jane)))

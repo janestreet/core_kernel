@@ -1,3 +1,5 @@
-(library (name balanced_reducer_test)
+(library
+ (name balanced_reducer_test)
  (libraries balanced_reducer base expect_test_helpers_core)
- (preprocess (pps ppx_jane)))
+ (preprocess
+  (pps ppx_jane)))

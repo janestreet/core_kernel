@@ -1,2 +1,5 @@
-(library (name bounded_int_table_test) (libraries bounded_int_table)
- (preprocess (pps ppx_jane)))
+(library
+ (name bounded_int_table_test)
+ (libraries bounded_int_table)
+ (preprocess
+  (pps ppx_jane)))

@@ -142,6 +142,24 @@ module Make_plain_with_witnesses (Key : Key_plain_with_witnesses) = struct
 
   let create_const x = create (fun _ -> x)
 
+  let named_key_set : _ Set.Named.t =
+    { set = Key.Set.of_list Key.all; name = "[Key.all]" }
+  ;;
+
+  let of_map_exn map =
+    Set.Named.equal named_key_set { set = Map.key_set map; name = "[Map.key_set map]" }
+    |> ok_exn;
+    create (fun key ->
+      match Map.find map key with
+      | Some value -> value
+      | None ->
+        raise_s
+          [%message
+            "impossible: all keys must be present in the map as verified by the key set"])
+  ;;
+
+  let of_alist_exn alist = of_map_exn (Key.Map.of_alist_exn alist)
+
   include Applicative.Make (struct
     type nonrec 'a t = 'a t
 

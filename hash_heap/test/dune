@@ -1,3 +1,5 @@
-(library (name hash_heap_test)
+(library
+ (name hash_heap_test)
  (libraries core expect_test_helpers_core.expect_test_helpers_base hash_heap)
- (preprocess (pps ppx_jane)))
+ (preprocess
+  (pps ppx_jane)))

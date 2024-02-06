@@ -1,3 +1,6 @@
-(executables (names bench_pairing_heap)
+(executables
+ (modes byte exe)
+ (names bench_pairing_heap)
  (libraries core_unix.command_unix core core_bench pairing_heap)
- (preprocess (pps ppx_jane)))
+ (preprocess
+  (pps ppx_jane)))

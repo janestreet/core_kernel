@@ -1,2 +1,6 @@
-(library (name reversed_list) (public_name core_kernel.reversed_list)
- (libraries base) (preprocess (pps ppx_jane)))
+(library
+ (name reversed_list)
+ (public_name core_kernel.reversed_list)
+ (libraries base)
+ (preprocess
+  (pps ppx_jane)))

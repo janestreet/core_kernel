@@ -27,6 +27,14 @@ let () =
      | Some (_ :: _ as l) ->
        Base.List.iter l ~f:(fun { repo; version } ->
          assert (Base.String.mem repo '/' && String.length version >= 12)))
+  | [| _; "build-info-must-be-set" |] ->
+    (match Version_util.For_tests.build_info_status with
+     | `Set -> ()
+     | `Not_supported | `Unset -> failwith "build info must be set")
+  | [| _; "build-info-must-be-unset" |] ->
+    (match Version_util.For_tests.build_info_status with
+     | `Unset -> ()
+     | `Not_supported | `Set -> failwith "build info must be unset")
   | _ -> failwith "unexpected command line arguments"
 ;;
 

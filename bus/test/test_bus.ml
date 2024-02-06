@@ -817,7 +817,7 @@ include (
               ~on_subscription_after_first_write:Allow
               ~on_callback_raise:ignore
           in
-          Bus.iter_exn bus [%here] ~f:(fun (x [@local]) ->
+          Bus.iter_exn bus [%here] ~f:(fun x ->
             let x =
               (* hack to globalize the int (local immediates can be trivially globalized)
             *)

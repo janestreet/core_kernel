@@ -87,6 +87,7 @@ val with_fdo : (string * Md5.t option) option
 
 module For_tests : sig
   val parse_generated_hg_version : string -> string list
+  val build_info_status : [ `Not_supported | `Unset | `Set ]
 end
 
 (** If [false], all the variables above are filled in with bogus values.
@@ -113,9 +114,8 @@ module Expert : sig
       seconds for several hundred megabyte binaries. *)
   val get_version_util : contents_of_exe:string -> string option
 
-  (** Inserts the given version util into the executable text given. Returns None if this
-      could not happen (maybe this is an executable that doesn't link in the current
-      library).
+  (** Inserts the given version util into the executable text given. Returns [None] if
+      this could not happen (e.g., the given executable has no version util sections).
 
       [None] means to remove the version util. The purpose is to make it possible to
       compare executables up to version util. *)
@@ -128,8 +128,22 @@ module Expert : sig
       returns. *)
   val parse_generated_hg_version : string -> string list
 
+  module Experimental : sig
+    (** Gets the build info if it exists.
+
+        This functionality is experimental and may be changed/removed with little notice. *)
+    val get_build_info : contents_of_exe:string -> string option
+
+    (** Replaces the payload of all build info sections with the string "NO_BUILD_INFO".
+        Returns [None] if no build info section was found.
+
+        This functionality is experimental and may be changed/removed with little notice. *)
+    val remove_build_info : contents_of_exe:string -> string option
+  end
+
   module For_tests : sig
-    val count_pattern_occurrences : contents_of_exe:string -> int
+    (** Includes version util and build info sections. *)
+    val count_section_occurrences : contents_of_exe:string -> int
   end
 end
 

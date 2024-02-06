@@ -1,3 +1,6 @@
-(library (name thread_pool_cpu_affinity)
- (public_name core_kernel.thread_pool_cpu_affinity) (libraries core)
- (preprocess (pps ppx_jane)))
+(library
+ (name thread_pool_cpu_affinity)
+ (public_name core_kernel.thread_pool_cpu_affinity)
+ (libraries core)
+ (preprocess
+  (pps ppx_jane)))

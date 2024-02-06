@@ -5,18 +5,18 @@ module With_integer_index = struct
   module Kernel : sig
     type 'a t
 
-    val length : (_ t[@local]) -> int
+    val length : _ t -> int
     val capacity : _ t -> int
     val create : ?initial_capacity:int -> unit -> _ t
     val unsafe_create_uninitialized : len:int -> 'a t
-    val init : int -> f:((int -> 'a)[@local]) -> 'a t
+    val init : int -> f:(int -> 'a) -> 'a t
     val unsafe_get : 'a t -> int -> 'a
     val unsafe_set : 'a t -> int -> 'a -> unit
 
     val unsafe_blit
-      :  src:('a t[@local])
+      :  src:'a t
       -> src_pos:int
-      -> dst:('a t[@local])
+      -> dst:'a t
       -> dst_pos:int
       -> len:int
       -> unit
@@ -344,6 +344,15 @@ module With_integer_index = struct
     !result
   ;;
 
+  (* Convert to a sequence but does not attempt to protect against modification
+     in the vec. *)
+  let to_sequence_mutable t =
+    Sequence.unfold_step ~init:0 ~f:(fun i ->
+      if i >= length t then Done else Yield { value = unsafe_get t i; state = i + 1 })
+  ;;
+
+  let to_sequence t = to_sequence_mutable (copy t)
+
   let of_list xs =
     let t = create ~initial_capacity:(List.length xs) () in
     List.iter xs ~f:(push_back t);
@@ -351,6 +360,13 @@ module With_integer_index = struct
   ;;
 
   let of_array arr = init (Array.length arr) ~f:(fun i -> Array.get arr i)
+
+  let of_sequence seq =
+    (* We don't know the length of seq, so we can't set an initial capacity *)
+    let t = create () in
+    Sequence.iter seq ~f:(push_back t);
+    t
+  ;;
 
   let foldi t ~init ~f =
     let r = ref init in
@@ -382,7 +398,7 @@ module With_integer_index = struct
   end)
 
   (** Returns the length of the longest prefix for which [f] is true. *)
-  let take_while_len t ~f:(f [@local]) =
+  let take_while_len t ~f =
     let rec loop i =
       if i >= length t || not (f (get t i)) then i else (loop [@tailcall]) (i + 1)
     in

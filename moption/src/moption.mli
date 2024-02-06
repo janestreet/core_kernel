@@ -4,7 +4,7 @@
 open! Core
 open! Import
 
-type 'a t [@@deriving bin_io, sexp]
+type !'a t [@@deriving bin_io, sexp]
 
 include Invariant.S1 with type 'a t := 'a t
 

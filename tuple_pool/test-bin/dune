@@ -1,6 +1,13 @@
-(executables (names tuple_pool_caml_modify_check)
+(executables
+ (modes byte exe)
+ (names tuple_pool_caml_modify_check)
  (libraries replace_caml_modify_for_testing tuple_pool)
- (preprocess (pps ppx_jane)))
+ (preprocess
+  (pps ppx_jane)))
 
-(alias (name runtest) (deps (:first_dep tuple_pool_caml_modify_check.exe))
- (action (bash ./%{first_dep})))
+(rule
+ (alias runtest)
+ (deps
+  (:first_dep tuple_pool_caml_modify_check.exe))
+ (action
+  (bash ./%{first_dep})))

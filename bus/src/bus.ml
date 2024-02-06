@@ -17,7 +17,7 @@ end
 module Callback_arity = struct
   type _ t =
     | Arity1 : ('a -> unit) t
-    | Arity1_local : (('a[@local]) -> unit) t
+    | Arity1_local : ('a -> unit) t
     | Arity2 : ('a -> 'b -> unit) t
     | Arity3 : ('a -> 'b -> 'c -> unit) t
     | Arity4 : ('a -> 'b -> 'c -> 'd -> unit) t
@@ -514,7 +514,7 @@ let write_non_optimized t callbacks a1 =
   finish_write t
 ;;
 
-let write_local_non_optimized t callbacks (a1 [@local]) =
+let write_local_non_optimized t callbacks a1 =
   let len = t.num_subscribers in
   let i = ref 0 in
   while !i < len do
@@ -609,7 +609,7 @@ let[@inline always] write t a1 =
       else (write_non_optimized [@inlined never]) t callbacks a1)
 ;;
 
-let[@inline always] write_local t (a1 [@local]) =
+let[@inline always] write_local t a1 =
   let callbacks = t.callbacks in
   t.write_ever_called <- true;
   match t.state with

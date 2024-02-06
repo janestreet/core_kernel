@@ -14,7 +14,7 @@ module type S = sig
 
       Raise Invalid_argument if [n < 0].
   *)
-  val init : int -> f:((int -> 'a)[@local]) -> 'a t
+  val init : int -> f:(int -> 'a) -> 'a t
 
   (** Raises if the index is invalid. *)
   val get : 'a t -> index -> 'a
@@ -28,14 +28,14 @@ module type S = sig
   include Blit.S1 with type 'a t := 'a t
 
   (** Finds the first 'a for which f is true **)
-  val find_exn : 'a t -> f:(('a -> bool)[@local]) -> 'a
+  val find_exn : 'a t -> f:('a -> bool) -> 'a
 
   (** [sort] uses constant heap space.
       To sort only part of the array, specify [pos] to be the index to start sorting from
       and [len] indicating how many elements to sort. *)
   val sort : ?pos:int -> ?len:int -> 'a t -> compare:('a -> 'a -> int) -> unit
 
-  val is_sorted : 'a t -> compare:(('a -> 'a -> int)[@local]) -> bool
+  val is_sorted : 'a t -> compare:('a -> 'a -> int) -> bool
   val next_free_index : 'a t -> index
   val push_back : 'a t -> 'a -> unit
   val push_back_index : 'a t -> 'a -> index
@@ -66,28 +66,32 @@ module type S = sig
   (** Find the first element that satisfies [f]. If exists, remove the element from the
       vector and return it. This is not a fast implementation, and runs in O(N) time.
   *)
-  val find_and_remove : 'a t -> f:(('a -> bool)[@local]) -> 'a option
+  val find_and_remove : 'a t -> f:('a -> bool) -> 'a option
 
   val pop_back_exn : 'a t -> 'a
   val pop_back_unit_exn : 'a t -> unit
   val peek_back : 'a t -> 'a option
   val peek_back_exn : 'a t -> 'a
-
-  val foldi
-    :  'a t
-    -> init:'accum
-    -> f:((index -> 'accum -> 'a -> 'accum)[@local])
-    -> 'accum
-
-  val iteri : 'a t -> f:((index -> 'a -> unit)[@local]) -> unit
+  val foldi : 'a t -> init:'accum -> f:(index -> 'accum -> 'a -> 'accum) -> 'accum
+  val iteri : 'a t -> f:(index -> 'a -> unit) -> unit
   val to_list : 'a t -> 'a list
   val to_alist : 'a t -> (index * 'a) list
+
+  (** The input vec is copied internally so that future modifications of it do not change
+      the sequence. *)
+  val to_sequence : 'a t -> 'a Sequence.t
+
+  (** The input vec is shared with the sequence and modifications of it will result in
+      modification of the sequence. *)
+  val to_sequence_mutable : 'a t -> 'a Sequence.t
+
   val of_list : 'a list -> 'a t
   val of_array : 'a array -> 'a t
+  val of_sequence : 'a Sequence.t -> 'a t
 
   (** [take_while t ~f] returns a fresh vec containing the longest prefix of [t] for which
       [f] is [true]. *)
-  val take_while : 'a t -> f:(('a -> bool)[@local]) -> 'a t
+  val take_while : 'a t -> f:('a -> bool) -> 'a t
 
   module Inplace : sig
     (** [sub] is like [Blit.sub], but modifies the vec in place. *)
@@ -95,16 +99,16 @@ module type S = sig
 
     (** [take_while t ~f] shortens the vec in place to the longest prefix of [t] for which
         [f] is [true]. *)
-    val take_while : 'a t -> f:(('a -> bool)[@local]) -> unit
+    val take_while : 'a t -> f:('a -> bool) -> unit
 
     (** Remove all elements from [t] that don't satisfy [f]. Shortens the vec in place. *)
-    val filter : 'a t -> f:(('a -> bool)[@local]) -> unit
+    val filter : 'a t -> f:('a -> bool) -> unit
 
     (** Modifies a vec in place, applying [f] to every element of the vec. *)
-    val map : 'a t -> f:(('a -> 'a)[@local]) -> unit
+    val map : 'a t -> f:('a -> 'a) -> unit
 
     (** Same as [map], but [f] also takes the index. *)
-    val mapi : 'a t -> f:((index -> 'a -> 'a)[@local]) -> unit
+    val mapi : 'a t -> f:(index -> 'a -> 'a) -> unit
   end
 
   (** The number of elements we can hold without growing. *)
@@ -121,7 +125,7 @@ module type S = sig
   val copy : 'a t -> 'a t
 
   (** [exists t ~f] returns true if [f] evaluates true on any element, else false *)
-  val exists : 'a t -> f:(('a -> bool)[@local]) -> bool
+  val exists : 'a t -> f:('a -> bool) -> bool
 
   (** swap the values at the provided indices *)
   val swap : _ t -> index -> index -> unit

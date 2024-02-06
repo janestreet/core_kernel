@@ -1,2 +1,6 @@
-(library (name enum) (public_name core_kernel.enum)
- (preprocess (pps ppx_jane)) (libraries base core.command))
+(library
+ (name enum)
+ (public_name core_kernel.enum)
+ (preprocess
+  (pps ppx_jane))
+ (libraries base core.command))

@@ -62,17 +62,17 @@ let%test_module "create_rand does a reasonable creation" =
       done;
       [%expect
         {|
-      0b90ffe5-a5a2-4da5-2b62-a5d151b81f94
-      4f772c29-2a7a-449b-9a9a-87c8da18e436
-      6090f17f-c5b7-4fdf-9d9e-8bc29d3604c5
-      cc6ee6e0-0c6d-47aa-4f42-a5d9ee94051a
-      a1185b42-098e-45a3-6013-97758b2c4036
-      628dfcfb-e6e7-42a9-bc53-0e69decd0bee
-      9b5130dc-1c44-4810-e9f6-9801606b6716
-      180cff8f-ab16-4081-d3cc-870fcff725ba
-      330195b9-3a70-49a3-88ce-cf0e41f664a7
-      ad20430d-84bf-4be2-1535-a8b753eb47dc
-      166fca01-529d-4016-2173-a47fdfe432b9 |}]
+      c14ac950-b432-46ed-7d19-622539d60705
+      a7b6c250-74a1-4865-d844-0f363cd03b01
+      fd08e817-23af-4c3e-468a-2f62976e42fc
+      9d013e20-a916-4ac6-e32b-a5c086d493b8
+      5d03ec13-5f28-4ad7-4874-96abccf22ece
+      31e69bdf-77e8-4ba0-9537-204f9027a9eb
+      0acbe3d4-1c12-4123-2b37-a73bcaffc8b3
+      1c70ce60-708a-46da-c92e-8edaf429ffef
+      69a984c2-8e41-4004-65d3-b52f4d263bd9
+      d6f253c4-f8c8-4390-b3a7-5b201fc215e9
+      11051874-0aca-4276-eaa4-0476434d3f12 |}]
     ;;
   end)
 ;;

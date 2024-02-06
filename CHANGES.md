@@ -1850,7 +1850,7 @@ you might want to have a look at Base's
   generative functor that creates new types, then we also need to make
   the enclosing functor generative.
 
-  For functors that don't create types (like `Async.Log.Make_global`),
+  For functors that don't create types (like `Async.Log.Global.Make`),
   generative or applicative functors are the same, but the syntax of
   generative functors is lighter.
 - Exported `Core_kernel.Std.With_return`.

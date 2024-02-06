@@ -1,2 +1,6 @@
-(library (name moption) (public_name core_kernel.moption)
- (preprocess (pps ppx_jane)) (libraries core))
+(library
+ (name moption)
+ (public_name core_kernel.moption)
+ (preprocess
+  (pps ppx_jane))
+ (libraries core))

@@ -1,2 +1,6 @@
-(library (name unpack_buffer) (public_name core_kernel.unpack_buffer)
- (preprocess (pps ppx_jane)) (libraries core))
+(library
+ (name unpack_buffer)
+ (public_name core_kernel.unpack_buffer)
+ (preprocess
+  (pps ppx_jane))
+ (libraries core))

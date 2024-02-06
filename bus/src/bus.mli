@@ -26,7 +26,7 @@ open! Core
 module Callback_arity : sig
   type _ t =
     | Arity1 : ('a -> unit) t
-    | Arity1_local : (('a[@local]) -> unit) t
+    | Arity1_local : ('a -> unit) t
     | Arity2 : ('a -> 'b -> unit) t
     | Arity3 : ('a -> 'b -> 'c -> unit) t
     | Arity4 : ('a -> 'b -> 'c -> 'd -> unit) t
@@ -100,7 +100,7 @@ val close : 'callback Read_write.t -> unit
     from within a callback on [t] or when [is_closed t]. *)
 
 val write : ('a -> unit) Read_write.t -> 'a -> unit
-val write_local : (('a[@local]) -> unit) Read_write.t -> ('a[@local]) -> unit
+val write_local : ('a -> unit) Read_write.t -> 'a -> unit
 val write2 : ('a -> 'b -> unit) Read_write.t -> 'a -> 'b -> unit
 val write3 : ('a -> 'b -> 'c -> unit) Read_write.t -> 'a -> 'b -> 'c -> unit
 val write4 : ('a -> 'b -> 'c -> 'd -> unit) Read_write.t -> 'a -> 'b -> 'c -> 'd -> unit

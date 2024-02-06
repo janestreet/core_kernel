@@ -36,6 +36,7 @@ module type S_plain = sig
 
   val create : (Key.t -> 'a) -> 'a t
   val create_const : 'a -> 'a t
+  val of_alist_exn : (Key.t * 'a) list -> 'a t
 end
 
 (** An alternative interface for [S_plain] which can be used with [include functor]. We

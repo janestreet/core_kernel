@@ -1,2 +1,6 @@
-(executables (names bench_pooled_hashtbl) (libraries core pooled_hashtbl)
- (preprocess (pps ppx_jane)))
+(executables
+ (modes byte exe)
+ (names bench_pooled_hashtbl)
+ (libraries core pooled_hashtbl)
+ (preprocess
+  (pps ppx_jane)))

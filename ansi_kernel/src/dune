@@ -1,2 +1,6 @@
-(library (name ansi_kernel) (public_name core_kernel.ansi_kernel)
- (libraries core) (preprocess (pps ppx_jane)))
+(library
+ (name ansi_kernel)
+ (public_name core_kernel.ansi_kernel)
+ (libraries core)
+ (preprocess
+  (pps ppx_jane)))

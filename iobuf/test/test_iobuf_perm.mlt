@@ -5,9 +5,8 @@ let () = Iobuf.Poke.char (Iobuf.read_only (Iobuf.create ~len:1)) 'c'
 [%%expect
   {|
 Line _, characters _-_:
-Error: This expression has type (read, 'a) Iobuf.t_with_shallow_sexp
-       but an expression was expected of type
-         (read_write, 'b) Iobuf.t_with_shallow_sexp
+Error: This expression has type (read, 'a) Iobuf.t
+       but an expression was expected of type (read_write, 'b) Iobuf.t
        Type read = [ `Read ] is not compatible with type
          read_write = [ `Read | `Who_can_write of Perms.me ]
        The first variant type does not allow tag(s) `Who_can_write
@@ -23,7 +22,8 @@ type ns = (read_write, Iobuf.no_seek) Iobuf.t
 let check_subtyping x = (x : rw :> ro)
 let check_subtyping x = (x : sk :> ns)
 
-[%%expect {|
+[%%expect
+  {|
 |}]
 
 (* This only works if the 'seek parameter is covariant. *)
@@ -38,7 +38,8 @@ let t =
   { message = buf; writable = buf }
 ;;
 
-[%%expect {|
+[%%expect
+  {|
 |}]
 
 (* Operations have the right permissions. *)
@@ -53,7 +54,8 @@ let (_ : char) = Iobuf.Consume.char seekable
 let () = Iobuf.Fill.char seekable 'a'
 let () = Iobuf.resize seekable ~len:0
 
-[%%expect {|
+[%%expect
+  {|
 |}]
 
 let () = Iobuf.advance unseekable 1
@@ -61,10 +63,9 @@ let () = Iobuf.advance unseekable 1
 [%%expect
   {|
 Line _, characters _-_:
-Error: This expression has type
-         (read_write, Iobuf.no_seek) Iobuf.t_with_shallow_sexp
+Error: This expression has type (read_write, Iobuf.no_seek) Iobuf.t
        but an expression was expected of type
-         (read_write, Iobuf.seek) Iobuf.t_with_shallow_sexp
+         (read_write, Iobuf.seek) Iobuf.t
        Type Iobuf.no_seek is not compatible with type Iobuf.seek
 |}]
 
@@ -73,10 +74,9 @@ let () = Iobuf.resize unseekable ~len:0
 [%%expect
   {|
 Line _, characters _-_:
-Error: This expression has type
-         (read_write, Iobuf.no_seek) Iobuf.t_with_shallow_sexp
+Error: This expression has type (read_write, Iobuf.no_seek) Iobuf.t
        but an expression was expected of type
-         (read_write, Iobuf.seek) Iobuf.t_with_shallow_sexp
+         (read_write, Iobuf.seek) Iobuf.t
        Type Iobuf.no_seek is not compatible with type Iobuf.seek
 |}]
 
@@ -85,9 +85,8 @@ let () = Iobuf.Fill.char unseekable 'a'
 [%%expect
   {|
 Line _, characters _-_:
-Error: This expression has type
-         (read_write, Iobuf.no_seek) Iobuf.t_with_shallow_sexp
+Error: This expression has type (read_write, Iobuf.no_seek) Iobuf.t
        but an expression was expected of type
-         (read_write, Iobuf.seek) Iobuf.t_with_shallow_sexp
+         (read_write, Iobuf.seek) Iobuf.t
        Type Iobuf.no_seek is not compatible with type Iobuf.seek
 |}]

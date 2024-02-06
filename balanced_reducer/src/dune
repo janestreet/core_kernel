@@ -1,2 +1,6 @@
-(library (name balanced_reducer) (public_name core_kernel.balanced_reducer)
- (libraries base) (preprocess (pps ppx_jane)))
+(library
+ (name balanced_reducer)
+ (public_name core_kernel.balanced_reducer)
+ (libraries base)
+ (preprocess
+  (pps ppx_jane)))

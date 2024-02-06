@@ -1,2 +1,6 @@
-(library (name bounded_int_table) (public_name core_kernel.bounded_int_table)
- (preprocess (pps ppx_jane)) (libraries core))
+(library
+ (name bounded_int_table)
+ (public_name core_kernel.bounded_int_table)
+ (preprocess
+  (pps ppx_jane))
+ (libraries core))

@@ -187,10 +187,9 @@ let check_range t ~pos ~len =
 ;;
 
 let[@inline always] unsafe_bigstring_view ~pos ~len buf =
-  
-    (let lo = pos in
-     let hi = pos + len in
-     { buf; lo_min = lo; lo; hi; hi_max = hi })
+  let lo = pos in
+  let hi = pos + len in
+  { buf; lo_min = lo; lo; hi; hi_max = hi }
 ;;
 
 let[@inline always] check_bigstring ~bstr ~pos ~len =
@@ -204,36 +203,34 @@ let[@inline always] check_bigstring ~bstr ~pos ~len =
 ;;
 
 let bigstring_view ~pos ~len bstr =
-  
-    (check_bigstring ~bstr ~pos ~len;
-     unsafe_bigstring_view ~pos ~len bstr)
+  check_bigstring ~bstr ~pos ~len;
+  unsafe_bigstring_view ~pos ~len bstr
 ;;
 
 let of_bigstring_local ?pos ?len buf =
-  
-    (let str_len = Bigstring.length buf in
-     let pos =
-       match pos with
-       | None -> 0
-       | Some pos ->
-         if pos < 0 || pos > str_len
-         then
-           raise_s
-             [%sexp "Iobuf.of_bigstring got invalid pos", (pos : int), ~~(str_len : int)];
-         pos
-     in
-     let len =
-       match len with
-       | None -> str_len - pos
-       | Some len ->
-         let max_len = str_len - pos in
-         if len < 0 || len > max_len
-         then
-           raise_s
-             [%sexp "Iobuf.of_bigstring got invalid pos", (len : int), ~~(max_len : int)];
-         len
-     in
-     unsafe_bigstring_view ~pos ~len buf)
+  let str_len = Bigstring.length buf in
+  let pos =
+    match pos with
+    | None -> 0
+    | Some pos ->
+      if pos < 0 || pos > str_len
+      then
+        raise_s
+          [%sexp "Iobuf.of_bigstring got invalid pos", (pos : int), ~~(str_len : int)];
+      pos
+  in
+  let len =
+    match len with
+    | None -> str_len - pos
+    | Some len ->
+      let max_len = str_len - pos in
+      if len < 0 || len > max_len
+      then
+        raise_s
+          [%sexp "Iobuf.of_bigstring got invalid pos", (len : int), ~~(max_len : int)];
+      len
+  in
+  unsafe_bigstring_view ~pos ~len buf
 ;;
 
 let unsafe_bigstring_view =
@@ -245,16 +242,15 @@ let of_bigstring ?pos ?len buf =
 ;;
 
 let sub_shared_local ?(pos = 0) ?len t =
-  
-    (let len =
-       match len with
-       | None -> length t - pos
-       | Some len -> len
-     in
-     check_range t ~pos ~len;
-     let lo = t.lo + pos in
-     let hi = lo + len in
-     { buf = t.buf; lo_min = lo; lo; hi; hi_max = hi })
+  let len =
+    match len with
+    | None -> length t - pos
+    | Some len -> len
+  in
+  check_range t ~pos ~len;
+  let lo = t.lo + pos in
+  let hi = lo + len in
+  { buf = t.buf; lo_min = lo; lo; hi; hi_max = hi }
 ;;
 
 let sub_shared ?pos ?len t =
@@ -335,31 +331,30 @@ let protect_window_bounds_and_buffer t ~f =
 ;;
 
 let protect_window_bounds_and_buffer_local t ~f =
-  
-    (let lo = t.lo in
-     let hi = t.hi in
-     let lo_min = t.lo_min in
-     let hi_max = t.hi_max in
-     let buf = t.buf in
-     (* also mutable *)
-     try
-       t.lo_min <- lo;
-       t.hi_max <- hi;
-       let result = f t in
-       t.lo <- lo;
-       t.hi <- hi;
-       t.lo_min <- lo_min;
-       t.hi_max <- hi_max;
-       if not (phys_equal buf t.buf) then t.buf <- buf;
-       result
-     with
-     | exn ->
-       t.lo <- lo;
-       t.hi <- hi;
-       t.lo_min <- lo_min;
-       t.hi_max <- hi_max;
-       if not (phys_equal buf t.buf) then t.buf <- buf;
-       raise exn)
+  let lo = t.lo in
+  let hi = t.hi in
+  let lo_min = t.lo_min in
+  let hi_max = t.hi_max in
+  let buf = t.buf in
+  (* also mutable *)
+  try
+    t.lo_min <- lo;
+    t.hi_max <- hi;
+    let result = f t in
+    t.lo <- lo;
+    t.hi <- hi;
+    t.lo_min <- lo_min;
+    t.hi_max <- hi_max;
+    if not (phys_equal buf t.buf) then t.buf <- buf;
+    result
+  with
+  | exn ->
+    t.lo <- lo;
+    t.hi <- hi;
+    t.lo_min <- lo_min;
+    t.hi_max <- hi_max;
+    if not (phys_equal buf t.buf) then t.buf <- buf;
+    raise exn
 ;;
 
 let protect_window_bounds_and_buffer_1 t x ~f =
@@ -621,7 +616,7 @@ module Consume = struct
     type t [@@deriving sexp_of]
 
     val create : len:int -> t
-    val length : (t[@local]) -> int
+    val length : t -> int
     val get : t -> int -> char
     val set : t -> int -> char -> unit
     val unsafe_blit : (T.t, t) Blit.blit
@@ -685,10 +680,8 @@ module Consume = struct
     ;;
   end
 
-  type nonrec ('a, 'd, 'w) t_local = (('d, seek) t[@local]) -> ('a[@local])
-    constraint 'd = [> read ]
-
-  type nonrec ('a, 'd, 'w) t = (('d, seek) t[@local]) -> 'a constraint 'd = [> read ]
+  type nonrec ('a, 'd, 'w) t_local = ('d, seek) t -> 'a constraint 'd = [> read ]
+  type nonrec ('a, 'd, 'w) t = ('d, seek) t -> 'a constraint 'd = [> read ]
 
   let uadv t n x =
     unsafe_advance t n;
@@ -771,64 +764,57 @@ module Consume = struct
 
   module Local = struct
     let tail_padded_fixed_string ~padding ~len t =
-      
-        (uadv_local
-           t
-           len
-           (Bigstring.get_tail_padded_fixed_string_local
-              t.buf
-              ~pos:(pos t len)
-              ~padding
-              ~len
-              ()))
+      uadv_local
+        t
+        len
+        (Bigstring.get_tail_padded_fixed_string_local
+           t.buf
+           ~pos:(pos t len)
+           ~padding
+           ~len
+           ())
     ;;
 
     let head_padded_fixed_string ~padding ~len t =
-      
-        (uadv_local
-           t
-           len
-           (Bigstring.get_head_padded_fixed_string_local
-              t.buf
-              ~pos:(pos t len)
-              ~padding
-              ~len
-              ()))
+      uadv_local
+        t
+        len
+        (Bigstring.get_head_padded_fixed_string_local
+           t.buf
+           ~pos:(pos t len)
+           ~padding
+           ~len
+           ())
     ;;
 
     let bytes ~str_pos ~len t =
-      
-        (let dst = Bytes.create_local (len + str_pos) in
-         To_bytes.blit ~src:t ~dst ~len ~dst_pos:str_pos;
-         dst)
+      let dst = Bytes.create_local (len + str_pos) in
+      To_bytes.blit ~src:t ~dst ~len ~dst_pos:str_pos;
+      dst
     ;;
 
     let string ~str_pos ~len t =
-      
-        (Bytes.unsafe_to_string
-           ~no_mutation_while_string_reachable:(bytes ~str_pos ~len t))
+      Bytes.unsafe_to_string ~no_mutation_while_string_reachable:(bytes ~str_pos ~len t)
     ;;
 
     let byteso ?(str_pos = 0) ?len t =
-      
-        (bytes
-           t
-           ~str_pos
-           ~len:
-             (match len with
-              | None -> length t
-              | Some len -> len))
+      bytes
+        t
+        ~str_pos
+        ~len:
+          (match len with
+           | None -> length t
+           | Some len -> len)
     ;;
 
     let stringo ?(str_pos = 0) ?len t =
-      
-        (string
-           t
-           ~str_pos
-           ~len:
-             (match len with
-              | None -> length t
-              | Some len -> len))
+      string
+        t
+        ~str_pos
+        ~len:
+          (match len with
+           | None -> length t
+           | Some len -> len)
     ;;
 
     open Bigstring
@@ -836,13 +822,11 @@ module Consume = struct
     let len = 8
 
     let[@inline always] int64_t_be t =
-      
-        (uadv_local t len (Local.unsafe_get_int64_t_be t.buf ~pos:(pos t len)) [@nontail])
+      uadv_local t len (Local.unsafe_get_int64_t_be t.buf ~pos:(pos t len)) [@nontail]
     ;;
 
     let[@inline always] int64_t_le t =
-      
-        (uadv_local t len (Local.unsafe_get_int64_t_le t.buf ~pos:(pos t len)) [@nontail])
+      uadv_local t len (Local.unsafe_get_int64_t_le t.buf ~pos:(pos t len)) [@nontail]
     ;;
   end
 
@@ -1128,42 +1112,41 @@ module Date_string = struct
 end
 
 module Fill = struct
-  type nonrec ('a, 'd, 'w) t_local =
-    ((read_write, seek) t[@local]) -> ('a[@local]) -> unit
+  type nonrec ('a, 'd, 'w) t_local = (read_write, seek) t -> 'a -> unit
     constraint 'd = [> read ]
 
-  type nonrec ('a, 'd, 'w) t = ((read_write, seek) t[@local]) -> 'a -> unit
+  type nonrec ('a, 'd, 'w) t = (read_write, seek) t -> 'a -> unit
     constraint 'd = [> read ]
 
   let[@inline] pos t len = buf_pos_exn t ~pos:0 ~len
   let uadv = unsafe_advance
 
-  let tail_padded_fixed_string ~padding ~len t (src [@local]) =
+  let tail_padded_fixed_string ~padding ~len t src =
     Bigstring.set_tail_padded_fixed_string ~padding ~len t.buf ~pos:(pos t len) src;
     uadv t len
   ;;
 
-  let head_padded_fixed_string ~padding ~len t (src [@local]) =
+  let head_padded_fixed_string ~padding ~len t src =
     Bigstring.set_head_padded_fixed_string ~padding ~len t.buf ~pos:(pos t len) src;
     uadv t len
   ;;
 
-  let bytes ~str_pos ~len t (src [@local]) =
+  let bytes ~str_pos ~len t src =
     Bigstring.From_bytes.blit ~src ~src_pos:str_pos ~len ~dst:t.buf ~dst_pos:(pos t len);
     uadv t len
   ;;
 
-  let string ~str_pos ~len t (src [@local]) =
+  let string ~str_pos ~len t src =
     Bigstring.From_string.blit ~src ~src_pos:str_pos ~len ~dst:t.buf ~dst_pos:(pos t len);
     uadv t len
   ;;
 
-  let bigstring ~str_pos ~len t (src [@local]) =
+  let bigstring ~str_pos ~len t src =
     Bigstring.blit ~src ~src_pos:str_pos ~len ~dst:t.buf ~dst_pos:(pos t len);
     uadv t len
   ;;
 
-  let byteso ?(str_pos = 0) ?len t (src [@local]) =
+  let byteso ?(str_pos = 0) ?len t src =
     bytes
       t
       src
@@ -1174,7 +1157,7 @@ module Fill = struct
          | Some len -> len)
   ;;
 
-  let stringo ?(str_pos = 0) ?len t (src [@local]) =
+  let stringo ?(str_pos = 0) ?len t src =
     string
       t
       src
@@ -1185,7 +1168,7 @@ module Fill = struct
          | Some len -> len)
   ;;
 
-  let bigstringo ?(str_pos = 0) ?len t (src [@local]) =
+  let bigstringo ?(str_pos = 0) ?len t src =
     bigstring
       t
       src
@@ -1293,12 +1276,12 @@ module Fill = struct
     uadv t len
   ;;
 
-  let[@inline always] int64_t_be t (i [@local]) =
+  let[@inline always] int64_t_be t i =
     unsafe_set_int64_t_be t.buf i ~pos:(pos t len);
     uadv t len
   ;;
 
-  let[@inline always] int64_t_le t (i [@local]) =
+  let[@inline always] int64_t_le t i =
     unsafe_set_int64_t_le t.buf i ~pos:(pos t len);
     uadv t len
   ;;
@@ -1340,11 +1323,8 @@ module Peek = struct
 
   module To_string = String_dst
 
-  type nonrec ('a, 'd, 'w) t_local = (('d, 'w) t[@local]) -> pos:int -> ('a[@local])
-    constraint 'd = [> read ]
-
-  type nonrec ('a, 'd, 'w) t = (('d, 'w) t[@local]) -> pos:int -> 'a
-    constraint 'd = [> read ]
+  type nonrec ('a, 'd, 'w) t_local = ('d, 'w) t -> pos:int -> 'a constraint 'd = [> read ]
+  type nonrec ('a, 'd, 'w) t = ('d, 'w) t -> pos:int -> 'a constraint 'd = [> read ]
 
   let spos = buf_pos_exn (* "safe position" *)
 
@@ -1420,65 +1400,59 @@ module Peek = struct
 
   module Local = struct
     let tail_padded_fixed_string ~padding ~len t ~pos =
-      
-        (Bigstring.get_tail_padded_fixed_string_local
-           t.buf
-           ~padding
-           ~len
-           ~pos:(spos t ~len ~pos)
-           ())
+      Bigstring.get_tail_padded_fixed_string_local
+        t.buf
+        ~padding
+        ~len
+        ~pos:(spos t ~len ~pos)
+        ()
     ;;
 
     let head_padded_fixed_string ~padding ~len t ~pos =
-      
-        (Bigstring.get_head_padded_fixed_string_local
-           t.buf
-           ~padding
-           ~len
-           ~pos:(spos t ~len ~pos)
-           ())
+      Bigstring.get_head_padded_fixed_string_local
+        t.buf
+        ~padding
+        ~len
+        ~pos:(spos t ~len ~pos)
+        ()
     ;;
 
     let bytes ~str_pos ~len t ~pos =
-      
-        (let dst = Bytes.create_local (len + str_pos) in
-         Bigstring.To_bytes.blit
-           ~src:t.buf
-           ~src_pos:(spos t ~len ~pos)
-           ~len
-           ~dst
-           ~dst_pos:str_pos;
-         dst)
+      let dst = Bytes.create_local (len + str_pos) in
+      Bigstring.To_bytes.blit
+        ~src:t.buf
+        ~src_pos:(spos t ~len ~pos)
+        ~len
+        ~dst
+        ~dst_pos:str_pos;
+      dst
     ;;
 
     let string ~str_pos ~len t ~pos =
-      
-        (Bytes.unsafe_to_string
-           ~no_mutation_while_string_reachable:(bytes ~str_pos ~len t ~pos))
+      Bytes.unsafe_to_string
+        ~no_mutation_while_string_reachable:(bytes ~str_pos ~len t ~pos)
     ;;
 
     let byteso ?(str_pos = 0) ?len t ~pos =
-      
-        (bytes
-           t
-           ~pos
-           ~str_pos
-           ~len:
-             (match len with
-              | None -> length t - pos
-              | Some len -> len))
+      bytes
+        t
+        ~pos
+        ~str_pos
+        ~len:
+          (match len with
+           | None -> length t - pos
+           | Some len -> len)
     ;;
 
     let stringo ?(str_pos = 0) ?len t ~pos =
-      
-        (string
-           t
-           ~pos
-           ~str_pos
-           ~len:
-             (match len with
-              | None -> length t - pos
-              | Some len -> len))
+      string
+        t
+        ~pos
+        ~str_pos
+        ~len:
+          (match len with
+           | None -> length t - pos
+           | Some len -> len)
     ;;
 
     open Bigstring
@@ -1486,13 +1460,11 @@ module Peek = struct
     let len = 8
 
     let[@inline always] int64_t_be t ~pos =
-      
-        (Local.unsafe_get_int64_t_be t.buf ~pos:(spos t ~len ~pos) [@nontail])
+      Local.unsafe_get_int64_t_be t.buf ~pos:(spos t ~len ~pos) [@nontail]
     ;;
 
     let[@inline always] int64_t_le t ~pos =
-      
-        (Local.unsafe_get_int64_t_le t.buf ~pos:(spos t ~len ~pos) [@nontail])
+      Local.unsafe_get_int64_t_le t.buf ~pos:(spos t ~len ~pos) [@nontail]
     ;;
   end
 
@@ -1601,11 +1573,10 @@ module Peek = struct
 end
 
 module Poke = struct
-  type nonrec ('a, 'd, 'w) t_local =
-    ((read_write, 'w) t[@local]) -> pos:int -> ('a[@local]) -> unit
+  type nonrec ('a, 'd, 'w) t_local = (read_write, 'w) t -> pos:int -> 'a -> unit
     constraint 'd = [> read ]
 
-  type nonrec ('a, 'd, 'w) t = ((read_write, 'w) t[@local]) -> pos:int -> 'a -> unit
+  type nonrec ('a, 'd, 'w) t = (read_write, 'w) t -> pos:int -> 'a -> unit
     constraint 'd = [> read ]
 
   let spos = buf_pos_exn (* "safe position" *)
@@ -2141,19 +2112,18 @@ module Expert = struct
   ;;
 
   let protect_window_local t ~f =
-    
-      (let lo = t.lo in
-       let hi = t.hi in
-       try
-         let result = f t in
-         t.lo <- lo;
-         t.hi <- hi;
-         result
-       with
-       | exn ->
-         t.lo <- lo;
-         t.hi <- hi;
-         raise exn)
+    let lo = t.lo in
+    let hi = t.hi in
+    try
+      let result = f t in
+      t.lo <- lo;
+      t.hi <- hi;
+      result
+    with
+    | exn ->
+      t.lo <- lo;
+      t.hi <- hi;
+      raise exn
   ;;
 end
 
@@ -2186,7 +2156,7 @@ module Unsafe = struct
       [@@inline always]
     ;;
 
-    let uadv_local t n (x [@local]) =
+    let uadv_local t n x =
       unsafe_advance t n;
       x
       [@@inline always]
@@ -2218,29 +2188,27 @@ module Unsafe = struct
 
     module Local = struct
       let tail_padded_fixed_string ~padding ~len t =
-        
-          (uadv_local
-             t
-             len
-             (Bigstring.get_tail_padded_fixed_string_local
-                t.buf
-                ~pos:(upos t len)
-                ~padding
-                ~len
-                ()))
+        uadv_local
+          t
+          len
+          (Bigstring.get_tail_padded_fixed_string_local
+             t.buf
+             ~pos:(upos t len)
+             ~padding
+             ~len
+             ())
       ;;
 
       let head_padded_fixed_string ~padding ~len t =
-        
-          (uadv_local
-             t
-             len
-             (Bigstring.get_head_padded_fixed_string_local
-                t.buf
-                ~pos:(upos t len)
-                ~padding
-                ~len
-                ()))
+        uadv_local
+          t
+          len
+          (Bigstring.get_head_padded_fixed_string_local
+             t.buf
+             ~pos:(upos t len)
+             ~padding
+             ~len
+             ())
       ;;
 
       let bytes = Consume.Local.bytes
@@ -2253,19 +2221,11 @@ module Unsafe = struct
       let len = 8
 
       let[@inline always] int64_t_be t =
-        
-          (uadv_local
-             t
-             len
-             (Local.unsafe_get_int64_t_be t.buf ~pos:(upos t len)) [@nontail])
+        uadv_local t len (Local.unsafe_get_int64_t_be t.buf ~pos:(upos t len)) [@nontail]
       ;;
 
       let[@inline always] int64_t_le t =
-        
-          (uadv_local
-             t
-             len
-             (Local.unsafe_get_int64_t_le t.buf ~pos:(upos t len)) [@nontail])
+        uadv_local t len (Local.unsafe_get_int64_t_le t.buf ~pos:(upos t len)) [@nontail]
       ;;
     end
 
@@ -2684,65 +2644,59 @@ module Unsafe = struct
 
     module Local = struct
       let tail_padded_fixed_string ~padding ~len t ~pos =
-        
-          (Bigstring.get_tail_padded_fixed_string_local
-             t.buf
-             ~padding
-             ~len
-             ~pos:(upos t ~len ~pos)
-             ())
+        Bigstring.get_tail_padded_fixed_string_local
+          t.buf
+          ~padding
+          ~len
+          ~pos:(upos t ~len ~pos)
+          ()
       ;;
 
       let head_padded_fixed_string ~padding ~len t ~pos =
-        
-          (Bigstring.get_head_padded_fixed_string_local
-             t.buf
-             ~padding
-             ~len
-             ~pos:(upos t ~len ~pos)
-             ())
+        Bigstring.get_head_padded_fixed_string_local
+          t.buf
+          ~padding
+          ~len
+          ~pos:(upos t ~len ~pos)
+          ()
       ;;
 
       let bytes ~str_pos ~len t ~pos =
-        
-          (let dst = Bytes.create_local (len + str_pos) in
-           Bigstring.To_bytes.unsafe_blit
-             ~src:t.buf
-             ~src_pos:(upos t ~len ~pos)
-             ~len
-             ~dst
-             ~dst_pos:str_pos;
-           dst)
+        let dst = Bytes.create_local (len + str_pos) in
+        Bigstring.To_bytes.unsafe_blit
+          ~src:t.buf
+          ~src_pos:(upos t ~len ~pos)
+          ~len
+          ~dst
+          ~dst_pos:str_pos;
+        dst
       ;;
 
       let string ~str_pos ~len t ~pos =
-        
-          (Bytes.unsafe_to_string
-             ~no_mutation_while_string_reachable:(bytes ~str_pos ~len t ~pos))
+        Bytes.unsafe_to_string
+          ~no_mutation_while_string_reachable:(bytes ~str_pos ~len t ~pos)
       ;;
 
       let byteso ?(str_pos = 0) ?len t ~pos =
-        
-          (bytes
-             t
-             ~pos
-             ~str_pos
-             ~len:
-               (match len with
-                | None -> length t - pos
-                | Some len -> len))
+        bytes
+          t
+          ~pos
+          ~str_pos
+          ~len:
+            (match len with
+             | None -> length t - pos
+             | Some len -> len)
       ;;
 
       let stringo ?(str_pos = 0) ?len t ~pos =
-        
-          (string
-             t
-             ~pos
-             ~str_pos
-             ~len:
-               (match len with
-                | None -> length t - pos
-                | Some len -> len))
+        string
+          t
+          ~pos
+          ~str_pos
+          ~len:
+            (match len with
+             | None -> length t - pos
+             | Some len -> len)
       ;;
 
       open Bigstring
@@ -2750,13 +2704,11 @@ module Unsafe = struct
       let len = 8
 
       let[@inline always] int64_t_be t ~pos =
-        
-          (Local.unsafe_get_int64_t_be t.buf ~pos:(upos t ~len ~pos) [@nontail])
+        Local.unsafe_get_int64_t_be t.buf ~pos:(upos t ~len ~pos) [@nontail]
       ;;
 
       let[@inline always] int64_t_le t ~pos =
-        
-          (Local.unsafe_get_int64_t_le t.buf ~pos:(upos t ~len ~pos) [@nontail])
+        Local.unsafe_get_int64_t_le t.buf ~pos:(upos t ~len ~pos) [@nontail]
       ;;
     end
 

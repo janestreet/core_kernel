@@ -1,2 +1,6 @@
-(library (name thread_safe_queue) (public_name core_kernel.thread_safe_queue)
- (preprocess (pps ppx_jane)) (libraries core uopt))
+(library
+ (name thread_safe_queue)
+ (public_name core_kernel.thread_safe_queue)
+ (preprocess
+  (pps ppx_jane))
+ (libraries core uopt))
