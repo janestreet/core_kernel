@@ -48,6 +48,7 @@ val to_sequence : 'a t -> 'a Sequence.t
 val sort : 'a t -> compare:('a -> 'a -> int) -> 'a t
 val stable_sort : 'a t -> compare:('a -> 'a -> int) -> 'a t
 val dedup_and_sort : 'a t -> compare:('a -> 'a -> int) -> 'a t
+val permute : ?random_state:Random.State.t -> 'a t -> 'a t
 val iteri : 'a t -> f:(int -> 'a -> unit) -> unit
 val cartesian_product : 'a t -> 'b t -> ('a * 'b) t
 val fold_nonempty : 'a t -> init:('a -> 'acc) -> f:('acc -> 'a -> 'acc) -> 'acc

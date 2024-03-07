@@ -754,6 +754,67 @@ struct
       assert (String.equal s s'))
   ;;
 
+  module Example_bin_prot = struct
+    type t =
+      | A
+      | B of int
+      | C of string
+      | D of
+          { a : int
+          ; b : int
+          }
+    [@@deriving sexp, bin_io ~localize, quickcheck, equal]
+
+    let quickcheck =
+      Quickcheck.test
+        ~shrinker:quickcheck_shrinker
+        ~sexp_of:sexp_of_t
+        quickcheck_generator
+    ;;
+  end
+
+  let%test_unit "fill_bin_prot and fill_bin_prot_local write the same bytes" =
+    Example_bin_prot.quickcheck ~f:(fun a ->
+      let len = Example_bin_prot.bin_size_t a + bin_prot_length_prefix_bytes in
+      let t = create ~len in
+      let t' = create ~len in
+      fill_bin_prot t Example_bin_prot.bin_writer_t a |> ok_exn;
+      fill_bin_prot_local
+        t'
+        Example_bin_prot.bin_size_t__local
+        Example_bin_prot.bin_write_t__local
+        a
+      |> ok_exn;
+      flip_lo t;
+      flip_lo t';
+      assert (length t = len);
+      assert (length t = length t');
+      assert (Bytes.equal (to_bytes t) (to_bytes t')))
+  ;;
+
+  let%test_unit "fill_bin_prot roundtrips" =
+    Example_bin_prot.quickcheck ~f:(fun a ->
+      let len = Example_bin_prot.bin_size_t a + bin_prot_length_prefix_bytes in
+      let t = create ~len in
+      fill_bin_prot t Example_bin_prot.bin_writer_t a |> ok_exn;
+      flip_lo t;
+      let a' = consume_bin_prot t Example_bin_prot.bin_reader_t |> ok_exn in
+      assert (Example_bin_prot.equal a a'))
+  ;;
+
+  let%expect_test "fill_bin_prot_local doesn't allocate" =
+    let t = create ~len:2000 in
+    let a : Example_bin_prot.t = D { a = 1; b = 2 } in
+    require_no_allocation [%here] (fun () ->
+      fill_bin_prot_local
+        t
+        Example_bin_prot.bin_size_t__local
+        Example_bin_prot.bin_write_t__local
+        a
+      |> ok_exn);
+    [%expect {| |}]
+  ;;
+
   module type Accessee = sig
     type t [@@deriving sexp_of, globalize]
 

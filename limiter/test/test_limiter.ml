@@ -208,14 +208,15 @@ let%test_module "Step_test" =
         ]
     ;;
 
-    let%test_unit "Increase_bucket_limit" =
-      let bucket =
-        Limiter.Token_bucket.Starts_full.create_exn
-          ~now:Time_ns.epoch
-          ~sustained_rate_per_sec:1.
-          ~burst_size:60
-      in
-      let increase_bucket_limit time burst_size sustained_rate_per_sec expect =
+    let%test_unit "Change_bucket_limit" =
+      let change_bucket_limit
+        (bucket : Limiter.Token_bucket.Starts_full.t)
+        time
+        burst_size
+        sustained_rate_per_sec
+        expect
+        ~allow_limit_decrease
+        =
         ( time
         , Generic
             { f =
@@ -229,6 +230,7 @@ let%test_module "Step_test" =
                       bucket
                       ~burst_size
                       ~sustained_rate_per_sec
+                      ~allow_limit_decrease
                   with
                   | Reconfigured ->
                     if not expect
@@ -261,27 +263,53 @@ let%test_module "Step_test" =
                     (expect : bool)]
             } )
       in
-      run
-        (bucket :> Limiter.t)
-        [ take 1. 60 true
-        ; take 1. 1 false
-        ; increase_bucket_limit 1. 70 1. true (* Now have enough bucket space to take *)
-        ; take 1. 11 false (* should only be 10 in the bucket now *)
-        ; take 1. 9 true
-        ; increase_bucket_limit 1. 60 1. false
-          (* This should fail, and we should still have enough bucket space to take *)
-        ; take 1. 1 true
-        ; take 1. 1 false (* But now we're fresh out *)
-        ; increase_bucket_limit 1. 80 2. true
-        ; take 1. 10 true
-        ; return_to_hopper 1. 80
-        ; take 20. 39 true
-          (* We expect to have 39 in the bucket since we're now returning
-           at a rate of 2 per sec. *)
-        ; increase_bucket_limit 1. 80 (-1.) false
-          (* Here, we should make sure that we don't accept a negative rate *)
-        ; increase_bucket_limit 1. 80 0. true (* but a rate of zero is fine *)
-        ]
+      (* Since we are (mostly) increasing the bucket limit here, [allow_limit_decrease]
+         shouldn't affect anything. *)
+      List.iter Bool.all ~f:(fun allow_limit_decrease ->
+        let bucket =
+          Limiter.Token_bucket.Starts_full.create_exn
+            ~now:Time_ns.epoch
+            ~sustained_rate_per_sec:1.
+            ~burst_size:60
+        in
+        let change_bucket_limit = change_bucket_limit bucket in
+        run
+          (bucket :> Limiter.t)
+          [ take 1. 60 true
+          ; take 1. 1 false
+          ; change_bucket_limit
+              1.
+              70
+              1.
+              true
+              ~allow_limit_decrease (* Now have enough bucket space to take *)
+          ; take 1. 11 false (* should only be 10 in the bucket now *)
+          ; take 1. 9 true
+          ; change_bucket_limit 1. 60 1. false ~allow_limit_decrease
+            (* This should fail even if [allow_limit_decrease], because the bucket has 1
+             token left but we are trying to reduce the bucket size by 10. We should still
+             have enough bucket space to take *)
+          ; take 1. 1 true
+          ; take 1. 1 false (* But now we're fresh out *)
+          ; change_bucket_limit 1. 80 2. true ~allow_limit_decrease
+          ; take 1. 10 true
+          ; return_to_hopper 1. 80
+          ; take 20. 39 true
+            (* We expect to have 39 in the bucket since we're now returning
+             at a rate of 2 per sec. *)
+          ; change_bucket_limit 20. 80 (-1.) false ~allow_limit_decrease
+            (* Here, we should make sure that we don't accept a negative rate *)
+          ; change_bucket_limit 20. 80 0. true ~allow_limit_decrease
+            (* but a rate of zero is fine *)
+          ; change_bucket_limit 20. 80 2. true ~allow_limit_decrease
+            (* Back to 2 per sec, at t=20 we expect to have 40 tokens in the bucket. *)
+          ; take 40. 1 true (* Now there are 39 tokens in the bucket *)
+          ; change_bucket_limit 40. 41 2. allow_limit_decrease ~allow_limit_decrease
+            (* So we can reduce our bucket limit to [80 - 39 = 41] tokens *)
+          ; take 40. 1 (not allow_limit_decrease)
+            (* at this point, we shouldn't be able to take anymore tokens if we
+               decreased the bucket limit. *)
+          ])
     ;;
 
     let%test_unit "Throttled_rate_limiter" =

@@ -451,6 +451,15 @@ let pop_if t f =
     else None
 ;;
 
+let pop_while t f =
+  let rec loop t f acc =
+    match pop_if t f with
+    | None -> List.rev acc
+    | Some x -> loop t f (x :: acc)
+  in
+  loop t f []
+;;
+
 (* pairing heaps are not balanced trees, and therefore we can't rely on a balance
    property to stop ourselves from overflowing the stack. *)
 let fold t ~init ~f =

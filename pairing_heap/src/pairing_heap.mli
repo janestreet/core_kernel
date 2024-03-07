@@ -67,6 +67,11 @@ val pop_exn : 'a t -> 'a
     [cond], removing it, or [None] in any other case. *)
 val pop_if : 'a t -> ('a -> bool) -> 'a option
 
+(** [pop_while t cond] returns a list of top elements from [t] while they satisfy
+    condition [cond], removing each of them, or an empty list if none of the elements
+    satisfy the condition. The returned list is in order of removal. *)
+val pop_while : 'a t -> ('a -> bool) -> 'a list
+
 (** [copy t] returns a shallow copy. *)
 val copy : 'a t -> 'a t
 

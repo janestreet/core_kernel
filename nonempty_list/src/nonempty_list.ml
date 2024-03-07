@@ -346,6 +346,7 @@ let to_sequence t =
 let sort t ~compare = List.sort (to_list t) ~compare |> of_list_exn
 let stable_sort t ~compare = List.stable_sort (to_list t) ~compare |> of_list_exn
 let dedup_and_sort t ~compare = List.dedup_and_sort ~compare (to_list t) |> of_list_exn
+let permute ?random_state t = List.permute ?random_state (to_list t) |> of_list_exn
 
 let min_elt' (hd :: tl) ~compare =
   List.fold tl ~init:hd ~f:(fun min elt -> if compare min elt > 0 then elt else min) [@nontail

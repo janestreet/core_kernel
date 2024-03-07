@@ -508,6 +508,13 @@ val fill_bin_prot
   -> 'a
   -> unit Or_error.t
 
+val fill_bin_prot_local
+  :  ([> write ], seek) t
+  -> 'a Bin_prot.Size.sizer_local
+  -> 'a Bin_prot.Write.writer_local
+  -> 'a
+  -> unit Or_error.t
+
 val consume_bin_prot
   :  ([> read ], seek) t
   -> 'a Bin_prot.Type_class.reader

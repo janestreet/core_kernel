@@ -395,3 +395,50 @@ let%expect_test "pop_if on empty heap" =
   let empty = Heap.create ~cmp:Int.compare () in
   require_none [%here] [%sexp_of: int] (Heap.pop_if empty (fun _ -> true))
 ;;
+
+let test_pop_while_negative values =
+  let heap = Heap.of_list values ~cmp:Int.compare in
+  print_s [%message "before" (heap : int Heap.t)];
+  let popped = Heap.pop_while heap (fun i -> i < 0) in
+  print_s [%message "after" (popped : int list) (heap : int Heap.t)]
+;;
+
+let%expect_test "pop_while single" =
+  test_pop_while_negative [ -1; 1; 2; 3 ];
+  [%expect {|
+    (before (heap (-1 1 2 3)))
+    (after (popped (-1)) (heap (1 2 3))) |}]
+;;
+
+let%expect_test "pop_while empty" =
+  test_pop_while_negative [];
+  [%expect {|
+    (before (heap ()))
+    (after
+      (popped ())
+      (heap   ())) |}]
+;;
+
+let%expect_test "pop_while no popped" =
+  test_pop_while_negative [ 5; 1; 10; 3; 2 ];
+  [%expect
+    {|
+    (before (heap (1 2 3 5 10)))
+    (after (popped ()) (heap (1 2 3 5 10))) |}]
+;;
+
+let%expect_test "pop_while all popped" =
+  test_pop_while_negative [ -10; -1; -3; -2 ];
+  [%expect
+    {|
+    (before (heap (-10 -3 -2 -1)))
+    (after (popped (-10 -3 -2 -1)) (heap ())) |}]
+;;
+
+let%expect_test "pop_while repeated" =
+  test_pop_while_negative [ -10; 2; -1; -1; -1; 3; 10 ];
+  [%expect
+    {|
+    (before (heap (-10 -1 -1 -1 2 3 10)))
+    (after (popped (-10 -1 -1 -1)) (heap (2 3 10))) |}]
+;;

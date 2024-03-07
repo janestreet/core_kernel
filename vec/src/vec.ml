@@ -336,6 +336,11 @@ module With_integer_index = struct
     !result
   ;;
 
+  let to_local_list t =
+    let rec aux t i acc = if i < 0 then acc else aux t (i - 1) (unsafe_get t i :: acc) in
+    aux t (max_index t) []
+  ;;
+
   let to_alist t =
     let result = ref [] in
     for i = max_index t downto 0 do
@@ -382,6 +387,17 @@ module With_integer_index = struct
       r := f !r (unsafe_get t i)
     done;
     !r
+  ;;
+
+  let foldi_local_accum t ~init:acc ~f =
+    let rec aux t i ~acc ~f =
+      if i >= length t
+      then acc
+      else (
+        let acc = f i acc (unsafe_get t i) in
+        aux t (i + 1) ~acc ~f)
+    in
+    aux t 0 ~acc ~f
   ;;
 
   include Blit.Make1 (struct
@@ -676,6 +692,11 @@ module Make (M : Intable.S) = struct
 
   let foldi t ~init ~f =
     (foldi [@inlined hint]) t ~init ~f:(fun [@inline] int accum x ->
+      f (M.of_int_exn int) accum x) [@nontail]
+  ;;
+
+  let foldi_local_accum t ~init ~f =
+    (foldi_local_accum [@inlined hint]) t ~init ~f:(fun [@inline] int accum x ->
       f (M.of_int_exn int) accum x) [@nontail]
   ;;
 

@@ -143,19 +143,19 @@ end
 
 type t =
   { start_time : Time_ns.t
+  ; mutable time : Time_ns.t
       (** The current time of the rate limiter.  Note that when this is moved forward,
       [in_hopper] must be updated accordingly. *)
-  ; mutable time : Time_ns.t
+  ; time_in_token_space : int Iofm.t
       (** the amount of time that has passed expressed in token terms, since start_time. *)
-  ; time_in_token_space : int Iofm.t (** number of tokens in the bucket *)
-  ; mutable in_bucket : int (** number of tokens in the hopper.  May be [inf] *)
-  ; in_hopper : int Iofm.t
+  ; mutable in_bucket : int (** number of tokens in the bucket *)
+  ; in_hopper : int Iofm.t (** number of tokens in the hopper.  May be [inf] *)
+  ; mutable in_flight : int
       (** Everything that has been taken from bucket but not returned to hopper *)
-  ; mutable in_flight : int (** maximum size allowable in the bucket *)
-  ; mutable bucket_limit : int (** maximum size allowable in flight *)
-  ; in_flight_limit : int Iofm.t
-      (** rate at which tokens "fall" from the hopper into the bucket *)
+  ; mutable bucket_limit : int (** maximum size allowable in the bucket *)
+  ; in_flight_limit : int Iofm.t (** maximum size allowable in flight *)
   ; mutable hopper_to_bucket_rate_per_ns : Tokens_per_ns.t Iofm.t
+      (** rate at which tokens "fall" from the hopper into the bucket *)
   }
 [@@deriving sexp_of]
 
@@ -449,9 +449,12 @@ module Token_bucket = struct
       t
       ~burst_size:new_bucket_limit
       ~sustained_rate_per_sec:new_sustained_rate_per_sec
+      ~allow_limit_decrease
       : Try_reconfigure_result.t
       =
-      if new_bucket_limit < t.bucket_limit
+      let used = t.bucket_limit - t.in_bucket in
+      if ((not allow_limit_decrease) && t.bucket_limit > new_bucket_limit)
+         || used > new_bucket_limit
       then Unable
       else (
         let hopper_to_bucket_rate_per_ns =
@@ -462,8 +465,7 @@ module Token_bucket = struct
         if not (fill_rate_is_positive_or_zero hopper_to_bucket_rate_per_ns)
         then Unable
         else (
-          let increase_amount = new_bucket_limit - t.bucket_limit in
-          t.in_bucket <- t.in_bucket + increase_amount;
+          t.in_bucket <- new_bucket_limit - used;
           t.bucket_limit <- new_bucket_limit;
           t.hopper_to_bucket_rate_per_ns <- hopper_to_bucket_rate_per_ns;
           Reconfigured))

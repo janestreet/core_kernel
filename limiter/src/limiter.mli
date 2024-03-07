@@ -101,12 +101,13 @@ module Token_bucket : sig
 
     (** Increases the [bucket_limit] and the current [bucket_level] by the difference
         between the current and new bucket limits. Decreasing the bucket_limit may cause
-        the [bucket_level] to become negative, breaking an invariant. If the new limit is
-        lower than the current limit, [Unable] is returned. *)
+        the [bucket_level] to become negative, breaking an invariant. If the new limit
+        would cause [bucket_level] to become negative, [Unable] is returned. *)
     val try_reconfigure
       :  t
       -> burst_size:int
       -> sustained_rate_per_sec:float
+      -> allow_limit_decrease:bool
       -> Try_reconfigure_result.t
   end
 end

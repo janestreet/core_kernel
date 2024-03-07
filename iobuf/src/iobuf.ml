@@ -936,6 +936,21 @@ let write_bin_prot writer t ~pos a =
       [%sexp_of: [ `size_len of int ] * [ `buf_pos of int ] * [ `write_stop_pos of int ]]
 ;;
 
+let write_bin_prot_local sizer writer t ~pos a =
+  let len = sizer a in
+  let buf_pos = buf_pos_exn t ~pos ~len in
+  let stop_pos = writer t.buf ~pos:buf_pos a in
+  if stop_pos - buf_pos = len
+  then len
+  else
+    fail
+      t
+      "Iobuf.write_bin_prot_local got unexpected number of bytes written (Bin_prot bug: \
+       writer disagrees with sizer)"
+      (`size_len len, `buf_pos buf_pos, `write_stop_pos stop_pos)
+      [%sexp_of: [ `size_len of int ] * [ `buf_pos of int ] * [ `write_stop_pos of int ]]
+;;
+
 (* [Itoa] provides a range of functions for integer to ASCII conversion, used by [Poke],
    [Fill] and their [Unsafe] versions.
 
@@ -1180,6 +1195,10 @@ module Fill = struct
   ;;
 
   let bin_prot writer t a = write_bin_prot writer t ~pos:0 a |> uadv t
+
+  let bin_prot_local sizer writer t a =
+    write_bin_prot_local sizer writer t ~pos:0 a |> uadv t
+  ;;
 
   open Bigstring
 
@@ -1938,6 +1957,24 @@ let fill_bin_prot t writer v =
     else (
       Fill.int32_be_trunc t v_len;
       Fill.bin_prot writer t v;
+      Ok ())
+  in
+  result
+;;
+
+let fill_bin_prot_local t sizer writer v =
+  let v_len = sizer v in
+  let need = v_len + bin_prot_length_prefix_bytes in
+  let result =
+    if need > length t
+    then
+      error
+        "Iobuf.fill_bin_prot_local not enough space"
+        (need, [%globalize: t_repr] t)
+        [%sexp_of: int * (_, _) t]
+    else (
+      Fill.int32_be_trunc t v_len;
+      Fill.bin_prot_local sizer writer t v;
       Ok ())
   in
   result

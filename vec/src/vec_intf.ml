@@ -73,8 +73,16 @@ module type S = sig
   val peek_back : 'a t -> 'a option
   val peek_back_exn : 'a t -> 'a
   val foldi : 'a t -> init:'accum -> f:(index -> 'accum -> 'a -> 'accum) -> 'accum
+
+  val foldi_local_accum
+    :  'a t
+    -> init:'accum
+    -> f:(index -> 'accum -> 'a -> 'accum)
+    -> 'accum
+
   val iteri : 'a t -> f:(index -> 'a -> unit) -> unit
   val to_list : 'a t -> 'a list
+  val to_local_list : 'a t -> 'a list
   val to_alist : 'a t -> (index * 'a) list
 
   (** The input vec is copied internally so that future modifications of it do not change
