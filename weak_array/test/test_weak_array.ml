@@ -15,43 +15,35 @@ let%expect_test "[length]" =
     0
     1
     2
-    3 |}]
+    3
+    |}]
 ;;
 
 let%expect_test "[get], [set]" =
   let t = create ~len:1 in
   print t;
-  [%expect {|
-    (()) |}];
+  [%expect {| (()) |}];
   set t 0 None;
   print t;
-  [%expect {|
-    (()) |}];
+  [%expect {| (()) |}];
   show_raise (fun () -> set t (-1) None);
-  [%expect {|
-    (raised (Invalid_argument Weak.set)) |}];
+  [%expect {| (raised (Invalid_argument Weak.set)) |}];
   show_raise (fun () -> set t 1 None);
-  [%expect {|
-    (raised (Invalid_argument Weak.set)) |}];
+  [%expect {| (raised (Invalid_argument Weak.set)) |}];
   print_s [%sexp (get t 0 : _ Heap_block.t option)];
-  [%expect {|
-    () |}];
+  [%expect {| () |}];
   show_raise (fun () -> ignore (get t (-1) : _ option));
-  [%expect {|
-    (raised (Invalid_argument Weak.get)) |}];
+  [%expect {| (raised (Invalid_argument Weak.get)) |}];
   show_raise (fun () -> ignore (get t 1 : _ option));
-  [%expect {|
-    (raised (Invalid_argument Weak.get)) |}];
+  [%expect {| (raised (Invalid_argument Weak.get)) |}];
   let b = block 13 in
   set t 0 (Some b);
   print t;
-  [%expect {|
-    ((13)) |}];
+  [%expect {| ((13)) |}];
   ignore (b : block);
   set t 0 None;
   print t;
-  [%expect {|
-    (()) |}]
+  [%expect {| (()) |}]
 ;;
 
 let%expect_test "[is_none], [is_some]" =
@@ -60,13 +52,15 @@ let%expect_test "[is_none], [is_some]" =
   print ();
   [%expect {|
     (("is_none t 0" true)
-     ("is_some t 0" false)) |}];
+     ("is_some t 0" false))
+    |}];
   let b = block 13 in
   set t 0 (Some b);
   print ();
   [%expect {|
     (("is_none t 0" false)
-     ("is_some t 0" true)) |}];
+     ("is_some t 0" true))
+    |}];
   ignore (b : block)
 ;;
 
@@ -75,16 +69,13 @@ let%expect_test ("clearing, with no finalizer attached" [@tags "no-js"]) =
   let b = block 13 in
   set t 0 (Some b);
   print t;
-  [%expect {|
-    ((13)) |}];
+  [%expect {| ((13)) |}];
   Gc.compact ();
   print t;
-  [%expect {|
-    (()) |}];
+  [%expect {| (()) |}];
   Gc.compact ();
   print t;
-  [%expect {|
-    (()) |}]
+  [%expect {| (()) |}]
 ;;
 
 (* This test demonstrates a difference between OCaml 4.02 and 4.03.  In 4.02, a weak
@@ -95,17 +86,13 @@ let%expect_test ("clearing, with a finalizer attached" [@tags "no-js"]) =
   let b = block 13 in
   set t 0 (Some b);
   print t;
-  [%expect {|
-    ((13)) |}];
+  [%expect {| ((13)) |}];
   Gc.Expert.add_finalizer b (fun b -> print_s [%message "finalized" (b : block)]);
   Gc.compact ();
-  [%expect {|
-    (finalized (b 13)) |}];
+  [%expect {| (finalized (b 13)) |}];
   print t;
-  [%expect {|
-    ((13)) |}];
+  [%expect {| ((13)) |}];
   Gc.compact ();
   print t;
-  [%expect {|
-    (()) |}]
+  [%expect {| (()) |}]
 ;;

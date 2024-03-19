@@ -38,13 +38,15 @@ let%expect_test "Heap.sexp_of_t" =
   test [ 3 ];
   [%expect {|
     (3)
-    () |}];
+    ()
+    |}];
   test [ 3; 1; 4 ];
   [%expect {|
     (1 3 4)
     (3 4)
     (4)
-    () |}];
+    ()
+    |}];
   test [ 3; 1; 4; 1; 5; 9; 2; 6; 5 ];
   [%expect
     {|
@@ -57,7 +59,8 @@ let%expect_test "Heap.sexp_of_t" =
     (5 6 9)
     (6 9)
     (9)
-    () |}]
+    ()
+    |}]
 ;;
 
 let%expect_test "Heap.sexp_of_t with removes" =
@@ -72,18 +75,19 @@ let%expect_test "Heap.sexp_of_t with removes" =
       print_s [%sexp (heap : int Heap.t)])
   in
   test [];
-  [%expect {|
-    () |}];
+  [%expect {| () |}];
   test [ 3 ];
   [%expect {|
     (3)
-    () |}];
+    ()
+    |}];
   test [ 3; 1; 4 ];
   [%expect {|
     (1 3 4)
     (1 4)
     (4)
-    () |}];
+    ()
+    |}];
   test [ 3; 1; 4; 1; 5; 9; 2; 6; 5 ];
   [%expect
     {|
@@ -96,7 +100,8 @@ let%expect_test "Heap.sexp_of_t with removes" =
     (2 5 6)
     (5 6)
     (5)
-    () |}]
+    ()
+    |}]
 ;;
 
 open! Heap
@@ -405,18 +410,22 @@ let test_pop_while_negative values =
 
 let%expect_test "pop_while single" =
   test_pop_while_negative [ -1; 1; 2; 3 ];
-  [%expect {|
+  [%expect
+    {|
     (before (heap (-1 1 2 3)))
-    (after (popped (-1)) (heap (1 2 3))) |}]
+    (after (popped (-1)) (heap (1 2 3)))
+    |}]
 ;;
 
 let%expect_test "pop_while empty" =
   test_pop_while_negative [];
-  [%expect {|
+  [%expect
+    {|
     (before (heap ()))
     (after
       (popped ())
-      (heap   ())) |}]
+      (heap   ()))
+    |}]
 ;;
 
 let%expect_test "pop_while no popped" =
@@ -424,7 +433,8 @@ let%expect_test "pop_while no popped" =
   [%expect
     {|
     (before (heap (1 2 3 5 10)))
-    (after (popped ()) (heap (1 2 3 5 10))) |}]
+    (after (popped ()) (heap (1 2 3 5 10)))
+    |}]
 ;;
 
 let%expect_test "pop_while all popped" =
@@ -432,7 +442,8 @@ let%expect_test "pop_while all popped" =
   [%expect
     {|
     (before (heap (-10 -3 -2 -1)))
-    (after (popped (-10 -3 -2 -1)) (heap ())) |}]
+    (after (popped (-10 -3 -2 -1)) (heap ()))
+    |}]
 ;;
 
 let%expect_test "pop_while repeated" =
@@ -440,5 +451,6 @@ let%expect_test "pop_while repeated" =
   [%expect
     {|
     (before (heap (-10 -1 -1 -1 2 3 10)))
-    (after (popped (-10 -1 -1 -1)) (heap (2 3 10))) |}]
+    (after (popped (-10 -1 -1 -1)) (heap (2 3 10)))
+    |}]
 ;;

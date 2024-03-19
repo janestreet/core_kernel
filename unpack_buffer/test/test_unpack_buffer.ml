@@ -30,8 +30,9 @@ let%expect_test "[unpack_one] bugs are checked" =
   show_raise (fun () -> Unpack_buffer.unpack_iter t ~f:(fun _ -> ()) |> ok_exn);
   [%expect
     {|
-   (raised
-    "unpack returned a value but consumed 0 bytes without partially unpacked data") |}]
+    (raised
+     "unpack returned a value but consumed 0 bytes without partially unpacked data")
+    |}]
 ;;
 
 module type Value = sig
@@ -346,7 +347,7 @@ module Example = struct
          let t = bin_reader_t.read buf ~pos_ref in
          size + t.x + t.y)
         : int);
-    [%expect {||}]
+    [%expect {| |}]
   ;;
 
   let%expect_test "confirm object size" =

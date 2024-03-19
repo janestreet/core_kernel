@@ -32,7 +32,7 @@ end
 
 module Stable : sig
   module V1 : sig
-    type nonrec t = t [@@deriving equal, hash]
+    type nonrec t = t [@@deriving equal, hash, sexp_grammar]
 
     include
       Stable_comparable.With_stable_witness.V1

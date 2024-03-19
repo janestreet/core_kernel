@@ -215,6 +215,10 @@ module With_integer_index = struct
 
   let maybe_get t i = if i < 0 || i >= length t then None else Some (unsafe_get t i)
 
+  let maybe_get_local t i =
+    if i < 0 || i >= length t then None else Some { Gel.g = unsafe_get t i }
+  ;;
+
   let set t i element =
     check_index t i ~op:"set";
     unsafe_set t i element
@@ -686,6 +690,7 @@ module Make (M : Intable.S) = struct
   let[@inline always] unsafe_get t index = unsafe_get t (M.to_int_exn index)
   let get t index = get t (M.to_int_exn index)
   let maybe_get t index = maybe_get t (M.to_int_exn index)
+  let maybe_get_local t index = maybe_get_local t (M.to_int_exn index)
   let[@inline always] unsafe_set t index = unsafe_set t (M.to_int_exn index)
   let set t index = set t (M.to_int_exn index)
   let next_free_index t = next_free_index t |> M.of_int_exn

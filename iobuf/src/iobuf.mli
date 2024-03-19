@@ -485,7 +485,19 @@ module Unsafe : sig
     val index_or_neg : ([> read ], _) iobuf -> pos:int -> len:int -> char -> int
   end
 
-  module Poke : module type of Poke
+  module Poke : sig
+    include module type of Poke
+
+    (** Like [bin_prot], but skips bin size and bounds checks. Useful for call sites where
+        the size is already known. *)
+    val bin_prot_with_known_size
+      :  'a Bin_prot.Type_class.writer
+      -> (read_write, _) iobuf
+      -> pos:int
+      -> size:int
+      -> 'a
+      -> unit
+  end
 end
 
 (** The number of bytes in the length prefix of [consume_bin_prot] and [fill_bin_prot]. *)

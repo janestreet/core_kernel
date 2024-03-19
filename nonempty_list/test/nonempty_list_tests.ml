@@ -67,7 +67,8 @@ let%expect_test "map2" =
     (Ok (2))
     (Ok (3 8))
     Unequal_lengths
-    Unequal_lengths |}]
+    Unequal_lengths
+    |}]
 ;;
 
 let%expect_test "map2_exn" =
@@ -84,7 +85,8 @@ let%expect_test "map2_exn" =
     (Ok (2))
     (Ok (3 8))
     (Error (Invalid_argument "length mismatch in map2_exn: 1 <> 2"))
-    (Error (Invalid_argument "length mismatch in map2_exn: 2 <> 1")) |}]
+    (Error (Invalid_argument "length mismatch in map2_exn: 2 <> 1"))
+    |}]
 ;;
 
 let%expect_test "zip" =
@@ -98,7 +100,8 @@ let%expect_test "zip" =
     (Ok ((1 2)))
     (Ok ((1 3) (2 4)))
     Unequal_lengths
-    Unequal_lengths |}]
+    Unequal_lengths
+    |}]
 ;;
 
 let%expect_test "zip_exn" =
@@ -114,7 +117,8 @@ let%expect_test "zip_exn" =
     (Ok ((1 2)))
     (Ok ((1 3) (2 4)))
     (Error (Invalid_argument "length mismatch in zip_exn: 1 <> 2"))
-    (Error (Invalid_argument "length mismatch in zip_exn: 2 <> 1")) |}]
+    (Error (Invalid_argument "length mismatch in zip_exn: 2 <> 1"))
+    |}]
 ;;
 
 let%expect_test "filter" =
@@ -128,7 +132,8 @@ let%expect_test "filter" =
     ()
     (2)
     (2)
-    (2 2 4) |}]
+    (2 2 4)
+    |}]
 ;;
 
 let%expect_test "filteri" =
@@ -144,7 +149,8 @@ let%expect_test "filteri" =
     (2)
     ()
     (2)
-    (2 4 3) |}]
+    (2 4 3)
+    |}]
 ;;
 
 let%expect_test "filter_map" =
@@ -158,7 +164,8 @@ let%expect_test "filter_map" =
     ()
     (4)
     (4)
-    (4 4 8) |}]
+    (4 4 8)
+    |}]
 ;;
 
 let%expect_test "filter_mapi" =
@@ -176,7 +183,8 @@ let%expect_test "filter_mapi" =
     (4)
     ()
     (4)
-    (4 8 6) |}]
+    (4 8 6)
+    |}]
 ;;
 
 let%expect_test "concat" =
@@ -189,7 +197,8 @@ let%expect_test "concat" =
     (1)
     (1 2 3)
     (1 2 3)
-    (1 2 3 4 5 6) |}]
+    (1 2 3 4 5 6)
+    |}]
 ;;
 
 let%expect_test "nth" =
@@ -202,7 +211,8 @@ let%expect_test "nth" =
     ()
     (1)
     (3)
-    () |}]
+    ()
+    |}]
 ;;
 
 let%expect_test "nth_exn" =
@@ -220,7 +230,8 @@ let%expect_test "nth_exn" =
     (Ok 1)
     (Ok 3)
     (Error
-     (Invalid_argument "Nonempty_list.nth_exn 3 called on list of length 3")) |}]
+     (Invalid_argument "Nonempty_list.nth_exn 3 called on list of length 3"))
+    |}]
 ;;
 
 let%expect_test "last" =
@@ -231,7 +242,8 @@ let%expect_test "last" =
   [%expect {|
     1
     2
-    3 |}]
+    3
+    |}]
 ;;
 
 let%expect_test "drop_last" =
@@ -242,7 +254,8 @@ let%expect_test "drop_last" =
   [%expect {|
     ()
     (1)
-    (1 2) |}]
+    (1 2)
+    |}]
 ;;
 
 let%expect_test "to_sequence" =
@@ -253,7 +266,8 @@ let%expect_test "to_sequence" =
   [%expect {|
     (1)
     (1 2 3)
-    (0 2 4 6) |}]
+    (0 2 4 6)
+    |}]
 ;;
 
 let%expect_test "sort" =
@@ -262,7 +276,8 @@ let%expect_test "sort" =
   test [ 2; 4; 1; 4 ];
   [%expect {|
     (1)
-    (1 2 4 4) |}]
+    (1 2 4 4)
+    |}]
 ;;
 
 let%expect_test "stable_sort" =
@@ -275,10 +290,12 @@ let%expect_test "stable_sort" =
   test [ 1, "_" ];
   test [ 2, "_"; 4, "a"; 1, "_"; 4, "b" ];
   test [ 2, "_"; 4, "b"; 1, "_"; 4, "a" ];
-  [%expect {|
+  [%expect
+    {|
     ((1 _))
     ((1 _) (2 _) (4 a) (4 b))
-    ((1 _) (2 _) (4 b) (4 a)) |}]
+    ((1 _) (2 _) (4 b) (4 a))
+    |}]
 ;;
 
 let%expect_test "dedup_and_sort" =
@@ -287,7 +304,8 @@ let%expect_test "dedup_and_sort" =
   test [ 2; 4; 1; 4 ];
   [%expect {|
     (1)
-    (1 2 4) |}]
+    (1 2 4)
+    |}]
 ;;
 
 let%expect_test "min_elt' max_elt'" =
@@ -315,7 +333,24 @@ let%expect_test "map_of_alist_multi" =
   test [ 0, 0; 0, 1; 1, 1 ];
   [%expect {|
     ()
-    ((0 (1 0)) (1 (1))) |}]
+    ((0 (1 0)) (1 (1)))
+    |}]
+;;
+
+let%expect_test "map_of_list_with_key_multi" =
+  let get_key = Date.year in
+  let test alist =
+    print_s
+      [%sexp
+        (map_of_list_with_key_multi alist ~comparator:(module Int) ~get_key
+          : Date.t t Int.Map.t)]
+  in
+  test [];
+  test ([ "2023-01-01"; "2023-03-03"; "2024-12-24" ] |> List.map ~f:Date.of_string);
+  [%expect {|
+    ()
+    ((2023 (2023-03-03 2023-01-01)) (2024 (2024-12-24)))
+    |}]
 ;;
 
 let%expect_test "map_of_sequence_multi" =
@@ -327,7 +362,8 @@ let%expect_test "map_of_sequence_multi" =
   test (Sequence.of_list [ 0, 0; 0, 1; 1, 1 ]);
   [%expect {|
     ()
-    ((0 (1 0)) (1 (1))) |}]
+    ((0 (1 0)) (1 (1)))
+    |}]
 ;;
 
 let%expect_test "combine_errors" =
@@ -412,7 +448,8 @@ let%expect_test "basic accessor" =
     index: 0, value 1
     index: 1, value 2
     index: 2, value 3
-    index: 3, value 4 |}]
+    index: 3, value 4
+    |}]
 ;;
 
 (* Demonstrate how accessors allow types to be easily commuted: Here a ['a Or_error.t
@@ -444,7 +481,8 @@ let%expect_test "stable types" =
     (1 2 3 4)
     true
     (1 2 3 4)
-    true |}];
+    true
+    |}];
   let test bin_writer_t bin_read_t =
     let bytes = Bin_prot.Writer.to_bytes (bin_writer_t Int.bin_writer_t) t in
     bytes |> [%sexp_of: bytes] |> print_s;
@@ -466,7 +504,8 @@ let%expect_test "stable types" =
     "\004\001\002\003\004"
     true
     "\004\001\002\003\004"
-    true |}]
+    true
+    |}]
 ;;
 
 let%expect_test "folds" =
@@ -506,14 +545,14 @@ let%expect_test "folds" =
     {|
     ((reduced (Leaf 1)) (folded (F Init (Leaf 1)))
      (folded_nonempty (F Init (Leaf 1))) (folded_right (F (Leaf 1) Init)))
-  |}];
+    |}];
   test [ 1; 2 ];
   [%expect
     {|
     ((reduced (F (Leaf 1) (Leaf 2))) (folded (F (F Init (Leaf 1)) (Leaf 2)))
      (folded_nonempty (F (F Init (Leaf 1)) (Leaf 2)))
      (folded_right (F (Leaf 1) (F (Leaf 2) Init))))
-  |}];
+    |}];
   test [ 1; 2; 3 ];
   [%expect
     {|
@@ -521,7 +560,7 @@ let%expect_test "folds" =
      (folded (F (F (F Init (Leaf 1)) (Leaf 2)) (Leaf 3)))
      (folded_nonempty (F (F (F Init (Leaf 1)) (Leaf 2)) (Leaf 3)))
      (folded_right (F (Leaf 1) (F (Leaf 2) (F (Leaf 3) Init)))))
-  |}];
+    |}];
   test [ 1; 2; 3; 4; 5; 6; 7; 8; 9 ];
   [%expect
     {|
@@ -558,7 +597,7 @@ let%expect_test "folds" =
         (F (Leaf 3)
          (F (Leaf 4)
           (F (Leaf 5) (F (Leaf 6) (F (Leaf 7) (F (Leaf 8) (F (Leaf 9) Init)))))))))))
-  |}];
+    |}];
   ()
 ;;
 
@@ -670,7 +709,7 @@ let%expect_test "Reversed.With_sexp_of" =
   [%expect {| (1 2) |}];
   print_s [%sexp ([ 1; 2; 3 ] : int Reversed.With_sexp_of.t)];
   [%expect {| (1 2 3) |}];
-  [%expect]
+  [%expect {| |}]
 ;;
 
 let%expect_test "Reversed.With_rev_sexp_of" =

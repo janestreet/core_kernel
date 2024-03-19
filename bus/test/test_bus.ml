@@ -91,31 +91,35 @@ include (
           print_bus ();
           [%expect
             {|
-        ((num_subscribers 0)
-         (is_closed       false)
-         (call_count      0)) |}];
+          ((num_subscribers 0)
+           (is_closed       false)
+           (call_count      0))
+          |}];
           let subscription = subscribe_exn bus [%here] ~f:callback in
           print_bus ();
           [%expect
             {|
-        ((num_subscribers 1)
-         (is_closed       false)
-         (call_count      0)) |}];
+          ((num_subscribers 1)
+           (is_closed       false)
+           (call_count      0))
+          |}];
           write bus ();
           unsubscribe bus subscription;
           print_bus ();
           [%expect
             {|
-        ((num_subscribers 0)
-         (is_closed       false)
-         (call_count      1)) |}];
+          ((num_subscribers 0)
+           (is_closed       false)
+           (call_count      1))
+          |}];
           write bus ();
           print_bus ();
           [%expect
             {|
-        ((num_subscribers 0)
-         (is_closed       false)
-         (call_count      1)) |}]
+          ((num_subscribers 0)
+           (is_closed       false)
+           (call_count      1))
+          |}]
         ;;
 
         let%expect_test "subscriber raise" =
@@ -127,12 +131,13 @@ include (
           show_raise ~hide_positions:true (fun () -> write bus ());
           [%expect
             {|
-        (raised (
-          "Bus subscriber raised"
-          (exn "subscriber raising")
-          (backtrace ("<backtrace elided in test>"))
-          (subscriber (
-            Bus.Subscriber.t (subscribed_from lib/bus/test/test_bus.ml:LINE:COL))))) |}]
+          (raised (
+            "Bus subscriber raised"
+            (exn "subscriber raising")
+            (backtrace ("<backtrace elided in test>"))
+            (subscriber (
+              Bus.Subscriber.t (subscribed_from lib/bus/test/test_bus.ml:LINE:COL)))))
+          |}]
         ;;
 
         let%expect_test "~on_subscription_after_first_write:Raise" =
@@ -149,12 +154,10 @@ include (
           write bus ();
           ignore (subscribe_exn bus [%here] ~f:callback : _ Subscriber.t);
           print_s [%message (call_count : int ref)];
-          [%expect {|
-        (call_count 0) |}];
+          [%expect {| (call_count 0) |}];
           write bus ();
           print_s [%message (call_count : int ref)];
-          [%expect {|
-        (call_count 1) |}]
+          [%expect {| (call_count 1) |}]
         ;;
 
         let%expect_test "on_close is called" =
@@ -163,8 +166,7 @@ include (
           let on_close () = print_string "Closed" in
           ignore (subscribe_exn bus [%here] ~on_close ~f:callback : _ Subscriber.t);
           Bus.close bus;
-          [%expect {|
-        Closed |}]
+          [%expect {| Closed |}]
         ;;
 
         let%expect_test "on_close is not called if you unsubscribe" =
@@ -193,19 +195,17 @@ include (
           subscribe 1;
           [%expect {| |}];
           write bus "orange";
-          [%expect {|
-        Subscriber 1, value received: orange |}];
+          [%expect {| Subscriber 1, value received: orange |}];
           subscribe 2;
-          [%expect {|
-        Subscriber 2, value received: orange |}];
+          [%expect {| Subscriber 2, value received: orange |}];
           write bus "banana";
           [%expect
             {|
-        Subscriber 1, value received: banana
-        Subscriber 2, value received: banana |}];
+          Subscriber 1, value received: banana
+          Subscriber 2, value received: banana
+          |}];
           subscribe 3;
-          [%expect {|
-        Subscriber 3, value received: banana |}]
+          [%expect {| Subscriber 3, value received: banana |}]
         ;;
 
         let%expect_test "unsubscribe is idempotent" =
@@ -236,13 +236,15 @@ include (
           write bus ();
           print_call_counts ();
           [%expect {|
-        ((call_count1 1)
-         (call_count2 1)) |}];
+          ((call_count1 1)
+           (call_count2 1))
+          |}];
           write bus ();
           print_call_counts ();
           [%expect {|
-        ((call_count1 1)
-         (call_count2 1)) |}]
+          ((call_count1 1)
+           (call_count2 1))
+          |}]
         ;;
 
         let%expect_test "subscribe_exn ~on_callback_raise" =
@@ -265,13 +267,15 @@ include (
               : _ Subscriber.t);
           print_rs ();
           [%expect {|
-        ((r1 0)
-         (r2 0)) |}];
+          ((r1 0)
+           (r2 0))
+          |}];
           write bus ();
           print_rs ();
           [%expect {|
-        ((r1 0)
-         (r2 1)) |}]
+          ((r1 0)
+           (r2 1))
+          |}]
         ;;
 
         let%expect_test "correct exception raised for [subscribe_exn ~extract_exn]" =
@@ -308,39 +312,43 @@ include (
           test ~extract_exn:false ~on_callback_raise:`Fall_back_to_bus;
           [%expect
             {|
-        ((extract_exn   false)
-         (error_handler Bus)
-         (error (
-           "Bus subscriber raised"
-           (exn "Assert_failure test_bus.ml:LINE:COL")
-           (backtrace ("<backtrace elided in test>"))
-           (subscriber (
-             Bus.Subscriber.t (subscribed_from lib/bus/test/test_bus.ml:LINE:COL)))))) |}];
+          ((extract_exn   false)
+           (error_handler Bus)
+           (error (
+             "Bus subscriber raised"
+             (exn "Assert_failure test_bus.ml:LINE:COL")
+             (backtrace ("<backtrace elided in test>"))
+             (subscriber (
+               Bus.Subscriber.t (subscribed_from lib/bus/test/test_bus.ml:LINE:COL))))))
+          |}];
           test ~extract_exn:false ~on_callback_raise:`Print;
           [%expect
             {|
-        ((extract_exn   false)
-         (error_handler Subscriber)
-         (error (
-           "Bus subscriber raised"
-           (exn "Assert_failure test_bus.ml:LINE:COL")
-           (backtrace ("<backtrace elided in test>"))
-           (subscriber (
-             Bus.Subscriber.t (
-               (on_callback_raise <fun>)
-               (subscribed_from   lib/bus/test/test_bus.ml:LINE:COL))))))) |}];
+          ((extract_exn   false)
+           (error_handler Subscriber)
+           (error (
+             "Bus subscriber raised"
+             (exn "Assert_failure test_bus.ml:LINE:COL")
+             (backtrace ("<backtrace elided in test>"))
+             (subscriber (
+               Bus.Subscriber.t (
+                 (on_callback_raise <fun>)
+                 (subscribed_from   lib/bus/test/test_bus.ml:LINE:COL)))))))
+          |}];
           test ~extract_exn:true ~on_callback_raise:`Fall_back_to_bus;
           [%expect
             {|
-        ((extract_exn   true)
-         (error_handler Bus)
-         (error         "Assert_failure test_bus.ml:LINE:COL")) |}];
+          ((extract_exn   true)
+           (error_handler Bus)
+           (error         "Assert_failure test_bus.ml:LINE:COL"))
+          |}];
           test ~extract_exn:true ~on_callback_raise:`Print;
           [%expect
             {|
-        ((extract_exn   true)
-         (error_handler Subscriber)
-         (error         "Assert_failure test_bus.ml:LINE:COL")) |}]
+          ((extract_exn   true)
+           (error_handler Subscriber)
+           (error         "Assert_failure test_bus.ml:LINE:COL"))
+          |}]
         ;;
 
         let%expect_test "subscribe_exn ~on_callback_raise:raise" =
@@ -361,12 +369,10 @@ include (
                ~on_callback_raise:Error.raise
               : _ Subscriber.t);
           print_r ();
-          [%expect {|
-        (r 0) |}];
+          [%expect {| (r 0) |}];
           write bus ();
           print_r ();
-          [%expect {|
-        (r 1) |}]
+          [%expect {| (r 1) |}]
         ;;
 
         let%expect_test "close is idempotent" =
@@ -380,20 +386,20 @@ include (
           write bus ();
           close bus;
           print_s [%message (is_closed bus : bool)];
-          [%expect {|
-        ("is_closed bus" true) |}];
+          [%expect {| ("is_closed bus" true) |}];
           show_raise ~hide_positions:true (fun () -> write bus ());
           [%expect
             {|
-        (raised (
-          "[Bus.write] called on closed bus"
-          ((callback_arity Arity1)
-           (created_from   lib/bus/test/test_bus.ml:LINE:COL)
-           (on_subscription_after_first_write Raise)
-           (state                             Closed)
-           (write_ever_called                 true)
-           (subscribers ()))
-          lib/bus/src/bus.ml:LINE:COL)) |}]
+          (raised (
+            "[Bus.write] called on closed bus"
+            ((callback_arity Arity1)
+             (created_from   lib/bus/test/test_bus.ml:LINE:COL)
+             (on_subscription_after_first_write Raise)
+             (state                             Closed)
+             (write_ever_called                 true)
+             (subscribers ()))
+            lib/bus/src/bus.ml:LINE:COL))
+          |}]
         ;;
 
         let%expect_test "[subscribe_exn] does not raise after [close], and [on_close] is \
@@ -461,9 +467,11 @@ include (
           write bus ();
           (* Since [close] is called after the [on_close] functions 0 and 1 are registered,
            only those two are called. *)
-          [%expect {|
-        [on_close] #0 called
-        [on_close] #1 called |}]
+          [%expect
+            {|
+          [on_close] #0 called
+          [on_close] #1 called
+          |}]
         ;;
 
         let%expect_test "During write, if [unsubscribe] is called before [close], then \
@@ -503,10 +511,11 @@ include (
           write bus ();
           [%expect
             {|
-        "unsubscribing subscriber1"
-        "closing bus"
-        "unsubscribing subscriber2"
-        "subcriber2 [on_close]" |}]
+          "unsubscribing subscriber1"
+          "closing bus"
+          "unsubscribing subscriber2"
+          "subcriber2 [on_close]"
+          |}]
         ;;
 
         let%expect_test "after [close], [write t] without the value to be written" =
@@ -527,8 +536,7 @@ include (
           let (_ : _ Subscriber.t) = subscribe_exn bus [%here] ~f:callback in
           write bus ();
           print_s [%message (call_count : int ref)];
-          [%expect {|
-        (call_count 2) |}]
+          [%expect {| (call_count 2) |}]
         ;;
 
         let%expect_test "raising in [on_callback_raise] closes the bus" =
@@ -564,14 +572,16 @@ include (
           write bus ();
           print_lasts ();
           [%expect {|
-        ((last1 3)
-         (last2 ...)) |}];
+          ((last1 3)
+           (last2 ...))
+          |}];
           write bus ();
           write bus ();
           print_lasts ();
           [%expect {|
-        ((last1 5)
-         (last2 .....)) |}]
+          ((last1 5)
+           (last2 .....))
+          |}]
         ;;
 
         let%expect_test "subscribing during a write with \
@@ -590,21 +600,24 @@ include (
           [%expect
             {|
           toplevel iter: x = 1
-          nested iter:   x = 1, y = 1 |}];
+          nested iter:   x = 1, y = 1
+          |}];
           (* Old subscriptions properly see new writes. *)
           write bus 2;
           [%expect
             {|
           toplevel iter: x = 2
           nested iter:   x = 2, y = 2
-          nested iter:   x = 1, y = 2 |}];
+          nested iter:   x = 1, y = 2
+          |}];
           write bus 3;
           [%expect
             {|
           toplevel iter: x = 3
           nested iter:   x = 3, y = 3
           nested iter:   x = 1, y = 3
-          nested iter:   x = 2, y = 3 |}]
+          nested iter:   x = 2, y = 3
+          |}]
         ;;
 
         let%expect_test "unsubscribe second listener on first listeners callback" =
@@ -622,15 +635,15 @@ include (
                  print_endline [%string "temporary sub2: x = %{x#Int}"])
                |> Some;
           write bus 1;
-          [%expect {|
+          [%expect
+            {|
           permanent sub1: x = 1
-          temporary sub2: x = 1 |}];
+          temporary sub2: x = 1
+          |}];
           write bus 2;
-          [%expect {|
-          permanent sub1: x = 2 |}];
+          [%expect {| permanent sub1: x = 2 |}];
           write bus 3;
-          [%expect {|
-          permanent sub1: x = 3 |}]
+          [%expect {| permanent sub1: x = 3 |}]
         ;;
 
         let%expect_test "subscribe and unsubscribe during a single write with \
@@ -665,17 +678,20 @@ include (
           [%expect
             {|
           toplevel iter: x = 1
-          nested iter:   x = 1, y = 1 |}];
+          nested iter:   x = 1, y = 1
+          |}];
           write bus 2;
           [%expect
             {|
           toplevel iter: x = 2
-          nested iter:   x = 2, y = 2 |}];
+          nested iter:   x = 2, y = 2
+          |}];
           write bus 3;
           [%expect
             {|
           toplevel iter: x = 3
-          nested iter:   x = 3, y = 3 |}]
+          nested iter:   x = 3, y = 3
+          |}]
         ;;
 
         let%expect_test "creating many new subscribers during a write with \
@@ -703,14 +719,16 @@ include (
           [%expect
             {|
           Subscriber 1, value received: hello
-          Subscriber 2, value received: hello |}];
+          Subscriber 2, value received: hello
+          |}];
           write bus "again";
           [%expect
             {|
           Subscriber 1, value received: again
           Subscriber 2, value received: again
           Subscriber 1, value received: again
-          Subscriber 2, value received: again |}]
+          Subscriber 2, value received: again
+          |}]
         ;;
 
         let%expect_test "subscribing during a write with \
@@ -736,7 +754,8 @@ include (
               lib/bus/src/bus.ml:LINE:COL))
             (backtrace ("<backtrace elided in test>"))
             (subscriber (
-              Bus.Subscriber.t (subscribed_from lib/bus/test/test_bus.ml:LINE:COL))))) |}]
+              Bus.Subscriber.t (subscribed_from lib/bus/test/test_bus.ml:LINE:COL)))))
+          |}]
         ;;
 
         let test_free which_unsubscribes =
@@ -784,14 +803,12 @@ include (
          weak pointers in javascript, so exclude javascript testing. *)
         let%expect_test ("free first subscriber" [@tags "no-js"]) =
           test_free `First;
-          [%expect {|
-          (unsubscribing (unsubscribed_index 0)) |}]
+          [%expect {| (unsubscribing (unsubscribed_index 0)) |}]
         ;;
 
         let%expect_test ("free last subscriber" [@tags "no-js"]) =
           test_free `Last;
-          [%expect {|
-          (unsubscribing (unsubscribed_index 1)) |}]
+          [%expect {| (unsubscribing (unsubscribed_index 1)) |}]
         ;;
       end)
     ;;
@@ -848,8 +865,7 @@ include (
           ignore (subscribe_exn bus [%here] ~f:callback2 : _ Subscriber.t);
           write2 bus () ();
           print_s [%message (call_count : int ref)];
-          [%expect {|
-        (call_count 2) |}]
+          [%expect {| (call_count 2) |}]
         ;;
 
         let%expect_test "mid-callback subscribe_exn takes effect for the next write" =
@@ -866,8 +882,9 @@ include (
           write2 bus () ();
           print_s [%message (call_count1 : int ref) (call_count2 : int ref)];
           [%expect {|
-        ((call_count1 2)
-         (call_count2 1)) |}]
+          ((call_count1 2)
+           (call_count2 1))
+          |}]
         ;;
       end)
     ;;

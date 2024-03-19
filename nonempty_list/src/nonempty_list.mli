@@ -83,6 +83,15 @@ val map_of_sequence_multi
   -> comparator:('k, 'cmp) Comparator.Module.t
   -> ('k, 'v t, 'cmp) Map.t
 
+(** Like [Map.of_list_with_key_multi], but comes with a guarantee that the range of the
+    returned map is all nonempty lists.
+*)
+val map_of_list_with_key_multi
+  :  'v list
+  -> comparator:('k, 'cmp) Comparator.Module.t
+  -> get_key:('v -> 'k)
+  -> ('k, 'v t, 'cmp) Map.t
+
 (** Like [Result.combine_errors] but for non-empty lists *)
 val combine_errors : ('ok, 'err) Result.t t -> ('ok t, 'err t) Result.t
 

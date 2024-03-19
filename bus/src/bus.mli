@@ -20,8 +20,8 @@ open! Core
     When reading the bus interface, keep in mind that each ['callback] is limited, through
     [create], to the types exposed by the variants in [Callback_arity].
 
-    Currently, only a 1-arity callback is provided with [@local] annotations in order to
-    avoid an explosion due to the permutations of [@local] args.  It is also relatively
+    Currently, only a 1-arity callback is provided with local_ annotations in order to
+    avoid an explosion due to the permutations of local_ args.  It is also relatively
     cheap to make the one local arg a record with multiple fields. *)
 module Callback_arity : sig
   type _ t =
@@ -75,7 +75,7 @@ val read_only : ('callback, _) t -> 'callback Read_only.t
     closed.
 
     [create_exn] will raise when using [Allow_and_send_last_value] with any
-    [Callback_arity] that uses [@local] args, because those args cannot be stored. *)
+    [Callback_arity] that uses local_ args, because those args cannot be stored. *)
 val create_exn
   :  ?name:Info.t
   -> Source_code_position.t

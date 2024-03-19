@@ -252,12 +252,10 @@ let%expect_test "use a pool that has been [grow]n" =
     print_s [%sexp (pointer_is_valid t pointer : bool), (get t pointer Slot.t0 : int)]
   in
   show_pointer ();
-  [%expect {|
-    (true 15) |}];
+  [%expect {| (true 15) |}];
   ignore (grow t);
   show_pointer ();
-  [%expect {|
-    (false 13) |}]
+  [%expect {| (false 13) |}]
 ;;
 
 let%test_module _ =
@@ -293,12 +291,10 @@ let%expect_test "use a pool that has been [grow]n" =
     print_s [%sexp (pointer_is_valid t pointer : bool), (get t pointer Slot.t0 : int)]
   in
   show_pointer ();
-  [%expect {|
-    (true 15) |}];
+  [%expect {| (true 15) |}];
   ignore (grow t);
   show_pointer ();
-  [%expect {|
-    (false 13) |}]
+  [%expect {| (false 13) |}]
 ;;
 
 open Unsafe
@@ -310,10 +306,8 @@ let%expect_test "use a pool that has been [grow]n" =
     print_s [%sexp (pointer_is_valid t pointer : bool), (get t pointer Slot.t0 : int)]
   in
   show_pointer ();
-  [%expect {|
-    (true 15) |}];
+  [%expect {| (true 15) |}];
   ignore (grow t);
   show_pointer ();
-  [%expect {|
-    (false 0) |}]
+  [%expect {| (false 0) |}]
 ;;

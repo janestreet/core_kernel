@@ -19,7 +19,8 @@ let%expect_test "Version.parse*" =
     {|
     (Ok
      ((((repo ssh://repo_1) (version 04ce83e21002))
-       ((repo ssh://repo_2) (version abcdefabcdfe+))))) |}];
+       ((repo ssh://repo_2) (version abcdefabcdfe+)))))
+    |}];
   print_s
     [%sexp (Version.parse_list [ no_version_util ] : Version.t list option Or_error.t)];
   [%expect {| (Ok ()) |}];
@@ -35,7 +36,8 @@ let%expect_test "Version.parse*" =
     {|
     (Ok
      ((((repo ssh://repo_1) (version 04ce83e21002))
-       ((repo ssh://repo_2) (version abcdefabcdfe+))))) |}];
+       ((repo ssh://repo_2) (version abcdefabcdfe+)))))
+    |}];
   print_s
     [%sexp
       (Version.parse_lines (no_version_util ^ "\n") : Version.t list option Or_error.t)];
@@ -52,8 +54,7 @@ let%expect_test "backwards-compatible printing of rev40s" =
   print
     "ssh://repo1 a123456789b123456789c123456789d123456789+\n\
      ssh://repo2 a123456789b123456789c123456789d123456789\n";
-  [%expect {|
-    (ssh://repo1_a123456789b1+ ssh://repo2_a123456789b1) |}];
+  [%expect {| (ssh://repo1_a123456789b1+ ssh://repo2_a123456789b1) |}];
   (* potentially in the future, when we change the hashing scheme: rev64 *)
   print "ssh://repo1 a1234567b1234567c1234567d1234567e1234567f1234567g1234567h1234567+\n";
   [%expect {| (ssh://repo1_a1234567b123+) |}]

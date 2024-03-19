@@ -14,31 +14,29 @@ let%expect_test "[add_exn], [find], [mem], [replace], [remove], [clear]" =
   print_mem key;
   [%expect {|
     ((i   13)
-     (mem false)) |}];
+     (mem false))
+    |}];
   add_exn t ~key ~data:(data key);
   print_mem key;
   [%expect {|
     ((i   13)
-     (mem true)) |}];
+     (mem true))
+    |}];
   let print_find () = print_s [%message (find t key : data option)] in
   print_find ();
-  [%expect {|
-    ("find t key" (13)) |}];
+  [%expect {| ("find t key" (13)) |}];
   replace t ~key ~data:(data 14);
   print_find ();
-  [%expect {|
-    ("find t key" (14)) |}];
+  [%expect {| ("find t key" (14)) |}];
   remove t key;
   print_find ();
-  [%expect {|
-    ("find t key" ()) |}];
+  [%expect {| ("find t key" ()) |}];
   add_exn t ~key ~data:(data key);
   print_find ();
   [%expect {| ("find t key" (13)) |}];
   clear t;
   print_find ();
-  [%expect {|
-    ("find t key" ()) |}]
+  [%expect {| ("find t key" ()) |}]
 ;;
 
 let%expect_test ("[key_is_using_space], [reclaim_space_for_keys_with_unused_data]" [@tags
@@ -54,22 +52,26 @@ let%expect_test ("[key_is_using_space], [reclaim_space_for_keys_with_unused_data
   print ();
   [%expect {|
     ((key_is_using_space false)
-     (mem                false)) |}];
+     (mem                false))
+    |}];
   add_exn t ~key ~data:(data ());
   print ();
   [%expect {|
     ((key_is_using_space true)
-     (mem                true)) |}];
+     (mem                true))
+    |}];
   Gc.compact ();
   print ();
   [%expect {|
     ((key_is_using_space true)
-     (mem                false)) |}];
+     (mem                false))
+    |}];
   reclaim_space_for_keys_with_unused_data t;
   print ();
   [%expect {|
     ((key_is_using_space false)
-     (mem                false)) |}]
+     (mem                false))
+    |}]
 ;;
 
 let%expect_test ("[set_run_when_unused_data]" [@tags "no-js"]) =
@@ -80,21 +82,17 @@ let%expect_test ("[set_run_when_unused_data]" [@tags "no-js"]) =
   set_run_when_unused_data t ~thread_safe_f:(fun () -> ran := true);
   Gc.compact ();
   print ();
-  [%expect {|
-    (ran false) |}];
+  [%expect {| (ran false) |}];
   let data = data key in
   add_exn t ~key ~data;
   Gc.compact ();
   print ();
-  [%expect {|
-    (ran false) |}];
+  [%expect {| (ran false) |}];
   print_s [%message (data : data)];
-  [%expect {|
-    (data 13) |}];
+  [%expect {| (data 13) |}];
   Gc.compact ();
   print ();
-  [%expect {|
-    (ran true) |}]
+  [%expect {| (ran true) |}]
 ;;
 
 let%expect_test (_ [@tags "no-js"]) =

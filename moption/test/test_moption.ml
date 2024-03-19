@@ -25,7 +25,8 @@ let%expect_test "[create], [is_none], [is_some], [get], [get_some_exn], [set], \
      (is_none true)
      (is_some false)
      (get ())
-     (get_some_exn (Error Moption.get_some_exn))) |}];
+     (get_some_exn (Error Moption.get_some_exn)))
+    |}];
   set_some t 13;
   print t;
   [%expect
@@ -34,7 +35,8 @@ let%expect_test "[create], [is_none], [is_some], [get], [get_some_exn], [set], \
      (is_none false)
      (is_some true)
      (get (13))
-     (get_some_exn (Ok 13))) |}];
+     (get_some_exn (Ok 13)))
+    |}];
   set_none t;
   print t;
   [%expect
@@ -43,7 +45,8 @@ let%expect_test "[create], [is_none], [is_some], [get], [get_some_exn], [set], \
      (is_none true)
      (is_some false)
      (get ())
-     (get_some_exn (Error Moption.get_some_exn))) |}];
+     (get_some_exn (Error Moption.get_some_exn)))
+    |}];
   set t (Some 13);
   print t;
   [%expect
@@ -52,7 +55,8 @@ let%expect_test "[create], [is_none], [is_some], [get], [get_some_exn], [set], \
      (is_none false)
      (is_some true)
      (get (13))
-     (get_some_exn (Ok 13))) |}];
+     (get_some_exn (Ok 13)))
+    |}];
   set t None;
   print t;
   [%expect
@@ -61,7 +65,8 @@ let%expect_test "[create], [is_none], [is_some], [get], [get_some_exn], [set], \
      (is_none true)
      (is_some false)
      (get ())
-     (get_some_exn (Error Moption.get_some_exn))) |}]
+     (get_some_exn (Error Moption.get_some_exn)))
+    |}]
 ;;
 
 let%expect_test "unsafe_get" =

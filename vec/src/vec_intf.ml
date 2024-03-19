@@ -20,6 +20,7 @@ module type S = sig
   val get : 'a t -> index -> 'a
 
   val maybe_get : 'a t -> index -> 'a option
+  val maybe_get_local : 'a t -> index -> 'a Gel.t option
 
   (** Raises if the index is invalid. *)
   val set : 'a t -> index -> 'a -> unit

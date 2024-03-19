@@ -2956,6 +2956,10 @@ module Unsafe = struct
     let bin_prot = Poke.bin_prot
     let bin_prot_size = Poke.bin_prot_size
 
+    let bin_prot_with_known_size writer t ~pos ~size a =
+      ignore (writer.Bin_prot.Type_class.write t.buf ~pos:(upos t ~pos ~len:size) a : int)
+    ;;
+
     open Bigstring
 
     let len = 1

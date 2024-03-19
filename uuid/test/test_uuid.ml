@@ -10,12 +10,12 @@ let%expect_test _ =
     ~trials:1_024
     ~distinct_values:512
     ~compare;
-  [%expect {||}]
+  [%expect {| |}]
 ;;
 
 let%expect_test _ =
   Quickcheck.test ~sexp_of:sexp_of_t quickcheck_generator ~f:invariant;
-  [%expect {||}]
+  [%expect {| |}]
 ;;
 
 let%expect_test "All hex digits are correctly encoded in lowercase" =
@@ -38,7 +38,8 @@ let%expect_test "All hex digits are correctly encoded in lowercase" =
      (12 c)
      (13 d)
      (14 e)
-     (15 f))|}]
+     (15 f))
+    |}]
 ;;
 
 let%test_module "create_rand does a reasonable creation" =
@@ -62,17 +63,18 @@ let%test_module "create_rand does a reasonable creation" =
       done;
       [%expect
         {|
-      c14ac950-b432-46ed-7d19-622539d60705
-      a7b6c250-74a1-4865-d844-0f363cd03b01
-      fd08e817-23af-4c3e-468a-2f62976e42fc
-      9d013e20-a916-4ac6-e32b-a5c086d493b8
-      5d03ec13-5f28-4ad7-4874-96abccf22ece
-      31e69bdf-77e8-4ba0-9537-204f9027a9eb
-      0acbe3d4-1c12-4123-2b37-a73bcaffc8b3
-      1c70ce60-708a-46da-c92e-8edaf429ffef
-      69a984c2-8e41-4004-65d3-b52f4d263bd9
-      d6f253c4-f8c8-4390-b3a7-5b201fc215e9
-      11051874-0aca-4276-eaa4-0476434d3f12 |}]
+        c14ac950-b432-46ed-7d19-622539d60705
+        a7b6c250-74a1-4865-d844-0f363cd03b01
+        fd08e817-23af-4c3e-468a-2f62976e42fc
+        9d013e20-a916-4ac6-e32b-a5c086d493b8
+        5d03ec13-5f28-4ad7-4874-96abccf22ece
+        31e69bdf-77e8-4ba0-9537-204f9027a9eb
+        0acbe3d4-1c12-4123-2b37-a73bcaffc8b3
+        1c70ce60-708a-46da-c92e-8edaf429ffef
+        69a984c2-8e41-4004-65d3-b52f4d263bd9
+        d6f253c4-f8c8-4390-b3a7-5b201fc215e9
+        11051874-0aca-4276-eaa4-0476434d3f12
+        |}]
     ;;
   end)
 ;;

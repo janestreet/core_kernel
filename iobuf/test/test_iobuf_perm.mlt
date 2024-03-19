@@ -22,9 +22,7 @@ type ns = (read_write, Iobuf.no_seek) Iobuf.t
 let check_subtyping x = (x : rw :> ro)
 let check_subtyping x = (x : sk :> ns)
 
-[%%expect
-  {|
-|}]
+[%%expect {| |}]
 
 (* This only works if the 'seek parameter is covariant. *)
 
@@ -38,9 +36,7 @@ let t =
   { message = buf; writable = buf }
 ;;
 
-[%%expect
-  {|
-|}]
+[%%expect {| |}]
 
 (* Operations have the right permissions. *)
 
@@ -54,9 +50,7 @@ let (_ : char) = Iobuf.Consume.char seekable
 let () = Iobuf.Fill.char seekable 'a'
 let () = Iobuf.resize seekable ~len:0
 
-[%%expect
-  {|
-|}]
+[%%expect {| |}]
 
 let () = Iobuf.advance unseekable 1
 

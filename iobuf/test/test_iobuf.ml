@@ -1739,8 +1739,9 @@ struct
       print_s [%sexp (buf : (_, _) Iobuf.Window.Hexdump.Pretty.t)];
       [%expect
         {|
-            ("00000000  5a 5a 5a 0d 61 20 73 74  72 69 6e 67 20 68 65 72  |ZZZ.a string her|"
-             "00000010  65 5a 5a 5a 5a 5a 5a 5a  5a 5a 5a 5a 5a 5a 5a 5a  |eZZZZZZZZZZZZZZZ|") |}]
+        ("00000000  5a 5a 5a 0d 61 20 73 74  72 69 6e 67 20 68 65 72  |ZZZ.a string her|"
+         "00000010  65 5a 5a 5a 5a 5a 5a 5a  5a 5a 5a 5a 5a 5a 5a 5a  |eZZZZZZZZZZZZZZZ|")
+        |}]
     ;;
   end
 
@@ -1917,7 +1918,8 @@ struct
       ((len  3)
        (char o)
        (index ()))
-      ((char z) (index ())) |}];
+      ((char z) (index ()))
+      |}];
     if is_safe
     then (
       require_error [%here] (fun () -> test 'z' ~pos:(-1));
@@ -2252,13 +2254,14 @@ struct
              ~f:(fun upoke () -> upoke t (-1 lxor 0xFF lor Char.to_int '!') ~pos:0));
         [%expect
           {|
-              "!1234567"
-              "\255!234567"
-              "!\255234567"
-              "\255\255\255!4567"
-              "!\255\255\2554567"
-              "\255\255\255\255\255\255\255!"
-              "!\255\255\255\255\255\255\255" |}]
+          "!1234567"
+          "\255!234567"
+          "!\255234567"
+          "\255\255\255!4567"
+          "!\255\255\2554567"
+          "\255\255\255\255\255\255\255!"
+          "!\255\255\255\255\255\255\255"
+          |}]
       ;;
 
       let%expect_test "signed Pokes of out-of-range ints" =
@@ -2274,11 +2277,12 @@ struct
              ~f:(fun poke () -> poke t ((1 lsl 32) lor Char.to_int '!') ~pos:0));
         [%expect
           {|
-              "!1234567"
-              "\000!234567"
-              "!\000234567"
-              "\000\000\000!4567"
-              "!\000\000\0004567" |}]
+          "!1234567"
+          "\000!234567"
+          "!\000234567"
+          "\000\000\000!4567"
+          "!\000\000\0004567"
+          |}]
       ;;
 
       let%expect_test "unsigned Fills don't check sign" =
@@ -2298,13 +2302,14 @@ struct
                Iobuf.flip_lo t));
         [%expect
           {|
-              "!"
-              "\255!"
-              "!\255"
-              "\255\255\255!"
-              "!\255\255\255"
-              "\255\255\255\255\255\255\255!"
-              "!\255\255\255\255\255\255\255" |}]
+          "!"
+          "\255!"
+          "!\255"
+          "\255\255\255!"
+          "!\255\255\255"
+          "\255\255\255\255\255\255\255!"
+          "!\255\255\255\255\255\255\255"
+          |}]
       ;;
 
       let%expect_test "signed Fills don't check range" =
@@ -2322,11 +2327,12 @@ struct
                Iobuf.flip_lo t));
         [%expect
           {|
-              "!"
-              "\000!"
-              "!\000"
-              "\000\000\000!"
-              "!\000\000\000" |}]
+          "!"
+          "\000!"
+          "!\000"
+          "\000\000\000!"
+          "!\000\000\000"
+          |}]
       ;;
     end)
   ;;
@@ -2552,16 +2558,19 @@ struct
       in
       t [%here] 4 (blit_maximal ~src:long ~dst:short ());
       [%expect {|
-          ((long  EFGHIJ)
-           (short ABCD)) |}];
+        ((long  EFGHIJ)
+         (short ABCD))
+        |}];
       t [%here] 3 (blit_maximal ~src:long ~dst_pos:1 ~dst:short ());
       [%expect {|
-          ((long  HIJ)
-           (short AEFG)) |}];
+        ((long  HIJ)
+         (short AEFG))
+        |}];
       t [%here] 3 (blit_maximal ~src:long ~dst:short ());
       [%expect {|
-          ((long  "")
-           (short HIJG)) |}]
+        ((long  "")
+         (short HIJG))
+        |}]
     ;;
   end
 
@@ -2649,16 +2658,19 @@ struct
       in
       t [%here] 4 (blit_maximal ~src:short ~dst:long ());
       [%expect {|
-          ((long  ABCD......)
-           (short ABCD)) |}];
+        ((long  ABCD......)
+         (short ABCD))
+        |}];
       t [%here] 3 (blit_maximal ~src:short ~dst_pos:7 ~dst:long ());
       [%expect {|
-          ((long  ABCD...ABC)
-           (short ABCD)) |}];
+        ((long  ABCD...ABC)
+         (short ABCD))
+        |}];
       t [%here] 1 (blit_maximal ~src:short ~src_pos:3 ~dst:long ());
       [%expect {|
-          ((long  DBCD...ABC)
-           (short ABCD)) |}]
+        ((long  DBCD...ABC)
+         (short ABCD))
+        |}]
     ;;
   end
 
@@ -2991,7 +3003,7 @@ let%test_module "allocation" =
 
       let%expect_test "char" =
         test char 1;
-        [%expect]
+        [%expect {| |}]
       ;;
 
       (* We don't bother testing the allocation of bin_prot. If there is a
@@ -3002,126 +3014,126 @@ let%test_module "allocation" =
 
       let%expect_test "int8" =
         test int8 1;
-        [%expect]
+        [%expect {| |}]
       ;;
 
       let int16_be = int16_be
 
       let%expect_test "int16_be" =
         test int16_be 2;
-        [%expect]
+        [%expect {| |}]
       ;;
 
       let int16_le = int16_le
 
       let%expect_test "int16_le" =
         test int16_le 2;
-        [%expect]
+        [%expect {| |}]
       ;;
 
       let int32_be = int32_be
 
       let%expect_test "int32_be" =
         test int32_be 4;
-        [%expect]
+        [%expect {| |}]
       ;;
 
       let int32_le = int32_le
 
       let%expect_test "int32_le" =
         test int32_le 4;
-        [%expect]
+        [%expect {| |}]
       ;;
 
       let int64_be_exn = int64_be_exn
 
       let%expect_test "int64_be_exn" =
         test int64_be_exn 8;
-        [%expect]
+        [%expect {| |}]
       ;;
 
       let int64_le_exn = int64_le_exn
 
       let%expect_test "int64_le_exn" =
         test int64_le_exn 8;
-        [%expect]
+        [%expect {| |}]
       ;;
 
       let int64_be_trunc = int64_be_trunc
 
       let%expect_test "int64_be_trunc" =
         test int64_be_trunc 8;
-        [%expect]
+        [%expect {| |}]
       ;;
 
       let int64_le_trunc = int64_le_trunc
 
       let%expect_test "int64_le_trunc" =
         test int64_le_trunc 8;
-        [%expect]
+        [%expect {| |}]
       ;;
 
       let uint8 = uint8
 
       let%expect_test "uint8" =
         test uint8 1;
-        [%expect]
+        [%expect {| |}]
       ;;
 
       let uint16_be = uint16_be
 
       let%expect_test "uint16_be" =
         test uint16_be 2;
-        [%expect]
+        [%expect {| |}]
       ;;
 
       let uint16_le = uint16_le
 
       let%expect_test "uint16_le" =
         test uint16_le 2;
-        [%expect]
+        [%expect {| |}]
       ;;
 
       let uint32_be = uint32_be
 
       let%expect_test "uint32_be" =
         test uint32_be 4;
-        [%expect]
+        [%expect {| |}]
       ;;
 
       let uint32_le = uint32_le
 
       let%expect_test "uint32_le" =
         test uint32_le 4;
-        [%expect]
+        [%expect {| |}]
       ;;
 
       let uint64_be_exn = uint64_be_exn
 
       let%expect_test "uint64_be_exn" =
         test uint64_be_exn 8;
-        [%expect]
+        [%expect {| |}]
       ;;
 
       let uint64_le_exn = uint64_le_exn
 
       let%expect_test "uint64_le_exn" =
         test uint64_le_exn 8;
-        [%expect]
+        [%expect {| |}]
       ;;
 
       let int64_t_be = int64_t_be
 
       let%expect_test "int64_t_be" =
         test ~allocation_limit:3 int64_t_be 8;
-        [%expect]
+        [%expect {| |}]
       ;;
 
       let int64_t_le = int64_t_le
 
       let%expect_test "int64_t_le" =
         test ~allocation_limit:3 int64_t_le 8;
-        [%expect]
+        [%expect {| |}]
       ;;
 
       (* We don't bother testing the allocation of string-like accessors that
@@ -3142,56 +3154,56 @@ let%test_module "allocation" =
 
         let%expect_test "int64_t_be" =
           test_local int64_t_be 8;
-          [%expect]
+          [%expect {| |}]
         ;;
 
         let int64_t_le = int64_t_le
 
         let%expect_test "int64_t_le" =
           test_local int64_t_le 8;
-          [%expect]
+          [%expect {| |}]
         ;;
 
         let head_padded_fixed_string = head_padded_fixed_string
 
         let%expect_test "head_padded_fixed_string" =
           test_padded_string head_padded_fixed_string;
-          [%expect]
+          [%expect {| |}]
         ;;
 
         let tail_padded_fixed_string = tail_padded_fixed_string
 
         let%expect_test "tail_padded_fixed_string" =
           test_padded_string tail_padded_fixed_string;
-          [%expect]
+          [%expect {| |}]
         ;;
 
         let string = string
 
         let%expect_test "string" =
           test_string string;
-          [%expect]
+          [%expect {| |}]
         ;;
 
         let bytes = bytes
 
         let%expect_test "bytes" =
           test_string bytes;
-          [%expect]
+          [%expect {| |}]
         ;;
 
         let stringo = stringo
 
         let%expect_test "stringo" =
           test_stringo stringo;
-          [%expect]
+          [%expect {| |}]
         ;;
 
         let byteso = byteso
 
         let%expect_test "byteso" =
           test_stringo byteso;
-          [%expect]
+          [%expect {| |}]
         ;;
       end
 
@@ -3202,98 +3214,98 @@ let%test_module "allocation" =
 
         let%expect_test "int8" =
           test int8 1;
-          [%expect]
+          [%expect {| |}]
         ;;
 
         let int16_be = int16_be
 
         let%expect_test "int16_be" =
           test int16_be 2;
-          [%expect]
+          [%expect {| |}]
         ;;
 
         let int16_le = int16_le
 
         let%expect_test "int16_le" =
           test int16_le 2;
-          [%expect]
+          [%expect {| |}]
         ;;
 
         let int32_be = int32_be
 
         let%expect_test "int32_be" =
           test ~allocation_limit:3 int32_be 4;
-          [%expect]
+          [%expect {| |}]
         ;;
 
         let int32_le = int32_le
 
         let%expect_test "int32_le" =
           test ~allocation_limit:3 int32_le 4;
-          [%expect]
+          [%expect {| |}]
         ;;
 
         let int64_be = int64_be
 
         let%expect_test "int64_be" =
           test ~allocation_limit:3 int64_be 8;
-          [%expect]
+          [%expect {| |}]
         ;;
 
         let int64_le = int64_le
 
         let%expect_test "int64_le" =
           test ~allocation_limit:3 int64_le 8;
-          [%expect]
+          [%expect {| |}]
         ;;
 
         let uint8 = uint8
 
         let%expect_test "uint8" =
           test uint8 1;
-          [%expect]
+          [%expect {| |}]
         ;;
 
         let uint16_be = uint16_be
 
         let%expect_test "uint16_be" =
           test uint16_be 2;
-          [%expect]
+          [%expect {| |}]
         ;;
 
         let uint16_le = uint16_le
 
         let%expect_test "uint16_le" =
           test uint16_le 2;
-          [%expect]
+          [%expect {| |}]
         ;;
 
         let uint32_be = uint32_be
 
         let%expect_test "uint32_be" =
           test ~allocation_limit:3 uint32_be 4;
-          [%expect]
+          [%expect {| |}]
         ;;
 
         let uint32_le = uint32_le
 
         let%expect_test "uint32_le" =
           test ~allocation_limit:3 uint32_le 4;
-          [%expect]
+          [%expect {| |}]
         ;;
 
         let uint64_be = uint64_be
 
         let%expect_test "uint64_be" =
           test ~allocation_limit:3 uint64_be 8;
-          [%expect]
+          [%expect {| |}]
         ;;
 
         let uint64_le = uint64_le
 
         let%expect_test "uint64_le" =
           test ~allocation_limit:3 uint64_le 8;
-          [%expect]
+          [%expect {| |}]
         ;;
       end
     end
@@ -3356,20 +3368,23 @@ let%expect_test "memset" =
   pr ();
   [%expect
     {|
-      ("00000000  41 41 41 41 41 41 41 41  41 41 41 41 41 41 41 41  |AAAAAAAAAAAAAAAA|"
-       "00000010  41 41 41 41 41 41 41 41  41 41 41 41 41 41 41 41  |AAAAAAAAAAAAAAAA|") |}];
+    ("00000000  41 41 41 41 41 41 41 41  41 41 41 41 41 41 41 41  |AAAAAAAAAAAAAAAA|"
+     "00000010  41 41 41 41 41 41 41 41  41 41 41 41 41 41 41 41  |AAAAAAAAAAAAAAAA|")
+    |}];
   Iobuf.memset t ~pos:8 ~len:16 'B';
   pr ();
   [%expect
     {|
-      ("00000000  41 41 41 41 41 41 41 41  42 42 42 42 42 42 42 42  |AAAAAAAABBBBBBBB|"
-       "00000010  42 42 42 42 42 42 42 42  41 41 41 41 41 41 41 41  |BBBBBBBBAAAAAAAA|") |}];
+    ("00000000  41 41 41 41 41 41 41 41  42 42 42 42 42 42 42 42  |AAAAAAAABBBBBBBB|"
+     "00000010  42 42 42 42 42 42 42 42  41 41 41 41 41 41 41 41  |BBBBBBBBAAAAAAAA|")
+    |}];
   Iobuf.memset t ~pos:2 ~len:3 'C';
   pr ();
   [%expect
     {|
-      ("00000000  41 41 43 43 43 41 41 41  42 42 42 42 42 42 42 42  |AACCCAAABBBBBBBB|"
-       "00000010  42 42 42 42 42 42 42 42  41 41 41 41 41 41 41 41  |BBBBBBBBAAAAAAAA|") |}]
+    ("00000000  41 41 43 43 43 41 41 41  42 42 42 42 42 42 42 42  |AACCCAAABBBBBBBB|"
+     "00000010  42 42 42 42 42 42 42 42  41 41 41 41 41 41 41 41  |BBBBBBBBAAAAAAAA|")
+    |}]
 ;;
 
 let%expect_test "check seek-indifferent r/w interfaces work on both kinds" =
@@ -3405,8 +3420,7 @@ let%expect_test "transfer" =
   require_equal [%here] (module Sexp) src dst;
   print_s [%sexp (dst : Sexp.t)];
   [%expect
-    {|
-    ("00000000  68 6f 6c 79 20 67 75 61  63 61 6d 6f 6c 65 21     |holy guacamole!|") |}]
+    {| ("00000000  68 6f 6c 79 20 67 75 61  63 61 6d 6f 6c 65 21     |holy guacamole!|") |}]
 ;;
 
 let%bench_fun ("blit x100" [@indexed blit_size = [ 1; 32; 100; 1600 ]]) =

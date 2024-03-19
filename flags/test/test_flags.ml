@@ -19,20 +19,18 @@ let%expect_test _ =
     (raised (
       "Flags.create got invalid ~bit (must be between 0 and 62)"
       63
-      lib/flags/src/flags.ml:LINE:COL)) |}]
+      lib/flags/src/flags.ml:LINE:COL))
+    |}]
 ;;
 
 let%expect_test _ =
   let print_hex bit = print_s [%sexp (create ~bit |> Int63.Hex.to_string_hum : string)] in
   print_hex 0;
-  [%expect {|
-    0x1 |}];
+  [%expect {| 0x1 |}];
   print_hex 1;
-  [%expect {|
-    0x2 |}];
+  [%expect {| 0x2 |}];
   print_hex 62;
-  [%expect {|
-    -0x4000_0000_0000_0000 |}]
+  [%expect {| -0x4000_0000_0000_0000 |}]
 ;;
 
 module Flags = struct
@@ -56,7 +54,8 @@ let%expect_test _ =
     (Map (
       ((a) 0)
       ((b) 1)
-      ((c) 2))) |}]
+      ((c) 2)))
+    |}]
 ;;
 
 (* [sexp_of_t] *)
@@ -74,19 +73,18 @@ let%expect_test _ =
     (a)
     (b)
     (c)
-    (() (unrecognized_bits 0x4000000000000000)) |}]
+    (() (unrecognized_bits 0x4000000000000000))
+    |}]
 ;;
 
 let%expect_test _ =
   print_sexp_of (a + b);
-  [%expect {|
-    (a b) |}]
+  [%expect {| (a b) |}]
 ;;
 
 let%expect_test _ =
   print_sexp_of (Int63.of_int 0x10);
-  [%expect {|
-    (() (unrecognized_bits 0x10)) |}]
+  [%expect {| (() (unrecognized_bits 0x10)) |}]
 ;;
 
 (* [t_of_sexp] *)
@@ -115,7 +113,8 @@ let%expect_test _ =
     (raised (Of_sexp_error "string_of_sexp: atom needed" (invalid_sexp ())))
     (input "(d)")
     (raised (
-      Of_sexp_error "Flags.t_of_sexp got unknown name: d" (invalid_sexp (d)))) |}]
+      Of_sexp_error "Flags.t_of_sexp got unknown name: d" (invalid_sexp (d))))
+    |}]
 ;;
 
 (* +, - *)
@@ -153,38 +152,27 @@ let print_compare t1 t2 = print_s [%sexp (compare t1 t2 : int)]
 
 let%expect_test _ =
   print_compare a empty;
-  [%expect {|
-    1 |}];
+  [%expect {| 1 |}];
   print_compare c empty;
-  [%expect {|
-    1 |}];
+  [%expect {| 1 |}];
   print_compare a a;
-  [%expect {|
-    0 |}];
+  [%expect {| 0 |}];
   print_compare c c;
-  [%expect {|
-    0 |}];
+  [%expect {| 0 |}];
   print_compare empty empty;
-  [%expect {|
-    0 |}];
+  [%expect {| 0 |}];
   print_compare empty a;
-  [%expect {|
-    -1 |}];
+  [%expect {| -1 |}];
   print_compare empty c;
-  [%expect {|
-    -1 |}];
+  [%expect {| -1 |}];
   print_compare (a + c) a;
-  [%expect {|
-    1 |}];
+  [%expect {| 1 |}];
   print_compare (a + c) c;
-  [%expect {|
-    1 |}];
+  [%expect {| 1 |}];
   print_compare (b + b) b;
-  [%expect {|
-    0 |}];
+  [%expect {| 0 |}];
   print_compare b (b + c);
-  [%expect {|
-    -1 |}]
+  [%expect {| -1 |}]
 ;;
 
 (* Create all combinations of the given flags. The output is ordered if the input is also
@@ -203,14 +191,11 @@ let combinations flags =
 
 let%expect_test "[compare] is a total order consistent with [is_subset]" =
   print_compare a b;
-  [%expect {|
-    -1 |}];
+  [%expect {| -1 |}];
   print_compare b (b + d);
-  [%expect {|
-    -1 |}];
+  [%expect {| -1 |}];
   print_compare a (b + d);
-  [%expect {|
-    -1 |}];
+  [%expect {| -1 |}];
   let test_ordering ordered =
     List.is_sorted_strictly ordered ~compare:(fun f1 f2 ->
       require [%here] (not (M.is_subset f2 ~of_:f1));
@@ -231,7 +216,8 @@ let%expect_test "[compare] is a total order consistent with [is_subset]" =
       (c)
       (a c)
       (b c)
-      (a b c))) |}];
+      (a b c)))
+    |}];
   require [%here] (test_ordering ordered);
   let complements = List.map ordered ~f:M.complement in
   print_s [%message (complements : M.t list)];
@@ -245,7 +231,8 @@ let%expect_test "[compare] is a total order consistent with [is_subset]" =
       (a b)
       (b)
       (a)
-      ())) |}];
+      ()))
+    |}];
   (* complemented flags (forms a reversed ordering) *)
   let ordered = complements |> List.rev in
   require [%here] (test_ordering ordered);
@@ -299,7 +286,8 @@ let%expect_test "ensure sexp representation of flag with unrecognized bits round
     {|
     ((t           ((a b c) (unrecognized_bits 0x3ffffffffffffff0)))
      (t_recovered ((a b c) (unrecognized_bits 0x3ffffffffffffff0)))
-     (sexp        ((a b c) (unrecognized_bits 0x3ffffffffffffff0)))) |}]
+     (sexp        ((a b c) (unrecognized_bits 0x3ffffffffffffff0))))
+    |}]
 ;;
 
 let gen_int63 = Int63.gen_incl Int63.min_value Int63.max_value

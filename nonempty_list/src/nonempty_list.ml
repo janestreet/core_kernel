@@ -370,6 +370,12 @@ let map_of_alist_multi alist = map_of_container_multi List.fold alist
 let map_of_sequence_multi sequence = map_of_container_multi Sequence.fold sequence
 let fold_nonempty (hd :: tl) ~init ~f = List.fold tl ~init:(init hd) ~f
 
+let map_of_list_with_key_multi list ~comparator ~get_key =
+  List.fold list ~init:(Map.empty comparator) ~f:(fun acc data ->
+    let key = get_key data in
+    map_add_multi acc ~key ~data)
+;;
+
 let fold_right (hd :: tl) ~init:acc ~f =
   let acc = List.fold_right tl ~init:acc ~f in
   f hd acc
