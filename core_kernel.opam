@@ -18,7 +18,7 @@ depends: [
   "ppx_optcomp"
   "uopt"
   "base-threads"
-  "dune"         {>= "2.0.0"}
+  "dune"         {>= "3.11.0"}
 ]
 available: arch != "arm32" & arch != "x86_32"
 synopsis: "Industrial strength alternative to OCaml's standard library"
