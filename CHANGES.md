@@ -1,3 +1,54 @@
+## Release v0.17.0
+
+* `Enum`
+  - Add `make_param_optional_comma_separated_with_default_doc`.
+  - Expose the optional argument `?strip_whitespace:bool` in `make_param_optional_comma_separated`.
+  - Add a functorized version of `to_string`.
+  - Expose `command_friendly_name` so the transformation can be reused by other libraries.
+
+* `Hash_heap`
+  - Expose `comparator`.
+
+* `Iobuf`
+  - Add `{Poke,Fill}.date_string_iso8601_extended`.
+  - Add `Iobuf.{Poke,Fill}.padded_decimal`.
+  - Add `Unsafe.Poke.bin_prot_with_known_size`.
+  - Rename `blit_explanation_trunc` to `blit_string_trunc`.
+  - Add `maybe_blit_int`.
+  - Add  `bigstring_view` and `unsafe_bigstring_view`.
+
+* `Limiter`
+  - `Token_bucket.try_reconfigure` now includes an `allow_limit_decrease` parameter.
+
+* `Nonempty_list`
+  - Add `map2`, `map2_exn`, `cartesian_product`, `fold_nonempty` and `map_of_list_with_key_multi`.
+
+* `Pairing_heap`
+  - Add `pop_while`.
+
+* `Timing_wheel`
+  - Add `advance_clock_stop_at_next_alarm`.
+
+* `Total_map`
+  - Add `S_plain.of_alist_exn`.
+
+* Move `Uopt` to a separate package.
+
+* `Vec`
+  - Add `maybe_get_local`, `grow_to_include`, `grow_to_include'`, `grow_to'`, `to_local_list`,
+  `to_sequence`, `to_sequence_mutable`, `of_sequence`, `clear_imm`, `foldi`, `foldi_local_accum`.
+  - Add `Expert.unsafe_inner`.
+
+* `Weak_hashtbl`
+  - Add `clear`.
+
+* `Weak_pointer`
+  - Add `create_full`.
+
+
+## Old pre-v0.16 changelogs (very likely stale and incomplete)
+
+
 As Core\_kernel is built on top of [Base](https://github.com/janestreet/base),
 you might want to have a look at Base's
 [changelog](https://github.com/janestreet/base/blob/master/CHANGES.md).
