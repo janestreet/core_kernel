@@ -144,18 +144,18 @@ end
 type t =
   { start_time : Time_ns.t
   ; mutable time : Time_ns.t
-      (** The current time of the rate limiter.  Note that when this is moved forward,
+  (** The current time of the rate limiter.  Note that when this is moved forward,
       [in_hopper] must be updated accordingly. *)
   ; time_in_token_space : int Iofm.t
-      (** the amount of time that has passed expressed in token terms, since start_time. *)
+  (** the amount of time that has passed expressed in token terms, since start_time. *)
   ; mutable in_bucket : int (** number of tokens in the bucket *)
   ; in_hopper : int Iofm.t (** number of tokens in the hopper.  May be [inf] *)
   ; mutable in_flight : int
-      (** Everything that has been taken from bucket but not returned to hopper *)
+  (** Everything that has been taken from bucket but not returned to hopper *)
   ; mutable bucket_limit : int (** maximum size allowable in the bucket *)
   ; in_flight_limit : int Iofm.t (** maximum size allowable in flight *)
   ; mutable hopper_to_bucket_rate_per_ns : Tokens_per_ns.t Iofm.t
-      (** rate at which tokens "fall" from the hopper into the bucket *)
+  (** rate at which tokens "fall" from the hopper into the bucket *)
   }
 [@@deriving sexp_of]
 

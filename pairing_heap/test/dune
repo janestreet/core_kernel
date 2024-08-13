@@ -1,5 +1,5 @@
 (library
  (name pairing_heap_test)
- (libraries base_test_helpers expect_test_helpers_core pairing_heap)
+ (libraries base_test_helpers core expect_test_helpers_core pairing_heap)
  (preprocess
   (pps ppx_jane)))

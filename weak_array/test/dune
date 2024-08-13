@@ -1,5 +1,5 @@
 (library
  (name weak_array_test)
- (libraries expect_test_helpers_core weak_array)
+ (libraries core expect_test_helpers_core weak_array)
  (preprocess
   (pps ppx_jane)))

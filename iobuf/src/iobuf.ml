@@ -25,8 +25,7 @@ let arch_sixtyfour = Sys.word_size_in_bits = 64
 module T = struct
   (* WHEN YOU CHANGE THIS, CHANGE iobuf_fields IN iobuf.h AS WELL!!! *)
   type t =
-    { mutable
-        buf :
+    { mutable buf :
         (Bigstring.t
         [@sexp.opaque] (* The data in [buf] is at indices [lo], [lo+1], ... [hi-1]. *))
     ; mutable lo_min : int
@@ -48,6 +47,12 @@ type no_seek = Iobuf_intf.no_seek [@@deriving sexp_of]
 
 module type Bound = Iobuf_intf.Bound with type ('d, 'w) iobuf := ('d, 'w) t
 
+let globalize_phantom name _ =
+  failwithf "Unexpectedly called [Iobuf.globalize_%s]" name ()
+;;
+
+let globalize_seek = globalize_phantom "seek"
+let globalize_no_seek = globalize_phantom "no_seek"
 let globalize _ _ t = [%globalize: t_repr] t
 let read_only t = t
 let read_only_local t = t
@@ -183,7 +188,7 @@ let[@cold] bad_range_bstr ~pos ~len ~str_len =
 
 let check_range t ~pos ~len =
   if pos < 0 || len < 0 || len > length t - pos then bad_range ~pos ~len t
-  [@@inline always]
+[@@inline always]
 ;;
 
 let[@inline always] unsafe_bigstring_view ~pos ~len buf =
@@ -272,7 +277,7 @@ let set_bounds_and_buffer_sub ~pos ~len ~src ~dst =
   dst.hi <- hi;
   dst.hi_max <- hi;
   if not (phys_equal dst.buf src.buf) then dst.buf <- src.buf
-  [@@inline]
+[@@inline]
 ;;
 
 let set_bounds_and_buffer ~src ~dst =
@@ -298,7 +303,7 @@ let resize t ~len =
   let hi = t.lo + len in
   if hi > t.hi_max then bad_range t ~len ~pos:0;
   t.hi <- hi
-  [@@inline always]
+[@@inline always]
 ;;
 
 let unsafe_resize = if unsafe_is_safe then resize else unsafe_resize
@@ -510,7 +515,7 @@ let unsafe_advance t n = t.lo <- t.lo + n
 let advance t len =
   check_range t ~len ~pos:0;
   unsafe_advance t len
-  [@@inline always]
+[@@inline always]
 ;;
 
 let unsafe_advance = if unsafe_is_safe then advance else unsafe_advance
@@ -547,6 +552,7 @@ module Bytes_dst = struct
   ;;
 
   let create ~len = create len
+  let get t i = get t i
 end
 
 module String_dst = struct
@@ -613,14 +619,14 @@ module Consume = struct
   type src = (read, seek) t
 
   module To (Dst : sig
-    type t [@@deriving sexp_of]
+      type t [@@deriving sexp_of]
 
-    val create : len:int -> t
-    val length : t -> int
-    val get : t -> int -> char
-    val set : t -> int -> char -> unit
-    val unsafe_blit : (T.t, t) Blit.blit
-  end) =
+      val create : len:int -> t
+      val length : t -> int
+      val get : t -> int -> char
+      val set : t -> int -> char -> unit
+      val unsafe_blit : (T.t, t) Blit.blit
+    end) =
   struct
     include Base_for_tests.Test_blit.Make_distinct_and_test (Char_elt) (T_src) (Dst)
 
@@ -686,13 +692,13 @@ module Consume = struct
   let uadv t n x =
     unsafe_advance t n;
     x
-    [@@inline always]
+  [@@inline always]
   ;;
 
   let uadv_local t n x =
     unsafe_advance t n;
     x
-    [@@inline always]
+  [@@inline always]
   ;;
 
   let pos t len = buf_pos_exn t ~pos:0 ~len
@@ -1415,6 +1421,11 @@ module Peek = struct
   let index t ?(pos = 0) ?(len = length t - pos) c =
     let pos = spos t ~len ~pos in
     Option.map (Bigstring.find ~pos ~len c t.buf) ~f:(fun x -> x - t.lo) [@nontail]
+  ;;
+
+  let rindex t ?(pos = 0) ?(len = length t - pos) c =
+    let pos = spos t ~len ~pos in
+    Option.map (Bigstring.rfind ~pos ~len c t.buf) ~f:(fun x -> x - t.lo) [@nontail]
   ;;
 
   module Local = struct
@@ -2190,13 +2201,13 @@ module Unsafe = struct
     let uadv t n x =
       unsafe_advance t n;
       x
-      [@@inline always]
+    [@@inline always]
     ;;
 
     let uadv_local t n x =
       unsafe_advance t n;
       x
-      [@@inline always]
+    [@@inline always]
     ;;
 
     let upos t len = unsafe_buf_pos t ~pos:0 ~len
@@ -2446,6 +2457,7 @@ module Unsafe = struct
     ;;
 
     let bin_prot = Fill.bin_prot
+    let bin_prot_local = Fill.bin_prot_local
 
     open Bigstring
 
@@ -2676,6 +2688,12 @@ module Unsafe = struct
     let index_or_neg t ~pos ~len c =
       let pos = unsafe_buf_pos t ~pos ~len in
       let idx = Bigstring.unsafe_find ~pos ~len t.buf c in
+      if idx < 0 then -1 else idx - t.lo
+    ;;
+
+    let rindex_or_neg t ~pos ~len c =
+      let pos = unsafe_buf_pos t ~pos ~len in
+      let idx = Bigstring.unsafe_rfind ~pos ~len t.buf c in
       if idx < 0 then -1 else idx - t.lo
     ;;
 
@@ -3198,25 +3216,25 @@ module For_hexdump = struct
   end
 
   module Window_and_limits = Make_compound_hexdump (struct
-    include Limits
+      include Limits
 
-    let parts =
-      [ (module Window_within_limits : Relative_indexable)
-      ; (module Limits_within_limits : Relative_indexable)
-      ]
-    ;;
-  end)
+      let parts =
+        [ (module Window_within_limits : Relative_indexable)
+        ; (module Limits_within_limits : Relative_indexable)
+        ]
+      ;;
+    end)
 
   module Window_and_limits_and_buffer = Make_compound_hexdump (struct
-    include Buffer
+      include Buffer
 
-    let parts =
-      [ (module Window_within_buffer : Relative_indexable)
-      ; (module Limits_within_buffer : Relative_indexable)
-      ; (module Buffer_within_buffer : Relative_indexable)
-      ]
-    ;;
-  end)
+      let parts =
+        [ (module Window_within_buffer : Relative_indexable)
+        ; (module Limits_within_buffer : Relative_indexable)
+        ; (module Buffer_within_buffer : Relative_indexable)
+        ]
+      ;;
+    end)
 end
 
 module Window = For_hexdump.Window

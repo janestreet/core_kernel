@@ -93,6 +93,6 @@ val to_rgb6 : t -> int * int * int
 
 module Stable : sig
   module V1 : sig
-    type nonrec t = t [@@deriving sexp, compare, hash, equal]
+    type nonrec t = t [@@deriving compare, equal, hash, sexp, sexp_grammar]
   end
 end

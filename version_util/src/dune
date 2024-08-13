@@ -6,6 +6,6 @@
  (public_name core_kernel.version_util)
  (js_of_ocaml
   (javascript_files version_util.js))
- (libraries core)
+ (libraries core sexplib)
  (preprocess
   (pps ppx_jane)))

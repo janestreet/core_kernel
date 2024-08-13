@@ -21,6 +21,11 @@ module type Key_with_witnesses = sig
   include Enumeration.S with type t := t
 end
 
+module type Key_with_stable_witness = sig
+  include Key_with_witnesses
+  include Stable_with_witness with type t := t
+end
+
 module type S_plain = sig
   type ('key, 'a, 'cmp, 'enum) total_map
 
@@ -37,6 +42,11 @@ module type S_plain = sig
   val create : (Key.t -> 'a) -> 'a t
   val create_const : 'a -> 'a t
   val of_alist_exn : (Key.t * 'a) list -> 'a t
+  val of_alist_multi_exn : (Key.t * 'a) list -> 'a list t
+
+  (** Note that [of_alist_multi keylist] will contain empty list items if a given [Key.t]
+      is not present in [keylist] *)
+  val of_alist_multi : (Key.t * 'a) list -> 'a list t
 end
 
 (** An alternative interface for [S_plain] which can be used with [include functor]. We
@@ -58,7 +68,7 @@ module type For_include_functor = sig
   module Total_map : S
 end
 
-module type Stable_V1_S = sig
+module type Stable_S = sig
   type ('key, 'a, 'cmp, 'enum) total_map
 
   module Key : Key
@@ -70,8 +80,67 @@ module type Stable_V1_S = sig
   [@@deriving bin_io, sexp, compare]
 end
 
-module type Stable_V1_For_include_functor = sig
-  module Total_map : Stable_V1_S
+module type Stable_For_include_functor = sig
+  module Total_map : Stable_S
+end
+
+module type Stable_S_with_stable_witness = sig
+  type ('key, 'a, 'cmp, 'enum) total_map
+
+  module Key : Key
+
+  type comparator_witness
+  type enumeration_witness
+
+  type 'a t = (Key.t, 'a, comparator_witness, enumeration_witness) total_map
+  [@@deriving bin_io, sexp, compare, stable_witness]
+end
+
+module type Stable_For_include_functor_with_stable_witness = sig
+  module Total_map : Stable_S_with_stable_witness
+end
+
+module type Stable = sig
+  type ('key, 'a, 'cmp, 'enum) t
+
+  module type S =
+    Stable_S with type ('key, 'a, 'cmp, 'enum) total_map := ('key, 'a, 'cmp, 'enum) t
+
+  module type S_with_stable_witness =
+    Stable_S_with_stable_witness
+    with type ('key, 'a, 'cmp, 'enum) total_map := ('key, 'a, 'cmp, 'enum) t
+
+  module type For_include_functor =
+    Stable_For_include_functor
+    with type ('key, 'a, 'cmp, 'enum) Total_map.total_map := ('key, 'a, 'cmp, 'enum) t
+
+  module type For_include_functor_with_stable_witness =
+    Stable_For_include_functor_with_stable_witness
+    with type ('key, 'a, 'cmp, 'enum) Total_map.total_map := ('key, 'a, 'cmp, 'enum) t
+
+  module Make_with_witnesses (Key : Key_with_witnesses) :
+    S
+    with module Key = Key
+    with type comparator_witness = Key.comparator_witness
+    with type enumeration_witness = Key.enumeration_witness
+
+  module Make_for_include_functor_with_witnesses (Key : Key_with_witnesses) :
+    For_include_functor
+    with module Total_map.Key = Key
+    with type Total_map.comparator_witness = Key.comparator_witness
+    with type Total_map.enumeration_witness = Key.enumeration_witness
+
+  module Make_with_stable_witness (Key : Key_with_stable_witness) :
+    S_with_stable_witness
+    with module Key = Key
+    with type comparator_witness = Key.comparator_witness
+    with type enumeration_witness = Key.enumeration_witness
+
+  module Make_for_include_functor_with_stable_witness (Key : Key_with_stable_witness) :
+    For_include_functor_with_stable_witness
+    with module Total_map.Key = Key
+    with type Total_map.comparator_witness = Key.comparator_witness
+    with type Total_map.enumeration_witness = Key.enumeration_witness
 end
 
 module type Total_map = sig
@@ -122,6 +191,12 @@ module type Total_map = sig
     :  ('key, 'a, 'cmp, 'enum) t
     -> ('key, 'b, 'cmp, 'enum) t
     -> f:('a -> 'b -> 'c)
+    -> ('key, 'c, 'cmp, 'enum) t
+
+  val mapi2
+    :  ('key, 'a, 'cmp, 'enum) t
+    -> ('key, 'b, 'cmp, 'enum) t
+    -> f:('key -> 'a -> 'b -> 'c)
     -> ('key, 'c, 'cmp, 'enum) t
 
   val iter_keys : ('key, _, _, _) t -> f:('key -> unit) -> unit
@@ -197,14 +272,14 @@ module type Total_map = sig
 
   module type For_include_functor_plain =
     For_include_functor_plain
-      with type ('key, 'a, 'cmp, 'enum) Total_map.total_map := ('key, 'a, 'cmp, 'enum) t
+    with type ('key, 'a, 'cmp, 'enum) Total_map.total_map := ('key, 'a, 'cmp, 'enum) t
 
   module type S =
     S with type ('key, 'a, 'cmp, 'enum) total_map := ('key, 'a, 'cmp, 'enum) t
 
   module type For_include_functor =
     For_include_functor
-      with type ('key, 'a, 'cmp, 'enum) Total_map.total_map := ('key, 'a, 'cmp, 'enum) t
+    with type ('key, 'a, 'cmp, 'enum) Total_map.total_map := ('key, 'a, 'cmp, 'enum) t
 
   module Make_plain (Key : Key_plain) : S_plain with module Key = Key
 
@@ -213,15 +288,15 @@ module type Total_map = sig
 
   module Make_plain_with_witnesses (Key : Key_plain_with_witnesses) :
     S_plain
-      with module Key = Key
-      with type comparator_witness = Key.comparator_witness
-      with type enumeration_witness = Key.enumeration_witness
+    with module Key = Key
+    with type comparator_witness = Key.comparator_witness
+    with type enumeration_witness = Key.enumeration_witness
 
   module Make_for_include_functor_plain_with_witnesses (Key : Key_plain_with_witnesses) :
     For_include_functor_plain
-      with module Total_map.Key = Key
-      with type Total_map.comparator_witness = Key.comparator_witness
-      with type Total_map.enumeration_witness = Key.enumeration_witness
+    with module Total_map.Key = Key
+    with type Total_map.comparator_witness = Key.comparator_witness
+    with type Total_map.enumeration_witness = Key.enumeration_witness
 
   module Make (Key : Key) : S with module Key = Key
 
@@ -230,38 +305,18 @@ module type Total_map = sig
 
   module Make_with_witnesses (Key : Key_with_witnesses) :
     S
-      with module Key = Key
-      with type comparator_witness = Key.comparator_witness
-      with type enumeration_witness = Key.enumeration_witness
+    with module Key = Key
+    with type comparator_witness = Key.comparator_witness
+    with type enumeration_witness = Key.enumeration_witness
 
   module Make_for_include_functor_with_witnesses (Key : Key_with_witnesses) :
     For_include_functor
-      with module Total_map.Key = Key
-      with type Total_map.comparator_witness = Key.comparator_witness
-      with type Total_map.enumeration_witness = Key.enumeration_witness
+    with module Total_map.Key = Key
+    with type Total_map.comparator_witness = Key.comparator_witness
+    with type Total_map.enumeration_witness = Key.enumeration_witness
 
   module Stable : sig
-    module V1 : sig
-      module type S =
-        Stable_V1_S
-          with type ('key, 'a, 'cmp, 'enum) total_map := ('key, 'a, 'cmp, 'enum) t
-
-      module type For_include_functor =
-        Stable_V1_For_include_functor
-          with type ('key, 'a, 'cmp, 'enum) Total_map.total_map :=
-            ('key, 'a, 'cmp, 'enum) t
-
-      module Make_with_witnesses (Key : Key_with_witnesses) :
-        S
-          with module Key = Key
-          with type comparator_witness = Key.comparator_witness
-          with type enumeration_witness = Key.enumeration_witness
-
-      module Make_for_include_functor_with_witnesses (Key : Key_with_witnesses) :
-        For_include_functor
-          with module Total_map.Key = Key
-          with type Total_map.comparator_witness = Key.comparator_witness
-          with type Total_map.enumeration_witness = Key.enumeration_witness
-    end
+    module V1 : Stable with type ('key, 'a, 'cmp, 'enum) t = ('key, 'a, 'cmp, 'enum) t
+    module V2 : Stable with type ('key, 'a, 'cmp, 'enum) t = ('key, 'a, 'cmp, 'enum) t
   end
 end

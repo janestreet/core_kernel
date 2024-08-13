@@ -907,8 +907,8 @@ module Pool = struct
     else
       (Obj.magic
          (Uniform_array.sub t ~pos:(Pointer.first_slot_index pointer) ~len
-           : Obj.t Uniform_array.t)
-        : tuple)
+          : Obj.t Uniform_array.t)
+       : tuple)
   ;;
 end
 

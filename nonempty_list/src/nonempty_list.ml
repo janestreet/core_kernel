@@ -3,7 +3,8 @@ open Core.Core_stable
 module Stable = struct
   module V3 = struct
     module T = struct
-      type nonrec 'a t = ( :: ) of 'a * 'a list [@@deriving compare, equal, hash]
+      type nonrec 'a t = ( :: ) of 'a * 'a list
+      [@@deriving compare, equal, globalize, hash]
 
       let to_list (hd :: tl) : _ list = hd :: tl
 
@@ -303,16 +304,16 @@ let reverse (hd :: tl) =
 let append (hd :: tl) l = hd :: List.append tl l
 
 include Monad.Make_local (struct
-  type nonrec 'a t = 'a t
+    type nonrec 'a t = 'a t
 
-  let return hd = [ hd ]
-  let map = `Custom map
+    let return hd = [ hd ]
+    let map = `Custom map
 
-  let bind (hd :: tl) ~f =
-    let f_hd = f hd in
-    append f_hd (List.concat_map tl ~f:(fun x -> to_list (f x)))
-  ;;
-end)
+    let bind (hd :: tl) ~f =
+      let f_hd = f hd in
+      append f_hd (List.concat_map tl ~f:(fun x -> to_list (f x)))
+    ;;
+  end)
 
 let unzip ((hd1, hd2) :: tl) =
   let tl1, tl2 = List.unzip tl in
@@ -345,8 +346,10 @@ let to_sequence t =
 
 let sort t ~compare = List.sort (to_list t) ~compare |> of_list_exn
 let stable_sort t ~compare = List.stable_sort (to_list t) ~compare |> of_list_exn
+let stable_dedup t ~compare = List.stable_dedup (to_list t) ~compare |> of_list_exn
 let dedup_and_sort t ~compare = List.dedup_and_sort ~compare (to_list t) |> of_list_exn
 let permute ?random_state t = List.permute ?random_state (to_list t) |> of_list_exn
+let random_element ?random_state t = to_list t |> List.random_element_exn ?random_state
 
 let min_elt' (hd :: tl) ~compare =
   List.fold tl ~init:hd ~f:(fun min elt -> if compare min elt > 0 then elt else min) [@nontail

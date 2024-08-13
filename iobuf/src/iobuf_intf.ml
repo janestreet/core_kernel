@@ -206,7 +206,7 @@ module type Peek = sig
 
   include
     Accessors_read
-      with type ('a, 'd, 'w) t = ('d, 'w) iobuf -> pos:int -> 'a
-      with type ('a, 'd, 'w) t_local = ('d, 'w) iobuf -> pos:int -> 'a
-      with type 'a bin_prot := 'a Bin_prot.Type_class.reader
+    with type ('a, 'd, 'w) t = ('d, 'w) iobuf -> pos:int -> 'a
+    with type ('a, 'd, 'w) t_local = ('d, 'w) iobuf -> pos:int -> 'a
+    with type 'a bin_prot := 'a Bin_prot.Type_class.reader
 end

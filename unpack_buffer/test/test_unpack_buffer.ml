@@ -293,7 +293,7 @@ let%test_unit _ =
     let unpack_one =
       Unpack_one.bin_blob
       |> Unpack_one.map ~f:(fun thing ->
-           Bin_prot.Blob.Opaque.Bigstring.of_opaque_exn thing bin_reader_t)
+        Bin_prot.Blob.Opaque.Bigstring.of_opaque_exn thing bin_reader_t)
     ;;
   end
   in
@@ -342,20 +342,20 @@ module Example = struct
     let buf = pack [ t ] in
     let pos_ref = ref 0 in
     ignore
-      (require_allocation_does_not_exceed (Minor_words object_size) [%here] (fun () ->
+      (require_allocation_does_not_exceed (Minor_words object_size) (fun () ->
          let size = Bin_prot.Utils.bin_read_size_header buf ~pos_ref in
          let t = bin_reader_t.read buf ~pos_ref in
          size + t.x + t.y)
-        : int);
+       : int);
     [%expect {| |}]
   ;;
 
   let%expect_test "confirm object size" =
     ignore
-      (require_allocation_does_not_exceed (Minor_words object_size) [%here] (fun () ->
+      (require_allocation_does_not_exceed (Minor_words object_size) (fun () ->
          let n = Sys.opaque_identity 0 in
          { x = n; y = n })
-        : t);
+       : t);
     [%expect {| |}]
   ;;
 end
@@ -371,16 +371,16 @@ let%expect_test "[feed] and [unpack_iter] allocation" =
      (see https://github.com/ocaml/ocaml/pull/10025) hence the bump. *)
   let fixed_cost_of_feed = 30 in
   let buf = Example.pack [] in
-  require_allocation_does_not_exceed (Minor_words fixed_cost_of_feed) [%here] (fun () ->
+  require_allocation_does_not_exceed (Minor_words fixed_cost_of_feed) (fun () ->
     feed unpack buf |> Or_error.ok_exn);
-  require_no_allocation [%here] unpack_iter;
+  require_no_allocation unpack_iter;
   let num_objects = 4 in
   let buf = Example.pack (List.init num_objects ~f:(const Example.t)) in
-  require_allocation_does_not_exceed (Minor_words fixed_cost_of_feed) [%here] (fun () ->
+  require_allocation_does_not_exceed (Minor_words fixed_cost_of_feed) (fun () ->
     feed unpack buf |> Or_error.ok_exn);
   let cost_per_unpack = 19 in
   let expected_allocation = num_objects * (cost_per_unpack + Example.object_size) in
-  require_allocation_does_not_exceed (Minor_words expected_allocation) [%here] unpack_iter;
+  require_allocation_does_not_exceed (Minor_words expected_allocation) unpack_iter;
   [%test_result: int] ~expect:num_objects !num_unpacked;
   [%expect {| |}]
 ;;

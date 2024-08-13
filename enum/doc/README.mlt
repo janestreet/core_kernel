@@ -154,7 +154,7 @@ end
 
 let () =
   List.iter [%all: M.t] ~f:(fun m ->
-    require_compare_equal [%here] (module M) m (M.of_string (M.to_string m));
+    require_compare_equal (module M) m (M.of_string (M.to_string m));
     print_endline (M.to_string m))
 ;;
 
@@ -216,7 +216,7 @@ module T3 = struct
 end
 
 let () =
-  Expect_test_helpers_core.require_does_not_raise ~cr:CR [%here] (fun () ->
+  Expect_test_helpers_core.require_does_not_raise ~cr:CR (fun () ->
     ignore (T3.of_string "a" : T3.t))
 ;;
 

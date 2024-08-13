@@ -1,5 +1,5 @@
 (library
  (name bounded_int_table_test)
- (libraries bounded_int_table)
+ (libraries bounded_int_table core)
  (preprocess
   (pps ppx_jane)))

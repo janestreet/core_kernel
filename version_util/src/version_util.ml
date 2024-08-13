@@ -27,42 +27,42 @@ external generated_hg_version : unit -> string = "generated_hg_version"
 (** Make sure to update [bin/generate_static_string_c_code.sh] too if you are changing
     these constants. *)
 module Version_util_section = Section.Make (struct
-  let name = "version_util"
-  let length_including_start_marker = 4096
+    let name = "version_util"
+    let length_including_start_marker = 4096
 
-  (* BEFORE CHANGING: Please note the bidirectional version compatibility guarantee
+    (* BEFORE CHANGING: Please note the bidirectional version compatibility guarantee
        granted in the mli file for [Expert.get_version_util]. If we ever need to change the
        version util format, we should update the code to be able to read both the old and
        new formats, then wait a month, then change the write function to only write the new
        format. The old and new formats can be distinguished by minting a new [start_marker]
        for the new format.
     *)
-  let start_marker =
-    (* This trick is to prevent the marker from occurring verbatim in the binary that uses
+    let start_marker =
+      (* This trick is to prevent the marker from occurring verbatim in the binary that uses
          [Expert.insert_version_util], so that we don't by accident rewrite our own code.
 
          [opaque_identity] is used to prevent the compiler from converting this computation
          into a literal, thus undoing this trick. We could split the marker in half instead,
          but that would make grepping hard for humans.
          Grep in the tree to see the place that generates this. *)
-    (Sys.opaque_identity ( ^ )) "rUb71QgfHXXwnBWBoJfb0Sa3R60vihdV" ":"
-  ;;
-end)
+      (Sys.opaque_identity ( ^ )) "rUb71QgfHXXwnBWBoJfb0Sa3R60vihdV" ":"
+    ;;
+  end)
 
 (** Make sure to update [bin/generate_static_string_c_code.sh] too if you are changing
     these constants. *)
 module Build_info_section = Section.Make (struct
-  let name = "build info"
-  let length_including_start_marker = 4096
+    let name = "build info"
+    let length_including_start_marker = 4096
 
-  let start_marker =
-    (* Same trick as in [Version_util_section]. *)
-    (Sys.opaque_identity ( ^ )) "vNxXpiccvPI9MHVFJuNwNxj8eu9W5KCB" ":"
-  ;;
-end)
+    let start_marker =
+      (* Same trick as in [Version_util_section]. *)
+      (Sys.opaque_identity ( ^ )) "vNxXpiccvPI9MHVFJuNwNxj8eu9W5KCB" ":"
+    ;;
+  end)
 
 (* BEFORE CHANGING: Note version compatibility guarantee above. *)
-let parse_generated_hg_version = function
+let parse_generated_hg_version_rev_n ~n = function
   | "" -> [ "NO_VERSION_UTIL" ]
   | generated_hg_version ->
     generated_hg_version
@@ -70,22 +70,23 @@ let parse_generated_hg_version = function
     |> Version_util_section.chop_start_marker_if_exists
     |> String.split ~on:'\n'
     |> List.map ~f:(fun line ->
-         match String.rsplit2 line ~on:' ' with
-         | None -> line (* no version util *)
-         | Some (repo, rev_status) ->
-           (* For compability with downstream tools that might rely on this output format,
+      match String.rsplit2 line ~on:' ' with
+      | None -> line (* no version util *)
+      | Some (repo, rev_status) ->
+        (* For compability with downstream tools that might rely on this output format,
            and with [Version.parse].*)
-           String.concat
-             [ repo
-             ; "_"
-             ; String.prefix rev_status 12
-             ; (* The revision can have a one-character '+' suffix. Keep it. *)
-               (if String.length rev_status mod 2 = 1
-                then String.suffix rev_status 1
-                else "")
-             ])
+        String.concat
+          [ repo
+          ; "_"
+          ; String.prefix rev_status n
+          ; (* The revision can have a one-character '+' suffix. Keep it. *)
+            (if String.length rev_status mod 2 = 1 then String.suffix rev_status 1 else "")
+          ])
 ;;
 
+(* BEFORE CHANGING: Note version compatibility guarantee above. *)
+let parse_generated_hg_version = parse_generated_hg_version_rev_n ~n:12
+let parse_generated_hg_version_rev40 = parse_generated_hg_version_rev_n ~n:40
 let version_list = parse_generated_hg_version (generated_hg_version ())
 let version = String.concat version_list ~sep:" "
 
@@ -144,14 +145,14 @@ module Expert = struct
       versions
       |> List.sort ~compare:Version.compare
       |> List.map ~f:(fun { repo; version } ->
-           if not (String.mem repo '/')
-           then failwith [%string "%{repo} doesn't look like a repo url"];
-           (let version' = String.chop_suffix_if_exists version ~suffix:"+" in
-            if (String.length version' = 40 || String.length version' = 64)
-               && String.for_all version' ~f:Char.is_hex_digit_lower
-            then ()
-            else failwith [%string "%{version} doesn't look like a full hg version"]);
-           repo ^ " " ^ version ^ "\n")
+        if not (String.mem repo '/')
+        then failwith [%string "%{repo} doesn't look like a repo url"];
+        (let version' = String.chop_suffix_if_exists version ~suffix:"+" in
+         if (String.length version' = 40 || String.length version' = 64)
+            && String.for_all version' ~f:Char.is_hex_digit_lower
+         then ()
+         else failwith [%string "%{version} doesn't look like a full hg version"]);
+        repo ^ " " ^ version ^ "\n")
       |> String.concat
   ;;
 
@@ -164,6 +165,7 @@ module Expert = struct
   ;;
 
   let parse_generated_hg_version = parse_generated_hg_version
+  let parse_generated_hg_version_rev40 = parse_generated_hg_version_rev40
 
   module Experimental = struct
     let get_build_info = Build_info_section.get
@@ -330,6 +332,7 @@ let compiled_for_speed = x_library_inlining && not dynlinkable_code
 module For_tests = struct
   let build_info_status = Build_info.build_info_status
   let parse_generated_hg_version = parse_generated_hg_version
+  let parse_generated_hg_version_rev40 = parse_generated_hg_version_rev40
 end
 
 let arg_spec =

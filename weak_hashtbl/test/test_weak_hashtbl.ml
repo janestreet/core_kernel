@@ -12,13 +12,15 @@ let%expect_test "[add_exn], [find], [mem], [replace], [remove], [clear]" =
   let print_mem i = print_s [%message (i : int) ~mem:(mem t i : bool)] in
   let key = 13 in
   print_mem key;
-  [%expect {|
+  [%expect
+    {|
     ((i   13)
      (mem false))
     |}];
   add_exn t ~key ~data:(data key);
   print_mem key;
-  [%expect {|
+  [%expect
+    {|
     ((i   13)
      (mem true))
     |}];
@@ -50,25 +52,29 @@ let%expect_test ("[key_is_using_space], [reclaim_space_for_keys_with_unused_data
         "" ~key_is_using_space:(key_is_using_space t key : bool) ~mem:(mem t key : bool)]
   in
   print ();
-  [%expect {|
+  [%expect
+    {|
     ((key_is_using_space false)
      (mem                false))
     |}];
   add_exn t ~key ~data:(data ());
   print ();
-  [%expect {|
+  [%expect
+    {|
     ((key_is_using_space true)
      (mem                true))
     |}];
   Gc.compact ();
   print ();
-  [%expect {|
+  [%expect
+    {|
     ((key_is_using_space true)
      (mem                false))
     |}];
   reclaim_space_for_keys_with_unused_data t;
   print ();
-  [%expect {|
+  [%expect
+    {|
     ((key_is_using_space false)
      (mem                false))
     |}]
@@ -135,24 +141,24 @@ let%expect_test (_ [@tags "no-js"]) =
     | None -> false
     | Some v -> phys_equal v b
   in
-  require [%here] (is_block k1 !b1);
-  require [%here] (is_block k2 !b2);
-  require [%here] (is_block k3 !b3);
+  require (is_block k1 !b1);
+  require (is_block k2 !b2);
+  require (is_block k3 !b3);
   blackhole b1;
   stabilize ();
-  require [%here] (is_absent k1);
-  require [%here] (is_block k2 !b2);
-  require [%here] (is_block k3 !b3);
+  require (is_absent k1);
+  require (is_block k2 !b2);
+  require (is_block k3 !b3);
   blackhole b2;
   stabilize ();
-  require [%here] (is_absent k1);
-  require [%here] (is_absent k2);
-  require [%here] (is_block k3 !b3);
+  require (is_absent k1);
+  require (is_absent k2);
+  require (is_block k3 !b3);
   replace tbl ~key:k3 ~data:!b4;
   blackhole b3;
   stabilize ();
-  require [%here] (is_block k3 !b4);
+  require (is_block k3 !b4);
   blackhole b4;
   stabilize ();
-  require [%here] (is_absent k3)
+  require (is_absent k3)
 ;;

@@ -21,7 +21,7 @@ type ('key, 'data) t_detailed =
      {[
        entries_by_key.( key_to_int key ) = Some { key; data; _ }
      ]}
-  *)
+      *)
   ; entries_by_key : ('key, 'data) Entry.t option array
       (* The first [length] elements of [defined_entries] hold the data in the table.  This is
      an optimization for fold, to keep us from wasting iterations when the array is
@@ -274,16 +274,16 @@ let for_all t ~f = for_alli t ~f:(fun ~key:_ ~data -> f data)
 let equal key_equal data_equal t1 t2 =
   length t1 = length t2
   && for_alli t1 ~f:(fun ~key ~data ->
-       match entry_opt t2 key with
-       | None -> false
-       | Some entry -> key_equal key entry.Entry.key && data_equal data entry.Entry.data)
+    match entry_opt t2 key with
+    | None -> false
+    | Some entry -> key_equal key entry.Entry.key && data_equal data entry.Entry.data)
 ;;
 
 module With_key (Key : sig
-  type t [@@deriving bin_io, sexp]
+    type t [@@deriving bin_io, sexp]
 
-  val to_int : t -> int
-end) =
+    val to_int : t -> int
+  end) =
 struct
   type 'data t = (Key.t, 'data) table
   type 'data table = 'data t

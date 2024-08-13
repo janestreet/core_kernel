@@ -12,6 +12,7 @@ module With_integer_index = struct
     val init : int -> f:(int -> 'a) -> 'a t
     val unsafe_get : 'a t -> int -> 'a
     val unsafe_set : 'a t -> int -> 'a -> unit
+    val unsafe_set_imm : 'a t -> 'a Type_immediacy.Always.t -> int -> 'a -> unit
 
     val unsafe_blit
       :  src:'a t
@@ -42,7 +43,7 @@ module With_integer_index = struct
       { mutable arr : Obj.t Uniform_array.t
       ; mutable length : int
       ; mutable capacity : int
-          (** Invariant: [capacity = Uniform_array.length arr].
+      (** Invariant: [capacity = Uniform_array.length arr].
           We maintain it here to eliminate an indirection when accessing long arrays. *)
       }
     [@@deriving fields ~getters ~setters]
@@ -87,6 +88,16 @@ module With_integer_index = struct
 
     let[@inline always] unsafe_set (type a) (t : a t) i (element : a) =
       Uniform_array.unsafe_set t.arr i (Obj.repr element)
+    ;;
+
+    let[@inline always] unsafe_set_imm
+      (type a)
+      (t : a t)
+      (_ : a Type_immediacy.Always.t)
+      i
+      (element : a)
+      =
+      Uniform_array.unsafe_set_int_assuming_currently_int t.arr i (Obj.magic element)
     ;;
 
     let[@inline always] unsafe_blit ~src ~src_pos ~dst ~dst_pos ~len =
@@ -193,6 +204,13 @@ module With_integer_index = struct
     !result
   ;;
 
+  include Binary_searchable.Make1 (struct
+      type nonrec 'a t = 'a t
+
+      let length = length
+      let get = unsafe_get
+    end)
+
   let next_free_index = length
 
   let[@cold] raise__bad_index t i ~op =
@@ -202,6 +220,14 @@ module With_integer_index = struct
           (t : _ With_structure_details.t)
           (i : int)
           (op : string)]
+  ;;
+
+  (* Tailcalls to raising functions are to be avoided, as the stack traces are much worse.
+     Instead, we try really hard to inline wrapper functions that just perform non-tail
+     calls to the raising functions.
+  *)
+  let[@inline always] raise__bad_index (type a) t i ~op : a =
+    raise__bad_index t i ~op [@nontail]
   ;;
 
   let[@inline always] check_index t i ~op =
@@ -216,7 +242,7 @@ module With_integer_index = struct
   let maybe_get t i = if i < 0 || i >= length t then None else Some (unsafe_get t i)
 
   let maybe_get_local t i =
-    if i < 0 || i >= length t then None else Some { Gel.g = unsafe_get t i }
+    if i < 0 || i >= length t then None else Some { global = unsafe_get t i }
   ;;
 
   let set t i element =
@@ -224,9 +250,20 @@ module With_integer_index = struct
     unsafe_set t i element
   ;;
 
+  let set_imm (type a) (t : a t) (w : a Type_immediacy.Always.t) i (element : a) : unit =
+    check_index t i ~op:"set_imm";
+    unsafe_set_imm t w i element
+  ;;
+
   let[@inline always] push_back__we_know_we_have_space t element =
     let length = length t in
     unsafe_set t length element;
+    set_length t (length + 1)
+  ;;
+
+  let[@inline always] push_back__we_know_we_have_space_imm t w element =
+    let length = length t in
+    unsafe_set_imm t w length element;
     set_length t (length + 1)
   ;;
 
@@ -237,8 +274,20 @@ module With_integer_index = struct
     length
   ;;
 
+  let push_back_index_imm t w element =
+    let length = length t in
+    if length = capacity t then grow_capacity_once t;
+    push_back__we_know_we_have_space_imm t w element;
+    length
+  ;;
+
   let[@inline always] push_back t element =
     let (_ : int) = push_back_index t element in
+    ()
+  ;;
+
+  let[@inline always] push_back_imm t w element =
+    let (_ : int) = push_back_index_imm t w element in
     ()
   ;;
 
@@ -265,14 +314,31 @@ module With_integer_index = struct
 
   let[@inline always] pop_back_unit_exn t =
     let pos = max_index t in
+    if pos < 0 then raise__bad_index t (length t) ~op:"pop_back_unit_exn";
     (* Don't leak the value. *)
     unsafe_clear_pointer_at t pos;
+    set_length t pos
+  ;;
+
+  let[@inline always] pop_back_unit_imm_exn
+    (type a)
+    (t : a t)
+    (_ : a Type_immediacy.Always.t)
+    =
+    let pos = max_index t in
+    if pos < 0 then raise__bad_index t (length t) ~op:"pop_back_unit_imm_exn";
     set_length t pos
   ;;
 
   let pop_back_exn t =
     let e = peek_back_exn t in
     pop_back_unit_exn t;
+    e
+  ;;
+
+  let pop_back_imm_exn t w =
+    let e = peek_back_exn t in
+    pop_back_unit_imm_exn t w;
     e
   ;;
 
@@ -405,17 +471,17 @@ module With_integer_index = struct
   ;;
 
   include Blit.Make1 (struct
-    type nonrec 'a t = 'a t
+      type nonrec 'a t = 'a t
 
-    let create_like ~len _t =
-      (* Note that even though we [unsafe_create_uninitialized], every time this function
+      let create_like ~len _t =
+        (* Note that even though we [unsafe_create_uninitialized], every time this function
            is called, the [Vec] is immediately blitted with valid values. *)
-      Kernel.unsafe_create_uninitialized ~len
-    ;;
+        Kernel.unsafe_create_uninitialized ~len
+      ;;
 
-    let length = length
-    let unsafe_blit = unsafe_blit
-  end)
+      let length = length
+      let unsafe_blit = unsafe_blit
+    end)
 
   (** Returns the length of the longest prefix for which [f] is true. *)
   let take_while_len t ~f =
@@ -534,6 +600,12 @@ module With_integer_index = struct
   let[@cold] raise__not_found () =
     raise (Base.Not_found_s [%message "Vec.find_exn: not found"])
   ;;
+
+  (* Tailcalls to raising functions are to be avoided, as the stack traces are much worse.
+     Instead, we try really hard to inline wrapper functions that just perform non-tail
+     calls to the raising functions.
+  *)
+  let[@inline always] raise__not_found () = raise__not_found () [@nontail]
 
   let rec find_exn' t ~f ~max_index i =
     if i > max_index
@@ -664,18 +736,18 @@ module With_integer_index = struct
       type nonrec 'a t = 'a t [@@deriving compare, sexp]
 
       include Bin_prot.Utils.Make_iterable_binable1 (struct
-        type nonrec 'a t = 'a t
-        type 'a el = 'a [@@deriving bin_io]
+          type nonrec 'a t = 'a t
+          type 'a el = 'a [@@deriving bin_io]
 
-        let caller_identity =
-          Bin_prot.Shape.Uuid.of_string "2ec1d047-7cf8-49bc-991b-0badd17d8359"
-        ;;
+          let caller_identity =
+            Bin_prot.Shape.Uuid.of_string "2ec1d047-7cf8-49bc-991b-0badd17d8359"
+          ;;
 
-        let module_name = Some "Vec"
-        let init ~len ~next = init len ~f:(fun _ -> next ())
-        let iter = iter
-        let length = length
-      end)
+          let module_name = Some "Vec"
+          let init ~len ~next = init len ~f:(fun _ -> next ())
+          let iter = iter
+          let length = length
+        end)
     end
   end
 end
@@ -691,8 +763,14 @@ module Make (M : Intable.S) = struct
   let get t index = get t (M.to_int_exn index)
   let maybe_get t index = maybe_get t (M.to_int_exn index)
   let maybe_get_local t index = maybe_get_local t (M.to_int_exn index)
-  let[@inline always] unsafe_set t index = unsafe_set t (M.to_int_exn index)
-  let set t index = set t (M.to_int_exn index)
+  let[@inline always] unsafe_set t index x : unit = unsafe_set t (M.to_int_exn index) x
+
+  let[@inline always] unsafe_set_imm t w index x : unit =
+    unsafe_set_imm t w (M.to_int_exn index) x
+  ;;
+
+  let set t index x : unit = set t (M.to_int_exn index) x
+  let set_imm t w index x : unit = set_imm t w (M.to_int_exn index) x
   let next_free_index t = next_free_index t |> M.of_int_exn
 
   let foldi t ~init ~f =
@@ -710,6 +788,7 @@ module Make (M : Intable.S) = struct
   ;;
 
   let push_back_index t element = push_back_index t element |> M.of_int_exn
+  let push_back_index_imm t w e = push_back_index_imm t w e |> M.of_int_exn
 
   let to_alist t =
     (* We could do:
@@ -749,3 +828,4 @@ module Make (M : Intable.S) = struct
   let swap t index1 index2 = swap t (M.to_int_exn index1) (M.to_int_exn index2)
   let swap_to_last_and_pop t index = swap_to_last_and_pop t (M.to_int_exn index)
 end
+[@@inline]

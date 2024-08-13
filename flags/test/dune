@@ -1,5 +1,5 @@
 (library
  (name flags_test)
- (libraries expect_test_helpers_core flags)
+ (libraries core expect_test_helpers_core flags)
  (preprocess
   (pps ppx_jane)))

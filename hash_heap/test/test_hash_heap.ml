@@ -2,7 +2,7 @@ open! Core
 open! Expect_test_helpers_base
 module Hash_heap = Hash_heap.Make (Int)
 
-let ( @? ) s b = require [%here] b ~if_false_then_print_s:(lazy [%message s])
+let ( @? ) s b = require b ~if_false_then_print_s:(lazy [%message s])
 let s = [ 1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 11 ]
 
 let make () =

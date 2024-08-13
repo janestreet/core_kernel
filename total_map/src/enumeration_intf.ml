@@ -23,8 +23,8 @@ module type Enumeration = sig
   module type S_fc = S_fc with type ('a, 'witness) enumeration := ('a, 'witness) t
 
   module Make (T : sig
-    type t [@@deriving enumerate]
-  end) : S with type t := T.t
+      type t [@@deriving enumerate]
+    end) : S with type t := T.t
 
   val make : all:'a list -> (module S_fc with type enumerable_t = 'a)
 end

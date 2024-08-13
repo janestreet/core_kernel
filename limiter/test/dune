@@ -1,5 +1,5 @@
 (library
  (name limiter_test)
- (libraries limiter)
+ (libraries core limiter)
  (preprocess
   (pps ppx_jane)))

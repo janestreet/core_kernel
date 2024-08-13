@@ -1,5 +1,5 @@
 (library
  (name tuple_pool_test)
- (libraries tuple_pool)
+ (libraries core tuple_pool)
  (preprocess
   (pps ppx_jane)))

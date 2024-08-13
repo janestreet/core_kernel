@@ -242,7 +242,7 @@ let%test_module "Step_test" =
                             (sustained_rate_per_sec : float)
                             (old_burst_size : int)
                             (old_sustained_rate_per_sec
-                              : float Limiter.Infinite_or_finite.t)]
+                             : float Limiter.Infinite_or_finite.t)]
                   | Unable ->
                     if expect
                     then
@@ -253,7 +253,7 @@ let%test_module "Step_test" =
                             (sustained_rate_per_sec : float)
                             (old_burst_size : int)
                             (old_sustained_rate_per_sec
-                              : float Limiter.Infinite_or_finite.t)])
+                             : float Limiter.Infinite_or_finite.t)])
             ; debug_sexp =
                 [%message
                   "Reconfigure"

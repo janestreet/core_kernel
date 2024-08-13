@@ -44,7 +44,7 @@ module M = Make (Flags)
 include M
 
 let%expect_test _ =
-  print_and_check_comparable_sexps [%here] (module M) [ a; b; c ];
+  print_and_check_comparable_sexps (module M) [ a; b; c ];
   [%expect
     {|
     (Set (
@@ -89,7 +89,7 @@ let%expect_test _ =
 
 (* [t_of_sexp] *)
 let check_t_of_sexp here expect string =
-  require here (equal expect (t_of_sexp (Sexp.of_string string)))
+  require ~here (equal expect (t_of_sexp (Sexp.of_string string)))
 ;;
 
 let%expect_test _ = check_t_of_sexp [%here] empty "()"
@@ -118,36 +118,36 @@ let%expect_test _ =
 ;;
 
 (* +, - *)
-let%expect_test _ = require [%here] (equal (a + a) a)
-let%expect_test _ = require [%here] (equal (a + b) (b + a))
-let%expect_test _ = require [%here] (equal (a - a) empty)
-let%expect_test _ = require [%here] (equal (a + b - a) b)
+let%expect_test _ = require (equal (a + a) a)
+let%expect_test _ = require (equal (a + b) (b + a))
+let%expect_test _ = require (equal (a - a) empty)
+let%expect_test _ = require (equal (a + b - a) b)
 
 (* [intersect] *)
-let%expect_test _ = require [%here] (equal (intersect a a) a)
-let%expect_test _ = require [%here] (equal (intersect a b) empty)
-let%expect_test _ = require [%here] (equal (intersect (a + b) a) a)
+let%expect_test _ = require (equal (intersect a a) a)
+let%expect_test _ = require (equal (intersect a b) empty)
+let%expect_test _ = require (equal (intersect (a + b) a) a)
 
 (* [complement] *)
-let%expect_test _ = require [%here] (equal (intersect (complement a) b) b)
+let%expect_test _ = require (equal (intersect (complement a) b) b)
 
 (* [do_intersect] *)
-let%expect_test _ = require [%here] (do_intersect a a)
-let%expect_test _ = require [%here] (not (do_intersect a b))
-let%expect_test _ = require [%here] (do_intersect (a + b) a)
-let%expect_test _ = require [%here] (do_intersect (a + b) b)
-let%expect_test _ = require [%here] (not (do_intersect (a + b) c))
+let%expect_test _ = require (do_intersect a a)
+let%expect_test _ = require (not (do_intersect a b))
+let%expect_test _ = require (do_intersect (a + b) a)
+let%expect_test _ = require (do_intersect (a + b) b)
+let%expect_test _ = require (not (do_intersect (a + b) c))
 
 (* [are_disjoint] *)
-let%expect_test _ = require [%here] (are_disjoint a empty)
-let%expect_test _ = require [%here] (not (are_disjoint a a))
-let%expect_test _ = require [%here] (are_disjoint a b)
-let%expect_test _ = require [%here] (are_disjoint b a)
-let%expect_test _ = require [%here] (not (are_disjoint (a + b) a))
-let%expect_test _ = require [%here] (are_disjoint (a + b) c)
+let%expect_test _ = require (are_disjoint a empty)
+let%expect_test _ = require (not (are_disjoint a a))
+let%expect_test _ = require (are_disjoint a b)
+let%expect_test _ = require (are_disjoint b a)
+let%expect_test _ = require (not (are_disjoint (a + b) a))
+let%expect_test _ = require (are_disjoint (a + b) c)
 
 (* compare *)
-let%expect_test _ = require [%here] (Int.( = ) (Int.compare 0 1) (-1))
+let%expect_test _ = require (Int.( = ) (Int.compare 0 1) (-1))
 let print_compare t1 t2 = print_s [%sexp (compare t1 t2 : int)]
 
 let%expect_test _ =
@@ -198,7 +198,7 @@ let%expect_test "[compare] is a total order consistent with [is_subset]" =
   [%expect {| -1 |}];
   let test_ordering ordered =
     List.is_sorted_strictly ordered ~compare:(fun f1 f2 ->
-      require [%here] (not (M.is_subset f2 ~of_:f1));
+      require (not (M.is_subset f2 ~of_:f1));
       M.compare f1 f2)
   in
   let known = List.map Flags.known ~f:fst in
@@ -218,7 +218,7 @@ let%expect_test "[compare] is a total order consistent with [is_subset]" =
       (b c)
       (a b c)))
     |}];
-  require [%here] (test_ordering ordered);
+  require (test_ordering ordered);
   let complements = List.map ordered ~f:M.complement in
   print_s [%message (complements : M.t list)];
   [%expect
@@ -235,10 +235,10 @@ let%expect_test "[compare] is a total order consistent with [is_subset]" =
     |}];
   (* complemented flags (forms a reversed ordering) *)
   let ordered = complements |> List.rev in
-  require [%here] (test_ordering ordered);
+  require (test_ordering ordered);
   (* With "unknown" flag [d] *)
   let ordered = combinations (known @ [ d ]) in
-  require [%here] (test_ordering ordered)
+  require (test_ordering ordered)
 ;;
 
 (* Check that conflicting flags leads to an error. *)
@@ -270,7 +270,7 @@ let%expect_test "ensure sexp representation of flags having only recognized bits
   List.iter t_list ~f:(fun t ->
     let sexp = [%sexp (t : t)] in
     let t_recovered = t_of_sexp sexp in
-    Expect_test_helpers_core.require_equal [%here] (module M) t t_recovered);
+    Expect_test_helpers_core.require_equal (module M) t t_recovered);
   [%expect {| |}]
 ;;
 
@@ -280,7 +280,7 @@ let%expect_test "ensure sexp representation of flag with unrecognized bits round
   print_s sexp;
   [%expect {| ((a b c) (unrecognized_bits 0x3ffffffffffffff0)) |}];
   let t_recovered = t_of_sexp sexp in
-  Expect_test_helpers_core.require_equal [%here] (module M) t t_recovered;
+  Expect_test_helpers_core.require_equal (module M) t t_recovered;
   print_s [%message (t : t) (t_recovered : t) (sexp : Sexp.t)];
   [%expect
     {|
@@ -323,7 +323,7 @@ let%expect_test "quickcheck test: ensure sexps round-trip for general scenarios"
     let t = M.of_int i in
     let sexp = [%sexp (t : M.t)] in
     let t_recovered = M.t_of_sexp sexp in
-    Expect_test_helpers_core.require_equal [%here] (module M) t t_recovered);
+    Expect_test_helpers_core.require_equal (module M) t t_recovered);
   [%expect {| |}]
 ;;
 
@@ -335,7 +335,7 @@ let%expect_test "quickcheck_test: existing hex representations can still be conv
   Quickcheck.test ~trials:1000 gen_int63 ~f:(fun int63 ->
     let old_format_hex_num = to_unsigned_hex_string_old int63 in
     let int63_recovered = of_unsigned_hex_string old_format_hex_num in
-    Expect_test_helpers_core.require_equal [%here] (module Int63) int63 int63_recovered);
+    Expect_test_helpers_core.require_equal (module Int63) int63 int63_recovered);
   [%expect {| |}]
 ;;
 
@@ -349,7 +349,6 @@ let%expect_test "old hex repr of 2^62 still deserializes correctly" =
   let old_hex_str = to_unsigned_hex_string_old num in
   let new_hex_str = to_unsigned_hex_string_new num in
   Expect_test_helpers_core.require_equal
-    [%here]
     (module Int63)
     (of_unsigned_hex_string old_hex_str)
     (of_unsigned_hex_string new_hex_str);

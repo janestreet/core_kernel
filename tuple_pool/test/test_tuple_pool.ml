@@ -168,8 +168,8 @@ module Make (Pool : Pool.S) = struct
             (List.init num_to_alloc_this_iter ~f:Fn.id)
             ~init:(p, live)
             ~f:(fun (p, live) i ->
-            let p = if Pool.is_full p then Pool.grow p else p in
-            p, create p i (nil ()) :: live)
+              let p = if Pool.is_full p then Pool.grow p else p in
+              p, create p i (nil ()) :: live)
         in
         let to_free, live =
           let r = ref true in
@@ -260,22 +260,22 @@ let%expect_test "use a pool that has been [grow]n" =
 
 let%test_module _ =
   (module Make (struct
-    include Pool.Unsafe
+      include Pool.Unsafe
 
-    let create (type tuple) (slots : (tuple, _) Slots.t) ~capacity ~dummy:(_ : tuple) =
-      create slots ~capacity
-    ;;
-  end))
+      let create (type tuple) (slots : (tuple, _) Slots.t) ~capacity ~dummy:(_ : tuple) =
+        create slots ~capacity
+      ;;
+    end))
 ;;
 
 let%test_module "Debug without messages" =
   (module Make (struct
-    include Pool.Debug (Pool)
+      include Pool.Debug (Pool)
 
-    let () = show_messages := false
+      let () = show_messages := false
 
-    (* or it prints too much *)
-  end))
+      (* or it prints too much *)
+    end))
 ;;
 
 module Error_checked_pool = Pool.Error_check (Pool)

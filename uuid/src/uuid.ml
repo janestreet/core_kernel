@@ -73,8 +73,8 @@ module T = struct
   let next_counter =
     let counter = ref 0 in
     fun () ->
-      (* In OCaml this doesn't allocate, and threads can't context switch except on
-         allocation *)
+      (* This is atomic because OCaml threads only context switch at allocations and
+         safepoints, and [incr] is a primitive that has neither. *)
       incr counter;
       !counter
   ;;
@@ -149,11 +149,11 @@ end
 include T
 
 include Identifiable.Make_using_comparator (struct
-  let module_name = "Uuid"
+    let module_name = "Uuid"
 
-  include T
-  include Sexpable.Of_stringable (T)
-end)
+    include T
+    include Sexpable.Of_stringable (T)
+  end)
 
 let invariant t = ignore (of_string t : t)
 let nil = "00000000-0000-0000-0000-000000000000"

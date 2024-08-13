@@ -22,62 +22,62 @@ module Unpack_one = struct
   let create ~initial_state ~unpack = T { initial_state; unpack }
 
   include Monad.Make (struct
-    type nonrec 'a t = 'a t
+      type nonrec 'a t = 'a t
 
-    let return v =
-      T
-        { initial_state = ()
-        ; unpack = (fun ~state:() ~buf:_ ~pos:_ ~len:_ -> `Ok (v, 0))
-        }
-    ;;
-
-    let map' (t : 'a t) ~f =
-      let (T { initial_state; unpack }) = t in
-      T
-        { initial_state
-        ; unpack =
-            (fun ~state ~buf ~pos ~len ->
-              match unpack ~state ~buf ~pos ~len with
-              | (`Invalid_data _ | `Not_enough_data _) as x -> x
-              | `Ok (a, pos) -> `Ok (f a, pos))
-        }
-    ;;
-
-    let map = `Custom map'
-
-    let bind =
-      let module State = struct
-        type ('sa, 'b) t =
-          | A : 'sa -> ('sa, _) t
-          | B : 'sb * ('b, 'sb) unpack -> (_, 'b) t
-      end
-      in
-      let open State in
-      let do_b ~na sb (ub : (_, _) unpack) ~buf ~pos ~len =
-        match ub ~state:sb ~buf ~pos ~len with
-        | `Invalid_data _ as x -> x
-        | `Not_enough_data (sb, nb) -> `Not_enough_data (B (sb, ub), nb + na)
-        | `Ok (b, nb) -> `Ok (b, na + nb)
-      in
-      fun (T a) ~f ->
-        let do_a sa ~buf ~pos ~len =
-          match a.unpack ~state:sa ~buf ~pos ~len with
-          | `Invalid_data _ as x -> x
-          | `Not_enough_data (sa, n) -> `Not_enough_data (A sa, n)
-          | `Ok (a, na) ->
-            let (T b) = f a in
-            do_b ~na b.initial_state b.unpack ~buf ~pos:(pos + na) ~len:(len - na)
-        in
+      let return v =
         T
-          { initial_state = A a.initial_state
+          { initial_state = ()
+          ; unpack = (fun ~state:() ~buf:_ ~pos:_ ~len:_ -> `Ok (v, 0))
+          }
+      ;;
+
+      let map' (t : 'a t) ~f =
+        let (T { initial_state; unpack }) = t in
+        T
+          { initial_state
           ; unpack =
               (fun ~state ~buf ~pos ~len ->
-                match state with
-                | A sa -> do_a sa ~buf ~pos ~len
-                | B (sb, ub) -> do_b ~na:0 sb ub ~buf ~pos ~len)
+                match unpack ~state ~buf ~pos ~len with
+                | (`Invalid_data _ | `Not_enough_data _) as x -> x
+                | `Ok (a, pos) -> `Ok (f a, pos))
           }
-    ;;
-  end)
+      ;;
+
+      let map = `Custom map'
+
+      let bind =
+        let module State = struct
+          type ('sa, 'b) t =
+            | A : 'sa -> ('sa, _) t
+            | B : 'sb * ('b, 'sb) unpack -> (_, 'b) t
+        end
+        in
+        let open State in
+        let do_b ~na sb (ub : (_, _) unpack) ~buf ~pos ~len =
+          match ub ~state:sb ~buf ~pos ~len with
+          | `Invalid_data _ as x -> x
+          | `Not_enough_data (sb, nb) -> `Not_enough_data (B (sb, ub), nb + na)
+          | `Ok (b, nb) -> `Ok (b, na + nb)
+        in
+        fun (T a) ~f ->
+          let do_a sa ~buf ~pos ~len =
+            match a.unpack ~state:sa ~buf ~pos ~len with
+            | `Invalid_data _ as x -> x
+            | `Not_enough_data (sa, n) -> `Not_enough_data (A sa, n)
+            | `Ok (a, na) ->
+              let (T b) = f a in
+              do_b ~na b.initial_state b.unpack ~buf ~pos:(pos + na) ~len:(len - na)
+          in
+          T
+            { initial_state = A a.initial_state
+            ; unpack =
+                (fun ~state ~buf ~pos ~len ->
+                  match state with
+                  | A sa -> do_a sa ~buf ~pos ~len
+                  | B (sb, ub) -> do_b ~na:0 sb ub ~buf ~pos ~len)
+            }
+      ;;
+    end)
 
   (* [create_bin_prot] doesn't use [Bigstring.read_bin_prot] for performance reasons.  It
      was written prior to [Bigstring.read_bin_prot], and it's not clear whether switching

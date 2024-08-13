@@ -17,13 +17,13 @@ module Stable = struct
         | `Cyan
         | `White
         ]
-      [@@deriving sexp, compare, hash, equal]
+      [@@deriving compare, equal, hash, sexp, sexp_grammar]
 
       type t =
         [ primary
         | `Color_256 of Color_256.V1.t
         ]
-      [@@deriving sexp, compare, hash, equal]
+      [@@deriving compare, equal, hash, sexp, sexp_grammar]
     end
 
     module V2 = struct
@@ -37,14 +37,14 @@ module Stable = struct
         | `Cyan
         | `White
         ]
-      [@@deriving sexp, compare, hash, equal]
+      [@@deriving compare, equal, hash, sexp, sexp_grammar]
 
       type t =
         [ primary
         | `Color_256 of Color_256.V1.t
         | `Default_color
         ]
-      [@@deriving sexp, compare, hash, equal]
+      [@@deriving compare, equal, hash, sexp, sexp_grammar]
 
       let of_v1 (t : V1.t) = (t :> t)
 
@@ -71,7 +71,7 @@ module Stable = struct
         | Color.V1.t
         | `Bg of Color.V1.t
         ]
-      [@@deriving sexp, compare, hash, equal]
+      [@@deriving compare, equal, hash, sexp, sexp_grammar]
     end
 
     module V2 = struct
@@ -83,7 +83,7 @@ module Stable = struct
         | Color.V2.t
         | `Bg of Color.V2.t
         ]
-      [@@deriving sexp, compare, hash, equal]
+      [@@deriving compare, equal, hash, sexp, sexp_grammar]
 
       let of_v1 (t : V1.t) = (t :> t)
 

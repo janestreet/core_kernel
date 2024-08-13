@@ -1,6 +1,6 @@
 (library
  (name total_map)
  (public_name core_kernel.total_map)
- (libraries core)
+ (libraries bin_prot.shape core)
  (preprocess
   (pps ppx_jane)))

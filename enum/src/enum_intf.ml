@@ -66,6 +66,12 @@ module type Enum = sig
     -> 'a t
     -> 'a Command.Param.t
 
+  val make_param_optional_one_of_flags
+    :  ?aliases:('a -> string list)
+    -> doc:('a -> string)
+    -> 'a t
+    -> 'a option Command.Param.t
+
   val make_param_optional_with_default_doc : default:'a -> ('a, 'a) make_param
 
   val make_param_optional_comma_separated

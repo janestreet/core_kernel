@@ -47,8 +47,10 @@ val drop_last : 'a t -> 'a list
 val to_sequence : 'a t -> 'a Sequence.t
 val sort : 'a t -> compare:('a -> 'a -> int) -> 'a t
 val stable_sort : 'a t -> compare:('a -> 'a -> int) -> 'a t
+val stable_dedup : 'a t -> compare:('a -> 'a -> int) -> 'a t
 val dedup_and_sort : 'a t -> compare:('a -> 'a -> int) -> 'a t
 val permute : ?random_state:Random.State.t -> 'a t -> 'a t
+val random_element : ?random_state:Random.State.t -> 'a t -> 'a
 val iteri : 'a t -> f:(int -> 'a -> unit) -> unit
 val cartesian_product : 'a t -> 'b t -> ('a * 'b) t
 val fold_nonempty : 'a t -> init:('a -> 'acc) -> f:('acc -> 'a -> 'acc) -> 'acc
@@ -194,18 +196,23 @@ module Stable : sig
       is represented as [(1 2)]. *)
   module V3 : sig
     type nonrec 'a t = 'a t
-    [@@deriving bin_io, compare, equal, sexp, sexp_grammar, hash, stable_witness]
+    [@@deriving
+      bin_io, compare, equal, globalize, sexp, sexp_grammar, hash, stable_witness]
   end
 
   (** Represents a [t] as an ordinary list for sexp conversions, but uses a record [{hd :
-      'a; tl ; 'a list}] for bin_io conversions. *)
+      'a; tl ; 'a list}] for bin_io conversions. This module is provided for compatibility
+      with existing protocols; there's no reason not to use the latest version if you're
+      writing a new protocol. *)
   module V2 : sig
     type nonrec 'a t = 'a t
     [@@deriving bin_io, compare, equal, sexp, hash, stable_witness]
   end
 
   (** Represents a [t] as an ordinary list for sexps, but as a pair for bin_io conversions
-      (i.e., a ['a t] is represented as the type ['a * 'a list]). *)
+      (i.e., a ['a t] is represented as the type ['a * 'a list]). This module is provided
+      for compatibility with existing protocols; there's no reason not to use the latest
+      version if you're writing a new protocol. *)
   module V1 : sig
     type nonrec 'a t = 'a t [@@deriving bin_io, compare, equal, sexp, stable_witness]
   end

@@ -1,6 +1,6 @@
 (library
  (name uopt_core)
  (public_name core_kernel.uopt)
- (libraries core uopt)
+ (libraries core ppx_stable_witness.stable_witness uopt)
  (preprocess
   (pps ppx_jane)))

@@ -4,12 +4,12 @@ open! Core
 
 (** Create a section. Each section has a fixed length and starts with a marker string. *)
 module Make : functor
-  (M : sig
-     val name : string
-     val start_marker : string
-     val length_including_start_marker : int
-   end)
-  -> sig
+    (M : sig
+       val name : string
+       val start_marker : string
+       val length_including_start_marker : int
+     end)
+    -> sig
   (** Extract the first section from an executable, including the start marker. Returns
         [None] if there are no matching sections. *)
   val get : contents_of_exe:string -> string option

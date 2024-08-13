@@ -81,7 +81,8 @@ let%expect_test "[sexp_of_t]" =
   [%expect {| (((13))) |}];
   let t = create_exn ~len:2 in
   show t;
-  [%expect {|
+  [%expect
+    {|
     (()
      ())
     |}];
@@ -90,7 +91,8 @@ let%expect_test "[sexp_of_t]" =
   [%expect {| (((13)) ()) |}];
   set_exn t 1 14;
   show t;
-  [%expect {|
+  [%expect
+    {|
     (((13))
      ((14)))
     |}]
@@ -131,7 +133,8 @@ let%expect_test "[compute_exn] caches [reduce]" =
   set_exn t 0 13;
   set_exn t 1 14;
   compute_exn t;
-  [%expect {|
+  [%expect
+    {|
     (reduce
       (13)
       (14))
@@ -146,7 +149,8 @@ let%expect_test "[compute_exn] recomputes when input changes" =
   set_exn t 0 13;
   set_exn t 1 14;
   compute_exn t;
-  [%expect {|
+  [%expect
+    {|
     (reduce
       (13)
       (14))
@@ -154,7 +158,8 @@ let%expect_test "[compute_exn] recomputes when input changes" =
     |}];
   set_exn t 1 15;
   compute_exn t;
-  [%expect {|
+  [%expect
+    {|
     (reduce
       (13)
       (15))
@@ -178,7 +183,8 @@ let%expect_test "[compute_exn] only recomputes what's necessary" =
     |}];
   set_exn t 2 16;
   compute_exn t;
-  [%expect {|
+  [%expect
+    {|
     (reduce (13 14) (16))
     (computed (13 14 16))
     |}]

@@ -2,7 +2,7 @@ module Stable = struct
   open! Core.Core_stable
 
   module V1 = struct
-    type t = int [@@deriving sexp, compare, hash, equal]
+    type t = int [@@deriving compare, equal, hash, sexp, sexp_grammar]
   end
 end
 

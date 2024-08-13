@@ -1,5 +1,5 @@
 (library
  (name timing_wheel_bench)
- (libraries timing_wheel)
+ (libraries core timing_wheel)
  (preprocess
   (pps ppx_jane)))

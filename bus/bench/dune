@@ -1,5 +1,5 @@
 (library
  (name bus_bench)
- (libraries bus)
+ (libraries bus core)
  (preprocess
   (pps ppx_jane)))

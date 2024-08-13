@@ -1,10 +1,10 @@
 open! Core
 
 module Make (M : sig
-  val name : string
-  val start_marker : string
-  val length_including_start_marker : int
-end) =
+    val name : string
+    val start_marker : string
+    val length_including_start_marker : int
+  end) =
 struct
   let chop_start_marker_if_exists = String.chop_prefix_if_exists ~prefix:M.start_marker
 

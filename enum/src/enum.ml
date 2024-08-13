@@ -162,6 +162,15 @@ let make_param_one_of_flags
        Command.Param.flag ?aliases name (Command.Param.no_arg_some enum) ~doc))
 ;;
 
+let make_param_optional_one_of_flags ?aliases ~doc m =
+  Command.Param.choose_one
+    ~if_nothing_chosen:Return_none
+    (List.map (enum m) ~f:(fun (name, enum) ->
+       let aliases = Option.map aliases ~f:(fun aliases -> aliases enum) in
+       let doc = doc enum in
+       Command.Param.flag ?aliases name (Command.Param.no_arg_some enum) ~doc))
+;;
+
 let comma_separated_extra_doc m =
   let options =
     enum m
@@ -268,9 +277,9 @@ module Make_stringable (M : S) : Stringable.S with type t := M.t = struct
   include Make_to_string (M)
 
   include Make_of_string (struct
-    type t = M.t
+      type t = M.t
 
-    let all = M.all
-    let to_string = to_string
-  end)
+      let all = M.all
+      let to_string = to_string
+    end)
 end

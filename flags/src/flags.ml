@@ -148,8 +148,8 @@ module Make (M : Make_arg) = struct
   ;;
 
   include Comparable.Make (struct
-    type nonrec t = t [@@deriving sexp, compare, hash]
-  end)
+      type nonrec t = t [@@deriving sexp, compare, hash]
+    end)
 
   (* [Comparable.Make] turns [equal] into a function call to [compare] rather than the
      much simpler (and equally correct) [Int63.(=)]. Restore it, as well as (=) and (<>). *)

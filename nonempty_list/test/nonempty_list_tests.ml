@@ -8,7 +8,7 @@ include (
 
     let of_list l = if List.is_empty l then `Skip_test else `Ok (of_list_exn l)
   end) :
-    sig end)
+  sig end)
 
 (* Note that at least one expect test must be included for the above functor's tests to
    run.
@@ -63,7 +63,8 @@ let%expect_test "map2" =
   test [ 1; 2 ] [ 3; 4 ];
   test [ 1 ] [ 2; 3 ];
   test [ 1; 2 ] [ 3 ];
-  [%expect {|
+  [%expect
+    {|
     (Ok (2))
     (Ok (3 8))
     Unequal_lengths
@@ -128,7 +129,8 @@ let%expect_test "filter" =
   test [ 2 ] ~f:is_even;
   test [ 1; 2 ] ~f:is_even;
   test [ 2; 2; 3; 4 ] ~f:is_even;
-  [%expect {|
+  [%expect
+    {|
     ()
     (2)
     (2)
@@ -144,7 +146,8 @@ let%expect_test "filteri" =
   test [ 1; 2 ] ~f:index_plus_value_is_even;
   test [ 2; 2; 3; 4 ] ~f:index_plus_value_is_even;
   test [ 2; 2; 4; 3 ] ~f:index_plus_value_is_even;
-  [%expect {|
+  [%expect
+    {|
     ()
     (2)
     ()
@@ -160,7 +163,8 @@ let%expect_test "filter_map" =
   test [ 2 ] ~f:double_if_even;
   test [ 1; 2 ] ~f:double_if_even;
   test [ 2; 2; 3; 4 ] ~f:double_if_even;
-  [%expect {|
+  [%expect
+    {|
     ()
     (4)
     (4)
@@ -178,7 +182,8 @@ let%expect_test "filter_mapi" =
   test [ 1; 2 ] ~f:double_if_index_plus_value_is_even;
   test [ 2; 2; 3; 4 ] ~f:double_if_index_plus_value_is_even;
   test [ 2; 2; 4; 3 ] ~f:double_if_index_plus_value_is_even;
-  [%expect {|
+  [%expect
+    {|
     ()
     (4)
     ()
@@ -193,7 +198,8 @@ let%expect_test "concat" =
   test [ [ 1 ]; [ 2 ]; [ 3 ] ];
   test [ [ 1; 2; 3 ] ];
   test [ [ 1 ]; [ 2; 3 ]; [ 4; 5; 6 ] ];
-  [%expect {|
+  [%expect
+    {|
     (1)
     (1 2 3)
     (1 2 3)
@@ -207,7 +213,8 @@ let%expect_test "nth" =
   test 0 [ 1; 2; 3 ];
   test 2 [ 1; 2; 3 ];
   test 3 [ 1; 2; 3 ];
-  [%expect {|
+  [%expect
+    {|
     ()
     (1)
     (3)
@@ -239,7 +246,8 @@ let%expect_test "last" =
   test [ 1 ];
   test [ 1; 2 ];
   test [ 1; 2; 3 ];
-  [%expect {|
+  [%expect
+    {|
     1
     2
     3
@@ -251,7 +259,8 @@ let%expect_test "drop_last" =
   test [ 1 ];
   test [ 1; 2 ];
   test [ 1; 2; 3 ];
-  [%expect {|
+  [%expect
+    {|
     ()
     (1)
     (1 2)
@@ -263,7 +272,8 @@ let%expect_test "to_sequence" =
   test [ 1 ];
   test [ 1; 2; 3 ];
   test [ 0; 2; 4; 6 ];
-  [%expect {|
+  [%expect
+    {|
     (1)
     (1 2 3)
     (0 2 4 6)
@@ -274,7 +284,8 @@ let%expect_test "sort" =
   let test t = print_s [%sexp (sort ~compare:Int.compare t : int t)] in
   test [ 1 ];
   test [ 2; 4; 1; 4 ];
-  [%expect {|
+  [%expect
+    {|
     (1)
     (1 2 4 4)
     |}]
@@ -285,7 +296,7 @@ let%expect_test "stable_sort" =
     print_s
       [%sexp
         (stable_sort ~compare:(fun a b -> Comparable.lift ~f:fst Int.compare a b) t
-          : (int * string) t)]
+         : (int * string) t)]
   in
   test [ 1, "_" ];
   test [ 2, "_"; 4, "a"; 1, "_"; 4, "b" ];
@@ -298,11 +309,30 @@ let%expect_test "stable_sort" =
     |}]
 ;;
 
+let%expect_test "stable_dedup" =
+  let test t =
+    print_s
+      [%sexp
+        (stable_dedup ~compare:(fun a b -> Comparable.lift ~f:fst Int.compare a b) t
+         : (int * string) t)]
+  in
+  test [ 1, "_" ];
+  test [ 2, "_"; 4, "a"; 1, "_"; 4, "b" ];
+  test [ 2, "_"; 4, "b"; 1, "_"; 4, "a" ];
+  [%expect
+    {|
+    ((1 _))
+    ((2 _) (4 a) (1 _))
+    ((2 _) (4 b) (1 _))
+    |}]
+;;
+
 let%expect_test "dedup_and_sort" =
   let test t = print_s [%sexp (dedup_and_sort ~compare:Int.compare t : int t)] in
   test [ 1 ];
   test [ 2; 4; 1; 4 ];
-  [%expect {|
+  [%expect
+    {|
     (1)
     (1 2 4)
     |}]
@@ -331,7 +361,8 @@ let%expect_test "map_of_alist_multi" =
   in
   test [];
   test [ 0, 0; 0, 1; 1, 1 ];
-  [%expect {|
+  [%expect
+    {|
     ()
     ((0 (1 0)) (1 (1)))
     |}]
@@ -343,11 +374,12 @@ let%expect_test "map_of_list_with_key_multi" =
     print_s
       [%sexp
         (map_of_list_with_key_multi alist ~comparator:(module Int) ~get_key
-          : Date.t t Int.Map.t)]
+         : Date.t t Int.Map.t)]
   in
   test [];
   test ([ "2023-01-01"; "2023-03-03"; "2024-12-24" ] |> List.map ~f:Date.of_string);
-  [%expect {|
+  [%expect
+    {|
     ()
     ((2023 (2023-03-03 2023-01-01)) (2024 (2024-12-24)))
     |}]
@@ -360,7 +392,8 @@ let%expect_test "map_of_sequence_multi" =
   in
   test Sequence.empty;
   test (Sequence.of_list [ 0, 0; 0, 1; 1, 1 ]);
-  [%expect {|
+  [%expect
+    {|
     ()
     ((0 (1 0)) (1 (1)))
     |}]
@@ -733,9 +766,9 @@ let%expect_test "init" =
   [%expect {| (0 1) |}];
   test 1;
   [%expect {| (0) |}];
-  Expect_test_helpers_core.require_does_raise [%here] (fun () -> test 0);
+  Expect_test_helpers_core.require_does_raise (fun () -> test 0);
   [%expect {| (Invalid_argument "Nonempty_list.init 0") |}];
-  Expect_test_helpers_core.require_does_raise [%here] (fun () -> test (-1));
+  Expect_test_helpers_core.require_does_raise (fun () -> test (-1));
   [%expect {| (Invalid_argument "Nonempty_list.init -1") |}];
   ()
 ;;
@@ -856,7 +889,7 @@ let%expect_test "Option" =
 let%expect_test "Option does not allocate" =
   run_on_empty_and_nonempty_lists (fun l ->
     let round_tripped =
-      Expect_test_helpers_core.require_no_allocation [%here] (fun () ->
+      Expect_test_helpers_core.require_no_allocation (fun () ->
         match%optional.Nonempty_list.Option l with
         | None -> Sys.opaque_identity Nonempty_list.Option.none
         | Some nonempty ->

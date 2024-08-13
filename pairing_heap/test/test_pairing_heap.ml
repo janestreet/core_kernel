@@ -6,21 +6,21 @@ module Heap = Pairing_heap
 (* Container tests.  Heap has no t_of_sexp because there is no way to deserialize a
    comparison function, so we simulate it. *)
 include Base_test_helpers.Test_container.Test_S0 (struct
-  include Heap
+    include Heap
 
-  module Elt = struct
-    type t = int [@@deriving sexp]
+    module Elt = struct
+      type t = int [@@deriving sexp]
 
-    let of_int = Fn.id
-    let to_int = Fn.id
-  end
+      let of_int = Fn.id
+      let to_int = Fn.id
+    end
 
-  type nonrec t = int t [@@deriving sexp_of]
+    type nonrec t = int t [@@deriving sexp_of]
 
-  let mem t int = mem t int ~equal:Int.equal
-  let of_list ints = of_list ints ~cmp:Int.compare
-  let t_of_sexp sexp = sexp |> [%of_sexp: int list] |> of_list
-end)
+    let mem t int = mem t int ~equal:Int.equal
+    let of_list ints = of_list ints ~cmp:Int.compare
+    let t_of_sexp sexp = sexp |> [%of_sexp: int list] |> of_list
+  end)
 
 let%expect_test "Heap.sexp_of_t" =
   let test list =
@@ -36,12 +36,14 @@ let%expect_test "Heap.sexp_of_t" =
   test [];
   [%expect {| () |}];
   test [ 3 ];
-  [%expect {|
+  [%expect
+    {|
     (3)
     ()
     |}];
   test [ 3; 1; 4 ];
-  [%expect {|
+  [%expect
+    {|
     (1 3 4)
     (3 4)
     (4)
@@ -77,12 +79,14 @@ let%expect_test "Heap.sexp_of_t with removes" =
   test [];
   [%expect {| () |}];
   test [ 3 ];
-  [%expect {|
+  [%expect
+    {|
     (3)
     ()
     |}];
   test [ 3; 1; 4 ];
-  [%expect {|
+  [%expect
+    {|
     (1 3 4)
     (1 4)
     (4)
@@ -256,88 +260,127 @@ let%test_module _ =
       That_heap.invariant Fn.ignore that_t
     ;;
 
-    let test_dual_ops () =
-      let t = create () in
-      let rec loop ops =
-        if ops = 0
-        then ()
-        else (
-          let r = Random.int 100 in
-          if r < 40
-          then add t (Random.int 100_000)
-          else if r < 70
-          then pop t
-          else if r < 80
-          then top t
-          else if r < 90
-          then remove_top t
-          else internal_check t;
-          loop (ops - 1))
+    let%expect_test _ =
+      let generator =
+        let add =
+          let%map.Quickcheck.Generator i = Int.gen_uniform_incl 0 100 in
+          `Add i
+        in
+        let return = Quickcheck.Generator.return in
+        Quickcheck.Generator.weighted_union
+          (* This is biased towards adding (0.5 probability of add, 0.3 probability of
+             pop or remove top), so the heap will tend to grow over time. This should test
+             more interesting cases compared to always testing small heaps. *)
+          [ 0.5, add
+          ; 0.2, return `Pop
+          ; 0.1, return `Top
+          ; 0.1, return `Remove_top
+          ; 0.1, return `Internal_check
+          ]
+        |> Quickcheck.Generator.list
       in
-      loop 1_000
+      Quickcheck.test generator ~sizes:(Sequence.repeat 10_000) ~trials:100 ~f:(fun ops ->
+        let t = create () in
+        List.iter ops ~f:(function
+          | `Add i -> add t i
+          | `Pop -> pop t
+          | `Top -> top t
+          | `Remove_top -> remove_top t
+          | `Internal_check -> internal_check t))
     ;;
-
-    let%test_unit _ = test_dual_ops ()
   end)
 ;;
 
-let integers n =
-  let t = create ~cmp:Int.compare () in
-  for i = 1 to n do
-    add t i;
-    if i % 10 = 0
-       (* We need to pop from time to time to trigger the amortized tree reorganizations.  If
-       we don't do this the resulting structure is just a linked list and the caller is
-       not flexed as completely as it should be. *)
-    then (
-      ignore (pop t : int option);
-      add t i)
-  done;
-  t
+let integer_test f =
+  let generator =
+    let%map.Quickcheck.Generator ops =
+      let add =
+        let%map.Quickcheck.Generator i =
+          Int.gen_uniform_incl Int.min_value Int.max_value
+        in
+        `Add i
+      in
+      (* We need to pop from time to time to trigger the amortized tree reorganizations.
+         If we don't do this the resulting structure is just a linked list and the caller
+         is not flexed as completely as it should be. *)
+      Quickcheck.Generator.weighted_union
+        [ 0.1, Quickcheck.Generator.return `Pop; 0.9, add ]
+      |> Quickcheck.Generator.list
+    in
+    let t = create ~cmp:Int.compare () in
+    List.iter ops ~f:(function
+      | `Add i -> add t i
+      | `Pop -> ignore (pop t : int option));
+    t
+  in
+  Quickcheck.test generator ~f
 ;;
 
 let%test_unit "clear" =
-  let t = integers 99 in
-  clear t;
-  if length t <> 0
-  then failwithf "not empty after clear: contains %d elements" (length t) ()
+  integer_test (fun t ->
+    let initial_elts = to_list t in
+    clear t;
+    if length t <> 0
+    then
+      raise_s
+        [%message
+          "not empty after clear"
+            (initial_elts : int list)
+            ~length_after_clear:(length t : int)])
 ;;
 
 let test_copy ~add_removable ~remove =
   let sum t = fold t ~init:0 ~f:(fun acc i -> acc + i) in
-  let t = integers 99 in
-  let token = add_removable t 100 in
-  invariant Fn.ignore t;
-  let t' = copy t in
-  invariant Fn.ignore t';
-  assert (sum t = sum t');
-  assert (to_list t = to_list t');
-  remove t token;
-  assert (sum t = sum t' - 100)
+  integer_test (fun t ->
+    let token = add_removable t 100 in
+    invariant Fn.ignore t;
+    let t' = copy t in
+    invariant Fn.ignore t';
+    assert (sum t = sum t');
+    assert (to_list t = to_list t');
+    remove t token;
+    assert (sum t = sum t' - 100))
 ;;
 
 let%test_unit _ = test_copy ~add_removable ~remove
 let%test_unit _ = test_copy ~add_removable:Unsafe.add_removable ~remove:Unsafe.remove
 
 let test_removal ~add_removable ~remove ~elt_value_exn =
-  let t = create ~cmp:Int.compare () in
-  let tokens = ref [] in
-  for i = 1 to 10_000 do
-    tokens := add_removable t i :: !tokens
-  done;
-  invariant Fn.ignore t;
-  List.iter !tokens ~f:(fun token ->
-    if elt_value_exn token t % 2 <> 0 then remove t token);
-  invariant Fn.ignore t;
-  let rec loop count =
-    if count % 1000 = 0 then invariant Fn.ignore t;
-    match pop t with
-    | None -> assert (count = 10_000 / 2)
-    | Some v ->
-      assert ((1 + count) * 2 = v);
-      loop (count + 1)
+  let generator =
+    let%map.Quickcheck.Generator elts =
+      Int.gen_uniform_incl Int.min_value Int.max_value |> Quickcheck.Generator.list
+    in
+    let t = create ~cmp:Int.compare () in
+    let tokens = List.map elts ~f:(fun i -> i, add_removable t i) in
+    t, tokens
   in
-  loop 0
+  Quickcheck.test
+    generator
+    (* This replaced an old test that added exactly 10k elements, and this combination of
+       sizes and trials produces a few of about that size. Reaching this exact size is
+       probably not all that important. *)
+    ~sizes:(Sequence.repeat 30_000)
+    ~trials:20
+    ~f:(fun (t, tokens) ->
+      invariant Fn.ignore t;
+      assert (length t = List.length tokens);
+      let even_elts =
+        List.filter_map tokens ~f:(fun (elt, token) ->
+          assert (elt_value_exn token t = elt);
+          if elt % 2 = 0
+          then Some elt
+          else (
+            remove t token;
+            None))
+      in
+      assert (length t = List.length even_elts);
+      invariant Fn.ignore t;
+      List.iteri (List.sort ~compare:Int.compare even_elts) ~f:(fun i elt ->
+        if i % 1000 = 0 then invariant Fn.ignore t;
+        match pop t with
+        | None -> assert false
+        | Some v -> assert (v = elt));
+      assert (is_empty t))
 ;;
 
 let%test_unit "remove" =
@@ -351,23 +394,27 @@ let%test_unit "remove" =
     ~elt_value_exn:Unsafe.Elt.value
 ;;
 
-let test_ordering () =
-  let t = create ~cmp:Int.compare () in
-  for _ = 1 to 10_000 do
-    add t (Random.int 100_000)
-  done;
-  let rec loop last count =
-    if count % 1_000 = 0 then invariant Fn.ignore t;
-    match pop t with
-    | None -> ()
-    | Some v ->
-      assert (v >= last);
-      loop v (count + 1)
+let%test_unit _ =
+  let generator =
+    let%map.Quickcheck.Generator elts =
+      Int.gen_uniform_incl Int.min_value Int.max_value |> Quickcheck.Generator.list
+    in
+    let t = create ~cmp:Int.compare () in
+    List.iter elts ~f:(fun elt -> add t elt);
+    t
   in
-  loop (-1) 0
+  Quickcheck.test generator ~sizes:(Sequence.repeat 30_000) ~trials:20 ~f:(fun t ->
+    let rec loop last count =
+      if count % 1_000 = 0 then invariant Fn.ignore t;
+      match pop t with
+      | None -> ()
+      | Some v ->
+        assert (v >= last);
+        loop v (count + 1)
+    in
+    loop Int.min_value 0)
 ;;
 
-let%test_unit _ = test_ordering ()
 let%test_unit _ = ignore (of_array [||] ~cmp:Int.compare : int t)
 
 let%expect_test "operations on removed elements" =
@@ -376,7 +423,7 @@ let%expect_test "operations on removed elements" =
   print_s [%sexp (elt : int Elt.t)];
   [%expect {| (1) |}];
   ignore (pop_exn h : int);
-  require_does_raise [%here] (fun () -> Elt.value_exn elt);
+  require_does_raise (fun () -> Elt.value_exn elt);
   [%expect {| (Failure "Heap.value_exn: node was removed from the heap") |}];
   print_s [%sexp (elt : int Elt.t)];
   [%expect {| () |}]
@@ -387,18 +434,18 @@ let%expect_test "pop_if" =
   let show () = print_s [%sexp (heap : int Heap.t)] in
   show ();
   [%expect {| (-1 1 2 3) |}];
-  require_some ~print_some:[%sexp_of: int] [%here] (Heap.pop_if heap (fun i -> i < 0));
+  require_some ~print_some:[%sexp_of: int] (Heap.pop_if heap (fun i -> i < 0));
   [%expect {| -1 |}];
   show ();
   [%expect {| (1 2 3) |}];
-  require_none [%here] [%sexp_of: int] (Heap.pop_if heap (fun i -> i < 0));
+  require_none [%sexp_of: int] (Heap.pop_if heap (fun i -> i < 0));
   show ();
   [%expect {| (1 2 3) |}]
 ;;
 
 let%expect_test "pop_if on empty heap" =
   let empty = Heap.create ~cmp:Int.compare () in
-  require_none [%here] [%sexp_of: int] (Heap.pop_if empty (fun _ -> true))
+  require_none [%sexp_of: int] (Heap.pop_if empty (fun _ -> true))
 ;;
 
 let test_pop_while_negative values =

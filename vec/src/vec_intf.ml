@@ -20,10 +20,12 @@ module type S = sig
   val get : 'a t -> index -> 'a
 
   val maybe_get : 'a t -> index -> 'a option
-  val maybe_get_local : 'a t -> index -> 'a Gel.t option
+  val maybe_get_local : 'a t -> index -> 'a Modes.Global.t option
 
   (** Raises if the index is invalid. *)
   val set : 'a t -> index -> 'a -> unit
+
+  val set_imm : 'a t -> 'a Type_immediacy.Always.t -> index -> 'a -> unit
 
   include Container.S1 with type 'a t := 'a t
   include Blit.S1 with type 'a t := 'a t
@@ -37,9 +39,14 @@ module type S = sig
   val sort : ?pos:int -> ?len:int -> 'a t -> compare:('a -> 'a -> int) -> unit
 
   val is_sorted : 'a t -> compare:('a -> 'a -> int) -> bool
+
+  include Binary_searchable.S1 with type 'a t := 'a t
+
   val next_free_index : 'a t -> index
   val push_back : 'a t -> 'a -> unit
   val push_back_index : 'a t -> 'a -> index
+  val push_back_imm : 'a t -> 'a Type_immediacy.Always.t -> 'a -> unit
+  val push_back_index_imm : 'a t -> 'a Type_immediacy.Always.t -> 'a -> index
 
   (** Grows the vec to the specified length if it is currently shorter. Sets all new
       indices to [default]. *)
@@ -70,7 +77,9 @@ module type S = sig
   val find_and_remove : 'a t -> f:('a -> bool) -> 'a option
 
   val pop_back_exn : 'a t -> 'a
+  val pop_back_imm_exn : 'a t -> 'a Type_immediacy.Always.t -> 'a
   val pop_back_unit_exn : 'a t -> unit
+  val pop_back_unit_imm_exn : 'a t -> 'a Type_immediacy.Always.t -> unit
   val peek_back : 'a t -> 'a option
   val peek_back_exn : 'a t -> 'a
   val foldi : 'a t -> init:'accum -> f:(index -> 'accum -> 'a -> 'accum) -> 'accum
@@ -151,6 +160,7 @@ module type S = sig
 
   val unsafe_get : 'a t -> index -> 'a
   val unsafe_set : 'a t -> index -> 'a -> unit
+  val unsafe_set_imm : 'a t -> 'a Type_immediacy.Always.t -> index -> 'a -> unit
 
   module Expert : sig
     val unsafe_inner : 'a t -> Obj.t Uniform_array.t

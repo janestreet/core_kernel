@@ -1,6 +1,6 @@
 (library
  (name weak_pointer)
  (public_name core_kernel.weak_pointer)
- (libraries base weak_array)
+ (libraries base core.heap_block weak_array)
  (preprocess
   (pps ppx_jane)))

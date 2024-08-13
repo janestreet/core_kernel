@@ -8,30 +8,30 @@ open! Thread_safe_queue
 let%bench_fun "enqueue + dequeue_exn of immediate" =
   let t = create () in
   enqueue t ();
-  ignore (dequeue_exn t : unit);
+  ignore (dequeue t : unit Dequeue_result.t);
   Gc.full_major ();
   fun () ->
     enqueue t ();
-    ignore (dequeue_exn t : unit)
+    ignore (dequeue t : unit Dequeue_result.t)
 ;;
 
 let%bench_fun "enqueue + dequeue_exn of young object" =
   let t = create () in
   enqueue t (ref ());
-  ignore (dequeue_exn t : unit ref);
+  ignore (dequeue t : unit ref Dequeue_result.t);
   Gc.full_major ();
   fun () ->
     enqueue t (ref ());
-    ignore (dequeue_exn t : unit ref)
+    ignore (dequeue t : unit ref Dequeue_result.t)
 ;;
 
 let%bench_fun "enqueue + dequeue_exn of old object" =
   let r = ref () in
   let t = create () in
   enqueue t r;
-  ignore (dequeue_exn t : unit ref);
+  ignore (dequeue t : unit ref Dequeue_result.t);
   Gc.full_major ();
   fun () ->
     enqueue t r;
-    ignore (dequeue_exn t : unit ref)
+    ignore (dequeue t : unit ref Dequeue_result.t)
 ;;

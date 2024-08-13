@@ -24,8 +24,8 @@
 open! Core
 open Iobuf_intf
 
-type nonrec seek = seek [@@deriving sexp_of]
-type nonrec no_seek = no_seek [@@deriving sexp_of]
+type nonrec seek = seek [@@deriving globalize, sexp_of]
+type nonrec no_seek = no_seek [@@deriving globalize, sexp_of]
 
 (** This type is a compiler witness that 'rw and 'seek do not affect layout; it enables
     wider use of unboxed GADTs. *)
@@ -389,9 +389,9 @@ module Consume : sig
 
   include
     Accessors_read
-      with type ('a, 'r, 's) t = (([> read ] as 'r), seek) t -> 'a
-      with type ('a, 'r, 's) t_local = (([> read ] as 'r), seek) t -> 'a
-      with type 'a bin_prot := 'a Bin_prot.Type_class.reader
+    with type ('a, 'r, 's) t = (([> read ] as 'r), seek) t -> 'a
+    with type ('a, 'r, 's) t_local = (([> read ] as 'r), seek) t -> 'a
+    with type 'a bin_prot := 'a Bin_prot.Type_class.reader
 end
 
 (** [Fill.bin_prot X.bin_write_t t x] writes [x] to [t] in bin-prot form, advancing past
@@ -399,9 +399,9 @@ end
 module Fill : sig
   include
     Accessors_write
-      with type ('a, 'd, 'w) t = (read_write, seek) t -> 'a -> unit
-      with type ('a, 'd, 'w) t_local = (read_write, seek) t -> 'a -> unit
-      with type 'a bin_prot := 'a Bin_prot.Type_class.writer
+    with type ('a, 'd, 'w) t = (read_write, seek) t -> 'a -> unit
+    with type ('a, 'd, 'w) t_local = (read_write, seek) t -> 'a -> unit
+    with type 'a bin_prot := 'a Bin_prot.Type_class.writer
 
   (** [decimal t int] is equivalent to [Iobuf.Fill.string t (Int.to_string int)], but with
       improved efficiency and no intermediate allocation.
@@ -421,6 +421,13 @@ module Fill : sig
       to [t]. [t] is advanced by 10 characters and no terminator is added. If sufficient
       space is not available, [date] will raise. *)
   val date_string_iso8601_extended : (Date.t, _, _) t
+
+  (** [bin_prot_local sizer writer bin] is similar to [bin_prot], but allows [bin] to be
+      locally allocated. *)
+  val bin_prot_local
+    :  'a Bin_prot.Size.sizer_local
+    -> 'a Bin_prot.Write.writer_local
+    -> ('a, _, _) t_local
 end
 
 (** [Peek] and [Poke] functions access a value at [pos] from the lower bound of the window
@@ -440,6 +447,13 @@ module Peek : sig
       @param pos default = 0
       @param len default = [length t - pos] *)
   val index : ([> read ], _) iobuf -> ?pos:int -> ?len:int -> char -> int option
+
+  (** [rindex ?pos ?len t c] returns [Some i] for the largest [i >= pos] such that [char t
+      i = c], or [None] if there is no such [i].
+
+      @param pos default = 0
+      @param len default = [length t - pos] *)
+  val rindex : ([> read ], _) iobuf -> ?pos:int -> ?len:int -> char -> int option
 end
 
 (** [Poke.bin_prot X.bin_write_t t x] writes [x] to the beginning of [t] in binary form
@@ -463,9 +477,9 @@ module Poke : sig
 
   include
     Accessors_write
-      with type ('a, 'd, 'w) t = (read_write, 'w) t -> pos:int -> 'a -> unit
-      with type ('a, 'd, 'w) t_local = (read_write, 'w) t -> pos:int -> 'a -> unit
-      with type 'a bin_prot := 'a Bin_prot.Type_class.writer
+    with type ('a, 'd, 'w) t = (read_write, 'w) t -> pos:int -> 'a -> unit
+    with type ('a, 'd, 'w) t_local = (read_write, 'w) t -> pos:int -> 'a -> unit
+    with type 'a bin_prot := 'a Bin_prot.Type_class.writer
 
   (** Same as [Fill.date_string_iso8601_extended t date], but does not advance [t]. *)
   val date_string_iso8601_extended : (Date.t, _, _) t
@@ -483,6 +497,10 @@ module Unsafe : sig
     (** Like [Peek.index] but with no bounds checks, and returns a negative number rather
         than [None] when the character is not found. *)
     val index_or_neg : ([> read ], _) iobuf -> pos:int -> len:int -> char -> int
+
+    (** Like [Peek.rindex] but with no bounds checks, and returns a negative number rather
+        than [None] when the character is not found. *)
+    val rindex_or_neg : ([> read ], _) iobuf -> pos:int -> len:int -> char -> int
   end
 
   module Poke : sig

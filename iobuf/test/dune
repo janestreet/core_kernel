@@ -1,5 +1,6 @@
 (library
  (name iobuf_test)
- (libraries expect_test_helpers_core iobuf int_repr)
+ (libraries expect_test_helpers_core iobuf core
+   expect_test_helpers_core.expect_test_helpers_base int_repr)
  (preprocess
   (pps ppx_jane)))

@@ -1,5 +1,5 @@
 (library
  (name fheap_bench)
- (libraries fheap)
+ (libraries core fheap)
  (preprocess
   (pps ppx_jane)))

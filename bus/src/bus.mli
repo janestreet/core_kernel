@@ -14,23 +14,30 @@ open! Core
 (** [Callback_arity] states the type of callbacks stored in a bus. Using [Callback_arity]
     is an implementation technique that allows callbacks to be defined as ordinary n-ary
     curried functions (e.g., [a1 -> a2 -> a3 -> r]), instead of forcing n-ary-variadic
-    callbacks to use tuples (e.g., [a1 * a2 * a3 -> r]).  This also avoids extra
+    callbacks to use tuples (e.g., [a1 * a2 * a3 -> r]). This also avoids extra
     allocation.
 
     When reading the bus interface, keep in mind that each ['callback] is limited, through
     [create], to the types exposed by the variants in [Callback_arity].
 
-    Currently, only a 1-arity callback is provided with local_ annotations in order to
-    avoid an explosion due to the permutations of local_ args.  It is also relatively
-    cheap to make the one local arg a record with multiple fields. *)
+    For use cases where one requires an multi-arity bus with a more nuanced set of local
+    annotations than what is provided, consider packing the fields into a local record and
+    using [Arity1_local], as this is relatively cheap and avoids a blowup in the size of
+    [Callback_arity].
+*)
+
 module Callback_arity : sig
   type _ t =
     | Arity1 : ('a -> unit) t
     | Arity1_local : ('a -> unit) t
     | Arity2 : ('a -> 'b -> unit) t
+    | Arity2_local : ('a -> 'b -> unit) t
     | Arity3 : ('a -> 'b -> 'c -> unit) t
+    | Arity3_local : ('a -> 'b -> 'c -> unit) t
     | Arity4 : ('a -> 'b -> 'c -> 'd -> unit) t
+    | Arity4_local : ('a -> 'b -> 'c -> 'd -> unit) t
     | Arity5 : ('a -> 'b -> 'c -> 'd -> 'e -> unit) t
+    | Arity5_local : ('a -> 'b -> 'c -> 'd -> 'e -> unit) t
   [@@deriving sexp_of]
 end
 
@@ -102,10 +109,29 @@ val close : 'callback Read_write.t -> unit
 val write : ('a -> unit) Read_write.t -> 'a -> unit
 val write_local : ('a -> unit) Read_write.t -> 'a -> unit
 val write2 : ('a -> 'b -> unit) Read_write.t -> 'a -> 'b -> unit
+val write2_local : ('a -> 'b -> unit) Read_write.t -> 'a -> 'b -> unit
 val write3 : ('a -> 'b -> 'c -> unit) Read_write.t -> 'a -> 'b -> 'c -> unit
+val write3_local : ('a -> 'b -> 'c -> unit) Read_write.t -> 'a -> 'b -> 'c -> unit
 val write4 : ('a -> 'b -> 'c -> 'd -> unit) Read_write.t -> 'a -> 'b -> 'c -> 'd -> unit
 
+val write4_local
+  :  ('a -> 'b -> 'c -> 'd -> unit) Read_write.t
+  -> 'a
+  -> 'b
+  -> 'c
+  -> 'd
+  -> unit
+
 val write5
+  :  ('a -> 'b -> 'c -> 'd -> 'e -> unit) Read_write.t
+  -> 'a
+  -> 'b
+  -> 'c
+  -> 'd
+  -> 'e
+  -> unit
+
+val write5_local
   :  ('a -> 'b -> 'c -> 'd -> 'e -> unit) Read_write.t
   -> 'a
   -> 'b
@@ -159,11 +185,8 @@ module Fold_arity : sig
     | Arity2 : ('a -> 'b -> unit, 's -> 'a -> 'b -> 's, 's) t
     | Arity3 : ('a -> 'b -> 'c -> unit, 's -> 'a -> 'b -> 'c -> 's, 's) t
     | Arity4 : ('a -> 'b -> 'c -> 'd -> unit, 's -> 'a -> 'b -> 'c -> 'd -> 's, 's) t
-    | Arity5
-        : ( 'a -> 'b -> 'c -> 'd -> 'e -> unit
-          , 's -> 'a -> 'b -> 'c -> 'd -> 'e -> 's
-          , 's )
-          t
+    | Arity5 :
+        ('a -> 'b -> 'c -> 'd -> 'e -> unit, 's -> 'a -> 'b -> 'c -> 'd -> 'e -> 's, 's) t
   [@@deriving sexp_of]
 end
 

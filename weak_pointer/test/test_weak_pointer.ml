@@ -17,27 +17,50 @@ let print t =
       ""
         ~_:(t : int ref t)
         ~is_some:(is_some t : bool)
-        ~get:(get t : contents Heap_block.t option)]
+        ~get_as_heap_block:(get_as_heap_block t : contents Heap_block.t option)
+        ~get:(get t : contents option)]
 ;;
 
 let%expect_test ("[create], [get], [set], clearing via GC" [@tags "no-js"]) =
   let t = create () in
   print t;
-  [%expect {| (() (is_some false) (get ())) |}];
+  [%expect
+    {|
+    (()
+     (is_some false)
+     (get_as_heap_block ())
+     (get               ()))
+    |}];
   let b = heap_block "b" 13 in
   set t b;
   print t;
-  [%expect {| ((13) (is_some true) (get (13))) |}];
+  [%expect
+    {|
+    ((13)
+     (is_some true)
+     (get_as_heap_block (13))
+     (get               (13)))
+    |}];
   Gc.compact ();
   print t;
-  [%expect {| ((13) (is_some true) (get (13))) |}];
+  [%expect
+    {|
+    ((13)
+     (is_some true)
+     (get_as_heap_block (13))
+     (get               (13)))
+    |}];
   print_s [%sexp (b : heap_block)];
   [%expect {| 13 |}];
   Gc.compact ();
   print t;
-  [%expect {|
+  [%expect
+    {|
     (finalized b)
-    (() (is_some false) (get ()))
+    (()
+     (is_some false)
+     (get_as_heap_block ())
+     (get               ()))
     |}]
 ;;
 
@@ -50,11 +73,23 @@ let%expect_test ("multiple [set]s and clearing" [@tags "no-js"]) =
   Gc.compact ();
   [%expect {| (finalized b1) |}];
   print t;
-  [%expect {| ((14) (is_some true) (get (14))) |}];
+  [%expect
+    {|
+    ((14)
+     (is_some true)
+     (get_as_heap_block (14))
+     (get               (14)))
+    |}];
   print_s [%sexp (b2 : heap_block)];
   [%expect {| 14 |}];
   Gc.compact ();
   [%expect {| (finalized b2) |}];
   print t;
-  [%expect {| (() (is_some false) (get ())) |}]
+  [%expect
+    {|
+    (()
+     (is_some false)
+     (get_as_heap_block ())
+     (get               ()))
+    |}]
 ;;

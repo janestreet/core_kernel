@@ -31,7 +31,7 @@ let%expect_test "Version.parse*" =
   print_s
     [%sexp
       (Version.parse_lines (line1 ^ "\n" ^ line2 ^ "\n")
-        : Version.t list option Or_error.t)];
+       : Version.t list option Or_error.t)];
   [%expect
     {|
     (Ok
@@ -58,4 +58,23 @@ let%expect_test "backwards-compatible printing of rev40s" =
   (* potentially in the future, when we change the hashing scheme: rev64 *)
   print "ssh://repo1 a1234567b1234567c1234567d1234567e1234567f1234567g1234567h1234567+\n";
   [%expect {| (ssh://repo1_a1234567b123+) |}]
+;;
+
+let%expect_test "print full rev40s if requested" =
+  let print s =
+    print_s
+      [%sexp (Version_util.For_tests.parse_generated_hg_version_rev40 s : string list)]
+  in
+  (* current jenga *)
+  print
+    "ssh://repo1 a123456789b123456789c123456789d123456789+\n\
+     ssh://repo2 a123456789b123456789c123456789d123456789\n";
+  [%expect
+    {|
+    (ssh://repo1_a123456789b123456789c123456789d123456789+
+     ssh://repo2_a123456789b123456789c123456789d123456789)
+    |}];
+  (* potentially in the future, when we change the hashing scheme: rev64 *)
+  print "ssh://repo1 a1234567b1234567c1234567d1234567e1234567f1234567g1234567h1234567+\n";
+  [%expect {| (ssh://repo1_a1234567b1234567c1234567d1234567e1234567+) |}]
 ;;

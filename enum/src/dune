@@ -3,4 +3,4 @@
  (public_name core_kernel.enum)
  (preprocess
   (pps ppx_jane))
- (libraries base core.command))
+ (libraries base core.command parsexp core.univ_map))

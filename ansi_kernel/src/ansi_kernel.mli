@@ -66,12 +66,12 @@ module Stable : sig
   module Color : sig
     module V1 : sig
       type primary
-      type t [@@deriving sexp, compare, hash, equal]
+      type t [@@deriving compare, equal, hash, sexp, sexp_grammar]
     end
 
     module V2 : sig
       type primary = Color.primary
-      type t = Color.t [@@deriving sexp, compare, hash, equal]
+      type t = Color.t [@@deriving compare, equal, hash, sexp, sexp_grammar]
 
       val of_v1 : V1.t -> t
       val to_v1 : t -> foreground:bool -> V1.t
@@ -82,11 +82,11 @@ module Stable : sig
 
   module Attr : sig
     module V1 : sig
-      type t [@@deriving sexp, compare, hash, equal]
+      type t [@@deriving compare, equal, hash, sexp, sexp_grammar]
     end
 
     module V2 : sig
-      type t = Attr.t [@@deriving sexp, compare, hash, equal]
+      type t = Attr.t [@@deriving compare, equal, hash, sexp, sexp_grammar]
 
       val of_v1 : V1.t -> t
       val to_v1 : t -> V1.t

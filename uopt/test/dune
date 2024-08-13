@@ -1,5 +1,5 @@
 (library
  (name uopt_core_test)
- (libraries uopt_core)
+ (libraries core uopt_core)
  (preprocess
   (pps ppx_jane)))

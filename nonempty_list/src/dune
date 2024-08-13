@@ -1,6 +1,6 @@
 (library
  (name nonempty_list)
  (public_name core_kernel.nonempty_list)
- (libraries core reversed_list)
+ (libraries core reversed_list ppx_stable_witness.stable_witness)
  (preprocess
   (pps ppx_jane)))

@@ -131,7 +131,7 @@ module type Alarm_precision = sig
   include Equal.S with type t := t
 
   val of_span : Time_ns.Span.t -> t
-    [@@deprecated "[since 2018-01] Use [of_span_floor_pow2_ns]"]
+  [@@deprecated "[since 2018-01] Use [of_span_floor_pow2_ns]"]
 
   (** [of_span_floor_pow2_ns span] returns the largest alarm precision less than or equal
       to [span] that is a power of two number of nanoseconds. *)
@@ -284,7 +284,7 @@ module type Timing_wheel = sig
   (** Accessors *)
   val alarm_precision : _ t -> Time_ns.Span.t
 
-  val now : _ t -> Time_ns.t
+  val now : _ t -> Time_ns.t [@@zero_alloc]
   val start : _ t -> Time_ns.t
 
   (** One can think of a timing wheel as a set of alarms.  Here are various container

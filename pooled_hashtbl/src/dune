@@ -1,6 +1,6 @@
 (library
  (name pooled_hashtbl)
  (public_name core_kernel.pooled_hashtbl)
- (libraries core tuple_pool)
+ (libraries core sexplib ppx_stable_witness.stable_witness tuple_pool)
  (preprocess
   (pps ppx_jane)))

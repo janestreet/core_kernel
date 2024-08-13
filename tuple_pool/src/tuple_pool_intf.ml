@@ -219,7 +219,7 @@ module type S = sig
 
   val new12
     :  (('a0, 'a1, 'a2, 'a3, 'a4, 'a5, 'a6, 'a7, 'a8, 'a9, 'a10, 'a11) Slots.t12 as 'slots)
-       t
+         t
     -> 'a0
     -> 'a1
     -> 'a2
@@ -238,7 +238,7 @@ module type S = sig
     :  (('a0, 'a1, 'a2, 'a3, 'a4, 'a5, 'a6, 'a7, 'a8, 'a9, 'a10, 'a11, 'a12) Slots.t13
         as
         'slots)
-       t
+         t
     -> 'a0
     -> 'a1
     -> 'a2
@@ -256,23 +256,23 @@ module type S = sig
 
   val new14
     :  (( 'a0
-        , 'a1
-        , 'a2
-        , 'a3
-        , 'a4
-        , 'a5
-        , 'a6
-        , 'a7
-        , 'a8
-        , 'a9
-        , 'a10
-        , 'a11
-        , 'a12
-        , 'a13 )
-        Slots.t14
+          , 'a1
+          , 'a2
+          , 'a3
+          , 'a4
+          , 'a5
+          , 'a6
+          , 'a7
+          , 'a8
+          , 'a9
+          , 'a10
+          , 'a11
+          , 'a12
+          , 'a13 )
+          Slots.t14
         as
         'slots)
-       t
+         t
     -> 'a0
     -> 'a1
     -> 'a2
@@ -377,9 +377,9 @@ module type Tuple_pool = sig
   module Debug (Tuple_pool : S) : sig
     include
       S
-        with type 'a Pointer.t = 'a Tuple_pool.Pointer.t
-        with type Pointer.Id.t = Tuple_pool.Pointer.Id.t
-        with type 'a t = 'a Tuple_pool.t
+      with type 'a Pointer.t = 'a Tuple_pool.Pointer.t
+      with type Pointer.Id.t = Tuple_pool.Pointer.Id.t
+      with type 'a t = 'a Tuple_pool.t
 
     val check_invariant : bool ref
     val show_messages : bool ref

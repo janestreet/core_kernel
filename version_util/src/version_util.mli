@@ -87,6 +87,7 @@ val with_fdo : (string * Md5.t option) option
 
 module For_tests : sig
   val parse_generated_hg_version : string -> string list
+  val parse_generated_hg_version_rev40 : string -> string list
   val build_info_status : [ `Not_supported | `Unset | `Set ]
 end
 
@@ -127,6 +128,8 @@ module Expert : sig
   (** Turns raw hg version info into the standard string list format that [version_list]
       returns. *)
   val parse_generated_hg_version : string -> string list
+
+  val parse_generated_hg_version_rev40 : string -> string list
 
   module Experimental : sig
     (** Gets the build info if it exists.

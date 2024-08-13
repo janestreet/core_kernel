@@ -31,12 +31,12 @@ let clear t = Hashtbl.clear t.entry_by_key
    was previously finalized, the weak pointer must have been cleared.  This relies on the
    fact that the OCaml garbage collector clears weaks and then runs finalizers. *)
 let reclaim_space_for_keys_with_unused_data t =
-  while Thread_safe_queue.length t.keys_with_unused_data > 0 do
-    let key = Thread_safe_queue.dequeue_exn t.keys_with_unused_data in
+  let remove_entry key =
     match Hashtbl.find t.entry_by_key key with
     | None -> ()
     | Some entry -> if Weak_pointer.is_none entry then remove t key
-  done
+  in
+  Thread_safe_queue.dequeue_until_empty ~f:remove_entry t.keys_with_unused_data [@nontail]
 ;;
 
 let get_entry t key =
@@ -78,12 +78,12 @@ let add_exn t ~key ~data =
 let find t key =
   match Hashtbl.find t.entry_by_key key with
   | None -> None
-  | Some entry -> Weak_pointer.get entry
+  | Some entry -> Weak_pointer.get_as_heap_block entry
 ;;
 
 let find_or_add t key ~default =
   let entry = get_entry t key in
-  match Weak_pointer.get entry with
+  match Weak_pointer.get_as_heap_block entry with
   | Some v -> v
   | None ->
     let data = default () in

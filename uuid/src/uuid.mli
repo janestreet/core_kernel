@@ -16,7 +16,7 @@ include Invariant.S with type t := t
 include Quickcheckable.S with type t := t
 
 val t_of_sexp : Sexp.t -> t
-  [@@deprecated "[since 2017-11] Use a [Stable] or [Unstable] [t_of_sexp]."]
+[@@deprecated "[since 2017-11] Use a [Stable] or [Unstable] [t_of_sexp]."]
 
 val create_random : Random.State.t -> t
 val arg_type : t Command.Arg_type.t
@@ -36,8 +36,8 @@ module Stable : sig
 
     include
       Stable_comparable.With_stable_witness.V1
-        with type t := t
-        with type comparator_witness = comparator_witness
+      with type t := t
+      with type comparator_witness = comparator_witness
 
     include Stringable.S with type t := t
 

@@ -525,12 +525,12 @@ end = struct
         for the slots in the pool tuple representing a level element. *)
     type 'a pool_slots =
       ( Key.t
-      , Time_ns.t
-      , 'a
-      , int
-      , 'a pool_slots Pointer.t
-      , 'a pool_slots Pointer.t )
-      Pool.Slots.t6
+        , Time_ns.t
+        , 'a
+        , int
+        , 'a pool_slots Pointer.t
+        , 'a pool_slots Pointer.t )
+        Pool.Slots.t6
     [@@deriving sexp_of]
 
     type 'a t = 'a pool_slots Pointer.t [@@deriving sexp_of]
@@ -866,10 +866,10 @@ end = struct
         (let r = ref [] in
          internal_iter t ~f:(fun elt ->
            r
-             := { Pretty.Elt.key = Internal_elt.key pool elt
-                ; value = Internal_elt.value pool elt
-                }
-                :: !r);
+           := { Pretty.Elt.key = Internal_elt.key pool elt
+              ; value = Internal_elt.value pool elt
+              }
+              :: !r);
          List.rev !r)
     }
   ;;
@@ -925,9 +925,9 @@ end = struct
                assert (
                  length
                  = Array.fold level.slots ~init:0 ~f:(fun n elt ->
-                     if Internal_elt.is_null elt
-                     then n
-                     else n + Internal_elt.length pool elt))))
+                   if Internal_elt.is_null elt
+                   then n
+                   else n + Internal_elt.length pool elt))))
           ~min_allowed_key:
             (check (fun min_allowed_key ->
                assert (Key.( >= ) min_allowed_key Key.zero);
@@ -1213,7 +1213,7 @@ end = struct
     done;
     level.min_allowed_key <- desired_min_allowed_key;
     level.max_allowed_key
-      <- Key.add_clamp_to_max desired_min_allowed_key level.diff_max_min_allowed_key
+    <- Key.add_clamp_to_max desired_min_allowed_key level.diff_max_min_allowed_key
   ;;
 
   module Increase_min_allowed_key_result = struct
@@ -1277,38 +1277,40 @@ end = struct
             index
             (bits_per_slot, max_level_min_allowed_key, levels)
             (level_bits : Num_key_bits.t)
-            ->
-        let keys_per_slot = Key.num_keys bits_per_slot in
-        let diff_max_min_allowed_key =
-          compute_diff_max_min_allowed_key ~level_bits ~bits_per_slot
-        in
-        let min_key_in_same_slot_mask = Min_key_in_same_slot_mask.create ~bits_per_slot in
-        let min_allowed_key =
-          Key.min_key_in_same_slot max_level_min_allowed_key min_key_in_same_slot_mask
-        in
-        let max_allowed_key =
-          Key.add_clamp_to_max min_allowed_key diff_max_min_allowed_key
-        in
-        let level =
-          { Level.index
-          ; bits = level_bits
-          ; slots_mask = Slots_mask.create ~level_bits
-          ; bits_per_slot
-          ; keys_per_slot
-          ; min_key_in_same_slot_mask
-          ; diff_max_min_allowed_key
-          ; length = 0
-          ; min_allowed_key
-          ; max_allowed_key
-          ; slots =
-              Array.create
-                ~len:(Int63.to_int_exn (Num_key_bits.pow2 level_bits))
-                (Internal_elt.null ())
-          }
-        in
-        ( Num_key_bits.( + ) level_bits bits_per_slot
-        , Key.succ_clamp_to_max max_allowed_key
-        , level :: levels ))
+          ->
+          let keys_per_slot = Key.num_keys bits_per_slot in
+          let diff_max_min_allowed_key =
+            compute_diff_max_min_allowed_key ~level_bits ~bits_per_slot
+          in
+          let min_key_in_same_slot_mask =
+            Min_key_in_same_slot_mask.create ~bits_per_slot
+          in
+          let min_allowed_key =
+            Key.min_key_in_same_slot max_level_min_allowed_key min_key_in_same_slot_mask
+          in
+          let max_allowed_key =
+            Key.add_clamp_to_max min_allowed_key diff_max_min_allowed_key
+          in
+          let level =
+            { Level.index
+            ; bits = level_bits
+            ; slots_mask = Slots_mask.create ~level_bits
+            ; bits_per_slot
+            ; keys_per_slot
+            ; min_key_in_same_slot_mask
+            ; diff_max_min_allowed_key
+            ; length = 0
+            ; min_allowed_key
+            ; max_allowed_key
+            ; slots =
+                Array.create
+                  ~len:(Int63.to_int_exn (Num_key_bits.pow2 level_bits))
+                  (Internal_elt.null ())
+            }
+          in
+          ( Num_key_bits.( + ) level_bits bits_per_slot
+          , Key.succ_clamp_to_max max_allowed_key
+          , level :: levels ))
     in
     { length = 0
     ; pool = Internal_elt.Pool.create ?capacity ()
@@ -1432,6 +1434,7 @@ type 'a t =
 type 'a timing_wheel = 'a t
 type 'a t_now = 'a t
 
+let[@zero_alloc] now t = t.now
 let sexp_of_t_now _ t = [%sexp (t.now : Time_ns.t)]
 let alarm_precision t = Config.alarm_precision t.config
 

@@ -1,5 +1,5 @@
 (library
  (name binary_packing_test)
- (libraries binary_packing)
+ (libraries binary_packing core)
  (preprocess
   (pps ppx_jane)))
