@@ -51,7 +51,13 @@ end
 
 val mem : ('a, _) t -> 'a -> bool
 val find : ('a, 'b) t -> 'a -> 'b Heap_block.t option
-val find_or_add : ('a, 'b) t -> 'a -> default:(unit -> 'b Heap_block.t) -> 'b Heap_block.t
+
+val find_or_add
+  :  ('a, 'b) t
+  -> 'a
+  -> default:local_ (unit -> 'b Heap_block.t)
+  -> 'b Heap_block.t
+
 val remove : ('a, 'b) t -> 'a -> unit
 val clear : (_, _) t -> unit
 val add_exn : ('a, 'b) t -> key:'a -> data:'b Heap_block.t -> unit

@@ -4,7 +4,7 @@ module Stable = struct
   module V3 = struct
     module T = struct
       type nonrec 'a t = ( :: ) of 'a * 'a list
-      [@@deriving compare, equal, globalize, hash]
+      [@@deriving compare ~localize, equal ~localize, globalize, hash]
 
       let to_list (hd :: tl) : _ list = hd :: tl
 
@@ -65,7 +65,7 @@ module Stable = struct
   module V2 = struct
     module T = struct
       type nonrec 'a t = 'a V3.t = ( :: ) of 'a * 'a list
-      [@@deriving compare, equal, hash]
+      [@@deriving compare ~localize, equal ~localize, hash]
 
       let sexp_of_t = V3.sexp_of_t
       let t_of_sexp = V3.t_of_sexp
@@ -112,7 +112,8 @@ module Stable = struct
 
   module V1 = struct
     module T = struct
-      type 'a t = 'a V2.t = ( :: ) of 'a * 'a list [@@deriving compare, equal]
+      type 'a t = 'a V2.t = ( :: ) of 'a * 'a list
+      [@@deriving compare ~localize, equal ~localize]
 
       let sexp_of_t = V2.sexp_of_t
       let t_of_sexp = V2.t_of_sexp
@@ -159,7 +160,8 @@ module Unstable = Stable.V3
 
 module T' = struct
   type 'a t = 'a Stable.V3.t = ( :: ) of 'a * 'a list
-  [@@deriving compare, equal, hash, quickcheck, typerep, bin_io, globalize]
+  [@@deriving
+    compare ~localize, equal ~localize, hash, quickcheck, typerep, bin_io, globalize]
 
   let sexp_of_t = Stable.V3.sexp_of_t
   let t_of_sexp = Stable.V3.t_of_sexp
@@ -496,7 +498,8 @@ type 'a nonempty_list = 'a t
     non-constant constructor in their respective types. *)
 module Option = struct
   type 'a t = 'a list
-  [@@deriving compare, equal, sexp, sexp_grammar, hash, quickcheck, typerep]
+  [@@deriving
+    compare ~localize, equal ~localize, sexp, sexp_grammar, hash, quickcheck, typerep]
 
   let none = []
   let some (_ :: _ as value : 'a nonempty_list) : 'a t = Obj.magic value

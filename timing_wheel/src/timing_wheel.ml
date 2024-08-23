@@ -412,14 +412,14 @@ module Priority_queue : sig
   val increase_min_allowed_key
     :  'a t
     -> key:Key.t
-    -> handle_removed:('a Elt.t -> unit)
+    -> handle_removed:local_ ('a Elt.t -> unit)
     -> Increase_min_allowed_key_result.t
 
-  val iter : 'a t -> f:('a Elt.t -> unit) -> unit
+  val iter : 'a t -> f:local_ ('a Elt.t -> unit) -> unit
 
   val fire_past_alarms
     :  'a t
-    -> handle_fired:('a Elt.t -> unit)
+    -> handle_fired:local_ ('a Elt.t -> unit)
     -> key:Key.t
     -> now:Time_ns.t
     -> unit
@@ -605,7 +605,7 @@ end = struct
     (** Iterators.  [iter p t ~init ~f] visits each element in the doubly-linked list
         containing [t], starting at [t], and following [next] pointers.  [length] counts
         by visiting each element in the list. *)
-    val iter : 'a Pool.t -> 'a t -> f:('a t -> unit) -> unit
+    val iter : 'a Pool.t -> 'a t -> f:local_ ('a t -> unit) -> unit
 
     val length : 'a Pool.t -> 'a t -> int
 
@@ -684,7 +684,7 @@ end = struct
       link pool to_add t
     ;;
 
-    let iter pool first ~f =
+    let iter pool first ~(local_ f) =
       let current = ref first in
       let continue = ref true in
       while !continue do
@@ -822,7 +822,7 @@ end = struct
   let min_allowed_key t = Level.min_allowed_key t.levels.(0)
   let max_allowed_key t = Level.max_allowed_key t.levels.(num_levels t - 1)
 
-  let internal_iter t ~f =
+  let internal_iter t ~(local_ f) =
     if t.length > 0
     then (
       let pool = t.pool in
@@ -839,7 +839,9 @@ end = struct
       done)
   ;;
 
-  let iter t ~f = internal_iter t ~f:(f : _ Elt.t -> unit :> _ Internal_elt.t -> unit)
+  let iter t ~(local_ f) =
+    internal_iter t ~f:(f : _ Elt.t -> unit :> _ Internal_elt.t -> unit)
+  ;;
 
   module Pretty = struct
     module Elt = struct
@@ -1350,7 +1352,7 @@ end = struct
     Internal_elt.free pool elt
   ;;
 
-  let fire_past_alarms t ~handle_fired ~key ~now =
+  let fire_past_alarms t ~(local_ handle_fired) ~key ~now =
     let level = t.levels.(0) in
     if level.length > 0
     then (
@@ -1448,7 +1450,7 @@ module Alarm = struct
 end
 
 let sexp_of_t_internal = sexp_of_t
-let iter t ~f = Priority_queue.iter t.priority_queue ~f
+let iter t ~(local_ f) = Priority_queue.iter t.priority_queue ~f
 
 module Pretty = struct
   module Alarm = struct
@@ -1651,7 +1653,7 @@ let invariant invariant_a t =
 
 let debug = false
 
-let advance_clock t ~to_ ~handle_fired =
+let advance_clock t ~to_ ~(local_ handle_fired) =
   if Time_ns.( > ) to_ (now t)
   then (
     t.now <- to_;
@@ -1827,7 +1829,7 @@ let min_alarm_time_in_min_interval_exn t =
   min_alarm_time_in_list t elt
 ;;
 
-let fire_past_alarms t ~handle_fired =
+let fire_past_alarms t ~(local_ handle_fired) =
   Priority_queue.fire_past_alarms
     t.priority_queue
     ~handle_fired

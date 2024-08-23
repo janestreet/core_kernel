@@ -20,7 +20,7 @@ val enqueue : 'a t -> 'a -> unit
 module Dequeue_result : sig
   type 'a t =
     | Empty
-    | Not_empty of { elt : 'a }
+    | Not_empty of { global_ elt : 'a }
   [@@deriving sexp, compare]
 end
 
@@ -36,7 +36,7 @@ end
     allowed to insert a polling point (also called a "safe point") at the beginning of
     [dequeue], which may give other threads an opportunity to run.  You must always handle
     the possibility of [Not_empty] when calling this function. *)
-val dequeue : 'a t -> 'a Dequeue_result.t
+val dequeue : 'a t -> local_ 'a Dequeue_result.t
 
 (** [dequeue_until_empty ~f t] iteratively dequeues elements of [t] and applies [f] to
     them until the queue is empty.
@@ -45,7 +45,7 @@ val dequeue : 'a t -> 'a Dequeue_result.t
     can not be a tailcall.  To achieve this for a call to [dequeue_until_empty] in tail
     position, mark the call with [@nontail].
 *)
-val dequeue_until_empty : f:('a -> unit) -> 'a t -> unit
+val dequeue_until_empty : f:local_ ('a -> unit) -> 'a t -> unit
 
 (** The queue maintains an internal pool of unused elements, which are used by [enqueue]
     and returned to the pool by [dequeue_exn].  [enqueue] creates a new element if the

@@ -116,7 +116,7 @@ module Dequeue_result = struct
   *)
   type 'a t =
     | Empty
-    | Not_empty of { elt : 'a }
+    | Not_empty of { global_ elt : 'a }
   [@@deriving sexp, compare]
 end
 
@@ -131,10 +131,10 @@ let[@inline never] [@specialise never] [@local never] dequeue t =
     t.length <- t.length - 1;
     (* END ATOMIC SECTION *)
     return_unused_elt t elt;
-    Not_empty { elt = Uopt.unsafe_value a })
+    exclave_ Not_empty { elt = Uopt.unsafe_value a })
 ;;
 
-let[@inline] dequeue_until_empty ~f t =
+let[@inline] dequeue_until_empty ~(local_ f) t =
   let keep_going = ref true in
   while !keep_going do
     match dequeue t with

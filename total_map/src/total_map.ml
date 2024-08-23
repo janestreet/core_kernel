@@ -305,9 +305,11 @@ module Make_plain_with_witnesses (Key : Key_plain_with_witnesses) = struct
   type enumeration_witness = Key.enumeration_witness
   type 'a t = 'a Key.Map.t [@@deriving sexp_of, compare, equal]
 
-  let create f =
-    List.fold Key.all ~init:Key.Map.empty ~f:(fun t key -> Map.set t ~key ~data:(f key)) [@nontail
-                                                                                          ]
+  let create (local_ f) =
+    List.fold
+      Key.all
+      ~init:Key.Map.empty
+      ~f:(local_ fun t key -> Map.set t ~key ~data:(f key)) [@nontail]
   ;;
 
   let create_const x = create (fun _ -> x)

@@ -829,7 +829,7 @@ struct
       val accessor_pos_1
         :  without_value:(read_write, seek) Iobuf.t
         -> value_len:int
-        -> ('a, read_write, seek) t
+        -> local_ ('a, read_write, seek) t
         -> value:'a
         -> with_value:string
         -> (module Accessee with type t = 'a)
@@ -877,7 +877,7 @@ struct
       val accessor_pos_1
         :  without_value:(read_write, seek) Iobuf.t
         -> value_len:int
-        -> ('a, read_write, seek) t
+        -> local_ ('a, read_write, seek) t
         -> value:'a
         -> with_value:string
         -> (module Accessee with type t = 'a)
@@ -1031,7 +1031,7 @@ struct
         (type v)
         (module Value : String_accessee with type t = v)
         value_len
-        accessor
+        (local_ accessor)
         ~skip
         value
         with_value
@@ -1274,14 +1274,14 @@ struct
       val accessor_pos_1
         :  without_value:(read_write, seek) Iobuf.t
         -> value_len:int
-        -> ('a, read_write, seek) t
+        -> local_ ('a, read_write, seek) t
         -> value:'a
         -> with_value:string
         -> (module Accessee with type t = 'a)
         -> unit
 
       val bin_prot_char : (char, 'd, 'w) t
-      val ignore_locality : ('a, 'd, 'w) t_local -> ('a, 'd, 'w) t
+      val ignore_locality : local_ ('a, 'd, 'w) t_local -> local_ ('a, 'd, 'w) t
     end) :
     Iobuf.Accessors_write
     with type ('a, 'b, 'c) t = ('a, 'b, 'c) Intf.t
@@ -3008,7 +3008,11 @@ let%test_module "allocation" =
            type w
 
            val apply : ('a, read, w) I.t -> (read, Iobuf.seek) Iobuf.t -> 'a
-           val apply_local : ('a, read, w) I.t_local -> (read, Iobuf.seek) Iobuf.t -> 'a
+
+           val apply_local
+             :  local_ ('a, read, w) I.t_local
+             -> (read, Iobuf.seek) Iobuf.t
+             -> local_ 'a
          end) : Accessors_read with type 'a bin_prot := 'a Bin_prot.Type_class.reader =
     struct
       open I
@@ -3045,7 +3049,9 @@ let%test_module "allocation" =
         test_local (f ~str_pos:0 ~len) len
       ;;
 
-      let test_stringo (f : ?str_pos:int -> ?len:int -> ('a, 'd, 'w) t_local) =
+      let test_stringo
+        (f : ?str_pos:local_ int -> ?len:local_ int -> local_ ('a, 'd, 'w) t_local)
+        =
         let len = 10 in
         let buf = Iobuf.of_bigstring (Bigstring.init len ~f:(const ' ')) in
         require_no_allocation (fun () ->
@@ -3370,7 +3376,7 @@ let%test_module "allocation" =
           type w = Iobuf.no_seek
 
           let apply f buf = f (Iobuf.no_seek buf) ~pos:0
-          let apply_local f buf = f (Iobuf.no_seek buf) ~pos:0
+          let apply_local f buf = exclave_ f (Iobuf.no_seek buf) ~pos:0
         end)
 
     module _ =
@@ -3380,7 +3386,7 @@ let%test_module "allocation" =
           type w = Iobuf.seek
 
           let apply f buf = f buf
-          let apply_local f buf = f buf
+          let apply_local f buf = exclave_ f buf
         end)
 
     module _ =
@@ -3390,7 +3396,7 @@ let%test_module "allocation" =
           type w = Iobuf.no_seek
 
           let apply f buf = f (Iobuf.no_seek buf) ~pos:0
-          let apply_local f buf = f (Iobuf.no_seek buf) ~pos:0
+          let apply_local f buf = exclave_ f (Iobuf.no_seek buf) ~pos:0
         end)
 
     module _ =
@@ -3400,7 +3406,7 @@ let%test_module "allocation" =
           type w = Iobuf.seek
 
           let apply f buf = f buf
-          let apply_local f buf = f buf
+          let apply_local f buf = exclave_ f buf
         end)
   end)
 ;;

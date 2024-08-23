@@ -138,7 +138,8 @@ let fold_until = C.fold_until
 (* We could avoid the intermediate list here, but it doesn't seem like a big deal. *)
 let to_array = C.to_array
 
-type ('a, 'at, 'accum) folder = 'at -> init:'accum -> f:('accum -> 'a -> 'accum) -> 'accum
+type ('a, 'at, 'accum) folder =
+  'at -> init:'accum -> f:local_ ('accum -> 'a -> 'accum) -> 'accum
 
 let of_fold c ~compare (fold : _ folder) =
   let h = create ~compare in

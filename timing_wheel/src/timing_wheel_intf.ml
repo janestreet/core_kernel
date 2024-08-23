@@ -292,7 +292,7 @@ module type Timing_wheel = sig
 
   val is_empty : _ t -> bool
   val length : _ t -> int
-  val iter : 'a t -> f:('a Alarm.t -> unit) -> unit
+  val iter : 'a t -> f:local_ ('a Alarm.t -> unit) -> unit
 
   (** [interval_num t time] returns the number of the interval that [time] is in, where
       [0] is the interval that starts at [Time_ns.epoch].  [interval_num] raises if
@@ -326,7 +326,11 @@ module type Timing_wheel = sig
 
       Behavior is unspecified if [handle_fired] accesses [t] in any way other than
       [Alarm] functions. *)
-  val advance_clock : 'a t -> to_:Time_ns.t -> handle_fired:('a Alarm.t -> unit) -> unit
+  val advance_clock
+    :  'a t
+    -> to_:Time_ns.t
+    -> handle_fired:local_ ('a Alarm.t -> unit)
+    -> unit
 
   (** Advance to the time [to_] or the time of the next alarm, whichever is earlier.
       This function should be functionally equivalent to
@@ -338,7 +342,7 @@ module type Timing_wheel = sig
   val advance_clock_stop_at_next_alarm
     :  'a t
     -> to_:Time_ns.t
-    -> handle_fired:('a Alarm.t -> unit)
+    -> handle_fired:local_ ('a Alarm.t -> unit)
     -> unit
 
   (** [fire_past_alarms t ~handle_fired] fires and removes all alarms [a] in [t] with
@@ -349,7 +353,7 @@ module type Timing_wheel = sig
 
       Behavior is unspecified if [handle_fired] accesses [t] in any way other than
       [Alarm] functions. *)
-  val fire_past_alarms : 'a t -> handle_fired:('a Alarm.t -> unit) -> unit
+  val fire_past_alarms : 'a t -> handle_fired:local_ ('a Alarm.t -> unit) -> unit
 
   (** [max_allowed_alarm_time t] returns the greatest [at] that can be supplied to [add].
       [max_allowed_alarm_time] is not constant; its value increases as [now t]

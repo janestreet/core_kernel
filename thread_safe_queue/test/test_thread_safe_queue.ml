@@ -35,7 +35,7 @@ let%test_module "Thread_safe_queue" =
     module Dequeue_result = struct
       type 'a t = 'a Dequeue_result.t =
         | Empty
-        | Not_empty of { elt : 'a }
+        | Not_empty of { global_ elt : 'a }
       [@@deriving sexp, compare]
     end
 

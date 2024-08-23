@@ -58,9 +58,13 @@ module type Accessors_read = sig
   val string : str_pos:int -> len:int -> (string, 'd, 'w) t
   val bytes : str_pos:int -> len:int -> (Bytes.t, 'd, 'w) t
   val bigstring : str_pos:int -> len:int -> (Bigstring.t, 'd, 'w) t
-  val stringo : ?str_pos:int -> ?len:int -> (string, 'd, 'w) t
-  val byteso : ?str_pos:int -> ?len:int -> (Bytes.t, 'd, 'w) t
-  val bigstringo : ?str_pos:int -> ?len:int -> (Bigstring.t, 'd, 'w) t
+  val stringo : ?str_pos:local_ int -> ?len:local_ int -> local_ (string, 'd, 'w) t
+  val byteso : ?str_pos:local_ int -> ?len:local_ int -> local_ (Bytes.t, 'd, 'w) t
+
+  val bigstringo
+    :  ?str_pos:local_ int
+    -> ?len:local_ int
+    -> local_ (Bigstring.t, 'd, 'w) t
 
   module Local : sig
     val int64_t_be : (Int64.t, 'd, 'w) t_local
@@ -69,8 +73,16 @@ module type Accessors_read = sig
     val tail_padded_fixed_string : padding:char -> len:int -> (string, 'd, 'w) t_local
     val string : str_pos:int -> len:int -> (string, 'd, 'w) t_local
     val bytes : str_pos:int -> len:int -> (Bytes.t, 'd, 'w) t_local
-    val stringo : ?str_pos:int -> ?len:int -> (string, 'd, 'w) t_local
-    val byteso : ?str_pos:int -> ?len:int -> (Bytes.t, 'd, 'w) t_local
+
+    val stringo
+      :  ?str_pos:local_ int
+      -> ?len:local_ int
+      -> local_ (string, 'd, 'w) t_local
+
+    val byteso
+      :  ?str_pos:local_ int
+      -> ?len:local_ int
+      -> local_ (Bytes.t, 'd, 'w) t_local
   end
 
   module Int_repr : sig
@@ -115,9 +127,13 @@ module type Accessors_write = sig
   val string : str_pos:int -> len:int -> (string, 'd, 'w) t_local
   val bytes : str_pos:int -> len:int -> (Bytes.t, 'd, 'w) t_local
   val bigstring : str_pos:int -> len:int -> (Bigstring.t, 'd, 'w) t_local
-  val stringo : ?str_pos:int -> ?len:int -> (string, 'd, 'w) t_local
-  val byteso : ?str_pos:int -> ?len:int -> (Bytes.t, 'd, 'w) t_local
-  val bigstringo : ?str_pos:int -> ?len:int -> (Bigstring.t, 'd, 'w) t_local
+  val stringo : ?str_pos:local_ int -> ?len:local_ int -> local_ (string, 'd, 'w) t_local
+  val byteso : ?str_pos:local_ int -> ?len:local_ int -> local_ (Bytes.t, 'd, 'w) t_local
+
+  val bigstringo
+    :  ?str_pos:local_ int
+    -> ?len:local_ int
+    -> local_ (Bigstring.t, 'd, 'w) t_local
 
   module Int_repr : sig
     val int8 : (Int_repr.Int8.t, 'd, 'w) t
@@ -145,19 +161,20 @@ module type Bound = sig
   type t = private int (*_ performance hack: avoid the write barrier *)
   [@@deriving compare, sexp_of]
 
-  val window : (_, _) iobuf -> t
-  val limit : (_, _) iobuf -> t
-  val restore : t -> (_, seek) iobuf -> unit
+  val window : local_ (_, _) iobuf -> t
+  val limit : local_ (_, _) iobuf -> t
+  val restore : t -> local_ (_, seek) iobuf -> unit
 end
 
 (** The [src_pos] argument of {!Core.Blit.blit} doesn't make sense here. *)
 
-type ('src, 'dst) consuming_blit = src:'src -> dst:'dst -> dst_pos:int -> len:int -> unit
+type ('src, 'dst) consuming_blit =
+  src:local_ 'src -> dst:local_ 'dst -> dst_pos:int -> len:int -> unit
 
 type ('src, 'dst) consuming_blito =
-  src:'src
+  src:local_ 'src
   -> ?src_len:int (** Default is [Iobuf.length src]. *)
-  -> dst:'dst
+  -> dst:local_ 'dst
   -> ?dst_pos:int (** Default is [0]. *)
   -> unit
   -> unit
@@ -206,7 +223,7 @@ module type Peek = sig
 
   include
     Accessors_read
-    with type ('a, 'd, 'w) t = ('d, 'w) iobuf -> pos:int -> 'a
-    with type ('a, 'd, 'w) t_local = ('d, 'w) iobuf -> pos:int -> 'a
+    with type ('a, 'd, 'w) t = local_ ('d, 'w) iobuf -> pos:int -> 'a
+    with type ('a, 'd, 'w) t_local = local_ ('d, 'w) iobuf -> pos:int -> local_ 'a
     with type 'a bin_prot := 'a Bin_prot.Type_class.reader
 end

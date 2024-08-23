@@ -39,7 +39,7 @@ module type S_plain = sig
 
   include Applicative with type 'a t := 'a t
 
-  val create : (Key.t -> 'a) -> 'a t
+  val create : local_ (Key.t -> 'a) -> 'a t
   val create_const : 'a -> 'a t
   val of_alist_exn : (Key.t * 'a) list -> 'a t
   val of_alist_multi_exn : (Key.t * 'a) list -> 'a list t

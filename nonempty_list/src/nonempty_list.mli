@@ -8,7 +8,15 @@ open Core
 *)
 type 'a t = ( :: ) of 'a * 'a list
 [@@deriving
-  compare, equal, sexp, sexp_grammar, hash, quickcheck, typerep, bin_io, globalize]
+  compare ~localize
+  , equal ~localize
+  , sexp
+  , sexp_grammar
+  , hash
+  , quickcheck
+  , typerep
+  , bin_io
+  , globalize]
 
 include Comparator.Derived with type 'a t := 'a t
 include Container.S1 with type 'a t := 'a t
@@ -17,7 +25,7 @@ include Monad.S_local with type 'a t := 'a t
 include Indexed_container.S1 with type 'a t := 'a t
 
 val create : 'a -> 'a list -> 'a t
-val init : int -> f:(int -> 'a) -> 'a t
+val init : int -> f:local_ (int -> 'a) -> 'a t
 val of_list : 'a list -> 'a t option
 val of_list_error : 'a list -> 'a t Or_error.t
 val of_list_exn : 'a list -> 'a t
@@ -27,42 +35,42 @@ val hd : 'a t -> 'a
 val tl : 'a t -> 'a list
 val nth : 'a t -> int -> 'a option
 val nth_exn : 'a t -> int -> 'a
-val reduce : 'a t -> f:('a -> 'a -> 'a) -> 'a
+val reduce : 'a t -> f:local_ ('a -> 'a -> 'a) -> 'a
 val reverse : 'a t -> 'a t
 val append : 'a t -> 'a list -> 'a t
 val unzip : ('a * 'b) t -> 'a t * 'b t
 val zip : 'a t -> 'b t -> ('a * 'b) t List.Or_unequal_lengths.t
 val zip_exn : 'a t -> 'b t -> ('a * 'b) t
-val mapi : 'a t -> f:(int -> 'a -> 'b) -> 'b t
-val map2 : 'a t -> 'b t -> f:('a -> 'b -> 'c) -> 'c t List.Or_unequal_lengths.t
-val map2_exn : 'a t -> 'b t -> f:('a -> 'b -> 'c) -> 'c t
-val filter : 'a t -> f:('a -> bool) -> 'a list
-val filteri : 'a t -> f:(int -> 'a -> bool) -> 'a list
-val filter_map : 'a t -> f:('a -> 'b option) -> 'b list
-val filter_mapi : 'a t -> f:(int -> 'a -> 'b option) -> 'b list
+val mapi : 'a t -> f:local_ (int -> 'a -> 'b) -> 'b t
+val map2 : 'a t -> 'b t -> f:local_ ('a -> 'b -> 'c) -> 'c t List.Or_unequal_lengths.t
+val map2_exn : 'a t -> 'b t -> f:local_ ('a -> 'b -> 'c) -> 'c t
+val filter : 'a t -> f:local_ ('a -> bool) -> 'a list
+val filteri : 'a t -> f:local_ (int -> 'a -> bool) -> 'a list
+val filter_map : 'a t -> f:local_ ('a -> 'b option) -> 'b list
+val filter_mapi : 'a t -> f:local_ (int -> 'a -> 'b option) -> 'b list
 val concat : 'a t t -> 'a t
-val concat_map : 'a t -> f:('a -> 'b t) -> 'b t
+val concat_map : 'a t -> f:local_ ('a -> 'b t) -> 'b t
 val last : 'a t -> 'a
 val drop_last : 'a t -> 'a list
 val to_sequence : 'a t -> 'a Sequence.t
-val sort : 'a t -> compare:('a -> 'a -> int) -> 'a t
-val stable_sort : 'a t -> compare:('a -> 'a -> int) -> 'a t
+val sort : 'a t -> compare:local_ ('a -> 'a -> int) -> 'a t
+val stable_sort : 'a t -> compare:local_ ('a -> 'a -> int) -> 'a t
 val stable_dedup : 'a t -> compare:('a -> 'a -> int) -> 'a t
-val dedup_and_sort : 'a t -> compare:('a -> 'a -> int) -> 'a t
+val dedup_and_sort : 'a t -> compare:local_ ('a -> 'a -> int) -> 'a t
 val permute : ?random_state:Random.State.t -> 'a t -> 'a t
 val random_element : ?random_state:Random.State.t -> 'a t -> 'a
-val iteri : 'a t -> f:(int -> 'a -> unit) -> unit
+val iteri : 'a t -> f:local_ (int -> 'a -> unit) -> unit
 val cartesian_product : 'a t -> 'b t -> ('a * 'b) t
-val fold_nonempty : 'a t -> init:('a -> 'acc) -> f:('acc -> 'a -> 'acc) -> 'acc
-val fold_right : 'a t -> init:'b -> f:('a -> 'b -> 'b) -> 'b
-val folding_map : 'a t -> init:'b -> f:('b -> 'a -> 'b * 'c) -> 'c t
-val fold_map : 'a t -> init:'acc -> f:('acc -> 'a -> 'acc * 'b) -> 'acc * 'b t
+val fold_nonempty : 'a t -> init:local_ ('a -> 'acc) -> f:('acc -> 'a -> 'acc) -> 'acc
+val fold_right : 'a t -> init:'b -> f:local_ ('a -> 'b -> 'b) -> 'b
+val folding_map : 'a t -> init:'b -> f:local_ ('b -> 'a -> 'b * 'c) -> 'c t
+val fold_map : 'a t -> init:'acc -> f:local_ ('acc -> 'a -> 'acc * 'b) -> 'acc * 'b t
 
 (** [min_elt'] and [max_elt'] differ from [min_elt] and [max_elt] (included in
     [Container.S1]) in that they don't return options. *)
-val min_elt' : 'a t -> compare:('a -> 'a -> int) -> 'a
+val min_elt' : 'a t -> compare:local_ ('a -> 'a -> int) -> 'a
 
-val max_elt' : 'a t -> compare:('a -> 'a -> int) -> 'a
+val max_elt' : 'a t -> compare:local_ ('a -> 'a -> int) -> 'a
 
 (** Like [Map.add_multi], but comes with a guarantee that the range of the returned map is
     all nonempty lists.
@@ -133,7 +141,8 @@ type 'a nonempty_list := 'a t
     allowing you to [match%optional] on a list, respectively. *)
 module Option : sig
   type 'a t = 'a list
-  [@@deriving compare, equal, sexp, sexp_grammar, hash, quickcheck, typerep]
+  [@@deriving
+    compare ~localize, equal ~localize, sexp, sexp_grammar, hash, quickcheck, typerep]
 
   (** Constructors analogous to [None] and [Some]. *)
 
@@ -170,8 +179,8 @@ module Reversed : sig
   val to_rev_list : 'a t -> 'a Reversed_list.t
   val rev : 'a t -> 'a nonempty_list
   val rev_append : 'a t -> 'a list -> 'a nonempty_list
-  val rev_map : 'a t -> f:('a -> 'b) -> 'b nonempty_list
-  val rev_mapi : 'a t -> f:(int -> 'a -> 'b) -> 'b nonempty_list
+  val rev_map : 'a t -> f:local_ ('a -> 'b) -> 'b nonempty_list
+  val rev_mapi : 'a t -> f:local_ (int -> 'a -> 'b) -> 'b nonempty_list
 
   (** Renders sexps without reversing the list. E.g. [1::2] is represented as [(1 2)]. *)
   module With_sexp_of : sig
@@ -188,7 +197,8 @@ val rev' : 'a t -> 'a Reversed.t
 val rev_append : 'a Reversed_list.t -> 'a t -> 'a t
 
 module Unstable : sig
-  type nonrec 'a t = 'a t [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar]
+  type nonrec 'a t = 'a t
+  [@@deriving bin_io, compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
 end
 
 module Stable : sig
@@ -197,7 +207,14 @@ module Stable : sig
   module V3 : sig
     type nonrec 'a t = 'a t
     [@@deriving
-      bin_io, compare, equal, globalize, sexp, sexp_grammar, hash, stable_witness]
+      bin_io
+      , compare ~localize
+      , equal ~localize
+      , globalize
+      , sexp
+      , sexp_grammar
+      , hash
+      , stable_witness]
   end
 
   (** Represents a [t] as an ordinary list for sexp conversions, but uses a record [{hd :
@@ -206,7 +223,7 @@ module Stable : sig
       writing a new protocol. *)
   module V2 : sig
     type nonrec 'a t = 'a t
-    [@@deriving bin_io, compare, equal, sexp, hash, stable_witness]
+    [@@deriving bin_io, compare ~localize, equal ~localize, sexp, hash, stable_witness]
   end
 
   (** Represents a [t] as an ordinary list for sexps, but as a pair for bin_io conversions
@@ -214,6 +231,7 @@ module Stable : sig
       for compatibility with existing protocols; there's no reason not to use the latest
       version if you're writing a new protocol. *)
   module V1 : sig
-    type nonrec 'a t = 'a t [@@deriving bin_io, compare, equal, sexp, stable_witness]
+    type nonrec 'a t = 'a t
+    [@@deriving bin_io, compare ~localize, equal ~localize, sexp, stable_witness]
   end
 end

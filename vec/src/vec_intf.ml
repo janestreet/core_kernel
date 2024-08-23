@@ -14,13 +14,13 @@ module type S = sig
 
       Raise Invalid_argument if [n < 0].
   *)
-  val init : int -> f:(int -> 'a) -> 'a t
+  val init : int -> f:local_ (int -> 'a) -> 'a t
 
   (** Raises if the index is invalid. *)
   val get : 'a t -> index -> 'a
 
   val maybe_get : 'a t -> index -> 'a option
-  val maybe_get_local : 'a t -> index -> 'a Modes.Global.t option
+  val maybe_get_local : 'a t -> index -> local_ 'a Modes.Global.t option
 
   (** Raises if the index is invalid. *)
   val set : 'a t -> index -> 'a -> unit
@@ -31,14 +31,14 @@ module type S = sig
   include Blit.S1 with type 'a t := 'a t
 
   (** Finds the first 'a for which f is true **)
-  val find_exn : 'a t -> f:('a -> bool) -> 'a
+  val find_exn : 'a t -> f:local_ ('a -> bool) -> 'a
 
   (** [sort] uses constant heap space.
       To sort only part of the array, specify [pos] to be the index to start sorting from
       and [len] indicating how many elements to sort. *)
   val sort : ?pos:int -> ?len:int -> 'a t -> compare:('a -> 'a -> int) -> unit
 
-  val is_sorted : 'a t -> compare:('a -> 'a -> int) -> bool
+  val is_sorted : 'a t -> compare:local_ ('a -> 'a -> int) -> bool
 
   include Binary_searchable.S1 with type 'a t := 'a t
 
@@ -74,7 +74,7 @@ module type S = sig
   (** Find the first element that satisfies [f]. If exists, remove the element from the
       vector and return it. This is not a fast implementation, and runs in O(N) time.
   *)
-  val find_and_remove : 'a t -> f:('a -> bool) -> 'a option
+  val find_and_remove : 'a t -> f:local_ ('a -> bool) -> 'a option
 
   val pop_back_exn : 'a t -> 'a
   val pop_back_imm_exn : 'a t -> 'a Type_immediacy.Always.t -> 'a
@@ -82,17 +82,17 @@ module type S = sig
   val pop_back_unit_imm_exn : 'a t -> 'a Type_immediacy.Always.t -> unit
   val peek_back : 'a t -> 'a option
   val peek_back_exn : 'a t -> 'a
-  val foldi : 'a t -> init:'accum -> f:(index -> 'accum -> 'a -> 'accum) -> 'accum
+  val foldi : 'a t -> init:'accum -> f:local_ (index -> 'accum -> 'a -> 'accum) -> 'accum
 
   val foldi_local_accum
     :  'a t
-    -> init:'accum
-    -> f:(index -> 'accum -> 'a -> 'accum)
-    -> 'accum
+    -> init:local_ 'accum
+    -> f:local_ (index -> local_ 'accum -> 'a -> local_ 'accum)
+    -> local_ 'accum
 
-  val iteri : 'a t -> f:(index -> 'a -> unit) -> unit
+  val iteri : 'a t -> f:local_ (index -> 'a -> unit) -> unit
   val to_list : 'a t -> 'a list
-  val to_local_list : 'a t -> 'a list
+  val to_local_list : 'a t -> local_ 'a list
   val to_alist : 'a t -> (index * 'a) list
 
   (** The input vec is copied internally so that future modifications of it do not change
@@ -109,7 +109,7 @@ module type S = sig
 
   (** [take_while t ~f] returns a fresh vec containing the longest prefix of [t] for which
       [f] is [true]. *)
-  val take_while : 'a t -> f:('a -> bool) -> 'a t
+  val take_while : 'a t -> f:local_ ('a -> bool) -> 'a t
 
   module Inplace : sig
     (** [sub] is like [Blit.sub], but modifies the vec in place. *)
@@ -117,16 +117,16 @@ module type S = sig
 
     (** [take_while t ~f] shortens the vec in place to the longest prefix of [t] for which
         [f] is [true]. *)
-    val take_while : 'a t -> f:('a -> bool) -> unit
+    val take_while : 'a t -> f:local_ ('a -> bool) -> unit
 
     (** Remove all elements from [t] that don't satisfy [f]. Shortens the vec in place. *)
-    val filter : 'a t -> f:('a -> bool) -> unit
+    val filter : 'a t -> f:local_ ('a -> bool) -> unit
 
     (** Modifies a vec in place, applying [f] to every element of the vec. *)
-    val map : 'a t -> f:('a -> 'a) -> unit
+    val map : 'a t -> f:local_ ('a -> 'a) -> unit
 
     (** Same as [map], but [f] also takes the index. *)
-    val mapi : 'a t -> f:(index -> 'a -> 'a) -> unit
+    val mapi : 'a t -> f:local_ (index -> 'a -> 'a) -> unit
   end
 
   (** The number of elements we can hold without growing. *)
@@ -143,7 +143,7 @@ module type S = sig
   val copy : 'a t -> 'a t
 
   (** [exists t ~f] returns true if [f] evaluates true on any element, else false *)
-  val exists : 'a t -> f:('a -> bool) -> bool
+  val exists : 'a t -> f:local_ ('a -> bool) -> bool
 
   (** swap the values at the provided indices *)
   val swap : _ t -> index -> index -> unit

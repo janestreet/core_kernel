@@ -81,7 +81,7 @@ let find t key =
   | Some entry -> Weak_pointer.get_as_heap_block entry
 ;;
 
-let find_or_add t key ~default =
+let find_or_add t key ~(local_ default) =
   let entry = get_entry t key in
   match Weak_pointer.get_as_heap_block entry with
   | Some v -> v

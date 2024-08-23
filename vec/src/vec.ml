@@ -5,19 +5,19 @@ module With_integer_index = struct
   module Kernel : sig
     type 'a t
 
-    val length : _ t -> int
+    val length : local_ _ t -> int
     val capacity : _ t -> int
     val create : ?initial_capacity:int -> unit -> _ t
     val unsafe_create_uninitialized : len:int -> 'a t
-    val init : int -> f:(int -> 'a) -> 'a t
+    val init : int -> f:local_ (int -> 'a) -> 'a t
     val unsafe_get : 'a t -> int -> 'a
     val unsafe_set : 'a t -> int -> 'a -> unit
     val unsafe_set_imm : 'a t -> 'a Type_immediacy.Always.t -> int -> 'a -> unit
 
     val unsafe_blit
-      :  src:'a t
+      :  src:local_ 'a t
       -> src_pos:int
-      -> dst:'a t
+      -> dst:local_ 'a t
       -> dst_pos:int
       -> len:int
       -> unit
@@ -242,7 +242,7 @@ module With_integer_index = struct
   let maybe_get t i = if i < 0 || i >= length t then None else Some (unsafe_get t i)
 
   let maybe_get_local t i =
-    if i < 0 || i >= length t then None else Some { global = unsafe_get t i }
+    if i < 0 || i >= length t then None else exclave_ Some { global = unsafe_get t i }
   ;;
 
   let set t i element =
@@ -406,8 +406,10 @@ module With_integer_index = struct
     !result
   ;;
 
-  let to_local_list t =
-    let rec aux t i acc = if i < 0 then acc else aux t (i - 1) (unsafe_get t i :: acc) in
+  let to_local_list t = exclave_
+    let rec aux t i acc = exclave_
+      if i < 0 then acc else aux t (i - 1) (unsafe_get t i :: acc)
+    in
     aux t (max_index t) []
   ;;
 
@@ -459,8 +461,8 @@ module With_integer_index = struct
     !r
   ;;
 
-  let foldi_local_accum t ~init:acc ~f =
-    let rec aux t i ~acc ~f =
+  let foldi_local_accum t ~init:acc ~f = exclave_
+    let rec aux t i ~acc ~f = exclave_
       if i >= length t
       then acc
       else (
@@ -484,7 +486,7 @@ module With_integer_index = struct
     end)
 
   (** Returns the length of the longest prefix for which [f] is true. *)
-  let take_while_len t ~f =
+  let take_while_len t ~(local_ f) =
     let rec loop i =
       if i >= length t || not (f (get t i)) then i else (loop [@tailcall]) (i + 1)
     in
@@ -762,7 +764,7 @@ module Make (M : Intable.S) = struct
   let[@inline always] unsafe_get t index = unsafe_get t (M.to_int_exn index)
   let get t index = get t (M.to_int_exn index)
   let maybe_get t index = maybe_get t (M.to_int_exn index)
-  let maybe_get_local t index = maybe_get_local t (M.to_int_exn index)
+  let maybe_get_local t index = exclave_ maybe_get_local t (M.to_int_exn index)
   let[@inline always] unsafe_set t index x : unit = unsafe_set t (M.to_int_exn index) x
 
   let[@inline always] unsafe_set_imm t w index x : unit =
@@ -778,9 +780,9 @@ module Make (M : Intable.S) = struct
       f (M.of_int_exn int) accum x) [@nontail]
   ;;
 
-  let foldi_local_accum t ~init ~f =
+  let foldi_local_accum t ~init ~f = exclave_
     (foldi_local_accum [@inlined hint]) t ~init ~f:(fun [@inline] int accum x ->
-      f (M.of_int_exn int) accum x) [@nontail]
+      exclave_ f (M.of_int_exn int) accum x) [@nontail]
   ;;
 
   let iteri t ~f =

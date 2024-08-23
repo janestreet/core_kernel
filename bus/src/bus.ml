@@ -17,15 +17,16 @@ end
 module Callback_arity = struct
   type _ t =
     | Arity1 : ('a -> unit) t
-    | Arity1_local : ('a -> unit) t
+    | Arity1_local : (local_ 'a -> unit) t
     | Arity2 : ('a -> 'b -> unit) t
-    | Arity2_local : ('a -> 'b -> unit) t
+    | Arity2_local : (local_ 'a -> local_ 'b -> unit) t
     | Arity3 : ('a -> 'b -> 'c -> unit) t
-    | Arity3_local : ('a -> 'b -> 'c -> unit) t
+    | Arity3_local : (local_ 'a -> local_ 'b -> local_ 'c -> unit) t
     | Arity4 : ('a -> 'b -> 'c -> 'd -> unit) t
-    | Arity4_local : ('a -> 'b -> 'c -> 'd -> unit) t
+    | Arity4_local : (local_ 'a -> local_ 'b -> local_ 'c -> local_ 'd -> unit) t
     | Arity5 : ('a -> 'b -> 'c -> 'd -> 'e -> unit) t
-    | Arity5_local : ('a -> 'b -> 'c -> 'd -> 'e -> unit) t
+    | Arity5_local :
+        (local_ 'a -> local_ 'b -> local_ 'c -> local_ 'd -> local_ 'e -> unit) t
   [@@deriving sexp_of]
 
   let uses_local_args : type a. a t -> bool = function

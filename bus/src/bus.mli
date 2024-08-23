@@ -29,15 +29,16 @@ open! Core
 module Callback_arity : sig
   type _ t =
     | Arity1 : ('a -> unit) t
-    | Arity1_local : ('a -> unit) t
+    | Arity1_local : (local_ 'a -> unit) t
     | Arity2 : ('a -> 'b -> unit) t
-    | Arity2_local : ('a -> 'b -> unit) t
+    | Arity2_local : (local_ 'a -> local_ 'b -> unit) t
     | Arity3 : ('a -> 'b -> 'c -> unit) t
-    | Arity3_local : ('a -> 'b -> 'c -> unit) t
+    | Arity3_local : (local_ 'a -> local_ 'b -> local_ 'c -> unit) t
     | Arity4 : ('a -> 'b -> 'c -> 'd -> unit) t
-    | Arity4_local : ('a -> 'b -> 'c -> 'd -> unit) t
+    | Arity4_local : (local_ 'a -> local_ 'b -> local_ 'c -> local_ 'd -> unit) t
     | Arity5 : ('a -> 'b -> 'c -> 'd -> 'e -> unit) t
-    | Arity5_local : ('a -> 'b -> 'c -> 'd -> 'e -> unit) t
+    | Arity5_local :
+        (local_ 'a -> local_ 'b -> local_ 'c -> local_ 'd -> local_ 'e -> unit) t
   [@@deriving sexp_of]
 end
 
@@ -107,19 +108,32 @@ val close : 'callback Read_write.t -> unit
     from within a callback on [t] or when [is_closed t]. *)
 
 val write : ('a -> unit) Read_write.t -> 'a -> unit
-val write_local : ('a -> unit) Read_write.t -> 'a -> unit
+val write_local : (local_ 'a -> unit) Read_write.t -> local_ 'a -> unit
 val write2 : ('a -> 'b -> unit) Read_write.t -> 'a -> 'b -> unit
-val write2_local : ('a -> 'b -> unit) Read_write.t -> 'a -> 'b -> unit
+
+val write2_local
+  :  (local_ 'a -> local_ 'b -> unit) Read_write.t
+  -> local_ 'a
+  -> local_ 'b
+  -> unit
+
 val write3 : ('a -> 'b -> 'c -> unit) Read_write.t -> 'a -> 'b -> 'c -> unit
-val write3_local : ('a -> 'b -> 'c -> unit) Read_write.t -> 'a -> 'b -> 'c -> unit
+
+val write3_local
+  :  (local_ 'a -> local_ 'b -> local_ 'c -> unit) Read_write.t
+  -> local_ 'a
+  -> local_ 'b
+  -> local_ 'c
+  -> unit
+
 val write4 : ('a -> 'b -> 'c -> 'd -> unit) Read_write.t -> 'a -> 'b -> 'c -> 'd -> unit
 
 val write4_local
-  :  ('a -> 'b -> 'c -> 'd -> unit) Read_write.t
-  -> 'a
-  -> 'b
-  -> 'c
-  -> 'd
+  :  (local_ 'a -> local_ 'b -> local_ 'c -> local_ 'd -> unit) Read_write.t
+  -> local_ 'a
+  -> local_ 'b
+  -> local_ 'c
+  -> local_ 'd
   -> unit
 
 val write5
@@ -132,12 +146,12 @@ val write5
   -> unit
 
 val write5_local
-  :  ('a -> 'b -> 'c -> 'd -> 'e -> unit) Read_write.t
-  -> 'a
-  -> 'b
-  -> 'c
-  -> 'd
-  -> 'e
+  :  (local_ 'a -> local_ 'b -> local_ 'c -> local_ 'd -> local_ 'e -> unit) Read_write.t
+  -> local_ 'a
+  -> local_ 'b
+  -> local_ 'c
+  -> local_ 'd
+  -> local_ 'e
   -> unit
 
 module Subscriber : sig
