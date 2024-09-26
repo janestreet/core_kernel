@@ -2685,16 +2685,26 @@ module Unsafe = struct
 
     let bin_prot = Peek.bin_prot
 
-    let index_or_neg t ~pos ~len c =
+    let index_or_neg t ?(pos = 0) ?(len = length t - pos) c =
       let pos = unsafe_buf_pos t ~pos ~len in
       let idx = Bigstring.unsafe_find ~pos ~len t.buf c in
       if idx < 0 then -1 else idx - t.lo
     ;;
 
-    let rindex_or_neg t ~pos ~len c =
+    let rindex_or_neg t ?(pos = 0) ?(len = length t - pos) c =
       let pos = unsafe_buf_pos t ~pos ~len in
       let idx = Bigstring.unsafe_rfind ~pos ~len t.buf c in
       if idx < 0 then -1 else idx - t.lo
+    ;;
+
+    let index_local t ?pos ?len c =
+      let index = index_or_neg t ?pos ?len c in
+      if index < 0 then None else Some index
+    ;;
+
+    let rindex_local t ?pos ?len c =
+      let index = rindex_or_neg t ?pos ?len c in
+      if index < 0 then None else Some index
     ;;
 
     module Local = struct

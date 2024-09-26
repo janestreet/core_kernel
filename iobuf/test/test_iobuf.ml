@@ -2927,16 +2927,29 @@ module _ = Accessors (struct
     module Peek = struct
       include Peek
 
-      let index t ?(pos = 0) ?(len = length t - pos) char =
-        match index_or_neg t ~pos ~len char with
-        | index when index < 0 -> None
-        | index -> Some index
+      let assert_equal ~index_or_neg ~index_option t ?pos ?len char =
+        let index_or_neg = index_or_neg t ?pos ?len char in
+        let index_option = index_option t ?pos ?len char in
+        (match index_option with
+         | None -> assert (index_or_neg < 0)
+         | Some index ->
+           assert (index >= 0);
+           assert (index = index_or_neg));
+        [%globalize: int option] index_option [@nontail]
       ;;
 
-      let rindex t ?(pos = 0) ?(len = length t - pos) char =
-        match rindex_or_neg t ~pos ~len char with
-        | index when index < 0 -> None
-        | index -> Some index
+      let index t ?pos ?len char =
+        assert_equal ~index_or_neg ~index_option:index_local t ?pos ?len char
+      ;;
+
+      let rindex t ?pos ?len char =
+        assert_equal
+          ~index_or_neg:rindex_or_neg
+          ~index_option:rindex_local
+          t
+          ?pos
+          ?len
+          char
       ;;
     end
 

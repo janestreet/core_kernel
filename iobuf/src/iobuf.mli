@@ -496,11 +496,17 @@ module Unsafe : sig
 
     (** Like [Peek.index] but with no bounds checks, and returns a negative number rather
         than [None] when the character is not found. *)
-    val index_or_neg : ([> read ], _) iobuf -> pos:int -> len:int -> char -> int
+    val index_or_neg : ([> read ], _) iobuf -> ?pos:int -> ?len:int -> char -> int
 
     (** Like [Peek.rindex] but with no bounds checks, and returns a negative number rather
         than [None] when the character is not found. *)
-    val rindex_or_neg : ([> read ], _) iobuf -> pos:int -> len:int -> char -> int
+    val rindex_or_neg : ([> read ], _) iobuf -> ?pos:int -> ?len:int -> char -> int
+
+    (** Like [Peek.index] but with no bounds checks. *)
+    val index_local : ([> read ], _) iobuf -> ?pos:int -> ?len:int -> char -> int option
+
+    (** Like [Peek.rindex] but with no bounds checks. *)
+    val rindex_local : ([> read ], _) iobuf -> ?pos:int -> ?len:int -> char -> int option
   end
 
   module Poke : sig

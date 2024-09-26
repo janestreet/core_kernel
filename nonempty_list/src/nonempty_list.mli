@@ -8,7 +8,15 @@ open Core
 *)
 type 'a t = ( :: ) of 'a * 'a list
 [@@deriving
-  compare, equal, sexp, sexp_grammar, hash, quickcheck, typerep, bin_io, globalize]
+  compare ~localize
+  , equal ~localize
+  , sexp
+  , sexp_grammar
+  , hash
+  , quickcheck
+  , typerep
+  , bin_io
+  , globalize]
 
 include Comparator.Derived with type 'a t := 'a t
 include Container.S1 with type 'a t := 'a t
@@ -133,7 +141,8 @@ type 'a nonempty_list := 'a t
     allowing you to [match%optional] on a list, respectively. *)
 module Option : sig
   type 'a t = 'a list
-  [@@deriving compare, equal, sexp, sexp_grammar, hash, quickcheck, typerep]
+  [@@deriving
+    compare ~localize, equal ~localize, sexp, sexp_grammar, hash, quickcheck, typerep]
 
   (** Constructors analogous to [None] and [Some]. *)
 
@@ -188,7 +197,8 @@ val rev' : 'a t -> 'a Reversed.t
 val rev_append : 'a Reversed_list.t -> 'a t -> 'a t
 
 module Unstable : sig
-  type nonrec 'a t = 'a t [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar]
+  type nonrec 'a t = 'a t
+  [@@deriving bin_io, compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
 end
 
 module Stable : sig
@@ -197,7 +207,14 @@ module Stable : sig
   module V3 : sig
     type nonrec 'a t = 'a t
     [@@deriving
-      bin_io, compare, equal, globalize, sexp, sexp_grammar, hash, stable_witness]
+      bin_io
+      , compare ~localize
+      , equal ~localize
+      , globalize
+      , sexp
+      , sexp_grammar
+      , hash
+      , stable_witness]
   end
 
   (** Represents a [t] as an ordinary list for sexp conversions, but uses a record [{hd :
@@ -206,7 +223,7 @@ module Stable : sig
       writing a new protocol. *)
   module V2 : sig
     type nonrec 'a t = 'a t
-    [@@deriving bin_io, compare, equal, sexp, hash, stable_witness]
+    [@@deriving bin_io, compare ~localize, equal ~localize, sexp, hash, stable_witness]
   end
 
   (** Represents a [t] as an ordinary list for sexps, but as a pair for bin_io conversions
@@ -214,6 +231,7 @@ module Stable : sig
       for compatibility with existing protocols; there's no reason not to use the latest
       version if you're writing a new protocol. *)
   module V1 : sig
-    type nonrec 'a t = 'a t [@@deriving bin_io, compare, equal, sexp, stable_witness]
+    type nonrec 'a t = 'a t
+    [@@deriving bin_io, compare ~localize, equal ~localize, sexp, stable_witness]
   end
 end
