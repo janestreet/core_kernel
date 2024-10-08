@@ -243,6 +243,16 @@ module type Total_map = sig
   val for_all : (_, 'a, _, _) t -> f:('a -> bool) -> bool
   val for_alli : ('key, 'a, _, _) t -> f:(key:'key -> data:'a -> bool) -> bool
 
+  val validate
+    :  name:('key -> string)
+    -> 'v Validate.check
+    -> ('key, 'v, _, _) t Validate.check
+
+  val validatei
+    :  name:('key -> string)
+    -> ('key * 'v) Validate.check
+    -> ('key, 'v, _, _) t Validate.check
+
   (** Sequence a total map of computations in order of their keys resulting in computation
       of the total map of results. *)
   module Sequence (A : Applicative) : sig

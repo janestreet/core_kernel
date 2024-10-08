@@ -347,6 +347,14 @@ let to_sequence t =
 ;;
 
 let sort t ~compare = List.sort (to_list t) ~compare |> of_list_exn
+
+let sort_and_group t ~compare =
+  List.sort_and_group (to_list t) ~compare
+  |> of_list_exn
+  |> (* an empty group is not created unless the input list is empty *)
+  map ~f:of_list_exn
+;;
+
 let stable_sort t ~compare = List.stable_sort (to_list t) ~compare |> of_list_exn
 let stable_dedup t ~compare = List.stable_dedup (to_list t) ~compare |> of_list_exn
 let dedup_and_sort t ~compare = List.dedup_and_sort ~compare (to_list t) |> of_list_exn
@@ -359,6 +367,16 @@ let min_elt' (hd :: tl) ~compare =
 ;;
 
 let max_elt' t ~compare = min_elt' t ~compare:(fun x y -> compare y x) [@nontail]
+
+let findi_exn =
+  let not_found = Not_found_s (Atom "Nonempty_list.findi_exn: not found") in
+  let findi_exn t ~f =
+    match findi t ~f with
+    | None -> raise not_found
+    | Some x -> x
+  in
+  findi_exn
+;;
 
 let map_add_multi map ~key ~data =
   Map.update map key ~f:(function
@@ -416,6 +434,208 @@ let combine_or_errors t =
 ;;
 
 let combine_or_errors_unit t = to_list t |> Or_error.combine_errors_unit
+
+let filter_ok_at_least_one t =
+  match Or_error.filter_ok_at_least_one (to_list t) with
+  | Ok oks -> Ok (of_list_exn oks)
+  | Error _ as e -> e
+;;
+
+type 'a nonempty_list = 'a t [@@deriving sexp_of]
+
+module Emptiness_witness = struct
+  type empty = Empty
+  type nonempty = Nonempty
+
+  let _ = Empty
+  let _ = Nonempty
+end
+
+module Part = struct
+  type ('a, 'emptiness) t =
+    | Empty : ('a, Emptiness_witness.empty) t
+    | Nonempty : 'a nonempty_list -> ('a, Emptiness_witness.nonempty) t
+  [@@deriving sexp_of]
+
+  type 'a packed = T : ('a, 'emptiness) t -> 'a packed [@@deriving sexp_of]
+
+  let compare_packed (type a) compare_element (T t1 : a packed) (T t2 : a packed) =
+    match t1, t2 with
+    | Empty, Empty -> 0
+    | Nonempty t1, Nonempty t2 -> compare compare_element t1 t2
+    | Empty, Nonempty _ -> 1
+    | Nonempty _, Empty -> -1
+  ;;
+
+  let equal_packed (type a) equal_element (T t1 : a packed) (T t2 : a packed) =
+    match t1, t2 with
+    | Empty, Empty -> true
+    | Nonempty t1, Nonempty t2 -> equal equal_element t1 t2
+    | Empty, Nonempty _ | Nonempty _, Empty -> false
+  ;;
+
+  let of_nonempty_list (nonempty_list : _ nonempty_list) = Nonempty nonempty_list
+
+  let to_nonempty_list (t : (_, Emptiness_witness.nonempty) t) : _ nonempty_list =
+    match t with
+    | Nonempty nonempty -> nonempty
+  ;;
+
+  let packed_of_list list =
+    match of_list list with
+    | None -> T Empty
+    | Some nonempty_list -> T (Nonempty nonempty_list)
+  ;;
+
+  let to_list (type witness) (t : (_, witness) t) : _ list =
+    match t with
+    | Empty -> []
+    | Nonempty nonempty -> to_list nonempty
+  ;;
+
+  let map (type witness) (t : (_, witness) t) ~f : (_, witness) t =
+    match t with
+    | Empty -> Empty
+    | Nonempty nonempty -> Nonempty (map nonempty ~f)
+  ;;
+
+  let append1
+    (type witness)
+    (t1 : (_, Emptiness_witness.nonempty) t)
+    (t2 : (_, witness) t)
+    : (_, Emptiness_witness.nonempty) t
+    =
+    match t1 with
+    | Nonempty nonempty -> Nonempty (append nonempty (to_list t2))
+  ;;
+
+  let append2
+    (type witness)
+    (t1 : (_, witness) t)
+    (t2 : (_, Emptiness_witness.nonempty) t)
+    : (_, Emptiness_witness.nonempty) t
+    =
+    match t1 with
+    | Empty -> t2
+    | Nonempty nonempty -> Nonempty (append nonempty (to_list t2))
+  ;;
+
+  let append_packed (T t1) (T t2) =
+    match t1, t2 with
+    | Empty, Empty -> T Empty
+    | (Nonempty _ as t1), (Nonempty _ as t2) -> T (append1 t1 t2)
+    | Empty, Nonempty t2 -> T (Nonempty t2)
+    | Nonempty t1, Empty -> T (Nonempty t1)
+  ;;
+end
+
+module Partition = struct
+  module Emptiness = struct
+    type ('left_emptiness, 'right_emptiness) t =
+      | Left_nonempty : (Emptiness_witness.nonempty, Emptiness_witness.empty) t
+      | Right_nonempty : (Emptiness_witness.empty, Emptiness_witness.nonempty) t
+      | Both_nonempty : (Emptiness_witness.nonempty, Emptiness_witness.nonempty) t
+    [@@deriving sexp_of]
+  end
+
+  type ('left, 'right, 'left_emptiness, 'right_emptiness) t =
+    { left : ('left, 'left_emptiness) Part.t
+    ; right : ('right, 'right_emptiness) Part.t
+    ; emptiness : ('left_emptiness, 'right_emptiness) Emptiness.t
+    }
+  [@@deriving fields ~getters, sexp_of]
+
+  type ('left, 'right) packed =
+    | T : ('left, 'right, 'left_emptiness, 'right_emptiness) t -> ('left, 'right) packed
+  [@@deriving sexp_of]
+
+  let compare_packed
+    (type left right)
+    compare_left
+    compare_right
+    (T t1 : (left, right) packed)
+    (T t2 : (left, right) packed)
+    =
+    match Part.compare_packed compare_left (T t1.left) (T t2.left) with
+    | 0 -> Part.compare_packed compare_right (T t1.right) (T t2.right)
+    | x -> x
+  ;;
+
+  let equal_packed
+    (type left right)
+    equal_left
+    equal_right
+    (T t1 : (left, right) packed)
+    (T t2 : (left, right) packed)
+    =
+    match Part.equal_packed equal_left (T t1.left) (T t2.left) with
+    | true -> Part.equal_packed equal_right (T t1.right) (T t2.right)
+    | false -> false
+  ;;
+
+  let of_lists_exn ((xs : _ list), (ys : _ list)) =
+    match xs, ys with
+    | x :: xs, [] ->
+      T { left = Nonempty (x :: xs); right = Empty; emptiness = Left_nonempty }
+    | [], y :: ys ->
+      T { left = Empty; right = Nonempty (y :: ys); emptiness = Right_nonempty }
+    | x :: xs, y :: ys ->
+      T
+        { left = Nonempty (x :: xs)
+        ; right = Nonempty (y :: ys)
+        ; emptiness = Both_nonempty
+        }
+    | [], [] ->
+      failwith "Partition of [Nonempty_list.t] unexpectedly resulted in two empty lists!"
+  ;;
+
+  let combine
+    (type left_emptiness right_emptiness)
+    (t : (_, _, left_emptiness, right_emptiness) t)
+    =
+    match t.emptiness with
+    | Left_nonempty -> Part.to_nonempty_list t.left
+    | Right_nonempty -> Part.to_nonempty_list t.right
+    | Both_nonempty -> append (Part.to_nonempty_list t.left) (Part.to_list t.right)
+  ;;
+
+  let combine'
+    (type left right left_emptiness right_emptiness)
+    (t : (left, right, left_emptiness, right_emptiness) t)
+    =
+    let map_left left = map (Part.to_nonempty_list left) ~f:(fun x -> First x) in
+    let map_right right = map (Part.to_nonempty_list right) ~f:(fun x -> Second x) in
+    match t.emptiness with
+    | Left_nonempty -> map_left t.left
+    | Right_nonempty -> map_right t.right
+    | Both_nonempty -> append (map_left t.left) (to_list (map_right t.right))
+  ;;
+
+  let map_left t ~f = { t with left = f t.left }
+  let map_right t ~f = { t with right = f t.right }
+
+  let swap
+    (type left right left_emptiness right_emptiness)
+    (t : (left, right, left_emptiness, right_emptiness) t)
+    : (right, left, right_emptiness, left_emptiness) t
+    =
+    { left = t.right
+    ; right = t.left
+    ; emptiness =
+        (match t.emptiness with
+         | Left_nonempty -> Right_nonempty
+         | Right_nonempty -> Left_nonempty
+         | Both_nonempty -> Both_nonempty)
+    }
+  ;;
+end
+
+let partition_tf t ~f = to_list t |> List.partition_tf ~f |> Partition.of_lists_exn
+let partition_tf' t ~f = to_list t |> List.partition_tf ~f
+let partition_map t ~f = to_list t |> List.partition_map ~f |> Partition.of_lists_exn
+let partition_map' t ~f = to_list t |> List.partition_map ~f
+let partition_result t = to_list t |> List.partition_result |> Partition.of_lists_exn
+let partition_result' t = to_list t |> List.partition_result
 let validate ~name check t = Validate.list ~name check (to_list t)
 let validate_indexed check t = Validate.list_indexed check (to_list t)
 
@@ -490,8 +710,6 @@ let comma_separated_argtype ?key ?strip_whitespace ?unique_values arg_type =
        ?unique_values
   |> Command.Param.Arg_type.map ?key ~f:of_list_exn
 ;;
-
-type 'a nonempty_list = 'a t
 
 (** This relies on the fact that the representation of [List.( :: )] constructor is
     identical to that of [Nonempty_list.( :: )], and that they are each the first

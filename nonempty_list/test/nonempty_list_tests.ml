@@ -338,6 +338,17 @@ let%expect_test "dedup_and_sort" =
     |}]
 ;;
 
+let%expect_test "sort_and_group" =
+  let test t = print_s [%sexp (sort_and_group ~compare:Int.compare t : int t t)] in
+  test [ 1 ];
+  test [ 2; 4; 1; 4 ];
+  [%expect
+    {|
+    ((1))
+    ((1) (2) (4 4))
+    |}]
+;;
+
 let%expect_test "min_elt' max_elt'" =
   let compare = Int.compare in
   let l = [ 2; 3; 1; 4 ] in
@@ -471,6 +482,27 @@ let%expect_test "combine_or_errors_unit" =
   [%expect {| (Error (A B C D)) |}];
   test [ Ok (); e "B"; e "C"; e "D" ];
   [%expect {| (Error (B C D)) |}]
+;;
+
+let%expect_test "filter_ok_at_least_one" =
+  let e s = Or_error.error_string s in
+  let test oes = print_s [%sexp (filter_ok_at_least_one oes : int t Or_error.t)] in
+  test [ Ok 1 ];
+  [%expect {| (Ok (1)) |}];
+  test [ e "A" ];
+  [%expect {| (Error A) |}];
+  test [ Ok 1; e "B" ];
+  [%expect {| (Ok (1)) |}];
+  test [ e "A"; Ok 2 ];
+  [%expect {| (Ok (2)) |}];
+  test [ Ok 1; Ok 2; Ok 3; Ok 4 ];
+  [%expect {| (Ok (1 2 3 4)) |}];
+  test [ e "A"; e "B"; e "C"; e "D" ];
+  [%expect {| (Error (A B C D)) |}];
+  test [ Ok 1; e "B"; e "C"; e "D" ];
+  [%expect {| (Ok (1)) |}];
+  test [ e "A"; e "B"; Ok 3; e "D"; Ok 5 ];
+  [%expect {| (Ok (3 5)) |}]
 ;;
 
 let%expect_test "basic accessor" =
@@ -806,6 +838,27 @@ let%expect_test "findi" =
   ()
 ;;
 
+let%expect_test "findi_exn" =
+  let test k v =
+    Nonempty_list.init 3 ~f:(fun x -> x * x)
+    |> findi_exn ~f:(fun i x -> i = k && x = v)
+    |> printf !"%{sexp: (int * int)}"
+  in
+  test 0 0;
+  [%expect {| (0 0) |}];
+  Expect_test_helpers_core.require_does_raise (fun () -> test 0 1);
+  [%expect {| (Not_found_s "Nonempty_list.findi_exn: not found") |}];
+  test 1 1;
+  [%expect {| (1 1) |}];
+  Expect_test_helpers_core.require_does_raise (fun () -> test 1 2);
+  [%expect {| (Not_found_s "Nonempty_list.findi_exn: not found") |}];
+  test 2 4;
+  [%expect {| (2 4) |}];
+  Expect_test_helpers_core.require_does_raise (fun () -> test 2 5);
+  [%expect {| (Not_found_s "Nonempty_list.findi_exn: not found") |}];
+  ()
+;;
+
 let%expect_test "find_mapi" =
   let test n =
     Nonempty_list.init 5 ~f:(fun x -> x * x)
@@ -897,3 +950,207 @@ let%expect_test "Option does not allocate" =
     in
     assert (phys_equal l round_tripped))
 ;;
+
+module%test Partition = struct
+  let%expect_test "partition_tf" =
+    let test xs =
+      let f x = x % 2 = 0 in
+      let (T partition) = Nonempty_list.partition_tf xs ~f in
+      partition |> [%sexp_of: (int, int, _, _) Partition.t] |> print_s;
+      assert (
+        [%equal: int list * int list]
+          ( Nonempty_list.Part.to_list partition.left
+          , Nonempty_list.Part.to_list partition.right )
+          (Nonempty_list.partition_tf' xs ~f))
+    in
+    test t;
+    [%expect
+      {| ((left (Nonempty (2 4))) (right (Nonempty (1 3))) (emptiness Both_nonempty)) |}];
+    test [ 1; 3 ];
+    [%expect {| ((left Empty) (right (Nonempty (1 3))) (emptiness Right_nonempty)) |}];
+    test [ 2; 4 ];
+    [%expect {| ((left (Nonempty (2 4))) (right Empty) (emptiness Left_nonempty)) |}]
+  ;;
+
+  let%expect_test "partition_map" =
+    let test xs =
+      let f x : _ Either.t =
+        if x % 2 = 0 then First x else Second [%string "odd %{x#Int}"]
+      in
+      let (T partition) = Nonempty_list.partition_map xs ~f in
+      partition |> [%sexp_of: (int, string, _, _) Partition.t] |> print_s;
+      assert (
+        [%equal: int list * string list]
+          ( Nonempty_list.Part.to_list partition.left
+          , Nonempty_list.Part.to_list partition.right )
+          (Nonempty_list.partition_map' xs ~f))
+    in
+    test t;
+    [%expect
+      {|
+      ((left (Nonempty (2 4))) (right (Nonempty ("odd 1" "odd 3")))
+       (emptiness Both_nonempty))
+      |}];
+    test [ 1; 3 ];
+    [%expect
+      {|
+      ((left Empty) (right (Nonempty ("odd 1" "odd 3")))
+       (emptiness Right_nonempty))
+      |}];
+    test [ 2; 4 ];
+    [%expect {| ((left (Nonempty (2 4))) (right Empty) (emptiness Left_nonempty)) |}]
+  ;;
+
+  let%expect_test "partition_result" =
+    let test xs =
+      let xs =
+        Nonempty_list.map xs ~f:(fun x ->
+          if x % 2 = 0 then Ok x else Error [%string "odd %{x#Int}"])
+      in
+      let (T partition) = Nonempty_list.partition_result xs in
+      partition |> [%sexp_of: (int, string, _, _) Partition.t] |> print_s;
+      assert (
+        [%equal: int list * string list]
+          ( Nonempty_list.Part.to_list partition.left
+          , Nonempty_list.Part.to_list partition.right )
+          (Nonempty_list.partition_result' xs))
+    in
+    test t;
+    [%expect
+      {|
+      ((left (Nonempty (2 4))) (right (Nonempty ("odd 1" "odd 3")))
+       (emptiness Both_nonempty))
+      |}];
+    test [ 1; 3 ];
+    [%expect
+      {|
+      ((left Empty) (right (Nonempty ("odd 1" "odd 3")))
+       (emptiness Right_nonempty))
+      |}];
+    test [ 2; 4 ];
+    [%expect {| ((left (Nonempty (2 4))) (right Empty) (emptiness Left_nonempty)) |}]
+  ;;
+
+  let partitions : _ Nonempty_list.Partition.packed list =
+    [ T { left = Nonempty [ 2; 4 ]; right = Empty; emptiness = Left_nonempty }
+    ; T
+        { left = Empty
+        ; right = Nonempty [ "odd 1"; "odd 3" ]
+        ; emptiness = Right_nonempty
+        }
+    ; T
+        { left = Nonempty [ 2; 4 ]
+        ; right = Nonempty [ "odd 1"; "odd 3" ]
+        ; emptiness = Both_nonempty
+        }
+    ]
+  ;;
+
+  let%expect_test "Partition accessors" =
+    List.iter partitions ~f:(fun (T p) ->
+      let left = Partition.left p in
+      left |> [%sexp_of: (int, _) Part.t] |> print_s);
+    [%expect
+      {|
+      (Nonempty (2 4))
+      Empty
+      (Nonempty (2 4))
+      |}];
+    List.iter partitions ~f:(fun (T p) ->
+      let right = Partition.right p in
+      right |> [%sexp_of: (string, _) Part.t] |> print_s);
+    [%expect
+      {|
+      Empty
+      (Nonempty ("odd 1" "odd 3"))
+      (Nonempty ("odd 1" "odd 3"))
+      |}]
+  ;;
+
+  let%expect_test "Part" =
+    List.iter partitions ~f:(fun (T p) ->
+      let left = Partition.left p in
+      let left' = Part.packed_of_list (Part.to_list left) in
+      left |> [%sexp_of: (int, _) Part.t] |> print_s;
+      assert ([%equal: int Part.packed] (T left) left'));
+    [%expect
+      {|
+      (Nonempty (2 4))
+      Empty
+      (Nonempty (2 4))
+      |}];
+    List.iter partitions ~f:(fun (T p) ->
+      let emptiness = Partition.emptiness p in
+      let left = Partition.left p |> Part.map ~f:Int.to_string in
+      let right = Partition.right p in
+      let both =
+        match emptiness with
+        | Left_nonempty -> Part.append1 left right
+        | Right_nonempty -> Part.append2 left right
+        | Both_nonempty -> Part.append2 left right
+      in
+      T both |> [%sexp_of: string Part.packed] |> print_s;
+      assert (
+        [%equal: string Part.packed] (T both) (Part.append_packed (T left) (T right))));
+    [%expect
+      {|
+      (T (Nonempty (2 4)))
+      (T (Nonempty ("odd 1" "odd 3")))
+      (T (Nonempty (2 4 "odd 1" "odd 3")))
+      |}];
+    List.iter partitions ~f:(fun (T p) ->
+      let right = Partition.right p in
+      right |> [%sexp_of: (string, _) Part.t] |> print_s);
+    [%expect
+      {|
+      Empty
+      (Nonempty ("odd 1" "odd 3"))
+      (Nonempty ("odd 1" "odd 3"))
+      |}]
+  ;;
+
+  let%expect_test "Partition swap" =
+    List.iter partitions ~f:(fun (T p) ->
+      Partition.swap p
+      |> [%sexp_of: (string, int, _, _) Nonempty_list.Partition.t]
+      |> print_s);
+    [%expect
+      {|
+      ((left Empty) (right (Nonempty (2 4))) (emptiness Right_nonempty))
+      ((left (Nonempty ("odd 1" "odd 3"))) (right Empty) (emptiness Left_nonempty))
+      ((left (Nonempty ("odd 1" "odd 3"))) (right (Nonempty (2 4)))
+       (emptiness Both_nonempty))
+      |}];
+    List.iter partitions ~f:(fun (T p) ->
+      assert (
+        [%equal: (int, string) Nonempty_list.Partition.packed]
+          (T p)
+          (T (p |> Partition.swap |> Partition.swap))))
+  ;;
+
+  let%expect_test "Partition map and combine" =
+    List.iter partitions ~f:(fun (T p) ->
+      Partition.combine' p
+      |> [%sexp_of: (int, string) Either.t Nonempty_list.t]
+      |> print_s);
+    [%expect
+      {|
+      ((First 2) (First 4))
+      ((Second "odd 1") (Second "odd 3"))
+      ((First 2) (First 4) (Second "odd 1") (Second "odd 3"))
+      |}];
+    List.iter partitions ~f:(fun (T p) ->
+      p
+      |> Partition.map_left ~f:(Part.map ~f:Int.to_string)
+      |> Partition.map_right ~f:(Part.map ~f:String.capitalize)
+      |> Partition.combine
+      |> [%sexp_of: string Nonempty_list.t]
+      |> print_s);
+    [%expect
+      {|
+      (2 4)
+      ("Odd 1" "Odd 3")
+      (2 4 "Odd 1" "Odd 3")
+      |}]
+  ;;
+end

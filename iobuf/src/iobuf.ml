@@ -107,7 +107,7 @@ end
 let length t = t.hi - t.lo
 let length_lo t = t.lo - t.lo_min
 let length_hi t = t.hi_max - t.hi
-let is_empty t = length t = 0
+let is_empty t = t.lo = t.hi
 let rewind t = t.lo <- t.lo_min
 
 let reset t =
@@ -246,6 +246,12 @@ let of_bigstring ?pos ?len buf =
   [%globalize: t_repr] (of_bigstring_local ?pos ?len buf) [@nontail]
 ;;
 
+let[@inline] unsafe_sub_shared ~pos ~len t =
+  let lo = t.lo + pos in
+  let hi = lo + len in
+  { buf = t.buf; lo_min = lo; lo; hi; hi_max = hi }
+;;
+
 let sub_shared_local ?(pos = 0) ?len t =
   let len =
     match len with
@@ -253,9 +259,11 @@ let sub_shared_local ?(pos = 0) ?len t =
     | Some len -> len
   in
   check_range t ~pos ~len;
-  let lo = t.lo + pos in
-  let hi = lo + len in
-  { buf = t.buf; lo_min = lo; lo; hi; hi_max = hi }
+  unsafe_sub_shared ~pos ~len t
+;;
+
+let unsafe_sub_shared ~pos ~len t =
+  if unsafe_is_safe then sub_shared_local ~pos ~len t else unsafe_sub_shared ~pos ~len t
 ;;
 
 let sub_shared ?pos ?len t =

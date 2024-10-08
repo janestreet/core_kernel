@@ -229,7 +229,7 @@ module Build_info = struct
     ; with_fdo : (string * Md5.t option) option [@sexp.option]
     ; application_specific_fields : Application_specific_fields.t option [@sexp.option]
     }
-  [@@deriving sexp]
+  [@@deriving sexp] [@@sexp.allow_extra_fields]
 
   module Structured = struct
     type nonrec t =
@@ -353,6 +353,16 @@ let arg_spec =
 
 module Private__For_version_util_async = struct
   let version_util_start_marker = Version_util_section.Expert.start_marker
+  let build_info_start_marker = Build_info_section.Expert.start_marker
   let parse_generated_hg_version = parse_generated_hg_version
   let raw_text = Expert.raw_text
+
+  module Build_info = struct
+    type t = Build_info.t
+
+    let t_of_sexp = Build_info.t_of_sexp
+    let sexp_of_t = Build_info.sexp_of_t
+    let executable_path { Build_info.executable_path; _ } = executable_path
+    let build_time { Build_info.build_time; _ } = Option.map build_time ~f:fst
+  end
 end

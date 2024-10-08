@@ -988,47 +988,42 @@ let fold_exn
        | Arity5 -> fun a1 a2 a3 a4 a5 -> state := f !state a1 a2 a3 a4 a5)
 ;;
 
-let%test_module _ =
-  (module struct
-    let assert_no_allocation bus callback write =
-      let bus_r = read_only bus in
-      ignore (subscribe_exn bus_r [%here] ~f:callback : _ Subscriber.t);
-      let starting_minor_words = Gc.minor_words () in
-      let starting_major_words = Gc.major_words () in
-      write ();
-      let ending_minor_words = Gc.minor_words () in
-      let ending_major_words = Gc.major_words () in
-      [%test_result: int] (ending_minor_words - starting_minor_words) ~expect:0;
-      [%test_result: int] (ending_major_words - starting_major_words) ~expect:0
-    ;;
+module%test _ = struct
+  let assert_no_allocation bus callback write =
+    let bus_r = read_only bus in
+    ignore (subscribe_exn bus_r [%here] ~f:callback : _ Subscriber.t);
+    let starting_minor_words = Gc.minor_words () in
+    let starting_major_words = Gc.major_words () in
+    write ();
+    let ending_minor_words = Gc.minor_words () in
+    let ending_major_words = Gc.major_words () in
+    [%test_result: int] (ending_minor_words - starting_minor_words) ~expect:0;
+    [%test_result: int] (ending_major_words - starting_major_words) ~expect:0
+  ;;
 
-    (* This test only works when [write] is properly inlined.  It does not guarantee that
+  (* This test only works when [write] is properly inlined.  It does not guarantee that
        [write] never allocates in any situation.  For example, if this test is moved to
        another library and run with X_LIBRARY_INLINING=false, it fails. *)
-    let%test_unit "write doesn't allocate when inlined" =
-      let create created_from arity =
-        create_exn
-          created_from
-          arity
-          ~on_subscription_after_first_write:Raise
-          ~on_callback_raise:Error.raise
-      in
-      let bus1 = create [%here] Arity1 in
-      let bus2 = create [%here] Arity2 in
-      let bus3 = create [%here] Arity3 in
-      let bus4 = create [%here] Arity4 in
-      let bus5 = create [%here] Arity5 in
-      assert_no_allocation bus1 (fun () -> ()) (fun () -> write bus1 ());
-      assert_no_allocation bus2 (fun () () -> ()) (fun () -> write2 bus2 () ());
-      assert_no_allocation bus3 (fun () () () -> ()) (fun () -> write3 bus3 () () ());
-      assert_no_allocation
-        bus4
-        (fun () () () () -> ())
-        (fun () -> write4 bus4 () () () ());
-      assert_no_allocation
-        bus5
-        (fun () () () () () -> ())
-        (fun () -> write5 bus5 () () () () ())
-    ;;
-  end)
-;;
+  let%test_unit "write doesn't allocate when inlined" =
+    let create created_from arity =
+      create_exn
+        created_from
+        arity
+        ~on_subscription_after_first_write:Raise
+        ~on_callback_raise:Error.raise
+    in
+    let bus1 = create [%here] Arity1 in
+    let bus2 = create [%here] Arity2 in
+    let bus3 = create [%here] Arity3 in
+    let bus4 = create [%here] Arity4 in
+    let bus5 = create [%here] Arity5 in
+    assert_no_allocation bus1 (fun () -> ()) (fun () -> write bus1 ());
+    assert_no_allocation bus2 (fun () () -> ()) (fun () -> write2 bus2 () ());
+    assert_no_allocation bus3 (fun () () () -> ()) (fun () -> write3 bus3 () () ());
+    assert_no_allocation bus4 (fun () () () () -> ()) (fun () -> write4 bus4 () () () ());
+    assert_no_allocation
+      bus5
+      (fun () () () () () -> ())
+      (fun () -> write5 bus5 () () () () ())
+  ;;
+end

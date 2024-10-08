@@ -152,6 +152,8 @@ module type S = sig
       It raises if [i] is out of bounds. *)
   val swap_to_last_and_pop : 'a t -> index -> 'a
 
+  val swap_to_last_and_pop_imm : 'a t -> 'a Type_immediacy.Always.t -> index -> 'a
+
   module With_structure_details : sig
     (** [[%sexp_of : t]] above only prints the elements. This gives various data structure
         details. *)

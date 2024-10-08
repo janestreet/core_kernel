@@ -109,6 +109,9 @@ val sub_shared : ?pos:int -> ?len:int -> ('d, _) t -> ('d, _) t
 (** [sub_shared_local] is like [sub_shared], but it allocates the iobuf record locally. *)
 val sub_shared_local : ?pos:int -> ?len:int -> ('d, _) t -> ('d, _) t
 
+(** More efficient than the above (optional arguments are costly). *)
+val unsafe_sub_shared : pos:int -> len:int -> ('d, _) t -> ('d, _) t
+
 (** [copy t] returns a new iobuf whose contents are the same as those in the window of
     [t]. *)
 val copy : (_, _) t -> (_, _) t

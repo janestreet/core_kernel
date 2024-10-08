@@ -152,6 +152,14 @@ end
 
 module Private__For_version_util_async : sig
   val version_util_start_marker : string
+  val build_info_start_marker : string
   val parse_generated_hg_version : string -> string list
   val raw_text : Version.t list option -> string
+
+  module Build_info : sig
+    type t [@@deriving sexp]
+
+    val executable_path : t -> string
+    val build_time : t -> Time_float.t option
+  end
 end

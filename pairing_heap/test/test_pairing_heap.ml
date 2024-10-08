@@ -110,186 +110,182 @@ let%expect_test "Heap.sexp_of_t with removes" =
 
 open! Heap
 
-let%test_module _ =
-  (module struct
-    let data = [ 0; 1; 2; 3; 4; 5; 6; 7 ]
-    let t = of_list data ~cmp:Int.compare
-    let () = invariant Fn.ignore t
+module%test _ = struct
+  let data = [ 0; 1; 2; 3; 4; 5; 6; 7 ]
+  let t = of_list data ~cmp:Int.compare
+  let () = invariant Fn.ignore t
 
-    (* pop the zero at the top to force some heap structuring.  This does not touch the
+  (* pop the zero at the top to force some heap structuring.  This does not touch the
        sum. *)
-    let (_ : int option) = pop t
-    let () = invariant Fn.ignore t
-    let list_sum = List.fold data ~init:0 ~f:(fun sum v -> sum + v)
-    let heap_fold_sum = fold t ~init:0 ~f:(fun sum v -> sum + v)
+  let (_ : int option) = pop t
+  let () = invariant Fn.ignore t
+  let list_sum = List.fold data ~init:0 ~f:(fun sum v -> sum + v)
+  let heap_fold_sum = fold t ~init:0 ~f:(fun sum v -> sum + v)
 
-    let heap_iter_sum =
-      let r = ref 0 in
-      iter t ~f:(fun v -> r := !r + v);
-      !r
+  let heap_iter_sum =
+    let r = ref 0 in
+    iter t ~f:(fun v -> r := !r + v);
+    !r
+  ;;
+
+  let%test _ = Int.( = ) list_sum heap_fold_sum
+  let%test _ = Int.( = ) list_sum heap_iter_sum
+end
+
+module%test _ = struct
+  module type Heap_intf = sig
+    type 'a t [@@deriving sexp_of]
+
+    include Invariant.S1 with type 'a t := 'a t
+
+    val create : cmp:('a -> 'a -> int) -> 'a t
+    val add : 'a t -> 'a -> unit
+    val pop : 'a t -> 'a option
+    val length : 'a t -> int
+    val top : 'a t -> 'a option
+    val remove_top : 'a t -> unit
+    val to_list : 'a t -> 'a list
+  end
+
+  module That_heap : Heap_intf = struct
+    type 'a t =
+      { cmp : 'a -> 'a -> int
+      ; mutable heap : 'a list
+      }
+
+    let sexp_of_t sexp_of_v t = List.sexp_of_t sexp_of_v t.heap
+    let create ~cmp = { cmp; heap = [] }
+    let add t v = t.heap <- List.sort ~compare:t.cmp (v :: t.heap)
+
+    let pop t =
+      match t.heap with
+      | [] -> None
+      | x :: xs ->
+        t.heap <- xs;
+        Some x
     ;;
 
-    let%test _ = Int.( = ) list_sum heap_fold_sum
-    let%test _ = Int.( = ) list_sum heap_iter_sum
-  end)
-;;
+    let length t = List.length t.heap
+    let top t = List.hd t.heap
 
-let%test_module _ =
-  (module struct
-    module type Heap_intf = sig
-      type 'a t [@@deriving sexp_of]
-
-      include Invariant.S1 with type 'a t := 'a t
-
-      val create : cmp:('a -> 'a -> int) -> 'a t
-      val add : 'a t -> 'a -> unit
-      val pop : 'a t -> 'a option
-      val length : 'a t -> int
-      val top : 'a t -> 'a option
-      val remove_top : 'a t -> unit
-      val to_list : 'a t -> 'a list
-    end
-
-    module That_heap : Heap_intf = struct
-      type 'a t =
-        { cmp : 'a -> 'a -> int
-        ; mutable heap : 'a list
-        }
-
-      let sexp_of_t sexp_of_v t = List.sexp_of_t sexp_of_v t.heap
-      let create ~cmp = { cmp; heap = [] }
-      let add t v = t.heap <- List.sort ~compare:t.cmp (v :: t.heap)
-
-      let pop t =
-        match t.heap with
-        | [] -> None
-        | x :: xs ->
-          t.heap <- xs;
-          Some x
-      ;;
-
-      let length t = List.length t.heap
-      let top t = List.hd t.heap
-
-      let remove_top t =
-        match t.heap with
-        | [] -> ()
-        | _ :: xs -> t.heap <- xs
-      ;;
-
-      let to_list t = t.heap
-      let invariant _ = Fn.ignore
-    end
-
-    module This_heap : Heap_intf = struct
-      type nonrec 'a t = 'a t [@@deriving sexp_of]
-
-      let create ~cmp = create ~cmp ()
-      let add = add
-      let pop = pop
-      let length = length
-      let top = top
-      let remove_top = remove_top
-      let to_list = to_list
-      let invariant = invariant
-    end
-
-    let this_to_string this = Sexp.to_string (This_heap.sexp_of_t Int.sexp_of_t this)
-    let that_to_string that = Sexp.to_string (That_heap.sexp_of_t Int.sexp_of_t that)
-
-    let length_check (t_a, t_b) =
-      let this_len = This_heap.length t_a in
-      let that_len = That_heap.length t_b in
-      if this_len <> that_len
-      then
-        failwithf
-          "error in length: %i (for %s) <> %i (for %s)"
-          this_len
-          (this_to_string t_a)
-          that_len
-          (that_to_string t_b)
-          ()
+    let remove_top t =
+      match t.heap with
+      | [] -> ()
+      | _ :: xs -> t.heap <- xs
     ;;
 
-    let create () =
-      let cmp = Int.compare in
-      This_heap.create ~cmp, That_heap.create ~cmp
-    ;;
+    let to_list t = t.heap
+    let invariant _ = Fn.ignore
+  end
 
-    let add (this_t, that_t) v =
-      This_heap.add this_t v;
-      That_heap.add that_t v;
-      length_check (this_t, that_t)
-    ;;
+  module This_heap : Heap_intf = struct
+    type nonrec 'a t = 'a t [@@deriving sexp_of]
 
-    let pop (this_t, that_t) =
-      let res1 = This_heap.pop this_t in
-      let res2 = That_heap.pop that_t in
-      if res1 <> res2
-      then
-        failwithf
-          "pop results differ (%s, %s)"
-          (Option.value ~default:"None" (Option.map ~f:Int.to_string res1))
-          (Option.value ~default:"None" (Option.map ~f:Int.to_string res2))
-          ()
-    ;;
+    let create ~cmp = create ~cmp ()
+    let add = add
+    let pop = pop
+    let length = length
+    let top = top
+    let remove_top = remove_top
+    let to_list = to_list
+    let invariant = invariant
+  end
 
-    let top (this_t, that_t) =
-      let res1 = This_heap.top this_t in
-      let res2 = That_heap.top that_t in
-      if res1 <> res2
-      then
-        failwithf
-          "top results differ (%s, %s)"
-          (Option.value ~default:"None" (Option.map ~f:Int.to_string res1))
-          (Option.value ~default:"None" (Option.map ~f:Int.to_string res2))
-          ()
-    ;;
+  let this_to_string this = Sexp.to_string (This_heap.sexp_of_t Int.sexp_of_t this)
+  let that_to_string that = Sexp.to_string (That_heap.sexp_of_t Int.sexp_of_t that)
 
-    let remove_top (this_t, that_t) =
-      This_heap.remove_top this_t;
-      That_heap.remove_top that_t;
-      length_check (this_t, that_t)
-    ;;
+  let length_check (t_a, t_b) =
+    let this_len = This_heap.length t_a in
+    let that_len = That_heap.length t_b in
+    if this_len <> that_len
+    then
+      failwithf
+        "error in length: %i (for %s) <> %i (for %s)"
+        this_len
+        (this_to_string t_a)
+        that_len
+        (that_to_string t_b)
+        ()
+  ;;
 
-    let internal_check (this_t, that_t) =
-      let this_list = List.sort ~compare:Int.compare (This_heap.to_list this_t) in
-      let that_list = List.sort ~compare:Int.compare (That_heap.to_list that_t) in
-      assert (this_list = that_list);
-      This_heap.invariant Fn.ignore this_t;
-      That_heap.invariant Fn.ignore that_t
-    ;;
+  let create () =
+    let cmp = Int.compare in
+    This_heap.create ~cmp, That_heap.create ~cmp
+  ;;
 
-    let%expect_test _ =
-      let generator =
-        let add =
-          let%map.Quickcheck.Generator i = Int.gen_uniform_incl 0 100 in
-          `Add i
-        in
-        let return = Quickcheck.Generator.return in
-        Quickcheck.Generator.weighted_union
-          (* This is biased towards adding (0.5 probability of add, 0.3 probability of
+  let add (this_t, that_t) v =
+    This_heap.add this_t v;
+    That_heap.add that_t v;
+    length_check (this_t, that_t)
+  ;;
+
+  let pop (this_t, that_t) =
+    let res1 = This_heap.pop this_t in
+    let res2 = That_heap.pop that_t in
+    if res1 <> res2
+    then
+      failwithf
+        "pop results differ (%s, %s)"
+        (Option.value ~default:"None" (Option.map ~f:Int.to_string res1))
+        (Option.value ~default:"None" (Option.map ~f:Int.to_string res2))
+        ()
+  ;;
+
+  let top (this_t, that_t) =
+    let res1 = This_heap.top this_t in
+    let res2 = That_heap.top that_t in
+    if res1 <> res2
+    then
+      failwithf
+        "top results differ (%s, %s)"
+        (Option.value ~default:"None" (Option.map ~f:Int.to_string res1))
+        (Option.value ~default:"None" (Option.map ~f:Int.to_string res2))
+        ()
+  ;;
+
+  let remove_top (this_t, that_t) =
+    This_heap.remove_top this_t;
+    That_heap.remove_top that_t;
+    length_check (this_t, that_t)
+  ;;
+
+  let internal_check (this_t, that_t) =
+    let this_list = List.sort ~compare:Int.compare (This_heap.to_list this_t) in
+    let that_list = List.sort ~compare:Int.compare (That_heap.to_list that_t) in
+    assert (this_list = that_list);
+    This_heap.invariant Fn.ignore this_t;
+    That_heap.invariant Fn.ignore that_t
+  ;;
+
+  let%expect_test _ =
+    let generator =
+      let add =
+        let%map.Quickcheck.Generator i = Int.gen_uniform_incl 0 100 in
+        `Add i
+      in
+      let return = Quickcheck.Generator.return in
+      Quickcheck.Generator.weighted_union
+        (* This is biased towards adding (0.5 probability of add, 0.3 probability of
              pop or remove top), so the heap will tend to grow over time. This should test
              more interesting cases compared to always testing small heaps. *)
-          [ 0.5, add
-          ; 0.2, return `Pop
-          ; 0.1, return `Top
-          ; 0.1, return `Remove_top
-          ; 0.1, return `Internal_check
-          ]
-        |> Quickcheck.Generator.list
-      in
-      Quickcheck.test generator ~sizes:(Sequence.repeat 10_000) ~trials:100 ~f:(fun ops ->
-        let t = create () in
-        List.iter ops ~f:(function
-          | `Add i -> add t i
-          | `Pop -> pop t
-          | `Top -> top t
-          | `Remove_top -> remove_top t
-          | `Internal_check -> internal_check t))
-    ;;
-  end)
-;;
+        [ 0.5, add
+        ; 0.2, return `Pop
+        ; 0.1, return `Top
+        ; 0.1, return `Remove_top
+        ; 0.1, return `Internal_check
+        ]
+      |> Quickcheck.Generator.list
+    in
+    Quickcheck.test generator ~sizes:(Sequence.repeat 10_000) ~trials:100 ~f:(fun ops ->
+      let t = create () in
+      List.iter ops ~f:(function
+        | `Add i -> add t i
+        | `Pop -> pop t
+        | `Top -> top t
+        | `Remove_top -> remove_top t
+        | `Internal_check -> internal_check t))
+  ;;
+end
 
 let integer_test f =
   let generator =

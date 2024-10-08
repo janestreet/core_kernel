@@ -293,6 +293,8 @@ include struct
   let fold = fold
   let fold_right = fold_right
   let to_alist = to_alist
+  let validate = validate
+  let validatei = validatei
 end
 
 module Make_plain_with_witnesses (Key : Key_plain_with_witnesses) = struct
