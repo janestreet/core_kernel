@@ -241,8 +241,7 @@ module Make (Pool : Pool.S) = struct
   ;;
 end
 
-let%test_module _ = (module Make (Pool))
-
+module%test _ = Make (Pool)
 open! Pool
 
 let%expect_test "use a pool that has been [grow]n" =
@@ -258,30 +257,24 @@ let%expect_test "use a pool that has been [grow]n" =
   [%expect {| (false 13) |}]
 ;;
 
-let%test_module _ =
-  (module Make (struct
-      include Pool.Unsafe
+module%test _ = Make (struct
+    include Pool.Unsafe
 
-      let create (type tuple) (slots : (tuple, _) Slots.t) ~capacity ~dummy:(_ : tuple) =
-        create slots ~capacity
-      ;;
-    end))
-;;
+    let create (type tuple) (slots : (tuple, _) Slots.t) ~capacity ~dummy:(_ : tuple) =
+      create slots ~capacity
+    ;;
+  end)
 
-let%test_module "Debug without messages" =
-  (module Make (struct
-      include Pool.Debug (Pool)
+module%test [@name "Debug without messages"] _ = Make (struct
+    include Pool.Debug (Pool)
 
-      let () = show_messages := false
+    let () = show_messages := false
 
-      (* or it prints too much *)
-    end))
-;;
+    (* or it prints too much *)
+  end)
 
 module Error_checked_pool = Pool.Error_check (Pool)
-
-let%test_module _ = (module Make (Error_checked_pool))
-
+module%test _ = Make (Error_checked_pool)
 open Error_checked_pool
 
 let%expect_test "use a pool that has been [grow]n" =

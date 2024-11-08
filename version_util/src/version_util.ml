@@ -183,6 +183,13 @@ module Expert = struct
   end
 end
 
+module Opt_level = struct
+  type t =
+    | High
+    | Low
+  [@@deriving sexp]
+end
+
 module Build_info = struct
   module Application_specific_fields = struct
     type t = Sexp.t String.Map.t [@@deriving sexp]
@@ -228,8 +235,9 @@ module Build_info = struct
     ; allowed_projections : string list option [@sexp.option]
     ; with_fdo : (string * Md5.t option) option [@sexp.option]
     ; application_specific_fields : Application_specific_fields.t option [@sexp.option]
+    ; opt_level : Opt_level.t option [@sexp.option]
     }
-  [@@deriving sexp]
+  [@@deriving sexp] [@@sexp.allow_extra_fields]
 
   module Structured = struct
     type nonrec t =
@@ -266,6 +274,7 @@ module Build_info = struct
     ; allowed_projections = None
     ; with_fdo = None
     ; application_specific_fields = None
+    ; opt_level = None
     }
   ;;
 
@@ -306,6 +315,7 @@ module Build_info = struct
       ; allowed_projections
       ; with_fdo
       ; application_specific_fields
+      ; opt_level
       }
     =
     t
@@ -351,8 +361,21 @@ let arg_spec =
   ]
 ;;
 
-module Private__For_version_util_async = struct
+(* This constraint has unfortunately been invalidated by an internal client. We should
+   make API improvements, such that this behaviour is further discouraged. (See further
+   discussion in version_util_async) *)
+module Private__for_use_under_lib_version_util_directory_only = struct
   let version_util_start_marker = Version_util_section.Expert.start_marker
+  let build_info_start_marker = Build_info_section.Expert.start_marker
   let parse_generated_hg_version = parse_generated_hg_version
   let raw_text = Expert.raw_text
+
+  module Build_info = struct
+    type t = Build_info.t
+
+    let t_of_sexp = Build_info.t_of_sexp
+    let sexp_of_t = Build_info.sexp_of_t
+    let executable_path { Build_info.executable_path; _ } = executable_path
+    let build_time { Build_info.build_time; _ } = Option.map build_time ~f:fst
+  end
 end

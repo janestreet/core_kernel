@@ -733,6 +733,12 @@ module With_integer_index = struct
     pop_back_exn t
   ;;
 
+  let swap_to_last_and_pop_imm t immediacy i =
+    check_index t i ~op:"swap_to_last_and_pop";
+    unsafe_swap t i (max_index t);
+    pop_back_imm_exn t immediacy
+  ;;
+
   module Stable = struct
     module V1 = struct
       type nonrec 'a t = 'a t [@@deriving compare, sexp]
@@ -829,5 +835,9 @@ module Make (M : Intable.S) = struct
 
   let swap t index1 index2 = swap t (M.to_int_exn index1) (M.to_int_exn index2)
   let swap_to_last_and_pop t index = swap_to_last_and_pop t (M.to_int_exn index)
+
+  let swap_to_last_and_pop_imm t imm index =
+    swap_to_last_and_pop_imm t imm (M.to_int_exn index)
+  ;;
 end
 [@@inline]

@@ -9,5 +9,5 @@ type 'a t = 'a [@@deriving bin_io, compare, equal, sexp_of]
 (** This type also derives [sexp]. This will not allow you to roundtrip values you create
     in tests and should be used carefully. *)
 module With_non_roundtripping_in_test_of_sexp : sig
-  type 'a t = 'a [@@deriving bin_io, compare, equal, sexp]
+  type 'a t = 'a [@@deriving bin_io, compare, equal, sexp, stable_witness]
 end

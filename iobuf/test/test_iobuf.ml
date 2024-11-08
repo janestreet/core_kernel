@@ -10,81 +10,73 @@ let is_ok = Result.is_ok
 let ok_exn = Or_error.ok_exn
 let try_with = Or_error.try_with
 
-let%test_module "[Consume]" =
-  (module struct
-    open Consume
+module%test [@name "[Consume]"] _ = struct
+  open Consume
 
-    let%test_unit "bin_prot char" =
-      let t = of_string "abc" in
-      let a = bin_prot Char.bin_reader_t t in
-      let b = bin_prot Char.bin_reader_t t in
-      [%test_eq: char] a 'a';
-      [%test_eq: char] b 'b';
-      [%test_eq: string] (to_string t) "c"
-    ;;
+  let%test_unit "bin_prot char" =
+    let t = of_string "abc" in
+    let a = bin_prot Char.bin_reader_t t in
+    let b = bin_prot Char.bin_reader_t t in
+    [%test_eq: char] a 'a';
+    [%test_eq: char] b 'b';
+    [%test_eq: string] (to_string t) "c"
+  ;;
 
-    let%test_unit "bin_prot int" =
-      let ints = [ 0; 1; -1; 12345; -67890; Int.min_value; Int.max_value; 666 ] in
-      let buf = Bigstring.create 1000 in
-      let _end_pos =
-        List.fold ints ~init:0 ~f:(fun pos i -> Int.bin_write_t buf ~pos i)
-      in
-      let t = of_bigstring buf in
-      List.iter ints ~f:(fun i -> [%test_eq: int] i (bin_prot Int.bin_reader_t t))
-    ;;
-  end)
-;;
+  let%test_unit "bin_prot int" =
+    let ints = [ 0; 1; -1; 12345; -67890; Int.min_value; Int.max_value; 666 ] in
+    let buf = Bigstring.create 1000 in
+    let _end_pos = List.fold ints ~init:0 ~f:(fun pos i -> Int.bin_write_t buf ~pos i) in
+    let t = of_bigstring buf in
+    List.iter ints ~f:(fun i -> [%test_eq: int] i (bin_prot Int.bin_reader_t t))
+  ;;
+end
 
-let%test_module "[Peek]" =
-  (module struct
-    open Peek
+module%test [@name "[Peek]"] _ = struct
+  open Peek
 
-    let%test_unit "bin_prot char" =
-      let t = of_string "abc" in
-      let a = bin_prot Char.bin_reader_t t ~pos:0 in
-      let b = bin_prot Char.bin_reader_t t ~pos:1 in
-      [%test_eq: char] a 'a';
-      [%test_eq: char] b 'b';
-      [%test_eq: string] (to_string t) "abc"
-    ;;
+  let%test_unit "bin_prot char" =
+    let t = of_string "abc" in
+    let a = bin_prot Char.bin_reader_t t ~pos:0 in
+    let b = bin_prot Char.bin_reader_t t ~pos:1 in
+    [%test_eq: char] a 'a';
+    [%test_eq: char] b 'b';
+    [%test_eq: string] (to_string t) "abc"
+  ;;
 
-    let%test_unit "bin_prot int" =
-      let ints = [ 0; 1; -1; 12345; -67890; Int.min_value; Int.max_value; 666 ] in
-      let buf = Bigstring.create 1000 in
-      let end_pos = List.fold ints ~init:0 ~f:(fun pos i -> Int.bin_write_t buf ~pos i) in
-      let t = of_bigstring buf in
-      List.fold ints ~init:0 ~f:(fun pos i ->
-        [%test_eq: int] i (bin_prot Int.bin_reader_t t ~pos);
-        pos + Int.bin_size_t i)
-      |> fun end_pos' -> [%test_eq: int] end_pos end_pos'
-    ;;
-  end)
-;;
+  let%test_unit "bin_prot int" =
+    let ints = [ 0; 1; -1; 12345; -67890; Int.min_value; Int.max_value; 666 ] in
+    let buf = Bigstring.create 1000 in
+    let end_pos = List.fold ints ~init:0 ~f:(fun pos i -> Int.bin_write_t buf ~pos i) in
+    let t = of_bigstring buf in
+    List.fold ints ~init:0 ~f:(fun pos i ->
+      [%test_eq: int] i (bin_prot Int.bin_reader_t t ~pos);
+      pos + Int.bin_size_t i)
+    |> fun end_pos' -> [%test_eq: int] end_pos end_pos'
+  ;;
+end
 
-let%test_module "[Poke]" =
-  (module struct
-    open Poke
+module%test [@name "[Poke]"] _ = struct
+  open Poke
 
-    let%test_unit _ =
-      let t = of_string "abc" in
-      bin_prot Char.bin_writer_t t 'd' ~pos:0;
-      bin_prot Char.bin_writer_t t 'e' ~pos:1;
-      [%test_eq: string] "dec" (to_string t);
-      flip_lo t;
-      assert (
-        try
-          bin_prot String.bin_writer_t t "fgh" ~pos:0;
-          false
-        with
-        | _ -> true);
-      assert (is_empty t);
-      reset t;
-      [%test_eq: string] "dec" (to_string t);
-      bin_prot Char.bin_writer_t t 'i' ~pos:0;
-      [%test_eq: string] "iec" (to_string t)
-    ;;
-  end)
-;;
+  let%test_unit _ =
+    let t = of_string "abc" in
+    bin_prot Char.bin_writer_t t 'd' ~pos:0;
+    bin_prot Char.bin_writer_t t 'e' ~pos:1;
+    [%test_eq: string] "dec" (to_string t);
+    flip_lo t;
+    assert (
+      try
+        bin_prot String.bin_writer_t t "fgh" ~pos:0;
+        false
+      with
+      | _ -> true);
+    assert (is_empty t);
+    reset t;
+    [%test_eq: string] "dec" (to_string t);
+    bin_prot Char.bin_writer_t t 'i' ~pos:0;
+    [%test_eq: string] "iec" (to_string t)
+  ;;
+end
 
 module type Accessors_common = Accessors_common
 module type Accessors_read = Accessors_read
@@ -165,18 +157,16 @@ let length_hi = length_hi
 let is_empty = is_empty
 
 (* [create] with random capacity. *)
-let%test_module _ =
-  (module struct
-    let () =
-      let n = Random.int 100_000 + 1 in
-      assert (n > 0);
-      let t = create ~len:n in
-      assert (capacity t = n);
-      assert (length t = n);
-      assert (not (is_empty t))
-    ;;
-  end)
-;;
+module%test _ = struct
+  let () =
+    let n = Random.int 100_000 + 1 in
+    assert (n > 0);
+    let t = create ~len:n in
+    assert (capacity t = n);
+    assert (length t = n);
+    assert (not (is_empty t))
+  ;;
+end
 
 (* [create] with user-supplied capacity. *)
 let%test_unit _ =
@@ -193,31 +183,29 @@ let%test_unit _ =
   assert (is_error (try_with (fun () -> ignore (create ~len:(-1) : (_, _) t))))
 ;;
 
-let%test_module "lengths" =
-  (module struct
-    let%expect_test "length" =
-      let print_lengths t =
-        printf "%d + %d + %d = %d\n" (length_lo t) (length t) (length_hi t) (capacity t)
-      in
-      let t = create ~len:5 in
-      print_lengths t;
-      [%expect {| 0 + 5 + 0 = 5 |}];
-      advance t 1;
-      print_lengths t;
-      [%expect {| 1 + 4 + 0 = 5 |}];
-      flip_lo t;
-      print_lengths t;
-      [%expect {| 0 + 1 + 4 = 5 |}];
-      resize t ~len:3;
-      advance t 1;
-      print_lengths t;
-      [%expect {| 1 + 2 + 2 = 5 |}];
-      flip_hi t;
-      print_lengths t;
-      [%expect {| 3 + 2 + 0 = 5 |}]
-    ;;
-  end)
-;;
+module%test [@name "lengths"] _ = struct
+  let%expect_test "length" =
+    let print_lengths t =
+      printf "%d + %d + %d = %d\n" (length_lo t) (length t) (length_hi t) (capacity t)
+    in
+    let t = create ~len:5 in
+    print_lengths t;
+    [%expect {| 0 + 5 + 0 = 5 |}];
+    advance t 1;
+    print_lengths t;
+    [%expect {| 1 + 4 + 0 = 5 |}];
+    flip_lo t;
+    print_lengths t;
+    [%expect {| 0 + 1 + 4 = 5 |}];
+    resize t ~len:3;
+    advance t 1;
+    print_lengths t;
+    [%expect {| 1 + 2 + 2 = 5 |}];
+    flip_hi t;
+    print_lengths t;
+    [%expect {| 3 + 2 + 0 = 5 |}]
+  ;;
+end
 
 module IR_Int8 = struct
   include IR.Int8
@@ -340,74 +328,72 @@ struct
     done
   ;;
 
-  let%test_module "duplication tests" =
-    (module struct
-      let equal_in_window t t' =
-        assert (length t = length t');
-        assert (String.equal (to_string t) (to_string t'));
-        assert (not (phys_equal (Expert.buf t) (Expert.buf t')))
-      ;;
+  module%test [@name "duplication tests"] _ = struct
+    let equal_in_window t t' =
+      assert (length t = length t');
+      assert (String.equal (to_string t) (to_string t'));
+      assert (not (phys_equal (Expert.buf t) (Expert.buf t')))
+    ;;
 
-      type assertion =
-        { in_window : string
-        ; in_limits : string
-        ; buf : string
-        }
+    type assertion =
+      { in_window : string
+      ; in_limits : string
+      ; buf : string
+      }
 
-      let run_scenario dup ~expect_t ~expect_a ~expect_b ~expect_c ~expect_d =
-        (* Use a [t] where the full window does not encompass the entire buffer *)
-        let t = of_bigstring (Bigstring.of_string "0123456") ~pos:1 ~len:5 in
-        (* Test with full window *)
-        let a = dup t in
-        equal_in_window t a;
-        resize t ~len:3;
-        advance t 1;
-        (* Test with new window *)
-        let b = dup t in
-        equal_in_window t b;
-        Poke.char t ~pos:0 '_';
-        (* Modifying t buffer should not affect those copied before *)
-        let c = dup t in
-        equal_in_window t c;
-        (* Modifying duplicate buffer only affects that instance *)
-        let d = dup t in
-        Poke.char d ~pos:0 'X';
-        let check_contents t { in_window; in_limits; buf } =
-          assert (String.equal (to_string t) in_window);
-          reset t;
-          assert (String.equal (to_string t) in_limits);
-          assert (String.equal (Bigstring.to_string (Expert.buf t)) buf)
-        in
-        check_contents t expect_t;
-        check_contents a expect_a;
-        check_contents b expect_b;
-        check_contents c expect_c;
-        check_contents d expect_d
-      ;;
+    let run_scenario dup ~expect_t ~expect_a ~expect_b ~expect_c ~expect_d =
+      (* Use a [t] where the full window does not encompass the entire buffer *)
+      let t = of_bigstring (Bigstring.of_string "0123456") ~pos:1 ~len:5 in
+      (* Test with full window *)
+      let a = dup t in
+      equal_in_window t a;
+      resize t ~len:3;
+      advance t 1;
+      (* Test with new window *)
+      let b = dup t in
+      equal_in_window t b;
+      Poke.char t ~pos:0 '_';
+      (* Modifying t buffer should not affect those copied before *)
+      let c = dup t in
+      equal_in_window t c;
+      (* Modifying duplicate buffer only affects that instance *)
+      let d = dup t in
+      Poke.char d ~pos:0 'X';
+      let check_contents t { in_window; in_limits; buf } =
+        assert (String.equal (to_string t) in_window);
+        reset t;
+        assert (String.equal (to_string t) in_limits);
+        assert (String.equal (Bigstring.to_string (Expert.buf t)) buf)
+      in
+      check_contents t expect_t;
+      check_contents a expect_a;
+      check_contents b expect_b;
+      check_contents c expect_c;
+      check_contents d expect_d
+    ;;
 
-      (* [copy t] *)
-      let%test_unit _ =
-        run_scenario
-          copy
-          ~expect_t:{ in_window = "_3"; in_limits = "1_345"; buf = "01_3456" }
-          ~expect_a:{ in_window = "12345"; in_limits = "12345"; buf = "12345" }
-          ~expect_b:{ in_window = "23"; in_limits = "23"; buf = "23" }
-          ~expect_c:{ in_window = "_3"; in_limits = "_3"; buf = "_3" }
-          ~expect_d:{ in_window = "X3"; in_limits = "X3"; buf = "X3" }
-      ;;
+    (* [copy t] *)
+    let%test_unit _ =
+      run_scenario
+        copy
+        ~expect_t:{ in_window = "_3"; in_limits = "1_345"; buf = "01_3456" }
+        ~expect_a:{ in_window = "12345"; in_limits = "12345"; buf = "12345" }
+        ~expect_b:{ in_window = "23"; in_limits = "23"; buf = "23" }
+        ~expect_c:{ in_window = "_3"; in_limits = "_3"; buf = "_3" }
+        ~expect_d:{ in_window = "X3"; in_limits = "X3"; buf = "X3" }
+    ;;
 
-      (* [clone t] *)
-      let%test_unit _ =
-        run_scenario
-          clone
-          ~expect_t:{ in_window = "_3"; in_limits = "1_345"; buf = "01_3456" }
-          ~expect_a:{ in_window = "12345"; in_limits = "12345"; buf = "0123456" }
-          ~expect_b:{ in_window = "23"; in_limits = "12345"; buf = "0123456" }
-          ~expect_c:{ in_window = "_3"; in_limits = "1_345"; buf = "01_3456" }
-          ~expect_d:{ in_window = "X3"; in_limits = "1X345"; buf = "01X3456" }
-      ;;
-    end)
-  ;;
+    (* [clone t] *)
+    let%test_unit _ =
+      run_scenario
+        clone
+        ~expect_t:{ in_window = "_3"; in_limits = "1_345"; buf = "01_3456" }
+        ~expect_a:{ in_window = "12345"; in_limits = "12345"; buf = "0123456" }
+        ~expect_b:{ in_window = "23"; in_limits = "12345"; buf = "0123456" }
+        ~expect_c:{ in_window = "_3"; in_limits = "1_345"; buf = "01_3456" }
+        ~expect_d:{ in_window = "X3"; in_limits = "1X345"; buf = "01X3456" }
+    ;;
+  end
 
   module Lo_bound = struct
     type t = Lo_bound.t [@@deriving compare]
@@ -2267,118 +2253,116 @@ struct
     assert (is_empty t)
   ;;
 
-  let%test_module "truncating pokers and fillers don't check values" =
-    (module struct
-      let t = Iobuf.create ~len:8
+  module%test [@name "truncating pokers and fillers don't check values"] _ = struct
+    let t = Iobuf.create ~len:8
 
-      let tests tests =
-        List.iter tests ~f:(fun test ->
-          reset t;
-          Poke.stringo t "01234567" ~pos:0;
-          try
-            test ();
-            printf "%S\n" (Iobuf.to_string t)
-          with
-          | e -> print_s [%sexp (e : exn)])
-      ;;
+    let tests tests =
+      List.iter tests ~f:(fun test ->
+        reset t;
+        Poke.stringo t "01234567" ~pos:0;
+        try
+          test ();
+          printf "%S\n" (Iobuf.to_string t)
+        with
+        | e -> print_s [%sexp (e : exn)])
+    ;;
 
-      let%expect_test "unsigned Pokes of negative ints" =
-        tests
-          (List.map
-             Poke.
-               [ uint8_trunc
-               ; uint16_be_trunc
-               ; uint16_le_trunc
-               ; uint32_be_trunc
-               ; uint32_le_trunc
-               ; uint64_be_trunc
-               ; uint64_le_trunc
-               ]
-             ~f:(fun upoke () -> upoke t (-1 lxor 0xFF lor Char.to_int '!') ~pos:0));
-        [%expect
-          {|
-          "!1234567"
-          "\255!234567"
-          "!\255234567"
-          "\255\255\255!4567"
-          "!\255\255\2554567"
-          "\255\255\255\255\255\255\255!"
-          "!\255\255\255\255\255\255\255"
-          |}]
-      ;;
+    let%expect_test "unsigned Pokes of negative ints" =
+      tests
+        (List.map
+           Poke.
+             [ uint8_trunc
+             ; uint16_be_trunc
+             ; uint16_le_trunc
+             ; uint32_be_trunc
+             ; uint32_le_trunc
+             ; uint64_be_trunc
+             ; uint64_le_trunc
+             ]
+           ~f:(fun upoke () -> upoke t (-1 lxor 0xFF lor Char.to_int '!') ~pos:0));
+      [%expect
+        {|
+        "!1234567"
+        "\255!234567"
+        "!\255234567"
+        "\255\255\255!4567"
+        "!\255\255\2554567"
+        "\255\255\255\255\255\255\255!"
+        "!\255\255\255\255\255\255\255"
+        |}]
+    ;;
 
-      let%expect_test "signed Pokes of out-of-range ints" =
-        tests
-          (List.map
-             Poke.
-               [ int8_trunc
-               ; int16_be_trunc
-               ; int16_le_trunc
-               ; int32_be_trunc
-               ; int32_le_trunc
-               ]
-             ~f:(fun poke () -> poke t ((1 lsl 32) lor Char.to_int '!') ~pos:0));
-        [%expect
-          {|
-          "!1234567"
-          "\000!234567"
-          "!\000234567"
-          "\000\000\000!4567"
-          "!\000\000\0004567"
-          |}]
-      ;;
+    let%expect_test "signed Pokes of out-of-range ints" =
+      tests
+        (List.map
+           Poke.
+             [ int8_trunc
+             ; int16_be_trunc
+             ; int16_le_trunc
+             ; int32_be_trunc
+             ; int32_le_trunc
+             ]
+           ~f:(fun poke () -> poke t ((1 lsl 32) lor Char.to_int '!') ~pos:0));
+      [%expect
+        {|
+        "!1234567"
+        "\000!234567"
+        "!\000234567"
+        "\000\000\000!4567"
+        "!\000\000\0004567"
+        |}]
+    ;;
 
-      let%expect_test "unsigned Fills don't check sign" =
-        tests
-          (List.map
-             Fill.
-               [ uint8_trunc
-               ; uint16_be_trunc
-               ; uint16_le_trunc
-               ; uint32_be_trunc
-               ; uint32_le_trunc
-               ; uint64_be_trunc
-               ; uint64_le_trunc
-               ]
-             ~f:(fun ufill () ->
-               ufill t (-1 lxor 0xFF lor Char.to_int '!');
-               Iobuf.flip_lo t));
-        [%expect
-          {|
-          "!"
-          "\255!"
-          "!\255"
-          "\255\255\255!"
-          "!\255\255\255"
-          "\255\255\255\255\255\255\255!"
-          "!\255\255\255\255\255\255\255"
-          |}]
-      ;;
+    let%expect_test "unsigned Fills don't check sign" =
+      tests
+        (List.map
+           Fill.
+             [ uint8_trunc
+             ; uint16_be_trunc
+             ; uint16_le_trunc
+             ; uint32_be_trunc
+             ; uint32_le_trunc
+             ; uint64_be_trunc
+             ; uint64_le_trunc
+             ]
+           ~f:(fun ufill () ->
+             ufill t (-1 lxor 0xFF lor Char.to_int '!');
+             Iobuf.flip_lo t));
+      [%expect
+        {|
+        "!"
+        "\255!"
+        "!\255"
+        "\255\255\255!"
+        "!\255\255\255"
+        "\255\255\255\255\255\255\255!"
+        "!\255\255\255\255\255\255\255"
+        |}]
+    ;;
 
-      let%expect_test "signed Fills don't check range" =
-        tests
-          (List.map
-             Fill.
-               [ int8_trunc
-               ; int16_be_trunc
-               ; int16_le_trunc
-               ; int32_be_trunc
-               ; int32_le_trunc
-               ]
-             ~f:(fun fill () ->
-               fill t ((1 lsl 32) lor Char.to_int '!');
-               Iobuf.flip_lo t));
-        [%expect
-          {|
-          "!"
-          "\000!"
-          "!\000"
-          "\000\000\000!"
-          "!\000\000\000"
-          |}]
-      ;;
-    end)
-  ;;
+    let%expect_test "signed Fills don't check range" =
+      tests
+        (List.map
+           Fill.
+             [ int8_trunc
+             ; int16_be_trunc
+             ; int16_le_trunc
+             ; int32_be_trunc
+             ; int32_le_trunc
+             ]
+           ~f:(fun fill () ->
+             fill t ((1 lsl 32) lor Char.to_int '!');
+             Iobuf.flip_lo t));
+      [%expect
+        {|
+        "!"
+        "\000!"
+        "!\000"
+        "\000\000\000!"
+        "!\000\000\000"
+        |}]
+    ;;
+  end
 
   let%test_unit _ =
     List.iter [ 0; 1 ] ~f:(fun pos ->
@@ -2927,16 +2911,29 @@ module _ = Accessors (struct
     module Peek = struct
       include Peek
 
-      let index t ?(pos = 0) ?(len = length t - pos) char =
-        match index_or_neg t ~pos ~len char with
-        | index when index < 0 -> None
-        | index -> Some index
+      let assert_equal ~index_or_neg ~index_option t ?pos ?len char =
+        let index_or_neg = index_or_neg t ?pos ?len char in
+        let index_option = index_option t ?pos ?len char in
+        (match index_option with
+         | None -> assert (index_or_neg < 0)
+         | Some index ->
+           assert (index >= 0);
+           assert (index = index_or_neg));
+        [%globalize: int option] index_option [@nontail]
       ;;
 
-      let rindex t ?(pos = 0) ?(len = length t - pos) char =
-        match rindex_or_neg t ~pos ~len char with
-        | index when index < 0 -> None
-        | index -> Some index
+      let index t ?pos ?len char =
+        assert_equal ~index_or_neg ~index_option:index_local t ?pos ?len char
+      ;;
+
+      let rindex t ?pos ?len char =
+        assert_equal
+          ~index_or_neg:rindex_or_neg
+          ~index_option:rindex_local
+          t
+          ?pos
+          ?len
+          char
       ;;
     end
 
@@ -2959,116 +2956,328 @@ let%test_unit _ =
   assert (memcmp a b = -1)
 ;;
 
-let%test_module "allocation" =
-  (module struct
-    let%expect_test "set_bounds_and_buffer_sub" =
-      let src = Iobuf.of_string "123abcDEF" in
-      let dst = Iobuf.create ~len:0 in
-      require_no_allocation (fun () ->
-        Iobuf.set_bounds_and_buffer_sub ~src ~dst ~len:(Iobuf.length src) ~pos:0);
-      [%expect {| |}]
-    ;;
+module%test [@name "allocation"] _ = struct
+  let%expect_test "set_bounds_and_buffer_sub" =
+    let src = Iobuf.of_string "123abcDEF" in
+    let dst = Iobuf.create ~len:0 in
+    require_no_allocation (fun () ->
+      Iobuf.set_bounds_and_buffer_sub ~src ~dst ~len:(Iobuf.length src) ~pos:0);
+    [%expect {| |}]
+  ;;
 
-    let%expect_test "Fill.string" =
-      let str = "123" in
-      (* The labeled arguments mustn't be constant or they don't test anything - optional
+  let%expect_test "Fill.string" =
+    let str = "123" in
+    (* The labeled arguments mustn't be constant or they don't test anything - optional
          constant arguments can always be preallocated. *)
-      let str_pos = Random.int (String.length str) in
-      let len = Random.int (String.length str - str_pos) in
-      let dst = Iobuf.create ~len in
-      require_no_allocation (fun () -> Iobuf.Fill.string dst str ~str_pos ~len);
+    let str_pos = Random.int (String.length str) in
+    let len = Random.int (String.length str - str_pos) in
+    let dst = Iobuf.create ~len in
+    require_no_allocation (fun () -> Iobuf.Fill.string dst str ~str_pos ~len);
+    [%expect {| |}]
+  ;;
+
+  let%expect_test "of_bigstring_local" =
+    let bigstring = Bigstring.of_string "abcdefghijklmnopqrstuvwxyz" in
+    require_no_allocation (fun () ->
+      let buf = Iobuf.of_bigstring_local bigstring in
+      ignore (Sys.opaque_identity buf : _ Iobuf.t));
+    require_no_allocation (fun () ->
+      let buf = Iobuf.of_bigstring_local ~pos:1 ~len:10 bigstring in
+      ignore (Sys.opaque_identity buf : _ Iobuf.t));
+    [%expect {| |}]
+  ;;
+
+  let%expect_test "of_string_local" =
+    let string = "abc" in
+    let buf = Iobuf.of_string_local string in
+    [%test_eq: string] (Iobuf.to_string buf) string;
+    (* 6 words for the Bigstring header + 1 word (regardless of whether 32-bit or 64-bit)
+       for the string payload (which is allocated with [malloc] but still tracked as
+       custom block out-of-heap resources). *)
+    require_allocation_does_not_exceed (Minor_words 7) (fun () ->
+      let buf = Iobuf.of_string_local string in
+      ignore (Sys.opaque_identity buf : _ Iobuf.t));
+    [%expect {| |}]
+  ;;
+
+  let%expect_test "sub_shared_local" =
+    let buf = Iobuf.of_string "abcdefghijklmnopqrstuvwxyz" in
+    require_no_allocation (fun () ->
+      let buf' = Iobuf.sub_shared_local buf in
+      ignore (Sys.opaque_identity buf' : _ Iobuf.t));
+    require_no_allocation (fun () ->
+      let buf' = Iobuf.sub_shared_local ~pos:1 ~len:5 buf in
+      ignore (Sys.opaque_identity buf' : _ Iobuf.t));
+    [%expect {| |}]
+  ;;
+
+  module Test_read_accessors
+      (I : Accessors_read with type 'a bin_prot := 'a Bin_prot.Type_class.reader)
+      (Apply : sig
+         type w
+
+         val apply : ('a, read, w) I.t -> (read, Iobuf.seek) Iobuf.t -> 'a
+
+         val apply_local
+           :  local_ ('a, read, w) I.t_local
+           -> (read, Iobuf.seek) Iobuf.t
+           -> local_ 'a
+       end) : Accessors_read with type 'a bin_prot := 'a Bin_prot.Type_class.reader =
+  struct
+    open I
+
+    type nonrec ('a, 'd, 'w) t = ('a, 'd, 'w) t
+    type nonrec ('a, 'd, 'w) t_local = ('a, 'd, 'w) t_local
+
+    let test ?(allocation_limit = 0) (f : ('a, 'd, 'w) t) len =
+      let buf = Iobuf.of_bigstring (Bigstring.init len ~f:(const '\000')) in
+      require_allocation_does_not_exceed (Minor_words allocation_limit) (fun () ->
+        ignore (Apply.apply f buf : _))
+    ;;
+
+    let test_local (f : ('a, 'd, 'w) t_local) len =
+      let buf = Iobuf.of_bigstring (Bigstring.init len ~f:(const '\000')) in
+      require_no_allocation (fun () -> ignore (Apply.apply_local f buf : _))
+    ;;
+
+    let test_padded_string (f : padding:char -> len:int -> ('a, 'd, 'w) t_local) =
+      let pad_amt = 5 in
+      let full_len = 20 in
+      let padding = ' ' in
+      let buf =
+        Iobuf.of_bigstring
+          (Bigstring.init full_len ~f:(fun i ->
+             if pad_amt <= i && i < full_len - pad_amt then 'x' else padding))
+      in
+      let f = f ~padding ~len:full_len in
+      require_no_allocation (fun () -> ignore (Apply.apply_local f buf : _))
+    ;;
+
+    let test_string (f : str_pos:int -> len:int -> ('a, 'd, 'w) t_local) =
+      let len = 10 in
+      test_local (f ~str_pos:0 ~len) len
+    ;;
+
+    let test_stringo
+      (f : ?str_pos:local_ int -> ?len:local_ int -> local_ ('a, 'd, 'w) t_local)
+      =
+      let len = 10 in
+      let buf = Iobuf.of_bigstring (Bigstring.init len ~f:(const ' ')) in
+      require_no_allocation (fun () ->
+        ignore (Apply.apply_local (f ~str_pos:0 ~len) buf : _))
+    ;;
+
+    let char = char
+
+    let%expect_test "char" =
+      test char 1;
       [%expect {| |}]
     ;;
 
-    let%expect_test "of_bigstring_local" =
-      let bigstring = Bigstring.of_string "abcdefghijklmnopqrstuvwxyz" in
-      require_no_allocation (fun () ->
-        let buf = Iobuf.of_bigstring_local bigstring in
-        ignore (Sys.opaque_identity buf : _ Iobuf.t));
-      require_no_allocation (fun () ->
-        let buf = Iobuf.of_bigstring_local ~pos:1 ~len:10 bigstring in
-        ignore (Sys.opaque_identity buf : _ Iobuf.t));
+    (* We don't bother testing the allocation of bin_prot. If there is a
+         locally-allocating version of bin_prot in the future, we can test that
+         instead. *)
+    let bin_prot = bin_prot
+    let int8 = int8
+
+    let%expect_test "int8" =
+      test int8 1;
       [%expect {| |}]
     ;;
 
-    let%expect_test "sub_shared_local" =
-      let buf = Iobuf.of_string "abcdefghijklmnopqrstuvwxyz" in
-      require_no_allocation (fun () ->
-        let buf' = Iobuf.sub_shared_local buf in
-        ignore (Sys.opaque_identity buf' : _ Iobuf.t));
-      require_no_allocation (fun () ->
-        let buf' = Iobuf.sub_shared_local ~pos:1 ~len:5 buf in
-        ignore (Sys.opaque_identity buf' : _ Iobuf.t));
+    let int16_be = int16_be
+
+    let%expect_test "int16_be" =
+      test int16_be 2;
       [%expect {| |}]
     ;;
 
-    module Test_read_accessors
-        (I : Accessors_read with type 'a bin_prot := 'a Bin_prot.Type_class.reader)
-        (Apply : sig
-           type w
+    let int16_le = int16_le
 
-           val apply : ('a, read, w) I.t -> (read, Iobuf.seek) Iobuf.t -> 'a
+    let%expect_test "int16_le" =
+      test int16_le 2;
+      [%expect {| |}]
+    ;;
 
-           val apply_local
-             :  local_ ('a, read, w) I.t_local
-             -> (read, Iobuf.seek) Iobuf.t
-             -> local_ 'a
-         end) : Accessors_read with type 'a bin_prot := 'a Bin_prot.Type_class.reader =
-    struct
-      open I
+    let int32_be = int32_be
 
-      type nonrec ('a, 'd, 'w) t = ('a, 'd, 'w) t
-      type nonrec ('a, 'd, 'w) t_local = ('a, 'd, 'w) t_local
+    let%expect_test "int32_be" =
+      test int32_be 4;
+      [%expect {| |}]
+    ;;
 
-      let test ?(allocation_limit = 0) (f : ('a, 'd, 'w) t) len =
-        let buf = Iobuf.of_bigstring (Bigstring.init len ~f:(const '\000')) in
-        require_allocation_does_not_exceed (Minor_words allocation_limit) (fun () ->
-          ignore (Apply.apply f buf : _))
-      ;;
+    let int32_le = int32_le
 
-      let test_local (f : ('a, 'd, 'w) t_local) len =
-        let buf = Iobuf.of_bigstring (Bigstring.init len ~f:(const '\000')) in
-        require_no_allocation (fun () -> ignore (Apply.apply_local f buf : _))
-      ;;
+    let%expect_test "int32_le" =
+      test int32_le 4;
+      [%expect {| |}]
+    ;;
 
-      let test_padded_string (f : padding:char -> len:int -> ('a, 'd, 'w) t_local) =
-        let pad_amt = 5 in
-        let full_len = 20 in
-        let padding = ' ' in
-        let buf =
-          Iobuf.of_bigstring
-            (Bigstring.init full_len ~f:(fun i ->
-               if pad_amt <= i && i < full_len - pad_amt then 'x' else padding))
-        in
-        let f = f ~padding ~len:full_len in
-        require_no_allocation (fun () -> ignore (Apply.apply_local f buf : _))
-      ;;
+    let int64_be_exn = int64_be_exn
 
-      let test_string (f : str_pos:int -> len:int -> ('a, 'd, 'w) t_local) =
-        let len = 10 in
-        test_local (f ~str_pos:0 ~len) len
-      ;;
+    let%expect_test "int64_be_exn" =
+      test int64_be_exn 8;
+      [%expect {| |}]
+    ;;
 
-      let test_stringo
-        (f : ?str_pos:local_ int -> ?len:local_ int -> local_ ('a, 'd, 'w) t_local)
-        =
-        let len = 10 in
-        let buf = Iobuf.of_bigstring (Bigstring.init len ~f:(const ' ')) in
-        require_no_allocation (fun () ->
-          ignore (Apply.apply_local (f ~str_pos:0 ~len) buf : _))
-      ;;
+    let int64_le_exn = int64_le_exn
 
-      let char = char
+    let%expect_test "int64_le_exn" =
+      test int64_le_exn 8;
+      [%expect {| |}]
+    ;;
 
-      let%expect_test "char" =
-        test char 1;
+    let int64_be_trunc = int64_be_trunc
+
+    let%expect_test "int64_be_trunc" =
+      test int64_be_trunc 8;
+      [%expect {| |}]
+    ;;
+
+    let int64_le_trunc = int64_le_trunc
+
+    let%expect_test "int64_le_trunc" =
+      test int64_le_trunc 8;
+      [%expect {| |}]
+    ;;
+
+    let uint8 = uint8
+
+    let%expect_test "uint8" =
+      test uint8 1;
+      [%expect {| |}]
+    ;;
+
+    let uint16_be = uint16_be
+
+    let%expect_test "uint16_be" =
+      test uint16_be 2;
+      [%expect {| |}]
+    ;;
+
+    let uint16_le = uint16_le
+
+    let%expect_test "uint16_le" =
+      test uint16_le 2;
+      [%expect {| |}]
+    ;;
+
+    let uint32_be = uint32_be
+
+    let%expect_test "uint32_be" =
+      test uint32_be 4;
+      [%expect {| |}]
+    ;;
+
+    let uint32_le = uint32_le
+
+    let%expect_test "uint32_le" =
+      test uint32_le 4;
+      [%expect {| |}]
+    ;;
+
+    let uint64_be_exn = uint64_be_exn
+
+    let%expect_test "uint64_be_exn" =
+      test uint64_be_exn 8;
+      [%expect {| |}]
+    ;;
+
+    let uint64_le_exn = uint64_le_exn
+
+    let%expect_test "uint64_le_exn" =
+      test uint64_le_exn 8;
+      [%expect {| |}]
+    ;;
+
+    let int64_t_be = int64_t_be
+
+    let%expect_test "int64_t_be" =
+      test ~allocation_limit:3 int64_t_be 8;
+      [%expect {| |}]
+    ;;
+
+    let int64_t_le = int64_t_le
+
+    let%expect_test "int64_t_le" =
+      test ~allocation_limit:3 int64_t_le 8;
+      [%expect {| |}]
+    ;;
+
+    (* We don't bother testing the allocation of string-like accessors that
+         heap-allocate their result. We do test the local equivalents below. *)
+    let head_padded_fixed_string = head_padded_fixed_string
+    let tail_padded_fixed_string = tail_padded_fixed_string
+    let string = string
+    let bytes = bytes
+    let bigstring = bigstring
+    let stringo = stringo
+    let byteso = byteso
+    let bigstringo = bigstringo
+
+    module Local = struct
+      open Local
+
+      let int64_t_be = int64_t_be
+
+      let%expect_test "int64_t_be" =
+        test_local int64_t_be 8;
         [%expect {| |}]
       ;;
 
-      (* We don't bother testing the allocation of bin_prot. If there is a
-         locally-allocating version of bin_prot in the future, we can test that
-         instead. *)
-      let bin_prot = bin_prot
+      let int64_t_le = int64_t_le
+
+      let%expect_test "int64_t_le" =
+        test_local int64_t_le 8;
+        [%expect {| |}]
+      ;;
+
+      let head_padded_fixed_string = head_padded_fixed_string
+
+      let%expect_test "head_padded_fixed_string" =
+        test_padded_string head_padded_fixed_string;
+        [%expect {| |}]
+      ;;
+
+      let tail_padded_fixed_string = tail_padded_fixed_string
+
+      let%expect_test "tail_padded_fixed_string" =
+        test_padded_string tail_padded_fixed_string;
+        [%expect {| |}]
+      ;;
+
+      let string = string
+
+      let%expect_test "string" =
+        test_string string;
+        [%expect {| |}]
+      ;;
+
+      let bytes = bytes
+
+      let%expect_test "bytes" =
+        test_string bytes;
+        [%expect {| |}]
+      ;;
+
+      let stringo = stringo
+
+      let%expect_test "stringo" =
+        test_stringo stringo;
+        [%expect {| |}]
+      ;;
+
+      let byteso = byteso
+
+      let%expect_test "byteso" =
+        test_stringo byteso;
+        [%expect {| |}]
+      ;;
+    end
+
+    module Int_repr = struct
+      open Int_repr
+
       let int8 = int8
 
       let%expect_test "int8" =
@@ -3093,42 +3302,28 @@ let%test_module "allocation" =
       let int32_be = int32_be
 
       let%expect_test "int32_be" =
-        test int32_be 4;
+        test ~allocation_limit:3 int32_be 4;
         [%expect {| |}]
       ;;
 
       let int32_le = int32_le
 
       let%expect_test "int32_le" =
-        test int32_le 4;
+        test ~allocation_limit:3 int32_le 4;
         [%expect {| |}]
       ;;
 
-      let int64_be_exn = int64_be_exn
+      let int64_be = int64_be
 
-      let%expect_test "int64_be_exn" =
-        test int64_be_exn 8;
+      let%expect_test "int64_be" =
+        test ~allocation_limit:3 int64_be 8;
         [%expect {| |}]
       ;;
 
-      let int64_le_exn = int64_le_exn
+      let int64_le = int64_le
 
-      let%expect_test "int64_le_exn" =
-        test int64_le_exn 8;
-        [%expect {| |}]
-      ;;
-
-      let int64_be_trunc = int64_be_trunc
-
-      let%expect_test "int64_be_trunc" =
-        test int64_be_trunc 8;
-        [%expect {| |}]
-      ;;
-
-      let int64_le_trunc = int64_le_trunc
-
-      let%expect_test "int64_le_trunc" =
-        test int64_le_trunc 8;
+      let%expect_test "int64_le" =
+        test ~allocation_limit:3 int64_le 8;
         [%expect {| |}]
       ;;
 
@@ -3156,260 +3351,73 @@ let%test_module "allocation" =
       let uint32_be = uint32_be
 
       let%expect_test "uint32_be" =
-        test uint32_be 4;
+        test ~allocation_limit:3 uint32_be 4;
         [%expect {| |}]
       ;;
 
       let uint32_le = uint32_le
 
       let%expect_test "uint32_le" =
-        test uint32_le 4;
+        test ~allocation_limit:3 uint32_le 4;
         [%expect {| |}]
       ;;
 
-      let uint64_be_exn = uint64_be_exn
+      let uint64_be = uint64_be
 
-      let%expect_test "uint64_be_exn" =
-        test uint64_be_exn 8;
+      let%expect_test "uint64_be" =
+        test ~allocation_limit:3 uint64_be 8;
         [%expect {| |}]
       ;;
 
-      let uint64_le_exn = uint64_le_exn
+      let uint64_le = uint64_le
 
-      let%expect_test "uint64_le_exn" =
-        test uint64_le_exn 8;
+      let%expect_test "uint64_le" =
+        test ~allocation_limit:3 uint64_le 8;
         [%expect {| |}]
       ;;
-
-      let int64_t_be = int64_t_be
-
-      let%expect_test "int64_t_be" =
-        test ~allocation_limit:3 int64_t_be 8;
-        [%expect {| |}]
-      ;;
-
-      let int64_t_le = int64_t_le
-
-      let%expect_test "int64_t_le" =
-        test ~allocation_limit:3 int64_t_le 8;
-        [%expect {| |}]
-      ;;
-
-      (* We don't bother testing the allocation of string-like accessors that
-         heap-allocate their result. We do test the local equivalents below. *)
-      let head_padded_fixed_string = head_padded_fixed_string
-      let tail_padded_fixed_string = tail_padded_fixed_string
-      let string = string
-      let bytes = bytes
-      let bigstring = bigstring
-      let stringo = stringo
-      let byteso = byteso
-      let bigstringo = bigstringo
-
-      module Local = struct
-        open Local
-
-        let int64_t_be = int64_t_be
-
-        let%expect_test "int64_t_be" =
-          test_local int64_t_be 8;
-          [%expect {| |}]
-        ;;
-
-        let int64_t_le = int64_t_le
-
-        let%expect_test "int64_t_le" =
-          test_local int64_t_le 8;
-          [%expect {| |}]
-        ;;
-
-        let head_padded_fixed_string = head_padded_fixed_string
-
-        let%expect_test "head_padded_fixed_string" =
-          test_padded_string head_padded_fixed_string;
-          [%expect {| |}]
-        ;;
-
-        let tail_padded_fixed_string = tail_padded_fixed_string
-
-        let%expect_test "tail_padded_fixed_string" =
-          test_padded_string tail_padded_fixed_string;
-          [%expect {| |}]
-        ;;
-
-        let string = string
-
-        let%expect_test "string" =
-          test_string string;
-          [%expect {| |}]
-        ;;
-
-        let bytes = bytes
-
-        let%expect_test "bytes" =
-          test_string bytes;
-          [%expect {| |}]
-        ;;
-
-        let stringo = stringo
-
-        let%expect_test "stringo" =
-          test_stringo stringo;
-          [%expect {| |}]
-        ;;
-
-        let byteso = byteso
-
-        let%expect_test "byteso" =
-          test_stringo byteso;
-          [%expect {| |}]
-        ;;
-      end
-
-      module Int_repr = struct
-        open Int_repr
-
-        let int8 = int8
-
-        let%expect_test "int8" =
-          test int8 1;
-          [%expect {| |}]
-        ;;
-
-        let int16_be = int16_be
-
-        let%expect_test "int16_be" =
-          test int16_be 2;
-          [%expect {| |}]
-        ;;
-
-        let int16_le = int16_le
-
-        let%expect_test "int16_le" =
-          test int16_le 2;
-          [%expect {| |}]
-        ;;
-
-        let int32_be = int32_be
-
-        let%expect_test "int32_be" =
-          test ~allocation_limit:3 int32_be 4;
-          [%expect {| |}]
-        ;;
-
-        let int32_le = int32_le
-
-        let%expect_test "int32_le" =
-          test ~allocation_limit:3 int32_le 4;
-          [%expect {| |}]
-        ;;
-
-        let int64_be = int64_be
-
-        let%expect_test "int64_be" =
-          test ~allocation_limit:3 int64_be 8;
-          [%expect {| |}]
-        ;;
-
-        let int64_le = int64_le
-
-        let%expect_test "int64_le" =
-          test ~allocation_limit:3 int64_le 8;
-          [%expect {| |}]
-        ;;
-
-        let uint8 = uint8
-
-        let%expect_test "uint8" =
-          test uint8 1;
-          [%expect {| |}]
-        ;;
-
-        let uint16_be = uint16_be
-
-        let%expect_test "uint16_be" =
-          test uint16_be 2;
-          [%expect {| |}]
-        ;;
-
-        let uint16_le = uint16_le
-
-        let%expect_test "uint16_le" =
-          test uint16_le 2;
-          [%expect {| |}]
-        ;;
-
-        let uint32_be = uint32_be
-
-        let%expect_test "uint32_be" =
-          test ~allocation_limit:3 uint32_be 4;
-          [%expect {| |}]
-        ;;
-
-        let uint32_le = uint32_le
-
-        let%expect_test "uint32_le" =
-          test ~allocation_limit:3 uint32_le 4;
-          [%expect {| |}]
-        ;;
-
-        let uint64_be = uint64_be
-
-        let%expect_test "uint64_be" =
-          test ~allocation_limit:3 uint64_be 8;
-          [%expect {| |}]
-        ;;
-
-        let uint64_le = uint64_le
-
-        let%expect_test "uint64_le" =
-          test ~allocation_limit:3 uint64_le 8;
-          [%expect {| |}]
-        ;;
-      end
     end
+  end
 
-    module _ =
-      Test_read_accessors
-        (Iobuf.Peek)
-        (struct
-          type w = Iobuf.no_seek
+  module _ =
+    Test_read_accessors
+      (Iobuf.Peek)
+      (struct
+        type w = Iobuf.no_seek
 
-          let apply f buf = f (Iobuf.no_seek buf) ~pos:0
-          let apply_local f buf = exclave_ f (Iobuf.no_seek buf) ~pos:0
-        end)
+        let apply f buf = f (Iobuf.no_seek buf) ~pos:0
+        let apply_local f buf = exclave_ f (Iobuf.no_seek buf) ~pos:0
+      end)
 
-    module _ =
-      Test_read_accessors
-        (Iobuf.Consume)
-        (struct
-          type w = Iobuf.seek
+  module _ =
+    Test_read_accessors
+      (Iobuf.Consume)
+      (struct
+        type w = Iobuf.seek
 
-          let apply f buf = f buf
-          let apply_local f buf = exclave_ f buf
-        end)
+        let apply f buf = f buf
+        let apply_local f buf = exclave_ f buf
+      end)
 
-    module _ =
-      Test_read_accessors
-        (Iobuf.Unsafe.Peek)
-        (struct
-          type w = Iobuf.no_seek
+  module _ =
+    Test_read_accessors
+      (Iobuf.Unsafe.Peek)
+      (struct
+        type w = Iobuf.no_seek
 
-          let apply f buf = f (Iobuf.no_seek buf) ~pos:0
-          let apply_local f buf = exclave_ f (Iobuf.no_seek buf) ~pos:0
-        end)
+        let apply f buf = f (Iobuf.no_seek buf) ~pos:0
+        let apply_local f buf = exclave_ f (Iobuf.no_seek buf) ~pos:0
+      end)
 
-    module _ =
-      Test_read_accessors
-        (Iobuf.Unsafe.Consume)
-        (struct
-          type w = Iobuf.seek
+  module _ =
+    Test_read_accessors
+      (Iobuf.Unsafe.Consume)
+      (struct
+        type w = Iobuf.seek
 
-          let apply f buf = f buf
-          let apply_local f buf = exclave_ f buf
-        end)
-  end)
-;;
+        let apply f buf = f buf
+        let apply_local f buf = exclave_ f buf
+      end)
+end
 
 let%test_unit "SEGV bug repro" =
   let tmp = Iobuf.create ~len:10000000 in

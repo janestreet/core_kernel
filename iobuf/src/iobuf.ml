@@ -1,6 +1,6 @@
 open! Core
 module IR = Int_repr
-open! Iobuf_intf
+include Iobuf_intf.Definitions
 
 [%%import "include.mlh"]
 [%%if UNSAFE_IS_SAFE]
@@ -12,13 +12,6 @@ let unsafe_is_safe = true
 let unsafe_is_safe = false
 
 [%%endif]
-
-module type Accessors_common = Accessors_common
-module type Accessors_read = Accessors_read
-module type Accessors_write = Accessors_write
-module type Consuming_blit = Consuming_blit
-
-type nonrec ('src, 'dst) consuming_blito = ('src, 'dst) consuming_blito
 
 let arch_sixtyfour = Sys.word_size_in_bits = 64
 
@@ -42,10 +35,8 @@ open T
 type t_repr = T.t [@@deriving globalize]
 type (-'read_write, +'seek) t = T.t [@@deriving sexp_of]
 type (_, _) t_with_shallow_sexp = T.t [@@deriving sexp_of]
-type seek = Iobuf_intf.seek [@@deriving sexp_of]
-type no_seek = Iobuf_intf.no_seek [@@deriving sexp_of]
 
-module type Bound = Iobuf_intf.Bound with type ('d, 'w) iobuf := ('d, 'w) t
+module type Bound = Iobuf_intf.Definitions.Bound with type ('d, 'w) iobuf := ('d, 'w) t
 
 let globalize_phantom name _ =
   failwithf "Unexpectedly called [Iobuf.globalize_%s]" name ()
@@ -54,6 +45,7 @@ let globalize_phantom name _ =
 let globalize_seek = globalize_phantom "seek"
 let globalize_no_seek = globalize_phantom "no_seek"
 let globalize _ _ t = [%globalize: t_repr] t
+let globalize_t_with_shallow_sexp = globalize
 let read_only t = t
 let read_only_local t = t
 let no_seek t = t
@@ -107,7 +99,7 @@ end
 let length t = t.hi - t.lo
 let length_lo t = t.lo - t.lo_min
 let length_hi t = t.hi_max - t.hi
-let is_empty t = length t = 0
+let is_empty t = t.lo = t.hi
 let rewind t = t.lo <- t.lo_min
 
 let reset t =
@@ -246,6 +238,12 @@ let of_bigstring ?pos ?len buf =
   [%globalize: t_repr] (of_bigstring_local ?pos ?len buf) [@nontail]
 ;;
 
+let[@inline] unsafe_sub_shared ~pos ~len t = exclave_
+  let lo = t.lo + pos in
+  let hi = lo + len in
+  { buf = t.buf; lo_min = lo; lo; hi; hi_max = hi }
+;;
+
 let sub_shared_local ?(pos = 0) ?len t = exclave_
   let len =
     match len with
@@ -253,9 +251,11 @@ let sub_shared_local ?(pos = 0) ?len t = exclave_
     | Some len -> len
   in
   check_range t ~pos ~len;
-  let lo = t.lo + pos in
-  let hi = lo + len in
-  { buf = t.buf; lo_min = lo; lo; hi; hi_max = hi }
+  unsafe_sub_shared ~pos ~len t
+;;
+
+let unsafe_sub_shared ~pos ~len t = exclave_
+  if unsafe_is_safe then sub_shared_local ~pos ~len t else unsafe_sub_shared ~pos ~len t
 ;;
 
 let sub_shared ?pos ?len t =
@@ -450,6 +450,7 @@ let create ~len =
 
 let empty = create ~len:0
 let of_string s = of_bigstring (Bigstring.of_string s)
+let of_string_local s = exclave_ of_bigstring_local (Bigstring.of_string s)
 let of_bytes s = of_bigstring (Bigstring.of_bytes s)
 
 let to_stringlike ~(convert : ?pos:int -> ?len:int -> Bigstring.t -> 'a) =
@@ -2692,16 +2693,26 @@ module Unsafe = struct
 
     let bin_prot = Peek.bin_prot
 
-    let index_or_neg t ~pos ~len c =
+    let index_or_neg t ?(pos = 0) ?(len = length t - pos) c =
       let pos = unsafe_buf_pos t ~pos ~len in
       let idx = Bigstring.unsafe_find ~pos ~len t.buf c in
       if idx < 0 then -1 else idx - t.lo
     ;;
 
-    let rindex_or_neg t ~pos ~len c =
+    let rindex_or_neg t ?(pos = 0) ?(len = length t - pos) c =
       let pos = unsafe_buf_pos t ~pos ~len in
       let idx = Bigstring.unsafe_rfind ~pos ~len t.buf c in
       if idx < 0 then -1 else idx - t.lo
+    ;;
+
+    let index_local t ?pos ?len c =
+      let index = index_or_neg t ?pos ?len c in
+      exclave_ if index < 0 then None else Some index
+    ;;
+
+    let rindex_local t ?pos ?len c =
+      let index = rindex_or_neg t ?pos ?len c in
+      exclave_ if index < 0 then None else Some index
     ;;
 
     module Local = struct
