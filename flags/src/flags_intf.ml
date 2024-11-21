@@ -35,9 +35,9 @@ module type S = sig
   (** bitwise not *)
   val complement : t -> t
 
-  val is_empty : t -> bool
-  val do_intersect : t -> t -> bool
-  val are_disjoint : t -> t -> bool
+  val is_empty : t -> bool [@@zero_alloc]
+  val do_intersect : t -> t -> bool [@@zero_alloc]
+  val are_disjoint : t -> t -> bool [@@zero_alloc]
 
   (** [is_subset t ~of_] is [t = intersect t of_] *)
   val is_subset : t -> of_:t -> bool

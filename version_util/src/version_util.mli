@@ -49,6 +49,13 @@ module Version : sig
   val current_version_present : unit -> t list Or_error.t
 end
 
+module Opt_level : sig
+  type t =
+    | High
+    | Low
+  [@@deriving sexp_of]
+end
+
 val arg_spec : (string * Arg.spec * string) list
 
 (** [Application_specific_fields] is a single field in the build-info sexp that holds
@@ -78,6 +85,7 @@ val compiled_for_speed : bool
 val application_specific_fields : Application_specific_fields.t option
 val ocaml_version : string
 val allowed_projections : string list option
+val opt_level : Opt_level.t option
 
 (** Relative to OMakeroot dir *)
 val executable_path : string
@@ -150,7 +158,7 @@ module Expert : sig
   end
 end
 
-module Private__For_version_util_async : sig
+module Private__for_use_under_lib_version_util_directory_only : sig
   val version_util_start_marker : string
   val build_info_start_marker : string
   val parse_generated_hg_version : string -> string list

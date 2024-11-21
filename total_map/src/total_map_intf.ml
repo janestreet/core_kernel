@@ -35,7 +35,7 @@ module type S_plain = sig
   type enumeration_witness
 
   type 'a t = (Key.t, 'a, comparator_witness, enumeration_witness) total_map
-  [@@deriving sexp_of, compare, equal]
+  [@@deriving sexp_of, compare, equal, quickcheck]
 
   include Applicative with type 'a t := 'a t
 
@@ -198,6 +198,10 @@ module type Total_map = sig
     -> ('key, 'b, 'cmp, 'enum) t
     -> f:('key -> 'a -> 'b -> 'c)
     -> ('key, 'c, 'cmp, 'enum) t
+
+  val unzip
+    :  ('key, 'a * 'b, 'cmp, 'enum) t
+    -> ('key, 'a, 'cmp, 'enum) t * ('key, 'b, 'cmp, 'enum) t
 
   val iter_keys : ('key, _, _, _) t -> f:('key -> unit) -> unit
   val iter : (_, 'a, _, _) t -> f:('a -> unit) -> unit

@@ -38,6 +38,7 @@ val nth_exn : 'a t -> int -> 'a
 val reduce : 'a t -> f:('a -> 'a -> 'a) -> 'a
 val reverse : 'a t -> 'a t
 val append : 'a t -> 'a list -> 'a t
+val append' : 'a list -> 'a t -> 'a t
 val unzip : ('a * 'b) t -> 'a t * 'b t
 val zip : 'a t -> 'b t -> ('a * 'b) t List.Or_unequal_lengths.t
 val zip_exn : 'a t -> 'b t -> ('a * 'b) t
@@ -74,10 +75,20 @@ val min_elt' : 'a t -> compare:('a -> 'a -> int) -> 'a
 
 val max_elt' : 'a t -> compare:('a -> 'a -> int) -> 'a
 
+(** [transpose] takes an n x m list of lists to an m x n list of lists. Hence, if the
+    input lists are all non-empty, the output lists will also all be non-empty.  *)
+val transpose : 'a t t -> 'a t t option
+
+val transpose_exn : 'a t t -> 'a t t
+
 (** Like [Map.add_multi], but comes with a guarantee that the range of the returned map is
     all nonempty lists.
 *)
 val map_add_multi : ('k, 'v t, 'cmp) Map.t -> key:'k -> data:'v -> ('k, 'v t, 'cmp) Map.t
+
+(** Like [Hashtbl.add_multi], but comes with a guarantee that list that's added to or
+    created is a nonempty list. *)
+val hashtbl_add_multi : ('k, 'v t) Hashtbl.t -> key:'k -> data:'v -> unit
 
 (** Like [Map.of_alist_multi], but comes with a guarantee that the range of the returned
     map is all nonempty lists.

@@ -263,6 +263,7 @@ let mapi2 t1 t2 ~f =
     Some (f key v1 v2))
 ;;
 
+let unzip t = Map.unzip t
 let set t key data = Map.set t ~key ~data
 
 module Sequence3 (A : Applicative.S3) = struct
@@ -306,6 +307,16 @@ module Make_plain_with_witnesses (Key : Key_plain_with_witnesses) = struct
   type comparator_witness = Key.comparator_witness
   type enumeration_witness = Key.enumeration_witness
   type 'a t = 'a Key.Map.t [@@deriving sexp_of, compare, equal]
+
+  let quickcheck_generator a_generator =
+    let data = Quickcheck.Generator.list_with_length (List.length Key.all) a_generator in
+    Quickcheck.Generator.map data ~f:(fun data ->
+      List.zip_exn Key.all data |> Key.Map.of_alist_exn)
+  ;;
+
+  (* Dummy values; maybe we should make them do something someday? *)
+  let quickcheck_shrinker _a_shrinker = Quickcheck.Shrinker.empty ()
+  let quickcheck_observer _a_observer = Quickcheck.Observer.singleton ()
 
   let create f =
     List.fold Key.all ~init:Key.Map.empty ~f:(fun t key -> Map.set t ~key ~data:(f key)) [@nontail

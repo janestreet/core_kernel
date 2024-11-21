@@ -1,6 +1,6 @@
 open! Core
 module IR = Int_repr
-open! Iobuf_intf
+include Iobuf_intf.Definitions
 
 [%%import "include.mlh"]
 [%%if UNSAFE_IS_SAFE]
@@ -12,13 +12,6 @@ let unsafe_is_safe = true
 let unsafe_is_safe = false
 
 [%%endif]
-
-module type Accessors_common = Accessors_common
-module type Accessors_read = Accessors_read
-module type Accessors_write = Accessors_write
-module type Consuming_blit = Consuming_blit
-
-type nonrec ('src, 'dst) consuming_blito = ('src, 'dst) consuming_blito
 
 let arch_sixtyfour = Sys.word_size_in_bits = 64
 
@@ -42,10 +35,8 @@ open T
 type t_repr = T.t [@@deriving globalize]
 type (-'read_write, +'seek) t = T.t [@@deriving sexp_of]
 type (_, _) t_with_shallow_sexp = T.t [@@deriving sexp_of]
-type seek = Iobuf_intf.seek [@@deriving sexp_of]
-type no_seek = Iobuf_intf.no_seek [@@deriving sexp_of]
 
-module type Bound = Iobuf_intf.Bound with type ('d, 'w) iobuf := ('d, 'w) t
+module type Bound = Iobuf_intf.Definitions.Bound with type ('d, 'w) iobuf := ('d, 'w) t
 
 let globalize_phantom name _ =
   failwithf "Unexpectedly called [Iobuf.globalize_%s]" name ()
@@ -54,6 +45,7 @@ let globalize_phantom name _ =
 let globalize_seek = globalize_phantom "seek"
 let globalize_no_seek = globalize_phantom "no_seek"
 let globalize _ _ t = [%globalize: t_repr] t
+let globalize_t_with_shallow_sexp = globalize
 let read_only t = t
 let read_only_local t = t
 let no_seek t = t
@@ -458,6 +450,7 @@ let create ~len =
 
 let empty = create ~len:0
 let of_string s = of_bigstring (Bigstring.of_string s)
+let of_string_local s = of_bigstring_local (Bigstring.of_string s)
 let of_bytes s = of_bigstring (Bigstring.of_bytes s)
 
 let to_stringlike ~(convert : ?pos:int -> ?len:int -> Bigstring.t -> 'a) =

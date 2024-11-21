@@ -20,6 +20,7 @@ depends: [
   "ppx_optcomp"
   "ppx_stable_witness"
   "sexplib"
+  "univ_map"
   "uopt"
   "base-threads"
   "dune"               {>= "3.11.0"}

@@ -36,53 +36,51 @@ open! Iobuf
  * │ [iobuf.ml:Blit] unsafe [overlap]:1000  │   169.60ns │     12.32% │
  * │ [iobuf.ml:Blit] unsafe [overlap]:10000 │ 1_377.01ns │    100.00% │
  * └────────────────────────────────────────┴────────────┴────────────┘ *)
-let%bench_module "Blit" =
-  (module struct
-    let lengths = [ 5; 10; 100; 1000; 10_000 ]
+module%bench Blit = struct
+  let lengths = [ 5; 10; 100; 1000; 10_000 ]
 
-    let%bench_fun ("string" [@indexed len = lengths]) =
-      let buf = create ~len in
-      let str = Bytes.create len in
-      fun () -> Peek.To_bytes.blit ~src:buf ~dst:str ~src_pos:0 ~dst_pos:0 ~len
-    ;;
+  let%bench_fun ("string" [@indexed len = lengths]) =
+    let buf = create ~len in
+    let str = Bytes.create len in
+    fun () -> Peek.To_bytes.blit ~src:buf ~dst:str ~src_pos:0 ~dst_pos:0 ~len
+  ;;
 
-    let%bench_fun ("blito" [@indexed len = lengths]) =
-      let src = create ~len in
-      let dst = create ~len in
-      fun () -> Blit.blito () ~src ~dst
-    ;;
+  let%bench_fun ("blito" [@indexed len = lengths]) =
+    let src = create ~len in
+    let dst = create ~len in
+    fun () -> Blit.blito () ~src ~dst
+  ;;
 
-    let%bench_fun ("consume" [@indexed len = lengths]) =
-      let src = create ~len in
-      let dst = create ~len in
-      fun () ->
-        Blit_consume.blito () ~src ~dst;
-        reset src
-    ;;
+  let%bench_fun ("consume" [@indexed len = lengths]) =
+    let src = create ~len in
+    let dst = create ~len in
+    fun () ->
+      Blit_consume.blito () ~src ~dst;
+      reset src
+  ;;
 
-    let%bench_fun ("fill" [@indexed len = lengths]) =
-      let src = create ~len in
-      let dst = create ~len in
-      fun () ->
-        Blit_fill.blito () ~src ~dst;
-        reset dst
-    ;;
+  let%bench_fun ("fill" [@indexed len = lengths]) =
+    let src = create ~len in
+    let dst = create ~len in
+    fun () ->
+      Blit_fill.blito () ~src ~dst;
+      reset dst
+  ;;
 
-    let%bench_fun ("consume_and_fill" [@indexed len = lengths]) =
-      let src = create ~len in
-      let dst = create ~len in
-      fun () ->
-        Blit_consume_and_fill.blito () ~src ~dst;
-        reset src;
-        reset dst
-    ;;
+  let%bench_fun ("consume_and_fill" [@indexed len = lengths]) =
+    let src = create ~len in
+    let dst = create ~len in
+    fun () ->
+      Blit_consume_and_fill.blito () ~src ~dst;
+      reset src;
+      reset dst
+  ;;
 
-    let%bench_fun ("unsafe [overlap]" [@indexed len = lengths]) =
-      let t = create ~len:(len + 1) in
-      fun () -> Blit.unsafe_blit ~src:t ~dst:t ~len ~src_pos:0 ~dst_pos:1
-    ;;
-  end)
-;;
+  let%bench_fun ("unsafe [overlap]" [@indexed len = lengths]) =
+    let t = create ~len:(len + 1) in
+    fun () -> Blit.unsafe_blit ~src:t ~dst:t ~len ~src_pos:0 ~dst_pos:1
+  ;;
+end
 
 (* 8b4516d0ab0a *"jane/int-repr/iobuf-bench/update-columns"
    Estimated testing time 20s (20 benchmarks x 1s). Change using '-quota'.
@@ -110,43 +108,27 @@ let%bench_module "Blit" =
    │ [bench_iobuf.ml:Poke] int64_le:52     │ 3119236 @ 1197 │   3.17ns │
    │ [bench_iobuf.ml:Poke] int64_le:60     │ 3150428 @ 1198 │   3.14ns │
    └───────────────────────────────────────┴────────────────┴──────────┘ *)
-let%bench_module "Poke" =
-  (module struct
-    let iobuf = of_string (String.make 72 '\000') (* cache line + word size *)
-    let pos = Sys.opaque_identity 0
-    let%bench "char" = Poke.char iobuf ~pos (Sys.opaque_identity 'a')
-    let%bench "uint8_trunc" = Poke.uint8_trunc iobuf ~pos (Sys.opaque_identity pos)
-    let%bench "int8_trunc" = Poke.int8_trunc iobuf ~pos (Sys.opaque_identity pos)
-    let%bench "int16_be_trunc" = Poke.int16_be_trunc iobuf ~pos (Sys.opaque_identity pos)
-    let%bench "int16_le_trunc" = Poke.int16_le_trunc iobuf ~pos (Sys.opaque_identity pos)
+module%bench Poke = struct
+  let iobuf = of_string (String.make 72 '\000') (* cache line + word size *)
+  let pos = Sys.opaque_identity 0
+  let%bench "char" = Poke.char iobuf ~pos (Sys.opaque_identity 'a')
+  let%bench "uint8_trunc" = Poke.uint8_trunc iobuf ~pos (Sys.opaque_identity pos)
+  let%bench "int8_trunc" = Poke.int8_trunc iobuf ~pos (Sys.opaque_identity pos)
+  let%bench "int16_be_trunc" = Poke.int16_be_trunc iobuf ~pos (Sys.opaque_identity pos)
+  let%bench "int16_le_trunc" = Poke.int16_le_trunc iobuf ~pos (Sys.opaque_identity pos)
+  let%bench "uint16_be_trunc" = Poke.uint16_be_trunc iobuf ~pos (Sys.opaque_identity pos)
+  let%bench "uint16_le_trunc" = Poke.uint16_le_trunc iobuf ~pos (Sys.opaque_identity pos)
+  let%bench "int32_be_trunc" = Poke.int32_be_trunc iobuf ~pos (Sys.opaque_identity pos)
+  let%bench "int32_le_trunc" = Poke.int32_le_trunc iobuf ~pos (Sys.opaque_identity pos)
+  let%bench "uint32_be_trunc" = Poke.uint32_be_trunc iobuf ~pos (Sys.opaque_identity pos)
+  let%bench "uint32_le_trunc" = Poke.uint32_le_trunc iobuf ~pos (Sys.opaque_identity pos)
+  let%bench "int64_be" = Poke.int64_be iobuf ~pos (Sys.opaque_identity pos)
 
-    let%bench "uint16_be_trunc" =
-      Poke.uint16_be_trunc iobuf ~pos (Sys.opaque_identity pos)
-    ;;
-
-    let%bench "uint16_le_trunc" =
-      Poke.uint16_le_trunc iobuf ~pos (Sys.opaque_identity pos)
-    ;;
-
-    let%bench "int32_be_trunc" = Poke.int32_be_trunc iobuf ~pos (Sys.opaque_identity pos)
-    let%bench "int32_le_trunc" = Poke.int32_le_trunc iobuf ~pos (Sys.opaque_identity pos)
-
-    let%bench "uint32_be_trunc" =
-      Poke.uint32_be_trunc iobuf ~pos (Sys.opaque_identity pos)
-    ;;
-
-    let%bench "uint32_le_trunc" =
-      Poke.uint32_le_trunc iobuf ~pos (Sys.opaque_identity pos)
-    ;;
-
-    let%bench "int64_be" = Poke.int64_be iobuf ~pos (Sys.opaque_identity pos)
-
-    (* We test a few offsets to see if alignment affects performance. *)
-    let%bench_fun ("int64_le" [@indexed pos = [ 4; 12; 20; 28; 36; 44; 52; 60 ]]) =
-      fun () -> Poke.int64_le iobuf ~pos (Sys.opaque_identity pos)
-    ;;
-  end)
-;;
+  (* We test a few offsets to see if alignment affects performance. *)
+  let%bench_fun ("int64_le" [@indexed pos = [ 4; 12; 20; 28; 36; 44; 52; 60 ]]) =
+    fun () -> Poke.int64_le iobuf ~pos (Sys.opaque_identity pos)
+  ;;
+end
 
 (* 8b4516d0ab0a *"jane/int-repr/iobuf-bench/update-columns"
    Estimated testing time 22s (22 benchmarks x 1s). Change using '-quota'.
@@ -176,150 +158,126 @@ let%bench_module "Poke" =
    │ [bench_iobuf.ml:Peek] int64_le_trunc:52 │ 3377682 @ 1205 │   2.92ns │
    │ [bench_iobuf.ml:Peek] int64_le_trunc:60 │ 3311129 @ 1203 │   2.98ns │
    └─────────────────────────────────────────┴────────────────┴──────────┘ *)
-let%bench_module "Peek" =
-  (module struct
-    let iobuf = of_string (String.make 72 '\000') (* cache line + word size *)
-    let pos = Sys.opaque_identity 0
-    let%bench "char" = Peek.char iobuf ~pos
-    let%bench "uint8" = Peek.uint8 iobuf ~pos
-    let%bench "int8" = Peek.int8 iobuf ~pos
-    let%bench "int16_be" = Peek.int16_be iobuf ~pos
-    let%bench "int16_le" = Peek.int16_le iobuf ~pos
-    let%bench "uint16_be" = Peek.uint16_be iobuf ~pos
-    let%bench "uint16_le" = Peek.uint16_le iobuf ~pos
-    let%bench "int32_be" = Peek.int32_be iobuf ~pos
-    let%bench "int32_le" = Peek.int32_le iobuf ~pos
-    let%bench "uint32_be" = Peek.uint32_be iobuf ~pos
-    let%bench "uint32_le" = Peek.uint32_le iobuf ~pos
-    let%bench "int64_be_exn" = Peek.int64_be_exn iobuf ~pos
-    let%bench "int64_le_exn" = Peek.int64_le_exn iobuf ~pos
-    let%bench "int64_be_trunc" = Peek.int64_be_trunc iobuf ~pos
+module%bench Peek = struct
+  let iobuf = of_string (String.make 72 '\000') (* cache line + word size *)
+  let pos = Sys.opaque_identity 0
+  let%bench "char" = Peek.char iobuf ~pos
+  let%bench "uint8" = Peek.uint8 iobuf ~pos
+  let%bench "int8" = Peek.int8 iobuf ~pos
+  let%bench "int16_be" = Peek.int16_be iobuf ~pos
+  let%bench "int16_le" = Peek.int16_le iobuf ~pos
+  let%bench "uint16_be" = Peek.uint16_be iobuf ~pos
+  let%bench "uint16_le" = Peek.uint16_le iobuf ~pos
+  let%bench "int32_be" = Peek.int32_be iobuf ~pos
+  let%bench "int32_le" = Peek.int32_le iobuf ~pos
+  let%bench "uint32_be" = Peek.uint32_be iobuf ~pos
+  let%bench "uint32_le" = Peek.uint32_le iobuf ~pos
+  let%bench "int64_be_exn" = Peek.int64_be_exn iobuf ~pos
+  let%bench "int64_le_exn" = Peek.int64_le_exn iobuf ~pos
+  let%bench "int64_be_trunc" = Peek.int64_be_trunc iobuf ~pos
 
-    (* We test a few offsets to see if alignment affects performance. *)
-    let%bench_fun ("int64_le_trunc" [@indexed pos = [ 4; 12; 20; 28; 36; 44; 52; 60 ]]) =
-      fun () -> Peek.int64_le_trunc iobuf ~pos
-    ;;
-  end)
-;;
+  (* We test a few offsets to see if alignment affects performance. *)
+  let%bench_fun ("int64_le_trunc" [@indexed pos = [ 4; 12; 20; 28; 36; 44; 52; 60 ]]) =
+    fun () -> Peek.int64_le_trunc iobuf ~pos
+  ;;
+end
 
-let%bench_module "decimal" =
-  (module struct
-    (* Quantify the gain from our version of [Fill.decimal] over [Int.to_string]. *)
-    let values =
-      [ Int.min_value
-      ; Int.min_value + 1
-      ; -10_000
-      ; 0
-      ; 35
-      ; 1_000
-      ; 1_000_000
-      ; Int.max_value
-      ]
-    ;;
+module%bench [@name "decimal"] _ = struct
+  (* Quantify the gain from our version of [Fill.decimal] over [Int.to_string]. *)
+  let values =
+    [ Int.min_value; Int.min_value + 1; -10_000; 0; 35; 1_000; 1_000_000; Int.max_value ]
+  ;;
 
-    let iobuf = create ~len:32
+  let iobuf = create ~len:32
 
-    let%bench_fun ("Fill" [@indexed x = values]) =
-      fun () ->
+  let%bench_fun ("Fill" [@indexed x = values]) =
+    fun () ->
+    reset iobuf;
+    Fill.decimal iobuf x
+  ;;
+
+  let%bench_fun ("Unsafe.Fill" [@indexed x = values]) =
+    fun () ->
+    reset iobuf;
+    Unsafe.Fill.decimal iobuf x
+  ;;
+
+  let%bench_fun ("Fill.stringo" [@indexed x = values]) =
+    fun () ->
+    reset iobuf;
+    Fill.stringo iobuf (Int.to_string x)
+  ;;
+end
+
+module%bench [@name "padded decimal"] _ = struct
+  (* Quantify the gain from our version of [Fill.decimal] over [sprintf "%0*d"]. *)
+  let values =
+    [ Int.min_value; Int.min_value + 1; -10_000; 0; 35; 1_000; 1_000_000; Int.max_value ]
+  ;;
+
+  let lengths = [ 0; 1; 5; 30 ]
+
+  let cases =
+    let%map.List x = values
+    and len = lengths in
+    sprintf "%0*d" len x, (x, len)
+  ;;
+
+  let iobuf = create ~len:32
+
+  let%bench_fun ("Fill" [@params case = cases]) =
+    let x, len = case in
+    fun () ->
       reset iobuf;
-      Fill.decimal iobuf x
-    ;;
+      Fill.padded_decimal ~len iobuf x
+  ;;
 
-    let%bench_fun ("Unsafe.Fill" [@indexed x = values]) =
-      fun () ->
+  let%bench_fun ("Unsafe.Fill" [@params case = cases]) =
+    let x, len = case in
+    fun () ->
       reset iobuf;
-      Unsafe.Fill.decimal iobuf x
-    ;;
+      Unsafe.Fill.padded_decimal ~len iobuf x
+  ;;
 
-    let%bench_fun ("Fill.stringo" [@indexed x = values]) =
-      fun () ->
+  let%bench_fun ("Fill.stringo" [@params case = cases]) =
+    let x, len = case in
+    fun () ->
       reset iobuf;
-      Fill.stringo iobuf (Int.to_string x)
-    ;;
-  end)
-;;
+      Fill.stringo iobuf (sprintf "%0*d" len x)
+  ;;
+end
 
-let%bench_module "padded decimal" =
-  (module struct
-    (* Quantify the gain from our version of [Fill.decimal] over [sprintf "%0*d"]. *)
-    let values =
-      [ Int.min_value
-      ; Int.min_value + 1
-      ; -10_000
-      ; 0
-      ; 35
-      ; 1_000
-      ; 1_000_000
-      ; Int.max_value
-      ]
-    ;;
-
-    let lengths = [ 0; 1; 5; 30 ]
-
-    let cases =
-      let%map.List x = values
-      and len = lengths in
-      sprintf "%0*d" len x, (x, len)
-    ;;
-
-    let iobuf = create ~len:32
-
-    let%bench_fun ("Fill" [@params case = cases]) =
-      let x, len = case in
-      fun () ->
-        reset iobuf;
-        Fill.padded_decimal ~len iobuf x
-    ;;
-
-    let%bench_fun ("Unsafe.Fill" [@params case = cases]) =
-      let x, len = case in
-      fun () ->
-        reset iobuf;
-        Unsafe.Fill.padded_decimal ~len iobuf x
-    ;;
-
-    let%bench_fun ("Fill.stringo" [@params case = cases]) =
-      let x, len = case in
-      fun () ->
-        reset iobuf;
-        Fill.stringo iobuf (sprintf "%0*d" len x)
-    ;;
-  end)
-;;
-
-let%bench_module "date string" =
-  (module struct
-    (* Quantify the gain from our version of [Fill.date_string_iso8601_extended] over 
+module%bench [@name "date string"] _ = struct
+  (* Quantify the gain from our version of [Fill.date_string_iso8601_extended] over 
        [Date.to_string]. *)
-    let dates =
-      let%map.List y = [ 0000; 0009; 0099; 0999; 9999 ]
-      and m = Month.[ Jan; Dec ]
-      and d = [ 01; 31 ] in
-      let date = Date.create_exn ~y ~m ~d in
-      Date.to_string date, date
-    ;;
+  let dates =
+    let%map.List y = [ 0000; 0009; 0099; 0999; 9999 ]
+    and m = Month.[ Jan; Dec ]
+    and d = [ 01; 31 ] in
+    let date = Date.create_exn ~y ~m ~d in
+    Date.to_string date, date
+  ;;
 
-    let iobuf = create ~len:10
+  let iobuf = create ~len:10
 
-    let%bench_fun ("Fill" [@params date = dates]) =
-      fun () ->
-      reset iobuf;
-      Fill.date_string_iso8601_extended iobuf date
-    ;;
+  let%bench_fun ("Fill" [@params date = dates]) =
+    fun () ->
+    reset iobuf;
+    Fill.date_string_iso8601_extended iobuf date
+  ;;
 
-    let%bench_fun ("Unsafe.Fill" [@params date = dates]) =
-      fun () ->
-      reset iobuf;
-      Unsafe.Fill.date_string_iso8601_extended iobuf date
-    ;;
+  let%bench_fun ("Unsafe.Fill" [@params date = dates]) =
+    fun () ->
+    reset iobuf;
+    Unsafe.Fill.date_string_iso8601_extended iobuf date
+  ;;
 
-    let%bench_fun ("Fill.stringo" [@params date = dates]) =
-      fun () ->
-      reset iobuf;
-      Fill.stringo iobuf (Date.to_string date)
-    ;;
-  end)
-;;
+  let%bench_fun ("Fill.stringo" [@params date = dates]) =
+    fun () ->
+    reset iobuf;
+    Fill.stringo iobuf (Date.to_string date)
+  ;;
+end
 
 (* In an attempt to verify how much a phys_equal check could optimize
    [set_bounds_and_buffer], in the soon-to-be-common protogen use case, here is the result

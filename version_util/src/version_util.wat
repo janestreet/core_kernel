@@ -1,37 +1,21 @@
 (module
-   (import "env" "ocaml_exception" (tag $ocaml_exception (param (ref eq))))
-   (import "env" "caml_read_file_content"
-      (func $caml_read_file_content (param (ref eq)) (result (ref eq))))
-
    (type $string (array (mut i8)))
 
-   (data $build_info "/static/build_info.sexp")
+   (global $generated_build_info_global (mut (ref $string))
+      (array.new_fixed $string 0))
 
-   (data $default_build_info
-      "((username \"\")(hostname \"\")(kernel \"\")(build_time \"1970-01-01 00:00:00Z\")(x_library_inlining false)(portable_int63 true)(dynlinkable_code false)(ocaml_version \"\")(executable_path \"\")(build_system \"\"))")
+   (global $generated_hg_version_global (mut (ref $string))
+      (array.new_fixed $string 0))
 
    (func (export "generated_build_info") (param (ref eq)) (result (ref eq))
-      (try (result (ref eq))
-         (do
-            (call $caml_read_file_content
-               (array.new_data $string $build_info
-                  (i32.const 0) (i32.const 23))))
-         (catch $ocaml_exception
-            (drop (pop (ref eq)))
-            (array.new_data $string $default_build_info
-               (i32.const 0) (i32.const 200)))))
-
-   (data $hg_version "/static/hg_version.out")
-   (data $default_hg_version "NO_VERSION_UTIL")
+      (global.get $generated_build_info_global))
 
    (func (export "generated_hg_version") (param (ref eq)) (result (ref eq))
-      (try (result (ref eq))
-         (do
-            (call $caml_read_file_content
-               (array.new_data $string $hg_version
-                  (i32.const 0) (i32.const 22))))
-         (catch $ocaml_exception
-            (drop (pop (ref eq)))
-            (array.new_data $string $default_hg_version
-               (i32.const 0) (i32.const 15)))))
+      (global.get $generated_hg_version_global))
+
+   (func (export "set_generated_build_info") (param $build_info (ref $string))
+      (global.set $generated_build_info_global (local.get $build_info)))
+
+   (func (export "set_generated_hg_version") (param $hg_version (ref $string))
+      (global.set $generated_hg_version_global (local.get $hg_version)))
 )

@@ -305,6 +305,12 @@ let reverse (hd :: tl) =
 
 let append (hd :: tl) l = hd :: List.append tl l
 
+let append' l t =
+  match l with
+  | [] -> t
+  | x :: xs -> x :: List.append xs (to_list t)
+;;
+
 include Monad.Make_local (struct
     type nonrec 'a t = 'a t
 
@@ -384,6 +390,12 @@ let map_add_multi map ~key ~data =
     | Some t -> cons data t)
 ;;
 
+let hashtbl_add_multi map ~key ~data =
+  Hashtbl.update map key ~f:(function
+    | None -> singleton data
+    | Some t -> cons data t)
+;;
+
 let map_of_container_multi fold container ~comparator =
   fold container ~init:(Map.empty comparator) ~f:(fun acc (key, data) ->
     map_add_multi acc ~key ~data)
@@ -413,6 +425,29 @@ let fold_map (hd :: tl) ~init:acc ~f =
   let acc, hd = f acc hd in
   let acc, tl = List.fold_map tl ~init:acc ~f in
   acc, hd :: tl
+;;
+
+let map2_opt t1 t2 ~f : _ option =
+  match map2 t1 t2 ~f with
+  | Unequal_lengths -> None
+  | Ok x -> Some x
+;;
+
+let rec transpose (hd :: tl) =
+  match tl with
+  | [] -> Some (map hd ~f:return)
+  | hd' :: tl ->
+    let rest = hd' :: tl in
+    Option.bind (transpose rest) ~f:(fun transposed -> map2_opt ~f:cons hd transposed)
+;;
+
+let transpose_exn list =
+  match transpose list with
+  | Some list -> list
+  | None ->
+    Error.raise_s
+      [%message
+        "transpose got lists of different lengths" ~lengths:(map list ~f:length : int t)]
 ;;
 
 let combine_errors t =

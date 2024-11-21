@@ -40,6 +40,13 @@ let%expect_test "append" =
   [%expect {| (1 2 3 4 5 6 7) |}]
 ;;
 
+let%expect_test "append'" =
+  print_s [%sexp (append' [] t : int t)];
+  [%expect {| (1 2 3 4) |}];
+  print_s [%sexp (append' [ 5; 6; 7 ] t : int t)];
+  [%expect {| (5 6 7 1 2 3 4) |}]
+;;
+
 let%expect_test "unzip" =
   let t = [ 1, 'a'; 2, 'b'; 3, 'c'; 4, 'd' ] in
   print_s [%sexp (unzip t : int t * char t)];
@@ -366,6 +373,22 @@ let%expect_test "map_add_multi" =
   [%expect {| ((0 (1 0)) (1 (0 1))) |}]
 ;;
 
+let%expect_test "hashtbl_add_multi" =
+  let hashtbl = Hashtbl.create (module Int) in
+  let print () = print_s [%sexp (hashtbl : int Nonempty_list.t Hashtbl.M(Int).t)] in
+  print ();
+  [%expect {| () |}];
+  hashtbl_add_multi hashtbl ~key:0 ~data:0;
+  (* adding to an key that doesn't exist should create the key with a singleton nonempty
+     list *)
+  print ();
+  [%expect {| ((0 (0))) |}];
+  hashtbl_add_multi hashtbl ~key:0 ~data:1;
+  (* adding to an key that already exists should cons to the existing nonempty list *)
+  print ();
+  [%expect {| ((0 (1 0))) |}]
+;;
+
 let%expect_test "map_of_alist_multi" =
   let test alist =
     print_s [%sexp (map_of_alist_multi alist ~comparator:(module Int) : int t Int.Map.t)]
@@ -683,6 +706,38 @@ let%expect_test "fold_map" =
 let%expect_test "mapi" =
   print_s [%sexp (mapi [ "a"; "b"; "c"; "d" ] ~f:(fun i x -> i, x) : (int * string) t)];
   [%expect {| ((0 a) (1 b) (2 c) (3 d)) |}]
+;;
+
+let%expect_test "transpose" =
+  print_s [%sexp (transpose [ [ 1; 2; 3 ]; [ 4; 5; 6 ]; [ 7; 8; 9 ] ] : int t t option)];
+  [%expect {| (((1 4 7) (2 5 8) (3 6 9))) |}];
+  print_s [%sexp (transpose [ [ 1; 2 ]; [ 3; 4 ]; [ 5; 6 ] ] : int t t option)];
+  [%expect {| (((1 3 5) (2 4 6))) |}];
+  print_s [%sexp (transpose [ [ 1; 2; 3 ]; [ 4; 5; 6 ] ] : int t t option)];
+  [%expect {| (((1 4) (2 5) (3 6))) |}];
+  print_s [%sexp (transpose [ [ 1 ] ] : int t t option)];
+  [%expect {| (((1))) |}];
+  print_s [%sexp (transpose [ [ 1; 2 ]; [ 3; 4 ]; [ 5 ] ] : int t t option)];
+  [%expect {| () |}];
+  print_s [%sexp (transpose [ [ 1 ]; [ 2; 3 ] ] : int t t option)];
+  [%expect {| () |}]
+;;
+
+let%expect_test "transpose_exn" =
+  print_s [%sexp (transpose_exn [ [ 1; 2; 3 ]; [ 4; 5; 6 ]; [ 7; 8; 9 ] ] : int t t)];
+  [%expect {| ((1 4 7) (2 5 8) (3 6 9)) |}];
+  print_s [%sexp (transpose_exn [ [ 1; 2 ]; [ 3; 4 ]; [ 5; 6 ] ] : int t t)];
+  [%expect {| ((1 3 5) (2 4 6)) |}];
+  print_s [%sexp (transpose_exn [ [ 1; 2; 3 ]; [ 4; 5; 6 ] ] : int t t)];
+  [%expect {| ((1 4) (2 5) (3 6)) |}];
+  print_s [%sexp (transpose_exn [ [ 1 ] ] : int t t)];
+  [%expect {| ((1)) |}];
+  Expect_test_helpers_core.require_does_raise (fun () ->
+    transpose_exn [ [ 1; 2 ]; [ 3; 4 ]; [ 5 ] ]);
+  [%expect {| ("transpose got lists of different lengths" (lengths (2 2 1))) |}];
+  Expect_test_helpers_core.require_does_raise (fun () ->
+    transpose_exn [ [ 1 ]; [ 2; 3 ] ]);
+  [%expect {| ("transpose got lists of different lengths" (lengths (1 2))) |}]
 ;;
 
 let%expect_test "rev_append" =
