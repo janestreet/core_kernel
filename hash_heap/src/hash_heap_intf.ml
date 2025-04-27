@@ -32,8 +32,7 @@ module type S = sig
   val find_pop_exn : 'a t -> Key.t -> 'a
 
   (** Mutation of the heap during iteration is not supported, but there is no check to
-      prevent it.  The behavior of a heap that is mutated during iteration is
-      undefined. *)
+      prevent it. The behavior of a heap that is mutated during iteration is undefined. *)
   val iter_keys : _ t -> f:(Key.t -> unit) -> unit
 
   val iter : 'a t -> f:('a -> unit) -> unit

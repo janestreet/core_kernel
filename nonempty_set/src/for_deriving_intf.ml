@@ -13,6 +13,7 @@ module type S_serializable = sig
   val m__t_sexp_grammar
     :  (module Set.M_sexp_grammar with type t = 'elt)
     -> ('elt, 'cmp) t Sexplib0.Sexp_grammar.t
+    @@ portable
 
   val compare_m__t : (module Set.Compare_m) -> ('elt, 'cmp) t -> ('elt, 'cmp) t -> int
   val bin_shape_m__t : ('a, 'b) Set.Elt_bin_io.t -> Bin_prot.Shape.t

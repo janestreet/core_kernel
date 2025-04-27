@@ -81,16 +81,10 @@ let test (type value) (module V : Value with type t = value) values =
       assert (is_empty_exn t);
       let output = Queue.to_list output in
       if not (List.equal V.equal values output)
-      then
-        failwiths
-          ~here:[%here]
-          "mismatch"
-          (values, output)
-          [%sexp_of: V.t list * V.t list]
+      then failwiths "mismatch" (values, output) [%sexp_of: V.t list * V.t list]
     with
     | exn ->
       failwiths
-        ~here:[%here]
         "failure"
         (exn, `chunk_size chunk_size, `input input, values, t)
         [%sexp_of:

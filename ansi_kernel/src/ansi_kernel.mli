@@ -31,9 +31,9 @@ module Color : sig
 end
 
 module Attr : sig
-  (** Styling attributes: these provide most of the ANSI display attributes,
-      but not directly `Reset, `Blink and `Hidden, so as to explicitly
-      discourage their use in general code. *)
+  (** Styling attributes: these provide most of the ANSI display attributes, but not
+      directly `Reset, `Blink and `Hidden, so as to explicitly discourage their use in
+      general code. *)
   type t =
     [ `Bright
     | `Dim

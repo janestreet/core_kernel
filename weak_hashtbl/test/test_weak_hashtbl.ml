@@ -41,8 +41,8 @@ let%expect_test "[add_exn], [find], [mem], [replace], [remove], [clear]" =
   [%expect {| ("find t key" ()) |}]
 ;;
 
-let%expect_test ("[key_is_using_space], [reclaim_space_for_keys_with_unused_data]" [@tags
-                                                                                     "no-js"])
+let%expect_test ("[key_is_using_space], [reclaim_space_for_keys_with_unused_data]"
+  [@tags "no-js"])
   =
   let t = create () in
   let key = 13 in

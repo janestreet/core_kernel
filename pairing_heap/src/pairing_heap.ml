@@ -48,7 +48,7 @@ module Node : sig
   (** [allocate v ~pool] allocates a new node from the pool with no child or sibling *)
   val allocate : 'a -> pool:'a Pool.t -> id:Id.t -> 'a t
 
-  (** [free t ~pool] frees [t] for reuse.  It is an error to access [t] after this. *)
+  (** [free t ~pool] frees [t] for reuse. It is an error to access [t] after this. *)
   val free : 'a t -> pool:'a Pool.t -> unit
 
   (** a special [t] that represents the empty node *)

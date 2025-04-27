@@ -20,8 +20,8 @@ module Stable = struct
       type 'a t = 'a list [@@deriving bin_io, sexp, stable_witness]
     end
 
-    include
-      Binable.Of_binable1.V2
+    include%template
+      Binable.Of_binable1.V2 [@modality portable]
         (Format)
         (struct
           include T
@@ -34,8 +34,8 @@ module Stable = struct
           ;;
         end)
 
-    include
-      Sexpable.Of_sexpable1.V1
+    include%template
+      Sexpable.Of_sexpable1.V1 [@modality portable]
         (Format)
         (struct
           include T
@@ -50,10 +50,11 @@ module Stable = struct
       { untyped = List (Cons (element, Many element)) }
     ;;
 
-    let stable_witness (type a) : a Stable_witness.t -> a t Stable_witness.t =
+    module T_stable_witness = Stable_witness.Of_serializable1 (Format) (T)
+
+    let stable_witness : type a. a Stable_witness.t -> a t Stable_witness.t =
       fun witness ->
-      let module Stable_witness = Stable_witness.Of_serializable1 (Format) (T) in
-      Stable_witness.of_serializable Format.stable_witness of_list_exn to_list witness
+      T_stable_witness.of_serializable Format.stable_witness of_list_exn to_list witness
     ;;
 
     let%expect_test _ =
@@ -84,8 +85,8 @@ module Stable = struct
       let to_nonempty_list { hd; tl } = hd :: tl
     end
 
-    include
-      Binable.Of_binable1.V1 [@alert "-legacy"]
+    include%template
+      Binable.Of_binable1.V1 [@alert "-legacy"] [@modality portable]
         (Record_format)
         (struct
           include T
@@ -94,10 +95,11 @@ module Stable = struct
           let of_binable = Record_format.to_nonempty_list
         end)
 
+    module T_stable_witness = Stable_witness.Of_serializable1 (Record_format) (T)
+
     let stable_witness (type a) : a Stable_witness.t -> a t Stable_witness.t =
       fun witness ->
-      let module Stable_witness = Stable_witness.Of_serializable1 (Record_format) (T) in
-      Stable_witness.of_serializable
+      T_stable_witness.of_serializable
         Record_format.stable_witness
         Record_format.to_nonempty_list
         Record_format.of_nonempty_list
@@ -128,8 +130,8 @@ module Stable = struct
       let to_nonempty_list (hd, tl) = hd :: tl
     end
 
-    include
-      Binable.Of_binable1.V1 [@alert "-legacy"]
+    include%template
+      Binable.Of_binable1.V1 [@alert "-legacy"] [@modality portable]
         (Pair_format)
         (struct
           include T
@@ -138,10 +140,11 @@ module Stable = struct
           let of_binable = Pair_format.to_nonempty_list
         end)
 
+    module T_stable_witness = Stable_witness.Of_serializable1 (Pair_format) (T)
+
     let stable_witness (type a) : a Stable_witness.t -> a t Stable_witness.t =
       fun witness ->
-      let module Stable_witness = Stable_witness.Of_serializable1 (Pair_format) (T) in
-      Stable_witness.of_serializable
+      T_stable_witness.of_serializable
         Pair_format.stable_witness
         Pair_format.to_nonempty_list
         Pair_format.of_nonempty_list
@@ -196,7 +199,8 @@ module T' = struct
 end
 
 include T'
-include Comparator.Derived (T')
+
+include%template Comparator.Derived [@modality portable] (T')
 
 include struct
   let is_empty _ = false
@@ -204,7 +208,9 @@ include struct
   (* [Container.Make] would fold through the tail and re-cons every elt. *)
   let to_list = to_list
 
-  module From_indexed_container_make = Indexed_container.Make (T')
+  module%template From_indexed_container_make =
+    Indexed_container.Make [@modality portable] (T')
+
   open From_indexed_container_make
 
   let mem = mem
@@ -269,6 +275,8 @@ let filter_mapi (hd :: tl) ~f : _ list =
   | Some hd -> hd :: List.filter_mapi tl ~f
 ;;
 
+let filter_opt t = filter_map t ~f:Fn.id
+
 let filter (hd :: tl) ~f : _ list =
   match f hd with
   | false -> List.filter tl ~f
@@ -311,7 +319,7 @@ let append' l t =
   | x :: xs -> x :: List.append xs (to_list t)
 ;;
 
-include Monad.Make_local (struct
+include%template Monad.Make [@mode local] [@modality portable] (struct
     type nonrec 'a t = 'a t
 
     let return hd = [ hd ]
@@ -326,6 +334,11 @@ include Monad.Make_local (struct
 let unzip ((hd1, hd2) :: tl) =
   let tl1, tl2 = List.unzip tl in
   hd1 :: tl1, hd2 :: tl2
+;;
+
+let unzip3 ((hd1, hd2, hd3) :: tl) =
+  let tl1, tl2, tl3 = List.unzip3 tl in
+  hd1 :: tl1, hd2 :: tl2, hd3 :: tl3
 ;;
 
 let concat t = bind t ~f:Fn.id
@@ -366,19 +379,20 @@ let stable_dedup t ~compare = List.stable_dedup (to_list t) ~compare |> of_list_
 let dedup_and_sort t ~compare = List.dedup_and_sort ~compare (to_list t) |> of_list_exn
 let permute ?random_state t = List.permute ?random_state (to_list t) |> of_list_exn
 let random_element ?random_state t = to_list t |> List.random_element_exn ?random_state
+let all_equal t ~equal = to_list t |> List.all_equal ~equal
 
 let min_elt' (hd :: tl) ~compare =
-  List.fold tl ~init:hd ~f:(fun min elt -> if compare min elt > 0 then elt else min) [@nontail
-                                                                                       ]
+  List.fold tl ~init:hd ~f:(fun min elt -> if compare min elt > 0 then elt else min)
+  [@nontail]
 ;;
 
 let max_elt' t ~compare = min_elt' t ~compare:(fun x y -> compare y x) [@nontail]
 
 let findi_exn =
-  let not_found = Not_found_s (Atom "Nonempty_list.findi_exn: not found") in
+  let not_found () = Not_found_s (Atom "Nonempty_list.findi_exn: not found") in
   let findi_exn t ~f =
     match findi t ~f with
-    | None -> raise not_found
+    | None -> raise (not_found ())
     | Some x -> x
   in
   findi_exn
@@ -476,192 +490,50 @@ let filter_ok_at_least_one t =
   | Error _ as e -> e
 ;;
 
+let option_all t =
+  let (hd :: tl) = t in
+  Option.map2 hd (Option.all tl) ~f:create
+;;
+
+let remove_consecutive_duplicates ?(which_to_keep = `Last) (hd :: tl) ~equal =
+  let tl = List.remove_consecutive_duplicates tl ~which_to_keep ~equal in
+  match tl with
+  | [] -> [ hd ]
+  | snd :: tl ->
+    if equal snd hd
+    then (
+      match which_to_keep with
+      | `Last -> snd :: tl
+      | `First -> hd :: tl)
+    else hd :: snd :: tl
+;;
+
 type 'a nonempty_list = 'a t [@@deriving sexp_of]
 
-module Emptiness_witness = struct
-  type empty = Empty
-  type nonempty = Nonempty
-
-  let _ = Empty
-  let _ = Nonempty
-end
-
-module Part = struct
-  type ('a, 'emptiness) t =
-    | Empty : ('a, Emptiness_witness.empty) t
-    | Nonempty : 'a nonempty_list -> ('a, Emptiness_witness.nonempty) t
-  [@@deriving sexp_of]
-
-  type 'a packed = T : ('a, 'emptiness) t -> 'a packed [@@deriving sexp_of]
-
-  let compare_packed (type a) compare_element (T t1 : a packed) (T t2 : a packed) =
-    match t1, t2 with
-    | Empty, Empty -> 0
-    | Nonempty t1, Nonempty t2 -> compare compare_element t1 t2
-    | Empty, Nonempty _ -> 1
-    | Nonempty _, Empty -> -1
-  ;;
-
-  let equal_packed (type a) equal_element (T t1 : a packed) (T t2 : a packed) =
-    match t1, t2 with
-    | Empty, Empty -> true
-    | Nonempty t1, Nonempty t2 -> equal equal_element t1 t2
-    | Empty, Nonempty _ | Nonempty _, Empty -> false
-  ;;
-
-  let of_nonempty_list (nonempty_list : _ nonempty_list) = Nonempty nonempty_list
-
-  let to_nonempty_list (t : (_, Emptiness_witness.nonempty) t) : _ nonempty_list =
-    match t with
-    | Nonempty nonempty -> nonempty
-  ;;
-
-  let packed_of_list list =
-    match of_list list with
-    | None -> T Empty
-    | Some nonempty_list -> T (Nonempty nonempty_list)
-  ;;
-
-  let to_list (type witness) (t : (_, witness) t) : _ list =
-    match t with
-    | Empty -> []
-    | Nonempty nonempty -> to_list nonempty
-  ;;
-
-  let map (type witness) (t : (_, witness) t) ~f : (_, witness) t =
-    match t with
-    | Empty -> Empty
-    | Nonempty nonempty -> Nonempty (map nonempty ~f)
-  ;;
-
-  let append1
-    (type witness)
-    (t1 : (_, Emptiness_witness.nonempty) t)
-    (t2 : (_, witness) t)
-    : (_, Emptiness_witness.nonempty) t
-    =
-    match t1 with
-    | Nonempty nonempty -> Nonempty (append nonempty (to_list t2))
-  ;;
-
-  let append2
-    (type witness)
-    (t1 : (_, witness) t)
-    (t2 : (_, Emptiness_witness.nonempty) t)
-    : (_, Emptiness_witness.nonempty) t
-    =
-    match t1 with
-    | Empty -> t2
-    | Nonempty nonempty -> Nonempty (append nonempty (to_list t2))
-  ;;
-
-  let append_packed (T t1) (T t2) =
-    match t1, t2 with
-    | Empty, Empty -> T Empty
-    | (Nonempty _ as t1), (Nonempty _ as t2) -> T (append1 t1 t2)
-    | Empty, Nonempty t2 -> T (Nonempty t2)
-    | Nonempty t1, Empty -> T (Nonempty t1)
-  ;;
-end
-
 module Partition = struct
-  module Emptiness = struct
-    type ('left_emptiness, 'right_emptiness) t =
-      | Left_nonempty : (Emptiness_witness.nonempty, Emptiness_witness.empty) t
-      | Right_nonempty : (Emptiness_witness.empty, Emptiness_witness.nonempty) t
-      | Both_nonempty : (Emptiness_witness.nonempty, Emptiness_witness.nonempty) t
-    [@@deriving sexp_of]
-  end
-
-  type ('left, 'right, 'left_emptiness, 'right_emptiness) t =
-    { left : ('left, 'left_emptiness) Part.t
-    ; right : ('right, 'right_emptiness) Part.t
-    ; emptiness : ('left_emptiness, 'right_emptiness) Emptiness.t
-    }
-  [@@deriving fields ~getters, sexp_of]
-
-  type ('left, 'right) packed =
-    | T : ('left, 'right, 'left_emptiness, 'right_emptiness) t -> ('left, 'right) packed
+  type ('left, 'right) t =
+    | Left of 'left nonempty_list
+    | Right of 'right nonempty_list
+    | Both of ('left nonempty_list * 'right nonempty_list)
   [@@deriving sexp_of]
-
-  let compare_packed
-    (type left right)
-    compare_left
-    compare_right
-    (T t1 : (left, right) packed)
-    (T t2 : (left, right) packed)
-    =
-    match Part.compare_packed compare_left (T t1.left) (T t2.left) with
-    | 0 -> Part.compare_packed compare_right (T t1.right) (T t2.right)
-    | x -> x
-  ;;
-
-  let equal_packed
-    (type left right)
-    equal_left
-    equal_right
-    (T t1 : (left, right) packed)
-    (T t2 : (left, right) packed)
-    =
-    match Part.equal_packed equal_left (T t1.left) (T t2.left) with
-    | true -> Part.equal_packed equal_right (T t1.right) (T t2.right)
-    | false -> false
-  ;;
 
   let of_lists_exn ((xs : _ list), (ys : _ list)) =
     match xs, ys with
-    | x :: xs, [] ->
-      T { left = Nonempty (x :: xs); right = Empty; emptiness = Left_nonempty }
-    | [], y :: ys ->
-      T { left = Empty; right = Nonempty (y :: ys); emptiness = Right_nonempty }
-    | x :: xs, y :: ys ->
-      T
-        { left = Nonempty (x :: xs)
-        ; right = Nonempty (y :: ys)
-        ; emptiness = Both_nonempty
-        }
+    | x :: xs, [] -> Left (x :: xs)
+    | [], y :: ys -> Right (y :: ys)
+    | x :: xs, y :: ys -> Both (x :: xs, y :: ys)
     | [], [] ->
       failwith "Partition of [Nonempty_list.t] unexpectedly resulted in two empty lists!"
   ;;
 
-  let combine
-    (type left_emptiness right_emptiness)
-    (t : (_, _, left_emptiness, right_emptiness) t)
-    =
-    match t.emptiness with
-    | Left_nonempty -> Part.to_nonempty_list t.left
-    | Right_nonempty -> Part.to_nonempty_list t.right
-    | Both_nonempty -> append (Part.to_nonempty_list t.left) (Part.to_list t.right)
+  let left = function
+    | Both (xs, _) | Left xs -> Some xs
+    | Right _ -> None
   ;;
 
-  let combine'
-    (type left right left_emptiness right_emptiness)
-    (t : (left, right, left_emptiness, right_emptiness) t)
-    =
-    let map_left left = map (Part.to_nonempty_list left) ~f:(fun x -> First x) in
-    let map_right right = map (Part.to_nonempty_list right) ~f:(fun x -> Second x) in
-    match t.emptiness with
-    | Left_nonempty -> map_left t.left
-    | Right_nonempty -> map_right t.right
-    | Both_nonempty -> append (map_left t.left) (to_list (map_right t.right))
-  ;;
-
-  let map_left t ~f = { t with left = f t.left }
-  let map_right t ~f = { t with right = f t.right }
-
-  let swap
-    (type left right left_emptiness right_emptiness)
-    (t : (left, right, left_emptiness, right_emptiness) t)
-    : (right, left, right_emptiness, left_emptiness) t
-    =
-    { left = t.right
-    ; right = t.left
-    ; emptiness =
-        (match t.emptiness with
-         | Left_nonempty -> Right_nonempty
-         | Right_nonempty -> Left_nonempty
-         | Both_nonempty -> Both_nonempty)
-    }
+  let right = function
+    | Both (_, ys) | Right ys -> Some ys
+    | Left _ -> None
   ;;
 end
 
@@ -746,6 +618,11 @@ let comma_separated_argtype ?key ?strip_whitespace ?unique_values arg_type =
   |> Command.Param.Arg_type.map ?key ~f:of_list_exn
 ;;
 
+let anons anons =
+  let open Command.Anons in
+  non_empty_sequence_as_list anons |> map_anons ~f:of_list_exn
+;;
+
 (** This relies on the fact that the representation of [List.( :: )] constructor is
     identical to that of [Nonempty_list.( :: )], and that they are each the first
     non-constant constructor in their respective types. *)
@@ -754,17 +631,19 @@ module Option = struct
   [@@deriving
     compare ~localize, equal ~localize, sexp, sexp_grammar, hash, quickcheck, typerep]
 
-  let none = []
+  let[@inline always] none () = []
   let some (_ :: _ as value : 'a nonempty_list) : 'a t = Obj.magic value
   let unchecked_value (t : 'a t) : 'a nonempty_list = Obj.magic t
-  let is_none t = phys_equal t none
+  let is_none t = Base.phys_equal t (none ())
   let is_some t = not (is_none t)
   let to_option = of_list
 
   let of_option = function
-    | None -> none
+    | None -> none ()
     | Some value -> some value
   ;;
+
+  let none = none ()
 
   let value_exn = function
     | [] -> raise_s [%sexp "Nonempty_list.Option.value_exn: empty list"]

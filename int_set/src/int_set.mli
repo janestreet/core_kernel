@@ -3,8 +3,7 @@
     the set. For data that is mostly serial, n should remain very small.
 
     Note that when n gets very large, in addition to poor performance, these operations
-    may throw exceptions since some of the code is not tail-recursive.
-*)
+    may throw exceptions since some of the code is not tail-recursive. *)
 
 open! Core
 open! Import

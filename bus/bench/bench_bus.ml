@@ -3,11 +3,7 @@ open Bus
 
 let create_with_subscribers (type a) (arity : a Callback_arity.t) ~num_subscribers =
   let t =
-    create_exn
-      [%here]
-      arity
-      ~on_subscription_after_first_write:Allow
-      ~on_callback_raise:ignore
+    create_exn arity ~on_subscription_after_first_write:Allow ~on_callback_raise:ignore
   in
   let subscribers =
     if num_subscribers = 0
@@ -16,7 +12,6 @@ let create_with_subscribers (type a) (arity : a Callback_arity.t) ~num_subscribe
       Array.init num_subscribers ~f:(fun _ ->
         subscribe_exn
           (read_only t)
-          [%here]
           ~f:
             (match arity with
              | Arity1 -> fun _ -> ()

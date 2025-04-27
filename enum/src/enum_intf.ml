@@ -9,8 +9,8 @@ module type Single = sig
 
   type 'a t
 
-  (** Map a constructor name to a command-line string: downcase the name and convert [_] to
-      [-]. *)
+  (** Map a constructor name to a command-line string: downcase the name and convert [_]
+      to [-]. *)
   val to_string_hum : 'a t -> 'a -> string
 
   val check_field_name : 'a t -> 'a -> (_, _, _) Field.t_with_perm -> unit
@@ -34,21 +34,20 @@ module type Enum = sig
     -> ?represent_choice_with:string
          (** If [represent_choice_with] is not passed, the documentation will be:
 
-        {v
+             {v
           -flag (choice1|choice2|...)     [doc]
-        v}
+             v}
 
-        If there are many choices, this can cause this and other flags to have the
-        documentation aligned very far to the right. To avoid that, the
-        [represent_choice_with] flag can be passed as a shorter reference to the possible
-        choices. Example:
+             If there are many choices, this can cause this and other flags to have the
+             documentation aligned very far to the right. To avoid that, the
+             [represent_choice_with] flag can be passed as a shorter reference to the
+             possible choices. Example:
 
-        {v
+             {v
           -flag CHOICE     [doc], CHOICE can be (choice1|choice2|...)
-        v}
+             v}
 
-        [Command] does a much better job of aligning this.
-    *)
+             [Command] does a much better job of aligning this. *)
     -> ?list_values_in_help:bool
     -> ?aliases:string list
     -> ?key:'a Univ_map.Multi.Key.t
@@ -99,14 +98,14 @@ module type Enum = sig
 
       The transformations are:
       + Single quotes get removed (since it's annoying to have to quote them when running
-      commands manually)
+        commands manually)
       + Underscores get turned into dashes (just to hopefully have a uniform convention
-      between the two)
+        between the two)
       + Other characters get lowercased
 
       Note that this is *not* actually a complete list of transformations needed to make
-      an arbitrary string "command-friendly": for example, double quotes are left
-      alone. This is because the expectation is that the string came from something like a
+      an arbitrary string "command-friendly": for example, double quotes are left alone.
+      This is because the expectation is that the string came from something like a
       [[@@deriving sexp]] on a variant type, and while single quotes can appear in ocaml
       variants, double quotes cannot. *)
   val command_friendly_name : string -> string

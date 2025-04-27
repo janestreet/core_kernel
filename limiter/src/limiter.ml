@@ -63,7 +63,7 @@ end
 
 open Infinite_or_finite.T
 
-(** Collect all the "dimensional analysis"-type things in one place.  Not every possible
+(** Collect all the "dimensional analysis"-type things in one place. Not every possible
     function is exposed here, just the ones that are actually used.
 
     These types are not exposed in the mli. *)
@@ -72,7 +72,7 @@ module Float_types : sig
     type t = private float
 
     (** This is the only entry-point to the interface, as all arguments in the mli are
-        "*_per_sec".  *)
+        "*_per_sec". *)
     val create : float -> t
 
     val to_span : t -> tokens:int -> Time_ns.Span.t
@@ -144,12 +144,12 @@ end
 type t =
   { start_time : Time_ns.t
   ; mutable time : Time_ns.t
-  (** The current time of the rate limiter.  Note that when this is moved forward,
+  (** The current time of the rate limiter. Note that when this is moved forward,
       [in_hopper] must be updated accordingly. *)
   ; time_in_token_space : int Iofm.t
   (** the amount of time that has passed expressed in token terms, since start_time. *)
   ; mutable in_bucket : int (** number of tokens in the bucket *)
-  ; in_hopper : int Iofm.t (** number of tokens in the hopper.  May be [inf] *)
+  ; in_hopper : int Iofm.t (** number of tokens in the hopper. May be [inf] *)
   ; mutable in_flight : int
   (** Everything that has been taken from bucket but not returned to hopper *)
   ; mutable bucket_limit : int (** maximum size allowable in the bucket *)

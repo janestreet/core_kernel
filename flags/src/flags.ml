@@ -5,11 +5,7 @@ include Flags_intf
 (* To allow [create] to be eagerly inlined, move this exception with macro expansion to
    its own function and mark it [@cold] so that it isn't inlined. *)
 let[@cold] raise_invalid_bit n =
-  failwiths
-    ~here:[%here]
-    "Flags.create got invalid ~bit (must be between 0 and 62)"
-    n
-    [%sexp_of: int]
+  failwiths "Flags.create got invalid ~bit (must be between 0 and 62)" n [%sexp_of: int]
 ;;
 
 let create ~bit:n =
@@ -26,7 +22,7 @@ module Make (M : Make_arg) = struct
   let is_empty t = t = empty
   let ( + ) a b = Int63.bit_or a b
   let ( - ) a b = Int63.bit_and a (Int63.bit_not b)
-  let intersect = Int63.bit_and
+  let[@inline] intersect a b = Int63.bit_and a b
   let all = List.fold M.known ~init:empty ~f:(fun acc (flag, _) -> acc + flag)
   let complement a = all - a
   let is_subset t ~of_ = Int63.( = ) t (intersect t of_)

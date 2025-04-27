@@ -35,12 +35,13 @@ module type S_plain = sig
   type enumeration_witness
 
   type 'a t = (Key.t, 'a, comparator_witness, enumeration_witness) total_map
-  [@@deriving sexp_of, compare, equal]
+  [@@deriving sexp_of, compare, equal, quickcheck]
 
   include Applicative with type 'a t := 'a t
 
   val create : local_ (Key.t -> 'a) -> 'a t
   val create_const : 'a -> 'a t
+  val of_map_exn : (Key.t, 'a, comparator_witness) Map.t -> 'a t
   val of_alist_exn : (Key.t * 'a) list -> 'a t
   val of_alist_multi_exn : (Key.t * 'a) list -> 'a list t
 
@@ -147,8 +148,8 @@ module type Total_map = sig
   (** A map that includes an entry for every possible value of the key type.
 
       This is intended to be used on ['key] types where there is a full enumeration of the
-      type. In the common use case, ['key] will be a simple variant type with [[@@deriving
-      compare, enumerate]]. For example:
+      type. In the common use case, ['key] will be a simple variant type with
+      [[@@deriving compare, enumerate]]. For example:
 
       {[
         module Arrow_key = struct
@@ -160,6 +161,7 @@ module type Total_map = sig
               | Right
             [@@deriving sexp, bin_io, compare, enumerate]
           end
+
           include T
           module Total_map = Total_map.Make (T)
         end
@@ -170,9 +172,8 @@ module type Total_map = sig
       [t] will produce a [t] using the same amount of space as the original.
 
       However, in theory you could also modify the comparison function and enumeration, so
-      long as the enumeration contains at least one representative of each equivalence class
-      determined by the comparison function.
-  *)
+      long as the enumeration contains at least one representative of each equivalence
+      class determined by the comparison function. *)
 
   module Enumeration = Enumeration
 
@@ -181,7 +182,7 @@ module type Total_map = sig
   val to_map : ('key, 'a, 'cmp, _) t -> ('key, 'a, 'cmp) Map.t
 
   (** Many of the functions below have types reflecting the fact that the maps are total
-      (e.g., [find] does not return an option).  The fact that they won't raise exceptions
+      (e.g., [find] does not return an option). The fact that they won't raise exceptions
       relies on the enumeration passed to [Make] being complete. *)
 
   val map : ('key, 'a, 'c, 'e) t -> f:('a -> 'b) -> ('key, 'b, 'c, 'e) t
@@ -198,6 +199,10 @@ module type Total_map = sig
     -> ('key, 'b, 'cmp, 'enum) t
     -> f:('key -> 'a -> 'b -> 'c)
     -> ('key, 'c, 'cmp, 'enum) t
+
+  val unzip
+    :  ('key, 'a * 'b, 'cmp, 'enum) t
+    -> ('key, 'a, 'cmp, 'enum) t * ('key, 'b, 'cmp, 'enum) t
 
   val iter_keys : ('key, _, _, _) t -> f:('key -> unit) -> unit
   val iter : (_, 'a, _, _) t -> f:('a -> unit) -> unit
@@ -326,7 +331,14 @@ module type Total_map = sig
     with type Total_map.enumeration_witness = Key.enumeration_witness
 
   module Stable : sig
-    module V1 : Stable with type ('key, 'a, 'cmp, 'enum) t = ('key, 'a, 'cmp, 'enum) t
+    module V1 : sig end
+    [@@deprecated
+      "[since 2025-01] Deserialization functions for [Total_map.Stable.V1] do not ensure \
+       the provided map is total. Use [Total_map.Stable.V2] instead."]
+
+    module V1_unsafe_deserialization :
+      Stable with type ('key, 'a, 'cmp, 'enum) t = ('key, 'a, 'cmp, 'enum) t
+
     module V2 : Stable with type ('key, 'a, 'cmp, 'enum) t = ('key, 'a, 'cmp, 'enum) t
   end
 end

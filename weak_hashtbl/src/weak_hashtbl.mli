@@ -7,7 +7,7 @@
     table for such keys.
 
     Unlike (OCaml's) [Weak.Make], which also describes itself as a "weak hashtable,"
-    [Weak_hashtbl] gives a dictionary-style structure.  In fact, OCaml's [Weak.Make] may
+    [Weak_hashtbl] gives a dictionary-style structure. In fact, OCaml's [Weak.Make] may
     better be described as a weak set.
 
     There's a tricky type of bug one can write with this module, e.g.:
@@ -63,20 +63,20 @@ val clear : (_, _) t -> unit
 val add_exn : ('a, 'b) t -> key:'a -> data:'b Heap_block.t -> unit
 val replace : ('a, 'b) t -> key:'a -> data:'b Heap_block.t -> unit
 
-(** [key_is_using_space t key] returns [true] if [key] is using some space in [t].  [mem t
-    key] implies [key_is_using_space t key], but it is also possible that that
+(** [key_is_using_space t key] returns [true] if [key] is using some space in [t].
+    [mem t key] implies [key_is_using_space t key], but it is also possible that that
     [key_is_using_space t key && not (mem t key)]. *)
 val key_is_using_space : ('a, _) t -> 'a -> bool
 
 (** [reclaim_space_for_keys_with_unused_data t] reclaims space for all keys in [t] whose
-    data has been detected (by a finalizer) to be unused.  Only [key]s such that
+    data has been detected (by a finalizer) to be unused. Only [key]s such that
     [key_is_using_space t key && not (mem t key)] will be reclaimed. *)
 val reclaim_space_for_keys_with_unused_data : (_, _) t -> unit
 
 (** [set_run_when_unused_data t ~thread_safe_f] calls [thread_safe_f] in the finalizer
     attached to each [data] in [t], after ensuring the entry being finalized will be
-    handled in the next call to [reclaim_space_for_keys_with_unused_data].  This can be
+    handled in the next call to [reclaim_space_for_keys_with_unused_data]. This can be
     used to arrange to call [reclaim_space_for_keys_with_unused_data] at a convenient time
-    in the future.  [thread_safe_f] must be thread safe -- it is {e not} safe for it to
+    in the future. [thread_safe_f] must be thread safe -- it is {e not} safe for it to
     call any [Weak_hashtbl] functions. *)
 val set_run_when_unused_data : (_, _) t -> thread_safe_f:(unit -> unit) -> unit

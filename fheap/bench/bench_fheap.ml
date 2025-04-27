@@ -1,8 +1,8 @@
 open! Core
 open! Fheap
 
-let%bench_fun ("pop_add_with_existing_heap" [@indexed
-                                              initial_size = [ 1; 10; 100; 1000; 10_000 ]])
+let%bench_fun ("pop_add_with_existing_heap"
+  [@indexed initial_size = [ 1; 10; 100; 1000; 10_000 ]])
   =
   let a = Array.init initial_size ~f:(fun _ -> Random.int 100_000) in
   let h1 = of_array ~compare:Int.compare a in

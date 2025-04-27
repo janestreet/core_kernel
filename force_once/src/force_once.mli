@@ -1,5 +1,5 @@
-(** A "force_once" is a thunk that can only be forced once.  Subsequent forces
-    will raise an exception. *)
+(** A "force_once" is a thunk that can only be forced once. Subsequent forces will raise
+    an exception. *)
 
 open! Core
 open! Import

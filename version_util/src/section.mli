@@ -11,11 +11,11 @@ module Make : functor
      end)
     -> sig
   (** Extract the first section from an executable, including the start marker. Returns
-        [None] if there are no matching sections. *)
+      [None] if there are no matching sections. *)
   val get : contents_of_exe:string -> string option
 
   (** Find all occurrences of the section and replace their payloads with new [data].
-        Returns [None] if there are no occurrences. *)
+      Returns [None] if there are no occurrences. *)
   val replace : contents_of_exe:string -> data:string -> string option
 
   (** An alias for [String.chop_prefix_if_exists ~prefix:M.start_marker]. *)
@@ -26,13 +26,13 @@ module Make : functor
 
   module Expert : sig
     (** The start marker, as passed via the functor's argument. It's in the [Expert]
-          module because one is not supposed to fiddle with start markers directly. *)
+        module because one is not supposed to fiddle with start markers directly. *)
     val start_marker : string
 
     (** Pad a string with NUL bytes up to the length of the section's payload.
 
-          Raises if there is no space for a NUL byte or if the given string contains a NUL
-          byte already. *)
+        Raises if there is no space for a NUL byte or if the given string contains a NUL
+        byte already. *)
     val pad_with_at_least_one_nul_byte_exn : string -> string
   end
 end

@@ -88,6 +88,7 @@ let parse_generated_hg_version_rev_n ~n = function
 let parse_generated_hg_version = parse_generated_hg_version_rev_n ~n:12
 let parse_generated_hg_version_rev40 = parse_generated_hg_version_rev_n ~n:40
 let version_list = parse_generated_hg_version (generated_hg_version ())
+let version_list_rev40 = parse_generated_hg_version_rev40 (generated_hg_version ())
 let version = String.concat version_list ~sep:" "
 
 module Version = struct
@@ -113,6 +114,7 @@ module Version = struct
 
   let parse_lines versions = parse_list (String.split_lines versions)
   let current_version () = ok_exn (parse_list version_list)
+  let current_version_rev40 () = ok_exn (parse_list version_list_rev40)
 
   let present = function
     | None -> error_s [%sexp "executable built without version util"]

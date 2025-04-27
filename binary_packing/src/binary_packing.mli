@@ -6,8 +6,7 @@
     [pos] arguments refer to the location in the buf string.
 
     We support big- and little-endian ints. Note that for an 8-bit (1-byte) integer, there
-    is no difference, because endian-ness only changes the order of bytes, not bits.
-*)
+    is no difference, because endian-ness only changes the order of bytes, not bits. *)
 
 open! Core
 open! Import
@@ -39,9 +38,7 @@ val pack_unsigned_8 : buf:bytes -> pos:int -> int -> unit
                 unpack_signed_64_int |    21 ns |    0 ns |        M
         pack_signed_64_little_endian |     8 ns |    0 ns |
       unpack_signed_64_little_endian |     9 ns |    0 ns |        M
-
- v}
-*)
+    v} *)
 val unpack_signed_16 : byte_order:endian -> buf:bytes -> pos:int -> int
 
 val pack_signed_16 : byte_order:endian -> buf:bytes -> pos:int -> int -> unit
@@ -95,8 +92,8 @@ val pack_float : byte_order:endian -> buf:bytes -> pos:int -> float -> unit
     plus the length of the padding equals the fixed length. *)
 
 (** Decode the fixed-length tail-padded string having length [len] from [buf] starting at
-    [pos]. Return a string containing only the non-padding characters. The default
-    padding is '\x00'. *)
+    [pos]. Return a string containing only the non-padding characters. The default padding
+    is '\x00'. *)
 val unpack_tail_padded_fixed_string
   :  ?padding:char
   -> buf:Bytes.t
@@ -106,9 +103,9 @@ val unpack_tail_padded_fixed_string
   -> string
 
 (** Encode and pack the given string as a tail padded fixed length string having length
-    [len]. Place it in [buf] starting at position [pos].  If the length of the string is
+    [len]. Place it in [buf] starting at position [pos]. If the length of the string is
     less then [len] pad it with the padding characters until its length is equal to [len].
-    If the string is longer than [len] raise [Invalid_argument].  The default padding is
+    If the string is longer than [len] raise [Invalid_argument]. The default padding is
     '\x00'. *)
 val pack_tail_padded_fixed_string
   :  ?padding:char

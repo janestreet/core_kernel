@@ -104,6 +104,5 @@ let set t v =
 ;;
 
 let invariant invariant_a t =
-  Invariant.invariant [%here] t [%sexp_of: _ t] (fun () ->
-    Option.iter (get t) ~f:invariant_a)
+  Invariant.invariant t [%sexp_of: _ t] (fun () -> Option.iter (get t) ~f:invariant_a)
 ;;

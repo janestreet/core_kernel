@@ -34,8 +34,9 @@ end
 
 module Stable = struct
   open Core.Core_stable
+  module V1 = struct end
 
-  module V1 = struct
+  module V1_unsafe_deserialization = struct
     type ('key, 'a, 'cmp, 'enum) t = ('key, 'a, 'cmp) Map.V1.t
 
     module type S =
@@ -197,7 +198,7 @@ open! Core
 open! Import
 module Enumeration = Enumeration
 
-type ('key, 'a, 'cmp, 'enum) t = ('key, 'a, 'cmp, 'enum) Stable.V1.t
+type ('key, 'a, 'cmp, 'enum) t = ('key, 'a, 'cmp, 'enum) Stable.V2.t
 
 module type S_plain =
   S_plain with type ('key, 'a, 'cmp, 'enum) total_map := ('key, 'a, 'cmp, 'enum) t
@@ -216,7 +217,6 @@ let to_map t = t
 
 let key_not_in_enumeration t key =
   failwiths
-    ~here:[%here]
     "Key was not provided in the enumeration given to [Total_map.Make]"
     key
     (Map.comparator t).sexp_of_t
@@ -263,6 +263,7 @@ let mapi2 t1 t2 ~f =
     Some (f key v1 v2))
 ;;
 
+let unzip t = Map.unzip t
 let set t key data = Map.set t ~key ~data
 
 module Sequence3 (A : Applicative.S3) = struct
@@ -275,8 +276,17 @@ module Sequence3 (A : Applicative.S3) = struct
   ;;
 end
 
-module Sequence2 (A : Applicative.S2) = Sequence3 (Applicative.S2_to_S3 (A))
-module Sequence (A : Applicative) = Sequence2 (Applicative.S_to_S2 (A))
+module Sequence2 (A : Applicative.S2) = Sequence3 (struct
+    include A
+
+    type ('a, 'b, _) t = ('a, 'b) A.t
+  end)
+
+module Sequence (A : Applicative) = Sequence2 (struct
+    include A
+
+    type ('a, _) t = 'a A.t
+  end)
 
 include struct
   open Map
@@ -306,6 +316,16 @@ module Make_plain_with_witnesses (Key : Key_plain_with_witnesses) = struct
   type comparator_witness = Key.comparator_witness
   type enumeration_witness = Key.enumeration_witness
   type 'a t = 'a Key.Map.t [@@deriving sexp_of, compare, equal]
+
+  let quickcheck_generator a_generator =
+    let data = Quickcheck.Generator.list_with_length (List.length Key.all) a_generator in
+    Quickcheck.Generator.map data ~f:(fun data ->
+      List.zip_exn Key.all data |> Key.Map.of_alist_exn)
+  ;;
+
+  (* Dummy values; maybe we should make them do something someday? *)
+  let quickcheck_shrinker _a_shrinker = Quickcheck.Shrinker.empty ()
+  let quickcheck_observer _a_observer = Quickcheck.Observer.singleton ()
 
   let create (local_ f) =
     List.fold

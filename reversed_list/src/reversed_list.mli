@@ -1,3 +1,5 @@
+@@ portable
+
 (** [Reversed_list] is constructed the same way as a list, but it needs to be reversed
     before it can be used. This is helpful when building up a list in reverse order to
     force reversal before use. *)
@@ -20,13 +22,20 @@ val rev_filter_map : 'a t -> f:('a -> 'b option) -> 'b list
 val is_empty : 'a t -> bool
 val length : 'a t -> int
 
+(** Submodule for only bringing the constructors into scope (primarily for [::]). *)
+module O : sig
+  type nonrec 'a t = 'a t =
+    | []
+    | ( :: ) of 'a * 'a t
+end
+
 (** Renders sexps without reversing the list. E.g. [1::2] is represented as [(1 2)].
     [of_sexp] and other derivations are not supported because [Reversed_list] is meant to
-    be a more ephemeral type and [of_sexp] is only provided for printing convenience,
+    be a more ephemeral type and [sexp_of] is only provided for printing convenience,
     e.g., for expect tests. Callers that are motivated to add derivations because they
     want to use [Reversed_list] as part of a type may be better off defining a custom type
     with a more meaningful name that conveys what the ordering represents instead of a
-    generic "reversed list."  *)
+    generic "reversed list." *)
 module With_sexp_of : sig
   type nonrec 'a t = 'a t [@@deriving sexp_of]
 end
