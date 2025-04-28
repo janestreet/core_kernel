@@ -11,12 +11,10 @@ let ok_exn = Or_error.ok_exn
 let try_with = Or_error.try_with
 
 module%test [@name "[Consume]"] _ = struct
-  open Consume
-
   let%test_unit "bin_prot char" =
     let t = of_string "abc" in
-    let a = bin_prot Char.bin_reader_t t in
-    let b = bin_prot Char.bin_reader_t t in
+    let a = Bin_io.consume Char.bin_reader_t t in
+    let b = Bin_io.consume Char.bin_reader_t t in
     [%test_eq: char] a 'a';
     [%test_eq: char] b 'b';
     [%test_eq: string] (to_string t) "c"
@@ -27,17 +25,15 @@ module%test [@name "[Consume]"] _ = struct
     let buf = Bigstring.create 1000 in
     let _end_pos = List.fold ints ~init:0 ~f:(fun pos i -> Int.bin_write_t buf ~pos i) in
     let t = of_bigstring buf in
-    List.iter ints ~f:(fun i -> [%test_eq: int] i (bin_prot Int.bin_reader_t t))
+    List.iter ints ~f:(fun i -> [%test_eq: int] i (Bin_io.consume Int.bin_reader_t t))
   ;;
 end
 
 module%test [@name "[Peek]"] _ = struct
-  open Peek
-
   let%test_unit "bin_prot char" =
     let t = of_string "abc" in
-    let a = bin_prot Char.bin_reader_t t ~pos:0 in
-    let b = bin_prot Char.bin_reader_t t ~pos:1 in
+    let a = Bin_io.peek Char.bin_reader_t t ~pos:0 in
+    let b = Bin_io.peek Char.bin_reader_t t ~pos:1 in
     [%test_eq: char] a 'a';
     [%test_eq: char] b 'b';
     [%test_eq: string] (to_string t) "abc"
@@ -49,31 +45,29 @@ module%test [@name "[Peek]"] _ = struct
     let end_pos = List.fold ints ~init:0 ~f:(fun pos i -> Int.bin_write_t buf ~pos i) in
     let t = of_bigstring buf in
     List.fold ints ~init:0 ~f:(fun pos i ->
-      [%test_eq: int] i (bin_prot Int.bin_reader_t t ~pos);
+      [%test_eq: int] i (Bin_io.peek Int.bin_reader_t t ~pos);
       pos + Int.bin_size_t i)
     |> fun end_pos' -> [%test_eq: int] end_pos end_pos'
   ;;
 end
 
 module%test [@name "[Poke]"] _ = struct
-  open Poke
-
   let%test_unit _ =
     let t = of_string "abc" in
-    bin_prot Char.bin_writer_t t 'd' ~pos:0;
-    bin_prot Char.bin_writer_t t 'e' ~pos:1;
+    Bin_io.poke Char.bin_writer_t t 'd' ~pos:0;
+    Bin_io.poke Char.bin_writer_t t 'e' ~pos:1;
     [%test_eq: string] "dec" (to_string t);
     flip_lo t;
     assert (
       try
-        bin_prot String.bin_writer_t t "fgh" ~pos:0;
+        Bin_io.poke String.bin_writer_t t "fgh" ~pos:0;
         false
       with
       | _ -> true);
     assert (is_empty t);
     reset t;
     [%test_eq: string] "dec" (to_string t);
-    bin_prot Char.bin_writer_t t 'i' ~pos:0;
+    Bin_io.poke Char.bin_writer_t t 'i' ~pos:0;
     [%test_eq: string] "iec" (to_string t)
   ;;
 end
@@ -727,8 +721,8 @@ struct
         done)
   ;;
 
-  let consume_bin_prot = consume_bin_prot
-  let fill_bin_prot = fill_bin_prot
+  let consume_bin_prot = Bin_io.consume_with_header
+  let fill_bin_prot = Bin_io.fill_with_header
 
   let%test_unit _ =
     let t = create ~len:2000 in
@@ -761,11 +755,11 @@ struct
 
   let%test_unit "fill_bin_prot and fill_bin_prot_local write the same bytes" =
     Example_bin_prot.quickcheck ~f:(fun a ->
-      let len = Example_bin_prot.bin_size_t a + bin_prot_length_prefix_bytes in
+      let len = Example_bin_prot.bin_size_t a + Bin_io.header_bytes in
       let t = create ~len in
       let t' = create ~len in
-      fill_bin_prot t Example_bin_prot.bin_writer_t a |> ok_exn;
-      fill_bin_prot_local
+      Bin_io.fill_with_header t Example_bin_prot.bin_writer_t a |> ok_exn;
+      Bin_io.fill_with_header__local
         t'
         Example_bin_prot.bin_size_t__local
         Example_bin_prot.bin_write_t__local
@@ -780,9 +774,9 @@ struct
 
   let%test_unit "fill_bin_prot roundtrips" =
     Example_bin_prot.quickcheck ~f:(fun a ->
-      let len = Example_bin_prot.bin_size_t a + bin_prot_length_prefix_bytes in
+      let len = Example_bin_prot.bin_size_t a + Bin_io.header_bytes in
       let t = create ~len in
-      fill_bin_prot t Example_bin_prot.bin_writer_t a |> ok_exn;
+      Bin_io.fill_with_header t Example_bin_prot.bin_writer_t a |> ok_exn;
       flip_lo t;
       let a' = consume_bin_prot t Example_bin_prot.bin_reader_t |> ok_exn in
       assert (Example_bin_prot.equal a a'))
@@ -792,7 +786,7 @@ struct
     let t = create ~len:2000 in
     let a : Example_bin_prot.t = D { a = 1; b = 2 } in
     require_no_allocation (fun () ->
-      fill_bin_prot_local
+      Bin_io.fill_with_header__local
         t
         Example_bin_prot.bin_size_t__local
         Example_bin_prot.bin_write_t__local
@@ -825,16 +819,13 @@ struct
     end) :
     Iobuf.Accessors_common
     with type ('a, 'b, 'c) t = ('a, 'b, 'c) Intf.t
-    with type ('a, 'b, 'c) t_local = ('a, 'b, 'c) Intf.t_local
-     and type 'a bin_prot = 'a Intf.bin_prot = struct
+    with type ('a, 'b, 'c) t__local = ('a, 'b, 'c) Intf.t__local = struct
     open Intf
 
     type nonrec ('a, 'd, 'w) t = ('a, 'd, 'w) Intf.t
-    type nonrec ('a, 'd, 'w) t_local = ('a, 'd, 'w) Intf.t_local
-    type nonrec 'a bin_prot = 'a Intf.bin_prot
+    type nonrec ('a, 'd, 'w) t__local = ('a, 'd, 'w) Intf.t__local
 
     let char = char
-    let bin_prot = bin_prot
 
     let%test_unit _ =
       let buf = of_string "ABCDEFGHIJ" in
@@ -858,7 +849,7 @@ struct
   end
 
   module Intf_read (Intf : sig
-      include Iobuf.Accessors_read with type 'a bin_prot := 'a Bin_prot.Type_class.reader
+      include Iobuf.Accessors_read
 
       val accessor_pos_1
         :  without_value:(read_write, seek) Iobuf.t
@@ -873,8 +864,7 @@ struct
     end) :
     Iobuf.Accessors_read
     with type ('a, 'b, 'c) t = ('a, 'b, 'c) Intf.t
-     and type ('a, 'b, 'c) t_local = ('a, 'b, 'c) Intf.t_local
-     and type 'a bin_prot := 'a Bin_prot.Type_class.reader = struct
+     and type ('a, 'b, 'c) t__local = ('a, 'b, 'c) Intf.t__local = struct
     open Intf
 
     let int8 = int8
@@ -1084,12 +1074,7 @@ struct
       bigstring_pos_1 2 (bigstringo ~str_pos:1 ~len:2) ~skip:1 "\000lm" "AlmmEFGHIJ"
     ;;
 
-    include Intf_common (struct
-        include Intf
-
-        type 'a bin_prot = 'a Bin_prot.Type_class.reader
-      end)
-
+    include Intf_common (Intf)
     module Int_repr = Intf.Int_repr
 
     let%test_unit _ =
@@ -1255,7 +1240,7 @@ struct
   end
 
   module Intf_write (Intf : sig
-      include Iobuf.Accessors_write with type 'a bin_prot := 'a Bin_prot.Type_class.writer
+      include Iobuf.Accessors_write
 
       val accessor_pos_1
         :  without_value:(read_write, seek) Iobuf.t
@@ -1267,12 +1252,11 @@ struct
         -> unit
 
       val bin_prot_char : (char, 'd, 'w) t
-      val ignore_locality : ('a, 'd, 'w) t_local -> ('a, 'd, 'w) t
+      val ignore_locality : ('a, 'd, 'w) t__local -> ('a, 'd, 'w) t
     end) :
     Iobuf.Accessors_write
     with type ('a, 'b, 'c) t = ('a, 'b, 'c) Intf.t
-     and type ('a, 'b, 'c) t_local = ('a, 'b, 'c) Intf.t_local
-     and type 'a bin_prot := 'a Bin_prot.Type_class.writer = struct
+     and type ('a, 'b, 'c) t__local = ('a, 'b, 'c) Intf.t__local = struct
     open Intf
 
     let int8_trunc = int8_trunc
@@ -1447,12 +1431,7 @@ struct
       bigstring_pos_1 2 (bigstringo ~str_pos:1 ~len:2) ~skip:1 "\000lm" "AlmmEFGHIJ"
     ;;
 
-    include Intf_common (struct
-        include Intf
-
-        type 'a bin_prot = 'a Bin_prot.Type_class.writer
-      end)
-
+    include Intf_common (Intf)
     module Int_repr = Intf.Int_repr
 
     let%test_unit _ =
@@ -1662,8 +1641,8 @@ struct
                   (arg : Arg.t)]
         ;;
 
-        let bin_prot_char t ~pos a = bin_prot Char.bin_writer_t t ~pos a
-        let ignore_locality (f : ('a, 'd, 'w) t_local) = (f :> ('a, 'd, 'w) t)
+        let bin_prot_char t ~pos a = Bin_io.poke Char.bin_writer_t t ~pos a
+        let ignore_locality (f : ('a, 'd, 'w) t__local) = (f :> ('a, 'd, 'w) t)
 
         (* Static permission tests for the cases that do compile.  Since the functions
            all use essentially the same type definitions, we don't need to test all of
@@ -1717,7 +1696,7 @@ struct
              ~len:Date_string.len_iso8601_extended))
     ;;
 
-    let bin_prot_size = Poke.bin_prot_size
+    let bin_prot_size = Bin_io.poke_size
 
     let%expect_test "bin prot size" =
       let buf = of_string (String.make 32 'Z') in
@@ -1830,7 +1809,7 @@ struct
                   (str : string)]
         ;;
 
-        let bin_prot_char t ~pos = bin_prot Char.bin_reader_t t ~pos
+        let bin_prot_char t ~pos = Bin_io.peek Char.bin_reader_t t ~pos
 
         (* static permission tests; see above *)
         let char_a_pos_0 iobuf = Char.( = ) 'a' (char iobuf ~pos:0)
@@ -2018,27 +1997,27 @@ struct
                   (arg : Arg.t)]
         ;;
 
-        let bin_prot_char t a = bin_prot Char.bin_writer_t t a
-        let ignore_locality (f : ('a, 'd, 'w) t_local) = (f :> ('a, 'd, 'w) t)
+        let bin_prot_char t a = Bin_io.fill Char.bin_writer_t t a
+        let ignore_locality (f : ('a, 'd, 'w) t__local) = (f :> ('a, 'd, 'w) t)
 
         let%test_unit _ =
           let t = of_string "abc" in
-          bin_prot Char.bin_writer_t t 'd';
-          bin_prot Char.bin_writer_t t 'e';
+          Bin_io.fill Char.bin_writer_t t 'd';
+          Bin_io.fill Char.bin_writer_t t 'e';
           [%test_eq: string] "c" (to_string t);
           flip_lo t;
           assert (
             try
-              bin_prot String.bin_writer_t t "fgh";
+              Bin_io.fill String.bin_writer_t t "fgh";
               false
             with
             | _ -> true);
           [%test_eq: string] "de" (to_string t);
           reset t;
           [%test_eq: string] "dec" (to_string t);
-          bin_prot Char.bin_writer_t t 'i';
-          bin_prot Char.bin_writer_t t 'j';
-          bin_prot Char.bin_writer_t t 'k';
+          Bin_io.fill Char.bin_writer_t t 'i';
+          Bin_io.fill Char.bin_writer_t t 'j';
+          Bin_io.fill Char.bin_writer_t t 'k';
           assert (is_empty t);
           flip_lo t;
           [%test_eq: string] "ijk" (to_string t)
@@ -2217,7 +2196,7 @@ struct
                   (n : int)]
         ;;
 
-        let bin_prot_char t = bin_prot Char.bin_reader_t t
+        let bin_prot_char t = Bin_io.consume Char.bin_reader_t t
 
         (* static permission tests; see above *)
         let%test _ = Char.( = ) 'a' (char (of_string "a" : (_, seek) Iobuf.t))
@@ -2713,7 +2692,7 @@ struct
     let protect_window = Expert.protect_window
     let protect_window_1 = Expert.protect_window_1
     let protect_window_2 = Expert.protect_window_2
-    let protect_window_local = Expert.protect_window_local
+    let protect_window_local = Expert.protect_window__local
 
     let%test_unit "reinitialize_of_bigstring" =
       let iobuf = Iobuf.of_string "1234" in
@@ -2923,13 +2902,13 @@ module _ = Accessors (struct
       ;;
 
       let index t ?pos ?len char =
-        assert_equal ~index_or_neg ~index_option:index_local t ?pos ?len char
+        assert_equal ~index_or_neg ~index_option:index__local t ?pos ?len char
       ;;
 
       let rindex t ?pos ?len char =
         assert_equal
           ~index_or_neg:rindex_or_neg
-          ~index_option:rindex_local
+          ~index_option:rindex__local
           t
           ?pos
           ?len
@@ -2979,23 +2958,23 @@ module%test [@name "allocation"] _ = struct
   let%expect_test "of_bigstring_local" =
     let bigstring = Bigstring.of_string "abcdefghijklmnopqrstuvwxyz" in
     require_no_allocation (fun () ->
-      let buf = Iobuf.of_bigstring_local bigstring in
+      let buf = Iobuf.of_bigstring__local bigstring in
       ignore (Sys.opaque_identity buf : _ Iobuf.t));
     require_no_allocation (fun () ->
-      let buf = Iobuf.of_bigstring_local ~pos:1 ~len:10 bigstring in
+      let buf = Iobuf.of_bigstring__local ~pos:1 ~len:10 bigstring in
       ignore (Sys.opaque_identity buf : _ Iobuf.t));
     [%expect {| |}]
   ;;
 
   let%expect_test "of_string_local" =
     let string = "abc" in
-    let buf = Iobuf.of_string_local string in
+    let buf = Iobuf.of_string__local string in
     [%test_eq: string] (Iobuf.to_string buf) string;
-    (* 6 words for the Bigstring header + 1 word (regardless of whether 32-bit or 64-bit)
+    (* 7 words for the Bigstring header + 1 word (regardless of whether 32-bit or 64-bit)
        for the string payload (which is allocated with [malloc] but still tracked as
        custom block out-of-heap resources). *)
-    require_allocation_does_not_exceed (Minor_words 7) (fun () ->
-      let buf = Iobuf.of_string_local string in
+    require_allocation_does_not_exceed (Minor_words 8) (fun () ->
+      let buf = Iobuf.of_string__local string in
       ignore (Sys.opaque_identity buf : _ Iobuf.t));
     [%expect {| |}]
   ;;
@@ -3003,27 +2982,26 @@ module%test [@name "allocation"] _ = struct
   let%expect_test "sub_shared_local" =
     let buf = Iobuf.of_string "abcdefghijklmnopqrstuvwxyz" in
     require_no_allocation (fun () ->
-      let buf' = Iobuf.sub_shared_local buf in
+      let buf' = Iobuf.sub_shared__local buf in
       ignore (Sys.opaque_identity buf' : _ Iobuf.t));
     require_no_allocation (fun () ->
-      let buf' = Iobuf.sub_shared_local ~pos:1 ~len:5 buf in
+      let buf' = Iobuf.sub_shared__local ~pos:1 ~len:5 buf in
       ignore (Sys.opaque_identity buf' : _ Iobuf.t));
     [%expect {| |}]
   ;;
 
   module Test_read_accessors
-      (I : Accessors_read with type 'a bin_prot := 'a Bin_prot.Type_class.reader)
+      (I : Accessors_read)
       (Apply : sig
          type w
 
          val apply : ('a, read, w) I.t -> (read, Iobuf.seek) Iobuf.t -> 'a
-         val apply_local : ('a, read, w) I.t_local -> (read, Iobuf.seek) Iobuf.t -> 'a
-       end) : Accessors_read with type 'a bin_prot := 'a Bin_prot.Type_class.reader =
-  struct
+         val apply_local : ('a, read, w) I.t__local -> (read, Iobuf.seek) Iobuf.t -> 'a
+       end) : Accessors_read = struct
     open I
 
     type nonrec ('a, 'd, 'w) t = ('a, 'd, 'w) t
-    type nonrec ('a, 'd, 'w) t_local = ('a, 'd, 'w) t_local
+    type nonrec ('a, 'd, 'w) t__local = ('a, 'd, 'w) t__local
 
     let test ?(allocation_limit = 0) (f : ('a, 'd, 'w) t) len =
       let buf = Iobuf.of_bigstring (Bigstring.init len ~f:(const '\000')) in
@@ -3031,12 +3009,12 @@ module%test [@name "allocation"] _ = struct
         ignore (Apply.apply f buf : _))
     ;;
 
-    let test_local (f : ('a, 'd, 'w) t_local) len =
+    let test_local (f : ('a, 'd, 'w) t__local) len =
       let buf = Iobuf.of_bigstring (Bigstring.init len ~f:(const '\000')) in
       require_no_allocation (fun () -> ignore (Apply.apply_local f buf : _))
     ;;
 
-    let test_padded_string (f : padding:char -> len:int -> ('a, 'd, 'w) t_local) =
+    let test_padded_string (f : padding:char -> len:int -> ('a, 'd, 'w) t__local) =
       let pad_amt = 5 in
       let full_len = 20 in
       let padding = ' ' in
@@ -3049,12 +3027,12 @@ module%test [@name "allocation"] _ = struct
       require_no_allocation (fun () -> ignore (Apply.apply_local f buf : _))
     ;;
 
-    let test_string (f : str_pos:int -> len:int -> ('a, 'd, 'w) t_local) =
+    let test_string (f : str_pos:int -> len:int -> ('a, 'd, 'w) t__local) =
       let len = 10 in
       test_local (f ~str_pos:0 ~len) len
     ;;
 
-    let test_stringo (f : ?str_pos:int -> ?len:int -> ('a, 'd, 'w) t_local) =
+    let test_stringo (f : ?str_pos:int -> ?len:int -> ('a, 'd, 'w) t__local) =
       let len = 10 in
       let buf = Iobuf.of_bigstring (Bigstring.init len ~f:(const ' ')) in
       require_no_allocation (fun () ->
@@ -3068,10 +3046,6 @@ module%test [@name "allocation"] _ = struct
       [%expect {| |}]
     ;;
 
-    (* We don't bother testing the allocation of bin_prot. If there is a
-         locally-allocating version of bin_prot in the future, we can test that
-         instead. *)
-    let bin_prot = bin_prot
     let int8 = int8
 
     let%expect_test "int8" =
@@ -3560,7 +3534,8 @@ let%bench_fun ("blit consume+fill x100" [@indexed blit_size = [ 1; 32; 100; 1600
     done
 ;;
 
-let%bench_fun ("unsafe_blit consume+fill x100" [@indexed blit_size = [ 1; 32; 100; 1600 ]])
+let%bench_fun ("unsafe_blit consume+fill x100"
+  [@indexed blit_size = [ 1; 32; 100; 1600 ]])
   =
   let total = blit_size * 100 in
   let src = Iobuf.create ~len:total in

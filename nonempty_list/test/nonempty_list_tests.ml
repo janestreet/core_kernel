@@ -16,6 +16,35 @@ include (
 
 let t : _ Nonempty_list.t = [ 1; 2; 3; 4 ]
 
+let quickcheck'
+  gen
+  (test_result :
+    ?here:lexing_position list
+    -> ?message:string
+    -> ?equal:('a -> 'a -> bool)
+    -> expect:'a
+    -> 'a
+    -> unit)
+  f_list
+  f
+  =
+  Quickcheck.test gen ~f:(fun v -> test_result ~expect:(f_list v) (f v))
+;;
+
+let quickcheck
+  (test_result :
+    ?here:lexing_position list
+    -> ?message:string
+    -> ?equal:('a -> 'a -> bool)
+    -> expect:'a
+    -> 'a
+    -> unit)
+  f_list
+  f
+  =
+  quickcheck' [%quickcheck.generator: int t] test_result (fun l -> f_list (to_list l)) f
+;;
+
 let%expect_test "sexp representations" =
   print_s [%sexp (t : int Nonempty_list.t)];
   [%expect {| (1 2 3 4) |}];
@@ -26,18 +55,24 @@ let%expect_test "sexp representations" =
 ;;
 
 let%expect_test "reduce" =
-  print_s [%sexp (reduce t ~f:( + ) : int)];
-  [%expect {| 10 |}]
+  quickcheck
+    [%test_result: int]
+    (fun l -> List.reduce l ~f:( + ) |> Core.Option.value_exn)
+    (fun l -> reduce l ~f:( + ))
 ;;
 
 let%expect_test "reverse" =
-  print_s [%sexp (reverse t : int t)];
-  [%expect {| (4 3 2 1) |}]
+  quickcheck
+    [%test_result: int list]
+    (fun l -> List.rev l)
+    (fun l -> reverse l |> to_list)
 ;;
 
 let%expect_test "append" =
-  print_s [%sexp (append t [ 5; 6; 7 ] : int t)];
-  [%expect {| (1 2 3 4 5 6 7) |}]
+  quickcheck
+    [%test_result: int list]
+    (fun l -> List.append (to_list t) l)
+    (fun l -> append t (to_list l) |> to_list)
 ;;
 
 let%expect_test "append'" =
@@ -48,9 +83,11 @@ let%expect_test "append'" =
 ;;
 
 let%expect_test "unzip" =
-  let t = [ 1, 'a'; 2, 'b'; 3, 'c'; 4, 'd' ] in
-  print_s [%sexp (unzip t : int t * char t)];
-  [%expect {| ((1 2 3 4) (a b c d)) |}]
+  quickcheck'
+    [%quickcheck.generator: (int * char) t]
+    [%test_result: int list * char list]
+    (fun l -> List.unzip (to_list l))
+    (fun l -> unzip l |> Tuple2.map_both ~f1:to_list ~f2:to_list)
 ;;
 
 let%expect_test "return" =
@@ -249,29 +286,17 @@ let%expect_test "nth_exn" =
 ;;
 
 let%expect_test "last" =
-  let test list = print_s [%sexp (last list : int)] in
-  test [ 1 ];
-  test [ 1; 2 ];
-  test [ 1; 2; 3 ];
-  [%expect
-    {|
-    1
-    2
-    3
-    |}]
+  quickcheck
+    [%test_result: int]
+    (fun l -> List.last l |> Core.Option.value_exn)
+    (fun l -> last l)
 ;;
 
 let%expect_test "drop_last" =
-  let test list = print_s [%sexp (drop_last list : int list)] in
-  test [ 1 ];
-  test [ 1; 2 ];
-  test [ 1; 2; 3 ];
-  [%expect
-    {|
-    ()
-    (1)
-    (1 2)
-    |}]
+  quickcheck
+    [%test_result: int list]
+    (fun l -> List.drop_last l |> Core.Option.value_exn)
+    (fun l -> drop_last l)
 ;;
 
 let%expect_test "to_sequence" =
@@ -354,6 +379,14 @@ let%expect_test "sort_and_group" =
     ((1))
     ((1) (2) (4 4))
     |}]
+;;
+
+let%expect_test "all_equal" =
+  let equal = [%equal: int] in
+  quickcheck
+    [%test_result: int option]
+    (fun l -> List.all_equal ~equal l)
+    (fun l -> all_equal ~equal l)
 ;;
 
 let%expect_test "min_elt' max_elt'" =
@@ -526,6 +559,24 @@ let%expect_test "filter_ok_at_least_one" =
   [%expect {| (Ok (1)) |}];
   test [ e "A"; e "B"; Ok 3; e "D"; Ok 5 ];
   [%expect {| (Ok (3 5)) |}]
+;;
+
+let%expect_test "option_all" =
+  let test os = print_s [%sexp (option_all os : int t option)] in
+  test [ Some 1 ];
+  [%expect {| ((1)) |}];
+  test [ None ];
+  [%expect {| () |}];
+  test [ Some 1; None ];
+  [%expect {| () |}];
+  test [ Some 1; Some 2 ];
+  [%expect {| ((1 2)) |}];
+  test [ None; None; Some 1 ];
+  [%expect {| () |}];
+  test [ None; None ];
+  [%expect {| () |}];
+  test [ Some 1; Some 2; Some 4 ];
+  [%expect {| ((1 2 4)) |}]
 ;;
 
 let%expect_test "basic accessor" =
@@ -1006,25 +1057,44 @@ let%expect_test "Option does not allocate" =
     assert (phys_equal l round_tripped))
 ;;
 
+let%expect_test "remove_consecutive_duplicates" =
+  let test l ~which_to_keep =
+    mapi l ~f:(fun idx elem -> elem, idx)
+    |> remove_consecutive_duplicates ~which_to_keep ~equal:[%equal: int * _]
+    |> [%sexp_of: (int * int) t]
+    |> print_s
+  in
+  test [ 0; 1; 1; 2 ] ~which_to_keep:`First;
+  [%expect {| ((0 0) (1 1) (2 3)) |}];
+  test [ 0; 0; 2; 2 ] ~which_to_keep:`Last;
+  [%expect {| ((0 1) (2 3)) |}];
+  test [ 0; 0; 2; 2; 0 ] ~which_to_keep:`First;
+  [%expect {| ((0 0) (2 2) (0 4)) |}];
+  test [ 0 ] ~which_to_keep:`First;
+  [%expect {| ((0 0)) |}];
+  test [ 0; 0; 0; 0 ] ~which_to_keep:`Last;
+  [%expect {| ((0 3)) |}];
+  ()
+;;
+
 module%test Partition = struct
   let%expect_test "partition_tf" =
     let test xs =
       let f x = x % 2 = 0 in
-      let (T partition) = Nonempty_list.partition_tf xs ~f in
-      partition |> [%sexp_of: (int, int, _, _) Partition.t] |> print_s;
+      let partition = Nonempty_list.partition_tf xs ~f in
+      partition |> [%sexp_of: (int, int) Partition.t] |> print_s;
       assert (
         [%equal: int list * int list]
-          ( Nonempty_list.Part.to_list partition.left
-          , Nonempty_list.Part.to_list partition.right )
+          ( Partition.left partition |> Option.of_option
+          , Partition.right partition |> Option.of_option )
           (Nonempty_list.partition_tf' xs ~f))
     in
     test t;
-    [%expect
-      {| ((left (Nonempty (2 4))) (right (Nonempty (1 3))) (emptiness Both_nonempty)) |}];
+    [%expect {| (Both ((2 4) (1 3))) |}];
     test [ 1; 3 ];
-    [%expect {| ((left Empty) (right (Nonempty (1 3))) (emptiness Right_nonempty)) |}];
+    [%expect {| (Right (1 3)) |}];
     test [ 2; 4 ];
-    [%expect {| ((left (Nonempty (2 4))) (right Empty) (emptiness Left_nonempty)) |}]
+    [%expect {| (Left (2 4)) |}]
   ;;
 
   let%expect_test "partition_map" =
@@ -1032,28 +1102,20 @@ module%test Partition = struct
       let f x : _ Either.t =
         if x % 2 = 0 then First x else Second [%string "odd %{x#Int}"]
       in
-      let (T partition) = Nonempty_list.partition_map xs ~f in
-      partition |> [%sexp_of: (int, string, _, _) Partition.t] |> print_s;
+      let partition = Nonempty_list.partition_map xs ~f in
+      partition |> [%sexp_of: (int, string) Partition.t] |> print_s;
       assert (
         [%equal: int list * string list]
-          ( Nonempty_list.Part.to_list partition.left
-          , Nonempty_list.Part.to_list partition.right )
+          ( Partition.left partition |> Option.of_option
+          , Partition.right partition |> Option.of_option )
           (Nonempty_list.partition_map' xs ~f))
     in
     test t;
-    [%expect
-      {|
-      ((left (Nonempty (2 4))) (right (Nonempty ("odd 1" "odd 3")))
-       (emptiness Both_nonempty))
-      |}];
+    [%expect {| (Both ((2 4) ("odd 1" "odd 3"))) |}];
     test [ 1; 3 ];
-    [%expect
-      {|
-      ((left Empty) (right (Nonempty ("odd 1" "odd 3")))
-       (emptiness Right_nonempty))
-      |}];
+    [%expect {| (Right ("odd 1" "odd 3")) |}];
     test [ 2; 4 ];
-    [%expect {| ((left (Nonempty (2 4))) (right Empty) (emptiness Left_nonempty)) |}]
+    [%expect {| (Left (2 4)) |}]
   ;;
 
   let%expect_test "partition_result" =
@@ -1062,150 +1124,19 @@ module%test Partition = struct
         Nonempty_list.map xs ~f:(fun x ->
           if x % 2 = 0 then Ok x else Error [%string "odd %{x#Int}"])
       in
-      let (T partition) = Nonempty_list.partition_result xs in
-      partition |> [%sexp_of: (int, string, _, _) Partition.t] |> print_s;
+      let partition = Nonempty_list.partition_result xs in
+      partition |> [%sexp_of: (int, string) Partition.t] |> print_s;
       assert (
         [%equal: int list * string list]
-          ( Nonempty_list.Part.to_list partition.left
-          , Nonempty_list.Part.to_list partition.right )
+          ( Partition.left partition |> Option.of_option
+          , Partition.right partition |> Option.of_option )
           (Nonempty_list.partition_result' xs))
     in
     test t;
-    [%expect
-      {|
-      ((left (Nonempty (2 4))) (right (Nonempty ("odd 1" "odd 3")))
-       (emptiness Both_nonempty))
-      |}];
+    [%expect {| (Both ((2 4) ("odd 1" "odd 3"))) |}];
     test [ 1; 3 ];
-    [%expect
-      {|
-      ((left Empty) (right (Nonempty ("odd 1" "odd 3")))
-       (emptiness Right_nonempty))
-      |}];
+    [%expect {| (Right ("odd 1" "odd 3")) |}];
     test [ 2; 4 ];
-    [%expect {| ((left (Nonempty (2 4))) (right Empty) (emptiness Left_nonempty)) |}]
-  ;;
-
-  let partitions : _ Nonempty_list.Partition.packed list =
-    [ T { left = Nonempty [ 2; 4 ]; right = Empty; emptiness = Left_nonempty }
-    ; T
-        { left = Empty
-        ; right = Nonempty [ "odd 1"; "odd 3" ]
-        ; emptiness = Right_nonempty
-        }
-    ; T
-        { left = Nonempty [ 2; 4 ]
-        ; right = Nonempty [ "odd 1"; "odd 3" ]
-        ; emptiness = Both_nonempty
-        }
-    ]
-  ;;
-
-  let%expect_test "Partition accessors" =
-    List.iter partitions ~f:(fun (T p) ->
-      let left = Partition.left p in
-      left |> [%sexp_of: (int, _) Part.t] |> print_s);
-    [%expect
-      {|
-      (Nonempty (2 4))
-      Empty
-      (Nonempty (2 4))
-      |}];
-    List.iter partitions ~f:(fun (T p) ->
-      let right = Partition.right p in
-      right |> [%sexp_of: (string, _) Part.t] |> print_s);
-    [%expect
-      {|
-      Empty
-      (Nonempty ("odd 1" "odd 3"))
-      (Nonempty ("odd 1" "odd 3"))
-      |}]
-  ;;
-
-  let%expect_test "Part" =
-    List.iter partitions ~f:(fun (T p) ->
-      let left = Partition.left p in
-      let left' = Part.packed_of_list (Part.to_list left) in
-      left |> [%sexp_of: (int, _) Part.t] |> print_s;
-      assert ([%equal: int Part.packed] (T left) left'));
-    [%expect
-      {|
-      (Nonempty (2 4))
-      Empty
-      (Nonempty (2 4))
-      |}];
-    List.iter partitions ~f:(fun (T p) ->
-      let emptiness = Partition.emptiness p in
-      let left = Partition.left p |> Part.map ~f:Int.to_string in
-      let right = Partition.right p in
-      let both =
-        match emptiness with
-        | Left_nonempty -> Part.append1 left right
-        | Right_nonempty -> Part.append2 left right
-        | Both_nonempty -> Part.append2 left right
-      in
-      T both |> [%sexp_of: string Part.packed] |> print_s;
-      assert (
-        [%equal: string Part.packed] (T both) (Part.append_packed (T left) (T right))));
-    [%expect
-      {|
-      (T (Nonempty (2 4)))
-      (T (Nonempty ("odd 1" "odd 3")))
-      (T (Nonempty (2 4 "odd 1" "odd 3")))
-      |}];
-    List.iter partitions ~f:(fun (T p) ->
-      let right = Partition.right p in
-      right |> [%sexp_of: (string, _) Part.t] |> print_s);
-    [%expect
-      {|
-      Empty
-      (Nonempty ("odd 1" "odd 3"))
-      (Nonempty ("odd 1" "odd 3"))
-      |}]
-  ;;
-
-  let%expect_test "Partition swap" =
-    List.iter partitions ~f:(fun (T p) ->
-      Partition.swap p
-      |> [%sexp_of: (string, int, _, _) Nonempty_list.Partition.t]
-      |> print_s);
-    [%expect
-      {|
-      ((left Empty) (right (Nonempty (2 4))) (emptiness Right_nonempty))
-      ((left (Nonempty ("odd 1" "odd 3"))) (right Empty) (emptiness Left_nonempty))
-      ((left (Nonempty ("odd 1" "odd 3"))) (right (Nonempty (2 4)))
-       (emptiness Both_nonempty))
-      |}];
-    List.iter partitions ~f:(fun (T p) ->
-      assert (
-        [%equal: (int, string) Nonempty_list.Partition.packed]
-          (T p)
-          (T (p |> Partition.swap |> Partition.swap))))
-  ;;
-
-  let%expect_test "Partition map and combine" =
-    List.iter partitions ~f:(fun (T p) ->
-      Partition.combine' p
-      |> [%sexp_of: (int, string) Either.t Nonempty_list.t]
-      |> print_s);
-    [%expect
-      {|
-      ((First 2) (First 4))
-      ((Second "odd 1") (Second "odd 3"))
-      ((First 2) (First 4) (Second "odd 1") (Second "odd 3"))
-      |}];
-    List.iter partitions ~f:(fun (T p) ->
-      p
-      |> Partition.map_left ~f:(Part.map ~f:Int.to_string)
-      |> Partition.map_right ~f:(Part.map ~f:String.capitalize)
-      |> Partition.combine
-      |> [%sexp_of: string Nonempty_list.t]
-      |> print_s);
-    [%expect
-      {|
-      (2 4)
-      ("Odd 1" "Odd 3")
-      (2 4 "Odd 1" "Odd 3")
-      |}]
+    [%expect {| (Left (2 4)) |}]
   ;;
 end

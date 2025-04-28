@@ -34,8 +34,9 @@ end
 
 module Stable = struct
   open Core.Core_stable
+  module V1 = struct end
 
-  module V1 = struct
+  module V1_unsafe_deserialization = struct
     type ('key, 'a, 'cmp, 'enum) t = ('key, 'a, 'cmp) Map.V1.t
 
     module type S =
@@ -197,7 +198,7 @@ open! Core
 open! Import
 module Enumeration = Enumeration
 
-type ('key, 'a, 'cmp, 'enum) t = ('key, 'a, 'cmp, 'enum) Stable.V1.t
+type ('key, 'a, 'cmp, 'enum) t = ('key, 'a, 'cmp, 'enum) Stable.V2.t
 
 module type S_plain =
   S_plain with type ('key, 'a, 'cmp, 'enum) total_map := ('key, 'a, 'cmp, 'enum) t
@@ -216,7 +217,6 @@ let to_map t = t
 
 let key_not_in_enumeration t key =
   failwiths
-    ~here:[%here]
     "Key was not provided in the enumeration given to [Total_map.Make]"
     key
     (Map.comparator t).sexp_of_t
@@ -276,8 +276,17 @@ module Sequence3 (A : Applicative.S3) = struct
   ;;
 end
 
-module Sequence2 (A : Applicative.S2) = Sequence3 (Applicative.S2_to_S3 (A))
-module Sequence (A : Applicative) = Sequence2 (Applicative.S_to_S2 (A))
+module Sequence2 (A : Applicative.S2) = Sequence3 (struct
+    include A
+
+    type ('a, 'b, _) t = ('a, 'b) A.t
+  end)
+
+module Sequence (A : Applicative) = Sequence2 (struct
+    include A
+
+    type ('a, _) t = 'a A.t
+  end)
 
 include struct
   open Map
@@ -319,8 +328,8 @@ module Make_plain_with_witnesses (Key : Key_plain_with_witnesses) = struct
   let quickcheck_observer _a_observer = Quickcheck.Observer.singleton ()
 
   let create f =
-    List.fold Key.all ~init:Key.Map.empty ~f:(fun t key -> Map.set t ~key ~data:(f key)) [@nontail
-                                                                                          ]
+    List.fold Key.all ~init:Key.Map.empty ~f:(fun t key -> Map.set t ~key ~data:(f key))
+    [@nontail]
   ;;
 
   let create_const x = create (fun _ -> x)

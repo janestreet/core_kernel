@@ -202,7 +202,7 @@ module Make (Pool : Pool.S) = struct
       assert (is_nil (tail p l));
       free p l
     with
-    | exn -> failwiths ~here:[%here] "failure" (exn, p) [%sexp_of: exn * _ Pool.t]
+    | exn -> failwiths "failure" (exn, p) [%sexp_of: exn * _ Pool.t]
   ;;
 
   (* [sexp_of] *)
@@ -214,7 +214,7 @@ module Make (Pool : Pool.S) = struct
       let l = create p 13 (nil ()) in
       ignore (sexp_of l)
     with
-    | exn -> failwiths ~here:[%here] "failure" (exn, p) [%sexp_of: exn * _ Pool.t]
+    | exn -> failwiths "failure" (exn, p) [%sexp_of: exn * _ Pool.t]
   ;;
 
   (* [id_of_pointer], [pointer_of_id_exn], [Id.to_int63], [Id.of_int63] *)

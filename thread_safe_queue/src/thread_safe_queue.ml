@@ -38,7 +38,7 @@ type 'a t =
 [@@deriving fields ~getters ~iterators:iter, sexp_of]
 
 let invariant _invariant_a t =
-  Invariant.invariant [%here] t [%sexp_of: _ t] (fun () ->
+  Invariant.invariant t [%sexp_of: _ t] (fun () ->
     let check f = Invariant.check_field t f in
     Fields.iter
       ~length:(check (fun length -> assert (length >= 0)))
@@ -116,7 +116,7 @@ module Dequeue_result = struct
   *)
   type 'a t =
     | Empty
-    | Not_empty of { elt : 'a }
+    | Not_empty of { elt : 'a [@globalized] }
   [@@deriving sexp, compare]
 end
 

@@ -214,7 +214,7 @@ module Subscriber = struct
   ;;
 
   let invariant invariant_a t =
-    Invariant.invariant [%here] t [%sexp_of: _ t] (fun () ->
+    Invariant.invariant t [%sexp_of: _ t] (fun () ->
       let check f = Invariant.check_field t f in
       Fields.iter
         ~bus_id:ignore
@@ -303,7 +303,7 @@ type ('callback, 'phantom) bus = ('callback, 'phantom) t [@@deriving sexp_of]
 let read_only t = (t :> (_, read) t)
 
 let invariant invariant_a _ t =
-  Invariant.invariant [%here] t [%sexp_of: (_, _) t] (fun () ->
+  Invariant.invariant t [%sexp_of: (_, _) t] (fun () ->
     let check f = Invariant.check_field t f in
     Fields.iter
       ~bus_id:ignore
@@ -353,14 +353,9 @@ end
 
 let[@cold] start_write_failing t =
   match t.state with
-  | Closed ->
-    failwiths ~here:[%here] "[Bus.write] called on closed bus" t [%sexp_of: (_, _) t]
+  | Closed -> failwiths "[Bus.write] called on closed bus" t [%sexp_of: (_, _) t]
   | Write_in_progress ->
-    failwiths
-      ~here:[%here]
-      "[Bus.write] called from callback on the same bus"
-      t
-      [%sexp_of: (_, _) t]
+    failwiths "[Bus.write] called from callback on the same bus" t [%sexp_of: (_, _) t]
   | Ok_to_write -> assert false
 ;;
 
@@ -852,7 +847,7 @@ let allow_subscription_after_first_write t =
 
 let create_exn
   ?name
-  created_from
+  ?here:(created_from = Stdlib.Lexing.dummy_pos)
   callback_arity
   ~(on_subscription_after_first_write : On_subscription_after_first_write.t)
   ~on_callback_raise
@@ -896,14 +891,13 @@ let subscribe_exn
   ?(extract_exn = false)
   ?on_callback_raise
   ?on_close
+  ?here:(subscribed_from = Stdlib.Lexing.dummy_pos)
   t
-  subscribed_from
   ~f:callback
   =
   if not (can_subscribe t)
   then
     failwiths
-      ~here:[%here]
       "Bus.subscribe_exn called after first write"
       [%sexp ~~(subscribed_from : Source_code_position.t), { bus = (t : (_, _) t) }]
       [%sexp_of: Sexp.t];
@@ -944,11 +938,19 @@ let subscribe_exn
     subscriber
 ;;
 
-let iter_exn ?extract_exn t subscribed_from ~f =
+let subscribe_permanently_exn
+  ?extract_exn
+  ?here:(subscribed_from = Stdlib.Lexing.dummy_pos)
+  t
+  ~f
+  =
   if not (can_subscribe t)
   then
-    failwiths ~here:[%here] "Bus.iter_exn called after first write" t [%sexp_of: (_, _) t];
-  ignore (subscribe_exn ?extract_exn t subscribed_from ~f : _ Subscriber.t)
+    failwiths
+      "Bus.subscribe_permanently_exn called after first write"
+      t
+      [%sexp_of: (_, _) t];
+  ignore (subscribe_exn ?extract_exn t ~here:subscribed_from ~f : _ Subscriber.t)
 ;;
 
 module Fold_arity = struct
@@ -962,11 +964,11 @@ module Fold_arity = struct
   [@@deriving sexp_of]
 end
 
-let fold_exn
+let subscribe_permanently_with_state_exn
   ?extract_exn
   (type c f s)
+  ?here:(subscribed_from = Stdlib.Lexing.dummy_pos)
   (t : (c, _) t)
-  subscribed_from
   (fold_arity : (c, f, s) Fold_arity.t)
   ~(init : s)
   ~(f : f)
@@ -974,11 +976,14 @@ let fold_exn
   let state = ref init in
   if not (can_subscribe t)
   then
-    failwiths ~here:[%here] "Bus.fold_exn called after first write" t [%sexp_of: (_, _) t];
-  iter_exn
+    failwiths
+      "Bus.subscribe_permanently_with_state_exn called after first write"
+      t
+      [%sexp_of: (_, _) t];
+  subscribe_permanently_exn
     ?extract_exn
     t
-    subscribed_from
+    ~here:subscribed_from
     ~f:
       (match fold_arity with
        | Arity1 -> fun a1 -> state := f !state a1
@@ -991,7 +996,7 @@ let fold_exn
 module%test _ = struct
   let assert_no_allocation bus callback write =
     let bus_r = read_only bus in
-    ignore (subscribe_exn bus_r [%here] ~f:callback : _ Subscriber.t);
+    ignore (subscribe_exn bus_r ~here:[%here] ~f:callback : _ Subscriber.t);
     let starting_minor_words = Gc.minor_words () in
     let starting_major_words = Gc.major_words () in
     write ();
@@ -1005,18 +1010,18 @@ module%test _ = struct
        [write] never allocates in any situation.  For example, if this test is moved to
        another library and run with X_LIBRARY_INLINING=false, it fails. *)
   let%test_unit "write doesn't allocate when inlined" =
-    let create created_from arity =
+    let create ~here:created_from arity =
       create_exn
-        created_from
+        ~here:created_from
         arity
         ~on_subscription_after_first_write:Raise
         ~on_callback_raise:Error.raise
     in
-    let bus1 = create [%here] Arity1 in
-    let bus2 = create [%here] Arity2 in
-    let bus3 = create [%here] Arity3 in
-    let bus4 = create [%here] Arity4 in
-    let bus5 = create [%here] Arity5 in
+    let bus1 = create ~here:[%here] Arity1 in
+    let bus2 = create ~here:[%here] Arity2 in
+    let bus3 = create ~here:[%here] Arity3 in
+    let bus4 = create ~here:[%here] Arity4 in
+    let bus5 = create ~here:[%here] Arity5 in
     assert_no_allocation bus1 (fun () -> ()) (fun () -> write bus1 ());
     assert_no_allocation bus2 (fun () () -> ()) (fun () -> write2 bus2 () ());
     assert_no_allocation bus3 (fun () () () -> ()) (fun () -> write3 bus3 () () ());

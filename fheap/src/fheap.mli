@@ -1,5 +1,5 @@
 (** Functional heaps (implemented as
-    {{: http://en.wikipedia.org/wiki/Pairing_heap} pairing heaps}). *)
+    {{:http://en.wikipedia.org/wiki/Pairing_heap} pairing heaps}). *)
 
 open! Core
 
@@ -23,8 +23,8 @@ val min_elt : 'a t -> compare:('a -> 'a -> int) -> 'a option
 
 val max_elt : 'a t -> compare:('a -> 'a -> int) -> 'a option
 
-(** The elements of [to_list t] are not in any particular order.  You need to sort the
-    list afterwards if you want to get a sorted list. *)
+(** The elements of [to_list t] are not in any particular order. You need to sort the list
+    afterwards if you want to get a sorted list. *)
 val to_list : 'a t -> 'a list
 
 (** [create ~compare] returns a new min-heap that uses ordering function [compare].
@@ -36,19 +36,18 @@ val create : compare:('a -> 'a -> int) -> 'a t
 val of_array : 'a array -> compare:('a -> 'a -> int) -> 'a t
 val of_list : 'a list -> compare:('a -> 'a -> int) -> 'a t
 
-(** [add t v] returns the new heap after addition.  Complexity O(1). *)
+(** [add t v] returns the new heap after addition. Complexity O(1). *)
 val add : 'a t -> 'a -> 'a t
 
-(** This returns the top (i.e., smallest) element of the heap.  Complexity O(1). *)
+(** This returns the top (i.e., smallest) element of the heap. Complexity O(1). *)
 val top : 'a t -> 'a option
 
 val top_exn : 'a t -> 'a
 
-(** [remove_top t] returns the new heap after a remove.  It does nothing if [t]
-    is empty.
+(** [remove_top t] returns the new heap after a remove. It does nothing if [t] is empty.
 
     The amortized time per [remove_top t] (or [pop t], [pop_exn t], [pop_if t]) is O(lg
-    n).  The complexity of the worst case is O(n). *)
+    n). The complexity of the worst case is O(n). *)
 val remove_top : 'a t -> 'a t option
 
 (** This removes and returns the top (i.e., least) element and the modified heap. *)

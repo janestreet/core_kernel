@@ -8,22 +8,21 @@
     This version implements a closed system where tokens move through three possible
     states:
 
-    {ul
-    {- in hopper}
-    {- in bucket}
-    {- in flight}}
+    - in hopper
+    - in bucket
+    - in flight
 
-    Tokens "drop" from the hopper into the bucket at a set rate, and can be taken from
-    the bucket by clients and put into flight. Once the client is finished with whatever
+    Tokens "drop" from the hopper into the bucket at a set rate, and can be taken from the
+    bucket by clients and put into flight. Once the client is finished with whatever
     tokens are required for its task, it is responsible for moving them from "in flight"
     back into the hopper.
 
     Most use cases are covered by the [Token_bucket], [Throttle], and
-    [Throttled_rate_limiter] modules, but the [Expert] module provides full access
-    to the module internals.
+    [Throttled_rate_limiter] modules, but the [Expert] module provides full access to the
+    module internals.
 
     This interface is the simple, non-concurrent interface, and requires machinery on top
-    to implement a specific strategy.  See [Limiter_async] for an async-friendly
+    to implement a specific strategy. See [Limiter_async] for an async-friendly
     implementation on top of this module.
 
     Most functions in this interface take an explicit time as an argument. [now] is
@@ -70,8 +69,8 @@ module Try_reconfigure_result : sig
   [@@deriving sexp_of]
 end
 
-(** Implements a basic token-bucket-based rate limiter. Users of the throttle
-    must successfully call [try_take] before doing work. *)
+(** Implements a basic token-bucket-based rate limiter. Users of the throttle must
+    successfully call [try_take] before doing work. *)
 module Token_bucket : sig
   type t = private limiter [@@deriving sexp_of]
 
@@ -90,7 +89,7 @@ module Token_bucket : sig
     type nonrec t = private t [@@deriving sexp_of]
 
     (** A [Token_bucket.Starts_full.t] is a [Token_bucket.t] that is statically guaranteed
-        to have been called with [initial_bucket_level] equal to [burst_size].  The
+        to have been called with [initial_bucket_level] equal to [burst_size]. The
         advantage of such a guarantee is that there's a clear semantics for increasing the
         bucket limit (implemented in [try_increase_bucket_limit]).
 
@@ -112,7 +111,7 @@ module Token_bucket : sig
   end
 end
 
-(** Implements a basic throttle.  Users of the throttle must successfully call [start_job]
+(** Implements a basic throttle. Users of the throttle must successfully call [start_job]
     before beginning work and must call [finish_job] once, and only once, when a job is
     completed. *)
 module Throttle : sig
@@ -123,9 +122,9 @@ module Throttle : sig
   val finish_job : t -> now:Time_ns.t -> unit
 end
 
-(** A [Throttled_rate_limiter] combines a [Token_bucket] and a [Throttle].  Unlike a
+(** A [Throttled_rate_limiter] combines a [Token_bucket] and a [Throttle]. Unlike a
     [Token_bucket], jobs cannot consume variable numbers of tokens, but the number of
-    outstanding jobs is also limited to [max_concurrent_jobs].  Like a [Throttle],
+    outstanding jobs is also limited to [max_concurrent_jobs]. Like a [Throttle],
     [finish_job] must be called once, and only once, when a job is completed. *)
 module Throttled_rate_limiter : sig
   type t = private limiter [@@deriving sexp_of]
@@ -135,12 +134,12 @@ module Throttled_rate_limiter : sig
     -> burst_size:int
     -> sustained_rate_per_sec:float
     -> max_concurrent_jobs:int
-         (** Limits concurrency per time quantum.  Any job started during a time quantum
-        ([try_start_job ~now]) or earlier and not stopped in an earlier quantum counts
-        toward the concurrency limit.
+         (** Limits concurrency per time quantum. Any job started during a time quantum
+             ([try_start_job ~now]) or earlier and not stopped in an earlier quantum
+             counts toward the concurrency limit.
 
-        In particular, [finish_job ~now] never prevents a job from counting toward
-        [~now]'s concurrency limit. *)
+             In particular, [finish_job ~now] never prevents a job from counting toward
+             [~now]'s concurrency limit. *)
     -> t
 
   val try_start_job
@@ -148,7 +147,7 @@ module Throttled_rate_limiter : sig
     -> now:Time_ns.t
     -> [ `Start | `Max_concurrent_jobs_running | `Unable_until_at_least of Time_ns.t ]
 
-  (** Return a token to the {e hopper} (not the bucket).  Thus, [max_concurrent_jobs]
+  (** Return a token to the {e hopper} (not the bucket). Thus, [max_concurrent_jobs]
       limits not only the number of open [try_start_job]-[finish_job] pairs across time,
       but also applies to the number of jobs run during the same (1ns) quantum time
       [now] - whether they finished [now] or not, and regardless of what order
@@ -181,46 +180,47 @@ val hopper_to_bucket_rate_per_sec : t -> float Infinite_or_finite.t
 
 (** Expert operations. *)
 module Expert : sig
-  (** @param now is the reference time that other time-accepting functions will use when
-      they adjust [now]. It is almost always correct to set this to [Time_ns.now].
+  (** @param now
+        is the reference time that other time-accepting functions will use when they
+        adjust [now]. It is almost always correct to set this to [Time_ns.now].
 
-      @param hopper_to_bucket_rate_per_sec bounds the maximum rate at which tokens fall
-      from the hopper into the bucket where they can be taken.
+      @param hopper_to_bucket_rate_per_sec
+        bounds the maximum rate at which tokens fall from the hopper into the bucket where
+        they can be taken.
 
-      @param bucket_limit bounds the number of tokens that the lower bucket can hold.
-      This corresponds to the maximum burst in a standard token bucket setup.
+      @param bucket_limit
+        bounds the number of tokens that the lower bucket can hold. This corresponds to
+        the maximum burst in a standard token bucket setup.
 
-      @param in_flight_limit bounds the number of tokens that can be in flight. This
-      corresponds to a running job limit/throttle.
+      @param in_flight_limit
+        bounds the number of tokens that can be in flight. This corresponds to a running
+        job limit/throttle.
 
-      @param initial_hopper_level sets the number of tokens placed into the hopper when
-      the [Limiter] is created.
+      @param initial_hopper_level
+        sets the number of tokens placed into the hopper when the [Limiter] is created.
 
-      @param initial_bucket_level sets the number of tokens placed into the bucket when
-      the [Limiter] is created. If this amount exceeds the bucket size it will be silently
-      limited to [bucket_limit].
+      @param initial_bucket_level
+        sets the number of tokens placed into the bucket when the [Limiter] is created. If
+        this amount exceeds the bucket size it will be silently limited to [bucket_limit].
 
-      These tunables can be combined in several ways:
+        These tunables can be combined in several ways:
 
-      {ul
+        - to produce a simple rate limiter, where the hopper is given an infinite number
+          of tokens and clients simply take tokens as they are delivered to the bucket.
+        - to produce a rate limiter that respects jobs that are more than instantaneous.
+          In this case [initial_hopper_level + initial_bucket_level] should be bounded and
+          clients hold tokens for the duration of their work.
+        - to produce a throttle that doesn't limit the rate of jobs at all, but always
+          keeps a max of n jobs running. In this case [hopper_to_bucket_rate_per_sec]
+          should be infinite but [in_flight_limit] should be bounded to the upper job
+          rate.
 
-      {- to produce a simple rate limiter, where the hopper is given an infinite number of
-      tokens and clients simply take tokens as they are delivered to the bucket.}
-
-      {- to produce a rate limiter that respects jobs that are more than instantaneous.
-      In this case [initial_hopper_level + initial_bucket_level] should be bounded and
-      clients hold tokens for the duration of their work.}
-
-      {- to produce a throttle that doesn't limit the rate of jobs at all, but always
-      keeps a max of n jobs running. In this case [hopper_to_bucket_rate_per_sec] should
-      be infinite but [in_flight_limit] should be bounded to the upper job rate.}}
-
-      In every case above, throttling and rate limiting combine nicely when the unit of
-      work for both is the same (e.g., one token per message). If the unit of work is
-      different (e.g., rate limit based on a number of tokens equal to message size, but
-      throttle based on simple message count) then a single [t] probably cannot be used to
-      get the correct behavior, and two instances should be used with tokens taken from
-      both. *)
+        In every case above, throttling and rate limiting combine nicely when the unit of
+        work for both is the same (e.g., one token per message). If the unit of work is
+        different (e.g., rate limit based on a number of tokens equal to message size, but
+        throttle based on simple message count) then a single [t] probably cannot be used
+        to get the correct behavior, and two instances should be used with tokens taken
+        from both. *)
   val create_exn
     :  now:Time_ns.t
     -> hopper_to_bucket_rate_per_sec:float Infinite_or_finite.t
@@ -244,15 +244,15 @@ module Expert : sig
       succeeds iff [in_bucket t ~now >= n]. *)
   val try_take : t -> now:Time_ns.t -> int -> Try_take_result.t
 
-  (** Returns the given number of tokens to the hopper. These tokens will fill the
-      tokens available to [try_take] at the [fill_rate]. Note that if [return] is
-      called on more tokens than have actually been removed, it can cause the number
-      of concurrent jobs to exceed [max_concurrent_jobs]. *)
+  (** Returns the given number of tokens to the hopper. These tokens will fill the tokens
+      available to [try_take] at the [fill_rate]. Note that if [return] is called on more
+      tokens than have actually been removed, it can cause the number of concurrent jobs
+      to exceed [max_concurrent_jobs]. *)
   val return_to_hopper : t -> now:Time_ns.t -> int -> unit
 
-  (** Returns the given number of tokens directly to the bucket. If the amount
-      is negative, is more than is currently in flight, or if moving the amount would
-      cause the bucket to surpass its [bucket_limit], [Unable] is returned. *)
+  (** Returns the given number of tokens directly to the bucket. If the amount is
+      negative, is more than is currently in flight, or if moving the amount would cause
+      the bucket to surpass its [bucket_limit], [Unable] is returned. *)
   val try_return_to_bucket : t -> now:Time_ns.t -> int -> Try_return_to_bucket_result.t
 end
 

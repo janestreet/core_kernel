@@ -1,0 +1,1 @@
+module Test_bounded_int_table = Test_bounded_int_table

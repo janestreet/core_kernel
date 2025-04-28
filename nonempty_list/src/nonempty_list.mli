@@ -4,8 +4,7 @@ open Core
     variant. The sexp representation is as a regular list (i.e., the same as the
     [Stable.V3] module below).
 
-    For operations on a locally allocated ['a t], see [Local_nonempty_list].
-*)
+    For operations on a locally allocated ['a t], see [Local_nonempty_list]. *)
 type 'a t = ( :: ) of 'a * 'a list
 [@@deriving
   compare ~localize
@@ -18,10 +17,12 @@ type 'a t = ( :: ) of 'a * 'a list
   , bin_io
   , globalize]
 
+type 'a nonempty_list := 'a t
+
 include Comparator.Derived with type 'a t := 'a t
 include Container.S1 with type 'a t := 'a t
 include Invariant.S1 with type 'a t := 'a t
-include Monad.S_local with type 'a t := 'a t
+include Monad.S__local with type 'a t := 'a t
 include Indexed_container.S1 with type 'a t := 'a t
 
 val create : 'a -> 'a list -> 'a t
@@ -40,6 +41,7 @@ val reverse : 'a t -> 'a t
 val append : 'a t -> 'a list -> 'a t
 val append' : 'a list -> 'a t -> 'a t
 val unzip : ('a * 'b) t -> 'a t * 'b t
+val unzip3 : ('a * 'b * 'c) t -> 'a t * 'b t * 'c t
 val zip : 'a t -> 'b t -> ('a * 'b) t List.Or_unequal_lengths.t
 val zip_exn : 'a t -> 'b t -> ('a * 'b) t
 val mapi : 'a t -> f:(int -> 'a -> 'b) -> 'b t
@@ -49,6 +51,7 @@ val filter : 'a t -> f:('a -> bool) -> 'a list
 val filteri : 'a t -> f:(int -> 'a -> bool) -> 'a list
 val filter_map : 'a t -> f:('a -> 'b option) -> 'b list
 val filter_mapi : 'a t -> f:(int -> 'a -> 'b option) -> 'b list
+val filter_opt : 'a option t -> 'a list
 val concat : 'a t t -> 'a t
 val concat_map : 'a t -> f:('a -> 'b t) -> 'b t
 val last : 'a t -> 'a
@@ -69,6 +72,10 @@ val folding_map : 'a t -> init:'b -> f:('b -> 'a -> 'b * 'c) -> 'c t
 val fold_map : 'a t -> init:'acc -> f:('acc -> 'a -> 'acc * 'b) -> 'acc * 'b t
 val findi_exn : 'a t -> f:(int -> 'a -> bool) -> int * 'a
 
+(** [all_equal] returns a single element of the list that is equal to all other elements,
+    or [None] if no such element exists. *)
+val all_equal : 'a t -> equal:('a -> 'a -> bool) -> 'a option
+
 (** [min_elt'] and [max_elt'] differ from [min_elt] and [max_elt] (included in
     [Container.S1]) in that they don't return options. *)
 val min_elt' : 'a t -> compare:('a -> 'a -> int) -> 'a
@@ -76,14 +83,13 @@ val min_elt' : 'a t -> compare:('a -> 'a -> int) -> 'a
 val max_elt' : 'a t -> compare:('a -> 'a -> int) -> 'a
 
 (** [transpose] takes an n x m list of lists to an m x n list of lists. Hence, if the
-    input lists are all non-empty, the output lists will also all be non-empty.  *)
+    input lists are all non-empty, the output lists will also all be non-empty. *)
 val transpose : 'a t t -> 'a t t option
 
 val transpose_exn : 'a t t -> 'a t t
 
 (** Like [Map.add_multi], but comes with a guarantee that the range of the returned map is
-    all nonempty lists.
-*)
+    all nonempty lists. *)
 val map_add_multi : ('k, 'v t, 'cmp) Map.t -> key:'k -> data:'v -> ('k, 'v t, 'cmp) Map.t
 
 (** Like [Hashtbl.add_multi], but comes with a guarantee that list that's added to or
@@ -91,24 +97,21 @@ val map_add_multi : ('k, 'v t, 'cmp) Map.t -> key:'k -> data:'v -> ('k, 'v t, 'c
 val hashtbl_add_multi : ('k, 'v t) Hashtbl.t -> key:'k -> data:'v -> unit
 
 (** Like [Map.of_alist_multi], but comes with a guarantee that the range of the returned
-    map is all nonempty lists.
-*)
+    map is all nonempty lists. *)
 val map_of_alist_multi
   :  ('k * 'v) list
   -> comparator:('k, 'cmp) Comparator.Module.t
   -> ('k, 'v t, 'cmp) Map.t
 
 (** Like [Map.of_sequence_multi], but comes with a guarantee that the range of the
-    returned map is all nonempty lists.
-*)
+    returned map is all nonempty lists. *)
 val map_of_sequence_multi
   :  ('k * 'v) Sequence.t
   -> comparator:('k, 'cmp) Comparator.Module.t
   -> ('k, 'v t, 'cmp) Map.t
 
 (** Like [Map.of_list_with_key_multi], but comes with a guarantee that the range of the
-    returned map is all nonempty lists.
-*)
+    returned map is all nonempty lists. *)
 val map_of_list_with_key_multi
   :  'v list
   -> comparator:('k, 'cmp) Comparator.Module.t
@@ -132,50 +135,23 @@ val combine_or_errors_unit : unit Or_error.t t -> unit Or_error.t
     In particular it:
 
     + Returns a ['a t Or_error.t], statically ensuring that in the [Ok l] case, [l] is
-    nonempty.
+      nonempty.
 
     + Takes a ['a Or_error.t t], ensuring that in the [Error e] case, [e] is informative,
-    rather than having been constructed from an empty list. *)
+      rather than having been constructed from an empty list. *)
 val filter_ok_at_least_one : 'a Or_error.t t -> 'a t Or_error.t
 
-type 'a nonempty_list := 'a t
+(** Like [Option.all] but for non-empty lists *)
+val option_all : 'a option t -> 'a t option
 
-module Emptiness_witness : sig
-  type empty = private Empty
-  type nonempty = private Nonempty
-end
-
-module Part : sig
-  type ('a, 'emptiness) t =
-    | Empty : ('a, Emptiness_witness.empty) t
-    | Nonempty : 'a nonempty_list -> ('a, Emptiness_witness.nonempty) t
-  [@@deriving sexp_of]
-
-  type 'a packed = T : ('a, 'emptiness) t -> 'a packed
-  [@@deriving compare, equal, sexp_of]
-
-  val of_nonempty_list : 'a nonempty_list -> ('a, Emptiness_witness.nonempty) t
-  val to_nonempty_list : ('a, Emptiness_witness.nonempty) t -> 'a nonempty_list
-  val packed_of_list : 'a list -> 'a packed
-  val to_list : ('a, _) t -> 'a list
-  val map : ('a, 'emptiness) t -> f:('a -> 'b) -> ('b, 'emptiness) t
-
-  (** Append two parts, knowing that the left part is nonempty, which produces a nonempty
-      part. *)
-  val append1
-    :  ('a, Emptiness_witness.nonempty) t
-    -> ('a, _) t
-    -> ('a, Emptiness_witness.nonempty) t
-
-  (** Append two parts, knowing that the right part is nonempty, which produces a nonempty
-      part. *)
-  val append2
-    :  ('a, _) t
-    -> ('a, Emptiness_witness.nonempty) t
-    -> ('a, Emptiness_witness.nonempty) t
-
-  val append_packed : 'a packed -> 'a packed -> 'a packed
-end
+(** Returns the given t with consecutive duplicates removed. The relative order of the
+    other elements is unaffected. The element kept from a run of duplicates is determined
+    by [which_to_keep]. *)
+val remove_consecutive_duplicates
+  :  ?which_to_keep:[ `First | `Last ] (** default = `Last *)
+  -> 'a t
+  -> equal:('a -> 'a -> bool)
+  -> 'a t
 
 module Partition : sig
   (** A [Partition] represents a splitting of a nonempty list into two parts, a "left" and
@@ -189,64 +165,19 @@ module Partition : sig
       The [partition] functions below have two variations, one which safely provides a
       [Partition], and another [partition'] variation which returns two possibly empty
       lists instead. The latter loses some type information but may be more convenient in
-      some cases.
-  *)
+      some cases. *)
 
-  module Emptiness : sig
-    type ('left_emptiness, 'right_emptiness) t =
-      | Left_nonempty : (Emptiness_witness.nonempty, Emptiness_witness.empty) t
-      | Right_nonempty : (Emptiness_witness.empty, Emptiness_witness.nonempty) t
-      | Both_nonempty : (Emptiness_witness.nonempty, Emptiness_witness.nonempty) t
-    [@@deriving sexp_of]
-  end
-
-  type ('left, 'right, 'left_emptiness, 'right_emptiness) t =
-    { left : ('left, 'left_emptiness) Part.t
-    ; right : ('right, 'right_emptiness) Part.t
-    ; emptiness : ('left_emptiness, 'right_emptiness) Emptiness.t
-    }
+  type ('left, 'right) t =
+    | Left of 'left nonempty_list
+    | Right of 'right nonempty_list
+    | Both of ('left nonempty_list * 'right nonempty_list)
   [@@deriving sexp_of]
 
-  type ('left, 'right) packed =
-    | T : ('left, 'right, 'left_emptiness, 'right_emptiness) t -> ('left, 'right) packed
-  [@@deriving compare, equal, sexp_of]
-
   (** Returns the left part of the partition. *)
-  val left : ('left, _, 'left_emptiness, _) t -> ('left, 'left_emptiness) Part.t
+  val left : ('left, _) t -> 'left nonempty_list option
 
   (** Returns the right part of the partition. *)
-  val right : (_, 'right, _, 'right_emptiness) t -> ('right, 'right_emptiness) Part.t
-
-  (** Returns the emptiness of the partition. *)
-  val emptiness
-    :  (_, _, 'left_emptiness, 'right_emptiness) t
-    -> ('left_emptiness, 'right_emptiness) Emptiness.t
-
-  (** Combines the parts of the partition into a single nonempty list, with the left being
-      ordered before the right. Both parts must have the same type. *)
-  val combine : ('a, 'a, _, _) t -> 'a nonempty_list
-
-  (** Combines the parts of the partition into a single nonempty list. This uses an
-      [Either.t] to indicate which part an element came from and to allow the two parts to
-      be of different types. *)
-  val combine' : ('left, 'right, _, _) t -> ('left, 'right) Either.t nonempty_list
-
-  (** Maps the left part of the partition, calling [f] on the part. *)
-  val map_left
-    :  ('left_1, 'right, 'left_emptiness, 'right_emptiness) t
-    -> f:(('left_1, 'left_emptiness) Part.t -> ('left_2, 'left_emptiness) Part.t)
-    -> ('left_2, 'right, 'left_emptiness, 'right_emptiness) t
-
-  (** Maps the right part of the partition, calling [f] on the part. *)
-  val map_right
-    :  ('left, 'right_1, 'left_emptiness, 'right_emptiness) t
-    -> f:(('right_1, 'right_emptiness) Part.t -> ('right_2, 'right_emptiness) Part.t)
-    -> ('left, 'right_2, 'left_emptiness, 'right_emptiness) t
-
-  (** Swaps the left and right parts of the partition. *)
-  val swap
-    :  ('left, 'right, 'left_emptiness, 'right_emptiness) t
-    -> ('right, 'left, 'right_emptiness, 'left_emptiness) t
+  val right : (_, 'right) t -> 'right nonempty_list option
 end
 
 (** [partition_tf t ~f] returns a pair [t1, t2], where [t1] is all elements of [t] that
@@ -255,7 +186,7 @@ end
 
     At least one of the two parts must be nonempty, which is represented by the type of
     [Partition.t]. *)
-val partition_tf : 'a t -> f:('a -> bool) -> ('a, 'a) Partition.packed
+val partition_tf : 'a t -> f:('a -> bool) -> ('a, 'a) Partition.t
 
 (** Like [partition_tf], but returns the parts in two lists instead. *)
 val partition_tf' : 'a t -> f:('a -> bool) -> 'a list * 'a list
@@ -267,7 +198,7 @@ val partition_tf' : 'a t -> f:('a -> bool) -> 'a list * 'a list
 val partition_map
   :  'a t
   -> f:('a -> ('left, 'right) Either.t)
-  -> ('left, 'right) Partition.packed
+  -> ('left, 'right) Partition.t
 
 (** Like [partition_map], but returns the parts in two lists instead. *)
 val partition_map'
@@ -275,13 +206,13 @@ val partition_map'
   -> f:('a -> ('left, 'right) Either.t)
   -> 'left list * 'right list
 
-(** [partition_result t] returns a pair [t1, t2], where [t1] is the
-    all [Ok] elements in [t] and [t2] is the list of all [Error]
-    elements. The order of elements in the input list is preserved.
+(** [partition_result t] returns a pair [t1, t2], where [t1] is the all [Ok] elements in
+    [t] and [t2] is the list of all [Error] elements. The order of elements in the input
+    list is preserved.
 
     At least one of the two parts must be nonempty, which is represented by the type of
     [Partition.t]. *)
-val partition_result : ('ok, 'error) Result.t t -> ('ok, 'error) Partition.packed
+val partition_result : ('ok, 'error) Result.t t -> ('ok, 'error) Partition.t
 
 (** Like [partition_result], but returns the parts in two lists instead. *)
 val partition_result' : ('ok, 'error) Result.t t -> 'ok list * 'error list
@@ -294,18 +225,21 @@ val validate_indexed : 'a Validate.check -> 'a t Validate.check
     name. *)
 val validate : name:('a -> string) -> 'a Validate.check -> 'a t Validate.check
 
-(** Returns a flag that must be passed one or more times.
-    See [Command.Param.one_or_more_as_pair]. *)
+(** Returns a flag that must be passed one or more times. See
+    [Command.Param.one_or_more_as_pair]. *)
 val flag : 'a Command.Param.Arg_type.t -> 'a t Command.Flag.t
 
-(** Accepts comma-separated lists of arguments parsed by [t].
-    See [Command.Param.Arg_type.comma_separated]. *)
+(** Accepts comma-separated lists of arguments parsed by [t]. See
+    [Command.Param.Arg_type.comma_separated]. *)
 val comma_separated_argtype
   :  ?key:'a t Univ_map.Multi.Key.t
   -> ?strip_whitespace:bool
   -> ?unique_values:bool
   -> 'a Command.Param.Arg_type.t
   -> 'a t Command.Param.Arg_type.t
+
+(** Requires one or more of an anonymous argument. *)
+val anons : 'a Command.Anons.t -> 'a t Command.Anons.t
 
 (** This module provides 0-alloc versions of [to_list] and [of_list], via [some] and
     allowing you to [match%optional] on a list, respectively. *)
@@ -324,14 +258,14 @@ module Option : sig
   (** [value (some x) ~default = x] and [value none ~default = default]. *)
   val value : 'a t -> default:'a nonempty_list -> 'a nonempty_list
 
-  (** [value_exn (some x) = x].  [value_exn none] raises.  Unlike [Option.value_exn],
-      there is no [?message] argument, so that calls to [value_exn] that do not raise
-      also do not have to allocate. *)
+  (** [value_exn (some x) = x]. [value_exn none] raises. Unlike [Option.value_exn], there
+      is no [?message] argument, so that calls to [value_exn] that do not raise also do
+      not have to allocate. *)
   val value_exn : 'a t -> 'a nonempty_list
 
-  (** [unchecked_value (some x) = x].  [unchecked_value none] returns an unspecified
-      value.  [unchecked_value t] is intended as an optimization of [value_exn t] when
-      [is_some t] is known to be true. *)
+  (** [unchecked_value (some x) = x]. [unchecked_value none] returns an unspecified value.
+      [unchecked_value t] is intended as an optimization of [value_exn t] when [is_some t]
+      is known to be true. *)
   val unchecked_value : 'a t -> 'a nonempty_list
 
   val to_option : 'a t -> 'a nonempty_list option
@@ -372,8 +306,8 @@ module Unstable : sig
 end
 
 module Stable : sig
-  (** Represents a [t] as an ordinary list for sexp and bin_io conversions, e.g. [1::2]
-      is represented as [(1 2)]. *)
+  (** Represents a [t] as an ordinary list for sexp and bin_io conversions, e.g. [1::2] is
+      represented as [(1 2)]. *)
   module V3 : sig
     type nonrec 'a t = 'a t
     [@@deriving
@@ -387,10 +321,10 @@ module Stable : sig
       , stable_witness]
   end
 
-  (** Represents a [t] as an ordinary list for sexp conversions, but uses a record [{hd :
-      'a; tl ; 'a list}] for bin_io conversions. This module is provided for compatibility
-      with existing protocols; there's no reason not to use the latest version if you're
-      writing a new protocol. *)
+  (** Represents a [t] as an ordinary list for sexp conversions, but uses a record
+      [{hd : 'a; tl ; 'a list}] for bin_io conversions. This module is provided for
+      compatibility with existing protocols; there's no reason not to use the latest
+      version if you're writing a new protocol. *)
   module V2 : sig
     type nonrec 'a t = 'a t
     [@@deriving bin_io, compare ~localize, equal ~localize, sexp, hash, stable_witness]

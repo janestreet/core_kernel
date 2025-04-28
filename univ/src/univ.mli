@@ -1,7 +1,6 @@
 (** An extensible "universal" variant type.
 
-    Every type id ([Type_equal.Id.t]) corresponds to one branch of the variant type.
-*)
+    Every type id ([Type_equal.Id.t]) corresponds to one branch of the variant type. *)
 
 open! Core
 open! Import
@@ -28,7 +27,7 @@ module View : sig
   type t = T : 'a Type_equal.Id.t * 'a -> t
 end
 
-(** [view t] provides access to the GADT representation of [t].  This is currently the
-    same as the underlying representation, but is put in the [View] module to make later
+(** [view t] provides access to the GADT representation of [t]. This is currently the same
+    as the underlying representation, but is put in the [View] module to make later
     changes to the underlying representation easier. *)
 val view : t -> View.t

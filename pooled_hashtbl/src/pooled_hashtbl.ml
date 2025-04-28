@@ -595,18 +595,38 @@ let iteri =
 let iter t ~f = iteri t ~f:(fun ~key:_ ~data -> f data) [@nontail]
 let iter_keys t ~f = iteri t ~f:(fun ~key ~data:_ -> f key) [@nontail]
 
-let rec choose_nonempty t i =
+let%template rec choose_nonempty t i =
   let entry = table_get t.table i in
   if Entry.is_null entry
-  then choose_nonempty t ((i + 1) land (t.capacity - 1))
-  else Entry.key t.entries entry, Entry.data t.entries entry
+  then (choose_nonempty [@mode m]) t ((i + 1) land (t.capacity - 1))
+  else
+    ( Modes.Global.wrap (Entry.key t.entries entry)
+    , Modes.Global.wrap (Entry.data t.entries entry) )
+[@@mode m = local]
 ;;
 
-let choose t = if t.length = 0 then None else Some (choose_nonempty t 0)
+let%template rec choose_nonempty t i =
+  let entry = table_get t.table i in
+  if Entry.is_null entry
+  then (choose_nonempty [@mode m]) t ((i + 1) land (t.capacity - 1))
+  else Entry.key t.entries entry, Entry.data t.entries entry
+[@@mode m = global]
+;;
 
-let choose_exn t =
+let%template choose t =
+  if t.length = 0 then None else Some ((choose_nonempty [@mode m]) t 0)
+[@@mode m = local]
+;;
+
+let%template choose t =
+  if t.length = 0 then None else Some ((choose_nonempty [@mode m]) t 0)
+[@@mode m = global]
+;;
+
+let%template choose_exn t =
   if t.length = 0 then raise_s [%message "[Pooled_hashtbl.choose_exn] of empty hashtbl"];
-  choose_nonempty t 0
+  (choose_nonempty [@mode m]) t 0 [@exclave_if_local m]
+[@@mode m = (local, global)]
 ;;
 
 let choose_randomly_nonempty ~random_state t =
@@ -681,7 +701,8 @@ let sexp_of_t sexp_of_k sexp_of_d t =
 let existsi t ~f =
   with_return (fun r ->
     iteri t ~f:(fun ~key ~data -> if f ~key ~data then r.return true);
-    false) [@nontail]
+    false)
+  [@nontail]
 ;;
 
 let exists t ~f = existsi t ~f:(fun ~key:_ ~data -> f data) [@nontail]
@@ -689,8 +710,8 @@ let for_alli t ~f = not (existsi t ~f:(fun ~key ~data -> not (f ~key ~data)))
 let for_all t ~f = not (existsi t ~f:(fun ~key:_ ~data -> not (f data)))
 
 let counti t ~f =
-  fold t ~init:0 ~f:(fun ~key ~data acc -> if f ~key ~data then acc + 1 else acc) [@nontail
-                                                                                    ]
+  fold t ~init:0 ~f:(fun ~key ~data acc -> if f ~key ~data then acc + 1 else acc)
+  [@nontail]
 ;;
 
 let count t ~f =
@@ -744,7 +765,7 @@ let partition_mapi t ~f =
 let partition_map t ~f = partition_mapi t ~f:(fun ~key:_ ~data -> f data) [@nontail]
 
 let partitioni_tf t ~f =
-  partition_mapi t ~f:(fun ~key ~data -> if f ~key ~data then First data else Second data) 
+  partition_mapi t ~f:(fun ~key ~data -> if f ~key ~data then First data else Second data)
   [@nontail]
 ;;
 
@@ -823,7 +844,8 @@ let add_to_groups groups ~get_key ~get_data ~combine ~rows =
       | None -> data
       | Some old -> combine old data
     in
-    replace groups ~key ~data) [@nontail]
+    replace groups ~key ~data)
+  [@nontail]
 ;;
 
 let group ?growth_allowed ?size ~hashable ~get_key ~get_data ~combine rows =
@@ -881,7 +903,8 @@ let merge =
               match find t_left key with
               | None -> maybe_set new_t ~key ~f (`Right right)
               | Some _ -> ()
-              (* already done above *)) [@nontail])
+              (* already done above *))
+            [@nontail])
           () [@nontail])
       ();
     new_t
@@ -896,8 +919,8 @@ let merge_into ~src ~dst ~f =
     | Set_to data ->
       (match dst_data with
        | None -> replace dst ~key ~data
-       | Some dst_data -> if not (phys_equal dst_data data) then replace dst ~key ~data)) [@nontail
-                                                                                          ]
+       | Some dst_data -> if not (phys_equal dst_data data) then replace dst ~key ~data))
+  [@nontail]
 ;;
 
 let filteri_inplace t ~f =
@@ -961,8 +984,8 @@ let copy t =
 ;;
 
 module Accessors = struct
-  let choose = choose
-  let choose_exn = choose_exn
+  let%template choose = (choose [@mode m]) [@@mode m = (local, global)]
+  let%template choose_exn = (choose_exn [@mode m]) [@@mode m = (local, global)]
   let choose_randomly = choose_randomly
   let choose_randomly_exn = choose_randomly_exn
   let clear = clear
@@ -1182,11 +1205,7 @@ Bin_prot.Utils.Make_iterable_binable1 (struct
         match find t key with
         | None -> replace t ~key ~data
         | Some _ ->
-          failwiths
-            ~here:[%here]
-            "Pooled_hashtbl.bin_read_t: duplicate key"
-            key
-            [%sexp_of: Key.t]
+          failwiths "Pooled_hashtbl.bin_read_t: duplicate key" key [%sexp_of: Key.t]
       done;
       t
     ;;

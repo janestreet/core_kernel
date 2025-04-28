@@ -253,7 +253,7 @@ module Config = struct
   ;;
 
   let invariant t =
-    Invariant.invariant [%here] t [%sexp_of: t] (fun () ->
+    Invariant.invariant t [%sexp_of: t] (fun () ->
       assert (
         Num_key_bits.( <= )
           (Level_bits.num_bits_internal t.level_bits)
@@ -295,32 +295,32 @@ module Config = struct
   ;;
 end
 
-(** Timing wheel is implemented as a priority queue in which the keys are
-    non-negative integers corresponding to the intervals of time.  The priority queue is
-    unlike a typical priority queue in that rather than having a "delete min" operation,
-    it has a nondecreasing minimum allowed key, which corresponds to the current time,
-    and an [increase_min_allowed_key] operation, which implements [advance_clock].
-    [increase_min_allowed_key] as a side effect removes all elements from the timing
-    wheel whose key is smaller than the new minimum, which implements firing the alarms
-    whose time has expired.
+(** Timing wheel is implemented as a priority queue in which the keys are non-negative
+    integers corresponding to the intervals of time. The priority queue is unlike a
+    typical priority queue in that rather than having a "delete min" operation, it has a
+    nondecreasing minimum allowed key, which corresponds to the current time, and an
+    [increase_min_allowed_key] operation, which implements [advance_clock].
+    [increase_min_allowed_key] as a side effect removes all elements from the timing wheel
+    whose key is smaller than the new minimum, which implements firing the alarms whose
+    time has expired.
 
     Adding elements to and removing elements from a timing wheel takes constant time,
     unlike a heap-based priority queue which takes log(N), where N is the number of
-    elements in the heap.  [increase_min_allowed_key] takes time proportional to the
-    amount of increase in the min-allowed key, as compared to log(N) for a heap.  It is
-    these performance differences that motivate the existence of timing wheels and make
-    them a good choice for maintaing a set of alarms.  With a timing wheel, one can
-    support any number of alarms paying constant overhead per alarm, while paying a
-    small constant overhead per unit of time passed.
+    elements in the heap. [increase_min_allowed_key] takes time proportional to the amount
+    of increase in the min-allowed key, as compared to log(N) for a heap. It is these
+    performance differences that motivate the existence of timing wheels and make them a
+    good choice for maintaing a set of alarms. With a timing wheel, one can support any
+    number of alarms paying constant overhead per alarm, while paying a small constant
+    overhead per unit of time passed.
 
     As the minimum allowed key increases, the timing wheel does a lazy radix sort of the
     element keys, with level 0 handling the least significant [b_0] bits in a key, and
-    each subsequent level [i] handling the next most significant [b_i] bits.  The levels
+    each subsequent level [i] handling the next most significant [b_i] bits. The levels
     hold increasingly larger ranges of keys, where the union of all the levels can hold
-    any key from [min_allowed_key t] to [max_allowed_key t].  When a key is added to the
-    timing wheel, it is added at the lowest possible level that can store the key.  As
-    the minimum allowed key increases, timing-wheel elements move down levels until they
-    reach level 0, and then are eventually removed.  *)
+    any key from [min_allowed_key t] to [max_allowed_key t]. When a key is added to the
+    timing wheel, it is added at the lowest possible level that can store the key. As the
+    minimum allowed key increases, timing-wheel elements move down levels until they reach
+    level 0, and then are eventually removed. *)
 module Priority_queue : sig
   type 'a t [@@deriving sexp_of]
   type 'a priority_queue = 'a t
@@ -362,27 +362,26 @@ module Priority_queue : sig
   (** [length t] returns the number of elements in the timing wheel. *)
   val length : _ t -> int
 
-  (** [min_allowed_key t] is the minimum key that can be stored in [t].  This only
-      indicates the possibility; there need not be an element [elt] in [t] with [Elt.key
-      elt = min_allowed_key t].  This is not the same as the "min_key" operation in a
-      typical priority queue.
+  (** [min_allowed_key t] is the minimum key that can be stored in [t]. This only
+      indicates the possibility; there need not be an element [elt] in [t] with
+      [Elt.key elt = min_allowed_key t]. This is not the same as the "min_key" operation
+      in a typical priority queue.
 
-      [min_allowed_key t] can increase over time, via calls to
-      [increase_min_allowed_key]. *)
+      [min_allowed_key t] can increase over time, via calls to [increase_min_allowed_key]. *)
   val min_allowed_key : _ t -> Key.t
 
-  (** [max_allowed_key t] is the maximum allowed key that can be stored in [t].  As
+  (** [max_allowed_key t] is the maximum allowed key that can be stored in [t]. As
       [min_allowed_key] increases, so does [max_allowed_key]; however it is not the case
-      that [max_allowed_key t - min_allowed_key t] is a constant.  It is guaranteed that
-      [max_allowed_key t >= min_allowed_key t + 2^B - 1],
-      where [B] is the sum of the b_i in [level_bits]. *)
+      that [max_allowed_key t - min_allowed_key t] is a constant. It is guaranteed that
+      [max_allowed_key t >= min_allowed_key t + 2^B - 1], where [B] is the sum of the b_i
+      in [level_bits]. *)
   val max_allowed_key : _ t -> Key.t
 
   val min_elt_ : 'a t -> 'a Internal_elt.t
   val internal_add : 'a t -> key:Key.t -> at:Time_ns.t -> 'a -> 'a Internal_elt.t
 
-  (** [remove t elt] removes [elt] from [t].  It is an error if [elt] is not currently
-      in [t], and this error may or may not be detected. *)
+  (** [remove t elt] removes [elt] from [t]. It is an error if [elt] is not currently in
+      [t], and this error may or may not be detected. *)
   val remove : 'a t -> 'a Elt.t -> unit
 
   val change : 'a t -> 'a Elt.t -> key:Key.t -> at:Time_ns.t -> unit
@@ -398,17 +397,17 @@ module Priority_queue : sig
       | Max_allowed_key_maybe_changed
   end
 
-  (** [increase_min_allowed_key t ~key ~handle_removed] increases the minimum allowed
-      key in [t] to [key], and removes all elements with keys less than [key], applying
-      [handle_removed] to each element that is removed.  If [key <= min_allowed_key t],
-      then [increase_min_allowed_key] does nothing.  Otherwise, if
+  (** [increase_min_allowed_key t ~key ~handle_removed] increases the minimum allowed key
+      in [t] to [key], and removes all elements with keys less than [key], applying
+      [handle_removed] to each element that is removed. If [key <= min_allowed_key t],
+      then [increase_min_allowed_key] does nothing. Otherwise, if
       [increase_min_allowed_key] returns successfully, [min_allowed_key t = key].
 
       [increase_min_allowed_key] takes time proportional to [key - min_allowed_key t],
       although possibly less time.
 
-      Behavior is unspecified if [handle_removed] accesses [t] in any way other than
-      [Elt] functions. *)
+      Behavior is unspecified if [handle_removed] accesses [t] in any way other than [Elt]
+      functions. *)
   val increase_min_allowed_key
     :  'a t
     -> key:Key.t
@@ -425,15 +424,15 @@ module Priority_queue : sig
     -> unit
 end = struct
   (** Each slot in a level is a (possibly null) pointer to a circular doubly-linked list
-      of elements.  We pool the elements so that we can reuse them after they are removed
-      from the timing wheel (either via [remove] or [increase_min_allowed_key]).  In
+      of elements. We pool the elements so that we can reuse them after they are removed
+      from the timing wheel (either via [remove] or [increase_min_allowed_key]). In
       addition to storing the [key], [at], and [value] in the element, we store the
       [level_index] so that we can quickly get to the level holding an element when we
       [remove] it.
 
       We distinguish between [External_elt] and [Internal_elt], which are the same
-      underneath.  We maintain the invariant that an [Internal_elt] is either [null] or a
-      valid pointer.  On the other hand, [External_elt]s are returned to user code, so
+      underneath. We maintain the invariant that an [Internal_elt] is either [null] or a
+      valid pointer. On the other hand, [External_elt]s are returned to user code, so
       there is no guarantee of validity -- we always validate an [External_elt] before
       doing anything with it.
 
@@ -444,8 +443,8 @@ end = struct
   module Pointer = Pool.Pointer
 
   module Key : sig
-    (** [Interval_num] is the public API.  Everything following in the signature is
-        for internal use. *)
+    (** [Interval_num] is the public API. Everything following in the signature is for
+        internal use. *)
     include Timing_wheel_intf.Interval_num
 
     (** [add_clamp_to_max] doesn't work at all with negative spans *)
@@ -493,6 +492,7 @@ end = struct
     module Span = struct
       include Int63
 
+      let[@inline] ( + ) x y = x + y
       let to_int63 t = t
       let of_int63 i = i
       let scale_int t i = t * of_int i
@@ -500,6 +500,7 @@ end = struct
 
     include Int63
 
+    let[@inline] rem x y = rem x y
     let of_int63 i = i
     let to_int63 t = t
     let add t i = t + i
@@ -521,7 +522,7 @@ end = struct
   module Slots_mask = Key.Slots_mask
 
   module External_elt = struct
-    (** The [pool_slots] here has nothing to do with the slots in a level array.  This is
+    (** The [pool_slots] here has nothing to do with the slots in a level array. This is
         for the slots in the pool tuple representing a level element. *)
     type 'a pool_slots =
       ( Key.t
@@ -567,8 +568,8 @@ end = struct
     val create
       :  'a Pool.t
       -> key:Key.t
-           (** [at] is used when the priority queue is used to implement a timing wheel.  If
-          unused, it will be [Time_ns.epoch]. *)
+           (** [at] is used when the priority queue is used to implement a timing wheel.
+               If unused, it will be [Time_ns.epoch]. *)
       -> at:Time_ns.t
       -> value:'a
       -> level_index:int
@@ -590,21 +591,21 @@ end = struct
     val set_at : 'a Pool.t -> 'a t -> Time_ns.t -> unit
     val set_level_index : 'a Pool.t -> 'a t -> int -> unit
 
-    (** [insert_at_end pool t ~to_add] treats [t] as the head of the list and adds [to_add]
-        to the end of it. *)
+    (** [insert_at_end pool t ~to_add] treats [t] as the head of the list and adds
+        [to_add] to the end of it. *)
     val insert_at_end : 'a Pool.t -> 'a t -> to_add:'a t -> unit
 
     (** [link_to_self pool t] makes [t] be a singleton circular doubly-linked list. *)
     val link_to_self : 'a Pool.t -> 'a t -> unit
 
-    (** [unlink p t] unlinks [t] from the circularly doubly-linked list that it is in.  It
+    (** [unlink p t] unlinks [t] from the circularly doubly-linked list that it is in. It
         changes the pointers of [t]'s [prev] and [next] elts, but not [t]'s [prev] and
-        [next] pointers.  [unlink] is meaningless if [t] is a singleton. *)
+        [next] pointers. [unlink] is meaningless if [t] is a singleton. *)
     val unlink : 'a Pool.t -> 'a t -> unit
 
-    (** Iterators.  [iter p t ~init ~f] visits each element in the doubly-linked list
-        containing [t], starting at [t], and following [next] pointers.  [length] counts
-        by visiting each element in the list. *)
+    (** Iterators. [iter p t ~init ~f] visits each element in the doubly-linked list
+        containing [t], starting at [t], and following [next] pointers. [length] counts by
+        visiting each element in the list. *)
     val iter : 'a Pool.t -> 'a t -> f:('a t -> unit) -> unit
 
     val length : 'a Pool.t -> 'a t -> int
@@ -642,7 +643,7 @@ end = struct
     let external_is_valid = is_valid
 
     let invariant pool invariant_a t =
-      Invariant.invariant [%here] t [%sexp_of: _ t] (fun () ->
+      Invariant.invariant t [%sexp_of: _ t] (fun () ->
         assert (is_valid pool t);
         invariant_a (value pool t);
         let n = next pool t in
@@ -751,7 +752,7 @@ end = struct
          | higher levels | this level | lower levels |
         v}
 
-        "Lower levels" is [bits_per_slot] bits wide.  "This level" is [bits] wide. *)
+        "Lower levels" is [bits_per_slot] bits wide. "This level" is [bits] wide. *)
     type 'a t =
       { (* The [index] in the timing wheel's array of levels where this level is. *)
         index : int
@@ -890,7 +891,7 @@ end = struct
   let invariant invariant_a t : unit =
     let pool = t.pool in
     let level_invariant level =
-      Invariant.invariant [%here] level [%sexp_of: _ Level.t] (fun () ->
+      Invariant.invariant level [%sexp_of: _ Level.t] (fun () ->
         let check f = Invariant.check_field level f in
         Level.Fields.iter
           ~index:(check (fun index -> assert (index >= 0)))
@@ -957,7 +958,7 @@ end = struct
                      assert (Internal_elt.level_index pool elt = level.index);
                      invariant_a (Internal_elt.value pool elt)))))))
     in
-    Invariant.invariant [%here] t [%sexp_of: _ t_internal] (fun () ->
+    Invariant.invariant t [%sexp_of: _ t_internal] (fun () ->
       let check f = Invariant.check_field t f in
       assert (Key.( >= ) (min_allowed_key t) Key.zero);
       assert (Key.( >= ) (max_allowed_key t) (min_allowed_key t));
@@ -998,7 +999,7 @@ end = struct
                         ~prev_level_max_allowed_key:prev_level.max_allowed_key))))))
   ;;
 
-  (** [min_elt_] returns [null] if it can't find the desired element.  We wrap it up
+  (** [min_elt_] returns [null] if it can't find the desired element. We wrap it up
       afterwards to return an [option]. *)
   let min_elt_ t =
     if is_empty t
@@ -1143,8 +1144,8 @@ end = struct
   ;;
 
   (** [remove_or_re_add_elts] visits each element in the circular doubly-linked list
-      [first].  If the element's key is [>= t_min_allowed_key], then it adds the element
-      back at a lower level.  If not, then it calls [handle_removed] and [free]s the
+      [first]. If the element's key is [>= t_min_allowed_key], then it adds the element
+      back at a lower level. If not, then it calls [handle_removed] and [free]s the
       element. *)
   let remove_or_re_add_elts t (level : _ Level.t) first ~t_min_allowed_key ~handle_removed
     =
@@ -1168,7 +1169,7 @@ end = struct
 
   (** [increase_level_min_allowed_key] increases the [min_allowed_key] of [level] to as
       large a value as possible, but no more than [max_level_min_allowed_key].
-      [t_min_allowed_key] is the minimum allowed key for the entire timing wheel.  As
+      [t_min_allowed_key] is the minimum allowed key for the entire timing wheel. As
       elements are encountered, they are removed from the timing wheel if their key is
       smaller than [t_min_allowed_key], or added at a lower level if not. *)
   let increase_level_min_allowed_key
@@ -1604,7 +1605,7 @@ let max_allowed_alarm_interval_num t = interval_num t (max_allowed_alarm_time t)
 let interval_start t time = interval_num_start_unchecked t (interval_num t time)
 
 let invariant invariant_a t =
-  Invariant.invariant [%here] t [%sexp_of: _ t] (fun () ->
+  Invariant.invariant t [%sexp_of: _ t] (fun () ->
     let check f = Invariant.check_field t f in
     Fields.iter
       ~config:(check Config.invariant)

@@ -3,7 +3,7 @@ open! Import
 
 module type Slots = sig
   (** [Slots] has types [t1], ..., [t12] of arities 1 to 12 that are isomorphic to tuple
-      types of the corresponding arities.  Type [('a0, ..., 'a<N-1>) t<N>] corresponds to
+      types of the corresponding arities. Type [('a0, ..., 'a<N-1>) t<N>] corresponds to
       ['a0 * ... * 'a<N-1>].
 
       Each type [ti] is an instance of type [('tuple, 'variant) t], in which ['tuple] is
@@ -25,12 +25,10 @@ module type Slots = sig
       definition expands to:
 
       {[
-        type 'a slots = [ `Slots of ('a * 'a slots Pointer.t,
-                                     [ `S0 of 'a
-                                     | `S1 of 'a slots Pointer.t
-                                     ]
-                                    ) u
-                        ]
+        type 'a slots =
+          [ `Slots of
+            ('a * 'a slots Pointer.t, [ `S0 of 'a | `S1 of 'a slots Pointer.t ]) u
+          ]
       ]}
 
       Ultimately, a [Slots.t] is used as a phantom type that ensures consistent usage of

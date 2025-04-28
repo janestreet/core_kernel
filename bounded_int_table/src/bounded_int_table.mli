@@ -4,10 +4,10 @@
     is willing to pay a space cost for the speed.
 
     [Bounded_int_table] presents a subset of the [Hashtbl] interface. The key type can be
-    any type, but table creation requires a [key_to_int] function, which will be used
-    to extract the integer of all keys. If multiple keys map to the same integer, then
-    only one of them can be in the table at a time. Any operation that supplies a key
-    whose corresponding integer is outside the allowed range for the table will cause an
+    any type, but table creation requires a [key_to_int] function, which will be used to
+    extract the integer of all keys. If multiple keys map to the same integer, then only
+    one of them can be in the table at a time. Any operation that supplies a key whose
+    corresponding integer is outside the allowed range for the table will cause an
     exception.
 
     A [Bounded_int_table] is implemented using two fixed-size arrays of size [num_keys],
@@ -16,8 +16,7 @@
     single element ([find], [mem], [add], [remove], [set]) take constant time, and perform
     one or two array operations. Operations that deal with all of the keys defined in the
     table ([data], [fold], [iter], [keys], [to_alist]) take time proportional to the
-    [length] of the table, not [num_keys].
-*)
+    [length] of the table, not [num_keys]. *)
 
 open! Core
 
@@ -27,11 +26,11 @@ type ('a, 'b) table = ('a, 'b) t
 include Invariant.S2 with type ('a, 'b) t := ('a, 'b) t
 
 (** Equality only requires the keys and values to be the same, not the bin or sexp
-    formatting or the integers the keys correspond to (see [key_to_int]).*)
+    formatting or the integers the keys correspond to (see [key_to_int]). *)
 include Equal.S2 with type ('a, 'b) t := ('a, 'b) t
 
-(** [create ~num_keys ~key_to_int] returns a table where the keys can map to 0
-    ... [num_keys] - 1, according to [key_to_int]. It is an error if [num_keys < 0].
+(** [create ~num_keys ~key_to_int] returns a table where the keys can map to 0 ...
+    [num_keys] - 1, according to [key_to_int]. It is an error if [num_keys < 0].
 
     [sexp_of_key], if supplied, will be used to display keys in error messages. *)
 val create

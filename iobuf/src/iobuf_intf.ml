@@ -1,279 +1,66 @@
-(** See {{!Iobuf}[Iobuf]} for documentation. *)
-
 open! Core
 
 module Definitions = struct
-  (** [no_seek] and [seek] are phantom types used in a similar manner to [read] and
-    [read_write]. *)
-
-  (** Like [read]. *)
-  type no_seek [@@deriving sexp_of]
-
-  (** Like [read_write]. *)
-  type seek = private no_seek [@@deriving sexp_of]
-
-  (** Collections of access functions.  These abstract over [Iobuf.Consume], [Iobuf.Fill],
-    [Iobuf.Peek], and [Iobuf.Poke].
-
-    Make all labeled arguments mandatory in [string] and [bigstring] to avoid accidental
-    allocation in, e.g., [Iobuf.Poke.string].  For convenience, [stringo] and [bigstringo]
-    are available by analogy between [blit] and [blito].
-
-    [_trunc] functions silently truncate values that don't fit.  For example,
-    [Iobuf.Unsafe.Poke.int8 128] effectively writes -128. *)
-  module type Accessors_common = sig
-    (** [('d, 'w) Iobuf.t] accessor function manipulating ['a], either writing it to the
-      iobuf or reading it from the iobuf. *)
-
-    type ('a, 'd, 'w) t constraint 'd = [> read ]
-    type ('a, 'd, 'w) t_local constraint 'd = [> read ]
-    type 'a bin_prot
-
-    val char : (char, 'd, 'w) t
-    val bin_prot : 'a bin_prot -> ('a, 'd, 'w) t
-  end
-
-  module type Accessors_read = sig
-    include Accessors_common
-
-    val int8 : (int, 'd, 'w) t
-    val int16_be : (int, 'd, 'w) t
-    val int16_le : (int, 'd, 'w) t
-    val int32_be : (int, 'd, 'w) t
-    val int32_le : (int, 'd, 'w) t
-    val int64_be_exn : (int, 'd, 'w) t
-    val int64_le_exn : (int, 'd, 'w) t
-    val int64_be_trunc : (int, 'd, 'w) t
-    val int64_le_trunc : (int, 'd, 'w) t
-    val uint8 : (int, 'd, 'w) t
-    val uint16_be : (int, 'd, 'w) t
-    val uint16_le : (int, 'd, 'w) t
-    val uint32_be : (int, 'd, 'w) t
-    val uint32_le : (int, 'd, 'w) t
-    val uint64_be_exn : (int, 'd, 'w) t
-    val uint64_le_exn : (int, 'd, 'w) t
-    val int64_t_be : (Int64.t, 'd, 'w) t
-    val int64_t_le : (Int64.t, 'd, 'w) t
-    val head_padded_fixed_string : padding:char -> len:int -> (string, 'd, 'w) t
-    val tail_padded_fixed_string : padding:char -> len:int -> (string, 'd, 'w) t
-    val string : str_pos:int -> len:int -> (string, 'd, 'w) t
-    val bytes : str_pos:int -> len:int -> (Bytes.t, 'd, 'w) t
-    val bigstring : str_pos:int -> len:int -> (Bigstring.t, 'd, 'w) t
-    val stringo : ?str_pos:int -> ?len:int -> (string, 'd, 'w) t
-    val byteso : ?str_pos:int -> ?len:int -> (Bytes.t, 'd, 'w) t
-    val bigstringo : ?str_pos:int -> ?len:int -> (Bigstring.t, 'd, 'w) t
-
-    module Local : sig
-      val int64_t_be : (Int64.t, 'd, 'w) t_local
-      val int64_t_le : (Int64.t, 'd, 'w) t_local
-      val head_padded_fixed_string : padding:char -> len:int -> (string, 'd, 'w) t_local
-      val tail_padded_fixed_string : padding:char -> len:int -> (string, 'd, 'w) t_local
-      val string : str_pos:int -> len:int -> (string, 'd, 'w) t_local
-      val bytes : str_pos:int -> len:int -> (Bytes.t, 'd, 'w) t_local
-      val stringo : ?str_pos:int -> ?len:int -> (string, 'd, 'w) t_local
-      val byteso : ?str_pos:int -> ?len:int -> (Bytes.t, 'd, 'w) t_local
-    end
-
-    module Int_repr : sig
-      val int8 : (Int_repr.Int8.t, 'd, 'w) t
-      val int16_be : (Int_repr.Int16.t, 'd, 'w) t
-      val int16_le : (Int_repr.Int16.t, 'd, 'w) t
-      val int32_be : (Int_repr.Int32.t, 'd, 'w) t
-      val int32_le : (Int_repr.Int32.t, 'd, 'w) t
-      val int64_be : (Int_repr.Int64.t, 'd, 'w) t
-      val int64_le : (Int_repr.Int64.t, 'd, 'w) t
-      val uint8 : (Int_repr.Uint8.t, 'd, 'w) t
-      val uint16_be : (Int_repr.Uint16.t, 'd, 'w) t
-      val uint16_le : (Int_repr.Uint16.t, 'd, 'w) t
-      val uint32_be : (Int_repr.Uint32.t, 'd, 'w) t
-      val uint32_le : (Int_repr.Uint32.t, 'd, 'w) t
-      val uint64_be : (Int_repr.Uint64.t, 'd, 'w) t
-      val uint64_le : (Int_repr.Uint64.t, 'd, 'w) t
-    end
-  end
-
-  module type Accessors_write = sig
-    include Accessors_common
-
-    val int8_trunc : (int, 'd, 'w) t
-    val int16_be_trunc : (int, 'd, 'w) t
-    val int16_le_trunc : (int, 'd, 'w) t
-    val int32_be_trunc : (int, 'd, 'w) t
-    val int32_le_trunc : (int, 'd, 'w) t
-    val int64_be : (int, 'd, 'w) t
-    val int64_le : (int, 'd, 'w) t
-    val uint8_trunc : (int, 'd, 'w) t
-    val uint16_be_trunc : (int, 'd, 'w) t
-    val uint16_le_trunc : (int, 'd, 'w) t
-    val uint32_be_trunc : (int, 'd, 'w) t
-    val uint32_le_trunc : (int, 'd, 'w) t
-    val uint64_be_trunc : (int, 'd, 'w) t
-    val uint64_le_trunc : (int, 'd, 'w) t
-    val int64_t_be : (Int64.t, 'd, 'w) t_local
-    val int64_t_le : (Int64.t, 'd, 'w) t_local
-    val head_padded_fixed_string : padding:char -> len:int -> (string, 'd, 'w) t_local
-    val tail_padded_fixed_string : padding:char -> len:int -> (string, 'd, 'w) t_local
-    val string : str_pos:int -> len:int -> (string, 'd, 'w) t_local
-    val bytes : str_pos:int -> len:int -> (Bytes.t, 'd, 'w) t_local
-    val bigstring : str_pos:int -> len:int -> (Bigstring.t, 'd, 'w) t_local
-    val stringo : ?str_pos:int -> ?len:int -> (string, 'd, 'w) t_local
-    val byteso : ?str_pos:int -> ?len:int -> (Bytes.t, 'd, 'w) t_local
-    val bigstringo : ?str_pos:int -> ?len:int -> (Bigstring.t, 'd, 'w) t_local
-
-    module Int_repr : sig
-      val int8 : (Int_repr.Int8.t, 'd, 'w) t
-      val int16_be : (Int_repr.Int16.t, 'd, 'w) t
-      val int16_le : (Int_repr.Int16.t, 'd, 'w) t
-      val int32_be : (Int_repr.Int32.t, 'd, 'w) t
-      val int32_le : (Int_repr.Int32.t, 'd, 'w) t
-      val int64_be : (Int_repr.Int64.t, 'd, 'w) t
-      val int64_le : (Int_repr.Int64.t, 'd, 'w) t
-      val uint8 : (Int_repr.Uint8.t, 'd, 'w) t
-      val uint16_be : (Int_repr.Uint16.t, 'd, 'w) t
-      val uint16_le : (Int_repr.Uint16.t, 'd, 'w) t
-      val uint32_be : (Int_repr.Uint32.t, 'd, 'w) t
-      val uint32_le : (Int_repr.Uint32.t, 'd, 'w) t
-      val uint64_be : (Int_repr.Uint64.t, 'd, 'w) t
-      val uint64_le : (Int_repr.Uint64.t, 'd, 'w) t
-    end
-  end
-
-  (** An iobuf window bound, either upper or lower.  You can't see its int value, but you
-    can save and restore it. *)
-  module type Bound = sig
-    type ('d, 'w) iobuf
-
-    type t = private int (*_ performance hack: avoid the write barrier *)
-    [@@deriving compare, sexp_of]
-
-    val window : (_, _) iobuf -> t
-    val limit : (_, _) iobuf -> t
-    val restore : t -> (_, seek) iobuf -> unit
-  end
-
-  (** The [src_pos] argument of {!Core.Blit.blit} doesn't make sense here. *)
-
-  type ('src, 'dst) consuming_blit =
-    src:'src -> dst:'dst -> dst_pos:int -> len:int -> unit
-
-  type ('src, 'dst) consuming_blito =
-    src:'src
-    -> ?src_len:int (** Default is [Iobuf.length src]. *)
-    -> dst:'dst
-    -> ?dst_pos:int (** Default is [0]. *)
-    -> unit
-    -> unit
-
-  module type Consuming_blit = sig
-    type src
-    type dst
-
-    val blito : (src, dst) consuming_blito
-    val blit : (src, dst) consuming_blit
-    val unsafe_blit : (src, dst) consuming_blit
-
-    (** [subo] defaults to using [Iobuf.length src] *)
-    val subo : ?len:int -> src -> dst
-
-    val sub : src -> len:int -> dst
-  end
-
-  module type Compound_hexdump = sig
-    type ('rw, 'seek) t
-
-    module Hexdump : sig
-      type nonrec ('rw, 'seek) t = ('rw, 'seek) t [@@deriving sexp_of]
-
-      val to_string_hum : ?max_lines:int -> (_, _) t -> string
-      val to_sequence : ?max_lines:int -> (_, _) t -> string Sequence.t
-    end
-  end
-
-  module type Peek = sig
-    type ('rw, 'seek) iobuf
-    type 'seek src = (read, 'seek) iobuf
-
-    (** Similar to [Consume.To_*], but do not advance the buffer. *)
-
-    module To_bytes :
-      Blit.S1_distinct with type 'seek src := 'seek src with type _ dst := Bytes.t
-
-    module To_bigstring :
-      Blit.S1_distinct with type 'seek src := 'seek src with type _ dst := Bigstring.t
-
-    module To_string : sig
-      val sub : (_ src, string) Base.Blit.sub
-      val subo : (_ src, string) Base.Blit.subo
-    end
-
-    include
-      Accessors_read
-      with type ('a, 'd, 'w) t = ('d, 'w) iobuf -> pos:int -> 'a
-      with type ('a, 'd, 'w) t_local = ('d, 'w) iobuf -> pos:int -> 'a
-      with type 'a bin_prot := 'a Bin_prot.Type_class.reader
-  end
+  include Iobuf_basic_intf.Definitions
+  include Iobuf_bin_io_intf.Definitions
+  include Iobuf_blit_intf.Definitions
+  include Iobuf_expert_intf.Definitions
+  include Iobuf_hexdump_intf.Definitions
+  include Iobuf_numeric_intf.Definitions
+  include Iobuf_safe_intf.Definitions
+  include Iobuf_type_intf.Definitions
+  include Iobuf_unsafe_intf.Definitions
 end
 
 module type Iobuf = sig
+  (** A non-moving (in the GC sense) contiguous range of bytes, useful for I/O operations.
+
+      An iobuf consists of:
+
+      - bigstring
+      - limits -- a subrange of the bigstring
+      - window -- a subrange of the limits
+
+      All iobuf operations are restricted to operate within the limits. Initially, the
+      window of an iobuf is identical to its limits. A phantom type, the "seek"
+      permission, controls whether or not code is allowed to change the limits and window.
+      With seek permission, the limits can be [narrow]ed, but can never be widened, and
+      the window can be set to an arbitrary subrange of the limits.
+
+      A phantom type controls whether code can read and write bytes in the bigstring
+      (within the limits) or can only read them.
+
+      To present a restricted view of an iobuf to a client, one can create a sub-iobuf or
+      add a type constraint.
+
+      Functions operate on the window unless the documentation or naming indicates
+      otherwise. *)
+
   include module type of struct
     include Definitions
   end
 
-  (** A non-moving (in the GC sense) contiguous range of bytes, useful for I/O operations.
+  module Repr : sig
+    (** This type is a compiler witness that 'rw and 'seek do not affect layout; it
+        enables wider use of unboxed GADTs. *)
+    type t
+  end
 
-    An iobuf consists of:
+  (** The first type parameter controls whether the iobuf can be written to. The second
+      type parameter controls whether the window and limits can be changed.
 
-    - bigstring
-    - limits -- a subrange of the bigstring
-    - window -- a subrange of the limits
+      See the [Perms] module for information on how the first type parameter is used.
 
-    All iobuf operations are restricted to operate within the limits.  Initially, the
-    window of an iobuf is identical to its limits.  A phantom type, the "seek" permission,
-    controls whether or not code is allowed to change the limits and window.  With seek
-    permission, the limits can be [narrow]ed, but can never be widened, and the window can
-    be set to an arbitrary subrange of the limits.
+      To allow [no_seek] or [seek] access, a function's type uses [_] rather than
+      [no_seek] as the type argument to [t]. Using [_] allows the function to be directly
+      applied to either permission. Using a specific permission would require code to use
+      coercion [:>].
 
-    A phantom type controls whether code can read and write bytes in the bigstring (within
-    the limits) or can only read them.
+      There is no [t_of_sexp]. One should use [Iobuf.Hexdump.t_of_sexp] or [@sexp.opaque]
+      as desired. *)
+  type (-'data_perm_read_write, +'seek_permission) t = private Repr.t
 
-    To present a restricted view of an iobuf to a client, one can create a sub-iobuf or
-    add a type constraint.
-
-    Functions operate on the window unless the documentation or naming indicates
-    otherwise. *)
-
-  type nonrec seek = seek [@@deriving globalize, sexp_of]
-  type nonrec no_seek = no_seek [@@deriving globalize, sexp_of]
-
-  (** This type is a compiler witness that 'rw and 'seek do not affect layout; it enables
-    wider use of unboxed GADTs. *)
-  type t_repr
-
-  (** The first type parameter controls whether the iobuf can be written to.  The second
-    type parameter controls whether the window and limits can be changed.
-
-    See the [Perms] module for information on how the first type parameter is used.
-
-    To allow [no_seek] or [seek] access, a function's type uses [_] rather than [no_seek]
-    as the type argument to [t].  Using [_] allows the function to be directly applied to
-    either permission.  Using a specific permission would require code to use coercion
-    [:>].
-
-    There is no [t_of_sexp].  One should use [Iobuf.Hexdump.t_of_sexp] or [@sexp.opaque]
-    as desired. *)
-  type (-'data_perm_read_write, +'seek_permission) t = private t_repr
-
-  val globalize : _ -> _ -> ('rw, _) t -> ('rw, _) t
-
-  type ('rw, 'seek) iobuf := ('rw, 'seek) t
-
-  (** [t_with_shallow_sexp] has a [sexp_of] that shows the windows and limits of
-    the underlying bigstring, but no data. We do this rather than deriving sexp_of
-    on [t] because it is much more likely to be noise than useful information, and
-    so callers should probably not display the iobuf at all. *)
-  type ('rw, 'seek) t_with_shallow_sexp = ('rw, 'seek) t [@@deriving sexp_of, globalize]
-
-  include Invariant.S2 with type ('rw, 'seek) t := ('rw, 'seek) t
+  include Basic with type ('rw, 'seek) t := ('rw, 'seek) t
 
   (** Provides a [Window.Hexdump] submodule that renders the contents of [t]'s window. *)
   module Window : Hexdump.S2 with type ('rw, 'seek) t := ('rw, 'seek) t
@@ -282,725 +69,73 @@ module type Iobuf = sig
   module Limits : Hexdump.S2 with type ('rw, 'seek) t := ('rw, 'seek) t
 
   (** Provides a [Hexdump] submodule that renders the contents of [t]'s window and limits
-    using indices relative to the limits. *)
-  include Compound_hexdump with type ('rw, 'seek) t := ('rw, 'seek) t
+      using indices relative to the limits. *)
+  module Hexdump : Hexdump_all with type ('rw, 'seek) t = ('rw, 'seek) t
 
   (** Provides a [Debug.Hexdump] submodule that renders the contents of [t]'s window,
-    limits, and underlying bigstring using indices relative to the bigstring. *)
-  module Debug : Compound_hexdump with type ('rw, 'seek) t := ('rw, 'seek) t
-
-  (** {2 Creation} *)
-
-  (** [create ~len] creates a new iobuf, backed by a bigstring of length [len],
-    with the limits and window set to the entire bigstring. *)
-  val create : len:int -> (_, _) t
-
-  (** [empty] is an immutable [t] of size 0. *)
-  val empty : (read, no_seek) t
-
-  (** [of_bigstring bigstring ~pos ~len] returns an iobuf backed by [bigstring], with the
-    window and limits specified starting at [pos] and of length [len]. *)
-  val of_bigstring
-    :  ?pos:int (** default is [0] *)
-    -> ?len:int (** default is [Bigstring.length bigstring - pos] *)
-    -> Bigstring.t
-    -> ([< read_write ], _) t
-  (** forbid [immutable] to prevent aliasing *)
-
-  (** [of_bigstring_local] is like [of_bigstring], but it allocates the iobuf record
-    locally.*)
-  val of_bigstring_local : ?pos:int -> ?len:int -> Bigstring.t -> ([< read_write ], _) t
-
-  (** More efficient than the above (optional arguments are costly). *)
-  val unsafe_bigstring_view : pos:int -> len:int -> Bigstring.t -> ([< read_write ], _) t
-
-  val bigstring_view : pos:int -> len:int -> Bigstring.t -> ([< read_write ], _) t
-
-  (** [of_string s] returns a new iobuf whose contents are [s]. *)
-  val of_string : string -> (_, _) t
-
-  (** [of_string_local] is like [of_string], but it allocates the iobuf record locally.
-      This still performs global allocation of the backing buffer. *)
-  val of_string_local : string -> (_, _) t
-
-  (** [sub_shared t ~pos ~len] returns a new iobuf with limits and window set to the
-    subrange of [t]'s window specified by [pos] and [len].  [sub_shared] preserves data
-    permissions, but allows arbitrary seek permissions on the resulting iobuf. *)
-  val sub_shared : ?pos:int -> ?len:int -> ('d, _) t -> ('d, _) t
-
-  (** [sub_shared_local] is like [sub_shared], but it allocates the iobuf record locally. *)
-  val sub_shared_local : ?pos:int -> ?len:int -> ('d, _) t -> ('d, _) t
-
-  (** More efficient than the above (optional arguments are costly). *)
-  val unsafe_sub_shared : pos:int -> len:int -> ('d, _) t -> ('d, _) t
-
-  (** [copy t] returns a new iobuf whose contents are the same as those in the window of
-    [t]. *)
-  val copy : (_, _) t -> (_, _) t
-
-  (** [clone t] returns a new iobuf that is a deep-copy of [t] including an exact copy of
-    the underlying buffer and bounds. This means data outside the window is copied as
-    well. *)
-  val clone : (_, _) t -> (_, _) t
-
-  (** [transfer ~src ~dst] makes the window of [dst] into a copy of the window of [src].
-    Like [blito], [transfer] will raise if [Iobuf.length dst] < [Iobuf.length src].
-
-    It is a utility function defined as [reset dst; blito ~src ~dst; flip_lo dst]. *)
-  val transfer : src:([> read ], _) t -> dst:([> write ], seek) t -> unit
-
-  (** [set_bounds_and_buffer ~src ~dst] copies bounds metadata (i.e., limits and window) and
-    shallowly copies the buffer (data pointer) from [src] to [dst].  It does not access
-    data, but does allow access through [dst].  This makes [dst] an alias of [src].
-
-    Because [set_bounds_and_buffer] creates an alias, we disallow immutable [src] and
-    [dst] using [[> write]].  Otherwise, one of [src] or [dst] could be [read_write :>
-    read] and the other [immutable :> read], which would allow you to write the
-    [immutable] alias's data through the [read_write] alias.
-
-    [set_bounds_and_buffer] is typically used with a frame iobuf that need only be
-    allocated once.  This frame can be updated repeatedly and handed to users, without
-    further allocation.  Allocation-sensitive applications need this. *)
-  val set_bounds_and_buffer
-    :  src:(([> write ] as 'data), _) t
-    -> dst:('data, seek) t
-    -> unit
-
-  (** [set_bounds_and_buffer_sub ~pos ~len ~src ~dst] is a more efficient version of
-    [set_bounds_and_buffer ~src:(Iobuf.sub_shared ~pos ~len src) ~dst].
-
-    [set_bounds_and_buffer ~src ~dst] is not the same as [set_bounds_and_buffer_sub ~dst
-    ~src ~len:(Iobuf.length src)] because the limits are narrowed in the latter case.
-
-    [~len] and [~pos] are mandatory for performance reasons, in concert with [@@inline].
-    If they were optional, allocation would be necessary when passing a non-default,
-    non-constant value, which is an important use case. *)
-  val set_bounds_and_buffer_sub
-    :  pos:int
-    -> len:int
-    -> src:(([> write ] as 'data), _) t
-    -> dst:('data, seek) t
-    -> unit
-
-  (** {2 Generalization}
-
-    One may wonder why you'd want to call [no_seek], given that a cast is already
-    possible, e.g., [t : (_, seek) t :> (_, no_seek) t].  It turns out that if you want to
-    define some [f : (_, _) t -> unit] of your own that can be conveniently applied to
-    [seek] iobufs without the user having to cast [seek] up, you need this [no_seek]
-    function.
-
-    [read_only] is more of a historical convenience now that [read_write] is a polymorphic
-    variant, as one can now explicitly specify the general type for an argument with
-    something like [t : (_ perms, _) t :> (read, _) t]. *)
-
-  val read_only : ([> read ], 's) t -> (read, 's) t
-  val read_only_local : ([> read ], 's) t -> (read, 's) t
-  val no_seek : ('r, _) t -> ('r, no_seek) t
-  val no_seek_local : ('r, _) t -> ('r, no_seek) t
-
-  (** {2 Accessors} *)
-
-  (** [capacity t] returns the size of [t]'s limits subrange.  The capacity of an iobuf can
-    be reduced via [narrow]. *)
-  val capacity : (_, _) t -> int
-
-  (** [length t] returns the size of [t]'s window. *)
-  val length : (_, _) t -> int
-
-  (** [length_lo t] returns the length that [t]'s window would have after calling [flip_lo],
-    without actually changing the window. This is the number of bytes between the lower
-    limit and the start of the window.
-
-    When you're writing to the window, you can think of this as the number of bytes
-    already written. When reading from the window, this can mean the number of bytes
-    already consumed.
-
-    This is equivalent to: {[ Iobuf.Expert.(lo t - lo_min t)]}. *)
-  val length_lo : (_, _) t -> int
-
-  (** [length_hi t] returns the length that [t]'s window would have after calling [flip_hi],
-    without actually changing the window. This is the number of bytes between the end of
-    the window and the upper limit of the buffer.
-
-    This is equivalent to: {[ Iobuf.Expert.(hi_max t - hi t) ]}. *)
-  val length_hi : (_, _) t -> int
-
-  (** [is_empty t] is [length t = 0]. *)
-  val is_empty : (_, _) t -> bool
-
-  (** {2 Changing the limits} *)
-
-  (** [narrow t] sets [t]'s limits to the current window. *)
-  val narrow : (_, seek) t -> unit
-
-  (** [narrow_lo t] sets [t]'s lower limit to the beginning of the current window. *)
-  val narrow_lo : (_, seek) t -> unit
-
-  (** [narrow_hi t] sets [t]'s upper limit to the end of the current window. *)
-  val narrow_hi : (_, seek) t -> unit
-
-  (** {2 Comparison} *)
-
-  (** [memcmp a b] first compares the length of [a] and [b]'s windows and then compares the
-    bytes in the windows for equivalence. *)
-  val memcmp : (_, _) t -> (_, _) t -> int
-
-  (** {2 Changing the window} *)
-
-  (** One can call [Lo_bound.window t] to get a snapshot of the lower bound of the window,
-    and then later restore that snapshot with [Lo_bound.restore].  This is useful for
-    speculatively parsing, and then rewinding when there isn't enough data to finish.
-
-    Similarly for [Hi_bound.window] and [Lo_bound.restore].
-
-    Using a snapshot with a different iobuf, even a sub iobuf of the snapshotted one, has
-    unspecified results.  An exception may be raised, or a silent error may occur.
-    However, the safety guarantees of the iobuf will not be violated, i.e., the attempt
-    will not enlarge the limits of the subject iobuf. *)
-
-  module type Bound = Bound with type ('d, 'w) iobuf := ('d, 'w) t
-
-  module Lo_bound : Bound
-  module Hi_bound : Bound
-
-  (** [advance t amount] advances the lower bound of the window by [amount].  It is an error
-    to advance past the upper bound of the window or the lower limit. *)
-  val advance : (_, seek) t -> int -> unit
-
-  (** [unsafe_advance] is like [advance] but with no bounds checking, so incorrect usage can
-    easily cause segfaults. *)
-  val unsafe_advance : (_, seek) t -> int -> unit
-
-  (** [resize t] sets the length of [t]'s window, provided it does not exceed limits. *)
-  val resize : (_, seek) t -> len:int -> unit
-
-  (** [unsafe_resize] is like [resize] but with no bounds checking, so incorrect usage can
-    easily cause segfaults. *)
-  val unsafe_resize : (_, seek) t -> len:int -> unit
-
-  (** [rewind t] sets the lower bound of the window to the lower limit. *)
-  val rewind : (_, seek) t -> unit
-
-  (** [reset t] sets the window to the limits. *)
-  val reset : (_, seek) t -> unit
-
-  (** [flip_lo t] sets the window to range from the lower limit to the lower bound of the
-    old window.  This is typically called after a series of [Fill]s, to reposition the
-    window in preparation to [Consume] the newly written data.
-
-    The bounded version narrows the effective limit.  This can preserve some data near the
-    limit, such as a hypothetical packet header (in the case of [bounded_flip_lo]) or
-    unfilled suffix of a buffer (in [bounded_flip_hi]). *)
-  val flip_lo : (_, seek) t -> unit
-
-  val bounded_flip_lo : (_, seek) t -> Lo_bound.t -> unit
-
-  (** [compact t] copies data from the window to the lower limit of the iobuf and sets the
-    window to range from the end of the copied data to the upper limit.  This is typically
-    called after a series of [Consume]s to save unread data and prepare for the next
-    series of [Fill]s and [flip_lo]. *)
-  val compact : (read_write, seek) t -> unit
-
-  val bounded_compact : (read_write, seek) t -> Lo_bound.t -> Hi_bound.t -> unit
-
-  (** [flip_hi t] sets the window to range from the the upper bound of the current window to
-    the upper limit.  This operation is dual to [flip_lo] and is typically called when the
-    data in the current (narrowed) window has been processed and the window needs to be
-    positioned over the remaining data in the buffer.  For example:
-
-    {[
-      (* ... determine initial_data_len ... *)
-      Iobuf.resize buf ~len:initial_data_len;
-      (* ... and process initial data ... *)
-      Iobuf.flip_hi buf;
-    ]}
-
-    Now the window of [buf] ranges over the remainder of the data. *)
-  val flip_hi : (_, seek) t -> unit
-
-  val bounded_flip_hi : (_, seek) t -> Hi_bound.t -> unit
-
-  (** [protect_window_bounds_and_buffer t ~f] calls [f t] with [t]'s bounds set to its current
-    window, and restores [t]'s window, bounds, and buffer afterward. *)
-  val protect_window_bounds_and_buffer : ('rw, no_seek) t -> f:(('rw, seek) t -> 'a) -> 'a
-
-  (** [protect_window_bounds_and_buffer_local] is similar to
-    [protect_window_bounds_and_buffer] except that it returns a local value *)
-  val protect_window_bounds_and_buffer_local
-    :  ('rw, no_seek) t
-    -> f:(('rw, seek) t -> 'a)
-    -> 'a
-
-  (** [protect_window_bounds_and_buffer_1 t x ~f] is a more efficient version of
-    [protect_window_bounds_and_buffer t ~f:(fun t -> f t x)]. *)
-  val protect_window_bounds_and_buffer_1
-    :  ('rw, no_seek) t
-    -> 'a
-    -> f:(('rw, seek) t -> 'a -> 'b)
-    -> 'b
-
-  (** [protect_window_bounds_and_buffer_2 t x y ~f] is a more efficient version of
-    [protect_window_bounds_and_buffer t ~f:(fun t -> f t x y)]. *)
-  val protect_window_bounds_and_buffer_2
-    :  ('rw, no_seek) t
-    -> 'a
-    -> 'b
-    -> f:(('rw, seek) t -> 'a -> 'b -> 'c)
-    -> 'c
-
-  (** [protect_window_bounds_and_buffer_3 t x y z ~f] is a more efficient version of
-    [protect_window_bounds_and_buffer t ~f:(fun t -> f t x y z)]. *)
-  val protect_window_bounds_and_buffer_3
-    :  ('rw, no_seek) t
-    -> 'a
-    -> 'b
-    -> 'c
-    -> f:(('rw, seek) t -> 'a -> 'b -> 'c -> 'd)
-    -> 'd
-
-  (** {2 Getting and setting data}
-
-    "consume" and "fill" functions access data at the lower bound of the window and
-    advance the lower bound of the window. "peek" and "poke" functions access data but do
-    not advance the window. *)
-
-  (** [to_string t] returns the bytes in [t] as a string.  It does not alter the window. *)
-  val to_string : ?len:int -> ([> read ], _) t -> string
-
-  (** Equivalent to [Hexdump.to_string_hum].  Renders [t]'s windows and limits. *)
-  val to_string_hum : ?max_lines:int -> (_, _) t -> string
-
-  (** [to_bytes t] returns the bytes in [t] as a bytes.  It does not alter the window. *)
-  val to_bytes : ?len:int -> (_, _) t -> Bytes.t
-
-  (** [of_bytes b] returns a new iobuf whose contents is [b]. *)
-  val of_bytes : Bytes.t -> (_, _) t
-
-  module Itoa : sig
-    (** [num_digits x] returns the number of digits in [x].
-      ([num_digits 0] is defined as 1).*)
-    val num_digits : int -> int
+      limits, and underlying bigstring using indices relative to the bigstring. *)
+  module Debug : sig
+    module Hexdump : Hexdump_all with type ('rw, 'seek) t = ('rw, 'seek) t
   end
-
-  module Date_string : sig
-    (** [len_iso8601_extended] is the length (in bytes) of a date in YYYY-MM-DD format,
-      i.e. 10. *)
-    val len_iso8601_extended : int
-  end
-
-  (** [Consume.string t ~len] reads [len] characters (all, by default) from [t] into a new
-    string and advances the lower bound of the window accordingly.
-
-    [Consume.bin_prot X.bin_read_t t] returns the initial [X.t] in [t], advancing past the
-    bytes read. *)
-  module Consume : sig
-    (** [To_bytes.blito ~src ~dst ~dst_pos ~src_len ()] reads [src_len] bytes from [src],
-      advancing [src]'s window accordingly, and writes them into [dst] starting at
-      [dst_pos].  By default [dst_pos = 0] and [src_len = length src].  It is an error if
-      [dst_pos] and [src_len] don't specify a valid region of [dst] or if [src_len >
-      length src]. *)
-    type src = (read, seek) t
-
-    module To_bytes : Consuming_blit with type src := src with type dst := Bytes.t
-    module To_bigstring : Consuming_blit with type src := src with type dst := Bigstring.t
-
-    module To_string : sig
-      (** [subo] defaults to using [Iobuf.length src]. *)
-      val subo : ?len:int -> src -> string
-
-      val sub : src -> len:int -> string
-    end
-
-    include
-      Accessors_read
-      with type ('a, 'r, 's) t = (([> read ] as 'r), seek) t -> 'a
-      with type ('a, 'r, 's) t_local = (([> read ] as 'r), seek) t -> 'a
-      with type 'a bin_prot := 'a Bin_prot.Type_class.reader
-  end
-
-  (** [Fill.bin_prot X.bin_write_t t x] writes [x] to [t] in bin-prot form, advancing past
-    the bytes written. *)
-  module Fill : sig
-    include
-      Accessors_write
-      with type ('a, 'd, 'w) t = (read_write, seek) t -> 'a -> unit
-      with type ('a, 'd, 'w) t_local = (read_write, seek) t -> 'a -> unit
-      with type 'a bin_prot := 'a Bin_prot.Type_class.writer
-
-    (** [decimal t int] is equivalent to [Iobuf.Fill.string t (Int.to_string int)], but with
-      improved efficiency and no intermediate allocation.
-
-      In other words: It fills the decimal representation of [int] to [t].  [t] is
-      advanced by the number of characters written and no terminator is added.  If
-      sufficient space is not available, [decimal] will raise. *)
-    val decimal : (int, _, _) t
-
-    (** Same as [decimal t int], but padding to [len] with prefix '0's. *)
-    val padded_decimal : len:int -> (int, _, _) t
-
-    (** [date_string_iso8601_extended t date] is equivalent to [Iobuf.Fill.string t
-      (Date.to_string date)], but with improved efficiency and no intermediate allocation.
-
-      In other words: It fills the ISO 8601 extended representation (YYYY-MM-DD) of [date]
-      to [t]. [t] is advanced by 10 characters and no terminator is added. If sufficient
-      space is not available, [date] will raise. *)
-    val date_string_iso8601_extended : (Date.t, _, _) t
-
-    (** [bin_prot_local sizer writer bin] is similar to [bin_prot], but allows [bin] to be
-      locally allocated. *)
-    val bin_prot_local
-      :  'a Bin_prot.Size.sizer_local
-      -> 'a Bin_prot.Write.writer_local
-      -> ('a, _, _) t_local
-  end
-
-  (** [Peek] and [Poke] functions access a value at [pos] from the lower bound of the window
-    and do not advance.
-
-    [Peek.bin_prot X.bin_read_t t] returns the initial [X.t] in [t] without advancing.
-
-    Following the [bin_prot] protocol, the representation of [x] is [X.bin_size_t x] bytes
-    long.  [Peek.], [Poke.], [Consume.], and [Fill.bin_prot] do not add any size prefix or
-    other framing to the [bin_prot] representation. *)
-  module Peek : sig
-    include Peek with type ('rw, 'seek) iobuf := ('rw, 'seek) t (** @open *)
-
-    (** [index ?pos ?len t c] returns [Some i] for the smallest [i >= pos] such that [char t
-      i = c], or [None] if there is no such [i].
-
-      @param pos default = 0
-      @param len default = [length t - pos] *)
-    val index : ([> read ], _) iobuf -> ?pos:int -> ?len:int -> char -> int option
-
-    (** [rindex ?pos ?len t c] returns [Some i] for the largest [i >= pos] such that [char t
-      i = c], or [None] if there is no such [i].
-
-      @param pos default = 0
-      @param len default = [length t - pos] *)
-    val rindex : ([> read ], _) iobuf -> ?pos:int -> ?len:int -> char -> int option
-  end
-
-  (** [Poke.bin_prot X.bin_write_t t x] writes [x] to the beginning of [t] in binary form
-    without advancing.  You can use [X.bin_size_t] to tell how long it was.
-    [X.bin_write_t] is only allowed to write that portion of the buffer you have access
-    to. *)
-  module Poke : sig
-    (** [decimal t ~pos i] returns the number of bytes written at [pos]. *)
-    val decimal : (read_write, 'w) t -> pos:int -> int -> int
-
-    (** Same as [decimal t int], but padding to [len] with prefix '0's. *)
-    val padded_decimal : (read_write, 'w) t -> pos:int -> len:int -> int -> int
-
-    (** As [bin_prot] but returns the number of bytes written. *)
-    val bin_prot_size
-      :  'a Bin_prot.Type_class.writer
-      -> (read_write, _) t
-      -> pos:int
-      -> 'a
-      -> int
-
-    include
-      Accessors_write
-      with type ('a, 'd, 'w) t = (read_write, 'w) t -> pos:int -> 'a -> unit
-      with type ('a, 'd, 'w) t_local = (read_write, 'w) t -> pos:int -> 'a -> unit
-      with type 'a bin_prot := 'a Bin_prot.Type_class.writer
-
-    (** Same as [Fill.date_string_iso8601_extended t date], but does not advance [t]. *)
-    val date_string_iso8601_extended : (Date.t, _, _) t
-  end
-
-  (** [Unsafe] has submodules that are like their corresponding module, except with no range
-    checks.  Hence, mistaken uses can cause segfaults.  Be careful! *)
-  module Unsafe : sig
-    module Consume : module type of Consume
-    module Fill : module type of Fill
-
-    module Peek : sig
-      include Peek with type ('rw, 'seek) iobuf := ('rw, 'seek) t (** @open *)
-
-      (** Like [Peek.index] but with no bounds checks, and returns a negative number rather
-        than [None] when the character is not found. *)
-      val index_or_neg : ([> read ], _) iobuf -> ?pos:int -> ?len:int -> char -> int
-
-      (** Like [Peek.rindex] but with no bounds checks, and returns a negative number rather
-        than [None] when the character is not found. *)
-      val rindex_or_neg : ([> read ], _) iobuf -> ?pos:int -> ?len:int -> char -> int
-
-      (** Like [Peek.index] but with no bounds checks. *)
-      val index_local : ([> read ], _) iobuf -> ?pos:int -> ?len:int -> char -> int option
-
-      (** Like [Peek.rindex] but with no bounds checks. *)
-      val rindex_local
-        :  ([> read ], _) iobuf
-        -> ?pos:int
-        -> ?len:int
-        -> char
-        -> int option
-    end
-
-    module Poke : sig
-      include module type of Poke
-
-      (** Like [bin_prot], but skips bin size and bounds checks. Useful for call sites where
-        the size is already known. *)
-      val bin_prot_with_known_size
-        :  'a Bin_prot.Type_class.writer
-        -> (read_write, _) iobuf
-        -> pos:int
-        -> size:int
-        -> 'a
-        -> unit
-    end
-  end
-
-  (** The number of bytes in the length prefix of [consume_bin_prot] and [fill_bin_prot]. *)
-  val bin_prot_length_prefix_bytes : int
-
-  (** [fill_bin_prot] writes a bin-prot value to the lower bound of the window, prefixed by
-    its length, and advances by the amount written.  [fill_bin_prot] returns an error if
-    the window is too small to write the value.
-
-    [consume_bin_prot t reader] reads a bin-prot value from the lower bound of the window,
-    which should have been written using [fill_bin_prot], and advances the window by the
-    amount read.  [consume_bin_prot] returns an error if there is not a complete message
-    in the window and in that case the window is left unchanged.
-
-    Don't use these without a good reason, as they are incompatible with similar functions
-    in [Reader] and [Writer].  They use a 4-byte length rather than an 8-byte length. *)
-  val fill_bin_prot
-    :  ([> write ], seek) t
-    -> 'a Bin_prot.Type_class.writer
-    -> 'a
-    -> unit Or_error.t
-
-  val fill_bin_prot_local
-    :  ([> write ], seek) t
-    -> 'a Bin_prot.Size.sizer_local
-    -> 'a Bin_prot.Write.writer_local
-    -> 'a
-    -> unit Or_error.t
-
-  val consume_bin_prot
-    :  ([> read ], seek) t
-    -> 'a Bin_prot.Type_class.reader
-    -> 'a Or_error.t
 
   (** [Blit] copies between iobufs and advances neither [src] nor [dst]. *)
-  module Blit : sig
-    val blit : (([> read ], _) t, ([> write ], _) t) Base.Blit.blit
-    val blito : (([> read ], _) t, ([> write ], _) t) Base.Blit.blito
-    val unsafe_blit : (([> read ], _) t, ([> write ], _) t) Base.Blit.blit
-    val sub : (([> read ], _) t, (_, _) t) Base.Blit.sub
-    val subo : (([> read ], _) t, (_, _) t) Base.Blit.subo
-
-    (** Copies as much as possible (returning the number of bytes copied) without running
-      out of either buffer's window. *)
-    val blit_maximal
-      :  src:([> read ], _) t
-      -> ?src_pos:int
-      -> dst:([> write ], _) t
-      -> ?dst_pos:int
-      -> unit
-      -> int
-  end
+  module Blit : Blit with type ('rw, 'seek) t := ('rw, 'seek) t
 
   (** [Blit_consume] copies between iobufs and advances [src] but does not advance [dst]. *)
-  module Blit_consume : sig
-    val blit
-      :  src:([> read ], seek) t
-      -> dst:([> write ], _) t
-      -> dst_pos:int
-      -> len:int
-      -> unit
-
-    val blito
-      :  src:([> read ], seek) t
-      -> ?src_len:int
-      -> dst:([> write ], _) t
-      -> ?dst_pos:int
-      -> unit
-      -> unit
-
-    val unsafe_blit
-      :  src:([> read ], seek) t
-      -> dst:([> write ], _) t
-      -> dst_pos:int
-      -> len:int
-      -> unit
-
-    val sub : ([> read ], seek) t -> len:int -> (_, _) t
-    val subo : ?len:int -> ([> read ], seek) t -> (_, _) t
-
-    val blit_maximal
-      :  src:([> read ], seek) t
-      -> dst:([> write ], _) t
-      -> ?dst_pos:int
-      -> unit
-      -> int
-  end
+  module Blit_consume : Blit_consume with type ('rw, 'seek) t := ('rw, 'seek) t
 
   (** [Blit_fill] copies between iobufs and advances [dst] but does not advance [src]. *)
-  module Blit_fill : sig
-    val blit
-      :  src:([> read ], _) t
-      -> src_pos:int
-      -> dst:([> write ], seek) t
-      -> len:int
-      -> unit
-
-    val blito
-      :  src:([> read ], _) t
-      -> ?src_pos:int
-      -> ?src_len:int
-      -> dst:([> write ], seek) t
-      -> unit
-      -> unit
-
-    val unsafe_blit
-      :  src:([> read ], _) t
-      -> src_pos:int
-      -> dst:([> write ], seek) t
-      -> len:int
-      -> unit
-
-    val blit_maximal
-      :  src:([> read ], _) t
-      -> ?src_pos:int
-      -> dst:([> write ], seek) t
-      -> unit
-      -> int
-  end
+  module Blit_fill : Blit_fill with type ('rw, 'seek) t := ('rw, 'seek) t
 
   (** [Blit_consume_and_fill] copies between iobufs and advances both [src] and [dst]. *)
-  module Blit_consume_and_fill : sig
-    val blit : src:([> read ], seek) t -> dst:([> write ], seek) t -> len:int -> unit
+  module Blit_consume_and_fill :
+    Blit_consume_and_fill with type ('rw, 'seek) t := ('rw, 'seek) t
 
-    val blito
-      :  src:([> read ], seek) t
-      -> ?src_len:int
-      -> dst:([> write ], seek) t
-      -> unit
-      -> unit
+  module Itoa : Itoa (** @inline *)
 
-    val unsafe_blit
-      :  src:([> read ], seek) t
-      -> dst:([> write ], seek) t
-      -> len:int
-      -> unit
+  module Date_string : Date_string (** @inline *)
 
-    val blit_maximal : src:([> read ], seek) t -> dst:([> write ], seek) t -> int
+  (** [Consume.string t ~len] reads [len] characters (all, by default) from [t] into a new
+      string and advances the lower bound of the window accordingly.
+
+      [Consume.bin_prot X.bin_read_t t] returns the initial [X.t] in [t], advancing past
+      the bytes read. *)
+  module Consume : Consume_safe with type ('rw, 'seek) iobuf := ('rw, 'seek) t
+
+  (** [Fill.bin_prot X.bin_write_t t x] writes [x] to [t] in bin-prot form, advancing past
+      the bytes written. *)
+  module Fill : Fill_safe with type ('rw, 'seek) iobuf := ('rw, 'seek) t
+
+  (** [Peek] and [Poke] functions access a value at [pos] from the lower bound of the
+      window and do not advance.
+
+      [Peek.bin_prot X.bin_read_t t] returns the initial [X.t] in [t] without advancing.
+
+      Following the [bin_prot] protocol, the representation of [x] is [X.bin_size_t x]
+      bytes long. [Peek.], [Poke.], [Consume.], and [Fill.bin_prot] do not add any size
+      prefix or other framing to the [bin_prot] representation. *)
+  module Peek : Peek_safe with type ('rw, 'seek) iobuf := ('rw, 'seek) t
+
+  (** [Poke.bin_prot X.bin_write_t t x] writes [x] to the beginning of [t] in binary form
+      without advancing. You can use [X.bin_size_t] to tell how long it was.
+      [X.bin_write_t] is only allowed to write that portion of the buffer you have access
+      to. *)
+  module Poke : Poke_safe with type ('rw, 'seek) iobuf := ('rw, 'seek) t
+
+  (** [Unsafe] has submodules that are like their corresponding module, except with no
+      range checks. Hence, mistaken uses can cause segfaults. Be careful! *)
+  module Unsafe : sig
+    module Consume : Consume_unsafe with type ('rw, 'seek) iobuf := ('rw, 'seek) t
+    module Fill : Fill_unsafe with type ('rw, 'seek) iobuf := ('rw, 'seek) t
+    module Peek : Peek_unsafe with type ('rw, 'seek) iobuf := ('rw, 'seek) t
+    module Poke : Poke_unsafe with type ('rw, 'seek) iobuf := ('rw, 'seek) t
   end
 
-  (** [memset t ~pos ~len c] fills [t] with [c] within the range [\[pos, pos + len)]. *)
-  val memset : (read_write, _) t -> pos:int -> len:int -> char -> unit
-
-  (** [memset]s a buffer to zero. *)
-  val zero : (read_write, _) t -> unit
-
-  (** Create a new iobuf whose contents are the appended contents of the passed array. *)
-  val concat : ([> read ], _) t array -> (_, _) t
+  module Bin_io : Bin_io with type ('rw, 'seek) t := ('rw, 'seek) t
 
   (** {2 Expert} *)
 
   (** The [Expert] module is for building efficient out-of-module [Iobuf] abstractions. *)
-  module Expert : sig
-    (** These accessors will not allocate, and are mainly here to assist in building
-      low-cost syscall wrappers.
-
-      One must be careful to avoid writing out of the limits (between [lo_min] and
-      [hi_max]) of the [buf].  Doing so would violate the invariants of the parent
-      [Iobuf]. *)
-    val buf : (_, _) t -> Bigstring.t
-
-    val hi_max : (_, _) t -> int
-    val hi : (_, _) t -> int
-    val lo : (_, _) t -> int
-    val lo_min : (_, _) t -> int
-
-    (** These setters directly set fields in [t] without checking any invariants. *)
-    val set_buf : (_, _) t -> Bigstring.t -> unit
-
-    val set_hi_max : (_, _) t -> int -> unit
-    val set_hi : (_, _) t -> int -> unit
-    val set_lo : (_, _) t -> int -> unit
-    val set_lo_min : (_, _) t -> int -> unit
-
-    (** [to_bigstring_shared t] and [to_iobuf_shared t] allocate new wrappers around the
-      storage of [buf t], relative to [t]'s current bounds.
-
-      These operations allow access outside the bounds and limits of [t], and without
-      respect to its read/write access.  Be careful not to violate [t]'s invariants. *)
-    val to_bigstring_shared : ?pos:int -> ?len:int -> (_, _) t -> Bigstring.t
-
-    (** [reinitialize_of_bigstring t bigstring] reinitializes [t] with backing [bigstring],
-      and the window and limits specified starting at [pos] and of length [len]. *)
-    val reinitialize_of_bigstring : (_, _) t -> pos:int -> len:int -> Bigstring.t -> unit
-
-    (** As [reinitialize_of_bigstring] but without checking, and requires explicit
-      specification of bounds. *)
-    val unsafe_reinitialize
-      :  (_, _) t
-      -> lo_min:int
-      -> lo:int
-      -> hi:int
-      -> hi_max:int
-      -> Bigstring.t
-      -> unit
-
-    (** These versions of [set_bounds_and_buffer] allow [~src] to be read-only.  [~dst] will
-      be writable through [~src] aliases even though the type does not reflect this! *)
-    val set_bounds_and_buffer : src:('data, _) t -> dst:('data, seek) t -> unit
-
-    val set_bounds_and_buffer_sub
-      :  pos:int
-      -> len:int
-      -> src:('data, _) t
-      -> dst:('data, seek) t
-      -> unit
-
-    (** Similar to [protect_window_bounds_and_buffer], but does not save/restore the buffer or
-      bounds. Mixing this with functions like [set_bounds_and_buffer] or [narrow] is
-      unsafe; you should not modify anyything but the window inside [f]. *)
-    val protect_window : ('rw, _) t -> f:(('rw, seek) t -> 'a) -> 'a
-
-    (** As [protect_window] but does not enforce that the closure should not let the buffer
-      escape. Letting the buffer escape is dangerous and almost certainly not what you
-      wanted. *)
-    val protect_window_global_deprecated : ('rw, _) t -> f:(('rw, seek) t -> 'a) -> 'a
-
-    val protect_window_1 : ('rw, _) t -> 'a -> f:(('rw, seek) t -> 'a -> 'b) -> 'b
-
-    val protect_window_1_global_deprecated
-      :  ('rw, _) t
-      -> 'a
-      -> f:(('rw, seek) t -> 'a -> 'b)
-      -> 'b
-
-    val protect_window_2
-      :  ('rw, _) t
-      -> 'a
-      -> 'b
-      -> f:(('rw, seek) t -> 'a -> 'b -> 'c)
-      -> 'c
-
-    val protect_window_2_global_deprecated
-      :  ('rw, _) t
-      -> 'a
-      -> 'b
-      -> f:(('rw, seek) t -> 'a -> 'b -> 'c)
-      -> 'c
-
-    (** Similar to [protect_window] but returns a local value. *)
-    val protect_window_local : ('rw, _) t -> f:(('rw, seek) t -> 'a) -> 'a
-
-    (** Computes the position within [buf] for [pos] relative to our window. Checks [len]
-      bytes are available. *)
-    val buf_pos_exn : (_, _) t -> pos:int -> len:int -> int
-
-    (** As [buf_pos_exn] without checks. *)
-    val unsafe_buf_pos : (_, _) t -> pos:int -> len:int -> int
-  end
-
-  val contains : ([> read ], _) t -> substring:Bigstring.t -> bool
+  module Expert : Expert with type ('rw, 'seek) t := ('rw, 'seek) t
+  (** @inline *)
 end

@@ -33,7 +33,7 @@ module%test Thread_safe_queue : module type of Thread_safe_queue = struct
   module Dequeue_result = struct
     type 'a t = 'a Dequeue_result.t =
       | Empty
-      | Not_empty of { elt : 'a }
+      | Not_empty of { elt : 'a [@globalized] }
     [@@deriving sexp, compare]
   end
 
@@ -174,8 +174,8 @@ module%test Thread_safe_queue : module type of Thread_safe_queue = struct
   ;;
 
   (* Allocation tests *)
-  let%expect_test ("dequeue_until_empty does not allocate at all with inlining" [@tags
-                                                                                  "fast-flambda"])
+  let%expect_test ("dequeue_until_empty does not allocate at all with inlining"
+    [@tags "fast-flambda"])
     =
     let t = create () in
     for _i = 1 to 100 do
@@ -197,7 +197,8 @@ module%test Thread_safe_queue : module type of Thread_safe_queue = struct
     Expect_test_helpers_core.require_no_allocation (fun () ->
       (dequeue_until_empty [@inlined never]) t ~f:(fun () ->
         let (_ : int) = Sys.opaque_identity (r + 1) in
-        ()) [@nontail])
+        ())
+      [@nontail])
   ;;
 
   (* Dequeueing from an empty queue yields "Empty" *)

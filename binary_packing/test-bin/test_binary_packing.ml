@@ -58,7 +58,7 @@ let test byte_order =
           string_of_int
   ; "[pack|unpack]_signed_32"
     >:: inverses
-          (fun n -> Int32.( + ) (Int32.of_int_exn n))
+          (fun n m -> Int32.( + ) (Int32.of_int_exn n) m)
           1
           B.pack_signed_32
           B.unpack_signed_32
