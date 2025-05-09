@@ -399,7 +399,7 @@ let%expect_test "min_elt' max_elt'" =
 ;;
 
 let%expect_test "map_add_multi" =
-  let map = map_of_alist_multi [ 0, 0; 0, 1; 1, 1 ] ~comparator:(module Int) in
+  let map = map_of_alist_multi_rev [ 0, 0; 0, 1; 1, 1 ] ~comparator:(module Int) in
   print_s [%sexp (map : int t Int.Map.t)];
   [%expect {| ((0 (1 0)) (1 (1))) |}];
   print_s [%sexp (map_add_multi map ~key:1 ~data:0 : int t Int.Map.t)];
@@ -424,7 +424,8 @@ let%expect_test "hashtbl_add_multi" =
 
 let%expect_test "map_of_alist_multi" =
   let test alist =
-    print_s [%sexp (map_of_alist_multi alist ~comparator:(module Int) : int t Int.Map.t)]
+    print_s
+      [%sexp (map_of_alist_multi_rev alist ~comparator:(module Int) : int t Int.Map.t)]
   in
   test [];
   test [ 0, 0; 0, 1; 1, 1 ];
@@ -440,7 +441,7 @@ let%expect_test "map_of_list_with_key_multi" =
   let test alist =
     print_s
       [%sexp
-        (map_of_list_with_key_multi alist ~comparator:(module Int) ~get_key
+        (map_of_list_with_key_multi_rev alist ~comparator:(module Int) ~get_key
          : Date.t t Int.Map.t)]
   in
   test [];
@@ -455,7 +456,7 @@ let%expect_test "map_of_list_with_key_multi" =
 let%expect_test "map_of_sequence_multi" =
   let test alist =
     print_s
-      [%sexp (map_of_sequence_multi alist ~comparator:(module Int) : int t Int.Map.t)]
+      [%sexp (map_of_sequence_multi_rev alist ~comparator:(module Int) : int t Int.Map.t)]
   in
   test Sequence.empty;
   test (Sequence.of_list [ 0, 0; 0, 1; 1, 1 ]);
@@ -1085,16 +1086,16 @@ module%test Partition = struct
       partition |> [%sexp_of: (int, int) Partition.t] |> print_s;
       assert (
         [%equal: int list * int list]
-          ( Partition.left partition |> Option.of_option
-          , Partition.right partition |> Option.of_option )
+          ( Partition.fst partition |> Option.of_option
+          , Partition.snd partition |> Option.of_option )
           (Nonempty_list.partition_tf' xs ~f))
     in
     test t;
     [%expect {| (Both ((2 4) (1 3))) |}];
     test [ 1; 3 ];
-    [%expect {| (Right (1 3)) |}];
+    [%expect {| (Snd (1 3)) |}];
     test [ 2; 4 ];
-    [%expect {| (Left (2 4)) |}]
+    [%expect {| (Fst (2 4)) |}]
   ;;
 
   let%expect_test "partition_map" =
@@ -1106,16 +1107,16 @@ module%test Partition = struct
       partition |> [%sexp_of: (int, string) Partition.t] |> print_s;
       assert (
         [%equal: int list * string list]
-          ( Partition.left partition |> Option.of_option
-          , Partition.right partition |> Option.of_option )
+          ( Partition.fst partition |> Option.of_option
+          , Partition.snd partition |> Option.of_option )
           (Nonempty_list.partition_map' xs ~f))
     in
     test t;
     [%expect {| (Both ((2 4) ("odd 1" "odd 3"))) |}];
     test [ 1; 3 ];
-    [%expect {| (Right ("odd 1" "odd 3")) |}];
+    [%expect {| (Snd ("odd 1" "odd 3")) |}];
     test [ 2; 4 ];
-    [%expect {| (Left (2 4)) |}]
+    [%expect {| (Fst (2 4)) |}]
   ;;
 
   let%expect_test "partition_result" =
@@ -1128,15 +1129,67 @@ module%test Partition = struct
       partition |> [%sexp_of: (int, string) Partition.t] |> print_s;
       assert (
         [%equal: int list * string list]
-          ( Partition.left partition |> Option.of_option
-          , Partition.right partition |> Option.of_option )
+          ( Partition.fst partition |> Option.of_option
+          , Partition.snd partition |> Option.of_option )
           (Nonempty_list.partition_result' xs))
     in
     test t;
     [%expect {| (Both ((2 4) ("odd 1" "odd 3"))) |}];
     test [ 1; 3 ];
-    [%expect {| (Right ("odd 1" "odd 3")) |}];
+    [%expect {| (Snd ("odd 1" "odd 3")) |}];
     test [ 2; 4 ];
-    [%expect {| (Left (2 4)) |}]
+    [%expect {| (Fst (2 4)) |}]
+  ;;
+end
+
+module%test Partition3 = struct
+  let f x =
+    match x % 3 with
+    | 0 -> `Fst x
+    | 1 -> `Snd (Int.to_float x)
+    | 2 -> `Trd (Int.to_string x)
+    | _ -> assert false
+  ;;
+
+  let convert (partition3 : _ Nonempty_list.Partition3.t) =
+    match partition3 with
+    | Fst t -> to_list t, [], []
+    | Snd t -> [], to_list t, []
+    | Trd t -> [], [], to_list t
+    | Fst_snd (fsts, snds) -> to_list fsts, to_list snds, []
+    | Fst_trd (fsts, trds) -> to_list fsts, [], to_list trds
+    | Snd_trd (snds, trds) -> [], to_list snds, to_list trds
+    | Fst_snd_trd (fsts, snds, trds) -> to_list fsts, to_list snds, to_list trds
+  ;;
+
+  let%expect_test "partition3_map (manual)" =
+    let test xs =
+      let partition3 = Nonempty_list.partition3_map xs ~f in
+      let from_list = List.partition3_map (to_list xs) ~f in
+      let three_lists = convert partition3 in
+      assert ([%equal: int list * float list * string list] three_lists from_list);
+      partition3 |> [%sexp_of: (int, float, string) Partition3.t] |> print_s
+    in
+    test [ 1; 2; 3; 4 ];
+    [%expect {| (Fst_snd_trd (3) (1 4) (2)) |}];
+    test [ 1; 3 ];
+    [%expect {| (Fst_snd (3) (1)) |}];
+    test [ 5; 3 ];
+    [%expect {| (Fst_trd (3) (5)) |}];
+    test [ 2; 4 ];
+    [%expect {| (Snd_trd (4) (2)) |}];
+    test [ 6; 3 ];
+    [%expect {| (Fst (6 3)) |}];
+    test [ 4; 7 ];
+    [%expect {| (Snd (4 7)) |}];
+    test [ 5; 2 ];
+    [%expect {| (Trd (5 2)) |}]
+  ;;
+
+  let%expect_test "partition3_map (quickcheck)" =
+    quickcheck
+      [%test_result: int list * float list * string list]
+      (fun l -> List.partition3_map l ~f)
+      (fun l -> Nonempty_list.partition3_map l ~f |> convert)
   ;;
 end

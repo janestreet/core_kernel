@@ -1,9 +1,9 @@
 (rule
- (alias runtest)
  (deps
   (:first_dep test_binary_packing.exe))
  (action
-  (bash ./%{first_dep})))
+  (bash ./%{first_dep}))
+ (alias runtest))
 
 (executables
  (modes byte exe)

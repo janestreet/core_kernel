@@ -3,17 +3,17 @@ open Iobuf_safe
 open Iobuf_type
 include Iobuf_bin_io_intf.Definitions
 
-let read_bin_prot reader t ~pos =
+let read_bin_prot read t ~pos =
   let buf_pos = unsafe_buf_pos t ~pos ~len:0 in
   let pos_ref = ref buf_pos in
-  let a = reader.Bin_prot.Type_class.read t.buf ~pos_ref in
+  let a = read t.buf ~pos_ref in
   let len = !pos_ref - buf_pos in
   check_range t ~pos ~len;
   a, len
 ;;
 
-let consume reader t =
-  let a, len = read_bin_prot reader t ~pos:0 in
+let consume (reader : 'a Bin_prot.Type_class.reader) t =
+  let a, len = read_bin_prot reader.read t ~pos:0 in
   unsafe_advance t len;
   a
 ;;
@@ -54,7 +54,7 @@ let fill__local sizer writer t (local_ a) =
   poke_size__local sizer writer t ~pos:0 a |> unsafe_advance t
 ;;
 
-let peek reader t ~pos = read_bin_prot reader t ~pos |> fst
+let peek read t ~pos = read_bin_prot read t ~pos |> fst
 let poke writer t ~pos a = ignore (poke_size writer t ~pos a : int)
 let header_bytes = 4
 
@@ -64,7 +64,7 @@ let consume_with_header t bin_prot_reader =
     then
       error
         "Iobuf.Bin_io.consume_with_header not enough data to read length"
-        ([%globalize: Repr.t] t)
+        (globalize0 t)
         [%sexp_of: (_, _) With_shallow_sexp.t]
     else (
       let mark = t.lo in
@@ -74,7 +74,7 @@ let consume_with_header t bin_prot_reader =
         t.lo <- mark;
         error
           "Iobuf.Bin_io.consume_with_header not enough data to read value"
-          (v_len, [%globalize: Repr.t] t)
+          (v_len, globalize0 t)
           [%sexp_of: int * (_, _) With_shallow_sexp.t])
       else Ok (consume bin_prot_reader t))
   in
@@ -89,7 +89,7 @@ let fill_with_header t writer v =
     then
       error
         "Iobuf.Bin_io.fill_with_header not enough space"
-        (need, [%globalize: Repr.t] t)
+        (need, globalize0 t)
         [%sexp_of: int * (_, _) With_shallow_sexp.t]
     else (
       Fill.int32_be_trunc t v_len;
@@ -107,7 +107,7 @@ let fill_with_header__local t sizer writer (local_ v) =
     then
       error
         "Iobuf.Bin_io.fill_with_header__local not enough space"
-        (need, [%globalize: Repr.t] t)
+        (need, globalize0 t)
         [%sexp_of: int * (_, _) With_shallow_sexp.t]
     else (
       Fill.int32_be_trunc t v_len;
@@ -117,13 +117,7 @@ let fill_with_header__local t sizer writer (local_ v) =
   result
 ;;
 
-let unsafe_poke_with_known_size writer t ~pos ~size a =
-  ignore
-    (writer.Bin_prot.Type_class.write t.buf ~pos:(unsafe_buf_pos t ~pos ~len:size) a
-     : int)
-;;
-
-let unsafe_poke_with_known_size__local write t ~pos ~size a =
+let%template[@mode m = (global, local)] unsafe_poke_with_known_size write t ~pos ~size a =
   ignore (write t.buf ~pos:(unsafe_buf_pos t ~pos ~len:size) a : int)
 ;;
 

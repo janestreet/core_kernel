@@ -410,16 +410,16 @@ let hashtbl_add_multi map ~key ~data =
     | Some t -> cons data t)
 ;;
 
-let map_of_container_multi fold container ~comparator =
+let map_of_container_multi_rev fold container ~comparator =
   fold container ~init:(Map.empty comparator) ~f:(fun acc (key, data) ->
     map_add_multi acc ~key ~data)
 ;;
 
-let map_of_alist_multi alist = map_of_container_multi List.fold alist
-let map_of_sequence_multi sequence = map_of_container_multi Sequence.fold sequence
+let map_of_alist_multi_rev alist = map_of_container_multi_rev List.fold alist
+let map_of_sequence_multi_rev sequence = map_of_container_multi_rev Sequence.fold sequence
 let fold_nonempty (hd :: tl) ~init ~f = List.fold tl ~init:(init hd) ~f
 
-let map_of_list_with_key_multi list ~comparator ~get_key =
+let map_of_list_with_key_multi_rev list ~comparator ~get_key =
   List.fold list ~init:(Map.empty comparator) ~f:(fun acc data ->
     let key = get_key data in
     map_add_multi acc ~key ~data)
@@ -511,29 +511,29 @@ let remove_consecutive_duplicates ?(which_to_keep = `Last) (hd :: tl) ~equal =
 type 'a nonempty_list = 'a t [@@deriving sexp_of]
 
 module Partition = struct
-  type ('left, 'right) t =
-    | Left of 'left nonempty_list
-    | Right of 'right nonempty_list
-    | Both of ('left nonempty_list * 'right nonempty_list)
+  type ('fst, 'snd) t =
+    | Fst of 'fst nonempty_list
+    | Snd of 'snd nonempty_list
+    | Both of ('fst nonempty_list * 'snd nonempty_list)
   [@@deriving sexp_of]
 
   let of_lists_exn ((xs : _ list), (ys : _ list)) =
     match xs, ys with
-    | x :: xs, [] -> Left (x :: xs)
-    | [], y :: ys -> Right (y :: ys)
+    | x :: xs, [] -> Fst (x :: xs)
+    | [], y :: ys -> Snd (y :: ys)
     | x :: xs, y :: ys -> Both (x :: xs, y :: ys)
     | [], [] ->
       failwith "Partition of [Nonempty_list.t] unexpectedly resulted in two empty lists!"
   ;;
 
-  let left = function
-    | Both (xs, _) | Left xs -> Some xs
-    | Right _ -> None
+  let fst = function
+    | Both (xs, _) | Fst xs -> Some xs
+    | Snd _ -> None
   ;;
 
-  let right = function
-    | Both (_, ys) | Right ys -> Some ys
-    | Left _ -> None
+  let snd = function
+    | Both (_, ys) | Snd ys -> Some ys
+    | Fst _ -> None
   ;;
 end
 
@@ -543,6 +543,40 @@ let partition_map t ~f = to_list t |> List.partition_map ~f |> Partition.of_list
 let partition_map' t ~f = to_list t |> List.partition_map ~f
 let partition_result t = to_list t |> List.partition_result |> Partition.of_lists_exn
 let partition_result' t = to_list t |> List.partition_result
+
+module Partition3 = struct
+  type ('fst, 'snd, 'trd) t =
+    | Fst of 'fst nonempty_list
+    | Snd of 'snd nonempty_list
+    | Trd of 'trd nonempty_list
+    | Fst_snd of 'fst nonempty_list * 'snd nonempty_list
+    | Fst_trd of 'fst nonempty_list * 'trd nonempty_list
+    | Snd_trd of 'snd nonempty_list * 'trd nonempty_list
+    | Fst_snd_trd of 'fst nonempty_list * 'snd nonempty_list * 'trd nonempty_list
+  [@@deriving sexp_of]
+end
+
+let partition3_map t ~f : _ Partition3.t =
+  match
+    partition_map t ~f:(fun elem ->
+      match f elem with
+      | `Fst elem -> First (First elem)
+      | `Snd elem -> First (Second elem)
+      | `Trd elem -> Second elem)
+  with
+  | Snd trds -> Trd trds
+  | Fst fsts_and_snds ->
+    (match partition_map fsts_and_snds ~f:Fn.id with
+     | Fst fsts -> Fst fsts
+     | Snd snds -> Snd snds
+     | Both (fsts, snds) -> Fst_snd (fsts, snds))
+  | Both (fsts_and_snds, trds) ->
+    (match partition_map fsts_and_snds ~f:Fn.id with
+     | Fst fsts -> Fst_trd (fsts, trds)
+     | Snd snds -> Snd_trd (snds, trds)
+     | Both (fsts, snds) -> Fst_snd_trd (fsts, snds, trds))
+;;
+
 let validate ~name check t = Validate.list ~name check (to_list t)
 let validate_indexed check t = Validate.list_indexed check (to_list t)
 

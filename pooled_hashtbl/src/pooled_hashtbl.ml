@@ -830,6 +830,11 @@ let of_alist_multi ?growth_allowed ?size ~hashable lst =
   create_mapped_multi ?growth_allowed ?size ~hashable ~get_key:fst ~get_data:snd lst
 ;;
 
+let t_of_sexp ~hashable k_of_sexp d_of_sexp sexp =
+  let alist = list_of_sexp (pair_of_sexp k_of_sexp d_of_sexp) sexp in
+  of_alist_exn ~hashable alist ~size:(List.length alist)
+;;
+
 let to_alist t = fold ~f:(fun ~key ~data list -> (key, data) :: list) ~init:[] t
 let validate ~name f t = Validate.alist ~name f (to_alist t)
 let keys t = fold t ~init:[] ~f:(fun ~key ~data:_ acc -> key :: acc)
@@ -1070,8 +1075,6 @@ module Creators (Key : sig
   end) : sig
   type ('a, 'b) t_ = ('a Key.t, 'b) t
 
-  val t_of_sexp : (Sexp.t -> 'a Key.t) -> (Sexp.t -> 'b) -> Sexp.t -> ('a, 'b) t_
-
   include
     Creators
     with type ('a, 'b) t := ('a, 'b) t_
@@ -1096,11 +1099,6 @@ end = struct
 
   let of_alist_exn ?growth_allowed ?size l =
     of_alist_exn ?growth_allowed ~hashable ?size l
-  ;;
-
-  let t_of_sexp k_of_sexp d_of_sexp sexp =
-    let alist = [%of_sexp: (k * d) list] sexp in
-    of_alist_exn alist ~size:(List.length alist)
   ;;
 
   let of_alist_multi ?growth_allowed ?size l =
@@ -1144,6 +1142,10 @@ module Poly = struct
   include Accessors
 
   let sexp_of_t = sexp_of_t
+
+  let t_of_sexp key_of_sexp value_of_sexp sexp =
+    t_of_sexp ~hashable key_of_sexp value_of_sexp sexp
+  ;;
 
   let t_sexp_grammar k_grammar v_grammar =
     Sexplib.Sexp_grammar.coerce (List.Assoc.t_sexp_grammar k_grammar v_grammar)
@@ -1235,49 +1237,34 @@ struct
   include Accessors
 
   let sexp_of_t sexp_of_v t = Poly.sexp_of_t T.Key.sexp_of_t sexp_of_v t
+end
 
-  module Provide_of_sexp
-      (X : sig
-             type t [@@deriving of_sexp]
-           end
-           with type t := key) =
-  struct
-    let t_of_sexp v_of_sexp sexp = t_of_sexp X.t_of_sexp v_of_sexp sexp
-  end
+module Provide_of_sexp (Elt : Hashtbl.M_of_sexp) = struct
+  let t_of_sexp v_of_sexp sexp =
+    t_of_sexp ~hashable:(Hashable.of_key (module Elt)) Elt.t_of_sexp v_of_sexp sexp
+  ;;
+end
 
-  module Provide_bin_io
-      (Key' : sig
-                type t [@@deriving bin_io]
-              end
-              with type t := key) =
-  Provide_bin_io (struct
-      include T.Key
-      include Key'
-    end)
+module Provide_stable_witness (Key : sig
+    type t [@@deriving stable_witness]
+  end) =
+struct
+  (* I'm not sure whether it makes sense for pooled hashtbl to be used as a stable type,
+     since pooling seems like an in-process thing, but in order to satisfy the entire
+     [Hashtbl_intf.Hashtbl] module type, we need to provide a stable witness.
 
-  module Provide_stable_witness
-      (Key' : sig
-                type t [@@deriving stable_witness]
-              end
-              with type t := key) =
-  struct
-    (* I'm not sure whether it makes sense for pooled hashtbl to be used as a stable type,
-       since pooling seems like an in-process thing, but in order to satisfy the entire
-       [Hashtbl_intf.Hashtbl] module type, we need to provide a stable witness.
-
-       The implementation and comment from hashtbl.ml is copied below.
-    *)
-    (* The binary representation of hashtbl is relied on by stable modules
-       (e.g. Hashtable.Stable) and is therefore assumed to be stable.  So, if the key and
-       data can provide a stable witnesses, then we can safely say the hashtbl is also
-       stable. *)
-    let stable_witness (type data) (_data_stable_witness : data Stable_witness.t)
-      : data t Stable_witness.t
-      =
-      let (_ : key Stable_witness.t) = Key'.stable_witness in
-      Stable_witness.assert_stable
-    ;;
-  end
+     The implementation and comment from hashtbl.ml is copied below.
+  *)
+  (* The binary representation of hashtbl is relied on by stable modules
+     (e.g. Hashtable.Stable) and is therefore assumed to be stable.  So, if the key and
+     data can provide a stable witnesses, then we can safely say the hashtbl is also
+     stable. *)
+  let stable_witness (type data) (_data_stable_witness : data Stable_witness.t)
+    : (Key.t, data) t Stable_witness.t
+    =
+    let (_ : Key.t Stable_witness.t) = Key.stable_witness in
+    Stable_witness.assert_stable
+  ;;
 end
 
 module Make_with_hashable (T : sig

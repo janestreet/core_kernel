@@ -32,8 +32,8 @@ end
 module%test [@name "[Peek]"] _ = struct
   let%test_unit "bin_prot char" =
     let t = of_string "abc" in
-    let a = Bin_io.peek Char.bin_reader_t t ~pos:0 in
-    let b = Bin_io.peek Char.bin_reader_t t ~pos:1 in
+    let a = Bin_io.peek Char.bin_read_t t ~pos:0 in
+    let b = Bin_io.peek Char.bin_read_t t ~pos:1 in
     [%test_eq: char] a 'a';
     [%test_eq: char] b 'b';
     [%test_eq: string] (to_string t) "abc"
@@ -45,7 +45,7 @@ module%test [@name "[Peek]"] _ = struct
     let end_pos = List.fold ints ~init:0 ~f:(fun pos i -> Int.bin_write_t buf ~pos i) in
     let t = of_bigstring buf in
     List.fold ints ~init:0 ~f:(fun pos i ->
-      [%test_eq: int] i (Bin_io.peek Int.bin_reader_t t ~pos);
+      [%test_eq: int] i (Bin_io.peek Int.bin_read_t t ~pos);
       pos + Int.bin_size_t i)
     |> fun end_pos' -> [%test_eq: int] end_pos end_pos'
   ;;
@@ -1809,7 +1809,7 @@ struct
                   (str : string)]
         ;;
 
-        let bin_prot_char t ~pos = Bin_io.peek Char.bin_reader_t t ~pos
+        let bin_prot_char t ~pos = Bin_io.peek Char.bin_read_t t ~pos
 
         (* static permission tests; see above *)
         let char_a_pos_0 iobuf = Char.( = ) 'a' (char iobuf ~pos:0)
@@ -2747,7 +2747,7 @@ struct
       protect_window_local buf ~f:(fun buf ->
         Iobuf.advance buf 15;
         Iobuf.resize buf ~len:(Iobuf.length buf - 15);
-        print_s [%sexp (Iobuf.globalize () () buf : (_, _) Iobuf.Window.Hexdump.Pretty.t)];
+        print_s [%sexp (Iobuf.globalize0 buf : (_, _) Iobuf.Window.Hexdump.Pretty.t)];
         [%expect {| in-short-window |}]);
       print_s [%sexp (buf : (_, _) Iobuf.Window.Hexdump.Pretty.t)];
       [%expect {| "in-long-window in-short-window in-long-window" |}]

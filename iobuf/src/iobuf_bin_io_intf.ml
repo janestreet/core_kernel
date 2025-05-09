@@ -16,8 +16,8 @@ module Definitions = struct
 
     (** Read without advancing *)
 
-    val peek : 'a Bin_prot.Type_class.reader -> (_, _) t @ local -> pos:int -> 'a
-    val unsafe_peek : 'a Bin_prot.Type_class.reader -> (_, _) t @ local -> pos:int -> 'a
+    val peek : 'a Bin_prot.Read.reader -> (_, _) t @ local -> pos:int -> 'a
+    val unsafe_peek : 'a Bin_prot.Read.reader -> (_, _) t @ local -> pos:int -> 'a
 
     (** Write and advance *)
 
@@ -73,21 +73,14 @@ module Definitions = struct
       -> 'a
       -> int
 
-    val unsafe_poke_with_known_size
-      :  'a Bin_prot.Type_class.writer
+    val%template unsafe_poke_with_known_size
+      :  ('a Bin_prot.Write.writer[@mode m])
       -> (read_write, _) t @ local
       -> pos:int
       -> size:int
-      -> 'a
+      -> 'a @ m
       -> unit
-
-    val unsafe_poke_with_known_size__local
-      :  'a Bin_prot.Write.writer__local
-      -> (read_write, _) t @ local
-      -> pos:int
-      -> size:int
-      -> 'a @ local
-      -> unit
+    [@@mode m = (global, local)]
 
     (** Include length of bin_prot payload as a header *)
 

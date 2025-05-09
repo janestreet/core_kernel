@@ -1,9 +1,9 @@
 (rule
- (alias runtest)
  (deps
   (:first_dep int_set_test.exe))
  (action
-  (bash ./%{first_dep})))
+  (bash ./%{first_dep}))
+ (alias runtest))
 
 (executables
  (modes byte exe)

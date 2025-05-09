@@ -1,3 +1,5 @@
+@@ portable
+
 (** Tuple-like types used in [Pool].
 
     See {!Tuple_type_intf} for documentation. *)

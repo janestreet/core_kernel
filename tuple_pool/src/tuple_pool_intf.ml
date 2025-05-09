@@ -333,7 +333,7 @@ module type S = sig
     -> unit
 end
 
-module type Tuple_pool = sig
+module type Tuple_pool = sig @@ portable
   module Tuple_type = Tuple_type
 
   module type S = S

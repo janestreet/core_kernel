@@ -219,7 +219,7 @@ let key_not_in_enumeration t key =
   failwiths
     "Key was not provided in the enumeration given to [Total_map.Make]"
     key
-    (Map.comparator t).sexp_of_t
+    (Comparator.sexp_of_t (Map.comparator t))
 ;;
 
 let change t k ~f =

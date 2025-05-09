@@ -7,7 +7,7 @@ open! Core
     [reduce], where the equivalent operation over a `Set` would be potentially
     exn-raising. *)
 
-module type Nonempty_set = sig
+module type Nonempty_set = sig @@ portable
   type (!'a, !'b) t
 
   val add : ('a, 'b) t -> 'a -> ('a, 'b) t

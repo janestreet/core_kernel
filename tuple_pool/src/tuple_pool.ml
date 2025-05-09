@@ -112,7 +112,7 @@ module Pool = struct
   let%test _ = array_index_num_bits + masked_tuple_id_num_bits <= Int.num_bits
   let max_array_length = 1 lsl array_index_num_bits
 
-  module Tuple_id : sig
+  module Tuple_id : sig @@ portable
     type t = private int [@@deriving sexp_of]
 
     include Invariant.S with type t := t
@@ -146,7 +146,7 @@ module Pool = struct
 
   let tuple_id_mask = (1 lsl masked_tuple_id_num_bits) - 1
 
-  module Pointer : sig
+  module Pointer : sig @@ portable
     (* [Pointer.t] is an encoding as an [int] of the following sum type:
 
        {[
@@ -158,7 +158,6 @@ module Pool = struct
        access, the [slot_index] function.  The encoding is designed so that [slot_index]
        produces a negative number for [Null], which will cause the subsequent array bounds
        check to fail. *)
-
     type 'slots t = private int [@@deriving sexp_of, typerep]
 
     include Invariant.S1 with type 'a t := 'a t
@@ -250,7 +249,8 @@ module Pool = struct
   end
 
   module Header : sig
-    (* A [Header.t] is an encoding as an [int] of the following type:
+    @@ portable
+       (* A [Header.t] is an encoding as an [int] of the following type:
 
        {[
          | Null
@@ -261,7 +261,6 @@ module Pool = struct
        If a tuple is free, its header is set to either [Null] or [Free] with
        [next_free_header_index] indicating the header of the next tuple on the free list.
        If a tuple is in use, it header is set to [Used]. *)
-
     type t = private int [@@deriving sexp_of]
 
     val null : t

@@ -16,8 +16,8 @@ let create ~bit:n =
 module Make (M : Make_arg) = struct
   type t = Int63.t [@@deriving bin_io, hash, typerep]
 
-  let of_int = Int63.of_int
-  let to_int_exn = Int63.to_int_exn
+  let of_int t = Int63.of_int t
+  let to_int_exn t = Int63.to_int_exn t
   let empty = Int63.zero
   let is_empty t = t = empty
   let ( + ) a b = Int63.bit_or a b
