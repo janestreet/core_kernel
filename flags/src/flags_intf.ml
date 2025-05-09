@@ -18,8 +18,8 @@ module type S = sig
   include Comparable.S with type t := t
 
   val to_flag_list : t -> t * string list
-  val of_int : int -> t
-  val to_int_exn : t -> int
+  val of_int : int -> t [@@zero_alloc]
+  val to_int_exn : t -> int [@@zero_alloc]
   val empty : t
 
   (** set union, bitwise or *)

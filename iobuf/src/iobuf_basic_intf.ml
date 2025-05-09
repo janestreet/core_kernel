@@ -20,9 +20,11 @@ module Definitions = struct
   module type Basic = sig
     type nonrec seek = seek [@@deriving globalize, sexp_of]
     type nonrec no_seek = no_seek [@@deriving globalize, sexp_of]
-    type ('rw, 'seek) t
+    type ('rw, 'seek) t [@@deriving globalize]
 
-    val globalize : _ -> _ -> ('rw, _) t -> ('rw, _) t
+    (** Globalize as if [t] had zero type parameters. Works because the parameters are
+        phantom types, and do not represent actual values that need to be globalized. *)
+    val globalize0 : ('rw, _) t -> ('rw, _) t
 
     module With_shallow_sexp : sig
       (** [With_shallow_sexp.t] has a [sexp_of] that shows the windows and limits of the

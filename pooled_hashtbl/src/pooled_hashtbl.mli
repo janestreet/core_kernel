@@ -10,7 +10,7 @@
 
 open! Core
 open! Import
-include Hashtbl_intf.Hashtbl
+include Hashtbl_intf.Hashtbl_over_values
 
 (** [resize t size] ensures that [t] can hold at least [size] entries without resizing
     (again), provided that [t] has growth enabled. This is useful for sizing global tables

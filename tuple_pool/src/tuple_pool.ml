@@ -158,7 +158,6 @@ module Pool = struct
        access, the [slot_index] function.  The encoding is designed so that [slot_index]
        produces a negative number for [Null], which will cause the subsequent array bounds
        check to fail. *)
-
     type 'slots t = private int [@@deriving sexp_of, typerep]
 
     include Invariant.S1 with type 'a t := 'a t
@@ -261,7 +260,6 @@ module Pool = struct
        If a tuple is free, its header is set to either [Null] or [Free] with
        [next_free_header_index] indicating the header of the next tuple on the free list.
        If a tuple is in use, it header is set to [Used]. *)
-
     type t = private int [@@deriving sexp_of]
 
     val null : t

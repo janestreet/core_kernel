@@ -66,7 +66,7 @@ module For_hexdump = struct
       ;;
 
       let to_string_hum ?max_lines t =
-        let t = globalize () () t in
+        let t = globalize0 t in
         to_sequence ?max_lines t |> Sequence.to_list |> String.concat ~sep:"\n"
       ;;
 

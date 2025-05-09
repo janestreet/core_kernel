@@ -97,22 +97,25 @@ val map_add_multi : ('k, 'v t, 'cmp) Map.t -> key:'k -> data:'v -> ('k, 'v t, 'c
 val hashtbl_add_multi : ('k, 'v t) Hashtbl.t -> key:'k -> data:'v -> unit
 
 (** Like [Map.of_alist_multi], but comes with a guarantee that the range of the returned
-    map is all nonempty lists. *)
-val map_of_alist_multi
+    map is all nonempty lists. Additionally, the elements in the resulting nonempty lists
+    will be in the reverse order of the input list. *)
+val map_of_alist_multi_rev
   :  ('k * 'v) list
   -> comparator:('k, 'cmp) Comparator.Module.t
   -> ('k, 'v t, 'cmp) Map.t
 
 (** Like [Map.of_sequence_multi], but comes with a guarantee that the range of the
-    returned map is all nonempty lists. *)
-val map_of_sequence_multi
+    returned map is all nonempty lists. Additionally, the elements in the resulting
+    nonempty lists will be in the reverse order of the input sequence. *)
+val map_of_sequence_multi_rev
   :  ('k * 'v) Sequence.t
   -> comparator:('k, 'cmp) Comparator.Module.t
   -> ('k, 'v t, 'cmp) Map.t
 
 (** Like [Map.of_list_with_key_multi], but comes with a guarantee that the range of the
-    returned map is all nonempty lists. *)
-val map_of_list_with_key_multi
+    returned map is all nonempty lists. Additionally, the elements in the resulting
+    nonempty lists will be in the reverse order of the input list. *)
+val map_of_list_with_key_multi_rev
   :  'v list
   -> comparator:('k, 'cmp) Comparator.Module.t
   -> get_key:('v -> 'k)
@@ -154,8 +157,8 @@ val remove_consecutive_duplicates
   -> 'a t
 
 module Partition : sig
-  (** A [Partition] represents a splitting of a nonempty list into two parts, a "left" and
-      a "right" part.
+  (** A [Partition] represents a splitting of a nonempty list into two parts, a "fst" and
+      a "snd" part.
 
       Unlike a [List], partitioning a nonempty list does not produce two nonempty lists,
       because one of the parts could be empty. However, we know for sure that at least one
@@ -167,17 +170,17 @@ module Partition : sig
       lists instead. The latter loses some type information but may be more convenient in
       some cases. *)
 
-  type ('left, 'right) t =
-    | Left of 'left nonempty_list
-    | Right of 'right nonempty_list
-    | Both of ('left nonempty_list * 'right nonempty_list)
+  type ('fst, 'snd) t =
+    | Fst of 'fst nonempty_list
+    | Snd of 'snd nonempty_list
+    | Both of ('fst nonempty_list * 'snd nonempty_list)
   [@@deriving sexp_of]
 
-  (** Returns the left part of the partition. *)
-  val left : ('left, _) t -> 'left nonempty_list option
+  (** Returns the fst part of the partition. *)
+  val fst : ('fst, _) t -> 'fst nonempty_list option
 
-  (** Returns the right part of the partition. *)
-  val right : (_, 'right) t -> 'right nonempty_list option
+  (** Returns the snd part of the partition. *)
+  val snd : (_, 'snd) t -> 'snd nonempty_list option
 end
 
 (** [partition_tf t ~f] returns a pair [t1, t2], where [t1] is all elements of [t] that
@@ -195,16 +198,10 @@ val partition_tf' : 'a t -> f:('a -> bool) -> 'a list * 'a list
 
     At least one of the two parts must be nonempty, which is represented by the type of
     [Partition.t]. *)
-val partition_map
-  :  'a t
-  -> f:('a -> ('left, 'right) Either.t)
-  -> ('left, 'right) Partition.t
+val partition_map : 'a t -> f:('a -> ('fst, 'snd) Either.t) -> ('fst, 'snd) Partition.t
 
 (** Like [partition_map], but returns the parts in two lists instead. *)
-val partition_map'
-  :  'a t
-  -> f:('a -> ('left, 'right) Either.t)
-  -> 'left list * 'right list
+val partition_map' : 'a t -> f:('a -> ('fst, 'snd) Either.t) -> 'fst list * 'snd list
 
 (** [partition_result t] returns a pair [t1, t2], where [t1] is the all [Ok] elements in
     [t] and [t2] is the list of all [Error] elements. The order of elements in the input
@@ -216,6 +213,31 @@ val partition_result : ('ok, 'error) Result.t t -> ('ok, 'error) Partition.t
 
 (** Like [partition_result], but returns the parts in two lists instead. *)
 val partition_result' : ('ok, 'error) Result.t t -> 'ok list * 'error list
+
+module Partition3 : sig
+  (** A [Partition3] represents a splitting of a nonempty list into three parts, a "fst",
+      a "snd", and a "trd" part.
+
+      Unlike [List], partitioning a nonempty list does not produce three nonempty lists,
+      because one of the parts could be empty. However, we know for sure that at least one
+      of the parts is nonempty, so we represent this information in a structured type
+      indicating which parts are nonempty. *)
+
+  type ('fst, 'snd, 'trd) t =
+    | Fst of 'fst nonempty_list
+    | Snd of 'snd nonempty_list
+    | Trd of 'trd nonempty_list
+    | Fst_snd of 'fst nonempty_list * 'snd nonempty_list
+    | Fst_trd of 'fst nonempty_list * 'trd nonempty_list
+    | Snd_trd of 'snd nonempty_list * 'trd nonempty_list
+    | Fst_snd_trd of 'fst nonempty_list * 'snd nonempty_list * 'trd nonempty_list
+  [@@deriving sexp_of]
+end
+
+val partition3_map
+  :  'a t
+  -> f:('a -> [ `Fst of 'fst | `Snd of 'snd | `Trd of 'trd ])
+  -> ('fst, 'snd, 'trd) Partition3.t
 
 (** validates a list, naming each element by its position in the list (where the first
     position is 1, not 0). *)

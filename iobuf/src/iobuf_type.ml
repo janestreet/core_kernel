@@ -35,13 +35,13 @@ type repr = Repr.t =
   ; mutable hi_max : int
   }
 
-type (-'read_write, +'seek) t = Repr.t [@@deriving sexp_of]
+type (-'read_write, +'seek) t = Repr.t [@@deriving globalize, sexp_of]
 
 module With_shallow_sexp = struct
   type (_, _) t = Repr.t [@@deriving globalize, sexp_of]
 end
 
-let globalize _ _ t = [%globalize: Repr.t] t
+let globalize0 = Repr.globalize
 
 let[@cold] fail t message a sexp_of_a =
   (* Immediately convert the iobuf to sexp.  Otherwise, the iobuf could be modified before
@@ -50,7 +50,7 @@ let[@cold] fail t message a sexp_of_a =
   Error.raise
     (Error.create
        message
-       (a, [%sexp_of: (_, _) t] ([%globalize: Repr.t] t))
+       (a, [%sexp_of: (_, _) t] (globalize0 t))
        (Tuple.T2.sexp_of_t sexp_of_a Fn.id))
 ;;
 
@@ -126,9 +126,7 @@ let unsafe_bigstring_view =
   if unsafe_is_safe then bigstring_view else unsafe_bigstring_view
 ;;
 
-let of_bigstring ?pos ?len buf =
-  [%globalize: Repr.t] (of_bigstring__local ?pos ?len buf) [@nontail]
-;;
+let of_bigstring ?pos ?len buf = globalize0 (of_bigstring__local ?pos ?len buf) [@nontail]
 
 let set_bounds_and_buffer_sub ~pos ~len ~src ~dst =
   check_range src ~pos ~len;

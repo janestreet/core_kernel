@@ -24,8 +24,7 @@ module type Iobuf_type = sig
       ; mutable hi : int
       ; mutable hi_max : int
       }
-    [@@deriving
-      fields ~getters ~direct_iterators:(iter, set_all_mutable_fields), globalize, sexp_of]
+    [@@deriving fields ~getters ~direct_iterators:(iter, set_all_mutable_fields), sexp_of]
   end
 
   type repr = Repr.t =
@@ -36,10 +35,10 @@ module type Iobuf_type = sig
     ; mutable hi_max : int
     }
 
-  type (_, _) t = Repr.t
+  type ('rw, 'seek) t = Repr.t [@@deriving globalize]
   type ('rw, 'seek) iobuf := ('rw, 'seek) t
 
-  val globalize : _ -> _ -> ('rw, _) t -> ('rw, _) t
+  val globalize0 : ('rw, _) t -> ('rw, _) t
 
   module With_shallow_sexp : sig
     type ('rw, 'seek) t = ('rw, 'seek) iobuf [@@deriving globalize, sexp_of]

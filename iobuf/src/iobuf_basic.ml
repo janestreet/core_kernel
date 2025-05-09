@@ -138,10 +138,7 @@ let unsafe_sub_shared ~pos ~len t =
   if unsafe_is_safe then sub_shared__local ~pos ~len t else unsafe_sub_shared ~pos ~len t
 ;;
 
-let sub_shared ?pos ?len t =
-  [%globalize: Repr.t] (sub_shared__local ?pos ?len t) [@nontail]
-;;
-
+let sub_shared ?pos ?len t = globalize0 (sub_shared__local ?pos ?len t) [@nontail]
 let copy t = of_bigstring (Bigstring.sub t.buf ~pos:t.lo ~len:(length t))
 
 let clone { buf; lo_min; lo; hi; hi_max } =
