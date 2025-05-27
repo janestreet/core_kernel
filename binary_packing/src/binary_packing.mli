@@ -1,3 +1,5 @@
+@@ portable
+
 (** Packs and unpacks various types of integers into and from strings.
 
     Functions ending in [_int] should not be used in 32-bit programs because native OCaml

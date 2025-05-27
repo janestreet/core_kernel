@@ -22,7 +22,7 @@ module Lo_bound = struct
     fail iobuf "Iobuf.Lo_bound.restore got stale snapshot" t [%sexp_of: int]
   ;;
 
-  type t = int [@@deriving compare, sexp_of] (* lo *)
+  type t = int [@@deriving compare ~localize, sexp_of] (* lo *)
 
   let window t = t.lo
 
@@ -39,7 +39,7 @@ module Hi_bound = struct
     fail iobuf "Iobuf.Hi_bound.restore got stale snapshot" t [%sexp_of: int]
   ;;
 
-  type t = int [@@deriving compare, sexp_of] (* hi *)
+  type t = int [@@deriving compare ~localize, sexp_of] (* hi *)
 
   let window t = t.hi
 

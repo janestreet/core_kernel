@@ -45,7 +45,7 @@ module type S = sig
   [@@zero_alloc]
 
   module Unstable : sig
-    type nonrec t = t [@@deriving bin_io, compare, equal, sexp]
+    type nonrec t = t [@@deriving bin_io, compare ~localize, equal ~localize, sexp]
   end
 end
 

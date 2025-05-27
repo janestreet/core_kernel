@@ -1,7 +1,7 @@
 type 'a t = 'a list =
   | []
   | ( :: ) of 'a * 'a t
-[@@deriving equal]
+[@@deriving equal ~localize]
 
 open Base
 

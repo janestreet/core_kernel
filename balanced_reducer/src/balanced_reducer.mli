@@ -1,3 +1,5 @@
+@@ portable
+
 (** A [Balanced_reducer.t] stores a mutable fixed-length sequence of optional values, and
     incrementally maintains the result of folding an associative operation ([reduce]) over
     the sequence as its elements change. *)

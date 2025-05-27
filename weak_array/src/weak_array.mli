@@ -1,3 +1,5 @@
+@@ portable
+
 (** Module for dealing with weak pointers, i.e., pointers that don't prevent garbage
     collection of what they point to.
 

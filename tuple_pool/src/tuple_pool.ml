@@ -146,8 +146,9 @@ module Pool = struct
 
   let tuple_id_mask = (1 lsl masked_tuple_id_num_bits) - 1
 
-  module Pointer : sig @@ portable
-    (* [Pointer.t] is an encoding as an [int] of the following sum type:
+  module Pointer : sig
+    @@ portable
+       (* [Pointer.t] is an encoding as an [int] of the following sum type:
 
        {[
          | Null
@@ -178,7 +179,7 @@ module Pool = struct
     val slot_index : _ t -> (_, _) Slot.t -> int
     val first_slot_index : _ t -> int
 
-    module Id : sig
+    module Id : sig @@ portable
       type t [@@deriving bin_io, sexp]
 
       val to_int63 : t -> Int63.t
@@ -366,7 +367,7 @@ module Pool = struct
   type 'slots t = Obj.t Uniform_array.t
 
   let metadata (type slots) (t : slots t) =
-    Uniform_array.unsafe_get t metadata_index |> (Obj.obj : _ -> slots Metadata.t)
+    Uniform_array.unsafe_get t metadata_index |> (Obj.Expert.obj : _ -> slots Metadata.t)
   ;;
 
   let length t = (metadata t).length
@@ -375,7 +376,7 @@ module Pool = struct
   (* Because [unsafe_header] and [unsafe_set_header] do not do a bounds check, one must be
      sure that one has a valid [header_index] before calling them. *)
   let unsafe_header t ~header_index =
-    Uniform_array.unsafe_get t header_index |> (Obj.obj : _ -> Header.t)
+    Uniform_array.unsafe_get t header_index |> (Obj.Expert.obj : _ -> Header.t)
   ;;
 
   let unsafe_set_header t ~header_index (header : Header.t) =
@@ -869,10 +870,10 @@ module Pool = struct
     pointer
   ;;
 
-  let get t p slot = Obj.obj (Uniform_array.get t (Pointer.slot_index p slot))
+  let get t p slot = Obj.Expert.obj (Uniform_array.get t (Pointer.slot_index p slot))
 
   let unsafe_get t p slot =
-    Obj.obj (Uniform_array.unsafe_get t (Pointer.slot_index p slot))
+    Obj.Expert.obj (Uniform_array.unsafe_get t (Pointer.slot_index p slot))
   ;;
 
   let set t p slot x = Uniform_array.set t (Pointer.slot_index p slot) (Obj.repr x)

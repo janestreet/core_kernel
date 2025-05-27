@@ -48,6 +48,8 @@ struct
   let write4_local = write4_local
   let write5 = write5
   let write5_local = write5_local
+  let write6 = write6
+  let write6_local = write6_local
 
   let create1 ~here:created_from ~on_subscription_after_first_write =
     create_exn

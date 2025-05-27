@@ -102,7 +102,7 @@ module type Iobuf_type = sig
   end
 
   module Char_elt : sig
-    type t = char [@@deriving equal]
+    type t = char [@@deriving equal ~localize]
 
     val of_bool : bool -> t
   end

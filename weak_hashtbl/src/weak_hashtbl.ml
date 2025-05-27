@@ -5,7 +5,7 @@ type ('a, 'b) t =
   ; keys_with_unused_data : 'a Thread_safe_queue.t
   ; mutable thread_safe_run_when_unused_data : unit -> unit
   }
-[@@deriving sexp_of]
+[@@deriving sexp_of ~portable]
 
 module Using_hashable = struct
   let create ?growth_allowed ?size hashable =

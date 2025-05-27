@@ -126,7 +126,7 @@ end
 (** An [Alarm_precision] is a time span that is a power of two number of nanoseconds, used
     to specify the precision of a timing wheel. *)
 module type Alarm_precision = sig
-  type t [@@deriving compare, sexp_of]
+  type t : immediate [@@deriving compare, sexp_of]
 
   include Equal.S with type t := t
 
@@ -173,7 +173,7 @@ module type Alarm_precision = sig
 end
 
 (** A timing wheel can be thought of as a set of alarms. *)
-module type Timing_wheel = sig
+module type Timing_wheel = sig @@ portable
   module Alarm_precision : Alarm_precision
 
   type 'a t [@@deriving sexp_of]
@@ -185,7 +185,7 @@ module type Timing_wheel = sig
   module Interval_num : Interval_num
 
   module Alarm : sig
-    type 'a t [@@deriving sexp_of]
+    type 'a t : value mod portable [@@deriving sexp_of]
 
     (** [null ()] returns an alarm [t] such that [not (mem timing_wheel t)] for all
         [timing_wheel]s. *)
@@ -198,7 +198,9 @@ module type Timing_wheel = sig
     val value : 'a timing_wheel -> 'a t -> 'a
   end
 
-  include Invariant.S1 with type 'a t := 'a t
+  (*_ This invariant isn't portable because the implementation uses [%test_result], which
+      is not portable *)
+  include Invariant.S1 with type 'a t := 'a t @@ nonportable
 
   module Level_bits : sig
     (** The timing-wheel implementation uses an array of "levels", where level [i] is an
@@ -248,7 +250,7 @@ module type Timing_wheel = sig
   end
 
   module Config : sig
-    type t [@@deriving sexp]
+    type t : immutable_data [@@deriving sexp]
 
     include Invariant.S with type t := t
 

@@ -1,3 +1,5 @@
+@@ portable
+
 (** A hashtable that keeps a weak pointer to each key's data and uses a finalizer to
     detect when the data is no longer referenced (by any non-weak pointers).
 
@@ -57,11 +59,12 @@ val find_or_add
   -> 'a
   -> default:local_ (unit -> 'b Heap_block.t)
   -> 'b Heap_block.t
+  @@ nonportable
 
 val remove : ('a, 'b) t -> 'a -> unit
 val clear : (_, _) t -> unit
-val add_exn : ('a, 'b) t -> key:'a -> data:'b Heap_block.t -> unit
-val replace : ('a, 'b) t -> key:'a -> data:'b Heap_block.t -> unit
+val add_exn : ('a, 'b) t -> key:'a -> data:'b Heap_block.t -> unit @@ nonportable
+val replace : ('a, 'b) t -> key:'a -> data:'b Heap_block.t -> unit @@ nonportable
 
 (** [key_is_using_space t key] returns [true] if [key] is using some space in [t].
     [mem t key] implies [key_is_using_space t key], but it is also possible that that

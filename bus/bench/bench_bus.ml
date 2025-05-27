@@ -23,7 +23,9 @@ let create_with_subscribers (type a) (arity : a Callback_arity.t) ~num_subscribe
              | Arity4 -> fun _ _ _ _ -> ()
              | Arity4_local -> fun _ _ _ _ -> ()
              | Arity5 -> fun _ _ _ _ _ -> ()
-             | Arity5_local -> fun _ _ _ _ _ -> ()))
+             | Arity5_local -> fun _ _ _ _ _ -> ()
+             | Arity6 -> fun _ _ _ _ _ _ -> ()
+             | Arity6_local -> fun _ _ _ _ _ _ -> ()))
   in
   t, subscribers
 ;;

@@ -1,3 +1,5 @@
+@@ portable
+
 (** Thread-safe generation of random identifiers in the UUID format.
 
     This library is not RFC 4122 compliant: the version is set in the output, but the
@@ -8,9 +10,11 @@ open! Core
 (** When [am_running_test], [sexp_of_t] masks the UUID, showing only
     "<uuid-omitted-in-test>". You can use [Unstable.sexp_of_t] if you definitely want to
     see it within your tests. *)
-type t [@@deriving hash, sexp_of]
+type t : immutable_data [@@deriving hash, sexp_of]
 
-include Identifiable.S with type t := t
+include%template Comparator.S [@modality portable] with type t := t
+
+include Identifiable.S with type t := t and type comparator_witness := comparator_witness
 include Invariant.S with type t := t
 include Quickcheckable.S with type t := t
 

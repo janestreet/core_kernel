@@ -38,6 +38,16 @@ module Callback_arity : sig
     | Arity5 : ('a -> 'b -> 'c -> 'd -> 'e -> unit) t
     | Arity5_local :
         (local_ 'a -> local_ 'b -> local_ 'c -> local_ 'd -> local_ 'e -> unit) t
+    | Arity6 : ('a -> 'b -> 'c -> 'd -> 'e -> 'f -> unit) t
+    | Arity6_local :
+        (local_ 'a
+         -> local_ 'b
+         -> local_ 'c
+         -> local_ 'd
+         -> local_ 'e
+         -> local_ 'f
+         -> unit)
+          t
   [@@deriving sexp_of]
 end
 
@@ -153,6 +163,27 @@ val write5_local
   -> local_ 'e
   -> unit
 
+val write6
+  :  ('a -> 'b -> 'c -> 'd -> 'e -> 'f -> unit) Read_write.t
+  -> 'a
+  -> 'b
+  -> 'c
+  -> 'd
+  -> 'e
+  -> 'f
+  -> unit
+
+val write6_local
+  :  (local_ 'a -> local_ 'b -> local_ 'c -> local_ 'd -> local_ 'e -> local_ 'f -> unit)
+       Read_write.t
+  -> local_ 'a
+  -> local_ 'b
+  -> local_ 'c
+  -> local_ 'd
+  -> local_ 'e
+  -> local_ 'f
+  -> unit
+
 module Subscriber : sig
   type 'callback t [@@deriving sexp_of]
 end
@@ -200,6 +231,11 @@ module Fold_arity : sig
     | Arity4 : ('a -> 'b -> 'c -> 'd -> unit, 's -> 'a -> 'b -> 'c -> 'd -> 's, 's) t
     | Arity5 :
         ('a -> 'b -> 'c -> 'd -> 'e -> unit, 's -> 'a -> 'b -> 'c -> 'd -> 'e -> 's, 's) t
+    | Arity6 :
+        ( 'a -> 'b -> 'c -> 'd -> 'e -> 'f -> unit
+          , 's -> 'a -> 'b -> 'c -> 'd -> 'e -> 'f -> 's
+          , 's )
+          t
   [@@deriving sexp_of]
 end
 

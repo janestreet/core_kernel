@@ -7,6 +7,11 @@ open Core
     [Stable.V3] module below).
 
     For operations on a locally allocated ['a t], see [Local_nonempty_list]. *)
+
+type%template ('a : k) t = ( :: ) of 'a * ('a List.t[@kind k])
+[@@deriving compare ~localize, equal ~localize]
+[@@kind k = (float64, bits64, bits32, word)]
+
 type 'a t = ( :: ) of 'a * 'a list
 [@@deriving
   compare ~localize
@@ -27,46 +32,75 @@ include Invariant.S1 with type 'a t := 'a t
 include Monad.S__local with type 'a t := 'a t
 include Indexed_container.S1 with type 'a t := 'a t
 
-val create : 'a -> 'a list -> 'a t
+[%%template:
+[@@@kind k = (float64, bits32, bits64, word, value)]
+
+type 'a t := ('a t[@kind k])
+
+[@@@kind.default k]
+
+val create : 'a -> ('a List.t[@kind k]) -> 'a t
 val init : int -> f:local_ (int -> 'a) -> 'a t
-val of_list : 'a list -> 'a t option
-val of_list_error : 'a list -> 'a t Or_error.t
-val of_list_exn : 'a list -> 'a t
+val of_list : ('a List.t[@kind k]) -> 'a t option
+val of_list_error : ('a List.t[@kind k]) -> 'a t Or_error.t
+val of_list_exn : ('a List.t[@kind k]) -> 'a t
+val to_list : 'a t -> ('a List.t[@kind k])
 val singleton : 'a -> 'a t
 val cons : 'a -> 'a t -> 'a t
 val hd : 'a t -> 'a
-val tl : 'a t -> 'a list
-val nth : 'a t -> int -> 'a option
+val tl : 'a t -> ('a List.t[@kind k])
+val nth : 'a t -> int -> ('a option[@kind k])
 val nth_exn : 'a t -> int -> 'a
 val reduce : 'a t -> f:local_ ('a -> 'a -> 'a) -> 'a
 val reverse : 'a t -> 'a t
-val append : 'a t -> 'a list -> 'a t
+val append : 'a t -> ('a List.t[@kind k]) -> 'a t
+val ( @ ) : 'a t -> 'a t -> 'a t
+val filter : 'a t -> f:local_ ('a -> bool) -> ('a List.t[@kind k])
+val filteri : 'a t -> f:local_ (int -> 'a -> bool) -> ('a List.t[@kind k])
+val last : 'a t -> 'a
+val iter : 'a t -> f:local_ ('a -> unit) -> unit
+val iteri : 'a t -> f:local_ (int -> 'a -> unit) -> unit
+val length : _ t -> int]
+
+[%%template:
+[@@@kind.default
+  ka = (float64, bits32, bits64, word, value), kb = (float64, bits32, bits64, word, value)]
+
+val map : ('a t[@kind ka]) -> f:local_ ('a -> 'b) -> ('b t[@kind kb])
+val mapi : ('a t[@kind ka]) -> f:local_ (int -> 'a -> 'b) -> ('b t[@kind kb])
+
+val filter_map
+  :  ('a t[@kind ka])
+  -> f:local_ ('a -> ('b Option.t[@kind kb]))
+  -> ('b List.t[@kind kb])
+
+val filter_mapi
+  :  ('a t[@kind ka])
+  -> f:local_ (int -> 'a -> ('b Option.t[@kind kb]))
+  -> ('b List.t[@kind kb])
+
+val concat_map : ('a t[@kind ka]) -> f:local_ ('a -> ('b t[@kind kb])) -> ('b t[@kind kb])]
+
+val reduce : 'a t -> f:local_ ('a -> 'a -> 'a) -> 'a
 val append' : 'a list -> 'a t -> 'a t
 val unzip : ('a * 'b) t -> 'a t * 'b t
 val unzip3 : ('a * 'b * 'c) t -> 'a t * 'b t * 'c t
 val zip : 'a t -> 'b t -> ('a * 'b) t List.Or_unequal_lengths.t
 val zip_exn : 'a t -> 'b t -> ('a * 'b) t
-val mapi : 'a t -> f:local_ (int -> 'a -> 'b) -> 'b t
 val map2 : 'a t -> 'b t -> f:local_ ('a -> 'b -> 'c) -> 'c t List.Or_unequal_lengths.t
 val map2_exn : 'a t -> 'b t -> f:local_ ('a -> 'b -> 'c) -> 'c t
-val filter : 'a t -> f:local_ ('a -> bool) -> 'a list
-val filteri : 'a t -> f:local_ (int -> 'a -> bool) -> 'a list
-val filter_map : 'a t -> f:local_ ('a -> 'b option) -> 'b list
-val filter_mapi : 'a t -> f:local_ (int -> 'a -> 'b option) -> 'b list
 val filter_opt : 'a option t -> 'a list
-val concat : 'a t t -> 'a t
-val concat_map : 'a t -> f:local_ ('a -> 'b t) -> 'b t
-val last : 'a t -> 'a
+val concat : 'a t nonempty_list -> 'a t
 val drop_last : 'a t -> 'a list
 val to_sequence : 'a t -> 'a Sequence.t
 val sort : 'a t -> compare:local_ ('a -> 'a -> int) -> 'a t
+val group : 'a t -> break:local_ ('a -> 'a -> bool) -> 'a t t
 val sort_and_group : 'a t -> compare:local_ ('a -> 'a -> int) -> 'a t t
 val stable_sort : 'a t -> compare:local_ ('a -> 'a -> int) -> 'a t
 val stable_dedup : 'a t -> compare:('a -> 'a -> int) -> 'a t
 val dedup_and_sort : 'a t -> compare:local_ ('a -> 'a -> int) -> 'a t
 val permute : ?random_state:Random.State.t -> 'a t -> 'a t
 val random_element : ?random_state:Random.State.t -> 'a t -> 'a
-val iteri : 'a t -> f:local_ (int -> 'a -> unit) -> unit
 val cartesian_product : 'a t -> 'b t -> ('a * 'b) t
 val fold_nonempty : 'a t -> init:local_ ('a -> 'acc) -> f:('acc -> 'a -> 'acc) -> 'acc
 val fold_right : 'a t -> init:'b -> f:local_ ('a -> 'b -> 'b) -> 'b
@@ -99,24 +133,46 @@ val map_add_multi : ('k, 'v t, 'cmp) Map.t -> key:'k -> data:'v -> ('k, 'v t, 'c
 val hashtbl_add_multi : ('k, 'v t) Hashtbl.t -> key:'k -> data:'v -> unit
 
 (** Like [Map.of_alist_multi], but comes with a guarantee that the range of the returned
-    map is all nonempty lists. Additionally, the elements in the resulting nonempty lists
-    will be in the reverse order of the input list. *)
+    map is all nonempty lists. *)
+val map_of_alist_multi
+  :  ('k * 'v) list
+  -> comparator:('k, 'cmp) Comparator.Module.t
+  -> ('k, 'v t, 'cmp) Map.t
+
+(** Like [map_of_alist_multi] but the elements in the resulting nonempty lists will be in
+    the reverse order of the input list. Uses of this function should probably be replaced
+    with [map_of_alist_multi] *)
 val map_of_alist_multi_rev
   :  ('k * 'v) list
   -> comparator:('k, 'cmp) Comparator.Module.t
   -> ('k, 'v t, 'cmp) Map.t
 
 (** Like [Map.of_sequence_multi], but comes with a guarantee that the range of the
-    returned map is all nonempty lists. Additionally, the elements in the resulting
-    nonempty lists will be in the reverse order of the input sequence. *)
+    returned map is all nonempty lists. *)
+val map_of_sequence_multi
+  :  ('k * 'v) Sequence.t
+  -> comparator:('k, 'cmp) Comparator.Module.t
+  -> ('k, 'v t, 'cmp) Map.t
+
+(** Like [map_of_sequence_multi] but the elements in the resulting nonempty lists will be
+    in the reverse order of the input sequence. Uses of this function should probably be
+    replaced with [map_of_sequence_multi] *)
 val map_of_sequence_multi_rev
   :  ('k * 'v) Sequence.t
   -> comparator:('k, 'cmp) Comparator.Module.t
   -> ('k, 'v t, 'cmp) Map.t
 
 (** Like [Map.of_list_with_key_multi], but comes with a guarantee that the range of the
-    returned map is all nonempty lists. Additionally, the elements in the resulting
-    nonempty lists will be in the reverse order of the input list. *)
+    returned map is all nonempty lists. *)
+val map_of_list_with_key_multi
+  :  'v list
+  -> comparator:('k, 'cmp) Comparator.Module.t
+  -> get_key:('v -> 'k)
+  -> ('k, 'v t, 'cmp) Map.t
+
+(** Like [map_of_list_with_key_multi] but the elements in the resulting nonempty lists
+    will be in the reverse order of the input list. Uses of this function should probably
+    be replaced with [map_of_list_with_key_multi] *)
 val map_of_list_with_key_multi_rev
   :  'v list
   -> comparator:('k, 'cmp) Comparator.Module.t

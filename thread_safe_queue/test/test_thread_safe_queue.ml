@@ -3,7 +3,7 @@ module Thread = Core_thread
 module Time = Time_float_unix
 
 module%test Thread_safe_queue : module type of Thread_safe_queue = struct
-  let () = Debug.should_print_backtrace := false
+  let () = Atomic.set Debug.should_print_backtrace false
 
   open Thread_safe_queue
 

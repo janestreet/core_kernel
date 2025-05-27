@@ -10,7 +10,7 @@ module Definitions = struct
     type ('d, 'w) iobuf
 
     type t = private int (*_ performance hack: avoid the write barrier *)
-    [@@deriving compare, sexp_of]
+    [@@deriving compare ~localize, sexp_of]
 
     val window : local_ (_, _) iobuf -> t
     val limit : local_ (_, _) iobuf -> t

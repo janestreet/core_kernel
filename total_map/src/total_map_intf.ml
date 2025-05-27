@@ -5,37 +5,70 @@ module type Key_plain = sig
   type t [@@deriving sexp_of, compare, enumerate]
 end
 
+module type%template [@modality portable] Key_plain = sig
+  type t : value mod contended portable
+
+  include Key_plain with type t := t
+end
+
 module type Key = sig
   type t [@@deriving sexp, bin_io, compare, enumerate]
 end
 
+module type%template [@modality portable] Key = sig
+  type t : value mod contended portable
+
+  include Key with type t := t
+end
+
+[%%template
+[@@@modality.default p = (portable, nonportable)]
+
 module type Key_plain_with_witnesses = sig
-  include Key_plain
-  include Comparator.S with type t := t
+  include Key_plain [@modality p]
+  include Comparator.S [@modality p] with type t := t
   include Enumeration.S with type t := t
 end
 
 module type Key_with_witnesses = sig
-  include Key
-  include Comparator.S with type t := t
+  include Key [@modality p]
+  include Comparator.S [@modality p] with type t := t
   include Enumeration.S with type t := t
 end
 
 module type Key_with_stable_witness = sig
-  include Key_with_witnesses
-  include Stable_with_witness with type t := t
+  include Key_with_witnesses [@modality p]
+
+  include
+    Stable_with_witness with type t := t and type comparator_witness := comparator_witness
 end
 
 module type S_plain = sig
   type ('key, 'a, 'cmp, 'enum) total_map
 
-  module Key : Key_plain
+  module Key : Key_plain [@modality p]
 
   type comparator_witness
   type enumeration_witness
 
   type 'a t = (Key.t, 'a, comparator_witness, enumeration_witness) total_map
-  [@@deriving sexp_of, compare, equal, quickcheck]
+  [@@deriving sexp_of, compare ~localize, equal ~localize]
+
+  include sig
+    [@@@mode.default p = (nonportable, p)]
+
+    val quickcheck_generator
+      :  'a Quickcheck.Generator.t @ p
+      -> 'a t Quickcheck.Generator.t @ p
+
+    val quickcheck_observer
+      :  'a Quickcheck.Observer.t @ p
+      -> 'a t Quickcheck.Observer.t @ p
+
+    val quickcheck_shrinker
+      :  'a Quickcheck.Shrinker.t @ p
+      -> 'a t Quickcheck.Shrinker.t @ p
+  end
 
   include Applicative with type 'a t := 'a t
 
@@ -53,12 +86,12 @@ end
 (** An alternative interface for [S_plain] which can be used with [include functor]. We
     keep the old interface to avoid breaking existing code. *)
 module type For_include_functor_plain = sig
-  module Total_map : S_plain
+  module Total_map : S_plain [@modality p]
 end
 
 module type S = sig
-  module Key : Key
-  include S_plain with module Key := Key
+  module Key : Key [@modality p]
+  include S_plain [@modality p] with module Key := Key
   include Sexpable.S1 with type 'a t := 'a t
   include Binable.S1 with type 'a t := 'a t
 end
@@ -66,85 +99,109 @@ end
 (** An alternative interface for [S] which can be used with [include functor]. We keep the
     old interface to avoid breaking existing code. *)
 module type For_include_functor = sig
-  module Total_map : S
+  module Total_map : S [@modality p]
 end
 
 module type Stable_S = sig
   type ('key, 'a, 'cmp, 'enum) total_map
 
-  module Key : Key
+  module Key : Key [@modality p]
 
   type comparator_witness
   type enumeration_witness
 
   type 'a t = (Key.t, 'a, comparator_witness, enumeration_witness) total_map
-  [@@deriving bin_io, sexp, compare]
+  [@@deriving bin_io, sexp, compare ~localize]
 end
 
 module type Stable_For_include_functor = sig
-  module Total_map : Stable_S
+  module Total_map : Stable_S [@modality p]
 end
 
 module type Stable_S_with_stable_witness = sig
   type ('key, 'a, 'cmp, 'enum) total_map
 
-  module Key : Key
+  module Key : Key [@modality p]
 
   type comparator_witness
   type enumeration_witness
 
   type 'a t = (Key.t, 'a, comparator_witness, enumeration_witness) total_map
-  [@@deriving bin_io, sexp, compare, stable_witness]
+  [@@deriving bin_io, sexp, compare ~localize, stable_witness]
 end
 
 module type Stable_For_include_functor_with_stable_witness = sig
-  module Total_map : Stable_S_with_stable_witness
-end
+  module Total_map : Stable_S_with_stable_witness [@modality p]
+end]
 
 module type Stable = sig
   type ('key, 'a, 'cmp, 'enum) t
 
+  [%%template:
+  [@@@modality.default p = (portable, nonportable)]
+
   module type S =
-    Stable_S with type ('key, 'a, 'cmp, 'enum) total_map := ('key, 'a, 'cmp, 'enum) t
+    Stable_S
+    [@modality p]
+    with type ('key, 'a, 'cmp, 'enum) total_map := ('key, 'a, 'cmp, 'enum) t
 
   module type S_with_stable_witness =
     Stable_S_with_stable_witness
+    [@modality p]
     with type ('key, 'a, 'cmp, 'enum) total_map := ('key, 'a, 'cmp, 'enum) t
 
   module type For_include_functor =
     Stable_For_include_functor
+    [@modality p]
     with type ('key, 'a, 'cmp, 'enum) Total_map.total_map := ('key, 'a, 'cmp, 'enum) t
 
   module type For_include_functor_with_stable_witness =
     Stable_For_include_functor_with_stable_witness
-    with type ('key, 'a, 'cmp, 'enum) Total_map.total_map := ('key, 'a, 'cmp, 'enum) t
+    [@modality p]
+    with type ('key, 'a, 'cmp, 'enum) Total_map.total_map := ('key, 'a, 'cmp, 'enum) t]
 
-  module Make_with_witnesses (Key : Key_with_witnesses) :
+  module%template.portable
+    [@modality p] Make_with_witnesses
+      (Key : Key_with_witnesses
+    [@modality p]) :
     S
+    [@modality p]
     with module Key = Key
     with type comparator_witness = Key.comparator_witness
     with type enumeration_witness = Key.enumeration_witness
 
-  module Make_for_include_functor_with_witnesses (Key : Key_with_witnesses) :
+  module%template.portable
+    [@modality p] Make_for_include_functor_with_witnesses
+      (Key : Key_with_witnesses
+    [@modality p]) :
     For_include_functor
+    [@modality p]
     with module Total_map.Key = Key
     with type Total_map.comparator_witness = Key.comparator_witness
     with type Total_map.enumeration_witness = Key.enumeration_witness
 
-  module Make_with_stable_witness (Key : Key_with_stable_witness) :
+  module%template.portable
+    [@modality p] Make_with_stable_witness
+      (Key : Key_with_stable_witness
+    [@modality p]) :
     S_with_stable_witness
+    [@modality p]
     with module Key = Key
     with type comparator_witness = Key.comparator_witness
     with type enumeration_witness = Key.enumeration_witness
 
-  module Make_for_include_functor_with_stable_witness (Key : Key_with_stable_witness) :
+  module%template.portable
+    [@modality p] Make_for_include_functor_with_stable_witness
+      (Key : Key_with_stable_witness
+    [@modality p]) :
     For_include_functor_with_stable_witness
+    [@modality p]
     with module Total_map.Key = Key
     with type Total_map.comparator_witness = Key.comparator_witness
     with type Total_map.enumeration_witness = Key.enumeration_witness
 end
 
-module type Total_map = sig
+module type Total_map = sig @@ portable
   (** A map that includes an entry for every possible value of the key type.
 
       This is intended to be used on ['key] types where there is a full enumeration of the
@@ -282,50 +339,82 @@ module type Total_map = sig
   module type Key = Key
   module type Key_with_witnesses = Key_with_witnesses
 
+  [%%template:
+  [@@@modality.default p = (portable, nonportable)]
+
   module type S_plain =
-    S_plain with type ('key, 'a, 'cmp, 'enum) total_map := ('key, 'a, 'cmp, 'enum) t
+    S_plain
+    [@modality p]
+    with type ('key, 'a, 'cmp, 'enum) total_map := ('key, 'a, 'cmp, 'enum) t
 
   module type For_include_functor_plain =
     For_include_functor_plain
+    [@modality p]
     with type ('key, 'a, 'cmp, 'enum) Total_map.total_map := ('key, 'a, 'cmp, 'enum) t
 
   module type S =
-    S with type ('key, 'a, 'cmp, 'enum) total_map := ('key, 'a, 'cmp, 'enum) t
+    S
+    [@modality p]
+    with type ('key, 'a, 'cmp, 'enum) total_map := ('key, 'a, 'cmp, 'enum) t
 
   module type For_include_functor =
     For_include_functor
-    with type ('key, 'a, 'cmp, 'enum) Total_map.total_map := ('key, 'a, 'cmp, 'enum) t
+    [@modality p]
+    with type ('key, 'a, 'cmp, 'enum) Total_map.total_map := ('key, 'a, 'cmp, 'enum) t]
 
-  module Make_plain (Key : Key_plain) : S_plain with module Key = Key
+  module%template.portable [@modality p] Make_plain (Key : Key_plain [@modality p]) :
+    S_plain [@modality p] with module Key = Key
 
-  module Make_for_include_functor_plain (Key : Key_plain) :
-    For_include_functor_plain with module Total_map.Key = Key
+  module%template.portable
+    [@modality p] Make_for_include_functor_plain
+      (Key : Key_plain
+    [@modality p]) :
+    For_include_functor_plain [@modality p] with module Total_map.Key = Key
 
-  module Make_plain_with_witnesses (Key : Key_plain_with_witnesses) :
+  module%template.portable
+    [@modality p] Make_plain_with_witnesses
+      (Key : Key_plain_with_witnesses
+    [@modality p]) :
     S_plain
+    [@modality p]
     with module Key = Key
     with type comparator_witness = Key.comparator_witness
     with type enumeration_witness = Key.enumeration_witness
 
-  module Make_for_include_functor_plain_with_witnesses (Key : Key_plain_with_witnesses) :
+  module%template.portable
+    [@modality p] Make_for_include_functor_plain_with_witnesses
+      (Key : Key_plain_with_witnesses
+    [@modality p]) :
     For_include_functor_plain
+    [@modality p]
     with module Total_map.Key = Key
     with type Total_map.comparator_witness = Key.comparator_witness
     with type Total_map.enumeration_witness = Key.enumeration_witness
 
-  module Make (Key : Key) : S with module Key = Key
+  module%template.portable [@modality p] Make (Key : Key [@modality p]) :
+    S [@modality p] with module Key = Key
 
-  module Make_for_include_functor (Key : Key) :
-    For_include_functor with module Total_map.Key = Key
+  module%template.portable
+    [@modality p] Make_for_include_functor
+      (Key : Key
+    [@modality p]) : For_include_functor [@modality p] with module Total_map.Key = Key
 
-  module Make_with_witnesses (Key : Key_with_witnesses) :
+  module%template.portable
+    [@modality p] Make_with_witnesses
+      (Key : Key_with_witnesses
+    [@modality p]) :
     S
+    [@modality p]
     with module Key = Key
     with type comparator_witness = Key.comparator_witness
     with type enumeration_witness = Key.enumeration_witness
 
-  module Make_for_include_functor_with_witnesses (Key : Key_with_witnesses) :
+  module%template.portable
+    [@modality p] Make_for_include_functor_with_witnesses
+      (Key : Key_with_witnesses
+    [@modality p]) :
     For_include_functor
+    [@modality p]
     with module Total_map.Key = Key
     with type Total_map.comparator_witness = Key.comparator_witness
     with type Total_map.enumeration_witness = Key.enumeration_witness

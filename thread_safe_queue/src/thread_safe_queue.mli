@@ -1,3 +1,5 @@
+@@ portable
+
 (** A thread-safe non-blocking queue of unbounded size.
 
     The implementation does not use mutexes, and so is safe to use in situations when one

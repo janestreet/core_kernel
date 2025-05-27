@@ -34,8 +34,10 @@ module type Slots = sig
       Ultimately, a [Slots.t] is used as a phantom type that ensures consistent usage of
       the tuples in the data structure containing them. *)
 
-  type ('tuple, 'variant) u
-  type ('tuple, 'variant) t = [ `Slots of ('tuple, 'variant) u ] [@@deriving sexp_of]
+  type ('tuple, 'variant) u : immutable_data
+
+  type ('tuple, 'variant) t = [ `Slots of ('tuple, 'variant) u ] Modes.Immutable_data.t
+  [@@deriving sexp_of]
 
   val slots_per_tuple : (_, _) t -> int
 
@@ -212,7 +214,7 @@ end
 
 module type Slot = sig
   (** A [Slot.t] represents a slot in a tuple type. *)
-  type ('variant, 'a) t [@@deriving sexp_of]
+  type ('variant, 'a) t : immutable_data [@@deriving sexp_of]
 
   val equal : ('v, 'a) t -> ('v, 'a) t -> bool
 
