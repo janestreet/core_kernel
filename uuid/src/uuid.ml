@@ -19,13 +19,15 @@ module Stable = struct
   module V1 = struct
     module T = struct
       type t = string
-      [@@deriving bin_io, compare, equal, hash, sexp, sexp_grammar, stable_witness]
+      [@@deriving
+        bin_io, compare, equal, hash, sexp ~portable, sexp_grammar, stable_witness]
 
-      include (val Comparator.V1.make ~compare ~sexp_of_t)
+      include%template (val (Comparator.V1.make [@modality portable]) ~compare ~sexp_of_t)
     end
 
     include T
-    include Comparable.V1.With_stable_witness.Make (T)
+
+    include%template Comparable.V1.With_stable_witness.Make [@modality portable] (T)
 
     let for_testing = "5a863fc1-67b7-3a0a-dc90-aca2995afbf9"
     let to_string t = t
@@ -71,12 +73,8 @@ module T = struct
   let comparator = Stable.V1.comparator
 
   let next_counter =
-    let counter = ref 0 in
-    fun () ->
-      (* This is atomic because OCaml threads only context switch at allocations and
-         safepoints, and [incr] is a primitive that has neither. *)
-      incr counter;
-      !counter
+    let counter = Atomic.make 1 in
+    fun () -> Atomic.fetch_and_add counter 1
   ;;
 
   let set_all_dashes bytes =
@@ -96,7 +94,12 @@ module T = struct
   ;;
 
   let create_random =
-    let bytes = Bytes.create 36 in
+    let module DLS = struct
+      include Stdlib.Domain.DLS
+      include Basement.Stdlib_shim.Domain.Safe.DLS
+    end
+    in
+    let bytes = DLS.new_key (fun () -> Bytes.create 36) in
     fun random_state ->
       (* We fill all 36 bytes with random hex digits, and then go back and set specific
          bytes to dash and the version number (4).  We do 6 groups of 6 bytes, each time
@@ -105,14 +108,19 @@ module T = struct
       for _ = 1 to 6 do
         let int = ref (Random.State.bits random_state) in
         for _ = 1 to 6 do
-          Bytes.set bytes !at (bottom_4_bits_to_hex_char !int);
+          let at' = !at in
+          let int' = !int in
+          DLS.access (fun access ->
+            Bytes.set (DLS.get access bytes) at' (bottom_4_bits_to_hex_char int'));
           incr at;
           int := !int lsr 4
         done
       done;
-      set_all_dashes bytes;
-      set_version bytes ~version:'4';
-      Bytes.to_string bytes
+      DLS.access (fun access ->
+        let bytes = DLS.get access bytes in
+        set_all_dashes bytes;
+        set_version bytes ~version:'4';
+        Bytes.to_string bytes)
   ;;
 
   (* [create] is responsible for generating unique string identifiers.  It should be clear
@@ -148,11 +156,11 @@ end
 
 include T
 
-include Identifiable.Make_using_comparator (struct
+include%template Identifiable.Make_using_comparator [@modality portable] (struct
     let module_name = "Uuid"
 
     include T
-    include Sexpable.Of_stringable (T)
+    include Sexpable.Of_stringable [@modality portable] (T)
   end)
 
 let invariant t = ignore (of_string t : t)
@@ -166,7 +174,7 @@ module Unstable = struct
   let t_sexp_grammar = string_sexp_grammar
 end
 
-let arg_type = Command.Arg_type.create of_string
+let%template arg_type = (Command.Arg_type.create [@mode portable]) of_string
 
 let sexp_of_t t =
   if am_running_test then [%sexp "<uuid-omitted-in-test>"] else [%sexp (t : t)]
@@ -180,18 +188,21 @@ module Private = struct
 end
 
 let quickcheck_shrinker : t Quickcheck.Shrinker.t = Quickcheck.Shrinker.empty ()
-let quickcheck_observer : t Quickcheck.Observer.t = Quickcheck.Observer.of_hash (module T)
 
-let quickcheck_generator : t Quickcheck.Generator.t =
-  let open Quickcheck.Generator.Let_syntax in
+let%template quickcheck_observer : t Quickcheck.Observer.t =
+  (Quickcheck.Observer.of_hash [@mode portable]) (module T)
+;;
+
+let%template quickcheck_generator : t Quickcheck.Generator.t =
+  let open Base_quickcheck.Generator.Portable.Let_syntax in
   let gen_hex_digit : Char.t Quickcheck.Generator.t =
-    Quickcheck.Generator.weighted_union
+    (Base_quickcheck.Generator.weighted_union [@mode portable])
       [ 10.0, Char.gen_digit; 6.0, Char.gen_uniform_inclusive 'a' 'f' ]
   in
-  let%map first = String.gen_with_length 8 gen_hex_digit
-  and second = String.gen_with_length 4 gen_hex_digit
-  and third = String.gen_with_length 4 gen_hex_digit
-  and fourth = String.gen_with_length 4 gen_hex_digit
-  and fifth = String.gen_with_length 12 gen_hex_digit in
+  let%map first = (String.gen_with_length [@mode portable]) 8 gen_hex_digit
+  and second = (String.gen_with_length [@mode portable]) 4 gen_hex_digit
+  and third = (String.gen_with_length [@mode portable]) 4 gen_hex_digit
+  and fourth = (String.gen_with_length [@mode portable]) 4 gen_hex_digit
+  and fifth = (String.gen_with_length [@mode portable]) 12 gen_hex_digit in
   of_string (sprintf "%s-%s-%s-%s-%s" first second third fourth fifth)
 ;;

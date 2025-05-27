@@ -22,7 +22,7 @@ module Elt = struct
     }
   [@@deriving sexp_of]
 
-  let create () = { value = Uopt.none; next = Uopt.none }
+  let create () = { value = Uopt.get_none (); next = Uopt.get_none () }
 end
 
 type 'a t =
@@ -66,7 +66,7 @@ let invariant _invariant_a t =
 
 let create () =
   let elt = Elt.create () in
-  { front = elt; back = elt; length = 0; unused_elts = Uopt.none }
+  { front = elt; back = elt; length = 0; unused_elts = Uopt.get_none () }
 ;;
 
 (* This doesn't actually need the attributes to ensure atomic semantics,
@@ -98,7 +98,7 @@ let[@inline never] [@specialise never] [@local never] enqueue (type a) (t : a t)
 (* Same comment about [@inline never][@specialise never][@local never] as for [get_unused_elt], above. *)
 let[@inline never] [@specialise never] [@local never] return_unused_elt t (elt : _ Elt.t) =
   (* BEGIN ATOMIC SECTION *)
-  elt.value <- Uopt.none;
+  elt.value <- Uopt.get_none ();
   elt.next <- t.unused_elts;
   t.unused_elts <- Uopt.some elt;
   (* END ATOMIC SECTION *)
@@ -143,7 +143,7 @@ let[@inline] dequeue_until_empty ~f t =
   done
 ;;
 
-let clear_internal_pool t = t.unused_elts <- Uopt.none
+let clear_internal_pool t = t.unused_elts <- Uopt.get_none ()
 
 module Private = struct
   module Uopt = Uopt

@@ -96,7 +96,7 @@ module Version = struct
     { repo : string
     ; version : string
     }
-  [@@deriving compare, sexp_of]
+  [@@deriving compare ~localize, sexp_of]
 
   let parse1 version =
     match String.rsplit2 version ~on:'_' with

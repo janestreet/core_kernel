@@ -82,6 +82,14 @@ let%expect_test "append'" =
   [%expect {| (5 6 7 1 2 3 4) |}]
 ;;
 
+let%expect_test "@" =
+  quickcheck'
+    [%quickcheck.generator: int t * int t]
+    [%test_result: int list]
+    (fun (t1, t2) -> to_list (t1 @ t2))
+    (fun (t1, t2) -> List.Infix.( @ ) (to_list t1) (to_list t2))
+;;
+
 let%expect_test "unzip" =
   quickcheck'
     [%quickcheck.generator: (int * char) t]
@@ -381,6 +389,14 @@ let%expect_test "sort_and_group" =
     |}]
 ;;
 
+let%expect_test "group" =
+  quickcheck'
+    [%quickcheck.generator: int t * (int -> int -> bool)]
+    [%test_result: int list list]
+    (fun (t, break) -> group t ~break |> to_list |> List.map ~f:to_list)
+    (fun (t, break) -> List.group (to_list t) ~break)
+;;
+
 let%expect_test "all_equal" =
   let equal = [%equal: int] in
   quickcheck
@@ -422,7 +438,7 @@ let%expect_test "hashtbl_add_multi" =
   [%expect {| ((0 (1 0))) |}]
 ;;
 
-let%expect_test "map_of_alist_multi" =
+let%expect_test "map_of_alist_multi_rev" =
   let test alist =
     print_s
       [%sexp (map_of_alist_multi_rev alist ~comparator:(module Int) : int t Int.Map.t)]
@@ -436,7 +452,25 @@ let%expect_test "map_of_alist_multi" =
     |}]
 ;;
 
-let%expect_test "map_of_list_with_key_multi" =
+let%expect_test "map_of_alist_multi" =
+  let test alist =
+    print_s [%sexp (map_of_alist_multi alist ~comparator:(module Int) : int t Int.Map.t)];
+    (* Also print the result of using [Map.of_alist_multi] to demonstrate that they're the
+       same *)
+    print_s [%sexp (Map.of_alist_multi (module Int) alist : int list Int.Map.t)]
+  in
+  test [];
+  test [ 0, 0; 0, 1; 1, 1 ];
+  [%expect
+    {|
+    ()
+    ()
+    ((0 (0 1)) (1 (1)))
+    ((0 (0 1)) (1 (1)))
+    |}]
+;;
+
+let%expect_test "map_of_list_with_key_multi_rev" =
   let get_key = Date.year in
   let test alist =
     print_s
@@ -453,7 +487,31 @@ let%expect_test "map_of_list_with_key_multi" =
     |}]
 ;;
 
-let%expect_test "map_of_sequence_multi" =
+let%expect_test "map_of_list_with_key_multi" =
+  let get_key = Date.year in
+  let test alist =
+    print_s
+      [%sexp
+        (map_of_list_with_key_multi alist ~comparator:(module Int) ~get_key
+         : Date.t t Int.Map.t)];
+    (* Also print the result of using [Map.of_list_with_key_multi] to demonstrate that
+       they're the same *)
+    print_s
+      [%sexp
+        (Map.of_list_with_key_multi (module Int) alist ~get_key : Date.t list Int.Map.t)]
+  in
+  test [];
+  test ([ "2023-01-01"; "2023-03-03"; "2024-12-24" ] |> List.map ~f:Date.of_string);
+  [%expect
+    {|
+    ()
+    ()
+    ((2023 (2023-01-01 2023-03-03)) (2024 (2024-12-24)))
+    ((2023 (2023-01-01 2023-03-03)) (2024 (2024-12-24)))
+    |}]
+;;
+
+let%expect_test "map_of_sequence_multi_rev" =
   let test alist =
     print_s
       [%sexp (map_of_sequence_multi_rev alist ~comparator:(module Int) : int t Int.Map.t)]
@@ -464,6 +522,25 @@ let%expect_test "map_of_sequence_multi" =
     {|
     ()
     ((0 (1 0)) (1 (1)))
+    |}]
+;;
+
+let%expect_test "map_of_sequence_multi" =
+  let test alist =
+    print_s
+      [%sexp (map_of_sequence_multi alist ~comparator:(module Int) : int t Int.Map.t)];
+    (* Also print the result of using [Map.of_sequence_multi] to demonstrate that they're the
+       same *)
+    print_s [%sexp (Map.of_sequence_multi (module Int) alist : int list Int.Map.t)]
+  in
+  test Sequence.empty;
+  test (Sequence.of_list [ 0, 0; 0, 1; 1, 1 ]);
+  [%expect
+    {|
+    ()
+    ()
+    ((0 (0 1)) (1 (1)))
+    ((0 (0 1)) (1 (1)))
     |}]
 ;;
 

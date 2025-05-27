@@ -47,7 +47,7 @@ open! Timing_wheel_intf
 module Pool = Tuple_pool
 module Time_ns = Core_private.Time_ns_alternate_sexp
 
-let sexp_of_t_style : [ `Pretty | `Internal ] ref = ref `Pretty
+let sexp_of_t_style : [ `Pretty | `Internal ] = `Pretty
 
 (* [{max,min}_time] are bounds on the times supported by a timing wheel. *)
 
@@ -224,8 +224,13 @@ end = struct
     end
 
     include T
-    include Binable.Of_binable_without_uuid [@alert "-legacy"] (Time_ns.Span) (T)
-    include Sexpable.Of_sexpable (Time_ns.Span) (T)
+
+    include%template
+      Binable.Of_binable_without_uuid [@modality portable] [@alert "-legacy"]
+        (Time_ns.Span)
+        (T)
+
+    include%template Sexpable.Of_sexpable [@modality portable] (Time_ns.Span) (T)
   end
 end
 
@@ -237,7 +242,7 @@ module Config = struct
     ; level_bits : Level_bits.t [@default level_bits_default]
     ; capacity : int option [@sexp.option]
     }
-  [@@deriving fields ~getters ~iterators:iter, sexp]
+  [@@deriving fields ~getters ~iterators:iter, sexp ~portable]
 
   let alarm_precision t = Alarm_precision.to_span t.alarm_precision
 
@@ -322,7 +327,7 @@ end
     minimum allowed key increases, timing-wheel elements move down levels until they reach
     level 0, and then are eventually removed. *)
 module Priority_queue : sig
-  type 'a t [@@deriving sexp_of]
+  type 'a t [@@deriving sexp_of ~portable]
   type 'a priority_queue = 'a t
 
   module Key : Interval_num
@@ -353,6 +358,8 @@ module Priority_queue : sig
 
   val pool : 'a t -> 'a Internal_elt.Pool.t
 
+  (* This invariant isn't portable because the implementation uses [%test_result], which 
+     is not portable *)
   include Invariant.S1 with type 'a t := 'a t
 
   (** [create ?level_bits ()] creates a new empty timing wheel, [t], with [length t = 0]
@@ -532,9 +539,9 @@ end = struct
         , 'a pool_slots Pointer.t
         , 'a pool_slots Pointer.t )
         Pool.Slots.t6
-    [@@deriving sexp_of]
+    [@@deriving sexp_of ~portable]
 
-    type 'a t = 'a pool_slots Pointer.t [@@deriving sexp_of]
+    type 'a t = 'a pool_slots Pointer.t [@@deriving sexp_of ~portable]
 
     let null = Pointer.null
   end
@@ -809,7 +816,7 @@ end = struct
   type 'a priority_queue = 'a t
 
   module Elt = struct
-    type 'a t = 'a External_elt.t [@@deriving sexp_of]
+    type 'a t = 'a External_elt.t [@@deriving sexp_of ~portable]
 
     let null = External_elt.null
     let at p t = Internal_elt.at p.pool (Internal_elt.of_external_exn p.pool t)
@@ -876,7 +883,7 @@ end = struct
   ;;
 
   let sexp_of_t sexp_of_a t =
-    match !sexp_of_t_style with
+    match sexp_of_t_style with
     | `Internal -> [%sexp (t : a t_internal)]
     | `Pretty -> [%sexp (pretty t : a Pretty.t)]
   ;;
@@ -1430,7 +1437,7 @@ type 'a t =
   ; mutable max_allowed_alarm_time : Time_ns.t
   ; priority_queue : 'a Priority_queue.t
   }
-[@@deriving fields ~getters ~iterators:iter, sexp_of]
+[@@deriving fields ~getters ~iterators:iter, sexp_of ~portable]
 
 type 'a timing_wheel = 'a t
 type 'a t_now = 'a t
@@ -1440,7 +1447,7 @@ let sexp_of_t_now _ t = [%sexp (t.now : Time_ns.t)]
 let alarm_precision t = Config.alarm_precision t.config
 
 module Alarm = struct
-  type 'a t = 'a Priority_queue.Elt.t [@@deriving sexp_of]
+  type 'a t = 'a Priority_queue.Elt.t [@@deriving sexp_of ~portable]
 
   let null = Priority_queue.Elt.null
   let at tw t = Priority_queue.Elt.at tw.priority_queue t
@@ -1490,7 +1497,7 @@ let pretty
 ;;
 
 let sexp_of_t sexp_of_a t =
-  match !sexp_of_t_style with
+  match sexp_of_t_style with
   | `Internal -> sexp_of_t_internal sexp_of_a t
   | `Pretty -> [%sexp (pretty t : a Pretty.t)]
 ;;

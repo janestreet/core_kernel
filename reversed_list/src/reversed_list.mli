@@ -4,7 +4,7 @@
 type 'a t =
   | []
   | ( :: ) of 'a * 'a t
-[@@deriving equal]
+[@@deriving equal ~localize]
 
 (** The API of [Reversed_list] is purposely minimal to encourage destructing the list near
     the point of construction. Callers that are motivated to extend this API to avoid the

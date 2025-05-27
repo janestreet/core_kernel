@@ -154,6 +154,7 @@ let hashable_s t = Hashable.to_key t.hashable
 let slot t key = hash_key t key land (t.capacity - 1)
 let length t = t.length
 let capacity t = t.capacity
+let growth_allowed t = t.growth_allowed
 let is_empty t = t.length = 0
 
 let clear =
@@ -322,7 +323,7 @@ let find_or_add =
   fun t key ~default -> find_or_add_impl t key ~without_mutating_make_default ~default
 ;;
 
-let find t key =
+let%template[@mode m = (local, global)] find t key =
   let index = slot t key in
   let it = table_get t.table index in
   let e = find_entry t ~key ~it in
@@ -568,7 +569,7 @@ let remove_multi t key =
   | Some (_ :: tl) -> replace t ~key ~data:tl
 ;;
 
-let iteri =
+let%template iteri =
   let rec loop t f e =
     if not (Entry.is_null e)
     then (
@@ -590,6 +591,7 @@ let iteri =
       | exception exn ->
         t.mutation_allowed <- m;
         raise exn)
+[@@mode m = (local, global)]
 ;;
 
 let iter t ~f = iteri t ~f:(fun ~key:_ ~data -> f data) [@nontail]
@@ -957,15 +959,18 @@ let mapi_inplace t ~f =
 
 let map_inplace t ~f = mapi_inplace t ~f:(fun ~key:_ ~data -> f data) [@nontail]
 
-let equal equal t t' =
+let%template equal equal t t' =
   length t = length t'
-  && with_return (fun r ->
-    iteri t ~f:(fun ~key ~data ->
-      match find t' key with
-      | None -> r.return false
-      | Some data' ->
-        if not (without_mutating t' (fun () -> equal data data') ()) then r.return false);
-    true)
+  && (with_return (fun r ->
+        (iteri [@mode m]) t ~f:(fun ~key ~data ->
+          match (find [@mode m]) t' key with
+          | None -> r.return false
+          | Some data' ->
+            if not (without_mutating t' (fun () -> equal data data') ())
+            then r.return false);
+        true)
+  [@nontail])
+[@@mode m = (local, global)]
 ;;
 
 let similar = equal
@@ -989,8 +994,13 @@ let copy t =
 ;;
 
 module Accessors = struct
-  let%template choose = (choose [@mode m]) [@@mode m = (local, global)]
-  let%template choose_exn = (choose_exn [@mode m]) [@@mode m = (local, global)]
+  [%%template
+  [@@@mode.default m = (global, local)]
+
+  let choose = (choose [@mode m])
+  let choose_exn = (choose_exn [@mode m])
+  let equal = (equal [@mode m])]
+
   let choose_randomly = choose_randomly
   let choose_randomly_exn = choose_randomly_exn
   let clear = clear
@@ -1009,7 +1019,7 @@ module Accessors = struct
   let mem = mem
   let iter_keys = iter_keys
   let iter = iter
-  let iteri = iteri
+  let iteri t ~f = iteri t ~f
   let exists = exists
   let existsi = existsi
   let for_all = for_all
@@ -1019,6 +1029,7 @@ module Accessors = struct
   let fold = fold
   let length = length
   let capacity = capacity
+  let growth_allowed = growth_allowed
   let is_empty = is_empty
   let map = map
   let mapi = mapi
@@ -1033,7 +1044,7 @@ module Accessors = struct
   let partitioni_tf = partitioni_tf
   let find_or_add = find_or_add
   let findi_or_add = findi_or_add
-  let find = find
+  let find t x = find t x
   let find_exn = find_exn
   let find_and_call = find_and_call
   let findi_and_call = findi_and_call
@@ -1055,17 +1066,21 @@ module Accessors = struct
   let mapi_inplace = mapi_inplace
   let filter_map_inplace = filter_map_inplace
   let filter_mapi_inplace = filter_mapi_inplace
-  let equal = equal
+  let%template equal = (equal [@mode m]) [@@mode m = (local, global)]
   let similar = similar
   let incr = incr
   let decr = decr
   let sexp_of_key = sexp_of_key
 end
 
-module type Key_plain = Key_plain
-module type Key = Key
-module type Key_binable = Key_binable
-module type Key_stable = Key_stable
+[%%template
+[@@@mode.default m = (local, global)]
+
+module type Key_plain = Key_plain [@mode m]
+module type Key = Key [@mode m]
+module type Key_binable = Key_binable [@mode m]
+module type Key_stable = Key_stable [@mode m]]
+
 module type For_deriving = For_deriving
 
 module Creators (Key : sig
@@ -1423,7 +1438,7 @@ let group ?growth_allowed ?size m ~get_key ~get_data ~combine l =
   group ~hashable:(Hashable.of_key m) ?growth_allowed ?size ~get_key ~get_data ~combine l
 ;;
 
-module type M_quickcheck = M_quickcheck
+module type%template M_quickcheck = M_quickcheck [@mode m] [@@mode m = (local, global)]
 
 let of_alist_option m alist = Result.ok (of_alist_or_error m alist)
 
@@ -1477,3 +1492,6 @@ let __bin_read_m__t__ (type t) (module Key : Key_binable with type t = t) =
   let module M = Provide_bin_io (Key) in
   M.__bin_read_t__
 ;;
+
+let iteri t ~f = iteri t ~f
+let find t x = find t x

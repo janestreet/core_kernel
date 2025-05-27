@@ -35,7 +35,9 @@ module type Slots = sig
       the tuples in the data structure containing them. *)
 
   type ('tuple, 'variant) u
-  type ('tuple, 'variant) t = [ `Slots of ('tuple, 'variant) u ] [@@deriving sexp_of]
+
+  type ('tuple, 'variant) t = [ `Slots of ('tuple, 'variant) u ] Modes.Immutable_data.t
+  [@@deriving sexp_of]
 
   val slots_per_tuple : (_, _) t -> int
 
