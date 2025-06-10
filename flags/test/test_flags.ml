@@ -339,6 +339,14 @@ let%expect_test "quickcheck_test: existing hex representations can still be conv
   [%expect {| |}]
 ;;
 
+let%expect_test "quickcheck test: quickcheck generator only generates known flags" =
+  Quickcheck.test ~trials:10 gen_scenario ~f:(fun (module M : S) ->
+    let all = M.complement M.empty in
+    Quickcheck.test ~trials:100 M.quickcheck_generator ~f:(fun t ->
+      Expect_test_helpers_core.require (M.is_subset t ~of_:all)));
+  [%expect {| |}]
+;;
+
 let%expect_test "old hex repr of 2^62 still deserializes correctly" =
   let num = 1 lsl 62 |> Int63.of_int in
   let to_unsigned_hex_string_old num = sprintf "0x%Lx" (Int63.to_int64 num) in

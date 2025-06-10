@@ -360,6 +360,11 @@ let memcmp a b =
 ;;
 
 let memset t ~pos ~len c = Bigstring.memset ~pos:(buf_pos_exn t ~pos ~len) ~len t.buf c
+
+let unsafe_memset t ~pos ~len c =
+  Bigstring.unsafe_memset ~pos:(buf_pos_exn t ~pos ~len) ~len t.buf c
+;;
+
 let zero t = memset t ~pos:0 ~len:(length t) '\000'
 
 let concat bufs =

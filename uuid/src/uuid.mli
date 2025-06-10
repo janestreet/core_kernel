@@ -22,6 +22,7 @@ val t_of_sexp : Sexp.t -> t
 [@@deprecated "[since 2017-11] Use a [Stable] or [Unstable] [t_of_sexp]."]
 
 val create_random : Random.State.t -> t
+val nil : t
 val arg_type : t Command.Arg_type.t
 
 module Unstable : sig
@@ -55,7 +56,6 @@ end
   https://opensource.janestreet.com/standards/#private-submodules *)
 module Private : sig
   val is_valid_exn : t -> unit
-  val nil : t
   val create : hostname:string -> pid:int -> t
   val bottom_4_bits_to_hex_char : int -> char
 end

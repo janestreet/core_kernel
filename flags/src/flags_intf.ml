@@ -12,7 +12,7 @@ open! Core
 
     [sexp_of_t] and [t_of_sexp] use the flag names supplied to [Flags.Make]. *)
 module type S = sig
-  type t [@@deriving sexp, typerep]
+  type t [@@deriving sexp, typerep, quickcheck]
 
   (** consistent with subset *)
   include Comparable.S with type t := t

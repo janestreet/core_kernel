@@ -67,12 +67,12 @@ let closest_cube_index v ~iterp_map =
   | None -> 5
 ;;
 
-let closest_8bit_cube_index =
-  closest_cube_index ~iterp_map:level_map_8bit_per_channel.interpolated_map
+let closest_8bit_cube_index v =
+  closest_cube_index ~iterp_map:level_map_8bit_per_channel.interpolated_map v
 ;;
 
-let closest_int1k_cube_index =
-  closest_cube_index ~iterp_map:level_map_1000_per_channel.interpolated_map
+let closest_int1k_cube_index v =
+  closest_cube_index ~iterp_map:level_map_1000_per_channel.interpolated_map v
 ;;
 
 let to_int c = c

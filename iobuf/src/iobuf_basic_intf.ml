@@ -358,6 +358,10 @@ module Definitions = struct
     (** [memset t ~pos ~len c] fills [t] with [c] within the range [\[pos, pos + len)]. *)
     val memset : local_ (read_write, _) t -> pos:int -> len:int -> char -> unit
 
+    (** [unsafe_memset t ~pos ~len c] fills [t] with [c] within the range
+        [\[pos, pos + len)], without bounds checks. *)
+    val unsafe_memset : local_ (read_write, _) t -> pos:int -> len:int -> char -> unit
+
     (** [memset]s a buffer to zero. *)
     val zero : local_ (read_write, _) t -> unit
 

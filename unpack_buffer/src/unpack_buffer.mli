@@ -116,7 +116,7 @@ val unpack_into : 'a t -> 'a Queue.t -> unit Or_error.t
     will return that same error -- i.e., no more data can be fed to or unpacked from [t].
 
     Behavior is unspecified if [f] operates on [t]. *)
-val unpack_iter : 'a t -> f:('a -> unit) -> unit Or_error.t
+val unpack_iter : 'a t -> f:local_ ('a -> unit) -> unit Or_error.t
 
 (** [debug] controls whether invariants are checked at each call. Setting this to [true]
     can make things very slow. *)

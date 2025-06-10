@@ -28,6 +28,16 @@ module Make (M : Make_arg) = struct
   let do_intersect t1 t2 = Int63.( <> ) (Int63.bit_and t1 t2) Int63.zero
   let are_disjoint t1 t2 = Int63.( = ) (Int63.bit_and t1 t2) Int63.zero
 
+  include
+    Quickcheckable.Of_quickcheckable
+      (Int63)
+      (struct
+        type nonrec t = t
+
+        let of_quickcheckable t = intersect t all
+        let to_quickcheckable t = t
+      end)
+
   let error message a sexp_of_a =
     let e = Error.create message a sexp_of_a in
     if M.should_print_error then eprintf "%s\n%!" (Sexp.to_string_hum (Error.sexp_of_t e));

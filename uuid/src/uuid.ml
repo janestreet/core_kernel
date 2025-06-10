@@ -184,7 +184,6 @@ module Private = struct
   let create = create
   let is_valid_exn = Stable.V1.is_valid_exn
   let bottom_4_bits_to_hex_char = bottom_4_bits_to_hex_char
-  let nil = nil
 end
 
 let quickcheck_shrinker : t Quickcheck.Shrinker.t = Quickcheck.Shrinker.empty ()

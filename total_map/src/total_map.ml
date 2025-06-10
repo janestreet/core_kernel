@@ -419,7 +419,8 @@ struct
     List.fold
       Key.all
       ~init:(Portability_hacks.magic_uncontended__promise_deeply_immutable Key.Map.empty)
-      ~f:(local_ fun t key -> Map.set t ~key ~data:(f key)) [@nontail]
+      ~f:(local_ fun t key -> Map.set t ~key ~data:(f key))
+    [@nontail]
   ;;
 
   let create_const x = create (fun _ -> x)

@@ -1,3 +1,5 @@
+@@ portable
+
 (** Common ANSI display attribute definitions.
 
     NOTE: assorted content lifted from lib/console/src/console.ml *)

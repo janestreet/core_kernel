@@ -1,3 +1,5 @@
+@@ portable
+
 (** Support for 256-color handling on terminals/consoles. Note that the functions
     [of_rgb6_exn] and [of_rgb6] return values within the 6x6x6 color-cube space, even
     though equivalent duplicates exist in the first 16 and last 24 colors (a
