@@ -10,4 +10,5 @@
  (preprocess
   (pps ppx_jane))
  (wasm_of_ocaml
-  (javascript_files version_util.js)))
+  (javascript_files version_util.js)
+  (wasm_files version_util.wat)))
