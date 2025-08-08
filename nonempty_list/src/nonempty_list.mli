@@ -4,7 +4,9 @@ open Core
     variant. The sexp representation is as a regular list (i.e., the same as the
     [Stable.V3] module below).
 
-    For operations on a locally allocated ['a t], see [Local_nonempty_list]. *)
+    For operations on a locally allocated ['a t], see [Local_nonempty_list]. For
+    convenience, some functions here are also ppx_template'd over local, and we hope to
+    fully merge the two after list is localized *)
 
 type%template 'a t = ( :: ) of 'a * ('a List.t[@kind k])
 [@@deriving compare ~localize, equal ~localize]
@@ -19,7 +21,7 @@ type 'a t = ( :: ) of 'a * 'a list
   , hash
   , quickcheck
   , typerep
-  , bin_io
+  , bin_io ~localize
   , globalize]
 
 type 'a nonempty_list := 'a t
@@ -39,10 +41,18 @@ type 'a t := ('a t[@kind k])
 
 val create : 'a -> ('a List.t[@kind k]) -> 'a t
 val init : int -> f:(int -> 'a) -> 'a t
+
 val of_list : ('a List.t[@kind k]) -> 'a t option
-val of_list_error : ('a List.t[@kind k]) -> 'a t Or_error.t
+[@@mode m = (global, local)] [@@zero_alloc_if_local m]
+
+val of_list_error : ('a List.t[@kind k]) -> 'a t Or_error.t [@@mode m = (global, local)]
+
 val of_list_exn : ('a List.t[@kind k]) -> 'a t
+[@@mode m = (global, local)] [@@zero_alloc_if_local m]
+
 val to_list : 'a t -> ('a List.t[@kind k])
+[@@mode m = (global, local)] [@@zero_alloc_if_local m]
+
 val singleton : 'a -> 'a t
 val cons : 'a -> 'a t -> 'a t
 val hd : 'a t -> 'a
@@ -56,7 +66,7 @@ val ( @ ) : 'a t -> 'a t -> 'a t
 val filter : 'a t -> f:('a -> bool) -> ('a List.t[@kind k])
 val filteri : 'a t -> f:(int -> 'a -> bool) -> ('a List.t[@kind k])
 val last : 'a t -> 'a
-val iter : 'a t -> f:('a -> unit) -> unit
+val iter : 'a t -> f:('a -> unit) -> unit [@@mode m = (global, local)]
 val iteri : 'a t -> f:(int -> 'a -> unit) -> unit
 val length : _ t -> int]
 

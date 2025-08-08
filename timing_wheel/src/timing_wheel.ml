@@ -55,7 +55,7 @@ let max_time = Time_ns.max_value_representable
 let min_time = Time_ns.epoch
 
 module Num_key_bits : sig
-  type t = private int [@@deriving compare, sexp]
+  type t = private int [@@deriving compare ~localize, sexp]
 
   include Comparable with type t := t
   include Invariant.S with type t := t
@@ -76,7 +76,7 @@ end = struct
   let min_value = 0
 
   (** We support all non-negative [Time_ns.t] values. *)
-  let max_value = Int63.num_bits - 1
+  let max_value = Int63.(num_bits |> to_int_trunc) - 1
 
   let invariant t =
     assert (t >= min_value);
@@ -104,7 +104,7 @@ end = struct
 end
 
 module Level_bits = struct
-  type t = Num_key_bits.t list [@@deriving compare, sexp]
+  type t = Num_key_bits.t list [@@deriving compare ~localize, sexp]
 
   let max_num_bits = (Num_key_bits.max_value :> int)
   let num_bits_internal t = List.fold t ~init:Num_key_bits.zero ~f:Num_key_bits.( + )
@@ -173,7 +173,7 @@ module Alarm_precision : sig
   val interval_num_start : t -> Int63.t -> Time_ns.t
 end = struct
   (** [t] is represented as the log2 of a number of nanoseconds. *)
-  type t = int [@@deriving compare, hash]
+  type t = int [@@deriving compare ~localize, hash]
 
   let equal = [%compare.equal: t]
   let num_key_bits t = t |> Num_key_bits.of_int
@@ -208,14 +208,14 @@ end = struct
         [%message
           "[Alarm_precision.of_span_floor_pow2_ns] got non-positive span"
             (span : Time_ns.Span.t)];
-    span |> Time_ns.Span.to_int63_ns |> Int63.floor_log2
+    span |> Time_ns.Span.to_int63_ns |> Int63.floor_log2 |> Int63.to_int_trunc
   ;;
 
   let of_span = of_span_floor_pow2_ns
 
   module Unstable = struct
     module T = struct
-      type nonrec t = t [@@deriving compare]
+      type nonrec t = t [@@deriving compare ~localize]
 
       let of_binable = of_span_floor_pow2_ns
       let to_binable = to_span
@@ -292,7 +292,7 @@ module Config = struct
         let num_bits_accum = num_bits_accum + (level_num_bits |> Num_key_bits.to_int) in
         let duration =
           Time_ns.Span.of_int63_ns
-            (if num_bits_accum = Int63.num_bits - 1
+            (if num_bits_accum = Int63.(num_bits |> to_int_trunc) - 1
              then Int63.max_value
              else Int63.shift_left Int63.one num_bits_accum)
         in
@@ -461,7 +461,7 @@ end = struct
 
     (** [Slots_mask] is used to quickly determine a key's slot in a given level. *)
     module Slots_mask : sig
-      type t = private Int63.t [@@deriving compare, sexp_of]
+      type t = private Int63.t [@@deriving compare ~localize, sexp_of]
 
       val create : level_bits:Num_key_bits.t -> t
       val next_slot : t -> int -> int
@@ -470,7 +470,7 @@ end = struct
     (** [Min_key_in_same_slot_mask] is used to quickly determine the minimum key in the
         same slot as a given key. *)
     module Min_key_in_same_slot_mask : sig
-      type t = private Int63.t [@@deriving compare, sexp_of]
+      type t = private Int63.t [@@deriving compare ~localize, sexp_of]
 
       include Equal.S with type t := t
 
@@ -482,7 +482,7 @@ end = struct
     val slot : t -> bits_per_slot:Num_key_bits.t -> slots_mask:Slots_mask.t -> int
   end = struct
     module Slots_mask = struct
-      type t = Int63.t [@@deriving compare, sexp_of]
+      type t = Int63.t [@@deriving compare ~localize, sexp_of]
 
       let create ~level_bits = Int63.( - ) (Num_key_bits.pow2 level_bits) Int63.one
       let next_slot t slot = (slot + 1) land Int63.to_int_exn t

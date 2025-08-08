@@ -16,32 +16,11 @@ include (
 
 let t : _ Nonempty_list.t = [ 1; 2; 3; 4 ]
 
-let quickcheck'
-  gen
-  (test_result :
-    ?here:lexing_position list
-    -> ?message:string
-    -> ?equal:('a -> 'a -> bool)
-    -> expect:'a
-    -> 'a
-    -> unit)
-  f_list
-  f
-  =
+let quickcheck' gen (test_result : [%test_result: 'a]) f_list f =
   Quickcheck.test gen ~f:(fun v -> test_result ~expect:(f_list v) (f v))
 ;;
 
-let quickcheck
-  (test_result :
-    ?here:lexing_position list
-    -> ?message:string
-    -> ?equal:('a -> 'a -> bool)
-    -> expect:'a
-    -> 'a
-    -> unit)
-  f_list
-  f
-  =
+let quickcheck (test_result : [%test_result: 'a]) f_list f =
   quickcheck' [%quickcheck.generator: int t] test_result (fun l -> f_list (to_list l)) f
 ;;
 
@@ -96,6 +75,21 @@ let%expect_test "unzip" =
     [%test_result: int list * char list]
     (fun l -> List.unzip (to_list l))
     (fun l -> unzip l |> Tuple2.map_both ~f1:to_list ~f2:to_list)
+;;
+
+let%expect_test "iter" =
+  quickcheck
+    [%test_result: int list]
+    (fun l ->
+      let output = ref [] in
+      let f x = output := x :: !output in
+      List.iter ~f l;
+      !output)
+    (fun l ->
+      let output = ref [] in
+      let f x = output := x :: !output in
+      Nonempty_list.iter ~f l;
+      !output)
 ;;
 
 let%expect_test "return" =
@@ -655,28 +649,6 @@ let%expect_test "option_all" =
   [%expect {| () |}];
   test [ Some 1; Some 2; Some 4 ];
   [%expect {| ((1 2 4)) |}]
-;;
-
-let%expect_test "basic accessor" =
-  Accessor.iteri Nonempty_list_accessor.eachi t ~f:(fun [ i ] x ->
-    printf "index: %d, value %d\n" i x);
-  [%expect
-    {|
-    index: 0, value 1
-    index: 1, value 2
-    index: 2, value 3
-    index: 3, value 4
-    |}]
-;;
-
-(* Demonstrate how accessors allow types to be easily commuted: Here a ['a Or_error.t
-   Nonempty_list.t] becomes a ['a Nonempty_list Or_error.t]. *)
-let%expect_test "commute types" =
-  let commute results = Accessor_base.Or_error.all Nonempty_list_accessor.each results in
-  print_s [%sexp (commute [ Ok 1; Ok 2; Ok 3 ] : int t Or_error.t)];
-  [%expect {| (Ok (1 2 3)) |}];
-  print_s [%sexp (commute [ Ok 1; Ok 2; Or_error.error_string "foo" ] : int t Or_error.t)];
-  [%expect {| (Error foo) |}]
 ;;
 
 let%expect_test "stable types" =

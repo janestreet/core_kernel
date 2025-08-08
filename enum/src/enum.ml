@@ -247,36 +247,47 @@ let make_param_optional_comma_separated_with_default_doc
     ~doc
 ;;
 
-module Make_to_string (M : Sexp_of) : sig
+module%template.portable Make_to_string (M : Sexp_of) : sig
   val to_string : M.t -> string
 end = struct
   let to_string t = command_friendly_name (atom_of_sexp_exn [%sexp (t : M.t)])
 end
 
-module Make_of_string (M : S_to_string) : sig
-  val of_string : String.t -> M.t
-end = struct
-  let known_values =
-    lazy
-      (List.fold
-         [%all: M.t]
-         ~init:(Map.empty (module String))
-         ~f:(fun map t -> Map.set map ~key:(M.to_string t) ~data:t))
-  ;;
+let known_values (type a) (module M : S_to_string with type t = a) =
+  List.fold
+    [%all: M.t]
+    ~init:(Map.empty (module String))
+    ~f:(fun map t -> Map.set map ~key:(M.to_string t) ~data:t)
+;;
 
-  let of_string s =
-    match Map.find (force known_values) s with
-    | None ->
-      let known_values = Map.keys (force known_values) in
-      raise_s [%message "Unknown value." s (known_values : string list)]
-    | Some t -> t
-  ;;
+let of_string ~known_values s =
+  match Map.find known_values s with
+  | None ->
+    let known_values = Map.keys known_values in
+    raise_s [%message "Unknown value." s (known_values : string list)]
+  | Some t -> t
+;;
+
+module Make_of_string (M : S_to_string) : sig
+  val of_string : string -> M.t
+end = struct
+  let known_values = lazy (known_values (module M))
+  let of_string = [%eta1 of_string ~known_values:(force known_values)]
 end
 
-module Make_stringable (M : S) : Stringable.S with type t := M.t = struct
-  include Make_to_string (M)
+module%template Make_of_string (M : S_to_string [@modality p]) : sig
+  val of_string : string -> M.t
+end = struct
+  let known_values = known_values (module M)
+  let of_string = [%eta1 of_string ~known_values]
+end
+[@@modality p = portable]
 
-  include Make_of_string (struct
+module%template.portable [@modality p] Make_stringable (M : S [@modality p]) :
+  Stringable.S with type t := M.t = struct
+  include Make_to_string [@modality p] (M)
+
+  include Make_of_string [@modality p] (struct
       type t = M.t
 
       let all = M.all

@@ -411,6 +411,107 @@ module type Total_map = sig
     with type Total_map.comparator_witness = Key.comparator_witness
     with type Total_map.enumeration_witness = Key.enumeration_witness
 
+  (** The below functions allow writing things like
+      [type t = int M(T).t [@@deriving sexp]]. Note that for sexp, bin_io, and compare
+      alone this would not be useful, as [T.Total_map.t] already has those conversions.
+      However, it could be useful to additionally derive [sexp_grammar]. (Sexp grammar
+      functionality is upcoming.) *)
+  module type M = sig
+    type t
+
+    module Total_map : S with type Key.t = t
+  end
+
+  module M (T : For_include_functor) : sig
+    type 'a t = 'a T.Total_map.t
+  end
+
+  val m__t_of_sexp
+    :  (module M
+          with type t = 'k
+           and type Total_map.enumeration_witness = 'enum
+           and type Total_map.comparator_witness = 'cmp)
+    -> (Sexp.t -> 'v)
+    -> Sexp.t
+    -> ('k, 'v, 'cmp, 'enum) t
+
+  val sexp_of_m__t
+    :  (module M
+          with type t = 'k
+           and type Total_map.enumeration_witness = 'enum
+           and type Total_map.comparator_witness = 'cmp)
+    -> ('v -> Sexp.t)
+    -> ('k, 'v, 'cmp, 'enum) t
+    -> Sexp.t
+
+  val bin_shape_m__t : (module For_include_functor) -> Bin_shape.t -> Bin_shape.t
+
+  val bin_size_m__t
+    :  (module M
+          with type t = 'k
+           and type Total_map.enumeration_witness = 'enum
+           and type Total_map.comparator_witness = 'cmp)
+    -> 'v Bin_prot.Size.sizer
+    -> ('k, 'v, 'cmp, 'enum) t Bin_prot.Size.sizer
+
+  val bin_write_m__t
+    :  (module M
+          with type t = 'k
+           and type Total_map.enumeration_witness = 'enum
+           and type Total_map.comparator_witness = 'cmp)
+    -> 'v Bin_prot.Write.writer
+    -> ('k, 'v, 'cmp, 'enum) t Bin_prot.Write.writer
+
+  val bin_read_m__t
+    :  (module M
+          with type t = 'k
+           and type Total_map.enumeration_witness = 'enum
+           and type Total_map.comparator_witness = 'cmp)
+    -> 'v Bin_prot.Read.reader
+    -> ('k, 'v, 'cmp, 'enum) t Bin_prot.Read.reader
+
+  val __bin_read_m__t__
+    :  (module M
+          with type t = 'k
+           and type Total_map.enumeration_witness = 'enum
+           and type Total_map.comparator_witness = 'cmp)
+    -> 'v Bin_prot.Read.reader
+    -> ('k, 'v, 'cmp, 'enum) t Bin_prot.Read.vtag_reader
+
+  val compare_m__t
+    :  (module M
+          with type t = 'k
+           and type Total_map.enumeration_witness = 'enum
+           and type Total_map.comparator_witness = 'cmp)
+    -> ('v -> 'v -> int)
+    -> ('k, 'v, 'cmp, 'enum) t
+    -> ('k, 'v, 'cmp, 'enum) t
+    -> int
+
+  val quickcheck_generator_m__t
+    :  (module M
+          with type t = 'k
+           and type Total_map.enumeration_witness = 'enum
+           and type Total_map.comparator_witness = 'cmp)
+    -> 'v Quickcheck.Generator.t
+    -> ('k, 'v, 'cmp, 'enum) t Quickcheck.Generator.t
+
+  val quickcheck_observer_m__t
+    :  (module M
+          with type t = 'k
+           and type Total_map.enumeration_witness = 'enum
+           and type Total_map.comparator_witness = 'cmp)
+    -> 'v Quickcheck.Observer.t
+    -> ('k, 'v, 'cmp, 'enum) t Quickcheck.Observer.t
+
+  val quickcheck_shrinker_m__t
+    :  (module M
+          with type t = 'k
+           and type Total_map.enumeration_witness = 'enum
+           and type Total_map.comparator_witness = 'cmp)
+    -> 'v Quickcheck.Shrinker.t
+    -> ('k, 'v, 'cmp, 'enum) t Quickcheck.Shrinker.t
+
   module Stable : sig
     module V1 : sig end
     [@@deprecated

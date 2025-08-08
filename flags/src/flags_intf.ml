@@ -12,10 +12,10 @@ open! Core
 
     [sexp_of_t] and [t_of_sexp] use the flag names supplied to [Flags.Make]. *)
 module type S = sig
-  type t [@@deriving sexp, typerep]
+  type t [@@deriving sexp, typerep, quickcheck]
 
   (** consistent with subset *)
-  include Comparable.S with type t := t
+  include Comparable.S [@mode local] with type t := t
 
   val to_flag_list : t -> t * string list
   val of_int : int -> t [@@zero_alloc]
@@ -112,8 +112,8 @@ module type Flags = sig
       We expose [type t = int] in the result of [Flags.Make] so that one can easily use
       flag constants as values of the flag type without having to coerce them. It is
       typical to hide the [t = int] in another signature [S]. *)
-  module Make (M : Make_arg) : S with type t = Int63.t
+  module%template.portable Make (M : Make_arg) : S with type t = Int63.t
 
   (** Similar to [Flags.Make], but the resulting [type t] is binable. *)
-  module Make_binable (M : Make_arg) : S_binable with type t = Int63.t
+  module%template.portable Make_binable (M : Make_arg) : S_binable with type t = Int63.t
 end

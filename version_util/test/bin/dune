@@ -16,7 +16,7 @@
   (pps ppx_jane)))
 
 (rule
- (alias DEFAULT)
+ (alias default)
  (deps main.exe)
  (action
   (bash ./main.exe)))
@@ -28,7 +28,7 @@
   (bash "node main.bc.js")))
 
 (rule
- (alias DEFAULT)
+ (alias default)
  (deps test_rewrite.exe main.exe)
  (action
   (bash ./test_rewrite.exe)))

@@ -1,6 +1,6 @@
 open! Core
 
-module Definitions = struct
+module Definitions : sig
   (** [no_seek] and [seek] are phantom types used in a similar manner to [read] and
       [read_write]. *)
 
@@ -8,6 +8,9 @@ module Definitions = struct
   type no_seek [@@deriving sexp_of]
 
   (** Like [read_write]. *)
+  type seek = private no_seek [@@deriving sexp_of]
+end = struct
+  type no_seek [@@deriving sexp_of]
   type seek = private no_seek [@@deriving sexp_of]
 end
 
@@ -44,17 +47,21 @@ module type Iobuf_type = sig
     type ('rw, 'seek) t = ('rw, 'seek) iobuf [@@deriving globalize, sexp_of]
   end
 
+  [%%template:
+  [@@@alloc.default a @ m = (heap_global, stack_local)]
+
+  val of_bigstring : ?pos:int -> ?len:int -> Bigstring.t -> (_, _) t
+  val of_bigstring_sub : pos:int -> len:int -> Bigstring.t -> (_, _) t
+  val unsafe_of_bigstring_sub : pos:int -> len:int -> Bigstring.t -> (_, _) t]
+
   val advance : (_, seek) t -> int -> unit
   val bad_range : pos:int -> len:int -> (_, _) t -> _
-  val bigstring_view : pos:int -> len:int -> Bigstring.t -> (_, _) t
   val buf_pos_exn : (_, _) t -> pos:int -> len:int -> int
   val check_range : (_, _) t -> pos:int -> len:int -> unit
   val create : len:int -> (_, _) t
   val fail : (_, _) t -> string -> 'a -> ('a -> Sexp.t) -> _
   val get_char : ([> read ], _) t -> int -> char
   val length : (_, _) t -> int
-  val of_bigstring : ?pos:int -> ?len:int -> Bigstring.t -> (_, _) t
-  val of_bigstring__local : ?pos:int -> ?len:int -> Bigstring.t -> (_, _) t
   val set_bounds_and_buffer : src:(_, _) t -> dst:(_, _) t -> unit
 
   val set_bounds_and_buffer_sub
@@ -66,7 +73,6 @@ module type Iobuf_type = sig
 
   val set_char : ([> write ], _) t -> int -> char -> unit
   val unsafe_advance : (_, seek) t -> int -> unit
-  val unsafe_bigstring_view : pos:int -> len:int -> Bigstring.t -> (_, _) t
   val unsafe_buf_pos : (_, _) t -> pos:int -> len:int -> int
   val unsafe_is_safe : bool
 

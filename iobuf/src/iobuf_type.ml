@@ -75,12 +75,6 @@ let check_range t ~pos ~len =
 [@@inline always]
 ;;
 
-let[@inline always] unsafe_bigstring_view ~pos ~len buf =
-  let lo = pos in
-  let hi = pos + len in
-  { buf; lo_min = lo; lo; hi; hi_max = hi }
-;;
-
 let[@inline always] check_bigstring ~bstr ~pos ~len =
   let str_len = Bigstring.length bstr in
   if pos < 0
@@ -91,12 +85,21 @@ let[@inline always] check_bigstring ~bstr ~pos ~len =
   then bad_range_bstr ~str_len ~pos ~len
 ;;
 
-let bigstring_view ~pos ~len bstr =
-  check_bigstring ~bstr ~pos ~len;
-  unsafe_bigstring_view ~pos ~len bstr
+[%%template
+[@@@alloc.default a = (stack, heap)]
+
+let[@inline always] unsafe_of_bigstring_sub ~pos ~len buf =
+  let lo = pos in
+  let hi = pos + len in
+  { buf; lo_min = lo; lo; hi; hi_max = hi } [@exclave_if_stack a]
 ;;
 
-let of_bigstring__local ?pos ?len buf =
+let of_bigstring_sub ~pos ~len bstr =
+  check_bigstring ~bstr ~pos ~len;
+  (unsafe_of_bigstring_sub [@alloc a]) ~pos ~len bstr [@exclave_if_stack a]
+;;
+
+let of_bigstring ?pos ?len buf =
   let str_len = Bigstring.length buf in
   let pos =
     match pos with
@@ -116,17 +119,22 @@ let of_bigstring__local ?pos ?len buf =
       if len < 0 || len > max_len
       then
         raise_s
-          [%sexp "Iobuf.of_bigstring got invalid pos", (len : int), ~~(max_len : int)];
+          [%sexp
+            "Iobuf.of_bigstring got invalid len"
+            , (len : int)
+            , ~~(max_len : int)
+            , ~~(str_len : int)
+            , ~~(pos : int)];
       len
   in
-  unsafe_bigstring_view ~pos ~len buf
+  (unsafe_of_bigstring_sub [@alloc a]) ~pos ~len buf [@exclave_if_stack a]
 ;;
 
-let unsafe_bigstring_view =
-  if unsafe_is_safe then bigstring_view else unsafe_bigstring_view
-;;
-
-let of_bigstring ?pos ?len buf = globalize0 (of_bigstring__local ?pos ?len buf) [@nontail]
+let unsafe_of_bigstring_sub =
+  if unsafe_is_safe
+  then of_bigstring_sub [@alloc a]
+  else unsafe_of_bigstring_sub [@alloc a]
+;;]
 
 let set_bounds_and_buffer_sub ~pos ~len ~src ~dst =
   check_range src ~pos ~len;

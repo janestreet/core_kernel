@@ -19,7 +19,7 @@ module Blit = struct
     ;;
   end
 
-  include Base_for_tests.Test_blit.Make_and_test (Char_elt) (T_dst)
+  include Base_for_tests.Test_blit.Make_and_test [@modality portable] (Char_elt) (T_dst)
 
   (* Workaround the inability of the compiler to inline in the presence of functors. *)
   let unsafe_blit = T_dst.unsafe_blit

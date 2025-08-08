@@ -20,7 +20,7 @@ module Dequeue_result : sig
   type 'a t =
     | Empty
     | Not_empty of { elt : 'a [@globalized] }
-  [@@deriving sexp, compare]
+  [@@deriving sexp, compare ~localize]
 end
 
 (** [dequeue t] returns [Dequeue_result.Empty] if [length t = 0], and

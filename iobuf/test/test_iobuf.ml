@@ -2958,23 +2958,23 @@ module%test [@name "allocation"] _ = struct
   let%expect_test "of_bigstring_local" =
     let bigstring = Bigstring.of_string "abcdefghijklmnopqrstuvwxyz" in
     require_no_allocation (fun () ->
-      let buf = Iobuf.of_bigstring__local bigstring in
+      let buf = (Iobuf.of_bigstring [@alloc stack]) bigstring in
       ignore (Sys.opaque_identity buf : _ Iobuf.t));
     require_no_allocation (fun () ->
-      let buf = Iobuf.of_bigstring__local ~pos:1 ~len:10 bigstring in
+      let buf = (Iobuf.of_bigstring [@alloc stack]) ~pos:1 ~len:10 bigstring in
       ignore (Sys.opaque_identity buf : _ Iobuf.t));
     [%expect {| |}]
   ;;
 
   let%expect_test "of_string_local" =
     let string = "abc" in
-    let buf = Iobuf.of_string__local string in
+    let buf = (Iobuf.of_string [@alloc stack]) string in
     [%test_eq: string] (Iobuf.to_string buf) string;
     (* 7 words for the Bigstring header + 1 word (regardless of whether 32-bit or 64-bit)
        for the string payload (which is allocated with [malloc] but still tracked as
        custom block out-of-heap resources). *)
     require_allocation_does_not_exceed (Minor_words 8) (fun () ->
-      let buf = Iobuf.of_string__local string in
+      let buf = (Iobuf.of_string [@alloc stack]) string in
       ignore (Sys.opaque_identity buf : _ Iobuf.t));
     [%expect {| |}]
   ;;

@@ -45,6 +45,9 @@ module Definitions = struct
     (** [empty] is an immutable [t] of size 0. *)
     val empty : (read, no_seek) t
 
+    [%%template:
+    [@@@alloc.default a @ m = (heap_global, stack_local)]
+
     (** [of_bigstring bigstring ~pos ~len] returns an iobuf backed by [bigstring], with
         the window and limits specified starting at [pos] and of length [len]. *)
     val of_bigstring
@@ -54,29 +57,20 @@ module Definitions = struct
       -> ([< read_write ], _) t
     (** forbid [immutable] to prevent aliasing *)
 
-    (** [of_bigstring__local] is like [of_bigstring], but it allocates the iobuf record
-        locally. *)
-    val of_bigstring__local
-      :  ?pos:int
-      -> ?len:int
-      -> Bigstring.t
-      -> ([< read_write ], _) t
-
     (** More efficient than the above (optional arguments are costly). *)
-    val unsafe_bigstring_view
+    val of_bigstring_sub : pos:int -> len:int -> Bigstring.t -> ([< read_write ], _) t
+
+    (** Yet more efficient than the above, by skipping bounds checks. *)
+    val unsafe_of_bigstring_sub
       :  pos:int
       -> len:int
       -> Bigstring.t
-      -> ([< read_write ], _) t
+      -> ([< read_write ], _) t]
 
-    val bigstring_view : pos:int -> len:int -> Bigstring.t -> ([< read_write ], _) t
-
-    (** [of_string s] returns a new iobuf whose contents are [s]. *)
-    val of_string : string -> (_, _) t
-
-    (** [of_string__local] is like [of_string], but it allocates the iobuf record locally.
-        This still performs global allocation of the backing buffer. *)
-    val of_string__local : string -> (_, _) t
+    (** [of_string s] returns a new iobuf whose contents are [s]. The stack-allocating
+        version still performs global allocation of the backing buffer. *)
+    val%template of_string : string -> (_, _) t
+    [@@alloc a @ m = (heap_global, stack_local)]
 
     (** [sub_shared t ~pos ~len] returns a new iobuf with limits and window set to the
         subrange of [t]'s window specified by [pos] and [len]. [sub_shared] preserves data
@@ -349,6 +343,10 @@ module Definitions = struct
 
     (** [memset t ~pos ~len c] fills [t] with [c] within the range [\[pos, pos + len)]. *)
     val memset : (read_write, _) t -> pos:int -> len:int -> char -> unit
+
+    (** [unsafe_memset t ~pos ~len c] fills [t] with [c] within the range
+        [\[pos, pos + len)], without bounds checks. *)
+    val unsafe_memset : (read_write, _) t -> pos:int -> len:int -> char -> unit
 
     (** [memset]s a buffer to zero. *)
     val zero : (read_write, _) t -> unit

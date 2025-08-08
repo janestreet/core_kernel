@@ -103,6 +103,6 @@ module With_key (Key : sig
   val of_alist_exn : (Key.t * 'data) list -> 'data t
 end
 
-(** set [debug := true] to turn on debugging, including potentially slow invariant
+(** set [Atomic.set debug true] to turn on debugging, including potentially slow invariant
     checking. *)
-val debug : bool ref
+val debug : bool Atomic.t

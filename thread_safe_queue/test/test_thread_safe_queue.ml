@@ -34,7 +34,7 @@ module%test Thread_safe_queue : module type of Thread_safe_queue = struct
     type 'a t = 'a Dequeue_result.t =
       | Empty
       | Not_empty of { elt : 'a [@globalized] }
-    [@@deriving sexp, compare]
+    [@@deriving sexp, compare ~localize]
   end
 
   let create = create

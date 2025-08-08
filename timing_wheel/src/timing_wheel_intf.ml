@@ -126,7 +126,7 @@ end
 (** An [Alarm_precision] is a time span that is a power of two number of nanoseconds, used
     to specify the precision of a timing wheel. *)
 module type Alarm_precision = sig
-  type t [@@deriving compare, sexp_of] [@@immediate]
+  type t [@@deriving compare ~localize, sexp_of] [@@immediate]
 
   include Equal.S with type t := t
 
@@ -168,7 +168,7 @@ module type Alarm_precision = sig
       nanoseconds. This ensures that the alarm precision that is used is at least as
       precise than the alarm precision that is stated. *)
   module Unstable : sig
-    type nonrec t = t [@@deriving bin_io, compare, sexp]
+    type nonrec t = t [@@deriving bin_io, compare ~localize, sexp]
   end
 end
 

@@ -12,7 +12,10 @@ let create ~bit:n =
   Int63.shift_left Int63.one n
 ;;
 
-module Make (M : Make_arg) = struct
+module%template Make (M : sig
+    include Make_arg
+  end) =
+struct
   type t = Int63.t [@@deriving bin_io, hash, typerep]
 
   let of_int t = Int63.of_int t
@@ -27,6 +30,16 @@ module Make (M : Make_arg) = struct
   let is_subset t ~of_ = Int63.( = ) t (intersect t of_)
   let do_intersect t1 t2 = Int63.( <> ) (Int63.bit_and t1 t2) Int63.zero
   let are_disjoint t1 t2 = Int63.( = ) (Int63.bit_and t1 t2) Int63.zero
+
+  include
+    Quickcheckable.Of_quickcheckable [@mode p]
+      (Int63)
+      (struct
+        type nonrec t = t
+
+        let of_quickcheckable t = intersect t all
+        let to_quickcheckable t = t
+      end)
 
   let error message a sexp_of_a =
     let e = Error.create message a sexp_of_a in
@@ -106,7 +119,8 @@ module Make (M : Make_arg) = struct
   ;;
 
   let known_by_name =
-    String.Table.of_alist_exn (List.map known ~f:(fun (mask, name) -> name, mask))
+    String.Map.of_iteri_exn ~iteri:(fun ~f ->
+      List.iter known ~f:(fun (mask, name) -> f ~key:name ~data:mask) [@nontail])
   ;;
 
   let t_of_sexp (sexp : Sexp.t) =
@@ -116,7 +130,7 @@ module Make (M : Make_arg) = struct
         (flags |> [%of_sexp: sexp_format])
         ~init:empty
         ~f:(fun t name ->
-          match Hashtbl.find known_by_name name with
+          match Map.find known_by_name name with
           | Some mask -> t + mask
           | None ->
             of_sexp_error (sprintf "Flags.t_of_sexp got unknown name: %s" name) sexp)
@@ -147,7 +161,7 @@ module Make (M : Make_arg) = struct
   let compare = `unused
   let `unused = compare
 
-  include%template Comparable.Make [@mode local] (struct
+  include%template Comparable.Make [@mode local p] (struct
       type nonrec t = t [@@deriving sexp, compare ~localize, hash]
     end)
 
@@ -162,5 +176,10 @@ module Make (M : Make_arg) = struct
     type nonrec t = t [@@deriving bin_io, compare ~localize, equal ~localize, sexp]
   end
 end
+[@@modality p = (nonportable, portable)]
 
-module Make_binable = Make
+module%template Make_binable (M : sig
+    include Make_arg
+  end) =
+  Make [@mode p] (M)
+[@@modality p = (nonportable, portable)]

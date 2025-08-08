@@ -16,8 +16,11 @@ module type Single = sig
   val check_field_name : 'a t -> 'a -> (_, _, _) Field.t_with_perm -> unit
 end
 
-module type S = Command.Enumerable_sexpable
-module type S_to_string = Command.Enumerable_stringable
+module type%template S = Command.Enumerable_sexpable [@modality p]
+[@@modality p = (nonportable, portable)]
+
+module type%template S_to_string = Command.Enumerable_stringable [@modality p]
+[@@modality p = (nonportable, portable)]
 
 module type Enum = sig
   module type S = S
@@ -112,17 +115,22 @@ module type Enum = sig
 
   (** Defines [to_string] and [of_string] functions for [M], based on [M.sexp_of_t] and
       [M.all]. The sexp representation of [M.t] must be a sexp atom. *)
-  module Make_stringable (M : S) : Stringable.S with type t := M.t
+  module%template.portable [@modality p] Make_stringable (M : S [@modality p]) : sig
+    include Stringable.S with type t := M.t
+  end
 
   (** Defines an [of_string] function for [M], using [M.all] and [M.to_string]. Does not
       require [M] to be sexpable. *)
-  module Make_of_string (M : S_to_string) : sig
+  module%template.portable
+    [@modality p] Make_of_string
+      (M : S_to_string
+    [@modality p]) : sig
     val of_string : String.t -> M.t
   end
 
   (** Defines [to_string] for [M], based on [M.sexp_of_t]. The sexp representation of
       [M.t] must be a sexp atom. *)
-  module Make_to_string (M : Sexp_of) : sig
+  module%template.portable Make_to_string (M : Sexp_of) : sig
     val to_string : M.t -> String.t
   end
 

@@ -13,7 +13,7 @@ type endian =
   [ `Big_endian
   | `Little_endian
   ]
-[@@deriving compare, hash, sexp]
+[@@deriving compare ~localize, hash, sexp]
 
 (* Computes the offset based on the total number of bytes, the byte order, and the
    byte number. The byte number is ordered by decreasing significance starting at zero

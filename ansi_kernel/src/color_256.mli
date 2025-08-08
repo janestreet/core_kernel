@@ -24,7 +24,7 @@
     (8 * 2) 'primary' colors. The standard [`Black], [`Blue], etc. attributes are
     recommended for these. *)
 
-type t [@@deriving sexp_of, compare, hash, equal]
+type t [@@deriving sexp_of, compare ~localize, hash, equal ~localize]
 
 val to_int : t -> int
 val of_int_exn : int -> t
@@ -88,6 +88,7 @@ val to_rgb6 : t -> int * int * int
 
 module Stable : sig
   module V1 : sig
-    type nonrec t = t [@@deriving compare, equal, hash, sexp, sexp_grammar]
+    type nonrec t = t
+    [@@deriving compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
   end
 end

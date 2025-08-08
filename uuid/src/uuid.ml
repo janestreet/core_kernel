@@ -20,7 +20,14 @@ module Stable = struct
     module T = struct
       type t = string
       [@@deriving
-        bin_io, compare, equal, hash, sexp ~portable, sexp_grammar, stable_witness]
+        bin_io ~localize
+        , compare ~localize
+        , equal ~localize
+        , globalize
+        , hash
+        , sexp ~portable
+        , sexp_grammar
+        , stable_witness]
 
       include%template (val (Comparator.V1.make [@modality portable]) ~compare ~sexp_of_t)
     end
@@ -67,7 +74,7 @@ end
 open! Core
 
 module T = struct
-  type t = string [@@deriving bin_io, compare, hash]
+  type t = string [@@deriving bin_io ~localize, compare ~localize, hash]
   type comparator_witness = Stable.V1.comparator_witness
 
   let comparator = Stable.V1.comparator
@@ -156,7 +163,8 @@ end
 
 include T
 
-include%template Identifiable.Make_using_comparator [@modality portable] (struct
+include%template
+  Identifiable.Make_using_comparator [@mode local] [@modality portable] (struct
     let module_name = "Uuid"
 
     include T
@@ -167,7 +175,7 @@ let invariant t = ignore (of_string t : t)
 let nil = "00000000-0000-0000-0000-000000000000"
 
 module Unstable = struct
-  type nonrec t = t [@@deriving bin_io, compare, equal, hash, sexp]
+  type nonrec t = t [@@deriving bin_io, compare ~localize, equal ~localize, hash, sexp]
   type nonrec comparator_witness = comparator_witness
 
   let comparator = comparator
@@ -184,7 +192,6 @@ module Private = struct
   let create = create
   let is_valid_exn = Stable.V1.is_valid_exn
   let bottom_4_bits_to_hex_char = bottom_4_bits_to_hex_char
-  let nil = nil
 end
 
 let quickcheck_shrinker : t Quickcheck.Shrinker.t = Quickcheck.Shrinker.empty ()

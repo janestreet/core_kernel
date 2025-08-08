@@ -7,6 +7,7 @@ open Base
 
 let of_list_rev = List.rev
 let rev = List.rev
+let rev_local = (List.rev [@alloc stack])
 let rev_append = List.rev_append
 let rev_map = List.rev_map
 let rev_filter_map = List.rev_filter_map

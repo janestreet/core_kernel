@@ -187,8 +187,9 @@ end
 
 module Opt_level = struct
   type t =
-    | High
     | Low
+    | Legacy_default
+    | High
   [@@deriving sexp]
 end
 

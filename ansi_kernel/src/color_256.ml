@@ -2,13 +2,13 @@ module Stable = struct
   open! Core.Core_stable
 
   module V1 = struct
-    type t = int [@@deriving compare, equal, hash, sexp, sexp_grammar]
+    type t = int [@@deriving compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
   end
 end
 
 open Core
 
-type t = Stable.V1.t [@@deriving sexp_of, compare, hash, equal]
+type t = Stable.V1.t [@@deriving sexp_of, compare ~localize, hash, equal ~localize]
 
 (* Internal type for turning palette values into RGB levels -- typically
    we want to convert these into 24-bit values (8-bits per channel) or into
@@ -67,12 +67,12 @@ let closest_cube_index v ~iterp_map =
   | None -> 5
 ;;
 
-let closest_8bit_cube_index =
-  closest_cube_index ~iterp_map:level_map_8bit_per_channel.interpolated_map
+let closest_8bit_cube_index v =
+  closest_cube_index ~iterp_map:level_map_8bit_per_channel.interpolated_map v
 ;;
 
-let closest_int1k_cube_index =
-  closest_cube_index ~iterp_map:level_map_1000_per_channel.interpolated_map
+let closest_int1k_cube_index v =
+  closest_cube_index ~iterp_map:level_map_1000_per_channel.interpolated_map v
 ;;
 
 let to_int c = c

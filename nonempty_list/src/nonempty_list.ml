@@ -18,12 +18,13 @@ module Stable = struct
       end
 
       [@@@kind.default k]
+      [@@@mode.default m = (global, local)]
 
-      let to_list (hd :: tl) : (_ List.V1.t[@kind k]) = hd :: tl
+      let to_list (hd :: tl) : (_ List.V1.t[@kind k]) = hd :: tl [@exclave_if_local m]
 
       let of_list_exn : (_ List.V1.t[@kind k]) -> _ t = function
         | [] -> Core.raise_s [%message "Nonempty_list.of_list_exn: empty list"]
-        | hd :: tl -> hd :: tl
+        | hd :: tl -> hd :: tl [@exclave_if_local m]
       ;;]
     end
 
@@ -180,7 +181,13 @@ type%template 'a t = ('a Stable.V3.t[@kind k]) = ( :: ) of 'a * ('a List.t[@kind
 
 type 'a t = 'a Stable.V3.t = ( :: ) of 'a * 'a list
 [@@deriving
-  compare ~localize, equal ~localize, hash, quickcheck, typerep, bin_io, globalize]
+  compare ~localize
+  , equal ~localize
+  , hash
+  , quickcheck
+  , typerep
+  , bin_io ~localize
+  , globalize]
 
 let t_sexp_grammar = Stable.V3.t_sexp_grammar
 let sexp_of_t = Stable.V3.sexp_of_t
@@ -199,19 +206,27 @@ end
 
 [@@@kind.default k]
 
-let to_list = (Stable.V3.to_list [@kind k])
-let of_list_exn = (Stable.V3.of_list_exn [@kind k])
+let[@mode m = (global, local)] to_list t =
+  (Stable.V3.to_list [@kind k] [@mode m]) t [@exclave_if_local m]
+;;
+
+let[@mode m = (global, local)] of_list_exn l =
+  (Stable.V3.of_list_exn [@kind k] [@mode m]) l [@exclave_if_local m]
+;;
+
 let hd (hd :: _) = hd
 let tl (_ :: tl) = tl
 
 let of_list : (_ List.t[@kind k]) -> _ t option = function
   | [] -> None
-  | hd :: tl -> Some (hd :: tl)
+  | hd :: tl -> Some (hd :: tl) [@exclave_if_local m]
+[@@mode m = (global, local)]
 ;;
 
 let of_list_error : (_ List.t[@kind k]) -> _ t Or_error.t = function
   | [] -> Core.error_s [%message "empty list"]
-  | hd :: tl -> Ok (hd :: tl)
+  | hd :: tl -> Ok (hd :: tl) [@exclave_if_local m]
+[@@mode m = (global, local)]
 ;;
 
 let length (_ :: tl) = 1 + (List.length [@kind k]) tl
@@ -278,6 +293,20 @@ let last (hd :: tl) = (List.fold [@kind k k]) tl ~init:hd ~f:(fun _ elt -> elt)
 let iter (hd :: tl) ~f =
   f hd;
   (List.iter [@kind k]) ~f tl
+;;
+
+(* Temporarily copied from base while we wait for list.ml to be localized *)
+let rec iter_local_list (t : (_ List.t[@kind k])) ~f =
+  match t with
+  | [] -> ()
+  | a :: xs ->
+    f a;
+    (iter_local_list [@kind k] [@tailcall]) xs ~f
+;;
+
+let[@mode local] iter (hd :: tl : (_ t[@kind k])) ~f =
+  f hd;
+  (iter_local_list [@kind k]) tl ~f
 ;;
 
 let iteri (hd :: tl) ~f =
@@ -724,11 +753,15 @@ struct
   Indexed_container.Make [@modality portable] (struct
       type nonrec 'a t = 'a t
 
-      let length = `Custom length
-      let iter = `Custom iter
-      let iteri = `Custom iteri
       let fold (hd :: tl) ~init ~f = List.fold tl ~init:(f init hd) ~f
+      let fold_until t ~init ~f ~finish = Container.fold_until ~fold ~init ~f t ~finish
+      let fold = `Custom fold
+      let iter_until = `Define_using_fold_until
+      let iter = `Custom iter
+      let length = `Custom length
+      let iteri = `Custom iteri
       let foldi = `Define_using_fold
+      let foldi_until = `Define_using_fold_until
     end)
 
   open From_indexed_container_make
@@ -740,6 +773,7 @@ struct
   (* *)
   let mem = mem
   let iter = iter
+  let iter_until = iter_until
   let fold = fold
   let fold_result = fold_result
   let fold_until = fold_until
@@ -758,8 +792,10 @@ struct
   let for_alli = for_alli
   let existsi = existsi
   let foldi = foldi
+  let foldi_until = foldi_until
   let length = length
   let iteri = iteri
+  let iteri_until = iteri_until
 end :
 sig
   include Indexed_container.S1 with type 'a t := 'a t

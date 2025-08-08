@@ -301,12 +301,16 @@ let protect_window_bounds_and_buffer_3 t x y z ~f =
 ;;
 
 let empty = create ~len:0
-let of_string s = of_bigstring (Bigstring.of_string s)
-let of_string__local s = of_bigstring__local (Bigstring.of_string s)
+
+let%template of_string s =
+  (of_bigstring [@alloc a]) (Bigstring.of_string s) [@exclave_if_stack a]
+[@@alloc a = (stack, heap)]
+;;
+
 let of_bytes s = of_bigstring (Bigstring.of_bytes s)
 
 let to_stringlike ~(convert : ?pos:int -> ?len:int -> Bigstring.t -> 'a) =
-  stage (fun ?len t : 'a ->
+  (stage [@mode portable]) (fun ?len t : 'a ->
     let len =
       match len with
       | Some len ->
@@ -317,8 +321,8 @@ let to_stringlike ~(convert : ?pos:int -> ?len:int -> Bigstring.t -> 'a) =
     convert t.buf ~pos:t.lo ~len)
 ;;
 
-let to_string = to_stringlike ~convert:Bigstring.to_string |> unstage
-let to_bytes = to_stringlike ~convert:Bigstring.to_bytes |> unstage
+let to_string = to_stringlike ~convert:Bigstring.to_string |> (unstage [@mode portable])
+let to_bytes = to_stringlike ~convert:Bigstring.to_bytes |> (unstage [@mode portable])
 
 let compact t =
   let len = t.hi - t.lo in
@@ -360,6 +364,11 @@ let memcmp a b =
 ;;
 
 let memset t ~pos ~len c = Bigstring.memset ~pos:(buf_pos_exn t ~pos ~len) ~len t.buf c
+
+let unsafe_memset t ~pos ~len c =
+  Bigstring.unsafe_memset ~pos:(buf_pos_exn t ~pos ~len) ~len t.buf c
+;;
+
 let zero t = memset t ~pos:0 ~len:(length t) '\000'
 
 let concat bufs =

@@ -17,7 +17,11 @@ module Consume = struct
       val unsafe_blit : (Repr.t, t) Core.Blit.blit
     end) =
   struct
-    include Base_for_tests.Test_blit.Make_distinct_and_test (Char_elt) (T_src) (Dst)
+    include
+      Base_for_tests.Test_blit.Make_distinct_and_test [@modality portable]
+        (Char_elt)
+        (T_src)
+        (Dst)
 
     let unsafe_blit ~src ~dst ~dst_pos ~len =
       let blit = if unsafe_is_safe then blit else unsafe_blit in
@@ -514,10 +518,16 @@ module Peek = struct
   type 'seek src = (read, 'seek) t
 
   module To_bytes =
-    Base_for_tests.Test_blit.Make_distinct_and_test (Char_elt) (T_src) (Bytes_dst)
+    Base_for_tests.Test_blit.Make_distinct_and_test [@modality portable]
+      (Char_elt)
+      (T_src)
+      (Bytes_dst)
 
   module To_bigstring =
-    Base_for_tests.Test_blit.Make_distinct_and_test (Char_elt) (T_src) (Bigstring_dst)
+    Base_for_tests.Test_blit.Make_distinct_and_test [@modality portable]
+      (Char_elt)
+      (T_src)
+      (Bigstring_dst)
 
   module To_string = String_dst
 

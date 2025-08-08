@@ -53,8 +53,9 @@ end
 
 module Opt_level : sig
   type t =
-    | High
     | Low
+    | Legacy_default
+    | High
   [@@deriving sexp_of]
 end
 

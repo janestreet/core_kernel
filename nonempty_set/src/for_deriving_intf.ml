@@ -14,7 +14,13 @@ module type S_serializable = sig
     :  (module Set.M_sexp_grammar with type t = 'elt)
     -> ('elt, 'cmp) t Sexplib0.Sexp_grammar.t
 
-  val compare_m__t : (module Set.Compare_m) -> ('elt, 'cmp) t -> ('elt, 'cmp) t -> int
+  val%template compare_m__t
+    :  (module Set.Compare_m)
+    -> ('elt, 'cmp) t
+    -> ('elt, 'cmp) t
+    -> int
+  [@@mode m = (local, global)]
+
   val bin_shape_m__t : ('a, 'b) Set.Elt_bin_io.t -> Bin_prot.Shape.t
   val bin_size_m__t : ('a, 'b) Set.Elt_bin_io.t -> ('a, 'b) t Bin_prot.Size.sizer
   val bin_write_m__t : ('a, 'b) Set.Elt_bin_io.t -> ('a, 'b) t Bin_prot.Write.writer

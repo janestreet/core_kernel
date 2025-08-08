@@ -112,16 +112,19 @@ let fold t ~init ~f =
 
 let length t = t.length
 
-module C = Container.Make (struct
+module C = Container.Make [@modality portable] (struct
     type nonrec 'a t = 'a t
 
-    let fold = fold
+    let fold_until t ~init ~f ~finish = Container.fold_until ~fold t ~init ~f ~finish
+    let fold = `Custom fold
+    let iter_until = `Define_using_fold_until
     let iter = `Define_using_fold
     let length = `Custom length
   end)
 
 let is_empty t = Option.is_none t.heap
 let iter = C.iter
+let iter_until = C.iter_until
 let mem = C.mem
 let min_elt = C.min_elt
 let max_elt = C.max_elt

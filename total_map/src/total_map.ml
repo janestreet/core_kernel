@@ -364,6 +364,142 @@ module Sequence (A : Applicative) = Sequence2 (struct
     type ('a, _) t = 'a A.t
   end)
 
+module type M = sig
+  type t
+
+  module Total_map : S with type Key.t = t
+end
+
+module M (T : For_include_functor) = struct
+  type 'a t = 'a T.Total_map.t
+end
+
+let m__t_of_sexp
+  (type k cmp enum a)
+  (module K : M
+    with type t = k
+     and type Total_map.enumeration_witness = enum
+     and type Total_map.comparator_witness = cmp)
+  (a_of_sexp : Sexp.t -> a)
+  : Sexp.t -> (k, a, cmp, enum) t
+  =
+  K.Total_map.t_of_sexp a_of_sexp
+;;
+
+let sexp_of_m__t
+  (type k cmp enum a)
+  (module K : M
+    with type t = k
+     and type Total_map.enumeration_witness = enum
+     and type Total_map.comparator_witness = cmp)
+  (sexp_of_a : a -> Sexp.t)
+  : (k, a, cmp, enum) t -> Sexp.t
+  =
+  K.Total_map.sexp_of_t sexp_of_a
+;;
+
+let bin_shape_m__t (module K : For_include_functor) (bin_shape_a : Bin_shape.t)
+  : Bin_shape.t
+  =
+  K.Total_map.bin_shape_t bin_shape_a
+;;
+
+let bin_size_m__t
+  (type k cmp enum a)
+  (module K : M
+    with type t = k
+     and type Total_map.enumeration_witness = enum
+     and type Total_map.comparator_witness = cmp)
+  (bin_size_a : a Bin_prot.Size.sizer)
+  : (k, a, cmp, enum) t Bin_prot.Size.sizer
+  =
+  K.Total_map.bin_size_t bin_size_a
+;;
+
+let bin_write_m__t
+  (type k cmp enum a)
+  (module K : M
+    with type t = k
+     and type Total_map.enumeration_witness = enum
+     and type Total_map.comparator_witness = cmp)
+  (bin_write_a : a Bin_prot.Write.writer)
+  : (k, a, cmp, enum) t Bin_prot.Write.writer
+  =
+  K.Total_map.bin_write_t bin_write_a
+;;
+
+let bin_read_m__t
+  (type k cmp enum a)
+  (module K : M
+    with type t = k
+     and type Total_map.enumeration_witness = enum
+     and type Total_map.comparator_witness = cmp)
+  (bin_read_a : a Bin_prot.Read.reader)
+  : (k, a, cmp, enum) t Bin_prot.Read.reader
+  =
+  K.Total_map.bin_read_t bin_read_a
+;;
+
+let __bin_read_m__t__
+  (type k cmp enum a)
+  (module K : M
+    with type t = k
+     and type Total_map.enumeration_witness = enum
+     and type Total_map.comparator_witness = cmp)
+  (bin_read_a : a Bin_prot.Read.reader)
+  : (k, a, cmp, enum) t Bin_prot.Read.vtag_reader
+  =
+  K.Total_map.__bin_read_t__ bin_read_a
+;;
+
+let compare_m__t
+  (type k cmp enum a)
+  (module K : M
+    with type t = k
+     and type Total_map.enumeration_witness = enum
+     and type Total_map.comparator_witness = cmp)
+  (a_compare : a -> a -> int)
+  : (k, a, cmp, enum) t -> (k, a, cmp, enum) t -> int
+  =
+  K.Total_map.compare a_compare
+;;
+
+let quickcheck_generator_m__t
+  (type k cmp enum a)
+  (module K : M
+    with type t = k
+     and type Total_map.enumeration_witness = enum
+     and type Total_map.comparator_witness = cmp)
+  a_generator
+  : (k, a, cmp, enum) t Quickcheck.Generator.t
+  =
+  K.Total_map.quickcheck_generator a_generator
+;;
+
+let quickcheck_observer_m__t
+  (type k cmp enum a)
+  (module K : M
+    with type t = k
+     and type Total_map.enumeration_witness = enum
+     and type Total_map.comparator_witness = cmp)
+  a_observer
+  : (k, a, cmp, enum) t Quickcheck.Observer.t
+  =
+  K.Total_map.quickcheck_observer a_observer
+;;
+
+let quickcheck_shrinker_m__t
+  (type k cmp enum a)
+  (module K : M
+    with type t = k
+     and type Total_map.enumeration_witness = enum
+     and type Total_map.comparator_witness = cmp)
+  a_shrinker
+  : (k, a, cmp, enum) t Quickcheck.Shrinker.t
+  =
+  K.Total_map.quickcheck_shrinker a_shrinker
+;;
+
 include struct
   open Map
 
