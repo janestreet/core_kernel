@@ -271,8 +271,8 @@ module type Timing_wheel = sig
     val durations : t -> Time_ns.Span.t list
 
     (** [microsecond_precision ()] returns a reasonable configuration for a timing wheel
-        with microsecond [alarm_precision], and level durations of 1ms, 1s, 1m, 1h, 1d.
-        See the relevant expect test in [Core_test] library. *)
+        with microsecond [alarm_precision], and level durations of 1ms, 1s, 1m, 1h, 1d,
+        1w. See the relevant expect test in [Core_test] library. *)
     val microsecond_precision : unit -> t
   end
 

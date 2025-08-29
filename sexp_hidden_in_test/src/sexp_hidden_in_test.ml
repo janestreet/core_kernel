@@ -5,7 +5,7 @@ module Make (M : sig
   end) =
 struct
   type 'a t = 'a
-  [@@deriving bin_io, compare ~localize, equal ~localize, sexp, stable_witness]
+  [@@deriving bin_io, compare ~localize, equal ~localize, hash, sexp, stable_witness]
 
   let sexp_of_t sexp_of_a a =
     if M.am_running_test then Core.Sexp.Atom "<hidden_in_test>" else sexp_of_a a
@@ -13,7 +13,7 @@ struct
 
   module With_non_roundtripping_in_test_of_sexp = struct
     type nonrec 'a t = 'a t
-    [@@deriving bin_io, compare ~localize, equal ~localize, sexp, stable_witness]
+    [@@deriving bin_io, compare ~localize, equal ~localize, hash, sexp, stable_witness]
   end
 end
 

@@ -84,6 +84,7 @@ module Stable = struct
 
       let sexp_of_t = V3.sexp_of_t
       let t_of_sexp = V3.t_of_sexp
+      let t_sexp_grammar = V3.t_sexp_grammar
     end
 
     include T
@@ -133,6 +134,7 @@ module Stable = struct
 
       let sexp_of_t = V2.sexp_of_t
       let t_of_sexp = V2.t_of_sexp
+      let t_sexp_grammar = V2.t_sexp_grammar
     end
 
     include T
@@ -400,6 +402,16 @@ let zip t1 t2 : _ List.Or_unequal_lengths.t =
 ;;
 
 let zip_exn t1 t2 = List.zip_exn (to_list t1) (to_list t2) |> of_list_exn
+
+let zip3 t1 t2 t3 : _ List.Or_unequal_lengths.t =
+  match List.zip3 (to_list t1) (to_list t2) (to_list t3) with
+  | Ok x -> Ok (of_list_exn x)
+  | Unequal_lengths -> Unequal_lengths
+;;
+
+let zip3_exn t1 t2 t3 =
+  List.zip3_exn (to_list t1) (to_list t2) (to_list t3) |> of_list_exn
+;;
 
 let drop_last (hd :: tl) =
   match List.drop_last tl with

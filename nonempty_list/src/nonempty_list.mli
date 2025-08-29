@@ -95,6 +95,8 @@ val unzip : ('a * 'b) t -> 'a t * 'b t
 val unzip3 : ('a * 'b * 'c) t -> 'a t * 'b t * 'c t
 val zip : 'a t -> 'b t -> ('a * 'b) t List.Or_unequal_lengths.t
 val zip_exn : 'a t -> 'b t -> ('a * 'b) t
+val zip3 : 'a t -> 'b t -> 'c t -> ('a * 'b * 'c) t List.Or_unequal_lengths.t
+val zip3_exn : 'a t -> 'b t -> 'c t -> ('a * 'b * 'c) t
 val map2 : 'a t -> 'b t -> f:('a -> 'b -> 'c) -> 'c t List.Or_unequal_lengths.t
 val map2_exn : 'a t -> 'b t -> f:('a -> 'b -> 'c) -> 'c t
 val filter_opt : 'a option t -> 'a list
@@ -415,7 +417,8 @@ module Stable : sig
       version if you're writing a new protocol. *)
   module V2 : sig
     type nonrec 'a t = 'a t
-    [@@deriving bin_io, compare ~localize, equal ~localize, sexp, hash, stable_witness]
+    [@@deriving
+      bin_io, compare ~localize, equal ~localize, sexp, sexp_grammar, hash, stable_witness]
   end
 
   (** Represents a [t] as an ordinary list for sexps, but as a pair for bin_io conversions
@@ -424,6 +427,7 @@ module Stable : sig
       version if you're writing a new protocol. *)
   module V1 : sig
     type nonrec 'a t = 'a t
-    [@@deriving bin_io, compare ~localize, equal ~localize, sexp, stable_witness]
+    [@@deriving
+      bin_io, compare ~localize, equal ~localize, sexp, sexp_grammar, stable_witness]
   end
 end

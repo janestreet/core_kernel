@@ -281,7 +281,7 @@ module Config = struct
     create
       ()
       ~alarm_precision:Alarm_precision.about_one_microsecond
-      ~level_bits:(Level_bits.create_exn [ 10; 10; 6; 6; 5 ])
+      ~level_bits:(Level_bits.create_exn [ 10; 10; 6; 6; 5; 3 ])
   ;;
 
   let durations t =

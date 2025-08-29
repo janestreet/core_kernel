@@ -21,6 +21,13 @@ module type S_serializable = sig
     -> int
   [@@mode m = (local, global)]
 
+  val hash_fold_m__t
+    :  (module Set.Hash_fold_m with type t = 'elt)
+    -> Hash.state
+    -> ('elt, _) t
+    -> Hash.state
+
+  val hash_m__t : (module Set.Hash_fold_m with type t = 'elt) -> ('elt, _) t -> int
   val bin_shape_m__t : ('a, 'b) Set.Elt_bin_io.t -> Bin_prot.Shape.t
   val bin_size_m__t : ('a, 'b) Set.Elt_bin_io.t -> ('a, 'b) t Bin_prot.Size.sizer
   val bin_write_m__t : ('a, 'b) Set.Elt_bin_io.t -> ('a, 'b) t Bin_prot.Write.writer

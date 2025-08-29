@@ -22,6 +22,8 @@ module Stable = struct
     [@@mode m = (local, global)]
     ;;
 
+    let hash_fold_m__t = Set.V1.hash_fold_m__t
+    let hash_m__t = Set.V1.hash_m__t
     let m__t_sexp_grammar = Set.V1.m__t_sexp_grammar
     let m__t_of_sexp e s = Set.V1.m__t_of_sexp e s |> of_set_exn
     let sexp_of_m__t = Set.V1.sexp_of_m__t
