@@ -1,6 +1,0 @@
-(library
- (name nonempty_list_tests)
- (libraries accessor accessor_base base_test_helpers base.composition_infix
-   core expect_test_helpers_core nonempty_list nonempty_list_accessor)
- (preprocess
-  (pps ppx_jane)))

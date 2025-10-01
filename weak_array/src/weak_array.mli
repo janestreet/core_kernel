@@ -8,7 +8,7 @@
 
 open! Base
 
-type 'a t [@@deriving sexp_of]
+type 'a t : mutable_data with 'a [@@deriving sexp_of]
 
 val create : len:int -> _ t
 val length : _ t -> int

@@ -120,7 +120,7 @@ end
 
 let%expect_test "[Config.microsecond_precision]" =
   print_s [%sexp (Config.microsecond_precision () : Config.t)];
-  [%expect {| ((alarm_precision 1.024us) (level_bits (10 10 6 6 5))) |}];
+  [%expect {| ((alarm_precision 1.024us) (level_bits (10 10 6 6 5 3))) |}];
   print_s
     [%sexp (Config.durations (Config.microsecond_precision ()) : Time_ns.Span.t list)];
   [%expect
@@ -129,7 +129,8 @@ let%expect_test "[Config.microsecond_precision]" =
      1.073741824s
      1m8.719476736s
      1h13m18.046511104s
-     1d15h5m37.488355328s)
+     1d15h5m37.488355328s
+     13d44m59.906842624s)
     |}]
 ;;
 

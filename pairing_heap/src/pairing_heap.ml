@@ -21,10 +21,9 @@ module Pointer = Pool.Pointer
      G         H->I->J   K->L
    v} *)
 
-module Node : sig
+module Node : sig @@ portable
   (* Exposing [private int] is a significant performance improvement, because it allows
      the compiler to skip the write barrier. *)
-
   type 'a t = private int
 
   module Id : sig
@@ -496,10 +495,12 @@ let iter t ~f =
 
 let length t = Node.Pool.length t.pool
 
-module C = Container.Make (struct
+module C = Container.Make [@modality portable] (struct
     type nonrec 'a t = 'a t
 
-    let fold = fold
+    let fold_until t ~init ~f ~finish = Container.fold_until ~fold ~init ~f t ~finish
+    let fold = `Custom fold
+    let iter_until = `Define_using_fold_until
     let iter = `Custom iter
     let length = `Custom length
   end)
@@ -518,6 +519,7 @@ let min_elt = C.min_elt
 let max_elt = C.max_elt
 let fold_result = C.fold_result
 let fold_until = C.fold_until
+let iter_until = C.iter_until
 
 let of_array arr ~cmp =
   let t = create ~min_size:(Array.length arr) ~cmp () in

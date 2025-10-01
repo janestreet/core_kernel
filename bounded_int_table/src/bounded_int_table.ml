@@ -75,8 +75,8 @@ let invariant invariant_key invariant_data t =
     failwiths "invariant failed" (exn, t) [%sexp_of: exn * (key, _) t_detailed]
 ;;
 
-let debug = ref false
-let check_invariant t = if !debug then invariant ignore ignore t
+let debug = Atomic.make false
+let check_invariant t = if Atomic.get debug then invariant ignore ignore t
 let is_empty t = length t = 0
 
 let create ?sexp_of_key ~num_keys ~key_to_int () =

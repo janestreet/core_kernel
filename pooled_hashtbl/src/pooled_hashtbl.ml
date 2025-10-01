@@ -330,6 +330,13 @@ let%template[@mode m = (local, global)] find (t @ m) key =
   if Entry.is_null e then None else Some (Entry.data t.entries e)
 ;;
 
+let find_or_null t key =
+  let index = slot t key in
+  let it = table_get t.table index in
+  let e = find_entry t ~key ~it in
+  if Entry.is_null e then Null else This (Entry.data t.entries e)
+;;
+
 let find_exn t key =
   (* We could call find here, but that returns a boxed option. *)
   let index = slot t key in
@@ -597,38 +604,27 @@ let%template iteri =
 let iter t ~f = iteri t ~f:(fun ~key:_ ~data -> f data) [@nontail]
 let iter_keys t ~f = iteri t ~f:(fun ~key ~data:_ -> f key) [@nontail]
 
-let%template rec choose_nonempty t i =
+let rec choose_nonempty t i =
   let entry = table_get t.table i in
   if Entry.is_null entry
-  then (choose_nonempty [@mode m]) t ((i + 1) land (t.capacity - 1))
-  else
-    ( Modes.Global.wrap (Entry.key t.entries entry)
-    , Modes.Global.wrap (Entry.data t.entries entry) )
-[@@mode m = local]
+  then choose_nonempty t ((i + 1) land (t.capacity - 1))
+  else #(Entry.key t.entries entry, Entry.data t.entries entry)
 ;;
 
-let%template rec choose_nonempty t i =
-  let entry = table_get t.table i in
-  if Entry.is_null entry
-  then (choose_nonempty [@mode m]) t ((i + 1) land (t.capacity - 1))
-  else Entry.key t.entries entry, Entry.data t.entries entry
-[@@mode m = global]
+let%template[@inline] [@mode global] wrap_pair #(k, v) = #(k, v)
+let%template[@inline] [@mode local] wrap_pair #(k, v) = #({ global = k }, { global = v })
+
+let%template[@mode m = (global, local)] choose t =
+  if t.length = 0
+  then None
+  else (
+    let #(k, v) = (wrap_pair [@mode m]) (choose_nonempty t 0) in
+    Some (k, v) [@exclave_if_local m])
 ;;
 
-let%template choose t = exclave_
-  if t.length = 0 then None else Some ((choose_nonempty [@mode m]) t 0)
-[@@mode m = local]
-;;
-
-let%template choose t =
-  if t.length = 0 then None else Some ((choose_nonempty [@mode m]) t 0)
-[@@mode m = global]
-;;
-
-let%template choose_exn t =
+let choose_exn t =
   if t.length = 0 then raise_s [%message "[Pooled_hashtbl.choose_exn] of empty hashtbl"];
-  (choose_nonempty [@mode m]) t 0 [@exclave_if_local m]
-[@@mode m = (local, global)]
+  choose_nonempty t 0
 ;;
 
 let choose_randomly_nonempty ~random_state t =
@@ -637,7 +633,11 @@ let choose_randomly_nonempty ~random_state t =
 ;;
 
 let choose_randomly ?(random_state = Random.State.default) t =
-  if t.length = 0 then None else Some (choose_randomly_nonempty ~random_state t)
+  if t.length = 0
+  then None
+  else (
+    let #(k, v) = choose_randomly_nonempty ~random_state t in
+    Some (k, v))
 ;;
 
 let choose_randomly_exn ?(random_state = Random.State.default) t =
@@ -994,13 +994,8 @@ let copy t =
 ;;
 
 module Accessors = struct
-  [%%template
-  [@@@mode.default m = (global, local)]
-
-  let choose = (choose [@mode m])
-  let choose_exn = (choose_exn [@mode m])
-  let equal = (equal [@mode m])]
-
+  let%template choose = (choose [@mode m]) [@@mode m = (local, global)]
+  let choose_exn = choose_exn
   let choose_randomly = choose_randomly
   let choose_randomly_exn = choose_randomly_exn
   let clear = clear
@@ -1045,6 +1040,7 @@ module Accessors = struct
   let find_or_add = find_or_add
   let findi_or_add = findi_or_add
   let find t x = find t x
+  let find_or_null t x = find_or_null t x
   let find_exn = find_exn
   let find_and_call = find_and_call
   let findi_and_call = findi_and_call

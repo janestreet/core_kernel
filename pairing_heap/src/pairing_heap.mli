@@ -1,3 +1,5 @@
+@@ portable
+
 (** Heap implementation based on a pairing-heap.
 
     This heap implementations supports an arbitrary element type via a comparison

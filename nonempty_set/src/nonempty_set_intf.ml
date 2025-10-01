@@ -8,10 +8,11 @@ open! Core
     exn-raising. *)
 
 module type Nonempty_set = sig @@ portable
-  type (!'a, !'b) t
+  type (!'a, !'b) t : value mod contended portable with 'a with 'b @@ contended
 
   val add : ('a, 'b) t -> 'a -> ('a, 'b) t
   val remove : ('a, 'b) t -> 'a -> ('a, 'b) t option
+  val inter : ('a, 'b) t -> ('a, 'b) t -> ('a, 'b) t option
   val singleton : ('a, 'cmp) Comparator.Module.t -> 'a -> ('a, 'cmp) t
   val reduce : ('a, _) t -> map:('a -> 'b) -> f:('b -> 'b -> 'b) -> 'b
   val fold : ('a, _) t -> init:'b -> f:('b -> 'a -> 'b) -> 'b
@@ -32,6 +33,7 @@ module type Nonempty_set = sig @@ portable
   val of_set_add : ('a, 'b) Set.t -> 'a -> ('a, 'b) t
   val to_set : ('a, 'b) t -> ('a, 'b) Set.t
   val to_set_remove : ('a, 'b) t -> 'a -> ('a, 'b) Set.t
+  val to_set_inter : ('a, 'b) t -> ('a, 'b) t -> ('a, 'b) Set.t
 
   (** [union t1 t2] returns the union of the two sets. [O(length t1 + length t2)]. *)
   val union : ('a, 'b) t -> ('a, 'b) t -> ('a, 'b) t
@@ -47,7 +49,10 @@ module type Nonempty_set = sig @@ portable
   val diff : ('a, 'cmp) t -> ('a, 'cmp) t -> ('a, 'cmp) Set.t
   val mem : ('a, _) t -> 'a -> bool
   val length : (_, _) t -> int
-  val equal : ('a, 'b) t -> ('a, 'b) t -> bool
+
+  val%template equal : ('a, 'b) t @ m -> ('a, 'b) t @ m -> bool
+  [@@mode m = (global, local)]
+
   val is_subset : ('a, 'b) t -> of_:('a, 'b) t -> bool
   val max_elt : ('a, _) t -> 'a
   val min_elt : ('a, _) t -> 'a

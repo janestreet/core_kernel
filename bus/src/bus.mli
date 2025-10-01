@@ -239,6 +239,18 @@ module Fold_arity : sig
   [@@deriving sexp_of]
 end
 
+(** [subscribe_with_state_exn t arity ~init ~f] folds over the bus events, threading a
+    state value to every call. This subscription can be stopped by unsubscribing the
+    returned Subscriber.t. It is otherwise similar to [subscribe_exn]. *)
+val subscribe_with_state_exn
+  :  ?extract_exn:bool (** passed along to [subscribe_exn] *)
+  -> here:[%call_pos]
+  -> ('callback, [> read ]) t
+  -> ('callback, 'f, 's) Fold_arity.t
+  -> init:'s
+  -> f:'f
+  -> 'callback Subscriber.t
+
 (** [subscribe_permanently_with_state_exn t arity ~init ~f] folds over the bus events,
     threading a state value to every call. It is otherwise similar to
     [subscribe_permanently_exn]. *)

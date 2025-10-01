@@ -1,0 +1,5 @@
+(library
+ (name version_util_compat_test)
+ (libraries core.command core version_util_compat)
+ (preprocess
+  (pps ppx_jane)))

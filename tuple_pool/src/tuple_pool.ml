@@ -179,7 +179,7 @@ module Pool = struct
     val slot_index : _ t -> (_, _) Slot.t -> int
     val first_slot_index : _ t -> int
 
-    module Id : sig @@ portable
+    module Id : sig
       type t [@@deriving bin_io, sexp]
 
       val to_int63 : t -> Int63.t

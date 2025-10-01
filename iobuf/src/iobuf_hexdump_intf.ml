@@ -9,7 +9,7 @@ module Definitions = struct
   end
 end
 
-module type Iobuf_hexdump = sig
+module type Iobuf_hexdump = sig @@ portable
   include module type of struct
     include Definitions
   end

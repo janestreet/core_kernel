@@ -123,7 +123,7 @@ module Definitions = struct
   end
 end
 
-module type Iobuf_expert = sig
+module type Iobuf_expert = sig @@ portable
   include module type of struct
     include Definitions
   end

@@ -987,6 +987,16 @@ let create_exn
 
 let can_subscribe t = allow_subscription_after_first_write t || not t.write_ever_called
 
+let assert_can_subscribe t ~function_name ~subscribed_from =
+  if not (can_subscribe t)
+  then
+    failwiths
+      ~here:subscribed_from
+      [%string "Bus.%{function_name} called after first write"]
+      t
+      [%sexp_of: (_, _) t]
+;;
+
 let enlarge_capacity t =
   let capacity = capacity t in
   let new_capacity = Int.max 1 (capacity * 2) in
@@ -1007,12 +1017,7 @@ let subscribe_exn
   t
   ~f:callback
   =
-  if not (can_subscribe t)
-  then
-    failwiths
-      "Bus.subscribe_exn called after first write"
-      [%sexp ~~(subscribed_from : Source_code_position.t), { bus = (t : (_, _) t) }]
-      [%sexp_of: Sexp.t];
+  assert_can_subscribe t ~function_name:"subscribe_exn" ~subscribed_from;
   match t.state with
   | Closed ->
     (* Anything that satisfies the return type will do.  Since the subscriber is never
@@ -1051,12 +1056,7 @@ let subscribe_exn
 ;;
 
 let subscribe_permanently_exn ?extract_exn ~here:(subscribed_from : [%call_pos]) t ~f =
-  if not (can_subscribe t)
-  then
-    failwiths
-      "Bus.subscribe_permanently_exn called after first write"
-      t
-      [%sexp_of: (_, _) t];
+  assert_can_subscribe t ~function_name:"subscribe_permanently_exn" ~subscribed_from;
   ignore (subscribe_exn ?extract_exn t ~here:subscribed_from ~f : _ Subscriber.t)
 ;;
 
@@ -1076,7 +1076,7 @@ module Fold_arity = struct
   [@@deriving sexp_of]
 end
 
-let subscribe_permanently_with_state_exn
+let subscribe_with_state_exn
   ?extract_exn
   (type c f s)
   ~here:(subscribed_from : [%call_pos])
@@ -1086,13 +1086,8 @@ let subscribe_permanently_with_state_exn
   ~(f : f)
   =
   let state = ref init in
-  if not (can_subscribe t)
-  then
-    failwiths
-      "Bus.subscribe_permanently_with_state_exn called after first write"
-      t
-      [%sexp_of: (_, _) t];
-  subscribe_permanently_exn
+  assert_can_subscribe t ~function_name:"subscribe_with_state_exn" ~subscribed_from;
+  subscribe_exn
     ?extract_exn
     t
     ~here:subscribed_from
@@ -1104,6 +1099,23 @@ let subscribe_permanently_with_state_exn
        | Arity4 -> fun a1 a2 a3 a4 -> state := f !state a1 a2 a3 a4
        | Arity5 -> fun a1 a2 a3 a4 a5 -> state := f !state a1 a2 a3 a4 a5
        | Arity6 -> fun a1 a2 a3 a4 a5 a6 -> state := f !state a1 a2 a3 a4 a5 a6)
+;;
+
+let subscribe_permanently_with_state_exn
+  ?extract_exn
+  ~here:(subscribed_from : [%call_pos])
+  t
+  fold_arity
+  ~init
+  ~f
+  =
+  assert_can_subscribe
+    t
+    ~function_name:"subscribe_permanently_with_state_exn"
+    ~subscribed_from;
+  ignore
+    (subscribe_with_state_exn ?extract_exn ~here:subscribed_from t fold_arity ~init ~f
+     : _ Subscriber.t)
 ;;
 
 module%test _ = struct

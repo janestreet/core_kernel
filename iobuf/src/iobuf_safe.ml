@@ -8,16 +8,21 @@ module Consume = struct
   type src = (read, seek) t
 
   module To (Dst : sig
+    @@ portable
       type t [@@deriving sexp_of]
 
       val create : len:int -> t
       val length : local_ t -> int
       val get : t -> int -> char
       val set : t -> int -> char -> unit
-      val unsafe_blit : (Repr.t, t) Core.Blit.blit
+      val unsafe_blit : (global Repr.t, t) Core.Blit.blit
     end) =
   struct
-    include Base_for_tests.Test_blit.Make_distinct_and_test (Char_elt) (T_src) (Dst)
+    include
+      Base_for_tests.Test_blit.Make_distinct_and_test [@modality portable]
+        (Char_elt)
+        (T_src)
+        (Dst)
 
     let unsafe_blit ~src ~dst ~dst_pos ~len =
       let blit = if unsafe_is_safe then blit else unsafe_blit in
@@ -75,10 +80,10 @@ module Consume = struct
     ;;
   end
 
-  type nonrec ('a, 'd, 'w) t__local = local_ ('d, seek) t -> local_ 'a
+  type nonrec ('a, 'd, 'w, 'l) t__local = local_ ('d, seek) t -> local_ 'a
     constraint 'd = [> read ]
 
-  type nonrec ('a, 'd, 'w) t = local_ ('d, seek) t -> 'a constraint 'd = [> read ]
+  type nonrec ('a, 'd, 'w, 'l) t = local_ ('d, seek) t -> 'a constraint 'd = [> read ]
 
   let uadv t n x =
     unsafe_advance t n;
@@ -98,14 +103,14 @@ module Consume = struct
     uadv
       t
       len
-      (Bigstring.get_tail_padded_fixed_string t.buf ~pos:(pos t len) ~padding ~len ())
+      (Bigstring.get_tail_padded_fixed_string (buf t) ~pos:(pos t len) ~padding ~len ())
   ;;
 
   let head_padded_fixed_string ~padding ~len t =
     uadv
       t
       len
-      (Bigstring.get_head_padded_fixed_string t.buf ~pos:(pos t len) ~padding ~len ())
+      (Bigstring.get_head_padded_fixed_string (buf t) ~pos:(pos t len) ~padding ~len ())
   ;;
 
   let bytes ~str_pos ~len t =
@@ -160,7 +165,7 @@ module Consume = struct
         t
         len
         (Bigstring.get_tail_padded_fixed_string_local
-           t.buf
+           (buf t)
            ~pos:(pos t len)
            ~padding
            ~len
@@ -172,7 +177,7 @@ module Consume = struct
         t
         len
         (Bigstring.get_head_padded_fixed_string_local
-           t.buf
+           (buf t)
            ~pos:(pos t len)
            ~padding
            ~len
@@ -214,85 +219,96 @@ module Consume = struct
     let len = 8
 
     let[@inline always] int64_t_be t = exclave_
-      uadv_local t len (Local.unsafe_get_int64_t_be t.buf ~pos:(pos t len)) [@nontail]
+      uadv_local t len (Local.unsafe_get_int64_t_be (buf t) ~pos:(pos t len)) [@nontail]
     ;;
 
     let[@inline always] int64_t_le t = exclave_
-      uadv_local t len (Local.unsafe_get_int64_t_le t.buf ~pos:(pos t len)) [@nontail]
+      uadv_local t len (Local.unsafe_get_int64_t_le (buf t) ~pos:(pos t len)) [@nontail]
     ;;
   end
 
   open Bigstring
 
   let len = 1
-  let[@inline always] char t = uadv t len (Bigstring.unsafe_get t.buf (pos t len))
-  let[@inline always] uint8 t = uadv t len (unsafe_get_uint8 t.buf ~pos:(pos t len))
-  let[@inline always] int8 t = uadv t len (unsafe_get_int8 t.buf ~pos:(pos t len))
+  let[@inline always] char t = uadv t len (Bigstring.unsafe_get (buf t) (pos t len))
+  let[@inline always] uint8 t = uadv t len (unsafe_get_uint8 (buf t) ~pos:(pos t len))
+  let[@inline always] int8 t = uadv t len (unsafe_get_int8 (buf t) ~pos:(pos t len))
   let len = 2
-  let[@inline always] int16_be t = uadv t len (unsafe_get_int16_be t.buf ~pos:(pos t len))
-  let[@inline always] int16_le t = uadv t len (unsafe_get_int16_le t.buf ~pos:(pos t len))
+
+  let[@inline always] int16_be t =
+    uadv t len (unsafe_get_int16_be (buf t) ~pos:(pos t len))
+  ;;
+
+  let[@inline always] int16_le t =
+    uadv t len (unsafe_get_int16_le (buf t) ~pos:(pos t len))
+  ;;
 
   let[@inline always] uint16_be t =
-    uadv t len (unsafe_get_uint16_be t.buf ~pos:(pos t len))
+    uadv t len (unsafe_get_uint16_be (buf t) ~pos:(pos t len))
   ;;
 
   let[@inline always] uint16_le t =
-    uadv t len (unsafe_get_uint16_le t.buf ~pos:(pos t len))
+    uadv t len (unsafe_get_uint16_le (buf t) ~pos:(pos t len))
   ;;
 
   let len = 4
-  let[@inline always] int32_be t = uadv t len (unsafe_get_int32_be t.buf ~pos:(pos t len))
 
-  let[@inline always] int32_t_be t =
-    uadv t len (unsafe_get_int32_t_be t.buf ~pos:(pos t len))
+  let[@inline always] int32_be t =
+    uadv t len (unsafe_get_int32_be (buf t) ~pos:(pos t len))
   ;;
 
-  let[@inline always] int32_le t = uadv t len (unsafe_get_int32_le t.buf ~pos:(pos t len))
+  let[@inline always] int32_t_be t =
+    uadv t len (unsafe_get_int32_t_be (buf t) ~pos:(pos t len))
+  ;;
+
+  let[@inline always] int32_le t =
+    uadv t len (unsafe_get_int32_le (buf t) ~pos:(pos t len))
+  ;;
 
   let[@inline always] int32_t_le t =
-    uadv t len (unsafe_get_int32_t_le t.buf ~pos:(pos t len))
+    uadv t len (unsafe_get_int32_t_le (buf t) ~pos:(pos t len))
   ;;
 
   let[@inline always] uint32_be t =
-    uadv t len (unsafe_get_uint32_be t.buf ~pos:(pos t len))
+    uadv t len (unsafe_get_uint32_be (buf t) ~pos:(pos t len))
   ;;
 
   let[@inline always] uint32_le t =
-    uadv t len (unsafe_get_uint32_le t.buf ~pos:(pos t len))
+    uadv t len (unsafe_get_uint32_le (buf t) ~pos:(pos t len))
   ;;
 
   let len = 8
 
   let[@inline always] int64_be_exn t =
-    uadv t len (unsafe_get_int64_be_exn t.buf ~pos:(pos t len))
+    uadv t len (unsafe_get_int64_be_exn (buf t) ~pos:(pos t len))
   ;;
 
   let[@inline always] int64_le_exn t =
-    uadv t len (unsafe_get_int64_le_exn t.buf ~pos:(pos t len))
+    uadv t len (unsafe_get_int64_le_exn (buf t) ~pos:(pos t len))
   ;;
 
   let[@inline always] uint64_be_exn t =
-    uadv t len (unsafe_get_uint64_be_exn t.buf ~pos:(pos t len))
+    uadv t len (unsafe_get_uint64_be_exn (buf t) ~pos:(pos t len))
   ;;
 
   let[@inline always] uint64_le_exn t =
-    uadv t len (unsafe_get_uint64_le_exn t.buf ~pos:(pos t len))
+    uadv t len (unsafe_get_uint64_le_exn (buf t) ~pos:(pos t len))
   ;;
 
   let[@inline always] int64_t_be t =
-    uadv t len (unsafe_get_int64_t_be t.buf ~pos:(pos t len))
+    uadv t len (unsafe_get_int64_t_be (buf t) ~pos:(pos t len))
   ;;
 
   let[@inline always] int64_t_le t =
-    uadv t len (unsafe_get_int64_t_le t.buf ~pos:(pos t len))
+    uadv t len (unsafe_get_int64_t_le (buf t) ~pos:(pos t len))
   ;;
 
   let[@inline always] int64_be_trunc t =
-    uadv t len (unsafe_get_int64_be_trunc t.buf ~pos:(pos t len))
+    uadv t len (unsafe_get_int64_be_trunc (buf t) ~pos:(pos t len))
   ;;
 
   let[@inline always] int64_le_trunc t =
-    uadv t len (unsafe_get_int64_le_trunc t.buf ~pos:(pos t len))
+    uadv t len (unsafe_get_int64_le_trunc (buf t) ~pos:(pos t len))
   ;;
 
   module Int_repr = struct
@@ -314,37 +330,42 @@ module Consume = struct
 end
 
 module Fill = struct
-  type nonrec ('a, 'd, 'w) t__local = local_ (read_write, seek) t -> local_ 'a -> unit
+  type nonrec ('a, 'd, 'w, 'l) t__local = local_ (read_write, seek) t -> local_ 'a -> unit
     constraint 'd = [> read ]
 
-  type nonrec ('a, 'd, 'w) t = local_ (read_write, seek) t -> 'a -> unit
+  type nonrec ('a, 'd, 'w, 'l) t = local_ (read_write, seek) t -> 'a -> unit
     constraint 'd = [> read ]
 
   let[@inline] pos t len = buf_pos_exn t ~pos:0 ~len
   let uadv = unsafe_advance
 
   let tail_padded_fixed_string ~padding ~len t (local_ src) =
-    Bigstring.set_tail_padded_fixed_string ~padding ~len t.buf ~pos:(pos t len) src;
+    Bigstring.set_tail_padded_fixed_string ~padding ~len (buf t) ~pos:(pos t len) src;
     uadv t len
   ;;
 
   let head_padded_fixed_string ~padding ~len t (local_ src) =
-    Bigstring.set_head_padded_fixed_string ~padding ~len t.buf ~pos:(pos t len) src;
+    Bigstring.set_head_padded_fixed_string ~padding ~len (buf t) ~pos:(pos t len) src;
     uadv t len
   ;;
 
   let bytes ~str_pos ~len t (local_ src) =
-    Bigstring.From_bytes.blit ~src ~src_pos:str_pos ~len ~dst:t.buf ~dst_pos:(pos t len);
+    Bigstring.From_bytes.blit ~src ~src_pos:str_pos ~len ~dst:(buf t) ~dst_pos:(pos t len);
     uadv t len
   ;;
 
   let string ~str_pos ~len t (local_ src) =
-    Bigstring.From_string.blit ~src ~src_pos:str_pos ~len ~dst:t.buf ~dst_pos:(pos t len);
+    Bigstring.From_string.blit
+      ~src
+      ~src_pos:str_pos
+      ~len
+      ~dst:(buf t)
+      ~dst_pos:(pos t len);
     uadv t len
   ;;
 
   let bigstring ~str_pos ~len t (local_ src) =
-    Bigstring.blit ~src ~src_pos:str_pos ~len ~dst:t.buf ~dst_pos:(pos t len);
+    Bigstring.blit ~src ~src_pos:str_pos ~len ~dst:(buf t) ~dst_pos:(pos t len);
     uadv t len
   ;;
 
@@ -386,103 +407,103 @@ module Fill = struct
   let len = 1
 
   let[@inline always] char t c =
-    Bigstring.unsafe_set t.buf (pos t len) c;
+    Bigstring.unsafe_set (buf t) (pos t len) c;
     uadv t len
   ;;
 
   let[@inline always] uint8_trunc t i =
-    unsafe_set_uint8 t.buf i ~pos:(pos t len);
+    unsafe_set_uint8 (buf t) i ~pos:(pos t len);
     uadv t len
   ;;
 
   let[@inline always] int8_trunc t i =
-    unsafe_set_int8 t.buf i ~pos:(pos t len);
+    unsafe_set_int8 (buf t) i ~pos:(pos t len);
     uadv t len
   ;;
 
   let len = 2
 
   let[@inline always] int16_be_trunc t i =
-    unsafe_set_int16_be t.buf i ~pos:(pos t len);
+    unsafe_set_int16_be (buf t) i ~pos:(pos t len);
     uadv t len
   ;;
 
   let[@inline always] int16_le_trunc t i =
-    unsafe_set_int16_le t.buf i ~pos:(pos t len);
+    unsafe_set_int16_le (buf t) i ~pos:(pos t len);
     uadv t len
   ;;
 
   let[@inline always] uint16_be_trunc t i =
-    unsafe_set_uint16_be t.buf i ~pos:(pos t len);
+    unsafe_set_uint16_be (buf t) i ~pos:(pos t len);
     uadv t len
   ;;
 
   let[@inline always] uint16_le_trunc t i =
-    unsafe_set_uint16_le t.buf i ~pos:(pos t len);
+    unsafe_set_uint16_le (buf t) i ~pos:(pos t len);
     uadv t len
   ;;
 
   let len = 4
 
   let[@inline always] int32_be_trunc t i =
-    unsafe_set_int32_be t.buf i ~pos:(pos t len);
+    unsafe_set_int32_be (buf t) i ~pos:(pos t len);
     uadv t len
   ;;
 
   let[@inline always] int32_t_be t i =
-    unsafe_set_int32_t_be t.buf i ~pos:(pos t len);
+    unsafe_set_int32_t_be (buf t) i ~pos:(pos t len);
     uadv t len
   ;;
 
   let[@inline always] int32_le_trunc t i =
-    unsafe_set_int32_le t.buf i ~pos:(pos t len);
+    unsafe_set_int32_le (buf t) i ~pos:(pos t len);
     uadv t len
   ;;
 
   let[@inline always] int32_t_le t i =
-    unsafe_set_int32_t_le t.buf i ~pos:(pos t len);
+    unsafe_set_int32_t_le (buf t) i ~pos:(pos t len);
     uadv t len
   ;;
 
   let[@inline always] uint32_be_trunc t i =
-    unsafe_set_uint32_be t.buf i ~pos:(pos t len);
+    unsafe_set_uint32_be (buf t) i ~pos:(pos t len);
     uadv t len
   ;;
 
   let[@inline always] uint32_le_trunc t i =
-    unsafe_set_uint32_le t.buf i ~pos:(pos t len);
+    unsafe_set_uint32_le (buf t) i ~pos:(pos t len);
     uadv t len
   ;;
 
   let len = 8
 
   let[@inline always] int64_be t i =
-    unsafe_set_int64_be t.buf i ~pos:(pos t len);
+    unsafe_set_int64_be (buf t) i ~pos:(pos t len);
     uadv t len
   ;;
 
   let[@inline always] int64_le t i =
-    unsafe_set_int64_le t.buf i ~pos:(pos t len);
+    unsafe_set_int64_le (buf t) i ~pos:(pos t len);
     uadv t len
   ;;
 
   let[@inline always] uint64_be_trunc t i =
-    unsafe_set_uint64_be t.buf i ~pos:(pos t len);
+    unsafe_set_uint64_be (buf t) i ~pos:(pos t len);
     uadv t len
   ;;
 
   let[@inline always] uint64_le_trunc t i =
-    unsafe_set_uint64_le t.buf i ~pos:(pos t len);
+    unsafe_set_uint64_le (buf t) i ~pos:(pos t len);
     uadv t len
   ;;
 
   let[@inline always] int64_t_be t (local_ i) =
-    unsafe_set_int64_t_be t.buf i ~pos:(pos t len);
+    unsafe_set_int64_t_be (buf t) i ~pos:(pos t len);
     uadv t len
   ;;
 
   let[@inline always] int64_t_le t (local_ i) =
-    unsafe_set_int64_t_le t.buf i ~pos:(pos t len);
+    unsafe_set_int64_t_le (buf t) i ~pos:(pos t len);
     uadv t len
   ;;
 
@@ -516,33 +537,49 @@ module Peek = struct
   type 'seek src = (read, 'seek) t
 
   module To_bytes =
-    Base_for_tests.Test_blit.Make_distinct_and_test (Char_elt) (T_src) (Bytes_dst)
+    Base_for_tests.Test_blit.Make_distinct_and_test [@modality portable]
+      (Char_elt)
+      (T_src)
+      (Bytes_dst)
 
   module To_bigstring =
-    Base_for_tests.Test_blit.Make_distinct_and_test (Char_elt) (T_src) (Bigstring_dst)
+    Base_for_tests.Test_blit.Make_distinct_and_test [@modality portable]
+      (Char_elt)
+      (T_src)
+      (Bigstring_dst)
 
   module To_string = String_dst
 
-  type nonrec ('a, 'd, 'w) t__local = local_ ('d, 'w) t -> pos:int -> local_ 'a
+  type nonrec ('a, 'd, 'w, 'l) t__local = local_ ('d, 'w) t -> pos:int -> local_ 'a
     constraint 'd = [> read ]
 
-  type nonrec ('a, 'd, 'w) t = local_ ('d, 'w) t -> pos:int -> 'a
+  type nonrec ('a, 'd, 'w, 'l) t = local_ ('d, 'w) t -> pos:int -> 'a
     constraint 'd = [> read ]
 
   let spos = buf_pos_exn (* "safe position" *)
 
   let tail_padded_fixed_string ~padding ~len t ~pos =
-    Bigstring.get_tail_padded_fixed_string t.buf ~padding ~len ~pos:(spos t ~len ~pos) ()
+    Bigstring.get_tail_padded_fixed_string
+      (buf t)
+      ~padding
+      ~len
+      ~pos:(spos t ~len ~pos)
+      ()
   ;;
 
   let head_padded_fixed_string ~padding ~len t ~pos =
-    Bigstring.get_head_padded_fixed_string t.buf ~padding ~len ~pos:(spos t ~len ~pos) ()
+    Bigstring.get_head_padded_fixed_string
+      (buf t)
+      ~padding
+      ~len
+      ~pos:(spos t ~len ~pos)
+      ()
   ;;
 
   let bytes ~str_pos ~len t ~pos =
     let dst = Bytes.create (len + str_pos) in
     Bigstring.To_bytes.blit
-      ~src:t.buf
+      ~src:(buf t)
       ~src_pos:(spos t ~len ~pos)
       ~len
       ~dst
@@ -557,7 +594,7 @@ module Peek = struct
 
   let bigstring ~str_pos ~len t ~pos =
     let dst = Bigstring.create (len + str_pos) in
-    Bigstring.blit ~src:t.buf ~src_pos:(spos t ~len ~pos) ~len ~dst ~dst_pos:str_pos;
+    Bigstring.blit ~src:(buf t) ~src_pos:(spos t ~len ~pos) ~len ~dst ~dst_pos:str_pos;
     dst
   ;;
 
@@ -596,18 +633,18 @@ module Peek = struct
 
   let index t ?(pos = 0) ?(len = length t - pos) c =
     let pos = spos t ~len ~pos in
-    Option.map (Bigstring.find ~pos ~len c t.buf) ~f:(fun x -> x - t.lo) [@nontail]
+    Option.map (Bigstring.find ~pos ~len c (buf t)) ~f:(fun x -> x - t.lo) [@nontail]
   ;;
 
   let rindex t ?(pos = 0) ?(len = length t - pos) c =
     let pos = spos t ~len ~pos in
-    Option.map (Bigstring.rfind ~pos ~len c t.buf) ~f:(fun x -> x - t.lo) [@nontail]
+    Option.map (Bigstring.rfind ~pos ~len c (buf t)) ~f:(fun x -> x - t.lo) [@nontail]
   ;;
 
   module Local = struct
     let tail_padded_fixed_string ~padding ~len t ~pos = exclave_
       Bigstring.get_tail_padded_fixed_string_local
-        t.buf
+        (buf t)
         ~padding
         ~len
         ~pos:(spos t ~len ~pos)
@@ -616,7 +653,7 @@ module Peek = struct
 
     let head_padded_fixed_string ~padding ~len t ~pos = exclave_
       Bigstring.get_head_padded_fixed_string_local
-        t.buf
+        (buf t)
         ~padding
         ~len
         ~pos:(spos t ~len ~pos)
@@ -626,7 +663,7 @@ module Peek = struct
     let bytes ~str_pos ~len t ~pos = exclave_
       let dst = Bytes.create_local (len + str_pos) in
       Bigstring.To_bytes.blit
-        ~src:t.buf
+        ~src:(buf t)
         ~src_pos:(spos t ~len ~pos)
         ~len
         ~dst
@@ -666,11 +703,11 @@ module Peek = struct
     let len = 8
 
     let[@inline always] int64_t_be t ~pos = exclave_
-      Local.unsafe_get_int64_t_be t.buf ~pos:(spos t ~len ~pos) [@nontail]
+      Local.unsafe_get_int64_t_be (buf t) ~pos:(spos t ~len ~pos) [@nontail]
     ;;
 
     let[@inline always] int64_t_le t ~pos = exclave_
-      Local.unsafe_get_int64_t_le t.buf ~pos:(spos t ~len ~pos) [@nontail]
+      Local.unsafe_get_int64_t_le (buf t) ~pos:(spos t ~len ~pos) [@nontail]
     ;;
   end
 
@@ -678,73 +715,84 @@ module Peek = struct
 
   let[@inline always] char t ~pos = get_char t pos
   let len = 1
-  let[@inline always] uint8 t ~pos = unsafe_get_uint8 t.buf ~pos:(spos t ~len ~pos)
-  let[@inline always] int8 t ~pos = unsafe_get_int8 t.buf ~pos:(spos t ~len ~pos)
+  let[@inline always] uint8 t ~pos = unsafe_get_uint8 (buf t) ~pos:(spos t ~len ~pos)
+  let[@inline always] int8 t ~pos = unsafe_get_int8 (buf t) ~pos:(spos t ~len ~pos)
   let len = 2
-  let[@inline always] int16_be t ~pos = unsafe_get_int16_be t.buf ~pos:(spos t ~len ~pos)
-  let[@inline always] int16_le t ~pos = unsafe_get_int16_le t.buf ~pos:(spos t ~len ~pos)
+
+  let[@inline always] int16_be t ~pos =
+    unsafe_get_int16_be (buf t) ~pos:(spos t ~len ~pos)
+  ;;
+
+  let[@inline always] int16_le t ~pos =
+    unsafe_get_int16_le (buf t) ~pos:(spos t ~len ~pos)
+  ;;
 
   let[@inline always] uint16_be t ~pos =
-    unsafe_get_uint16_be t.buf ~pos:(spos t ~len ~pos)
+    unsafe_get_uint16_be (buf t) ~pos:(spos t ~len ~pos)
   ;;
 
   let[@inline always] uint16_le t ~pos =
-    unsafe_get_uint16_le t.buf ~pos:(spos t ~len ~pos)
+    unsafe_get_uint16_le (buf t) ~pos:(spos t ~len ~pos)
   ;;
 
   let len = 4
-  let[@inline always] int32_be t ~pos = unsafe_get_int32_be t.buf ~pos:(spos t ~len ~pos)
 
-  let[@inline always] int32_t_be t ~pos =
-    unsafe_get_int32_t_be t.buf ~pos:(spos t ~len ~pos)
+  let[@inline always] int32_be t ~pos =
+    unsafe_get_int32_be (buf t) ~pos:(spos t ~len ~pos)
   ;;
 
-  let[@inline always] int32_le t ~pos = unsafe_get_int32_le t.buf ~pos:(spos t ~len ~pos)
+  let[@inline always] int32_t_be t ~pos =
+    unsafe_get_int32_t_be (buf t) ~pos:(spos t ~len ~pos)
+  ;;
+
+  let[@inline always] int32_le t ~pos =
+    unsafe_get_int32_le (buf t) ~pos:(spos t ~len ~pos)
+  ;;
 
   let[@inline always] int32_t_le t ~pos =
-    unsafe_get_int32_t_le t.buf ~pos:(spos t ~len ~pos)
+    unsafe_get_int32_t_le (buf t) ~pos:(spos t ~len ~pos)
   ;;
 
   let[@inline always] uint32_be t ~pos =
-    unsafe_get_uint32_be t.buf ~pos:(spos t ~len ~pos)
+    unsafe_get_uint32_be (buf t) ~pos:(spos t ~len ~pos)
   ;;
 
   let[@inline always] uint32_le t ~pos =
-    unsafe_get_uint32_le t.buf ~pos:(spos t ~len ~pos)
+    unsafe_get_uint32_le (buf t) ~pos:(spos t ~len ~pos)
   ;;
 
   let len = 8
 
   let[@inline always] int64_be_exn t ~pos =
-    unsafe_get_int64_be_exn t.buf ~pos:(spos t ~len ~pos)
+    unsafe_get_int64_be_exn (buf t) ~pos:(spos t ~len ~pos)
   ;;
 
   let[@inline always] int64_le_exn t ~pos =
-    unsafe_get_int64_le_exn t.buf ~pos:(spos t ~len ~pos)
+    unsafe_get_int64_le_exn (buf t) ~pos:(spos t ~len ~pos)
   ;;
 
   let[@inline always] uint64_be_exn t ~pos =
-    unsafe_get_uint64_be_exn t.buf ~pos:(spos t ~len ~pos)
+    unsafe_get_uint64_be_exn (buf t) ~pos:(spos t ~len ~pos)
   ;;
 
   let[@inline always] uint64_le_exn t ~pos =
-    unsafe_get_uint64_le_exn t.buf ~pos:(spos t ~len ~pos)
+    unsafe_get_uint64_le_exn (buf t) ~pos:(spos t ~len ~pos)
   ;;
 
   let[@inline always] int64_t_be t ~pos =
-    unsafe_get_int64_t_be t.buf ~pos:(spos t ~len ~pos)
+    unsafe_get_int64_t_be (buf t) ~pos:(spos t ~len ~pos)
   ;;
 
   let[@inline always] int64_t_le t ~pos =
-    unsafe_get_int64_t_le t.buf ~pos:(spos t ~len ~pos)
+    unsafe_get_int64_t_le (buf t) ~pos:(spos t ~len ~pos)
   ;;
 
   let[@inline always] int64_be_trunc t ~pos =
-    unsafe_get_int64_be_trunc t.buf ~pos:(spos t ~len ~pos)
+    unsafe_get_int64_be_trunc (buf t) ~pos:(spos t ~len ~pos)
   ;;
 
   let[@inline always] int64_le_trunc t ~pos =
-    unsafe_get_int64_le_trunc t.buf ~pos:(spos t ~len ~pos)
+    unsafe_get_int64_le_trunc (buf t) ~pos:(spos t ~len ~pos)
   ;;
 
   module Int_repr = struct
@@ -779,21 +827,31 @@ module Peek = struct
 end
 
 module Poke = struct
-  type nonrec ('a, 'd, 'w) t__local =
+  type nonrec ('a, 'd, 'w, 'l) t__local =
     local_ (read_write, 'w) t -> pos:int -> local_ 'a -> unit
     constraint 'd = [> read ]
 
-  type nonrec ('a, 'd, 'w) t = local_ (read_write, 'w) t -> pos:int -> 'a -> unit
+  type nonrec ('a, 'd, 'w, 'l) t = local_ (read_write, 'w) t -> pos:int -> 'a -> unit
     constraint 'd = [> read ]
 
   let spos = buf_pos_exn (* "safe position" *)
 
   let tail_padded_fixed_string ~padding ~len t ~pos src =
-    Bigstring.set_tail_padded_fixed_string ~padding ~len t.buf ~pos:(spos t ~len ~pos) src
+    Bigstring.set_tail_padded_fixed_string
+      ~padding
+      ~len
+      (buf t)
+      ~pos:(spos t ~len ~pos)
+      src
   ;;
 
   let head_padded_fixed_string ~padding ~len t ~pos src =
-    Bigstring.set_head_padded_fixed_string ~padding ~len t.buf ~pos:(spos t ~len ~pos) src
+    Bigstring.set_head_padded_fixed_string
+      ~padding
+      ~len
+      (buf t)
+      ~pos:(spos t ~len ~pos)
+      src
   ;;
 
   let bytes ~str_pos ~len t ~pos src =
@@ -801,7 +859,7 @@ module Poke = struct
       ~src
       ~src_pos:str_pos
       ~len
-      ~dst:t.buf
+      ~dst:(buf t)
       ~dst_pos:(spos t ~len ~pos)
   ;;
 
@@ -810,12 +868,12 @@ module Poke = struct
       ~src
       ~src_pos:str_pos
       ~len
-      ~dst:t.buf
+      ~dst:(buf t)
       ~dst_pos:(spos t ~len ~pos)
   ;;
 
   let bigstring ~str_pos ~len t ~pos src =
-    Bigstring.blit ~src ~src_pos:str_pos ~len ~dst:t.buf ~dst_pos:(spos t ~len ~pos)
+    Bigstring.blit ~src ~src_pos:str_pos ~len ~dst:(buf t) ~dst_pos:(spos t ~len ~pos)
   ;;
 
   let byteso ?(str_pos = 0) ?len t ~pos src =
@@ -860,81 +918,81 @@ module Poke = struct
   let[@inline always] char t ~pos c = set_char t pos c
 
   let[@inline always] uint8_trunc t ~pos i =
-    unsafe_set_uint8 t.buf ~pos:(spos t ~len ~pos) i
+    unsafe_set_uint8 (buf t) ~pos:(spos t ~len ~pos) i
   ;;
 
   let[@inline always] int8_trunc t ~pos i =
-    unsafe_set_int8 t.buf ~pos:(spos t ~len ~pos) i
+    unsafe_set_int8 (buf t) ~pos:(spos t ~len ~pos) i
   ;;
 
   let len = 2
 
   let[@inline always] int16_be_trunc t ~pos i =
-    unsafe_set_int16_be t.buf ~pos:(spos t ~len ~pos) i
+    unsafe_set_int16_be (buf t) ~pos:(spos t ~len ~pos) i
   ;;
 
   let[@inline always] int16_le_trunc t ~pos i =
-    unsafe_set_int16_le t.buf ~pos:(spos t ~len ~pos) i
+    unsafe_set_int16_le (buf t) ~pos:(spos t ~len ~pos) i
   ;;
 
   let[@inline always] uint16_be_trunc t ~pos i =
-    unsafe_set_uint16_be t.buf ~pos:(spos t ~len ~pos) i
+    unsafe_set_uint16_be (buf t) ~pos:(spos t ~len ~pos) i
   ;;
 
   let[@inline always] uint16_le_trunc t ~pos i =
-    unsafe_set_uint16_le t.buf ~pos:(spos t ~len ~pos) i
+    unsafe_set_uint16_le (buf t) ~pos:(spos t ~len ~pos) i
   ;;
 
   let len = 4
 
   let[@inline always] int32_be_trunc t ~pos i =
-    unsafe_set_int32_be t.buf ~pos:(spos t ~len ~pos) i
+    unsafe_set_int32_be (buf t) ~pos:(spos t ~len ~pos) i
   ;;
 
   let[@inline always] int32_t_be t ~pos i =
-    unsafe_set_int32_t_be t.buf ~pos:(spos t ~len ~pos) i
+    unsafe_set_int32_t_be (buf t) ~pos:(spos t ~len ~pos) i
   ;;
 
   let[@inline always] int32_le_trunc t ~pos i =
-    unsafe_set_int32_le t.buf ~pos:(spos t ~len ~pos) i
+    unsafe_set_int32_le (buf t) ~pos:(spos t ~len ~pos) i
   ;;
 
   let[@inline always] int32_t_le t ~pos i =
-    unsafe_set_int32_t_le t.buf ~pos:(spos t ~len ~pos) i
+    unsafe_set_int32_t_le (buf t) ~pos:(spos t ~len ~pos) i
   ;;
 
   let[@inline always] uint32_be_trunc t ~pos i =
-    unsafe_set_uint32_be t.buf ~pos:(spos t ~len ~pos) i
+    unsafe_set_uint32_be (buf t) ~pos:(spos t ~len ~pos) i
   ;;
 
   let[@inline always] uint32_le_trunc t ~pos i =
-    unsafe_set_uint32_le t.buf ~pos:(spos t ~len ~pos) i
+    unsafe_set_uint32_le (buf t) ~pos:(spos t ~len ~pos) i
   ;;
 
   let len = 8
 
   let[@inline always] int64_be t ~pos i =
-    unsafe_set_int64_be t.buf ~pos:(spos t ~len ~pos) i
+    unsafe_set_int64_be (buf t) ~pos:(spos t ~len ~pos) i
   ;;
 
   let[@inline always] int64_le t ~pos i =
-    unsafe_set_int64_le t.buf ~pos:(spos t ~len ~pos) i
+    unsafe_set_int64_le (buf t) ~pos:(spos t ~len ~pos) i
   ;;
 
   let[@inline always] uint64_be_trunc t ~pos i =
-    unsafe_set_uint64_be t.buf ~pos:(spos t ~len ~pos) i
+    unsafe_set_uint64_be (buf t) ~pos:(spos t ~len ~pos) i
   ;;
 
   let[@inline always] uint64_le_trunc t ~pos i =
-    unsafe_set_uint64_le t.buf ~pos:(spos t ~len ~pos) i
+    unsafe_set_uint64_le (buf t) ~pos:(spos t ~len ~pos) i
   ;;
 
   let[@inline always] int64_t_be t ~pos i =
-    unsafe_set_int64_t_be t.buf ~pos:(spos t ~len ~pos) i
+    unsafe_set_int64_t_be (buf t) ~pos:(spos t ~len ~pos) i
   ;;
 
   let[@inline always] int64_t_le t ~pos i =
-    unsafe_set_int64_t_le t.buf ~pos:(spos t ~len ~pos) i
+    unsafe_set_int64_t_le (buf t) ~pos:(spos t ~len ~pos) i
   ;;
 
   let decimal = Itoa.poke_decimal

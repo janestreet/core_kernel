@@ -156,7 +156,8 @@ module Unpack_one = struct
             try
               match state ~pos ~len buf with
               | Cont (_state, k) -> `Not_enough_data (k, len)
-              | Done (sexp, parse_pos) -> `Ok (sexp, parse_pos.Parse_pos.buf_pos - pos)
+              | Done (sexp, parse_pos) ->
+                `Ok (sexp, Stdlib.Atomic.get parse_pos.Parse_pos.buf_pos - pos)
             with
             | exn -> `Invalid_data (Error.of_exn exn))
       }

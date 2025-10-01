@@ -18,7 +18,12 @@ module Stable = struct
     end =
       Set.V1.M (Elt)
 
-    let compare_m__t = Set.V1.compare_m__t
+    let%template compare_m__t = (Set.V1.compare_m__t [@mode m])
+    [@@mode m = (local, global)]
+    ;;
+
+    let hash_fold_m__t = Set.V1.hash_fold_m__t
+    let hash_m__t = Set.V1.hash_m__t
     let m__t_sexp_grammar = Set.V1.m__t_sexp_grammar
     let m__t_of_sexp e s = Set.V1.m__t_of_sexp e s |> of_set_exn
     let sexp_of_m__t = Set.V1.sexp_of_m__t
@@ -64,13 +69,15 @@ let union = Set.union
 let union_set = Set.union
 let union_set_list t l = Set.union_list (Set.comparator_s t) (t :: l)
 let union_list (t :: l : _ t Nonempty_list.t) = union_set_list t l
+let inter t1 t2 = of_set (Set.inter t1 t2)
+let to_set_inter = Set.inter
 let diff = Set.diff
 let mem = Set.mem
 let length = Set.length
 let of_set_add = Set.add
 let to_set_remove = Set.remove
 let remove t elt = of_set (Set.remove t elt)
-let equal = Set.equal
+let%template equal = (Set.equal [@mode m]) [@@mode m = (global, local)]
 let is_subset = Set.is_subset
 let max_elt = Set.max_elt_exn
 let min_elt = Set.min_elt_exn
@@ -102,7 +109,7 @@ end =
 let hash_fold_m__t = Set.hash_fold_m__t
 let hash_m__t = Set.hash_m__t
 let equal_m__t = Set.equal_m__t
-let compare_m__t = Set.compare_m__t
+let%template compare_m__t = (Set.compare_m__t [@mode m]) [@@mode m = (local, global)]
 let m__t_sexp_grammar = Set.m__t_sexp_grammar
 let m__t_of_sexp e s = Set.m__t_of_sexp e s |> of_set_exn
 let sexp_of_m__t = Set.sexp_of_m__t

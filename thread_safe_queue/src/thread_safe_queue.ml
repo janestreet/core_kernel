@@ -117,7 +117,7 @@ module Dequeue_result = struct
   type 'a t =
     | Empty
     | Not_empty of { global_ elt : 'a }
-  [@@deriving sexp, compare]
+  [@@deriving sexp, compare ~localize]
 end
 
 let[@inline never] [@specialise never] [@local never] dequeue t =

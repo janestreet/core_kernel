@@ -2,13 +2,13 @@ module Stable = struct
   open! Core.Core_stable
 
   module V1 = struct
-    type t = int [@@deriving compare, equal, hash, sexp, sexp_grammar]
+    type t = int [@@deriving compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
   end
 end
 
 open Core
 
-type t = Stable.V1.t [@@deriving sexp_of, compare, hash, equal]
+type t = Stable.V1.t [@@deriving sexp_of, compare ~localize, hash, equal ~localize]
 
 (* Internal type for turning palette values into RGB levels -- typically
    we want to convert these into 24-bit values (8-bits per channel) or into

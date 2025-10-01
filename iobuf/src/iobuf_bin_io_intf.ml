@@ -106,7 +106,7 @@ module Definitions = struct
   end
 end
 
-module type Iobuf_bin_io = sig
+module type Iobuf_bin_io = sig @@ portable
   include module type of struct
     include Definitions
   end

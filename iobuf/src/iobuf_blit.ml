@@ -12,14 +12,14 @@ module Blit = struct
          bounds-check both buffers before calling [Bigstring.unsafe_blit]. *)
       Bigstring.unsafe_blit
         ~len
-        ~src:src.buf
+        ~src:(buf src)
         ~src_pos:(unsafe_buf_pos src ~pos:src_pos ~len)
-        ~dst:dst.buf
+        ~dst:(buf dst)
         ~dst_pos:(unsafe_buf_pos dst ~pos:dst_pos ~len)
     ;;
   end
 
-  include Base_for_tests.Test_blit.Make_and_test (Char_elt) (T_dst)
+  include Base_for_tests.Test_blit.Make_and_test [@modality portable] (Char_elt) (T_dst)
 
   (* Workaround the inability of the compiler to inline in the presence of functors. *)
   let unsafe_blit = T_dst.unsafe_blit

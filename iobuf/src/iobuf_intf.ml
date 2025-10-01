@@ -12,7 +12,7 @@ module Definitions = struct
   include Iobuf_unsafe_intf.Definitions
 end
 
-module type Iobuf = sig
+module type Iobuf = sig @@ portable
   (** A non-moving (in the GC sense) contiguous range of bytes, useful for I/O operations.
 
       An iobuf consists of:
@@ -43,22 +43,28 @@ module type Iobuf = sig
   module Repr : sig
     (** This type is a compiler witness that 'rw and 'seek do not affect layout; it
         enables wider use of unboxed GADTs. *)
-    type t
+    type 'loc t : value mod non_float portable
   end
 
-  (** The first type parameter controls whether the iobuf can be written to. The second
-      type parameter controls whether the window and limits can be changed.
+  module Generic : sig
+    (** The first type parameter controls whether the iobuf can be written to. The second
+        type parameter controls whether the window and limits can be changed.
 
-      See the [Perms] module for information on how the first type parameter is used.
+        See the [Perms] module for information on how the first type parameter is used.
 
-      To allow [no_seek] or [seek] access, a function's type uses [_] rather than
-      [no_seek] as the type argument to [t]. Using [_] allows the function to be directly
-      applied to either permission. Using a specific permission would require code to use
-      coercion [:>].
+        To allow [no_seek] or [seek] access, a function's type uses [_] rather than
+        [no_seek] as the type argument to [t]. Using [_] allows the function to be
+        directly applied to either permission. Using a specific permission would require
+        code to use coercion [:>].
 
-      There is no [t_of_sexp]. One should use [Iobuf.Hexdump.t_of_sexp] or [@sexp.opaque]
-      as desired. *)
-  type (-'data_perm_read_write, +'seek_permission) t = private Repr.t
+        There is no [t_of_sexp]. One should use [Iobuf.Hexdump.t_of_sexp] or
+        [@sexp.opaque] as desired. *)
+    type (-'data_perm_read_write, +'seek_permission, 'buffer_locality) t =
+      private
+      'buffer_locality Repr.t
+  end
+
+  type ('rw, 'seek) t = ('rw, 'seek, global) Generic.t
 
   include Basic with type ('rw, 'seek) t := ('rw, 'seek) t
 
@@ -100,11 +106,13 @@ module type Iobuf = sig
 
       [Consume.bin_prot X.bin_read_t t] returns the initial [X.t] in [t], advancing past
       the bytes read. *)
-  module Consume : Consume_safe with type ('rw, 'seek) iobuf := ('rw, 'seek) t
+  module Consume :
+    Consume_safe with type ('rw, 'seek, 'loc) iobuf := ('rw, 'seek, 'loc) Generic.t
 
   (** [Fill.bin_prot X.bin_write_t t x] writes [x] to [t] in bin-prot form, advancing past
       the bytes written. *)
-  module Fill : Fill_safe with type ('rw, 'seek) iobuf := ('rw, 'seek) t
+  module Fill :
+    Fill_safe with type ('rw, 'seek, 'loc) iobuf := ('rw, 'seek, 'loc) Generic.t
 
   (** [Peek] and [Poke] functions access a value at [pos] from the lower bound of the
       window and do not advance.
@@ -114,21 +122,30 @@ module type Iobuf = sig
       Following the [bin_prot] protocol, the representation of [x] is [X.bin_size_t x]
       bytes long. [Peek.], [Poke.], [Consume.], and [Fill.bin_prot] do not add any size
       prefix or other framing to the [bin_prot] representation. *)
-  module Peek : Peek_safe with type ('rw, 'seek) iobuf := ('rw, 'seek) t
+  module Peek :
+    Peek_safe with type ('rw, 'seek, 'loc) iobuf := ('rw, 'seek, 'loc) Generic.t
 
   (** [Poke.bin_prot X.bin_write_t t x] writes [x] to the beginning of [t] in binary form
       without advancing. You can use [X.bin_size_t] to tell how long it was.
       [X.bin_write_t] is only allowed to write that portion of the buffer you have access
       to. *)
-  module Poke : Poke_safe with type ('rw, 'seek) iobuf := ('rw, 'seek) t
+  module Poke :
+    Poke_safe with type ('rw, 'seek, 'loc) iobuf := ('rw, 'seek, 'loc) Generic.t
 
   (** [Unsafe] has submodules that are like their corresponding module, except with no
       range checks. Hence, mistaken uses can cause segfaults. Be careful! *)
   module Unsafe : sig
-    module Consume : Consume_unsafe with type ('rw, 'seek) iobuf := ('rw, 'seek) t
-    module Fill : Fill_unsafe with type ('rw, 'seek) iobuf := ('rw, 'seek) t
-    module Peek : Peek_unsafe with type ('rw, 'seek) iobuf := ('rw, 'seek) t
-    module Poke : Poke_unsafe with type ('rw, 'seek) iobuf := ('rw, 'seek) t
+    module Consume :
+      Consume_unsafe with type ('rw, 'seek, 'loc) iobuf := ('rw, 'seek, 'loc) Generic.t
+
+    module Fill :
+      Fill_unsafe with type ('rw, 'seek, 'loc) iobuf := ('rw, 'seek, 'loc) Generic.t
+
+    module Peek :
+      Peek_unsafe with type ('rw, 'seek, 'loc) iobuf := ('rw, 'seek, 'loc) Generic.t
+
+    module Poke :
+      Poke_unsafe with type ('rw, 'seek, 'loc) iobuf := ('rw, 'seek, 'loc) Generic.t
   end
 
   module Bin_io : Bin_io with type ('rw, 'seek) t := ('rw, 'seek) t

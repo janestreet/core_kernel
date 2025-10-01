@@ -27,7 +27,7 @@ module Color : sig
     | `Color_256 of Color_256.t
     | `Default_color
     ]
-  [@@deriving sexp_of, compare, hash, equal]
+  [@@deriving sexp_of, compare ~localize, hash, equal ~localize]
 
   val to_int_list : [< t ] -> int list
 end
@@ -44,7 +44,7 @@ module Attr : sig
     | Color.t
     | `Bg of Color.t
     ]
-  [@@deriving sexp_of, compare, hash, equal]
+  [@@deriving sexp_of, compare ~localize, hash, equal ~localize]
 
   val to_int_list : [< t ] -> int list
   val list_to_string : [< t ] list -> string
@@ -58,7 +58,7 @@ module With_all_attrs : sig
     | `Blink
     | `Hidden
     ]
-  [@@deriving sexp_of, compare, hash, equal]
+  [@@deriving sexp_of, compare ~localize, hash, equal ~localize]
 
   val to_int_list : [< t ] -> int list
   val list_to_string : [< t ] list -> string
@@ -68,12 +68,14 @@ module Stable : sig
   module Color : sig
     module V1 : sig
       type primary
-      type t [@@deriving compare, equal, hash, sexp, sexp_grammar]
+      type t [@@deriving compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
     end
 
     module V2 : sig
       type primary = Color.primary
-      type t = Color.t [@@deriving compare, equal, hash, sexp, sexp_grammar]
+
+      type t = Color.t
+      [@@deriving compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
 
       val of_v1 : V1.t -> t
       val to_v1 : t -> foreground:bool -> V1.t
@@ -84,11 +86,12 @@ module Stable : sig
 
   module Attr : sig
     module V1 : sig
-      type t [@@deriving compare, equal, hash, sexp, sexp_grammar]
+      type t [@@deriving compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
     end
 
     module V2 : sig
-      type t = Attr.t [@@deriving compare, equal, hash, sexp, sexp_grammar]
+      type t = Attr.t
+      [@@deriving compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
 
       val of_v1 : V1.t -> t
       val to_v1 : t -> V1.t

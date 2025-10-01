@@ -1,3 +1,5 @@
+@@ portable
+
 (** Functional heaps (implemented as
     {{:http://en.wikipedia.org/wiki/Pairing_heap} pairing heaps}). *)
 
@@ -5,7 +7,7 @@ open! Core
 
 (** [t_of_sexp] is not supported, because of the difficulty involved in recreating the
     comparison function. *)
-type 'a t [@@deriving sexp_of]
+type 'a t : value mod contended with 'a [@@deriving sexp_of]
 
 (** Even though [min_elt], [max_elt], and [to_list] are in [Container.S1], they are
     documented separately to make sure there is no confusion. *)

@@ -126,7 +126,7 @@ end
 (** An [Alarm_precision] is a time span that is a power of two number of nanoseconds, used
     to specify the precision of a timing wheel. *)
 module type Alarm_precision = sig
-  type t : immediate [@@deriving compare, sexp_of]
+  type t : immediate [@@deriving compare ~localize, sexp_of]
 
   include Equal.S with type t := t
 
@@ -168,7 +168,7 @@ module type Alarm_precision = sig
       nanoseconds. This ensures that the alarm precision that is used is at least as
       precise than the alarm precision that is stated. *)
   module Unstable : sig
-    type nonrec t = t [@@deriving bin_io, compare, sexp]
+    type nonrec t = t [@@deriving bin_io, compare ~localize, sexp]
   end
 end
 
@@ -271,8 +271,8 @@ module type Timing_wheel = sig @@ portable
     val durations : t -> Time_ns.Span.t list
 
     (** [microsecond_precision ()] returns a reasonable configuration for a timing wheel
-        with microsecond [alarm_precision], and level durations of 1ms, 1s, 1m, 1h, 1d.
-        See the relevant expect test in [Core_test] library. *)
+        with microsecond [alarm_precision], and level durations of 1ms, 1s, 1m, 1h, 1d,
+        1w. See the relevant expect test in [Core_test] library. *)
     val microsecond_precision : unit -> t
   end
 

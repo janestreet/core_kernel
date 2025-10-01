@@ -8,7 +8,7 @@
 
 open! Base
 
-type 'a t [@@deriving sexp_of]
+type 'a t : mutable_data with 'a [@@deriving sexp_of]
 
 (** [create] creates an empty weak pointer. One must [set] it to point it to something. *)
 val create : unit -> _ t

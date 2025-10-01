@@ -2,12 +2,12 @@ open! Core
 open Iobuf_type
 include Iobuf_expert_intf.Definitions
 
-let buf t = t.buf
+let buf = buf
 let hi_max t = t.hi_max
 let hi t = t.hi
 let lo t = t.lo
 let lo_min t = t.lo_min
-let set_buf t buf = t.buf <- buf
+let set_buf t buf = t.buf <- Modes.At_locality.wrap buf
 let set_hi_max t hi_max = t.hi_max <- hi_max
 let set_hi t hi = t.hi <- hi
 let set_lo t lo = t.lo <- lo
@@ -19,12 +19,12 @@ let to_bigstring_shared ?pos ?len t =
   let pos, len =
     Ordered_collection_common.get_pos_len_exn () ?pos ?len ~total_length:(length t)
   in
-  Bigstring.sub_shared t.buf ~pos:(t.lo + pos) ~len
+  Bigstring.sub_shared (buf t) ~pos:(t.lo + pos) ~len
 ;;
 
-let unsafe_reinitialize t ~lo_min ~lo ~hi ~hi_max buf =
+let unsafe_reinitialize t ~lo_min ~lo ~hi ~hi_max bstr =
   (* avoid [caml_modify], if possible *)
-  if not (phys_equal t.buf buf) then t.buf <- buf;
+  if not (phys_equal (buf t) bstr) then t.buf <- Modes.At_locality.wrap bstr;
   t.lo_min <- lo_min;
   t.lo <- lo;
   t.hi <- hi;
@@ -53,8 +53,8 @@ let reinitialize t ~lo_min ~lo ~hi ~hi_max buf =
 let unsafe_reinitialize = if unsafe_is_safe then reinitialize else unsafe_reinitialize
 
 let _remember_to_update_unsafe_reinitialize
-  :  local_ (_, _) t -> buf:Bigstring.t -> lo_min:int -> lo:int -> hi:int -> hi_max:int
-  -> unit
+  :  local_ (_, _) t -> buf:(Bigstring.t, global) Modes.At_locality.t -> lo_min:int
+  -> lo:int -> hi:int -> hi_max:int -> unit
   =
   Repr.Fields.Direct.set_all_mutable_fields
 ;;

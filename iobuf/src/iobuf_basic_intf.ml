@@ -18,23 +18,29 @@ module Definitions = struct
   end
 
   module type Basic = sig
-    type nonrec seek = seek [@@deriving globalize, sexp_of]
-    type nonrec no_seek = no_seek [@@deriving globalize, sexp_of]
-    type ('rw, 'seek) t [@@deriving globalize]
+    type nonrec seek = seek [@@deriving sexp_of]
+    type nonrec no_seek = no_seek [@@deriving sexp_of]
+    type ('rw, 'seek) t
+
+    val globalize : [ `deprecated ]
+    [@@deprecated "[since 2025-09] use [Iobuf.globalize_shared] instead"]
 
     (** Globalize as if [t] had zero type parameters. Works because the parameters are
         phantom types, and do not represent actual values that need to be globalized. *)
-    val globalize0 : local_ ('rw, _) t -> ('rw, _) t
+    val globalize_shared : local_ ('rw, _) t -> ('rw, _) t
 
     module With_shallow_sexp : sig
       (** [With_shallow_sexp.t] has a [sexp_of] that shows the windows and limits of the
           underlying bigstring, but no data. We do this rather than deriving sexp_of on
           [t] because it is much more likely to be noise than useful information, and so
           callers should probably not display the iobuf at all. *)
-      type nonrec ('rw, 'seek) t = ('rw, 'seek) t [@@deriving sexp_of, globalize]
+      type nonrec ('rw, 'seek) t = ('rw, 'seek) t [@@deriving sexp_of]
+
+      val globalize : [ `deprecated ]
+      [@@deprecated "[since 2025-09] use [Iobuf.globalize_shared] instead"]
     end
 
-    include Invariant.S2 with type ('rw, 'seek) t := ('rw, 'seek) t
+    val invariant : (_, _) t -> unit
 
     (** {2 Creation} *)
 
@@ -45,42 +51,32 @@ module Definitions = struct
     (** [empty] is an immutable [t] of size 0. *)
     val empty : (read, no_seek) t
 
+    [%%template:
+    [@@@alloc.default a @ m = (heap_global, stack_local)]
+
     (** [of_bigstring bigstring ~pos ~len] returns an iobuf backed by [bigstring], with
         the window and limits specified starting at [pos] and of length [len]. *)
     val of_bigstring
       :  ?pos:local_ int (** default is [0] *)
       -> ?len:local_ int (** default is [Bigstring.length bigstring - pos] *)
       -> Bigstring.t
-      -> ([< read_write ], _) t
+      -> ([< read_write ], _) t @ m
     (** forbid [immutable] to prevent aliasing *)
 
-    (** [of_bigstring__local] is like [of_bigstring], but it allocates the iobuf record
-        locally. *)
-    val of_bigstring__local
-      :  ?pos:local_ int
-      -> ?len:local_ int
-      -> Bigstring.t
-      -> local_ ([< read_write ], _) t
-
     (** More efficient than the above (optional arguments are costly). *)
-    val unsafe_bigstring_view
+    val of_bigstring_sub : pos:int -> len:int -> Bigstring.t -> ([< read_write ], _) t @ m
+
+    (** Yet more efficient than the above, by skipping bounds checks. *)
+    val unsafe_of_bigstring_sub
       :  pos:int
       -> len:int
       -> Bigstring.t
-      -> local_ ([< read_write ], _) t
+      -> ([< read_write ], _) t @ m]
 
-    val bigstring_view
-      :  pos:int
-      -> len:int
-      -> Bigstring.t
-      -> local_ ([< read_write ], _) t
-
-    (** [of_string s] returns a new iobuf whose contents are [s]. *)
-    val of_string : local_ string -> (_, _) t
-
-    (** [of_string__local] is like [of_string], but it allocates the iobuf record locally.
-        This still performs global allocation of the backing buffer. *)
-    val of_string__local : local_ string -> local_ (_, _) t
+    (** [of_string s] returns a new iobuf whose contents are [s]. The stack-allocating
+        version still performs global allocation of the backing buffer. *)
+    val%template of_string : string @ local -> (_, _) t @ m
+    [@@alloc a @ m = (heap_global, stack_local)]
 
     (** [sub_shared t ~pos ~len] returns a new iobuf with limits and window set to the
         subrange of [t]'s window specified by [pos] and [len]. [sub_shared] preserves data
@@ -372,7 +368,7 @@ module Definitions = struct
   end
 end
 
-module type Iobuf_basic = sig
+module type Iobuf_basic = sig @@ portable
   include module type of struct
     include Definitions
   end

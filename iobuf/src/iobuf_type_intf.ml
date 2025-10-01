@@ -1,6 +1,6 @@
 open! Core
 
-module Definitions = struct
+module Definitions : sig @@ portable
   (** [no_seek] and [seek] are phantom types used in a similar manner to [read] and
       [read_write]. *)
 
@@ -9,16 +9,24 @@ module Definitions = struct
 
   (** Like [read_write]. *)
   type seek = private no_seek [@@deriving sexp_of]
+
+  type global = Modes.At_locality.global [@@deriving sexp_of]
+  type local = Modes.At_locality.local [@@deriving sexp_of]
+end = struct
+  type no_seek [@@deriving sexp_of]
+  type seek = private no_seek [@@deriving sexp_of]
+  type global = Modes.At_locality.global [@@deriving sexp_of]
+  type local = Modes.At_locality.local [@@deriving sexp_of]
 end
 
-module type Iobuf_type = sig
+module type Iobuf_type = sig @@ portable
   include module type of struct
     include Definitions
   end
 
   module Repr : sig
-    type t =
-      { mutable buf : Bigstring.t
+    type 'loc t =
+      { mutable buf : (Bigstring.t, 'loc) Modes.At_locality.t @@ local
       ; mutable lo_min : int
       ; mutable lo : int
       ; mutable hi : int
@@ -27,40 +35,46 @@ module type Iobuf_type = sig
     [@@deriving fields ~getters ~direct_iterators:(iter, set_all_mutable_fields), sexp_of]
   end
 
-  type repr = Repr.t =
-    { mutable buf : Bigstring.t
+  type 'loc repr = 'loc Repr.t =
+    { mutable buf : (Bigstring.t, 'loc) Modes.At_locality.t @@ local
     ; mutable lo_min : int
     ; mutable lo : int
     ; mutable hi : int
     ; mutable hi_max : int
     }
 
-  type ('rw, 'seek) t = Repr.t [@@deriving globalize]
+  module Generic : sig
+    type ('rw, 'seek, 'loc) t = 'loc Repr.t
+  end
+
+  type ('rw, 'seek) t = ('rw, 'seek, global) Generic.t
   type ('rw, 'seek) iobuf := ('rw, 'seek) t
 
-  val globalize0 : local_ ('rw, _) t -> ('rw, _) t
+  val globalize : [ `deprecated ]
+  val globalize_shared : local_ ('rw, 'seek) t -> ('rw, 'seek) t
 
   module With_shallow_sexp : sig
-    type ('rw, 'seek) t = ('rw, 'seek) iobuf [@@deriving globalize, sexp_of]
+    type ('rw, 'seek) t = ('rw, 'seek) iobuf [@@deriving sexp_of]
+
+    val globalize : [ `deprecated ]
   end
+
+  [%%template:
+  [@@@alloc.default a @ m = (heap_global, stack_local)]
+
+  val of_bigstring : ?pos:local_ int -> ?len:local_ int -> Bigstring.t -> (_, _) t @ m
+  val of_bigstring_sub : pos:int -> len:int -> Bigstring.t -> (_, _) t @ m
+  val unsafe_of_bigstring_sub : pos:int -> len:int -> Bigstring.t -> (_, _) t @ m]
 
   val advance : local_ (_, seek) t -> int -> unit
   val bad_range : pos:int -> len:int -> local_ (_, _) t -> _
-  val bigstring_view : pos:int -> len:int -> Bigstring.t -> local_ (_, _) t
+  val buf : local_ (_, _) t -> Bigstring.t
   val buf_pos_exn : local_ (_, _) t -> pos:int -> len:int -> int
   val check_range : local_ (_, _) t -> pos:int -> len:int -> unit
   val create : len:int -> (_, _) t
   val fail : local_ (_, _) t -> string -> 'a -> ('a -> Sexp.t) -> _
   val get_char : local_ ([> read ], _) t -> int -> char
   val length : local_ (_, _) t -> int
-  val of_bigstring : ?pos:local_ int -> ?len:local_ int -> Bigstring.t -> (_, _) t
-
-  val of_bigstring__local
-    :  ?pos:local_ int
-    -> ?len:local_ int
-    -> Bigstring.t
-    -> local_ (_, _) t
-
   val set_bounds_and_buffer : src:local_ (_, _) t -> dst:local_ (_, _) t -> unit
 
   val set_bounds_and_buffer_sub
@@ -72,7 +86,6 @@ module type Iobuf_type = sig
 
   val set_char : local_ ([> write ], _) t -> int -> char -> unit
   val unsafe_advance : local_ (_, seek) t -> int -> unit
-  val unsafe_bigstring_view : pos:int -> len:int -> Bigstring.t -> local_ (_, _) t
   val unsafe_buf_pos : local_ (_, _) t -> pos:int -> len:int -> int
   val unsafe_is_safe : bool
 
@@ -108,7 +121,7 @@ module type Iobuf_type = sig
   end
 
   module T_src : sig
-    type t = Repr.t
+    type t = global Repr.t
 
     val create : len:int -> (_, _) iobuf
     val length : local_ (_, _) iobuf -> int

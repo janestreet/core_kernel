@@ -15,7 +15,7 @@ module Definitions = struct
   end
 end
 
-module type Iobuf_numeric = sig
+module type Iobuf_numeric = sig @@ portable
   include module type of struct
     include Definitions
   end

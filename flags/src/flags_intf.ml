@@ -12,10 +12,10 @@ open! Core
 
     [sexp_of_t] and [t_of_sexp] use the flag names supplied to [Flags.Make]. *)
 module type S = sig
-  type t [@@deriving sexp, typerep, quickcheck]
+  type t : immutable_data [@@deriving sexp, typerep, quickcheck]
 
   (** consistent with subset *)
-  include Comparable.S with type t := t
+  include Comparable.S [@mode local] with type t := t
 
   val to_flag_list : t -> t * string list
   val of_int : int -> t [@@zero_alloc]
@@ -51,7 +51,7 @@ end
 
 (** Same as [module type S], but [type t] is binable. *)
 module type S_binable = sig
-  type t [@@deriving bin_io]
+  type t : immutable_data [@@deriving bin_io]
 
   include S with type t := t
 end
@@ -104,7 +104,7 @@ module type Flags = sig
       Typically a flag has one bit set; [create] is useful in exactly those cases. For
       flags with multiple bits one can either define the Int63.t directly or create it in
       terms of simpler flags, using [+] and [-]. *)
-  val create : bit:int -> Int63.t
+  val create : bit:int -> Int63.t @@ portable
 
   (** [Flags.Make] builds a new flags module. If there is an error in the [known] flags,
       it behaves as per [on_error].
@@ -112,8 +112,12 @@ module type Flags = sig
       We expose [type t = int] in the result of [Flags.Make] so that one can easily use
       flag constants as values of the flag type without having to coerce them. It is
       typical to hide the [t = int] in another signature [S]. *)
-  module Make (M : Make_arg) : S with type t = Int63.t
+  module Make (M : Make_arg) : sig @@ portable
+    include S with type t = Int63.t
+  end
 
   (** Similar to [Flags.Make], but the resulting [type t] is binable. *)
-  module Make_binable (M : Make_arg) : S_binable with type t = Int63.t
+  module Make_binable (M : Make_arg) : sig @@ portable
+    include S_binable with type t = Int63.t
+  end
 end

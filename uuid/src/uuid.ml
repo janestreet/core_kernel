@@ -20,7 +20,14 @@ module Stable = struct
     module T = struct
       type t = string
       [@@deriving
-        bin_io, compare, equal, hash, sexp ~portable, sexp_grammar, stable_witness]
+        bin_io ~localize
+        , compare ~localize
+        , equal ~localize
+        , globalize
+        , hash
+        , sexp ~portable
+        , sexp_grammar
+        , stable_witness]
 
       include%template (val (Comparator.V1.make [@modality portable]) ~compare ~sexp_of_t)
     end
@@ -67,7 +74,7 @@ end
 open! Core
 
 module T = struct
-  type t = string [@@deriving bin_io, compare, hash]
+  type t = string [@@deriving bin_io ~localize, compare ~localize, hash]
   type comparator_witness = Stable.V1.comparator_witness
 
   let comparator = Stable.V1.comparator
@@ -104,23 +111,21 @@ module T = struct
       (* We fill all 36 bytes with random hex digits, and then go back and set specific
          bytes to dash and the version number (4).  We do 6 groups of 6 bytes, each time
          using 24 bits of a random int, 4 for each hex digit. *)
+      let bytes = Obj.magic_uncontended (DLS.get bytes) in
       let at = stack_ (ref 0) in
       for _ = 1 to 6 do
         let int = ref (Random.State.bits random_state) in
         for _ = 1 to 6 do
           let at' = !at in
           let int' = !int in
-          DLS.access (fun access ->
-            Bytes.set (DLS.get access bytes) at' (bottom_4_bits_to_hex_char int'));
+          Bytes.set bytes at' (bottom_4_bits_to_hex_char int');
           incr at;
           int := !int lsr 4
         done
       done;
-      DLS.access (fun access ->
-        let bytes = DLS.get access bytes in
-        set_all_dashes bytes;
-        set_version bytes ~version:'4';
-        Bytes.to_string bytes)
+      set_all_dashes bytes;
+      set_version bytes ~version:'4';
+      Bytes.to_string bytes
   ;;
 
   (* [create] is responsible for generating unique string identifiers.  It should be clear
@@ -156,7 +161,8 @@ end
 
 include T
 
-include%template Identifiable.Make_using_comparator [@modality portable] (struct
+include%template
+  Identifiable.Make_using_comparator [@mode local] [@modality portable] (struct
     let module_name = "Uuid"
 
     include T
@@ -167,7 +173,7 @@ let invariant t = ignore (of_string t : t)
 let nil = "00000000-0000-0000-0000-000000000000"
 
 module Unstable = struct
-  type nonrec t = t [@@deriving bin_io, compare, equal, hash, sexp]
+  type nonrec t = t [@@deriving bin_io, compare ~localize, equal ~localize, hash, sexp]
   type nonrec comparator_witness = comparator_witness
 
   let comparator = comparator

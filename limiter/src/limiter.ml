@@ -11,7 +11,7 @@ module Infinite_or_finite = struct
 
   include T
 
-  let compare compare t1 t2 =
+  let%template[@mode m = (local, global)] compare compare t1 t2 =
     match t1, t2 with
     | Infinite, Infinite -> 0
     | Infinite, Finite _ -> 1

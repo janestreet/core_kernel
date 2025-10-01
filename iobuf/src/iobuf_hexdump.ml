@@ -19,27 +19,32 @@ module For_hexdump = struct
     include T2
 
     let length t = t.hi_max - t.lo_min
-    let get t pos = Bigstring.get t.buf (t.lo_min + pos)
+    let get t pos = Bigstring.get (buf t) (t.lo_min + pos)
   end
 
   module Buffer_indexable = struct
     include T2
 
-    let length t = Bigstring.length t.buf
-    let get t pos = Bigstring.get t.buf pos
+    let length t = Bigstring.length (buf t)
+    let get t pos = Bigstring.get (buf t) pos
   end
 
-  module Window = Hexdump.Of_indexable2 (Window_indexable)
-  module Limits = Hexdump.Of_indexable2 (Limits_indexable)
-  module Buffer = Hexdump.Of_indexable2 (Buffer_indexable)
+  module Window = Hexdump.Of_indexable2 [@modality portable] (Window_indexable)
+  module Limits = Hexdump.Of_indexable2 [@modality portable] (Limits_indexable)
+  module Buffer = Hexdump.Of_indexable2 [@modality portable] (Buffer_indexable)
 
-  module type Relative_indexable = sig
+  module type Relative_indexable = sig @@ portable
     val name : string
     val lo : (_, _) t -> int
     val hi : (_, _) t -> int
   end
 
-  module type Compound_indexable = sig
+  let portabilize_Relative_indexable =
+    (Portability_hacks.magic_portable__first_class_module
+     : (module Relative_indexable) -> (module Relative_indexable) @ portable)
+  ;;
+
+  module type Compound_indexable = sig @@ portable
     include Hexdump.S2 with type ('rw, 'seek) t := ('rw, 'seek) t
 
     val parts : (module Relative_indexable) list
@@ -56,23 +61,27 @@ module For_hexdump = struct
       ;;
 
       let to_sequence ?max_lines t =
-        List.concat_map Compound.parts ~f:(fun (module Relative) ->
-          [ Sequence.singleton (String.capitalize Relative.name)
-          ; relative_sequence ?max_lines t (module Relative)
-            |> Sequence.map ~f:(fun line -> "  " ^ line)
-          ])
+        List.concat_map
+          (Portability_hacks.magic_uncontended__first_class_module Compound.parts)
+          ~f:(fun (module Relative) ->
+            [ Sequence.singleton (String.capitalize Relative.name)
+            ; relative_sequence ?max_lines t (module Relative)
+              |> Sequence.map ~f:(fun line -> "  " ^ line)
+            ])
         |> Sequence.of_list
         |> Sequence.concat
       ;;
 
       let to_string_hum ?max_lines t =
-        let t = globalize0 t in
+        let t = globalize_shared t in
         to_sequence ?max_lines t |> Sequence.to_list |> String.concat ~sep:"\n"
       ;;
 
       let sexp_of_t _ _ t =
-        List.map Compound.parts ~f:(fun (module Relative) ->
-          Relative.name, Sequence.to_list (relative_sequence t (module Relative)))
+        List.map
+          (Portability_hacks.magic_uncontended__first_class_module Compound.parts)
+          ~f:(fun (module Relative) ->
+            Relative.name, Sequence.to_list (relative_sequence t (module Relative)))
         |> [%sexp_of: (string * string list) list]
       ;;
     end
@@ -105,15 +114,15 @@ module For_hexdump = struct
   module Buffer_within_buffer = struct
     let name = "buffer"
     let lo _ = 0
-    let hi t = Bigstring.length t.buf
+    let hi t = Bigstring.length (buf t)
   end
 
   module Window_and_limits = Make_compound_hexdump (struct
       include Limits
 
       let parts =
-        [ (module Window_within_limits : Relative_indexable)
-        ; (module Limits_within_limits : Relative_indexable)
+        [ (module Window_within_limits) |> portabilize_Relative_indexable
+        ; (module Limits_within_limits) |> portabilize_Relative_indexable
         ]
       ;;
     end)
@@ -122,9 +131,9 @@ module For_hexdump = struct
       include Buffer
 
       let parts =
-        [ (module Window_within_buffer : Relative_indexable)
-        ; (module Limits_within_buffer : Relative_indexable)
-        ; (module Buffer_within_buffer : Relative_indexable)
+        [ (module Window_within_buffer) |> portabilize_Relative_indexable
+        ; (module Limits_within_buffer) |> portabilize_Relative_indexable
+        ; (module Buffer_within_buffer) |> portabilize_Relative_indexable
         ]
       ;;
     end)

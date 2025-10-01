@@ -13,7 +13,7 @@ type endian =
   [ `Big_endian
   | `Little_endian
   ]
-[@@deriving compare, hash, sexp]
+[@@deriving compare ~localize, hash, sexp]
 
 (* Computes the offset based on the total number of bytes, the byte order, and the
    byte number. The byte number is ordered by decreasing significance starting at zero
@@ -655,7 +655,9 @@ let unpack_tail_padded_fixed_string ?(padding = '\x00') ~buf ~pos ~len () =
 
 exception
   Pack_tail_padded_fixed_string_argument_too_long of
-    [ `s of string ] * [ `longer_than ] * [ `len of int ]
+    [ `s of string ] @@ contended portable
+    * [ `longer_than ]
+    * [ `len of int ] @@ contended portable
 [@@deriving sexp]
 
 let pack_tail_padded_fixed_string ?(padding = '\x00') ~buf ~pos ~len s =

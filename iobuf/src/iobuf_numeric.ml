@@ -101,8 +101,8 @@ module Itoa = struct
   let[@inline] gen_poke_padded_decimal_trunc ~buf_pos t ~pos ~len int =
     let pos = (buf_pos [@inlined hint]) t ~pos ~len in
     if int < 0
-    then unsafe_poke_negative_decimal t.buf ~pos ~len int
-    else unsafe_poke_negative_decimal_without_sign t.buf ~pos ~len (-int)
+    then unsafe_poke_negative_decimal (buf t) ~pos ~len int
+    else unsafe_poke_negative_decimal_without_sign (buf t) ~pos ~len (-int)
   ;;
 
   (* See [gen_poke_padded_decimal_trunc] re: truncation. *)
@@ -163,11 +163,15 @@ module Date_string = struct
 
   let[@inline] gen_poke_iso8601_extended ~buf_pos t ~pos date =
     let pos = (buf_pos [@inlined hint]) t ~pos ~len:len_iso8601_extended in
-    Itoa.unsafe_poke_negative_decimal_without_sign t.buf ~pos ~len:4 (-Date.year date);
+    Itoa.unsafe_poke_negative_decimal_without_sign (buf t) ~pos ~len:4 (-Date.year date);
     let pos = pos + 4 in
-    Itoa.unsafe_poke_negative_decimal t.buf ~pos ~len:3 (-Month.to_int (Date.month date));
+    Itoa.unsafe_poke_negative_decimal
+      (buf t)
+      ~pos
+      ~len:3
+      (-Month.to_int (Date.month date));
     let pos = pos + 3 in
-    Itoa.unsafe_poke_negative_decimal t.buf ~pos ~len:3 (-Date.day date)
+    Itoa.unsafe_poke_negative_decimal (buf t) ~pos ~len:3 (-Date.day date)
   ;;
 
   let poke_iso8601_extended t ~pos date =

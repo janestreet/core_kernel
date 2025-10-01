@@ -15,7 +15,20 @@ module type S_serializable = sig
     -> ('elt, 'cmp) t Sexplib0.Sexp_grammar.t
     @@ portable
 
-  val compare_m__t : (module Set.Compare_m) -> ('elt, 'cmp) t -> ('elt, 'cmp) t -> int
+  val%template compare_m__t
+    :  (module Set.Compare_m)
+    -> ('elt, 'cmp) t @ m
+    -> ('elt, 'cmp) t @ m
+    -> int
+  [@@mode m = (local, global)]
+
+  val hash_fold_m__t
+    :  (module Set.Hash_fold_m with type t = 'elt)
+    -> Hash.state
+    -> ('elt, _) t
+    -> Hash.state
+
+  val hash_m__t : (module Set.Hash_fold_m with type t = 'elt) -> ('elt, _) t -> int
   val bin_shape_m__t : ('a, 'b) Set.Elt_bin_io.t -> Bin_prot.Shape.t
   val bin_size_m__t : ('a, 'b) Set.Elt_bin_io.t -> ('a, 'b) t Bin_prot.Size.sizer
   val bin_write_m__t : ('a, 'b) Set.Elt_bin_io.t -> ('a, 'b) t Bin_prot.Write.writer

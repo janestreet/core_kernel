@@ -29,7 +29,7 @@ module Make (M : Make_arg) = struct
   let are_disjoint t1 t2 = Int63.( = ) (Int63.bit_and t1 t2) Int63.zero
 
   include
-    Quickcheckable.Of_quickcheckable
+    Quickcheckable.Of_quickcheckable [@mode portable]
       (Int63)
       (struct
         type nonrec t = t
@@ -116,7 +116,8 @@ module Make (M : Make_arg) = struct
   ;;
 
   let known_by_name =
-    String.Table.of_alist_exn (List.map known ~f:(fun (mask, name) -> name, mask))
+    String.Map.of_iteri_exn ~iteri:(fun ~f ->
+      List.iter known ~f:(fun (mask, name) -> f ~key:name ~data:mask) [@nontail])
   ;;
 
   let t_of_sexp (sexp : Sexp.t) =
@@ -126,7 +127,7 @@ module Make (M : Make_arg) = struct
         (flags |> [%of_sexp: sexp_format])
         ~init:empty
         ~f:(fun t name ->
-          match Hashtbl.find known_by_name name with
+          match Map.find known_by_name name with
           | Some mask -> t + mask
           | None ->
             of_sexp_error (sprintf "Flags.t_of_sexp got unknown name: %s" name) sexp)
@@ -157,7 +158,7 @@ module Make (M : Make_arg) = struct
   let compare = `unused
   let `unused = compare
 
-  include%template Comparable.Make [@mode local] (struct
+  include%template Comparable.Make [@mode local portable] (struct
       type nonrec t = t [@@deriving sexp, compare ~localize, hash]
     end)
 
@@ -173,4 +174,4 @@ module Make (M : Make_arg) = struct
   end
 end
 
-module Make_binable = Make
+module Make_binable (M : Make_arg) = Make (M)

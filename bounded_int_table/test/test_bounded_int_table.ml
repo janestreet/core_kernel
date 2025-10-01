@@ -122,7 +122,7 @@ module%test _ = struct
 end
 
 module%test _ = struct
-  let () = debug := true
+  let () = Atomic.set debug true
 
   let%test_unit _ =
     (* Check that [set] replaces the key. *)
