@@ -111,23 +111,21 @@ module T = struct
       (* We fill all 36 bytes with random hex digits, and then go back and set specific
          bytes to dash and the version number (4).  We do 6 groups of 6 bytes, each time
          using 24 bits of a random int, 4 for each hex digit. *)
+      let bytes = Obj.magic_uncontended (DLS.get bytes) in
       let at = ref 0 in
       for _ = 1 to 6 do
         let int = ref (Random.State.bits random_state) in
         for _ = 1 to 6 do
           let at' = !at in
           let int' = !int in
-          DLS.access (fun access ->
-            Bytes.set (DLS.get access bytes) at' (bottom_4_bits_to_hex_char int'));
+          Bytes.set bytes at' (bottom_4_bits_to_hex_char int');
           incr at;
           int := !int lsr 4
         done
       done;
-      DLS.access (fun access ->
-        let bytes = DLS.get access bytes in
-        set_all_dashes bytes;
-        set_version bytes ~version:'4';
-        Bytes.to_string bytes)
+      set_all_dashes bytes;
+      set_version bytes ~version:'4';
+      Bytes.to_string bytes
   ;;
 
   (* [create] is responsible for generating unique string identifiers.  It should be clear

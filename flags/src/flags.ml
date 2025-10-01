@@ -12,10 +12,7 @@ let create ~bit:n =
   Int63.shift_left Int63.one n
 ;;
 
-module%template Make (M : sig
-    include Make_arg
-  end) =
-struct
+module Make (M : Make_arg) = struct
   type t = Int63.t [@@deriving bin_io, hash, typerep]
 
   let of_int t = Int63.of_int t
@@ -32,7 +29,7 @@ struct
   let are_disjoint t1 t2 = Int63.( = ) (Int63.bit_and t1 t2) Int63.zero
 
   include
-    Quickcheckable.Of_quickcheckable [@mode p]
+    Quickcheckable.Of_quickcheckable [@mode portable]
       (Int63)
       (struct
         type nonrec t = t
@@ -161,7 +158,7 @@ struct
   let compare = `unused
   let `unused = compare
 
-  include%template Comparable.Make [@mode local p] (struct
+  include%template Comparable.Make [@mode local portable] (struct
       type nonrec t = t [@@deriving sexp, compare ~localize, hash]
     end)
 
@@ -176,10 +173,5 @@ struct
     type nonrec t = t [@@deriving bin_io, compare ~localize, equal ~localize, sexp]
   end
 end
-[@@modality p = (nonportable, portable)]
 
-module%template Make_binable (M : sig
-    include Make_arg
-  end) =
-  Make [@mode p] (M)
-[@@modality p = (nonportable, portable)]
+module Make_binable (M : Make_arg) = Make (M)

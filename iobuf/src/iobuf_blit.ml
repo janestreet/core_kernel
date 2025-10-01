@@ -12,9 +12,9 @@ module Blit = struct
          bounds-check both buffers before calling [Bigstring.unsafe_blit]. *)
       Bigstring.unsafe_blit
         ~len
-        ~src:src.buf
+        ~src:(buf src)
         ~src_pos:(unsafe_buf_pos src ~pos:src_pos ~len)
-        ~dst:dst.buf
+        ~dst:(buf dst)
         ~dst_pos:(unsafe_buf_pos dst ~pos:dst_pos ~len)
     ;;
   end

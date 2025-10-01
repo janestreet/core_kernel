@@ -18,23 +18,29 @@ module Definitions = struct
   end
 
   module type Basic = sig
-    type nonrec seek = seek [@@deriving globalize, sexp_of]
-    type nonrec no_seek = no_seek [@@deriving globalize, sexp_of]
-    type ('rw, 'seek) t [@@deriving globalize]
+    type nonrec seek = seek [@@deriving sexp_of]
+    type nonrec no_seek = no_seek [@@deriving sexp_of]
+    type ('rw, 'seek) t
+
+    val globalize : [ `deprecated ]
+    [@@deprecated "[since 2025-09] use [Iobuf.globalize_shared] instead"]
 
     (** Globalize as if [t] had zero type parameters. Works because the parameters are
         phantom types, and do not represent actual values that need to be globalized. *)
-    val globalize0 : ('rw, _) t -> ('rw, _) t
+    val globalize_shared : ('rw, _) t -> ('rw, _) t
 
     module With_shallow_sexp : sig
       (** [With_shallow_sexp.t] has a [sexp_of] that shows the windows and limits of the
           underlying bigstring, but no data. We do this rather than deriving sexp_of on
           [t] because it is much more likely to be noise than useful information, and so
           callers should probably not display the iobuf at all. *)
-      type nonrec ('rw, 'seek) t = ('rw, 'seek) t [@@deriving sexp_of, globalize]
+      type nonrec ('rw, 'seek) t = ('rw, 'seek) t [@@deriving sexp_of]
+
+      val globalize : [ `deprecated ]
+      [@@deprecated "[since 2025-09] use [Iobuf.globalize_shared] instead"]
     end
 
-    include Invariant.S2 with type ('rw, 'seek) t := ('rw, 'seek) t
+    val invariant : (_, _) t -> unit
 
     (** {2 Creation} *)
 

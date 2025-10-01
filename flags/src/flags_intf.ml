@@ -112,8 +112,12 @@ module type Flags = sig
       We expose [type t = int] in the result of [Flags.Make] so that one can easily use
       flag constants as values of the flag type without having to coerce them. It is
       typical to hide the [t = int] in another signature [S]. *)
-  module%template.portable Make (M : Make_arg) : S with type t = Int63.t
+  module Make (M : Make_arg) : sig
+    include S with type t = Int63.t
+  end
 
   (** Similar to [Flags.Make], but the resulting [type t] is binable. *)
-  module%template.portable Make_binable (M : Make_arg) : S_binable with type t = Int63.t
+  module Make_binable (M : Make_arg) : sig
+    include S_binable with type t = Int63.t
+  end
 end

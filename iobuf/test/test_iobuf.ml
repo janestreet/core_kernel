@@ -142,7 +142,7 @@ let iter_slices n ~f =
 ;;
 
 let invariant = invariant
-let%test_unit _ = invariant ignore ignore (create ~len:(Random.int 100_000 + 1))
+let%test_unit _ = invariant (create ~len:(Random.int 100_000 + 1))
 let create = create
 let capacity = capacity
 let length = length
@@ -809,21 +809,21 @@ struct
       val accessor_pos_1
         :  without_value:(read_write, seek) Iobuf.t
         -> value_len:int
-        -> ('a, read_write, seek) t
+        -> ('a, read_write, seek, global) t
         -> value:'a
         -> with_value:string
         -> (module Accessee with type t = 'a)
         -> unit
 
-      val bin_prot_char : (char, 'd, 'w) t
+      val bin_prot_char : (char, 'd, 'w, global) t
     end) :
     Iobuf.Accessors_common
-    with type ('a, 'b, 'c) t = ('a, 'b, 'c) Intf.t
-    with type ('a, 'b, 'c) t__local = ('a, 'b, 'c) Intf.t__local = struct
+    with type ('a, 'b, 'c, 'd) t = ('a, 'b, 'c, 'd) Intf.t
+    with type ('a, 'b, 'c, 'd) t__local = ('a, 'b, 'c, 'd) Intf.t__local = struct
     open Intf
 
-    type nonrec ('a, 'd, 'w) t = ('a, 'd, 'w) Intf.t
-    type nonrec ('a, 'd, 'w) t__local = ('a, 'd, 'w) Intf.t__local
+    type nonrec ('a, 'd, 'w, 'l) t = ('a, 'd, 'w, 'l) Intf.t
+    type nonrec ('a, 'd, 'w, 'l) t__local = ('a, 'd, 'w, 'l) Intf.t__local
 
     let char = char
 
@@ -854,17 +854,17 @@ struct
       val accessor_pos_1
         :  without_value:(read_write, seek) Iobuf.t
         -> value_len:int
-        -> ('a, read_write, seek) t
+        -> ('a, read_write, seek, global) t
         -> value:'a
         -> with_value:string
         -> (module Accessee with type t = 'a)
         -> unit
 
-      val bin_prot_char : (char, 'd, 'w) t
+      val bin_prot_char : (char, 'd, 'w, global) t
     end) :
     Iobuf.Accessors_read
-    with type ('a, 'b, 'c) t = ('a, 'b, 'c) Intf.t
-     and type ('a, 'b, 'c) t__local = ('a, 'b, 'c) Intf.t__local = struct
+    with type ('a, 'b, 'c, 'd) t = ('a, 'b, 'c, 'd) Intf.t
+     and type ('a, 'b, 'c, 'd) t__local = ('a, 'b, 'c, 'd) Intf.t__local = struct
     open Intf
 
     let int8 = int8
@@ -1245,18 +1245,18 @@ struct
       val accessor_pos_1
         :  without_value:(read_write, seek) Iobuf.t
         -> value_len:int
-        -> ('a, read_write, seek) t
+        -> ('a, read_write, seek, global) t
         -> value:'a
         -> with_value:string
         -> (module Accessee with type t = 'a)
         -> unit
 
-      val bin_prot_char : (char, 'd, 'w) t
-      val ignore_locality : ('a, 'd, 'w) t__local -> ('a, 'd, 'w) t
+      val bin_prot_char : (char, 'd, 'w, global) t
+      val ignore_locality : ('a, 'd, 'w, 'l) t__local -> ('a, 'd, 'w, 'l) t
     end) :
     Iobuf.Accessors_write
-    with type ('a, 'b, 'c) t = ('a, 'b, 'c) Intf.t
-     and type ('a, 'b, 'c) t__local = ('a, 'b, 'c) Intf.t__local = struct
+    with type ('a, 'b, 'c, 'd) t = ('a, 'b, 'c, 'd) Intf.t
+     and type ('a, 'b, 'c, 'd) t__local = ('a, 'b, 'c, 'd) Intf.t__local = struct
     open Intf
 
     let int8_trunc = int8_trunc
@@ -1642,7 +1642,7 @@ struct
         ;;
 
         let bin_prot_char t ~pos a = Bin_io.poke Char.bin_writer_t t ~pos a
-        let ignore_locality (f : ('a, 'd, 'w) t__local) = (f :> ('a, 'd, 'w) t)
+        let ignore_locality (f : ('a, 'd, 'w, 'l) t__local) = (f :> ('a, 'd, 'w, 'l) t)
 
         (* Static permission tests for the cases that do compile.  Since the functions
            all use essentially the same type definitions, we don't need to test all of
@@ -1998,7 +1998,7 @@ struct
         ;;
 
         let bin_prot_char t a = Bin_io.fill Char.bin_writer_t t a
-        let ignore_locality (f : ('a, 'd, 'w) t__local) = (f :> ('a, 'd, 'w) t)
+        let ignore_locality (f : ('a, 'd, 'w, 'l) t__local) = (f :> ('a, 'd, 'w, 'l) t)
 
         let%test_unit _ =
           let t = of_string "abc" in
@@ -2747,7 +2747,8 @@ struct
       protect_window_local buf ~f:(fun buf ->
         Iobuf.advance buf 15;
         Iobuf.resize buf ~len:(Iobuf.length buf - 15);
-        print_s [%sexp (Iobuf.globalize0 buf : (_, _) Iobuf.Window.Hexdump.Pretty.t)];
+        print_s
+          [%sexp (Iobuf.globalize_shared buf : (_, _) Iobuf.Window.Hexdump.Pretty.t)];
         [%expect {| in-short-window |}]);
       print_s [%sexp (buf : (_, _) Iobuf.Window.Hexdump.Pretty.t)];
       [%expect {| "in-long-window in-short-window in-long-window" |}]
@@ -2995,26 +2996,30 @@ module%test [@name "allocation"] _ = struct
       (Apply : sig
          type w
 
-         val apply : ('a, read, w) I.t -> (read, Iobuf.seek) Iobuf.t -> 'a
-         val apply_local : ('a, read, w) I.t__local -> (read, Iobuf.seek) Iobuf.t -> 'a
+         val apply : ('a, read, w, 'l) I.t -> (read, Iobuf.seek) Iobuf.t -> 'a
+
+         val apply_local
+           :  ('a, read, w, 'l) I.t__local
+           -> (read, Iobuf.seek) Iobuf.t
+           -> 'a
        end) : Accessors_read = struct
     open I
 
-    type nonrec ('a, 'd, 'w) t = ('a, 'd, 'w) t
-    type nonrec ('a, 'd, 'w) t__local = ('a, 'd, 'w) t__local
+    type nonrec ('a, 'd, 'w, 'l) t = ('a, 'd, 'w, 'l) t
+    type nonrec ('a, 'd, 'w, 'l) t__local = ('a, 'd, 'w, 'l) t__local
 
-    let test ?(allocation_limit = 0) (f : ('a, 'd, 'w) t) len =
+    let test ?(allocation_limit = 0) (f : ('a, 'd, 'w, 'l) t) len =
       let buf = Iobuf.of_bigstring (Bigstring.init len ~f:(const '\000')) in
       require_allocation_does_not_exceed (Minor_words allocation_limit) (fun () ->
         ignore (Apply.apply f buf : _))
     ;;
 
-    let test_local (f : ('a, 'd, 'w) t__local) len =
+    let test_local (f : ('a, 'd, 'w, 'l) t__local) len =
       let buf = Iobuf.of_bigstring (Bigstring.init len ~f:(const '\000')) in
       require_no_allocation (fun () -> ignore (Apply.apply_local f buf : _))
     ;;
 
-    let test_padded_string (f : padding:char -> len:int -> ('a, 'd, 'w) t__local) =
+    let test_padded_string (f : padding:char -> len:int -> ('a, 'd, 'w, 'l) t__local) =
       let pad_amt = 5 in
       let full_len = 20 in
       let padding = ' ' in
@@ -3027,12 +3032,12 @@ module%test [@name "allocation"] _ = struct
       require_no_allocation (fun () -> ignore (Apply.apply_local f buf : _))
     ;;
 
-    let test_string (f : str_pos:int -> len:int -> ('a, 'd, 'w) t__local) =
+    let test_string (f : str_pos:int -> len:int -> ('a, 'd, 'w, 'l) t__local) =
       let len = 10 in
       test_local (f ~str_pos:0 ~len) len
     ;;
 
-    let test_stringo (f : ?str_pos:int -> ?len:int -> ('a, 'd, 'w) t__local) =
+    let test_stringo (f : ?str_pos:int -> ?len:int -> ('a, 'd, 'w, 'l) t__local) =
       let len = 10 in
       let buf = Iobuf.of_bigstring (Bigstring.init len ~f:(const ' ')) in
       require_no_allocation (fun () ->

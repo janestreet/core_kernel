@@ -31,6 +31,7 @@ struct
   let callback_arity = callback_arity
   let close = close
   let create_exn = create_exn
+  let subscribe_with_state_exn = subscribe_with_state_exn
   let subscribe_permanently_with_state_exn = subscribe_permanently_with_state_exn
   let is_closed = is_closed
   let subscribe_permanently_exn = subscribe_permanently_exn
@@ -741,7 +742,7 @@ struct
              (write_ever_called                 true)
              (subscribers ((
                Bus.Subscriber.t (subscribed_from lib/bus/test/test_bus.ml:LINE:COL)))))
-            lib/bus/src/bus.ml:LINE:COL))
+            lib/bus/test/test_bus.ml:LINE:COL))
           (backtrace ("<backtrace elided in test>"))
           (subscriber (
             Bus.Subscriber.t (subscribed_from lib/bus/test/test_bus.ml:LINE:COL)))))

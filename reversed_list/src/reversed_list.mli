@@ -6,6 +6,9 @@ type 'a t =
   | ( :: ) of 'a * 'a t
 [@@deriving equal ~localize]
 
+(** Type alias for use within submodules *)
+type 'a reversed_list = 'a t
+
 (** The API of [Reversed_list] is purposely minimal to encourage destructing the list near
     the point of construction. Callers that are motivated to extend this API to avoid the
     overhead of reversal may be better off using a queue. *)
@@ -44,3 +47,34 @@ end
 module With_rev_sexp_of : sig
   type nonrec 'a t = 'a t [@@deriving sexp_of]
 end
+
+(** Functions that operate between [Reversed_list.t] and [Nonempty_list.t] *)
+
+(** Non-empty version of [Reversed_list.t] *)
+module Nonempty : sig
+  type 'a t = ( :: ) of 'a * 'a reversed_list
+
+  val cons : 'a -> 'a t -> 'a t
+  val to_rev_list : 'a t -> 'a reversed_list
+  val rev : 'a t -> 'a Nonempty_list.t
+  val rev_append : 'a t -> 'a list -> 'a Nonempty_list.t
+  val rev_map : 'a t -> f:('a -> 'b) -> 'b Nonempty_list.t
+  val rev_mapi : 'a t -> f:(int -> 'a -> 'b) -> 'b Nonempty_list.t
+
+  (** Renders sexps without reversing the list. E.g. [1::2] is represented as [(1 2)]. *)
+  module With_sexp_of : sig
+    type nonrec 'a t = 'a t [@@deriving sexp_of]
+  end
+
+  (** Renders sexps after reversing the list. E.g. [1::2] is represented as [(2 1)]. *)
+  module With_rev_sexp_of : sig
+    type nonrec 'a t = 'a t [@@deriving sexp_of]
+  end
+end
+
+(** [of_nonempty t] converts a nonempty list to a nonempty reversed list. *)
+val of_nonempty : 'a Nonempty_list.t -> 'a Nonempty.t
+
+(** [rev_append_to_nonempty xs acc] reverses [xs] and prepends it to the nonempty list
+    [acc]. *)
+val rev_append_to_nonempty : 'a t -> 'a Nonempty_list.t -> 'a Nonempty_list.t

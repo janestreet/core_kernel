@@ -6,12 +6,6 @@ include Iobuf_type
 
 module type Bound = Bound with type ('d, 'w) iobuf := ('d, 'w) t
 
-let globalize_phantom name _ =
-  failwithf "Unexpectedly called [Iobuf.globalize_%s]" name ()
-;;
-
-let globalize_seek = globalize_phantom "seek"
-let globalize_no_seek = globalize_phantom "no_seek"
 let read_only t = t
 let read_only__local t = t
 let no_seek t = t
@@ -97,7 +91,7 @@ let bounded_flip_hi t hi_max =
 
 let capacity t = t.hi_max - t.lo_min
 
-let invariant _ _ t =
+let invariant t =
   try
     Repr.Fields.Direct.iter
       t
@@ -138,11 +132,14 @@ let unsafe_sub_shared ~pos ~len t =
   if unsafe_is_safe then sub_shared__local ~pos ~len t else unsafe_sub_shared ~pos ~len t
 ;;
 
-let sub_shared ?pos ?len t = globalize0 (sub_shared__local ?pos ?len t) [@nontail]
-let copy t = of_bigstring (Bigstring.sub t.buf ~pos:t.lo ~len:(length t))
+let sub_shared ?pos ?len t = globalize_shared (sub_shared__local ?pos ?len t) [@nontail]
+let copy t = of_bigstring (Bigstring.sub (buf t) ~pos:t.lo ~len:(length t))
 
 let clone { buf; lo_min; lo; hi; hi_max } =
-  { buf = Bigstring.copy buf; lo_min; lo; hi; hi_max }
+  let buf =
+    Modes.At_locality.wrap (Bigstring.copy (Modes.At_locality.unwrap_local buf))
+  in
+  { buf; lo_min; lo; hi; hi_max }
 ;;
 
 let narrow_lo t = t.lo_min <- t.lo
@@ -170,7 +167,7 @@ let protect_window_bounds_and_buffer t ~f =
   let hi = t.hi in
   let lo_min = t.lo_min in
   let hi_max = t.hi_max in
-  let buf = t.buf in
+  let bstr = buf t in
   (* also mutable *)
   try
     t.lo_min <- lo;
@@ -180,7 +177,7 @@ let protect_window_bounds_and_buffer t ~f =
     t.hi <- hi;
     t.lo_min <- lo_min;
     t.hi_max <- hi_max;
-    if not (phys_equal buf t.buf) then t.buf <- buf;
+    if not (phys_equal bstr (buf t)) then t.buf <- Modes.At_locality.wrap bstr;
     result
   with
   | exn ->
@@ -188,7 +185,7 @@ let protect_window_bounds_and_buffer t ~f =
     t.hi <- hi;
     t.lo_min <- lo_min;
     t.hi_max <- hi_max;
-    if not (phys_equal buf t.buf) then t.buf <- buf;
+    if not (phys_equal bstr (buf t)) then t.buf <- Modes.At_locality.wrap bstr;
     raise exn
 ;;
 
@@ -197,7 +194,7 @@ let protect_window_bounds_and_buffer__local t ~f =
   let hi = t.hi in
   let lo_min = t.lo_min in
   let hi_max = t.hi_max in
-  let buf = t.buf in
+  let bstr = buf t in
   (* also mutable *)
   try
     t.lo_min <- lo;
@@ -207,7 +204,7 @@ let protect_window_bounds_and_buffer__local t ~f =
     t.hi <- hi;
     t.lo_min <- lo_min;
     t.hi_max <- hi_max;
-    if not (phys_equal buf t.buf) then t.buf <- buf;
+    if not (phys_equal bstr (buf t)) then t.buf <- Modes.At_locality.wrap bstr;
     result
   with
   | exn ->
@@ -215,7 +212,7 @@ let protect_window_bounds_and_buffer__local t ~f =
     t.hi <- hi;
     t.lo_min <- lo_min;
     t.hi_max <- hi_max;
-    if not (phys_equal buf t.buf) then t.buf <- buf;
+    if not (phys_equal bstr (buf t)) then t.buf <- Modes.At_locality.wrap bstr;
     raise exn
 ;;
 
@@ -224,7 +221,7 @@ let protect_window_bounds_and_buffer_1 t x ~f =
   let hi = t.hi in
   let lo_min = t.lo_min in
   let hi_max = t.hi_max in
-  let buf = t.buf in
+  let bstr = buf t in
   (* also mutable *)
   try
     t.lo_min <- lo;
@@ -234,7 +231,7 @@ let protect_window_bounds_and_buffer_1 t x ~f =
     t.hi <- hi;
     t.lo_min <- lo_min;
     t.hi_max <- hi_max;
-    if not (phys_equal buf t.buf) then t.buf <- buf;
+    if not (phys_equal bstr (buf t)) then t.buf <- Modes.At_locality.wrap bstr;
     result
   with
   | exn ->
@@ -242,7 +239,7 @@ let protect_window_bounds_and_buffer_1 t x ~f =
     t.hi <- hi;
     t.lo_min <- lo_min;
     t.hi_max <- hi_max;
-    if not (phys_equal buf t.buf) then t.buf <- buf;
+    if not (phys_equal bstr (buf t)) then t.buf <- Modes.At_locality.wrap bstr;
     raise exn
 ;;
 
@@ -251,7 +248,7 @@ let protect_window_bounds_and_buffer_2 t x y ~f =
   let hi = t.hi in
   let lo_min = t.lo_min in
   let hi_max = t.hi_max in
-  let buf = t.buf in
+  let bstr = buf t in
   (* also mutable *)
   try
     t.lo_min <- lo;
@@ -261,7 +258,7 @@ let protect_window_bounds_and_buffer_2 t x y ~f =
     t.hi <- hi;
     t.lo_min <- lo_min;
     t.hi_max <- hi_max;
-    if not (phys_equal buf t.buf) then t.buf <- buf;
+    if not (phys_equal bstr (buf t)) then t.buf <- Modes.At_locality.wrap bstr;
     result
   with
   | exn ->
@@ -269,7 +266,7 @@ let protect_window_bounds_and_buffer_2 t x y ~f =
     t.hi <- hi;
     t.lo_min <- lo_min;
     t.hi_max <- hi_max;
-    if not (phys_equal buf t.buf) then t.buf <- buf;
+    if not (phys_equal bstr (buf t)) then t.buf <- Modes.At_locality.wrap bstr;
     raise exn
 ;;
 
@@ -278,7 +275,7 @@ let protect_window_bounds_and_buffer_3 t x y z ~f =
   let hi = t.hi in
   let lo_min = t.lo_min in
   let hi_max = t.hi_max in
-  let buf = t.buf in
+  let bstr = buf t in
   (* also mutable *)
   try
     t.lo_min <- lo;
@@ -288,7 +285,7 @@ let protect_window_bounds_and_buffer_3 t x y z ~f =
     t.hi <- hi;
     t.lo_min <- lo_min;
     t.hi_max <- hi_max;
-    if not (phys_equal buf t.buf) then t.buf <- buf;
+    if not (phys_equal bstr (buf t)) then t.buf <- Modes.At_locality.wrap bstr;
     result
   with
   | exn ->
@@ -296,7 +293,7 @@ let protect_window_bounds_and_buffer_3 t x y z ~f =
     t.hi <- hi;
     t.lo_min <- lo_min;
     t.hi_max <- hi_max;
-    if not (phys_equal buf t.buf) then t.buf <- buf;
+    if not (phys_equal bstr (buf t)) then t.buf <- Modes.At_locality.wrap bstr;
     raise exn
 ;;
 
@@ -318,7 +315,7 @@ let to_stringlike ~(convert : ?pos:int -> ?len:int -> Bigstring.t -> 'a) =
         len
       | None -> length t
     in
-    convert t.buf ~pos:t.lo ~len)
+    convert (buf t) ~pos:t.lo ~len)
 ;;
 
 let to_string = to_stringlike ~convert:Bigstring.to_string |> (unstage [@mode portable])
@@ -326,7 +323,7 @@ let to_bytes = to_stringlike ~convert:Bigstring.to_bytes |> (unstage [@mode port
 
 let compact t =
   let len = t.hi - t.lo in
-  Bigstring.blit ~src:t.buf ~src_pos:t.lo ~len ~dst:t.buf ~dst_pos:t.lo_min;
+  Bigstring.blit ~src:(buf t) ~src_pos:t.lo ~len ~dst:(buf t) ~dst_pos:t.lo_min;
   t.lo <- t.lo_min + len;
   t.hi <- t.hi_max
 ;;
@@ -344,7 +341,7 @@ let bounded_compact t lo_min hi_max =
   if hi_max > t.hi_max || hi_max < lo_min + len || lo_min < t.lo_min
   then bounded_compact_stale t lo_min hi_max
   else (
-    Bigstring.blit ~src:t.buf ~src_pos:t.lo ~len ~dst:t.buf ~dst_pos:lo_min;
+    Bigstring.blit ~src:(buf t) ~src_pos:t.lo ~len ~dst:(buf t) ~dst_pos:lo_min;
     t.lo <- lo_min + len;
     t.hi <- hi_max)
 ;;
@@ -360,13 +357,13 @@ let to_string_hum = Hexdump.to_string_hum
 let memcmp a b =
   let len = length a in
   let c = Int.compare len (length b) in
-  if c <> 0 then c else Bigstring.memcmp ~pos1:a.lo a.buf ~pos2:b.lo b.buf ~len
+  if c <> 0 then c else Bigstring.memcmp ~pos1:a.lo (buf a) ~pos2:b.lo (buf b) ~len
 ;;
 
-let memset t ~pos ~len c = Bigstring.memset ~pos:(buf_pos_exn t ~pos ~len) ~len t.buf c
+let memset t ~pos ~len c = Bigstring.memset ~pos:(buf_pos_exn t ~pos ~len) ~len (buf t) c
 
 let unsafe_memset t ~pos ~len c =
-  Bigstring.unsafe_memset ~pos:(buf_pos_exn t ~pos ~len) ~len t.buf c
+  Bigstring.unsafe_memset ~pos:(buf_pos_exn t ~pos ~len) ~len (buf t) c
 ;;
 
 let zero t = memset t ~pos:0 ~len:(length t) '\000'
@@ -391,7 +388,7 @@ let concat bufs =
 
 let contains t ~substring =
   Bigstring.unsafe_memmem
-    ~haystack:(Repr.buf t)
+    ~haystack:(buf t)
     ~haystack_pos:t.lo
     ~haystack_len:(length t)
     ~needle:substring

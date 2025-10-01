@@ -14,34 +14,46 @@ let unsafe_is_safe = false
 
 module Repr = struct
   (* WHEN YOU CHANGE THIS, CHANGE iobuf_fields IN iobuf.h AS WELL!!! *)
-  type t =
+  type 'loc t =
     { mutable buf :
-        (Bigstring.t
+        ((Bigstring.t, 'loc) Modes.At_locality.t
         [@sexp.opaque] (* The data in [buf] is at indices [lo], [lo+1], ... [hi-1]. **))
     ; mutable lo_min : int
     ; mutable lo : int
     ; mutable hi : int
     ; mutable hi_max : int
     }
-  [@@deriving
-    fields ~getters ~direct_iterators:(iter, set_all_mutable_fields), globalize, sexp_of]
+  [@@deriving fields ~getters ~direct_iterators:(iter, set_all_mutable_fields), sexp_of]
+
+  let globalize_shared { buf; lo_min; lo; hi; hi_max } =
+    let buf = Modes.At_locality.globalize_global buf in
+    { buf; lo_min; lo; hi; hi_max }
+  ;;
 end
 
-type repr = Repr.t =
-  { mutable buf : Bigstring.t
+type 'loc repr = 'loc Repr.t =
+  { mutable buf : (Bigstring.t, 'loc) Modes.At_locality.t
   ; mutable lo_min : int
   ; mutable lo : int
   ; mutable hi : int
   ; mutable hi_max : int
   }
 
-type (-'read_write, +'seek) t = Repr.t [@@deriving globalize, sexp_of]
-
-module With_shallow_sexp = struct
-  type (_, _) t = Repr.t [@@deriving globalize, sexp_of]
+module Generic = struct
+  type (-'read_write, +'seek, 'loc) t = 'loc Repr.t [@@deriving sexp_of]
 end
 
-let globalize0 = Repr.globalize
+type ('rw, 'seek) t = ('rw, 'seek, global) Generic.t [@@deriving sexp_of]
+
+module With_shallow_sexp = struct
+  type (_, _) t = global Repr.t [@@deriving sexp_of]
+
+  let globalize = `deprecated
+end
+
+let globalize = `deprecated
+let globalize_shared = Repr.globalize_shared
+let buf t = Modes.At_locality.unwrap_global t.buf
 
 let[@cold] fail t message a sexp_of_a =
   (* Immediately convert the iobuf to sexp.  Otherwise, the iobuf could be modified before
@@ -50,7 +62,7 @@ let[@cold] fail t message a sexp_of_a =
   Error.raise
     (Error.create
        message
-       (a, [%sexp_of: (_, _) t] (globalize0 t))
+       (a, [%sexp_of: (_, _) t] (globalize_shared t))
        (Tuple.T2.sexp_of_t sexp_of_a Fn.id))
 ;;
 
@@ -91,7 +103,8 @@ let[@inline always] check_bigstring ~bstr ~pos ~len =
 let[@inline always] unsafe_of_bigstring_sub ~pos ~len buf =
   let lo = pos in
   let hi = pos + len in
-  { buf; lo_min = lo; lo; hi; hi_max = hi } [@exclave_if_stack a]
+  { buf = Modes.At_locality.wrap buf; lo_min = lo; lo; hi; hi_max = hi }
+  [@exclave_if_stack a]
 ;;
 
 let of_bigstring_sub ~pos ~len bstr =
@@ -144,7 +157,7 @@ let set_bounds_and_buffer_sub ~pos ~len ~src ~dst =
   dst.lo <- lo;
   dst.hi <- hi;
   dst.hi_max <- hi;
-  if not (phys_equal dst.buf src.buf) then dst.buf <- src.buf
+  if not (phys_equal (buf dst) (buf src)) then dst.buf <- Modes.At_locality.wrap (buf src)
 [@@inline]
 ;;
 
@@ -153,7 +166,7 @@ let set_bounds_and_buffer ~src ~dst =
   dst.lo <- src.lo;
   dst.hi <- src.hi;
   dst.hi_max <- src.hi_max;
-  if not (phys_equal dst.buf src.buf) then dst.buf <- src.buf
+  if not (phys_equal (buf dst) (buf src)) then dst.buf <- Modes.At_locality.wrap (buf src)
 ;;
 
 let create ~len =
@@ -164,7 +177,7 @@ let create ~len =
 (* We used to do it like {v
 
 let unsafe_with_range t ~pos f =
-  f t.buf ~pos:(t.lo + pos);
+  f (buf t) ~pos:(t.lo + pos);
 ;;
 
 let with_range t ~pos ~len f =
@@ -223,11 +236,11 @@ module Char_elt = struct
   ;;
 end
 
-let[@inline] get_char t pos = Bigstring.unsafe_get t.buf (buf_pos_exn t ~len:1 ~pos)
-let[@inline] set_char t pos c = Bigstring.unsafe_set t.buf (buf_pos_exn t ~len:1 ~pos) c
+let[@inline] get_char t pos = Bigstring.unsafe_get (buf t) (buf_pos_exn t ~len:1 ~pos)
+let[@inline] set_char t pos c = Bigstring.unsafe_set (buf t) (buf_pos_exn t ~len:1 ~pos) c
 
 module T_src = struct
-  type t = Repr.t [@@deriving sexp_of]
+  type t = global Repr.t [@@deriving sexp_of]
 
   let create = create
   let length = length
@@ -242,7 +255,7 @@ module Bytes_dst = struct
     let blit =
       if unsafe_is_safe then Bigstring.To_bytes.blit else Bigstring.To_bytes.unsafe_blit
     in
-    blit ~src:src.buf ~src_pos:(unsafe_buf_pos src ~pos:src_pos ~len) ~dst ~dst_pos ~len
+    blit ~src:(buf src) ~src_pos:(unsafe_buf_pos src ~pos:src_pos ~len) ~dst ~dst_pos ~len
   ;;
 
   let create ~len = create len
@@ -251,7 +264,7 @@ end
 
 module String_dst = struct
   let sub src ~pos ~len =
-    Bigstring.To_string.sub src.buf ~pos:(buf_pos_exn src ~pos ~len) ~len
+    Bigstring.To_string.sub (buf src) ~pos:(buf_pos_exn src ~pos ~len) ~len
   ;;
 
   let subo ?(pos = 0) ?len src =
@@ -260,7 +273,7 @@ module String_dst = struct
       | None -> length src - pos
       | Some len -> len
     in
-    Bigstring.To_string.subo src.buf ~pos:(buf_pos_exn src ~pos ~len) ~len
+    Bigstring.To_string.subo (buf src) ~pos:(buf_pos_exn src ~pos ~len) ~len
   ;;
 end
 
@@ -269,7 +282,7 @@ module Bigstring_dst = struct
 
   let unsafe_blit ~src ~src_pos ~dst ~dst_pos ~len =
     let blit = if unsafe_is_safe then Bigstring.blit else Bigstring.unsafe_blit in
-    blit ~src:src.buf ~src_pos:(unsafe_buf_pos src ~pos:src_pos ~len) ~dst ~dst_pos ~len
+    blit ~src:(buf src) ~src_pos:(unsafe_buf_pos src ~pos:src_pos ~len) ~dst ~dst_pos ~len
   ;;
 
   let create ~len = create len

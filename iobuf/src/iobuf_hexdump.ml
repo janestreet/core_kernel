@@ -19,14 +19,14 @@ module For_hexdump = struct
     include T2
 
     let length t = t.hi_max - t.lo_min
-    let get t pos = Bigstring.get t.buf (t.lo_min + pos)
+    let get t pos = Bigstring.get (buf t) (t.lo_min + pos)
   end
 
   module Buffer_indexable = struct
     include T2
 
-    let length t = Bigstring.length t.buf
-    let get t pos = Bigstring.get t.buf pos
+    let length t = Bigstring.length (buf t)
+    let get t pos = Bigstring.get (buf t) pos
   end
 
   module Window = Hexdump.Of_indexable2 [@modality portable] (Window_indexable)
@@ -73,7 +73,7 @@ module For_hexdump = struct
       ;;
 
       let to_string_hum ?max_lines t =
-        let t = globalize0 t in
+        let t = globalize_shared t in
         to_sequence ?max_lines t |> Sequence.to_list |> String.concat ~sep:"\n"
       ;;
 
@@ -114,7 +114,7 @@ module For_hexdump = struct
   module Buffer_within_buffer = struct
     let name = "buffer"
     let lo _ = 0
-    let hi t = Bigstring.length t.buf
+    let hi t = Bigstring.length (buf t)
   end
 
   module Window_and_limits = Make_compound_hexdump (struct

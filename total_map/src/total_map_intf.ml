@@ -1,28 +1,16 @@
 open! Core
 open! Import
 
+[%%template
+[@@@modality.default (p, c) = ((nonportable, uncontended), (portable, contended))]
+
 module type Key_plain = sig
   type t [@@deriving sexp_of, compare, enumerate]
-end
-
-module type%template [@modality portable] Key_plain = sig
-  type t
-
-  include Key_plain with type t := t
 end
 
 module type Key = sig
   type t [@@deriving sexp, bin_io, compare, enumerate]
 end
-
-module type%template [@modality portable] Key = sig
-  type t
-
-  include Key with type t := t
-end
-
-[%%template
-[@@@modality.default p = (portable, nonportable)]
 
 module type Key_plain_with_witnesses = sig
   include Key_plain [@modality p]

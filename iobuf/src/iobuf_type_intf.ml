@@ -9,9 +9,14 @@ module Definitions : sig
 
   (** Like [read_write]. *)
   type seek = private no_seek [@@deriving sexp_of]
+
+  type global = Modes.At_locality.global [@@deriving sexp_of]
+  type local = Modes.At_locality.local [@@deriving sexp_of]
 end = struct
   type no_seek [@@deriving sexp_of]
   type seek = private no_seek [@@deriving sexp_of]
+  type global = Modes.At_locality.global [@@deriving sexp_of]
+  type local = Modes.At_locality.local [@@deriving sexp_of]
 end
 
 module type Iobuf_type = sig
@@ -20,8 +25,8 @@ module type Iobuf_type = sig
   end
 
   module Repr : sig
-    type t =
-      { mutable buf : Bigstring.t
+    type 'loc t =
+      { mutable buf : (Bigstring.t, 'loc) Modes.At_locality.t
       ; mutable lo_min : int
       ; mutable lo : int
       ; mutable hi : int
@@ -30,21 +35,28 @@ module type Iobuf_type = sig
     [@@deriving fields ~getters ~direct_iterators:(iter, set_all_mutable_fields), sexp_of]
   end
 
-  type repr = Repr.t =
-    { mutable buf : Bigstring.t
+  type 'loc repr = 'loc Repr.t =
+    { mutable buf : (Bigstring.t, 'loc) Modes.At_locality.t
     ; mutable lo_min : int
     ; mutable lo : int
     ; mutable hi : int
     ; mutable hi_max : int
     }
 
-  type ('rw, 'seek) t = Repr.t [@@deriving globalize]
+  module Generic : sig
+    type ('rw, 'seek, 'loc) t = 'loc Repr.t
+  end
+
+  type ('rw, 'seek) t = ('rw, 'seek, global) Generic.t
   type ('rw, 'seek) iobuf := ('rw, 'seek) t
 
-  val globalize0 : ('rw, _) t -> ('rw, _) t
+  val globalize : [ `deprecated ]
+  val globalize_shared : ('rw, 'seek) t -> ('rw, 'seek) t
 
   module With_shallow_sexp : sig
-    type ('rw, 'seek) t = ('rw, 'seek) iobuf [@@deriving globalize, sexp_of]
+    type ('rw, 'seek) t = ('rw, 'seek) iobuf [@@deriving sexp_of]
+
+    val globalize : [ `deprecated ]
   end
 
   [%%template:
@@ -56,6 +68,7 @@ module type Iobuf_type = sig
 
   val advance : (_, seek) t -> int -> unit
   val bad_range : pos:int -> len:int -> (_, _) t -> _
+  val buf : (_, _) t -> Bigstring.t
   val buf_pos_exn : (_, _) t -> pos:int -> len:int -> int
   val check_range : (_, _) t -> pos:int -> len:int -> unit
   val create : len:int -> (_, _) t
@@ -108,7 +121,7 @@ module type Iobuf_type = sig
   end
 
   module T_src : sig
-    type t = Repr.t
+    type t = global Repr.t
 
     val create : len:int -> (_, _) iobuf
     val length : (_, _) iobuf -> int
