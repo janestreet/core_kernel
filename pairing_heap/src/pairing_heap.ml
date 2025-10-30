@@ -300,7 +300,8 @@ let top_exn t =
   else Node.value_exn t.root ~pool:t.pool
 ;;
 
-let top t = if Node.is_empty t.root then None else Some (top_exn t)
+let top_or_null t = if Node.is_empty t.root then Null else This (top_exn t)
+let[@inline] top t = top_or_null t |> Or_null.to_option
 
 let add_node t v =
   let node = allocate t v in
@@ -437,18 +438,21 @@ let pop_exn t =
   r
 ;;
 
-let pop t = if Node.is_empty t.root then None else Some (pop_exn t)
+let pop_or_null t = if Node.is_empty t.root then Null else This (pop_exn t)
+let[@inline] pop t = pop_or_null t |> Or_null.to_option
 
-let pop_if t f =
-  match top t with
-  | None -> None
-  | Some v ->
+let pop_if_or_null t f =
+  match top_or_null t with
+  | Null -> Null
+  | This v ->
     if f v
     then (
       remove_top t;
-      Some v)
-    else None
+      This v)
+    else Null
 ;;
+
+let[@inline] pop_if t f = pop_if_or_null t f |> Or_null.to_option
 
 let pop_while t f =
   let rec loop t f acc =

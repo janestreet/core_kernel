@@ -169,4 +169,9 @@ module Make (Key : Key) : S with module Key = Key = struct
     Heap.clear t.heap;
     Hashtbl.clear t.tbl
   ;;
+
+  let invariant (f : 'a Invariant.t) t =
+    let f_with_key (_key, data) = f data in
+    Heap.invariant f_with_key t.heap
+  ;;
 end

@@ -46,6 +46,9 @@ module type S = sig
 
   (** Removes all values, leaving the hash heap empty. **)
   val clear : 'a t -> unit
+
+  (** Only checks heap invariant of the underlying heap. *)
+  include Invariant.S1 with type 'a t := 'a t
 end
 
 module type Hash_heap = sig

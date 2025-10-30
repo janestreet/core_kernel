@@ -1,6 +1,6 @@
 (library
  (name nonempty_set)
  (public_name core_kernel.nonempty_set)
- (libraries core nonempty_list ppx_stable_witness.stable_witness)
+ (libraries core ppx_stable_witness.stable_witness)
  (preprocess
   (pps ppx_jane)))

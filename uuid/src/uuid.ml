@@ -101,17 +101,13 @@ module T = struct
   ;;
 
   let create_random =
-    let module DLS = struct
-      include Stdlib.Domain.DLS
-      include Basement.Stdlib_shim.Domain.Safe.DLS
-    end
-    in
-    let bytes = DLS.new_key (fun () -> Bytes.create 36) in
+    let module TLS = Basement.Stdlib_shim.Domain.Safe.TLS in
+    let bytes = TLS.new_key (fun () -> Bytes.create 36) in
     fun random_state ->
       (* We fill all 36 bytes with random hex digits, and then go back and set specific
          bytes to dash and the version number (4).  We do 6 groups of 6 bytes, each time
          using 24 bits of a random int, 4 for each hex digit. *)
-      let bytes = Obj.magic_uncontended (DLS.get bytes) in
+      let bytes = Obj.magic_uncontended (TLS.get bytes) in
       let at = ref 0 in
       for _ = 1 to 6 do
         let int = ref (Random.State.bits random_state) in
