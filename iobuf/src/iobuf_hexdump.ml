@@ -4,39 +4,39 @@ open Iobuf_type
 include Iobuf_hexdump_intf.Definitions
 
 module For_hexdump = struct
-  module T2 = struct
-    type nonrec ('rw, 'seek) t = ('rw, 'seek) t
+  module T3 = struct
+    type nonrec ('rw, 'seek, 'loc) t = ('rw, 'seek, 'loc) t
   end
 
   module Window_indexable = struct
-    include T2
+    include T3
 
     let length t = length t
     let get t pos = Peek.char t ~pos
   end
 
   module Limits_indexable = struct
-    include T2
+    include T3
 
     let length t = t.hi_max - t.lo_min
-    let get t pos = Bigstring.get (buf t) (t.lo_min + pos)
+    let get t pos = Bigstring.get ([%template buf [@mode local]] t) (t.lo_min + pos)
   end
 
   module Buffer_indexable = struct
-    include T2
+    include T3
 
-    let length t = Bigstring.length (buf t)
-    let get t pos = Bigstring.get (buf t) pos
+    let length t = Bigstring.length ([%template buf [@mode local]] t) [@nontail]
+    let get t pos = Bigstring.get ([%template buf [@mode local]] t) pos
   end
 
-  module Window = Hexdump.Of_indexable2 [@modality portable] (Window_indexable)
-  module Limits = Hexdump.Of_indexable2 [@modality portable] (Limits_indexable)
-  module Buffer = Hexdump.Of_indexable2 [@modality portable] (Buffer_indexable)
+  module Window = Hexdump.Of_indexable3 [@modality portable] (Window_indexable)
+  module Limits = Hexdump.Of_indexable3 [@modality portable] (Limits_indexable)
+  module Buffer = Hexdump.Of_indexable3 [@modality portable] (Buffer_indexable)
 
   module type Relative_indexable = sig @@ portable
     val name : string
-    val lo : (_, _) t -> int
-    val hi : (_, _) t -> int
+    val lo : (_, _, _) t -> int
+    val hi : (_, _, _) t -> int
   end
 
   let portabilize_Relative_indexable =
@@ -45,14 +45,14 @@ module For_hexdump = struct
   ;;
 
   module type Compound_indexable = sig @@ portable
-    include Hexdump.S2 with type ('rw, 'seek) t := ('rw, 'seek) t
+    include Hexdump.S3 with type ('rw, 'seek, 'loc) t := ('rw, 'seek, 'loc) t
 
     val parts : (module Relative_indexable) list
   end
 
   module Make_compound_hexdump (Compound : Compound_indexable) = struct
     module Hexdump = struct
-      include T2
+      include T3
 
       let relative_sequence ?max_lines t (module Relative : Relative_indexable) =
         let lo = Relative.lo t in
@@ -73,11 +73,11 @@ module For_hexdump = struct
       ;;
 
       let to_string_hum ?max_lines t =
-        let t = globalize_shared t in
+        let t = globalize_copied t in
         to_sequence ?max_lines t |> Sequence.to_list |> String.concat ~sep:"\n"
       ;;
 
-      let sexp_of_t _ _ t =
+      let sexp_of_t _ _ _ t =
         List.map
           (Portability_hacks.magic_uncontended__first_class_module Compound.parts)
           ~f:(fun (module Relative) ->
@@ -114,7 +114,7 @@ module For_hexdump = struct
   module Buffer_within_buffer = struct
     let name = "buffer"
     let lo _ = 0
-    let hi t = Bigstring.length (buf t)
+    let hi t = Bigstring.length ([%template buf [@mode local]] t) [@nontail]
   end
 
   module Window_and_limits = Make_compound_hexdump (struct

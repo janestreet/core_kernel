@@ -13,7 +13,7 @@ let create ~bit:n =
 ;;
 
 module Make (M : Make_arg) = struct
-  type t = Int63.t [@@deriving bin_io, hash, typerep]
+  type t = Int63.t [@@deriving bin_io ~localize, globalize, hash, typerep]
 
   let of_int t = Int63.of_int t
   let to_int_exn t = Int63.to_int_exn t
@@ -170,7 +170,8 @@ module Make (M : Make_arg) = struct
   let ( <> ) = Int63.( <> )
 
   module Unstable = struct
-    type nonrec t = t [@@deriving bin_io, compare ~localize, equal ~localize, sexp]
+    type nonrec t = t
+    [@@deriving bin_io ~localize, globalize, compare ~localize, equal ~localize, sexp]
   end
 end
 

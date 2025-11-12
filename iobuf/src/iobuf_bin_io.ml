@@ -65,7 +65,7 @@ let consume_with_header t bin_prot_reader =
       error
         "Iobuf.Bin_io.consume_with_header not enough data to read length"
         (globalize_shared t)
-        [%sexp_of: (_, _) With_shallow_sexp.t]
+        [%sexp_of: (_, _, _) With_shallow_sexp.t]
     else (
       let mark = t.lo in
       let v_len = Consume.int32_be t in
@@ -75,7 +75,7 @@ let consume_with_header t bin_prot_reader =
         error
           "Iobuf.Bin_io.consume_with_header not enough data to read value"
           (v_len, globalize_shared t)
-          [%sexp_of: int * (_, _) With_shallow_sexp.t])
+          [%sexp_of: int * (_, _, _) With_shallow_sexp.t])
       else Ok (consume bin_prot_reader t))
   in
   result
@@ -90,7 +90,7 @@ let fill_with_header t writer v =
       error
         "Iobuf.Bin_io.fill_with_header not enough space"
         (need, globalize_shared t)
-        [%sexp_of: int * (_, _) With_shallow_sexp.t]
+        [%sexp_of: int * (_, _, _) With_shallow_sexp.t]
     else (
       Fill.int32_be_trunc t v_len;
       fill writer t v;
@@ -108,7 +108,7 @@ let fill_with_header__local t sizer writer (local_ v) =
       error
         "Iobuf.Bin_io.fill_with_header__local not enough space"
         (need, globalize_shared t)
-        [%sexp_of: int * (_, _) With_shallow_sexp.t]
+        [%sexp_of: int * (_, _, _) With_shallow_sexp.t]
     else (
       Fill.int32_be_trunc t v_len;
       fill__local sizer writer t v;

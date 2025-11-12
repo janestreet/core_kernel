@@ -24,7 +24,7 @@ let () =
 let iobuf = iobuf |> Iobuf.no_seek |> Iobuf.read_only
 
 module T = struct
-  type ('a, 'b) t = ('a, 'b) Iobuf.t
+  type ('a, 'b, 'c) t = ('a, 'b, 'c) Iobuf.t
 end
 
 module%test Window : module type of Iobuf.Window = struct
@@ -38,7 +38,7 @@ module%test Window : module type of Iobuf.Window = struct
     let sexp_of_t = sexp_of_t
 
     let%expect_test "sexp_of_t" =
-      print_s [%sexp (iobuf : (_, _) t)];
+      print_s [%sexp (iobuf : (_, _, _) t)];
       [%expect
         {|
         ("00000000  60 42 6f 73 74 6f 6e 27  20 69 73 20 64 69 73 79  |`Boston' is disy|"
@@ -74,7 +74,7 @@ module%test Window : module type of Iobuf.Window = struct
       let sexp_of_t = Pretty.sexp_of_t
 
       let%expect_test "sexp_of_t" =
-        print_s [%sexp (iobuf : (_, _) t)];
+        print_s [%sexp (iobuf : (_, _, _) t)];
         [%expect {| "`Boston' is disyllabic" |}]
       ;;
     end
@@ -92,7 +92,7 @@ module%test Limits : module type of Iobuf.Limits = struct
     let sexp_of_t = sexp_of_t
 
     let%expect_test "sexp_of_t" =
-      print_s [%sexp (iobuf : (_, _) t)];
+      print_s [%sexp (iobuf : (_, _, _) t)];
       [%expect
         {|
         ("00000000  60 60 42 6f 73 74 6f 6e  27 20 69 73 20 64 69 73  |``Boston' is dis|"
@@ -137,7 +137,7 @@ module%test Limits : module type of Iobuf.Limits = struct
       let sexp_of_t = Pretty.sexp_of_t
 
       let%expect_test "sexp_of_t" =
-        print_s [%sexp (iobuf : (_, _) t)];
+        print_s [%sexp (iobuf : (_, _, _) t)];
         [%expect
           {| "``Boston' is disyllabic' is about `Boston' and contains ``Boston''." |}]
       ;;
@@ -152,7 +152,7 @@ module%test Hexdump : module type of Iobuf.Hexdump = struct
   let sexp_of_t = sexp_of_t
 
   let%expect_test "sexp_of_t" =
-    print_s [%sexp (iobuf : (_, _) t)];
+    print_s [%sexp (iobuf : (_, _, _) t)];
     [%expect
       {|
       ((window (
@@ -215,7 +215,7 @@ module%test Debug : module type of Iobuf.Debug = struct
     let sexp_of_t = sexp_of_t
 
     let%expect_test "sexp_of_t" =
-      print_s [%sexp (iobuf : (_, _) t)];
+      print_s [%sexp (iobuf : (_, _, _) t)];
       [%expect
         {|
         ((window (

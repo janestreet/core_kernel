@@ -6,20 +6,32 @@ module Blit = struct
   module T_dst = struct
     include T_src
 
+    type nonrec ('rw, 'seek, 'loc) t = ('rw, 'seek, 'loc) Iobuf_type.t
+
+    let create_bool = create
+    let create_like ~len _ = create ~len
+
     let unsafe_blit ~src ~src_pos ~dst ~dst_pos ~len =
       (* Unlike other blitting functions, we use [Bigstring.unsafe_blit] here (regardless
          of the value of [unsafe_is_safe]), since we have two [Iobuf.t]s and can therefore
          bounds-check both buffers before calling [Bigstring.unsafe_blit]. *)
       Bigstring.unsafe_blit
         ~len
-        ~src:(buf src)
+        ~src:([%template buf [@mode local]] src)
         ~src_pos:(unsafe_buf_pos src ~pos:src_pos ~len)
-        ~dst:(buf dst)
-        ~dst_pos:(unsafe_buf_pos dst ~pos:dst_pos ~len)
+        ~dst:([%template buf [@mode local]] dst)
+        ~dst_pos:(unsafe_buf_pos dst ~pos:dst_pos ~len) [@nontail]
     ;;
   end
 
-  include Base_for_tests.Test_blit.Make_and_test [@modality portable] (Char_elt) (T_dst)
+  include
+    Base_for_tests.Test_blit.Make1_phantom2_and_test [@modality portable]
+      (struct
+        include Char_elt
+
+        type _ t = char
+      end)
+      (T_dst)
 
   (* Workaround the inability of the compiler to inline in the presence of functors. *)
   let unsafe_blit = T_dst.unsafe_blit
@@ -91,8 +103,10 @@ module Blit_fill = struct
 end
 
 module Blit_consume_and_fill = struct
+  external phys_similar : ('a[@local_opt]) -> ('b[@local_opt]) -> bool @@ portable = "%eq"
+
   let unsafe_blit ~src ~dst ~len =
-    if phys_equal src dst
+    if phys_similar src dst
     then advance src len
     else (
       Blit.unsafe_blit ~src ~src_pos:0 ~dst ~dst_pos:0 ~len;
@@ -101,7 +115,7 @@ module Blit_consume_and_fill = struct
   ;;
 
   let blit ~src ~dst ~len =
-    if phys_equal src dst
+    if phys_similar src dst
     then advance src len
     else (
       Blit.blit ~src ~src_pos:0 ~dst ~dst_pos:0 ~len;

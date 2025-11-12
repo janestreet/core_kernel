@@ -16,10 +16,11 @@ type 'a reversed_list = 'a t
     overhead of reversal may be better off using a queue. *)
 
 (** [of_list_rev] reverses the input list. *)
-val of_list_rev : 'a list -> 'a t
+val%template of_list_rev : 'a list @ m -> 'a t @ m
+[@@alloc __ @ m = (stack_local, heap_global)]
 
-val rev : 'a t -> 'a list
-val rev_local : 'a t @ local -> 'a list @ local
+val%template rev : 'a t @ m -> 'a list @ m [@@alloc __ @ m = (stack_local, heap_global)]
+
 val rev_append : 'a t -> 'a list -> 'a list
 val rev_map : 'a t -> f:('a -> 'b) -> 'b list
 val rev_filter_map : 'a t -> f:('a -> 'b option) -> 'b list

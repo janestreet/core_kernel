@@ -370,7 +370,7 @@ module type M = sig
   module Total_map : S with type Key.t = t
 end
 
-module M (T : For_include_functor) = struct
+module M (T : For_include_functor_plain) = struct
   type 'a t = 'a T.Total_map.t
 end
 
@@ -397,6 +397,8 @@ let sexp_of_m__t
   =
   K.Total_map.sexp_of_t sexp_of_a
 ;;
+
+let m__t_sexp_grammar = Map.Stable.V1.m__t_sexp_grammar
 
 let bin_shape_m__t (module K : For_include_functor) (bin_shape_a : Bin_shape.t)
   : Bin_shape.t

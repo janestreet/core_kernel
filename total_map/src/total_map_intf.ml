@@ -32,7 +32,12 @@ module type Key_with_stable_witness = sig
 end
 
 module type S_plain = sig
-  type ('key, 'a, 'cmp, 'enum) total_map
+  type ('key
+       , 'a
+       , 'cmp
+       , 'enum)
+       total_map :
+       value mod contended portable with 'key with 'a with 'cmp @@ contended
 
   module Key : Key_plain [@modality p]
 
@@ -418,7 +423,7 @@ module type Total_map = sig @@ portable
     module Total_map : S with type Key.t = t
   end
 
-  module M (T : For_include_functor) : sig
+  module M (T : For_include_functor_plain) : sig
     type 'a t = 'a T.Total_map.t
   end
 
@@ -439,6 +444,11 @@ module type Total_map = sig @@ portable
     -> ('v -> Sexp.t)
     -> ('k, 'v, 'cmp, 'enum) t
     -> Sexp.t
+
+  val m__t_sexp_grammar
+    :  (module Map.M_sexp_grammar with type t = 'k)
+    -> 'v Sexplib0.Sexp_grammar.t
+    -> ('k, 'v, 'cmp, 'enum) t Sexplib0.Sexp_grammar.t
 
   val bin_shape_m__t : (module For_include_functor) -> Bin_shape.t -> Bin_shape.t
 

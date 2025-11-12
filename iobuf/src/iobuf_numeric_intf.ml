@@ -25,12 +25,19 @@ module type Iobuf_numeric = sig @@ portable
   module Itoa : sig
     include Itoa
 
-    val poke_decimal : local_ ([> write ], _) t -> pos:int -> int -> int
-    val poke_padded_decimal : local_ ([> write ], _) t -> pos:int -> len:int -> int -> int
-    val unsafe_poke_decimal : local_ ([> write ], _) t -> pos:int -> int -> int
+    val poke_decimal : local_ ([> write ], _, _) t -> pos:int -> int -> int
+
+    val poke_padded_decimal
+      :  local_ ([> write ], _, _) t
+      -> pos:int
+      -> len:int
+      -> int
+      -> int
+
+    val unsafe_poke_decimal : local_ ([> write ], _, _) t -> pos:int -> int -> int
 
     val unsafe_poke_padded_decimal
-      :  local_ ([> write ], _) t
+      :  local_ ([> write ], _, _) t
       -> pos:int
       -> len:int
       -> int
@@ -40,10 +47,10 @@ module type Iobuf_numeric = sig @@ portable
   module Date_string : sig
     include Date_string
 
-    val poke_iso8601_extended : local_ ([> write ], _) t -> pos:int -> Date.t -> unit
+    val poke_iso8601_extended : local_ ([> write ], _, _) t -> pos:int -> Date.t -> unit
 
     val unsafe_poke_iso8601_extended
-      :  local_ ([> write ], _) t
+      :  local_ ([> write ], _, _) t
       -> pos:int
       -> Date.t
       -> unit

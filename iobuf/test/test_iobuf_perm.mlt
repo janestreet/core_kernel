@@ -5,11 +5,8 @@ let () = Iobuf.Poke.char (Iobuf.read_only (Iobuf.create ~len:1)) 'c'
 [%%expect
   {|
 Line _, characters _-_:
-Error: This expression has type
-         (read, 'a) Iobuf.t = (read, 'a, Iobuf.global) Iobuf.Generic.t
-       but an expression was expected of type
-         (read_write, 'b, Iobuf__.Iobuf_type_intf.Definitions.global)
-         Iobuf.Generic.t
+Error: This expression has type (read, 'a, 'b) Iobuf.t
+       but an expression was expected of type (read_write, 'c, 'd) Iobuf.t
        Type read = [ `Read ] is not compatible with type
          read_write = [ `Read | `Who_can_write of Perms.me ]
        The first variant type does not allow tag(s) `Who_can_write
@@ -17,10 +14,10 @@ Error: This expression has type
 
 (* Some basic subtyping judgements. *)
 
-type rw = (read_write, Iobuf.seek) Iobuf.t
-type ro = (read, Iobuf.seek) Iobuf.t
-type sk = (read_write, Iobuf.seek) Iobuf.t
-type ns = (read_write, Iobuf.no_seek) Iobuf.t
+type rw = (read_write, Iobuf.seek, Iobuf.global) Iobuf.t
+type ro = (read, Iobuf.seek, Iobuf.global) Iobuf.t
+type sk = (read_write, Iobuf.seek, Iobuf.global) Iobuf.t
+type ns = (read_write, Iobuf.no_seek, Iobuf.global) Iobuf.t
 
 let check_subtyping x = (x : rw :> ro)
 let check_subtyping x = (x : sk :> ns)
@@ -30,8 +27,8 @@ let check_subtyping x = (x : sk :> ns)
 (* This only works if the 'seek parameter is covariant. *)
 
 type t =
-  { message : (read_write, Iobuf.no_seek) Iobuf.t
-  ; writable : (read_write, Iobuf.seek) Iobuf.t
+  { message : (read_write, Iobuf.no_seek, Iobuf.global) Iobuf.t
+  ; writable : (read_write, Iobuf.seek, Iobuf.global) Iobuf.t
   }
 
 let t =
@@ -43,8 +40,8 @@ let t =
 
 (* Operations have the right permissions. *)
 
-let unseekable : (read_write, Iobuf.no_seek) Iobuf.t = Iobuf.create ~len:16
-let seekable : (read_write, Iobuf.seek) Iobuf.t = Iobuf.create ~len:16
+let unseekable : (read_write, Iobuf.no_seek, Iobuf.global) Iobuf.t = Iobuf.create ~len:16
+let seekable : (read_write, Iobuf.seek, Iobuf.global) Iobuf.t = Iobuf.create ~len:16
 
 (* all of these are fine *)
 
@@ -61,11 +58,9 @@ let () = Iobuf.advance unseekable 1
   {|
 Line _, characters _-_:
 Error: This expression has type
-         (read_write, Iobuf.no_seek) Iobuf.t =
-           (read_write, Iobuf.no_seek, Iobuf.global) Iobuf.Generic.t
+         (read_write, Iobuf.no_seek, Iobuf.global) Iobuf.t
        but an expression was expected of type
-         (read_write, Iobuf.seek) Iobuf.t =
-           (read_write, Iobuf.seek, Iobuf.global) Iobuf.Generic.t
+         (read_write, Iobuf.seek, 'a) Iobuf.t
        Type Iobuf.no_seek is not compatible with type Iobuf.seek
 |}]
 
@@ -75,11 +70,9 @@ let () = Iobuf.resize unseekable ~len:0
   {|
 Line _, characters _-_:
 Error: This expression has type
-         (read_write, Iobuf.no_seek) Iobuf.t =
-           (read_write, Iobuf.no_seek, Iobuf.global) Iobuf.Generic.t
+         (read_write, Iobuf.no_seek, Iobuf.global) Iobuf.t
        but an expression was expected of type
-         (read_write, Iobuf.seek) Iobuf.t =
-           (read_write, Iobuf.seek, Iobuf.global) Iobuf.Generic.t
+         (read_write, Iobuf.seek, 'a) Iobuf.t
        Type Iobuf.no_seek is not compatible with type Iobuf.seek
 |}]
 
@@ -89,9 +82,8 @@ let () = Iobuf.Fill.char unseekable 'a'
   {|
 Line _, characters _-_:
 Error: This expression has type
-         (read_write, Iobuf.no_seek) Iobuf.t =
-           (read_write, Iobuf.no_seek, Iobuf.global) Iobuf.Generic.t
+         (read_write, Iobuf.no_seek, Iobuf.global) Iobuf.t
        but an expression was expected of type
-         (read_write, Iobuf.seek, Iobuf.global) Iobuf.Generic.t
+         (read_write, Iobuf.seek, 'a) Iobuf.t
        Type Iobuf.no_seek is not compatible with type Iobuf.seek
 |}]

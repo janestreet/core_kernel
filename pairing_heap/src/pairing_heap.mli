@@ -48,6 +48,7 @@ val of_list : 'a list -> cmp:('a -> 'a -> int) -> 'a t
 (** Returns the top (i.e., smallest) element of the heap. *)
 val top : 'a t -> 'a option
 
+val top_or_null : 'a t -> 'a or_null
 val top_exn : 'a t -> 'a
 val add : 'a t -> 'a -> unit
 
@@ -61,11 +62,14 @@ val clear : _ t -> unit
 (** [pop] removes and returns the top (i.e. least) element. *)
 val pop : 'a t -> 'a option
 
+val pop_or_null : 'a t -> 'a or_null
 val pop_exn : 'a t -> 'a
 
 (** [pop_if t cond] returns [Some top_element] of [t] if it satisfies condition [cond],
     removing it, or [None] in any other case. *)
 val pop_if : 'a t -> ('a -> bool) -> 'a option
+
+val pop_if_or_null : 'a t -> ('a -> bool) -> 'a or_null
 
 (** [pop_while t cond] returns a list of top elements from [t] while they satisfy
     condition [cond], removing each of them, or an empty list if none of the elements

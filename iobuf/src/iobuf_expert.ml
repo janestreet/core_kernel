@@ -1,8 +1,11 @@
+[@@@ocaml.flambda_o3]
+
 open! Core
 open Iobuf_type
 include Iobuf_expert_intf.Definitions
 
 let buf = buf
+let%template[@mode local] buf = (buf [@mode local])
 let hi_max t = t.hi_max
 let hi t = t.hi
 let lo t = t.lo
@@ -24,7 +27,8 @@ let to_bigstring_shared ?pos ?len t =
 
 let unsafe_reinitialize t ~lo_min ~lo ~hi ~hi_max bstr =
   (* avoid [caml_modify], if possible *)
-  if not (phys_equal (buf t) bstr) then t.buf <- Modes.At_locality.wrap bstr;
+  if not (phys_equal ([%template buf [@mode local]] t) bstr)
+  then t.buf <- Modes.At_locality.wrap bstr;
   t.lo_min <- lo_min;
   t.lo <- lo;
   t.hi <- hi;
@@ -53,7 +57,7 @@ let reinitialize t ~lo_min ~lo ~hi ~hi_max buf =
 let unsafe_reinitialize = if unsafe_is_safe then reinitialize else unsafe_reinitialize
 
 let _remember_to_update_unsafe_reinitialize
-  :  local_ (_, _) t -> buf:(Bigstring.t, global) Modes.At_locality.t -> lo_min:int
+  :  local_ (_, _, _) t -> buf:(Bigstring.t, global) Modes.At_locality.t -> lo_min:int
   -> lo:int -> hi:int -> hi_max:int -> unit
   =
   Repr.Fields.Direct.set_all_mutable_fields

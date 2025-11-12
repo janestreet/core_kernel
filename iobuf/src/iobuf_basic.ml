@@ -4,7 +4,7 @@ open Iobuf_hexdump
 include Iobuf_basic_intf.Definitions
 include Iobuf_type
 
-module type Bound = Bound with type ('d, 'w) iobuf := ('d, 'w) t
+module type Bound = Bound with type ('d, 'w, 'l) iobuf := ('d, 'w, 'l) t
 
 let read_only t = t
 let read_only__local t = t
@@ -133,7 +133,10 @@ let unsafe_sub_shared ~pos ~len t = exclave_
 ;;
 
 let sub_shared ?pos ?len t = globalize_shared (sub_shared__local ?pos ?len t) [@nontail]
-let copy t = of_bigstring (Bigstring.sub (buf t) ~pos:t.lo ~len:(length t))
+
+let copy t =
+  of_bigstring (Bigstring.sub ([%template buf [@mode local]] t) ~pos:t.lo ~len:(length t))
+;;
 
 let clone { buf; lo_min; lo; hi; hi_max } =
   let buf =
@@ -306,24 +309,30 @@ let%template of_string s =
 
 let of_bytes s = of_bigstring (Bigstring.of_bytes s)
 
-let to_stringlike ~(convert : ?pos:int -> ?len:int -> Bigstring.t -> 'a) =
-  (stage [@mode portable]) (fun ?len t : 'a ->
-    let len =
-      match len with
-      | Some len ->
-        check_range t ~pos:0 ~len;
-        len
-      | None -> length t
-    in
-    convert (buf t) ~pos:t.lo ~len)
+let to_stringlike ~(convert : ?pos:int -> ?len:int -> Bigstring.t @ local -> 'a) ?len t
+  : 'a
+  =
+  let len =
+    match len with
+    | Some len ->
+      check_range t ~pos:0 ~len;
+      len
+    | None -> length t
+  in
+  convert ([%template buf [@mode local]] t) ~pos:t.lo ~len [@nontail]
 ;;
 
-let to_string = to_stringlike ~convert:Bigstring.to_string |> (unstage [@mode portable])
-let to_bytes = to_stringlike ~convert:Bigstring.to_bytes |> (unstage [@mode portable])
+let to_string ?len t = to_stringlike ~convert:Bigstring.to_string ?len t
+let to_bytes ?len t = to_stringlike ~convert:Bigstring.to_bytes ?len t
 
 let compact t =
   let len = t.hi - t.lo in
-  Bigstring.blit ~src:(buf t) ~src_pos:t.lo ~len ~dst:(buf t) ~dst_pos:t.lo_min;
+  Bigstring.blit
+    ~src:([%template buf [@mode local]] t)
+    ~src_pos:t.lo
+    ~len
+    ~dst:([%template buf [@mode local]] t)
+    ~dst_pos:t.lo_min;
   t.lo <- t.lo_min + len;
   t.hi <- t.hi_max
 ;;
@@ -341,7 +350,12 @@ let bounded_compact t lo_min hi_max =
   if hi_max > t.hi_max || hi_max < lo_min + len || lo_min < t.lo_min
   then bounded_compact_stale t lo_min hi_max
   else (
-    Bigstring.blit ~src:(buf t) ~src_pos:t.lo ~len ~dst:(buf t) ~dst_pos:lo_min;
+    Bigstring.blit
+      ~src:([%template buf [@mode local]] t)
+      ~src_pos:t.lo
+      ~len
+      ~dst:([%template buf [@mode local]] t)
+      ~dst_pos:lo_min;
     t.lo <- lo_min + len;
     t.hi <- hi_max)
 ;;
@@ -357,13 +371,31 @@ let to_string_hum = Hexdump.to_string_hum
 let memcmp a b =
   let len = length a in
   let c = Int.compare len (length b) in
-  if c <> 0 then c else Bigstring.memcmp ~pos1:a.lo (buf a) ~pos2:b.lo (buf b) ~len
+  if c <> 0
+  then c
+  else
+    Bigstring.memcmp
+      ~pos1:a.lo
+      ([%template buf [@mode local]] a)
+      ~pos2:b.lo
+      ([%template buf [@mode local]] b)
+      ~len [@nontail]
 ;;
 
-let memset t ~pos ~len c = Bigstring.memset ~pos:(buf_pos_exn t ~pos ~len) ~len (buf t) c
+let memset t ~pos ~len c =
+  Bigstring.memset
+    ~pos:(buf_pos_exn t ~pos ~len)
+    ~len
+    ([%template buf [@mode local]] t)
+    c [@nontail]
+;;
 
 let unsafe_memset t ~pos ~len c =
-  Bigstring.unsafe_memset ~pos:(buf_pos_exn t ~pos ~len) ~len (buf t) c
+  Bigstring.unsafe_memset
+    ~pos:(buf_pos_exn t ~pos ~len)
+    ~len
+    ([%template buf [@mode local]] t)
+    c [@nontail]
 ;;
 
 let zero t = memset t ~pos:0 ~len:(length t) '\000'
@@ -388,7 +420,7 @@ let concat bufs =
 
 let contains t ~substring =
   Bigstring.unsafe_memmem
-    ~haystack:(buf t)
+    ~haystack:([%template buf [@mode local]] t)
     ~haystack_pos:t.lo
     ~haystack_len:(length t)
     ~needle:substring

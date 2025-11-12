@@ -43,50 +43,73 @@ module type Iobuf_type = sig @@ portable
     ; mutable hi_max : int
     }
 
-  module Generic : sig
-    type ('rw, 'seek, 'loc) t = 'loc Repr.t
-  end
-
-  type ('rw, 'seek) t = ('rw, 'seek, global) Generic.t
-  type ('rw, 'seek) iobuf := ('rw, 'seek) t
+  type ('rw, 'seek, 'loc) t = 'loc Repr.t
+  type ('rw, 'seek, 'loc) iobuf := ('rw, 'seek, 'loc) t
 
   val globalize : [ `deprecated ]
-  val globalize_shared : local_ ('rw, 'seek) t -> ('rw, 'seek) t
+  val globalize_shared : local_ ('rw, 'seek, global) t -> ('rw, 'seek, global) t
+  val globalize_copied : local_ ('rw, 'seek, 'loc) t -> ('rw, 'seek, 'loc) t
 
   module With_shallow_sexp : sig
-    type ('rw, 'seek) t = ('rw, 'seek) iobuf [@@deriving sexp_of]
+    type ('rw, 'seek, 'loc) t = ('rw, 'seek, 'loc) iobuf [@@deriving sexp_of]
 
     val globalize : [ `deprecated ]
   end
 
   [%%template:
+  type 'a locality := 'a
+  type _ locality := local [@@mode local]]
+
+  [%%template:
   [@@@alloc.default a @ m = (heap_global, stack_local)]
+  [@@@mode.default l = (global, m)]
 
-  val of_bigstring : ?pos:local_ int -> ?len:local_ int -> Bigstring.t -> (_, _) t @ m
-  val of_bigstring_sub : pos:int -> len:int -> Bigstring.t -> (_, _) t @ m
-  val unsafe_of_bigstring_sub : pos:int -> len:int -> Bigstring.t -> (_, _) t @ m]
+  val of_bigstring
+    :  ?pos:local_ int
+    -> ?len:local_ int
+    -> Bigstring.t @ l
+    -> (_, _, (_ locality[@mode l])) t @ m
 
-  val advance : local_ (_, seek) t -> int -> unit
-  val bad_range : pos:int -> len:int -> local_ (_, _) t -> _
-  val buf : local_ (_, _) t -> Bigstring.t
-  val buf_pos_exn : local_ (_, _) t -> pos:int -> len:int -> int
-  val check_range : local_ (_, _) t -> pos:int -> len:int -> unit
-  val create : len:int -> (_, _) t
-  val fail : local_ (_, _) t -> string -> 'a -> ('a -> Sexp.t) -> _
-  val get_char : local_ ([> read ], _) t -> int -> char
-  val length : local_ (_, _) t -> int
-  val set_bounds_and_buffer : src:local_ (_, _) t -> dst:local_ (_, _) t -> unit
+  val of_bigstring_sub
+    :  pos:int
+    -> len:int
+    -> Bigstring.t @ l
+    -> (_, _, (_ locality[@mode l])) t @ m
+
+  val unsafe_of_bigstring_sub
+    :  pos:int
+    -> len:int
+    -> Bigstring.t @ l
+    -> (_, _, (_ locality[@mode l])) t @ m]
+
+  val advance : local_ (_, seek, _) t -> int -> unit
+  val bad_range : pos:int -> len:int -> local_ (_, _, _) t -> _
+  val buf : local_ (_, _, global) t -> Bigstring.t
+
+  val%template buf : local_ (_, _, _) t -> local_ Bigstring.t [@@mode local]
+
+  val buf_pos_exn : local_ (_, _, _) t -> pos:int -> len:int -> int
+  val check_range : local_ (_, _, _) t -> pos:int -> len:int -> unit
+  val create : len:int -> (_, _, _) t
+  val fail : local_ (_, _, _) t -> string -> 'a -> ('a -> Sexp.t) -> _
+  val get_char : local_ ([> read ], _, _) t -> int -> char
+  val length : local_ (_, _, _) t -> int
+
+  val set_bounds_and_buffer
+    :  src:local_ (_, _, global) t
+    -> dst:local_ (_, _, _) t
+    -> unit
 
   val set_bounds_and_buffer_sub
     :  pos:int
     -> len:int
-    -> src:local_ (_, _) t
-    -> dst:local_ (_, _) t
+    -> src:local_ (_, _, global) t
+    -> dst:local_ (_, _, _) t
     -> unit
 
-  val set_char : local_ ([> write ], _) t -> int -> char -> unit
-  val unsafe_advance : local_ (_, seek) t -> int -> unit
-  val unsafe_buf_pos : local_ (_, _) t -> pos:int -> len:int -> int
+  val set_char : local_ ([> write ], _, _) t -> int -> char -> unit
+  val unsafe_advance : local_ (_, seek, _) t -> int -> unit
+  val unsafe_buf_pos : local_ (_, _, _) t -> pos:int -> len:int -> int
   val unsafe_is_safe : bool
 
   module Bytes_dst : sig
@@ -96,7 +119,7 @@ module type Iobuf_type = sig @@ portable
     val length : local_ t -> int
     val get : t -> int -> char
     val set : t -> int -> char -> unit
-    val unsafe_blit : ((_, _) iobuf, t) Blit.blit
+    val unsafe_blit : ((_, _, _) iobuf, t) Blit.blit
   end
 
   module Bigstring_dst : sig
@@ -106,12 +129,12 @@ module type Iobuf_type = sig @@ portable
     val length : local_ t -> int
     val get : t -> int -> char
     val set : t -> int -> char -> unit
-    val unsafe_blit : ((_, _) iobuf, t) Blit.blit
+    val unsafe_blit : ((_, _, _) iobuf, t) Blit.blit
   end
 
   module String_dst : sig
-    val sub : ((_, _) iobuf, string) Blit.sub
-    val subo : ((_, _) iobuf, string) Blit.subo
+    val sub : ((_, _, _) iobuf, string) Blit.sub
+    val subo : ((_, _, _) iobuf, string) Blit.subo
   end
 
   module Char_elt : sig
@@ -121,11 +144,11 @@ module type Iobuf_type = sig @@ portable
   end
 
   module T_src : sig
-    type t = global Repr.t
+    type 'loc t = 'loc Repr.t
 
-    val create : len:int -> (_, _) iobuf
-    val length : local_ (_, _) iobuf -> int
-    val get : (_, _) iobuf -> int -> char
-    val set : (_, _) iobuf -> int -> char -> unit
+    val create : len:int -> (_, _, _) iobuf
+    val length : local_ (_, _, _) iobuf -> int
+    val get : (_, _, _) iobuf -> int -> char
+    val set : (_, _, _) iobuf -> int -> char -> unit
   end
 end

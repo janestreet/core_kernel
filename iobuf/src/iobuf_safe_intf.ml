@@ -12,8 +12,8 @@ module Definitions = struct
       [_trunc] functions silently truncate values that don't fit. For example,
       [Iobuf.Unsafe.Poke.int8 128] effectively writes -128. *)
   module type Accessors_common = sig
-    (** [('d, 'w) Iobuf.t] accessor function manipulating ['a], either writing it to the
-        iobuf or reading it from the iobuf. *)
+    (** [('d, 'w, 'l) Iobuf.t] accessor function manipulating ['a], either writing it to
+        the iobuf or reading it from the iobuf. *)
 
     type ('a, 'd, 'w, 'l) t constraint 'd = [> read ]
     type ('a, 'd, 'w, 'l) t__local constraint 'd = [> read ]
@@ -182,17 +182,17 @@ module Definitions = struct
     -> unit
 
   module type Consuming_blit = sig
-    type src
-    type dst
+    type _ src
+    type _ dst
 
-    val blito : (src, dst) consuming_blito
-    val blit : (src, dst) consuming_blit
-    val unsafe_blit : (src, dst) consuming_blit
+    val blito : (_ src, _ dst) consuming_blito
+    val blit : (_ src, _ dst) consuming_blit
+    val unsafe_blit : (_ src, _ dst) consuming_blit
 
     (** [subo] defaults to using [Iobuf.length src] *)
-    val subo : ?len:int -> src -> dst
+    val subo : ?len:int -> _ src -> _ dst
 
-    val sub : src -> len:int -> dst
+    val sub : _ src -> len:int -> _ dst
   end
 
   module type Consume_safe = sig @@ portable
@@ -203,23 +203,26 @@ module Definitions = struct
         [dst_pos]. By default [dst_pos = 0] and [src_len = length src]. It is an error if
         [dst_pos] and [src_len] don't specify a valid region of [dst] or if
         [src_len > length src]. *)
-    type src = (read, seek, global) iobuf
+    type 'loc src = (read, seek, 'loc) iobuf
 
-    module To_bytes : Consuming_blit with type src := src with type dst := Bytes.t
-    module To_bigstring : Consuming_blit with type src := src with type dst := Bigstring.t
+    module To_bytes :
+      Consuming_blit with type 'loc src := 'loc src with type _ dst := Bytes.t
+
+    module To_bigstring :
+      Consuming_blit with type 'loc src := 'loc src with type _ dst := Bigstring.t
 
     module To_string : sig
       (** [subo] defaults to using [Iobuf.length src]. *)
-      val subo : ?len:int -> src -> string
+      val subo : ?len:int -> _ src -> string
 
-      val sub : src -> len:int -> string
+      val sub : _ src -> len:int -> string
     end
 
     include
       Accessors_read
-      with type ('a, 'r, 's, 'l) t = local_ (([> read ] as 'r), seek, global) iobuf -> 'a
+      with type ('a, 'r, 's, 'l) t = local_ (([> read ] as 'r), seek, 'l) iobuf -> 'a
       with type ('a, 'r, 's, 'l) t__local =
-        local_ (([> read ] as 'r), seek, global) iobuf -> local_ 'a
+        local_ (([> read ] as 'r), seek, 'l) iobuf -> local_ 'a
   end
 
   module type Fill_safe = sig
@@ -227,9 +230,9 @@ module Definitions = struct
 
     include
       Accessors_write
-      with type ('a, 'd, 'w, 'l) t = local_ (read_write, seek, global) iobuf -> 'a -> unit
+      with type ('a, 'd, 'w, 'l) t = local_ (read_write, seek, 'l) iobuf -> 'a -> unit
       with type ('a, 'd, 'w, 'l) t__local =
-        local_ (read_write, seek, global) iobuf -> local_ 'a -> unit
+        local_ (read_write, seek, 'l) iobuf -> local_ 'a -> unit
 
     (** [decimal t int] is equivalent to [Iobuf.Fill.string t (Int.to_string int)], but
         with improved efficiency and no intermediate allocation.
@@ -253,18 +256,20 @@ module Definitions = struct
   end
 
   module type Peek_common = sig @@ portable
-    type (_, _, _) iobuf
-    type 'seek src = (read, 'seek, global) iobuf
+    type ('rw, 'seek, 'loc) iobuf
+    type ('seek, 'loc) src = (read, 'seek, 'loc) iobuf
 
     (** Similar to [Consume.To_*], but do not advance the buffer. *)
 
     module To_bytes :
-      Blit.S_phantom_distinct with type 'seek src := 'seek src with type _ dst := Bytes.t
+      Blit.S1_phantom2_distinct
+      with type (_, 'seek, 'loc) src := ('seek, 'loc) src
+      with type (_, _, _) dst := Bytes.t
 
     module To_bigstring :
-      Blit.S_phantom_distinct
-      with type 'seek src := 'seek src
-      with type _ dst := Bigstring.t
+      Blit.S1_phantom2_distinct
+      with type (_, 'seek, 'loc) src := ('seek, 'loc) src
+      with type (_, _, _) dst := Bigstring.t
 
     module To_string : sig
       val sub : (_ src, string) Base.Blit.sub
@@ -273,9 +278,9 @@ module Definitions = struct
 
     include
       Accessors_read
-      with type ('a, 'd, 'w, 'l) t = local_ ('d, 'w, global) iobuf -> pos:int -> 'a
+      with type ('a, 'd, 'w, 'l) t = local_ ('d, 'w, 'l) iobuf -> pos:int -> 'a
       with type ('a, 'd, 'w, 'l) t__local =
-        local_ ('d, 'w, global) iobuf -> pos:int -> local_ 'a
+        local_ ('d, 'w, 'l) iobuf -> pos:int -> local_ 'a
   end
 
   module type Peek_safe = sig
@@ -287,7 +292,7 @@ module Definitions = struct
         @param pos default = 0
         @param len default = [length t - pos] *)
     val index
-      :  local_ ([> read ], _, global) iobuf
+      :  local_ ([> read ], _, _) iobuf
       -> ?pos:int
       -> ?len:int
       -> char
@@ -299,7 +304,7 @@ module Definitions = struct
         @param pos default = 0
         @param len default = [length t - pos] *)
     val rindex
-      :  local_ ([> read ], _, global) iobuf
+      :  local_ ([> read ], _, _) iobuf
       -> ?pos:int
       -> ?len:int
       -> char
@@ -310,11 +315,11 @@ module Definitions = struct
     type (_, _, _) iobuf
 
     (** [decimal t ~pos i] returns the number of bytes written at [pos]. *)
-    val decimal : local_ (read_write, 'w, global) iobuf -> pos:int -> int -> int
+    val decimal : local_ (read_write, 'w, 'l) iobuf -> pos:int -> int -> int
 
     (** Same as [decimal t int], but padding to [len] with prefix '0's. *)
     val padded_decimal
-      :  local_ (read_write, 'w, global) iobuf
+      :  local_ (read_write, 'w, 'l) iobuf
       -> pos:int
       -> len:int
       -> int
@@ -323,9 +328,9 @@ module Definitions = struct
     include
       Accessors_write
       with type ('a, 'd, 'w, 'l) t =
-        local_ (read_write, 'w, global) iobuf -> pos:int -> 'a -> unit
+        local_ (read_write, 'w, 'l) iobuf -> pos:int -> 'a -> unit
       with type ('a, 'd, 'w, 'l) t__local =
-        local_ (read_write, 'w, global) iobuf -> pos:int -> local_ 'a -> unit
+        local_ (read_write, 'w, 'l) iobuf -> pos:int -> local_ 'a -> unit
 
     (** Same as [Fill.date_string_iso8601_extended t date], but does not advance [t]. *)
     val date_string_iso8601_extended : (Date.t, _, _, _) t
@@ -338,18 +343,14 @@ module type Iobuf_safe = sig @@ portable
   end
 
   module Consume :
-    Consume_safe
-    with type ('rw, 'seek, 'loc) iobuf := ('rw, 'seek, 'loc) Iobuf_type.Generic.t
+    Consume_safe with type ('rw, 'seek, 'loc) iobuf := ('rw, 'seek, 'loc) Iobuf_type.t
 
   module Fill :
-    Fill_safe
-    with type ('rw, 'seek, 'loc) iobuf := ('rw, 'seek, 'loc) Iobuf_type.Generic.t
+    Fill_safe with type ('rw, 'seek, 'loc) iobuf := ('rw, 'seek, 'loc) Iobuf_type.t
 
   module Peek :
-    Peek_safe
-    with type ('rw, 'seek, 'loc) iobuf := ('rw, 'seek, 'loc) Iobuf_type.Generic.t
+    Peek_safe with type ('rw, 'seek, 'loc) iobuf := ('rw, 'seek, 'loc) Iobuf_type.t
 
   module Poke :
-    Poke_safe
-    with type ('rw, 'seek, 'loc) iobuf := ('rw, 'seek, 'loc) Iobuf_type.Generic.t
+    Poke_safe with type ('rw, 'seek, 'loc) iobuf := ('rw, 'seek, 'loc) Iobuf_type.t
 end

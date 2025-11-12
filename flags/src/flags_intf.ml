@@ -45,13 +45,14 @@ module type S = sig
   [@@zero_alloc]
 
   module Unstable : sig
-    type nonrec t = t [@@deriving bin_io, compare ~localize, equal ~localize, sexp]
+    type nonrec t = t
+    [@@deriving bin_io ~localize, globalize, compare ~localize, equal ~localize, sexp]
   end
 end
 
 (** Same as [module type S], but [type t] is binable. *)
 module type S_binable = sig
-  type t : immutable_data [@@deriving bin_io]
+  type t : immutable_data [@@deriving bin_io ~localize]
 
   include S with type t := t
 end

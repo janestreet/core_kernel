@@ -12,12 +12,15 @@ module type Nonempty_set = sig @@ portable
 
   val add : ('a, 'b) t -> 'a -> ('a, 'b) t
   val remove : ('a, 'b) t -> 'a -> ('a, 'b) t option
+  val remove_or_null : ('a, 'b) t -> 'a -> ('a, 'b) t or_null
   val inter : ('a, 'b) t -> ('a, 'b) t -> ('a, 'b) t option
+  val inter_or_null : ('a, 'b) t -> ('a, 'b) t -> ('a, 'b) t or_null
   val singleton : ('a, 'cmp) Comparator.Module.t -> 'a -> ('a, 'cmp) t
   val reduce : ('a, _) t -> map:('a -> 'b) -> f:('b -> 'b -> 'b) -> 'b
   val fold : ('a, _) t -> init:'b -> f:('b -> 'a -> 'b) -> 'b
   val iter : ('a, _) t -> f:local_ ('a -> unit) -> unit
   val of_list : ('a, 'cmp) Comparator.Module.t -> 'a list -> ('a, 'cmp) t option
+  val of_list_or_null : ('a, 'cmp) Comparator.Module.t -> 'a list -> ('a, 'cmp) t or_null
   val of_list_exn : ('a, 'cmp) Comparator.Module.t -> 'a list -> ('a, 'cmp) t
 
   val of_nonempty_list
@@ -29,6 +32,7 @@ module type Nonempty_set = sig @@ portable
   val to_nonempty_list : ('a, _) t -> 'a Nonempty_list.t
   val map : ('b, 'cmp) Comparator.Module.t -> ('a, _) t -> f:('a -> 'b) -> ('b, 'cmp) t
   val of_set : ('a, 'b) Set.t -> ('a, 'b) t option
+  val of_set_or_null : ('a, 'b) Set.t -> ('a, 'b) t or_null
   val of_set_exn : ('a, 'b) Set.t -> ('a, 'b) t
   val of_set_add : ('a, 'b) Set.t -> 'a -> ('a, 'b) t
   val to_set : ('a, 'b) t -> ('a, 'b) Set.t
@@ -60,6 +64,7 @@ module type Nonempty_set = sig @@ portable
 
   include For_deriving.S_serializable with type ('a, 'b) t := ('a, 'b) t
   include For_deriving.S_unstable with type ('a, 'b) t := ('a, 'b) t
+  include For_deriving.S_common with type ('a, 'b) t := ('a, 'b) t
 
   module M (Elt : sig
       type t
@@ -81,6 +86,7 @@ module type Nonempty_set = sig @@ portable
 
       include For_deriving.S_stable with type ('a, 'b) t := ('a, 'b) t
       include For_deriving.S_serializable with type ('a, 'b) t := ('a, 'b) t
+      include For_deriving.S_common with type ('a, 'b) t := ('a, 'b) t
     end
   end
 end
