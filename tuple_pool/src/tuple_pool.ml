@@ -38,7 +38,7 @@ module Pool = struct
 
   (* The pool is represented as a single [Uniform_array.t], where index zero has the
      metadata about the pool and the remaining indices are the tuples layed out one after
-     the other.  Each tuple takes [1 + slots_per_tuple] indices in the pool, where the
+     the other. Each tuple takes [1 + slots_per_tuple] indices in the pool, where the
      first index holds a header and the remaining indices hold the tuple's slots:
 
      {v
@@ -51,16 +51,16 @@ module Pool = struct
      The free tuples are singly linked via the headers.
 
      When a tuple is in use, its header is marked to indicate so, and also to include the
-     tuple's unique id.  This allows us to check in constant time whether a pointer is
+     tuple's unique id. This allows us to check in constant time whether a pointer is
      valid, by comparing the id in the pointer with the id in the header.
 
      When a tuple is not in use, its header is part of the free list, and its tuple slots
      have dummy values of the appropriate types, from the [dummy] tuple supplied to
-     [create].  We must have dummy values of the correct type to prevent a segfault in
-     code that (mistakenly) uses a pointer to a free tuple.
+     [create]. We must have dummy values of the correct type to prevent a segfault in code
+     that (mistakenly) uses a pointer to a free tuple.
 
      For [Pool.Unsafe], a slot in a free object is guaranteed to be an int; it must not be
-     pointer to prevent a space leak.  However, the int in the slot may not represent a
+     pointer to prevent a space leak. However, the int in the slot may not represent a
      valid value of the type.
   *)
 
@@ -85,7 +85,7 @@ module Pool = struct
     let%test _ = t13 = max_slot
   end
 
-  (* We only have [Int.num_bits] bits available for pool pointers.  The bits of a pool
+  (* We only have [Int.num_bits] bits available for pool pointers. The bits of a pool
      pointer encode two things:
 
      - the tuple's array index in the pool
@@ -93,7 +93,7 @@ module Pool = struct
 
      We choose [array_index_num_bits] as large as needed for the maximum pool capacity
      that we want to support, and use the remaining [masked_tuple_id_num_bits] bits for
-     the identifier.  64-bit and 32-bit architectures typically have very different
+     the identifier. 64-bit and 32-bit architectures typically have very different
      address-space sizes, so we choose [array_index_num_bits] differently. *)
 
   let array_index_num_bits =
@@ -127,8 +127,7 @@ module Pool = struct
   end = struct
     type t = int [@@deriving sexp_of]
 
-    (* We guarantee that tuple ids are nonnegative so that they can be encoded in
-       headers. *)
+    (* We guarantee that tuple ids are nonnegative so that they can be encoded in headers. *)
     let invariant t = assert (t >= 0)
     let to_string = Int.to_string
     let equal (t1 : t) t2 = t1 = t2
@@ -150,15 +149,15 @@ module Pool = struct
     @@ portable
        (* [Pointer.t] is an encoding as an [int] of the following sum type:
 
-       {[
-         | Null
-         | Normal of { header_index : int; masked_tuple_id : int }
-       ]}
+          {[
+            | Null
+            | Normal of { header_index : int; masked_tuple_id : int }
+          ]}
 
-       The encoding is chosen to optimize the most common operation, namely tuple-slot
-       access, the [slot_index] function.  The encoding is designed so that [slot_index]
-       produces a negative number for [Null], which will cause the subsequent array bounds
-       check to fail. *)
+          The encoding is chosen to optimize the most common operation, namely tuple-slot
+          access, the [slot_index] function. The encoding is designed so that [slot_index]
+          produces a negative number for [Null], which will cause the subsequent array
+          bounds check to fail. *)
     type 'slots t = private int [@@deriving sexp_of, typerep]
 
     include Invariant.S1 with type 'a t := 'a t
@@ -166,7 +165,7 @@ module Pool = struct
     val phys_compare : 'a t -> 'a t -> int
     val phys_equal : 'a t -> 'a t -> bool
 
-    (* The null pointer.  [null] is a function due to issues with the value restriction. *)
+    (* The null pointer. [null] is a function due to issues with the value restriction. *)
 
     val null : unit -> _ t
     val is_null : _ t -> bool
@@ -253,15 +252,15 @@ module Pool = struct
     @@ portable
        (* A [Header.t] is an encoding as an [int] of the following type:
 
-       {[
-         | Null
-         | Free of { next_free_header_index : int }
-         | Used of { tuple_id : int }
-       ]}
+          {[
+            | Null
+            | Free of { next_free_header_index : int }
+            | Used of { tuple_id : int }
+          ]}
 
-       If a tuple is free, its header is set to either [Null] or [Free] with
-       [next_free_header_index] indicating the header of the next tuple on the free list.
-       If a tuple is in use, it header is set to [Used]. *)
+          If a tuple is free, its header is set to either [Null] or [Free] with
+          [next_free_header_index] indicating the header of the next tuple on the free
+          list. If a tuple is in use, it header is set to [Used]. *)
     type t = private int [@@deriving sexp_of]
 
     val null : t
@@ -331,13 +330,14 @@ module Pool = struct
       ; mutable length : int
       ; mutable next_id : Tuple_id.t
       ; mutable first_free : Header.t
-          (* [dummy] is [None] in an unsafe pool.  In a safe pool, [dummy] is [Some a], with
-         [Uniform_array.length a = slots_per_tuple].  [dummy] is actually a tuple value
-         with the correct type (corresponding to ['slots]), but we make the type of
-         [dummy] be [Obj.t Uniform_array.t] because we can't write that type here.  Also,
-         the purpose of [dummy] is to initialize a pool element, making [dummy] an [Obj.t
-         Uniform_array.t] lets us initialize a pool element using [Uniform_array.blit]
-         from [dummy] to the pool, which is an [Obj.t Uniform_array.t]. *)
+          (* [dummy] is [None] in an unsafe pool. In a safe pool, [dummy] is [Some a],
+             with [Uniform_array.length a = slots_per_tuple]. [dummy] is actually a tuple
+             value with the correct type (corresponding to ['slots]), but we make the type
+             of [dummy] be [Obj.t Uniform_array.t] because we can't write that type here.
+             Also, the purpose of [dummy] is to initialize a pool element, making [dummy]
+             an [Obj.t Uniform_array.t] lets us initialize a pool element using
+             [Uniform_array.blit] from [dummy] to the pool, which is an
+             [Obj.t Uniform_array.t]. *)
       ; dummy : (Obj.t Uniform_array.t[@sexp.opaque]) option
       }
     [@@deriving fields ~iterators:iter, sexp_of]
@@ -497,7 +497,7 @@ module Pool = struct
     t
   ;;
 
-  (* Initialize tuples numbered from [lo] (inclusive) up to [hi] (exclusive).  For each
+  (* Initialize tuples numbered from [lo] (inclusive) up to [hi] (exclusive). For each
      tuple, this puts dummy values in the tuple's slots and adds the tuple to the free
      list. *)
   let unsafe_init_range t metadata ~lo ~hi =
@@ -557,10 +557,10 @@ module Pool = struct
   (* Purge a pool and make it unusable. *)
   let destroy t =
     let metadata = metadata t in
-    (* We clear out all the pool's entries, which causes all pointers to be invalid.  This
-       also prevents the destroyed pool from unnecessarily keeping heap blocks alive.
-       This is similar to [free]ing all the entries with the difference that we make the
-       free list empty as well. *)
+    (* We clear out all the pool's entries, which causes all pointers to be invalid. This
+       also prevents the destroyed pool from unnecessarily keeping heap blocks alive. This
+       is similar to [free]ing all the entries with the difference that we make the free
+       list empty as well. *)
     (match metadata.dummy with
      | None ->
        for i = start_of_tuples_index to Uniform_array.length t - 1 do
@@ -1141,8 +1141,8 @@ module Error_check (Pool : S) = struct
     is_valid && pointer_is_valid t pointer
   ;;
 
-  (* We don't do [Pointer.follow pointer], because that would disallow [id_of_pointer t
-     (Pointer.null ())]. *)
+  (* We don't do [Pointer.follow pointer], because that would disallow
+     [id_of_pointer t (Pointer.null ())]. *)
   let id_of_pointer t pointer = id_of_pointer t pointer.Pointer.pointer
 
   let pointer_of_id_exn t id =

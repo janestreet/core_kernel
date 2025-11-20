@@ -1923,9 +1923,9 @@ let%expect_test "[max_alarm_time_in_min_interval]" =
   remove t a;
   max_alarm_time_in_min_interval ();
   [%expect {| () |}];
-  (* Add two alarms that appear in different intervals, but in the same slot on the
-     second level of the timing wheel.  So the correct [max_alarm_time_in_min_interval] is
-     2.1, not 3.9. *)
+  (* Add two alarms that appear in different intervals, but in the same slot on the second
+     level of the timing wheel. So the correct [max_alarm_time_in_min_interval] is 2.1,
+     not 3.9. *)
   let _ = add_after (gibi_nanos 2.1) in
   let _ = add_after (gibi_nanos 3.9) in
   max_alarm_time_in_min_interval ();

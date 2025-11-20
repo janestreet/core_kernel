@@ -2,8 +2,8 @@ module Exposed_for_use_in_stable = struct
   open! Core
   open! Import
 
-  (* Being a pointer, no one outside this module can construct a value that is
-     [phys_same] as this one.
+  (* Being a pointer, no one outside this module can construct a value that is [phys_same]
+     as this one.
 
      this code is duplicated in Option_array.Cheap_option, and if we find yet another
      place where we want it we should reconsider making it shared. *)

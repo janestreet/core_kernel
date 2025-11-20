@@ -56,7 +56,7 @@ val clear_internal_pool : _ t -> unit
 
 (*_ See the Jane Street Style Guide for an explanation of [Private] submodules:
 
-  https://opensource.janestreet.com/standards/#private-submodules *)
+    https://opensource.janestreet.com/standards/#private-submodules *)
 module Private : sig
   module Uopt : sig
     type 'a t [@@deriving sexp_of]

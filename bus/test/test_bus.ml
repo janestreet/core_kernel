@@ -461,7 +461,7 @@ struct
         ignore (subscribe_exn bus_r ~f:callback : _ Subscriber.t));
       write bus ();
       (* Since [close] is called after the [on_close] functions 0 and 1 are registered,
-           only those two are called. *)
+         only those two are called. *)
       [%expect
         {|
         [on_close] #0 called
@@ -644,21 +644,21 @@ struct
       let bus =
         create1 ~here:[%here] ~on_subscription_after_first_write:Allow_and_send_last_value
       in
-      (* Create a new subscription and cancel it during each write.  While this behavior
-           is a bit strange, one write (of the current value) makes it to the subscriber.
-           In other words, the callgraph for this test is:
+      (* Create a new subscription and cancel it during each write. While this behavior is
+         a bit strange, one write (of the current value) makes it to the subscriber. In
+         other words, the callgraph for this test is:
 
-           {v
+         {v
             subscribe_permanently_exn ~f:f1
             write x
               |- f1 x
                  |- subscribe_exn ~f:f2 ==> s
                     |- f2 x
                  |- unsubscribe s
-            v}
+         v}
 
-           It may seem weird, but I claim this is no different than when other
-           subscribes happen during writes with [Allow_and_send_last_value]. *)
+         It may seem weird, but I claim this is no different than when other subscribes
+         happen during writes with [Allow_and_send_last_value]. *)
       subscribe_permanently_exn bus ~f:(fun x ->
         print_endline [%string "toplevel iter: x = %{x#Int}"];
         let subscriber =
@@ -758,9 +758,9 @@ struct
       in
       let bus = create1 ~here:[%here] ~on_subscription_after_first_write:Raise in
       let bus_r = read_only bus in
-      (* Keep two subscribers.  One stays subscribed and the other won't.  The one that
-           stays subscribed is proof that we can still access the subscribers.  The
-           unsubscribed one should be freed. *)
+      (* Keep two subscribers. One stays subscribed and the other won't. The one that
+         stays subscribed is proof that we can still access the subscribers. The
+         unsubscribed one should be freed. *)
       Weak.set weak_references subscribed_index (subscribe_exn bus_r ~f:ignore |> Some);
       let unsubscriber = ref None in
       unsubscriber
@@ -780,13 +780,13 @@ struct
         (Option.is_none (Weak.get weak_references unsubscribed_index))
         ~if_false_then_print_s:(lazy [%message "Unsubscribed subscriber remains"]);
       (* Use [bus] again here, otherwise it would be gc'd along with the subscribers
-           above. *)
+         above. *)
       write bus ()
     ;;
 
     (* There are two 'free' tests because [Bus] does some logic under the hood when
-         unsubscription occurs, and we should test multiple cases.  Also, there are no
-         weak pointers in javascript, so exclude javascript testing. *)
+       unsubscription occurs, and we should test multiple cases. Also, there are no weak
+       pointers in javascript, so exclude javascript testing. *)
     let%expect_test ("free first subscriber" [@tags "no-js"]) =
       test_free `First;
       [%expect {| (unsubscribing (unsubscribed_index 0)) |}]
@@ -865,6 +865,6 @@ struct
     ;;
   end
 end
-(* This signature constraint is here to remind us to add a unit test whenever
-   the interface to [Bus] changes. *) :
+(* This signature constraint is here to remind us to add a unit test whenever the
+   interface to [Bus] changes. *) :
   module type of Bus)

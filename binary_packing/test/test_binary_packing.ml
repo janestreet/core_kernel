@@ -288,9 +288,10 @@ module%test [@name "inline_signed_64"] _ = Make_inline_tests (struct
 
 module%test [@name "inline_signed_64_int"] [@tags "64-bits-only"] _ =
 Make_inline_tests (struct
-    (* These numbers are written with one endianness and read with the opposite endianness,
-          so the smallest byte becomes the biggest byte. Because of this, the range restriction
-          that applies to the biggest byte also applies to the smallest byte. *)
+    (* These numbers are written with one endianness and read with the opposite
+       endianness, so the smallest byte becomes the biggest byte. Because of this, the
+       range restriction that applies to the biggest byte also applies to the smallest
+       byte. *)
     let ns =
       [ "0x3f20_3040_5060_0708"
       ; "0x7f20_3040_5060_0708"

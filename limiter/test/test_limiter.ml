@@ -263,7 +263,7 @@ module%test Step_test = struct
           } )
     in
     (* Since we are (mostly) increasing the bucket limit here, [allow_limit_decrease]
-         shouldn't affect anything. *)
+       shouldn't affect anything. *)
     List.iter Bool.all ~f:(fun allow_limit_decrease ->
       let bucket =
         Limiter.Token_bucket.Starts_full.create_exn
@@ -294,8 +294,8 @@ module%test Step_test = struct
         ; take 1. 10 true
         ; return_to_hopper 1. 80
         ; take 20. 39 true
-          (* We expect to have 39 in the bucket since we're now returning
-             at a rate of 2 per sec. *)
+          (* We expect to have 39 in the bucket since we're now returning at a rate of 2
+             per sec. *)
         ; change_bucket_limit 20. 80 (-1.) false ~allow_limit_decrease
           (* Here, we should make sure that we don't accept a negative rate *)
         ; change_bucket_limit 20. 80 0. true ~allow_limit_decrease
@@ -306,8 +306,8 @@ module%test Step_test = struct
         ; change_bucket_limit 40. 41 2. allow_limit_decrease ~allow_limit_decrease
           (* So we can reduce our bucket limit to [80 - 39 = 41] tokens *)
         ; take 40. 1 (not allow_limit_decrease)
-          (* at this point, we shouldn't be able to take anymore tokens if we
-               decreased the bucket limit. *)
+          (* at this point, we shouldn't be able to take anymore tokens if we decreased
+             the bucket limit. *)
         ])
   ;;
 
@@ -327,11 +327,11 @@ module%test Step_test = struct
       ; take 0.3 1 false (* and now that's done *)
       ; take 0.5 1 true (* but after 1/2 second, we have another *)
       ; take 1.0 1 true
-        (* and now one more.  We need to wait a bit longer than
-           would be perfect to accomodate token drip granularity. *)
+        (* and now one more. We need to wait a bit longer than would be perfect to
+           accomodate token drip granularity. *)
       ; take 2.0 2 false (* but now there are too many concurrent jobs *)
       ; return_to_hopper 2.0 3 (* give some back *)
-      ; take 2.0 1 false (* and it take            s time for them to get in the bucket *)
+      ; take 2.0 1 false (*=and it take            s time for them to get in the bucket *)
       ; take 3.0 2 true (* and now we can do a burst of 2 *)
       ; take 10.0 1 true (* and one more *)
       ; take 10.0 1 false (* but now we're out of concurrent jobs *)

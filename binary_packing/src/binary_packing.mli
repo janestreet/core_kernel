@@ -119,7 +119,7 @@ val pack_tail_padded_fixed_string
 
 (*_ See the Jane Street Style Guide for an explanation of [Private] submodules:
 
-  https://opensource.janestreet.com/standards/#private-submodules *)
+    https://opensource.janestreet.com/standards/#private-submodules *)
 module Private : sig
   val last_nonmatch_plus_one : buf:bytes -> min_pos:int -> pos:int -> char:char -> int
 

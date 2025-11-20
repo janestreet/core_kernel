@@ -126,14 +126,14 @@ let reduce t ~map ~f =
 ;;
 
 let to_nonempty_list t =
-  (* Safe: of_list_exn only raises on empty lists, but to_list of a nonempty set
-     produces a nonempty list *)
+  (* Safe: of_list_exn only raises on empty lists, but to_list of a nonempty set produces
+     a nonempty list *)
   Nonempty_list.of_list_exn (to_list t)
 ;;
 
 let map cmp t ~f : _ t =
-  (* Safe: mapping a nonempty set always produces at least one element in the result,
-     even if multiple elements map to the same value (they just collapse to one) *)
+  (* Safe: mapping a nonempty set always produces at least one element in the result, even
+     if multiple elements map to the same value (they just collapse to one) *)
   { nonempty = Set.map cmp t.nonempty ~f }
 ;;
 
@@ -173,12 +173,14 @@ let%template equal t1 t2 : bool = (Set.equal [@mode m]) t1.nonempty t2.nonempty
 let is_subset t ~of_ : bool = Set.is_subset t.nonempty ~of_:of_.nonempty
 
 let max_elt t =
-  (* Safe: Set.max_elt_exn only raises on empty sets, but t.nonempty is guaranteed nonempty *)
+  (* Safe: Set.max_elt_exn only raises on empty sets, but t.nonempty is guaranteed
+     nonempty *)
   Set.max_elt_exn t.nonempty
 ;;
 
 let min_elt t =
-  (* Safe: Set.min_elt_exn only raises on empty sets, but t.nonempty is guaranteed nonempty *)
+  (* Safe: Set.min_elt_exn only raises on empty sets, but t.nonempty is guaranteed
+     nonempty *)
   Set.min_elt_exn t.nonempty
 ;;
 

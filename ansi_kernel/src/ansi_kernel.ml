@@ -130,8 +130,8 @@ module Attr = struct
     | `Dim -> [ 2 ]
     | `Underscore -> [ 4 ]
     | `Reverse -> [ 7 ]
-    (* Background colors are 40..47, foreground 30..37.
-       256-color codes start with 48 (bg) or 38 (fg). *)
+    (* Background colors are 40..47, foreground 30..37. 256-color codes start with 48 (bg)
+       or 38 (fg). *)
     | #Color.t as c -> Color.to_int_list c
     | `Bg bg ->
       (match Color.to_int_list bg with

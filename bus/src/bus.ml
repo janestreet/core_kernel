@@ -224,7 +224,7 @@ module Subscriber = struct
     ; callback : 'callback
     ; extract_exn : bool
     ; (* [subscribers_index] is the index of this subscriber in the bus's [subscribers]
-         array.  [-1] indicates that this subscriber is not subscribed. *)
+         array. [-1] indicates that this subscriber is not subscribed. *)
       mutable subscribers_index : int
     ; on_callback_raise : (Error.t -> unit) option
     ; on_close : (unit -> unit) option
@@ -459,7 +459,7 @@ let unsubscribe t subscriber =
     | Write_in_progress ->
       t.unsubscribes_during_write <- subscriber :: t.unsubscribes_during_write
     | Closed ->
-      (* This can happen if during [write], [unsubscribe] is called after [close].  We
+      (* This can happen if during [write], [unsubscribe] is called after [close]. We
          don't do anything here because all subscribers will be unsubscribed after the
          [write] finishes. *)
       ()
@@ -507,17 +507,17 @@ let call_on_callback_raise t error =
 ;;
 
 let callback_raised t i exn =
-  (* [i] was incremented before the callback was called, so we have to subtract one
-     here.  We do this here, rather than at the call site, because there are multiple
-     call sites due to the optimizations needed to keep this zero-alloc. *)
+  (* [i] was incremented before the callback was called, so we have to subtract one here.
+     We do this here, rather than at the call site, because there are multiple call sites
+     due to the optimizations needed to keep this zero-alloc. *)
   let subscriber = Option_array.get_some_exn t.subscribers (i - 1) in
   let error =
     match subscriber.extract_exn with
     | true -> Error.of_exn exn
     | false ->
-      (* This [Backtrace.Exn.most_recent ()] is intended to grab the backtrace of the [try
-         ... with]'s that call [callback_raised].  The call is here rather than earlier so
-         that we only do it when [subscriber.extract_exn = false]. *)
+      (* This [Backtrace.Exn.most_recent ()] is intended to grab the backtrace of the
+         [try ... with]'s that call [callback_raised]. The call is here rather than
+         earlier so that we only do it when [subscriber.extract_exn = false]. *)
       let backtrace = Backtrace.Exn.most_recent () in
       [%message
         "Bus subscriber raised"
@@ -545,8 +545,8 @@ let callback_raised t i exn =
 
 let[@inline always] unsafe_get_callback a i =
   (* We considered using [Option_array.get_some_exn] and
-     [Option_array.unsafe_get_some_exn] here, but both are significantly slower.  Check
-     the write benchmarks in [bench_bus.ml] before changing this. *)
+     [Option_array.unsafe_get_some_exn] here, but both are significantly slower. Check the
+     write benchmarks in [bench_bus.ml] before changing this. *)
   Option_array.unsafe_get_some_assuming_some a i
 ;;
 
@@ -636,7 +636,7 @@ module Write_variants_without_locals = struct
   ;;
 
   (* The [write_N] functions are written to minimise registers live across function calls
-     (these have to be spilled).  They are also annotated for partial inlining (the
+     (these have to be spilled). They are also annotated for partial inlining (the
      one-callback case becomes inlined whereas the >1-callback-case requires a further
      direct call). *)
 
@@ -1020,7 +1020,7 @@ let subscribe_exn
   assert_can_subscribe t ~function_name:"subscribe_exn" ~subscribed_from;
   match t.state with
   | Closed ->
-    (* Anything that satisfies the return type will do.  Since the subscriber is never
+    (* Anything that satisfies the return type will do. Since the subscriber is never
        stored in the arrays, the [on_close] callback will never be called. *)
     Subscriber.create
       subscribed_from
@@ -1032,8 +1032,8 @@ let subscribe_exn
       ~on_close
   | Ok_to_write | Write_in_progress ->
     (* The code below side effects [t], which potentially could interfere with a write in
-       progress.  However, the side effects don't change the prefix of [t.callbacks] that
-       write uses; they only change [t.callbacks] beyond that prefix.  And all writes
+       progress. However, the side effects don't change the prefix of [t.callbacks] that
+       write uses; they only change [t.callbacks] beyond that prefix. And all writes
        extract [t.num_subscribers] at the start, so that they will not see any subsequent
        changes to it. *)
     let subscriber =
@@ -1131,9 +1131,9 @@ module%test _ = struct
     [%test_result: int] (ending_major_words - starting_major_words) ~expect:0
   ;;
 
-  (* This test only works when [write] is properly inlined.  It does not guarantee that
-       [write] never allocates in any situation.  For example, if this test is moved to
-       another library and run with X_LIBRARY_INLINING=false, it fails. *)
+  (* This test only works when [write] is properly inlined. It does not guarantee that
+     [write] never allocates in any situation. For example, if this test is moved to
+     another library and run with X_LIBRARY_INLINING=false, it fails. *)
   let%test_unit "write doesn't allocate when inlined" =
     let create ~here:created_from arity =
       create_exn

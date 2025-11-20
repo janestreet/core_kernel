@@ -132,9 +132,9 @@ let%expect_test (_ [@tags "no-js"]) =
   add k1 b1;
   add k2 b2;
   add k3 b3;
-  (* Checking [is_absent k] is stronger than checking that [is_none (find tbl k)].  We
-     want to make sure that a key has been removed from the table, and in particular rule
-     out the case where the key is in the table but the corresponding weak is none. *)
+  (* Checking [is_absent k] is stronger than checking that [is_none (find tbl k)]. We want
+     to make sure that a key has been removed from the table, and in particular rule out
+     the case where the key is in the table but the corresponding weak is none. *)
   let is_absent k = not (key_is_using_space tbl k) in
   let is_block k b =
     match find tbl k with

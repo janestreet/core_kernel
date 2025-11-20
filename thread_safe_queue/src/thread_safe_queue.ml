@@ -1,5 +1,5 @@
 (* This module exploits the fact that OCaml does not perform context-switches under
-   certain conditions.  It can therefore avoid using mutexes.
+   certain conditions. It can therefore avoid using mutexes.
 
    Given the semantics of the current OCaml runtime (and for the foreseeable future), code
    sections documented as atomic below will never contain a context-switch. Allocations
@@ -9,7 +9,7 @@
    pattern-matching, etc., do not trigger context-switches.
 
    Code reviewers should therefore make sure that the sections documented as atomic below
-   do not violate the above assumptions.  It is prudent to disassemble the .o file (using
+   do not violate the above assumptions. It is prudent to disassemble the .o file (using
    [objdump -dr]) and examine it. *)
 
 open! Core
@@ -27,12 +27,12 @@ end
 
 type 'a t =
   { mutable length : int
-      (* [front] to [back] has [length + 1] linked elements, where the first [length] hold the
-     values in the queue, and the last is [back], holding no value. *)
+      (* [front] to [back] has [length + 1] linked elements, where the first [length] hold
+         the values in the queue, and the last is [back], holding no value. *)
   ; mutable front : 'a Elt.t
   ; mutable back : 'a Elt.t
-      (* [unused_elts] is singly linked via [next], and ends with [sentinel].  All elts in
-     [unused_elts] have [Uopt.is_none elt.value]. *)
+      (* [unused_elts] is singly linked via [next], and ends with [sentinel]. All elts in
+         [unused_elts] have [Uopt.is_none elt.value]. *)
   ; mutable unused_elts : 'a Elt.t Uopt.t
   }
 [@@deriving fields ~getters ~iterators:iter, sexp_of]
@@ -69,9 +69,9 @@ let create () =
   { front = elt; back = elt; length = 0; unused_elts = Uopt.get_none () }
 ;;
 
-(* This doesn't actually need the attributes to ensure atomic semantics,
-   but if it were used in more places (or exposed in the .mli) it could
-   well do, so we put the attribute on now. *)
+(* This doesn't actually need the attributes to ensure atomic semantics, but if it were
+   used in more places (or exposed in the .mli) it could well do, so we put the attribute
+   on now. *)
 let[@inline never] [@specialise never] [@local never] get_unused_elt t =
   (* BEGIN ATOMIC SECTION *)
   if Uopt.is_some t.unused_elts
@@ -95,7 +95,8 @@ let[@inline never] [@specialise never] [@local never] enqueue (type a) (t : a t)
 
 (* END ATOMIC SECTION *)
 
-(* Same comment about [@inline never][@specialise never][@local never] as for [get_unused_elt], above. *)
+(* Same comment about [@inline never][@specialise never][@local never] as for
+   [get_unused_elt], above. *)
 let[@inline never] [@specialise never] [@local never] return_unused_elt t (elt : _ Elt.t) =
   (* BEGIN ATOMIC SECTION *)
   elt.value <- Uopt.get_none ();
@@ -107,9 +108,9 @@ let[@inline never] [@specialise never] [@local never] return_unused_elt t (elt :
 
 module Dequeue_result = struct
   (* It's important that dequeue does not allocate.
-     - We could accomplish this by having it raise an exception when the queue is
-       empty. But that would have poor performance in javascript (and this library is used
-       by javascript applications via incremental).
+     - We could accomplish this by having it raise an exception when the queue is empty.
+       But that would have poor performance in javascript (and this library is used by
+       javascript applications via incremental).
      - We could use Uopt, as this module does internally. But using Uopt correctly is
        subtle, so we prefer not to expose it to users.
      - Instead we employ a local (stack allocated) return of the below type.

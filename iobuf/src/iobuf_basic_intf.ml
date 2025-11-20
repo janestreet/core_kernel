@@ -31,7 +31,7 @@ module Definitions = struct
         phantom types, and do not represent actual values that need to be globalized. *)
 
     val globalize_shared : local_ ('rw, _, global) t -> ('rw, _, global) t
-    val globalize_copied : local_ ('rw, _, 'loc) t -> ('rw, _, 'loc) t
+    val globalize_copied : local_ ('rw, _, _) t -> ('rw, _, _) t
 
     module With_shallow_sexp : sig
       (** [With_shallow_sexp.t] has a [sexp_of] that shows the windows and limits of the

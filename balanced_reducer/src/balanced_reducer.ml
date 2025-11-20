@@ -1,11 +1,11 @@
 open! Base
 
-(* The [data] array is an implicit binary tree with [children_length * 2 - 1] nodes,
-   with each node being the sum of the two child nodes and the root node being the 0th
-   node.  The leaves of the tree are the last [num_leaves] nodes.
+(* The [data] array is an implicit binary tree with [children_length * 2 - 1] nodes, with
+   each node being the sum of the two child nodes and the root node being the 0th node.
+   The leaves of the tree are the last [num_leaves] nodes.
 
-   The children are not necessarily all at the same level of the tree. For instance if
-   you have 3 children [| a; b; c |]:
+   The children are not necessarily all at the same level of the tree. For instance if you
+   have 3 children [| a; b; c |]:
 
    {v
           o
@@ -31,20 +31,21 @@ let length t = t.num_leaves
 (* {v
      parent:      0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 ...
      left child:  1  3  5  7  9 11 13 15 17 19 21 23 25 27 29 31 33 35 37 39 ...
-     right child: 2  4  6  8 10 12 14 16 18 20 22 24 26 28 30 32 34 36 38 40 ... v} *)
+     right child: 2  4  6  8 10 12 14 16 18 20 22 24 26 28 30 32 34 36 38 40 ...
+   v} *)
 let parent_index ~child_index = (child_index - 1) / 2
 let left_child_index ~parent_index = (parent_index * 2) + 1
 let right_child_index ~left_child_index = left_child_index + 1
 
-(* The first [num_leaves-1] elements are internal nodes of the tree.  The next
-   [num_leaves] elements are the leaves. *)
+(* The first [num_leaves-1] elements are internal nodes of the tree. The next [num_leaves]
+   elements are the leaves. *)
 let num_branches t = t.num_leaves - 1
 let index_is_leaf t i = i >= num_branches t
 
 (* The tree is complete, but not necessarily perfect, so we perform some rotation of the
    leaves to ensure that our reductions preserve ordering. *)
 let leaf_index t i =
-  (* The tree layout is level order.  Any leaves in the second to last level need to occur
+  (* The tree layout is level order. Any leaves in the second to last level need to occur
      in the array before the leaves in the bottom level. *)
   let rotated_index =
     let offset_from_start_of_leaves_in_array = i + t.num_leaves_not_in_bottom_level in

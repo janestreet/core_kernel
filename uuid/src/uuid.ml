@@ -1,10 +1,9 @@
 (* A loose implementation of version 3 and version 4 of the UUID spec (RFC 4122):
 
-   Version 3 UUIDs use a scheme deriving a UUID via MD5 from a URL, a fully
-   qualified domain name, an object identifier, a distinguished name (DN as used
-   in Lightweight Directory Access Protocol), or on names in unspecified
-   namespaces. The generated UUIDs have the form xxxxxxxx-xxxx-3xxx-xxxx-xxxxxxxxxxxx
-   with hexadecimal digits x.
+   Version 3 UUIDs use a scheme deriving a UUID via MD5 from a URL, a fully qualified
+   domain name, an object identifier, a distinguished name (DN as used in Lightweight
+   Directory Access Protocol), or on names in unspecified namespaces. The generated UUIDs
+   have the form xxxxxxxx-xxxx-3xxx-xxxx-xxxxxxxxxxxx with hexadecimal digits x.
 
    Version 4 UUIDs use random bits, the generated UUIDs have the form
    xxxxxxxx-xxxx-4xxx-xxxx-xxxxxxxxxxxx.
@@ -39,12 +38,12 @@ module Stable = struct
     let for_testing = "5a863fc1-67b7-3a0a-dc90-aca2995afbf9"
     let to_string t = t
 
-    (*{v
+    (* {v
        xxxxxxxx-xxxx-3xxx-xxxx-xxxxxxxxxxxx
        xxxxxxxx-xxxx-4xxx-xxxx-xxxxxxxxxxxx
        012345678901234567890123456789012345
        0         1         2         3
-    v}*)
+       v} *)
 
     let char_is_dash c = Core.Char.equal '-' c
 
@@ -124,7 +123,7 @@ module T = struct
       Bytes.to_string bytes
   ;;
 
-  (* [create] is responsible for generating unique string identifiers.  It should be clear
+  (* [create] is responsible for generating unique string identifiers. It should be clear
      to a reader that the id generated has an extremely high probability of uniqueness
      across all possible machines, processes, and threads of execution. *)
 

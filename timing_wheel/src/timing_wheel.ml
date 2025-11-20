@@ -1,32 +1,32 @@
 (* Be sure and first read the implementation overview in timing_wheel_intf.ml.
 
    A timing wheel is represented as an array of "levels", where each level is an array of
-   "slots".  Each slot represents a range of keys, and holds elements associated with
-   those keys.  Each level is determined by two parameters: [bits], the number of key bits
-   that that level is responsible for distinguishing, and [bits_per_slot], the size of the
-   range of keys that correspond to a single slot in the array.  Conceptually, each level
-   breaks up all possible keys into ranges of size [2^bits_per_slot].  The length of a
+   "slots". Each slot represents a range of keys, and holds elements associated with those
+   keys. Each level is determined by two parameters: [bits], the number of key bits that
+   that level is responsible for distinguishing, and [bits_per_slot], the size of the
+   range of keys that correspond to a single slot in the array. Conceptually, each level
+   breaks up all possible keys into ranges of size [2^bits_per_slot]. The length of a
    level array is [2^bits], and the array is used like a circular buffer to traverse the
-   ranges as the timing wheel's [min_allowed_key] increases.  A key [k], if stored in the
+   ranges as the timing wheel's [min_allowed_key] increases. A key [k], if stored in the
    level, is stored at index [(k / 2^bits_per_slot) mod 2^bits].
 
    The settings of the [bits] values are configurable by user code using [Level_bits],
-   although there is a reasonable default setting.  Given the [bits] values, the
+   although there is a reasonable default setting. Given the [bits] values, the
    [bits_per_slot] are chosen so that [bits_per_slot] at level [i] is the sum of the
-   [bits] at all lower levels.  Thus, a slot's range at level [i] is as large as the
-   entire range of the array at level [i - 1].
+   [bits] at all lower levels. Thus, a slot's range at level [i] is as large as the entire
+   range of the array at level [i - 1].
 
    Each level has a [min_allowed_key] and a [max_allowed_key] that determine the range of
-   keys that it currently represents.  The crucial invariant of the timing wheel data
+   keys that it currently represents. The crucial invariant of the timing wheel data
    structure is that the [min_allowed_key] at level [i] is no more than the
-   [max_allowed_key + 1] of level [i - 1].  This ensures that the levels can represent all
+   [max_allowed_key + 1] of level [i - 1]. This ensures that the levels can represent all
    keys from the [min_allowed_key] of the lowest level to the [max_allowed_key] of the
-   highest level.  The [increase_min_allowed_key] function is responsible for restoring
+   highest level. The [increase_min_allowed_key] function is responsible for restoring
    this invariant.
 
-   At level 0, [bits_per_slot = 0], and so the size of each slot is [1].  That is, level 0
+   At level 0, [bits_per_slot = 0], and so the size of each slot is [1]. That is, level 0
    precisely distinguishes all the keys between its [min_allowed_key] (which is the same
-   as the [min_allowed_key] of the entire timing wheel) and [max_allowed_key].  As the
+   as the [min_allowed_key] of the entire timing wheel) and [max_allowed_key]. As the
    levels increase, the [min_allowed_key] increases, the [bits_per_slot] increases, and
    the range of keys stored in the level increases (dramatically).
 
@@ -248,9 +248,9 @@ module Config = struct
 
   (* [max_num_level_bits alarm_precision] returns the number of level bits needed for a
      timing wheel with the specified [alarm_precision] to be able to represent all
-     possible times from [Time_ns.epoch] onward.  Since non-negative times have 62 bits,
-     we require [L <= 62 - A], where [A] is the number of alarm bits and [L] is the
-     number of level bits. *)
+     possible times from [Time_ns.epoch] onward. Since non-negative times have 62 bits, we
+     require [L <= 62 - A], where [A] is the number of alarm bits and [L] is the number of
+     level bits. *)
   let max_num_level_bits alarm_precision =
     Num_key_bits.( - )
       Num_key_bits.max_value
@@ -358,7 +358,7 @@ module Priority_queue : sig @@ portable
 
   val pool : 'a t -> 'a Internal_elt.Pool.t
 
-  (* This invariant isn't portable because the implementation uses [%test_result], which 
+  (* This invariant isn't portable because the implementation uses [%test_result], which
      is not portable *)
   include Invariant.S1 with type 'a t := 'a t @@ nonportable
 
@@ -737,12 +737,12 @@ end = struct
         (* The [key] comparison is necessary for [max_alarm_time_in_min_interval] because
            max time per interval is not the same as max time globally.
 
-           This is not so for [min_alarm_time_in_min_interval], so this can potentially
-           be simplified.
+           This is not so for [min_alarm_time_in_min_interval], so this can potentially be
+           simplified.
 
-           Probably a better change would be to simply transfer the events to the
-           "fired" collection (and rename it to "about to fire"), which is sorted by time,
-           so getting the first element from that collection is efficient.
+           Probably a better change would be to simply transfer the events to the "fired"
+           collection (and rename it to "about to fire"), which is sorted by time, so
+           getting the first element from that collection is efficient.
         *)
         if Key.equal (key pool !current) with_key
         then min_alarm_time := Time_ns.min (at pool !current) !min_alarm_time;
@@ -776,12 +776,13 @@ end = struct
         diff_max_min_allowed_key : Key.Span.t
       ; (* [length] is the number of elts currently in this level. *)
         mutable length : int
-      ; (* All elements at this level have their [key] satisfy [min_allowed_key <= key <=
-           max_allowed_key].  Also, [min_allowed_key] is a multiple of [keys_per_slot]. *)
+      ; (* All elements at this level have their [key] satisfy
+           [min_allowed_key <= key <= max_allowed_key]. Also, [min_allowed_key] is a
+           multiple of [keys_per_slot]. *)
         mutable min_allowed_key : Key.t
       ; mutable max_allowed_key : Key.t
       ; (* [slots] holds the (possibly null) pointers to the circular doubly-linked lists
-           of elts.  [Array.length slots = 1 lsl bits]. *)
+           of elts. [Array.length slots = 1 lsl bits]. *)
         slots : ('a Internal_elt.t array[@sexp.opaque])
       }
     [@@deriving fields ~getters ~iterators:iter, sexp_of]
@@ -1025,7 +1026,7 @@ end = struct
         let level = t.levels.(!level_index) in
         if Key.( > ) (Level.min_allowed_key level) !min_key_already_found
         then
-          (* We don't need to consider any more levels.  Quit the loop. *)
+          (* We don't need to consider any more levels. Quit the loop. *)
           level_index := num_levels
         else if level.length = 0
         then incr level_index
@@ -1061,14 +1062,14 @@ end = struct
                 min_key_already_found := current_key);
               let next = Internal_elt.next pool !current in
               (* If [!level_index = 0] then all elts in this slot have the same [key],
-                 i.e. [!slot_min_key].  So, we don't have to check any elements after
-                 [first].  This is a useful short cut in the common case that there are
+                 i.e. [!slot_min_key]. So, we don't have to check any elements after
+                 [first]. This is a useful short cut in the common case that there are
                  multiple elements in the same min slot in level 0. *)
               if phys_equal next first || !level_index = 0
               then continue := false
               else current := next
             done);
-          (* Finished looking in [level].  Move up to the next level. *)
+          (* Finished looking in [level]. Move up to the next level. *)
           incr level_index)
       done;
       t.min_elt <- !min_elt_already_found;
@@ -1191,9 +1192,9 @@ end = struct
     let desired_min_allowed_key =
       Level.compute_min_allowed_key level ~prev_level_max_allowed_key
     in
-    (* We require that [mod level.min_allowed_key level.keys_per_slot = 0].  So,
-       we start [level_min_allowed_key] where that is true, and then increase it by
-       [keys_per_slot] each iteration of the loop. *)
+    (* We require that [mod level.min_allowed_key level.keys_per_slot = 0]. So, we start
+       [level_min_allowed_key] where that is true, and then increase it by [keys_per_slot]
+       each iteration of the loop. *)
     let level_min_allowed_key =
       Level.min_key_in_same_slot
         level
@@ -1237,8 +1238,8 @@ end = struct
     then Max_allowed_key_did_not_change
     else (
       (* We increase the [min_allowed_key] of levels in order to restore the invariant
-         that they have as large as possible a [min_allowed_key], while leaving no gaps
-         in keys. *)
+         that they have as large as possible a [min_allowed_key], while leaving no gaps in
+         keys. *)
       let level_index = ref 0 in
       let result = ref Increase_min_allowed_key_result.Max_allowed_key_maybe_changed in
       let prev_level_max_allowed_key = ref (Key.pred key) in
@@ -1255,18 +1256,17 @@ end = struct
           ~handle_removed;
         if Key.equal (Level.min_allowed_key level) min_allowed_key_before
         then (
-          (* This level did not shift.  Don't shift any higher levels. *)
+          (* This level did not shift. Don't shift any higher levels. *)
           level_index := num_levels;
           result := Max_allowed_key_did_not_change)
         else (
-          (* Level [level_index] shifted.  Consider shifting higher levels. *)
+          (* Level [level_index] shifted. Consider shifting higher levels. *)
           level_index := !level_index + 1;
           prev_level_max_allowed_key := Level.max_allowed_key level)
       done;
       if Key.( > ) key t.elt_key_lower_bound
       then (
-        (* We have removed [t.min_elt] or it was already null, so just set it to
-           null. *)
+        (* We have removed [t.min_elt] or it was already null, so just set it to null. *)
         t.min_elt <- Internal_elt.null ();
         t.elt_key_lower_bound <- min_allowed_key t);
       !result)
@@ -1338,7 +1338,7 @@ end = struct
     then
       t.min_elt <- Internal_elt.null ()
       (* We keep [t.elt_lower_bound] since it is valid even though [t.min_elt] is being
-       removed. *);
+         removed. *);
     t.length <- t.length - 1;
     let level = t.levels.(Internal_elt.level_index pool elt) in
     level.length <- level.length - 1;
@@ -1427,7 +1427,7 @@ module Interval_num = Key
 let min_interval_num = Interval_num.zero
 
 (* All time from the epoch onwards is broken into half-open intervals of size
-   [Config.alarm_precision config].  The intervals are numbered starting at zero, and a
+   [Config.alarm_precision config]. The intervals are numbered starting at zero, and a
    time's interval number serves as its key in [priority_queue]. *)
 type 'a t =
   { config : Config.t
@@ -1571,10 +1571,9 @@ let interval_num_start t interval_num =
 
 let next_alarm_fires_at_internal t key =
   (* [interval_num_start t key] is the key corresponding to the start of the time interval
-     holding the first alarm in [t].  Advancing to that would not be enough, since the
+     holding the first alarm in [t]. Advancing to that would not be enough, since the
      alarms in that interval don't fire until the clock is advanced to the start of the
-     next interval.  So, we use [succ key] to advance to the start of the next
-     interval. *)
+     next interval. So, we use [succ key] to advance to the start of the next interval. *)
   interval_num_start t (Key.succ key)
 ;;
 

@@ -7,11 +7,12 @@ module Pointer = Pool.Pointer
    {[
      type 'a t =
        | Empty
-       | Heap of 'a * 'a t list ]}
+       | Heap of 'a * 'a t list
+   ]}
 
-   We will represent them as a left-child, right-sibling tree in a triplet
-   (value * left_child * right_sibling).  The left child and all right siblings
-   of the left child form a linked list representing the subheaps of a given heap:
+   We will represent them as a left-child, right-sibling tree in a triplet (value *
+   left_child * right_sibling). The left child and all right siblings of the left child
+   form a linked list representing the subheaps of a given heap:
 
    {v
          A
@@ -100,7 +101,7 @@ end = struct
   let prev t ~pool = Pool.get pool t Pool.Slot.t3
   let id t ~pool = Pool.get pool t Pool.Slot.t4
 
-  (* let set_value   t v ~pool = Pool.set pool t Pool.Slot.t0 v *)
+  (* [let set_value t v ~pool = Pool.set pool t Pool.Slot.t0 v] *)
   let set_child t v ~pool = Pool.set pool t Pool.Slot.t1 v
   let set_sibling t v ~pool = Pool.set pool t Pool.Slot.t2 v
   let set_prev t v ~pool = Pool.set pool t Pool.Slot.t3 v
@@ -133,10 +134,12 @@ end = struct
 
   let add_child t ~child:new_child ~pool =
     (* assertions we would make, but for speed:
-       assert (not (is_empty t));
-       assert (not (is_empty new_child));
-       assert (is_empty (sibling new_child ~pool));
-       assert (is_empty (prev new_child ~pool));
+       {[
+         assert (not (is_empty t));
+         assert (not (is_empty new_child));
+         assert (is_empty (sibling new_child ~pool));
+         assert (is_empty (prev new_child ~pool))
+       ]}
     *)
     let current_child = disconnect_child t ~pool in
     (* add [new_child] to the list of [t]'s children (which may be empty) *)
@@ -220,7 +223,7 @@ type 'a t =
   { (* cmp is placed first to short-circuit polymorphic compare *)
     cmp : 'a -> 'a -> int
   ; mutable pool : 'a Node.Pool.t
-  ; (* invariant:  [root] never has a sibling *)
+  ; (* invariant: [root] never has a sibling *)
     mutable root : 'a Node.t
   ; mutable num_of_allocated_nodes : int
   }
@@ -365,13 +368,11 @@ let allocating_merge_pairs t head =
        let rec loop depth children =
          if depth >= max_stack_depth
          then allocating_merge_pairs t childen
-         else begin
+         else (
            match children with
            | [] -> None
-           | [head] -> Some head
-           | head :: next1 :: next2 ->
-             merge (merge head next1) (loop (depth + 1) next2)
-         end
+           | [ head ] -> Some head
+           | head :: next1 :: next2 -> merge (merge head next1) (loop (depth + 1) next2))
        in
        loop 0 children
    ]}
@@ -463,8 +464,8 @@ let pop_while t f =
   loop t f []
 ;;
 
-(* pairing heaps are not balanced trees, and therefore we can't rely on a balance
-   property to stop ourselves from overflowing the stack. *)
+(* pairing heaps are not balanced trees, and therefore we can't rely on a balance property
+   to stop ourselves from overflowing the stack. *)
 let fold t ~init ~f =
   let pool = t.pool in
   let rec loop acc to_visit =
@@ -541,8 +542,8 @@ module Elt = struct
     ; heap : 'a t
     }
 
-  (* If ids are different, it means that the node has already been removed by some
-     other means (and possibly reused). *)
+  (* If ids are different, it means that the node has already been removed by some other
+     means (and possibly reused). *)
   let is_node_valid t = Node.Id.equal (Node.id ~pool:t.heap.pool t.node) t.node_id
 
   let value t =

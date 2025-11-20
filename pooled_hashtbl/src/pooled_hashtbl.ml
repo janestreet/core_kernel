@@ -34,7 +34,7 @@ module Entry : sig
   val set_next : ('k, 'd) Pool.t -> ('k, 'd) t -> ('k, 'd) t -> unit
   val set_data : ('k, 'd) Pool.t -> ('k, 'd) t -> 'd -> unit
 end = struct
-  (* It is OK to use [Pool.Unsafe] because entries are never exposed to user code.  Thus,
+  (* It is OK to use [Pool.Unsafe] because entries are never exposed to user code. Thus,
      we can convince ourselves solely from looking at the implementation of
      [Pooled_hashtbl] that an entry is never used after it is freed. *)
   module Unsafe = Pool.Unsafe
@@ -554,8 +554,8 @@ let remove t key =
 
 (* TODO: If we care, these can be optimized to avoid option boxes, allocating closures,
    etc. These are largely copied from core_hashtbl.ml. If we do care about performance
-   here, we should, at the least, allow you to determine, given an entry, whether it has
-   a key. Then we could just iterate over the Entry_pool and get better cache behavior. *)
+   here, we should, at the least, allow you to determine, given an entry, whether it has a
+   key. Then we could just iterate over the Entry_pool and get better cache behavior. *)
 
 let add_multi t ~key ~data =
   match find t key with

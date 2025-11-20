@@ -3,9 +3,8 @@ open! Timing_wheel
 
 let start = Time_ns.epoch
 
-(* In these benchmarks, the alarm times are chosen in such a way that computing
-   the next alarm time is expensive because it involves traversing the entire level
-   array. *)
+(* In these benchmarks, the alarm times are chosen in such a way that computing the next
+   alarm time is expensive because it involves traversing the entire level array. *)
 
 (** This definition is copied from [lib/async_kernel/src/async_kernel_config.ml]. *)
 module Alarm_precision = Timing_wheel.Alarm_precision

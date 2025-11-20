@@ -15,9 +15,9 @@ type endian =
   ]
 [@@deriving compare ~localize, hash, sexp]
 
-(* Computes the offset based on the total number of bytes, the byte order, and the
-   byte number. The byte number is ordered by decreasing significance starting at zero
-   (big endian). So the most significant byte is 0, and the least significant byte is (len
+(* Computes the offset based on the total number of bytes, the byte order, and the byte
+   number. The byte number is ordered by decreasing significance starting at zero (big
+   endian). So the most significant byte is 0, and the least significant byte is (len
    - 1). *)
 
 exception Binary_packing_invalid_byte_number of int * int [@@deriving sexp]
@@ -537,8 +537,8 @@ let pack_signed_64_int ~byte_order ~buf ~pos n =
 
 (* It's important to use [asr] not [lsr] in [pack_signed_64_int_big_endian] and
    [pack_signed_64_int_little_endian] so that the most significant byte is encoded
-   correctly.  (It might be helpful to think about this as widening, i.e. sign
-   extending, the number to 64 bits and then doing the right shift by 56.)
+   correctly. (It might be helpful to think about this as widening, i.e. sign extending,
+   the number to 64 bits and then doing the right shift by 56.)
 *)
 
 let pack_signed_64_int_big_endian ~buf ~pos v =

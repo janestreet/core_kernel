@@ -235,7 +235,7 @@ module%test _ = struct
   ;;
 
   (* Additional tests for [[@@deriving binio]], [[@@deriving sexp]], [t_of_sexp],
-       [filter_map{,i}], [map{,i}]. *)
+     [filter_map{,i}], [map{,i}]. *)
   let%test_unit _ =
     let outer_sexp_of_t = sexp_of_t in
     let module M = struct

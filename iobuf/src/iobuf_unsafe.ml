@@ -442,7 +442,7 @@ module Fill = struct
     uadv t len
   ;;
 
-  (* Bigstring int8 accessors are slow C calls.  Use the fast char primitive. *)
+  (* Bigstring int8 accessors are slow C calls. Use the fast char primitive. *)
   let[@inline always] uint8_trunc t i = char t (Char.unsafe_of_int i)
   let[@inline always] int8_trunc t i = char t (Char.unsafe_of_int i)
   let decimal t i = uadv t (Itoa.unsafe_poke_decimal t ~pos:0 i)
