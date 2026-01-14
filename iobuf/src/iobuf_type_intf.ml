@@ -48,7 +48,7 @@ module type Iobuf_type = sig
 
   val globalize : [ `deprecated ]
   val globalize_shared : ('rw, 'seek, global) t -> ('rw, 'seek, global) t
-  val globalize_copied : ('rw, 'seek, 'loc) t -> ('rw, 'seek, 'loc) t
+  val globalize_copied : ('rw, 'seek, _) t -> ('rw, 'seek, _) t
 
   module With_shallow_sexp : sig
     type ('rw, 'seek, 'loc) t = ('rw, 'seek, 'loc) iobuf [@@deriving sexp_of]

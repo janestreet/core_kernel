@@ -165,16 +165,12 @@ module Stable = struct
 
             let to_sexpable t = t
 
-            let module_Key =
-              Base.Portability_hacks.magic_portable__first_class_module
-                (module Key : Key_with_witnesses
-                  with type t = Key.t
-                   and type comparator_witness = Key.comparator_witness)
-            ;;
-
             let of_sexpable map =
               validate_map_from_serialization
-                (Base.Portability_hacks.magic_uncontended__first_class_module module_Key)
+                (Base.Portability_hacks.magic_uncontended__promise_deeply_immutable_module
+                   (module Key : Key_with_witnesses
+                     with type t = Key.t
+                      and type comparator_witness = Key.comparator_witness))
                 map;
               map
             ;;
@@ -188,16 +184,12 @@ module Stable = struct
 
             let to_binable t = t
 
-            let module_Key =
-              Base.Portability_hacks.magic_portable__first_class_module
-                (module Key : Key_with_witnesses
-                  with type t = Key.t
-                   and type comparator_witness = Key.comparator_witness)
-            ;;
-
             let of_binable map =
               validate_map_from_serialization
-                (Base.Portability_hacks.magic_uncontended__first_class_module module_Key)
+                (Base.Portability_hacks.magic_uncontended__promise_deeply_immutable_module
+                   (module Key : Key_with_witnesses
+                     with type t = Key.t
+                      and type comparator_witness = Key.comparator_witness))
                 map;
               map
             ;;
@@ -370,7 +362,7 @@ module type M = sig
   module Total_map : S with type Key.t = t
 end
 
-module M (T : For_include_functor) = struct
+module M (T : For_include_functor_plain) = struct
   type 'a t = 'a T.Total_map.t
 end
 
@@ -397,6 +389,8 @@ let sexp_of_m__t
   =
   K.Total_map.sexp_of_t sexp_of_a
 ;;
+
+let m__t_sexp_grammar = Map.Stable.V1.m__t_sexp_grammar
 
 let bin_shape_m__t (module K : For_include_functor) (bin_shape_a : Bin_shape.t)
   : Bin_shape.t
@@ -644,16 +638,12 @@ struct
 
       let to_binable x = x
 
-      let module_Key =
-        Portability_hacks.magic_portable__first_class_module
-          (module Key : Key_with_witnesses
-            with type t = Key.t
-             and type comparator_witness = Key.comparator_witness)
-      ;;
-
       let of_binable x =
         validate_map_from_serialization
-          (Portability_hacks.magic_uncontended__first_class_module module_Key)
+          (Portability_hacks.magic_uncontended__promise_deeply_immutable_module
+             (module Key : Key_with_witnesses
+               with type t = Key.t
+                and type comparator_witness = Key.comparator_witness))
           x;
         x
       ;;

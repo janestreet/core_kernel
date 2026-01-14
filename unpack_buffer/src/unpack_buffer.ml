@@ -197,6 +197,14 @@ module Unpack_one = struct
 
   let expect_char = expect char (module Char)
   let newline = expect_char '\n'
+
+  let unpack_result_strip_state
+    : type a state. (a, state) unpack_result -> (a, unit) unpack_result
+    = function
+    | `Ok (a, n) -> `Ok (a, n)
+    | `Invalid_data e -> `Invalid_data e
+    | `Not_enough_data (_, n) -> `Not_enough_data ((), n)
+  ;;
 end
 
 type ('a, 'state) alive =
@@ -397,3 +405,20 @@ let unpack_iter t ~f =
 ;;
 
 let unpack_into t q = unpack_iter t ~f:(Queue.enqueue q)
+
+module For_testing = struct
+  let inspect' ({ unpack; _ } as alive) ~f =
+    let unpack_with_inspect ~state ~buf ~pos ~len =
+      let a = unpack ~state ~buf ~pos ~len in
+      f (Unpack_one.unpack_result_strip_state a);
+      a
+    in
+    { alive with unpack = unpack_with_inspect }
+  ;;
+
+  let inspect t ~f =
+    match t.alive_or_dead with
+    | Dead _ -> ()
+    | Alive alive -> t.alive_or_dead <- Alive (inspect' alive ~f)
+  ;;
+end

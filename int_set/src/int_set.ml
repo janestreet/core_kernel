@@ -29,8 +29,7 @@ end = struct
   let make x y = if x <= y then { lo = x; hi = y } else { lo = y; hi = x }
   let to_string t = if t.lo = t.hi then Int.to_string t.lo else sprintf "%d-%d" t.lo t.hi
 
-  (* on the number line, r1 is either on the left, on the right, or
-     intersected with r2 *)
+  (* on the number line, r1 is either on the left, on the right, or intersected with r2 *)
   let compare r1 r2 =
     if r1.hi < r2.lo - 1
     then `Lt_and_not_adjacent
@@ -51,8 +50,8 @@ end
 
 type t = Range.t list
 
-(* invariant : the elements of [t] must be pairwise discrete (not mergeable) and sorted
-   in DECREASING order. *)
+(* invariant : the elements of [t] must be pairwise discrete (not mergeable) and sorted in
+   DECREASING order. *)
 
 let empty = []
 let to_string t = String.concat ~sep:"," (List.rev_map t ~f:Range.to_string)

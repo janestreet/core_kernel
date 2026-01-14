@@ -63,8 +63,8 @@ let buf t = Modes.At_locality.unwrap_global t.buf
 let%template[@mode local] buf t = Modes.At_locality.unwrap_local t.buf
 
 let[@cold] fail t message a sexp_of_a =
-  (* Immediately convert the iobuf to sexp.  Otherwise, the iobuf could be modified before
-     conversion and printing.  Since we plan to use iobufs for pooled network buffers in
+  (* Immediately convert the iobuf to sexp. Otherwise, the iobuf could be modified before
+     conversion and printing. Since we plan to use iobufs for pooled network buffers in
      practice, this could be very confusing when debugging production systems. *)
   Error.raise
     (Error.create
@@ -193,8 +193,8 @@ let create ~len =
   of_bigstring (Bigstring.create len)
 ;;
 
-(* We used to do it like {v
-
+(* We used to do it like
+   {v
 let unsafe_with_range t ~pos f =
   f ([%template buf [@mode local]] t) ~pos:(t.lo + pos);
 ;;
@@ -224,8 +224,8 @@ let with_advance t ~len f =
 let ignore_range (_ : Bigstring.t) ~pos:(_ : int) = ()
 
 let advance t len = with_advance t ~len ignore_range
-
-   v} but higher order functions don't get inlined, even in simple uses like advance.
+   v}
+   but higher order functions don't get inlined, even in simple uses like advance.
    Therefor, we stick to first order. *)
 
 let[@inline always] unsafe_buf_pos t ~pos ~len:_ = t.lo + pos

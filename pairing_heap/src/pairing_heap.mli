@@ -80,6 +80,10 @@ val copy : 'a t -> 'a t
 module Elt : sig
   type 'a t [@@deriving sexp_of]
 
+  (** [value t] returns the value in the heap controlled by this token if the value is
+      still in the heap, and [None] otherwise. *)
+  val value : 'a t -> 'a option
+
   (** [value_exn t] returns the value in the heap controlled by this token if the value is
       still in the heap, and raises otherwise. *)
   val value_exn : 'a t -> 'a

@@ -317,7 +317,9 @@ module type Total_map = sig
       have an [Applicative.S4]. *)
 
   module type Key = Key
+  module type Key_plain = Key_plain
   module type Key_with_witnesses = Key_with_witnesses
+  module type Key_plain_with_witnesses = Key_plain_with_witnesses
 
   [%%template:
   [@@@modality.default p = (portable, nonportable)]
@@ -410,7 +412,7 @@ module type Total_map = sig
     module Total_map : S with type Key.t = t
   end
 
-  module M (T : For_include_functor) : sig
+  module M (T : For_include_functor_plain) : sig
     type 'a t = 'a T.Total_map.t
   end
 
@@ -431,6 +433,11 @@ module type Total_map = sig
     -> ('v -> Sexp.t)
     -> ('k, 'v, 'cmp, 'enum) t
     -> Sexp.t
+
+  val m__t_sexp_grammar
+    :  (module Map.M_sexp_grammar with type t = 'k)
+    -> 'v Sexplib0.Sexp_grammar.t
+    -> ('k, 'v, 'cmp, 'enum) t Sexplib0.Sexp_grammar.t
 
   val bin_shape_m__t : (module For_include_functor) -> Bin_shape.t -> Bin_shape.t
 

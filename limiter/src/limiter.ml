@@ -100,7 +100,7 @@ end = struct
     let of_tokens_per_sec x = x /. 1E9
 
     (* this will raise when there is an int overflow, but in a way that will be annoying
-       to understand/track down if it fails.  This comment is here to help while keeping
+       to understand/track down if it fails. This comment is here to help while keeping
        the common case fast. *)
     let to_tokens t span = Float.iround_down_exn (t *. Time_ns.Span.to_ns span)
   end
@@ -298,7 +298,7 @@ let advance_time =
   fun t ~now ->
     if Time_ns.( > ) now t.time then t.time <- now;
     (* this has to be run even if time doesn't move forward to handle the case of an
-       Infinite hopper to bucket drop rate.  In that case tokens in the hopper may
+       Infinite hopper to bucket drop rate. In that case tokens in the hopper may
        instantaneously move into the bucket. *)
     update_tokens t
 ;;
@@ -509,8 +509,7 @@ module Throttle = struct
   include Throttled_rate_limiter
 
   let create_exn ~now ~max_concurrent_jobs =
-    (* the sustained rate is immediately overridden with
-       set_hopper_to_bucket_rate_per_sec *)
+    (* the sustained rate is immediately overridden with set_hopper_to_bucket_rate_per_sec *)
     let sustained_rate_unused = 1. in
     let t =
       create_exn
@@ -521,8 +520,7 @@ module Throttle = struct
     in
     Iofm.set_infinite t.hopper_to_bucket_rate_per_ns;
     Iofm.set_infinite t.time_in_token_space;
-    (* Since we set the hopper rate to infinite then the bucket can immediately be
-       filled. *)
+    (* Since we set the hopper rate to infinite then the bucket can immediately be filled. *)
     t.in_bucket <- t.bucket_limit;
     t
   ;;

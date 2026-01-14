@@ -1,9 +1,19 @@
 open Core
 open Bus
 
-let create_with_subscribers (type a) (arity : a Callback_arity.t) ~num_subscribers =
+type _ arity =
+  | Arity1 : (_ -> unit) arity
+  | Arity1_local : (_ -> unit) arity
+  | Arity2 : (_ -> _ -> unit) arity
+  | Arity3 : (_ -> _ -> _ -> unit) arity
+  | Arity4 : (_ -> _ -> _ -> _ -> unit) arity
+  | Arity5 : (_ -> _ -> _ -> _ -> _ -> unit) arity
+  | Arity6 : (_ -> _ -> _ -> _ -> _ -> _ -> unit) arity
+[@@warning "-unused-constructor"]
+
+let create_with_subscribers (type a) (arity : a arity) ~num_subscribers =
   let t =
-    create_exn arity ~on_subscription_after_first_write:Allow ~on_callback_raise:ignore
+    create_exn ~on_subscription_after_first_write:Allow ~on_callback_raise:ignore ()
   in
   let subscribers =
     if num_subscribers = 0
@@ -13,19 +23,15 @@ let create_with_subscribers (type a) (arity : a Callback_arity.t) ~num_subscribe
         subscribe_exn
           (read_only t)
           ~f:
-            (match arity with
-             | Arity1 -> fun _ -> ()
-             | Arity1_local -> fun _ -> ()
-             | Arity2 -> fun _ _ -> ()
-             | Arity2_local -> fun _ _ -> ()
-             | Arity3 -> fun _ _ _ -> ()
-             | Arity3_local -> fun _ _ _ -> ()
-             | Arity4 -> fun _ _ _ _ -> ()
-             | Arity4_local -> fun _ _ _ _ -> ()
-             | Arity5 -> fun _ _ _ _ _ -> ()
-             | Arity5_local -> fun _ _ _ _ _ -> ()
-             | Arity6 -> fun _ _ _ _ _ _ -> ()
-             | Arity6_local -> fun _ _ _ _ _ _ -> ()))
+            ((match arity with
+              | Arity1 -> fun _ -> ()
+              | Arity1_local -> fun _ -> ()
+              | Arity2 -> fun _ _ -> ()
+              | Arity3 -> fun _ _ _ -> ()
+              | Arity4 -> fun _ _ _ _ -> ()
+              | Arity5 -> fun _ _ _ _ _ -> ()
+              | Arity6 -> fun _ _ _ _ _ _ -> ())
+             : a))
   in
   t, subscribers
 ;;

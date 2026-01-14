@@ -53,8 +53,7 @@ module%test _ = struct
     done
   ;;
 
-  (* [large_int] creates an integer constant that is not representable on 32bits
-       systems. *)
+  (* [large_int] creates an integer constant that is not representable on 32bits systems. *)
   let large_int a b c d = (a lsl 48) lor (b lsl 32) lor (c lsl 16) lor d
 
   (* Test for past bugs with very small tables and collisions *)

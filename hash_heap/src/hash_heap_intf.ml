@@ -44,7 +44,7 @@ module type S = sig
   val length : 'a t -> int
   val is_empty : 'a t -> bool
 
-  (** Removes all values, leaving the hash heap empty. **)
+  (** Removes all values, leaving the hash heap empty. *)
   val clear : 'a t -> unit
 
   (** Only checks heap invariant of the underlying heap. *)

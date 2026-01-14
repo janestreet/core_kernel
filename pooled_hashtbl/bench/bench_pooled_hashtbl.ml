@@ -3,7 +3,7 @@ open! Pooled_hashtbl
 
 module%bench Pooled_hashtbl = struct
   (* Big enough so that the arrays are not allocated on the minor. Minor allocations
-       should be small and independent of the size. *)
+     should be small and independent of the size. *)
   let size = 512
 
   let create () =

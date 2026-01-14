@@ -28,7 +28,7 @@ let remove t key = Hashtbl.remove t.entry_by_key key
 let clear t = Hashtbl.clear t.entry_by_key
 
 (* In order for a call to [reclaim_space_for_keys_with_unused_data] to reclaim a key that
-   was previously finalized, the weak pointer must have been cleared.  This relies on the
+   was previously finalized, the weak pointer must have been cleared. This relies on the
    fact that the OCaml garbage collector clears weaks and then runs finalizers. *)
 let reclaim_space_for_keys_with_unused_data t =
   let remove_entry key =
@@ -59,8 +59,8 @@ let set_data t key entry (data : _ Heap_block.t) =
       t.thread_safe_run_when_unused_data ())
   in
   try Stdlib.Gc.finalise_last cleanup data with
-  (* In this case, [x] is known to be static data, which will
-     never be collected by the GC anyway, so it's safe to drop *)
+  (* In this case, [x] is known to be static data, which will never be collected by the GC
+     anyway, so it's safe to drop *)
   | Invalid_argument _ -> ()
 ;;
 

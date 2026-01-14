@@ -28,7 +28,7 @@ module Make (Key : Key) : S with module Key = Key = struct
 
   let comparator t = t.cmp
 
-  (* [push_new_key] adds an entry to the heap without checking for duplicates.  Thus it
+  (* [push_new_key] adds an entry to the heap without checking for duplicates. Thus it
      should only be called when the key is known not to be present already. *)
   let push_new_key t ~key ~data =
     let el = Heap.add_removable t.heap (key, data) in
@@ -43,7 +43,8 @@ module Make (Key : Key) : S with module Key = Key = struct
       `Ok
   ;;
 
-  exception Key_already_present of Key.t [@@deriving sexp]
+  exception Key_already_present of Key.t
+  [@@deriving sexp ~nonportable__magic_unsafe_in_parallel_programs]
 
   let push_exn t ~key ~data =
     match push t ~key ~data with
@@ -123,7 +124,8 @@ module Make (Key : Key) : S with module Key = Key = struct
     | Some el -> Some (snd (Heap.Elt.value_exn el))
   ;;
 
-  exception Key_not_found of Key.t [@@deriving sexp]
+  exception Key_not_found of Key.t
+  [@@deriving sexp ~nonportable__magic_unsafe_in_parallel_programs]
 
   let find_exn t key =
     match find t key with

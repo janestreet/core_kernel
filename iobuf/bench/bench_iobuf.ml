@@ -82,7 +82,7 @@ module%bench Blit = struct
   ;;
 end
 
-(* 8b4516d0ab0a *"jane/int-repr/iobuf-bench/update-columns"
+(*=8b4516d0ab0a *"jane/int-repr/iobuf-bench/update-columns"
    Estimated testing time 20s (20 benchmarks x 1s). Change using '-quota'.
    ┌───────────────────────────────────────┬────────────────┬──────────┐
    │ Name                                  │ Runs @ Samples │ Time/Run │
@@ -130,7 +130,7 @@ module%bench Poke = struct
   ;;
 end
 
-(* 8b4516d0ab0a *"jane/int-repr/iobuf-bench/update-columns"
+(*=8b4516d0ab0a *"jane/int-repr/iobuf-bench/update-columns"
    Estimated testing time 22s (22 benchmarks x 1s). Change using '-quota'.
    ┌─────────────────────────────────────────┬────────────────┬──────────┐
    │ Name                                    │ Runs @ Samples │ Time/Run │
@@ -248,8 +248,8 @@ module%bench [@name "padded decimal"] _ = struct
 end
 
 module%bench [@name "date string"] _ = struct
-  (* Quantify the gain from our version of [Fill.date_string_iso8601_extended] over 
-       [Date.to_string]. *)
+  (* Quantify the gain from our version of [Fill.date_string_iso8601_extended] over
+     [Date.to_string]. *)
   let dates =
     let%map.List y = [ 0000; 0009; 0099; 0999; 9999 ]
     and m = Month.[ Jan; Dec ]
@@ -279,7 +279,7 @@ module%bench [@name "date string"] _ = struct
   ;;
 end
 
-(* In an attempt to verify how much a phys_equal check could optimize
+(*=In an attempt to verify how much a phys_equal check could optimize
    [set_bounds_and_buffer], in the soon-to-be-common protogen use case, here is the result
    with cross-module inlining:
 

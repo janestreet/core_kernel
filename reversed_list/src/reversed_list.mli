@@ -57,10 +57,10 @@ module Nonempty : sig
 
   val cons : 'a -> 'a t -> 'a t
   val to_rev_list : 'a t -> 'a reversed_list
-  val rev : 'a t -> 'a Nonempty_list.t
-  val rev_append : 'a t -> 'a list -> 'a Nonempty_list.t
-  val rev_map : 'a t -> f:('a -> 'b) -> 'b Nonempty_list.t
-  val rev_mapi : 'a t -> f:(int -> 'a -> 'b) -> 'b Nonempty_list.t
+  val rev : 'a t -> 'a Core.Nonempty_list.t
+  val rev_append : 'a t -> 'a list -> 'a Core.Nonempty_list.t
+  val rev_map : 'a t -> f:('a -> 'b) -> 'b Core.Nonempty_list.t
+  val rev_mapi : 'a t -> f:(int -> 'a -> 'b) -> 'b Core.Nonempty_list.t
 
   (** Renders sexps without reversing the list. E.g. [1::2] is represented as [(1 2)]. *)
   module With_sexp_of : sig
@@ -74,8 +74,8 @@ module Nonempty : sig
 end
 
 (** [of_nonempty t] converts a nonempty list to a nonempty reversed list. *)
-val of_nonempty : 'a Nonempty_list.t -> 'a Nonempty.t
+val of_nonempty : 'a Core.Nonempty_list.t -> 'a Nonempty.t
 
 (** [rev_append_to_nonempty xs acc] reverses [xs] and prepends it to the nonempty list
     [acc]. *)
-val rev_append_to_nonempty : 'a t -> 'a Nonempty_list.t -> 'a Nonempty_list.t
+val rev_append_to_nonempty : 'a t -> 'a Core.Nonempty_list.t -> 'a Core.Nonempty_list.t

@@ -292,7 +292,7 @@ struct
     done
   ;;
 
-  (* [sub_shared ?pos ?len]  *)
+  (* [sub_shared ?pos ?len] *)
   let%test_unit _ =
     let test t =
       let n = length t in
@@ -1647,9 +1647,9 @@ struct
         let bin_prot_char t ~pos a = Bin_io.poke Char.bin_writer_t t ~pos a
         let ignore_locality (f : ('a, 'd, 'w, 's) t__local) = (f :> ('a, 'd, 'w, 's) t)
 
-        (* Static permission tests for the cases that do compile.  Since the functions
-           all use essentially the same type definitions, we don't need to test all of
-           them.  We've already tested them on a (read_write, seek) Iobuf.t above. *)
+        (* Static permission tests for the cases that do compile. Since the functions all
+           use essentially the same type definitions, we don't need to test all of them.
+           We've already tested them on a (read_write, seek) Iobuf.t above. *)
         let%test_unit _ =
           char (of_string "a" : (_, no_seek, Iobuf.global) Iobuf.t) ~pos:0 'b';
           char (of_string "a" : (_, seek, Iobuf.global) Iobuf.t) ~pos:0 'b';
@@ -1878,8 +1878,8 @@ struct
       check rindex
     in
     let require_error here f =
-      (* Do this instead of [require_does_raise] because the latter prints out the exn.
-         We need to have the same output in the safe and unsafe variants. *)
+      (* Do this instead of [require_does_raise] because the latter prints out the exn. We
+         need to have the same output in the safe and unsafe variants. *)
       require_error ~here [%sexp_of: unit] (try_with f)
     in
     test 'h';
@@ -2967,7 +2967,7 @@ module%test [@name "allocation"] _ = struct
   let%expect_test "Fill.string" =
     let str = "123" in
     (* The labeled arguments mustn't be constant or they don't test anything - optional
-         constant arguments can always be preallocated. *)
+       constant arguments can always be preallocated. *)
     let str_pos = Random.int (String.length str) in
     let len = Random.int (String.length str - str_pos) in
     let dst = Iobuf.create ~len in
@@ -3202,8 +3202,8 @@ module%test [@name "allocation"] _ = struct
       [%expect {| |}]
     ;;
 
-    (* We don't bother testing the allocation of string-like accessors that
-         heap-allocate their result. We do test the local equivalents below. *)
+    (* We don't bother testing the allocation of string-like accessors that heap-allocate
+       their result. We do test the local equivalents below. *)
     let head_padded_fixed_string = head_padded_fixed_string
     let tail_padded_fixed_string = tail_padded_fixed_string
     let string = string

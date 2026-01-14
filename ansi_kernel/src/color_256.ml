@@ -10,9 +10,9 @@ open Core
 
 type t = Stable.V1.t [@@deriving sexp_of, compare ~localize, hash, equal ~localize]
 
-(* Internal type for turning palette values into RGB levels -- typically
-   we want to convert these into 24-bit values (8-bits per channel) or into
-   0-1000 for internal [Jane_curses] use. *)
+(* Internal type for turning palette values into RGB levels -- typically we want to
+   convert these into 24-bit values (8-bits per channel) or into 0-1000 for internal
+   [Jane_curses] use. *)
 type level_map_t =
   { zero_level : int
   ; half_level : int
@@ -25,10 +25,9 @@ type level_map_t =
   ; interpolated_map : float list
   }
 
-(* NOTE: these constant structures mirror the xterm palette colour scheme, as
-   per expected terminal interpretation.  The Jane_curses mapping of the
-   1000-per-channel palette into RGB levels is linear, with black and
-   bright-black both mapping to outright black (see
+(* NOTE: these constant structures mirror the xterm palette colour scheme, as per expected
+   terminal interpretation. The Jane_curses mapping of the 1000-per-channel palette into
+   RGB levels is linear, with black and bright-black both mapping to outright black (see
    lib/jane_curses/backends/lambda-term/lib/curses_screen.ml). *)
 let level_map_8bit_per_channel =
   { zero_level = 0
@@ -56,9 +55,8 @@ let level_map_1000_per_channel =
   }
 ;;
 
-(* Given a value in some integer range (here, [0,255] or [0,1000]), find the
-   closest matching value in the interpolated color-cube map and return its
-   index, in [0,5]. *)
+(* Given a value in some integer range (here, [0,255] or [0,1000]), find the closest
+   matching value in the interpolated color-cube map and return its index, in [0,5]. *)
 let closest_cube_index v ~iterp_map =
   match
     List.findi iterp_map ~f:(fun _idx iterp_val -> Float.( < ) (Float.of_int v) iterp_val)
@@ -104,15 +102,13 @@ let of_rgb6_exn (r, g, b) =
 let of_rgb rgb =
   (* Map float values from [0. -> 1.] to int [0 -> 5], reducing non-finites to 0.
 
-     NOTE: Float.clamp_exn only throws an exception if something is wrong with
-     respect to the ~min and ~max values; however, we only pass finite values
-     regardless.
+     NOTE: Float.clamp_exn only throws an exception if something is wrong with respect to
+     the ~min and ~max values; however, we only pass finite values regardless.
 
-     NOTE: The mapping here is linear in RGB terms (for the standard 256-color
-     palette used), mapped to the closest [rgb6] value.  I.e. a value of 0.1 will
-     result in an output of 0/5 (black level); a value of 0.9 will result in an
-     output of 4/5; and a value of 0.95 will result in an output of 5/5 (white
-     level).
+     NOTE: The mapping here is linear in RGB terms (for the standard 256-color palette
+     used), mapped to the closest [rgb6] value. I.e. a value of 0.1 will result in an
+     output of 0/5 (black level); a value of 0.9 will result in an output of 4/5; and a
+     value of 0.95 will result in an output of 5/5 (white level).
   *)
   Tuple3.map rgb ~f:(fun f ->
     (if Float.is_finite f then Float.clamp_exn ~min:0. ~max:1. f else 0.) *. 255.
@@ -171,7 +167,7 @@ let to_rgb_ints (c : t) ~(level_map : level_map_t) : int * int * int =
   else if ival >= 232
   then (
     let gr_val = ival - 232 in
-    (* [232,255] -> [0,23] ;  generate RGB levels starting at 8 in increments of 10. *)
+    (* [232,255] -> [0,23] ; generate RGB levels starting at 8 in increments of 10. *)
     let gr_part = level_map.gray_base + (gr_val * level_map.gray_stride) in
     gr_part, gr_part, gr_part)
   else (

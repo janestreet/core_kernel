@@ -121,3 +121,12 @@ val unpack_iter : 'a t -> f:('a -> unit) -> unit Or_error.t
 (** [debug] controls whether invariants are checked at each call. Setting this to [true]
     can make things very slow. *)
 val debug : bool ref
+
+module For_testing : sig
+  (** _ *)
+
+  (** [inspect t ~f] registers [f] to be invoked as a callback on each [unpack_result]
+      immediately as it is produced. [inspect] can be used to attach observability to [t]
+      even if one is not directly responsible for unpacking it. *)
+  val inspect : 'a t -> f:(('a, unit) Unpack_one.unpack_result -> unit) -> unit
+end

@@ -378,3 +378,128 @@ let%expect_test "[feed] and [unpack_iter] allocation" =
   [%test_result: int] ~expect:num_objects !num_unpacked;
   [%expect {| |}]
 ;;
+
+module%test Inspect = struct
+  let inspect = For_testing.inspect
+
+  let test_inspect (type a) ~(sexp_of : a -> _) unpack_result =
+    let sexp_of_a = sexp_of in
+    print_s
+      [%message
+        "inspect"
+          ~_:
+            (unpack_result
+             : [ `Ok of a * int
+               | `Not_enough_data of unit * int
+               | `Invalid_data of Error.t
+               ])]
+  ;;
+
+  let test_unpack (type a) ~(sexp_of : a -> _) a =
+    let sexp_of_a = sexp_of in
+    print_s [%message "unpack" ~_:(a : a)]
+  ;;
+
+  let error_exn = function
+    | Error e -> e
+    | Ok () -> failwith "expected error"
+  ;;
+
+  let one_char_at_a_time ~state:() ~buf ~pos ~len =
+    if len < 1
+    then `Not_enough_data ((), 0)
+    else `Ok (Bigstring.get_string buf ~pos ~len:1, 1)
+  ;;
+
+  let%expect_test "[inspect] calls [~f] with [Ok]" =
+    debug := true;
+    let t = Unpack_one.create ~initial_state:() ~unpack:one_char_at_a_time |> create in
+    inspect t ~f:(test_inspect ~sexp_of:[%sexp_of: string]);
+    feed_string t "abc" |> ok_exn;
+    unpack_iter t ~f:(test_unpack ~sexp_of:[%sexp_of: string]) |> ok_exn;
+    [%expect
+      {|
+      (inspect (Ok (a 1)))
+      (unpack a)
+      (inspect (Ok (b 1)))
+      (unpack b)
+      (inspect (Ok (c 1)))
+      (unpack c)
+      |}]
+  ;;
+
+  let%expect_test "[inspect] calls [~f] with [Not_enough_data]" =
+    debug := true;
+    let t =
+      Unpack_one.create ~initial_state:() ~unpack:(fun ~state:() ~buf ~pos ~len ->
+        if len < 2
+        then `Not_enough_data ((), len)
+        else `Ok (Bigstring.get_string buf ~pos ~len:2, 2))
+      |> create
+    in
+    inspect t ~f:(test_inspect ~sexp_of:[%sexp_of: string]);
+    feed_string t "abcde" |> ok_exn;
+    unpack_iter t ~f:(test_unpack ~sexp_of:[%sexp_of: string]) |> ok_exn;
+    [%expect
+      {|
+      (inspect (Ok (ab 2)))
+      (unpack ab)
+      (inspect (Ok (cd 2)))
+      (unpack cd)
+      (inspect (Not_enough_data (() 1)))
+      |}]
+  ;;
+
+  let%expect_test "[inspect] calls [~f] with [Invalid_data]" =
+    debug := true;
+    let t =
+      Unpack_one.create ~initial_state:() ~unpack:(fun ~state:() ~buf ~pos ~len ->
+        if len < 1
+        then `Not_enough_data ((), 0)
+        else if Char.( = ) (Bigstring.get buf pos) 'x'
+        then `Invalid_data (Error.of_string "boom")
+        else `Ok (Bigstring.get_string buf ~pos ~len:1, 1))
+      |> create
+    in
+    inspect t ~f:(test_inspect ~sexp_of:[%sexp_of: string]);
+    feed_string t "abcxdef" |> ok_exn;
+    let error = unpack_iter t ~f:(test_unpack ~sexp_of:[%sexp_of: string]) |> error_exn in
+    print_s [%message (error : Error.t)];
+    [%expect
+      {|
+      (inspect (Ok (a 1)))
+      (unpack a)
+      (inspect (Ok (b 1)))
+      (unpack b)
+      (inspect (Ok (c 1)))
+      (unpack c)
+      (inspect (Invalid_data boom))
+      (error ("invalid data" boom))
+      |}]
+  ;;
+
+  let%expect_test "[inspect] is a no-op if [Dead]" =
+    debug := true;
+    let t = Unpack_one.create ~initial_state:() ~unpack:one_char_at_a_time |> create in
+    feed_string t "a" |> ok_exn;
+    let (_ : Error.t) = unpack_iter t ~f:(fun _ -> failwith "boom") |> error_exn in
+    assert (is_dead t);
+    let inspected = ref false in
+    inspect t ~f:(fun _ -> inspected := true);
+    let (feed_error : Error.t) =
+      feed_string t "abcdefghijklmnopqrstuvwxyz" |> error_exn
+    in
+    let (unpack_error : Error.t) =
+      unpack_iter t ~f:(test_unpack ~sexp_of:[%sexp_of: string]) |> error_exn
+    in
+    print_s [%message (!inspected : bool) (feed_error : Error.t) (unpack_error : Error.t)];
+    [%expect
+      {|
+      ((!inspected false)
+       (feed_error (
+         "~f supplied to Unpack_buffer.unpack_iter raised" (Failure boom)))
+       (unpack_error (
+         "~f supplied to Unpack_buffer.unpack_iter raised" (Failure boom))))
+      |}]
+  ;;
+end

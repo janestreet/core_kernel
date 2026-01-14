@@ -14,42 +14,10 @@ module State = struct
   ;;
 end
 
-module Callback_arity = struct
-  type _ t =
-    | Arity1 : ('a -> unit) t
-    | Arity1_local : ('a -> unit) t
-    | Arity2 : ('a -> 'b -> unit) t
-    | Arity2_local : ('a -> 'b -> unit) t
-    | Arity3 : ('a -> 'b -> 'c -> unit) t
-    | Arity3_local : ('a -> 'b -> 'c -> unit) t
-    | Arity4 : ('a -> 'b -> 'c -> 'd -> unit) t
-    | Arity4_local : ('a -> 'b -> 'c -> 'd -> unit) t
-    | Arity5 : ('a -> 'b -> 'c -> 'd -> 'e -> unit) t
-    | Arity5_local : ('a -> 'b -> 'c -> 'd -> 'e -> unit) t
-    | Arity6 : ('a -> 'b -> 'c -> 'd -> 'e -> 'f -> unit) t
-    | Arity6_local : ('a -> 'b -> 'c -> 'd -> 'e -> 'f -> unit) t
-  [@@deriving sexp_of]
-
-  let uses_local_args : type a. a t -> bool = function
-    | Arity1 -> false
-    | Arity1_local -> true
-    | Arity2 -> false
-    | Arity2_local -> true
-    | Arity3 -> false
-    | Arity3_local -> true
-    | Arity4 -> false
-    | Arity4_local -> true
-    | Arity5 -> false
-    | Arity5_local -> true
-    | Arity6 -> false
-    | Arity6_local -> true
-  ;;
-end
-
 module Last_value : sig
   type 'callback t
 
-  val create_exn : 'callback Callback_arity.t -> 'callback t
+  val create : unit -> 'callback t
   val set1 : ('a -> unit) t -> 'a -> unit
   val set2 : ('a -> 'b -> unit) t -> 'a -> 'b -> unit
   val set3 : ('a -> 'b -> 'c -> unit) t -> 'a -> 'b -> 'c -> unit
@@ -108,14 +76,7 @@ end = struct
 
   type 'callback t = 'callback tuple option ref
 
-  let create_exn (type callback) (arity : callback Callback_arity.t) : callback t =
-    if Callback_arity.uses_local_args arity
-    then
-      raise_s
-        [%message
-          "Cannot save last value when using local args" (arity : _ Callback_arity.t)];
-    ref None
-  ;;
+  let create (type callback) () : callback t = ref None
 
   let set1 t a =
     match !t with
@@ -189,19 +150,19 @@ end
 module On_subscription_after_first_write = struct
   type t =
     | Allow
-    | Allow_and_send_last_value
+    | Allow_and_send_last_value_if_global
     | Raise
-  [@@deriving enumerate, sexp_of]
+  [@@deriving compare, enumerate, equal, sexp_of]
 
   let allow_subscription_after_first_write = function
     | Allow -> true
-    | Allow_and_send_last_value -> true
+    | Allow_and_send_last_value_if_global -> true
     | Raise -> false
   ;;
 
-  let save_last_value_exn t callback_arity =
+  let save_last_value_exn t =
     match t with
-    | Allow_and_send_last_value -> Some (Last_value.create_exn callback_arity)
+    | Allow_and_send_last_value_if_global -> Some (Last_value.create ())
     | Allow -> None
     | Raise -> None
   ;;
@@ -215,7 +176,7 @@ module Subscriber = struct
     ; callback : 'callback
     ; extract_exn : bool
     ; (* [subscribers_index] is the index of this subscriber in the bus's [subscribers]
-         array.  [-1] indicates that this subscriber is not subscribed. *)
+         array. [-1] indicates that this subscriber is not subscribed. *)
       mutable subscribers_index : int
     ; on_callback_raise : (Error.t -> unit) option
     ; on_close : (unit -> unit) option
@@ -287,7 +248,6 @@ end
 type ('callback, 'phantom) t =
   { bus_id : Bus_id.t
   ; name : Info.t option
-  ; callback_arity : 'callback Callback_arity.t
   ; created_from : Source_code_position.t
   ; on_subscription_after_first_write : On_subscription_after_first_write.t
   ; on_callback_raise : Error.t -> unit
@@ -308,7 +268,6 @@ let sexp_of_t
   _
   _
   { bus_id = _
-  ; callback_arity
   ; callbacks = _
   ; created_from
   ; last_value = _
@@ -328,7 +287,6 @@ let sexp_of_t
   [%message
     ""
       (name : (Info.t option[@sexp.option]))
-      (callback_arity : _ Callback_arity.t)
       (created_from : Source_code_position.t)
       (on_subscription_after_first_write : On_subscription_after_first_write.t)
       (state : State.t)
@@ -354,7 +312,6 @@ let invariant invariant_a _ t =
              then invariant_a (Option_array.get_some_exn callbacks i)
              else assert (Option_array.is_none callbacks i)
            done))
-      ~callback_arity:ignore
       ~created_from:ignore
       ~num_subscribers:(check (fun num_subscribers -> assert (num_subscribers >= 0)))
       ~on_subscription_after_first_write:ignore
@@ -450,7 +407,7 @@ let unsubscribe t subscriber =
     | Write_in_progress ->
       t.unsubscribes_during_write <- subscriber :: t.unsubscribes_during_write
     | Closed ->
-      (* This can happen if during [write], [unsubscribe] is called after [close].  We
+      (* This can happen if during [write], [unsubscribe] is called after [close]. We
          don't do anything here because all subscribers will be unsubscribed after the
          [write] finishes. *)
       ()
@@ -498,17 +455,17 @@ let call_on_callback_raise t error =
 ;;
 
 let callback_raised t i exn =
-  (* [i] was incremented before the callback was called, so we have to subtract one
-     here.  We do this here, rather than at the call site, because there are multiple
-     call sites due to the optimizations needed to keep this zero-alloc. *)
+  (* [i] was incremented before the callback was called, so we have to subtract one here.
+     We do this here, rather than at the call site, because there are multiple call sites
+     due to the optimizations needed to keep this zero-alloc. *)
   let subscriber = Option_array.get_some_exn t.subscribers (i - 1) in
   let error =
     match subscriber.extract_exn with
     | true -> Error.of_exn exn
     | false ->
-      (* This [Backtrace.Exn.most_recent ()] is intended to grab the backtrace of the [try
-         ... with]'s that call [callback_raised].  The call is here rather than earlier so
-         that we only do it when [subscriber.extract_exn = false]. *)
+      (* This [Backtrace.Exn.most_recent ()] is intended to grab the backtrace of the
+         [try ... with]'s that call [callback_raised]. The call is here rather than
+         earlier so that we only do it when [subscriber.extract_exn = false]. *)
       let backtrace = Backtrace.Exn.most_recent () in
       [%message
         "Bus subscriber raised"
@@ -536,8 +493,8 @@ let callback_raised t i exn =
 
 let[@inline always] unsafe_get_callback a i =
   (* We considered using [Option_array.get_some_exn] and
-     [Option_array.unsafe_get_some_exn] here, but both are significantly slower.  Check
-     the write benchmarks in [bench_bus.ml] before changing this. *)
+     [Option_array.unsafe_get_some_exn] here, but both are significantly slower. Check the
+     write benchmarks in [bench_bus.ml] before changing this. *)
   Option_array.unsafe_get_some_assuming_some a i
 ;;
 
@@ -627,7 +584,7 @@ module Write_variants_without_locals = struct
   ;;
 
   (* The [write_N] functions are written to minimise registers live across function calls
-     (these have to be spilled).  They are also annotated for partial inlining (the
+     (these have to be spilled). They are also annotated for partial inlining (the
      one-callback case becomes inlined whereas the >1-callback-case requires a further
      direct call). *)
 
@@ -753,6 +710,9 @@ module Write_variants_without_locals = struct
 end
 
 module Write_variants_with_locals = struct
+  [%%template
+  [@@@kind.default ka1 = base_or_null]
+
   let write_local_non_optimized t callbacks a1 =
     let len = t.num_subscribers in
     let i = ref 0 in
@@ -767,6 +727,8 @@ module Write_variants_with_locals = struct
     finish_write t
   ;;
 
+  [@@@kind.default ka2 = base_or_null]
+
   let write2_local_non_optimized t callbacks a1 a2 =
     let len = t.num_subscribers in
     let i = ref 0 in
@@ -779,7 +741,7 @@ module Write_variants_with_locals = struct
       | exn -> callback_raised t !i exn
     done;
     finish_write t
-  ;;
+  ;;]
 
   let write3_local_non_optimized t callbacks a1 a2 a3 =
     let len = t.num_subscribers in
@@ -837,6 +799,9 @@ module Write_variants_with_locals = struct
     finish_write t
   ;;
 
+  [%%template
+  [@@@kind.default ka1 = base_or_null]
+
   let[@inline always] write_local t a1 =
     let callbacks = t.callbacks in
     t.write_ever_called <- true;
@@ -851,8 +816,10 @@ module Write_variants_with_locals = struct
           (try (unsafe_get_callback callbacks 0) a1 with
            | exn -> callback_raised t 1 exn);
           finish_write t)
-        else (write_local_non_optimized [@inlined never]) t callbacks a1)
+        else (write_local_non_optimized [@kind ka1] [@inlined never]) t callbacks a1)
   ;;
+
+  [@@@kind.default ka2 = base_or_null]
 
   let[@inline always] write2_local t a1 a2 =
     let callbacks = t.callbacks in
@@ -868,8 +835,9 @@ module Write_variants_with_locals = struct
           (try (unsafe_get_callback callbacks 0) a1 a2 with
            | exn -> callback_raised t 1 exn);
           finish_write t)
-        else (write2_local_non_optimized [@inlined never]) t callbacks a1 a2)
-  ;;
+        else
+          (write2_local_non_optimized [@kind ka1 ka2] [@inlined never]) t callbacks a1 a2)
+  ;;]
 
   let[@inline always] write3_local t a1 a2 a3 =
     let callbacks = t.callbacks in
@@ -951,18 +919,16 @@ let allow_subscription_after_first_write t =
 let create_exn
   ?name
   ?here:(created_from = Stdlib.Lexing.dummy_pos)
-  callback_arity
   ~(on_subscription_after_first_write : On_subscription_after_first_write.t)
   ~on_callback_raise
+  ()
   =
   let last_value =
     On_subscription_after_first_write.save_last_value_exn
       on_subscription_after_first_write
-      callback_arity
   in
   { bus_id = Bus_id.create ()
   ; name
-  ; callback_arity
   ; created_from
   ; num_subscribers = 0
   ; on_subscription_after_first_write
@@ -1011,7 +977,7 @@ let subscribe_exn
   assert_can_subscribe t ~function_name:"subscribe_exn" ~subscribed_from;
   match t.state with
   | Closed ->
-    (* Anything that satisfies the return type will do.  Since the subscriber is never
+    (* Anything that satisfies the return type will do. Since the subscriber is never
        stored in the arrays, the [on_close] callback will never be called. *)
     Subscriber.create
       subscribed_from
@@ -1023,8 +989,8 @@ let subscribe_exn
       ~on_close
   | Ok_to_write | Write_in_progress ->
     (* The code below side effects [t], which potentially could interfere with a write in
-       progress.  However, the side effects don't change the prefix of [t.callbacks] that
-       write uses; they only change [t.callbacks] beyond that prefix.  And all writes
+       progress. However, the side effects don't change the prefix of [t.callbacks] that
+       write uses; they only change [t.callbacks] beyond that prefix. And all writes
        extract [t.num_subscribers] at the start, so that they will not see any subsequent
        changes to it. *)
     let subscriber =
@@ -1127,9 +1093,9 @@ module%test _ = struct
     [%test_result: int] (ending_major_words - starting_major_words) ~expect:0
   ;;
 
-  (* This test only works when [write] is properly inlined.  It does not guarantee that
-       [write] never allocates in any situation.  For example, if this test is moved to
-       another library and run with X_LIBRARY_INLINING=false, it fails. *)
+  (* This test only works when [write] is properly inlined. It does not guarantee that
+     [write] never allocates in any situation. For example, if this test is moved to
+     another library and run with X_LIBRARY_INLINING=false, it fails. *)
   let%test_unit "write doesn't allocate when inlined" =
     let create ~here:created_from arity =
       create_exn
@@ -1138,12 +1104,12 @@ module%test _ = struct
         ~on_subscription_after_first_write:Raise
         ~on_callback_raise:Error.raise
     in
-    let bus1 = create ~here:[%here] Arity1 in
-    let bus2 = create ~here:[%here] Arity2 in
-    let bus3 = create ~here:[%here] Arity3 in
-    let bus4 = create ~here:[%here] Arity4 in
-    let bus5 = create ~here:[%here] Arity5 in
-    let bus6 = create ~here:[%here] Arity6 in
+    let bus1 = create ~here:[%here] () in
+    let bus2 = create ~here:[%here] () in
+    let bus3 = create ~here:[%here] () in
+    let bus4 = create ~here:[%here] () in
+    let bus5 = create ~here:[%here] () in
+    let bus6 = create ~here:[%here] () in
     assert_no_allocation bus1 (fun () -> ()) (fun () -> write bus1 ());
     assert_no_allocation bus2 (fun () () -> ()) (fun () -> write2 bus2 () ());
     assert_no_allocation bus3 (fun () () () -> ()) (fun () -> write3 bus3 () () ());

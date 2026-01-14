@@ -7,8 +7,6 @@ let does_raise = Exn.does_raise
 
 include (
 struct
-  module Callback_arity = Callback_arity
-
   type nonrec ('a, 'b) t = ('a, 'b) t
   type ('a, 'b) bus = ('a, 'b) t
 
@@ -28,7 +26,6 @@ struct
   module Subscriber = Subscriber
   module Fold_arity = Fold_arity
 
-  let callback_arity = callback_arity
   let close = close
   let create_exn = create_exn
   let subscribe_with_state_exn = subscribe_with_state_exn
@@ -40,9 +37,13 @@ struct
   let subscribe_exn = subscribe_exn
   let unsubscribe = unsubscribe
   let write = write
-  let write_local = write_local
+  let%template write_local = (write_local [@kind ka]) [@@kind ka = base_or_null]
   let write2 = write2
-  let write2_local = write2_local
+
+  let%template write2_local = (write2_local [@kind ka kb])
+  [@@kind ka = base_or_null, kb = base_or_null]
+  ;;
+
   let write3 = write3
   let write3_local = write3_local
   let write4 = write4
@@ -55,17 +56,17 @@ struct
   let create1 ~here:created_from ~on_subscription_after_first_write =
     create_exn
       ~here:created_from
-      Arity1
       ~on_subscription_after_first_write
       ~on_callback_raise:Error.raise
+      ()
   ;;
 
   let create2 ~here:created_from ~on_subscription_after_first_write =
     create_exn
       ~here:created_from
-      Arity2
       ~on_subscription_after_first_write
       ~on_callback_raise:Error.raise
+      ()
   ;;
 
   let sexp_of_t = sexp_of_t
@@ -183,12 +184,13 @@ struct
       [%expect {| |}]
     ;;
 
-    let%expect_test "~on_subscription_after_first_write:Allow_and_send_last_value" =
+    let%expect_test "~on_subscription_after_first_write:Allow_and_send_last_value_if_global"
+      =
       let bus =
         create_exn
-          ~on_subscription_after_first_write:Allow_and_send_last_value
-          Arity1
+          ~on_subscription_after_first_write:Allow_and_send_last_value_if_global
           ~on_callback_raise:Error.raise
+          ()
       in
       let subscribe n =
         ignore
@@ -259,9 +261,9 @@ struct
       let print_rs () = print_s [%message (r1 : int ref) (r2 : int ref)] in
       let bus =
         create_exn
-          Arity1
           ~on_subscription_after_first_write:Allow
           ~on_callback_raise:(fun _ -> incr r1)
+          ()
       in
       ignore
         (subscribe_exn
@@ -297,9 +299,9 @@ struct
       let test ~extract_exn ~on_callback_raise =
         let bus =
           create_exn
-            Arity1
             ~on_subscription_after_first_write:Allow
             ~on_callback_raise:(print_error ~extract_exn ~error_handler:`Bus)
+            ()
         in
         ignore
           (subscribe_exn
@@ -360,9 +362,9 @@ struct
       let print_r () = print_s [%message (r : int ref)] in
       let bus =
         create_exn
-          Arity1
           ~on_subscription_after_first_write:Allow
           ~on_callback_raise:(fun _ -> incr r)
+          ()
       in
       ignore
         (subscribe_exn bus ~f:(fun () -> failwith "") ~on_callback_raise:Error.raise
@@ -391,8 +393,7 @@ struct
         {|
         (raised (
           "[Bus.write] called on closed bus"
-          ((callback_arity Arity1)
-           (created_from   lib/bus/test/test_bus.ml:LINE:COL)
+          ((created_from lib/bus/test/test_bus.ml:LINE:COL)
            (on_subscription_after_first_write Raise)
            (state                             Closed)
            (write_ever_called                 true)
@@ -461,7 +462,7 @@ struct
         ignore (subscribe_exn bus_r ~f:callback : _ Subscriber.t));
       write bus ();
       (* Since [close] is called after the [on_close] functions 0 and 1 are registered,
-           only those two are called. *)
+         only those two are called. *)
       [%expect
         {|
         [on_close] #0 called
@@ -535,9 +536,9 @@ struct
     let%expect_test "raising in [on_callback_raise] closes the bus" =
       let t =
         create_exn
-          Arity1
           ~on_subscription_after_first_write:Raise
           ~on_callback_raise:Error.raise
+          ()
       in
       subscribe_permanently_exn t ~f:(fun _ -> failwith "");
       require (does_raise (fun () -> write t ()));
@@ -577,10 +578,12 @@ struct
     ;;
 
     let%expect_test "subscribing during a write with \
-                     [~on_subscription_after_first_write=Allow_and_send_last_value]"
+                     [~on_subscription_after_first_write=Allow_and_send_last_value_if_global]"
       =
       let bus =
-        create1 ~here:[%here] ~on_subscription_after_first_write:Allow_and_send_last_value
+        create1
+          ~here:[%here]
+          ~on_subscription_after_first_write:Allow_and_send_last_value_if_global
       in
       (* Create a new subscription during each write. *)
       subscribe_permanently_exn bus ~f:(fun x ->
@@ -614,7 +617,9 @@ struct
 
     let%expect_test "unsubscribe second listener on first listeners callback" =
       let bus =
-        create1 ~here:[%here] ~on_subscription_after_first_write:Allow_and_send_last_value
+        create1
+          ~here:[%here]
+          ~on_subscription_after_first_write:Allow_and_send_last_value_if_global
       in
       let sub2 = ref None in
       let _sub1 =
@@ -639,26 +644,28 @@ struct
     ;;
 
     let%expect_test "subscribe and unsubscribe during a single write with \
-                     [~on_subscription_after_first_write=Allow_and_send_last_value]"
+                     [~on_subscription_after_first_write=Allow_and_send_last_value_if_global]"
       =
       let bus =
-        create1 ~here:[%here] ~on_subscription_after_first_write:Allow_and_send_last_value
+        create1
+          ~here:[%here]
+          ~on_subscription_after_first_write:Allow_and_send_last_value_if_global
       in
-      (* Create a new subscription and cancel it during each write.  While this behavior
-           is a bit strange, one write (of the current value) makes it to the subscriber.
-           In other words, the callgraph for this test is:
+      (* Create a new subscription and cancel it during each write. While this behavior is
+         a bit strange, one write (of the current value) makes it to the subscriber. In
+         other words, the callgraph for this test is:
 
-           {v
+         {v
             subscribe_permanently_exn ~f:f1
             write x
               |- f1 x
                  |- subscribe_exn ~f:f2 ==> s
                     |- f2 x
                  |- unsubscribe s
-            v}
+         v}
 
-           It may seem weird, but I claim this is no different than when other
-           subscribes happen during writes with [Allow_and_send_last_value]. *)
+         It may seem weird, but I claim this is no different than when other subscribes
+         happen during writes with [Allow_and_send_last_value_if_global]. *)
       subscribe_permanently_exn bus ~f:(fun x ->
         print_endline [%string "toplevel iter: x = %{x#Int}"];
         let subscriber =
@@ -687,13 +694,13 @@ struct
     ;;
 
     let%expect_test "creating many new subscribers during a write with \
-                     [~on_subscription_after_first_write=Allow_and_send_last_value]"
+                     [~on_subscription_after_first_write=Allow_and_send_last_value_if_global]"
       =
       let bus =
         create_exn
-          ~on_subscription_after_first_write:Allow_and_send_last_value
-          Arity1
+          ~on_subscription_after_first_write:Allow_and_send_last_value_if_global
           ~on_callback_raise:Error.raise
+          ()
       in
       let subscribe n =
         ignore
@@ -735,8 +742,7 @@ struct
           "Bus subscriber raised"
           (exn (
             "Bus.subscribe_permanently_exn called after first write"
-            ((callback_arity Arity1)
-             (created_from   lib/bus/test/test_bus.ml:LINE:COL)
+            ((created_from lib/bus/test/test_bus.ml:LINE:COL)
              (on_subscription_after_first_write Raise)
              (state                             Write_in_progress)
              (write_ever_called                 true)
@@ -758,9 +764,9 @@ struct
       in
       let bus = create1 ~here:[%here] ~on_subscription_after_first_write:Raise in
       let bus_r = read_only bus in
-      (* Keep two subscribers.  One stays subscribed and the other won't.  The one that
-           stays subscribed is proof that we can still access the subscribers.  The
-           unsubscribed one should be freed. *)
+      (* Keep two subscribers. One stays subscribed and the other won't. The one that
+         stays subscribed is proof that we can still access the subscribers. The
+         unsubscribed one should be freed. *)
       Weak.set weak_references subscribed_index (subscribe_exn bus_r ~f:ignore |> Some);
       let unsubscriber = ref None in
       unsubscriber
@@ -780,13 +786,13 @@ struct
         (Option.is_none (Weak.get weak_references unsubscribed_index))
         ~if_false_then_print_s:(lazy [%message "Unsubscribed subscriber remains"]);
       (* Use [bus] again here, otherwise it would be gc'd along with the subscribers
-           above. *)
+         above. *)
       write bus ()
     ;;
 
     (* There are two 'free' tests because [Bus] does some logic under the hood when
-         unsubscription occurs, and we should test multiple cases.  Also, there are no
-         weak pointers in javascript, so exclude javascript testing. *)
+       unsubscription occurs, and we should test multiple cases. Also, there are no weak
+       pointers in javascript, so exclude javascript testing. *)
     let%expect_test ("free first subscriber" [@tags "no-js"]) =
       test_free `First;
       [%expect {| (unsubscribing (unsubscribed_index 0)) |}]
@@ -799,32 +805,20 @@ struct
   end
 
   module%test [@name "arity1_local"] _ = struct
-    let%expect_test "create raises if you use [Allow_and_send_last_value]" =
-      Expect_test_helpers_base.require_does_raise (fun () ->
-        create_exn
-          Arity1_local
-          ~on_subscription_after_first_write:Allow_and_send_last_value
-          ~on_callback_raise:ignore);
-      [%expect
-        {| ("Cannot save last value when using local args" (arity Arity1_local)) |}]
-    ;;
-
-    let%expect_test "[write_local] works as expected" =
+    let%expect_test "[write_local] does not see last value for \
+                     [Allow_and_send_last_value_if_global]"
+      =
       let bus =
         create_exn
-          Arity1_local
-          ~on_subscription_after_first_write:Allow
+          ~on_subscription_after_first_write:Allow_and_send_last_value_if_global
           ~on_callback_raise:ignore
+          ()
       in
+      Bus.write_local bus "42";
       Bus.subscribe_permanently_exn bus ~f:(fun x ->
-        let x =
-          (* hack to globalize the int (local immediates can be trivially globalized)
-          *)
-          x + 0
-        in
-        print_s [%sexp (x : int)]);
-      Bus.write_local bus 42;
-      [%expect {| 42 |}]
+        let x = String.globalize x in
+        print_s [%sexp (x : string)]);
+      [%expect {| |}]
     ;;
   end
 
@@ -833,7 +827,7 @@ struct
       let call_count = ref 0 in
       let on_callback_raise _ = incr call_count in
       let bus =
-        create_exn Arity2 ~on_subscription_after_first_write:Allow ~on_callback_raise
+        create_exn ~on_subscription_after_first_write:Allow ~on_callback_raise ()
       in
       let callback1 _ _ = failwith "callback1" in
       let callback2 _ _ = failwith "callback2" in
@@ -865,6 +859,6 @@ struct
     ;;
   end
 end
-(* This signature constraint is here to remind us to add a unit test whenever
-   the interface to [Bus] changes. *) :
+(* This signature constraint is here to remind us to add a unit test whenever the
+   interface to [Bus] changes. *) :
   module type of Bus)

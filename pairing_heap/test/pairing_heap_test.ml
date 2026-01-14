@@ -3,7 +3,7 @@ open Poly
 open Expect_test_helpers_core
 module Heap = Pairing_heap
 
-(* Container tests.  Heap has no t_of_sexp because there is no way to deserialize a
+(* Container tests. Heap has no t_of_sexp because there is no way to deserialize a
    comparison function, so we simulate it. *)
 include Base_test_helpers.Test_container.Test_S0 (struct
     include Heap
@@ -115,8 +115,7 @@ module%test _ = struct
   let t = of_list data ~cmp:Int.compare
   let () = invariant Fn.ignore t
 
-  (* pop the zero at the top to force some heap structuring.  This does not touch the
-       sum. *)
+  (* pop the zero at the top to force some heap structuring. This does not touch the sum. *)
   let (_ : int option) = pop t
   let () = invariant Fn.ignore t
   let list_sum = List.fold data ~init:0 ~f:(fun sum v -> sum + v)
@@ -265,9 +264,9 @@ module%test _ = struct
       in
       let return = Quickcheck.Generator.return in
       Quickcheck.Generator.weighted_union
-        (* This is biased towards adding (0.5 probability of add, 0.3 probability of
-             pop or remove top), so the heap will tend to grow over time. This should test
-             more interesting cases compared to always testing small heaps. *)
+        (* This is biased towards adding (0.5 probability of add, 0.3 probability of pop
+           or remove top), so the heap will tend to grow over time. This should test more
+           interesting cases compared to always testing small heaps. *)
         [ 0.5, add
         ; 0.2, return `Pop
         ; 0.1, return `Top

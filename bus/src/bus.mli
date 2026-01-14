@@ -11,37 +11,6 @@
 
 open! Core
 
-(** [Callback_arity] states the type of callbacks stored in a bus. Using [Callback_arity]
-    is an implementation technique that allows callbacks to be defined as ordinary n-ary
-    curried functions (e.g., [a1 -> a2 -> a3 -> r]), instead of forcing n-ary-variadic
-    callbacks to use tuples (e.g., [a1 * a2 * a3 -> r]). This also avoids extra
-    allocation.
-
-    When reading the bus interface, keep in mind that each ['callback] is limited, through
-    [create], to the types exposed by the variants in [Callback_arity].
-
-    For use cases where one requires an multi-arity bus with a more nuanced set of local
-    annotations than what is provided, consider packing the fields into a local record and
-    using [Arity1_local], as this is relatively cheap and avoids a blowup in the size of
-    [Callback_arity]. *)
-
-module Callback_arity : sig
-  type _ t =
-    | Arity1 : ('a -> unit) t
-    | Arity1_local : ('a -> unit) t
-    | Arity2 : ('a -> 'b -> unit) t
-    | Arity2_local : ('a -> 'b -> unit) t
-    | Arity3 : ('a -> 'b -> 'c -> unit) t
-    | Arity3_local : ('a -> 'b -> 'c -> unit) t
-    | Arity4 : ('a -> 'b -> 'c -> 'd -> unit) t
-    | Arity4_local : ('a -> 'b -> 'c -> 'd -> unit) t
-    | Arity5 : ('a -> 'b -> 'c -> 'd -> 'e -> unit) t
-    | Arity5_local : ('a -> 'b -> 'c -> 'd -> 'e -> unit) t
-    | Arity6 : ('a -> 'b -> 'c -> 'd -> 'e -> 'f -> unit) t
-    | Arity6_local : ('a -> 'b -> 'c -> 'd -> 'e -> 'f -> unit) t
-  [@@deriving sexp_of]
-end
-
 type ('callback, -'phantom) t [@@deriving sexp_of]
 type ('callback, -'phantom) bus = ('callback, 'phantom) t
 
@@ -60,21 +29,23 @@ end
 module On_subscription_after_first_write : sig
   type t =
     | Allow
-    | Allow_and_send_last_value
+    | Allow_and_send_last_value_if_global
     | Raise
-  [@@deriving enumerate, sexp_of]
+  [@@deriving compare, enumerate, equal, sexp_of]
 end
 
 val read_only : ('callback, _) t -> 'callback Read_only.t
 
-(** In [create_exn ArityN ~on_subscription_after_first_write ~on_callback_raise],
-    [[%here]] is stored in the resulting bus, and contained in [%sexp_of: t], which can
-    help with debugging.
+(** In [create_exn ~on_subscription_after_first_write ~on_callback_raise ()], [[%here]] is
+    stored in the resulting bus, and contained in [%sexp_of: t], which can help with
+    debugging.
 
     If [on_subscription_after_first_write] is [Raise], then [subscribe_exn] will raise if
     it is called after [write] has been called the first time. If
-    [on_subscription_after_first_write] is [Allow_and_send_last_value], then the bus will
-    remember the last value written and will send it to new subscribers.
+    [on_subscription_after_first_write] is [Allow_and_send_last_value_if_global], then the
+    bus will remember the last value written and will send it to new subscribers; values
+    written with [write*_local] cannot be saved, and so the last value is not sent in this
+    case.
 
     If a callback raises, [on_callback_raise] is called with an error containing the
     exception.
@@ -82,17 +53,15 @@ val read_only : ('callback, _) t -> 'callback Read_only.t
     If [on_callback_raise] raises, then the exception is raised to [write] and the bus is
     closed.
 
-    [create_exn] will raise when using [Allow_and_send_last_value] with any
-    [Callback_arity] that uses local_ args, because those args cannot be stored. *)
+    ['callback] is the function type of subscribers to the bus. *)
 val create_exn
   :  ?name:Info.t
   -> ?here:Stdlib.Lexing.position
-  -> 'callback Callback_arity.t
   -> on_subscription_after_first_write:On_subscription_after_first_write.t
   -> on_callback_raise:(Error.t -> unit)
+  -> unit
   -> 'callback Read_write.t
 
-val callback_arity : ('callback, _) t -> 'callback Callback_arity.t
 val num_subscribers : (_, _) t -> int
 val is_closed : (_, _) t -> bool
 
@@ -108,9 +77,15 @@ val close : 'callback Read_write.t -> unit
     a callback on [t] or when [is_closed t]. *)
 
 val write : ('a -> unit) Read_write.t -> 'a -> unit
-val write_local : ('a -> unit) Read_write.t -> 'a -> unit
+
+val%template write_local : 'a. ('a -> unit) Read_write.t -> 'a -> unit
+[@@kind ka = base_or_null]
+
 val write2 : ('a -> 'b -> unit) Read_write.t -> 'a -> 'b -> unit
-val write2_local : ('a -> 'b -> unit) Read_write.t -> 'a -> 'b -> unit
+
+val%template write2_local : 'a 'b. ('a -> 'b -> unit) Read_write.t -> 'a -> 'b -> unit
+[@@kind ka = base_or_null, kb = base_or_null]
+
 val write3 : ('a -> 'b -> 'c -> unit) Read_write.t -> 'a -> 'b -> 'c -> unit
 val write3_local : ('a -> 'b -> 'c -> unit) Read_write.t -> 'a -> 'b -> 'c -> unit
 val write4 : ('a -> 'b -> 'c -> 'd -> unit) Read_write.t -> 'a -> 'b -> 'c -> 'd -> unit

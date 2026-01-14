@@ -221,4 +221,4 @@ module%test Thread_safe_queue : module type of Thread_safe_queue = struct
   ;;
 end
 (* This signature constraint is here to remind us to add a unit test whenever the
-      interface to [Thread_safe_queue] changes. *)
+   interface to [Thread_safe_queue] changes. *)

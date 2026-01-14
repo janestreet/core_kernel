@@ -127,10 +127,10 @@ module Blit_consume_and_fill = struct
 
   let blit_maximal ~src ~dst =
     let len = min (length src) (length dst) in
-    (* [len] is naturally validated to be correct; don't double-check it.
-       Sadly, we can't do this for the other [Blit_*] modules, as they can have
-       invalid [src_pos]/[dst_pos] values which a) have to be checked on their own
-       and b) can lead to the construction of unsafe [len] values. *)
+    (* [len] is naturally validated to be correct; don't double-check it. Sadly, we can't
+       do this for the other [Blit_*] modules, as they can have invalid
+       [src_pos]/[dst_pos] values which a) have to be checked on their own and b) can lead
+       to the construction of unsafe [len] values. *)
     unsafe_blit ~src ~dst ~len;
     len
   ;;

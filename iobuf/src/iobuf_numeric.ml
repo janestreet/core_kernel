@@ -88,16 +88,16 @@ module Itoa = struct
      least-significant digits, left-padded with '0', prefixed by the sign ('-').
 
      E.g. for [len = 3]:
-     -    5 -> "005"
-     -   -5 -> "-05"
-     -   50 -> "050"
-     -  -50 -> "-50"
-     -  500 -> "500"
+     - 5 -> "005"
+     - -5 -> "-05"
+     - 50 -> "050"
+     - -50 -> "-50"
+     - 500 -> "500"
      - -500 -> "-00"
 
-     The publicly-exposed functions compute the necessary [len] to prevent any digits
-     from being truncated, but this function is used internally in cases where we are
-     already confident the decimal will fit and can thus skip the extra work. *)
+     The publicly-exposed functions compute the necessary [len] to prevent any digits from
+     being truncated, but this function is used internally in cases where we are already
+     confident the decimal will fit and can thus skip the extra work. *)
   let[@inline] gen_poke_padded_decimal_trunc ~buf_pos t ~pos ~len int =
     let pos = (buf_pos [@inlined hint]) t ~pos ~len in
     if int < 0

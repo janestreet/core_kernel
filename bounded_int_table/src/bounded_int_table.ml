@@ -18,14 +18,14 @@ type ('key, 'data) t_detailed =
       (* The number of entries in the table, not the length of the arrays below. *)
   ; mutable length : int
       (* [(key, data)] is in the table iff
-     {[
-       entries_by_key.( key_to_int key ) = Some { key; data; _ }
-     ]}
+         {[
+           entries_by_key.( key_to_int key ) = Some { key; data; _ }
+         ]}
       *)
   ; entries_by_key : ('key, 'data) Entry.t option array
-      (* The first [length] elements of [defined_entries] hold the data in the table.  This is
-     an optimization for fold, to keep us from wasting iterations when the array is
-     sparse. *)
+      (* The first [length] elements of [defined_entries] hold the data in the table. This
+         is an optimization for fold, to keep us from wasting iterations when the array is
+         sparse. *)
   ; defined_entries : ('key, 'data) Entry.t option array
   }
 [@@deriving fields ~getters, sexp_of]
