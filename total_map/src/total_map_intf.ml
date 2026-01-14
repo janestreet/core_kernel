@@ -330,7 +330,9 @@ module type Total_map = sig @@ portable
       have an [Applicative.S4]. *)
 
   module type Key = Key
+  module type Key_plain = Key_plain
   module type Key_with_witnesses = Key_with_witnesses
+  module type Key_plain_with_witnesses = Key_plain_with_witnesses
 
   [%%template:
   [@@@modality.default p = (portable, nonportable)]

@@ -104,7 +104,7 @@ module T = struct
     let bytes = TLS.new_key (fun () -> Bytes.create 36) in
     fun random_state ->
       (* We fill all 36 bytes with random hex digits, and then go back and set specific
-         bytes to dash and the version number (4).  We do 6 groups of 6 bytes, each time
+         bytes to dash and the version number (4). We do 6 groups of 6 bytes, each time
          using 24 bits of a random int, 4 for each hex digit. *)
       let bytes = Obj.magic_uncontended (TLS.get bytes) in
       let at = stack_ (ref 0) in

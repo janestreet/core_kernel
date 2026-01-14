@@ -165,16 +165,12 @@ module Stable = struct
 
             let to_sexpable t = t
 
-            let module_Key @ p =
-              Base.Portability_hacks.magic_portable__first_class_module
-                (module Key : Key_with_witnesses
-                  with type t = Key.t
-                   and type comparator_witness = Key.comparator_witness)
-            ;;
-
             let of_sexpable map =
               validate_map_from_serialization
-                (Base.Portability_hacks.magic_uncontended__first_class_module module_Key)
+                (Base.Portability_hacks.magic_uncontended__promise_deeply_immutable_module
+                   (module Key : Key_with_witnesses
+                     with type t = Key.t
+                      and type comparator_witness = Key.comparator_witness))
                 map;
               map
             ;;
@@ -188,16 +184,12 @@ module Stable = struct
 
             let to_binable t = t
 
-            let module_Key =
-              Base.Portability_hacks.magic_portable__first_class_module
-                (module Key : Key_with_witnesses
-                  with type t = Key.t
-                   and type comparator_witness = Key.comparator_witness)
-            ;;
-
             let of_binable map =
               validate_map_from_serialization
-                (Base.Portability_hacks.magic_uncontended__first_class_module module_Key)
+                (Base.Portability_hacks.magic_uncontended__promise_deeply_immutable_module
+                   (module Key : Key_with_witnesses
+                     with type t = Key.t
+                      and type comparator_witness = Key.comparator_witness))
                 map;
               map
             ;;
@@ -647,16 +639,12 @@ struct
 
       let to_binable x = x
 
-      let module_Key =
-        Portability_hacks.magic_portable__first_class_module
-          (module Key : Key_with_witnesses
-            with type t = Key.t
-             and type comparator_witness = Key.comparator_witness)
-      ;;
-
       let of_binable x =
         validate_map_from_serialization
-          (Portability_hacks.magic_uncontended__first_class_module module_Key)
+          (Portability_hacks.magic_uncontended__promise_deeply_immutable_module
+             (module Key : Key_with_witnesses
+               with type t = Key.t
+                and type comparator_witness = Key.comparator_witness))
           x;
         x
       ;;

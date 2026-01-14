@@ -25,7 +25,8 @@ module type%template S_to_string = Command.Enumerable_stringable [@modality p]
 module type Enum = sig
   module type S = S
 
-  type 'a t = (module S with type t = 'a)
+  type%template 'a t = ((module S with type t = 'a)[@mode p])
+  [@@mode p = (portable, nonportable)]
 
   include Single with type 'a t := 'a t
 
@@ -74,7 +75,7 @@ module type Enum = sig
     -> 'a t
     -> 'a option Command.Param.t
 
-  val make_param_optional_with_default_doc : default:'a -> ('a, 'a) make_param
+  val make_param_optional_with_default_doc_sexp : default:'a -> ('a, 'a) make_param
 
   val make_param_optional_comma_separated
     :  ?allow_empty:bool
@@ -89,12 +90,14 @@ module type Enum = sig
     -> default:'a list
     -> ('a, 'a list) make_param
 
-  val arg_type
-    :  ?case_sensitive:bool
-    -> ?key:'a Univ_map.Multi.Key.t
+  val%template arg_type
+    : ('a : value mod c p).
+    ?case_sensitive:bool
+    -> ?key:'a Univ_map.Multi.Key.t @ p
     -> ?list_values_in_help:bool
-    -> 'a t
-    -> 'a Command.Arg_type.t
+    -> ('a t[@mode p]) @ p
+    -> 'a Command.Arg_type.t @ p
+  [@@mode (p, c) = ((nonportable, uncontended), (portable, contended))]
 
   (** Transform a string to be accepted by [Command]. This is the transformation that is
       applied throughout this module.

@@ -27,7 +27,8 @@ module Single = struct
   ;;
 end
 
-type 'a t = (module S with type t = 'a)
+type%template 'a t = ((module S with type t = 'a)[@mode p])
+[@@mode p = (portable, nonportable)]
 
 let to_string_hum (type a) ((module M) : a t) a = Single.to_string_hum (module M) a
 
@@ -48,24 +49,27 @@ let assert_alphabetic_order_exn here (type a) ((module M) : a t) =
     as_strings
 ;;
 
-module Rewrite_sexp_of (S : S) : S with type t = S.t = struct
+module%template.portable [@modality p] Rewrite_sexp_of (S : S [@modality p]) :
+  S [@modality p] with type t = S.t = struct
   include S
 
   let sexp_of_t t = to_string_hum (module S) t |> Parsexp.Single.parse_string_exn
 end
 
-let arg_type
-  (type t)
+let%template[@mode (p, c) = ((nonportable, uncontended), (portable, contended))] arg_type
+  (type a : value mod c p)
   ?case_sensitive
   ?key
   ?list_values_in_help
-  (module S : S with type t = t)
+  (t : (a t[@mode p]) @ p)
+  : _ @ p
   =
-  Command.Arg_type.enumerated_sexpable
+  let module S = (val t) in
+  (Command.Arg_type.enumerated_sexpable [@mode p])
     ?key
     ?list_values_in_help
     ?case_sensitive
-    (module Rewrite_sexp_of (S))
+    (module Rewrite_sexp_of [@modality p] (S))
 ;;
 
 module Make_param = struct
@@ -118,7 +122,7 @@ let make_param
   Command.Param.flag ?aliases flag_name ~doc (f arg_type)
 ;;
 
-let make_param_optional_with_default_doc
+let make_param_optional_with_default_doc_sexp
   (type a)
   ~default
   ?case_sensitive
@@ -139,7 +143,7 @@ let make_param_optional_with_default_doc
       ~doc
       m
   in
-  Command.Param.flag_optional_with_default_doc
+  Command.Param.flag_optional_with_default_doc_sexp
     ?aliases
     flag_name
     arg_type
@@ -233,7 +237,7 @@ let make_param_optional_comma_separated_with_default_doc
       ~doc:[%string {|%{doc} %{comma_separated_extra_doc m}|}]
       m
   in
-  Command.Param.flag_optional_with_default_doc
+  Command.Param.flag_optional_with_default_doc_sexp
     ?aliases
     flag_name
     (Command.Arg_type.comma_separated

@@ -190,9 +190,9 @@ module Definitions = struct
     val unsafe_blit : (_ src, _ dst) consuming_blit
 
     (** [subo] defaults to using [Iobuf.length src] *)
-    val subo : ?len:int -> _ src -> _ dst
+    val subo : ?len:int -> local_ _ src -> _ dst
 
-    val sub : _ src -> len:int -> _ dst
+    val sub : local_ _ src -> len:int -> _ dst
   end
 
   module type Consume_safe = sig @@ portable

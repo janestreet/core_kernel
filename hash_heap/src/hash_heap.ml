@@ -43,7 +43,8 @@ module Make (Key : Key) : S with module Key = Key = struct
       `Ok
   ;;
 
-  exception Key_already_present of Key.t [@@deriving sexp]
+  exception Key_already_present of Key.t
+  [@@deriving sexp ~nonportable__magic_unsafe_in_parallel_programs]
 
   let push_exn t ~key ~data =
     match push t ~key ~data with
@@ -123,7 +124,8 @@ module Make (Key : Key) : S with module Key = Key = struct
     | Some el -> Some (snd (Heap.Elt.value_exn el))
   ;;
 
-  exception Key_not_found of Key.t [@@deriving sexp]
+  exception Key_not_found of Key.t
+  [@@deriving sexp ~nonportable__magic_unsafe_in_parallel_programs]
 
   let find_exn t key =
     match find t key with

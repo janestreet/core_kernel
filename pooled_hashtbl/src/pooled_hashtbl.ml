@@ -1266,10 +1266,9 @@ struct
 
      The implementation and comment from hashtbl.ml is copied below.
   *)
-  (* The binary representation of hashtbl is relied on by stable modules
-     (e.g. Hashtable.Stable) and is therefore assumed to be stable.  So, if the key and
-     data can provide a stable witnesses, then we can safely say the hashtbl is also
-     stable. *)
+  (* The binary representation of hashtbl is relied on by stable modules (e.g.
+     Hashtable.Stable) and is therefore assumed to be stable. So, if the key and data can
+     provide a stable witnesses, then we can safely say the hashtbl is also stable. *)
   let stable_witness (type data) (_data_stable_witness : data Stable_witness.t)
     : (Key.t, data) t Stable_witness.t
     =

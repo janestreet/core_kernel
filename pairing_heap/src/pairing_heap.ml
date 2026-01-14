@@ -315,31 +315,31 @@ let add_node t v =
 let add t v = ignore (add_node t v : _ Node.t)
 
 (* [merge_pairs] takes a list of heap roots and merges consecutive pairs, reducing the
-   list of length n to n/2.  Then it merges the merged pairs into a single heap.  One
+   list of length n to n/2. Then it merges the merged pairs into a single heap. One
    intuition is that this is somewhat like building a single level of a binary tree.
 
    The output heap does not contain the value that was at the root of the input heap.
 
-   We break the function into two parts.  A first stage that is willing to use limited
+   We break the function into two parts. A first stage that is willing to use limited
    stack instead of heap allocation for bookkeeping, and a second stage that shifts to
    using a list as an accumulator if we go too deep.
 
    This can be made tail recursive and non-allocating by starting with an empty heap and
    merging merged pairs into it. Unfortunately this "left fold" version is not what is
-   described in the original paper by Fredman et al.; they specifically say that
-   children should be merged together from the end of the list to the beginning of the
-   list. ([merge] is not associative, so order matters.)
+   described in the original paper by Fredman et al.; they specifically say that children
+   should be merged together from the end of the list to the beginning of the list.
+   ([merge] is not associative, so order matters.)
 *)
 (* translation:
    {[
      let rec loop acc = function
        | [] -> acc
-       | [head] -> head :: acc
+       | [ head ] -> head :: acc
        | head :: next1 :: next2 -> loop (merge head next1 :: acc) next2
      in
      match loop [] children with
      | [] -> None
-     | [h] -> Some h
+     | [ h ] -> Some h
      | x :: xs -> Some (List.fold xs ~init:x ~f:merge)
    ]}
 *)

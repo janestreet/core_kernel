@@ -14,51 +14,10 @@ module State = struct
   ;;
 end
 
-module Callback_arity = struct
-  type _ t =
-    | Arity1 : ('a -> unit) t
-    | Arity1_local : (local_ 'a -> unit) t
-    | Arity2 : ('a -> 'b -> unit) t
-    | Arity2_local : (local_ 'a -> local_ 'b -> unit) t
-    | Arity3 : ('a -> 'b -> 'c -> unit) t
-    | Arity3_local : (local_ 'a -> local_ 'b -> local_ 'c -> unit) t
-    | Arity4 : ('a -> 'b -> 'c -> 'd -> unit) t
-    | Arity4_local : (local_ 'a -> local_ 'b -> local_ 'c -> local_ 'd -> unit) t
-    | Arity5 : ('a -> 'b -> 'c -> 'd -> 'e -> unit) t
-    | Arity5_local :
-        (local_ 'a -> local_ 'b -> local_ 'c -> local_ 'd -> local_ 'e -> unit) t
-    | Arity6 : ('a -> 'b -> 'c -> 'd -> 'e -> 'f -> unit) t
-    | Arity6_local :
-        (local_ 'a
-         -> local_ 'b
-         -> local_ 'c
-         -> local_ 'd
-         -> local_ 'e
-         -> local_ 'f
-         -> unit)
-          t
-  [@@deriving sexp_of]
-
-  let uses_local_args : type a. a t -> bool = function
-    | Arity1 -> false
-    | Arity1_local -> true
-    | Arity2 -> false
-    | Arity2_local -> true
-    | Arity3 -> false
-    | Arity3_local -> true
-    | Arity4 -> false
-    | Arity4_local -> true
-    | Arity5 -> false
-    | Arity5_local -> true
-    | Arity6 -> false
-    | Arity6_local -> true
-  ;;
-end
-
 module Last_value : sig
   type 'callback t
 
-  val create_exn : 'callback Callback_arity.t -> 'callback t
+  val create : unit -> 'callback t
   val set1 : ('a -> unit) t -> 'a -> unit
   val set2 : ('a -> 'b -> unit) t -> 'a -> 'b -> unit
   val set3 : ('a -> 'b -> 'c -> unit) t -> 'a -> 'b -> 'c -> unit
@@ -117,14 +76,7 @@ end = struct
 
   type 'callback t = 'callback tuple option ref
 
-  let create_exn (type callback) (arity : callback Callback_arity.t) : callback t =
-    if Callback_arity.uses_local_args arity
-    then
-      raise_s
-        [%message
-          "Cannot save last value when using local args" (arity : _ Callback_arity.t)];
-    ref None
-  ;;
+  let create (type callback) () : callback t = ref None
 
   let set1 t a =
     match !t with
@@ -198,19 +150,19 @@ end
 module On_subscription_after_first_write = struct
   type t =
     | Allow
-    | Allow_and_send_last_value
+    | Allow_and_send_last_value_if_global
     | Raise
-  [@@deriving enumerate, sexp_of]
+  [@@deriving compare, enumerate, equal, sexp_of]
 
   let allow_subscription_after_first_write = function
     | Allow -> true
-    | Allow_and_send_last_value -> true
+    | Allow_and_send_last_value_if_global -> true
     | Raise -> false
   ;;
 
-  let save_last_value_exn t callback_arity =
+  let save_last_value_exn t =
     match t with
-    | Allow_and_send_last_value -> Some (Last_value.create_exn callback_arity)
+    | Allow_and_send_last_value_if_global -> Some (Last_value.create ())
     | Allow -> None
     | Raise -> None
   ;;
@@ -296,7 +248,6 @@ end
 type ('callback, 'phantom) t =
   { bus_id : Bus_id.t
   ; name : Info.t option
-  ; callback_arity : 'callback Callback_arity.t
   ; created_from : Source_code_position.t
   ; on_subscription_after_first_write : On_subscription_after_first_write.t
   ; on_callback_raise : Error.t -> unit
@@ -317,7 +268,6 @@ let sexp_of_t
   _
   _
   { bus_id = _
-  ; callback_arity
   ; callbacks = _
   ; created_from
   ; last_value = _
@@ -337,7 +287,6 @@ let sexp_of_t
   [%message
     ""
       (name : (Info.t option[@sexp.option]))
-      (callback_arity : _ Callback_arity.t)
       (created_from : Source_code_position.t)
       (on_subscription_after_first_write : On_subscription_after_first_write.t)
       (state : State.t)
@@ -363,7 +312,6 @@ let invariant invariant_a _ t =
              then invariant_a (Option_array.get_some_exn callbacks i)
              else assert (Option_array.is_none callbacks i)
            done))
-      ~callback_arity:ignore
       ~created_from:ignore
       ~num_subscribers:(check (fun num_subscribers -> assert (num_subscribers >= 0)))
       ~on_subscription_after_first_write:ignore
@@ -762,6 +710,9 @@ module Write_variants_without_locals = struct
 end
 
 module Write_variants_with_locals = struct
+  [%%template
+  [@@@kind.default ka1 = base_or_null]
+
   let write_local_non_optimized t callbacks a1 =
     let len = t.num_subscribers in
     let i = ref 0 in
@@ -776,6 +727,8 @@ module Write_variants_with_locals = struct
     finish_write t
   ;;
 
+  [@@@kind.default ka2 = base_or_null]
+
   let write2_local_non_optimized t callbacks a1 a2 =
     let len = t.num_subscribers in
     let i = ref 0 in
@@ -788,7 +741,7 @@ module Write_variants_with_locals = struct
       | exn -> callback_raised t !i exn
     done;
     finish_write t
-  ;;
+  ;;]
 
   let write3_local_non_optimized t callbacks a1 a2 a3 =
     let len = t.num_subscribers in
@@ -846,6 +799,9 @@ module Write_variants_with_locals = struct
     finish_write t
   ;;
 
+  [%%template
+  [@@@kind.default ka1 = base_or_null]
+
   let[@inline always] write_local t a1 =
     let callbacks = t.callbacks in
     t.write_ever_called <- true;
@@ -860,8 +816,10 @@ module Write_variants_with_locals = struct
           (try (unsafe_get_callback callbacks 0) a1 with
            | exn -> callback_raised t 1 exn);
           finish_write t)
-        else (write_local_non_optimized [@inlined never]) t callbacks a1)
+        else (write_local_non_optimized [@kind ka1] [@inlined never]) t callbacks a1)
   ;;
+
+  [@@@kind.default ka2 = base_or_null]
 
   let[@inline always] write2_local t a1 a2 =
     let callbacks = t.callbacks in
@@ -877,8 +835,9 @@ module Write_variants_with_locals = struct
           (try (unsafe_get_callback callbacks 0) a1 a2 with
            | exn -> callback_raised t 1 exn);
           finish_write t)
-        else (write2_local_non_optimized [@inlined never]) t callbacks a1 a2)
-  ;;
+        else
+          (write2_local_non_optimized [@kind ka1 ka2] [@inlined never]) t callbacks a1 a2)
+  ;;]
 
   let[@inline always] write3_local t a1 a2 a3 =
     let callbacks = t.callbacks in
@@ -960,18 +919,16 @@ let allow_subscription_after_first_write t =
 let create_exn
   ?name
   ~here:(created_from : [%call_pos])
-  callback_arity
   ~(on_subscription_after_first_write : On_subscription_after_first_write.t)
   ~on_callback_raise
+  ()
   =
   let last_value =
     On_subscription_after_first_write.save_last_value_exn
       on_subscription_after_first_write
-      callback_arity
   in
   { bus_id = Bus_id.create ()
   ; name
-  ; callback_arity
   ; created_from
   ; num_subscribers = 0
   ; on_subscription_after_first_write
@@ -1142,12 +1099,12 @@ module%test _ = struct
         ~on_subscription_after_first_write:Raise
         ~on_callback_raise:Error.raise
     in
-    let bus1 = create ~here:[%here] Arity1 in
-    let bus2 = create ~here:[%here] Arity2 in
-    let bus3 = create ~here:[%here] Arity3 in
-    let bus4 = create ~here:[%here] Arity4 in
-    let bus5 = create ~here:[%here] Arity5 in
-    let bus6 = create ~here:[%here] Arity6 in
+    let bus1 = create ~here:[%here] () in
+    let bus2 = create ~here:[%here] () in
+    let bus3 = create ~here:[%here] () in
+    let bus4 = create ~here:[%here] () in
+    let bus5 = create ~here:[%here] () in
+    let bus6 = create ~here:[%here] () in
     assert_no_allocation bus1 (fun () -> ()) (fun () -> write bus1 ());
     assert_no_allocation bus2 (fun () () -> ()) (fun () -> write2 bus2 () ());
     assert_no_allocation bus3 (fun () () () -> ()) (fun () -> write3 bus3 () () ());
