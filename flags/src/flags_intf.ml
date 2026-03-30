@@ -12,7 +12,7 @@ open! Core
 
     [sexp_of_t] and [t_of_sexp] use the flag names supplied to [Flags.Make]. *)
 module type S = sig
-  type t [@@deriving sexp, typerep, quickcheck]
+  type t [@@deriving sexp ~stackify, typerep, quickcheck]
 
   (** consistent with subset *)
   include Comparable.S [@mode local] with type t := t
@@ -46,7 +46,8 @@ module type S = sig
 
   module Unstable : sig
     type nonrec t = t
-    [@@deriving bin_io ~localize, globalize, compare ~localize, equal ~localize, sexp]
+    [@@deriving
+      bin_io ~localize, globalize, compare ~localize, equal ~localize, sexp ~stackify]
   end
 end
 

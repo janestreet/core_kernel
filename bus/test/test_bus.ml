@@ -11,13 +11,13 @@ struct
   type ('a, 'b) bus = ('a, 'b) t
 
   module Read_only = struct
-    type 'a t = 'a Read_only.t [@@deriving sexp_of]
+    type 'a t = 'a Read_only.t [@@deriving sexp_of ~stackify]
 
     let invariant = Read_only.invariant
   end
 
   module Read_write = struct
-    type 'a t = 'a Read_write.t [@@deriving sexp_of]
+    type 'a t = 'a Read_write.t [@@deriving sexp_of ~stackify]
 
     let invariant = Read_write.invariant
   end
@@ -69,7 +69,7 @@ struct
       ()
   ;;
 
-  let sexp_of_t = sexp_of_t
+  let%template[@alloc a = (heap, stack)] sexp_of_t = (sexp_of_t [@alloc a])
 
   module%test [@name "arity1"] _ = struct
     let%expect_test "sexp_of_t" =

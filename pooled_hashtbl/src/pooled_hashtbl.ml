@@ -1225,7 +1225,11 @@ Bin_prot.Utils.Make_iterable_binable1 (struct
   end)
 
 module Make_plain_with_hashable (T : sig
-    module Key : Key_plain
+    module Key : sig
+      type t
+
+      include Key_plain with type t := t
+    end
 
     val hashable : Key.t Hashable.t
   end) =
@@ -1307,7 +1311,12 @@ struct
   include Provide_stable_witness (T.Key)
 end
 
-module Make_plain (Key : Key_plain) = Make_plain_with_hashable (struct
+module Make_plain (Key : sig
+    type t
+
+    include Key_plain with type t := t
+  end) =
+Make_plain_with_hashable (struct
     module Key = Key
 
     let hashable =

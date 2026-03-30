@@ -25,7 +25,8 @@ module Repr = struct
     ; mutable hi : int
     ; mutable hi_max : int
     }
-  [@@deriving fields ~getters ~direct_iterators:(iter, set_all_mutable_fields), sexp_of]
+  [@@deriving
+    fields ~getters ~direct_iterators:(iter, set_all_mutable_fields), sexp_of ~localize]
 
   let globalize_shared { buf; lo_min; lo; hi; hi_max } =
     let buf = Modes.At_locality.globalize_global buf in
@@ -48,10 +49,10 @@ type 'loc repr = 'loc Repr.t =
   ; mutable hi_max : int
   }
 
-type (-'read_write, +'seek, 'loc) t = 'loc Repr.t [@@deriving sexp_of]
+type (-'read_write, +'seek, 'loc) t = 'loc Repr.t [@@deriving sexp_of ~localize]
 
 module With_shallow_sexp = struct
-  type (_, _, 'loc) t = 'loc Repr.t [@@deriving sexp_of]
+  type (_, _, 'loc) t = 'loc Repr.t [@@deriving sexp_of ~localize]
 
   let globalize = `deprecated
 end
@@ -264,7 +265,7 @@ let[@inline] set_char t pos c =
 ;;
 
 module T_src = struct
-  type 'loc t = 'loc Repr.t [@@deriving sexp_of]
+  type 'loc t = 'loc Repr.t [@@deriving sexp_of ~localize]
 
   let create = create
   let length = length

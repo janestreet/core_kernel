@@ -92,22 +92,16 @@ let bounded_flip_hi t hi_max =
 let capacity t = t.hi_max - t.lo_min
 
 let invariant t =
+  let { lo_min; lo; hi; hi_max; buf = _ } = t in
   try
-    Repr.Fields.Direct.iter
-      t
-      ~buf:(fun _ _ _ -> ())
-      ~lo_min:(fun _ _ lo_min ->
-        assert (lo_min >= 0);
-        assert (lo_min = t.hi_max - capacity t))
-      ~hi_max:(fun _ _ hi_max ->
-        assert (hi_max >= t.lo);
-        assert (hi_max = t.lo_min + capacity t))
-      ~lo:(fun _ _ lo ->
-        assert (lo >= t.lo_min);
-        assert (lo <= t.hi))
-      ~hi:(fun _ _ hi ->
-        assert (hi >= t.lo);
-        assert (hi <= t.hi_max))
+    assert (lo_min >= 0);
+    assert (lo_min = hi_max - capacity t);
+    assert (hi_max >= lo);
+    assert (hi_max = lo_min + capacity t);
+    assert (lo >= lo_min);
+    assert (lo <= hi);
+    assert (hi >= lo);
+    assert (hi <= hi_max)
   with
   | e -> fail t "Iobuf.invariant failed" e [%sexp_of: exn]
 ;;
@@ -309,18 +303,30 @@ let%template of_string s =
 
 let of_bytes s = of_bigstring (Bigstring.of_bytes s)
 
-let to_stringlike ~(convert : ?pos:int -> ?len:int -> Bigstring.t -> 'a) ?len t : 'a =
-  let len =
-    match len with
-    | Some len ->
-      check_range t ~pos:0 ~len;
-      len
-    | None -> length t
-  in
-  convert ([%template buf [@mode local]] t) ~pos:t.lo ~len [@nontail]
+let%template[@alloc a @ m = (heap_global, stack_local)] to_stringlike
+  ~(convert : ?pos:int -> ?len:int -> Bigstring.t -> 'a)
+  ?len
+  t
+  : 'a
+  =
+  (let len =
+     match len with
+     | Some len ->
+       check_range t ~pos:0 ~len;
+       len
+     | None -> length t
+   in
+   convert ([%template buf [@mode local]] t) ~pos:t.lo ~len [@nontail])
+  [@exclave_if_stack a]
 ;;
 
-let to_string ?len t = to_stringlike ~convert:Bigstring.to_string ?len t
+let%template[@alloc a = (heap, stack)] to_string ?len t =
+  (to_stringlike [@alloc a])
+    ~convert:(Bigstring.to_string [@alloc a])
+    ?len
+    t [@exclave_if_stack a]
+;;
+
 let to_bytes ?len t = to_stringlike ~convert:Bigstring.to_bytes ?len t
 
 let compact t =

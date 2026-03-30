@@ -3,4 +3,4 @@
  (public_name core_kernel.thread_pool_cpu_affinity)
  (libraries core)
  (preprocess
-  (pps ppx_jane)))
+  (pps ppx_jane -compare-require-explicit-locality)))

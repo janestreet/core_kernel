@@ -118,6 +118,12 @@ module Make (Key : Key) : S with module Key = Key = struct
     | Some (_k, v) -> Some v
   ;;
 
+  let pop_while_with_key t f =
+    let elts = Heap.pop_while t.heap (fun (k, v) -> f ~key:k ~data:v) in
+    List.iter elts ~f:(fun (k, _v) -> Hashtbl.remove t.tbl k);
+    elts
+  ;;
+
   let find t key =
     match Hashtbl.find t.tbl key with
     | None -> None

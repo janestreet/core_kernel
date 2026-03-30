@@ -36,7 +36,9 @@ end
 module With_rev_sexp_of = struct
   type nonrec 'a t = 'a t
 
-  let sexp_of_t sexp_of_a t = List.sexp_of_t sexp_of_a (rev t)
+  let%template[@alloc a = (heap, stack)] sexp_of_t sexp_of_a t =
+    (List.sexp_of_t [@alloc a]) sexp_of_a ((rev [@alloc a]) t) [@exclave_if_stack a]
+  ;;
 
   let%expect_test _ =
     Stdlib.print_endline (Sexp.to_string [%sexp ([ 1; 2 ] : int t)]);

@@ -35,7 +35,7 @@ module%test Window : module type of Iobuf.Window = struct
     open Hexdump
     include T
 
-    let sexp_of_t = sexp_of_t
+    let%template[@alloc a = (heap, stack)] sexp_of_t = (sexp_of_t [@alloc a])
 
     let%expect_test "sexp_of_t" =
       print_s [%sexp (iobuf : (_, _, _) t)];
@@ -46,7 +46,7 @@ module%test Window : module type of Iobuf.Window = struct
         |}]
     ;;
 
-    let to_string_hum = to_string_hum
+    let%template[@alloc a = (heap, stack)] to_string_hum = (to_string_hum [@alloc a])
 
     let%expect_test "to_string_hum" =
       print_endline (to_string_hum iobuf);
@@ -71,7 +71,7 @@ module%test Window : module type of Iobuf.Window = struct
     module Pretty = struct
       include T
 
-      let sexp_of_t = Pretty.sexp_of_t
+      let%template[@alloc a = (heap, stack)] sexp_of_t = (Pretty.sexp_of_t [@alloc a])
 
       let%expect_test "sexp_of_t" =
         print_s [%sexp (iobuf : (_, _, _) t)];
@@ -89,7 +89,7 @@ module%test Limits : module type of Iobuf.Limits = struct
     open Hexdump
     include T
 
-    let sexp_of_t = sexp_of_t
+    let%template[@alloc a = (heap, stack)] sexp_of_t = (sexp_of_t [@alloc a])
 
     let%expect_test "sexp_of_t" =
       print_s [%sexp (iobuf : (_, _, _) t)];
@@ -103,7 +103,7 @@ module%test Limits : module type of Iobuf.Limits = struct
         |}]
     ;;
 
-    let to_string_hum = to_string_hum
+    let%template[@alloc a = (heap, stack)] to_string_hum = (to_string_hum [@alloc a])
 
     let%expect_test "to_string_hum" =
       print_endline (to_string_hum iobuf);
@@ -134,7 +134,7 @@ module%test Limits : module type of Iobuf.Limits = struct
     module Pretty = struct
       include T
 
-      let sexp_of_t = Pretty.sexp_of_t
+      let%template[@alloc a = (heap, stack)] sexp_of_t = (Pretty.sexp_of_t [@alloc a])
 
       let%expect_test "sexp_of_t" =
         print_s [%sexp (iobuf : (_, _, _) t)];

@@ -2,5 +2,5 @@
  (name bounded_int_table)
  (public_name core_kernel.bounded_int_table)
  (preprocess
-  (pps ppx_jane))
+  (pps ppx_jane -compare-require-explicit-locality))
  (libraries core))

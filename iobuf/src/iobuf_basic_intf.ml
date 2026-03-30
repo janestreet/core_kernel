@@ -18,10 +18,10 @@ module Definitions = struct
   end
 
   module type Basic = sig
-    type nonrec seek = seek [@@deriving sexp_of]
-    type nonrec no_seek = no_seek [@@deriving sexp_of]
-    type nonrec global = global [@@deriving sexp_of]
-    type nonrec local = local [@@deriving sexp_of]
+    type nonrec seek = seek [@@deriving sexp_of ~localize ~stackify]
+    type nonrec no_seek = no_seek [@@deriving sexp_of ~localize ~stackify]
+    type nonrec global = global [@@deriving sexp_of ~localize ~stackify]
+    type nonrec local = local [@@deriving sexp_of ~localize ~stackify]
     type ('rw, 'seek, 'loc) t
 
     val globalize : [ `deprecated ]
@@ -38,7 +38,8 @@ module Definitions = struct
           underlying bigstring, but no data. We do this rather than deriving sexp_of on
           [t] because it is much more likely to be noise than useful information, and so
           callers should probably not display the iobuf at all. *)
-      type nonrec ('rw, 'seek, 'loc) t = ('rw, 'seek, 'loc) t [@@deriving sexp_of]
+      type nonrec ('rw, 'seek, 'loc) t = ('rw, 'seek, 'loc) t
+      [@@deriving sexp_of ~localize]
 
       val globalize : [ `deprecated ]
       [@@deprecated "[since 2025-09] use [Iobuf.globalize_shared] instead"]
@@ -349,7 +350,8 @@ module Definitions = struct
         do not advance the window. *)
 
     (** [to_string t] returns the bytes in [t] as a string. It does not alter the window. *)
-    val to_string : ?len:int -> ([> read ], _, _) t -> string
+    val%template to_string : ?len:int -> ([> read ], _, _) t -> string
+    [@@alloc a @ m = (heap_global, stack_local)]
 
     (** Equivalent to [Hexdump.to_string_hum]. Renders [t]'s windows and limits. *)
     val to_string_hum : ?max_lines:int -> (_, _, _) t -> string

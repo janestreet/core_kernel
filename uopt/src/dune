@@ -3,4 +3,4 @@
  (public_name core_kernel.uopt)
  (libraries core ppx_stable_witness.stable_witness uopt)
  (preprocess
-  (pps ppx_jane)))
+  (pps ppx_jane -compare-require-explicit-locality)))

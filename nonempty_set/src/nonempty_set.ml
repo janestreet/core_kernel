@@ -120,9 +120,10 @@ let fold t ~init ~f = Set.fold t.nonempty ~init ~f
 let iter t ~f : unit = Set.iter t.nonempty ~f
 
 let reduce t ~map ~f =
-  (* Safe: Sequence.reduce_exn only raises on empty sequences, but t.nonempty is
-     guaranteed to be nonempty, so the sequence will have at least one element *)
-  Set.to_sequence t.nonempty |> Sequence.map ~f:map |> Sequence.reduce_exn ~f
+  let acc = ref Null in
+  iter t ~f:(fun elem -> acc := This (Or_null.fold !acc ~init:(map elem) ~f));
+  (* Safe: So long as [iter] calls [f] at least once, [acc] will be non-null. *)
+  Or_null.value_exn !acc
 ;;
 
 let to_nonempty_list t =

@@ -4,7 +4,7 @@
  (libraries core.base_for_tests core int_repr)
  (preprocessor_deps include.mlh)
  (preprocess
-  (pps ppx_jane ppx_optcomp)))
+  (pps ppx_jane ppx_optcomp -compare-require-explicit-locality)))
 
 (rule
  (targets include.mlh)
