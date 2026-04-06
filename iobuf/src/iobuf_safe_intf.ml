@@ -213,7 +213,7 @@ module Definitions = struct
 
     module To_string : sig
       (** [subo] defaults to using [Iobuf.length src]. *)
-      val subo : ?len:int -> _ src -> string
+      val subo : ?len:int -> _ src @ local -> string
 
       val sub : _ src -> len:int -> string
     end

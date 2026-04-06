@@ -5,7 +5,7 @@ module State = struct
     | Closed
     | Write_in_progress
     | Ok_to_write
-  [@@deriving sexp_of]
+  [@@deriving sexp_of ~stackify]
 
   let is_closed = function
     | Closed -> true
@@ -152,7 +152,7 @@ module On_subscription_after_first_write = struct
     | Allow
     | Allow_and_send_last_value_if_global
     | Raise
-  [@@deriving compare, enumerate, equal, sexp_of]
+  [@@deriving compare ~localize, enumerate, equal ~localize, sexp_of ~stackify]
 
   let allow_subscription_after_first_write = function
     | Allow -> true
@@ -186,7 +186,7 @@ module Subscriber = struct
 
   let is_subscribed t ~to_ = t.subscribers_index >= 0 && Bus_id.equal t.bus_id to_
 
-  let sexp_of_t
+  let%template[@alloc a = (heap, stack)] sexp_of_t
     _
     { callback = _
     ; bus_id = _
@@ -200,16 +200,18 @@ module Subscriber = struct
     =
     List
       [ Atom "Bus.Subscriber.t"
-      ; [%message
-          ""
-            ~subscribers_index:
-              (if Ppx_inline_test_lib.am_running then None else Some subscribers_index
-               : (int option[@sexp.option]))
-            (on_callback_raise : ((Error.t -> unit) option[@sexp.option]))
-            ~extract_exn:
-              (if extract_exn then Some true else None : (bool option[@sexp.option]))
-            (subscribed_from : Source_code_position.t)]
+      ; ([%message
+           ""
+             ~subscribers_index:
+               (if Ppx_inline_test_lib.am_running then None else Some subscribers_index
+                : (int option[@sexp.option]))
+             (on_callback_raise : ((Error.t -> unit) option[@sexp.option]))
+             ~extract_exn:
+               (if extract_exn then Some true else None : (bool option[@sexp.option]))
+             (subscribed_from : Source_code_position.t)]
+        [@alloc a])
       ]
+    [@exclave_if_stack a]
   ;;
 
   let invariant invariant_a t =
@@ -264,7 +266,7 @@ type ('callback, 'phantom) t =
   }
 [@@deriving fields ~getters ~iterators:iter]
 
-let sexp_of_t
+let%template[@alloc a = (heap, stack)] sexp_of_t
   _
   _
   { bus_id = _
@@ -281,20 +283,22 @@ let sexp_of_t
   ; unsubscribes_during_write = _
   }
   =
-  let subscribers =
-    Array.init num_subscribers ~f:(fun i -> Option_array.get_some_exn subscribers i)
-  in
-  [%message
-    ""
-      (name : (Info.t option[@sexp.option]))
-      (created_from : Source_code_position.t)
-      (on_subscription_after_first_write : On_subscription_after_first_write.t)
-      (state : State.t)
-      (write_ever_called : bool)
-      (subscribers : _ Subscriber.t Array.t)]
+  (let subscribers =
+     Array.init num_subscribers ~f:(fun i -> Option_array.get_some_exn subscribers i)
+   in
+   [%message
+     ""
+       (name : (Info.t option[@sexp.option]))
+       (created_from : Source_code_position.t)
+       (on_subscription_after_first_write : On_subscription_after_first_write.t)
+       (state : State.t)
+       (write_ever_called : bool)
+       (subscribers : _ Subscriber.t Array.t)]
+   [@alloc a])
+  [@exclave_if_stack a]
 ;;
 
-type ('callback, 'phantom) bus = ('callback, 'phantom) t [@@deriving sexp_of]
+type ('callback, 'phantom) bus = ('callback, 'phantom) t [@@deriving sexp_of ~stackify]
 
 let read_only t = (t :> (_, read) t)
 
@@ -335,13 +339,13 @@ let invariant invariant_a _ t =
 let is_closed t = State.is_closed t.state
 
 module Read_write = struct
-  type 'callback t = ('callback, read_write) bus [@@deriving sexp_of]
+  type 'callback t = ('callback, read_write) bus [@@deriving sexp_of ~stackify]
 
   let invariant invariant_a t = invariant invariant_a ignore t
 end
 
 module Read_only = struct
-  type 'callback t = ('callback, read) bus [@@deriving sexp_of]
+  type 'callback t = ('callback, read) bus [@@deriving sexp_of ~stackify]
 
   let invariant invariant_a t = invariant invariant_a ignore t
 end
@@ -1030,7 +1034,7 @@ module Fold_arity = struct
           , 's -> 'a -> 'b -> 'c -> 'd -> 'e -> 'f -> 's
           , 's )
           t
-  [@@deriving sexp_of]
+  [@@deriving sexp_of ~stackify]
 end
 
 let subscribe_with_state_exn

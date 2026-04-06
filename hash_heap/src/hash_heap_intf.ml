@@ -1,7 +1,11 @@
 open! Core
 open! Import
 
-module type Key = Hashtbl.Key_plain
+module type Key = sig
+  type t
+
+  include Hashtbl.Key_plain with type t := t
+end
 
 module type S = sig
   module Key : Key
@@ -26,6 +30,7 @@ module type S = sig
   val pop_exn : 'a t -> 'a
   val pop_if_with_key : 'a t -> (key:Key.t -> data:'a -> bool) -> (Key.t * 'a) option
   val pop_if : 'a t -> ('a -> bool) -> 'a option
+  val pop_while_with_key : 'a t -> (key:Key.t -> data:'a -> bool) -> (Key.t * 'a) list
   val find : 'a t -> Key.t -> 'a option
   val find_pop : 'a t -> Key.t -> 'a option
   val find_exn : 'a t -> Key.t -> 'a

@@ -175,11 +175,11 @@ let make_param_optional_one_of_flags ?aliases ~doc m =
        Command.Param.flag ?aliases name (Command.Param.no_arg_some enum) ~doc))
 ;;
 
-let comma_separated_extra_doc m =
+let%template comma_separated_extra_doc m =
   let options =
     enum m
     |> List.map ~f:fst
-    |> List.sort ~compare:[%compare: string]
+    |> List.sort ~compare:([%compare: string] [@mode local])
     |> String.concat ~sep:", "
   in
   [%string "(can be comma-separated values: %{options})"]

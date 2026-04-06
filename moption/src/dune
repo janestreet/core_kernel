@@ -2,5 +2,5 @@
  (name moption)
  (public_name core_kernel.moption)
  (preprocess
-  (pps ppx_jane))
+  (pps ppx_jane -compare-require-explicit-locality))
  (libraries core))

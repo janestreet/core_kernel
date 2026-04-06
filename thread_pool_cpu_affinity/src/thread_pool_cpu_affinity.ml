@@ -2,11 +2,11 @@ open! Core
 open! Import
 
 module Cpuset = struct
-  include Validated.Make (struct
+  include%template Validated.Make [@mode portable] (struct
       type t = Int.Set.t [@@deriving sexp]
 
       let%template[@alloc a = stack] sexp_of_t =
-        (Set.sexp_of_m__t [@alloc a]) (module Int)
+        [%eta1 exclave_ (Set.sexp_of_m__t [@alloc a]) (module Int)]
       ;;
 
       let here = [%here]

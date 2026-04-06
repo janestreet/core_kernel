@@ -11,17 +11,17 @@
 
 open! Core
 
-type ('callback, -'phantom) t [@@deriving sexp_of]
+type ('callback, -'phantom) t : value mod non_float [@@deriving sexp_of ~stackify]
 type ('callback, -'phantom) bus = ('callback, 'phantom) t
 
 module Read_write : sig
-  type 'callback t = ('callback, read_write) bus [@@deriving sexp_of]
+  type 'callback t = ('callback, read_write) bus [@@deriving sexp_of ~stackify]
 
   include Invariant.S1 with type 'a t := 'a t
 end
 
 module Read_only : sig
-  type 'callback t = ('callback, read) bus [@@deriving sexp_of]
+  type 'callback t = ('callback, read) bus [@@deriving sexp_of ~stackify]
 
   include Invariant.S1 with type 'a t := 'a t
 end
@@ -31,7 +31,7 @@ module On_subscription_after_first_write : sig
     | Allow
     | Allow_and_send_last_value_if_global
     | Raise
-  [@@deriving compare, enumerate, equal, sexp_of]
+  [@@deriving compare ~localize, enumerate, equal ~localize, sexp_of ~stackify]
 end
 
 val read_only : ('callback, _) t -> 'callback Read_only.t
@@ -149,7 +149,7 @@ val write6_local
   -> unit
 
 module Subscriber : sig
-  type 'callback t [@@deriving sexp_of]
+  type 'callback t [@@deriving sexp_of ~stackify]
 end
 
 (** [subscribe_exn t ~f] adds the callback [f] to the set of [t]'s subscribers, and
@@ -200,7 +200,7 @@ module Fold_arity : sig
           , 's -> 'a -> 'b -> 'c -> 'd -> 'e -> 'f -> 's
           , 's )
           t
-  [@@deriving sexp_of]
+  [@@deriving sexp_of ~stackify]
 end
 
 (** [subscribe_with_state_exn t arity ~init ~f] folds over the bus events, threading a

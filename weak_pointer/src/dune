@@ -3,4 +3,4 @@
  (public_name core_kernel.weak_pointer)
  (libraries base core.heap_block weak_array)
  (preprocess
-  (pps ppx_jane)))
+  (pps ppx_jane -compare-require-explicit-locality)))

@@ -16,9 +16,9 @@ module type Nonempty_set = sig @@ portable
   val inter : ('a, 'b) t -> ('a, 'b) t -> ('a, 'b) t option
   val inter_or_null : ('a, 'b) t -> ('a, 'b) t -> ('a, 'b) t or_null
   val singleton : ('a, 'cmp) Comparator.Module.t -> 'a -> ('a, 'cmp) t
-  val reduce : ('a, _) t -> map:('a -> 'b) -> f:('b -> 'b -> 'b) -> 'b
-  val fold : ('a, _) t -> init:'b -> f:('b -> 'a -> 'b) -> 'b
-  val iter : ('a, _) t -> f:local_ ('a -> unit) -> unit
+  val reduce : ('a, _) t -> map:('a -> 'b) @ local -> f:('b -> 'b -> 'b) @ local -> 'b
+  val fold : ('a, _) t -> init:'b -> f:('b -> 'a -> 'b) @ local -> 'b
+  val iter : ('a, _) t -> f:('a -> unit) @ local -> unit
   val of_list : ('a, 'cmp) Comparator.Module.t -> 'a list -> ('a, 'cmp) t option
   val of_list_or_null : ('a, 'cmp) Comparator.Module.t -> 'a list -> ('a, 'cmp) t or_null
   val of_list_exn : ('a, 'cmp) Comparator.Module.t -> 'a list -> ('a, 'cmp) t
@@ -30,7 +30,13 @@ module type Nonempty_set = sig @@ portable
 
   val to_list : ('a, _) t -> 'a list
   val to_nonempty_list : ('a, _) t -> 'a Nonempty_list.t
-  val map : ('b, 'cmp) Comparator.Module.t -> ('a, _) t -> f:('a -> 'b) -> ('b, 'cmp) t
+
+  val map
+    :  ('b, 'cmp) Comparator.Module.t
+    -> ('a, _) t
+    -> f:('a -> 'b) @ local
+    -> ('b, 'cmp) t
+
   val of_set : ('a, 'b) Set.t -> ('a, 'b) t option
   val of_set_or_null : ('a, 'b) Set.t -> ('a, 'b) t or_null
   val of_set_exn : ('a, 'b) Set.t -> ('a, 'b) t

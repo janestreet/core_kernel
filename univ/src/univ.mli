@@ -1,3 +1,5 @@
+@@ portable
+
 (** An extensible "universal" variant type.
 
     Every type id ([Type_equal.Id.t]) corresponds to one branch of the variant type. *)

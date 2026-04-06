@@ -1,3 +1,5 @@
+@@ portable
+
 open! Core
 
 (** ['a t] is a type that uses [Core.am_running_test] to determine if it should use the

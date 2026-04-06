@@ -5,18 +5,18 @@ module Definitions : sig @@ portable
       [read_write]. *)
 
   (** Like [read]. *)
-  type no_seek [@@deriving sexp_of]
+  type no_seek [@@deriving sexp_of ~localize ~stackify]
 
   (** Like [read_write]. *)
-  type seek = private no_seek [@@deriving sexp_of]
+  type seek = private no_seek [@@deriving sexp_of ~localize ~stackify]
 
-  type global = Modes.At_locality.global [@@deriving sexp_of]
-  type local = Modes.At_locality.local [@@deriving sexp_of]
+  type global = Modes.At_locality.global [@@deriving sexp_of ~localize ~stackify]
+  type local = Modes.At_locality.local [@@deriving sexp_of ~localize ~stackify]
 end = struct
-  type no_seek [@@deriving sexp_of]
-  type seek = private no_seek [@@deriving sexp_of]
-  type global = Modes.At_locality.global [@@deriving sexp_of]
-  type local = Modes.At_locality.local [@@deriving sexp_of]
+  type no_seek [@@deriving sexp_of ~localize ~stackify]
+  type seek = private no_seek [@@deriving sexp_of ~localize ~stackify]
+  type global = Modes.At_locality.global [@@deriving sexp_of ~localize ~stackify]
+  type local = Modes.At_locality.local [@@deriving sexp_of ~localize ~stackify]
 end
 
 module type Iobuf_type = sig @@ portable
@@ -32,7 +32,8 @@ module type Iobuf_type = sig @@ portable
       ; mutable hi : int
       ; mutable hi_max : int
       }
-    [@@deriving fields ~getters ~direct_iterators:(iter, set_all_mutable_fields), sexp_of]
+    [@@deriving
+      fields ~getters ~direct_iterators:(iter, set_all_mutable_fields), sexp_of ~localize]
   end
 
   type 'loc repr = 'loc Repr.t =
@@ -51,7 +52,7 @@ module type Iobuf_type = sig @@ portable
   val globalize_copied : local_ ('rw, 'seek, _) t -> ('rw, 'seek, _) t
 
   module With_shallow_sexp : sig
-    type ('rw, 'seek, 'loc) t = ('rw, 'seek, 'loc) iobuf [@@deriving sexp_of]
+    type ('rw, 'seek, 'loc) t = ('rw, 'seek, 'loc) iobuf [@@deriving sexp_of ~localize]
 
     val globalize : [ `deprecated ]
   end

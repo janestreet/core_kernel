@@ -2,5 +2,5 @@
  (name unpack_buffer)
  (public_name core_kernel.unpack_buffer)
  (preprocess
-  (pps ppx_jane))
+  (pps ppx_jane -compare-require-explicit-locality))
  (libraries core))
