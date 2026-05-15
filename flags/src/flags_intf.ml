@@ -17,6 +17,8 @@ module type S = sig
   (** consistent with subset *)
   include Comparable.S [@mode local] with type t := t
 
+  include Comparable.Comparisons_with_zero_alloc [@mode local] with type t := t
+
   val to_flag_list : t -> t * string list
   val of_int : int -> t [@@zero_alloc]
   val to_int_exn : t -> int [@@zero_alloc]
@@ -47,7 +49,11 @@ module type S = sig
   module Unstable : sig
     type nonrec t = t
     [@@deriving
-      bin_io ~localize, globalize, compare ~localize, equal ~localize, sexp ~stackify]
+      bin_io ~localize
+      , globalize
+      , compare ~localize ~zero_alloc
+      , equal ~localize ~zero_alloc
+      , sexp ~stackify]
   end
 end
 
@@ -107,6 +113,7 @@ module type Flags = sig
       flags with multiple bits one can either define the Int63.t directly or create it in
       terms of simpler flags, using [+] and [-]. *)
   val create : bit:int -> Int63.t
+  [@@zero_alloc]
 
   (** [Flags.Make] builds a new flags module. If there is an error in the [known] flags,
       it behaves as per [on_error].

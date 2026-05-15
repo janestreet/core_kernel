@@ -148,15 +148,15 @@ module Pool = struct
   module Pointer : sig
     (* [Pointer.t] is an encoding as an [int] of the following sum type:
 
-          {[
-            | Null
-            | Normal of { header_index : int; masked_tuple_id : int }
-          ]}
+       {[
+         | Null
+         | Normal of { header_index : int; masked_tuple_id : int }
+       ]}
 
-          The encoding is chosen to optimize the most common operation, namely tuple-slot
-          access, the [slot_index] function. The encoding is designed so that [slot_index]
-          produces a negative number for [Null], which will cause the subsequent array
-          bounds check to fail. *)
+       The encoding is chosen to optimize the most common operation, namely tuple-slot
+       access, the [slot_index] function. The encoding is designed so that [slot_index]
+       produces a negative number for [Null], which will cause the subsequent array bounds
+       check to fail. *)
     type 'slots t = private int [@@deriving sexp_of, typerep]
 
     include Invariant.S1 with type 'a t := 'a t
@@ -250,15 +250,15 @@ module Pool = struct
   module Header : sig
     (* A [Header.t] is an encoding as an [int] of the following type:
 
-          {[
-            | Null
-            | Free of { next_free_header_index : int }
-            | Used of { tuple_id : int }
-          ]}
+       {[
+         | Null
+         | Free of { next_free_header_index : int }
+         | Used of { tuple_id : int }
+       ]}
 
-          If a tuple is free, its header is set to either [Null] or [Free] with
-          [next_free_header_index] indicating the header of the next tuple on the free
-          list. If a tuple is in use, it header is set to [Used]. *)
+       If a tuple is free, its header is set to either [Null] or [Free] with
+       [next_free_header_index] indicating the header of the next tuple on the free list.
+       If a tuple is in use, it header is set to [Used]. *)
     type t = private int [@@deriving sexp_of]
 
     val null : t

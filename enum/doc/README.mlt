@@ -255,9 +255,23 @@ let () = print_flag_help_display param
 
 [%%org
   {|
+~Enum.make_param_comma_separated~,
 ~Enum.make_param_optional_comma_separated~ and
 ~Enum.make_param_optional_comma_separated_with_default_doc~ allow you to create
 flags that take a comma-separated list:
+|}]
+
+let (param : Mode.t list Command.Param.t) =
+  Enum.make_param_comma_separated "-mode" (module Mode) ~doc:"list of modes"
+;;
+
+let () = print_flag_help_display param
+
+[%%expect
+  {|
+-mode _                    . list of modes (can be comma-separated values:
+                             dev, prod, something-else, unit-test)
+[-help], -?                . print this help text and exit
 |}]
 
 let (param : Mode.t list option Command.Param.t) =

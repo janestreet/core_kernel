@@ -94,6 +94,22 @@ module Stable = struct
         | (`Bright | `Dim | `Underscore | `Reverse) as t -> t
       ;;
     end
+
+    module V3 = struct
+      type t =
+        [ V2.t
+        | `Url of string
+        ]
+      [@@deriving compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
+
+      let of_v2 (t : V2.t) = (t :> t)
+
+      let to_v2 (t : t) : V2.t option =
+        match t with
+        | #V2.t as t -> Some t
+        | `Url _ -> None
+      ;;
+    end
   end
 end
 
@@ -123,7 +139,7 @@ module Color = struct
 end
 
 module Attr = struct
-  type t = Stable.Attr.V2.t [@@deriving sexp_of, compare ~localize, hash, equal ~localize]
+  type t = Stable.Attr.V3.t [@@deriving sexp_of, compare ~localize, hash, equal ~localize]
 
   let to_int_list = function
     | `Bright -> [ 1 ]
@@ -137,16 +153,16 @@ module Attr = struct
       (match Color.to_int_list bg with
        | ansi_code :: rest -> (ansi_code + 10) :: rest
        | [] -> [] (* NOTE: impossible, but appropriate *))
+    | `Url _ -> []
   ;;
 
-  let list_to_string = function
+  let list_to_string l =
+    let codes =
+      List.concat_map l ~f:(fun att -> to_int_list att |> List.map ~f:string_of_int)
+    in
+    match codes with
     | [] -> ""
-    | l ->
-      sprintf
-        "\027[%sm"
-        (String.concat
-           ~sep:";"
-           (List.concat_map l ~f:(fun att -> to_int_list att |> List.map ~f:string_of_int)))
+    | _ :: _ -> sprintf "\027[%sm" (String.concat ~sep:";" codes)
   ;;
 end
 
@@ -166,13 +182,12 @@ module With_all_attrs = struct
     | #Attr.t as attr -> Attr.to_int_list attr
   ;;
 
-  let list_to_string = function
+  let list_to_string l =
+    let codes =
+      List.concat_map l ~f:(fun att -> to_int_list att |> List.map ~f:string_of_int)
+    in
+    match codes with
     | [] -> ""
-    | l ->
-      sprintf
-        "\027[%sm"
-        (String.concat
-           ~sep:";"
-           (List.concat_map l ~f:(fun att -> to_int_list att |> List.map ~f:string_of_int)))
+    | _ :: _ -> sprintf "\027[%sm" (String.concat ~sep:";" codes)
   ;;
 end

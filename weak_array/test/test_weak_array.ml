@@ -81,11 +81,11 @@ let%expect_test ("clearing, with no finalizer attached" [@tags "no-js"]) =
   [%expect {| (()) |}]
 ;;
 
-(* This test shows two properties of weak pointers in conjunction with finalizers that
-   are well-specified:
+(* This test shows two properties of weak pointers in conjunction with finalizers that are
+   well-specified:
 
    1. if a finalizer resurrects a weak pointer that would otherwise be cleared
-   immediately, then it is not in fact cleared;
+      immediately, then it is not in fact cleared;
 
    2. when such a resurrected weak pointer becomes dead, it is indeed cleared.
 *)

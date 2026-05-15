@@ -36,9 +36,9 @@ module Make (Key : Key) : S with module Key = Key = struct
   ;;
 
   let push t ~key ~data =
-    match Hashtbl.find t.tbl key with
-    | Some _ -> `Key_already_present
-    | None ->
+    match Hashtbl.find_or_null t.tbl key with
+    | This _ -> `Key_already_present
+    | Null ->
       push_new_key t ~key ~data;
       `Ok
   ;;
@@ -53,17 +53,17 @@ module Make (Key : Key) : S with module Key = Key = struct
   ;;
 
   let replace t ~key ~data =
-    match Hashtbl.find t.tbl key with
-    | None -> push_exn t ~key ~data
-    | Some el ->
+    match Hashtbl.find_or_null t.tbl key with
+    | Null -> push_exn t ~key ~data
+    | This el ->
       Heap.remove t.heap el;
       push_new_key t ~key ~data
   ;;
 
   let remove t key =
-    match Hashtbl.find t.tbl key with
-    | None -> ()
-    | Some el ->
+    match Hashtbl.find_or_null t.tbl key with
+    | Null -> ()
+    | This el ->
       Hashtbl.remove t.tbl key;
       Heap.remove t.heap el
   ;;
@@ -125,9 +125,9 @@ module Make (Key : Key) : S with module Key = Key = struct
   ;;
 
   let find t key =
-    match Hashtbl.find t.tbl key with
-    | None -> None
-    | Some el -> Some (snd (Heap.Elt.value_exn el))
+    match Hashtbl.find_or_null t.tbl key with
+    | Null -> None
+    | This el -> Some (snd (Heap.Elt.value_exn el))
   ;;
 
   exception Key_not_found of Key.t
@@ -140,9 +140,9 @@ module Make (Key : Key) : S with module Key = Key = struct
   ;;
 
   let find_pop t key =
-    match Hashtbl.find t.tbl key with
-    | None -> None
-    | Some el ->
+    match Hashtbl.find_or_null t.tbl key with
+    | Null -> None
+    | This el ->
       let _k, v = Heap.Elt.value_exn el in
       Hashtbl.remove t.tbl key;
       Heap.remove t.heap el;
@@ -155,9 +155,9 @@ module Make (Key : Key) : S with module Key = Key = struct
     | None -> raise (Key_not_found key)
   ;;
 
-  let iteri t ~f = Heap.iter t.heap ~f:(fun (k, v) -> f ~key:k ~data:v)
-  let iter t ~f = Heap.iter t.heap ~f:(fun (_k, v) -> f v)
-  let iter_keys t ~f = Heap.iter t.heap ~f:(fun (k, _v) -> f k)
+  let iteri t ~f = Heap.iter t.heap ~f:(fun (k, v) -> f ~key:k ~data:v) [@nontail]
+  let iter t ~f = Heap.iter t.heap ~f:(fun (_k, v) -> f v) [@nontail]
+  let iter_keys t ~f = Heap.iter t.heap ~f:(fun (k, _v) -> f k) [@nontail]
   let to_alist t = Heap.to_list t.heap
 
   let length t =

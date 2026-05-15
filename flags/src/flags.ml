@@ -163,22 +163,33 @@ module Make (M : Make_arg) = struct
   (* we only use [compare [@mode local]] below *)
   let compare = `unused
   let `unused = compare
+  let%template[@mode m = local] compare_zero_alloc = (compare [@mode m])
 
   include%template Comparable.Make [@mode local portable] (struct
       type nonrec t = t [@@deriving sexp, compare ~localize, hash]
     end)
 
-  (* [Comparable.Make] turns [equal] into a function call to [compare] rather than the
-     much simpler (and equally correct) [Int63.equal]. Restore it, as well as (=) and
-     (<>). *)
-  let%template equal = (Int63.equal [@mode m]) [@@mode m = (local, global)]
-  let ( = ) = Int63.( = )
-  let ( <> ) = Int63.( <> )
+  let%template[@mode m = local] compare = (compare_zero_alloc [@mode m])
+
+  include%template Comparable.Comparisons_with_zero_alloc [@mode local portable] (struct
+      type nonrec t = t [@@deriving compare ~localize ~zero_alloc]
+    end)
+
+  (* [Comparable.Comparisons_with_zero_alloc] turns [equal] into a function call to
+     [compare] rather than the much simpler (and equally correct) [Int63.equal]. Restore
+     it, as well as (=) and (<>). *)
+  let%template[@mode m = (local, global)] equal t1 t2 = (Int63.equal [@mode m]) t1 t2
+  let ( = ) = [%eta2 Int63.( = )]
+  let ( <> ) = [%eta2 Int63.( <> )]
 
   module Unstable = struct
     type nonrec t = t
     [@@deriving
-      bin_io ~localize, globalize, compare ~localize, equal ~localize, sexp ~stackify]
+      bin_io ~localize
+      , globalize
+      , compare ~localize ~zero_alloc
+      , equal ~localize ~zero_alloc
+      , sexp ~stackify]
   end
 end
 

@@ -77,6 +77,12 @@ module type Enum = sig
 
   val make_param_optional_with_default_doc_sexp : default:'a -> ('a, 'a) make_param
 
+  val make_param_comma_separated
+    :  ?allow_empty:bool
+    -> ?strip_whitespace:bool
+    -> ?unique_values:bool
+    -> ('a, 'a list) make_param
+
   val make_param_optional_comma_separated
     :  ?allow_empty:bool
     -> ?strip_whitespace:bool
