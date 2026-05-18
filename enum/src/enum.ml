@@ -185,6 +185,34 @@ let%template comma_separated_extra_doc m =
   [%string "(can be comma-separated values: %{options})"]
 ;;
 
+let make_param_comma_separated
+  ?allow_empty
+  ?strip_whitespace
+  ?unique_values
+  ?case_sensitive
+  ?represent_choice_with
+  ?list_values_in_help
+  ?aliases
+  ?key
+  flag_name
+  ~doc
+  m
+  =
+  make_param
+    ?case_sensitive
+    ?represent_choice_with
+    ?list_values_in_help
+    ?aliases
+    ?key
+    flag_name
+    m
+    ~f:
+      (Fn.compose
+         Command.Param.required
+         (Command.Arg_type.comma_separated ?allow_empty ?strip_whitespace ?unique_values))
+    ~doc:[%string {|%{doc} %{comma_separated_extra_doc m}|}]
+;;
+
 let make_param_optional_comma_separated
   ?allow_empty
   ?strip_whitespace

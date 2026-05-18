@@ -79,7 +79,7 @@ module Unpack_one = struct
       ;;
     end)
 
-  (* [create_bin_prot] doesn't use [Bigstring.read_bin_prot] for performance reasons.  It
+  (* [create_bin_prot] doesn't use [Bigstring.read_bin_prot] for performance reasons. It
      was written prior to [Bigstring.read_bin_prot], and it's not clear whether switching
      to use it would cause too much of a performance hit. *)
   let create_bin_prot_internal bin_prot_reader ~reader_expects_size_header =
@@ -212,7 +212,7 @@ type ('a, 'state) alive =
   ; mutable state_is_initial : bool
   ; initial_state : 'state
   ; unpack :
-      (('a, 'state) Unpack_one.unpack[@sexp.opaque] (* [buf] holds unconsumed chars*))
+      (('a, 'state) Unpack_one.unpack[@sexp.opaque] (* [buf] holds unconsumed chars *))
   ; mutable buf : Bigstring.t (* [pos] is the start of unconsumed data in[buf] *)
   ; mutable pos : int (* [len] is the length of unconsumed data in[buf] *)
   ; mutable len : int
@@ -338,9 +338,9 @@ let rec unpack_iter_loop t alive ~f =
        | `Invalid_data e -> error t (Error.tag e ~tag:"invalid data")
        | `Ok (one, num_bytes) ->
          (* In order to get a value we either need to consume some bytes or have partially
-           unpacked data, otherwise it is a bug in [unpack_one].  The case of [num_bytes =
-           0] comes up when parsing sexp atoms where we don't know where atom ends until
-           we hit parenthesis, e.g. "abc(". *)
+            unpacked data, otherwise it is a bug in [unpack_one]. The case of
+            [num_bytes = 0] comes up when parsing sexp atoms where we don't know where
+            atom ends until we hit parenthesis, e.g. "abc(". *)
          if num_bytes < 0 || num_bytes > alive.len
          then
            error
@@ -368,7 +368,7 @@ let rec unpack_iter_loop t alive ~f =
            | _ -> unpack_iter_loop t alive ~f)
        | `Not_enough_data (state, num_bytes) ->
          (* Partial unpacking need not have consumed any bytes, and cannot have consumed
-           more bytes than were available. *)
+            more bytes than were available. *)
          if num_bytes < 0 || num_bytes > alive.len
          then
            error
@@ -381,10 +381,10 @@ let rec unpack_iter_loop t alive ~f =
            consume alive ~num_bytes;
            alive.state <- state;
            alive.state_is_initial <- false;
-           (* Put unconsumed bytes at the front.  We assume that unpacking is
-             deterministic, which ensures that every input byte is shifted at most once.
-             Once a byte has been shifted, it will remain where it is until it is
-             consumed. *)
+           (* Put unconsumed bytes at the front. We assume that unpacking is
+              deterministic, which ensures that every input byte is shifted at most once.
+              Once a byte has been shifted, it will remain where it is until it is
+              consumed. *)
            if alive.len > 0
            then
              Bigstring.blito

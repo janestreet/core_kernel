@@ -12,9 +12,9 @@ module Definitions = struct
     type t = private int (*_ performance hack: avoid the write barrier *)
     [@@deriving compare ~localize, sexp_of]
 
-    val window : local_ (_, _, global) iobuf -> t
-    val limit : local_ (_, _, global) iobuf -> t
-    val restore : t -> local_ (_, seek, global) iobuf -> unit
+    val window : local_ (_, _, _) iobuf -> t
+    val limit : local_ (_, _, _) iobuf -> t
+    val restore : t -> local_ (_, seek, _) iobuf -> unit
   end
 
   module type Basic = sig

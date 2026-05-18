@@ -11,8 +11,8 @@ let unpack t =
   match unpack_into t q with
   | Ok () -> Ok q
   | Error _ as err ->
-    (* If we *have* unpacked values, we first want to return them,
-       and then on the next call we will return the error (because [t.state = Dead]) *)
+    (* If we *have* unpacked values, we first want to return them, and then on the next
+       call we will return the error (because [t.state = Dead]) *)
     assert (is_dead t);
     if Queue.is_empty q then err else Ok q
 ;;
@@ -361,8 +361,8 @@ let%expect_test "[feed] and [unpack_iter] allocation" =
     let f (_ : Example.t) = incr num_unpacked in
     fun () -> unpack_iter unpack ~f |> Or_error.ok_exn
   in
-  (* Starting from 4.12 the GC is able to track more allocations from bigstrings
-     (see https://github.com/ocaml/ocaml/pull/10025) hence the bump. *)
+  (* Starting from 4.12 the GC is able to track more allocations from bigstrings (see
+     https://github.com/ocaml/ocaml/pull/10025) hence the bump. *)
   let fixed_cost_of_feed = 30 in
   let buf = Example.pack [] in
   require_allocation_does_not_exceed (Minor_words fixed_cost_of_feed) (fun () ->

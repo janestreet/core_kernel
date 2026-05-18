@@ -7,15 +7,6 @@ module%test Thread_safe_queue : module type of Thread_safe_queue = struct
 
   open Thread_safe_queue
 
-  module Private = struct
-    module Uopt = struct
-      include Private.Uopt
-
-      let%test _ = is_none none
-      let%test _ = is_some (some ())
-    end
-  end
-
   type nonrec 'a t = 'a t
 
   let invariant = invariant
@@ -30,20 +21,13 @@ module%test Thread_safe_queue : module type of Thread_safe_queue = struct
     ignore (t |> [%sexp_of: int t] : Sexp.t)
   ;;
 
-  module Dequeue_result = struct
-    type 'a t = 'a Dequeue_result.t =
-      | Empty
-      | Not_empty of { global_ elt : 'a }
-    [@@deriving sexp, compare ~localize]
-  end
-
   let create = create
-  let dequeue = dequeue
+  let dequeue t = dequeue t
 
   let dequeue_exn t =
     match dequeue t with
-    | Not_empty { elt } -> elt
-    | Empty -> raise_s [%sexp "dequeue_exn of empty queue"]
+    | This elt -> elt
+    | Null -> raise_s [%sexp "dequeue_exn of empty queue"]
   ;;
 
   let enqueue = enqueue
@@ -205,19 +189,19 @@ module%test Thread_safe_queue : module type of Thread_safe_queue = struct
   let%test_unit _ =
     let t = create () in
     match dequeue t with
-    | Dequeue_result.Empty -> ()
-    | Not_empty _ -> assert false
+    | Null -> ()
+    | This _ -> assert false
   ;;
 
   let%test_unit _ =
     let t = create () in
     enqueue t ();
     (match dequeue t with
-     | Dequeue_result.Empty -> assert false
-     | Not_empty { elt } -> elt);
+     | Null -> assert false
+     | This elt -> elt);
     match dequeue t with
-    | Dequeue_result.Empty -> ()
-    | Not_empty _ -> assert false
+    | Null -> ()
+    | This _ -> assert false
   ;;
 end
 (* This signature constraint is here to remind us to add a unit test whenever the

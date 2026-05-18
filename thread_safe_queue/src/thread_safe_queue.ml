@@ -17,12 +17,12 @@ open! Import
 
 module Elt = struct
   type 'a t =
-    { mutable value : 'a Uopt.t
-    ; mutable next : ('a t Uopt.t[@sexp.opaque])
+    { mutable value : 'a or_null
+    ; mutable next : ('a t or_null[@sexp.opaque])
     }
   [@@deriving sexp_of]
 
-  let create () = { value = Uopt.get_none (); next = Uopt.get_none () }
+  let create () = { value = Null; next = Null }
 end
 
 type 'a t =
@@ -32,8 +32,8 @@ type 'a t =
   ; mutable front : 'a Elt.t
   ; mutable back : 'a Elt.t
       (* [unused_elts] is singly linked via [next], and ends with [sentinel]. All elts in
-         [unused_elts] have [Uopt.is_none elt.value]. *)
-  ; mutable unused_elts : 'a Elt.t Uopt.t
+         [unused_elts] have [Or_null.is_null elt.value]. *)
+  ; mutable unused_elts : 'a Elt.t or_null
   }
 [@@deriving fields ~getters ~iterators:iter, sexp_of]
 
@@ -49,24 +49,24 @@ let invariant _invariant_a t =
            while !i > 0 do
              decr i;
              let elt = !r in
-             r := Uopt.value_exn elt.Elt.next;
-             assert (Uopt.is_some elt.value)
+             r := Or_null.value_exn elt.Elt.next;
+             assert (Or_null.is_this elt.value)
            done;
            assert (phys_equal !r t.back)))
-      ~back:(check (fun back -> assert (Uopt.is_none back.Elt.value)))
+      ~back:(check (fun back -> assert (Or_null.is_null back.Elt.value)))
       ~unused_elts:
         (check (fun unused_elts ->
            let r = ref unused_elts in
-           while Uopt.is_some !r do
-             let elt = Uopt.value_exn !r in
+           while Or_null.is_this !r do
+             let elt = Or_null.value_exn !r in
              r := elt.Elt.next;
-             assert (Uopt.is_none elt.value)
+             assert (Or_null.is_null elt.value)
            done)))
 ;;
 
 let create () =
   let elt = Elt.create () in
-  { front = elt; back = elt; length = 0; unused_elts = Uopt.get_none () }
+  { front = elt; back = elt; length = 0; unused_elts = Null }
 ;;
 
 (* This doesn't actually need the attributes to ensure atomic semantics, but if it were
@@ -74,9 +74,9 @@ let create () =
    on now. *)
 let[@inline never] [@specialise never] [@local never] get_unused_elt t =
   (* BEGIN ATOMIC SECTION *)
-  if Uopt.is_some t.unused_elts
+  if Or_null.is_this t.unused_elts
   then (
-    let elt = Uopt.unsafe_value t.unused_elts in
+    let elt = Or_null.unsafe_value t.unused_elts in
     t.unused_elts <- elt.next;
     elt (* END ATOMIC SECTION *))
   else Elt.create ()
@@ -88,8 +88,8 @@ let[@inline never] [@specialise never] [@local never] enqueue (type a) (t : a t)
   let new_back = get_unused_elt t in
   (* BEGIN ATOMIC SECTION *)
   t.length <- t.length + 1;
-  t.back.value <- Uopt.some a;
-  t.back.next <- Uopt.some new_back;
+  t.back.value <- This a;
+  t.back.next <- This new_back;
   t.back <- new_back
 ;;
 
@@ -99,53 +99,38 @@ let[@inline never] [@specialise never] [@local never] enqueue (type a) (t : a t)
    [get_unused_elt], above. *)
 let[@inline never] [@specialise never] [@local never] return_unused_elt t (elt : _ Elt.t) =
   (* BEGIN ATOMIC SECTION *)
-  elt.value <- Uopt.get_none ();
+  elt.value <- Null;
   elt.next <- t.unused_elts;
-  t.unused_elts <- Uopt.some elt;
+  t.unused_elts <- This elt;
   (* END ATOMIC SECTION *)
   ()
 ;;
 
-module Dequeue_result = struct
-  (* It's important that dequeue does not allocate.
-     - We could accomplish this by having it raise an exception when the queue is empty.
-       But that would have poor performance in javascript (and this library is used by
-       javascript applications via incremental).
-     - We could use Uopt, as this module does internally. But using Uopt correctly is
-       subtle, so we prefer not to expose it to users.
-     - Instead we employ a local (stack allocated) return of the below type.
-  *)
-  type 'a t =
-    | Empty
-    | Not_empty of { global_ elt : 'a }
-  [@@deriving sexp, compare ~localize]
-end
-
 let[@inline never] [@specialise never] [@local never] dequeue t =
   (* BEGIN ATOMIC SECTION *)
   if t.length = 0
-  then Dequeue_result.Empty
+  then Null
   else (
     let elt = t.front in
     let a = elt.value in
-    t.front <- Uopt.unsafe_value elt.next;
+    t.front <- Or_null.unsafe_value elt.next;
     t.length <- t.length - 1;
     (* END ATOMIC SECTION *)
     return_unused_elt t elt;
-    exclave_ Not_empty { elt = Uopt.unsafe_value a })
+    (* this is a known-This [Or_null], which is exactly what we want anyway. *)
+    a)
 ;;
 
 let[@inline] dequeue_until_empty ~(local_ f) t =
-  let keep_going = ref true in
-  while !keep_going do
+  while
     match dequeue t with
-    | Not_empty { elt } -> f elt
-    | Empty -> keep_going := false
+    | This elt ->
+      f elt;
+      true
+    | Null -> false
+  do
+    ()
   done
 ;;
 
-let clear_internal_pool t = t.unused_elts <- Uopt.get_none ()
-
-module Private = struct
-  module Uopt = Uopt
-end
+let clear_internal_pool t = t.unused_elts <- Null

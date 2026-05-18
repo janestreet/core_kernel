@@ -43,7 +43,7 @@ module type Iobuf = sig @@ portable
   module Repr : sig
     (** This type is a compiler witness that 'rw and 'seek do not affect layout; it
         enables wider use of unboxed GADTs. *)
-    type 'loc t : value mod non_float portable
+    type 'loc t : value mod non_float portable unyielding
   end
 
   (** The first type parameter controls whether the iobuf can be written to. The second

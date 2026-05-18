@@ -79,10 +79,12 @@ module Definitions = struct
     (** Similar to [protect_window_bounds_and_buffer], but does not save/restore the
         buffer or bounds. Mixing this with functions like [set_bounds_and_buffer] or
         [narrow] is unsafe; you should not modify anyything but the window inside [f]. *)
-    val protect_window
-      :  local_ ('rw, _, 'loc) t
-      -> f:local_ (local_ ('rw, seek, 'loc) t -> 'a)
-      -> 'a
+    val%template protect_window
+      : ('a : value_or_null) 'rw 'sk 'loc.
+      local_ ('rw, 'sk, 'loc) t
+      -> f:local_ (local_ ('rw, seek, 'loc) t -> 'a @ m)
+      -> 'a @ m
+    [@@mode m = (local, global)]
 
     (** As [protect_window] but does not enforce that the closure should not let the
         buffer escape. Letting the buffer escape is dangerous and almost certainly not
@@ -117,13 +119,6 @@ module Definitions = struct
       -> 'b
       -> f:local_ (('rw, seek, 'loc) t -> 'a -> 'b -> 'c)
       -> 'c
-
-    (** Similar to [protect_window] but returns a local value. *)
-    val protect_window__local
-      : ('a : value_or_null) 'rw 'sk 'loc.
-      local_ ('rw, 'sk, 'loc) t
-      -> f:local_ (local_ ('rw, seek, 'loc) t -> local_ 'a)
-      -> local_ 'a
 
     (** Computes the position within [buf] for [pos] relative to our window. Checks [len]
         bytes are available. *)

@@ -8,7 +8,8 @@ open! Core
     exn-raising. *)
 
 module type Nonempty_set = sig @@ portable
-  type (!'a, !'b) t : value mod contended portable with 'a with 'b @@ contended
+  type (!'elt, !'cmp) t : immutable_data with 'elt with ('elt, 'cmp) Comparator.t
+  [@@sexp.phantom: 'cmp] [@@deriving compare ~localize, globalize, sexp_of]
 
   val add : ('a, 'b) t -> 'a -> ('a, 'b) t
   val remove : ('a, 'b) t -> 'a -> ('a, 'b) t option
@@ -44,6 +45,7 @@ module type Nonempty_set = sig @@ portable
   val to_set : ('a, 'b) t -> ('a, 'b) Set.t
   val to_set_remove : ('a, 'b) t -> 'a -> ('a, 'b) Set.t
   val to_set_inter : ('a, 'b) t -> ('a, 'b) t -> ('a, 'b) Set.t
+  val to_set_filter : ('a, 'cmp) t -> f:('a -> bool) @ local -> ('a, 'cmp) Set.t
 
   (** [union t1 t2] returns the union of the two sets. [O(length t1 + length t2)]. *)
   val union : ('a, 'b) t -> ('a, 'b) t -> ('a, 'b) t
@@ -56,9 +58,15 @@ module type Nonempty_set = sig @@ portable
   val union_list : ('a, 'cmp) t Nonempty_list.t -> ('a, 'cmp) t
 
   val union_set_list : ('a, 'cmp) t -> ('a, 'cmp) Set.t list -> ('a, 'cmp) t
+  val filter : ('a, 'cmp) t -> f:('a -> bool) @ local -> ('a, 'cmp) t or_null
   val diff : ('a, 'cmp) t -> ('a, 'cmp) t -> ('a, 'cmp) Set.t
   val mem : ('a, _) t -> 'a -> bool
   val length : (_, _) t -> int
+
+  val%template compare_direct : ('a, 'b) t @ m -> ('a, 'b) t @ m -> int
+  [@@mode m = (global, local)]
+
+  val hash_fold_direct : 'a Hash.folder -> ('a, 'b) t Hash.folder
 
   val%template equal : ('a, 'b) t @ m -> ('a, 'b) t @ m -> bool
   [@@mode m = (global, local)]
@@ -80,16 +88,23 @@ module type Nonempty_set = sig @@ portable
   end
 
   module Stable : sig
+    (** [V1] and [V2] differ only in their sexp_grammar and bin_shape. The [V1] shape and
+        grammar are direct copies from [Set.V1] which don't express the additional
+        nonemptiness property. *)
+
     module V1 : sig
       type nonrec (!'a, !'b) t = ('a, 'b) t
 
-      module M (Elt : sig
-          type t
-          type comparator_witness
-        end) : sig
-        type nonrec t = (Elt.t, Elt.comparator_witness) t
-      end
+      module M = M
+      include For_deriving.S_stable with type ('a, 'b) t := ('a, 'b) t
+      include For_deriving.S_serializable with type ('a, 'b) t := ('a, 'b) t
+      include For_deriving.S_common with type ('a, 'b) t := ('a, 'b) t
+    end
 
+    module V2 : sig
+      type nonrec (!'a, !'b) t = ('a, 'b) t
+
+      module M = M
       include For_deriving.S_stable with type ('a, 'b) t := ('a, 'b) t
       include For_deriving.S_serializable with type ('a, 'b) t := ('a, 'b) t
       include For_deriving.S_common with type ('a, 'b) t := ('a, 'b) t

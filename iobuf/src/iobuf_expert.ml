@@ -84,19 +84,21 @@ let reinitialize_of_bigstring t ~pos ~len buf =
 let set_bounds_and_buffer = set_bounds_and_buffer
 let set_bounds_and_buffer_sub = set_bounds_and_buffer_sub
 
-let protect_window t ~f =
-  let lo = t.lo in
-  let hi = t.hi in
-  try
-    let result = f t in
-    t.lo <- lo;
-    t.hi <- hi;
-    result
-  with
-  | exn ->
-    t.lo <- lo;
-    t.hi <- hi;
-    raise exn
+let%template protect_window t ~f =
+  (let lo = t.lo in
+   let hi = t.hi in
+   try
+     let result = f t in
+     t.lo <- lo;
+     t.hi <- hi;
+     result
+   with
+   | exn ->
+     t.lo <- lo;
+     t.hi <- hi;
+     raise exn)
+  [@exclave_if_local m ~reasons:[ May_return_local ]]
+[@@mode m = (local, global)]
 ;;
 
 let protect_window_global_deprecated t ~f =
@@ -164,21 +166,6 @@ let protect_window_2_global_deprecated t x y ~f =
   let hi = t.hi in
   try
     let result = f t x y in
-    t.lo <- lo;
-    t.hi <- hi;
-    result
-  with
-  | exn ->
-    t.lo <- lo;
-    t.hi <- hi;
-    raise exn
-;;
-
-let protect_window__local t ~f = exclave_
-  let lo = t.lo in
-  let hi = t.hi in
-  try
-    let result = f t in
     t.lo <- lo;
     t.hi <- hi;
     result

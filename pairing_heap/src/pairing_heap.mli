@@ -67,14 +67,14 @@ val pop_exn : 'a t -> 'a
 
 (** [pop_if t cond] returns [Some top_element] of [t] if it satisfies condition [cond],
     removing it, or [None] in any other case. *)
-val pop_if : 'a t -> ('a -> bool) -> 'a option
+val pop_if : 'a t -> ('a -> bool) @ local -> 'a option
 
-val pop_if_or_null : 'a t -> ('a -> bool) -> 'a or_null
+val pop_if_or_null : 'a t -> ('a -> bool) @ local -> 'a or_null
 
 (** [pop_while t cond] returns a list of top elements from [t] while they satisfy
     condition [cond], removing each of them, or an empty list if none of the elements
     satisfy the condition. The returned list is in order of removal. *)
-val pop_while : 'a t -> ('a -> bool) -> 'a list
+val pop_while : 'a t -> ('a -> bool) @ local -> 'a list
 
 (** [copy t] returns a shallow copy. *)
 val copy : 'a t -> 'a t
@@ -110,7 +110,7 @@ val update : 'a t -> 'a Elt.t -> 'a -> 'a Elt.t
 
 (** [find_elt t ~f]. If [f] is true for some element in [t], return an [Elt.t] for that
     element. This operation is O(n). *)
-val find_elt : 'a t -> f:('a -> bool) -> 'a Elt.t option
+val find_elt : 'a t -> f:('a -> bool) @ local -> 'a Elt.t option
 
 module Unsafe : sig
   (** [Unsafe] functions provide faster alternatives to regular functions with the same

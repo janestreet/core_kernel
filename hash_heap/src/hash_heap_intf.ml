@@ -28,9 +28,19 @@ module type S = sig
   val pop_with_key_exn : 'a t -> Key.t * 'a
   val pop : 'a t -> 'a option
   val pop_exn : 'a t -> 'a
-  val pop_if_with_key : 'a t -> (key:Key.t -> data:'a -> bool) -> (Key.t * 'a) option
-  val pop_if : 'a t -> ('a -> bool) -> 'a option
-  val pop_while_with_key : 'a t -> (key:Key.t -> data:'a -> bool) -> (Key.t * 'a) list
+
+  val pop_if_with_key
+    :  'a t
+    -> (key:Key.t -> data:'a -> bool) @ local
+    -> (Key.t * 'a) option
+
+  val pop_if : 'a t -> ('a -> bool) @ local -> 'a option
+
+  val pop_while_with_key
+    :  'a t
+    -> (key:Key.t -> data:'a -> bool) @ local
+    -> (Key.t * 'a) list
+
   val find : 'a t -> Key.t -> 'a option
   val find_pop : 'a t -> Key.t -> 'a option
   val find_exn : 'a t -> Key.t -> 'a
@@ -38,10 +48,10 @@ module type S = sig
 
   (** Mutation of the heap during iteration is not supported, but there is no check to
       prevent it. The behavior of a heap that is mutated during iteration is undefined. *)
-  val iter_keys : _ t -> f:(Key.t -> unit) -> unit
+  val iter_keys : _ t -> f:(Key.t -> unit) @ local -> unit
 
-  val iter : 'a t -> f:('a -> unit) -> unit
-  val iteri : 'a t -> f:(key:Key.t -> data:'a -> unit) -> unit
+  val iter : 'a t -> f:('a -> unit) @ local -> unit
+  val iteri : 'a t -> f:(key:Key.t -> data:'a -> unit) @ local -> unit
 
   (** Returns the list of all (key, value) pairs for given [Hash_heap]. *)
   val to_alist : 'a t -> (Key.t * 'a) list

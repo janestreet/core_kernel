@@ -11,23 +11,29 @@ module Nonempty_set0 = struct
     | This t -> t
     | Null -> invalid_arg "[Nonempty_set.of_set_exn] called on empty set"
   ;;
+
+  module M (Elt : sig
+      type t
+      type comparator_witness
+    end) : sig
+    type nonrec t = (Elt.t, Elt.comparator_witness) t
+  end = struct
+    type nonrec t = (Elt.t, Elt.comparator_witness) t
+  end
 end
 
 module Stable = struct
   open! Core.Core_stable
 
-  module V1 = struct
+  module V1_and_V2_common = struct
+    (** [V1] and [V2] differ only in their sexp_grammar and bin_shape, and only because
+        the [V1] shape and grammar are direct copies from [Set.V1] which don't express the
+        additional nonemptiness property. This module contains everything else that is
+        shared between them. *)
     type ('a, 'b) t = ('a, 'b) Nonempty_set0.t = { nonempty : ('a, 'b) Set.V1.t }
     [@@unboxed]
 
-    module M (Elt : sig
-        type t
-        type comparator_witness
-      end) : sig
-      type nonrec t = (Elt.t, Elt.comparator_witness) t
-    end = struct
-      type nonrec t = (Elt.t, Elt.comparator_witness) t
-    end
+    module M = Nonempty_set0.M
 
     let hash_fold_m__t hasher state t = Set.V1.hash_fold_m__t hasher state t.nonempty
     let hash_m__t hasher t = Set.V1.hash_m__t hasher t.nonempty
@@ -42,13 +48,8 @@ module Stable = struct
     [@@mode m = (local, global)]
     ;;
 
-    let m__t_sexp_grammar m : ('a, 'b) t Sexplib0.Sexp_grammar.t =
-      Sexplib0.Sexp_grammar.coerce (Set.V1.m__t_sexp_grammar m)
-    ;;
-
     let m__t_of_sexp e s = Set.V1.m__t_of_sexp e s |> Nonempty_set0.of_set_exn
     let sexp_of_m__t m t = Set.V1.sexp_of_m__t m t.nonempty
-    let bin_shape_m__t = Set.V1.bin_shape_m__t
     let bin_size_m__t m t = Set.V1.bin_size_m__t m t.nonempty
     let bin_write_m__t m buf ~pos t = Set.V1.bin_write_m__t m buf ~pos t.nonempty
 
@@ -66,10 +67,48 @@ module Stable = struct
         Nonempty_set0.of_set_exn
         Nonempty_set0.to_set
     ;;
+  end
+
+  module V1 = struct
+    include V1_and_V2_common
+
+    let m__t_sexp_grammar m : ('a, 'b) t Sexplib0.Sexp_grammar.t =
+      (* This is copied from [Set], but it's actually wrong. The correct grammar should
+         express non-emptiness, and is what's actually used in V2. *)
+      Sexplib0.Sexp_grammar.coerce (Set.V1.m__t_sexp_grammar m)
+    ;;
+
+    let bin_shape_m__t = Set.V1.bin_shape_m__t
 
     let%expect_test _ =
       print_endline [%bin_digest: M(Int.V1).t];
       [%expect {| 3564446b0bfa871d8c3ebf31ab342fe7 |}]
+    ;;
+  end
+
+  module V2 = struct
+    include V1_and_V2_common
+
+    let m__t_sexp_grammar
+      (type elt)
+      (module Elt : Base.Set.M_sexp_grammar with type t = elt)
+      : (elt, _) t Sexplib0.Sexp_grammar.t
+      =
+      let ({ untyped } : _ Sexplib0.Sexp_grammar.t) = Elt.t_sexp_grammar in
+      { untyped = List (Cons (untyped, Many untyped)) }
+    ;;
+
+    let bin_shape_m__t m =
+      (* This shape is intended to express "Set plus an additional property"; you get
+         shapes like this from [Binable.Of_binable_with_uuid] etc. *)
+      Bin_prot.Shape.annotate
+        (Bin_prot.Shape.Uuid.of_string "5648e4ee-2f70-11f1-87f9-aa75fc78cc15")
+        (Set.V1.bin_shape_m__t m)
+    ;;
+
+    let%expect_test _ =
+      print_endline [%bin_digest: M(Int.V1).t];
+      [%expect {| d6d6d7f7d8de4b551b915f8998f89bcd |}]
     ;;
   end
 end
@@ -77,6 +116,12 @@ end
 open! Core
 include Nonempty_set_intf
 include Nonempty_set0
+
+[%%rederive
+  type nonrec ('a, 'b) t = ('a, 'b) t = { nonempty : ('a, 'b) Base.Set.t }
+  [@@unboxed] [@@deriving compare ~localize, globalize]]
+
+let sexp_of_t sexp_of_elt t = Set.sexp_of_t sexp_of_elt t.nonempty
 
 let of_set_add set el : _ t =
   (* Safe: adding an element to any set (even empty) produces a nonempty set *)
@@ -160,12 +205,23 @@ let union_list (t :: l : _ t Nonempty_list.t) : _ t =
 let to_set_inter t1 t2 : _ Set.t = Set.inter t1.nonempty t2.nonempty
 let inter t1 t2 : _ t option = of_set (to_set_inter t1 t2)
 let inter_or_null t1 t2 : _ t or_null = of_set_or_null (to_set_inter t1 t2)
+let to_set_filter t ~f : _ Set.t = Set.filter t.nonempty ~f
+let filter t ~f : _ t or_null = of_set_or_null (to_set_filter t ~f)
 let diff t1 t2 = Set.diff t1.nonempty t2.nonempty
 let mem t el : bool = Set.mem t.nonempty el
 let length t : int = Set.length t.nonempty
 let to_set_remove t elt : _ Set.t = Set.remove t.nonempty elt
 let remove t elt : _ t option = of_set (to_set_remove t elt)
 let remove_or_null t elt : _ t or_null = of_set_or_null (to_set_remove t elt)
+
+let%template compare_direct t1 t2 : int =
+  (Set.compare_direct [@mode m]) t1.nonempty t2.nonempty
+[@@mode m = (global, local)]
+;;
+
+let hash_fold_direct hash_fold_key state t =
+  Set.hash_fold_direct hash_fold_key state t.nonempty
+;;
 
 let%template equal t1 t2 : bool = (Set.equal [@mode m]) t1.nonempty t2.nonempty
 [@@mode m = (global, local)]
@@ -205,9 +261,24 @@ let%expect_test "min/max elt" =
   [%expect {| |}]
 ;;
 
-module M = Stable.V1.M
-include (Stable.V1 : For_deriving.S_serializable with type ('a, 'b) t := ('a, 'b) t)
-include (Stable.V1 : For_deriving.S_common with type ('a, 'b) t := ('a, 'b) t)
+let%expect_test "filter" =
+  Quickcheck.test
+    [%quickcheck.generator: Int.t Nonempty_list.t]
+    ~sexp_of:[%sexp_of: Int.t Nonempty_list.t]
+    ~f:(fun list ->
+      let t = of_nonempty_list (module Int) list in
+      let f x = x > 0 in
+      let expect = Set.filter (to_set t) ~f in
+      [%test_result: Int.Set.t] ~expect (to_set_filter t ~f);
+      [%test_result: Int.Set.t or_null]
+        ~expect:(if Set.is_empty expect then Null else This expect)
+        (filter t ~f |> Or_null.map ~f:to_set));
+  [%expect {| |}]
+;;
+
+module M = Stable.V2.M
+include (Stable.V2 : For_deriving.S_serializable with type ('a, 'b) t := ('a, 'b) t)
+include (Stable.V2 : For_deriving.S_common with type ('a, 'b) t := ('a, 'b) t)
 
 let quickcheck_generator_m__t m =
   Quickcheck.Generator.filter_map ~f:of_set (Set.quickcheck_generator_m__t m)

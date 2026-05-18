@@ -43,10 +43,22 @@ module Attr : sig
     | `Reverse
     | Color.t
     | `Bg of Color.t
+    | `Url of string
+      (** [`Url url] marks the span as a clickable hyperlink with the given URL on
+          terminals that support OSC 8.
+
+          The string is expected to be a valid URL (e.g. ["https://example.com"]) with no
+          control characters (e.g. ESC (\027)).
+
+          When multiple [`Url _] attributes are supplied for the same span, only the last
+          is honored; subsequent [`Url _] attributes are silently dropped. *)
     ]
   [@@deriving sexp_of, compare ~localize, hash, equal ~localize]
 
+  (** ignores the `Url attr, if any *)
   val to_int_list : [< t ] -> int list
+
+  (** ignores the `Url attr, if any *)
   val list_to_string : [< t ] list -> string
 end
 
@@ -60,7 +72,10 @@ module With_all_attrs : sig
     ]
   [@@deriving sexp_of, compare ~localize, hash, equal ~localize]
 
+  (** ignores the `Url attr, if any *)
   val to_int_list : [< t ] -> int list
+
+  (** ignores the `Url attr, if any *)
   val list_to_string : [< t ] list -> string
 end
 
@@ -90,11 +105,18 @@ module Stable : sig
     end
 
     module V2 : sig
-      type t = Attr.t
-      [@@deriving compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
+      type t [@@deriving compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
 
       val of_v1 : V1.t -> t
       val to_v1 : t -> V1.t
+    end
+
+    module V3 : sig
+      type t = Attr.t
+      [@@deriving compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
+
+      val of_v2 : V2.t -> t
+      val to_v2 : t -> V2.t option
     end
   end
 end

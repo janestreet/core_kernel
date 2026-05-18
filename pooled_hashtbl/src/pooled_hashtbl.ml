@@ -502,6 +502,34 @@ let change =
        | Some data -> insert_link t ~index ~key ~data ~it)
 ;;
 
+let change_or_null =
+  let call t f x = without_mutating t (fun () -> f x) () [@nontail] in
+  let rec change_key t key f index e prev =
+    if Entry.is_null e
+    then `Not_found
+    else (
+      let curr_key = Entry.key t.entries e in
+      if compare_key t curr_key key = 0
+      then (
+        (match call t f (This (Entry.data t.entries e)) with
+         | This data -> Entry.set_data t.entries e data
+         | Null -> delete_link t ~index ~prev ~e);
+        `Changed)
+      else change_key t key f index (Entry.next t.entries e) e)
+  in
+  fun t key ~f ->
+    ensure_mutation_allowed t;
+    let index = slot t key in
+    let it = table_get t.table index in
+    match change_key t key f index it (Entry.null ()) with
+    | `Changed -> ()
+    | `Not_found ->
+      (* New entry is inserted in the beginning of the list (it) *)
+      (match call t f Null with
+       | Null -> ()
+       | This data -> insert_link t ~index ~key ~data ~it)
+;;
+
 let incr_by ~remove_if_zero t key by =
   if remove_if_zero
   then
@@ -1006,6 +1034,7 @@ module Accessors = struct
   let add = add
   let add_exn = add_exn
   let change = change
+  let change_or_null = change_or_null
   let update = update
   let update_and_return = update_and_return
   let add_multi = add_multi

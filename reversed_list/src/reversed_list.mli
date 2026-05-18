@@ -26,6 +26,7 @@ val rev_map : 'a t -> f:('a -> 'b) -> 'b list
 val rev_filter_map : 'a t -> f:('a -> 'b option) -> 'b list
 val is_empty : 'a t -> bool
 val length : 'a t -> int
+val singleton : 'a -> 'a t
 
 (** Submodule for only bringing the constructors into scope (primarily for [::]). *)
 module O : sig
@@ -63,6 +64,8 @@ module Nonempty : sig
   val rev_append : 'a t -> 'a list -> 'a Base.Nonempty_list.t
   val rev_map : 'a t -> f:local_ ('a -> 'b) -> 'b Base.Nonempty_list.t
   val rev_mapi : 'a t -> f:local_ (int -> 'a -> 'b) -> 'b Base.Nonempty_list.t
+  val length : 'a t -> int
+  val singleton : 'a -> 'a t
 
   (** Renders sexps without reversing the list. E.g. [1::2] is represented as [(1 2)]. *)
   module With_sexp_of : sig
