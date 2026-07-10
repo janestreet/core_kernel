@@ -71,7 +71,7 @@ module Definitions = struct
 
     (** Similar to [protect_window_bounds_and_buffer], but does not save/restore the
         buffer or bounds. Mixing this with functions like [set_bounds_and_buffer] or
-        [narrow] is unsafe; you should not modify anyything but the window inside [f]. *)
+        [narrow] is unsafe; you should not modify anything but the window inside [f]. *)
     val%template protect_window
       : 'a 'rw 'sk 'loc.
       ('rw, 'sk, 'loc) t -> f:(('rw, seek, 'loc) t -> 'a) -> 'a

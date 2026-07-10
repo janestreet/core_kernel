@@ -208,7 +208,7 @@ let inter_or_null t1 t2 : _ t or_null = of_set_or_null (to_set_inter t1 t2)
 let to_set_filter t ~f : _ Set.t = Set.filter t.nonempty ~f
 let filter t ~f : _ t or_null = of_set_or_null (to_set_filter t ~f)
 let diff t1 t2 = Set.diff t1.nonempty t2.nonempty
-let mem t el : bool = Set.mem t.nonempty el
+let[@zero_alloc] mem t el : bool = Set.mem t.nonempty el
 let length t : int = Set.length t.nonempty
 let to_set_remove t elt : _ Set.t = Set.remove t.nonempty elt
 let remove t elt : _ t option = of_set (to_set_remove t elt)
@@ -280,17 +280,24 @@ module M = Stable.V2.M
 include (Stable.V2 : For_deriving.S_serializable with type ('a, 'b) t := ('a, 'b) t)
 include (Stable.V2 : For_deriving.S_common with type ('a, 'b) t := ('a, 'b) t)
 
+[%%template
+[@@@mode.default p = (portable, nonportable)]
+
 let quickcheck_generator_m__t m =
-  Quickcheck.Generator.filter_map ~f:of_set (Set.quickcheck_generator_m__t m)
+  (Quickcheck.Generator.filter_map [@mode p])
+    ~f:of_set
+    ((Set.quickcheck_generator_m__t [@mode p]) m)
 ;;
 
 let quickcheck_observer_m__t m =
-  Quickcheck.Observer.unmap ~f:to_set (Set.quickcheck_observer_m__t m)
+  (Quickcheck.Observer.unmap [@mode p])
+    ~f:to_set
+    ((Set.quickcheck_observer_m__t [@mode p]) m)
 ;;
 
 let quickcheck_shrinker_m__t m =
-  Quickcheck.Shrinker.filter_map
+  (Quickcheck.Shrinker.filter_map [@mode p])
     ~f:of_set
     ~f_inverse:to_set
-    (Set.quickcheck_shrinker_m__t m)
-;;
+    ((Set.quickcheck_shrinker_m__t [@mode p]) m)
+;;]

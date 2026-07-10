@@ -16,7 +16,9 @@ val set : 'a t -> int -> 'a Heap_block.t option -> unit
     is in addition to raising exceptions on bounds violation as [set] does. *)
 val set_exn : 'a t -> int -> 'a option -> unit
 
-val get : 'a t -> int -> 'a Heap_block.t option
+val%template get : 'a t -> int -> 'a Heap_block.t option
+[@@mode c = (uncontended, shared)]
+
 val is_some : _ t -> int -> bool
 val is_none : _ t -> int -> bool
 val iter : 'a t -> f:('a -> unit) -> unit

@@ -63,23 +63,23 @@ end
 module type S_unstable = sig
   type ('a, 'b) t
 
+  [%%template:
+  [@@@mode.default p = (portable, nonportable)]
+
   val quickcheck_generator_m__t
-    :  (module Set.Quickcheck_generator_m
-          with type t = 'a
-           and type comparator_witness = 'cmp)
+    : 'a 'cmp.
+    (module Set.Quickcheck_generator_m with type t = 'a and type comparator_witness = 'cmp)
     -> ('a, 'cmp) t Quickcheck.Generator.t
 
   val quickcheck_observer_m__t
-    :  (module Set.Quickcheck_observer_m
-          with type t = 'a
-           and type comparator_witness = 'cmp)
+    : 'a 'cmp.
+    (module Set.Quickcheck_observer_m with type t = 'a and type comparator_witness = 'cmp)
     -> ('a, 'cmp) t Quickcheck.Observer.t
 
   val quickcheck_shrinker_m__t
-    :  (module Set.Quickcheck_shrinker_m
-          with type t = 'a
-           and type comparator_witness = 'cmp)
-    -> ('a, 'cmp) t Quickcheck.Shrinker.t
+    : 'a 'cmp.
+    (module Set.Quickcheck_shrinker_m with type t = 'a and type comparator_witness = 'cmp)
+    -> ('a, 'cmp) t Quickcheck.Shrinker.t]
 end
 
 module type For_deriving = sig

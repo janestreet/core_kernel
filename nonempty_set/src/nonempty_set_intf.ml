@@ -54,7 +54,7 @@ module type Nonempty_set = sig
   val union_set_list : ('a, 'cmp) t -> ('a, 'cmp) Set.t list -> ('a, 'cmp) t
   val filter : ('a, 'cmp) t -> f:('a -> bool) -> ('a, 'cmp) t or_null
   val diff : ('a, 'cmp) t -> ('a, 'cmp) t -> ('a, 'cmp) Set.t
-  val mem : ('a, _) t -> 'a -> bool
+  val mem : ('a, _) t -> 'a -> bool [@@zero_alloc]
   val length : (_, _) t -> int
 
   val%template compare_direct : ('a, 'b) t -> ('a, 'b) t -> int

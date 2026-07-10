@@ -3,13 +3,14 @@ open! Import
 
 [%%template
 [@@@modality.default (p, c) = ((nonportable, uncontended), (portable, contended))]
+[@@@mode.default m = (global, local)]
 
 module type Key_plain = sig
-  type t [@@deriving sexp_of, compare, enumerate]
+  type t [@@deriving sexp_of, (compare [@mode.explicit m]), enumerate]
 end
 
 module type Key = sig
-  type t [@@deriving sexp, bin_io, compare, enumerate]
+  type t [@@deriving sexp, bin_io, (compare [@mode.explicit m]), enumerate]
 end
 
 module type Key_plain_with_witnesses = sig
@@ -32,7 +33,7 @@ module type Key_with_stable_witness = sig
 end
 
 module type S_plain = sig
-  type ('key, 'a, 'cmp, 'enum) total_map
+  type (!'key, +!'a, !'cmp, 'enum) total_map
 
   module Key : Key_plain [@modality p]
 
@@ -40,7 +41,7 @@ module type S_plain = sig
   type enumeration_witness
 
   type 'a t = (Key.t, 'a, comparator_witness, enumeration_witness) total_map
-  [@@deriving sexp_of, compare ~localize, equal ~localize]
+  [@@deriving sexp_of, compare ~localize, equal ~localize, globalize]
 
   include sig
     [@@@mode.default p = (nonportable, p)]
@@ -73,7 +74,7 @@ module type S = sig
   module Key : Key [@modality p]
   include S_plain [@modality p] with module Key := Key
   include Sexpable.S1 with type 'a t := 'a t
-  include Binable.S1 with type 'a t := 'a t
+  include Binable.S1 [@mode local] with type 'a t := 'a t
 end
 
 (** An alternative interface for [S] which can be used with [include functor]. We keep the
@@ -91,7 +92,7 @@ module type Stable_S = sig
   type enumeration_witness
 
   type 'a t = (Key.t, 'a, comparator_witness, enumeration_witness) total_map
-  [@@deriving bin_io, sexp, compare ~localize]
+  [@@deriving bin_io ~localize, sexp, compare ~localize, globalize]
 end
 
 module type Stable_For_include_functor = sig
@@ -107,7 +108,7 @@ module type Stable_S_with_stable_witness = sig
   type enumeration_witness
 
   type 'a t = (Key.t, 'a, comparator_witness, enumeration_witness) total_map
-  [@@deriving bin_io, sexp, compare ~localize, stable_witness]
+  [@@deriving bin_io ~localize, sexp, compare ~localize, globalize, stable_witness]
 end
 
 module type Stable_For_include_functor_with_stable_witness = sig
@@ -214,7 +215,7 @@ module type Total_map = sig
 
   module Enumeration = Enumeration
 
-  type ('key, 'a, 'cmp, 'enum) t = private ('key, 'a, 'cmp) Map.t
+  type (!'key, +!'a, !'cmp, 'enum) t
 
   val to_map : ('key, 'a, 'cmp, _) t -> ('key, 'a, 'cmp) Map.t
 
@@ -316,8 +317,8 @@ module type Total_map = sig
   (** The only reason that the Applicative interface isn't included here is that we don't
       have an [Applicative.S4]. *)
 
-  module type Key = Key
-  module type Key_plain = Key_plain
+  module type%template [@mode m = (local, global)] Key = Key [@mode m]
+  module type%template [@mode m = (local, global)] Key_plain = Key_plain [@mode m]
   module type Key_with_witnesses = Key_with_witnesses
   module type Key_plain_with_witnesses = Key_plain_with_witnesses
 
@@ -327,7 +328,7 @@ module type Total_map = sig
   module type S_plain =
     S_plain
     [@modality p]
-    with type ('key, 'a, 'cmp, 'enum) total_map := ('key, 'a, 'cmp, 'enum) t
+    with type (!'key, +!'a, !'cmp, 'enum) total_map := ('key, 'a, 'cmp, 'enum) t
 
   module type For_include_functor_plain =
     For_include_functor_plain
@@ -441,21 +442,24 @@ module type Total_map = sig
 
   val bin_shape_m__t : (module For_include_functor) -> Bin_shape.t -> Bin_shape.t
 
+  [%%template:
+  [@@@mode.default m = (global, local)]
+
   val bin_size_m__t
     :  (module M
           with type t = 'k
            and type Total_map.enumeration_witness = 'enum
            and type Total_map.comparator_witness = 'cmp)
-    -> 'v Bin_prot.Size.sizer
-    -> ('k, 'v, 'cmp, 'enum) t Bin_prot.Size.sizer
+    -> ('v Bin_prot.Size.sizer[@mode m])
+    -> (('k, 'v, 'cmp, 'enum) t Bin_prot.Size.sizer[@mode m])
 
   val bin_write_m__t
     :  (module M
           with type t = 'k
            and type Total_map.enumeration_witness = 'enum
            and type Total_map.comparator_witness = 'cmp)
-    -> 'v Bin_prot.Write.writer
-    -> ('k, 'v, 'cmp, 'enum) t Bin_prot.Write.writer
+    -> ('v Bin_prot.Write.writer[@mode m])
+    -> (('k, 'v, 'cmp, 'enum) t Bin_prot.Write.writer[@mode m])]
 
   val bin_read_m__t
     :  (module M
@@ -482,6 +486,15 @@ module type Total_map = sig
     -> ('k, 'v, 'cmp, 'enum) t
     -> ('k, 'v, 'cmp, 'enum) t
     -> int
+
+  val globalize_m__t
+    :  (module M
+          with type t = 'k
+           and type Total_map.enumeration_witness = 'enum
+           and type Total_map.comparator_witness = 'cmp)
+    -> ('v -> 'v)
+    -> ('k, 'v, 'cmp, 'enum) t
+    -> ('k, 'v, 'cmp, 'enum) t
 
   val quickcheck_generator_m__t
     :  (module M

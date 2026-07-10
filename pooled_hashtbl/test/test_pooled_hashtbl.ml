@@ -106,6 +106,36 @@ module%test _ = struct
       let expected_sum = n * (n + 1) / 2 in
       assert (fsum = expected_sum))
   ;;
+
+  let%test_unit "update_or_null" =
+    let tbl = Hashtbl.create ~size:4 () in
+    Hashtbl.update_or_null tbl 1 ~f:(function
+      | Null -> 10
+      | This _ -> assert false);
+    [%test_result: int option] (Hashtbl.find tbl 1) ~expect:(Some 10);
+    Hashtbl.update_or_null tbl 1 ~f:(function
+      | This 10 -> 11
+      | Null | This _ -> assert false);
+    [%test_result: int option] (Hashtbl.find tbl 1) ~expect:(Some 11)
+  ;;
+
+  let%test_unit "update_or_null_and_return" =
+    let tbl = Hashtbl.create ~size:4 () in
+    let result =
+      Hashtbl.update_or_null_and_return tbl 1 ~f:(function
+        | Null -> 10
+        | This _ -> assert false)
+    in
+    [%test_result: int] result ~expect:10;
+    [%test_result: int option] (Hashtbl.find tbl 1) ~expect:(Some 10);
+    let result =
+      Hashtbl.update_or_null_and_return tbl 1 ~f:(function
+        | This 10 -> 11
+        | Null | This _ -> assert false)
+    in
+    [%test_result: int] result ~expect:11;
+    [%test_result: int option] (Hashtbl.find tbl 1) ~expect:(Some 11)
+  ;;
 end
 
 module%test [@name "unit tests from core"] _ =

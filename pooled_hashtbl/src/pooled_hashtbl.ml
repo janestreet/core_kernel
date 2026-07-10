@@ -550,6 +550,16 @@ let incr ?(by = 1) ?(remove_if_zero = false) t key = incr_by ~remove_if_zero t k
 let decr ?(by = 1) ?(remove_if_zero = false) t key = incr_by ~remove_if_zero t key (-by)
 let update t key ~f = change t key ~f:(fun data -> Some (f data)) [@nontail]
 
+let update_or_null t key ~f =
+  change_or_null t key ~f:(fun data -> This (f data)) [@nontail]
+;;
+
+(* This could be optimized if desired. *)
+let update_or_null_and_return t key ~f =
+  update_or_null t key ~f;
+  find_exn t key
+;;
+
 (* This could be optimized if desired. *)
 let update_and_return t key ~f =
   update t key ~f;
@@ -1036,6 +1046,8 @@ module Accessors = struct
   let change = change
   let change_or_null = change_or_null
   let update = update
+  let update_or_null = update_or_null
+  let update_or_null_and_return = update_or_null_and_return
   let update_and_return = update_and_return
   let add_multi = add_multi
   let remove_multi = remove_multi
@@ -1051,7 +1063,7 @@ module Accessors = struct
   let count = count
   let counti = counti
   let fold = fold
-  let length = length
+  let length = [%eta1 length]
   let capacity = capacity
   let growth_allowed = growth_allowed
   let is_empty = is_empty
