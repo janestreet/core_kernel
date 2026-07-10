@@ -19,8 +19,8 @@ module Definitions = struct
 
     (** Read without advancing *)
 
-    val peek : 'a Bin_prot.Read.reader -> (_, _, global) t @ local -> pos:int -> 'a
-    val unsafe_peek : 'a Bin_prot.Read.reader -> (_, _, global) t @ local -> pos:int -> 'a
+    val peek : 'a Bin_prot.Read.reader -> (_, _, _) t @ local -> pos:int -> 'a
+    val unsafe_peek : 'a Bin_prot.Read.reader -> (_, _, _) t @ local -> pos:int -> 'a
 
     (** Write and advance *)
 

@@ -198,9 +198,7 @@ module type Timing_wheel = sig @@ portable
     val value : 'a timing_wheel -> 'a t -> 'a
   end
 
-  (*_ This invariant isn't portable because the implementation uses [%test_result], which
-      is not portable *)
-  include Invariant.S1 with type 'a t := 'a t @@ nonportable
+  include Invariant.S1 with type 'a t := 'a t
 
   module Level_bits : sig
     (** The timing-wheel implementation uses an array of "levels", where level [i] is an

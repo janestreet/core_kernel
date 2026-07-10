@@ -60,7 +60,7 @@ module type Nonempty_set = sig @@ portable
   val union_set_list : ('a, 'cmp) t -> ('a, 'cmp) Set.t list -> ('a, 'cmp) t
   val filter : ('a, 'cmp) t -> f:('a -> bool) @ local -> ('a, 'cmp) t or_null
   val diff : ('a, 'cmp) t -> ('a, 'cmp) t -> ('a, 'cmp) Set.t
-  val mem : ('a, _) t -> 'a -> bool
+  val mem : ('a, _) t -> 'a -> bool [@@zero_alloc]
   val length : (_, _) t -> int
 
   val%template compare_direct : ('a, 'b) t @ m -> ('a, 'b) t @ m -> int

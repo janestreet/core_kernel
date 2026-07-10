@@ -7,9 +7,13 @@ module Exposed_for_use_in_stable = struct
 
      this code is duplicated in Option_array.Cheap_option, and if we find yet another
      place where we want it we should reconsider making it shared. *)
-  let none = Obj.Expert.obj (Obj.Expert.new_block Obj.abstract_tag 1)
-  let create () = ref none
-  let is_none x = phys_equal !x none
+  let none =
+    Obj.Expert.obj (Obj.Expert.new_block Obj.abstract_tag 1) |> Obj.magic_portable
+  ;;
+
+  let[@inline] get_none () = Obj.magic_uncontended none
+  let create () = ref (get_none ())
+  let is_none x = phys_equal !x (get_none ())
   let get t = if is_none t then None else Some !t
   let unsafe_get t = !t
 
@@ -28,8 +32,8 @@ module Stable = struct
   module V1 = struct
     type 'a t = 'a ref [@@deriving stable_witness]
 
-    include
-      Sexpable.Of_sexpable1.V1
+    include%template
+      Sexpable.Of_sexpable1.V1 [@modality portable]
         (Option.V1)
         (struct
           type nonrec 'a t = 'a t
@@ -83,7 +87,7 @@ module Stable = struct
       ;;
     end
 
-    include Bin_prot.Utils.Of_minimal1 (Minimal_bin_io)
+    include%template Bin_prot.Utils.Of_minimal1 [@modality portable] (Minimal_bin_io)
   end
 end
 
@@ -95,7 +99,7 @@ include Exposed_for_use_in_stable
 let is_some x = not (is_none x)
 let get_some_exn x = if is_none x then raise_s [%message "Moption.get_some_exn"] else !x
 let set_some t v = t := v
-let set_none t = t := none
+let set_none t = t := get_none ()
 
 let set t v =
   match v with

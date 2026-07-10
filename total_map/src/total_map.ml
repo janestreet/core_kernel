@@ -75,7 +75,11 @@ module Stable = struct
 
       type comparator_witness = Key.comparator_witness
       type enumeration_witness = Key.enumeration_witness
-      type nonrec 'a t = 'a Key.Map.t [@@deriving bin_io, sexp, compare ~localize]
+
+      type nonrec 'a t = 'a Key.Map.t
+      [@@deriving bin_io ~localize, sexp, compare ~localize]
+
+      let globalize _ (t @ local) = Base.Map.globalize0 t
     end
 
     module%template.portable
@@ -100,7 +104,9 @@ module Stable = struct
       type enumeration_witness = Key.enumeration_witness
 
       type nonrec 'a t = 'a Key.Map.t
-      [@@deriving bin_io, sexp, compare ~localize, stable_witness]
+      [@@deriving bin_io ~localize, sexp, compare ~localize, stable_witness]
+
+      let globalize _ (t @ local) = Base.Map.globalize0 t
     end
 
     module%template.portable
@@ -176,13 +182,13 @@ module Stable = struct
             ;;
           end)
 
-      include
-        Binable.Of_binable1.V2 [@modality p]
+      include%template
+        Binable.Of_binable1.V2 [@mode local] [@modality p]
           (Key.Map)
           (struct
             type nonrec 'a t = 'a t
 
-            let to_binable t = t
+            let[@mode m = (global, local)] to_binable t = t
 
             let of_binable map =
               validate_map_from_serialization
@@ -212,6 +218,8 @@ module Stable = struct
 
       module T = struct
         type nonrec 'a t = 'a Key.Map.t [@@deriving compare ~localize]
+
+        let globalize _ (t @ local) = Base.Map.globalize0 t
       end
 
       include T
@@ -238,6 +246,8 @@ module Stable = struct
 
       module T = struct
         type nonrec 'a t = 'a Key.Map.t [@@deriving compare ~localize, stable_witness]
+
+        let globalize _ (t @ local) = Base.Map.globalize0 t
       end
 
       include T
@@ -398,28 +408,28 @@ let bin_shape_m__t (module K : For_include_functor) (bin_shape_a : Bin_shape.t)
   K.Total_map.bin_shape_t bin_shape_a
 ;;
 
-let bin_size_m__t
+let%template[@mode m = (global, local)] bin_size_m__t
   (type k cmp enum a)
   (module K : M
     with type t = k
      and type Total_map.enumeration_witness = enum
      and type Total_map.comparator_witness = cmp)
-  (bin_size_a : a Bin_prot.Size.sizer)
-  : (k, a, cmp, enum) t Bin_prot.Size.sizer
+  (bin_size_a : (a Bin_prot.Size.sizer[@mode m]))
+  : ((k, a, cmp, enum) t Bin_prot.Size.sizer[@mode m])
   =
-  K.Total_map.bin_size_t bin_size_a
+  (K.Total_map.bin_size_t [@mode m]) bin_size_a
 ;;
 
-let bin_write_m__t
+let%template[@mode m = (global, local)] bin_write_m__t
   (type k cmp enum a)
   (module K : M
     with type t = k
      and type Total_map.enumeration_witness = enum
      and type Total_map.comparator_witness = cmp)
-  (bin_write_a : a Bin_prot.Write.writer)
-  : (k, a, cmp, enum) t Bin_prot.Write.writer
+  (bin_write_a : (a Bin_prot.Write.writer[@mode m]))
+  : ((k, a, cmp, enum) t Bin_prot.Write.writer[@mode m])
   =
-  K.Total_map.bin_write_t bin_write_a
+  (K.Total_map.bin_write_t [@mode m]) bin_write_a
 ;;
 
 let bin_read_m__t
@@ -456,6 +466,18 @@ let compare_m__t
   : (k, a, cmp, enum) t -> (k, a, cmp, enum) t -> int
   =
   K.Total_map.compare a_compare
+;;
+
+let globalize_m__t
+  (type k cmp enum a)
+  (module K : M
+    with type t = k
+     and type Total_map.enumeration_witness = enum
+     and type Total_map.comparator_witness = cmp)
+  globalize_a
+  : (k, a, cmp, enum) t @ local -> (k, a, cmp, enum) t
+  =
+  K.Total_map.globalize globalize_a
 ;;
 
 let quickcheck_generator_m__t
@@ -526,6 +548,8 @@ struct
   type comparator_witness = Key.comparator_witness
   type enumeration_witness = Key.enumeration_witness
   type 'a t = 'a Key.Map.t [@@deriving sexp_of, compare ~localize, equal ~localize]
+
+  let globalize _ (t @ local) = Base.Map.globalize0 t
 
   include struct
     [@@@mode.default p = (nonportable, p)]
@@ -609,7 +633,8 @@ struct
     include Comparable.Make_binable_using_comparator [@modality p] (Key)
   end
 
-  type 'a t = 'a Key.Map.t [@@deriving sexp, bin_io, compare ~localize, equal ~localize]
+  type 'a t = 'a Key.Map.t
+  [@@deriving sexp, bin_io ~localize, compare ~localize, equal ~localize]
 
   include (
     Make_plain_with_witnesses [@modality p]
@@ -631,13 +656,17 @@ struct
     t
   ;;
 
-  include
-    Bin_prot.Utils.Make_binable1_without_uuid [@modality p] [@alert "-legacy"] (struct
+  include%template
+    Bin_prot.Utils.Make_binable1_without_uuid
+      [@mode local]
+      [@modality p]
+      [@alert "-legacy"]
+      (struct
       type nonrec 'a t = 'a t
 
       module Binable = Key.Map
 
-      let to_binable x = x
+      let[@mode m = (global, local)] to_binable x = x
 
       let of_binable x =
         validate_map_from_serialization

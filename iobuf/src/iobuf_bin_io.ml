@@ -6,7 +6,7 @@ include Iobuf_bin_io_intf.Definitions
 let read_bin_prot read t ~pos =
   let buf_pos = unsafe_buf_pos t ~pos ~len:0 in
   let pos_ref = ref buf_pos in
-  let a = read (buf t) ~pos_ref in
+  let a = read ([%template buf [@mode local]] t) ~pos_ref in
   let len = !pos_ref - buf_pos in
   check_range t ~pos ~len;
   a, len

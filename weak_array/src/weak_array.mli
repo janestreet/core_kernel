@@ -11,14 +11,16 @@ open! Base
 type 'a t : mutable_data with 'a [@@deriving sexp_of]
 
 val create : len:int -> _ t
-val length : _ t -> int
+val length : _ t @ immutable -> int
 val set : 'a t -> int -> 'a Heap_block.t option -> unit
 
 (** [set_exn] raises an exception if given [Some x] with [x] not being a heap block. This
     is in addition to raising exceptions on bounds violation as [set] does. *)
 val set_exn : 'a t -> int -> 'a option -> unit
 
-val get : 'a t -> int -> 'a Heap_block.t option
+val%template get : 'a t @ c -> int -> 'a Heap_block.t option @ c
+[@@mode c = (uncontended, shared)]
+
 val is_some : _ t -> int -> bool
 val is_none : _ t -> int -> bool
 val iter : 'a t -> f:('a -> unit) -> unit

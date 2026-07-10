@@ -358,9 +358,7 @@ module Priority_queue : sig @@ portable
 
   val pool : 'a t -> 'a Internal_elt.Pool.t
 
-  (* This invariant isn't portable because the implementation uses [%test_result], which
-     is not portable *)
-  include Invariant.S1 with type 'a t := 'a t @@ nonportable
+  include Invariant.S1 with type 'a t := 'a t
 
   (** [create ?level_bits ()] creates a new empty timing wheel, [t], with [length t = 0]
       and [min_allowed_key t = 0]. *)

@@ -1,5 +1,11 @@
 open! Base
-module Weak = Stdlib.Weak
+
+module Weak = struct
+  include Stdlib.Weak
+
+  let length t = length (Obj.magic_read_write_uncontended t)
+  let get_shared (t @ shared) i @ shared = get (Obj.magic_uncontended t) i
+end
 
 type 'a t : mutable_data with 'a = T of 'a Heap_block.t Weak.t
 [@@unboxed] [@@unsafe_allow_any_mode_crossing]
@@ -8,7 +14,8 @@ let create ~len = T (Weak.create len)
 let length (T t) = Weak.length t
 let set (T t) i v = Weak.set t i v
 let set_exn t i x = set t i (Option.map x ~f:Heap_block.create_exn)
-let get (T t) = Weak.get t
+let%template get (T t) i = Weak.get t i [@@mode uncontended]
+let%template get (T t) i = Weak.get_shared t i [@@mode shared]
 let is_some (T t) i = Weak.check t i
 let is_none t i = not (is_some t i)
 let to_array t = Array.init (length t) ~f:(fun i -> get t i)
