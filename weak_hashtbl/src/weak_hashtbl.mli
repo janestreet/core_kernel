@@ -57,7 +57,7 @@ val find : ('a, 'b) t -> 'a -> 'b Heap_block.t option
 val find_or_add
   :  ('a, 'b) t
   -> 'a
-  -> default:local_ (unit -> 'b Heap_block.t)
+  -> default:(unit -> 'b Heap_block.t) @ local
   -> 'b Heap_block.t
   @@ nonportable
 

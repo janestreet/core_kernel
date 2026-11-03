@@ -56,14 +56,14 @@ end
 
 (** Non-empty version of [Reversed_list.t] *)
 module Nonempty : sig
-  type 'a t = ( :: ) of 'a * 'a reversed_list
+  type 'a t = ( :: ) of 'a * 'a reversed_list [@@deriving equal ~localize]
 
   val cons : 'a -> 'a t -> 'a t
   val to_rev_list : 'a t -> 'a reversed_list
   val rev : 'a t -> 'a Base.Nonempty_list.t
   val rev_append : 'a t -> 'a list -> 'a Base.Nonempty_list.t
-  val rev_map : 'a t -> f:local_ ('a -> 'b) -> 'b Base.Nonempty_list.t
-  val rev_mapi : 'a t -> f:local_ (int -> 'a -> 'b) -> 'b Base.Nonempty_list.t
+  val rev_map : 'a t -> f:('a -> 'b) @ local -> 'b Base.Nonempty_list.t
+  val rev_mapi : 'a t -> f:(int -> 'a -> 'b) @ local -> 'b Base.Nonempty_list.t
   val length : 'a t -> int
   val singleton : 'a -> 'a t
 

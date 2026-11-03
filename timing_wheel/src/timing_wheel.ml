@@ -175,7 +175,7 @@ end = struct
   (** [t] is represented as the log2 of a number of nanoseconds. *)
   type t = int [@@deriving compare ~localize, hash]
 
-  let equal = [%compare.equal: t]
+  let equal = ([%compare.equal: t] [@mode local])
   let num_key_bits t = t |> Num_key_bits.of_int
 
   let to_span t =
@@ -416,14 +416,14 @@ module Priority_queue : sig @@ portable
   val increase_min_allowed_key
     :  'a t
     -> key:Key.t
-    -> handle_removed:local_ ('a Elt.t -> unit)
+    -> handle_removed:('a Elt.t -> unit) @ local
     -> Increase_min_allowed_key_result.t
 
-  val iter : 'a t -> f:local_ ('a Elt.t -> unit) -> unit
+  val iter : 'a t -> f:('a Elt.t -> unit) @ local -> unit
 
   val fire_past_alarms
     :  'a t
-    -> handle_fired:local_ ('a Elt.t -> unit)
+    -> handle_fired:('a Elt.t -> unit) @ local
     -> key:Key.t
     -> now:Time_ns.t
     -> unit
@@ -611,7 +611,7 @@ end = struct
     (** Iterators. [iter p t ~init ~f] visits each element in the doubly-linked list
         containing [t], starting at [t], and following [next] pointers. [length] counts by
         visiting each element in the list. *)
-    val iter : 'a Pool.t -> 'a t -> f:local_ ('a t -> unit) -> unit
+    val iter : 'a Pool.t -> 'a t -> f:('a t -> unit) @ local -> unit
 
     val length : 'a Pool.t -> 'a t -> int
 

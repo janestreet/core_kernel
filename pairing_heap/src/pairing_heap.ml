@@ -542,9 +542,12 @@ module Elt = struct
     ; heap : 'a t
     }
 
-  (* If ids are different, it means that the node has already been removed by some other
-     means (and possibly reused). *)
-  let is_node_valid t = Node.Id.equal (Node.id ~pool:t.heap.pool t.node) t.node_id
+  (* [t.node] is empty once [t] has been [remove]d. If ids are different, it means that
+     the node has already been removed by some other means (and possibly reused). *)
+  let is_node_valid t =
+    (not (Node.is_empty t.node))
+    && Node.Id.equal (Node.id ~pool:t.heap.pool t.node) t.node_id
+  ;;
 
   let value t =
     if is_node_valid t then Some (Node.value_exn t.node ~pool:t.heap.pool) else None

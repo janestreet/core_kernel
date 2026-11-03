@@ -7,7 +7,7 @@ open! Core
 
 (** [t_of_sexp] is not supported, because of the difficulty involved in recreating the
     comparison function. *)
-type 'a t : value mod contended with 'a [@@deriving sexp_of]
+type 'a t : value mod contended portable with 'a [@@deriving sexp_of]
 
 (** Even though [min_elt], [max_elt], and [to_list] are in [Container.S1], they are
     documented separately to make sure there is no confusion. *)
@@ -33,10 +33,10 @@ val to_list : 'a t -> 'a list
 
     The top of the heap is the smallest element as determined by the provided comparison
     function. *)
-val create : compare:('a -> 'a -> int) -> 'a t
+val create : compare:('a -> 'a -> int) @ portable -> 'a t
 
-val of_array : 'a array -> compare:('a -> 'a -> int) -> 'a t
-val of_list : 'a list -> compare:('a -> 'a -> int) -> 'a t
+val of_array : 'a array -> compare:('a -> 'a -> int) @ portable -> 'a t
+val of_list : 'a list -> compare:('a -> 'a -> int) @ portable -> 'a t
 
 (** [add t v] returns the new heap after addition. Complexity O(1). *)
 val add : 'a t -> 'a -> 'a t

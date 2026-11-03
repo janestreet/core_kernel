@@ -3,7 +3,7 @@ open Bus
 
 type _ arity =
   | Arity1 : (_ -> unit) arity
-  | Arity1_local : (local_ _ -> unit) arity
+  | Arity1_local : (_ @ local -> unit) arity
   | Arity2 : (_ -> _ -> unit) arity
   | Arity3 : (_ -> _ -> _ -> unit) arity
   | Arity4 : (_ -> _ -> _ -> _ -> unit) arity

@@ -12,7 +12,7 @@ open! Core
 
     [sexp_of_t] and [t_of_sexp] use the flag names supplied to [Flags.Make]. *)
 module type S = sig
-  type t : immutable_data [@@deriving sexp ~stackify, typerep, quickcheck]
+  type t : immutable_data [@@deriving sexp ~stackify, typerep, quickcheck, hash]
 
   (** consistent with subset *)
   include Comparable.S [@mode local] with type t := t

@@ -883,9 +883,9 @@ let%expect_test "[advance_clock_to_interval_num]" =
 ;;
 
 module Interval_num_option = struct
-  type t = Interval_num.t option [@@deriving compare, sexp_of]
+  type t = Interval_num.t option [@@deriving compare ~localize, sexp_of]
 
-  let equal = [%compare.equal: t]
+  let equal = ([%compare.equal: t] [@mode local])
 end
 
 let%expect_test "[advance_clock]" =

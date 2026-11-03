@@ -112,7 +112,7 @@ let[@inline] unsafe_sub_shared ~pos ~len t = exclave_
   { buf = t.buf; lo_min = lo; lo; hi; hi_max = hi }
 ;;
 
-let sub_shared__local ?(pos = 0) ?len t = exclave_
+let sub_shared_internal ?(pos = 0) ?len t = exclave_
   let len =
     match len with
     | None -> length t - pos
@@ -122,11 +122,15 @@ let sub_shared__local ?(pos = 0) ?len t = exclave_
   unsafe_sub_shared ~pos ~len t
 ;;
 
+let%template[@mode local] sub_shared = sub_shared_internal
+
 let unsafe_sub_shared ~pos ~len t = exclave_
-  if unsafe_is_safe then sub_shared__local ~pos ~len t else unsafe_sub_shared ~pos ~len t
+  if unsafe_is_safe
+  then sub_shared_internal ~pos ~len t
+  else unsafe_sub_shared ~pos ~len t
 ;;
 
-let sub_shared ?pos ?len t = globalize_shared (sub_shared__local ?pos ?len t) [@nontail]
+let sub_shared ?pos ?len t = globalize_shared (sub_shared_internal ?pos ?len t) [@nontail]
 
 let copy t =
   of_bigstring (Bigstring.sub ([%template buf [@mode local]] t) ~pos:t.lo ~len:(length t))

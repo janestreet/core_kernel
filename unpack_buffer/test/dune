@@ -2,4 +2,4 @@
  (name unpack_buffer_test)
  (libraries core expect_test_helpers_core unpack_buffer)
  (preprocess
-  (pps ppx_jane)))
+  (pps ppx_jane -compare-require-explicit-locality)))

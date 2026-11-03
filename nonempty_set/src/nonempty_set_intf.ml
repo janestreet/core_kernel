@@ -20,6 +20,7 @@ module type Nonempty_set = sig @@ portable
   val reduce : ('a, _) t -> map:('a -> 'b) @ local -> f:('b -> 'b -> 'b) @ local -> 'b
   val fold : ('a, _) t -> init:'b -> f:('b -> 'a -> 'b) @ local -> 'b
   val iter : ('a, _) t -> f:('a -> unit) @ local -> unit
+  val exists : ('a, _) t -> f:('a -> bool) @ local -> bool
   val of_list : ('a, 'cmp) Comparator.Module.t -> 'a list -> ('a, 'cmp) t option
   val of_list_or_null : ('a, 'cmp) Comparator.Module.t -> 'a list -> ('a, 'cmp) t or_null
   val of_list_exn : ('a, 'cmp) Comparator.Module.t -> 'a list -> ('a, 'cmp) t

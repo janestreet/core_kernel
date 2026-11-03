@@ -3,4 +3,4 @@
  (names bench_pooled_hashtbl)
  (libraries core pooled_hashtbl)
  (preprocess
-  (pps ppx_jane)))
+  (pps ppx_jane -compare-require-explicit-locality)))

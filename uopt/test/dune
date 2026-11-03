@@ -2,4 +2,4 @@
  (name uopt_core_test)
  (libraries core uopt_core)
  (preprocess
-  (pps ppx_jane)))
+  (pps ppx_jane -compare-require-explicit-locality)))

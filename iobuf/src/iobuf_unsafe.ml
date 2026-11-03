@@ -517,15 +517,12 @@ module Peek = struct
       ~src:([%template buf [@mode local]] t)
       ~src_pos:(upos t ~len ~pos)
       ~len
-      ~dst
+      ~dst:(borrow_ dst)
       ~dst_pos:str_pos;
     dst
   ;;
 
-  let string ~str_pos ~len t ~pos =
-    Bytes.unsafe_to_string
-      ~no_mutation_while_string_reachable:(bytes ~str_pos ~len t ~pos)
-  ;;
+  let string ~str_pos ~len t ~pos = Bytes.unique_to_string (bytes ~str_pos ~len t ~pos)
 
   let bigstring ~str_pos ~len t ~pos =
     let dst = Bigstring.create (len + str_pos) in
@@ -618,14 +615,13 @@ module Peek = struct
         ~src:([%template buf [@mode local]] t)
         ~src_pos:(upos t ~len ~pos)
         ~len
-        ~dst
+        ~dst:(borrow_ dst)
         ~dst_pos:str_pos;
       dst
     ;;
 
     let string ~str_pos ~len t ~pos = exclave_
-      Bytes.unsafe_to_string
-        ~no_mutation_while_string_reachable:(bytes ~str_pos ~len t ~pos)
+      Bytes.unique_to_string (bytes ~str_pos ~len t ~pos)
     ;;
 
     let byteso ?(str_pos = 0) ?len t ~pos = exclave_

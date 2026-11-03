@@ -35,10 +35,10 @@ let%expect_test "[unpack_one] bugs are checked" =
     |}]
 ;;
 
-module type Value = sig
+module type%template [@mode m = (local, global)] Value = sig
   type t [@@deriving sexp_of]
 
-  include Equal.S with type t := t
+  include Equal.S [@mode m] with type t := t
 
   val pack : t list -> string
   val unpack_one : t Unpack_one.t
@@ -256,7 +256,7 @@ let%test_unit _ =
       ; bar : int
       ; baz : string list
       }
-    [@@deriving bin_io, compare, sexp]
+    [@@deriving bin_io, compare ~localize, sexp]
 
     let equal t t' = compare t t' = 0
 

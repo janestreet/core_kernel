@@ -12,22 +12,24 @@ module Definitions = struct
         [hi_max]) of the [buf]. Doing so would violate the invariants of the parent
         [Iobuf]. *)
 
-    val buf : local_ (_, _, global) t -> Bigstring.t
+    val buf : (_, _, global) t @ local -> Bigstring.t [@@zero_alloc]
 
-    val%template buf : local_ (_, _, _) t -> local_ Bigstring.t [@@mode local]
+    val%template buf : (_, _, _) t @ local -> Bigstring.t @ local
+    [@@mode local] [@@zero_alloc]
 
-    val hi_max : local_ (_, _, _) t -> int
-    val hi : local_ (_, _, _) t -> int
-    val lo : local_ (_, _, _) t -> int
-    val lo_min : local_ (_, _, _) t -> int
+    val hi_max : (_, _, _) t @ local -> int [@@zero_alloc]
+    val hi : (_, _, _) t @ local -> int [@@zero_alloc]
+    val lo : (_, _, _) t @ local -> int [@@zero_alloc]
+    val lo_min : (_, _, _) t @ local -> int [@@zero_alloc]
 
     (** These setters directly set fields in [t] without checking any invariants. *)
-    val set_buf : local_ (_, _, _) t -> Bigstring.t -> unit
+    val set_buf : (_, _, _) t @ local -> Bigstring.t -> unit
+    [@@zero_alloc]
 
-    val set_hi_max : local_ (_, _, _) t -> int -> unit
-    val set_hi : local_ (_, _, _) t -> int -> unit
-    val set_lo : local_ (_, _, _) t -> int -> unit
-    val set_lo_min : local_ (_, _, _) t -> int -> unit
+    val set_hi_max : (_, _, _) t @ local -> int -> unit [@@zero_alloc]
+    val set_hi : (_, _, _) t @ local -> int -> unit [@@zero_alloc]
+    val set_lo : (_, _, _) t @ local -> int -> unit [@@zero_alloc]
+    val set_lo_min : (_, _, _) t @ local -> int -> unit [@@zero_alloc]
 
     (** [to_bigstring_shared t] and [to_iobuf_shared t] allocate new wrappers around the
         storage of [buf t], relative to [t]'s current bounds.
@@ -37,14 +39,14 @@ module Definitions = struct
     val to_bigstring_shared
       :  ?pos:int
       -> ?len:int
-      -> local_ (_, _, global) t
+      -> (_, _, global) t @ local
       -> Bigstring.t
 
     (** [reinitialize_of_bigstring t bigstring] reinitializes [t] with backing
         [bigstring], and the window and limits specified starting at [pos] and of length
         [len]. *)
     val reinitialize_of_bigstring
-      :  local_ (_, _, _) t
+      :  (_, _, _) t @ local
       -> pos:int
       -> len:int
       -> Bigstring.t
@@ -53,7 +55,7 @@ module Definitions = struct
     (** As [reinitialize_of_bigstring] but without checking, and requires explicit
         specification of bounds. *)
     val unsafe_reinitialize
-      :  local_ (_, _, _) t
+      :  (_, _, _) t @ local
       -> lo_min:int
       -> lo:int
       -> hi:int
@@ -65,15 +67,15 @@ module Definitions = struct
         will be writable through [~src] aliases even though the type does not reflect
         this! *)
     val set_bounds_and_buffer
-      :  src:local_ ('data, _, global) t
-      -> dst:local_ ('data, seek, _) t
+      :  src:('data, _, global) t @ local
+      -> dst:('data, seek, _) t @ local
       -> unit
 
     val set_bounds_and_buffer_sub
       :  pos:int
       -> len:int
-      -> src:local_ ('data, _, global) t
-      -> dst:local_ ('data, seek, _) t
+      -> src:('data, _, global) t @ local
+      -> dst:('data, seek, _) t @ local
       -> unit
 
     (** Similar to [protect_window_bounds_and_buffer], but does not save/restore the
@@ -81,8 +83,8 @@ module Definitions = struct
         [narrow] is unsafe; you should not modify anything but the window inside [f]. *)
     val%template protect_window
       : ('a : value_or_null) 'rw 'sk 'loc.
-      local_ ('rw, 'sk, 'loc) t
-      -> f:local_ (local_ ('rw, seek, 'loc) t -> 'a @ m)
+      ('rw, 'sk, 'loc) t @ local
+      -> f:(('rw, seek, 'loc) t @ local -> 'a @ m) @ local
       -> 'a @ m
     [@@mode m = (local, global)]
 
@@ -91,41 +93,41 @@ module Definitions = struct
         what you wanted. *)
     val protect_window_global_deprecated
       :  ('rw, _, 'loc) t
-      -> f:local_ (('rw, seek, 'loc) t -> 'a)
+      -> f:(('rw, seek, 'loc) t -> 'a) @ local
       -> 'a
 
     val protect_window_1
-      :  local_ ('rw, _, 'loc) t
+      :  ('rw, _, 'loc) t @ local
       -> 'a
-      -> f:local_ (local_ ('rw, seek, 'loc) t -> 'a -> 'b)
+      -> f:(('rw, seek, 'loc) t @ local -> 'a -> 'b) @ local
       -> 'b
 
     val protect_window_1_global_deprecated
       :  ('rw, _, 'loc) t
       -> 'a
-      -> f:local_ (('rw, seek, 'loc) t -> 'a -> 'b)
+      -> f:(('rw, seek, 'loc) t -> 'a -> 'b) @ local
       -> 'b
 
     val protect_window_2
-      :  local_ ('rw, _, 'loc) t
+      :  ('rw, _, 'loc) t @ local
       -> 'a
       -> 'b
-      -> f:local_ (local_ ('rw, seek, 'loc) t -> 'a -> 'b -> 'c)
+      -> f:(('rw, seek, 'loc) t @ local -> 'a -> 'b -> 'c) @ local
       -> 'c
 
     val protect_window_2_global_deprecated
       :  ('rw, _, 'loc) t
       -> 'a
       -> 'b
-      -> f:local_ (('rw, seek, 'loc) t -> 'a -> 'b -> 'c)
+      -> f:(('rw, seek, 'loc) t -> 'a -> 'b -> 'c) @ local
       -> 'c
 
     (** Computes the position within [buf] for [pos] relative to our window. Checks [len]
         bytes are available. *)
-    val buf_pos_exn : local_ (_, _, _) t -> pos:int -> len:int -> int
+    val buf_pos_exn : (_, _, _) t @ local -> pos:int -> len:int -> int
 
     (** As [buf_pos_exn] without checks. *)
-    val unsafe_buf_pos : local_ (_, _, _) t -> pos:int -> len:int -> int
+    val unsafe_buf_pos : (_, _, _) t @ local -> pos:int -> len:int -> int
   end
 end
 

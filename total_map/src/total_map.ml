@@ -63,7 +63,8 @@ module Stable = struct
       with type ('key, 'a, 'cmp, 'enum) Total_map.total_map := ('key, 'a, 'cmp, 'enum) t]
 
     module%template.portable
-      [@modality p] Make_with_witnesses
+      [@modality p]
+      Make_with_witnesses
         (Key : Key_with_witnesses
       [@modality p]) =
     struct
@@ -83,7 +84,8 @@ module Stable = struct
     end
 
     module%template.portable
-      [@modality p] Make_for_include_functor_with_witnesses
+      [@modality p]
+      Make_for_include_functor_with_witnesses
         (Key : Key_with_witnesses
       [@modality p]) =
     struct
@@ -91,7 +93,8 @@ module Stable = struct
     end
 
     module%template.portable
-      [@modality p] Make_with_stable_witness
+      [@modality p]
+      Make_with_stable_witness
         (Key : Key_with_stable_witness
       [@modality p]) =
     struct
@@ -110,7 +113,8 @@ module Stable = struct
     end
 
     module%template.portable
-      [@modality p] Make_for_include_functor_with_stable_witness
+      [@modality p]
+      Make_for_include_functor_with_stable_witness
         (Key : Key_with_stable_witness
       [@modality p]) =
     struct
@@ -145,7 +149,8 @@ module Stable = struct
       with type ('key, 'a, 'cmp, 'enum) Total_map.total_map := ('key, 'a, 'cmp, 'enum) t]
 
     module%template.portable
-      [@modality p] Make_common
+      [@modality p]
+      Make_common
         (Key : sig
            include Key_with_witnesses [@modality p]
 
@@ -207,7 +212,8 @@ module Stable = struct
     end
 
     module%template.portable
-      [@modality p] Make_with_witnesses
+      [@modality p]
+      Make_with_witnesses
         (Key : Key_with_witnesses
       [@modality p]) =
     struct
@@ -227,7 +233,8 @@ module Stable = struct
     end
 
     module%template.portable
-      [@modality p] Make_for_include_functor_with_witnesses
+      [@modality p]
+      Make_for_include_functor_with_witnesses
         (Key : Key_with_witnesses
       [@modality p]) =
     struct
@@ -235,7 +242,8 @@ module Stable = struct
     end
 
     module%template.portable
-      [@modality p] Make_with_stable_witness
+      [@modality p]
+      Make_with_stable_witness
         (Key : Key_with_stable_witness
       [@modality p]) =
     struct
@@ -255,7 +263,8 @@ module Stable = struct
     end
 
     module%template.portable
-      [@modality p] Make_for_include_functor_with_stable_witness
+      [@modality p]
+      Make_for_include_functor_with_stable_witness
         (Key : Key_with_stable_witness
       [@modality p]) =
     struct
@@ -372,6 +381,12 @@ module type M = sig
   module Total_map : S with type Key.t = t
 end
 
+module type M_with_hash = sig
+  include M
+
+  val hash_fold_t : Hash.state -> t -> Hash.state
+end
+
 module M (T : For_include_functor_plain) = struct
   type 'a t = 'a T.Total_map.t
 end
@@ -468,6 +483,30 @@ let compare_m__t
   K.Total_map.compare a_compare
 ;;
 
+let equal_m__t
+  (type k cmp enum a)
+  (module K : M
+    with type t = k
+     and type Total_map.enumeration_witness = enum
+     and type Total_map.comparator_witness = cmp)
+  (a_equal : a -> a -> bool)
+  : (k, a, cmp, enum) t -> (k, a, cmp, enum) t -> bool
+  =
+  K.Total_map.equal a_equal
+;;
+
+let hash_fold_m__t
+  (type k cmp enum a)
+  (module K : M_with_hash
+    with type t = k
+     and type Total_map.enumeration_witness = enum
+     and type Total_map.comparator_witness = cmp)
+  (hash_fold_a : Hash.state -> a -> Hash.state)
+  : Hash.state -> (k, a, cmp, enum) t -> Hash.state
+  =
+  Map.hash_fold_m__t (module K) hash_fold_a
+;;
+
 let globalize_m__t
   (type k cmp enum a)
   (module K : M
@@ -536,7 +575,8 @@ include struct
 end
 
 module%template.portable
-  [@modality p] Make_plain_with_witnesses
+  [@modality p]
+  Make_plain_with_witnesses
     (Key : Key_plain_with_witnesses
   [@modality p]) =
 struct
@@ -583,27 +623,48 @@ struct
     { set = Key.Set.of_list Key.all; name = "[Key.all]" }
   ;;
 
-  let of_map map ~if_missing =
-    create (fun key ->
-      match Map.find map key with
-      | Some value -> value
-      | None -> if_missing ())
+  let map_has_expected_keys map expected_set =
+    (* There's no direct way to compare the set of keys in a map to a given set, so we use
+       [Map.Tree.Enum] and [Set.Tree.Enum] to step through the set and the map in
+       lockstep. This is ~10x faster, and allocates ~10x less. *)
+    let compare_key = Map.comparator map |> Core.Comparator.compare in
+    let rec keys_match map_enum set_enum =
+      match map_enum, set_enum with
+      | Null, Null -> true
+      | Null, This _ | This _, Null -> false
+      | This map_enum, This set_enum ->
+        compare_key (Base.Map.Tree.Enum.key map_enum) (Base.Set.Tree.Enum.elt set_enum)
+        = 0
+        && (keys_match [@tailcall])
+             (Base.Map.Tree.Enum.next map_enum)
+             (Base.Set.Tree.Enum.next set_enum)
+    in
+    keys_match
+      (Base.Map.Tree.Enum.of_tree (Map.to_tree map))
+      (Base.Set.Tree.Enum.of_set (Set.to_tree expected_set))
   ;;
 
   let of_map_exn map =
-    Set.Named.equal named_key_set { set = Map.key_set map; name = "[Map.key_set map]" }
-    |> ok_exn;
-    of_map map ~if_missing:(fun () ->
-      raise_s
-        [%message
-          "impossible: all keys must be present in the map as verified by the key set"])
+    if not (map_has_expected_keys map named_key_set.set)
+    then
+      (* If the fast path fails, construct the key set to give a good error message. *)
+      Set.Named.equal named_key_set { set = Map.key_set map; name = "[Map.key_set map]" }
+      |> ok_exn;
+    map
   ;;
 
   let of_alist_exn alist = of_map_exn (Key.Map.of_alist_exn alist)
   let of_alist_multi_exn alist = of_map_exn (Key.Map.of_alist_multi alist)
 
   let of_alist_multi alist =
-    of_map (Key.Map.of_alist_multi alist) ~if_missing:(fun () -> [])
+    let map = Key.Map.of_alist_multi alist in
+    if map_has_expected_keys map named_key_set.set
+    then map
+    else
+      create (fun key ->
+        match Map.find map key with
+        | Some value -> value
+        | None -> [])
   ;;
 
   include Applicative.Make [@modality p] (struct
@@ -616,7 +677,8 @@ struct
 end
 
 module%template.portable
-  [@modality p] Make_for_include_functor_plain_with_witnesses
+  [@modality p]
+  Make_for_include_functor_plain_with_witnesses
     (Key : Key_plain_with_witnesses
   [@modality p]) =
 struct
@@ -624,7 +686,8 @@ struct
 end
 
 module%template.portable
-  [@modality p] Make_with_witnesses
+  [@modality p]
+  Make_with_witnesses
     (Key : Key_with_witnesses
   [@modality p]) =
 struct
@@ -681,7 +744,8 @@ struct
 end
 
 module%template.portable
-  [@modality p] Make_for_include_functor_with_witnesses
+  [@modality p]
+  Make_for_include_functor_with_witnesses
     (Key : Key_with_witnesses
   [@modality p]) =
 struct
@@ -696,7 +760,8 @@ Make_plain_with_witnesses [@modality p] (struct
   end)
 
 module%template.portable
-  [@modality p] Make_for_include_functor_plain
+  [@modality p]
+  Make_for_include_functor_plain
     (Key : Key_plain
   [@modality p]) =
 struct

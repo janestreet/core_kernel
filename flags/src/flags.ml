@@ -153,16 +153,13 @@ module Make (M : Make_arg) = struct
   ;;
 
   (* total order such that [subset a b] implies [a <= b] *)
-  let%template compare t u =
+  let compare t u =
     (* This is the same as {| Int63.(i bit_xor (one shift_left 62)) |} *)
     let flip_top_bit i = Int63.( + ) i Int63.min_value in
     Int63.compare (flip_top_bit t) (flip_top_bit u)
-  [@@mode local]
   ;;
 
-  (* we only use [compare [@mode local]] below *)
-  let compare = `unused
-  let `unused = compare
+  let%template[@mode local] compare = compare
   let%template[@mode m = local] compare_zero_alloc = (compare [@mode m])
 
   include%template Comparable.Make [@mode local portable] (struct

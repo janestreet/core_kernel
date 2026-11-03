@@ -50,6 +50,10 @@ type 'loc repr = 'loc Repr.t =
 
 type (-'read_write, +'seek, 'loc) t = 'loc Repr.t [@@deriving sexp_of ~localize]
 
+[%%template
+type 'a locality = 'a
+type _ locality = local [@@mode local]]
+
 module With_shallow_sexp = struct
   type (_, _, 'loc) t = 'loc Repr.t [@@deriving sexp_of ~localize]
 

@@ -39,7 +39,7 @@ module type S_plain = sig
        , !'cmp
        , 'enum)
        total_map :
-       value mod contended portable with 'key with 'a with 'cmp @@ contended
+       value mod contended non_float portable with 'key with 'a with 'cmp @@ contended
 
   module Key : Key_plain [@modality p]
 
@@ -67,7 +67,7 @@ module type S_plain = sig
 
   include Applicative with type 'a t := 'a t
 
-  val create : local_ (Key.t -> 'a) -> 'a t
+  val create : (Key.t -> 'a) @ local -> 'a t
   val create_const : 'a -> 'a t
   val of_map_exn : (Key.t, 'a, comparator_witness) Map.t -> 'a t
   val of_alist_exn : (Key.t * 'a) list -> 'a t
@@ -98,7 +98,7 @@ module type For_include_functor = sig
 end
 
 module type Stable_S = sig
-  type ('key, 'a, 'cmp, 'enum) total_map
+  type ('key, 'a, 'cmp, 'enum) total_map : value mod non_float
 
   module Key : Key [@modality p]
 
@@ -114,7 +114,7 @@ module type Stable_For_include_functor = sig
 end
 
 module type Stable_S_with_stable_witness = sig
-  type ('key, 'a, 'cmp, 'enum) total_map
+  type ('key, 'a, 'cmp, 'enum) total_map : value mod non_float
 
   module Key : Key [@modality p]
 
@@ -130,7 +130,7 @@ module type Stable_For_include_functor_with_stable_witness = sig
 end]
 
 module type Stable = sig
-  type ('key, 'a, 'cmp, 'enum) t
+  type ('key, 'a, 'cmp, 'enum) t : value mod non_float
 
   [%%template:
   [@@@modality.default p = (portable, nonportable)]
@@ -156,7 +156,8 @@ module type Stable = sig
     with type ('key, 'a, 'cmp, 'enum) Total_map.total_map := ('key, 'a, 'cmp, 'enum) t]
 
   module%template.portable
-    [@modality p] Make_with_witnesses
+    [@modality p]
+    Make_with_witnesses
       (Key : Key_with_witnesses
     [@modality p]) :
     S
@@ -166,7 +167,8 @@ module type Stable = sig
     with type enumeration_witness = Key.enumeration_witness
 
   module%template.portable
-    [@modality p] Make_for_include_functor_with_witnesses
+    [@modality p]
+    Make_for_include_functor_with_witnesses
       (Key : Key_with_witnesses
     [@modality p]) :
     For_include_functor
@@ -176,7 +178,8 @@ module type Stable = sig
     with type Total_map.enumeration_witness = Key.enumeration_witness
 
   module%template.portable
-    [@modality p] Make_with_stable_witness
+    [@modality p]
+    Make_with_stable_witness
       (Key : Key_with_stable_witness
     [@modality p]) :
     S_with_stable_witness
@@ -186,7 +189,8 @@ module type Stable = sig
     with type enumeration_witness = Key.enumeration_witness
 
   module%template.portable
-    [@modality p] Make_for_include_functor_with_stable_witness
+    [@modality p]
+    Make_for_include_functor_with_stable_witness
       (Key : Key_with_stable_witness
     [@modality p]) :
     For_include_functor_with_stable_witness
@@ -234,7 +238,7 @@ module type Total_map = sig @@ portable
        , !'cmp
        , 'enum)
        t :
-       value mod contended portable with 'key with 'a with 'cmp @@ contended
+       value mod contended non_float portable with 'key with 'a with 'cmp @@ contended
 
   val to_map : ('key, 'a, 'cmp, _) t -> ('key, 'a, 'cmp) Map.t
 
@@ -368,13 +372,15 @@ module type Total_map = sig @@ portable
     S_plain [@modality p] with module Key = Key
 
   module%template.portable
-    [@modality p] Make_for_include_functor_plain
+    [@modality p]
+    Make_for_include_functor_plain
       (Key : Key_plain
     [@modality p]) :
     For_include_functor_plain [@modality p] with module Total_map.Key = Key
 
   module%template.portable
-    [@modality p] Make_plain_with_witnesses
+    [@modality p]
+    Make_plain_with_witnesses
       (Key : Key_plain_with_witnesses
     [@modality p]) :
     S_plain
@@ -384,7 +390,8 @@ module type Total_map = sig @@ portable
     with type enumeration_witness = Key.enumeration_witness
 
   module%template.portable
-    [@modality p] Make_for_include_functor_plain_with_witnesses
+    [@modality p]
+    Make_for_include_functor_plain_with_witnesses
       (Key : Key_plain_with_witnesses
     [@modality p]) :
     For_include_functor_plain
@@ -397,12 +404,14 @@ module type Total_map = sig @@ portable
     S [@modality p] with module Key = Key
 
   module%template.portable
-    [@modality p] Make_for_include_functor
+    [@modality p]
+    Make_for_include_functor
       (Key : Key
     [@modality p]) : For_include_functor [@modality p] with module Total_map.Key = Key
 
   module%template.portable
-    [@modality p] Make_with_witnesses
+    [@modality p]
+    Make_with_witnesses
       (Key : Key_with_witnesses
     [@modality p]) :
     S
@@ -412,7 +421,8 @@ module type Total_map = sig @@ portable
     with type enumeration_witness = Key.enumeration_witness
 
   module%template.portable
-    [@modality p] Make_for_include_functor_with_witnesses
+    [@modality p]
+    Make_for_include_functor_with_witnesses
       (Key : Key_with_witnesses
     [@modality p]) :
     For_include_functor
@@ -430,6 +440,12 @@ module type Total_map = sig @@ portable
     type t
 
     module Total_map : S with type Key.t = t
+  end
+
+  module type M_with_hash = sig
+    include M
+
+    val hash_fold_t : Hash.state -> t -> Hash.state
   end
 
   module M (T : For_include_functor_plain) : sig
@@ -505,6 +521,26 @@ module type Total_map = sig @@ portable
     -> ('k, 'v, 'cmp, 'enum) t
     -> ('k, 'v, 'cmp, 'enum) t
     -> int
+
+  val equal_m__t
+    :  (module M
+          with type t = 'k
+           and type Total_map.enumeration_witness = 'enum
+           and type Total_map.comparator_witness = 'cmp)
+    -> ('v -> 'v -> bool)
+    -> ('k, 'v, 'cmp, 'enum) t
+    -> ('k, 'v, 'cmp, 'enum) t
+    -> bool
+
+  val hash_fold_m__t
+    :  (module M_with_hash
+          with type t = 'k
+           and type Total_map.enumeration_witness = 'enum
+           and type Total_map.comparator_witness = 'cmp)
+    -> (Hash.state -> 'v -> Hash.state)
+    -> Hash.state
+    -> ('k, 'v, 'cmp, 'enum) t
+    -> Hash.state
 
   val globalize_m__t
     :  (module M

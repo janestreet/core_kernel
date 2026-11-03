@@ -4,7 +4,8 @@
  (libraries core.base_for_tests core int_repr)
  (preprocessor_deps include.mlh)
  (preprocess
-  (pps ppx_jane ppx_optcomp -compare-require-explicit-locality)))
+  (pps ppx_jane ppx_optcomp -compare-require-explicit-locality))
+ (ocamlopt_flags :standard -O3))
 
 (rule
  (targets include.mlh)

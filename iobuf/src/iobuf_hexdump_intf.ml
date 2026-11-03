@@ -4,7 +4,7 @@ module Definitions = struct
   module type Hexdump_all = sig
     type nonrec ('rw, 'seek, 'loc) t [@@deriving sexp_of]
 
-    val to_string_hum : ?max_lines:int -> local_ (_, _, _) t -> string
+    val to_string_hum : ?max_lines:int -> (_, _, _) t @ local -> string
     val to_sequence : ?max_lines:int -> (_, _, _) t -> string Sequence.t
   end
 end

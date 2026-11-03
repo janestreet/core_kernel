@@ -4,7 +4,7 @@ type 'a t = 'a list =
 [@@deriving equal ~localize]
 
 (** Type alias for use within submodules *)
-type 'a reversed_list = 'a t
+type 'a reversed_list = 'a t [@@deriving equal ~localize]
 
 open Base
 
@@ -57,8 +57,8 @@ let rec rev_append_to_nonempty xs acc =
 
 (* Non-empty version of Reversed_list.t *)
 module Nonempty = struct
-  type 'a nonempty_list = 'a Nonempty_list.t
-  type 'a t = ( :: ) of 'a * 'a reversed_list
+  type 'a nonempty_list = 'a Nonempty_list.t [@@deriving equal ~localize]
+  type 'a t = ( :: ) of 'a * 'a reversed_list [@@deriving equal ~localize]
 
   let to_rev_list (hd :: tl) : _ reversed_list = hd :: tl
   let rev_append (hd :: tl) xs = rev_append_to_nonempty tl (hd :: xs)

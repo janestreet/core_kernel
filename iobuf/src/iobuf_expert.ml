@@ -4,8 +4,8 @@ open! Core
 open Iobuf_type
 include Iobuf_expert_intf.Definitions
 
-let buf = buf
-let%template[@mode local] buf = (buf [@mode local])
+let buf t = buf t
+let%template[@mode local] buf t = exclave_ (buf [@mode local]) t
 let hi_max t = t.hi_max
 let hi t = t.hi
 let lo t = t.lo
@@ -57,7 +57,7 @@ let reinitialize t ~lo_min ~lo ~hi ~hi_max buf =
 let unsafe_reinitialize = if unsafe_is_safe then reinitialize else unsafe_reinitialize
 
 let _remember_to_update_unsafe_reinitialize
-  :  local_ (_, _, _) t -> buf:(Bigstring.t, global) Modes.At_locality.t -> lo_min:int
+  :  (_, _, _) t @ local -> buf:(Bigstring.t, global) Modes.At_locality.t -> lo_min:int
   -> lo:int -> hi:int -> hi_max:int -> unit
   =
   Repr.Fields.Direct.set_all_mutable_fields

@@ -3,11 +3,18 @@ open! Expect_test_helpers_core
 open! Weak_hashtbl
 
 let create () = create (module Int)
-let data int = ref int |> Heap_block.create_exn
+let make_data int = ref int |> Heap_block.create_exn
 
 type data = int ref Heap_block.t [@@deriving sexp_of]
 
 let%expect_test "[add_exn], [find], [mem], [replace], [remove], [clear]" =
+  let all_data = ref [] in
+  let make_data int =
+    (* keep everything alive: were're not testing "weakness" in this test *)
+    let data = make_data int in
+    all_data := data :: !all_data;
+    data
+  in
   let t = create () in
   let print_mem i = print_s [%message (i : int) ~mem:(mem t i : bool)] in
   let key = 13 in
@@ -17,7 +24,7 @@ let%expect_test "[add_exn], [find], [mem], [replace], [remove], [clear]" =
     ((i   13)
      (mem false))
     |}];
-  add_exn t ~key ~data:(data key);
+  add_exn t ~key ~data:(make_data key);
   print_mem key;
   [%expect
     {|
@@ -27,17 +34,18 @@ let%expect_test "[add_exn], [find], [mem], [replace], [remove], [clear]" =
   let print_find () = print_s [%message (find t key : data option)] in
   print_find ();
   [%expect {| ("find t key" (13)) |}];
-  replace t ~key ~data:(data 14);
+  replace t ~key ~data:(make_data 14);
   print_find ();
   [%expect {| ("find t key" (14)) |}];
   remove t key;
   print_find ();
   [%expect {| ("find t key" ()) |}];
-  add_exn t ~key ~data:(data key);
+  add_exn t ~key ~data:(make_data key);
   print_find ();
   [%expect {| ("find t key" (13)) |}];
   clear t;
   print_find ();
+  Gc.keep_alive all_data;
   [%expect {| ("find t key" ()) |}]
 ;;
 
@@ -57,13 +65,15 @@ let%expect_test ("[key_is_using_space], [reclaim_space_for_keys_with_unused_data
     ((key_is_using_space false)
      (mem                false))
     |}];
-  add_exn t ~key ~data:(data ());
+  let data = make_data () in
+  add_exn t ~key ~data;
   print ();
   [%expect
     {|
     ((key_is_using_space true)
      (mem                true))
     |}];
+  Gc.keep_alive data;
   Gc.compact ();
   print ();
   [%expect
@@ -89,7 +99,7 @@ let%expect_test ("[set_run_when_unused_data]" [@tags "no-js"]) =
   Gc.compact ();
   print ();
   [%expect {| (ran false) |}];
-  let data = data key in
+  let data = make_data key in
   add_exn t ~key ~data;
   Gc.compact ();
   print ();
@@ -125,7 +135,7 @@ let%expect_test (_ [@tags "no-js"]) =
   let b2 = ref (block 2) in
   let b3 = ref (block 3) in
   let b4 = ref (block 4) in
-  let blackhole b = b := block 0 in
+  let blackhole = Sys.opaque_identity (fun b -> b := block 0) in
   let k1 = 1 in
   let k2 = 2 in
   let k3 = 3 in

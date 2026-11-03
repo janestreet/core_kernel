@@ -1,5 +1,6 @@
 open! Core
 
+[%%template
 module type S_common = sig
   type ('a, 'b) t
 
@@ -11,25 +12,34 @@ module type S_common = sig
 
   val hash_m__t : (module Set.Hash_fold_m with type t = 'elt) -> ('elt, _) t -> int
 
-  val%template compare_m__t
+  val compare_m__t
     :  (module Set.Compare_m)
     -> ('elt, 'cmp) t @ m
     -> ('elt, 'cmp) t @ m
     -> int
   [@@mode m = (local, global)]
 
-  val%template equal_m__t
+  val equal_m__t
     :  (module Set.Equal_m)
     -> ('elt, 'cmp) t @ m
     -> ('elt, 'cmp) t @ m
     -> bool
   [@@mode m = (local, global)]
+
+  val globalize_m__t
+    :  (module Set.Globalize_m)
+    -> ('elt, 'cmp) t @ local
+    -> ('elt, 'cmp) t
 end
 
 module type S_serializable = sig
   type ('a, 'b) t
 
-  val sexp_of_m__t : (module Set.Sexp_of_m with type t = 'elt) -> ('elt, 'cmp) t -> Sexp.t
+  val sexp_of_m__t
+    :  ((module Set.Sexp_of_m with type t = 'elt)[@alloc a])
+    -> ('elt, 'cmp) t @ m
+    -> Sexp.t @ m
+  [@@alloc a @ m = (heap @ global, stack @ local)]
 
   val m__t_of_sexp
     :  (module Set.M_of_sexp with type t = 'elt and type comparator_witness = 'cmp)
@@ -42,8 +52,18 @@ module type S_serializable = sig
     @@ portable
 
   val bin_shape_m__t : ('a, 'b) Set.Elt_bin_io.t -> Bin_prot.Shape.t
-  val bin_size_m__t : ('a, 'b) Set.Elt_bin_io.t -> ('a, 'b) t Bin_prot.Size.sizer
-  val bin_write_m__t : ('a, 'b) Set.Elt_bin_io.t -> ('a, 'b) t Bin_prot.Write.writer
+
+  [%%template:
+  [@@@mode.default m = (global, local)]
+
+  val bin_size_m__t
+    :  ('a, 'b) Set.Elt_bin_io.t
+    -> (('a, 'b) t Bin_prot.Size.sizer[@mode m])
+
+  val bin_write_m__t
+    :  ('a, 'b) Set.Elt_bin_io.t
+    -> (('a, 'b) t Bin_prot.Write.writer[@mode m])]
+
   val bin_read_m__t : ('a, 'b) Set.Elt_bin_io.t -> ('a, 'b) t Bin_prot.Read.reader
 
   val __bin_read_m__t__
@@ -64,7 +84,6 @@ end
 module type S_unstable = sig
   type ('a, 'b) t
 
-  [%%template:
   [@@@mode.default p = (portable, nonportable)]
 
   val quickcheck_generator_m__t
@@ -83,7 +102,7 @@ module type S_unstable = sig
     : 'a ('cmp : value mod p).
     (module Set.Quickcheck_shrinker_m with type t = 'a and type comparator_witness = 'cmp)
     @ p
-    -> ('a, 'cmp) t Quickcheck.Shrinker.t @ p]
+    -> ('a, 'cmp) t Quickcheck.Shrinker.t @ p
 end
 
 module type For_deriving = sig
@@ -91,4 +110,4 @@ module type For_deriving = sig
   module type S_stable = S_stable
   module type S_unstable = S_unstable
   module type S_common = S_common
-end
+end]

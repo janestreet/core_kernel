@@ -2,4 +2,4 @@
  (name pooled_hashtbl_test)
  (libraries core core_test pooled_hashtbl)
  (preprocess
-  (pps ppx_jane)))
+  (pps ppx_jane -compare-require-explicit-locality)))

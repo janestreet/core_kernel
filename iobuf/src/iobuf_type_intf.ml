@@ -48,8 +48,8 @@ module type Iobuf_type = sig @@ portable
   type ('rw, 'seek, 'loc) iobuf := ('rw, 'seek, 'loc) t
 
   val globalize : [ `deprecated ]
-  val globalize_shared : local_ ('rw, 'seek, global) t -> ('rw, 'seek, global) t
-  val globalize_copied : local_ ('rw, 'seek, _) t -> ('rw, 'seek, _) t
+  val globalize_shared : ('rw, 'seek, global) t @ local -> ('rw, 'seek, global) t
+  val globalize_copied : ('rw, 'seek, _) t @ local -> ('rw, 'seek, _) t
 
   module With_shallow_sexp : sig
     type ('rw, 'seek, 'loc) t = ('rw, 'seek, 'loc) iobuf [@@deriving sexp_of ~localize]
@@ -58,16 +58,16 @@ module type Iobuf_type = sig @@ portable
   end
 
   [%%template:
-  type 'a locality := 'a
-  type _ locality := local [@@mode local]]
+  type 'a locality = 'a
+  type _ locality = local [@@mode local]]
 
   [%%template:
   [@@@alloc.default a @ m = (heap_global, stack_local)]
   [@@@mode.default l = (global, m)]
 
   val of_bigstring
-    :  ?pos:local_ int
-    -> ?len:local_ int
+    :  ?pos:int @ local
+    -> ?len:int @ local
     -> Bigstring.t @ l
     -> (_, _, (_ locality[@mode l])) t @ m
 
@@ -83,41 +83,42 @@ module type Iobuf_type = sig @@ portable
     -> Bigstring.t @ l
     -> (_, _, (_ locality[@mode l])) t @ m]
 
-  val advance : local_ (_, seek, _) t -> int -> unit
-  val bad_range : pos:int -> len:int -> local_ (_, _, _) t -> _
-  val buf : local_ (_, _, global) t -> Bigstring.t
+  val advance : (_, seek, _) t @ local -> int -> unit
+  val bad_range : pos:int -> len:int -> (_, _, _) t @ local -> _
+  val buf : (_, _, global) t @ local -> Bigstring.t [@@zero_alloc]
 
-  val%template buf : local_ (_, _, _) t -> local_ Bigstring.t [@@mode local]
+  [%%template:
+    val buf : (_, _, _) t @ local -> Bigstring.t @ local [@@mode local] [@@zero_alloc]]
 
-  val buf_pos_exn : local_ (_, _, _) t -> pos:int -> len:int -> int
-  val check_range : local_ (_, _, _) t -> pos:int -> len:int -> unit
+  val buf_pos_exn : (_, _, _) t @ local -> pos:int -> len:int -> int
+  val check_range : (_, _, _) t @ local -> pos:int -> len:int -> unit
   val create : len:int -> (_, _, _) t
-  val fail : local_ (_, _, _) t -> string -> 'a -> ('a -> Sexp.t) -> _
-  val get_char : local_ ([> read ], _, _) t -> int -> char
-  val length : local_ (_, _, _) t -> int
+  val fail : (_, _, _) t @ local -> string -> 'a -> ('a -> Sexp.t) -> _
+  val get_char : ([> read ], _, _) t @ local -> int -> char
+  val length : (_, _, _) t @ local -> int
 
   val set_bounds_and_buffer
-    :  src:local_ (_, _, global) t
-    -> dst:local_ (_, _, _) t
+    :  src:(_, _, global) t @ local
+    -> dst:(_, _, _) t @ local
     -> unit
 
   val set_bounds_and_buffer_sub
     :  pos:int
     -> len:int
-    -> src:local_ (_, _, global) t
-    -> dst:local_ (_, _, _) t
+    -> src:(_, _, global) t @ local
+    -> dst:(_, _, _) t @ local
     -> unit
 
-  val set_char : local_ ([> write ], _, _) t -> int -> char -> unit
-  val unsafe_advance : local_ (_, seek, _) t -> int -> unit
-  val unsafe_buf_pos : local_ (_, _, _) t -> pos:int -> len:int -> int
+  val set_char : ([> write ], _, _) t @ local -> int -> char -> unit
+  val unsafe_advance : (_, seek, _) t @ local -> int -> unit
+  val unsafe_buf_pos : (_, _, _) t @ local -> pos:int -> len:int -> int
   val unsafe_is_safe : bool
 
   module Bytes_dst : sig
     type t = bytes [@@deriving sexp_of]
 
     val create : len:int -> t
-    val length : local_ t -> int
+    val length : t @ local -> int
     val get : t -> int -> char
     val set : t -> int -> char -> unit
     val unsafe_blit : ((_, _, _) iobuf, t) Blit.blit
@@ -127,7 +128,7 @@ module type Iobuf_type = sig @@ portable
     type t = Bigstring.t [@@deriving sexp_of]
 
     val create : len:int -> t
-    val length : local_ t -> int
+    val length : t @ local -> int
     val get : t -> int -> char
     val set : t -> int -> char -> unit
     val unsafe_blit : ((_, _, _) iobuf, t) Blit.blit
@@ -148,7 +149,7 @@ module type Iobuf_type = sig @@ portable
     type 'loc t = 'loc Repr.t
 
     val create : len:int -> (_, _, _) iobuf
-    val length : local_ (_, _, _) iobuf -> int
+    val length : (_, _, _) iobuf @ local -> int
     val get : (_, _, _) iobuf -> int -> char
     val set : (_, _, _) iobuf -> int -> char -> unit
   end

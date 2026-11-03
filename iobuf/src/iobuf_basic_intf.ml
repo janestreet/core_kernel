@@ -12,9 +12,9 @@ module Definitions = struct
     type t = private int (*_ performance hack: avoid the write barrier *)
     [@@deriving compare ~localize, sexp_of]
 
-    val window : local_ (_, _, _) iobuf -> t
-    val limit : local_ (_, _, _) iobuf -> t
-    val restore : t -> local_ (_, seek, _) iobuf -> unit
+    val window : (_, _, _) iobuf @ local -> t
+    val limit : (_, _, _) iobuf @ local -> t
+    val restore : t -> (_, seek, _) iobuf @ local -> unit
   end
 
   module type Basic = sig
@@ -30,8 +30,8 @@ module Definitions = struct
     (** Globalize as if [t] had zero type parameters. Works because the parameters are
         phantom types, and do not represent actual values that need to be globalized. *)
 
-    val globalize_shared : local_ ('rw, _, global) t -> ('rw, _, global) t
-    val globalize_copied : local_ ('rw, _, _) t -> ('rw, _, _) t
+    val globalize_shared : ('rw, _, global) t @ local -> ('rw, _, global) t
+    val globalize_copied : ('rw, _, _) t @ local -> ('rw, _, _) t
 
     module With_shallow_sexp : sig
       (** [With_shallow_sexp.t] has a [sexp_of] that shows the windows and limits of the
@@ -57,8 +57,8 @@ module Definitions = struct
     val empty : (read, no_seek, global) t
 
     [%%template:
-    type 'a locality := 'a
-    type _ locality := local [@@mode local]]
+    type 'a locality = 'a
+    type _ locality = local [@@mode local]]
 
     [%%template:
     [@@@alloc.default a @ m = (heap_global, stack_local)]
@@ -67,8 +67,8 @@ module Definitions = struct
     (** [of_bigstring bigstring ~pos ~len] returns an iobuf backed by [bigstring], with
         the window and limits specified starting at [pos] and of length [len]. *)
     val of_bigstring
-      :  ?pos:local_ int (** default is [0] *)
-      -> ?len:local_ int (** default is [Bigstring.length bigstring - pos] *)
+      :  ?pos:int (** default is [0] *) @ local
+      -> ?len:int (** default is [Bigstring.length bigstring - pos] *) @ local
       -> Bigstring.t @ l
       -> ([< read_write ], _, (_ locality[@mode l])) t @ m
     (** forbid [immutable] to prevent aliasing *)
@@ -96,42 +96,43 @@ module Definitions = struct
         subrange of [t]'s window specified by [pos] and [len]. [sub_shared] preserves data
         permissions, but allows arbitrary seek permissions on the resulting iobuf. *)
     val sub_shared
-      :  ?pos:local_ int
-      -> ?len:local_ int
-      -> local_ ('d, _, global) t
+      :  ?pos:int @ local
+      -> ?len:int @ local
+      -> ('d, _, global) t @ local
       -> ('d, _, global) t
+      @@ portable
 
     (** [sub_shared__local] is like [sub_shared], but it allocates the iobuf record
         locally. *)
     val sub_shared__local
-      :  ?pos:local_ int
-      -> ?len:local_ int
-      -> local_ ('d, _, 'loc) t
-      -> local_ ('d, _, 'loc) t
+      :  ?pos:int @ local
+      -> ?len:int @ local
+      -> ('d, _, 'loc) t @ local
+      -> ('d, _, 'loc) t @ local
 
     (** More efficient than the above (optional arguments are costly). *)
     val unsafe_sub_shared
       :  pos:int
       -> len:int
-      -> local_ ('d, _, 'loc) t
-      -> local_ ('d, _, 'loc) t
+      -> ('d, _, 'loc) t @ local
+      -> ('d, _, 'loc) t @ local
 
     (** [copy t] returns a new iobuf whose contents are the same as those in the window of
         [t]. *)
-    val copy : local_ (_, _, _) t -> (_, _, _) t
+    val copy : (_, _, _) t @ local -> (_, _, _) t
 
     (** [clone t] returns a new iobuf that is a deep-copy of [t] including an exact copy
         of the underlying buffer and bounds. This means data outside the window is copied
         as well. *)
-    val clone : local_ (_, _, _) t -> (_, _, _) t
+    val clone : (_, _, _) t @ local -> (_, _, _) t
 
     (** [transfer ~src ~dst] makes the window of [dst] into a copy of the window of [src].
         Like [blito], [transfer] will raise if [Iobuf.length dst] < [Iobuf.length src].
 
         It is a utility function defined as [reset dst; blito ~src ~dst; flip_lo dst]. *)
     val transfer
-      :  src:local_ ([> read ], _, _) t
-      -> dst:local_ ([> write ], seek, _) t
+      :  src:([> read ], _, _) t @ local
+      -> dst:([> write ], seek, _) t @ local
       -> unit
 
     (** [set_bounds_and_buffer ~src ~dst] copies bounds metadata (i.e., limits and window)
@@ -148,8 +149,8 @@ module Definitions = struct
         allocated once. This frame can be updated repeatedly and handed to users, without
         further allocation. Allocation-sensitive applications need this. *)
     val set_bounds_and_buffer
-      :  src:local_ (([> write ] as 'data), _, global) t
-      -> dst:local_ ('data, seek, _) t
+      :  src:(([> write ] as 'data), _, global) t @ local
+      -> dst:('data, seek, _) t @ local
       -> unit
 
     (** [set_bounds_and_buffer_sub ~pos ~len ~src ~dst] is a more efficient version of
@@ -165,8 +166,8 @@ module Definitions = struct
     val set_bounds_and_buffer_sub
       :  pos:int
       -> len:int
-      -> src:local_ (([> write ] as 'data), _, global) t
-      -> dst:local_ ('data, seek, _) t
+      -> src:(([> write ] as 'data), _, global) t @ local
+      -> dst:('data, seek, _) t @ local
       -> unit
 
     (** {2 Generalization}
@@ -182,18 +183,18 @@ module Definitions = struct
         argument with something like [t : (_ perms, _) t :> (read, _) t]. *)
 
     val read_only : ([> read ], 's, 'l) t -> (read, 's, 'l) t
-    val read_only__local : local_ ([> read ], 's, 'l) t -> local_ (read, 's, 'l) t
+    val read_only__local : ([> read ], 's, 'l) t @ local -> (read, 's, 'l) t @ local
     val no_seek : ('r, _, 'l) t -> ('r, no_seek, 'l) t
-    val no_seek__local : local_ ('r, _, 'l) t -> local_ ('r, no_seek, 'l) t
+    val no_seek__local : ('r, _, 'l) t @ local -> ('r, no_seek, 'l) t @ local
 
     (** {2 Accessors} *)
 
     (** [capacity t] returns the size of [t]'s limits subrange. The capacity of an iobuf
         can be reduced via [narrow]. *)
-    val capacity : local_ (_, _, _) t -> int
+    val capacity : (_, _, _) t @ local -> int
 
     (** [length t] returns the size of [t]'s window. *)
-    val length : local_ (_, _, _) t -> int
+    val length : (_, _, _) t @ local -> int
 
     (** [length_lo t] returns the length that [t]'s window would have after calling
         [flip_lo], without actually changing the window. This is the number of bytes
@@ -208,7 +209,7 @@ module Definitions = struct
           Iobuf.Expert.(lo t - lo_min t)
         ]}
         . *)
-    val length_lo : local_ (_, _, _) t -> int
+    val length_lo : (_, _, _) t @ local -> int
 
     (** [length_hi t] returns the length that [t]'s window would have after calling
         [flip_hi], without actually changing the window. This is the number of bytes
@@ -219,27 +220,27 @@ module Definitions = struct
           Iobuf.Expert.(hi_max t - hi t)
         ]}
         . *)
-    val length_hi : local_ (_, _, _) t -> int
+    val length_hi : (_, _, _) t @ local -> int
 
     (** [is_empty t] is [length t = 0]. *)
-    val is_empty : local_ (_, _, _) t -> bool
+    val is_empty : (_, _, _) t @ local -> bool
 
     (** {2 Changing the limits} *)
 
     (** [narrow t] sets [t]'s limits to the current window. *)
-    val narrow : local_ (_, seek, _) t -> unit
+    val narrow : (_, seek, _) t @ local -> unit
 
     (** [narrow_lo t] sets [t]'s lower limit to the beginning of the current window. *)
-    val narrow_lo : local_ (_, seek, _) t -> unit
+    val narrow_lo : (_, seek, _) t @ local -> unit
 
     (** [narrow_hi t] sets [t]'s upper limit to the end of the current window. *)
-    val narrow_hi : local_ (_, seek, _) t -> unit
+    val narrow_hi : (_, seek, _) t @ local -> unit
 
     (** {2 Comparison} *)
 
     (** [memcmp a b] first compares the length of [a] and [b]'s windows and then compares
         the bytes in the windows for equivalence. *)
-    val memcmp : local_ (_, _, _) t -> local_ (_, _, _) t -> int
+    val memcmp : (_, _, _) t @ local -> (_, _, _) t @ local -> int
 
     (** {2 Changing the window} *)
 
@@ -262,24 +263,24 @@ module Definitions = struct
 
     (** [advance t amount] advances the lower bound of the window by [amount]. It is an
         error to advance past the upper bound of the window or the lower limit. *)
-    val advance : local_ (_, seek, _) t -> int -> unit
+    val advance : (_, seek, _) t @ local -> int -> unit
 
     (** [unsafe_advance] is like [advance] but with no bounds checking, so incorrect usage
         can easily cause segfaults. *)
-    val unsafe_advance : local_ (_, seek, _) t -> int -> unit
+    val unsafe_advance : (_, seek, _) t @ local -> int -> unit
 
     (** [resize t] sets the length of [t]'s window, provided it does not exceed limits. *)
-    val resize : local_ (_, seek, _) t -> len:int -> unit
+    val resize : (_, seek, _) t @ local -> len:int -> unit
 
     (** [unsafe_resize] is like [resize] but with no bounds checking, so incorrect usage
         can easily cause segfaults. *)
-    val unsafe_resize : local_ (_, seek, _) t -> len:int -> unit
+    val unsafe_resize : (_, seek, _) t @ local -> len:int -> unit
 
     (** [rewind t] sets the lower bound of the window to the lower limit. *)
-    val rewind : local_ (_, seek, _) t -> unit
+    val rewind : (_, seek, _) t @ local -> unit
 
     (** [reset t] sets the window to the limits. *)
-    val reset : local_ (_, seek, _) t -> unit
+    val reset : (_, seek, _) t @ local -> unit
 
     (** [flip_lo t] sets the window to range from the lower limit to the lower bound of
         the old window. This is typically called after a series of [Fill]s, to reposition
@@ -288,18 +289,18 @@ module Definitions = struct
         The bounded version narrows the effective limit. This can preserve some data near
         the limit, such as a hypothetical packet header (in the case of [bounded_flip_lo])
         or unfilled suffix of a buffer (in [bounded_flip_hi]). *)
-    val flip_lo : local_ (_, seek, _) t -> unit
+    val flip_lo : (_, seek, _) t @ local -> unit
 
-    val bounded_flip_lo : local_ (_, seek, _) t -> Lo_bound.t -> unit
+    val bounded_flip_lo : (_, seek, _) t @ local -> Lo_bound.t -> unit
 
     (** [compact t] copies data from the window to the lower limit of the iobuf and sets
         the window to range from the end of the copied data to the upper limit. This is
         typically called after a series of [Consume]s to save unread data and prepare for
         the next series of [Fill]s and [flip_lo]. *)
-    val compact : local_ (read_write, seek, _) t -> unit
+    val compact : (read_write, seek, _) t @ local -> unit
 
     val bounded_compact
-      :  local_ (read_write, seek, _) t
+      :  (read_write, seek, _) t @ local
       -> Lo_bound.t
       -> Hi_bound.t
       -> unit
@@ -317,30 +318,30 @@ module Definitions = struct
         ]}
 
         Now the window of [buf] ranges over the remainder of the data. *)
-    val flip_hi : local_ (_, seek, _) t -> unit
+    val flip_hi : (_, seek, _) t @ local -> unit
 
-    val bounded_flip_hi : local_ (_, seek, _) t -> Hi_bound.t -> unit
+    val bounded_flip_hi : (_, seek, _) t @ local -> Hi_bound.t -> unit
 
     (** [protect_window_bounds_and_buffer t ~f] calls [f t] with [t]'s bounds set to its
         current window, and restores [t]'s window, bounds, and buffer afterward. *)
     val protect_window_bounds_and_buffer
       :  ('rw, no_seek, global) t
-      -> f:local_ (('rw, seek, global) t -> 'a)
+      -> f:(('rw, seek, global) t -> 'a) @ local
       -> 'a
 
     (** [protect_window_bounds_and_buffer__local] is similar to
         [protect_window_bounds_and_buffer] except that it returns a local value *)
     val protect_window_bounds_and_buffer__local
       :  ('rw, no_seek, global) t
-      -> f:local_ (('rw, seek, global) t -> local_ 'a)
-      -> local_ 'a
+      -> f:(('rw, seek, global) t -> 'a @ local) @ local
+      -> 'a @ local
 
     (** [protect_window_bounds_and_buffer_1 t x ~f] is a more efficient version of
         [protect_window_bounds_and_buffer t ~f:(fun t -> f t x)]. *)
     val protect_window_bounds_and_buffer_1
       :  ('rw, no_seek, global) t
       -> 'a
-      -> f:local_ (('rw, seek, global) t -> 'a -> 'b)
+      -> f:(('rw, seek, global) t -> 'a -> 'b) @ local
       -> 'b
 
     (** [protect_window_bounds_and_buffer_2 t x y ~f] is a more efficient version of
@@ -349,7 +350,7 @@ module Definitions = struct
       :  ('rw, no_seek, global) t
       -> 'a
       -> 'b
-      -> f:local_ (('rw, seek, global) t -> 'a -> 'b -> 'c)
+      -> f:(('rw, seek, global) t -> 'a -> 'b -> 'c) @ local
       -> 'c
 
     (** [protect_window_bounds_and_buffer_3 t x y z ~f] is a more efficient version of
@@ -359,7 +360,7 @@ module Definitions = struct
       -> 'a
       -> 'b
       -> 'c
-      -> f:local_ (('rw, seek, global) t -> 'a -> 'b -> 'c -> 'd)
+      -> f:(('rw, seek, global) t -> 'a -> 'b -> 'c -> 'd) @ local
       -> 'd
 
     (** {2 Getting and setting data}
@@ -373,28 +374,28 @@ module Definitions = struct
     [@@alloc a @ m = (heap_global, stack_local)]
 
     (** Equivalent to [Hexdump.to_string_hum]. Renders [t]'s windows and limits. *)
-    val to_string_hum : ?max_lines:int -> local_ (_, _, _) t -> string
+    val to_string_hum : ?max_lines:int -> (_, _, _) t @ local -> string
 
     (** [to_bytes t] returns the bytes in [t] as a bytes. It does not alter the window. *)
-    val to_bytes : ?len:int -> local_ (_, _, _) t -> Bytes.t
+    val to_bytes : ?len:int -> (_, _, _) t @ local -> Bytes.t
 
     (** [of_bytes b] returns a new iobuf whose contents is [b]. *)
     val of_bytes : Bytes.t -> (_, _, _) t
 
     (** [memset t ~pos ~len c] fills [t] with [c] within the range [\[pos, pos + len)]. *)
-    val memset : local_ (read_write, _, _) t -> pos:int -> len:int -> char -> unit
+    val memset : (read_write, _, _) t @ local -> pos:int -> len:int -> char -> unit
 
     (** [unsafe_memset t ~pos ~len c] fills [t] with [c] within the range
         [\[pos, pos + len)], without bounds checks. *)
-    val unsafe_memset : local_ (read_write, _, _) t -> pos:int -> len:int -> char -> unit
+    val unsafe_memset : (read_write, _, _) t @ local -> pos:int -> len:int -> char -> unit
 
     (** [memset]s a buffer to zero. *)
-    val zero : local_ (read_write, _, _) t -> unit
+    val zero : (read_write, _, _) t @ local -> unit
 
     (** Create a new iobuf whose contents are the appended contents of the passed array. *)
     val concat : ([> read ], _, _) t array -> (_, _, _) t
 
-    val contains : ([> read ], _, _) t -> substring:local_ Bigstring.t -> bool
+    val contains : ([> read ], _, _) t -> substring:Bigstring.t @ local -> bool
   end
 end
 

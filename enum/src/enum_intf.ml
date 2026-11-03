@@ -131,7 +131,8 @@ module type Enum = sig
   (** Defines an [of_string] function for [M], using [M.all] and [M.to_string]. Does not
       require [M] to be sexpable. *)
   module%template.portable
-    [@modality p] Make_of_string
+    [@modality p]
+    Make_of_string
       (M : S_to_string
     [@modality p]) : sig
     val of_string : String.t -> M.t

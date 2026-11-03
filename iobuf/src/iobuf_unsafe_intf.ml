@@ -16,36 +16,36 @@ module Definitions = struct
     (** Like [Peek.index] but with no bounds checks, and returns a negative number rather
         than [None] when the character is not found. *)
     val index_or_neg
-      :  local_ ([> read ], _, _) iobuf
-      -> ?pos:local_ int
-      -> ?len:local_ int
+      :  ([> read ], _, _) iobuf @ local
+      -> ?pos:int @ local
+      -> ?len:int @ local
       -> char
       -> int
 
     (** Like [Peek.rindex] but with no bounds checks, and returns a negative number rather
         than [None] when the character is not found. *)
     val rindex_or_neg
-      :  local_ ([> read ], _, _) iobuf
-      -> ?pos:local_ int
-      -> ?len:local_ int
+      :  ([> read ], _, _) iobuf @ local
+      -> ?pos:int @ local
+      -> ?len:int @ local
       -> char
       -> int
 
     (** Like [Peek.index] but with no bounds checks. *)
     val index__local
-      :  local_ ([> read ], _, _) iobuf
-      -> ?pos:local_ int
-      -> ?len:local_ int
+      :  ([> read ], _, _) iobuf @ local
+      -> ?pos:int @ local
+      -> ?len:int @ local
       -> char
-      -> local_ int option
+      -> int option @ local
 
     (** Like [Peek.rindex] but with no bounds checks. *)
     val rindex__local
-      :  local_ ([> read ], _, _) iobuf
-      -> ?pos:local_ int
-      -> ?len:local_ int
+      :  ([> read ], _, _) iobuf @ local
+      -> ?pos:int @ local
+      -> ?len:int @ local
       -> char
-      -> local_ int option
+      -> int option @ local
   end
 
   module type Poke_unsafe = sig

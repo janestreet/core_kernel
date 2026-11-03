@@ -80,33 +80,33 @@ val write : ('a -> unit) Read_write.t -> 'a -> unit
 
 val%template write_local
   : ('a : ka).
-  (local_ 'a -> unit) Read_write.t -> local_ 'a -> unit
+  ('a @ local -> unit) Read_write.t -> 'a @ local -> unit
 [@@kind ka = base_or_null]
 
 val write2 : ('a -> 'b -> unit) Read_write.t -> 'a -> 'b -> unit
 
 val%template write2_local
   : ('a : ka) ('b : kb).
-  (local_ 'a -> local_ 'b -> unit) Read_write.t -> local_ 'a -> local_ 'b -> unit
+  ('a @ local -> 'b @ local -> unit) Read_write.t -> 'a @ local -> 'b @ local -> unit
 [@@kind ka = base_or_null, kb = base_or_null]
 
 val write3 : ('a -> 'b -> 'c -> unit) Read_write.t -> 'a -> 'b -> 'c -> unit
 
 val write3_local
-  :  (local_ 'a -> local_ 'b -> local_ 'c -> unit) Read_write.t
-  -> local_ 'a
-  -> local_ 'b
-  -> local_ 'c
+  :  ('a @ local -> 'b @ local -> 'c @ local -> unit) Read_write.t
+  -> 'a @ local
+  -> 'b @ local
+  -> 'c @ local
   -> unit
 
 val write4 : ('a -> 'b -> 'c -> 'd -> unit) Read_write.t -> 'a -> 'b -> 'c -> 'd -> unit
 
 val write4_local
-  :  (local_ 'a -> local_ 'b -> local_ 'c -> local_ 'd -> unit) Read_write.t
-  -> local_ 'a
-  -> local_ 'b
-  -> local_ 'c
-  -> local_ 'd
+  :  ('a @ local -> 'b @ local -> 'c @ local -> 'd @ local -> unit) Read_write.t
+  -> 'a @ local
+  -> 'b @ local
+  -> 'c @ local
+  -> 'd @ local
   -> unit
 
 val write5
@@ -119,12 +119,13 @@ val write5
   -> unit
 
 val write5_local
-  :  (local_ 'a -> local_ 'b -> local_ 'c -> local_ 'd -> local_ 'e -> unit) Read_write.t
-  -> local_ 'a
-  -> local_ 'b
-  -> local_ 'c
-  -> local_ 'd
-  -> local_ 'e
+  :  ('a @ local -> 'b @ local -> 'c @ local -> 'd @ local -> 'e @ local -> unit)
+       Read_write.t
+  -> 'a @ local
+  -> 'b @ local
+  -> 'c @ local
+  -> 'd @ local
+  -> 'e @ local
   -> unit
 
 val write6
@@ -138,14 +139,20 @@ val write6
   -> unit
 
 val write6_local
-  :  (local_ 'a -> local_ 'b -> local_ 'c -> local_ 'd -> local_ 'e -> local_ 'f -> unit)
+  :  ('a @ local
+      -> 'b @ local
+      -> 'c @ local
+      -> 'd @ local
+      -> 'e @ local
+      -> 'f @ local
+      -> unit)
        Read_write.t
-  -> local_ 'a
-  -> local_ 'b
-  -> local_ 'c
-  -> local_ 'd
-  -> local_ 'e
-  -> local_ 'f
+  -> 'a @ local
+  -> 'b @ local
+  -> 'c @ local
+  -> 'd @ local
+  -> 'e @ local
+  -> 'f @ local
   -> unit
 
 module Subscriber : sig

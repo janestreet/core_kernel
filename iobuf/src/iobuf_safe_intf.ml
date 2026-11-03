@@ -47,13 +47,21 @@ module Definitions = struct
     val string : str_pos:int -> len:int -> (string, 'd, 'w, 'l) t
     val bytes : str_pos:int -> len:int -> (Bytes.t, 'd, 'w, 'l) t
     val bigstring : str_pos:int -> len:int -> (Bigstring.t, 'd, 'w, 'l) t
-    val stringo : ?str_pos:local_ int -> ?len:local_ int -> local_ (string, 'd, 'w, 'l) t
-    val byteso : ?str_pos:local_ int -> ?len:local_ int -> local_ (Bytes.t, 'd, 'w, 'l) t
+
+    val stringo
+      :  ?str_pos:int @ local
+      -> ?len:int @ local
+      -> (string, 'd, 'w, 'l) t @ local
+
+    val byteso
+      :  ?str_pos:int @ local
+      -> ?len:int @ local
+      -> (Bytes.t, 'd, 'w, 'l) t @ local
 
     val bigstringo
-      :  ?str_pos:local_ int
-      -> ?len:local_ int
-      -> local_ (Bigstring.t, 'd, 'w, 'l) t
+      :  ?str_pos:int @ local
+      -> ?len:int @ local
+      -> (Bigstring.t, 'd, 'w, 'l) t @ local
 
     module Local : sig
       val int64_t_be : (Int64.t, 'd, 'w, 'l) t__local
@@ -73,14 +81,14 @@ module Definitions = struct
       val bytes : str_pos:int -> len:int -> (Bytes.t, 'd, 'w, 'l) t__local
 
       val stringo
-        :  ?str_pos:local_ int
-        -> ?len:local_ int
-        -> local_ (string, 'd, 'w, 'l) t__local
+        :  ?str_pos:int @ local
+        -> ?len:int @ local
+        -> (string, 'd, 'w, 'l) t__local @ local
 
       val byteso
-        :  ?str_pos:local_ int
-        -> ?len:local_ int
-        -> local_ (Bytes.t, 'd, 'w, 'l) t__local
+        :  ?str_pos:int @ local
+        -> ?len:int @ local
+        -> (Bytes.t, 'd, 'w, 'l) t__local @ local
     end
 
     module Int_repr : sig
@@ -136,19 +144,19 @@ module Definitions = struct
     val bigstring : str_pos:int -> len:int -> (Bigstring.t, 'd, 'w, 'l) t__local
 
     val stringo
-      :  ?str_pos:local_ int
-      -> ?len:local_ int
-      -> local_ (string, 'd, 'w, 'l) t__local
+      :  ?str_pos:int @ local
+      -> ?len:int @ local
+      -> (string, 'd, 'w, 'l) t__local @ local
 
     val byteso
-      :  ?str_pos:local_ int
-      -> ?len:local_ int
-      -> local_ (Bytes.t, 'd, 'w, 'l) t__local
+      :  ?str_pos:int @ local
+      -> ?len:int @ local
+      -> (Bytes.t, 'd, 'w, 'l) t__local @ local
 
     val bigstringo
-      :  ?str_pos:local_ int
-      -> ?len:local_ int
-      -> local_ (Bigstring.t, 'd, 'w, 'l) t__local
+      :  ?str_pos:int @ local
+      -> ?len:int @ local
+      -> (Bigstring.t, 'd, 'w, 'l) t__local @ local
 
     module Int_repr : sig
       val int8 : (Int_repr.Int8.t, 'd, 'w, 'l) t
@@ -171,12 +179,12 @@ module Definitions = struct
   (** The [src_pos] argument of {!Core.Blit.blit} doesn't make sense here. *)
 
   type ('src, 'dst) consuming_blit =
-    src:local_ 'src -> dst:local_ 'dst -> dst_pos:int -> len:int -> unit
+    src:'src @ local -> dst:'dst @ local -> dst_pos:int -> len:int -> unit
 
   type ('src, 'dst) consuming_blito =
-    src:local_ 'src
+    src:'src @ local
     -> ?src_len:int (** Default is [Iobuf.length src]. *)
-    -> dst:local_ 'dst
+    -> dst:'dst @ local
     -> ?dst_pos:int (** Default is [0]. *)
     -> unit
     -> unit
@@ -190,9 +198,9 @@ module Definitions = struct
     val unsafe_blit : (_ src, _ dst) consuming_blit
 
     (** [subo] defaults to using [Iobuf.length src] *)
-    val subo : ?len:int -> local_ _ src -> _ dst
+    val subo : ?len:int -> _ src @ local -> _ dst
 
-    val sub : local_ _ src -> len:int -> _ dst
+    val sub : _ src @ local -> len:int -> _ dst
   end
 
   module type Consume_safe = sig @@ portable
@@ -220,9 +228,9 @@ module Definitions = struct
 
     include
       Accessors_read
-      with type ('a, 'r, 's, 'l) t = local_ (([> read ] as 'r), seek, 'l) iobuf -> 'a
+      with type ('a, 'r, 's, 'l) t = (([> read ] as 'r), seek, 'l) iobuf @ local -> 'a
       with type ('a, 'r, 's, 'l) t__local =
-        local_ (([> read ] as 'r), seek, 'l) iobuf -> local_ 'a
+        (([> read ] as 'r), seek, 'l) iobuf @ local -> 'a @ local
   end
 
   module type Fill_safe = sig
@@ -230,9 +238,9 @@ module Definitions = struct
 
     include
       Accessors_write
-      with type ('a, 'd, 'w, 'l) t = local_ (read_write, seek, 'l) iobuf -> 'a -> unit
+      with type ('a, 'd, 'w, 'l) t = (read_write, seek, 'l) iobuf @ local -> 'a -> unit
       with type ('a, 'd, 'w, 'l) t__local =
-        local_ (read_write, seek, 'l) iobuf -> local_ 'a -> unit
+        (read_write, seek, 'l) iobuf @ local -> 'a @ local -> unit
 
     (** [decimal t int] is equivalent to [Iobuf.Fill.string t (Int.to_string int)], but
         with improved efficiency and no intermediate allocation.
@@ -278,9 +286,9 @@ module Definitions = struct
 
     include
       Accessors_read
-      with type ('a, 'd, 'w, 'l) t = local_ ('d, 'w, 'l) iobuf -> pos:int -> 'a
+      with type ('a, 'd, 'w, 'l) t = ('d, 'w, 'l) iobuf @ local -> pos:int -> 'a
       with type ('a, 'd, 'w, 'l) t__local =
-        local_ ('d, 'w, 'l) iobuf -> pos:int -> local_ 'a
+        ('d, 'w, 'l) iobuf @ local -> pos:int -> 'a @ local
   end
 
   module type Peek_safe = sig
@@ -292,7 +300,7 @@ module Definitions = struct
         @param pos default = 0
         @param len default = [length t - pos] *)
     val index
-      :  local_ ([> read ], _, _) iobuf
+      :  ([> read ], _, _) iobuf @ local
       -> ?pos:int
       -> ?len:int
       -> char
@@ -304,7 +312,7 @@ module Definitions = struct
         @param pos default = 0
         @param len default = [length t - pos] *)
     val rindex
-      :  local_ ([> read ], _, _) iobuf
+      :  ([> read ], _, _) iobuf @ local
       -> ?pos:int
       -> ?len:int
       -> char
@@ -315,11 +323,11 @@ module Definitions = struct
     type (_, _, _) iobuf
 
     (** [decimal t ~pos i] returns the number of bytes written at [pos]. *)
-    val decimal : local_ (read_write, 'w, 'l) iobuf -> pos:int -> int -> int
+    val decimal : (read_write, 'w, 'l) iobuf @ local -> pos:int -> int -> int
 
     (** Same as [decimal t int], but padding to [len] with prefix '0's. *)
     val padded_decimal
-      :  local_ (read_write, 'w, 'l) iobuf
+      :  (read_write, 'w, 'l) iobuf @ local
       -> pos:int
       -> len:int
       -> int
@@ -328,9 +336,9 @@ module Definitions = struct
     include
       Accessors_write
       with type ('a, 'd, 'w, 'l) t =
-        local_ (read_write, 'w, 'l) iobuf -> pos:int -> 'a -> unit
+        (read_write, 'w, 'l) iobuf @ local -> pos:int -> 'a -> unit
       with type ('a, 'd, 'w, 'l) t__local =
-        local_ (read_write, 'w, 'l) iobuf -> pos:int -> local_ 'a -> unit
+        (read_write, 'w, 'l) iobuf @ local -> pos:int -> 'a @ local -> unit
 
     (** Same as [Fill.date_string_iso8601_extended t date], but does not advance [t]. *)
     val date_string_iso8601_extended : (Date.t, _, _, _) t

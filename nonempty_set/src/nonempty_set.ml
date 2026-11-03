@@ -1,3 +1,4 @@
+[%%template
 module Nonempty_set0 = struct
   open! Core
 
@@ -38,20 +39,30 @@ module Stable = struct
     let hash_fold_m__t hasher state t = Set.V1.hash_fold_m__t hasher state t.nonempty
     let hash_m__t hasher t = Set.V1.hash_m__t hasher t.nonempty
 
-    let%template compare_m__t m t1 t2 =
-      (Set.V1.compare_m__t [@mode m]) m t1.nonempty t2.nonempty
+    let compare_m__t m t1 t2 = (Set.V1.compare_m__t [@mode m]) m t1.nonempty t2.nonempty
     [@@mode m = (local, global)]
     ;;
 
-    let%template equal_m__t m t1 t2 =
-      (Set.V1.equal_m__t [@mode m]) m t1.nonempty t2.nonempty
+    let equal_m__t m t1 t2 = (Set.V1.equal_m__t [@mode m]) m t1.nonempty t2.nonempty
     [@@mode m = (local, global)]
     ;;
 
+    let globalize_m__t m (t @ local) = { nonempty = Set.V1.globalize_m__t m t.nonempty }
     let m__t_of_sexp e s = Set.V1.m__t_of_sexp e s |> Nonempty_set0.of_set_exn
-    let sexp_of_m__t m t = Set.V1.sexp_of_m__t m t.nonempty
-    let bin_size_m__t m t = Set.V1.bin_size_m__t m t.nonempty
-    let bin_write_m__t m buf ~pos t = Set.V1.bin_write_m__t m buf ~pos t.nonempty
+
+    let sexp_of_m__t m t =
+      (Set.V1.sexp_of_m__t [@alloc a]) m t.nonempty [@exclave_if_stack a]
+    [@@alloc a @ m = (heap @ global, stack @ local)]
+    ;;
+
+    let bin_size_m__t m t = (Set.V1.bin_size_m__t [@mode m]) m t.nonempty
+    [@@mode m = (global, local)]
+    ;;
+
+    let bin_write_m__t m buf ~pos t =
+      (Set.V1.bin_write_m__t [@mode m]) m buf ~pos t.nonempty
+    [@@mode m = (global, local)]
+    ;;
 
     let bin_read_m__t e buf ~pos_ref =
       Nonempty_set0.of_set_exn (Set.V1.bin_read_m__t e buf ~pos_ref)
@@ -163,6 +174,7 @@ let singleton cmp el : _ t =
 
 let fold t ~init ~f = Set.fold t.nonempty ~init ~f
 let iter t ~f : unit = Set.iter t.nonempty ~f
+let exists t ~f : bool = Set.exists t.nonempty ~f
 
 let reduce t ~map ~f =
   let acc = stack_ (ref Null) in
@@ -276,9 +288,27 @@ let%expect_test "filter" =
   [%expect {| |}]
 ;;
 
+(* [exists] distinguishes predicates that match at least one element from those that do
+   not. *)
+let%expect_test "exists" =
+  let t = of_list_exn (module Int) [ 1; 2; 3 ] in
+  print_s [%sexp (exists t ~f:(fun x -> x = 2) : bool)];
+  print_s [%sexp (exists t ~f:(fun x -> x = 4) : bool)];
+  [%expect
+    {|
+    true
+    false
+    |}]
+;;
+
 module M = Stable.V2.M
 include (Stable.V2 : For_deriving.S_serializable with type ('a, 'b) t := ('a, 'b) t)
 include (Stable.V2 : For_deriving.S_common with type ('a, 'b) t := ('a, 'b) t)
+
+module%test [@name "check usage with bin_io portable + localize, and sexp_of ~stackify"] _ =
+struct
+  type t = M(Int).t [@@deriving bin_io ~portable ~localize, globalize, sexp_of ~stackify]
+end
 
 [%%template
 [@@@mode.default p = (portable, nonportable)]
@@ -300,4 +330,4 @@ let quickcheck_shrinker_m__t m =
     ~f:of_set
     ~f_inverse:to_set
     ((Set.quickcheck_shrinker_m__t [@mode p]) m)
-;;]
+;;]]

@@ -11,4 +11,4 @@
  (libraries binary_packing binary_packing_test core oUnit
    quickcheck_deprecated)
  (preprocess
-  (pps ppx_jane)))
+  (pps ppx_jane -compare-require-explicit-locality)))

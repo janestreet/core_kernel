@@ -1,9 +1,10 @@
 (executables
  (modes byte exe)
  (names tuple_pool_caml_modify_check)
- (libraries core replace_caml_modify_for_testing tuple_pool)
+ (libraries core replace_caml_modify_for_testing
+   enable_replace_caml_modify_for_testing tuple_pool)
  (preprocess
-  (pps ppx_jane)))
+  (pps ppx_jane -compare-require-explicit-locality)))
 
 (rule
  (deps

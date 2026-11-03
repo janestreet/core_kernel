@@ -5,7 +5,7 @@ module Option = Base.Option
 module Sequence = Base.Sequence
 
 module Node = struct
-  type 'a t =
+  type 'a t : value mod contended portable with 'a =
     { value : 'a
     ; children : 'a t list
     }
@@ -13,8 +13,8 @@ end
 
 open Node
 
-type 'a t =
-  { compare : 'a -> 'a -> int
+type 'a t : value mod contended portable with 'a =
+  { compare : 'a -> 'a -> int @@ portable
   ; length : int
   ; heap : 'a Node.t option
   }
@@ -142,7 +142,7 @@ let fold_until = C.fold_until
 let to_array = C.to_array
 
 type ('a, 'at, 'accum) folder =
-  'at -> init:'accum -> f:local_ ('accum -> 'a -> 'accum) -> 'accum
+  'at -> init:'accum -> f:('accum -> 'a -> 'accum) @ local -> 'accum
 
 let of_fold c ~compare (fold : _ folder) =
   let h = create ~compare in

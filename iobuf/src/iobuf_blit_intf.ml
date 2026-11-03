@@ -14,9 +14,9 @@ module Definitions = struct
     (** Copies as much as possible (returning the number of bytes copied) without running
         out of either buffer's window. *)
     val blit_maximal
-      :  src:local_ ([> read ], _, _) t
+      :  src:([> read ], _, _) t @ local
       -> ?src_pos:int
-      -> dst:local_ ([> write ], _, _) t
+      -> dst:([> write ], _, _) t @ local
       -> ?dst_pos:int
       -> unit
       -> int
@@ -26,23 +26,23 @@ module Definitions = struct
     type ('rw, 'seek, 'loc) t
 
     val blit
-      :  src:local_ ([> read ], seek, _) t
-      -> dst:local_ ([> write ], _, _) t
+      :  src:([> read ], seek, _) t @ local
+      -> dst:([> write ], _, _) t @ local
       -> dst_pos:int
       -> len:int
       -> unit
 
     val blito
-      :  src:local_ ([> read ], seek, _) t
+      :  src:([> read ], seek, _) t @ local
       -> ?src_len:int
-      -> dst:local_ ([> write ], _, _) t
+      -> dst:([> write ], _, _) t @ local
       -> ?dst_pos:int
       -> unit
       -> unit
 
     val unsafe_blit
-      :  src:local_ ([> read ], seek, _) t
-      -> dst:local_ ([> write ], _, _) t
+      :  src:([> read ], seek, _) t @ local
+      -> dst:([> write ], _, _) t @ local
       -> dst_pos:int
       -> len:int
       -> unit
@@ -51,8 +51,8 @@ module Definitions = struct
     val subo : ?len:int -> ([> read ], seek, _) t -> (_, _, _) t
 
     val blit_maximal
-      :  src:local_ ([> read ], seek, _) t
-      -> dst:local_ ([> write ], _, _) t
+      :  src:([> read ], seek, _) t @ local
+      -> dst:([> write ], _, _) t @ local
       -> ?dst_pos:int
       -> unit
       -> int
@@ -62,31 +62,31 @@ module Definitions = struct
     type ('rw, 'seek, 'loc) t
 
     val blit
-      :  src:local_ ([> read ], _, _) t
+      :  src:([> read ], _, _) t @ local
       -> src_pos:int
-      -> dst:local_ ([> write ], seek, _) t
+      -> dst:([> write ], seek, _) t @ local
       -> len:int
       -> unit
 
     val blito
-      :  src:local_ ([> read ], _, _) t
+      :  src:([> read ], _, _) t @ local
       -> ?src_pos:int
       -> ?src_len:int
-      -> dst:local_ ([> write ], seek, _) t
+      -> dst:([> write ], seek, _) t @ local
       -> unit
       -> unit
 
     val unsafe_blit
-      :  src:local_ ([> read ], _, _) t
+      :  src:([> read ], _, _) t @ local
       -> src_pos:int
-      -> dst:local_ ([> write ], seek, _) t
+      -> dst:([> write ], seek, _) t @ local
       -> len:int
       -> unit
 
     val blit_maximal
-      :  src:local_ ([> read ], _, _) t
+      :  src:([> read ], _, _) t @ local
       -> ?src_pos:int
-      -> dst:local_ ([> write ], seek, _) t
+      -> dst:([> write ], seek, _) t @ local
       -> unit
       -> int
   end
@@ -95,27 +95,27 @@ module Definitions = struct
     type ('rw, 'seek, 'loc) t
 
     val blit
-      :  src:local_ ([> read ], seek, _) t
-      -> dst:local_ ([> write ], seek, _) t
+      :  src:([> read ], seek, _) t @ local
+      -> dst:([> write ], seek, _) t @ local
       -> len:int
       -> unit
 
     val blito
-      :  src:local_ ([> read ], seek, _) t
+      :  src:([> read ], seek, _) t @ local
       -> ?src_len:int
-      -> dst:local_ ([> write ], seek, _) t
+      -> dst:([> write ], seek, _) t @ local
       -> unit
       -> unit
 
     val unsafe_blit
-      :  src:local_ ([> read ], seek, _) t
-      -> dst:local_ ([> write ], seek, _) t
+      :  src:([> read ], seek, _) t @ local
+      -> dst:([> write ], seek, _) t @ local
       -> len:int
       -> unit
 
     val blit_maximal
-      :  src:local_ ([> read ], seek, _) t
-      -> dst:local_ ([> write ], seek, _) t
+      :  src:([> read ], seek, _) t @ local
+      -> dst:([> write ], seek, _) t @ local
       -> int
   end
 end

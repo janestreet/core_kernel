@@ -84,7 +84,7 @@ module type Interval_num = sig
   module Span : sig
     type t = private Int63.t [@@deriving sexp_of]
 
-    include Comparable.S with type t := t
+    include Comparable.S [@mode local] with type t := t
 
     val max : t -> t -> t
     val zero : t
@@ -102,7 +102,7 @@ module type Interval_num = sig
 
   type t = private Int63.t [@@deriving sexp_of]
 
-  include Comparable.S with type t := t
+  include Comparable.S [@mode local] with type t := t
   include Hashable.S with type t := t
 
   val max : t -> t -> t
@@ -291,7 +291,7 @@ module type Timing_wheel = sig @@ portable
 
   val is_empty : _ t -> bool
   val length : _ t -> int
-  val iter : 'a t -> f:local_ ('a Alarm.t -> unit) -> unit
+  val iter : 'a t -> f:('a Alarm.t -> unit) @ local -> unit
 
   (** [interval_num t time] returns the number of the interval that [time] is in, where
       [0] is the interval that starts at [Time_ns.epoch]. [interval_num] raises if
@@ -329,7 +329,7 @@ module type Timing_wheel = sig @@ portable
   val advance_clock
     :  'a t
     -> to_:Time_ns.t
-    -> handle_fired:local_ ('a Alarm.t -> unit)
+    -> handle_fired:('a Alarm.t -> unit) @ local
     -> unit
 
   (** Advance to the time [to_] or the time of the next alarm, whichever is earlier. This
@@ -342,7 +342,7 @@ module type Timing_wheel = sig @@ portable
   val advance_clock_stop_at_next_alarm
     :  'a t
     -> to_:Time_ns.t
-    -> handle_fired:local_ ('a Alarm.t -> unit)
+    -> handle_fired:('a Alarm.t -> unit) @ local
     -> unit
 
   (** [fire_past_alarms t ~handle_fired] fires and removes all alarms [a] in [t] with
@@ -353,7 +353,7 @@ module type Timing_wheel = sig @@ portable
 
       Behavior is unspecified if [handle_fired] accesses [t] in any way other than [Alarm]
       functions. *)
-  val fire_past_alarms : 'a t -> handle_fired:local_ ('a Alarm.t -> unit) -> unit
+  val fire_past_alarms : 'a t -> handle_fired:('a Alarm.t -> unit) @ local -> unit
 
   (** [max_allowed_alarm_time t] returns the greatest [at] that can be supplied to [add].
       [max_allowed_alarm_time] is not constant; its value increases as [now t] increases. *)

@@ -3,4 +3,5 @@
  (public_name core_kernel.tuple_pool)
  (libraries core)
  (preprocess
-  (pps ppx_jane -compare-require-explicit-locality)))
+  (pps ppx_jane -compare-require-explicit-locality))
+ (ocamlopt_flags :standard -O3))

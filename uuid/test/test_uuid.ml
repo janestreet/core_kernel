@@ -76,3 +76,66 @@ module%test [@name "create_rand does a reasonable creation"] _ = struct
       |}]
   ;;
 end
+
+module%test [@name "of_string validation (SWAR dash count)"] _ = struct
+  let accepts (s : string) =
+    match of_string s with
+    | (_ : t) -> true
+    | exception _ -> false
+  ;;
+
+  (* The pre-change validation rule, used as an oracle. ([open! Uuid] shadows [=] with
+     Uuid's t-comparison, so use [Int.equal] for the int checks.) *)
+  let reference (s : string) =
+    Int.equal (String.length s) 36
+    && Int.equal (String.count s ~f:(Char.equal '-')) 4
+    && Char.equal s.[8] '-'
+    && Char.equal s.[13] '-'
+    && Char.equal s.[18] '-'
+    && Char.equal s.[23] '-'
+  ;;
+
+  let valid = "c14ac950-b432-46ed-7d19-622539d60705"
+
+  let%expect_test "explicit accept/reject" =
+    require (accepts valid);
+    (* a ',' (0x2C) in a hex slot is accepted, matching the original [String.count] check
+       -- regression test for the zero-byte-trick borrow bug (see the [dash_mask] comment
+       in uuid.ml) *)
+    require (accepts "c14ac950-,432-46ed-7d19-622539d60705");
+    (* wrong length *)
+    require (not (accepts (valid ^ "0")));
+    require (not (accepts (String.drop_suffix valid 1)));
+    (* stray dash in a hex slot -> count <> 4, still length 36 *)
+    require
+      (not (accepts (String.mapi valid ~f:(fun i c -> if Int.equal i 0 then '-' else c))));
+    (* missing dash at a required position (13) -> count <> 4 and position check fails *)
+    require
+      (not
+         (accepts (String.mapi valid ~f:(fun i c -> if Int.equal i 13 then '0' else c))));
+    [%expect {| |}]
+  ;;
+
+  let%expect_test "verify validity under single character edits" =
+    let check s =
+      if not (Bool.equal (accepts s) (reference s))
+      then raise_s [%message "SWAR validation disagrees with reference" (s : string)]
+    in
+    require (accepts valid);
+    (* Mutate one byte at a time and restore it, rather than allocating a fresh string per
+       edit. [Bytes.unsafe_to_string] is safe here because [check] only reads the string
+       (via [accepts]/[reference]) and does not retain it. *)
+    let buf = Bytes.of_string valid in
+    List.iter [ '-'; ','; '.'; '0'; 'f'; '\000'; '\255' ] ~f:(fun c ->
+      for i = 0 to Bytes.length buf - 1 do
+        let orig = Bytes.get buf i in
+        Bytes.set buf i c;
+        Bytes.unsafe_to_string ~no_mutation_while_string_reachable:buf |> check;
+        Bytes.set buf i orig
+      done);
+    List.iter [ 30; 33; 35; 36 ] ~f:(fun len -> String.prefix valid len |> check);
+    check (valid ^ "0");
+    check (valid ^ "0000");
+    [%expect {| |}]
+  ;;
+end

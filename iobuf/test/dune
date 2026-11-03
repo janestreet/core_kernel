@@ -3,4 +3,4 @@
  (libraries expect_test_helpers_core iobuf core expect_test_helpers_base
    int_repr)
  (preprocess
-  (pps ppx_jane)))
+  (pps ppx_jane -compare-require-explicit-locality)))

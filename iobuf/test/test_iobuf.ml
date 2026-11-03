@@ -390,7 +390,7 @@ struct
   end
 
   module Lo_bound = struct
-    type t = Lo_bound.t [@@deriving compare]
+    type t = Lo_bound.t [@@deriving compare ~localize]
 
     let window, restore = Lo_bound.(window, restore)
 
@@ -428,7 +428,7 @@ struct
   end
 
   module Hi_bound = struct
-    type t = Hi_bound.t [@@deriving compare]
+    type t = Hi_bound.t [@@deriving compare ~localize]
 
     let window, restore = Hi_bound.(window, restore)
 
@@ -743,7 +743,7 @@ struct
           { a : int
           ; b : int
           }
-    [@@deriving sexp, bin_io ~localize, quickcheck, equal]
+    [@@deriving sexp, bin_io ~localize, quickcheck, equal ~localize]
 
     let quickcheck =
       Quickcheck.test
@@ -809,7 +809,7 @@ struct
       val accessor_pos_1
         :  without_value:(read_write, seek, Iobuf.global) Iobuf.t
         -> value_len:int
-        -> local_ ('a, read_write, seek, Iobuf.global) t
+        -> ('a, read_write, seek, Iobuf.global) t @ local
         -> value:'a
         -> with_value:string
         -> (module Accessee with type t = 'a)
@@ -854,7 +854,7 @@ struct
       val accessor_pos_1
         :  without_value:(read_write, seek, Iobuf.global) Iobuf.t
         -> value_len:int
-        -> local_ ('a, read_write, seek, Iobuf.global) t
+        -> ('a, read_write, seek, Iobuf.global) t @ local
         -> value:'a
         -> with_value:string
         -> (module Accessee with type t = 'a)
@@ -1245,7 +1245,7 @@ struct
       val accessor_pos_1
         :  without_value:(read_write, seek, Iobuf.global) Iobuf.t
         -> value_len:int
-        -> local_ ('a, read_write, seek, Iobuf.global) t
+        -> ('a, read_write, seek, Iobuf.global) t @ local
         -> value:'a
         -> with_value:string
         -> (module Accessee with type t = 'a)
@@ -1254,8 +1254,8 @@ struct
       val bin_prot_char : (char, 'd, 'w, Iobuf.global) t
 
       val ignore_locality
-        :  local_ ('a, 'd, 'w, Iobuf.global) t__local
-        -> local_ ('a, 'd, 'w, Iobuf.global) t
+        :  ('a, 'd, 'w, Iobuf.global) t__local @ local
+        -> ('a, 'd, 'w, Iobuf.global) t @ local
     end) :
     Iobuf.Accessors_write
     with type ('a, 'b, 'c, 'd) t = ('a, 'b, 'c, 'd) Intf.t
@@ -3021,9 +3021,9 @@ module%test [@name "allocation"] _ = struct
            -> 'a
 
          val apply_local
-           :  local_ ('a, read, w, Iobuf.global) I.t__local
+           :  ('a, read, w, Iobuf.global) I.t__local @ local
            -> (read, Iobuf.seek, Iobuf.global) Iobuf.t
-           -> local_ 'a
+           -> 'a @ local
        end) : Accessors_read = struct
     open I
 
@@ -3063,9 +3063,9 @@ module%test [@name "allocation"] _ = struct
 
     let test_stringo
       (f :
-        ?str_pos:local_ int
-        -> ?len:local_ int
-        -> local_ ('a, 'd, 'w, Iobuf.global) t__local)
+        ?str_pos:int @ local
+        -> ?len:int @ local
+        -> ('a, 'd, 'w, Iobuf.global) t__local @ local)
       =
       let len = 10 in
       let buf = Iobuf.of_bigstring (Bigstring.init len ~f:(const ' ')) in
@@ -3581,3 +3581,27 @@ let%bench_fun ("unsafe_blit consume+fill x100"
       Iobuf.Blit_consume_and_fill.unsafe_blit ~src ~dst ~len:blit_size
     done
 ;;
+
+module%test [@name "Iobuf.locality can be used with ppx_template"] _ = struct
+  module M : sig
+    val%template usage
+      :  (_, _, (Iobuf.global Iobuf.locality[@mode l])) Iobuf.t @ local
+      -> Bigstring.t @ l
+    [@@mode l = (global, local)]
+  end = struct
+    let%template usage (iobuf @ local) =
+      (Iobuf.Expert.buf [@mode l])
+        iobuf [@exclave_if_local l ~reasons:[ May_return_local ]]
+    [@@mode l = (global, local)]
+    ;;
+  end
+
+  (* Also demonstrate the non-templated signature. *)
+  module _ : sig
+    [@@@disable_unused_warnings]
+
+    val usage : (_, _, Iobuf.global) Iobuf.t @ local -> Bigstring.t @ global
+    val usage__local : (_, _, Iobuf.local) Iobuf.t @ local -> Bigstring.t @ local
+  end =
+    M
+end

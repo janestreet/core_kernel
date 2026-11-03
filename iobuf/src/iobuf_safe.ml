@@ -14,7 +14,7 @@ module Consume = struct
       type t [@@deriving sexp_of]
 
       val create : len:int -> t
-      val length : local_ t -> int
+      val length : t @ local -> int
       val get : t -> int -> char
       val set : t -> int -> char -> unit
       val unsafe_blit : (_ Repr.t, t) Core.Blit.blit
@@ -99,10 +99,11 @@ module Consume = struct
     ;;
   end
 
-  type nonrec ('a, 'd, 'w, 'l) t__local = local_ ('d, seek, 'l) t -> local_ 'a
+  type nonrec ('a, 'd, 'w, 'l) t__local = ('d, seek, 'l) t @ local -> 'a @ local
     constraint 'd = [> read ]
 
-  type nonrec ('a, 'd, 'w, 'l) t = local_ ('d, seek, 'l) t -> 'a constraint 'd = [> read ]
+  type nonrec ('a, 'd, 'w, 'l) t = ('d, seek, 'l) t @ local -> 'a
+    constraint 'd = [> read ]
 
   let uadv t n x =
     unsafe_advance t n;
@@ -144,13 +145,11 @@ module Consume = struct
 
   let bytes ~str_pos ~len t =
     let dst = Bytes.create (len + str_pos) in
-    To_bytes.blit ~src:t ~dst ~len ~dst_pos:str_pos;
+    To_bytes.blit ~src:t ~dst:(borrow_ dst) ~len ~dst_pos:str_pos;
     dst
   ;;
 
-  let string ~str_pos ~len t =
-    Bytes.unsafe_to_string ~no_mutation_while_string_reachable:(bytes ~str_pos ~len t)
-  ;;
+  let string ~str_pos ~len t = Bytes.unique_to_string (bytes ~str_pos ~len t)
 
   let bigstring ~str_pos ~len t =
     let dst = Bigstring.create (len + str_pos) in
@@ -215,13 +214,11 @@ module Consume = struct
 
     let bytes ~str_pos ~len t = exclave_
       let dst = Bytes.create_local (len + str_pos) in
-      To_bytes.blit ~src:t ~dst ~len ~dst_pos:str_pos;
+      To_bytes.blit ~src:t ~dst:(borrow_ dst) ~len ~dst_pos:str_pos;
       dst
     ;;
 
-    let string ~str_pos ~len t = exclave_
-      Bytes.unsafe_to_string ~no_mutation_while_string_reachable:(bytes ~str_pos ~len t)
-    ;;
+    let string ~str_pos ~len t = exclave_ Bytes.unique_to_string (bytes ~str_pos ~len t)
 
     let byteso ?(str_pos = 0) ?len t = exclave_
       bytes
@@ -396,10 +393,10 @@ end
 
 module Fill = struct
   type nonrec ('a, 'd, 'w, 'l) t__local =
-    local_ (read_write, seek, 'l) t -> local_ 'a -> unit
+    (read_write, seek, 'l) t @ local -> 'a @ local -> unit
     constraint 'd = [> read ]
 
-  type nonrec ('a, 'd, 'w, 'l) t = local_ (read_write, seek, 'l) t -> 'a -> unit
+  type nonrec ('a, 'd, 'w, 'l) t = (read_write, seek, 'l) t @ local -> 'a -> unit
     constraint 'd = [> read ]
 
   let[@inline] pos t len = buf_pos_exn t ~pos:0 ~len
@@ -670,10 +667,10 @@ module Peek = struct
 
   module To_string = String_dst
 
-  type nonrec ('a, 'd, 'w, 'l) t__local = local_ ('d, 'w, 'l) t -> pos:int -> local_ 'a
+  type nonrec ('a, 'd, 'w, 'l) t__local = ('d, 'w, 'l) t @ local -> pos:int -> 'a @ local
     constraint 'd = [> read ]
 
-  type nonrec ('a, 'd, 'w, 'l) t = local_ ('d, 'w, 'l) t -> pos:int -> 'a
+  type nonrec ('a, 'd, 'w, 'l) t = ('d, 'w, 'l) t @ local -> pos:int -> 'a
     constraint 'd = [> read ]
 
   let spos = buf_pos_exn (* "safe position" *)
@@ -702,15 +699,12 @@ module Peek = struct
       ~src:([%template buf [@mode local]] t)
       ~src_pos:(spos t ~len ~pos)
       ~len
-      ~dst
+      ~dst:(borrow_ dst)
       ~dst_pos:str_pos;
     dst
   ;;
 
-  let string ~str_pos ~len t ~pos =
-    Bytes.unsafe_to_string
-      ~no_mutation_while_string_reachable:(bytes ~str_pos ~len t ~pos)
-  ;;
+  let string ~str_pos ~len t ~pos = Bytes.unique_to_string (bytes ~str_pos ~len t ~pos)
 
   let bigstring ~str_pos ~len t ~pos =
     let dst = Bigstring.create (len + str_pos) in
@@ -795,14 +789,13 @@ module Peek = struct
         ~src:([%template buf [@mode local]] t)
         ~src_pos:(spos t ~len ~pos)
         ~len
-        ~dst
+        ~dst:(borrow_ dst)
         ~dst_pos:str_pos;
       dst
     ;;
 
     let string ~str_pos ~len t ~pos = exclave_
-      Bytes.unsafe_to_string
-        ~no_mutation_while_string_reachable:(bytes ~str_pos ~len t ~pos)
+      Bytes.unique_to_string (bytes ~str_pos ~len t ~pos)
     ;;
 
     let byteso ?(str_pos = 0) ?len t ~pos = exclave_
@@ -1004,10 +997,10 @@ end
 
 module Poke = struct
   type nonrec ('a, 'd, 'w, 'l) t__local =
-    local_ (read_write, 'w, 'l) t -> pos:int -> local_ 'a -> unit
+    (read_write, 'w, 'l) t @ local -> pos:int -> 'a @ local -> unit
     constraint 'd = [> read ]
 
-  type nonrec ('a, 'd, 'w, 'l) t = local_ (read_write, 'w, 'l) t -> pos:int -> 'a -> unit
+  type nonrec ('a, 'd, 'w, 'l) t = (read_write, 'w, 'l) t @ local -> pos:int -> 'a -> unit
     constraint 'd = [> read ]
 
   let spos = buf_pos_exn (* "safe position" *)

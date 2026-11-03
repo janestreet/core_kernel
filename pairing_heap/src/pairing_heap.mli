@@ -25,15 +25,16 @@ include Invariant.S1 with type 'a t := 'a t
     If you want to access the smallest element of the heap according to the heap's
     comparison function in constant time, you should use [top]. *)
 
-val min_elt : 'a t -> compare:local_ ('a -> 'a -> int) -> 'a option
-val max_elt : 'a t -> compare:local_ ('a -> 'a -> int) -> 'a option
+val min_elt : 'a t -> compare:('a -> 'a -> int) @ local -> 'a option
+val max_elt : 'a t -> compare:('a -> 'a -> int) @ local -> 'a option
 
 (** [create ?min_size ~cmp] returns a new min-heap that can store [min_size] elements
     without reallocations, using ordering function [cmp].
 
     The top of the heap is the smallest element as determined by the provided comparison
     function. In particular, if [cmp x y < 0] then [x] will be "on top of" [y] in the
-    heap.
+    heap. [cmp] must not mutate the heap it is comparing elements of; this is not checked,
+    and the behavior of such a heap is undefined.
 
     Memory use can be surprising in that the underlying pool never shrinks, so current
     memory use will at least be proportional to the largest number of elements that the

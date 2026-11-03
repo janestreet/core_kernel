@@ -5,13 +5,13 @@ module%test _ = struct
   module type Heap_intf = sig
     type 'a t [@@deriving sexp_of]
 
-    val create : compare:('a -> 'a -> int) -> 'a t
+    val create : compare:('a -> 'a -> int) @ portable -> 'a t
     val add : 'a t -> 'a -> 'a t
     val pop : 'a t -> ('a * 'a t) option
     val length : 'a t -> int
     val top : 'a t -> 'a option
     val remove_top : 'a t -> 'a t option
-    val of_list : 'a list -> compare:('a -> 'a -> int) -> 'a t
+    val of_list : 'a list -> compare:('a -> 'a -> int) @ portable -> 'a t
     val to_list : 'a t -> 'a list
 
     val sum

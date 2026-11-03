@@ -37,7 +37,7 @@ val dequeue : 'a t -> 'a or_null
     Recall that if you want [dequeue_until_empty]'s arguments to be locally allocated, it
     can not be a tailcall. To achieve this for a call to [dequeue_until_empty] in tail
     position, mark the call with [@nontail]. *)
-val dequeue_until_empty : f:local_ ('a -> unit) -> 'a t -> unit
+val dequeue_until_empty : f:('a -> unit) @ local -> 'a t -> unit
 
 (** The queue maintains an internal pool of unused elements, which are used by [enqueue]
     and returned to the pool by [dequeue_exn]. [enqueue] creates a new element if the pool
