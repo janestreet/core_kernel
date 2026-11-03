@@ -3,4 +3,4 @@
  (public_name core_kernel.pooled_hashtbl)
  (libraries core sexplib ppx_stable_witness.stable_witness tuple_pool)
  (preprocess
-  (pps ppx_jane)))
+  (pps ppx_jane -compare-require-explicit-locality)))

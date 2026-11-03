@@ -22,20 +22,8 @@ module Definitions = struct
     val rindex_or_neg : ([> read ], _, _) iobuf -> ?pos:int -> ?len:int -> char -> int
 
     (** Like [Peek.index] but with no bounds checks. *)
-    val index__local
-      :  ([> read ], _, _) iobuf
-      -> ?pos:int
-      -> ?len:int
-      -> char
-      -> int option
 
     (** Like [Peek.rindex] but with no bounds checks. *)
-    val rindex__local
-      :  ([> read ], _, _) iobuf
-      -> ?pos:int
-      -> ?len:int
-      -> char
-      -> int option
   end
 
   module type Poke_unsafe = sig

@@ -57,7 +57,7 @@ let () = Iobuf.advance unseekable 1
 [%%expect
   {|
 Line _, characters _-_:
-Error: This expression has type
+Error: The value unseekable has type
          (read_write, Iobuf.no_seek, Iobuf.global) Iobuf.t
        but an expression was expected of type
          (read_write, Iobuf.seek, 'a) Iobuf.t
@@ -69,7 +69,7 @@ let () = Iobuf.resize unseekable ~len:0
 [%%expect
   {|
 Line _, characters _-_:
-Error: This expression has type
+Error: The value unseekable has type
          (read_write, Iobuf.no_seek, Iobuf.global) Iobuf.t
        but an expression was expected of type
          (read_write, Iobuf.seek, 'a) Iobuf.t
@@ -81,7 +81,7 @@ let () = Iobuf.Fill.char unseekable 'a'
 [%%expect
   {|
 Line _, characters _-_:
-Error: This expression has type
+Error: The value unseekable has type
          (read_write, Iobuf.no_seek, Iobuf.global) Iobuf.t
        but an expression was expected of type
          (read_write, Iobuf.seek, 'a) Iobuf.t

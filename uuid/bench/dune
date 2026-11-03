@@ -1,0 +1,5 @@
+(library
+ (name uuid_bench)
+ (libraries core uuid)
+ (preprocess
+  (pps ppx_bench)))

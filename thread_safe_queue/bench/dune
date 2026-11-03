@@ -2,4 +2,4 @@
  (name thread_safe_queue_bench)
  (libraries core thread_safe_queue)
  (preprocess
-  (pps ppx_jane)))
+  (pps ppx_jane -compare-require-explicit-locality)))

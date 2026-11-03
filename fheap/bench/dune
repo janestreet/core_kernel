@@ -2,4 +2,4 @@
  (name fheap_bench)
  (libraries core fheap)
  (preprocess
-  (pps ppx_jane)))
+  (pps ppx_jane -compare-require-explicit-locality)))

@@ -6,7 +6,7 @@ include Iobuf_bin_io_intf.Definitions
 let read_bin_prot read t ~pos =
   let buf_pos = unsafe_buf_pos t ~pos ~len:0 in
   let pos_ref = ref buf_pos in
-  let a = read ([%template buf [@mode local]] t) ~pos_ref in
+  let a = read (buf t) ~pos_ref in
   let len = !pos_ref - buf_pos in
   check_range t ~pos ~len;
   a, len
@@ -33,27 +33,7 @@ let poke_size writer t ~pos a =
       [%sexp_of: [ `size_len of int ] * [ `buf_pos of int ] * [ `write_stop_pos of int ]]
 ;;
 
-let poke_size__local sizer writer t ~pos a =
-  let len = sizer a in
-  let buf_pos = buf_pos_exn t ~pos ~len in
-  let stop_pos = writer (buf t) ~pos:buf_pos a in
-  if stop_pos - buf_pos = len
-  then len
-  else
-    fail
-      t
-      "Iobuf.write_bin_prot_local got unexpected number of bytes written (Bin_prot bug: \
-       writer disagrees with sizer)"
-      (`size_len len, `buf_pos buf_pos, `write_stop_pos stop_pos)
-      [%sexp_of: [ `size_len of int ] * [ `buf_pos of int ] * [ `write_stop_pos of int ]]
-;;
-
 let fill writer t a = poke_size writer t ~pos:0 a |> unsafe_advance t
-
-let fill__local sizer writer t a =
-  poke_size__local sizer writer t ~pos:0 a |> unsafe_advance t
-;;
-
 let peek read t ~pos = read_bin_prot read t ~pos |> fst
 let poke writer t ~pos a = ignore (poke_size writer t ~pos a : int)
 let header_bytes = 4
@@ -99,31 +79,12 @@ let fill_with_header t writer v =
   result
 ;;
 
-let fill_with_header__local t sizer writer v =
-  let v_len = sizer v in
-  let need = v_len + header_bytes in
-  let result =
-    if need > length t
-    then
-      error
-        "Iobuf.Bin_io.fill_with_header__local not enough space"
-        (need, globalize_shared t)
-        [%sexp_of: int * (_, _, _) With_shallow_sexp.t]
-    else (
-      Fill.int32_be_trunc t v_len;
-      fill__local sizer writer t v;
-      Ok ())
-  in
-  result
-;;
-
-let%template[@mode m = (global, local)] unsafe_poke_with_known_size write t ~pos ~size a =
+let unsafe_poke_with_known_size write t ~pos ~size a =
   ignore (write (buf t) ~pos:(unsafe_buf_pos t ~pos ~len:size) a : int)
 ;;
 
 let unsafe_consume = consume
 let unsafe_fill = fill
-let unsafe_fill__local = fill__local
 let unsafe_peek = peek
 let unsafe_poke = poke
 let unsafe_poke_size = poke_size

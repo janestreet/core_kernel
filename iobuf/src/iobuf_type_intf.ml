@@ -5,18 +5,18 @@ module Definitions : sig
       [read_write]. *)
 
   (** Like [read]. *)
-  type no_seek [@@deriving sexp_of ~localize ~stackify]
+  type no_seek [@@deriving sexp_of]
 
   (** Like [read_write]. *)
-  type seek = private no_seek [@@deriving sexp_of ~localize ~stackify]
+  type seek = private no_seek [@@deriving sexp_of]
 
-  type global = Modes.At_locality.global [@@deriving sexp_of ~localize ~stackify]
-  type local = Modes.At_locality.local [@@deriving sexp_of ~localize ~stackify]
+  type global = Modes.At_locality.global [@@deriving sexp_of]
+  type local = Modes.At_locality.local [@@deriving sexp_of]
 end = struct
-  type no_seek [@@deriving sexp_of ~localize ~stackify]
-  type seek = private no_seek [@@deriving sexp_of ~localize ~stackify]
-  type global = Modes.At_locality.global [@@deriving sexp_of ~localize ~stackify]
-  type local = Modes.At_locality.local [@@deriving sexp_of ~localize ~stackify]
+  type no_seek [@@deriving sexp_of]
+  type seek = private no_seek [@@deriving sexp_of]
+  type global = Modes.At_locality.global [@@deriving sexp_of]
+  type local = Modes.At_locality.local [@@deriving sexp_of]
 end
 
 module type Iobuf_type = sig
@@ -32,8 +32,7 @@ module type Iobuf_type = sig
       ; mutable hi : int
       ; mutable hi_max : int
       }
-    [@@deriving
-      fields ~getters ~direct_iterators:(iter, set_all_mutable_fields), sexp_of ~localize]
+    [@@deriving fields ~getters ~direct_iterators:(iter, set_all_mutable_fields), sexp_of]
   end
 
   type 'loc repr = 'loc Repr.t =
@@ -52,43 +51,19 @@ module type Iobuf_type = sig
   val globalize_copied : ('rw, 'seek, _) t -> ('rw, 'seek, _) t
 
   module With_shallow_sexp : sig
-    type ('rw, 'seek, 'loc) t = ('rw, 'seek, 'loc) iobuf [@@deriving sexp_of ~localize]
+    type ('rw, 'seek, 'loc) t = ('rw, 'seek, 'loc) iobuf [@@deriving sexp_of]
 
     val globalize : [ `deprecated ]
   end
 
-  [%%template:
-  type 'a locality := 'a
-  type _ locality := local [@@mode local]]
+  type 'a locality = 'a
 
-  [%%template:
-  [@@@alloc.default a @ m = (heap_global, stack_local)]
-  [@@@mode.default l = (global, m)]
-
-  val of_bigstring
-    :  ?pos:int
-    -> ?len:int
-    -> Bigstring.t
-    -> (_, _, (_ locality[@mode l])) t
-
-  val of_bigstring_sub
-    :  pos:int
-    -> len:int
-    -> Bigstring.t
-    -> (_, _, (_ locality[@mode l])) t
-
-  val unsafe_of_bigstring_sub
-    :  pos:int
-    -> len:int
-    -> Bigstring.t
-    -> (_, _, (_ locality[@mode l])) t]
-
+  val of_bigstring : ?pos:int -> ?len:int -> Bigstring.t -> (_, _, _ locality) t
+  val of_bigstring_sub : pos:int -> len:int -> Bigstring.t -> (_, _, _ locality) t
+  val unsafe_of_bigstring_sub : pos:int -> len:int -> Bigstring.t -> (_, _, _ locality) t
   val advance : (_, seek, _) t -> int -> unit
   val bad_range : pos:int -> len:int -> (_, _, _) t -> _
-  val buf : (_, _, global) t -> Bigstring.t
-
-  val%template buf : (_, _, _) t -> Bigstring.t [@@mode local]
-
+  val buf : (_, _, _) t -> Bigstring.t
   val buf_pos_exn : (_, _, _) t -> pos:int -> len:int -> int
   val check_range : (_, _, _) t -> pos:int -> len:int -> unit
   val create : len:int -> (_, _, _) t
@@ -135,7 +110,7 @@ module type Iobuf_type = sig
   end
 
   module Char_elt : sig
-    type t = char [@@deriving equal ~localize]
+    type t = char [@@deriving equal]
 
     val of_bool : bool -> t
   end

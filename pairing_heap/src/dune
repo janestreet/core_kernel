@@ -3,4 +3,4 @@
  (public_name core_kernel.pairing_heap)
  (libraries core tuple_pool)
  (preprocess
-  (pps ppx_jane)))
+  (pps ppx_jane -compare-require-explicit-locality)))

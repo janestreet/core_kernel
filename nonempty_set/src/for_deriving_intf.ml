@@ -10,20 +10,9 @@ module type S_common = sig
     -> Hash.state
 
   val hash_m__t : (module Set.Hash_fold_m with type t = 'elt) -> ('elt, _) t -> int
-
-  val%template compare_m__t
-    :  (module Set.Compare_m)
-    -> ('elt, 'cmp) t
-    -> ('elt, 'cmp) t
-    -> int
-  [@@mode m = (local, global)]
-
-  val%template equal_m__t
-    :  (module Set.Equal_m)
-    -> ('elt, 'cmp) t
-    -> ('elt, 'cmp) t
-    -> bool
-  [@@mode m = (local, global)]
+  val compare_m__t : (module Set.Compare_m) -> ('elt, 'cmp) t -> ('elt, 'cmp) t -> int
+  val equal_m__t : (module Set.Equal_m) -> ('elt, 'cmp) t -> ('elt, 'cmp) t -> bool
+  val globalize_m__t : (module Set.Globalize_m) -> ('elt, 'cmp) t -> ('elt, 'cmp) t
 end
 
 module type S_serializable = sig
@@ -63,9 +52,6 @@ end
 module type S_unstable = sig
   type ('a, 'b) t
 
-  [%%template:
-  [@@@mode.default p = (portable, nonportable)]
-
   val quickcheck_generator_m__t
     : 'a 'cmp.
     (module Set.Quickcheck_generator_m with type t = 'a and type comparator_witness = 'cmp)
@@ -79,7 +65,7 @@ module type S_unstable = sig
   val quickcheck_shrinker_m__t
     : 'a 'cmp.
     (module Set.Quickcheck_shrinker_m with type t = 'a and type comparator_witness = 'cmp)
-    -> ('a, 'cmp) t Quickcheck.Shrinker.t]
+    -> ('a, 'cmp) t Quickcheck.Shrinker.t
 end
 
 module type For_deriving = sig

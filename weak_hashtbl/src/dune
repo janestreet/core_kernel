@@ -3,4 +3,4 @@
  (public_name core_kernel.weak_hashtbl)
  (libraries base core.heap_block thread_safe_queue weak_pointer)
  (preprocess
-  (pps ppx_jane)))
+  (pps ppx_jane -compare-require-explicit-locality)))

@@ -1,32 +1,28 @@
 open! Core
 open! Import
 
-[%%template
-[@@@modality.default (p, c) = ((nonportable, uncontended), (portable, contended))]
-[@@@mode.default m = (global, local)]
-
 module type Key_plain = sig
-  type t [@@deriving sexp_of, (compare [@mode.explicit m]), enumerate]
+  type t [@@deriving sexp_of, compare, enumerate]
 end
 
 module type Key = sig
-  type t [@@deriving sexp, bin_io, (compare [@mode.explicit m]), enumerate]
+  type t [@@deriving sexp, bin_io, compare, enumerate]
 end
 
 module type Key_plain_with_witnesses = sig
-  include Key_plain [@modality p]
-  include Comparator.S [@modality p] with type t := t
+  include Key_plain
+  include Comparator.S with type t := t
   include Enumeration.S with type t := t
 end
 
 module type Key_with_witnesses = sig
-  include Key [@modality p]
-  include Comparator.S [@modality p] with type t := t
+  include Key
+  include Comparator.S with type t := t
   include Enumeration.S with type t := t
 end
 
 module type Key_with_stable_witness = sig
-  include Key_with_witnesses [@modality p]
+  include Key_with_witnesses
 
   include
     Stable_with_witness with type t := t and type comparator_witness := comparator_witness
@@ -35,17 +31,15 @@ end
 module type S_plain = sig
   type (!'key, +!'a, !'cmp, 'enum) total_map
 
-  module Key : Key_plain [@modality p]
+  module Key : Key_plain
 
   type comparator_witness
   type enumeration_witness
 
   type 'a t = (Key.t, 'a, comparator_witness, enumeration_witness) total_map
-  [@@deriving sexp_of, compare ~localize, equal ~localize, globalize]
+  [@@deriving sexp_of, compare, equal, globalize]
 
   include sig
-    [@@@mode.default p = (nonportable, p)]
-
     val quickcheck_generator : 'a Quickcheck.Generator.t -> 'a t Quickcheck.Generator.t
     val quickcheck_observer : 'a Quickcheck.Observer.t -> 'a t Quickcheck.Observer.t
     val quickcheck_shrinker : 'a Quickcheck.Shrinker.t -> 'a t Quickcheck.Shrinker.t
@@ -67,116 +61,92 @@ end
 (** An alternative interface for [S_plain] which can be used with [include functor]. We
     keep the old interface to avoid breaking existing code. *)
 module type For_include_functor_plain = sig
-  module Total_map : S_plain [@modality p]
+  module Total_map : S_plain
 end
 
 module type S = sig
-  module Key : Key [@modality p]
-  include S_plain [@modality p] with module Key := Key
+  module Key : Key
+  include S_plain with module Key := Key
   include Sexpable.S1 with type 'a t := 'a t
-  include Binable.S1 [@mode local] with type 'a t := 'a t
+  include Binable.S1 with type 'a t := 'a t
 end
 
 (** An alternative interface for [S] which can be used with [include functor]. We keep the
     old interface to avoid breaking existing code. *)
 module type For_include_functor = sig
-  module Total_map : S [@modality p]
+  module Total_map : S
 end
 
 module type Stable_S = sig
   type ('key, 'a, 'cmp, 'enum) total_map
 
-  module Key : Key [@modality p]
+  module Key : Key
 
   type comparator_witness
   type enumeration_witness
 
   type 'a t = (Key.t, 'a, comparator_witness, enumeration_witness) total_map
-  [@@deriving bin_io ~localize, sexp, compare ~localize, globalize]
+  [@@deriving bin_io, sexp, compare, globalize]
 end
 
 module type Stable_For_include_functor = sig
-  module Total_map : Stable_S [@modality p]
+  module Total_map : Stable_S
 end
 
 module type Stable_S_with_stable_witness = sig
   type ('key, 'a, 'cmp, 'enum) total_map
 
-  module Key : Key [@modality p]
+  module Key : Key
 
   type comparator_witness
   type enumeration_witness
 
   type 'a t = (Key.t, 'a, comparator_witness, enumeration_witness) total_map
-  [@@deriving bin_io ~localize, sexp, compare ~localize, globalize, stable_witness]
+  [@@deriving bin_io, sexp, compare, globalize, stable_witness]
 end
 
 module type Stable_For_include_functor_with_stable_witness = sig
-  module Total_map : Stable_S_with_stable_witness [@modality p]
-end]
+  module Total_map : Stable_S_with_stable_witness
+end
 
 module type Stable = sig
   type ('key, 'a, 'cmp, 'enum) t
 
-  [%%template:
-  [@@@modality.default p = (portable, nonportable)]
-
   module type S =
-    Stable_S
-    [@modality p]
-    with type ('key, 'a, 'cmp, 'enum) total_map := ('key, 'a, 'cmp, 'enum) t
+    Stable_S with type ('key, 'a, 'cmp, 'enum) total_map := ('key, 'a, 'cmp, 'enum) t
 
   module type S_with_stable_witness =
     Stable_S_with_stable_witness
-    [@modality p]
     with type ('key, 'a, 'cmp, 'enum) total_map := ('key, 'a, 'cmp, 'enum) t
 
   module type For_include_functor =
     Stable_For_include_functor
-    [@modality p]
     with type ('key, 'a, 'cmp, 'enum) Total_map.total_map := ('key, 'a, 'cmp, 'enum) t
 
   module type For_include_functor_with_stable_witness =
     Stable_For_include_functor_with_stable_witness
-    [@modality p]
-    with type ('key, 'a, 'cmp, 'enum) Total_map.total_map := ('key, 'a, 'cmp, 'enum) t]
+    with type ('key, 'a, 'cmp, 'enum) Total_map.total_map := ('key, 'a, 'cmp, 'enum) t
 
-  module%template.portable
-    [@modality p] Make_with_witnesses
-      (Key : Key_with_witnesses
-    [@modality p]) :
+  module Make_with_witnesses (Key : Key_with_witnesses) :
     S
-    [@modality p]
     with module Key = Key
     with type comparator_witness = Key.comparator_witness
     with type enumeration_witness = Key.enumeration_witness
 
-  module%template.portable
-    [@modality p] Make_for_include_functor_with_witnesses
-      (Key : Key_with_witnesses
-    [@modality p]) :
+  module Make_for_include_functor_with_witnesses (Key : Key_with_witnesses) :
     For_include_functor
-    [@modality p]
     with module Total_map.Key = Key
     with type Total_map.comparator_witness = Key.comparator_witness
     with type Total_map.enumeration_witness = Key.enumeration_witness
 
-  module%template.portable
-    [@modality p] Make_with_stable_witness
-      (Key : Key_with_stable_witness
-    [@modality p]) :
+  module Make_with_stable_witness (Key : Key_with_stable_witness) :
     S_with_stable_witness
-    [@modality p]
     with module Key = Key
     with type comparator_witness = Key.comparator_witness
     with type enumeration_witness = Key.enumeration_witness
 
-  module%template.portable
-    [@modality p] Make_for_include_functor_with_stable_witness
-      (Key : Key_with_stable_witness
-    [@modality p]) :
+  module Make_for_include_functor_with_stable_witness (Key : Key_with_stable_witness) :
     For_include_functor_with_stable_witness
-    [@modality p]
     with module Total_map.Key = Key
     with type Total_map.comparator_witness = Key.comparator_witness
     with type Total_map.enumeration_witness = Key.enumeration_witness
@@ -317,87 +287,55 @@ module type Total_map = sig
   (** The only reason that the Applicative interface isn't included here is that we don't
       have an [Applicative.S4]. *)
 
-  module type%template [@mode m = (local, global)] Key = Key [@mode m]
-  module type%template [@mode m = (local, global)] Key_plain = Key_plain [@mode m]
+  module type Key = Key
+  module type Key_plain = Key_plain
   module type Key_with_witnesses = Key_with_witnesses
   module type Key_plain_with_witnesses = Key_plain_with_witnesses
 
-  [%%template:
-  [@@@modality.default p = (portable, nonportable)]
-
   module type S_plain =
-    S_plain
-    [@modality p]
-    with type (!'key, +!'a, !'cmp, 'enum) total_map := ('key, 'a, 'cmp, 'enum) t
+    S_plain with type (!'key, +!'a, !'cmp, 'enum) total_map := ('key, 'a, 'cmp, 'enum) t
 
   module type For_include_functor_plain =
     For_include_functor_plain
-    [@modality p]
     with type ('key, 'a, 'cmp, 'enum) Total_map.total_map := ('key, 'a, 'cmp, 'enum) t
 
   module type S =
-    S
-    [@modality p]
-    with type ('key, 'a, 'cmp, 'enum) total_map := ('key, 'a, 'cmp, 'enum) t
+    S with type ('key, 'a, 'cmp, 'enum) total_map := ('key, 'a, 'cmp, 'enum) t
 
   module type For_include_functor =
     For_include_functor
-    [@modality p]
-    with type ('key, 'a, 'cmp, 'enum) Total_map.total_map := ('key, 'a, 'cmp, 'enum) t]
+    with type ('key, 'a, 'cmp, 'enum) Total_map.total_map := ('key, 'a, 'cmp, 'enum) t
 
-  module%template.portable [@modality p] Make_plain (Key : Key_plain [@modality p]) :
-    S_plain [@modality p] with module Key = Key
+  module Make_plain (Key : Key_plain) : S_plain with module Key = Key
 
-  module%template.portable
-    [@modality p] Make_for_include_functor_plain
-      (Key : Key_plain
-    [@modality p]) :
-    For_include_functor_plain [@modality p] with module Total_map.Key = Key
+  module Make_for_include_functor_plain (Key : Key_plain) :
+    For_include_functor_plain with module Total_map.Key = Key
 
-  module%template.portable
-    [@modality p] Make_plain_with_witnesses
-      (Key : Key_plain_with_witnesses
-    [@modality p]) :
+  module Make_plain_with_witnesses (Key : Key_plain_with_witnesses) :
     S_plain
-    [@modality p]
     with module Key = Key
     with type comparator_witness = Key.comparator_witness
     with type enumeration_witness = Key.enumeration_witness
 
-  module%template.portable
-    [@modality p] Make_for_include_functor_plain_with_witnesses
-      (Key : Key_plain_with_witnesses
-    [@modality p]) :
+  module Make_for_include_functor_plain_with_witnesses (Key : Key_plain_with_witnesses) :
     For_include_functor_plain
-    [@modality p]
     with module Total_map.Key = Key
     with type Total_map.comparator_witness = Key.comparator_witness
     with type Total_map.enumeration_witness = Key.enumeration_witness
 
-  module%template.portable [@modality p] Make (Key : Key [@modality p]) :
-    S [@modality p] with module Key = Key
+  module Make (Key : Key) : S with module Key = Key
 
-  module%template.portable
-    [@modality p] Make_for_include_functor
-      (Key : Key
-    [@modality p]) : For_include_functor [@modality p] with module Total_map.Key = Key
+  module Make_for_include_functor (Key : Key) :
+    For_include_functor with module Total_map.Key = Key
 
-  module%template.portable
-    [@modality p] Make_with_witnesses
-      (Key : Key_with_witnesses
-    [@modality p]) :
+  module Make_with_witnesses (Key : Key_with_witnesses) :
     S
-    [@modality p]
     with module Key = Key
     with type comparator_witness = Key.comparator_witness
     with type enumeration_witness = Key.enumeration_witness
 
-  module%template.portable
-    [@modality p] Make_for_include_functor_with_witnesses
-      (Key : Key_with_witnesses
-    [@modality p]) :
+  module Make_for_include_functor_with_witnesses (Key : Key_with_witnesses) :
     For_include_functor
-    [@modality p]
     with module Total_map.Key = Key
     with type Total_map.comparator_witness = Key.comparator_witness
     with type Total_map.enumeration_witness = Key.enumeration_witness
@@ -411,6 +349,12 @@ module type Total_map = sig
     type t
 
     module Total_map : S with type Key.t = t
+  end
+
+  module type M_with_hash = sig
+    include M
+
+    val hash_fold_t : Hash.state -> t -> Hash.state
   end
 
   module M (T : For_include_functor_plain) : sig
@@ -442,24 +386,21 @@ module type Total_map = sig
 
   val bin_shape_m__t : (module For_include_functor) -> Bin_shape.t -> Bin_shape.t
 
-  [%%template:
-  [@@@mode.default m = (global, local)]
-
   val bin_size_m__t
     :  (module M
           with type t = 'k
            and type Total_map.enumeration_witness = 'enum
            and type Total_map.comparator_witness = 'cmp)
-    -> ('v Bin_prot.Size.sizer[@mode m])
-    -> (('k, 'v, 'cmp, 'enum) t Bin_prot.Size.sizer[@mode m])
+    -> 'v Bin_prot.Size.sizer
+    -> ('k, 'v, 'cmp, 'enum) t Bin_prot.Size.sizer
 
   val bin_write_m__t
     :  (module M
           with type t = 'k
            and type Total_map.enumeration_witness = 'enum
            and type Total_map.comparator_witness = 'cmp)
-    -> ('v Bin_prot.Write.writer[@mode m])
-    -> (('k, 'v, 'cmp, 'enum) t Bin_prot.Write.writer[@mode m])]
+    -> 'v Bin_prot.Write.writer
+    -> ('k, 'v, 'cmp, 'enum) t Bin_prot.Write.writer
 
   val bin_read_m__t
     :  (module M
@@ -486,6 +427,26 @@ module type Total_map = sig
     -> ('k, 'v, 'cmp, 'enum) t
     -> ('k, 'v, 'cmp, 'enum) t
     -> int
+
+  val equal_m__t
+    :  (module M
+          with type t = 'k
+           and type Total_map.enumeration_witness = 'enum
+           and type Total_map.comparator_witness = 'cmp)
+    -> ('v -> 'v -> bool)
+    -> ('k, 'v, 'cmp, 'enum) t
+    -> ('k, 'v, 'cmp, 'enum) t
+    -> bool
+
+  val hash_fold_m__t
+    :  (module M_with_hash
+          with type t = 'k
+           and type Total_map.enumeration_witness = 'enum
+           and type Total_map.comparator_witness = 'cmp)
+    -> (Hash.state -> 'v -> Hash.state)
+    -> Hash.state
+    -> ('k, 'v, 'cmp, 'enum) t
+    -> Hash.state
 
   val globalize_m__t
     :  (module M

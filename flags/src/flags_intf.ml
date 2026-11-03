@@ -12,12 +12,12 @@ open! Core
 
     [sexp_of_t] and [t_of_sexp] use the flag names supplied to [Flags.Make]. *)
 module type S = sig
-  type t [@@deriving sexp ~stackify, typerep, quickcheck]
+  type t [@@deriving sexp, typerep, quickcheck, hash]
 
   (** consistent with subset *)
-  include Comparable.S [@mode local] with type t := t
+  include Comparable.S with type t := t
 
-  include Comparable.Comparisons_with_zero_alloc [@mode local] with type t := t
+  include Comparable.Comparisons_with_zero_alloc with type t := t
 
   val to_flag_list : t -> t * string list
   val of_int : int -> t [@@zero_alloc]
@@ -48,18 +48,13 @@ module type S = sig
 
   module Unstable : sig
     type nonrec t = t
-    [@@deriving
-      bin_io ~localize
-      , globalize
-      , compare ~localize ~zero_alloc
-      , equal ~localize ~zero_alloc
-      , sexp ~stackify]
+    [@@deriving bin_io, globalize, compare ~zero_alloc, equal ~zero_alloc, sexp]
   end
 end
 
 (** Same as [module type S], but [type t] is binable. *)
 module type S_binable = sig
-  type t [@@deriving bin_io ~localize]
+  type t [@@deriving bin_io]
 
   include S with type t := t
 end

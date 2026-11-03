@@ -112,7 +112,7 @@ let fold t ~init ~f =
 
 let length t = t.length
 
-module C = Container.Make [@modality portable] (struct
+module C = Container.Make (struct
     type nonrec 'a t = 'a t
 
     let fold_until t ~init ~f ~finish = Container.fold_until ~fold t ~init ~f ~finish

@@ -2,4 +2,4 @@
  (name uuid_test)
  (libraries core expect_test_helpers_core uuid)
  (preprocess
-  (pps ppx_jane)))
+  (pps ppx_jane -compare-require-explicit-locality)))

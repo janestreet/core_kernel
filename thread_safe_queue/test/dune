@@ -3,4 +3,4 @@
  (libraries core core_unix.core_thread expect_test_helpers_core
    thread_safe_queue core_unix.time_float_unix)
  (preprocess
-  (pps ppx_jane)))
+  (pps ppx_jane -compare-require-explicit-locality)))

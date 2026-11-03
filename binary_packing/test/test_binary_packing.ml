@@ -234,6 +234,32 @@ Make_inline_tests (struct
     let unpack_little_endian = unpack_signed_32_int_little_endian
   end)
 
+module%test [@name "inline_signed_32"] _ = Make_inline_tests (struct
+    let ns =
+      [ 0x3f20_3040l
+      ; 0x7f20_3040l
+      ; Int32.neg 0x7f20_3040l
+      ; Int32.max_value
+      ; Int32.min_value
+      ; 0l
+      ]
+    ;;
+
+    let num_bytes = 4
+    let signed = true
+
+    type t = int32
+
+    let of_int64 = Int64.to_int32_trunc
+    let to_int64 = Int64.of_int32
+    let pack = pack_signed_32
+    let unpack = unpack_signed_32
+    let pack_big_endian = pack_signed_32_big_endian
+    let unpack_big_endian = unpack_signed_32_big_endian
+    let pack_little_endian = pack_signed_32_little_endian
+    let unpack_little_endian = unpack_signed_32_little_endian
+  end)
+
 let%test_unit ("63 bits overflow" [@tags "64-bits-only"]) =
   let buf = Bytes.create 8 in
   let pos = 0 in

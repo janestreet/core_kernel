@@ -10,4 +10,4 @@
  (names int_set_test)
  (libraries core int_set oUnit)
  (preprocess
-  (pps ppx_jane)))
+  (pps ppx_jane -compare-require-explicit-locality)))

@@ -110,6 +110,33 @@ let%expect_test "Heap.sexp_of_t with removes" =
 
 open! Heap
 
+(* This pins down current behavior of an unsupported use, not desired behavior. We use
+   [int] so the test is memory-safe: with boxed elements the freed slot's dummy is
+   returned typed as ['a], which is memory-unsafe. *)
+let%expect_test "cmp that mutates the heap corrupts it (documented as unsupported)" =
+  let heap = ref None in
+  let cmp a b =
+    Option.iter !heap ~f:(fun t ->
+      heap := None;
+      remove_top t);
+    Int.compare a b
+  in
+  let t = create ~cmp () in
+  heap := Some t;
+  add t 1;
+  add t 2;
+  print_s
+    [%message
+      ""
+        ~top:(top t : int option)
+        ~length:(length t : int)
+        ~to_list:(to_list t : int list)];
+  [%expect {| ((top (0)) (length 1) (to_list (0 2))) |}];
+  invariant ignore t;
+  print_endline "invariant did not raise";
+  [%expect {| invariant did not raise |}]
+;;
+
 module%test _ = struct
   let data = [ 0; 1; 2; 3; 4; 5; 6; 7 ]
   let t = of_list data ~cmp:Int.compare
@@ -424,6 +451,21 @@ let%expect_test "operations on removed elements" =
   [%expect {| () |}]
 ;;
 
+let%expect_test "operations on explicitly removed elements" =
+  let h = create ~cmp:Int.compare () in
+  let elt = add_removable h 1 in
+  ignore (add_removable h 2 : int Elt.t);
+  remove h elt;
+  print_s [%sexp (elt : int Elt.t)];
+  [%expect {| () |}];
+  require_does_raise (fun () -> Elt.value_exn elt);
+  [%expect {| (Failure "Heap.value_exn: node was removed from the heap") |}];
+  (* removing again is a no-op *)
+  remove h elt;
+  print_s [%sexp (h : int t)];
+  [%expect {| (2) |}]
+;;
+
 let%expect_test "pop_if" =
   let heap = Heap.of_list [ -1; 1; 2; 3 ] ~cmp:Int.compare in
   let show () = print_s [%sexp (heap : int Heap.t)] in
@@ -496,3 +538,332 @@ let%expect_test "pop_while repeated" =
     (after (popped (-10 -1 -1 -1)) (heap (2 3 10)))
     |}]
 ;;
+
+(* The order in which the heap returns elements that compare equal is not specified, but
+   it is deterministic and some callers' outputs depend on it. These tests pin it down.
+*)
+module%test [@name "order of equal elements"] _ = struct
+  let cmp = [%compare: int * _]
+  let create () = create ~cmp ()
+  let add t key ~id = add t (key, id)
+  let drain t = List.init (length t) ~f:(fun _ -> pop_exn t)
+  let ids l = List.map l ~f:snd
+
+  (* Compact summary of a long sequence of observations. *)
+  let fingerprint =
+    List.fold ~init:0 ~f:(fun acc x -> [%hash: int * (int * int)] (acc, x))
+  ;;
+
+  let%expect_test "all equal, added then drained" =
+    let t = create () in
+    for id = 0 to 9 do
+      add t 0 ~id
+    done;
+    print_s [%sexp (ids (drain t) : int list)];
+    [%expect {| (0 1 2 3 4 5 6 7 8 9) |}]
+  ;;
+
+  let%expect_test "all equal, pops interleaved with adds" =
+    let t = create () in
+    let popped = ref [] in
+    for id = 0 to 29 do
+      add t 0 ~id;
+      if id % 3 = 2 then popped := pop_exn t :: !popped
+    done;
+    print_s [%sexp (ids (List.rev !popped) : int list)];
+    [%expect {| (2 5 8 11 14 17 20 23 26 29) |}];
+    print_s [%sexp (ids (drain t) : int list)];
+    [%expect {| (0 1 3 4 6 7 9 10 12 13 15 16 18 19 21 22 24 25 27 28) |}]
+  ;;
+
+  let%expect_test "duplicate keys" =
+    let t = create () in
+    List.iteri [ 3; 1; 3; 2; 1; 3; 0; 2; 2; 1; 3; 0; 1; 3; 2 ] ~f:(fun id key ->
+      add t key ~id);
+    print_s [%sexp (drain t : (int * int) list)];
+    [%expect
+      {|
+      ((3 13)
+       (3 10)
+       (3 5)
+       (3 0)
+       (3 2)
+       (2 3)
+       (2 8)
+       (2 7)
+       (2 14)
+       (1 12)
+       (1 9)
+       (1 1)
+       (1 4)
+       (0 6)
+       (0 11))
+      |}]
+  ;;
+
+  let%expect_test "all equal, long list of children (exercises allocating_merge_pairs)" =
+    let t = create () in
+    for id = 0 to 4999 do
+      add t 0 ~id
+    done;
+    let first = List.init 40 ~f:(fun _ -> pop_exn t) in
+    print_s [%sexp (ids first : int list)];
+    [%expect
+      {|
+      (4960
+       4961
+       4962
+       4963
+       4964
+       4965
+       4966
+       4967
+       4968
+       4969
+       4970
+       4971
+       4972
+       4973
+       4974
+       4975
+       4976
+       4977
+       4978
+       4979
+       4980
+       4981
+       4982
+       4983
+       4984
+       4985
+       4986
+       4987
+       4988
+       4989
+       4990
+       4991
+       4992
+       4993
+       4994
+       4995
+       4996
+       4997
+       4998
+       4999)
+      |}];
+    print_s [%sexp (fingerprint (drain t) : int)];
+    [%expect {| 1030249178 |}]
+  ;;
+
+  let%expect_test "equal elements with removals" =
+    let t = create () in
+    let tokens = List.init 20 ~f:(fun id -> add_removable t (0, id)) in
+    List.iteri tokens ~f:(fun i token -> if i % 4 = 1 then remove t token);
+    ignore (pop_exn t : int * int);
+    List.iteri tokens ~f:(fun i token -> if i % 4 = 3 then remove t token);
+    print_s [%sexp (ids (drain t) : int list)];
+    [%expect {| (4 8 12 16 0 2 6 10 14) |}]
+  ;;
+
+  let%expect_test "deterministic random operations on a few distinct keys" =
+    let random = Random.State.make [| 0 |] in
+    let t = create () in
+    let tokens = Stack.create () in
+    let observations = ref [] in
+    let observe x = observations := x :: !observations in
+    for id = 1 to 20_000 do
+      let key = Random.State.int random 5 in
+      match Random.State.int random 10 with
+      | 0 | 1 | 2 | 3 -> add t key ~id
+      | 4 -> Stack.push tokens (add_removable t (key, id))
+      | 5 ->
+        (match Stack.pop tokens with
+         | None -> ()
+         | Some token -> remove t token)
+      | 6 ->
+        (match Stack.pop tokens with
+         | None -> ()
+         | Some token -> Stack.push tokens (update t token (key, id)))
+      | 7 | 8 | 9 -> Option.iter (pop t) ~f:observe
+      | _ -> assert false
+    done;
+    invariant ignore t;
+    print_s [%sexp (length t : int)];
+    [%expect {| 3013 |}];
+    print_s [%sexp (fingerprint (List.rev !observations) : int)];
+    [%expect {| 158864271 |}];
+    print_s [%sexp (fingerprint (drain t) : int)];
+    [%expect {| 662961811 |}]
+  ;;
+end
+
+module%test [@name "pool reuse, growth and copy"] _ = struct
+  let%expect_test "nodes are reused after pop and tokens stay invalid" =
+    let t = create ~min_size:1 ~cmp:Int.compare () in
+    let tokens = List.init 100 ~f:(fun i -> add_removable t i) in
+    invariant ignore t;
+    for _ = 1 to 100 do
+      ignore (pop_exn t : int)
+    done;
+    invariant ignore t;
+    (* refilling the heap reuses the freed nodes... *)
+    for i = 100 to 199 do
+      add t i
+    done;
+    invariant ignore t;
+    (* ...but the tokens of the popped elements do not come back to life *)
+    print_s [%sexp (List.filter_map tokens ~f:Elt.value : int list)];
+    [%expect {| () |}];
+    List.iter tokens ~f:(remove t);
+    print_s
+      [%sexp (length t : int), (to_list t |> List.sort ~compare:Int.compare : int list)];
+    [%expect
+      {|
+      (100 (
+        100
+        101
+        102
+        103
+        104
+        105
+        106
+        107
+        108
+        109
+        110
+        111
+        112
+        113
+        114
+        115
+        116
+        117
+        118
+        119
+        120
+        121
+        122
+        123
+        124
+        125
+        126
+        127
+        128
+        129
+        130
+        131
+        132
+        133
+        134
+        135
+        136
+        137
+        138
+        139
+        140
+        141
+        142
+        143
+        144
+        145
+        146
+        147
+        148
+        149
+        150
+        151
+        152
+        153
+        154
+        155
+        156
+        157
+        158
+        159
+        160
+        161
+        162
+        163
+        164
+        165
+        166
+        167
+        168
+        169
+        170
+        171
+        172
+        173
+        174
+        175
+        176
+        177
+        178
+        179
+        180
+        181
+        182
+        183
+        184
+        185
+        186
+        187
+        188
+        189
+        190
+        191
+        192
+        193
+        194
+        195
+        196
+        197
+        198
+        199))
+      |}]
+  ;;
+
+  let%expect_test "growth" =
+    let t = create ~min_size:1 ~cmp:Int.compare () in
+    let expected = ref [] in
+    for i = 1 to 1000 do
+      add t (-i);
+      expected := -i :: !expected;
+      if i % 3 = 0
+      then (
+        let popped = pop_exn t in
+        expected := List.filter !expected ~f:(fun x -> x <> popped))
+    done;
+    invariant ignore t;
+    print_s [%sexp (length t : int)];
+    [%expect {| 667 |}];
+    require_equal (module Int) (length t) (List.length !expected);
+    require
+      ([%equal: int list]
+         (List.sort (to_list t) ~compare:Int.compare)
+         (List.sort !expected ~compare:Int.compare))
+  ;;
+
+  let%expect_test "copy is independent of the original, including free nodes" =
+    let t = create ~min_size:1 ~cmp:Int.compare () in
+    let tokens = List.init 10 ~f:(fun i -> add_removable t i) in
+    List.iteri tokens ~f:(fun i token -> if i % 2 = 0 then remove t token);
+    let t' = copy t in
+    invariant ignore t;
+    invariant ignore t';
+    add t 100;
+    add t' 200;
+    add t' 300;
+    remove t (List.nth_exn tokens 1);
+    print_s [%sexp (to_list t |> List.sort ~compare:Int.compare : int list)];
+    [%expect {| (3 5 7 9 100) |}];
+    print_s [%sexp (to_list t' |> List.sort ~compare:Int.compare : int list)];
+    [%expect {| (1 3 5 7 9 200 300) |}];
+    invariant ignore t;
+    invariant ignore t';
+    print_s [%sexp (List.init 6 ~f:(fun _ -> pop_exn t') : int list)];
+    [%expect {| (200 9 7 5 3 1) |}];
+    print_s [%sexp (List.init 5 ~f:(fun _ -> pop_exn t) : int list)];
+    [%expect {| (100 9 7 5 3) |}]
+  ;;
+end

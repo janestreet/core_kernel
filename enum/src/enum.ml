@@ -27,8 +27,7 @@ module Single = struct
   ;;
 end
 
-type%template 'a t = ((module S with type t = 'a)[@mode p])
-[@@mode p = (portable, nonportable)]
+type 'a t = (module S with type t = 'a)
 
 let to_string_hum (type a) ((module M) : a t) a = Single.to_string_hum (module M) a
 
@@ -49,27 +48,19 @@ let assert_alphabetic_order_exn here (type a) ((module M) : a t) =
     as_strings
 ;;
 
-module%template.portable [@modality p] Rewrite_sexp_of (S : S [@modality p]) :
-  S [@modality p] with type t = S.t = struct
+module Rewrite_sexp_of (S : S) : S with type t = S.t = struct
   include S
 
   let sexp_of_t t = to_string_hum (module S) t |> Parsexp.Single.parse_string_exn
 end
 
-let%template[@mode (p, c) = ((nonportable, uncontended), (portable, contended))] arg_type
-  (type a)
-  ?case_sensitive
-  ?key
-  ?list_values_in_help
-  (t : (a t[@mode p]))
-  : _
-  =
+let arg_type (type a) ?case_sensitive ?key ?list_values_in_help (t : a t) : _ =
   let module S = (val t) in
-  (Command.Arg_type.enumerated_sexpable [@mode p])
+  Command.Arg_type.enumerated_sexpable
     ?key
     ?list_values_in_help
     ?case_sensitive
-    (module Rewrite_sexp_of [@modality p] (S))
+    (module Rewrite_sexp_of (S))
 ;;
 
 module Make_param = struct
@@ -175,11 +166,11 @@ let make_param_optional_one_of_flags ?aliases ~doc m =
        Command.Param.flag ?aliases name (Command.Param.no_arg_some enum) ~doc))
 ;;
 
-let%template comma_separated_extra_doc m =
+let comma_separated_extra_doc m =
   let options =
     enum m
     |> List.map ~f:fst
-    |> List.sort ~compare:([%compare: string] [@mode local])
+    |> List.sort ~compare:[%compare: string]
     |> String.concat ~sep:", "
   in
   [%string "(can be comma-separated values: %{options})"]
@@ -279,7 +270,7 @@ let make_param_optional_comma_separated_with_default_doc
     ~doc
 ;;
 
-module%template.portable Make_to_string (M : Sexp_of) : sig
+module Make_to_string (M : Sexp_of) : sig
   val to_string : M.t -> string
 end = struct
   let to_string t = command_friendly_name (atom_of_sexp_exn [%sexp (t : M.t)])
@@ -307,19 +298,10 @@ end = struct
   let of_string = [%eta1 of_string ~known_values:(force known_values)]
 end
 
-module%template Make_of_string (M : S_to_string [@modality p]) : sig
-  val of_string : string -> M.t
-end = struct
-  let known_values = known_values (module M)
-  let of_string = [%eta1 of_string ~known_values]
-end
-[@@modality p = portable]
+module Make_stringable (M : S) : Stringable.S with type t := M.t = struct
+  include Make_to_string (M)
 
-module%template.portable [@modality p] Make_stringable (M : S [@modality p]) :
-  Stringable.S with type t := M.t = struct
-  include Make_to_string [@modality p] (M)
-
-  include Make_of_string [@modality p] (struct
+  include Make_of_string (struct
       type t = M.t
 
       let all = M.all

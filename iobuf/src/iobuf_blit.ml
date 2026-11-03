@@ -17,15 +17,15 @@ module Blit = struct
          bounds-check both buffers before calling [Bigstring.unsafe_blit]. *)
       Bigstring.unsafe_blit
         ~len
-        ~src:([%template buf [@mode local]] src)
+        ~src:(buf src)
         ~src_pos:(unsafe_buf_pos src ~pos:src_pos ~len)
-        ~dst:([%template buf [@mode local]] dst)
+        ~dst:(buf dst)
         ~dst_pos:(unsafe_buf_pos dst ~pos:dst_pos ~len) [@nontail]
     ;;
   end
 
   include
-    Base_for_tests.Test_blit.Make1_phantom2_and_test [@modality portable]
+    Base_for_tests.Test_blit.Make1_phantom2_and_test
       (struct
         include Char_elt
 

@@ -25,8 +25,7 @@ module Repr = struct
     ; mutable hi : int
     ; mutable hi_max : int
     }
-  [@@deriving
-    fields ~getters ~direct_iterators:(iter, set_all_mutable_fields), sexp_of ~localize]
+  [@@deriving fields ~getters ~direct_iterators:(iter, set_all_mutable_fields), sexp_of]
 
   let globalize_shared { buf; lo_min; lo; hi; hi_max } =
     let buf = Modes.At_locality.globalize_global buf in
@@ -49,10 +48,11 @@ type 'loc repr = 'loc Repr.t =
   ; mutable hi_max : int
   }
 
-type (-'read_write, +'seek, 'loc) t = 'loc Repr.t [@@deriving sexp_of ~localize]
+type (-'read_write, +'seek, 'loc) t = 'loc Repr.t [@@deriving sexp_of]
+type 'a locality = 'a
 
 module With_shallow_sexp = struct
-  type (_, _, 'loc) t = 'loc Repr.t [@@deriving sexp_of ~localize]
+  type (_, _, 'loc) t = 'loc Repr.t [@@deriving sexp_of]
 
   let globalize = `deprecated
 end
@@ -61,7 +61,6 @@ let globalize = `deprecated
 let globalize_shared = Repr.globalize_shared
 let globalize_copied = Repr.globalize_copied
 let buf t = Modes.At_locality.unwrap_global t.buf
-let%template[@mode local] buf t = Modes.At_locality.unwrap_local t.buf
 
 let[@cold] fail t message a sexp_of_a =
   (* Immediately convert the iobuf to sexp. Otherwise, the iobuf could be modified before
@@ -105,23 +104,17 @@ let[@inline always] check_bigstring ~bstr ~pos ~len =
   then bad_range_bstr ~str_len ~pos ~len
 ;;
 
-[%%template
 let wrap = Modes.At_locality.wrap
-let[@mode local] wrap = Modes.At_locality.wrap_local
-
-[@@@alloc.default a @ m = (stack_local, heap_global)]
-[@@@mode.default l = (m, global)]
 
 let[@inline always] unsafe_of_bigstring_sub ~pos ~len buf =
-  (let lo = pos in
-   let hi = pos + len in
-   { buf = (wrap [@mode l]) buf; lo_min = lo; lo; hi; hi_max = hi })
-  [@exclave_if_stack a]
+  let lo = pos in
+  let hi = pos + len in
+  { buf = wrap buf; lo_min = lo; lo; hi; hi_max = hi }
 ;;
 
 let of_bigstring_sub ~pos ~len bstr =
   check_bigstring ~bstr ~pos ~len;
-  (unsafe_of_bigstring_sub [@alloc a] [@mode l]) ~pos ~len bstr [@exclave_if_stack a]
+  unsafe_of_bigstring_sub ~pos ~len bstr
 ;;
 
 let of_bigstring ?pos ?len buf =
@@ -152,14 +145,12 @@ let of_bigstring ?pos ?len buf =
             , ~~(pos : int)];
       len
   in
-  (unsafe_of_bigstring_sub [@alloc a] [@mode l]) ~pos ~len buf [@exclave_if_stack a]
+  unsafe_of_bigstring_sub ~pos ~len buf
 ;;
 
 let unsafe_of_bigstring_sub =
-  if unsafe_is_safe
-  then of_bigstring_sub [@alloc a] [@mode l]
-  else unsafe_of_bigstring_sub [@alloc a] [@mode l]
-;;]
+  if unsafe_is_safe then of_bigstring_sub else unsafe_of_bigstring_sub
+;;
 
 let set_bounds_and_buffer_sub ~pos ~len ~src ~dst =
   check_range src ~pos ~len;
@@ -169,11 +160,7 @@ let set_bounds_and_buffer_sub ~pos ~len ~src ~dst =
   dst.lo <- lo;
   dst.hi <- hi;
   dst.hi_max <- hi;
-  if not
-       (phys_equal
-          ([%template buf [@mode local]] dst)
-          ([%template buf [@mode local]] src))
-  then dst.buf <- Modes.At_locality.wrap (buf src)
+  if not (phys_equal (buf dst) (buf src)) then dst.buf <- Modes.At_locality.wrap (buf src)
 [@@inline]
 ;;
 
@@ -182,11 +169,7 @@ let set_bounds_and_buffer ~src ~dst =
   dst.lo <- src.lo;
   dst.hi <- src.hi;
   dst.hi_max <- src.hi_max;
-  if not
-       (phys_equal
-          ([%template buf [@mode local]] dst)
-          ([%template buf [@mode local]] src))
-  then dst.buf <- Modes.At_locality.wrap (buf src)
+  if not (phys_equal (buf dst) (buf src)) then dst.buf <- Modes.At_locality.wrap (buf src)
 ;;
 
 let create ~len =
@@ -248,7 +231,7 @@ let advance t len =
 let unsafe_advance = if unsafe_is_safe then advance else unsafe_advance
 
 module Char_elt = struct
-  type t = char [@@deriving equal ~localize]
+  type t = char [@@deriving equal]
 
   let of_bool = function
     | true -> '0'
@@ -256,16 +239,11 @@ module Char_elt = struct
   ;;
 end
 
-let[@inline] get_char t pos =
-  Bigstring.unsafe_get ([%template buf [@mode local]] t) (buf_pos_exn t ~len:1 ~pos)
-;;
-
-let[@inline] set_char t pos c =
-  Bigstring.unsafe_set ([%template buf [@mode local]] t) (buf_pos_exn t ~len:1 ~pos) c
-;;
+let[@inline] get_char t pos = Bigstring.unsafe_get (buf t) (buf_pos_exn t ~len:1 ~pos)
+let[@inline] set_char t pos c = Bigstring.unsafe_set (buf t) (buf_pos_exn t ~len:1 ~pos) c
 
 module T_src = struct
-  type 'loc t = 'loc Repr.t [@@deriving sexp_of ~localize]
+  type 'loc t = 'loc Repr.t [@@deriving sexp_of]
 
   let create = create
   let length = length
@@ -281,7 +259,7 @@ module Bytes_dst = struct
       if unsafe_is_safe then Bigstring.To_bytes.blit else Bigstring.To_bytes.unsafe_blit
     in
     blit
-      ~src:([%template buf [@mode local]] src)
+      ~src:(buf src)
       ~src_pos:(unsafe_buf_pos src ~pos:src_pos ~len)
       ~dst
       ~dst_pos
@@ -294,10 +272,7 @@ end
 
 module String_dst = struct
   let sub src ~pos ~len =
-    Bigstring.To_string.sub
-      ([%template buf [@mode local]] src)
-      ~pos:(buf_pos_exn src ~pos ~len)
-      ~len [@nontail]
+    Bigstring.To_string.sub (buf src) ~pos:(buf_pos_exn src ~pos ~len) ~len [@nontail]
   ;;
 
   let subo ?(pos = 0) ?len src =
@@ -306,10 +281,7 @@ module String_dst = struct
       | None -> length src - pos
       | Some len -> len
     in
-    Bigstring.To_string.subo
-      ([%template buf [@mode local]] src)
-      ~pos:(buf_pos_exn src ~pos ~len)
-      ~len [@nontail]
+    Bigstring.To_string.subo (buf src) ~pos:(buf_pos_exn src ~pos ~len) ~len [@nontail]
   ;;
 end
 
@@ -319,7 +291,7 @@ module Bigstring_dst = struct
   let unsafe_blit ~src ~src_pos ~dst ~dst_pos ~len =
     let blit = if unsafe_is_safe then Bigstring.blit else Bigstring.unsafe_blit in
     blit
-      ~src:([%template buf [@mode local]] src)
+      ~src:(buf src)
       ~src_pos:(unsafe_buf_pos src ~pos:src_pos ~len)
       ~dst
       ~dst_pos

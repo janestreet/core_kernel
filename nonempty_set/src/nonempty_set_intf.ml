@@ -8,8 +8,7 @@ open! Core
     exn-raising. *)
 
 module type Nonempty_set = sig
-  type (!'elt, !'cmp) t
-  [@@sexp.phantom: 'cmp] [@@deriving compare ~localize, globalize, sexp_of]
+  type (!'elt, !'cmp) t [@@sexp.phantom: 'cmp] [@@deriving compare, globalize, sexp_of]
 
   val add : ('a, 'b) t -> 'a -> ('a, 'b) t
   val remove : ('a, 'b) t -> 'a -> ('a, 'b) t option
@@ -20,6 +19,7 @@ module type Nonempty_set = sig
   val reduce : ('a, _) t -> map:('a -> 'b) -> f:('b -> 'b -> 'b) -> 'b
   val fold : ('a, _) t -> init:'b -> f:('b -> 'a -> 'b) -> 'b
   val iter : ('a, _) t -> f:('a -> unit) -> unit
+  val exists : ('a, _) t -> f:('a -> bool) -> bool
   val of_list : ('a, 'cmp) Comparator.Module.t -> 'a list -> ('a, 'cmp) t option
   val of_list_or_null : ('a, 'cmp) Comparator.Module.t -> 'a list -> ('a, 'cmp) t or_null
   val of_list_exn : ('a, 'cmp) Comparator.Module.t -> 'a list -> ('a, 'cmp) t
@@ -56,14 +56,9 @@ module type Nonempty_set = sig
   val diff : ('a, 'cmp) t -> ('a, 'cmp) t -> ('a, 'cmp) Set.t
   val mem : ('a, _) t -> 'a -> bool [@@zero_alloc]
   val length : (_, _) t -> int
-
-  val%template compare_direct : ('a, 'b) t -> ('a, 'b) t -> int
-  [@@mode m = (global, local)]
-
+  val compare_direct : ('a, 'b) t -> ('a, 'b) t -> int
   val hash_fold_direct : 'a Hash.folder -> ('a, 'b) t Hash.folder
-
-  val%template equal : ('a, 'b) t -> ('a, 'b) t -> bool [@@mode m = (global, local)]
-
+  val equal : ('a, 'b) t -> ('a, 'b) t -> bool
   val is_subset : ('a, 'b) t -> of_:('a, 'b) t -> bool
   val max_elt : ('a, _) t -> 'a
   val min_elt : ('a, _) t -> 'a

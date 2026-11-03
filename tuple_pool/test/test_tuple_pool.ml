@@ -133,7 +133,7 @@ module Make (Pool : Pool.S) = struct
   let to_list p list = List.rev (fold p list ~init:[] ~f:(fun l a -> a :: l))
 
   (* [grow] on demand *)
-  let%test_unit (_ [@tags "no-js"]) =
+  let%test_unit _ =
     let total_length = 3_000 in
     let rec loop i p list =
       let i = i - 1 in

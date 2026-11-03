@@ -12,22 +12,20 @@ module Definitions = struct
         [hi_max]) of the [buf]. Doing so would violate the invariants of the parent
         [Iobuf]. *)
 
-    val buf : (_, _, global) t -> Bigstring.t
-
-    val%template buf : (_, _, _) t -> Bigstring.t [@@mode local]
-
-    val hi_max : (_, _, _) t -> int
-    val hi : (_, _, _) t -> int
-    val lo : (_, _, _) t -> int
-    val lo_min : (_, _, _) t -> int
+    val buf : (_, _, global) t -> Bigstring.t [@@zero_alloc]
+    val hi_max : (_, _, _) t -> int [@@zero_alloc]
+    val hi : (_, _, _) t -> int [@@zero_alloc]
+    val lo : (_, _, _) t -> int [@@zero_alloc]
+    val lo_min : (_, _, _) t -> int [@@zero_alloc]
 
     (** These setters directly set fields in [t] without checking any invariants. *)
     val set_buf : (_, _, _) t -> Bigstring.t -> unit
+    [@@zero_alloc]
 
-    val set_hi_max : (_, _, _) t -> int -> unit
-    val set_hi : (_, _, _) t -> int -> unit
-    val set_lo : (_, _, _) t -> int -> unit
-    val set_lo_min : (_, _, _) t -> int -> unit
+    val set_hi_max : (_, _, _) t -> int -> unit [@@zero_alloc]
+    val set_hi : (_, _, _) t -> int -> unit [@@zero_alloc]
+    val set_lo : (_, _, _) t -> int -> unit [@@zero_alloc]
+    val set_lo_min : (_, _, _) t -> int -> unit [@@zero_alloc]
 
     (** [to_bigstring_shared t] and [to_iobuf_shared t] allocate new wrappers around the
         storage of [buf t], relative to [t]'s current bounds.
@@ -72,10 +70,9 @@ module Definitions = struct
     (** Similar to [protect_window_bounds_and_buffer], but does not save/restore the
         buffer or bounds. Mixing this with functions like [set_bounds_and_buffer] or
         [narrow] is unsafe; you should not modify anything but the window inside [f]. *)
-    val%template protect_window
+    val protect_window
       : 'a 'rw 'sk 'loc.
       ('rw, 'sk, 'loc) t -> f:(('rw, seek, 'loc) t -> 'a) -> 'a
-    [@@mode m = (local, global)]
 
     (** As [protect_window] but does not enforce that the closure should not let the
         buffer escape. Letting the buffer escape is dangerous and almost certainly not

@@ -55,7 +55,7 @@ let max_time = Time_ns.max_value_representable
 let min_time = Time_ns.epoch
 
 module Num_key_bits : sig
-  type t = private int [@@deriving compare ~localize, sexp]
+  type t = private int [@@deriving compare, sexp]
 
   include Comparable with type t := t
   include Invariant.S with type t := t
@@ -104,7 +104,7 @@ end = struct
 end
 
 module Level_bits = struct
-  type t = Num_key_bits.t list [@@deriving compare ~localize, sexp]
+  type t = Num_key_bits.t list [@@deriving compare, sexp]
 
   let max_num_bits = (Num_key_bits.max_value :> int)
   let num_bits_internal t = List.fold t ~init:Num_key_bits.zero ~f:Num_key_bits.( + )
@@ -173,7 +173,7 @@ module Alarm_precision : sig
   val interval_num_start : t -> Int63.t -> Time_ns.t
 end = struct
   (** [t] is represented as the log2 of a number of nanoseconds. *)
-  type t = int [@@deriving compare ~localize, hash]
+  type t = int [@@deriving compare, hash]
 
   let equal = [%compare.equal: t]
   let num_key_bits t = t |> Num_key_bits.of_int
@@ -215,7 +215,7 @@ end = struct
 
   module Unstable = struct
     module T = struct
-      type nonrec t = t [@@deriving compare ~localize]
+      type nonrec t = t [@@deriving compare]
 
       let of_binable = of_span_floor_pow2_ns
       let to_binable = to_span
@@ -224,13 +224,8 @@ end = struct
     end
 
     include T
-
-    include%template
-      Binable.Of_binable_without_uuid [@modality portable] [@alert "-legacy"]
-        (Time_ns.Span)
-        (T)
-
-    include%template Sexpable.Of_sexpable [@modality portable] (Time_ns.Span) (T)
+    include Binable.Of_binable_without_uuid [@alert "-legacy"] (Time_ns.Span) (T)
+    include Sexpable.Of_sexpable (Time_ns.Span) (T)
   end
 end
 
@@ -242,7 +237,7 @@ module Config = struct
     ; level_bits : Level_bits.t [@default level_bits_default]
     ; capacity : int option [@sexp.option]
     }
-  [@@deriving fields ~getters ~iterators:iter, sexp ~portable]
+  [@@deriving fields ~getters ~iterators:iter, sexp]
 
   let alarm_precision t = Alarm_precision.to_span t.alarm_precision
 
@@ -327,7 +322,7 @@ end
     minimum allowed key increases, timing-wheel elements move down levels until they reach
     level 0, and then are eventually removed. *)
 module Priority_queue : sig
-  type 'a t [@@deriving sexp_of ~portable]
+  type 'a t [@@deriving sexp_of]
   type 'a priority_queue = 'a t
 
   module Key : Interval_num
@@ -459,7 +454,7 @@ end = struct
 
     (** [Slots_mask] is used to quickly determine a key's slot in a given level. *)
     module Slots_mask : sig
-      type t = private Int63.t [@@deriving compare ~localize, sexp_of]
+      type t = private Int63.t [@@deriving compare, sexp_of]
 
       val create : level_bits:Num_key_bits.t -> t
       val next_slot : t -> int -> int
@@ -468,7 +463,7 @@ end = struct
     (** [Min_key_in_same_slot_mask] is used to quickly determine the minimum key in the
         same slot as a given key. *)
     module Min_key_in_same_slot_mask : sig
-      type t = private Int63.t [@@deriving compare ~localize, sexp_of]
+      type t = private Int63.t [@@deriving compare, sexp_of]
 
       include Equal.S with type t := t
 
@@ -480,7 +475,7 @@ end = struct
     val slot : t -> bits_per_slot:Num_key_bits.t -> slots_mask:Slots_mask.t -> int
   end = struct
     module Slots_mask = struct
-      type t = Int63.t [@@deriving compare ~localize, sexp_of]
+      type t = Int63.t [@@deriving compare, sexp_of]
 
       let create ~level_bits = Int63.( - ) (Num_key_bits.pow2 level_bits) Int63.one
       let next_slot t slot = (slot + 1) land Int63.to_int_exn t
@@ -537,9 +532,9 @@ end = struct
         , 'a pool_slots Pointer.t
         , 'a pool_slots Pointer.t )
         Pool.Slots.t6
-    [@@deriving sexp_of ~portable]
+    [@@deriving sexp_of]
 
-    type 'a t = 'a pool_slots Pointer.t [@@deriving sexp_of ~portable]
+    type 'a t = 'a pool_slots Pointer.t [@@deriving sexp_of]
 
     let null = Pointer.null
   end
@@ -815,7 +810,7 @@ end = struct
   type 'a priority_queue = 'a t
 
   module Elt = struct
-    type 'a t = 'a External_elt.t [@@deriving sexp_of ~portable]
+    type 'a t = 'a External_elt.t [@@deriving sexp_of]
 
     let null = External_elt.null
     let at p t = Internal_elt.at p.pool (Internal_elt.of_external_exn p.pool t)
@@ -1435,7 +1430,7 @@ type 'a t =
   ; mutable max_allowed_alarm_time : Time_ns.t
   ; priority_queue : 'a Priority_queue.t
   }
-[@@deriving fields ~getters ~iterators:iter, sexp_of ~portable]
+[@@deriving fields ~getters ~iterators:iter, sexp_of]
 
 type 'a timing_wheel = 'a t
 type 'a t_now = 'a t
@@ -1445,7 +1440,7 @@ let sexp_of_t_now _ t = [%sexp (t.now : Time_ns.t)]
 let alarm_precision t = Config.alarm_precision t.config
 
 module Alarm = struct
-  type 'a t = 'a Priority_queue.Elt.t [@@deriving sexp_of ~portable]
+  type 'a t = 'a Priority_queue.Elt.t [@@deriving sexp_of]
 
   let null = Priority_queue.Elt.null
   let at tw t = Priority_queue.Elt.at tw.priority_queue t

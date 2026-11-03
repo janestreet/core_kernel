@@ -16,7 +16,6 @@ module Definitions = struct
         the iobuf or reading it from the iobuf. *)
 
     type ('a, 'd, 'w, 'l) t constraint 'd = [> read ]
-    type ('a, 'd, 'w, 'l) t__local constraint 'd = [> read ]
 
     val char : (char, 'd, 'w, 'l) t
   end
@@ -52,23 +51,14 @@ module Definitions = struct
     val bigstringo : ?str_pos:int -> ?len:int -> (Bigstring.t, 'd, 'w, 'l) t
 
     module Local : sig
-      val int64_t_be : (Int64.t, 'd, 'w, 'l) t__local
-      val int64_t_le : (Int64.t, 'd, 'w, 'l) t__local
-
-      val head_padded_fixed_string
-        :  padding:char
-        -> len:int
-        -> (string, 'd, 'w, 'l) t__local
-
-      val tail_padded_fixed_string
-        :  padding:char
-        -> len:int
-        -> (string, 'd, 'w, 'l) t__local
-
-      val string : str_pos:int -> len:int -> (string, 'd, 'w, 'l) t__local
-      val bytes : str_pos:int -> len:int -> (Bytes.t, 'd, 'w, 'l) t__local
-      val stringo : ?str_pos:int -> ?len:int -> (string, 'd, 'w, 'l) t__local
-      val byteso : ?str_pos:int -> ?len:int -> (Bytes.t, 'd, 'w, 'l) t__local
+      val int64_t_be : (Int64.t, 'd, 'w, 'l) t
+      val int64_t_le : (Int64.t, 'd, 'w, 'l) t
+      val head_padded_fixed_string : padding:char -> len:int -> (string, 'd, 'w, 'l) t
+      val tail_padded_fixed_string : padding:char -> len:int -> (string, 'd, 'w, 'l) t
+      val string : str_pos:int -> len:int -> (string, 'd, 'w, 'l) t
+      val bytes : str_pos:int -> len:int -> (Bytes.t, 'd, 'w, 'l) t
+      val stringo : ?str_pos:int -> ?len:int -> (string, 'd, 'w, 'l) t
+      val byteso : ?str_pos:int -> ?len:int -> (Bytes.t, 'd, 'w, 'l) t
     end
 
     module Int_repr : sig
@@ -106,25 +96,16 @@ module Definitions = struct
     val uint32_le_trunc : (int, 'd, 'w, 'l) t
     val uint64_be_trunc : (int, 'd, 'w, 'l) t
     val uint64_le_trunc : (int, 'd, 'w, 'l) t
-    val int64_t_be : (Int64.t, 'd, 'w, 'l) t__local
-    val int64_t_le : (Int64.t, 'd, 'w, 'l) t__local
-
-    val head_padded_fixed_string
-      :  padding:char
-      -> len:int
-      -> (string, 'd, 'w, 'l) t__local
-
-    val tail_padded_fixed_string
-      :  padding:char
-      -> len:int
-      -> (string, 'd, 'w, 'l) t__local
-
-    val string : str_pos:int -> len:int -> (string, 'd, 'w, 'l) t__local
-    val bytes : str_pos:int -> len:int -> (Bytes.t, 'd, 'w, 'l) t__local
-    val bigstring : str_pos:int -> len:int -> (Bigstring.t, 'd, 'w, 'l) t__local
-    val stringo : ?str_pos:int -> ?len:int -> (string, 'd, 'w, 'l) t__local
-    val byteso : ?str_pos:int -> ?len:int -> (Bytes.t, 'd, 'w, 'l) t__local
-    val bigstringo : ?str_pos:int -> ?len:int -> (Bigstring.t, 'd, 'w, 'l) t__local
+    val int64_t_be : (Int64.t, 'd, 'w, 'l) t
+    val int64_t_le : (Int64.t, 'd, 'w, 'l) t
+    val head_padded_fixed_string : padding:char -> len:int -> (string, 'd, 'w, 'l) t
+    val tail_padded_fixed_string : padding:char -> len:int -> (string, 'd, 'w, 'l) t
+    val string : str_pos:int -> len:int -> (string, 'd, 'w, 'l) t
+    val bytes : str_pos:int -> len:int -> (Bytes.t, 'd, 'w, 'l) t
+    val bigstring : str_pos:int -> len:int -> (Bigstring.t, 'd, 'w, 'l) t
+    val stringo : ?str_pos:int -> ?len:int -> (string, 'd, 'w, 'l) t
+    val byteso : ?str_pos:int -> ?len:int -> (Bytes.t, 'd, 'w, 'l) t
+    val bigstringo : ?str_pos:int -> ?len:int -> (Bigstring.t, 'd, 'w, 'l) t
 
     module Int_repr : sig
       val int8 : (Int_repr.Int8.t, 'd, 'w, 'l) t
@@ -197,7 +178,7 @@ module Definitions = struct
     include
       Accessors_read
       with type ('a, 'r, 's, 'l) t = (([> read ] as 'r), seek, 'l) iobuf -> 'a
-      with type ('a, 'r, 's, 'l) t__local = (([> read ] as 'r), seek, 'l) iobuf -> 'a
+      with type ('a, 'r, 's, 'l) t = (([> read ] as 'r), seek, 'l) iobuf -> 'a
   end
 
   module type Fill_safe = sig
@@ -206,7 +187,7 @@ module Definitions = struct
     include
       Accessors_write
       with type ('a, 'd, 'w, 'l) t = (read_write, seek, 'l) iobuf -> 'a -> unit
-      with type ('a, 'd, 'w, 'l) t__local = (read_write, seek, 'l) iobuf -> 'a -> unit
+      with type ('a, 'd, 'w, 'l) t = (read_write, seek, 'l) iobuf -> 'a -> unit
 
     (** [decimal t int] is equivalent to [Iobuf.Fill.string t (Int.to_string int)], but
         with improved efficiency and no intermediate allocation.
@@ -253,7 +234,7 @@ module Definitions = struct
     include
       Accessors_read
       with type ('a, 'd, 'w, 'l) t = ('d, 'w, 'l) iobuf -> pos:int -> 'a
-      with type ('a, 'd, 'w, 'l) t__local = ('d, 'w, 'l) iobuf -> pos:int -> 'a
+      with type ('a, 'd, 'w, 'l) t = ('d, 'w, 'l) iobuf -> pos:int -> 'a
   end
 
   module type Peek_safe = sig
@@ -286,8 +267,7 @@ module Definitions = struct
     include
       Accessors_write
       with type ('a, 'd, 'w, 'l) t = (read_write, 'w, 'l) iobuf -> pos:int -> 'a -> unit
-      with type ('a, 'd, 'w, 'l) t__local =
-        (read_write, 'w, 'l) iobuf -> pos:int -> 'a -> unit
+      with type ('a, 'd, 'w, 'l) t = (read_write, 'w, 'l) iobuf -> pos:int -> 'a -> unit
 
     (** Same as [Fill.date_string_iso8601_extended t date], but does not advance [t]. *)
     val date_string_iso8601_extended : (Date.t, _, _, _) t

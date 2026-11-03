@@ -7,16 +7,14 @@ include Iobuf_type
 module type Bound = Bound with type ('d, 'w, 'l) iobuf := ('d, 'w, 'l) t
 
 let read_only t = t
-let read_only__local t = t
 let no_seek t = t
-let no_seek__local t = t
 
 module Lo_bound = struct
   let[@cold] stale t iobuf =
     fail iobuf "Iobuf.Lo_bound.restore got stale snapshot" t [%sexp_of: int]
   ;;
 
-  type t = int [@@deriving compare ~localize, sexp_of] (* lo *)
+  type t = int [@@deriving compare, sexp_of] (* lo *)
 
   let window t = t.lo
 
@@ -33,7 +31,7 @@ module Hi_bound = struct
     fail iobuf "Iobuf.Hi_bound.restore got stale snapshot" t [%sexp_of: int]
   ;;
 
-  type t = int [@@deriving compare ~localize, sexp_of] (* hi *)
+  type t = int [@@deriving compare, sexp_of] (* hi *)
 
   let window t = t.hi
 
@@ -112,7 +110,7 @@ let[@inline] unsafe_sub_shared ~pos ~len t =
   { buf = t.buf; lo_min = lo; lo; hi; hi_max = hi }
 ;;
 
-let sub_shared__local ?(pos = 0) ?len t =
+let sub_shared_internal ?(pos = 0) ?len t =
   let len =
     match len with
     | None -> length t - pos
@@ -123,14 +121,13 @@ let sub_shared__local ?(pos = 0) ?len t =
 ;;
 
 let unsafe_sub_shared ~pos ~len t =
-  if unsafe_is_safe then sub_shared__local ~pos ~len t else unsafe_sub_shared ~pos ~len t
+  if unsafe_is_safe
+  then sub_shared_internal ~pos ~len t
+  else unsafe_sub_shared ~pos ~len t
 ;;
 
-let sub_shared ?pos ?len t = globalize_shared (sub_shared__local ?pos ?len t) [@nontail]
-
-let copy t =
-  of_bigstring (Bigstring.sub ([%template buf [@mode local]] t) ~pos:t.lo ~len:(length t))
-;;
+let sub_shared ?pos ?len t = globalize_shared (sub_shared_internal ?pos ?len t) [@nontail]
+let copy t = of_bigstring (Bigstring.sub (buf t) ~pos:t.lo ~len:(length t))
 
 let clone { buf; lo_min; lo; hi; hi_max } =
   let buf =
@@ -160,33 +157,6 @@ let resize t ~len =
 let unsafe_resize = if unsafe_is_safe then resize else unsafe_resize
 
 let protect_window_bounds_and_buffer t ~f =
-  let lo = t.lo in
-  let hi = t.hi in
-  let lo_min = t.lo_min in
-  let hi_max = t.hi_max in
-  let bstr = buf t in
-  (* also mutable *)
-  try
-    t.lo_min <- lo;
-    t.hi_max <- hi;
-    let result = f t in
-    t.lo <- lo;
-    t.hi <- hi;
-    t.lo_min <- lo_min;
-    t.hi_max <- hi_max;
-    if not (phys_equal bstr (buf t)) then t.buf <- Modes.At_locality.wrap bstr;
-    result
-  with
-  | exn ->
-    t.lo <- lo;
-    t.hi <- hi;
-    t.lo_min <- lo_min;
-    t.hi_max <- hi_max;
-    if not (phys_equal bstr (buf t)) then t.buf <- Modes.At_locality.wrap bstr;
-    raise exn
-;;
-
-let protect_window_bounds_and_buffer__local t ~f =
   let lo = t.lo in
   let hi = t.hi in
   let lo_min = t.lo_min in
@@ -295,48 +265,26 @@ let protect_window_bounds_and_buffer_3 t x y z ~f =
 ;;
 
 let empty = create ~len:0
-
-let%template of_string s =
-  (of_bigstring [@alloc a]) (Bigstring.of_string s) [@exclave_if_stack a]
-[@@alloc a = (stack, heap)]
-;;
-
+let of_string s = of_bigstring (Bigstring.of_string s)
 let of_bytes s = of_bigstring (Bigstring.of_bytes s)
 
-let%template[@alloc a @ m = (heap_global, stack_local)] to_stringlike
-  ~(convert : ?pos:int -> ?len:int -> Bigstring.t -> 'a)
-  ?len
-  t
-  : 'a
-  =
-  (let len =
-     match len with
-     | Some len ->
-       check_range t ~pos:0 ~len;
-       len
-     | None -> length t
-   in
-   convert ([%template buf [@mode local]] t) ~pos:t.lo ~len [@nontail])
-  [@exclave_if_stack a]
+let to_stringlike ~(convert : ?pos:int -> ?len:int -> Bigstring.t -> 'a) ?len t : 'a =
+  let len =
+    match len with
+    | Some len ->
+      check_range t ~pos:0 ~len;
+      len
+    | None -> length t
+  in
+  convert (buf t) ~pos:t.lo ~len [@nontail]
 ;;
 
-let%template[@alloc a = (heap, stack)] to_string ?len t =
-  (to_stringlike [@alloc a])
-    ~convert:(Bigstring.to_string [@alloc a])
-    ?len
-    t [@exclave_if_stack a]
-;;
-
+let to_string ?len t = to_stringlike ~convert:Bigstring.to_string ?len t
 let to_bytes ?len t = to_stringlike ~convert:Bigstring.to_bytes ?len t
 
 let compact t =
   let len = t.hi - t.lo in
-  Bigstring.blit
-    ~src:([%template buf [@mode local]] t)
-    ~src_pos:t.lo
-    ~len
-    ~dst:([%template buf [@mode local]] t)
-    ~dst_pos:t.lo_min;
+  Bigstring.blit ~src:(buf t) ~src_pos:t.lo ~len ~dst:(buf t) ~dst_pos:t.lo_min;
   t.lo <- t.lo_min + len;
   t.hi <- t.hi_max
 ;;
@@ -354,12 +302,7 @@ let bounded_compact t lo_min hi_max =
   if hi_max > t.hi_max || hi_max < lo_min + len || lo_min < t.lo_min
   then bounded_compact_stale t lo_min hi_max
   else (
-    Bigstring.blit
-      ~src:([%template buf [@mode local]] t)
-      ~src_pos:t.lo
-      ~len
-      ~dst:([%template buf [@mode local]] t)
-      ~dst_pos:lo_min;
+    Bigstring.blit ~src:(buf t) ~src_pos:t.lo ~len ~dst:(buf t) ~dst_pos:lo_min;
     t.lo <- lo_min + len;
     t.hi <- hi_max)
 ;;
@@ -377,29 +320,15 @@ let memcmp a b =
   let c = Int.compare len (length b) in
   if c <> 0
   then c
-  else
-    Bigstring.memcmp
-      ~pos1:a.lo
-      ([%template buf [@mode local]] a)
-      ~pos2:b.lo
-      ([%template buf [@mode local]] b)
-      ~len [@nontail]
+  else Bigstring.memcmp ~pos1:a.lo (buf a) ~pos2:b.lo (buf b) ~len [@nontail]
 ;;
 
 let memset t ~pos ~len c =
-  Bigstring.memset
-    ~pos:(buf_pos_exn t ~pos ~len)
-    ~len
-    ([%template buf [@mode local]] t)
-    c [@nontail]
+  Bigstring.memset ~pos:(buf_pos_exn t ~pos ~len) ~len (buf t) c [@nontail]
 ;;
 
 let unsafe_memset t ~pos ~len c =
-  Bigstring.unsafe_memset
-    ~pos:(buf_pos_exn t ~pos ~len)
-    ~len
-    ([%template buf [@mode local]] t)
-    c [@nontail]
+  Bigstring.unsafe_memset ~pos:(buf_pos_exn t ~pos ~len) ~len (buf t) c [@nontail]
 ;;
 
 let zero t = memset t ~pos:0 ~len:(length t) '\000'
@@ -424,7 +353,7 @@ let concat bufs =
 
 let contains t ~substring =
   Bigstring.unsafe_memmem
-    ~haystack:([%template buf [@mode local]] t)
+    ~haystack:(buf t)
     ~haystack_pos:t.lo
     ~haystack_len:(length t)
     ~needle:substring

@@ -13,7 +13,7 @@ type endian =
   [ `Big_endian
   | `Little_endian
   ]
-[@@deriving compare ~localize, hash, sexp]
+[@@deriving compare, hash, sexp]
 
 (* Computes the offset based on the total number of bytes, the byte order, and the byte
    number. The byte number is ordered by decreasing significance starting at zero (big
@@ -264,6 +264,42 @@ let pack_signed_32 ~byte_order ~buf ~pos n =
     (Char.unsafe_chr (0xFF land Int32.to_int n))
 ;;
 
+let pack_signed_32_big_endian ~buf ~pos v =
+  (* Safely set the first and last bytes, so that we verify the string bounds. *)
+  Bytes.set
+    buf
+    pos
+    (Char.unsafe_chr (0xFF land Int32.to_int (Int32.shift_right_logical v 24)));
+  Bytes.set buf (pos + 3) (Char.unsafe_chr (0xFF land Int32.to_int v));
+  (* Now we can use [unsafe_set] for the intermediate bytes. *)
+  Bytes.unsafe_set
+    buf
+    (pos + 1)
+    (Char.unsafe_chr (0xFF land Int32.to_int (Int32.shift_right_logical v 16)));
+  Bytes.unsafe_set
+    buf
+    (pos + 2)
+    (Char.unsafe_chr (0xFF land Int32.to_int (Int32.shift_right_logical v 8)))
+;;
+
+let pack_signed_32_little_endian ~buf ~pos v =
+  (* Safely set the first and last bytes, so that we verify the string bounds. *)
+  Bytes.set buf pos (Char.unsafe_chr (0xFF land Int32.to_int v));
+  Bytes.set
+    buf
+    (pos + 3)
+    (Char.unsafe_chr (0xFF land Int32.to_int (Int32.shift_right_logical v 24)));
+  (* Now we can use [unsafe_set] for the intermediate bytes. *)
+  Bytes.unsafe_set
+    buf
+    (pos + 1)
+    (Char.unsafe_chr (0xFF land Int32.to_int (Int32.shift_right_logical v 8)));
+  Bytes.unsafe_set
+    buf
+    (pos + 2)
+    (Char.unsafe_chr (0xFF land Int32.to_int (Int32.shift_right_logical v 16)))
+;;
+
 let unpack_signed_32 ~byte_order ~buf ~pos =
   let b1 =
     (* MSB *)
@@ -276,6 +312,34 @@ let unpack_signed_32 ~byte_order ~buf ~pos =
   let b4 = Char.code (Bytes.get buf (pos + offset ~len:4 ~byte_order 3)) in
   (* LSB *)
   Int32.logor b1 (Int32.of_int (b2 lor b3 lor b4))
+;;
+
+let unpack_signed_32_big_endian ~buf ~pos =
+  (* Do bounds checking only on the first and last bytes *)
+  let b1 = Char.code (Bytes.get buf pos)
+  and b4 = Char.code (Bytes.get buf (pos + 3)) in
+  let b2 = Char.code (Bytes.unsafe_get buf (pos + 1))
+  and b3 = Char.code (Bytes.unsafe_get buf (pos + 2)) in
+  if arch_sixtyfour
+  then Int32.of_int ((b1 lsl 24) lor (b2 lsl 16) lor (b3 lsl 8) lor b4)
+  else
+    Int32.logor
+      (Int32.shift_left (Int32.of_int b1) 24)
+      (Int32.of_int ((b2 lsl 16) lor (b3 lsl 8) lor b4))
+;;
+
+let unpack_signed_32_little_endian ~buf ~pos =
+  (* Do bounds checking only on the first and last bytes *)
+  let b1 = Char.code (Bytes.get buf pos)
+  and b4 = Char.code (Bytes.get buf (pos + 3)) in
+  let b2 = Char.code (Bytes.unsafe_get buf (pos + 1))
+  and b3 = Char.code (Bytes.unsafe_get buf (pos + 2)) in
+  if arch_sixtyfour
+  then Int32.of_int ((b4 lsl 24) lor (b3 lsl 16) lor (b2 lsl 8) lor b1)
+  else
+    Int32.logor
+      (Int32.shift_left (Int32.of_int b4) 24)
+      (Int32.of_int ((b3 lsl 16) lor (b2 lsl 8) lor b1))
 ;;
 
 let unpack_unsigned_32_int ~byte_order ~buf ~pos =

@@ -2,5 +2,6 @@
  (name timing_wheel)
  (public_name core_kernel.timing_wheel)
  (preprocess
-  (pps ppx_jane))
- (libraries core tuple_pool))
+  (pps ppx_jane -compare-require-explicit-locality))
+ (libraries core tuple_pool)
+ (ocamlopt_flags :standard -O3))

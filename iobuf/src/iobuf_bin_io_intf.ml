@@ -23,22 +23,8 @@ module Definitions = struct
 
     val fill : 'a Bin_prot.Type_class.writer -> (read_write, seek, global) t -> 'a -> unit
 
-    val fill__local
-      :  'a Bin_prot.Size.sizer__local
-      -> 'a Bin_prot.Write.writer__local
-      -> (read_write, seek, global) t
-      -> 'a
-      -> unit
-
     val unsafe_fill
       :  'a Bin_prot.Type_class.writer
-      -> (read_write, seek, global) t
-      -> 'a
-      -> unit
-
-    val unsafe_fill__local
-      :  'a Bin_prot.Size.sizer__local
-      -> 'a Bin_prot.Write.writer__local
       -> (read_write, seek, global) t
       -> 'a
       -> unit
@@ -73,14 +59,13 @@ module Definitions = struct
       -> 'a
       -> int
 
-    val%template unsafe_poke_with_known_size
-      :  ('a Bin_prot.Write.writer[@mode m])
+    val unsafe_poke_with_known_size
+      :  'a Bin_prot.Write.writer
       -> (read_write, _, global) t
       -> pos:int
       -> size:int
       -> 'a
       -> unit
-    [@@mode m = (global, local)]
 
     (** Include length of bin_prot payload as a header *)
 
@@ -94,13 +79,6 @@ module Definitions = struct
     val fill_with_header
       :  ([> write ], seek, global) t
       -> 'a Bin_prot.Type_class.writer
-      -> 'a
-      -> unit Or_error.t
-
-    val fill_with_header__local
-      :  ([> write ], seek, global) t
-      -> 'a Bin_prot.Size.sizer__local
-      -> 'a Bin_prot.Write.writer__local
       -> 'a
       -> unit Or_error.t
   end

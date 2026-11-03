@@ -4,7 +4,7 @@
 type 'a t =
   | []
   | ( :: ) of 'a * 'a t
-[@@deriving equal ~localize]
+[@@deriving equal]
 
 (** Type alias for use within submodules *)
 type 'a reversed_list = 'a t
@@ -14,11 +14,9 @@ type 'a reversed_list = 'a t
     overhead of reversal may be better off using a queue. *)
 
 (** [of_list_rev] reverses the input list. *)
-val%template of_list_rev : 'a list -> 'a t
-[@@alloc __ @ m = (stack_local, heap_global)]
+val of_list_rev : 'a list -> 'a t
 
-val%template rev : 'a t -> 'a list [@@alloc __ @ m = (stack_local, heap_global)]
-
+val rev : 'a t -> 'a list
 val rev_append : 'a t -> 'a list -> 'a list
 val rev_map : 'a t -> f:('a -> 'b) -> 'b list
 val rev_filter_map : 'a t -> f:('a -> 'b option) -> 'b list
@@ -47,14 +45,14 @@ end
 (** Renders sexps after reversing the list. E.g. [1::2] is represented as [(2 1)]. See
     [With_sexp_of] for why only [sexp_of] is provided. *)
 module With_rev_sexp_of : sig
-  type nonrec 'a t = 'a t [@@deriving sexp_of ~stackify]
+  type nonrec 'a t = 'a t [@@deriving sexp_of]
 end
 
 (** Functions that operate between [Reversed_list.t] and [Nonempty_list.t] *)
 
 (** Non-empty version of [Reversed_list.t] *)
 module Nonempty : sig
-  type 'a t = ( :: ) of 'a * 'a reversed_list
+  type 'a t = ( :: ) of 'a * 'a reversed_list [@@deriving equal]
 
   val cons : 'a -> 'a t -> 'a t
   val to_rev_list : 'a t -> 'a reversed_list

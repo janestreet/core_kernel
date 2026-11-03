@@ -5,7 +5,7 @@ module State = struct
     | Closed
     | Write_in_progress
     | Ok_to_write
-  [@@deriving sexp_of ~stackify]
+  [@@deriving sexp_of]
 
   let is_closed = function
     | Closed -> true
@@ -152,7 +152,7 @@ module On_subscription_after_first_write = struct
     | Allow
     | Allow_and_send_last_value_if_global
     | Raise
-  [@@deriving compare ~localize, enumerate, equal ~localize, sexp_of ~stackify]
+  [@@deriving compare, enumerate, equal, sexp_of]
 
   let allow_subscription_after_first_write = function
     | Allow -> true
@@ -186,7 +186,7 @@ module Subscriber = struct
 
   let is_subscribed t ~to_ = t.subscribers_index >= 0 && Bus_id.equal t.bus_id to_
 
-  let%template[@alloc a = (heap, stack)] sexp_of_t
+  let sexp_of_t
     _
     { callback = _
     ; bus_id = _
@@ -200,18 +200,16 @@ module Subscriber = struct
     =
     List
       [ Atom "Bus.Subscriber.t"
-      ; ([%message
-           ""
-             ~subscribers_index:
-               (if Ppx_inline_test_lib.am_running then None else Some subscribers_index
-                : (int option[@sexp.option]))
-             (on_callback_raise : ((Error.t -> unit) option[@sexp.option]))
-             ~extract_exn:
-               (if extract_exn then Some true else None : (bool option[@sexp.option]))
-             (subscribed_from : Source_code_position.t)]
-        [@alloc a])
+      ; [%message
+          ""
+            ~subscribers_index:
+              (if Ppx_inline_test_lib.am_running then None else Some subscribers_index
+               : (int option[@sexp.option]))
+            (on_callback_raise : ((Error.t -> unit) option[@sexp.option]))
+            ~extract_exn:
+              (if extract_exn then Some true else None : (bool option[@sexp.option]))
+            (subscribed_from : Source_code_position.t)]
       ]
-    [@exclave_if_stack a]
   ;;
 
   let invariant invariant_a t =
@@ -266,7 +264,7 @@ type ('callback, 'phantom) t =
   }
 [@@deriving fields ~getters ~iterators:iter]
 
-let%template[@alloc a = (heap, stack)] sexp_of_t
+let sexp_of_t
   _
   _
   { bus_id = _
@@ -283,22 +281,20 @@ let%template[@alloc a = (heap, stack)] sexp_of_t
   ; unsubscribes_during_write = _
   }
   =
-  (let subscribers =
-     Array.init num_subscribers ~f:(fun i -> Option_array.get_some_exn subscribers i)
-   in
-   [%message
-     ""
-       (name : (Info.t option[@sexp.option]))
-       (created_from : Source_code_position.t)
-       (on_subscription_after_first_write : On_subscription_after_first_write.t)
-       (state : State.t)
-       (write_ever_called : bool)
-       (subscribers : _ Subscriber.t Array.t)]
-   [@alloc a])
-  [@exclave_if_stack a]
+  let subscribers =
+    Array.init num_subscribers ~f:(fun i -> Option_array.get_some_exn subscribers i)
+  in
+  [%message
+    ""
+      (name : (Info.t option[@sexp.option]))
+      (created_from : Source_code_position.t)
+      (on_subscription_after_first_write : On_subscription_after_first_write.t)
+      (state : State.t)
+      (write_ever_called : bool)
+      (subscribers : _ Subscriber.t Array.t)]
 ;;
 
-type ('callback, 'phantom) bus = ('callback, 'phantom) t [@@deriving sexp_of ~stackify]
+type ('callback, 'phantom) bus = ('callback, 'phantom) t [@@deriving sexp_of]
 
 let read_only t = (t :> (_, read) t)
 
@@ -339,13 +335,13 @@ let invariant invariant_a _ t =
 let is_closed t = State.is_closed t.state
 
 module Read_write = struct
-  type 'callback t = ('callback, read_write) bus [@@deriving sexp_of ~stackify]
+  type 'callback t = ('callback, read_write) bus [@@deriving sexp_of]
 
   let invariant invariant_a t = invariant invariant_a ignore t
 end
 
 module Read_only = struct
-  type 'callback t = ('callback, read) bus [@@deriving sexp_of ~stackify]
+  type 'callback t = ('callback, read) bus [@@deriving sexp_of]
 
   let invariant invariant_a t = invariant invariant_a ignore t
 end
@@ -714,9 +710,6 @@ module Write_variants_without_locals = struct
 end
 
 module Write_variants_with_locals = struct
-  [%%template
-  [@@@kind.default ka1 = base_or_null]
-
   let write_local_non_optimized t callbacks a1 =
     let len = t.num_subscribers in
     let i = ref 0 in
@@ -731,8 +724,6 @@ module Write_variants_with_locals = struct
     finish_write t
   ;;
 
-  [@@@kind.default ka2 = base_or_null]
-
   let write2_local_non_optimized t callbacks a1 a2 =
     let len = t.num_subscribers in
     let i = ref 0 in
@@ -745,7 +736,7 @@ module Write_variants_with_locals = struct
       | exn -> callback_raised t !i exn
     done;
     finish_write t
-  ;;]
+  ;;
 
   let write3_local_non_optimized t callbacks a1 a2 a3 =
     let len = t.num_subscribers in
@@ -803,9 +794,6 @@ module Write_variants_with_locals = struct
     finish_write t
   ;;
 
-  [%%template
-  [@@@kind.default ka1 = base_or_null]
-
   let[@inline always] write_local t a1 =
     let callbacks = t.callbacks in
     t.write_ever_called <- true;
@@ -820,10 +808,8 @@ module Write_variants_with_locals = struct
           (try (unsafe_get_callback callbacks 0) a1 with
            | exn -> callback_raised t 1 exn);
           finish_write t)
-        else (write_local_non_optimized [@kind ka1] [@inlined never]) t callbacks a1)
+        else (write_local_non_optimized [@inlined never]) t callbacks a1)
   ;;
-
-  [@@@kind.default ka2 = base_or_null]
 
   let[@inline always] write2_local t a1 a2 =
     let callbacks = t.callbacks in
@@ -839,9 +825,8 @@ module Write_variants_with_locals = struct
           (try (unsafe_get_callback callbacks 0) a1 a2 with
            | exn -> callback_raised t 1 exn);
           finish_write t)
-        else
-          (write2_local_non_optimized [@kind ka1 ka2] [@inlined never]) t callbacks a1 a2)
-  ;;]
+        else (write2_local_non_optimized [@inlined never]) t callbacks a1 a2)
+  ;;
 
   let[@inline always] write3_local t a1 a2 a3 =
     let callbacks = t.callbacks in
@@ -1039,7 +1024,7 @@ module Fold_arity = struct
           , 's -> 'a -> 'b -> 'c -> 'd -> 'e -> 'f -> 's
           , 's )
           t
-  [@@deriving sexp_of ~stackify]
+  [@@deriving sexp_of]
 end
 
 let subscribe_with_state_exn

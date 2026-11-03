@@ -32,8 +32,8 @@ module Stable = struct
   module V1 = struct
     type 'a t = 'a ref [@@deriving stable_witness]
 
-    include%template
-      Sexpable.Of_sexpable1.V1 [@modality portable]
+    include
+      Sexpable.Of_sexpable1.V1
         (Option.V1)
         (struct
           type nonrec 'a t = 'a t
@@ -87,7 +87,7 @@ module Stable = struct
       ;;
     end
 
-    include%template Bin_prot.Utils.Of_minimal1 [@modality portable] (Minimal_bin_io)
+    include Bin_prot.Utils.Of_minimal1 (Minimal_bin_io)
   end
 end
 

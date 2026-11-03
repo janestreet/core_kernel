@@ -25,7 +25,7 @@ module Color : sig
     | `Color_256 of Color_256.t
     | `Default_color
     ]
-  [@@deriving sexp_of, compare ~localize, hash, equal ~localize]
+  [@@deriving sexp_of, compare, hash, equal]
 
   val to_int_list : [< t ] -> int list
 end
@@ -51,7 +51,7 @@ module Attr : sig
           When multiple [`Url _] attributes are supplied for the same span, only the last
           is honored; subsequent [`Url _] attributes are silently dropped. *)
     ]
-  [@@deriving sexp_of, compare ~localize, hash, equal ~localize]
+  [@@deriving sexp_of, compare, hash, equal]
 
   (** ignores the `Url attr, if any *)
   val to_int_list : [< t ] -> int list
@@ -68,7 +68,7 @@ module With_all_attrs : sig
     | `Blink
     | `Hidden
     ]
-  [@@deriving sexp_of, compare ~localize, hash, equal ~localize]
+  [@@deriving sexp_of, compare, hash, equal]
 
   (** ignores the `Url attr, if any *)
   val to_int_list : [< t ] -> int list
@@ -81,14 +81,12 @@ module Stable : sig
   module Color : sig
     module V1 : sig
       type primary
-      type t [@@deriving compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
+      type t [@@deriving compare, equal, hash, sexp, sexp_grammar]
     end
 
     module V2 : sig
       type primary = Color.primary
-
-      type t = Color.t
-      [@@deriving compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
+      type t = Color.t [@@deriving compare, equal, hash, sexp, sexp_grammar]
 
       val of_v1 : V1.t -> t
       val to_v1 : t -> foreground:bool -> V1.t
@@ -99,19 +97,18 @@ module Stable : sig
 
   module Attr : sig
     module V1 : sig
-      type t [@@deriving compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
+      type t [@@deriving compare, equal, hash, sexp, sexp_grammar]
     end
 
     module V2 : sig
-      type t [@@deriving compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
+      type t [@@deriving compare, equal, hash, sexp, sexp_grammar]
 
       val of_v1 : V1.t -> t
       val to_v1 : t -> V1.t
     end
 
     module V3 : sig
-      type t = Attr.t
-      [@@deriving compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
+      type t = Attr.t [@@deriving compare, equal, hash, sexp, sexp_grammar]
 
       val of_v2 : V2.t -> t
       val to_v2 : t -> V2.t option

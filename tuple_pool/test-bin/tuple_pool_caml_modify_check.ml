@@ -7,6 +7,9 @@
 open Core
 module Caml_modify = Replace_caml_modify_for_testing
 
+(* Link the [caml_modify] counting wrapper so [Caml_modify] reports real counts. *)
+module _ = Enable_replace_caml_modify_for_testing
+
 (* Big enough length so an array goes directly into the major heap. *)
 let big = 32 * 1024
 

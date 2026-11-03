@@ -17,13 +17,13 @@ module Stable = struct
         | `Cyan
         | `White
         ]
-      [@@deriving compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
+      [@@deriving compare, equal, hash, sexp, sexp_grammar]
 
       type t =
         [ primary
         | `Color_256 of Color_256.V1.t
         ]
-      [@@deriving compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
+      [@@deriving compare, equal, hash, sexp, sexp_grammar]
     end
 
     module V2 = struct
@@ -37,14 +37,14 @@ module Stable = struct
         | `Cyan
         | `White
         ]
-      [@@deriving compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
+      [@@deriving compare, equal, hash, sexp, sexp_grammar]
 
       type t =
         [ primary
         | `Color_256 of Color_256.V1.t
         | `Default_color
         ]
-      [@@deriving compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
+      [@@deriving compare, equal, hash, sexp, sexp_grammar]
 
       let of_v1 (t : V1.t) = (t :> t)
 
@@ -71,7 +71,7 @@ module Stable = struct
         | Color.V1.t
         | `Bg of Color.V1.t
         ]
-      [@@deriving compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
+      [@@deriving compare, equal, hash, sexp, sexp_grammar]
     end
 
     module V2 = struct
@@ -83,7 +83,7 @@ module Stable = struct
         | Color.V2.t
         | `Bg of Color.V2.t
         ]
-      [@@deriving compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
+      [@@deriving compare, equal, hash, sexp, sexp_grammar]
 
       let of_v1 (t : V1.t) = (t :> t)
 
@@ -100,7 +100,7 @@ module Stable = struct
         [ V2.t
         | `Url of string
         ]
-      [@@deriving compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
+      [@@deriving compare, equal, hash, sexp, sexp_grammar]
 
       let of_v2 (t : V2.t) = (t :> t)
 
@@ -118,11 +118,8 @@ module Color_256 = Color_256
 
 (* NOTE: assorted content lifted from lib/console/src/console.ml *)
 module Color = struct
-  type primary = Stable.Color.V2.primary
-  [@@deriving sexp_of, compare ~localize, hash, equal ~localize]
-
-  type t = Stable.Color.V2.t
-  [@@deriving sexp_of, compare ~localize, hash, equal ~localize]
+  type primary = Stable.Color.V2.primary [@@deriving sexp_of, compare, hash, equal]
+  type t = Stable.Color.V2.t [@@deriving sexp_of, compare, hash, equal]
 
   let to_int_list = function
     | `Black -> [ 30 ]
@@ -139,7 +136,7 @@ module Color = struct
 end
 
 module Attr = struct
-  type t = Stable.Attr.V3.t [@@deriving sexp_of, compare ~localize, hash, equal ~localize]
+  type t = Stable.Attr.V3.t [@@deriving sexp_of, compare, hash, equal]
 
   let to_int_list = function
     | `Bright -> [ 1 ]
@@ -173,7 +170,7 @@ module With_all_attrs = struct
     | `Blink
     | `Hidden
     ]
-  [@@deriving sexp_of, compare ~localize, hash, equal ~localize]
+  [@@deriving sexp_of, compare, hash, equal]
 
   let to_int_list = function
     | `Reset -> [ 0 ]

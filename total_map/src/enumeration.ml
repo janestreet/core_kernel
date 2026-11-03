@@ -9,7 +9,7 @@ module type S =
 module type S_fc =
   Enumeration_intf.S_fc with type ('a, 'witness) enumeration := ('a, 'witness) t
 
-module%template.portable Make (T : sig
+module Make (T : sig
     type t [@@deriving enumerate]
   end) =
 struct

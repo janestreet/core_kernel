@@ -323,7 +323,7 @@ let find_or_add =
   fun t key ~default -> find_or_add_impl t key ~without_mutating_make_default ~default
 ;;
 
-let%template[@mode m = (local, global)] find t key =
+let find t key =
   let index = slot t key in
   let it = table_get t.table index in
   let e = find_entry t ~key ~it in
@@ -474,6 +474,8 @@ let find_and_remove t key =
   else None
 ;;
 
+let find_and_remove_or_null t key = find_and_remove t key |> Or_null.of_option
+
 let change =
   let call t f x = without_mutating t (fun () -> f x) () [@nontail] in
   let rec change_key t key f index e prev =
@@ -614,7 +616,7 @@ let remove_multi t key =
   | Some (_ :: tl) -> replace t ~key ~data:tl
 ;;
 
-let%template iteri =
+let iteri =
   let rec loop t f e =
     if not (Entry.is_null e)
     then (
@@ -636,7 +638,6 @@ let%template iteri =
       | exception exn ->
         t.mutation_allowed <- m;
         raise exn)
-[@@mode m = (local, global)]
 ;;
 
 let iter t ~f = iteri t ~f:(fun ~key:_ ~data -> f data) [@nontail]
@@ -649,15 +650,20 @@ let rec choose_nonempty t i =
   else Entry.key t.entries entry, Entry.data t.entries entry
 ;;
 
-let%template[@inline] [@mode global] wrap_pair (k, v) = k, v
-let%template[@inline] [@mode local] wrap_pair (k, v) = { global = k }, { global = v }
-
-let%template[@mode m = (global, local)] choose t =
-  if t.length = 0
+let choose_local t =
+  if is_empty t
   then None
   else (
-    let k, v = (wrap_pair [@mode m]) (choose_nonempty t 0) in
-    Some (k, v) [@exclave_if_local m])
+    let k, v = choose_nonempty t 0 in
+    Some ({ Modes.Global.global = k }, { Modes.Global.global = v }))
+;;
+
+let choose t =
+  if is_empty t
+  then None
+  else (
+    let k, v = choose_nonempty t 0 in
+    Some (k, v))
 ;;
 
 let choose_exn t =
@@ -997,18 +1003,17 @@ let mapi_inplace t ~f =
 
 let map_inplace t ~f = mapi_inplace t ~f:(fun ~key:_ ~data -> f data) [@nontail]
 
-let%template equal equal t t' =
+let equal equal t t' =
   length t = length t'
   && (with_return (fun r ->
-        (iteri [@mode m]) t ~f:(fun ~key ~data ->
-          match (find [@mode m]) t' key with
+        iteri t ~f:(fun ~key ~data ->
+          match find t' key with
           | None -> r.return false
           | Some data' ->
             if not (without_mutating t' (fun () -> equal data data') ())
             then r.return false);
         true)
   [@nontail])
-[@@mode m = (local, global)]
 ;;
 
 let similar = equal
@@ -1032,7 +1037,8 @@ let copy t =
 ;;
 
 module Accessors = struct
-  let%template choose = (choose [@mode m]) [@@mode m = (local, global)]
+  let choose = choose
+  let choose_local = choose_local
   let choose_exn = choose_exn
   let choose_randomly = choose_randomly
   let choose_randomly_exn = choose_randomly_exn
@@ -1090,6 +1096,7 @@ module Accessors = struct
   let find_and_call2 = find_and_call2
   let findi_and_call2 = findi_and_call2
   let find_and_remove = find_and_remove
+  let find_and_remove_or_null = find_and_remove_or_null
   let to_alist = to_alist
   let validate = validate
   let merge = merge
@@ -1103,22 +1110,19 @@ module Accessors = struct
   let mapi_inplace = mapi_inplace
   let filter_map_inplace = filter_map_inplace
   let filter_mapi_inplace = filter_mapi_inplace
-  let%template equal = (equal [@mode m]) [@@mode m = (local, global)]
+  let equal = equal
   let similar = similar
   let incr = incr
   let decr = decr
   let sexp_of_key = sexp_of_key
 end
 
-[%%template
-[@@@mode.default m = (local, global)]
-
-module type Key_plain = Key_plain [@mode m]
-module type Key = Key [@mode m]
-module type Key_binable = Key_binable [@mode m]
-module type Key_stable = Key_stable [@mode m]]
-
+module type Key_plain = Key_plain
+module type Key = Key
+module type Key_binable = Key_binable
+module type Key_stable = Key_stable
 module type For_deriving = For_deriving
+module type For_deriving_stable = For_deriving_stable
 
 module Creators (Key : sig
     type 'a t
@@ -1388,41 +1392,6 @@ module M (K : T) = struct
   type nonrec 'v t = (K.t, 'v) t
 end
 
-module type Sexp_of_m = sig
-  type t [@@deriving sexp_of]
-end
-
-module type M_of_sexp = sig
-  type t [@@deriving of_sexp]
-
-  include Key with type t := t
-end
-
-module type M_sexp_grammar = sig
-  type t [@@deriving sexp_grammar]
-end
-
-module type Equal_m = sig end
-
-let t_of_sexp ~hashable k_of_sexp d_of_sexp sexp =
-  let alist = list_of_sexp (pair_of_sexp k_of_sexp d_of_sexp) sexp in
-  of_alist_exn ~hashable alist ~size:(List.length alist)
-;;
-
-let sexp_of_m__t (type k) (module K : Sexp_of_m with type t = k) sexp_of_v t =
-  sexp_of_t K.sexp_of_t sexp_of_v t
-;;
-
-let m__t_of_sexp (type k) (module K : M_of_sexp with type t = k) v_of_sexp s =
-  t_of_sexp ~hashable:(Hashable.of_key (module K)) K.t_of_sexp v_of_sexp s
-;;
-
-let m__t_sexp_grammar (type k) (module K : M_sexp_grammar with type t = k) v_grammar =
-  Sexplib.Sexp_grammar.coerce (List.Assoc.t_sexp_grammar K.t_sexp_grammar v_grammar)
-;;
-
-let equal_m__t (module _ : Equal_m) equal_v t1 t2 = equal equal_v t1 t2
-
 module Using_hashable = struct
   type nonrec ('a, 'b) t = ('a, 'b) t [@@deriving sexp_of]
 
@@ -1438,6 +1407,11 @@ module Using_hashable = struct
   let create_with_key_exn = create_with_key_exn
   let group = group
 end
+
+let t_of_sexp ~hashable k_of_sexp d_of_sexp sexp =
+  let alist = list_of_sexp (pair_of_sexp k_of_sexp d_of_sexp) sexp in
+  of_alist_exn ~hashable alist ~size:(List.length alist)
+;;
 
 let create ?growth_allowed ?size m =
   create ~hashable:(Hashable.of_key m) ?growth_allowed ?size ()
@@ -1483,60 +1457,129 @@ let group ?growth_allowed ?size m ~get_key ~get_data ~combine l =
   group ~hashable:(Hashable.of_key m) ?growth_allowed ?size ~get_key ~get_data ~combine l
 ;;
 
-module type%template M_quickcheck = M_quickcheck [@mode m] [@@mode m = (local, global)]
-
 let of_alist_option m alist = Result.ok (of_alist_or_error m alist)
 
-let quickcheck_generator_m__t
-  (type key)
-  (module Key : M_quickcheck with type t = key)
-  quickcheck_generator_data
-  =
-  [%quickcheck.generator: (Key.t * data) List.t]
-  |> Quickcheck.Generator.filter_map ~f:(of_alist_option (module Key))
-;;
+module For_deriving = struct
+  module type Sexp_of_m = sig
+    type t [@@deriving sexp_of]
+  end
 
-let quickcheck_observer_m__t
-  (type key)
-  (module Key : M_quickcheck with type t = key)
-  quickcheck_observer_data
-  =
-  [%quickcheck.observer: (Key.t * data) List.t] |> Quickcheck.Observer.unmap ~f:to_alist
-;;
+  module type M_of_sexp = sig
+    type t [@@deriving of_sexp]
 
-let quickcheck_shrinker_m__t
-  (type key)
-  (module Key : M_quickcheck with type t = key)
-  quickcheck_shrinker_data
-  =
-  [%quickcheck.shrinker: (Key.t * data) List.t]
-  |> Quickcheck.Shrinker.filter_map ~f:(of_alist_option (module Key)) ~f_inverse:to_alist
-;;
+    include Key with type t := t
+  end
 
-let bin_shape_m__t (type t) (module Key : Key_binable with type t = t) =
-  let module M = Provide_bin_io (Key) in
-  M.bin_shape_t
-;;
+  module type M_sexp_grammar = sig
+    type t [@@deriving sexp_grammar]
+  end
 
-let bin_size_m__t (type t) (module Key : Key_binable with type t = t) =
-  let module M = Provide_bin_io (Key) in
-  M.bin_size_t
-;;
+  module type Equal_m = sig end
 
-let bin_write_m__t (type t) (module Key : Key_binable with type t = t) =
-  let module M = Provide_bin_io (Key) in
-  M.bin_write_t
-;;
+  let sexp_of_m__t (type k) (module K : Sexp_of_m with type t = k) sexp_of_v t =
+    sexp_of_t K.sexp_of_t sexp_of_v t
+  ;;
 
-let bin_read_m__t (type t) (module Key : Key_binable with type t = t) =
-  let module M = Provide_bin_io (Key) in
-  M.bin_read_t
-;;
+  let m__t_of_sexp (type k) (module K : M_of_sexp with type t = k) v_of_sexp s =
+    t_of_sexp ~hashable:(Hashable.of_key (module K)) K.t_of_sexp v_of_sexp s
+  ;;
 
-let __bin_read_m__t__ (type t) (module Key : Key_binable with type t = t) =
-  let module M = Provide_bin_io (Key) in
-  M.__bin_read_t__
-;;
+  let m__t_sexp_grammar (type k) (module K : M_sexp_grammar with type t = k) v_grammar =
+    Sexplib.Sexp_grammar.coerce (List.Assoc.t_sexp_grammar K.t_sexp_grammar v_grammar)
+  ;;
+
+  let equal_m__t (module _ : Equal_m) equal_v t1 t2 = equal equal_v t1 t2
+
+  module type M_quickcheck = M_quickcheck
+
+  let quickcheck_generator_m__t
+    (type key)
+    (module Key : M_quickcheck with type t = key)
+    quickcheck_generator_data
+    =
+    [%quickcheck.generator: (Key.t * data) List.t]
+    |> Quickcheck.Generator.filter_map ~f:(of_alist_option (module Key))
+  ;;
+
+  let quickcheck_observer_m__t
+    (type key)
+    (module Key : M_quickcheck with type t = key)
+    quickcheck_observer_data
+    =
+    [%quickcheck.observer: (Key.t * data) List.t] |> Quickcheck.Observer.unmap ~f:to_alist
+  ;;
+
+  let quickcheck_shrinker_m__t
+    (type key)
+    (module Key : M_quickcheck with type t = key)
+    quickcheck_shrinker_data
+    =
+    [%quickcheck.shrinker: (Key.t * data) List.t]
+    |> Quickcheck.Shrinker.filter_map
+         ~f:(of_alist_option (module Key))
+         ~f_inverse:to_alist
+  ;;
+
+  let bin_shape_m__t (type t) (module Key : Key_binable with type t = t) =
+    let module M = Provide_bin_io (Key) in
+    M.bin_shape_t
+  ;;
+
+  let bin_size_m__t (type t) (module Key : Key_binable with type t = t) =
+    let module M = Provide_bin_io (Key) in
+    M.bin_size_t
+  ;;
+
+  let bin_write_m__t (type t) (module Key : Key_binable with type t = t) =
+    let module M = Provide_bin_io (Key) in
+    M.bin_write_t
+  ;;
+
+  let bin_read_m__t (type t) (module Key : Key_binable with type t = t) =
+    let module M = Provide_bin_io (Key) in
+    M.bin_read_t
+  ;;
+
+  let __bin_read_m__t__ (type t) (module Key : Key_binable with type t = t) =
+    let module M = Provide_bin_io (Key) in
+    M.__bin_read_t__
+  ;;
+end
+
+include For_deriving
+
+module For_deriving_stable = struct
+  let stable_witness_m__t (type t) (module Key : Stable_witness.S with type t = t) =
+    let module M = Provide_stable_witness (Key) in
+    M.stable_witness
+  ;;
+end
+
+module Stable = struct
+  module V1 = struct
+    type nonrec ('key, 'data) t = ('key, 'data) Poly.t [@@deriving bin_io, sexp]
+
+    let stable_witness
+      (type key data)
+      (key_stable_witness : key Stable_witness.t)
+      (data_stable_witness : data Stable_witness.t)
+      : (key, data) t Stable_witness.t
+      =
+      let module M =
+        Provide_stable_witness (struct
+          type t = key
+
+          let stable_witness = key_stable_witness
+        end)
+      in
+      M.stable_witness data_stable_witness
+    ;;
+
+    module M = M
+    include For_deriving
+    include For_deriving_stable
+  end
+end
 
 let iteri t ~f = iteri t ~f
 let find t x = find t x

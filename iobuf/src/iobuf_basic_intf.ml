@@ -10,7 +10,7 @@ module Definitions = struct
     type ('d, 'w, 'l) iobuf
 
     type t = private int (*_ performance hack: avoid the write barrier *)
-    [@@deriving compare ~localize, sexp_of]
+    [@@deriving compare, sexp_of]
 
     val window : (_, _, _) iobuf -> t
     val limit : (_, _, _) iobuf -> t
@@ -18,10 +18,10 @@ module Definitions = struct
   end
 
   module type Basic = sig
-    type nonrec seek = seek [@@deriving sexp_of ~localize ~stackify]
-    type nonrec no_seek = no_seek [@@deriving sexp_of ~localize ~stackify]
-    type nonrec global = global [@@deriving sexp_of ~localize ~stackify]
-    type nonrec local = local [@@deriving sexp_of ~localize ~stackify]
+    type nonrec seek = seek [@@deriving sexp_of]
+    type nonrec no_seek = no_seek [@@deriving sexp_of]
+    type nonrec global = global [@@deriving sexp_of]
+    type nonrec local = local [@@deriving sexp_of]
     type ('rw, 'seek, 'loc) t
 
     val globalize : [ `deprecated ]
@@ -38,8 +38,7 @@ module Definitions = struct
           underlying bigstring, but no data. We do this rather than deriving sexp_of on
           [t] because it is much more likely to be noise than useful information, and so
           callers should probably not display the iobuf at all. *)
-      type nonrec ('rw, 'seek, 'loc) t = ('rw, 'seek, 'loc) t
-      [@@deriving sexp_of ~localize]
+      type nonrec ('rw, 'seek, 'loc) t = ('rw, 'seek, 'loc) t [@@deriving sexp_of]
 
       val globalize : [ `deprecated ]
       [@@deprecated "[since 2025-09] use [Iobuf.globalize_shared] instead"]
@@ -56,13 +55,7 @@ module Definitions = struct
     (** [empty] is an immutable [t] of size 0. *)
     val empty : (read, no_seek, global) t
 
-    [%%template:
-    type 'a locality := 'a
-    type _ locality := local [@@mode local]]
-
-    [%%template:
-    [@@@alloc.default a @ m = (heap_global, stack_local)]
-    [@@@mode.default l = (global, m)]
+    type 'a locality = 'a
 
     (** [of_bigstring bigstring ~pos ~len] returns an iobuf backed by [bigstring], with
         the window and limits specified starting at [pos] and of length [len]. *)
@@ -70,7 +63,7 @@ module Definitions = struct
       :  ?pos:int (** default is [0] *)
       -> ?len:int (** default is [Bigstring.length bigstring - pos] *)
       -> Bigstring.t
-      -> ([< read_write ], _, (_ locality[@mode l])) t
+      -> ([< read_write ], _, _ locality) t
     (** forbid [immutable] to prevent aliasing *)
 
     (** More efficient than the above (optional arguments are costly). *)
@@ -78,19 +71,18 @@ module Definitions = struct
       :  pos:int
       -> len:int
       -> Bigstring.t
-      -> ([< read_write ], _, (_ locality[@mode l])) t
+      -> ([< read_write ], _, _ locality) t
 
     (** Yet more efficient than the above, by skipping bounds checks. *)
     val unsafe_of_bigstring_sub
       :  pos:int
       -> len:int
       -> Bigstring.t
-      -> ([< read_write ], _, (_ locality[@mode l])) t]
+      -> ([< read_write ], _, _ locality) t
 
     (** [of_string s] returns a new iobuf whose contents are [s]. The stack-allocating
         version still performs global allocation of the backing buffer. *)
-    val%template of_string : string -> (_, _, _) t
-    [@@alloc a @ m = (heap_global, stack_local)]
+    val of_string : string -> (_, _, _) t
 
     (** [sub_shared t ~pos ~len] returns a new iobuf with limits and window set to the
         subrange of [t]'s window specified by [pos] and [len]. [sub_shared] preserves data
@@ -99,7 +91,6 @@ module Definitions = struct
 
     (** [sub_shared__local] is like [sub_shared], but it allocates the iobuf record
         locally. *)
-    val sub_shared__local : ?pos:int -> ?len:int -> ('d, _, 'loc) t -> ('d, _, 'loc) t
 
     (** More efficient than the above (optional arguments are costly). *)
     val unsafe_sub_shared : pos:int -> len:int -> ('d, _, 'loc) t -> ('d, _, 'loc) t
@@ -167,9 +158,7 @@ module Definitions = struct
         argument with something like [t : (_ perms, _) t :> (read, _) t]. *)
 
     val read_only : ([> read ], 's, 'l) t -> (read, 's, 'l) t
-    val read_only__local : ([> read ], 's, 'l) t -> (read, 's, 'l) t
     val no_seek : ('r, _, 'l) t -> ('r, no_seek, 'l) t
-    val no_seek__local : ('r, _, 'l) t -> ('r, no_seek, 'l) t
 
     (** {2 Accessors} *)
 
@@ -311,10 +300,6 @@ module Definitions = struct
 
     (** [protect_window_bounds_and_buffer__local] is similar to
         [protect_window_bounds_and_buffer] except that it returns a local value *)
-    val protect_window_bounds_and_buffer__local
-      :  ('rw, no_seek, global) t
-      -> f:(('rw, seek, global) t -> 'a)
-      -> 'a
 
     (** [protect_window_bounds_and_buffer_1 t x ~f] is a more efficient version of
         [protect_window_bounds_and_buffer t ~f:(fun t -> f t x)]. *)
@@ -350,8 +335,7 @@ module Definitions = struct
         do not advance the window. *)
 
     (** [to_string t] returns the bytes in [t] as a string. It does not alter the window. *)
-    val%template to_string : ?len:int -> ([> read ], _, _) t -> string
-    [@@alloc a @ m = (heap_global, stack_local)]
+    val to_string : ?len:int -> ([> read ], _, _) t -> string
 
     (** Equivalent to [Hexdump.to_string_hum]. Renders [t]'s windows and limits. *)
     val to_string_hum : ?max_lines:int -> (_, _, _) t -> string

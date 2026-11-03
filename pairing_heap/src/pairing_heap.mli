@@ -31,7 +31,8 @@ val max_elt : 'a t -> compare:('a -> 'a -> int) -> 'a option
 
     The top of the heap is the smallest element as determined by the provided comparison
     function. In particular, if [cmp x y < 0] then [x] will be "on top of" [y] in the
-    heap.
+    heap. [cmp] must not mutate the heap it is comparing elements of; this is not checked,
+    and the behavior of such a heap is undefined.
 
     Memory use can be surprising in that the underlying pool never shrinks, so current
     memory use will at least be proportional to the largest number of elements that the

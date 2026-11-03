@@ -11,17 +11,17 @@
 
 open! Core
 
-type ('callback, -'phantom) t [@@deriving sexp_of ~stackify]
+type ('callback, -'phantom) t [@@deriving sexp_of]
 type ('callback, -'phantom) bus = ('callback, 'phantom) t
 
 module Read_write : sig
-  type 'callback t = ('callback, read_write) bus [@@deriving sexp_of ~stackify]
+  type 'callback t = ('callback, read_write) bus [@@deriving sexp_of]
 
   include Invariant.S1 with type 'a t := 'a t
 end
 
 module Read_only : sig
-  type 'callback t = ('callback, read) bus [@@deriving sexp_of ~stackify]
+  type 'callback t = ('callback, read) bus [@@deriving sexp_of]
 
   include Invariant.S1 with type 'a t := 'a t
 end
@@ -31,7 +31,7 @@ module On_subscription_after_first_write : sig
     | Allow
     | Allow_and_send_last_value_if_global
     | Raise
-  [@@deriving compare ~localize, enumerate, equal ~localize, sexp_of ~stackify]
+  [@@deriving compare, enumerate, equal, sexp_of]
 end
 
 val read_only : ('callback, _) t -> 'callback Read_only.t
@@ -77,15 +77,9 @@ val close : 'callback Read_write.t -> unit
     a callback on [t] or when [is_closed t]. *)
 
 val write : ('a -> unit) Read_write.t -> 'a -> unit
-
-val%template write_local : 'a. ('a -> unit) Read_write.t -> 'a -> unit
-[@@kind ka = base_or_null]
-
+val write_local : 'a. ('a -> unit) Read_write.t -> 'a -> unit
 val write2 : ('a -> 'b -> unit) Read_write.t -> 'a -> 'b -> unit
-
-val%template write2_local : 'a 'b. ('a -> 'b -> unit) Read_write.t -> 'a -> 'b -> unit
-[@@kind ka = base_or_null, kb = base_or_null]
-
+val write2_local : 'a 'b. ('a -> 'b -> unit) Read_write.t -> 'a -> 'b -> unit
 val write3 : ('a -> 'b -> 'c -> unit) Read_write.t -> 'a -> 'b -> 'c -> unit
 val write3_local : ('a -> 'b -> 'c -> unit) Read_write.t -> 'a -> 'b -> 'c -> unit
 val write4 : ('a -> 'b -> 'c -> 'd -> unit) Read_write.t -> 'a -> 'b -> 'c -> 'd -> unit
@@ -137,7 +131,7 @@ val write6_local
   -> unit
 
 module Subscriber : sig
-  type 'callback t [@@deriving sexp_of ~stackify]
+  type 'callback t [@@deriving sexp_of]
 end
 
 (** [subscribe_exn t ~f] adds the callback [f] to the set of [t]'s subscribers, and
@@ -188,7 +182,7 @@ module Fold_arity : sig
           , 's -> 'a -> 'b -> 'c -> 'd -> 'e -> 'f -> 's
           , 's )
           t
-  [@@deriving sexp_of ~stackify]
+  [@@deriving sexp_of]
 end
 
 (** [subscribe_with_state_exn t arity ~init ~f] folds over the bus events, threading a

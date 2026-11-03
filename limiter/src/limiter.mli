@@ -39,7 +39,7 @@ module Infinite_or_finite : sig
   type 'a t =
     | Infinite
     | Finite of 'a
-  [@@deriving sexp, bin_io, compare ~localize]
+  [@@deriving sexp, bin_io, compare]
 end
 
 module Try_take_result : sig

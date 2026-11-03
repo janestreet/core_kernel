@@ -4,8 +4,7 @@ open! Core
 open Iobuf_type
 include Iobuf_expert_intf.Definitions
 
-let buf = buf
-let%template[@mode local] buf = (buf [@mode local])
+let buf t = buf t
 let hi_max t = t.hi_max
 let hi t = t.hi
 let lo t = t.lo
@@ -27,8 +26,7 @@ let to_bigstring_shared ?pos ?len t =
 
 let unsafe_reinitialize t ~lo_min ~lo ~hi ~hi_max bstr =
   (* avoid [caml_modify], if possible *)
-  if not (phys_equal ([%template buf [@mode local]] t) bstr)
-  then t.buf <- Modes.At_locality.wrap bstr;
+  if not (phys_equal (buf t) bstr) then t.buf <- Modes.At_locality.wrap bstr;
   t.lo_min <- lo_min;
   t.lo <- lo;
   t.hi <- hi;
@@ -84,21 +82,19 @@ let reinitialize_of_bigstring t ~pos ~len buf =
 let set_bounds_and_buffer = set_bounds_and_buffer
 let set_bounds_and_buffer_sub = set_bounds_and_buffer_sub
 
-let%template protect_window t ~f =
-  (let lo = t.lo in
-   let hi = t.hi in
-   try
-     let result = f t in
-     t.lo <- lo;
-     t.hi <- hi;
-     result
-   with
-   | exn ->
-     t.lo <- lo;
-     t.hi <- hi;
-     raise exn)
-  [@exclave_if_local m ~reasons:[ May_return_local ]]
-[@@mode m = (local, global)]
+let protect_window t ~f =
+  let lo = t.lo in
+  let hi = t.hi in
+  try
+    let result = f t in
+    t.lo <- lo;
+    t.hi <- hi;
+    result
+  with
+  | exn ->
+    t.lo <- lo;
+    t.hi <- hi;
+    raise exn
 ;;
 
 let protect_window_global_deprecated t ~f =

@@ -1,15 +1,15 @@
 type 'a t = 'a list =
   | []
   | ( :: ) of 'a * 'a t
-[@@deriving equal ~localize]
+[@@deriving equal]
 
 (** Type alias for use within submodules *)
-type 'a reversed_list = 'a t
+type 'a reversed_list = 'a t [@@deriving equal]
 
 open Base
 
-let%template of_list_rev = (List.rev [@alloc a]) [@@alloc a = (stack, heap)]
-let%template rev = (List.rev [@alloc a]) [@@alloc a = (stack, heap)]
+let of_list_rev = List.rev
+let rev = List.rev
 let rev_append = List.rev_append
 let rev_map = List.rev_map
 let rev_filter_map = List.rev_filter_map
@@ -37,9 +37,7 @@ end
 module With_rev_sexp_of = struct
   type nonrec 'a t = 'a t
 
-  let%template[@alloc a = (heap, stack)] sexp_of_t sexp_of_a t =
-    (List.sexp_of_t [@alloc a]) sexp_of_a ((rev [@alloc a]) t) [@exclave_if_stack a]
-  ;;
+  let sexp_of_t sexp_of_a t = List.sexp_of_t sexp_of_a (rev t)
 
   let%expect_test _ =
     Stdlib.print_endline (Sexp.to_string [%sexp ([ 1; 2 ] : int t)]);
@@ -57,8 +55,8 @@ let rec rev_append_to_nonempty xs acc =
 
 (* Non-empty version of Reversed_list.t *)
 module Nonempty = struct
-  type 'a nonempty_list = 'a Nonempty_list.t
-  type 'a t = ( :: ) of 'a * 'a reversed_list
+  type 'a nonempty_list = 'a Nonempty_list.t [@@deriving equal]
+  type 'a t = ( :: ) of 'a * 'a reversed_list [@@deriving equal]
 
   let to_rev_list (hd :: tl) : _ reversed_list = hd :: tl
   let rev_append (hd :: tl) xs = rev_append_to_nonempty tl (hd :: xs)

@@ -37,17 +37,9 @@ module Stable = struct
 
     let hash_fold_m__t hasher state t = Set.V1.hash_fold_m__t hasher state t.nonempty
     let hash_m__t hasher t = Set.V1.hash_m__t hasher t.nonempty
-
-    let%template compare_m__t m t1 t2 =
-      (Set.V1.compare_m__t [@mode m]) m t1.nonempty t2.nonempty
-    [@@mode m = (local, global)]
-    ;;
-
-    let%template equal_m__t m t1 t2 =
-      (Set.V1.equal_m__t [@mode m]) m t1.nonempty t2.nonempty
-    [@@mode m = (local, global)]
-    ;;
-
+    let compare_m__t m t1 t2 = Set.V1.compare_m__t m t1.nonempty t2.nonempty
+    let equal_m__t m t1 t2 = Set.V1.equal_m__t m t1.nonempty t2.nonempty
+    let globalize_m__t m t = { nonempty = Set.V1.globalize_m__t m t.nonempty }
     let m__t_of_sexp e s = Set.V1.m__t_of_sexp e s |> Nonempty_set0.of_set_exn
     let sexp_of_m__t m t = Set.V1.sexp_of_m__t m t.nonempty
     let bin_size_m__t m t = Set.V1.bin_size_m__t m t.nonempty
@@ -119,7 +111,7 @@ include Nonempty_set0
 
 [%%rederive
   type nonrec ('a, 'b) t = ('a, 'b) t = { nonempty : ('a, 'b) Base.Set.t }
-  [@@unboxed] [@@deriving compare ~localize, globalize]]
+  [@@unboxed] [@@deriving compare, globalize]]
 
 let sexp_of_t sexp_of_elt t = Set.sexp_of_t sexp_of_elt t.nonempty
 
@@ -163,6 +155,7 @@ let singleton cmp el : _ t =
 
 let fold t ~init ~f = Set.fold t.nonempty ~init ~f
 let iter t ~f : unit = Set.iter t.nonempty ~f
+let exists t ~f : bool = Set.exists t.nonempty ~f
 
 let reduce t ~map ~f =
   let acc = ref Null in
@@ -213,20 +206,13 @@ let length t : int = Set.length t.nonempty
 let to_set_remove t elt : _ Set.t = Set.remove t.nonempty elt
 let remove t elt : _ t option = of_set (to_set_remove t elt)
 let remove_or_null t elt : _ t or_null = of_set_or_null (to_set_remove t elt)
-
-let%template compare_direct t1 t2 : int =
-  (Set.compare_direct [@mode m]) t1.nonempty t2.nonempty
-[@@mode m = (global, local)]
-;;
+let compare_direct t1 t2 : int = Set.compare_direct t1.nonempty t2.nonempty
 
 let hash_fold_direct hash_fold_key state t =
   Set.hash_fold_direct hash_fold_key state t.nonempty
 ;;
 
-let%template equal t1 t2 : bool = (Set.equal [@mode m]) t1.nonempty t2.nonempty
-[@@mode m = (global, local)]
-;;
-
+let equal t1 t2 : bool = Set.equal t1.nonempty t2.nonempty
 let is_subset t ~of_ : bool = Set.is_subset t.nonempty ~of_:of_.nonempty
 
 let max_elt t =
@@ -276,28 +262,39 @@ let%expect_test "filter" =
   [%expect {| |}]
 ;;
 
+(* [exists] distinguishes predicates that match at least one element from those that do
+   not. *)
+let%expect_test "exists" =
+  let t = of_list_exn (module Int) [ 1; 2; 3 ] in
+  print_s [%sexp (exists t ~f:(fun x -> x = 2) : bool)];
+  print_s [%sexp (exists t ~f:(fun x -> x = 4) : bool)];
+  [%expect
+    {|
+    true
+    false
+    |}]
+;;
+
 module M = Stable.V2.M
 include (Stable.V2 : For_deriving.S_serializable with type ('a, 'b) t := ('a, 'b) t)
 include (Stable.V2 : For_deriving.S_common with type ('a, 'b) t := ('a, 'b) t)
 
-[%%template
-[@@@mode.default p = (portable, nonportable)]
+module%test [@name "check usage with bin_io portable + localize, and sexp_of ~stackify"] _ =
+struct
+  type t = M(Int).t [@@deriving bin_io, globalize, sexp_of]
+end
 
 let quickcheck_generator_m__t m =
-  (Quickcheck.Generator.filter_map [@mode p])
-    ~f:of_set
-    ((Set.quickcheck_generator_m__t [@mode p]) m)
+  Quickcheck.Generator.filter_map ~f:of_set (Set.quickcheck_generator_m__t m)
 ;;
 
 let quickcheck_observer_m__t m =
-  (Quickcheck.Observer.unmap [@mode p])
-    ~f:to_set
-    ((Set.quickcheck_observer_m__t [@mode p]) m)
+  Quickcheck.Observer.unmap ~f:to_set (Set.quickcheck_observer_m__t m)
 ;;
 
 let quickcheck_shrinker_m__t m =
-  (Quickcheck.Shrinker.filter_map [@mode p])
+  Quickcheck.Shrinker.filter_map
     ~f:of_set
     ~f_inverse:to_set
-    ((Set.quickcheck_shrinker_m__t [@mode p]) m)
-;;]
+    (Set.quickcheck_shrinker_m__t m)
+;;

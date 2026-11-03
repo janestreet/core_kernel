@@ -15,7 +15,7 @@ type endian =
   [ `Big_endian
   | `Little_endian
   ]
-[@@deriving compare ~localize, hash, sexp]
+[@@deriving compare, hash, sexp]
 
 val unpack_signed_8 : buf:bytes -> pos:int -> int
 val pack_signed_8 : buf:bytes -> pos:int -> int -> unit
@@ -66,6 +66,10 @@ val pack_signed_32_int_big_endian : buf:bytes -> pos:int -> int -> unit
 val pack_signed_32_int_little_endian : buf:bytes -> pos:int -> int -> unit
 val unpack_unsigned_32_int : byte_order:endian -> buf:bytes -> pos:int -> int
 val pack_unsigned_32_int : byte_order:endian -> buf:bytes -> pos:int -> int -> unit
+val unpack_signed_32_big_endian : buf:bytes -> pos:int -> int32
+val unpack_signed_32_little_endian : buf:bytes -> pos:int -> int32
+val pack_signed_32_big_endian : buf:bytes -> pos:int -> int32 -> unit
+val pack_signed_32_little_endian : buf:bytes -> pos:int -> int32 -> unit
 val unpack_signed_64 : byte_order:endian -> buf:bytes -> pos:int -> int64
 val unpack_signed_64_int : byte_order:endian -> buf:bytes -> pos:int -> int
 val pack_signed_64 : byte_order:endian -> buf:bytes -> pos:int -> Int64.t -> unit

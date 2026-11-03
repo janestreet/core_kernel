@@ -19,19 +19,19 @@ module For_hexdump = struct
     include T3
 
     let length t = t.hi_max - t.lo_min
-    let get t pos = Bigstring.get ([%template buf [@mode local]] t) (t.lo_min + pos)
+    let get t pos = Bigstring.get (buf t) (t.lo_min + pos)
   end
 
   module Buffer_indexable = struct
     include T3
 
-    let length t = Bigstring.length ([%template buf [@mode local]] t) [@nontail]
-    let get t pos = Bigstring.get ([%template buf [@mode local]] t) pos
+    let length t = Bigstring.length (buf t) [@nontail]
+    let get t pos = Bigstring.get (buf t) pos
   end
 
-  module Window = Hexdump.Of_indexable3 [@modality portable] (Window_indexable)
-  module Limits = Hexdump.Of_indexable3 [@modality portable] (Limits_indexable)
-  module Buffer = Hexdump.Of_indexable3 [@modality portable] (Buffer_indexable)
+  module Window = Hexdump.Of_indexable3 (Window_indexable)
+  module Limits = Hexdump.Of_indexable3 (Limits_indexable)
+  module Buffer = Hexdump.Of_indexable3 (Buffer_indexable)
 
   module type Relative_indexable = sig
     val name : string
@@ -111,7 +111,7 @@ module For_hexdump = struct
   module Buffer_within_buffer = struct
     let name = "buffer"
     let lo _ = 0
-    let hi t = Bigstring.length ([%template buf [@mode local]] t) [@nontail]
+    let hi t = Bigstring.length (buf t) [@nontail]
   end
 
   module Window_and_limits = Make_compound_hexdump (struct
